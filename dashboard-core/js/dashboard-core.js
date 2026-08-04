@@ -350,13 +350,11 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
      * وتُعرَض كما هي بصدق دون أي محاكاة.
      */
     /**
-     * Stream Status — قراءة عبر AGP.streamConnector الموجود أصلاً (منصات
-     * مسجَّلة كـ Stubs: tiktok/youtube/twitch)، وأزرار Connect/Disconnect
-     * (Phase 2: Stream control) تستدعي AGP.streamConnector.connect()/
-     * disconnect() مباشرة — موجودتان أصلاً في Core ولم تُستخدَما من قبل.
-     * لا اتصال فعلي هنا ولا في Core نفسه (لا TikTok بعد)؛ الضغط على
-     * Connect ينقل الحالة إلى "connecting" بصدق فقط (الخدمة الأساسية
-     * TikTokService/YouTubeService/TwitchService لا تزال Stub فارغة).
+     * Stream Status — قراءة عبر AGP.streamConnector الموجود أصلاً. لتيك
+     * توك تحديداً، موصِّل حقيقي مربوط فعلياً (عبر
+     * adapters/tiktok/agp-tiktok-adapter.js) — الضغط على Connect يقرأ
+     * يوزرنيم فعلي من #tiktok-username-input ويرسله. يوتيوب/تويتش تبقى
+     * Stub فارغة (بلا موصِّل حقيقي بعد).
      */
     NS.components.streamStatus = {
         render: function () {
@@ -392,7 +390,17 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
             });
         },
         connect: function (platform) {
-            AGP.streamConnector.connect(platform);
+            var options = {};
+            if (platform === 'tiktok') {
+                var input = el('tiktok-username-input');
+                var username = input ? input.value.trim() : '';
+                if (!username) {
+                    if (input) input.focus();
+                    return; // لا اتصال بدون يوزرنيم فعلي لتيك توك تحديداً
+                }
+                options.username = username;
+            }
+            AGP.streamConnector.connect(platform, options);
             refreshAll();
         },
         disconnect: function (platform) {
