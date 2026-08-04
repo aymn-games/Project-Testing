@@ -48,7 +48,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // عنوان الخادم الخلفي — تطوير محلي فقط حالياً (نفس نطاق الصفحة،
     // منفذ backend/config.js الافتراضي). سيحتاج ضبطاً حقيقياً (بيئة
     // إنتاج) عند التوزيع الفعلي لاحقاً — خارج نطاق هذه المرحلة.
-    var BACKEND_WS_URL = 'ws://' + window.location.hostname + ':8787';
+    var BACKEND_WS_URL = 'wss://project-testing-akds.onrender.com';
 
     var _socket = null;
     var _connecting = false;
