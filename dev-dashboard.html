@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AGP Core — Dev Dashboard</title>
+<style>
+    body { font-family: monospace; background: #111; color: #eee; margin: 0; padding: 20px; }
+    h1 { font-size: 18px; margin-bottom: 4px; }
+    .note { color: #888; font-size: 12px; margin-bottom: 20px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1000px; }
+    .panel { background: #1b1b1b; border: 1px solid #333; border-radius: 6px; padding: 14px; }
+    .panel h2 { font-size: 14px; margin: 0 0 10px; color: #7fd; text-transform: uppercase; letter-spacing: 0.05em; }
+    .row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #222; font-size: 13px; }
+    .row:last-child { border-bottom: none; }
+    .row .val { color: #6f6; font-weight: bold; }
+    button { background: #2a2a2a; color: #eee; border: 1px solid #444; border-radius: 4px; padding: 8px 12px; margin: 4px 4px 0 0; cursor: pointer; font-family: monospace; font-size: 12px; }
+    button:hover { background: #383838; border-color: #666; }
+    input[type=text] { background: #0d0d0d; color: #eee; border: 1px solid #444; border-radius: 4px; padding: 6px; font-family: monospace; font-size: 12px; width: 140px; }
+    label { font-size: 12px; color: #999; display: block; margin: 8px 0 4px; }
+    #log { grid-column: 1 / -1; height: 220px; overflow-y: auto; background: #0a0a0a; font-size: 11px; line-height: 1.5; }
+    #log div { border-bottom: 1px dotted #222; padding: 2px 0; }
+    #log .ev { color: #7bf; }
+</style>
+</head>
+<body>
+
+<h1>AGP Core — Developer Dashboard</h1>
+<div class="note">Temporary developer UI. Talks to AGP Core managers directly. No networking, no TikTok, no new managers.</div>
+
+<label>Game ID (optional, used for Create Room / Start Round / End Round / Reset)</label>
+<input type="text" id="gameIdInput" placeholder="e.g. demo-game">
+
+<div class="grid">
+
+    <div class="panel">
+        <h2>Room &amp; Session</h2>
+        <div class="row"><span>Session state</span><span class="val" id="sessionState">—</span></div>
+        <div class="row"><span>Room state</span><span class="val" id="roomState">—</span></div>
+        <div class="row"><span>Active room</span><span class="val" id="roomId">—</span></div>
+        <button onclick="createRoom()">Create Room</button>
+    </div>
+
+    <div class="panel">
+        <h2>Lobby / Registration</h2>
+        <div class="row"><span>Lobby state</span><span class="val" id="lobbyState">—</span></div>
+        <button onclick="openRegistration()">Open Registration</button>
+        <button onclick="closeRegistration()">Close Registration</button>
+    </div>
+
+    <div class="panel">
+        <h2>Players &amp; Queue</h2>
+        <div class="row"><span>Players count</span><span class="val" id="playersCount">—</span></div>
+        <div class="row"><span>Queue count</span><span class="val" id="queueCount">—</span></div>
+    </div>
+
+    <div class="panel">
+        <h2>Round</h2>
+        <div class="row"><span>Round state</span><span class="val" id="roundState">—</span></div>
+        <button onclick="startRound()">Start Round</button>
+        <button onclick="endRound()">End Round</button>
+    </div>
+
+    <div class="panel" style="grid-column: 1 / -1;">
+        <h2>Reset</h2>
+        <button onclick="resetGame()">Reset Game (game:reset)</button>
+    </div>
+
+    <div class="panel" id="log">
+        <h2>Event Log</h2>
+    </div>
+
+</div>
+
+<!-- ==========================================================================
+     AGP Core scripts — exact same load order as index.html, minus the
+     roulette game adapter (this is a Core-only test harness, no game).
+     ========================================================================== -->
+<script src="js/agp-core.js"></script>
+<script src="js/agp-events.js"></script>
+<script src="js/agp-timer-manager.js"></script>
+<script src="js/agp-storage-manager.js"></script>
+<script src="js/agp-services.js"></script>
+<script src="js/agp-stream-connector.js"></script>
+<script src="js/agp-registry.js"></script>
+<script src="js/agp-session.js"></script>
+<script src="js/agp-rooms-manager.js"></script>
+<script src="js/agp-player-manager.js"></script>
+<script src="js/agp-player-source.js"></script>
+<script src="js/agp-keyword-manager.js"></script>
+<script src="js/agp-queue-manager.js"></script>
+<script src="js/agp-score-manager.js"></script>
+<script src="js/agp-lobby.js"></script>
+<script src="js/agp-game-api.js"></script>
+<script src="js/agp-game-engine.js"></script>
+<script src="js/agp-game-manager.js"></script>
+<script src="js/agp-game-bridge.js"></script>
+<script src="js/agp-round-manager.js"></script>
+<script src="js/agp-bootstrap.js"></script>
+
+<script>
+    // --------------------------------------------------------------------
+    // Dev Dashboard logic — this script only CALLS existing AGP Core
+    // managers and listens to existing AGP.events. It defines no new
+    // manager, no new state machine, and duplicates no Core logic.
+    // --------------------------------------------------------------------
+    var AGP = window.AymanGamesPlatform;
+
+    function gameId() {
+        var v = document.getElementById('gameIdInput').value.trim();
+        return v || undefined;
+    }
+
+    // ---- Button handlers: each is a thin call into an existing manager ----
+
+    function createRoom() {
+        AGP.roomsManager.createRoom(gameId());
+        refreshAll();
+    }
+
+    function openRegistration() {
+        // AGP.gameManager is the documented single entry point for
+        // Dashboard-style callers; it delegates to AGP.lobby.open().
+        AGP.gameManager.openRegistration();
+        refreshAll();
+    }
+
+    function closeRegistration() {
+        AGP.gameManager.closeRegistration();
+        refreshAll();
+    }
+
+    function startRound() {
+        // There is no public "force start" method on Round Manager by
+        // design (it only transitions via AGP.events). This is exactly
+        // how a real connected game reports a round starting.
+        AGP.events.emit('game:roundStarted', { id: gameId() });
+        refreshAll();
+    }
+
+    function endRound() {
+        AGP.events.emit('game:roundEnded', { id: gameId() });
+        refreshAll();
+    }
+
+    function resetGame() {
+        // Documented helper on the Game Manager Facade specifically for
+        // external callers like a dashboard to trigger the existing
+        // game:reset event without touching AGP.events directly.
+        AGP.gameManager.resetSession();
+        refreshAll();
+    }
+
+    // ---- Read-only state display: each reads directly from its owning manager ----
+
+    function refreshAll() {
+        setText('sessionState', AGP.session.getState());
+        setText('roomState', AGP.roomsManager.getRoomState());
+        setText('roomId', AGP.roomsManager.hasActiveRoom() ? AGP.roomsManager.getCurrentRoom().id : '—');
+        setText('lobbyState', AGP.gameManager.getLobbyState());
+        setText('playersCount', AGP.gameManager.getPlayersCount());
+        setText('queueCount', AGP.queueManager.getQueueLength());
+        setText('roundState', AGP.gameManager.getRoundState());
+    }
+
+    function setText(id, value) {
+        document.getElementById(id).textContent = (value === null || value === undefined || value === '') ? '—' : value;
+    }
+
+    // ---- Event log + auto-refresh on any relevant existing AGP event ----
+    // Explicit list (no wildcard), same style as dashboard-live.js.
+    var WATCHED_EVENTS = [
+        'session:created', 'session:stateChanged', 'session:ended',
+        'session:roundStarted', 'session:roundFinished',
+        'room:created', 'room:closed',
+        'lobby:opened', 'lobby:closed', 'lobby:stateChanged',
+        'lobby:playerAccepted', 'lobby:playerRejected',
+        'player:joined', 'player:removed', 'player:listReset',
+        'queue:enqueued', 'queue:admitted', 'queue:cleared',
+        'round:stateChanged',
+        'game:roundStarted', 'game:roundEnded', 'game:reset',
+        'game:started', 'game:ended'
+    ];
+
+    function logEvent(eventName) {
+        return function (payload) {
+            var logEl = document.getElementById('log');
+            var line = document.createElement('div');
+            var time = new Date().toLocaleTimeString();
+            line.innerHTML = '[' + time + '] <span class="ev">' + eventName + '</span> ' +
+                (payload ? JSON.stringify(payload) : '');
+            logEl.appendChild(line);
+            logEl.scrollTop = logEl.scrollHeight;
+            refreshAll();
+        };
+    }
+
+    window.addEventListener('load', function () {
+        WATCHED_EVENTS.forEach(function (eventName) {
+            AGP.events.on(eventName, logEvent(eventName));
+        });
+        refreshAll();
+    });
+</script>
+</body>
+</html>

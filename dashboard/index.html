@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<!--
+    ==========================================================================
+    ⚠️ DEPRECATED — هذه اللوحة (dashboard/) متجاوَزة منذ AGP Core v1 Freeze.
+    لا تعرف شيئاً عن AGP.roomsManager/queueManager/keywordManager/
+    playerSource/timerManager/scoreManager/streamConnector (كلها أُضيفت
+    بعد بنائها)، وأسماء حالات الجولة المعروضة هنا قديمة (تغيّرت في
+    agp-round-manager.js). اللوحة الحالية الرسمية: dashboard-core/.
+    لم تُحذَف أو تُعدَّل هذه اللوحة (خارج نطاق التجميد)، فقط وُسِمت.
+    ==========================================================================
+-->
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGP Dashboard (Deprecated — see dashboard-core/)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+    <div style="background:#3a1f1e;color:#ffb4ae;padding:10px 16px;font-family:sans-serif;font-size:13px;text-align:center;">
+        ⚠️ Deprecated — superseded by <code>dashboard-core/</code>. Kept for reference only.
+    </div>
+
+    <!--
+        ==========================================================================
+
+        AGP DASHBOARD — أول مرحلة ربط حقيقي مع AGP Platform
+        ==========================================================================
+        هذه الصفحة الآن تُحمِّل نفس ملفات AGP Platform (بمسارات نسبية ../js
+        و ../games، بافتراض أن مجلد dashboard/ يقع بجانب js/ و games/ في
+        جذر المشروع نفسه) لأن قراءة الألعاب/التصنيفات الحقيقية تتطلب وجود
+        window.AymanGamesPlatform في نفس الصفحة — لا يوجد اتصال عبر شبكة
+        أو خادم، AGP بالكامل عبارة عن JS يعمل داخل نفس المتصفح.
+
+        النطاق الحالي محدود صراحةً بالتصنيفات والألعاب فقط (عبر
+        dashboard-data.js). لا Widgets، لا Settings حقيقية، لا Marketplace،
+        لا اتصال بث — تلك كلها تبقى كما هي دون أي ربط.
+    -->
+
+    <div class="dashboard-shell">
+        <header id="dashboard-topbar"></header>
+        <aside id="dashboard-sidebar"></aside>
+        <main id="dashboard-content"></main>
+    </div>
+
+    <!--
+        ترتيب التحميل:
+        أولاً: نفس ملفات AGP Platform بالضبط وبنفس ترتيبها في index.html
+        الرئيسي (مطلوبة حتى تكون window.AymanGamesPlatform جاهزة قبل
+        تحميل ملفات Dashboard نفسها):
+    -->
+    <script src="../js/agp-core.js"></script>
+    <script src="../js/agp-events.js"></script>
+    <script src="../js/agp-timer-manager.js"></script>
+    <script src="../js/agp-storage-manager.js"></script>
+    <script src="../js/agp-services.js"></script>
+    <script src="../js/agp-stream-connector.js"></script>
+    <script src="../js/agp-registry.js"></script>
+    <script src="../js/agp-session.js"></script>
+    <script src="../js/agp-rooms-manager.js"></script>
+    <script src="../js/agp-player-manager.js"></script>
+    <script src="../js/agp-player-source.js"></script>
+    <script src="../js/agp-keyword-manager.js"></script>
+    <script src="../js/agp-queue-manager.js"></script>
+    <script src="../js/agp-score-manager.js"></script>
+    <script src="../js/agp-lobby.js"></script>
+    <script src="../js/agp-game-api.js"></script>
+    <script src="../js/agp-game-engine.js"></script>
+    <script src="../js/agp-game-manager.js"></script>
+    <script src="../js/agp-game-bridge.js"></script>
+    <script src="../games/roulette/agp-roulette.js"></script>
+    <script src="../js/agp-round-manager.js"></script>
+    <script src="../js/agp-bootstrap.js"></script>
+
+    <!--
+        ثانياً: ملفات Dashboard نفسها:
+        1) dashboard-data.js   : يقرأ التصنيفات/الألعاب من AGP الآن
+        2) dashboard-router.js : نظام التنقّل (يعرّف واجهة التسجيل + refresh)
+        3) dashboard-live.js   : تحديث حي عام عبر AGP.events فقط (جديد)
+        4) dashboard-layout.js : بناء Top Bar + Sidebar
+        5) dashboard-pages.js  : الصفحات السبع + تسجيل مساراتها
+    -->
+    <script src="js/dashboard-data.js"></script>
+    <script src="js/dashboard-router.js"></script>
+    <script src="js/dashboard-live.js"></script>
+    <script src="js/dashboard-layout.js"></script>
+    <script src="js/dashboard-pages.js"></script>
+</body>
+</html>
