@@ -390,7 +390,10 @@
 
             <section class="panel panel-wide">
                 <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-broadcast"/></svg>Stream Status &amp; Control</h2></div>
-                <div class="empty-note" style="margin-bottom:10px;">No real platform connection yet (TikTok integration not implemented). Connect/Disconnect only exercise the existing AGP.streamConnector foundation.</div>
+                <div class="field" style="max-width:320px; margin-bottom:12px;">
+                    <label for="tiktok-username-input">TikTok username to connect</label>
+                    <input type="text" id="tiktok-username-input" placeholder="e.g. ayman_live">
+                </div>
                 <ul class="list list-plain" id="stream-status-list"></ul>
             </section>
 
