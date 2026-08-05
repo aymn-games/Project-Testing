@@ -38,6 +38,17 @@ function createConnectorForPlatform(platform) {
     return null;
 }
 
+/**
+ * ⚠️ تشخيصي فقط — يعكس بالضبط نفس قرار createConnectorForPlatform أعلاه
+ * بدون إنشاء موصِّل فعلي، يُستخدَم من server.js لفحص الصحة (/) حتى يكون
+ * بالإمكان التأكد من نوع الموصِّل النشط بمجرد فتح رابط الباك اند.
+ */
+function getActiveConnectorName(platform) {
+    if (platform === 'tiktok') return 'tiktok-connector.js (real)';
+    return 'none';
+}
+
 module.exports = {
-    createConnectorForPlatform: createConnectorForPlatform
+    createConnectorForPlatform: createConnectorForPlatform,
+    getActiveConnectorName: getActiveConnectorName
 };
