@@ -33,6 +33,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _config = null;
     var _overlayEl = null;
     var _settingsValues = {};
+    var _lastKeyword = '';
 
     function el(id) { return document.getElementById(id); }
 
@@ -98,7 +99,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
             /* شاشة اللوبي — تطابق القالب الغامق المُرسَل */
             '#agp-shell-box.agp-lobby-box{background:linear-gradient(170deg,#3a1560,#7a1fb8);',
-            'border:2px solid #b06be0;min-height:420px;display:flex;flex-direction:column;}',
+            'border:2px solid #b06be0;width:1440px;max-width:96vw;height:800px;max-height:90vh;',
+            'display:flex;flex-direction:column;}',
             '#agp-shell-box.agp-lobby-box h2{color:#f3eefc;}',
             '#agp-shell-box.agp-lobby-box .agp-shell-status{color:#e9d3ff;}',
             '.agp-shell-player-list{list-style:none;margin:0 0 16px;padding:0;flex:1;overflow-y:auto;}',
@@ -282,7 +284,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         box.className = 'agp-lobby-box';
         box.innerHTML =
             '<h2>اللوبي — بانتظار اللاعبين</h2>' +
-            '<p class="agp-shell-status">اكتب الكلمة المفتاحية بين علامتَي "هنا" — اكتب هنا بالشات عشان اللعبة تتدخل، اكتب هنا</p>' +
+            '<p class="agp-shell-status">عشان تتدخل المباراة اكتب بالشات "' + escapeHtml(_lastKeyword) + '"</p>' +
             '<ul class="agp-shell-player-list" id="agp-lobby-list"></ul>' +
             '<button class="agp-shell-btn-connect" id="agp-start-round-btn">انهاء وبدء الجولة</button>';
 
@@ -314,6 +316,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!username) { document.getElementById('agp-tiktok-username').focus(); return; }
         if (!keyword) { document.getElementById('agp-keyword').focus(); return; }
 
+        _lastKeyword = keyword;
         renderConnectingScreen();
 
         AGP.gameManager.loadGame(_config.gameId);
