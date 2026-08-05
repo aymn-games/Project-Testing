@@ -33,18 +33,19 @@ var http = require('http');
 var config = require('./config');
 var logger = require('./utils/logger');
 var wsServer = require('./websocket/ws-server');
+var connectorRouter = require('./platforms/connector-router');
 
 /**
- * معالج طلبات HTTP بسيط جداً — فحص صحة فقط، لا أي منطق بروتوكول.
+ * معالج طلبات HTTP بسيط جداً — فحص صحة، ويبلّغ فعلياً عن الموصِّل
+ * النشط الآن لتيك توك (تشخيصي حقيقي، لا نص ثابت).
  */
 function handleHttpRequest(req, res) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
         service: 'agp-backend',
         status: 'ok',
-        phase: 'websocket-implemented',
         websocket: 'implemented',
-        tiktok: 'not-implemented-yet (mock connector active)'
+        activeTikTokConnector: connectorRouter.getActiveConnectorName('tiktok')
     }));
 }
 
