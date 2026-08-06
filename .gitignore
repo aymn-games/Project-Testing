@@ -1,0 +1,12 @@
+# Node dependencies (backend/) — installed via `npm install`, not committed.
+node_modules/
+
+# SQLite database created at runtime by backend/db/database.js — holds
+# real user accounts/sessions once the server actually runs; never
+# committed (raw fallback if it existed anywhere before this file).
+backend/agp-data.sqlite
+backend/agp-data.sqlite-*
+
+# Common OS/editor noise.
+.DS_Store
+*.log
