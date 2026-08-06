@@ -83,11 +83,30 @@ function extractUser(data) {
  * حقيقي (لا وصول شبكي لتيك توك من بيئة التطوير هذه). المنطق هنا أفضل
  * تفسير منطقي متاح — يحتاج تأكيداً فعلياً بعد الرفع على بيئتك.
  */
+/**
+ * ⚠️ استخراج "هل هذا المعلِّق متابع لصاحب البث؟" — عبر
+ * `data.user.followInfo.followStatus`.
+ *
+ * ⚠️ **تخميني الأول (status === '1' || '2') ثبت أنه غير صحيح باختبار
+ * حقيقي** — شخص غير متابع دخل رغم تفعيل "متابعين فقط". بدل تخمين قيمة
+ * ثانية بلا دليل، هذي النسخة تُرجِع بيانات تشخيصية خام مع كل تعليق (عبر
+ * _debugFollowStatus) لنشوف القيمة الحقيقية مباشرة بمتصفحك (بنفس طريقة
+ * ?agpDebug=1 المعتادة)، ثم نصحّح الشرط بدقة بدل التخمين.
+ */
 function extractIsFollower(data) {
     var followInfo = data && data.user && data.user.followInfo;
     if (!followInfo || !followInfo.followStatus) return false;
     var status = String(followInfo.followStatus);
-    return status === '1' || status === '2'; // 1=يتابعه فقط، 2=متابعة متبادلة (تخمين مبني على الأنماط الشائعة لهذا النوع من الحقول)
+    return status === '1' || status === '2'; // ⚠️ لا يزال تخميناً — بانتظار القيم الحقيقية من _debugFollowStatus
+}
+
+function extractFollowDebugInfo(data) {
+    var followInfo = data && data.user && data.user.followInfo;
+    var userIdentity = data && data.user && data.user.userIdentity;
+    return {
+        followStatus: followInfo ? followInfo.followStatus : '(no followInfo)',
+        isFollowerOfAnchor: userIdentity ? userIdentity.isFollowerOfAnchor : '(no userIdentity)'
+    };
 }
 
 /**
@@ -117,7 +136,7 @@ function createTikTokConnector() {
     var _reconnectAttempts = 0;
     var _reconnectTimer = null;
     var _username = null;
-    var _followersOnly = false;
+    var _followersOnly = false; // ⚠️ لم تعد تُستخدَم للفلترة هنا — الفلترة انتقلت للواجهة الأمامية لتشخيص أسهل (راجع agp-shell-config.js)
     var _callbacks = null;
 
     function clearReconnectTimer() {
@@ -170,20 +189,21 @@ function createTikTokConnector() {
         _connection.on(TikTokLib.WebcastEvent.CHAT, function (data) {
             var user = extractUser(data);
 
-            // ⚠️ فلترة "متابعين فقط" — راجع تعليق extractIsFollower() أعلى
-            // الملف: تفسير قيمة followStatus غير مؤكَّد رسمياً، يحتاج
-            // تأكيداً باختبار حقيقي.
-            if (_followersOnly && !extractIsFollower(data)) {
-                return; // تعليق من غير متابع، يُتجاهَل تماماً هنا قبل أي إرسال للواجهة
-            }
-
             // ⚠️ إصلاح خطأ حقيقي: الحقل الفعلي بالرسالة المفكوكة هو
             // "content"، وليس "comment" كما أوحى مثال README نفسه (توثيق
             // مضلِّل مقارنة بالحقل الخام الفعلي). أُكِّد هذا مباشرة عبر
             // اختبار حقيقي على بث فعلي (كان النص يصل فارغاً دائماً قبل
             // هذا الإصلاح). نُبقي data.comment كاحتياط دفاعي فقط.
             var commentText = (data && (data.content || data.comment)) || '';
-            _callbacks.onComment({ id: user.id, name: user.name, text: commentText });
+            var followDebug = extractFollowDebugInfo(data);
+            _callbacks.onComment({
+                id: user.id,
+                name: user.name,
+                text: commentText,
+                isFollower: extractIsFollower(data), // ⚠️ لا يزال تخميناً، راجع _debugFollowStatus أدناه
+                _debugFollowStatus: followDebug.followStatus,
+                _debugIsFollowerOfAnchor: followDebug.isFollowerOfAnchor
+            });
         });
 
         _connection.on(TikTokLib.WebcastEvent.GIFT, function (data) {
