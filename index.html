@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>منصة ألعاب أيمن</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg: #0b0616;
+        --surface: #150c26;
+        --surface-2: #1c1233;
+        --border: rgba(168, 85, 247, 0.25);
+        --text: #f3eefc;
+        --text-muted: #b9aed1;
+        --accent: #a855f7;
+        --accent-2: #22d3ee;
+        --accent-gradient: linear-gradient(90deg, #22d3ee, #a855f7);
+        --radius: 14px;
+        --radius-sm: 8px;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        font-family: 'Cairo', sans-serif;
+        background: var(--bg);
+        background-image:
+            radial-gradient(circle at 15% 20%, rgba(168, 85, 247, 0.18), transparent 40%),
+            radial-gradient(circle at 85% 75%, rgba(34, 211, 238, 0.14), transparent 40%);
+        background-attachment: fixed;
+        color: var(--text);
+        text-align: center;
+    }
+    a { text-decoration: none; color: inherit; }
+
+    header.topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 16px 32px; border-bottom: 1px solid var(--border);
+        flex-wrap: wrap; gap: 12px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.2em; }
+    .brand-badge {
+        width: 34px; height: 34px; border-radius: 10px; background: var(--accent-gradient);
+        display: flex; align-items: center; justify-content: center; font-weight: 800; color: #0b0616;
+    }
+    nav.mainnav { display: flex; gap: 24px; color: var(--text-muted); font-weight: 600; }
+    nav.mainnav a:hover { color: var(--text); }
+    .auth-actions { display: flex; gap: 10px; }
+    .btn {
+        border: none; border-radius: 999px; padding: 9px 20px; font-family: inherit;
+        font-weight: 700; cursor: pointer; font-size: 0.9em;
+    }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-filled { background: var(--accent-gradient); color: #0b0616; }
+    .btn-pill { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 10px 22px; }
+
+    #profile-button { display: none; }
+
+    .hero {
+        max-width: 900px; margin: 40px auto; padding: 32px; border-radius: var(--radius);
+        background: linear-gradient(160deg, rgba(168,85,247,0.12), rgba(34,211,238,0.08));
+        border: 1px solid var(--border);
+    }
+    .hero h1 { font-size: 2.2em; font-weight: 800; margin: 0 0 12px; }
+    .hero p.subtitle { color: var(--text-muted); font-size: 1.1em; margin: 0 0 6px; }
+    .hero p.small { color: var(--text-muted); font-size: 0.9em; margin: 0 0 16px; }
+    .free-badge {
+        display: inline-block; background: var(--surface-2); border: 1px solid var(--accent-2);
+        color: var(--accent-2); border-radius: 999px; padding: 5px 16px; font-size: 0.85em; font-weight: 700;
+        margin-bottom: 14px;
+    }
+    .social-row { display: flex; justify-content: center; gap: 14px; font-size: 1.2em; color: var(--text-muted); }
+
+    .categories { display: flex; justify-content: center; gap: 14px; margin: 28px auto; flex-wrap: wrap; }
+
+    .sub-banner {
+        max-width: 900px; margin: 0 auto 36px; padding: 14px 20px; border-radius: 999px;
+        background: var(--surface-2); border: 1px solid var(--accent); color: var(--text);
+        font-weight: 700; font-size: 0.95em;
+    }
+    .sub-banner span { color: var(--accent-2); }
+
+    .section-title-bar {
+        max-width: 1200px; margin: 0 auto 24px; padding: 12px 24px; border-radius: 999px;
+        background: var(--accent-gradient); color: #0b0616; font-weight: 800; font-size: 1.1em;
+    }
+
+    .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 22px; max-width: 1200px; margin: 0 auto 40px; padding: 0 20px; }
+    .game-card {
+        width: 300px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+        overflow: hidden; text-align: right; transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .game-card:hover { transform: translateY(-4px); border-color: var(--accent); }
+    .game-cover-wrap { width: 100%; height: 160px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; }
+    .game-cover { width: 100%; height: 100%; object-fit: cover; }
+    .no-cover::after { content: '🖼️ سيتم إضافة صورة الغلاف قريباً'; color: var(--text-muted); font-size: 0.85em; padding: 20px; }
+    .game-info { padding: 16px; }
+    .game-title { display: block; font-weight: 700; margin-bottom: 12px; }
+    .game-info .btn-play {
+        display: block; width: 100%; text-align: center; background: var(--accent-gradient);
+        color: #0b0616; font-weight: 800; padding: 11px; border-radius: var(--radius-sm); margin-bottom: 8px;
+    }
+    .btn-toggle-desc {
+        width: 100%; background: transparent; border: 1px solid var(--border); color: var(--text-muted);
+        border-radius: var(--radius-sm); padding: 8px; font-family: inherit; cursor: pointer; font-size: 0.85em;
+    }
+    .game-description { display: none; text-align: right; color: var(--text-muted); font-size: 0.85em; margin-top: 10px; line-height: 1.6; }
+    .game-description.visible { display: block; }
+
+    .teaser { max-width: 900px; margin: 0 auto 20px; }
+    .teaser h3 { font-size: 1.15em; }
+    .teaser .highlight { color: var(--accent-2); font-weight: 800; }
+    .teaser-pills { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin: 16px 0 40px; }
+    .teaser-pills span { background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 8px 16px; font-size: 0.85em; color: var(--text-muted); }
+
+    .stats-section { max-width: 900px; margin: 0 auto 40px; }
+    .stats-grid { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+    .stat-box { width: 160px; height: 80px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
+
+    footer { border-top: 1px solid var(--border); padding: 24px; color: var(--text-muted); font-size: 0.85em; }
+    footer a { color: var(--accent-2); }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+    <div class="brand"><span class="brand-badge">A</span> ألعاب أيمن</div>
+    <nav class="mainnav">
+        <a href="#">الصفحة الرئيسية</a>
+        <a href="#games-section">الألعاب</a>
+        <a href="#">البث المباشر</a>
+        <a href="#">المجتمع</a>
+    </nav>
+    <div class="auth-actions" id="auth-actions">
+        <button class="btn btn-outline" onclick="AGP.log && AGP.log('login clicked — not wired yet')">تسجيل دخول</button>
+        <button class="btn btn-filled" onclick="AGP.log && AGP.log('signup clicked — not wired yet')">إنشاء حساب</button>
+    </div>
+    <!--
+        زر الملف الشخصي — يظهر بدل زرَّي الدخول/التسجيل أعلاه بمجرد
+        وجود جلسة مسجَّلة. غير مربوط بعد بنقاط API حقيقية (signup/login
+        HTTP routes لم تُبنَ بعد في backend/ — فقط منطق auth-service.js
+        الداخلي جاهز). الشكل جاهز، الربط الوظيفي خطوة قادمة منفصلة.
+    -->
+    <button class="btn btn-filled" id="profile-button">الملف الشخصي</button>
+</header>
+
+<div class="hero">
+    <div class="free-badge">منصة مجانية</div>
+    <h1>مـنـصـة ألـعـاب أيـمـن</h1>
+    <p class="subtitle">🎧 تفاعل، بث مباشر، ومجتمع اللاعبين</p>
+    <p class="small">انضم الى اكبر مجتمع للاعبين و الاستريمرز</p>
+    <div class="social-row">🎵 💬 🎮 📺</div>
+</div>
+
+<div class="categories">
+    <button class="btn btn-pill">🎲 ألعاب البث</button>
+    <button class="btn btn-pill">💬 ألعاب الدسكورد</button>
+    <button class="btn btn-pill">🌐 ألعاب أون لاين</button>
+</div>
+
+<div class="sub-banner">
+    لتفعيل الاشتراك مجاناً بعد إنشاء حسابك تواصل معنا عبر تيك توك <span>@em70_q</span>
+</div>
+
+<div id="games-section">
+    <div class="section-title-bar">ألعاب البث</div>
+
+    <div class="container">
+
+        <div class="game-card" data-agp-game-id="roulette-game" data-agp-game-status="active">
+            <div class="game-cover-wrap">
+                <img src="roulette-cover.png" alt="غلاف لعبة روليت القبائل" class="game-cover"
+                     onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+            </div>
+            <div class="game-info">
+                <span class="game-title">🎲 لعبة روليت القبائل (Roulette Game)</span>
+                <a href="https://aymn-games.github.io/roulette-game/" target="_blank" class="btn-play">العب الآن</a>
+                <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
+                <p class="game-description">
+                    روليت بأسماء قبائل سعودية، إذا توقفت الروليت عند أحد أسماء اللاعبين تظهر نافذة أسماء قبائل وخلفها أسماء قبائل ومهمة المشاركين يختار اسم قبيلة إما أن يقصي اللاعب أو يفشل الإقصاء، أيضاً عند تكرار الاسم مرتين في الروليت يعيد أحد اللاعبين الذين تم إقصاؤهم وفي كل جولة تتغير أسماء القبائل ومن خلفها، استمتعوا باللعب!
+                </p>
+            </div>
+        </div>
+
+        <div class="game-card" data-agp-game-id="who-is-the-impostor" data-agp-game-status="active">
+            <div class="game-cover-wrap">
+                <img src="impostor-cover.png" alt="غلاف لعبة مين الامبوستر" class="game-cover"
+                     onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+            </div>
+            <div class="game-info">
+                <span class="game-title">🕵️‍♂️ لعبة مين الامبوستر (Who is the Impostor)</span>
+                <a href="https://aymn-games.github.io/Who-is-the-Impostor/" target="_blank" class="btn-play">العب الآن</a>
+                <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
+                <p class="game-description">
+                    لعبة جماعية الهوست يقوم بإنشاء غرفة واللاعبين يقومون بالدخول عن طريق كود الغرفة، وتبدأ اللعبة بتوزيع كلمات لكل اللاعبين جميعهم نفس الكلمة ماعدا الامبوستر مختلف لهم ثلاث تلميحات لتحديد الامبوستر.
+                </p>
+            </div>
+        </div>
+
+        <div class="game-card" data-agp-game-id="mafia-game" data-agp-game-status="active">
+            <div class="game-cover-wrap">
+                <img src="mafia-cover.png" alt="غلاف لعبة مافيا" class="game-cover"
+                     onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+            </div>
+            <div class="game-info">
+                <span class="game-title">🔪 لعبة مافيا (Mafia Game)</span>
+                <a href="https://aymn-games.github.io/Mafia-game/" target="_blank" class="btn-play">العب الآن</a>
+                <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
+                <p class="game-description">
+                    لعبة جماعية أونلاين، فيها مافيا وحرامي يتآمرون ليلاً ضد باقي اللاعبين، ومحقق وطبيب يحاولون حماية الأبرياء واكتشاف الحقيقة، ونهارًا يتناقش الجميع علنًا قبل التصويت على إقصاء المشتبه به. من يكتشف المافيا أولًا يفوز!
+                </p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="teaser">
+    <h3>منصة متكاملة مخصصة للاستريمرز</h3>
+    <p class="highlight">أقسام قريباً سيتم إضافتها بشكل مجاني</p>
+</div>
+<div class="teaser-pills">
+    <span>🖥️ بث وقوالب للابتوب/PC</span>
+    <span>🔔 إيقونات النوتفكيشن</span>
+    <span>⚙️ أوامر إدارة للتحميل</span>
+</div>
+
+<div class="stats-section" id="platform-stats" style="display:none;">
+    <div class="section-title-bar">إحصائيات المنصة</div>
+    <div class="stats-grid">
+        <div class="stat-box">عدد المستخدمين</div>
+        <div class="stat-box">عدد البثوث</div>
+        <div class="stat-box">عدد اللاعبين</div>
+    </div>
+</div>
+
+<footer>
+    <div class="brand" style="justify-content:center; margin-bottom:10px;"><span class="brand-badge">A</span> ألعاب أيمن</div>
+    <div style="margin-bottom:10px;">
+        <a href="#">سياسة الاستخدام</a> · <a href="#">سياسة الخصوصية</a>
+    </div>
+    <p>© منصة ألعاب أيمن — جميع الحقوق محفوظة</p>
+    <p>تابعنا على تيك توك: <a href="https://www.tiktok.com/@em70_q" target="_blank">@em70_q</a> · واتساب: 966582411235</p>
+</footer>
+
+<script>
+    function toggleDescription(button) {
+        var desc = button.nextElementSibling;
+        if (desc) desc.classList.toggle('visible');
+    }
+</script>
+
+<script src="js/agp-core.js"></script>
+<script src="js/agp-events.js"></script>
+<script src="js/agp-timer-manager.js"></script>
+<script src="js/agp-storage-manager.js"></script>
+<script src="js/agp-services.js"></script>
+<script src="js/agp-stream-connector.js"></script>
+<script src="js/agp-registry.js"></script>
+<script src="js/agp-session.js"></script>
+<script src="js/agp-rooms-manager.js"></script>
+<script src="js/agp-player-manager.js"></script>
+<script src="js/agp-player-source.js"></script>
+<script src="js/agp-keyword-manager.js"></script>
+<script src="js/agp-queue-manager.js"></script>
+<script src="js/agp-score-manager.js"></script>
+<script src="js/agp-lobby.js"></script>
+<script src="js/agp-game-api.js"></script>
+<script src="js/agp-game-engine.js"></script>
+<script src="js/agp-game-manager.js"></script>
+<script src="js/agp-game-bridge.js"></script>
+<script src="games/roulette/agp-roulette.js"></script>
+<script src="js/agp-round-manager.js"></script>
+<script src="js/agp-bootstrap.js"></script>
+</body>
+</html>
