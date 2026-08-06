@@ -1,0 +1,119 @@
+/* ==========================================================================
+   AGP AUTH PAGES — تنسيق تكميلي فوق dashboard-core/css/style.css.
+   لا إعادة تعريف لأي متغيّر أو صنف موجود هناك؛ فقط ما تحتاجه صفحات
+   الحسابات (بطاقة مركزية + حقول email/password غير المعرَّفة هناك،
+   حيث style.css يستهدف input[type=text] فقط).
+   ========================================================================== */
+
+body.auth-body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-5);
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 380px;
+}
+
+.auth-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: var(--space-5);
+}
+
+.auth-brand .topbar-logo { position: static; }
+
+.auth-title {
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0 0 var(--space-5);
+    color: var(--text);
+}
+
+.field input[type=email],
+.field input[type=password] {
+    width: 100%;
+    padding: 9px 11px;
+    background: var(--bg);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 13px;
+}
+
+.field input[type=email]:focus,
+.field input[type=password]:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.field-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    margin: var(--space-3) 0;
+}
+
+.auth-message {
+    font-size: 12.5px;
+    padding: 9px 11px;
+    border-radius: var(--radius-sm);
+    margin: var(--space-3) 0;
+    display: none;
+}
+
+.auth-message--visible { display: block; }
+.auth-message--error { background: var(--danger-soft); color: #fca5a5; border: 1px solid rgba(239,68,68,0.35); }
+.auth-message--success { background: var(--success-soft); color: #86efac; border: 1px solid rgba(34,197,94,0.35); }
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-faint);
+    font-size: 11px;
+    margin: var(--space-4) 0;
+}
+
+.auth-divider::before, .auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.auth-google-btn { display: flex; justify-content: center; margin-bottom: var(--space-2); }
+
+.auth-footer {
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    margin-top: var(--space-4);
+}
+
+.auth-footer a { color: #9fb0ff; text-decoration: none; }
+.auth-footer a:hover { text-decoration: underline; }
+
+.auth-topbar-account {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-inline-start: auto;
+}
+
+.auth-topbar-account .btn { padding: 6px 11px; font-size: 11.5px; }
+
+/* --------------------------------------------------------------------
+   Dashboard auth gate — يبقى الجسم مخفياً لحين تأكيد صلاحية الجلسة عبر
+   dashboard-auth.js (يمنع "ومضة" ظهور اللوحة قبل التحويل لصفحة الدخول
+   لجلسة غير صالحة). يُزال هذا الصنف فوراً بعد التأكيد.
+   -------------------------------------------------------------------- */
+body.auth-checking { visibility: hidden; }
