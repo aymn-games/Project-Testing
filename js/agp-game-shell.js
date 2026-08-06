@@ -86,6 +86,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-shell-counter-row button{width:26px;height:26px;border-radius:8px;border:1px solid #9b3fe0;',
             'background:#fff;color:#5a2585;cursor:pointer;font-weight:800;}',
             '.agp-shell-counter-row span.agp-count-val{min-width:24px;text-align:center;font-weight:800;color:#3a1560;}',
+            '.agp-count-input{width:48px;text-align:center;font-weight:800;color:#3a1560;border:1px solid #9b3fe0;',
+            'border-radius:6px;padding:3px;font-family:inherit;}',
 
             '.agp-shell-btn-connect{width:100%;padding:13px;border:none;border-radius:999px;font-weight:800;',
             'cursor:pointer;background:linear-gradient(90deg,#22d3ee,#a855f7);color:#0b0616;',
@@ -180,7 +182,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (field.type === 'counter') {
             return '<div class="agp-shell-row">' +
                 '<div class="agp-shell-counter-row"><button data-key="' + field.key + '" data-delta="-1">−</button>' +
-                '<span class="agp-count-val" id="agp-field-' + field.key + '">' + _settingsValues[field.key] + '</span>' +
+                '<input type="number" class="agp-count-input" data-key="' + field.key + '" id="agp-field-' + field.key + '" value="' + _settingsValues[field.key] + '" min="' + (field.min || 0) + '">' +
                 '<button data-key="' + field.key + '" data-delta="1">+</button></div>' +
                 '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + '</span></div>';
         }
@@ -194,13 +196,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function renderSettingsScreen(isReopened) {
+        // ⚠️ إصلاح: نحفظ القيم الحالية لليوزرنيم/الكلمة المفتاحية قبل
+        // إعادة البناء (كانت تُمسَح مع كل ضغطة على أي زر تبديل، لأن
+        // الشاشة تُعاد بناؤها بالكامل لتحديث الرؤية الشرطية).
+        var preservedUsername = (el('agp-tiktok-username') && el('agp-tiktok-username').value) || '';
+        var preservedKeyword = (el('agp-keyword') && el('agp-keyword').value) || '';
+
         var fieldsHtml = (_config.settingsFields || []).map(renderField).join('');
         var box = el('agp-shell-box');
         box.className = '';
 
+        var closeBtnHtml = isReopened ?
+            '<button type="button" id="agp-settings-close-btn" style="position:absolute;top:14px;left:18px;background:none;border:none;font-size:1.3em;cursor:pointer;color:#5a2585;">✕</button>' : '';
+
         var baseFieldsHtml = isReopened ? '' :
-            '<div class="agp-shell-field"><label>' + iconImg(_config.usernameIcon) + 'اكتب يوزر نيم حساب تيك توك</label><input type="text" id="agp-tiktok-username" placeholder="ayman_live"></div>' +
-            '<div class="agp-shell-field"><label>' + iconImg(_config.keywordIcon) + 'الكلمة المفتاحية لدخول المبارة</label><input type="text" id="agp-keyword" placeholder="JOIN"></div>';
+            '<div class="agp-shell-field"><label>' + iconImg(_config.usernameIcon) + 'اكتب يوزر نيم حساب تيك توك</label><input type="text" id="agp-tiktok-username" placeholder="ayman_live" value="' + escapeHtml(preservedUsername) + '"></div>' +
+            '<div class="agp-shell-field"><label>' + iconImg(_config.keywordIcon) + 'الكلمة المفتاحية لدخول المبارة</label><input type="text" id="agp-keyword" placeholder="JOIN" value="' + escapeHtml(preservedKeyword) + '"></div>';
 
         var connectBtnHtml = isReopened ? '' :
             '<button class="agp-shell-btn-connect" id="agp-connect-btn">' + (_config.connectButtonLabel || 'اتصال بالبث') + '</button>';
@@ -208,10 +219,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var playerManagementHtml = isReopened ?
             '<div class="agp-shell-field"><label>👥 قائمة اللاعبين</label>' +
             '<ul class="agp-shell-player-list" id="agp-settings-player-list" style="max-height:160px;"></ul>' +
-            '<div style="display:flex;gap:8px;"><input type="text" id="agp-add-player-name" placeholder="اسم اللاعب الجديد" style="flex:1;">' +
-            '<button type="button" class="agp-pill-btn" id="agp-add-player-btn">➕ إضافة لاعب</button></div></div>' : '';
+            '<button type="button" class="agp-shell-btn-connect" id="agp-reopen-registration-btn">➕ فتح التسجيل لإضافة لاعبين</button></div>' : '';
 
+        box.style.position = 'relative';
         box.innerHTML =
+            closeBtnHtml +
             '<h2>' + (_config.settingsTitle || 'إعدادات المبارة') + '</h2>' +
             baseFieldsHtml +
             fieldsHtml +
@@ -223,7 +235,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             document.getElementById('agp-connect-btn').onclick = handleConnectClick;
         } else {
             renderSettingsPlayerList();
-            document.getElementById('agp-add-player-btn').onclick = handleAddPlayerClick;
+            document.getElementById('agp-reopen-registration-btn').onclick = handleReopenRegistrationClick;
+            document.getElementById('agp-settings-close-btn').onclick = hideOverlay;
         }
     }
 
@@ -234,18 +247,36 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         list.innerHTML = players.map(function (p) { return '<li>' + escapeHtml(p.name || p.id) + '</li>'; }).join('');
     }
 
-    function handleAddPlayerClick() {
-        var input = el('agp-add-player-name');
-        var name = input.value.trim();
-        if (!name) { input.focus(); return; }
+    /**
+     * ⚠️ إعادة تصميم: بدل إضافة لاعب يدوياً بالاسم، الزر يفتح "لوبي
+     * مصغّر" — يُعيد تفعيل الكلمة المفتاحية فقط (بدون لمس حالة الجلسة/
+     * الجولة إطلاقاً، فلا يتأثر اللاعبون الحاليون ولا تُعاد الجولة).
+     * اللاعبون المقصيون سابقاً **لا يعودون للعجلة أبداً** هنا — هذا
+     * المسار يضيف لاعبين جدد فقط عبر نفس مسار player:joined الحقيقي،
+     * ولا علاقة له بقائمة eliminatedPlayers الخاصة باللعبة إطلاقاً.
+     */
+    function handleReopenRegistrationClick() {
+        AGP.keywordManager.activate();
+        var box = el('agp-shell-box');
+        box.innerHTML =
+            '<h2>إضافة لاعبين جدد</h2>' +
+            '<p class="agp-shell-status">اكتبوا نفس الكلمة المفتاحية بالشات للانضمام</p>' +
+            '<ul class="agp-shell-player-list" id="agp-mini-lobby-list"></ul>' +
+            '<button class="agp-shell-btn-connect" id="agp-mini-lobby-done-btn">أكمل</button>';
+        renderMiniLobbyList();
+        document.getElementById('agp-mini-lobby-done-btn').onclick = handleMiniLobbyDone;
+    }
 
-        // إضافة يدوية — تمر بنفس مسار AGP.player.addPlayer الحقيقي، فتصل
-        // تلقائياً للعبة نفسها عبر نفس مستمع player:joined الموجود أصلاً
-        // بملف تهيئة اللعبة (agp-shell-config.js)، دون أي منطق مكرَّر هنا.
-        AGP.player.addPlayer({ id: 'manual:' + Date.now() + ':' + Math.random().toString(36).slice(2, 7), name: name });
+    function renderMiniLobbyList() {
+        var list = el('agp-mini-lobby-list');
+        if (!list) return;
+        var players = AGP.gameManager.getPlayers();
+        list.innerHTML = players.map(function (p) { return '<li>' + escapeHtml(p.name || p.id) + '</li>'; }).join('');
+    }
 
-        input.value = '';
-        renderSettingsPlayerList();
+    function handleMiniLobbyDone() {
+        AGP.keywordManager.deactivate();
+        renderSettingsScreen(true);
     }
 
     function wireFieldEvents() {
@@ -265,6 +296,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 var fieldConfig = (_config.settingsFields || []).filter(function (f) { return f.key === key; })[0];
                 var min = fieldConfig && typeof fieldConfig.min === 'number' ? fieldConfig.min : 0;
                 _settingsValues[key] = Math.max(min, (_settingsValues[key] || 0) + delta);
+                renderSettingsScreen();
+            };
+        });
+        _overlayEl.querySelectorAll('.agp-count-input').forEach(function (input) {
+            input.onchange = function () {
+                var key = input.getAttribute('data-key');
+                var fieldConfig = (_config.settingsFields || []).filter(function (f) { return f.key === key; })[0];
+                var min = fieldConfig && typeof fieldConfig.min === 'number' ? fieldConfig.min : 0;
+                var typed = parseInt(input.value, 10);
+                _settingsValues[key] = isNaN(typed) ? min : Math.max(min, typed);
                 renderSettingsScreen();
             };
         });
@@ -346,6 +387,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
 
         AGP.gameManager.closeRegistration();
+        AGP.keywordManager.deactivate();
         AGP.events.emit('game:roundStarted', { id: _config.gameId });
         hideOverlay();
         if (typeof _config.onStartRound === 'function') {
@@ -385,6 +427,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.events.on('player:joined', function () {
             renderLobbyPlayerList();
             renderSettingsPlayerList();
+            renderMiniLobbyList();
         });
     }
 
