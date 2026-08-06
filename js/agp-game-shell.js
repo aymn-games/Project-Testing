@@ -38,6 +38,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function el(id) { return document.getElementById(id); }
 
     function injectStyles() {
+        var fontLink1 = document.createElement('link');
+        fontLink1.rel = 'preconnect';
+        fontLink1.href = 'https://fonts.googleapis.com';
+        document.head.appendChild(fontLink1);
+
+        var fontLink2 = document.createElement('link');
+        fontLink2.rel = 'preconnect';
+        fontLink2.href = 'https://fonts.gstatic.com';
+        fontLink2.crossOrigin = 'anonymous';
+        document.head.appendChild(fontLink2);
+
+        var fontLink3 = document.createElement('link');
+        fontLink3.rel = 'stylesheet';
+        fontLink3.href = 'https://fonts.googleapis.com/css2?family=Cairo+Play:wght@200..1000&display=swap';
+        document.head.appendChild(fontLink3);
+
         var style = document.createElement('style');
         style.textContent = [
             'body.agp-shell-active{background:linear-gradient(170deg,#0b0616 0%,#2a0e3d 55%,#6d1fb0 100%);',
@@ -50,11 +66,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-header-icon-btn{width:34px;height:34px;border-radius:50%;border:1px solid rgba(216,120,255,0.4);',
             'background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;}',
             '.agp-header-icon-btn img{width:16px;height:16px;filter:invert(1);}',
-            '#agp-header-title{background:rgba(0,0,0,0.35);border-radius:999px;padding:6px 22px;color:#e9d3ff;font-weight:700;font-size:0.9em;}',
+            '#agp-header-title{background:rgba(0,0,0,0.35);border-radius:999px;padding:6px 22px;color:#e9d3ff;',
+            'font-weight:700;font-size:0.9em;font-family:"Cairo Play",Cairo,sans-serif;}',
             '#agp-header-brand{color:#fff;font-weight:800;display:flex;align-items:center;gap:8px;}',
             '#agp-header-brand .agp-brand-badge{width:28px;height:28px;border-radius:8px;',
             'background:linear-gradient(90deg,#22d3ee,#d878ff);display:inline-flex;align-items:center;justify-content:center;',
             'color:#0b0616;font-weight:800;}',
+            '#agp-header-brand .agp-brand-logo-img{height:32px;width:auto;}',
             '#agp-sponsor-banner{position:fixed;top:64px;right:20px;z-index:99997;width:300px;height:90px;',
             'border:1px dashed rgba(216,120,255,0.4);border-radius:10px;display:none;',
             'align-items:center;justify-content:center;color:#c9a8e0;font-size:0.8em;background:rgba(20,8,35,0.5);}',
@@ -121,6 +139,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var gearIcon = _config.headerGearIcon ? '<img src="' + _config.headerGearIcon + '" alt="">' : '⚙️';
 
+        var brandHtml = _config.logoImage ?
+            '<img class="agp-brand-logo-img" src="' + _config.logoImage + '" alt="ألعاب أيمن"> ألعاب أيمن' :
+            '<span class="agp-brand-badge">A</span> ألعاب أيمن';
+
         var header = document.createElement('div');
         header.id = 'agp-persistent-header';
         header.innerHTML =
@@ -129,7 +151,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<button class="agp-header-icon-btn" id="agp-header-settings-btn" title="الإعدادات">' + gearIcon + '</button>' +
             '</div>' +
             '<div id="agp-header-title">' + (_config.gameTitle || '') + '</div>' +
-            '<div id="agp-header-brand"><span class="agp-brand-badge">A</span> ألعاب أيمن</div>';
+            '<div id="agp-header-brand">' + brandHtml + '</div>';
         document.body.appendChild(header);
 
         var banner = document.createElement('div');
