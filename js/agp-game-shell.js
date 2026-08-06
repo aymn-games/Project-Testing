@@ -107,7 +107,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-box.agp-lobby-box .agp-shell-status{color:#e9d3ff;}',
             '.agp-shell-player-list{list-style:none;margin:0 0 16px;padding:0;flex:1;overflow-y:auto;}',
             '.agp-shell-player-list li{padding:8px 12px;background:rgba(255,255,255,0.12);border-radius:8px;',
-            'margin-bottom:6px;text-align:right;color:#f3eefc;}'
+            'margin-bottom:6px;text-align:right;color:#f3eefc;}',
+
+            '.agp-relocated-into-settings{position:fixed !important;top:90px !important;left:50% !important;',
+            'transform:translateX(-50%);z-index:100000 !important;}'
         ].join('');
         document.head.appendChild(style);
         document.body.classList.add('agp-shell-active');
@@ -233,11 +236,33 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wireFieldEvents();
         if (!isReopened) {
             document.getElementById('agp-connect-btn').onclick = handleConnectClick;
+            hideRelocatedControls();
         } else {
             renderSettingsPlayerList();
             document.getElementById('agp-reopen-registration-btn').onclick = handleReopenRegistrationClick;
-            document.getElementById('agp-settings-close-btn').onclick = hideOverlay;
+            document.getElementById('agp-settings-close-btn').onclick = function () { hideRelocatedControls(); hideOverlay(); };
+            showRelocatedControls();
         }
+    }
+
+    /**
+     * ⚠️ إضافة: أدوات التحكم (إعادة ترتيب/تصفير) وحقل اسم الستريمر —
+     * تبقى بمكانها الأصلي بالـ DOM (لا نقلها فعلياً، تجنّباً لفقدانها
+     * عند أي إعادة رسم لاحقة تمسح محتوى الصندوق)، فقط تظهر بصرياً وهي
+     * مثبَّتة فوق شاشة الإعدادات المفتوحة، وتختفي معها تماماً.
+     */
+    function showRelocatedControls() {
+        var controls = document.getElementById('left-controls');
+        var streamerName = document.getElementById('streamer-name-wrapper');
+        if (controls) { controls.classList.remove('hidden'); controls.classList.add('agp-relocated-into-settings'); }
+        if (streamerName) { streamerName.style.display = ''; streamerName.classList.add('agp-relocated-into-settings'); }
+    }
+
+    function hideRelocatedControls() {
+        var controls = document.getElementById('left-controls');
+        var streamerName = document.getElementById('streamer-name-wrapper');
+        if (controls) controls.classList.remove('agp-relocated-into-settings');
+        if (streamerName) streamerName.classList.remove('agp-relocated-into-settings');
     }
 
     function renderSettingsPlayerList() {
@@ -255,8 +280,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * المسار يضيف لاعبين جدد فقط عبر نفس مسار player:joined الحقيقي،
      * ولا علاقة له بقائمة eliminatedPlayers الخاصة باللعبة إطلاقاً.
      */
+    var _miniLobbyKnownIds = null;
+
     function handleReopenRegistrationClick() {
         AGP.keywordManager.activate();
+        _miniLobbyKnownIds = {};
+        AGP.gameManager.getPlayers().forEach(function (p) { _miniLobbyKnownIds[p.id] = true; });
+
         var box = el('agp-shell-box');
         box.innerHTML =
             '<h2>إضافة لاعبين جدد</h2>' +
@@ -269,13 +299,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function renderMiniLobbyList() {
         var list = el('agp-mini-lobby-list');
-        if (!list) return;
-        var players = AGP.gameManager.getPlayers();
-        list.innerHTML = players.map(function (p) { return '<li>' + escapeHtml(p.name || p.id) + '</li>'; }).join('');
+        if (!list || !_miniLobbyKnownIds) return;
+        var newPlayers = AGP.gameManager.getPlayers().filter(function (p) { return !_miniLobbyKnownIds[p.id]; });
+        list.innerHTML = newPlayers.map(function (p) { return '<li>' + escapeHtml(p.name || p.id) + '</li>'; }).join('');
     }
 
     function handleMiniLobbyDone() {
         AGP.keywordManager.deactivate();
+        _miniLobbyKnownIds = null;
         renderSettingsScreen(true);
     }
 
