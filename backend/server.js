@@ -23,6 +23,11 @@
  *
  * يعتمد فقط على وحدات Node المدمجة (http) وملفات backend/ الأخرى؛ لا
  * أي مكتبة من package.json (فارغة عمداً).
+ *
+ * تحديث: أي طلب يبدأ بـ "/api/" يُفوَّض الآن لـ http/auth-router.js
+ * (Auth + Admin API فوق auth/auth-service.js الموجود مسبقاً — راجع
+ * docs/BACKEND_ARCHITECTURE.md §10). فحص الصحة على المسار الجذري لم
+ * يتغيّر إطلاقاً.
  * ==========================================================================
  */
 
@@ -34,12 +39,20 @@ var config = require('./config');
 var logger = require('./utils/logger');
 var wsServer = require('./websocket/ws-server');
 var connectorRouter = require('./platforms/connector-router');
+var authRouter = require('./http/auth-router');
 
 /**
- * معالج طلبات HTTP بسيط جداً — فحص صحة، ويبلّغ فعلياً عن الموصِّل
- * النشط الآن لتيك توك (تشخيصي حقيقي، لا نص ثابت).
+ * معالج طلبات HTTP — فحص صحة على الجذر كما كان تماماً، بالإضافة لتفويض
+ * أي طلب "/api/*" لـ http/auth-router.js (Auth + Admin API، راجع
+ * docs/BACKEND_ARCHITECTURE.md §10). هذا السطر الوحيد المضاف هنا؛ لا
+ * تغيير آخر على هذا الملف أو على استجابة فحص الصحة نفسها.
  */
 function handleHttpRequest(req, res) {
+    if ((req.url || '').indexOf('/api/') === 0) {
+        authRouter.handle(req, res);
+        return;
+    }
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
         service: 'agp-backend',
