@@ -5,8 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AGP Streamer Dashboard</title>
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="../auth/auth.css">
 </head>
-<body>
+<body class="auth-checking">
+
+<!-- ==========================================================================
+     ACCOUNT GATE — checks a real session before anything else runs (see
+     dashboard-core/js/dashboard-auth.js). Redirects to ../login.html if
+     invalid. Independent of AGP.* entirely; loaded first on purpose.
+     ========================================================================== -->
+<script src="../auth/auth-client.js"></script>
+<script src="js/dashboard-auth.js"></script>
 
 <!-- Initial loading overlay — hidden once the first dashboard render completes. -->
 <div class="loading-overlay" id="loading-overlay">
@@ -84,6 +93,15 @@
         <span class="topbar-status-label">Session</span>
         <span class="badge badge-lg" id="session-state">—</span>
     </div>
+
+    <!-- Account info + Logout — populated by dashboard-core/js/dashboard-auth.js, unrelated to AGP.* session state above. -->
+    <div class="auth-topbar-account">
+        <a class="btn btn-sm" id="account-admin-link" href="../admin.html" style="display:none;">Admin</a>
+        <span class="badge" id="account-role">—</span>
+        <span class="stat-value" id="account-username">—</span>
+        <button class="btn btn-sm" id="btn-account-logout">Logout</button>
+    </div>
+
     <button class="btn btn-danger" onclick="AGPDashboardCore.components.controls.reset()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg>Reset</button>
 </header>
 
@@ -395,6 +413,34 @@
                     <input type="text" id="tiktok-username-input" placeholder="e.g. ayman_live">
                 </div>
                 <ul class="list list-plain" id="stream-status-list"></ul>
+            </section>
+
+            <!-- ==========================================================
+                 ACCOUNT — linked TikTok ownership + Custom ID. Backed by
+                 backend/auth/auth-service.js via auth/auth-client.js
+                 (dashboard-core/js/dashboard-auth.js wires the buttons).
+                 Separate from the manual "connect to stream" panel above.
+                 ========================================================== -->
+            <section class="panel panel-wide">
+                <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-key"/></svg>Account — Linked TikTok &amp; Custom ID</h2></div>
+                <div class="field" style="max-width:320px;">
+                    <label for="account-tiktok-username">Your TikTok username</label>
+                    <input type="text" id="account-tiktok-username" placeholder="e.g. ayman_live">
+                </div>
+                <div class="panel-head-actions" style="margin-bottom:8px;">
+                    <button class="btn btn-sm" id="btn-account-tiktok-link">Link</button>
+                    <button class="btn btn-sm" id="btn-account-tiktok-code">Get verification code</button>
+                    <button class="btn btn-sm btn-primary" id="btn-account-tiktok-verify">Verify ownership</button>
+                </div>
+                <div class="stat"><span class="stat-label">Verification code</span><span class="stat-value mono" id="account-tiktok-code">—</span></div>
+                <div class="empty-note" id="account-tiktok-status"></div>
+
+                <div class="field" style="max-width:320px; margin-top:16px;">
+                    <label for="account-custom-id">Custom ID (public, separate from internal user id)</label>
+                    <input type="text" id="account-custom-id" placeholder="e.g. ayman-live">
+                </div>
+                <button class="btn btn-sm" id="btn-account-custom-id">Save Custom ID</button>
+                <div class="empty-note" id="account-custom-id-status"></div>
             </section>
 
         </div>
