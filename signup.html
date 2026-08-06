@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إنشاء حساب — AGP</title>
+<link rel="stylesheet" href="dashboard-core/css/style.css">
+<link rel="stylesheet" href="auth/auth.css">
+</head>
+<body class="auth-body">
+
+<div class="panel auth-card">
+    <div class="auth-brand">
+        <span class="topbar-logo">AGP</span>
+    </div>
+    <h1 class="auth-title">إنشاء حساب جديد</h1>
+
+    <div class="auth-message" id="auth-message"></div>
+
+    <form id="signup-form">
+        <div class="field">
+            <label for="username">اسم المستخدم</label>
+            <input type="text" id="username" required minlength="3" autocomplete="username">
+        </div>
+        <div class="field">
+            <label for="email">البريد الإلكتروني</label>
+            <input type="email" id="email" required autocomplete="email">
+        </div>
+        <div class="field">
+            <label for="password">كلمة المرور</label>
+            <input type="password" id="password" required minlength="8" autocomplete="new-password">
+            <div class="sidebar-hint">٨ أحرف على الأقل.</div>
+        </div>
+        <label class="field-checkbox">
+            <input type="checkbox" id="wants-streamer" checked>
+            أبي أشتغل كستريمر على المنصة
+        </label>
+        <button type="submit" class="btn btn-primary btn-block" id="signup-submit">إنشاء الحساب</button>
+    </form>
+
+    <div class="auth-divider">أو</div>
+
+    <div class="auth-google-btn" id="google-signin-btn"></div>
+
+    <div class="auth-footer">
+        عندك حساب فعلاً؟ <a href="login.html">سجّل دخولك</a>
+    </div>
+</div>
+
+<script src="auth/auth-client.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+'use strict';
+
+/**
+ * صفحة إنشاء حساب — نفس منطق login.html بالضبط لناحية جوجل (تسجيل
+ * الدخول بجوجل أول مرة = إنشاء حساب تلقائياً، راجع
+ * auth-service.loginWithGoogle). أول حساب يُنشَأ بالنظام بالكامل يصبح
+ * admin تلقائياً بصرف النظر عن طريقة الإنشاء (راجع auth-service.js).
+ */
+(function () {
+    var GOOGLE_CLIENT_ID = '777683353907-hkemaaft5t7mktgtjvlf47ptuqk93qbg.apps.googleusercontent.com';
+
+    var messageEl = document.getElementById('auth-message');
+    var form = document.getElementById('signup-form');
+    var submitBtn = document.getElementById('signup-submit');
+
+    function showMessage(text, type) {
+        messageEl.textContent = text;
+        messageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+
+    var ERROR_LABELS = {
+        username_too_short: 'اسم المستخدم قصير جداً (٣ أحرف على الأقل).',
+        invalid_email: 'صيغة البريد الإلكتروني غير صحيحة.',
+        password_too_short: 'كلمة المرور قصيرة جداً (٨ أحرف على الأقل).',
+        already_exists: 'يوجد حساب مسجَّل مسبقاً بنفس البريد أو اسم المستخدم.'
+    };
+
+    function goToDashboard() {
+        window.location.href = 'dashboard-core/index.html';
+    }
+
+    if (AGPAuth.getToken()) {
+        AGPAuth.me().then(function (result) {
+            if (result.success) goToDashboard();
+        });
+    }
+
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        submitBtn.disabled = true;
+
+        var username = document.getElementById('username').value.trim();
+        var email = document.getElementById('email').value.trim();
+        var password = document.getElementById('password').value;
+        var wantsStreamer = document.getElementById('wants-streamer').checked;
+
+        AGPAuth.signup(username, email, password, wantsStreamer)
+            .then(function (result) {
+                if (!result.success) {
+                    showMessage(ERROR_LABELS[result.error] || 'تعذّر إنشاء الحساب.', 'error');
+                    return null;
+                }
+                // إنشاء الحساب لا يُنشئ جلسة تلقائياً (auth-service.signup لا
+                // يُرجِع Token) — تسجيل دخول مباشر بنفس البيانات فور النجاح.
+                return AGPAuth.login(email, password);
+            })
+            .then(function (loginResult) {
+                if (loginResult && loginResult.success) goToDashboard();
+            })
+            .catch(function () {
+                showMessage('تعذّر الوصول للخادم. حاول مرة أخرى.', 'error');
+            })
+            .finally(function () { submitBtn.disabled = false; });
+    });
+
+    window.addEventListener('load', function () {
+        if (!window.google || !window.google.accounts || !window.google.accounts.id) return;
+
+        window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: function (response) {
+                AGPAuth.loginWithGoogle(response.credential).then(function (result) {
+                    if (result.success) {
+                        goToDashboard();
+                        return;
+                    }
+                    showMessage('تعذّر الدخول عبر جوجل: ' + (result.error || 'unknown'), 'error');
+                });
+            }
+        });
+
+        window.google.accounts.id.renderButton(
+            document.getElementById('google-signin-btn'),
+            { theme: 'filled_black', size: 'large', text: 'signup_with', shape: 'pill', width: 320 }
+        );
+    });
+}());
+</script>
+</body>
+</html>

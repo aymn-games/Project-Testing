@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة الأدمن — AGP</title>
+<link rel="stylesheet" href="dashboard-core/css/style.css">
+<link rel="stylesheet" href="auth/auth.css">
+</head>
+<body class="auth-checking">
+
+<header class="topbar">
+    <div class="topbar-brand">
+        <span class="topbar-logo">AGP</span>
+        <span class="topbar-title">Admin Panel</span>
+    </div>
+    <div class="auth-topbar-account">
+        <a class="btn btn-sm" href="dashboard-core/index.html">Dashboard</a>
+        <span class="badge" id="account-role">—</span>
+        <span class="stat-value" id="account-username">—</span>
+        <button class="btn btn-sm" id="btn-account-logout">Logout</button>
+    </div>
+</header>
+
+<div class="main" style="padding: var(--space-5);">
+
+    <div class="auth-message" id="admin-message"></div>
+
+    <section class="panel panel-wide">
+        <div class="panel-head">
+            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-users"/></svg>Users &amp; Streamers</h2>
+            <button class="btn btn-sm" id="btn-refresh-users"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg>Refresh</button>
+        </div>
+        <div class="table-wrap">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>TikTok</th>
+                    <th>Custom ID</th>
+                    <th>Broadcasts</th>
+                    <th>Gifts (value)</th>
+                    <th>can_run_games</th>
+                </tr>
+            </thead>
+            <tbody id="admin-users-table-body">
+                <tr><td class="table-empty" colspan="9">Loading…</td></tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
+
+</div>
+
+<svg style="display:none" aria-hidden="true">
+    <symbol id="icon-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="8" cy="9" r="3"/><circle cx="16.5" cy="9.5" r="2.5"/>
+        <path d="M2 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M14.5 20c.2-2.8 2.2-5 4.8-5.3"/>
+    </symbol>
+    <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 12a8 8 0 018-8 8 8 0 017.4 5"/><polyline points="19 3 19 9 13 9"/>
+    </symbol>
+</svg>
+
+<script src="auth/auth-client.js"></script>
+<script>
+'use strict';
+
+/**
+ * لوحة أدمن مستقلة تماماً (خارج AGP.* وخارج dashboard-core.js). محمية
+ * بـ AGPAuth.requireAdmin — تحوّل لصفحة الدخول لغير المسجّلين، ولصفحة
+ * الدخول أيضاً لأي مستخدم دوره ليس 'admin' (لا صفحة "غير مصرَّح" منفصلة
+ * حالياً؛ كافٍ لهذه المرحلة).
+ */
+(function () {
+    var KNOWN_PERMISSION_KEYS = ['can_run_games'];
+
+    var messageEl = document.getElementById('admin-message');
+    var tbody = document.getElementById('admin-users-table-body');
+
+    function showMessage(text, type) {
+        messageEl.textContent = text;
+        messageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+
+    function escapeHtml(value) {
+        var div = document.createElement('div');
+        div.textContent = value === null || value === undefined ? '' : String(value);
+        return div.innerHTML;
+    }
+
+    function renderUsers(users) {
+        if (!users.length) {
+            tbody.innerHTML = '<tr><td class="table-empty" colspan="9">No users yet.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = users.map(function (u) {
+            var permCells = KNOWN_PERMISSION_KEYS.map(function (key) {
+                var checked = u.permissions && u.permissions[key] ? 'checked' : '';
+                return '<input type="checkbox" data-user-id="' + u.id + '" data-permission-key="' + key + '" ' + checked + '>';
+            }).join('');
+
+            return '<tr>' +
+                '<td>' + u.id + '</td>' +
+                '<td>' + escapeHtml(u.username) + '</td>' +
+                '<td>' + escapeHtml(u.email) + '</td>' +
+                '<td><span class="badge">' + escapeHtml(u.role) + '</span></td>' +
+                '<td>' + escapeHtml(u.tiktok_username) + (u.tiktok_verified ? ' ✅' : '') + '</td>' +
+                '<td class="mono">' + escapeHtml(u.custom_id) + '</td>' +
+                '<td>' + u.stats.total_broadcasts + '</td>' +
+                '<td>' + u.stats.total_gifts + ' (' + u.stats.total_gifts_value + ')</td>' +
+                '<td>' + permCells + '</td>' +
+                '</tr>';
+        }).join('');
+
+        Array.prototype.forEach.call(tbody.querySelectorAll('input[type=checkbox]'), function (checkbox) {
+            checkbox.addEventListener('change', function () {
+                var userId = Number(checkbox.getAttribute('data-user-id'));
+                var permissionKey = checkbox.getAttribute('data-permission-key');
+                checkbox.disabled = true;
+                window.AGPAuth.adminSetPermission(userId, permissionKey, checkbox.checked)
+                    .then(function (result) {
+                        if (!result.success) {
+                            showMessage('تعذّر تحديث الصلاحية: ' + (result.error || 'unknown'), 'error');
+                            checkbox.checked = !checkbox.checked; // تراجع بصري لو فشل الحفظ
+                        }
+                    })
+                    .finally(function () { checkbox.disabled = false; });
+            });
+        });
+    }
+
+    function loadUsers() {
+        tbody.innerHTML = '<tr><td class="table-empty" colspan="9">Loading…</td></tr>';
+        window.AGPAuth.adminListUsers().then(function (result) {
+            if (!result.success) {
+                showMessage('تعذّر تحميل قائمة المستخدمين.', 'error');
+                return;
+            }
+            renderUsers(result.users);
+        });
+    }
+
+    document.getElementById('btn-refresh-users').addEventListener('click', loadUsers);
+    document.getElementById('btn-account-logout').addEventListener('click', function () {
+        window.AGPAuth.logout().then(function () { window.location.href = 'login.html'; });
+    });
+
+    window.AGPAuth.requireAdmin('login.html').then(function (user) {
+        if (!user) return;
+        document.body.classList.remove('auth-checking');
+        document.getElementById('account-username').textContent = user.username;
+        document.getElementById('account-role').textContent = user.role;
+        loadUsers();
+    });
+}());
+</script>
+</body>
+</html>
