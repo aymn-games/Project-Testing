@@ -54,5 +54,22 @@ module.exports = {
      */
     rateLimits: {
         maxMessagesPerSecondPerConnection: 20
-    }
+    },
+
+    /**
+     * النطاقات المسموح لها بالوصول لواجهة HTTP API (Auth/Admin —
+     * راجع docs/BACKEND_ARCHITECTURE.md §10). منفصل تماماً عن
+     * allowedOrigins أعلاه (ذاك لـ WebSocket، لم يُلمَس).
+     *
+     * الجلسات هنا تُمرَّر عبر ترويسة `Authorization: Bearer <token>`
+     * فقط (لا كوكيز إطلاقاً)، فلا خطر CSRF من قبول أي أصل — بخلاف
+     * الكوكيز، Token لا يُرفَق تلقائياً من المتصفح. لذلك الافتراضي هنا
+     * `['*']` (يعكس أصل الطلب نفسه في `Access-Control-Allow-Origin`،
+     * راجع http/response.js)، ويمكن تضييقه فعلياً بضبط متغيّر بيئة
+     * `CORS_ORIGINS` (مفصول بفواصل) بمجرد معرفة نطاق الفرونت إند
+     * النهائي في الإنتاج.
+     */
+    corsAllowedOrigins: process.env.CORS_ORIGINS
+        ? process.env.CORS_ORIGINS.split(',').map(function (s) { return s.trim(); }).filter(Boolean)
+        : ['*']
 };
