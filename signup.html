@@ -77,13 +77,19 @@
         already_exists: 'يوجد حساب مسجَّل مسبقاً بنفس البريد أو اسم المستخدم.'
     };
 
-    function goToDashboard() {
-        window.location.href = 'dashboard-core/index.html';
+    // اللوحة حصراً لحساب الأدمن — أي حساب آخر يروح لبروفايله العام
+    // بدل اللوحة. راجع AGPAuth.canAccessDashboard وdocs/CHANGELOG.md.
+    function goAfterAuth(user) {
+        if (AGPAuth.canAccessDashboard(user)) {
+            window.location.href = 'dashboard-core/index.html';
+        } else {
+            window.location.href = 'profile.html?id=' + encodeURIComponent((user && user.custom_id) || '');
+        }
     }
 
     if (AGPAuth.getToken()) {
         AGPAuth.me().then(function (result) {
-            if (result.success) goToDashboard();
+            if (result.success) goAfterAuth(result.user);
         });
     }
 
@@ -107,7 +113,7 @@
                 return AGPAuth.login(email, password);
             })
             .then(function (loginResult) {
-                if (loginResult && loginResult.success) goToDashboard();
+                if (loginResult && loginResult.success) goAfterAuth(loginResult.user);
             })
             .catch(function () {
                 showMessage('تعذّر الوصول للخادم. حاول مرة أخرى.', 'error');
@@ -123,7 +129,7 @@
             callback: function (response) {
                 AGPAuth.loginWithGoogle(response.credential).then(function (result) {
                     if (result.success) {
-                        goToDashboard();
+                        goAfterAuth(result.user);
                         return;
                     }
                     showMessage('تعذّر الدخول عبر جوجل: ' + (result.error || 'unknown'), 'error');
