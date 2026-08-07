@@ -134,16 +134,17 @@
         <a href="#">المجتمع</a>
     </nav>
     <div class="auth-actions" id="auth-actions">
-        <button class="btn btn-outline" onclick="AGP.log && AGP.log('login clicked — not wired yet')">تسجيل دخول</button>
-        <button class="btn btn-filled" onclick="AGP.log && AGP.log('signup clicked — not wired yet')">إنشاء حساب</button>
+        <button class="btn btn-outline" onclick="location.href='login.html'">تسجيل دخول</button>
+        <button class="btn btn-filled" onclick="location.href='signup.html'">إنشاء حساب</button>
     </div>
     <!--
         زر الملف الشخصي — يظهر بدل زرَّي الدخول/التسجيل أعلاه بمجرد
-        وجود جلسة مسجَّلة. غير مربوط بعد بنقاط API حقيقية (signup/login
-        HTTP routes لم تُبنَ بعد في backend/ — فقط منطق auth-service.js
-        الداخلي جاهز). الشكل جاهز، الربط الوظيفي خطوة قادمة منفصلة.
+        وجود جلسة مسجَّلة صالحة (يُتحقَّق منها محلياً هنا فقط بشكل متفائل
+        عبر auth/auth-client.js؛ dashboard-core/js/dashboard-auth.js هو
+        من يتحقق فعلياً من الخادم عند فتح اللوحة). راجع السكربت آخر
+        الصفحة.
     -->
-    <button class="btn btn-filled" id="profile-button">الملف الشخصي</button>
+    <button class="btn btn-filled" id="profile-button" onclick="location.href='dashboard-core/index.html'">الملف الشخصي</button>
 </header>
 
 <div class="hero">
@@ -274,5 +275,25 @@
 <script src="games/roulette/agp-roulette.js"></script>
 <script src="js/agp-round-manager.js"></script>
 <script src="js/agp-bootstrap.js"></script>
+
+<!--
+    زر الدخول/التسجيل/الملف الشخصي بالأعلى — طبقة عميل مستقلة تماماً عن
+    AGP.* (window.AGPAuth من auth/auth-client.js، راجع docs/CHANGELOG.md
+    [0.29.0]). فحص متفائل فقط من بيانات محلية مخزَّنة (لا طلب شبكة هنا؛
+    الصفحة الرئيسية عامة ولا تحتاج تحقّقاً صارماً) — التحقق الحقيقي من
+    صلاحية الجلسة يصير عند فتح dashboard-core/index.html فعلياً.
+-->
+<script src="auth/auth-client.js"></script>
+<script>
+    (function () {
+        var cachedUser = window.AGPAuth && window.AGPAuth.getCachedUser();
+        if (cachedUser && window.AGPAuth.getToken()) {
+            var authActions = document.getElementById('auth-actions');
+            var profileButton = document.getElementById('profile-button');
+            if (authActions) authActions.style.display = 'none';
+            if (profileButton) profileButton.style.display = '';
+        }
+    }());
+</script>
 </body>
 </html>
