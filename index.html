@@ -310,7 +310,11 @@
             var profileButton = document.getElementById('profile-button');
             if (authActions) authActions.style.display = 'none';
             if (profileButton) {
-                profileButton.style.display = '';
+                // ملاحظة: `#profile-button { display: none; }` بالأعلى قاعدة
+                // CSS بمعرّف (ID) — تفريغ style.display لا يُبطلها (إفراغ
+                // الخاصية المضمّنة يرجّع التطبيق لقاعدة الـCSS نفسها، فيبقى
+                // الزر مخفياً). لازم قيمة صريحة هنا لتَغلِب على تلك القاعدة.
+                profileButton.style.display = 'inline-block';
                 // اللوحة (dashboard-core) حصراً للأدمن؛ أي حد ثاني يودّيه
                 // الزر لبروفايله العام بدل اللوحة — راجع AGPAuth.canAccessDashboard.
                 var destination = window.AGPAuth.canAccessDashboard(cachedUser)
