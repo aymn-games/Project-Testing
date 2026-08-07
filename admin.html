@@ -92,6 +92,12 @@
         return div.innerHTML;
     }
 
+    // زي escapeHtml بس يعالج علامات الاقتباس كمان — لازم لاستخدام قيمة
+    // داخل attribute (value="...") بدل نص عادي، حتى لو الـID فيه ".
+    function escapeAttr(value) {
+        return escapeHtml(value).replace(/"/g, '&quot;');
+    }
+
     function renderUsers(users) {
         if (!users.length) {
             tbody.innerHTML = '<tr><td class="table-empty" colspan="9">No users yet.</td></tr>';
@@ -104,13 +110,20 @@
                 return '<input type="checkbox" data-user-id="' + u.id + '" data-permission-key="' + key + '" ' + checked + '>';
             }).join('');
 
+            var inputStyle = 'width:110px;padding:5px 7px;background:var(--bg);border:1px solid var(--border-light);' +
+                'border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit;';
+
             return '<tr>' +
                 '<td>' + u.id + '</td>' +
                 '<td>' + escapeHtml(u.username) + '</td>' +
                 '<td>' + escapeHtml(u.email) + '</td>' +
                 '<td><span class="badge">' + escapeHtml(u.role) + '</span></td>' +
                 '<td>' + escapeHtml(u.tiktok_username) + (u.tiktok_verified ? ' ✅' : '') + '</td>' +
-                '<td class="mono">' + escapeHtml(u.custom_id) + '</td>' +
+                '<td class="mono">' +
+                    '<input type="text" style="' + inputStyle + '" value="' + escapeAttr(u.custom_id) + '" data-user-id="' + u.id + '" data-custom-id-input>' +
+                    ' <button class="btn btn-sm" data-user-id="' + u.id + '" data-save-custom-id>Save</button>' +
+                    ' <a class="btn btn-sm" href="profile.html?id=' + encodeURIComponent(u.custom_id || '') + '" target="_blank">View</a>' +
+                '</td>' +
                 '<td>' + u.stats.total_broadcasts + '</td>' +
                 '<td>' + u.stats.total_gifts + ' (' + u.stats.total_gifts_value + ')</td>' +
                 '<td>' + permCells + '</td>' +
@@ -130,6 +143,27 @@
                         }
                     })
                     .finally(function () { checkbox.disabled = false; });
+            });
+        });
+
+        // الأدمن يعدّل الـID العام لأي مستخدم — يحفظ نص الحقل المجاور
+        // بضغطة واحدة عبر /api/admin/custom-id (يشمل نفسه كمان).
+        Array.prototype.forEach.call(tbody.querySelectorAll('[data-save-custom-id]'), function (button) {
+            button.addEventListener('click', function () {
+                var userId = Number(button.getAttribute('data-user-id'));
+                var input = tbody.querySelector('input[data-custom-id-input][data-user-id="' + userId + '"]');
+                var newId = (input.value || '').trim();
+                if (!newId) { showMessage('اكتب ID قبل الحفظ.', 'error'); return; }
+
+                button.disabled = true;
+                window.AGPAuth.adminSetCustomId(userId, newId).then(function (result) {
+                    if (result.success) {
+                        showMessage('تم تحديث الـID.', 'success');
+                        loadUsers(); // إعادة تحميل حتى يتحدّث رابط "View" بالقيمة الجديدة
+                    } else {
+                        showMessage('تعذّر الحفظ: ' + (result.error || 'unknown') + (result.error === 'custom_id_taken' ? ' (هذا الـID مستخدَم لحساب آخر)' : ''), 'error');
+                    }
+                }).finally(function () { button.disabled = false; });
             });
         });
     }
