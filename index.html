@@ -109,6 +109,15 @@
     .game-description { display: none; text-align: right; color: var(--text-muted); font-size: 0.85em; margin-top: 10px; line-height: 1.6; }
     .game-description.visible { display: block; }
 
+    .games-lock-message {
+        display: none;
+        max-width: 700px; margin: 0 auto 24px; padding: 14px 20px; border-radius: var(--radius-sm);
+        background: rgba(239, 68, 68, 0.12); border: 1px solid #ef4444; color: var(--text);
+        font-weight: 700; font-size: 0.9em;
+    }
+    .games-lock-message.visible { display: block; }
+    .games-lock-message a { color: var(--accent-2); text-decoration: underline; }
+
     .teaser { max-width: 900px; margin: 0 auto 20px; }
     .teaser h3 { font-size: 1.15em; }
     .teaser .highlight { color: var(--accent-2); font-weight: 800; }
@@ -144,7 +153,7 @@
         من يتحقق فعلياً من الخادم عند فتح اللوحة). راجع السكربت آخر
         الصفحة.
     -->
-    <button class="btn btn-filled" id="profile-button" onclick="location.href='dashboard-core/index.html'">الملف الشخصي</button>
+    <button class="btn btn-filled" id="profile-button">الملف الشخصي</button>
 </header>
 
 <div class="hero">
@@ -167,6 +176,13 @@
 
 <div id="games-section">
     <div class="section-title-bar">ألعاب البث</div>
+
+    <!--
+        رسالة قفل الألعاب — مخفية افتراضياً، تظهر فقط لو ضغط زائر بدون
+        حساب أو حساب غير موافَق عليه على "العب الآن". راجع السكربت آخر
+        الصفحة وdocs/CHANGELOG.md.
+    -->
+    <div class="games-lock-message" id="games-lock-message"></div>
 
     <div class="container">
 
@@ -287,12 +303,46 @@
 <script>
     (function () {
         var cachedUser = window.AGPAuth && window.AGPAuth.getCachedUser();
-        if (cachedUser && window.AGPAuth.getToken()) {
+        var hasSession = Boolean(cachedUser && window.AGPAuth.getToken());
+
+        if (hasSession) {
             var authActions = document.getElementById('auth-actions');
             var profileButton = document.getElementById('profile-button');
             if (authActions) authActions.style.display = 'none';
-            if (profileButton) profileButton.style.display = '';
+            if (profileButton) {
+                profileButton.style.display = '';
+                // اللوحة (dashboard-core) حصراً للأدمن؛ أي حد ثاني يودّيه
+                // الزر لبروفايله العام بدل اللوحة — راجع AGPAuth.canAccessDashboard.
+                var destination = window.AGPAuth.canAccessDashboard(cachedUser)
+                    ? 'dashboard-core/index.html'
+                    : 'profile.html?id=' + encodeURIComponent(cachedUser.custom_id || '');
+                profileButton.onclick = function () { location.href = destination; };
+            }
         }
+
+        // قفل أزرار "العب الآن" (روابط خارجية لمواقع الألعاب) على أي
+        // زائر بدون حساب، أو حساب لم يوافَق عليه من الأدمن بعد
+        // (AGPAuth.canPlayGames) — راجع docs/CHANGELOG.md.
+        var lockMessageEl = document.getElementById('games-lock-message');
+        function showLockMessage(html) {
+            if (!lockMessageEl) return;
+            lockMessageEl.innerHTML = html;
+            lockMessageEl.classList.add('visible');
+        }
+
+        Array.prototype.forEach.call(document.querySelectorAll('.btn-play'), function (link) {
+            link.addEventListener('click', function (event) {
+                if (!hasSession) {
+                    event.preventDefault();
+                    showLockMessage('لازم تسجّل دخول أولاً عشان تفتح الألعاب. <a href="login.html">سجّل دخولك</a> أو <a href="signup.html">أنشئ حساب</a>.');
+                    return;
+                }
+                if (!window.AGPAuth.canPlayGames(cachedUser)) {
+                    event.preventDefault();
+                    showLockMessage('حسابك يحتاج موافقة الأدمن قبل ما يقدر يفتح الألعاب. تواصل معنا عبر تيك توك <a href="https://www.tiktok.com/@em70_q" target="_blank">@em70_q</a>.');
+                }
+            });
+        });
     }());
 </script>
 </body>
