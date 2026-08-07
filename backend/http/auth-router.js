@@ -140,10 +140,14 @@ function handleAdminSetCustomId(req, res, body) {
 }
 
 /**
- * بروفايل عام — بدون تسجيل دخول، عبر ?id=<custom_id> بالرابط. مسار
- * الوحيد بالراوتر اللي يقرأ query string (بقية المسارات لا تحتاجه).
+ * بروفايل عبر ?id=<custom_id> بالرابط — بدون تسجيل دخول إلزامي (مسار
+ * الوحيد بالراوتر اللي يقرأ query string). **الخصوصية**: لا عرض علني
+ * لبروفايل أي أحد بعد الآن — البيانات الكاملة (إحصائيات، تيك توك...)
+ * تُرسَل فقط لصاحب الحساب نفسه أو للأدمن؛ أي طرف آخر (زائر أو حساب
+ * مختلف) يستلم فقط username/custom_id، بقية الحقول (role, stats,
+ * tiktok...) undefined عمداً. راجع docs/CHANGELOG.md.
  */
-function handlePublicProfile(req, res) {
+function handlePublicProfile(req, res, body, user) {
     var queryString = (req.url || '').split('?')[1] || '';
     var customId = '';
     queryString.split('&').forEach(function (pair) {
@@ -156,6 +160,15 @@ function handlePublicProfile(req, res) {
         sendJson(res, 404, { success: false, error: 'not_found' });
         return;
     }
+
+    var isOwner = Boolean(user && user.custom_id === profile.custom_id);
+    var isAdmin = Boolean(user && user.role === 'admin');
+
+    if (!isOwner && !isAdmin) {
+        sendJson(res, 200, { success: true, profile: { username: profile.username, custom_id: profile.custom_id, restricted: true } });
+        return;
+    }
+
     sendJson(res, 200, { success: true, profile: profile });
 }
 
@@ -201,10 +214,14 @@ function handle(req, res) {
     }
 
     var token = extractBearerToken(req);
-    var user = null;
+    // فحص Auth "اختياري" دائماً — حتى المسارات العامة (requireAuth: false)
+    // تعرف الآن هوية المُرسِل لو أرفق Token صالحاً (مثال: handlePublicProfile
+    // يحتاج يعرف "هل هذا صاحب الحساب؟" مع بقاء المسار عاماً وصولاً). هذا لا
+    // يغيّر أي سلوك سابق: المسارات المحمية (requireAuth: true) ترفض 401
+    // بالضبط كما كانت، والمسارات العامة تجاهلت "user" أصلاً قبل هذا التعديل.
+    var user = requireUser(req);
 
     if (route.requireAuth) {
-        user = requireUser(req);
         if (!user) {
             sendJson(res, 401, { success: false, error: 'unauthorized' });
             return;
