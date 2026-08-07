@@ -131,6 +131,16 @@
         return request('/api/auth/tiktok/verify', { method: 'POST', body: { tiktokUsername: tiktokUsername } });
     }
 
+    /**
+     * إلغاء ربط تيك توك يدوياً (زر صريح من المستخدم فقط) — الربط
+     * الموثَّق لا ينتهي أبداً من نفسه، حتى لو شال المستخدم الكود من
+     * بايو حسابه بتيك توك بعد التحقق. راجع docs/CHANGELOG.md.
+     * @returns {Promise<Object>}
+     */
+    function unlinkTikTok() {
+        return request('/api/auth/tiktok/unlink', { method: 'POST' });
+    }
+
     function setCustomId(customId) {
         return request('/api/auth/custom-id', { method: 'POST', body: { customId: customId } });
     }
@@ -256,6 +266,7 @@
         linkTikTok: linkTikTok,
         requestTikTokVerificationCode: requestTikTokVerificationCode,
         verifyTikTok: verifyTikTok,
+        unlinkTikTok: unlinkTikTok,
         setCustomId: setCustomId,
         adminListUsers: adminListUsers,
         adminSetPermission: adminSetPermission,
