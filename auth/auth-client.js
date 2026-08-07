@@ -146,6 +146,28 @@
         });
     }
 
+    /**
+     * الأدمن فقط — يعدّل الـID العام (custom_id) لأي مستخدم بمعرفة id
+     * حسابه الداخلي (userId)، خلافاً لـ setCustomId أعلاه اللي يقتصر
+     * دائماً على حساب الجلسة الحالية نفسها.
+     */
+    function adminSetCustomId(userId, customId) {
+        return request('/api/admin/custom-id', {
+            method: 'POST',
+            body: { userId: userId, customId: customId }
+        });
+    }
+
+    /**
+     * بروفايل عام لأي مستخدم عبر الـID العام (custom_id) — بدون تسجيل
+     * دخول، يصلح للاستدعاء من صفحة profile.html العامة مباشرة.
+     * @param {string} customId
+     * @returns {Promise<Object>}
+     */
+    function getPublicProfile(customId) {
+        return request('/api/profile?id=' + encodeURIComponent(customId), { method: 'GET' });
+    }
+
     /* ----------------------------------------------------------------------
      * حرّاس صفحات — تُستدعى في أول سطر من أي صفحة محمية
      * ---------------------------------------------------------------------- */
@@ -210,6 +232,8 @@
         setCustomId: setCustomId,
         adminListUsers: adminListUsers,
         adminSetPermission: adminSetPermission,
+        adminSetCustomId: adminSetCustomId,
+        getPublicProfile: getPublicProfile,
         requireAuth: requireAuth,
         requireAdmin: requireAdmin
     };
