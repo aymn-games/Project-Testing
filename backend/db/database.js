@@ -3,10 +3,20 @@
  *  AGP DATABASE — قاعدة بيانات دائمة (SQLite عبر better-sqlite3)
  * ==========================================================================
  *
- * ملف واحد على القرص (agp-data.sqlite)، لا سيرفر قاعدة بيانات منفصل —
- * أنسب خيار لخطة استضافة VPS مفردة. البيانات هنا **دائمة** (لا تُفقَد
- * عند إعادة تشغيل الخادم)، بخلاف كل شي بُني قبل هذا (كان في الذاكرة
- * فقط أو localStorage بالمتصفح).
+ * ملف واحد على القرص (agp-data.sqlite)، لا سيرفر قاعدة بيانات منفصل.
+ *
+ * ⚠️ **قرص Render الدائم (Persistent Disk) إلزامي لبقاء البيانات فعلياً**:
+ *   Render (الاستضافة الحالية) يمسح أي ملفات محلية غير موجودة على قرص
+ *   دائم مُرفَق صراحةً، وذلك في كل مرة تُعاد فيها الخدمة (نشر جديد، أو
+ *   حتى مجرد استيقاظ الخدمة بعد فترة خمول على الخطط غير المدفوعة) —
+ *   هذا سبب اختفاء الحسابات (حتى حساب الأدمن) المُلاحَظ فعلياً، وليس
+ *   خللاً بمنطق التطبيق. الحل: إرفاق قرص دائم (Persistent Disk) من
+ *   لوحة Render بمسار وصل (Mount Path) قيمته بالضبط `/var/data`، على
+ *   خطة مدفوعة (الخطط المجانية لا تدعم الأقراص الدائمة إطلاقاً). لو
+ *   ذلك المسار موجود فعلياً (أي القرص مُرفَق ومُوصَّل)، قاعدة البيانات
+ *   تُخزَّن فيه تلقائياً؛ غير ذلك (بيئة تطوير محلية، أو الخدمة بدون قرص
+ *   مُرفَق بعد) ترجع لنفس السلوك القديم بالضبط (ملف بجانب مجلد backend/).
+ *   راجع docs/CHANGELOG.md للتفاصيل الكاملة وخطوات الإعداد على Render.
  *
  * الجداول:
  *   users       — حسابات الستريمرز (+ حساب أدمن واحد)
@@ -17,11 +27,16 @@
 
 'use strict';
 
+var fs = require('fs');
 var path = require('path');
 var Database = require('better-sqlite3');
 var logger = require('../utils/logger');
 
-var DB_PATH = path.join(__dirname, '..', 'agp-data.sqlite');
+var RENDER_DISK_MOUNT_PATH = '/var/data';
+var DB_DIR = fs.existsSync(RENDER_DISK_MOUNT_PATH) ? RENDER_DISK_MOUNT_PATH : path.join(__dirname, '..');
+var DB_PATH = path.join(DB_DIR, 'agp-data.sqlite');
+
+logger.log('Database: using ' + (DB_DIR === RENDER_DISK_MOUNT_PATH ? 'persistent Render disk' : 'local (non-persistent) path') + ' — ' + DB_PATH);
 
 var db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL'); // أداء أفضل مع كتابة متزامنة أثناء البث
