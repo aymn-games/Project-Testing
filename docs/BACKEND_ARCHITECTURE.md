@@ -365,9 +365,11 @@ user's row returned by `auth-service.validateSession`):
 | POST | `/api/auth/tiktok/link` | ✓ | `linkTikTokUsername()` |
 | POST | `/api/auth/tiktok/verification-code` | ✓ | `generateVerificationCode()` |
 | POST | `/api/auth/tiktok/verify` | ✓ | `verifyTikTokOwnership()` |
-| POST | `/api/auth/custom-id` | ✓ | `setCustomId()` |
+| POST | `/api/auth/custom-id` | ✓ | `setCustomId()` (own account only) |
 | GET | `/api/admin/users` | ✓ Admin | `listAllUsersWithStats()` |
 | POST | `/api/admin/permissions` | ✓ Admin | `setPermission()` |
+| POST | `/api/admin/custom-id` | ✓ Admin | `setCustomId()` (any userId) |
+| GET | `/api/profile?id=<customId>` | — | `getPublicProfile()` |
 
 **CORS**: sessions travel over `Authorization: Bearer`, never cookies —
 so there's no CSRF exposure from reflecting any request Origin, unlike a
