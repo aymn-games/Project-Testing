@@ -168,6 +168,33 @@
         return request('/api/profile?id=' + encodeURIComponent(customId), { method: 'GET' });
     }
 
+    /**
+     * هل هذا المستخدم يقدر يدخل لوحة الستريمر (dashboard-core)؟ حصراً
+     * حساب الأدمن — أي حساب آخر (عادي أو ستريمر موافَق عليه) يُحوَّل
+     * دائماً لصفحة بروفايله العامة بدل اللوحة. راجع docs/CHANGELOG.md.
+     * @param {Object} user
+     * @returns {boolean}
+     */
+    function canAccessDashboard(user) {
+        return Boolean(user && user.role === 'admin');
+    }
+
+    /**
+     * هل هذا المستخدم يقدر "يفتح" الألعاب (أزرار "العب الآن" بالصفحة
+     * الرئيسية)؟ الأدمن دائماً يقدر، أو أي حساب وافق له الأدمن صراحة
+     * على صلاحية can_run_games من admin.html (راجع setPermission/
+     * adminSetPermission). تسجيل الحساب كـ"يبي يكون ستريمر" (مربع
+     * الاختيار بصفحة signup.html) مجرّد طلب أولي لا يمنح فتح الألعاب
+     * تلقائياً — الموافقة الفعلية دايماً من الأدمن.
+     * @param {Object} user
+     * @returns {boolean}
+     */
+    function canPlayGames(user) {
+        if (!user) return false;
+        if (user.role === 'admin') return true;
+        return Boolean(user.permissions && user.permissions.can_run_games);
+    }
+
     /* ----------------------------------------------------------------------
      * حرّاس صفحات — تُستدعى في أول سطر من أي صفحة محمية
      * ---------------------------------------------------------------------- */
@@ -234,6 +261,8 @@
         adminSetPermission: adminSetPermission,
         adminSetCustomId: adminSetCustomId,
         getPublicProfile: getPublicProfile,
+        canAccessDashboard: canAccessDashboard,
+        canPlayGames: canPlayGames,
         requireAuth: requireAuth,
         requireAdmin: requireAdmin
     };
