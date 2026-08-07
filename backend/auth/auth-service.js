@@ -30,6 +30,22 @@ function isValidEmail(email) {
 }
 
 /**
+ * رقم عرض عام (Public ID) — رقم عشوائي من 8 أرقام على الأقل، فريد بكل
+ * قاعدة البيانات. يُولَّد تلقائياً لكل حساب جديد (signup أو أول دخول
+ * بجوجل)، ويُستخدم كـ custom_id الافتراضي — يبقى نفس العمود، فقط الآن
+ * يُملأ تلقائياً بدل ما يُترَك فارغاً. الأدمن أو المستخدم نفسه يقدر
+ * يغيّره لاحقاً عبر setCustomId (نفس الدالة أدناه، بدون أي تعديل عليها).
+ * @returns {string}
+ */
+function generatePublicId() {
+    var id;
+    do {
+        id = String(Math.floor(10000000 + Math.random() * 90000000)); // 10000000–99999999
+    } while (db.prepare('SELECT id FROM users WHERE custom_id = ?').get(id));
+    return id;
+}
+
+/**
  * إنشاء حساب جديد.
  * @param {boolean} [wantsToBeStreamer] - زر التفعيل بصفحة إنشاء الحساب
  * @returns {{success: boolean, user?: Object, error?: string}}
@@ -50,13 +66,14 @@ function signup(username, email, plainPassword, wantsToBeStreamer) {
     var isStreamer = wantsToBeStreamer ? 1 : 0;
 
     var hash = password.hashPassword(plainPassword);
+    var publicId = generatePublicId();
     var info = db.prepare(
-        'INSERT INTO users (username, email, password_hash, role, is_streamer, created_at) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(username, email, hash, role, isStreamer, now());
+        'INSERT INTO users (username, email, password_hash, role, is_streamer, custom_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run(username, email, hash, role, isStreamer, publicId, now());
 
-    logger.log('Auth: new user signed up: ' + username + ' (role: ' + role + ', streamer: ' + Boolean(isStreamer) + ')');
+    logger.log('Auth: new user signed up: ' + username + ' (role: ' + role + ', streamer: ' + Boolean(isStreamer) + ', id: ' + publicId + ')');
 
-    return { success: true, user: { id: info.lastInsertRowid, username: username, email: email, role: role, is_streamer: Boolean(isStreamer) } };
+    return { success: true, user: { id: info.lastInsertRowid, username: username, email: email, role: role, is_streamer: Boolean(isStreamer), custom_id: publicId } };
 }
 
 /**
@@ -76,7 +93,7 @@ function login(email, plainPassword) {
     return {
         success: true,
         token: token,
-        user: { id: user.id, username: user.username, email: user.email, role: user.role }
+        user: { id: user.id, username: user.username, email: user.email, role: user.role, custom_id: user.custom_id }
     };
 }
 
@@ -131,11 +148,12 @@ async function loginWithGoogle(idToken) {
             while (db.prepare('SELECT id FROM users WHERE username = ?').get(username)) {
                 username = baseUsername + suffix++;
             }
+            var publicId = generatePublicId();
             var info = db.prepare(
-                'INSERT INTO users (username, email, google_id, role, created_at) VALUES (?, ?, ?, ?, ?)'
-            ).run(username, email, googleId, role, now());
-            existing = { id: info.lastInsertRowid, username: username, email: email, role: role };
-            logger.log('Auth: new user signed up via Google: ' + username + ' (role: ' + role + ')');
+                'INSERT INTO users (username, email, google_id, role, custom_id, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+            ).run(username, email, googleId, role, publicId, now());
+            existing = { id: info.lastInsertRowid, username: username, email: email, role: role, custom_id: publicId };
+            logger.log('Auth: new user signed up via Google: ' + username + ' (role: ' + role + ', id: ' + publicId + ')');
         }
     }
 
@@ -143,7 +161,7 @@ async function loginWithGoogle(idToken) {
     return {
         success: true,
         token: sessionToken,
-        user: { id: existing.id, username: existing.username, email: existing.email, role: existing.role }
+        user: { id: existing.id, username: existing.username, email: existing.email, role: existing.role, custom_id: existing.custom_id }
     };
 }
 
@@ -172,6 +190,39 @@ function setCustomId(userId, customId) {
 
     db.prepare('UPDATE users SET custom_id = ? WHERE id = ?').run(customId, userId);
     return { success: true };
+}
+
+/**
+ * بروفايل عام لأي مستخدم عبر الـID العام (custom_id) — بدون أي تسجيل
+ * دخول (مسار عام في auth-router.js). حقول آمنة للنشر فقط: لا بريد،
+ * لا صلاحيات، لا الآيدي الداخلي (id) — راجع docs/BACKEND_ARCHITECTURE.md §10.
+ * @param {string} customId
+ * @returns {Object|null}
+ */
+function getPublicProfile(customId) {
+    customId = (customId || '').trim();
+    if (!customId) return null;
+
+    var user = db.prepare(
+        'SELECT id, username, role, is_streamer, tiktok_username, tiktok_verified, custom_id, created_at FROM users WHERE custom_id = ?'
+    ).get(customId);
+    if (!user) return null;
+
+    var stats = getUserStats(user.id);
+    return {
+        custom_id: user.custom_id,
+        username: user.username,
+        role: user.role,
+        is_streamer: Boolean(user.is_streamer),
+        tiktok_username: user.tiktok_verified ? user.tiktok_username : null,
+        tiktok_verified: Boolean(user.tiktok_verified),
+        joined_at: user.created_at,
+        stats: {
+            total_broadcasts: stats.total_broadcasts,
+            total_gifts_value: stats.total_gifts_value,
+            total_players: stats.total_players
+        }
+    };
 }
 
 /* ----------------------------------------------------------------------
@@ -252,8 +303,17 @@ function validateSession(token) {
     var session = db.prepare('SELECT * FROM sessions WHERE token = ?').get(token);
     if (!session || session.expires_at < now()) return null;
 
-    var user = db.prepare('SELECT id, username, email, role, tiktok_username FROM users WHERE id = ?').get(session.user_id);
-    return user || null;
+    var user = db.prepare('SELECT id, username, email, role, tiktok_username, custom_id FROM users WHERE id = ?').get(session.user_id);
+    if (!user) return null;
+
+    // شفاء ذاتي: حسابات أُنشئت قبل ميزة الـID العام (custom_id) قد لا
+    // يكون لها واحد بعد — نولّد واحداً الآن بدل ما نتركه فارغاً.
+    if (!user.custom_id) {
+        user.custom_id = generatePublicId();
+        db.prepare('UPDATE users SET custom_id = ? WHERE id = ?').run(user.custom_id, user.id);
+    }
+
+    return user;
 }
 
 function logout(token) {
@@ -327,6 +387,12 @@ function getUserStats(userId) {
 function listAllUsersWithStats() {
     var users = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, custom_id, is_streamer, permissions, created_at FROM users ORDER BY created_at ASC').all();
     return users.map(function (u) {
+        // شفاء ذاتي — نفس منطق validateSession، حتى تظهر لوحة الأدمن
+        // دائماً IDً لكل حساب حتى القديم منه قبل هذه الميزة.
+        if (!u.custom_id) {
+            u.custom_id = generatePublicId();
+            db.prepare('UPDATE users SET custom_id = ? WHERE id = ?').run(u.custom_id, u.id);
+        }
         return Object.assign({}, u, {
             is_streamer: Boolean(u.is_streamer),
             permissions: JSON.parse(u.permissions || '{}'),
@@ -382,6 +448,7 @@ module.exports = {
     logout: logout,
     linkTikTokUsername: linkTikTokUsername,
     setCustomId: setCustomId,
+    getPublicProfile: getPublicProfile,
     generateVerificationCode: generateVerificationCode,
     verifyTikTokOwnership: verifyTikTokOwnership,
     startBroadcast: startBroadcast,
