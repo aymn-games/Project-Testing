@@ -4,46 +4,331 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إنشاء حساب — AGP</title>
-<link rel="stylesheet" href="dashboard-core/css/style.css">
-<link rel="stylesheet" href="auth/auth.css">
+
+<!--
+  ==========================================================================
+  AGP SIGNUP PAGE — تصميم جديد بنفس الهوية البصرية المستخدمة في
+  profile.html (تصميم مرجعي معتمد، لم يُغيَّر). ملف ذاتي الاكتفاء
+  (self-contained) بنفس فلسفة profile.html/index.html — لا اعتماد على
+  dashboard-core/css/style.css أو auth/auth.css، حتى لا يتأثر أي شيء آخر.
+
+  الوظيفة كما هي بالكامل: نفس AGPAuth.signup() ونفس تدفق تسجيل الدخول
+  التلقائي بعد إنشاء الحساب ونفس Google Identity Services — لا تعديل
+  على أي منها. الإضافات الوحيدة:
+    - حقل "تأكيد كلمة المرور": تحقق واجهة فقط (لا يُرسَل للخادم، الخادم
+      أصلاً يستقبل كلمة مرور واحدة فقط).
+    - اختيار نوع الحساب صار بشكل بطاقتين (لاعب/استريمر) بدل Checkbox،
+      لكن يُترجَم لنفس المتغيّر wantsToBeStreamer المُرسَل لـ
+      AGPAuth.signup() تماماً كالسابق — **لا يمنح صلاحية ستريمر فعلية**،
+      فقط طلب أولي كما كان الـCheckbox (الموافقة الفعلية تبقى من الأدمن
+      عبر can_run_games، راجع docs/CHANGELOG.md). الافتراضي الآن "لاعب"
+      بدل "استريمر" (كان الـCheckbox مُفعَّلاً افتراضياً سابقاً) تماشياً
+      مع التصميم المرجعي.
+  ==========================================================================
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --bg-primary: #1A0F1F;
+        --bg-secondary: #2D1340;
+        --purple: #7B2CBF;
+        --pink: #FF6EC7;
+        --pink-light: #FF9CF1;
+        --text-primary: #FFFFFF;
+        --text-secondary: #B38BC7;
+        --card-bg: #3A1A4D;
+        --gradient: linear-gradient(90deg, #7B2CBF, #FF6EC7);
+        --card-border: rgba(255, 110, 199, 0.35);
+        --card-shadow: 0 20px 40px rgba(0, 0, 0, 0.35), 0 0 20px rgba(255, 110, 199, 0.2);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 55%);
+        background-attachment: fixed;
+        color: var(--text-primary);
+        font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+        overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .au-wrap {
+        max-width: 460px;
+        margin: 0 auto;
+        padding: 32px 16px 48px;
+    }
+
+    .au-brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 22px;
+    }
+    .au-brand-badge {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: var(--gradient);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 16px;
+        color: #fff;
+    }
+    .au-brand-name { font-weight: 700; font-size: 16px; }
+
+    .au-card {
+        border-radius: 16px;
+        border: 1px solid var(--card-border);
+        background: rgba(45, 19, 64, 0.65);
+        box-shadow: var(--card-shadow);
+        padding: 28px 24px;
+    }
+
+    .au-title {
+        font-size: 24px;
+        font-weight: 700;
+        text-align: center;
+        margin: 0 0 6px;
+    }
+    .au-subtitle {
+        font-size: 13px;
+        color: var(--text-secondary);
+        text-align: center;
+        margin: 0 0 20px;
+    }
+
+    .au-message {
+        display: none;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 13px;
+        margin-bottom: 16px;
+        text-align: center;
+    }
+    .au-message--visible { display: block; }
+    .au-message--error { background: rgba(255, 110, 199, 0.12); color: var(--pink-light); border: 1px solid var(--card-border); }
+    .au-message--ok { background: rgba(158, 247, 194, 0.1); color: #9ef7c2; border: 1px solid rgba(158, 247, 194, 0.3); }
+
+    .au-field { margin-bottom: 16px; }
+    .au-field label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+    }
+    .au-input-wrap { position: relative; }
+    .au-input-wrap .au-icon {
+        position: absolute;
+        top: 50%;
+        right: 16px;
+        transform: translateY(-50%);
+        font-size: 14px;
+        color: var(--text-secondary);
+        pointer-events: none;
+    }
+    .au-input-wrap input {
+        width: 100%;
+        height: 48px;
+        border-radius: 12px;
+        border: 1px solid var(--card-border);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text-primary);
+        padding: 0 44px 0 44px;
+        font-size: 14px;
+        font-family: inherit;
+    }
+    .au-input-wrap input::placeholder { color: var(--text-secondary); opacity: 0.7; }
+    .au-input-wrap input:focus { outline: none; border-color: var(--pink); }
+    .au-input-wrap .au-eye-toggle {
+        position: absolute;
+        top: 50%;
+        left: 14px;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 15px;
+        padding: 4px;
+    }
+    .au-hint { font-size: 11.5px; color: var(--text-secondary); margin-top: 6px; }
+
+    /* نوع الحساب — بطاقتان قابلتان للاختيار (Radio مخفي) */
+    .au-account-type { margin-bottom: 18px; }
+    .au-account-type > label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+    .au-type-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .au-type-card {
+        cursor: pointer;
+        border-radius: 12px;
+        border: 1.5px solid var(--card-border);
+        background: rgba(255, 255, 255, 0.03);
+        padding: 14px 10px;
+        text-align: center;
+        transition: border-color .15s, box-shadow .15s;
+    }
+    .au-type-card input { position: absolute; opacity: 0; pointer-events: none; }
+    .au-type-card .au-type-icon { font-size: 20px; margin-bottom: 6px; }
+    .au-type-card .au-type-label { font-weight: 600; font-size: 14px; margin-bottom: 3px; }
+    .au-type-card .au-type-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
+    .au-type-card.is-selected {
+        border-color: var(--pink);
+        box-shadow: 0 0 14px rgba(255, 110, 199, 0.25);
+        background: rgba(255, 110, 199, 0.06);
+    }
+
+    .au-btn {
+        width: 100%;
+        height: 48px;
+        border-radius: 14px;
+        border: none;
+        font-family: inherit;
+        font-weight: 600;
+        font-size: 16px;
+        cursor: pointer;
+    }
+    .au-btn--primary {
+        background: var(--gradient);
+        color: #fff;
+        box-shadow: 0 0 14px rgba(255, 110, 199, 0.25);
+    }
+    .au-btn--primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .au-divider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text-secondary);
+        font-size: 12.5px;
+        margin: 18px 0;
+    }
+    .au-divider::before, .au-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--card-border);
+    }
+
+    .au-google-wrap { display: flex; justify-content: center; }
+    .au-google-btn {
+        width: 100%;
+        min-height: 44px;
+        border-radius: 14px;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+    }
+
+    .au-footer {
+        text-align: center;
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-top: 18px;
+    }
+    .au-footer a { color: var(--pink-light); font-weight: 600; }
+    .au-footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 420px) {
+        .au-card { padding: 22px 16px; }
+        .au-type-options { grid-template-columns: 1fr; }
+    }
+</style>
 </head>
-<body class="auth-body">
+<body>
 
-<div class="panel auth-card">
-    <div class="auth-brand">
-        <span class="topbar-logo">AGP</span>
+<div class="au-wrap">
+    <div class="au-brand">
+        <span class="au-brand-badge">A</span>
+        <span class="au-brand-name">ألعاب أيمن</span>
     </div>
-    <h1 class="auth-title">إنشاء حساب جديد</h1>
 
-    <div class="auth-message" id="auth-message"></div>
+    <div class="au-card">
+        <h1 class="au-title">إنشاء حساب جديد</h1>
+        <p class="au-subtitle">انضم لمنصة ألعاب أيمن وابدأ اللعب أو البث الآن</p>
 
-    <form id="signup-form">
-        <div class="field">
-            <label for="username">اسم المستخدم</label>
-            <input type="text" id="username" required minlength="3" autocomplete="username">
+        <div class="au-message" id="auth-message"></div>
+
+        <form id="signup-form">
+            <div class="au-field">
+                <label for="username">اسم المستخدم</label>
+                <div class="au-input-wrap">
+                    <span class="au-icon">👤</span>
+                    <input type="text" id="username" required minlength="3" autocomplete="username" placeholder="اكتب اسم المستخدم">
+                </div>
+            </div>
+
+            <div class="au-field">
+                <label for="email">البريد الإلكتروني</label>
+                <div class="au-input-wrap">
+                    <span class="au-icon">✉️</span>
+                    <input type="email" id="email" required autocomplete="email" placeholder="اكتب بريدك الإلكتروني">
+                </div>
+            </div>
+
+            <div class="au-field">
+                <label for="password">كلمة المرور</label>
+                <div class="au-input-wrap">
+                    <span class="au-icon">🔒</span>
+                    <input type="password" id="password" required minlength="8" autocomplete="new-password" placeholder="اكتب كلمة المرور">
+                    <button type="button" class="au-eye-toggle" data-toggle-for="password">👁</button>
+                </div>
+                <div class="au-hint">٨ أحرف على الأقل.</div>
+            </div>
+
+            <div class="au-field">
+                <label for="password-confirm">تأكيد كلمة المرور</label>
+                <div class="au-input-wrap">
+                    <span class="au-icon">🔒</span>
+                    <input type="password" id="password-confirm" required autocomplete="new-password" placeholder="أعد كتابة كلمة المرور">
+                    <button type="button" class="au-eye-toggle" data-toggle-for="password-confirm">👁</button>
+                </div>
+            </div>
+
+            <div class="au-account-type">
+                <label>نوع الحساب</label>
+                <div class="au-type-options">
+                    <label class="au-type-card" id="type-card-player">
+                        <input type="radio" name="account-type" value="player" checked>
+                        <div class="au-type-icon">🎮</div>
+                        <div class="au-type-label">لاعب</div>
+                        <div class="au-type-desc">للعب والتفاعل في الألعاب</div>
+                    </label>
+                    <label class="au-type-card" id="type-card-streamer">
+                        <input type="radio" name="account-type" value="streamer">
+                        <div class="au-type-icon">📡</div>
+                        <div class="au-type-label">استريمر</div>
+                        <div class="au-type-desc">لبث الألعاب والتفاعل مع الجمهور</div>
+                    </label>
+                </div>
+                <div class="au-hint" id="streamer-note" style="display:none;">
+                    اختيار "استريمر" طلب أولي فقط — الحساب يبقى لاعباً حتى يوافق الأدمن على تفعيل صلاحية الستريمر.
+                </div>
+            </div>
+
+            <button type="submit" class="au-btn au-btn--primary" id="signup-submit">إنشاء الحساب</button>
+        </form>
+
+        <div class="au-divider">أو</div>
+
+        <div class="au-google-wrap">
+            <div class="au-google-btn" id="google-signin-btn"></div>
         </div>
-        <div class="field">
-            <label for="email">البريد الإلكتروني</label>
-            <input type="email" id="email" required autocomplete="email">
+
+        <div class="au-footer">
+            عندك حساب فعلاً؟ <a href="login.html">سجّل دخولك</a>
         </div>
-        <div class="field">
-            <label for="password">كلمة المرور</label>
-            <input type="password" id="password" required minlength="8" autocomplete="new-password">
-            <div class="sidebar-hint">٨ أحرف على الأقل.</div>
-        </div>
-        <label class="field-checkbox">
-            <input type="checkbox" id="wants-streamer" checked>
-            أبي أشتغل كستريمر على المنصة
-        </label>
-        <button type="submit" class="btn btn-primary btn-block" id="signup-submit">إنشاء الحساب</button>
-    </form>
-
-    <div class="auth-divider">أو</div>
-
-    <div class="auth-google-btn" id="google-signin-btn"></div>
-
-    <div class="auth-footer">
-        عندك حساب فعلاً؟ <a href="login.html">سجّل دخولك</a>
     </div>
 </div>
 
@@ -53,10 +338,8 @@
 'use strict';
 
 /**
- * صفحة إنشاء حساب — نفس منطق login.html بالضبط لناحية جوجل (تسجيل
- * الدخول بجوجل أول مرة = إنشاء حساب تلقائياً، راجع
- * auth-service.loginWithGoogle). أول حساب يُنشَأ بالنظام بالكامل يصبح
- * admin تلقائياً بصرف النظر عن طريقة الإنشاء (راجع auth-service.js).
+ * منطق إنشاء الحساب — نفس AGPAuth.signup()/login() بالضبط، لم يتغيّر
+ * شيء بالتدفق سوى شكل الحقول. راجع docs/CHANGELOG.md.
  */
 (function () {
     var GOOGLE_CLIENT_ID = '777683353907-hkemaaft5t7mktgtjvlf47ptuqk93qbg.apps.googleusercontent.com';
@@ -67,7 +350,7 @@
 
     function showMessage(text, type) {
         messageEl.textContent = text;
-        messageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+        messageEl.className = 'au-message au-message--visible au-message--' + type;
     }
 
     var ERROR_LABELS = {
@@ -93,14 +376,46 @@
         });
     }
 
+    // إظهار/إخفاء كلمة المرور — عنصر واجهة بحت، لا علاقة له بالبيانات المُرسَلة.
+    Array.prototype.forEach.call(document.querySelectorAll('.au-eye-toggle'), function (btn) {
+        btn.addEventListener('click', function () {
+            var input = document.getElementById(btn.getAttribute('data-toggle-for'));
+            input.type = input.type === 'password' ? 'text' : 'password';
+        });
+    });
+
+    // بطاقات نوع الحساب — تحديث شكل الاختيار + ملاحظة توضيحية لو "استريمر".
+    var typeCards = [document.getElementById('type-card-player'), document.getElementById('type-card-streamer')];
+    var streamerNote = document.getElementById('streamer-note');
+    function refreshTypeCards() {
+        typeCards.forEach(function (card) {
+            var input = card.querySelector('input');
+            card.classList.toggle('is-selected', input.checked);
+        });
+        streamerNote.style.display = document.getElementById('type-card-streamer').querySelector('input').checked ? '' : 'none';
+    }
+    typeCards.forEach(function (card) {
+        card.querySelector('input').addEventListener('change', refreshTypeCards);
+    });
+    refreshTypeCards();
+
     form.addEventListener('submit', function (event) {
         event.preventDefault();
-        submitBtn.disabled = true;
 
         var username = document.getElementById('username').value.trim();
         var email = document.getElementById('email').value.trim();
         var password = document.getElementById('password').value;
-        var wantsStreamer = document.getElementById('wants-streamer').checked;
+        var passwordConfirm = document.getElementById('password-confirm').value;
+        var wantsStreamer = document.getElementById('type-card-streamer').querySelector('input').checked;
+
+        // تحقق واجهة فقط — لا يُرسَل شيء إضافي للخادم (الخادم يستقبل
+        // كلمة مرور واحدة فقط كما كان دائماً).
+        if (password !== passwordConfirm) {
+            showMessage('كلمتا المرور غير متطابقتين.', 'error');
+            return;
+        }
+
+        submitBtn.disabled = true;
 
         AGPAuth.signup(username, email, password, wantsStreamer)
             .then(function (result) {
