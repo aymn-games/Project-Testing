@@ -59,14 +59,20 @@
         messageEl.className = 'auth-message auth-message--visible auth-message--' + type;
     }
 
-    function goToDashboard() {
-        window.location.href = 'dashboard-core/index.html';
+    // اللوحة حصراً لحساب الأدمن — أي حساب آخر يروح لبروفايله العام
+    // بدل اللوحة. راجع AGPAuth.canAccessDashboard وdocs/CHANGELOG.md.
+    function goAfterAuth(user) {
+        if (AGPAuth.canAccessDashboard(user)) {
+            window.location.href = 'dashboard-core/index.html';
+        } else {
+            window.location.href = 'profile.html?id=' + encodeURIComponent((user && user.custom_id) || '');
+        }
     }
 
     // لو Token محلي موجود وصالح فعلاً، لا داعي لعرض نموذج الدخول من جديد.
     if (AGPAuth.getToken()) {
         AGPAuth.me().then(function (result) {
-            if (result.success) goToDashboard();
+            if (result.success) goAfterAuth(result.user);
         });
     }
 
@@ -76,7 +82,7 @@
         AGPAuth.login(document.getElementById('email').value.trim(), document.getElementById('password').value)
             .then(function (result) {
                 if (result.success) {
-                    goToDashboard();
+                    goAfterAuth(result.user);
                     return;
                 }
                 showMessage('بيانات الدخول غير صحيحة.', 'error');
@@ -97,7 +103,7 @@
             callback: function (response) {
                 AGPAuth.loginWithGoogle(response.credential).then(function (result) {
                     if (result.success) {
-                        goToDashboard();
+                        goAfterAuth(result.user);
                         return;
                     }
                     showMessage('تعذّر الدخول عبر جوجل: ' + (result.error || 'unknown'), 'error');
