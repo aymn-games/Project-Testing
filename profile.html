@@ -4,37 +4,616 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>بروفايل — AGP</title>
-<link rel="stylesheet" href="dashboard-core/css/style.css">
-<link rel="stylesheet" href="auth/auth.css">
+
+<!--
+  ==========================================================================
+  AGP PROFILE PAGE — إعادة تصميم كاملة (مستقلة تماماً عن باقي الصفحات)
+  ==========================================================================
+  ملف واحد ذاتي الاكتفاء (self-contained): لا يستخدم dashboard-core/css/
+  style.css ولا auth/auth.css — نفس فلسفة index.html (كل صفحة لها نمطها
+  الخاص) حتى لا يؤثر أي تعديل هنا على أي صفحة أخرى بالمشروع، ولا العكس.
+
+  البيانات: كل شيء يمر عبر window.AGPAuth.getPublicProfile(customId) —
+  دالة موجودة أصلاً في auth/auth-client.js، لم تُعدَّل. الخصوصية الفعلية
+  (من يشوف ماذا) تُطبَّق بالكامل من الخادم (backend/http/auth-router.js
+  → handlePublicProfile): لو الطلب مرفق بـ Token صاحب الحساب أو الأدمن،
+  يرجع بروفايل كامل؛ غير ذلك يرجع {username, custom_id, restricted:true}
+  فقط. هذا الملف لا "يقرر" الخصوصية — فقط يعرض حسب شكل الاستجابة.
+
+  بيانات غير موجودة فعلياً في قاعدة البيانات (XP/Level نظام اللاعب،
+  SP/Level نظام الستريمر، تحليلات الجمهور، أفضل اللحظات، الإنجازات،
+  البث القادم، المقتنيات/الإطارات/الشارات) تُعرض بوضوح كـ"قريباً" —
+  بدون أي أرقام وهمية، وبدون أي تعديل على Backend (حسب توجيه صاحب
+  المشروع). البيانات الست الحقيقية المتاحة فعلاً من getUserStats() في
+  auth-service.js (عدد البثوث، إجمالي مدة البث، الهدايا وقيمتها،
+  المتابعين الجدد، عدد اللاعبين المنضمين) تُعرض كما هي.
+  ==========================================================================
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --bg-primary: #1A0F1F;
+        --bg-secondary: #2D1340;
+        --purple: #7B2CBF;
+        --pink: #FF6EC7;
+        --pink-light: #FF9CF1;
+        --text-primary: #FFFFFF;
+        --text-secondary: #B38BC7;
+        --card-bg: #3A1A4D;
+        --gradient: linear-gradient(90deg, #7B2CBF, #FF6EC7);
+        --card-border: rgba(255, 110, 199, 0.35);
+        --card-shadow: 0 20px 40px rgba(0, 0, 0, 0.35), 0 0 20px rgba(255, 110, 199, 0.2);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 55%);
+        background-attachment: fixed;
+        color: var(--text-primary);
+        font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+        overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .pp-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        position: sticky;
+        top: 0;
+        background: rgba(26, 15, 31, 0.85);
+        backdrop-filter: blur(8px);
+        z-index: 20;
+    }
+
+    .pp-logo {
+        font-weight: 700;
+        font-size: 18px;
+        background: var(--gradient);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .pp-home-link {
+        font-size: 13px;
+        color: var(--text-secondary);
+        border: 1px solid var(--card-border);
+        border-radius: 10px;
+        padding: 7px 14px;
+        transition: color .15s, border-color .15s;
+    }
+    .pp-home-link:hover { color: var(--pink-light); border-color: var(--pink); }
+
+    .pp-container {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 24px 16px 64px;
+    }
+
+    /* ---- حالات التحميل / غير موجود ---- */
+    .pp-state {
+        text-align: center;
+        padding: 80px 16px;
+        color: var(--text-secondary);
+        font-size: 14px;
+    }
+    .pp-state--error { color: var(--pink-light); }
+
+    /* ---- بطاقات عامة ---- */
+    .pp-card {
+        border-radius: 16px;
+        border: 1px solid var(--card-border);
+        background: rgba(45, 19, 64, 0.65);
+        box-shadow: var(--card-shadow);
+        padding: 20px;
+    }
+
+    /* ---- رأس البروفايل ---- */
+    .pp-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .pp-avatar {
+        width: 84px;
+        height: 84px;
+        min-width: 84px;
+        border-radius: 50%;
+        background: var(--gradient);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        font-weight: 700;
+        color: #fff;
+        box-shadow: 0 0 20px rgba(255, 110, 199, 0.25);
+    }
+
+    .pp-header-info { flex: 1; min-width: 200px; }
+
+    .pp-username {
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0 0 4px;
+        line-height: 1.25;
+        word-break: break-word;
+    }
+
+    .pp-id-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        color: var(--text-secondary);
+        font-size: 13px;
+        margin-bottom: 10px;
+    }
+
+    .pp-id-row .mono { font-family: 'Courier New', monospace; letter-spacing: .5px; }
+
+    .pp-copy-btn {
+        background: transparent;
+        border: 1px solid var(--card-border);
+        color: var(--text-secondary);
+        border-radius: 8px;
+        padding: 3px 9px;
+        font-size: 11.5px;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    .pp-copy-btn:hover { color: var(--pink-light); border-color: var(--pink); }
+
+    .pp-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+
+    .pp-badge {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--card-border);
+        color: var(--text-secondary);
+        background: rgba(255, 255, 255, 0.03);
+    }
+    .pp-badge--admin { background: var(--gradient); color: #fff; border: none; }
+    .pp-badge--streamer { border-color: var(--pink); color: var(--pink-light); }
+    .pp-badge--approved { color: #9ef7c2; border-color: rgba(158, 247, 194, 0.4); }
+    .pp-badge--pending { color: #ffd699; border-color: rgba(255, 214, 153, 0.4); }
+
+    .pp-joined { font-size: 12.5px; color: var(--text-secondary); }
+
+    /* ---- مستويات (Player / Streamer) — قريباً ---- */
+    .pp-levels {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-top: 16px;
+    }
+    @media (max-width: 560px) { .pp-levels { grid-template-columns: 1fr; } }
+
+    .pp-level-box {
+        border-radius: 12px;
+        border: 1px solid var(--card-border);
+        background: rgba(255, 255, 255, 0.03);
+        padding: 12px 14px;
+    }
+    .pp-level-title {
+        font-size: 12.5px;
+        color: var(--text-secondary);
+        margin-bottom: 6px;
+        display: flex;
+        justify-content: space-between;
+    }
+    .pp-level-soon { font-size: 11px; color: var(--pink-light); }
+    .pp-progress-track {
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        overflow: hidden;
+    }
+    .pp-progress-fill {
+        height: 100%;
+        width: 0%;
+        border-radius: 999px;
+        background: var(--gradient);
+        opacity: 0.35;
+    }
+
+    /* ---- تبويبات ---- */
+    .pp-tabs {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        margin: 22px 0 16px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .pp-tabs::-webkit-scrollbar { display: none; }
+
+    .pp-tab-btn {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        background: transparent;
+        border: 1px solid var(--card-border);
+        color: var(--text-secondary);
+        border-radius: 12px;
+        padding: 9px 18px;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s, color .15s;
+    }
+    .pp-tab-btn.is-active {
+        background: var(--gradient);
+        color: #fff;
+        border-color: transparent;
+    }
+
+    .pp-tab-panel { display: none; }
+    .pp-tab-panel.is-active { display: block; }
+
+    /* ---- شبكات إحصائيات ---- */
+    .pp-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 14px;
+        margin-bottom: 16px;
+    }
+
+    .pp-stat-card {
+        border-radius: 14px;
+        border: 1px solid var(--card-border);
+        background: rgba(255, 255, 255, 0.03);
+        padding: 14px 16px;
+        text-align: center;
+    }
+    .pp-stat-value { font-size: 22px; font-weight: 700; color: var(--pink-light); margin-bottom: 4px; }
+    .pp-stat-label { font-size: 12.5px; color: var(--text-secondary); }
+
+    .pp-section-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0 0 12px;
+        color: var(--text-primary);
+    }
+
+    .pp-block { margin-bottom: 18px; }
+
+    /* ---- سطر معلومة (حساب/تيك توك) ---- */
+    .pp-info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        font-size: 13.5px;
+    }
+    .pp-info-row:last-child { border-bottom: none; }
+    .pp-info-row .pp-info-label { color: var(--text-secondary); }
+    .pp-info-row .pp-info-value { color: var(--text-primary); font-weight: 600; }
+
+    /* ---- نموذج تيك توك (نفس منطق dashboard-auth.js، شكل جديد فقط) ---- */
+    .pp-field { margin-bottom: 10px; }
+    .pp-field label { display: block; font-size: 12.5px; color: var(--text-secondary); margin-bottom: 6px; }
+    .pp-field input {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--card-border);
+        border-radius: 10px;
+        color: var(--text-primary);
+        padding: 10px 12px;
+        font-size: 13.5px;
+        font-family: inherit;
+    }
+    .pp-field input:focus { outline: none; border-color: var(--pink); }
+
+    .pp-btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+
+    .pp-btn {
+        height: 44px;
+        padding: 0 20px;
+        border-radius: 14px;
+        font-family: inherit;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        border: none;
+    }
+    .pp-btn--primary {
+        background: var(--gradient);
+        color: #fff;
+        box-shadow: 0 0 14px rgba(255, 110, 199, 0.25);
+    }
+    .pp-btn--primary:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+    .pp-btn--secondary {
+        background: transparent;
+        color: var(--pink-light);
+        border: 1px solid var(--pink);
+    }
+
+    .pp-status-note { font-size: 12.5px; margin-top: 8px; min-height: 16px; }
+    .pp-status-note--ok { color: #9ef7c2; }
+    .pp-status-note--err { color: #ffb1b1; }
+
+    .pp-code-box {
+        font-family: 'Courier New', monospace;
+        font-size: 15px;
+        letter-spacing: 2px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 8px 12px;
+        display: inline-block;
+        margin-top: 6px;
+    }
+
+    /* ---- "قريباً" placeholders ---- */
+    .pp-soon-card {
+        border-radius: 14px;
+        border: 1px dashed var(--card-border);
+        background: rgba(255, 255, 255, 0.02);
+        padding: 22px 16px;
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 13.5px;
+    }
+    .pp-soon-card .pp-soon-badge {
+        display: inline-block;
+        background: var(--gradient);
+        color: #fff;
+        font-size: 11.5px;
+        font-weight: 700;
+        border-radius: 999px;
+        padding: 3px 12px;
+        margin-bottom: 8px;
+    }
+
+    /* ---- تخطيط الشبكتين (رئيسي + جانبي) ---- */
+    .pp-layout {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 18px;
+        align-items: start;
+    }
+    @media (max-width: 780px) {
+        .pp-layout { grid-template-columns: 1fr; }
+    }
+
+    .pp-side-card { margin-bottom: 18px; }
+
+    /* ---- بروفايل مقيَّد (غير مالك الحساب) ---- */
+    .pp-restricted-wrap {
+        max-width: 420px;
+        margin: 40px auto 0;
+        text-align: center;
+    }
+    .pp-restricted-wrap .pp-avatar { margin: 0 auto 14px; }
+    .pp-restricted-note {
+        margin-top: 18px;
+        font-size: 12.5px;
+        color: var(--text-secondary);
+        line-height: 1.9;
+    }
+    .pp-restricted-note a { color: var(--pink-light); }
+    .pp-restricted-note a:hover { text-decoration: underline; }
+</style>
 </head>
-<body class="auth-body">
+<body>
 
-<div class="panel auth-card" style="max-width:420px;">
-    <div class="auth-brand">
-        <span class="topbar-logo">AGP</span>
-    </div>
+<div class="pp-topbar">
+    <span class="pp-logo">AGP</span>
+    <a class="pp-home-link" href="index.html">الرئيسية</a>
+</div>
 
-    <div class="auth-title" id="profile-loading">جاري التحميل…</div>
-    <div class="auth-message auth-message--visible auth-message--error" id="profile-not-found" style="display:none;">
+<div class="pp-container">
+
+    <div class="pp-state" id="pp-loading">جاري تحميل البروفايل…</div>
+    <div class="pp-state pp-state--error" id="pp-not-found" style="display:none;">
         هذا الحساب غير موجود، أو الرابط غير صحيح.
     </div>
 
-    <div id="profile-content" style="display:none;">
-        <h1 class="auth-title" id="profile-username">—</h1>
-        <div style="text-align:center; margin-bottom:16px;">
-            <span class="badge" id="profile-role">—</span>
-            <span class="badge" id="profile-streamer-badge" style="display:none;">Streamer</span>
+    <!-- بروفايل مقيَّد — لأي زائر ليس صاحب الحساب ولا أدمن -->
+    <div class="pp-restricted-wrap" id="pp-restricted" style="display:none;">
+        <div class="pp-card">
+            <div class="pp-avatar" id="pp-r-avatar">?</div>
+            <div class="pp-username" id="pp-r-username">—</div>
+            <div class="pp-id-row" style="justify-content:center;">
+                <span>ID: #<span class="mono" id="pp-r-id">—</span></span>
+            </div>
+            <div class="pp-level-box" style="margin-top:14px;">
+                <div class="pp-level-title">
+                    <span>المستوى</span>
+                    <span class="pp-level-soon">قريباً</span>
+                </div>
+                <div class="pp-progress-track"><div class="pp-progress-fill"></div></div>
+            </div>
         </div>
-
-        <div class="stat"><span class="stat-label">الـID العام</span><span class="stat-value mono" id="profile-custom-id">—</span></div>
-        <div class="stat" id="profile-tiktok-row" style="display:none;"><span class="stat-label">تيك توك</span><span class="stat-value" id="profile-tiktok">—</span></div>
-        <div class="stat"><span class="stat-label">تاريخ الانضمام</span><span class="stat-value" id="profile-joined">—</span></div>
-        <div class="stat"><span class="stat-label">عدد البثوث</span><span class="stat-value" id="profile-broadcasts">0</span></div>
-        <div class="stat"><span class="stat-label">إجمالي قيمة الهدايا</span><span class="stat-value" id="profile-gifts-value">0</span></div>
+        <div class="pp-restricted-note">
+            بقية معلومات هذا البروفايل خاصة بصاحب الحساب فقط.<br>
+            إذا كان هذا حسابك، <a href="login.html">سجّل دخولك</a> لعرض كامل بياناتك.
+        </div>
     </div>
 
-    <div class="auth-footer">
-        <a href="index.html">الرجوع للصفحة الرئيسية</a>
+    <!-- بروفايل كامل — لصاحب الحساب أو الأدمن -->
+    <div id="pp-full" style="display:none;">
+
+        <div class="pp-card pp-header">
+            <div class="pp-avatar" id="pp-avatar">?</div>
+            <div class="pp-header-info">
+                <h1 class="pp-username" id="pp-username">—</h1>
+                <div class="pp-id-row">
+                    <span>ID: #<span class="mono" id="pp-id">—</span></span>
+                    <button type="button" class="pp-copy-btn" id="pp-copy-id">نسخ</button>
+                </div>
+                <div class="pp-badges" id="pp-badges"></div>
+                <div class="pp-joined" id="pp-joined">—</div>
+            </div>
+        </div>
+
+        <div class="pp-card" style="margin-top:14px;">
+            <div class="pp-levels">
+                <div class="pp-level-box">
+                    <div class="pp-level-title"><span>مستوى اللاعب (XP)</span><span class="pp-level-soon">قريباً</span></div>
+                    <div class="pp-progress-track"><div class="pp-progress-fill"></div></div>
+                </div>
+                <div class="pp-level-box">
+                    <div class="pp-level-title"><span>مستوى الستريمر (SP)</span><span class="pp-level-soon">قريباً</span></div>
+                    <div class="pp-progress-track"><div class="pp-progress-fill"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pp-tabs" id="pp-tabs">
+            <button type="button" class="pp-tab-btn is-active" data-tab="player">معلومات اللاعب</button>
+            <button type="button" class="pp-tab-btn" data-tab="streamer" id="pp-tab-streamer-btn" style="display:none;">معلومات الستريمر</button>
+            <button type="button" class="pp-tab-btn" data-tab="collectibles">المقتنيات</button>
+        </div>
+
+        <!-- تبويب: معلومات اللاعب -->
+        <div class="pp-tab-panel is-active" data-panel="player">
+            <div class="pp-layout">
+                <div>
+                    <div class="pp-card pp-block">
+                        <div class="pp-section-title">إحصائيات اللاعب</div>
+                        <div class="pp-soon-card">
+                            <span class="pp-soon-badge">قريباً</span><br>
+                            عدد الألعاب، الفوز، المشاركات، ونسبة الفوز — بانتظار نظام تتبّع الألعاب.
+                        </div>
+                    </div>
+
+                    <div class="pp-card pp-block">
+                        <div class="pp-section-title">كيف تكسب نقاط الخبرة (XP)؟</div>
+                        <div class="pp-soon-card">
+                            <span class="pp-soon-badge">قريباً</span><br>
+                            سيتم عرض طرق كسب الخبرة هنا فور تفعيل نظام المستويات.
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="pp-card pp-side-card">
+                        <div class="pp-section-title">معلومات الحساب</div>
+                        <div class="pp-info-row"><span class="pp-info-label">اسم المستخدم</span><span class="pp-info-value" id="pp-info-username">—</span></div>
+                        <div class="pp-info-row"><span class="pp-info-label">الدور</span><span class="pp-info-value" id="pp-info-role">—</span></div>
+                        <div class="pp-info-row"><span class="pp-info-label">تاريخ الانضمام</span><span class="pp-info-value" id="pp-info-joined">—</span></div>
+                        <div class="pp-info-row" id="pp-info-games-row">
+                            <span class="pp-info-label">صلاحية تشغيل الألعاب</span>
+                            <span class="pp-info-value" id="pp-info-can-play">—</span>
+                        </div>
+                    </div>
+
+                    <div class="pp-card pp-side-card" id="pp-tiktok-card">
+                        <div class="pp-section-title">حساب تيك توك</div>
+                        <div id="pp-tiktok-readonly" style="display:none;">
+                            <div class="pp-info-row"><span class="pp-info-label">الحالة</span><span class="pp-info-value" id="pp-tiktok-readonly-value">—</span></div>
+                        </div>
+                        <div id="pp-tiktok-owner-form" style="display:none;">
+                            <div class="pp-field">
+                                <label>يوزرنيم تيك توك</label>
+                                <input type="text" id="pp-tiktok-username" placeholder="username">
+                            </div>
+                            <div class="pp-btn-row">
+                                <button type="button" class="pp-btn pp-btn--secondary" id="pp-btn-tiktok-link">ربط</button>
+                                <button type="button" class="pp-btn pp-btn--secondary" id="pp-btn-tiktok-code">توليد كود تحقق</button>
+                                <button type="button" class="pp-btn pp-btn--primary" id="pp-btn-tiktok-verify">تحقق</button>
+                            </div>
+                            <div class="pp-code-box" id="pp-tiktok-code" style="display:none;"></div>
+                            <div class="pp-status-note" id="pp-tiktok-status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- تبويب: معلومات الستريمر (يظهر فقط لو is_streamer) -->
+        <div class="pp-tab-panel" data-panel="streamer">
+            <div class="pp-card pp-block">
+                <div class="pp-section-title">إحصائيات البث</div>
+                <div class="pp-grid">
+                    <div class="pp-stat-card"><div class="pp-stat-value" id="pp-s-broadcasts">0</div><div class="pp-stat-label">عدد البثوث</div></div>
+                    <div class="pp-stat-card"><div class="pp-stat-value" id="pp-s-hours">0</div><div class="pp-stat-label">ساعات البث</div></div>
+                    <div class="pp-stat-card"><div class="pp-stat-value" id="pp-s-follows">0</div><div class="pp-stat-label">متابعين جدد</div></div>
+                    <div class="pp-stat-card"><div class="pp-stat-value" id="pp-s-players">0</div><div class="pp-stat-label">لاعبون انضموا</div></div>
+                    <div class="pp-stat-card"><div class="pp-stat-value" id="pp-s-gifts">0</div><div class="pp-stat-label">عدد الهدايا</div></div>
+                    <div class="pp-stat-card"><div class="pp-stat-value" id="pp-s-gifts-value">0</div><div class="pp-stat-label">قيمة الهدايا</div></div>
+                </div>
+                <div class="pp-info-row">
+                    <span class="pp-info-label">مشاهدات إجمالية / متوسط المشاهدين</span>
+                    <span class="pp-info-value" style="color:var(--pink-light);">قريباً</span>
+                </div>
+            </div>
+
+            <div class="pp-card pp-block">
+                <div class="pp-section-title">الألعاب التي تم بثّها</div>
+                <div class="pp-soon-card">
+                    <span class="pp-soon-badge">قريباً</span><br>
+                    تفصيل الألعاب المبثوثة لكل لعبة — بانتظار تتبّع الألعاب لكل بث.
+                </div>
+            </div>
+
+            <div class="pp-layout">
+                <div>
+                    <div class="pp-card pp-block">
+                        <div class="pp-section-title">تحليلات الجمهور</div>
+                        <div class="pp-soon-card">
+                            <span class="pp-soon-badge">قريباً</span><br>
+                            توزيع الجمهور حسب الدولة.
+                        </div>
+                    </div>
+                    <div class="pp-card pp-block">
+                        <div class="pp-section-title">أبرز اللحظات</div>
+                        <div class="pp-soon-card">
+                            <span class="pp-soon-badge">قريباً</span>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="pp-card pp-block">
+                        <div class="pp-section-title">البث القادم</div>
+                        <div class="pp-soon-card">
+                            <span class="pp-soon-badge">قريباً</span><br>
+                            جدولة البث + تذكير — غير مفعّلة بعد.
+                            <div class="pp-btn-row" style="justify-content:center;">
+                                <button type="button" class="pp-btn pp-btn--secondary" disabled>ذكّرني</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pp-card pp-block">
+                        <div class="pp-section-title">إنجازات الستريمر</div>
+                        <div class="pp-soon-card">
+                            <span class="pp-soon-badge">قريباً</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- تبويب: المقتنيات -->
+        <div class="pp-tab-panel" data-panel="collectibles">
+            <div class="pp-card">
+                <div class="pp-soon-card">
+                    <span class="pp-soon-badge">قريباً</span><br>
+                    الإطارات، الشارات، الألقاب، والتأثيرات الخاصة ستظهر هنا فور تفعيل نظام المقتنيات.
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -43,50 +622,215 @@
 'use strict';
 
 /**
- * بروفايل عام لأي مستخدم — بدون تسجيل دخول، عبر ?id=<الـID العام>.
- * يستدعي GET /api/profile (مسار عام في backend/http/auth-router.js)
- * عبر window.AGPAuth.getPublicProfile — راجع docs/CHANGELOG.md.
+ * بروفايل — يقرأ ?id=<custom_id> ويستدعي AGPAuth.getPublicProfile (يُرفق
+ * Bearer تلقائياً لو موجود). الخادم وحده يقرر: بروفايل كامل (صاحب الحساب
+ * أو الأدمن) أو {username, custom_id, restricted:true} فقط لأي شخص آخر.
+ * هذا الملف فقط يعرض الشكل المناسب حسب الاستجابة — لا منطق خصوصية هنا.
  */
 (function () {
     var params = new URLSearchParams(window.location.search);
     var customId = (params.get('id') || '').trim();
 
-    var loadingEl = document.getElementById('profile-loading');
-    var notFoundEl = document.getElementById('profile-not-found');
-    var contentEl = document.getElementById('profile-content');
+    var loadingEl = document.getElementById('pp-loading');
+    var notFoundEl = document.getElementById('pp-not-found');
+    var restrictedEl = document.getElementById('pp-restricted');
+    var fullEl = document.getElementById('pp-full');
+
+    function initials(name) {
+        return (name || '?').trim().charAt(0).toUpperCase() || '?';
+    }
+
+    function formatDate(iso) {
+        if (!iso) return '—';
+        try { return new Date(iso).toLocaleDateString('ar'); } catch (e) { return '—'; }
+    }
+
+    function formatHours(ms) {
+        var hours = (ms || 0) / 3600000;
+        return hours >= 10 ? Math.round(hours) : Math.round(hours * 10) / 10;
+    }
 
     function showNotFound() {
         loadingEl.style.display = 'none';
         notFoundEl.style.display = '';
     }
 
+    function renderRestricted(p) {
+        loadingEl.style.display = 'none';
+        restrictedEl.style.display = '';
+        document.getElementById('pp-r-avatar').textContent = initials(p.username);
+        document.getElementById('pp-r-username').textContent = p.username || '—';
+        document.getElementById('pp-r-id').textContent = p.custom_id || '—';
+        document.title = (p.username || 'بروفايل') + ' — AGP';
+    }
+
+    function addBadge(container, text, cls) {
+        var span = document.createElement('span');
+        span.className = 'pp-badge' + (cls ? ' ' + cls : '');
+        span.textContent = text;
+        container.appendChild(span);
+    }
+
+    function wireTabs() {
+        var buttons = document.querySelectorAll('.pp-tab-btn');
+        Array.prototype.forEach.call(buttons, function (btn) {
+            btn.addEventListener('click', function () {
+                if (btn.style.display === 'none') return;
+                Array.prototype.forEach.call(buttons, function (b) { b.classList.remove('is-active'); });
+                btn.classList.add('is-active');
+                var tab = btn.getAttribute('data-tab');
+                Array.prototype.forEach.call(document.querySelectorAll('.pp-tab-panel'), function (panel) {
+                    panel.classList.toggle('is-active', panel.getAttribute('data-panel') === tab);
+                });
+            });
+        });
+    }
+
+    function wireCopyId(customIdValue) {
+        var btn = document.getElementById('pp-copy-id');
+        btn.addEventListener('click', function () {
+            var text = '#' + customIdValue;
+            var done = function () {
+                var old = btn.textContent;
+                btn.textContent = 'تم!';
+                setTimeout(function () { btn.textContent = old; }, 1200);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(done).catch(done);
+            } else {
+                done();
+            }
+        });
+    }
+
+    /**
+     * قسم تيك توك: لو صاحب الحساب نفسه، نعرض نفس أدوات الربط/التحقق
+     * الموجودة أصلاً في dashboard-core/js/dashboard-auth.js (تستدعي نفس
+     * AGPAuth.linkTikTok/requestTikTokVerificationCode/verifyTikTok دون
+     * أي تعديل عليها). غير ذلك (أدمن يشاهد حساباً آخر) نعرض الحالة فقط
+     * للقراءة — لأن أزرار الربط تعمل دائماً على حساب الجلسة الحالية،
+     * وليس على الحساب المعروض.
+     */
+    function wireTikTok(p, isOwner) {
+        var readonlyBox = document.getElementById('pp-tiktok-readonly');
+        var readonlyValue = document.getElementById('pp-tiktok-readonly-value');
+        var ownerForm = document.getElementById('pp-tiktok-owner-form');
+
+        if (!isOwner) {
+            readonlyBox.style.display = '';
+            if (p.tiktok_verified && p.tiktok_username) {
+                readonlyValue.textContent = '@' + p.tiktok_username + ' (موثّق)';
+            } else {
+                readonlyValue.textContent = 'غير مربوط';
+            }
+            return;
+        }
+
+        ownerForm.style.display = '';
+        var usernameInput = document.getElementById('pp-tiktok-username');
+        var statusEl = document.getElementById('pp-tiktok-status');
+        var codeEl = document.getElementById('pp-tiktok-code');
+
+        if (p.tiktok_username) usernameInput.value = p.tiktok_username;
+
+        function setStatus(text, isError) {
+            statusEl.textContent = text;
+            statusEl.className = 'pp-status-note ' + (isError ? 'pp-status-note--err' : 'pp-status-note--ok');
+        }
+
+        document.getElementById('pp-btn-tiktok-link').addEventListener('click', function () {
+            var username = (usernameInput.value || '').trim();
+            if (!username) { setStatus('اكتب يوزرنيم تيك توك أولاً.', true); return; }
+            window.AGPAuth.linkTikTok(username).then(function (result) {
+                setStatus(result.success ? 'تم الربط.' : 'تعذّر الربط.', !result.success);
+            });
+        });
+
+        document.getElementById('pp-btn-tiktok-code').addEventListener('click', function () {
+            window.AGPAuth.requestTikTokVerificationCode().then(function (result) {
+                if (result.success) {
+                    codeEl.style.display = '';
+                    codeEl.textContent = result.code;
+                    setStatus('أضف الكود لبايو حسابك بتيك توك، ثم اضغط "تحقق".', false);
+                } else {
+                    setStatus('تعذّر توليد كود التحقق.', true);
+                }
+            });
+        });
+
+        document.getElementById('pp-btn-tiktok-verify').addEventListener('click', function () {
+            var username = (usernameInput.value || '').trim();
+            if (!username) { setStatus('اكتب يوزرنيم تيك توك أولاً.', true); return; }
+            setStatus('جارٍ التحقق…', false);
+            window.AGPAuth.verifyTikTok(username).then(function (result) {
+                setStatus(result.success ? 'تم التحقق من ملكية الحساب ✅' : ('تعذّر التحقق: ' + (result.error || 'unknown')), !result.success);
+            });
+        });
+    }
+
+    function renderFull(p) {
+        loadingEl.style.display = 'none';
+        fullEl.style.display = '';
+        document.title = p.username + ' — بروفايل AGP';
+
+        var cachedUser = window.AGPAuth.getCachedUser();
+        var isOwner = Boolean(cachedUser && cachedUser.custom_id && cachedUser.custom_id === p.custom_id);
+
+        document.getElementById('pp-avatar').textContent = initials(p.username);
+        document.getElementById('pp-username').textContent = p.username;
+        document.getElementById('pp-id').textContent = p.custom_id || '—';
+        document.getElementById('pp-joined').textContent = 'انضم في ' + formatDate(p.joined_at);
+
+        var badgesEl = document.getElementById('pp-badges');
+        if (p.role === 'admin') addBadge(badgesEl, 'أدمن', 'pp-badge--admin');
+        if (p.is_streamer) addBadge(badgesEl, 'ستريمر', 'pp-badge--streamer');
+        if (p.is_streamer) {
+            addBadge(badgesEl, p.can_run_games ? 'الألعاب مفعّلة' : 'بانتظار موافقة الألعاب', p.can_run_games ? 'pp-badge--approved' : 'pp-badge--pending');
+        }
+
+        document.getElementById('pp-info-username').textContent = p.username;
+        document.getElementById('pp-info-role').textContent = p.role === 'admin' ? 'أدمن' : (p.is_streamer ? 'ستريمر' : 'لاعب');
+        document.getElementById('pp-info-joined').textContent = formatDate(p.joined_at);
+
+        var gamesRow = document.getElementById('pp-info-games-row');
+        var canPlayEl = document.getElementById('pp-info-can-play');
+        if (p.role === 'admin') {
+            gamesRow.style.display = 'none';
+        } else {
+            canPlayEl.textContent = p.can_run_games ? 'مفعّلة ✅' : 'بانتظار موافقة الأدمن ⏳';
+        }
+
+        var streamerTabBtn = document.getElementById('pp-tab-streamer-btn');
+        if (p.is_streamer) streamerTabBtn.style.display = '';
+
+        if (p.stats) {
+            document.getElementById('pp-s-broadcasts').textContent = p.stats.total_broadcasts || 0;
+            document.getElementById('pp-s-hours').textContent = formatHours(p.stats.total_live_ms);
+            document.getElementById('pp-s-follows').textContent = p.stats.total_follows || 0;
+            document.getElementById('pp-s-players').textContent = p.stats.total_players || 0;
+            document.getElementById('pp-s-gifts').textContent = p.stats.total_gifts || 0;
+            document.getElementById('pp-s-gifts-value').textContent = p.stats.total_gifts_value || 0;
+        }
+
+        wireTikTok(p, isOwner);
+        wireCopyId(p.custom_id || '');
+        wireTabs();
+    }
+
     if (!customId) {
         showNotFound();
     } else {
         window.AGPAuth.getPublicProfile(customId).then(function (result) {
-            loadingEl.style.display = 'none';
-
             if (!result.success || !result.profile) {
-                notFoundEl.style.display = '';
+                showNotFound();
                 return;
             }
-
             var p = result.profile;
-            document.getElementById('profile-username').textContent = p.username;
-            document.getElementById('profile-role').textContent = p.role;
-            document.getElementById('profile-custom-id').textContent = p.custom_id;
-            document.getElementById('profile-joined').textContent = p.joined_at ? new Date(p.joined_at).toLocaleDateString('ar') : '—';
-            document.getElementById('profile-broadcasts').textContent = p.stats.total_broadcasts;
-            document.getElementById('profile-gifts-value').textContent = p.stats.total_gifts_value;
-
-            if (p.is_streamer) document.getElementById('profile-streamer-badge').style.display = '';
-            if (p.tiktok_verified && p.tiktok_username) {
-                document.getElementById('profile-tiktok-row').style.display = '';
-                document.getElementById('profile-tiktok').textContent = '@' + p.tiktok_username;
+            if (p.restricted) {
+                renderRestricted(p);
+            } else {
+                renderFull(p);
             }
-
-            contentEl.style.display = '';
-            document.title = p.username + ' — بروفايل AGP';
         }).catch(showNotFound);
     }
 }());
