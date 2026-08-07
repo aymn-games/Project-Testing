@@ -204,9 +204,13 @@ function setCustomId(userId, customId) {
 }
 
 /**
- * بروفايل عام لأي مستخدم عبر الـID العام (custom_id) — بدون أي تسجيل
- * دخول (مسار عام في auth-router.js). حقول آمنة للنشر فقط: لا بريد،
- * لا صلاحيات، لا الآيدي الداخلي (id) — راجع docs/BACKEND_ARCHITECTURE.md §10.
+ * بروفايل مستخدم عبر الـID العام (custom_id) — يُستدعى من مسار عام
+ * (auth-router.js لا يتطلّب تسجيل دخول لاستدعائه)، لكن الراوتر نفسه هو
+ * من يقرّر أي جزء من هذا الكائن يُرسَل فعلياً للمتصفح: صاحب الحساب أو
+ * الأدمن يشوفون كل شيء، أي أحد آخر يشوف فقط username/custom_id (راجع
+ * handlePublicProfile في auth-router.js وdocs/CHANGELOG.md — لا عرض
+ * علني لبروفايلات الآخرين بعد الآن). حقول آمنة أصلاً حتى بالإرجاع
+ * الكامل: لا بريد، لا الآيدي الداخلي (id) — راجع docs/BACKEND_ARCHITECTURE.md §10.
  * @param {string} customId
  * @returns {Object|null}
  */
@@ -215,7 +219,7 @@ function getPublicProfile(customId) {
     if (!customId) return null;
 
     var user = db.prepare(
-        'SELECT id, username, role, is_streamer, tiktok_username, tiktok_verified, custom_id, created_at FROM users WHERE custom_id = ?'
+        'SELECT id, username, role, is_streamer, tiktok_username, tiktok_verified, custom_id, permissions, created_at FROM users WHERE custom_id = ?'
     ).get(customId);
     if (!user) return null;
 
@@ -225,13 +229,19 @@ function getPublicProfile(customId) {
         username: user.username,
         role: user.role,
         is_streamer: Boolean(user.is_streamer),
+        can_run_games: Boolean(JSON.parse(user.permissions || '{}').can_run_games),
         tiktok_username: user.tiktok_verified ? user.tiktok_username : null,
         tiktok_verified: Boolean(user.tiktok_verified),
         joined_at: user.created_at,
+        // كل هذي أرقام حقيقية من جدول broadcasts (لا XP/SP/مستوى — تلك
+        // ميزات غير مبنية بعد، راجع docs/CHANGELOG.md).
         stats: {
             total_broadcasts: stats.total_broadcasts,
+            total_gifts: stats.total_gifts,
             total_gifts_value: stats.total_gifts_value,
-            total_players: stats.total_players
+            total_follows: stats.total_follows,
+            total_players: stats.total_players,
+            total_live_ms: stats.total_live_ms
         }
     };
 }
