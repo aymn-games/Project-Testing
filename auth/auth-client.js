@@ -119,6 +119,27 @@
         return request('/api/auth/me', { method: 'GET' });
     }
 
+    /**
+     * يحدّث بيانات المستخدم المخزَّنة محلياً (localStorage) من الخادم
+     * مباشرة — بدون أي تحويل أو تسجيل خروج عند الفشل، خلافاً لـ
+     * requireAuth أدناه. يحل مشكلة بيانات مخزَّنة قديمة (مثال: الأدمن
+     * وافق على can_run_games لحساب بعد ما كان صاحبه سجّل دخوله أصلاً —
+     * الجلسة المحلية المخزَّنة تبقى بالصلاحية القديمة لحد ما يسجّل خروج
+     * ويدخل من جديد، أو تُستدعى هذه الدالة). تُستخدَم بصفحات عامة مثل
+     * index.html حيث لا نريد فرض requireAuth (لا تسجيل دخول إلزامي).
+     * @returns {Promise<Object|null>} المستخدم المحدَّث، أو null لو فشل
+     */
+    function refreshUser() {
+        if (!getToken()) return Promise.resolve(null);
+        return me().then(function (result) {
+            if (result.success) {
+                setSession(getToken(), result.user);
+                return result.user;
+            }
+            return null;
+        }).catch(function () { return null; });
+    }
+
     function linkTikTok(tiktokUsername) {
         return request('/api/auth/tiktok/link', { method: 'POST', body: { tiktokUsername: tiktokUsername } });
     }
@@ -263,6 +284,7 @@
         loginWithGoogle: loginWithGoogle,
         logout: logout,
         me: me,
+        refreshUser: refreshUser,
         linkTikTok: linkTikTok,
         requestTikTokVerificationCode: requestTikTokVerificationCode,
         verifyTikTok: verifyTikTok,
