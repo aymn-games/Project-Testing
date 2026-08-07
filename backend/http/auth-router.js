@@ -65,7 +65,9 @@ var ROUTES = [
     { method: 'POST', path: '/api/auth/tiktok/verify', requireAuth: true, handler: handleTikTokVerify },
     { method: 'POST', path: '/api/auth/custom-id', requireAuth: true, handler: handleCustomId },
     { method: 'GET', path: '/api/admin/users', requireAuth: true, requireAdmin: true, handler: handleAdminListUsers },
-    { method: 'POST', path: '/api/admin/permissions', requireAuth: true, requireAdmin: true, handler: handleAdminSetPermission }
+    { method: 'POST', path: '/api/admin/permissions', requireAuth: true, requireAdmin: true, handler: handleAdminSetPermission },
+    { method: 'POST', path: '/api/admin/custom-id', requireAuth: true, requireAdmin: true, handler: handleAdminSetCustomId },
+    { method: 'GET', path: '/api/profile', requireAuth: false, handler: handlePublicProfile }
 ];
 
 /* ----------------------------------------------------------------------
@@ -125,6 +127,36 @@ function handleAdminListUsers(req, res) {
 function handleAdminSetPermission(req, res, body) {
     var result = authService.setPermission(body.userId, body.permissionKey, Boolean(body.value));
     sendJson(res, result.success ? 200 : 400, result);
+}
+
+/**
+ * الأدمن فقط — يعدّل الـID العام (custom_id) لأي مستخدم (مو حسابه هو
+ * بس، خلافاً لـ handleCustomId أعلاه اللي يقتصر على صاحب الجلسة).
+ * يستدعي نفس authService.setCustomId دون أي تعديل عليها.
+ */
+function handleAdminSetCustomId(req, res, body) {
+    var result = authService.setCustomId(body.userId, body.customId);
+    sendJson(res, result.success ? 200 : 400, result);
+}
+
+/**
+ * بروفايل عام — بدون تسجيل دخول، عبر ?id=<custom_id> بالرابط. مسار
+ * الوحيد بالراوتر اللي يقرأ query string (بقية المسارات لا تحتاجه).
+ */
+function handlePublicProfile(req, res) {
+    var queryString = (req.url || '').split('?')[1] || '';
+    var customId = '';
+    queryString.split('&').forEach(function (pair) {
+        var kv = pair.split('=');
+        if (decodeURIComponent(kv[0] || '') === 'id') customId = decodeURIComponent(kv[1] || '');
+    });
+
+    var profile = authService.getPublicProfile(customId);
+    if (!profile) {
+        sendJson(res, 404, { success: false, error: 'not_found' });
+        return;
+    }
+    sendJson(res, 200, { success: true, profile: profile });
 }
 
 /* ----------------------------------------------------------------------
