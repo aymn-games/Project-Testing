@@ -91,6 +91,19 @@ svg.icon-sm {
     color: var(--text);
 }
 
+/* شعار صورة حقيقي (logo.png) بدل حرف "AGP" النصي — قاعدة إضافية فقط،
+   لا تعديل على .topbar-logo نفسها حتى لا يتأثر أي استخدام قديم لها. */
+.topbar-logo--img {
+    background: none;
+    padding: 0;
+}
+.topbar-logo--img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
 .topbar-status {
     display: flex;
     align-items: center;
