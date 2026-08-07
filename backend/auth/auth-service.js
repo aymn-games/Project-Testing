@@ -316,6 +316,20 @@ async function verifyTikTokOwnership(userId, tiktokUsername) {
 }
 
 /**
+ * إلغاء ربط تيك توك يدوياً من قِبل صاحب الحساب نفسه. التحقق (unlink)
+ * لا يحدث تلقائياً أبداً بأي مكان آخر في هذا الملف — بمجرد
+ * `tiktok_verified = 1` يبقى الحساب "مرتبط" للأبد بلا حاجة لأي إعادة
+ * تحقق دورية، حتى لو المستخدم شال الكود من بايو حسابه بتيك توك بعد ما
+ * تحقق مرة وحدة. هذه الدالة هي المخرج الوحيد لإلغاء الربط.
+ * @param {number} userId
+ * @returns {{success: boolean}}
+ */
+function unlinkTikTok(userId) {
+    db.prepare('UPDATE users SET tiktok_username = NULL, tiktok_verified = 0, tiktok_verification_code = NULL WHERE id = ?').run(userId);
+    return { success: true };
+}
+
+/**
  * التحقق من رمز جلسة — يُستخدَم بكل طلب محمي.
  * @returns {Object|null} بيانات المستخدم إن كانت الجلسة صالحة، وإلا null
  */
@@ -471,6 +485,7 @@ module.exports = {
     validateSession: validateSession,
     logout: logout,
     linkTikTokUsername: linkTikTokUsername,
+    unlinkTikTok: unlinkTikTok,
     setCustomId: setCustomId,
     getPublicProfile: getPublicProfile,
     generateVerificationCode: generateVerificationCode,
