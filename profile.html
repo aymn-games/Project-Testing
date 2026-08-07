@@ -352,6 +352,26 @@
     .pp-status-note--ok { color: #9ef7c2; }
     .pp-status-note--err { color: #ffb1b1; }
 
+    .pp-tiktok-connected-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    .pp-tiktok-avatar {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--card-border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+    }
+    .pp-tiktok-handle { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+
     .pp-code-box {
         font-family: 'Courier New', monospace;
         font-size: 15px;
@@ -520,21 +540,48 @@
 
                     <div class="pp-card pp-side-card" id="pp-tiktok-card">
                         <div class="pp-section-title">حساب تيك توك</div>
+
+                        <!-- أدمن يشاهد حساب شخص آخر: قراءة فقط -->
                         <div id="pp-tiktok-readonly" style="display:none;">
                             <div class="pp-info-row"><span class="pp-info-label">الحالة</span><span class="pp-info-value" id="pp-tiktok-readonly-value">—</span></div>
                         </div>
-                        <div id="pp-tiktok-owner-form" style="display:none;">
-                            <div class="pp-field">
-                                <label>يوزرنيم تيك توك</label>
-                                <input type="text" id="pp-tiktok-username" placeholder="username">
+
+                        <!-- صاحب الحساب: مرتبط وموثّق فعلاً — يبقى هكذا للأبد
+                             حتى لو شال الكود من بايو تيك توك، إلا لو ألغى
+                             الربط يدوياً بالزر أدناه. -->
+                        <div id="pp-tiktok-connected" style="display:none;">
+                            <div class="pp-tiktok-connected-row">
+                                <div class="pp-tiktok-avatar">🎵</div>
+                                <div>
+                                    <div class="pp-tiktok-handle" id="pp-tiktok-handle">@—</div>
+                                    <span class="pp-badge pp-badge--approved">متصل ✅</span>
+                                </div>
                             </div>
                             <div class="pp-btn-row">
-                                <button type="button" class="pp-btn pp-btn--secondary" id="pp-btn-tiktok-link">ربط</button>
-                                <button type="button" class="pp-btn pp-btn--secondary" id="pp-btn-tiktok-code">توليد كود تحقق</button>
-                                <button type="button" class="pp-btn pp-btn--primary" id="pp-btn-tiktok-verify">تحقق</button>
+                                <button type="button" class="pp-btn pp-btn--secondary" id="pp-btn-tiktok-unlink">إلغاء الربط</button>
                             </div>
-                            <div class="pp-code-box" id="pp-tiktok-code" style="display:none;"></div>
-                            <div class="pp-status-note" id="pp-tiktok-status"></div>
+                            <div class="pp-status-note" id="pp-tiktok-connected-status"></div>
+                        </div>
+
+                        <!-- صاحب الحساب: غير مرتبط بعد -->
+                        <div id="pp-tiktok-disconnected" style="display:none;">
+                            <div class="pp-info-row"><span class="pp-info-label">الحالة</span><span class="pp-info-value" style="color:var(--text-secondary);">غير مرتبط</span></div>
+                            <div class="pp-btn-row">
+                                <button type="button" class="pp-btn pp-btn--primary" id="pp-btn-tiktok-start-link">ربط حساب TikTok</button>
+                            </div>
+                            <div id="pp-tiktok-owner-form" style="display:none; margin-top:12px;">
+                                <div class="pp-field">
+                                    <label>يوزرنيم تيك توك</label>
+                                    <input type="text" id="pp-tiktok-username" placeholder="username">
+                                </div>
+                                <div class="pp-btn-row">
+                                    <button type="button" class="pp-btn pp-btn--secondary" id="pp-btn-tiktok-link">ربط</button>
+                                    <button type="button" class="pp-btn pp-btn--secondary" id="pp-btn-tiktok-code">توليد كود تحقق</button>
+                                    <button type="button" class="pp-btn pp-btn--primary" id="pp-btn-tiktok-verify">تحقق</button>
+                                </div>
+                                <div class="pp-code-box" id="pp-tiktok-code" style="display:none;"></div>
+                                <div class="pp-status-note" id="pp-tiktok-status"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -704,32 +751,74 @@
     }
 
     /**
-     * قسم تيك توك: لو صاحب الحساب نفسه، نعرض نفس أدوات الربط/التحقق
-     * الموجودة أصلاً في dashboard-core/js/dashboard-auth.js (تستدعي نفس
-     * AGPAuth.linkTikTok/requestTikTokVerificationCode/verifyTikTok دون
-     * أي تعديل عليها). غير ذلك (أدمن يشاهد حساباً آخر) نعرض الحالة فقط
-     * للقراءة — لأن أزرار الربط تعمل دائماً على حساب الجلسة الحالية،
-     * وليس على الحساب المعروض.
+     * قسم تيك توك — ثلاث حالات:
+     *  1) أدمن يشاهد حساب شخص آخر → قراءة فقط (نفس ما كان سابقاً).
+     *  2) صاحب الحساب ومرتبط/موثّق فعلاً (tiktok_verified) → حالة
+     *     "متصل" ثابتة + زر إلغاء ربط صريح فقط. **لا تحقق دوري تلقائي
+     *     من جهتنا** — التوثيق يبقى صالحاً للأبد بمجرد نجاحه مرة واحدة
+     *     (راجع auth-service.unlinkTikTok)، حتى لو المستخدم شال الكود
+     *     من بايو حسابه بعدها. هذا يحل مشكلة "يطلب تحقق كل مرة" التي
+     *     كانت بسبب عرض نموذج الربط دائماً بدل التحقق من الحالة الفعلية.
+     *  3) صاحب الحساب وغير مرتبط → حالة "غير مرتبط" + زر يفتح نموذج
+     *     الربط (نفس AGPAuth.linkTikTok/requestTikTokVerificationCode/
+     *     verifyTikTok الأصليين دون أي تعديل على منطقهم).
      */
     function wireTikTok(p, isOwner) {
         var readonlyBox = document.getElementById('pp-tiktok-readonly');
         var readonlyValue = document.getElementById('pp-tiktok-readonly-value');
-        var ownerForm = document.getElementById('pp-tiktok-owner-form');
+        var connectedBox = document.getElementById('pp-tiktok-connected');
+        var disconnectedBox = document.getElementById('pp-tiktok-disconnected');
 
         if (!isOwner) {
             readonlyBox.style.display = '';
-            if (p.tiktok_verified && p.tiktok_username) {
-                readonlyValue.textContent = '@' + p.tiktok_username + ' (موثّق)';
-            } else {
-                readonlyValue.textContent = 'غير مربوط';
-            }
+            readonlyValue.textContent = (p.tiktok_verified && p.tiktok_username) ? ('@' + p.tiktok_username + ' (موثّق)') : 'غير مربوط';
             return;
         }
 
-        ownerForm.style.display = '';
+        if (p.tiktok_verified && p.tiktok_username) {
+            connectedBox.style.display = '';
+            document.getElementById('pp-tiktok-handle').textContent = '@' + p.tiktok_username;
+            wireTikTokUnlink();
+        } else {
+            disconnectedBox.style.display = '';
+            wireTikTokLinkForm(p);
+        }
+    }
+
+    function wireTikTokUnlink() {
+        var btn = document.getElementById('pp-btn-tiktok-unlink');
+        var statusEl = document.getElementById('pp-tiktok-connected-status');
+        btn.addEventListener('click', function () {
+            btn.disabled = true;
+            statusEl.textContent = 'جارٍ إلغاء الربط…';
+            statusEl.className = 'pp-status-note';
+            window.AGPAuth.unlinkTikTok().then(function (result) {
+                if (result.success) {
+                    window.location.reload();
+                } else {
+                    statusEl.textContent = 'تعذّر إلغاء الربط.';
+                    statusEl.className = 'pp-status-note pp-status-note--err';
+                    btn.disabled = false;
+                }
+            }).catch(function () {
+                statusEl.textContent = 'تعذّر الوصول للخادم.';
+                statusEl.className = 'pp-status-note pp-status-note--err';
+                btn.disabled = false;
+            });
+        });
+    }
+
+    function wireTikTokLinkForm(p) {
+        var startBtn = document.getElementById('pp-btn-tiktok-start-link');
+        var formBox = document.getElementById('pp-tiktok-owner-form');
         var usernameInput = document.getElementById('pp-tiktok-username');
         var statusEl = document.getElementById('pp-tiktok-status');
         var codeEl = document.getElementById('pp-tiktok-code');
+
+        startBtn.addEventListener('click', function () {
+            formBox.style.display = '';
+            startBtn.style.display = 'none';
+        });
 
         if (p.tiktok_username) usernameInput.value = p.tiktok_username;
 
@@ -763,7 +852,12 @@
             if (!username) { setStatus('اكتب يوزرنيم تيك توك أولاً.', true); return; }
             setStatus('جارٍ التحقق…', false);
             window.AGPAuth.verifyTikTok(username).then(function (result) {
-                setStatus(result.success ? 'تم التحقق من ملكية الحساب ✅' : ('تعذّر التحقق: ' + (result.error || 'unknown')), !result.success);
+                if (result.success) {
+                    setStatus('تم التحقق من ملكية الحساب ✅ جارٍ التحديث…', false);
+                    setTimeout(function () { window.location.reload(); }, 900);
+                } else {
+                    setStatus('تعذّر التحقق: ' + (result.error || 'unknown'), true);
+                }
             });
         });
     }
@@ -781,15 +875,26 @@
         document.getElementById('pp-id').textContent = p.custom_id || '—';
         document.getElementById('pp-joined').textContent = 'انضم في ' + formatDate(p.joined_at);
 
+        // "ستريمر" فعلياً = وافق عليه الأدمن (can_run_games)، وليس مجرد
+        // اختيار المستخدم "أبي أشتغل كستريمر" وقت التسجيل (is_streamer)
+        // — ذلك مجرد طلب أولي. أي حساب يبدأ "لاعب" ويتحول "ستريمر" فقط
+        // بموافقة الأدمن الصريحة من admin.html (نفس صلاحية can_run_games
+        // المستخدمة أصلاً لفتح الألعاب). راجع docs/CHANGELOG.md.
+        var isApprovedStreamer = Boolean(p.can_run_games);
+
         var badgesEl = document.getElementById('pp-badges');
-        if (p.role === 'admin') addBadge(badgesEl, 'أدمن', 'pp-badge--admin');
-        if (p.is_streamer) addBadge(badgesEl, 'ستريمر', 'pp-badge--streamer');
-        if (p.is_streamer) {
-            addBadge(badgesEl, p.can_run_games ? 'الألعاب مفعّلة' : 'بانتظار موافقة الألعاب', p.can_run_games ? 'pp-badge--approved' : 'pp-badge--pending');
+        if (p.role === 'admin') {
+            addBadge(badgesEl, 'أدمن', 'pp-badge--admin');
+        } else if (isApprovedStreamer) {
+            addBadge(badgesEl, 'ستريمر ✅', 'pp-badge--streamer');
+        } else if (p.is_streamer) {
+            addBadge(badgesEl, 'بانتظار موافقة الأدمن كستريمر', 'pp-badge--pending');
+        } else {
+            addBadge(badgesEl, 'لاعب', '');
         }
 
         document.getElementById('pp-info-username').textContent = p.username;
-        document.getElementById('pp-info-role').textContent = p.role === 'admin' ? 'أدمن' : (p.is_streamer ? 'ستريمر' : 'لاعب');
+        document.getElementById('pp-info-role').textContent = p.role === 'admin' ? 'أدمن' : (isApprovedStreamer ? 'ستريمر' : 'لاعب');
         document.getElementById('pp-info-joined').textContent = formatDate(p.joined_at);
 
         var gamesRow = document.getElementById('pp-info-games-row');
@@ -801,7 +906,7 @@
         }
 
         var streamerTabBtn = document.getElementById('pp-tab-streamer-btn');
-        if (p.is_streamer) streamerTabBtn.style.display = '';
+        if (isApprovedStreamer) streamerTabBtn.style.display = '';
 
         if (p.stats) {
             document.getElementById('pp-s-broadcasts').textContent = p.stats.total_broadcasts || 0;
