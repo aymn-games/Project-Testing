@@ -73,7 +73,7 @@ function signup(username, email, plainPassword, wantsToBeStreamer) {
 
     logger.log('Auth: new user signed up: ' + username + ' (role: ' + role + ', streamer: ' + Boolean(isStreamer) + ', id: ' + publicId + ')');
 
-    return { success: true, user: { id: info.lastInsertRowid, username: username, email: email, role: role, is_streamer: Boolean(isStreamer), custom_id: publicId } };
+    return { success: true, user: { id: info.lastInsertRowid, username: username, email: email, role: role, is_streamer: Boolean(isStreamer), custom_id: publicId, permissions: {} } };
 }
 
 /**
@@ -93,7 +93,10 @@ function login(email, plainPassword) {
     return {
         success: true,
         token: token,
-        user: { id: user.id, username: user.username, email: user.email, role: user.role, custom_id: user.custom_id }
+        user: {
+            id: user.id, username: user.username, email: user.email, role: user.role, custom_id: user.custom_id,
+            is_streamer: Boolean(user.is_streamer), permissions: JSON.parse(user.permissions || '{}')
+        }
     };
 }
 
@@ -157,11 +160,19 @@ async function loginWithGoogle(idToken) {
         }
     }
 
+    // "existing" قد يكون صف قاعدة بيانات فعلي (permissions نص JSON،
+    // is_streamer رقم 0/1) أو كائناً جديداً بُني يدوياً بالأعلى (فرع
+    // الحساب الجديد كلياً، بدون هذين الحقلين إطلاقاً) — توحيد الشكل هنا
+    // قبل الإرجاع بدل تكرار المنطق بكل فرع.
     var sessionToken = createSessionFor(existing);
     return {
         success: true,
         token: sessionToken,
-        user: { id: existing.id, username: existing.username, email: existing.email, role: existing.role, custom_id: existing.custom_id }
+        user: {
+            id: existing.id, username: existing.username, email: existing.email, role: existing.role, custom_id: existing.custom_id,
+            is_streamer: Boolean(existing.is_streamer),
+            permissions: typeof existing.permissions === 'string' ? JSON.parse(existing.permissions || '{}') : (existing.permissions || {})
+        }
     };
 }
 
@@ -303,7 +314,7 @@ function validateSession(token) {
     var session = db.prepare('SELECT * FROM sessions WHERE token = ?').get(token);
     if (!session || session.expires_at < now()) return null;
 
-    var user = db.prepare('SELECT id, username, email, role, tiktok_username, custom_id FROM users WHERE id = ?').get(session.user_id);
+    var user = db.prepare('SELECT id, username, email, role, tiktok_username, custom_id, is_streamer, permissions FROM users WHERE id = ?').get(session.user_id);
     if (!user) return null;
 
     // شفاء ذاتي: حسابات أُنشئت قبل ميزة الـID العام (custom_id) قد لا
@@ -312,6 +323,9 @@ function validateSession(token) {
         user.custom_id = generatePublicId();
         db.prepare('UPDATE users SET custom_id = ? WHERE id = ?').run(user.custom_id, user.id);
     }
+
+    user.is_streamer = Boolean(user.is_streamer);
+    user.permissions = JSON.parse(user.permissions || '{}');
 
     return user;
 }
