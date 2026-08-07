@@ -63,6 +63,7 @@ var ROUTES = [
     { method: 'POST', path: '/api/auth/tiktok/link', requireAuth: true, handler: handleTikTokLink },
     { method: 'POST', path: '/api/auth/tiktok/verification-code', requireAuth: true, handler: handleTikTokVerificationCode },
     { method: 'POST', path: '/api/auth/tiktok/verify', requireAuth: true, handler: handleTikTokVerify },
+    { method: 'POST', path: '/api/auth/tiktok/unlink', requireAuth: true, handler: handleTikTokUnlink },
     { method: 'POST', path: '/api/auth/custom-id', requireAuth: true, handler: handleCustomId },
     { method: 'GET', path: '/api/admin/users', requireAuth: true, requireAdmin: true, handler: handleAdminListUsers },
     { method: 'POST', path: '/api/admin/permissions', requireAuth: true, requireAdmin: true, handler: handleAdminSetPermission },
@@ -113,6 +114,16 @@ function handleTikTokVerify(req, res, body, user) {
     return authService.verifyTikTokOwnership(user.id, body.tiktokUsername).then(function (result) {
         sendJson(res, result.success ? 200 : 400, result);
     });
+}
+
+/**
+ * إلغاء ربط تيك توك يدوياً — بطلب صريح من صاحب الحساب فقط (زر "إلغاء
+ * الربط" بصفحة البروفايل). لا علاقة له بأي فحص تلقائي دوري — غير
+ * موجود أصلاً. راجع authService.unlinkTikTok وdocs/CHANGELOG.md.
+ */
+function handleTikTokUnlink(req, res, body, user) {
+    var result = authService.unlinkTikTok(user.id);
+    sendJson(res, 200, result);
 }
 
 function handleCustomId(req, res, body, user) {
