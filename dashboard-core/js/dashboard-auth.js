@@ -82,10 +82,20 @@
         var codeDisplayEl = document.getElementById('account-tiktok-code');
         var customIdInput = document.getElementById('account-custom-id');
         var customIdStatusEl = document.getElementById('account-custom-id-status');
+        var viewProfileLink = document.getElementById('account-view-profile-link');
 
         if (user.tiktok_username && tiktokUsernameInput) {
             tiktokUsernameInput.value = user.tiktok_username;
         }
+
+        // كل حساب يوصله ID عام (custom_id) تلقائياً من الخادم فور
+        // التسجيل (راجع backend/auth/auth-service.js — generatePublicId)؛
+        // نعبّئه هنا ونجهّز رابط البروفايل العام مباشرة.
+        function applyCustomId(customId) {
+            if (customIdInput && customId) customIdInput.value = customId;
+            if (viewProfileLink) viewProfileLink.href = 'profile.html?id=' + encodeURIComponent(customId || '');
+        }
+        applyCustomId(user.custom_id);
 
         function setStatus(el, text, isError) {
             if (!el) return;
@@ -135,7 +145,8 @@
             customIdBtn.addEventListener('click', function () {
                 var customId = (customIdInput.value || '').trim();
                 window.AGPAuth.setCustomId(customId).then(function (result) {
-                    setStatus(customIdStatusEl, result.success ? 'تم الحفظ.' : ('تعذّر الحفظ: ' + (result.error || 'unknown')), !result.success);
+                    if (result.success) applyCustomId(customId);
+                    setStatus(customIdStatusEl, result.success ? 'تم الحفظ.' : ('تعذّر الحفظ: ' + (result.error || 'unknown') + (result.error === 'custom_id_taken' ? ' (هذا الـID مستخدَم لحساب آخر)' : '')), !result.success);
                 });
             });
         }
