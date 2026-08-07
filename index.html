@@ -41,10 +41,8 @@
         flex-wrap: wrap; gap: 12px;
     }
     .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.2em; }
-    .brand-badge {
-        width: 34px; height: 34px; border-radius: 10px; background: var(--accent-gradient);
-        display: flex; align-items: center; justify-content: center; font-weight: 800; color: #0b0616;
-    }
+    .brand-logo { height: 38px; width: auto; display: block; }
+    .hero-banner { display: block; width: 100%; height: auto; border-radius: var(--radius); margin-bottom: 20px; }
     nav.mainnav { display: flex; gap: 24px; color: var(--text-muted); font-weight: 600; }
     nav.mainnav a:hover { color: var(--text); }
     .auth-actions { display: flex; gap: 10px; }
@@ -135,7 +133,7 @@
 <body>
 
 <header class="topbar">
-    <div class="brand"><span class="brand-badge">A</span> ألعاب أيمن</div>
+    <a href="index.html" class="brand"><img src="logo.png" alt="ألعاب أيمن" class="brand-logo"></a>
     <nav class="mainnav">
         <a href="#">الصفحة الرئيسية</a>
         <a href="#games-section">الألعاب</a>
@@ -157,6 +155,13 @@
 </header>
 
 <div class="hero">
+    <!--
+        مكان البانر المخصَّص — ملف جديد باسم hero-banner.png (أو .jpg)
+        بجذر المستودع، بجانب logo.png. يُعرَض هنا فقط لو الملف موجود
+        فعلياً (onerror يخفي العنصر كلياً لو الملف غير مرفوع بعد، فلا
+        يظهر أيقونة "صورة مكسورة"). راجع docs/CHANGELOG.md للمقاس الموصى به.
+    -->
+    <img src="hero-banner.png" alt="" class="hero-banner" onerror="this.style.display='none';">
     <div class="free-badge">منصة مجانية</div>
     <h1>مـنـصـة ألـعـاب أيـمـن</h1>
     <p class="subtitle">🎧 تفاعل، بث مباشر، ومجتمع اللاعبين</p>
@@ -254,7 +259,7 @@
 </div>
 
 <footer>
-    <div class="brand" style="justify-content:center; margin-bottom:10px;"><span class="brand-badge">A</span> ألعاب أيمن</div>
+    <div class="brand" style="justify-content:center; margin-bottom:10px;"><img src="logo.png" alt="ألعاب أيمن" class="brand-logo"></div>
     <div style="margin-bottom:10px;">
         <a href="#">سياسة الاستخدام</a> · <a href="#">سياسة الخصوصية</a>
     </div>
@@ -322,6 +327,17 @@
                     : 'profile.html?id=' + encodeURIComponent(cachedUser.custom_id || '');
                 profileButton.onclick = function () { location.href = destination; };
             }
+
+            // تحديث صامت من الخادم لبيانات الجلسة المخزَّنة محلياً —
+            // يعالج مشكلة كانت موجودة: لو الأدمن وافق على can_run_games
+            // بعد ما المستخدم سجّل دخوله أصلاً، الجلسة المحلية المخزَّنة
+            // (cachedUser) تبقى بالصلاحية القديمة (false) ويستمر يشوف
+            // رسالة "يحتاج موافقة الأدمن" رغم إنه صار موافَق عليه فعلاً،
+            // لحد ما يسجّل خروج ودخول من جديد. الآن يتحدّث تلقائياً بصمت
+            // (بدون Refresh أو تحويل) بمجرد فتح الصفحة. راجع docs/CHANGELOG.md.
+            window.AGPAuth.refreshUser().then(function (freshUser) {
+                if (freshUser) cachedUser = freshUser;
+            });
         }
 
         // قفل أزرار "العب الآن" (روابط خارجية لمواقع الألعاب) على أي
