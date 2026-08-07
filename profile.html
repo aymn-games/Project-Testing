@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>بروفايل — AGP</title>
+<link rel="stylesheet" href="dashboard-core/css/style.css">
+<link rel="stylesheet" href="auth/auth.css">
+</head>
+<body class="auth-body">
+
+<div class="panel auth-card" style="max-width:420px;">
+    <div class="auth-brand">
+        <span class="topbar-logo">AGP</span>
+    </div>
+
+    <div class="auth-title" id="profile-loading">جاري التحميل…</div>
+    <div class="auth-message auth-message--visible auth-message--error" id="profile-not-found" style="display:none;">
+        هذا الحساب غير موجود، أو الرابط غير صحيح.
+    </div>
+
+    <div id="profile-content" style="display:none;">
+        <h1 class="auth-title" id="profile-username">—</h1>
+        <div style="text-align:center; margin-bottom:16px;">
+            <span class="badge" id="profile-role">—</span>
+            <span class="badge" id="profile-streamer-badge" style="display:none;">Streamer</span>
+        </div>
+
+        <div class="stat"><span class="stat-label">الـID العام</span><span class="stat-value mono" id="profile-custom-id">—</span></div>
+        <div class="stat" id="profile-tiktok-row" style="display:none;"><span class="stat-label">تيك توك</span><span class="stat-value" id="profile-tiktok">—</span></div>
+        <div class="stat"><span class="stat-label">تاريخ الانضمام</span><span class="stat-value" id="profile-joined">—</span></div>
+        <div class="stat"><span class="stat-label">عدد البثوث</span><span class="stat-value" id="profile-broadcasts">0</span></div>
+        <div class="stat"><span class="stat-label">إجمالي قيمة الهدايا</span><span class="stat-value" id="profile-gifts-value">0</span></div>
+    </div>
+
+    <div class="auth-footer">
+        <a href="index.html">الرجوع للصفحة الرئيسية</a>
+    </div>
+</div>
+
+<script src="auth/auth-client.js"></script>
+<script>
+'use strict';
+
+/**
+ * بروفايل عام لأي مستخدم — بدون تسجيل دخول، عبر ?id=<الـID العام>.
+ * يستدعي GET /api/profile (مسار عام في backend/http/auth-router.js)
+ * عبر window.AGPAuth.getPublicProfile — راجع docs/CHANGELOG.md.
+ */
+(function () {
+    var params = new URLSearchParams(window.location.search);
+    var customId = (params.get('id') || '').trim();
+
+    var loadingEl = document.getElementById('profile-loading');
+    var notFoundEl = document.getElementById('profile-not-found');
+    var contentEl = document.getElementById('profile-content');
+
+    function showNotFound() {
+        loadingEl.style.display = 'none';
+        notFoundEl.style.display = '';
+    }
+
+    if (!customId) {
+        showNotFound();
+    } else {
+        window.AGPAuth.getPublicProfile(customId).then(function (result) {
+            loadingEl.style.display = 'none';
+
+            if (!result.success || !result.profile) {
+                notFoundEl.style.display = '';
+                return;
+            }
+
+            var p = result.profile;
+            document.getElementById('profile-username').textContent = p.username;
+            document.getElementById('profile-role').textContent = p.role;
+            document.getElementById('profile-custom-id').textContent = p.custom_id;
+            document.getElementById('profile-joined').textContent = p.joined_at ? new Date(p.joined_at).toLocaleDateString('ar') : '—';
+            document.getElementById('profile-broadcasts').textContent = p.stats.total_broadcasts;
+            document.getElementById('profile-gifts-value').textContent = p.stats.total_gifts_value;
+
+            if (p.is_streamer) document.getElementById('profile-streamer-badge').style.display = '';
+            if (p.tiktok_verified && p.tiktok_username) {
+                document.getElementById('profile-tiktok-row').style.display = '';
+                document.getElementById('profile-tiktok').textContent = '@' + p.tiktok_username;
+            }
+
+            contentEl.style.display = '';
+            document.title = p.username + ' — بروفايل AGP';
+        }).catch(showNotFound);
+    }
+}());
+</script>
+</body>
+</html>
