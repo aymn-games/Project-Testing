@@ -11,14 +11,14 @@
 
 <header class="topbar">
     <div class="topbar-brand">
-        <span class="topbar-logo">AGP</span>
-        <span class="topbar-title">Admin Panel</span>
+        <span class="topbar-logo topbar-logo--img"><img src="logo.png" alt="ألعاب أيمن"></span>
+        <span class="topbar-title">لوحة الأدمن</span>
     </div>
     <div class="auth-topbar-account">
-        <a class="btn btn-sm" href="dashboard-core/index.html">Dashboard</a>
+        <a class="btn btn-sm" href="dashboard-core/index.html">لوحة التحكم</a>
         <span class="badge" id="account-role">—</span>
         <span class="stat-value" id="account-username">—</span>
-        <button class="btn btn-sm" id="btn-account-logout">Logout</button>
+        <button class="btn btn-sm" id="btn-account-logout">تسجيل خروج</button>
     </div>
 </header>
 
@@ -28,26 +28,26 @@
 
     <section class="panel panel-wide">
         <div class="panel-head">
-            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-users"/></svg>Users &amp; Streamers</h2>
-            <button class="btn btn-sm" id="btn-refresh-users"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg>Refresh</button>
+            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-users"/></svg>المستخدمون والستريمرز</h2>
+            <button class="btn btn-sm" id="btn-refresh-users"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg>تحديث</button>
         </div>
         <div class="table-wrap">
         <table class="table">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>TikTok</th>
-                    <th>Custom ID</th>
-                    <th>Broadcasts</th>
-                    <th>Gifts (value)</th>
-                    <th>can_run_games</th>
+                    <th>المعرّف</th>
+                    <th>اسم المستخدم</th>
+                    <th>البريد الإلكتروني</th>
+                    <th>الدور</th>
+                    <th>تيك توك</th>
+                    <th>الـID العام</th>
+                    <th>البثوث</th>
+                    <th>الهدايا (القيمة)</th>
+                    <th>صلاحية الألعاب</th>
                 </tr>
             </thead>
             <tbody id="admin-users-table-body">
-                <tr><td class="table-empty" colspan="9">Loading…</td></tr>
+                <tr><td class="table-empty" colspan="9">جارٍ التحميل…</td></tr>
             </tbody>
         </table>
         </div>
@@ -100,7 +100,7 @@
 
     function renderUsers(users) {
         if (!users.length) {
-            tbody.innerHTML = '<tr><td class="table-empty" colspan="9">No users yet.</td></tr>';
+            tbody.innerHTML = '<tr><td class="table-empty" colspan="9">لا يوجد مستخدمون بعد.</td></tr>';
             return;
         }
 
@@ -117,12 +117,14 @@
                 '<td>' + u.id + '</td>' +
                 '<td>' + escapeHtml(u.username) + '</td>' +
                 '<td>' + escapeHtml(u.email) + '</td>' +
-                '<td><span class="badge">' + escapeHtml(u.role) + '</span></td>' +
+                '<td><span class="badge">' + escapeHtml(u.role) + '</span>' +
+                    (u.is_streamer ? ' <span title="طلب أن يكون ستريمر وقت التسجيل">🎙️</span>' : '') +
+                '</td>' +
                 '<td>' + escapeHtml(u.tiktok_username) + (u.tiktok_verified ? ' ✅' : '') + '</td>' +
                 '<td class="mono">' +
                     '<input type="text" style="' + inputStyle + '" value="' + escapeAttr(u.custom_id) + '" data-user-id="' + u.id + '" data-custom-id-input>' +
-                    ' <button class="btn btn-sm" data-user-id="' + u.id + '" data-save-custom-id>Save</button>' +
-                    ' <a class="btn btn-sm" href="profile.html?id=' + encodeURIComponent(u.custom_id || '') + '" target="_blank">View</a>' +
+                    ' <button class="btn btn-sm" data-user-id="' + u.id + '" data-save-custom-id>حفظ</button>' +
+                    ' <a class="btn btn-sm" href="profile.html?id=' + encodeURIComponent(u.custom_id || '') + '" target="_blank">عرض</a>' +
                 '</td>' +
                 '<td>' + u.stats.total_broadcasts + '</td>' +
                 '<td>' + u.stats.total_gifts + ' (' + u.stats.total_gifts_value + ')</td>' +
@@ -159,7 +161,7 @@
                 window.AGPAuth.adminSetCustomId(userId, newId).then(function (result) {
                     if (result.success) {
                         showMessage('تم تحديث الـID.', 'success');
-                        loadUsers(); // إعادة تحميل حتى يتحدّث رابط "View" بالقيمة الجديدة
+                        loadUsers(); // إعادة تحميل حتى يتحدّث رابط "عرض" بالقيمة الجديدة
                     } else {
                         showMessage('تعذّر الحفظ: ' + (result.error || 'unknown') + (result.error === 'custom_id_taken' ? ' (هذا الـID مستخدَم لحساب آخر)' : ''), 'error');
                     }
@@ -169,7 +171,7 @@
     }
 
     function loadUsers() {
-        tbody.innerHTML = '<tr><td class="table-empty" colspan="9">Loading…</td></tr>';
+        tbody.innerHTML = '<tr><td class="table-empty" colspan="9">جارٍ التحميل…</td></tr>';
         window.AGPAuth.adminListUsers().then(function (result) {
             if (!result.success) {
                 showMessage('تعذّر تحميل قائمة المستخدمين.', 'error');
