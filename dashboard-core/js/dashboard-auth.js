@@ -30,6 +30,14 @@
     window.AGPAuth.requireAuth('../login.html').then(function (user) {
         if (!user) return; // تحويل قيد التنفيذ فعلاً داخل requireAuth
 
+        // هذي اللوحة حصراً لحساب الأدمن — أي حساب آخر (عادي أو ستريمر
+        // موافَق عليه) يُحوَّل لصفحة بروفايله العامة بدل ما يشوف اللوحة.
+        // راجع AGPAuth.canAccessDashboard وdocs/CHANGELOG.md.
+        if (!window.AGPAuth.canAccessDashboard(user)) {
+            window.location.href = '../profile.html?id=' + encodeURIComponent(user.custom_id || '');
+            return;
+        }
+
         document.body.classList.remove('auth-checking');
 
         if (document.readyState === 'loading') {
