@@ -19,6 +19,8 @@ var password = require('./password');
 var logger = require('../utils/logger');
 var config = require('../config');
 var OAuth2Client = require('google-auth-library').OAuth2Client;
+var collectiblesService = require('../collectibles/collectibles-service');
+var pointsService = require('../points/points-service');
 
 var SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 يوماً
 var googleClient = config.googleClientId ? new OAuth2Client(config.googleClientId) : null;
@@ -233,8 +235,6 @@ function getPublicProfile(customId) {
         tiktok_username: user.tiktok_verified ? user.tiktok_username : null,
         tiktok_verified: Boolean(user.tiktok_verified),
         joined_at: user.created_at,
-        // كل هذي أرقام حقيقية من جدول broadcasts (لا XP/SP/مستوى — تلك
-        // ميزات غير مبنية بعد، راجع docs/CHANGELOG.md).
         stats: {
             total_broadcasts: stats.total_broadcasts,
             total_gifts: stats.total_gifts,
@@ -242,8 +242,33 @@ function getPublicProfile(customId) {
             total_follows: stats.total_follows,
             total_players: stats.total_players,
             total_live_ms: stats.total_live_ms
-        }
+        },
+        // نظام النقاط/المستويات + المقتنيات (إطارات + دخولية) — راجع
+        // backend/points/points-service.js وbackend/collectibles/collectibles-service.js.
+        // handlePublicProfile في auth-router.js هو من يقرر إرسال هذا الحقل
+        // أصلاً (صاحب الحساب أو الأدمن فقط)؛ هذا الملف لا يعرف شيئاً عن
+        // تلك القاعدة، فقط يُرفِق البيانات لو الكائن كامل سيُرسَل.
+        points: pointsService.getUserPoints(user.id),
+        frames: collectiblesService.getUserFrames(user.id),
+        entrance: collectiblesService.getEntrance(user.id)
     };
+}
+
+/**
+ * إيجاد حساب مسجَّل بالمنصة له يوزرنيم تيك توك **موثَّق فعلياً**
+ * (tiktok_verified = 1) يطابق الاسم المُمرَّر — يُستخدَم لربط مشاركة
+ * لاعب بجولة (معروف فقط بيوزرنيم تيك توك من لوحة الستريمر) بحساب فعلي
+ * على المنصة لمنحه نقاطاً (راجع backend/points/points-service.js). مطابقة
+ * غير حساسة لحالة الأحرف (تيك توك نفسه غير حساس لحالة الأحرف).
+ * @param {string} tiktokUsername
+ * @returns {{id: number}|null}
+ */
+function findVerifiedUserByTikTok(tiktokUsername) {
+    tiktokUsername = (tiktokUsername || '').trim();
+    if (!tiktokUsername) return null;
+    return db.prepare(
+        'SELECT id FROM users WHERE tiktok_verified = 1 AND LOWER(tiktok_username) = LOWER(?)'
+    ).get(tiktokUsername) || null;
 }
 
 /* ----------------------------------------------------------------------
@@ -431,10 +456,18 @@ function listAllUsersWithStats() {
             u.custom_id = generatePublicId();
             db.prepare('UPDATE users SET custom_id = ? WHERE id = ?').run(u.custom_id, u.id);
         }
+        var frames = collectiblesService.getUserFrames(u.id);
+        var equipped = frames.filter(function (f) { return f.equipped; })[0] || null;
         return Object.assign({}, u, {
             is_streamer: Boolean(u.is_streamer),
             permissions: JSON.parse(u.permissions || '{}'),
-            stats: getUserStats(u.id)
+            stats: getUserStats(u.id),
+            // للوحة الأدمن فقط (جدول المستخدمين) — نفس بيانات النقاط/
+            // المقتنيات المُرفَقة في getPublicProfile، لكن هنا لكل المستخدمين
+            // دفعة واحدة بدل طلب منفصل لكل بروفايل.
+            points: pointsService.getUserPoints(u.id),
+            framesCount: frames.length,
+            equippedFrame: equipped ? { frameType: equipped.frameType, frameRef: equipped.frameRef, displayNameAr: equipped.displayNameAr } : null
         });
     });
 }
@@ -488,6 +521,7 @@ module.exports = {
     unlinkTikTok: unlinkTikTok,
     setCustomId: setCustomId,
     getPublicProfile: getPublicProfile,
+    findVerifiedUserByTikTok: findVerifiedUserByTikTok,
     generateVerificationCode: generateVerificationCode,
     verifyTikTokOwnership: verifyTikTokOwnership,
     startBroadcast: startBroadcast,
