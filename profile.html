@@ -279,6 +279,28 @@
     .pp-stat-value { font-size: 22px; font-weight: 700; color: var(--pink-light); margin-bottom: 4px; }
     .pp-stat-label { font-size: 12.5px; color: var(--text-secondary); }
 
+    /* ---- بطاقات المقتنيات (إطارات) ---- */
+    .pp-frame-card {
+        border-radius: 14px;
+        border: 1px solid var(--card-border);
+        background: rgba(255, 255, 255, 0.03);
+        padding: 14px;
+        text-align: center;
+    }
+    .pp-frame-card.is-equipped { border-color: var(--pink); box-shadow: 0 0 14px rgba(255, 110, 199, 0.25); }
+    .pp-frame-img { width: 64px; height: 64px; object-fit: contain; margin: 0 auto 8px; display: block; }
+    .pp-frame-img[hidden] { display: none; }
+    .pp-frame-name { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+    .pp-frame-equip-btn {
+        font-size: 12px; padding: 6px 14px; border-radius: 10px; border: 1px solid var(--pink);
+        background: transparent; color: var(--pink-light); cursor: pointer; font-family: inherit;
+    }
+    .pp-frame-equip-btn:disabled { opacity: 0.5; cursor: default; }
+    .pp-frame-equipped-badge {
+        font-size: 11px; font-weight: 700; background: var(--gradient); color: #fff;
+        border-radius: 999px; padding: 4px 12px; display: inline-block;
+    }
+
     .pp-section-title {
         font-size: 16px;
         font-weight: 600;
@@ -482,8 +504,9 @@
         <div class="pp-card" style="margin-top:14px;">
             <div class="pp-levels">
                 <div class="pp-level-box">
-                    <div class="pp-level-title"><span>مستوى اللاعب (XP)</span><span class="pp-level-soon">قريباً</span></div>
-                    <div class="pp-progress-track"><div class="pp-progress-fill"></div></div>
+                    <div class="pp-level-title"><span>مستوى اللاعب</span><span id="pp-level-points">0 نقطة</span></div>
+                    <div class="pp-progress-track"><div class="pp-progress-fill" id="pp-level-fill" style="opacity:1;"></div></div>
+                    <div class="pp-level-soon" id="pp-level-next" style="margin-top:6px;">—</div>
                 </div>
                 <div class="pp-level-box">
                     <div class="pp-level-title"><span>مستوى الستريمر (SP)</span><span class="pp-level-soon">قريباً</span></div>
@@ -646,11 +669,18 @@
 
         <!-- تبويب: المقتنيات -->
         <div class="pp-tab-panel" data-panel="collectibles">
-            <div class="pp-card">
-                <div class="pp-soon-card">
-                    <span class="pp-soon-badge">قريباً</span><br>
-                    الإطارات، الشارات، الألقاب، والتأثيرات الخاصة ستظهر هنا فور تفعيل نظام المقتنيات.
+            <div class="pp-card pp-block">
+                <div class="pp-section-title">إطاراتي</div>
+                <div id="pp-frames-empty" class="pp-soon-card" style="display:none;">
+                    لا تملك أي إطار بعد — يُمنح من قِبل الأدمن، أو يُفتَح تلقائياً عند بلوغ مستوى معيّن.
                 </div>
+                <div id="pp-frames-grid" class="pp-grid"></div>
+                <div class="pp-status-note" id="pp-frames-status"></div>
+            </div>
+            <div class="pp-card pp-block" id="pp-entrance-card" style="display:none;">
+                <div class="pp-section-title">دخوليتي الحالية</div>
+                <div class="pp-info-row"><span class="pp-info-label">النموذج</span><span class="pp-info-value" id="pp-entrance-template">—</span></div>
+                <div class="pp-info-row"><span class="pp-info-label">النص</span><span class="pp-info-value" id="pp-entrance-text">—</span></div>
             </div>
         </div>
 
@@ -910,9 +940,107 @@
             document.getElementById('pp-s-gifts-value').textContent = p.stats.total_gifts_value || 0;
         }
 
+        renderLevel(p);
+        renderCollectibles(p, isOwner);
         wireTikTok(p, isOwner);
         wireCopyId(p.custom_id || '');
         wireTabs();
+    }
+
+    /**
+     * مستوى اللاعب — نقاط + شريط تقدّم نحو المستوى التالي. p.points يأتي
+     * فقط لصاحب الحساب أو الأدمن (نفس بوابة الخصوصية لبقية الحقول
+     * الكاملة). راجع backend/points/points-service.js.
+     */
+    function renderLevel(p) {
+        var points = p.points;
+        if (!points) return;
+
+        document.getElementById('pp-level-points').textContent = points.totalPoints + ' نقطة';
+
+        var currentLabel = points.currentLevel ? (points.currentLevel.displayNameAr || points.currentLevel.slug) : 'بلا مستوى بعد';
+        var fillEl = document.getElementById('pp-level-fill');
+        var nextEl = document.getElementById('pp-level-next');
+
+        if (points.nextLevel) {
+            var base = points.currentLevel ? points.currentLevel.pointsRequired : 0;
+            var span = points.nextLevel.pointsRequired - base;
+            var progress = span > 0 ? Math.min(100, Math.max(0, (points.totalPoints - base) / span * 100)) : 0;
+            fillEl.style.width = progress + '%';
+            nextEl.textContent = currentLabel + ' — يحتاج ' + Math.max(0, points.nextLevel.pointsRequired - points.totalPoints) + ' نقطة للمستوى التالي (' + (points.nextLevel.displayNameAr || points.nextLevel.slug) + ')';
+        } else {
+            fillEl.style.width = points.currentLevel ? '100%' : '0%';
+            nextEl.textContent = points.currentLevel ? (currentLabel + ' — أعلى مستوى متاح حالياً') : 'لا توجد مستويات مفعَّلة بعد.';
+        }
+    }
+
+    /**
+     * إطاراتي — كل إطار مملوك (من getUserFrames بالخادم)، مع زر "تفعيل"
+     * لصاحب الحساب فقط (equipFrame يرفض أي محاولة من غير صاحب الجلسة
+     * نفسها من جهة الخادم على أي حال). صورة الإطار تُحمَّل من جذر
+     * المستودع بنفس اسم ملفها (نفس أسلوب الشعار/البانر) — لو الأدمن لم
+     * يرفعها بعد، onerror يُخفيها بهدوء بدل أيقونة صورة مكسورة.
+     */
+    function renderCollectibles(p, isOwner) {
+        var frames = p.frames || [];
+        var gridEl = document.getElementById('pp-frames-grid');
+        var emptyEl = document.getElementById('pp-frames-empty');
+        var statusEl = document.getElementById('pp-frames-status');
+
+        if (!frames.length) {
+            emptyEl.style.display = '';
+            gridEl.innerHTML = '';
+        } else {
+            emptyEl.style.display = 'none';
+            gridEl.innerHTML = frames.map(function (f) {
+                var name = f.displayNameAr || f.frameRef;
+                var img = f.imageFilename
+                    ? '<img class="pp-frame-img" src="' + escapeAttrLocal(f.imageFilename) + '" alt="" onerror="this.hidden=true;">'
+                    : '';
+                var action = f.equipped
+                    ? '<span class="pp-frame-equipped-badge">مفعّل الآن</span>'
+                    : (isOwner
+                        ? '<button type="button" class="pp-frame-equip-btn" data-equip-type="' + f.frameType + '" data-equip-ref="' + escapeAttrLocal(f.frameRef) + '">تفعيل</button>'
+                        : '<span class="pp-frame-equipped-badge" style="background:transparent;border:1px solid var(--card-border);color:var(--text-secondary);">غير مفعّل</span>');
+                return '<div class="pp-frame-card' + (f.equipped ? ' is-equipped' : '') + '">' + img +
+                    '<div class="pp-frame-name">' + escapeHtmlLocal(name) + '</div>' + action + '</div>';
+            }).join('');
+
+            if (isOwner) {
+                Array.prototype.forEach.call(gridEl.querySelectorAll('[data-equip-type]'), function (btn) {
+                    btn.addEventListener('click', function () {
+                        btn.disabled = true;
+                        statusEl.textContent = 'جارٍ التفعيل…';
+                        statusEl.className = 'pp-status-note';
+                        window.AGPAuth.equipFrame(btn.getAttribute('data-equip-type'), btn.getAttribute('data-equip-ref')).then(function (result) {
+                            if (result.success) {
+                                window.location.reload();
+                            } else {
+                                statusEl.textContent = 'تعذّر التفعيل.';
+                                statusEl.className = 'pp-status-note pp-status-note--err';
+                                btn.disabled = false;
+                            }
+                        });
+                    });
+                });
+            }
+        }
+
+        var entrance = p.entrance;
+        if (entrance) {
+            document.getElementById('pp-entrance-card').style.display = '';
+            document.getElementById('pp-entrance-template').textContent = entrance.template_key || '—';
+            document.getElementById('pp-entrance-text').textContent = entrance.entrance_text || '—';
+        }
+    }
+
+    function escapeHtmlLocal(value) {
+        var div = document.createElement('div');
+        div.textContent = value === null || value === undefined ? '' : String(value);
+        return div.innerHTML;
+    }
+    function escapeAttrLocal(value) {
+        return escapeHtmlLocal(value).replace(/"/g, '&quot;');
     }
 
     if (!customId) {
