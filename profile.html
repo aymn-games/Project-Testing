@@ -171,6 +171,23 @@
     }
     .pp-copy-btn:hover { color: var(--pink-light); border-color: var(--pink); }
 
+    /* زر تسجيل الخروج — يظهر فقط لصاحب البروفايل نفسه (isOwner)، راجع
+       renderFull أدناه. نفس نمط .pp-copy-btn بصرياً بس بحجم أكبر شوي. */
+    .pp-logout-btn {
+        margin-inline-start: auto;
+        align-self: flex-start;
+        background: transparent;
+        border: 1px solid var(--card-border);
+        color: var(--text-secondary);
+        border-radius: 8px;
+        padding: 7px 16px;
+        font-size: 12.5px;
+        cursor: pointer;
+        font-family: inherit;
+        white-space: nowrap;
+    }
+    .pp-logout-btn:hover { color: var(--pink-light); border-color: var(--pink); }
+
     .pp-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 
     .pp-badge {
@@ -499,6 +516,7 @@
                 <div class="pp-badges" id="pp-badges"></div>
                 <div class="pp-joined" id="pp-joined">—</div>
             </div>
+            <button type="button" class="pp-logout-btn" id="pp-logout-btn" style="display:none;">تسجيل خروج</button>
         </div>
 
         <div class="pp-card" style="margin-top:14px;">
@@ -892,6 +910,17 @@
 
         var cachedUser = window.AGPAuth.getCachedUser();
         var isOwner = Boolean(cachedUser && cachedUser.custom_id && cachedUser.custom_id === p.custom_id);
+
+        // زر تسجيل الخروج — يظهر فقط لصاحب الحساب نفسه وهو يشوف بروفايله،
+        // نفس نمط زر Logout الموجود بـ admin.html/dashboard-core (تسجيل
+        // الخروج ثم تحويل لـ login.html — من هناك يقدر يدخل بحساب جديد).
+        var logoutBtn = document.getElementById('pp-logout-btn');
+        if (isOwner) {
+            logoutBtn.style.display = '';
+            logoutBtn.onclick = function () {
+                window.AGPAuth.logout().then(function () { window.location.href = 'login.html'; });
+            };
+        }
 
         document.getElementById('pp-avatar').textContent = initials(p.username);
         document.getElementById('pp-username').textContent = p.username;
