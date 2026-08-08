@@ -18,6 +18,9 @@
 'use strict';
 
 var authService = require('../auth/auth-service');
+var announcementService = require('../announcements/announcement-service');
+var collectiblesService = require('../collectibles/collectibles-service');
+var pointsService = require('../points/points-service');
 var logger = require('../utils/logger');
 var config = require('../config');
 var response = require('./response');
@@ -68,7 +71,20 @@ var ROUTES = [
     { method: 'GET', path: '/api/admin/users', requireAuth: true, requireAdmin: true, handler: handleAdminListUsers },
     { method: 'POST', path: '/api/admin/permissions', requireAuth: true, requireAdmin: true, handler: handleAdminSetPermission },
     { method: 'POST', path: '/api/admin/custom-id', requireAuth: true, requireAdmin: true, handler: handleAdminSetCustomId },
-    { method: 'GET', path: '/api/profile', requireAuth: false, handler: handlePublicProfile }
+    { method: 'GET', path: '/api/profile', requireAuth: false, handler: handlePublicProfile },
+    { method: 'GET', path: '/api/announcement', requireAuth: false, handler: handleGetAnnouncement },
+    { method: 'POST', path: '/api/admin/announcement', requireAuth: true, requireAdmin: true, handler: handleAdminSetAnnouncement },
+
+    // ---- المقتنيات (إطارات + دخوليات) والنقاط — راجع
+    // backend/collectibles/collectibles-service.js وbackend/points/points-service.js
+    { method: 'GET', path: '/api/admin/collectibles/catalog', requireAuth: true, requireAdmin: true, handler: handleAdminGetCatalog },
+    { method: 'POST', path: '/api/admin/collectibles/catalog', requireAuth: true, requireAdmin: true, handler: handleAdminUpdateCatalog },
+    { method: 'POST', path: '/api/admin/collectibles/custom-frame', requireAuth: true, requireAdmin: true, handler: handleAdminCreateCustomFrame },
+    { method: 'POST', path: '/api/admin/collectibles/grant', requireAuth: true, requireAdmin: true, handler: handleAdminGrantFrame },
+    { method: 'POST', path: '/api/admin/collectibles/revoke', requireAuth: true, requireAdmin: true, handler: handleAdminRevokeFrame },
+    { method: 'POST', path: '/api/admin/entrance', requireAuth: true, requireAdmin: true, handler: handleAdminSetEntrance },
+    { method: 'POST', path: '/api/collectibles/equip', requireAuth: true, handler: handleEquipFrame },
+    { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete }
 ];
 
 /* ----------------------------------------------------------------------
@@ -135,8 +151,20 @@ function handleAdminListUsers(req, res) {
     sendJson(res, 200, { success: true, users: authService.listAllUsersWithStats() });
 }
 
+/**
+ * ⚠️ منح تلقائي مرتبط: تفعيل صلاحية can_run_games تحديداً (وليس أي
+ * صلاحية أخرى) يمنح تلقائياً إطار "streamer" الخاص (+ دخولية + توهج
+ * تلقائياً معه، راجع frame_catalog.bundles_entrance) — هذا هو "الإطار
+ * التلقائي" المتفَق عليه: لا يُمنح عند مجرد إنشاء الحساب كستريمر
+ * (is_streamer)، فقط عند موافقة الأدمن الفعلية على تشغيل الألعاب. تعطيل
+ * الصلاحية لاحقاً **لا يسحب الإطار تلقائياً** (قرار منتج: الإطار إنجاز
+ * مكتسب، سحبه يحتاج فعل يدوي صريح من الأدمن عبر /api/admin/collectibles/revoke).
+ */
 function handleAdminSetPermission(req, res, body) {
     var result = authService.setPermission(body.userId, body.permissionKey, Boolean(body.value));
+    if (result.success && body.permissionKey === 'can_run_games' && body.value) {
+        collectiblesService.grantFrame(body.userId, 'catalog', 'streamer', { grantedBy: 'auto_permission' });
+    }
     sendJson(res, result.success ? 200 : 400, result);
 }
 
@@ -181,6 +209,121 @@ function handlePublicProfile(req, res, body, user) {
     }
 
     sendJson(res, 200, { success: true, profile: profile });
+}
+
+/**
+ * الإعلان الحالي (إن كان نشطاً) — مسار عام بدون تسجيل دخول، تستدعيه
+ * الصفحة الرئيسية عند التحميل لعرض نافذة منبثقة لكل زائر. يرجع
+ * announcement: null بهدوء لو ما فيه إعلان نشط (لا خطأ).
+ */
+function handleGetAnnouncement(req, res) {
+    sendJson(res, 200, { success: true, announcement: announcementService.getActiveAnnouncement() });
+}
+
+/**
+ * نشر/تحديث أو إزالة الإعلان — الأدمن فقط. body.active === false يزيل
+ * الإعلان الحالي فوراً (يُبقي نصه محفوظاً للتعديل لاحقاً)؛ أي شيء آخر
+ * يُعامَل كنشر/تحديث كامل (body.text إلزامي، body.imageFilename اختياري).
+ */
+function handleAdminSetAnnouncement(req, res, body) {
+    if (body.active === false) {
+        sendJson(res, 200, announcementService.clearAnnouncement());
+        return;
+    }
+    var result = announcementService.setAnnouncement(body.text, body.imageFilename);
+    sendJson(res, result.success ? 200 : 400, result);
+}
+
+/* ----------------------------------------------------------------------
+ * المقتنيات (إطارات + دخوليات) والنقاط — كل Handler يستدعي دالة واحدة
+ * موجودة أصلاً في collectiblesService/pointsService، بدون منطق هنا.
+ * ---------------------------------------------------------------------- */
+
+function handleAdminGetCatalog(req, res) {
+    sendJson(res, 200, {
+        success: true,
+        catalog: collectiblesService.getCatalog(),
+        customFrames: collectiblesService.listCustomFrames()
+    });
+}
+
+function handleAdminUpdateCatalog(req, res, body) {
+    var result = collectiblesService.updateCatalogEntry(body.slug, {
+        displayNameAr: body.displayNameAr,
+        levelPointsRequired: body.levelPointsRequired,
+        defaultEntranceTemplate: body.defaultEntranceTemplate,
+        defaultEntranceText: body.defaultEntranceText
+    });
+    sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleAdminCreateCustomFrame(req, res, body) {
+    var result = collectiblesService.createCustomFrame(body.imageFilename, body.displayNameAr);
+    sendJson(res, result.success ? 201 : 400, result);
+}
+
+/**
+ * منح إطار (كتالوج أو حصري) لأي مستخدم يحدده الأدمن. body.entranceTemplate/
+ * body.entranceText اختياريان — لو الإطار من الأربعة "الخاصة" ولم
+ * تُمرَّرا، تُستخدَم قيم frame_catalog الافتراضية تلقائياً.
+ */
+function handleAdminGrantFrame(req, res, body) {
+    var result = collectiblesService.grantFrame(body.userId, body.frameType, body.frameRef, {
+        grantedBy: 'admin_manual',
+        entranceTemplate: body.entranceTemplate,
+        entranceText: body.entranceText
+    });
+    sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleAdminRevokeFrame(req, res, body) {
+    var result = collectiblesService.revokeFrame(body.userId, body.frameType, body.frameRef);
+    sendJson(res, 200, result);
+}
+
+/**
+ * تعيين/إزالة دخولية مستخدم يدوياً — مستقل تماماً عن أي إطار (يُستخدَم
+ * لإعطاء دخولية لمستخدم لا يملك أحد الإطارات الأربعة "الخاصة"، أو
+ * لتخصيص نص/نموذج مختلف عن الافتراضي). body.clear === true يزيلها.
+ */
+function handleAdminSetEntrance(req, res, body) {
+    if (body.clear) {
+        sendJson(res, 200, collectiblesService.clearEntrance(body.userId));
+        return;
+    }
+    var result = collectiblesService.setEntrance(body.userId, body.templateKey, body.entranceText, 'admin_manual');
+    sendJson(res, 200, result);
+}
+
+/**
+ * صاحب الحساب نفسه يفعّل أحد إطاراته المملوكة كإطاره الظاهر الوحيد —
+ * راجع Q4 بخصوص تصميم المقتنيات: "المستخدم يفعّل من بروفايله الخاص".
+ */
+function handleEquipFrame(req, res, body, user) {
+    var result = collectiblesService.setEquipped(user.id, body.frameType, body.frameRef);
+    sendJson(res, result.success ? 200 : 400, result);
+}
+
+/**
+ * تُستدعى من dashboard-core عند إنهاء جولة (راجع dashboard-core/js/
+ * dashboard-core.js — NS.components.round.end). body.participants: مصفوفة
+ * {tiktokUsername, won}. كل مشارك يُطابَق بحساب مسجَّل موثَّق تيك توك
+ * (findVerifiedUserByTikTok) قبل منح أي نقاط — لا نقاط لمن لا حساب له
+ * أو لم يوثّق تيك توك، بصمت (لا خطأ، هذا سلوك متوقَّع وليس استثنائياً).
+ */
+function handleRoundComplete(req, res, body) {
+    var participants = Array.isArray(body.participants) ? body.participants : [];
+    var durationMs = Number(body.durationMs) || 0;
+    var results = [];
+
+    participants.forEach(function (p) {
+        var matched = authService.findVerifiedUserByTikTok(p && p.tiktokUsername);
+        if (!matched) return;
+        var award = pointsService.awardForRoundCompletion(matched.id, { won: Boolean(p.won), durationMs: durationMs });
+        results.push({ tiktokUsername: p.tiktokUsername, userId: matched.id, added: award.added, totalPoints: award.totalPoints });
+    });
+
+    sendJson(res, 200, { success: true, awarded: results });
 }
 
 /* ----------------------------------------------------------------------
