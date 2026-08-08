@@ -195,6 +195,10 @@ ensureColumn('users', 'tiktok_verification_code', 'TEXT');
 ensureColumn('users', 'custom_id', 'TEXT');
 ensureColumn('users', 'is_streamer', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'permissions', "TEXT NOT NULL DEFAULT '{}'");
+// حفلة ترحيب الستريمر الجديد (راجع docs/CHANGELOG.md) — 0 = لسا ما
+// شافها كاملة (تظهر له بـindex.html)، 1 = خلص شافها، ما تتكرر تلقائياً
+// إلا لو الأدمن صفّرها له صراحة من admin.html.
+ensureColumn('users', 'welcome_completed', 'INTEGER NOT NULL DEFAULT 0');
 
 /**
  * تهيئة أولية لكتالوج الإطارات الثابت (4 خاصة + 7 مستويات) — تُنفَّذ مرة
