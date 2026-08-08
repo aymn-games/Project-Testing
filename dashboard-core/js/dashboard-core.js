@@ -900,14 +900,50 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
      * فعلياً (`game:roundStarted`/`game:roundEnded`)، فتمر عبر Round
      * Manager وSession وGame API بنفس المسار الحقيقي تماماً.
      */
+    /**
+     * ⚠️ نظام النقاط (راجع backend/points/points-service.js): عند إنهاء
+     * جولة، تُرسَل قائمة المشاركين الحاليين (AGP.gameManager.getPlayers())
+     * + الفائز الأخير (NS.components.winner._last) + مدة الجولة (بين
+     * start() وend() هنا) لـ /api/points/round-complete، الذي يطابق كل
+     * لاعب بحساب مسجَّل موثَّق تيك توك (بصمت يتجاهل من لا حساب له).
+     *
+     * ⚠️ افتراض صريح غير مؤكَّد: `player.name` (أو player.id لو الاسم
+     * غير موجود) يُفترَض أنه يوزرنيم تيك توك نفسه — هذا الحقل يُضبَط من
+     * مصدر انضمام اللاعب (Lobby/Queue/PlayerSource)، ولا توثيق مؤكَّد هنا
+     * أنه دائماً نفس يوزرنيم تيك توك الحقيقي حرفياً بكل مصدر انضمام. لو
+     * تبيّن لاحقاً أنه مختلف، التعديل يقتصر على السطر اللي يبني
+     * `participants` أدناه فقط. الإرسال نفسه لا يكسر أي شيء لو فشل
+     * (Promise catch صامت) — لا يعطّل تدفّق إنهاء الجولة العادي.
+     */
     NS.components.round = {
+        _startedAt: null,
         render: function () {
             setText('round-state', AGP.gameManager.getRoundState());
         },
         start: function () {
+            this._startedAt = Date.now();
             AGP.events.emit('game:roundStarted', { id: gameId() });
         },
         end: function () {
+            var durationMs = this._startedAt ? (Date.now() - this._startedAt) : 0;
+            this._startedAt = null;
+
+            if (window.AGPAuth && typeof window.AGPAuth.reportRoundCompletion === 'function') {
+                var winner = NS.components.winner._last;
+                var winnerKey = winner && (winner.id || winner.name);
+                var players = AGP.gameManager.getPlayers();
+                var participants = players.map(function (player) {
+                    var key = player.name || player.id;
+                    return { tiktokUsername: key, won: Boolean(winnerKey) && (player.id === winnerKey || player.name === winnerKey) };
+                }).filter(function (p) { return p.tiktokUsername; });
+
+                if (participants.length) {
+                    window.AGPAuth.reportRoundCompletion(participants, durationMs).catch(function () {
+                        // فشل صامت — لا نمنع إنهاء الجولة نفسه بسبب هذا (راجع الملاحظة أعلاه).
+                    });
+                }
+            }
+
             AGP.events.emit('game:roundEnded', { id: gameId() });
         }
     };
