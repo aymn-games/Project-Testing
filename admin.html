@@ -284,6 +284,12 @@
                 return '<input type="checkbox" data-user-id="' + u.id + '" data-permission-key="' + key + '" ' + checked + '>';
             }).join('');
 
+            // زر "إعادة الترحيب" — بجانب صلاحية الألعاب مباشرة (نفس
+            // الخلية) بطلب صريح من صاحب المشروع. راجع docs/CHANGELOG.md.
+            var welcomeResetBtn = '<br><button class="btn btn-sm" data-user-id="' + u.id + '" data-reset-welcome title="' +
+                (u.welcome_completed ? 'شافها كاملة من قبل — اضغط لإعادتها له مرة وحدة' : 'لسا ما شافها') +
+                '">🎉 إعادة الترحيب</button>';
+
             var inputStyle = 'width:110px;padding:5px 7px;background:var(--bg);border:1px solid var(--border-light);' +
                 'border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit;';
 
@@ -302,7 +308,7 @@
                 '</td>' +
                 '<td>' + u.stats.total_broadcasts + '</td>' +
                 '<td>' + u.stats.total_gifts + ' (' + u.stats.total_gifts_value + ')</td>' +
-                '<td>' + permCells + '</td>' +
+                '<td>' + permCells + welcomeResetBtn + '</td>' +
                 '<td>' + (u.points ? u.points.totalPoints : 0) + ' — ' +
                     escapeHtml(u.points && u.points.currentLevel ? (u.points.currentLevel.displayNameAr || u.points.currentLevel.slug) : 'بلا مستوى') + '</td>' +
                 '<td>' + (u.equippedFrame ? escapeHtml(u.equippedFrame.displayNameAr || u.equippedFrame.frameRef) : '—') + '</td>' +
@@ -322,6 +328,23 @@
                         }
                     })
                     .finally(function () { checkbox.disabled = false; });
+            });
+        });
+
+        // زر "إعادة الترحيب" — يصفّر welcome_completed لذاك المستخدم فقط،
+        // فتطلع له حفلة الترحيب مرة وحدة إضافية بأول زيارة جاية للصفحة
+        // الرئيسية. راجع docs/CHANGELOG.md.
+        Array.prototype.forEach.call(tbody.querySelectorAll('[data-reset-welcome]'), function (button) {
+            button.addEventListener('click', function () {
+                var userId = Number(button.getAttribute('data-user-id'));
+                button.disabled = true;
+                window.AGPAuth.adminResetWelcome(userId).then(function (result) {
+                    if (result.success) {
+                        showMessage('تم — الحفلة رح تطلع له مرة ثانية أول ما يزور الصفحة الرئيسية.', 'success');
+                    } else {
+                        showMessage('تعذّر: ' + (result.error || 'unknown'), 'error');
+                    }
+                }).finally(function () { button.disabled = false; });
             });
         });
 
