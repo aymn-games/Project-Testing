@@ -104,8 +104,8 @@ function getUserPoints(userId) {
     var totalPoints = row ? row.total_points : 0;
 
     var levels = db.prepare(
-        'SELECT slug, display_name_ar, level_points_required FROM frame_catalog ' +
-        'WHERE kind = "level" AND level_points_required IS NOT NULL ORDER BY level_points_required ASC'
+        "SELECT slug, display_name_ar, level_points_required FROM frame_catalog " +
+        "WHERE kind = 'level' AND level_points_required IS NOT NULL ORDER BY level_points_required ASC"
     ).all();
 
     var currentLevel = null;
