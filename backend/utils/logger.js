@@ -33,7 +33,21 @@ function error() {
     console.error.apply(console, args);
 }
 
+/**
+ * تسجيل معلومة تشغيلية مهمة — تظهر دائماً بصرف النظر عن وضع Debug، مثل
+ * error()، لكن عبر console.log بدل console.error (مو خطأ فعلياً). تُستخدَم
+ * لحالات لازم يشوفها صاحب المشروع في أي بيئة (مثل نوع مسار قاعدة
+ * البيانات المستخدَم فعلياً) — على عكس log() اللي تُكتَم بالإنتاج لأن
+ * Render يضبط NODE_ENV=production تلقائياً (config.debug تصير false).
+ */
+function info() {
+    var args = Array.prototype.slice.call(arguments);
+    args.unshift('[AGP Backend]');
+    console.log.apply(console, args);
+}
+
 module.exports = {
     log: log,
-    error: error
+    error: error,
+    info: info
 };
