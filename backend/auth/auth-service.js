@@ -363,7 +363,7 @@ function validateSession(token) {
     var session = db.prepare('SELECT * FROM sessions WHERE token = ?').get(token);
     if (!session || session.expires_at < now()) return null;
 
-    var user = db.prepare('SELECT id, username, email, role, tiktok_username, custom_id, is_streamer, permissions FROM users WHERE id = ?').get(session.user_id);
+    var user = db.prepare('SELECT id, username, email, role, tiktok_username, custom_id, is_streamer, permissions, welcome_completed FROM users WHERE id = ?').get(session.user_id);
     if (!user) return null;
 
     // شفاء ذاتي: حسابات أُنشئت قبل ميزة الـID العام (custom_id) قد لا
@@ -375,8 +375,33 @@ function validateSession(token) {
 
     user.is_streamer = Boolean(user.is_streamer);
     user.permissions = JSON.parse(user.permissions || '{}');
+    user.welcome_completed = Boolean(user.welcome_completed);
 
     return user;
+}
+
+/**
+ * حفلة ترحيب الستريمر الجديد (راجع docs/CHANGELOG.md) — تُستدعى ذاتياً
+ * من صاحب الحساب بعد ما يكمل الحفلة كاملة فعلياً (سلايدات + قص الشريطة
+ * + العد التنازلي)، وليس مجرد فتحها. بعدها ما تتكرر تلقائياً أبداً.
+ * @param {number} userId
+ */
+function completeWelcome(userId) {
+    db.prepare('UPDATE users SET welcome_completed = 1 WHERE id = ?').run(userId);
+    return { success: true };
+}
+
+/**
+ * الأدمن فقط — يصفّر حالة الترحيب لمستخدم معيّن، فتطلع له الحفلة مرة
+ * وحدة إضافية بأول زيارة جاية لـindex.html، ثم تنتهي تلقائياً بعد ما
+ * يكملها زي أول مرة (نفس مسار completeWelcome أعلاه).
+ * @param {number} userId
+ */
+function resetWelcome(userId) {
+    var user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+    if (!user) return { success: false, error: 'user_not_found' };
+    db.prepare('UPDATE users SET welcome_completed = 0 WHERE id = ?').run(userId);
+    return { success: true };
 }
 
 function logout(token) {
@@ -448,7 +473,7 @@ function getUserStats(userId) {
  * كل المستخدمين مع إحصائياتهم المجمَّعة — للوحة الأدمن فقط.
  */
 function listAllUsersWithStats() {
-    var users = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, custom_id, is_streamer, permissions, created_at FROM users ORDER BY created_at ASC').all();
+    var users = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, custom_id, is_streamer, permissions, welcome_completed, created_at FROM users ORDER BY created_at ASC').all();
     return users.map(function (u) {
         // شفاء ذاتي — نفس منطق validateSession، حتى تظهر لوحة الأدمن
         // دائماً IDً لكل حساب حتى القديم منه قبل هذه الميزة.
@@ -461,6 +486,7 @@ function listAllUsersWithStats() {
         return Object.assign({}, u, {
             is_streamer: Boolean(u.is_streamer),
             permissions: JSON.parse(u.permissions || '{}'),
+            welcome_completed: Boolean(u.welcome_completed),
             stats: getUserStats(u.id),
             // للوحة الأدمن فقط (جدول المستخدمين) — نفس بيانات النقاط/
             // المقتنيات المُرفَقة في getPublicProfile، لكن هنا لكل المستخدمين
@@ -520,6 +546,8 @@ module.exports = {
     linkTikTokUsername: linkTikTokUsername,
     unlinkTikTok: unlinkTikTok,
     setCustomId: setCustomId,
+    completeWelcome: completeWelcome,
+    resetWelcome: resetWelcome,
     getPublicProfile: getPublicProfile,
     findVerifiedUserByTikTok: findVerifiedUserByTikTok,
     generateVerificationCode: generateVerificationCode,
