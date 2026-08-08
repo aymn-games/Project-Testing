@@ -200,6 +200,113 @@
     }
 
     /**
+     * الإعلان الحالي (إن كان نشطاً) — بدون تسجيل دخول، تستدعيها
+     * index.html عند التحميل لعرض نافذة منبثقة لكل زائر. النتيجة
+     * result.announcement تكون null لو ما فيه إعلان نشط حالياً.
+     * @returns {Promise<Object>}
+     */
+    function getAnnouncement() {
+        return request('/api/announcement', { method: 'GET' });
+    }
+
+    /**
+     * الأدمن فقط — نشر/تحديث الإعلان الحالي (يظهر فوراً لكل زائر جديد
+     * للصفحة الرئيسية). imageFilename اختياري: اسم ملف مرفوع لجذر
+     * المستودع (بنفس أسلوب logo.png/hero-banner.png)، مو رفع صورة فعلي.
+     * @param {string} text
+     * @param {string} [imageFilename]
+     * @returns {Promise<Object>}
+     */
+    function adminSetAnnouncement(text, imageFilename) {
+        return request('/api/admin/announcement', {
+            method: 'POST',
+            body: { text: text, imageFilename: imageFilename || '', active: true }
+        });
+    }
+
+    /**
+     * الأدمن فقط — إزالة الإعلان الحالي فوراً (يختفي من الصفحة الرئيسية
+     * لكل الزوار من اللحظة التالية). النص القديم يبقى محفوظاً بالخادم.
+     * @returns {Promise<Object>}
+     */
+    function adminClearAnnouncement() {
+        return request('/api/admin/announcement', { method: 'POST', body: { active: false } });
+    }
+
+    /* ----------------------------------------------------------------------
+     * المقتنيات (إطارات + دخوليات) والنقاط — راجع
+     * backend/collectibles/collectibles-service.js وbackend/points/points-service.js
+     * ---------------------------------------------------------------------- */
+
+    function adminGetCollectiblesCatalog() {
+        return request('/api/admin/collectibles/catalog', { method: 'GET' });
+    }
+
+    function adminUpdateCatalogEntry(slug, fields) {
+        return request('/api/admin/collectibles/catalog', {
+            method: 'POST',
+            body: Object.assign({ slug: slug }, fields)
+        });
+    }
+
+    function adminCreateCustomFrame(imageFilename, displayNameAr) {
+        return request('/api/admin/collectibles/custom-frame', {
+            method: 'POST',
+            body: { imageFilename: imageFilename, displayNameAr: displayNameAr }
+        });
+    }
+
+    /**
+     * @param {number} userId
+     * @param {'catalog'|'custom'} frameType
+     * @param {string} frameRef
+     * @param {{entranceTemplate?: string, entranceText?: string}} [opts]
+     */
+    function adminGrantFrame(userId, frameType, frameRef, opts) {
+        opts = opts || {};
+        return request('/api/admin/collectibles/grant', {
+            method: 'POST',
+            body: { userId: userId, frameType: frameType, frameRef: frameRef, entranceTemplate: opts.entranceTemplate, entranceText: opts.entranceText }
+        });
+    }
+
+    function adminRevokeFrame(userId, frameType, frameRef) {
+        return request('/api/admin/collectibles/revoke', {
+            method: 'POST',
+            body: { userId: userId, frameType: frameType, frameRef: frameRef }
+        });
+    }
+
+    function adminSetEntrance(userId, templateKey, entranceText) {
+        return request('/api/admin/entrance', {
+            method: 'POST',
+            body: { userId: userId, templateKey: templateKey, entranceText: entranceText }
+        });
+    }
+
+    function adminClearEntrance(userId) {
+        return request('/api/admin/entrance', { method: 'POST', body: { userId: userId, clear: true } });
+    }
+
+    /**
+     * صاحب الحساب يفعّل أحد إطاراته المملوكة (من صفحة بروفايله الخاصة فقط).
+     */
+    function equipFrame(frameType, frameRef) {
+        return request('/api/collectibles/equip', { method: 'POST', body: { frameType: frameType, frameRef: frameRef } });
+    }
+
+    /**
+     * تُستدعى من dashboard-core عند إنهاء جولة — راجع dashboard-core/js/
+     * dashboard-core.js. participants: [{tiktokUsername, won}].
+     */
+    function reportRoundCompletion(participants, durationMs) {
+        return request('/api/points/round-complete', {
+            method: 'POST',
+            body: { participants: participants, durationMs: durationMs }
+        });
+    }
+
+    /**
      * هل هذا المستخدم يقدر يدخل لوحة الستريمر (dashboard-core)؟ حصراً
      * حساب الأدمن — أي حساب آخر (عادي أو ستريمر موافَق عليه) يُحوَّل
      * دائماً لصفحة بروفايله العامة بدل اللوحة. راجع docs/CHANGELOG.md.
@@ -294,6 +401,18 @@
         adminSetPermission: adminSetPermission,
         adminSetCustomId: adminSetCustomId,
         getPublicProfile: getPublicProfile,
+        getAnnouncement: getAnnouncement,
+        adminSetAnnouncement: adminSetAnnouncement,
+        adminClearAnnouncement: adminClearAnnouncement,
+        adminGetCollectiblesCatalog: adminGetCollectiblesCatalog,
+        adminUpdateCatalogEntry: adminUpdateCatalogEntry,
+        adminCreateCustomFrame: adminCreateCustomFrame,
+        adminGrantFrame: adminGrantFrame,
+        adminRevokeFrame: adminRevokeFrame,
+        adminSetEntrance: adminSetEntrance,
+        adminClearEntrance: adminClearEntrance,
+        equipFrame: equipFrame,
+        reportRoundCompletion: reportRoundCompletion,
         canAccessDashboard: canAccessDashboard,
         canPlayGames: canPlayGames,
         requireAuth: requireAuth,
