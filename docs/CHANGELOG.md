@@ -9,6 +9,56 @@
 
 ---
 
+## [0.37.1] — إصلاح: لوحة الأدمن تفشل بتحميل قائمة المستخدمين (خطأ SQL بجداول المقتنيات)
+
+### السياق
+بعد نشر [0.37.0] وربط `announcement-service.js` المفقود، ظهر خطأ جديد عند
+فتح `admin.html`: قسم الإعلان يعمل، لكن جدول المستخدمين يبقى عالقاً على
+"جارٍ التحميل…" مع بانر أحمر "تعذّر تحميل قائمة المستخدمين" — أي أن
+`GET /api/admin/users` كان يفشل بالسيرفر (500).
+
+### السبب الجذري
+3 استعلامات SQL (بـ`backend/collectibles/collectibles-service.js` و
+`backend/points/points-service.js`) قارنت عمود `kind`/`frame_type` بقيمة
+نصية بين علامتي اقتباس **مزدوجتين** (`kind = "level"`, `frame_type =
+"catalog"`) بدل مفردتين. بمعيار SQL القياسي (ونسخة SQLite المستخدمة هنا)،
+الاقتباس المزدوج يعني "اسم عمود"، لا نصاً حرفياً — وبما إنه لا يوجد عمود
+اسمه `level` أو `catalog` بجدول `frame_catalog`/`user_frames`، فشل SQLite
+بخطأ `no such column: "level"` عند أي استدعاء لـ:
+- `collectiblesService.getCatalog()`
+- `collectiblesService.autoGrantOnLevelUp()`
+- `pointsService.getUserPoints()`
+
+ودالة `listAllUsersWithStats()` (المستدعاة من `GET /api/admin/users`)
+تستدعي `pointsService.getUserPoints()` لكل مستخدم بحلقة — فأي استثناء
+بداخلها يُسقِط الطلب كاملاً بخطأ 500 (يُمسَك بمعالج الأخطاء العام
+بـ`auth-router.js` ويرجَّع `{success:false, error:'internal_error'}`، وهذا
+بالضبط ما تعرضه `admin.html` كـ"تعذّر تحميل قائمة المستخدمين").
+
+**ملاحظة صادقة**: هذا خطأ برمجي وقع أثناء كتابة [0.37.0] نفسه (لم يُكتشَف
+وقتها لأن فحص `node --check` يتحقق فقط من صحة صياغة JavaScript، لا من
+صحة نصوص SQL المضمَّنة كسلاسل نصية داخله) — لا علاقة له بمشكلة
+`announcement-service.js` المفقود التي أُصلِحت قبله.
+
+### أُصلِح
+- 3 مواضع بالضبط، تغيير الاقتباس المزدوج لمفرد حول القيم النصية `level`/
+  `catalog`:
+  - `collectiblesService.getCatalog()` — `ORDER BY (kind = 'level')`
+  - `collectiblesService.autoGrantOnLevelUp()` — شرطا `WHERE`
+  - `pointsService.getUserPoints()` — شرط `WHERE`
+- **تحقق فعلي قبل التسليم**: نُفِّذ الكود الحقيقي (`database.js` +
+  `auth-service.js` + `collectiblesService` + `pointsService`) ضد قاعدة
+  SQLite تجريبية فعلية (وليس فقط فحص صياغة) — أُعيد إنتاج الخطأ حرفياً
+  أولاً للتأكد من التشخيص، ثم تأكيد اختفائه تماماً بعد الإصلاح مع تمرين
+  التدفق الكامل: منح إطار founder + تحقق حزمة الدخولية التلقائية + منح
+  نقاط + فتح تلقائي لإطار مستوى + `listAllUsersWithStats()` لمستخدمين
+  اثنين معاً، كل ذلك بنجاح تام.
+
+### لم يتغيّر
+- لا تعديل على أي هيكل جدول (نفس المخطط بالضبط)، ولا على أي مسار HTTP،
+  ولا على أي ملف واجهة (`admin.html`/`profile.html`) — الإصلاح داخل
+  منطق الاستعلامات فقط بملفين اثنين.
+
 ## [0.37.0] — نظام المقتنيات (إطارات + دخوليات) والنقاط/المستويات
 
 ### السياق
