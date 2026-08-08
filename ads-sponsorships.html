@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الإعلانات والرعايات — منصة ألعاب أيمن</title>
+<meta name="description" content="معلومات الإعلانات والرعايات في منصة ألعاب أيمن.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg: #0e0e16; --surface: #150c26; --surface-2: #1c1233;
+        --border: rgba(124, 58, 237, 0.28); --text: #ffffff; --text-muted: #b9aed1;
+        --accent: #7c3aed; --accent-pink: #ff4dff;
+        --accent-gradient: linear-gradient(90deg, #7c3aed, #ff4dff);
+        --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); }
+    a { text-decoration: none; color: inherit; }
+    header.topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 16px 32px; border-bottom: 1px solid var(--border);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.2em; }
+    .brand-logo { height: 44px; width: auto; display: block; }
+    .home-link {
+        border: 1px solid var(--border); border-radius: 999px; padding: 8px 18px;
+        font-weight: 700; font-size: 0.9em; color: var(--text-muted);
+    }
+    .home-link:hover { color: var(--text); border-color: var(--accent); }
+    main { max-width: 780px; margin: 48px auto; padding: 0 24px 60px; }
+    h1 {
+        font-size: 1.9em; font-weight: 800; margin: 0 0 24px;
+        background: var(--accent-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .empty-note {
+        background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+        padding: 28px; color: var(--text-muted); line-height: 1.9; font-size: 0.95em;
+    }
+    footer { border-top: 1px solid var(--border); padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.85em; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+    <a href="index.html" class="brand"><img src="logo.png" alt="ألعاب أيمن" class="brand-logo"></a>
+    <a href="index.html" class="home-link">الرئيسية</a>
+</header>
+
+<main>
+    <h1>الإعلانات والرعايات</h1>
+    <!-- محتوى هذي الصفحة فاضي عمداً — يُكتَب لاحقاً مباشرة من هنا على GitHub. -->
+    <div class="empty-note">سيتم إضافة محتوى الإعلانات والرعايات هنا قريباً.</div>
+</main>
+
+<footer>© منصة ألعاب أيمن — جميع الحقوق محفوظة</footer>
+
+</body>
+</html>
