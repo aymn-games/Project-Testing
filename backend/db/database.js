@@ -36,7 +36,11 @@ var RENDER_DISK_MOUNT_PATH = '/var/data';
 var DB_DIR = fs.existsSync(RENDER_DISK_MOUNT_PATH) ? RENDER_DISK_MOUNT_PATH : path.join(__dirname, '..');
 var DB_PATH = path.join(DB_DIR, 'agp-data.sqlite');
 
-logger.log('Database: using ' + (DB_DIR === RENDER_DISK_MOUNT_PATH ? 'persistent Render disk' : 'local (non-persistent) path') + ' — ' + DB_PATH);
+// ⚠️ عمداً logger.info() وليس logger.log(): هذا السطر لازم يظهر دائماً
+// حتى بالإنتاج (حيث Render يضبط NODE_ENV=production تلقائياً فتصير
+// config.debug=false وتُكتَم logger.log() العادية) — التأكد من مسار
+// قاعدة البيانات الفعلي معلومة تشغيلية حرجة، مو تفصيل تصحيح عادي.
+logger.info('Database: using ' + (DB_DIR === RENDER_DISK_MOUNT_PATH ? 'persistent Render disk' : 'local (non-persistent) path') + ' — ' + DB_PATH);
 
 var db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL'); // أداء أفضل مع كتابة متزامنة أثناء البث
