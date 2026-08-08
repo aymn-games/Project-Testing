@@ -84,7 +84,11 @@ var ROUTES = [
     { method: 'POST', path: '/api/admin/collectibles/revoke', requireAuth: true, requireAdmin: true, handler: handleAdminRevokeFrame },
     { method: 'POST', path: '/api/admin/entrance', requireAuth: true, requireAdmin: true, handler: handleAdminSetEntrance },
     { method: 'POST', path: '/api/collectibles/equip', requireAuth: true, handler: handleEquipFrame },
-    { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete }
+    { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
+
+    // ---- حفلة ترحيب الستريمر الجديد — راجع docs/CHANGELOG.md
+    { method: 'POST', path: '/api/auth/welcome/complete', requireAuth: true, handler: handleCompleteWelcome },
+    { method: 'POST', path: '/api/admin/welcome/reset', requireAuth: true, requireAdmin: true, handler: handleAdminResetWelcome }
 ];
 
 /* ----------------------------------------------------------------------
@@ -324,6 +328,28 @@ function handleRoundComplete(req, res, body) {
     });
 
     sendJson(res, 200, { success: true, awarded: results });
+}
+
+/* ----------------------------------------------------------------------
+ * حفلة ترحيب الستريمر الجديد — راجع docs/CHANGELOG.md
+ * ---------------------------------------------------------------------- */
+
+/**
+ * يُستدعى من index.html بعد ما صاحب الحساب يكمل الحفلة كاملة فعلياً
+ * (كل السلايدات + قص الشريطة + العد التنازلي) — من user.id بالجلسة
+ * نفسها، مو من body، حتى ما يقدر أي مستخدم يعلّم حساب غيره كمكتمل.
+ */
+function handleCompleteWelcome(req, res, body, user) {
+    sendJson(res, 200, authService.completeWelcome(user.id));
+}
+
+/**
+ * الأدمن فقط — يصفّر حالة الترحيب لمستخدم معيّن (زر "إعادة الترحيب"
+ * بجدول admin.html، بجانب صلاحية الألعاب لكل مستخدم).
+ */
+function handleAdminResetWelcome(req, res, body) {
+    var result = authService.resetWelcome(body.userId);
+    sendJson(res, result.success ? 200 : 400, result);
 }
 
 /* ----------------------------------------------------------------------
