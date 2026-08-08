@@ -19,9 +19,18 @@
  *   راجع docs/CHANGELOG.md للتفاصيل الكاملة وخطوات الإعداد على Render.
  *
  * الجداول:
- *   users       — حسابات الستريمرز (+ حساب أدمن واحد)
- *   sessions    — جلسات تسجيل الدخول (Token مؤقّت لكل تسجيل دخول)
- *   broadcasts  — سجل كل بث مباشر رُبط بالمنصة (بداية/نهاية + إحصائياته)
+ *   users          — حسابات الستريمرز (+ حساب أدمن واحد)
+ *   sessions       — جلسات تسجيل الدخول (Token مؤقّت لكل تسجيل دخول)
+ *   broadcasts     — سجل كل بث مباشر رُبط بالمنصة (بداية/نهاية + إحصائياته)
+ *   announcement   — إعلان/تنبيه واحد يديره الأدمن، يظهر للزوار بالصفحة
+ *                    الرئيسية — راجع backend/announcements/announcement-service.js
+ *   frame_catalog  — كتالوج الإطارات الثابتة (تلقائية/خاصة + 7 مستويات) —
+ *                    راجع backend/collectibles/collectibles-service.js
+ *   custom_frames  — إطارات حصرية حرة يرفعها الأدمن ويمنحها لأي مستخدم
+ *   user_frames    — ملكية/تفعيل الإطارات لكل مستخدم
+ *   user_entrances — الدخولية النشطة (أنيميشن + نص) لكل مستخدم
+ *   user_points    — نقاط اللاعب الإجمالية + سقف يومي — راجع
+ *                    backend/points/points-service.js
  * ==========================================================================
  */
 
@@ -84,6 +93,86 @@ db.exec(`
 
     CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_broadcasts_user ON broadcasts(user_id);
+
+    -- إعلان/تنبيه واحد يديره الأدمن، يظهر للزوار بالصفحة الرئيسية (نافذة
+    -- منبثقة). صف واحد ثابت (id = 1) يُستبدَل بالكامل مع كل نشر جديد —
+    -- راجع backend/announcements/announcement-service.js.
+    CREATE TABLE IF NOT EXISTS announcement (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        text TEXT,
+        image_filename TEXT,
+        active INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER
+    );
+
+    -- ========================================================
+    -- نظام المقتنيات (إطارات + دخوليات) والنقاط/المستويات — راجع
+    -- backend/collectibles/collectibles-service.js وbackend/points/points-service.js
+    -- ========================================================
+
+    -- كتالوج الإطارات الثابتة/المحجوزة: 4 صفوف "خاصة" (founder/streamer/
+    -- supporter/distinguished — تُمنح تلقائياً أو يدوياً وتأتي مع دخولية
+    -- + توهج تلقائياً)، و7 صفوف "مستوى" (تُفتح تلقائياً عند بلوغ عدد
+    -- النقاط الذي يحدده الأدمن). أسماء الملفات ثابتة يرفعها الأدمن يدوياً
+    -- لجذر المستودع بنفس أسلوب logo.png — راجع ensureFrameCatalogSeed أدناه.
+    CREATE TABLE IF NOT EXISTS frame_catalog (
+        slug TEXT PRIMARY KEY,
+        image_filename TEXT NOT NULL,
+        display_name_ar TEXT NOT NULL DEFAULT '',
+        kind TEXT NOT NULL CHECK(kind IN ('special', 'level')),
+        level_points_required INTEGER,
+        bundles_entrance INTEGER NOT NULL DEFAULT 0,
+        default_entrance_template TEXT,
+        default_entrance_text TEXT
+    );
+
+    -- إطارات حصرية بأسماء ملفات حرة يرفعها الأدمن لاحقاً (خارج الكتالوج
+    -- الثابت أعلاه) — كل صف مقتنى واحد قابل للمنح لأي مستخدم يدوياً.
+    CREATE TABLE IF NOT EXISTS custom_frames (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        image_filename TEXT NOT NULL,
+        display_name_ar TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL
+    );
+
+    -- ملكية الإطارات لكل مستخدم. frame_type يحدد المصدر ('catalog' يشير
+    -- إلى frame_catalog.slug عبر frame_ref، 'custom' يشير إلى
+    -- custom_frames.id عبر frame_ref كنص). equipped = الإطار الظاهر
+    -- حالياً (واحد فقط في كل مرة لكل مستخدم — يُطبَّق بمنطق التطبيق، لا
+    -- قيد قاعدة بيانات).
+    CREATE TABLE IF NOT EXISTS user_frames (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        frame_type TEXT NOT NULL CHECK(frame_type IN ('catalog', 'custom')),
+        frame_ref TEXT NOT NULL,
+        granted_by TEXT NOT NULL DEFAULT 'admin_manual',
+        equipped INTEGER NOT NULL DEFAULT 0,
+        granted_at INTEGER NOT NULL,
+        UNIQUE(user_id, frame_type, frame_ref)
+    );
+
+    -- الدخولية النشطة لكل مستخدم (نموذج أنيميشن ثابت بالواجهة + نص حر) —
+    -- صف واحد لكل مستخدم، يُستبدَل بالكامل مع كل منح جديد (تلقائي مع
+    -- إطار خاص، أو يدوي مستقل من الأدمن).
+    CREATE TABLE IF NOT EXISTS user_entrances (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        template_key TEXT NOT NULL,
+        entrance_text TEXT NOT NULL DEFAULT '',
+        source TEXT NOT NULL DEFAULT 'admin_manual',
+        updated_at INTEGER NOT NULL
+    );
+
+    -- نقاط اللاعب الإجمالية (تحدد المستوى) + تتبّع سقف يومي (100 نقطة/يوم
+    -- كحد أقصى — today_date/today_earned يُصفَّران تلقائياً عند تغيّر اليوم).
+    CREATE TABLE IF NOT EXISTS user_points (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        total_points INTEGER NOT NULL DEFAULT 0,
+        today_date TEXT,
+        today_earned INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_user_frames_user ON user_frames(user_id);
 `);
 
 /**
@@ -106,6 +195,47 @@ ensureColumn('users', 'tiktok_verification_code', 'TEXT');
 ensureColumn('users', 'custom_id', 'TEXT');
 ensureColumn('users', 'is_streamer', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'permissions', "TEXT NOT NULL DEFAULT '{}'");
+
+/**
+ * تهيئة أولية لكتالوج الإطارات الثابت (4 خاصة + 7 مستويات) — تُنفَّذ مرة
+ * واحدة فقط لكل صف (INSERT OR IGNORE بمفتاح slug)، فلا خطر إعادة الكتابة
+ * فوق تعديلات الأدمن اللاحقة (اسم عرض عربي، نقاط المستوى، نص/نموذج
+ * الدخولية الافتراضي) في أي تشغيل لاحق للخادم. مستويات النقاط تُترَك
+ * NULL عمداً (غير مفعَّلة) لحد ما الأدمن يحددها بنفسه من لوحة التحكم —
+ * راجع backend/collectibles/collectibles-service.js.
+ */
+var DEFAULT_FRAME_CATALOG = [
+    { slug: 'founder', image_filename: 'frame-founder.png', kind: 'special', bundles_entrance: 1, default_entrance_template: 'gold', default_entrance_text: 'مؤسس المنصة دخل البث!' },
+    { slug: 'streamer', image_filename: 'frame-streamer.png', kind: 'special', bundles_entrance: 1, default_entrance_template: 'neon', default_entrance_text: 'استريمر رسمي انضم الآن' },
+    { slug: 'supporter', image_filename: 'frame-supporter.png', kind: 'special', bundles_entrance: 1, default_entrance_template: 'fire', default_entrance_text: 'داعم المنصة دخل بقوة!' },
+    { slug: 'distinguished', image_filename: 'frame-distinguished.png', kind: 'special', bundles_entrance: 1, default_entrance_template: 'ice', default_entrance_text: 'عضو مميز حضر اللحظة' },
+    { slug: 'level-1', image_filename: 'frame-level-1.png', kind: 'level' },
+    { slug: 'level-2', image_filename: 'frame-level-2.png', kind: 'level' },
+    { slug: 'level-3', image_filename: 'frame-level-3.png', kind: 'level' },
+    { slug: 'level-4', image_filename: 'frame-level-4.png', kind: 'level' },
+    { slug: 'level-5', image_filename: 'frame-level-5.png', kind: 'level' },
+    { slug: 'level-6', image_filename: 'frame-level-6.png', kind: 'level' },
+    { slug: 'level-7', image_filename: 'frame-level-7.png', kind: 'level' }
+];
+(function ensureFrameCatalogSeed() {
+    var insert = db.prepare(
+        'INSERT OR IGNORE INTO frame_catalog ' +
+        '(slug, image_filename, display_name_ar, kind, level_points_required, bundles_entrance, default_entrance_template, default_entrance_text) ' +
+        'VALUES (@slug, @image_filename, @display_name_ar, @kind, @level_points_required, @bundles_entrance, @default_entrance_template, @default_entrance_text)'
+    );
+    DEFAULT_FRAME_CATALOG.forEach(function (row) {
+        insert.run({
+            slug: row.slug,
+            image_filename: row.image_filename,
+            display_name_ar: row.display_name_ar || '',
+            kind: row.kind,
+            level_points_required: row.level_points_required === undefined ? null : row.level_points_required,
+            bundles_entrance: row.bundles_entrance ? 1 : 0,
+            default_entrance_template: row.default_entrance_template || null,
+            default_entrance_text: row.default_entrance_text || null
+        });
+    });
+}());
 
 logger.log('Database: ready at ' + DB_PATH);
 
