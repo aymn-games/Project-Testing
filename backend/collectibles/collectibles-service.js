@@ -39,7 +39,7 @@ function now() { return Date.now(); }
  * ---------------------------------------------------------------------- */
 
 function getCatalog() {
-    return db.prepare('SELECT * FROM frame_catalog ORDER BY (kind = "level"), slug').all();
+    return db.prepare("SELECT * FROM frame_catalog ORDER BY (kind = 'level'), slug").all();
 }
 
 function getCatalogEntry(slug) {
@@ -236,10 +236,10 @@ function getEntrance(userId) {
  * الملف)، ولا يسحب أي إطار مستوى سابق.
  */
 function autoGrantOnLevelUp(userId, totalPoints) {
-    var levelRows = db.prepare('SELECT slug, level_points_required FROM frame_catalog WHERE kind = "level" AND level_points_required IS NOT NULL').all();
+    var levelRows = db.prepare("SELECT slug, level_points_required FROM frame_catalog WHERE kind = 'level' AND level_points_required IS NOT NULL").all();
     levelRows.forEach(function (row) {
         if (totalPoints < row.level_points_required) return;
-        var owned = db.prepare('SELECT id FROM user_frames WHERE user_id = ? AND frame_type = "catalog" AND frame_ref = ?').get(userId, row.slug);
+        var owned = db.prepare("SELECT id FROM user_frames WHERE user_id = ? AND frame_type = 'catalog' AND frame_ref = ?").get(userId, row.slug);
         if (owned) return;
         grantFrame(userId, 'catalog', row.slug, { grantedBy: 'auto_level', skipEntranceBundle: true });
     });
