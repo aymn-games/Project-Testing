@@ -333,6 +333,38 @@
         return Boolean(user.permissions && user.permissions.can_run_games);
     }
 
+    /**
+     * هل هذا المستخدم لازم يشوف "حفلة ترحيب الستريمر الجديد" الآن؟ —
+     * حساب ستريمر موافَق عليه فعلياً (نفس شرط canPlayGames، بدون
+     * الأدمن نفسه — الحفلة لستريمر جديد لا لصاحب المنصة) ولم يكملها
+     * كاملة بعد (welcome_completed). راجع docs/CHANGELOG.md.
+     * @param {Object} user
+     * @returns {boolean}
+     */
+    function needsWelcome(user) {
+        if (!user || user.role === 'admin') return false;
+        return Boolean(user.permissions && user.permissions.can_run_games) && !user.welcome_completed;
+    }
+
+    /**
+     * صاحب الحساب يعلّم الحفلة كمكتملة بعد ما يشوفها كاملة فعلياً
+     * (آخر خطوة بالعد التنازلي) — راجع index.html.
+     * @returns {Promise<Object>}
+     */
+    function completeWelcome() {
+        return request('/api/auth/welcome/complete', { method: 'POST' });
+    }
+
+    /**
+     * الأدمن فقط — يصفّر حالة الترحيب لمستخدم معيّن فتطلع له الحفلة
+     * مرة وحدة إضافية بأول زيارة جاية.
+     * @param {number} userId
+     * @returns {Promise<Object>}
+     */
+    function adminResetWelcome(userId) {
+        return request('/api/admin/welcome/reset', { method: 'POST', body: { userId: userId } });
+    }
+
     /* ----------------------------------------------------------------------
      * حرّاس صفحات — تُستدعى في أول سطر من أي صفحة محمية
      * ---------------------------------------------------------------------- */
@@ -415,6 +447,9 @@
         reportRoundCompletion: reportRoundCompletion,
         canAccessDashboard: canAccessDashboard,
         canPlayGames: canPlayGames,
+        needsWelcome: needsWelcome,
+        completeWelcome: completeWelcome,
+        adminResetWelcome: adminResetWelcome,
         requireAuth: requireAuth,
         requireAdmin: requireAdmin
     };
