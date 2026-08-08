@@ -311,6 +311,76 @@
     @keyframes splashPulse { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.08); opacity: 1; } }
     #splash-screen.splash-hide { opacity: 0; pointer-events: none; }
     @media (prefers-reduced-motion: reduce) { #splash-screen img { animation: none; } }
+
+    /*
+        حفلة ترحيب الستريمر الجديد — تظهر تلقائياً من السكربت آخر الصفحة
+        لأي حساب ستريمر موافَق عليه لم يكملها بعد (راجع docs/CHANGELOG.md
+        و AGPAuth.needsWelcome). النصوص بالسلايدات + الصوت + الفيديو
+        مسوَّدات/أماكن محجوزة مؤقتة — عدّلها مباشرة من GitHub متى جهّزتها.
+    */
+    #welcome-overlay {
+        position: fixed; inset: 0; z-index: 1500; display: none; align-items: center; justify-content: center;
+        background: rgba(14, 14, 22, 0.94); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        padding: 20px;
+    }
+    #welcome-overlay.visible { display: flex; }
+
+    .welcome-box {
+        max-width: 460px; width: 100%; background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 34px 26px 26px; text-align: center;
+        box-shadow: 0 20px 60px rgba(124, 58, 237, 0.25);
+    }
+
+    .welcome-slides { position: relative; overflow: hidden; min-height: 190px; }
+    .welcome-slide {
+        position: absolute; inset: 0; opacity: 0; transform: translateX(40px);
+        transition: opacity 0.45s ease, transform 0.45s ease; pointer-events: none;
+    }
+    .welcome-slide.is-active { position: relative; opacity: 1; transform: translateX(0); pointer-events: auto; }
+    .welcome-slide .welcome-slide-icon { font-size: 2.4em; margin-bottom: 10px; }
+    .welcome-slide h2 { font-size: 1.25em; margin: 0 0 12px; color: var(--text); }
+    .welcome-slide p { color: var(--text-muted); line-height: 1.8; font-size: 0.95em; margin: 0; }
+
+    .welcome-dots { display: flex; justify-content: center; gap: 8px; margin: 20px 0 22px; }
+    .welcome-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border); transition: background 0.2s ease, transform 0.2s ease; }
+    .welcome-dots span.is-active { background: var(--accent-gradient); transform: scale(1.3); }
+
+    .welcome-next-btn {
+        border: none; border-radius: 999px; padding: 12px 40px; font-family: inherit; font-weight: 800;
+        cursor: pointer; font-size: 0.95em; background: var(--accent-gradient); color: #0e0e16; width: 100%;
+    }
+
+    /* مرحلة قص الشريطة */
+    .welcome-ribbon-stage { display: flex; flex-direction: column; align-items: center; gap: 26px; }
+    .welcome-ribbon-stage h2 { margin: 0; font-size: 1.15em; }
+    .welcome-ribbon-wrap { position: relative; width: 100%; height: 46px; display: flex; align-items: center; justify-content: center; }
+    .welcome-ribbon-half {
+        position: absolute; top: 50%; width: 50%; height: 14px; margin-top: -7px;
+        background: var(--accent-gradient); transition: transform 0.7s cubic-bezier(.2,.8,.3,1), opacity 0.7s ease;
+    }
+    .welcome-ribbon-half.left { right: 50%; border-radius: 999px 0 0 999px; }
+    .welcome-ribbon-half.right { left: 50%; border-radius: 0 999px 999px 0; }
+    .welcome-ribbon-wrap.is-cut .welcome-ribbon-half.left { transform: translate(-70px, 40px) rotate(-25deg); opacity: 0; }
+    .welcome-ribbon-wrap.is-cut .welcome-ribbon-half.right { transform: translate(70px, 40px) rotate(25deg); opacity: 0; }
+    .welcome-scissors-btn {
+        position: relative; z-index: 1; width: 60px; height: 60px; border-radius: 50%; border: none; cursor: pointer;
+        background: var(--surface-2); border: 2px solid var(--accent-pink); font-size: 1.6em;
+        animation: scissorsWiggle 1.4s ease-in-out infinite;
+    }
+    @keyframes scissorsWiggle { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+    @media (prefers-reduced-motion: reduce) { .welcome-scissors-btn { animation: none; } }
+
+    /* مرحلة العد التنازلي */
+    .welcome-countdown-stage { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .welcome-countdown-num {
+        font-size: 4em; font-weight: 800; background: var(--accent-gradient);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+        animation: countdownPulse 1s ease-in-out infinite;
+    }
+    @keyframes countdownPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+    @media (prefers-reduced-motion: reduce) { .welcome-countdown-num { animation: none; } }
+    .welcome-countdown-stage p { color: var(--text-muted); margin: 0; font-size: 0.9em; }
+    #welcome-video { max-width: 100%; border-radius: var(--radius-sm); margin-top: 14px; display: none; }
 </style>
 </head>
 <body>
@@ -333,6 +403,69 @@
         <img id="announcement-image" alt="" style="display:none;">
         <p id="announcement-text"></p>
         <button class="announcement-close" id="announcement-close-btn">تم</button>
+    </div>
+</div>
+
+<!--
+    حفلة ترحيب الستريمر الجديد — مخفية افتراضياً، تُظهَر عبر السكربت آخر
+    الصفحة فقط لحساب ستريمر موافَق عليه لم يكملها بعد (راجع
+    AGPAuth.needsWelcome و docs/CHANGELOG.md). نصوص السلايدات الأربعة
+    أدناه مسوَّدة مؤقتة — عدّلها مباشرة من هنا وقت ما تجهّز النص النهائي.
+    نفس الشيء لملفَي الصوت والفيديو (welcome-sound.mp3 / welcome-video.mp4)
+    — ارفعهم لجذر المستودع بنفس أسلوب logo.png، يشتغلون تلقائياً بمجرد
+    رفعهم (فشل التحميل الآن يُعالَج بصمت، بدون كسر الحفلة).
+-->
+<div id="welcome-overlay">
+    <div class="welcome-box">
+
+        <div class="welcome-slides" id="welcome-slides">
+            <div class="welcome-slide is-active" data-slide="1">
+                <div class="welcome-slide-icon">🎉</div>
+                <h2>مبروك! صرت ستريمر رسمي بمنصة ألعاب أيمن</h2>
+                <p>نص السلايد الأول — يُستبدل لاحقاً بالنص النهائي.</p>
+            </div>
+            <div class="welcome-slide" data-slide="2">
+                <div class="welcome-slide-icon">🎮</div>
+                <h2>سلايد ٢ — عنوان مؤقت</h2>
+                <p>نص السلايد الثاني — يُستبدل لاحقاً بالنص النهائي.</p>
+            </div>
+            <div class="welcome-slide" data-slide="3">
+                <div class="welcome-slide-icon">🏆</div>
+                <h2>سلايد ٣ — عنوان مؤقت</h2>
+                <p>نص السلايد الثالث — يُستبدل لاحقاً بالنص النهائي.</p>
+            </div>
+            <div class="welcome-slide" data-slide="4">
+                <div class="welcome-slide-icon">🚀</div>
+                <h2>سلايد ٤ — عنوان مؤقت</h2>
+                <p>نص السلايد الرابع — يُستبدل لاحقاً بالنص النهائي.</p>
+            </div>
+        </div>
+
+        <div class="welcome-dots" id="welcome-dots">
+            <span class="is-active"></span><span></span><span></span><span></span>
+        </div>
+
+        <button class="welcome-next-btn" id="welcome-next-btn">التالي</button>
+
+        <!-- مرحلة قص الشريطة — مخفية لين ينتهي من السلايدات الأربعة -->
+        <div class="welcome-ribbon-stage" id="welcome-ribbon-stage" style="display:none;">
+            <h2>🎊 اقطع الشريطة وابدأ رحلتك!</h2>
+            <div class="welcome-ribbon-wrap" id="welcome-ribbon-wrap">
+                <div class="welcome-ribbon-half left"></div>
+                <button class="welcome-scissors-btn" id="welcome-scissors-btn" title="اضغط للقص">✂️</button>
+                <div class="welcome-ribbon-half right"></div>
+            </div>
+        </div>
+
+        <!-- مرحلة العد التنازلي — مخفية لين تُقص الشريطة -->
+        <div class="welcome-countdown-stage" id="welcome-countdown-stage" style="display:none;">
+            <div class="welcome-countdown-num" id="welcome-countdown-num">5</div>
+            <p>استعد... البث يبدأ الآن!</p>
+            <video id="welcome-video" src="welcome-video.mp4" muted playsinline
+                   onerror="this.style.display='none';"></video>
+        </div>
+
+        <audio id="welcome-audio" src="welcome-sound.mp3" preload="auto"></audio>
     </div>
 </div>
 
@@ -641,6 +774,128 @@
     }());
 </script>
 
+<!--
+    منطق حفلة ترحيب الستريمر — راجع #welcome-overlay بالأعلى و
+    docs/CHANGELOG.md. لا يظهر شيء هنا تلقائياً؛ الدالة
+    window.__showWelcomeCeremony تبقى معرَّفة فقط لحد ما يستدعيها
+    السكربت الأخير بالصفحة بعد ما يتأكد من AGPAuth.needsWelcome(freshUser)
+    (بعد نجاح refreshUser() من الخادم). مستقل تماماً عن AGP.*.
+-->
+<script>
+    (function () {
+        var overlay = document.getElementById('welcome-overlay');
+        if (!overlay) return;
+
+        var slidesWrap = document.getElementById('welcome-slides');
+        var slides = overlay.querySelectorAll('.welcome-slide');
+        var dotsWrap = document.getElementById('welcome-dots');
+        var dots = overlay.querySelectorAll('#welcome-dots span');
+        var nextBtn = document.getElementById('welcome-next-btn');
+        var ribbonStage = document.getElementById('welcome-ribbon-stage');
+        var ribbonWrap = document.getElementById('welcome-ribbon-wrap');
+        var scissorsBtn = document.getElementById('welcome-scissors-btn');
+        var countdownStage = document.getElementById('welcome-countdown-stage');
+        var countdownNum = document.getElementById('welcome-countdown-num');
+        var audioEl = document.getElementById('welcome-audio');
+        var videoEl = document.getElementById('welcome-video');
+
+        var currentSlide = 0;
+        var ceremonyFinishing = false; // يمنع الضغط المتكرر على المقص
+
+        function goToSlide(index) {
+            currentSlide = index;
+            Array.prototype.forEach.call(slides, function (slide, i) {
+                slide.classList.toggle('is-active', i === index);
+            });
+            Array.prototype.forEach.call(dots, function (dot, i) {
+                dot.classList.toggle('is-active', i === index);
+            });
+            if (nextBtn) nextBtn.textContent = (index === slides.length - 1) ? 'إنهاء' : 'التالي';
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function () {
+                if (currentSlide < slides.length - 1) {
+                    goToSlide(currentSlide + 1);
+                    return;
+                }
+                // آخر سلايد — ننتقل لمرحلة قص الشريطة
+                if (slidesWrap) slidesWrap.style.display = 'none';
+                if (dotsWrap) dotsWrap.style.display = 'none';
+                nextBtn.style.display = 'none';
+                if (ribbonStage) ribbonStage.style.display = 'flex';
+            });
+        }
+
+        if (scissorsBtn) {
+            scissorsBtn.addEventListener('click', function () {
+                if (ceremonyFinishing) return;
+                ceremonyFinishing = true;
+                scissorsBtn.disabled = true;
+
+                if (ribbonWrap) ribbonWrap.classList.add('is-cut');
+
+                // نشغّل الصوت والفيديو هنا مباشرة داخل معالج ضغطة المستخدم
+                // (لا بأي setTimeout لاحق) عشان نضمن سياسات المتصفح
+                // للتشغيل التلقائي (autoplay يحتاج "user gesture" مباشر).
+                if (audioEl) {
+                    try { audioEl.currentTime = 0; } catch (e) {}
+                    audioEl.play().catch(function () { /* رفض المتصفح — تجاهل بصمت */ });
+                }
+                if (videoEl) {
+                    videoEl.style.display = 'block';
+                    try { videoEl.currentTime = 0; } catch (e) {}
+                    videoEl.play().catch(function () { /* تجاهل بصمت */ });
+                }
+
+                // بعد انتهاء أنيميشن قص الشريطة (0.6s بالـ CSS) ننتقل للعد التنازلي
+                window.setTimeout(function () {
+                    if (ribbonStage) ribbonStage.style.display = 'none';
+                    if (countdownStage) countdownStage.style.display = 'flex';
+                    startCountdown();
+                }, 650);
+            });
+        }
+
+        function startCountdown() {
+            var remaining = 5;
+            if (countdownNum) countdownNum.textContent = String(remaining);
+            var interval = window.setInterval(function () {
+                remaining -= 1;
+                if (remaining < 0) {
+                    window.clearInterval(interval);
+                    finishCeremony();
+                    return;
+                }
+                if (countdownNum) countdownNum.textContent = String(remaining);
+            }, 1000);
+        }
+
+        function finishCeremony() {
+            // نسجّل الإكمال بالخادم — يمنع ظهورها ثانية لهذا الحساب لحد ما
+            // الأدمن يعيد تفعيلها له من admin.html (زر "🎉 إعادة الترحيب").
+            if (window.AGPAuth && typeof window.AGPAuth.completeWelcome === 'function') {
+                window.AGPAuth.completeWelcome().catch(function () {
+                    // لو فشل الطلب (مثلاً انقطاع شبكة لحظي) بتظهر الحفلة ثانية
+                    // بالزيارة الجاية — لا كسر بالواجهة الآن، الاحتفال خلص بصرياً.
+                });
+            }
+            if (audioEl) { try { audioEl.pause(); } catch (e) {} }
+            if (videoEl) { try { videoEl.pause(); } catch (e) {} }
+            overlay.classList.remove('visible');
+            window.setTimeout(function () {
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            }, 400);
+        }
+
+        // تُستدعى من السكربت الأخير بالصفحة بعد التأكد من AGPAuth.needsWelcome()
+        window.__showWelcomeCeremony = function () {
+            goToSlide(0);
+            overlay.classList.add('visible');
+        };
+    }());
+</script>
+
 <script src="js/agp-core.js"></script>
 <script src="js/agp-events.js"></script>
 <script src="js/agp-timer-manager.js"></script>
@@ -705,6 +960,14 @@
             window.AGPAuth.refreshUser().then(function (freshUser) {
                 if (freshUser) {
                     cachedUser = freshUser;
+                    // ستريمر موافَق عليه ولسا ما شاف حفلة الترحيب (أو
+                    // الأدمن أعاد تفعيلها له من admin.html) — نعرضها الآن.
+                    // راجع #welcome-overlay بالأعلى وAGPAuth.needsWelcome.
+                    if (typeof window.AGPAuth.needsWelcome === 'function' &&
+                        window.AGPAuth.needsWelcome(freshUser) &&
+                        typeof window.__showWelcomeCeremony === 'function') {
+                        window.__showWelcomeCeremony();
+                    }
                     return;
                 }
                 // الخادم رفض الجلسة المخزَّنة محلياً (Token منتهي، أو حساب
