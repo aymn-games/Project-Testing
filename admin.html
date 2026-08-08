@@ -26,6 +26,33 @@
 
     <div class="auth-message" id="admin-message"></div>
 
+    <section class="panel panel-wide" style="margin-bottom: var(--space-5);">
+        <div class="panel-head">
+            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-announcement"/></svg>الإعلان للزوار</h2>
+        </div>
+        <p class="empty-note" style="margin-bottom: var(--space-3);">
+            يظهر كنافذة منبثقة لكل زائر يفتح الصفحة الرئيسية، في كل مرة يدخل فيها، لحد ما تزيله يدوياً.
+        </p>
+        <div class="field" style="margin-bottom: var(--space-3);">
+            <label for="announcement-text-input">نص الإعلان</label>
+            <textarea id="announcement-text-input" rows="3"
+                style="width:100%; padding:8px 10px; background:var(--bg); border:1px solid var(--border-light); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:14px; resize:vertical;"
+                placeholder="اكتب النص اللي تبي المستخدمين يشوفونه…"></textarea>
+        </div>
+        <div class="field" style="margin-bottom: var(--space-3); max-width:420px;">
+            <label for="announcement-image-input">اسم ملف الصورة (اختياري)</label>
+            <input type="text" id="announcement-image-input" placeholder="مثال: announcement.png">
+            <div class="empty-note" style="margin-top:4px;">
+                ارفع الصورة بنفس طريقة الشعار — لازم ترفعها بنفسك على GitHub بجذر المستودع (بجانب logo.png)، واكتب هنا نفس اسم الملف بالضبط. اتركه فاضي لو الإعلان نص فقط بدون صورة.
+            </div>
+        </div>
+        <div class="panel-head-actions">
+            <button class="btn btn-sm btn-primary" id="btn-publish-announcement">نشر / تحديث</button>
+            <button class="btn btn-sm btn-danger" id="btn-clear-announcement">إزالة الإعلان الحالي</button>
+        </div>
+        <div class="auth-message" id="announcement-message"></div>
+    </section>
+
     <section class="panel panel-wide">
         <div class="panel-head">
             <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-users"/></svg>المستخدمون والستريمرز</h2>
@@ -44,13 +71,150 @@
                     <th>البثوث</th>
                     <th>الهدايا (القيمة)</th>
                     <th>صلاحية الألعاب</th>
+                    <th>النقاط / المستوى</th>
+                    <th>الإطار الحالي</th>
                 </tr>
             </thead>
             <tbody id="admin-users-table-body">
-                <tr><td class="table-empty" colspan="9">جارٍ التحميل…</td></tr>
+                <tr><td class="table-empty" colspan="11">جارٍ التحميل…</td></tr>
             </tbody>
         </table>
         </div>
+    </section>
+
+    <section class="panel panel-wide" style="margin-top: var(--space-5);">
+        <div class="panel-head">
+            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-frame"/></svg>كتالوج الإطارات</h2>
+            <button class="btn btn-sm" id="btn-refresh-catalog"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg>تحديث</button>
+        </div>
+        <p class="empty-note" style="margin-bottom: var(--space-3);">
+            11 إطار ثابت: 4 "خاصة" (تأتي مع دخولية + توهج تلقائياً عند منحها) و7 "مستوى" (تُفتح تلقائياً
+            عند بلوغ اللاعب عدد النقاط الذي تحدده هنا). ارفع صورة كل إطار بنفسك على GitHub بجذر
+            المستودع بنفس اسم الملف المكتوب بالجدول (بنفس أسلوب logo.png)، ثم عدّل بياناته هنا.
+        </p>
+        <div class="table-wrap">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>النوع</th>
+                    <th>اسم الملف</th>
+                    <th>الاسم المعروض (عربي)</th>
+                    <th>نقاط المستوى المطلوبة</th>
+                    <th>نموذج الدخولية الافتراضي</th>
+                    <th>نص الدخولية الافتراضي</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="catalog-table-body">
+                <tr><td class="table-empty" colspan="7">جارٍ التحميل…</td></tr>
+            </tbody>
+        </table>
+        </div>
+        <div class="auth-message" id="catalog-message"></div>
+    </section>
+
+    <section class="panel panel-wide" style="margin-top: var(--space-5);">
+        <div class="panel-head">
+            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-frame"/></svg>إطارات حصرية</h2>
+        </div>
+        <p class="empty-note" style="margin-bottom: var(--space-3);">
+            إطارات إضافية بأسماء ملفات حرة تصممها بنفسك وترفعها لجذر المستودع، ثم تسجّلها هنا لتصبح
+            متاحة للمنح لأي مستخدم من القسم اللي تحت.
+        </p>
+        <div style="display:flex; gap:var(--space-2); flex-wrap:wrap; margin-bottom: var(--space-3);">
+            <input type="text" id="custom-frame-filename" placeholder="اسم الملف — مثال: frame-exclusive-1.png" style="flex:1; min-width:220px;">
+            <input type="text" id="custom-frame-name" placeholder="الاسم المعروض (عربي)" style="flex:1; min-width:180px;">
+            <button class="btn btn-sm btn-primary" id="btn-create-custom-frame">إضافة</button>
+        </div>
+        <div class="table-wrap">
+        <table class="table">
+            <thead><tr><th>#</th><th>اسم الملف</th><th>الاسم المعروض</th></tr></thead>
+            <tbody id="custom-frames-table-body">
+                <tr><td class="table-empty" colspan="3">جارٍ التحميل…</td></tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
+
+    <section class="panel panel-wide" style="margin-top: var(--space-5);">
+        <div class="panel-head">
+            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-frame"/></svg>منح / سحب مقتنى</h2>
+        </div>
+        <p class="empty-note" style="margin-bottom: var(--space-3);">
+            يمنح أي إطار — حتى المقفول بمستوى — لأي مستخدم فوراً بصرف النظر عن نقاطه الفعلية (صلاحية
+            تجاوز الأدمن). منح أحد الإطارات الأربعة "الخاصة" (المؤسس/الستريمر/الداعم/العضو المميز)
+            يمنح تلقائياً دخولية + توهج معه، إلا لو خصّصت نموذج/نص مختلف بالحقول اللي تحت.
+        </p>
+        <div style="display:flex; gap:var(--space-2); flex-wrap:wrap; align-items:flex-end;">
+            <div class="field" style="min-width:140px;">
+                <label for="grant-user-id">معرّف المستخدم (id)</label>
+                <input type="number" id="grant-user-id" placeholder="مثال: 3">
+            </div>
+            <div class="field" style="min-width:140px;">
+                <label for="grant-frame-type">نوع الإطار</label>
+                <select id="grant-frame-type">
+                    <option value="catalog">من الكتالوج الثابت</option>
+                    <option value="custom">إطار حصري</option>
+                </select>
+            </div>
+            <div class="field" style="min-width:200px;">
+                <label for="grant-frame-ref">الإطار</label>
+                <select id="grant-frame-ref"></select>
+            </div>
+            <div class="field" style="min-width:160px;">
+                <label for="grant-entrance-template">نموذج الدخولية (اختياري)</label>
+                <select id="grant-entrance-template">
+                    <option value="">افتراضي الكتالوج</option>
+                    <option value="gold">الذهبي الفخم</option>
+                    <option value="neon">النيون المستقبلي</option>
+                    <option value="fire">الناري القوي</option>
+                    <option value="ice">الجليدي الملكي</option>
+                </select>
+            </div>
+            <div class="field" style="flex:1; min-width:200px;">
+                <label for="grant-entrance-text">نص الدخولية (اختياري)</label>
+                <input type="text" id="grant-entrance-text" placeholder="اتركه فاضي لاستخدام النص الافتراضي">
+            </div>
+        </div>
+        <div style="display:flex; gap:var(--space-2); margin-top: var(--space-3);">
+            <button class="btn btn-sm btn-primary" id="btn-grant-frame">منح الإطار</button>
+            <button class="btn btn-sm btn-danger" id="btn-revoke-frame">سحب الإطار</button>
+        </div>
+        <div class="auth-message" id="grant-message"></div>
+    </section>
+
+    <section class="panel panel-wide" style="margin-top: var(--space-5);">
+        <div class="panel-head">
+            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-frame"/></svg>دخولية مستقلة (بدون إطار)</h2>
+        </div>
+        <p class="empty-note" style="margin-bottom: var(--space-3);">
+            إعطاء دخولية لأي مستخدم بشكل منفصل تماماً عن الإطارات — مفيد لو تبي دخولية لمستخدم لا يملك
+            أحد الإطارات الأربعة "الخاصة".
+        </p>
+        <div style="display:flex; gap:var(--space-2); flex-wrap:wrap; align-items:flex-end;">
+            <div class="field" style="min-width:140px;">
+                <label for="entrance-user-id">معرّف المستخدم (id)</label>
+                <input type="number" id="entrance-user-id" placeholder="مثال: 3">
+            </div>
+            <div class="field" style="min-width:160px;">
+                <label for="entrance-template">النموذج</label>
+                <select id="entrance-template">
+                    <option value="gold">الذهبي الفخم</option>
+                    <option value="neon">النيون المستقبلي</option>
+                    <option value="fire">الناري القوي</option>
+                    <option value="ice">الجليدي الملكي</option>
+                </select>
+            </div>
+            <div class="field" style="flex:1; min-width:200px;">
+                <label for="entrance-text">النص</label>
+                <input type="text" id="entrance-text" placeholder="اكتب نص الدخولية">
+            </div>
+        </div>
+        <div style="display:flex; gap:var(--space-2); margin-top: var(--space-3);">
+            <button class="btn btn-sm btn-primary" id="btn-set-entrance">حفظ الدخولية</button>
+            <button class="btn btn-sm btn-danger" id="btn-clear-entrance">إزالة الدخولية</button>
+        </div>
+        <div class="auth-message" id="entrance-message"></div>
     </section>
 
 </div>
@@ -62,6 +226,12 @@
     </symbol>
     <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 12a8 8 0 018-8 8 8 0 017.4 5"/><polyline points="19 3 19 9 13 9"/>
+    </symbol>
+    <symbol id="icon-announcement" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 11v2a2 2 0 002 2h1l3 4v-6"/><path d="M9 9l8-4v14l-8-4"/><path d="M17 9a3 3 0 010 6"/>
+    </symbol>
+    <symbol id="icon-frame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>
     </symbol>
 </svg>
 
@@ -100,7 +270,7 @@
 
     function renderUsers(users) {
         if (!users.length) {
-            tbody.innerHTML = '<tr><td class="table-empty" colspan="9">لا يوجد مستخدمون بعد.</td></tr>';
+            tbody.innerHTML = '<tr><td class="table-empty" colspan="11">لا يوجد مستخدمون بعد.</td></tr>';
             return;
         }
 
@@ -129,6 +299,9 @@
                 '<td>' + u.stats.total_broadcasts + '</td>' +
                 '<td>' + u.stats.total_gifts + ' (' + u.stats.total_gifts_value + ')</td>' +
                 '<td>' + permCells + '</td>' +
+                '<td>' + (u.points ? u.points.totalPoints : 0) + ' — ' +
+                    escapeHtml(u.points && u.points.currentLevel ? (u.points.currentLevel.displayNameAr || u.points.currentLevel.slug) : 'بلا مستوى') + '</td>' +
+                '<td>' + (u.equippedFrame ? escapeHtml(u.equippedFrame.displayNameAr || u.equippedFrame.frameRef) : '—') + '</td>' +
                 '</tr>';
         }).join('');
 
@@ -186,12 +359,271 @@
         window.AGPAuth.logout().then(function () { window.location.href = 'login.html'; });
     });
 
+    /**
+     * إعلان الزوار — نص + صورة اختيارية (اسم ملف مرفوع يدوياً على
+     * GitHub، بنفس أسلوب logo.png، مو رفع صورة فعلي من هنا). يظهر
+     * كنافذة منبثقة بالصفحة الرئيسية فقط لكل زائر طالما نشط. راجع
+     * backend/announcements/announcement-service.js.
+     */
+    var announcementMessageEl = document.getElementById('announcement-message');
+    var announcementTextInput = document.getElementById('announcement-text-input');
+    var announcementImageInput = document.getElementById('announcement-image-input');
+
+    function showAnnouncementMessage(text, type) {
+        announcementMessageEl.textContent = text;
+        announcementMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+
+    function loadAnnouncement() {
+        window.AGPAuth.getAnnouncement().then(function (result) {
+            if (result.success && result.announcement) {
+                announcementTextInput.value = result.announcement.text || '';
+                announcementImageInput.value = result.announcement.imageFilename || '';
+            }
+        });
+    }
+
+    document.getElementById('btn-publish-announcement').addEventListener('click', function () {
+        var text = (announcementTextInput.value || '').trim();
+        if (!text) { showAnnouncementMessage('اكتب نص الإعلان قبل النشر.', 'error'); return; }
+
+        var button = this;
+        button.disabled = true;
+        window.AGPAuth.adminSetAnnouncement(text, announcementImageInput.value).then(function (result) {
+            if (result.success) {
+                showAnnouncementMessage('تم نشر الإعلان — يظهر الآن لكل زائر جديد للصفحة الرئيسية.', 'success');
+            } else {
+                showAnnouncementMessage('تعذّر النشر: ' + (result.error || 'unknown'), 'error');
+            }
+        }).finally(function () { button.disabled = false; });
+    });
+
+    document.getElementById('btn-clear-announcement').addEventListener('click', function () {
+        var button = this;
+        button.disabled = true;
+        window.AGPAuth.adminClearAnnouncement().then(function (result) {
+            if (result.success) {
+                showAnnouncementMessage('تمت إزالة الإعلان — ما راح يظهر لأي زائر بعد الآن.', 'success');
+            } else {
+                showAnnouncementMessage('تعذّرت الإزالة.', 'error');
+            }
+        }).finally(function () { button.disabled = false; });
+    });
+
+    /**
+     * كتالوج الإطارات (11 صف ثابت) — تعديل الاسم المعروض/عتبة نقاط
+     * المستوى/الدخولية الافتراضية لكل صف. لا إضافة ولا حذف صفوف هنا
+     * (الكتالوج ثابت بالعدد والملفات، راجع backend/db/database.js).
+     */
+    var TEMPLATE_LABELS = { gold: 'الذهبي الفخم', neon: 'النيون المستقبلي', fire: 'الناري القوي', ice: 'الجليدي الملكي' };
+    var catalogMessageEl = document.getElementById('catalog-message');
+    var catalogTbody = document.getElementById('catalog-table-body');
+    var latestCatalog = [];
+    var latestCustomFrames = [];
+
+    function showCatalogMessage(text, type) {
+        catalogMessageEl.textContent = text;
+        catalogMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+
+    function templateSelectHtml(currentValue, idAttr) {
+        var options = ['<option value="">—</option>'].concat(Object.keys(TEMPLATE_LABELS).map(function (key) {
+            return '<option value="' + key + '"' + (currentValue === key ? ' selected' : '') + '>' + TEMPLATE_LABELS[key] + '</option>';
+        }));
+        return '<select ' + idAttr + '>' + options.join('') + '</select>';
+    }
+
+    function renderCatalog(rows) {
+        latestCatalog = rows;
+        if (!rows.length) {
+            catalogTbody.innerHTML = '<tr><td class="table-empty" colspan="7">لا يوجد كتالوج.</td></tr>';
+            return;
+        }
+        var smallInput = 'style="width:100%;padding:5px 7px;background:var(--bg);border:1px solid var(--border-light);border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit;"';
+
+        catalogTbody.innerHTML = rows.map(function (row) {
+            var kindLabel = row.kind === 'level' ? 'مستوى' : 'خاص';
+            var entranceCells = row.kind === 'special'
+                ? '<td>' + templateSelectHtml(row.default_entrance_template, 'data-slug="' + row.slug + '" data-field="defaultEntranceTemplate"') + '</td>' +
+                  '<td><input type="text" ' + smallInput + ' value="' + escapeAttr(row.default_entrance_text) + '" data-slug="' + row.slug + '" data-field="defaultEntranceText"></td>'
+                : '<td class="table-empty">—</td><td class="table-empty">—</td>';
+            var levelCell = row.kind === 'level'
+                ? '<input type="number" ' + smallInput + ' value="' + (row.level_points_required === null ? '' : row.level_points_required) + '" placeholder="غير مفعّل" data-slug="' + row.slug + '" data-field="levelPointsRequired">'
+                : '—';
+
+            return '<tr>' +
+                '<td><span class="badge">' + kindLabel + '</span></td>' +
+                '<td class="mono">' + escapeHtml(row.image_filename) + '</td>' +
+                '<td><input type="text" ' + smallInput + ' value="' + escapeAttr(row.display_name_ar) + '" data-slug="' + row.slug + '" data-field="displayNameAr"></td>' +
+                '<td>' + levelCell + '</td>' +
+                entranceCells +
+                '<td><button class="btn btn-sm" data-save-catalog="' + row.slug + '">حفظ</button></td>' +
+                '</tr>';
+        }).join('');
+
+        Array.prototype.forEach.call(catalogTbody.querySelectorAll('[data-save-catalog]'), function (button) {
+            button.addEventListener('click', function () {
+                var slug = button.getAttribute('data-save-catalog');
+                var fields = {};
+                Array.prototype.forEach.call(catalogTbody.querySelectorAll('[data-slug="' + slug + '"][data-field]'), function (input) {
+                    fields[input.getAttribute('data-field')] = input.value;
+                });
+                button.disabled = true;
+                window.AGPAuth.adminUpdateCatalogEntry(slug, fields).then(function (result) {
+                    if (result.success) {
+                        showCatalogMessage('تم الحفظ.', 'success');
+                        loadCatalog();
+                    } else {
+                        showCatalogMessage('تعذّر الحفظ: ' + (result.error || 'unknown'), 'error');
+                    }
+                }).finally(function () { button.disabled = false; });
+            });
+        });
+
+        refreshGrantFrameOptions();
+    }
+
+    function loadCatalog() {
+        window.AGPAuth.adminGetCollectiblesCatalog().then(function (result) {
+            if (!result.success) { showCatalogMessage('تعذّر تحميل الكتالوج.', 'error'); return; }
+            renderCatalog(result.catalog);
+            renderCustomFrames(result.customFrames);
+        });
+    }
+
+    document.getElementById('btn-refresh-catalog').addEventListener('click', loadCatalog);
+
+    /**
+     * إطارات حصرية — إنشاء صف جديد (اسم ملف حر + اسم عرض)، تصير متاحة
+     * فوراً بقائمة "منح / سحب مقتنى" تحت.
+     */
+    var customFramesTbody = document.getElementById('custom-frames-table-body');
+
+    function renderCustomFrames(frames) {
+        latestCustomFrames = frames;
+        if (!frames.length) {
+            customFramesTbody.innerHTML = '<tr><td class="table-empty" colspan="3">لا توجد إطارات حصرية بعد.</td></tr>';
+        } else {
+            customFramesTbody.innerHTML = frames.map(function (f) {
+                return '<tr><td>' + f.id + '</td><td class="mono">' + escapeHtml(f.image_filename) + '</td><td>' + escapeHtml(f.display_name_ar) + '</td></tr>';
+            }).join('');
+        }
+        refreshGrantFrameOptions();
+    }
+
+    document.getElementById('btn-create-custom-frame').addEventListener('click', function () {
+        var filenameInput = document.getElementById('custom-frame-filename');
+        var nameInput = document.getElementById('custom-frame-name');
+        var filename = (filenameInput.value || '').trim();
+        if (!filename) { showCatalogMessage('اكتب اسم ملف الإطار الحصري أولاً.', 'error'); return; }
+
+        window.AGPAuth.adminCreateCustomFrame(filename, nameInput.value).then(function (result) {
+            if (result.success) {
+                filenameInput.value = '';
+                nameInput.value = '';
+                showCatalogMessage('تمت الإضافة — ارفع الصورة بنفس اسم الملف لجذر المستودع.', 'success');
+                loadCatalog();
+            } else {
+                showCatalogMessage('تعذّرت الإضافة: ' + (result.error || 'unknown'), 'error');
+            }
+        });
+    });
+
+    /**
+     * منح / سحب مقتنى — قائمة الإطارات المتاحة تُبنى ديناميكياً من
+     * الكتالوج + الإطارات الحصرية المحمَّلة أعلاه.
+     */
+    var grantMessageEl = document.getElementById('grant-message');
+    var grantFrameTypeEl = document.getElementById('grant-frame-type');
+    var grantFrameRefEl = document.getElementById('grant-frame-ref');
+
+    function showGrantMessage(text, type) {
+        grantMessageEl.textContent = text;
+        grantMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+
+    function refreshGrantFrameOptions() {
+        if (grantFrameTypeEl.value === 'custom') {
+            grantFrameRefEl.innerHTML = latestCustomFrames.map(function (f) {
+                return '<option value="' + f.id + '">' + escapeHtml(f.display_name_ar || f.image_filename) + '</option>';
+            }).join('') || '<option value="">لا يوجد إطارات حصرية</option>';
+        } else {
+            grantFrameRefEl.innerHTML = latestCatalog.map(function (row) {
+                return '<option value="' + row.slug + '">' + escapeHtml(row.display_name_ar || row.slug) + ' (' + row.slug + ')</option>';
+            }).join('');
+        }
+    }
+    grantFrameTypeEl.addEventListener('change', refreshGrantFrameOptions);
+
+    document.getElementById('btn-grant-frame').addEventListener('click', function () {
+        var userId = Number(document.getElementById('grant-user-id').value);
+        if (!userId) { showGrantMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
+        var frameType = grantFrameTypeEl.value;
+        var frameRef = grantFrameRefEl.value;
+        if (!frameRef) { showGrantMessage('اختر إطاراً أولاً.', 'error'); return; }
+
+        window.AGPAuth.adminGrantFrame(userId, frameType, frameRef, {
+            entranceTemplate: document.getElementById('grant-entrance-template').value,
+            entranceText: document.getElementById('grant-entrance-text').value
+        }).then(function (result) {
+            if (result.success) {
+                showGrantMessage('تم منح الإطار.', 'success');
+                loadUsers();
+            } else {
+                showGrantMessage('تعذّر المنح: ' + (result.error || 'unknown'), 'error');
+            }
+        });
+    });
+
+    document.getElementById('btn-revoke-frame').addEventListener('click', function () {
+        var userId = Number(document.getElementById('grant-user-id').value);
+        if (!userId) { showGrantMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
+        var frameType = grantFrameTypeEl.value;
+        var frameRef = grantFrameRefEl.value;
+        if (!frameRef) { showGrantMessage('اختر إطاراً أولاً.', 'error'); return; }
+
+        window.AGPAuth.adminRevokeFrame(userId, frameType, frameRef).then(function (result) {
+            showGrantMessage(result.success ? 'تم سحب الإطار.' : 'تعذّر السحب.', result.success ? 'success' : 'error');
+            loadUsers();
+        });
+    });
+
+    /**
+     * دخولية مستقلة (بدون إطار) — راجع handleAdminSetEntrance بالخادم.
+     */
+    var entranceMessageEl = document.getElementById('entrance-message');
+    function showEntranceMessage(text, type) {
+        entranceMessageEl.textContent = text;
+        entranceMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+
+    document.getElementById('btn-set-entrance').addEventListener('click', function () {
+        var userId = Number(document.getElementById('entrance-user-id').value);
+        if (!userId) { showEntranceMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
+        var text = (document.getElementById('entrance-text').value || '').trim();
+        if (!text) { showEntranceMessage('اكتب نص الدخولية أولاً.', 'error'); return; }
+
+        window.AGPAuth.adminSetEntrance(userId, document.getElementById('entrance-template').value, text).then(function (result) {
+            showEntranceMessage(result.success ? 'تم حفظ الدخولية.' : 'تعذّر الحفظ.', result.success ? 'success' : 'error');
+        });
+    });
+
+    document.getElementById('btn-clear-entrance').addEventListener('click', function () {
+        var userId = Number(document.getElementById('entrance-user-id').value);
+        if (!userId) { showEntranceMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
+        window.AGPAuth.adminClearEntrance(userId).then(function (result) {
+            showEntranceMessage(result.success ? 'تمت إزالة الدخولية.' : 'تعذّرت الإزالة.', result.success ? 'success' : 'error');
+        });
+    });
+
     window.AGPAuth.requireAdmin('login.html').then(function (user) {
         if (!user) return;
         document.body.classList.remove('auth-checking');
         document.getElementById('account-username').textContent = user.username;
         document.getElementById('account-role').textContent = user.role;
         loadUsers();
+        loadAnnouncement();
+        loadCatalog();
     });
 }());
 </script>
