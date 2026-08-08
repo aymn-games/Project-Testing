@@ -70,7 +70,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
             var emptyCell = document.createElement('td');
             emptyCell.colSpan = emptyColSpan || 1;
             emptyCell.className = 'table-empty';
-            emptyCell.textContent = 'No players yet.';
+            emptyCell.textContent = 'لا يوجد لاعبون بعد.';
             emptyRow.appendChild(emptyCell);
             target.appendChild(emptyRow);
             return;
@@ -103,14 +103,14 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
      *  keywordManager.isActive)، ويستدعي نفس دوال الأزرار الموجودة أصلاً.
      * ================================================================== */
     var WORKFLOW_STEPS = [
-        { key: 'select-game', label: 'Select Game' },
-        { key: 'create-room', label: 'Create Room' },
-        { key: 'open-registration', label: 'Open Registration' },
-        { key: 'game-settings', label: 'Game Settings' },
-        { key: 'join-keyword', label: 'Join Keyword' },
-        { key: 'start-round', label: 'Start Round' },
-        { key: 'end-round', label: 'End Round' },
-        { key: 'reset', label: 'Reset / New Round' }
+        { key: 'select-game', label: 'اختيار اللعبة' },
+        { key: 'create-room', label: 'إنشاء غرفة' },
+        { key: 'open-registration', label: 'فتح التسجيل' },
+        { key: 'game-settings', label: 'إعدادات اللعبة' },
+        { key: 'join-keyword', label: 'كلمة الانضمام' },
+        { key: 'start-round', label: 'بدء الجولة' },
+        { key: 'end-round', label: 'إنهاء الجولة' },
+        { key: 'reset', label: 'إعادة الضبط / جولة جديدة' }
     ];
 
     function computeWorkflow() {
@@ -122,27 +122,27 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         var ALL_BEFORE_ROUND = ['select-game', 'create-room', 'open-registration', 'game-settings', 'join-keyword'];
 
         if (!currentGame) {
-            return { completed: [], activeKey: 'select-game', text: 'Select a registered game above.', action: null };
+            return { completed: [], activeKey: 'select-game', text: 'اختر لعبة مسجَّلة أعلاه.', action: null };
         }
         if (!hasRoom) {
-            return { completed: ['select-game'], activeKey: 'create-room', text: 'Create a room to start a session.', action: function () { NS.components.room.createRoom(); } };
+            return { completed: ['select-game'], activeKey: 'create-room', text: 'أنشئ غرفة لبدء جلسة.', action: function () { NS.components.room.createRoom(); } };
         }
         if (!roundState || roundState === 'idle') {
-            return { completed: ['select-game', 'create-room'], activeKey: 'open-registration', text: 'Open registration for players to join.', action: function () { NS.components.lobby.open(); } };
+            return { completed: ['select-game', 'create-room'], activeKey: 'open-registration', text: 'افتح التسجيل حتى ينضم اللاعبون.', action: function () { NS.components.lobby.open(); } };
         }
         if (roundState === 'registration_open') {
             var c1 = ['select-game', 'create-room', 'open-registration'];
             if (keywordActive) c1.push('join-keyword');
-            return { completed: c1, activeKey: 'game-settings', text: 'Optional: settings/keyword, then start the round.', action: function () { NS.components.round.start(); } };
+            return { completed: c1, activeKey: 'game-settings', text: 'اختياري: الإعدادات/كلمة الانضمام، ثم ابدأ الجولة.', action: function () { NS.components.round.start(); } };
         }
         if (roundState === 'ready') {
-            return { completed: ALL_BEFORE_ROUND, activeKey: 'start-round', text: 'Start the round.', action: function () { NS.components.round.start(); } };
+            return { completed: ALL_BEFORE_ROUND, activeKey: 'start-round', text: 'ابدأ الجولة.', action: function () { NS.components.round.start(); } };
         }
         if (roundState === 'in_progress') {
-            return { completed: ALL_BEFORE_ROUND.concat(['start-round']), activeKey: 'end-round', text: 'End the round when ready.', action: function () { NS.components.round.end(); } };
+            return { completed: ALL_BEFORE_ROUND.concat(['start-round']), activeKey: 'end-round', text: 'أنهِ الجولة عند الاستعداد.', action: function () { NS.components.round.end(); } };
         }
         if (roundState === 'round_ended') {
-            return { completed: ALL_BEFORE_ROUND.concat(['start-round', 'end-round']), activeKey: 'reset', text: 'Reset to start a new round.', action: function () { NS.components.controls.reset(); } };
+            return { completed: ALL_BEFORE_ROUND.concat(['start-round', 'end-round']), activeKey: 'reset', text: 'أعد الضبط لبدء جولة جديدة.', action: function () { NS.components.controls.reset(); } };
         }
         return { completed: [], activeKey: 'select-game', text: '—', action: null };
     }
@@ -234,7 +234,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
 
             var confirmBtn = el('modal-confirm-btn');
             if (confirmBtn) {
-                confirmBtn.textContent = options.confirmLabel || 'OK';
+                confirmBtn.textContent = options.confirmLabel || 'موافق';
                 confirmBtn.className = 'btn ' + (options.confirmClass || 'btn-primary');
             }
 
@@ -295,8 +295,8 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         loadGame: function () {
             var id = gameId();
             if (!id) {
-                NS.components.eventLog.log('dashboard:error', { message: 'Enter a Game ID first.' });
-                NS.toast.error('Enter a Game ID first.');
+                NS.components.eventLog.log('dashboard:error', { message: 'أدخل معرّف اللعبة أولاً.' });
+                NS.toast.error('أدخل معرّف اللعبة أولاً.');
                 return;
             }
             AGP.gameManager.loadGame(id);
@@ -322,7 +322,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
             if (!games.length) {
                 var empty = document.createElement('div');
                 empty.className = 'empty-note';
-                empty.textContent = 'No games registered yet.';
+                empty.textContent = 'لا توجد ألعاب مسجَّلة بعد.';
                 container.appendChild(empty);
                 return;
             }
@@ -375,14 +375,14 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
                 var connectBtn = document.createElement('button');
                 connectBtn.type = 'button';
                 connectBtn.className = 'btn btn-xs';
-                connectBtn.textContent = 'Connect';
+                connectBtn.textContent = 'اتصال';
                 connectBtn.onclick = function () { NS.components.streamStatus.connect(platform); };
                 row.appendChild(connectBtn);
 
                 var disconnectBtn = document.createElement('button');
                 disconnectBtn.type = 'button';
                 disconnectBtn.className = 'btn btn-xs';
-                disconnectBtn.textContent = 'Disconnect';
+                disconnectBtn.textContent = 'قطع الاتصال';
                 disconnectBtn.onclick = function () { NS.components.streamStatus.disconnect(platform); };
                 row.appendChild(disconnectBtn);
 
@@ -417,7 +417,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
      * ================================================================== */
 
     var TEAM_SETTINGS_KEY = 'roulette:teamSettings';
-    var DEFAULT_TEAM_SETTINGS = { teamCount: 2, playersPerTeam: 5, teamNames: ['Team A', 'Team B'] };
+    var DEFAULT_TEAM_SETTINGS = { teamCount: 2, playersPerTeam: 5, teamNames: ['الفريق أ', 'الفريق ب'] };
 
     /**
      * Team Settings — تخزين/قراءة إعدادات الفرق حصراً عبر
@@ -463,7 +463,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
     NS.components.keyword = {
         render: function () {
             setText('keyword-current', AGP.keywordManager.getKeyword());
-            setText('keyword-status', AGP.keywordManager.isActive() ? 'active' : 'inactive');
+            setText('keyword-status', AGP.keywordManager.isActive() ? 'مفعّلة' : 'غير مفعّلة');
         },
         setKeyword: function () {
             var value = el('keywordInput').value.trim();
@@ -491,9 +491,9 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
     NS.components.timers = {
         render: function () {
             setText('registration-timer-remaining',
-                AGP.timerManager.isRunning('registration') ? AGP.timerManager.getRemainingSeconds('registration') + 's' : '—');
+                AGP.timerManager.isRunning('registration') ? AGP.timerManager.getRemainingSeconds('registration') + ' ث' : '—');
             setText('round-timer-remaining',
-                AGP.timerManager.isRunning('round') ? AGP.timerManager.getRemainingSeconds('round') + 's' : '—');
+                AGP.timerManager.isRunning('round') ? AGP.timerManager.getRemainingSeconds('round') + ' ث' : '—');
         },
         startRegistration: function () {
             var seconds = parseInt(el('registrationTimerInput').value, 10);
@@ -525,7 +525,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
     NS.components.winner = {
         _last: null,
         render: function () {
-            setText('winner-display', this._last ? JSON.stringify(this._last) : 'No winner yet.');
+            setText('winner-display', this._last ? JSON.stringify(this._last) : 'لا يوجد فائز بعد.');
         },
         setWinner: function (payload) {
             this._last = payload || null;
@@ -597,8 +597,8 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
             var name = current ? (current.name || current.id) : null;
             setText('game-settings-placeholder-text',
                 name
-                    ? name + ' has no custom settings yet.'
-                    : 'Load a game to see its settings here.');
+                    ? name + ' ليس لها إعدادات خاصة بعد.'
+                    : 'حمّل لعبة لعرض إعداداتها هنا.');
         }
     };
 
@@ -725,7 +725,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
             var filterEl = el('playersSourceFilter');
             if (filterEl) {
                 var current = filterEl.value || this._sourceFilter;
-                filterEl.innerHTML = '<option value="all">All sources</option>';
+                filterEl.innerHTML = '<option value="all">كل المصادر</option>';
                 Object.keys(sources).sort().forEach(function (s) {
                     var opt = document.createElement('option');
                     opt.value = s;
@@ -748,7 +748,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
                 var emptyCell = document.createElement('td');
                 emptyCell.colSpan = 6;
                 emptyCell.className = 'table-empty';
-                emptyCell.textContent = allPlayers.length ? 'No players match your search/filter.' : 'No players yet.';
+                emptyCell.textContent = allPlayers.length ? 'لا يوجد لاعبون مطابقون لبحثك/الفلتر.' : 'لا يوجد لاعبون بعد.';
                 emptyRow.appendChild(emptyCell);
                 target.appendChild(emptyRow);
             } else {
@@ -782,14 +782,14 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
                     var viewBtn = document.createElement('button');
                     viewBtn.type = 'button';
                     viewBtn.className = 'btn btn-xs';
-                    viewBtn.textContent = 'View';
+                    viewBtn.textContent = 'عرض';
                     viewBtn.onclick = function () { NS.components.players.viewDetails(player.id); };
                     actionCell.appendChild(viewBtn);
 
                     var removeBtn = document.createElement('button');
                     removeBtn.type = 'button';
                     removeBtn.className = 'btn btn-xs btn-danger';
-                    removeBtn.textContent = 'Remove';
+                    removeBtn.textContent = 'حذف';
                     removeBtn.onclick = function () { NS.components.players.confirmRemove(player.id); };
                     actionCell.appendChild(removeBtn);
 
@@ -840,9 +840,9 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
             var player = AGP.player.findPlayer(playerId);
             var label = player ? (player.name || player.id) : playerId;
             NS.modal.show({
-                title: 'Remove player?',
-                body: 'Remove <strong>' + label + '</strong> from the current session? This cannot be undone.',
-                confirmLabel: 'Remove',
+                title: 'حذف اللاعب؟',
+                body: 'حذف <strong>' + label + '</strong> من الجلسة الحالية؟ لا يمكن التراجع عن هذا.',
+                confirmLabel: 'حذف',
                 confirmClass: 'btn-danger',
                 onConfirm: function () {
                     AGP.player.removePlayer(playerId);
@@ -856,9 +856,9 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
             var ids = Object.keys(this._selected);
             if (!ids.length) return;
             NS.modal.show({
-                title: 'Remove ' + ids.length + ' player(s)?',
-                body: 'This removes all selected players from the current session. This cannot be undone.',
-                confirmLabel: 'Remove All',
+                title: 'حذف ' + ids.length + ' لاعب(ين)؟',
+                body: 'سيؤدي هذا لحذف جميع اللاعبين المحدَّدين من الجلسة الحالية. لا يمكن التراجع عن هذا.',
+                confirmLabel: 'حذف الكل',
                 confirmClass: 'btn-danger',
                 onConfirm: function () {
                     ids.forEach(function (id) { AGP.player.removePlayer(id); });
@@ -883,9 +883,9 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
             }).join('');
 
             NS.modal.show({
-                title: 'Player Details',
+                title: 'تفاصيل اللاعب',
                 body: rows,
-                confirmLabel: 'Close',
+                confirmLabel: 'إغلاق',
                 confirmClass: 'btn-primary',
                 onConfirm: null
             });
@@ -1064,22 +1064,22 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
     // — لا حدث جديد، ولا قراءة AGP إضافية، فقط نص عرضي أوضح للأحداث
     // المهمة للمذيع تحديداً.
     var TOAST_EVENTS = {
-        'room:created': function () { return { message: 'Room created.', type: 'success' }; },
-        'room:closed': function () { return { message: 'Room closed.', type: 'info' }; },
-        'lobby:opened': function () { return { message: 'Registration opened.', type: 'success' }; },
-        'lobby:closed': function () { return { message: 'Registration closed.', type: 'info' }; },
-        'game:loaded': function (p) { return { message: (p && p.game && (p.game.name || p.id)) + ' loaded.', type: 'success' }; },
-        'game:roundStarted': function () { return { message: 'Round started.', type: 'success' }; },
-        'game:roundEnded': function () { return { message: 'Round ended.', type: 'info' }; },
-        'game:reset': function () { return { message: 'Session reset.', type: 'info' }; },
-        'player:removed': function (p) { return { message: (p && p.player && (p.player.name || p.player.id)) + ' removed.', type: 'info' }; },
-        'queue:admitted': function () { return { message: 'Player admitted from queue.', type: 'success' }; },
-        'keyword:activated': function () { return { message: 'Join keyword activated.', type: 'success' }; },
-        'keyword:deactivated': function () { return { message: 'Join keyword deactivated.', type: 'info' }; },
+        'room:created': function () { return { message: 'تم إنشاء الغرفة.', type: 'success' }; },
+        'room:closed': function () { return { message: 'تم إغلاق الغرفة.', type: 'info' }; },
+        'lobby:opened': function () { return { message: 'تم فتح التسجيل.', type: 'success' }; },
+        'lobby:closed': function () { return { message: 'تم إغلاق التسجيل.', type: 'info' }; },
+        'game:loaded': function (p) { return { message: 'تم تحميل ' + (p && p.game && (p.game.name || p.id)) + '.', type: 'success' }; },
+        'game:roundStarted': function () { return { message: 'بدأت الجولة.', type: 'success' }; },
+        'game:roundEnded': function () { return { message: 'انتهت الجولة.', type: 'info' }; },
+        'game:reset': function () { return { message: 'تمت إعادة ضبط الجلسة.', type: 'info' }; },
+        'player:removed': function (p) { return { message: 'تمت إزالة ' + (p && p.player && (p.player.name || p.player.id)) + '.', type: 'info' }; },
+        'queue:admitted': function () { return { message: 'تم قبول لاعب من قائمة الانتظار.', type: 'success' }; },
+        'keyword:activated': function () { return { message: 'تم تفعيل كلمة الانضمام.', type: 'success' }; },
+        'keyword:deactivated': function () { return { message: 'تم إيقاف كلمة الانضمام.', type: 'info' }; },
         'stream:statusChanged': function (p) { return { message: (p && p.platform) + ': ' + (p && p.status), type: 'info' }; },
-        'stream:giftReceived': function (p) { return { message: (p && p.name) + ' sent ' + (p && p.giftName) + '!', type: 'success' }; },
-        'stream:followReceived': function (p) { return { message: (p && p.name) + ' followed!', type: 'info' }; },
-        'timer:ended': function (p) { return { message: (p && p.name) + ' timer ended.', type: 'info' }; }
+        'stream:giftReceived': function (p) { return { message: (p && p.name) + ' أرسل هدية ' + (p && p.giftName) + '!', type: 'success' }; },
+        'stream:followReceived': function (p) { return { message: (p && p.name) + ' تابع البث!', type: 'info' }; },
+        'timer:ended': function (p) { return { message: 'انتهى مؤقّت ' + (p && p.name) + '.', type: 'info' }; }
     };
 
     window.addEventListener('load', function () {
