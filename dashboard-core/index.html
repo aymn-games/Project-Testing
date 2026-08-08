@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AGP Streamer Dashboard</title>
+<title>لوحة تحكم الستريمر — AGP</title>
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="../auth/auth.css">
 </head>
@@ -20,7 +20,7 @@
 <!-- Initial loading overlay — hidden once the first dashboard render completes. -->
 <div class="loading-overlay" id="loading-overlay">
     <div class="loading-spinner" aria-hidden="true"></div>
-    <div>Loading dashboard…</div>
+    <div>جارٍ تحميل اللوحة…</div>
 </div>
 
 <!-- Toast notifications — populated entirely by AGPDashboardCore.toast. -->
@@ -87,22 +87,22 @@
 <header class="topbar">
     <div class="topbar-brand">
         <span class="topbar-logo topbar-logo--img"><img src="../logo.png" alt="ألعاب أيمن"></span>
-        <span class="topbar-title">Streamer Dashboard</span>
+        <span class="topbar-title">لوحة تحكم الستريمر</span>
     </div>
     <div class="topbar-status">
-        <span class="topbar-status-label">Session</span>
+        <span class="topbar-status-label">الجلسة</span>
         <span class="badge badge-lg" id="session-state">—</span>
     </div>
 
     <!-- Account info + Logout — populated by dashboard-core/js/dashboard-auth.js, unrelated to AGP.* session state above. -->
     <div class="auth-topbar-account">
-        <a class="btn btn-sm" id="account-admin-link" href="../admin.html" style="display:none;">Admin</a>
+        <a class="btn btn-sm" id="account-admin-link" href="../admin.html" style="display:none;">لوحة الأدمن</a>
         <span class="badge" id="account-role">—</span>
         <span class="stat-value" id="account-username">—</span>
-        <button class="btn btn-sm" id="btn-account-logout">Logout</button>
+        <button class="btn btn-sm" id="btn-account-logout">تسجيل خروج</button>
     </div>
 
-    <button class="btn btn-danger" onclick="AGPDashboardCore.components.controls.reset()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg>Reset</button>
+    <button class="btn btn-danger" onclick="AGPDashboardCore.components.controls.reset()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg>إعادة ضبط</button>
 </header>
 
 <div class="shell">
@@ -112,27 +112,27 @@
          ====================================================================== -->
     <aside class="sidebar">
 
-        <nav class="tab-nav" role="tablist" aria-label="Dashboard sections">
-            <button type="button" class="tab-btn active" role="tab" aria-selected="true" data-tab-target="game" onclick="AGPDashboardCore.tabs.show('game')"><svg class="icon-sm" aria-hidden="true"><use href="#icon-controller"/></svg><span>Game</span></button>
-            <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab-target="players" onclick="AGPDashboardCore.tabs.show('players')"><svg class="icon-sm" aria-hidden="true"><use href="#icon-users"/></svg><span>Players</span></button>
-            <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab-target="stream" onclick="AGPDashboardCore.tabs.show('stream')"><svg class="icon-sm" aria-hidden="true"><use href="#icon-broadcast"/></svg><span>Stream &amp; Room</span></button>
-            <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab-target="round" onclick="AGPDashboardCore.tabs.show('round')"><svg class="icon-sm" aria-hidden="true"><use href="#icon-clock"/></svg><span>Round</span></button>
-            <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab-target="log" onclick="AGPDashboardCore.tabs.show('log')"><svg class="icon-sm" aria-hidden="true"><use href="#icon-log"/></svg><span>Event Log</span></button>
+        <nav class="tab-nav" role="tablist" aria-label="أقسام اللوحة">
+            <button type="button" class="tab-btn active" role="tab" aria-selected="true" data-tab-target="game" onclick="AGPDashboardCore.tabs.show('game')"><svg class="icon-sm" aria-hidden="true"><use href="#icon-controller"/></svg><span>اللعبة</span></button>
+            <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab-target="players" onclick="AGPDashboardCore.tabs.show('players')"><svg class="icon-sm" aria-hidden="true"><use href="#icon-users"/></svg><span>اللاعبون</span></button>
+            <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab-target="stream" onclick="AGPDashboardCore.tabs.show('stream')"><svg class="icon-sm" aria-hidden="true"><use href="#icon-broadcast"/></svg><span>البث والغرفة</span></button>
+            <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab-target="round" onclick="AGPDashboardCore.tabs.show('round')"><svg class="icon-sm" aria-hidden="true"><use href="#icon-clock"/></svg><span>الجولة</span></button>
+            <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab-target="log" onclick="AGPDashboardCore.tabs.show('log')"><svg class="icon-sm" aria-hidden="true"><use href="#icon-log"/></svg><span>سجل الأحداث</span></button>
         </nav>
 
         <div class="sidebar-section">
-            <div class="sidebar-label">Active Game</div>
-            <div class="stat"><span class="stat-label">Name</span><span class="stat-value" id="current-game-name">—</span></div>
-            <div class="stat"><span class="stat-label">ID</span><span class="stat-value mono" id="current-game-id">—</span></div>
+            <div class="sidebar-label">اللعبة النشطة</div>
+            <div class="stat"><span class="stat-label">الاسم</span><span class="stat-value" id="current-game-name">—</span></div>
+            <div class="stat"><span class="stat-label">المعرّف</span><span class="stat-value mono" id="current-game-id">—</span></div>
 
             <div class="field">
-                <label for="gameIdInput">Game ID</label>
-                <input type="text" id="gameIdInput" placeholder="e.g. roulette-game">
+                <label for="gameIdInput">معرّف اللعبة</label>
+                <input type="text" id="gameIdInput" placeholder="مثال: roulette-game">
             </div>
-            <div class="sidebar-hint">Used by Create Room, Start/End Round, Reset, and Load Game.</div>
+            <div class="sidebar-hint">يُستخدَم بواسطة إنشاء الغرفة، بدء/إنهاء الجولة، إعادة الضبط، وتحميل اللعبة.</div>
         </div>
 
-        <div class="sidebar-footer">AGP Streamer Platform — Phase 2</div>
+        <div class="sidebar-footer">منصة AGP للستريمرز — المرحلة 2</div>
     </aside>
 
     <!-- ======================================================================
@@ -149,9 +149,9 @@
         <section class="workflow-banner">
             <div class="workflow-steps" id="workflow-steps"></div>
             <div class="workflow-next">
-                <span class="workflow-next-label">Next step:</span>
+                <span class="workflow-next-label">الخطوة التالية:</span>
                 <span id="workflow-next-text">—</span>
-                <button class="btn btn-sm btn-primary" onclick="AGPDashboardCore.workflow.runNext()">Go <svg class="icon-sm" aria-hidden="true"><use href="#icon-play"/></svg></button>
+                <button class="btn btn-sm btn-primary" onclick="AGPDashboardCore.workflow.runNext()">تنفيذ <svg class="icon-sm" aria-hidden="true"><use href="#icon-play"/></svg></button>
             </div>
         </section>
 
@@ -160,11 +160,11 @@
              ================================================================ -->
         <div class="tab-panel" role="tabpanel" data-tab="game">
 
-            <h2 class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-controller"/></svg>Game Selection</h2>
+            <h2 class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-controller"/></svg>اختيار اللعبة</h2>
             <section class="panel">
                 <div class="panel-head">
-                    <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-controller"/></svg>Registered Games</h2>
-                    <button class="btn btn-sm" onclick="AGPDashboardCore.components.game.loadGame()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg>Load by ID</button>
+                    <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-controller"/></svg>الألعاب المسجَّلة</h2>
+                    <button class="btn btn-sm" onclick="AGPDashboardCore.components.game.loadGame()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg>تحميل بالمعرّف</button>
                 </div>
                 <div class="game-select-list" id="game-selector-list"></div>
 
@@ -176,12 +176,12 @@
                     Any future TikTok game plugs in the same way.
                 -->
                 <div class="game-card" data-agp-game-id="roulette-game" data-agp-game-status="active">
-                    <span class="game-title">Roulette Game (روليت القبائل)</span>
-                    <a href="https://aymn-games.github.io/roulette-game/" target="_blank" class="btn-play btn btn-primary btn-block"><svg class="icon-sm" aria-hidden="true"><use href="#icon-play"/></svg>Play</a>
+                    <span class="game-title">روليت القبائل</span>
+                    <a href="https://aymn-games.github.io/roulette-game/" target="_blank" class="btn-play btn btn-primary btn-block"><svg class="icon-sm" aria-hidden="true"><use href="#icon-play"/></svg>العب</a>
                 </div>
             </section>
 
-            <h2 class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-team"/></svg>Game Settings</h2>
+            <h2 class="section-title"><svg class="icon-sm" aria-hidden="true"><use href="#icon-team"/></svg>إعدادات اللعبة</h2>
             <div class="panels-grid">
 
                 <!--
@@ -192,8 +192,8 @@
                     framework (not built yet — see ARCHITECTURE.md).
                 -->
                 <section class="panel" id="panel-game-settings-placeholder">
-                    <div class="panel-head"><h2>Game Settings</h2></div>
-                    <div class="empty-note" id="game-settings-placeholder-text">Load a game to see its settings here.</div>
+                    <div class="panel-head"><h2>إعدادات اللعبة</h2></div>
+                    <div class="empty-note" id="game-settings-placeholder-text">حمّل لعبة لعرض إعداداتها هنا.</div>
                 </section>
 
                 <!--
@@ -278,42 +278,42 @@
                 -->
                 <div class="team-feature" id="team-settings-section" style="display:none;">
                 <section class="panel">
-                    <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-team"/></svg>Team Settings</h2></div>
+                    <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-team"/></svg>إعدادات الفرق</h2></div>
                     <div class="field">
-                        <label for="teamCountInput">Number of teams</label>
+                        <label for="teamCountInput">عدد الفرق</label>
                         <input type="text" id="teamCountInput" placeholder="2">
                     </div>
                     <div class="field">
-                        <label for="playersPerTeamInput">Players per team</label>
+                        <label for="playersPerTeamInput">اللاعبون لكل فريق</label>
                         <input type="text" id="playersPerTeamInput" placeholder="5">
                     </div>
                     <div class="field">
-                        <label for="teamNamesInput">Team names (comma-separated)</label>
-                        <input type="text" id="teamNamesInput" placeholder="Team A, Team B">
+                        <label for="teamNamesInput">أسماء الفرق (مفصولة بفاصلة)</label>
+                        <input type="text" id="teamNamesInput" placeholder="الفريق أ، الفريق ب">
                     </div>
-                    <button class="btn btn-block btn-primary" onclick="AGPDashboardCore.components.teamSettings.save()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg>Save Settings</button>
+                    <button class="btn btn-block btn-primary" onclick="AGPDashboardCore.components.teamSettings.save()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg>حفظ الإعدادات</button>
                 </section>
 
                 <section class="panel">
-                    <div class="panel-head"><h2>Current Game Settings</h2></div>
-                    <div class="stat"><span class="stat-label">Teams</span><span class="stat-value" id="current-team-count">—</span></div>
-                    <div class="stat"><span class="stat-label">Players / team</span><span class="stat-value" id="current-players-per-team">—</span></div>
-                    <div class="stat"><span class="stat-label">Team names</span><span class="stat-value" id="current-team-names">—</span></div>
+                    <div class="panel-head"><h2>إعدادات اللعبة الحالية</h2></div>
+                    <div class="stat"><span class="stat-label">الفرق</span><span class="stat-value" id="current-team-count">—</span></div>
+                    <div class="stat"><span class="stat-label">اللاعبون / الفريق</span><span class="stat-value" id="current-players-per-team">—</span></div>
+                    <div class="stat"><span class="stat-label">أسماء الفرق</span><span class="stat-value" id="current-team-names">—</span></div>
                 </section>
                 </div>
 
                 <section class="panel">
-                    <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-key"/></svg>Join Keyword</h2></div>
-                    <div class="stat"><span class="stat-label">Current</span><span class="stat-value mono" id="keyword-current">—</span></div>
-                    <div class="stat"><span class="stat-label">Status</span><span class="badge" id="keyword-status">—</span></div>
+                    <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-key"/></svg>كلمة الانضمام</h2></div>
+                    <div class="stat"><span class="stat-label">الحالية</span><span class="stat-value mono" id="keyword-current">—</span></div>
+                    <div class="stat"><span class="stat-label">الحالة</span><span class="badge" id="keyword-status">—</span></div>
                     <div class="field">
-                        <label for="keywordInput">New keyword</label>
-                        <input type="text" id="keywordInput" placeholder="e.g. JOIN">
+                        <label for="keywordInput">كلمة جديدة</label>
+                        <input type="text" id="keywordInput" placeholder="مثال: JOIN">
                     </div>
                     <div class="card-actions">
-                        <button class="btn btn-sm" onclick="AGPDashboardCore.components.keyword.setKeyword()">Set</button>
-                        <button class="btn btn-sm btn-success" onclick="AGPDashboardCore.components.keyword.activate()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-play"/></svg>Activate</button>
-                        <button class="btn btn-sm btn-warning" onclick="AGPDashboardCore.components.keyword.deactivate()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-stop"/></svg>Deactivate</button>
+                        <button class="btn btn-sm" onclick="AGPDashboardCore.components.keyword.setKeyword()">تعيين</button>
+                        <button class="btn btn-sm btn-success" onclick="AGPDashboardCore.components.keyword.activate()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-play"/></svg>تفعيل</button>
+                        <button class="btn btn-sm btn-warning" onclick="AGPDashboardCore.components.keyword.deactivate()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-stop"/></svg>إيقاف</button>
                     </div>
                 </section>
 
@@ -327,41 +327,41 @@
 
             <section class="panel">
                 <div class="panel-head">
-                    <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-queue"/></svg>Queue</h2>
+                    <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-queue"/></svg>قائمة الانتظار</h2>
                     <div class="panel-head-actions">
-                        <button class="btn btn-sm" onclick="AGPDashboardCore.components.queue.admitNext()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg>Admit Next</button>
-                        <button class="btn btn-sm" onclick="AGPDashboardCore.components.queue.admitAll()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg>Admit All</button>
+                        <button class="btn btn-sm" onclick="AGPDashboardCore.components.queue.admitNext()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg>قبول التالي</button>
+                        <button class="btn btn-sm" onclick="AGPDashboardCore.components.queue.admitAll()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg>قبول الجميع</button>
                     </div>
                 </div>
-                <div class="stat"><span class="stat-label">Count</span><span class="stat-value" id="queue-count">0</span></div>
+                <div class="stat"><span class="stat-label">العدد</span><span class="stat-value" id="queue-count">0</span></div>
                 <ul class="list" id="queue-list"></ul>
             </section>
 
             <section class="panel">
                 <div class="panel-head">
-                    <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-users"/></svg>Players</h2>
+                    <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-users"/></svg>اللاعبون</h2>
                     <span class="stat-value" id="players-count">0</span>
                 </div>
 
                 <div class="players-toolbar">
-                    <input type="text" id="playersSearchInput" placeholder="Search by ID or name…"
+                    <input type="text" id="playersSearchInput" placeholder="ابحث بالمعرّف أو الاسم…"
                         oninput="AGPDashboardCore.components.players.setSearch(this.value)">
                     <select id="playersSourceFilter" onchange="AGPDashboardCore.components.players.setSourceFilter(this.value)">
-                        <option value="all">All sources</option>
+                        <option value="all">كل المصادر</option>
                     </select>
                 </div>
 
                 <div class="players-bulk-bar" id="players-bulk-bar" style="display:none;">
-                    <span><span id="players-bulk-count">0</span> selected</span>
-                    <button class="btn btn-xs btn-danger" onclick="AGPDashboardCore.components.players.confirmRemoveSelected()">Remove Selected</button>
+                    <span><span id="players-bulk-count">0</span> محدَّد</span>
+                    <button class="btn btn-xs btn-danger" onclick="AGPDashboardCore.components.players.confirmRemoveSelected()">حذف المحدَّد</button>
                 </div>
 
                 <div class="table-wrap">
                 <table class="table">
                     <thead>
                         <tr>
-                            <th><input type="checkbox" aria-label="Select all players" onchange="AGPDashboardCore.components.players.toggleSelectAll(this.checked)"></th>
-                            <th>ID</th><th>Name</th><th>Joined</th><th>Source</th><th>Action</th>
+                            <th><input type="checkbox" aria-label="تحديد كل اللاعبين" onchange="AGPDashboardCore.components.players.toggleSelectAll(this.checked)"></th>
+                            <th>المعرّف</th><th>الاسم</th><th>وقت الانضمام</th><th>المصدر</th><th>إجراء</th>
                         </tr>
                     </thead>
                     <tbody id="players-table-body"></tbody>
@@ -371,7 +371,7 @@
 
             <div class="team-feature" style="display:none;">
             <section class="panel">
-                <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-team"/></svg>Current Players by Team</h2></div>
+                <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-team"/></svg>اللاعبون حسب الفريق</h2></div>
                 <div class="teams-grid" id="players-by-team"></div>
             </section>
             </div>
@@ -386,31 +386,31 @@
             <div class="panels-grid">
                 <section class="panel">
                     <div class="panel-head">
-                        <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-door"/></svg>Room</h2>
-                        <button class="btn btn-sm btn-primary" id="btn-create-room" onclick="AGPDashboardCore.components.room.createRoom()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg>Create Room</button>
+                        <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-door"/></svg>الغرفة</h2>
+                        <button class="btn btn-sm btn-primary" id="btn-create-room" onclick="AGPDashboardCore.components.room.createRoom()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg>إنشاء غرفة</button>
                     </div>
-                    <div class="stat"><span class="stat-label">State</span><span class="badge" id="room-state">—</span></div>
-                    <div class="stat"><span class="stat-label">Room ID</span><span class="stat-value mono" id="room-id">—</span></div>
+                    <div class="stat"><span class="stat-label">الحالة</span><span class="badge" id="room-state">—</span></div>
+                    <div class="stat"><span class="stat-label">معرّف الغرفة</span><span class="stat-value mono" id="room-id">—</span></div>
                 </section>
 
                 <section class="panel">
                     <div class="panel-head">
-                        <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-key"/></svg>Registration</h2>
+                        <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-key"/></svg>التسجيل</h2>
                         <div class="panel-head-actions">
-                            <button class="btn btn-sm" id="btn-open-registration" onclick="AGPDashboardCore.components.lobby.open()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-play"/></svg>Open</button>
-                            <button class="btn btn-sm" onclick="AGPDashboardCore.components.lobby.close()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-stop"/></svg>Close</button>
+                            <button class="btn btn-sm" id="btn-open-registration" onclick="AGPDashboardCore.components.lobby.open()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-play"/></svg>فتح</button>
+                            <button class="btn btn-sm" onclick="AGPDashboardCore.components.lobby.close()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-stop"/></svg>إغلاق</button>
                         </div>
                     </div>
-                    <div class="stat"><span class="stat-label">State</span><span class="badge" id="lobby-state">—</span></div>
-                    <div class="stat"><span class="stat-label">Join code</span><span class="stat-value mono" id="lobby-joincode">—</span></div>
+                    <div class="stat"><span class="stat-label">الحالة</span><span class="badge" id="lobby-state">—</span></div>
+                    <div class="stat"><span class="stat-label">كود الانضمام</span><span class="stat-value mono" id="lobby-joincode">—</span></div>
                 </section>
             </div>
 
             <section class="panel panel-wide">
-                <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-broadcast"/></svg>Stream Status &amp; Control</h2></div>
+                <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-broadcast"/></svg>حالة البث والتحكم</h2></div>
                 <div class="field" style="max-width:320px; margin-bottom:12px;">
-                    <label for="tiktok-username-input">TikTok username to connect</label>
-                    <input type="text" id="tiktok-username-input" placeholder="e.g. ayman_live">
+                    <label for="tiktok-username-input">يوزرنيم تيك توك للاتصال</label>
+                    <input type="text" id="tiktok-username-input" placeholder="مثال: ayman_live">
                 </div>
                 <ul class="list list-plain" id="stream-status-list"></ul>
             </section>
@@ -422,26 +422,26 @@
                  Separate from the manual "connect to stream" panel above.
                  ========================================================== -->
             <section class="panel panel-wide">
-                <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-key"/></svg>Account — Linked TikTok &amp; Custom ID</h2></div>
+                <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-key"/></svg>الحساب — ربط تيك توك والمعرّف الخاص</h2></div>
                 <div class="field" style="max-width:320px;">
-                    <label for="account-tiktok-username">Your TikTok username</label>
-                    <input type="text" id="account-tiktok-username" placeholder="e.g. ayman_live">
+                    <label for="account-tiktok-username">يوزرنيم تيك توك الخاص بك</label>
+                    <input type="text" id="account-tiktok-username" placeholder="مثال: ayman_live">
                 </div>
                 <div class="panel-head-actions" style="margin-bottom:8px;">
-                    <button class="btn btn-sm" id="btn-account-tiktok-link">Link</button>
-                    <button class="btn btn-sm" id="btn-account-tiktok-code">Get verification code</button>
-                    <button class="btn btn-sm btn-primary" id="btn-account-tiktok-verify">Verify ownership</button>
+                    <button class="btn btn-sm" id="btn-account-tiktok-link">ربط</button>
+                    <button class="btn btn-sm" id="btn-account-tiktok-code">الحصول على كود التحقق</button>
+                    <button class="btn btn-sm btn-primary" id="btn-account-tiktok-verify">تحقّق من الملكية</button>
                 </div>
-                <div class="stat"><span class="stat-label">Verification code</span><span class="stat-value mono" id="account-tiktok-code">—</span></div>
+                <div class="stat"><span class="stat-label">كود التحقق</span><span class="stat-value mono" id="account-tiktok-code">—</span></div>
                 <div class="empty-note" id="account-tiktok-status"></div>
 
                 <div class="field" style="max-width:320px; margin-top:16px;">
-                    <label for="account-custom-id">Your public ID (visible to everyone, e.g. on your public profile page)</label>
-                    <input type="text" id="account-custom-id" placeholder="8-digit ID assigned automatically">
+                    <label for="account-custom-id">معرّفك العام (يظهر للجميع، مثلاً في صفحة بروفايلك العامة)</label>
+                    <input type="text" id="account-custom-id" placeholder="معرّف من 8 أرقام يُخصَّص تلقائياً">
                 </div>
                 <div class="panel-head-actions" style="margin-bottom:8px;">
-                    <button class="btn btn-sm" id="btn-account-custom-id">Save Custom ID</button>
-                    <a class="btn btn-sm" id="account-view-profile-link" href="profile.html" target="_blank">View my public profile</a>
+                    <button class="btn btn-sm" id="btn-account-custom-id">حفظ المعرّف</button>
+                    <a class="btn btn-sm" id="account-view-profile-link" href="profile.html" target="_blank">عرض بروفايلي العام</a>
                 </div>
                 <div class="empty-note" id="account-custom-id-status"></div>
             </section>
@@ -456,52 +456,52 @@
             <div class="panels-grid">
                 <section class="panel">
                     <div class="panel-head">
-                        <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-clock"/></svg>Round</h2>
+                        <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-clock"/></svg>الجولة</h2>
                         <div class="panel-head-actions">
-                            <button class="btn btn-sm btn-success" id="btn-start-round" onclick="AGPDashboardCore.components.round.start()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-play"/></svg>Start</button>
-                            <button class="btn btn-sm btn-warning" id="btn-end-round" onclick="AGPDashboardCore.components.round.end()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-stop"/></svg>End</button>
+                            <button class="btn btn-sm btn-success" id="btn-start-round" onclick="AGPDashboardCore.components.round.start()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-play"/></svg>بدء</button>
+                            <button class="btn btn-sm btn-warning" id="btn-end-round" onclick="AGPDashboardCore.components.round.end()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-stop"/></svg>إنهاء</button>
                         </div>
                     </div>
-                    <div class="stat"><span class="stat-label">State</span><span class="badge" id="round-state">—</span></div>
+                    <div class="stat"><span class="stat-label">الحالة</span><span class="badge" id="round-state">—</span></div>
                 </section>
 
                 <section class="panel">
-                    <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-timer"/></svg>Registration Timer</h2></div>
-                    <div class="stat"><span class="stat-label">Remaining</span><span class="stat-value mono" id="registration-timer-remaining">—</span></div>
+                    <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-timer"/></svg>مؤقّت التسجيل</h2></div>
+                    <div class="stat"><span class="stat-label">المتبقي</span><span class="stat-value mono" id="registration-timer-remaining">—</span></div>
                     <div class="field">
-                        <label for="registrationTimerInput">Duration (seconds)</label>
+                        <label for="registrationTimerInput">المدة (بالثواني)</label>
                         <input type="text" id="registrationTimerInput" placeholder="60">
                     </div>
                     <div class="card-actions">
-                        <button class="btn btn-sm btn-success" onclick="AGPDashboardCore.components.timers.startRegistration()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-play"/></svg>Start</button>
-                        <button class="btn btn-sm btn-warning" onclick="AGPDashboardCore.components.timers.stopRegistration()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-stop"/></svg>Stop</button>
+                        <button class="btn btn-sm btn-success" onclick="AGPDashboardCore.components.timers.startRegistration()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-play"/></svg>بدء</button>
+                        <button class="btn btn-sm btn-warning" onclick="AGPDashboardCore.components.timers.stopRegistration()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-stop"/></svg>إيقاف</button>
                     </div>
-                    <div class="empty-note">On expiry: closes registration automatically.</div>
+                    <div class="empty-note">عند الانتهاء: يُغلق التسجيل تلقائياً.</div>
                 </section>
 
                 <section class="panel">
-                    <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-timer"/></svg>Round Timer</h2></div>
-                    <div class="stat"><span class="stat-label">Remaining</span><span class="stat-value mono" id="round-timer-remaining">—</span></div>
+                    <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-timer"/></svg>مؤقّت الجولة</h2></div>
+                    <div class="stat"><span class="stat-label">المتبقي</span><span class="stat-value mono" id="round-timer-remaining">—</span></div>
                     <div class="field">
-                        <label for="roundTimerInput">Duration (seconds)</label>
+                        <label for="roundTimerInput">المدة (بالثواني)</label>
                         <input type="text" id="roundTimerInput" placeholder="30">
                     </div>
                     <div class="card-actions">
-                        <button class="btn btn-sm btn-success" onclick="AGPDashboardCore.components.timers.startRound()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-play"/></svg>Start</button>
-                        <button class="btn btn-sm btn-warning" onclick="AGPDashboardCore.components.timers.stopRound()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-stop"/></svg>Stop</button>
+                        <button class="btn btn-sm btn-success" onclick="AGPDashboardCore.components.timers.startRound()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-play"/></svg>بدء</button>
+                        <button class="btn btn-sm btn-warning" onclick="AGPDashboardCore.components.timers.stopRound()"><svg class="icon-sm" aria-hidden="true"><use href="#icon-stop"/></svg>إيقاف</button>
                     </div>
-                    <div class="empty-note">On expiry: ends the round automatically.</div>
+                    <div class="empty-note">عند الانتهاء: تنتهي الجولة تلقائياً.</div>
                 </section>
 
                 <section class="panel">
-                    <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-timer"/></svg>Active Timers</h2></div>
+                    <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-timer"/></svg>المؤقّتات النشطة</h2></div>
                     <ul class="list" id="timer-list"></ul>
-                    <div class="empty-note" id="timer-empty">No active timers.</div>
+                    <div class="empty-note" id="timer-empty">لا توجد مؤقّتات نشطة.</div>
                 </section>
 
                 <section class="panel">
-                    <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-trophy"/></svg>Winner</h2></div>
-                    <div class="winner-box" id="winner-display">No winner yet.</div>
+                    <div class="panel-head"><h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-trophy"/></svg>الفائز</h2></div>
+                    <div class="winner-box" id="winner-display">لا يوجد فائز بعد.</div>
                 </section>
             </div>
 
@@ -512,7 +512,7 @@
              ================================================================ -->
         <div class="tab-panel" role="tabpanel" data-tab="log" style="display:none;">
             <section class="panel panel-wide">
-                <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-log"/></svg>Event Log</h2>
+                <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-log"/></svg>سجل الأحداث</h2>
                 <div class="log" id="event-log"></div>
             </section>
         </div>
@@ -556,8 +556,8 @@
         <h3 id="modal-title">—</h3>
         <div id="modal-body"></div>
         <div class="modal-actions">
-            <button class="btn btn-sm" onclick="AGPDashboardCore.modal.hide()">Cancel</button>
-            <button class="btn btn-sm btn-primary" id="modal-confirm-btn" onclick="AGPDashboardCore.modal.confirm()">OK</button>
+            <button class="btn btn-sm" onclick="AGPDashboardCore.modal.hide()">إلغاء</button>
+            <button class="btn btn-sm btn-primary" id="modal-confirm-btn" onclick="AGPDashboardCore.modal.confirm()">موافق</button>
         </div>
     </div>
 </div>
