@@ -299,13 +299,14 @@
 
     /*
         شاشة البداية (Splash) — شعار على خلفية مغبشة أول ما تفتح الصفحة،
-        تختفي تلقائياً بعد 3 ثواني (راجع السكربت آخر الصفحة). لا تمنع أي
-        محتوى تحتها من التحميل أو العمل — طبقة بصرية بحتة فوق الصفحة.
+        تختفي تلقائياً بعد ثانيتين باختفاء سريع (راجع السكربت آخر
+        الصفحة). لا تمنع أي محتوى تحتها من التحميل أو العمل — طبقة
+        بصرية بحتة فوق الصفحة.
     */
     #splash-screen {
         position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center;
         background: rgba(14, 14, 22, 0.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-        transition: opacity 0.6s ease; opacity: 1;
+        transition: opacity 0.3s ease; opacity: 1;
     }
     #splash-screen img { width: 96px; height: auto; animation: splashPulse 1.6s ease-in-out infinite; }
     @keyframes splashPulse { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.08); opacity: 1; } }
@@ -370,15 +371,10 @@
     @keyframes scissorsWiggle { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
     @media (prefers-reduced-motion: reduce) { .welcome-scissors-btn { animation: none; } }
 
-    /* مرحلة العد التنازلي */
+    /* مرحلة فيديو البداية — تشتغل تلقائياً بعد قص الشريطة مباشرة، بالصوت
+       المدمج بالفيديو نفسه، وتنتهي الحفلة كاملة تلقائياً لما ينتهي الفيديو
+       (أو بعد 10 ثوانٍ كحد أقصى احتياطي لو الفيديو ما اشتغل لأي سبب). */
     .welcome-countdown-stage { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-    .welcome-countdown-num {
-        font-size: 4em; font-weight: 800; background: var(--accent-gradient);
-        -webkit-background-clip: text; background-clip: text; color: transparent;
-        animation: countdownPulse 1s ease-in-out infinite;
-    }
-    @keyframes countdownPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
-    @media (prefers-reduced-motion: reduce) { .welcome-countdown-num { animation: none; } }
     .welcome-countdown-stage p { color: var(--text-muted); margin: 0; font-size: 0.9em; }
     #welcome-video { max-width: 100%; border-radius: var(--radius-sm); margin-top: 14px; display: none; }
 </style>
@@ -411,9 +407,12 @@
     الصفحة فقط لحساب ستريمر موافَق عليه لم يكملها بعد (راجع
     AGPAuth.needsWelcome و docs/CHANGELOG.md). نصوص السلايدات الأربعة
     أدناه مسوَّدة مؤقتة — عدّلها مباشرة من هنا وقت ما تجهّز النص النهائي.
-    نفس الشيء لملفَي الصوت والفيديو (welcome-sound.mp3 / welcome-video.mp4)
-    — ارفعهم لجذر المستودع بنفس أسلوب logo.png، يشتغلون تلقائياً بمجرد
-    رفعهم (فشل التحميل الآن يُعالَج بصمت، بدون كسر الحفلة).
+    بعد قص الشريطة يشتغل فيديو واحد فقط (welcome-video.mp4، بصوته
+    المدمج بداخله — بدون أي ملف صوت منفصل) تلقائياً، ومدته المتوقعة 10
+    ثوانٍ؛ لما ينتهي (أو بعد 10 ثوانٍ كحد أقصى احتياطي لو تعذّر تشغيله)
+    تنتهي الحفلة تلقائياً بالكامل. ارفع الفيديو لجذر المستودع بنفس أسلوب
+    logo.png (فشل التحميل الآن يُعالَج بصمت، بدون كسر الحفلة — تنتهي
+    بنفس التوقيت الاحتياطي).
 -->
 <div id="welcome-overlay">
     <div class="welcome-box">
@@ -457,15 +456,13 @@
             </div>
         </div>
 
-        <!-- مرحلة العد التنازلي — مخفية لين تُقص الشريطة -->
+        <!-- مرحلة فيديو البداية — مخفية لين تُقص الشريطة، تنتهي الحفلة
+             تلقائياً لما ينتهي الفيديو (راجع السكربت آخر الصفحة) -->
         <div class="welcome-countdown-stage" id="welcome-countdown-stage" style="display:none;">
-            <div class="welcome-countdown-num" id="welcome-countdown-num">5</div>
             <p>استعد... البث يبدأ الآن!</p>
-            <video id="welcome-video" src="welcome-video.mp4" muted playsinline
+            <video id="welcome-video" src="welcome-video.mp4" playsinline
                    onerror="this.style.display='none';"></video>
         </div>
-
-        <audio id="welcome-audio" src="welcome-sound.mp3" preload="auto"></audio>
     </div>
 </div>
 
@@ -740,7 +737,7 @@
 -->
 <script>
     (function () {
-        // شاشة البداية — تختفي تلقائياً بعد 3 ثواني بأنيميشن fade، ثم
+        // شاشة البداية — تختفي تلقائياً بعد ثانيتين باختفاء سريع، ثم
         // تُزال من الـ DOM كلياً حتى لا تبقى عنصراً خفياً يعيق أي شيء.
         var splash = document.getElementById('splash-screen');
         if (splash) {
@@ -748,8 +745,8 @@
                 splash.classList.add('splash-hide');
                 window.setTimeout(function () {
                     if (splash.parentNode) splash.parentNode.removeChild(splash);
-                }, 650); // بعد انتهاء الأنيميشن (transition: 0.6s بالـ CSS)
-            }, 3000);
+                }, 350); // بعد انتهاء الأنيميشن (transition: 0.3s بالـ CSS)
+            }, 2000);
         }
 
         // أنيميشن ظهور بسيط للأقسام عند وصولها للشاشة بالسكرول. لو
@@ -795,12 +792,12 @@
         var ribbonWrap = document.getElementById('welcome-ribbon-wrap');
         var scissorsBtn = document.getElementById('welcome-scissors-btn');
         var countdownStage = document.getElementById('welcome-countdown-stage');
-        var countdownNum = document.getElementById('welcome-countdown-num');
-        var audioEl = document.getElementById('welcome-audio');
         var videoEl = document.getElementById('welcome-video');
 
         var currentSlide = 0;
         var ceremonyFinishing = false; // يمنع الضغط المتكرر على المقص
+        var ceremonyEnded = false; // يمنع استدعاء finishCeremony مرتين (من الفيديو + المؤقّت الاحتياطي معاً)
+        var videoFallbackTimer = null;
 
         function goToSlide(index) {
             currentSlide = index;
@@ -835,43 +832,44 @@
 
                 if (ribbonWrap) ribbonWrap.classList.add('is-cut');
 
-                // نشغّل الصوت والفيديو هنا مباشرة داخل معالج ضغطة المستخدم
-                // (لا بأي setTimeout لاحق) عشان نضمن سياسات المتصفح
-                // للتشغيل التلقائي (autoplay يحتاج "user gesture" مباشر).
-                if (audioEl) {
-                    try { audioEl.currentTime = 0; } catch (e) {}
-                    audioEl.play().catch(function () { /* رفض المتصفح — تجاهل بصمت */ });
-                }
-                if (videoEl) {
-                    videoEl.style.display = 'block';
-                    try { videoEl.currentTime = 0; } catch (e) {}
-                    videoEl.play().catch(function () { /* تجاهل بصمت */ });
-                }
-
-                // بعد انتهاء أنيميشن قص الشريطة (0.6s بالـ CSS) ننتقل للعد التنازلي
+                // بعد انتهاء أنيميشن قص الشريطة (0.6s بالـ CSS) ننتقل لمرحلة
+                // الفيديو مباشرة ونشغّله — لسا داخل نفس سلسلة معالج ضغطة
+                // المستخدم منطقياً (بدون أي تفاعل مستخدم جديد بينهم)، فسياسات
+                // المتصفح للتشغيل التلقائي بالصوت تسمح به.
                 window.setTimeout(function () {
                     if (ribbonStage) ribbonStage.style.display = 'none';
                     if (countdownStage) countdownStage.style.display = 'flex';
-                    startCountdown();
+                    playEndingVideo();
                 }, 650);
             });
         }
 
-        function startCountdown() {
-            var remaining = 5;
-            if (countdownNum) countdownNum.textContent = String(remaining);
-            var interval = window.setInterval(function () {
-                remaining -= 1;
-                if (remaining < 0) {
-                    window.clearInterval(interval);
+        function playEndingVideo() {
+            // فيديو واحد فقط، بصوته المدمج (بدون ملف صوت منفصل) — لما ينتهي
+            // فعلياً (حدث 'ended') تنتهي الحفلة تلقائياً. لو تعذّر تشغيله أو
+            // تحميله لأي سبب (الملف غير مرفوع بعد، أو رفضه المتصفح)، مؤقّت
+            // احتياطي 10 ثوانٍ يضمن إنهاء الحفلة برضو بدل ما تعلَق للأبد.
+            if (videoEl) {
+                videoEl.style.display = 'block';
+                videoEl.addEventListener('ended', function () {
                     finishCeremony();
-                    return;
-                }
-                if (countdownNum) countdownNum.textContent = String(remaining);
-            }, 1000);
+                });
+                videoEl.addEventListener('error', function () {
+                    finishCeremony();
+                });
+                try { videoEl.currentTime = 0; } catch (e) {}
+                videoEl.play().catch(function () { /* رفض المتصفح — المؤقّت الاحتياطي كافٍ */ });
+            }
+            videoFallbackTimer = window.setTimeout(function () {
+                finishCeremony();
+            }, 10000);
         }
 
         function finishCeremony() {
+            if (ceremonyEnded) return;
+            ceremonyEnded = true;
+            if (videoFallbackTimer) { window.clearTimeout(videoFallbackTimer); videoFallbackTimer = null; }
+
             // نسجّل الإكمال بالخادم — يمنع ظهورها ثانية لهذا الحساب لحد ما
             // الأدمن يعيد تفعيلها له من admin.html (زر "🎉 إعادة الترحيب").
             if (window.AGPAuth && typeof window.AGPAuth.completeWelcome === 'function') {
@@ -880,7 +878,6 @@
                     // بالزيارة الجاية — لا كسر بالواجهة الآن، الاحتفال خلص بصرياً.
                 });
             }
-            if (audioEl) { try { audioEl.pause(); } catch (e) {} }
             if (videoEl) { try { videoEl.pause(); } catch (e) {} }
             overlay.classList.remove('visible');
             window.setTimeout(function () {
@@ -987,6 +984,21 @@
         // قفل أزرار "العب الآن" (روابط خارجية لمواقع الألعاب) على أي
         // زائر بدون حساب، أو حساب لم يوافَق عليه من الأدمن بعد
         // (AGPAuth.canPlayGames) — راجع docs/CHANGELOG.md.
+        //
+        // ملاحظة مهمة (إصلاح): لعبة روليت القبائل متصلة فعلياً بجسر
+        // AGP.gameBridge (js/agp-game-bridge.js)، وهو يضيف مستمع click
+        // خاص به على نفس رابط "العب الآن" يفتح نافذة اللعبة فوراً
+        // (window.open) بدون أي علم بحالة تسجيل الدخول — هذا منطق AGP.*
+        // أساسي ولا يُعدَّل. المشكلة إن مستمعه يُسجَّل قبل مستمعنا هنا
+        // (سكربتات AGP.* تُحمَّل وتُشغَّل قبل هذا السكربت الأخير)، فيفتح
+        // اللعبة فوراً قبل ما يوصل الدور لفحصنا للجلسة — لذلك كانت
+        // روليت تفتح مباشرة حتى لحساب غير موافَق عليه، بعكس مين
+        // الامبوستر/مافيا (ما فيهم جسر مشابه، فمستمعنا هو الوحيد عليهم).
+        // الحل: مستمع واحد مفوَّض (Delegated) على document بمرحلة
+        // الالتقاط (capture) بدل مستمع مباشر على كل رابط — مرحلة
+        // الالتقاط تمر عبر document قبل ما توصل الحدث لعنصر الرابط
+        // نفسه أصلاً، فنقدر نوقفه تماماً (preventDefault + stopPropagation)
+        // قبل ما يوصل لمستمع جسر اللعبة إطلاقاً، لأي لعبة كانت.
         var lockMessageEl = document.getElementById('games-lock-message');
         function showLockMessage(html) {
             if (!lockMessageEl) return;
@@ -994,19 +1006,24 @@
             lockMessageEl.classList.add('visible');
         }
 
-        Array.prototype.forEach.call(document.querySelectorAll('.btn-play'), function (link) {
-            link.addEventListener('click', function (event) {
-                if (!hasSession) {
-                    event.preventDefault();
-                    showLockMessage('لازم تسجّل دخول أولاً عشان تفتح الألعاب. <a href="login.html">سجّل دخولك</a> أو <a href="signup.html">أنشئ حساب</a>.');
-                    return;
-                }
-                if (!window.AGPAuth.canPlayGames(cachedUser)) {
-                    event.preventDefault();
-                    showLockMessage('حسابك يحتاج موافقة الأدمن قبل ما يقدر يفتح الألعاب. تواصل معنا عبر تيك توك <a href="https://www.tiktok.com/@em70_q" target="_blank">@em70_q</a>.');
-                }
-            });
-        });
+        document.addEventListener('click', function (event) {
+            var link = event.target.closest ? event.target.closest('.btn-play') : null;
+            if (!link) return;
+
+            if (!hasSession) {
+                event.preventDefault();
+                event.stopPropagation();
+                showLockMessage('لازم تسجّل دخول أولاً عشان تفتح الألعاب. <a href="login.html">سجّل دخولك</a> أو <a href="signup.html">أنشئ حساب</a>.');
+                return;
+            }
+            if (!window.AGPAuth.canPlayGames(cachedUser)) {
+                event.preventDefault();
+                event.stopPropagation();
+                showLockMessage('حسابك يحتاج موافقة الأدمن قبل ما يقدر يفتح الألعاب. تواصل معنا عبر تيك توك <a href="https://www.tiktok.com/@em70_q" target="_blank">@em70_q</a>.');
+            }
+            // غير كذا (جلسة صالحة + صلاحية لعب) — لا نفعل شيء، والحدث
+            // يكمل مساره الطبيعي لمستمع جسر اللعبة (أو التنقّل العادي).
+        }, true); // true = مرحلة الالتقاط، هذا هو أساس الإصلاح
 
         // إعلان الأدمن — نافذة منبثقة عامة (تظهر حتى لغير المسجَّلين
         // دخولهم)، تُجلَب في كل زيارة للصفحة الرئيسية طالما نشطة من
