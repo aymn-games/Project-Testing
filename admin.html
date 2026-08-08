@@ -58,6 +58,10 @@
             <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-users"/></svg>المستخدمون والستريمرز</h2>
             <button class="btn btn-sm" id="btn-refresh-users"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg>تحديث</button>
         </div>
+        <div class="field" style="max-width:420px; margin-bottom: var(--space-3);">
+            <label for="user-search">بحث (اسم المستخدم / الإيميل / الـID العام / تيك توك / المعرّف الداخلي)</label>
+            <input type="text" id="user-search" placeholder="اكتب للبحث…">
+        </div>
         <div class="table-wrap">
         <table class="table">
             <thead>
@@ -343,14 +347,35 @@
         });
     }
 
+    // ذاكرة محلية بآخر قائمة مستخدمين حمّلناها من السيرفر — البحث أدناه
+    // يفلتر عليها مباشرة بدون أي طلب شبكي جديد، حتى لو صار عندنا آلاف
+    // المستخدمين مستقبلاً (البحث بالـID الداخلي وحده غير عملي وقتها).
+    var allUsersCache = [];
+    var userSearchInput = document.getElementById('user-search');
+
+    function applyUserFilter() {
+        var q = (userSearchInput.value || '').trim().toLowerCase();
+        if (!q) { renderUsers(allUsersCache); return; }
+        var filtered = allUsersCache.filter(function (u) {
+            return String(u.id) === q ||
+                (u.username && u.username.toLowerCase().indexOf(q) !== -1) ||
+                (u.email && u.email.toLowerCase().indexOf(q) !== -1) ||
+                (u.custom_id && String(u.custom_id).toLowerCase().indexOf(q) !== -1) ||
+                (u.tiktok_username && u.tiktok_username.toLowerCase().indexOf(q) !== -1);
+        });
+        renderUsers(filtered);
+    }
+    userSearchInput.addEventListener('input', applyUserFilter);
+
     function loadUsers() {
-        tbody.innerHTML = '<tr><td class="table-empty" colspan="9">جارٍ التحميل…</td></tr>';
+        tbody.innerHTML = '<tr><td class="table-empty" colspan="11">جارٍ التحميل…</td></tr>';
         window.AGPAuth.adminListUsers().then(function (result) {
             if (!result.success) {
                 showMessage('تعذّر تحميل قائمة المستخدمين.', 'error');
                 return;
             }
-            renderUsers(result.users);
+            allUsersCache = result.users;
+            applyUserFilter(); // يطبّق أي نص بحث نشط حالياً (لو "تحديث" ضُغط أثناء بحث)
         });
     }
 
