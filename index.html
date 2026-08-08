@@ -3,21 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>منصة ألعاب أيمن</title>
+<title>منصة ألعاب أيمن — ألعاب تفاعلية للبث المباشر على تيك توك</title>
+
+<!--
+    SEO — راجع docs/CHANGELOG.md. لا علاقة لها بأي منطق AGP.*، مجرد
+    وسوم <head> وصفية عادية. عدّل النص هنا مباشرة من GitHub وقتها تبي.
+-->
+<meta name="description" content="منصة ألعاب أيمن — منصة عربية مجانية تفاعلية للبث المباشر، تربط الاستريمرز بجمهورهم عبر ألعاب جماعية مباشرة (روليت القبائل، مين الامبوستر، مافيا) مع دعم كامل لبث تيك توك وربط حساباتكم.">
+<meta name="keywords" content="ألعاب بث مباشر, ألعاب تيك توك, منصة استريمرز, روليت القبائل, مين الامبوستر, لعبة مافيا, العاب جماعية اونلاين">
+<meta name="author" content="ألعاب أيمن">
+<link rel="canonical" href="https://agp-platform.onrender.com/">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="منصة ألعاب أيمن — ألعاب تفاعلية للبث المباشر">
+<meta property="og:description" content="منصة عربية مجانية تفاعلية للبث المباشر — ألعاب جماعية مباشرة، ربط تيك توك، ومجتمع للاعبين والاستريمرز.">
+<meta property="og:image" content="https://agp-platform.onrender.com/logo.png">
+<meta property="og:url" content="https://agp-platform.onrender.com/">
+<meta property="og:locale" content="ar_AR">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="منصة ألعاب أيمن">
+<meta name="twitter:description" content="منصة عربية مجانية تفاعلية للبث المباشر وألعاب جماعية للاستريمرز.">
+<meta name="twitter:image" content="https://agp-platform.onrender.com/logo.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "منصة ألعاب أيمن",
+  "url": "https://agp-platform.onrender.com/",
+  "description": "منصة عربية مجانية تفاعلية للبث المباشر وألعاب جماعية للاستريمرز واللاعبين."
+}
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Almarai:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
     :root {
-        --bg: #0b0616;
+        /*
+            لوحة الألوان المعتمدة (راجع docs/CHANGELOG.md) — السماوي
+            (--accent-2) مقصود إبقاؤه محدود الاستخدام (لمسات صغيرة فقط)،
+            والتدرّج الرئيسي (--accent-gradient) بنفسجي↔وردي بدل بنفسجي↔سماوي
+            زي ما كان، حتى يقل حضور السماوي البصري بالموقع ككل.
+        */
+        --bg: #0e0e16;
         --surface: #150c26;
         --surface-2: #1c1233;
-        --border: rgba(168, 85, 247, 0.25);
-        --text: #f3eefc;
+        --border: rgba(124, 58, 237, 0.28);
+        --text: #ffffff;
         --text-muted: #b9aed1;
-        --accent: #a855f7;
-        --accent-2: #22d3ee;
-        --accent-gradient: linear-gradient(90deg, #22d3ee, #a855f7);
+        --accent: #7c3aed;
+        --accent-2: #00c2ff;
+        --accent-pink: #ff4dff;
+        --accent-gradient: linear-gradient(90deg, #7c3aed, #ff4dff);
         --radius: 14px;
         --radius-sm: 8px;
     }
@@ -27,13 +65,45 @@
         font-family: 'Cairo', sans-serif;
         background: var(--bg);
         background-image:
-            radial-gradient(circle at 15% 20%, rgba(168, 85, 247, 0.18), transparent 40%),
-            radial-gradient(circle at 85% 75%, rgba(34, 211, 238, 0.14), transparent 40%);
+            radial-gradient(circle at 15% 20%, rgba(124, 58, 237, 0.20), transparent 40%),
+            radial-gradient(circle at 85% 75%, rgba(255, 77, 255, 0.10), transparent 40%);
         background-attachment: fixed;
         color: var(--text);
         text-align: center;
+        overflow-x: hidden; /* حتى ما تسبب أيقونات الخلفية الزخرفية أي Scroll أفقي */
+        position: relative;
     }
     a { text-decoration: none; color: inherit; }
+
+    /*
+        أيقونات خلفية زخرفية ثابتة (عالم الألعاب) — بدون أي حركة، شفافية
+        منخفضة جداً حتى ما تشتت عن المحتوى. طبقة واحدة خلف كل شيء
+        (z-index: 0)، لا تتفاعل مع الماوس (pointer-events: none) ولا تُثقل
+        الصفحة (نص Emoji عادي، بدون أي صور/طلبات شبكة إضافية).
+    */
+    .bg-decor { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+    .bg-decor span { position: absolute; font-size: 2.6em; opacity: 0.05; filter: blur(0.3px); }
+    .bg-decor span:nth-child(1) { top: 8%; left: 6%; }
+    .bg-decor span:nth-child(2) { top: 18%; right: 8%; font-size: 3.4em; }
+    .bg-decor span:nth-child(3) { top: 42%; left: 3%; font-size: 2.1em; }
+    .bg-decor span:nth-child(4) { top: 60%; right: 5%; font-size: 3em; }
+    .bg-decor span:nth-child(5) { top: 75%; left: 10%; font-size: 2.4em; }
+    .bg-decor span:nth-child(6) { top: 30%; left: 45%; font-size: 2em; }
+    .bg-decor span:nth-child(7) { top: 88%; right: 20%; font-size: 2.6em; }
+    .bg-decor span:nth-child(8) { top: 5%; left: 40%; font-size: 1.8em; }
+    header.topbar, .hero, .categories, .sub-banner, #games-section, .teaser, .teaser-pills,
+    .stats-section, footer, .announcement-overlay, #splash-screen { position: relative; z-index: 1; }
+
+    /*
+        أنيميشن ظهور بسيط عند الوصول للقسم بالسكرول (Reveal on scroll) —
+        JS بالأسفل يضيف .in-view لما القسم يدخل الشاشة عبر
+        IntersectionObserver؛ بدون JS (متصفح قديم جداً) يبقى العنصر ظاهراً
+        طبيعياً بحكم fallback الـ CSS (opacity: 1 افتراضياً، الحركة تحسين
+        فقط لا شرط لظهور المحتوى).
+    */
+    .reveal-on-scroll { opacity: 1; transform: none; }
+    .js-reveal-ready .reveal-on-scroll { opacity: 0; transform: translateY(18px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .js-reveal-ready .reveal-on-scroll.in-view { opacity: 1; transform: translateY(0); }
 
     header.topbar {
         display: flex; align-items: center; justify-content: space-between;
@@ -41,7 +111,7 @@
         flex-wrap: wrap; gap: 12px;
     }
     .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.2em; }
-    .brand-logo { height: 38px; width: auto; display: block; }
+    .brand-logo { height: 48px; width: auto; display: block; }
     .hero-banner { display: block; width: 100%; height: auto; border-radius: var(--radius); margin-bottom: 20px; }
     nav.mainnav { display: flex; gap: 24px; color: var(--text-muted); font-weight: 600; }
     nav.mainnav a:hover { color: var(--text); }
@@ -51,27 +121,48 @@
         font-weight: 700; cursor: pointer; font-size: 0.9em;
     }
     .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
-    .btn-filled { background: var(--accent-gradient); color: #0b0616; }
+    .btn-filled { background: var(--accent-gradient); color: #0e0e16; }
     .btn-pill { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 10px 22px; }
 
     #profile-button { display: none; }
 
     .hero {
         max-width: 900px; margin: 40px auto; padding: 32px; border-radius: var(--radius);
-        background: linear-gradient(160deg, rgba(168,85,247,0.12), rgba(34,211,238,0.08));
+        background: linear-gradient(160deg, rgba(124,58,237,0.14), rgba(255,77,255,0.07));
         border: 1px solid var(--border);
     }
-    .hero h1 { font-size: 2.2em; font-weight: 800; margin: 0 0 12px; }
-    .hero p.subtitle { color: var(--text-muted); font-size: 1.1em; margin: 0 0 6px; }
-    .hero p.small { color: var(--text-muted); font-size: 0.9em; margin: 0 0 16px; }
+    /*
+        شارة "منصة مجانية" — أيقونة فقط بدون نص (راجع docs/CHANGELOG.md)،
+        title/aria-label يحافظان على المعنى لقارئ الشاشة.
+    */
     .free-badge {
-        display: inline-block; background: var(--surface-2); border: 1px solid var(--accent-2);
-        color: var(--accent-2); border-radius: 999px; padding: 5px 16px; font-size: 0.85em; font-weight: 700;
-        margin-bottom: 14px;
+        display: flex; align-items: center; justify-content: center;
+        width: 44px; height: 44px; margin: 0 auto 10px;
+        background: var(--surface-2); border: 1px solid var(--accent-2);
+        color: var(--accent-2); border-radius: 50%; font-size: 1.3em;
     }
-    .social-row { display: flex; justify-content: center; gap: 14px; font-size: 1.2em; color: var(--text-muted); }
+
+    /* سهم بسيط ينبض بهدوء من مكان الشارة لزر "حسابنا تيك توك" تحته */
+    .hero-arrow { font-size: 1.4em; color: var(--accent-pink); margin: 2px 0 12px; animation: heroArrowBounce 1.8s ease-in-out infinite; }
+    @keyframes heroArrowBounce { 0%, 100% { transform: translateY(0); opacity: 0.65; } 50% { transform: translateY(6px); opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .hero-arrow { animation: none; } }
+
+    .tiktok-cta {
+        display: inline-flex; align-items: center; gap: 8px; background: var(--accent-gradient);
+        color: #0e0e16; font-weight: 800; padding: 11px 26px; border-radius: 999px; font-size: 0.95em;
+        box-shadow: 0 6px 20px rgba(255, 77, 255, 0.25); transition: transform 0.15s ease;
+    }
+    .tiktok-cta:hover { transform: translateY(-2px); }
 
     .categories { display: flex; justify-content: center; gap: 14px; margin: 28px auto; flex-wrap: wrap; }
+    .btn-pill--active { background: var(--accent-gradient); color: #0e0e16; border-color: transparent; font-weight: 800; }
+    .btn-pill--disabled {
+        opacity: 0.55; cursor: not-allowed; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .soon-tag {
+        background: rgba(255, 77, 255, 0.15); color: var(--accent-pink); border-radius: 999px;
+        padding: 2px 9px; font-size: 0.75em; font-weight: 800;
+    }
 
     .sub-banner {
         max-width: 900px; margin: 0 auto 36px; padding: 14px 20px; border-radius: 999px;
@@ -82,15 +173,15 @@
 
     .section-title-bar {
         max-width: 1200px; margin: 0 auto 24px; padding: 12px 24px; border-radius: 999px;
-        background: var(--accent-gradient); color: #0b0616; font-weight: 800; font-size: 1.1em;
+        background: var(--accent-gradient); color: #0e0e16; font-weight: 800; font-size: 1.1em;
     }
 
     .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 22px; max-width: 1200px; margin: 0 auto 40px; padding: 0 20px; }
     .game-card {
         width: 300px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-        overflow: hidden; text-align: right; transition: transform 0.15s ease, border-color 0.15s ease;
+        overflow: hidden; text-align: right; transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
     }
-    .game-card:hover { transform: translateY(-4px); border-color: var(--accent); }
+    .game-card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 10px 26px rgba(124, 58, 237, 0.18); }
     .game-cover-wrap { width: 100%; height: 160px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; }
     .game-cover { width: 100%; height: 100%; object-fit: cover; }
     .no-cover::after { content: '🖼️ سيتم إضافة صورة الغلاف قريباً'; color: var(--text-muted); font-size: 0.85em; padding: 20px; }
@@ -98,7 +189,7 @@
     .game-title { display: block; font-weight: 700; margin-bottom: 12px; }
     .game-info .btn-play {
         display: block; width: 100%; text-align: center; background: var(--accent-gradient);
-        color: #0b0616; font-weight: 800; padding: 11px; border-radius: var(--radius-sm); margin-bottom: 8px;
+        color: #0e0e16; font-weight: 800; padding: 11px; border-radius: var(--radius-sm); margin-bottom: 8px;
     }
     .btn-toggle-desc {
         width: 100%; background: transparent; border: 1px solid var(--border); color: var(--text-muted);
@@ -106,6 +197,29 @@
     }
     .game-description { display: none; text-align: right; color: var(--text-muted); font-size: 0.85em; margin-top: 10px; line-height: 1.6; }
     .game-description.visible { display: block; }
+
+    /*
+        تصميم البطاقة الجديد (v2) — مقاس 250×250 معتمد من الأدمن (بطاقة
+        250، صورة الغلاف 200×130، زر الشرح 75×30، خط Almarai). يُطبَّق
+        فقط على البطاقات الجديدة/القابلة للتحديث الآن (روليت القبائل +
+        بطاقات "قريباً") — بطاقتَي مافيا/الامبوستر تبقيان بتصميمهما القديم
+        كما هو تماماً بقرار صريح (سيُعاد تصميمهما لاحقاً بشكل منفصل)،
+        فهذا كلاس إضافي جديد لا يمسّ .game-card الأصلي إطلاقاً.
+    */
+    .game-card--v2 { width: 250px; font-family: 'Almarai', 'Cairo', sans-serif; }
+    .game-card--v2 .game-cover-wrap { width: 200px; height: 130px; margin: 12px auto 0; border-radius: var(--radius-sm); overflow: hidden; }
+    .game-card--v2 .game-info { padding: 12px 14px 16px; text-align: center; }
+    .game-card--v2 .game-title { font-size: 0.95em; }
+    .game-card--v2 .btn-toggle-desc { width: 75px; height: 30px; padding: 0; margin: 0 auto; font-size: 0.78em; }
+    .game-card--v2 .game-description { text-align: center; }
+
+    /* بطاقة "لعبة قريباً" — نفس تصميم v2، بدون رابط لعب فعلي */
+    .game-card--soon .game-info { text-align: center; padding: 14px; }
+    .btn-soon {
+        display: block; width: 100%; text-align: center; background: var(--surface-2);
+        border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;
+        padding: 10px; border-radius: var(--radius-sm); cursor: not-allowed; font-size: 0.85em;
+    }
 
     .games-lock-message {
         display: none;
@@ -116,21 +230,111 @@
     .games-lock-message.visible { display: block; }
     .games-lock-message a { color: var(--accent-2); text-decoration: underline; }
 
-    .teaser { max-width: 900px; margin: 0 auto 20px; }
-    .teaser h3 { font-size: 1.15em; }
-    .teaser .highlight { color: var(--accent-2); font-weight: 800; }
-    .teaser-pills { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin: 16px 0 40px; }
-    .teaser-pills span { background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 8px 16px; font-size: 0.85em; color: var(--text-muted); }
+    /*
+        كتلة أسفل الصفحة الموحّدة (Teaser + إحصائيات + Footer) — نفس تصميم
+        الصورة المرجعية المعتمدة: بطاقة داكنة بحواف علوية مدوّرة تجمع كل
+        هذي الأقسام بصرياً بدل ما تكون عناصر منفصلة عائمة على الخلفية.
+    */
+    .platform-footer-block {
+        max-width: 1100px; margin: 20px auto 0; padding: 44px 24px 28px;
+        background: linear-gradient(180deg, rgba(28,18,51,0.6), rgba(14,14,22,0.9));
+        border: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .teaser { max-width: 700px; margin: 0 auto 20px; }
+    .teaser h3 { font-size: 1.3em; font-weight: 800; }
+    .teaser .highlight { color: var(--accent-pink); font-weight: 800; }
+    .teaser-pills { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin: 16px 0 36px; }
+    .teaser-pills span {
+        display: inline-flex; align-items: center; gap: 8px; background: var(--surface-2);
+        border: 1px solid var(--border); border-radius: 999px; padding: 9px 18px; font-size: 0.85em;
+        color: var(--text-muted); transition: border-color 0.15s ease, transform 0.15s ease;
+    }
+    .teaser-pills span:hover { border-color: var(--accent-pink); transform: translateY(-2px); }
 
-    .stats-section { max-width: 900px; margin: 0 auto 40px; }
+    .stats-section { max-width: 900px; margin: 0 auto 36px; }
     .stats-grid { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
-    .stat-box { width: 160px; height: 80px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
+    .stat-box {
+        width: 160px; height: 80px; background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center;
+        color: var(--text-muted); font-weight: 700; font-size: 0.9em;
+    }
 
-    footer { border-top: 1px solid var(--border); padding: 24px; color: var(--text-muted); font-size: 0.85em; }
+    footer { padding: 24px 24px 30px; color: var(--text-muted); font-size: 0.85em; }
     footer a { color: var(--accent-2); }
+    .footer-columns {
+        display: flex; flex-wrap: wrap; justify-content: center; gap: 40px; max-width: 760px;
+        margin: 8px auto 24px; text-align: center;
+    }
+    .footer-columns .footer-col { min-width: 220px; max-width: 320px; }
+    .footer-col h4 { color: var(--text); font-size: 0.95em; margin: 0 0 12px; }
+    .footer-links { display: flex; flex-direction: column; gap: 9px; }
+    .footer-about p { line-height: 1.9; margin: 0; }
+    .footer-contact {
+        display: flex; justify-content: center; gap: 22px; flex-wrap: wrap; margin-bottom: 18px; font-weight: 700;
+    }
+    .footer-contact a { display: inline-flex; align-items: center; gap: 6px; }
+    .footer-copyright { border-top: 1px solid var(--border); padding-top: 16px; }
+
+    /*
+        إعلان/تنبيه الأدمن — نافذة منبثقة عامة، تُملأ وتُظهَر عبر السكربت
+        آخر الصفحة فقط لو فيه إعلان نشط (window.AGPAuth.getAnnouncement).
+        مخفية افتراضياً؛ لا تظهر أي "ومضة" فارغة قبل وصول الرد من الخادم.
+    */
+    .announcement-overlay {
+        display: none; position: fixed; inset: 0; background: rgba(11, 6, 22, 0.75);
+        z-index: 1000; align-items: center; justify-content: center; padding: 20px;
+    }
+    .announcement-overlay.visible { display: flex; }
+    .announcement-box {
+        max-width: 420px; width: 100%; max-height: 85vh; overflow-y: auto;
+        background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+        padding: 28px 24px 22px; text-align: center;
+    }
+    .announcement-box img { max-width: 100%; border-radius: var(--radius-sm); margin-bottom: 16px; display: block; }
+    .announcement-box p { color: var(--text); font-size: 1em; line-height: 1.8; white-space: pre-wrap; margin: 0 0 20px; }
+    .announcement-close {
+        border: none; border-radius: 999px; padding: 9px 26px; font-family: inherit;
+        font-weight: 700; cursor: pointer; font-size: 0.9em; background: var(--accent-gradient); color: #0e0e16;
+    }
+
+    /*
+        شاشة البداية (Splash) — شعار على خلفية مغبشة أول ما تفتح الصفحة،
+        تختفي تلقائياً بعد 3 ثواني (راجع السكربت آخر الصفحة). لا تمنع أي
+        محتوى تحتها من التحميل أو العمل — طبقة بصرية بحتة فوق الصفحة.
+    */
+    #splash-screen {
+        position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center;
+        background: rgba(14, 14, 22, 0.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        transition: opacity 0.6s ease; opacity: 1;
+    }
+    #splash-screen img { width: 96px; height: auto; animation: splashPulse 1.6s ease-in-out infinite; }
+    @keyframes splashPulse { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.08); opacity: 1; } }
+    #splash-screen.splash-hide { opacity: 0; pointer-events: none; }
+    @media (prefers-reduced-motion: reduce) { #splash-screen img { animation: none; } }
 </style>
 </head>
 <body>
+
+<!-- شاشة البداية — راجع #splash-screen بالأعلى والسكربت آخر الصفحة -->
+<div id="splash-screen"><img src="logo.png" alt="ألعاب أيمن"></div>
+
+<!-- أيقونات خلفية زخرفية ثابتة — راجع .bg-decor بالأعلى، بدون أي حركة -->
+<div class="bg-decor" aria-hidden="true">
+    <span>🎮</span><span>🎲</span><span>🕹️</span><span>🏆</span>
+    <span>🎧</span><span>📺</span><span>🃏</span><span>🎯</span>
+</div>
+
+<!--
+    نافذة إعلان الأدمن — مخفية افتراضياً، تُملأ وتُظهَر عبر السكربت آخر
+    الصفحة فقط لو رجع فيه إعلان نشط من الخادم. لا علاقة لها بـ AGP.*.
+-->
+<div class="announcement-overlay" id="announcement-overlay">
+    <div class="announcement-box">
+        <img id="announcement-image" alt="" style="display:none;">
+        <p id="announcement-text"></p>
+        <button class="announcement-close" id="announcement-close-btn">تم</button>
+    </div>
+</div>
 
 <header class="topbar">
     <a href="index.html" class="brand"><img src="logo.png" alt="ألعاب أيمن" class="brand-logo"></a>
@@ -162,17 +366,15 @@
         يظهر أيقونة "صورة مكسورة"). راجع docs/CHANGELOG.md للمقاس الموصى به.
     -->
     <img src="hero-banner.png" alt="" class="hero-banner" onerror="this.style.display='none';">
-    <div class="free-badge">منصة مجانية</div>
-    <h1>مـنـصـة ألـعـاب أيـمـن</h1>
-    <p class="subtitle">🎧 تفاعل، بث مباشر، ومجتمع اللاعبين</p>
-    <p class="small">انضم الى اكبر مجتمع للاعبين و الاستريمرز</p>
-    <div class="social-row">🎵 💬 🎮 📺</div>
+    <div class="free-badge" title="منصة مجانية" aria-label="منصة مجانية">🆓</div>
+    <div class="hero-arrow" aria-hidden="true">⬇</div>
+    <a class="tiktok-cta" href="https://www.tiktok.com/@em70_q" target="_blank">🎵 حسابنا تيك توك</a>
 </div>
 
 <div class="categories">
-    <button class="btn btn-pill">🎲 ألعاب البث</button>
-    <button class="btn btn-pill">💬 ألعاب الدسكورد</button>
-    <button class="btn btn-pill">🌐 ألعاب أون لاين</button>
+    <a href="#games-section" class="btn btn-pill btn-pill--active">🎵 ألعاب تيك توك</a>
+    <button class="btn btn-pill btn-pill--disabled" disabled>💬 ألعاب دسكورد <span class="soon-tag">قريباً</span></button>
+    <button class="btn btn-pill btn-pill--disabled" disabled>🕹️ ألعاب منصة الكيك <span class="soon-tag">قريباً</span></button>
 </div>
 
 <div class="sub-banner">
@@ -191,7 +393,7 @@
 
     <div class="container">
 
-        <div class="game-card" data-agp-game-id="roulette-game" data-agp-game-status="active">
+        <div class="game-card game-card--v2" data-agp-game-id="roulette-game" data-agp-game-status="active">
             <div class="game-cover-wrap">
                 <img src="roulette-cover.png" alt="غلاف لعبة روليت القبائل" class="game-cover"
                      onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
@@ -236,42 +438,207 @@
             </div>
         </div>
 
+        <!--
+            10 بطاقات "قريباً" جاهزة — أماكن محجوزة لألعاب جديدة تُضاف
+            لاحقاً. status="coming-soon" (لا "active") حتى ما تُحسب ضمن
+            الألعاب الفعلية بأي منطق مستقبلي يعتمد على data-agp-game-status.
+            بدون data-agp-game-id فريد لأي لعبة حقيقية بعد — عدّل الصورة/
+            العنوان/الرابط هنا مباشرة عند تجهيز كل لعبة، ونفعّلها كـ"active"
+            وقتها. راجع docs/CHANGELOG.md.
+        -->
+        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-1" data-agp-game-status="coming-soon">
+            <div class="game-cover-wrap">
+                <img src="coming-soon-1-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+            </div>
+            <div class="game-info">
+                <span class="game-title">🎮 لعبة جديدة #1</span>
+                <button class="btn-soon" disabled>🔒 قريباً</button>
+            </div>
+        </div>
+        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-2" data-agp-game-status="coming-soon">
+            <div class="game-cover-wrap">
+                <img src="coming-soon-2-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+            </div>
+            <div class="game-info">
+                <span class="game-title">🎮 لعبة جديدة #2</span>
+                <button class="btn-soon" disabled>🔒 قريباً</button>
+            </div>
+        </div>
+        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-3" data-agp-game-status="coming-soon">
+            <div class="game-cover-wrap">
+                <img src="coming-soon-3-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+            </div>
+            <div class="game-info">
+                <span class="game-title">🎮 لعبة جديدة #3</span>
+                <button class="btn-soon" disabled>🔒 قريباً</button>
+            </div>
+        </div>
+        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-4" data-agp-game-status="coming-soon">
+            <div class="game-cover-wrap">
+                <img src="coming-soon-4-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+            </div>
+            <div class="game-info">
+                <span class="game-title">🎮 لعبة جديدة #4</span>
+                <button class="btn-soon" disabled>🔒 قريباً</button>
+            </div>
+        </div>
+        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-5" data-agp-game-status="coming-soon">
+            <div class="game-cover-wrap">
+                <img src="coming-soon-5-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+            </div>
+            <div class="game-info">
+                <span class="game-title">🎮 لعبة جديدة #5</span>
+                <button class="btn-soon" disabled>🔒 قريباً</button>
+            </div>
+        </div>
+        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-6" data-agp-game-status="coming-soon">
+            <div class="game-cover-wrap">
+                <img src="coming-soon-6-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+            </div>
+            <div class="game-info">
+                <span class="game-title">🎮 لعبة جديدة #6</span>
+                <button class="btn-soon" disabled>🔒 قريباً</button>
+            </div>
+        </div>
+        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-7" data-agp-game-status="coming-soon">
+            <div class="game-cover-wrap">
+                <img src="coming-soon-7-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+            </div>
+            <div class="game-info">
+                <span class="game-title">🎮 لعبة جديدة #7</span>
+                <button class="btn-soon" disabled>🔒 قريباً</button>
+            </div>
+        </div>
+        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-8" data-agp-game-status="coming-soon">
+            <div class="game-cover-wrap">
+                <img src="coming-soon-8-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+            </div>
+            <div class="game-info">
+                <span class="game-title">🎮 لعبة جديدة #8</span>
+                <button class="btn-soon" disabled>🔒 قريباً</button>
+            </div>
+        </div>
+        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-9" data-agp-game-status="coming-soon">
+            <div class="game-cover-wrap">
+                <img src="coming-soon-9-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+            </div>
+            <div class="game-info">
+                <span class="game-title">🎮 لعبة جديدة #9</span>
+                <button class="btn-soon" disabled>🔒 قريباً</button>
+            </div>
+        </div>
+        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-10" data-agp-game-status="coming-soon">
+            <div class="game-cover-wrap">
+                <img src="coming-soon-10-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+            </div>
+            <div class="game-info">
+                <span class="game-title">🎮 لعبة جديدة #10</span>
+                <button class="btn-soon" disabled>🔒 قريباً</button>
+            </div>
+        </div>
+
     </div>
 </div>
 
-<div class="teaser">
-    <h3>منصة متكاملة مخصصة للاستريمرز</h3>
-    <p class="highlight">أقسام قريباً سيتم إضافتها بشكل مجاني</p>
-</div>
-<div class="teaser-pills">
-    <span>🖥️ بث وقوالب للابتوب/PC</span>
-    <span>🔔 إيقونات النوتفكيشن</span>
-    <span>⚙️ أوامر إدارة للتحميل</span>
-</div>
+<div class="platform-footer-block">
 
-<div class="stats-section" id="platform-stats" style="display:none;">
-    <div class="section-title-bar">إحصائيات المنصة</div>
-    <div class="stats-grid">
-        <div class="stat-box">عدد المستخدمين</div>
-        <div class="stat-box">عدد البثوث</div>
-        <div class="stat-box">عدد اللاعبين</div>
+    <div class="teaser reveal-on-scroll">
+        <h3>منصة متكاملة مخصصة للاستريمرز</h3>
+        <p class="highlight">أقسام قريباً سيتم إضافتها بشكل مجاني</p>
     </div>
-</div>
+    <div class="teaser-pills reveal-on-scroll">
+        <span>🎁 ليربتات جاهزة للتحميل <span class="soon-tag">قريباً</span></span>
+        <span>🔔 إيقونات البثوث <span class="soon-tag">قريباً</span></span>
+        <span>🖼️ بانرات وقوالب البث <span class="soon-tag">قريباً</span></span>
+    </div>
 
-<footer>
-    <div class="brand" style="justify-content:center; margin-bottom:10px;"><img src="logo.png" alt="ألعاب أيمن" class="brand-logo"></div>
-    <div style="margin-bottom:10px;">
-        <a href="#">سياسة الاستخدام</a> · <a href="#">سياسة الخصوصية</a>
+    <div class="stats-section reveal-on-scroll" id="platform-stats">
+        <div class="section-title-bar">إحصائيات المنصة</div>
+        <div class="stats-grid">
+            <div class="stat-box">عدد المستخدمين</div>
+            <div class="stat-box">عدد البثوث</div>
+            <div class="stat-box">عدد اللاعبين</div>
+        </div>
     </div>
-    <p>© منصة ألعاب أيمن — جميع الحقوق محفوظة</p>
-    <p>تابعنا على تيك توك: <a href="https://www.tiktok.com/@em70_q" target="_blank">@em70_q</a> · واتساب: 966582411235</p>
-</footer>
+
+    <footer class="reveal-on-scroll">
+        <div class="brand" style="justify-content:center; margin-bottom:20px;"><img src="logo.png" alt="ألعاب أيمن" class="brand-logo"></div>
+
+        <div class="footer-columns">
+            <div class="footer-col footer-links">
+                <h4>معلومات مهمة</h4>
+                <a href="usage-policy.html">سياسة الاستخدام</a>
+                <a href="privacy-policy.html">سياسة الخصوصية</a>
+                <a href="important-notice.html">تنويه مهم فيما يخص المنصة والألعاب فيها</a>
+                <a href="suggest-ideas.html">اقتراح الأفكار</a>
+                <a href="ads-sponsorships.html">الإعلانات والرعايات</a>
+            </div>
+            <div class="footer-col footer-about">
+                <h4>من نحن</h4>
+                <p>
+                    نحن منصة ترفيهية تفاعلية مخصصة للاستريمرز واللاعبين، نهدف إلى بناء أكبر مجتمع عربي
+                    يجمع صنّاع المحتوى والجمهور، نقدّم تجارب ألعاب مباشرة ومبتكرة تدعم التفاعل الحي وتزيد
+                    حماس بثوثكم بكل سهولة واحترافية.
+                </p>
+            </div>
+        </div>
+
+        <div class="footer-contact">
+            <a href="https://www.tiktok.com/@em70_q" target="_blank">🎵 تيك توك: @em70_q</a>
+            <a href="https://wa.me/966582411235" target="_blank">📱 واتساب: 966582411235</a>
+        </div>
+
+        <p class="footer-copyright">© منصة ألعاب أيمن — جميع الحقوق محفوظة</p>
+    </footer>
+
+</div>
 
 <script>
     function toggleDescription(button) {
         var desc = button.nextElementSibling;
         if (desc) desc.classList.toggle('visible');
     }
+</script>
+
+<!--
+    شاشة البداية (Splash) + أنيميشن ظهور الأقسام عند السكرول — بصري بحت،
+    مستقل تماماً عن AGP.* وعن AGPAuth (يعمل حتى لو فشل تحميلهما لأي سبب).
+    راجع docs/CHANGELOG.md.
+-->
+<script>
+    (function () {
+        // شاشة البداية — تختفي تلقائياً بعد 3 ثواني بأنيميشن fade، ثم
+        // تُزال من الـ DOM كلياً حتى لا تبقى عنصراً خفياً يعيق أي شيء.
+        var splash = document.getElementById('splash-screen');
+        if (splash) {
+            window.setTimeout(function () {
+                splash.classList.add('splash-hide');
+                window.setTimeout(function () {
+                    if (splash.parentNode) splash.parentNode.removeChild(splash);
+                }, 650); // بعد انتهاء الأنيميشن (transition: 0.6s بالـ CSS)
+            }, 3000);
+        }
+
+        // أنيميشن ظهور بسيط للأقسام عند وصولها للشاشة بالسكرول. لو
+        // IntersectionObserver غير مدعوم (متصفح قديم جداً)، ما نضيف كلاس
+        // js-reveal-ready أصلاً فتبقى العناصر ظاهرة طبيعياً بحكم fallback
+        // الـ CSS (.reveal-on-scroll { opacity: 1 } الافتراضي).
+        if ('IntersectionObserver' in window) {
+            document.documentElement.classList.add('js-reveal-ready');
+            var observer = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('in-view');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.15 });
+
+            Array.prototype.forEach.call(document.querySelectorAll('.reveal-on-scroll'), function (el) {
+                observer.observe(el);
+            });
+        }
+    }());
 </script>
 
 <script src="js/agp-core.js"></script>
@@ -336,7 +703,21 @@
             // لحد ما يسجّل خروج ودخول من جديد. الآن يتحدّث تلقائياً بصمت
             // (بدون Refresh أو تحويل) بمجرد فتح الصفحة. راجع docs/CHANGELOG.md.
             window.AGPAuth.refreshUser().then(function (freshUser) {
-                if (freshUser) cachedUser = freshUser;
+                if (freshUser) {
+                    cachedUser = freshUser;
+                    return;
+                }
+                // الخادم رفض الجلسة المخزَّنة محلياً (Token منتهي، أو حساب
+                // ما عاد موجوداً — مثال حقيقي: قاعدة بيانات جديدة بعد إعداد
+                // القرص الدائم بينما المتصفح لسا فيه جلسة قديمة من قبلها).
+                // بدون هذا، كان الزر يبقى "الملف الشخصي" ويودّي لبروفايل/
+                // حساب ما عاد له وجود ("هذا الحساب غير موجود"). نمسح الجلسة
+                // ونرجّع الواجهة لحالة "غير مسجَّل دخول" الحقيقية.
+                window.AGPAuth.clearSession();
+                hasSession = false;
+                cachedUser = null;
+                if (authActions) authActions.style.display = '';
+                if (profileButton) profileButton.style.display = 'none';
             });
         }
 
@@ -363,6 +744,42 @@
                 }
             });
         });
+
+        // إعلان الأدمن — نافذة منبثقة عامة (تظهر حتى لغير المسجَّلين
+        // دخولهم)، تُجلَب في كل زيارة للصفحة الرئيسية طالما نشطة من
+        // لوحة الأدمن. فشل الشبكة أو عدم وجود إعلان نشط = لا شيء يظهر،
+        // بصمت تام (لا تأثير على باقي الصفحة). راجع admin.html
+        // وbackend/announcements/announcement-service.js.
+        var announcementOverlay = document.getElementById('announcement-overlay');
+        var announcementCloseBtn = document.getElementById('announcement-close-btn');
+
+        if (announcementOverlay && window.AGPAuth && typeof window.AGPAuth.getAnnouncement === 'function') {
+            window.AGPAuth.getAnnouncement().then(function (result) {
+                if (!result || !result.success || !result.announcement) return;
+
+                var textEl = document.getElementById('announcement-text');
+                var imageEl = document.getElementById('announcement-image');
+                if (textEl) textEl.textContent = result.announcement.text || '';
+
+                if (imageEl) {
+                    if (result.announcement.imageFilename) {
+                        imageEl.onerror = function () { imageEl.style.display = 'none'; };
+                        imageEl.src = result.announcement.imageFilename;
+                        imageEl.style.display = 'block';
+                    } else {
+                        imageEl.style.display = 'none';
+                    }
+                }
+
+                announcementOverlay.classList.add('visible');
+            }).catch(function () { /* لا اتصال بالخادم — لا نمنع تصفّح الصفحة، نتجاهل بصمت */ });
+        }
+
+        if (announcementCloseBtn) {
+            announcementCloseBtn.addEventListener('click', function () {
+                announcementOverlay.classList.remove('visible');
+            });
+        }
     }());
 </script>
 </body>
