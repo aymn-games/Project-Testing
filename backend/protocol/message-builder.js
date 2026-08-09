@@ -29,8 +29,14 @@ module.exports = {
         return buildEnvelope(MESSAGE_TYPES.STATUS, payload);
     },
 
-    buildCommentMessage: function (platform, id, name, text) {
-        return buildEnvelope(MESSAGE_TYPES.COMMENT, { platform: platform, id: id, name: name, text: text });
+    buildCommentMessage: function (platform, id, name, text, isFollower) {
+        // ⚠️ [0.42.2] isFollower أُضيف هنا — كان يُحسَب فعلاً بالباك إند
+        // (tiktok-connector.js) لكن يُفقَد قبل الوصول للمتصفح لأن هذي
+        // الدالة نفسها ما كانت تستقبله ولا تضيفه لحمولة الرسالة، فيصل
+        // للواجهة الأمامية `undefined` دائماً بصرف النظر عن حالة المتابعة
+        // الحقيقية — هذا هو السبب الجذري الفعلي وراء فشل بوابة
+        // "المتابعون فقط" حتى مع متابع حقيقي.
+        return buildEnvelope(MESSAGE_TYPES.COMMENT, { platform: platform, id: id, name: name, text: text, isFollower: Boolean(isFollower) });
     },
 
     buildGiftMessage: function (platform, id, name, giftName, giftValue, repeatCount) {
