@@ -22,6 +22,7 @@ var announcementService = require('../announcements/announcement-service');
 var collectiblesService = require('../collectibles/collectibles-service');
 var pointsService = require('../points/points-service');
 var supportersService = require('../supporters/supporters-service');
+var siteThemeService = require('../theme/site-theme-service');
 var logger = require('../utils/logger');
 var config = require('../config');
 var response = require('./response');
@@ -97,7 +98,12 @@ var ROUTES = [
     { method: 'GET', path: '/api/supporters/top', requireAuth: false, handler: handleGetTopSupporters },
     { method: 'GET', path: '/api/admin/supporters', requireAuth: true, requireAdmin: true, handler: handleAdminListSupporters },
     { method: 'POST', path: '/api/admin/supporters', requireAuth: true, requireAdmin: true, handler: handleAdminAddSupporter },
-    { method: 'POST', path: '/api/admin/supporters/delete', requireAuth: true, requireAdmin: true, handler: handleAdminDeleteSupporter }
+    { method: 'POST', path: '/api/admin/supporters/delete', requireAuth: true, requireAdmin: true, handler: handleAdminDeleteSupporter },
+
+    // ---- ثيم المناسبات — راجع backend/theme/site-theme-service.js
+    { method: 'GET', path: '/api/theme', requireAuth: false, handler: handleGetTheme },
+    { method: 'POST', path: '/api/admin/theme', requireAuth: true, requireAdmin: true, handler: handleAdminSetTheme },
+    { method: 'POST', path: '/api/admin/theme/clear', requireAuth: true, requireAdmin: true, handler: handleAdminClearTheme }
 ];
 
 /* ----------------------------------------------------------------------
@@ -398,6 +404,30 @@ function handleAdminAddSupporter(req, res, body) {
 /** الأدمن فقط — حذف صف دعم واحد (تصحيح خطأ إدخال يدوي). */
 function handleAdminDeleteSupporter(req, res, body) {
     sendJson(res, 200, supportersService.deleteSupporter(body.id));
+}
+
+/* ----------------------------------------------------------------------
+ * ثيم المناسبات — راجع backend/theme/site-theme-service.js
+ * ---------------------------------------------------------------------- */
+
+/**
+ * الثيم الحالي (إن كان نشطاً) — مسار عام بدون تسجيل دخول، تستدعيه
+ * index.html عند التحميل ليطبّق الألوان فوراً. theme: null بهدوء لو
+ * غير مفعَّل (لا خطأ) — الموقع يبقى بألوانه الافتراضية.
+ */
+function handleGetTheme(req, res) {
+    sendJson(res, 200, { success: true, theme: siteThemeService.getActiveTheme() });
+}
+
+/** الأدمن فقط — تفعيل/تحديث ثيم المناسبة الحالي. */
+function handleAdminSetTheme(req, res, body) {
+    var result = siteThemeService.setTheme(body.presetKey, body.accent, body.accent2, body.accentPink);
+    sendJson(res, result.success ? 200 : 400, result);
+}
+
+/** الأدمن فقط — تعطيل الثيم فوراً (رجوع للألوان الافتراضية). */
+function handleAdminClearTheme(req, res) {
+    sendJson(res, 200, siteThemeService.clearTheme());
 }
 
 /* ----------------------------------------------------------------------
