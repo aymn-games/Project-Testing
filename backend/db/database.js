@@ -35,6 +35,9 @@
  *                    الأدمن حالياً (لا ربط تلقائي مع منصة كريترز/دكان
  *                    تب بعد، بانتظار رد الدعم الفني منهم) — راجع
  *                    backend/supporters/supporters-service.js
+ *   site_theme     — ثيم ألوان مؤقت للمناسبات (اليوم الوطني، يوم
+ *                    التأسيس...)، صف واحد ثابت يُفعَّل/يُعطَّل من الأدمن
+ *                    — راجع backend/theme/site-theme-service.js
  * ==========================================================================
  */
 
@@ -190,6 +193,20 @@ db.exec(`
         created_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_supporters_created ON supporters(created_at);
+
+    -- ثيم ألوان مؤقت للمناسبات — صف واحد ثابت (id = 1)، يُستبدَل بالكامل
+    -- مع كل تفعيل جديد من الأدمن (نفس نمط جدول announcement بالضبط).
+    -- active = 0 يعني الموقع بألوانه الافتراضية (index.html:root)، مافي
+    -- أي تأثير. راجع backend/theme/site-theme-service.js.
+    CREATE TABLE IF NOT EXISTS site_theme (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        active INTEGER NOT NULL DEFAULT 0,
+        preset_key TEXT,
+        accent TEXT,
+        accent_2 TEXT,
+        accent_pink TEXT,
+        updated_at INTEGER
+    );
 `);
 
 /**
