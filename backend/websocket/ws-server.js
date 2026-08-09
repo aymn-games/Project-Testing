@@ -100,7 +100,9 @@ function handleConnectMessage(connectionId, socket, payload) {
             sendEnvelope(socket, builder.buildStatusMessage(platform, status, message));
         },
         onComment: function (data) {
-            sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text));
+            // ⚠️ [0.42.2] data.isFollower يُمرَّر الآن للرسالة الصادرة —
+            // كان يُحسَب بـ tiktok-connector.js لكن يُفقَد هنا سابقاً.
+            sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, data.isFollower));
         },
         onGift: function (data) {
             sendEnvelope(socket, builder.buildGiftMessage(platform, data.id, data.name, data.giftName, data.giftValue, data.repeatCount));
