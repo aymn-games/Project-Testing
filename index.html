@@ -622,13 +622,22 @@
             العنوان/الرابط هنا مباشرة عند تجهيز كل لعبة، ونفعّلها كـ"active"
             وقتها. راجع docs/CHANGELOG.md.
         -->
-        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-1" data-agp-game-status="coming-soon">
+        <!--
+            روليت الإقصاء — أول لعبة أصلية (Native) تُبنى داخل نفس هذا
+            المستودع مباشرة (بدون موقع خارجي ولا جسر postMessage)، عبر
+            games/elimination-roulette/. راجع docs/CHANGELOG.md.
+        -->
+        <div class="game-card game-card--v2" data-agp-game-id="elimination-roulette" data-agp-game-status="active">
             <div class="game-cover-wrap">
-                <img src="coming-soon-1-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+                <img src="elimination-roulette-cover.png" alt="غلاف لعبة روليت الإقصاء" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
             </div>
             <div class="game-info">
-                <span class="game-title">🎮 لعبة جديدة #1</span>
-                <button class="btn-soon" disabled>🔒 قريباً</button>
+                <span class="game-title">🎡 روليت الإقصاء (Elimination Roulette)</span>
+                <a href="games/elimination-roulette/index.html" target="_blank" class="btn-play">العب الآن</a>
+                <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
+                <p class="game-description">
+                    عجلة تدور وتتوقف عند أحد اللاعبين، فيختار رقم لاعب آخر يقصيه من شات البث. لو وقفت العجلة على نفس الشخص مرتين متتاليتين يقدر يرجّع لاعباً مُقصى بدل الإقصاء (لو مفعّلة ميزة انعاش صديق). أي مُقصى يقدر يرجع بإرسال هدية معيّنة يحددها الاستريمر (لو مفعّلة ميزة الإنعاش بالدعم). تستمر المباراة حتى يبقى لاعب واحد فائز!
+                </p>
             </div>
         </div>
         <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-2" data-agp-game-status="coming-soon">
