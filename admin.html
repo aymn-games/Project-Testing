@@ -53,6 +53,51 @@
         <div class="auth-message" id="announcement-message"></div>
     </section>
 
+    <!--
+        داعمو المنصة — إدخال يدوي حالياً (لا ربط تلقائي مع منصة كريترز/
+        دكان تب بعد، بانتظار رد الدعم الفني منهم بخصوص Webhook/API —
+        راجع backend/supporters/supporters-service.js وdocs/CHANGELOG.md).
+        أضف كل دعم تشوفه فعلياً بلوحة تحكم كريترز يدوياً هنا؛ يظهر فوراً
+        بالشريط المتحرك بالصفحة الرئيسية وبصفحة top-supporters.html.
+    -->
+    <section class="panel panel-wide" style="margin-bottom: var(--space-5);">
+        <div class="panel-head">
+            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-heart"/></svg>داعمو المنصة</h2>
+        </div>
+        <p class="empty-note" style="margin-bottom: var(--space-3);">
+            إدخال يدوي حالياً — أضف كل دعم تشوفه بلوحة تحكم كريترز (اسم الداعم + رسالته + المبلغ). يظهر فوراً بالشريط المتحرك بالصفحة الرئيسية وبصفحة "توب الداعمين".
+        </p>
+        <div style="display:flex; gap: var(--space-3); flex-wrap:wrap; margin-bottom: var(--space-3);">
+            <div class="field" style="flex:1; min-width:160px;">
+                <label for="supporter-name-input">اسم الداعم</label>
+                <input type="text" id="supporter-name-input" placeholder="مثال: أحمد">
+            </div>
+            <div class="field" style="flex:2; min-width:220px;">
+                <label for="supporter-message-input">رسالة الداعم (اختياري)</label>
+                <input type="text" id="supporter-message-input" placeholder="مثال: بالتوفيق للمنصة!">
+            </div>
+            <div class="field" style="width:140px;">
+                <label for="supporter-amount-input">المبلغ (ريال)</label>
+                <input type="number" id="supporter-amount-input" min="0" step="0.01" placeholder="0">
+            </div>
+        </div>
+        <div class="panel-head-actions">
+            <button class="btn btn-sm btn-primary" id="btn-add-supporter">إضافة دعم</button>
+        </div>
+        <div class="auth-message" id="supporter-message"></div>
+
+        <div class="table-wrap" style="margin-top: var(--space-4);">
+        <table class="table">
+            <thead>
+                <tr><th>الاسم</th><th>الرسالة</th><th>المبلغ</th><th>التاريخ</th><th></th></tr>
+            </thead>
+            <tbody id="supporters-tbody">
+                <tr><td class="table-empty" colspan="5">جارٍ التحميل…</td></tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
+
     <section class="panel panel-wide">
         <div class="panel-head">
             <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-users"/></svg>المستخدمون والستريمرز</h2>
@@ -236,6 +281,9 @@
     </symbol>
     <symbol id="icon-frame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>
+    </symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20s-7.5-4.6-10-9.3C.4 7.4 2.3 4 5.8 4c2 0 3.5 1 6.2 3.6C14.7 5 16.2 4 18.2 4c3.5 0 5.4 3.4 3.8 6.7C19.5 15.4 12 20 12 20z"/>
     </symbol>
 </svg>
 
@@ -459,6 +507,84 @@
     });
 
     /**
+     * داعمو المنصة — إدخال يدوي حالياً (لا Webhook تلقائي بعد، راجع
+     * backend/supporters/supporters-service.js وتعليق القسم بالأعلى).
+     * كل إضافة تظهر فوراً بالشريط المتحرك بالصفحة الرئيسية وبصفحة
+     * top-supporters.html، بدون أي خطوة إضافية.
+     */
+    var supporterMessageEl = document.getElementById('supporter-message');
+    var supportersTbody = document.getElementById('supporters-tbody');
+    var supporterNameInput = document.getElementById('supporter-name-input');
+    var supporterMessageInput = document.getElementById('supporter-message-input');
+    var supporterAmountInput = document.getElementById('supporter-amount-input');
+
+    function showSupporterMessage(text, type) {
+        supporterMessageEl.textContent = text;
+        supporterMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+
+    function formatSupporterDate(timestamp) {
+        try {
+            return new Date(timestamp).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch (e) {
+            return '—';
+        }
+    }
+
+    function loadSupporters() {
+        supportersTbody.innerHTML = '<tr><td class="table-empty" colspan="5">جارٍ التحميل…</td></tr>';
+        window.AGPAuth.adminListSupporters().then(function (result) {
+            if (!result.success) {
+                supportersTbody.innerHTML = '<tr><td class="table-empty" colspan="5">تعذّر تحميل قائمة الداعمين.</td></tr>';
+                return;
+            }
+            var supporters = result.supporters || [];
+            if (!supporters.length) {
+                supportersTbody.innerHTML = '<tr><td class="table-empty" colspan="5">لا يوجد داعمون بعد.</td></tr>';
+                return;
+            }
+            supportersTbody.innerHTML = supporters.map(function (s) {
+                return '<tr>' +
+                    '<td>' + s.name + '</td>' +
+                    '<td>' + (s.message || '—') + '</td>' +
+                    '<td>' + s.amount + '</td>' +
+                    '<td>' + formatSupporterDate(s.created_at) + '</td>' +
+                    '<td><button class="btn btn-sm btn-danger" data-delete-supporter="' + s.id + '">حذف</button></td>' +
+                    '</tr>';
+            }).join('');
+        });
+    }
+
+    document.getElementById('btn-add-supporter').addEventListener('click', function () {
+        var name = (supporterNameInput.value || '').trim();
+        if (!name) { showSupporterMessage('اكتب اسم الداعم أولاً.', 'error'); return; }
+
+        var button = this;
+        button.disabled = true;
+        window.AGPAuth.adminAddSupporter(name, supporterMessageInput.value, supporterAmountInput.value).then(function (result) {
+            if (result.success) {
+                showSupporterMessage('تمت الإضافة — يظهر الآن بالصفحة الرئيسية.', 'success');
+                supporterNameInput.value = '';
+                supporterMessageInput.value = '';
+                supporterAmountInput.value = '';
+                loadSupporters();
+            } else {
+                showSupporterMessage('تعذّرت الإضافة: ' + (result.error || 'unknown'), 'error');
+            }
+        }).finally(function () { button.disabled = false; });
+    });
+
+    supportersTbody.addEventListener('click', function (event) {
+        var button = event.target.closest ? event.target.closest('[data-delete-supporter]') : null;
+        if (!button) return;
+        var id = button.getAttribute('data-delete-supporter');
+        button.disabled = true;
+        window.AGPAuth.adminDeleteSupporter(id).then(function () {
+            loadSupporters();
+        });
+    });
+
+    /**
      * كتالوج الإطارات (11 صف ثابت) — تعديل الاسم المعروض/عتبة نقاط
      * المستوى/الدخولية الافتراضية لكل صف. لا إضافة ولا حذف صفوف هنا
      * (الكتالوج ثابت بالعدد والملفات، راجع backend/db/database.js).
@@ -672,6 +798,7 @@
         loadUsers();
         loadAnnouncement();
         loadCatalog();
+        loadSupporters();
     });
 }());
 </script>
