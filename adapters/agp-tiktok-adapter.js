@@ -100,44 +100,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* ----------------------------------------------------------------
-     * بوابة "المتابعون فقط" — عامة لأي لعبة تستخدم هذا المحوّل، مو خاصة
-     * بلعبة معينة. الباك إند (tiktok-connector.js) يحسب isFollower فعلاً
-     * لكل تعليق، لكنه توقّف عمداً عن الفلترة بنفسه (راجع تعليقه هناك) —
-     * فهذي البوابة هي التطبيق الفعلي الوحيد لخيار followersOnly حالياً.
-     * استثناء يدوي (addFollowerException) يسمح لحساب معيّن بالدخول حتى
-     * لو مو متابع، بطلب صريح من الاستريمر عبر واجهة اللعبة.
-     * ---------------------------------------------------------------- */
-    var _followerExceptions = {};
-
-    function normalizeExceptionKey(value) {
-        return (typeof value === 'string') ? value.trim().toLowerCase() : '';
-    }
-
-    function isFollowerException(payload) {
-        var idKey = normalizeExceptionKey(payload && payload.id);
-        var nameKey = normalizeExceptionKey(payload && payload.name);
-        return Boolean((idKey && _followerExceptions[idKey]) || (nameKey && _followerExceptions[nameKey]));
-    }
-
-    AGP.services.TikTokService.addFollowerException = function (usernameOrId) {
-        var key = normalizeExceptionKey(usernameOrId);
-        if (!key) return false;
-        _followerExceptions[key] = true;
-        AGP.log('TikTok Adapter: added follower-gate exception for "' + key + '".');
-        return true;
-    };
-
-    AGP.services.TikTokService.removeFollowerException = function (usernameOrId) {
-        var key = normalizeExceptionKey(usernameOrId);
-        if (!key) return false;
-        delete _followerExceptions[key];
-        return true;
-    };
-
-    /* ----------------------------------------------------------------
      * توجيه رسالة comment واردة — نفس منطق الملف المتجاوَز بالضبط:
      * عبر AGP.keywordManager إن كانت الكلمة مفعَّلة، وإلا عبر
      * AGP.queueManager. لا فرق هنا عن كون النص محاكاة أم حقيقياً.
+     *
+     * ⚠️ بوابة "المتابعون فقط" ([0.42.0]/[0.42.1]) — عامة لأي لعبة تستخدم
+     * هذا المحوّل، مو خاصة بلعبة معينة. الباك إند (tiktok-connector.js)
+     * يحسب isFollower فعلاً لكل تعليق (حالة متابعة حقيقية من تيك توك)،
+     * لكنه توقّف عمداً عن الفلترة بنفسه — فهذي البوابة هي التطبيق الفعلي
+     * الوحيد لخيار followersOnly حالياً. لا يوجد أي استثناء يدوي: الشخص
+     * غير المتابع يُرفض دائماً حتى يتابع فعلياً على تيك توك ويكتب الكلمة
+     * من جديد، فترسل حالته isFollower=true تلقائياً بالمرة القادمة.
      * ---------------------------------------------------------------- */
     function handleIncomingComment(payload) {
         if (_commentCallback) _commentCallback(payload);
@@ -153,7 +126,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         if (keywordActive) {
             var followersOnly = Boolean(_pendingConnectOptions && _pendingConnectOptions.followersOnly);
-            if (followersOnly && !playerData.isFollower && !isFollowerException(payload)) {
+            if (followersOnly && !playerData.isFollower) {
                 AGP.events.emit('keyword:rejected', { reason: 'not_follower', text: payload.text, playerData: playerData });
                 return;
             }
