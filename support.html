@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دعم المنصة — منصة ألعاب أيمن</title>
+<meta name="description" content="ادعم منصة ألعاب أيمن واستمر بدعم صنّاع المحتوى والاستريمرز.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg: #0e0e16; --surface: #150c26; --surface-2: #1c1233;
+        --border: rgba(124, 58, 237, 0.28); --text: #ffffff; --text-muted: #b9aed1;
+        --accent: #7c3aed; --accent-2: #00c2ff; --accent-pink: #ff4dff;
+        --accent-gradient: linear-gradient(90deg, #7c3aed, #ff4dff);
+        --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); }
+    a { text-decoration: none; color: inherit; }
+    header.topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 16px 32px; border-bottom: 1px solid var(--border);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.2em; }
+    .brand-logo { height: 44px; width: auto; display: block; }
+    .home-link {
+        border: 1px solid var(--border); border-radius: 999px; padding: 8px 18px;
+        font-weight: 700; font-size: 0.9em; color: var(--text-muted);
+    }
+    .home-link:hover { color: var(--text); border-color: var(--accent); }
+
+    main { max-width: 720px; margin: 0 auto; padding: 48px 24px 60px; text-align: center; }
+
+    .support-icon { font-size: 3em; margin-bottom: 10px; }
+    h1 {
+        font-size: 2em; font-weight: 800; margin: 0 0 16px;
+        background: var(--accent-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .support-intro { color: var(--text-muted); line-height: 1.9; font-size: 1em; margin-bottom: 32px; }
+
+    .support-donate-btn {
+        display: inline-flex; align-items: center; gap: 10px;
+        background: var(--accent-gradient); color: #fff; font-weight: 800; font-size: 1.1em;
+        padding: 16px 40px; border-radius: 999px; box-shadow: 0 10px 30px rgba(255, 77, 255, 0.3);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .support-donate-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(255, 77, 255, 0.45); }
+
+    .support-note {
+        margin-top: 14px; color: var(--text-muted); font-size: 0.85em;
+    }
+
+    .support-links { margin-top: 28px; display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+    .support-link-btn {
+        border: 1px solid var(--border); border-radius: 999px; padding: 10px 22px;
+        font-weight: 700; font-size: 0.9em; color: var(--text-muted);
+    }
+    .support-link-btn:hover { color: var(--text); border-color: var(--accent); }
+
+    .recent-supporters {
+        margin-top: 48px; background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 24px; text-align: right;
+    }
+    .recent-supporters h2 { font-size: 1.1em; margin: 0 0 14px; }
+    .recent-supporters ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+    .recent-supporters li {
+        display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+        background: var(--surface-2); border-radius: 10px; padding: 10px 14px; font-size: 0.9em;
+    }
+    .recent-supporters .rs-name { color: var(--accent-2); font-weight: 800; }
+    .recent-supporters .rs-amount { color: var(--accent-pink); font-weight: 800; }
+    .recent-supporters .rs-empty { color: var(--text-muted); text-align: center; padding: 8px; }
+
+    footer { border-top: 1px solid var(--border); padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.85em; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+    <a href="index.html" class="brand"><img src="logo.png" alt="ألعاب أيمن" class="brand-logo"></a>
+    <a href="index.html" class="home-link">الرئيسية</a>
+</header>
+
+<main>
+    <div class="support-icon">💜</div>
+    <h1>ادعم منصة ألعاب أيمن</h1>
+    <p class="support-intro">
+        دعمك يساعدنا نستمر ونطوّر المنصة، ونضيف ألعاباً وميزات جديدة لكل الاستريمرز
+        والمجتمع. أي دعم — كبير أو صغير — نقدّره فعلاً ونذكرك فيه هنا وبصفحة توب الداعمين.
+    </p>
+
+    <!--
+        رابط الدعم الفعلي (منصة كريترز/دكان تب) — لسا مؤقت (#) لحد ما
+        يجهز صاحب المشروع رابط صفحته هناك. استبدل href="#" بالرابط
+        الحقيقي مباشرة من هنا على GitHub، بدون أي تعديل ثاني على الصفحة.
+        مثال متوقَّع: href="https://app.creators.sa/اسم-الصفحة"
+    -->
+    <a class="support-donate-btn" href="#" id="support-donate-link" target="_blank" rel="noopener">
+        🎁 ادعم الآن عبر كريترز
+    </a>
+    <div class="support-note">بيفتح صفحة الدعم بمنصة كريترز (دكان تب سابقاً) بتبويب جديد.</div>
+
+    <div class="support-links">
+        <a class="support-link-btn" href="top-supporters.html">🏆 توب الداعمين</a>
+        <a class="support-link-btn" href="https://www.tiktok.com/@em70_q" target="_blank" rel="noopener">🎵 تواصل معنا عبر تيك توك</a>
+    </div>
+
+    <div class="recent-supporters">
+        <h2>💬 آخر الداعمين</h2>
+        <ul id="recent-supporters-list">
+            <li class="rs-empty">جارٍ التحميل…</li>
+        </ul>
+    </div>
+</main>
+
+<footer>© منصة ألعاب أيمن — جميع الحقوق محفوظة</footer>
+
+<script src="auth/auth-client.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    function formatAmount(amount) {
+        var n = Number(amount) || 0;
+        return (n % 1 === 0 ? n.toString() : n.toFixed(2)) + ' ريال';
+    }
+
+    var listEl = document.getElementById('recent-supporters-list');
+    if (listEl && window.AGPAuth && typeof window.AGPAuth.getRecentSupporters === 'function') {
+        window.AGPAuth.getRecentSupporters().then(function (result) {
+            var supporters = (result && result.success && result.supporters) || [];
+            if (!supporters.length) {
+                listEl.innerHTML = '<li class="rs-empty">لسا ما فيه داعمون — كن أول من يدعم المنصة! 🎉</li>';
+                return;
+            }
+            listEl.innerHTML = supporters.map(function (s) {
+                return '<li><span class="rs-name">' + s.name + '</span>' +
+                    '<span class="rs-amount">' + formatAmount(s.amount) + '</span></li>';
+            }).join('');
+        }).catch(function () {
+            listEl.innerHTML = '<li class="rs-empty">تعذّر تحميل قائمة الداعمين حالياً.</li>';
+        });
+    }
+}());
+</script>
+</body>
+</html>

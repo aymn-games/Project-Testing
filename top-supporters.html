@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>توب الداعمين — منصة ألعاب أيمن</title>
+<meta name="description" content="قائمة أفضل داعمي منصة ألعاب أيمن.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg: #0e0e16; --surface: #150c26; --surface-2: #1c1233;
+        --border: rgba(124, 58, 237, 0.28); --text: #ffffff; --text-muted: #b9aed1;
+        --accent: #7c3aed; --accent-2: #00c2ff; --accent-pink: #ff4dff;
+        --accent-gradient: linear-gradient(90deg, #7c3aed, #ff4dff);
+        --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); }
+    a { text-decoration: none; color: inherit; }
+    header.topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 16px 32px; border-bottom: 1px solid var(--border);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.2em; }
+    .brand-logo { height: 44px; width: auto; display: block; }
+    .home-link {
+        border: 1px solid var(--border); border-radius: 999px; padding: 8px 18px;
+        font-weight: 700; font-size: 0.9em; color: var(--text-muted);
+    }
+    .home-link:hover { color: var(--text); border-color: var(--accent); }
+
+    main { max-width: 720px; margin: 0 auto; padding: 48px 24px 60px; }
+
+    .top-header { text-align: center; margin-bottom: 32px; }
+    .top-icon { font-size: 3em; margin-bottom: 10px; }
+    h1 {
+        font-size: 2em; font-weight: 800; margin: 0 0 12px;
+        background: var(--accent-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .top-intro { color: var(--text-muted); line-height: 1.8; }
+
+    .top-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+    .top-row {
+        display: flex; align-items: center; gap: 16px;
+        background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+        padding: 16px 20px;
+    }
+    .top-row--1 { border-color: rgba(255, 200, 87, 0.6); box-shadow: 0 0 24px rgba(255, 200, 87, 0.15); }
+    .top-row--2 { border-color: rgba(200, 200, 210, 0.5); }
+    .top-row--3 { border-color: rgba(205, 140, 90, 0.5); }
+
+    .top-rank { font-size: 1.6em; min-width: 40px; text-align: center; font-weight: 800; color: var(--text-muted); }
+    .top-info { flex: 1; }
+    .top-name { font-weight: 800; font-size: 1.05em; }
+    .top-meta { color: var(--text-muted); font-size: 0.85em; margin-top: 2px; }
+    .top-amount { font-weight: 800; font-size: 1.1em; color: var(--accent-pink); white-space: nowrap; }
+
+    .top-empty {
+        text-align: center; color: var(--text-muted); background: var(--surface);
+        border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; line-height: 1.9;
+    }
+    .top-empty a { color: var(--accent-2); text-decoration: underline; }
+
+    .top-cta { text-align: center; margin-top: 32px; }
+    .top-cta a {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: var(--accent-gradient); color: #fff; font-weight: 800;
+        padding: 12px 28px; border-radius: 999px;
+    }
+
+    footer { border-top: 1px solid var(--border); padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.85em; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+    <a href="index.html" class="brand"><img src="logo.png" alt="ألعاب أيمن" class="brand-logo"></a>
+    <a href="index.html" class="home-link">الرئيسية</a>
+</header>
+
+<main>
+    <div class="top-header">
+        <div class="top-icon">🏆</div>
+        <h1>توب الداعمين</h1>
+        <p class="top-intro">شكراً لكل من دعم منصة ألعاب أيمن — هذي قائمة الداعمين مرتّبة حسب إجمالي الدعم.</p>
+    </div>
+
+    <ul class="top-list" id="top-supporters-list">
+        <li class="top-empty">جارٍ التحميل…</li>
+    </ul>
+
+    <div class="top-cta">
+        <a href="support.html">💜 ادعم المنصة أنت كمان</a>
+    </div>
+</main>
+
+<footer>© منصة ألعاب أيمن — جميع الحقوق محفوظة</footer>
+
+<script src="auth/auth-client.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    var MEDALS = ['🥇', '🥈', '🥉'];
+
+    function formatAmount(amount) {
+        var n = Number(amount) || 0;
+        return (n % 1 === 0 ? n.toString() : n.toFixed(2)) + ' ريال';
+    }
+
+    var listEl = document.getElementById('top-supporters-list');
+    if (!listEl || !window.AGPAuth || typeof window.AGPAuth.getTopSupporters !== 'function') return;
+
+    window.AGPAuth.getTopSupporters().then(function (result) {
+        var supporters = (result && result.success && result.supporters) || [];
+        if (!supporters.length) {
+            listEl.innerHTML = '<li class="top-empty">لسا ما فيه داعمون — <a href="support.html">كن أول داعم للمنصة! 🎉</a></li>';
+            return;
+        }
+        listEl.innerHTML = supporters.map(function (s, index) {
+            var rank = index + 1;
+            var rowClass = rank <= 3 ? ' top-row--' + rank : '';
+            var rankDisplay = rank <= 3 ? MEDALS[rank - 1] : '#' + rank;
+            var donationsLabel = s.donationsCount === 1 ? 'دعم واحد' : (s.donationsCount + ' مرات دعم');
+            return '<li class="top-row' + rowClass + '">' +
+                '<div class="top-rank">' + rankDisplay + '</div>' +
+                '<div class="top-info"><div class="top-name">' + s.name + '</div>' +
+                '<div class="top-meta">' + donationsLabel + '</div></div>' +
+                '<div class="top-amount">' + formatAmount(s.totalAmount) + '</div>' +
+                '</li>';
+        }).join('');
+    }).catch(function () {
+        listEl.innerHTML = '<li class="top-empty">تعذّر تحميل قائمة الداعمين حالياً.</li>';
+    });
+}());
+</script>
+</body>
+</html>
