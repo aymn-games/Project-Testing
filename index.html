@@ -113,8 +113,19 @@
     .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.2em; }
     .brand-logo { height: 48px; width: auto; display: block; }
     .hero-banner { display: block; width: 100%; height: auto; border-radius: var(--radius); margin-bottom: 20px; }
-    nav.mainnav { display: flex; gap: 24px; color: var(--text-muted); font-weight: 600; }
+    nav.mainnav { display: flex; align-items: center; gap: 24px; color: var(--text-muted); font-weight: 600; }
     nav.mainnav a:hover { color: var(--text); }
+
+    /* زر "دعم المنصة" بالهيدر — بارز عمداً عن باقي روابط التنقل النصية،
+       نفس تدرج لوحة الألوان الحالية. يربط لصفحة support.html الجديدة. */
+    .nav-support-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        background: var(--accent-gradient); color: #fff !important; font-weight: 800;
+        padding: 8px 18px; border-radius: 999px; font-size: 0.92em;
+        box-shadow: 0 6px 18px rgba(255, 77, 255, 0.28);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .nav-support-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(255, 77, 255, 0.4); color: #fff !important; }
     .auth-actions { display: flex; gap: 10px; }
     .btn {
         border: none; border-radius: 999px; padding: 9px 20px; font-family: inherit;
@@ -170,6 +181,16 @@
         font-weight: 700; font-size: 0.95em;
     }
     .sub-banner span { color: var(--accent-2); }
+
+    /* شريط الداعمين المتحرك — يحل محل نص "لتفعيل الاشتراك..." الثابت
+       القديم (راجع #supporters-banner-text بالسكربت آخر الصفحة
+       وbackend/supporters/supporters-service.js). تلاشي بسيط بين كل
+       داعم والي بعده، مو قفزة مفاجئة. */
+    #supporters-banner-text { display: inline-block; transition: opacity 0.35s ease; }
+    #supporters-banner-text.is-fading { opacity: 0; }
+    #supporters-banner-text a { color: var(--accent-2); text-decoration: underline; }
+    #supporters-banner-text .supporter-name { color: var(--accent-2); font-weight: 800; }
+    #supporters-banner-text .supporter-amount { color: var(--accent-pink); font-weight: 800; }
 
     .section-title-bar {
         max-width: 1200px; margin: 0 auto 24px; padding: 12px 24px; border-radius: 999px;
@@ -298,20 +319,46 @@
     }
 
     /*
-        شاشة البداية (Splash) — شعار على خلفية مغبشة أول ما تفتح الصفحة،
-        تختفي تلقائياً بعد ثانيتين باختفاء سريع (راجع السكربت آخر
-        الصفحة). لا تمنع أي محتوى تحتها من التحميل أو العمل — طبقة
-        بصرية بحتة فوق الصفحة.
+        شاشة البداية (Splash) — شعار كبير على خلفية مغبشة أول ما تفتح
+        الصفحة، يدخل بأنيميشن دخول بارز (تكبير+دوران+توهّج) ثم نبض
+        هادئ، ويختفي تلقائياً بعد ثانيتين بأنيميشن خروج مماثل بالقوة
+        (تكبير+تمويه+تلاشي). لا تمنع أي محتوى تحتها من التحميل أو
+        العمل — طبقة بصرية بحتة فوق الصفحة. راجع السكربت آخر الصفحة.
     */
     #splash-screen {
         position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center;
         background: rgba(14, 14, 22, 0.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-        transition: opacity 0.3s ease; opacity: 1;
+        transition: opacity 0.5s ease; opacity: 1;
     }
-    #splash-screen img { width: 96px; height: auto; animation: splashPulse 1.6s ease-in-out infinite; }
-    @keyframes splashPulse { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.08); opacity: 1; } }
+    .splash-logo-wrap {
+        position: relative; display: inline-flex; align-items: center; justify-content: center;
+        transition: transform 0.5s cubic-bezier(.4,0,.2,1), filter 0.5s ease;
+    }
+    .splash-logo-wrap::before {
+        content: ''; position: absolute; inset: -35%; border-radius: 50%; z-index: -1;
+        background: radial-gradient(circle, rgba(124, 58, 237, 0.4), rgba(255, 77, 255, 0.18) 55%, transparent 72%);
+        animation: splashGlowPulse 1.8s ease-in-out 0.9s infinite;
+    }
+    #splash-screen img {
+        width: clamp(140px, 24vw, 220px); height: auto;
+        animation: splashIntro 0.9s cubic-bezier(.34, 1.56, .64, 1) both,
+                   splashPulse 1.8s ease-in-out 0.9s infinite;
+    }
+    @keyframes splashIntro {
+        0% { transform: scale(0.25) rotate(-20deg); opacity: 0; filter: blur(10px) drop-shadow(0 0 0 rgba(255, 77, 255, 0)); }
+        55% { transform: scale(1.18) rotate(6deg); opacity: 1; filter: blur(0) drop-shadow(0 0 26px rgba(255, 77, 255, 0.55)); }
+        80% { transform: scale(0.96) rotate(-2deg); }
+        100% { transform: scale(1) rotate(0deg); filter: blur(0) drop-shadow(0 0 16px rgba(124, 58, 237, 0.4)); }
+    }
+    @keyframes splashGlowPulse { 0%, 100% { transform: scale(0.85); opacity: 0.55; } 50% { transform: scale(1.2); opacity: 1; } }
+    @keyframes splashPulse { 0%, 100% { transform: scale(1); opacity: 0.92; } 50% { transform: scale(1.06); opacity: 1; } }
     #splash-screen.splash-hide { opacity: 0; pointer-events: none; }
-    @media (prefers-reduced-motion: reduce) { #splash-screen img { animation: none; } }
+    #splash-screen.splash-hide .splash-logo-wrap { transform: scale(1.4) rotate(8deg); filter: blur(10px); }
+    @media (prefers-reduced-motion: reduce) {
+        #splash-screen img { animation: none; }
+        .splash-logo-wrap::before { animation: none; }
+        .splash-logo-wrap, #splash-screen.splash-hide .splash-logo-wrap { transition: none; transform: none; filter: none; }
+    }
 
     /*
         حفلة ترحيب الستريمر الجديد — تظهر تلقائياً من السكربت آخر الصفحة
@@ -327,8 +374,8 @@
     #welcome-overlay.visible { display: flex; }
 
     .welcome-box {
-        max-width: 460px; width: 100%; background: var(--surface); border: 1px solid var(--border);
-        border-radius: var(--radius); padding: 34px 26px 26px; text-align: center;
+        position: relative; z-index: 2; max-width: 460px; width: 100%; background: var(--surface);
+        border: 1px solid var(--border); border-radius: var(--radius); padding: 34px 26px 26px; text-align: center;
         box-shadow: 0 20px 60px rgba(124, 58, 237, 0.25);
     }
 
@@ -377,12 +424,30 @@
     .welcome-countdown-stage { display: flex; flex-direction: column; align-items: center; gap: 14px; }
     .welcome-countdown-stage p { color: var(--text-muted); margin: 0; font-size: 0.9em; }
     #welcome-video { max-width: 100%; border-radius: var(--radius-sm); margin-top: 14px; display: none; }
+
+    /* قصاصات احتفالية متساقطة — تشتغل فقط مع فيديو النهاية (راجع
+       playEndingVideo/finishCeremony بالسكربت آخر الصفحة)، طبقة كاملة
+       فوق الشاشة خلف صندوق الحفلة، بدون أي تفاعل (pointer-events: none). */
+    #welcome-confetti-layer {
+        position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1;
+    }
+    .welcome-confetti-piece {
+        position: absolute; top: -40px; font-size: 1.6em; will-change: transform, opacity;
+        animation: welcomeConfettiFall linear forwards;
+    }
+    @keyframes welcomeConfettiFall {
+        0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+        100% { transform: translateY(115vh) rotate(360deg); opacity: 0.9; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        #welcome-confetti-layer { display: none; }
+    }
 </style>
 </head>
 <body>
 
 <!-- شاشة البداية — راجع #splash-screen بالأعلى والسكربت آخر الصفحة -->
-<div id="splash-screen"><img src="logo.png" alt="ألعاب أيمن"></div>
+<div id="splash-screen"><div class="splash-logo-wrap"><img src="logo.png" alt="ألعاب أيمن"></div></div>
 
 <!-- أيقونات خلفية زخرفية ثابتة — راجع .bg-decor بالأعلى، بدون أي حركة -->
 <div class="bg-decor" aria-hidden="true">
@@ -415,6 +480,7 @@
     بنفس التوقيت الاحتياطي).
 -->
 <div id="welcome-overlay">
+    <div id="welcome-confetti-layer" aria-hidden="true"></div>
     <div class="welcome-box">
 
         <div class="welcome-slides" id="welcome-slides">
@@ -473,6 +539,7 @@
         <a href="#games-section">الألعاب</a>
         <a href="#">البث المباشر</a>
         <a href="#">المجتمع</a>
+        <a href="support.html" class="nav-support-btn">💜 دعم المنصة</a>
     </nav>
     <div class="auth-actions" id="auth-actions">
         <button class="btn btn-outline" onclick="location.href='login.html'">تسجيل دخول</button>
@@ -507,8 +574,13 @@
     <button class="btn btn-pill btn-pill--disabled" disabled>🕹️ ألعاب منصة الكيك <span class="soon-tag">قريباً</span></button>
 </div>
 
+<!--
+    شريط الداعمين المتحرك — يحل محل النص الثابت القديم. مبدئياً يعرض
+    نص افتراضي (لو ما فيه داعمون بعد)، ثم يتحدّث تلقائياً من السكربت
+    آخر الصفحة (راجع window.AGPAuth.getRecentSupporters وdocs/CHANGELOG.md).
+-->
 <div class="sub-banner">
-    لتفعيل الاشتراك مجاناً بعد إنشاء حسابك تواصل معنا عبر تيك توك <span>@em70_q</span>
+    <span id="supporters-banner-text">لتفعيل الاشتراك مجاناً بعد إنشاء حسابك تواصل معنا عبر تيك توك <span>@em70_q</span></span>
 </div>
 
 <div id="games-section">
@@ -523,50 +595,16 @@
 
     <div class="container">
 
-        <div class="game-card game-card--v2" data-agp-game-id="roulette-game" data-agp-game-status="active">
-            <div class="game-cover-wrap">
-                <img src="roulette-cover.png" alt="غلاف لعبة روليت القبائل" class="game-cover"
-                     onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
-            </div>
-            <div class="game-info">
-                <span class="game-title">🎲 لعبة روليت القبائل (Roulette Game)</span>
-                <a href="https://aymn-games.github.io/roulette-game/" target="_blank" class="btn-play">العب الآن</a>
-                <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
-                <p class="game-description">
-                    روليت بأسماء قبائل سعودية، إذا توقفت الروليت عند أحد أسماء اللاعبين تظهر نافذة أسماء قبائل وخلفها أسماء قبائل ومهمة المشاركين يختار اسم قبيلة إما أن يقصي اللاعب أو يفشل الإقصاء، أيضاً عند تكرار الاسم مرتين في الروليت يعيد أحد اللاعبين الذين تم إقصاؤهم وفي كل جولة تتغير أسماء القبائل ومن خلفها، استمتعوا باللعب!
-                </p>
-            </div>
-        </div>
-
-        <div class="game-card" data-agp-game-id="who-is-the-impostor" data-agp-game-status="active">
-            <div class="game-cover-wrap">
-                <img src="impostor-cover.png" alt="غلاف لعبة مين الامبوستر" class="game-cover"
-                     onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
-            </div>
-            <div class="game-info">
-                <span class="game-title">🕵️‍♂️ لعبة مين الامبوستر (Who is the Impostor)</span>
-                <a href="https://aymn-games.github.io/Who-is-the-Impostor/" target="_blank" class="btn-play">العب الآن</a>
-                <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
-                <p class="game-description">
-                    لعبة جماعية الهوست يقوم بإنشاء غرفة واللاعبين يقومون بالدخول عن طريق كود الغرفة، وتبدأ اللعبة بتوزيع كلمات لكل اللاعبين جميعهم نفس الكلمة ماعدا الامبوستر مختلف لهم ثلاث تلميحات لتحديد الامبوستر.
-                </p>
-            </div>
-        </div>
-
-        <div class="game-card" data-agp-game-id="mafia-game" data-agp-game-status="active">
-            <div class="game-cover-wrap">
-                <img src="mafia-cover.png" alt="غلاف لعبة مافيا" class="game-cover"
-                     onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
-            </div>
-            <div class="game-info">
-                <span class="game-title">🔪 لعبة مافيا (Mafia Game)</span>
-                <a href="https://aymn-games.github.io/Mafia-game/" target="_blank" class="btn-play">العب الآن</a>
-                <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
-                <p class="game-description">
-                    لعبة جماعية أونلاين، فيها مافيا وحرامي يتآمرون ليلاً ضد باقي اللاعبين، ومحقق وطبيب يحاولون حماية الأبرياء واكتشاف الحقيقة، ونهارًا يتناقش الجميع علنًا قبل التصويت على إقصاء المشتبه به. من يكتشف المافيا أولًا يفوز!
-                </p>
-            </div>
-        </div>
+        <!--
+            روليت القبائل + مين الامبوستر + مافيا: أُزيلت بطاقاتها من هنا
+            بطلب صريح من صاحب المشروع (فك ربط فقط، لا حذف) — ملفات الربط
+            (games/roulette/agp-roulette.js وباقيها) باقية بالمستودع
+            بدون حذف، ومستودعات الألعاب نفسها محفوظة خارجياً عند صاحب
+            المشروع. لإرجاع أي لعبة منهم لاحقاً: أعد بطاقتها من تاريخ Git
+            لهذا الملف + سطر <script src="games/...."></script> المطابق
+            (لروليت فقط — الوحيدة المتصلة بجسر AGP.gameBridge) في نهاية
+            قائمة سكربتات AGP.* أدناه. راجع docs/CHANGELOG.md.
+        -->
 
         <!--
             10 بطاقات "قريباً" جاهزة — أماكن محجوزة لألعاب جديدة تُضاف
@@ -737,7 +775,7 @@
 -->
 <script>
     (function () {
-        // شاشة البداية — تختفي تلقائياً بعد ثانيتين باختفاء سريع، ثم
+        // شاشة البداية — تختفي تلقائياً بعد ثانيتين بأنيميشن خروج بارز، ثم
         // تُزال من الـ DOM كلياً حتى لا تبقى عنصراً خفياً يعيق أي شيء.
         var splash = document.getElementById('splash-screen');
         if (splash) {
@@ -745,7 +783,7 @@
                 splash.classList.add('splash-hide');
                 window.setTimeout(function () {
                     if (splash.parentNode) splash.parentNode.removeChild(splash);
-                }, 350); // بعد انتهاء الأنيميشن (transition: 0.3s بالـ CSS)
+                }, 500); // بعد انتهاء أنيميشن الخروج (transition: 0.5s بالـ CSS)
             }, 2000);
         }
 
@@ -793,11 +831,41 @@
         var scissorsBtn = document.getElementById('welcome-scissors-btn');
         var countdownStage = document.getElementById('welcome-countdown-stage');
         var videoEl = document.getElementById('welcome-video');
+        var confettiLayer = document.getElementById('welcome-confetti-layer');
 
         var currentSlide = 0;
         var ceremonyFinishing = false; // يمنع الضغط المتكرر على المقص
         var ceremonyEnded = false; // يمنع استدعاء finishCeremony مرتين (من الفيديو + المؤقّت الاحتياطي معاً)
         var videoFallbackTimer = null;
+        var confettiSpawnInterval = null;
+        var CONFETTI_EMOJIS = ['🎉', '🎊', '✨', '🎈', '🥳', '🪅'];
+
+        // قصاصات احتفالية متساقطة — تشتغل بالضبط مع فيديو النهاية فقط
+        // (راجع #welcome-confetti-layer بالأعلى وplayEndingVideo/finishCeremony).
+        function startConfetti() {
+            if (!confettiLayer || confettiSpawnInterval) return;
+            confettiSpawnInterval = window.setInterval(function () {
+                var piece = document.createElement('span');
+                piece.className = 'welcome-confetti-piece';
+                piece.textContent = CONFETTI_EMOJIS[Math.floor(Math.random() * CONFETTI_EMOJIS.length)];
+                piece.style.left = (Math.random() * 96) + '%';
+                var duration = 2.6 + Math.random() * 1.8; // 2.6–4.4 ثانية سقوط
+                piece.style.animationDuration = duration + 's';
+                piece.style.fontSize = (1.1 + Math.random() * 1.1) + 'em';
+                piece.addEventListener('animationend', function () {
+                    if (piece.parentNode) piece.parentNode.removeChild(piece);
+                });
+                confettiLayer.appendChild(piece);
+            }, 180);
+        }
+
+        function stopConfetti() {
+            if (confettiSpawnInterval) {
+                window.clearInterval(confettiSpawnInterval);
+                confettiSpawnInterval = null;
+            }
+            if (confettiLayer) confettiLayer.innerHTML = '';
+        }
 
         function goToSlide(index) {
             currentSlide = index;
@@ -849,6 +917,7 @@
             // فعلياً (حدث 'ended') تنتهي الحفلة تلقائياً. لو تعذّر تشغيله أو
             // تحميله لأي سبب (الملف غير مرفوع بعد، أو رفضه المتصفح)، مؤقّت
             // احتياطي 10 ثوانٍ يضمن إنهاء الحفلة برضو بدل ما تعلَق للأبد.
+            startConfetti();
             if (videoEl) {
                 videoEl.style.display = 'block';
                 videoEl.addEventListener('ended', function () {
@@ -869,6 +938,7 @@
             if (ceremonyEnded) return;
             ceremonyEnded = true;
             if (videoFallbackTimer) { window.clearTimeout(videoFallbackTimer); videoFallbackTimer = null; }
+            stopConfetti();
 
             // نسجّل الإكمال بالخادم — يمنع ظهورها ثانية لهذا الحساب لحد ما
             // الأدمن يعيد تفعيلها له من admin.html (زر "🎉 إعادة الترحيب").
@@ -912,7 +982,7 @@
 <script src="js/agp-game-engine.js"></script>
 <script src="js/agp-game-manager.js"></script>
 <script src="js/agp-game-bridge.js"></script>
-<script src="games/roulette/agp-roulette.js"></script>
+<!-- games/roulette/agp-roulette.js — غير محمَّل حالياً (اللعبة فُكَّت من المنصة، الملف باقٍ بالمستودع). راجع تعليق بطاقات الألعاب أعلاه. -->
 <script src="js/agp-round-manager.js"></script>
 <script src="js/agp-bootstrap.js"></script>
 
@@ -1059,6 +1129,59 @@
             announcementCloseBtn.addEventListener('click', function () {
                 announcementOverlay.classList.remove('visible');
             });
+        }
+
+        // شريط الداعمين المتحرك — يحل محل نص "لتفعيل الاشتراك..." الثابت
+        // القديم (راجع #supporters-banner-text بالأعلى وبackend/supporters/
+        // supporters-service.js). آخر 3 داعمين، كل وحد يظهر 4 ثوانٍ
+        // بالتدوير المتكرر؛ لو دعم شخص جديد يحل مكان الأقدم تلقائياً (عبر
+        // إعادة الجلب الدورية أدناه). لا داعمين بعد = يبقى النص الافتراضي
+        // كما هو بالـHTML (تواصل تيك توك)، بدون أي تغيير.
+        var supportersBannerText = document.getElementById('supporters-banner-text');
+        if (supportersBannerText && window.AGPAuth && typeof window.AGPAuth.getRecentSupporters === 'function') {
+            var supportersList = [];
+            var supportersIndex = 0;
+            var defaultBannerHtml = supportersBannerText.innerHTML;
+
+            function formatSupporterAmount(amount) {
+                var n = Number(amount) || 0;
+                return (n % 1 === 0 ? n.toString() : n.toFixed(2)) + ' ريال';
+            }
+
+            function renderSupporterAt(index) {
+                if (!supportersList.length) {
+                    supportersBannerText.innerHTML = defaultBannerHtml;
+                    return;
+                }
+                var s = supportersList[index % supportersList.length];
+                var html = '🎉 <span class="supporter-name">' + s.name + '</span> دعم المنصة بمبلغ ' +
+                    '<span class="supporter-amount">' + formatSupporterAmount(s.amount) + '</span>';
+                if (s.message) html += ' — ' + s.message;
+                supportersBannerText.innerHTML = html;
+            }
+
+            function rotateSupporters() {
+                if (!supportersList.length) return;
+                supportersBannerText.classList.add('is-fading');
+                window.setTimeout(function () {
+                    supportersIndex = (supportersIndex + 1) % supportersList.length;
+                    renderSupporterAt(supportersIndex);
+                    supportersBannerText.classList.remove('is-fading');
+                }, 350); // بعد انتهاء التلاشي (transition: 0.35s بالـ CSS)
+            }
+
+            function refreshSupportersList() {
+                window.AGPAuth.getRecentSupporters().then(function (result) {
+                    if (!result || !result.success) return;
+                    supportersList = result.supporters || [];
+                    supportersIndex = 0;
+                    renderSupporterAt(0);
+                }).catch(function () { /* لا اتصال بالخادم — يبقى النص الافتراضي، بصمت */ });
+            }
+
+            refreshSupportersList();
+            window.setInterval(rotateSupporters, 4000); // تبديل العرض كل 4 ثوانٍ
+            window.setInterval(refreshSupportersList, 30000); // إعادة جلب دورية (يلتقط أي دعم جديد)
         }
     }());
 </script>
