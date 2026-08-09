@@ -136,7 +136,7 @@ function createTikTokConnector() {
     var _reconnectAttempts = 0;
     var _reconnectTimer = null;
     var _username = null;
-    var _followersOnly = false; // ⚠️ لا تُستخدَم للفلترة هنا عمداً — الفلترة الفعلية تتم بالواجهة الأمامية (adapters/agp-tiktok-adapter.js، بوابة isFollowerException/followersOnly في handleIncomingComment)، بالاعتماد على isFollower المحسوبة هنا أدناه وتُبعث مع كل تعليق. الإشارة السابقة لملف agp-shell-config.js كانت خاطئة/غير موجودة، صُححت [0.42.0].
+    var _followersOnly = false; // ⚠️ لا تُستخدَم للفلترة هنا عمداً — الفلترة الفعلية تتم بالواجهة الأمامية (adapters/agp-tiktok-adapter.js، بوابة followersOnly داخل handleIncomingComment، بدون أي استثناء يدوي — غير المتابع يُرفض دائماً حتى يتابع فعلياً)، بالاعتماد على isFollower المحسوبة هنا أدناه وتُبعث مع كل تعليق. الإشارة السابقة لملف agp-shell-config.js كانت خاطئة/غير موجودة، صُححت [0.42.0]/[0.42.1].
     var _callbacks = null;
 
     function clearReconnectTimer() {
