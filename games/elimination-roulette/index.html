@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>روليت الإقصاء — ألعاب أيمن</title>
+<!--
+    صفحة أصلية (Native) للعبة "روليت الإقصاء"، لا تعتمد على أي موقع
+    خارجي ولا على جسر postMessage (js/agp-game-bridge.js) — بعكس روليت
+    القبائل القديمة. تحمّل AGP Core كاملاً بنفس ترتيب الصفحة الرئيسية
+    (راجع docs/CLAUDE.md وdocs/ARCHITECTURE.md)، ثم js/agp-game-shell.js
+    (ملف عام موجود مسبقاً بالمستودع، غير مُعدَّل هنا)، ثم ملف اللعبة
+    الخاص بها. لا تسجيل دخول مطلوب بهذه الصفحة تحديداً — بوابة الدخول
+    (تسجيل الدخول + موافقة الأدمن) تحدث فعلياً بالصفحة الرئيسية قبل ما
+    يوصل الزائر لرابط "العب الآن" أصلاً (نفس آلية بقية الألعاب).
+-->
+</head>
+<body>
+
+<script src="../../js/agp-core.js"></script>
+<script src="../../js/agp-events.js"></script>
+<script src="../../js/agp-timer-manager.js"></script>
+<script src="../../js/agp-storage-manager.js"></script>
+<script src="../../js/agp-services.js"></script>
+<script src="../../js/agp-stream-connector.js"></script>
+<!--
+    ⚠️ ملاحظة مسار: هذا المسار الصحيح والمطابق فعلياً لمكان الملف
+    بالمستودع (adapters/agp-tiktok-adapter.js، بدون مجلد فرعي "tiktok/").
+    لاحظت أن dashboard-core/index.html يحمّله حالياً من مسار قديم محذوف
+    (../adapters/tiktok/agp-tiktok-adapter.js) — على الأرجح رابط معطّل
+    فعلياً هناك من نقل سابق للملف؛ خارج نطاق هذا التسليم فلم ألمسه، لكن
+    يستحق تنبيهك له بشكل منفصل.
+-->
+<script src="../../adapters/agp-tiktok-adapter.js"></script>
+<script src="../../js/agp-registry.js"></script>
+<script src="../../js/agp-session.js"></script>
+<script src="../../js/agp-rooms-manager.js"></script>
+<script src="../../js/agp-player-manager.js"></script>
+<script src="../../js/agp-player-source.js"></script>
+<script src="../../js/agp-keyword-manager.js"></script>
+<script src="../../js/agp-queue-manager.js"></script>
+<script src="../../js/agp-score-manager.js"></script>
+<script src="../../js/agp-lobby.js"></script>
+<script src="../../js/agp-game-api.js"></script>
+<script src="../../js/agp-game-engine.js"></script>
+<script src="../../js/agp-game-manager.js"></script>
+<script src="../../js/agp-game-bridge.js"></script>
+<script src="../../js/agp-round-manager.js"></script>
+<script src="../../js/agp-bootstrap.js"></script>
+
+<!-- طبقة الحسابات/النقاط — مستقلة عن AGP.*، تُستخدم فقط لتقرير نقاط نهاية المباراة -->
+<script src="../../auth/auth-client.js"></script>
+
+<!-- شاشة الإعدادات + الاتصال بتيك توك + اللوبي (عام، موجود مسبقاً، غير مُعدَّل) -->
+<script src="../../js/agp-game-shell.js"></script>
+
+<!-- منطق لعبة روليت الإقصاء نفسها -->
+<script src="agp-elimination-roulette.js"></script>
+
+</body>
+</html>
