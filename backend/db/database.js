@@ -31,6 +31,10 @@
  *   user_entrances — الدخولية النشطة (أنيميشن + نص) لكل مستخدم
  *   user_points    — نقاط اللاعب الإجمالية + سقف يومي — راجع
  *                    backend/points/points-service.js
+ *   supporters     — سجل داعمي المنصة (اسم/رسالة/مبلغ) — إدخال يدوي من
+ *                    الأدمن حالياً (لا ربط تلقائي مع منصة كريترز/دكان
+ *                    تب بعد، بانتظار رد الدعم الفني منهم) — راجع
+ *                    backend/supporters/supporters-service.js
  * ==========================================================================
  */
 
@@ -173,6 +177,19 @@ db.exec(`
     );
 
     CREATE INDEX IF NOT EXISTS idx_user_frames_user ON user_frames(user_id);
+
+    -- سجل داعمي المنصة — كل صف تبرّع/دعم واحد. إدخال يدوي حالياً من
+    -- الأدمن (admin.html) بعد ما يشوفه فعلياً بلوحة تحكم كريترز/دكان
+    -- تب — راجع backend/supporters/supporters-service.js. لا ربط حساب
+    -- مستخدم هنا عمداً (الداعم قد لا يملك حساباً بالمنصة أصلاً).
+    CREATE TABLE IF NOT EXISTS supporters (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        message TEXT NOT NULL DEFAULT '',
+        amount REAL NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_supporters_created ON supporters(created_at);
 `);
 
 /**
