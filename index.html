@@ -113,8 +113,16 @@
     .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.2em; }
     .brand-logo { height: 48px; width: auto; display: block; }
     .hero-banner { display: block; width: 100%; height: auto; border-radius: var(--radius); margin-bottom: 20px; }
-    nav.mainnav { display: flex; align-items: center; gap: 24px; color: var(--text-muted); font-weight: 600; }
+    nav.mainnav { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; color: var(--text-muted); font-weight: 600; }
     nav.mainnav a:hover { color: var(--text); }
+
+    /* تصحيح تجاوب: على شاشات الجوال الضيقة (أقل من 480px) القائمة
+       تحتوي 5 عناصر (بعد إضافة زر دعم المنصة) فتصبح أعرض من الشاشة —
+       نقلّل المسافات وحجم الخط هنا فقط، دون أي تغيير على شاشات أكبر. */
+    @media (max-width: 480px) {
+        nav.mainnav { gap: 8px 14px; font-size: 0.92em; }
+        .nav-support-btn { padding: 7px 14px; font-size: 0.88em; }
+    }
 
     /* زر "دعم المنصة" بالهيدر — بارز عمداً عن باقي روابط التنقل النصية،
        نفس تدرج لوحة الألوان الحالية. يربط لصفحة support.html الجديدة. */
@@ -994,6 +1002,46 @@
     صلاحية الجلسة يصير عند فتح dashboard-core/index.html فعلياً.
 -->
 <script src="auth/auth-client.js"></script>
+
+<!--
+    ثيم المناسبات — يبدّل 3 متغيرات ألوان CSS (--accent/--accent-2/
+    --accent-pink + --accent-gradient المشتق منهما) وقت التحميل، فقط لو
+    الأدمن فعّل ثيماً من admin.html (راجع backend/theme/site-theme-service.js
+    وdocs/CHANGELOG.md). لا تعديل على أي قاعدة CSS ثابتة — استبدال قيم
+    المتغيرات وقت التشغيل فقط، فيرجع الموقع لألوانه الافتراضية تلقائياً
+    بمجرد ما الأدمن يلغي التفعيل (لا حاجة لإعادة نشر أو لمس أي ملف).
+    مستقل تماماً عن AGP.* — سكربت مبكر عمداً لتقليل أي "ومضة" ألوان
+    افتراضية قبل التطبيق.
+-->
+<script>
+    (function () {
+        if (!window.AGPAuth || typeof window.AGPAuth.getSiteTheme !== 'function') return;
+
+        function hexToRgba(hex, alpha) {
+            var clean = (hex || '').replace('#', '');
+            if (clean.length === 3) clean = clean.split('').map(function (c) { return c + c; }).join('');
+            var r = parseInt(clean.substring(0, 2), 16);
+            var g = parseInt(clean.substring(2, 4), 16);
+            var b = parseInt(clean.substring(4, 6), 16);
+            if (isNaN(r) || isNaN(g) || isNaN(b)) return null;
+            return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
+        }
+
+        window.AGPAuth.getSiteTheme().then(function (result) {
+            var theme = result && result.success ? result.theme : null;
+            if (!theme || !theme.accent || !theme.accentPink) return; // غير مفعَّل — نسيب الألوان الافتراضية بـ:root كما هي
+
+            var root = document.documentElement.style;
+            root.setProperty('--accent', theme.accent);
+            if (theme.accent2) root.setProperty('--accent-2', theme.accent2);
+            root.setProperty('--accent-pink', theme.accentPink);
+            root.setProperty('--accent-gradient', 'linear-gradient(90deg, ' + theme.accent + ', ' + theme.accentPink + ')');
+            var borderRgba = hexToRgba(theme.accent, 0.28);
+            if (borderRgba) root.setProperty('--border', borderRgba);
+        }).catch(function () { /* لا اتصال بالخادم — تبقى الألوان الافتراضية، بصمت */ });
+    }());
+</script>
+
 <script>
     (function () {
         var cachedUser = window.AGPAuth && window.AGPAuth.getCachedUser();
