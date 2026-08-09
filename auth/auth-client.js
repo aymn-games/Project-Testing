@@ -366,6 +366,50 @@
     }
 
     /* ----------------------------------------------------------------------
+     * داعمو المنصة — راجع backend/supporters/supporters-service.js
+     * ---------------------------------------------------------------------- */
+
+    /**
+     * آخر 3 داعمين (افتراضياً) — بدون تسجيل دخول، تستدعيها index.html
+     * للشريط المتحرك.
+     * @returns {Promise<Object>}
+     */
+    function getRecentSupporters() {
+        return request('/api/supporters/recent', { method: 'GET' });
+    }
+
+    /**
+     * توب الداعمين (مجموع المبالغ لكل اسم) — بدون تسجيل دخول، تستدعيها
+     * صفحة top-supporters.html.
+     * @returns {Promise<Object>}
+     */
+    function getTopSupporters() {
+        return request('/api/supporters/top', { method: 'GET' });
+    }
+
+    /** الأدمن فقط — كل صفوف الدعم (لوحة الإدارة بـadmin.html). */
+    function adminListSupporters() {
+        return request('/api/admin/supporters', { method: 'GET' });
+    }
+
+    /**
+     * الأدمن فقط — إضافة دعم جديد يدوياً (بعد ما يشوفه فعلياً بلوحة
+     * تحكم كريترز — لا ربط تلقائي بعد، راجع docs/CHANGELOG.md).
+     * @param {string} name
+     * @param {string} message
+     * @param {number} amount
+     * @returns {Promise<Object>}
+     */
+    function adminAddSupporter(name, message, amount) {
+        return request('/api/admin/supporters', { method: 'POST', body: { name: name, message: message, amount: amount } });
+    }
+
+    /** الأدمن فقط — حذف صف دعم واحد (تصحيح خطأ إدخال يدوي). */
+    function adminDeleteSupporter(id) {
+        return request('/api/admin/supporters/delete', { method: 'POST', body: { id: id } });
+    }
+
+    /* ----------------------------------------------------------------------
      * حرّاس صفحات — تُستدعى في أول سطر من أي صفحة محمية
      * ---------------------------------------------------------------------- */
 
@@ -450,6 +494,11 @@
         needsWelcome: needsWelcome,
         completeWelcome: completeWelcome,
         adminResetWelcome: adminResetWelcome,
+        getRecentSupporters: getRecentSupporters,
+        getTopSupporters: getTopSupporters,
+        adminListSupporters: adminListSupporters,
+        adminAddSupporter: adminAddSupporter,
+        adminDeleteSupporter: adminDeleteSupporter,
         requireAuth: requireAuth,
         requireAdmin: requireAdmin
     };
