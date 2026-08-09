@@ -21,6 +21,7 @@ var authService = require('../auth/auth-service');
 var announcementService = require('../announcements/announcement-service');
 var collectiblesService = require('../collectibles/collectibles-service');
 var pointsService = require('../points/points-service');
+var supportersService = require('../supporters/supporters-service');
 var logger = require('../utils/logger');
 var config = require('../config');
 var response = require('./response');
@@ -88,7 +89,15 @@ var ROUTES = [
 
     // ---- حفلة ترحيب الستريمر الجديد — راجع docs/CHANGELOG.md
     { method: 'POST', path: '/api/auth/welcome/complete', requireAuth: true, handler: handleCompleteWelcome },
-    { method: 'POST', path: '/api/admin/welcome/reset', requireAuth: true, requireAdmin: true, handler: handleAdminResetWelcome }
+    { method: 'POST', path: '/api/admin/welcome/reset', requireAuth: true, requireAdmin: true, handler: handleAdminResetWelcome },
+
+    // ---- داعمو المنصة — إدخال يدوي من الأدمن حالياً، راجع
+    // backend/supporters/supporters-service.js وdocs/CHANGELOG.md
+    { method: 'GET', path: '/api/supporters/recent', requireAuth: false, handler: handleGetRecentSupporters },
+    { method: 'GET', path: '/api/supporters/top', requireAuth: false, handler: handleGetTopSupporters },
+    { method: 'GET', path: '/api/admin/supporters', requireAuth: true, requireAdmin: true, handler: handleAdminListSupporters },
+    { method: 'POST', path: '/api/admin/supporters', requireAuth: true, requireAdmin: true, handler: handleAdminAddSupporter },
+    { method: 'POST', path: '/api/admin/supporters/delete', requireAuth: true, requireAdmin: true, handler: handleAdminDeleteSupporter }
 ];
 
 /* ----------------------------------------------------------------------
@@ -350,6 +359,45 @@ function handleCompleteWelcome(req, res, body, user) {
 function handleAdminResetWelcome(req, res, body) {
     var result = authService.resetWelcome(body.userId);
     sendJson(res, result.success ? 200 : 400, result);
+}
+
+/* ----------------------------------------------------------------------
+ * داعمو المنصة — راجع backend/supporters/supporters-service.js
+ * ---------------------------------------------------------------------- */
+
+/**
+ * آخر 3 داعمين (افتراضياً) — مسار عام بدون تسجيل دخول، يستدعيه
+ * index.html للشريط المتحرك بدل نص "لتفعيل الاشتراك..." القديم.
+ */
+function handleGetRecentSupporters(req, res) {
+    sendJson(res, 200, { success: true, supporters: supportersService.listRecent(3) });
+}
+
+/**
+ * توب الداعمين (مجموع مبالغ كل اسم) — مسار عام، تستدعيه صفحة
+ * top-supporters.html الجديدة.
+ */
+function handleGetTopSupporters(req, res) {
+    sendJson(res, 200, { success: true, supporters: supportersService.listTop(50) });
+}
+
+/** الأدمن فقط — كل صفوف الدعم (لوحة الإدارة بـadmin.html). */
+function handleAdminListSupporters(req, res) {
+    sendJson(res, 200, { success: true, supporters: supportersService.listAll(200) });
+}
+
+/**
+ * الأدمن فقط — إضافة دعم جديد يدوياً بعد ما يشوفه فعلياً بلوحة تحكم
+ * كريترز (لا ربط تلقائي بعد — راجع تعليق أعلى supporters-service.js).
+ */
+function handleAdminAddSupporter(req, res, body) {
+    var result = supportersService.addSupporter(body.name, body.message, body.amount);
+    sendJson(res, result.success ? 201 : 400, result);
+}
+
+/** الأدمن فقط — حذف صف دعم واحد (تصحيح خطأ إدخال يدوي). */
+function handleAdminDeleteSupporter(req, res, body) {
+    sendJson(res, 200, supportersService.deleteSupporter(body.id));
 }
 
 /* ----------------------------------------------------------------------
