@@ -137,6 +137,20 @@
         box-shadow: 0 0 20px rgba(255, 110, 199, 0.25);
     }
 
+    /* تمييز بصري خفيف لبروفايل أي حساب "ستريمر موافَق عليه من الأدمن"
+       (isApprovedStreamer بـrenderFull أدناه) عن بروفايل اللاعب العادي
+       — لمسة ذهبية إضافية فوق نفس لوحة الألوان الحالية، بدون أي تعديل
+       على .pp-header/.pp-card/.pp-avatar الأساسية (Modifier إضافي فقط،
+       نفس أسلوب .game-card--v2 بـindex.html). راجع docs/CHANGELOG.md. */
+    .pp-header--streamer {
+        border-color: rgba(255, 200, 87, 0.55);
+        box-shadow: var(--card-shadow), 0 0 26px rgba(255, 200, 87, 0.18);
+    }
+    .pp-header--streamer .pp-avatar {
+        background: linear-gradient(135deg, #FFC857, var(--pink));
+        box-shadow: 0 0 22px rgba(255, 200, 87, 0.4);
+    }
+
     .pp-header-info { flex: 1; min-width: 200px; }
 
     .pp-username {
@@ -933,6 +947,12 @@
         // بموافقة الأدمن الصريحة من admin.html (نفس صلاحية can_run_games
         // المستخدمة أصلاً لفتح الألعاب). راجع docs/CHANGELOG.md.
         var isApprovedStreamer = Boolean(p.can_run_games);
+
+        // تمييز بصري خفيف لرأس البروفايل لأي ستريمر موافَق عليه فعلياً
+        // (راجع .pp-header--streamer بالأعلى) — إضافي فقط، لا يغيّر بنية
+        // الرأس ولا يؤثر على بروفايل اللاعب العادي.
+        var headerEl = document.querySelector('.pp-header');
+        if (headerEl) headerEl.classList.toggle('pp-header--streamer', isApprovedStreamer);
 
         var badgesEl = document.getElementById('pp-badges');
         if (p.role === 'admin') {
