@@ -410,6 +410,39 @@
     }
 
     /* ----------------------------------------------------------------------
+     * ثيم المناسبات — راجع backend/theme/site-theme-service.js
+     * ---------------------------------------------------------------------- */
+
+    /**
+     * الثيم الحالي (إن كان نشطاً) — بدون تسجيل دخول، تستدعيها
+     * index.html عند التحميل. result.theme تكون null لو غير مفعَّل.
+     * @returns {Promise<Object>}
+     */
+    function getSiteTheme() {
+        return request('/api/theme', { method: 'GET' });
+    }
+
+    /**
+     * الأدمن فقط — تفعيل/تحديث ثيم المناسبة (3 أكواد لون Hex).
+     * @param {string|null} presetKey
+     * @param {string} accent
+     * @param {string} accent2
+     * @param {string} accentPink
+     * @returns {Promise<Object>}
+     */
+    function adminSetSiteTheme(presetKey, accent, accent2, accentPink) {
+        return request('/api/admin/theme', {
+            method: 'POST',
+            body: { presetKey: presetKey, accent: accent, accent2: accent2, accentPink: accentPink }
+        });
+    }
+
+    /** الأدمن فقط — تعطيل الثيم فوراً (رجوع للألوان الافتراضية). */
+    function adminClearSiteTheme() {
+        return request('/api/admin/theme/clear', { method: 'POST' });
+    }
+
+    /* ----------------------------------------------------------------------
      * حرّاس صفحات — تُستدعى في أول سطر من أي صفحة محمية
      * ---------------------------------------------------------------------- */
 
@@ -499,6 +532,9 @@
         adminListSupporters: adminListSupporters,
         adminAddSupporter: adminAddSupporter,
         adminDeleteSupporter: adminDeleteSupporter,
+        getSiteTheme: getSiteTheme,
+        adminSetSiteTheme: adminSetSiteTheme,
+        adminClearSiteTheme: adminClearSiteTheme,
         requireAuth: requireAuth,
         requireAdmin: requireAdmin
     };
