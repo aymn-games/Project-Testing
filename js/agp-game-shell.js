@@ -376,14 +376,47 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function renderLobbyScreen() {
         var box = el('agp-shell-box');
         box.className = 'agp-lobby-box';
+
+        // ⚠️ إضافة: حقل استثناء يدوي، يظهر فقط لو خيار "المتابعون فقط"
+        // مفعّل بالإعدادات (agp-tiktok-adapter.js هو من يطبّق البوابة
+        // فعلياً — هذا الحقل فقط واجهة لاستدعاء addFollowerException).
+        var exceptionHtml = _settingsValues.followersOnly ?
+            ('<div class="agp-shell-field">' +
+                '<label>➕ إضافة استثناء (يدخل حتى لو مو متابع)</label>' +
+                '<input type="text" id="agp-follower-exception-input" placeholder="يوزرنيم تيك توك">' +
+                '<button type="button" class="agp-shell-btn-connect" id="agp-follower-exception-btn">إضافة الاستثناء</button>' +
+                '<p class="agp-shell-status" id="agp-follower-exception-status"></p>' +
+            '</div>') : '';
+
         box.innerHTML =
             '<h2>اللوبي — بانتظار اللاعبين</h2>' +
             '<p class="agp-shell-status">عشان تتدخل المباراة اكتب بالشات "' + escapeHtml(_lastKeyword) + '"</p>' +
+            exceptionHtml +
             '<ul class="agp-shell-player-list" id="agp-lobby-list"></ul>' +
             '<button class="agp-shell-btn-connect" id="agp-start-round-btn">انهاء وبدء الجولة</button>';
 
         renderLobbyPlayerList();
         document.getElementById('agp-start-round-btn').onclick = handleStartRoundClick;
+
+        if (_settingsValues.followersOnly) {
+            document.getElementById('agp-follower-exception-btn').onclick = handleAddFollowerException;
+        }
+    }
+
+    function handleAddFollowerException() {
+        var input = el('agp-follower-exception-input');
+        var status = el('agp-follower-exception-status');
+        if (!input) return;
+        var value = input.value.trim();
+        if (!value) { input.focus(); return; }
+
+        if (AGP.services && AGP.services.TikTokService && typeof AGP.services.TikTokService.addFollowerException === 'function') {
+            AGP.services.TikTokService.addFollowerException(value);
+            if (status) status.textContent = '✅ "' + value + '" يقدر يدخل الآن بكتابة الكلمة المفتاحية حتى لو مو متابع.';
+            input.value = '';
+        } else if (status) {
+            status.textContent = '⚠️ تعذّر إضافة الاستثناء — تأكد من تحميل adapters/agp-tiktok-adapter.js.';
+        }
     }
 
     function renderLobbyPlayerList() {
