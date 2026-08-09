@@ -98,6 +98,56 @@
         </div>
     </section>
 
+    <!--
+        ثيم المناسبات — يبدّل 3 ألوان بالصفحة الرئيسية مؤقتاً (اليوم
+        الوطني، يوم التأسيس...) بدون أي تعديل على ملفات CSS أو كود
+        AGP.* — راجع backend/theme/site-theme-service.js وindex.html
+        (يُطبَّق عبر document.documentElement.style.setProperty وقت
+        التحميل، ويرجع تلقائياً للوضع الطبيعي بمجرد "إلغاء التفعيل").
+    -->
+    <section class="panel panel-wide" style="margin-bottom: var(--space-5);">
+        <div class="panel-head">
+            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-palette"/></svg>ثيم المناسبات</h2>
+        </div>
+        <p class="empty-note" style="margin-bottom: var(--space-3);">
+            يبدّل ألوان الصفحة الرئيسية مؤقتاً لمناسبة معيّنة. اختر ثيم جاهز (تقدر تعدّل ألوانه بعدها) أو عدّل الألوان يدوياً بالكامل. "إلغاء التفعيل" يرجّع الموقع لألوانه الافتراضية فوراً لكل زائر.
+        </p>
+        <div class="auth-message" id="theme-status-message"></div>
+
+        <div class="field" style="max-width:320px; margin-bottom: var(--space-3);">
+            <label for="theme-preset-select">ثيم جاهز</label>
+            <select id="theme-preset-select">
+                <option value="">— اختر ثيماً جاهزاً (اختياري) —</option>
+                <option value="national-day">🇸🇦 اليوم الوطني السعودي</option>
+                <option value="founding-day">🏛️ يوم التأسيس</option>
+                <option value="custom">🎨 مخصّص (عدّل الألوان يدوياً)</option>
+            </select>
+            <div class="empty-note" style="margin-top:4px;">
+                الأكواد بالثيمات الجاهزة تقريبية — عدّلها بالأسفل لو عندك الكود الرسمي بالضبط.
+            </div>
+        </div>
+
+        <div style="display:flex; gap: var(--space-3); flex-wrap:wrap; margin-bottom: var(--space-3);">
+            <div class="field">
+                <label for="theme-accent-input">اللون الأساسي</label>
+                <input type="color" id="theme-accent-input" value="#7c3aed">
+            </div>
+            <div class="field">
+                <label for="theme-accent-pink-input">لون التدرّج الثاني</label>
+                <input type="color" id="theme-accent-pink-input" value="#ff4dff">
+            </div>
+            <div class="field">
+                <label for="theme-accent-2-input">لون إضافي (لمسات خفيفة)</label>
+                <input type="color" id="theme-accent-2-input" value="#00c2ff">
+            </div>
+        </div>
+
+        <div class="panel-head-actions">
+            <button class="btn btn-sm btn-primary" id="btn-activate-theme">تفعيل الثيم</button>
+            <button class="btn btn-sm btn-danger" id="btn-clear-theme">إلغاء التفعيل (رجوع للوضع الطبيعي)</button>
+        </div>
+    </section>
+
     <section class="panel panel-wide">
         <div class="panel-head">
             <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-users"/></svg>المستخدمون والستريمرز</h2>
@@ -284,6 +334,12 @@
     </symbol>
     <symbol id="icon-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 20s-7.5-4.6-10-9.3C.4 7.4 2.3 4 5.8 4c2 0 3.5 1 6.2 3.6C14.7 5 16.2 4 18.2 4c3.5 0 5.4 3.4 3.8 6.7C19.5 15.4 12 20 12 20z"/>
+    </symbol>
+    <symbol id="icon-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3a9 9 0 100 18c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.4-.3-.4-.5-.9-.5-1.4 0-1.1.9-2 2-2h1.7a2.3 2.3 0 002.3-2.3C19 6.7 16 3 12 3z"/>
+        <circle cx="7.5" cy="10.5" r="1.2" fill="currentColor" stroke="none"/>
+        <circle cx="11" cy="7" r="1.2" fill="currentColor" stroke="none"/>
+        <circle cx="15.5" cy="8.5" r="1.2" fill="currentColor" stroke="none"/>
     </symbol>
 </svg>
 
@@ -585,6 +641,78 @@
     });
 
     /**
+     * ثيم المناسبات — راجع backend/theme/site-theme-service.js. الأكواد
+     * بالثيمات الجاهزة تقريبية (لا يوجد لدينا مصدر رسمي مؤكد لكل كود
+     * بالضبط) — معروضة كنقطة انطلاق سريعة يعدّلها الأدمن بنفسه لو احتاج.
+     */
+    var THEME_PRESETS = {
+        'national-day': { accent: '#006c35', accentPink: '#c9a24b', accent2: '#ffffff' },
+        'founding-day': { accent: '#2c3e2d', accentPink: '#a85c32', accent2: '#d8c79d' }
+    };
+    var themeStatusEl = document.getElementById('theme-status-message');
+    var themePresetSelect = document.getElementById('theme-preset-select');
+    var themeAccentInput = document.getElementById('theme-accent-input');
+    var themeAccentPinkInput = document.getElementById('theme-accent-pink-input');
+    var themeAccent2Input = document.getElementById('theme-accent-2-input');
+
+    function showThemeStatus(text, type) {
+        themeStatusEl.textContent = text;
+        themeStatusEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+
+    function loadThemeStatus() {
+        window.AGPAuth.getSiteTheme().then(function (result) {
+            var theme = result && result.success ? result.theme : null;
+            if (!theme) {
+                showThemeStatus('الحالة الآن: غير مفعَّل — الموقع بألوانه الافتراضية.', 'success');
+                return;
+            }
+            themeAccentInput.value = theme.accent || '#7c3aed';
+            themeAccentPinkInput.value = theme.accentPink || '#ff4dff';
+            themeAccent2Input.value = theme.accent2 || '#00c2ff';
+            if (theme.presetKey) themePresetSelect.value = theme.presetKey;
+            showThemeStatus('الحالة الآن: مفعَّل' + (theme.presetKey && THEME_PRESETS[theme.presetKey] ? ' (' + themePresetSelect.options[themePresetSelect.selectedIndex].text + ')' : '') + '.', 'success');
+        });
+    }
+
+    themePresetSelect.addEventListener('change', function () {
+        var preset = THEME_PRESETS[this.value];
+        if (!preset) return; // "مخصّص" أو الخيار الفارغ — نسيب الألوان الحالية بالمنتقيات كما هي
+        themeAccentInput.value = preset.accent;
+        themeAccentPinkInput.value = preset.accentPink;
+        themeAccent2Input.value = preset.accent2;
+    });
+
+    document.getElementById('btn-activate-theme').addEventListener('click', function () {
+        var button = this;
+        button.disabled = true;
+        window.AGPAuth.adminSetSiteTheme(
+            themePresetSelect.value || null,
+            themeAccentInput.value,
+            themeAccentPinkInput.value,
+            themeAccent2Input.value
+        ).then(function (result) {
+            if (result.success) {
+                showThemeStatus('تم التفعيل — الألوان صارت تظهر الآن لكل زائر للصفحة الرئيسية.', 'success');
+            } else {
+                showThemeStatus('تعذّر التفعيل: ' + (result.error || 'unknown'), 'error');
+            }
+        }).finally(function () { button.disabled = false; });
+    });
+
+    document.getElementById('btn-clear-theme').addEventListener('click', function () {
+        var button = this;
+        button.disabled = true;
+        window.AGPAuth.adminClearSiteTheme().then(function (result) {
+            if (result.success) {
+                showThemeStatus('تم إلغاء التفعيل — الموقع رجع لألوانه الافتراضية.', 'success');
+            } else {
+                showThemeStatus('تعذّر الإلغاء.', 'error');
+            }
+        }).finally(function () { button.disabled = false; });
+    });
+
+    /**
      * كتالوج الإطارات (11 صف ثابت) — تعديل الاسم المعروض/عتبة نقاط
      * المستوى/الدخولية الافتراضية لكل صف. لا إضافة ولا حذف صفوف هنا
      * (الكتالوج ثابت بالعدد والملفات، راجع backend/db/database.js).
@@ -799,6 +927,7 @@
         loadAnnouncement();
         loadCatalog();
         loadSupporters();
+        loadThemeStatus();
     });
 }());
 </script>
