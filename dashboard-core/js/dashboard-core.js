@@ -907,14 +907,24 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
      * start() وend() هنا) لـ /api/points/round-complete، الذي يطابق كل
      * لاعب بحساب مسجَّل موثَّق تيك توك (بصمت يتجاهل من لا حساب له).
      *
-     * ⚠️ افتراض صريح غير مؤكَّد: `player.name` (أو player.id لو الاسم
-     * غير موجود) يُفترَض أنه يوزرنيم تيك توك نفسه — هذا الحقل يُضبَط من
-     * مصدر انضمام اللاعب (Lobby/Queue/PlayerSource)، ولا توثيق مؤكَّد هنا
-     * أنه دائماً نفس يوزرنيم تيك توك الحقيقي حرفياً بكل مصدر انضمام. لو
-     * تبيّن لاحقاً أنه مختلف، التعديل يقتصر على السطر اللي يبني
-     * `participants` أدناه فقط. الإرسال نفسه لا يكسر أي شيء لو فشل
-     * (Promise catch صامت) — لا يعطّل تدفّق إنهاء الجولة العادي.
+     * ⚠️ [0.46.0] إصلاح ثغرة نقاط مؤكَّدة (كانت مُعلَّمة سابقاً هنا
+     * كـ"افتراض غير مؤكَّد" — تأكَّدت فعلياً وانحلّت): `player.name` هو
+     * الاسم المستعار (nickname) بتيك توك، وليس اليوزرنيم الحقيقي
+     * (@handle) المستخدَم فعلياً بمطابقة الباك إند
+     * (auth-service.js findVerifiedUserByTikTok يقارن tiktok_username
+     * الحقيقي المُدخَل يدوياً وقت التوثيق — dashboard-auth.js). اليوزرنيم
+     * الحقيقي (uniqueId) متوفر فقط داخل player.id بصيغة 'tiktok:'+uniqueId
+     * (راجع backend/platforms/tiktok/tiktok-connector.js extractUser()) —
+     * الحل: نستخرجه من id عبر tiktokUsernameFor() أدناه، لا من name.
+     * الإرسال نفسه لا يكسر أي شيء لو فشل (Promise catch صامت) — لا
+     * يعطّل تدفّق إنهاء الجولة العادي.
      */
+    function tiktokUsernameFor(player) {
+        var id = (player && player.id) || '';
+        if (id.indexOf('tiktok:') === 0) return id.slice('tiktok:'.length);
+        return (player && (player.name || player.id)) || '';
+    }
+
     NS.components.round = {
         _startedAt: null,
         render: function () {
@@ -933,7 +943,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
                 var winnerKey = winner && (winner.id || winner.name);
                 var players = AGP.gameManager.getPlayers();
                 var participants = players.map(function (player) {
-                    var key = player.name || player.id;
+                    var key = tiktokUsernameFor(player);
                     return { tiktokUsername: key, won: Boolean(winnerKey) && (player.id === winnerKey || player.name === winnerKey) };
                 }).filter(function (p) { return p.tiktokUsername; });
 
