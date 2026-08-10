@@ -199,9 +199,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * مشترك بين اللوبي الأول واللوبي الجديد. */
             '.agp-shell-player-list{list-style:none;margin:0 0 16px;padding:0;display:flex;flex-wrap:wrap;',
             'gap:8px;overflow-y:auto;}',
+            /* ⚠️ [0.47.0] خلفية الشريحة البيضاوية خلف كل عنصر لاعب أُلغيت
+             * بالكامل بطلب صريح ("شيل التبويب اللي خلف بطاقة الاسماء") —
+             * التخطيط والتباعد بقيا كما هما، فقط بدون الخلفية/الحواف. */
             '.agp-shell-player-list li{display:flex;align-items:center;gap:6px;flex:0 0 auto;',
-            'padding:6px 10px;background:rgba(255,255,255,0.12);border-radius:999px;',
-            'text-align:right;color:#f3eefc;}',
+            'padding:4px 2px;text-align:right;color:#f3eefc;}',
             '.agp-player-remove-btn{background:rgba(255,77,77,0.18);border:1px solid rgba(255,77,77,0.55);',
             'color:#ffb3b3;border-radius:8px;width:22px;height:22px;flex-shrink:0;cursor:pointer;font-weight:800;',
             'font-size:0.8em;line-height:1;}',
