@@ -35,6 +35,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _settingsValues = {};
     var _lastKeyword = '';
 
+    // ⚠️ [إصلاح خلل حقيقي] تصير true فور بدء الجولة (زر "انهاء وبدء
+    // الجولة") ولا ترجع false إلا بإعادة تحميل الصفحة (مباراة جديدة —
+    // نفس أسلوب اللعبة نفسها). راجع تعليق مستمع stream:statusChanged
+    // أدناه لسبب وجودها.
+    var _roundStarted = false;
+
     function el(id) { return document.getElementById(id); }
 
     function injectStyles() {
@@ -287,11 +293,28 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (streamerName) streamerName.classList.remove('agp-relocated-into-settings');
     }
 
+    /**
+     * ⚠️ بطاقة اللاعب المشتركة (صورة + اسم [+ إطار]) — راجع
+     * js/agp-player-card.js. showFrame:true دائماً هنا لأن الدوال
+     * الثلاث اللي تستخدم هذي الدالة (renderSettingsPlayerList،
+     * renderMiniLobbyList، renderLobbyPlayerList) كلها شاشات "لوبي"
+     * (قبل/أثناء بدء المباراة، قبل أي إقصاء) — القرار الصريح إن الإطار
+     * يظهر باللوبي حصراً، وهذي الثلاث كلها لوبي بمعناه.
+     */
+    function renderPlayerListItemsHtml(players) {
+        if (!AGP.playerCard) return players.map(function (p) { return '<li>' + escapeHtml(p.name || p.id) + '</li>'; }).join('');
+        var basePath = (_config && _config.assetBasePath) || '';
+        return players.map(function (p) {
+            return '<li>' + AGP.playerCard.renderHtml(p, { showFrame: true, basePath: basePath }) + '</li>';
+        }).join('');
+    }
+
     function renderSettingsPlayerList() {
         var list = el('agp-settings-player-list');
         if (!list) return;
         var players = AGP.gameManager.getPlayers();
-        list.innerHTML = players.map(function (p) { return '<li>' + escapeHtml(p.name || p.id) + '</li>'; }).join('');
+        list.innerHTML = renderPlayerListItemsHtml(players);
+        if (AGP.playerCard) AGP.playerCard.fitAllNames(list);
     }
 
     /**
@@ -323,7 +346,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var list = el('agp-mini-lobby-list');
         if (!list || !_miniLobbyKnownIds) return;
         var newPlayers = AGP.gameManager.getPlayers().filter(function (p) { return !_miniLobbyKnownIds[p.id]; });
-        list.innerHTML = newPlayers.map(function (p) { return '<li>' + escapeHtml(p.name || p.id) + '</li>'; }).join('');
+        list.innerHTML = renderPlayerListItemsHtml(newPlayers);
+        if (AGP.playerCard) AGP.playerCard.fitAllNames(list);
     }
 
     function handleMiniLobbyDone() {
@@ -390,7 +414,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var list = el('agp-lobby-list');
         if (!list) return;
         var players = AGP.gameManager.getPlayers();
-        list.innerHTML = players.map(function (p) { return '<li>' + escapeHtml(p.name || p.id) + '</li>'; }).join('');
+        list.innerHTML = renderPlayerListItemsHtml(players);
+        if (AGP.playerCard) AGP.playerCard.fitAllNames(list);
     }
 
     function escapeHtml(text) {
@@ -441,6 +466,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         AGP.gameManager.closeRegistration();
         AGP.keywordManager.deactivate();
+        _roundStarted = true;
         AGP.events.emit('game:roundStarted', { id: _config.gameId });
         hideOverlay();
         if (typeof _config.onStartRound === 'function') {
@@ -472,6 +498,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         AGP.events.on('stream:statusChanged', function (payload) {
             if (payload.platform !== 'tiktok') return;
+
+            // ⚠️ إصلاح خلل حقيقي: هذا المستمع كان يعيد عرض شاشة اللوبي
+            // الأولى (renderLobbyScreen — وفيها زر "انهاء وبدء الجولة"
+            // اللي يستدعي onStartRound من جديد) عند أي "connected" واردة،
+            // **حتى لو المباراة شغّالة أصلاً**. وصول "connected" مرة ثانية
+            // منتصف مباراة شائع فعلياً: إعادة اتصال تلقائية بتيك توك بعد
+            // انقطاع مؤقّت (tiktok-connector.js)، أو حتى إعادة اتصال
+            // قناة WebSocket بيننا وبين الباك إند نفسها (agp-tiktok-adapter.js).
+            // لو صادف هذا وقت كانت شاشة الإعدادات مفتوحة (مثلاً الاستريمر
+            // فاتحها عشان يضيف لاعب جديد عبر "فتح التسجيل")، كانت تُستبدَل
+            // فجأة بشاشة اللوبي الأولى، وضغط "انهاء وبدء الجولة" ظناً إنه
+            // المسار الصحيح لإضافة لاعب كان يصفّر المباراة بالكامل (كل
+            // اللاعبين، حتى المُقصَون، يرجعون للعجلة). بعد بدء الجولة،
+            // نتجاهل أي تغيّر بحالة الاتصال هنا تماماً — الاتصال نفسه
+            // يُدار بالخلفية بشكل مستقل، ولا داعي لأي شاشة تتفاعل معه.
+            if (_roundStarted) {
+                AGP.log('Game Shell: ignoring stream:statusChanged("' + payload.status + '") — round already started.');
+                return;
+            }
+
             if (payload.status === 'connecting') renderConnectingScreen('جارِ الاتصال بالبث...');
             else if (payload.status === 'connected') renderLobbyScreen();
             else if (payload.status === 'error') renderConnectingScreen('تعذّر الاتصال — تحقّق من اليوزرنيم وحاول مرة أخرى.');
