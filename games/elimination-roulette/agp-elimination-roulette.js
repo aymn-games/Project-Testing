@@ -134,6 +134,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return { label: s + 'ث', value: s };
     });
 
+    // ⚠️ [0.48.0] موشر تكبير/تصغير العجلة — حدود الحجم بالبكسل + القيمة
+    // الافتراضية (تطابق 440px القديمة الثابتة). القيمة الحالية تُحفَظ
+    // بمتغيّر وحدة (_wheelSizePx أدناه مع بقية حالة المباراة) حتى تبقى
+    // كما هي عبر renderStage() المتكرّرة (إعادة مباراة بنفس اللاعبين...).
+    var WHEEL_SIZE_MIN = 260;
+    var WHEEL_SIZE_MAX = 640;
+    var WHEEL_SIZE_DEFAULT = 440;
+    var _wheelSizePx = WHEEL_SIZE_DEFAULT; // يبقى كما هو عبر renderStage() المتكرّرة (خارج resetMatchState() عمداً)
+
     /* ======================================================================
      *  0) الصوت — أربعة مقاطع مولَّدة برمجياً (راجع الملاحظة الصادقة أعلى
      *     الملف) + مستوى صوت قابل للتعديل حياً من الإعدادات.
@@ -262,6 +271,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'font-size:0.68em;font-weight:800;color:#f1e9fb;text-shadow:0 1px 3px rgba(0,0,0,0.8);',
             'max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;',
             'pointer-events:none;text-align:center;}',
+
+            /* ---- [0.48.0] موشر تكبير/تصغير العجلة — عنصر عادي بترتيب
+             * العمود (#er-stage flex-direction:column) بين العجلة وزر
+             * إعادة الترتيب العشوائي، حتى يتحرك الأخير تلقائياً معه لما
+             * يتغيّر حجم العجلة فوقه (بدل التموضع المطلق). */
+            '#er-wheel-zoom-row{display:flex;align-items:center;gap:10px;font-size:0.82em;color:#e9d3ff;}',
+            '#er-wheel-zoom-slider{width:170px;accent-color:var(--er-accent2);cursor:pointer;}',
 
             /* ---- زر إعادة الترتيب العشوائي (تحت العجلة) ---- */
             '#er-shuffle-btn{margin-top:2px;padding:9px 22px;border-radius:999px;',
@@ -512,6 +528,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
         // ⚠️ [0.46.0] أسماء اللاعبين رجعت مكتوبة داخل قطع العجلة نفسها
         // (renderWheelLabels)، وزر "إعادة ترتيب عشوائية" تحت العجلة.
+        // ⚠️ [0.48.0] موشر تكبير/تصغير العجلة بين العجلة والزر — عنصر
+        // عادي بترتيب العمود حتى يتحرك الزر تلقائياً معه عند تغيير الحجم.
         stage.innerHTML =
             '<div id="er-wheel-wrap">' +
             '<div id="er-wheel-bezel"></div>' +
@@ -519,13 +537,47 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div id="er-wheel"></div>' +
             '<button id="er-spin-hub" title="دوّر العجلة"><img src="../../logo.png" alt="ألعاب أيمن"><span>دور</span></button>' +
             '</div>' +
+            '<div id="er-wheel-zoom-row">' +
+            '<span>🔍−</span>' +
+            '<input type="range" id="er-wheel-zoom-slider" min="' + WHEEL_SIZE_MIN + '" max="' + WHEEL_SIZE_MAX + '" step="10" value="' + _wheelSizePx + '" title="تكبير/تصغير العجلة">' +
+            '<span>🔍+</span>' +
+            '</div>' +
             '<button id="er-shuffle-btn" type="button">🔀 إعادة ترتيب عشوائية</button>';
 
+        applyWheelSize(_wheelSizePx);
         renderWheelBulbs();
         renderWheelSlices();
         renderWheelLabels();
         el('er-spin-hub').onclick = handleSpinClick;
         el('er-shuffle-btn').onclick = handleShuffleClick;
+        el('er-wheel-zoom-slider').oninput = function () {
+            handleWheelZoomChange(parseInt(this.value, 10));
+        };
+    }
+
+    /**
+     * ⚠️ [0.48.0] يضبط حجم العجلة فعلياً (inline style، يتجاوز الحجم
+     * الافتراضي بـCSS) + يحسب حداً آمناً بالنسبة لعرض الشاشة الحالي
+     * (88vw، نفس سقف CSS الأصلي القديم) حتى ما تطفح العجلة خارج الشاشة
+     * بشاشات صغيرة حتى لو الموشر مضبوط على قيمة أكبر.
+     */
+    function applyWheelSize(px) {
+        var wrap = el('er-wheel-wrap');
+        if (!wrap) return;
+        var viewportSafeMax = Math.floor(window.innerWidth * 0.88);
+        var applied = Math.max(WHEEL_SIZE_MIN, Math.min(px, viewportSafeMax));
+        wrap.style.width = applied + 'px';
+        wrap.style.height = applied + 'px';
+    }
+
+    function handleWheelZoomChange(px) {
+        if (isNaN(px)) return;
+        _wheelSizePx = Math.max(WHEEL_SIZE_MIN, Math.min(WHEEL_SIZE_MAX, px));
+        applyWheelSize(_wheelSizePx);
+        // ⚠️ نصف قطر أسماء اللاعبين على الشرائح يُحسَب من wheel.clientWidth
+        // الفعلي (راجع renderWheelLabels) — لازم يُعاد حسابه هنا حتى
+        // تتكيّف الأسماء فوراً مع الحجم الجديد.
+        renderWheelLabels();
     }
 
     // ⚠️ حلقة "مصابيح" زخرفية ثابتة حول العجلة (16 نقطة) — تُبنى مرة
