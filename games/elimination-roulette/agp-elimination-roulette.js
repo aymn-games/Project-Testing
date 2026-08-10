@@ -71,17 +71,38 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var GAME_NAME = 'روليت الإقصاء';
     var TIMER_NAME = 'elimination-roulette-turn';
 
-    // قائمة هدايا تيك توك شائعة ثابتة (راجع الملاحظة الصادقة أعلى الملف) —
-    // القيمة (value) هي بالضبط الاسم المتوقَّع بحقل giftName بحدث
-    // stream:giftReceived (نفس أسماء هدايا تيك توك الرسمية بالإنجليزية).
+    // ⚠️ [0.43.1] وُسِّعت لـ20 هدية (كانت 7) — راجع الملاحظة الصادقة أعلى
+    // الملف. القيمة (value) هي بالضبط الاسم المتوقَّع بحقل giftName بحدث
+    // stream:giftReceived (اسم هدية تيك توك الرسمي بالإنجليزية — هذا ما
+    // تُقارَن به المطابقة فعلياً بـwireGiftListener، فلا يجوز تغييره
+    // لعربي). الـlabel وحده بالعربي (يظهر للاستريمر بشاشة الإعدادات فقط).
+    // ⚠️ ملاحظة صادقة: نفس تحفّظ الأسماء بكل هذا الملف — قائمة هدايا تيك
+    // توك ليست ثابتة عالمياً (تختلف حسب المنطقة ونسخة التطبيق)، فالأسماء
+    // أدناه أفضل معرفة عامة متاحة، غير مؤكَّدة 100% ضد حسابك تحديداً.
+    // لو أي هدية هنا ما اشتغلت بالاختبار الحقيقي، افتح ?agpDebug=1 وشوف
+    // القيمة الفعلية الواصلة بـpayload.giftName (حدث stream:giftReceived)
+    // وقارنها بالضبط مع الـvalue هنا.
     var COMMON_GIFTS = [
-        { label: '🌹 Rose', value: 'Rose' },
-        { label: '💖 TikTok', value: 'TikTok' },
-        { label: '🤍 Finger Heart', value: 'Finger Heart' },
-        { label: '🎤 GG', value: 'GG' },
-        { label: '🧴 Perfume', value: 'Perfume' },
-        { label: '🦁 Lion', value: 'Lion' },
-        { label: '🚗 Sports Car', value: 'Sports Car' }
+        { label: '🌹 وردة', value: 'Rose' },
+        { label: '💖 تيك توك', value: 'TikTok' },
+        { label: '🤍 قلب الإصبع', value: 'Finger Heart' },
+        { label: '🎤 جي جي', value: 'GG' },
+        { label: '🍦 مخروط آيسكريم', value: 'Ice Cream Cone' },
+        { label: '🧴 عطر', value: 'Perfume' },
+        { label: '🍩 دوناتس', value: 'Doughnut' },
+        { label: '💞 قلوب اليد', value: 'Hand Hearts' },
+        { label: '🕶️ نظارة شمسية', value: 'Sunglasses' },
+        { label: '👑 تاج صغير', value: 'Little Crown' },
+        { label: '🐕 كلب كورجي', value: 'Corgi' },
+        { label: '💐 باقة ورد', value: 'Rosa' },
+        { label: '🎵 نغمة موسيقية', value: 'Music Note' },
+        { label: '🎉 قصاصات احتفالية', value: 'Confetti Battle' },
+        { label: '🌌 مجرة', value: 'Galaxy' },
+        { label: '💸 مسدس نقود', value: 'Money Gun' },
+        { label: '🏎️ سيارة رياضية', value: 'Sports Car' },
+        { label: '🦁 أسد', value: 'Lion' },
+        { label: '💃 ملكة الدراما', value: 'Drama Queen' },
+        { label: '🌠 كون تيك توك', value: 'TikTok Universe' }
     ];
 
     var ELIMINATION_TIMER_OPTIONS = [20, 25, 30, 40].map(function (s) {
