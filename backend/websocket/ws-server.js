@@ -102,7 +102,10 @@ function handleConnectMessage(connectionId, socket, payload) {
         onComment: function (data) {
             // ⚠️ [0.42.2] data.isFollower يُمرَّر الآن للرسالة الصادرة —
             // كان يُحسَب بـ tiktok-connector.js لكن يُفقَد هنا سابقاً.
-            sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, data.isFollower));
+            // ⚠️ [جديد] data.avatarUrl وdata.frame يُمرَّران أيضاً — نفس
+            // مبدأ 0.42.2 بالضبط، تجنّباً لتكرار نفس الخطأ (حساب صحيح
+            // بالباك إند ثم فقدانه هنا قبل وصوله للمتصفح).
+            sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, data.isFollower, data.avatarUrl, data.frame));
         },
         onGift: function (data) {
             sendEnvelope(socket, builder.buildGiftMessage(platform, data.id, data.name, data.giftName, data.giftValue, data.repeatCount));
