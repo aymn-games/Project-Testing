@@ -94,7 +94,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *     متوافق مع "عزل كل لعبة بمنطقها الداخلي" في PLATFORM_RULES.md).
      * ==================================================================== */
     var _alive = [];          // مصفوفة كائنات لاعبين (نفس مرجع AGP.player)، من زالوا لسا بالعجلة
-    var _eliminated = [];     // { player, revivedCount }
+    var _eliminated = [];     // { player }
     var _lastWheelWinnerId = null;
     var _repeatStreak = 0;
     var _settings = null;     // لقطة الإعدادات وقت بدء المباراة
@@ -103,6 +103,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _pendingTurn = null;  // { type: 'eliminate'|'revive', candidates: [...], chooser } أو null
     var _commentUnsub = null;
     var _giftUnsub = null;
+
+    // ⚠️ [إصلاح خلل حقيقي] عدّاد الإنعاش بالدعم — لازم يبقى مرتبطاً
+    // باللاعب نفسه طول المباراة كاملة (Object: player.id -> عدد المرات)،
+    // مو بسجل الإقصاء اللحظي (كان `entry.revivedCount` يُصفَّر تلقائياً
+    // كل مرة يُقصى فيها اللاعب من جديد بـeliminatePlayer، فيقدر يتنعش
+    // بلا نهاية). هذا العدّاد فقط يُصفَّر مع كل مباراة جديدة (resetMatchState).
+    var _giftReviveCounts = {};
 
     function resetMatchState() {
         _alive = [];
@@ -113,6 +120,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _startedAt = null;
         _matchActive = false;
         _pendingTurn = null;
+        _giftReviveCounts = {};
     }
 
     /* ======================================================================
@@ -233,16 +241,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    // ⚠️ [جديد] بطاقة اللاعب المشتركة (js/agp-player-card.js) — بدون
+    // إطار عمداً هنا (showFrame:false): القرار الصريح إن الإطار يظهر
+    // باللوبي فقط، مو أثناء المباراة. لو الملف غير محمَّل لأي سبب
+    // (توافق دفاعي)، نرجع للتصميم النصي القديم (.er-chip) بدل ما ينهار.
+    function playerCardHtml(p, extraClass) {
+        if (!AGP.playerCard) return '<span class="er-chip' + (extraClass ? ' ' + extraClass : '') + '">' + escapeHtml(playerLabel(p)) + '</span>';
+        return AGP.playerCard.renderHtml(p, { showFrame: false, outClass: extraClass });
+    }
+
     function renderAliveList() {
         var list = el('er-alive-list');
         if (!list) return;
-        var html = _alive.map(function (p) {
-            return '<span class="er-chip">' + escapeHtml(playerLabel(p)) + '</span>';
-        }).join('');
-        html += _eliminated.map(function (e) {
-            return '<span class="er-chip er-chip--out">' + escapeHtml(playerLabel(e.player)) + '</span>';
-        }).join('');
+        var html = _alive.map(function (p) { return playerCardHtml(p); }).join('');
+        html += _eliminated.map(function (e) { return playerCardHtml(e.player, 'agp-pcard--out'); }).join('');
         list.innerHTML = html;
+        if (AGP.playerCard) AGP.playerCard.fitAllNames(list);
     }
 
     function showToast(message) {
@@ -332,7 +346,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var idx = _alive.findIndex(function (p) { return p.id === target.id; });
         if (idx === -1) return;
         _alive.splice(idx, 1);
-        _eliminated.push({ player: target, revivedCount: 0 });
+        _eliminated.push({ player: target });
 
         showToast('❌ تم إقصاء ' + playerLabel(target));
         renderWheelSlices();
@@ -379,7 +393,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var rows = _pendingTurn.candidates.map(function (p, i) {
             return '<div class="er-candidate-row" data-index="' + i + '">' +
-                '<span class="er-candidate-name">' + escapeHtml(playerLabel(p)) + '</span>' +
+                '<span class="er-candidate-name">' + playerCardHtml(p) + '</span>' +
                 '<span class="er-candidate-num">' + (i + 1) + '</span></div>';
         }).join('');
 
@@ -388,6 +402,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div id="er-modal-sub">' + subtitle + '</div>' +
             '<div id="er-modal-timer"></div>' +
             rows;
+
+        if (AGP.playerCard) AGP.playerCard.fitAllNames(box);
 
         box.querySelectorAll('.er-candidate-row').forEach(function (row) {
             row.onclick = function () {
@@ -463,6 +479,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function wireCommentListener() {
         _commentUnsub = AGP.events.on('stream:commentReceived', function (payload) {
             if (!_pendingTurn || !payload || typeof payload.text !== 'string') return;
+
+            // ⚠️ [إصلاح خلل حقيقي] كان أي شخص بالشات يقدر يكتب رقماً
+            // صحيحاً وينفَّذ الاختيار فوراً — لازم يكون فقط صاحب الدور
+            // نفسه (اللي طلعت عليه العجلة هذي الجولة). مطابقة بالـid
+            // أولاً، وبالاسم احتياطياً لو الـid ما تطابق لأي سبب (نفس
+            // أسلوب المطابقة المستخدم بـwireGiftListener أدناه).
+            var chooser = _pendingTurn.chooser;
+            if (!chooser || (payload.id !== chooser.id && payload.name !== chooser.name)) return;
+
             var n = parseInt(payload.text.trim(), 10);
             if (isNaN(n) || n < 1 || n > _pendingTurn.candidates.length) return;
             resolveTurnSelection(n - 1);
@@ -483,13 +508,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             })[0];
             if (!entry) return; // مو مُقصى حالياً (أو غير موجود أصلاً باللاعبين) — تجاهل بصمت
 
+            // ⚠️ [إصلاح خلل حقيقي] العدّاد يُقرأ ويُحفَظ الآن من
+            // _giftReviveCounts (مرتبط باللاعب نفسه طول المباراة)، مو من
+            // entry.revivedCount (كان يُصفَّر تلقائياً كل مرة يُقصى فيها
+            // اللاعب من جديد، فيقدر يتنعش بلا نهاية — راجع تعليق
+            // _giftReviveCounts أعلى الملف).
             var maxCount = _settings.giftRevivalMaxCount || 1;
-            if (entry.revivedCount >= maxCount) {
+            var usedCount = _giftReviveCounts[entry.player.id] || 0;
+            if (usedCount >= maxCount) {
                 showToast('⚠️ ' + playerLabel(entry.player) + ' استخدم كل مرات الإنعاش بالدعم المسموحة');
                 return;
             }
 
-            entry.revivedCount += 1;
+            _giftReviveCounts[entry.player.id] = usedCount + 1;
             revivePlayerByEntry(entry);
         });
     }
@@ -500,19 +531,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _eliminated.splice(idx, 1);
         _alive.push(entry.player);
 
-        showToast('🎁 ' + playerLabel(entry.player) + ' رجع للعبة عن طريق الدعم!');
+        showToast('🎁 ' + playerLabel(entry.player) + ' رجع للعبة عن طريق الدعم! يدخل العجلة بداية الجولة الجاية');
         renderWheelSlices();
         renderAliveList();
 
-        if (_pendingTurn && _pendingTurn.type === 'eliminate') {
-            // اللاعب الراجع يدخل ضمن قائمة الإقصاء الحالية أيضاً لو كانت
-            // نافذة إقصاء مفتوحة وقتها — إعادة رسم بسيطة تضيفه للقائمة.
-            _pendingTurn.candidates.push(entry.player);
-            renderTurnModal(
-                el('er-modal-box').querySelector('h2').textContent,
-                el('er-modal-sub').textContent
-            );
-        }
+        // ⚠️ [إصلاح خلل حقيقي] لا نضيف اللاعب الراجع لقائمة الإقصاء
+        // *الحالية* حتى لو نافذة إقصاء مفتوحة وقتها — كان هذا مقصوداً
+        // بالنسخة السابقة لكن تبيّن إنه سلوك غير مرغوب: لو الدور وصل
+        // لمرحلة اختيار الشخص المقصى، اللاعب الراجع تواً ما يظهر ضمن
+        // خيارات هذي الجولة بالذات؛ يرجع فقط يشارك بالعجلة بداية الجولة
+        // الجاية (أصلاً موجود بـ_alive الآن، فسيظهر تلقائياً بالدوران
+        // القادم عبر handleSpinClick/openEliminationWindow العادية).
     }
 
     /* ======================================================================
@@ -680,6 +709,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             connectButtonLabel: 'اتصال بالبث وبدء الإعدادات',
             minPlayersToStart: 2,
             logoImage: '../../logo.png',
+            assetBasePath: '../../', // ⚠️ [جديد] بادئة مسار صور الإطارات ببطاقات لاعبي اللوبي (agp-game-shell.js)
             settingsFields: buildSettingsFields(),
             onStartRound: handleStartRound
         });
