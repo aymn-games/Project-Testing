@@ -103,33 +103,33 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * توجيه رسالة comment واردة — نفس منطق الملف المتجاوَز بالضبط:
      * عبر AGP.keywordManager إن كانت الكلمة مفعَّلة، وإلا عبر
      * AGP.queueManager. لا فرق هنا عن كون النص محاكاة أم حقيقياً.
-     *
-     * ⚠️ بوابة "المتابعون فقط" ([0.42.0]/[0.42.1]) — عامة لأي لعبة تستخدم
-     * هذا المحوّل، مو خاصة بلعبة معينة. الباك إند (tiktok-connector.js)
-     * يحسب isFollower فعلاً لكل تعليق (حالة متابعة حقيقية من تيك توك)،
-     * لكنه توقّف عمداً عن الفلترة بنفسه — فهذي البوابة هي التطبيق الفعلي
-     * الوحيد لخيار followersOnly حالياً. لا يوجد أي استثناء يدوي: الشخص
-     * غير المتابع يُرفض دائماً حتى يتابع فعلياً على تيك توك ويكتب الكلمة
-     * من جديد، فترسل حالته isFollower=true تلقائياً بالمرة القادمة.
      * ---------------------------------------------------------------- */
     function handleIncomingComment(payload) {
         if (_commentCallback) _commentCallback(payload);
 
         // ⚠️ إضافة: بث كل تعليق وارد كحدث عام، بصرف النظر عن مطابقة
-        // الكلمة المفتاحية — يسمح لأي لعبة بالتفاعل مع نص الشات مباشرة
-        // (مثلاً: اختيار قبيلة بالاسم/الرقم بالشات). لا يغيّر أي شيء
-        // بمسار الكلمة المفتاحية/الطابور الموجود أصلاً تحته مباشرة.
+        // الكلمة المفتاحية أو فلتر المتابعين — يسمح بالتشخيص المباشر عبر
+        // Console (?agpDebug=1) ولأي لعبة بالتفاعل مع نص الشات مباشرة.
         AGP.events.emit('stream:commentReceived', payload);
 
-        var playerData = { id: payload.id, name: payload.name, isFollower: Boolean(payload.isFollower) };
+        // ⚠️ فلترة "متابعين فقط" — انتقلت هنا من الباك اند (كانت تخميناً
+        // خاطئاً هناك، اكتُشِف بالاختبار الحقيقي). تُقرَأ الإعداد الحي من
+        // الـ Shell إن وُجد؛ إن لم يكن الفلتر مفعَّلاً، لا شيء يتغيّر.
+        if (AGP.gameShell && typeof AGP.gameShell.getSettings === 'function') {
+            var shellSettings = AGP.gameShell.getSettings();
+            if (shellSettings.followersOnly && !payload.isFollower) {
+                return; // غير متابع، والفلتر مفعَّل — يُتجاهَل هنا فقط (لا يُعتبَر لاعباً جديداً)
+            }
+        }
+
+        // ⚠️ [جديد] avatarUrl/frame تُمرَّران الآن ضمن بيانات اللاعب —
+        // نفس الحقول الواصلة من الباك إند بالضبط (راجع tiktok-connector.js)،
+        // تُستخدَم لبناء بطاقة اللاعب (js/agp-player-card.js) باللوبي
+        // ونوافذ اختيار الإقصاء/الإرجاع بأي لعبة.
+        var playerData = { id: payload.id, name: payload.name, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null };
         var keywordActive = AGP.keywordManager && AGP.keywordManager.isActive();
 
         if (keywordActive) {
-            var followersOnly = Boolean(_pendingConnectOptions && _pendingConnectOptions.followersOnly);
-            if (followersOnly && !playerData.isFollower) {
-                AGP.events.emit('keyword:rejected', { reason: 'not_follower', text: payload.text, playerData: playerData });
-                return;
-            }
             AGP.keywordManager.checkKeyword(payload.text, playerData);
         } else if (AGP.queueManager && typeof AGP.queueManager.enqueue === 'function') {
             AGP.queueManager.enqueue(PLATFORM_KEY, playerData);
