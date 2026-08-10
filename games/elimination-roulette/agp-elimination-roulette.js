@@ -411,10 +411,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-trophy-cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:14px 0 18px;}',
             /* ⚠️ [0.46.0] حجم موحَّد 250×250 لكل بطاقة، وبدون أي خلفية أو
              * حدود إطلاقاً (أُلغيتا بالكامل) — تأثير "تطاير" (confetti)
-             * هو البديل الاحتفالي الآن، راجع spawnConfetti(). */
+             * هو البديل الاحتفالي الآن، راجع spawnConfetti().
+             * ⚠️ [0.47.0] تأثير "إشعاع/توهّج" جديد حول كل بطاقة (نفس اللون
+             * الموحَّد للطرفين — الفائز والأكثر إقصاءً — بطلب صريح)، مع
+             * نبضة خفيفة مستمرة. overflow صار visible بدل hidden حتى لا
+             * يُقصّ التوهّج (ولا قصاصات confetti التي تتخطى حدود الصندوق
+             * أحياناً — إصلاح فني إضافي وُجد أثناء المراجعة). */
             '.er-trophy-card{position:relative;width:250px;height:250px;box-sizing:border-box;',
             'border-radius:18px;padding:20px 14px;display:flex;flex-direction:column;align-items:center;',
-            'justify-content:center;overflow:hidden;background:none;border:none;}',
+            'justify-content:center;overflow:visible;background:none;border:none;',
+            'box-shadow:0 0 55px 14px rgba(255,255,255,0.4),0 0 120px 35px rgba(216,120,255,0.6);',
+            'animation:er-trophy-glow-pulse 2.6s ease-in-out infinite;}',
+            '@keyframes er-trophy-glow-pulse{0%,100%{box-shadow:0 0 55px 14px rgba(255,255,255,0.4),',
+            '0 0 120px 35px rgba(216,120,255,0.6);}',
+            '50%{box-shadow:0 0 75px 22px rgba(255,255,255,0.6),0 0 150px 45px rgba(216,120,255,0.78);}}',
             '.er-trophy-card .er-trophy-label{font-size:0.85em;font-weight:800;color:#fff;margin-bottom:10px;}',
 
             '.er-ring-wrap{position:relative;width:88px;height:88px;margin:0 auto 10px;border-radius:50%;',
@@ -460,9 +470,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '@keyframes er-confetti-burst{0%{opacity:1;transform:translate(-50%,-50%) translate(0,0) rotate(0deg);}',
             '100%{opacity:0;transform:translate(-50%,-50%) translate(var(--dx),var(--dy)) rotate(540deg);}}',
 
-            /* ---- [0.46.0] بانر أحداث المباراة (يسار الشاشة، من تحت الشعار) ---- */
-            '#er-event-log{position:fixed;left:0;top:70px;bottom:0;width:450px;max-width:90vw;',
-            'padding:14px 16px;overflow-y:auto;background:rgba(12,6,22,0.55);',
+            /* ---- بانر أحداث المباراة (يسار الشاشة، من تحت الشعار) ----
+             * ⚠️ [0.47.0] العرض صار 250px بدل 450px (طلب صريح). */
+            '#er-event-log{position:fixed;left:0;top:70px;bottom:0;width:250px;max-width:90vw;',
+            'box-sizing:border-box;padding:14px 16px;overflow-y:auto;background:rgba(12,6,22,0.55);',
             'border-inline-end:1px solid rgba(156,143,176,0.25);z-index:20;}',
             '#er-event-log h3{margin:0 0 10px;font-size:0.95em;font-weight:800;color:#e9d3ff;}',
             '.er-event-log-item{display:flex;align-items:flex-start;gap:8px;font-size:0.82em;color:#f3eefc;',
@@ -1546,16 +1557,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             handlePlayerRemoved(payload && payload.player);
         });
 
-        // ⚠️ [0.46.0] تسجيل مستمر بانضمام لاعب جديد + استلام هدية (عام —
-        // مستقل عن منطق إنعاش الهدية المحدَّد بـwireGiftListener) بانر
-        // أحداث المباراة.
+        // ⚠️ [0.46.0] تسجيل مستمر بانضمام لاعب جديد بانر أحداث المباراة.
+        // ⚠️ [0.47.0] أُلغي مستمع "كل هدية تصل من شات البث" العام الذي
+        // كان مُضافاً هنا بـ[0.46.0] — كان يسجّل أي هدية حقيقية بغضّ
+        // النظر عن علاقتها بالمباراة (سبام غير مرتبط)، بطلب صريح إن
+        // البانر يعرض "أحداث المباراة" فقط. تسجيل الهدية اللي فعلاً
+        // تسبّب إنعاش لاعب لا يزال قائماً (راجع revivePlayerByEntry
+        // أدناه) — تلك حدث مباراة حقيقي، بعكس أي هدية عشوائية بالشات.
         AGP.events.on('player:joined', function (payload) {
             var p = payload && payload.player;
             if (p) logEvent('join', '➕ ' + playerLabel(p) + ' انضم للعبة');
-        });
-        AGP.events.on('stream:giftReceived', function (payload) {
-            if (!payload || !payload.giftName) return;
-            logEvent('gift', '🎁 ' + (payload.name || payload.id || 'مشاهد') + ' أرسل هدية ' + payload.giftName);
         });
 
         AGP.gameShell.init({
@@ -1576,9 +1587,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // ⚠️ [0.46.0] زر "العب" — يُبنى عاماً بـjs/agp-game-shell.js
             // (لا يعرف معناه، فقط يرسم الزر وينادي onToggle) ويُنفَّذ
             // فعلياً هنا (handleAutoPlayToggle → maybeAutoSpin/stopAutoPlay).
+            // ⚠️ [0.47.0] النص صار أوضح "العب التلقائي"/"إيقاف التلقائي"
+            // بطلب صريح (كان "العب"/"إيقاف" فقط، غير واضح المعنى).
             midMatchToggleButton: {
-                icon: '▶️', label: 'العب',
-                activeIcon: '⏸️', activeLabel: 'إيقاف',
+                icon: '▶️', label: 'العب التلقائي',
+                activeIcon: '⏸️', activeLabel: 'إيقاف التلقائي',
                 onToggle: handleAutoPlayToggle
             }
         });
