@@ -62,34 +62,50 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var style = document.createElement('style');
         style.textContent = [
+            /* ⚠️ [0.44.0] ألوان المنصة الرسمية (مطابقة تماماً لمتغيرات CSS
+             * الجذرية بـindex.html: --accent/--accent-2/--accent-pink) —
+             * تُستخدَم هنا بدل الألوان اليدوية المتقاربة القديمة (#9b3fe0،
+             * #22d3ee، #a855f7، #d878ff...) حتى تطابق هوية المنصة حرفياً،
+             * بدون أي تغيير بصري غير ضروري (نفس البنية والتدرجات القديمة،
+             * بس بقيم الألوان الرسمية). راجع docs/UI_GUIDELINES.md.
+             */
+            ':root{--agp-accent:#7c3aed;--agp-accent-2:#00c2ff;--agp-accent-pink:#ff4dff;}',
+
             'body.agp-shell-active{background:linear-gradient(170deg,#0b0616 0%,#2a0e3d 55%,#6d1fb0 100%);',
             'background-attachment:fixed;background-size:cover;min-height:100vh;}',
 
             '#agp-persistent-header{position:fixed;top:0;left:0;right:0;z-index:99998;display:flex;',
             'align-items:center;justify-content:space-between;padding:10px 20px;',
             'background:linear-gradient(90deg,rgba(20,8,35,0.9),rgba(60,15,90,0.85));',
-            'border-bottom:1px solid rgba(216,120,255,0.3);font-family:Cairo,sans-serif;direction:rtl;}',
-            '.agp-header-icon-btn{width:34px;height:34px;border-radius:50%;border:1px solid rgba(216,120,255,0.4);',
+            'border-bottom:1px solid rgba(124,58,237,0.35);font-family:Cairo,sans-serif;direction:rtl;}',
+            '.agp-header-icon-btn{width:34px;height:34px;border-radius:50%;border:1px solid rgba(124,58,237,0.45);',
             'background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;}',
             '.agp-header-icon-btn img{width:16px;height:16px;filter:invert(1);}',
             '#agp-header-title{background:rgba(0,0,0,0.35);border-radius:999px;padding:6px 22px;color:#e9d3ff;',
             'font-weight:700;font-size:0.9em;font-family:"Cairo Play",Cairo,sans-serif;}',
             '#agp-header-brand{color:#fff;font-weight:800;display:flex;align-items:center;gap:8px;}',
             '#agp-header-brand .agp-brand-badge{width:28px;height:28px;border-radius:8px;',
-            'background:linear-gradient(90deg,#22d3ee,#d878ff);display:inline-flex;align-items:center;justify-content:center;',
+            'background:linear-gradient(90deg,var(--agp-accent-2),var(--agp-accent-pink));display:inline-flex;align-items:center;justify-content:center;',
             'color:#0b0616;font-weight:800;}',
-            '#agp-header-brand .agp-brand-logo-img{height:32px;width:auto;}',
+            '#agp-header-brand .agp-brand-logo-img{height:46px;width:auto;}',
             '#agp-sponsor-banner{position:fixed;top:64px;right:20px;z-index:99997;width:300px;height:90px;',
-            'border:1px dashed rgba(216,120,255,0.4);border-radius:10px;display:none;',
+            'border:1px dashed rgba(124,58,237,0.45);border-radius:10px;display:none;',
             'align-items:center;justify-content:center;color:#c9a8e0;font-size:0.8em;background:rgba(20,8,35,0.5);}',
 
-            /* شاشة الإعدادات */
+            /* شاشة الإعدادات — ⚠️ [0.44.0] حجم أكبر 1300×800 كحد أقصى (كان
+             * تلقائياً min(460px,94vw))، خط عنوان أكبر وأبرز.
+             * ⚠️ ملاحظة تعديل: height ثابتة 800px كانت تترك فراغاً كبيراً
+             * فارغاً أسفل الأزرار عند إخفاء حقول شرطية (مثل حقلي الهدية
+             * عند تعطيل "الإنعاش عن طريق الدعم") — لاحظته بالاختبار
+             * البصري، فحوّلتها لـ height:auto مع max-height:800px (سقف
+             * أقصى فقط، يكبر الصندوق حسب المحتوى الفعلي بدل فراغ ثابت). */
             '#agp-shell-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;',
             'padding:80px 16px 16px;background:rgba(8,4,16,0.55);font-family:Cairo,sans-serif;color:#2c1240;direction:rtl;}',
-            '#agp-shell-box{width:min(460px,94vw);max-height:82vh;overflow-y:auto;',
-            'background:linear-gradient(180deg,#efe0fb,#e2c7f7);border:2px solid #9b3fe0;border-radius:18px;padding:26px;',
-            'box-shadow:0 0 40px rgba(155,63,224,0.5);}',
-            '#agp-shell-box h2{margin:0 0 18px;font-size:1.3em;text-align:center;color:#3a1560;font-weight:800;}',
+            '#agp-shell-box{width:1300px;max-width:96vw;height:auto;max-height:800px;max-height:min(800px,92vh);overflow-y:auto;',
+            'background:linear-gradient(180deg,#efe0fb,#e2c7f7);border:2px solid var(--agp-accent);border-radius:18px;padding:30px 34px;',
+            'box-shadow:0 0 40px rgba(124,58,237,0.5);box-sizing:border-box;}',
+            '#agp-shell-box h2{margin:0 0 20px;font-size:1.7em;text-align:center;color:#3a1560;font-weight:800;',
+            'font-family:Almarai,Cairo,sans-serif;}',
             '.agp-shell-field{margin-bottom:14px;text-align:right;}',
             '.agp-shell-field label{display:flex;align-items:center;gap:6px;justify-content:flex-end;',
             'margin-bottom:6px;font-size:0.88em;color:#4a1f6e;font-weight:700;}',
@@ -98,40 +114,65 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'background:#fff;color:#2c1240;font-family:inherit;box-sizing:border-box;}',
 
             '.agp-shell-row{display:flex;align-items:center;justify-content:space-between;gap:10px;',
-            'padding:9px 0;border-bottom:1px solid rgba(155,63,224,0.2);}',
+            'padding:9px 0;border-bottom:1px solid rgba(124,58,237,0.2);}',
             '.agp-shell-row-label{display:flex;align-items:center;gap:6px;font-size:0.88em;color:#4a1f6e;font-weight:700;}',
 
-            '.agp-pill-group{display:flex;gap:6px;}',
-            '.agp-pill-btn{border:1px solid #9b3fe0;background:#fff;color:#5a2585;border-radius:999px;',
+            '.agp-pill-group{display:flex;gap:6px;flex-wrap:wrap;}',
+            '.agp-pill-btn{border:1px solid var(--agp-accent);background:#fff;color:#5a2585;border-radius:999px;',
             'padding:6px 16px;font-family:inherit;font-size:0.82em;cursor:pointer;font-weight:700;}',
-            '.agp-pill-btn.agp-pill-active{background:#9b3fe0;color:#fff;}',
+            '.agp-pill-btn.agp-pill-active{background:var(--agp-accent);color:#fff;}',
 
             '.agp-shell-counter-row{display:flex;align-items:center;gap:8px;}',
-            '.agp-shell-counter-row button{width:26px;height:26px;border-radius:8px;border:1px solid #9b3fe0;',
+            '.agp-shell-counter-row button{width:26px;height:26px;border-radius:8px;border:1px solid var(--agp-accent);',
             'background:#fff;color:#5a2585;cursor:pointer;font-weight:800;}',
             '.agp-shell-counter-row span.agp-count-val{min-width:24px;text-align:center;font-weight:800;color:#3a1560;}',
-            '.agp-count-input{width:48px;text-align:center;font-weight:800;color:#3a1560;border:1px solid #9b3fe0;',
+            '.agp-count-input{width:48px;text-align:center;font-weight:800;color:#3a1560;border:1px solid var(--agp-accent);',
             'border-radius:6px;padding:3px;font-family:inherit;}',
 
+            /* ⚠️ [0.44.0] مفتاح تبديل حقيقي (Toggle Switch) بدل checkbox
+             * افتراضي — نفس data-key ونفس _settingsValues، فقط شكل جديد. */
+            '.agp-toggle-switch{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;}',
+            '.agp-toggle-switch input{opacity:0;width:0;height:0;position:absolute;}',
+            '.agp-toggle-track{position:absolute;inset:0;background:#c9b6de;border-radius:999px;',
+            'transition:background 0.2s;cursor:pointer;}',
+            '.agp-toggle-track::before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;',
+            'background:#fff;border-radius:50%;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.3);}',
+            '.agp-toggle-switch input:checked + .agp-toggle-track{background:var(--agp-accent);}',
+            '.agp-toggle-switch input:checked + .agp-toggle-track::before{transform:translateX(-20px);}',
+
             '.agp-shell-btn-connect{width:100%;padding:13px;border:none;border-radius:999px;font-weight:800;',
-            'cursor:pointer;background:linear-gradient(90deg,#22d3ee,#a855f7);color:#0b0616;',
+            'cursor:pointer;background:linear-gradient(90deg,var(--agp-accent-2),var(--agp-accent));color:#0b0616;',
             'font-family:inherit;font-size:1em;margin-top:8px;}',
 
             /* شاشة "جاري الاتصال" — تطابق القالب البسيط المُرسَل */
-            '#agp-shell-box.agp-connecting-box{background:linear-gradient(90deg,#f3eefc,#8b3fd6);',
+            '#agp-shell-box.agp-connecting-box{width:min(460px,94vw);height:auto;background:linear-gradient(90deg,#f3eefc,#8b3fd6);',
             'text-align:center;padding:34px 26px;}',
-            '#agp-shell-box.agp-connecting-box h2{color:#2c1240;}',
+            '#agp-shell-box.agp-connecting-box h2{color:#2c1240;font-size:1.3em;}',
             '.agp-shell-status{text-align:center;color:#4a1f6e;font-size:0.9em;margin-bottom:12px;}',
 
-            /* شاشة اللوبي — تطابق القالب الغامق المُرسَل */
+            /* شاشة اللوبي — ⚠️ [0.44.0] خط Almarai أبرز، بدون شرطة طويلة
+             * بالعنوان، شارة كلمة مفتاحية مميزة، عداد لاعبين X/الحد الأقصى. */
             '#agp-shell-box.agp-lobby-box{background:linear-gradient(170deg,#3a1560,#7a1fb8);',
-            'border:2px solid #b06be0;width:1440px;max-width:96vw;height:800px;max-height:90vh;',
+            'border:2px solid var(--agp-accent-2);width:1440px;max-width:96vw;height:800px;max-height:90vh;',
             'display:flex;flex-direction:column;}',
-            '#agp-shell-box.agp-lobby-box h2{color:#f3eefc;}',
+            '#agp-shell-box.agp-lobby-box h2{color:#f3eefc;font-family:Almarai,Cairo,sans-serif;font-weight:800;font-size:1.8em;}',
             '#agp-shell-box.agp-lobby-box .agp-shell-status{color:#e9d3ff;}',
+            '.agp-join-hint{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;',
+            'margin-bottom:14px;font-family:Almarai,Cairo,sans-serif;}',
+            '.agp-join-hint-text{color:#e9d3ff;font-size:1em;}',
+            '.agp-join-keyword-badge{display:inline-block;background:linear-gradient(90deg,var(--agp-accent-2),var(--agp-accent-pink));',
+            'color:#0b0616;font-weight:900;font-size:1.35em;padding:6px 22px;border-radius:12px;',
+            'box-shadow:0 0 18px rgba(0,194,255,0.55);letter-spacing:0.5px;}',
+            '.agp-player-count-badge{display:inline-block;margin-inline-start:8px;background:rgba(0,0,0,0.3);',
+            'color:#fff;font-weight:800;font-size:0.85em;padding:4px 12px;border-radius:999px;',
+            'border:1px solid rgba(255,255,255,0.25);}',
             '.agp-shell-player-list{list-style:none;margin:0 0 16px;padding:0;flex:1;overflow-y:auto;}',
-            '.agp-shell-player-list li{padding:8px 12px;background:rgba(255,255,255,0.12);border-radius:8px;',
+            '.agp-shell-player-list li{display:flex;align-items:center;justify-content:space-between;gap:8px;',
+            'padding:8px 12px;background:rgba(255,255,255,0.12);border-radius:8px;',
             'margin-bottom:6px;text-align:right;color:#f3eefc;}',
+            '.agp-player-remove-btn{background:rgba(255,77,77,0.18);border:1px solid rgba(255,77,77,0.55);',
+            'color:#ffb3b3;border-radius:8px;width:26px;height:26px;flex-shrink:0;cursor:pointer;font-weight:800;',
+            'font-size:0.85em;line-height:1;}',
 
             '.agp-relocated-into-settings{position:fixed !important;top:90px !important;left:50% !important;',
             'transform:translateX(-50%);z-index:100000 !important;}'
@@ -145,20 +186,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var gearIcon = _config.headerGearIcon ? '<img src="' + _config.headerGearIcon + '" alt="">' : '⚙️';
 
+        // ⚠️ [0.44.0] حذف نص "ألعاب أيمن" بجانب اللوقو (يبقى اللوقو فقط،
+        // بحجم أكبر) — بناءً على طلب صريح. لو ما فيه صورة لوقو مُمرَّرة
+        // (حالة دفاعية)، نرجع للشارة النصية "A" القديمة كبديل وحيد.
         var brandHtml = _config.logoImage ?
-            '<img class="agp-brand-logo-img" src="' + _config.logoImage + '" alt="ألعاب أيمن"> ألعاب أيمن' :
-            '<span class="agp-brand-badge">A</span> ألعاب أيمن';
+            '<img class="agp-brand-logo-img" src="' + _config.logoImage + '" alt="ألعاب أيمن">' :
+            '<span class="agp-brand-badge">A</span>';
 
         var header = document.createElement('div');
         header.id = 'agp-persistent-header';
         header.innerHTML =
-            '<div style="display:flex;gap:8px;">' +
+            '<div style="display:flex;gap:8px;align-items:center;">' +
+            '<button class="agp-header-icon-btn" id="agp-header-home-btn" title="العودة للمنصة">🏠</button>' +
             '<button class="agp-header-icon-btn" id="agp-header-info-btn" title="شرح اللعبة">!</button>' +
             '<button class="agp-header-icon-btn" id="agp-header-settings-btn" title="الإعدادات">' + gearIcon + '</button>' +
             '</div>' +
             '<div id="agp-header-title">' + (_config.gameTitle || '') + '</div>' +
             '<div id="agp-header-brand">' + brandHtml + '</div>';
         document.body.appendChild(header);
+
+        // ⚠️ [0.44.0] زر "العودة للمنصة" — يرجع للصفحة الرئيسية. المسار
+        // نسبي (homeUrl) تحدِّده كل لعبة حسب عمق مجلدها (راجع
+        // agp-elimination-roulette.js: '../../index.html').
+        document.getElementById('agp-header-home-btn').onclick = function () {
+            window.location.href = _config.homeUrl || '../../index.html';
+        };
 
         var banner = document.createElement('div');
         banner.id = 'agp-sponsor-banner';
@@ -220,13 +272,33 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         if (field.type === 'toggle') {
             var checked = _settingsValues[field.key] ? 'checked' : '';
-            return '<div class="agp-shell-row"><input type="checkbox" id="agp-field-' + field.key + '" data-key="' + field.key + '" ' + checked + '><span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + '</span></div>';
+            return '<div class="agp-shell-row">' +
+                '<label class="agp-toggle-switch"><input type="checkbox" id="agp-field-' + field.key + '" data-key="' + field.key + '" ' + checked + '><span class="agp-toggle-track"></span></label>' +
+                '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + '</span></div>';
+        }
+
+        // ⚠️ [0.44.0] نوع حقل جديد عام: زر يفتح تبويباً/نافذة مخصَّصة
+        // تبنيها اللعبة نفسها بالكامل (لا يعرف هذا الملف شيئاً عن محتواها
+        // — مجرد زر + استدعاء callback اللعبة عند الضغط). القيمة المعروضة
+        // على الزر تُبنى عبر field.formatValue(value) لو موجودة، وإلا القيمة
+        // الخام. عند اختيار اللعبة لقيمة جديدة، تستدعي
+        // AGP.gameShell.setSetting(key, value) فتُحدَّث القيمة ويُعاد رسم
+        // الحقل تلقائياً.
+        if (field.type === 'modal-trigger') {
+            var currentVal = _settingsValues[field.key];
+            var displayVal = (typeof field.formatValue === 'function') ? field.formatValue(currentVal) : currentVal;
+            return '<div class="agp-shell-row">' +
+                '<button type="button" class="agp-pill-btn agp-modal-trigger-btn" data-trigger-key="' + field.key + '">' + escapeHtml(displayVal) + '</button>' +
+                '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + '</span></div>';
         }
 
         return '';
     }
 
+    var _lastIsReopened = false;
+
     function renderSettingsScreen(isReopened) {
+        _lastIsReopened = Boolean(isReopened);
         // ⚠️ إصلاح: نحفظ القيم الحالية لليوزرنيم/الكلمة المفتاحية قبل
         // إعادة البناء (كانت تُمسَح مع كل ضغطة على أي زر تبديل، لأن
         // الشاشة تُعاد بناؤها بالكامل لتحديث الرؤية الشرطية).
@@ -240,17 +312,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var closeBtnHtml = isReopened ?
             '<button type="button" id="agp-settings-close-btn" style="position:absolute;top:14px;left:18px;background:none;border:none;font-size:1.3em;cursor:pointer;color:#5a2585;">✕</button>' : '';
 
+        // ⚠️ [0.44.0] لو ما فيه قيمة محفوظة بالجلسة الحالية (أول رسم)، نرجع
+        // لآخر يوزرنيم محفوظ عبر AGP.storageManager (يبقى بعد "مباراة
+        // جديدة" ← reload الصفحة، بدل ما يُطلَب من الاستريمر كتابته كل مرة).
+        var savedUsername = preservedUsername || (AGP.storageManager ? AGP.storageManager.get('agp-last-username', '') : '');
+
         var baseFieldsHtml = isReopened ? '' :
-            '<div class="agp-shell-field"><label>' + iconImg(_config.usernameIcon) + 'اكتب يوزر نيم حساب تيك توك</label><input type="text" id="agp-tiktok-username" placeholder="ayman_live" value="' + escapeHtml(preservedUsername) + '"></div>' +
+            '<div class="agp-shell-field"><label>' + iconImg(_config.usernameIcon) + 'اكتب يوزر نيم حساب تيك توك</label><input type="text" id="agp-tiktok-username" placeholder="ayman_live" value="' + escapeHtml(savedUsername) + '"></div>' +
             '<div class="agp-shell-field"><label>' + iconImg(_config.keywordIcon) + 'الكلمة المفتاحية لدخول المبارة</label><input type="text" id="agp-keyword" placeholder="JOIN" value="' + escapeHtml(preservedKeyword) + '"></div>';
 
         var connectBtnHtml = isReopened ? '' :
             '<button class="agp-shell-btn-connect" id="agp-connect-btn">' + (_config.connectButtonLabel || 'اتصال بالبث') + '</button>';
 
         var playerManagementHtml = isReopened ?
-            '<div class="agp-shell-field"><label>👥 قائمة اللاعبين</label>' +
+            '<div class="agp-shell-field"><label>👥 قائمة اللاعبين <span id="agp-settings-player-count"></span></label>' +
             '<ul class="agp-shell-player-list" id="agp-settings-player-list" style="max-height:160px;"></ul>' +
-            '<button type="button" class="agp-shell-btn-connect" id="agp-reopen-registration-btn">➕ فتح التسجيل لإضافة لاعبين</button></div>' : '';
+            '<button type="button" class="agp-shell-btn-connect" id="agp-reopen-registration-btn">➕ إضافة لوبي جديد</button></div>' : '';
 
         box.style.position = 'relative';
         box.innerHTML =
@@ -301,20 +378,56 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * (قبل/أثناء بدء المباراة، قبل أي إقصاء) — القرار الصريح إن الإطار
      * يظهر باللوبي حصراً، وهذي الثلاث كلها لوبي بمعناه.
      */
-    function renderPlayerListItemsHtml(players) {
+    // ⚠️ [0.44.0] removable:true يضيف زر حذف نهائي لكل صف (يُستخدَم فقط
+    // بقائمة "أثناء المباراة" داخل الإعدادات المُعاد فتحها — لا يظهر
+    // باللوبي الأول ولا باللوبي المصغَّر، حتى لا يُحذَف لاعب بالخطأ قبل
+    // بدء المباراة أصلاً حيث لا داعي لذلك). الحذف الفعلي عبر
+    // AGP.player.removePlayer الموجودة أصلاً (تبث player:removed — أي
+    // لعبة تستمع لها لتزامن حالتها الداخلية، راجع agp-elimination-roulette.js).
+    function renderPlayerListItemsHtml(players, opts) {
+        opts = opts || {};
         if (!AGP.playerCard) return players.map(function (p) { return '<li>' + escapeHtml(p.name || p.id) + '</li>'; }).join('');
         var basePath = (_config && _config.assetBasePath) || '';
         return players.map(function (p) {
-            return '<li>' + AGP.playerCard.renderHtml(p, { showFrame: true, basePath: basePath }) + '</li>';
+            var removeBtn = opts.removable ?
+                '<button type="button" class="agp-player-remove-btn" data-remove-player-id="' + escapeHtml(p.id) + '" title="حذف نهائي من المباراة">🗑️</button>' : '';
+            return '<li>' + removeBtn + AGP.playerCard.renderHtml(p, { showFrame: true, basePath: basePath }) + '</li>';
         }).join('');
+    }
+
+    function wireRemovePlayerButtons(container) {
+        if (!container) return;
+        container.querySelectorAll('[data-remove-player-id]').forEach(function (btn) {
+            btn.onclick = function () {
+                var id = btn.getAttribute('data-remove-player-id');
+                if (AGP.player && typeof AGP.player.removePlayer === 'function') {
+                    AGP.player.removePlayer(id); // يبث player:removed — إعادة رسم القوائم تتم عبر مستمع player:joined/player:removed أدناه
+                }
+            };
+        });
+    }
+
+    /**
+     * ⚠️ [0.44.0] عداد "الحالي/الحد الأقصى" — يُعرَض فقط لو اللعبة عرَّفت
+     * حقل إعداد باسم maxPlayers (أي لعبة، عام وليس خاصاً بلعبة معيّنة).
+     * @returns {string} مثل " (6 / 15)" أو نص فارغ لو ما فيه حد أقصى مُعرَّف
+     */
+    function playerCountBadgeHtml() {
+        var max = _settingsValues.maxPlayers;
+        if (!max) return '';
+        var current = AGP.gameManager.getPlayers().length;
+        return '<span class="agp-player-count-badge">' + current + ' / ' + max + '</span>';
     }
 
     function renderSettingsPlayerList() {
         var list = el('agp-settings-player-list');
         if (!list) return;
         var players = AGP.gameManager.getPlayers();
-        list.innerHTML = renderPlayerListItemsHtml(players);
+        list.innerHTML = renderPlayerListItemsHtml(players, { removable: true });
+        wireRemovePlayerButtons(list);
         if (AGP.playerCard) AGP.playerCard.fitAllNames(list);
+        var countEl = el('agp-settings-player-count');
+        if (countEl) countEl.innerHTML = playerCountBadgeHtml();
     }
 
     /**
@@ -328,16 +441,30 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _miniLobbyKnownIds = null;
 
     function handleReopenRegistrationClick() {
+        // ⚠️ [0.44.0] لو أصلاً وصلنا الحد الأقصى، ما نفتح تسجيلاً جديداً
+        // إطلاقاً — بدل ما نفتح نافذة تقبل كتابة الكلمة المفتاحية بلا فائدة.
+        var max = _settingsValues.maxPlayers;
+        if (max && AGP.gameManager.getPlayers().length >= max) {
+            var box0 = el('agp-shell-box');
+            box0.innerHTML = '<h2>وصلنا الحد الأقصى</h2>' +
+                '<p class="agp-shell-status">عدد اللاعبين وصل الحد الأقصى المحدَّد بإعدادات المباراة (' + max + ') — احذف لاعباً أولاً لو تبي تضيف غيره.</p>' +
+                '<button class="agp-shell-btn-connect" id="agp-mini-lobby-back-btn">رجوع</button>';
+            document.getElementById('agp-mini-lobby-back-btn').onclick = function () { renderSettingsScreen(true); };
+            return;
+        }
+
         AGP.keywordManager.activate();
         _miniLobbyKnownIds = {};
         AGP.gameManager.getPlayers().forEach(function (p) { _miniLobbyKnownIds[p.id] = true; });
 
         var box = el('agp-shell-box');
         box.innerHTML =
-            '<h2>إضافة لاعبين جدد</h2>' +
-            '<p class="agp-shell-status">اكتبوا نفس الكلمة المفتاحية بالشات للانضمام</p>' +
+            '<h2>إضافة لوبي جديد</h2>' +
+            '<div class="agp-join-hint"><span class="agp-join-hint-text">اكتبوا نفس الكلمة المفتاحية بالشات للانضمام:</span>' +
+            '<span class="agp-join-keyword-badge">' + escapeHtml(_lastKeyword) + '</span>' +
+            '<span id="agp-mini-lobby-count"></span></div>' +
             '<ul class="agp-shell-player-list" id="agp-mini-lobby-list"></ul>' +
-            '<button class="agp-shell-btn-connect" id="agp-mini-lobby-done-btn">أكمل</button>';
+            '<button class="agp-shell-btn-connect" id="agp-mini-lobby-done-btn">✅ إكمال المباراة</button>';
         renderMiniLobbyList();
         document.getElementById('agp-mini-lobby-done-btn').onclick = handleMiniLobbyDone;
     }
@@ -348,6 +475,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var newPlayers = AGP.gameManager.getPlayers().filter(function (p) { return !_miniLobbyKnownIds[p.id]; });
         list.innerHTML = renderPlayerListItemsHtml(newPlayers);
         if (AGP.playerCard) AGP.playerCard.fitAllNames(list);
+        var countEl = el('agp-mini-lobby-count');
+        if (countEl) countEl.innerHTML = playerCountBadgeHtml();
+
+        // ⚠️ [0.44.0] وصلنا الحد الأقصى وسط اللوبي المصغَّر نفسه (وصل
+        // آخر لاعب بالضبط بينما النافذة مفتوحة) — نوقف الكلمة المفتاحية
+        // فوراً (تزامناً مع enforceMaxPlayers بملف اللعبة) ونعطّل الزر
+        // اسمياً فقط (الإكمال يبقى ممكناً لإغلاق النافذة).
+        var max = _settingsValues.maxPlayers;
+        if (max && AGP.gameManager.getPlayers().length >= max && AGP.keywordManager.isActive()) {
+            AGP.keywordManager.deactivate();
+        }
     }
 
     function handleMiniLobbyDone() {
@@ -387,7 +525,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             };
         });
         _overlayEl.querySelectorAll('#agp-shell-box input[type=checkbox]').forEach(function (chk) {
-            chk.onchange = function () { _settingsValues[chk.getAttribute('data-key')] = chk.checked; };
+            // ⚠️ [0.44.0] إصلاح: كانت لا تُعيد رسم شاشة الإعدادات بعد
+            // تغيير أي مفتاح toggle، فالحقول الشرطية (showWhen) المرتبطة
+            // بمفتاح toggle (مثل حقل اختيار هدية الإنعاش) ما كانت تظهر/
+            // تختفي فوراً عند تفعيل/تعطيل المفتاح — لاحظته بالاختبار
+            // البصري لهذا الإصدار (كان موجوداً بالكود الأصلي قبل هذا
+            // الإصدار، غير متعلق مباشرة بأي طلب من التعديلات المتفق
+            // عليها، لكنه يمنع ميزة منبثقة الهدية من الظهور فعلياً).
+            chk.onchange = function () {
+                _settingsValues[chk.getAttribute('data-key')] = chk.checked;
+                renderSettingsScreen(_lastIsReopened);
+            };
+        });
+        _overlayEl.querySelectorAll('.agp-modal-trigger-btn').forEach(function (btn) {
+            btn.onclick = function () {
+                var key = btn.getAttribute('data-trigger-key');
+                var fieldConfig = (_config.settingsFields || []).filter(function (f) { return f.key === key; })[0];
+                if (fieldConfig && typeof fieldConfig.onOpen === 'function') fieldConfig.onOpen(_settingsValues[key]);
+            };
         });
     }
 
@@ -401,8 +556,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var box = el('agp-shell-box');
         box.className = 'agp-lobby-box';
         box.innerHTML =
-            '<h2>اللوبي — بانتظار اللاعبين</h2>' +
-            '<p class="agp-shell-status">عشان تتدخل المباراة اكتب بالشات "' + escapeHtml(_lastKeyword) + '"</p>' +
+            '<h2>اللوبي بانتظار اللاعبين</h2>' +
+            '<div class="agp-join-hint"><span class="agp-join-hint-text">عشان تدخل المباراة اكتب بالشات:</span>' +
+            '<span class="agp-join-keyword-badge">' + escapeHtml(_lastKeyword) + '</span>' +
+            '<span id="agp-lobby-count"></span></div>' +
             '<ul class="agp-shell-player-list" id="agp-lobby-list"></ul>' +
             '<button class="agp-shell-btn-connect" id="agp-start-round-btn">انهاء وبدء الجولة</button>';
 
@@ -416,6 +573,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var players = AGP.gameManager.getPlayers();
         list.innerHTML = renderPlayerListItemsHtml(players);
         if (AGP.playerCard) AGP.playerCard.fitAllNames(list);
+        var countEl = el('agp-lobby-count');
+        if (countEl) countEl.innerHTML = playerCountBadgeHtml();
     }
 
     function escapeHtml(text) {
@@ -435,6 +594,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!username) { document.getElementById('agp-tiktok-username').focus(); return; }
         if (!keyword) { document.getElementById('agp-keyword').focus(); return; }
 
+        if (AGP.storageManager) AGP.storageManager.set('agp-last-username', username);
         _lastKeyword = keyword;
         renderConnectingScreen();
 
@@ -528,11 +688,33 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             renderSettingsPlayerList();
             renderMiniLobbyList();
         });
+        // ⚠️ [0.44.0] حذف لاعب (زر 🗑️ بقائمة الإعدادات) يبث player:removed
+        // — لازم نعيد رسم نفس القوائم الثلاث لتحديث العدّاد والقائمة فوراً.
+        AGP.events.on('player:removed', function () {
+            renderLobbyPlayerList();
+            renderSettingsPlayerList();
+            renderMiniLobbyList();
+        });
     }
 
     AGP.gameShell = {
         init: init,
-        getSettings: function () { return Object.assign({}, _settingsValues); }
+        getSettings: function () { return Object.assign({}, _settingsValues); },
+
+        /**
+         * ⚠️ [0.44.0] يسمح للعبة بتحديث قيمة إعداد واحد من خارج الشاشة
+         * العامة (مثلاً بعد اختيار من نافذة مخصَّصة تبنيها اللعبة نفسها،
+         * راجع field.type === 'modal-trigger' أعلاه)، ثم يُعاد رسم شاشة
+         * الإعدادات فوراً لتعكس القيمة الجديدة على الزر.
+         * @param {string} key
+         * @param {*} value
+         */
+        setSetting: function (key, value) {
+            _settingsValues[key] = value;
+            if (_overlayEl && _overlayEl.style.display !== 'none') {
+                renderSettingsScreen(_lastIsReopened);
+            }
+        }
     };
 
 }(window.AymanGamesPlatform));
