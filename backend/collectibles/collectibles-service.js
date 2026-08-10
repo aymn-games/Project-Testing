@@ -198,6 +198,45 @@ function getUserFrames(userId) {
     });
 }
 
+/**
+ * ⚠️ [جديد] الإطار المفعَّل حالياً (equipped) لمستخدم مسجَّل بالمنصة،
+ * *فقط* لو ربط ووثَّق (tiktok_verified = 1) نفس يوزرنيم التيك توك
+ * الممرَّر — يُستخدَم من tiktok-connector.js عند كل تعليق وارد بالشات
+ * عشان نعرف هل هذا المعلِّق يملك إطاراً مفعَّلاً يظهر ببطاقته باللوبي.
+ *
+ * ⚠️ الاستعلام هنا مكرَّر عمداً (بدل استدعاء
+ * authService.findVerifiedUserByTikTok) لتفادي اعتمادية دائرية —
+ * auth-service.js يستورد هذا الملف أصلاً، فلا يجوز العكس. نفس شرط
+ * التحقق بالضبط (tiktok_verified = 1، مطابقة غير حساسة لحالة الأحرف).
+ *
+ * @param {string} tiktokUsername - يوزرنيم تيك توك خام (بدون بادئة 'tiktok:')
+ * @returns {{frameType: string, frameRef: string, imageFilename: string}|null}
+ */
+function getEquippedFrameForVerifiedTikTok(tiktokUsername) {
+    tiktokUsername = (tiktokUsername || '').trim();
+    if (!tiktokUsername) return null;
+
+    var user = db.prepare(
+        'SELECT id FROM users WHERE tiktok_verified = 1 AND LOWER(tiktok_username) = LOWER(?)'
+    ).get(tiktokUsername);
+    if (!user) return null;
+
+    var row = db.prepare('SELECT * FROM user_frames WHERE user_id = ? AND equipped = 1').get(user.id);
+    if (!row) return null;
+
+    var imageFilename = null;
+    if (row.frame_type === 'catalog') {
+        var cat = getCatalogEntry(row.frame_ref);
+        if (cat) imageFilename = cat.image_filename;
+    } else {
+        var custom = db.prepare('SELECT * FROM custom_frames WHERE id = ?').get(row.frame_ref);
+        if (custom) imageFilename = custom.image_filename;
+    }
+    if (!imageFilename) return null;
+
+    return { frameType: row.frame_type, frameRef: row.frame_ref, imageFilename: imageFilename };
+}
+
 /* ----------------------------------------------------------------------
  * الدخولية (نموذج أنيميشن + نص حر)
  * ---------------------------------------------------------------------- */
@@ -255,6 +294,7 @@ module.exports = {
     revokeFrame: revokeFrame,
     setEquipped: setEquipped,
     getUserFrames: getUserFrames,
+    getEquippedFrameForVerifiedTikTok: getEquippedFrameForVerifiedTikTok,
     setEntrance: setEntrance,
     clearEntrance: clearEntrance,
     getEntrance: getEntrance,
