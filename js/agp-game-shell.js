@@ -92,30 +92,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'border:1px dashed rgba(124,58,237,0.45);border-radius:10px;display:none;',
             'align-items:center;justify-content:center;color:#c9a8e0;font-size:0.8em;background:rgba(20,8,35,0.5);}',
 
-            /* شاشة الإعدادات — ⚠️ [0.44.0] حجم أكبر 1300×800 كحد أقصى (كان
-             * تلقائياً min(460px,94vw))، خط عنوان أكبر وأبرز.
-             * ⚠️ ملاحظة تعديل: height ثابتة 800px كانت تترك فراغاً كبيراً
-             * فارغاً أسفل الأزرار عند إخفاء حقول شرطية (مثل حقلي الهدية
-             * عند تعطيل "الإنعاش عن طريق الدعم") — لاحظته بالاختبار
-             * البصري، فحوّلتها لـ height:auto مع max-height:800px (سقف
-             * أقصى فقط، يكبر الصندوق حسب المحتوى الفعلي بدل فراغ ثابت). */
+            /* شاشة الإعدادات — ⚠️ [0.45.0] حجم 900×800 كحد أقصى (كان
+             * 1300×800)، خلفية غامقة بتدرّج (884B98 → 2D1932، من فوق
+             * لتحت) بدل التدرّج الفاتح القديم — بألوان محدَّدة صراحة،
+             * ونصوص بيضاء تناسبها. height تبقى auto مع سقف 800px (نفس
+             * إصلاح الفراغ الفارغ من [0.44.0]) بدل ثابتة، حتى لا يرجع نفس
+             * الفراغ الفارغ. نفس الصندوق الأساسي (بدون كلاس إضافي) يُستخدم
+             * أيضاً لشاشة الشرح ولوبي منتصف المباراة الجديد — فيرثان نفس
+             * المظهر الغامق تلقائياً. */
             '#agp-shell-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;',
-            'padding:80px 16px 16px;background:rgba(8,4,16,0.55);font-family:Cairo,sans-serif;color:#2c1240;direction:rtl;}',
-            '#agp-shell-box{width:1300px;max-width:96vw;height:auto;max-height:800px;max-height:min(800px,92vh);overflow-y:auto;',
-            'background:linear-gradient(180deg,#efe0fb,#e2c7f7);border:2px solid var(--agp-accent);border-radius:18px;padding:30px 34px;',
+            'padding:80px 16px 16px;background:rgba(8,4,16,0.55);font-family:Cairo,sans-serif;color:#fff;direction:rtl;}',
+            '#agp-shell-box{width:900px;max-width:96vw;height:auto;max-height:800px;max-height:min(800px,92vh);overflow-y:auto;',
+            'background:linear-gradient(180deg,#884B98,#2D1932);border:2px solid var(--agp-accent);border-radius:18px;padding:30px 34px;',
             'box-shadow:0 0 40px rgba(124,58,237,0.5);box-sizing:border-box;}',
-            '#agp-shell-box h2{margin:0 0 20px;font-size:1.7em;text-align:center;color:#3a1560;font-weight:800;',
+            '#agp-shell-box h2{margin:0 0 20px;font-size:1.7em;text-align:center;color:#fff;font-weight:800;',
             'font-family:Almarai,Cairo,sans-serif;}',
             '.agp-shell-field{margin-bottom:14px;text-align:right;}',
             '.agp-shell-field label{display:flex;align-items:center;gap:6px;justify-content:flex-end;',
-            'margin-bottom:6px;font-size:0.88em;color:#4a1f6e;font-weight:700;}',
+            'margin-bottom:6px;font-size:0.88em;color:#fff;font-weight:700;}',
             '.agp-shell-field label img,.agp-field-icon{width:18px;height:18px;}',
             '.agp-shell-field input[type=text]{width:100%;padding:10px;border-radius:10px;border:1px solid #b479e8;',
             'background:#fff;color:#2c1240;font-family:inherit;box-sizing:border-box;}',
 
             '.agp-shell-row{display:flex;align-items:center;justify-content:space-between;gap:10px;',
-            'padding:9px 0;border-bottom:1px solid rgba(124,58,237,0.2);}',
-            '.agp-shell-row-label{display:flex;align-items:center;gap:6px;font-size:0.88em;color:#4a1f6e;font-weight:700;}',
+            'padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.18);}',
+            '.agp-shell-row-label{display:flex;align-items:center;gap:6px;font-size:0.88em;color:#fff;font-weight:700;}',
 
             '.agp-pill-group{display:flex;gap:6px;flex-wrap:wrap;}',
             '.agp-pill-btn{border:1px solid var(--agp-accent);background:#fff;color:#5a2585;border-radius:999px;',
@@ -125,30 +126,48 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-shell-counter-row{display:flex;align-items:center;gap:8px;}',
             '.agp-shell-counter-row button{width:26px;height:26px;border-radius:8px;border:1px solid var(--agp-accent);',
             'background:#fff;color:#5a2585;cursor:pointer;font-weight:800;}',
-            '.agp-shell-counter-row span.agp-count-val{min-width:24px;text-align:center;font-weight:800;color:#3a1560;}',
+            '.agp-shell-counter-row span.agp-count-val{min-width:24px;text-align:center;font-weight:800;color:#fff;}',
             '.agp-count-input{width:48px;text-align:center;font-weight:800;color:#3a1560;border:1px solid var(--agp-accent);',
             'border-radius:6px;padding:3px;font-family:inherit;}',
 
-            /* ⚠️ [0.44.0] مفتاح تبديل حقيقي (Toggle Switch) بدل checkbox
-             * افتراضي — نفس data-key ونفس _settingsValues، فقط شكل جديد. */
+            /* ⚠️ [0.45.0] شريط تمرير (slider) — يستبدل عداد +/- لمستوى الصوت. */
+            '.agp-slider-wrap{display:flex;align-items:center;gap:10px;width:60%;}',
+            '.agp-slider-input{flex:1;-webkit-appearance:none;appearance:none;height:6px;border-radius:999px;',
+            'background:linear-gradient(90deg,var(--agp-accent-2),var(--agp-accent));outline:none;cursor:pointer;}',
+            '.agp-slider-input::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;',
+            'border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#e5d8f5);',
+            'box-shadow:0 2px 5px rgba(0,0,0,0.45);cursor:pointer;}',
+            '.agp-slider-input::-moz-range-thumb{width:18px;height:18px;border-radius:50%;border:none;',
+            'background:radial-gradient(circle at 35% 30%,#fff,#e5d8f5);box-shadow:0 2px 5px rgba(0,0,0,0.45);cursor:pointer;}',
+            '.agp-slider-val{min-width:22px;text-align:center;font-weight:800;color:#fff;font-size:0.85em;}',
+
+            /* ⚠️ [0.45.0] مفتاح تبديل "أكثر واقعية" — تدرّج + ظل داخلي على
+             * المسار (يشبه سطح مادي محفور خفيف)، ومقبض بلمعان/ظل واضح
+             * (يشبه زر فعلي مرفوع)، بدل الشكل المسطّح السابق. لا صور —
+             * CSS فقط (gradients/box-shadow)، نفس data-key/_settingsValues. */
             '.agp-toggle-switch{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;}',
             '.agp-toggle-switch input{opacity:0;width:0;height:0;position:absolute;}',
-            '.agp-toggle-track{position:absolute;inset:0;background:#c9b6de;border-radius:999px;',
+            '.agp-toggle-track{position:absolute;inset:0;background:linear-gradient(180deg,#d8c7ea,#b79bd1);',
+            'border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.3),inset 0 -1px 1px rgba(255,255,255,0.25);',
             'transition:background 0.2s;cursor:pointer;}',
             '.agp-toggle-track::before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;',
-            'background:#fff;border-radius:50%;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.3);}',
-            '.agp-toggle-switch input:checked + .agp-toggle-track{background:var(--agp-accent);}',
+            'background:radial-gradient(circle at 35% 30%,#ffffff,#d9d9d9);border-radius:50%;transition:transform 0.2s;',
+            'box-shadow:0 2px 4px rgba(0,0,0,0.45),inset 0 -1px 1px rgba(0,0,0,0.12),inset 0 1px 1px rgba(255,255,255,0.7);}',
+            '.agp-toggle-switch input:checked + .agp-toggle-track{background:linear-gradient(180deg,#9d5ff0,var(--agp-accent));',
+            'box-shadow:inset 0 2px 4px rgba(0,0,0,0.35),inset 0 -1px 1px rgba(255,255,255,0.2);}',
             '.agp-toggle-switch input:checked + .agp-toggle-track::before{transform:translateX(-20px);}',
 
             '.agp-shell-btn-connect{width:100%;padding:13px;border:none;border-radius:999px;font-weight:800;',
             'cursor:pointer;background:linear-gradient(90deg,var(--agp-accent-2),var(--agp-accent));color:#0b0616;',
             'font-family:inherit;font-size:1em;margin-top:8px;}',
 
-            /* شاشة "جاري الاتصال" — تطابق القالب البسيط المُرسَل */
+            /* شاشة "جاري الاتصال" — تطابق القالب البسيط المُرسَل (تبقى
+             * فاتحة عمداً، غير مشمولة بطلب التغميق — شاشة عابرة قصيرة). */
             '#agp-shell-box.agp-connecting-box{width:min(460px,94vw);height:auto;background:linear-gradient(90deg,#f3eefc,#8b3fd6);',
             'text-align:center;padding:34px 26px;}',
             '#agp-shell-box.agp-connecting-box h2{color:#2c1240;font-size:1.3em;}',
-            '.agp-shell-status{text-align:center;color:#4a1f6e;font-size:0.9em;margin-bottom:12px;}',
+            '#agp-shell-box.agp-connecting-box .agp-shell-status{color:#4a1f6e;}',
+            '.agp-shell-status{text-align:center;color:#fff;font-size:0.9em;margin-bottom:12px;}',
 
             /* شاشة اللوبي — ⚠️ [0.44.0] خط Almarai أبرز، بدون شرطة طويلة
              * بالعنوان، شارة كلمة مفتاحية مميزة، عداد لاعبين X/الحد الأقصى. */
@@ -163,16 +182,32 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-join-keyword-badge{display:inline-block;background:linear-gradient(90deg,var(--agp-accent-2),var(--agp-accent-pink));',
             'color:#0b0616;font-weight:900;font-size:1.35em;padding:6px 22px;border-radius:12px;',
             'box-shadow:0 0 18px rgba(0,194,255,0.55);letter-spacing:0.5px;}',
+            /* ⚠️ [0.45.0] لوبي منتصف المباراة الجديد: نص التعليمة يحتوي
+             * الكلمة المفتاحية بلون أصفر عادي داخل الجملة (بدل الشارة
+             * المتدرّجة أعلاه — طلب صريح لهذا السياق تحديداً فقط). */
+            '.agp-join-keyword-plain{color:#ffd400;font-weight:900;font-size:1.15em;}',
             '.agp-player-count-badge{display:inline-block;margin-inline-start:8px;background:rgba(0,0,0,0.3);',
             'color:#fff;font-weight:800;font-size:0.85em;padding:4px 12px;border-radius:999px;',
             'border:1px solid rgba(255,255,255,0.25);}',
-            '.agp-shell-player-list{list-style:none;margin:0 0 16px;padding:0;flex:1;overflow-y:auto;}',
-            '.agp-shell-player-list li{display:flex;align-items:center;justify-content:space-between;gap:8px;',
-            'padding:8px 12px;background:rgba(255,255,255,0.12);border-radius:8px;',
-            'margin-bottom:6px;text-align:right;color:#f3eefc;}',
+            /* ⚠️ [0.45.0] قائمة اللاعبين: من صف كامل لكل لاعب (سطر مستقل)
+             * لتخطيط أفقي متلاصق (شرائح/chips تلتف تلقائياً) — نفس الكلاس
+             * مشترك بين اللوبي الأول واللوبي الجديد. */
+            '.agp-shell-player-list{list-style:none;margin:0 0 16px;padding:0;display:flex;flex-wrap:wrap;',
+            'gap:8px;overflow-y:auto;}',
+            '.agp-shell-player-list li{display:flex;align-items:center;gap:6px;flex:0 0 auto;',
+            'padding:6px 10px;background:rgba(255,255,255,0.12);border-radius:999px;',
+            'text-align:right;color:#f3eefc;}',
             '.agp-player-remove-btn{background:rgba(255,77,77,0.18);border:1px solid rgba(255,77,77,0.55);',
-            'color:#ffb3b3;border-radius:8px;width:26px;height:26px;flex-shrink:0;cursor:pointer;font-weight:800;',
-            'font-size:0.85em;line-height:1;}',
+            'color:#ffb3b3;border-radius:8px;width:22px;height:22px;flex-shrink:0;cursor:pointer;font-weight:800;',
+            'font-size:0.8em;line-height:1;}',
+
+            /* ⚠️ [0.45.0] قائمة اللاعبين أثناء المباراة (بشاشة الإعدادات
+             * المُعاد فتحها): صندوق فرعي مستقل صغير 250×250 بدل قائمة
+             * ممتدة داخل الصندوق الرئيسي — نفس تخطيط الشرائح أعلاه بداخله. */
+            '.agp-settings-player-box{width:250px;height:250px;box-sizing:border-box;overflow-y:auto;',
+            'border:1px solid rgba(255,255,255,0.3);',
+            'border-radius:12px;padding:8px;background:rgba(0,0,0,0.18);margin:6px auto 10px;}',
+            '.agp-settings-player-box .agp-shell-player-list{margin:0;}',
 
             '.agp-relocated-into-settings{position:fixed !important;top:90px !important;left:50% !important;',
             'transform:translateX(-50%);z-index:100000 !important;}'
@@ -242,6 +277,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *  شاشة الإعدادات
      * ================================================================== */
     function isFieldVisible(field) {
+        // ⚠️ [0.45.0] onlyMidMatch: حقل يظهر فقط لو شاشة الإعدادات مفتوحة
+        // أثناء مباراة نشطة (أُعيد فتحها بزر الترس ⚙️) — يُخفى تماماً
+        // بشاشة الإعدادات الأولية قبل بدء أي مباراة. مثال: مستوى الصوت
+        // (لا معنى له قبل أن تبدأ أصوات اللعبة أصلاً).
+        if (field.onlyMidMatch && !_lastIsReopened) return false;
         if (!field.showWhen) return true;
         return _settingsValues[field.showWhen.key] === field.showWhen.equals;
     }
@@ -267,6 +307,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="agp-shell-counter-row"><button data-key="' + field.key + '" data-delta="-1">−</button>' +
                 '<input type="number" class="agp-count-input" data-key="' + field.key + '" id="agp-field-' + field.key + '" value="' + _settingsValues[field.key] + '" min="' + (field.min || 0) + '">' +
                 '<button data-key="' + field.key + '" data-delta="1">+</button></div>' +
+                '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + '</span></div>';
+        }
+
+        // ⚠️ [0.45.0] نوع حقل جديد: شريط تمرير (slider) — بدل عداد +/-،
+        // يُستخدَم حالياً لمستوى الصوت (مع onlyMidMatch:true).
+        if (field.type === 'slider') {
+            var sliderMin = typeof field.min === 'number' ? field.min : 0;
+            var sliderMax = typeof field.max === 'number' ? field.max : 10;
+            var sliderVal = _settingsValues[field.key];
+            return '<div class="agp-shell-row">' +
+                '<div class="agp-slider-wrap"><input type="range" class="agp-slider-input" data-key="' + field.key + '" ' +
+                'min="' + sliderMin + '" max="' + sliderMax + '" value="' + sliderVal + '">' +
+                '<span class="agp-slider-val" id="agp-slider-val-' + field.key + '">' + sliderVal + '</span></div>' +
                 '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + '</span></div>';
         }
 
@@ -326,7 +379,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var playerManagementHtml = isReopened ?
             '<div class="agp-shell-field"><label>👥 قائمة اللاعبين <span id="agp-settings-player-count"></span></label>' +
-            '<ul class="agp-shell-player-list" id="agp-settings-player-list" style="max-height:160px;"></ul>' +
+            '<div class="agp-settings-player-box"><ul class="agp-shell-player-list" id="agp-settings-player-list"></ul></div>' +
             '<button type="button" class="agp-shell-btn-connect" id="agp-reopen-registration-btn">➕ إضافة لوبي جديد</button></div>' : '';
 
         box.style.position = 'relative';
@@ -460,8 +513,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var box = el('agp-shell-box');
         box.innerHTML =
             '<h2>إضافة لوبي جديد</h2>' +
-            '<div class="agp-join-hint"><span class="agp-join-hint-text">اكتبوا نفس الكلمة المفتاحية بالشات للانضمام:</span>' +
-            '<span class="agp-join-keyword-badge">' + escapeHtml(_lastKeyword) + '</span>' +
+            '<div class="agp-join-hint"><span class="agp-join-hint-text">لدخول المبارة للاعبين الجدد اكتب ' +
+            '<span class="agp-join-keyword-plain">' + escapeHtml(_lastKeyword) + '</span>' +
+            ' في شات البث</span>' +
             '<span id="agp-mini-lobby-count"></span></div>' +
             '<ul class="agp-shell-player-list" id="agp-mini-lobby-list"></ul>' +
             '<button class="agp-shell-btn-connect" id="agp-mini-lobby-done-btn">✅ إكمال المباراة</button>';
@@ -495,13 +549,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function wireFieldEvents() {
+        // ⚠️ [0.45.0] إصلاح خطأ حرج: كل هذي المستمعات (pill/counter/count-input)
+        // كانت تستدعي renderSettingsScreen() بدون تمرير _lastIsReopened —
+        // فكانت تعيد رسم الشاشة **كأنها تُفتح لأول مرة** (تُظهر حقلي
+        // اليوزرنيم/الكلمة المفتاحية وزر "اتصال بالبث" من جديد) بمجرد
+        // تعديل أي إعداد (حد اللاعبين، موقّت الإقصاء، مين يقدر يدخل...)
+        // أثناء مباراة نشطة — يبان للمستخدم وكأن المباراة "انلغت" وتطلب
+        // اتصال جديد، رغم إن المباراة الفعلية بالخلفية ما توقفت أصلاً.
+        // كان فقط مستمع مفتاح التبديل (toggle) بالأسفل مصلَّحاً صح من
+        // الإصدار الماضي. الإصلاح: كل المستمعات الأربعة تمرر _lastIsReopened
+        // الآن، فتبقى الشاشة بوضعها الصحيح والمباراة تكمل بدون انقطاع.
         _overlayEl.querySelectorAll('.agp-pill-btn').forEach(function (btn) {
             btn.onclick = function () {
                 var key = btn.getAttribute('data-key');
                 var raw = btn.getAttribute('data-value');
                 var parsed = raw === 'true' ? true : (raw === 'false' ? false : (isNaN(Number(raw)) ? raw : Number(raw)));
                 _settingsValues[key] = parsed;
-                renderSettingsScreen();
+                renderSettingsScreen(_lastIsReopened);
             };
         });
         _overlayEl.querySelectorAll('.agp-shell-counter-row button').forEach(function (btn) {
@@ -511,7 +575,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 var fieldConfig = (_config.settingsFields || []).filter(function (f) { return f.key === key; })[0];
                 var min = fieldConfig && typeof fieldConfig.min === 'number' ? fieldConfig.min : 0;
                 _settingsValues[key] = Math.max(min, (_settingsValues[key] || 0) + delta);
-                renderSettingsScreen();
+                renderSettingsScreen(_lastIsReopened);
             };
         });
         _overlayEl.querySelectorAll('.agp-count-input').forEach(function (input) {
@@ -521,8 +585,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 var min = fieldConfig && typeof fieldConfig.min === 'number' ? fieldConfig.min : 0;
                 var typed = parseInt(input.value, 10);
                 _settingsValues[key] = isNaN(typed) ? min : Math.max(min, typed);
-                renderSettingsScreen();
+                renderSettingsScreen(_lastIsReopened);
             };
+        });
+        // ⚠️ [0.45.0] نوع حقل جديد: 'slider' (شريط تمرير — راجع renderField).
+        _overlayEl.querySelectorAll('.agp-slider-input').forEach(function (input) {
+            input.oninput = function () {
+                var key = input.getAttribute('data-key');
+                _settingsValues[key] = Number(input.value);
+                var valEl = el('agp-slider-val-' + key);
+                if (valEl) valEl.textContent = input.value;
+            };
+            input.onchange = function () { renderSettingsScreen(_lastIsReopened); };
         });
         _overlayEl.querySelectorAll('#agp-shell-box input[type=checkbox]').forEach(function (chk) {
             // ⚠️ [0.44.0] إصلاح: كانت لا تُعيد رسم شاشة الإعدادات بعد
