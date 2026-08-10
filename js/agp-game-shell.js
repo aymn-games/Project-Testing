@@ -35,6 +35,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _settingsValues = {};
     var _lastKeyword = '';
 
+    // ⚠️ [0.46.0] حالة زر التشغيل التلقائي العام (راجع _config.midMatchToggleButton
+    // بـrenderSettingsScreen) — يُصفَّر عبر AGP.gameShell.setMidMatchToggleActive(false)
+    // من اللعبة نفسها عند انتهاء/إعادة المباراة.
+    var _midMatchToggleActive = false;
+
     // ⚠️ [إصلاح خلل حقيقي] تصير true فور بدء الجولة (زر "انهاء وبدء
     // الجولة") ولا ترجع false إلا بإعادة تحميل الصفحة (مباراة جديدة —
     // نفس أسلوب اللعبة نفسها). راجع تعليق مستمع stream:statusChanged
@@ -205,9 +210,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * المُعاد فتحها): صندوق فرعي مستقل صغير 250×250 بدل قائمة
              * ممتدة داخل الصندوق الرئيسي — نفس تخطيط الشرائح أعلاه بداخله. */
             '.agp-settings-player-box{width:250px;height:250px;box-sizing:border-box;overflow-y:auto;',
-            'border:1px solid rgba(255,255,255,0.3);',
-            'border-radius:12px;padding:8px;background:rgba(0,0,0,0.18);margin:6px auto 10px;}',
+            'border:1px solid rgba(255,255,255,0.3);flex-shrink:0;',
+            'border-radius:12px;padding:8px;background:rgba(0,0,0,0.18);margin:6px 0 10px;}',
             '.agp-settings-player-box .agp-shell-player-list{margin:0;}',
+            /* ⚠️ [0.46.0] الصندوق وزر "إضافة لوبي جديد" (+ زر التشغيل
+             * التلقائي الاختياري تحته) يصيران بجانب بعض بصف أفقي واحد،
+             * بدل الترتيب العمودي القديم — طلب صريح. */
+            '.agp-settings-player-row{display:flex;gap:14px;align-items:flex-start;justify-content:center;flex-wrap:wrap;}',
+            '.agp-settings-player-actions{display:flex;flex-direction:column;gap:8px;width:220px;padding-top:6px;}',
+            '.agp-settings-player-actions .agp-shell-btn-connect{margin-top:0;}',
+            /* ⚠️ [0.46.0] زر التشغيل التلقائي العام (يبنيه إعداد اللعبة
+             * midMatchToggleButton — هذا الملف لا يعرف شيئاً عن معناه
+             * الفعلي، فقط يعرض زراً يبدّل حالته ويستدعي onToggle). */
+            '.agp-midmatch-toggle-btn{background:linear-gradient(90deg,#2fbf71,#1f8a52);color:#fff;}',
+            '.agp-midmatch-toggle-btn.agp-midmatch-toggle-active{background:linear-gradient(90deg,#ff6161,#c81452);}',
 
             '.agp-relocated-into-settings{position:fixed !important;top:90px !important;left:50% !important;',
             'transform:translateX(-50%);z-index:100000 !important;}'
@@ -377,10 +393,29 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var connectBtnHtml = isReopened ? '' :
             '<button class="agp-shell-btn-connect" id="agp-connect-btn">' + (_config.connectButtonLabel || 'اتصال بالبث') + '</button>';
 
+        // ⚠️ [0.46.0] زر تشغيل تلقائي عام اختياري — تحدِّده اللعبة عبر
+        // _config.midMatchToggleButton (نفس فلسفة modal-trigger: هذا
+        // الملف لا يعرف معناه الفعلي، فقط يعرض زراً بحالتين ويستدعي
+        // onToggle عند الضغط). يظهر أسفل زر "إضافة لوبي جديد" بنفس عمود
+        // الأزرار.
+        var midMatchToggleHtml = '';
+        if (isReopened && _config.midMatchToggleButton) {
+            var btnCfg = _config.midMatchToggleButton;
+            var toggleLabel = _midMatchToggleActive ? (btnCfg.activeLabel || 'إيقاف') : (btnCfg.label || 'تشغيل');
+            var toggleIcon = _midMatchToggleActive ? (btnCfg.activeIcon || '⏸️') : (btnCfg.icon || '▶️');
+            midMatchToggleHtml = '<button type="button" class="agp-shell-btn-connect agp-midmatch-toggle-btn' +
+                (_midMatchToggleActive ? ' agp-midmatch-toggle-active' : '') + '" id="agp-midmatch-toggle-btn">' +
+                toggleIcon + ' ' + toggleLabel + '</button>';
+        }
+
         var playerManagementHtml = isReopened ?
             '<div class="agp-shell-field"><label>👥 قائمة اللاعبين <span id="agp-settings-player-count"></span></label>' +
+            '<div class="agp-settings-player-row">' +
             '<div class="agp-settings-player-box"><ul class="agp-shell-player-list" id="agp-settings-player-list"></ul></div>' +
-            '<button type="button" class="agp-shell-btn-connect" id="agp-reopen-registration-btn">➕ إضافة لوبي جديد</button></div>' : '';
+            '<div class="agp-settings-player-actions">' +
+            '<button type="button" class="agp-shell-btn-connect" id="agp-reopen-registration-btn">➕ إضافة لوبي جديد</button>' +
+            midMatchToggleHtml +
+            '</div></div></div>' : '';
 
         box.style.position = 'relative';
         box.innerHTML =
@@ -399,6 +434,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             renderSettingsPlayerList();
             document.getElementById('agp-reopen-registration-btn').onclick = handleReopenRegistrationClick;
             document.getElementById('agp-settings-close-btn').onclick = function () { hideRelocatedControls(); hideOverlay(); };
+            var toggleBtn = document.getElementById('agp-midmatch-toggle-btn');
+            if (toggleBtn && _config.midMatchToggleButton) {
+                toggleBtn.onclick = function () {
+                    _midMatchToggleActive = !_midMatchToggleActive;
+                    if (typeof _config.midMatchToggleButton.onToggle === 'function') {
+                        _config.midMatchToggleButton.onToggle(_midMatchToggleActive);
+                    }
+                    renderSettingsScreen(_lastIsReopened);
+                };
+            }
             showRelocatedControls();
         }
     }
@@ -786,6 +831,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         setSetting: function (key, value) {
             _settingsValues[key] = value;
             if (_overlayEl && _overlayEl.style.display !== 'none') {
+                renderSettingsScreen(_lastIsReopened);
+            }
+        },
+
+        /**
+         * ⚠️ [0.46.0] تصفير حالة زر التشغيل التلقائي العام من خارج هذا
+         * الملف — تستدعيها اللعبة عند انتهاء/إعادة المباراة، حتى لا يبقى
+         * الزر عالقاً على "إيقاف" (نصاً) بينما حلقة التشغيل التلقائي
+         * الفعلية بملف اللعبة توقّفت فعلياً.
+         * @param {boolean} active
+         */
+        setMidMatchToggleActive: function (active) {
+            _midMatchToggleActive = Boolean(active);
+            if (_overlayEl && _overlayEl.style.display !== 'none' && _lastIsReopened) {
                 renderSettingsScreen(_lastIsReopened);
             }
         }
