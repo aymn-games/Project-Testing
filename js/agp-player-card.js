@@ -86,15 +86,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         style.textContent = [
             /* ---- البطاقة الأساسية (بدون إطار) ----
              * ⚠️ [0.47.0] الخلفية البيضاوية الشفافة + الحدود البنفسجية
-             * حول الصورة+الاسم أُلغيتا بالكامل بطلب صريح ("شيل التبويب
-             * اللي خلف بطاقة الاسماء") — الصورة الدائرية والاسم نفسهما
-             * بقيا بدون تغيير. هذا مكوّن مشترك (AGP.playerCard)، فالتأثير
-             * يشمل تلقائياً كل الأماكن اللي تستخدمه: اللوبي الرئيسي،
-             * اللوبي الفرعي (منتصف المباراة)، قائمة لاعبين شاشة
+             * حول الصورة+الاسم أُلغيتا بالكامل بطلب صريح.
+             * ⚠️ [0.48.0] رجع حدّ (border) رفيع شفاف فقط حول البطاقة —
+             * بدون أي تعبئة/خلفية خلفه (مو نفس الخلفية القديمة قبل
+             * [0.47.0]) — بطلب صريح لاحق. هذا مكوّن مشترك (AGP.playerCard)،
+             * فالتأثير يشمل تلقائياً كل الأماكن اللي تستخدمه: اللوبي
+             * الرئيسي، اللوبي الفرعي (منتصف المباراة)، قائمة لاعبين شاشة
              * الإعدادات، وقائمة مرشّحي نافذة الإقصاء/الإرجاع.
              */
             '.agp-pcard{display:inline-flex;align-items:center;gap:8px;',
-            'max-width:220px;box-sizing:border-box;padding:2px 4px;',
+            'max-width:220px;box-sizing:border-box;padding:4px 12px;',
+            'border:1px solid rgba(255,255,255,0.28);border-radius:999px;background:transparent;',
             'font-family:Cairo,sans-serif;direction:rtl;vertical-align:middle;}',
             '.agp-pcard--out{opacity:0.45;text-decoration:line-through;}',
 
