@@ -13,7 +13,7 @@
  *   connect:    { platform, username }
  *   disconnect: { platform }
  *   status:     { platform, status, message? }
- *   comment:    { platform, id, name, text, isFollower } // isFollower أُضيف [0.42.2]
+ *   comment:    { platform, id, name, text, isFollower, avatarUrl, frame } // isFollower [0.42.2]، avatarUrl/frame [جديد]
  *   gift:       { platform, id, name, giftName, giftValue, repeatCount }
  *   follow:     { platform, id, name }
  *   error:      { platform, code, message }

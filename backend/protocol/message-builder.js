@@ -29,14 +29,24 @@ module.exports = {
         return buildEnvelope(MESSAGE_TYPES.STATUS, payload);
     },
 
-    buildCommentMessage: function (platform, id, name, text, isFollower) {
+    buildCommentMessage: function (platform, id, name, text, isFollower, avatarUrl, frame) {
         // ⚠️ [0.42.2] isFollower أُضيف هنا — كان يُحسَب فعلاً بالباك إند
         // (tiktok-connector.js) لكن يُفقَد قبل الوصول للمتصفح لأن هذي
         // الدالة نفسها ما كانت تستقبله ولا تضيفه لحمولة الرسالة، فيصل
         // للواجهة الأمامية `undefined` دائماً بصرف النظر عن حالة المتابعة
         // الحقيقية — هذا هو السبب الجذري الفعلي وراء فشل بوابة
         // "المتابعون فقط" حتى مع متابع حقيقي.
-        return buildEnvelope(MESSAGE_TYPES.COMMENT, { platform: platform, id: id, name: name, text: text, isFollower: Boolean(isFollower) });
+        //
+        // ⚠️ [جديد] avatarUrl (رابط صورة بروفايل تيك توك، أو null) وframe
+        // (الإطار المفعَّل لصاحب التعليق لو يملك حساباً موثَّقاً بالمنصة،
+        // أو null) — تُستخدَم لبناء بطاقة اللاعب (صورة + اسم [+ إطار
+        // باللوبي فقط]) بالواجهة الأمامية. راجع js/agp-player-card.js.
+        return buildEnvelope(MESSAGE_TYPES.COMMENT, {
+            platform: platform, id: id, name: name, text: text,
+            isFollower: Boolean(isFollower),
+            avatarUrl: avatarUrl || null,
+            frame: frame || null
+        });
     },
 
     buildGiftMessage: function (platform, id, name, giftName, giftValue, repeatCount) {
