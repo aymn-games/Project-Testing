@@ -165,6 +165,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-shell-btn-connect{width:100%;padding:13px;border:none;border-radius:999px;font-weight:800;',
             'cursor:pointer;background:linear-gradient(90deg,var(--agp-accent-2),var(--agp-accent));color:#0b0616;',
             'font-family:inherit;font-size:1em;margin-top:8px;}',
+            /* ⚠️ [0.48.0] زر "اتصال بالبث وبدء الإعدادات" تحديداً (شاشة
+             * الإعدادات الأولى فقط — #agp-connect-btn لا يُرسَم إطلاقاً
+             * بشاشة منتصف المباراة المُعاد فتحها) صار أصغر — عرض تلقائي
+             * بدل 100% وحشو أقل، بطلب صريح. بقية الأزرار المشتركة بنفس
+             * الكلاس (إضافة لوبي جديد، العب التلقائي...) بقيت بحجمها. */
+            '#agp-connect-btn{width:auto;min-width:190px;max-width:80%;padding:9px 22px;',
+            'margin:10px auto 0;display:block;font-size:0.85em;}',
 
             /* شاشة "جاري الاتصال" — تطابق القالب البسيط المُرسَل (تبقى
              * فاتحة عمداً، غير مشمولة بطلب التغميق — شاشة عابرة قصيرة). */
