@@ -19,7 +19,7 @@
  *                                    // مسؤولية ws-server.js عند تلقّي
  *                                    // رسالة disconnect من المتصفح فقط،
  *                                    // بلا تغيير على هذا العقد).
- *     onComment({ id, name, text }),
+ *     onComment({ id, name, text, isFollower, avatarUrl, frame }),
  *     onGift({ id, name, giftName, giftValue, repeatCount }),
  *     onFollow({ id, name })
  *   }
@@ -49,6 +49,7 @@
 'use strict';
 
 var logger = require('../../utils/logger');
+var collectiblesService = require('../../collectibles/collectibles-service');
 
 var MAX_RECONNECT_ATTEMPTS = 5;
 var BASE_RECONNECT_DELAY_MS = 1000;
@@ -70,7 +71,45 @@ function extractUser(data) {
     var user = (data && data.user) || {};
     var uniqueId = user.uniqueId || user.id || 'unknown';
     var nickname = user.nickname || uniqueId;
-    return { id: 'tiktok:' + uniqueId, name: nickname };
+    return { id: 'tiktok:' + uniqueId, name: nickname, uniqueId: uniqueId };
+}
+
+/**
+ * ⚠️ [جديد] استخراج رابط صورة بروفايل تيك توك — **غير مؤكَّد بالكامل**،
+ * بنفس تحفّظ extractIsFollower أعلاه: لم يُختبَر ضد بث حقيقي من هذه
+ * البيئة (لا وصول شبكي لتيك توك هنا). المكتبة (v2.4.3) تُوثِّق شكل
+ * profilePicture بأكثر من صيغة محتملة حسب نسخة الحدث، فهذي محاولة آمنة
+ * تجرّب كل الأشكال المعروفة بالترتيب وترجع null لو ما لقت شيء — بدل ما
+ * تفشل بصمت أو ترمي خطأ. يحتاج تأكيداً فعلياً على بث حقيقي بعد الرفع
+ * (بنفس أسلوب ?agpDebug=1 المستخدم لـ isFollower).
+ */
+function extractAvatarUrl(data) {
+    var user = (data && data.user) || {};
+    var pic = user.profilePicture || user.avatarThumb || user.avatarMedium || user.avatarLarger || null;
+    if (!pic) return null;
+    if (typeof pic === 'string') return pic;
+    if (typeof pic.url === 'string') return pic.url;
+    if (Array.isArray(pic.urls) && pic.urls.length) return pic.urls[0];
+    if (Array.isArray(pic.urlListList) && pic.urlListList.length) return pic.urlListList[0];
+    if (Array.isArray(pic.urlList) && pic.urlList.length) return pic.urlList[0];
+    return null;
+}
+
+/**
+ * ⚠️ [جديد] الإطار المفعَّل حالياً (لو وُجد) لصاحب هذا التعليق — فقط لو
+ * يملك حساباً مسجَّلاً بالمنصة، وثّق ملكية نفس يوزرنيم التيك توك هذا
+ * فعلياً (راجع collectibles-service.js). فشل الاستعلام (قاعدة بيانات
+ * غير متاحة مثلاً) لا يوقف معالجة التعليق — فقط يُعتبَر "بدون إطار".
+ * @param {string} uniqueId
+ * @returns {{frameType: string, frameRef: string, imageFilename: string}|null}
+ */
+function extractEquippedFrame(uniqueId) {
+    try {
+        return collectiblesService.getEquippedFrameForVerifiedTikTok(uniqueId);
+    } catch (err) {
+        logger.error('TikTok Connector: frame lookup failed for "' + uniqueId + '":', err);
+        return null;
+    }
 }
 
 /**
@@ -136,7 +175,7 @@ function createTikTokConnector() {
     var _reconnectAttempts = 0;
     var _reconnectTimer = null;
     var _username = null;
-    var _followersOnly = false; // ⚠️ لا تُستخدَم للفلترة هنا عمداً — الفلترة الفعلية تتم بالواجهة الأمامية (adapters/agp-tiktok-adapter.js، بوابة followersOnly داخل handleIncomingComment، بدون أي استثناء يدوي — غير المتابع يُرفض دائماً حتى يتابع فعلياً)، بالاعتماد على isFollower المحسوبة هنا أدناه وتُبعث مع كل تعليق. الإشارة السابقة لملف agp-shell-config.js كانت خاطئة/غير موجودة، صُححت [0.42.0]/[0.42.1].
+    var _followersOnly = false; // ⚠️ لم تعد تُستخدَم للفلترة هنا — الفلترة انتقلت للواجهة الأمامية لتشخيص أسهل (راجع agp-shell-config.js)
     var _callbacks = null;
 
     function clearReconnectTimer() {
@@ -201,6 +240,8 @@ function createTikTokConnector() {
                 name: user.name,
                 text: commentText,
                 isFollower: extractIsFollower(data), // ⚠️ لا يزال تخميناً، راجع _debugFollowStatus أدناه
+                avatarUrl: extractAvatarUrl(data), // ⚠️ [جديد] غير مؤكَّد بالكامل، راجع تعليق extractAvatarUrl
+                frame: extractEquippedFrame(user.uniqueId), // ⚠️ [جديد] null لو بدون حساب موثَّق/إطار مفعَّل
                 _debugFollowStatus: followDebug.followStatus,
                 _debugIsFollowerOfAnchor: followDebug.isFollowerOfAnchor
             });
