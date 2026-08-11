@@ -907,24 +907,14 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
      * start() وend() هنا) لـ /api/points/round-complete، الذي يطابق كل
      * لاعب بحساب مسجَّل موثَّق تيك توك (بصمت يتجاهل من لا حساب له).
      *
-     * ⚠️ [0.46.0] إصلاح ثغرة نقاط مؤكَّدة (كانت مُعلَّمة سابقاً هنا
-     * كـ"افتراض غير مؤكَّد" — تأكَّدت فعلياً وانحلّت): `player.name` هو
-     * الاسم المستعار (nickname) بتيك توك، وليس اليوزرنيم الحقيقي
-     * (@handle) المستخدَم فعلياً بمطابقة الباك إند
-     * (auth-service.js findVerifiedUserByTikTok يقارن tiktok_username
-     * الحقيقي المُدخَل يدوياً وقت التوثيق — dashboard-auth.js). اليوزرنيم
-     * الحقيقي (uniqueId) متوفر فقط داخل player.id بصيغة 'tiktok:'+uniqueId
-     * (راجع backend/platforms/tiktok/tiktok-connector.js extractUser()) —
-     * الحل: نستخرجه من id عبر tiktokUsernameFor() أدناه، لا من name.
-     * الإرسال نفسه لا يكسر أي شيء لو فشل (Promise catch صامت) — لا
-     * يعطّل تدفّق إنهاء الجولة العادي.
+     * ⚠️ افتراض صريح غير مؤكَّد: `player.name` (أو player.id لو الاسم
+     * غير موجود) يُفترَض أنه يوزرنيم تيك توك نفسه — هذا الحقل يُضبَط من
+     * مصدر انضمام اللاعب (Lobby/Queue/PlayerSource)، ولا توثيق مؤكَّد هنا
+     * أنه دائماً نفس يوزرنيم تيك توك الحقيقي حرفياً بكل مصدر انضمام. لو
+     * تبيّن لاحقاً أنه مختلف، التعديل يقتصر على السطر اللي يبني
+     * `participants` أدناه فقط. الإرسال نفسه لا يكسر أي شيء لو فشل
+     * (Promise catch صامت) — لا يعطّل تدفّق إنهاء الجولة العادي.
      */
-    function tiktokUsernameFor(player) {
-        var id = (player && player.id) || '';
-        if (id.indexOf('tiktok:') === 0) return id.slice('tiktok:'.length);
-        return (player && (player.name || player.id)) || '';
-    }
-
     NS.components.round = {
         _startedAt: null,
         render: function () {
@@ -943,8 +933,14 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
                 var winnerKey = winner && (winner.id || winner.name);
                 var players = AGP.gameManager.getPlayers();
                 var participants = players.map(function (player) {
-                    var key = tiktokUsernameFor(player);
-                    return { tiktokUsername: key, won: Boolean(winnerKey) && (player.id === winnerKey || player.name === winnerKey) };
+                    // ⚠️ [إصلاح باگ حقيقي — 0.44.0] كان يُرسَل هنا اسم العرض
+                    // (player.name، قابل للتغيير) أو player.id بصيغته الكاملة
+                    // "tiktok:اليوزرنيم" — كلاهما لا يطابق أبداً tiktok_username
+                    // الحقيقي المخزَّن بالحساب (مقارنة حرفية بالباك إند)، فتقرير
+                    // النقاط كان يفشل بصمت لكل المشاركين تقريباً. نفس الإصلاح
+                    // المطبَّق بـ games/elimination-roulette/agp-elimination-roulette.js.
+                    var rawId = (player.id || '').indexOf('tiktok:') === 0 ? player.id.slice(7) : player.id;
+                    return { tiktokUsername: rawId, won: Boolean(winnerKey) && (player.id === winnerKey || player.name === winnerKey) };
                 }).filter(function (p) { return p.tiktokUsername; });
 
                 if (participants.length) {
