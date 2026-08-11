@@ -21,60 +21,48 @@
  *   backend/collectibles/collectibles-service.js:
  *   getEquippedFrameForVerifiedTikTok).
  *
- * ⚠️ [0.44.5] قالب صور الإطارات (Frame Template) — **مُعاد قياسه من
- *   الملف الفعلي النهائي** (frame-founder.png كما رُفع فعلياً على
- *   GitHub)، بعد ما تبيّن أنه مختلف عن أول معاينة JPEG أُرسِلت (كانت
- *   1090×843 بخلفية بيضاء صلبة). الملف الفعلي: PNG 1254×1254 بقناة ألفا
- *   شفافة حقيقية (تحقّقتُ منه مباشرة — mode=RGBA، أكثر من 1.19 مليون
- *   بكسل alpha=0)، فتحة دائرة الصورة شفافة فعلياً (لا شعار نخلة معتم
- *   كالمعاينة الأولى)، وبلاطة الاسم فاضية تماماً من أي نص مرسوم مسبقاً.
+ * ⚠️ [0.44.8] قالب صور الإطارات (Frame Template) — **تحوّل من "ثوابت
+ *   عامة واحدة لكل الإطارات" إلى جدول FRAME_TEMPLATES (قياس مستقل لكل
+ *   ملف إطار)**. السبب: تبيّن عملياً (بفحص أول 5 ملفات فعلية أرسلها
+ *   صاحب المشروع، مولَّدة بجلسات منفصلة عبر ChatGPT) أن افتراض "قالب
+ *   واحد موحّد بنفس القياسات لكل الإطارات" غير صحيح فعلياً على مستوى
+ *   الأبعاد: بعض الملفات 1254×1254 (مربّعة، زي founder)، وبعضها
+ *   1536×1024 (مستطيلة، نسبة مختلفة كلياً) — قماشة واحدة بأبعاد ثابتة
+ *   ما تنفع للكل. كل إطار له الآن مدخل مستقل بجدول FRAME_TEMPLATES
+ *   أدناه، فيه: أبعاد القماشة الحقيقية (canvasW/canvasH)، نافذة القص
+ *   الرأسي (contentTop/contentHeight)، وموقع/حجم دائرة الصورة وبلاطة
+ *   الاسم (avatar_ وname_ — % من نافذة القص، مو القماشة الكاملة).
  *
- *   ⚠️ [0.44.7] **تصحيح اتجاه**: القياس الأول ([0.44.5]) تم على نسخة من
- *   الملف أرسلها صاحب المشروع بالمحادثة (دائرة الصورة يسار/بلاطة الاسم
- *   يمين) — لكن الملف الفعلي المنشور فعلياً على GitHub (تأكَّد بفتح
- *   `frame-founder.png` مباشرة بالمتصفح مع كسر-كاش `?v=`) نسخة **معكوسة
- *   أفقياً** من نفسها (دائرة الصورة **يمين** وبلاطة الاسم **يسار**) —
- *   ثوابت AVATAR_LEFT_PCT/NAME_LEFT_PCT أدناه مقاسة الآن من الاتجاه
- *   الصحيح (عكس رياضي دقيق للقياس الأصلي المؤكَّد، لا إعادة تخمين).
- *   القياسات أدناه مقاسة بالبكسل مباشرة (تحليل قناة الألفا +
- *   Connected-Components عبر Python/PIL/SciPy، تحقّق بصري بعد ذلك عبر
- *   عرض حقيقي بـChromium/Playwright) — راجع ثوابت *_PCT وCARD_ وFRAME_
- *   أدناه.
+ *   كل مدخل بالجدول **مقاس فعلياً بالبكسل من ملف الصورة الحقيقي**
+ *   (تحليل قناة الألفا لإيجاد فتحة الصورة الشفافة + Connected-
+ *   Components، وflood-fill بالتفاوت اللوني لإيجاد بلاطة الاسم — عبر
+ *   Python/PIL/SciPy/scikit-image)، ثم تحقّق بصري بصندوقين (أحمر
+ *   للصورة، أخضر للاسم) فوق الملف نفسه قبل اعتمادهما — **لا تخمين ولا
+ *   نسخ قياسات ملف على آخر**، بما إنها ملفات مختلفة فعلياً (ألوان/نسب/
+ *   سماكة زخرفة مختلفة لكل واحد).
  *
- *   ⚠️ ملاحظة صادقة: الملف الفعلي فيه هامش شفاف كبير أعلى/أسفل التصميم
- *   نفسه داخل القماشة المربّعة 1254×1254 (المحتوى الفعلي يشغل فقط
- *   الشريط الرأسي من y=254 إلى y=867 تقريباً، أي CONTENT_TOP_PX/
- *   CONTENT_HEIGHT_PX أدناه) — بدل عرض القماشة كاملة (يعطي بطاقة مربّعة
- *   ضخمة فيها فراغ شفاف كبير أعلى/أسفل)، الكود "يقصّ" هذا الهامش بصرياً
- *   عبر CSS فقط (حاوية بارتفاع ثابت + overflow:hidden + صورة خلفية
- *   أكبر من الحاوية بإزاحة سالبة للأعلى) **دون أي تعديل على ملف الصورة
- *   نفسه** — نفس الملف المرفوع فعلياً على GitHub يُستخدَم كما هو تماماً.
- *   هذا القص يفترض أن الإطارات الأربعة عشر الأخرى (المستقبلية) تتّبع
- *   نفس القماشة 1254×1254 ونفس هامش القص هذا بالضبط (بما إنها قالب
- *   موحّد) — لو ملف إطار مستقبلي مختلف بحجم القماشة أو هامشه، هذي
- *   الثوابت تحتاج مراجعة لذلك الملف تحديداً.
+ *   ⚠️ [0.44.7→0.44.8] founder تحديداً: القياس الأول ([0.44.5]) كان على
+ *   نسخة أرسلها صاحب المشروع بالمحادثة (صورة يسار/اسم يمين). تبيّن
+ *   لاحقاً أن الملف اللي كان منشوراً وقتها على GitHub نسخة معكوسة
+ *   أفقياً منها (صورة يمين/اسم يسار) — أُصلح مؤقتاً بـ[0.44.7] بعكس
+ *   الثوابت رياضياً لتطابق تلك النسخة المعكوسة. بعدها صاحب المشروع صحّح
+ *   الملف نفسه على GitHub (رجّعه لاتجاهه الصحيح: صورة يسار/اسم يمين)
+ *   ليطابق باقي الإطارات الجديدة (كلها صورة-يسار حسب الفحص) — فمدخل
+ *   `frame-founder.png` بالجدول أدناه رجع لقياسات [0.44.5] الأصلية
+ *   (صورة يسار/اسم يمين)، **بشرط أن يكون الملف المرفوع فعلاً على
+ *   GitHub الآن هو النسخة المصحَّحة** (لا المعكوسة).
  *
- *   - القماشة الأصلية (Canvas): مربّعة CANVAS_SIZE×CANVAS_SIZE بالضبط.
- *   - نافذة القص الرأسي المعروضة: من CONTENT_TOP_PX بارتفاع
- *     CONTENT_HEIGHT_PX (بالبكسل الأصلي)، بدون أي قص أفقي (المحتوى
- *     يمتد أصلاً شبه حافة-لحافة أفقياً، فلا هامش أفقي يُهدَر).
- *   - بلاطة الاسم: مستطيل بموقع/حجم NAME_LEFT_PCT/NAME_TOP_PCT/
- *     NAME_WIDTH_PCT/NAME_HEIGHT_PCT (% من الحاوية المعروضة بعد القص)
- *     — الاسم الحقيقي للاعب يُرسَم هنا كنص عادي (يصغّر تلقائياً لو
- *     طويل، راجع fitAllNames)، **فوق** طبقة القماشة مباشرة.
- *   - دائرة الصورة: بموقع/حجم AVATAR_LEFT_PCT/AVATAR_TOP_PCT/
- *     AVATAR_WIDTH_PCT/AVATAR_HEIGHT_PCT (% من نفس الحاوية) — الصورة
- *     الشخصية الحقيقية تُرسَم هنا **خلف** طبقة القماشة (z-index أقل)،
- *     فيظهر إطارها الذهبي/الزخرفي فوقها تلقائياً من نفس ملف القماشة.
- *
- *   ⚠️ متطلبات الملف الفعلي المرفوع (الثلاثة كلها **مؤكَّدة متوفرة**
- *   بالملف الحالي frame-founder.png بعد فحص مباشر — وثّقتها هنا فقط
- *   كمرجع لأي إطار جديد يُضاف لاحقاً من نفس القالب):
+ *   ⚠️ متطلبات أي ملف إطار جديد يُضاف لهذا الجدول (الثلاثة كلها
+ *   ضرورية، تأكَّدت منها بالفحص لكل الملفات الحالية):
  *   1. PNG بخلفية شفافة حقيقياً (قناة ألفا فعلية، لا JPEG بخلفية بيضاء).
  *   2. منطقة دائرة الصورة شفافة فعلياً (فتحة حقيقية، لا أي رسمة معتمة
  *      داخلها) — حتى تظهر الصورة الشخصية الحقيقية لكل لاعب بدون تراكب.
  *   3. بلاطة الاسم فاضية تماماً من أي نص مرسوم مسبقاً — الكود يرسم اسم
  *      كل لاعب الحقيقي فوق هذي المنطقة تلقائياً.
+ *   ⚠️ أي ملف إطار جديد **لازم يُقاس بنفس الطريقة** (فحص فعلي بالبكسل)
+ *   قبل إضافته للجدول — نسخ قياسات ملف موجود على ملف جديد بدون فحص
+ *   يعطي نتيجة مكسورة (صورة/اسم بمكان خاطئ)، بالضبط زي ما صار مع
+ *   founder المعكوس.
  *
  * يعتمد هذا الملف على js/agp-core.js فقط (لـ AGP.log) — لا اعتماد على
  * أي وحدة لعبة أو AGP.gameShell.
@@ -90,31 +78,50 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     var STYLE_ID = 'agp-pcard-styles';
 
-    // ⚠️ [0.44.5] ثوابت القالب — مقاسة فعلياً من الملف الحقيقي المرفوع
-    // (frame-founder.png، PNG شفاف 1254×1254px)، راجع تعليق القالب أعلى
-    // الملف لتفاصيل كيفية القياس والتحقّق. غيّر هذي الأرقام فقط لو تغيّر
-    // الملف الفعلي المرفوع لاحقاً (مكان واحد يُطبَّق على كل الإطارات).
-    var CANVAS_SIZE = 1254;          // القماشة الأصلية مربّعة
-    var CONTENT_TOP_PX = 254;        // بداية الشريط المحتوي فعلياً (بالبكسل الأصلي)
-    var CONTENT_HEIGHT_PX = 613;     // ارتفاع الشريط المحتوي فعلياً (بالبكسل الأصلي)
+    var CARD_HEIGHT_PX = 72; // ارتفاع البطاقة المعروضة باللوبي (ثابت للكل — العرض يختلف حسب نسبة كل إطار)
 
-    var CARD_HEIGHT_PX = 72;         // ارتفاع البطاقة المعروضة باللوبي (بعد القص)
-    var _scale = CARD_HEIGHT_PX / CONTENT_HEIGHT_PX;
-    var CARD_WIDTH_PX = Math.round(CANVAS_SIZE * _scale * 100) / 100;   // 147.29
-    var FRAME_IMG_SIZE_PX = CARD_WIDTH_PX;                              // القماشة كاملة معروضة (مربّعة) قبل القص بـoverflow:hidden
-    var FRAME_TOP_OFFSET_PX = Math.round(-(CONTENT_TOP_PX * _scale) * 100) / 100; // -29.83
+    // ⚠️ [0.44.8] جدول قياسات كل إطار — راجع تعليق القالب أعلى الملف.
+    // المفتاح = اسم ملف الصورة بالضبط (player.frame.imageFilename).
+    // avatar*/name* كلها % من "نافذة القص" (canvasW × contentHeight)، لا
+    // من القماشة الكاملة رأسياً (المحتوى الفعلي شريط رأسي داخل القماشة
+    // فقط، راجع contentTop/contentHeight لكل مدخل).
+    var FRAME_TEMPLATES = {
+        'frame-founder.png': {
+            canvasW: 1254, canvasH: 1254, contentTop: 254, contentHeight: 613,
+            avatarLeftPct: 9.73, avatarTopPct: 33.12, avatarWidthPct: 24.24, avatarHeightPct: 51.71,
+            nameLeftPct: 42.11, nameTopPct: 51.55, nameWidthPct: 47.13, nameHeightPct: 21.86
+        },
+        'frame-floral.png': {
+            canvasW: 1536, canvasH: 1024, contentTop: 160, contentHeight: 615,
+            avatarLeftPct: 9.38, avatarTopPct: 21.3, avatarWidthPct: 22.92, avatarHeightPct: 57.72,
+            nameLeftPct: 37.96, nameTopPct: 36.91, nameWidthPct: 55.27, nameHeightPct: 34.63
+        },
+        'frame-ice.png': {
+            canvasW: 1536, canvasH: 1024, contentTop: 175, contentHeight: 514,
+            avatarLeftPct: 8.07, avatarTopPct: 18.48, avatarWidthPct: 22.59, avatarHeightPct: 64.98,
+            nameLeftPct: 34.7, nameTopPct: 37.35, nameWidthPct: 59.24, nameHeightPct: 34.44
+        },
+        'frame-blacksteel.png': {
+            canvasW: 1254, canvasH: 1254, contentTop: 399, contentHeight: 409,
+            avatarLeftPct: 7.26, avatarTopPct: 11.74, avatarWidthPct: 24.88, avatarHeightPct: 77.02,
+            nameLeftPct: 30.62, nameTopPct: 31.05, nameWidthPct: 64.75, nameHeightPct: 54.77
+        },
+        'frame-phoenix.png': {
+            canvasW: 1254, canvasH: 1254, contentTop: 234, contentHeight: 687,
+            avatarLeftPct: 12.44, avatarTopPct: 37.99, avatarWidthPct: 26.16, avatarHeightPct: 48.18,
+            nameLeftPct: 47.85, nameTopPct: 54.73, nameWidthPct: 42.26, nameHeightPct: 19.65
+        },
+        'frame-purple.png': {
+            canvasW: 1536, canvasH: 1024, contentTop: 212, contentHeight: 535,
+            avatarLeftPct: 8.07, avatarTopPct: 15.89, avatarWidthPct: 23.63, avatarHeightPct: 69.35,
+            nameLeftPct: 39.45, nameTopPct: 37.94, nameWidthPct: 55.01, nameHeightPct: 32.71
+        }
+    };
+    var DEFAULT_TEMPLATE_KEY = 'frame-founder.png'; // احتياط دفاعي فقط — إطار غير موجود بالجدول يظهر بقياسات founder بدل ما ينكسر كلياً
 
-    // النسب أفقياً محسوبة من عرض القماشة الكاملة (لا قص أفقي)، ورأسياً
-    // من ارتفاع الشريط المحتوي فقط (بعد القص) — راجع الشرح أعلى الملف.
-    var NAME_LEFT_PCT = 10.77;
-    var NAME_TOP_PCT = 51.55;
-    var NAME_WIDTH_PCT = 47.13;
-    var NAME_HEIGHT_PCT = 21.86;
-
-    var AVATAR_LEFT_PCT = 66.03;
-    var AVATAR_TOP_PCT = 33.12;
-    var AVATAR_WIDTH_PCT = 24.24;
-    var AVATAR_HEIGHT_PCT = 51.71;
+    function getTemplate(imageFilename) {
+        return FRAME_TEMPLATES[imageFilename] || FRAME_TEMPLATES[DEFAULT_TEMPLATE_KEY];
+    }
 
     function el(id) { return document.getElementById(id); }
 
@@ -151,32 +158,50 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-pcard-name-basic{font-size:0.85em;font-weight:700;color:#f3eefc;',
             'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
 
-            /* ---- [0.44.5] البطاقة المؤطَّرة (إطار مفعَّل — اللوبي فقط) ----
-             * حاوية بحجم ثابت (CARD_WIDTH_PX×CARD_HEIGHT_PX) مع
-             * overflow:hidden، وطبقة القماشة بالحجم الأصلي الكامل
-             * (مربّعة) بإزاحة سالبة للأعلى (FRAME_TOP_OFFSET_PX) — هذا
-             * "يقصّ" الهامش الشفاف أعلى/أسفل الملف الأصلي بصرياً بدون أي
-             * تعديل على الملف نفسه. الصورة الشخصية تُرسَم خلفها، والاسم
-             * فوقها، كلاهما بمواقع مقاسة (% من الحاوية بعد القص). */
-            '.agp-pcard-tpl{display:inline-block;position:relative;width:' + CARD_WIDTH_PX + 'px;height:' + CARD_HEIGHT_PX + 'px;',
+            /* ---- [0.44.8] البطاقة المؤطَّرة (إطار مفعَّل — اللوبي فقط) ----
+             * هذا الكلاس يحدد فقط الخصائص الثابتة المشتركة بين كل
+             * الإطارات (الموضع/الطبقات/شكل النص). أما القياسات المتغيرة
+             * فعلياً بين إطار وآخر (العرض/الارتفاع الحقيقيين، إزاحة
+             * القص، موقع/حجم الصورة والاسم) فتُحقَن inline لكل بطاقة
+             * حسب FRAME_TEMPLATES[imageFilename] — راجع
+             * buildFramedInlineStyles أدناه. */
+            '.agp-pcard-tpl{display:inline-block;position:relative;height:' + CARD_HEIGHT_PX + 'px;',
             'overflow:hidden;flex-shrink:0;vertical-align:middle;}',
-            '.agp-pcard-tpl-avatar{position:absolute;left:' + AVATAR_LEFT_PCT + '%;top:' + AVATAR_TOP_PCT + '%;',
-            'width:' + AVATAR_WIDTH_PCT + '%;height:' + AVATAR_HEIGHT_PCT + '%;border-radius:50%;',
+            '.agp-pcard-tpl-avatar{position:absolute;border-radius:50%;',
             'object-fit:cover;background:#5a2585;z-index:1;}',
             '.agp-pcard-tpl-avatar--fallback{display:flex;align-items:center;justify-content:center;',
             'color:#f3eefc;font-weight:800;font-size:0.75em;}',
-            '.agp-pcard-tpl-frame-img{position:absolute;left:0;top:' + FRAME_TOP_OFFSET_PX + 'px;',
-            'width:' + FRAME_IMG_SIZE_PX + 'px;height:' + FRAME_IMG_SIZE_PX + 'px;',
+            '.agp-pcard-tpl-frame-img{position:absolute;left:0;',
             'background-repeat:no-repeat;background-position:0 0;',
-            'background-size:' + FRAME_IMG_SIZE_PX + 'px ' + FRAME_IMG_SIZE_PX + 'px;',
             'z-index:2;pointer-events:none;}',
-            '.agp-pcard-tpl-name{position:absolute;left:' + NAME_LEFT_PCT + '%;top:' + NAME_TOP_PCT + '%;',
-            'width:' + NAME_WIDTH_PCT + '%;height:' + NAME_HEIGHT_PCT + '%;z-index:3;',
+            '.agp-pcard-tpl-name{position:absolute;z-index:3;',
             'display:flex;align-items:center;justify-content:center;overflow:hidden;',
             'font-weight:800;color:#fff;text-align:center;line-height:1.1;white-space:nowrap;',
             'text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.6);box-sizing:border-box;}'
         ].join('');
         document.head.appendChild(style);
+    }
+
+    /**
+     * يحسب كل القياسات الفعلية (px/%) لإطار معيّن حسب FRAME_TEMPLATES —
+     * نفس منطق القص بصرياً (حاوية بارتفاع CARD_HEIGHT_PX + overflow:
+     * hidden + صورة خلفية أكبر منها بإزاحة سالبة للأعلى) لكل الإطارات،
+     * لكن بأبعاد/إزاحة خاصة بكل قالب بدل رقم عام واحد.
+     * @param {Object} tpl - مدخل من FRAME_TEMPLATES
+     * @returns {Object} قياسات جاهزة للحقن inline
+     */
+    function computeLayout(tpl) {
+        var scale = CARD_HEIGHT_PX / tpl.contentHeight;
+        var cardWidthPx = Math.round(tpl.canvasW * scale * 100) / 100;
+        var frameImgWidthPx = cardWidthPx; // القص أفقي غير مطلوب (المحتوى يمتد شبه حافة-لحافة بكل الملفات المفحوصة)
+        var frameImgHeightPx = Math.round(tpl.canvasH * scale * 100) / 100;
+        var frameTopOffsetPx = Math.round(-(tpl.contentTop * scale) * 100) / 100;
+        return {
+            cardWidthPx: cardWidthPx,
+            frameImgWidthPx: frameImgWidthPx,
+            frameImgHeightPx: frameImgHeightPx,
+            frameTopOffsetPx: frameTopOffsetPx
+        };
     }
 
     /**
@@ -197,24 +222,38 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * ⚠️ [0.44.5] بطاقة مؤطَّرة — قماشة واحدة مقصوصة (صورة خلف + اسم
-     * فوق، كلاهما بمواقع مقاسة من الملف الفعلي). راجع تعليق القالب أعلى
-     * الملف. تُستخدَم فقط لو showFrame صحيح وplayer.frame موجود.
+     * ⚠️ [0.44.8] بطاقة مؤطَّرة — قماشة واحدة مقصوصة (صورة خلف + اسم
+     * فوق)، بقياسات خاصة بملف هذا الإطار تحديداً (FRAME_TEMPLATES).
+     * تُستخدَم فقط لو showFrame صحيح وplayer.frame موجود.
      */
     function renderFramedHtml(player, opts) {
         var name = (player && player.name) || (player && player.id) || '—';
         var avatarUrl = player && player.avatarUrl;
         var basePath = (opts && opts.basePath) || '';
-        var frameSrc = basePath + player.frame.imageFilename;
+        var imageFilename = player.frame.imageFilename;
+        var frameSrc = basePath + imageFilename;
+
+        var tpl = getTemplate(imageFilename);
+        var layout = computeLayout(tpl);
+
+        var wrapStyle = 'width:' + layout.cardWidthPx + 'px';
+        var avatarStyle = 'left:' + tpl.avatarLeftPct + '%;top:' + tpl.avatarTopPct + '%;' +
+            'width:' + tpl.avatarWidthPct + '%;height:' + tpl.avatarHeightPct + '%;';
+        var frameImgStyle = 'top:' + layout.frameTopOffsetPx + 'px;' +
+            'width:' + layout.frameImgWidthPx + 'px;height:' + layout.frameImgHeightPx + 'px;' +
+            'background-size:' + layout.frameImgWidthPx + 'px ' + layout.frameImgHeightPx + 'px;' +
+            'background-image:url(' + escapeHtml(frameSrc) + ')';
+        var nameStyle = 'left:' + tpl.nameLeftPct + '%;top:' + tpl.nameTopPct + '%;' +
+            'width:' + tpl.nameWidthPct + '%;height:' + tpl.nameHeightPct + '%;';
 
         var avatarHtml = avatarUrl
-            ? '<img class="agp-pcard-tpl-avatar" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;agp-pcard-tpl-avatar agp-pcard-tpl-avatar--fallback&quot; style=&quot;left:' + AVATAR_LEFT_PCT + '%;top:' + AVATAR_TOP_PCT + '%;width:' + AVATAR_WIDTH_PCT + '%;height:' + AVATAR_HEIGHT_PCT + '%;&quot;>' + escapeHtml(initials(name)) + '</div>\';">'
-            : '<div class="agp-pcard-tpl-avatar agp-pcard-tpl-avatar--fallback" style="left:' + AVATAR_LEFT_PCT + '%;top:' + AVATAR_TOP_PCT + '%;width:' + AVATAR_WIDTH_PCT + '%;height:' + AVATAR_HEIGHT_PCT + '%;">' + escapeHtml(initials(name)) + '</div>';
+            ? '<img class="agp-pcard-tpl-avatar" style="' + avatarStyle + '" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;agp-pcard-tpl-avatar agp-pcard-tpl-avatar--fallback&quot; style=&quot;' + avatarStyle + '&quot;>' + escapeHtml(initials(name)) + '</div>\';">'
+            : '<div class="agp-pcard-tpl-avatar agp-pcard-tpl-avatar--fallback" style="' + avatarStyle + '">' + escapeHtml(initials(name)) + '</div>';
 
-        return '<span class="agp-pcard-tpl' + (opts && opts.outClass ? ' ' + opts.outClass : '') + '">' +
+        return '<span class="agp-pcard-tpl' + (opts && opts.outClass ? ' ' + opts.outClass : '') + '" style="' + wrapStyle + '">' +
             avatarHtml +
-            '<span class="agp-pcard-tpl-frame-img" style="background-image:url(' + escapeHtml(frameSrc) + ')"></span>' +
-            '<span class="agp-pcard-tpl-name" data-agp-pcard-name="1">' + escapeHtml(name) + '</span>' +
+            '<span class="agp-pcard-tpl-frame-img" style="' + frameImgStyle + '"></span>' +
+            '<span class="agp-pcard-tpl-name" data-agp-pcard-name="1" style="' + nameStyle + '">' + escapeHtml(name) + '</span>' +
             '</span>';
     }
 
