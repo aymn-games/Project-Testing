@@ -241,6 +241,12 @@ ensureColumn('users', 'welcome_completed', 'INTEGER NOT NULL DEFAULT 0');
 // تيك توك بالمشروع، قد يفشل أحياناً فيرجع null بدون كسر التحقق نفسه.
 ensureColumn('users', 'tiktok_avatar_url', 'TEXT');
 ensureColumn('users', 'tiktok_display_name', 'TEXT');
+// عدّادات جولات مكتملة/فوز — لتفعيل بطاقة "إحصائيات اللاعب" بالبروفايل
+// (كانت "قريباً" ثابتة، ما فيه عدّاد حقيقي مخزَّن قبل هذا). تُحدَّث من
+// backend/points/points-service.js عند كل استدعاء awardForRoundCompletion
+// فعلي (بعد مطابقة الحساب الموثَّق) — راجع [0.44.2] بـdocs/CHANGELOG.md.
+ensureColumn('user_points', 'games_played', 'INTEGER NOT NULL DEFAULT 0');
+ensureColumn('user_points', 'games_won', 'INTEGER NOT NULL DEFAULT 0');
 
 /**
  * تهيئة أولية لكتالوج الإطارات الثابت (4 خاصة + 7 مستويات) — تُنفَّذ مرة
