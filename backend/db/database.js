@@ -233,6 +233,14 @@ ensureColumn('users', 'permissions', "TEXT NOT NULL DEFAULT '{}'");
 // شافها كاملة (تظهر له بـindex.html)، 1 = خلص شافها، ما تتكرر تلقائياً
 // إلا لو الأدمن صفّرها له صراحة من admin.html.
 ensureColumn('users', 'welcome_completed', 'INTEGER NOT NULL DEFAULT 0');
+// صورة بروفايل تيك توك واسم العرض — تُلتقَط مرة واحدة فقط لحظة نجاح
+// التحقق الفعلي (verifyTikTokOwnership بـbackend/auth/auth-service.js)
+// من نفس صفحة البروفايل العامة المجلوبة أصلاً للتحقق من الكود، بدون أي
+// طلب شبكي إضافي. تُعرَض بصفحة البروفايل (profile.html) بمجرد الربط.
+// ⚠️ استخراج تقريبي (meta tags) من HTML عام — نفس تحفّظ باقي استخراجات
+// تيك توك بالمشروع، قد يفشل أحياناً فيرجع null بدون كسر التحقق نفسه.
+ensureColumn('users', 'tiktok_avatar_url', 'TEXT');
+ensureColumn('users', 'tiktok_display_name', 'TEXT');
 
 /**
  * تهيئة أولية لكتالوج الإطارات الثابت (4 خاصة + 7 مستويات) — تُنفَّذ مرة
