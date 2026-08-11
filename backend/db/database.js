@@ -31,6 +31,9 @@
  *   user_entrances — الدخولية النشطة (أنيميشن + نص) لكل مستخدم
  *   user_points    — نقاط اللاعب الإجمالية + سقف يومي — راجع
  *                    backend/points/points-service.js
+ *   streamer_levels — كتالوج مستويات "SP" (نقاط الستريمر) القابلة
+ *                    للتعديل من الأدمن — راجع backend/points/streamer-level-service.js
+ *                    [0.45.0]
  *   supporters     — سجل داعمي المنصة (اسم/رسالة/مبلغ) — إدخال يدوي من
  *                    الأدمن حالياً (لا ربط تلقائي مع منصة كريترز/دكان
  *                    تب بعد، بانتظار رد الدعم الفني منهم) — راجع
@@ -169,6 +172,20 @@ db.exec(`
         updated_at INTEGER NOT NULL
     );
 
+    -- [0.45.0] كتالوج مستويات "SP" (نقاط الستريمر) — بنفس فلسفة
+    -- frame_catalog kind='level' (عتبات نقاط قابلة للتعديل من الأدمن)،
+    -- لكن بجدول منفصل بدل إضافة قيمة جديدة لقيد CHECK(kind IN (...))
+    -- الحالي بـ frame_catalog (تعديل قيد CHECK بـSQLite يتطلب إعادة بناء
+    -- الجدول بالكامل — قرار غير آمن بلا داعٍ، بينما جدول جديد كامل
+    -- إضافة بحتة بلا أي خطر على البيانات الحالية). راجع
+    -- backend/points/streamer-level-service.js.
+    CREATE TABLE IF NOT EXISTS streamer_levels (
+        slug TEXT PRIMARY KEY,
+        display_name_ar TEXT NOT NULL DEFAULT '',
+        min_sp INTEGER NOT NULL,
+        sort_order INTEGER NOT NULL
+    );
+
     -- نقاط اللاعب الإجمالية (تحدد المستوى) + تتبّع سقف يومي (100 نقطة/يوم
     -- كحد أقصى — today_date/today_earned يُصفَّران تلقائياً عند تغيّر اليوم).
     CREATE TABLE IF NOT EXISTS user_points (
@@ -247,6 +264,12 @@ ensureColumn('users', 'tiktok_display_name', 'TEXT');
 // فعلي (بعد مطابقة الحساب الموثَّق) — راجع [0.44.2] بـdocs/CHANGELOG.md.
 ensureColumn('user_points', 'games_played', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('user_points', 'games_won', 'INTEGER NOT NULL DEFAULT 0');
+// [0.45.0] تفعيل/إيقاف ذاتي للدخولية من البروفايل — 1 (افتراضي) يعني
+// "مفعّلة" لكل الصفوف الحالية، فلا يتغيّر أي سلوك ظاهر لأي مستخدم عنده
+// دخولية اليوم. 0 = الستريمر أطفأها بنفسه؛ يبقى القالب/النص محفوظين
+// بالصف نفسه (بدون حذف) لإعادة التفعيل بضغطة واحدة — راجع
+// backend/http/auth-router.js (POST /api/entrance/toggle) وprofile.html.
+ensureColumn('user_entrances', 'enabled', 'INTEGER NOT NULL DEFAULT 1');
 
 /**
  * تهيئة أولية لكتالوج الإطارات الثابت (4 خاصة + 7 مستويات) — تُنفَّذ مرة
@@ -287,6 +310,29 @@ var DEFAULT_FRAME_CATALOG = [
             default_entrance_text: row.default_entrance_text || null
         });
     });
+}());
+
+/**
+ * [0.45.0] تهيئة أولية لكتالوج مستويات SP — نفس أسلوب ensureFrameCatalogSeed
+ * أعلاه بالضبط (INSERT OR IGNORE بمفتاح slug)، فلا خطر إعادة الكتابة فوق
+ * تعديلات الأدمن اللاحقة على min_sp/display_name_ar. القيم الابتدائية
+ * تصميم جديد بالكامل (راجع docs/CHANGELOG.md [0.45.0] للتفاصيل والمبرر) —
+ * قابلة للتعديل الكامل من admin.html لاحقاً بدون أي حاجة لتعديل الكود.
+ */
+var DEFAULT_STREAMER_LEVELS = [
+    { slug: 'sp-level-1', display_name_ar: 'مستوى 1 — مبتدئ', min_sp: 0, sort_order: 1 },
+    { slug: 'sp-level-2', display_name_ar: 'مستوى 2 — نشِط', min_sp: 500, sort_order: 2 },
+    { slug: 'sp-level-3', display_name_ar: 'مستوى 3 — صاعد', min_sp: 1500, sort_order: 3 },
+    { slug: 'sp-level-4', display_name_ar: 'مستوى 4 — محترف', min_sp: 3500, sort_order: 4 },
+    { slug: 'sp-level-5', display_name_ar: 'مستوى 5 — مميز', min_sp: 7000, sort_order: 5 },
+    { slug: 'sp-level-6', display_name_ar: 'مستوى 6 — نخبة', min_sp: 15000, sort_order: 6 },
+    { slug: 'sp-level-7', display_name_ar: 'مستوى 7 — أسطورة', min_sp: 30000, sort_order: 7 }
+];
+(function ensureStreamerLevelsSeed() {
+    var insert = db.prepare(
+        'INSERT OR IGNORE INTO streamer_levels (slug, display_name_ar, min_sp, sort_order) VALUES (@slug, @display_name_ar, @min_sp, @sort_order)'
+    );
+    DEFAULT_STREAMER_LEVELS.forEach(function (row) { insert.run(row); });
 }());
 
 logger.log('Database: ready at ' + DB_PATH);
