@@ -123,6 +123,8 @@
     }
 
     .pp-avatar {
+        position: relative;
+        overflow: hidden;
         width: 84px;
         height: 84px;
         min-width: 84px;
@@ -136,6 +138,7 @@
         color: #fff;
         box-shadow: 0 0 20px rgba(255, 110, 199, 0.25);
     }
+    .pp-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
     /* تمييز بصري خفيف لبروفايل أي حساب "ستريمر موافَق عليه من الأدمن"
        (isApprovedStreamer بـrenderFull أدناه) عن بروفايل اللاعب العادي
@@ -561,18 +564,26 @@
                 <div>
                     <div class="pp-card pp-block">
                         <div class="pp-section-title">إحصائيات اللاعب</div>
-                        <div class="pp-soon-card">
-                            <span class="pp-soon-badge">قريباً</span><br>
-                            عدد الألعاب، الفوز، المشاركات، ونسبة الفوز — بانتظار نظام تتبّع الألعاب.
+                        <!-- ⚠️ [مُفعَّلة — 0.44.2] عدّادات حقيقية من backend/points/points-service.js
+                             (تُحدَّث عند كل جولة مكتملة فعلياً عبر AGPAuth.reportRoundCompletion) —
+                             ليست تقديرية. تُملأ بـrenderLevel أدناه. -->
+                        <div class="pp-grid" id="pp-player-stats-grid">
+                            <div class="pp-stat-card"><div class="pp-stat-value" id="pp-p-games">0</div><div class="pp-stat-label">جولات مكتملة</div></div>
+                            <div class="pp-stat-card"><div class="pp-stat-value" id="pp-p-wins">0</div><div class="pp-stat-label">فوز</div></div>
+                            <div class="pp-stat-card"><div class="pp-stat-value" id="pp-p-winrate">0%</div><div class="pp-stat-label">نسبة الفوز</div></div>
                         </div>
                     </div>
 
                     <div class="pp-card pp-block">
                         <div class="pp-section-title">كيف تكسب نقاط الخبرة (XP)؟</div>
-                        <div class="pp-soon-card">
-                            <span class="pp-soon-badge">قريباً</span><br>
-                            سيتم عرض طرق كسب الخبرة هنا فور تفعيل نظام المستويات.
-                        </div>
+                        <!-- ⚠️ [مُفعَّلة — 0.44.2] نص ثابت يطابق القواعد الحقيقية المبرمجة
+                             فعلياً بـbackend/points/points-service.js (POINTS_PER_COMPLETED_ROUND/
+                             WIN_BONUS_POINTS/POINTS_PER_HOUR_PLAYED/DAILY_CAP) — لو غيّرت هالأرقام
+                             بالباك إند لازم تحدّث هذا النص يدوياً بنفس القيم. -->
+                        <div class="pp-info-row"><span class="pp-info-label">إكمال جولة كامل</span><span class="pp-info-value">+4 نقاط</span></div>
+                        <div class="pp-info-row"><span class="pp-info-label">الفوز بالجولة</span><span class="pp-info-value">+20 نقطة إضافية</span></div>
+                        <div class="pp-info-row"><span class="pp-info-label">كل ساعة لعب فعلية</span><span class="pp-info-value">+4 نقاط</span></div>
+                        <div class="pp-info-row"><span class="pp-info-label">الحد الأقصى باليوم</span><span class="pp-info-value">100 نقطة</span></div>
                     </div>
                 </div>
 
@@ -967,8 +978,35 @@
             };
         }
 
-        document.getElementById('pp-avatar').textContent = initials(p.username);
-        document.getElementById('pp-username').textContent = p.username;
+        // ⚠️ [مُفعَّلة — 0.44.2] بمجرد ما الحساب يربط ويوثّق تيك توك، صورة
+        // واسم البروفايل الرئيسيين يصيرون نفس صورة/اسم حساب تيك توك
+        // المرتبط — بدل الأحرف الأولى من اسم حساب المنصة. لو الاستخراج
+        // فشل (raja null — راجع الملاحظة الصادقة بـauth-service.js) أو
+        // ما ربط تيك توك أصلاً، يبقى الشكل الأساسي (أحرف أولى + اسم
+        // حساب المنصة) كما هو دون أي تغيير.
+        var avatarEl = document.getElementById('pp-avatar');
+        var usernameEl = document.getElementById('pp-username');
+        var hasTikTokIdentity = Boolean(p.tiktok_verified && p.tiktok_username);
+
+        avatarEl.textContent = initials(p.username);
+        usernameEl.textContent = p.username;
+
+        if (hasTikTokIdentity && p.tiktok_avatar_url) {
+            var mainAvatarImg = document.createElement('img');
+            mainAvatarImg.alt = '';
+            mainAvatarImg.referrerPolicy = 'no-referrer';
+            mainAvatarImg.src = p.tiktok_avatar_url;
+            mainAvatarImg.onerror = function () {
+                // فشل تحميل الصورة فعلياً (رابط منتهي/محجوب) — رجوع فوري
+                // للأحرف الأولى الافتراضية، بدون كسر الصفحة.
+                avatarEl.textContent = initials(p.username);
+            };
+            avatarEl.textContent = '';
+            avatarEl.appendChild(mainAvatarImg);
+        }
+        if (hasTikTokIdentity && p.tiktok_display_name) {
+            usernameEl.textContent = p.tiktok_display_name;
+        }
         document.getElementById('pp-id').textContent = p.custom_id || '—';
         document.getElementById('pp-joined').textContent = 'انضم في ' + formatDate(p.joined_at);
 
@@ -1052,6 +1090,14 @@
             fillEl.style.width = points.currentLevel ? '100%' : '0%';
             nextEl.textContent = points.currentLevel ? (currentLabel + ' — أعلى مستوى متاح حالياً') : 'لا توجد مستويات مفعَّلة بعد.';
         }
+
+        // ⚠️ [مُفعَّلة — 0.44.2] إحصائيات اللاعب الحقيقية (كانت "قريباً" ثابتة).
+        var gamesEl = document.getElementById('pp-p-games');
+        var winsEl = document.getElementById('pp-p-wins');
+        var winrateEl = document.getElementById('pp-p-winrate');
+        if (gamesEl) gamesEl.textContent = points.gamesPlayed || 0;
+        if (winsEl) winsEl.textContent = points.gamesWon || 0;
+        if (winrateEl) winrateEl.textContent = (points.winRatePct || 0) + '%';
     }
 
     /**
