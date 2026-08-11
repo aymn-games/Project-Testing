@@ -38,8 +38,9 @@
  *     اتصال إطلاقاً (يُميَّز صراحة عن الانقطاع غير المتوقَّع).
  *
  * تطبيع الأحداث (محقَّق من الحزمة المثبَّتة فعلياً v2.4.3):
- *   chat   -> data.user.uniqueId, data.user.nickname, data.content (⚠️ مؤكَّد باختبار حقيقي، ليس data.comment)
- *   gift   -> data.user.{uniqueId,nickname}, data.gift.{name,diamondCount,type}, data.repeatCount, data.repeatEnd
+ *   chat   -> data.user.displayId (⚠️ [0.44.3] صُحِّح — راجع تعليق extractUser)،
+ *             data.user.nickname, data.content (⚠️ مؤكَّد باختبار حقيقي، ليس data.comment)
+ *   gift   -> data.user.{displayId,nickname}, data.gift.{name,diamondCount,type}, data.repeatCount, data.repeatEnd
  *             (هدايا قابلة للتسلسل type===1: حدث واحد نهائي فقط عند
  *             repeatEnd، تطابقاً مع سلوك موصِّل المحاكاة).
  *   follow -> WebcastEvent.FOLLOW منفصل تماماً عن SOCIAL/SHARE.
@@ -64,14 +65,53 @@ try {
 }
 
 /**
- * استخراج {id, name} موحَّد من كائن مستخدم واردٍ من المكتبة، بأمان حتى
- * لو كانت بعض الحقول مفقودة.
+ * استخراج {id, name, uniqueId} موحَّد من كائن مستخدم واردٍ من المكتبة،
+ * بأمان حتى لو كانت بعض الحقول مفقودة.
+ *
+ * ⚠️ [0.44.3] إصلاح خطأ حقيقي جذري — مؤكَّد هذي المرة بفحص مباشر لكود
+ * المكتبة المثبَّتة فعلياً (node_modules/tiktok-live-proto، التبعية
+ * الفعلية لـ tiktok-live-connector@2.4.3)، وليس تخميناً: رسالة الـ User
+ * الخام القادمة من بروتوكول تيك توك الحالي (Webcast proto v3) **لا
+ * تحتوي حقل uniqueId إطلاقاً** — تيك توك أزالته من البروتوكول الخام.
+ * الحقل البديل الفعلي بنفس المعنى (اليوزرنيم القابل للعرض) هو
+ * `displayId`. كان الكود القديم يعتمد على `user.uniqueId` فقط، فكان
+ * يتساقط دائماً تقريباً على `user.id` (رقم داخلي خام لتيك توك، مثل
+ * "7029124818248565761") بدل اليوزرنيم الحقيقي — وهذا يفسّر بدقة العطل
+ * المُبلَّغ (الإطار ما يظهر أبداً باللوبي رغم توثيق الحساب فعلاً):
+ * `getEquippedFrameForVerifiedTikTok` يقارن هذا الرقم الخام مع
+ * `users.tiktok_username` (يوزرنيم حقيقي) فلا يتطابق أبداً — ونفس
+ * المشكلة تنطبق على مطابقة النقاط عبر auth-router.js. راجع أيضاً
+ * السطر اللي يستدعي extractEquippedFrame أدناه (يستخدم uniqueId
+ * المُرجَع من هذي الدالة، فيستفيد من الإصلاح تلقائياً بدون تعديل إضافي).
+ *
+ * نُبقي `user.uniqueId` كخيار احتياطي ثانٍ (لو رجعته نسخة مستقبلية من
+ * المكتبة) قبل السقوط لـ `user.id` كملاذ أخير فقط، بدل حذفه كلياً.
+ *
+ * ملاحظة صادقة: هذا التفسير مبني على فحص فعلي لكود المكتبة (أدلة
+ * حقيقية، مو تخميناً)، لكن لم يُختبَر بعد ضد بث حقيقي من هذه البيئة (لا
+ * وصول شبكي لتيك توك هنا كالعادة) — سجل التشخيص أدناه (أول 5 أحداث)
+ * سيؤكد القيمة الفعلية لـ displayId على بثّك الحقيقي بعد الرفع.
  */
+var _extractUserDebugLogsRemaining = 5;
 function extractUser(data) {
     var user = (data && data.user) || {};
-    var uniqueId = user.uniqueId || user.id || 'unknown';
-    var nickname = user.nickname || uniqueId;
-    return { id: 'tiktok:' + uniqueId, name: nickname, uniqueId: uniqueId };
+    var identifier = user.displayId || user.uniqueId || user.id || 'unknown';
+    var nickname = user.nickname || identifier;
+
+    if (_extractUserDebugLogsRemaining > 0) {
+        _extractUserDebugLogsRemaining--;
+        logger.log(
+            'TikTok Connector: [0.44.3 تشخيص] الحقول الخام — ' +
+            'displayId=' + JSON.stringify(user.displayId) + ' ' +
+            'uniqueId=' + JSON.stringify(user.uniqueId) + ' ' +
+            'id=' + JSON.stringify(user.id) + ' ' +
+            'secUid=' + JSON.stringify(user.secUid) + ' ' +
+            'nickname=' + JSON.stringify(user.nickname) + ' ' +
+            '→ المُستخدَم فعلياً=' + JSON.stringify(identifier)
+        );
+    }
+
+    return { id: 'tiktok:' + identifier, name: nickname, uniqueId: identifier };
 }
 
 /**
