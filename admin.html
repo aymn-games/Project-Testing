@@ -6,358 +6,122 @@
 <title>لوحة الأدمن — AGP</title>
 <link rel="stylesheet" href="dashboard-core/css/style.css">
 <link rel="stylesheet" href="auth/auth.css">
+<!--
+  ==========================================================================
+  [0.45.0] إعادة تنظيم admin.html — تقسيم المستخدمين لتبويبين (لاعبون/
+  ستريمرز) مع بحث لكل تبويب، ونقل كل أقسام "الإعدادات" (الإعلان، الداعمون،
+  الثيم، كتالوج الإطارات، الإطارات الحصرية، منح/سحب مقتنى، الدخولية
+  المستقلة، مستويات SP) لصفحة ثانية منظّمة بتبويبات: admin-settings.html.
+
+  لا تعديل على أي مسار HTTP موجود، ولا على أي دالة بـauth-client.js —
+  فقط إعادة توزيع نفس العناصر/الاستدعاءات الموجودة أصلاً بين صفحتين بدل
+  صفحة واحدة طويلة. راجع docs/CHANGELOG.md [0.45.0].
+  ==========================================================================
+-->
+<style>
+  /* تبويبات بسيطة مستقلة تماماً عن dashboard-core/css/style.css — لا
+     تعديل على ذلك الملف المشترك مع باقي الصفحات، فقط أصناف جديدة محلية
+     لهذه الصفحة بالذات (نفس فلسفة .game-card--v2 بـindex.html: إضافي فقط). */
+  .adm-tabs { display: flex; gap: 8px; margin-bottom: var(--space-4); flex-wrap: wrap; }
+  .adm-tab-btn {
+    background: transparent; border: 1px solid var(--border-light); color: var(--text-dim, #9aa);
+    border-radius: 10px; padding: 8px 18px; font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer;
+  }
+  .adm-tab-btn.is-active { background: var(--accent, #7c3aed); color: #fff; border-color: transparent; }
+  .adm-tab-panel { display: none; }
+  .adm-tab-panel.is-active { display: block; }
+</style>
 </head>
 <body class="auth-checking">
-
 <header class="topbar">
-    <div class="topbar-brand">
-        <span class="topbar-logo topbar-logo--img"><img src="logo.png" alt="ألعاب أيمن"></span>
-        <span class="topbar-title">لوحة الأدمن</span>
-    </div>
-    <div class="auth-topbar-account">
-        <a class="btn btn-sm" href="dashboard-core/index.html">لوحة التحكم</a>
-        <span class="badge" id="account-role">—</span>
-        <span class="stat-value" id="account-username">—</span>
-        <button class="btn btn-sm" id="btn-account-logout">تسجيل خروج</button>
-    </div>
+<div class="topbar-brand">
+<span class="topbar-logo topbar-logo--img"><img src="logo.png" alt="ألعاب أيمن"></span>
+<span class="topbar-title">لوحة الأدمن — المستخدمون</span>
+</div>
+<div class="auth-topbar-account">
+<a class="btn btn-sm" href="admin-settings.html">الإعدادات</a>
+<a class="btn btn-sm" href="dashboard-core/index.html">لوحة التحكم</a>
+<span class="badge" id="account-role">—</span>
+<span class="stat-value" id="account-username">—</span>
+<button class="btn btn-sm" id="btn-account-logout">تسجيل خروج</button>
+</div>
 </header>
-
 <div class="main" style="padding: var(--space-5);">
+<div class="auth-message" id="admin-message"></div>
 
-    <div class="auth-message" id="admin-message"></div>
-
-    <section class="panel panel-wide" style="margin-bottom: var(--space-5);">
-        <div class="panel-head">
-            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-announcement"/></svg>الإعلان للزوار</h2>
-        </div>
-        <p class="empty-note" style="margin-bottom: var(--space-3);">
-            يظهر كنافذة منبثقة لكل زائر يفتح الصفحة الرئيسية، في كل مرة يدخل فيها، لحد ما تزيله يدوياً.
-        </p>
-        <div class="field" style="margin-bottom: var(--space-3);">
-            <label for="announcement-text-input">نص الإعلان</label>
-            <textarea id="announcement-text-input" rows="3"
-                style="width:100%; padding:8px 10px; background:var(--bg); border:1px solid var(--border-light); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:14px; resize:vertical;"
-                placeholder="اكتب النص اللي تبي المستخدمين يشوفونه…"></textarea>
-        </div>
-        <div class="field" style="margin-bottom: var(--space-3); max-width:420px;">
-            <label for="announcement-image-input">اسم ملف الصورة (اختياري)</label>
-            <input type="text" id="announcement-image-input" placeholder="مثال: announcement.png">
-            <div class="empty-note" style="margin-top:4px;">
-                ارفع الصورة بنفس طريقة الشعار — لازم ترفعها بنفسك على GitHub بجذر المستودع (بجانب logo.png)، واكتب هنا نفس اسم الملف بالضبط. اتركه فاضي لو الإعلان نص فقط بدون صورة.
-            </div>
-        </div>
-        <div class="panel-head-actions">
-            <button class="btn btn-sm btn-primary" id="btn-publish-announcement">نشر / تحديث</button>
-            <button class="btn btn-sm btn-danger" id="btn-clear-announcement">إزالة الإعلان الحالي</button>
-        </div>
-        <div class="auth-message" id="announcement-message"></div>
-    </section>
-
-    <!--
-        داعمو المنصة — إدخال يدوي حالياً (لا ربط تلقائي مع منصة كريترز/
-        دكان تب بعد، بانتظار رد الدعم الفني منهم بخصوص Webhook/API —
-        راجع backend/supporters/supporters-service.js وdocs/CHANGELOG.md).
-        أضف كل دعم تشوفه فعلياً بلوحة تحكم كريترز يدوياً هنا؛ يظهر فوراً
-        بالشريط المتحرك بالصفحة الرئيسية وبصفحة top-supporters.html.
-    -->
-    <section class="panel panel-wide" style="margin-bottom: var(--space-5);">
-        <div class="panel-head">
-            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-heart"/></svg>داعمو المنصة</h2>
-        </div>
-        <p class="empty-note" style="margin-bottom: var(--space-3);">
-            إدخال يدوي حالياً — أضف كل دعم تشوفه بلوحة تحكم كريترز (اسم الداعم + رسالته + المبلغ). يظهر فوراً بالشريط المتحرك بالصفحة الرئيسية وبصفحة "توب الداعمين".
-        </p>
-        <div style="display:flex; gap: var(--space-3); flex-wrap:wrap; margin-bottom: var(--space-3);">
-            <div class="field" style="flex:1; min-width:160px;">
-                <label for="supporter-name-input">اسم الداعم</label>
-                <input type="text" id="supporter-name-input" placeholder="مثال: أحمد">
-            </div>
-            <div class="field" style="flex:2; min-width:220px;">
-                <label for="supporter-message-input">رسالة الداعم (اختياري)</label>
-                <input type="text" id="supporter-message-input" placeholder="مثال: بالتوفيق للمنصة!">
-            </div>
-            <div class="field" style="width:140px;">
-                <label for="supporter-amount-input">المبلغ (ريال)</label>
-                <input type="number" id="supporter-amount-input" min="0" step="0.01" placeholder="0">
-            </div>
-        </div>
-        <div class="panel-head-actions">
-            <button class="btn btn-sm btn-primary" id="btn-add-supporter">إضافة دعم</button>
-        </div>
-        <div class="auth-message" id="supporter-message"></div>
-
-        <div class="table-wrap" style="margin-top: var(--space-4);">
-        <table class="table">
-            <thead>
-                <tr><th>الاسم</th><th>الرسالة</th><th>المبلغ</th><th>التاريخ</th><th></th></tr>
-            </thead>
-            <tbody id="supporters-tbody">
-                <tr><td class="table-empty" colspan="5">جارٍ التحميل…</td></tr>
-            </tbody>
-        </table>
-        </div>
-    </section>
-
-    <!--
-        ثيم المناسبات — يبدّل 3 ألوان بالصفحة الرئيسية مؤقتاً (اليوم
-        الوطني، يوم التأسيس...) بدون أي تعديل على ملفات CSS أو كود
-        AGP.* — راجع backend/theme/site-theme-service.js وindex.html
-        (يُطبَّق عبر document.documentElement.style.setProperty وقت
-        التحميل، ويرجع تلقائياً للوضع الطبيعي بمجرد "إلغاء التفعيل").
-    -->
-    <section class="panel panel-wide" style="margin-bottom: var(--space-5);">
-        <div class="panel-head">
-            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-palette"/></svg>ثيم المناسبات</h2>
-        </div>
-        <p class="empty-note" style="margin-bottom: var(--space-3);">
-            يبدّل ألوان الصفحة الرئيسية مؤقتاً لمناسبة معيّنة. اختر ثيم جاهز (تقدر تعدّل ألوانه بعدها) أو عدّل الألوان يدوياً بالكامل. "إلغاء التفعيل" يرجّع الموقع لألوانه الافتراضية فوراً لكل زائر.
-        </p>
-        <div class="auth-message" id="theme-status-message"></div>
-
-        <div class="field" style="max-width:320px; margin-bottom: var(--space-3);">
-            <label for="theme-preset-select">ثيم جاهز</label>
-            <select id="theme-preset-select">
-                <option value="">— اختر ثيماً جاهزاً (اختياري) —</option>
-                <option value="national-day">🇸🇦 اليوم الوطني السعودي</option>
-                <option value="founding-day">🏛️ يوم التأسيس</option>
-                <option value="custom">🎨 مخصّص (عدّل الألوان يدوياً)</option>
-            </select>
-            <div class="empty-note" style="margin-top:4px;">
-                الأكواد بالثيمات الجاهزة تقريبية — عدّلها بالأسفل لو عندك الكود الرسمي بالضبط.
-            </div>
-        </div>
-
-        <div style="display:flex; gap: var(--space-3); flex-wrap:wrap; margin-bottom: var(--space-3);">
-            <div class="field">
-                <label for="theme-accent-input">اللون الأساسي</label>
-                <input type="color" id="theme-accent-input" value="#7c3aed">
-            </div>
-            <div class="field">
-                <label for="theme-accent-pink-input">لون التدرّج الثاني</label>
-                <input type="color" id="theme-accent-pink-input" value="#ff4dff">
-            </div>
-            <div class="field">
-                <label for="theme-accent-2-input">لون إضافي (لمسات خفيفة)</label>
-                <input type="color" id="theme-accent-2-input" value="#00c2ff">
-            </div>
-        </div>
-
-        <div class="panel-head-actions">
-            <button class="btn btn-sm btn-primary" id="btn-activate-theme">تفعيل الثيم</button>
-            <button class="btn btn-sm btn-danger" id="btn-clear-theme">إلغاء التفعيل (رجوع للوضع الطبيعي)</button>
-        </div>
-    </section>
-
-    <section class="panel panel-wide">
-        <div class="panel-head">
-            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-users"/></svg>المستخدمون والستريمرز</h2>
-            <button class="btn btn-sm" id="btn-refresh-users"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg>تحديث</button>
-        </div>
-        <div class="field" style="max-width:420px; margin-bottom: var(--space-3);">
-            <label for="user-search">بحث (اسم المستخدم / الإيميل / الـID العام / تيك توك / المعرّف الداخلي)</label>
-            <input type="text" id="user-search" placeholder="اكتب للبحث…">
-        </div>
-        <div class="table-wrap">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>المعرّف</th>
-                    <th>اسم المستخدم</th>
-                    <th>البريد الإلكتروني</th>
-                    <th>الدور</th>
-                    <th>تيك توك</th>
-                    <th>الـID العام</th>
-                    <th>البثوث</th>
-                    <th>الهدايا (القيمة)</th>
-                    <th>صلاحية الألعاب</th>
-                    <th>النقاط / المستوى</th>
-                    <th>الإطار الحالي</th>
-                </tr>
-            </thead>
-            <tbody id="admin-users-table-body">
-                <tr><td class="table-empty" colspan="11">جارٍ التحميل…</td></tr>
-            </tbody>
-        </table>
-        </div>
-    </section>
-
-    <section class="panel panel-wide" style="margin-top: var(--space-5);">
-        <div class="panel-head">
-            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-frame"/></svg>كتالوج الإطارات</h2>
-            <button class="btn btn-sm" id="btn-refresh-catalog"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg>تحديث</button>
-        </div>
-        <p class="empty-note" style="margin-bottom: var(--space-3);">
-            11 إطار ثابت: 4 "خاصة" (تأتي مع دخولية + توهج تلقائياً عند منحها) و7 "مستوى" (تُفتح تلقائياً
-            عند بلوغ اللاعب عدد النقاط الذي تحدده هنا). ارفع صورة كل إطار بنفسك على GitHub بجذر
-            المستودع بنفس اسم الملف المكتوب بالجدول (بنفس أسلوب logo.png)، ثم عدّل بياناته هنا.
-        </p>
-        <div class="table-wrap">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>النوع</th>
-                    <th>اسم الملف</th>
-                    <th>الاسم المعروض (عربي)</th>
-                    <th>نقاط المستوى المطلوبة</th>
-                    <th>نموذج الدخولية الافتراضي</th>
-                    <th>نص الدخولية الافتراضي</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody id="catalog-table-body">
-                <tr><td class="table-empty" colspan="7">جارٍ التحميل…</td></tr>
-            </tbody>
-        </table>
-        </div>
-        <div class="auth-message" id="catalog-message"></div>
-    </section>
-
-    <section class="panel panel-wide" style="margin-top: var(--space-5);">
-        <div class="panel-head">
-            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-frame"/></svg>إطارات حصرية</h2>
-        </div>
-        <p class="empty-note" style="margin-bottom: var(--space-3);">
-            إطارات إضافية بأسماء ملفات حرة تصممها بنفسك وترفعها لجذر المستودع، ثم تسجّلها هنا لتصبح
-            متاحة للمنح لأي مستخدم من القسم اللي تحت.
-        </p>
-        <div style="display:flex; gap:var(--space-2); flex-wrap:wrap; margin-bottom: var(--space-3);">
-            <input type="text" id="custom-frame-filename" placeholder="اسم الملف — مثال: frame-exclusive-1.png" style="flex:1; min-width:220px;">
-            <input type="text" id="custom-frame-name" placeholder="الاسم المعروض (عربي)" style="flex:1; min-width:180px;">
-            <button class="btn btn-sm btn-primary" id="btn-create-custom-frame">إضافة</button>
-        </div>
-        <div class="table-wrap">
-        <table class="table">
-            <thead><tr><th>#</th><th>اسم الملف</th><th>الاسم المعروض</th></tr></thead>
-            <tbody id="custom-frames-table-body">
-                <tr><td class="table-empty" colspan="3">جارٍ التحميل…</td></tr>
-            </tbody>
-        </table>
-        </div>
-    </section>
-
-    <section class="panel panel-wide" style="margin-top: var(--space-5);">
-        <div class="panel-head">
-            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-frame"/></svg>منح / سحب مقتنى</h2>
-        </div>
-        <p class="empty-note" style="margin-bottom: var(--space-3);">
-            يمنح أي إطار — حتى المقفول بمستوى — لأي مستخدم فوراً بصرف النظر عن نقاطه الفعلية (صلاحية
-            تجاوز الأدمن). منح أحد الإطارات الأربعة "الخاصة" (المؤسس/الستريمر/الداعم/العضو المميز)
-            يمنح تلقائياً دخولية + توهج معه، إلا لو خصّصت نموذج/نص مختلف بالحقول اللي تحت.
-        </p>
-        <div style="display:flex; gap:var(--space-2); flex-wrap:wrap; align-items:flex-end;">
-            <div class="field" style="min-width:140px;">
-                <label for="grant-user-id">معرّف المستخدم (id)</label>
-                <input type="number" id="grant-user-id" placeholder="مثال: 3">
-            </div>
-            <div class="field" style="min-width:140px;">
-                <label for="grant-frame-type">نوع الإطار</label>
-                <select id="grant-frame-type">
-                    <option value="catalog">من الكتالوج الثابت</option>
-                    <option value="custom">إطار حصري</option>
-                </select>
-            </div>
-            <div class="field" style="min-width:200px;">
-                <label for="grant-frame-ref">الإطار</label>
-                <select id="grant-frame-ref"></select>
-            </div>
-            <div class="field" style="min-width:160px;">
-                <label for="grant-entrance-template">نموذج الدخولية (اختياري)</label>
-                <select id="grant-entrance-template">
-                    <option value="">افتراضي الكتالوج</option>
-                    <option value="gold">الذهبي الفخم</option>
-                    <option value="neon">النيون المستقبلي</option>
-                    <option value="fire">الناري القوي</option>
-                    <option value="ice">الجليدي الملكي</option>
-                </select>
-            </div>
-            <div class="field" style="flex:1; min-width:200px;">
-                <label for="grant-entrance-text">نص الدخولية (اختياري)</label>
-                <input type="text" id="grant-entrance-text" placeholder="اتركه فاضي لاستخدام النص الافتراضي">
-            </div>
-        </div>
-        <div style="display:flex; gap:var(--space-2); margin-top: var(--space-3);">
-            <button class="btn btn-sm btn-primary" id="btn-grant-frame">منح الإطار</button>
-            <button class="btn btn-sm btn-danger" id="btn-revoke-frame">سحب الإطار</button>
-        </div>
-        <div class="auth-message" id="grant-message"></div>
-    </section>
-
-    <section class="panel panel-wide" style="margin-top: var(--space-5);">
-        <div class="panel-head">
-            <h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-frame"/></svg>دخولية مستقلة (بدون إطار)</h2>
-        </div>
-        <p class="empty-note" style="margin-bottom: var(--space-3);">
-            إعطاء دخولية لأي مستخدم بشكل منفصل تماماً عن الإطارات — مفيد لو تبي دخولية لمستخدم لا يملك
-            أحد الإطارات الأربعة "الخاصة".
-        </p>
-        <div style="display:flex; gap:var(--space-2); flex-wrap:wrap; align-items:flex-end;">
-            <div class="field" style="min-width:140px;">
-                <label for="entrance-user-id">معرّف المستخدم (id)</label>
-                <input type="number" id="entrance-user-id" placeholder="مثال: 3">
-            </div>
-            <div class="field" style="min-width:160px;">
-                <label for="entrance-template">النموذج</label>
-                <select id="entrance-template">
-                    <option value="gold">الذهبي الفخم</option>
-                    <option value="neon">النيون المستقبلي</option>
-                    <option value="fire">الناري القوي</option>
-                    <option value="ice">الجليدي الملكي</option>
-                </select>
-            </div>
-            <div class="field" style="flex:1; min-width:200px;">
-                <label for="entrance-text">النص</label>
-                <input type="text" id="entrance-text" placeholder="اكتب نص الدخولية">
-            </div>
-        </div>
-        <div style="display:flex; gap:var(--space-2); margin-top: var(--space-3);">
-            <button class="btn btn-sm btn-primary" id="btn-set-entrance">حفظ الدخولية</button>
-            <button class="btn btn-sm btn-danger" id="btn-clear-entrance">إزالة الدخولية</button>
-        </div>
-        <div class="auth-message" id="entrance-message"></div>
-    </section>
-
+<section class="panel panel-wide">
+<div class="panel-head">
+<h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-users"/></svg>المستخدمون</h2>
+<button class="btn btn-sm" id="btn-refresh-users"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg>تحديث</button>
 </div>
 
-<svg style="display:none" aria-hidden="true">
-    <symbol id="icon-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="8" cy="9" r="3"/><circle cx="16.5" cy="9.5" r="2.5"/>
-        <path d="M2 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M14.5 20c.2-2.8 2.2-5 4.8-5.3"/>
-    </symbol>
-    <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4 12a8 8 0 018-8 8 8 0 017.4 5"/><polyline points="19 3 19 9 13 9"/>
-    </symbol>
-    <symbol id="icon-announcement" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 11v2a2 2 0 002 2h1l3 4v-6"/><path d="M9 9l8-4v14l-8-4"/><path d="M17 9a3 3 0 010 6"/>
-    </symbol>
-    <symbol id="icon-frame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>
-    </symbol>
-    <symbol id="icon-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 20s-7.5-4.6-10-9.3C.4 7.4 2.3 4 5.8 4c2 0 3.5 1 6.2 3.6C14.7 5 16.2 4 18.2 4c3.5 0 5.4 3.4 3.8 6.7C19.5 15.4 12 20 12 20z"/>
-    </symbol>
-    <symbol id="icon-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 3a9 9 0 100 18c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.4-.3-.4-.5-.9-.5-1.4 0-1.1.9-2 2-2h1.7a2.3 2.3 0 002.3-2.3C19 6.7 16 3 12 3z"/>
-        <circle cx="7.5" cy="10.5" r="1.2" fill="currentColor" stroke="none"/>
-        <circle cx="11" cy="7" r="1.2" fill="currentColor" stroke="none"/>
-        <circle cx="15.5" cy="8.5" r="1.2" fill="currentColor" stroke="none"/>
-    </symbol>
-</svg>
+<!-- [0.45.0] تبويبان: لاعبون (لا صلاحية ألعاب ولا طلبوا يكونون ستريمرز)
+     وستريمرز (أدمن، أو can_run_games مفعّلة، أو طلب أن يكون ستريمر وقت
+     التسجيل is_streamer). التصنيف بمنطق العميل فقط من نفس بيانات
+     adminListUsers الموجودة أصلاً — لا تعديل على الخادم. -->
+<div class="adm-tabs" id="user-tabs">
+  <button type="button" class="adm-tab-btn is-active" data-user-tab="players">اللاعبون</button>
+  <button type="button" class="adm-tab-btn" data-user-tab="streamers">الستريمرز</button>
+</div>
 
+<div class="adm-tab-panel is-active" data-user-panel="players">
+  <div class="field" style="max-width:420px; margin-bottom: var(--space-3);">
+    <label for="user-search-players">بحث بين اللاعبين (اسم المستخدم / الإيميل / الـID العام / المعرّف الداخلي)</label>
+    <input type="text" id="user-search-players" placeholder="اكتب للبحث…">
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>المعرّف</th><th>اسم المستخدم</th><th>البريد الإلكتروني</th><th>تيك توك</th><th>الـID العام</th><th>النقاط / المستوى</th><th>الإطار الحالي</th></tr>
+      </thead>
+      <tbody id="players-table-body"><tr><td class="table-empty" colspan="7">جارٍ التحميل…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="adm-tab-panel" data-user-panel="streamers">
+  <div class="field" style="max-width:420px; margin-bottom: var(--space-3);">
+    <label for="user-search-streamers">بحث بين الستريمرز (اسم المستخدم / الإيميل / الـID العام / تيك توك / المعرّف الداخلي)</label>
+    <input type="text" id="user-search-streamers" placeholder="اكتب للبحث…">
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>المعرّف</th><th>اسم المستخدم</th><th>البريد الإلكتروني</th><th>الدور</th><th>تيك توك</th>
+          <th>الـID العام</th><th>البثوث</th><th>الهدايا (القيمة)</th><th>صلاحية الألعاب</th>
+          <th>النقاط / المستوى</th><th>الإطار الحالي</th>
+        </tr>
+      </thead>
+      <tbody id="streamers-table-body"><tr><td class="table-empty" colspan="11">جارٍ التحميل…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+</section>
+</div>
+<svg style="display:none" aria-hidden="true">
+<symbol id="icon-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="8" cy="9" r="3"/><circle cx="16.5" cy="9.5" r="2.5"/>
+<path d="M2 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M14.5 20c.2-2.8 2.2-5 4.8-5.3"/>
+</symbol>
+<symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+<path d="M4 12a8 8 0 018-8 8 8 0 017.4 5"/><polyline points="19 3 19 9 13 9"/>
+</symbol>
+</svg>
 <script src="auth/auth-client.js"></script>
 <script>
 'use strict';
-
 /**
- * لوحة أدمن مستقلة تماماً (خارج AGP.* وخارج dashboard-core.js). محمية
- * بـ AGPAuth.requireAdmin — تحوّل لصفحة الدخول لغير المسجّلين، ولصفحة
- * الدخول أيضاً لأي مستخدم دوره ليس 'admin' (لا صفحة "غير مصرَّح" منفصلة
- * حالياً؛ كافٍ لهذه المرحلة).
+ * [0.45.0] لوحة الأدمن — المستخدمون فقط الآن (تبويبا لاعبون/ستريمرز).
+ * باقي الأقسام (الإعلان، الداعمون، الثيم، الكتالوج، منح/سحب، الدخولية
+ * المستقلة، مستويات SP) انتقلت لـadmin-settings.html — راجع تعليق أعلى
+ * الملف. نفس منطق محمية AGPAuth.requireAdmin كما كان بالضبط.
  */
 (function () {
     var KNOWN_PERMISSION_KEYS = ['can_run_games'];
-
     var messageEl = document.getElementById('admin-message');
-    var tbody = document.getElementById('admin-users-table-body');
 
     function showMessage(text, type) {
         messageEl.textContent = text;
@@ -369,56 +133,96 @@
         div.textContent = value === null || value === undefined ? '' : String(value);
         return div.innerHTML;
     }
-
-    // زي escapeHtml بس يعالج علامات الاقتباس كمان — لازم لاستخدام قيمة
-    // داخل attribute (value="...") بدل نص عادي، حتى لو الـID فيه ".
     function escapeAttr(value) {
         return escapeHtml(value).replace(/"/g, '&quot;');
     }
 
-    function renderUsers(users) {
+    // [0.45.0] تبويبات المستخدمين — نفس نمط تبويبات profile.html.
+    Array.prototype.forEach.call(document.querySelectorAll('[data-user-tab]'), function (btn) {
+        btn.addEventListener('click', function () {
+            Array.prototype.forEach.call(document.querySelectorAll('[data-user-tab]'), function (b) { b.classList.remove('is-active'); });
+            btn.classList.add('is-active');
+            var tab = btn.getAttribute('data-user-tab');
+            Array.prototype.forEach.call(document.querySelectorAll('[data-user-panel]'), function (panel) {
+                panel.classList.toggle('is-active', panel.getAttribute('data-user-panel') === tab);
+            });
+        });
+    });
+
+    function isStreamerLike(u) {
+        return u.role === 'admin' || Boolean(u.is_streamer) || Boolean(u.permissions && u.permissions.can_run_games);
+    }
+
+    function commonPermCells(u) {
+        return KNOWN_PERMISSION_KEYS.map(function (key) {
+            var checked = u.permissions && u.permissions[key] ? 'checked' : '';
+            return '<input type="checkbox" data-user-id="' + u.id + '" data-permission-key="' + key + '" ' + checked + '>';
+        }).join('');
+    }
+
+    function customIdCell(u) {
+        var inputStyle = 'width:110px;padding:5px 7px;background:var(--bg);border:1px solid var(--border-light);' +
+            'border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit;';
+        return '<input type="text" style="' + inputStyle + '" value="' + escapeAttr(u.custom_id) + '" data-user-id="' + u.id + '" data-custom-id-input>' +
+            ' <button class="btn btn-sm" data-user-id="' + u.id + '" data-save-custom-id>حفظ</button>' +
+            ' <a class="btn btn-sm" href="profile.html?id=' + encodeURIComponent(u.custom_id || '') + '" target="_blank">عرض</a>';
+    }
+
+    function levelCell(u) {
+        return (u.points ? u.points.totalPoints : 0) + ' — ' +
+            escapeHtml(u.points && u.points.currentLevel ? (u.points.currentLevel.displayNameAr || u.points.currentLevel.slug) : 'بلا مستوى');
+    }
+
+    function renderPlayers(users) {
+        var tbody = document.getElementById('players-table-body');
         if (!users.length) {
-            tbody.innerHTML = '<tr><td class="table-empty" colspan="11">لا يوجد مستخدمون بعد.</td></tr>';
+            tbody.innerHTML = '<tr><td class="table-empty" colspan="7">لا يوجد لاعبون بعد.</td></tr>';
             return;
         }
-
         tbody.innerHTML = users.map(function (u) {
-            var permCells = KNOWN_PERMISSION_KEYS.map(function (key) {
-                var checked = u.permissions && u.permissions[key] ? 'checked' : '';
-                return '<input type="checkbox" data-user-id="' + u.id + '" data-permission-key="' + key + '" ' + checked + '>';
-            }).join('');
+            return '<tr>' +
+                '<td>' + u.id + '</td>' +
+                '<td>' + escapeHtml(u.username) + '</td>' +
+                '<td>' + escapeHtml(u.email) + '</td>' +
+                '<td>' + (u.tiktok_username ? (escapeHtml(u.tiktok_username) + (u.tiktok_verified ? ' ✅' : '')) : '—') + '</td>' +
+                '<td class="mono">' + customIdCell(u) + '</td>' +
+                '<td>' + levelCell(u) + '</td>' +
+                '<td>' + (u.equippedFrame ? escapeHtml(u.equippedFrame.displayNameAr || u.equippedFrame.frameRef) : '—') + '</td>' +
+                '</tr>';
+        }).join('');
+        wireRowActions(tbody);
+    }
 
-            // زر "إعادة الترحيب" — بجانب صلاحية الألعاب مباشرة (نفس
-            // الخلية) بطلب صريح من صاحب المشروع. راجع docs/CHANGELOG.md.
+    function renderStreamers(users) {
+        var tbody = document.getElementById('streamers-table-body');
+        if (!users.length) {
+            tbody.innerHTML = '<tr><td class="table-empty" colspan="11">لا يوجد ستريمرز بعد.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = users.map(function (u) {
             var welcomeResetBtn = '<br><button class="btn btn-sm" data-user-id="' + u.id + '" data-reset-welcome title="' +
                 (u.welcome_completed ? 'شافها كاملة من قبل — اضغط لإعادتها له مرة وحدة' : 'لسا ما شافها') +
                 '">🎉 إعادة الترحيب</button>';
-
-            var inputStyle = 'width:110px;padding:5px 7px;background:var(--bg);border:1px solid var(--border-light);' +
-                'border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit;';
-
             return '<tr>' +
                 '<td>' + u.id + '</td>' +
                 '<td>' + escapeHtml(u.username) + '</td>' +
                 '<td>' + escapeHtml(u.email) + '</td>' +
                 '<td><span class="badge">' + escapeHtml(u.role) + '</span>' +
-                    (u.is_streamer ? ' <span title="طلب أن يكون ستريمر وقت التسجيل">🎙️</span>' : '') +
+                (u.is_streamer ? ' <span title="طلب أن يكون ستريمر وقت التسجيل">🎙️</span>' : '') +
                 '</td>' +
-                '<td>' + escapeHtml(u.tiktok_username) + (u.tiktok_verified ? ' ✅' : '') + '</td>' +
-                '<td class="mono">' +
-                    '<input type="text" style="' + inputStyle + '" value="' + escapeAttr(u.custom_id) + '" data-user-id="' + u.id + '" data-custom-id-input>' +
-                    ' <button class="btn btn-sm" data-user-id="' + u.id + '" data-save-custom-id>حفظ</button>' +
-                    ' <a class="btn btn-sm" href="profile.html?id=' + encodeURIComponent(u.custom_id || '') + '" target="_blank">عرض</a>' +
-                '</td>' +
+                '<td>' + (u.tiktok_username ? (escapeHtml(u.tiktok_username) + (u.tiktok_verified ? ' ✅' : '')) : '—') + '</td>' +
+                '<td class="mono">' + customIdCell(u) + '</td>' +
                 '<td>' + u.stats.total_broadcasts + '</td>' +
                 '<td>' + u.stats.total_gifts + ' (' + u.stats.total_gifts_value + ')</td>' +
-                '<td>' + permCells + welcomeResetBtn + '</td>' +
-                '<td>' + (u.points ? u.points.totalPoints : 0) + ' — ' +
-                    escapeHtml(u.points && u.points.currentLevel ? (u.points.currentLevel.displayNameAr || u.points.currentLevel.slug) : 'بلا مستوى') + '</td>' +
+                '<td>' + commonPermCells(u) + welcomeResetBtn + '</td>' +
+                '<td>' + levelCell(u) + '</td>' +
                 '<td>' + (u.equippedFrame ? escapeHtml(u.equippedFrame.displayNameAr || u.equippedFrame.frameRef) : '—') + '</td>' +
                 '</tr>';
         }).join('');
+        wireRowActions(tbody);
+    }
 
+    function wireRowActions(tbody) {
         Array.prototype.forEach.call(tbody.querySelectorAll('input[type=checkbox]'), function (checkbox) {
             checkbox.addEventListener('change', function () {
                 var userId = Number(checkbox.getAttribute('data-user-id'));
@@ -428,16 +232,15 @@
                     .then(function (result) {
                         if (!result.success) {
                             showMessage('تعذّر تحديث الصلاحية: ' + (result.error || 'unknown'), 'error');
-                            checkbox.checked = !checkbox.checked; // تراجع بصري لو فشل الحفظ
+                            checkbox.checked = !checkbox.checked;
+                        } else {
+                            loadUsers();
                         }
                     })
                     .finally(function () { checkbox.disabled = false; });
             });
         });
 
-        // زر "إعادة الترحيب" — يصفّر welcome_completed لذاك المستخدم فقط،
-        // فتطلع له حفلة الترحيب مرة وحدة إضافية بأول زيارة جاية للصفحة
-        // الرئيسية. راجع docs/CHANGELOG.md.
         Array.prototype.forEach.call(tbody.querySelectorAll('[data-reset-welcome]'), function (button) {
             button.addEventListener('click', function () {
                 var userId = Number(button.getAttribute('data-user-id'));
@@ -452,20 +255,17 @@
             });
         });
 
-        // الأدمن يعدّل الـID العام لأي مستخدم — يحفظ نص الحقل المجاور
-        // بضغطة واحدة عبر /api/admin/custom-id (يشمل نفسه كمان).
         Array.prototype.forEach.call(tbody.querySelectorAll('[data-save-custom-id]'), function (button) {
             button.addEventListener('click', function () {
                 var userId = Number(button.getAttribute('data-user-id'));
                 var input = tbody.querySelector('input[data-custom-id-input][data-user-id="' + userId + '"]');
                 var newId = (input.value || '').trim();
                 if (!newId) { showMessage('اكتب ID قبل الحفظ.', 'error'); return; }
-
                 button.disabled = true;
                 window.AGPAuth.adminSetCustomId(userId, newId).then(function (result) {
                     if (result.success) {
                         showMessage('تم تحديث الـID.', 'success');
-                        loadUsers(); // إعادة تحميل حتى يتحدّث رابط "عرض" بالقيمة الجديدة
+                        loadUsers();
                     } else {
                         showMessage('تعذّر الحفظ: ' + (result.error || 'unknown') + (result.error === 'custom_id_taken' ? ' (هذا الـID مستخدَم لحساب آخر)' : ''), 'error');
                     }
@@ -474,448 +274,45 @@
         });
     }
 
-    // ذاكرة محلية بآخر قائمة مستخدمين حمّلناها من السيرفر — البحث أدناه
-    // يفلتر عليها مباشرة بدون أي طلب شبكي جديد، حتى لو صار عندنا آلاف
-    // المستخدمين مستقبلاً (البحث بالـID الداخلي وحده غير عملي وقتها).
     var allUsersCache = [];
-    var userSearchInput = document.getElementById('user-search');
+    var playersSearchInput = document.getElementById('user-search-players');
+    var streamersSearchInput = document.getElementById('user-search-streamers');
 
-    function applyUserFilter() {
-        var q = (userSearchInput.value || '').trim().toLowerCase();
-        if (!q) { renderUsers(allUsersCache); return; }
-        var filtered = allUsersCache.filter(function (u) {
-            return String(u.id) === q ||
-                (u.username && u.username.toLowerCase().indexOf(q) !== -1) ||
-                (u.email && u.email.toLowerCase().indexOf(q) !== -1) ||
-                (u.custom_id && String(u.custom_id).toLowerCase().indexOf(q) !== -1) ||
-                (u.tiktok_username && u.tiktok_username.toLowerCase().indexOf(q) !== -1);
-        });
-        renderUsers(filtered);
+    function matchesQuery(u, q) {
+        return String(u.id) === q ||
+            (u.username && u.username.toLowerCase().indexOf(q) !== -1) ||
+            (u.email && u.email.toLowerCase().indexOf(q) !== -1) ||
+            (u.custom_id && String(u.custom_id).toLowerCase().indexOf(q) !== -1) ||
+            (u.tiktok_username && u.tiktok_username.toLowerCase().indexOf(q) !== -1);
     }
-    userSearchInput.addEventListener('input', applyUserFilter);
+
+    function applyFilters() {
+        var players = allUsersCache.filter(function (u) { return !isStreamerLike(u); });
+        var streamers = allUsersCache.filter(isStreamerLike);
+
+        var pq = (playersSearchInput.value || '').trim().toLowerCase();
+        var sq = (streamersSearchInput.value || '').trim().toLowerCase();
+
+        renderPlayers(pq ? players.filter(function (u) { return matchesQuery(u, pq); }) : players);
+        renderStreamers(sq ? streamers.filter(function (u) { return matchesQuery(u, sq); }) : streamers);
+    }
+    playersSearchInput.addEventListener('input', applyFilters);
+    streamersSearchInput.addEventListener('input', applyFilters);
 
     function loadUsers() {
-        tbody.innerHTML = '<tr><td class="table-empty" colspan="11">جارٍ التحميل…</td></tr>';
         window.AGPAuth.adminListUsers().then(function (result) {
             if (!result.success) {
                 showMessage('تعذّر تحميل قائمة المستخدمين.', 'error');
                 return;
             }
             allUsersCache = result.users;
-            applyUserFilter(); // يطبّق أي نص بحث نشط حالياً (لو "تحديث" ضُغط أثناء بحث)
+            applyFilters();
         });
     }
-
     document.getElementById('btn-refresh-users').addEventListener('click', loadUsers);
+
     document.getElementById('btn-account-logout').addEventListener('click', function () {
         window.AGPAuth.logout().then(function () { window.location.href = 'login.html'; });
-    });
-
-    /**
-     * إعلان الزوار — نص + صورة اختيارية (اسم ملف مرفوع يدوياً على
-     * GitHub، بنفس أسلوب logo.png، مو رفع صورة فعلي من هنا). يظهر
-     * كنافذة منبثقة بالصفحة الرئيسية فقط لكل زائر طالما نشط. راجع
-     * backend/announcements/announcement-service.js.
-     */
-    var announcementMessageEl = document.getElementById('announcement-message');
-    var announcementTextInput = document.getElementById('announcement-text-input');
-    var announcementImageInput = document.getElementById('announcement-image-input');
-
-    function showAnnouncementMessage(text, type) {
-        announcementMessageEl.textContent = text;
-        announcementMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
-    }
-
-    function loadAnnouncement() {
-        window.AGPAuth.getAnnouncement().then(function (result) {
-            if (result.success && result.announcement) {
-                announcementTextInput.value = result.announcement.text || '';
-                announcementImageInput.value = result.announcement.imageFilename || '';
-            }
-        });
-    }
-
-    document.getElementById('btn-publish-announcement').addEventListener('click', function () {
-        var text = (announcementTextInput.value || '').trim();
-        if (!text) { showAnnouncementMessage('اكتب نص الإعلان قبل النشر.', 'error'); return; }
-
-        var button = this;
-        button.disabled = true;
-        window.AGPAuth.adminSetAnnouncement(text, announcementImageInput.value).then(function (result) {
-            if (result.success) {
-                showAnnouncementMessage('تم نشر الإعلان — يظهر الآن لكل زائر جديد للصفحة الرئيسية.', 'success');
-            } else {
-                showAnnouncementMessage('تعذّر النشر: ' + (result.error || 'unknown'), 'error');
-            }
-        }).finally(function () { button.disabled = false; });
-    });
-
-    document.getElementById('btn-clear-announcement').addEventListener('click', function () {
-        var button = this;
-        button.disabled = true;
-        window.AGPAuth.adminClearAnnouncement().then(function (result) {
-            if (result.success) {
-                showAnnouncementMessage('تمت إزالة الإعلان — ما راح يظهر لأي زائر بعد الآن.', 'success');
-            } else {
-                showAnnouncementMessage('تعذّرت الإزالة.', 'error');
-            }
-        }).finally(function () { button.disabled = false; });
-    });
-
-    /**
-     * داعمو المنصة — إدخال يدوي حالياً (لا Webhook تلقائي بعد، راجع
-     * backend/supporters/supporters-service.js وتعليق القسم بالأعلى).
-     * كل إضافة تظهر فوراً بالشريط المتحرك بالصفحة الرئيسية وبصفحة
-     * top-supporters.html، بدون أي خطوة إضافية.
-     */
-    var supporterMessageEl = document.getElementById('supporter-message');
-    var supportersTbody = document.getElementById('supporters-tbody');
-    var supporterNameInput = document.getElementById('supporter-name-input');
-    var supporterMessageInput = document.getElementById('supporter-message-input');
-    var supporterAmountInput = document.getElementById('supporter-amount-input');
-
-    function showSupporterMessage(text, type) {
-        supporterMessageEl.textContent = text;
-        supporterMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
-    }
-
-    function formatSupporterDate(timestamp) {
-        try {
-            return new Date(timestamp).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
-        } catch (e) {
-            return '—';
-        }
-    }
-
-    function loadSupporters() {
-        supportersTbody.innerHTML = '<tr><td class="table-empty" colspan="5">جارٍ التحميل…</td></tr>';
-        window.AGPAuth.adminListSupporters().then(function (result) {
-            if (!result.success) {
-                supportersTbody.innerHTML = '<tr><td class="table-empty" colspan="5">تعذّر تحميل قائمة الداعمين.</td></tr>';
-                return;
-            }
-            var supporters = result.supporters || [];
-            if (!supporters.length) {
-                supportersTbody.innerHTML = '<tr><td class="table-empty" colspan="5">لا يوجد داعمون بعد.</td></tr>';
-                return;
-            }
-            supportersTbody.innerHTML = supporters.map(function (s) {
-                return '<tr>' +
-                    '<td>' + s.name + '</td>' +
-                    '<td>' + (s.message || '—') + '</td>' +
-                    '<td>' + s.amount + '</td>' +
-                    '<td>' + formatSupporterDate(s.created_at) + '</td>' +
-                    '<td><button class="btn btn-sm btn-danger" data-delete-supporter="' + s.id + '">حذف</button></td>' +
-                    '</tr>';
-            }).join('');
-        });
-    }
-
-    document.getElementById('btn-add-supporter').addEventListener('click', function () {
-        var name = (supporterNameInput.value || '').trim();
-        if (!name) { showSupporterMessage('اكتب اسم الداعم أولاً.', 'error'); return; }
-
-        var button = this;
-        button.disabled = true;
-        window.AGPAuth.adminAddSupporter(name, supporterMessageInput.value, supporterAmountInput.value).then(function (result) {
-            if (result.success) {
-                showSupporterMessage('تمت الإضافة — يظهر الآن بالصفحة الرئيسية.', 'success');
-                supporterNameInput.value = '';
-                supporterMessageInput.value = '';
-                supporterAmountInput.value = '';
-                loadSupporters();
-            } else {
-                showSupporterMessage('تعذّرت الإضافة: ' + (result.error || 'unknown'), 'error');
-            }
-        }).finally(function () { button.disabled = false; });
-    });
-
-    supportersTbody.addEventListener('click', function (event) {
-        var button = event.target.closest ? event.target.closest('[data-delete-supporter]') : null;
-        if (!button) return;
-        var id = button.getAttribute('data-delete-supporter');
-        button.disabled = true;
-        window.AGPAuth.adminDeleteSupporter(id).then(function () {
-            loadSupporters();
-        });
-    });
-
-    /**
-     * ثيم المناسبات — راجع backend/theme/site-theme-service.js. الأكواد
-     * بالثيمات الجاهزة تقريبية (لا يوجد لدينا مصدر رسمي مؤكد لكل كود
-     * بالضبط) — معروضة كنقطة انطلاق سريعة يعدّلها الأدمن بنفسه لو احتاج.
-     */
-    var THEME_PRESETS = {
-        'national-day': { accent: '#006c35', accentPink: '#c9a24b', accent2: '#ffffff' },
-        'founding-day': { accent: '#2c3e2d', accentPink: '#a85c32', accent2: '#d8c79d' }
-    };
-    var themeStatusEl = document.getElementById('theme-status-message');
-    var themePresetSelect = document.getElementById('theme-preset-select');
-    var themeAccentInput = document.getElementById('theme-accent-input');
-    var themeAccentPinkInput = document.getElementById('theme-accent-pink-input');
-    var themeAccent2Input = document.getElementById('theme-accent-2-input');
-
-    function showThemeStatus(text, type) {
-        themeStatusEl.textContent = text;
-        themeStatusEl.className = 'auth-message auth-message--visible auth-message--' + type;
-    }
-
-    function loadThemeStatus() {
-        window.AGPAuth.getSiteTheme().then(function (result) {
-            var theme = result && result.success ? result.theme : null;
-            if (!theme) {
-                showThemeStatus('الحالة الآن: غير مفعَّل — الموقع بألوانه الافتراضية.', 'success');
-                return;
-            }
-            themeAccentInput.value = theme.accent || '#7c3aed';
-            themeAccentPinkInput.value = theme.accentPink || '#ff4dff';
-            themeAccent2Input.value = theme.accent2 || '#00c2ff';
-            if (theme.presetKey) themePresetSelect.value = theme.presetKey;
-            showThemeStatus('الحالة الآن: مفعَّل' + (theme.presetKey && THEME_PRESETS[theme.presetKey] ? ' (' + themePresetSelect.options[themePresetSelect.selectedIndex].text + ')' : '') + '.', 'success');
-        });
-    }
-
-    themePresetSelect.addEventListener('change', function () {
-        var preset = THEME_PRESETS[this.value];
-        if (!preset) return; // "مخصّص" أو الخيار الفارغ — نسيب الألوان الحالية بالمنتقيات كما هي
-        themeAccentInput.value = preset.accent;
-        themeAccentPinkInput.value = preset.accentPink;
-        themeAccent2Input.value = preset.accent2;
-    });
-
-    document.getElementById('btn-activate-theme').addEventListener('click', function () {
-        var button = this;
-        button.disabled = true;
-        window.AGPAuth.adminSetSiteTheme(
-            themePresetSelect.value || null,
-            themeAccentInput.value,
-            themeAccentPinkInput.value,
-            themeAccent2Input.value
-        ).then(function (result) {
-            if (result.success) {
-                showThemeStatus('تم التفعيل — الألوان صارت تظهر الآن لكل زائر للصفحة الرئيسية.', 'success');
-            } else {
-                showThemeStatus('تعذّر التفعيل: ' + (result.error || 'unknown'), 'error');
-            }
-        }).finally(function () { button.disabled = false; });
-    });
-
-    document.getElementById('btn-clear-theme').addEventListener('click', function () {
-        var button = this;
-        button.disabled = true;
-        window.AGPAuth.adminClearSiteTheme().then(function (result) {
-            if (result.success) {
-                showThemeStatus('تم إلغاء التفعيل — الموقع رجع لألوانه الافتراضية.', 'success');
-            } else {
-                showThemeStatus('تعذّر الإلغاء.', 'error');
-            }
-        }).finally(function () { button.disabled = false; });
-    });
-
-    /**
-     * كتالوج الإطارات (11 صف ثابت) — تعديل الاسم المعروض/عتبة نقاط
-     * المستوى/الدخولية الافتراضية لكل صف. لا إضافة ولا حذف صفوف هنا
-     * (الكتالوج ثابت بالعدد والملفات، راجع backend/db/database.js).
-     */
-    var TEMPLATE_LABELS = { gold: 'الذهبي الفخم', neon: 'النيون المستقبلي', fire: 'الناري القوي', ice: 'الجليدي الملكي' };
-    var catalogMessageEl = document.getElementById('catalog-message');
-    var catalogTbody = document.getElementById('catalog-table-body');
-    var latestCatalog = [];
-    var latestCustomFrames = [];
-
-    function showCatalogMessage(text, type) {
-        catalogMessageEl.textContent = text;
-        catalogMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
-    }
-
-    function templateSelectHtml(currentValue, idAttr) {
-        var options = ['<option value="">—</option>'].concat(Object.keys(TEMPLATE_LABELS).map(function (key) {
-            return '<option value="' + key + '"' + (currentValue === key ? ' selected' : '') + '>' + TEMPLATE_LABELS[key] + '</option>';
-        }));
-        return '<select ' + idAttr + '>' + options.join('') + '</select>';
-    }
-
-    function renderCatalog(rows) {
-        latestCatalog = rows;
-        if (!rows.length) {
-            catalogTbody.innerHTML = '<tr><td class="table-empty" colspan="7">لا يوجد كتالوج.</td></tr>';
-            return;
-        }
-        var smallInput = 'style="width:100%;padding:5px 7px;background:var(--bg);border:1px solid var(--border-light);border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit;"';
-
-        catalogTbody.innerHTML = rows.map(function (row) {
-            var kindLabel = row.kind === 'level' ? 'مستوى' : 'خاص';
-            var entranceCells = row.kind === 'special'
-                ? '<td>' + templateSelectHtml(row.default_entrance_template, 'data-slug="' + row.slug + '" data-field="defaultEntranceTemplate"') + '</td>' +
-                  '<td><input type="text" ' + smallInput + ' value="' + escapeAttr(row.default_entrance_text) + '" data-slug="' + row.slug + '" data-field="defaultEntranceText"></td>'
-                : '<td class="table-empty">—</td><td class="table-empty">—</td>';
-            var levelCell = row.kind === 'level'
-                ? '<input type="number" ' + smallInput + ' value="' + (row.level_points_required === null ? '' : row.level_points_required) + '" placeholder="غير مفعّل" data-slug="' + row.slug + '" data-field="levelPointsRequired">'
-                : '—';
-
-            return '<tr>' +
-                '<td><span class="badge">' + kindLabel + '</span></td>' +
-                '<td class="mono">' + escapeHtml(row.image_filename) + '</td>' +
-                '<td><input type="text" ' + smallInput + ' value="' + escapeAttr(row.display_name_ar) + '" data-slug="' + row.slug + '" data-field="displayNameAr"></td>' +
-                '<td>' + levelCell + '</td>' +
-                entranceCells +
-                '<td><button class="btn btn-sm" data-save-catalog="' + row.slug + '">حفظ</button></td>' +
-                '</tr>';
-        }).join('');
-
-        Array.prototype.forEach.call(catalogTbody.querySelectorAll('[data-save-catalog]'), function (button) {
-            button.addEventListener('click', function () {
-                var slug = button.getAttribute('data-save-catalog');
-                var fields = {};
-                Array.prototype.forEach.call(catalogTbody.querySelectorAll('[data-slug="' + slug + '"][data-field]'), function (input) {
-                    fields[input.getAttribute('data-field')] = input.value;
-                });
-                button.disabled = true;
-                window.AGPAuth.adminUpdateCatalogEntry(slug, fields).then(function (result) {
-                    if (result.success) {
-                        showCatalogMessage('تم الحفظ.', 'success');
-                        loadCatalog();
-                    } else {
-                        showCatalogMessage('تعذّر الحفظ: ' + (result.error || 'unknown'), 'error');
-                    }
-                }).finally(function () { button.disabled = false; });
-            });
-        });
-
-        refreshGrantFrameOptions();
-    }
-
-    function loadCatalog() {
-        window.AGPAuth.adminGetCollectiblesCatalog().then(function (result) {
-            if (!result.success) { showCatalogMessage('تعذّر تحميل الكتالوج.', 'error'); return; }
-            renderCatalog(result.catalog);
-            renderCustomFrames(result.customFrames);
-        });
-    }
-
-    document.getElementById('btn-refresh-catalog').addEventListener('click', loadCatalog);
-
-    /**
-     * إطارات حصرية — إنشاء صف جديد (اسم ملف حر + اسم عرض)، تصير متاحة
-     * فوراً بقائمة "منح / سحب مقتنى" تحت.
-     */
-    var customFramesTbody = document.getElementById('custom-frames-table-body');
-
-    function renderCustomFrames(frames) {
-        latestCustomFrames = frames;
-        if (!frames.length) {
-            customFramesTbody.innerHTML = '<tr><td class="table-empty" colspan="3">لا توجد إطارات حصرية بعد.</td></tr>';
-        } else {
-            customFramesTbody.innerHTML = frames.map(function (f) {
-                return '<tr><td>' + f.id + '</td><td class="mono">' + escapeHtml(f.image_filename) + '</td><td>' + escapeHtml(f.display_name_ar) + '</td></tr>';
-            }).join('');
-        }
-        refreshGrantFrameOptions();
-    }
-
-    document.getElementById('btn-create-custom-frame').addEventListener('click', function () {
-        var filenameInput = document.getElementById('custom-frame-filename');
-        var nameInput = document.getElementById('custom-frame-name');
-        var filename = (filenameInput.value || '').trim();
-        if (!filename) { showCatalogMessage('اكتب اسم ملف الإطار الحصري أولاً.', 'error'); return; }
-
-        window.AGPAuth.adminCreateCustomFrame(filename, nameInput.value).then(function (result) {
-            if (result.success) {
-                filenameInput.value = '';
-                nameInput.value = '';
-                showCatalogMessage('تمت الإضافة — ارفع الصورة بنفس اسم الملف لجذر المستودع.', 'success');
-                loadCatalog();
-            } else {
-                showCatalogMessage('تعذّرت الإضافة: ' + (result.error || 'unknown'), 'error');
-            }
-        });
-    });
-
-    /**
-     * منح / سحب مقتنى — قائمة الإطارات المتاحة تُبنى ديناميكياً من
-     * الكتالوج + الإطارات الحصرية المحمَّلة أعلاه.
-     */
-    var grantMessageEl = document.getElementById('grant-message');
-    var grantFrameTypeEl = document.getElementById('grant-frame-type');
-    var grantFrameRefEl = document.getElementById('grant-frame-ref');
-
-    function showGrantMessage(text, type) {
-        grantMessageEl.textContent = text;
-        grantMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
-    }
-
-    function refreshGrantFrameOptions() {
-        if (grantFrameTypeEl.value === 'custom') {
-            grantFrameRefEl.innerHTML = latestCustomFrames.map(function (f) {
-                return '<option value="' + f.id + '">' + escapeHtml(f.display_name_ar || f.image_filename) + '</option>';
-            }).join('') || '<option value="">لا يوجد إطارات حصرية</option>';
-        } else {
-            grantFrameRefEl.innerHTML = latestCatalog.map(function (row) {
-                return '<option value="' + row.slug + '">' + escapeHtml(row.display_name_ar || row.slug) + ' (' + row.slug + ')</option>';
-            }).join('');
-        }
-    }
-    grantFrameTypeEl.addEventListener('change', refreshGrantFrameOptions);
-
-    document.getElementById('btn-grant-frame').addEventListener('click', function () {
-        var userId = Number(document.getElementById('grant-user-id').value);
-        if (!userId) { showGrantMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
-        var frameType = grantFrameTypeEl.value;
-        var frameRef = grantFrameRefEl.value;
-        if (!frameRef) { showGrantMessage('اختر إطاراً أولاً.', 'error'); return; }
-
-        window.AGPAuth.adminGrantFrame(userId, frameType, frameRef, {
-            entranceTemplate: document.getElementById('grant-entrance-template').value,
-            entranceText: document.getElementById('grant-entrance-text').value
-        }).then(function (result) {
-            if (result.success) {
-                showGrantMessage('تم منح الإطار.', 'success');
-                loadUsers();
-            } else {
-                showGrantMessage('تعذّر المنح: ' + (result.error || 'unknown'), 'error');
-            }
-        });
-    });
-
-    document.getElementById('btn-revoke-frame').addEventListener('click', function () {
-        var userId = Number(document.getElementById('grant-user-id').value);
-        if (!userId) { showGrantMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
-        var frameType = grantFrameTypeEl.value;
-        var frameRef = grantFrameRefEl.value;
-        if (!frameRef) { showGrantMessage('اختر إطاراً أولاً.', 'error'); return; }
-
-        window.AGPAuth.adminRevokeFrame(userId, frameType, frameRef).then(function (result) {
-            showGrantMessage(result.success ? 'تم سحب الإطار.' : 'تعذّر السحب.', result.success ? 'success' : 'error');
-            loadUsers();
-        });
-    });
-
-    /**
-     * دخولية مستقلة (بدون إطار) — راجع handleAdminSetEntrance بالخادم.
-     */
-    var entranceMessageEl = document.getElementById('entrance-message');
-    function showEntranceMessage(text, type) {
-        entranceMessageEl.textContent = text;
-        entranceMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
-    }
-
-    document.getElementById('btn-set-entrance').addEventListener('click', function () {
-        var userId = Number(document.getElementById('entrance-user-id').value);
-        if (!userId) { showEntranceMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
-        var text = (document.getElementById('entrance-text').value || '').trim();
-        if (!text) { showEntranceMessage('اكتب نص الدخولية أولاً.', 'error'); return; }
-
-        window.AGPAuth.adminSetEntrance(userId, document.getElementById('entrance-template').value, text).then(function (result) {
-            showEntranceMessage(result.success ? 'تم حفظ الدخولية.' : 'تعذّر الحفظ.', result.success ? 'success' : 'error');
-        });
-    });
-
-    document.getElementById('btn-clear-entrance').addEventListener('click', function () {
-        var userId = Number(document.getElementById('entrance-user-id').value);
-        if (!userId) { showEntranceMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
-        window.AGPAuth.adminClearEntrance(userId).then(function (result) {
-            showEntranceMessage(result.success ? 'تمت إزالة الدخولية.' : 'تعذّرت الإزالة.', result.success ? 'success' : 'error');
-        });
     });
 
     window.AGPAuth.requireAdmin('login.html').then(function (user) {
@@ -924,10 +321,6 @@
         document.getElementById('account-username').textContent = user.username;
         document.getElementById('account-role').textContent = user.role;
         loadUsers();
-        loadAnnouncement();
-        loadCatalog();
-        loadSupporters();
-        loadThemeStatus();
     });
 }());
 </script>

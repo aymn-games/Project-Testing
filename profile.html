@@ -546,8 +546,9 @@
                     <div class="pp-level-soon" id="pp-level-next" style="margin-top:6px;">—</div>
                 </div>
                 <div class="pp-level-box">
-                    <div class="pp-level-title"><span>مستوى الستريمر (SP)</span><span class="pp-level-soon">قريباً</span></div>
-                    <div class="pp-progress-track"><div class="pp-progress-fill"></div></div>
+                    <div class="pp-level-title"><span>مستوى الستريمر (SP)</span><span id="pp-sp-points">0 SP</span></div>
+                    <div class="pp-progress-track"><div class="pp-progress-fill" id="pp-sp-fill" style="opacity:1;"></div></div>
+                    <div class="pp-level-soon" id="pp-sp-next" style="margin-top:6px;">—</div>
                 </div>
             </div>
         </div>
@@ -663,10 +664,11 @@
                 <div class="pp-grid">
                     <div class="pp-stat-card"><div class="pp-stat-value" id="pp-s-broadcasts">0</div><div class="pp-stat-label">عدد البثوث</div></div>
                     <div class="pp-stat-card"><div class="pp-stat-value" id="pp-s-hours">0</div><div class="pp-stat-label">ساعات البث</div></div>
+                    <div class="pp-stat-card"><div class="pp-stat-value" id="pp-s-comments">0</div><div class="pp-stat-label">التعليقات</div></div>
                     <div class="pp-stat-card"><div class="pp-stat-value" id="pp-s-follows">0</div><div class="pp-stat-label">متابعين جدد</div></div>
                     <div class="pp-stat-card"><div class="pp-stat-value" id="pp-s-players">0</div><div class="pp-stat-label">لاعبون انضموا</div></div>
                     <div class="pp-stat-card"><div class="pp-stat-value" id="pp-s-gifts">0</div><div class="pp-stat-label">عدد الهدايا</div></div>
-                    <div class="pp-stat-card"><div class="pp-stat-value" id="pp-s-gifts-value">0</div><div class="pp-stat-label">قيمة الهدايا</div></div>
+                    <div class="pp-stat-card"><div class="pp-stat-value" id="pp-s-gifts-value">0</div><div class="pp-stat-label">قيمة الهدايا (ماس)</div></div>
                 </div>
                 <div class="pp-info-row">
                     <span class="pp-info-label">مشاهدات إجمالية / متوسط المشاهدين</span>
@@ -733,6 +735,17 @@
                 <div class="pp-section-title">دخوليتي الحالية</div>
                 <div class="pp-info-row"><span class="pp-info-label">النموذج</span><span class="pp-info-value" id="pp-entrance-template">—</span></div>
                 <div class="pp-info-row"><span class="pp-info-label">النص</span><span class="pp-info-value" id="pp-entrance-text">—</span></div>
+                <!-- [0.45.0] تفعيل/إيقاف ذاتي — يظهر فقط لصاحب الحساب (isOwner، راجع
+                     wireEntranceToggle أدناه). الإيقاف لا يحذف الدخولية، فقط يخفيها
+                     باللوبي (راجع collectiblesService.setEntranceEnabled). -->
+                <div class="pp-info-row" id="pp-entrance-enabled-row" style="display:none;">
+                    <span class="pp-info-label">الحالة</span>
+                    <span class="pp-info-value" id="pp-entrance-enabled-value">—</span>
+                </div>
+                <div class="pp-btn-row" id="pp-entrance-toggle-row" style="display:none;">
+                    <button type="button" class="pp-btn pp-btn--secondary" id="pp-btn-entrance-toggle">—</button>
+                </div>
+                <div class="pp-status-note" id="pp-entrance-status"></div>
             </div>
         </div>
 
@@ -1052,6 +1065,7 @@
         if (p.stats) {
             document.getElementById('pp-s-broadcasts').textContent = p.stats.total_broadcasts || 0;
             document.getElementById('pp-s-hours').textContent = formatHours(p.stats.total_live_ms);
+            document.getElementById('pp-s-comments').textContent = p.stats.total_comments || 0;
             document.getElementById('pp-s-follows').textContent = p.stats.total_follows || 0;
             document.getElementById('pp-s-players').textContent = p.stats.total_players || 0;
             document.getElementById('pp-s-gifts').textContent = p.stats.total_gifts || 0;
@@ -1059,10 +1073,38 @@
         }
 
         renderLevel(p);
+        renderStreamerLevel(p);
         renderCollectibles(p, isOwner);
         wireTikTok(p, isOwner);
         wireCopyId(p.custom_id || '');
         wireTabs();
+    }
+
+    /**
+     * [0.45.0] مستوى الستريمر (SP) — نظير renderLevel (مستوى اللاعب)
+     * بالضبط، لكن من p.streamerLevel (راجع
+     * backend/points/streamer-level-service.js). كانت هذي البطاقة
+     * "قريباً" ثابتة — الآن بيانات حقيقية محسوبة من إحصائيات البث
+     * الفعلية (صفر لأي حساب لم يبدأ بثاً بعد تفعيل التتبّع — متوقَّع
+     * وليس خللاً، راجع docs/CHANGELOG.md [0.45.0]).
+     */
+    function renderStreamerLevel(p) {
+        var sp = p.streamerLevel;
+        if (!sp) return;
+
+        document.getElementById('pp-sp-points').textContent = sp.sp + ' SP';
+
+        var currentLabel = sp.currentLevel ? (sp.currentLevel.display_name_ar || sp.currentLevel.slug) : 'بلا مستوى بعد';
+        var fillEl = document.getElementById('pp-sp-fill');
+        var nextEl = document.getElementById('pp-sp-next');
+
+        fillEl.style.width = (sp.progressPercent || 0) + '%';
+
+        if (sp.nextLevel) {
+            nextEl.textContent = currentLabel + ' — يحتاج ' + Math.max(0, sp.nextLevel.min_sp - sp.sp) + ' SP للمستوى التالي (' + (sp.nextLevel.display_name_ar || sp.nextLevel.slug) + ')';
+        } else {
+            nextEl.textContent = sp.currentLevel ? (currentLabel + ' — أعلى مستوى متاح حالياً') : 'لا توجد مستويات مفعَّلة بعد.';
+        }
     }
 
     /**
@@ -1157,7 +1199,55 @@
             document.getElementById('pp-entrance-card').style.display = '';
             document.getElementById('pp-entrance-template').textContent = entrance.template_key || '—';
             document.getElementById('pp-entrance-text').textContent = entrance.entrance_text || '—';
+            if (isOwner) wireEntranceToggle(entrance);
         }
+    }
+
+    /**
+     * [0.45.0] تفعيل/إيقاف الدخولية ذاتياً — يظهر فقط لصاحب الحساب.
+     * enabled قد تكون undefined لصفوف قديمة قبل هذا التحديث (العمود
+     * الجديد افتراضه 1 بقاعدة البيانات نفسها — راجع
+     * backend/db/database.js ensureColumn — فهذا فقط احتياط عرض إضافي).
+     */
+    function wireEntranceToggle(entrance) {
+        var row = document.getElementById('pp-entrance-enabled-row');
+        var valueEl = document.getElementById('pp-entrance-enabled-value');
+        var toggleRow = document.getElementById('pp-entrance-toggle-row');
+        var btn = document.getElementById('pp-btn-entrance-toggle');
+        var statusEl = document.getElementById('pp-entrance-status');
+
+        var isEnabled = entrance.enabled === undefined ? true : Boolean(entrance.enabled);
+
+        function renderState() {
+            valueEl.textContent = isEnabled ? 'مفعّلة ✅ (تظهر باللوبي)' : 'موقوفة ⏸️ (مخفية عن اللوبي)';
+            btn.textContent = isEnabled ? 'إيقاف الدخولية' : 'تفعيل الدخولية';
+        }
+
+        row.style.display = '';
+        toggleRow.style.display = '';
+        renderState();
+
+        btn.addEventListener('click', function () {
+            btn.disabled = true;
+            statusEl.textContent = 'جارٍ الحفظ…';
+            statusEl.className = 'pp-status-note';
+            window.AGPAuth.toggleEntrance(!isEnabled).then(function (result) {
+                btn.disabled = false;
+                if (result.success) {
+                    isEnabled = !isEnabled;
+                    renderState();
+                    statusEl.textContent = isEnabled ? 'تم التفعيل — ستظهر دخوليتك باللوبي من بثّك القادم.' : 'تم الإيقاف — دخوليتك محفوظة ويمكنك تفعيلها لاحقاً بضغطة واحدة.';
+                    statusEl.className = 'pp-status-note pp-status-note--ok';
+                } else {
+                    statusEl.textContent = 'تعذّر الحفظ.';
+                    statusEl.className = 'pp-status-note pp-status-note--err';
+                }
+            }).catch(function () {
+                btn.disabled = false;
+                statusEl.textContent = 'تعذّر الوصول للخادم.';
+                statusEl.className = 'pp-status-note pp-status-note--err';
+            });
+        });
     }
 
     function escapeHtmlLocal(value) {

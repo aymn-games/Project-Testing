@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إعدادات الأدمن — AGP</title>
+<link rel="stylesheet" href="dashboard-core/css/style.css">
+<link rel="stylesheet" href="auth/auth.css">
+<!--
+  ==========================================================================
+  [0.45.0] صفحة جديدة — كل أقسام "الإعدادات" التي كانت بـadmin.html
+  (الإعلان، الداعمون، ثيم المناسبات، كتالوج الإطارات، الإطارات الحصرية،
+  منح/سحب مقتنى، الدخولية المستقلة) منظّمة الآن بتبويبات هنا، + تبويب
+  جديد لمستويات SP (streamer_levels — راجع
+  backend/points/streamer-level-service.js). نفس عناصر/استدعاءات
+  auth-client.js الموجودة أصلاً دون أي تعديل عليها، فقط أُعيد ترتيبها.
+  ==========================================================================
+-->
+<style>
+  .adm-tabs { display: flex; gap: 8px; margin-bottom: var(--space-4); flex-wrap: wrap; }
+  .adm-tab-btn {
+    background: transparent; border: 1px solid var(--border-light); color: var(--text-dim, #9aa);
+    border-radius: 10px; padding: 8px 18px; font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer;
+  }
+  .adm-tab-btn.is-active { background: var(--accent, #7c3aed); color: #fff; border-color: transparent; }
+  .adm-tab-panel { display: none; }
+  .adm-tab-panel.is-active { display: block; }
+</style>
+</head>
+<body class="auth-checking">
+<header class="topbar">
+<div class="topbar-brand">
+<span class="topbar-logo topbar-logo--img"><img src="logo.png" alt="ألعاب أيمن"></span>
+<span class="topbar-title">إعدادات الأدمن</span>
+</div>
+<div class="auth-topbar-account">
+<a class="btn btn-sm" href="admin.html">المستخدمون</a>
+<a class="btn btn-sm" href="dashboard-core/index.html">لوحة التحكم</a>
+<span class="badge" id="account-role">—</span>
+<span class="stat-value" id="account-username">—</span>
+<button class="btn btn-sm" id="btn-account-logout">تسجيل خروج</button>
+</div>
+</header>
+<div class="main" style="padding: var(--space-5);">
+<div class="auth-message" id="admin-message"></div>
+
+<div class="adm-tabs" id="settings-tabs">
+  <button type="button" class="adm-tab-btn is-active" data-settings-tab="announcement">الإعلان</button>
+  <button type="button" class="adm-tab-btn" data-settings-tab="supporters">الداعمون</button>
+  <button type="button" class="adm-tab-btn" data-settings-tab="theme">ثيم المناسبات</button>
+  <button type="button" class="adm-tab-btn" data-settings-tab="catalog">كتالوج الإطارات</button>
+  <button type="button" class="adm-tab-btn" data-settings-tab="custom-frames">إطارات حصرية</button>
+  <button type="button" class="adm-tab-btn" data-settings-tab="grant">منح / سحب مقتنى</button>
+  <button type="button" class="adm-tab-btn" data-settings-tab="entrance">دخولية مستقلة</button>
+  <button type="button" class="adm-tab-btn" data-settings-tab="sp-levels">مستويات SP</button>
+</div>
+
+<!-- ---- الإعلان ---- -->
+<section class="adm-tab-panel is-active" data-settings-panel="announcement">
+<section class="panel panel-wide">
+<div class="panel-head"><h2>الإعلان للزوار</h2></div>
+<p class="empty-note" style="margin-bottom: var(--space-3);">
+يظهر كنافذة منبثقة لكل زائر يفتح الصفحة الرئيسية، في كل مرة يدخل فيها، لحد ما تزيله يدوياً.
+</p>
+<div class="field" style="margin-bottom: var(--space-3);">
+<label for="announcement-text-input">نص الإعلان</label>
+<textarea id="announcement-text-input" rows="3"
+style="width:100%; padding:8px 10px; background:var(--bg); border:1px solid var(--border-light); border-radius:var(--radius-sm); color:var(--text); font-family:inherit; font-size:14px; resize:vertical;"
+placeholder="اكتب النص اللي تبي المستخدمين يشوفونه…"></textarea>
+</div>
+<div class="field" style="margin-bottom: var(--space-3); max-width:420px;">
+<label for="announcement-image-input">اسم ملف الصورة (اختياري)</label>
+<input type="text" id="announcement-image-input" placeholder="مثال: announcement.png">
+<div class="empty-note" style="margin-top:4px;">
+ارفع الصورة بنفس طريقة الشعار — لازم ترفعها بنفسك على GitHub بجذر المستودع (بجانب logo.png)، واكتب هنا نفس اسم الملف بالضبط. اتركه فاضي لو الإعلان نص فقط بدون صورة.
+</div>
+</div>
+<div class="panel-head-actions">
+<button class="btn btn-sm btn-primary" id="btn-publish-announcement">نشر / تحديث</button>
+<button class="btn btn-sm btn-danger" id="btn-clear-announcement">إزالة الإعلان الحالي</button>
+</div>
+<div class="auth-message" id="announcement-message"></div>
+</section>
+</section>
+
+<!-- ---- الداعمون ---- -->
+<section class="adm-tab-panel" data-settings-panel="supporters">
+<section class="panel panel-wide">
+<div class="panel-head"><h2>داعمو المنصة</h2></div>
+<p class="empty-note" style="margin-bottom: var(--space-3);">
+إدخال يدوي حالياً — أضف كل دعم تشوفه بلوحة تحكم كريترز (اسم الداعم + رسالته + المبلغ). يظهر فوراً بالشريط المتحرك بالصفحة الرئيسية وبصفحة "توب الداعمين".
+</p>
+<div style="display:flex; gap: var(--space-3); flex-wrap:wrap; margin-bottom: var(--space-3);">
+<div class="field" style="flex:1; min-width:160px;">
+<label for="supporter-name-input">اسم الداعم</label>
+<input type="text" id="supporter-name-input" placeholder="مثال: أحمد">
+</div>
+<div class="field" style="flex:2; min-width:220px;">
+<label for="supporter-message-input">رسالة الداعم (اختياري)</label>
+<input type="text" id="supporter-message-input" placeholder="مثال: بالتوفيق للمنصة!">
+</div>
+<div class="field" style="width:140px;">
+<label for="supporter-amount-input">المبلغ (ريال)</label>
+<input type="number" id="supporter-amount-input" min="0" step="0.01" placeholder="0">
+</div>
+</div>
+<div class="panel-head-actions">
+<button class="btn btn-sm btn-primary" id="btn-add-supporter">إضافة دعم</button>
+</div>
+<div class="auth-message" id="supporter-message"></div>
+<div class="table-wrap" style="margin-top: var(--space-4);">
+<table class="table">
+<thead><tr><th>الاسم</th><th>الرسالة</th><th>المبلغ</th><th>التاريخ</th><th></th></tr></thead>
+<tbody id="supporters-tbody"><tr><td class="table-empty" colspan="5">جارٍ التحميل…</td></tr></tbody>
+</table>
+</div>
+</section>
+</section>
+
+<!-- ---- ثيم المناسبات ---- -->
+<section class="adm-tab-panel" data-settings-panel="theme">
+<section class="panel panel-wide">
+<div class="panel-head"><h2>ثيم المناسبات</h2></div>
+<p class="empty-note" style="margin-bottom: var(--space-3);">
+يبدّل ألوان الصفحة الرئيسية مؤقتاً لمناسبة معيّنة. اختر ثيم جاهز (تقدر تعدّل ألوانه بعدها) أو عدّل الألوان يدوياً بالكامل. "إلغاء التفعيل" يرجّع الموقع لألوانه الافتراضية فوراً لكل زائر.
+</p>
+<div class="auth-message" id="theme-status-message"></div>
+<div class="field" style="max-width:320px; margin-bottom: var(--space-3);">
+<label for="theme-preset-select">ثيم جاهز</label>
+<select id="theme-preset-select">
+<option value="">— اختر ثيماً جاهزاً (اختياري) —</option>
+<option value="national-day">🇸🇦 اليوم الوطني السعودي</option>
+<option value="founding-day">🏛️ يوم التأسيس</option>
+<option value="custom">🎨 مخصّص (عدّل الألوان يدوياً)</option>
+</select>
+<div class="empty-note" style="margin-top:4px;">الأكواد بالثيمات الجاهزة تقريبية — عدّلها بالأسفل لو عندك الكود الرسمي بالضبط.</div>
+</div>
+<div style="display:flex; gap: var(--space-3); flex-wrap:wrap; margin-bottom: var(--space-3);">
+<div class="field"><label for="theme-accent-input">اللون الأساسي</label><input type="color" id="theme-accent-input" value="#7c3aed"></div>
+<div class="field"><label for="theme-accent-pink-input">لون التدرّج الثاني</label><input type="color" id="theme-accent-pink-input" value="#ff4dff"></div>
+<div class="field"><label for="theme-accent-2-input">لون إضافي (لمسات خفيفة)</label><input type="color" id="theme-accent-2-input" value="#00c2ff"></div>
+</div>
+<div class="panel-head-actions">
+<button class="btn btn-sm btn-primary" id="btn-activate-theme">تفعيل الثيم</button>
+<button class="btn btn-sm btn-danger" id="btn-clear-theme">إلغاء التفعيل (رجوع للوضع الطبيعي)</button>
+</div>
+</section>
+</section>
+
+<!-- ---- كتالوج الإطارات ---- -->
+<section class="adm-tab-panel" data-settings-panel="catalog">
+<section class="panel panel-wide">
+<div class="panel-head">
+<h2>كتالوج الإطارات</h2>
+<button class="btn btn-sm" id="btn-refresh-catalog">تحديث</button>
+</div>
+<p class="empty-note" style="margin-bottom: var(--space-3);">
+11 إطار ثابت: 4 "خاصة" (تأتي مع دخولية + توهج تلقائياً عند منحها) و7 "مستوى" (تُفتح تلقائياً
+عند بلوغ اللاعب عدد النقاط الذي تحدده هنا). ارفع صورة كل إطار بنفسك على GitHub بجذر
+المستودع بنفس اسم الملف المكتوب بالجدول (بنفس أسلوب logo.png)، ثم عدّل بياناته هنا.
+</p>
+<div class="table-wrap">
+<table class="table">
+<thead>
+<tr><th>النوع</th><th>اسم الملف</th><th>الاسم المعروض (عربي)</th><th>نقاط المستوى المطلوبة</th><th>نموذج الدخولية الافتراضي</th><th>نص الدخولية الافتراضي</th><th></th></tr>
+</thead>
+<tbody id="catalog-table-body"><tr><td class="table-empty" colspan="7">جارٍ التحميل…</td></tr></tbody>
+</table>
+</div>
+<div class="auth-message" id="catalog-message"></div>
+</section>
+</section>
+
+<!-- ---- إطارات حصرية ---- -->
+<section class="adm-tab-panel" data-settings-panel="custom-frames">
+<section class="panel panel-wide">
+<div class="panel-head"><h2>إطارات حصرية</h2></div>
+<p class="empty-note" style="margin-bottom: var(--space-3);">
+إطارات إضافية بأسماء ملفات حرة تصممها بنفسك وترفعها لجذر المستودع، ثم تسجّلها هنا لتصبح
+متاحة للمنح لأي مستخدم من تبويب "منح / سحب مقتنى".
+</p>
+<div style="display:flex; gap:var(--space-2); flex-wrap:wrap; margin-bottom: var(--space-3);">
+<input type="text" id="custom-frame-filename" placeholder="اسم الملف — مثال: frame-exclusive-1.png" style="flex:1; min-width:220px;">
+<input type="text" id="custom-frame-name" placeholder="الاسم المعروض (عربي)" style="flex:1; min-width:180px;">
+<button class="btn btn-sm btn-primary" id="btn-create-custom-frame">إضافة</button>
+</div>
+<div class="table-wrap">
+<table class="table">
+<thead><tr><th>#</th><th>اسم الملف</th><th>الاسم المعروض</th></tr></thead>
+<tbody id="custom-frames-table-body"><tr><td class="table-empty" colspan="3">جارٍ التحميل…</td></tr></tbody>
+</table>
+</div>
+</section>
+</section>
+
+<!-- ---- منح / سحب مقتنى ---- -->
+<section class="adm-tab-panel" data-settings-panel="grant">
+<section class="panel panel-wide">
+<div class="panel-head"><h2>منح / سحب مقتنى</h2></div>
+<p class="empty-note" style="margin-bottom: var(--space-3);">
+يمنح أي إطار — حتى المقفول بمستوى — لأي مستخدم فوراً بصرف النظر عن نقاطه الفعلية (صلاحية
+تجاوز الأدمن). منح أحد الإطارات الأربعة "الخاصة" (المؤسس/الستريمر/الداعم/العضو المميز)
+يمنح تلقائياً دخولية + توهج معه، إلا لو خصّصت نموذج/نص مختلف بالحقول اللي تحت.
+</p>
+<div style="display:flex; gap:var(--space-2); flex-wrap:wrap; align-items:flex-end;">
+<div class="field" style="min-width:140px;"><label for="grant-user-id">معرّف المستخدم (id)</label><input type="number" id="grant-user-id" placeholder="مثال: 3"></div>
+<div class="field" style="min-width:140px;">
+<label for="grant-frame-type">نوع الإطار</label>
+<select id="grant-frame-type"><option value="catalog">من الكتالوج الثابت</option><option value="custom">إطار حصري</option></select>
+</div>
+<div class="field" style="min-width:200px;"><label for="grant-frame-ref">الإطار</label><select id="grant-frame-ref"></select></div>
+<div class="field" style="min-width:160px;">
+<label for="grant-entrance-template">نموذج الدخولية (اختياري)</label>
+<select id="grant-entrance-template">
+<option value="">افتراضي الكتالوج</option>
+<option value="gold">الذهبي الفخم</option>
+<option value="neon">النيون المستقبلي</option>
+<option value="fire">الناري القوي</option>
+<option value="ice">الجليدي الملكي</option>
+</select>
+</div>
+<div class="field" style="flex:1; min-width:200px;"><label for="grant-entrance-text">نص الدخولية (اختياري)</label><input type="text" id="grant-entrance-text" placeholder="اتركه فاضي لاستخدام النص الافتراضي"></div>
+</div>
+<div style="display:flex; gap:var(--space-2); margin-top: var(--space-3);">
+<button class="btn btn-sm btn-primary" id="btn-grant-frame">منح الإطار</button>
+<button class="btn btn-sm btn-danger" id="btn-revoke-frame">سحب الإطار</button>
+</div>
+<div class="auth-message" id="grant-message"></div>
+</section>
+</section>
+
+<!-- ---- دخولية مستقلة ---- -->
+<section class="adm-tab-panel" data-settings-panel="entrance">
+<section class="panel panel-wide">
+<div class="panel-head"><h2>دخولية مستقلة (بدون إطار)</h2></div>
+<p class="empty-note" style="margin-bottom: var(--space-3);">
+إعطاء دخولية لأي مستخدم بشكل منفصل تماماً عن الإطارات — مفيد لو تبي دخولية لمستخدم لا يملك
+أحد الإطارات الأربعة "الخاصة".
+</p>
+<div style="display:flex; gap:var(--space-2); flex-wrap:wrap; align-items:flex-end;">
+<div class="field" style="min-width:140px;"><label for="entrance-user-id">معرّف المستخدم (id)</label><input type="number" id="entrance-user-id" placeholder="مثال: 3"></div>
+<div class="field" style="min-width:160px;">
+<label for="entrance-template">النموذج</label>
+<select id="entrance-template">
+<option value="gold">الذهبي الفخم</option>
+<option value="neon">النيون المستقبلي</option>
+<option value="fire">الناري القوي</option>
+<option value="ice">الجليدي الملكي</option>
+</select>
+</div>
+<div class="field" style="flex:1; min-width:200px;"><label for="entrance-text">النص</label><input type="text" id="entrance-text" placeholder="اكتب نص الدخولية"></div>
+</div>
+<div style="display:flex; gap:var(--space-2); margin-top: var(--space-3);">
+<button class="btn btn-sm btn-primary" id="btn-set-entrance">حفظ الدخولية</button>
+<button class="btn btn-sm btn-danger" id="btn-clear-entrance">إزالة الدخولية</button>
+</div>
+<div class="auth-message" id="entrance-message"></div>
+<p class="empty-note" style="margin-top: var(--space-3);">
+ملاحظة: لو مستخدم أوقف دخوليته بنفسه من بروفايله (تفعيل/إيقاف ذاتي — [0.45.0])، تعيين
+دخولية جديدة هنا يعيد تفعيلها تلقائياً.
+</p>
+</section>
+</section>
+
+<!-- ---- [0.45.0] مستويات SP ---- -->
+<section class="adm-tab-panel" data-settings-panel="sp-levels">
+<section class="panel panel-wide">
+<div class="panel-head">
+<h2>مستويات الستريمر (SP)</h2>
+<button class="btn btn-sm" id="btn-refresh-sp-levels">تحديث</button>
+</div>
+<p class="empty-note" style="margin-bottom: var(--space-3);">
+7 مستويات ثابتة العدد (نفس فلسفة مستويات نقاط اللاعب) — تقدر تعدّل اسم كل مستوى وعتبة SP
+المطلوبة له فقط، بدون إضافة/حذف مستويات. SP تُحسَب تلقائياً من إحصائيات البث الفعلية
+(دقائق البث + قيمة الهدايا) — راجع backend/points/streamer-level-service.js.
+</p>
+<div class="table-wrap">
+<table class="table">
+<thead><tr><th>الترتيب</th><th>الاسم المعروض</th><th>عتبة SP المطلوبة</th><th></th></tr></thead>
+<tbody id="sp-levels-table-body"><tr><td class="table-empty" colspan="4">جارٍ التحميل…</td></tr></tbody>
+</table>
+</div>
+<div class="auth-message" id="sp-levels-message"></div>
+</section>
+</section>
+
+</div>
+<script src="auth/auth-client.js"></script>
+<script>
+'use strict';
+/**
+ * [0.45.0] إعدادات الأدمن — كل الأقسام التي كانت أصلاً بـadmin.html
+ * (نفس منطق كل قسم دون أي تعديل)، منظّمة بتبويبات، + تبويب جديد لمستويات
+ * SP. نفس محمية AGPAuth.requireAdmin بالضبط.
+ */
+(function () {
+    function escapeHtml(value) {
+        var div = document.createElement('div');
+        div.textContent = value === null || value === undefined ? '' : String(value);
+        return div.innerHTML;
+    }
+    function escapeAttr(value) {
+        return escapeHtml(value).replace(/"/g, '&quot;');
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-settings-tab]'), function (btn) {
+        btn.addEventListener('click', function () {
+            Array.prototype.forEach.call(document.querySelectorAll('[data-settings-tab]'), function (b) { b.classList.remove('is-active'); });
+            btn.classList.add('is-active');
+            var tab = btn.getAttribute('data-settings-tab');
+            Array.prototype.forEach.call(document.querySelectorAll('[data-settings-panel]'), function (panel) {
+                panel.classList.toggle('is-active', panel.getAttribute('data-settings-panel') === tab);
+            });
+        });
+    });
+
+    document.getElementById('btn-account-logout').addEventListener('click', function () {
+        window.AGPAuth.logout().then(function () { window.location.href = 'login.html'; });
+    });
+
+    /* ---- الإعلان ---- */
+    var announcementMessageEl = document.getElementById('announcement-message');
+    var announcementTextInput = document.getElementById('announcement-text-input');
+    var announcementImageInput = document.getElementById('announcement-image-input');
+    function showAnnouncementMessage(text, type) {
+        announcementMessageEl.textContent = text;
+        announcementMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+    function loadAnnouncement() {
+        window.AGPAuth.getAnnouncement().then(function (result) {
+            if (result.success && result.announcement) {
+                announcementTextInput.value = result.announcement.text || '';
+                announcementImageInput.value = result.announcement.imageFilename || '';
+            }
+        });
+    }
+    document.getElementById('btn-publish-announcement').addEventListener('click', function () {
+        var text = (announcementTextInput.value || '').trim();
+        if (!text) { showAnnouncementMessage('اكتب نص الإعلان قبل النشر.', 'error'); return; }
+        var button = this;
+        button.disabled = true;
+        window.AGPAuth.adminSetAnnouncement(text, announcementImageInput.value).then(function (result) {
+            showAnnouncementMessage(result.success ? 'تم نشر الإعلان — يظهر الآن لكل زائر جديد للصفحة الرئيسية.' : ('تعذّر النشر: ' + (result.error || 'unknown')), result.success ? 'success' : 'error');
+        }).finally(function () { button.disabled = false; });
+    });
+    document.getElementById('btn-clear-announcement').addEventListener('click', function () {
+        var button = this;
+        button.disabled = true;
+        window.AGPAuth.adminClearAnnouncement().then(function (result) {
+            showAnnouncementMessage(result.success ? 'تمت إزالة الإعلان — ما راح يظهر لأي زائر بعد الآن.' : 'تعذّرت الإزالة.', result.success ? 'success' : 'error');
+        }).finally(function () { button.disabled = false; });
+    });
+
+    /* ---- الداعمون ---- */
+    var supporterMessageEl = document.getElementById('supporter-message');
+    var supportersTbody = document.getElementById('supporters-tbody');
+    var supporterNameInput = document.getElementById('supporter-name-input');
+    var supporterMessageInput = document.getElementById('supporter-message-input');
+    var supporterAmountInput = document.getElementById('supporter-amount-input');
+    function showSupporterMessage(text, type) {
+        supporterMessageEl.textContent = text;
+        supporterMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+    function formatSupporterDate(timestamp) {
+        try { return new Date(timestamp).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' }); } catch (e) { return '—'; }
+    }
+    function loadSupporters() {
+        supportersTbody.innerHTML = '<tr><td class="table-empty" colspan="5">جارٍ التحميل…</td></tr>';
+        window.AGPAuth.adminListSupporters().then(function (result) {
+            if (!result.success) { supportersTbody.innerHTML = '<tr><td class="table-empty" colspan="5">تعذّر تحميل قائمة الداعمين.</td></tr>'; return; }
+            var supporters = result.supporters || [];
+            if (!supporters.length) { supportersTbody.innerHTML = '<tr><td class="table-empty" colspan="5">لا يوجد داعمون بعد.</td></tr>'; return; }
+            supportersTbody.innerHTML = supporters.map(function (s) {
+                return '<tr><td>' + escapeHtml(s.name) + '</td><td>' + escapeHtml(s.message || '—') + '</td><td>' + s.amount + '</td><td>' + formatSupporterDate(s.created_at) + '</td>' +
+                    '<td><button class="btn btn-sm btn-danger" data-delete-supporter="' + s.id + '">حذف</button></td></tr>';
+            }).join('');
+        });
+    }
+    document.getElementById('btn-add-supporter').addEventListener('click', function () {
+        var name = (supporterNameInput.value || '').trim();
+        if (!name) { showSupporterMessage('اكتب اسم الداعم أولاً.', 'error'); return; }
+        var button = this;
+        button.disabled = true;
+        window.AGPAuth.adminAddSupporter(name, supporterMessageInput.value, supporterAmountInput.value).then(function (result) {
+            if (result.success) {
+                showSupporterMessage('تمت الإضافة — يظهر الآن بالصفحة الرئيسية.', 'success');
+                supporterNameInput.value = ''; supporterMessageInput.value = ''; supporterAmountInput.value = '';
+                loadSupporters();
+            } else {
+                showSupporterMessage('تعذّرت الإضافة: ' + (result.error || 'unknown'), 'error');
+            }
+        }).finally(function () { button.disabled = false; });
+    });
+    supportersTbody.addEventListener('click', function (event) {
+        var button = event.target.closest ? event.target.closest('[data-delete-supporter]') : null;
+        if (!button) return;
+        var id = button.getAttribute('data-delete-supporter');
+        button.disabled = true;
+        window.AGPAuth.adminDeleteSupporter(id).then(function () { loadSupporters(); });
+    });
+
+    /* ---- ثيم المناسبات ---- */
+    var THEME_PRESETS = {
+        'national-day': { accent: '#006c35', accentPink: '#c9a24b', accent2: '#ffffff' },
+        'founding-day': { accent: '#2c3e2d', accentPink: '#a85c32', accent2: '#d8c79d' }
+    };
+    var themeStatusEl = document.getElementById('theme-status-message');
+    var themePresetSelect = document.getElementById('theme-preset-select');
+    var themeAccentInput = document.getElementById('theme-accent-input');
+    var themeAccentPinkInput = document.getElementById('theme-accent-pink-input');
+    var themeAccent2Input = document.getElementById('theme-accent-2-input');
+    function showThemeStatus(text, type) {
+        themeStatusEl.textContent = text;
+        themeStatusEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+    function loadThemeStatus() {
+        window.AGPAuth.getSiteTheme().then(function (result) {
+            var theme = result && result.success ? result.theme : null;
+            if (!theme) { showThemeStatus('الحالة الآن: غير مفعَّل — الموقع بألوانه الافتراضية.', 'success'); return; }
+            themeAccentInput.value = theme.accent || '#7c3aed';
+            themeAccentPinkInput.value = theme.accentPink || '#ff4dff';
+            themeAccent2Input.value = theme.accent2 || '#00c2ff';
+            if (theme.presetKey) themePresetSelect.value = theme.presetKey;
+            showThemeStatus('الحالة الآن: مفعَّل' + (theme.presetKey && THEME_PRESETS[theme.presetKey] ? ' (' + themePresetSelect.options[themePresetSelect.selectedIndex].text + ')' : '') + '.', 'success');
+        });
+    }
+    themePresetSelect.addEventListener('change', function () {
+        var preset = THEME_PRESETS[this.value];
+        if (!preset) return;
+        themeAccentInput.value = preset.accent; themeAccentPinkInput.value = preset.accentPink; themeAccent2Input.value = preset.accent2;
+    });
+    document.getElementById('btn-activate-theme').addEventListener('click', function () {
+        var button = this;
+        button.disabled = true;
+        window.AGPAuth.adminSetSiteTheme(themePresetSelect.value || null, themeAccentInput.value, themeAccentPinkInput.value, themeAccent2Input.value).then(function (result) {
+            showThemeStatus(result.success ? 'تم التفعيل — الألوان صارت تظهر الآن لكل زائر للصفحة الرئيسية.' : ('تعذّر التفعيل: ' + (result.error || 'unknown')), result.success ? 'success' : 'error');
+        }).finally(function () { button.disabled = false; });
+    });
+    document.getElementById('btn-clear-theme').addEventListener('click', function () {
+        var button = this;
+        button.disabled = true;
+        window.AGPAuth.adminClearSiteTheme().then(function (result) {
+            showThemeStatus(result.success ? 'تم إلغاء التفعيل — الموقع رجع لألوانه الافتراضية.' : 'تعذّر الإلغاء.', result.success ? 'success' : 'error');
+        }).finally(function () { button.disabled = false; });
+    });
+
+    /* ---- كتالوج الإطارات + إطارات حصرية + منح/سحب ---- */
+    var TEMPLATE_LABELS = { gold: 'الذهبي الفخم', neon: 'النيون المستقبلي', fire: 'الناري القوي', ice: 'الجليدي الملكي' };
+    var catalogMessageEl = document.getElementById('catalog-message');
+    var catalogTbody = document.getElementById('catalog-table-body');
+    var latestCatalog = [];
+    var latestCustomFrames = [];
+    function showCatalogMessage(text, type) {
+        catalogMessageEl.textContent = text;
+        catalogMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+    function templateSelectHtml(currentValue, idAttr) {
+        var options = ['<option value="">—</option>'].concat(Object.keys(TEMPLATE_LABELS).map(function (key) {
+            return '<option value="' + key + '"' + (currentValue === key ? ' selected' : '') + '>' + TEMPLATE_LABELS[key] + '</option>';
+        }));
+        return '<select ' + idAttr + '>' + options.join('') + '</select>';
+    }
+    function renderCatalog(rows) {
+        latestCatalog = rows;
+        if (!rows.length) { catalogTbody.innerHTML = '<tr><td class="table-empty" colspan="7">لا يوجد كتالوج.</td></tr>'; return; }
+        var smallInput = 'style="width:100%;padding:5px 7px;background:var(--bg);border:1px solid var(--border-light);border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit;"';
+        catalogTbody.innerHTML = rows.map(function (row) {
+            var kindLabel = row.kind === 'level' ? 'مستوى' : 'خاص';
+            var entranceCells = row.kind === 'special'
+                ? '<td>' + templateSelectHtml(row.default_entrance_template, 'data-slug="' + row.slug + '" data-field="defaultEntranceTemplate"') + '</td>' +
+                  '<td><input type="text" ' + smallInput + ' value="' + escapeAttr(row.default_entrance_text) + '" data-slug="' + row.slug + '" data-field="defaultEntranceText"></td>'
+                : '<td class="table-empty">—</td><td class="table-empty">—</td>';
+            var levelCell = row.kind === 'level'
+                ? '<input type="number" ' + smallInput + ' value="' + (row.level_points_required === null ? '' : row.level_points_required) + '" placeholder="غير مفعّل" data-slug="' + row.slug + '" data-field="levelPointsRequired">'
+                : '—';
+            return '<tr><td><span class="badge">' + kindLabel + '</span></td><td class="mono">' + escapeHtml(row.image_filename) + '</td>' +
+                '<td><input type="text" ' + smallInput + ' value="' + escapeAttr(row.display_name_ar) + '" data-slug="' + row.slug + '" data-field="displayNameAr"></td>' +
+                '<td>' + levelCell + '</td>' + entranceCells +
+                '<td><button class="btn btn-sm" data-save-catalog="' + row.slug + '">حفظ</button></td></tr>';
+        }).join('');
+        Array.prototype.forEach.call(catalogTbody.querySelectorAll('[data-save-catalog]'), function (button) {
+            button.addEventListener('click', function () {
+                var slug = button.getAttribute('data-save-catalog');
+                var fields = {};
+                Array.prototype.forEach.call(catalogTbody.querySelectorAll('[data-slug="' + slug + '"][data-field]'), function (input) {
+                    fields[input.getAttribute('data-field')] = input.value;
+                });
+                button.disabled = true;
+                window.AGPAuth.adminUpdateCatalogEntry(slug, fields).then(function (result) {
+                    showCatalogMessage(result.success ? 'تم الحفظ.' : ('تعذّر الحفظ: ' + (result.error || 'unknown')), result.success ? 'success' : 'error');
+                    if (result.success) loadCatalog();
+                }).finally(function () { button.disabled = false; });
+            });
+        });
+        refreshGrantFrameOptions();
+    }
+    function loadCatalog() {
+        window.AGPAuth.adminGetCollectiblesCatalog().then(function (result) {
+            if (!result.success) { showCatalogMessage('تعذّر تحميل الكتالوج.', 'error'); return; }
+            renderCatalog(result.catalog);
+            renderCustomFrames(result.customFrames);
+        });
+    }
+    document.getElementById('btn-refresh-catalog').addEventListener('click', loadCatalog);
+
+    var customFramesTbody = document.getElementById('custom-frames-table-body');
+    function renderCustomFrames(frames) {
+        latestCustomFrames = frames;
+        if (!frames.length) {
+            customFramesTbody.innerHTML = '<tr><td class="table-empty" colspan="3">لا توجد إطارات حصرية بعد.</td></tr>';
+        } else {
+            customFramesTbody.innerHTML = frames.map(function (f) {
+                return '<tr><td>' + f.id + '</td><td class="mono">' + escapeHtml(f.image_filename) + '</td><td>' + escapeHtml(f.display_name_ar) + '</td></tr>';
+            }).join('');
+        }
+        refreshGrantFrameOptions();
+    }
+    document.getElementById('btn-create-custom-frame').addEventListener('click', function () {
+        var filenameInput = document.getElementById('custom-frame-filename');
+        var nameInput = document.getElementById('custom-frame-name');
+        var filename = (filenameInput.value || '').trim();
+        if (!filename) { showCatalogMessage('اكتب اسم ملف الإطار الحصري أولاً.', 'error'); return; }
+        window.AGPAuth.adminCreateCustomFrame(filename, nameInput.value).then(function (result) {
+            if (result.success) {
+                filenameInput.value = ''; nameInput.value = '';
+                showCatalogMessage('تمت الإضافة — ارفع الصورة بنفس اسم الملف لجذر المستودع.', 'success');
+                loadCatalog();
+            } else {
+                showCatalogMessage('تعذّرت الإضافة: ' + (result.error || 'unknown'), 'error');
+            }
+        });
+    });
+
+    var grantMessageEl = document.getElementById('grant-message');
+    var grantFrameTypeEl = document.getElementById('grant-frame-type');
+    var grantFrameRefEl = document.getElementById('grant-frame-ref');
+    function showGrantMessage(text, type) {
+        grantMessageEl.textContent = text;
+        grantMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+    function refreshGrantFrameOptions() {
+        if (grantFrameTypeEl.value === 'custom') {
+            grantFrameRefEl.innerHTML = latestCustomFrames.map(function (f) {
+                return '<option value="' + f.id + '">' + escapeHtml(f.display_name_ar || f.image_filename) + '</option>';
+            }).join('') || '<option value="">لا يوجد إطارات حصرية</option>';
+        } else {
+            grantFrameRefEl.innerHTML = latestCatalog.map(function (row) {
+                return '<option value="' + row.slug + '">' + escapeHtml(row.display_name_ar || row.slug) + ' (' + row.slug + ')</option>';
+            }).join('');
+        }
+    }
+    grantFrameTypeEl.addEventListener('change', refreshGrantFrameOptions);
+    document.getElementById('btn-grant-frame').addEventListener('click', function () {
+        var userId = Number(document.getElementById('grant-user-id').value);
+        if (!userId) { showGrantMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
+        var frameType = grantFrameTypeEl.value;
+        var frameRef = grantFrameRefEl.value;
+        if (!frameRef) { showGrantMessage('اختر إطاراً أولاً.', 'error'); return; }
+        window.AGPAuth.adminGrantFrame(userId, frameType, frameRef, {
+            entranceTemplate: document.getElementById('grant-entrance-template').value,
+            entranceText: document.getElementById('grant-entrance-text').value
+        }).then(function (result) {
+            showGrantMessage(result.success ? 'تم منح الإطار.' : ('تعذّر المنح: ' + (result.error || 'unknown')), result.success ? 'success' : 'error');
+        });
+    });
+    document.getElementById('btn-revoke-frame').addEventListener('click', function () {
+        var userId = Number(document.getElementById('grant-user-id').value);
+        if (!userId) { showGrantMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
+        var frameType = grantFrameTypeEl.value;
+        var frameRef = grantFrameRefEl.value;
+        if (!frameRef) { showGrantMessage('اختر إطاراً أولاً.', 'error'); return; }
+        window.AGPAuth.adminRevokeFrame(userId, frameType, frameRef).then(function (result) {
+            showGrantMessage(result.success ? 'تم سحب الإطار.' : 'تعذّر السحب.', result.success ? 'success' : 'error');
+        });
+    });
+
+    /* ---- دخولية مستقلة ---- */
+    var entranceMessageEl = document.getElementById('entrance-message');
+    function showEntranceMessage(text, type) {
+        entranceMessageEl.textContent = text;
+        entranceMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+    document.getElementById('btn-set-entrance').addEventListener('click', function () {
+        var userId = Number(document.getElementById('entrance-user-id').value);
+        if (!userId) { showEntranceMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
+        var text = (document.getElementById('entrance-text').value || '').trim();
+        if (!text) { showEntranceMessage('اكتب نص الدخولية أولاً.', 'error'); return; }
+        window.AGPAuth.adminSetEntrance(userId, document.getElementById('entrance-template').value, text).then(function (result) {
+            showEntranceMessage(result.success ? 'تم حفظ الدخولية.' : 'تعذّر الحفظ.', result.success ? 'success' : 'error');
+        });
+    });
+    document.getElementById('btn-clear-entrance').addEventListener('click', function () {
+        var userId = Number(document.getElementById('entrance-user-id').value);
+        if (!userId) { showEntranceMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
+        window.AGPAuth.adminClearEntrance(userId).then(function (result) {
+            showEntranceMessage(result.success ? 'تمت إزالة الدخولية.' : 'تعذّرت الإزالة.', result.success ? 'success' : 'error');
+        });
+    });
+
+    /* ---- [0.45.0] مستويات SP ---- */
+    var spLevelsMessageEl = document.getElementById('sp-levels-message');
+    var spLevelsTbody = document.getElementById('sp-levels-table-body');
+    function showSpLevelsMessage(text, type) {
+        spLevelsMessageEl.textContent = text;
+        spLevelsMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+    function loadSpLevels() {
+        spLevelsTbody.innerHTML = '<tr><td class="table-empty" colspan="4">جارٍ التحميل…</td></tr>';
+        window.AGPAuth.getStreamerLevels().then(function (result) {
+            if (!result.success) { spLevelsTbody.innerHTML = '<tr><td class="table-empty" colspan="4">تعذّر التحميل.</td></tr>'; return; }
+            var smallInput = 'style="width:140px;padding:5px 7px;background:var(--bg);border:1px solid var(--border-light);border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit;"';
+            var rows = result.levels || [];
+            spLevelsTbody.innerHTML = rows.map(function (row) {
+                return '<tr><td>' + row.sort_order + '</td>' +
+                    '<td><input type="text" style="width:220px;padding:5px 7px;background:var(--bg);border:1px solid var(--border-light);border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit;" value="' + escapeAttr(row.display_name_ar) + '" data-sp-slug="' + row.slug + '" data-sp-field="displayNameAr"></td>' +
+                    '<td><input type="number" ' + smallInput + ' value="' + row.min_sp + '" data-sp-slug="' + row.slug + '" data-sp-field="minSp"></td>' +
+                    '<td><button class="btn btn-sm" data-save-sp-level="' + row.slug + '">حفظ</button></td></tr>';
+            }).join('');
+            Array.prototype.forEach.call(spLevelsTbody.querySelectorAll('[data-save-sp-level]'), function (button) {
+                button.addEventListener('click', function () {
+                    var slug = button.getAttribute('data-save-sp-level');
+                    var fields = {};
+                    Array.prototype.forEach.call(spLevelsTbody.querySelectorAll('[data-sp-slug="' + slug + '"][data-sp-field]'), function (input) {
+                        fields[input.getAttribute('data-sp-field')] = input.getAttribute('data-sp-field') === 'minSp' ? Number(input.value) : input.value;
+                    });
+                    button.disabled = true;
+                    window.AGPAuth.adminUpdateStreamerLevel(slug, fields).then(function (result2) {
+                        showSpLevelsMessage(result2.success ? 'تم الحفظ.' : ('تعذّر الحفظ: ' + (result2.error || 'unknown')), result2.success ? 'success' : 'error');
+                    }).finally(function () { button.disabled = false; });
+                });
+            });
+        });
+    }
+    document.getElementById('btn-refresh-sp-levels').addEventListener('click', loadSpLevels);
+
+    window.AGPAuth.requireAdmin('login.html').then(function (user) {
+        if (!user) return;
+        document.body.classList.remove('auth-checking');
+        document.getElementById('account-username').textContent = user.username;
+        document.getElementById('account-role').textContent = user.role;
+        loadAnnouncement();
+        loadCatalog();
+        loadSupporters();
+        loadThemeStatus();
+        loadSpLevels();
+    });
+}());
+</script>
+</body>
+</html>
