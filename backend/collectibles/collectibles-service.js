@@ -237,6 +237,31 @@ function getEquippedFrameForVerifiedTikTok(tiktokUsername) {
     return { frameType: row.frame_type, frameRef: row.frame_ref, imageFilename: imageFilename };
 }
 
+/**
+ * ⚠️ [0.44.4] الدخولية النشطة حالياً لمستخدم مسجَّل بالمنصة، *فقط* لو
+ * ربط ووثَّق (tiktok_verified = 1) نفس يوزرنيم التيك توك الممرَّر —
+ * نظير getEquippedFrameForVerifiedTikTok أعلاه بالضبط (نفس منطق
+ * التحقق ونفس سبب تكرار الاستعلام بدل استدعاء auth-service.js). كانت
+ * الدخولية موجودة بالباك إند فقط بدون أي مسار يوصلها لبطاقة اللاعب
+ * باللوبي — هذا أول استهلاك فعلي لها من tiktok-connector.js.
+ * @param {string} tiktokUsername - يوزرنيم تيك توك خام (بدون بادئة 'tiktok:')
+ * @returns {{templateKey: string, entranceText: string}|null}
+ */
+function getEquippedEntranceForVerifiedTikTok(tiktokUsername) {
+    tiktokUsername = (tiktokUsername || '').trim();
+    if (!tiktokUsername) return null;
+
+    var user = db.prepare(
+        'SELECT id FROM users WHERE tiktok_verified = 1 AND LOWER(tiktok_username) = LOWER(?)'
+    ).get(tiktokUsername);
+    if (!user) return null;
+
+    var row = db.prepare('SELECT template_key, entrance_text FROM user_entrances WHERE user_id = ?').get(user.id);
+    if (!row) return null;
+
+    return { templateKey: row.template_key, entranceText: row.entrance_text || '' };
+}
+
 /* ----------------------------------------------------------------------
  * الدخولية (نموذج أنيميشن + نص حر)
  * ---------------------------------------------------------------------- */
@@ -295,6 +320,7 @@ module.exports = {
     setEquipped: setEquipped,
     getUserFrames: getUserFrames,
     getEquippedFrameForVerifiedTikTok: getEquippedFrameForVerifiedTikTok,
+    getEquippedEntranceForVerifiedTikTok: getEquippedEntranceForVerifiedTikTok,
     setEntrance: setEntrance,
     clearEntrance: clearEntrance,
     getEntrance: getEntrance,
