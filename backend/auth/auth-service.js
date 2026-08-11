@@ -21,6 +21,7 @@ var config = require('../config');
 var OAuth2Client = require('google-auth-library').OAuth2Client;
 var collectiblesService = require('../collectibles/collectibles-service');
 var pointsService = require('../points/points-service');
+var streamerLevelService = require('../points/streamer-level-service');
 
 var SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 يوماً
 var googleClient = config.googleClientId ? new OAuth2Client(config.googleClientId) : null;
@@ -242,6 +243,7 @@ function getPublicProfile(customId) {
         joined_at: user.created_at,
         stats: {
             total_broadcasts: stats.total_broadcasts,
+            total_comments: stats.total_comments, // [0.45.0] كانت محسوبة بـgetUserStats لكن غير مُرفَقة هنا
             total_gifts: stats.total_gifts,
             total_gifts_value: stats.total_gifts_value,
             total_follows: stats.total_follows,
@@ -255,7 +257,11 @@ function getPublicProfile(customId) {
         // تلك القاعدة، فقط يُرفِق البيانات لو الكائن كامل سيُرسَل.
         points: pointsService.getUserPoints(user.id),
         frames: collectiblesService.getUserFrames(user.id),
-        entrance: collectiblesService.getEntrance(user.id)
+        entrance: collectiblesService.getEntrance(user.id),
+        // [0.45.0] مستوى الستريمر (SP) — راجع backend/points/streamer-level-service.js.
+        // بنفس بوابة الخصوصية على "points" أعلاه بالضبط (handlePublicProfile
+        // بـauth-router.js يقرر إرسالها فقط لصاحب الحساب أو الأدمن).
+        streamerLevel: streamerLevelService.getStreamerLevelInfo(user.id)
     };
 }
 
@@ -377,6 +383,55 @@ async function verifyTikTokOwnership(userId, tiktokUsername) {
 }
 
 /**
+ * [0.45.0] استخراج قيمة content من وسم <meta> يطابق property/name معيّن،
+ * **بصرف النظر عن ترتيب الخصائص بالوسم**. الإصدار القديم كان يفترض
+ * ترتيباً ثابتاً (property أولاً ثم content مباشرة)، وهذا يفشل بصمت لو
+ * تيك توك (أو أي React SSR — علامته المعتادة سمة data-rh) وضع خاصية
+ * أخرى (مثل data-rh="true") قبل property بنفس الوسم — نمط شائع جداً في
+ * صفحات React Helmet SSR. هذا الإصدار يبحث أولاً عن كامل وسم <meta ...>
+ * الذي يحتوي property="<key>" (بأي مكان بالوسم)، ثم يستخرج content منه
+ * بمعزل عن الترتيب. لا يرمي أبداً — يرجع null عند أي فشل.
+ *
+ * ⚠️ ملاحظة صادقة: هذا تحسين مبني على سبب فشل معروف وشائع (اختلاف ترتيب
+ * الخصائص)، لكن **لم يُختبَر بعد ضد تيك توك حقيقي** من هذه البيئة (لا
+ * وصول شبكي لتيك توك هنا، نفس تحفّظ verifyTikTokOwnership وباقي
+ * استخراجات تيك توك بالمشروع). لو تيك توك أصلاً لا يُرسِل وسوم og:image/
+ * og:title لطلبات غير المتصفح (User-Agent غير حقيقي)، هذا الإصلاح وحده
+ * لن يكفي — سجل التشخيص أدناه (أول 5 محاولات فقط) سيوضّح ذلك مباشرة
+ * بسجلات الخادم بعد الرفع.
+ * @param {string} html
+ * @param {string} propertyKey - مثل 'og:image' أو 'og:title'
+ * @returns {string|null}
+ */
+function extractMetaTagContent(html, propertyKey) {
+    var escapedKey = propertyKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    var tagRegex = new RegExp('<meta\\b[^>]*\\bproperty=["\']' + escapedKey + '["\'][^>]*>', 'i');
+    var tagMatch = tagRegex.exec(html);
+    if (!tagMatch) return null;
+
+    var contentMatch = /\bcontent=["']([^"']*)["']/i.exec(tagMatch[0]);
+    return (contentMatch && contentMatch[1]) ? contentMatch[1] : null;
+}
+
+var _tiktokExtractionDebugLogsRemaining = 5;
+/**
+ * تسجيل تشخيصي محدود (أول 5 محاولات استخراج فقط، بنفس أسلوب
+ * _extractUserDebugLogsRemaining بـtiktok-connector.js) — يوضّح هل HTML
+ * المجلوب فعلياً يحتوي وسوم og: من الأساس أم لا، بدل التخمين لاحقاً.
+ */
+function _logTikTokExtractionDiagnostics(label, html, extractedValue) {
+    if (_tiktokExtractionDebugLogsRemaining <= 0) return;
+    _tiktokExtractionDebugLogsRemaining--;
+    var hasAnyOgTag = /<meta\b[^>]*\bproperty=["']og:/i.test(html || '');
+    logger.log(
+        'Auth Service: [0.45.0 تشخيص] استخراج ' + label + ' — ' +
+        'طول HTML=' + ((html && html.length) || 0) + ' ' +
+        'يحتوي أي وسم og:=' + hasAnyOgTag + ' ' +
+        '→ النتيجة=' + JSON.stringify(extractedValue)
+    );
+}
+
+/**
  * استخراج تقريبي لرابط صورة بروفايل تيك توك من HTML صفحة البروفايل
  * العامة، عبر وسم <meta property="og:image" content="...">. لا يرمي
  * أبداً — يرجع null عند أي فشل.
@@ -384,8 +439,9 @@ async function verifyTikTokOwnership(userId, tiktokUsername) {
  */
 function extractProfileAvatarFromHtml(html) {
     try {
-        var match = /<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i.exec(html);
-        return (match && match[1]) ? match[1] : null;
+        var value = extractMetaTagContent(html, 'og:image');
+        _logTikTokExtractionDiagnostics('avatar (og:image)', html, value);
+        return value;
     } catch (err) {
         return null;
     }
@@ -399,8 +455,9 @@ function extractProfileAvatarFromHtml(html) {
  */
 function extractProfileDisplayNameFromHtml(html) {
     try {
-        var match = /<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i.exec(html);
-        return (match && match[1]) ? match[1] : null;
+        var value = extractMetaTagContent(html, 'og:title');
+        _logTikTokExtractionDiagnostics('display name (og:title)', html, value);
+        return value;
     } catch (err) {
         return null;
     }
