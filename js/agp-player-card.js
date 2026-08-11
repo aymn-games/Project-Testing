@@ -151,7 +151,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * "يقصّ" الهامش الشفاف أعلى/أسفل الملف الأصلي بصرياً بدون أي
              * تعديل على الملف نفسه. الصورة الشخصية تُرسَم خلفها، والاسم
              * فوقها، كلاهما بمواقع مقاسة (% من الحاوية بعد القص). */
-            '.agp-pcard-tpl{position:relative;width:' + CARD_WIDTH_PX + 'px;height:' + CARD_HEIGHT_PX + 'px;',
+            '.agp-pcard-tpl{display:inline-block;position:relative;width:' + CARD_WIDTH_PX + 'px;height:' + CARD_HEIGHT_PX + 'px;',
             'overflow:hidden;flex-shrink:0;vertical-align:middle;}',
             '.agp-pcard-tpl-avatar{position:absolute;left:' + AVATAR_LEFT_PCT + '%;top:' + AVATAR_TOP_PCT + '%;',
             'width:' + AVATAR_WIDTH_PCT + '%;height:' + AVATAR_HEIGHT_PCT + '%;border-radius:50%;',
