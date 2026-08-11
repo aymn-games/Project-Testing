@@ -126,7 +126,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // نفس الحقول الواصلة من الباك إند بالضبط (راجع tiktok-connector.js)،
         // تُستخدَم لبناء بطاقة اللاعب (js/agp-player-card.js) باللوبي
         // ونوافذ اختيار الإقصاء/الإرجاع بأي لعبة.
-        var playerData = { id: payload.id, name: payload.name, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null };
+        // ⚠️ [0.44.4] entrance نفس المبدأ بالضبط — تُستخدَم لتشغيل
+        // أنيميشن الدخول (js/agp-entrance.js) عند انضمام لاعب له دخولية مفعَّلة.
+        var playerData = { id: payload.id, name: payload.name, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, entrance: payload.entrance || null };
         var keywordActive = AGP.keywordManager && AGP.keywordManager.isActive();
 
         if (keywordActive) {
