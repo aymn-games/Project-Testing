@@ -19,7 +19,7 @@
  *                                    // مسؤولية ws-server.js عند تلقّي
  *                                    // رسالة disconnect من المتصفح فقط،
  *                                    // بلا تغيير على هذا العقد).
- *     onComment({ id, name, text, isFollower, avatarUrl, frame }),
+ *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance }), // ⚠️ [0.44.4] entrance جديد
  *     onGift({ id, name, giftName, giftValue, repeatCount }),
  *     onFollow({ id, name })
  *   }
@@ -148,6 +148,24 @@ function extractEquippedFrame(uniqueId) {
         return collectiblesService.getEquippedFrameForVerifiedTikTok(uniqueId);
     } catch (err) {
         logger.error('TikTok Connector: frame lookup failed for "' + uniqueId + '":', err);
+        return null;
+    }
+}
+
+/**
+ * ⚠️ [0.44.4] الدخولية المفعَّلة حالياً (لو وُجدت) لصاحب هذا التعليق —
+ * نفس شرط/منطق extractEquippedFrame أعلاه بالضبط، راجع
+ * collectiblesService.getEquippedEntranceForVerifiedTikTok. كانت
+ * الدخولية مبنية بالباك إند فقط بدون أي مسار يوصلها لهذا الحدث —
+ * هذا أول ربط فعلي لها.
+ * @param {string} uniqueId
+ * @returns {{templateKey: string, entranceText: string}|null}
+ */
+function extractEquippedEntrance(uniqueId) {
+    try {
+        return collectiblesService.getEquippedEntranceForVerifiedTikTok(uniqueId);
+    } catch (err) {
+        logger.error('TikTok Connector: entrance lookup failed for "' + uniqueId + '":', err);
         return null;
     }
 }
@@ -282,6 +300,7 @@ function createTikTokConnector() {
                 isFollower: extractIsFollower(data), // ⚠️ لا يزال تخميناً، راجع _debugFollowStatus أدناه
                 avatarUrl: extractAvatarUrl(data), // ⚠️ [جديد] غير مؤكَّد بالكامل، راجع تعليق extractAvatarUrl
                 frame: extractEquippedFrame(user.uniqueId), // ⚠️ [جديد] null لو بدون حساب موثَّق/إطار مفعَّل
+                entrance: extractEquippedEntrance(user.uniqueId), // ⚠️ [0.44.4] null لو بدون حساب موثَّق/دخولية مفعَّلة
                 _debugFollowStatus: followDebug.followStatus,
                 _debugIsFollowerOfAnchor: followDebug.isFollowerOfAnchor
             });
