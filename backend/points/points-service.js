@@ -90,7 +90,18 @@ function awardForRoundCompletion(userId, params) {
     var hours = Math.floor((params.durationMs || 0) / 3600000);
     points += hours * POINTS_PER_HOUR_PLAYED;
 
-    return awardPoints(userId, points);
+    var result = awardPoints(userId, points);
+
+    // ⚠️ [0.44.2] عدّاد جولات مكتملة/فوز — لتفعيل بطاقة "إحصائيات اللاعب"
+    // بالبروفايل (كانت "قريباً" ثابتة). منفصل عمداً عن سقف النقاط اليومي
+    // (awardPoints أعلاه) — المشاركة والفوز حقيقيان بصرف النظر عن اقتطاع
+    // النقاط لبلوغ السقف اليومي. awardPoints أعلاه ضمِنت وجود صف
+    // user_points لهذا المستخدم، فهذا التحديث آمن دائماً بعده مباشرة.
+    db.prepare(
+        'UPDATE user_points SET games_played = games_played + 1, games_won = games_won + ? WHERE user_id = ?'
+    ).run(params.won ? 1 : 0, userId);
+
+    return result;
 }
 
 /**
@@ -118,10 +129,22 @@ function getUserPoints(userId) {
         }
     });
 
+    // ⚠️ [0.44.2] إحصائيات مشاركة حقيقية (كانت "قريباً" ثابتة بالبروفايل) —
+    // عدّادان فقط، بدون أي منطق مُخترَع: عدد الجولات المكتملة الفعلية،
+    // وعدد مرات الفوز منها (كلاهما يُحدَّثان بـawardForRoundCompletion
+    // أعلاه). نسبة الفوز محسوبة هنا مباشرة (0 لو صفر جولات، تجنّباً
+    // للقسمة على صفر).
+    var gamesPlayed = row ? (row.games_played || 0) : 0;
+    var gamesWon = row ? (row.games_won || 0) : 0;
+    var winRatePct = gamesPlayed > 0 ? Math.round((gamesWon / gamesPlayed) * 100) : 0;
+
     return {
         totalPoints: totalPoints,
         currentLevel: currentLevel ? { slug: currentLevel.slug, displayNameAr: currentLevel.display_name_ar, pointsRequired: currentLevel.level_points_required } : null,
-        nextLevel: nextLevel ? { slug: nextLevel.slug, displayNameAr: nextLevel.display_name_ar, pointsRequired: nextLevel.level_points_required } : null
+        nextLevel: nextLevel ? { slug: nextLevel.slug, displayNameAr: nextLevel.display_name_ar, pointsRequired: nextLevel.level_points_required } : null,
+        gamesPlayed: gamesPlayed,
+        gamesWon: gamesWon,
+        winRatePct: winRatePct
     };
 }
 
