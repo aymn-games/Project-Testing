@@ -115,6 +115,29 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             canvasW: 1536, canvasH: 1024, contentTop: 212, contentHeight: 535,
             avatarLeftPct: 8.07, avatarTopPct: 15.89, avatarWidthPct: 23.63, avatarHeightPct: 69.35,
             nameLeftPct: 39.45, nameTopPct: 37.94, nameWidthPct: 55.01, nameHeightPct: 32.71
+        },
+        'frame-celestial.png': {
+            canvasW: 1254, canvasH: 1254, contentTop: 391, contentHeight: 450,
+            avatarLeftPct: 9.01, avatarTopPct: 20.44, avatarWidthPct: 20.41, avatarHeightPct: 57.33,
+            nameLeftPct: 41.07, nameTopPct: 28.22, nameWidthPct: 50.72, nameHeightPct: 46.67
+        },
+        'frame-crystalline.png': {
+            canvasW: 1536, canvasH: 1024, contentTop: 172, contentHeight: 602,
+            avatarLeftPct: 6.45, avatarTopPct: 18.6, avatarWidthPct: 23.18, avatarHeightPct: 60.13,
+            nameLeftPct: 39.06, nameTopPct: 32.56, nameWidthPct: 45.9, nameHeightPct: 38.21
+        },
+        'frame-frozen.png': {
+            canvasW: 1254, canvasH: 1254, contentTop: 335, contentHeight: 464,
+            avatarLeftPct: 9.65, avatarTopPct: 15.09, avatarWidthPct: 25.28, avatarHeightPct: 68.97,
+            nameLeftPct: 38.84, nameTopPct: 41.38, nameWidthPct: 49.92, nameHeightPct: 41.81
+        },
+        // [0.45.1] إطار "الأهلي" — مقاس فعلياً بالبكسل من الملف المرفوع (1536×1024،
+        // فتحة صورة دائرية شفافة حقيقية يسار + بلاطة اسم بيضاء فاضية يمين، نفس
+        // منهجية القياس المتبعة لكل الإطارات أعلاه — تحقّق بصري بصندوقين قبل الاعتماد).
+        'frame-al-ahli.png': {
+            canvasW: 1536, canvasH: 1024, contentTop: 257, contentHeight: 464,
+            avatarLeftPct: 6.05, avatarTopPct: 15.52, avatarWidthPct: 20.64, avatarHeightPct: 65.95,
+            nameLeftPct: 33.59, nameTopPct: 28.88, nameWidthPct: 38.35, nameHeightPct: 49.57
         }
     };
     var DEFAULT_TEMPLATE_KEY = 'frame-founder.png'; // احتياط دفاعي فقط — إطار غير موجود بالجدول يظهر بقياسات founder بدل ما ينكسر كلياً
