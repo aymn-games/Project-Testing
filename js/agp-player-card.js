@@ -21,18 +21,26 @@
  *   backend/collectibles/collectibles-service.js:
  *   getEquippedFrameForVerifiedTikTok).
  *
- * ⚠️ قالب صور الإطارات (Frame Template) — ثابت، كل إطار (كتالوج أو
- *   مخصّص يرفعه الأدمن) *يجب* يلتزم به بالضبط:
- *   - نسبة القماشة (Canvas) width:height = 3.2 : 1 بالضبط (PNG شفاف).
- *   - فتحة الصورة (دائرية): القطر = 90% من ارتفاع القماشة، بمنتصف
- *     القماشة عمودياً، وهامش 5% من عرض القماشة من الحافة اليسرى.
- *   - فتحة الاسم (مستطيلة): تبدأ بعد حافة الدائرة اليمنى + هامش 4% من
- *     عرض القماشة، وتمتد لين 96% من عرض القماشة. الارتفاع 65% من
- *     ارتفاع القماشة، بمنتصف القماشة عمودياً. **حجم هذا الصندوق ثابت
- *     دائماً** — الاسم الطويل يصغّر حجم خطه تلقائياً (راجع fitAllNames
- *     أدناه)، ما يتمدد الصندوق نفسه.
- *   الأرقام المشتقة أدناه بالكود (37.125%، 58.875%...) محسوبة من هذي
- *   النسب مباشرة — لو تغيّرت النسب لازم تُحدَّث هنا فقط (مكان واحد).
+ * ⚠️ [0.44.4] قالب صور الإطارات (Frame Template) — **تغيّر بالكامل**،
+ *   بعد ما تأكَّدنا من مصدر حقيقي (فحص فعلي لملف frame-founder.png
+ *   المرفوع فعلاً على الإنتاج عبر DevTools: 1254×1254px — صورة مربّعة
+ *   1:1) أن القالب القديم (بطاقة عريضة 3.2:1 فيها دائرة صورة + صندوق
+ *   اسم جنبها) كان لا يطابق شكل الصور الحقيقية المرفوعة إطلاقاً، فكان
+ *   يُمطّها أفقياً بقوة ويشوّه شكلها بالكامل باللوبي. القالب الجديد
+ *   (بقرار صريح من صاحب المشروع، بدل إعادة تصميم كل ملفات الإطارات):
+ *   - القماشة (Canvas) **مربّعة دائماً (1:1)**، PNG شفاف — نفس شكل
+ *     الإطارات الحالية بالضبط (ميدالية/حلقة زخرفية دائرية).
+ *   - الصورة الشخصية تظهر **بمنتصف القماشة تماماً**، بقطر = 62% من
+ *     عرض/ارتفاع القماشة (توسيط أفقي وعمودي كامل) — الإطار نفسه يُرسَم
+ *     **فوق** الصورة الشخصية مباشرة (`background-size:contain`، بدون
+ *     أي تمديد/تشويه مهما كانت نسبة الصورة الفعلية).
+ *   - الاسم **لم يعد جزءاً من القماشة إطلاقاً** — يظهر كنص عادي بجانب
+ *     الدائرة المؤطَّرة (نفس أسلوب البطاقة الأساسية)، بدل صندوق ثابت
+ *     داخل الصورة نفسها. هذا أبسط وأكثر أماناً (لا يعتمد على تصميم
+ *     الرسّام لصندوق اسم دقيق داخل كل ملف).
+ *   ⚠️ نسبة 62% رقم افتراضي معقول (يترك هامش ظاهر للحلقة/الزخرفة حول
+ *   الصورة) — قابل للتعديل بسهولة من AVATAR_SIZE_PCT أدناه لو الشكل
+ *   الفعلي بعد الرفع يحتاج ضبطاً (أصغر/أكبر) حسب تصميم كل ملف إطار.
  *
  * يعتمد هذا الملف على js/agp-core.js فقط (لـ AGP.log) — لا اعتماد على
  * أي وحدة لعبة أو AGP.gameShell.
@@ -48,21 +56,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     var STYLE_ID = 'agp-pcard-styles';
 
-    // ⚠️ ثابتة من قالب الإطار الموثَّق أعلى الملف — لا تُغيَّر إلا لو
-    // تغيّرت مواصفات القالب نفسها (وقتها حدّثها هنا فقط).
-    var FRAME_RATIO = 3.2; // width:height
-    var AVATAR_HEIGHT_PCT = 90; // % من ارتفاع القماشة
-    var AVATAR_LEFT_PCT = 5;    // % من عرض القماشة
-    var AVATAR_TOP_PCT = (100 - AVATAR_HEIGHT_PCT) / 2; // = 5% (توسيط عمودي)
-    var AVATAR_WIDTH_PCT = AVATAR_HEIGHT_PCT / FRAME_RATIO; // = 28.125% من عرض القماشة
-    var NAME_GAP_PCT = 4;   // % من عرض القماشة، بعد حافة الدائرة اليمنى
-    var NAME_RIGHT_MARGIN_PCT = 4; // % من عرض القماشة (يمتد لين 96%)
-    var NAME_LEFT_PCT = AVATAR_LEFT_PCT + AVATAR_WIDTH_PCT + NAME_GAP_PCT; // = 37.125%
-    var NAME_WIDTH_PCT = (100 - NAME_RIGHT_MARGIN_PCT) - NAME_LEFT_PCT;   // = 58.875%
-    var NAME_HEIGHT_PCT = 65;
-    var NAME_TOP_PCT = (100 - NAME_HEIGHT_PCT) / 2; // = 17.5%
-
-    var CARD_HEIGHT_PX = 56; // مقاس البطاقة المؤطَّرة (الأساسية بتصميم مختلف، راجع CSS)
+    // ⚠️ [0.44.4] ثابتة القالب الجديد — راجع تعليق "قالب صور الإطارات"
+    // أعلى الملف. غيّر هذا الرقم فقط لو احتجت تكبير/تصغير حجم الصورة
+    // الشخصية نسبةً لحجم إطارها (كل الإطارات تستخدم نفس النسبة).
+    var RING_BOX_PX = 52;       // حجم مربّع منطقة (الإطار + الصورة) بالبكسل
+    var AVATAR_SIZE_PCT = 62;   // % قطر الصورة الشخصية من حجم المربّع، بالمنتصف تماماً
 
     function el(id) { return document.getElementById(id); }
 
@@ -84,19 +82,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var style = document.createElement('style');
         style.id = STYLE_ID;
         style.textContent = [
-            /* ---- البطاقة الأساسية (بدون إطار) ----
-             * ⚠️ [0.47.0] الخلفية البيضاوية الشفافة + الحدود البنفسجية
-             * حول الصورة+الاسم أُلغيتا بالكامل بطلب صريح.
-             * ⚠️ [0.48.0] رجع حدّ (border) رفيع شفاف فقط حول البطاقة —
-             * بدون أي تعبئة/خلفية خلفه (مو نفس الخلفية القديمة قبل
-             * [0.47.0]) — بطلب صريح لاحق. هذا مكوّن مشترك (AGP.playerCard)،
-             * فالتأثير يشمل تلقائياً كل الأماكن اللي تستخدمه: اللوبي
-             * الرئيسي، اللوبي الفرعي (منتصف المباراة)، قائمة لاعبين شاشة
-             * الإعدادات، وقائمة مرشّحي نافذة الإقصاء/الإرجاع.
-             */
+            /* ---- البطاقة الأساسية (بدون إطار) ---- */
             '.agp-pcard{display:inline-flex;align-items:center;gap:8px;',
-            'max-width:220px;box-sizing:border-box;padding:4px 12px;',
-            'border:1px solid rgba(255,255,255,0.28);border-radius:999px;background:transparent;',
+            'background:rgba(255,255,255,0.08);border:1px solid rgba(216,120,255,0.3);',
+            'border-radius:999px;padding:4px 14px 4px 4px;max-width:220px;box-sizing:border-box;',
             'font-family:Cairo,sans-serif;direction:rtl;vertical-align:middle;}',
             '.agp-pcard--out{opacity:0.45;text-decoration:line-through;}',
 
@@ -108,20 +97,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-pcard-name-basic{font-size:0.85em;font-weight:700;color:#f3eefc;',
             'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
 
-            /* ---- البطاقة المؤطَّرة (إطار مفعَّل — اللوبي فقط) ---- */
-            '.agp-pcard-framed{position:relative;display:inline-block;height:' + CARD_HEIGHT_PX + 'px;',
-            'aspect-ratio:' + FRAME_RATIO + '/1;background-repeat:no-repeat;background-size:100% 100%;',
-            'vertical-align:middle;}',
-            '.agp-pcard-framed .agp-pcard-avatar-framed{position:absolute;',
-            'left:' + AVATAR_LEFT_PCT + '%;top:' + AVATAR_TOP_PCT + '%;height:' + AVATAR_HEIGHT_PCT + '%;',
-            'aspect-ratio:1/1;border-radius:50%;object-fit:cover;background:#5a2585;}',
-            '.agp-pcard-framed .agp-pcard-avatar-framed--fallback{display:flex;align-items:center;',
-            'justify-content:center;color:#f3eefc;font-weight:800;font-size:0.8em;}',
-            '.agp-pcard-framed .agp-pcard-name-framed{position:absolute;',
-            'left:' + NAME_LEFT_PCT + '%;top:' + NAME_TOP_PCT + '%;width:' + NAME_WIDTH_PCT + '%;height:' + NAME_HEIGHT_PCT + '%;',
-            'display:flex;align-items:center;justify-content:center;overflow:hidden;',
-            'font-weight:800;color:#2c1240;text-align:center;line-height:1.1;white-space:nowrap;',
-            'text-overflow:ellipsis;padding:0 2px;box-sizing:border-box;}'
+            /* ---- [0.44.4] البطاقة المؤطَّرة (إطار مفعَّل — اللوبي فقط) ----
+             * قماشة مربّعة 1:1 (raqm RING_BOX_PX) بدون أي تمديد/تشويه —
+             * الصورة الشخصية بالمنتصف تماماً، والإطار مرسوم فوقها كاملاً
+             * بنفس أبعاد المربّع (contain = لا تمديد حتى لو الصورة مش
+             * مربّعة تماماً بالضبط لأي سبب). الاسم نص عادي بجانبها، مو
+             * جزءاً من الصورة. */
+            '.agp-pcard-ring-wrap{position:relative;width:' + RING_BOX_PX + 'px;height:' + RING_BOX_PX + 'px;flex-shrink:0;}',
+            '.agp-pcard-ring-avatar{position:absolute;left:50%;top:50%;width:' + AVATAR_SIZE_PCT + '%;height:' + AVATAR_SIZE_PCT + '%;',
+            'transform:translate(-50%,-50%);border-radius:50%;object-fit:cover;background:#5a2585;z-index:1;}',
+            '.agp-pcard-ring-avatar--fallback{display:flex;align-items:center;justify-content:center;',
+            'color:#f3eefc;font-weight:800;font-size:0.75em;}',
+            '.agp-pcard-ring-frame-img{position:absolute;left:0;top:0;width:100%;height:100%;',
+            'background-repeat:no-repeat;background-position:center center;background-size:contain;',
+            'z-index:2;pointer-events:none;}'
         ].join('');
         document.head.appendChild(style);
     }
@@ -144,8 +133,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * بطاقة مؤطَّرة بإطار اللاعب المفعَّل — تُستخدَم فقط لو showFrame
-     * صحيح وplayer.frame موجود (راجع تعليق القالب أعلى الملف).
+     * ⚠️ [0.44.4] بطاقة مؤطَّرة — أُعيد بناؤها بالكامل بالقالب المربّع
+     * الجديد (راجع تعليق القالب أعلى الملف). تُستخدَم فقط لو showFrame
+     * صحيح وplayer.frame موجود.
      */
     function renderFramedHtml(player, opts) {
         var name = (player && player.name) || (player && player.id) || '—';
@@ -154,12 +144,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var frameSrc = basePath + player.frame.imageFilename;
 
         var avatarHtml = avatarUrl
-            ? '<img class="agp-pcard-avatar-framed" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;agp-pcard-avatar-framed agp-pcard-avatar-framed--fallback&quot; style=&quot;left:' + AVATAR_LEFT_PCT + '%;top:' + AVATAR_TOP_PCT + '%;height:' + AVATAR_HEIGHT_PCT + '%;&quot;>' + escapeHtml(initials(name)) + '</div>\';">'
-            : '<div class="agp-pcard-avatar-framed agp-pcard-avatar-framed--fallback">' + escapeHtml(initials(name)) + '</div>';
+            ? '<img class="agp-pcard-ring-avatar" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;agp-pcard-ring-avatar agp-pcard-ring-avatar--fallback&quot;>' + escapeHtml(initials(name)) + '</div>\';">'
+            : '<div class="agp-pcard-ring-avatar agp-pcard-ring-avatar--fallback">' + escapeHtml(initials(name)) + '</div>';
 
-        return '<span class="agp-pcard-framed" style="background-image:url(' + escapeHtml(frameSrc) + ')">' +
-            avatarHtml +
-            '<span class="agp-pcard-name-framed" data-agp-pcard-name="1">' + escapeHtml(name) + '</span>' +
+        return '<span class="agp-pcard' + (opts && opts.outClass ? ' ' + opts.outClass : '') + '">' +
+            '<span class="agp-pcard-ring-wrap">' +
+                avatarHtml +
+                '<span class="agp-pcard-ring-frame-img" style="background-image:url(' + escapeHtml(frameSrc) + ')"></span>' +
+            '</span>' +
+            '<span class="agp-pcard-name-basic" data-agp-pcard-name="1">' + escapeHtml(name) + '</span>' +
             '</span>';
     }
 
