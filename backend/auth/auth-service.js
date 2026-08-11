@@ -221,7 +221,7 @@ function getPublicProfile(customId) {
     if (!customId) return null;
 
     var user = db.prepare(
-        'SELECT id, username, role, is_streamer, tiktok_username, tiktok_verified, custom_id, permissions, created_at FROM users WHERE custom_id = ?'
+        'SELECT id, username, role, is_streamer, tiktok_username, tiktok_verified, tiktok_avatar_url, tiktok_display_name, custom_id, permissions, created_at FROM users WHERE custom_id = ?'
     ).get(customId);
     if (!user) return null;
 
@@ -234,6 +234,11 @@ function getPublicProfile(customId) {
         can_run_games: Boolean(JSON.parse(user.permissions || '{}').can_run_games),
         tiktok_username: user.tiktok_verified ? user.tiktok_username : null,
         tiktok_verified: Boolean(user.tiktok_verified),
+        // ⚠️ [جديد — 0.44.0] تُلتقَط لحظة نجاح التحقق فقط (verifyTikTokOwnership
+        // أدناه)، من نفس صفحة البروفايل العامة، استخراج تقريبي (meta tags) —
+        // قد ترجع null لو تعذّر الاستخراج، بدون أي أثر على صحة التحقق نفسه.
+        tiktok_avatar_url: user.tiktok_verified ? (user.tiktok_avatar_url || null) : null,
+        tiktok_display_name: user.tiktok_verified ? (user.tiktok_display_name || null) : null,
         joined_at: user.created_at,
         stats: {
             total_broadcasts: stats.total_broadcasts,
@@ -301,7 +306,16 @@ function generateVerificationCode(userId) {
 function fetchPublicProfileHtml(tiktokUsername) {
     return new Promise(function (resolve, reject) {
         var url = 'https://www.tiktok.com/@' + encodeURIComponent(tiktokUsername);
-        https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, function (res) {
+        // ⚠️ [0.44.1] هيدرز أشبه بمتصفح حقيقي — تيك توك معروف بحجب/تقديم
+        // صفحة تحقّق-من-إنك-إنسان (بدل البروفايل الحقيقي) لطلبات فيها
+        // هيدرز واضحة إنها من سكربت/سيرفر لا متصفح. هذا يقلّل احتمال
+        // الحجب لكنه **ما يضمنه كلياً** — راجع الملاحظة الصادقة بأعلى الملف.
+        var headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8'
+        };
+        https.get(url, { headers: headers }, function (res) {
             if (res.statusCode !== 200) {
                 reject(new Error('profile_fetch_failed_status_' + res.statusCode));
                 res.resume();
@@ -333,11 +347,63 @@ async function verifyTikTokOwnership(userId, tiktokUsername) {
     }
 
     if (html.indexOf(user.tiktok_verification_code) === -1) {
+        // ⚠️ [جديد — 0.44.1] تشخيص حقيقي بدل التخمين: نطبع بسجلات الخادم
+        // طول الصفحة المستلَمة فعلياً + أول 300 حرف منها، ونعلّم لو فيها
+        // كلمات دلالية معروفة لصفحات "تحقّق من إنك إنسان" بتيك توك. هذا
+        // يخلينا نشوف بالضبط وش رجع تيك توك فعلياً بدل ما نفترض.
+        var looksLikeBotCheck = /verify you.{0,20}human|captcha|are you a robot|please enable javascript/i.test(html);
+        logger.error(
+            'Auth: TikTok verification code not found in fetched page for "' + tiktokUsername + '". ' +
+            'html_length=' + html.length + ' looks_like_bot_check=' + looksLikeBotCheck + ' ' +
+            'snippet=' + JSON.stringify(html.slice(0, 300).replace(/\s+/g, ' '))
+        );
         return { success: false, error: 'code_not_found_in_bio' };
     }
 
-    db.prepare('UPDATE users SET tiktok_verified = 1, tiktok_username = ? WHERE id = ?').run(tiktokUsername, userId);
+    // ⚠️ [جديد — 0.44.0] نفس صفحة البروفايل المجلوبة أعلاه للتحقق من
+    // الكود تُستخدَم أيضاً لاستخراج صورة/اسم عرض تيك توك — بدون أي طلب
+    // شبكي إضافي. استخراج تقريبي عبر meta tags (og:image/og:title) —
+    // **غير مؤكَّد بالكامل ولم يُختبَر ضد تيك توك حقيقي** من هذه البيئة
+    // (نفس تحفّظ verifyTikTokOwnership نفسها أعلاه). فشل الاستخراج هنا
+    // لا يُفشِل التحقق نفسه إطلاقاً — يبقى الحساب موثَّقاً بأي حال، فقط
+    // الصورة/الاسم يرجعوا null ويُعرَض بديل افتراضي بالواجهة.
+    var avatarUrl = extractProfileAvatarFromHtml(html);
+    var displayName = extractProfileDisplayNameFromHtml(html);
+
+    db.prepare(
+        'UPDATE users SET tiktok_verified = 1, tiktok_username = ?, tiktok_avatar_url = ?, tiktok_display_name = ? WHERE id = ?'
+    ).run(tiktokUsername, avatarUrl, displayName, userId);
     return { success: true };
+}
+
+/**
+ * استخراج تقريبي لرابط صورة بروفايل تيك توك من HTML صفحة البروفايل
+ * العامة، عبر وسم <meta property="og:image" content="...">. لا يرمي
+ * أبداً — يرجع null عند أي فشل.
+ * @returns {string|null}
+ */
+function extractProfileAvatarFromHtml(html) {
+    try {
+        var match = /<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i.exec(html);
+        return (match && match[1]) ? match[1] : null;
+    } catch (err) {
+        return null;
+    }
+}
+
+/**
+ * استخراج تقريبي لاسم عرض تيك توك من HTML صفحة البروفايل العامة، عبر
+ * وسم <meta property="og:title" content="...">. لا يرمي أبداً — يرجع
+ * null عند أي فشل.
+ * @returns {string|null}
+ */
+function extractProfileDisplayNameFromHtml(html) {
+    try {
+        var match = /<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i.exec(html);
+        return (match && match[1]) ? match[1] : null;
+    } catch (err) {
+        return null;
+    }
 }
 
 /**
@@ -350,7 +416,9 @@ async function verifyTikTokOwnership(userId, tiktokUsername) {
  * @returns {{success: boolean}}
  */
 function unlinkTikTok(userId) {
-    db.prepare('UPDATE users SET tiktok_username = NULL, tiktok_verified = 0, tiktok_verification_code = NULL WHERE id = ?').run(userId);
+    // ⚠️ [0.44.0] تصفير tiktok_avatar_url/tiktok_display_name أيضاً — وإلا
+    // تبقى صورة/اسم الحساب القديم عالقة لو ربط لاحقاً حساب تيك توك مختلف.
+    db.prepare('UPDATE users SET tiktok_username = NULL, tiktok_verified = 0, tiktok_verification_code = NULL, tiktok_avatar_url = NULL, tiktok_display_name = NULL WHERE id = ?').run(userId);
     return { success: true };
 }
 
@@ -363,7 +431,14 @@ function validateSession(token) {
     var session = db.prepare('SELECT * FROM sessions WHERE token = ?').get(token);
     if (!session || session.expires_at < now()) return null;
 
-    var user = db.prepare('SELECT id, username, email, role, tiktok_username, custom_id, is_streamer, permissions, welcome_completed FROM users WHERE id = ?').get(session.user_id);
+    // ⚠️ [إصلاح باگ حقيقي — 0.44.0] tiktok_verified وtiktok_avatar_url/
+    // tiktok_display_name كانوا غايبين تماماً عن هذا الاستعلام — أي كود
+    // مستقبلي يعتمد على AGPAuth.me().tiktok_verified كان بيشوفه دائماً
+    // undefined (يعني "غير موثَّق") حتى لو الحساب موثَّق فعلياً بقاعدة
+    // البيانات. profile.html نفسها ما تأثّرت (تستخدم getPublicProfile
+    // أدناه، اللي كان صحيحاً أصلاً)، لكن هذا كان قنبلة موقوتة لأي واجهة
+    // ثانية تعتمد على /api/auth/me مباشرة.
+    var user = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, tiktok_avatar_url, tiktok_display_name, custom_id, is_streamer, permissions, welcome_completed FROM users WHERE id = ?').get(session.user_id);
     if (!user) return null;
 
     // شفاء ذاتي: حسابات أُنشئت قبل ميزة الـID العام (custom_id) قد لا
@@ -374,6 +449,7 @@ function validateSession(token) {
     }
 
     user.is_streamer = Boolean(user.is_streamer);
+    user.tiktok_verified = Boolean(user.tiktok_verified);
     user.permissions = JSON.parse(user.permissions || '{}');
     user.welcome_completed = Boolean(user.welcome_completed);
 
