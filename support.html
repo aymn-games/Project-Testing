@@ -92,12 +92,11 @@
     </p>
 
     <!--
-        رابط الدعم الفعلي (منصة كريترز/دكان تب) — لسا مؤقت (#) لحد ما
-        يجهز صاحب المشروع رابط صفحته هناك. استبدل href="#" بالرابط
-        الحقيقي مباشرة من هنا على GitHub، بدون أي تعديل ثاني على الصفحة.
-        مثال متوقَّع: href="https://app.creators.sa/اسم-الصفحة"
+        رابط الدعم الفعلي (منصة كريترز/دكان تب سابقاً) — أُضيف الرابط
+        الحقيقي بـ[0.45.4] (راجع docs/CHANGELOG.md). لو احتجت تغييره
+        مستقبلاً، بدّل href هنا مباشرة من GitHub، بدون أي تعديل ثاني.
     -->
-    <a class="support-donate-btn" href="#" id="support-donate-link" target="_blank" rel="noopener">
+    <a class="support-donate-btn" href="https://creators.sa/aymngame" id="support-donate-link" target="_blank" rel="noopener">
         🎁 ادعم الآن عبر كريترز
     </a>
     <div class="support-note">بيفتح صفحة الدعم بمنصة كريترز (دكان تب سابقاً) بتبويب جديد.</div>
@@ -124,7 +123,7 @@
 
     function formatAmount(amount) {
         var n = Number(amount) || 0;
-        return (n % 1 === 0 ? n.toString() : n.toFixed(2)) + ' ريال';
+        return (n % 1 === 0 ? n.toString() : n.toFixed(2)) + ' دولار';
     }
 
     var listEl = document.getElementById('recent-supporters-list');
