@@ -32,6 +32,21 @@
   <!-- ============ FLYING FRUIT BACKGROUND ============ -->
   <div class="fruit-bg" id="fruitBg" aria-hidden="true"></div>
 
+  <!-- ============ GIFT PICKER MODAL + TOASTS ============
+       ⚠️ عمداً خارج #frGameRoot: نافذة اختيار هدية الإنعاش لازم تكون
+       متاحة من شاشة الإعدادات الأولى (قبل بدء أي مباراة)، ونفس الشي
+       لطبقة الإشعارات العائمة (تنعش بالدعم ممكن يحصل قبل ما نعرض
+       واجهة اللعبة). z-index أعلى من #agp-shell-overlay (99999) عمداً
+       — راجع agp-fruit-roulette.js لتفاصيل هذا القرار. -->
+  <div class="overlay fr-gift-picker-overlay" id="frGiftPickerOverlay" role="dialog" aria-modal="true" aria-labelledby="frGiftPickerTitle">
+    <div class="modal fr-gift-picker-modal">
+      <h2 id="frGiftPickerTitle">🎁 اختر هدية الإنعاش</h2>
+      <p class="modal-sub">اضغط على الهدية المطلوبة — تُغلق النافذة تلقائياً بعد الاختيار</p>
+      <div class="fr-gift-grid" id="frGiftGrid"></div>
+    </div>
+  </div>
+  <div class="fr-toast-wrap" id="frToastWrap" aria-live="polite"></div>
+
   <!-- كل واجهة اللعبة الفعلية تبقى مخفية إلى أن يبدأ المضيف المباراة
        فعلياً من شاشة الإعدادات العامة (agp-game-shell.js) -->
   <div id="frGameRoot" style="display:none;">
@@ -84,8 +99,6 @@
 
         <div class="panel-divider"></div>
 
-        <button class="btn btn-spin" id="spinBtn" type="button" disabled>🎡 أدر العجلة</button>
-
         <div class="utility-row">
           <button class="btn btn-utility" id="shuffleBtn" type="button">🔀 خلط</button>
           <button class="btn btn-utility" id="resetWheelBtn" type="button">↺ إعادة ضبط العجلة</button>
@@ -111,10 +124,15 @@
               <div class="wheel-empty" id="wheelEmpty">بانتظار انضمام لاعبين اثنين على الأقل 🍓</div>
             </div>
           </div>
-          <div class="hub" id="hub" aria-hidden="true">
+          <!-- ⚠️ مركز العجلة هو زر التدوير الوحيد بالصفحة كاملة الآن —
+               تعمّدنا استخدام نفس المعرِّف القديم spinBtn (بدل الزر
+               الخارجي المحذوف) حتى ما نحتاج نعدّل كل سطر spinBtn.disabled
+               المنتشر بالكود، راجع agp-fruit-roulette.js. -->
+          <button type="button" class="hub" id="spinBtn" aria-label="أدر العجلة" disabled>
             <img src="folder_images/hub_icon.png" alt="" id="hubImg">
             <span class="hub-fallback" id="hubFallback">🍒</span>
-          </div>
+            <span class="hub-spin-label" id="hubSpinLabel">أدر<br>العجلة</span>
+          </button>
         </div>
 
         <div class="winner-strip" id="winnerStrip">🏆 <span id="winnerStripName">—</span> يفوز باللعبة!</div>
@@ -163,9 +181,11 @@
 
         <div class="crate-result" id="crateResult">
           <p class="result-text" id="resultText"></p>
+          <!-- ⚠️ لا يوجد زر تأكيد إقصاء — الحالة الخطرة تُنفَّذ تلقائياً
+               (راجع handleCrateClick بـagp-fruit-roulette.js). زر
+               "متابعة اللعب" يبقى يدوياً — خاص بالحالة الآمنة فقط. -->
           <div class="result-actions">
             <button class="btn btn-safe" id="continueBtn" type="button" hidden>✅ متابعة اللعب</button>
-            <button class="btn btn-danger" id="eliminateBtn" type="button" hidden>💀 إقصاء اللاعب</button>
           </div>
         </div>
       </div>
@@ -176,8 +196,12 @@
       <div class="modal winner-modal">
         <div class="trophy" aria-hidden="true">🏆</div>
         <p class="eyebrow">البطل</p>
+        <!-- صورة تيك توك الحقيقية للفائز (أو حروف اسمه الأولى كبديل) —
+             تُبنى ديناميكياً بـwinnerAvatarHtml()، راجع agp-fruit-roulette.js -->
+        <div class="winner-avatar-wrap" id="winnerAvatarWrap"></div>
         <h2 id="winnerName">—</h2>
         <p class="modal-sub">نجا من كل الصناديق ليحقق الفوز.</p>
+        <p class="winner-points-text" id="winnerPointsText"></p>
         <div class="result-actions">
           <button class="btn btn-safe" id="rematchBtn" type="button">🔁 إعادة الجولة (عودة الجميع)</button>
           <button class="btn btn-primary" id="newGameBtn" type="button">🆕 مباراة جديدة</button>

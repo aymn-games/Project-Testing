@@ -290,7 +290,9 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
   display:grid;
   grid-template-columns: 360px 1fr;
   gap:22px;
-  align-items:start;
+  /* ⚠️ لوحة اللاعبين تمتد بطول الصفحة كاملة (تساوي ارتفاع لوحة العجلة) —
+     stretch بدل start */
+  align-items:stretch;
 }
 @media (max-width: 920px){
   .layout{ grid-template-columns: 1fr; }
@@ -315,6 +317,13 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
 }
 
 /* ---------- Player list (live join, no manual host panel) ---------- */
+/* ⚠️ اللوحة تمتد بطول الصفحة كاملة: تصبح عمود flex، وقائمة اللاعبين
+   تاخذ كل المساحة المتبقية (flex:1) مع تمرير داخلي بدل ارتفاع ثابت. */
+.host-panel{
+  display:flex;
+  flex-direction:column;
+}
+
 .panel-divider{
   border-top: 1px dashed var(--line);
   margin: 18px 0 0;
@@ -325,7 +334,8 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
   display:flex;
   flex-direction:column;
   gap:8px;
-  max-height:320px;
+  flex:1;
+  min-height:120px; /* لازم رقم فعلي — بدونه flexbox ما يسمح بانكماش صحيح للتمرير */
   overflow-y:auto;
   padding-right:2px;
 }
@@ -444,46 +454,67 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
   overflow:hidden;
 }
 
+/* ⚠️ أسماء أفقية بحتة حول العجلة: الموقع (يمين/يسار/فوق/تحت) يُحسَب
+   بالجافاسكربت عبر مثلثات (left%/top%)، والعنصر يُوسَّط بـ
+   translate(-50%,-50%) بلا أي rotate — فيبقى النص أفقياً تماماً بغض
+   النظر عن موضعه حول محيط العجلة. حجم الخط نفسه يُضبَط ديناميكياً
+   (inline style.fontSize) حسب عدد اللاعبين، راجع agp-fruit-roulette.js. */
 .wheel-label{
   position:absolute;
-  width:50%;
-  height:2px;
-  top:50%;
-  left:50%;
-  transform-origin:0% 0%;
+  transform: translate(-50%, -50%);
   pointer-events:none;
-}
-.wheel-label span{
-  position:absolute;
-  right:14px;
-  top:0;
-  transform: translateY(-50%);
-  text-align:right;
+  text-align:center;
   white-space:nowrap;
   font-weight:700;
   font-size:0.82rem;
   color: rgba(255,255,255,0.97);
   text-shadow: 0 1px 3px rgba(0,0,0,0.6);
-  max-width:112px;
+  max-width:104px;
   overflow:hidden;
   text-overflow:ellipsis;
 }
 
+/* ⚠️ مركز العجلة صار زر التدوير الوحيد بالصفحة (id="spinBtn") — إعادة
+   ضبط مظهر <button> الافتراضي + نبضة انتباه + نص "أدر العجلة" داخله. */
 .hub{
   position:absolute;
   top:50%; left:50%;
   transform:translate(-50%,-50%);
-  width:76px; height:76px;
+  width:84px; height:84px;
   border-radius:50%;
   background: radial-gradient(circle at 35% 30%, var(--banana), #a8760a 75%);
   border:4px solid var(--bg);
-  display:flex; align-items:center; justify-content:center;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
   z-index:5;
   box-shadow: 0 8px 18px rgba(0,0,0,0.55);
+  padding:0;
+  cursor:pointer;
+  font-family:'Tajawal', sans-serif;
+  animation: hub-pulse 2.1s ease-in-out infinite;
+  transition: transform .15s ease, box-shadow .15s ease;
 }
-.hub img{ width:36px; height:36px; object-fit:contain; }
+.hub:hover:not(:disabled){ transform: translate(-50%,-50%) scale(1.06); }
+.hub:active:not(:disabled){ transform: translate(-50%,-50%) scale(0.96); }
+.hub:disabled{
+  cursor:not-allowed;
+  animation:none;
+  opacity:0.55;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.4);
+}
+@keyframes hub-pulse{
+  0%,100%{ box-shadow: 0 8px 18px rgba(0,0,0,0.55), 0 0 0 0 rgba(255,210,63,0.5); }
+  50%{ box-shadow: 0 8px 18px rgba(0,0,0,0.55), 0 0 0 10px rgba(255,210,63,0); }
+}
+.hub img{ width:30px; height:30px; object-fit:contain; }
 .hub img[hidden], .hub .hub-fallback[hidden]{ display:none; }
-.hub-fallback{ font-size:1.7rem; }
+.hub-fallback{ font-size:1.4rem; }
+.hub-spin-label{
+  font-size:0.62rem;
+  font-weight:800;
+  line-height:1.15;
+  color:#2a1600;
+  margin-top:2px;
+}
 
 .wheel-empty{
   position:absolute;
@@ -643,6 +674,95 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
 
 .result-actions{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
 
+/* ---------- Winner avatar (صورة تيك توك حقيقية + حالة النقاط) ---------- */
+.winner-avatar-wrap{ display:flex; justify-content:center; margin: 4px 0 10px; }
+.fr-ring-avatar{
+  width:96px; height:96px;
+  border-radius:50%;
+  object-fit:cover;
+  border:4px solid var(--banana);
+  box-shadow: 0 0 24px rgba(255,210,63,0.5), 0 10px 22px rgba(0,0,0,0.5);
+}
+.fr-ring-avatar--fallback{
+  width:96px; height:96px;
+  border-radius:50%;
+  border:4px solid var(--banana);
+  box-shadow: 0 0 24px rgba(255,210,63,0.5), 0 10px 22px rgba(0,0,0,0.5);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Cairo'; font-weight:800; font-size:1.9rem;
+  color:#2a1600;
+  background: radial-gradient(circle at 35% 30%, var(--banana), var(--mango) 85%);
+}
+.winner-points-text{
+  margin: -8px 0 20px;
+  font-size:0.86rem;
+  color: var(--text-dim);
+  min-height:1.2em;
+}
+.winner-points-text.has-points{ color: var(--lime); font-weight:700; }
+.winner-points-text.no-account{ color: var(--mango); }
+
+/* ---------- هدية الإنعاش: نافذة الاختيار + الإشعارات العائمة ----------
+   ⚠️ z-index أعلى من #agp-shell-overlay (99999 بملف الشِل المشترك) —
+   نافذة الهدية والإشعارات لازم تظهر فوق شاشة الإعدادات المشتركة نفسها
+   لو فُتحت من جوّاها (زر modal-trigger)، وإلا الضغط ما يشتغل. */
+.fr-gift-picker-overlay{ z-index:100010; }
+.fr-gift-picker-modal{ max-width:640px; }
+.fr-gift-grid{
+  display:flex; flex-wrap:wrap; justify-content:center; gap:8px;
+  margin-top:16px; max-height:52vh; overflow-y:auto; padding:2px;
+}
+.fr-gift-btn{
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  min-width:84px;
+  padding:10px 8px;
+  border-radius:14px;
+  border:2px solid var(--line);
+  background: rgba(0,0,0,0.28);
+  color: var(--text);
+  cursor:pointer;
+  transition: border-color .15s ease, transform .15s ease, background .15s ease;
+}
+.fr-gift-btn:hover{ border-color: rgba(255,210,63,0.6); transform: translateY(-2px); }
+.fr-gift-btn.is-active{ border-color: var(--banana); background: rgba(255,210,63,0.12); }
+.fr-gift-icon{ width:30px; height:30px; object-fit:contain; }
+.fr-gift-name{ font-size:0.8rem; font-weight:700; }
+.fr-gift-coins{ font-size:0.7rem; opacity:0.75; }
+
+.fr-toast-wrap{
+  position:fixed;
+  bottom:22px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:100011;
+  display:flex; flex-direction:column; gap:8px;
+  align-items:center;
+  pointer-events:none;
+}
+.fr-toast{
+  background: rgba(15,10,5,0.92);
+  border: 1px solid rgba(255,210,63,0.4);
+  color: var(--text);
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size:0.85rem;
+  font-weight:600;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.5);
+  animation: fade-up .25s ease;
+}
+.fr-gift-revive-card{
+  display:flex; align-items:center; gap:10px;
+  background: rgba(15,10,5,0.94);
+  border: 1px solid rgba(139,212,80,0.55);
+  border-radius: 999px;
+  padding: 8px 18px 8px 8px;
+  box-shadow: 0 0 20px rgba(139,212,80,0.35), 0 10px 22px rgba(0,0,0,0.5);
+  animation: fade-up .25s ease;
+}
+.fr-gift-revive-card .fr-ring-avatar,
+.fr-gift-revive-card .fr-ring-avatar--fallback{ width:36px; height:36px; font-size:0.85rem; border-width:2px; }
+.fr-gift-revive-text{ font-size:0.85rem; font-weight:700; color: var(--lime); }
+
 /* ---------- Winner modal ---------- */
 .winner-modal .trophy{
   font-size:3.2rem;
@@ -756,4 +876,71 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
 
 @media (max-width: 560px){
   .credit-box{ width:100%; justify-content:center; flex-wrap:wrap; text-align:center; }
+}
+
+/* ==========================================================================
+   إعادة تلوين شاشة الإعدادات المشتركة (agp-game-shell.js) بهوية الفواكه
+   ==========================================================================
+   ⚠️ هذي الكتلة بالكامل خاصة بصفحة روليت الفواكه فقط — لا لمس على
+   js/agp-game-shell.js نفسه، ولا أي تأثير على أي لعبة أخرى (كل لعبة
+   صفحة HTML/style.css منفصلة تماماً).
+   ⚠️ !important إلزامي هنا: شاشة الإعدادات تُحقَن كـ<style> بالـ<head>
+   وقت التشغيل (بعد ما هذا الملف يكون انقرأ أصلاً) — أي قاعدة بدون
+   !important تخسر بسبب ترتيب التحميل، بغض النظر عن ترتيبها بالملف.
+   ⚠️ تغطي نفس الكتلة تلقائياً شاشة "إضافة لوبي جديد" لأنها تُبنى داخل
+   نفس #agp-shell-box وبنفس الأصناف المشتركة (راجع handleReopenRegistrationClick
+   بملف الشِل) — لا حاجة لكتلة منفصلة لها.
+   ========================================================================== */
+
+/* الاعتماد الأساسي: الشِل يستخدم var(--agp-accent/-2/-pink) بمعظم
+   عناصره (الأزرار النشطة، حدود الحقول، تدرّج زر الاتصال، شارة الكلمة
+   المفتاحية...) — إعادة تعريف هذي المتغيرات الثلاثة بألوان الفواكه
+   تغطي أغلب الواجهة تلقائياً بقاعدة واحدة فقط. */
+:root{
+  --agp-accent: var(--watermelon) !important;
+  --agp-accent-2: var(--mango) !important;
+  --agp-accent-pink: var(--banana) !important;
+}
+
+/* خلفية الصفحة خلف شاشة الإعدادات + الهيدر الثابت فوق */
+body.agp-shell-active{
+  background: linear-gradient(170deg, #150b06 0%, #3a1c08 55%, #7a3a10 100%) !important;
+}
+#agp-persistent-header{
+  background: linear-gradient(90deg, rgba(20,10,5,0.92), rgba(90,35,10,0.88)) !important;
+  border-bottom: 1px solid rgba(255,166,48,0.4) !important;
+}
+
+/* الصندوق الرئيسي (الإعدادات + لوبي المباراة الأول + لوبي "إضافة لوبي
+   جديد" — الثلاثة يشتركون بنفس #agp-shell-box) */
+#agp-shell-overlay{ background: rgba(16,8,4,0.6) !important; }
+#agp-shell-box{
+  background: linear-gradient(180deg, #7a2a1f, #2b1208) !important;
+  box-shadow: 0 0 40px rgba(255,166,48,0.4) !important;
+}
+#agp-shell-box.agp-lobby-box{
+  background: linear-gradient(170deg, #5c1f10, #a8420f) !important;
+}
+
+/* أزرار الاختيار (pill) + صفوف العدّادات + مفاتيح التفعيل — أغلبها
+   يتبع var(--agp-accent) تلقائياً؛ هذي فقط تفاصيل تكميلية (لون النص
+   الغامق داخل الأزرار البيضاء يبقى مقروءاً فوق التمييز البرتقالي) */
+.agp-pill-btn{ color:#7a2a05 !important; }
+.agp-shell-counter-row button{ color:#7a2a05 !important; }
+.agp-count-input{ color:#5a1f04 !important; }
+.agp-toggle-track{
+  background: linear-gradient(180deg, #ffe3b8, #ffb347) !important;
+}
+
+/* زر الاتصال / إكمال المباراة / إضافة لوبي جديد — كلها نفس الكلاس */
+.agp-shell-btn-connect{ color:#2a1000 !important; }
+
+/* شارة الكلمة المفتاحية بلوبي المباراة + لوبي "إضافة لوبي جديد" */
+.agp-join-keyword-badge{ box-shadow: 0 0 18px rgba(255,166,48,0.55) !important; }
+.agp-join-keyword-plain{ color: var(--banana) !important; }
+
+/* صناديق قائمة اللاعبين (اللوبي المصغَّر أثناء المباراة النشطة) */
+.agp-settings-player-box{
+  border-color: rgba(255,166,48,0.4) !important;
+  background: rgba(40,15,5,0.35) !important;
 }

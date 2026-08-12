@@ -48,6 +48,27 @@
  *   - لا مؤقّت إجباري لاختيار الصندوق (يبقى مفتوحاً لحين الاختيار، تماماً
  *     كسلوك النسخة الأصلية) — لم يُطلَب تغيير هذا الجزء تحديداً.
  *
+ * ⚠️ [تحديث] دفعة تعديلات ثانية (8 متطلبات + إصلاح خلل) — راجع
+ *   fruit-roulette-instructions.md المرفق للتفاصيل الكاملة. ملخص:
+ *   - لوحة اللاعبين تمتد بطول الصفحة (CSS: .layout/.host-panel/.player-list).
+ *   - زر التدوير حُذف من اللوحة — مركز العجلة (id="spinBtn") صار هو زر
+ *     التدوير الوحيد (نفس المعرِّف القديم، متغيّرا hub وspinBtn يشيران
+ *     لنفس عنصر الـDOM).
+ *   - أسماء اللاعبين حول العجلة أفقية بحتة (مثلثات + translate، بلا rotate).
+ *   - الإقصاء عند فتح صندوق الشخصية الخفية تلقائي بالكامل (بلا زر تأكيد) —
+ *     تأخير 1.6 ثانية لعرض الرسالة قبل الإغلاق التلقائي.
+ *   - إنعاش بالدعم (هدية تيك توك محدَّدة، سقف لكل لاعب طول المباراة) —
+ *     نفس آلية/قائمة الهدايا المستخدَمة بروليت الإقصاء بالضبط (مصفوفة
+ *     منسوخة، لا استيراد مشترك — كل لعبة ملف مستقل).
+ *   - نافذة الفوز تعرض صورة تيك توك الحقيقية للبطل + حالة النقاط (3 حالات:
+ *     فشل الاتصال / نجاح+حساب مرتبط / نجاح+بلا حساب).
+ *   - شاشة الإعدادات المشتركة (ولوبي "إضافة لوبي جديد" المبني بنفس الصندوق)
+ *     تُعاد تلوينها بهوية الفواكه عبر !important بـstyle.css فقط — بلا لمس
+ *     js/agp-game-shell.js وبلا أي تأثير على أي لعبة أخرى.
+ *   - إصلاح خلل: انضمام لاعب أثناء مباراة نشطة (عبر "إضافة لوبي جديد") كان
+ *     يُسجَّل بالمنصة لكن ما يدخل فعلياً لقائمة اللعبة/العجلة — أُضيف
+ *     استماع لحدث player:joined (لم يكن موجوداً إطلاقاً).
+ *
  * الاعتماديات (بنفس ترتيب index.html القياسي، راجع docs/CLAUDE.md):
  *   js/agp-core.js … js/agp-bootstrap.js (AGP Core كامل)، ثم
  *   js/agp-player-card.js، js/agp-entrance.js، js/agp-game-shell.js، ثم
@@ -95,9 +116,43 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         { label: '8 دقائق', value: 480 }
     ];
 
+    // ⚠️ قائمة هدايا الإنعاش — نسخة مطابقة لنفس القائمة المستخدَمة بروليت
+    // الإقصاء (games/elimination-roulette/agp-elimination-roulette.js)
+    // بطلب صريح ("نفس آلية روليت الإقصاء"). كل لعبة ملف مستقل بالكامل —
+    // لا استيراد مشترك بينهما، فلسفة المشروع القائمة (games/<id>/ معزول).
+    // قيم العملات + الأيقونات (Twemoji، رخصة MIT + CC-BY 4.0، مو صور تيك
+    // توك الرسمية) منسوخة كما هي من نفس المصدر الأصلي بروليت الإقصاء.
+    var COMMON_GIFTS = [
+        { label: 'وردة', value: 'Rose', codepoint: '1f339', coins: 1 },
+        { label: 'تيك توك', value: 'TikTok', codepoint: '1f496', coins: 1 },
+        { label: 'قلب الإصبع', value: 'Finger Heart', codepoint: '1f90d', coins: 5 },
+        { label: 'جي جي', value: 'GG', codepoint: '1f3a4', coins: 1 },
+        { label: 'مخروط آيسكريم', value: 'Ice Cream Cone', codepoint: '1f366', coins: 1 },
+        { label: 'عطر', value: 'Perfume', codepoint: '1f9f4', coins: 20 },
+        { label: 'دوناتس', value: 'Doughnut', codepoint: '1f369', coins: 30 },
+        { label: 'قلوب اليد', value: 'Hand Hearts', codepoint: '1f49e', coins: 100 },
+        { label: 'نظارة شمسية', value: 'Sunglasses', codepoint: '1f576', coins: 199 },
+        { label: 'تاج صغير', value: 'Little Crown', codepoint: '1f451', coins: 99 },
+        { label: 'كلب كورجي', value: 'Corgi', codepoint: '1f415', coins: 299 },
+        { label: 'باقة ورد', value: 'Rosa', codepoint: '1f490', coins: 10 },
+        { label: 'نغمة موسيقية', value: 'Music Note', codepoint: '1f3b5', coins: 169 },
+        { label: 'قصاصات احتفالية', value: 'Confetti Battle', codepoint: '1f389', coins: null },
+        { label: 'مجرة', value: 'Galaxy', codepoint: '1f30c', coins: 1000 },
+        { label: 'مسدس نقود', value: 'Money Gun', codepoint: '1f4b8', coins: 500 },
+        { label: 'سيارة رياضية', value: 'Sports Car', codepoint: '1f3ce', coins: 7000 },
+        { label: 'أسد', value: 'Lion', codepoint: '1f981', coins: 29999 },
+        { label: 'ملكة الدراما', value: 'Drama Queen', codepoint: '1f483', coins: 5 },
+        { label: 'كون تيك توك', value: 'TikTok Universe', codepoint: '1f320', coins: 44999 }
+    ];
+    var TWEMOJI_BASE = 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/';
+    function giftIconUrl(g) { return TWEMOJI_BASE + g.codepoint + '.svg'; }
+    function giftCoinsText(g) { return (g.coins != null) ? (g.coins + ' 🪙') : '؟'; }
+
     /* ============ الحالة ============ */
     var _settings = {};
     var _alive = [];              // لاعبو المباراة الحاليون (كائنات AGP: id/name/avatarUrl)
+    var _eliminated = [];         // [{ player }] مُقصَون قابلون للإنعاش بالدعم
+    var _giftReviveCounts = {};   // player.id -> عدد مرات الإنعاش المستخدَمة (طول المباراة)
     var _colorMap = {};           // player.id -> لون ثابت طول المباراة
     var _isSpinning = false;
     var _currentRotation = 0;
@@ -109,21 +164,28 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _startedAt = 0;
 
     var _commentUnsub = null;
+    var _giftUnsub = null;
     var _playerRemovedUnsub = null;
+    var _playerJoinedUnsub = null;
 
     /* ============ مراجع DOM (الصفحة ثابتة — العناصر موجودة من البداية) ============ */
     function el(id) { return document.getElementById(id); }
 
-    var frGameRoot, spinBtn, shuffleBtn, resetWheelBtn, playerListEl, playerCountVal;
-    var currentTurnName, wheel, wheelEmpty, wheelRing, hub, hubImg, hubFallback;
+    var frGameRoot, spinBtn, hub, shuffleBtn, resetWheelBtn, playerListEl, playerCountVal;
+    var currentTurnName, wheel, wheelEmpty, wheelRing, hubImg, hubFallback;
     var winnerStrip, winnerStripName;
-    var fruitOverlay, fruitPopupPlayer, crateGrid, crateResult, resultText, continueBtn, eliminateBtn, fruitModalSub;
-    var winnerOverlay, winnerNameEl, rematchBtn, newGameBtn;
+    var fruitOverlay, fruitPopupPlayer, crateGrid, crateResult, resultText, continueBtn, fruitModalSub;
+    var winnerOverlay, winnerNameEl, winnerAvatarWrap, winnerPointsText, rematchBtn, newGameBtn;
     var soundBtn, soundIcon, liveRegion, roundCounterVal, fruitBg, roundTimerBox, roundTimerVal;
+    var frGiftPickerOverlay, frGiftGrid, frToastWrap;
 
     function cacheDom() {
         frGameRoot = el('frGameRoot');
+        // ⚠️ مركز العجلة صار زر التدوير الوحيد بالصفحة — نفس عنصر الـDOM
+        // الواحد (id="spinBtn") يشير له كلا المتغيّرين، تفادياً لإعادة
+        // كتابة كل سطر spinBtn.disabled = ... المنتشر بالكود.
         spinBtn = el('spinBtn');
+        hub = spinBtn;
         shuffleBtn = el('shuffleBtn');
         resetWheelBtn = el('resetWheelBtn');
         playerListEl = el('playerList');
@@ -133,7 +195,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wheel = el('wheel');
         wheelEmpty = el('wheelEmpty');
         wheelRing = el('wheelRing');
-        hub = el('hub');
         hubImg = el('hubImg');
         hubFallback = el('hubFallback');
 
@@ -146,11 +207,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         crateResult = el('crateResult');
         resultText = el('resultText');
         continueBtn = el('continueBtn');
-        eliminateBtn = el('eliminateBtn');
         fruitModalSub = el('fruitModalSub');
 
         winnerOverlay = el('winnerOverlay');
         winnerNameEl = el('winnerName');
+        winnerAvatarWrap = el('winnerAvatarWrap');
+        winnerPointsText = el('winnerPointsText');
         rematchBtn = el('rematchBtn');
         newGameBtn = el('newGameBtn');
 
@@ -161,6 +223,47 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         fruitBg = el('fruitBg');
         roundTimerBox = el('roundTimerBox');
         roundTimerVal = el('roundTimerVal');
+
+        frGiftPickerOverlay = el('frGiftPickerOverlay');
+        frGiftGrid = el('frGiftGrid');
+        frToastWrap = el('frToastWrap');
+    }
+
+    /* ============ HELPERS ============ */
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text == null ? '' : String(text);
+        return div.innerHTML;
+    }
+    function playerLabel(p) { return (p && (p.name || p.id)) || '—'; }
+
+    // ⚠️ إعدادات المباراة لا تتغيّر أثناء المباراة النشطة فعلياً (شاشة
+    // "إضافة لوبي جديد" المُعاد فتحها منتصف المباراة تعرض لوبي مصغَّر
+    // فقط، لا حقول الإعدادات الكاملة) — لكن نقرأها حيّة بردّه (بدل
+    // الاعتماد فقط على _settings المحفوظة وقت البداية) اتساقاً مع نفس
+    // نمط liveSettings() المستخدَم بروليت الإقصاء.
+    function liveSettings() {
+        return (AGP.gameShell && typeof AGP.gameShell.getSettings === 'function') ? AGP.gameShell.getSettings() : _settings;
+    }
+
+    function showToast(message) {
+        if (!frToastWrap) return;
+        var t = document.createElement('div');
+        t.className = 'fr-toast';
+        t.textContent = message;
+        frToastWrap.appendChild(t);
+        window.setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 4000);
+    }
+
+    // صورة تيك توك الحقيقية للاعب (أو حرفين من اسمه كبديل) — تُستخدَم
+    // ببطاقة الفوز + بطاقة الإنعاش العائمة.
+    function ringAvatarHtml(player) {
+        var name = playerLabel(player);
+        var avatarUrl = player && player.avatarUrl;
+        var initials = (name || '').trim().slice(0, 2).toUpperCase() || '؟';
+        return avatarUrl
+            ? '<img class="fr-ring-avatar" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;fr-ring-avatar--fallback&quot;>' + escapeHtml(initials) + '</div>\';">'
+            : '<div class="fr-ring-avatar--fallback">' + escapeHtml(initials) + '</div>';
     }
 
     /* ============ IMAGE FALLBACK ============ */
@@ -386,23 +489,54 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         playClick();
     }
 
-    /* ============ إقصاء/حذف لاعب من المباراة (محلي فقط — لا يمس قائمة AGP العامة) ============ */
-    function eliminateFromMatch(playerId) {
-        _alive = _alive.filter(function (p) { return p.id !== playerId; });
+    /* ============ إقصاء لاعب من المباراة (محلي فقط — لا يمس قائمة AGP
+       العامة) — يُنقَل لقائمة _eliminated القابلة للإنعاش بالدعم. ============ */
+    function eliminateFromMatch(player) {
+        _alive = _alive.filter(function (p) { return p.id !== player.id; });
+        _eliminated.push({ player: player });
         renderPlayerList();
         buildWheel();
         checkGameOver();
     }
 
+    function revivePlayerByEntry(entry) {
+        var idx = _eliminated.indexOf(entry);
+        if (idx === -1) return;
+        _eliminated.splice(idx, 1);
+        _alive.push(entry.player);
+        renderPlayerList();
+        buildWheel();
+        showToast('🎁 ' + playerLabel(entry.player) + ' رجع للعبة عن طريق الدعم!');
+        showGiftReviveCard(entry.player);
+    }
+
+    // ⚠️ [0.46.0]-إقتباس: بطاقة عائمة منفصلة (مو toast نصي عادي) — أفاتار
+    // المُنعَش + نص، تختفي تلقائياً. نفس فكرة روليت الإقصاء بالضبط.
+    function showGiftReviveCard(player) {
+        if (!frToastWrap) return;
+        var card = document.createElement('div');
+        card.className = 'fr-gift-revive-card';
+        card.innerHTML = ringAvatarHtml(player) +
+            '<span class="fr-gift-revive-text">🎁 ' + escapeHtml(playerLabel(player)) + ' رجع للعبة عن طريق الدعم!</span>';
+        frToastWrap.appendChild(card);
+        window.setTimeout(function () { if (card.parentNode) card.parentNode.removeChild(card); }, 4200);
+    }
+
     // ⚠️ حذف إداري حقيقي (زر 🗑️ بشاشة الإعدادات أثناء المباراة —
     // js/agp-game-shell.js عبر AGP.player.removePlayer، يبث player:removed)
-    // — منفصل تماماً عن إقصاء اللعبة نفسها (صندوق الشخصية الخفية).
+    // — منفصل تماماً عن إقصاء اللعبة نفسها (صندوق الشخصية الخفية)،
+    // ويتحقق من كلتا القائمتين (أحياء + مُقصَون قابلون للإنعاش).
     function handlePlayerRemoved(removedPlayer) {
         if (!removedPlayer || !removedPlayer.id) return;
-        var existed = _alive.some(function (p) { return p.id === removedPlayer.id; });
-        if (!existed) return;
 
-        _alive = _alive.filter(function (p) { return p.id !== removedPlayer.id; });
+        var aliveIdx = _alive.findIndex(function (p) { return p.id === removedPlayer.id; });
+        if (aliveIdx !== -1) _alive.splice(aliveIdx, 1);
+
+        var elimIdx = _eliminated.findIndex(function (e) { return e.player.id === removedPlayer.id; });
+        if (elimIdx !== -1) _eliminated.splice(elimIdx, 1);
+
+        if (aliveIdx === -1 && elimIdx === -1) return; // ما كان جزءاً من مباراة نشطة أصلاً
+
         renderPlayerList();
         buildWheel();
 
@@ -412,6 +546,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             closeFruitPopup();
         }
         checkGameOver();
+    }
+
+    // ⚠️ إصلاح خلل حقيقي: انضمام لاعب أثناء مباراة نشطة (عبر "إضافة لوبي
+    // جديد" بشاشة الإعدادات) كان يُسجَّل بسجل المنصة العام لكن ما يدخل
+    // فعلياً لقائمة اللعبة ولا العجلة — لم يكن فيه أي استماع لهذا الحدث
+    // إطلاقاً. الإصلاح: نتحقق أن مباراة فعلاً نشطة وأن اللاعب مو موجود
+    // مسبقاً (لا بالأحياء ولا بالمُقصَين القابلين للإنعاش)، ثم نضيفه فوراً.
+    function handlePlayerJoined(newPlayer) {
+        if (!_matchActive || !newPlayer || !newPlayer.id) return;
+
+        var alreadyAlive = _alive.some(function (p) { return p.id === newPlayer.id; });
+        var alreadyEliminated = _eliminated.some(function (e) { return e.player.id === newPlayer.id; });
+        if (alreadyAlive || alreadyEliminated) return;
+
+        _alive.push(newPlayer);
+        renderPlayerList();
+        buildWheel();
     }
 
     /* ============ بناء العجلة ============ */
@@ -429,6 +580,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         snapWheelTo(0);
         currentTurnName.textContent = '—';
         playClick();
+    }
+
+    /* ⚠️ أسماء أفقية بحتة: نحسب موقع كل اسم بمثلثات (نفس صيغة حلقة
+       اللمبات بـbuildBulbs) بدل تدوير النص نفسه — فيبقى أفقياً 100%
+       بغض النظر عن موقعه حول محيط العجلة. حجم الخط يصغر تلقائياً كل ما
+       زاد عدد اللاعبين (تقليل التزاحم). */
+    function labelFontSizeFor(n) {
+        if (n <= 6) return '0.95rem';
+        if (n <= 10) return '0.82rem';
+        if (n <= 14) return '0.7rem';
+        return '0.6rem';
     }
 
     function buildWheel() {
@@ -455,14 +617,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
         wheel.style.background = 'conic-gradient(from 0deg, ' + gradientParts.join(', ') + ')';
 
+        var fontSize = labelFontSizeFor(n);
+        var radiusPct = 36;
         _alive.forEach(function (p, i) {
             var midAngle = segAngle * i + segAngle / 2;
+            var rad = midAngle * Math.PI / 180;
+            var x = 50 + radiusPct * Math.sin(rad);
+            var y = 50 - radiusPct * Math.cos(rad);
+
             var labelWrap = document.createElement('div');
             labelWrap.className = 'wheel-label';
-            labelWrap.style.transform = 'rotate(' + midAngle + 'deg)';
-            var span = document.createElement('span');
-            span.textContent = p.name || p.id;
-            labelWrap.appendChild(span);
+            labelWrap.style.left = x + '%';
+            labelWrap.style.top = y + '%';
+            labelWrap.style.fontSize = fontSize;
+            labelWrap.textContent = p.name || p.id;
             wheel.appendChild(labelWrap);
         });
 
@@ -546,7 +714,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         crateResult.classList.remove('show');
         resultText.textContent = '';
         continueBtn.hidden = true;
-        eliminateBtn.hidden = true;
         _crateResolved = false;
 
         var hiddenCount = Math.min(eliminationLevel, CRATE_COUNT - 1);
@@ -634,24 +801,32 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var all = crateGrid.querySelectorAll('.crate');
         all.forEach(function (c) { c.disabled = true; });
         crateEl.classList.add('flipped');
+        var eliminatedPlayer = _activeWinner;
 
         window.setTimeout(function () {
             if (isHidden) {
                 playBoom();
                 resultText.className = 'result-text danger';
-                resultText.textContent = '💀 ' + content.name + '! تم إقصاء ' + (_activeWinner.name || _activeWinner.id) + '!';
-                eliminateBtn.hidden = false;
+                resultText.textContent = '💀 ' + content.name + '! تم إقصاء ' + playerLabel(eliminatedPlayer) + '!';
                 continueBtn.hidden = true;
-                if (liveRegion) liveRegion.textContent = 'تم إقصاء ' + (_activeWinner.name || _activeWinner.id) + '.';
+                if (liveRegion) liveRegion.textContent = 'تم إقصاء ' + playerLabel(eliminatedPlayer) + '.';
+                crateResult.classList.add('show');
+
+                // ⚠️ إقصاء تلقائي بلا أي تأكيد يدوي من المضيف — رسالة
+                // النتيجة تظهر 1.6 ثانية (يكفي البث يقرأها) ثم يُنفَّذ
+                // الإقصاء فعلياً وتُغلَق النافذة تلقائياً.
+                window.setTimeout(function () {
+                    eliminateFromMatch(eliminatedPlayer);
+                    closeFruitPopup();
+                }, 1600);
             } else {
                 playChime();
                 resultText.className = 'result-text safe';
-                resultText.textContent = '🍉 آمن! ' + (_activeWinner.name || _activeWinner.id) + ' ينجو من هذه الجولة.';
+                resultText.textContent = '🍉 آمن! ' + playerLabel(eliminatedPlayer) + ' ينجو من هذه الجولة.';
                 continueBtn.hidden = false;
-                eliminateBtn.hidden = true;
-                if (liveRegion) liveRegion.textContent = (_activeWinner.name || _activeWinner.id) + ' بأمان.';
+                if (liveRegion) liveRegion.textContent = playerLabel(eliminatedPlayer) + ' بأمان.';
+                crateResult.classList.add('show');
             }
-            crateResult.classList.add('show');
         }, 650);
     }
 
@@ -677,6 +852,69 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    /* ============ الإنعاش عن طريق الدعم — عبر حدث stream:giftReceived
+       الموجود أصلاً (نفس آلية روليت الإقصاء بالضبط). ============ */
+    function wireGiftListener() {
+        _giftUnsub = AGP.events.on('stream:giftReceived', function (payload) {
+            var settings = liveSettings();
+            if (!_matchActive || !settings.giftRevivalEnabled) return;
+            if (!payload || !payload.giftName) return;
+            if (payload.giftName !== settings.giftRevivalGiftName) return;
+
+            var entry = _eliminated.filter(function (e) {
+                return e.player.id === payload.id || e.player.name === payload.name;
+            })[0];
+            if (!entry) return;
+
+            var maxCount = settings.giftRevivalMaxCount || 1;
+            var usedCount = _giftReviveCounts[entry.player.id] || 0;
+            if (usedCount >= maxCount) {
+                showToast('⚠️ ' + playerLabel(entry.player) + ' استخدم كل مرات الإنعاش بالدعم المسموحة');
+                return;
+            }
+
+            _giftReviveCounts[entry.player.id] = usedCount + 1;
+            revivePlayerByEntry(entry);
+        });
+    }
+
+    function giftLabelFor(value) {
+        var match = COMMON_GIFTS.filter(function (g) { return g.value === value; })[0];
+        if (!match) return value || 'اختر هدية';
+        return match.label + ' · ' + giftCoinsText(match);
+    }
+
+    /**
+     * نافذة اختيار الهدية — مبنية مسبقاً بـHTML (خارج #frGameRoot عمداً،
+     * راجع index.html) عشان تكون متاحة من شاشة الإعدادات الأولى قبل بدء
+     * أي مباراة. z-index أعلى من #agp-shell-overlay (99999) بـstyle.css
+     * — بدونه الضغط على الهدايا ما يشتغل لو فُتحت من داخل شاشة الإعدادات.
+     */
+    function openGiftPickerModal(currentValue) {
+        if (!frGiftPickerOverlay || !frGiftGrid) return;
+
+        frGiftGrid.innerHTML = COMMON_GIFTS.map(function (g) {
+            var active = g.value === currentValue ? 'is-active' : '';
+            return '<button type="button" class="fr-gift-btn ' + active + '" data-gift-value="' + escapeHtml(g.value) + '">' +
+                '<img class="fr-gift-icon" src="' + giftIconUrl(g) + '" alt="" loading="lazy" onerror="this.style.display=\'none\';">' +
+                '<span class="fr-gift-name">' + escapeHtml(g.label) + '</span>' +
+                '<span class="fr-gift-coins">' + giftCoinsText(g) + '</span>' +
+                '</button>';
+        }).join('');
+
+        frGiftGrid.querySelectorAll('[data-gift-value]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var value = btn.getAttribute('data-gift-value');
+                if (AGP.gameShell && typeof AGP.gameShell.setSetting === 'function') {
+                    AGP.gameShell.setSetting('giftRevivalGiftName', value);
+                }
+                frGiftPickerOverlay.classList.remove('active');
+            });
+        });
+
+        frGiftPickerOverlay.classList.add('active');
+    }
+
     /* ============ نهاية اللعبة / الفائز ============ */
     function checkGameOver() {
         if (_alive.length === 1) {
@@ -693,8 +931,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         spinBtn.disabled = true;
         stopRoundTimerInterval();
         if (typeof _commentUnsub === 'function') { _commentUnsub(); _commentUnsub = null; }
+        if (typeof _giftUnsub === 'function') { _giftUnsub(); _giftUnsub = null; }
 
         var durationMs = _startedAt ? (Date.now() - _startedAt) : 0;
+        // ⚠️ ثلاث حالات محتملة لنتيجة النقاط — راجع openWinnerModal:
+        // null = تعذّر الاتصال بخادم النقاط، {} = نجح لكن بلا مطابقة
+        // لهذا اللاعب (لا حساب مرتبط)، {added, totalPoints} = نجح فعلياً.
         var pointsPromise = Promise.resolve(null);
 
         if (window.AGPAuth && typeof window.AGPAuth.reportRoundCompletion === 'function') {
@@ -706,18 +948,43 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             }).filter(function (p) { return p.tiktokUsername; });
 
             if (participants.length) {
-                pointsPromise = window.AGPAuth.reportRoundCompletion(participants, durationMs).catch(function () { return null; });
+                var championUname = (function () {
+                    var id = champion.id || '';
+                    return id.indexOf('tiktok:') === 0 ? id.slice('tiktok:'.length) : (champion.name || champion.id);
+                })();
+                pointsPromise = window.AGPAuth.reportRoundCompletion(participants, durationMs)
+                    .then(function (res) {
+                        var awarded = (res && Array.isArray(res.awarded)) ? res.awarded : [];
+                        var match = awarded.filter(function (a) { return a.tiktokUsername === championUname; })[0];
+                        return match || {}; // {} = نجح الطلب لكن بلا مطابقة حساب لهذا اللاعب
+                    })
+                    .catch(function () { return null; }); // null = فشل الاتصال نفسه
             }
         }
 
         AGP.events.emit('game:roundEnded', { id: GAME_ID });
-        pointsPromise.then(function () {
-            openWinnerModal(champion);
+        pointsPromise.then(function (pointsResult) {
+            openWinnerModal(champion, pointsResult);
         });
     }
 
-    function openWinnerModal(champion) {
+    function openWinnerModal(champion, pointsResult) {
         winnerNameEl.textContent = champion.name || champion.id;
+        if (winnerAvatarWrap) winnerAvatarWrap.innerHTML = ringAvatarHtml(champion);
+
+        if (winnerPointsText) {
+            winnerPointsText.className = 'winner-points-text';
+            if (pointsResult === null) {
+                winnerPointsText.textContent = 'تعذّر جلب النقاط الآن.';
+            } else if (pointsResult && typeof pointsResult.added === 'number') {
+                winnerPointsText.classList.add('has-points');
+                winnerPointsText.textContent = '🏆 +' + pointsResult.added + ' نقطة (المجموع: ' + pointsResult.totalPoints + ')';
+            } else {
+                winnerPointsText.classList.add('no-account');
+                winnerPointsText.textContent = 'لا يوجد حساب مرتبط بهذا اللاعب على المنصة بعد.';
+            }
+        }
+
         if (liveRegion) liveRegion.textContent = (champion.name || champion.id) + ' فاز باللعبة!';
         winnerOverlay.classList.add('active');
         playChime();
@@ -738,6 +1005,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (roster.length < 2) return;
 
         _alive = roster;
+        _eliminated = [];
+        _giftReviveCounts = {};
         _colorMap = {};
         _isSpinning = false;
         _activeWinner = null;
@@ -755,6 +1024,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderPlayerList();
         buildWheel();
         wireCommentListener();
+        wireGiftListener();
 
         AGP.events.emit('game:roundStarted', { id: GAME_ID });
     }
@@ -766,6 +1036,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _roundDuration = _settings.roundDurationMinutes ? Number(_settings.roundDurationMinutes) : 240;
 
         _alive = AGP.gameManager.getPlayers().slice();
+        _eliminated = [];
+        _giftReviveCounts = {};
         _colorMap = {};
         _isSpinning = false;
         _currentRotation = 0;
@@ -783,6 +1055,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderPlayerList();
         buildWheel();
         wireCommentListener();
+        wireGiftListener();
     }
 
     /* ============ الحد الأقصى للاعبين — نفس آلية روليت الإقصاء تماماً ============ */
@@ -803,7 +1076,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function buildSettingsFields() {
         return [
             { key: 'maxPlayers', type: 'counter', label: '👥 الحد الأقصى لعدد اللاعبين بالمباراة', min: 2, default: 20 },
-            { key: 'roundDurationMinutes', type: 'pill-group', label: '⏱️ مدة تصاعد صعوبة الصناديق', options: ROUND_DURATION_OPTIONS, default: 240 }
+            { key: 'roundDurationMinutes', type: 'pill-group', label: '⏱️ مدة تصاعد صعوبة الصناديق', options: ROUND_DURATION_OPTIONS, default: 240 },
+            { key: 'giftRevivalEnabled', type: 'toggle', label: '🎁 الإنعاش عن طريق الدعم', default: false },
+            {
+                key: 'giftRevivalGiftName', type: 'modal-trigger', label: 'الهدية المختارة',
+                default: COMMON_GIFTS[0].value,
+                formatValue: giftLabelFor,
+                onOpen: openGiftPickerModal,
+                showWhen: { key: 'giftRevivalEnabled', equals: true }
+            },
+            {
+                key: 'giftRevivalMaxCount', type: 'counter', label: 'كم مرة يقدر ينعش نفسه (طول المباراة)',
+                min: 1, default: 1,
+                showWhen: { key: 'giftRevivalEnabled', equals: true }
+            }
         ];
     }
 
@@ -819,8 +1105,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             onDestroy: function () {
                 _matchActive = false;
                 _alive = [];
+                _eliminated = [];
+                _giftReviveCounts = {};
                 _activeWinner = null;
                 if (typeof _commentUnsub === 'function') { _commentUnsub(); _commentUnsub = null; }
+                if (typeof _giftUnsub === 'function') { _giftUnsub(); _giftUnsub = null; }
                 if (frGameRoot) frGameRoot.style.display = 'none';
                 AGP.log('Fruit Roulette: onDestroy — match state cleared.');
             }
@@ -836,6 +1125,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _playerRemovedUnsub = AGP.events.on('player:removed', function (payload) {
             handlePlayerRemoved(payload && payload.player);
         });
+        // ⚠️ إصلاح خلل الانضمام أثناء مباراة نشطة — راجع handlePlayerJoined.
+        _playerJoinedUnsub = AGP.events.on('player:joined', function (payload) {
+            handlePlayerJoined(payload && payload.player);
+        });
 
         AGP.gameShell.init({
             gameId: GAME_ID,
@@ -843,7 +1136,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             settingsTitle: 'إعدادات مباراة روليت الفواكه',
             gameExplanation: 'تدور العجلة وتتوقف عند أحد اللاعبين — يفتح صندوقاً من أربعة بكتابة رقمه (١-٤) في شات ' +
                 'البث (هو فقط، وقت دوره). ثلاثة صناديق آمنة تحتوي فاكهة، وواحد أو أكثر يخفي "الشخصية الخفية" ويقصي ' +
-                'صاحب الدور. عدد الصناديق المخفية يرتفع تدريجياً كل ما انتهى مؤقت الجولة. تستمر المباراة حتى يبقى لاعب واحد.',
+                'صاحب الدور تلقائياً. عدد الصناديق المخفية يرتفع تدريجياً كل ما انتهى مؤقت الجولة. تستمر المباراة ' +
+                'حتى يبقى لاعب واحد. اختياري: إنعاش المُقصَين بإرسال هدية دعم محدَّدة.',
             connectButtonLabel: 'اتصال بالبث وبدء الإعدادات',
             minPlayersToStart: 2,
             logoImage: '../../logo.png',
@@ -868,15 +1162,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         shuffleBtn.addEventListener('click', shufflePlayers);
         resetWheelBtn.addEventListener('click', resetWheelPosition);
 
+        // زر "متابعة اللعب" يبقى يدوياً — خاص بالحالة الآمنة فقط (لا يوجد
+        // زر تأكيد إقصاء بعد الآن، الإقصاء تلقائي داخل handleCrateClick).
         continueBtn.addEventListener('click', function () { playClick(); closeFruitPopup(); });
-        eliminateBtn.addEventListener('click', function () {
-            playClick();
-            if (_activeWinner) eliminateFromMatch(_activeWinner.id);
-            closeFruitPopup();
-        });
         fruitOverlay.addEventListener('click', function (e) {
-            if (e.target === fruitOverlay && crateResult.classList.contains('show')) closeFruitPopup();
+            if (e.target === fruitOverlay && crateResult.classList.contains('show') && !continueBtn.hidden) closeFruitPopup();
         });
+        if (frGiftPickerOverlay) {
+            frGiftPickerOverlay.addEventListener('click', function (e) {
+                if (e.target === frGiftPickerOverlay) frGiftPickerOverlay.classList.remove('active');
+            });
+        }
 
         newGameBtn.addEventListener('click', function () { playClick(); newGame(); });
         rematchBtn.addEventListener('click', function () { playClick(); rematchRound(); });
