@@ -64,6 +64,27 @@
  *   يعطي نتيجة مكسورة (صورة/اسم بمكان خاطئ)، بالضبط زي ما صار مع
  *   founder المعكوس.
  *
+ * ⚠️ [0.45.5] إعادة قياس شاملة لـ8 إطارات (floral/ice/blacksteel/phoenix/
+ *   purple/celestial/crystalline/frozen) — صاحب المشروع بلّغ (بلقطات شاشة
+ *   فعلية من اللوبي) أن الصورة الشخصية ما تنطبق بالضبط على فتحة بعض
+ *   الإطارات (فراغات/تراكب)، ولون بعض أسماء اللاعبين غير مقروء فوق
+ *   لوحات فاتحة. أعاد صاحب المشروع رفع نفس ملفات الصور (بنفس الأسماء
+ *   أعلاه) فرداً فرداً، قيست كل واحدة من جديد بنفس منهجية [0.44.8]
+ *   بالضبط (فحص بكسل فعلي + تحقّق بصري بصندوقين) واستُبدلت قياساتها
+ *   القديمة بالجدول. تمت مطابقة كل ملف بقياسه القديم عبر contentTop/
+ *   contentHeight (متطابقة تقريباً حرفياً) للتأكد إنه نفس الملف قبل أي
+ *   استبدال — **لا حذف ولا إضافة مفاتيح جديدة**، فقط تصحيح أرقام
+ *   المفاتيح العشرة الموجودة أصلاً.
+ * ⚠️ [0.45.5] خاصية جديدة اختيارية بالجدول: textColor (لون نص الاسم،
+ *   hex). لو غير موجودة بمدخل إطار معيّن يبقى الأبيض الافتراضي كما هو
+ *   (بدون أي تغيير سلوك على أي إطار ما يحتاجها). أُضيفت للإطارات اللي
+ *   لوحة اسمها فاتحة (floral/ice/celestial/frozen — أبيض عليها غير
+ *   مقروء)، ولإطار الأهلي (أخضر النادي بطلب صريح).
+ * ⚠️ [0.45.5] frame-founder.png لم يُمس إطلاقاً (صاحب المشروع أكّد إنه
+ *   سليم ومرجعي). ملفان جديدان اتفحصا بنفس الجلسة (فيه واحد بصيغة JPEG
+ *   بدون شفافية حقيقية) لسا ما انضافا للجدول — يحتاجان تأكيد/ملف PNG
+ *   شفاف قبل أي إضافة مستقبلية، حسب نفس شرط "PNG شفاف حقيقي" أعلاه.
+ *
  * يعتمد هذا الملف على js/agp-core.js فقط (لـ AGP.log) — لا اعتماد على
  * أي وحدة لعبة أو AGP.gameShell.
  * ==========================================================================
@@ -91,53 +112,72 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 9.73, avatarTopPct: 33.12, avatarWidthPct: 24.24, avatarHeightPct: 51.71,
             nameLeftPct: 42.11, nameTopPct: 51.55, nameWidthPct: 47.13, nameHeightPct: 21.86
         },
+        // [0.45.5] أعيد قياسه بالكامل — القياس القديم كان يسبب انزياح/فراغات
+        // بالصورة الحقيقية وتراكب طفيف بلوحة الاسم (بلاغ صاحب المشروع
+        // بلقطات شاشة من اللوبي الفعلي). قياس جديد بنفس المنهجية (فحص بكسل
+        // + تحقّق بصندوقين) على نفس ملف الصورة الحيّ على GitHub.
         'frame-floral.png': {
-            canvasW: 1536, canvasH: 1024, contentTop: 160, contentHeight: 615,
-            avatarLeftPct: 9.38, avatarTopPct: 21.3, avatarWidthPct: 22.92, avatarHeightPct: 57.72,
-            nameLeftPct: 37.96, nameTopPct: 36.91, nameWidthPct: 55.27, nameHeightPct: 34.63
+            canvasW: 1536, canvasH: 1024, contentTop: 160, contentHeight: 616,
+            avatarLeftPct: 9.51, avatarTopPct: 21.75, avatarWidthPct: 22.66, avatarHeightPct: 56.17,
+            nameLeftPct: 32.55, nameTopPct: 33.12, nameWidthPct: 65.36, nameHeightPct: 41.56,
+            textColor: '#1c1c24' // لوحة الاسم فاتحة (كريمي/عاجي) — أبيض افتراضي غير مقروء عليها
         },
+        // [0.45.5] أعيد قياسه — نفس السبب أعلاه.
         'frame-ice.png': {
-            canvasW: 1536, canvasH: 1024, contentTop: 175, contentHeight: 514,
-            avatarLeftPct: 8.07, avatarTopPct: 18.48, avatarWidthPct: 22.59, avatarHeightPct: 64.98,
-            nameLeftPct: 34.7, nameTopPct: 37.35, nameWidthPct: 59.24, nameHeightPct: 34.44
+            canvasW: 1536, canvasH: 1024, contentTop: 175, contentHeight: 515,
+            avatarLeftPct: 8.20, avatarTopPct: 19.03, avatarWidthPct: 22.33, avatarHeightPct: 61.94,
+            nameLeftPct: 31.25, nameTopPct: 34.37, nameWidthPct: 65.17, nameHeightPct: 40.00,
+            textColor: '#1c1c24' // لوحة الاسم فاتحة (أزرق ثلجي فاتح) — أبيض افتراضي غير مقروء عليها
         },
+        // [0.45.5] أعيد قياسه — نفس السبب أعلاه.
         'frame-blacksteel.png': {
-            canvasW: 1254, canvasH: 1254, contentTop: 399, contentHeight: 409,
-            avatarLeftPct: 7.26, avatarTopPct: 11.74, avatarWidthPct: 24.88, avatarHeightPct: 77.02,
-            nameLeftPct: 30.62, nameTopPct: 31.05, nameWidthPct: 64.75, nameHeightPct: 54.77
+            canvasW: 1254, canvasH: 1254, contentTop: 399, contentHeight: 410,
+            avatarLeftPct: 7.66, avatarTopPct: 12.20, avatarWidthPct: 24.32, avatarHeightPct: 74.88,
+            nameLeftPct: 32.70, nameTopPct: 26.83, nameWidthPct: 64.99, nameHeightPct: 58.78
         },
+        // [0.45.5] أعيد قياسه — نفس السبب أعلاه.
         'frame-phoenix.png': {
             canvasW: 1254, canvasH: 1254, contentTop: 234, contentHeight: 687,
-            avatarLeftPct: 12.44, avatarTopPct: 37.99, avatarWidthPct: 26.16, avatarHeightPct: 48.18,
-            nameLeftPct: 47.85, nameTopPct: 54.73, nameWidthPct: 42.26, nameHeightPct: 19.65
+            avatarLeftPct: 12.68, avatarTopPct: 38.43, avatarWidthPct: 25.76, avatarHeightPct: 46.87,
+            nameLeftPct: 46.25, nameTopPct: 53.28, nameWidthPct: 46.65, nameHeightPct: 21.83
         },
+        // [0.45.5] أعيد قياسه — نفس السبب أعلاه.
         'frame-purple.png': {
-            canvasW: 1536, canvasH: 1024, contentTop: 212, contentHeight: 535,
-            avatarLeftPct: 8.07, avatarTopPct: 15.89, avatarWidthPct: 23.63, avatarHeightPct: 69.35,
-            nameLeftPct: 39.45, nameTopPct: 37.94, nameWidthPct: 55.01, nameHeightPct: 32.71
+            canvasW: 1536, canvasH: 1024, contentTop: 212, contentHeight: 536,
+            avatarLeftPct: 8.33, avatarTopPct: 16.98, avatarWidthPct: 23.18, avatarHeightPct: 67.54,
+            nameLeftPct: 31.90, nameTopPct: 34.51, nameWidthPct: 64.91, nameHeightPct: 39.74
         },
+        // [0.45.5] أعيد قياسه — نفس السبب أعلاه.
         'frame-celestial.png': {
-            canvasW: 1254, canvasH: 1254, contentTop: 391, contentHeight: 450,
-            avatarLeftPct: 9.01, avatarTopPct: 20.44, avatarWidthPct: 20.41, avatarHeightPct: 57.33,
-            nameLeftPct: 41.07, nameTopPct: 28.22, nameWidthPct: 50.72, nameHeightPct: 46.67
+            canvasW: 1254, canvasH: 1254, contentTop: 391, contentHeight: 452,
+            avatarLeftPct: 9.81, avatarTopPct: 23.67, avatarWidthPct: 19.14, avatarHeightPct: 51.99,
+            nameLeftPct: 30.70, nameTopPct: 24.12, nameWidthPct: 64.99, nameHeightPct: 54.20,
+            textColor: '#1c1c24' // لوحة الاسم فاتحة (سحاب وردي/بنفسجي فاتح) — أبيض افتراضي غير مقروء عليها
         },
+        // [0.45.5] أعيد قياسه — نفس السبب أعلاه.
         'frame-crystalline.png': {
-            canvasW: 1536, canvasH: 1024, contentTop: 172, contentHeight: 602,
-            avatarLeftPct: 6.45, avatarTopPct: 18.6, avatarWidthPct: 23.18, avatarHeightPct: 60.13,
-            nameLeftPct: 39.06, nameTopPct: 32.56, nameWidthPct: 45.9, nameHeightPct: 38.21
+            canvasW: 1536, canvasH: 1024, contentTop: 172, contentHeight: 604,
+            avatarLeftPct: 6.64, avatarTopPct: 18.87, avatarWidthPct: 22.79, avatarHeightPct: 58.94,
+            nameLeftPct: 29.43, nameTopPct: 27.32, nameWidthPct: 65.62, nameHeightPct: 46.85
         },
+        // [0.45.5] أعيد قياسه — نفس السبب أعلاه.
         'frame-frozen.png': {
-            canvasW: 1254, canvasH: 1254, contentTop: 335, contentHeight: 464,
-            avatarLeftPct: 9.65, avatarTopPct: 15.09, avatarWidthPct: 25.28, avatarHeightPct: 68.97,
-            nameLeftPct: 38.84, nameTopPct: 41.38, nameWidthPct: 49.92, nameHeightPct: 41.81
+            canvasW: 1254, canvasH: 1254, contentTop: 335, contentHeight: 465,
+            avatarLeftPct: 9.97, avatarTopPct: 16.13, avatarWidthPct: 24.64, avatarHeightPct: 66.88,
+            nameLeftPct: 34.29, nameTopPct: 33.76, nameWidthPct: 61.40, nameHeightPct: 46.24,
+            textColor: '#1c1c24' // لوحة الاسم فاتحة (جليدي أبيض/أزرق فاتح جداً) — أبيض افتراضي غير مقروء عليها
         },
         // [0.45.1] إطار "الأهلي" — مقاس فعلياً بالبكسل من الملف المرفوع (1536×1024،
         // فتحة صورة دائرية شفافة حقيقية يسار + بلاطة اسم بيضاء فاضية يمين، نفس
         // منهجية القياس المتبعة لكل الإطارات أعلاه — تحقّق بصري بصندوقين قبل الاعتماد).
+        // [0.45.5] لون الاسم: أخضر نادي الأهلي (مسحوب فعلياً بالبكسل من شعار
+        // النادي داخل الصورة نفسها = #046D38) بطلب صريح من صاحب المشروع —
+        // القياسات الهندسية (المواقع/الأحجام) ما تغيّرت، كانت صحيحة أصلاً.
         'frame-al-ahli.png': {
             canvasW: 1536, canvasH: 1024, contentTop: 257, contentHeight: 464,
             avatarLeftPct: 6.05, avatarTopPct: 15.52, avatarWidthPct: 20.64, avatarHeightPct: 65.95,
-            nameLeftPct: 33.59, nameTopPct: 28.88, nameWidthPct: 38.35, nameHeightPct: 49.57
+            nameLeftPct: 33.59, nameTopPct: 28.88, nameWidthPct: 38.35, nameHeightPct: 49.57,
+            textColor: '#046D38'
         }
     };
     var DEFAULT_TEMPLATE_KEY = 'frame-founder.png'; // احتياط دفاعي فقط — إطار غير موجود بالجدول يظهر بقياسات founder بدل ما ينكسر كلياً
@@ -166,19 +206,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var style = document.createElement('style');
         style.id = STYLE_ID;
         style.textContent = [
-            /* ---- البطاقة الأساسية (بدون إطار) ----
-             * ⚠️ [0.47.0] الخلفية البيضاوية الشفافة + الحدود البنفسجية
-             * حول الصورة+الاسم أُلغيتا بالكامل بطلب صريح.
-             * ⚠️ [0.48.0] رجع حدّ (border) رفيع شفاف فقط حول البطاقة —
-             * بدون أي تعبئة/خلفية خلفه (مو نفس الخلفية القديمة قبل
-             * [0.47.0]) — بطلب صريح لاحق. هذا مكوّن مشترك (AGP.playerCard)،
-             * فالتأثير يشمل تلقائياً كل الأماكن اللي تستخدمه: اللوبي
-             * الرئيسي، اللوبي الفرعي (منتصف المباراة)، قائمة لاعبين شاشة
-             * الإعدادات، وقائمة مرشّحي نافذة الإقصاء/الإرجاع.
-             */
+            /* ---- البطاقة الأساسية (بدون إطار) ---- */
             '.agp-pcard{display:inline-flex;align-items:center;gap:8px;',
-            'max-width:220px;box-sizing:border-box;padding:4px 12px;',
-            'border:1px solid rgba(255,255,255,0.28);border-radius:999px;background:transparent;',
+            'background:rgba(255,255,255,0.08);border:1px solid rgba(216,120,255,0.3);',
+            'border-radius:999px;padding:4px 14px 4px 4px;max-width:220px;box-sizing:border-box;',
             'font-family:Cairo,sans-serif;direction:rtl;vertical-align:middle;}',
             '.agp-pcard--out{opacity:0.45;text-decoration:line-through;}',
 
@@ -275,8 +306,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'width:' + layout.frameImgWidthPx + 'px;height:' + layout.frameImgHeightPx + 'px;' +
             'background-size:' + layout.frameImgWidthPx + 'px ' + layout.frameImgHeightPx + 'px;' +
             'background-image:url(' + escapeHtml(frameSrc) + ')';
+        // [0.45.5] tpl.textColor اختياري — لو موجود يطغى على اللون الأبيض
+        // الافتراضي بالـCSS (بعض لوحات الأسماء فاتحة واللون الأبيض غير
+        // مقروء عليها، أو مطلوب لون هوية محدد زي إطار الأهلي).
         var nameStyle = 'left:' + tpl.nameLeftPct + '%;top:' + tpl.nameTopPct + '%;' +
-            'width:' + tpl.nameWidthPct + '%;height:' + tpl.nameHeightPct + '%;';
+            'width:' + tpl.nameWidthPct + '%;height:' + tpl.nameHeightPct + '%;' +
+            (tpl.textColor ? 'color:' + tpl.textColor + ';' : '');
 
         var avatarHtml = avatarUrl
             ? '<img class="agp-pcard-tpl-avatar" style="' + avatarStyle + '" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;agp-pcard-tpl-avatar agp-pcard-tpl-avatar--fallback&quot; style=&quot;' + avatarStyle + '&quot;>' + escapeHtml(initials(name)) + '</div>\';">'
