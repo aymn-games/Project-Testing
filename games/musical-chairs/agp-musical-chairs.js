@@ -162,6 +162,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _eliminated = [];
     var _roundNumber = 0;
     var _customDeficitCurrent = 1;
+    var _roundDeficit = 1; // ⚠️ جديد: العجز المستخدَم فعلياً بالدورة الحالية (يلزم addChairsIfNeeded)
 
     var _chairs = [];
     var _seatedThisRound = {};
@@ -274,9 +275,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '-webkit-background-clip:text;background-clip:text;color:transparent;}',
             '#mc-round-banner .mc-round-sub{font-size:0.85em;color:#d9c3ef;margin-top:2px;}',
 
-            /* ================= شريط الأدوات (تدوير + صوت + نوع الموسيقى + بادجات) ================= */
+            /* ================= شريط الأدوات (تدوير + صوت + نوع الموسيقى + بادجات) =================
+             * ⚠️ عرّضته من عرض تلقائي (~680px حسب المحتوى) لعرض أدنى ثابت
+             * 760px على الشاشات الواسعة (يرجع يتقلّص تلقائياً على الجوال
+             * عبر min(94vw,760px) حتى ما ينكسر التصميم). عدّل الرقم 760
+             * لأي رقم تبيه بالضبط. */
             '#mc-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;',
-            'margin:8px auto;padding:8px 14px;max-width:94vw;border-radius:999px;',
+            'margin:8px auto;padding:10px 18px;width:min(94vw,760px);box-sizing:border-box;border-radius:999px;',
             'background:linear-gradient(90deg,#3a1750,#2D1932);border:2px solid var(--mc-badge-stroke);',
             'box-shadow:0 4px 18px rgba(0,0,0,0.35);}',
 
@@ -317,8 +322,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'min-width:320px;min-height:320px;margin:10px auto;}',
             '#mc-circle-glow{position:absolute;inset:8%;border-radius:50%;',
             'background:radial-gradient(circle,rgba(124,58,237,0.28),transparent 70%);pointer-events:none;}',
-            '#mc-circle-track{position:absolute;inset:0;border-radius:50%;',
-            'border:2px dashed rgba(0,194,255,0.25);pointer-events:none;}',
+            /* ⚠️ تصميم جديد لحلقة الإطار — حلقة متوهّجة تلوّن متدرّج (بنفسجي
+             * ← سماوي ← ذهبي ← وردي) تدور ببطء حول الحلبة، بدل الخط
+             * المتقطع البسيط القديم. مبنية بتقنية conic-gradient + mask
+             * (بدون أي صورة خارجية). */
+            '#mc-circle-track{position:absolute;inset:-3px;border-radius:50%;pointer-events:none;',
+            'background:conic-gradient(from 0deg,var(--agp-accent),var(--agp-accent-2),var(--mc-gold),',
+            'var(--agp-accent-pink),var(--agp-accent));',
+            '-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 5px));',
+            'mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 5px));',
+            'opacity:0.9;animation:mcTrackSpin 7s linear infinite;',
+            'filter:drop-shadow(0 0 10px rgba(124,58,237,0.55));}',
+            '@keyframes mcTrackSpin{to{transform:rotate(360deg);}}',
             '#mc-chairs-ring{position:absolute;inset:0;}',
             '#mc-players-ring{position:absolute;inset:0;}',
 
@@ -382,6 +397,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'border:3px solid var(--mc-gold);box-shadow:0 0 22px rgba(255,176,32,0.7);}',
             '.mc-winner-name{font-weight:900;font-size:1.2em;color:#fff;}',
             '.mc-winner-points{color:var(--mc-gold);font-weight:800;font-size:0.9em;}',
+            '.mc-winner-video-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;',
+            'font-size:3em;background:rgba(0,0,0,0.3);}',
+
+            /* ⚠️ جديد: زرّي نهاية المباراة بجانب بعض، كل وحد عرضه 350px بالضبط — طلب صريح */
+            '.mc-winner-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;width:100%;}',
+            '.mc-winner-action-btn{width:350px;max-width:90vw;margin-top:0 !important;}',
 
             /* ⚠️ تحسين وضوح زر إغلاق (✕) لوحة الإعدادات — خاص بصفحة الكراسي
              * الموسيقية فقط عبر override بملفنا، بدون أي لمس لملف
@@ -517,14 +538,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return { x: 50 + radiusPct * Math.cos(rad), y: 50 + radiusPct * Math.sin(rad) };
     }
 
-    function chairSvg() {
+    // ⚠️ إصلاح باگ حقيقي: كل الكراسي كانت تستخدم نفس معرِّف SVG الحرفي
+    // "mcChairGrad" (أول Grad مكرر بكل كرسي بنفس الصفحة) — معرِّفات SVG
+    // المكرَّرة بنفس المستند ممكن تسبب فشل رسم التدرّج بمتصفحات حقيقية
+    // (خصوصاً بعد استبدال innerHTML كل دورة). الحل: معرِّف فريد لكل كرسي
+    // برقم index بالكرسي نفسه.
+    function chairSvg(idx) {
+        var gradId = 'mcChairGrad' + idx;
         return '<svg class="mc-chair-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
-            '<defs><linearGradient id="mcChairGrad" x1="0" y1="0" x2="0" y2="1">' +
+            '<defs><linearGradient id="' + gradId + '" x1="0" y1="0" x2="0" y2="1">' +
             '<stop offset="0%" stop-color="#ffd166"/><stop offset="100%" stop-color="#ffb020"/>' +
             '</linearGradient></defs>' +
-            '<rect x="14" y="6" width="30" height="8" rx="3" fill="url(#mcChairGrad)"/>' +
-            '<rect x="14" y="14" width="8" height="26" rx="2" fill="url(#mcChairGrad)" opacity="0.9"/>' +
-            '<rect x="10" y="26" width="38" height="9" rx="3" fill="url(#mcChairGrad)"/>' +
+            '<rect x="14" y="6" width="30" height="8" rx="3" fill="url(#' + gradId + ')"/>' +
+            '<rect x="14" y="14" width="8" height="26" rx="2" fill="url(#' + gradId + ')" opacity="0.9"/>' +
+            '<rect x="10" y="26" width="38" height="9" rx="3" fill="url(#' + gradId + ')"/>' +
             '<rect x="12" y="35" width="6" height="20" rx="2" fill="#c97a12"/>' +
             '<rect x="40" y="35" width="6" height="20" rx="2" fill="#c97a12"/>' +
             '<rect x="18" y="35" width="6" height="16" rx="2" fill="#c97a12"/>' +
@@ -543,15 +570,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<span class="mc-avatar-name">' + escapeHtml(name) + '</span>';
     }
 
+    function usedChairNumbers() {
+        var used = {};
+        _chairs.forEach(function (c) { used[c.number] = true; });
+        return used;
+    }
+
+    function randomFreeChairNumber(used) {
+        var num;
+        do { num = 10 + Math.floor(Math.random() * 90); } while (used[num]);
+        used[num] = true;
+        return num;
+    }
+
     function buildChairs(count) {
         var used = {};
         var chairs = [];
         for (var i = 0; i < count; i++) {
-            var num;
-            do { num = 10 + Math.floor(Math.random() * 90); } while (used[num]);
-            used[num] = true;
             var pos = angleToXY((360 / count) * i, 32);
-            chairs.push({ number: num, x: pos.x, y: pos.y, occupantId: null });
+            chairs.push({ number: randomFreeChairNumber(used), x: pos.x, y: pos.y, occupantId: null });
         }
         return chairs;
     }
@@ -561,8 +598,45 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!ring) return;
         ring.innerHTML = _chairs.map(function (chair, idx) {
             return '<div class="mc-chair" id="mc-chair-' + idx + '" style="left:' + chair.x + '%;top:' + chair.y + '%;">' +
-                chairSvg() + '<span class="mc-chair-number">' + chair.number + '</span></div>';
+                chairSvg(idx) + '<span class="mc-chair-number">' + chair.number + '</span></div>';
         }).join('');
+    }
+
+    // ⚠️ جديد: لاعب جديد ينضم أثناء دورة شغّالة ← يزيد عدد الكراسي تلقائياً
+    // (نفس منطق حساب عدد الكراسي بالدورة، بس مطبَّق على العدد الجديد للأحياء)
+    // بدون ما نلمس مواقع/أرقام الكراسي الموجودة أصلاً (نضيف بس الكرسي
+    // الناقص كعنصر جديد، حتى ما نحرّك كرسي لاعب قاعد عليه فعلاً).
+    function addChairsIfNeeded() {
+        if (!_matchActive || _chairs.length === 0) return;
+        var mode = liveSettings().chairDeficitMode || 'auto';
+        var targetCount = (mode === 'custom')
+            ? Math.max(1, _alive.length - _roundDeficit)
+            : Math.max(1, _alive.length - 1);
+
+        if (targetCount <= _chairs.length) return;
+
+        var used = usedChairNumbers();
+        var newTotal = targetCount;
+        var ring = el('mc-chairs-ring');
+        var showRevealed = _selectionOpen; // لو الاختيار شغّال أصلاً، الكرسي الجديد يطلع مكشوف فوراً
+
+        while (_chairs.length < newTotal) {
+            var idx = _chairs.length;
+            var pos = angleToXY((360 / newTotal) * idx, 32);
+            var chair = { number: randomFreeChairNumber(used), x: pos.x, y: pos.y, occupantId: null };
+            _chairs.push(chair);
+
+            if (ring) {
+                var div = document.createElement('div');
+                div.className = 'mc-chair' + (showRevealed ? ' mc-chair-revealed' : '');
+                div.id = 'mc-chair-' + idx;
+                div.style.left = chair.x + '%';
+                div.style.top = chair.y + '%';
+                div.innerHTML = chairSvg(idx) + '<span class="mc-chair-number">' + chair.number + '</span>';
+                ring.appendChild(div);
+            }
+        }
+        updateBadges();
     }
 
     function playerBaseAngle(index, total) { return (360 / total) * index; }
@@ -673,8 +747,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         playSound('claim');
 
-        var unseatedLeft = _alive.filter(function (p) { return !_seatedThisRound[p.id]; }).length;
-        if (unseatedLeft === 0) {
+        // ⚠️ إصلاح باگ حقيقي: الشرط القديم كان يتحقق فقط لو "كل اللاعبين
+        // الأحياء" لقوا كراسي — شي يكاد يستحيل يصير لأن الكراسي دايماً
+        // أقل من اللاعبين بالتصميم (فيه عجز دايماً ≥1)، فكان العدّاد
+        // يكمل لآخر وقته دايماً حتى لو خلصت كل الكراسي الفاضية من زمان.
+        // الصح: أول ما تنحجز آخر كرسي فاضي (بغض النظر عن عدد اللاعبين
+        // المتبقين بدون كرسي)، تنتهي الدورة فوراً وتبدأ الإقصاء مباشرة.
+        var chairsStillEmpty = _chairs.filter(function (c) { return !c.occupantId; }).length;
+        if (chairsStillEmpty === 0) {
             AGP.timerManager.stop(TIMER_NAME);
             window.setTimeout(finishSelectionWindow, 500);
         }
@@ -688,10 +768,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var aliveCount = _alive.length;
         if (mode === 'custom') {
             var deficit = _customDeficitCurrent;
+            _roundDeficit = deficit; // ⚠️ نحفظ العجز المستخدَم فعلياً بهذي الدورة (يلزم addChairsIfNeeded)
             var count = Math.max(1, aliveCount - deficit);
             _customDeficitCurrent = Math.max(1, deficit - 1);
             return count;
         }
+        _roundDeficit = 1;
         return Math.max(1, aliveCount - 1);
     }
 
@@ -873,6 +955,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         div.style.top = pos.y + '%';
         div.innerHTML = avatarInnerHtml(newPlayer);
         ring.appendChild(div);
+
+        addChairsIfNeeded(); // ⚠️ جديد: يزيد عدد الكراسي فوراً لو انضم لاعب أثناء دورة شغّالة
     }
 
     function enforceMaxPlayers() {
@@ -941,8 +1025,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // ⚠️ فيديو الاحتفال (250×250، حدود بلون الفيديو #4d0008 + توهج نابض)
     // يشتغل مباشرة مع بطاقة الفائز بنفس الشاشة — طلب صريح.
     function winnerVideoHtml() {
-        return '<div class="mc-winner-video-wrap">' +
-            '<video id="mc-winner-video" src="videos/winning-video.mp4" autoplay loop playsinline></video>' +
+        // ⚠️ onerror جديد: لو ملف الفيديو مو موجود على السيرفر (404) أو
+        // فشل تحميله لأي سبب، نستبدل الصندوق برسالة واضحة بدل ما يطلع
+        // فاضي بصمت (بالضبط الأعراض اللي وصفتها بالصورة الثانية — على
+        // الأغلب لأن videos/winning-video.mp4 لسه ما انرفع فعلياً على
+        // GitHub وقتها).
+        return '<div class="mc-winner-video-wrap" id="mc-winner-video-wrap">' +
+            '<video id="mc-winner-video" src="videos/winning-video.mp4" autoplay loop playsinline ' +
+            'onerror="document.getElementById(&quot;mc-winner-video-wrap&quot;).innerHTML=' +
+            '&quot;&lt;div class=\'mc-winner-video-fallback\'&gt;🎬&lt;/div&gt;&quot;;"></video>' +
             '<button type="button" class="mc-winner-video-unmute" id="mc-winner-video-unmute" hidden>🔇 اضغط للصوت</button>' +
             '</div>';
     }
@@ -988,13 +1079,28 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                   '<div>👑 آخر لاعب على كرسي!</div>' + pointsHtml +
                   '</div>'
                 : '<p class="agp-shell-status" style="text-align:center;">ما فيه فائز واضح لهذي المباراة.</p>') +
-            '<button class="agp-shell-btn-connect" id="mc-new-match-btn">🔄 مباراة جديدة</button>';
+            '<div class="mc-winner-actions">' +
+            '<button class="agp-shell-btn-connect mc-winner-action-btn" id="mc-new-match-btn">🔄 مباراة جديدة</button>' +
+            '<button class="agp-shell-btn-connect mc-winner-action-btn" id="mc-replay-same-btn">🔁 إعادة المباراة (نفس اللاعبين)</button>' +
+            '</div>';
 
         box.id = 'agp-shell-box';
         overlay.style.display = 'flex';
 
         if (winner) wireWinnerVideo();
         document.getElementById('mc-new-match-btn').onclick = function () { window.location.reload(); };
+        // ⚠️ جديد: إعادة المباراة بنفس قائمة اللاعبين المسجَّلين أصلاً
+        // (بدون رجوع لشاشة الاتصال/اللوبي — نفس فلسفة "إعادة اللعب بنفس
+        // اللاعبين" الموجودة بروليت الإقصاء).
+        document.getElementById('mc-replay-same-btn').onclick = function () {
+            overlay.style.display = 'none';
+            resetMatchState();
+            _alive = AGP.gameManager.getPlayers().slice();
+            _customDeficitCurrent = (liveSettings().customDeficitStart) || 5;
+            _startedAt = Date.now();
+            _matchActive = true;
+            runNextRound();
+        };
     }
 
     /* ======================================================================
