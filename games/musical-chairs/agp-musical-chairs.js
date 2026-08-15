@@ -322,17 +322,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'min-width:320px;min-height:320px;margin:10px auto;}',
             '#mc-circle-glow{position:absolute;inset:8%;border-radius:50%;',
             'background:radial-gradient(circle,rgba(124,58,237,0.28),transparent 70%);pointer-events:none;}',
-            /* ⚠️ تصميم جديد لحلقة الإطار — حلقة متوهّجة تلوّن متدرّج (بنفسجي
-             * ← سماوي ← ذهبي ← وردي) تدور ببطء حول الحلبة، بدل الخط
-             * المتقطع البسيط القديم. مبنية بتقنية conic-gradient + mask
-             * (بدون أي صورة خارجية). */
-            '#mc-circle-track{position:absolute;inset:-3px;border-radius:50%;pointer-events:none;',
-            'background:conic-gradient(from 0deg,var(--agp-accent),var(--agp-accent-2),var(--mc-gold),',
-            'var(--agp-accent-pink),var(--agp-accent));',
-            '-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 5px));',
-            'mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 5px));',
-            'opacity:0.9;animation:mcTrackSpin 7s linear infinite;',
-            'filter:drop-shadow(0 0 10px rgba(124,58,237,0.55));}',
+            /* ⚠️ إصلاح: التصميم الأول (conic-gradient + mask + filter) كان
+             * يسبب تشوه بصري حقيقي ببعض المتصفحات (خط ملتوي يمتد خارج
+             * الدائرة، يتضخم كل ما كبرت نافذة المتصفح) — لاحظه المستخدم
+             * فعلياً بالصورة. الحل الآمن: نفس التأثير (حلقة متدرّجة الألوان
+             * تدور ببطء) بس بتقنية "حدود متدرّجة" (background مزدوج
+             * padding-box/border-box) بدل mask — تقنية مستقرة 100% بكل
+             * المتصفحات، بدون أي فلتر متراكب معها. */
+            '#mc-circle-track{position:absolute;inset:0;border-radius:50%;pointer-events:none;',
+            'border:3px solid transparent;box-sizing:border-box;',
+            'background:linear-gradient(#1a0d2e,#1a0d2e) padding-box,',
+            'conic-gradient(from 0deg,var(--agp-accent),var(--agp-accent-2),var(--mc-gold),',
+            'var(--agp-accent-pink),var(--agp-accent)) border-box;',
+            'box-shadow:0 0 18px rgba(124,58,237,0.45);',
+            'animation:mcTrackSpin 8s linear infinite;}',
             '@keyframes mcTrackSpin{to{transform:rotate(360deg);}}',
             '#mc-chairs-ring{position:absolute;inset:0;}',
             '#mc-players-ring{position:absolute;inset:0;}',
