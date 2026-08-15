@@ -228,8 +228,11 @@ function getEquippedFrameForVerifiedTikTok(tiktokUsername) {
   tiktokUsername = (tiktokUsername || '').trim();
   if (!tiktokUsername) return null;
 
+  // [0.45.6] "= ? COLLATE NOCASE" بدل LOWER(tiktok_username) = LOWER(?) —
+  // يسمح باستخدام فهرس idx_users_tiktok_username_nocase (راجع backend/
+  // db/database.js) بدل مسح جدول users كاملاً على كل تعليق وارد بالشات.
   var user = db.prepare(
-    'SELECT id FROM users WHERE tiktok_verified = 1 AND LOWER(tiktok_username) = LOWER(?)'
+    'SELECT id FROM users WHERE tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE'
   ).get(tiktokUsername);
 
   if (!user) return null;
@@ -268,8 +271,9 @@ function getEquippedEntranceForVerifiedTikTok(tiktokUsername) {
   tiktokUsername = (tiktokUsername || '').trim();
   if (!tiktokUsername) return null;
 
+  // [0.45.6] نفس تعليق getEquippedFrameForVerifiedTikTok أعلاه بالضبط.
   var user = db.prepare(
-    'SELECT id FROM users WHERE tiktok_verified = 1 AND LOWER(tiktok_username) = LOWER(?)'
+    'SELECT id FROM users WHERE tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE'
   ).get(tiktokUsername);
 
   if (!user) return null;
