@@ -103,6 +103,20 @@ db.exec(`
 
     CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_broadcasts_user ON broadcasts(user_id);
+    -- [0.45.6] فهرس على tiktok_username بمطابقة غير حساسة لحالة الأحرف
+    -- (COLLATE NOCASE) — راجع backend/collectibles/collectibles-service.js
+    -- (getEquippedFrameForVerifiedTikTok/getEquippedEntranceForVerifiedTikTok)
+    -- وbackend/auth/auth-service.js (findVerifiedUserByTikTok): كل الثلاثة
+    -- تُستدعى على **كل تعليق وارد من الشات المباشر بتيك توك** (راجع
+    -- backend/websocket/ws-server.js)، وكانت تلف الاستعلام بـLOWER(column)
+    -- بدل LOWER(?) فقط — وهذا يُبطِل أي فهرس عادي على العمود نفسه (SQLite
+    -- لا يقدر يستخدم فهرساً على تعبير LOWER(tiktok_username) بدون فهرس
+    -- تعبيري مخصَّص)، فيضطر كل استعلام لمسح كامل جدول users تسلسلياً —
+    -- استعلام متزامن (better-sqlite3) يوقف حلقة الأحداث بـNode بالكامل
+    -- لكل الاتصالات أثناء تنفيذه، على كل تعليق، طوال مدة أي بث حي. هذا
+    -- الفهرس + تعديل الاستعلامات لاستخدام "= ? COLLATE NOCASE" بدل
+    -- LOWER() يحل المشكلة فعلياً (الفهرس أصبح قابلاً للاستخدام).
+    CREATE INDEX IF NOT EXISTS idx_users_tiktok_username_nocase ON users(tiktok_username COLLATE NOCASE);
 
     -- إعلان/تنبيه واحد يديره الأدمن، يظهر للزوار بالصفحة الرئيسية (نافذة
     -- منبثقة). صف واحد ثابت (id = 1) يُستبدَل بالكامل مع كل نشر جديد —
@@ -270,6 +284,23 @@ ensureColumn('user_points', 'games_won', 'INTEGER NOT NULL DEFAULT 0');
 // بالصف نفسه (بدون حذف) لإعادة التفعيل بضغطة واحدة — راجع
 // backend/http/auth-router.js (POST /api/entrance/toggle) وprofile.html.
 ensureColumn('user_entrances', 'enabled', 'INTEGER NOT NULL DEFAULT 1');
+// [0.45.6] اختيار نوع الحساب (لاعب/استريمر) بعد تسجيل الدخول عبر جوجل —
+// افتراضي 1 (أي "تم الاختيار") لكل الصفوف الحالية عمداً، فلا يتأثر أي
+// حساب موجود مسبقاً (كلها اختارت نوعها فعلاً وقت التسجيل العادي بكلمة
+// مرور، أو دخلت بجوجل قبل هذا الإصدار وتُعامَل كأنها اختارت "لاعب" ضمنياً
+// بدل إجبارها فجأة على شاشة اختيار لم تكن موجودة وقتها). فقط حسابات جوجل
+// الجديدة كلياً من هذا الإصدار فصاعداً تُنشأ بـ0 (يحتاج اختيار إجباري) —
+// راجع backend/auth/auth-service.js (loginWithGoogle/chooseAccountType).
+ensureColumn('users', 'account_type_chosen', 'INTEGER NOT NULL DEFAULT 1');
+// [0.45.6] قيد جهاز واحد لحسابات الستريمر المعتمدين (can_run_games=true)
+// — معرّف جهاز عشوائي (يُولَّد ويُخزَّن بـlocalStorage بالمتصفح، راجع
+// auth/auth-client.js: getDeviceId) يُربَط تلقائياً بأول تسجيل دخول ناجح
+// بعد اعتماد الحساب كستريمر فعلي. NULL = لا قيد بعد (لسا ما سجّل دخول
+// كستريمر معتمد، أو الأدمن صفّر القيد يدوياً). راجع backend/auth/
+// auth-service.js (checkDeviceLock) — **قيد ناعم وليس صلباً، حدوده
+// موثَّقة صراحة بالكود وبـdocs/CHANGELOG.md**، لا قيد إطلاقاً على الحسابات
+// غير المعتمدة كستريمر (لاعبون عاديون يدخلون من أي جهاز بلا أي تأثير).
+ensureColumn('users', 'bound_device_id', 'TEXT');
 
 /**
  * تهيئة أولية لكتالوج الإطارات الثابت (4 خاصة + 7 مستويات) — تُنفَّذ مرة
