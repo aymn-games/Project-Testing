@@ -85,6 +85,49 @@
  *   بدون شفافية حقيقية) لسا ما انضافا للجدول — يحتاجان تأكيد/ملف PNG
  *   شفاف قبل أي إضافة مستقبلية، حسب نفس شرط "PNG شفاف حقيقي" أعلاه.
  *
+ * ⚠️⚠️ [0.45.6] تصحيح خطأ جوهري بـ[0.45.5] — المفاتيح الثمانية المعدَّلة
+ *   هناك (floral/ice/blacksteel/phoenix/purple/celestial/crystalline/
+ *   frozen) **ليست أسماء ملفات مسجَّلة فعلياً بأي مكان بقاعدة البيانات**
+ *   (تأكَّدت بقراءة backend/db/database.js → DEFAULT_FRAME_CATALOG
+ *   كاملاً). يعني: getTemplate('frame-level-6.png') وأمثالها كانت
+ *   ترجع دايماً founder الافتراضي (fallback) — **صفر تأثير فعلي على
+ *   الموقع الحي رغم رفع [0.45.5] فعلياً على GitHub**. سبب الخطأ: اعتمدت
+ *   وقتها على تطابق contentTop/contentHeight لإثبات "نفس ملف الصورة"
+ *   (صحيح) لكن استنتجت منه خطأً إبقاء المفتاح القديم بدل استبداله
+ *   بالاسم الحقيقي المسجَّل — والملف الحقيقي المطلوب قراءته
+ *   (backend/db/database.js) ما كان بحوزتي وقتها كملف كامل، فقط رأيته
+ *   عبر أداة تلخيص لصفحة GitHub، وهذا سبب الالتباس.
+ *
+ *   **الإصلاح هنا**: نفس القيم المقاسة بالبكسل بـ[0.45.5] (لم تُعَد
+ *   قياسها من جديد — كانت صحيحة هندسياً، المشكلة فقط بالمفتاح) أُعيد
+ *   تسميتها لأسماء الملفات الحقيقية المسجَّلة بـDEFAULT_FRAME_CATALOG:
+ *
+ *   | المفتاح القديم (خاطئ، غير مسجَّل) | → المفتاح الصحيح الجديد |
+ *   |---|---|
+ *   | frame-blacksteel.png  | `frame-level-1.png` |
+ *   | frame-ice.png         | `frame-level-2.png` |
+ *   | frame-purple.png      | `frame-level-4.png` |
+ *   | frame-floral.png      | `frame-level-5.png` |
+ *   | frame-crystalline.png | `frame-level-6.png` |
+ *   | frame-celestial.png   | `frame-level-7.png` |
+ *   | frame-frozen.png      | `frame-distinguished.png` |
+ *   | frame-phoenix.png     | `frame-supporter.png` |
+ *
+ *   كل الملفات الثمانية القديمة كانت أسماء زخرفية من جلسة تجريبية سابقة
+ *   ولا تقابلها أي صورة فعلية بجذر المستودع الآن (تحقّقت من قائمة
+ *   الملفات) — حذفها من الجدول آمن 100%، ما راح يتأثر أي شيء حي.
+ *
+ *   **`frame-streamer.png` أُضيف حديثاً للجدول لأول مرة** — النسخة
+ *   السابقة كانت JPEG بدون شفافية حقيقية (رُفضت حسب شرط الملف)، وصلتني
+ *   الآن نسخة PNG شفافة حقيقية فقُست بنفس المنهجية الكاملة من الصفر
+ *   (فحص ألفا + تحقّق بصري بصندوقين).
+ *
+ *   ⚠️ **`frame-level-3.png` غير موجود إطلاقاً بجذر المستودع** رغم إنه
+ *   مسجَّل بـDEFAULT_FRAME_CATALOG (`slug: 'level-3'`) — أي لاعب يفتح
+ *   هذا المستوى يشوف حالياً إطار founder الاحتياطي بدل إطاره الحقيقي
+ *   (fallback آمن، مو كسر). **يحتاج رفع ملف الصورة نفسه** (بصيغة PNG
+ *   شفافة حقيقية) لحل هذا تحديداً — لا يوجد شيء بالكود يُصلحه.
+ *
  * يعتمد هذا الملف على js/agp-core.js فقط (لـ AGP.log) — لا اعتماد على
  * أي وحدة لعبة أو AGP.gameShell.
  * ==========================================================================
@@ -112,60 +155,69 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 9.73, avatarTopPct: 33.12, avatarWidthPct: 24.24, avatarHeightPct: 51.71,
             nameLeftPct: 42.11, nameTopPct: 51.55, nameWidthPct: 47.13, nameHeightPct: 21.86
         },
-        // [0.45.5] أعيد قياسه بالكامل — القياس القديم كان يسبب انزياح/فراغات
-        // بالصورة الحقيقية وتراكب طفيف بلوحة الاسم (بلاغ صاحب المشروع
-        // بلقطات شاشة من اللوبي الفعلي). قياس جديد بنفس المنهجية (فحص بكسل
-        // + تحقّق بصندوقين) على نفس ملف الصورة الحيّ على GitHub.
-        'frame-floral.png': {
+        // [0.45.6] هذا المفتاح = "frame-level-5.png" بتسمية صاحب المشروع
+        // أثناء الرفع لي (كان خطأً مسجَّلاً هنا باسم "frame-floral.png" —
+        // راجع تعليق [0.45.6] أعلى الملف). القياسات نفسها من [0.45.5] (لم
+        // تتغيّر، كانت صحيحة هندسياً)، فقط المفتاح تصحّح.
+        'frame-level-5.png': {
             canvasW: 1536, canvasH: 1024, contentTop: 160, contentHeight: 616,
             avatarLeftPct: 9.51, avatarTopPct: 21.75, avatarWidthPct: 22.66, avatarHeightPct: 56.17,
             nameLeftPct: 32.55, nameTopPct: 33.12, nameWidthPct: 65.36, nameHeightPct: 41.56,
             textColor: '#1c1c24' // لوحة الاسم فاتحة (كريمي/عاجي) — أبيض افتراضي غير مقروء عليها
         },
-        // [0.45.5] أعيد قياسه — نفس السبب أعلاه.
-        'frame-ice.png': {
+        // [0.45.6] = "frame-level-2.png" (كان مسجَّلاً خطأً باسم "frame-ice.png").
+        'frame-level-2.png': {
             canvasW: 1536, canvasH: 1024, contentTop: 175, contentHeight: 515,
             avatarLeftPct: 8.20, avatarTopPct: 19.03, avatarWidthPct: 22.33, avatarHeightPct: 61.94,
             nameLeftPct: 31.25, nameTopPct: 34.37, nameWidthPct: 65.17, nameHeightPct: 40.00,
             textColor: '#1c1c24' // لوحة الاسم فاتحة (أزرق ثلجي فاتح) — أبيض افتراضي غير مقروء عليها
         },
-        // [0.45.5] أعيد قياسه — نفس السبب أعلاه.
-        'frame-blacksteel.png': {
+        // [0.45.6] = "frame-level-1.png" (كان مسجَّلاً خطأً باسم "frame-blacksteel.png").
+        'frame-level-1.png': {
             canvasW: 1254, canvasH: 1254, contentTop: 399, contentHeight: 410,
             avatarLeftPct: 7.66, avatarTopPct: 12.20, avatarWidthPct: 24.32, avatarHeightPct: 74.88,
             nameLeftPct: 32.70, nameTopPct: 26.83, nameWidthPct: 64.99, nameHeightPct: 58.78
         },
-        // [0.45.5] أعيد قياسه — نفس السبب أعلاه.
-        'frame-phoenix.png': {
+        // [0.45.6] = "frame-supporter.png" (كان مسجَّلاً خطأً باسم "frame-phoenix.png").
+        'frame-supporter.png': {
             canvasW: 1254, canvasH: 1254, contentTop: 234, contentHeight: 687,
             avatarLeftPct: 12.68, avatarTopPct: 38.43, avatarWidthPct: 25.76, avatarHeightPct: 46.87,
             nameLeftPct: 46.25, nameTopPct: 53.28, nameWidthPct: 46.65, nameHeightPct: 21.83
         },
-        // [0.45.5] أعيد قياسه — نفس السبب أعلاه.
-        'frame-purple.png': {
+        // [0.45.6] = "frame-level-4.png" (كان مسجَّلاً خطأً باسم "frame-purple.png").
+        'frame-level-4.png': {
             canvasW: 1536, canvasH: 1024, contentTop: 212, contentHeight: 536,
             avatarLeftPct: 8.33, avatarTopPct: 16.98, avatarWidthPct: 23.18, avatarHeightPct: 67.54,
             nameLeftPct: 31.90, nameTopPct: 34.51, nameWidthPct: 64.91, nameHeightPct: 39.74
         },
-        // [0.45.5] أعيد قياسه — نفس السبب أعلاه.
-        'frame-celestial.png': {
+        // [0.45.6] = "frame-level-7.png" (كان مسجَّلاً خطأً باسم "frame-celestial.png").
+        'frame-level-7.png': {
             canvasW: 1254, canvasH: 1254, contentTop: 391, contentHeight: 452,
             avatarLeftPct: 9.81, avatarTopPct: 23.67, avatarWidthPct: 19.14, avatarHeightPct: 51.99,
             nameLeftPct: 30.70, nameTopPct: 24.12, nameWidthPct: 64.99, nameHeightPct: 54.20,
             textColor: '#1c1c24' // لوحة الاسم فاتحة (سحاب وردي/بنفسجي فاتح) — أبيض افتراضي غير مقروء عليها
         },
-        // [0.45.5] أعيد قياسه — نفس السبب أعلاه.
-        'frame-crystalline.png': {
+        // [0.45.6] = "frame-level-6.png" (كان مسجَّلاً خطأً باسم "frame-crystalline.png").
+        'frame-level-6.png': {
             canvasW: 1536, canvasH: 1024, contentTop: 172, contentHeight: 604,
             avatarLeftPct: 6.64, avatarTopPct: 18.87, avatarWidthPct: 22.79, avatarHeightPct: 58.94,
             nameLeftPct: 29.43, nameTopPct: 27.32, nameWidthPct: 65.62, nameHeightPct: 46.85
         },
-        // [0.45.5] أعيد قياسه — نفس السبب أعلاه.
-        'frame-frozen.png': {
+        // [0.45.6] = "frame-distinguished.png" (كان مسجَّلاً خطأً باسم "frame-frozen.png").
+        'frame-distinguished.png': {
             canvasW: 1254, canvasH: 1254, contentTop: 335, contentHeight: 465,
             avatarLeftPct: 9.97, avatarTopPct: 16.13, avatarWidthPct: 24.64, avatarHeightPct: 66.88,
             nameLeftPct: 34.29, nameTopPct: 33.76, nameWidthPct: 61.40, nameHeightPct: 46.24,
             textColor: '#1c1c24' // لوحة الاسم فاتحة (جليدي أبيض/أزرق فاتح جداً) — أبيض افتراضي غير مقروء عليها
+        },
+        // [0.45.6] إطار "استريمر" — مقاس فعلياً بالبكسل لأول مرة من نسخة PNG
+        // شفافة حقيقية حصلت عليها هذا الإصدار (النسخة السابقة كانت JPEG بدون
+        // شفافية، رُفضت). لوحة الاسم داكنة (كحلي/بنفسجي) فالأبيض الافتراضي
+        // مقروء بدون حاجة textColor.
+        'frame-streamer.png': {
+            canvasW: 1536, canvasH: 1024, contentTop: 152, contentHeight: 628,
+            avatarLeftPct: 8.14, avatarTopPct: 21.97, avatarWidthPct: 25.07, avatarHeightPct: 60.67,
+            nameLeftPct: 43.95, nameTopPct: 41.40, nameWidthPct: 41.86, nameHeightPct: 27.39
         },
         // [0.45.1] إطار "الأهلي" — مقاس فعلياً بالبكسل من الملف المرفوع (1536×1024،
         // فتحة صورة دائرية شفافة حقيقية يسار + بلاطة اسم بيضاء فاضية يمين، نفس
