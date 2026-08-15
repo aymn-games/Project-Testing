@@ -323,10 +323,21 @@
         }
     }
 
+    // [0.45.6] لو صاحب الحساب لسا ما اختار نوع حسابه إجبارياً (حصراً
+    // حسابات جوجل جديدة كلياً — راجع choose-account-type.html)، نحوّله
+    // هناك بدل لوحته مباشرة، أياً كانت طريقة اكتشاف الجلسة الصالحة.
+    function goAfterAuthOrChoice(user) {
+        if (AGPAuth.needsAccountTypeChoice(user)) {
+            window.location.href = 'choose-account-type.html';
+            return;
+        }
+        goAfterAuth(user);
+    }
+
     // لو Token محلي موجود وصالح فعلاً، لا داعي لعرض نموذج الدخول من جديد.
     if (AGPAuth.getToken()) {
         AGPAuth.me().then(function (result) {
-            if (result.success) goAfterAuth(result.user);
+            if (result.success) goAfterAuthOrChoice(result.user);
         });
     }
 
@@ -343,16 +354,23 @@
         document.getElementById('forgot-password-note').classList.toggle('is-visible');
     });
 
+    // [0.45.6] device_locked: بيانات الدخول صحيحة لكن هذا حساب ستريمر
+    // معتمد مربوط بجهاز آخر مسبقاً (راجع backend/auth/auth-service.js:
+    // checkDeviceLock) — رسالة واضحة بدل "بيانات الدخول غير صحيحة" المضلِّلة.
+    var LOGIN_ERROR_LABELS = {
+        device_locked: 'هذا الحساب (ستريمر معتمد) مربوط بجهاز آخر مسبقاً. تواصل مع الأدمن لإعادة تعيين الجهاز المسموح.'
+    };
+
     form.addEventListener('submit', function (event) {
         event.preventDefault();
         submitBtn.disabled = true;
         AGPAuth.login(document.getElementById('email').value.trim(), document.getElementById('password').value)
             .then(function (result) {
                 if (result.success) {
-                    goAfterAuth(result.user);
+                    goAfterAuthOrChoice(result.user);
                     return;
                 }
-                showMessage('بيانات الدخول غير صحيحة.', 'error');
+                showMessage(LOGIN_ERROR_LABELS[result.error] || 'بيانات الدخول غير صحيحة.', 'error');
             })
             .catch(function () {
                 showMessage('تعذّر الوصول للخادم. حاول مرة أخرى.', 'error');
@@ -370,10 +388,10 @@
             callback: function (response) {
                 AGPAuth.loginWithGoogle(response.credential).then(function (result) {
                     if (result.success) {
-                        goAfterAuth(result.user);
+                        goAfterAuthOrChoice(result.user);
                         return;
                     }
-                    showMessage('تعذّر الدخول عبر جوجل: ' + (result.error || 'unknown'), 'error');
+                    showMessage(LOGIN_ERROR_LABELS[result.error] || ('تعذّر الدخول عبر جوجل: ' + (result.error || 'unknown')), 'error');
                 });
             }
         });

@@ -357,9 +357,19 @@
         }
     }
 
+    // [0.45.6] راجع نفس الدالة بـlogin.html — يحوّل لشاشة اختيار نوع
+    // الحساب الإجبارية بدل اللوحة مباشرة لو الحساب (جوجل جديد) لم يختر بعد.
+    function goAfterAuthOrChoice(user) {
+        if (AGPAuth.needsAccountTypeChoice(user)) {
+            window.location.href = 'choose-account-type.html';
+            return;
+        }
+        goAfterAuth(user);
+    }
+
     if (AGPAuth.getToken()) {
         AGPAuth.me().then(function (result) {
-            if (result.success) goAfterAuth(result.user);
+            if (result.success) goAfterAuthOrChoice(result.user);
         });
     }
 
@@ -415,7 +425,7 @@
                 return AGPAuth.login(email, password);
             })
             .then(function (loginResult) {
-                if (loginResult && loginResult.success) goAfterAuth(loginResult.user);
+                if (loginResult && loginResult.success) goAfterAuthOrChoice(loginResult.user);
             })
             .catch(function () {
                 showMessage('تعذّر الوصول للخادم. حاول مرة أخرى.', 'error');
@@ -431,7 +441,11 @@
             callback: function (response) {
                 AGPAuth.loginWithGoogle(response.credential).then(function (result) {
                     if (result.success) {
-                        goAfterAuth(result.user);
+                        goAfterAuthOrChoice(result.user);
+                        return;
+                    }
+                    if (result.error === 'device_locked') {
+                        showMessage('هذا الحساب (ستريمر معتمد) مربوط بجهاز آخر مسبقاً. تواصل مع الأدمن لإعادة تعيين الجهاز المسموح.', 'error');
                         return;
                     }
                     showMessage('تعذّر الدخول عبر جوجل: ' + (result.error || 'unknown'), 'error');

@@ -73,9 +73,12 @@
   <div class="table-wrap">
     <table class="table">
       <thead>
-        <tr><th>المعرّف</th><th>اسم المستخدم</th><th>البريد الإلكتروني</th><th>تيك توك</th><th>الـID العام</th><th>النقاط / المستوى</th><th>الإطار الحالي</th></tr>
+        <tr>
+          <th>المعرّف</th><th>اسم المستخدم</th><th>البريد الإلكتروني</th><th>تيك توك</th><th>الـID العام</th>
+          <th>ترقية لستريمر</th><th>النقاط / المستوى</th><th>الإطار الحالي</th><th>حذف</th>
+        </tr>
       </thead>
-      <tbody id="players-table-body"><tr><td class="table-empty" colspan="7">جارٍ التحميل…</td></tr></tbody>
+      <tbody id="players-table-body"><tr><td class="table-empty" colspan="9">جارٍ التحميل…</td></tr></tbody>
     </table>
   </div>
 </div>
@@ -91,10 +94,10 @@
         <tr>
           <th>المعرّف</th><th>اسم المستخدم</th><th>البريد الإلكتروني</th><th>الدور</th><th>تيك توك</th>
           <th>الـID العام</th><th>البثوث</th><th>الهدايا (القيمة)</th><th>صلاحية الألعاب</th>
-          <th>النقاط / المستوى</th><th>الإطار الحالي</th>
+          <th>النقاط / المستوى</th><th>الإطار الحالي</th><th>قيد الجهاز</th><th>حذف</th>
         </tr>
       </thead>
-      <tbody id="streamers-table-body"><tr><td class="table-empty" colspan="11">جارٍ التحميل…</td></tr></tbody>
+      <tbody id="streamers-table-body"><tr><td class="table-empty" colspan="13">جارٍ التحميل…</td></tr></tbody>
     </table>
   </div>
 </div>
@@ -173,10 +176,16 @@
             escapeHtml(u.points && u.points.currentLevel ? (u.points.currentLevel.displayNameAr || u.points.currentLevel.slug) : 'بلا مستوى');
     }
 
+    // [0.45.6] زر حذف حساب نهائي — مشترك بين تبويبي اللاعبين والستريمرز.
+    // تأكيد صريح عبر confirm() قبل أي استدعاء فعلي (لا تراجع بعد الحذف).
+    function deleteUserCell(u) {
+        return '<button class="btn btn-sm" data-user-id="' + u.id + '" data-delete-user title="حذف الحساب نهائياً — لا تراجع">🗑️ حذف</button>';
+    }
+
     function renderPlayers(users) {
         var tbody = document.getElementById('players-table-body');
         if (!users.length) {
-            tbody.innerHTML = '<tr><td class="table-empty" colspan="7">لا يوجد لاعبون بعد.</td></tr>';
+            tbody.innerHTML = '<tr><td class="table-empty" colspan="9">لا يوجد لاعبون بعد.</td></tr>';
             return;
         }
         tbody.innerHTML = users.map(function (u) {
@@ -186,8 +195,17 @@
                 '<td>' + escapeHtml(u.email) + '</td>' +
                 '<td>' + (u.tiktok_username ? (escapeHtml(u.tiktok_username) + (u.tiktok_verified ? ' ✅' : '')) : '—') + '</td>' +
                 '<td class="mono">' + customIdCell(u) + '</td>' +
+                // [0.45.6] نفس checkbox صلاحية can_run_games الموجود بتبويب
+                // الستريمرز — الآن متاح مباشرة من هنا (أول مكان يظهر فيه أي
+                // لاعب جديد فعلاً)، بدل ما يحتاج الأدمن يبحث عنه بتبويب ثاني
+                // أصلاً مصمم يستثنيه (raجع isStreamerLike). wireRowActions
+                // أدناه عام لأي checkbox[data-permission-key] بأي جدول، فلا
+                // تعديل إضافي هناك — يعيد تحميل القائمة تلقائياً بعد النجاح
+                // فينتقل الحساب لتبويب الستريمرز فوراً.
+                '<td>' + commonPermCells(u) + '</td>' +
                 '<td>' + levelCell(u) + '</td>' +
                 '<td>' + (u.equippedFrame ? escapeHtml(u.equippedFrame.displayNameAr || u.equippedFrame.frameRef) : '—') + '</td>' +
+                '<td>' + deleteUserCell(u) + '</td>' +
                 '</tr>';
         }).join('');
         wireRowActions(tbody);
@@ -196,13 +214,18 @@
     function renderStreamers(users) {
         var tbody = document.getElementById('streamers-table-body');
         if (!users.length) {
-            tbody.innerHTML = '<tr><td class="table-empty" colspan="11">لا يوجد ستريمرز بعد.</td></tr>';
+            tbody.innerHTML = '<tr><td class="table-empty" colspan="13">لا يوجد ستريمرز بعد.</td></tr>';
             return;
         }
         tbody.innerHTML = users.map(function (u) {
             var welcomeResetBtn = '<br><button class="btn btn-sm" data-user-id="' + u.id + '" data-reset-welcome title="' +
                 (u.welcome_completed ? 'شافها كاملة من قبل — اضغط لإعادتها له مرة وحدة' : 'لسا ما شافها') +
                 '">🎉 إعادة الترحيب</button>';
+            // [0.45.6] قيد الجهاز الواحد (راجع backend/auth/auth-service.js:
+            // checkDeviceLock) — عرض حالة فقط (🔒 مربوط / — غير مربوط بعد)
+            // + زر تصفير يدوي (صمام أمان لو الستريمر غيّر جهازه فعلاً).
+            var deviceLockCell = (u.deviceLocked ? '🔒 مربوط' : '—') +
+                '<br><button class="btn btn-sm" data-user-id="' + u.id + '" data-reset-device-lock title="تصفير القيد — يسمح بالدخول من جهاز جديد">↺ تصفير</button>';
             return '<tr>' +
                 '<td>' + u.id + '</td>' +
                 '<td>' + escapeHtml(u.username) + '</td>' +
@@ -217,6 +240,8 @@
                 '<td>' + commonPermCells(u) + welcomeResetBtn + '</td>' +
                 '<td>' + levelCell(u) + '</td>' +
                 '<td>' + (u.equippedFrame ? escapeHtml(u.equippedFrame.displayNameAr || u.equippedFrame.frameRef) : '—') + '</td>' +
+                '<td>' + deviceLockCell + '</td>' +
+                '<td>' + deleteUserCell(u) + '</td>' +
                 '</tr>';
         }).join('');
         wireRowActions(tbody);
@@ -250,6 +275,40 @@
                         showMessage('تم — الحفلة رح تطلع له مرة ثانية أول ما يزور الصفحة الرئيسية.', 'success');
                     } else {
                         showMessage('تعذّر: ' + (result.error || 'unknown'), 'error');
+                    }
+                }).finally(function () { button.disabled = false; });
+            });
+        });
+
+        // [0.45.6] حذف حساب نهائياً — تأكيد صريح قبل أي استدعاء فعلي.
+        Array.prototype.forEach.call(tbody.querySelectorAll('[data-delete-user]'), function (button) {
+            button.addEventListener('click', function () {
+                var userId = Number(button.getAttribute('data-user-id'));
+                if (!window.confirm('حذف هذا الحساب نهائياً؟ هذا الإجراء لا رجعة فيه — يحذف حسابه وكل بياناته المرتبطة (جلسات، إحصائيات بث، إطارات، نقاط).')) return;
+                button.disabled = true;
+                window.AGPAuth.adminDeleteUser(userId).then(function (result) {
+                    if (result.success) {
+                        showMessage('تم حذف الحساب.', 'success');
+                        loadUsers();
+                    } else {
+                        showMessage('تعذّر الحذف: ' + (result.error === 'cannot_delete_last_admin' ? 'لا يمكن حذف آخر حساب أدمن بالمنصة.' : (result.error || 'unknown')), 'error');
+                        button.disabled = false;
+                    }
+                });
+            });
+        });
+
+        // [0.45.6] تصفير قيد الجهاز الواحد لستريمر معتمد.
+        Array.prototype.forEach.call(tbody.querySelectorAll('[data-reset-device-lock]'), function (button) {
+            button.addEventListener('click', function () {
+                var userId = Number(button.getAttribute('data-user-id'));
+                button.disabled = true;
+                window.AGPAuth.adminResetDeviceLock(userId).then(function (result) {
+                    if (result.success) {
+                        showMessage('تم تصفير قيد الجهاز — أول دخول جاي يصير هو الجهاز الجديد المسموح.', 'success');
+                        loadUsers();
+                    } else {
+                        showMessage('تعذّر التصفير: ' + (result.error || 'unknown'), 'error');
                     }
                 }).finally(function () { button.disabled = false; });
             });
