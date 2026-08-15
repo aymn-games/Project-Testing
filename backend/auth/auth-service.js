@@ -80,15 +80,53 @@ function signup(username, email, plainPassword, wantsToBeStreamer) {
 }
 
 /**
+ * ⚠️ [0.45.6] قيد جهاز واحد لحسابات الستريمر المعتمدين فقط (can_run_games
+ * = true — نفس المعيار المستخدم بكل مكان آخر بالمشروع لـ"استريمر معتمد
+ * فعلياً"، راجع canPlayGames بـauth/auth-client.js). لا قيد إطلاقاً على
+ * حسابات اللاعبين العاديين أو الستريمرز اللي لسا الأدمن ما وافق عليهم.
+ *
+ * ⚠️ ملاحظة صادقة صريحة (نفس أسلوب التوثيق بكل هذا المشروع): هذا قيد
+ * "ناعم" (soft) لا "صلب" (hard) — الجهاز يُعرَّف برقم عشوائي يُولَّد
+ * ويُخزَّن بـlocalStorage بالمتصفح (راجع auth/auth-client.js:
+ * getDeviceId)، **مو بصمة جهاز حقيقية (Hardware Fingerprint)** — المتصفح
+ * أصلاً لا يسمح بالوصول لمعرّف جهاز ثابت حقيقي لأسباب خصوصية، ولا توجد
+ * طريقة أخرى متاحة من صفحة ويب عادية (بدون تطبيق أصلي/Native App). يعني
+ * عملياً: أي شخص يمسح بيانات المتصفح (localStorage) أو يستخدم متصفحاً
+ * مختلفاً أو وضع تصفح خفي على **نفس جهازه الفعلي** يقدر يتحايل على القيد.
+ * هذا ليس خللاً بالتنفيذ — أقصى حماية ممكنة تقنياً بهذا السياق، لا وعد
+ * زائف بحماية أقوى مما هو فعلياً موجود.
+ * @param {Object} user - صف قاعدة بيانات كامل (permissions لسا نص JSON خام)
+ * @param {string|null|undefined} deviceId
+ * @returns {{allowed: boolean, bind?: boolean}}
+ */
+function checkDeviceLock(user, deviceId) {
+    var isApprovedStreamer = Boolean(JSON.parse(user.permissions || '{}').can_run_games);
+    if (!isApprovedStreamer) return { allowed: true };
+    if (!user.bound_device_id) return { allowed: true, bind: true };
+    if (!deviceId || deviceId !== user.bound_device_id) return { allowed: false };
+    return { allowed: true };
+}
+
+/**
  * تسجيل الدخول — يُنشئ جلسة جديدة عند النجاح.
+ * @param {string} email
+ * @param {string} plainPassword
+ * @param {string} [deviceId] - [0.45.6] معرّف الجهاز من auth-client.js —
+ *   يُستخدَم فقط لو الحساب ستريمر معتمد (raجع checkDeviceLock أعلاه).
  * @returns {{success: boolean, token?: string, user?: Object, error?: string}}
  */
-function login(email, plainPassword) {
+function login(email, plainPassword, deviceId) {
     email = (email || '').trim().toLowerCase();
     var user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
 
     if (!user || !password.verifyPassword(plainPassword || '', user.password_hash)) {
         return { success: false, error: 'invalid_credentials' };
+    }
+
+    var deviceCheck = checkDeviceLock(user, deviceId);
+    if (!deviceCheck.allowed) return { success: false, error: 'device_locked' };
+    if (deviceCheck.bind && deviceId) {
+        db.prepare('UPDATE users SET bound_device_id = ? WHERE id = ?').run(deviceId, user.id);
     }
 
     var token = createSessionFor(user);
@@ -98,7 +136,8 @@ function login(email, plainPassword) {
         token: token,
         user: {
             id: user.id, username: user.username, email: user.email, role: user.role, custom_id: user.custom_id,
-            is_streamer: Boolean(user.is_streamer), permissions: JSON.parse(user.permissions || '{}')
+            is_streamer: Boolean(user.is_streamer), permissions: JSON.parse(user.permissions || '{}'),
+            account_type_chosen: user.account_type_chosen === undefined ? true : Boolean(user.account_type_chosen)
         }
     };
 }
@@ -119,9 +158,11 @@ function createSessionFor(user) {
  *   Console — راجع README.md)، وإلا يرفض فوراً بخطأ واضح.
  *
  * @param {string} idToken - الرمز القادم من زر تسجيل الدخول بجوجل بالمتصفح
+ * @param {string} [deviceId] - [0.45.6] معرّف الجهاز من auth-client.js —
+ *   نفس شرط checkDeviceLock بدالة login أعلاه (يؤثر فقط على ستريمر معتمد).
  * @returns {Promise<{success: boolean, token?: string, user?: Object, error?: string}>}
  */
-async function loginWithGoogle(idToken) {
+async function loginWithGoogle(idToken, deviceId) {
     if (!googleClient) return { success: false, error: 'google_signin_not_configured' };
     if (!idToken) return { success: false, error: 'missing_id_token' };
 
@@ -155,12 +196,31 @@ async function loginWithGoogle(idToken) {
                 username = baseUsername + suffix++;
             }
             var publicId = generatePublicId();
+            // ⚠️ [0.45.6] account_type_chosen = 0 صراحة (خلافاً لقيمة العمود
+            // الافتراضية 1 بقاعدة البيانات) — حساب جوجل جديد كلياً **لازم**
+            // يختار لاعب/استريمر يدوياً بخطوة إجبارية بعد الدخول مباشرة (راجع
+            // choose-account-type.html)، بدل الافتراض الصامت القديم "لاعب"
+            // بدون علم صاحب الحساب. راجع docs/CHANGELOG.md [0.45.6].
             var info = db.prepare(
-                'INSERT INTO users (username, email, google_id, role, custom_id, created_at) VALUES (?, ?, ?, ?, ?, ?)'
-            ).run(username, email, googleId, role, publicId, now());
-            existing = { id: info.lastInsertRowid, username: username, email: email, role: role, custom_id: publicId };
-            logger.log('Auth: new user signed up via Google: ' + username + ' (role: ' + role + ', id: ' + publicId + ')');
+                'INSERT INTO users (username, email, google_id, role, custom_id, created_at, account_type_chosen) VALUES (?, ?, ?, ?, ?, ?, ?)'
+            ).run(username, email, googleId, role, publicId, now(), 0);
+            existing = { id: info.lastInsertRowid, username: username, email: email, role: role, custom_id: publicId, account_type_chosen: 0 };
+            logger.log('Auth: new user signed up via Google: ' + username + ' (role: ' + role + ', id: ' + publicId + ') — account type choice pending');
         }
+    }
+
+    // [0.45.6] قيد الجهاز الواحد يُطبَّق هنا أيضاً (نفس دالة checkDeviceLock
+    // المستخدمة بـlogin العادي) — يعمل فقط لو الحساب ستريمر معتمد فعلاً
+    // (can_run_games)، بصرف النظر عن طريقة الدخول (كلمة مرور أو جوجل).
+    var deviceCheck = checkDeviceLock(
+        Object.assign({ permissions: '{}' }, existing, {
+            permissions: typeof existing.permissions === 'string' ? existing.permissions : JSON.stringify(existing.permissions || {})
+        }),
+        deviceId
+    );
+    if (!deviceCheck.allowed) return { success: false, error: 'device_locked' };
+    if (deviceCheck.bind && deviceId) {
+        db.prepare('UPDATE users SET bound_device_id = ? WHERE id = ?').run(deviceId, existing.id);
     }
 
     // "existing" قد يكون صف قاعدة بيانات فعلي (permissions نص JSON،
@@ -174,7 +234,8 @@ async function loginWithGoogle(idToken) {
         user: {
             id: existing.id, username: existing.username, email: existing.email, role: existing.role, custom_id: existing.custom_id,
             is_streamer: Boolean(existing.is_streamer),
-            permissions: typeof existing.permissions === 'string' ? JSON.parse(existing.permissions || '{}') : (existing.permissions || {})
+            permissions: typeof existing.permissions === 'string' ? JSON.parse(existing.permissions || '{}') : (existing.permissions || {}),
+            account_type_chosen: existing.account_type_chosen === undefined ? true : Boolean(existing.account_type_chosen)
         }
     };
 }
@@ -277,8 +338,13 @@ function getPublicProfile(customId) {
 function findVerifiedUserByTikTok(tiktokUsername) {
     tiktokUsername = (tiktokUsername || '').trim();
     if (!tiktokUsername) return null;
+    // [0.45.6] "= ? COLLATE NOCASE" بدل LOWER(tiktok_username) = LOWER(?) —
+    // نفس نتيجة المطابقة (غير حساسة لحالة الأحرف) لكن قابلة لاستخدام فهرس
+    // idx_users_tiktok_username_nocase (راجع backend/db/database.js)، خلافاً
+    // لِلف العمود بـLOWER() اللي يُبطِل أي فهرس عادي ويفرض مسحاً تسلسلياً
+    // كاملاً لجدول users على كل استدعاء — هذا يُستدعى لكل تعليق وارد بالشات.
     return db.prepare(
-        'SELECT id FROM users WHERE tiktok_verified = 1 AND LOWER(tiktok_username) = LOWER(?)'
+        'SELECT id FROM users WHERE tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE'
     ).get(tiktokUsername) || null;
 }
 
@@ -495,7 +561,7 @@ function validateSession(token) {
     // البيانات. profile.html نفسها ما تأثّرت (تستخدم getPublicProfile
     // أدناه، اللي كان صحيحاً أصلاً)، لكن هذا كان قنبلة موقوتة لأي واجهة
     // ثانية تعتمد على /api/auth/me مباشرة.
-    var user = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, tiktok_avatar_url, tiktok_display_name, custom_id, is_streamer, permissions, welcome_completed FROM users WHERE id = ?').get(session.user_id);
+    var user = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, tiktok_avatar_url, tiktok_display_name, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen FROM users WHERE id = ?').get(session.user_id);
     if (!user) return null;
 
     // شفاء ذاتي: حسابات أُنشئت قبل ميزة الـID العام (custom_id) قد لا
@@ -509,8 +575,84 @@ function validateSession(token) {
     user.tiktok_verified = Boolean(user.tiktok_verified);
     user.permissions = JSON.parse(user.permissions || '{}');
     user.welcome_completed = Boolean(user.welcome_completed);
+    user.account_type_chosen = user.account_type_chosen === undefined ? true : Boolean(user.account_type_chosen);
 
     return user;
+}
+
+/**
+ * [0.45.6] الاختيار الإجباري لنوع الحساب (لاعب/استريمر) بعد أول دخول
+ * بجوجل لحساب جديد كلياً — راجع loginWithGoogle وchoose-account-type.html.
+ * نفس أثر مربع الاختيار wantsToBeStreamer وقت التسجيل العادي بالضبط
+ * (يضبط is_streamer فقط — **لا يمنح صلاحية تشغيل الألعاب تلقائياً**،
+ * الموافقة الفعلية تبقى من الأدمن عبر can_run_games كما كان دائماً).
+ * @param {number} userId - من الجلسة نفسها دائماً، لا يُمرَّر من body خام
+ * @param {boolean} wantsToBeStreamer
+ * @returns {{success: boolean, error?: string}}
+ */
+function chooseAccountType(userId, wantsToBeStreamer) {
+    var user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+    if (!user) return { success: false, error: 'user_not_found' };
+    db.prepare('UPDATE users SET is_streamer = ?, account_type_chosen = 1 WHERE id = ?')
+        .run(wantsToBeStreamer ? 1 : 0, userId);
+    return { success: true };
+}
+
+/**
+ * [0.45.6] حذف حساب نهائياً — الأدمن فقط (زر "حذف الحساب" بـadmin.html،
+ * لكل من الستريمرز واللاعبين). يحذف يدوياً كل الصفوف المرتبطة بكل جدول
+ * قبل حذف صف المستخدم نفسه.
+ *
+ * ⚠️ **سبب الحذف اليدوي الصريح بدل الاعتماد على `ON DELETE CASCADE`
+ * المكتوب أصلاً بتعريفات الجداول** (sessions/broadcasts/user_frames/
+ * user_entrances/user_points كلها REFERENCES users(id) ON DELETE CASCADE):
+ * تحقّقت من backend/db/database.js — **`PRAGMA foreign_keys` غير مفعَّل
+ * إطلاقاً بهذا المشروع** (SQLite يترك قيود المفاتيح الأجنبية معطَّلة
+ * افتراضياً ما لم يُفعَّل هذا الـPRAGMA صراحة لكل اتصال، وهو غير موجود
+ * بـdatabase.js). يعني عملياً: كل تعريفات `ON DELETE CASCADE` الحالية
+ * **خاملة تماماً** ولا تُنفَّذ فعلياً — حذف مستخدم بـ`DELETE FROM users`
+ * وحده كان سيترك صفوفاً يتيمة (Orphan Rows) بكل تلك الجداول. لم ألمس
+ * PRAGMA foreign_keys نفسه (تفعيله الآن قد يكسر أي بيانات يتيمة موجودة
+ * فعلياً بالإنتاج من قبل هذا الإصدار)، فقط أضفت حذفاً يدوياً صريحاً هنا
+ * يغطي نفس الأثر بأمان تام بغض النظر عن حالة الـPRAGMA.
+ * @param {number} userId
+ * @returns {{success: boolean, error?: string}}
+ */
+function deleteUser(userId) {
+    var user = db.prepare('SELECT id, role FROM users WHERE id = ?').get(userId);
+    if (!user) return { success: false, error: 'user_not_found' };
+
+    // منع حذف آخر حساب أدمن بالمنصة — لو انحذف بالغلط ما تبقى أي طريقة
+    // دخول للوحة الأدمن إطلاقاً (لا نظام استرجاع/تعيين أدمن آخر حالياً).
+    if (user.role === 'admin') {
+        var adminCount = db.prepare("SELECT COUNT(*) AS c FROM users WHERE role = 'admin'").get().c;
+        if (adminCount <= 1) return { success: false, error: 'cannot_delete_last_admin' };
+    }
+
+    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM broadcasts WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM user_frames WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM user_entrances WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM user_points WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+
+    logger.log('Auth: user permanently deleted by admin (id: ' + userId + ')');
+    return { success: true };
+}
+
+/**
+ * [0.45.6] الأدمن فقط — يصفّر قيد الجهاز الواحد لستريمر معتمد (صمام أمان
+ * لو الستريمر غيّر جهازه فعلاً بشكل مشروع — جهاز جديد، فورمات، إلخ) —
+ * راجع checkDeviceLock أعلاه. بعد التصفير، أول تسجيل دخول جاي (من أي
+ * جهاز) يصير هو الجهاز المربوط الجديد تلقائياً.
+ * @param {number} userId
+ * @returns {{success: boolean, error?: string}}
+ */
+function adminResetDeviceLock(userId) {
+    var user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+    if (!user) return { success: false, error: 'user_not_found' };
+    db.prepare('UPDATE users SET bound_device_id = NULL WHERE id = ?').run(userId);
+    return { success: true };
 }
 
 /**
@@ -606,7 +748,7 @@ function getUserStats(userId) {
  * كل المستخدمين مع إحصائياتهم المجمَّعة — للوحة الأدمن فقط.
  */
 function listAllUsersWithStats() {
-    var users = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, custom_id, is_streamer, permissions, welcome_completed, created_at FROM users ORDER BY created_at ASC').all();
+    var users = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen, bound_device_id, created_at FROM users ORDER BY created_at ASC').all();
     return users.map(function (u) {
         // شفاء ذاتي — نفس منطق validateSession، حتى تظهر لوحة الأدمن
         // دائماً IDً لكل حساب حتى القديم منه قبل هذه الميزة.
@@ -616,10 +758,17 @@ function listAllUsersWithStats() {
         }
         var frames = collectiblesService.getUserFrames(u.id);
         var equipped = frames.filter(function (f) { return f.equipped; })[0] || null;
+        // [0.45.6] deviceLocked: true/false فقط لعرض حالة قيد الجهاز بلوحة
+        // الأدمن — لا يُرسَل معرّف الجهاز الفعلي (bound_device_id) نفسه
+        // إطلاقاً للواجهة، لا داعي له هناك (فقط "مربوط أو لا؟").
+        var deviceLocked = Boolean(u.bound_device_id);
+        delete u.bound_device_id;
         return Object.assign({}, u, {
             is_streamer: Boolean(u.is_streamer),
             permissions: JSON.parse(u.permissions || '{}'),
             welcome_completed: Boolean(u.welcome_completed),
+            account_type_chosen: u.account_type_chosen === undefined ? true : Boolean(u.account_type_chosen),
+            deviceLocked: deviceLocked,
             stats: getUserStats(u.id),
             // للوحة الأدمن فقط (جدول المستخدمين) — نفس بيانات النقاط/
             // المقتنيات المُرفَقة في getPublicProfile، لكن هنا لكل المستخدمين
@@ -693,5 +842,8 @@ module.exports = {
     listAllUsersWithStats: listAllUsersWithStats,
     listStreamers: listStreamers,
     setPermission: setPermission,
-    hasPermission: hasPermission
+    hasPermission: hasPermission,
+    chooseAccountType: chooseAccountType,
+    deleteUser: deleteUser,
+    adminResetDeviceLock: adminResetDeviceLock
 };
