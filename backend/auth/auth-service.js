@@ -32,6 +32,86 @@ function isValidEmail(email) {
     return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+/* ----------------------------------------------------------------------
+ * [0.45.7→0.45.8] إطار "من البداية" الحصري — راجع js/agp-player-card.js:
+ * FRAME_TEMPLATES['frame-founders-month.png'] لقياسات الإطار نفسه.
+ *
+ * ⚠️ [0.45.8] تصحيح شرط المنح بطلب صريح من صاحب المنصة — الشرط الآن
+ * **مركَّب من قيدين معاً، أيهما يتحقق أولاً يوقف العرض**:
+ *   1. زمني: يجب أن يحصل التسجيل + التوثيق قبل FOUNDERS_MONTH_CUTOFF_MS
+ *      (تاريخ ثابت مكتوب صراحة، لا حساب ديناميكي "شهر من التشغيل").
+ *   2. عددي: أول FOUNDERS_MONTH_MAX_GRANTS حساباً فقط (مو أي عدد بعدها).
+ *
+ * **تغيّر جوهري عن [0.45.7]**: المنح لم يعد يحصل وقت التسجيل مباشرة —
+ * صار يحصل فقط عند **نجاح توثيق تيك توك فعلياً** (verifyTikTokOwnership
+ * أدناه)، لأن الشرط صراحة "يسجّل **و** يوثّق حسابه" — تسجيل وحده غير
+ * كافٍ. حساب يسجّل ولا يوثّق تيك توك أبداً لا يحصل على الإطار إطلاقاً،
+ * بصرف النظر عن تاريخ تسجيله.
+ *
+ * ⚠️ ملاحظة صادقة: هذا يخص فقط حسابات تسجّل/توثّق **من هذا الإصدار
+ * فصاعداً** — أي حساب موثَّق تيك توك مسبقاً (قبل رفع هذا الكود) لا يُمنح
+ * الإطار بأثر رجعي، حتى لو كان من أوائل حسابات المنصة تاريخياً. لو تبي
+ * تشمل حسابات قديمة موثَّقة أصلاً، هذا يحتاج قراراً ومنحاً يدوياً منفصلاً
+ * (عبر admin-settings.html)، مو جزءاً من هذا المنطق التلقائي.
+ * ---------------------------------------------------------------------- */
+var FOUNDERS_MONTH_FRAME_FILENAME = 'frame-founders-month.png';
+var FOUNDERS_MONTH_DISPLAY_NAME_AR = 'من البداية';
+var FOUNDERS_MONTH_CUTOFF_MS = Date.parse('2026-09-15T00:00:00Z'); // شهر واحد من [0.45.7]
+var FOUNDERS_MONTH_MAX_GRANTS = 100; // [0.45.8]
+
+/**
+ * يضمن وجود صف `custom_frames` واحد لإطار "من البداية" (بدون تكرار عند
+ * كل استدعاء أو كل إعادة تشغيل للخادم — بحث أولاً بـimage_filename).
+ * @returns {number|null} id الصف، أو null لو فشل الإنشاء لسبب ما
+ */
+function ensureFoundersMonthCustomFrameId() {
+    var existing = db.prepare('SELECT id FROM custom_frames WHERE image_filename = ?').get(FOUNDERS_MONTH_FRAME_FILENAME);
+    if (existing) return existing.id;
+    var created = collectiblesService.createCustomFrame(FOUNDERS_MONTH_FRAME_FILENAME, FOUNDERS_MONTH_DISPLAY_NAME_AR);
+    return created.success ? created.id : null;
+}
+
+/**
+ * [0.45.8] عدد المرات اللي مُنح فيها إطار "من البداية" حتى الآن (لكل
+ * حسابات المنصة) — يُستخدَم لفرض سقف الـ100 شخص.
+ * @param {number} frameId
+ * @returns {number}
+ */
+function countFoundersMonthGrants(frameId) {
+    return db.prepare(
+        "SELECT COUNT(*) AS c FROM user_frames WHERE frame_type = 'custom' AND frame_ref = ?"
+    ).get(String(frameId)).c;
+}
+
+/**
+ * [0.45.8] يمنح إطار "من البداية" ويفعّله تلقائياً (equip) — يُستدعى
+ * **حصراً من verifyTikTokOwnership عند نجاح التوثيق فعلياً** (راجع
+ * التعليق أعلى الملف لسبب هذا التغيير عن [0.45.7]). فحص مزدوج قبل أي
+ * منح: (1) لسا قبل تاريخ الانتهاء، (2) لسا تحت سقف الـ100. **كل الفحص
+ * والمنح هنا متزامن بالكامل (بدون أي await بينهما)** — عمداً، لتفادي
+ * أي Race Condition بين توثيقين متزامنين يشوفان نفس العدّاد ويتجاوزان
+ * الـ100 معاً (Node أحادي الخيط، فلا كود آخر يشتغل بين استعلامَي العدّ
+ * والإدراج طالما ما فيه await بينهما).
+ * @param {number} userId
+ */
+function grantFoundersMonthFrameIfEligible(userId) {
+    if (now() > FOUNDERS_MONTH_CUTOFF_MS) return;
+    var frameId = ensureFoundersMonthCustomFrameId();
+    if (!frameId) return;
+
+    // لو مُنح له مسبقاً (مثال: أعاد توثيق حسابه مرة ثانية) — لا تحسبه
+    // مرتين ولا تعيد المنح.
+    var already = db.prepare(
+        "SELECT id FROM user_frames WHERE user_id = ? AND frame_type = 'custom' AND frame_ref = ?"
+    ).get(userId, String(frameId));
+    if (already) return;
+
+    if (countFoundersMonthGrants(frameId) >= FOUNDERS_MONTH_MAX_GRANTS) return;
+
+    var result = collectiblesService.grantFrame(userId, 'custom', frameId, { grantedBy: 'auto_founders_month' });
+    if (result.success) collectiblesService.setEquipped(userId, 'custom', frameId);
+}
+
 /**
  * رقم عرض عام (Public ID) — رقم عشوائي من 8 أرقام على الأقل، فريد بكل
  * قاعدة البيانات. يُولَّد تلقائياً لكل حساب جديد (signup أو أول دخول
@@ -75,6 +155,10 @@ function signup(username, email, plainPassword, wantsToBeStreamer) {
     ).run(username, email, hash, role, isStreamer, publicId, now());
 
     logger.log('Auth: new user signed up: ' + username + ' (role: ' + role + ', streamer: ' + Boolean(isStreamer) + ', id: ' + publicId + ')');
+
+    // [0.45.8] عرض "من البداية" الحصري لم يعد يُمنح هنا (وقت التسجيل) —
+    // صار يُمنح فقط عند نجاح توثيق تيك توك فعلياً، راجع verifyTikTokOwnership
+    // أدناه والتعليق أعلى الملف لسبب هذا التغيير عن [0.45.7].
 
     return { success: true, user: { id: info.lastInsertRowid, username: username, email: email, role: role, is_streamer: Boolean(isStreamer), custom_id: publicId, permissions: {} } };
 }
@@ -206,6 +290,9 @@ async function loginWithGoogle(idToken, deviceId) {
             ).run(username, email, googleId, role, publicId, now(), 0);
             existing = { id: info.lastInsertRowid, username: username, email: email, role: role, custom_id: publicId, account_type_chosen: 0 };
             logger.log('Auth: new user signed up via Google: ' + username + ' (role: ' + role + ', id: ' + publicId + ') — account type choice pending');
+
+            // [0.45.8] عرض "من البداية" لم يعد يُمنح هنا — راجع التعليق
+            // أعلى الملف (يُمنح فقط عند نجاح توثيق تيك توك).
         }
     }
 
@@ -445,6 +532,11 @@ async function verifyTikTokOwnership(userId, tiktokUsername) {
     db.prepare(
         'UPDATE users SET tiktok_verified = 1, tiktok_username = ?, tiktok_avatar_url = ?, tiktok_display_name = ? WHERE id = ?'
     ).run(tiktokUsername, avatarUrl, displayName, userId);
+
+    // [0.45.8] عرض "من البداية" الحصري — نقطة المنح الوحيدة الآن (بعد
+    // التوثيق الفعلي، لا وقت التسجيل) — راجع التعليق أعلى الملف.
+    grantFoundersMonthFrameIfEligible(userId);
+
     return { success: true };
 }
 
