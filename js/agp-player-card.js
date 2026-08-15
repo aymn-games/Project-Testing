@@ -225,6 +225,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // [0.45.5] لون الاسم: أخضر نادي الأهلي (مسحوب فعلياً بالبكسل من شعار
         // النادي داخل الصورة نفسها = #046D38) بطلب صريح من صاحب المشروع —
         // القياسات الهندسية (المواقع/الأحجام) ما تغيّرت، كانت صحيحة أصلاً.
+        // [0.45.7] إطار "من البداية" — إطار حصري (custom_frames، مو كتالوج
+        // ثابت) يُمنح تلقائياً لكل حساب جديد يسجّل خلال فترة محدودة، راجع
+        // backend/auth/auth-service.js (grantFoundersMonthFrameIfEligible)
+        // وdocs/CHANGELOG.md. مقاس فعلياً بالبكسل من ملف PNG شفاف حقيقي
+        // (تحقّقت بفحص قناة الألفا مباشرة أن الخلفية الخارجية وفتحة الصورة
+        // كلتيهما شفافة فعلياً، لا لطخة بيضاء) — نفس منهجية كل الإطارات
+        // أعلاه بالضبط. لوحة الاسم داكنة جداً (سطوع ~24)، الأبيض الافتراضي
+        // مقروء بدون حاجة لـtextColor.
+        'frame-founders-month.png': {
+            canvasW: 1080, canvasH: 1080, contentTop: 364, contentHeight: 345,
+            avatarLeftPct: 6.48, avatarTopPct: 17.39, avatarWidthPct: 19.81, avatarHeightPct: 61.45,
+            nameLeftPct: 38.89, nameTopPct: 28.41, nameWidthPct: 33.33, nameHeightPct: 37.68
+        },
         'frame-al-ahli.png': {
             canvasW: 1536, canvasH: 1024, contentTop: 257, contentHeight: 464,
             avatarLeftPct: 6.05, avatarTopPct: 15.52, avatarWidthPct: 20.64, avatarHeightPct: 65.95,
