@@ -20,6 +20,7 @@
 var API_BASE = 'https://project-testing-akds.onrender.com';
 var TOKEN_KEY = 'agp_auth_token';
 var USER_KEY = 'agp_auth_user';
+var DEVICE_ID_KEY = 'agp_device_id'; // [0.45.6] راجع getDeviceId أدناه
 
 /* ----------------------------------------------------------------------
  * تخزين محلي — Token + آخر بيانات مستخدم معروفة (للعرض الفوري قبل
@@ -49,6 +50,27 @@ function getCachedUser() {
         var raw = localStorage.getItem(USER_KEY);
         return raw ? JSON.parse(raw) : null;
     } catch (err) { return null; }
+}
+
+/**
+ * [0.45.6] معرّف "جهاز" ثابت لهذا المتصفح — رقم عشوائي يُولَّد مرة واحدة
+ * فقط ويُخزَّن بـlocalStorage للأبد (لا ينتهي، خلافاً للـToken). يُستخدَم
+ * حصراً لقيد الجهاز الواحد لحسابات الستريمر المعتمدين (راجع
+ * backend/auth/auth-service.js: checkDeviceLock) — **ليس بصمة جهاز
+ * حقيقية**، مجرد رقم محلي بالمتصفح. مسح بيانات المتصفح أو استخدام متصفح/
+ * وضع تصفح مختلف يُولِّد رقماً جديداً بالكامل (نفس القيد الناعم الموثَّق
+ * صراحة بـauth-service.js وdocs/CHANGELOG.md).
+ * @returns {string|null}
+ */
+function getDeviceId() {
+    try {
+        var id = localStorage.getItem(DEVICE_ID_KEY);
+        if (!id) {
+            id = 'dev_' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+            localStorage.setItem(DEVICE_ID_KEY, id);
+        }
+        return id;
+    } catch (err) { return null; } // localStorage غير متاح — القيد ببساطة لا يُطبَّق (نفس تحفّظ باقي localStorage بالملف)
 }
 
 /**
@@ -90,7 +112,7 @@ function signup(username, email, password, wantsToBeStreamer) {
 }
 
 function login(email, password) {
-    return request('/api/auth/login', { method: 'POST', body: { email: email, password: password } })
+    return request('/api/auth/login', { method: 'POST', body: { email: email, password: password, deviceId: getDeviceId() } })
         .then(function (result) {
             if (result.success) setSession(result.token, result.user);
             return result;
@@ -98,11 +120,31 @@ function login(email, password) {
 }
 
 function loginWithGoogle(idToken) {
-    return request('/api/auth/google', { method: 'POST', body: { idToken: idToken } })
+    return request('/api/auth/google', { method: 'POST', body: { idToken: idToken, deviceId: getDeviceId() } })
         .then(function (result) {
             if (result.success) setSession(result.token, result.user);
             return result;
         });
+}
+
+/**
+ * [0.45.6] اختيار نوع الحساب الإجباري (لاعب/استريمر) بعد أول دخول بجوجل
+ * لحساب جديد — راجع choose-account-type.html وneedsAccountTypeChoice أدناه.
+ * @param {boolean} wantsToBeStreamer
+ * @returns {Promise<Object>}
+ */
+function chooseAccountType(wantsToBeStreamer) {
+    return request('/api/auth/account-type', { method: 'POST', body: { wantsToBeStreamer: Boolean(wantsToBeStreamer) } });
+}
+
+/**
+ * هل هذا المستخدم لازم يشوف شاشة اختيار نوع الحساب الإجبارية الآن؟ —
+ * صحيح فقط لحسابات جوجل جديدة كلياً من [0.45.6] فصاعداً لم تختر بعد.
+ * @param {Object} user
+ * @returns {boolean}
+ */
+function needsAccountTypeChoice(user) {
+    return Boolean(user) && user.account_type_chosen === false;
 }
 
 function logout() {
@@ -187,6 +229,25 @@ function adminSetCustomId(userId, customId) {
         method: 'POST',
         body: { userId: userId, customId: customId }
     });
+}
+
+/**
+ * [0.45.6] الأدمن فقط — حذف حساب نهائياً (لاعب أو ستريمر). لا تراجع.
+ * @param {number} userId
+ * @returns {Promise<Object>}
+ */
+function adminDeleteUser(userId) {
+    return request('/api/admin/users/delete', { method: 'POST', body: { userId: userId } });
+}
+
+/**
+ * [0.45.6] الأدمن فقط — تصفير قيد الجهاز الواحد لستريمر معتمد (صمام أمان
+ * لو الستريمر غيّر جهازه فعلاً بشكل مشروع).
+ * @param {number} userId
+ * @returns {Promise<Object>}
+ */
+function adminResetDeviceLock(userId) {
+    return request('/api/admin/reset-device-lock', { method: 'POST', body: { userId: userId } });
 }
 
 /**
@@ -543,9 +604,14 @@ global.AGPAuth = {
     verifyTikTok: verifyTikTok,
     unlinkTikTok: unlinkTikTok,
     setCustomId: setCustomId,
+    getDeviceId: getDeviceId,
+    chooseAccountType: chooseAccountType,
+    needsAccountTypeChoice: needsAccountTypeChoice,
     adminListUsers: adminListUsers,
     adminSetPermission: adminSetPermission,
     adminSetCustomId: adminSetCustomId,
+    adminDeleteUser: adminDeleteUser,
+    adminResetDeviceLock: adminResetDeviceLock,
     getPublicProfile: getPublicProfile,
     getAnnouncement: getAnnouncement,
     adminSetAnnouncement: adminSetAnnouncement,
