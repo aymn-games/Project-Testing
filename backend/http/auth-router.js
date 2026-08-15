@@ -71,9 +71,16 @@ var ROUTES = [
   { method: 'POST', path: '/api/auth/tiktok/verify', requireAuth: true, handler: handleTikTokVerify },
   { method: 'POST', path: '/api/auth/tiktok/unlink', requireAuth: true, handler: handleTikTokUnlink },
   { method: 'POST', path: '/api/auth/custom-id', requireAuth: true, handler: handleCustomId },
+  // [0.45.6] اختيار نوع الحساب الإجباري (لاعب/استريمر) بعد أول دخول
+  // بجوجل لحساب جديد كلياً — راجع choose-account-type.html.
+  { method: 'POST', path: '/api/auth/account-type', requireAuth: true, handler: handleChooseAccountType },
   { method: 'GET', path: '/api/admin/users', requireAuth: true, requireAdmin: true, handler: handleAdminListUsers },
   { method: 'POST', path: '/api/admin/permissions', requireAuth: true, requireAdmin: true, handler: handleAdminSetPermission },
   { method: 'POST', path: '/api/admin/custom-id', requireAuth: true, requireAdmin: true, handler: handleAdminSetCustomId },
+  // [0.45.6] حذف حساب نهائياً (لاعب أو ستريمر) — زر بـadmin.html.
+  { method: 'POST', path: '/api/admin/users/delete', requireAuth: true, requireAdmin: true, handler: handleAdminDeleteUser },
+  // [0.45.6] تصفير قيد الجهاز الواحد لستريمر معتمد — صمام أمان يدوي.
+  { method: 'POST', path: '/api/admin/reset-device-lock', requireAuth: true, requireAdmin: true, handler: handleAdminResetDeviceLock },
   { method: 'GET', path: '/api/profile', requireAuth: false, handler: handlePublicProfile },
   { method: 'GET', path: '/api/announcement', requireAuth: false, handler: handleGetAnnouncement },
   { method: 'POST', path: '/api/admin/announcement', requireAuth: true, requireAdmin: true, handler: handleAdminSetAnnouncement },
@@ -124,13 +131,18 @@ function handleSignup(req, res, body) {
 }
 
 function handleLogin(req, res, body) {
-  var result = authService.login(body.email, body.password);
-  sendJson(res, result.success ? 200 : 401, result);
+  // [0.45.6] body.deviceId اختياري — يؤثر فقط على حسابات ستريمر معتمدة
+  // (can_run_games)، راجع authService.checkDeviceLock. خطأ 'device_locked'
+  // يُرجَع بـ403 (مو 401 — بيانات الدخول صحيحة، فقط الجهاز مرفوض).
+  var result = authService.login(body.email, body.password, body.deviceId);
+  var status = result.success ? 200 : (result.error === 'device_locked' ? 403 : 401);
+  sendJson(res, status, result);
 }
 
 function handleGoogleLogin(req, res, body) {
-  return authService.loginWithGoogle(body.idToken).then(function (result) {
-    sendJson(res, result.success ? 200 : 401, result);
+  return authService.loginWithGoogle(body.idToken, body.deviceId).then(function (result) {
+    var status = result.success ? 200 : (result.error === 'device_locked' ? 403 : 401);
+    sendJson(res, status, result);
   });
 }
 
@@ -174,6 +186,15 @@ function handleCustomId(req, res, body, user) {
   sendJson(res, result.success ? 200 : 400, result);
 }
 
+/**
+ * [0.45.6] اختيار نوع الحساب الإجباري (لاعب/استريمر) — user.id من الجلسة
+ * نفسها دائماً (مو من body)، حتى ما يقدر أي مستخدم يبدّل نوع حساب غيره.
+ */
+function handleChooseAccountType(req, res, body, user) {
+  var result = authService.chooseAccountType(user.id, Boolean(body.wantsToBeStreamer));
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
 function handleAdminListUsers(req, res) {
   sendJson(res, 200, { success: true, users: authService.listAllUsersWithStats() });
 }
@@ -202,6 +223,18 @@ function handleAdminSetPermission(req, res, body) {
  */
 function handleAdminSetCustomId(req, res, body) {
   var result = authService.setCustomId(body.userId, body.customId);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+/** [0.45.6] الأدمن فقط — حذف حساب نهائياً (لاعب أو ستريمر). راجع authService.deleteUser. */
+function handleAdminDeleteUser(req, res, body) {
+  var result = authService.deleteUser(body.userId);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+/** [0.45.6] الأدمن فقط — تصفير قيد الجهاز الواحد لستريمر معتمد. */
+function handleAdminResetDeviceLock(req, res, body) {
+  var result = authService.adminResetDeviceLock(body.userId);
   sendJson(res, result.success ? 200 : 400, result);
 }
 
