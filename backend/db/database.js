@@ -302,6 +302,28 @@ ensureColumn('users', 'account_type_chosen', 'INTEGER NOT NULL DEFAULT 1');
 // غير المعتمدة كستريمر (لاعبون عاديون يدخلون من أي جهاز بلا أي تأثير).
 ensureColumn('users', 'bound_device_id', 'TEXT');
 
+// [0.45.10] عدد المشاهدين لكل بث — يُحدَّث من حدث roomUser الحقيقي من
+// مكتبة tiktok-live-connector (راجع backend/platforms/tiktok/
+// tiktok-connector.js). peak_viewers = أعلى عدد مشاهدين متزامن لُوحظ
+// خلال البث (من حقل المكتبة `total`)، total_unique_viewers = آخر قيمة
+// مرصودة لعدد المشاهدين التراكمي الكلي (من حقل المكتبة `totalUser`).
+// ⚠️ ملاحظة صادقة: أسماء الحقول (`total`/`totalUser`) من نوع بروتوكول
+// تيك توك غير الرسمي `WebcastRoomUserSeqMessage` بالمكتبة المثبَّتة
+// فعلياً (v2.4.3) — لم تُختبَر ضد بث حقيقي من هذه البيئة (لا اتصال
+// شبكي فعلي هنا)، فالافتراض إن `totalUser` = العدد التراكمي الكلي
+// (المطابق لما تسميه تيك توك "المشاهدات") مبني على اسم الحقل نفسه لا
+// اختبار فعلي — يحتاج تأكيداً من بث حقيقي بعد الرفع.
+ensureColumn('broadcasts', 'peak_viewers', 'INTEGER NOT NULL DEFAULT 0');
+ensureColumn('broadcasts', 'total_unique_viewers', 'INTEGER NOT NULL DEFAULT 0');
+
+// [0.45.10] اسم عرض منفصل عن username (المعرّف الثابت لتسجيل الدخول،
+// لا يتغيّر) — يقدر المستخدم يعدّله بنفسه من البروفايل. NULL = لسا ما
+// عدّله، يُعرَض username كبديل. صورة البروفايل تُخزَّن Base64 مباشرة
+// بقاعدة البيانات (لا يوجد نظام تخزين ملفات بالباك إند حالياً) — حد
+// أقصى للحجم يُفرَض بمستوى الكود (auth-service.js) قبل التخزين، لا هنا.
+ensureColumn('users', 'display_name', 'TEXT');
+ensureColumn('users', 'avatar_image_base64', 'TEXT');
+
 /**
  * تهيئة أولية لكتالوج الإطارات الثابت (4 خاصة + 7 مستويات) — تُنفَّذ مرة
  * واحدة فقط لكل صف (INSERT OR IGNORE بمفتاح slug)، فلا خطر إعادة الكتابة
