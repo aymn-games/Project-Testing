@@ -1759,11 +1759,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 default: false
             },
             {
-                key: 'friendRevivalEnabled', type: 'toggle', label: '🎗️ ميزة انعاش صديق',
+                key: 'friendRevivalEnabled', type: 'toggle', label: '🎗️  (اذا  تكرر اسم لاعب مرتين بالروليت يرجع احد)ميزة انعاش صديق',
                 default: false
             },
             {
-                key: 'giftRevivalEnabled', type: 'toggle', label: '🎁 الإنعاش عن طريق الدعم',
+                key: 'giftRevivalEnabled', type: 'toggle', label: '🎁(ترجع نفسك بدعم التيك توك) الإنعاش عن طريق الدعم',
                 default: false
             },
             {
