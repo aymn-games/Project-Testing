@@ -103,19 +103,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // "Confetti Battle" ما لقيت له قيمة مؤكدة بأي مصدر، تظهر "؟" بدلها.
     // أيقونات الهدايا: Twemoji (jdecked/twemoji، رخصة MIT + CC-BY 4.0) —
     // مو صور تيك توك الرسمية المحمية بحقوق ملكية (تفادياً لأي انتهاك).
+    //
+    // [0.45.12] حقل `icon` جديد (اختياري): لبعض الهدايا فقط، صاحب المشروع
+    // زوّدنا بصور الأيقونات الحقيقية من واجهة تيك توك مباشرة (رفعها بنفسه
+    // كملف مضغوط)، وقارنّاها يدوياً باسم الهدية + قيمتها بالعملات مقابل
+    // صورة مرجعية أرسلها أيضاً (فيها كل الهدايا الحقيقية بأسمائها العربية
+    // وقيمها) — فقط الهدايا الستّة التالية طابقت اسماً وقيمة الهدية الحالية
+    // بدقة تامة (لا تخمين): Corgi(299), Perfume(20), Doughnut(30),
+    // Finger Heart(5), Rosa(10), Hand Hearts(100). باقي الـ14 هدية إما ما
+    // كان فيها أيقونة مطابقة أكيدة بالصور المرسلة أو كانت هناك أكثر من
+    // هدية مرشَّحة بنفس السعر (مثال: 3 مرشَّحين محتملين لـ"Sunglasses" 199
+    // عملة) — تبقى هذه على أيقونة Twemoji القديمة لحين تأكيد صاحب المشروع.
+    // ملف الأيقونات: gift_icons/*.webp (مجلد جديد محلي داخل مجلد اللعبة).
     var COMMON_GIFTS = [
         { label: 'وردة', value: 'Rose', codepoint: '1f339', coins: 1 },
         { label: 'تيك توك', value: 'TikTok', codepoint: '1f496', coins: 1 },
-        { label: 'قلب الإصبع', value: 'Finger Heart', codepoint: '1f90d', coins: 5 },
+        { label: 'قلب الإصبع', value: 'Finger Heart', codepoint: '1f90d', coins: 5, icon: 'gift_icons/finger_heart.webp' },
         { label: 'جي جي', value: 'GG', codepoint: '1f3a4', coins: 1 },
         { label: 'مخروط آيسكريم', value: 'Ice Cream Cone', codepoint: '1f366', coins: 1 },
-        { label: 'عطر', value: 'Perfume', codepoint: '1f9f4', coins: 20 },
-        { label: 'دوناتس', value: 'Doughnut', codepoint: '1f369', coins: 30 },
-        { label: 'قلوب اليد', value: 'Hand Hearts', codepoint: '1f49e', coins: 100 },
+        { label: 'عطر', value: 'Perfume', codepoint: '1f9f4', coins: 20, icon: 'gift_icons/perfume.webp' },
+        { label: 'دوناتس', value: 'Doughnut', codepoint: '1f369', coins: 30, icon: 'gift_icons/doughnut.webp' },
+        { label: 'قلوب اليد', value: 'Hand Hearts', codepoint: '1f49e', coins: 100, icon: 'gift_icons/hand_hearts.webp' },
         { label: 'نظارة شمسية', value: 'Sunglasses', codepoint: '1f576', coins: 199 },
         { label: 'تاج صغير', value: 'Little Crown', codepoint: '1f451', coins: 99 },
-        { label: 'كلب كورجي', value: 'Corgi', codepoint: '1f415', coins: 299 },
-        { label: 'باقة ورد', value: 'Rosa', codepoint: '1f490', coins: 10 },
+        { label: 'كلب كورجي', value: 'Corgi', codepoint: '1f415', coins: 299, icon: 'gift_icons/corgi.webp' },
+        { label: 'باقة ورد', value: 'Rosa', codepoint: '1f490', coins: 10, icon: 'gift_icons/rosa.webp' },
         { label: 'نغمة موسيقية', value: 'Music Note', codepoint: '1f3b5', coins: 169 },
         { label: 'قصاصات احتفالية', value: 'Confetti Battle', codepoint: '1f389', coins: null },
         { label: 'مجرة', value: 'Galaxy', codepoint: '1f30c', coins: 1000 },
@@ -127,7 +139,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     ];
 
     var TWEMOJI_BASE = 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/';
-    function giftIconUrl(g) { return TWEMOJI_BASE + g.codepoint + '.svg'; }
+    // [0.45.12] لو الهدية فيها أيقونة حقيقية محلية (`icon`) نستخدمها، وإلا
+    // نرجع لأيقونة Twemoji القديمة كما كانت (سلوك افتراضي محفوظ 100%).
+    function giftIconUrl(g) { return g.icon ? g.icon : (TWEMOJI_BASE + g.codepoint + '.svg'); }
     function giftCoinsText(g) { return (g.coins != null) ? (g.coins + ' 🪙') : '؟'; }
 
     var ELIMINATION_TIMER_OPTIONS = [20, 25, 30, 40].map(function (s) {
