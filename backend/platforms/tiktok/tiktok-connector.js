@@ -21,7 +21,12 @@
  *                                    // بلا تغيير على هذا العقد).
  *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance }), // ⚠️ [0.44.4] entrance جديد
  *     onGift({ id, name, giftName, giftValue, repeatCount }),
- *     onFollow({ id, name })
+ *     onFollow({ id, name }),
+ *     onViewerUpdate({ current, totalUsers })   // [0.45.10] اختياري — لو
+ *                                                 // ما استقبله الاستدعاء
+ *                                                 // (callbacks بلا هذي
+ *                                                 // الدالة)، لا يُستمَع
+ *                                                 // لحدث roomUser إطلاقاً
  *   }
  *
  * لا تعديل على platforms/connector-router.js (يبقى نقطة التبديل الوحيدة
@@ -328,6 +333,19 @@ function createTikTokConnector() {
             var user = extractUser(data);
             _callbacks.onFollow({ id: user.id, name: user.name });
         });
+
+        // [0.45.10] roomUser -> عدد المشاهدين. حقول data.total/data.totalUser
+        // نصية (String) بمخطط WebcastRoomUserSeqMessage المثبَّت فعلياً —
+        // راجع الملاحظة الصادقة أعلى الملف وبـbackend/db/database.js
+        // (لم تُختبَر ضد بث حقيقي من هذه البيئة). فحص وجود onViewerUpdate
+        // دفاعياً — موصِّل المحاكاة قد لا يستدعيها بنفس التكرار.
+        if (_callbacks.onViewerUpdate) {
+            _connection.on(TikTokLib.WebcastEvent.ROOM_USER, function (data) {
+                var current = Number(data && data.total) || 0;
+                var totalUsers = Number(data && data.totalUser) || 0;
+                _callbacks.onViewerUpdate({ current: current, totalUsers: totalUsers });
+            });
+        }
 
         _connection.on(TikTokLib.ControlEvent.DISCONNECTED, function (info) {
             _connected = false;
