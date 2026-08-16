@@ -256,7 +256,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         style.textContent = [
             ':root{--mc-gold:#ffb020;--mc-gold-2:#ff7a3d;--mc-danger:#ff4d6a;--mc-badge-fill:#CAB6B6;--mc-badge-stroke:#9F5FC4;--mc-video-glow:#4d0008;}',
 
-            '#mc-stage{position:fixed;inset:0;padding-top:78px;display:flex;flex-direction:column;',
+            /* ⚠️ إصلاح: كانت الحلبة محبوسة بحجم الشاشة (fixed inset:0
+             * بدون تمرير) — لو المحتوى أطول من الشاشة (تكبير كبير، شاشة
+             * قصيرة) ما فيه طريقة توصل لباقي الدائرة. الحل: overflow-y
+             * يخلي الحلبة نفسها قابلة للتمرير عمودياً لو احتاجت، بدون ما
+             * يأثر على الهيدر الثابت فوقها. */
+            '#mc-stage{position:fixed;inset:0;overflow-y:auto;padding-top:78px;padding-bottom:24px;',
+            'display:flex;flex-direction:column;',
             'align-items:center;z-index:10;font-family:Cairo,sans-serif;direction:rtl;}',
 
             /* ⚠️ دُمج شريط الدورة وشريط الأدوات بشريط واحد موسّع، بمكان
@@ -306,25 +312,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'min-height:1.4em;display:flex;align-items:center;justify-content:center;gap:6px;}',
             '#mc-countdown.mc-countdown-warn{color:var(--mc-danger);}',
 
-            /* ⚠️ تبويب المُقصَين — يظهر مؤقتاً وقت الإقصاء، يعرض صور مين
-             * طلع هالدورة بالتحديد، ثم يختفي تلقائياً بعد الأنيميشن. */
-            '#mc-eliminated-panel{position:fixed;top:86px;left:50%;transform:translateX(-50%) translateY(-16px);',
-            'z-index:9997;background:rgba(20,8,35,0.95);border:2px solid var(--mc-danger);border-radius:16px;',
-            'padding:10px 20px;display:flex;flex-direction:column;align-items:center;gap:8px;opacity:0;',
-            'pointer-events:none;transition:opacity .3s ease,transform .3s ease;max-width:92vw;}',
-            '#mc-eliminated-panel.mc-eliminated-visible{opacity:1;transform:translateX(-50%) translateY(0);}',
-            '.mc-eliminated-title{color:var(--mc-danger);font-weight:800;font-size:0.9em;white-space:nowrap;}',
-            '.mc-eliminated-avatars{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}',
-            '.mc-eliminated-avatar-item{position:relative;width:54px;height:54px;filter:grayscale(0.55);',
+            /* ⚠️ تبويب المُقصَين — يظهر مؤقتاً وقت الإقصاء بمنتصف الشاشة
+             * بالضبط (500×500px)، حدود بنفسجية، داخله أسود شبه شفاف،
+             * وشعار المنصة بالأعلى — ثم يختفي تلقائياً بعد الأنيميشن. */
+            '#mc-eliminated-panel{position:fixed;top:50%;left:50%;',
+            'transform:translate(-50%,-50%) scale(0.85);',
+            'z-index:9997;width:500px;height:500px;max-width:92vw;max-height:92vw;box-sizing:border-box;',
+            'background:rgba(0,0,0,0.88);border:4px solid var(--agp-accent);border-radius:26px;',
+            'padding:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;opacity:0;',
+            'pointer-events:none;transition:opacity .3s ease,transform .3s ease;',
+            'box-shadow:0 0 34px rgba(124,58,237,0.55);}',
+            '#mc-eliminated-panel.mc-eliminated-visible{opacity:1;transform:translate(-50%,-50%) scale(1);}',
+            '.mc-eliminated-logo{width:64px;height:64px;object-fit:contain;}',
+            '.mc-eliminated-title{color:#fff;font-weight:800;font-size:1.15em;white-space:nowrap;}',
+            '.mc-eliminated-avatars{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;',
+            'max-width:100%;max-height:280px;overflow-y:auto;}',
+            '.mc-eliminated-avatar-item{position:relative;width:76px;height:76px;filter:grayscale(0.55);',
             'animation:mcElimPop .3s ease;}',
             '@keyframes mcElimPop{0%{transform:scale(0);opacity:0;}100%{transform:scale(1);opacity:1;}}',
             '.mc-eliminated-avatar-item .mc-avatar-img,.mc-eliminated-avatar-item .mc-avatar-fallback{',
             'width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid var(--mc-danger);background:#2c1240;}',
             '.mc-eliminated-avatar-item .mc-avatar-fallback{display:flex;align-items:center;justify-content:center;',
-            'color:#fff;font-weight:800;font-size:0.8em;}',
-            '.mc-eliminated-avatar-item .mc-avatar-name{position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);',
-            'font-size:0.55em;color:#f3eefc;background:rgba(0,0,0,0.6);padding:1px 5px;border-radius:999px;',
-            'white-space:nowrap;max-width:60px;overflow:hidden;text-overflow:ellipsis;}',
+            'color:#fff;font-weight:800;font-size:0.85em;}',
+            '.mc-eliminated-avatar-item .mc-avatar-name{position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);',
+            'font-size:0.6em;color:#f3eefc;background:rgba(0,0,0,0.6);padding:1px 6px;border-radius:999px;',
+            'white-space:nowrap;max-width:70px;overflow:hidden;text-overflow:ellipsis;}',
 
 
             /* ⚠️ إصلاح جذري لمشكلة تشوّه الدائرة عند تكبير المتصفح (Zoom) —
@@ -915,7 +927,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function showEliminatedPanel() {
         var panel = el('mc-eliminated-panel');
         if (!panel) return;
-        panel.innerHTML = '<div class="mc-eliminated-title">❌ تم إقصاء هالدورة</div>' +
+        panel.innerHTML = '<img class="mc-eliminated-logo" src="../../logo.png" alt="">' +
+            '<div class="mc-eliminated-title">❌ تم إقصاء هالدورة</div>' +
             '<div class="mc-eliminated-avatars" id="mc-eliminated-avatars"></div>';
         panel.classList.add('mc-eliminated-visible');
     }
@@ -1092,6 +1105,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</div>';
     }
 
+    // ⚠️ إصلاح باگ حقيقي: لما تضغط "إعادة المباراة" الفيديو ما كان يتوقف
+    // (كانت تختفي بصرياً بس عبر display:none، بدون إيقاف التشغيل فعلياً)
+    // — فيتراكم صوته فوق الدورة الجديدة. الحل: إيقاف صريح للفيديو قبل أي
+    // إجراء نهاية مباراة (سواء "مباراة جديدة" أو "إعادة المباراة").
+    function stopWinnerVideo() {
+        var video = el('mc-winner-video');
+        if (!video) return;
+        try { video.pause(); video.currentTime = 0; video.muted = true; } catch (e) {}
+    }
+
     function wireWinnerVideo() {
         var video = el('mc-winner-video');
         var unmuteBtn = el('mc-winner-video-unmute');
@@ -1142,11 +1165,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         overlay.style.display = 'flex';
 
         if (winner) wireWinnerVideo();
-        document.getElementById('mc-new-match-btn').onclick = function () { window.location.reload(); };
+        document.getElementById('mc-new-match-btn').onclick = function () {
+            stopWinnerVideo();
+            window.location.reload();
+        };
         // ⚠️ جديد: إعادة المباراة بنفس قائمة اللاعبين المسجَّلين أصلاً
         // (بدون رجوع لشاشة الاتصال/اللوبي — نفس فلسفة "إعادة اللعب بنفس
         // اللاعبين" الموجودة بروليت الإقصاء).
         document.getElementById('mc-replay-same-btn').onclick = function () {
+            stopWinnerVideo(); // ⚠️ إصلاح: يمنع تراكم صوت الفيديو فوق الدورة الجديدة
             overlay.style.display = 'none';
             resetMatchState();
             _alive = AGP.gameManager.getPlayers().slice();
