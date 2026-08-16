@@ -337,11 +337,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // إعلان النتيجة، شاشة الفائز) — نفس الملاحظة اللي طلعت
             // بالاختبار البصري لصندوق شاشة الإعدادات المشتركة. حوّلتها
             // لـheight:auto مع max-height:800px (سقف أقصى فقط).
+            // ⚠️ [0.45.8] تدرّج الخلفية (884B98→2D1932) صار (5F3976→211528) —
+            // نفس التدرّج بالضبط طلبه المستخدم موحَّداً بكل "تبويبات"
+            // اللعبة (الإعدادات/اللوبي/الإقصاء/الإنعاش/الفائز)، راجع
+            // التعليق المطابق بـ#agp-shell-box أدناه لشاشتي الإعدادات واللوبي.
             '#er-modal-box{width:1300px;max-width:97vw;height:auto;max-height:800px;max-height:min(800px,94vh);overflow-y:auto;box-sizing:border-box;',
-            'background:linear-gradient(180deg,#884B98,#2D1932);border:2px solid var(--er-accent);border-radius:20px;',
+            'background:linear-gradient(180deg,#5F3976,#211528);border:2px solid var(--er-accent);border-radius:20px;',
             'padding:28px 32px;color:#fff;box-shadow:0 0 50px rgba(124,58,237,0.55);}',
             '#er-modal-box h2{margin:0 0 6px;font-size:1.5em;text-align:center;color:#fff;font-weight:800;',
             'font-family:Almarai,Cairo,sans-serif;}',
+            // ⚠️ [0.45.8] تبويب "اختيار الإقصاء" تحديداً يتميّز بحدّ وعنوان
+            // أخضرين (بدل الأساسي البنفسجي) — طلب صريح، بينما تبويب
+            // "انعاش الصديق" (نفس الصندوق، roleClass مختلف) يبقى بالمظهر
+            // الأساسي بدون تمييز. الكلاس er-role-eliminate/er-role-revive
+            // يُضاف على #er-modal-box نفسه من renderTurnModal() (بدل
+            // تفريغه بالكامل كما كان سابقاً).
+            '#er-modal-box.er-role-eliminate{border-color:#22c55e;}',
+            '#er-modal-box.er-role-eliminate h2{color:#22c55e;}',
             /* اسم صاحب الدور وكلمة "يختار!" — كل وحدة مميَّزة بلون مختلف
              * ⚠️ [0.45.0] طلب صريح: تمييز الاسم عن كلمة "يختار!" بألوان
              * مختلفة (كانا سطراً واحداً بلون واحد سابقاً) — يطبَّق تلقائياً
@@ -375,29 +387,38 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#er-modal-timer.er-timer-warning{color:#ff4d6d;animation:er-pulse 1s infinite;}',
             '@keyframes er-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}',
 
-            /* ---- [0.45.7] بطاقات مرشَّحين أُعيد تصميمها بالكامل — صفوف
-             * عمودية عريضة (شريط + دائرة صورة بارزة بالحافة) بدل الرقائق
-             * الصغيرة جنباً لجنب القديمة، حتى تكون واضحة ومقروءة بشاشة
-             * البث المباشر (طلب صريح، بحسب تصميم مرجعي زوَّدنا به المستخدم).
-             * نفس البنية تُستخدَم تلقائياً بنافذتي الإقصاء والإرجاع معاً
-             * (دالة renderTurnModal واحدة مشتركة بين الاثنتين). */
-            '#er-candidates-grid{display:flex;flex-direction:column;gap:12px;width:100%;max-width:520px;margin:0 auto;}',
-            '.er-candidate-card{display:flex;align-items:center;gap:12px;cursor:pointer;',
-            'background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.16);',
-            'border-radius:999px;padding:8px 16px;transition:background 0.15s,transform 0.15s;}',
-            '.er-candidate-card:hover{background:rgba(255,255,255,0.18);transform:translateY(-2px);}',
+            /* ---- [0.45.8] بطاقات مرشَّحين أُعيد تصميمها مرة أخرى — شبكة
+             * أفقية (4 بطاقات بالصف الواحد) بدل الصفوف العمودية المتراكبة
+             * السابقة ([0.45.7])، بطلب صريح بعد مراجعة الشكل على الموقع
+             * الحي: كل بطاقة الآن مربّعة الشكل تقريباً بخلفية سوداء صريحة،
+             * تحتوي الصورة + رقم الاختيار + الاسم بجانب بعض، بحجم مريح
+             * للقراءة من جوال أثناء البث المباشر. نفس البنية تُستخدَم
+             * تلقائياً بنافذتي الإقصاء والإرجاع معاً (دالة renderTurnModal
+             * واحدة مشتركة بين الاثنتين). */
+            '#er-candidates-grid{display:flex;flex-flow:row wrap;gap:14px;justify-content:center;',
+            'width:100%;max-width:1180px;margin:0 auto;}',
+            '.er-candidate-card{display:flex;align-items:center;gap:10px;cursor:pointer;',
+            'width:270px;box-sizing:border-box;background:#000;border:1px solid rgba(255,255,255,0.18);',
+            'border-radius:16px;padding:10px 14px;transition:background 0.15s,transform 0.15s;}',
+            '.er-candidate-card:hover{background:#1a1a1a;transform:translateY(-2px);}',
             '.er-candidate-num{color:#fff;border-radius:50%;width:32px;height:32px;flex-shrink:0;',
             'display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.95em;}',
-            '.er-candidate-num.er-role-eliminate{background:var(--er-accent);}',
+            // ⚠️ [0.45.8] رقم بطاقة "الإقصاء" تحديداً صار أخضر مميَّز (بدل
+            // اللون البنفسجي الأساسي) — طلب صريح لتمييز تبويب الإقصاء عن
+            // بقية التبويبات، بنفس الأخضر المستخدم أصلاً بحلقة "صاحب
+            // الدور" (er-role-eliminate) لنفس النافذة، للتناسق.
+            '.er-candidate-num.er-role-eliminate{background:#22c55e;}',
             // ⚠️ بطاقة اللاعب المشتركة (agp-pcard) داخل شبكة المرشَّحين هنا
             // فقط — تكبير الصورة/الاسم بمحدِّدات مقيَّدة بـ#er-candidates-grid
             // (لا تلمس .agp-pcard بأي مكان آخر بالمنصة، ولا الملف المشترك
             // نفسه) + !important لضمان الأولوية بغضّ النظر عن ترتيب حقن
             // الأنماط بين هذا الملف وjs/agp-player-card.js.
             '#er-candidates-grid .agp-pcard{display:flex !important;flex:1;flex-direction:row-reverse;',
-            'align-items:center;gap:10px;}',
-            '#er-candidates-grid .agp-pcard-avatar-basic{width:52px !important;height:52px !important;}',
-            '#er-candidates-grid .agp-pcard-name-basic{font-size:1.05em !important;font-weight:800 !important;}',
+            'align-items:center;gap:10px;min-width:0;}',
+            '#er-candidates-grid .agp-pcard-avatar-basic{width:44px !important;height:44px !important;',
+            'flex-shrink:0;}',
+            '#er-candidates-grid .agp-pcard-name-basic{font-size:0.95em !important;font-weight:800 !important;',
+            'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
             '.er-candidate-num.er-role-revive{background:var(--er-accent2);}',
 
             /* ---- تبويب إعلان النتيجة (4 ثوانٍ) ----
@@ -567,7 +588,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'content:"✕" !important;color:#7a7488;line-height:22px;text-align:center;}',
             'label.agp-toggle-switch:has(input[data-key="friendRevivalEnabled"]:checked) .agp-toggle-track::before,',
             'label.agp-toggle-switch:has(input[data-key="giftRevivalEnabled"]:checked) .agp-toggle-track::before{',
-            'content:"✓" !important;color:#16a34a !important;transform:translateX(-20px) !important;}'
+            'content:"✓" !important;color:#16a34a !important;transform:translateX(-20px) !important;}',
+
+            /* ---- [0.45.8] توحيد لون/تدرّج خلفية "تبويبات" شاشتي الإعدادات
+             * واللوبي (#agp-shell-box بكلاسيه) بنفس تدرّج (5F3976→211528)
+             * المستخدم بـ#er-modal-box أعلاه — طلب صريح لتوحيد شكل كل
+             * شاشات اللعبة. #agp-shell-box معرَّف أصلاً بالملف المشترك
+             * js/agp-game-shell.js (تستخدمه كل الألعاب)، فبدل تعديله هناك
+             * (يؤثر على كل لعبة)، هذا التنسيق محقون هنا فقط — يُحمَّل بعد
+             * تنسيق الملف المشترك (registerGame تستدعي injectStageStyles
+             * أول شيء)، بنفس محدِّد الـID + !important، فيطغى فقط على
+             * صفحة روليت الإقصاء تحديداً دون أي تأثير على أي لعبة أخرى
+             * تستخدم نفس الصندوق المشترك (لا تعديل بالملف المشترك نفسه إطلاقاً). */
+            '#agp-shell-box{background:linear-gradient(180deg,#5F3976,#211528) !important;}',
+            '#agp-shell-box.agp-lobby-box{background:linear-gradient(180deg,#5F3976,#211528) !important;}'
         ].join('');
         document.head.appendChild(style);
     }
@@ -986,7 +1020,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '</div>';
         }).join('');
 
-        box.className = '';
+        box.className = roleClass; // ⚠️ [0.45.8] يميّز تبويب الإقصاء بلون أخضر (راجع CSS)
         box.innerHTML =
             '<h2>' + title + '</h2>' +
             '<div id="er-modal-sub">' + subtitle + '</div>' +
