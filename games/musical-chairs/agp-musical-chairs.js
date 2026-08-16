@@ -70,16 +70,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var ROTATION_DEG_PER_SEC = 22;
     var RING_TICK_MS = 90;
     var ELIMINATE_STAGGER_MS = 550;
+    var ELIMINATED_PANEL_HOLD_MS = 1600; // ⚠️ مدة بقاء تبويب المُقصَين ظاهراً بعد آخر إقصاء
     var NEXT_ROUND_DELAY_MS = 2200;
     var MUSIC_TRACK_COUNT = 5; // عدد ملفات كل تصنيف (شيلات / خليجية)
 
     /* ======================================================================
-     *  0) الصوت — طبقتان منفصلتان:
-     *     أ) مؤثرات قصيرة (reveal/claim/eliminate/warning/winner) — نفس
-     *        القديم، مربوطة بحقل soundVolume بشاشة الإعدادات.
-     *     ب) موسيقى طويلة (شيلات/خليجية) — تشتغل فقط وقت الدوران الفعلي،
-     *        بمستوى صوت حي (سلايدر) + كتم منفصلين تماماً، يتحكم فيهم
-     *        الاستريمر لحظياً من شريط الأدوات أثناء اللعب.
+     *  0) الصوت — مستوى صوت واحد موحَّد لكل شي (مؤثرات قصيرة + موسيقى
+     *     طويلة) يُتحكَّم فيه حياً من تبويب الأصوات باللعبة فقط — لا يوجد
+     *     أي حقل صوت منفصل بشاشة الإعدادات (حُذف بالكامل بطلب صريح).
      * ==================================================================== */
     var SOUND_BASE = 'sounds/';
     var _sounds = {
@@ -90,25 +88,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         winner: new Audio(SOUND_BASE + 'winner.wav')
     };
 
-    function currentVolume() {
-        var settings = AGP.gameShell.getSettings ? AGP.gameShell.getSettings() : {};
-        var v = settings.soundVolume;
-        if (v === undefined || v === null || isNaN(v)) v = 7;
-        return Math.max(0, Math.min(10, v)) / 10;
-    }
-
     function playSound(name) {
         var a = _sounds[name];
         if (!a) return;
         try {
-            a.volume = currentVolume();
+            a.volume = _musicMuted ? 0 : _musicVolume; // ⚠️ نفس مستوى/كتم الموسيقى الحي — مصدر واحد موحَّد
             a.currentTime = 0;
             var p = a.play();
             if (p && typeof p.catch === 'function') { p.catch(function () {}); }
         } catch (e) { /* تجاهل صامت — الصوت طبقة تحسين، لا يوقف اللعبة */ }
     }
 
-    // ⚠️ طبقة الموسيقى الطويلة (منفصلة كلياً عن مؤثرات SFX أعلاه)
+    // طبقة الموسيقى الطويلة
     var _musicTracks = { shailat: [], khaleeji: [] };
     for (var mi = 1; mi <= MUSIC_TRACK_COUNT; mi++) {
         _musicTracks.shailat.push(SOUND_BASE + 'shailat/' + mi + '.mp3');
@@ -117,7 +108,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     var _musicMode = 'random';   // 'random' | 'shailat' | 'khaleeji' — يتحكم فيه الاستريمر حياً
     var _musicMuted = false;
-    var _musicVolume = 0.7;      // 0..1 — سلايدر حي منفصل عن soundVolume (مؤثرات SFX)
+    var _musicVolume = 0.7;      // 0..1 — المصدر الوحيد للصوت بكل اللعبة (مؤثرات + موسيقى)
     var _currentMusicAudio = null;
 
     function pickMusicUrl() {
@@ -241,8 +232,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             {
                 key: 'selectionTimerSeconds', type: 'pill-group', label: '⏱️ مهلة اختيار الكرسي',
                 options: SELECTION_TIMER_OPTIONS, default: 15
-            },
-            { key: 'soundVolume', type: 'slider', label: '🔊 مستوى صوت المؤثرات', min: 0, max: 10, default: 7, onlyMidMatch: true }
+            }
         ];
     }
 
@@ -269,21 +259,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#mc-stage{position:fixed;inset:0;padding-top:78px;display:flex;flex-direction:column;',
             'align-items:center;z-index:10;font-family:Cairo,sans-serif;direction:rtl;}',
 
-            '#mc-round-banner{margin:6px 0 4px;text-align:center;color:#fff;}',
-            '#mc-round-banner .mc-round-num{font-family:"Cairo Play",Cairo,sans-serif;font-weight:900;',
-            'font-size:1.35em;background:linear-gradient(90deg,var(--agp-accent-2),var(--mc-gold));',
-            '-webkit-background-clip:text;background-clip:text;color:transparent;}',
-            '#mc-round-banner .mc-round-sub{font-size:0.85em;color:#d9c3ef;margin-top:2px;}',
-
-            /* ================= شريط الأدوات (تدوير + صوت + نوع الموسيقى + بادجات) =================
-             * ⚠️ عرّضته من عرض تلقائي (~680px حسب المحتوى) لعرض أدنى ثابت
-             * 760px على الشاشات الواسعة (يرجع يتقلّص تلقائياً على الجوال
-             * عبر min(94vw,760px) حتى ما ينكسر التصميم). عدّل الرقم 760
-             * لأي رقم تبيه بالضبط. */
+            /* ⚠️ دُمج شريط الدورة وشريط الأدوات بشريط واحد موسّع، بمكان
+             * عنوان "الدورة" السابق تماماً (فوق الحلقة مباشرة) — كل
+             * التفاصيل (عدد اللاعبين، الكراسي، رقم الدورة، نوع الموسيقى،
+             * الصوت، زر التدوير) بداخله. عرَّضته لعرض أدنى ثابت 760px
+             * على الشاشات الواسعة (يتقلّص تلقائياً بالجوال). عدّل الرقم
+             * 760 لأي رقم تبيه بالضبط. */
             '#mc-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;',
-            'margin:8px auto;padding:10px 18px;width:min(94vw,760px);box-sizing:border-box;border-radius:999px;',
+            'margin:14px auto 8px;padding:12px 20px;width:min(94vw,760px);box-sizing:border-box;border-radius:999px;',
             'background:linear-gradient(90deg,#3a1750,#2D1932);border:2px solid var(--mc-badge-stroke);',
             'box-shadow:0 4px 18px rgba(0,0,0,0.35);}',
+
+            '#mc-round-info{font-size:0.88em;color:#e9d3ff;white-space:nowrap;font-weight:700;}',
+            '#mc-round-info .mc-round-num-inline{color:var(--mc-gold);font-weight:900;}',
 
             '.mc-spin-btn{border:none;border-radius:999px;padding:9px 20px;font-weight:800;font-size:0.95em;',
             'color:#fff;cursor:pointer;background:linear-gradient(90deg,var(--agp-accent-pink),var(--agp-accent));',
@@ -318,8 +306,34 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'min-height:1.4em;display:flex;align-items:center;justify-content:center;gap:6px;}',
             '#mc-countdown.mc-countdown-warn{color:var(--mc-danger);}',
 
-            '#mc-circle-wrap{position:relative;width:min(62vw,600px);height:min(62vw,600px);',
-            'min-width:320px;min-height:320px;margin:10px auto;}',
+            /* ⚠️ تبويب المُقصَين — يظهر مؤقتاً وقت الإقصاء، يعرض صور مين
+             * طلع هالدورة بالتحديد، ثم يختفي تلقائياً بعد الأنيميشن. */
+            '#mc-eliminated-panel{position:fixed;top:86px;left:50%;transform:translateX(-50%) translateY(-16px);',
+            'z-index:9997;background:rgba(20,8,35,0.95);border:2px solid var(--mc-danger);border-radius:16px;',
+            'padding:10px 20px;display:flex;flex-direction:column;align-items:center;gap:8px;opacity:0;',
+            'pointer-events:none;transition:opacity .3s ease,transform .3s ease;max-width:92vw;}',
+            '#mc-eliminated-panel.mc-eliminated-visible{opacity:1;transform:translateX(-50%) translateY(0);}',
+            '.mc-eliminated-title{color:var(--mc-danger);font-weight:800;font-size:0.9em;white-space:nowrap;}',
+            '.mc-eliminated-avatars{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}',
+            '.mc-eliminated-avatar-item{position:relative;width:54px;height:54px;filter:grayscale(0.55);',
+            'animation:mcElimPop .3s ease;}',
+            '@keyframes mcElimPop{0%{transform:scale(0);opacity:0;}100%{transform:scale(1);opacity:1;}}',
+            '.mc-eliminated-avatar-item .mc-avatar-img,.mc-eliminated-avatar-item .mc-avatar-fallback{',
+            'width:100%;height:100%;border-radius:50%;object-fit:cover;border:2px solid var(--mc-danger);background:#2c1240;}',
+            '.mc-eliminated-avatar-item .mc-avatar-fallback{display:flex;align-items:center;justify-content:center;',
+            'color:#fff;font-weight:800;font-size:0.8em;}',
+            '.mc-eliminated-avatar-item .mc-avatar-name{position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);',
+            'font-size:0.55em;color:#f3eefc;background:rgba(0,0,0,0.6);padding:1px 5px;border-radius:999px;',
+            'white-space:nowrap;max-width:60px;overflow:hidden;text-overflow:ellipsis;}',
+
+
+            /* ⚠️ إصلاح جذري لمشكلة تشوّه الدائرة عند تكبير المتصفح (Zoom) —
+             * بدل حساب height بمعادلة width منفصلة (كانت تنكسر مع بعض
+             * نسب التكبير)، نستخدم aspect-ratio:1/1 اللي يفرض مربّعاً
+             * مثالياً دائماً بغض النظر عن حجم الشاشة أو نسبة التكبير —
+             * الارتفاع يُشتق تلقائياً من العرض، صفر احتمال تشوّه. */
+            '#mc-circle-wrap{position:relative;width:min(62vw,600px);aspect-ratio:1/1;',
+            'min-width:320px;margin:10px auto;}',
             '#mc-circle-glow{position:absolute;inset:8%;border-radius:50%;',
             'background:radial-gradient(circle,rgba(124,58,237,0.28),transparent 70%);pointer-events:none;}',
             /* ⚠️ إصلاح: التصميم الأول (conic-gradient + mask + filter) كان
@@ -344,12 +358,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'display:flex;align-items:center;justify-content:center;}',
             '.mc-chair-svg{width:100%;height:100%;filter:drop-shadow(0 0 8px rgba(255,176,32,0.55));transition:filter .25s;}',
             '.mc-chair.mc-chair-taken .mc-chair-svg{filter:drop-shadow(0 0 14px rgba(124,58,237,0.9));}',
-            '.mc-chair-number{position:absolute;top:6%;left:50%;transform:translateX(-50%) scale(0);',
-            'background:linear-gradient(180deg,var(--mc-gold),var(--mc-gold-2));color:#3a1a00;',
-            'font-weight:900;font-size:0.95em;border-radius:999px;padding:2px 9px;',
-            'box-shadow:0 0 10px rgba(255,176,32,0.8);transition:transform .35s cubic-bezier(.34,1.56,.64,1);}',
+            /* ⚠️ تكبير + توضيح رقم الكرسي — خلفية سوداء + رقم أبيض، عشان
+             * يبين واضح بشاشات الجوال بالبث (كان اللون الذهبي صعب يبين
+             * على المشاهدين). */
+            '.mc-chair-number{position:absolute;top:0%;left:50%;transform:translateX(-50%) scale(0);',
+            'background:#000;color:#fff;border:2px solid var(--mc-gold);',
+            'font-weight:900;font-size:1.5em;border-radius:999px;padding:3px 13px;min-width:1.5em;text-align:center;',
+            'box-shadow:0 0 12px rgba(0,0,0,0.85);transition:transform .35s cubic-bezier(.34,1.56,.64,1);}',
             '.mc-chair.mc-chair-revealed .mc-chair-number{transform:translateX(-50%) scale(1);}',
-            '.mc-chair.mc-chair-taken .mc-chair-number{background:linear-gradient(180deg,var(--agp-accent-2),var(--agp-accent));color:#fff;}',
+            '.mc-chair.mc-chair-taken .mc-chair-number{border-color:var(--agp-accent-2);}',
 
             '.mc-avatar{position:absolute;width:11%;height:11%;transform:translate(-50%,-50%);',
             'display:flex;align-items:center;justify-content:center;transition:left .1s linear,top .1s linear;}',
@@ -427,20 +444,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             toastWrap.id = 'mc-toast-wrap';
             document.body.appendChild(toastWrap);
         }
+        if (!el('mc-eliminated-panel')) {
+            var elimPanel = document.createElement('div');
+            elimPanel.id = 'mc-eliminated-panel';
+            document.body.appendChild(elimPanel);
+        }
         if (!el('mc-stage')) {
             var stage = document.createElement('div');
             stage.id = 'mc-stage';
             stage.innerHTML =
-                '<div id="mc-round-banner"><div class="mc-round-num" id="mc-round-num"></div>' +
-                '<div class="mc-round-sub" id="mc-round-sub"></div></div>' +
-
                 '<div id="mc-toolbar">' +
-                '<button type="button" id="mc-spin-btn" class="mc-spin-btn">▶️ تدوير</button>' +
-                '<span id="mc-spin-countdown"></span>' +
-                '<div class="mc-volume-group">' +
-                '<button type="button" id="mc-mute-btn" class="mc-icon-btn" title="كتم/تشغيل صوت الموسيقى">🔊</button>' +
-                '<input type="range" id="mc-volume-slider" min="0" max="100" value="70" title="مستوى صوت الموسيقى">' +
-                '</div>' +
+                '<span class="mc-badge" id="mc-chairs-badge">🪑 <span id="mc-chairs-badge-num">0</span></span>' +
+                '<span class="mc-badge" id="mc-players-badge">👥 <span id="mc-players-badge-num">0</span></span>' +
+                '<span id="mc-round-info"><span class="mc-round-num-inline" id="mc-round-num"></span> — <span id="mc-round-sub"></span></span>' +
                 '<div class="mc-music-mode">' +
                 '<button type="button" id="mc-music-mode-btn" class="mc-music-mode-btn">🔀 التشغيل العشوائي</button>' +
                 '<div class="mc-music-mode-options" id="mc-music-mode-options" hidden>' +
@@ -448,12 +464,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<button type="button" data-mode="shailat">🎙️ شيلات</button>' +
                 '<button type="button" data-mode="khaleeji">🎵 اغاني خليجية</button>' +
                 '</div></div>' +
-                '<span class="mc-badge" id="mc-chairs-badge">🪑 <span id="mc-chairs-badge-num">0</span></span>' +
-                '<span class="mc-badge" id="mc-players-badge">👥 <span id="mc-players-badge-num">0</span></span>' +
+                '<div class="mc-volume-group">' +
+                '<button type="button" id="mc-mute-btn" class="mc-icon-btn" title="كتم/تشغيل الصوت">🔊</button>' +
+                '<input type="range" id="mc-volume-slider" min="0" max="100" value="70" title="مستوى الصوت">' +
+                '</div>' +
+                '<button type="button" id="mc-spin-btn" class="mc-spin-btn">▶️ تدوير</button>' +
+                '<span id="mc-spin-countdown"></span>' +
                 '</div>' +
 
                 '<div id="mc-countdown"></div>' +
                 '<div id="mc-circle-wrap">' +
+
                 '<div id="mc-circle-glow"></div>' +
                 '<div id="mc-circle-track"></div>' +
                 '<div id="mc-chairs-ring"></div>' +
@@ -887,18 +908,48 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     /* ======================================================================
      *  9) الإقصاء بأنيميشن متتابع
      * ==================================================================== */
+    /* ======================================================================
+     *  9ب) تبويب المُقصَين — يظهر مؤقتاً وقت الإقصاء، يعرض صور مين طلع
+     *      هالدورة بالتحديد (بالترتيب اللي طلعوا فيه)، ثم يختفي تلقائياً.
+     * ==================================================================== */
+    function showEliminatedPanel() {
+        var panel = el('mc-eliminated-panel');
+        if (!panel) return;
+        panel.innerHTML = '<div class="mc-eliminated-title">❌ تم إقصاء هالدورة</div>' +
+            '<div class="mc-eliminated-avatars" id="mc-eliminated-avatars"></div>';
+        panel.classList.add('mc-eliminated-visible');
+    }
+
+    function addEliminatedAvatar(player) {
+        var wrap = el('mc-eliminated-avatars');
+        if (!wrap) return;
+        var div = document.createElement('div');
+        div.className = 'mc-eliminated-avatar-item';
+        div.innerHTML = avatarInnerHtml(player);
+        wrap.appendChild(div);
+    }
+
+    function hideEliminatedPanel() {
+        var panel = el('mc-eliminated-panel');
+        if (panel) panel.classList.remove('mc-eliminated-visible');
+    }
+
     function eliminateSequentially(losers, idx) {
+        if (idx === 0) showEliminatedPanel();
+
         if (idx >= losers.length) {
             window.setTimeout(function () {
+                hideEliminatedPanel();
                 updateBadges();
                 if (_alive.length <= 1) endMatch(_alive[0] || null);
                 else window.setTimeout(runNextRound, NEXT_ROUND_DELAY_MS - 700);
-            }, 300);
+            }, ELIMINATED_PANEL_HOLD_MS);
             return;
         }
         var player = losers[idx];
         var avatarEl = el('mc-avatar-' + player.id);
         if (avatarEl) avatarEl.classList.add('mc-avatar-out');
+        addEliminatedAvatar(player);
         playSound('eliminate');
 
         window.setTimeout(function () {
