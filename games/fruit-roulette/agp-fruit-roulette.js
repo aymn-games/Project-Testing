@@ -126,21 +126,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // [0.45.12] حقل `icon` جديد (اختياري): لبعض الهدايا فقط، صاحب المشروع
     // زوّدنا بصور الأيقونات الحقيقية من واجهة تيك توك مباشرة (رفعها بنفسه
     // كملف مضغوط)، وقارنّاها يدوياً باسم الهدية + قيمتها بالعملات مقابل
-    // صورة مرجعية أرسلها أيضاً (فيها كل الهدايا الحقيقية بأسمائها العربية
-    // وقيمها) — فقط الهدايا الستّة التالية طابقت اسماً وقيمة الهدية الحالية
-    // بدقة تامة (لا تخمين): Corgi(299), Perfume(20), Doughnut(30),
-    // Finger Heart(5), Rosa(10), Hand Hearts(100). باقي الـ14 هدية إما ما
-    // كان فيها أيقونة مطابقة أكيدة بالصور المرسلة أو كانت هناك أكثر من
-    // هدية مرشَّحة بنفس السعر (مثال: 3 مرشَّحين محتملين لـ"Sunglasses" 199
-    // عملة) — تبقى هذه على أيقونة Twemoji القديمة لحين تأكيد صاحب المشروع.
+    // صورتين مرجعيتين أرسلهما (فيهما كل الهدايا الحقيقية بأسمائها العربية
+    // وقيمها — مصدر ثانٍ منهما موقع "TikFinity" لقائمة هدايا الـ1 عملة
+    // تحديداً) — فقط الهدايا الثمانية التالية طابقت اسماً وقيمة الهدية
+    // الحالية بدقة تامة (لا تخمين): Corgi(299), Perfume(20), Doughnut(30),
+    // Finger Heart(5), Rosa(10), Hand Hearts(100), TikTok(1),
+    // Ice Cream Cone(1). باقي الـ12 هدية إما ما كان فيها أيقونة مطابقة
+    // أكيدة بالصور المرسلة أو كانت هناك أكثر من هدية مرشَّحة بنفس السعر
+    // (مثال: 3 مرشَّحين محتملين لـ"Sunglasses" 199 عملة) — تبقى هذه على
+    // أيقونة Twemoji القديمة لحين تأكيد صاحب المشروع.
     // ملف الأيقونات: gift_icons/*.webp (مجلد جديد بجانب folder_images/،
     // بنفس نمط الاستضافة المحلية المتّبع أصلاً لصور الفواكه).
     var COMMON_GIFTS = [
         { label: 'وردة', value: 'Rose', codepoint: '1f339', coins: 1 },
-        { label: 'تيك توك', value: 'TikTok', codepoint: '1f496', coins: 1 },
+        { label: 'تيك توك', value: 'TikTok', codepoint: '1f496', coins: 1, icon: 'gift_icons/tiktok.webp' },
         { label: 'قلب الإصبع', value: 'Finger Heart', codepoint: '1f90d', coins: 5, icon: 'gift_icons/finger_heart.webp' },
         { label: 'جي جي', value: 'GG', codepoint: '1f3a4', coins: 1 },
-        { label: 'مخروط آيسكريم', value: 'Ice Cream Cone', codepoint: '1f366', coins: 1 },
+        { label: 'مخروط آيسكريم', value: 'Ice Cream Cone', codepoint: '1f366', coins: 1, icon: 'gift_icons/ice_cream_cone.webp' },
         { label: 'عطر', value: 'Perfume', codepoint: '1f9f4', coins: 20, icon: 'gift_icons/perfume.webp' },
         { label: 'دوناتس', value: 'Doughnut', codepoint: '1f369', coins: 30, icon: 'gift_icons/doughnut.webp' },
         { label: 'قلوب اليد', value: 'Hand Hearts', codepoint: '1f49e', coins: 100, icon: 'gift_icons/hand_hearts.webp' },
