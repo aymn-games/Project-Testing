@@ -208,6 +208,25 @@ function setCustomId(customId) {
     return request('/api/auth/custom-id', { method: 'POST', body: { customId: customId } });
 }
 
+/**
+ * [0.45.10] تعديل اسم العرض بالبروفايل (صاحب الجلسة فقط — user.id من
+ * الجلسة بالخادم، لا يُرسَل هنا). راجع backend/http/auth-router.js
+ * (handleUpdateDisplayName).
+ */
+function updateDisplayName(displayName) {
+    return request('/api/profile/display-name', { method: 'POST', body: { displayName: displayName } });
+}
+
+/**
+ * [0.45.10] تعديل صورة بروفايل المستخدم — imageDataUrl كامل جاهز (Data
+ * URL، مثال "data:image/png;base64,..."). حد أقصى ~85KB بعد الترميز
+ * (راجع MAX_AVATAR_BASE64_LENGTH بـauth-service.js) — يفضَّل تصغير/
+ * ضغط الصورة (Canvas) بالمتصفح قبل الاستدعاء.
+ */
+function updateAvatarImage(imageDataUrl) {
+    return request('/api/profile/avatar', { method: 'POST', body: { imageDataUrl: imageDataUrl } });
+}
+
 function adminListUsers() {
     return request('/api/admin/users', { method: 'GET' });
 }
@@ -477,6 +496,40 @@ function getRecentSupporters() {
 }
 
 /**
+ * [0.45.10] أعلى الاستريمرز بإجمالي ساعات البث — بدون تسجيل دخول،
+ * تستدعيها index.html لشريط "الاستريمرز الأكثر ساعات". يرجع فقط يوزرنيم
+ * تيك توك + إجمالي الساعات لكل استريمر — بدون أي بيانات حساب حساسة.
+ * @param {number} [limit]
+ * @returns {Promise<Object>}
+ */
+function getTopStreamers(limit) {
+    var qs = limit ? ('?limit=' + encodeURIComponent(limit)) : '';
+    return request('/api/public/top-streamers' + qs, { method: 'GET' });
+}
+
+/**
+ * [0.45.10] الأدمن فقط — إحصائيات تجميعية للستريمرز (إجمالي الساعات،
+ * إجمالي المشاهدات، عدد الستريمرز المسجَّلين، وأعلى 10 بالساعات).
+ * تستدعيها admin-stats.html — راجع getAdminStreamerStats() بـ
+ * backend/auth/auth-service.js.
+ * @returns {Promise<Object>}
+ */
+function getAdminStreamerStats() {
+    return request('/api/admin/stats/streamers', { method: 'GET' });
+}
+
+/**
+ * [0.45.10] الأدمن فقط — إحصائيات عامة للمستخدمين (عدد المسجَّلين،
+ * عدد الستريمرز، عدد الموثَّقين بتيك توك، وأعلى اللاعبين بعدد الجولات
+ * كبديل صادق عن "الأكثر نشاطاً" لغير الستريمرز — راجع الملاحظة الصادقة
+ * بـgetAdminUserStats() بـbackend/auth/auth-service.js).
+ * @returns {Promise<Object>}
+ */
+function getAdminUserStats() {
+    return request('/api/admin/stats/users', { method: 'GET' });
+}
+
+/**
  * توب الداعمين (مجموع المبالغ لكل اسم) — بدون تسجيل دخول، تستدعيها
  * صفحة top-supporters.html.
  * @returns {Promise<Object>}
@@ -604,6 +657,8 @@ global.AGPAuth = {
     verifyTikTok: verifyTikTok,
     unlinkTikTok: unlinkTikTok,
     setCustomId: setCustomId,
+    updateDisplayName: updateDisplayName,
+    updateAvatarImage: updateAvatarImage,
     getDeviceId: getDeviceId,
     chooseAccountType: chooseAccountType,
     needsAccountTypeChoice: needsAccountTypeChoice,
@@ -633,6 +688,9 @@ global.AGPAuth = {
     needsWelcome: needsWelcome,
     completeWelcome: completeWelcome,
     adminResetWelcome: adminResetWelcome,
+    getTopStreamers: getTopStreamers,
+    getAdminStreamerStats: getAdminStreamerStats,
+    getAdminUserStats: getAdminUserStats,
     getRecentSupporters: getRecentSupporters,
     getTopSupporters: getTopSupporters,
     adminListSupporters: adminListSupporters,
