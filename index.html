@@ -183,6 +183,82 @@
         padding: 2px 9px; font-size: 0.75em; font-weight: 800;
     }
 
+    /* [0.45.10] شريط "الأكثر نشاطاً" — أعلى الاستريمرز بإجمالي ساعات
+       البث، شريط متحرك (Marquee) بين أزرار الأقسام والبانر. مخفي كلياً
+       افتراضياً (JS يُظهره فقط لو وصلت بيانات فعلية من الخادم — لا شريط
+       فارغ أبداً). راجع docs/CHANGELOG.md. */
+    #top-streamers-ticker {
+        display: none;
+        max-width: 900px;
+        height: 100px;
+        margin: 0 auto 28px;
+        border-radius: var(--radius);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        overflow: hidden;
+        position: relative;
+        box-shadow: 0 0 0 1px rgba(255, 77, 255, 0.06), 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+    #top-streamers-ticker.is-ready { display: block; }
+    .tst-label {
+        position: absolute;
+        top: 8px; right: 14px;
+        z-index: 2;
+        font-size: 0.72em;
+        font-weight: 800;
+        color: var(--accent-pink);
+        background: rgba(14, 14, 22, 0.75);
+        padding: 3px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 77, 255, 0.35);
+        display: flex; align-items: center; gap: 4px;
+    }
+    .tst-track-wrap {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        padding-top: 14px;
+    }
+    .tst-track {
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
+        animation: tst-scroll 28s linear infinite;
+        will-change: transform;
+    }
+    #top-streamers-ticker:hover .tst-track { animation-play-state: paused; }
+    @keyframes tst-scroll {
+        from { transform: translateX(0); }
+        to   { transform: translateX(-50%); } /* المحتوى مُكرَّر مرتين — راجع JS */
+    }
+    .tst-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 22px;
+        font-size: 0.95em;
+        font-weight: 700;
+        color: var(--text);
+    }
+    .tst-item .tst-rank {
+        font-size: 0.85em;
+        color: var(--accent-2);
+        font-weight: 800;
+    }
+    .tst-item .tst-hours {
+        color: var(--accent-pink);
+        font-weight: 800;
+        font-size: 0.85em;
+    }
+    .tst-sep {
+        width: 4px; height: 4px; border-radius: 50%;
+        background: var(--accent-gradient);
+        flex: none;
+        margin: 0 8px;
+        opacity: 0.8;
+    }
+
     .sub-banner {
         max-width: 900px; margin: 0 auto 36px; padding: 14px 20px; border-radius: 999px;
         background: var(--surface-2); border: 1px solid var(--accent); color: var(--text);
@@ -244,6 +320,12 @@
 
     /* بطاقة "لعبة قريباً" — نفس تصميم v2، بدون رابط لعب فعلي */
     .game-card--soon .game-info { text-align: center; padding: 14px; }
+
+    /* [0.45.10] إخفاء مؤقت لبعض بطاقات "قريباً" الفارغة (بطلب صريح من
+       صاحب المنصة) — الأساس/الـmarkup لكل بطاقة يبقى موجوداً بالكامل
+       بالملف، فقط لا تُعرَض للزوار. لإرجاع أي بطاقة، احذفي هذا الصنف من
+       عليها فقط. راجع docs/CHANGELOG.md. */
+    .game-card--hidden-soon { display: none !important; }
     .btn-soon {
         display: block; width: 100%; text-align: center; background: var(--surface-2);
         border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;
@@ -583,6 +665,19 @@
 </div>
 
 <!--
+    [0.45.10] شريط "الأكثر نشاطاً" — أعلى الاستريمرز بإجمالي ساعات البث،
+    مبني من GET /api/public/top-streamers (عام، بدون تسجيل دخول). مخفي
+    بالكامل (display:none عبر CSS) حتى تصل بيانات فعلية من الخادم —
+    راجع wireTopStreamersTicker() آخر الصفحة + docs/CHANGELOG.md.
+-->
+<div id="top-streamers-ticker">
+    <span class="tst-label">🔥 الأكثر نشاطاً</span>
+    <div class="tst-track-wrap">
+        <div class="tst-track" id="tst-track"></div>
+    </div>
+</div>
+
+<!--
     شريط الداعمين المتحرك — يحل محل النص الثابت القديم. مبدئياً يعرض
     نص افتراضي (لو ما فيه داعمون بعد)، ثم يتحدّث تلقائياً من السكربت
     آخر الصفحة (راجع window.AGPAuth.getRecentSupporters وdocs/CHANGELOG.md).
@@ -741,7 +836,7 @@
             العنوان هنا مباشرة عند تجهيز كل لعبة، ونفعّلها كـ"active" وقتها.
             راجع docs/CHANGELOG.md [0.45.2].
         -->
-        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-11" data-agp-game-status="coming-soon">
+        <div class="game-card game-card--v2 game-card--soon game-card--hidden-soon" data-agp-game-id="coming-soon-11" data-agp-game-status="coming-soon">
             <div class="game-cover-wrap">
                 <img src="coming-soon-11-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
             </div>
@@ -750,7 +845,7 @@
                 <button class="btn-soon" disabled>🔒 قريباً</button>
             </div>
         </div>
-        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-12" data-agp-game-status="coming-soon">
+        <div class="game-card game-card--v2 game-card--soon game-card--hidden-soon" data-agp-game-id="coming-soon-12" data-agp-game-status="coming-soon">
             <div class="game-cover-wrap">
                 <img src="coming-soon-12-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
             </div>
@@ -759,7 +854,7 @@
                 <button class="btn-soon" disabled>🔒 قريباً</button>
             </div>
         </div>
-        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-13" data-agp-game-status="coming-soon">
+        <div class="game-card game-card--v2 game-card--soon game-card--hidden-soon" data-agp-game-id="coming-soon-13" data-agp-game-status="coming-soon">
             <div class="game-cover-wrap">
                 <img src="coming-soon-13-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
             </div>
@@ -768,7 +863,7 @@
                 <button class="btn-soon" disabled>🔒 قريباً</button>
             </div>
         </div>
-        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-14" data-agp-game-status="coming-soon">
+        <div class="game-card game-card--v2 game-card--soon game-card--hidden-soon" data-agp-game-id="coming-soon-14" data-agp-game-status="coming-soon">
             <div class="game-cover-wrap">
                 <img src="coming-soon-14-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
             </div>
@@ -777,7 +872,7 @@
                 <button class="btn-soon" disabled>🔒 قريباً</button>
             </div>
         </div>
-        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-15" data-agp-game-status="coming-soon">
+        <div class="game-card game-card--v2 game-card--soon game-card--hidden-soon" data-agp-game-id="coming-soon-15" data-agp-game-status="coming-soon">
             <div class="game-cover-wrap">
                 <img src="coming-soon-15-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
             </div>
@@ -786,7 +881,7 @@
                 <button class="btn-soon" disabled>🔒 قريباً</button>
             </div>
         </div>
-        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-16" data-agp-game-status="coming-soon">
+        <div class="game-card game-card--v2 game-card--soon game-card--hidden-soon" data-agp-game-id="coming-soon-16" data-agp-game-status="coming-soon">
             <div class="game-cover-wrap">
                 <img src="coming-soon-16-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
             </div>
@@ -795,7 +890,7 @@
                 <button class="btn-soon" disabled>🔒 قريباً</button>
             </div>
         </div>
-        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-17" data-agp-game-status="coming-soon">
+        <div class="game-card game-card--v2 game-card--soon game-card--hidden-soon" data-agp-game-id="coming-soon-17" data-agp-game-status="coming-soon">
             <div class="game-cover-wrap">
                 <img src="coming-soon-17-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
             </div>
@@ -804,7 +899,7 @@
                 <button class="btn-soon" disabled>🔒 قريباً</button>
             </div>
         </div>
-        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-18" data-agp-game-status="coming-soon">
+        <div class="game-card game-card--v2 game-card--soon game-card--hidden-soon" data-agp-game-id="coming-soon-18" data-agp-game-status="coming-soon">
             <div class="game-cover-wrap">
                 <img src="coming-soon-18-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
             </div>
@@ -813,7 +908,7 @@
                 <button class="btn-soon" disabled>🔒 قريباً</button>
             </div>
         </div>
-        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-19" data-agp-game-status="coming-soon">
+        <div class="game-card game-card--v2 game-card--soon game-card--hidden-soon" data-agp-game-id="coming-soon-19" data-agp-game-status="coming-soon">
             <div class="game-cover-wrap">
                 <img src="coming-soon-19-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
             </div>
@@ -822,7 +917,7 @@
                 <button class="btn-soon" disabled>🔒 قريباً</button>
             </div>
         </div>
-        <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-20" data-agp-game-status="coming-soon">
+        <div class="game-card game-card--v2 game-card--soon game-card--hidden-soon" data-agp-game-id="coming-soon-20" data-agp-game-status="coming-soon">
             <div class="game-cover-wrap">
                 <img src="coming-soon-20-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
             </div>
@@ -1351,6 +1446,57 @@
             window.setInterval(rotateSupporters, 4000); // تبديل العرض كل 4 ثوانٍ
             window.setInterval(refreshSupportersList, 30000); // إعادة جلب دورية (يلتقط أي دعم جديد)
         }
+
+        // [0.45.10] شريط "الأكثر نشاطاً" — أعلى الاستريمرز بإجمالي ساعات
+        // البث. مخفي بالكامل افتراضياً (راجع CSS #top-streamers-ticker) —
+        // يُظهَر فقط لو رجعت بيانات فعلية من الخادم (استريمر واحد على
+        // الأقل له بث مكتمل). المحتوى يُكرَّر مرتين بالـDOM حتى يبقى
+        // الحلقة الحركية (@keyframes tst-scroll) سلسة بدون قفزة عند
+        // إعادة البداية — تقنية Marquee قياسية بلا أي مكتبة خارجية.
+        (function wireTopStreamersTicker() {
+            var container = document.getElementById('top-streamers-ticker');
+            var track = document.getElementById('tst-track');
+            if (!container || !track || !window.AGPAuth || typeof window.AGPAuth.getTopStreamers !== 'function') return;
+
+            function escapeHtml(s) {
+                return String(s || '').replace(/[&<>"']/g, function (c) {
+                    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+                });
+            }
+
+            function buildItemsHtml(streamers) {
+                return streamers.map(function (s, i) {
+                    var hoursLabel = (s.totalHours === 1) ? 'ساعة' : 'ساعة';
+                    return '<span class="tst-item"><span class="tst-rank">#' + (i + 1) + '</span> ' +
+                        '@' + escapeHtml(s.tiktokUsername) +
+                        ' <span class="tst-hours">' + s.totalHours + ' ' + hoursLabel + '</span></span>' +
+                        '<span class="tst-sep" aria-hidden="true"></span>';
+                }).join('');
+            }
+
+            function refreshTicker() {
+                // [0.45.10] أعلى 5 استريمرز فقط بالساعات (بدل 20) — بما
+                // أن الاستعلام بالخادم مرتَّب تنازلياً بالساعات مع LIMIT
+                // حيّ (راجع getTopStreamersByHours بـauth-service.js)، أي
+                // استريمر جديد يتجاوز صاحب الساعات الأقل بالخمسة الحاليين
+                // يحل محله تلقائياً بأول تحديث تالٍ (كل 3 دقائق) — بلا أي
+                // منطق إضافي مطلوب هنا، فقط تغيير الرقم المطلوب.
+                window.AGPAuth.getTopStreamers(5).then(function (result) {
+                    if (!result || !result.success || !result.streamers || !result.streamers.length) {
+                        container.classList.remove('is-ready');
+                        return;
+                    }
+                    var itemsHtml = buildItemsHtml(result.streamers);
+                    track.innerHTML = itemsHtml + itemsHtml; // تكرار مرتين لحلقة سلسة
+                    container.classList.add('is-ready');
+                }).catch(function () {
+                    container.classList.remove('is-ready'); // لا اتصال بالخادم — يبقى الشريط مخفياً بصمت
+                });
+            }
+
+            refreshTicker();
+            window.setInterval(refreshTicker, 180000); // إعادة جلب كل 3 دقائق (الساعات تتغيّر ببطء)
+        }());
     }());
 </script>
 </body>

@@ -434,6 +434,113 @@
         margin-top: 6px;
     }
 
+    /* [0.45.10] زر + نافذة "شرح كيف تربط" — دليل صور خطوة بخطوة لربط
+       وتوثيق حساب تيك توك، يفتح فوق نفس صفحة البروفايل (Modal بسيط
+       ذاتي الاكتفاء، بدون أي مكتبة خارجية) — لا يغيّر منطق الربط
+       الفعلي إطلاقاً، فقط عرض توضيحي. راجع docs/CHANGELOG.md. */
+    .pp-btn--ghost-info {
+        background: transparent;
+        color: var(--pink-light);
+        border: 1px dashed var(--pink);
+        font-size: 12.5px;
+        padding: 6px 12px;
+    }
+    .pp-guide-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 4, 14, 0.72);
+        z-index: 500;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    .pp-guide-overlay.pp-guide-overlay--open { display: flex; }
+    .pp-guide-modal {
+        background: var(--bg-secondary);
+        border: 1px solid var(--card-border);
+        border-radius: 18px;
+        box-shadow: var(--card-shadow);
+        max-width: 480px;
+        width: 100%;
+        max-height: 86vh;
+        overflow-y: auto;
+        padding: 22px;
+        position: relative;
+    }
+    .pp-guide-modal h3 {
+        margin: 0 0 14px;
+        font-size: 17px;
+        background: var(--gradient);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+    .pp-guide-close {
+        position: absolute;
+        top: 14px;
+        left: 14px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--card-border);
+        color: var(--text-primary);
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 15px;
+        line-height: 1;
+    }
+    .pp-guide-step { margin-bottom: 18px; }
+    .pp-guide-step:last-child { margin-bottom: 0; }
+    .pp-guide-step-title {
+        font-weight: 700;
+        font-size: 13.5px;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .pp-guide-step-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--gradient);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+    .pp-guide-step-text {
+        font-size: 12.5px;
+        color: var(--text-secondary);
+        margin: 0 0 8px;
+        line-height: 1.6;
+    }
+    .pp-guide-step-img {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid var(--card-border);
+        display: block;
+    }
+    /* لو الصورة ما رفعتها بعد (اسم الملف غير موجود بالمستودع)، نخفيها
+       بصمت ونعرض بديل نصي بدل أيقونة صورة مكسورة — نفس أسلوب onerror
+       المتبع لأغلفة الألعاب بـindex.html. */
+    .pp-guide-step-img-missing {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 90px;
+        border-radius: 10px;
+        border: 1px dashed var(--card-border);
+        color: var(--text-secondary);
+        font-size: 11.5px;
+        text-align: center;
+        padding: 10px;
+    }
+
     /* ---- "قريباً" placeholders ---- */
     .pp-soon-card {
         border-radius: 14px;
@@ -531,6 +638,9 @@
                 <div class="pp-id-row">
                     <span>ID: #<span class="mono" id="pp-id">—</span></span>
                     <button type="button" class="pp-copy-btn" id="pp-copy-id">نسخ</button>
+                    <!-- [0.45.10] زر تعديل الاسم/الصورة — يظهر فقط لصاحب الحساب
+                         (نفس شرط pp-logout-btn)، راجع wireEditProfileModal(). -->
+                    <button type="button" class="pp-copy-btn" id="pp-btn-edit-profile" style="display:none;">✏️ تعديل</button>
                 </div>
                 <div class="pp-badges" id="pp-badges"></div>
                 <div class="pp-joined" id="pp-joined">—</div>
@@ -601,7 +711,12 @@
                     </div>
 
                     <div class="pp-card pp-side-card" id="pp-tiktok-card">
-                        <div class="pp-section-title">حساب تيك توك</div>
+                        <div class="pp-section-title" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                            <span>حساب تيك توك</span>
+                            <!-- [0.45.10] زر "شرح كيف تربط" — يفتح دليل خطوة بخطوة (Modal)،
+                                 راجع pp-guide-overlay أسفل الصفحة + showTikTokGuide() بالسكربت. -->
+                            <button type="button" class="pp-btn pp-btn--ghost-info" id="pp-btn-tiktok-guide">ℹ️ شرح كيف تربط</button>
+                        </div>
 
                         <!-- أدمن يشاهد حساب شخص آخر: قراءة فقط -->
                         <div id="pp-tiktok-readonly" style="display:none;">
@@ -752,6 +867,81 @@
     </div>
 </div>
 
+<!-- [0.45.10] نافذتا "شرح كيف تربط" و"تعديل البروفايل" — نُقلتا هنا (قبل
+     وسم السكربت بالأسفل) بعد إصلاح خلل حقيقي وُجد بالاختبار: كانتا
+     موضوعتين بعد وسم السكربت، فـ document.getElementById لهما كان
+     يرجّع null وقت تنفيذ wireTikTokGuideModal()/wireEditProfileModal()
+     (لأن المتصفح يشغّل كتلة السكربت فور الوصول لها أثناء التحليل، قبل
+     تحليل أي HTML بعدها) — فكانت كل الأزرار المرتبطة بهما لا تفعل
+     شيئاً فعلياً رغم عدم وجود أي خطأ ظاهر. راجع docs/CHANGELOG.md. -->
+<div class="pp-guide-overlay" id="pp-tiktok-guide-overlay">
+    <div class="pp-guide-modal">
+        <button type="button" class="pp-guide-close" id="pp-guide-close-btn" aria-label="إغلاق">✕</button>
+        <h3>شرح ربط وتوثيق حساب تيك توك</h3>
+
+        <div class="pp-guide-step">
+            <div class="pp-guide-step-title"><span class="pp-guide-step-num">1</span> افتحي نموذج الربط</div>
+            <p class="pp-guide-step-text">اضغطي زر "ربط حساب TikTok" بقسم "حساب تيك توك" بالبروفايل — بيظهر لك حقل لإدخال يوزرنيم حسابك بتيك توك.</p>
+            <img class="pp-guide-step-img" src="tiktok-guide-1.png" alt="خطوة 1: فتح نموذج الربط" onerror="this.outerHTML='<div class=&quot;pp-guide-step-img-missing&quot;>الصورة لم تُرفع بعد</div>';">
+        </div>
+
+        <div class="pp-guide-step">
+            <div class="pp-guide-step-title"><span class="pp-guide-step-num">2</span> أدخلي اليوزرنيم واضغطي "ربط"</div>
+            <p class="pp-guide-step-text">اكتبي يوزرنيم حسابك بتيك توك بدون علامة @، ثم اضغطي زر "ربط".</p>
+            <img class="pp-guide-step-img" src="tiktok-guide-2.png" alt="خطوة 2: إدخال اليوزرنيم" onerror="this.outerHTML='<div class=&quot;pp-guide-step-img-missing&quot;>الصورة لم تُرفع بعد</div>';">
+        </div>
+
+        <div class="pp-guide-step">
+            <div class="pp-guide-step-title"><span class="pp-guide-step-num">3</span> ولّدي كود التحقق</div>
+            <p class="pp-guide-step-text">اضغطي زر "توليد كود تحقق" — بيظهر لك كود قصير (مثال: AGP-XXXXXXXX).</p>
+            <img class="pp-guide-step-img" src="tiktok-guide-3.png" alt="خطوة 3: توليد كود التحقق" onerror="this.outerHTML='<div class=&quot;pp-guide-step-img-missing&quot;>الصورة لم تُرفع بعد</div>';">
+        </div>
+
+        <div class="pp-guide-step">
+            <div class="pp-guide-step-title"><span class="pp-guide-step-num">4</span> ضيفي الكود لبايو حسابك بتيك توك</div>
+            <p class="pp-guide-step-text">افتحي تطبيق تيك توك → عدّلي البروفايل → الصقي الكود بخانة البايو (السيرة الذاتية) واحفظي.</p>
+            <img class="pp-guide-step-img" src="tiktok-guide-4.png" alt="خطوة 4: إضافة الكود للبايو" onerror="this.outerHTML='<div class=&quot;pp-guide-step-img-missing&quot;>الصورة لم تُرفع بعد</div>';">
+        </div>
+
+        <div class="pp-guide-step">
+            <div class="pp-guide-step-title"><span class="pp-guide-step-num">5</span> ارجعي واضغطي "تحقق"</div>
+            <p class="pp-guide-step-text">بعد حفظ الكود بالبايو، ارجعي لنفس الصفحة واضغطي زر "تحقق" — لو الكود موجود فعلاً ببايو حسابك، يصير حسابك موثّقاً ✅.</p>
+            <img class="pp-guide-step-img" src="tiktok-guide-5.png" alt="خطوة 5: الضغط على تحقق" onerror="this.outerHTML='<div class=&quot;pp-guide-step-img-missing&quot;>الصورة لم تُرفع بعد</div>';">
+        </div>
+    </div>
+</div>
+
+<!-- [0.45.10] نافذة "تعديل البروفايل" — اسم عرض + صورة، صاحب الحساب
+     فقط. نفس نمط الـModal المستخدَم بدليل تيك توك أعلاه (Overlay بسيط
+     ذاتي الاكتفاء). الصورة تُصغَّر/تُضغَط بالمتصفح (Canvas) قبل
+     الإرسال حتى تبقى تحت حد الخادم (~85KB بعد Base64) — راجع
+     wireEditProfileModal() بالسكربت + docs/CHANGELOG.md. -->
+<div class="pp-guide-overlay" id="pp-edit-profile-overlay">
+    <div class="pp-guide-modal" style="max-width:380px;">
+        <button type="button" class="pp-guide-close" id="pp-edit-close-btn" aria-label="إغلاق">✕</button>
+        <h3>تعديل البروفايل</h3>
+
+        <div class="pp-field">
+            <label>اسم العرض بالمنصة</label>
+            <input type="text" id="pp-edit-display-name" placeholder="اكتبي اسماً يظهر بدل اسم الحساب" maxlength="40">
+        </div>
+
+        <div class="pp-field" style="margin-top:14px;">
+            <label>صورة البروفايل</label>
+            <div style="display:flex; align-items:center; gap:12px; margin-top:6px;">
+                <div class="pp-avatar" id="pp-edit-avatar-preview" style="width:56px; height:56px; min-width:56px;">?</div>
+                <input type="file" id="pp-edit-avatar-file" accept="image/png,image/jpeg,image/webp">
+            </div>
+            <div class="pp-status-note" id="pp-edit-avatar-note" style="margin-top:4px;">يُصغَّر تلقائياً ليناسب الحجم المسموح — لا حاجة لتصغيره يدوياً.</div>
+        </div>
+
+        <div class="pp-btn-row" style="margin-top:16px;">
+            <button type="button" class="pp-btn pp-btn--primary" id="pp-btn-save-profile">حفظ</button>
+        </div>
+        <div class="pp-status-note" id="pp-edit-profile-status"></div>
+    </div>
+</div>
+
 <script src="auth/auth-client.js"></script>
 <script>
 'use strict';
@@ -770,6 +960,161 @@
     var notFoundEl = document.getElementById('pp-not-found');
     var restrictedEl = document.getElementById('pp-restricted');
     var fullEl = document.getElementById('pp-full');
+
+    // [0.45.10] زر + نافذة "شرح كيف تربط" — تعمل بصرف النظر عن حالة
+    // البروفايل (قراءة فقط/متصل/غير متصل)، فقط عرض توضيحي، لا تلمس
+    // منطق الربط الفعلي إطلاقاً. الأزرار موجودة دائماً بالـDOM (راجع
+    // pp-tiktok-card أعلى الملف)، فوصلها هنا مباشرة بدل انتظار جلب
+    // البروفايل.
+    (function wireTikTokGuideModal() {
+        var openBtn = document.getElementById('pp-btn-tiktok-guide');
+        var overlay = document.getElementById('pp-tiktok-guide-overlay');
+        var closeBtn = document.getElementById('pp-guide-close-btn');
+        if (!openBtn || !overlay) return;
+
+        function open() { overlay.classList.add('pp-guide-overlay--open'); }
+        function close() { overlay.classList.remove('pp-guide-overlay--open'); }
+
+        openBtn.addEventListener('click', open);
+        if (closeBtn) closeBtn.addEventListener('click', close);
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) close();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') close();
+        });
+    }());
+
+    // [0.45.10] نافذة "تعديل البروفايل" (اسم عرض + صورة) — صاحب الحساب
+    // فقط. openEditProfileModal(p) تُستدعى من renderFull() أدناه بعد
+    // التأكد isOwner. الصورة تُصغَّر/تُضغَط بـCanvas قبل الإرسال حتى
+    // تبقى تحت حد الخادم (~85KB بعد Base64، راجع MAX_AVATAR_BASE64_LENGTH
+    // بـbackend/auth/auth-service.js) — نبدأ بجودة عالية ونخفّضها
+    // تدريجياً لحد ما يصير الحجم مناسباً، بدل رفض المستخدم مباشرة.
+    var openEditProfileModal = (function wireEditProfileModal() {
+        var overlay = document.getElementById('pp-edit-profile-overlay');
+        var closeBtn = document.getElementById('pp-edit-close-btn');
+        var nameInput = document.getElementById('pp-edit-display-name');
+        var fileInput = document.getElementById('pp-edit-avatar-file');
+        var avatarPreview = document.getElementById('pp-edit-avatar-preview');
+        var saveBtn = document.getElementById('pp-btn-save-profile');
+        var statusEl = document.getElementById('pp-edit-profile-status');
+        if (!overlay) return function () {};
+
+        var pendingAvatarDataUrl = null; // null = لم يُختَر ملف جديد بهذي الجلسة
+
+        function close() { overlay.classList.remove('pp-guide-overlay--open'); }
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+        if (closeBtn) closeBtn.addEventListener('click', close);
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+        // [0.45.10] تصغير/ضغط الصورة محلياً بالمتصفح عبر Canvas — أقصى
+        // بُعد 220px + جودة JPEG تنخفض تدريجياً (0.85 → 0.4) لحد ما يصير
+        // الناتج تحت MAX_TARGET_BYTES. لا تحويل خادمي إطلاقاً (لا يوجد
+        // نظام صور بالخادم أصلاً).
+        var MAX_TARGET_BYTES = 80 * 1024; // هامش أمان تحت حد الخادم 85KB
+        function resizeAndCompress(file) {
+            return new Promise(function (resolve, reject) {
+                var reader = new FileReader();
+                reader.onerror = function () { reject(new Error('read_failed')); };
+                reader.onload = function () {
+                    var img = new Image();
+                    img.onerror = function () { reject(new Error('decode_failed')); };
+                    img.onload = function () {
+                        var maxDim = 220;
+                        var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+                        var canvas = document.createElement('canvas');
+                        canvas.width = Math.round(img.width * scale);
+                        canvas.height = Math.round(img.height * scale);
+                        var ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                        var quality = 0.85;
+                        var dataUrl = canvas.toDataURL('image/jpeg', quality);
+                        while (dataUrl.length > MAX_TARGET_BYTES && quality > 0.35) {
+                            quality -= 0.1;
+                            dataUrl = canvas.toDataURL('image/jpeg', quality);
+                        }
+                        if (dataUrl.length > MAX_TARGET_BYTES) {
+                            reject(new Error('still_too_large'));
+                            return;
+                        }
+                        resolve(dataUrl);
+                    };
+                    img.src = reader.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        if (fileInput) {
+            fileInput.addEventListener('change', function () {
+                var file = fileInput.files && fileInput.files[0];
+                if (!file) return;
+                statusEl.textContent = 'جارٍ تجهيز الصورة…';
+                statusEl.className = 'pp-status-note';
+                resizeAndCompress(file).then(function (dataUrl) {
+                    pendingAvatarDataUrl = dataUrl;
+                    avatarPreview.textContent = '';
+                    var img = document.createElement('img');
+                    img.src = dataUrl;
+                    avatarPreview.appendChild(img);
+                    statusEl.textContent = '';
+                }).catch(function () {
+                    statusEl.textContent = 'تعذّر تجهيز هذي الصورة — جرّبي صورة ثانية.';
+                    statusEl.className = 'pp-status-note pp-status-note--err';
+                    pendingAvatarDataUrl = null;
+                });
+            });
+        }
+
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function () {
+                var tasks = [];
+                var newName = (nameInput.value || '').trim();
+                if (newName) tasks.push(window.AGPAuth.updateDisplayName(newName));
+                if (pendingAvatarDataUrl) tasks.push(window.AGPAuth.updateAvatarImage(pendingAvatarDataUrl));
+
+                if (!tasks.length) { close(); return; }
+
+                saveBtn.disabled = true;
+                statusEl.textContent = 'جارٍ الحفظ…';
+                statusEl.className = 'pp-status-note';
+                Promise.all(tasks).then(function (results) {
+                    var failed = results.filter(function (r) { return !r || !r.success; });
+                    saveBtn.disabled = false;
+                    if (failed.length) {
+                        statusEl.textContent = 'تعذّر حفظ بعض التعديلات — تأكدي من اسم صالح وحاولي مجدداً.';
+                        statusEl.className = 'pp-status-note pp-status-note--err';
+                        return;
+                    }
+                    statusEl.textContent = 'تم الحفظ ✅';
+                    statusEl.className = 'pp-status-note pp-status-note--ok';
+                    window.setTimeout(function () { window.location.reload(); }, 700);
+                }).catch(function () {
+                    saveBtn.disabled = false;
+                    statusEl.textContent = 'تعذّر الاتصال بالخادم — حاولي مجدداً.';
+                    statusEl.className = 'pp-status-note pp-status-note--err';
+                });
+            });
+        }
+
+        return function open(p) {
+            pendingAvatarDataUrl = null;
+            statusEl.textContent = '';
+            statusEl.className = 'pp-status-note';
+            nameInput.value = p.display_name || '';
+            avatarPreview.textContent = '';
+            if (p.avatar_image_base64) {
+                var img = document.createElement('img');
+                img.src = p.avatar_image_base64;
+                avatarPreview.appendChild(img);
+            } else {
+                avatarPreview.textContent = initials(p.username);
+            }
+            overlay.classList.add('pp-guide-overlay--open');
+        };
+    }());
 
     function initials(name) {
         return (name || '?').trim().charAt(0).toUpperCase() || '?';
@@ -991,6 +1336,14 @@
             };
         }
 
+        // [0.45.10] زر "تعديل" (اسم عرض + صورة) — صاحب الحساب فقط، نفس
+        // شرط زر تسجيل الخروج أعلاه بالضبط.
+        var editProfileBtn = document.getElementById('pp-btn-edit-profile');
+        if (isOwner && editProfileBtn) {
+            editProfileBtn.style.display = '';
+            editProfileBtn.onclick = function () { openEditProfileModal(p); };
+        }
+
         // ⚠️ [مُفعَّلة — 0.44.2] بمجرد ما الحساب يربط ويوثّق تيك توك، صورة
         // واسم البروفايل الرئيسيين يصيرون نفس صورة/اسم حساب تيك توك
         // المرتبط — بدل الأحرف الأولى من اسم حساب المنصة. لو الاستخراج
@@ -1019,6 +1372,20 @@
         }
         if (hasTikTokIdentity && p.tiktok_display_name) {
             usernameEl.textContent = p.tiktok_display_name;
+        }
+
+        // [0.45.10] اسم عرض/صورة يعدّلهما المستخدم بنفسه (زر "تعديل" أعلى
+        // البروفايل) — أولوية أخيرة، تتفوّق حتى على بيانات تيك توك
+        // التلقائية، لأنه اختيار المستخدم الصريح.
+        if (p.display_name) {
+            usernameEl.textContent = p.display_name;
+        }
+        if (p.avatar_image_base64) {
+            var customAvatarImg = document.createElement('img');
+            customAvatarImg.alt = '';
+            customAvatarImg.src = p.avatar_image_base64;
+            avatarEl.textContent = '';
+            avatarEl.appendChild(customAvatarImg);
         }
         document.getElementById('pp-id').textContent = p.custom_id || '—';
         document.getElementById('pp-joined').textContent = 'انضم في ' + formatDate(p.joined_at);
