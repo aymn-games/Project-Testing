@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة الأدمن — الإحصائيات — AGP</title>
+<link rel="stylesheet" href="dashboard-core/css/style.css">
+<link rel="stylesheet" href="auth/auth.css">
+<!--
+  ==========================================================================
+  [0.45.10] admin-stats.html — صفحة جديدة كلياً، خارج AGP.* بالكامل، بنفس
+  نمط admin.html/admin-settings.html (تبويبات .adm-tab-btn/.adm-tab-panel،
+  حماية AGPAuth.requireAdmin، نفس أصناف dashboard-core/css/style.css).
+  تعرض بيانات جاهزة أصلاً من الخادم (getAdminStreamerStats/getAdminUserStats
+  بـbackend/auth/auth-service.js، عبر مسارات /api/admin/stats/* الموجودة
+  أصلاً بـauth-router.js) — لا مسار HTTP جديد، ولا تعديل على أي ملف موجود
+  غير auth/auth-client.js (إضافة دالتين استدعاء فقط، راجع docs/CHANGELOG.md).
+
+  زر "تحميل CSV" بكل تبويب يبني ملفاً محلياً بالمتصفح (Blob) من نفس
+  البيانات المعروضة أصلاً — بدون أي استدعاء خادم إضافي.
+
+  ⚠️ ملاحظة صادقة (نفس الملاحظة الموثَّقة بـauth-service.js): "إجمالي
+  المشاهدات" مبني على حقل totalUser من مكتبة tiktok-live-connector، لم
+  يُختبَر فعلياً ضد بث حقيقي من هذه البيئة. و"الأكثر نشاطاً" لغير
+  الاستريمرز (لاعبون عاديون) غير قابل للقياس حالياً — لا يوجد تتبّع
+  جلسات/دخول لهم، فقط عدّاد جولات ألعاب مكتملة (راجع تبويب "المستخدمون"
+  أدناه لعرض هذا القيد بوضوح بدل افتراض رقم غير موجود.)
+  ==========================================================================
+-->
+<style>
+  .adm-tabs { display: flex; gap: 8px; margin-bottom: var(--space-4); flex-wrap: wrap; }
+  .adm-tab-btn {
+    background: transparent; border: 1px solid var(--border-light); color: var(--text-dim, #9aa);
+    border-radius: 10px; padding: 8px 18px; font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer;
+  }
+  .adm-tab-btn.is-active { background: var(--accent, #7c3aed); color: #fff; border-color: transparent; }
+  .adm-tab-panel { display: none; }
+  .adm-tab-panel.is-active { display: block; }
+
+  /* [0.45.10] بطاقات أرقام كبيرة — محلية لهذه الصفحة فقط، نفس فلسفة
+     أصناف admin.html المحلية (إضافي فوق dashboard-core/css/style.css
+     بدل تعديله). */
+  .stats-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-4); }
+  .stats-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: var(--space-4); text-align: center;
+  }
+  .stats-card-num { font-size: 26px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .stats-card-label { font-size: 12.5px; color: var(--text-muted); }
+  .stats-note {
+    font-size: 12px; color: var(--text-muted); border: 1px dashed var(--border-light);
+    border-radius: var(--radius-sm); padding: 8px 12px; margin-bottom: var(--space-4);
+  }
+</style>
+</head>
+<body class="auth-checking">
+<header class="topbar">
+<div class="topbar-brand">
+<span class="topbar-logo topbar-logo--img"><img src="logo.png" alt="ألعاب أيمن"></span>
+<span class="topbar-title">لوحة الأدمن — الإحصائيات</span>
+</div>
+<div class="auth-topbar-account">
+<a class="btn btn-sm" href="admin.html">المستخدمون</a>
+<a class="btn btn-sm" href="admin-settings.html">الإعدادات</a>
+<a class="btn btn-sm" href="dashboard-core/index.html">لوحة التحكم</a>
+<span class="badge" id="account-role">—</span>
+<span class="stat-value" id="account-username">—</span>
+<button class="btn btn-sm" id="btn-account-logout">تسجيل خروج</button>
+</div>
+</header>
+<div class="main" style="padding: var(--space-5);">
+<div class="auth-message" id="admin-message"></div>
+
+<section class="panel panel-wide">
+<div class="panel-head">
+<h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-chart"/></svg>الإحصائيات</h2>
+<button class="btn btn-sm" id="btn-refresh-stats"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg>تحديث</button>
+</div>
+
+<div class="adm-tabs" id="stats-tabs">
+  <button type="button" class="adm-tab-btn is-active" data-stats-tab="streamers">إحصائيات الستريمرز</button>
+  <button type="button" class="adm-tab-btn" data-stats-tab="users">إحصائيات المستخدمين</button>
+</div>
+
+<!-- ==================== تبويب: إحصائيات الستريمرز ==================== -->
+<div class="adm-tab-panel is-active" data-stats-panel="streamers">
+  <div class="stats-note">⚠️ "إجمالي المشاهدات" مبني على بيانات لم تُختبَر فعلياً ضد بث حقيقي من هذه البيئة — راجع docs/CHANGELOG.md.</div>
+  <div class="stats-cards">
+    <div class="stats-card"><div class="stats-card-num" id="st-total-streamers">—</div><div class="stats-card-label">عدد الستريمرز المسجَّلين</div></div>
+    <div class="stats-card"><div class="stats-card-num" id="st-total-hours">—</div><div class="stats-card-label">إجمالي ساعات البث</div></div>
+    <div class="stats-card"><div class="stats-card-num" id="st-total-views">—</div><div class="stats-card-label">إجمالي المشاهدات</div></div>
+  </div>
+  <div class="panel-head" style="margin-bottom: var(--space-2);">
+    <h2 style="font-size:13px;">أعلى 10 ستريمرز (بالساعات)</h2>
+    <button class="btn btn-sm" id="btn-export-streamers">⬇️ تحميل CSV</button>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>#</th><th>اسم المستخدم</th><th>تيك توك</th><th>عدد البثوث</th><th>الساعات</th><th>المشاهدات</th></tr></thead>
+      <tbody id="top-streamers-table-body"><tr><td class="table-empty" colspan="6">جارٍ التحميل…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== تبويب: إحصائيات المستخدمين ==================== -->
+<div class="adm-tab-panel" data-stats-panel="users">
+  <div class="stats-note">⚠️ لا يوجد تتبّع جلسات/دخول للاعبين العاديين حالياً، فـ"الأكثر نشاطاً" هنا معروض فقط لمن لعب جولات فعلية (عدّاد games_played) — راجع docs/CHANGELOG.md.</div>
+  <div class="stats-cards">
+    <div class="stats-card"><div class="stats-card-num" id="us-total-users">—</div><div class="stats-card-label">إجمالي المستخدمين المسجَّلين</div></div>
+    <div class="stats-card"><div class="stats-card-num" id="us-total-streamers">—</div><div class="stats-card-label">عدد الستريمرز</div></div>
+    <div class="stats-card"><div class="stats-card-num" id="us-total-verified">—</div><div class="stats-card-label">موثَّقون بتيك توك</div></div>
+  </div>
+  <div class="panel-head" style="margin-bottom: var(--space-2);">
+    <h2 style="font-size:13px;">أعلى 10 لاعبين (بعدد الجولات المكتملة)</h2>
+    <button class="btn btn-sm" id="btn-export-users">⬇️ تحميل CSV</button>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>#</th><th>اسم المستخدم</th><th>تيك توك</th><th>جولات مكتملة</th><th>جولات مربوحة</th></tr></thead>
+      <tbody id="top-players-table-body"><tr><td class="table-empty" colspan="5">جارٍ التحميل…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+</section>
+</div>
+<svg style="display:none" aria-hidden="true">
+<symbol id="icon-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+<path d="M4 20V10"/><path d="M12 20V4"/><path d="M20 20v-7"/>
+</symbol>
+<symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+<path d="M4 12a8 8 0 018-8 8 8 0 017.4 5"/><polyline points="19 3 19 9 13 9"/>
+</symbol>
+</svg>
+<script src="auth/auth-client.js"></script>
+<script>
+'use strict';
+/**
+ * [0.45.10] لوحة الأدمن — الإحصائيات. نفس نمط admin.html بالضبط (تبويبات،
+ * حماية requireAdmin، escapeHtml). لا تعديل على أي مسار HTTP أو دالة
+ * موجودة — فقط استهلاك getAdminStreamerStats/getAdminUserStats الجديدتين
+ * بـauth-client.js.
+ */
+(function () {
+    var messageEl = document.getElementById('admin-message');
+    var lastStreamerStats = null;
+    var lastUserStats = null;
+
+    function showMessage(text, type) {
+        messageEl.textContent = text;
+        messageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+
+    function escapeHtml(value) {
+        var div = document.createElement('div');
+        div.textContent = value === null || value === undefined ? '' : String(value);
+        return div.innerHTML;
+    }
+
+    // تبويبات — نفس نمط admin.html/profile.html بالضبط.
+    Array.prototype.forEach.call(document.querySelectorAll('[data-stats-tab]'), function (btn) {
+        btn.addEventListener('click', function () {
+            Array.prototype.forEach.call(document.querySelectorAll('[data-stats-tab]'), function (b) { b.classList.remove('is-active'); });
+            btn.classList.add('is-active');
+            var tab = btn.getAttribute('data-stats-tab');
+            Array.prototype.forEach.call(document.querySelectorAll('[data-stats-panel]'), function (panel) {
+                panel.classList.toggle('is-active', panel.getAttribute('data-stats-panel') === tab);
+            });
+        });
+    });
+
+    function renderStreamerStats(stats) {
+        lastStreamerStats = stats;
+        document.getElementById('st-total-streamers').textContent = stats.totalStreamers;
+        document.getElementById('st-total-hours').textContent = stats.totalHours;
+        document.getElementById('st-total-views').textContent = stats.totalViews;
+
+        var tbody = document.getElementById('top-streamers-table-body');
+        if (!stats.topStreamers.length) {
+            tbody.innerHTML = '<tr><td class="table-empty" colspan="6">لا توجد بيانات بث كافية بعد.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = stats.topStreamers.map(function (r, i) {
+            return '<tr>' +
+                '<td>' + (i + 1) + '</td>' +
+                '<td>' + escapeHtml(r.username) + '</td>' +
+                '<td>' + (r.tiktokUsername ? escapeHtml(r.tiktokUsername) : '—') + '</td>' +
+                '<td>' + r.totalBroadcasts + '</td>' +
+                '<td>' + r.totalHours + '</td>' +
+                '<td>' + r.totalViews + '</td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    function renderUserStats(stats) {
+        lastUserStats = stats;
+        document.getElementById('us-total-users').textContent = stats.totalUsers;
+        document.getElementById('us-total-streamers').textContent = stats.totalStreamers;
+        document.getElementById('us-total-verified').textContent = stats.totalVerifiedTikTok;
+
+        var tbody = document.getElementById('top-players-table-body');
+        if (!stats.topPlayersByGamesPlayed.length) {
+            tbody.innerHTML = '<tr><td class="table-empty" colspan="5">لا توجد بيانات جولات كافية بعد.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = stats.topPlayersByGamesPlayed.map(function (r, i) {
+            return '<tr>' +
+                '<td>' + (i + 1) + '</td>' +
+                '<td>' + escapeHtml(r.username) + '</td>' +
+                '<td>' + (r.tiktokUsername ? escapeHtml(r.tiktokUsername) : '—') + '</td>' +
+                '<td>' + r.gamesPlayed + '</td>' +
+                '<td>' + r.gamesWon + '</td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    // [0.45.10] تصدير CSV محلي بالمتصفح (Blob) — بدون أي استدعاء خادم
+    // إضافي، من نفس البيانات المعروضة أصلاً. ﻿ بالبداية (BOM) حتى
+    // يفتح إكسل الملف بترميز UTF-8 صحيح (أحرف عربية سليمة).
+    function downloadCsv(filename, rows) {
+        var csv = '﻿' + rows.map(function (row) {
+            return row.map(function (cell) {
+                var value = cell === null || cell === undefined ? '' : String(cell);
+                return '"' + value.replace(/"/g, '""') + '"';
+            }).join(',');
+        }).join('\r\n');
+        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('btn-export-streamers').addEventListener('click', function () {
+        if (!lastStreamerStats) return;
+        var rows = [['#', 'اسم المستخدم', 'تيك توك', 'عدد البثوث', 'الساعات', 'المشاهدات']];
+        lastStreamerStats.topStreamers.forEach(function (r, i) {
+            rows.push([i + 1, r.username, r.tiktokUsername || '', r.totalBroadcasts, r.totalHours, r.totalViews]);
+        });
+        rows.push([]);
+        rows.push(['إجمالي الستريمرز', lastStreamerStats.totalStreamers]);
+        rows.push(['إجمالي الساعات', lastStreamerStats.totalHours]);
+        rows.push(['إجمالي المشاهدات', lastStreamerStats.totalViews]);
+        downloadCsv('agp-streamer-stats.csv', rows);
+    });
+
+    document.getElementById('btn-export-users').addEventListener('click', function () {
+        if (!lastUserStats) return;
+        var rows = [['#', 'اسم المستخدم', 'تيك توك', 'جولات مكتملة', 'جولات مربوحة']];
+        lastUserStats.topPlayersByGamesPlayed.forEach(function (r, i) {
+            rows.push([i + 1, r.username, r.tiktokUsername || '', r.gamesPlayed, r.gamesWon]);
+        });
+        rows.push([]);
+        rows.push(['إجمالي المستخدمين', lastUserStats.totalUsers]);
+        rows.push(['عدد الستريمرز', lastUserStats.totalStreamers]);
+        rows.push(['موثَّقون بتيك توك', lastUserStats.totalVerifiedTikTok]);
+        downloadCsv('agp-user-stats.csv', rows);
+    });
+
+    function loadStats() {
+        window.AGPAuth.getAdminStreamerStats().then(function (result) {
+            if (!result.success) { showMessage('تعذّر تحميل إحصائيات الستريمرز.', 'error'); return; }
+            renderStreamerStats(result.stats);
+        });
+        window.AGPAuth.getAdminUserStats().then(function (result) {
+            if (!result.success) { showMessage('تعذّر تحميل إحصائيات المستخدمين.', 'error'); return; }
+            renderUserStats(result.stats);
+        });
+    }
+    document.getElementById('btn-refresh-stats').addEventListener('click', loadStats);
+
+    document.getElementById('btn-account-logout').addEventListener('click', function () {
+        window.AGPAuth.logout().then(function () { window.location.href = 'login.html'; });
+    });
+
+    window.AGPAuth.requireAdmin('login.html').then(function (user) {
+        if (!user) return;
+        document.body.classList.remove('auth-checking');
+        document.getElementById('account-username').textContent = user.username;
+        document.getElementById('account-role').textContent = user.role;
+        loadStats();
+    });
+}());
+</script>
+</body>
+</html>
