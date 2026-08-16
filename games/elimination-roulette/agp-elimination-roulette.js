@@ -254,12 +254,53 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return null;
     }
 
+    // ⚠️ [0.45.9] خط "Zain" — طلب صريح (خط أوضح لشاشات الإعدادات/عناوين
+    // التبويبات وغيرها). يُحمَّل هنا فقط (لا يُلمَس js/agp-game-shell.js
+    // المشترك ولا أي لعبة أخرى) — نفس رابط Google Fonts المرسَل بالضبط،
+    // بحارس (guard) بمعرِّف العنصر يمنع التكرار لو استُدعيت الدالة أكثر
+    // من مرة.
+    function ensureZainFont() {
+        if (el('er-zain-font-link')) return;
+        var pre1 = document.createElement('link');
+        pre1.rel = 'preconnect';
+        pre1.href = 'https://fonts.googleapis.com';
+        var pre2 = document.createElement('link');
+        pre2.rel = 'preconnect';
+        pre2.href = 'https://fonts.gstatic.com';
+        pre2.crossOrigin = 'anonymous';
+        var sheet = document.createElement('link');
+        sheet.id = 'er-zain-font-link';
+        sheet.rel = 'stylesheet';
+        sheet.href = 'https://fonts.googleapis.com/css2?family=Zain:ital,wght@0,200;0,300;0,400;0,700;0,800;0,900;1,300;1,400&display=swap';
+        document.head.appendChild(pre1);
+        document.head.appendChild(pre2);
+        document.head.appendChild(sheet);
+    }
+
     function injectStageStyles() {
         if (el('er-stage-styles')) return;
+        ensureZainFont();
         var style = document.createElement('style');
         style.id = 'er-stage-styles';
         style.textContent = [
             ':root{--er-accent:' + C_ACCENT + ';--er-accent2:' + C_ACCENT2 + ';--er-pink:' + C_PINK + ';}',
+
+            // ⚠️ [0.45.9] خط "Zain" يطغى على كل خطوط اللعبة — أوضح للقراءة
+            // بحسب طلب المستخدم. Cairo يبقى احتياطياً (fallback) لو تأخّر
+            // تحميل الخط. ملاحظة تقنية: body{font-family:...} وحده لا
+            // يكفي — أي عنصر له font-family مُحدَّد مباشرة عليه (كل
+            // العناوين/الأزرار/التسميات هنا وبالملف المشترك) يتجاهل قيمة
+            // الوراثة من body حتى لو !important، لأن التوريث أضعف من أي
+            // تطابق مباشر. الحل: تطبيق !important على كل عنصر مباشرة عبر
+            // محدِّد "*" داخل كل حاويات اللعبة (شاشة اللعب + الحاوية
+            // المشتركة للإعدادات/اللوبي #agp-shell-overlay + نافذة
+            // الإقصاء/الفائز + التوست وسجل الأحداث) — يطغى فوراً بغضّ
+            // النظر عن الخصوصية لأنه الوحيد المُعلَّم !important، ودون أي
+            // لمس لملف js/agp-game-shell.js المشترك نفسه أو أي لعبة أخرى
+            // (المحدِّدات هنا خاصة بعناصر روليت الإقصاء فقط).
+            '#agp-shell-overlay,#agp-shell-overlay *,#er-stage,#er-stage *,',
+            '#er-modal-overlay,#er-modal-overlay *,#er-toast-wrap,#er-toast-wrap *,',
+            '#er-event-log,#er-event-log *{font-family:"Zain",Cairo,sans-serif !important;}',
 
             '#er-stage{position:fixed;inset:0;padding-top:70px;display:flex;flex-direction:column;',
             'align-items:center;justify-content:flex-start;gap:14px;overflow-y:auto;font-family:Cairo,sans-serif;direction:rtl;color:#f3eefc;}',
