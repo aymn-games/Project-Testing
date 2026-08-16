@@ -370,7 +370,7 @@ function getPublicProfile(customId) {
     if (!customId) return null;
 
     var user = db.prepare(
-        'SELECT id, username, role, is_streamer, tiktok_username, tiktok_verified, tiktok_avatar_url, tiktok_display_name, custom_id, permissions, created_at FROM users WHERE custom_id = ?'
+        'SELECT id, username, role, is_streamer, tiktok_username, tiktok_verified, tiktok_avatar_url, tiktok_display_name, custom_id, permissions, created_at, display_name, avatar_image_base64 FROM users WHERE custom_id = ?'
     ).get(customId);
     if (!user) return null;
 
@@ -388,6 +388,12 @@ function getPublicProfile(customId) {
         // قد ترجع null لو تعذّر الاستخراج، بدون أي أثر على صحة التحقق نفسه.
         tiktok_avatar_url: user.tiktok_verified ? (user.tiktok_avatar_url || null) : null,
         tiktok_display_name: user.tiktok_verified ? (user.tiktok_display_name || null) : null,
+        // [0.45.10] اسم عرض + صورة بروفايل يعدّلهما المستخدم بنفسه —
+        // منفصلان تماماً عن username (ثابت) وtiktok_display_name/
+        // tiktok_avatar_url (من تيك توك). راجع updateDisplayName/
+        // updateAvatarImage أدناه.
+        display_name: user.display_name || null,
+        avatar_image_base64: user.avatar_image_base64 || null,
         joined_at: user.created_at,
         stats: {
             total_broadcasts: stats.total_broadcasts,
@@ -820,6 +826,26 @@ function addGiftValue(broadcastId, value) {
 }
 
 /**
+ * [0.45.10] تحديث لقطة عدد المشاهدين لبث معيّن — تُستدعى من ws-server.js
+ * عند كل حدث roomUser حقيقي من تيك توك (راجع onViewerUpdate بـ
+ * tiktok-connector.js). MAX(...) بدل الكتابة المباشرة عمداً — أحداث
+ * roomUser قد تصل بترتيب غير مضمون 100%، فهذا يمنع رجوع الرقم للخلف
+ * سهواً بلقطة متأخرة الوصول لكن أقدم زمنياً.
+ * @param {number} broadcastId
+ * @param {number} currentViewers - عدد المشاهدين المتزامن الآن (حقل `total`)
+ * @param {number} totalUsers - العدد التراكمي الكلي المرصود لحد الآن (حقل `totalUser`)
+ */
+function updateBroadcastViewerStats(broadcastId, currentViewers, totalUsers) {
+    if (!broadcastId) return;
+    db.prepare(
+        `UPDATE broadcasts SET
+            peak_viewers = MAX(peak_viewers, ?),
+            total_unique_viewers = MAX(total_unique_viewers, ?)
+         WHERE id = ?`
+    ).run(Number(currentViewers) || 0, Number(totalUsers) || 0, broadcastId);
+}
+
+/**
  * إحصائيات مجمَّعة لمستخدم واحد عبر كل بثوثه (لعرضها له أو للأدمن).
  */
 function getUserStats(userId) {
@@ -831,9 +857,157 @@ function getUserStats(userId) {
             COALESCE(SUM(gifts_value_total), 0) AS total_gifts_value,
             COALESCE(SUM(follows_count), 0) AS total_follows,
             COALESCE(SUM(players_joined_count), 0) AS total_players,
-            COALESCE(SUM(CASE WHEN ended_at IS NOT NULL THEN ended_at - started_at ELSE 0 END), 0) AS total_live_ms
+            COALESCE(SUM(CASE WHEN ended_at IS NOT NULL THEN ended_at - started_at ELSE 0 END), 0) AS total_live_ms,
+            COALESCE(SUM(total_unique_viewers), 0) AS total_views,
+            COALESCE(MAX(peak_viewers), 0) AS peak_viewers
          FROM broadcasts WHERE user_id = ?`
     ).get(userId);
+}
+
+/**
+ * [0.45.10] أعلى الاستريمرز بعدد ساعات البث الإجمالي — لشريط الصفحة
+ * الرئيسية (عام، بدون Bearer). يرجع فقط بيانات غير حساسة: يوزرنيم
+ * تيك توك + إجمالي الساعات — لا بريد، لا id داخلي، لا أي بيانات حساب.
+ * يشترط حساباً موثَّقاً فعلياً (tiktok_verified=1) وله يوزرنيم مسجَّل،
+ * وبث واحد مكتمل (ended_at IS NOT NULL) على الأقل.
+ * @param {number} [limit]
+ * @returns {Array<{tiktokUsername: string, totalHours: number}>}
+ */
+function getTopStreamersByHours(limit) {
+    var rows = db.prepare(
+        `SELECT u.tiktok_username AS tiktokUsername,
+                COALESCE(SUM(CASE WHEN b.ended_at IS NOT NULL THEN b.ended_at - b.started_at ELSE 0 END), 0) AS total_ms
+         FROM users u
+         JOIN broadcasts b ON b.user_id = u.id
+         WHERE u.tiktok_verified = 1 AND u.tiktok_username IS NOT NULL
+         GROUP BY u.id
+         HAVING total_ms > 0
+         ORDER BY total_ms DESC
+         LIMIT ?`
+    ).all(limit || 20);
+    return rows.map(function (r) {
+        return { tiktokUsername: r.tiktokUsername, totalHours: Math.round((r.total_ms / 3600000) * 10) / 10 };
+    });
+}
+
+/**
+ * [0.45.10] إحصائيات مجمَّعة عن كل الاستريمرز — لتبويب "إحصائيات
+ * الاستريمرز" بلوحة الأدمن فقط.
+ * ⚠️ ملاحظة صادقة: total_views مبنية على حقل totalUser من مكتبة
+ * tiktok-live-connector — لم تُختبَر ضد بث حقيقي من هذه البيئة، راجع
+ * التعليق بـbackend/db/database.js عند عمود total_unique_viewers.
+ */
+function getAdminStreamerStats() {
+    var totals = db.prepare(
+        `SELECT
+            COUNT(DISTINCT u.id) AS total_streamers,
+            COALESCE(SUM(CASE WHEN b.ended_at IS NOT NULL THEN b.ended_at - b.started_at ELSE 0 END), 0) AS total_live_ms,
+            COALESCE(SUM(b.total_unique_viewers), 0) AS total_views
+         FROM users u LEFT JOIN broadcasts b ON b.user_id = u.id
+         WHERE u.is_streamer = 1`
+    ).get();
+
+    var top = db.prepare(
+        `SELECT u.id, u.username, u.tiktok_username AS tiktokUsername,
+                COUNT(b.id) AS total_broadcasts,
+                COALESCE(SUM(CASE WHEN b.ended_at IS NOT NULL THEN b.ended_at - b.started_at ELSE 0 END), 0) AS total_ms,
+                COALESCE(SUM(b.total_unique_viewers), 0) AS total_views
+         FROM users u
+         JOIN broadcasts b ON b.user_id = u.id
+         WHERE u.is_streamer = 1
+         GROUP BY u.id
+         HAVING total_ms > 0
+         ORDER BY total_ms DESC
+         LIMIT 10`
+    ).all();
+
+    return {
+        totalStreamers: totals.total_streamers,
+        totalHours: Math.round((totals.total_live_ms / 3600000) * 10) / 10,
+        totalViews: totals.total_views,
+        topStreamers: top.map(function (r) {
+            return {
+                username: r.username,
+                tiktokUsername: r.tiktokUsername,
+                totalBroadcasts: r.total_broadcasts,
+                totalHours: Math.round((r.total_ms / 3600000) * 10) / 10,
+                totalViews: r.total_views
+            };
+        })
+    };
+}
+
+/**
+ * [0.45.10] إحصائيات مجمَّعة عن كل المستخدمين (لاعبين + استريمرز) —
+ * لتبويب "المستخدمون" بلوحة الأدمن. ⚠️ ملاحظة صادقة: "الأكثر استخداماً
+ * للمنصة" لغير الاستريمرز (لاعبون عاديون بدون بث) غير قابل للقياس حالياً
+ * — لا يوجد أي تتبّع جلسات/دخول بالمنصة لهم (فقط عدّاد جولات ألعاب
+ * مكتملة games_played لمن لعب فعلياً عبر نظام النقاط). لهذا نعرض "الأكثر
+ * استخداماً" هنا بمعنى: الاستريمرز حسب ساعات البث (نفس بيانات
+ * getAdminStreamerStats)، + قائمة منفصلة لأكثر اللاعبين حسب عدد الجولات
+ * المكتملة (games_played) — بدون افتراض رقم "استخدام عام" غير موجود.
+ */
+function getAdminUserStats() {
+    var totalUsers = db.prepare('SELECT COUNT(*) AS c FROM users').get().c;
+    var totalStreamers = db.prepare('SELECT COUNT(*) AS c FROM users WHERE is_streamer = 1').get().c;
+    var totalVerifiedTikTok = db.prepare('SELECT COUNT(*) AS c FROM users WHERE tiktok_verified = 1').get().c;
+
+    var topPlayers = db.prepare(
+        `SELECT u.username, u.tiktok_username AS tiktokUsername,
+                COALESCE(up.games_played, 0) AS gamesPlayed,
+                COALESCE(up.games_won, 0) AS gamesWon
+         FROM users u
+         LEFT JOIN user_points up ON up.user_id = u.id
+         WHERE COALESCE(up.games_played, 0) > 0
+         ORDER BY gamesPlayed DESC
+         LIMIT 10`
+    ).all();
+
+    return {
+        totalUsers: totalUsers,
+        totalStreamers: totalStreamers,
+        totalVerifiedTikTok: totalVerifiedTikTok,
+        topPlayersByGamesPlayed: topPlayers
+    };
+}
+
+/**
+ * [0.45.10] تحديث اسم العرض بالبروفايل (منفصل عن username الثابت لتسجيل
+ * الدخول). حد أقصى 40 حرفاً، يُرفض الفارغ تماماً بعد trim (لو المستخدم
+ * يبي يرجع للاسم الافتراضي، NULL صراحة عبر عدم إرسال حقل، لا سلسلة فارغة).
+ */
+function updateDisplayName(userId, displayName) {
+    var trimmed = (displayName || '').trim();
+    if (!trimmed) return { success: false, error: 'empty_display_name' };
+    if (trimmed.length > 40) return { success: false, error: 'display_name_too_long' };
+    db.prepare('UPDATE users SET display_name = ? WHERE id = ?').run(trimmed, userId);
+    return { success: true, displayName: trimmed };
+}
+
+// ⚠️ [تصحيح حقيقي بعد اختبار — 0.45.10] كانت القيمة الأولى 350KB، لكن
+// backend/http/body-parser.js يفرض حداً أقصى عاماً لكل جسم طلب HTTP =
+// 100KB (MAX_BODY_BYTES، موجود مسبقاً لكل مسارات Auth/Admin) — أي صورة
+// أكبر من ~100KB كانت تُسقَط الاتصال خام (ECONNRESET) قبل ما تصل هذا
+// التحقق أصلاً، بدل رسالة خطأ واضحة 400. اكتُشف هذا فعلياً باختبار
+// تكامل حقيقي (طلب HTTP فعلي بصورة كبيرة)، لا افتراضاً. الحل: تخفيض
+// الحد هنا ليبقى **دون** حد body-parser.js بهامش أمان كافٍ لغلاف JSON
+// (~85KB للصورة نفسها بعد Base64، يعادل ~62KB للصورة الأصلية تقريباً) —
+// يفرض هذا صوراً صغيرة/مضغوطة فعلاً (لا صور بدقة كاملة)؛ الواجهة
+// الأمامية يفضَّل تصغّر/تضغط الصورة (Canvas) قبل الإرسال بدل الاعتماد
+// على هذا الرفض فقط.
+var MAX_AVATAR_BASE64_LENGTH = 85 * 1024;
+
+/**
+ * تحديث صورة بروفايل المستخدم — يستقبل Data URL كامل جاهز من المتصفح
+ * (مثال: "data:image/png;base64,....") ويخزّنه كما هو بعد التحقق من
+ * الحجم والنوع فقط، بدون أي معالجة صورة فعلية بالخادم.
+ */
+function updateAvatarImage(userId, dataUrl) {
+    if (!dataUrl || typeof dataUrl !== 'string') return { success: false, error: 'empty_image' };
+    if (dataUrl.length > MAX_AVATAR_BASE64_LENGTH) return { success: false, error: 'image_too_large' };
+    if (!/^data:image\/(png|jpe?g|webp);base64,/.test(dataUrl)) return { success: false, error: 'invalid_image_format' };
+    db.prepare('UPDATE users SET avatar_image_base64 = ? WHERE id = ?').run(dataUrl, userId);
+    return { success: true };
 }
 
 /**
@@ -937,5 +1111,11 @@ module.exports = {
     hasPermission: hasPermission,
     chooseAccountType: chooseAccountType,
     deleteUser: deleteUser,
-    adminResetDeviceLock: adminResetDeviceLock
+    adminResetDeviceLock: adminResetDeviceLock,
+    updateBroadcastViewerStats: updateBroadcastViewerStats,
+    getTopStreamersByHours: getTopStreamersByHours,
+    getAdminStreamerStats: getAdminStreamerStats,
+    getAdminUserStats: getAdminUserStats,
+    updateDisplayName: updateDisplayName,
+    updateAvatarImage: updateAvatarImage
 };
