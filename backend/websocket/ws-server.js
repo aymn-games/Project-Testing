@@ -206,6 +206,19 @@ function handleConnectMessage(connectionId, socket, payload) {
       if (entry.activeBroadcastId) {
         try { authService.incrementBroadcastStat(entry.activeBroadcastId, 'follow'); } catch (err) { logger.error('WS Server: follow stat increment failed:', err); }
       }
+    },
+
+    // [0.45.10] عدد المشاهدين — تخزين فقط بجدول broadcasts (لإحصائيات
+    // الأدمن + شريط أفضل الاستريمرز)، بدون أي رسالة جديدة للمتصفح (غير
+    // مطلوب حالياً، راجع docs/CHANGELOG.md).
+    onViewerUpdate: function (data) {
+      if (entry.activeBroadcastId) {
+        try {
+          authService.updateBroadcastViewerStats(entry.activeBroadcastId, data.current, data.totalUsers);
+        } catch (err) {
+          logger.error('WS Server: viewer stats update failed:', err);
+        }
+      }
     }
   });
 }
