@@ -264,6 +264,20 @@ function getEquippedFrameForVerifiedTikTok(tiktokUsername) {
  * (enabled = 0) — تماماً كأنها غير موجودة من منظور اللوبي، رغم بقاء
  * قالبها/نصها محفوظين بالصف بقاعدة البيانات (راجع setEntranceEnabled
  * أدناه لإعادة التفعيل بضغطة واحدة).
+ *
+ * ⚠️ [0.45.11] **شرط جديد**: الدخولية الآن تتطلب أيضاً وجود **إطار
+ * مُجهَّز فعلاً** (user_frames.equipped = 1) لنفس المستخدم — نفس شرط
+ * getEquippedFrameForVerifiedTikTok أعلاه بالضبط، بطلب صريح من صاحب
+ * المنصة بعد تشخيص حالة حقيقية: حساب عنده دخولية مفعَّلة (enabled=1)
+ * وإطار *ممنوح* لكن غير *مُجهَّز* من صاحبه بعد — النتيجة: الإطار ما
+ * يظهر (متوقَّع، ما جُهِّز)، لكن الدخولية أيضاً ما ظهرت رغم إنها كانت
+ * "مفعَّلة" بالبروفايل — لأن التفعيل الذاتي (enabled) شيء، وتجهيز إطار
+ * فعلي شيء ثاني تماماً، وما كان فيه ربط بينهما. الحل: اعتماد "نفس أساس
+ * تفعيل الإطار" كشرط إضافي للدخولية، بدل الاعتماد فقط على enabled
+ * المنفصل — يعني: **دخولية بلا إطار مُجهَّز = لا تظهر باللوبي إطلاقاً**،
+ * حتى لو enabled=1. لا حذف لأي بيانات — enabled يبقى كما هو بقاعدة
+ * البيانات (يقدر المستخدم لسا يوقفها/يفعّلها من بروفايله بشكل طبيعي)،
+ * فقط شرط عرض إضافي بهذي الدالة تحديداً.
  * @param {string} tiktokUsername - يوزرنيم تيك توك خام (بدون بادئة 'tiktok:')
  * @returns {{templateKey: string, entranceText: string}|null}
  */
@@ -277,6 +291,11 @@ function getEquippedEntranceForVerifiedTikTok(tiktokUsername) {
   ).get(tiktokUsername);
 
   if (!user) return null;
+
+  // [0.45.11] الشرط الجديد: إطار مُجهَّز فعلاً (بصرف النظر عن نوعه —
+  // كتالوج أو حصري، ونوعه بالضبط غير مهم هنا، فقط وجوده).
+  var hasEquippedFrame = db.prepare('SELECT id FROM user_frames WHERE user_id = ? AND equipped = 1').get(user.id);
+  if (!hasEquippedFrame) return null;
 
   var row = db.prepare('SELECT template_key, entrance_text FROM user_entrances WHERE user_id = ? AND enabled = 1').get(user.id);
   if (!row) return null;
