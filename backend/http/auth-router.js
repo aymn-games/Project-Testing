@@ -118,7 +118,21 @@ var ROUTES = [
   // ---- ثيم المناسبات — راجع backend/theme/site-theme-service.js
   { method: 'GET', path: '/api/theme', requireAuth: false, handler: handleGetTheme },
   { method: 'POST', path: '/api/admin/theme', requireAuth: true, requireAdmin: true, handler: handleAdminSetTheme },
-  { method: 'POST', path: '/api/admin/theme/clear', requireAuth: true, requireAdmin: true, handler: handleAdminClearTheme }
+  { method: 'POST', path: '/api/admin/theme/clear', requireAuth: true, requireAdmin: true, handler: handleAdminClearTheme },
+  // ---- [0.45.10] شريط "أكثر الاستريمرز ساعات" بالصفحة الرئيسية — عام
+  // بدون تسجيل دخول (نفس فلسفة /api/announcement و/api/theme)، يرجع
+  // فقط يوزرنيم تيك توك + ساعات، بدون أي بيانات حساب حساسة.
+  { method: 'GET', path: '/api/public/top-streamers', requireAuth: false, handler: handleTopStreamers },
+  // ---- [0.45.10] إحصائيات لوحة الأدمن — راجع backend/auth/auth-service.js
+  // (getAdminStreamerStats/getAdminUserStats) للملاحظات الصادقة حول
+  // دقة "إجمالي المشاهدات" (غير مؤكَّدة ضد بث حقيقي من هذه البيئة).
+  { method: 'GET', path: '/api/admin/stats/streamers', requireAuth: true, requireAdmin: true, handler: handleAdminStreamerStats },
+  { method: 'GET', path: '/api/admin/stats/users', requireAuth: true, requireAdmin: true, handler: handleAdminUserStats },
+  // ---- [0.45.10] تعديل بروفايل المستخدم (اسم عرض + صورة) — صاحب
+  // الجلسة فقط (user.id من الجلسة، لا من body، حتى ما يقدر أحد يعدّل
+  // بروفايل غيره — نفس نمط handleEquipFrame/handleToggleEntrance).
+  { method: 'POST', path: '/api/profile/display-name', requireAuth: true, handler: handleUpdateDisplayName },
+  { method: 'POST', path: '/api/profile/avatar', requireAuth: true, handler: handleUpdateAvatar }
 ];
 
 /* -----------------------------------------------------------------------
@@ -499,6 +513,51 @@ function handleAdminSetTheme(req, res, body) {
 /** الأدمن فقط — تعطيل الثيم فوراً (رجوع للألوان الافتراضية). */
 function handleAdminClearTheme(req, res) {
   sendJson(res, 200, siteThemeService.clearTheme());
+}
+
+/**
+ * [0.45.10] أعلى الاستريمرز بالساعات — عام، لشريط الصفحة الرئيسية.
+ * ?limit=<n> اختياري (افتراضي 20 من authService، يُحدَّد هنا بحد أقصى
+ * 50 دفاعياً حتى لو طُلب رقم أكبر أو غير صالح).
+ */
+function handleTopStreamers(req, res) {
+  var queryString = (req.url || '').split('?')[1] || '';
+  var limitRaw = '';
+  queryString.split('&').forEach(function (pair) {
+    var kv = pair.split('=');
+    if (decodeURIComponent(kv[0] || '') === 'limit') limitRaw = decodeURIComponent(kv[1] || '');
+  });
+  var limit = Math.min(50, Math.max(1, parseInt(limitRaw, 10) || 20));
+  sendJson(res, 200, { success: true, streamers: authService.getTopStreamersByHours(limit) });
+}
+
+/** [0.45.10] الأدمن فقط — إحصائيات الاستريمرز المجمَّعة. */
+function handleAdminStreamerStats(req, res) {
+  sendJson(res, 200, { success: true, stats: authService.getAdminStreamerStats() });
+}
+
+/** [0.45.10] الأدمن فقط — إحصائيات المستخدمين المجمَّعة. */
+function handleAdminUserStats(req, res) {
+  sendJson(res, 200, { success: true, stats: authService.getAdminUserStats() });
+}
+
+/**
+ * [0.45.10] صاحب الجلسة يعدّل اسم العرض الخاص به — user.id من الجلسة
+ * حصراً (لا من body)، نفس نمط handleEquipFrame.
+ */
+function handleUpdateDisplayName(req, res, body, user) {
+  var result = authService.updateDisplayName(user.id, body.displayName);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+/**
+ * [0.45.10] صاحب الجلسة يعدّل صورة بروفايله — يستقبل Data URL كامل
+ * (base64) جاهز من المتصفح، راجع authService.updateAvatarImage للحدود
+ * (النوع/الحجم الأقصى).
+ */
+function handleUpdateAvatar(req, res, body, user) {
+  var result = authService.updateAvatarImage(user.id, body.imageDataUrl);
+  sendJson(res, result.success ? 200 : 400, result);
 }
 
 /* -----------------------------------------------------------------------
