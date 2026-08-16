@@ -23,7 +23,11 @@
  *                                    // مركزياً من ws-server.js نفسه)
  *     onComment({ id, name, text }),
  *     onGift({ id, name, giftName, giftValue, repeatCount }),
- *     onFollow({ id, name })
+ *     onFollow({ id, name }),
+ *     onViewerUpdate({ current, totalUsers })   // [0.45.10] محاكاة بسيطة —
+ *                                                 // current يتذبذب،
+ *                                                 // totalUsers يزيد فقط
+ *                                                 // (يحاكي مشاهدين جدد)
  *   }
  *
  * هذا التطابق في الشكل هو ما يسمح لاحقاً باستبدال هذا الملف بموصِّل
@@ -72,7 +76,11 @@ function randomViewer() {
  */
 function createMockConnector() {
     var _intervalId = null;
+    var _viewerIntervalId = null;
     var _connected = false;
+    // [0.45.10] محاكاة عدد مشاهدين — current يتذبذب حول قيمة عشوائية،
+    // totalUsers تراكمي يزيد فقط (يحاكي انضمام مشاهدين جدد بمرور الوقت).
+    var _totalUsers = Math.floor(10 + Math.random() * 20);
 
     function tick(callbacks) {
         var roll = Math.random();
@@ -111,6 +119,14 @@ function createMockConnector() {
                 _intervalId = setInterval(function () {
                     tick(callbacks);
                 }, 1500 + Math.random() * 1500);
+
+                if (callbacks.onViewerUpdate) {
+                    _viewerIntervalId = setInterval(function () {
+                        if (Math.random() < 0.3) _totalUsers += 1; // مشاهد جديد أحياناً
+                        var current = Math.max(1, Math.floor(_totalUsers * (0.4 + Math.random() * 0.3)));
+                        callbacks.onViewerUpdate({ current: current, totalUsers: _totalUsers });
+                    }, 4000 + Math.random() * 2000);
+                }
             }, 800 + Math.random() * 700);
         },
 
@@ -120,6 +136,10 @@ function createMockConnector() {
             if (_intervalId !== null) {
                 clearInterval(_intervalId);
                 _intervalId = null;
+            }
+            if (_viewerIntervalId !== null) {
+                clearInterval(_viewerIntervalId);
+                _viewerIntervalId = null;
             }
             logger.log('Mock Connector (backend): simulated disconnect.');
         },
