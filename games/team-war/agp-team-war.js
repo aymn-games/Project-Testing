@@ -45,12 +45,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     var CARD_EMOJI_BANK = ['🎁','💎','🔥','⚡','🎯','🍀','🎲','⭐','💣','🐉','👑','🍉','🚀','🎃','🦁','🍩','⚔️','🛡️','🎈','🍕'];
 
-    // شكل زخرفي مختلف لكل مربع قبل فتحه (أعلام + حيوانات + كواكب/فضاء + متفرقات)
+    // شكل زخرفي مختلف لكل مربع قبل فتحه: أعلام حقيقية (flag-icons) +
+    // حيوانات/كواكب/متفرقات إيموجي
     var TILE_ICON_BANK = [
-        '🇸🇦','🇦🇪','🇰🇼','🇶🇦','🇧🇭','🇴🇲','🇪🇬','🇯🇴','🇱🇧','🇵🇸',
-        '🐫','🦁','🐯','🐺','🦅','🦉','🐬','🐢','🦋','🐝','🐼','🐧',
-        '🪐','🌍','🌙','⭐','☄️','🚀','🛸','🌌',
-        '🎯','🎲','🔥','💎','⚡','🎁','🗝️','⚔️','🛡️','🏆','🍉','🍕','🎈','🎃','🍀','💰','🔮','🧭','⚓','🎵'
+        { type: 'flag', code: 'sa' }, { type: 'flag', code: 'ae' }, { type: 'flag', code: 'kw' },
+        { type: 'flag', code: 'qa' }, { type: 'flag', code: 'bh' }, { type: 'flag', code: 'om' },
+        { type: 'flag', code: 'eg' }, { type: 'flag', code: 'jo' }, { type: 'flag', code: 'lb' }, { type: 'flag', code: 'ps' },
+        { type: 'emoji', char: '🐫' }, { type: 'emoji', char: '🦁' }, { type: 'emoji', char: '🐯' }, { type: 'emoji', char: '🐺' },
+        { type: 'emoji', char: '🦅' }, { type: 'emoji', char: '🦉' }, { type: 'emoji', char: '🐬' }, { type: 'emoji', char: '🐢' },
+        { type: 'emoji', char: '🦋' }, { type: 'emoji', char: '🐝' }, { type: 'emoji', char: '🐼' }, { type: 'emoji', char: '🐧' },
+        { type: 'emoji', char: '🪐' }, { type: 'emoji', char: '🌍' }, { type: 'emoji', char: '🌙' }, { type: 'emoji', char: '⭐' },
+        { type: 'emoji', char: '☄️' }, { type: 'emoji', char: '🚀' }, { type: 'emoji', char: '🛸' }, { type: 'emoji', char: '🌌' },
+        { type: 'emoji', char: '🎯' }, { type: 'emoji', char: '🎲' }, { type: 'emoji', char: '🔥' }, { type: 'emoji', char: '💎' },
+        { type: 'emoji', char: '⚡' }, { type: 'emoji', char: '🎁' }, { type: 'emoji', char: '🗝️' }, { type: 'emoji', char: '⚔️' },
+        { type: 'emoji', char: '🛡️' }, { type: 'emoji', char: '🏆' }, { type: 'emoji', char: '🍉' }, { type: 'emoji', char: '🍕' },
+        { type: 'emoji', char: '🎈' }, { type: 'emoji', char: '🎃' }, { type: 'emoji', char: '🍀' }, { type: 'emoji', char: '💰' },
+        { type: 'emoji', char: '🔮' }, { type: 'emoji', char: '🧭' }, { type: 'emoji', char: '⚓' }, { type: 'emoji', char: '🎵' }
     ];
 
     var SPECIAL_SKIP_OPPONENT = 'skip_opp';
@@ -548,10 +558,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         root.style.display = 'block';
 
         root.innerHTML =
-            '<div class="tw-scoreboard">' +
-                '<div class="tw-team-panel tw-team-blue"><div class="tw-team-panel-name">' + escapeHtml(_settings.teamBlueName) + '</div><div class="tw-score-val" id="tw-score-blue"></div></div>' +
-                '<div class="tw-vs-label">VS</div>' +
-                '<div class="tw-team-panel tw-team-red"><div class="tw-team-panel-name">' + escapeHtml(_settings.teamRedName) + '</div><div class="tw-score-val" id="tw-score-red"></div></div>' +
+            '<div class="tw-scorebar">' +
+                '<div class="tw-scorebar-team"><span class="tw-scorebar-dot tw-dot-blue"></span><span class="tw-scorebar-name">' + escapeHtml(_settings.teamBlueName) + '</span><span class="tw-scorebar-val tw-val-blue" id="tw-score-blue"></span></div>' +
+                '<span class="tw-scorebar-vs">VS</span>' +
+                '<div class="tw-scorebar-team"><span class="tw-scorebar-val tw-val-red" id="tw-score-red"></span><span class="tw-scorebar-name">' + escapeHtml(_settings.teamRedName) + '</span><span class="tw-scorebar-dot tw-dot-red"></span></div>' +
             '</div>' +
             '<div class="tw-turn-indicator" id="tw-turn-indicator"></div>' +
             '<div class="tw-match-body">' +
@@ -567,9 +577,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.events.on('score:changed', updateScoreDisplays);
     }
 
+    function tileIconHtml(icon) {
+        if (!icon) return '';
+        if (icon.type === 'flag') return '<span class="fi fi-' + icon.code + ' tw-tile-icon-flag"></span>';
+        return '<span class="tw-tile-icon-emoji">' + icon.char + '</span>';
+    }
+
     function tileInnerHtml(t) {
         if (t.used) return '';
-        return '<span class="tw-tile-icon">' + t.icon + '</span><span class="tw-tile-num-badge">' + t.num + '</span>';
+        return tileIconHtml(t.icon) + '<span class="tw-tile-number">' + t.num + '</span>';
     }
 
     function renderGrid() {
