@@ -459,7 +459,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // اللون البنفسجي الأساسي) — طلب صريح لتمييز تبويب الإقصاء عن
             // بقية التبويبات، بنفس الأخضر المستخدم أصلاً بحلقة "صاحب
             // الدور" (er-role-eliminate) لنفس النافذة، للتناسق.
-            '.er-candidate-num.er-role-eliminate{background:#22c55e;}',
+'.er-candidate-num.er-role-eliminate{background:#000;}',
             // ⚠️ بطاقة اللاعب المشتركة (agp-pcard) داخل شبكة المرشَّحين هنا
             // فقط — تكبير الصورة/الاسم بمحدِّدات مقيَّدة بـ#er-candidates-grid
             // (لا تلمس .agp-pcard بأي مكان آخر بالمنصة، ولا الملف المشترك
