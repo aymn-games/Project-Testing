@@ -103,33 +103,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // "Confetti Battle" ما لقيت له قيمة مؤكدة بأي مصدر، تظهر "؟" بدلها.
     // أيقونات الهدايا: Twemoji (jdecked/twemoji، رخصة MIT + CC-BY 4.0) —
     // مو صور تيك توك الرسمية المحمية بحقوق ملكية (تفادياً لأي انتهاك).
-    //
-    // [0.45.12] حقل `icon` جديد (اختياري): لبعض الهدايا فقط، صاحب المشروع
-    // زوّدنا بصور الأيقونات الحقيقية من واجهة تيك توك مباشرة (رفعها بنفسه
-    // كملف مضغوط)، وقارنّاها يدوياً باسم الهدية + قيمتها بالعملات مقابل
-    // صورتين مرجعيتين أرسلهما (فيهما كل الهدايا الحقيقية بأسمائها العربية
-    // وقيمها — مصدر ثانٍ منهما موقع "TikFinity" لقائمة هدايا الـ1 عملة
-    // تحديداً) — فقط الهدايا الثمانية التالية طابقت اسماً وقيمة الهدية
-    // الحالية بدقة تامة (لا تخمين): Corgi(299), Perfume(20), Doughnut(30),
-    // Finger Heart(5), Rosa(10), Hand Hearts(100), TikTok(1),
-    // Ice Cream Cone(1). باقي الـ12 هدية إما ما كان فيها أيقونة مطابقة
-    // أكيدة بالصور المرسلة أو كانت هناك أكثر من هدية مرشَّحة بنفس السعر
-    // (مثال: 3 مرشَّحين محتملين لـ"Sunglasses" 199 عملة) — تبقى هذه على
-    // أيقونة Twemoji القديمة لحين تأكيد صاحب المشروع.
-    // ملف الأيقونات: gift_icons/*.webp (مجلد جديد محلي داخل مجلد اللعبة).
     var COMMON_GIFTS = [
         { label: 'وردة', value: 'Rose', codepoint: '1f339', coins: 1 },
-        { label: 'تيك توك', value: 'TikTok', codepoint: '1f496', coins: 1, icon: 'gift_icons/tiktok.webp' },
-        { label: 'قلب الإصبع', value: 'Finger Heart', codepoint: '1f90d', coins: 5, icon: 'gift_icons/finger_heart.webp' },
+        { label: 'تيك توك', value: 'TikTok', codepoint: '1f496', coins: 1 },
+        { label: 'قلب الإصبع', value: 'Finger Heart', codepoint: '1f90d', coins: 5 },
         { label: 'جي جي', value: 'GG', codepoint: '1f3a4', coins: 1 },
-        { label: 'مخروط آيسكريم', value: 'Ice Cream Cone', codepoint: '1f366', coins: 1, icon: 'gift_icons/ice_cream_cone.webp' },
-        { label: 'عطر', value: 'Perfume', codepoint: '1f9f4', coins: 20, icon: 'gift_icons/perfume.webp' },
-        { label: 'دوناتس', value: 'Doughnut', codepoint: '1f369', coins: 30, icon: 'gift_icons/doughnut.webp' },
-        { label: 'قلوب اليد', value: 'Hand Hearts', codepoint: '1f49e', coins: 100, icon: 'gift_icons/hand_hearts.webp' },
+        { label: 'مخروط آيسكريم', value: 'Ice Cream Cone', codepoint: '1f366', coins: 1 },
+        { label: 'عطر', value: 'Perfume', codepoint: '1f9f4', coins: 20 },
+        { label: 'دوناتس', value: 'Doughnut', codepoint: '1f369', coins: 30 },
+        { label: 'قلوب اليد', value: 'Hand Hearts', codepoint: '1f49e', coins: 100 },
         { label: 'نظارة شمسية', value: 'Sunglasses', codepoint: '1f576', coins: 199 },
         { label: 'تاج صغير', value: 'Little Crown', codepoint: '1f451', coins: 99 },
-        { label: 'كلب كورجي', value: 'Corgi', codepoint: '1f415', coins: 299, icon: 'gift_icons/corgi.webp' },
-        { label: 'باقة ورد', value: 'Rosa', codepoint: '1f490', coins: 10, icon: 'gift_icons/rosa.webp' },
+        { label: 'كلب كورجي', value: 'Corgi', codepoint: '1f415', coins: 299 },
+        { label: 'باقة ورد', value: 'Rosa', codepoint: '1f490', coins: 10 },
         { label: 'نغمة موسيقية', value: 'Music Note', codepoint: '1f3b5', coins: 169 },
         { label: 'قصاصات احتفالية', value: 'Confetti Battle', codepoint: '1f389', coins: null },
         { label: 'مجرة', value: 'Galaxy', codepoint: '1f30c', coins: 1000 },
@@ -141,9 +127,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     ];
 
     var TWEMOJI_BASE = 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/';
-    // [0.45.12] لو الهدية فيها أيقونة حقيقية محلية (`icon`) نستخدمها، وإلا
-    // نرجع لأيقونة Twemoji القديمة كما كانت (سلوك افتراضي محفوظ 100%).
-    function giftIconUrl(g) { return g.icon ? g.icon : (TWEMOJI_BASE + g.codepoint + '.svg'); }
+    function giftIconUrl(g) { return TWEMOJI_BASE + g.codepoint + '.svg'; }
     function giftCoinsText(g) { return (g.coins != null) ? (g.coins + ' 🪙') : '؟'; }
 
     var ELIMINATION_TIMER_OPTIONS = [20, 25, 30, 40].map(function (s) {
@@ -824,9 +808,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * مؤقتاً ثم تُعاد فوراً)، حتى تبقى العجلة دائماً متوافقة مع تشكيلتها
      * الحالية إلى حين الدورة القادمة الفعلية.
      */
-    function realignWheelAfterRosterChange() {
-        renderWheelSlices();
-        renderWheelLabels();
+    // ⚠️ [0.45.10] استُخرجت من realignWheelAfterRosterChange() لتصفير دوران
+    // العجلة بمفردها (بدون إعادة رسم القطع/الأسماء غير اللازمة لو
+    // التشكيلة نفسها ما تغيّرت) — راجع تعليق handleSpinClick أدناه لشرح
+    // سبب الحاجة لهذا التصفير بعد كل دور ينتهي، مو فقط عند تغيّر التشكيلة.
+    function resetWheelSpinPosition() {
         var wheel = el('er-wheel');
         if (!wheel) return;
         wheel.style.transition = 'none';
@@ -834,6 +820,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wheel.style.transform = 'rotate(0deg)';
         void wheel.offsetWidth; // إجبار إعادة تدفّق حتى يُطبَّق transition:none فعلياً قبل إعادته
         wheel.style.transition = '';
+    }
+
+    function realignWheelAfterRosterChange() {
+        renderWheelSlices();
+        renderWheelLabels();
+        resetWheelSpinPosition();
     }
 
     // ⚠️ [0.46.0] "إعادة ترتيب عشوائية" — يخلط ترتيب اللاعبين الأحياء
@@ -874,6 +866,27 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * ==================================================================== */
     var _wheelRotation = 0;
 
+    /**
+     * ⚠️ [0.45.10] إصلاح خلل حقيقي مؤكَّد: توقّف السهم بصرياً على اسم
+     * لاعب، بينما تبويب الاختيار يفتح لصاحب دور مختلف فعلياً (ملاحظة
+     * وصلتنا من المستخدم مع صور من الموقع الحي).
+     *
+     * السبب الجذري: targetAngle أدناه يُحسَب دائماً بافتراض أن العجلة
+     * حالياً واقفة عند 0deg بالضبط (زاوية الدوران الحالية = 0)، ثم
+     * يُضاف فوق _wheelRotation المتراكم من كل الدورات السابقة. هذا
+     * الافتراض صحيح فقط لو _wheelRotation صُفِّر فعلياً قبل هذه الدورة
+     * (يحصل عند realignWheelAfterRosterChange بعد أي تغيير حقيقي
+     * بالتشكيلة: إقصاء/إرجاع/انضمام/خلط). لكن 3 مسارات لإنهاء الدور
+     * (زر "استئناف اللعب"، إعداد "يتخطى دوره فقط" عند انتهاء الوقت،
+     * وانتهاء وقت نافذة الإرجاع بدون اختيار) كانت تُنهي الدور دون أي
+     * تصفير للدوران رغم عدم تغيّر التشكيلة — فيبقى _wheelRotation من
+     * الدورة السابقة، والحساب هنا يفترض خطأً أنه صفر، فتهبط العجلة
+     * بصرياً على قطعة مختلفة تماماً عن winnerIndex الفعلي (المستخدَم
+     * بشكل صحيح دائماً لتحديد صاحب الدور بالبيانات — لذلك تبويب الاختيار
+     * نفسه كان يعرض الاسم الصحيح دائماً، فقط مكان توقف السهم بصرياً هو
+     * الغلط). الإصلاح: استدعاء resetWheelSpinPosition() بكل المسارات
+     * الثلاثة أيضاً (راجعها)، حتى تبدأ كل دورة فعلياً من صفر حقيقي.
+     */
     function handleSpinClick() {
         if (!_matchActive || _pendingTurn) return;
         if (_alive.length <= 1) return;
@@ -888,7 +901,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var n = _alive.length;
         var anglePer = 360 / n;
         var targetAngle = 360 * 5 + (360 - (winnerIndex * anglePer + anglePer / 2));
-        _wheelRotation += targetAngle;
+        _wheelRotation += targetAngle; // يفترض _wheelRotation == 0 هنا (راجع التعليق أعلاه)
 
         var wheel = el('er-wheel');
         if (wheel) wheel.style.transform = 'rotate(' + _wheelRotation + 'deg)';
@@ -981,6 +994,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             eliminatePlayer(chooser, chooser.id);
         } else {
             // 'skip_turn' — بدون إقصاء؛ لو "العب" مفعّل نكمل الدوران تلقائياً
+            // ⚠️ [0.45.10] لازم تصفير دوران العجلة هنا رغم عدم تغيّر
+            // التشكيلة — راجع تعليق handleSpinClick لشرح سبب الخلل الحقيقي
+            // (توقّف السهم بصرياً على لاعب مختلف عن صاحب الدور الفعلي).
+            resetWheelSpinPosition();
             maybeAutoSpin();
         }
     }
@@ -1029,6 +1046,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderTurnModal();
         startTurnTimer(function onTimeout() {
             closeTurnModal(); // انتهاء الوقت بدون اختيار = تفويت فرصة الإرجاع فقط
+            // ⚠️ [0.45.10] نفس تصفير الدوران المطلوب بكل مسار لا يغيّر
+            // التشكيلة — راجع تعليق handleSpinClick.
+            resetWheelSpinPosition();
             maybeAutoSpin();
         });
     }
@@ -1119,6 +1139,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             resumeBtn.onclick = function () {
                 AGP.timerManager.stop(TIMER_NAME);
                 closeTurnModal();
+                // ⚠️ [0.45.10] نفس تصفير الدوران — راجع تعليق handleSpinClick.
+                resetWheelSpinPosition();
                 maybeAutoSpin();
             };
         }
@@ -1775,11 +1797,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 default: false
             },
             {
-                key: 'friendRevivalEnabled', type: 'toggle', label: '🎗️  (اذا  تكرر اسم لاعب مرتين بالروليت يرجع احد)ميزة انعاش صديق',
+                key: 'friendRevivalEnabled', type: 'toggle', label: '🎗️ ميزة انعاش صديق',
                 default: false
             },
             {
-                key: 'giftRevivalEnabled', type: 'toggle', label: '🎁(ترجع نفسك بدعم التيك توك) الإنعاش عن طريق الدعم',
+                key: 'giftRevivalEnabled', type: 'toggle', label: '🎁 الإنعاش عن طريق الدعم',
                 default: false
             },
             {
