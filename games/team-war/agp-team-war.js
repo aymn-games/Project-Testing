@@ -27,7 +27,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     var GAME_ID = 'team-war';
-    var GAME_NAME = 'حرب الفرقين';
+    var GAME_NAME = 'حرب الفريقين';
 
     var TEAM_BLUE = 'blue';
     var TEAM_RED = 'red';

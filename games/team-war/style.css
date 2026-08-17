@@ -79,9 +79,10 @@ body.tw-active {
 }
 .tw-row-field label { font-weight: 800; font-size: 1em; white-space: nowrap; }
 .tw-row-field input[type=text] {
-    flex: 1; padding: 9px 12px; border-radius: 8px; border: none;
-    background: #e9e6e6; color: #241018; font-family: inherit; font-size: 0.95em;
+    flex: 1; padding: 9px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(0,0,0,0.4); color: #fff; font-family: inherit; font-size: 0.95em;
 }
+.tw-row-field input[type=text]::placeholder { color: rgba(255,255,255,0.45); }
 
 .tw-section-header {
     text-align: center; font-weight: 800; padding: 10px 14px; margin-bottom: 14px;
