@@ -165,6 +165,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function playSound(name) {
         var a = _sounds[name];
         if (!a) return;
+        // ⚠️ [0.45.11] إصلاح خلل حقيقي: لو مستوى الصوت صفر، الكود كان
+        // يستدعي play() فعلياً (بس بصوت صامت volume=0) بدل تجاهل الاستدعاء
+        // بالكامل. على iOS تحديداً، مجرد استدعاء play() على أي عنصر
+        // <audio> (حتى بصوت صفر) يخلي Safari يستولي على جلسة الصوت
+        // ويسكت أي صوت آخر شغّال بالخلفية بجهاز الاستريمر (موسيقى من
+        // تطبيق ثاني مثلاً) — هذا سلوك نظام iOS نفسه، لا يوجد أي API
+        // متاح لصفحات الويب يطلب استثناءً منه (خاص بالتطبيقات الأصلية
+        // فقط). الحل الوحيد الفعلي: عدم استدعاء play() إطلاقاً لو مستوى
+        // الصوت صفر، فما تلمس اللعبة نظام الصوت من الأساس ولا سبب يخلي
+        // iOS يسكت الصوت الآخر.
+        if (currentVolume() <= 0) return;
         try {
             a.volume = currentVolume();
             a.currentTime = 0;
@@ -448,8 +459,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // اللون البنفسجي الأساسي) — طلب صريح لتمييز تبويب الإقصاء عن
             // بقية التبويبات، بنفس الأخضر المستخدم أصلاً بحلقة "صاحب
             // الدور" (er-role-eliminate) لنفس النافذة، للتناسق.
-'.er-candidate-num.er-role-eliminate{background:#000;}',
-
+            '.er-candidate-num.er-role-eliminate{background:#22c55e;}',
             // ⚠️ بطاقة اللاعب المشتركة (agp-pcard) داخل شبكة المرشَّحين هنا
             // فقط — تكبير الصورة/الاسم بمحدِّدات مقيَّدة بـ#er-candidates-grid
             // (لا تلمس .agp-pcard بأي مكان آخر بالمنصة، ولا الملف المشترك
