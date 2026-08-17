@@ -4,17 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>حرب الفرقين — ألعاب أيمن</title>
+
+<!-- خط Zain (Google Fonts) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zain:ital,wght@0,200;0,300;0,400;0,700;0,800;0,900;1,300;1,400&display=swap" rel="stylesheet">
+
 <link rel="stylesheet" href="style.css">
 <!--
     ==========================================================================
-     حرب الفرقين (Team War) — لعبة أصلية (Native) داخل مستودع Project-Testing،
-     بنفس نمط games/musical-chairs بالضبط (لا نافذة خارجية ولا postMessage).
-     صفحة جديدة كلياً — لا تعديل على أي ملف موجود.
-
-     ⚠️ ملاحظة مهمة: هذي اللعبة لا تحمّل js/agp-game-shell.js (الشل
-     المشترك مبني لفريق/كلمة مفتاحية واحدة فقط، وهذي اللعبة تحتاج فريقين
-     بكلمتين متزامنتين) — راجع رأس agp-team-war.js للتفاصيل الكاملة.
-     ترتيب باقي الملفات مطابق تماماً لترتيب docs/CLAUDE.md.
+     حرب الفرقين (Team War) — لعبة أصلية (Native) داخل مستودع Project-Testing.
+     هوية بصرية مستقلة بالكامل (خط Zain + ألوان خاصة) — لا اعتماد على أي
+     لعبة ثانية بالمنصة ولا على js/agp-game-shell.js المشترك. لا تعديل على
+     أي ملف موجود بالمشروع.
     ==========================================================================
 -->
 </head>
@@ -43,10 +45,9 @@
 <script src="../../js/agp-round-manager.js"></script>
 <script src="../../js/agp-bootstrap.js"></script>
 
-<!-- بطاقة اللاعب المشتركة (صورة + اسم) -->
 <script src="../../js/agp-player-card.js"></script>
 
-<!-- منطق لعبة حرب الفرقين نفسها (بدون agp-game-shell.js، راجع الملاحظة أعلاه) -->
+<!-- منطق لعبة حرب الفرقين نفسها (بدون agp-game-shell.js) -->
 <script src="agp-team-war.js"></script>
 
 </body>
