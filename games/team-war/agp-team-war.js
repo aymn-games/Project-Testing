@@ -45,6 +45,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     var CARD_EMOJI_BANK = ['🎁','💎','🔥','⚡','🎯','🍀','🎲','⭐','💣','🐉','👑','🍉','🚀','🎃','🦁','🍩','⚔️','🛡️','🎈','🍕'];
 
+    // شكل زخرفي مختلف لكل مربع قبل فتحه (أعلام + حيوانات + كواكب/فضاء + متفرقات)
+    var TILE_ICON_BANK = [
+        '🇸🇦','🇦🇪','🇰🇼','🇶🇦','🇧🇭','🇴🇲','🇪🇬','🇯🇴','🇱🇧','🇵🇸',
+        '🐫','🦁','🐯','🐺','🦅','🦉','🐬','🐢','🦋','🐝','🐼','🐧',
+        '🪐','🌍','🌙','⭐','☄️','🚀','🛸','🌌',
+        '🎯','🎲','🔥','💎','⚡','🎁','🗝️','⚔️','🛡️','🏆','🍉','🍕','🎈','🎃','🍀','💰','🔮','🧭','⚓','🎵'
+    ];
+
+    var SPECIAL_SKIP_OPPONENT = 'skip_opp';
+    var SPECIAL_SKIP_TEAMMATE = 'skip_own';
+    var SPECIAL_EXTRA_TURN = 'extra_turn';
+    var SPECIAL_TYPES = [SPECIAL_SKIP_OPPONENT, SPECIAL_SKIP_TEAMMATE, SPECIAL_EXTRA_TURN];
+
     /* ======================================================================
      *  0) الحالة الداخلية
      * ==================================================================== */
@@ -76,10 +89,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     };
 
     // حالة المباراة الحيّة
-    var _tiles = []; // { num, used }
-    var _turnQueue = []; // [{id, team}]
+    var _tiles = []; // { num, used, icon, special }
+    var _turnQueue = []; // [{id, team, skipOnce}]
     var _turnPointer = 0;
     var _matchActive = false;
+    var _highValuePool = []; // [30..35] كل رقم يُسحب مرة وحدة بالمباراة كلها
 
     function el(id) { return document.getElementById(id); }
     function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
@@ -323,12 +337,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderLobbyPlayerGrids();
     }
 
-    function playerCardHtml(p) {
+    // بطاقة اللاعب المشتركة (agp-player-card.js) -- تدعم الإطارات (showFrame)
+    // فقط باللوبي، بنفس قاعدة المنصة المتّبعة بكل الألعاب الثانية.
+    function playerCardHtml(p, showFrame) {
+        if (AGP.playerCard) {
+            return AGP.playerCard.renderHtml(p, { showFrame: !!showFrame, basePath: '../../', outClass: 'tw-pcard-wrap' });
+        }
+        // احتياط لو الملف ما تحمّل لأي سبب
         var avatar = p.avatarUrl ? escapeAttr(p.avatarUrl) : '';
-        return '<div class="tw-player-card">' +
-            '<div class="tw-player-card-name">' + escapeHtml(p.name || p.id) + '</div>' +
-            (avatar ? '<img class="tw-player-card-avatar" src="' + avatar + '">' : '<div class="tw-player-card-avatar"></div>') +
-        '</div>';
+        return '<span class="tw-pcard-wrap">' + (avatar ? '<img src="' + avatar + '">' : '') + escapeHtml(p.name || p.id) + '</span>';
+    }
+    function fitCardNames(rootEl) {
+        if (AGP.playerCard && rootEl) AGP.playerCard.fitAllNames(rootEl);
     }
 
     function renderLobbyPlayerGrids() {
@@ -342,8 +362,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('tw-lobby-count-red').textContent = playersRed.length + ' / ' + _settings.maxTeamSize;
         el('tw-lobby-count-blue').textContent = playersBlue.length + ' / ' + _settings.maxTeamSize;
 
-        gridRed.innerHTML = playersRed.map(playerCardHtml).join('') || '<div class="tw-lobby-empty-slot"></div>';
-        gridBlue.innerHTML = playersBlue.map(playerCardHtml).join('') || '<div class="tw-lobby-empty-slot"></div>';
+        gridRed.innerHTML = playersRed.map(function (p) { return playerCardHtml(p, true); }).join('') || '<div class="tw-lobby-empty-slot"></div>';
+        gridBlue.innerHTML = playersBlue.map(function (p) { return playerCardHtml(p, true); }).join('') || '<div class="tw-lobby-empty-slot"></div>';
+        fitCardNames(gridRed);
+        fitCardNames(gridBlue);
 
         var startBtn = el('tw-start-round-btn');
         if (startBtn) startBtn.disabled = !(playersRed.length && playersBlue.length);
@@ -365,7 +387,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
             if (getTeamPlayers(team).length >= _settings.maxTeamSize) return; // الفريق مكتمل
 
-            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, team: team });
+            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, team: team });
         });
     }
 
@@ -404,9 +426,47 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     /* ======================================================================
      *  7) شاشة اللعب -- الشبكة، الأدوار، كشف البطاقة (تصميم خاص)
      * ==================================================================== */
+    function shuffleArray(arr) {
+        var a = arr.slice();
+        for (var i = a.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+        }
+        return a;
+    }
+
     function buildTiles() {
         _tiles = [];
-        for (var i = 1; i <= GRID_TOTAL; i++) _tiles.push({ num: i, used: false });
+        var shuffledIcons = shuffleArray(TILE_ICON_BANK);
+        var specialNums = shuffleArray(Array.from({ length: GRID_TOTAL }, function (_, i) { return i + 1; })).slice(0, 3);
+        var specialMap = {};
+        specialNums.forEach(function (num, i) { specialMap[num] = SPECIAL_TYPES[i]; });
+
+        for (var i = 1; i <= GRID_TOTAL; i++) {
+            _tiles.push({
+                num: i,
+                used: false,
+                icon: shuffledIcons[(i - 1) % shuffledIcons.length],
+                special: specialMap[i] || null
+            });
+        }
+
+        // بنك القيم العالية (30-35) -- كل رقم يُسحب مرة وحدة بالمباراة كلها
+        _highValuePool = shuffleArray([30, 31, 32, 33, 34, 35]);
+    }
+
+    // سحب قيمة عشوائية "منطقية" حسب التوزيع المطلوب: 1-10 الأكثر تكراراً،
+    // 11-19 أقل شوي، 20-29 أقل من ذلك، و30-35 كل رقم مرة وحدة بالمباراة.
+    function drawCardMagnitude() {
+        if (_highValuePool.length && Math.random() < 0.15) {
+            return _highValuePool.pop();
+        }
+        var roll = Math.random();
+        var lo, hi;
+        if (roll < 0.5) { lo = 1; hi = 10; }
+        else if (roll < 0.82) { lo = 11; hi = 19; }
+        else { lo = 20; hi = 29; }
+        return lo + Math.floor(Math.random() * (hi - lo + 1));
     }
 
     function buildTurnQueue() {
@@ -415,8 +475,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var maxLen = Math.max(playersRed.length, playersBlue.length);
         _turnQueue = [];
         for (var i = 0; i < maxLen; i++) {
-            if (playersBlue[i]) _turnQueue.push({ id: playersBlue[i].id, team: TEAM_BLUE });
-            if (playersRed[i]) _turnQueue.push({ id: playersRed[i].id, team: TEAM_RED });
+            if (playersBlue[i]) _turnQueue.push({ id: playersBlue[i].id, team: TEAM_BLUE, skipOnce: false });
+            if (playersRed[i]) _turnQueue.push({ id: playersRed[i].id, team: TEAM_RED, skipOnce: false });
         }
         _turnPointer = 0;
     }
@@ -436,9 +496,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return null;
     }
 
+    // يتقدّم خطوة وحدة بالدور، ويتخطى تلقائياً أي مدخل عليه skipOnce
     function advanceTurn() {
         if (!_turnQueue.length) return;
         _turnPointer = (_turnPointer + 1) % _turnQueue.length;
+        var guard = 0;
+        while (_turnQueue[_turnPointer] && _turnQueue[_turnPointer].skipOnce && guard < _turnQueue.length) {
+            _turnQueue[_turnPointer].skipOnce = false;
+            _turnPointer = (_turnPointer + 1) % _turnQueue.length;
+            guard++;
+        }
+    }
+
+    // صندوق "تخطي دور الخصم": يتخطى الدور المباشر التالي (دايماً الفريق
+    // الخصم بحكم تناوب القائمة) وينتقل للي بعده مباشرة
+    function applySkipOpponentNext() {
+        advanceTurn();
+        advanceTurn();
+    }
+
+    // صندوق "تخطي دور صديقك": يعلّم أقرب مدخل لنفس فريق اللاعب الحالي
+    // (يبعد خطوتين بالقائمة بحكم التناوب) عشان يُتخطى تلقائياً بالدور اللي بعده
+    function applySkipOwnTeammateNext() {
+        if (_turnQueue.length < 3) return;
+        var idx = (_turnPointer + 2) % _turnQueue.length;
+        _turnQueue[idx].skipOnce = true;
     }
 
     function removeFromTurnQueue(playerId) {
@@ -458,27 +540,65 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return _matchEl;
     }
 
+    // تخطيط الشاشة: الفريق الأزرق يسار / الشبكة بالنص / الفريق الأحمر يمين
+    // (مطابق للمعاينة اللي حددها أيمن لهذي الشاشة تحديداً)
     function renderMatchScreen() {
         _screen = 'match';
         var root = ensureMatchEl();
         root.style.display = 'block';
 
-        var tilesHtml = _tiles.map(function (t) {
-            return '<div class="tw-tile' + (t.used ? ' tw-tile-used' : '') + '" data-num="' + t.num + '">' + t.num + '</div>';
-        }).join('');
-
         root.innerHTML =
             '<div class="tw-scoreboard">' +
-                '<div class="tw-team-panel tw-team-red"><div class="tw-team-panel-name">' + escapeHtml(_settings.teamRedName) + '</div><div class="tw-score-val" id="tw-score-red"></div></div>' +
-                '<div class="tw-vs-label">VS</div>' +
                 '<div class="tw-team-panel tw-team-blue"><div class="tw-team-panel-name">' + escapeHtml(_settings.teamBlueName) + '</div><div class="tw-score-val" id="tw-score-blue"></div></div>' +
+                '<div class="tw-vs-label">VS</div>' +
+                '<div class="tw-team-panel tw-team-red"><div class="tw-team-panel-name">' + escapeHtml(_settings.teamRedName) + '</div><div class="tw-score-val" id="tw-score-red"></div></div>' +
             '</div>' +
             '<div class="tw-turn-indicator" id="tw-turn-indicator"></div>' +
-            '<div class="tw-grid">' + tilesHtml + '</div>';
+            '<div class="tw-match-body">' +
+                '<div class="tw-roster tw-roster-blue" id="tw-roster-blue"></div>' +
+                '<div class="tw-grid" id="tw-grid"></div>' +
+                '<div class="tw-roster tw-roster-red" id="tw-roster-red"></div>' +
+            '</div>';
 
+        renderGrid();
+        renderRosters();
         updateScoreDisplays();
         renderTurnIndicator();
         AGP.events.on('score:changed', updateScoreDisplays);
+    }
+
+    function tileInnerHtml(t) {
+        if (t.used) return '';
+        return '<span class="tw-tile-icon">' + t.icon + '</span><span class="tw-tile-num-badge">' + t.num + '</span>';
+    }
+
+    function renderGrid() {
+        var grid = el('tw-grid');
+        if (!grid) return;
+        grid.innerHTML = _tiles.map(function (t) {
+            return '<div class="tw-tile' + (t.used ? ' tw-tile-used' : '') + '" data-num="' + t.num + '">' + tileInnerHtml(t) + '</div>';
+        }).join('');
+    }
+
+    function renderRosters() {
+        renderOneRoster(TEAM_BLUE, 'tw-roster-blue');
+        renderOneRoster(TEAM_RED, 'tw-roster-red');
+    }
+
+    function renderOneRoster(team, elId) {
+        var container = el(elId);
+        if (!container) return;
+        var players = getTeamPlayers(team);
+        var entry = currentTurnEntry();
+
+        container.innerHTML = players.map(function (p) {
+            var isActive = entry && entry.id === p.id;
+            return '<div class="tw-roster-row' + (isActive ? ' tw-roster-active' : '') + '">' +
+                playerCardHtml(p, false) +
+                (isActive ? '<span class="tw-roster-turn-label">دورك</span>' : '') +
+            '</div>';
+        }).join('');
+        fitCardNames(container);
     }
 
     function updateScoreDisplays() {
@@ -493,11 +613,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var player = currentTurnPlayer();
         var entry = currentTurnEntry();
         if (!player || !entry) { indicator.textContent = 'لا يوجد لاعبون نشطون.'; return; }
-        var avatar = player.avatarUrl ? '<img class="tw-turn-avatar" src="' + escapeAttr(player.avatarUrl) + '">' : '';
-        indicator.innerHTML = 'الدور الآن: ' + avatar + '<b>' + escapeHtml(player.name || player.id) + '</b>' +
-            ' (' + (entry.team === TEAM_BLUE ? escapeHtml(_settings.teamBlueName) : escapeHtml(_settings.teamRedName)) + ')' +
-            ' -- اكتب رقم المربع بالشات' +
+
+        indicator.innerHTML =
+            playerCardHtml(player, false) +
+            '<span class="tw-roster-turn-label" style="margin-right:10px;">دورك -- اكتب رقم المربع بالشات</span>' +
             '<span class="tw-turn-timer" id="tw-turn-timer-val"></span>';
+        fitCardNames(indicator);
+        renderRosters();
     }
 
     function startSelectionTimer() {
@@ -533,48 +655,80 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var tile = _tiles[num - 1];
         if (!tile || tile.used) return;
 
-        tile.used = true;
         AGP.timerManager.stop(SELECTION_TIMER_NAME);
         revealCard(entry, tile);
     }
 
+    // كشف البطاقة: المربع نفسه ينقلب ويكبر لـ250×250 بنص الشاشة، يبقى
+    // 3 ثواني، يختفي بنفس الطريقة، ومكانه يصير فاضي بالكامل بعدها.
     function revealCard(entry, tile) {
-        var emoji = CARD_EMOJI_BANK[Math.floor(Math.random() * CARD_EMOJI_BANK.length)];
-        var isPositive = Math.random() < 0.7;
-        var magnitude = 5 + Math.floor(Math.random() * 46); // 5..50
-        var value = isPositive ? magnitude : -magnitude;
-
-        var tileEl = el('tw-match-screen').querySelector('.tw-tile[data-num="' + tile.num + '"]');
-        if (tileEl) tileEl.classList.add('tw-tile-used');
+        var tileEl = el('tw-grid').querySelector('.tw-tile[data-num="' + tile.num + '"]');
+        if (tileEl) tileEl.classList.add('tw-tile-opening');
 
         var overlay = document.createElement('div');
         overlay.className = 'tw-card-reveal-overlay';
-        var opponentTeam = entry.team === TEAM_BLUE ? TEAM_RED : TEAM_BLUE;
-        var effectText = isPositive
-            ? 'خصم ' + magnitude + ' نقطة من ' + (opponentTeam === TEAM_BLUE ? _settings.teamBlueName : _settings.teamRedName)
-            : 'خصم ' + magnitude + ' نقطة من فريقه نفسه';
 
-        overlay.innerHTML =
-            '<div class="tw-card-reveal-box">' +
-                '<div class="tw-card-emoji">' + emoji + '</div>' +
-                '<div class="tw-card-value ' + (isPositive ? 'tw-value-positive' : 'tw-value-negative') + '">' + (isPositive ? '+' : '') + value + '</div>' +
-                '<div class="tw-card-effect-text">' + escapeHtml(effectText) + '</div>' +
-            '</div>';
+        var isSpecial = !!tile.special;
+        var magnitude = 0, isPositive = true, opponentTeam = entry.team === TEAM_BLUE ? TEAM_RED : TEAM_BLUE;
+
+        if (isSpecial) {
+            var specialEmoji = tile.special === SPECIAL_EXTRA_TURN ? '⚡' : '⏭️';
+            var specialText = tile.special === SPECIAL_SKIP_OPPONENT ? 'تخطّي دور اللاعب التالي بالفريق الخصم!'
+                : tile.special === SPECIAL_SKIP_TEAMMATE ? 'تخطّي دور صديقك التالي بنفس الفريق!'
+                : 'دور إضافي! نفس اللاعب يفتح صندوق ثاني فوراً';
+            overlay.innerHTML =
+                '<div class="tw-card-reveal-box">' +
+                    '<div class="tw-card-emoji">' + specialEmoji + '</div>' +
+                    '<div class="tw-card-effect-text" style="font-size:1.1em;">' + escapeHtml(specialText) + '</div>' +
+                '</div>';
+        } else {
+            var emoji = CARD_EMOJI_BANK[Math.floor(Math.random() * CARD_EMOJI_BANK.length)];
+            isPositive = Math.random() < 0.7;
+            magnitude = drawCardMagnitude();
+            var effectText = isPositive
+                ? 'خصم ' + magnitude + ' نقطة من ' + (opponentTeam === TEAM_BLUE ? _settings.teamBlueName : _settings.teamRedName)
+                : 'خصم ' + magnitude + ' نقطة من فريقه نفسه (' + (entry.team === TEAM_BLUE ? escapeHtml(_settings.teamBlueName) : escapeHtml(_settings.teamRedName)) + ')';
+
+            overlay.innerHTML =
+                '<div class="tw-card-reveal-box">' +
+                    '<div class="tw-card-emoji">' + emoji + '</div>' +
+                    '<div class="tw-card-value ' + (isPositive ? 'tw-value-positive' : 'tw-value-negative') + '">' + (isPositive ? '+' : '-') + magnitude + '</div>' +
+                    '<div class="tw-card-effect-text">' + effectText + '</div>' +
+                '</div>';
+        }
         document.body.appendChild(overlay);
+        requestAnimationFrame(function () { overlay.classList.add('tw-card-visible'); });
 
         setTimeout(function () {
-            var targetScoreKey = isPositive
-                ? (opponentTeam === TEAM_BLUE ? SCORE_KEY_BLUE : SCORE_KEY_RED)
-                : (entry.team === TEAM_BLUE ? SCORE_KEY_BLUE : SCORE_KEY_RED);
-            AGP.scoreManager.addPoints(targetScoreKey, -magnitude);
-            overlay.remove();
-            checkForWinner();
-            if (_matchActive) {
-                advanceTurn();
-                renderTurnIndicator();
-                startSelectionTimer();
+            overlay.classList.add('tw-card-closing');
+            setTimeout(function () { overlay.remove(); }, 400);
+
+            tile.used = true;
+            if (tileEl) { tileEl.classList.remove('tw-tile-opening'); tileEl.classList.add('tw-tile-used'); tileEl.innerHTML = ''; }
+
+            if (!isSpecial) {
+                var targetScoreKey = isPositive
+                    ? (opponentTeam === TEAM_BLUE ? SCORE_KEY_BLUE : SCORE_KEY_RED)
+                    : (entry.team === TEAM_BLUE ? SCORE_KEY_BLUE : SCORE_KEY_RED);
+                AGP.scoreManager.addPoints(targetScoreKey, -magnitude);
             }
-        }, 2400);
+
+            checkForWinner();
+            if (!_matchActive) return;
+
+            if (isSpecial && tile.special === SPECIAL_EXTRA_TURN) {
+                // بدون تقدّم بالدور -- نفس اللاعب يفتح مربع ثاني
+            } else if (isSpecial && tile.special === SPECIAL_SKIP_OPPONENT) {
+                applySkipOpponentNext();
+            } else if (isSpecial && tile.special === SPECIAL_SKIP_TEAMMATE) {
+                applySkipOwnTeammateNext();
+                advanceTurn();
+            } else {
+                advanceTurn();
+            }
+            renderTurnIndicator();
+            startSelectionTimer();
+        }, 3000);
     }
 
     function checkForWinner() {
@@ -643,11 +797,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function adminRowHtml(p) {
-        var avatar = p.avatarUrl ? escapeAttr(p.avatarUrl) : '';
         return '<div class="tw-admin-player-row">' +
             '<button type="button" class="tw-admin-remove-x" data-id="' + escapeAttr(p.id) + '">✕</button>' +
-            (avatar ? '<img class="tw-player-card-avatar" src="' + avatar + '">' : '<div class="tw-player-card-avatar"></div>') +
-            '<div class="tw-player-card-name">' + escapeHtml(p.name || p.id) + '</div>' +
+            playerCardHtml(p, false) +
         '</div>';
     }
 
@@ -661,6 +813,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         listBlue.innerHTML = playersBlue.length ? playersBlue.map(adminRowHtml).join('') : '<div class="tw-admin-empty">لا يوجد لاعبون</div>';
         listRed.innerHTML = playersRed.length ? playersRed.map(adminRowHtml).join('') : '<div class="tw-admin-empty">لا يوجد لاعبون</div>';
+        fitCardNames(listBlue);
+        fitCardNames(listRed);
 
         panelQuerySelectorAll('.tw-admin-remove-x').forEach(function (btn) {
             btn.addEventListener('click', function () {
@@ -722,9 +876,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var text = normalizeArabicText(payload.text);
             if (text !== normalizeArabicText(keyword)) return;
 
-            _subLobbyCandidate = { id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null };
+            _subLobbyCandidate = { id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null };
             var candBox = el('tw-sub-lobby-candidate');
-            if (candBox) candBox.innerHTML = '<div class="tw-player-grid" style="max-width:260px;margin:0 auto;">' + playerCardHtml(_subLobbyCandidate) + '</div>';
+            if (candBox) { candBox.innerHTML = playerCardHtml(_subLobbyCandidate, false); fitCardNames(candBox); }
             var confirmBtn = el('tw-sub-lobby-confirm-btn');
             if (confirmBtn) confirmBtn.disabled = false;
         });
@@ -732,7 +886,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function confirmSubLobbyPlayer() {
         if (!_subLobbyCandidate || !_subLobbyTeam) return;
-        AGP.player.addPlayer({ id: _subLobbyCandidate.id, name: _subLobbyCandidate.name, avatarUrl: _subLobbyCandidate.avatarUrl, team: _subLobbyTeam });
+        AGP.player.addPlayer({ id: _subLobbyCandidate.id, name: _subLobbyCandidate.name, avatarUrl: _subLobbyCandidate.avatarUrl, frame: _subLobbyCandidate.frame, team: _subLobbyTeam });
 
         if (_matchActive) {
             _turnQueue.push({ id: _subLobbyCandidate.id, team: _subLobbyTeam });
