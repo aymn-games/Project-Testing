@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>حرب الفرقين — ألعاب أيمن</title>
+<link rel="stylesheet" href="style.css">
+<!--
+    ==========================================================================
+     حرب الفرقين (Team War) — لعبة أصلية (Native) داخل مستودع Project-Testing،
+     بنفس نمط games/musical-chairs بالضبط (لا نافذة خارجية ولا postMessage).
+     صفحة جديدة كلياً — لا تعديل على أي ملف موجود.
+
+     ⚠️ ملاحظة مهمة: هذي اللعبة لا تحمّل js/agp-game-shell.js (الشل
+     المشترك مبني لفريق/كلمة مفتاحية واحدة فقط، وهذي اللعبة تحتاج فريقين
+     بكلمتين متزامنتين) — راجع رأس agp-team-war.js للتفاصيل الكاملة.
+     ترتيب باقي الملفات مطابق تماماً لترتيب docs/CLAUDE.md.
+    ==========================================================================
+-->
+</head>
+<body>
+
+<script src="../../js/agp-core.js"></script>
+<script src="../../js/agp-events.js"></script>
+<script src="../../js/agp-timer-manager.js"></script>
+<script src="../../js/agp-storage-manager.js"></script>
+<script src="../../js/agp-services.js"></script>
+<script src="../../js/agp-stream-connector.js"></script>
+<script src="../../adapters/agp-tiktok-adapter.js"></script>
+<script src="../../js/agp-registry.js"></script>
+<script src="../../js/agp-session.js"></script>
+<script src="../../js/agp-rooms-manager.js"></script>
+<script src="../../js/agp-player-manager.js"></script>
+<script src="../../js/agp-player-source.js"></script>
+<script src="../../js/agp-keyword-manager.js"></script>
+<script src="../../js/agp-queue-manager.js"></script>
+<script src="../../js/agp-score-manager.js"></script>
+<script src="../../js/agp-lobby.js"></script>
+<script src="../../js/agp-game-api.js"></script>
+<script src="../../js/agp-game-engine.js"></script>
+<script src="../../js/agp-game-manager.js"></script>
+<script src="../../js/agp-game-bridge.js"></script>
+<script src="../../js/agp-round-manager.js"></script>
+<script src="../../js/agp-bootstrap.js"></script>
+
+<!-- بطاقة اللاعب المشتركة (صورة + اسم) -->
+<script src="../../js/agp-player-card.js"></script>
+
+<!-- منطق لعبة حرب الفرقين نفسها (بدون agp-game-shell.js، راجع الملاحظة أعلاه) -->
+<script src="agp-team-war.js"></script>
+
+</body>
+</html>

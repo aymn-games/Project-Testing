@@ -1,0 +1,129 @@
+/* ==========================================================================
+   حرب الفرقين (Team War) -- ستايل خاص باللعبة
+   نفس متغيرات الألوان الرسمية المستخدمة بـ agp-game-shell.js (--agp-accent
+   / --agp-accent-2 / --agp-accent-pink) حتى تطابق هوية المنصة، بدون أي
+   اعتماد فعلي على ملف الشل نفسه (هذي اللعبة ما تحمّله إطلاقاً).
+   ========================================================================== */
+
+:root {
+    --tw-accent: #7c3aed;
+    --tw-accent-2: #00c2ff;
+    --tw-accent-pink: #ff4dff;
+    --tw-blue: #3b82f6;
+    --tw-red: #ef4444;
+}
+
+body.tw-active {
+    background: linear-gradient(170deg, #0b0616 0%, #2a0e3d 55%, #6d1fb0 100%);
+    background-attachment: fixed;
+    background-size: cover;
+    min-height: 100vh;
+    margin: 0;
+    font-family: Cairo, 'Almarai', sans-serif;
+    direction: rtl;
+    color: #fff;
+}
+
+#tw-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 20px;
+    background: linear-gradient(90deg, rgba(20,8,35,0.9), rgba(60,15,90,0.85));
+    border-bottom: 1px solid rgba(124,58,237,0.35);
+}
+#tw-header-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; }
+#tw-header-brand img { height: 40px; }
+#tw-header-title { background: rgba(0,0,0,0.35); border-radius: 999px; padding: 6px 20px; color: #e9d3ff; font-weight: 700; font-size: 0.9em; }
+.tw-header-icon-btn {
+    width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(124,58,237,0.45);
+    background: rgba(255,255,255,0.06); color: #fff; cursor: pointer; font-size: 1.1em;
+    display: flex; align-items: center; justify-content: center;
+}
+.tw-header-icon-btn:hover { background: rgba(255,255,255,0.16); }
+
+#tw-overlay {
+    position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center;
+    padding: 80px 16px 16px; background: rgba(8,4,16,0.55);
+}
+#tw-box {
+    width: 720px; max-width: 96vw; max-height: min(820px, 92vh); overflow-y: auto;
+    background: linear-gradient(180deg, #884B98, #2D1932);
+    border: 2px solid var(--tw-accent); border-radius: 18px; padding: 28px 32px;
+    box-shadow: 0 0 40px rgba(124,58,237,0.5); box-sizing: border-box;
+}
+#tw-box h2 { margin: 0 0 22px; font-size: 1.6em; text-align: center; font-weight: 800; }
+#tw-box h2 span.tw-title-badge { display:block; font-size:0.5em; color:#e9d3ff; font-weight:600; margin-top:4px; }
+
+.tw-field { margin-bottom: 16px; text-align: right; }
+.tw-field label { display: block; margin-bottom: 6px; font-size: 0.88em; font-weight: 700; }
+.tw-field input[type=text], .tw-field input[type=number] {
+    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #b479e8;
+    background: #fff; color: #2c1240; font-family: inherit; box-sizing: border-box; font-size: 0.95em;
+}
+
+.tw-two-col { display: flex; gap: 16px; }
+.tw-two-col > div { flex: 1; }
+.tw-team-box { border-radius: 12px; padding: 14px; border: 1px solid rgba(255,255,255,0.18); }
+.tw-team-box.tw-team-a { border-color: var(--tw-blue); background: rgba(59,130,246,0.08); }
+.tw-team-box.tw-team-b { border-color: var(--tw-red); background: rgba(239,68,68,0.08); }
+
+.tw-pill-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.tw-pill-btn {
+    border: 1px solid var(--tw-accent); background: #fff; color: #5a2585; border-radius: 999px;
+    padding: 8px 18px; font-family: inherit; font-size: 0.88em; cursor: pointer; font-weight: 700;
+}
+.tw-pill-btn.tw-pill-active { background: var(--tw-accent); color: #fff; }
+
+.tw-btn-primary {
+    display: block; width: 100%; margin-top: 8px; padding: 13px; border: none; border-radius: 12px;
+    background: linear-gradient(90deg, var(--tw-accent), var(--tw-accent-pink)); color: #fff;
+    font-family: inherit; font-weight: 800; font-size: 1em; cursor: pointer;
+}
+.tw-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.tw-btn-secondary {
+    display: inline-block; padding: 8px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.08); color: #fff; font-family: inherit; cursor: pointer; font-size: 0.85em;
+}
+.tw-error-msg { color: #ffb4b4; font-size: 0.85em; margin-top: 6px; text-align: center; }
+.tw-hint { color: #d8c3ec; font-size: 0.8em; margin-top: 4px; }
+
+.tw-connecting-box { text-align: center; padding: 40px 10px; }
+.tw-spinner { width: 46px; height: 46px; border: 4px solid rgba(255,255,255,0.2); border-top-color: var(--tw-accent-2); border-radius: 50%; margin: 0 auto 18px; animation: tw-spin 0.9s linear infinite; }
+@keyframes tw-spin { to { transform: rotate(360deg); } }
+
+.tw-lobby-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.tw-lobby-tab {
+    flex: 1; padding: 12px; text-align: center; border-radius: 12px 12px 0 0; cursor: pointer;
+    font-weight: 800; border: 2px solid transparent; opacity: 0.6;
+}
+.tw-lobby-tab.tw-tab-a { border-color: var(--tw-blue); }
+.tw-lobby-tab.tw-tab-b { border-color: var(--tw-red); }
+.tw-lobby-tab.tw-tab-active { opacity: 1; background: rgba(255,255,255,0.08); }
+.tw-lobby-panel { display: none; }
+.tw-lobby-panel.tw-panel-active { display: block; }
+.tw-lobby-count { text-align: center; font-size: 0.85em; color: #d8c3ec; margin-bottom: 10px; }
+.tw-player-list { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.tw-player-row { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.06); border-radius: 10px; padding: 8px 12px; }
+.tw-player-row img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; background: rgba(255,255,255,0.2); }
+.tw-player-row .tw-player-name { flex: 1; font-weight: 700; font-size: 0.9em; }
+.tw-player-empty { text-align: center; color: #b89bce; padding: 20px; font-size: 0.85em; }
+.tw-keyword-hint { text-align: center; font-size: 0.85em; color: #e9d3ff; margin-bottom: 12px; }
+.tw-keyword-hint b { color: var(--tw-accent-2); }
+
+.tw-admin-remove-btn { background: none; border: none; color: #ff8a8a; cursor: pointer; font-size: 1em; padding: 4px 8px; }
+.tw-admin-team-label { font-size: 0.8em; color: #d8c3ec; margin: 12px 0 6px; font-weight: 700; }
+
+#tw-match-screen { padding: 76px 20px 20px; max-width: 1200px; margin: 0 auto; }
+.tw-scoreboard { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+.tw-team-panel { flex: 1; border-radius: 16px; padding: 16px 20px; border: 2px solid; background: rgba(0,0,0,0.25); }
+.tw-team-panel.tw-panel-a { border-color: var(--tw-blue); }
+.tw-team-panel.tw-panel-b { border-color: var(--tw-red); }
+.tw-team-panel-name { font-weight: 800; font-size: 1.05em; margin-bottom: 8px; }
+.tw-team-panel-score-row { display: flex; align-items: center; gap: 10px; }
+.tw-score-btn { width: 30px; height: 30px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.08); color: #fff; font-weight: 800; cursor: pointer; }
+.tw-score-val { font-size: 1.6em; font-weight: 900; min-width: 60px; text-align: center; }
+.tw-vs-label { font-size: 1.4em; font-weight: 900; color: var(--tw-accent-2); }
+.tw-match-placeholder { text-align: center; padding: 60px 20px; border: 2px dashed rgba(255,255,255,0.25); border-radius: 18px; color: #d8c3ec; }
+.tw-match-placeholder h3 { color: #fff; margin-bottom: 10px; }
+.tw-turn-indicator { text-align: center; margin-bottom: 18px; font-size: 1.05em; }
+.tw-turn-indicator b { color: var(--tw-accent-2); }
