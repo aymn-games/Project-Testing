@@ -122,34 +122,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // لا استيراد مشترك بينهما، فلسفة المشروع القائمة (games/<id>/ معزول).
     // قيم العملات + الأيقونات (Twemoji، رخصة MIT + CC-BY 4.0، مو صور تيك
     // توك الرسمية) منسوخة كما هي من نفس المصدر الأصلي بروليت الإقصاء.
-    //
-    // [0.45.12] حقل `icon` جديد (اختياري): لبعض الهدايا فقط، صاحب المشروع
-    // زوّدنا بصور الأيقونات الحقيقية من واجهة تيك توك مباشرة (رفعها بنفسه
-    // كملف مضغوط)، وقارنّاها يدوياً باسم الهدية + قيمتها بالعملات مقابل
-    // صورتين مرجعيتين أرسلهما (فيهما كل الهدايا الحقيقية بأسمائها العربية
-    // وقيمها — مصدر ثانٍ منهما موقع "TikFinity" لقائمة هدايا الـ1 عملة
-    // تحديداً) — فقط الهدايا الثمانية التالية طابقت اسماً وقيمة الهدية
-    // الحالية بدقة تامة (لا تخمين): Corgi(299), Perfume(20), Doughnut(30),
-    // Finger Heart(5), Rosa(10), Hand Hearts(100), TikTok(1),
-    // Ice Cream Cone(1). باقي الـ12 هدية إما ما كان فيها أيقونة مطابقة
-    // أكيدة بالصور المرسلة أو كانت هناك أكثر من هدية مرشَّحة بنفس السعر
-    // (مثال: 3 مرشَّحين محتملين لـ"Sunglasses" 199 عملة) — تبقى هذه على
-    // أيقونة Twemoji القديمة لحين تأكيد صاحب المشروع.
-    // ملف الأيقونات: gift_icons/*.webp (مجلد جديد بجانب folder_images/،
-    // بنفس نمط الاستضافة المحلية المتّبع أصلاً لصور الفواكه).
     var COMMON_GIFTS = [
         { label: 'وردة', value: 'Rose', codepoint: '1f339', coins: 1 },
-        { label: 'تيك توك', value: 'TikTok', codepoint: '1f496', coins: 1, icon: 'gift_icons/tiktok.webp' },
-        { label: 'قلب الإصبع', value: 'Finger Heart', codepoint: '1f90d', coins: 5, icon: 'gift_icons/finger_heart.webp' },
+        { label: 'تيك توك', value: 'TikTok', codepoint: '1f496', coins: 1 },
+        { label: 'قلب الإصبع', value: 'Finger Heart', codepoint: '1f90d', coins: 5 },
         { label: 'جي جي', value: 'GG', codepoint: '1f3a4', coins: 1 },
-        { label: 'مخروط آيسكريم', value: 'Ice Cream Cone', codepoint: '1f366', coins: 1, icon: 'gift_icons/ice_cream_cone.webp' },
-        { label: 'عطر', value: 'Perfume', codepoint: '1f9f4', coins: 20, icon: 'gift_icons/perfume.webp' },
-        { label: 'دوناتس', value: 'Doughnut', codepoint: '1f369', coins: 30, icon: 'gift_icons/doughnut.webp' },
-        { label: 'قلوب اليد', value: 'Hand Hearts', codepoint: '1f49e', coins: 100, icon: 'gift_icons/hand_hearts.webp' },
+        { label: 'مخروط آيسكريم', value: 'Ice Cream Cone', codepoint: '1f366', coins: 1 },
+        { label: 'عطر', value: 'Perfume', codepoint: '1f9f4', coins: 20 },
+        { label: 'دوناتس', value: 'Doughnut', codepoint: '1f369', coins: 30 },
+        { label: 'قلوب اليد', value: 'Hand Hearts', codepoint: '1f49e', coins: 100 },
         { label: 'نظارة شمسية', value: 'Sunglasses', codepoint: '1f576', coins: 199 },
         { label: 'تاج صغير', value: 'Little Crown', codepoint: '1f451', coins: 99 },
-        { label: 'كلب كورجي', value: 'Corgi', codepoint: '1f415', coins: 299, icon: 'gift_icons/corgi.webp' },
-        { label: 'باقة ورد', value: 'Rosa', codepoint: '1f490', coins: 10, icon: 'gift_icons/rosa.webp' },
+        { label: 'كلب كورجي', value: 'Corgi', codepoint: '1f415', coins: 299 },
+        { label: 'باقة ورد', value: 'Rosa', codepoint: '1f490', coins: 10 },
         { label: 'نغمة موسيقية', value: 'Music Note', codepoint: '1f3b5', coins: 169 },
         { label: 'قصاصات احتفالية', value: 'Confetti Battle', codepoint: '1f389', coins: null },
         { label: 'مجرة', value: 'Galaxy', codepoint: '1f30c', coins: 1000 },
@@ -160,9 +145,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         { label: 'كون تيك توك', value: 'TikTok Universe', codepoint: '1f320', coins: 44999 }
     ];
     var TWEMOJI_BASE = 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/';
-    // [0.45.12] لو الهدية فيها أيقونة حقيقية محلية (`icon`) نستخدمها، وإلا
-    // نرجع لأيقونة Twemoji القديمة كما كانت (سلوك افتراضي محفوظ 100%).
-    function giftIconUrl(g) { return g.icon ? g.icon : (TWEMOJI_BASE + g.codepoint + '.svg'); }
+    function giftIconUrl(g) { return TWEMOJI_BASE + g.codepoint + '.svg'; }
     function giftCoinsText(g) { return (g.coins != null) ? (g.coins + ' 🪙') : '؟'; }
 
     /* ============ الحالة ============ */
@@ -170,7 +153,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _alive = [];              // لاعبو المباراة الحاليون (كائنات AGP: id/name/avatarUrl)
     var _eliminated = [];         // [{ player }] مُقصَون قابلون للإنعاش بالدعم
     var _giftReviveCounts = {};   // player.id -> عدد مرات الإنعاش المستخدَمة (طول المباراة)
-    var _colorMap = {};           // player.id -> لون ثابت طول المباراة
     var _isSpinning = false;
     var _currentRotation = 0;
     var _muted = false;
@@ -191,8 +173,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var frGameRoot, spinBtn, hub, shuffleBtn, resetWheelBtn, playerListEl, playerCountVal;
     var currentTurnName, wheel, wheelEmpty, wheelRing, hubImg, hubFallback;
     var winnerStrip, winnerStripName;
-    var fruitOverlay, fruitPopupPlayer, crateGrid, crateResult, resultText, continueBtn, fruitModalSub;
-    var winnerOverlay, winnerNameEl, winnerAvatarWrap, winnerPointsText, rematchBtn, newGameBtn;
+    var fruitOverlay, fruitPopupPlayer, frTurnAvatarWrap, crateGrid, crateResult, resultText, continueBtn, fruitModalSub;
+    var frManualActions, manualEliminateBtn, manualCloseBtn;
+    var winnerOverlay, winnerNameEl, winnerAvatarWrap, winnerPointsText, rematchBtn, newGameBtn, winnerHomeBtn;
+    var winnerCrownTop, winnerCrownFallback, winnerVideoWrap, winnerVideo;
     var soundBtn, soundIcon, liveRegion, roundCounterVal, fruitBg, roundTimerBox, roundTimerVal;
     var frGiftPickerOverlay, frGiftGrid, frToastWrap;
 
@@ -220,11 +204,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         fruitOverlay = el('fruitOverlay');
         fruitPopupPlayer = el('fruitPopupPlayer');
+        frTurnAvatarWrap = el('frTurnAvatarWrap');
         crateGrid = el('crateGrid');
         crateResult = el('crateResult');
         resultText = el('resultText');
         continueBtn = el('continueBtn');
         fruitModalSub = el('fruitModalSub');
+        frManualActions = el('frManualActions');
+        manualEliminateBtn = el('manualEliminateBtn');
+        manualCloseBtn = el('manualCloseBtn');
 
         winnerOverlay = el('winnerOverlay');
         winnerNameEl = el('winnerName');
@@ -232,6 +220,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         winnerPointsText = el('winnerPointsText');
         rematchBtn = el('rematchBtn');
         newGameBtn = el('newGameBtn');
+        winnerHomeBtn = el('winnerHomeBtn');
+        winnerCrownTop = el('winnerCrownTop');
+        winnerCrownFallback = el('winnerCrownFallback');
+        winnerVideoWrap = el('winnerVideoWrap');
+        winnerVideo = el('winnerVideo');
 
         soundBtn = el('soundBtn');
         soundIcon = el('soundIcon');
@@ -461,17 +454,45 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (roundTimerBox) roundTimerBox.classList.remove('paused', 'urgent');
     }
 
-    /* ============ قائمة اللاعبين (مصدرها AGP الحي — لا إدخال يدوي) ============ */
-    function colorFor(player) {
-        if (!_colorMap[player.id]) {
-            var idx = Object.keys(_colorMap).length;
-            _colorMap[player.id] = PALETTE[idx % PALETTE.length];
+    /* ============ قائمة اللاعبين (مصدرها AGP الحي — لا إدخال يدوي) ============
+       ⚠️ إصلاح بگ حقيقي: الإصدار القديم كان يثبّت لون كل لاعب حسب ترتيب
+       انضمامه (PALETTE[index % 6])، بدون أي اعتبار لمن يجاوره فعلياً
+       بالعجلة. بعد إقصاءات متتالية، ترتيب "من يجاور من" يتغيّر، فيصير
+       فيه احتمال حقيقي إن لاعبين متجاورين ينتهي بهم المطاف بنفس الرقم
+       المعياري (index % 6) فنفس اللون. الحل: نحسب الألوان من جديد في كل
+       رسم بناءً على الترتيب الحالي الفعلي بـ_alive، مع ضمان صريح إن كل
+       لون يختلف عن جاره السابق وعن أول لون بالحلقة (لتغطية التفاف
+       العجلة بين آخر قطعة وأولها). */
+    var _colorsByIndex = [];
+    function recomputeColors() {
+        var n = _alive.length;
+        var colors = [];
+        for (var i = 0; i < n; i++) {
+            var prev = i > 0 ? colors[i - 1] : null;
+            var mustAvoidFirst = (i === n - 1 && n > 2) ? colors[0] : null;
+            var candidates = [];
+            for (var j = 0; j < PALETTE.length; j++) {
+                var c = PALETTE[j];
+                if (c === prev) continue;
+                if (c === mustAvoidFirst) continue;
+                candidates.push(c);
+            }
+            if (candidates.length === 0) {
+                // حالة نادرة (عدد لاعبين > عدد الألوان بكثير) — نتساهل
+                // ونتجاهل فقط قيد اللون الأول، نبقي قيد "مو نفس السابق".
+                for (var k = 0; k < PALETTE.length; k++) {
+                    if (PALETTE[k] !== prev) candidates.push(PALETTE[k]);
+                }
+            }
+            colors.push(candidates[i % candidates.length] || PALETTE[i % PALETTE.length]);
         }
-        return _colorMap[player.id];
+        _colorsByIndex = colors;
     }
+    function colorForIndex(i) { return _colorsByIndex[i] || PALETTE[i % PALETTE.length]; }
 
     function renderPlayerList() {
         playerListEl.innerHTML = '';
+        recomputeColors();
 
         if (_alive.length === 0) {
             var note = document.createElement('div');
@@ -479,13 +500,37 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             note.textContent = 'لا يوجد لاعبون حالياً.';
             playerListEl.appendChild(note);
         } else {
-            _alive.forEach(function (p) {
+            _alive.forEach(function (p, i) {
                 var row = document.createElement('div');
                 row.className = 'player-chip';
-                row.style.setProperty('--chip-color', colorFor(p));
-                row.innerHTML = AGP.playerCard
+                row.style.setProperty('--chip-color', colorForIndex(i));
+
+                var cardWrap = document.createElement('div');
+                cardWrap.className = 'player-chip-card';
+                cardWrap.style.flex = '1';
+                cardWrap.style.minWidth = '0';
+                cardWrap.innerHTML = AGP.playerCard
                     ? AGP.playerCard.renderHtml(p, { showFrame: false })
-                    : '<span>' + (p.name || p.id) + '</span>';
+                    : '<span>' + escapeHtml(p.name || p.id) + '</span>';
+                row.appendChild(cardWrap);
+
+                // ⚠️ X حذف مباشر ونهائي من المباراة كاملة (يستدعي نفس
+                // AGP.player.removePlayer المستخدَمة بشاشة الإعدادات
+                // المشتركة — راجع player:removed listener بالأسفل، هو
+                // من يحدّث الواجهة فعلياً بعد الحذف). لو حاب يرجع، لازم
+                // يدخل من جديد عبر "إضافة لوبي جديد" + الكلمة المفتاحية.
+                var removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'fr-lobby-remove-btn';
+                removeBtn.title = 'حذف نهائي من المباراة';
+                removeBtn.textContent = '✕';
+                removeBtn.addEventListener('click', function () {
+                    if (AGP.player && typeof AGP.player.removePlayer === 'function') {
+                        AGP.player.removePlayer(p.id);
+                    }
+                });
+                row.appendChild(removeBtn);
+
                 playerListEl.appendChild(row);
             });
             if (AGP.playerCard) AGP.playerCard.fitAllNames(playerListEl);
@@ -613,6 +658,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function buildWheel() {
         wheel.innerHTML = '';
         var n = _alive.length;
+        recomputeColors();
 
         if (n < 2) {
             var msg = document.createElement('div');
@@ -630,7 +676,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _alive.forEach(function (p, i) {
             var start = (segAngle * i).toFixed(3);
             var end = (segAngle * (i + 1)).toFixed(3);
-            gradientParts.push(colorFor(p) + ' ' + start + 'deg ' + end + 'deg');
+            gradientParts.push(colorForIndex(i) + ' ' + start + 'deg ' + end + 'deg');
         });
         wheel.style.background = 'conic-gradient(from 0deg, ' + gradientParts.join(', ') + ')';
 
@@ -728,10 +774,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         onFruitPopupOpen();
 
         fruitPopupPlayer.textContent = winner.name || winner.id;
+        if (frTurnAvatarWrap) frTurnAvatarWrap.innerHTML = ringAvatarHtml(winner);
         crateResult.classList.remove('show');
         resultText.textContent = '';
         continueBtn.hidden = true;
         _crateResolved = false;
+        // ⚠️ صف الإقصاء اليدوي/الإغلاق بدون إقصاء متاح من لحظة فتح
+        // النافذة، ويُخفى تلقائياً بمجرد ما يُفتح أي صندوق (راجع
+        // handleCrateClick/resolveCrateSelection).
+        if (frManualActions) frManualActions.hidden = false;
 
         var hiddenCount = Math.min(eliminationLevel, CRATE_COUNT - 1);
         var hiddenIndices = [];
@@ -812,6 +863,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function handleCrateClick(crateEl, isHidden, content) {
         if (_crateResolved) return;
         _crateResolved = true;
+        if (frManualActions) frManualActions.hidden = true;
 
         playClick();
 
@@ -847,11 +899,47 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }, 650);
     }
 
+    /**
+     * ⚠️ إقصاء يدوي مباشر من المضيف — بدون فتح أي صندوق إطلاقاً. متاح
+     * فقط طول ما النافذة مفتوحة وقبل أي اختيار (نفس شرط _crateResolved
+     * المستخدَم بالاختيار العادي، عشان ما يتصادم مع اختيار متزامن جاي
+     * من الشات بنفس اللحظة).
+     */
+    function handleManualEliminate() {
+        if (_crateResolved || !_activeWinner) return;
+        _crateResolved = true;
+        var eliminatedPlayer = _activeWinner;
+        playBoom();
+        if (liveRegion) liveRegion.textContent = 'تم إقصاء ' + playerLabel(eliminatedPlayer) + ' يدوياً.';
+        eliminateFromMatch(eliminatedPlayer);
+        closeFruitPopup();
+    }
+
+    /**
+     * ⚠️ إغلاق يدوي بدون إقصاء — يرجّع لشاشة العجلة مباشرة، اللاعب يبقى
+     * بالمباراة عادي (يشتغل حتى قبل فتح أي صندوق، بعكس زر "متابعة اللعب"
+     * القديم اللي يظهر فقط بعد كشف صندوق آمن).
+     */
+    function handleManualClose() {
+        if (_crateResolved) return; // بعد كشف صندوق، الإغلاق يصير عبر continueBtn فقط
+        playClick();
+        closeFruitPopup();
+    }
+
     function closeFruitPopup() {
         fruitOverlay.classList.remove('active');
         _activeWinner = null;
         _crateData = [];
         onFruitPopupClose();
+        // ⚠️ إعادة ضبط دوران العجلة لنقطة الصفر بعد إغلاق أي نافذة اختيار
+        // (بأي زر: متابعة/إقصاء تلقائي/إقصاء يدوي/إغلاق بدون إقصاء) —
+        // طلب صريح لتقليل الإحساس البصري بتكرار نفس الاسم عدة مرات ورا
+        // بعض. هذا يمس فقط زاوية البداية البصرية؛ اختيار الفائز التالي
+        // يبقى عشوائياً بالكامل وبمعزل تام (Math.random() بدالة spin) —
+        // صفر خطر تصادم بين الاسم المعروض والاسم الفائز فعلياً.
+        _currentRotation = 0;
+        snapWheelTo(0);
+        currentTurnName.textContent = '—';
     }
 
     /* ============ الاستماع لشات البث — رقم الصندوق فقط من صاحب الدور ============ */
@@ -987,7 +1075,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function openWinnerModal(champion, pointsResult) {
         winnerNameEl.textContent = champion.name || champion.id;
-        if (winnerAvatarWrap) winnerAvatarWrap.innerHTML = ringAvatarHtml(champion);
+        if (winnerAvatarWrap) {
+            winnerAvatarWrap.innerHTML =
+                '<img class="fr-winner-crown-mini" src="folder_images/winner_crown.png" alt="" onerror="this.hidden=true;">' +
+                ringAvatarHtml(champion);
+        }
 
         if (winnerPointsText) {
             winnerPointsText.className = 'winner-points-text';
@@ -1002,12 +1094,46 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             }
         }
 
+        playWinnerVideo();
+
         if (liveRegion) liveRegion.textContent = (champion.name || champion.id) + ' فاز باللعبة!';
         winnerOverlay.classList.add('active');
         playChime();
     }
 
-    function closeWinnerModal() { winnerOverlay.classList.remove('active'); }
+    /**
+     * ⚠️ فيديو احتفالي (10 ثواني) — أساس فقط، الملف مو مرفوع بعد
+     * (games/fruit-roulette/folder_images/winner_video.mp4). لو الملف
+     * غير موجود، الصندوق كامل يختفي (onerror مربوط مرة وحدة بـ
+     * initStaticUi عبر setupWinnerVideo) — صفر مساحة فاضية أو أيقونة
+     * مكسورة بالواجهة. لو موجود: يشتغل تلقائياً (مكتوم الصوت، متطلب
+     * متصفحات لتشغيل autoplay) ويتوقف تلقائياً بعد 10 ثواني كحد أقصى
+     * حتى لو الملف نفسه أطول.
+     */
+    var _winnerVideoStopTimeout = null;
+    function setupWinnerVideo() {
+        if (!winnerVideo || !winnerVideoWrap) return;
+        winnerVideo.addEventListener('error', function () {
+            winnerVideoWrap.hidden = true;
+        });
+        winnerVideo.src = 'folder_images/winner_video.mp4';
+    }
+    function playWinnerVideo() {
+        if (!winnerVideo || !winnerVideoWrap || winnerVideoWrap.hidden) return;
+        window.clearTimeout(_winnerVideoStopTimeout);
+        try {
+            winnerVideo.currentTime = 0;
+            var playPromise = winnerVideo.play();
+            if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(function () {});
+        } catch (e) { /* تجاهل — بعض المتصفحات تمنع autoplay، الفيديو يبقى بأول إطاره */ }
+        _winnerVideoStopTimeout = window.setTimeout(function () { winnerVideo.pause(); }, 10000);
+    }
+
+    function closeWinnerModal() {
+        winnerOverlay.classList.remove('active');
+        if (winnerVideo) winnerVideo.pause();
+        window.clearTimeout(_winnerVideoStopTimeout);
+    }
 
     /* ============ مباراة جديدة / إعادة الجولة ============ */
     function newGame() {
@@ -1024,7 +1150,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _alive = roster;
         _eliminated = [];
         _giftReviveCounts = {};
-        _colorMap = {};
         _isSpinning = false;
         _activeWinner = null;
         _currentRotation = 0;
@@ -1055,7 +1180,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _alive = AGP.gameManager.getPlayers().slice();
         _eliminated = [];
         _giftReviveCounts = {};
-        _colorMap = {};
         _isSpinning = false;
         _currentRotation = 0;
         _activeWinner = null;
@@ -1108,6 +1232,108 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 showWhen: { key: 'giftRevivalEnabled', equals: true }
             }
         ];
+    }
+
+    /* ==========================================================================
+       تحسينات شاشتي الإعدادات/اللوبي المشتركتين (js/agp-game-shell.js) —
+       خاصة بروليت الفواكه فقط، بدون أي تعديل على الملف المشترك نفسه.
+       ⚠️ الطريقة: MutationObserver يراقب #agp-shell-overlay (تُنشأ مرة
+       وحدة عند init()، تبقى بالـDOM طول الوقت) ويعيد حقن عناصرنا في كل
+       مرة يُعاد فيها بناء محتوى #agp-shell-box (كل تنقّل بين شاشة
+       إعدادات/اتصال/لوبي يمسح المحتوى بالكامل). كل دالة idempotent
+       (تتأكد أول شي إن عنصرها مو موجود مسبقاً قبل ما تضيفه).
+       ========================================================================== */
+    function enhanceSettingsScreen() {
+        var box = document.getElementById('agp-shell-box');
+        if (!box) return;
+        if (box.classList.contains('agp-lobby-box') || box.classList.contains('agp-connecting-box')) return;
+        if (box.querySelector('.fr-settings-home-btn')) return;
+        var connectBtn = box.querySelector('.agp-shell-btn-connect');
+        if (!connectBtn) return;
+
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'fr-settings-home-btn';
+        btn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
+        btn.addEventListener('click', function () { window.location.href = '../../index.html'; });
+        connectBtn.insertAdjacentElement('afterend', btn);
+    }
+
+    /**
+     * ⚠️ زر X حذف مباشر لكل لاعب بقائمة اللوبي. تنبيه صادق عن حدود
+     * الطريقة: renderLobbyPlayerList (بالملف المشترك) ما يحط أي
+     * data-player-id على عناصر <li> باللوبي (بعكس شاشة الإعدادات وسط
+     * المباراة اللي تستخدم opts.removable الجاهزة أصلاً). فبدل تعديل
+     * الملف المشترك، نطابق كل <li> بترتيبه (index) مع نفس ترتيب
+     * AGP.gameManager.getPlayers() — نفس المصدر ونفس الدالة اللي
+     * renderLobbyPlayerList تستخدمها لبناء القائمة أصلاً، فالترتيب يطابق
+     * عملياً بكل الحالات الطبيعية.
+     */
+    function enhanceLobbyList() {
+        var list = document.getElementById('agp-lobby-list');
+        if (!list || !AGP.gameManager) return;
+        var players = AGP.gameManager.getPlayers();
+        var items = list.querySelectorAll('li');
+        items.forEach(function (li, i) {
+            if (li.querySelector('.fr-lobby-remove-btn')) return;
+            var player = players[i];
+            if (!player || !player.id) return;
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'fr-lobby-remove-btn';
+            btn.title = 'حذف من اللوبي';
+            btn.textContent = '✕';
+            btn.addEventListener('click', function () {
+                if (AGP.player && typeof AGP.player.removePlayer === 'function') {
+                    AGP.player.removePlayer(player.id);
+                }
+            });
+            li.insertBefore(btn, li.firstChild);
+        });
+    }
+
+    /**
+     * زرّا "رجوع للإعدادات"/"رجوع للمنصة" بشاشة اللوبي — يعيدان استخدام
+     * أزرار الهيدر الثابت الموجودة أصلاً (#agp-header-settings-btn /
+     * #agp-header-home-btn، مبنية من agp-game-shell.js نفسه) عبر محاكاة
+     * ضغطة برمجية — صفر منطق مكرر، صفر لمس للملف المشترك.
+     */
+    function enhanceLobbyActions() {
+        var box = document.getElementById('agp-shell-box');
+        if (!box || !box.classList.contains('agp-lobby-box')) return;
+        if (box.querySelector('.fr-lobby-actions-row')) return;
+        var startBtn = document.getElementById('agp-start-round-btn');
+        if (!startBtn) return;
+
+        var row = document.createElement('div');
+        row.className = 'fr-lobby-actions-row';
+        row.innerHTML =
+            '<button type="button" class="fr-lobby-action-btn" id="frLobbyBackSettingsBtn">⚙️ رجوع للإعدادات</button>' +
+            '<button type="button" class="fr-lobby-action-btn" id="frLobbyBackHomeBtn">🏠 رجوع للمنصة</button>';
+        startBtn.insertAdjacentElement('afterend', row);
+
+        document.getElementById('frLobbyBackSettingsBtn').addEventListener('click', function () {
+            var settingsBtn = document.getElementById('agp-header-settings-btn');
+            if (settingsBtn) settingsBtn.click();
+        });
+        document.getElementById('frLobbyBackHomeBtn').addEventListener('click', function () {
+            var homeBtn = document.getElementById('agp-header-home-btn');
+            if (homeBtn) homeBtn.click();
+        });
+    }
+
+    function applyShellEnhancements() {
+        enhanceSettingsScreen();
+        enhanceLobbyList();
+        enhanceLobbyActions();
+    }
+
+    function wireSharedShellEnhancements() {
+        applyShellEnhancements();
+        var overlay = document.getElementById('agp-shell-overlay');
+        if (!overlay) return;
+        var observer = new MutationObserver(applyShellEnhancements);
+        observer.observe(overlay, { childList: true, subtree: true });
     }
 
     function registerGame() {
@@ -1163,6 +1389,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             settingsFields: buildSettingsFields(),
             onStartRound: handleStartRound
         });
+
+        wireSharedShellEnhancements();
     }
 
     /* ============ التهيئة الأولية للعناصر الثابتة (مرة واحدة عند التحميل) ============ */
@@ -1172,6 +1400,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _uiInitialized = true;
         cacheDom();
         bindImageFallback(hubImg, hubFallback);
+        bindImageFallback(winnerCrownTop, winnerCrownFallback);
+        setupWinnerVideo();
         buildFruitBackground();
         wireSoundButton();
 
@@ -1182,6 +1412,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // زر "متابعة اللعب" يبقى يدوياً — خاص بالحالة الآمنة فقط (لا يوجد
         // زر تأكيد إقصاء بعد الآن، الإقصاء تلقائي داخل handleCrateClick).
         continueBtn.addEventListener('click', function () { playClick(); closeFruitPopup(); });
+        manualEliminateBtn.addEventListener('click', handleManualEliminate);
+        manualCloseBtn.addEventListener('click', handleManualClose);
         fruitOverlay.addEventListener('click', function (e) {
             if (e.target === fruitOverlay && crateResult.classList.contains('show') && !continueBtn.hidden) closeFruitPopup();
         });
@@ -1193,6 +1425,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         newGameBtn.addEventListener('click', function () { playClick(); newGame(); });
         rematchBtn.addEventListener('click', function () { playClick(); rematchRound(); });
+        winnerHomeBtn.addEventListener('click', function () { window.location.href = '../../index.html'; });
 
         renderPlayerList();
         buildWheel();

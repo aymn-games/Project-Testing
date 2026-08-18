@@ -25,6 +25,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- خط Zain — خاص ببطاقة الفائز فقط (طلب صريح)، راجع style.css -->
+<link href="https://fonts.googleapis.com/css2?family=Zain:ital,wght@0,200;0,300;0,400;0,700;0,800;0,900;1,300&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -174,6 +176,8 @@
     <div class="overlay" id="fruitOverlay" role="dialog" aria-modal="true" aria-labelledby="fruitPopupTitle">
       <div class="modal fruit-modal">
         <p class="eyebrow">تحدي صندوق الفواكه</p>
+        <!-- صورة + اسم صاحب الدور — تُبنى ديناميكياً بـringAvatarHtml() -->
+        <div class="fr-turn-avatar-wrap" id="frTurnAvatarWrap"></div>
         <h2 id="fruitPopupTitle"><span id="fruitPopupPlayer">اللاعب</span>، اختر مصيرك!</h2>
         <p class="modal-sub" id="fruitModalSub">اكتب رقم الصندوق في شات البث — أنت فقط تقدر تختار الآن.</p>
 
@@ -188,23 +192,49 @@
             <button class="btn btn-safe" id="continueBtn" type="button" hidden>✅ متابعة اللعب</button>
           </div>
         </div>
+
+        <!-- ⚠️ تحكم يدوي إضافي من المضيف — متاح طول ما النافذة مفتوحة
+             وقبل أي اختيار (يُخفى تلقائياً بعد ما تُفتح نتيجة صندوق). -->
+        <div class="fr-manual-actions" id="frManualActions">
+          <button class="btn btn-manual-eliminate" id="manualEliminateBtn" type="button">💀 إقصاء اللاعب مباشرة</button>
+          <button class="btn btn-manual-close" id="manualCloseBtn" type="button">✋ إغلاق بدون إقصاء</button>
+        </div>
       </div>
     </div>
 
     <!-- ============ WINNER MODAL ============ -->
     <div class="overlay" id="winnerOverlay" role="dialog" aria-modal="true" aria-labelledby="winnerName">
       <div class="modal winner-modal">
-        <div class="trophy" aria-hidden="true">🏆</div>
+        <!-- تاج علوي — يُرفَع لاحقاً بالاسم:
+             folder_images/winner_crown.png (fallback إيموجي تلقائي) -->
+        <img class="fr-winner-crown-top" id="winnerCrownTop" src="folder_images/winner_crown.png" alt="" aria-hidden="true">
+        <span class="fr-winner-crown-fallback" id="winnerCrownFallback" hidden aria-hidden="true">👑</span>
+
+        <p class="fr-winner-title">الشخص الرهيب الي فاز بلعبة روليت الفواكة!</p>
+
+        <!-- صندوق فيديو احتفالي (10 ثواني) — أساس فقط، الملف يُرفَع
+             لاحقاً بالاسم: folder_images/winner_video.mp4. الصندوق كامل
+             يختفي تلقائياً لو الملف غير موجود (راجع agp-fruit-roulette.js). -->
+        <div class="fr-winner-video-wrap" id="winnerVideoWrap">
+          <video id="winnerVideo" muted playsinline preload="none"></video>
+        </div>
+
         <p class="eyebrow">البطل</p>
-        <!-- صورة تيك توك الحقيقية للفائز (أو حروف اسمه الأولى كبديل) —
-             تُبنى ديناميكياً بـwinnerAvatarHtml()، راجع agp-fruit-roulette.js -->
+        <!-- صورة تيك توك الحقيقية للفائز (أو حروف اسمه الأولى كبديل) +
+             تاج صغير فوقها — تُبنى ديناميكياً بـwinnerAvatarHtml() -->
         <div class="winner-avatar-wrap" id="winnerAvatarWrap"></div>
         <h2 id="winnerName">—</h2>
         <p class="modal-sub">نجا من كل الصناديق ليحقق الفوز.</p>
         <p class="winner-points-text" id="winnerPointsText"></p>
+
+        <div class="fr-winner-logo-wrap">
+          <img src="../../logo.png" alt="">
+        </div>
+
         <div class="result-actions">
-          <button class="btn btn-safe" id="rematchBtn" type="button">🔁 إعادة الجولة (عودة الجميع)</button>
-          <button class="btn btn-primary" id="newGameBtn" type="button">🆕 مباراة جديدة</button>
+          <button class="btn btn-winner-home" id="winnerHomeBtn" type="button">🏠 العودة لمنصة الألعاب</button>
+          <button class="btn btn-winner-newmatch" id="newGameBtn" type="button">🆕 إعداد مباراة جديدة</button>
+          <button class="btn btn-winner-rematch" id="rematchBtn" type="button">🔁 إعادة المباراة بنفس اللاعبين</button>
         </div>
       </div>
     </div>

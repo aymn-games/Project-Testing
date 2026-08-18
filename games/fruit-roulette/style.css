@@ -50,7 +50,12 @@ body{
     var(--bg);
   color: var(--text);
   font-family:'Tajawal', sans-serif;
-  padding: 22px clamp(16px, 3vw, 34px) 48px;
+  /* ⚠️ padding-top مرفوع من 22px إلى 78px: عشان يفسح مجال لهيدر الشِل
+     الثابت (#agp-persistent-header — position:fixed, ~54px ارتفاع)
+     المعروض طول الوقت (حتى أثناء المباراة النشطة، ما يُخفى إطلاقاً) —
+     بدون هالمسافة، أول عناصر الصفحة (اللوقو + التوبار) تنطبع تحته
+     جزئياً. راجع js/agp-game-shell.js سطر ~82. */
+  padding: 78px clamp(16px, 3vw, 34px) 48px;
 }
 
 h1, h2, .display{ font-family:'Cairo', sans-serif; }
@@ -322,6 +327,12 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
 .host-panel{
   display:flex;
   flex-direction:column;
+  /* ⚠️ إصلاح بگ حقيقي: بدون min-height:0 هنا، المتصفح يحسب الحد الأدنى
+     الطبيعي للصندوق (كـflex item داخل .layout كـgrid) بناءً على محتواه
+     الكامل (كل أسماء اللاعبين)، فيتجاهل flex:1+overflow-y:auto بقائمة
+     اللاعبين ويكبر الصندوق فعلياً بدل ما يمرّر داخلياً — هذا يدفع باقي
+     عناصر الصفحة لتحت ويكسر التنسيق كل ما زاد عدد اللاعبين. */
+  min-height:0;
 }
 
 .panel-divider{
@@ -580,6 +591,11 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
   color: var(--text-dim);
   margin: 0 0 6px;
 }
+/* ⚠️ صورة + اسم صاحب الدور بنافذة اختيار الصندوق — تُبنى ديناميكياً
+   بـringAvatarHtml()، راجع agp-fruit-roulette.js */
+.fruit-modal .fr-turn-avatar-wrap{
+  display:flex; justify-content:center; margin: 4px 0 10px;
+}
 .modal h2{ margin:0 0 6px; font-size:1.5rem; color: var(--banana); }
 .modal-sub{ margin:0 0 22px; font-size:0.9rem; color: var(--text-dim); }
 
@@ -668,14 +684,115 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
 .crate-result.show{ display:block; animation: fade-up .3s ease; }
 @keyframes fade-up{ from{ opacity:0; transform: translateY(8px); } to{ opacity:1; transform: translateY(0); } }
 
+/* ⚠️ صف أزرار التحكم اليدوي — متاح طول ما نافذة اختيار الصندوق مفتوحة
+   (حتى قبل فتح أي صندوق)، منفصل عن .crate-result (اللي يظهر بس بعد
+   الكشف). "إقصاء اللاعب" يقصي صاحب الدور فوراً بدون فتح أي صندوق.
+   "إغلاق بدون إقصاء" يرجّع لشاشة العجلة واللاعب يبقى بالمباراة. */
+.fr-manual-actions{
+  display:flex; gap:12px; justify-content:center; flex-wrap:wrap;
+  margin-top:18px; padding-top:16px;
+  border-top:1px dashed var(--line);
+}
+.btn-manual-eliminate{
+  background: linear-gradient(90deg, #8a1030, #c72447);
+  color:#fff;
+}
+.btn-manual-close{
+  background: rgba(0,0,0,0.3);
+  border:1px solid var(--line);
+  color: var(--text);
+}
+.btn-manual-close:hover{ border-color: rgba(255,210,63,0.5); }
+
 .result-text{ font-family:'Cairo'; font-size:1.2rem; margin: 0 0 16px; }
 .result-text.safe{ color: var(--lime); }
 .result-text.danger{ color: var(--watermelon); }
 
 .result-actions{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
 
-/* ---------- Winner avatar (صورة تيك توك حقيقية + حالة النقاط) ---------- */
-.winner-avatar-wrap{ display:flex; justify-content:center; margin: 4px 0 10px; }
+/* ==========================================================================
+   بطاقة الفائز — تصميم جديد بالكامل (تاج + فيديو احتفالي + صورة اللاعب
+   + لوقو شفاف + 3 أزرار ملوّنة) — راجع index.html لبنية HTML المطابقة.
+   ========================================================================== */
+.winner-modal{
+  background: linear-gradient(180deg, #2a1608, #120902);
+  border-color: rgba(255,166,48,0.5);
+  overflow: hidden;
+}
+
+/* التاج الكبير أعلى البطاقة — يستبدل إيموجي 🏆 القديم. الملف يُرفَع لاحقاً
+   يدوياً بـ GitHub بالاسم: games/fruit-roulette/folder_images/winner_crown.png
+   (fallback إيموجي 👑 تلقائي لو الملف مو موجود بعد). */
+.fr-winner-crown-top{
+  width:84px; height:84px;
+  object-fit:contain;
+  margin: 0 auto 6px;
+  display:block;
+  filter: drop-shadow(0 6px 16px rgba(255,166,48,0.55));
+  animation: trophy-bounce 1.4s ease-in-out infinite;
+}
+.fr-winner-crown-top[hidden]{ display:none; }
+.fr-winner-crown-fallback{
+  font-size:3rem;
+  display:block;
+  margin: 0 auto 6px;
+  filter: drop-shadow(0 6px 14px rgba(255,166,48,0.5));
+  animation: trophy-bounce 1.4s ease-in-out infinite;
+}
+@keyframes trophy-bounce{
+  0%,100%{ transform: translateY(0) rotate(-6deg); }
+  50%{ transform: translateY(-10px) rotate(6deg); }
+}
+
+/* ⚠️ خط Zain — خاص ببطاقة الفائز فقط (طلب صريح)، بقية اللعبة تحافظ على
+   Cairo/Tajawal الأصليين. مستورد بـ<link> منفصل بـ<head>، راجع index.html */
+.winner-modal h2#winnerName,
+.fr-winner-title{
+  font-family:'Zain', 'Cairo', sans-serif;
+}
+.fr-winner-title{
+  font-weight:700;
+  font-size:1.15rem;
+  color: var(--banana);
+  margin: 0 0 14px;
+  line-height:1.4;
+}
+#winnerName{
+  font-weight:800;
+  font-size:1.7rem;
+}
+
+/* صندوق الفيديو الاحتفالي (10 ثواني) — أساس فقط، الملف مو مرفوع بعد.
+   يُرفَع لاحقاً يدوياً بالاسم: games/fruit-roulette/folder_images/winner_video.mp4
+   الصندوق كامل يختفي تلقائياً (JS) لو الملف غير موجود — بلا أي مساحة
+   فاضية أو أيقونة مكسورة بالواجهة. */
+.fr-winner-video-wrap{
+  width:100%;
+  aspect-ratio: 16/9;
+  border-radius:14px;
+  overflow:hidden;
+  margin: 4px 0 16px;
+  border:1px solid rgba(255,166,48,0.35);
+  background: rgba(0,0,0,0.35);
+}
+.fr-winner-video-wrap video{
+  width:100%; height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.winner-avatar-wrap{ display:flex; justify-content:center; margin: 4px 0 6px; position:relative; }
+.fr-winner-crown-mini{
+  position:absolute;
+  top:-22px;
+  left:50%;
+  transform: translateX(-50%) rotate(-4deg);
+  width:38px; height:38px;
+  object-fit:contain;
+  filter: drop-shadow(0 3px 8px rgba(255,166,48,0.5));
+}
+.fr-winner-crown-mini[hidden]{ display:none; }
+
 .fr-ring-avatar{
   width:96px; height:96px;
   border-radius:50%;
@@ -694,13 +811,22 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
   background: radial-gradient(circle at 35% 30%, var(--banana), var(--mango) 85%);
 }
 .winner-points-text{
-  margin: -8px 0 20px;
-  font-size:0.86rem;
+  margin: 8px 0 4px;
+  font-size:0.9rem;
   color: var(--text-dim);
   min-height:1.2em;
+  font-weight:700;
 }
-.winner-points-text.has-points{ color: var(--lime); font-weight:700; }
-.winner-points-text.no-account{ color: var(--mango); }
+.winner-points-text.has-points{ color: var(--lime); }
+.winner-points-text.no-account{ color: var(--mango); font-weight:400; }
+
+/* لوقو ألعاب أيمن شفاف بأسفل البطاقة */
+.fr-winner-logo-wrap{
+  display:flex; justify-content:center;
+  margin: 10px 0 4px;
+  opacity: 0.35;
+}
+.fr-winner-logo-wrap img{ height:34px; width:auto; }
 
 /* ---------- هدية الإنعاش: نافذة الاختيار + الإشعارات العائمة ----------
    ⚠️ z-index أعلى من #agp-shell-overlay (99999 بملف الشِل المشترك) —
@@ -763,19 +889,22 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
 .fr-gift-revive-card .fr-ring-avatar--fallback{ width:36px; height:36px; font-size:0.85rem; border-width:2px; }
 .fr-gift-revive-text{ font-size:0.85rem; font-weight:700; color: var(--lime); }
 
-/* ---------- Winner modal ---------- */
-.winner-modal .trophy{
-  font-size:3.2rem;
-  display:inline-block;
-  animation: trophy-bounce 1.4s ease-in-out infinite;
-  filter: drop-shadow(0 6px 14px rgba(255,166,48,0.5));
-}
-@keyframes trophy-bounce{
-  0%,100%{ transform: translateY(0) rotate(-6deg); }
-  50%{ transform: translateY(-10px) rotate(6deg); }
-}
-.winner-modal .result-actions{ flex-direction:column; }
+/* ---------- Winner modal buttons: 3 أزرار ملوّنة مميّزة (أحمر/أخضر/زيتوني) ---------- */
+.winner-modal .result-actions{ flex-direction:column; margin-top:6px; }
 .winner-modal .btn{ width:100%; justify-content:center; }
+
+.btn-winner-home{
+  background: linear-gradient(90deg, #c72447, #8a1030);
+  color:#fff;
+}
+.btn-winner-newmatch{
+  background: linear-gradient(90deg, var(--kiwi), var(--lime));
+  color:#08210f;
+}
+.btn-winner-rematch{
+  background: linear-gradient(90deg, #7a8a1a, #a8b830);
+  color:#1a1e05;
+}
 
 .sr-only{
   position:absolute; width:1px; height:1px;
@@ -928,8 +1057,17 @@ body.agp-shell-active{
 .agp-pill-btn{ color:#7a2a05 !important; }
 .agp-shell-counter-row button{ color:#7a2a05 !important; }
 .agp-count-input{ color:#5a1f04 !important; }
+/* ⚠️ إصلاح بگ حقيقي: القاعدة القديمة كانت تفرض نفس التدرّج البرتقالي
+   على حالتي تشغيل/إيقاف المفتاح معاً (بدون تمييز :checked)، فيبين
+   المفتاح "شغّال" بصرياً حتى وهو مطفي فعلياً. الحين حالتان منفصلتان
+   بوضوح: إيقاف = رمادي غامق مطفي، تشغيل = برتقالي نابض. */
 .agp-toggle-track{
+  background: linear-gradient(180deg, #3a2a1c, #241811) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+}
+.agp-toggle-switch input:checked + .agp-toggle-track{
   background: linear-gradient(180deg, #ffe3b8, #ffb347) !important;
+  border-color: transparent !important;
 }
 
 /* زر الاتصال / إكمال المباراة / إضافة لوبي جديد — كلها نفس الكلاس */
@@ -944,3 +1082,130 @@ body.agp-shell-active{
   border-color: rgba(255,166,48,0.4) !important;
   background: rgba(40,15,5,0.35) !important;
 }
+
+/* أيقونة 🗑️ حذف اللاعب وسط شاشة الإعدادات — أوضح وأبرز */
+.agp-player-remove-btn{
+  background: rgba(255,60,60,0.28) !important;
+  border: 1px solid rgba(255,90,90,0.85) !important;
+  color: #ffd9d9 !important;
+  width: 26px !important;
+  height: 26px !important;
+  font-size: 0.95em !important;
+  box-shadow: 0 0 8px rgba(255,60,60,0.35) !important;
+}
+
+/* زر ✕ إغلاق شاشة الإعدادات (يظهر فقط لو أُعيد فتحها أثناء مباراة
+   نشطة) — أكبر وأوضح وبتباين أعلى فوق خلفية الفواكه الغامقة */
+#agp-settings-close-btn{
+  color: #fff !important;
+  background: rgba(255,77,109,0.85) !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  font-size: 1.1em !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+  top: 12px !important;
+  left: 14px !important;
+}
+
+/* ==========================================================================
+   شاشة اللوبي "بانتظار اللاعبين" — تكبير/إبراز بطاقات اللاعبين وخلفية أغمق
+   ========================================================================== */
+#agp-shell-box.agp-lobby-box{
+  background: linear-gradient(170deg, #1a0d05, #4a2008) !important;
+  position: relative !important;
+}
+#agp-shell-box.agp-lobby-box h2{
+  color: var(--mango) !important;
+}
+.agp-join-hint-text{
+  font-size: 1.05em !important;
+  font-weight: 700 !important;
+}
+/* ⚠️ تكبير بطاقات اللاعبين باللوبي: نطبّق transform:scale على بطاقة
+   agp-player-card نفسها (المُولَّدة من js/agp-player-card.js) بدل تكبير
+   الخط يدوياً — هذا يكبر الصورة+الإطار+الاسم معاً بنفس النسبة فما
+   ينكسر تموضع الإطار حول الصورة (الإطار عنصر منفصل متموضع فوق الصورة
+   بإحداثيات نسبية، فتكبير الحاوية بالكامل عبر scale يحافظ عليه متمركز). */
+#agp-lobby-list.agp-shell-player-list{
+  gap: 14px !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+#agp-lobby-list.agp-shell-player-list li{
+  transform: scale(1.35);
+  transform-origin: right center;
+  margin-left: 20px !important;
+}
+/* شعار ألعاب أيمن شفاف (25%) بخلفية صندوق اللوبي فقط — طبقة منفصلة
+   خلف كل المحتوى (z-index:0)، ما تتعارض مع قابلية النقر على أي عنصر. */
+#agp-shell-box.agp-lobby-box::before{
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('../../logo.png') no-repeat center 55%;
+  background-size: 240px auto;
+  opacity: 0.25;
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 0;
+}
+
+/* ⚠️ الأزرار الإضافية (رجوع للإعدادات / رجوع للمنصة / X حذف كل لاعب
+   باللوبي) عناصر جديدة تُحقَنها agp-fruit-roulette.js نفسها (ليست جزءاً
+   من js/agp-game-shell.js) — أصنافها التالية خاصة بنا بالكامل. */
+.fr-lobby-actions-row{
+  display:flex; gap:10px; justify-content:center; margin-top:14px;
+  position: relative; z-index: 1;
+}
+.fr-lobby-action-btn{
+  flex:1; max-width:220px;
+  padding:11px 14px;
+  border-radius:999px;
+  border:1px solid rgba(255,210,63,0.4);
+  background: rgba(0,0,0,0.35);
+  color:#fff;
+  font-family:'Tajawal', sans-serif;
+  font-weight:700;
+  font-size:0.86rem;
+  cursor:pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.fr-lobby-action-btn:hover{ border-color: var(--banana); background: rgba(0,0,0,0.5); }
+
+.fr-lobby-remove-btn{
+  background: rgba(255,60,60,0.3);
+  border: 1px solid rgba(255,90,90,0.85);
+  color: #ffd9d9;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  font-size: 0.85em;
+  font-weight: 800;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* زر "رجوع للمنصة" الجديد داخل بطاقة شاشة الإعدادات نفسها (غير أيقونة
+   🏠 الصغيرة الموجودة أصلاً بالهيدر الثابت — هذا زر نصي بارز إضافي،
+   يُحقَن من agp-fruit-roulette.js داخل #agp-shell-box). */
+.fr-settings-home-btn{
+  display:block;
+  width:100%;
+  margin-top:10px;
+  padding:10px 14px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.25);
+  background: rgba(0,0,0,0.3);
+  color:#fff;
+  font-family:'Tajawal', sans-serif;
+  font-weight:700;
+  font-size:0.85rem;
+  cursor:pointer;
+  text-align:center;
+  transition: border-color .15s ease, background .15s ease;
+}
+.fr-settings-home-btn:hover{ border-color: var(--banana); background: rgba(0,0,0,0.45); }
