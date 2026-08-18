@@ -1146,9 +1146,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     /* ============ مباراة جديدة / إعادة الجولة ============ */
     function newGame() {
         closeWinnerModal();
-        // يعيد فتح شاشة الإعدادات العامة من جديد (نفس مسار "مباراة جديدة"
-        // بروليت الإقصاء) — يبث game:reset ويستدعي onDestroy تلقائياً.
+        // ⚠️ إصلاح بگ حقيقي: AGP.gameManager.resetSession() لحالها ما
+        // ترجّع شاشة الإعدادات — تبث game:reset فقط (يستدعي onDestroy
+        // عندنا)، لكن ما فيه أي مستمع بـjs/agp-game-shell.js نفسه يعيد
+        // إظهار الأوفرلاي/الصندوق بعدها، فتطلع صفحة فاضية بلا أي واجهة.
+        // نفس الحل المعتمد بزر "رجوع للإعدادات" باللوبي: إعادة تحميل
+        // الصفحة بالكامل هي الطريقة الوحيدة الموثوقة لرجوع شاشة الإعدادات
+        // الحقيقية (بزر الاتصال + حقل اليوزرنيم + الكلمة المفتاحية).
         AGP.gameManager.resetSession();
+        window.location.reload();
     }
 
     function rematchRound() {
@@ -1226,6 +1232,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function buildSettingsFields() {
         return [
             { key: 'maxPlayers', type: 'counter', label: '👥 الحد الأقصى لعدد اللاعبين بالمباراة', min: 2, default: 20 },
+            {
+                key: 'followersOnly', type: 'pill-choice', label: '🔑 مين يقدر يدخل؟',
+                options: [
+                    { label: 'الكل', value: false },
+                    { label: 'المتابعون فقط', value: true }
+                ],
+                default: false
+            },
             { key: 'roundDurationMinutes', type: 'pill-group', label: '⏱️ مدة تصاعد صعوبة الصناديق', options: ROUND_DURATION_OPTIONS, default: 240 },
             { key: 'giftRevivalEnabled', type: 'toggle', label: '🎁 الإنعاش عن طريق الدعم', default: false },
             {

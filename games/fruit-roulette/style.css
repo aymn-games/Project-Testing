@@ -182,7 +182,16 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
   color: var(--text-dim);
 }
 
-.topbar-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+/* ⚠️ ثابت بالشاشة دايماً (position:fixed) — يبقى ظاهر بغض النظر عن
+   التمرير، وفوق أي نافذة منبثقة بما فيها صندوق اختيار الفواكه ونافذة
+   الفائز (z-index أعلى من .overlay's 100). طلب صريح: "ما تختفي أبداً". */
+.topbar-actions{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  position: fixed;
+  top: 150px;
+  left: clamp(16px, 3vw, 34px);
+  z-index: 150;
+}
 
 .round-counter{
   display:flex;
@@ -1151,7 +1160,7 @@ body.agp-shell-active{
 }
 #agp-lobby-list.agp-shell-player-list li{
   position: relative !important;
-  transform: scale(1.35);
+  transform: scale(1.15);
   transform-origin: right center;
   margin: 10px 20px 6px 6px !important;
   /* ⚠️ خلفية غامقة خلف كل بطاقة لاعب — تبرز الاسم أكثر فوق خلفية اللوبي
