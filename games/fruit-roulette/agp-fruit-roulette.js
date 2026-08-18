@@ -1102,15 +1102,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * ⚠️ فيديو احتفالي (10 ثواني) — أساس فقط، الملف مو مرفوع بعد
-     * (games/fruit-roulette/folder_images/winner_video.mp4). لو الملف
-     * غير موجود، الصندوق كامل يختفي (onerror مربوط مرة وحدة بـ
-     * initStaticUi عبر setupWinnerVideo) — صفر مساحة فاضية أو أيقونة
-     * مكسورة بالواجهة. لو موجود: يشتغل تلقائياً (مكتوم الصوت، متطلب
-     * متصفحات لتشغيل autoplay) ويتوقف تلقائياً بعد 10 ثواني كحد أقصى
-     * حتى لو الملف نفسه أطول.
+     * ⚠️ فيديو احتفالي — أساس فقط لو الملف غير مرفوع بعد
+     * (games/fruit-roulette/folder_images/winner_video.mp4)، وإلا الصندوق
+     * كامل يختفي تلقائياً (onerror مربوط مرة وحدة بـinitStaticUi عبر
+     * setupWinnerVideo) — صفر مساحة فاضية أو أيقونة مكسورة بالواجهة.
+     * لو موجود: يتكرر باستمرار (loop) وبصوت مسموع، ويستمر لحد ما المضيف
+     * يضغط أي زر من أزرار بطاقة الفائز الثلاثة (راجع closeWinnerModal —
+     * تُستدعى من الثلاثة كلهم: rematchRound/newGame/winnerHomeBtn).
+     * ⚠️ محاولة تشغيل بصوت غير مكتوم أولاً؛ لو المتصفح رفض (سياسة
+     * autoplay بدون تفاعل مسبق — نادر هنا لأن المضيف أصلاً تفاعل مع
+     * الصفحة كثير قبل ما توصل لهذي اللحظة)، نتراجع لتشغيل مكتوم كحل
+     * احتياطي بدل ما الفيديو ما يشتغل إطلاقاً.
      */
-    var _winnerVideoStopTimeout = null;
     function setupWinnerVideo() {
         if (!winnerVideo || !winnerVideoWrap) return;
         winnerVideo.addEventListener('error', function () {
@@ -1120,23 +1123,29 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
     function playWinnerVideo() {
         if (!winnerVideo || !winnerVideoWrap || winnerVideoWrap.hidden) return;
-        window.clearTimeout(_winnerVideoStopTimeout);
+        winnerVideo.currentTime = 0;
+        winnerVideo.muted = false;
         try {
-            winnerVideo.currentTime = 0;
             var playPromise = winnerVideo.play();
-            if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(function () {});
-        } catch (e) { /* تجاهل — بعض المتصفحات تمنع autoplay، الفيديو يبقى بأول إطاره */ }
-        _winnerVideoStopTimeout = window.setTimeout(function () { winnerVideo.pause(); }, 10000);
+            if (playPromise && typeof playPromise.catch === 'function') {
+                playPromise.catch(function () {
+                    // رفض المتصفح التشغيل بصوت — نتراجع لمكتوم عشان الفيديو
+                    // على الأقل يشتغل بصرياً بدل ما يتوقف كلياً.
+                    winnerVideo.muted = true;
+                    winnerVideo.play().catch(function () {});
+                });
+            }
+        } catch (e) { /* تجاهل بصمت */ }
     }
 
     function closeWinnerModal() {
         winnerOverlay.classList.remove('active');
         if (winnerVideo) winnerVideo.pause();
-        window.clearTimeout(_winnerVideoStopTimeout);
     }
 
     /* ============ مباراة جديدة / إعادة الجولة ============ */
     function newGame() {
+        closeWinnerModal();
         // يعيد فتح شاشة الإعدادات العامة من جديد (نفس مسار "مباراة جديدة"
         // بروليت الإقصاء) — يبث game:reset ويستدعي onDestroy تلقائياً.
         AGP.gameManager.resetSession();
@@ -1275,12 +1284,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var players = AGP.gameManager.getPlayers();
         var items = list.querySelectorAll('li');
         items.forEach(function (li, i) {
-            if (li.querySelector('.fr-lobby-remove-btn')) return;
+            if (li.querySelector('.fr-lobbyscreen-remove-btn')) return;
             var player = players[i];
             if (!player || !player.id) return;
+            // ⚠️ شارة صغيرة عائمة فوق زاوية البطاقة (position:absolute عبر
+            // CSS) — بدل إدراجها كعنصر شقيق بصف flex عادي (كانت تسبب خربطة
+            // بصرية واضحة، البطاقات ما مصممة أصلاً لاستيعاب عنصر إضافي
+            // بجانبها). راجع style.css: #agp-lobby-list li{position:relative}.
             var btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'fr-lobby-remove-btn';
+            btn.className = 'fr-lobbyscreen-remove-btn';
             btn.title = 'حذف من اللوبي';
             btn.textContent = '✕';
             btn.addEventListener('click', function () {
@@ -1288,7 +1301,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     AGP.player.removePlayer(player.id);
                 }
             });
-            li.insertBefore(btn, li.firstChild);
+            li.appendChild(btn);
         });
     }
 
@@ -1313,8 +1326,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         startBtn.insertAdjacentElement('afterend', row);
 
         document.getElementById('frLobbyBackSettingsBtn').addEventListener('click', function () {
-            var settingsBtn = document.getElementById('agp-header-settings-btn');
-            if (settingsBtn) settingsBtn.click();
+            // ⚠️ ليس نفس ⚙️ الهيدر الثابت عمداً: ذاك يفتح شاشة إعدادات
+            // "مختصرة" (بدون حقل يوزرنيم/كلمة مفتاحية — راجع
+            // renderSettingsScreen(isReopened=true) بالملف المشترك)، بينما
+            // المطلوب هنا فعلياً هو شاشة البداية الكاملة (زر الاتصال +
+            // حقل اليوزرنيم + حقل الكلمة المفتاحية). لا توجد دالة عامة
+            // مصدَّرة تفتح هذي النسخة الكاملة من خارج الملف المشترك، فأقرب
+            // طريقة نظيفة وموثوقة هي إعادة تحميل الصفحة بالكامل — يرجّع
+            // فعلياً لنفس الشاشة الأولى اللي تظهر أول ما تفتح رابط اللعبة.
+            if (window.confirm('بيرجّعك لشاشة الاتصال الأولى (يوزرنيم + كلمة مفتاحية) وتنقطع اتصال البث الحالي. تكمل؟')) {
+                window.location.reload();
+            }
         });
         document.getElementById('frLobbyBackHomeBtn').addEventListener('click', function () {
             var homeBtn = document.getElementById('agp-header-home-btn');
@@ -1425,7 +1447,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         newGameBtn.addEventListener('click', function () { playClick(); newGame(); });
         rematchBtn.addEventListener('click', function () { playClick(); rematchRound(); });
-        winnerHomeBtn.addEventListener('click', function () { window.location.href = '../../index.html'; });
+        winnerHomeBtn.addEventListener('click', function () { closeWinnerModal(); window.location.href = '../../index.html'; });
 
         renderPlayerList();
         buildWheel();

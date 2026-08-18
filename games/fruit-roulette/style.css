@@ -346,7 +346,13 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
   flex-direction:column;
   gap:8px;
   flex:1;
-  min-height:120px; /* لازم رقم فعلي — بدونه flexbox ما يسمح بانكماش صحيح للتمرير */
+  /* ⚠️ إصلاح بگ حقيقي إضافي: min-height:0 على .host-panel وحده ما كفى —
+     التمرير الداخلي فعلياً يحتاج حد أقصى صريح بالبكسل هنا (بدل الاعتماد
+     الكامل على حساب flex/grid التلقائي)، عشان يضمن الصندوق يبقى بنفس
+     حجم لوحة العجلة تقريباً (580px) بغض النظر عن عدد اللاعبين — أي زيادة
+     تتمرّر داخلياً فقط، صفر تأثير على باقي عناصر الصفحة. */
+  max-height:320px;
+  min-height:120px;
   overflow-y:auto;
   padding-right:2px;
 }
@@ -718,6 +724,9 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
   background: linear-gradient(180deg, #2a1608, #120902);
   border-color: rgba(255,166,48,0.5);
   overflow: hidden;
+  /* توسيع بطاقة الفائز شوي عن الحد الأساسي (560px) — المحتوى صار أكثر
+     (تاج + فيديو + صورة + نقاط) ويحتاج مساحة أوسع تتنفّس فيها. */
+  max-width: 640px;
 }
 
 /* التاج الكبير أعلى البطاقة — يستبدل إيموجي 🏆 القديم. الملف يُرفَع لاحقاً
@@ -1047,9 +1056,6 @@ body.agp-shell-active{
   background: linear-gradient(180deg, #7a2a1f, #2b1208) !important;
   box-shadow: 0 0 40px rgba(255,166,48,0.4) !important;
 }
-#agp-shell-box.agp-lobby-box{
-  background: linear-gradient(170deg, #5c1f10, #a8420f) !important;
-}
 
 /* أزرار الاختيار (pill) + صفوف العدّادات + مفاتيح التفعيل — أغلبها
    يتبع var(--agp-accent) تلقائياً؛ هذي فقط تفاصيل تكميلية (لون النص
@@ -1114,9 +1120,14 @@ body.agp-shell-active{
 /* ==========================================================================
    شاشة اللوبي "بانتظار اللاعبين" — تكبير/إبراز بطاقات اللاعبين وخلفية أغمق
    ========================================================================== */
+/* ⚠️ عمود flex: يخلي زر "انهاء وبدء الجولة" + صف أزرارنا الإضافية
+   يلتصقون بأسفل الصندوق دايماً (margin-top:auto على الزر) بدل ما يطلعون
+   مباشرة بعد القائمة تاركين فراغ فاضي تحتهم لما عدد اللاعبين قليل. */
 #agp-shell-box.agp-lobby-box{
   background: linear-gradient(170deg, #1a0d05, #4a2008) !important;
   position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 #agp-shell-box.agp-lobby-box h2{
   color: var(--mango) !important;
@@ -1129,16 +1140,45 @@ body.agp-shell-active{
    agp-player-card نفسها (المُولَّدة من js/agp-player-card.js) بدل تكبير
    الخط يدوياً — هذا يكبر الصورة+الإطار+الاسم معاً بنفس النسبة فما
    ينكسر تموضع الإطار حول الصورة (الإطار عنصر منفصل متموضع فوق الصورة
-   بإحداثيات نسبية، فتكبير الحاوية بالكامل عبر scale يحافظ عليه متمركز). */
+   بإحداثيات نسبية، فتكبير الحاوية بالكامل عبر scale يحافظ عليه متمركز).
+   ⚠️ الصندوق المشترك (#agp-shell-box) عنده أصلاً max-height:800px مع
+   overflow-y:auto — يعني عدد لاعبين كبير يتمرّر داخل الصندوق نفسه
+   تلقائياً، بدون أي تدخل إضافي مننا (لا حاجة لـmax-height مستقل هنا). */
 #agp-lobby-list.agp-shell-player-list{
   gap: 14px !important;
   position: relative !important;
   z-index: 1 !important;
 }
 #agp-lobby-list.agp-shell-player-list li{
+  position: relative !important;
   transform: scale(1.35);
   transform-origin: right center;
-  margin-left: 20px !important;
+  margin: 10px 20px 6px 6px !important;
+  /* ⚠️ خلفية غامقة خلف كل بطاقة لاعب — تبرز الاسم أكثر فوق خلفية اللوبي
+     الفاتحة نسبياً (تدرّج برتقالي/بني)، طلب صريح لتحسين وضوح القراءة. */
+  background: rgba(0,0,0,0.4) !important;
+  border-radius: 10px !important;
+  padding: 4px 6px !important;
+}
+/* ⚠️ شارة X صغيرة عائمة أعلى زاوية كل بطاقة (بدل عنصر بصف flex عادي —
+   كان يخربط تموضع الصورة/الاسم جنبه، راجع enhanceLobbyList بالـJS).
+   الحجم صغير عمداً (طلب صريح: "أصغر حده"). */
+.fr-lobbyscreen-remove-btn{
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  z-index: 2;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: rgba(255,60,60,0.85);
+  border: 1px solid rgba(255,255,255,0.5);
+  color: #fff;
+  font-size: 0.55em;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
 }
 /* شعار ألعاب أيمن شفاف (25%) بخلفية صندوق اللوبي فقط — طبقة منفصلة
    خلف كل المحتوى (z-index:0)، ما تتعارض مع قابلية النقر على أي عنصر. */
@@ -1152,6 +1192,13 @@ body.agp-shell-active{
   pointer-events: none;
   border-radius: inherit;
   z-index: 0;
+}
+/* ⚠️ يلصق زر "انهاء وبدء الجولة" + صف أزرارنا بأسفل الصندوق دايماً
+   (يستهلك أي فراغ فاضي فوقه بدل ما يترك فارغاً تحته) */
+#agp-shell-box.agp-lobby-box #agp-start-round-btn{
+  margin-top: auto !important;
+  position: relative !important;
+  z-index: 1 !important;
 }
 
 /* ⚠️ الأزرار الإضافية (رجوع للإعدادات / رجوع للمنصة / X حذف كل لاعب
