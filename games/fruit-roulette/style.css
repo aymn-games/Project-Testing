@@ -599,6 +599,19 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
   100%{ transform: scale(1); opacity:1; }
 }
 
+/* ---------- إشعار تصاعد صعوبة الصناديق (مركز الشاشة) ---------- */
+.difficulty-notice-modal{
+  max-width: 420px;
+  border-color: rgba(255,166,48,0.6);
+}
+.difficulty-notice-text{
+  font-family:'Cairo';
+  font-weight:700;
+  font-size: 1.2rem;
+  color: var(--mango);
+  margin: 4px 0 22px;
+}
+
 .eyebrow{
   font-size:0.76rem;
   letter-spacing:1.6px;
@@ -1188,7 +1201,7 @@ body.agp-shell-active{
   flex: 0 0 auto !important;
   min-width: 0 !important;
   padding: 4px !important;
-  min-height: var(--fr-lobby-row-min-height, 88px) !important;
+  min-height: var(--fr-lobby-row-min-height, 64px) !important;
   box-sizing: border-box !important;
 }
 /* 6) بطاقة الاسم الطويل تاخذ عرض عمودين بدل تصغير الشبكة كلها */
@@ -1209,8 +1222,8 @@ body.agp-shell-active{
   align-items: center !important;
 }
 #agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-avatar-basic{
-  width: var(--fr-lobby-avatar-size, 65px) !important;
-  height: var(--fr-lobby-avatar-size, 65px) !important;
+  width: var(--fr-lobby-avatar-size, 50px) !important;
+  height: var(--fr-lobby-avatar-size, 50px) !important;
   border-width: 3px !important;
 }
 #agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-avatar-basic--fallback{
@@ -1220,12 +1233,12 @@ body.agp-shell-active{
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  min-width: var(--fr-lobby-pill-minw, 260px) !important;
-  max-width: var(--fr-lobby-pill-maxw, 450px) !important;
-  height: var(--fr-lobby-pill-height, 52px) !important;
+  min-width: var(--fr-lobby-pill-minw, 110px) !important;
+  max-width: var(--fr-lobby-pill-maxw, 260px) !important;
+  height: var(--fr-lobby-pill-height, 40px) !important;
   box-sizing: border-box !important;
   padding: 0 20px !important;
-  font-size: var(--fr-lobby-font-size, 30px) !important;
+  font-size: var(--fr-lobby-font-size, 18px) !important;
   font-weight: 800 !important;
   background: rgba(255,255,255,0.14) !important;
   border: 1px solid rgba(255,255,255,0.32) !important;
@@ -1241,7 +1254,7 @@ body.agp-shell-active{
    (يشوّه صورة الإطار) — بدلها تكبير متناسب للقماشة كوحدة واحدة عبر
    zoom فقط. */
 #agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-tpl{
-  zoom: var(--fr-lobby-frame-zoom, 1.00) !important;
+  zoom: var(--fr-lobby-frame-zoom, 0.77) !important;
 }
 
 /* 5) زر "✕" حذف لاعب قبل بدء المباراة — دائرة حمراء صغيرة بأعلى-يسار

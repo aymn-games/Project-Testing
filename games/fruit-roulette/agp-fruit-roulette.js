@@ -176,6 +176,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var fruitOverlay, fruitPopupPlayer, frTurnAvatarWrap, crateGrid, crateResult, resultText, continueBtn, fruitModalSub;
     var frManualActions, manualEliminateBtn, manualCloseBtn;
     var winnerOverlay, winnerNameEl, winnerAvatarWrap, winnerPointsText, rematchBtn, newGameBtn, winnerHomeBtn;
+    var difficultyNoticeOverlay, difficultyNoticeText, difficultyNoticeCloseBtn;
     var winnerCrownTop, winnerCrownFallback, winnerVideoWrap, winnerVideo;
     var soundBtn, soundIcon, liveRegion, roundCounterVal, fruitBg, roundTimerBox, roundTimerVal;
     var frGiftPickerOverlay, frGiftGrid, frToastWrap;
@@ -221,6 +222,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         rematchBtn = el('rematchBtn');
         newGameBtn = el('newGameBtn');
         winnerHomeBtn = el('winnerHomeBtn');
+        difficultyNoticeOverlay = el('difficultyNoticeOverlay');
+        difficultyNoticeText = el('difficultyNoticeText');
+        difficultyNoticeCloseBtn = el('difficultyNoticeCloseBtn');
         winnerCrownTop = el('winnerCrownTop');
         winnerCrownFallback = el('winnerCrownFallback');
         winnerVideoWrap = el('winnerVideoWrap');
@@ -425,10 +429,28 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var maxHidden = CRATE_COUNT - 1;
         if (eliminationLevel < maxHidden) {
             eliminationLevel += 1;
-            if (liveRegion) liveRegion.textContent = 'ارتفعت صعوبة الجولة! الآن ' + eliminationLevel + ' من الصناديق تخفي الشخصية.';
+            var msg = 'ارتفعت صعوبة الجولة! الآن ' + eliminationLevel + ' من الصناديق تخفي الشخصية.';
+            if (liveRegion) liveRegion.textContent = msg;
+            showDifficultyNotice(msg);
         }
         roundTimerRemaining = _roundDuration;
         updateTimerDisplay();
+    }
+
+    /**
+     * ⚠️ إشعار مرئي فعلياً بمنتصف الشاشة (بعكس liveRegion اللي مخصَّص
+     * لقارئات الشاشة فقط وغير مرئي — كان هذا سبب إن الإشعار ما يطلع
+     * للمضيف إطلاقاً رغم إن الصعوبة كانت ترتفع فعلياً بالخلفية). يُغلَق
+     * يدوياً بزر، والمباراة تكمل عادي بدون أي تأثير على منطق اللعب.
+     */
+    function showDifficultyNotice(message) {
+        if (!difficultyNoticeOverlay || !difficultyNoticeText) return;
+        difficultyNoticeText.textContent = message;
+        difficultyNoticeOverlay.classList.add('active');
+        playChime();
+    }
+    function closeDifficultyNotice() {
+        if (difficultyNoticeOverlay) difficultyNoticeOverlay.classList.remove('active');
     }
 
     function onFruitPopupOpen() {
@@ -447,11 +469,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function resetRoundTimer() {
         stopRoundTimerInterval();
-        roundTimerStarted = false;
         roundTimerRemaining = _roundDuration;
         eliminationLevel = 1;
         updateTimerDisplay();
         if (roundTimerBox) roundTimerBox.classList.remove('paused', 'urgent');
+        // ⚠️ إصلاح بگ حقيقي: قبل كذا roundTimerStarted كانت تبقى false
+        // إلى أن يُفتح أول صندوق فعلياً (عبر onFruitPopupOpen) — يعني
+        // المؤقت الحقيقي ما كان يبدأ العدّ إلا بعد أول سبن+فتح صندوق،
+        // مو من لحظة بداية المباراة مباشرة. بهذا الشكل، مدة الإعداد
+        // المختارة ("مدة تصاعد صعوبة الصناديق") ما كانت تُحتسَب كاملة —
+        // كان فيها وقت "ميت" بالبداية قبل ما يبدأ العدّ التنازلي أصلاً.
+        // الإصلاح: العدّ يبدأ فوراً من لحظة بداية المباراة (أو إعادتها)،
+        // بنفس المدة المختارة بالإعدادات بالضبط.
+        roundTimerStarted = true;
+        startRoundTimerInterval();
     }
 
     /* ============ قائمة اللاعبين (مصدرها AGP الحي — لا إدخال يدوي) ============
@@ -1173,6 +1204,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         winnerStrip.classList.remove('show');
         closeWinnerModal();
+        closeDifficultyNotice();
         snapWheelTo(0);
         currentTurnName.textContent = '—';
         if (liveRegion) liveRegion.textContent = 'بدأت جولة جديدة — عاد الجميع إلى اللعب!';
@@ -1204,6 +1236,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         frGameRoot.style.display = '';
         winnerStrip.classList.remove('show');
         closeWinnerModal();
+        closeDifficultyNotice();
         snapWheelTo(0);
         currentTurnName.textContent = '—';
         resetRoundCounter();
@@ -1383,8 +1416,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var totalSlots = markWideLobbyCards(box, list);
 
-        var BASE_ROW = 88, BASE_GAP = 10, BASE_AVATAR = 65, BASE_PILL_H = 52,
-            BASE_FONT = 30, BASE_PILL_MINW = 260, BASE_PILL_MAXW = 450, BASE_ZOOM = 1.00;
+        // ⚠️ إصلاح بگ حقيقي (مؤكَّد بالحساب): عرض صندوق اللوبي الفعلي
+        // 900px بحشو 34px يمين/يسار (من الملف المشترك) = محتوى ≈832px،
+        // فعرض العمود الواحد بشبكة 3 أعمدة (فجوة 10px) ≈ 270px فقط.
+        // القيم القديمة المنقولة (أفاتار 65 + أدنى عرض بلاطة 260) كانت
+        // تحتاج 333px حتى بأقصر اسم ممكن — أكبر من عرض العمود نفسه، فكل
+        // بطاقة كانت تُعلَّم "عريضة" (span 2) بغضّ النظر عن طول اسمها
+        // الفعلي، وهذا سبب التخطيط المكسور بالصورة. القيم الجديدة محسوبة
+        // فعلياً لتتناسب مع عرض العمود الحقيقي — اسم قصير عادي يبقى
+        // بعمود واحد، وفقط الأسماء الطويلة فعلاً (كثرة إيموجي/نص) تاخذ
+        // عمودين.
+        var BASE_ROW = 64, BASE_GAP = 10, BASE_AVATAR = 50, BASE_PILL_H = 40,
+            BASE_FONT = 18, BASE_PILL_MINW = 110, BASE_PILL_MAXW = 260, BASE_ZOOM = 0.77;
         var MIN_SCALE = 0.55;
 
         var rows = Math.ceil(totalSlots / 3);
@@ -1574,6 +1617,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         newGameBtn.addEventListener('click', function () { playClick(); newGame(); });
         rematchBtn.addEventListener('click', function () { playClick(); rematchRound(); });
         winnerHomeBtn.addEventListener('click', function () { closeWinnerModal(); window.location.href = '../../index.html'; });
+        if (difficultyNoticeCloseBtn) difficultyNoticeCloseBtn.addEventListener('click', function () { playClick(); closeDifficultyNotice(); });
 
         renderPlayerList();
         buildWheel();

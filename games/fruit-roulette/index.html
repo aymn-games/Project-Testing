@@ -202,6 +202,18 @@
       </div>
     </div>
 
+    <!-- ============ إشعار تصاعد صعوبة الصناديق (مركز الشاشة) ============
+         ⚠️ يظهر فقط لما تنتهي مدة "تصاعد صعوبة الصناديق" المختارة
+         بالإعدادات فعلياً ويرتفع عدد الصناديق المخفية — راجع
+         handleTimerExpire بـagp-fruit-roulette.js. -->
+    <div class="overlay" id="difficultyNoticeOverlay" role="dialog" aria-modal="true" aria-labelledby="difficultyNoticeText">
+      <div class="modal difficulty-notice-modal">
+        <p class="eyebrow">⚠️ تصاعد الصعوبة</p>
+        <p id="difficultyNoticeText" class="difficulty-notice-text">ارتفعت صعوبة الجولة!</p>
+        <button class="btn btn-primary" id="difficultyNoticeCloseBtn" type="button">إغلاق ومتابعة</button>
+      </div>
+    </div>
+
     <!-- ============ WINNER MODAL ============ -->
     <div class="overlay" id="winnerOverlay" role="dialog" aria-modal="true" aria-labelledby="winnerName">
       <div class="modal winner-modal">
