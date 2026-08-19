@@ -425,8 +425,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // الإقصاء (roleClass er-role-eliminate)، مبنيان بـchooserCardHtml().
             // بديل يدوي اختياري لآلية كتابة الرقم بشات البث الموجودة أصلاً
             // — الاثنان يبقيان شغّالين معاً (لا إلغاء لأي منهما).
-            '.er-chooser-actions{display:flex;flex-direction:column;gap:8px;margin-top:12px;width:200px;}',
-            '.er-chooser-action-btn{padding:11px 14px;border-radius:999px;border:none;font-weight:800;',
+            // ⚠️ [0.45.12] تعديل صريح: الزرّان كانا فوق بعض عمودياً (column)
+            // بعرض 200px موحّد للاثنين — صار بجانب بعض أفقياً (row) بطلب
+            // المستخدم، كل زر ياخذ نصف المساحة (flex:1) بدل عرض ثابت.
+            '.er-chooser-actions{display:flex;flex-direction:row;gap:8px;margin-top:12px;width:100%;',
+            'max-width:340px;}',
+            '.er-chooser-action-btn{flex:1;padding:11px 10px;border-radius:999px;border:none;font-weight:800;',
             'cursor:pointer;font-family:inherit;font-size:0.85em;color:#fff;transition:transform 0.15s,box-shadow 0.15s;}',
             '.er-chooser-action-btn:hover{transform:translateY(-2px);}',
             '.er-chooser-action-eliminate{background:linear-gradient(90deg,#ef4444,#b91c1c);',
@@ -447,19 +451,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * للقراءة من جوال أثناء البث المباشر. نفس البنية تُستخدَم
              * تلقائياً بنافذتي الإقصاء والإرجاع معاً (دالة renderTurnModal
              * واحدة مشتركة بين الاثنتين). */
+            // ⚠️ [0.45.12] تكبير بطاقات المرشَّحين بطلب صريح (أرقام محددة من
+            // المستخدم): عرض البطاقة 270→290px، الأفاتار 44→47px، رقم
+            // البطاقة 32→34px، خط الاسم ~15px→17px (انظر تعليق أدناه).
             '#er-candidates-grid{display:flex;flex-flow:row wrap;gap:14px;justify-content:center;',
             'width:100%;max-width:1180px;margin:0 auto;}',
             '.er-candidate-card{display:flex;align-items:center;gap:10px;cursor:pointer;',
-            'width:270px;box-sizing:border-box;background:#000;border:1px solid rgba(255,255,255,0.18);',
+            'width:290px;box-sizing:border-box;background:#000;border:1px solid rgba(255,255,255,0.18);',
             'border-radius:16px;padding:10px 14px;transition:background 0.15s,transform 0.15s;}',
             '.er-candidate-card:hover{background:#1a1a1a;transform:translateY(-2px);}',
-            '.er-candidate-num{color:#fff;border-radius:50%;width:32px;height:32px;flex-shrink:0;',
+            '.er-candidate-num{color:#fff;border-radius:50%;width:34px;height:34px;flex-shrink:0;',
             'display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.95em;}',
             // ⚠️ [0.45.8] رقم بطاقة "الإقصاء" تحديداً صار أخضر مميَّز (بدل
             // اللون البنفسجي الأساسي) — طلب صريح لتمييز تبويب الإقصاء عن
             // بقية التبويبات، بنفس الأخضر المستخدم أصلاً بحلقة "صاحب
             // الدور" (er-role-eliminate) لنفس النافذة، للتناسق.
-'.er-candidate-num.er-role-eliminate{background:#000;}',
+            '.er-candidate-num.er-role-eliminate{background:#22c55e;}',
             // ⚠️ بطاقة اللاعب المشتركة (agp-pcard) داخل شبكة المرشَّحين هنا
             // فقط — تكبير الصورة/الاسم بمحدِّدات مقيَّدة بـ#er-candidates-grid
             // (لا تلمس .agp-pcard بأي مكان آخر بالمنصة، ولا الملف المشترك
@@ -467,9 +474,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // الأنماط بين هذا الملف وjs/agp-player-card.js.
             '#er-candidates-grid .agp-pcard{display:flex !important;flex:1;flex-direction:row-reverse;',
             'align-items:center;gap:10px;min-width:0;}',
-            '#er-candidates-grid .agp-pcard-avatar-basic{width:44px !important;height:44px !important;',
+            '#er-candidates-grid .agp-pcard-avatar-basic{width:47px !important;height:47px !important;',
             'flex-shrink:0;}',
-            '#er-candidates-grid .agp-pcard-name-basic{font-size:0.95em !important;font-weight:800 !important;',
+            // ⚠️ [0.45.12] المستخدم طلب "1.20em و 17px" لخط اسم المرشَّح —
+            // القيمتان لا تتطابقان تماماً إلا بافتراض حجم أساس غير معتاد،
+            // فاستُخدمت القيمة الصريحة غير الملتبسة (17px) مباشرةً.
+            '#er-candidates-grid .agp-pcard-name-basic{font-size:17px !important;font-weight:800 !important;',
             'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
             '.er-candidate-num.er-role-revive{background:var(--er-accent2);}',
 
@@ -653,7 +663,65 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * صفحة روليت الإقصاء تحديداً دون أي تأثير على أي لعبة أخرى
              * تستخدم نفس الصندوق المشترك (لا تعديل بالملف المشترك نفسه إطلاقاً). */
             '#agp-shell-box{background:linear-gradient(180deg,#5F3976,#211528) !important;}',
-            '#agp-shell-box.agp-lobby-box{background:linear-gradient(180deg,#5F3976,#211528) !important;}'
+            '#agp-shell-box.agp-lobby-box{background:linear-gradient(180deg,#5F3976,#211528) !important;position:relative;overflow:hidden;}',
+
+            /* ---- [0.45.12] تعديلات إضافية على صندوق الإعدادات/اللوبي
+             * المشترك (#agp-shell-box) — كل القواعد هنا !important ومحقونة
+             * من هذا الملف فقط (بعد تنسيق الملف المشترك)، فتطغى فقط على
+             * صفحة روليت الإقصاء دون لمس js/agp-game-shell.js إطلاقاً. */
+
+            // ⚠️ زر إغلاق الإعدادات (✕) كان بلون بنفسجي غامق (#5a2585) قليل
+            // التباين — طلب صريح: يكون بارزاً وأبيض واضح.
+            '#agp-settings-close-btn{color:#ffffff !important;font-weight:900 !important;',
+            'text-shadow:0 1px 4px rgba(0,0,0,0.5) !important;}',
+
+            // ⚠️ صندوق اللوبي كان بارتفاع ثابت 800px — طلب صريح: يترك مساحة
+            // كافية لتمدد بطاقات اللاعبين المكبَّرة بدون قصّ (auto بدل ثابت،
+            // مع سقف بحدود ارتفاع الشاشة كما بالأصل).
+            '#agp-shell-box.agp-lobby-box{height:auto !important;max-height:92vh !important;',
+            'overflow-y:auto !important;}',
+
+            // ⚠️ شعار "Ayman Games" كخلفية شفافة (25%) بمنتصف صندوق اللوبي —
+            // طلب صريح. يُضاف كعنصر img عبر enhanceLobbyScreen()، هذا فقط
+            // موضعته/شفافيته.
+            '#er-lobby-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);',
+            'width:55%;max-width:420px;opacity:0.25;pointer-events:none;z-index:0;}',
+            // العناصر الحقيقية بصندوق اللوبي فوق الشعار دائماً.
+            '#agp-shell-box.agp-lobby-box > *:not(#er-lobby-watermark){position:relative;z-index:1;}',
+
+            // ⚠️ تمييز عنوان اللوبي "اللوبي بانتظار اللاعبين" عن نص التلميح
+            // "عشان تدخل المباراة اكتب بالشات" المجاور له — طلب صريح.
+            '#agp-shell-box.agp-lobby-box h2{color:#ffe066 !important;',
+            'text-shadow:0 2px 10px rgba(255,224,102,0.35) !important;letter-spacing:0.5px !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-hint-text{color:#c9b7db !important;',
+            'font-weight:400 !important;}',
+
+            // ⚠️ [0.45.12] تكبير بطاقات اللاعبين بشاشة اللوبي (قبل بدء
+            // المباراة) ~28% + خلفية داكنة شبه شفافة خلف كل بطاقة — طلب
+            // صريح، بدون كسر شكل "الإطارات" (frames) المعروضة حصراً بهذي
+            // الشاشة. استُخدم CSS zoom (وليس transform:scale) عمداً: zoom
+            // يغيّر حجم صندوق التخطيط الفعلي فيعيد ترتيب البطاقات المجاورة
+            // بشكل صحيح (flex-wrap) بدل تراكبها بصرياً كما يحدث مع
+            // transform:scale مع gap ثابت صغير.
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{zoom:1.28;background:rgba(0,0,0,0.55) !important;',
+            'border-radius:14px !important;padding:6px !important;}',
+
+            // ⚠️ زر "✕" لإقصاء لاعب يدوياً قبل بدء المباراة (بطاقات اللوبي) —
+            // يُضاف كعنصر عبر enhanceLobbyScreen()، هذا فقط شكله.
+            '.er-lobby-remove-btn{position:absolute;top:-6px;left:-6px;width:22px;height:22px;',
+            'border-radius:50%;background:#ef4444;color:#fff;border:2px solid #211528;',
+            'font-weight:900;font-size:13px;line-height:18px;text-align:center;cursor:pointer;',
+            'box-shadow:0 2px 6px rgba(0,0,0,0.5);z-index:2;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{position:relative;}',
+
+            // ⚠️ زر "رجوع للمنصة" داخل صندوق الإعدادات/اللوبي نفسه (بالإضافة
+            // لأيقونة 🏠 الموجودة بالهيدر أصلاً) — طلب صريح، يُضاف كعنصر عبر
+            // enhanceSettingsScreen()/enhanceLobbyScreen()، هذا فقط شكله.
+            '.er-back-to-platform-btn{display:block;margin:14px auto 0;padding:10px 22px;',
+            'border-radius:999px;border:1px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.08);',
+            'color:#f3eefc;font-family:inherit;font-weight:800;font-size:0.9em;cursor:pointer;',
+            'transition:background 0.15s;}',
+            '.er-back-to-platform-btn:hover{background:rgba(255,255,255,0.18);}'
         ].join('');
         document.head.appendChild(style);
     }
@@ -1296,11 +1364,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         overlay.style.display = 'flex';
 
+        // ⚠️ [0.45.12] تقليل مدة ظهور تبويب الإعلان من 4 ثوانٍ إلى 3 —
+        // طلب صريح.
         window.setTimeout(function () {
             overlay.style.display = 'none';
             box.className = '';
             if (typeof onDone === 'function') onDone();
-        }, 4000);
+        }, 3000);
     }
 
     function announcePersonHtml(player, effectClass) {
@@ -1808,7 +1878,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 default: false
             },
             {
-                key: 'friendRevivalEnabled', type: 'toggle', label: '🎗️ ميزة انعاش صديق',
+                // ⚠️ [0.45.12] نص توضيحي مختصر أُضيف للتسمية نفسها (لا يوجد
+                // حقل hint/description منفصل بنظام الإعدادات المشترك) —
+                // طلب صريح لتوضيح آلية "انعاش صديق" دون الحاجة لشرح خارجي.
+                key: 'friendRevivalEnabled', type: 'toggle',
+                label: '🎗️ ميزة انعاش صديق (لو توقفت العجلة على نفس الاسم مرتين متتاليتين، يرجع أحد المُقصَين)',
                 default: false
             },
             {
@@ -1859,6 +1933,122 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wireCommentListener();
         wireGiftListener();
         renderStage();
+    }
+
+    /* ======================================================================
+     *  تحسينات شاشتي الإعدادات/اللوبي المشتركتين (js/agp-game-shell.js) —
+     *  خاصة بروليت الإقصاء فقط، بدون أي تعديل على الملف المشترك نفسه.
+     *  ⚠️ [0.45.12] نفس التقنية المُثبَتة فعلياً بلعبة روليت الفواكه (نفس
+     *  المنصة، ملف مختلف تماماً) — بعد سؤال صريح من المستخدم "هل راح
+     *  يتاثر اي شي بخصوصها؟" تحقّقنا من الكود الحي الفعلي لروليت الفواكه
+     *  (git show origin/main) وتأكّدنا إنها تستخدم بالضبط هذي الطريقة:
+     *  MutationObserver يراقب #agp-shell-overlay (يُنشأ مرة واحدة عند
+     *  init()، يبقى بالـDOM طول الوقت) ويعيد تطبيق تحسيناتنا كل مرة
+     *  يُعاد فيها بناء محتوى #agp-shell-box بالكامل (كل تنقّل بين شاشة
+     *  إعدادات/اتصال/لوبي يمسح المحتوى). كل دالة idempotent (تتأكد أول
+     *  شي إن عنصرها مو موجود مسبقاً قبل ما تضيفه) — صفر تعديل على
+     *  js/agp-game-shell.js، وصفر تأثير على أي لعبة أخرى تستخدم نفس
+     *  الملف المشترك (هذا الكود موجود فقط بملف روليت الإقصاء نفسه، ولا
+     *  يُحمَّل إطلاقاً إلا بصفحة هذي اللعبة تحديداً). هذا يُلغي الاقتراح
+     *  السابق (خيار opt-in بالملف المشترك) لصالح هذي التقنية الأثبت.
+     * ==================================================================== */
+    function homeNavigate() {
+        var homeBtn = el('agp-header-home-btn');
+        if (homeBtn) { homeBtn.click(); }
+        else { window.location.href = '../../index.html'; }
+    }
+
+    function makeBackToPlatformBtn() {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'er-back-to-platform-btn';
+        btn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
+        btn.addEventListener('click', homeNavigate);
+        return btn;
+    }
+
+    // ⚠️ زر "رجوع للمنصة" بشاشة الإعدادات الأولى (قبل الاتصال بالبث) —
+    // طلب صريح (صورة 1)، بالإضافة لأيقونة 🏠 الثابتة بالهيدر أصلاً.
+    function enhanceSettingsScreen() {
+        var box = el('agp-shell-box');
+        if (!box) return;
+        if (box.classList.contains('agp-lobby-box') || box.classList.contains('agp-connecting-box')) return;
+        if (box.querySelector('.er-back-to-platform-btn')) return;
+        var connectBtn = box.querySelector('.agp-shell-btn-connect');
+        if (!connectBtn) return;
+        connectBtn.insertAdjacentElement('afterend', makeBackToPlatformBtn());
+    }
+
+    /**
+     * ⚠️ علامة ✕ لإقصاء لاعب يدوياً من شاشة اللوبي (قبل بدء المباراة) —
+     * طلب صريح (صورة 2)، وهي نفس ميزة "النقطة 7" المؤجَّلة سابقاً. تنبيه
+     * صادق عن حدود الطريقة: renderLobbyPlayerList (بالملف المشترك) ما
+     * يحط أي data-player-id على عناصر <li> باللوبي (بعكس قائمة منتصف
+     * المباراة اللي تستخدم opts.removable الجاهزة أصلاً). فبدل تعديل
+     * الملف المشترك، نطابق كل <li> بترتيبه (index) مع نفس ترتيب
+     * AGP.gameManager.getPlayers() — نفس المصدر ونفس الدالة اللي
+     * renderLobbyPlayerList تستخدمها لبناء القائمة أصلاً، فالترتيب يطابق
+     * عملياً بكل الحالات الطبيعية (index-based وليس id-based، بنفس
+     * الإقرار الصادق الموجود بتعليق روليت الفواكه الأصلي).
+     */
+    function enhanceLobbyList() {
+        var list = el('agp-lobby-list');
+        if (!list || !AGP.gameManager) return;
+        var players = AGP.gameManager.getPlayers();
+        var items = list.querySelectorAll('li');
+        items.forEach(function (li, i) {
+            if (li.querySelector('.er-lobby-remove-btn')) return;
+            var player = players[i];
+            if (!player || !player.id) return;
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'er-lobby-remove-btn';
+            btn.title = 'إقصاء اللاعب قبل بدء المباراة';
+            btn.textContent = '✕';
+            btn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                if (AGP.player && typeof AGP.player.removePlayer === 'function') {
+                    AGP.player.removePlayer(player.id);
+                }
+            });
+            li.appendChild(btn);
+        });
+    }
+
+    // ⚠️ شعار "ألعاب أيمن" شفاف بمنتصف صندوق اللوبي + زر "رجوع للمنصة" —
+    // طلب صريح (صورة 2).
+    function enhanceLobbyWatermarkAndActions() {
+        var box = el('agp-shell-box');
+        if (!box || !box.classList.contains('agp-lobby-box')) return;
+
+        if (!box.querySelector('#er-lobby-watermark')) {
+            var img = document.createElement('img');
+            img.id = 'er-lobby-watermark';
+            img.src = '../../logo.png';
+            img.alt = '';
+            box.insertBefore(img, box.firstChild);
+        }
+
+        if (!box.querySelector('.er-back-to-platform-btn')) {
+            var startBtn = el('agp-start-round-btn');
+            if (startBtn) {
+                startBtn.insertAdjacentElement('afterend', makeBackToPlatformBtn());
+            }
+        }
+    }
+
+    function applyShellEnhancements() {
+        enhanceSettingsScreen();
+        enhanceLobbyList();
+        enhanceLobbyWatermarkAndActions();
+    }
+
+    function wireSharedShellEnhancements() {
+        applyShellEnhancements();
+        var overlay = el('agp-shell-overlay');
+        if (!overlay) return;
+        var observer = new MutationObserver(applyShellEnhancements);
+        observer.observe(overlay, { childList: true, subtree: true });
     }
 
     function registerGame() {
@@ -1950,6 +2140,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 onToggle: handleAutoPlayToggle
             }
         });
+
+        // ⚠️ [0.45.12] تفعيل تحسينات شاشتي الإعدادات/اللوبي (زر رجوع
+        // للمنصة، ✕ الإقصاء اليدوي، الشعار الشفاف) — راجع التعليق التفصيلي
+        // فوق تعريف الدوال أعلاه.
+        wireSharedShellEnhancements();
     }
 
     AGP.events.on('platform:ready', function () {
