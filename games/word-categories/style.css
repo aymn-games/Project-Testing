@@ -1,0 +1,416 @@
+/* =========================================================
+   WORD CATEGORIES (اسم و حيوان و نبات و جماد و بلاد) — style.css
+   هوية اللعبة: تدرّج كحلي/أسود (#3C3F67 → #191C1B) كخلفية أساسية لكل
+   شيء (الصفحة، شاشة الإعدادات، اللوبي، صناديق اللعبة)، مع لون ذهبي
+   دافئ (#F2B84B) كتمييز تفاعلي وحيد (أزرار/حالات نشطة) — بدون هذا
+   التمييز، الأزرار وحالات "مفعَّل" تصير غير مقروءة فوق خلفية غامقة
+   بالكامل. راجع الكتلة السفلية "إعادة تلوين شاشة الإعدادات المشتركة"
+   لتفاصيل القرار.
+   ========================================================= */
+
+:root{
+  --wc-indigo: #3C3F67;
+  --wc-black: #191C1B;
+  --wc-panel: rgba(60,63,103,0.28);
+  --wc-panel-2: rgba(60,63,103,0.42);
+  --wc-line: rgba(255,255,255,0.10);
+  --wc-text: #F2F2F7;
+  --wc-text-dim: rgba(242,242,247,0.65);
+
+  --wc-gold: #F2B84B;
+  --wc-gold-2: #FFD98A;
+  --wc-periwinkle: #8891FF;
+  --wc-good: #22c55e;
+  --wc-bad: #ef4444;
+
+  --wc-radius-lg: 20px;
+  --wc-radius-md: 13px;
+  --wc-shadow-panel: 0 12px 32px rgba(0,0,0,0.5);
+}
+
+*{ box-sizing: border-box; }
+html, body{ height:100%; }
+
+body{
+  margin:0;
+  min-height:100vh;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(136,145,255,0.14), transparent 42%),
+    radial-gradient(circle at 88% 92%, rgba(242,184,75,0.10), transparent 42%),
+    linear-gradient(150deg, var(--wc-indigo) 0%, var(--wc-black) 100%);
+  color: var(--wc-text);
+  font-family:'Tajawal', sans-serif;
+  /* padding-top يفسح مجال لهيدر الشِل الثابت (#agp-persistent-header) */
+  padding: 78px clamp(16px, 3vw, 34px) 48px;
+}
+
+h1, h2, .display{ font-family:'Cairo', sans-serif; }
+.sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+
+/* ---------- شعار الموقع أعلى الصفحة ---------- */
+.site-logo-top{ text-align:center; margin-bottom: 6px; }
+.site-logo-img{ height:48px; width:auto; opacity:0.9; }
+
+/* ---------- توست ---------- */
+.wc-toast-wrap{ position: fixed; top: 70px; left: 50%; transform: translateX(-50%); z-index: 100050; display:flex; flex-direction:column; gap:8px; align-items:center; }
+.wc-toast{
+  background: rgba(25,28,27,0.95); color:#fff; border:1px solid var(--wc-gold);
+  padding: 10px 18px; border-radius: 999px; font-weight:700; font-size:0.9rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5); opacity:0; transform: translateY(-8px);
+  transition: opacity .25s ease, transform .25s ease;
+}
+.wc-toast.show{ opacity:1; transform: translateY(0); }
+
+/* =========================================================
+   TOPBAR
+   ========================================================= */
+.wc-topbar{
+  display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap;
+  max-width: 1320px; margin: 0 auto 22px; padding: 16px 22px;
+  background: var(--wc-panel); border:1px solid var(--wc-line); border-radius: var(--wc-radius-lg);
+  box-shadow: var(--wc-shadow-panel);
+}
+.wc-brand{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.wc-brand-logo{
+  display:flex; align-items:center; gap:6px; color: var(--wc-text-dim); text-decoration:none;
+  font-weight:700; font-size:0.85rem; border:1px solid var(--wc-line); border-radius:999px;
+  padding:6px 14px; transition: border-color .15s ease, color .15s ease;
+}
+.wc-brand-logo:hover{ border-color: var(--wc-gold); color:#fff; }
+.wc-brand-text h1{ margin:0; font-size:1.5rem; font-weight:800; color:#fff; }
+.wc-brand-text p{ margin:4px 0 0; color: var(--wc-text-dim); font-size:0.88rem; }
+.wc-round-badge{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  background: linear-gradient(180deg, var(--wc-gold-2), var(--wc-gold)); color: var(--wc-black);
+  border-radius: var(--wc-radius-md); padding: 8px 22px; font-weight:800;
+}
+.wc-round-badge-label{ font-size:0.72rem; opacity:0.85; }
+.wc-round-badge strong{ font-size:1.5rem; line-height:1; font-family:'Zain', sans-serif; }
+
+/* =========================================================
+   LAYOUT
+   ========================================================= */
+.wc-layout{
+  max-width: 1320px; margin: 0 auto; display:grid;
+  grid-template-columns: 320px 1fr; gap: 20px; align-items:start;
+}
+@media (max-width: 900px){ .wc-layout{ grid-template-columns: 1fr; } }
+
+.wc-panel{
+  background: var(--wc-panel); border:1px solid var(--wc-line); border-radius: var(--wc-radius-lg);
+  box-shadow: var(--wc-shadow-panel); padding: 20px;
+}
+.wc-panel h2{ margin:0 0 14px; font-size:1.05rem; color:#fff; }
+.wc-panel-divider{ height:1px; background: var(--wc-line); margin: 16px 0; }
+
+/* ---------- لوحة تحكم المضيف ---------- */
+.wc-block{ margin-bottom: 16px; }
+.wc-block-title{ margin:0 0 8px; font-weight:800; font-size:0.88rem; color: var(--wc-gold-2); }
+.wc-hint-small{ margin: 6px 0 0; font-size: 0.76rem; color: var(--wc-text-dim); line-height:1.5; }
+
+.wc-cat-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+.wc-cat-chip{
+  background: var(--wc-panel-2); border:1px solid var(--wc-line); border-radius:999px;
+  padding: 5px 12px; font-size:0.82rem; font-weight:700; color:#fff;
+}
+.wc-cat-chip-empty{ color: var(--wc-bad); border-color: rgba(239,68,68,0.5); }
+
+.wc-leaderboard{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+.wc-leaderboard li{
+  display:flex; align-items:center; gap:10px; background: var(--wc-panel-2); border:1px solid var(--wc-line);
+  border-radius: var(--wc-radius-md); padding: 8px 12px; font-size:0.86rem;
+}
+.wc-leaderboard-empty{ justify-content:center; color: var(--wc-text-dim); }
+.wc-leaderboard-rank{
+  width:22px; height:22px; border-radius:50%; background: var(--wc-gold); color: var(--wc-black);
+  font-weight:900; font-size:0.75rem; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.wc-leaderboard-name{ flex:1; font-weight:700; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wc-leaderboard-score{ font-weight:900; color: var(--wc-gold-2); }
+
+/* ---------- أزرار عامة ---------- */
+.wc-btn{
+  display:block; width:100%; border:none; border-radius:999px; padding:13px; font-weight:800;
+  font-family:inherit; font-size:0.95rem; cursor:pointer; margin-top:10px; transition: filter .15s ease, transform .1s ease;
+}
+.wc-btn:hover{ filter:brightness(1.08); }
+.wc-btn:active{ transform: scale(0.98); }
+.wc-btn-primary{ background: linear-gradient(90deg, var(--wc-gold-2), var(--wc-gold)); color: var(--wc-black); }
+.wc-btn-danger{ background: rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.6); color:#ffd9d9; }
+
+/* =========================================================
+   مسرح الجولة
+   ========================================================= */
+.wc-stage-panel{ min-height: 420px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+
+.wc-stage-idle{ color: var(--wc-text-dim); }
+.wc-idle-icon{ font-size:3rem; margin-bottom:10px; opacity:0.7; }
+
+.wc-stage-collecting{ width:100%; max-width:520px; display:flex; flex-direction:column; align-items:center; }
+.wc-letter-eyebrow{ margin:0; color: var(--wc-text-dim); font-size:0.85rem; font-weight:700; }
+.wc-letter-badge{
+  font-family:'Zain', sans-serif; font-weight:900; font-size:7rem; line-height:1;
+  width:180px; height:180px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.08), transparent 60%), var(--wc-panel-2);
+  border: 4px solid var(--wc-gold); color:#fff; margin: 10px 0 18px;
+  box-shadow: 0 0 34px rgba(242,184,75,0.35);
+}
+.wc-letter-badge.wc-letter-settle{ animation: wc-letter-pop 0.35s ease; }
+@keyframes wc-letter-pop{ 0%{ transform:scale(1.18); } 100%{ transform:scale(1); } }
+
+.wc-timer-wrap{ width:100%; display:flex; align-items:center; gap:12px; margin-bottom: 14px; }
+.wc-timer-bar-track{ flex:1; height:10px; border-radius:999px; background: rgba(255,255,255,0.1); overflow:hidden; }
+.wc-timer-bar-fill{ height:100%; width:100%; background: linear-gradient(90deg, var(--wc-gold), var(--wc-gold-2)); transition: width 1s linear; }
+.wc-timer-bar-fill.wc-timer-urgent{ background: linear-gradient(90deg, var(--wc-bad), #ff8a8a); }
+.wc-timer-val{ font-family:'Zain', sans-serif; font-size:1.6rem; color:#fff; min-width:70px; text-align:center; }
+
+.wc-instructions-hint{ font-size:0.92rem; font-weight:700; color: var(--wc-gold-2); margin: 0 0 6px; line-height:1.6; }
+.wc-participants-count{ font-size:0.85rem; color: var(--wc-text-dim); }
+
+/* =========================================================
+   مراجعة الإجابات
+   ========================================================= */
+.wc-stage-review{ width:100%; text-align:right; }
+.wc-review-header{ text-align:center; margin-bottom:14px; }
+.wc-review-header h2{ margin:0 0 4px; }
+
+.wc-review-list{ display:flex; flex-direction:column; gap:10px; max-height:56vh; overflow-y:auto; padding-inline-end:4px; }
+.wc-review-row{
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  background: var(--wc-panel-2); border:1px solid var(--wc-line); border-radius: var(--wc-radius-md); padding: 10px 14px;
+}
+.wc-review-row-player{ flex:0 0 auto; min-width: 140px; }
+.wc-review-row-cells{ flex:1; display:flex; flex-wrap:wrap; gap:8px; }
+.wc-review-cell{
+  position:relative; display:flex; flex-direction:column; align-items:center; gap:2px;
+  background: rgba(255,255,255,0.06); border:1px solid var(--wc-line); border-radius:10px;
+  padding: 6px 10px 8px; min-width: 92px;
+}
+.wc-review-cell-label{ font-size:0.68rem; color: var(--wc-text-dim); }
+.wc-review-cell-word{ font-size:0.88rem; font-weight:800; color:#fff; }
+.wc-review-cell-empty .wc-review-cell-word{ color: var(--wc-text-dim); font-weight:600; }
+.wc-review-cell-accepted{ border-color: rgba(34,197,94,0.6); background: rgba(34,197,94,0.12); }
+.wc-review-cell-rejected{ border-color: rgba(239,68,68,0.6); background: rgba(239,68,68,0.1); opacity:0.75; }
+.wc-review-toggle-btn{
+  position:absolute; top:-8px; left:-8px; width:24px; height:24px; border-radius:50%; border:2px solid var(--wc-black);
+  font-weight:900; font-size:0.8rem; cursor:pointer; color:#fff;
+  background: var(--wc-good);
+}
+.wc-review-cell-rejected .wc-review-toggle-btn{ background: var(--wc-bad); }
+.wc-review-row-score{ flex:0 0 auto; font-weight:900; color: var(--wc-gold-2); font-size:0.95rem; }
+.wc-review-empty{ text-align:center; color: var(--wc-text-dim); padding: 30px 0; }
+.wc-confirm-btn{ max-width:420px; margin: 18px auto 0; }
+
+/* بطاقة اللاعب المشتركة (avatar+name) داخل صف المراجعة — لا تعديل على
+   الكلاسات نفسها (js/agp-player-card.js)، فقط سياق عرضها هنا. */
+.wc-review-row-player .agp-pcard{ display:flex; align-items:center; gap:8px; }
+.wc-review-row-player .agp-pcard-avatar-basic{ width:36px; height:36px; }
+.wc-review-row-player .agp-pcard-name-basic{ color:#fff; font-weight:700; font-size:0.85rem; max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* =========================================================
+   CREDITS
+   ========================================================= */
+.wc-credits-row{ max-width:1320px; margin: 26px auto 0; display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+.wc-credit-box{
+  display:flex; align-items:center; gap:8px; background: var(--wc-panel); border:1px solid var(--wc-line);
+  border-radius:999px; padding:8px 16px; font-size:0.8rem;
+}
+.wc-credit-badge{ color: var(--wc-text-dim); }
+.wc-credit-name{ font-weight:800; color:#fff; }
+.wc-credit-tiktok{ display:flex; align-items:center; gap:5px; color: var(--wc-gold-2); text-decoration:none; font-weight:700; }
+.wc-tiktok-badge{ display:flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:#000; }
+
+/* =========================================================
+   نافذة الفائز
+   ========================================================= */
+.wc-overlay{
+  position:fixed; inset:0; background: rgba(10,8,14,0.72); display:flex; align-items:center; justify-content:center;
+  z-index: 100010; opacity:0; pointer-events:none; transition: opacity .2s ease;
+}
+.wc-overlay.active{ opacity:1; pointer-events:auto; }
+.wc-modal{
+  background: linear-gradient(165deg, var(--wc-indigo), var(--wc-black)); border:2px solid var(--wc-gold);
+  border-radius: 24px; padding: 30px 26px; width: min(440px, 92vw); text-align:center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+.wc-winner-crown{ font-size:2.6rem; margin-bottom:4px; }
+.wc-winner-title{ color: var(--wc-gold-2); font-weight:800; margin:0 0 14px; }
+.wc-winner-avatar-wrap{ display:flex; justify-content:center; margin-bottom:10px; }
+.wc-winner-avatar-wrap .agp-pcard-avatar-basic{ width:84px; height:84px; }
+.wc-winner-avatar-wrap .agp-pcard-name-basic{ display:none; }
+#wcWinnerName{ margin:6px 0; color:#fff; font-size:1.5rem; }
+.wc-winner-score-text{ color: var(--wc-gold-2); font-weight:800; margin: 4px 0 16px; }
+.wc-winner-logo-wrap img{ height:34px; opacity:0.85; margin: 6px 0 16px; }
+.wc-result-actions{ display:flex; flex-direction:column; gap:8px; }
+.wc-btn-winner-home{ background: rgba(255,255,255,0.1); color:#fff; border:1px solid var(--wc-line); }
+.wc-btn-winner-newmatch{ background: rgba(255,255,255,0.1); color:#fff; border:1px solid var(--wc-line); }
+.wc-btn-winner-rematch{ background: linear-gradient(90deg, var(--wc-gold-2), var(--wc-gold)); color: var(--wc-black); }
+
+/* ==========================================================================
+   إعادة تلوين شاشة الإعدادات المشتركة (js/agp-game-shell.js) بهوية اللعبة
+   ==========================================================================
+   ⚠️ هذي الكتلة بالكامل خاصة بصفحة هذي اللعبة فقط — لا لمس على
+   js/agp-game-shell.js نفسه، ولا أي تأثير على أي لعبة أخرى.
+   ⚠️ !important إلزامي: شاشة الإعدادات تُحقَن كـ<style> بالـ<head> وقت
+   التشغيل (بعد ما هذا الملف يكون انقرأ أصلاً).
+   ⚠️ قرار تصميمي: اللونان المطلوبان (#3C3F67 / #191C1B) هما هوية
+   الخلفيات (الصفحة، الصندوق، اللوبي) بكل مكان بهذي اللعبة — لكن أزرار/
+   حالات "مفعَّل" التفاعلية تستخدم لون ذهبي (--wc-gold) بدل نفس اللونين
+   الغامقين، وإلا ما كانت راح تكون مقروءة/مميّزة فوق خلفية غامقة أصلاً
+   بنفس درجتها (نفس مبدأ روليت الفواكه: خلفية بلون اللعبة + تمييز
+   تفاعلي بلون مختلف واضح).
+   ========================================================================== */
+
+:root{
+  --agp-accent: var(--wc-gold) !important;
+  --agp-accent-2: var(--wc-gold-2) !important;
+  --agp-accent-pink: var(--wc-periwinkle) !important;
+}
+
+body.agp-shell-active{
+  background: linear-gradient(150deg, var(--wc-indigo) 0%, var(--wc-black) 100%) !important;
+}
+#agp-persistent-header{
+  background: linear-gradient(90deg, rgba(25,28,27,0.94), rgba(60,63,103,0.88)) !important;
+  border-bottom: 1px solid rgba(242,184,75,0.4) !important;
+}
+
+#agp-shell-overlay{ background: rgba(10,10,14,0.62) !important; }
+#agp-shell-box{
+  background: linear-gradient(165deg, var(--wc-indigo), var(--wc-black)) !important;
+  box-shadow: 0 0 40px rgba(242,184,75,0.28) !important;
+}
+
+.agp-pill-btn{ color: var(--wc-black) !important; }
+.agp-shell-counter-row button{ color: var(--wc-black) !important; }
+.agp-count-input{ color: var(--wc-black) !important; }
+.agp-toggle-track{
+  background: linear-gradient(180deg, #3a3d5c, #22242f) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+}
+.agp-toggle-switch input:checked + .agp-toggle-track{
+  background: linear-gradient(180deg, var(--wc-gold-2), var(--wc-gold)) !important;
+  border-color: transparent !important;
+}
+
+.agp-shell-btn-connect{ color: var(--wc-black) !important; }
+.agp-join-keyword-badge{ box-shadow: 0 0 18px rgba(242,184,75,0.55) !important; }
+.agp-join-keyword-plain{ color: var(--wc-gold-2) !important; }
+
+.agp-settings-player-box{
+  border-color: rgba(242,184,75,0.35) !important;
+  background: rgba(25,28,27,0.35) !important;
+}
+.agp-player-remove-btn{
+  background: rgba(255,60,60,0.28) !important; border: 1px solid rgba(255,90,90,0.85) !important;
+  color: #ffd9d9 !important; width: 26px !important; height: 26px !important; font-size: 0.95em !important;
+  box-shadow: 0 0 8px rgba(255,60,60,0.35) !important;
+}
+#agp-settings-close-btn{
+  color: #fff !important; background: rgba(255,77,109,0.85) !important; width: 32px !important; height: 32px !important;
+  border-radius: 50% !important; font-size: 1.1em !important; display: flex !important; align-items: center !important;
+  justify-content: center !important; box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important; top: 12px !important; left: 14px !important;
+}
+
+.wc-settings-home-btn{
+  display:block; width:100%; margin-top:10px; padding:10px 14px; border-radius:999px;
+  border:1px solid rgba(255,255,255,0.25); background: rgba(0,0,0,0.3); color:#fff;
+  font-family:'Tajawal', sans-serif; font-weight:700; font-size:0.85rem; cursor:pointer; text-align:center;
+  transition: border-color .15s ease, background .15s ease;
+}
+.wc-settings-home-btn:hover{ border-color: var(--wc-gold); background: rgba(0,0,0,0.45); }
+
+/* ==========================================================================
+   شاشة اللوبي "بانتظار اللاعبين" — نظام موحَّد منقول حرفياً من نفس
+   التحسينات المطبَّقة بروليت الفواكه (راجع
+   lobby-heading-cards-buttons-prompt.md المرفق)، مع تطبيق هوية هذي
+   اللعبة على خلفية الصندوق نفسها أيضاً (لعبة جديدة بلا هوية سابقة).
+   ========================================================================== */
+
+/* 1) حجم صندوق اللوبي: ارتفاع ثابت 900px (بحد أقصى 92vh)، سكرول داخلي */
+#agp-shell-box.agp-lobby-box{
+  background: linear-gradient(165deg, var(--wc-indigo), var(--wc-black)) !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 900px !important;
+  max-height: 92vh !important;
+  overflow-y: auto !important;
+}
+#agp-shell-box.agp-lobby-box h2{ color: #fff !important; }
+.wc-lobby-heading-plain{ color: #fff !important; }
+.wc-lobby-heading-accent{ color: var(--wc-gold-2) !important; font-weight: 800 !important; }
+.agp-join-hint-text{ font-size: 1.05em !important; font-weight: 700 !important; }
+
+#agp-shell-box.agp-lobby-box::before{
+  content: '';
+  position: absolute; inset: 0;
+  background: url('../../logo.png') no-repeat center 55%;
+  background-size: 240px auto; opacity: 0.2; pointer-events: none; border-radius: inherit; z-index: 0;
+}
+#agp-shell-box.agp-lobby-box > *{ position: relative; z-index: 1; }
+
+/* 2) شبكة بطاقات اللاعبين — 3 أعمدة بالضبط */
+#agp-shell-box.agp-lobby-box .agp-shell-player-list{
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  grid-auto-flow: dense !important;
+  gap: var(--wc-lobby-grid-gap, 10px) !important;
+  align-items: center !important;
+  justify-items: center !important;
+  margin-top: 34px !important;
+}
+#agp-shell-box.agp-lobby-box .agp-shell-player-list li{
+  position: relative !important; display: flex !important; align-items: center !important; justify-content: center !important;
+  flex: 0 0 auto !important; min-width: 0 !important; padding: 4px !important;
+  min-height: var(--wc-lobby-row-min-height, 64px) !important; box-sizing: border-box !important;
+}
+#agp-shell-box.agp-lobby-box .agp-shell-player-list li.wc-lobby-card-wide{ grid-column: span 2 !important; }
+
+/* 3) بطاقة اللاعب العادية (بدون إطار) */
+#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard{
+  background: none !important; border: none !important; padding: 0 !important; border-radius: 0 !important;
+  max-width: none !important; gap: 0 !important; display: flex !important; align-items: center !important;
+}
+#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-avatar-basic{
+  width: var(--wc-lobby-avatar-size, 50px) !important; height: var(--wc-lobby-avatar-size, 50px) !important; border-width: 3px !important;
+}
+#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-avatar-basic--fallback{ font-size: 1.6em !important; }
+#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-name-basic{
+  display: flex !important; align-items: center !important; justify-content: center !important;
+  min-width: var(--wc-lobby-pill-minw, 110px) !important; max-width: var(--wc-lobby-pill-maxw, 260px) !important;
+  height: var(--wc-lobby-pill-height, 40px) !important; box-sizing: border-box !important; padding: 0 20px !important;
+  font-size: var(--wc-lobby-font-size, 18px) !important; font-weight: 800 !important;
+  background: rgba(255,255,255,0.14) !important; border: 1px solid rgba(255,255,255,0.32) !important;
+  border-radius: 999px !important; white-space: nowrap !important; overflow: hidden !important;
+  text-overflow: ellipsis !important; line-height: 1 !important;
+}
+
+/* 4) بطاقة اللاعب المؤطَّرة — تكبير متناسب عبر zoom فقط، بدون تشويه */
+#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-tpl{ zoom: var(--wc-lobby-frame-zoom, 0.77) !important; }
+
+/* 5) زر "✕" حذف لاعب */
+.wc-lobbyscreen-remove-btn{
+  position: absolute; top: -6px; left: -6px; width: 22px; height: 22px; border-radius: 50%;
+  background: #ef4444; color: #fff; border: 2px solid var(--wc-black); font-weight: 900; font-size: 13px;
+  line-height: 18px; text-align: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.5); z-index: 2; padding: 0;
+}
+
+/* 6) صف الأزرار السفلي — 3 أزرار بصف واحد، 360×48 لكل واحد */
+#agp-shell-box.agp-lobby-box .wc-lobby-actions-row{
+  display: flex; gap: 14px; margin-top: auto; padding-top: 14px; justify-content: center; flex-wrap: wrap;
+}
+.wc-lobby-actions-row > *{
+  width: 360px !important; height: 48px !important; max-width: 360px !important; flex: 0 0 360px !important;
+  box-sizing: border-box !important; display: flex !important; align-items: center !important; justify-content: center !important;
+  padding: 0 14px !important; margin: 0 !important;
+}
+.wc-lobby-action-btn{
+  border-radius: 999px; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.08); color: #fff;
+  font-family: 'Tajawal', sans-serif; font-weight: 800; font-size: 0.86rem; cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.wc-lobby-action-btn:hover{ background: rgba(255,255,255,0.18); border-color: var(--wc-gold); }
+#agp-shell-box.agp-lobby-box .wc-lobby-actions-row #agp-start-round-btn{
+  background: linear-gradient(90deg, #22c55e, #16a34a) !important; color: #fff !important;
+}

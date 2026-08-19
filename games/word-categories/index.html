@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>اسم و حيوان و نبات و جماد و بلاد — ألعاب أيمن</title>
+<!--
+    صفحة أصلية (Native) للعبة "اسم و حيوان و نبات و جماد و بلاد"، بنفس
+    نمط games/fruit-roulette (لا تعتمد على أي موقع خارجي ولا على جسر
+    postMessage). تحمّل AGP Core كاملاً بنفس ترتيب الصفحة الرئيسية، ثم
+    js/agp-game-shell.js، ثم ملف اللعبة الخاص بها.
+
+    ⚠️ ملف مستقل بالكامل عن أي لعبة أخرى — لا تعديل على أي ملف مشترك
+    (js/agp-*.js) ولا على أي ملف يخص لعبة أخرى. كل التخصيص (شاشة
+    الإعدادات/اللوبي) يتم عبر حقن CSS/DOM وقت التشغيل من
+    agp-word-categories.js نفسه فقط، بنفس أسلوب باقي الألعاب.
+
+    #wcGameRoot يبقى مخفياً حتى يبدأ المضيف المباراة فعلياً عبر شاشة
+    الإعدادات العامة (js/agp-game-shell.js).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&family=Tajawal:wght@400;500;700&family=Zain:ital,wght@0,200;0,300;0,400;0,700;0,800;0,900;1,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="wc-toast-wrap" id="wcToastWrap" aria-live="polite"></div>
+
+  <!-- كل واجهة اللعبة الفعلية تبقى مخفية إلى أن يبدأ المضيف المباراة
+       فعلياً من شاشة الإعدادات العامة (agp-game-shell.js) -->
+  <div id="wcGameRoot" style="display:none;">
+
+    <div class="site-logo-top">
+      <img src="../../logo.png" alt="شعار العاب أيمن" class="site-logo-img">
+    </div>
+
+    <header class="wc-topbar">
+      <div class="wc-brand">
+        <a class="wc-brand-logo" href="../../index.html">
+          <span aria-hidden="true">🏠</span>
+          <span>العودة لموقع العاب أيمن</span>
+        </a>
+        <div class="wc-brand-text">
+          <h1>اسم و حيوان و نبات و جماد و بلاد</h1>
+          <p>حرف عشوائي، وقت محدد، وإجابات تُكتب بشات البث — أنت من يقرر الصحيح من الخطأ.</p>
+        </div>
+      </div>
+      <div class="wc-round-badge">
+        <span class="wc-round-badge-label">الجولة</span>
+        <strong id="wcRoundVal">—</strong>
+      </div>
+    </header>
+
+    <main class="wc-layout">
+
+      <!-- ============ لوحة تحكم المضيف ============ -->
+      <section class="wc-panel wc-host-panel" aria-label="لوحة تحكم المضيف">
+        <h2>🎛️ لوحة التحكم</h2>
+
+        <div class="wc-block">
+          <p class="wc-block-title">الفئات المفعّلة هذه الجولة</p>
+          <div class="wc-cat-chips" id="wcCategoryChips"></div>
+          <p class="wc-hint-small">عدّل الفئات بأي وقت من ⚙️ الإعدادات أعلى الصفحة — تُطبَّق من الجولة القادمة.</p>
+        </div>
+
+        <div class="wc-block">
+          <p class="wc-block-title">🏆 لوحة الصدارة</p>
+          <ol class="wc-leaderboard" id="wcLeaderboardList">
+            <li class="wc-leaderboard-empty">ما فيه نقاط بعد</li>
+          </ol>
+        </div>
+
+        <div class="wc-panel-divider"></div>
+
+        <button class="wc-btn wc-btn-primary" id="wcStartBtn" type="button">🎲 بدء الجولة</button>
+        <button class="wc-btn wc-btn-danger" id="wcEndTimerBtn" type="button" hidden>⏹️ إنهاء الوقت الآن</button>
+      </section>
+
+      <!-- ============ مسرح الجولة ============ -->
+      <section class="wc-panel wc-stage-panel" aria-label="مسرح الجولة">
+
+        <!-- حالة: بانتظار بدء الجولة -->
+        <div class="wc-stage-idle" id="wcStageIdle">
+          <div class="wc-idle-icon">🔤</div>
+          <p>اضغط "بدء الجولة" من لوحة التحكم عشان يطلع حرف عشوائي جديد.</p>
+        </div>
+
+        <!-- حالة: جمع الإجابات -->
+        <div class="wc-stage-collecting" id="wcStageCollecting" hidden>
+          <p class="wc-letter-eyebrow">الحرف هذي الجولة</p>
+          <div class="wc-letter-badge" id="wcLetterBadge">أ</div>
+
+          <div class="wc-timer-wrap">
+            <div class="wc-timer-bar-track"><div class="wc-timer-bar-fill" id="wcTimerBarFill"></div></div>
+            <strong class="wc-timer-val" id="wcTimerVal">00:45</strong>
+          </div>
+
+          <p class="wc-instructions-hint" id="wcInstructionsHint"></p>
+          <p class="wc-participants-count" id="wcParticipantsCount">بانتظار أول إجابة...</p>
+        </div>
+
+        <!-- حالة: مراجعة الإجابات -->
+        <div class="wc-stage-review" id="wcStageReview" hidden>
+          <div class="wc-review-header">
+            <h2>📋 مراجعة إجابات الجولة</h2>
+            <p class="wc-hint-small">الفئات المُجابة تُقبل تلقائياً — اضغط ✗ على أي إجابة خاطئة قبل الاعتماد.</p>
+          </div>
+          <div class="wc-review-list" id="wcReviewList"></div>
+          <div class="wc-review-empty" id="wcReviewEmpty" hidden>محد أرسل إجابات هذي الجولة 😅</div>
+          <button class="wc-btn wc-btn-primary wc-confirm-btn" id="wcConfirmBtn" type="button">✅ اعتماد نتائج الجولة</button>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- ============ CREDITS ============ -->
+    <section class="wc-credits-row" aria-label="فريق العمل">
+      <div class="wc-credit-box">
+        <span class="wc-credit-badge">💡 فكرة</span>
+        <span class="wc-credit-name">واي</span>
+        <a class="wc-credit-tiktok" href="https://www.tiktok.com/@lu_24ll" target="_blank" rel="noopener noreferrer">
+          <span class="wc-tiktok-badge" aria-hidden="true">
+            <svg viewBox="0 0 48 48" width="13" height="13" fill="#fff">
+              <path d="M33.5 6c1 4.2 3.7 6.9 8.5 7.2v6.4c-3 .3-5.7-.6-8.5-2.4v13.6c0 8.6-9.4 14.2-17 10.2-4.9-2.6-7.2-8.5-5.2-13.8 2-5.4 7.9-8.4 13.4-6.8v6.8c-2.4-1-5-.3-6.2 1.7-1.2 1.9-.7 4.5 1.1 5.9 1.9 1.5 4.7 1.2 6.2-.7.6-.8.9-1.7.9-2.7V6h6.8z"/>
+            </svg>
+          </span>
+          lu_24ll
+        </a>
+      </div>
+      <div class="wc-credit-box">
+        <span class="wc-credit-badge">⚙️ تطوير وتنفيذ</span>
+        <span class="wc-credit-name">AYMN</span>
+        <a class="wc-credit-tiktok" href="https://www.tiktok.com/@em70_q" target="_blank" rel="noopener noreferrer">
+          <span class="wc-tiktok-badge" aria-hidden="true">
+            <svg viewBox="0 0 48 48" width="13" height="13" fill="#fff">
+              <path d="M33.5 6c1 4.2 3.7 6.9 8.5 7.2v6.4c-3 .3-5.7-.6-8.5-2.4v13.6c0 8.6-9.4 14.2-17 10.2-4.9-2.6-7.2-8.5-5.2-13.8 2-5.4 7.9-8.4 13.4-6.8v6.8c-2.4-1-5-.3-6.2 1.7-1.2 1.9-.7 4.5 1.1 5.9 1.9 1.5 4.7 1.2 6.2-.7.6-.8.9-1.7.9-2.7V6h6.8z"/>
+            </svg>
+          </span>
+          em70_q
+        </a>
+      </div>
+    </section>
+
+    <span class="sr-only" id="wcLiveRegion" role="status" aria-live="assertive"></span>
+
+    <!-- ============ WINNER MODAL ============ -->
+    <div class="wc-overlay" id="wcWinnerOverlay" role="dialog" aria-modal="true" aria-labelledby="wcWinnerName">
+      <div class="wc-modal wc-winner-modal">
+        <div class="wc-winner-crown">👑</div>
+        <p class="wc-winner-title">بطل لعبة اسم و حيوان و نبات و جماد و بلاد!</p>
+        <div class="wc-winner-avatar-wrap" id="wcWinnerAvatarWrap"></div>
+        <h2 id="wcWinnerName">—</h2>
+        <p class="wc-winner-score-text" id="wcWinnerScoreText"></p>
+
+        <div class="wc-winner-logo-wrap">
+          <img src="../../logo.png" alt="">
+        </div>
+
+        <div class="wc-result-actions">
+          <button class="wc-btn wc-btn-winner-home" id="wcWinnerHomeBtn" type="button">🏠 العودة لمنصة الألعاب</button>
+          <button class="wc-btn wc-btn-winner-newmatch" id="wcNewGameBtn" type="button">🆕 إعداد مباراة جديدة</button>
+          <button class="wc-btn wc-btn-winner-rematch" id="wcRematchBtn" type="button">🔁 إعادة المباراة بنفس اللاعبين</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /#wcGameRoot -->
+
+<script src="../../js/agp-core.js"></script>
+<script src="../../js/agp-events.js"></script>
+<script src="../../js/agp-timer-manager.js"></script>
+<script src="../../js/agp-storage-manager.js"></script>
+<script src="../../js/agp-services.js"></script>
+<script src="../../js/agp-stream-connector.js"></script>
+<script src="../../adapters/agp-tiktok-adapter.js"></script>
+<script src="../../js/agp-registry.js"></script>
+<script src="../../js/agp-session.js"></script>
+<script src="../../js/agp-rooms-manager.js"></script>
+<script src="../../js/agp-player-manager.js"></script>
+<script src="../../js/agp-player-source.js"></script>
+<script src="../../js/agp-keyword-manager.js"></script>
+<script src="../../js/agp-queue-manager.js"></script>
+<script src="../../js/agp-score-manager.js"></script>
+<script src="../../js/agp-lobby.js"></script>
+<script src="../../js/agp-game-api.js"></script>
+<script src="../../js/agp-game-engine.js"></script>
+<script src="../../js/agp-game-manager.js"></script>
+<script src="../../js/agp-game-bridge.js"></script>
+<script src="../../js/agp-round-manager.js"></script>
+<script src="../../js/agp-bootstrap.js"></script>
+
+<!-- طبقة الحسابات (تحميل فقط للتوافق مع بقية المنصة — لا استخدام فعلي بهذي اللعبة) -->
+<script src="../../auth/auth-client.js"></script>
+
+<!-- بطاقة اللاعب المشتركة (صورة + اسم) -->
+<script src="../../js/agp-player-card.js"></script>
+
+<!-- أنيميشن "الدخولية" -->
+<script src="../../js/agp-entrance.js"></script>
+
+<!-- شاشة الإعدادات + الاتصال بتيك توك + اللوبي (عام، موجود مسبقاً) -->
+<script src="../../js/agp-game-shell.js"></script>
+
+<!-- منطق لعبة "اسم و حيوان و نبات و جماد و بلاد" نفسها -->
+<script src="agp-word-categories.js"></script>
+
+</body>
+</html>
