@@ -70,10 +70,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var ROTATION_DEG_PER_SEC = 22;
     var RING_TICK_MS = 90;
     var ELIMINATE_STAGGER_MS = 550;
-    var ELIMINATED_PANEL_HOLD_MS = 3000; // ⚠️ تثبيت كل الأسماء والصور ظاهرة 3 ثوانٍ بالضبط قبل ما تبدأ تختفي
-    var ELIMINATED_ITEM_DISMISS_MS = 350; // ⚠️ كل صورة تختفي لحالها بفارق هالمدة عن اللي قبلها
+    // (ما نحتاج مدة تثبيت أو اختفاء تلقائي بعد الآن — الإغلاق يدوي بالكامل بزر ✕)
     var NEXT_ROUND_DELAY_MS = 2200;
-    var MUSIC_TRACK_COUNT = 5; // عدد ملفات كل تصنيف (شيلات / خليجية)
+    // ⚠️ جاهزة تستقبل 10 لكل تصنيف (5 حالية + 5 إضافية قادمة) — بس خليتها
+    // 5 فعلياً حالياً حتى ما تصير محاولات تشغيل ملفات غير مرفوعة بعد (صمت
+    // صوتي نصف الوقت). أول ما ترفع 6.mp3...10.mp3 بنفس مسار shailat/
+    // وkhaleeji/، غيّر الرقم تحت لـ10 وخلاص — بدون أي تعديل ثاني بالكود.
+    var MUSIC_TRACK_COUNT = 5;
 
     /* ======================================================================
      *  0) الصوت — مستوى صوت واحد موحَّد لكل شي (مؤثرات قصيرة + موسيقى
@@ -189,6 +192,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.timerManager.stop(TIMER_NAME);
         _selectionOpen = false;
         unwireCommentListener();
+        // ⚠️ احتياط: لو تبويب المُقصَين انفتح ولسه ما انقفل يدوياً (مباراة
+        // جديدة/إعادة مباراة قبل ما يقفله الاستريمر)، نخفيه حتى ما يعلق
+        var elimPanel = el('mc-eliminated-panel');
+        if (elimPanel) elimPanel.classList.remove('mc-eliminated-visible');
     }
 
     function el(id) { return document.getElementById(id); }
@@ -324,9 +331,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'padding:28px 32px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;opacity:0;',
             'pointer-events:none;transition:opacity .3s ease,transform .3s ease;',
             'box-shadow:0 0 34px rgba(124,58,237,0.55);}',
-            '#mc-eliminated-panel.mc-eliminated-visible{opacity:1;transform:translate(-50%,-50%) scale(1);}',
+            '#mc-eliminated-panel.mc-eliminated-visible{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto;}',
             '.mc-eliminated-logo{width:64px;height:64px;object-fit:contain;flex-shrink:0;}',
             '.mc-eliminated-title{color:#fff;font-weight:800;font-size:1.2em;white-space:nowrap;}',
+            /* ⚠️ زر إغلاق يدوي — الطريقة الوحيدة لإخفاء التبويب الآن */
+            '.mc-eliminated-close-btn{position:absolute;top:14px;left:14px;width:34px;height:34px;',
+            'border-radius:50%;background:rgba(255,255,255,0.12);border:2px solid #fff;color:#fff;',
+            'font-size:1.05em;font-weight:900;cursor:pointer;display:flex;align-items:center;',
+            'justify-content:center;z-index:5;padding:0;line-height:1;pointer-events:auto;}',
+            '.mc-eliminated-close-btn:hover{background:rgba(255,255,255,0.28);}',
             '.mc-eliminated-avatars{display:flex;gap:20px 24px;flex-wrap:wrap;justify-content:center;',
             'align-items:flex-start;max-width:min(640px,88vw);max-height:56vh;overflow-y:auto;padding:6px;}',
             '.mc-eliminated-avatar-item{position:relative;width:88px;height:88px;margin-bottom:18px;',
@@ -450,11 +463,61 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * الموسيقية فقط عبر override بملفنا، بدون أي لمس لملف
              * js/agp-game-shell.js المشترك (قرار صريح من صاحب المشروع). */
             '#agp-settings-close-btn{color:#fff !important;background:rgba(0,0,0,0.35) !important;',
-            'width:32px;height:32px;border-radius:50%;display:flex !important;align-items:center;',
-            'justify-content:center;box-shadow:0 0 8px rgba(0,0,0,0.55);}',
+            'width:38px;height:38px;border-radius:50%;display:flex !important;align-items:center;',
+            'justify-content:center;box-shadow:0 0 8px rgba(0,0,0,0.55);font-size:1.5em !important;}',
 
             /* ⚠️ اسم اللعبة بجانب عنوان اللوبي — بلون ذهبي مميّز عن باقي النص */
-            '.mc-lobby-game-tag{color:var(--mc-gold);}'
+            '.mc-lobby-game-tag{color:var(--mc-gold);}',
+
+            /* ======================================================================
+             * ⚠️ تحسينات شاشة اللوبي (شبكة اللاعبين + صف الأزرار) — بدون
+             * أي تغيير على لون خلفية صندوق اللوبي نفسه (قرار صريح).
+             * ==================================================================== */
+            '#agp-shell-box.agp-lobby-box{height:900px !important;max-height:92vh !important;',
+            'overflow-y:auto !important;display:flex !important;flex-direction:column;}',
+
+            '#agp-lobby-list.agp-shell-player-list{',
+            '--mc-av:50px;--mc-nw-min:110px;--mc-nw-max:260px;--mc-nh:40px;--mc-nf:18px;',
+            '--mc-gap:10px;--mc-zoom:0.77;--mc-row-min:64px;',
+            'display:grid !important;grid-template-columns:repeat(3,1fr);grid-auto-flow:dense;',
+            'gap:var(--mc-gap) !important;margin-top:34px !important;list-style:none;padding:0;}',
+            '#agp-lobby-list.agp-shell-player-list li{position:relative;display:flex;align-items:center;',
+            'justify-content:center;min-height:var(--mc-row-min);}',
+            '#agp-lobby-list.agp-shell-player-list li.mc-wide-card{grid-column:span 2;}',
+
+            '#agp-lobby-list .agp-pcard{display:flex !important;align-items:center;gap:0 !important;}',
+            '#agp-lobby-list .agp-pcard-avatar-basic{width:var(--mc-av) !important;height:var(--mc-av) !important;',
+            'flex-shrink:0;}',
+            '#agp-lobby-list .agp-pcard-name-basic{display:flex !important;align-items:center;',
+            'justify-content:center;min-width:var(--mc-nw-min);max-width:var(--mc-nw-max);height:var(--mc-nh);',
+            'font-size:var(--mc-nf) !important;background:rgba(255,255,255,0.08);',
+            'border:1px solid rgba(255,255,255,0.25);border-radius:999px;padding:0 12px;',
+            'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;}',
+            '#agp-lobby-list .agp-pcard-tpl{zoom:var(--mc-zoom);}',
+
+            '.mc-lobby-remove-btn{position:absolute;top:-6px;left:-6px;width:22px;height:22px;',
+            'border-radius:50%;background:#ff3b5c;border:2px solid #fff;color:#fff;font-size:11px;',
+            'font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;',
+            'z-index:5;padding:0;line-height:1;}',
+            '.mc-lobby-remove-btn:hover{background:#ff5c78;}',
+
+            '.mc-lobby-actions-row{display:flex;gap:10px;justify-content:center;margin-top:auto;',
+            'padding-top:18px;flex-wrap:wrap;}',
+            '.mc-lobby-actions-row > *{width:360px;max-width:100%;height:48px;border-radius:10px;',
+            'font-weight:800;font-size:0.95em;cursor:pointer;border:none;display:flex;align-items:center;',
+            'justify-content:center;gap:6px;box-sizing:border-box;font-family:Cairo,sans-serif;',
+            'text-decoration:none;}',
+            '.mc-lobby-back-settings-btn{background:linear-gradient(90deg,#4a1f5c,#2D1932);color:#fff;',
+            'border:1px solid rgba(255,255,255,0.3) !important;}',
+            '.mc-lobby-home-btn{background:linear-gradient(90deg,var(--agp-accent-2),var(--agp-accent));color:#fff;}',
+            '#agp-start-round-btn.mc-lobby-start-btn{background:linear-gradient(90deg,#1fbf6a,#0e8f4e) !important;}',
+
+            /* لوحة الإعدادات أثناء المباراة — زر رجوع للمنصة + إكس أبرز */
+            '.mc-settings-home-btn{display:flex;align-items:center;justify-content:center;gap:6px;',
+            'width:100%;max-width:360px;height:44px;margin:18px auto 0;border-radius:10px;',
+            'background:linear-gradient(90deg,var(--agp-accent-2),var(--agp-accent));color:#fff;',
+            'font-weight:800;font-size:0.9em;text-decoration:none;font-family:Cairo,sans-serif;',
+            'box-sizing:border-box;}'
         ].join('');
         document.head.appendChild(style);
     }
@@ -935,14 +998,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *  9) الإقصاء بأنيميشن متتابع
      * ==================================================================== */
     /* ======================================================================
-     *  9ب) تبويب المُقصَين — يظهر مرة وحدة بكل الأسماء والصور المُقصاة
-     *      هالدورة مع بعض (بدل ما تتراكم وحدة وحدة)، تثبت 3 ثوانٍ كاملة،
-     *      وبعدين تختفي وحدة وحدة (مو كلها مرة وحدة) لين يفضى التبويب.
+     *  9ب) تبويب المُقصَين — يظهر بكل الأسماء والصور المُقصاة هالدورة
+     *      مرة وحدة، ويبقى ظاهر **لين الاستريمر يقفله بنفسه** بزر ✕ —
+     *      ما يختفي تلقائياً بأي توقيت. الدورة الجاية ما تبدأ تجهيزها
+     *      إلا بعد ما يُقفل التبويب يدوياً (طلب صريح).
      * ==================================================================== */
     function showEliminatedPanel(losers) {
         var panel = el('mc-eliminated-panel');
         if (!panel) return;
-        panel.innerHTML = '<img class="mc-eliminated-logo" src="../../logo.png" alt="">' +
+        panel.innerHTML = '<button type="button" class="mc-eliminated-close-btn" id="mc-eliminated-close-btn" title="إغلاق">✕</button>' +
+            '<img class="mc-eliminated-logo" src="../../logo.png" alt="">' +
             '<div class="mc-eliminated-title">❌ تم إقصاء هالدورة</div>' +
             '<div class="mc-eliminated-avatars" id="mc-eliminated-avatars"></div>';
         var wrap = el('mc-eliminated-avatars');
@@ -954,38 +1019,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             wrap.appendChild(div);
         });
         panel.classList.add('mc-eliminated-visible');
+
+        document.getElementById('mc-eliminated-close-btn').onclick = function () {
+            panel.classList.remove('mc-eliminated-visible');
+            proceedAfterElimination();
+        };
     }
 
-    function dismissEliminatedPanelOneByOne(losers, idx) {
-        if (idx >= losers.length) {
-            var panel = el('mc-eliminated-panel');
-            if (panel) panel.classList.remove('mc-eliminated-visible');
-            return;
-        }
-        var item = el('mc-elim-item-' + losers[idx].id);
-        if (item) item.classList.add('mc-eliminated-item-out');
-        window.setTimeout(function () {
-            if (item) item.remove();
-            dismissEliminatedPanelOneByOne(losers, idx + 1);
-        }, ELIMINATED_ITEM_DISMISS_MS);
+    function proceedAfterElimination() {
+        updateBadges();
+        if (_alive.length <= 1) endMatch(_alive[0] || null);
+        else window.setTimeout(runNextRound, NEXT_ROUND_DELAY_MS - 700);
     }
 
     function eliminateSequentially(losers, idx) {
         if (idx === 0) showEliminatedPanel(losers); // ⚠️ الكل يظهر دفعة وحدة من البداية، مو تراكمياً
 
         if (idx >= losers.length) {
-            // بعد آخر إقصاء بالحلقة: نثبّت التبويب 3 ثوانٍ، وبعدها يبدأ
-            // يفضى وحدة وحدة، والدورة الجاية تبدأ بعد ما يفضى بالكامل.
-            window.setTimeout(function () {
-                dismissEliminatedPanelOneByOne(losers, 0);
-            }, ELIMINATED_PANEL_HOLD_MS);
-
-            var totalDismissMs = losers.length * ELIMINATED_ITEM_DISMISS_MS;
-            window.setTimeout(function () {
-                updateBadges();
-                if (_alive.length <= 1) endMatch(_alive[0] || null);
-                else window.setTimeout(runNextRound, NEXT_ROUND_DELAY_MS - 700);
-            }, ELIMINATED_PANEL_HOLD_MS + totalDismissMs + 400);
+            // ⚠️ ما نكمل تلقائياً هنا إطلاقاً — ننتظر ضغطة زر ✕ اليدوية
+            // (داخل showEliminatedPanel) اللي تستدعي proceedAfterElimination.
             return;
         }
         var player = losers[idx];
@@ -1216,6 +1268,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *  13) تسجيل اللعبة بالمنصة
      * ==================================================================== */
     function registerGame() {
+        // ⚠️ إصلاح باگ حقيقي لقطته بالاختبار: كانت أنماط اللوبي (الشبكة،
+        // أزرار الحذف، صف الأزرار...) ما تنحقن بالصفحة إلا بعد "بدء
+        // الجولة" (عبر ensureScaffolding)، يعني ما تشتغل إطلاقاً وقت
+        // الاستريمر لسه بشاشة اللوبي نفسها! لازم تنحقن من أول لحظة.
+        injectStageStyles();
+
         var registered = AGP.gameManager.registerGame({
             id: GAME_ID,
             name: GAME_NAME,
@@ -1255,16 +1313,49 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             onStartRound: handleStartRound
         });
 
-        startLobbyGameNameWatcher();
+        startShellOverlayWatcher();
     }
 
     /* ======================================================================
-     *  14) إضافة اسم اللعبة بجانب عنوان اللوبي — بدون أي تعديل على ملف
-     *      js/agp-game-shell.js المشترك (قرار صريح من صاحب المشروع).
-     *      شاشة اللوبي تُعاد رسمها بالكامل (innerHTML) كل ما ينضم لاعب،
-     *      فأي إضافة يدوية تُمسَح فوراً — لذا نراقب DOM بـMutationObserver
-     *      ونعيد الإضافة تلقائياً كل مرة تتغيّر فيها.
+     *  14) تحسينات شاشة اللوبي + لوحة الإعدادات أثناء المباراة — كل هذا
+     *      إضافي بحت (CSS override + DOM injection من ملفنا) بدون أي
+     *      تعديل على js/agp-game-shell.js أو js/agp-player-card.js
+     *      المشتركين (قرار صريح من صاحب المشروع، ثابت لكل الألعاب).
+     *
+     *      شاشات الشل تُعاد رسمها بالكامل (innerHTML) مع أي تحديث (لاعب
+     *      جديد، تغيّر حالة الاتصال...)، فأي إضافة يدوية تُمسَح فوراً —
+     *      لذا نراقب DOM بـMutationObserver واحد يغطي الحالتين، ونعيد
+     *      تطبيق كل التحسينات تلقائياً كل مرة يتغيّر فيها.
      * ==================================================================== */
+    function enhanceShellOverlay() {
+        var box = document.getElementById('agp-shell-box');
+        if (!box) return;
+
+        if (box.classList.contains('agp-lobby-box')) {
+            enhanceLobbyScreen(box);
+        }
+        if (document.getElementById('agp-settings-close-btn')) {
+            enhanceMidMatchSettingsPanel(box);
+        }
+    }
+
+    function startShellOverlayWatcher() {
+        enhanceShellOverlay();
+        var target = document.getElementById('agp-shell-overlay') || document.body;
+        var observer = new MutationObserver(function () { enhanceShellOverlay(); });
+        observer.observe(target, { childList: true, subtree: true });
+        window.addEventListener('resize', debounce(enhanceShellOverlay, 200));
+    }
+
+    function debounce(fn, ms) {
+        var t = null;
+        return function () {
+            if (t) clearTimeout(t);
+            t = window.setTimeout(fn, ms);
+        };
+    }
+
+    /* -------- 14أ) عنوان اللوبي بلونين -------- */
     function injectLobbyGameNameLabel() {
         var h2 = document.querySelector('#agp-shell-box h2');
         if (!h2 || h2.textContent.indexOf('اللوبي') === -1) return;
@@ -1275,11 +1366,122 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         h2.appendChild(tag);
     }
 
-    function startLobbyGameNameWatcher() {
+    /* -------- 14ب) قائمة اللاعبين: شبكة 3 أعمدة + حذف + بطاقة عريضة + تصغير تلقائي -------- */
+    function enhanceLobbyList() {
+        var list = document.getElementById('agp-lobby-list');
+        if (!list) return;
+
+        var players = AGP.gameManager.getPlayers();
+        var items = Array.prototype.slice.call(list.children);
+
+        // زر حذف (✕) لكل بطاقة — يستدعي نفس API الحذف الحقيقي المستخدَم
+        // بلوحة الإعدادات (AGP.player.removePlayer)، بدون أي لمس للملف
+        // المشترك — فقط عبر واجهته العامة المُصدَّرة أصلاً.
+        items.forEach(function (li, idx) {
+            var player = players[idx];
+            if (!player || li.querySelector('.mc-lobby-remove-btn')) return;
+            li.style.position = 'relative';
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'mc-lobby-remove-btn';
+            btn.textContent = '✕';
+            btn.title = 'حذف من اللوبي';
+            btn.onclick = function () {
+                if (AGP.player && typeof AGP.player.removePlayer === 'function') {
+                    AGP.player.removePlayer(player.id);
+                }
+            };
+            li.appendChild(btn);
+        });
+
+        // بطاقة عريضة (عمودين) لو الاسم أطول من عرض عمود واحد فعلي
+        var gap = 10;
+        var colWidth = list.clientWidth ? (list.clientWidth - 2 * gap) / 3 : 0;
+        if (colWidth > 0) {
+            items.forEach(function (li) {
+                li.classList.remove('mc-wide-card');
+                var nameEl = li.querySelector('.agp-pcard-name-basic, .agp-pcard-tpl-name');
+                if (nameEl && nameEl.scrollWidth > colWidth - 8) {
+                    li.classList.add('mc-wide-card');
+                }
+            });
+        }
+
+        applyLobbyAutoShrink(list, items.length);
+    }
+
+    // ⚠️ تصغير متناسب (أفاتار/بلاطة/خط/فجوات/تكبير البطاقة المؤطَّرة) لو
+    // عدد الصفوف المطلوب يتجاوز المساحة الرأسية المتاحة داخل الصندوق
+    // الثابت (900px) — بحد أدنى 55% من الحجم الكامل.
+    function applyLobbyAutoShrink(list, playerCount) {
+        var rows = Math.max(1, Math.ceil(playerCount / 3));
+        var baseRow = 64, baseGap = 10;
+        var neededHeight = rows * baseRow + (rows - 1) * baseGap;
+        // مساحة تقديرية متاحة لقائمة اللاعبين داخل الصندوق (900 ناقص
+        // الحشو، العنوان، سطر التلميح، هامش القائمة العلوي، وصف الأزرار)
+        var availableHeight = 900 - 60 - 60 - 40 - 34 - 82;
+        var scale = 1;
+        if (neededHeight > availableHeight && availableHeight > 0) {
+            scale = Math.max(0.55, availableHeight / neededHeight);
+        }
+        list.style.setProperty('--mc-av', Math.round(50 * scale) + 'px');
+        list.style.setProperty('--mc-nw-min', Math.round(110 * scale) + 'px');
+        list.style.setProperty('--mc-nw-max', Math.round(260 * scale) + 'px');
+        list.style.setProperty('--mc-nh', Math.round(40 * scale) + 'px');
+        list.style.setProperty('--mc-nf', Math.round(18 * scale) + 'px');
+        list.style.setProperty('--mc-gap', Math.round(10 * scale) + 'px');
+        list.style.setProperty('--mc-zoom', (0.77 * scale).toFixed(3));
+        list.style.setProperty('--mc-row-min', Math.round(64 * scale) + 'px');
+    }
+
+    /* -------- 14ج) صف الأزرار السفلي (إعدادات / بدء الجولة / رجوع للمنصة) -------- */
+    function ensureLobbyActionsRow(box) {
+        if (document.getElementById('mc-lobby-actions-row')) return;
+        var startBtn = document.getElementById('agp-start-round-btn');
+        if (!startBtn) return;
+
+        var row = document.createElement('div');
+        row.id = 'mc-lobby-actions-row';
+        row.className = 'mc-lobby-actions-row';
+
+        var backBtn = document.createElement('button');
+        backBtn.type = 'button';
+        backBtn.className = 'mc-lobby-back-settings-btn';
+        backBtn.textContent = '⚙️ العودة لاعدادات المباراة';
+        backBtn.onclick = function () {
+            if (window.confirm('بيلغي الاتصال الحالي بالبث ويقفل اللوبي — تبي تكمل؟')) {
+                window.location.reload();
+            }
+        };
+
+        var homeBtn = document.createElement('a');
+        homeBtn.href = '../../index.html';
+        homeBtn.className = 'mc-lobby-home-btn';
+        homeBtn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
+
+        startBtn.classList.add('mc-lobby-start-btn'); // نفس العنصر، ننقله بس (بدون أي تكرار أو تعديل نصّه)
+
+        row.appendChild(backBtn);
+        row.appendChild(startBtn);
+        row.appendChild(homeBtn);
+        box.appendChild(row);
+    }
+
+    function enhanceLobbyScreen(box) {
         injectLobbyGameNameLabel();
-        var target = document.getElementById('agp-shell-overlay') || document.body;
-        var observer = new MutationObserver(function () { injectLobbyGameNameLabel(); });
-        observer.observe(target, { childList: true, subtree: true });
+        enhanceLobbyList();
+        ensureLobbyActionsRow(box);
+    }
+
+    /* -------- 14د) لوحة الإعدادات أثناء المباراة: زر رجوع للمنصة -------- */
+    function enhanceMidMatchSettingsPanel(box) {
+        if (document.getElementById('mc-settings-home-btn')) return;
+        var btn = document.createElement('a');
+        btn.id = 'mc-settings-home-btn';
+        btn.href = '../../index.html';
+        btn.className = 'mc-settings-home-btn';
+        btn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
+        box.appendChild(btn);
     }
 
     AGP.events.on('platform:ready', function () { registerGame(); });
