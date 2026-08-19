@@ -206,9 +206,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         '<button type="button" class="tw-pill-btn tw-timer-pill' + (_settings.selectionTimerSeconds === 0 ? ' tw-pill-active' : '') + '" data-value="0">إيقاف</button>';
 
         box.innerHTML =
+            '<button type="button" id="tw-settings-back-btn" class="tw-back-to-platform-link">🏠 رجوع للمنصة</button>' +
             '<h2>إعدادات مباراة حرب الفريقين</h2>' +
 
-            '<div class="tw-row-field" style="margin-bottom:16px;">' +
+            '<div class="tw-row-field" style="margin-bottom:12px;">' +
                 '<input type="text" id="tw-input-username" placeholder="" value="' + escapeAttr(_settings.tiktokUsername) + '">' +
                 '<label>اكتب يوزر بث التيك توك</label>' +
             '</div>' +
@@ -227,19 +228,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</div>' +
 
             '<div class="tw-field-label-center">أقصى حد لكل فريق: اختار كم عدد لاعبين الفرق</div>' +
-            '<div class="tw-pill-group" id="tw-teamsize-group" style="margin-bottom:18px;">' + teamSizePills + '</div>' +
+            '<div class="tw-pill-group" id="tw-teamsize-group" style="margin-bottom:12px;">' + teamSizePills + '</div>' +
 
             '<div class="tw-field-label-center">عدد نقاط البداية لكل فريق</div>' +
-            '<div class="tw-pill-group" id="tw-points-group" style="margin-bottom:18px;">' + pointsPills + '</div>' +
+            '<div class="tw-pill-group" id="tw-points-group" style="margin-bottom:12px;">' + pointsPills + '</div>' +
 
             '<div class="tw-field-label-center">مؤقت اختيار المربع</div>' +
-            '<div class="tw-pill-group" id="tw-timer-group" style="margin-bottom:6px;">' + timerPills + '</div>' +
+            '<div class="tw-pill-group" id="tw-timer-group" style="margin-bottom:4px;">' + timerPills + '</div>' +
             '<div class="tw-hint">إذا انتهى الوقت، ينتقل الدور تلقائياً للاعب التالي.</div>' +
 
             '<div id="tw-settings-error" class="tw-error-msg" style="display:none;"></div>' +
 
             '<button type="button" id="tw-connect-btn" class="tw-btn-connect">اتصل بالبث و انتقل للوبي</button>';
 
+        el('tw-settings-back-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
         wireSettingsHandlers();
     }
 
@@ -325,6 +327,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var root = ensureLobbyEl();
         root.style.display = 'block';
         root.innerHTML =
+            '<h2 class="tw-lobby-heading">اللوبي بانتظار اللاعبين <span class="tw-lobby-heading-accent">' + escapeHtml(GAME_NAME) + '</span></h2>' +
             '<div class="tw-lobby-banner">عشان تدخل لعبة حرب الفريقين اكتب بشات البث كلمة الدخول</div>' +
             '<div class="tw-lobby-headers">' +
                 '<div class="tw-team-header-box tw-team-red"><div class="tw-team-header-name" id="tw-lh-red-name"></div><div class="tw-team-header-keyword" id="tw-lh-red-kw"></div></div>' +
@@ -335,7 +338,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="tw-vs-label">VS</div>' +
                 '<div class="tw-lobby-team-panel tw-team-blue"><div class="tw-lobby-count" id="tw-lobby-count-blue"></div><div class="tw-player-grid" id="tw-lobby-grid-blue"></div></div>' +
             '</div>' +
-            '<div class="tw-start-round-wrap"><button type="button" id="tw-start-round-btn" class="tw-btn-start-round">بدء الجولة</button></div>';
+            '<div class="tw-lobby-btn-row">' +
+                '<button type="button" id="tw-lobby-back-settings-btn" class="tw-lobby-row-btn tw-lobby-btn-settings">⚙️ العودة لإعدادات المباراة</button>' +
+                '<button type="button" id="tw-start-round-btn" class="tw-lobby-row-btn tw-lobby-btn-start">بدء الجولة</button>' +
+                '<button type="button" id="tw-lobby-back-platform-btn" class="tw-lobby-row-btn tw-lobby-btn-platform">🏠 رجوع لمنصة ألعاب أيمن</button>' +
+            '</div>';
 
         el('tw-lh-red-name').textContent = _settings.teamRedName;
         el('tw-lh-red-kw').textContent = 'الكلمة: ' + _settings.teamRedKeyword;
@@ -343,6 +350,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('tw-lh-blue-kw').textContent = 'الكلمة: ' + _settings.teamBlueKeyword;
 
         el('tw-start-round-btn').addEventListener('click', handleStartRound);
+        el('tw-lobby-back-platform-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('tw-lobby-back-settings-btn').addEventListener('click', function () {
+            var ok = window.confirm('بترجع لشاشة الإعدادات وينقطع الاتصال الحالي بالبث. تبي تكمل؟');
+            if (ok) window.location.reload();
+        });
 
         renderLobbyPlayerGrids();
     }

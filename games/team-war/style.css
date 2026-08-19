@@ -61,15 +61,22 @@ body.tw-active {
     padding: 90px 16px 20px; background: rgba(5,2,5,0.55);
 }
 #tw-box {
-    width: 720px; max-width: 96vw; max-height: min(860px, 90vh); overflow-y: auto;
+    width: 720px; max-width: 96vw; max-height: min(720px, 88vh); overflow-y: auto;
     background: rgba(30,15,20,0.66);
     border: 8px solid; border-image: linear-gradient(180deg, var(--tw-outer-border-1), var(--tw-outer-border-2)) 1;
-    border-radius: 0; padding: 30px 34px; box-sizing: border-box;
+    border-radius: 0; padding: 20px 30px; box-sizing: border-box;
     box-shadow: 0 0 50px rgba(0,0,0,0.6);
 }
-#tw-box h2 { margin: 0 0 22px; font-size: 1.7em; text-align: center; font-weight: 900; }
+#tw-box h2 { margin: 0 0 14px; font-size: 1.5em; text-align: center; font-weight: 900; }
 
-.tw-field { margin-bottom: 16px; text-align: right; }
+.tw-back-to-platform-link {
+    display: block; margin: 0 0 10px auto; background: none; border: none; cursor: pointer;
+    color: rgba(255,255,255,0.65); font-family: inherit; font-size: 0.85em; font-weight: 700;
+    padding: 4px 0; transition: color .15s;
+}
+.tw-back-to-platform-link:hover { color: #fff; }
+
+.tw-field { margin-bottom: 12px; text-align: right; }
 
 /* صف اليوزر: مدخل + تسمية بنفس السطر، حد متدرّج مشترك */
 .tw-row-field {
@@ -90,7 +97,7 @@ body.tw-active {
     border-radius: 10px; background: rgba(0,0,0,0.28);
 }
 
-.tw-two-col { display: flex; gap: 16px; margin-bottom: 18px; }
+.tw-two-col { display: flex; gap: 14px; margin-bottom: 12px; }
 .tw-two-col > div { flex: 1; }
 .tw-team-box { border-radius: 10px; padding: 12px; border: 3px solid; text-align: center; }
 .tw-team-box.tw-team-red { border-color: var(--tw-red); background: rgba(228,37,40,0.10); }
@@ -131,6 +138,8 @@ body.tw-active {
 
 /* ---------- اللوبي ---------- */
 #tw-lobby-screen { padding: 100px 24px 30px; max-width: 1700px; margin: 0 auto; }
+.tw-lobby-heading { text-align: center; font-size: 1.5em; font-weight: 800; color: #fff; margin: 0 0 16px; }
+.tw-lobby-heading-accent { color: var(--tw-gold); font-weight: 900; }
 .tw-lobby-banner {
     width: 100%; max-width: 1015px; margin: 0 auto 22px; padding: 22px 20px; text-align: center;
     font-size: 1.3em; font-weight: 800;
@@ -172,12 +181,16 @@ body.tw-active {
 .tw-lobby-empty-slot { border: 2px dashed rgba(255,255,255,0.35); border-radius: 999px; min-height: 46px; }
 .tw-lobby-count { text-align: center; color: #fff; font-weight: 800; margin-bottom: 12px; font-size: 1.05em; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
 
-.tw-start-round-wrap { text-align: center; margin-top: 26px; }
-.tw-btn-start-round {
-    padding: 14px 60px; border: none; border-radius: 10px; background: linear-gradient(90deg, #1DB954, #14813B);
-    color: #fff; font-family: inherit; font-weight: 900; font-size: 1.15em; cursor: pointer;
+.tw-lobby-btn-row { display: flex; gap: 14px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 26px; }
+.tw-lobby-row-btn {
+    width: 300px; max-width: 90vw; height: 48px; border: none; border-radius: 10px;
+    font-family: inherit; font-weight: 800; font-size: 0.95em; cursor: pointer; color: #fff; transition: filter .15s;
 }
-.tw-btn-start-round:disabled { opacity: 0.45; cursor: not-allowed; }
+.tw-lobby-row-btn:hover { filter: brightness(1.1); }
+.tw-lobby-btn-settings { background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.35); }
+.tw-lobby-btn-start { background: linear-gradient(90deg, #1DB954, #14813B); }
+.tw-lobby-btn-start:disabled { opacity: 0.45; cursor: not-allowed; }
+.tw-lobby-btn-platform { background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.35); }
 
 /* ---------- لوحة إدارة المباراة (زر ⚙️) ---------- */
 #tw-admin-panel {
@@ -228,9 +241,9 @@ body.tw-active {
 /* اللوبي الفرعي (إضافة لاعب لمقعد فاضي) */
 #tw-sub-lobby-overlay {
     position: fixed; inset: 0; z-index: 10001; display: flex; align-items: center; justify-content: center;
-    background: rgba(0,0,0,0.55); opacity: 0; transition: opacity .25s;
+    background: rgba(0,0,0,0.55); opacity: 0; pointer-events: none; transition: opacity .25s;
 }
-#tw-sub-lobby-overlay.tw-sub-open { opacity: 1; }
+#tw-sub-lobby-overlay.tw-sub-open { opacity: 1; pointer-events: auto; }
 #tw-sub-lobby-box {
     width: 1015px; max-width: 94vw; min-height: 300px; border-radius: 10px; padding: 26px; position: relative;
     background: linear-gradient(135deg, #f26a6a, var(--tw-blue));
