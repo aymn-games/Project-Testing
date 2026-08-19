@@ -757,13 +757,29 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // (مقاسة من list.clientHeight)، وتُعاد الحساب تلقائياً مع كل
             // انضمام/مغادرة لاعب (نفس MutationObserver الموجود أصلاً).
             // القيم الافتراضية (fallback) هي أرقام الحجم الكامل المعتمدة.
+            // ⚠️ [0.45.19] طلب صريح بعد اختبار بأسماء حقيقية (إنجليزية/
+            // إيموجي طويلة، عكس أسماء الاختبار القصيرة "لاعب_1"): بلاطة
+            // اسم طويلة كانت تتوسّع حتى الحد الأقصى (520px) وتفرض على
+            // شبكة 3 أعمدة عرضاً أكبر من المتاح فعلياً — يسبب فيض أفقي
+            // حقيقي (سكرول جانبي + قصّ بصري للعمود الأول). المحاولة
+            // الأولى (تبديل كامل الشبكة لعمودين) كانت أوسع من المطلوب —
+            // طلب المستخدم صراحةً إبقاء 3 أعمدة كقاعدة عامة، وفقط
+            // البطاقة صاحبة الاسم الطويل تاخذ عرض عمودين (`grid-column:
+            // span 2`) بدل تغيير الشبكة كلها. الفحص (markWideLobbyCards)
+            // يحدد لكل بطاقة على حدة هل عرضها الطبيعي أكبر من عرض عمود
+            // واحد متاح، ويضيف كلاس `.er-lobby-card-wide` لها فقط لو
+            // كذا. `grid-auto-flow:dense` يسمح للبطاقات القصيرة اللاحقة
+            // تملأ أي فراغ متبقي بنفس الصف بدل ترك فراغ فارغ.
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list{display:grid !important;',
-            'grid-template-columns:repeat(3,1fr) !important;gap:var(--er-lobby-grid-gap,10px) !important;',
+            'grid-template-columns:repeat(3,1fr) !important;grid-auto-flow:dense !important;',
+            'gap:var(--er-lobby-grid-gap,10px) !important;',
             'align-items:center !important;justify-items:center !important;margin-top:34px !important;}',
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{position:relative;display:flex !important;',
             'align-items:center !important;justify-content:center !important;flex:0 0 auto !important;',
-            'padding:4px !important;min-height:var(--er-lobby-row-min-height,100px) !important;',
-            'box-sizing:border-box !important;}',
+            'min-width:0 !important;padding:4px !important;',
+            'min-height:var(--er-lobby-row-min-height,88px) !important;box-sizing:border-box !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li.er-lobby-card-wide{',
+            'grid-column:span 2 !important;}',
 
             // ---- بطاقة اللاعب الأساسية (بدون إطار) — تصميم "بلاطة اسم +
             // دائرة أفاتار منفصلة بجانبها"، مطابق لصورة Figma:
@@ -780,7 +796,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // ⚠️ [0.45.17] طلب صريح: حجم دائرة الأفاتار 84→75px (الأساس
             // الكامل — [0.45.18] يصغّره أكثر ديناميكياً لو زاد اللاعبين).
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-avatar-basic{',
-            'width:var(--er-lobby-avatar-size,75px) !important;height:var(--er-lobby-avatar-size,75px) !important;',
+            'width:var(--er-lobby-avatar-size,65px) !important;height:var(--er-lobby-avatar-size,65px) !important;',
             'border-width:3px !important;}',
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-avatar-basic--fallback{',
             'font-size:1.6em !important;}',
@@ -788,9 +804,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // 40→35px (أساس كامل — [0.45.18] يصغّره ديناميكياً أيضاً).
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-name-basic{',
             'display:flex !important;align-items:center !important;justify-content:center !important;',
-            'min-width:var(--er-lobby-pill-minw,300px) !important;max-width:var(--er-lobby-pill-maxw,520px) !important;',
-            'height:var(--er-lobby-pill-height,60px) !important;',
-            'box-sizing:border-box !important;padding:0 20px !important;font-size:var(--er-lobby-font-size,35px) !important;',
+            'min-width:var(--er-lobby-pill-minw,260px) !important;max-width:var(--er-lobby-pill-maxw,450px) !important;',
+            'height:var(--er-lobby-pill-height,52px) !important;',
+            'box-sizing:border-box !important;padding:0 20px !important;font-size:var(--er-lobby-font-size,30px) !important;',
             'font-weight:800 !important;background:rgba(255,255,255,0.14) !important;',
             'border:1px solid rgba(255,255,255,0.32) !important;border-radius:999px !important;',
             'white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;',
@@ -811,7 +827,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // الأحجام، بدون أي تشويه (zoom يبقى تكبيراً متناسباً للقماشة
             // كوحدة واحدة دائماً، بغضّ النظر عن قيمته).
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-tpl{',
-            'zoom:var(--er-lobby-frame-zoom,1.15) !important;}',
+            'zoom:var(--er-lobby-frame-zoom,1.00) !important;}',
 
             // ⚠️ زر "✕" لإقصاء لاعب يدوياً قبل بدء المباراة (بطاقات اللوبي) —
             // يُضاف كعنصر عبر enhanceLobbyList()، هذا فقط شكله. حجمه بقي
@@ -2164,6 +2180,53 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * افتراضي>) فتتحدَّث تلقائياً. يُعاد الحساب مع كل تغيّر بعدد
      * اللاعبين (نفس MutationObserver الموجود، عبر applyShellEnhancements).
      */
+    /**
+     * ⚠️ [0.45.19] بدل تبديل كامل الشبكة لعمودين (محاولة أولى رُفضت
+     * صراحةً من المستخدم: "لا غلط خل ثلاثه اسماء بس لو حصل فيه اسم
+     * طويل يصبح اسمين بجانب بعض") — الشبكة تبقى 3 أعمدة دائماً، وفقط
+     * البطاقة صاحبة الاسم الطويل (اللي عرضها الطبيعي أكبر من عرض عمود
+     * واحد متاح فعلياً) تاخذ عرض عمودين (`grid-column:span 2`، عبر
+     * كلاس `.er-lobby-card-wide`)، فيصير بصف تلك البطاقة مكان لبطاقة
+     * واحدة إضافية بجانبها بس (بدل 2). بقية الصفوف اللي كل أسمائها
+     * قصيرة تبقى 3 بطاقات بالضبط بدون أي تغيير. نقرأ القيم الحالية
+     * المُطبَّقة فعلياً (أفاتار/بلاطة بعد أي تصغير سابق) بدل أرقام أساس
+     * ثابتة، حتى يتطابق القرار مع الحجم الفعلي المعروض حالياً.
+     */
+    function markWideLobbyCards(box, list) {
+        var items = list.querySelectorAll('li');
+        if (items.length === 0) return 0;
+
+        var availableWidth = list.clientWidth || box.clientWidth || 1400;
+        var GRID_GAP = 10, BUFFER = 8, COLUMNS = 3;
+        var columnWidth = (availableWidth - GRID_GAP * (COLUMNS - 1)) / COLUMNS;
+
+        var avatarRef = parseFloat(box.style.getPropertyValue('--er-lobby-avatar-size')) || 65;
+        var pillMinRef = parseFloat(box.style.getPropertyValue('--er-lobby-pill-minw')) || 260;
+        var pillMaxRef = parseFloat(box.style.getPropertyValue('--er-lobby-pill-maxw')) || 450;
+
+        var totalSlots = 0;
+        for (var i = 0; i < items.length; i++) {
+            var li = items[i];
+            var wide = false;
+            var nameEl = li.querySelector('.agp-pcard-name-basic');
+            if (nameEl) {
+                var textW = nameEl.scrollWidth;
+                if (textW > pillMaxRef) textW = pillMaxRef; // بعد هذا الحد ellipsis يتكفّل بالقصّ بغضّ النظر عن مساحة العمود
+                var cardW = avatarRef + Math.max(pillMinRef, textW);
+                wide = (cardW + BUFFER) > columnWidth;
+            } else {
+                var tpl = li.querySelector('.agp-pcard-tpl'); // بطاقة مؤطَّرة — عرضها مبني على صورة الإطار نفسها
+                if (tpl) {
+                    var tplW = tpl.getBoundingClientRect().width || 0;
+                    wide = (tplW + BUFFER) > columnWidth;
+                }
+            }
+            li.classList.toggle('er-lobby-card-wide', wide);
+            totalSlots += wide ? 2 : 1;
+        }
+        return totalSlots;
+    }
+
     function applyDynamicLobbyCardScale() {
         var box = el('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
@@ -2172,14 +2235,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var n = list.querySelectorAll('li').length;
         if (n === 0) return;
 
+        // ⚠️ [0.45.19] البطاقات العريضة (اسم طويل) تاخذ مكان بطاقتين —
+        // totalSlots يحسب "عدد المواقع الفعلي" المطلوب (بطاقة عادية=1،
+        // عريضة=2) عشان تقدير عدد الصفوف يبقى دقيقاً لحساب التصغير
+        // الرأسي أدناه، بدل الاعتماد على عدد اللاعبين الخام فقط.
+        var totalSlots = markWideLobbyCards(box, list);
+
         // ⚠️ أرقام الأساس (الحجم الكامل عند 100% — نفس القيم الافتراضية
-        // بقواعد CSS): صف كامل ≈ 100px (أفاتار 75px+حدود + حشو li)،
+        // بقواعد CSS): صف كامل ≈ 88px (أفاتار 65px+حدود + حشو li)،
         // فجوة 10px بين الصفوف.
-        var BASE_ROW = 100, BASE_GAP = 10, BASE_AVATAR = 75, BASE_PILL_H = 60,
-            BASE_FONT = 35, BASE_PILL_MINW = 300, BASE_PILL_MAXW = 520, BASE_ZOOM = 1.15;
+        // ⚠️ [0.45.20] طلب صريح: تصغير إضافي للحجم الكامل الأساسي (~13%)
+        // بعد موافقة المستخدم على تخطيط [0.45.19] — أفاتار 75→65،
+        // بلاطة 60→52، خط 35→30، عرض البلاطة 300-520→260-450، صف
+        // 100→88، تكبير الإطار 1.15→1.00 (نفس نسبة التخفيض تقريباً على
+        // الكل حتى تبقى النسب متوازنة بين البطاقات المؤطَّرة والأساسية).
+        var BASE_ROW = 88, BASE_GAP = 10, BASE_AVATAR = 65, BASE_PILL_H = 52,
+            BASE_FONT = 30, BASE_PILL_MINW = 260, BASE_PILL_MAXW = 450, BASE_ZOOM = 1.00;
         var MIN_SCALE = 0.55; // حد أدنى — تحته الخط/الأفاتار يصير غير مقروء بالبث
 
-        var rows = Math.ceil(n / 3);
+        var rows = Math.ceil(totalSlots / 3);
         var available = list.clientHeight || 620;
         var neededFull = rows * BASE_ROW + Math.max(0, rows - 1) * BASE_GAP;
 
