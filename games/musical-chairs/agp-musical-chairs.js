@@ -1337,6 +1337,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (document.getElementById('agp-settings-close-btn')) {
             enhanceMidMatchSettingsPanel(box);
         }
+        // ⚠️ جديد: شاشة الإعدادات الأولى (قبل الاتصال بالبث) — نميّزها
+        // بوجود #agp-connect-btn (ما يُرسَم إلا هنا بالضبط، راجع تعليق
+        // الملف المشترك نفسه سطر 169).
+        if (document.getElementById('agp-connect-btn')) {
+            enhanceInitialConnectScreen(box);
+        }
     }
 
     function startShellOverlayWatcher() {
@@ -1478,6 +1484,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (document.getElementById('mc-settings-home-btn')) return;
         var btn = document.createElement('a');
         btn.id = 'mc-settings-home-btn';
+        btn.href = '../../index.html';
+        btn.className = 'mc-settings-home-btn';
+        btn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
+        box.appendChild(btn);
+    }
+
+    /* -------- 14هـ) شاشة الإعدادات الأولى (قبل الاتصال): زر رجوع للمنصة -------- */
+    function enhanceInitialConnectScreen(box) {
+        if (document.getElementById('mc-connect-home-btn')) return;
+        var btn = document.createElement('a');
+        btn.id = 'mc-connect-home-btn';
         btn.href = '../../index.html';
         btn.className = 'mc-settings-home-btn';
         btn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
