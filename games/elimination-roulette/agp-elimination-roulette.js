@@ -428,10 +428,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // ⚠️ [0.45.12] تعديل صريح: الزرّان كانا فوق بعض عمودياً (column)
             // بعرض 200px موحّد للاثنين — صار بجانب بعض أفقياً (row) بطلب
             // المستخدم، كل زر ياخذ نصف المساحة (flex:1) بدل عرض ثابت.
-            '.er-chooser-actions{display:flex;flex-direction:row;gap:8px;margin-top:12px;width:100%;',
-            'max-width:340px;}',
-            '.er-chooser-action-btn{flex:1;padding:11px 10px;border-radius:999px;border:none;font-weight:800;',
-            'cursor:pointer;font-family:inherit;font-size:0.85em;color:#fff;transition:transform 0.15s,box-shadow 0.15s;}',
+            // ⚠️ [0.45.13] إصلاح: width:100% كانت تحسب نسبة لعرض الحاوية
+            // الأب (#er-modal-chooser-card) اللي بدورها auto-width بحجم
+            // أضيق محتوى (حلقة الأفاتار 110px) — فعملياً الصف كان يضيق
+            // كثيراً (~277px)، ونص زر "إقصاء صاحب الدور" كان ينكسر
+            // لسطرين ويطوّل الزر — طلب صريح: عرض ثابت أوسع (380px) بدل
+            // النسبة المئوية، يفرض على الحاوية الأب تتوسع لتلائمه، فيصير
+            // فيه مساحة كافية لكل النص بسطر وحد + الزر يصير أقصر ارتفاعاً.
+            '.er-chooser-actions{display:flex;flex-direction:row;gap:8px;margin-top:12px;',
+            'width:380px;max-width:92vw;}',
+            '.er-chooser-action-btn{flex:1;padding:9px 8px;border-radius:999px;border:none;font-weight:800;',
+            'cursor:pointer;font-family:inherit;font-size:0.85em;color:#fff;white-space:nowrap;',
+            'line-height:1.3;transition:transform 0.15s,box-shadow 0.15s;}',
             '.er-chooser-action-btn:hover{transform:translateY(-2px);}',
             '.er-chooser-action-eliminate{background:linear-gradient(90deg,#ef4444,#b91c1c);',
             'box-shadow:0 4px 14px rgba(239,68,68,0.45);}',
@@ -466,7 +474,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // اللون البنفسجي الأساسي) — طلب صريح لتمييز تبويب الإقصاء عن
             // بقية التبويبات، بنفس الأخضر المستخدم أصلاً بحلقة "صاحب
             // الدور" (er-role-eliminate) لنفس النافذة، للتناسق.
-            '.er-candidate-num.er-role-eliminate{background:#22c55e;}',
+            // ⚠️ [0.45.13] طلب صريح: رقم البادج الأخضر (الإقصاء) تحديداً
+            // يكبر ويكون أوضح أكثر من الرقم الأساسي (34px) — البادج
+            // الأرجواني (نافذة الإرجاع) يبقى بحجمه بدون تغيير.
+            '.er-candidate-num.er-role-eliminate{background:#22c55e;width:40px !important;',
+            'height:40px !important;font-size:1.15em !important;}',
+            // ⚠️ [0.45.13] شارة "🔴 مرحلة الإقصاء" — تظهر فقط بأعلى نافذة
+            // اختيار الإقصاء (isEliminate)، طلب صريح لتوضيح المرحلة
+            // الحالية للمشاهدين بالبث.
+            '.er-phase-badge-wrap{text-align:center;margin-bottom:8px;}',
+            '.er-phase-badge{display:inline-block;padding:4px 16px;border-radius:999px;',
+            'background:rgba(34,197,94,0.18);border:1px solid rgba(34,197,94,0.65);color:#22c55e;',
+            'font-weight:900;font-size:0.85em;letter-spacing:0.3px;}',
             // ⚠️ بطاقة اللاعب المشتركة (agp-pcard) داخل شبكة المرشَّحين هنا
             // فقط — تكبير الصورة/الاسم بمحدِّدات مقيَّدة بـ#er-candidates-grid
             // (لا تلمس .agp-pcard بأي مكان آخر بالمنصة، ولا الملف المشترك
@@ -675,48 +694,157 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-settings-close-btn{color:#ffffff !important;font-weight:900 !important;',
             'text-shadow:0 1px 4px rgba(0,0,0,0.5) !important;}',
 
-            // ⚠️ صندوق اللوبي كان بارتفاع ثابت 800px — طلب صريح: يترك مساحة
-            // كافية لتمدد بطاقات اللاعبين المكبَّرة بدون قصّ (auto بدل ثابت،
-            // مع سقف بحدود ارتفاع الشاشة كما بالأصل).
-            '#agp-shell-box.agp-lobby-box{height:auto !important;max-height:92vh !important;',
+            // ⚠️ [0.45.14] طلب صريح (تصميم Figma مُزوَّد): صندوق اللوبي
+            // برجع لارتفاع ثابت — 900px هذي المرة (بدل 800px الأصلي وبدل
+            // auto اللي جربناها بـ[0.45.12]) — بحد أقصى 92vh للشاشات
+            // الأقصر. تنبيه صادق: لو عدد اللاعبين كبير جداً، المحتوى
+            // يتجاوز 900px ويصير سكرول داخل الصندوق نفسه (overflow-y:auto
+            // موروثة من القاعدة الأساسية #agp-shell-box) — هذا تحديداً
+            // الفرق بين الخيارين اللي عُرضا على المستخدم، واختار الثابت.
+            '#agp-shell-box.agp-lobby-box{height:900px !important;max-height:92vh !important;',
             'overflow-y:auto !important;}',
 
             // ⚠️ شعار "Ayman Games" كخلفية شفافة (25%) بمنتصف صندوق اللوبي —
-            // طلب صريح. يُضاف كعنصر img عبر enhanceLobbyScreen()، هذا فقط
-            // موضعته/شفافيته.
+            // طلب صريح. يُضاف كعنصر img عبر enhanceLobbyWatermarkAndActions()،
+            // هذا فقط موضعته/شفافيته.
             '#er-lobby-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);',
             'width:55%;max-width:420px;opacity:0.25;pointer-events:none;z-index:0;}',
             // العناصر الحقيقية بصندوق اللوبي فوق الشعار دائماً.
             '#agp-shell-box.agp-lobby-box > *:not(#er-lobby-watermark){position:relative;z-index:1;}',
 
-            // ⚠️ تمييز عنوان اللوبي "اللوبي بانتظار اللاعبين" عن نص التلميح
-            // "عشان تدخل المباراة اكتب بالشات" المجاور له — طلب صريح.
-            '#agp-shell-box.agp-lobby-box h2{color:#ffe066 !important;',
-            'text-shadow:0 2px 10px rgba(255,224,102,0.35) !important;letter-spacing:0.5px !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-join-hint-text{color:#c9b7db !important;',
-            'font-weight:400 !important;}',
+            // ⚠️ [0.45.14] تدرّج جديد خاص باللوبي فقط (5D336A→000000 —
+            // من صورة Figma زوَّدنا بها المستخدم)، يستبدل التدرّج الموحَّد
+            // (5F3976→211528) المستخدَم بباقي الشاشات (الإعدادات، تبويبي
+            // الإقصاء/الإرجاع، بطاقة الفائز) — تلك تبقى بتدرّجها القديم
+            // بدون تغيير، القاعدة `#agp-shell-box{...}` (بدون .agp-lobby-box)
+            // ما تغيّرت. محدِّد `.agp-lobby-box` أعلى تخصيصاً فيطغى هنا فقط.
+            '#agp-shell-box.agp-lobby-box{background:linear-gradient(180deg,#5D336A,#000000) !important;',
+            'position:relative;overflow:hidden;}',
 
-            // ⚠️ [0.45.12] تكبير بطاقات اللاعبين بشاشة اللوبي (قبل بدء
-            // المباراة) ~28% + خلفية داكنة شبه شفافة خلف كل بطاقة — طلب
-            // صريح، بدون كسر شكل "الإطارات" (frames) المعروضة حصراً بهذي
-            // الشاشة. استُخدم CSS zoom (وليس transform:scale) عمداً: zoom
-            // يغيّر حجم صندوق التخطيط الفعلي فيعيد ترتيب البطاقات المجاورة
-            // بشكل صحيح (flex-wrap) بدل تراكبها بصرياً كما يحدث مع
-            // transform:scale مع gap ثابت صغير.
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{zoom:1.28;background:rgba(0,0,0,0.55) !important;',
-            'border-radius:14px !important;padding:6px !important;}',
+            // ⚠️ [0.45.14] عنوان اللوبي بلونين — طلب صريح حسب تصميم
+            // Figma: جزء أبيض ثابت + جزء ملوَّن مميَّز ("روليت الإقصاء")،
+            // يستبدل تمييز اللون الذهبي الموحَّد المستخدَم سابقاً بـ[0.45.12].
+            // النص نفسه (وليس فقط اللون) يتغيّر أيضاً — يُطبَّق عبر
+            // enhanceLobbyHeading() (استبدال innerHTML لعنصر h2 الموجود
+            // أصلاً بالملف المشترك، بدون أي تعديل على الملف نفسه).
+            '#agp-shell-box.agp-lobby-box h2{text-shadow:none !important;letter-spacing:0.5px !important;}',
+            '.er-lobby-title-plain{color:#fff !important;}',
+            '.er-lobby-title-accent{color:#ffb648 !important;text-shadow:0 2px 10px rgba(255,182,72,0.4) !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-hint-text{color:#d9c8e8 !important;',
+            'font-weight:400 !important;}',
+            // إبراز إضافي لبادج الكلمة المفتاحية الجاهزة أصلاً بالملف
+            // المشترك (.agp-join-keyword-badge) فوق الخلفية الغامقة الجديدة.
+            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge{box-shadow:0 0 22px rgba(0,194,255,0.75) !important;}',
+
+            // ⚠️ [0.45.14] إعادة تصميم شبكة بطاقات اللاعبين باللوبي —
+            // يستبدل تكبير zoom الموحَّد لكل البطاقات ([0.45.12]/[0.45.13])
+            // بتصميمين منفصلين حسب نوع البطاقة (تفصيل كامل بالتعليقات
+            // أدناه)، بطلب صريح مبني على تصميم Figma مُزوَّد + توضيح
+            // صريح لعدد الأعمدة (3 بالضبط، وليس تلقائي).
+            // ⚠️ [0.45.15] margin-top إضافي — طلب صريح لحل قصّ بصري ظاهر
+            // بأعلى الصف الأول من البطاقات (ملتصقة بصف التلميح/الكلمة
+            // المفتاحية فوقها)، بنزول ~1 سم تقريباً.
+            // ⚠️ [0.45.16] طلب صريح: تقريب البطاقات من بعض (gap 18→10px)
+            // مع إبقاء 3 أعمدة بالضبط + ارتفاع أدنى موحَّد لكل صف
+            // (min-height على li) حتى تتساوى الصفوف طولياً بين البطاقات
+            // المؤطَّرة (~83px) والأساسية (~84px) رغم اختلاف نظام كل نوع.
+            // ⚠️ [0.45.18] طلب صريح: تقليص تلقائي لحجم البطاقات لو عدد
+            // اللاعبين كبير (أكثر من 15 — أكثر من 5 صفوف) حتى يظهر الكل
+            // بدون أي قصّ بصري، بدل الاعتماد على السكرول الداخلي. القيم
+            // أدناه صارت متغيرات CSS (custom properties) بدل أرقام ثابتة
+            // — applyDynamicLobbyCardScale() تحسبها وتحقنها ديناميكياً
+            // حسب عدد اللاعبين الفعلي + المساحة الرأسية المتاحة فعلياً
+            // (مقاسة من list.clientHeight)، وتُعاد الحساب تلقائياً مع كل
+            // انضمام/مغادرة لاعب (نفس MutationObserver الموجود أصلاً).
+            // القيم الافتراضية (fallback) هي أرقام الحجم الكامل المعتمدة.
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{display:grid !important;',
+            'grid-template-columns:repeat(3,1fr) !important;gap:var(--er-lobby-grid-gap,10px) !important;',
+            'align-items:center !important;justify-items:center !important;margin-top:34px !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{position:relative;display:flex !important;',
+            'align-items:center !important;justify-content:center !important;flex:0 0 auto !important;',
+            'padding:4px !important;min-height:var(--er-lobby-row-min-height,100px) !important;',
+            'box-sizing:border-box !important;}',
+
+            // ---- بطاقة اللاعب الأساسية (بدون إطار) — تصميم "بلاطة اسم +
+            // دائرة أفاتار منفصلة بجانبها"، مطابق لصورة Figma:
+            // بلاطة الاسم بعرض أدنى 300px (يتوسع تلقائياً لو الاسم طويل،
+            // يبقى بالنص لو قصير)، ارتفاع ثابت 80px، خط 40px. الأفاتار
+            // دائرة منفصلة 84×84px بجانبها (مو بداخلها). الحاوية الأصلية
+            // .agp-pcard صارت شفافة (بدون خلفية/حدود خاصة فيها) — الشكل
+            // البصري صار على البلاطة والدائرة نفسهما.
+            // ⚠️ [0.45.16] طلب صريح: إزالة الفراغ بين دائرة الأفاتار وبلاطة
+            // الاسم — يصيران ملتصقين ببعض (gap:0 بدل 12px).
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard{background:none !important;',
+            'border:none !important;padding:0 !important;border-radius:0 !important;',
+            'max-width:none !important;gap:0 !important;display:flex !important;align-items:center !important;}',
+            // ⚠️ [0.45.17] طلب صريح: حجم دائرة الأفاتار 84→75px (الأساس
+            // الكامل — [0.45.18] يصغّره أكثر ديناميكياً لو زاد اللاعبين).
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-avatar-basic{',
+            'width:var(--er-lobby-avatar-size,75px) !important;height:var(--er-lobby-avatar-size,75px) !important;',
+            'border-width:3px !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-avatar-basic--fallback{',
+            'font-size:1.6em !important;}',
+            // ⚠️ [0.45.15] طلب صريح: ارتفاع البلاطة 80→60px، خط الاسم
+            // 40→35px (أساس كامل — [0.45.18] يصغّره ديناميكياً أيضاً).
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-name-basic{',
+            'display:flex !important;align-items:center !important;justify-content:center !important;',
+            'min-width:var(--er-lobby-pill-minw,300px) !important;max-width:var(--er-lobby-pill-maxw,520px) !important;',
+            'height:var(--er-lobby-pill-height,60px) !important;',
+            'box-sizing:border-box !important;padding:0 20px !important;font-size:var(--er-lobby-font-size,35px) !important;',
+            'font-weight:800 !important;background:rgba(255,255,255,0.14) !important;',
+            'border:1px solid rgba(255,255,255,0.32) !important;border-radius:999px !important;',
+            'white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;',
+            'line-height:1 !important;}',
+
+            // ---- بطاقة اللاعب المؤطَّرة (عنده إطار مفعَّل) — نظام مختلف
+            // كلياً بالملف المشترك (js/agp-player-card.js): قماشة صورة
+            // واحدة (إطار+صورة+اسم مدموجين) بأبعاد مبنية حسب نسبة كل
+            // ملف إطار على حدة (ارتفاع أساس ثابت 72px بالملف المشترك،
+            // ما نقدر نلمسه). تكبير أي جزء بمقاس منفصل (زي 84px أفاتار)
+            // بيمدّد صورة الإطار بالقوة ويشوّهها — بدل هذا، تكبير
+            // متناسب بالكامل (zoom على القماشة كوحدة واحدة) يقارب نفس
+            // الحجم العام (~83px بدل 72px) بدون أي تشويه — بالضبط القرار
+            // اللي تم تأكيده صراحة.
+            // ⚠️ [0.45.18] نفس نسبة التصغير الديناميكي تنطبق على البطاقات
+            // المؤطَّرة أيضاً (zoom أساسه 1.15 يتغيّر مع --er-lobby-scale)
+            // حتى تبقى الصفوف متوازنة بالطول مع البطاقات الأساسية بكل
+            // الأحجام، بدون أي تشويه (zoom يبقى تكبيراً متناسباً للقماشة
+            // كوحدة واحدة دائماً، بغضّ النظر عن قيمته).
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-tpl{',
+            'zoom:var(--er-lobby-frame-zoom,1.15) !important;}',
 
             // ⚠️ زر "✕" لإقصاء لاعب يدوياً قبل بدء المباراة (بطاقات اللوبي) —
-            // يُضاف كعنصر عبر enhanceLobbyScreen()، هذا فقط شكله.
+            // يُضاف كعنصر عبر enhanceLobbyList()، هذا فقط شكله. حجمه بقي
+            // بدون تغيير (طلب صريح: "حجم قريب من الحالي").
             '.er-lobby-remove-btn{position:absolute;top:-6px;left:-6px;width:22px;height:22px;',
             'border-radius:50%;background:#ef4444;color:#fff;border:2px solid #211528;',
             'font-weight:900;font-size:13px;line-height:18px;text-align:center;cursor:pointer;',
             'box-shadow:0 2px 6px rgba(0,0,0,0.5);z-index:2;}',
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{position:relative;}',
 
-            // ⚠️ زر "رجوع للمنصة" داخل صندوق الإعدادات/اللوبي نفسه (بالإضافة
-            // لأيقونة 🏠 الموجودة بالهيدر أصلاً) — طلب صريح، يُضاف كعنصر عبر
-            // enhanceSettingsScreen()/enhanceLobbyScreen()، هذا فقط شكله.
+            // ⚠️ [0.45.15] صف أزرار اللوبي السفلي — طلب صريح جديد: الثلاثة
+            // أزرار (العودة للإعدادات، بدء الجولة، رجوع للمنصة) بصف واحد
+            // جنب بعض، بنفس المقاس بالضبط (W360×H48)، بدل صفّين متفاوتَي
+            // الحجم كما كان بـ[0.45.14]. المقاس ثابت (مو flex:1) + الصف
+            // نفسه في المنتصف (justify-content:center).
+            '.er-lobby-actions-row{display:flex;gap:14px;margin-top:14px;justify-content:center;',
+            'flex-wrap:wrap;}',
+            '.er-lobby-actions-row > *{width:360px !important;height:48px !important;',
+            'max-width:360px !important;flex:0 0 360px !important;box-sizing:border-box !important;',
+            'display:flex !important;align-items:center !important;justify-content:center !important;',
+            'padding:0 14px !important;margin:0 !important;}',
+            '.er-lobby-back-settings-btn{border-radius:999px;',
+            'border:1px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.08);color:#fff;',
+            'font-family:inherit;font-weight:800;font-size:0.9em;cursor:pointer;transition:background 0.15s;}',
+            '.er-lobby-back-settings-btn:hover{background:rgba(255,255,255,0.18);}',
+            '#agp-shell-box.agp-lobby-box .er-lobby-actions-row #agp-start-round-btn{',
+            'background:linear-gradient(90deg,#22c55e,#16a34a) !important;color:#fff !important;}',
+
+            // ⚠️ زر "رجوع للمنصة" — طلب صريح [0.45.15]: بشاشة اللوبي صار
+            // ضمن نفس صف الأزرار الثلاثة (W360×H48 موحَّد أعلاه)، بينما
+            // بشاشة الإعدادات الأولى (صورة 1، خارج نطاق هذا التعديل) بقي
+            // بشكله الأصلي (block بعرض تلقائي) — القاعدة العامة أدناه
+            // تبقى الافتراضي، ومحدِّد .er-lobby-actions-row أعلى تخصيصاً
+            // فيطغى فقط داخل صف اللوبي.
             '.er-back-to-platform-btn{display:block;margin:14px auto 0;padding:10px 22px;',
             'border-radius:999px;border:1px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.08);',
             'color:#f3eefc;font-family:inherit;font-weight:800;font-size:0.9em;cursor:pointer;',
@@ -1176,8 +1304,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '</div>';
         }).join('');
 
+        // ⚠️ [0.45.13] طلب صريح: كتابة "مرحلة الإقصاء" داخل نافذة اختيار
+        // الإقصاء تحديداً (بدون نافذة الإرجاع) — توضيح إضافي للمشاهدين.
+        var phaseBadgeHtml = !isRevive
+            ? '<div class="er-phase-badge-wrap"><span class="er-phase-badge">🔴 مرحلة الإقصاء</span></div>'
+            : '';
+
         box.className = roleClass; // ⚠️ [0.45.8] يميّز تبويب الإقصاء بلون أخضر (راجع CSS)
         box.innerHTML =
+            phaseBadgeHtml +
             '<h2>' + title + '</h2>' +
             '<div id="er-modal-sub">' + subtitle + '</div>' +
             '<div id="er-modal-timer"></div>' +
@@ -2015,8 +2150,79 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    // ⚠️ شعار "ألعاب أيمن" شفاف بمنتصف صندوق اللوبي + زر "رجوع للمنصة" —
-    // طلب صريح (صورة 2).
+    /**
+     * ⚠️ [0.45.18] تصغير تلقائي لحجم بطاقات اللوبي لو عدد اللاعبين كبير
+     * (أكثر من ~15 — أكثر من 5 صفوف بشبكة 3 أعمدة) — طلب صريح بعد ما
+     * جُرِّب 18 لاعباً وطلع قصّ بصري حقيقي بالصف السادس مع الحجم الكامل
+     * الثابت (900px صندوق ثابت، طلب مؤكَّد سابقاً). بدل الاعتماد على
+     * سكرول داخلي، نقيس المساحة الرأسية المتاحة فعلياً لقائمة اللاعبين
+     * (list.clientHeight — القيمة اللي يفرضها تخطيط flex-column الثابت
+     * بالفعل، بعد ما "تقتص" حصة القائمة من الصندوق الثابت 900px) ونحسب
+     * أصغر نسبة تكبير (scale) تخلي كل الصفوف تنضم بدون قصّ، ثم نحقن
+     * القيم الجديدة كمتغيّرات CSS (custom properties) على الصندوق —
+     * القواعد بـinjectStageStyles() تستخدم var(--er-lobby-*, <حجم كامل
+     * افتراضي>) فتتحدَّث تلقائياً. يُعاد الحساب مع كل تغيّر بعدد
+     * اللاعبين (نفس MutationObserver الموجود، عبر applyShellEnhancements).
+     */
+    function applyDynamicLobbyCardScale() {
+        var box = el('agp-shell-box');
+        if (!box || !box.classList.contains('agp-lobby-box')) return;
+        var list = el('agp-lobby-list');
+        if (!list) return;
+        var n = list.querySelectorAll('li').length;
+        if (n === 0) return;
+
+        // ⚠️ أرقام الأساس (الحجم الكامل عند 100% — نفس القيم الافتراضية
+        // بقواعد CSS): صف كامل ≈ 100px (أفاتار 75px+حدود + حشو li)،
+        // فجوة 10px بين الصفوف.
+        var BASE_ROW = 100, BASE_GAP = 10, BASE_AVATAR = 75, BASE_PILL_H = 60,
+            BASE_FONT = 35, BASE_PILL_MINW = 300, BASE_PILL_MAXW = 520, BASE_ZOOM = 1.15;
+        var MIN_SCALE = 0.55; // حد أدنى — تحته الخط/الأفاتار يصير غير مقروء بالبث
+
+        var rows = Math.ceil(n / 3);
+        var available = list.clientHeight || 620;
+        var neededFull = rows * BASE_ROW + Math.max(0, rows - 1) * BASE_GAP;
+
+        var scale = 1;
+        if (neededFull > available && rows > 0) {
+            scale = available / neededFull;
+            if (scale < MIN_SCALE) scale = MIN_SCALE;
+        }
+
+        box.style.setProperty('--er-lobby-avatar-size', Math.round(BASE_AVATAR * scale) + 'px');
+        box.style.setProperty('--er-lobby-pill-height', Math.round(BASE_PILL_H * scale) + 'px');
+        box.style.setProperty('--er-lobby-font-size', Math.max(14, Math.round(BASE_FONT * scale)) + 'px');
+        box.style.setProperty('--er-lobby-pill-minw', Math.round(BASE_PILL_MINW * scale) + 'px');
+        box.style.setProperty('--er-lobby-pill-maxw', Math.round(BASE_PILL_MAXW * scale) + 'px');
+        box.style.setProperty('--er-lobby-grid-gap', Math.max(4, Math.round(BASE_GAP * scale)) + 'px');
+        box.style.setProperty('--er-lobby-row-min-height', Math.round(BASE_ROW * scale) + 'px');
+        box.style.setProperty('--er-lobby-frame-zoom', (BASE_ZOOM * scale).toFixed(3));
+    }
+
+    // ⚠️ [0.45.14] عنوان اللوبي بلونين — يستبدل نص "اللوبي بانتظار
+    // اللاعبين" (المُعرَّف بالملف المشترك) بنص جديد بلونين، حسب تصميم
+    // Figma مُزوَّد من المستخدم. تعديل DOM من كودنا فقط (استبدال
+    // innerHTML لعنصر h2 موجود أصلاً) — صفر لمس لملف
+    // js/agp-game-shell.js نفسه، بنفس فلسفة كل تحسينات هذا القسم.
+    function enhanceLobbyHeading() {
+        var box = el('agp-shell-box');
+        if (!box || !box.classList.contains('agp-lobby-box')) return;
+        var h2 = box.querySelector('h2');
+        if (!h2 || h2.getAttribute('data-er-heading') === '1') return;
+        h2.innerHTML = '<span class="er-lobby-title-plain">لوبي دخول لعبة - </span>' +
+            '<span class="er-lobby-title-accent">روليت الإقصاء</span>';
+        h2.setAttribute('data-er-heading', '1');
+    }
+
+    // ⚠️ [0.45.14] شعار "ألعاب أيمن" شفاف بمنتصف صندوق اللوبي (من [0.45.12])
+    // + صف الأزرار السفلي الجديد (طلب صريح، صورة 5): "العودة لاعدادات
+    // المباراة" (جديد كلياً — يلغي الاتصال الحالي بالبث ويرجّع لشاشة
+    // البداية عبر إعادة تحميل الصفحة، بعد تأكيد المستخدم؛ نفس الأسلوب
+    // المُثبَت بروليت الفواكة — ما فيه طريقة عامة نظيفة تفتح شاشة
+    // الاتصال الكاملة من خارج الملف المشترك) + زر البدء الأصلي (نفس
+    // العنصر ونفس onclick المُعرَّف بالملف المشترك، فقط نص/لون جديدان)
+    // + زر "رجوع لمنصة ألعاب أيمن" (من [0.45.12]) يبقى تحت الصف الجديد
+    // — المستخدم أكّد صراحة إبقاء الثلاثة أزرار معاً.
     function enhanceLobbyWatermarkAndActions() {
         var box = el('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
@@ -2029,17 +2235,46 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             box.insertBefore(img, box.firstChild);
         }
 
-        if (!box.querySelector('.er-back-to-platform-btn')) {
-            var startBtn = el('agp-start-round-btn');
-            if (startBtn) {
-                startBtn.insertAdjacentElement('afterend', makeBackToPlatformBtn());
-            }
+        var startBtn = el('agp-start-round-btn');
+        if (!startBtn) return;
+
+        if (startBtn.textContent.indexOf('اغلاق اللوبي') === -1) {
+            startBtn.textContent = '🔒 اغلاق اللوبي وبدء المباراة';
+        }
+
+        var row = box.querySelector('.er-lobby-actions-row');
+        if (!row) {
+            row = document.createElement('div');
+            row.className = 'er-lobby-actions-row';
+            startBtn.parentNode.insertBefore(row, startBtn);
+
+            var backSettingsBtn = document.createElement('button');
+            backSettingsBtn.type = 'button';
+            backSettingsBtn.className = 'er-lobby-back-settings-btn';
+            backSettingsBtn.textContent = '⚙️ العودة لاعدادات المباراة';
+            backSettingsBtn.addEventListener('click', function () {
+                if (window.confirm('بيرجّعك لشاشة إعدادات المباراة الأولى، ويلغي الاتصال الحالي بالبث ' +
+                    'ويقفل اللوبي — بيحتاج اتصال جديد بعدها. تكمل؟')) {
+                    window.location.reload();
+                }
+            });
+
+            row.appendChild(backSettingsBtn);
+            row.appendChild(startBtn); // ينقل الزر الأصلي (بعنصره ونفس onclick) داخل الصف الجديد
+        }
+
+        // ⚠️ [0.45.15] طلب صريح: زر "رجوع للمنصة" صار ضمن نفس الصف (ثلاثة
+        // أزرار بصف واحد، W360×H48 موحَّد) بدل عنصر منفصل تحت الصف.
+        if (!row.querySelector('.er-back-to-platform-btn')) {
+            row.appendChild(makeBackToPlatformBtn());
         }
     }
 
     function applyShellEnhancements() {
         enhanceSettingsScreen();
         enhanceLobbyList();
+        applyDynamicLobbyCardScale();
+        enhanceLobbyHeading();
         enhanceLobbyWatermarkAndActions();
     }
 
