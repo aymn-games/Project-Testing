@@ -1320,47 +1320,159 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * زرّا "رجوع للإعدادات"/"رجوع للمنصة" بشاشة اللوبي — يعيدان استخدام
-     * أزرار الهيدر الثابت الموجودة أصلاً (#agp-header-settings-btn /
-     * #agp-header-home-btn، مبنية من agp-game-shell.js نفسه) عبر محاكاة
-     * ضغطة برمجية — صفر منطق مكرر، صفر لمس للملف المشترك.
+     * ⚠️ [مطابق لنفس التحسين المطبَّق بروليت الإقصاء] بطاقة الاسم الطويل
+     * (خصوصاً أسماء إنجليزية/إيموجي) قد تحتاج عرض بلاطة أكبر من عرض
+     * عمود واحد متاح فعلياً بشبكة 3 أعمدة — بدل تصغير الشبكة كلها
+     * لعمودين، تلك البطاقة وحدها تاخذ عرض عمودين (`grid-column:span 2`
+     * عبر كلاس .fr-lobby-card-wide)، والباقي يبقى 3 أعمدة بالضبط.
+     * الفحص بقياس العرض الحقيقي غير المقصوص للاسم (scrollWidth) مقابل
+     * عرض العمود المتاح فعلياً.
+     */
+    function markWideLobbyCards(box, list) {
+        var items = list.querySelectorAll('li');
+        if (items.length === 0) return 0;
+
+        var availableWidth = list.clientWidth || box.clientWidth || 1400;
+        var GRID_GAP = 10, BUFFER = 8, COLUMNS = 3;
+        var columnWidth = (availableWidth - GRID_GAP * (COLUMNS - 1)) / COLUMNS;
+
+        var avatarRef = parseFloat(box.style.getPropertyValue('--fr-lobby-avatar-size')) || 65;
+        var pillMinRef = parseFloat(box.style.getPropertyValue('--fr-lobby-pill-minw')) || 260;
+        var pillMaxRef = parseFloat(box.style.getPropertyValue('--fr-lobby-pill-maxw')) || 450;
+
+        var totalSlots = 0;
+        for (var i = 0; i < items.length; i++) {
+            var li = items[i];
+            var wide = false;
+            var nameEl = li.querySelector('.agp-pcard-name-basic');
+            if (nameEl) {
+                var textW = nameEl.scrollWidth;
+                if (textW > pillMaxRef) textW = pillMaxRef;
+                var cardW = avatarRef + Math.max(pillMinRef, textW);
+                wide = (cardW + BUFFER) > columnWidth;
+            } else {
+                var tpl = li.querySelector('.agp-pcard-tpl');
+                if (tpl) {
+                    var tplW = tpl.getBoundingClientRect().width || 0;
+                    wide = (tplW + BUFFER) > columnWidth;
+                }
+            }
+            li.classList.toggle('fr-lobby-card-wide', wide);
+            totalSlots += wide ? 2 : 1;
+        }
+        return totalSlots;
+    }
+
+    /**
+     * ⚠️ [مطابق لنفس التحسين المطبَّق بروليت الإقصاء] تصغير تلقائي متناسب
+     * لحجم بطاقات اللوبي لو عدد اللاعبين كبير (يتجاوز المساحة الرأسية
+     * المتاحة داخل الصندوق الثابت 900px) — بدل الاعتماد فقط على السكرول
+     * الداخلي. نقيس المساحة المتاحة فعلياً (list.clientHeight) ونحسب
+     * أصغر نسبة تكبير (scale) تخلي كل الصفوف تنضم بدون قصّ، بحد أدنى
+     * 55% (تحته الخط/الأفاتار يصير غير مقروء بالبث). القيم تُحقَن
+     * كمتغيّرات CSS (custom properties) تستخدمها القواعد بـstyle.css
+     * عبر var(--fr-lobby-*, <حجم كامل افتراضي>)، فتتحدَّث تلقائياً.
+     */
+    function applyDynamicLobbyCardScale() {
+        var box = document.getElementById('agp-shell-box');
+        if (!box || !box.classList.contains('agp-lobby-box')) return;
+        var list = document.getElementById('agp-lobby-list');
+        if (!list) return;
+        var n = list.querySelectorAll('li').length;
+        if (n === 0) return;
+
+        var totalSlots = markWideLobbyCards(box, list);
+
+        var BASE_ROW = 88, BASE_GAP = 10, BASE_AVATAR = 65, BASE_PILL_H = 52,
+            BASE_FONT = 30, BASE_PILL_MINW = 260, BASE_PILL_MAXW = 450, BASE_ZOOM = 1.00;
+        var MIN_SCALE = 0.55;
+
+        var rows = Math.ceil(totalSlots / 3);
+        var available = list.clientHeight || 620;
+        var neededFull = rows * BASE_ROW + Math.max(0, rows - 1) * BASE_GAP;
+
+        var scale = 1;
+        if (neededFull > available && rows > 0) {
+            scale = available / neededFull;
+            if (scale < MIN_SCALE) scale = MIN_SCALE;
+        }
+
+        box.style.setProperty('--fr-lobby-avatar-size', Math.round(BASE_AVATAR * scale) + 'px');
+        box.style.setProperty('--fr-lobby-pill-height', Math.round(BASE_PILL_H * scale) + 'px');
+        box.style.setProperty('--fr-lobby-font-size', Math.max(14, Math.round(BASE_FONT * scale)) + 'px');
+        box.style.setProperty('--fr-lobby-pill-minw', Math.round(BASE_PILL_MINW * scale) + 'px');
+        box.style.setProperty('--fr-lobby-pill-maxw', Math.round(BASE_PILL_MAXW * scale) + 'px');
+        box.style.setProperty('--fr-lobby-grid-gap', Math.max(4, Math.round(BASE_GAP * scale)) + 'px');
+        box.style.setProperty('--fr-lobby-row-min-height', Math.round(BASE_ROW * scale) + 'px');
+        box.style.setProperty('--fr-lobby-frame-zoom', (BASE_ZOOM * scale).toFixed(3));
+    }
+
+    /**
+     * 8) صف الأزرار السفلي الموحَّد: "العودة لاعدادات المباراة" (جديد —
+     * تأكيد ثم إعادة تحميل الصفحة) + زر البدء الأصلي (نفس العنصر ونفس
+     * onclick المُعرَّف بالملف المشترك — يُنقَل داخل الصف، بدون أي تغيير
+     * على نصّه) + "رجوع لمنصة ألعاب أيمن" — الثلاثة بصف واحد.
      */
     function enhanceLobbyActions() {
         var box = document.getElementById('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
-        if (box.querySelector('.fr-lobby-actions-row')) return;
         var startBtn = document.getElementById('agp-start-round-btn');
         if (!startBtn) return;
 
-        var row = document.createElement('div');
-        row.className = 'fr-lobby-actions-row';
-        row.innerHTML =
-            '<button type="button" class="fr-lobby-action-btn" id="frLobbyBackSettingsBtn">⚙️ رجوع للإعدادات</button>' +
-            '<button type="button" class="fr-lobby-action-btn" id="frLobbyBackHomeBtn">🏠 رجوع للمنصة</button>';
-        startBtn.insertAdjacentElement('afterend', row);
+        var row = box.querySelector('.fr-lobby-actions-row');
+        if (!row) {
+            row = document.createElement('div');
+            row.className = 'fr-lobby-actions-row';
+            startBtn.parentNode.insertBefore(row, startBtn);
 
-        document.getElementById('frLobbyBackSettingsBtn').addEventListener('click', function () {
-            // ⚠️ ليس نفس ⚙️ الهيدر الثابت عمداً: ذاك يفتح شاشة إعدادات
-            // "مختصرة" (بدون حقل يوزرنيم/كلمة مفتاحية — راجع
-            // renderSettingsScreen(isReopened=true) بالملف المشترك)، بينما
-            // المطلوب هنا فعلياً هو شاشة البداية الكاملة (زر الاتصال +
-            // حقل اليوزرنيم + حقل الكلمة المفتاحية). لا توجد دالة عامة
-            // مصدَّرة تفتح هذي النسخة الكاملة من خارج الملف المشترك، فأقرب
-            // طريقة نظيفة وموثوقة هي إعادة تحميل الصفحة بالكامل — يرجّع
-            // فعلياً لنفس الشاشة الأولى اللي تظهر أول ما تفتح رابط اللعبة.
-            if (window.confirm('بيرجّعك لشاشة الاتصال الأولى (يوزرنيم + كلمة مفتاحية) وتنقطع اتصال البث الحالي. تكمل؟')) {
-                window.location.reload();
-            }
-        });
-        document.getElementById('frLobbyBackHomeBtn').addEventListener('click', function () {
-            var homeBtn = document.getElementById('agp-header-home-btn');
-            if (homeBtn) homeBtn.click();
-        });
+            var backSettingsBtn = document.createElement('button');
+            backSettingsBtn.type = 'button';
+            backSettingsBtn.className = 'fr-lobby-action-btn';
+            backSettingsBtn.textContent = '⚙️ العودة لاعدادات المباراة';
+            backSettingsBtn.addEventListener('click', function () {
+                // ⚠️ ليس نفس ⚙️ الهيدر الثابت عمداً: ذاك يفتح شاشة إعدادات
+                // "مختصرة" (بدون حقل يوزرنيم/كلمة مفتاحية). لا توجد دالة
+                // عامة مصدَّرة تفتح النسخة الكاملة من خارج الملف المشترك،
+                // فأقرب طريقة نظيفة وموثوقة هي إعادة تحميل الصفحة بالكامل.
+                if (window.confirm('بيرجّعك لشاشة إعدادات المباراة الأولى، ويلغي الاتصال الحالي بالبث ويقفل اللوبي — بيحتاج اتصال جديد بعدها. تكمل؟')) {
+                    window.location.reload();
+                }
+            });
+
+            row.appendChild(backSettingsBtn);
+            row.appendChild(startBtn); // ينقل الزر الأصلي (بعنصره ونفس onclick) داخل الصف الجديد بدون أي تغيير بنصّه
+        }
+
+        if (!row.querySelector('.fr-lobby-home-btn')) {
+            var homeBtn = document.createElement('button');
+            homeBtn.type = 'button';
+            homeBtn.className = 'fr-lobby-action-btn fr-lobby-home-btn';
+            homeBtn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
+            homeBtn.addEventListener('click', function () { window.location.href = '../../index.html'; });
+            row.appendChild(homeBtn);
+        }
+    }
+
+    /**
+     * عنوان اللوبي بلونين: النص الأصلي "اللوبي بانتظار اللاعبين" أبيض،
+     * واسم اللعبة بجانبه بالأصفر — استبدال innerHTML لعنصر h2 الموجود
+     * أصلاً بالملف المشترك، بدون أي تعديل على الملف نفسه.
+     */
+    function enhanceLobbyHeading() {
+        var box = document.getElementById('agp-shell-box');
+        if (!box || !box.classList.contains('agp-lobby-box')) return;
+        var h2 = box.querySelector('h2');
+        if (!h2 || h2.getAttribute('data-fr-heading') === '1') return;
+        h2.innerHTML = '<span class="fr-lobby-heading-plain">اللوبي بانتظار اللاعبين</span> ' +
+            '<span class="fr-lobby-heading-accent">' + escapeHtml(GAME_NAME) + '</span>';
+        h2.setAttribute('data-fr-heading', '1');
     }
 
     function applyShellEnhancements() {
         enhanceSettingsScreen();
         enhanceLobbyList();
+        applyDynamicLobbyCardScale();
+        enhanceLobbyHeading();
         enhanceLobbyActions();
     }
 

@@ -1127,70 +1127,34 @@ body.agp-shell-active{
 }
 
 /* ==========================================================================
-   شاشة اللوبي "بانتظار اللاعبين" — تكبير/إبراز بطاقات اللاعبين وخلفية أغمق
+   شاشة اللوبي "بانتظار اللاعبين" — نظام موحَّد (منقول حرفياً من نفس
+   التحسينات المطبَّقة بروليت الإقصاء)، فقط لون خلفية الصندوق نفسه بقي
+   كما هو (تدرّج الفواكه الأصلي) بطلب صريح — لا شي غيره تغيّر.
    ========================================================================== */
-/* ⚠️ عمود flex: يخلي زر "انهاء وبدء الجولة" + صف أزرارنا الإضافية
-   يلتصقون بأسفل الصندوق دايماً (margin-top:auto على الزر) بدل ما يطلعون
-   مباشرة بعد القائمة تاركين فراغ فاضي تحتهم لما عدد اللاعبين قليل. */
+
+/* 1) حجم صندوق اللوبي: ارتفاع ثابت 900px (بحد أقصى 92vh للشاشات
+   الأقصر)، مع سكرول داخلي لو المحتوى زاد. */
 #agp-shell-box.agp-lobby-box{
   background: linear-gradient(170deg, #1a0d05, #4a2008) !important;
   position: relative !important;
   display: flex !important;
   flex-direction: column !important;
+  height: 900px !important;
+  max-height: 92vh !important;
+  overflow-y: auto !important;
 }
 #agp-shell-box.agp-lobby-box h2{
-  color: var(--mango) !important;
+  color: #fff !important;
 }
+.fr-lobby-heading-plain{ color: #fff !important; }
+.fr-lobby-heading-accent{ color: var(--banana) !important; font-weight: 800 !important; }
 .agp-join-hint-text{
   font-size: 1.05em !important;
   font-weight: 700 !important;
 }
-/* ⚠️ تكبير بطاقات اللاعبين باللوبي: نطبّق transform:scale على بطاقة
-   agp-player-card نفسها (المُولَّدة من js/agp-player-card.js) بدل تكبير
-   الخط يدوياً — هذا يكبر الصورة+الإطار+الاسم معاً بنفس النسبة فما
-   ينكسر تموضع الإطار حول الصورة (الإطار عنصر منفصل متموضع فوق الصورة
-   بإحداثيات نسبية، فتكبير الحاوية بالكامل عبر scale يحافظ عليه متمركز).
-   ⚠️ الصندوق المشترك (#agp-shell-box) عنده أصلاً max-height:800px مع
-   overflow-y:auto — يعني عدد لاعبين كبير يتمرّر داخل الصندوق نفسه
-   تلقائياً، بدون أي تدخل إضافي مننا (لا حاجة لـmax-height مستقل هنا). */
-#agp-lobby-list.agp-shell-player-list{
-  gap: 14px !important;
-  position: relative !important;
-  z-index: 1 !important;
-}
-#agp-lobby-list.agp-shell-player-list li{
-  position: relative !important;
-  transform: scale(1.15);
-  transform-origin: right center;
-  margin: 10px 20px 6px 6px !important;
-  /* ⚠️ خلفية غامقة خلف كل بطاقة لاعب — تبرز الاسم أكثر فوق خلفية اللوبي
-     الفاتحة نسبياً (تدرّج برتقالي/بني)، طلب صريح لتحسين وضوح القراءة. */
-  background: rgba(0,0,0,0.4) !important;
-  border-radius: 10px !important;
-  padding: 4px 6px !important;
-}
-/* ⚠️ شارة X صغيرة عائمة أعلى زاوية كل بطاقة (بدل عنصر بصف flex عادي —
-   كان يخربط تموضع الصورة/الاسم جنبه، راجع enhanceLobbyList بالـJS).
-   الحجم صغير عمداً (طلب صريح: "أصغر حده"). */
-.fr-lobbyscreen-remove-btn{
-  position: absolute;
-  top: -8px;
-  right: -6px;
-  z-index: 2;
-  width: 16px; height: 16px;
-  border-radius: 50%;
-  background: rgba(255,60,60,0.85);
-  border: 1px solid rgba(255,255,255,0.5);
-  color: #fff;
-  font-size: 0.55em;
-  font-weight: 800;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-}
-/* شعار ألعاب أيمن شفاف (25%) بخلفية صندوق اللوبي فقط — طبقة منفصلة
-   خلف كل المحتوى (z-index:0)، ما تتعارض مع قابلية النقر على أي عنصر. */
+
+/* شعار ألعاب أيمن شفاف (25%) بخلفية صندوق اللوبي — طبقة منفصلة خلف كل
+   المحتوى، ما تتعارض مع قابلية النقر على أي عنصر. */
 #agp-shell-box.agp-lobby-box::before{
   content: '';
   position: absolute;
@@ -1202,35 +1166,145 @@ body.agp-shell-active{
   border-radius: inherit;
   z-index: 0;
 }
-/* ⚠️ يلصق زر "انهاء وبدء الجولة" + صف أزرارنا بأسفل الصندوق دايماً
-   (يستهلك أي فراغ فاضي فوقه بدل ما يترك فارغاً تحته) */
-#agp-shell-box.agp-lobby-box #agp-start-round-btn{
-  margin-top: auto !important;
+#agp-shell-box.agp-lobby-box > *{ position: relative; z-index: 1; }
+
+/* 2) شبكة بطاقات اللاعبين — 3 أعمدة بالضبط، fjوة صغيرة، هامش علوي
+   يفصلها عن صف التلميح/الكلمة المفتاحية فوقها. grid-auto-flow:dense
+   يسمح لبطاقة قصيرة لاحقة تملأ أي فراغ متبقي بنفس صف بطاقة عريضة. */
+#agp-shell-box.agp-lobby-box .agp-shell-player-list{
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  grid-auto-flow: dense !important;
+  gap: var(--fr-lobby-grid-gap, 10px) !important;
+  align-items: center !important;
+  justify-items: center !important;
+  margin-top: 34px !important;
+}
+#agp-shell-box.agp-lobby-box .agp-shell-player-list li{
   position: relative !important;
-  z-index: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+  padding: 4px !important;
+  min-height: var(--fr-lobby-row-min-height, 88px) !important;
+  box-sizing: border-box !important;
+}
+/* 6) بطاقة الاسم الطويل تاخذ عرض عمودين بدل تصغير الشبكة كلها */
+#agp-shell-box.agp-lobby-box .agp-shell-player-list li.fr-lobby-card-wide{
+  grid-column: span 2 !important;
 }
 
-/* ⚠️ الأزرار الإضافية (رجوع للإعدادات / رجوع للمنصة / X حذف كل لاعب
-   باللوبي) عناصر جديدة تُحقَنها agp-fruit-roulette.js نفسها (ليست جزءاً
-   من js/agp-game-shell.js) — أصنافها التالية خاصة بنا بالكامل. */
-.fr-lobby-actions-row{
-  display:flex; gap:10px; justify-content:center; margin-top:14px;
-  position: relative; z-index: 1;
+/* 3) بطاقة اللاعب العادية (بدون إطار): دائرة أفاتار منفصلة ملتصقة
+   ببلاطة اسم كبسولية بجانبها. */
+#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard{
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  max-width: none !important;
+  gap: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-avatar-basic{
+  width: var(--fr-lobby-avatar-size, 65px) !important;
+  height: var(--fr-lobby-avatar-size, 65px) !important;
+  border-width: 3px !important;
+}
+#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-avatar-basic--fallback{
+  font-size: 1.6em !important;
+}
+#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-name-basic{
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: var(--fr-lobby-pill-minw, 260px) !important;
+  max-width: var(--fr-lobby-pill-maxw, 450px) !important;
+  height: var(--fr-lobby-pill-height, 52px) !important;
+  box-sizing: border-box !important;
+  padding: 0 20px !important;
+  font-size: var(--fr-lobby-font-size, 30px) !important;
+  font-weight: 800 !important;
+  background: rgba(255,255,255,0.14) !important;
+  border: 1px solid rgba(255,255,255,0.32) !important;
+  border-radius: 999px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1 !important;
+}
+
+/* 4) بطاقة اللاعب المؤطَّرة (عندها إطار مفعَّل) — قماشة واحدة (إطار+صورة
+   +اسم مدموجين، نظام مختلف بالملف المشترك)، ما تُغيَّر أبعادها الفرعية
+   (يشوّه صورة الإطار) — بدلها تكبير متناسب للقماشة كوحدة واحدة عبر
+   zoom فقط. */
+#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-tpl{
+  zoom: var(--fr-lobby-frame-zoom, 1.00) !important;
+}
+
+/* 5) زر "✕" حذف لاعب قبل بدء المباراة — دائرة حمراء صغيرة بأعلى-يسار
+   كل بطاقة. */
+.fr-lobbyscreen-remove-btn{
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: #fff;
+  border: 2px solid #211528;
+  font-weight: 900;
+  font-size: 13px;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  z-index: 2;
+  padding: 0;
+}
+
+/* 8) صف الأزرار السفلي — 3 أزرار بصف واحد، نفس المقاس بالضبط لكل واحد
+   (360×48)، بالمنتصف. يلتصق بأسفل الصندوق دايماً (margin-top:auto). */
+#agp-shell-box.agp-lobby-box .fr-lobby-actions-row{
+  display: flex;
+  gap: 14px;
+  margin-top: auto;
+  padding-top: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.fr-lobby-actions-row > *{
+  width: 360px !important;
+  height: 48px !important;
+  max-width: 360px !important;
+  flex: 0 0 360px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 14px !important;
+  margin: 0 !important;
 }
 .fr-lobby-action-btn{
-  flex:1; max-width:220px;
-  padding:11px 14px;
-  border-radius:999px;
-  border:1px solid rgba(255,210,63,0.4);
-  background: rgba(0,0,0,0.35);
-  color:#fff;
-  font-family:'Tajawal', sans-serif;
-  font-weight:700;
-  font-size:0.86rem;
-  cursor:pointer;
-  transition: border-color .15s ease, background .15s ease;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  font-family: 'Tajawal', sans-serif;
+  font-weight: 800;
+  font-size: 0.86rem;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
-.fr-lobby-action-btn:hover{ border-color: var(--banana); background: rgba(0,0,0,0.5); }
+.fr-lobby-action-btn:hover{ background: rgba(255,255,255,0.18); border-color: var(--banana); }
+/* زر البدء الأصلي (نفس العنصر ونفس onclick بالملف المشترك) — فقط
+   شكل/لون جديدان ضمن نفس الصف الموحَّد. */
+#agp-shell-box.agp-lobby-box .fr-lobby-actions-row #agp-start-round-btn{
+  background: linear-gradient(90deg, #22c55e, #16a34a) !important;
+  color: #fff !important;
+}
 
 .fr-lobby-remove-btn{
   background: rgba(255,60,60,0.3);
