@@ -491,8 +491,10 @@ function adminResetWelcome(userId) {
  * للشريط المتحرك.
  * @returns {Promise<Object>}
  */
-function getRecentSupporters() {
-    return request('/api/supporters/recent', { method: 'GET' });
+function getRecentSupporters(limit) {
+    var path = '/api/supporters/recent';
+    if (limit) path += '?limit=' + encodeURIComponent(limit);
+    return request(path, { method: 'GET' });
 }
 
 /**
@@ -551,8 +553,19 @@ function adminListSupporters() {
  * @param {number} amount
  * @returns {Promise<Object>}
  */
-function adminAddSupporter(name, message, amount) {
-    return request('/api/admin/supporters', { method: 'POST', body: { name: name, message: message, amount: amount } });
+function adminAddSupporter(name, message, amount, customId) {
+    return request('/api/admin/supporters', { method: 'POST', body: { name: name, message: message, amount: amount, customId: customId } });
+}
+
+/**
+ * [0.45.14] معاينة حيّة (اسم+صورة) لحساب عبر custom_id — تُستخدَم
+ * بلوحة الأدمن قبل تأكيد ربط صف دعم بحساب فعلي. راجع
+ * backend/supporters/supporters-service.js (findUserForLinking).
+ * @param {string} customId
+ * @returns {Promise<Object>}
+ */
+function adminFindSupporterUser(customId) {
+    return request('/api/admin/supporters/find-user?customId=' + encodeURIComponent(customId || ''), { method: 'GET' });
 }
 
 /** الأدمن فقط — حذف صف دعم واحد (تصحيح خطأ إدخال يدوي). */
@@ -695,6 +708,7 @@ global.AGPAuth = {
     getTopSupporters: getTopSupporters,
     adminListSupporters: adminListSupporters,
     adminAddSupporter: adminAddSupporter,
+    adminFindSupporterUser: adminFindSupporterUser,
     adminDeleteSupporter: adminDeleteSupporter,
     getSiteTheme: getSiteTheme,
     adminSetSiteTheme: adminSetSiteTheme,
