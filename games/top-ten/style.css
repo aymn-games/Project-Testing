@@ -1,0 +1,312 @@
+/* ==========================================================================
+   أهم عشرة (Top Ten) — هوية بصرية بلونين فقط:
+     - أخضر زمردي (Emerald)  -> كل الخلفيات/الألواح/الحدود الباهتة
+     - ذهبي (Gold)           -> كل التمييز/النقاط/الأزرار الأساسية
+   الأبيض/الأسود يُستخدمان فقط كنص/ظل، لا كلون تصميم حقيقي ثالث.
+   ========================================================================== */
+
+:root {
+    --tt-green-950: #03130d;
+    --tt-green-900: #052119;
+    --tt-green-800: #0a3626;
+    --tt-green-700: #0f4a34;
+    --tt-green-600: #146046;
+    --tt-green-glow: #1a8a63;
+    --tt-green-line: rgba(31, 158, 115, 0.28);
+
+    --tt-gold-900: #7a5b17;
+    --tt-gold-700: #a8802a;
+    --tt-gold-500: #d9a83e;
+    --tt-gold-400: #f3c352;
+    --tt-gold-300: #ffe2a1;
+
+    --tt-text: #f4f8f5;
+    --tt-text-dim: rgba(244, 248, 245, 0.68);
+    --tt-shadow: rgba(0, 0, 0, 0.5);
+
+    --tt-radius-lg: 18px;
+    --tt-radius-md: 12px;
+    --tt-radius-sm: 8px;
+}
+
+body.tt-active {
+    margin: 0;
+    font-family: 'Zain', 'Tahoma', sans-serif;
+    background: radial-gradient(circle at 85% -10%, var(--tt-green-700) 0%, var(--tt-green-950) 55%),
+                linear-gradient(160deg, var(--tt-green-950), var(--tt-green-900));
+    color: var(--tt-text);
+    min-height: 100vh;
+    padding-top: 62px;
+    direction: rtl;
+}
+
+/* ---------- الهيدر ---------- */
+#tt-header {
+    position: fixed; top: 0; right: 0; left: 0; z-index: 40;
+    height: 58px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
+    background: linear-gradient(90deg, var(--tt-green-900), var(--tt-green-800));
+    border-bottom: 2px solid var(--tt-gold-500);
+    box-shadow: 0 4px 18px var(--tt-shadow);
+}
+#tt-header-brand img { height: 34px; display: block; }
+#tt-header-title { font-weight: 800; font-size: 1.15em; color: var(--tt-gold-400); text-shadow: 0 2px 6px var(--tt-shadow); }
+.tt-header-icon-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--tt-gold-500);
+    background: var(--tt-green-700); color: var(--tt-gold-400); font-size: 1.15em;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.tt-header-icon-btn:hover { background: var(--tt-green-600); }
+
+/* ---------- الصندوق العام (إعدادات/اتصال) ---------- */
+#tt-overlay {
+    position: fixed; inset: 0; z-index: 30; display: flex; align-items: flex-start; justify-content: center;
+    padding: 24px 14px 60px; overflow-y: auto;
+}
+#tt-box {
+    width: 100%; max-width: 560px;
+    background: linear-gradient(165deg, var(--tt-green-800), var(--tt-green-900));
+    border: 1px solid var(--tt-green-line);
+    border-radius: var(--tt-radius-lg);
+    box-shadow: 0 18px 46px var(--tt-shadow), inset 0 0 60px rgba(26, 138, 99, 0.06);
+    padding: 26px 22px 30px;
+    position: relative;
+}
+#tt-box h2 { text-align: center; color: var(--tt-gold-400); margin: 6px 0 20px; font-size: 1.4em; }
+
+.tt-back-to-platform-link {
+    background: none; border: none; color: var(--tt-text-dim); font-family: inherit;
+    font-size: 0.85em; cursor: pointer; padding: 4px 0; display: block;
+}
+.tt-back-to-platform-link:hover { color: var(--tt-gold-400); }
+
+.tt-row-field { position: relative; margin-bottom: 16px; }
+.tt-row-field input[type="text"] {
+    width: 100%; box-sizing: border-box; padding: 13px 14px 13px; font-size: 1em;
+    background: var(--tt-green-950); border: 1.5px solid var(--tt-green-line); border-radius: var(--tt-radius-sm);
+    color: var(--tt-text); font-family: inherit; direction: rtl;
+}
+.tt-row-field input:focus { outline: none; border-color: var(--tt-gold-500); }
+.tt-row-field label { display: block; margin-top: 6px; font-size: 0.8em; color: var(--tt-text-dim); }
+
+.tt-field-label-center { text-align: center; font-size: 0.9em; color: var(--tt-text-dim); margin: 14px 0 8px; }
+
+.tt-pill-group { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 4px; }
+.tt-pill-btn {
+    min-width: 46px; padding: 8px 16px; border-radius: 999px; cursor: pointer; font-family: inherit; font-size: 0.95em;
+    background: var(--tt-green-950); border: 1.5px solid var(--tt-green-line); color: var(--tt-text);
+}
+.tt-pill-btn.tt-pill-active { background: var(--tt-gold-500); border-color: var(--tt-gold-500); color: var(--tt-green-950); font-weight: 800; }
+
+.tt-hint { text-align: center; font-size: 0.78em; color: var(--tt-text-dim); margin: 4px 0 12px; }
+
+.tt-section-header {
+    margin: 22px 0 10px; font-weight: 800; color: var(--tt-gold-400); font-size: 1.05em;
+    border-top: 1px solid var(--tt-green-line); padding-top: 16px;
+}
+#tt-q-selected-count { font-weight: 400; font-size: 0.75em; color: var(--tt-text-dim); }
+
+.tt-questions-list { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.tt-q-row {
+    display: flex; align-items: center; gap: 8px; background: var(--tt-green-950);
+    border: 1px solid var(--tt-green-line); border-radius: var(--tt-radius-sm); padding: 9px 10px; cursor: pointer; font-size: 0.9em;
+}
+.tt-q-row:hover { border-color: var(--tt-gold-700); }
+.tt-q-checkbox { accent-color: var(--tt-gold-500); width: 17px; height: 17px; flex-shrink: 0; }
+.tt-q-row-text { flex: 1; }
+.tt-custom-badge { font-size: 0.72em; background: var(--tt-gold-900); color: var(--tt-gold-300); padding: 2px 8px; border-radius: 999px; }
+.tt-q-delete-btn { background: none; border: none; cursor: pointer; font-size: 1em; opacity: 0.7; }
+.tt-q-delete-btn:hover { opacity: 1; }
+
+.tt-btn-secondary {
+    display: block; width: 100%; box-sizing: border-box; padding: 11px; margin-top: 6px;
+    background: var(--tt-green-700); border: 1.5px solid var(--tt-gold-700); color: var(--tt-gold-300);
+    border-radius: var(--tt-radius-sm); font-family: inherit; font-size: 0.95em; cursor: pointer; font-weight: 700;
+}
+.tt-btn-secondary:hover { background: var(--tt-green-600); }
+.tt-btn-danger { border-color: #c0392b; color: #ffb4a8; }
+
+.tt-newq-form {
+    background: var(--tt-green-950); border: 1px dashed var(--tt-gold-700); border-radius: var(--tt-radius-md);
+    padding: 16px 14px; margin: 10px 0;
+}
+.tt-newq-answer-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.tt-newq-answer-badge {
+    flex-shrink: 0; width: 66px; text-align: center; font-size: 0.78em; background: var(--tt-green-700);
+    border: 1px solid var(--tt-gold-700); border-radius: 999px; padding: 4px 2px; color: var(--tt-gold-300);
+}
+.tt-newq-answer-badge em { font-style: normal; display: block; opacity: 0.8; }
+.tt-newq-answer-input {
+    flex: 1; box-sizing: border-box; padding: 9px 10px; background: var(--tt-green-900); border: 1.5px solid var(--tt-green-line);
+    border-radius: var(--tt-radius-sm); color: var(--tt-text); font-family: inherit; direction: rtl; font-size: 0.9em;
+}
+.tt-newq-answer-input:focus { outline: none; border-color: var(--tt-gold-500); }
+
+.tt-error-msg { color: #ffb4a8; background: rgba(192, 57, 43, 0.18); border: 1px solid #c0392b; border-radius: var(--tt-radius-sm); padding: 9px 12px; margin: 10px 0; font-size: 0.88em; text-align: center; }
+
+.tt-btn-connect {
+    display: block; width: 100%; box-sizing: border-box; padding: 15px; margin-top: 18px;
+    background: linear-gradient(135deg, var(--tt-gold-400), var(--tt-gold-700));
+    border: none; border-radius: var(--tt-radius-md); color: var(--tt-green-950); font-family: inherit;
+    font-size: 1.08em; font-weight: 900; cursor: pointer; box-shadow: 0 8px 22px rgba(217, 168, 62, 0.35);
+}
+.tt-btn-connect:hover { filter: brightness(1.08); }
+
+.tt-connecting-box { text-align: center; padding: 30px 10px; }
+.tt-spinner {
+    width: 46px; height: 46px; margin: 0 auto 16px; border-radius: 50%;
+    border: 4px solid var(--tt-green-line); border-top-color: var(--tt-gold-400);
+    animation: tt-spin 0.9s linear infinite;
+}
+@keyframes tt-spin { to { transform: rotate(360deg); } }
+
+/* ---------- اللوبي ---------- */
+#tt-lobby-screen { max-width: 760px; margin: 0 auto; padding: 20px 16px 40px; }
+.tt-lobby-heading { text-align: center; color: var(--tt-text); font-size: 1.3em; margin-bottom: 6px; }
+.tt-lobby-heading-accent { color: var(--tt-gold-400); font-weight: 900; }
+.tt-lobby-banner {
+    text-align: center; background: var(--tt-green-800); border: 1px solid var(--tt-gold-700);
+    border-radius: var(--tt-radius-md); padding: 12px; margin-bottom: 16px; font-size: 0.95em;
+}
+.tt-lobby-banner b { color: var(--tt-gold-400); }
+.tt-lobby-count { text-align: center; color: var(--tt-gold-300); font-weight: 800; margin-bottom: 10px; }
+
+.tt-player-grid {
+    display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+    background: var(--tt-green-900); border: 1px solid var(--tt-green-line); border-radius: var(--tt-radius-lg);
+    padding: 18px; min-height: 110px; margin-bottom: 18px;
+}
+.tt-lobby-empty-hint { color: var(--tt-text-dim); align-self: center; }
+
+.tt-lobby-btn-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.tt-lobby-row-btn {
+    flex: 1 1 220px; max-width: 300px; height: 48px; border-radius: var(--tt-radius-sm); font-family: inherit;
+    font-size: 0.95em; font-weight: 800; cursor: pointer; border: none;
+}
+.tt-lobby-btn-settings { background: var(--tt-green-700); color: var(--tt-gold-300); border: 1.5px solid var(--tt-gold-700); }
+.tt-lobby-btn-start { background: linear-gradient(135deg, var(--tt-gold-400), var(--tt-gold-700)); color: var(--tt-green-950); }
+.tt-lobby-btn-platform { background: var(--tt-green-800); color: var(--tt-text); border: 1.5px solid var(--tt-green-line); }
+.tt-lobby-row-btn:hover { filter: brightness(1.08); }
+
+/* ---------- بطاقة اللاعب المشتركة (تنسيق إضافي فوق agp-player-card.js) ---------- */
+.tt-pcard-wrap { display: inline-flex !important; flex-direction: column; align-items: center; gap: 4px; }
+
+/* ---------- شاشة المباراة ---------- */
+#tt-match-screen { max-width: 880px; margin: 0 auto; padding: 18px 14px 100px; }
+
+.tt-match-topbar { text-align: center; margin-bottom: 14px; }
+.tt-round-badge {
+    display: inline-block; background: var(--tt-gold-500); color: var(--tt-green-950); font-weight: 900;
+    padding: 5px 18px; border-radius: 999px; font-size: 0.9em; margin-bottom: 8px;
+}
+.tt-question-banner {
+    background: linear-gradient(135deg, var(--tt-green-700), var(--tt-green-800));
+    border: 1.5px solid var(--tt-gold-500); border-radius: var(--tt-radius-lg);
+    padding: 16px 18px; font-size: 1.15em; font-weight: 800; color: var(--tt-gold-300);
+    box-shadow: 0 8px 24px var(--tt-shadow);
+}
+
+.tt-all-guessed-banner {
+    text-align: center; background: var(--tt-gold-400); color: var(--tt-green-950); font-weight: 800;
+    border-radius: var(--tt-radius-sm); padding: 9px; margin-bottom: 12px;
+}
+
+.tt-match-body { display: flex; gap: 16px; align-items: flex-start; }
+.tt-boxes-list { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.tt-leaderboard-panel {
+    width: 230px; flex-shrink: 0; background: var(--tt-green-900); border: 1px solid var(--tt-green-line);
+    border-radius: var(--tt-radius-md); padding: 12px; position: sticky; top: 72px;
+}
+.tt-panel-title { font-weight: 800; color: var(--tt-gold-400); margin-bottom: 8px; font-size: 0.95em; }
+.tt-leaderboard-list { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; }
+.tt-lb-row { display: flex; align-items: center; gap: 8px; background: var(--tt-green-950); border-radius: var(--tt-radius-sm); padding: 6px 8px; }
+.tt-lb-rank { width: 20px; text-align: center; font-weight: 900; color: var(--tt-gold-400); flex-shrink: 0; }
+.tt-lb-score { margin-right: auto; font-weight: 900; color: var(--tt-gold-300); }
+
+/* ---------- الصناديق (تقليب ثلاثي الأبعاد) ---------- */
+.tt-box { perspective: 1200px; height: 78px; }
+.tt-box-inner {
+    position: relative; width: 100%; height: 100%; transform-style: preserve-3d;
+    transition: transform 0.65s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+.tt-box.tt-box-revealed .tt-box-inner { transform: rotateX(180deg); }
+.tt-box-face {
+    position: absolute; inset: 0; border-radius: var(--tt-radius-md); backface-visibility: hidden;
+    display: flex; align-items: center; padding: 0 16px; gap: 12px;
+}
+.tt-box-back {
+    background: linear-gradient(135deg, var(--tt-green-700), var(--tt-green-900));
+    border: 1.5px solid var(--tt-gold-700); justify-content: space-between;
+}
+.tt-box-rank {
+    width: 34px; height: 34px; border-radius: 50%; background: var(--tt-gold-500); color: var(--tt-green-950);
+    font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.tt-box-points { color: var(--tt-gold-300); font-weight: 800; font-size: 0.9em; }
+.tt-box-mark { font-size: 1.4em; color: var(--tt-gold-400); font-weight: 900; }
+
+.tt-box-front { transform: rotateX(180deg); }
+.tt-box-front-won { background: linear-gradient(135deg, var(--tt-gold-500), var(--tt-gold-700)); border: 1.5px solid var(--tt-gold-300); }
+.tt-box-front-empty { background: var(--tt-green-800); border: 1.5px dashed var(--tt-green-line); }
+.tt-box-front .tt-box-rank { background: var(--tt-green-950); color: var(--tt-gold-400); }
+.tt-box-front-won .tt-box-answer-text,
+.tt-box-front-won .tt-box-points { color: var(--tt-green-950); }
+.tt-box-front-empty .tt-box-answer-text,
+.tt-box-front-empty .tt-box-points { color: var(--tt-text-dim); }
+.tt-box-answer-text { flex: 1; font-weight: 800; font-size: 0.95em; }
+.tt-box-player { flex-shrink: 0; }
+.tt-box-player .tt-pcard-wrap { flex-direction: row; }
+.tt-box-unclaimed { flex-shrink: 0; font-size: 0.8em; color: var(--tt-text-dim); }
+
+/* ---------- أزرار التحكم أثناء المباراة ---------- */
+.tt-match-controls {
+    position: fixed; bottom: 0; right: 0; left: 0; z-index: 25; display: flex; gap: 10px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(0deg, var(--tt-green-950) 60%, transparent);
+    justify-content: center;
+}
+.tt-ctrl-btn {
+    flex: 1 1 220px; max-width: 320px; height: 50px; border-radius: var(--tt-radius-md); font-family: inherit;
+    font-size: 1em; font-weight: 900; cursor: pointer; border: none;
+}
+.tt-ctrl-skip { background: var(--tt-green-700); color: var(--tt-gold-300); border: 1.5px solid var(--tt-gold-700); }
+.tt-ctrl-next { background: linear-gradient(135deg, var(--tt-gold-400), var(--tt-gold-700)); color: var(--tt-green-950); }
+.tt-ctrl-btn:hover { filter: brightness(1.08); }
+
+/* ---------- لوحة الإدارة (⚙️) ---------- */
+#tt-admin-overlay {
+    display: none; position: fixed; inset: 0; z-index: 50; align-items: flex-start; justify-content: center;
+    background: rgba(3, 19, 13, 0.78); padding: 24px 14px; overflow-y: auto;
+}
+.tt-admin-box {
+    width: 100%; max-width: 480px; background: var(--tt-green-900); border: 1.5px solid var(--tt-gold-500);
+    border-radius: var(--tt-radius-lg); padding: 22px; position: relative;
+}
+.tt-admin-close { position: absolute; top: 12px; left: 12px; background: none; border: none; color: var(--tt-text); font-size: 1.2em; cursor: pointer; }
+.tt-admin-box h3 { color: var(--tt-gold-400); text-align: center; margin: 4px 0 4px; }
+
+/* ---------- شاشة الفائز ---------- */
+#tt-winner-overlay {
+    display: none; position: fixed; inset: 0; z-index: 45; align-items: center; justify-content: center;
+    background: rgba(3, 19, 13, 0.9); padding: 20px;
+}
+.tt-winner-box {
+    width: 100%; max-width: 480px; background: linear-gradient(165deg, var(--tt-green-800), var(--tt-green-950));
+    border: 2px solid var(--tt-gold-500); border-radius: var(--tt-radius-lg); padding: 28px 24px; text-align: center;
+    box-shadow: 0 20px 60px var(--tt-shadow);
+}
+.tt-winner-title { color: var(--tt-gold-400); font-size: 1.25em; font-weight: 900; margin-bottom: 14px; }
+.tt-winner-avatar-wrap { display: flex; justify-content: center; margin-bottom: 8px; }
+.tt-winner-name { font-size: 1.3em; font-weight: 900; }
+.tt-winner-score { color: var(--tt-gold-300); font-weight: 800; margin: 4px 0 12px; }
+.tt-winner-points-text { font-size: 0.9em; padding: 8px; border-radius: var(--tt-radius-sm); background: var(--tt-green-950); margin-bottom: 14px; }
+.tt-winner-points-text.tt-has-points { color: var(--tt-gold-300); border: 1px solid var(--tt-gold-700); }
+.tt-winner-points-text.tt-no-account { color: var(--tt-text-dim); }
+.tt-winner-btn-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 16px; }
+
+/* ---------- استجابة الشاشات الصغيرة ---------- */
+@media (max-width: 680px) {
+    .tt-match-body { flex-direction: column-reverse; }
+    .tt-leaderboard-panel { width: 100%; position: static; }
+    .tt-box { height: 72px; }
+}
