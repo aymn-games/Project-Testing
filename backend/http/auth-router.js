@@ -115,6 +115,9 @@ var ROUTES = [
   { method: 'GET', path: '/api/admin/supporters', requireAuth: true, requireAdmin: true, handler: handleAdminListSupporters },
   { method: 'POST', path: '/api/admin/supporters', requireAuth: true, requireAdmin: true, handler: handleAdminAddSupporter },
   { method: 'POST', path: '/api/admin/supporters/delete', requireAuth: true, requireAdmin: true, handler: handleAdminDeleteSupporter },
+  // [0.45.14] معاينة حيّة (اسم+صورة) لحساب قبل ربطه بصف دعم — راجع
+  // supportersService.findUserForLinking.
+  { method: 'GET', path: '/api/admin/supporters/find-user', requireAuth: true, requireAdmin: true, handler: handleAdminFindSupporterUser },
   // ---- ثيم المناسبات — راجع backend/theme/site-theme-service.js
   { method: 'GET', path: '/api/theme', requireAuth: false, handler: handleGetTheme },
   { method: 'POST', path: '/api/admin/theme', requireAuth: true, requireAdmin: true, handler: handleAdminSetTheme },
@@ -457,11 +460,24 @@ function handleAdminResetWelcome(req, res, body) {
  * ----------------------------------------------------------------------- */
 
 /**
- * آخر 3 داعمين (افتراضياً) — مسار عام بدون تسجيل دخول، يستدعيه
- * index.html للشريط المتحرك بدل نص "لتفعيل الاشتراك..." القديم.
+ * آخر N داعمين (افتراضياً 3) — مسار عام بدون تسجيل دخول، يستدعيه
+ * index.html للشريط المتحرك بدل نص "لتفعيل الاشتراك..." القديم (بدون
+ * ?limit، يبقى بنفس السلوك القديم تماماً: 3 فقط). [0.45.14]: أضيف دعم
+ * اختياري لـ?limit=N (محدود بـ50 كحد أقصى دفاعي) حتى تقدر
+ * top-supporters.html تطلب قائمة أطول لتبويب "أحدث الداعمين" — نفس
+ * نمط قراءة query string في handlePublicProfile أعلاه.
  */
 function handleGetRecentSupporters(req, res) {
-  sendJson(res, 200, { success: true, supporters: supportersService.listRecent(3) });
+  var queryString = (req.url || '').split('?')[1] || '';
+  var limit = 3;
+  queryString.split('&').forEach(function (pair) {
+    var kv = pair.split('=');
+    if (decodeURIComponent(kv[0] || '') === 'limit') {
+      var n = parseInt(decodeURIComponent(kv[1] || ''), 10);
+      if (isFinite(n) && n > 0) limit = Math.min(n, 50);
+    }
+  });
+  sendJson(res, 200, { success: true, supporters: supportersService.listRecent(limit) });
 }
 
 /**
@@ -482,13 +498,30 @@ function handleAdminListSupporters(req, res) {
  * كريترز (لا ربط تلقائي بعد — راجع تعليق أعلى supporters-service.js).
  */
 function handleAdminAddSupporter(req, res, body) {
-  var result = supportersService.addSupporter(body.name, body.message, body.amount);
+  var result = supportersService.addSupporter(body.name, body.message, body.amount, body.customId);
   sendJson(res, result.success ? 201 : 400, result);
 }
 
 /** الأدمن فقط — حذف صف دعم واحد (تصحيح خطأ إدخال يدوي). */
 function handleAdminDeleteSupporter(req, res, body) {
   sendJson(res, 200, supportersService.deleteSupporter(body.id));
+}
+
+/**
+ * [0.45.14] الأدمن فقط — بحث عن حساب عبر ?customId=... لعرض معاينة
+ * حيّة (اسم+صورة) قبل تأكيد ربطه بصف دعم. نفس نمط قراءة query string
+ * المستخدَم بـhandlePublicProfile أعلاه (المسار الوحيد الآخر الذي
+ * يقرأ query string بهذا الراوتر).
+ */
+function handleAdminFindSupporterUser(req, res) {
+  var queryString = (req.url || '').split('?')[1] || '';
+  var customId = '';
+  queryString.split('&').forEach(function (pair) {
+    var kv = pair.split('=');
+    if (decodeURIComponent(kv[0] || '') === 'customId') customId = decodeURIComponent(kv[1] || '');
+  });
+  var result = supportersService.findUserForLinking(customId);
+  sendJson(res, result.success ? 200 : 404, result);
 }
 
 /* -----------------------------------------------------------------------
