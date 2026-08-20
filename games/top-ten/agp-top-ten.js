@@ -261,6 +261,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return false;
     }
 
+    /**
+     * فحص واجهة فقط (UX) — يخفي رابط "إدارة بنك الأسئلة" عن أي ستريمر
+     * ثاني يفتح نفس اللعبة مستقبلاً، حتى ما يتشتت برابط ما يقدر يستخدمه.
+     * هذا مو الحماية الحقيقية — تلك موجودة أصلاً داخل admin-questions.html
+     * نفسها (window.AGPAuth.requireAdmin يتحقق من الخادم فعلياً). حتى لو
+     * ظهر الرابط لشخص ثاني بالخطأ (مثلاً بيانات محلية قديمة بالمتصفح)،
+     * الصفحة نفسها ترفضه على أي حال.
+     */
+    function isCachedAdminUser() {
+        try {
+            return !!(window.AGPAuth && typeof window.AGPAuth.getCachedUser === 'function' &&
+                window.AGPAuth.getCachedUser() && window.AGPAuth.getCachedUser().role === 'admin');
+        } catch (err) { return false; }
+    }
+
     /* ======================================================================
      *  2) الحالة العامة
      * ==================================================================== */
@@ -379,7 +394,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div class="tt-field-label-center">عدد الجولات (الأسئلة الفعلية المستهدفة)</div>' +
             '<div class="tt-pill-group" id="tt-rounds-group">' + roundsPills + '</div>' +
             '<div class="tt-hint">تخطي أي سؤال ما يُحتسب من هذا العدد.</div>' +
-            '<a href="admin-questions.html" target="_blank" class="tt-manage-questions-link">📋 عرض/إدارة بنك الأسئلة (صفحة أدمن منفصلة)</a>' +
+            (isCachedAdminUser() ? '<a href="admin-questions.html" target="_blank" class="tt-manage-questions-link">📋 عرض/إدارة بنك الأسئلة (صفحة أدمن منفصلة)</a>' : '') +
 
             '<div id="tt-settings-error" class="tt-error-msg" style="display:none;"></div>' +
             '<button type="button" id="tt-connect-btn" class="tt-btn-connect">اتصل بالبث وانتقل للوبي</button>';
