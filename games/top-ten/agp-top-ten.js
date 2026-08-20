@@ -915,6 +915,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (payload.platform !== 'tiktok') return;
             if (payload.status === 'connecting') renderConnectingScreen('جارِ الاتصال بالبث...');
             else if (payload.status === 'connected' && _screen !== 'lobby' && _screen !== 'match' && _screen !== 'winner') {
+                // ⚠️ إصلاح خطأ حقيقي: AGP.player.addPlayer/getAllPlayers يعتمدان
+                // على AGP.session.getPlayersRef() الموجودة أصلاً — بدون جلسة
+                // نشطة فعلاً (AGP.session.createSession)، ترجع تلك الدالة
+                // مصفوفة فاضية جديدة كل مرة (راجع js/agp-session.js)، فيختفي
+                // أي لاعب انضم فوراً رغم نجاح addPlayer نفسها ظاهرياً. الحل
+                // الرسمي الموجود أصلاً بالمنصة هو AGP.lobby.open() (نفس ما
+                // تستخدمه games/team-war بالضبط) — تتكفّل بإنشاء الجلسة/الغرفة
+                // بأمان (عبر AGP.roomsManager إن وُجد) قبل فتح التسجيل.
+                if (AGP.lobby && typeof AGP.lobby.open === 'function') AGP.lobby.open();
                 wireCommentListener();
                 renderLobbyScreen();
             }
