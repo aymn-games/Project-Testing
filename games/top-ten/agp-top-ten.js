@@ -1,6 +1,6 @@
 /**
  * ==========================================================================
- *  أهم عشرة (Top Ten) — لعبة أصلية (Native) مستقلة بالكامل
+ *  خمّن العشرة (Guess the Ten) — لعبة أصلية (Native) مستقلة بالكامل
  * ==========================================================================
  * سؤال واحد في كل جولة (مثال: "اكتب عشر أشياء نسويها بالسفر")، وعشرة
  * صناديق مرتبة من 1 إلى 10. الصندوق رقم 1 يساوي 10 نقاط، وكل صندوق
@@ -53,7 +53,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     if (!AGP.events) { AGP.events = { emit: function () {}, on: function () { return function () {}; } }; }
 
     var GAME_ID = 'top-ten';
-    var GAME_NAME = 'أهم عشرة';
+    var GAME_NAME = 'خمّن العشرة';
     var QUESTIONS_BANK_URL = 'questions-bank.json';
     var ROUNDS_OPTIONS = [3, 5, 7, 10];
     var JOIN_ACCESS_OPTIONS = [
@@ -71,151 +71,151 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         {
             id: 'b1', builtin: true, prompt: 'اكتب عشر أشياء نسويها قبل السفر',
             answers: [
-                { text: 'حجز الفندق والطيران', aliases: ['حجز الطيران', 'حجز الفندق', 'نحجز تذاكر'] },
-                { text: 'نجهز جواز السفر والتأشيرة', aliases: ['الجواز', 'الباسبور', 'التأشيرة'] },
-                { text: 'نحزم الشنطة', aliases: ['تحضير الشنطة', 'نرتب الشنطة'] },
-                { text: 'نسوي تأمين السفر', aliases: ['التأمين', 'تأمين السفر'] },
-                { text: 'نجهز الفلوس والعملة', aliases: ['نبدل عملة', 'نجهز الكاش'] },
-                { text: 'نتأكد من الطقس بوجهتنا', aliases: ['نشوف الطقس', 'حالة الجو'] },
-                { text: 'نشحن الجوال والباور بانك', aliases: ['نشحن الأجهزة', 'باور بانك'] },
-                { text: 'نسوي خطة للأماكن اللي بنزورها', aliases: ['نرتب البرنامج', 'خطة الرحلة'] },
-                { text: 'نودع الأهل', aliases: ['نسلم على الأهل'] },
-                { text: 'نصور ستوري قبل الطيران', aliases: ['بوست السفر', 'نعلن اننا مسافرين'] }
+                { text: 'حجز', aliases: ['الحجز'] },
+                { text: 'جواز', aliases: ['الجواز', 'باسبور'] },
+                { text: 'شنطة', aliases: ['الشنطة'] },
+                { text: 'تأمين', aliases: ['التأمين'] },
+                { text: 'فلوس', aliases: ['الفلوس', 'كاش'] },
+                { text: 'طقس', aliases: ['الطقس', 'جو'] },
+                { text: 'شاحن', aliases: ['الشاحن'] },
+                { text: 'برنامج', aliases: ['البرنامج', 'خطة'] },
+                { text: 'وداع', aliases: ['الوداع'] },
+                { text: 'ستوري', aliases: ['الستوري'] }
             ]
         },
         {
             id: 'b2', builtin: true, prompt: 'اكتب عشر أشياء تخلي البث المباشر ينجح',
             answers: [
-                { text: 'محتوى ممتع وتفاعلي', aliases: ['محتوى حلو', 'تفاعل'] },
-                { text: 'جودة الصوت والصورة', aliases: ['جودة البث', 'كاميرا زينة'] },
-                { text: 'تفاعل الستريمر مع الشات', aliases: ['يرد على الشات', 'يتفاعل مع المشاهدين'] },
-                { text: 'وقت ثابت للبث', aliases: ['توقيت ثابت', 'جدول بث'] },
-                { text: 'إضاءة وخلفية مرتبة', aliases: ['الإضاءة', 'الخلفية'] },
-                { text: 'ألعاب تفاعلية تشد المشاهد', aliases: ['ألعاب تفاعلية'] },
-                { text: 'نت قوي وثابت', aliases: ['انترنت زين', 'سرعة النت'] },
-                { text: 'دعوة المتابعين للمشاركة', aliases: ['يدعوهم يشاركون'] },
-                { text: 'شكر الداعمين والهدايا', aliases: ['شكر الهدايا'] },
-                { text: 'مقدمة حلوة بأول البث', aliases: ['افتتاحية البث'] }
+                { text: 'محتوى', aliases: ['المحتوى'] },
+                { text: 'صوت', aliases: ['الصوت'] },
+                { text: 'تفاعل', aliases: ['التفاعل'] },
+                { text: 'توقيت', aliases: ['التوقيت', 'جدول'] },
+                { text: 'إضاءة', aliases: ['الإضاءة'] },
+                { text: 'ألعاب', aliases: ['الألعاب'] },
+                { text: 'نت', aliases: ['النت', 'انترنت'] },
+                { text: 'دعوة', aliases: ['الدعوة'] },
+                { text: 'شكر', aliases: ['الشكر'] },
+                { text: 'مقدمة', aliases: ['المقدمة', 'افتتاحية'] }
             ]
         },
         {
             id: 'b3', builtin: true, prompt: 'اكتب عشر أشياء نسويها يوم الجمعة',
             answers: [
-                { text: 'صلاة الجمعة', aliases: ['نصلي الجمعة'] },
-                { text: 'غداء العائلة', aliases: ['غدا مع الاهل', 'وجبة جمعة'] },
-                { text: 'نزور الأهل', aliases: ['زيارة الاهل'] },
-                { text: 'نرتاح ونتأخر بالنوم', aliases: ['نطول بالنوم', 'ننام متأخر'] },
-                { text: 'نطلع مع الأصدقاء', aliases: ['نطلع مع الشلة'] },
-                { text: 'نتابع مباراة أو رياضة', aliases: ['نشوف مباراة'] },
-                { text: 'نسوي قهوة وفطور فاخر', aliases: ['فطور جمعة'] },
-                { text: 'نرتب البيت', aliases: ['تنظيف البيت'] },
-                { text: 'نسوي بث لايف', aliases: ['بث الجمعة'] },
-                { text: 'نطلع نتمشى بالمول', aliases: ['نروح المول'] }
+                { text: 'صلاة', aliases: ['الصلاة'] },
+                { text: 'غداء', aliases: ['الغداء'] },
+                { text: 'زيارة', aliases: ['الزيارة'] },
+                { text: 'راحة', aliases: ['الراحة', 'نوم'] },
+                { text: 'طلعة', aliases: ['الطلعة'] },
+                { text: 'مباراة', aliases: ['المباراة'] },
+                { text: 'فطور', aliases: ['الفطور'] },
+                { text: 'ترتيب', aliases: ['الترتيب', 'تنظيف'] },
+                { text: 'بث', aliases: ['البث', 'لايف'] },
+                { text: 'مشي', aliases: ['المشي', 'تمشية'] }
             ]
         },
         {
             id: 'b4', builtin: true, prompt: 'اكتب عشر أشياء لازم تكون بسيارتك',
             answers: [
-                { text: 'إطار احتياطي وعدة تغيير', aliases: ['الإطار الاحتياطي', 'جك السيارة'] },
-                { text: 'كابل شحن الجوال', aliases: ['شاحن السيارة'] },
-                { text: 'مويه للشرب', aliases: ['مويه', 'ماء'] },
-                { text: 'صندوق إسعافات أولية', aliases: ['اسعافات اولية'] },
-                { text: 'كبل تشغيل البطارية', aliases: ['كبل بطارية', 'جمبر'] },
-                { text: 'مناديل ومعطر', aliases: ['مناديل'] },
-                { text: 'خريطة أو جهاز تتبع', aliases: ['تطبيق خرائط'] },
-                { text: 'وثائق السيارة والاستمارة', aliases: ['الاستمارة', 'رخصة القيادة'] },
-                { text: 'نظارة شمس', aliases: ['نظارة'] },
-                { text: 'سماعة أو شاحن سماعات', aliases: ['سماعات'] }
+                { text: 'إطار', aliases: ['الإطار'] },
+                { text: 'شاحن', aliases: ['الشاحن'] },
+                { text: 'ماء', aliases: ['الماء', 'مويه'] },
+                { text: 'إسعافات', aliases: ['الإسعافات'] },
+                { text: 'كبل', aliases: ['الكبل', 'جمبر'] },
+                { text: 'مناديل', aliases: ['المناديل'] },
+                { text: 'خريطة', aliases: ['الخريطة'] },
+                { text: 'استمارة', aliases: ['الاستمارة', 'رخصة'] },
+                { text: 'نظارة', aliases: ['النظارة'] },
+                { text: 'سماعات', aliases: ['السماعات'] }
             ]
         },
         {
             id: 'b5', builtin: true, prompt: 'اكتب عشر أشياء نسويها استعداد لرمضان',
             answers: [
-                { text: 'نجهز قائمة الأكل والمشتريات', aliases: ['تسوق رمضان', 'قائمة المشتريات'] },
-                { text: 'ننظف البيت', aliases: ['تنظيف رمضان'] },
-                { text: 'نرتب مواعيد النوم', aliases: ['نظام النوم'] },
-                { text: 'نحدد جدول للقرآن', aliases: ['ختمة القران', 'جدول القران'] },
-                { text: 'نجهز زينة رمضان', aliases: ['زينة رمضان', 'فوانيس'] },
-                { text: 'نخطط للصدقات والخير', aliases: ['صدقة رمضان'] },
-                { text: 'نرتب دعوات الإفطار', aliases: ['دعوات افطار'] },
-                { text: 'نسوي تسوق ملابس العيد', aliases: ['ملابس العيد'] },
-                { text: 'نقلل الكافيين قبلها', aliases: ['نقلل القهوة'] },
-                { text: 'نتابع مسلسلات رمضان', aliases: ['مسلسلات رمضان'] }
+                { text: 'تسوق', aliases: ['التسوق'] },
+                { text: 'تنظيف', aliases: ['التنظيف'] },
+                { text: 'نوم', aliases: ['النوم'] },
+                { text: 'قرآن', aliases: ['القرآن'] },
+                { text: 'زينة', aliases: ['الزينة', 'فوانيس'] },
+                { text: 'صدقة', aliases: ['الصدقة'] },
+                { text: 'دعوات', aliases: ['الدعوات'] },
+                { text: 'ملابس', aliases: ['الملابس'] },
+                { text: 'قهوة', aliases: ['القهوة'] },
+                { text: 'مسلسلات', aliases: ['المسلسلات'] }
             ]
         },
         {
             id: 'b6', builtin: true, prompt: 'اكتب عشر أشياء يحبها كل قيمر',
             answers: [
-                { text: 'نت سريع بدون لاق', aliases: ['بدون لاق', 'بينق قليل'] },
-                { text: 'سماعة وميكروفون زين', aliases: ['هيدسيت'] },
-                { text: 'كرسي قيمنق مريح', aliases: ['كرسي قيمنق'] },
-                { text: 'شاشة عالية التحديث', aliases: ['شاشة هاي رفرش'] },
-                { text: 'فريق أو أصحاب يلعبون وياه', aliases: ['قروب قيمرز'] },
-                { text: 'توزيعة أزرار مريحة', aliases: ['كنترول مريح'] },
-                { text: 'عروض وخصومات على الألعاب', aliases: ['خصومات الالعاب'] },
-                { text: 'بث لايف وهو يلعب', aliases: ['يبث وهو يقيم'] },
-                { text: 'تحديثات جديدة للعبة', aliases: ['تحديث اللعبة'] },
-                { text: 'إنجازات وتروفيهات', aliases: ['تروفيهات', 'انجازات'] }
+                { text: 'نت', aliases: ['النت'] },
+                { text: 'سماعة', aliases: ['السماعة', 'هيدسيت'] },
+                { text: 'كرسي', aliases: ['الكرسي'] },
+                { text: 'شاشة', aliases: ['الشاشة'] },
+                { text: 'فريق', aliases: ['الفريق', 'قروب'] },
+                { text: 'كنترول', aliases: ['الكنترول'] },
+                { text: 'خصومات', aliases: ['الخصومات'] },
+                { text: 'بث', aliases: ['البث'] },
+                { text: 'تحديثات', aliases: ['التحديثات'] },
+                { text: 'إنجازات', aliases: ['الإنجازات', 'تروفيهات'] }
             ]
         },
         {
             id: 'b7', builtin: true, prompt: 'اكتب عشر أشياء نسويها بعطلة نهاية الأسبوع',
             answers: [
-                { text: 'نرتاح ونعوض النوم', aliases: ['نعوض النوم'] },
-                { text: 'نطلع مع العائلة', aliases: ['طلعة عائلية'] },
-                { text: 'نسوي رياضة أو مشي', aliases: ['نمشي', 'رياضة'] },
-                { text: 'نشوف مسلسل أو فيلم', aliases: ['نتفرج مسلسل'] },
-                { text: 'نرتب أغراضنا للأسبوع الجاي', aliases: ['نرتب الأسبوع'] },
-                { text: 'نطلع مطعم أو كافيه', aliases: ['نفطر برا', 'كافيه'] },
-                { text: 'نلعب قيم مع الأصحاب', aliases: ['قيمنق مع الشلة'] },
-                { text: 'نسوي شوبينق', aliases: ['تسوق', 'شوبينق'] },
-                { text: 'نزور صديق أو قريب', aliases: ['زيارة صديق'] },
-                { text: 'نسوي بث لايف', aliases: ['بث نهاية الاسبوع'] }
+                { text: 'راحة', aliases: ['الراحة'] },
+                { text: 'عائلة', aliases: ['العائلة'] },
+                { text: 'رياضة', aliases: ['الرياضة', 'مشي'] },
+                { text: 'مسلسل', aliases: ['المسلسل'] },
+                { text: 'ترتيب', aliases: ['الترتيب'] },
+                { text: 'مطعم', aliases: ['المطعم', 'كافيه'] },
+                { text: 'قيمنق', aliases: ['القيمنق'] },
+                { text: 'تسوق', aliases: ['التسوق', 'شوبينق'] },
+                { text: 'زيارة', aliases: ['الزيارة'] },
+                { text: 'بث', aliases: ['البث'] }
             ]
         },
         {
             id: 'b8', builtin: true, prompt: 'اكتب عشر أشياء تخلي الضيافة السعودية مميزة',
             answers: [
-                { text: 'القهوة والتمر', aliases: ['قهوة وتمر'] },
-                { text: 'كرم الضيف والترحيب', aliases: ['كرم الضيافة', 'ترحيب حار'] },
-                { text: 'المجلس المرتب', aliases: ['المجلس'] },
-                { text: 'البخور عند الاستقبال', aliases: ['البخور'] },
-                { text: 'تقديم العسل والحلا', aliases: ['حلا وعسل'] },
-                { text: 'حسن الاستماع للضيف', aliases: ['الاصغاء للضيف'] },
-                { text: 'توديع الضيف لباب البيت', aliases: ['توديع الضيف'] },
-                { text: 'تنويع الأطباق بالسفرة', aliases: ['تنوع الاكل'] },
-                { text: 'الاهتمام بأدق التفاصيل', aliases: ['الاهتمام بالتفاصيل'] },
-                { text: 'هدية بسيطة للضيف أحياناً', aliases: ['هدية للضيف'] }
+                { text: 'قهوة', aliases: ['القهوة'] },
+                { text: 'كرم', aliases: ['الكرم'] },
+                { text: 'مجلس', aliases: ['المجلس'] },
+                { text: 'بخور', aliases: ['البخور'] },
+                { text: 'عسل', aliases: ['العسل'] },
+                { text: 'إصغاء', aliases: ['الإصغاء', 'استماع'] },
+                { text: 'توديع', aliases: ['التوديع'] },
+                { text: 'تنويع', aliases: ['التنويع'] },
+                { text: 'تفاصيل', aliases: ['التفاصيل'] },
+                { text: 'هدية', aliases: ['الهدية'] }
             ]
         },
         {
             id: 'b9', builtin: true, prompt: 'اكتب عشر أسباب تخلينا نحب بث التيك توك لايف',
             answers: [
-                { text: 'نتفاعل مباشرة مع المتابعين', aliases: ['تفاعل مباشر'] },
-                { text: 'نكسب أصدقاء جدد', aliases: ['صداقات جديدة'] },
-                { text: 'نتسلى ونضحك سوا', aliases: ['نضحك سوا'] },
-                { text: 'نتعلم أشياء جديدة', aliases: ['نتعلم'] },
-                { text: 'نشارك يومنا مع المتابعين', aliases: ['نشارك يومنا'] },
-                { text: 'نلعب ألعاب تفاعلية', aliases: ['العاب تفاعلية'] },
-                { text: 'ندعم بعض بالهدايا', aliases: ['هدايا الدعم'] },
-                { text: 'نكتشف مواهب جديدة', aliases: ['مواهب جديدة'] },
-                { text: 'نسوي ذكريات حلوة', aliases: ['ذكريات حلوة'] },
-                { text: 'نقضي وقت ممتع', aliases: ['وقت ممتع'] }
+                { text: 'تفاعل', aliases: ['التفاعل'] },
+                { text: 'أصدقاء', aliases: ['الأصدقاء', 'صداقات'] },
+                { text: 'ضحك', aliases: ['الضحك'] },
+                { text: 'تعلم', aliases: ['التعلم'] },
+                { text: 'مشاركة', aliases: ['المشاركة'] },
+                { text: 'ألعاب', aliases: ['الألعاب'] },
+                { text: 'هدايا', aliases: ['الهدايا'] },
+                { text: 'مواهب', aliases: ['المواهب'] },
+                { text: 'ذكريات', aliases: ['الذكريات'] },
+                { text: 'متعة', aliases: ['المتعة'] }
             ]
         },
         {
             id: 'b10', builtin: true, prompt: 'اكتب عشر أشياء نسويها أول يوم دوام جديد',
             answers: [
-                { text: 'نوصل بدري', aliases: ['نجي بدري', 'الحضور بدري'] },
-                { text: 'نتعرف على الزملاء', aliases: ['نتعرف على الفريق'] },
-                { text: 'نرتب مكتبنا', aliases: ['ترتيب المكتب'] },
-                { text: 'نسمع تعليمات المدير', aliases: ['تعليمات المدير'] },
-                { text: 'نلبس لبس رسمي مرتب', aliases: ['لبس مرتب'] },
-                { text: 'نجهز أدواتنا ولابتوبنا', aliases: ['نجهز اللابتوب'] },
-                { text: 'نتعرف على نظام الشغل', aliases: ['نظام العمل'] },
-                { text: 'نسأل عن أهم المهام', aliases: ['أهم المهام'] },
-                { text: 'نطلب رقم الواي فاي', aliases: ['الواي فاي'] },
-                { text: 'نصور ستوري أول يوم دوام', aliases: ['ستوري اول دوام'] }
+                { text: 'حضور', aliases: ['الحضور'] },
+                { text: 'زملاء', aliases: ['الزملاء', 'فريق'] },
+                { text: 'مكتب', aliases: ['المكتب'] },
+                { text: 'تعليمات', aliases: ['التعليمات'] },
+                { text: 'لبس', aliases: ['اللبس'] },
+                { text: 'لابتوب', aliases: ['اللابتوب'] },
+                { text: 'نظام', aliases: ['النظام'] },
+                { text: 'مهام', aliases: ['المهام'] },
+                { text: 'واي فاي', aliases: ['الواي فاي', 'wifi'] },
+                { text: 'ستوري', aliases: ['الستوري'] }
             ]
         }
     ];
@@ -378,7 +378,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
             '<div class="tt-field-label-center">عدد الجولات (الأسئلة الفعلية المستهدفة)</div>' +
             '<div class="tt-pill-group" id="tt-rounds-group">' + roundsPills + '</div>' +
-            '<div class="tt-hint">تخطي أي سؤال ما يُحتسب من هذا العدد. الأسئلة نفسها تُدار من صفحة تحكم منفصلة.</div>' +
+            '<div class="tt-hint">تخطي أي سؤال ما يُحتسب من هذا العدد.</div>' +
+            '<a href="admin-questions.html" target="_blank" class="tt-manage-questions-link">📋 عرض/إدارة بنك الأسئلة (صفحة أدمن منفصلة)</a>' +
 
             '<div id="tt-settings-error" class="tt-error-msg" style="display:none;"></div>' +
             '<button type="button" id="tt-connect-btn" class="tt-btn-connect">اتصل بالبث وانتقل للوبي</button>';
@@ -607,7 +608,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 a.revealedBy = { id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null };
                 AGP.scoreManager.addPoints(payload.id, a.points);
                 renderBoxReveal(i);
-                renderLeaderboardPanel();
+                refreshLeaderboardIfOpen();
                 checkAllRevealed();
                 return;
             }
@@ -649,27 +650,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         root.style.display = 'block';
         root.innerHTML =
             '<div class="tt-match-topbar">' +
-                '<div class="tt-round-badge">الجولة ' + (_completedRounds + 1) + ' من ' + _settings.roundsTarget + '</div>' +
+                '<div class="tt-round-badge-row">' +
+                    '<div class="tt-round-badge">الجولة ' + (_completedRounds + 1) + ' من ' + _settings.roundsTarget + '</div>' +
+                    '<button type="button" id="tt-leaderboard-toggle-btn" class="tt-leaderboard-toggle-btn">🏆 المتصدرين</button>' +
+                '</div>' +
                 '<div class="tt-question-banner">' + escapeHtml(_currentQuestion.prompt) + '</div>' +
             '</div>' +
             '<div id="tt-all-guessed-banner" class="tt-all-guessed-banner" style="display:none;">🎉 تم تخمين كل الصناديق! اضغط "السؤال التالي" للمتابعة.</div>' +
             '<div id="tt-round-recap-banner" class="tt-round-recap-banner" style="display:none;"></div>' +
-            '<div class="tt-match-body">' +
-                '<div class="tt-leaderboard-panel">' +
-                    '<div class="tt-panel-title">🏆 لوحة الصدارة</div>' +
-                    '<div id="tt-leaderboard-list" class="tt-leaderboard-list"></div>' +
-                '</div>' +
-                '<div class="tt-boxes-list" id="tt-boxes-list"></div>' +
-            '</div>' +
+            '<div class="tt-boxes-list" id="tt-boxes-list"></div>' +
             '<div class="tt-match-controls">' +
                 '<button type="button" id="tt-skip-btn" class="tt-ctrl-btn tt-ctrl-skip">⏭️ تخطي (بدون احتساب)</button>' +
                 '<button type="button" id="tt-next-btn" class="tt-ctrl-btn tt-ctrl-next">✅ السؤال التالي</button>' +
             '</div>';
 
         renderBoxesList();
-        renderLeaderboardPanel();
 
         el('tt-skip-btn').addEventListener('click', handleSkipQuestion);
+        el('tt-leaderboard-toggle-btn').addEventListener('click', openLeaderboardPanel);
         el('tt-next-btn').addEventListener('click', handleNextQuestion);
     }
 
@@ -713,12 +711,36 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         fitCardNames(boxEl);
     }
 
-    function renderLeaderboardPanel() {
-        var listEl = el('tt-leaderboard-list');
-        if (!listEl) return;
-        var lb = AGP.scoreManager.getLeaderboard().slice(0, 8);
+    var _leaderboardEl = null;
+    var _leaderboardPanelOpen = false;
+
+    function ensureLeaderboardOverlayEl() {
+        if (_leaderboardEl) return _leaderboardEl;
+        _leaderboardEl = document.createElement('div');
+        _leaderboardEl.id = 'tt-leaderboard-overlay';
+        document.body.appendChild(_leaderboardEl);
+        return _leaderboardEl;
+    }
+
+    function openLeaderboardPanel() {
+        _leaderboardPanelOpen = true;
+        var root = ensureLeaderboardOverlayEl();
+        root.style.display = 'flex';
+        renderLeaderboardOverlayContent();
+    }
+    function closeLeaderboardPanel() {
+        _leaderboardPanelOpen = false;
+        if (_leaderboardEl) _leaderboardEl.style.display = 'none';
+    }
+    function refreshLeaderboardIfOpen() {
+        if (_leaderboardPanelOpen) renderLeaderboardOverlayContent();
+    }
+
+    function renderLeaderboardOverlayContent() {
+        var listEl0 = ensureLeaderboardOverlayEl();
         var roster = getRoster();
-        listEl.innerHTML = lb.map(function (row, i) {
+        var lb = AGP.scoreManager.getLeaderboard();
+        var rows = lb.map(function (row, i) {
             var p = roster.filter(function (pp) { return pp.id === row.playerId; })[0] || { id: row.playerId, name: row.playerId };
             return '<div class="tt-lb-row">' +
                 '<span class="tt-lb-rank">' + (i + 1) + '</span>' +
@@ -726,7 +748,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<span class="tt-lb-score">' + row.score + '</span>' +
                 '</div>';
         }).join('') || '<div class="tt-hint">ولا حد سجّل نقاط بعد.</div>';
-        fitCardNames(listEl);
+
+        listEl0.innerHTML =
+            '<div class="tt-leaderboard-box">' +
+                '<button type="button" id="tt-leaderboard-close-btn" class="tt-admin-close">✖</button>' +
+                '<h3>🏆 لوحة الصدارة</h3>' +
+                '<div class="tt-leaderboard-list">' + rows + '</div>' +
+            '</div>';
+
+        el('tt-leaderboard-close-btn').addEventListener('click', closeLeaderboardPanel);
+        fitCardNames(listEl0);
     }
 
     function handleSkipQuestion() {
@@ -820,6 +851,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *      (window.AGPAuth) بنفس نمط لعبة "اسم و حيوان ونبات وجماد وبلاد"
      * ==================================================================== */
     function finalizeMatchAndShowWinner() {
+        closeLeaderboardPanel();
         var lb = AGP.scoreManager.getLeaderboard();
         var roster = getRoster();
 
@@ -953,14 +985,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.events.on('player:joined', function () {
             if (_screen === 'lobby') renderLobbyPlayerGrid();
             if (_adminPanelOpen) renderAdminPanel();
+            refreshLeaderboardIfOpen();
         });
         AGP.events.on('player:removed', function () {
             if (_screen === 'lobby') renderLobbyPlayerGrid();
             if (_adminPanelOpen) renderAdminPanel();
+            refreshLeaderboardIfOpen();
         });
         AGP.events.on('score:changed', function () {
-            if (_screen === 'match') renderLeaderboardPanel();
             if (_adminPanelOpen) renderAdminPanel();
+            refreshLeaderboardIfOpen();
         });
     }
 
