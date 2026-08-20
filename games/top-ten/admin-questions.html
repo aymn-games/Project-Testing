@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إدارة أسئلة أهم عشرة — أدمن</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zain:ital,wght@0,200;0,300;0,400;0,700;0,800;0,900;1,300;1,400&display=swap" rel="stylesheet">
+
+<!--
+    ==========================================================================
+     صفحة إدارة بنك أسئلة "أهم عشرة" — أدمن فقط.
+     ==========================================================================
+     محمية بنفس آلية admin.html الموجودة أصلاً (window.AGPAuth.requireAdmin)
+     — بدون أي نقطة API جديدة على الباك اند وبدون أي تعديل على
+     auth/auth-client.js نفسه. ملف ذاتي الاكتفاء تماماً (بنفس فلسفة
+     login.html) — لا اعتماد على أي ملف AGP.* آخر غير auth-client.js.
+
+     المصدر الحقيقي للأسئلة اللي تلعبها كل الستريمرز هو ملف
+     games/top-ten/questions-bank.json (يقرأه agp-top-ten.js وقت
+     التحميل مباشرة). هذه الصفحة تفتح على نفس الملف الحالي (fetch)،
+     تخليك تعدّل/تضيف/تحذف، وبعدها تنزّل نسخة محدثة منه تروح ترفعها
+     يدوياً بنفس رابط الرفع المعتاد — بدون أي اتصال شبكي حقيقي إضافي،
+     وبدون تعديل أي ملف ثاني بالمشروع.
+    ==========================================================================
+-->
+
+<style>
+:root {
+    --aq-green-950: #03130d; --aq-green-900: #052119; --aq-green-800: #0a3626;
+    --aq-green-700: #0f4a34; --aq-green-line: rgba(31, 158, 115, 0.28);
+    --aq-gold-700: #a8802a; --aq-gold-500: #d9a83e; --aq-gold-400: #f3c352; --aq-gold-300: #ffe2a1;
+    --aq-text: #f4f8f5; --aq-text-dim: rgba(244, 248, 245, 0.68);
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0; font-family: 'Zain', 'Tahoma', sans-serif; direction: rtl;
+    background: linear-gradient(160deg, var(--aq-green-950), var(--aq-green-900));
+    color: var(--aq-text); min-height: 100vh; padding: 20px 16px 60px;
+}
+body.auth-checking .aq-content { display: none; }
+.aq-checking-msg { text-align: center; padding: 60px 20px; color: var(--aq-text-dim); }
+body:not(.auth-checking) .aq-checking-msg { display: none; }
+
+.aq-wrap { max-width: 760px; margin: 0 auto; }
+.aq-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+.aq-title { font-size: 1.4em; font-weight: 900; color: var(--aq-gold-400); }
+.aq-back { color: var(--aq-text-dim); text-decoration: none; font-size: 0.9em; }
+.aq-back:hover { color: var(--aq-gold-400); }
+
+.aq-panel {
+    background: linear-gradient(165deg, var(--aq-green-800), var(--aq-green-900));
+    border: 1px solid var(--aq-green-line); border-radius: 16px; padding: 18px 18px 22px; margin-bottom: 18px;
+}
+.aq-panel h2 { color: var(--aq-gold-400); font-size: 1.1em; margin: 0 0 12px; }
+.aq-hint { color: var(--aq-text-dim); font-size: 0.85em; line-height: 1.7; }
+.aq-hint code { background: var(--aq-green-950); padding: 2px 6px; border-radius: 4px; }
+.aq-hint a { color: var(--aq-gold-400); }
+
+.aq-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.aq-btn {
+    padding: 10px 18px; border-radius: 10px; font-family: inherit; font-size: 0.95em; font-weight: 800;
+    cursor: pointer; border: none;
+}
+.aq-btn-primary { background: linear-gradient(135deg, var(--aq-gold-400), var(--aq-gold-700)); color: var(--aq-green-950); }
+.aq-btn-secondary { background: var(--aq-green-700); color: var(--aq-gold-300); border: 1.5px solid var(--aq-gold-700); }
+.aq-btn-danger { background: var(--aq-green-700); color: #ffb4a8; border: 1.5px solid #c0392b; }
+.aq-btn:hover { filter: brightness(1.08); }
+.aq-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.aq-q-card { background: var(--aq-green-950); border: 1px solid var(--aq-green-line); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+.aq-q-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.aq-q-prompt { font-weight: 800; font-size: 1.02em; }
+.aq-q-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.aq-icon-btn { background: none; border: none; cursor: pointer; font-size: 1.05em; opacity: 0.8; padding: 4px; }
+.aq-icon-btn:hover { opacity: 1; }
+.aq-q-answers { margin-top: 10px; display: none; flex-wrap: wrap; gap: 6px; }
+.aq-q-card.aq-expanded .aq-q-answers { display: flex; }
+.aq-q-answer-chip { background: var(--aq-green-800); border: 1px solid var(--aq-gold-700); border-radius: 999px; padding: 3px 10px; font-size: 0.8em; }
+.aq-q-answer-chip b { color: var(--aq-gold-400); }
+
+.aq-row-field { position: relative; margin-bottom: 14px; }
+.aq-row-field input[type="text"] {
+    width: 100%; padding: 12px 14px; font-size: 1em; background: var(--aq-green-950);
+    border: 1.5px solid var(--aq-green-line); border-radius: 8px; color: var(--aq-text); font-family: inherit; direction: rtl;
+}
+.aq-row-field input:focus { outline: none; border-color: var(--aq-gold-500); }
+.aq-row-field label { display: block; margin-top: 5px; font-size: 0.78em; color: var(--aq-text-dim); }
+
+.aq-answer-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.aq-answer-badge {
+    flex-shrink: 0; width: 74px; text-align: center; font-size: 0.75em; background: var(--aq-green-700);
+    border: 1px solid var(--aq-gold-700); border-radius: 999px; padding: 4px 2px; color: var(--aq-gold-300);
+}
+.aq-answer-badge em { font-style: normal; display: block; opacity: 0.8; }
+.aq-answer-input { flex: 1; padding: 9px 10px; background: var(--aq-green-900); border: 1.5px solid var(--aq-green-line); border-radius: 8px; color: var(--aq-text); font-family: inherit; direction: rtl; font-size: 0.9em; }
+.aq-answer-input:focus { outline: none; border-color: var(--aq-gold-500); }
+.aq-alias-input { flex: 1; padding: 9px 10px; background: var(--aq-green-900); border: 1.5px dashed var(--aq-green-line); border-radius: 8px; color: var(--aq-text-dim); font-family: inherit; direction: rtl; font-size: 0.82em; }
+
+.aq-error { color: #ffb4a8; background: rgba(192, 57, 43, 0.18); border: 1px solid #c0392b; border-radius: 8px; padding: 9px 12px; margin: 10px 0; font-size: 0.88em; text-align: center; display: none; }
+.aq-success { color: var(--aq-gold-300); background: var(--aq-green-950); border: 1px solid var(--aq-gold-700); border-radius: 8px; padding: 9px 12px; margin: 10px 0; font-size: 0.88em; text-align: center; display: none; }
+</style>
+</head>
+<body class="auth-checking">
+
+<div class="aq-checking-msg">جارِ التحقق من صلاحيات الأدمن...</div>
+
+<div class="aq-content">
+<div class="aq-wrap">
+
+    <div class="aq-header">
+        <div class="aq-title">🛠️ إدارة أسئلة أهم عشرة</div>
+        <a class="aq-back" href="../../index.html">🏠 رجوع للمنصة</a>
+    </div>
+
+    <div class="aq-panel">
+        <div class="aq-hint">
+            هذه الصفحة تعدّل نسخة محلية بالمتصفح بس — أي تعديل ما يوصل للعبة
+            الفعلية إلا بعد ما تضغط <b>"⬇️ تنزيل ملف الأسئلة"</b> تحت، وترفع
+            الملف الناتج (<code>questions-bank.json</code>) لنفس مكان ملف
+            اللعبة بمستودع GitHub (استبدال الملف الحالي)، بنفس طريقة رفعك
+            المعتادة. فتح الصفحة يجيب لك تلقائياً آخر نسخة منشورة فعلياً
+            كنقطة بداية، فتقدر تكمل عليها مباشرة بدل ما تبدأ من الصفر كل مرة.
+        </div>
+    </div>
+
+    <div class="aq-toolbar">
+        <button type="button" id="aq-add-btn" class="aq-btn aq-btn-primary">➕ سؤال جديد</button>
+        <button type="button" id="aq-reload-btn" class="aq-btn aq-btn-secondary">🔄 إعادة تحميل من الملف المنشور حالياً</button>
+        <button type="button" id="aq-download-btn" class="aq-btn aq-btn-primary">⬇️ تنزيل ملف الأسئلة</button>
+    </div>
+
+    <div id="aq-status-error" class="aq-error"></div>
+    <div id="aq-status-success" class="aq-success"></div>
+
+    <div class="aq-panel">
+        <h2>الأسئلة الحالية (<span id="aq-count">0</span>)</h2>
+        <div id="aq-list"></div>
+    </div>
+
+    <div id="aq-form-panel" class="aq-panel" style="display:none;"></div>
+
+</div>
+</div>
+
+<script src="../../auth/auth-client.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    var _questions = [];
+    var _editingId = null; // null = وضع إضافة، غير ذلك = وضع تعديل
+
+    function el(id) { return document.getElementById(id); }
+    function escapeHtml(str) {
+        return String(str == null ? '' : str).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+    function showError(msg) {
+        var e = el('aq-status-error'); e.textContent = msg; e.style.display = 'block';
+        el('aq-status-success').style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function showSuccess(msg) {
+        var s = el('aq-status-success'); s.textContent = msg; s.style.display = 'block';
+        el('aq-status-error').style.display = 'none';
+    }
+    function clearMessages() {
+        el('aq-status-error').style.display = 'none';
+        el('aq-status-success').style.display = 'none';
+    }
+
+    function loadBankFromServer() {
+        return fetch('questions-bank.json', { cache: 'no-store' })
+            .then(function (res) { return res.ok ? res.json() : null; })
+            .then(function (data) {
+                _questions = (data && Array.isArray(data.questions)) ? data.questions : [];
+                renderList();
+                if (!_questions.length) showError('ما فيه ملف أسئلة منشور بعد، أو الملف فاضي — ابدأ بإضافة سؤال جديد.');
+            })
+            .catch(function () {
+                _questions = [];
+                renderList();
+                showError('تعذّر تحميل ملف الأسئلة الحالي (شبكة أو الملف مو موجود بعد) — تقدر تبدأ بإضافة أسئلة جديدة من الصفر.');
+            });
+    }
+
+    function renderList() {
+        el('aq-count').textContent = _questions.length;
+        var listEl = el('aq-list');
+        listEl.innerHTML = _questions.map(function (q) {
+            var chips = q.answers.map(function (a, i) {
+                return '<span class="aq-q-answer-chip"><b>' + (i + 1) + '.</b> ' + escapeHtml(a.text) + ' (' + (10 - i) + 'ن)</span>';
+            }).join('');
+            return '<div class="aq-q-card" id="aq-qcard-' + escapeHtml(q.id) + '">' +
+                '<div class="aq-q-card-top">' +
+                    '<span class="aq-q-prompt">' + escapeHtml(q.prompt) + '</span>' +
+                    '<span class="aq-q-actions">' +
+                        '<button type="button" class="aq-icon-btn aq-toggle-btn" data-id="' + escapeHtml(q.id) + '" title="عرض الإجابات">👁️</button>' +
+                        '<button type="button" class="aq-icon-btn aq-edit-btn" data-id="' + escapeHtml(q.id) + '" title="تعديل">✏️</button>' +
+                        '<button type="button" class="aq-icon-btn aq-delete-btn" data-id="' + escapeHtml(q.id) + '" title="حذف">🗑️</button>' +
+                    '</span>' +
+                '</div>' +
+                '<div class="aq-q-answers">' + chips + '</div>' +
+            '</div>';
+        }).join('') || '<div class="aq-hint">لا يوجد أي سؤال بعد.</div>';
+
+        Array.prototype.forEach.call(listEl.querySelectorAll('.aq-toggle-btn'), function (btn) {
+            btn.addEventListener('click', function () {
+                el('aq-qcard-' + btn.getAttribute('data-id')).classList.toggle('aq-expanded');
+            });
+        });
+        Array.prototype.forEach.call(listEl.querySelectorAll('.aq-edit-btn'), function (btn) {
+            btn.addEventListener('click', function () { openForm(btn.getAttribute('data-id')); });
+        });
+        Array.prototype.forEach.call(listEl.querySelectorAll('.aq-delete-btn'), function (btn) {
+            btn.addEventListener('click', function () {
+                var id = btn.getAttribute('data-id');
+                var q = _questions.filter(function (x) { return x.id === id; })[0];
+                if (!q) return;
+                if (!window.confirm('تحذف السؤال "' + q.prompt + '"؟')) return;
+                _questions = _questions.filter(function (x) { return x.id !== id; });
+                renderList();
+                showSuccess('تم الحذف محلياً — لا تنسى تنزيل الملف وترفعه عشان يصير التغيير فعلي.');
+            });
+        });
+    }
+
+    function buildFormHtml(existing) {
+        var rows = '';
+        for (var i = 0; i < 10; i++) {
+            var points = 10 - i;
+            var ans = existing ? existing.answers[i] : null;
+            var textVal = ans ? ans.text : '';
+            var aliasVal = ans && ans.aliases ? ans.aliases.join('، ') : '';
+            rows += '<div class="aq-answer-row">' +
+                '<span class="aq-answer-badge">' + (i + 1) + ' <em>(' + points + ' ن)</em></span>' +
+                '<input type="text" class="aq-answer-input" data-rank="' + i + '" placeholder="نص الإجابة رقم ' + (i + 1) + '" value="' + escapeHtml(textVal) + '">' +
+                '</div>' +
+                '<div class="aq-answer-row" style="margin-right:82px; margin-top:-4px;">' +
+                '<input type="text" class="aq-alias-input" data-rank="' + i + '" placeholder="صيغ بديلة (اختياري، افصل بفاصلة عربية ،)" value="' + escapeHtml(aliasVal) + '">' +
+                '</div>';
+        }
+        return '<h2>' + (existing ? 'تعديل سؤال' : 'سؤال جديد') + '</h2>' +
+            '<div class="aq-row-field">' +
+                '<input type="text" id="aq-form-prompt" placeholder="مثال: اكتب عشر أشياء نسويها بالسفر" value="' + escapeHtml(existing ? existing.prompt : '') + '">' +
+                '<label>نص السؤال</label>' +
+            '</div>' +
+            '<div class="aq-hint" style="margin-bottom:12px;">رتّب الإجابات من الأهم (رقم 1 = 10 نقاط) للأقل أهمية (رقم 10 = نقطة وحدة). الصيغ البديلة تساعد المطابقة التلقائية تتعرف على كتابات مختلفة لنفس الإجابة.</div>' +
+            rows +
+            '<div id="aq-form-error" class="aq-error"></div>' +
+            '<div style="display:flex; gap:10px; margin-top:14px;">' +
+                '<button type="button" id="aq-form-save-btn" class="aq-btn aq-btn-primary">💾 حفظ</button>' +
+                '<button type="button" id="aq-form-cancel-btn" class="aq-btn aq-btn-secondary">إلغاء</button>' +
+            '</div>';
+    }
+
+    function openForm(editId) {
+        clearMessages();
+        _editingId = editId || null;
+        var existing = _editingId ? _questions.filter(function (q) { return q.id === _editingId; })[0] : null;
+        var panel = el('aq-form-panel');
+        panel.style.display = 'block';
+        panel.innerHTML = buildFormHtml(existing);
+
+        el('aq-form-save-btn').addEventListener('click', function () {
+            var prompt = (el('aq-form-prompt').value || '').trim();
+            var textInputs = Array.prototype.slice.call(panel.querySelectorAll('.aq-answer-input'));
+            var aliasInputs = Array.prototype.slice.call(panel.querySelectorAll('.aq-alias-input'));
+            var errEl = el('aq-form-error');
+
+            var answers = textInputs.map(function (inp, i) {
+                var aliasRaw = (aliasInputs[i].value || '').trim();
+                var aliases = aliasRaw ? aliasRaw.split(/[،,]/).map(function (s) { return s.trim(); }).filter(Boolean) : [];
+                return { text: (inp.value || '').trim(), aliases: aliases };
+            });
+
+            if (!prompt) { errEl.textContent = 'لازم تكتب نص السؤال.'; errEl.style.display = 'block'; return; }
+            if (answers.some(function (a) { return !a.text; })) { errEl.textContent = 'لازم تعبّي كل الإجابات العشر.'; errEl.style.display = 'block'; return; }
+
+            if (_editingId) {
+                var idx = _questions.findIndex(function (q) { return q.id === _editingId; });
+                _questions[idx] = { id: _editingId, prompt: prompt, answers: answers };
+            } else {
+                _questions.push({ id: 'q' + Date.now(), prompt: prompt, answers: answers });
+            }
+
+            panel.style.display = 'none';
+            panel.innerHTML = '';
+            _editingId = null;
+            renderList();
+            showSuccess('تم الحفظ محلياً — لا تنسى تنزيل الملف وترفعه عشان يصير التغيير فعلي باللعبة.');
+        });
+
+        el('aq-form-cancel-btn').addEventListener('click', function () {
+            panel.style.display = 'none';
+            panel.innerHTML = '';
+            _editingId = null;
+        });
+
+        if (typeof panel.scrollIntoView === 'function') {
+            panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    function downloadBank() {
+        if (!_questions.length) { showError('ما فيه أي سؤال تنزّله — أضف سؤال واحد على الأقل أول.'); return; }
+        var payload = { updatedAt: new Date().toISOString(), questions: _questions };
+        var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'questions-bank.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showSuccess('تم تنزيل الملف — ارفعه الحين لمكان اللعبة بـGitHub (استبدال الملف الحالي) عشان يصير التحديث فعلي.');
+    }
+
+    el('aq-add-btn').addEventListener('click', function () { openForm(null); });
+    el('aq-reload-btn').addEventListener('click', function () {
+        if (!window.confirm('تفقد أي تعديل محلي غير محفوظ بملف. تبي تكمل؟')) return;
+        loadBankFromServer();
+    });
+    el('aq-download-btn').addEventListener('click', downloadBank);
+
+    window.AGPAuth.requireAdmin('../../login.html', '../../dashboard-core/index.html').then(function (user) {
+        if (!user) return;
+        document.body.classList.remove('auth-checking');
+        loadBankFromServer();
+    });
+}());
+</script>
+
+</body>
+</html>

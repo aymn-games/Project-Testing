@@ -22,6 +22,19 @@
  * وتظهر بطاقة الفائز (الأعلى نقاطاً بكل المباراة) بنفس نمط نقاط منصة
  * ألعاب أيمن الحقيقية (window.AGPAuth) المتّبع بلعبة "اسم و حيوان...".
  *
+ * ⚠️ بنك الأسئلة خارجي بالكامل — ما فيه أي إدارة أسئلة بشاشة الإعدادات
+ *   هنا إطلاقاً. اللعبة تقرأ ملف games/top-ten/questions-bank.json
+ *   (نفس المجلد) وقت التحميل فقط، وهذا الملف يُدار حصراً من صفحة
+ *   admin-questions.html (محمية بتسجيل دخول الأدمن عبر
+ *   window.AGPAuth.requireAdmin — نفس آلية admin.html الموجودة أصلاً،
+ *   بدون أي تعديل أو نقطة API جديدة على الباك اند). لو تعذّر تحميل
+ *   الملف (أول نشر قبل رفعه، أو خطأ شبكة)، تُستخدَم مجموعة احتياطية
+ *   صغيرة مضمّنة هنا (BUILTIN_FALLBACK_QUESTIONS) حتى لا تنهار اللعبة.
+ *
+ * إعداد "المسموح له بالانضمام": الجميع أو المتابعون فقط — يُطبَّق على
+ *   لحظة قبول الكلمة المفتاحية فقط (payload.isFollower من الباك اند)،
+ *   ولا يمنع أي لاعب منضم مسبقاً من الإجابة بعدها.
+ *
  * هوية بصرية بلونين فقط (أخضر زمردي + ذهبي) بدرجات وشفافيات مختلفة —
  * لا لون ثالث حقيقي بالتصميم (الأبيض/الأسود للنصوص والظلال فقط).
  *
@@ -41,15 +54,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     var GAME_ID = 'top-ten';
     var GAME_NAME = 'أهم عشرة';
-    var STORAGE_KEY_CUSTOM_QUESTIONS = 'topten:customQuestions';
+    var QUESTIONS_BANK_URL = 'questions-bank.json';
     var ROUNDS_OPTIONS = [3, 5, 7, 10];
+    var JOIN_ACCESS_OPTIONS = [
+        { value: 'everyone', label: 'الجميع' },
+        { value: 'followers', label: 'المتابعون فقط' }
+    ];
 
     /* ======================================================================
-     *  0) بنك الأسئلة الجاهز — كل سؤال فيه 10 إجابات مرتبة من الأهم
-     *     (10 نقاط) للأقل أهمية (نقطة وحدة). aliases اختيارية لتحسين
-     *     المطابقة التلقائية مع صيغ مختلفة لنفس الإجابة.
+     *  0) بنك أسئلة احتياطي (Fallback) فقط — يُستخدَم حصراً لو تعذّر تحميل
+     *     games/top-ten/questions-bank.json (أول نشر قبل رفعه، أو خطأ
+     *     شبكة). المصدر الحقيقي دايماً هو ذاك الملف، يُدار من
+     *     admin-questions.html — لا علاقة لهذه القائمة بأي شاشة إعدادات.
      * ==================================================================== */
-    var BUILTIN_QUESTIONS = [
+    var BUILTIN_FALLBACK_QUESTIONS = [
         {
             id: 'b1', builtin: true, prompt: 'اكتب عشر أشياء نسويها قبل السفر',
             answers: [
@@ -251,9 +269,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         tiktokUsername: '',
         keyword: '',
         roundsTarget: 5,
-        selectedQuestionIds: null // يُبنى لاحقاً = كل الأسئلة الجاهزة + المخصّصة
+        joinAccess: 'everyone' // 'everyone' | 'followers'
     };
-    var _customQuestions = [];
+    var _questionBank = BUILTIN_FALLBACK_QUESTIONS; // يُستبدَل بمحتوى questions-bank.json لو توفّر
+    var _questionBankLoaded = false;
     var _pool = [];
     var _poolIndex = 0;
     var _currentQuestion = null;
@@ -261,27 +280,30 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _matchStartedAt = null;
     var _adminPanelOpen = false;
     var _commentUnsub = null;
+    var _recentComments = []; // آخر تعليقات وصلت — لصندوق التشخيص باللوبي فقط
 
     var _overlayEl = null, _lobbyEl = null, _matchEl = null, _adminEl = null, _winnerEl = null;
 
-    function allAvailableQuestions() {
-        return BUILTIN_QUESTIONS.concat(_customQuestions);
-    }
-
-    function loadCustomQuestions() {
-        _customQuestions = AGP.storageManager && typeof AGP.storageManager.get === 'function'
-            ? (AGP.storageManager.get(STORAGE_KEY_CUSTOM_QUESTIONS, []) || [])
-            : [];
-    }
-    function saveCustomQuestions() {
-        if (AGP.storageManager && typeof AGP.storageManager.set === 'function') {
-            AGP.storageManager.set(STORAGE_KEY_CUSTOM_QUESTIONS, _customQuestions);
-        }
-    }
-
-    function ensureSelectedDefaults() {
-        if (_settings.selectedQuestionIds) return;
-        _settings.selectedQuestionIds = allAvailableQuestions().map(function (q) { return q.id; });
+    /* ======================================================================
+     *  0-ب) تحميل بنك الأسئلة الخارجي (questions-bank.json) — مرة وحدة
+     *      عند تسجيل اللعبة، بدون أي حظر لباقي الواجهة أثناء الانتظار
+     *      (الاتصال باللوبي وبدء المباراة يحتاجان تفاعل المستخدم أصلاً،
+     *      يعطي وقت كافٍ للتحميل قبل أول استخدام فعلي للبنك).
+     * ==================================================================== */
+    function loadQuestionBank() {
+        if (typeof fetch !== 'function') { _questionBankLoaded = true; return; }
+        fetch(QUESTIONS_BANK_URL, { cache: 'no-store' })
+            .then(function (res) { return res.ok ? res.json() : null; })
+            .then(function (data) {
+                if (data && Array.isArray(data.questions) && data.questions.length) {
+                    _questionBank = data.questions;
+                    AGP.log('Top Ten: loaded ' + data.questions.length + ' question(s) from questions-bank.json.');
+                } else {
+                    AGP.log('Top Ten: questions-bank.json missing/empty, using fallback bank.');
+                }
+            })
+            .catch(function () { AGP.log('Top Ten: failed to fetch questions-bank.json, using fallback bank.'); })
+            .then(function () { _questionBankLoaded = true; });
     }
 
     /* ======================================================================
@@ -324,13 +346,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _screen = 'settings';
         hideGearButton();
         showOverlay();
-        loadCustomQuestions();
-        ensureSelectedDefaults();
         var box = el('tt-box');
 
         var roundsPills = ROUNDS_OPTIONS.map(function (v) {
             var active = (_settings.roundsTarget === v) ? ' tt-pill-active' : '';
             return '<button type="button" class="tt-pill-btn tt-rounds-pill' + active + '" data-value="' + v + '">' + v + '</button>';
+        }).join('');
+
+        var accessPills = JOIN_ACCESS_OPTIONS.map(function (opt) {
+            var active = (_settings.joinAccess === opt.value) ? ' tt-pill-active' : '';
+            return '<button type="button" class="tt-pill-btn tt-access-pill' + active + '" data-value="' + opt.value + '">' + opt.label + '</button>';
         }).join('');
 
         box.innerHTML =
@@ -347,21 +372,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<label>الكلمة المفتاحية للانضمام كمتسابق</label>' +
             '</div>' +
 
+            '<div class="tt-field-label-center">مين مسموح له ينضم؟</div>' +
+            '<div class="tt-pill-group" id="tt-access-group">' + accessPills + '</div>' +
+
             '<div class="tt-field-label-center">عدد الجولات (الأسئلة الفعلية المستهدفة)</div>' +
             '<div class="tt-pill-group" id="tt-rounds-group">' + roundsPills + '</div>' +
-            '<div class="tt-hint">تخطي أي سؤال ما يُحتسب من هذا العدد.</div>' +
-
-            '<div class="tt-section-header">بنك الأسئلة <span id="tt-q-selected-count"></span></div>' +
-            '<div id="tt-questions-list" class="tt-questions-list"></div>' +
-            '<button type="button" id="tt-add-question-btn" class="tt-btn-secondary">➕ سؤال جديد من عندي</button>' +
-            '<div id="tt-newq-form-holder"></div>' +
+            '<div class="tt-hint">تخطي أي سؤال ما يُحتسب من هذا العدد. الأسئلة نفسها تُدار من صفحة تحكم منفصلة.</div>' +
 
             '<div id="tt-settings-error" class="tt-error-msg" style="display:none;"></div>' +
             '<button type="button" id="tt-connect-btn" class="tt-btn-connect">اتصل بالبث وانتقل للوبي</button>';
 
         el('tt-settings-back-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
         wireSettingsHandlers();
-        renderQuestionsList();
     }
 
     function wireSettingsHandlers() {
@@ -374,97 +396,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             renderSettingsScreen();
         });
 
-        el('tt-add-question-btn').addEventListener('click', function () {
-            var holder = el('tt-newq-form-holder');
-            holder.innerHTML = holder.innerHTML ? '' : buildNewQuestionFormHtml();
-            if (holder.innerHTML) wireNewQuestionForm();
+        el('tt-access-group').addEventListener('click', function (e) {
+            var btn = e.target.closest('.tt-pill-btn'); if (!btn) return;
+            _settings.joinAccess = btn.getAttribute('data-value');
+            renderSettingsScreen();
         });
 
         el('tt-connect-btn').addEventListener('click', handleConnectClick);
-    }
-
-    function renderQuestionsList() {
-        var listEl = el('tt-questions-list');
-        var countEl = el('tt-q-selected-count');
-        if (!listEl) return;
-        var all = allAvailableQuestions();
-        countEl.textContent = '(' + _settings.selectedQuestionIds.length + ' من ' + all.length + ' مفعّل)';
-
-        listEl.innerHTML = all.map(function (q) {
-            var checked = _settings.selectedQuestionIds.indexOf(q.id) !== -1 ? ' checked' : '';
-            var customBadge = q.builtin ? '' : '<span class="tt-custom-badge">من عندك</span>';
-            var delBtn = q.builtin ? '' : '<button type="button" class="tt-q-delete-btn" data-id="' + escapeAttr(q.id) + '" title="حذف السؤال">🗑️</button>';
-            return '<label class="tt-q-row">' +
-                '<input type="checkbox" class="tt-q-checkbox" data-id="' + escapeAttr(q.id) + '"' + checked + '>' +
-                '<span class="tt-q-row-text">' + escapeHtml(q.prompt) + '</span>' +
-                customBadge + delBtn +
-                '</label>';
-        }).join('') || '<div class="tt-hint">لا يوجد أي سؤال مفعّل حالياً.</div>';
-
-        Array.prototype.forEach.call(listEl.querySelectorAll('.tt-q-checkbox'), function (cb) {
-            cb.addEventListener('change', function () {
-                var id = cb.getAttribute('data-id');
-                var idx = _settings.selectedQuestionIds.indexOf(id);
-                if (cb.checked && idx === -1) _settings.selectedQuestionIds.push(id);
-                else if (!cb.checked && idx !== -1) _settings.selectedQuestionIds.splice(idx, 1);
-                countEl.textContent = '(' + _settings.selectedQuestionIds.length + ' من ' + all.length + ' مفعّل)';
-            });
-        });
-        Array.prototype.forEach.call(listEl.querySelectorAll('.tt-q-delete-btn'), function (btn) {
-            btn.addEventListener('click', function () {
-                var id = btn.getAttribute('data-id');
-                _customQuestions = _customQuestions.filter(function (q) { return q.id !== id; });
-                var idx = _settings.selectedQuestionIds.indexOf(id);
-                if (idx !== -1) _settings.selectedQuestionIds.splice(idx, 1);
-                saveCustomQuestions();
-                renderQuestionsList();
-            });
-        });
-    }
-
-    function buildNewQuestionFormHtml() {
-        var rows = '';
-        for (var i = 0; i < 10; i++) {
-            var points = 10 - i;
-            rows += '<div class="tt-newq-answer-row">' +
-                '<span class="tt-newq-answer-badge">' + (i + 1) + ' <em>(' + points + ' ن)</em></span>' +
-                '<input type="text" class="tt-newq-answer-input" data-rank="' + i + '" placeholder="الإجابة رقم ' + (i + 1) + '">' +
-                '</div>';
-        }
-        return '<div class="tt-newq-form">' +
-            '<div class="tt-row-field">' +
-                '<input type="text" id="tt-newq-prompt" placeholder="مثال: اكتب عشر أشياء نسويها بالسفر">' +
-                '<label>نص السؤال</label>' +
-            '</div>' +
-            '<div class="tt-hint">رتّب الإجابات من الأهم (رقم 1 = 10 نقاط) للأقل أهمية (رقم 10 = نقطة وحدة).</div>' +
-            rows +
-            '<div id="tt-newq-error" class="tt-error-msg" style="display:none;"></div>' +
-            '<button type="button" id="tt-newq-save-btn" class="tt-btn-secondary">💾 حفظ السؤال</button>' +
-            '</div>';
-    }
-
-    function wireNewQuestionForm() {
-        el('tt-newq-save-btn').addEventListener('click', function () {
-            var prompt = (el('tt-newq-prompt').value || '').trim();
-            var inputs = Array.prototype.slice.call(document.querySelectorAll('.tt-newq-answer-input'));
-            var answers = inputs.map(function (inp) { return (inp.value || '').trim(); });
-            var errEl = el('tt-newq-error');
-
-            if (!prompt) { errEl.textContent = 'لازم تكتب نص السؤال.'; errEl.style.display = 'block'; return; }
-            if (answers.some(function (a) { return !a; })) { errEl.textContent = 'لازم تعبّي كل الإجابات العشر.'; errEl.style.display = 'block'; return; }
-
-            var newQ = {
-                id: 'c' + Date.now(),
-                builtin: false,
-                prompt: prompt,
-                answers: answers.map(function (text) { return { text: text, aliases: [] }; })
-            };
-            _customQuestions.push(newQ);
-            _settings.selectedQuestionIds.push(newQ.id);
-            saveCustomQuestions();
-            el('tt-newq-form-holder').innerHTML = '';
-            renderQuestionsList();
-        });
     }
 
     function showSettingsError(msg) {
@@ -480,7 +418,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         if (!username) return showSettingsError('لازم تكتب يوزر البث أول.');
         if (!keyword) return showSettingsError('لازم تحدد كلمة مفتاحية للانضمام.');
-        if (!_settings.selectedQuestionIds.length) return showSettingsError('فعّل سؤال واحد على الأقل من البنك.');
 
         AGP.streamConnector.connect('tiktok', { username: username });
     }
@@ -538,7 +475,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<button type="button" id="tt-lobby-back-settings-btn" class="tt-lobby-row-btn tt-lobby-btn-settings">⚙️ العودة لإعدادات المباراة</button>' +
                 '<button type="button" id="tt-start-match-btn" class="tt-lobby-row-btn tt-lobby-btn-start">ابدأ المباراة</button>' +
                 '<button type="button" id="tt-lobby-back-platform-btn" class="tt-lobby-row-btn tt-lobby-btn-platform">🏠 رجوع لمنصة ألعاب أيمن</button>' +
-            '</div>';
+            '</div>' +
+
+            '<details class="tt-debug-feed">' +
+                '<summary>🛠️ تشخيص: آخر التعليقات الواردة (لك أنت بس، ما يشوفه المشاهدين)</summary>' +
+                '<div id="tt-debug-feed-list" class="tt-debug-feed-list"></div>' +
+            '</details>';
 
         el('tt-start-match-btn').addEventListener('click', handleStartMatch);
         el('tt-lobby-back-platform-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
@@ -548,6 +490,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
 
         renderLobbyPlayerGrid();
+        renderDebugFeed();
     }
 
     function renderLobbyPlayerGrid() {
@@ -577,6 +520,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *  6) استماع الشات (انضمام بالكلمة المفتاحية + مطابقة إجابات) — يبقى
      *     فعّالاً من اللوبي لين نهاية المباراة، عشان أي متأخر يقدر ينضم.
      * ==================================================================== */
+    function trackRecentComment(payload, status) {
+        _recentComments.unshift({ text: payload.text, name: payload.name || payload.id, status: status, t: Date.now() });
+        if (_recentComments.length > 6) _recentComments.length = 6;
+        renderDebugFeed();
+    }
+
     function wireCommentListener() {
         if (_commentUnsub) return;
         _commentUnsub = AGP.events.on('stream:commentReceived', function (payload) {
@@ -587,16 +536,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var kwNorm = normalizeArabicText(_settings.keyword);
 
             if (norm && kwNorm && norm === kwNorm) {
+                if (_settings.joinAccess === 'followers' && !payload.isFollower) {
+                    trackRecentComment(payload, 'مرفوض (مو متابع)');
+                    return;
+                }
                 if (!AGP.player.hasPlayer(payload.id)) {
                     AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null });
+                    trackRecentComment(payload, 'انضم ✅');
+                } else {
+                    trackRecentComment(payload, 'منضم مسبقاً');
                 }
                 return;
             }
 
-            if (_screen !== 'match' || !_currentQuestion) return;
-            if (!AGP.player.hasPlayer(payload.id)) return;
+            if (_screen !== 'match' || !_currentQuestion) { trackRecentComment(payload, '—'); return; }
+            if (!AGP.player.hasPlayer(payload.id)) { trackRecentComment(payload, 'مو منضم'); return; }
 
+            var beforeScore = _currentQuestion.answers.filter(function (a) { return a.revealed; }).length;
             tryMatchAnswer(payload, norm);
+            var afterScore = _currentQuestion.answers.filter(function (a) { return a.revealed; }).length;
+            trackRecentComment(payload, afterScore > beforeScore ? 'إجابة صحيحة ✅' : 'ما طابقت');
         });
     }
 
@@ -608,9 +567,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *  7) بنك الأسئلة أثناء المباراة (اختيار عشوائي بدون تكرار قدر الإمكان)
      * ==================================================================== */
     function buildFreshPool() {
-        var all = allAvailableQuestions();
-        var selected = all.filter(function (q) { return _settings.selectedQuestionIds.indexOf(q.id) !== -1; });
-        _pool = shuffleArray(selected.length ? selected : all);
+        _pool = shuffleArray(_questionBank && _questionBank.length ? _questionBank : BUILTIN_FALLBACK_QUESTIONS);
         _poolIndex = 0;
     }
 
@@ -653,6 +610,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 return;
             }
         }
+    }
+
+    function renderDebugFeed() {
+        var listEl = el('tt-debug-feed-list');
+        if (!listEl) return;
+        listEl.innerHTML = _recentComments.map(function (c) {
+            return '<div class="tt-debug-row"><b>' + escapeHtml(c.name) + ':</b> ' + escapeHtml(c.text) + ' <span class="tt-debug-status">(' + escapeHtml(c.status) + ')</span></div>';
+        }).join('') || '<div class="tt-hint">ولا وصل أي تعليق بعد.</div>';
     }
 
     function checkAllRevealed() {
@@ -986,6 +951,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         injectHeader();
         wirePlatformListeners();
+        loadQuestionBank();
         renderSettingsScreen();
     }
 

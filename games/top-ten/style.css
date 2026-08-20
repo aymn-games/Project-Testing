@@ -178,6 +178,17 @@ body.tt-active {
 }
 .tt-lobby-empty-hint { color: var(--tt-text-dim); align-self: center; }
 
+.tt-debug-feed {
+    margin-top: 16px; background: var(--tt-green-950); border: 1px dashed var(--tt-green-line);
+    border-radius: var(--tt-radius-md); padding: 10px 14px; font-size: 0.82em;
+}
+.tt-debug-feed summary { cursor: pointer; color: var(--tt-text-dim); }
+.tt-debug-feed summary:hover { color: var(--tt-gold-400); }
+.tt-debug-feed-list { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; max-height: 160px; overflow-y: auto; }
+.tt-debug-row { color: var(--tt-text-dim); }
+.tt-debug-row b { color: var(--tt-text); }
+.tt-debug-status { color: var(--tt-gold-400); }
+
 .tt-lobby-btn-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
 .tt-lobby-row-btn {
     flex: 1 1 220px; max-width: 300px; height: 48px; border-radius: var(--tt-radius-sm); font-family: inherit;
