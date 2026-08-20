@@ -324,6 +324,14 @@ ensureColumn('broadcasts', 'total_unique_viewers', 'INTEGER NOT NULL DEFAULT 0')
 ensureColumn('users', 'display_name', 'TEXT');
 ensureColumn('users', 'avatar_image_base64', 'TEXT');
 
+// [0.45.14] ربط اختياري بين صف دعم (supporters) وحساب مسجَّل فعلياً
+// بالمنصة (users.id) — NULL افتراضياً (الداعم قد لا يملك حساباً، يبقى
+// السلوك القديم كما هو تماماً بالاسم النصي وحده). لو الأدمن ربط الصف
+// بحساب معيّن، تُعرَض الصفحة الرئيسية/صفحة توب الداعمين اسم العرض
+// وصورة البروفايل *الحيّة* لذلك الحساب بدل النص الثابت وقت الإدخال —
+// راجع backend/supporters/supporters-service.js.
+ensureColumn('supporters', 'user_id', 'INTEGER');
+
 /**
  * تهيئة أولية لكتالوج الإطارات الثابت (4 خاصة + 7 مستويات) — تُنفَّذ مرة
  * واحدة فقط لكل صف (INSERT OR IGNORE بمفتاح slug)، فلا خطر إعادة الكتابة
