@@ -91,7 +91,7 @@
     .bg-decor span:nth-child(6) { top: 30%; left: 45%; font-size: 2em; }
     .bg-decor span:nth-child(7) { top: 88%; right: 20%; font-size: 2.6em; }
     .bg-decor span:nth-child(8) { top: 5%; left: 40%; font-size: 1.8em; }
-    header.topbar, .hero, .categories, .sub-banner, #games-section, .teaser, .teaser-pills,
+    header.topbar, .hero, .categories, .highlight-tabs, #games-section, .teaser, .teaser-pills,
     .stats-section, footer, .announcement-overlay, #splash-screen { position: relative; z-index: 1; }
 
     /*
@@ -183,42 +183,64 @@
         padding: 2px 9px; font-size: 0.75em; font-weight: 800;
     }
 
-    /* [0.45.10] شريط "الأكثر نشاطاً" — أعلى الاستريمرز بإجمالي ساعات
-       البث، شريط متحرك (Marquee) بين أزرار الأقسام والبانر. مخفي كلياً
-       افتراضياً (JS يُظهره فقط لو وصلت بيانات فعلية من الخادم — لا شريط
-       فارغ أبداً). راجع docs/CHANGELOG.md. */
-    #top-streamers-ticker {
-        display: none;
+    /* [0.45.21] تبويب موحَّد "🔥 الأكثر نشاطاً" / "💜 داعمين المنصة" —
+       يحل محل شريطين منفصلين (تكر متحرك + بانر دعم) بعنصر واحد واضح
+       بتبويبين حقيقيين يختار بينهما الزائر. راجع wireHighlightTabs()
+       آخر الصفحة وdocs/CHANGELOG.md. البطاقة نفسها تبقى ظاهرة دائماً
+       (خلافاً لسلوك [0.45.10] القديم اللي كان يخفي الشريط كلياً لو ما
+       فيه بيانات) — كل تبويب يعرض رسالة فارغة واضحة بدل الاختفاء،
+       لأنها الآن عنصر واجهة ثابت لا "شريط إشعار" عابر. */
+    .highlight-tabs {
         max-width: 900px;
-        height: 100px;
-        margin: 0 auto 28px;
+        margin: 0 auto 36px;
         border-radius: var(--radius);
         background: var(--surface);
         border: 1px solid var(--border);
         overflow: hidden;
-        position: relative;
         box-shadow: 0 0 0 1px rgba(255, 77, 255, 0.06), 0 8px 24px rgba(0, 0, 0, 0.25);
     }
-    #top-streamers-ticker.is-ready { display: block; }
-    .tst-label {
-        position: absolute;
-        top: 8px; right: 14px;
-        z-index: 2;
-        font-size: 0.72em;
-        font-weight: 800;
-        color: var(--accent-pink);
-        background: rgba(14, 14, 22, 0.75);
-        padding: 3px 10px;
-        border-radius: 999px;
-        border: 1px solid rgba(255, 77, 255, 0.35);
-        display: flex; align-items: center; gap: 4px;
+    .ht-tabbar {
+        display: flex;
+        gap: 6px;
+        padding: 10px 10px 0;
     }
+    .ht-tab-btn {
+        flex: 1;
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-family: inherit;
+        font-weight: 800;
+        font-size: 0.92em;
+        padding: 10px 14px;
+        border-radius: 999px 999px 0 0;
+        transition: background .18s ease, color .18s ease;
+    }
+    .ht-tab-btn.active {
+        background: var(--accent-gradient);
+        color: #0e0e16;
+    }
+    .ht-panel {
+        display: none;
+        height: 92px;
+        position: relative;
+        overflow: hidden;
+    }
+    .ht-panel.active { display: block; }
+    .ht-empty {
+        position: absolute; inset: 0;
+        display: none; align-items: center; justify-content: center;
+        color: var(--text-muted); font-size: 0.9em; font-weight: 700; padding: 0 20px; text-align: center;
+    }
+    .ht-empty.is-visible { display: flex; }
+
     .tst-track-wrap {
         position: absolute;
         inset: 0;
         display: flex;
         align-items: center;
-        padding-top: 14px;
+        padding-top: 4px;
     }
     .tst-track {
         display: flex;
@@ -227,7 +249,7 @@
         animation: tst-scroll 28s linear infinite;
         will-change: transform;
     }
-    #top-streamers-ticker:hover .tst-track { animation-play-state: paused; }
+    .ht-panel:hover .tst-track { animation-play-state: paused; }
     @keyframes tst-scroll {
         from { transform: translateX(0); }
         to   { transform: translateX(-50%); } /* المحتوى مُكرَّر مرتين — راجع JS */
@@ -251,6 +273,14 @@
         font-weight: 800;
         font-size: 0.85em;
     }
+    .tst-avatar {
+        width: 26px; height: 26px; border-radius: 50%; object-fit: cover;
+        border: 1.5px solid var(--border); background: var(--surface-2); flex: none;
+    }
+    .tst-avatar--placeholder {
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: 0.75em; color: #fff; background: var(--accent-gradient);
+    }
     .tst-sep {
         width: 4px; height: 4px; border-radius: 50%;
         background: var(--accent-gradient);
@@ -259,22 +289,23 @@
         opacity: 0.8;
     }
 
-    .sub-banner {
-        max-width: 900px; margin: 0 auto 36px; padding: 14px 20px; border-radius: 999px;
-        background: var(--surface-2); border: 1px solid var(--accent); color: var(--text);
-        font-weight: 700; font-size: 0.95em;
+    /* لوحة "داعمين المنصة" — بديل .sub-banner القديمة (نفس روح
+       #supporters-banner-text وbackend/supporters/supporters-service.js)
+       لكن كتبويب داخل .highlight-tabs بدل بانر مستقل. تلاشي بسيط بين
+       كل داعم والي بعده، مو قفزة مفاجئة. */
+    .ht-supporters-inner {
+        position: absolute; inset: 0;
+        display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 24px;
     }
-    .sub-banner span { color: var(--accent-2); }
-
-    /* شريط الداعمين المتحرك — يحل محل نص "لتفعيل الاشتراك..." الثابت
-       القديم (راجع #supporters-banner-text بالسكربت آخر الصفحة
-       وbackend/supporters/supporters-service.js). تلاشي بسيط بين كل
-       داعم والي بعده، مو قفزة مفاجئة. */
-    #supporters-banner-text { display: inline-block; transition: opacity 0.35s ease; }
+    #supporters-banner-text { display: inline-block; transition: opacity 0.35s ease; font-weight: 700; font-size: 0.95em; }
     #supporters-banner-text.is-fading { opacity: 0; }
     #supporters-banner-text a { color: var(--accent-2); text-decoration: underline; }
     #supporters-banner-text .supporter-name { color: var(--accent-2); font-weight: 800; }
     #supporters-banner-text .supporter-amount { color: var(--accent-pink); font-weight: 800; }
+    #supporters-banner-text .supporter-avatar {
+        width: 22px; height: 22px; border-radius: 50%; object-fit: cover;
+        vertical-align: middle; margin-inline-end: 4px;
+    }
 
     .section-title-bar {
         max-width: 1200px; margin: 0 auto 24px; padding: 12px 24px; border-radius: 999px;
@@ -665,25 +696,27 @@
 </div>
 
 <!--
-    [0.45.10] شريط "الأكثر نشاطاً" — أعلى الاستريمرز بإجمالي ساعات البث،
-    مبني من GET /api/public/top-streamers (عام، بدون تسجيل دخول). مخفي
-    بالكامل (display:none عبر CSS) حتى تصل بيانات فعلية من الخادم —
-    راجع wireTopStreamersTicker() آخر الصفحة + docs/CHANGELOG.md.
+    [0.45.21] تبويب موحَّد "🔥 الأكثر نشاطاً" (أعلى الاستريمرز بإجمالي
+    ساعات البث، من GET /api/public/top-streamers) و"💜 داعمين المنصة"
+    (آخر الداعمين، من window.AGPAuth.getRecentSupporters) — بدل شريطين
+    منفصلين سابقاً. راجع wireHighlightTabs() آخر الصفحة + docs/CHANGELOG.md.
 -->
-<div id="top-streamers-ticker">
-    <span class="tst-label">🔥 الأكثر نشاطاً</span>
-    <div class="tst-track-wrap">
-        <div class="tst-track" id="tst-track"></div>
+<div class="highlight-tabs" id="highlight-tabs">
+    <div class="ht-tabbar">
+        <button type="button" class="ht-tab-btn active" data-ht-tab="streamers">🔥 الأكثر نشاطاً</button>
+        <button type="button" class="ht-tab-btn" data-ht-tab="supporters">💜 داعمين المنصة</button>
     </div>
-</div>
-
-<!--
-    شريط الداعمين المتحرك — يحل محل النص الثابت القديم. مبدئياً يعرض
-    نص افتراضي (لو ما فيه داعمون بعد)، ثم يتحدّث تلقائياً من السكربت
-    آخر الصفحة (راجع window.AGPAuth.getRecentSupporters وdocs/CHANGELOG.md).
--->
-<div class="sub-banner">
-    <span id="supporters-banner-text">لتفعيل الاشتراك مجاناً بعد إنشاء حسابك تواصل معنا عبر تيك توك <span>@em70_q</span></span>
+    <div class="ht-panel active" data-ht-panel="streamers" id="top-streamers-ticker">
+        <div class="tst-track-wrap">
+            <div class="tst-track" id="tst-track"></div>
+        </div>
+        <div class="ht-empty" id="tst-empty">ما فيه استريمرز نشِطون بالساعات بعد.</div>
+    </div>
+    <div class="ht-panel" data-ht-panel="supporters">
+        <div class="ht-supporters-inner">
+            <span id="supporters-banner-text">لتفعيل الاشتراك مجاناً بعد إنشاء حسابك تواصل معنا عبر تيك توك <span>@em70_q</span></span>
+        </div>
+    </div>
 </div>
 
 <div id="games-section">
@@ -1408,8 +1441,32 @@
             });
         }
 
-        // شريط الداعمين المتحرك — يحل محل نص "لتفعيل الاشتراك..." الثابت
-        // القديم (راجع #supporters-banner-text بالأعلى وبackend/supporters/
+        // [0.45.21] مساعد هروب HTML مشترك للتبويب الموحَّد (الأكثر نشاطاً +
+        // داعمين المنصة) — البيانات هنا نصوص حرة (اسم داعم/استريمر يدخلها
+        // الأدمن أو صاحب الحساب بنفسه)، فتُهرَّب دائماً قبل الحقن كـHTML.
+        function htEscapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+
+        // تبديل التبويبين "🔥 الأكثر نشاطاً" / "💜 داعمين المنصة" — راجع
+        // .highlight-tabs بالـHTML أعلاه وdocs/CHANGELOG.md [0.45.21].
+        (function wireHighlightTabs() {
+            var tabButtons = document.querySelectorAll('.ht-tab-btn');
+            var panels = document.querySelectorAll('.ht-panel');
+            if (!tabButtons.length || !panels.length) return;
+            tabButtons.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var target = btn.getAttribute('data-ht-tab');
+                    tabButtons.forEach(function (b) { b.classList.toggle('active', b === btn); });
+                    panels.forEach(function (p) { p.classList.toggle('active', p.getAttribute('data-ht-panel') === target); });
+                });
+            });
+        }());
+
+        // شريط الداعمين — يحل محل نص "لتفعيل الاشتراك..." الثابت القديم
+        // (راجع #supporters-banner-text أعلاه وbackend/supporters/
         // supporters-service.js). آخر 3 داعمين، كل وحد يظهر 4 ثوانٍ
         // بالتدوير المتكرر؛ لو دعم شخص جديد يحل مكان الأقدم تلقائياً (عبر
         // إعادة الجلب الدورية أدناه). لا داعمين بعد = يبقى النص الافتراضي
@@ -1422,7 +1479,7 @@
 
             function formatSupporterAmount(amount) {
                 var n = Number(amount) || 0;
-                return (n % 1 === 0 ? n.toString() : n.toFixed(2)) + ' ريال';
+                return (n % 1 === 0 ? n.toString() : n.toFixed(2)) + ' دولار';
             }
 
             function renderSupporterAt(index) {
@@ -1431,9 +1488,15 @@
                     return;
                 }
                 var s = supportersList[index % supportersList.length];
-                var html = '🎉 <span class="supporter-name">' + s.name + '</span> دعم المنصة بمبلغ ' +
+                // [0.45.21] لو الداعم مربوط بحساب فعلي (s.linked)، نعرض صورة
+                // بروفايله الحيّة بجانب اسمه — راجع backend/supporters/
+                // supporters-service.js (decorateRow).
+                var avatarHtml = (s.linked && s.avatarBase64)
+                    ? '<img class="supporter-avatar" src="' + htEscapeHtml(s.avatarBase64) + '" alt="">'
+                    : '';
+                var html = '🎉 ' + avatarHtml + '<span class="supporter-name">' + htEscapeHtml(s.name) + '</span> دعم المنصة بمبلغ ' +
                     '<span class="supporter-amount">' + formatSupporterAmount(s.amount) + '</span>';
-                if (s.message) html += ' — ' + s.message;
+                if (s.message) html += ' — ' + htEscapeHtml(s.message);
                 supportersBannerText.innerHTML = html;
             }
 
@@ -1461,28 +1524,28 @@
             window.setInterval(refreshSupportersList, 30000); // إعادة جلب دورية (يلتقط أي دعم جديد)
         }
 
-        // [0.45.10] شريط "الأكثر نشاطاً" — أعلى الاستريمرز بإجمالي ساعات
-        // البث. مخفي بالكامل افتراضياً (راجع CSS #top-streamers-ticker) —
-        // يُظهَر فقط لو رجعت بيانات فعلية من الخادم (استريمر واحد على
-        // الأقل له بث مكتمل). المحتوى يُكرَّر مرتين بالـDOM حتى يبقى
-        // الحلقة الحركية (@keyframes tst-scroll) سلسة بدون قفزة عند
-        // إعادة البداية — تقنية Marquee قياسية بلا أي مكتبة خارجية.
+        // [0.45.10] (محدَّث [0.45.21]) تبويب "الأكثر نشاطاً" — أعلى
+        // الاستريمرز بإجمالي ساعات البث، الآن بصورة البروفايل والاسم
+        // المعروض (اللي حاطينه الاستريمر فوق بروفايله) بدل يوزرنيم تيك
+        // توك الخام. لو ما فيه بيانات، يظهر نص فارغ واضح داخل التبويب
+        // نفسه (راجع #tst-empty) بدل إخفاء العنصر كله كالسابق — لأنه
+        // الآن جزء من تبويب ثابت لا شريط إشعار عابر. المحتوى يُكرَّر
+        // مرتين بالـDOM حتى تبقى الحلقة الحركية (@keyframes tst-scroll)
+        // سلسة بدون قفزة عند إعادة البداية — تقنية Marquee قياسية بلا
+        // أي مكتبة خارجية.
         (function wireTopStreamersTicker() {
-            var container = document.getElementById('top-streamers-ticker');
             var track = document.getElementById('tst-track');
-            if (!container || !track || !window.AGPAuth || typeof window.AGPAuth.getTopStreamers !== 'function') return;
-
-            function escapeHtml(s) {
-                return String(s || '').replace(/[&<>"']/g, function (c) {
-                    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-                });
-            }
+            var emptyEl = document.getElementById('tst-empty');
+            if (!track || !emptyEl || !window.AGPAuth || typeof window.AGPAuth.getTopStreamers !== 'function') return;
 
             function buildItemsHtml(streamers) {
                 return streamers.map(function (s, i) {
                     var hoursLabel = (s.totalHours === 1) ? 'ساعة' : 'ساعة';
+                    var avatarHtml = s.avatarBase64
+                        ? '<img class="tst-avatar" src="' + htEscapeHtml(s.avatarBase64) + '" alt="">'
+                        : '<span class="tst-avatar tst-avatar--placeholder">' + htEscapeHtml((s.displayName || '؟').trim().charAt(0).toUpperCase()) + '</span>';
                     return '<span class="tst-item"><span class="tst-rank">#' + (i + 1) + '</span> ' +
-                        '@' + escapeHtml(s.tiktokUsername) +
+                        avatarHtml + ' ' + htEscapeHtml(s.displayName) +
                         ' <span class="tst-hours">' + s.totalHours + ' ' + hoursLabel + '</span></span>' +
                         '<span class="tst-sep" aria-hidden="true"></span>';
                 }).join('');
@@ -1497,14 +1560,16 @@
                 // منطق إضافي مطلوب هنا، فقط تغيير الرقم المطلوب.
                 window.AGPAuth.getTopStreamers(5).then(function (result) {
                     if (!result || !result.success || !result.streamers || !result.streamers.length) {
-                        container.classList.remove('is-ready');
+                        track.innerHTML = '';
+                        emptyEl.classList.add('is-visible');
                         return;
                     }
                     var itemsHtml = buildItemsHtml(result.streamers);
                     track.innerHTML = itemsHtml + itemsHtml; // تكرار مرتين لحلقة سلسة
-                    container.classList.add('is-ready');
+                    emptyEl.classList.remove('is-visible');
                 }).catch(function () {
-                    container.classList.remove('is-ready'); // لا اتصال بالخادم — يبقى الشريط مخفياً بصمت
+                    track.innerHTML = '';
+                    emptyEl.classList.add('is-visible'); // لا اتصال بالخادم — نص فارغ واضح بدل شريط مكسور
                 });
             }
 
