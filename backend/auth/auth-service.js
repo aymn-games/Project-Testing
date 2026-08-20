@@ -870,12 +870,19 @@ function getUserStats(userId) {
  * تيك توك + إجمالي الساعات — لا بريد، لا id داخلي، لا أي بيانات حساب.
  * يشترط حساباً موثَّقاً فعلياً (tiktok_verified=1) وله يوزرنيم مسجَّل،
  * وبث واحد مكتمل (ended_at IS NOT NULL) على الأقل.
+ *
+ * [0.45.21] أُضيف: اسم العرض وصورة البروفايل اللي حاطينها الاستريمر
+ * بصفحته (`users.display_name`/`avatar_image_base64`) — نفس البيانات
+ * العلنية أصلاً بالبروفايل العام (`GET /api/profile?id=`)، ليست بيانات
+ * جديدة حساسة. `displayName` تسقط تلقائياً لاسم المستخدم لو ما عيّن
+ * الاستريمر اسم عرض بعد، حتى تبقى الواجهة دائماً عندها اسم تعرضه.
  * @param {number} [limit]
- * @returns {Array<{tiktokUsername: string, totalHours: number}>}
+ * @returns {Array<{tiktokUsername: string, displayName: string, avatarBase64: (string|null), customId: (string|null), totalHours: number}>}
  */
 function getTopStreamersByHours(limit) {
     var rows = db.prepare(
-        `SELECT u.tiktok_username AS tiktokUsername,
+        `SELECT u.tiktok_username AS tiktokUsername, u.username, u.display_name AS displayName,
+                u.avatar_image_base64 AS avatarBase64, u.custom_id AS customId,
                 COALESCE(SUM(CASE WHEN b.ended_at IS NOT NULL THEN b.ended_at - b.started_at ELSE 0 END), 0) AS total_ms
          FROM users u
          JOIN broadcasts b ON b.user_id = u.id
@@ -886,7 +893,13 @@ function getTopStreamersByHours(limit) {
          LIMIT ?`
     ).all(limit || 20);
     return rows.map(function (r) {
-        return { tiktokUsername: r.tiktokUsername, totalHours: Math.round((r.total_ms / 3600000) * 10) / 10 };
+        return {
+            tiktokUsername: r.tiktokUsername,
+            displayName: r.displayName || r.username || r.tiktokUsername,
+            avatarBase64: r.avatarBase64 || null,
+            customId: r.customId || null,
+            totalHours: Math.round((r.total_ms / 3600000) * 10) / 10
+        };
     });
 }
 
