@@ -1,11 +1,7 @@
 /* =========================================================
    WORD CATEGORIES (اسم و حيوان و نبات و جماد و بلاد) — style.css
    هوية اللعبة: تدرّج كحلي/أسود (#3C3F67 → #191C1B) كخلفية أساسية لكل
-   شيء (الصفحة، شاشة الإعدادات، اللوبي، صناديق اللعبة)، مع لون ذهبي
-   دافئ (#F2B84B) كتمييز تفاعلي وحيد (أزرار/حالات نشطة) — بدون هذا
-   التمييز، الأزرار وحالات "مفعَّل" تصير غير مقروءة فوق خلفية غامقة
-   بالكامل. راجع الكتلة السفلية "إعادة تلوين شاشة الإعدادات المشتركة"
-   لتفاصيل القرار.
+   شيء، مع لون ذهبي دافئ (#F2B84B) كتمييز تفاعلي وحيد.
    ========================================================= */
 
 :root{
@@ -31,6 +27,14 @@
 *{ box-sizing: border-box; }
 html, body{ height:100%; }
 
+/* ⚠️ [إصلاح خلل حقيقي] قاعدة صريحة وعامة: أي عنصر بهذي الصفحة عليه
+   خاصية hidden لازم يختفي فعلياً، بصرف النظر عن أي display صريح مضبوط
+   بقاعدة أخرى بنفس الملف (class selector ينافس [hidden] بنفس التخصيص
+   تقريباً، والقاعدة اللاحقة أو الأعلى تخصيصاً تفوز — !important هنا
+   يقطع الشك تماماً). هذا بالضبط سبب ظهور مراجعة الجولة تحت الحرف
+   والمؤقّت وقت الجمع بالإصدار السابق. */
+[hidden]{ display:none !important; }
+
 body{
   margin:0;
   min-height:100vh;
@@ -40,18 +44,15 @@ body{
     linear-gradient(150deg, var(--wc-indigo) 0%, var(--wc-black) 100%);
   color: var(--wc-text);
   font-family:'Tajawal', sans-serif;
-  /* padding-top يفسح مجال لهيدر الشِل الثابت (#agp-persistent-header) */
   padding: 78px clamp(16px, 3vw, 34px) 48px;
 }
 
 h1, h2, .display{ font-family:'Cairo', sans-serif; }
 .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
 
-/* ---------- شعار الموقع أعلى الصفحة ---------- */
 .site-logo-top{ text-align:center; margin-bottom: 6px; }
 .site-logo-img{ height:48px; width:auto; opacity:0.9; }
 
-/* ---------- توست ---------- */
 .wc-toast-wrap{ position: fixed; top: 70px; left: 50%; transform: translateX(-50%); z-index: 100050; display:flex; flex-direction:column; gap:8px; align-items:center; }
 .wc-toast{
   background: rgba(25,28,27,0.95); color:#fff; border:1px solid var(--wc-gold);
@@ -88,7 +89,7 @@ h1, h2, .display{ font-family:'Cairo', sans-serif; }
 .wc-round-badge strong{ font-size:1.5rem; line-height:1; font-family:'Zain', sans-serif; }
 
 /* =========================================================
-   LAYOUT
+   LAYOUT (وضع عادي — لوحة تحكم + مسرح الجولة)
    ========================================================= */
 .wc-layout{
   max-width: 1320px; margin: 0 auto; display:grid;
@@ -105,17 +106,25 @@ h1, h2, .display{ font-family:'Cairo', sans-serif; }
 
 /* ---------- لوحة تحكم المضيف ---------- */
 .wc-block{ margin-bottom: 16px; }
-.wc-block-title{ margin:0 0 8px; font-weight:800; font-size:0.88rem; color: var(--wc-gold-2); }
+.wc-block-title{ margin:0 0 8px; font-weight:800; font-size:0.82rem; color: var(--wc-gold-2); line-height:1.5; }
 .wc-hint-small{ margin: 6px 0 0; font-size: 0.76rem; color: var(--wc-text-dim); line-height:1.5; }
 
-.wc-cat-chips{ display:flex; flex-wrap:wrap; gap:6px; }
-.wc-cat-chip{
+/* محدِّد الفئات الحي — أزرار تبديل حقيقية (بدل شارات للعرض فقط سابقاً) */
+.wc-cat-selector{ display:flex; flex-wrap:wrap; gap:6px; }
+.wc-cat-toggle{
   background: var(--wc-panel-2); border:1px solid var(--wc-line); border-radius:999px;
-  padding: 5px 12px; font-size:0.82rem; font-weight:700; color:#fff;
+  padding: 7px 14px; font-size:0.82rem; font-weight:700; color: var(--wc-text-dim);
+  cursor:pointer; font-family:'Tajawal', sans-serif; transition: background .15s ease, border-color .15s ease, color .15s ease;
 }
-.wc-cat-chip-empty{ color: var(--wc-bad); border-color: rgba(239,68,68,0.5); }
+.wc-cat-toggle:hover{ border-color: rgba(242,184,75,0.5); }
+.wc-cat-toggle-active{
+  background: linear-gradient(90deg, var(--wc-gold-2), var(--wc-gold)); border-color: transparent; color: var(--wc-black);
+}
+.wc-cat-toggle-all{ border-style:dashed; }
 
-.wc-leaderboard{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+/* لوحة الصدارة — ارتفاع أقصى بسكرول داخلي حتى ما تتمدد لوحة التحكم كلها
+   مع كثرة اللاعبين (طلب صريح). */
+.wc-leaderboard{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; max-height: 230px; overflow-y:auto; padding-inline-end:2px; }
 .wc-leaderboard li{
   display:flex; align-items:center; gap:10px; background: var(--wc-panel-2); border:1px solid var(--wc-line);
   border-radius: var(--wc-radius-md); padding: 8px 12px; font-size:0.86rem;
@@ -139,86 +148,85 @@ h1, h2, .display{ font-family:'Cairo', sans-serif; }
 .wc-btn-danger{ background: rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.6); color:#ffd9d9; }
 
 /* =========================================================
-   مسرح الجولة
+   مسرح الجولة — الحرف + المؤقّت فقط الآن (المراجعة انتقلت لشاشة كاملة
+   مستقلة، راجع .wc-review-fullscreen أدناه) — حجم أكبر ووضوح أعلى
+   للمشاهد بالبث بعد ما صار المسرح مخصَّصاً للحرف فقط.
    ========================================================= */
-.wc-stage-panel{ min-height: 420px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+.wc-stage-panel{ min-height: 480px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
 
 .wc-stage-idle{ color: var(--wc-text-dim); }
 .wc-idle-icon{ font-size:3rem; margin-bottom:10px; opacity:0.7; }
 
-.wc-stage-collecting{ width:100%; max-width:520px; display:flex; flex-direction:column; align-items:center; }
-.wc-letter-eyebrow{ margin:0; color: var(--wc-text-dim); font-size:0.85rem; font-weight:700; }
+.wc-stage-collecting{ width:100%; max-width:620px; display:flex; flex-direction:column; align-items:center; }
+.wc-letter-eyebrow{ margin:0; color: var(--wc-text-dim); font-size:0.95rem; font-weight:700; }
 .wc-letter-badge{
-  font-family:'Zain', sans-serif; font-weight:900; font-size:7rem; line-height:1;
-  width:180px; height:180px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-family:'Zain', sans-serif; font-weight:900; font-size:9.5rem; line-height:1;
+  width:240px; height:240px; border-radius:50%; display:flex; align-items:center; justify-content:center;
   background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.08), transparent 60%), var(--wc-panel-2);
-  border: 4px solid var(--wc-gold); color:#fff; margin: 10px 0 18px;
-  box-shadow: 0 0 34px rgba(242,184,75,0.35);
+  border: 5px solid var(--wc-gold); color:#fff; margin: 14px 0 22px;
+  box-shadow: 0 0 46px rgba(242,184,75,0.4);
 }
 .wc-letter-badge.wc-letter-settle{ animation: wc-letter-pop 0.35s ease; }
 @keyframes wc-letter-pop{ 0%{ transform:scale(1.18); } 100%{ transform:scale(1); } }
 
-.wc-timer-wrap{ width:100%; display:flex; align-items:center; gap:12px; margin-bottom: 14px; }
-.wc-timer-bar-track{ flex:1; height:10px; border-radius:999px; background: rgba(255,255,255,0.1); overflow:hidden; }
+.wc-timer-wrap{ width:100%; max-width:440px; display:flex; align-items:center; gap:12px; margin-bottom: 16px; }
+.wc-timer-bar-track{ flex:1; height:12px; border-radius:999px; background: rgba(255,255,255,0.1); overflow:hidden; }
 .wc-timer-bar-fill{ height:100%; width:100%; background: linear-gradient(90deg, var(--wc-gold), var(--wc-gold-2)); transition: width 1s linear; }
 .wc-timer-bar-fill.wc-timer-urgent{ background: linear-gradient(90deg, var(--wc-bad), #ff8a8a); }
-.wc-timer-val{ font-family:'Zain', sans-serif; font-size:1.6rem; color:#fff; min-width:70px; text-align:center; }
+.wc-timer-val{ font-family:'Zain', sans-serif; font-size:2rem; color:#fff; min-width:86px; text-align:center; }
 
-.wc-instructions-hint{ font-size:0.92rem; font-weight:700; color: var(--wc-gold-2); margin: 0 0 6px; line-height:1.6; }
-.wc-participants-count{ font-size:0.85rem; color: var(--wc-text-dim); }
+.wc-instructions-hint{ font-size:1.05rem; font-weight:700; color: var(--wc-gold-2); margin: 0 0 8px; line-height:1.7; max-width:560px; }
+.wc-participants-count{ font-size:0.92rem; color: var(--wc-text-dim); }
 
 /* =========================================================
-   مراجعة الإجابات
+   مراجعة الإجابات — شاشة كاملة مستقلة (طلب صريح)، تحل محل .wc-layout
+   بالكامل بين انتهاء وقت الجولة واعتماد النتائج.
    ========================================================= */
-.wc-stage-review{ width:100%; text-align:right; }
-.wc-review-header{ text-align:center; margin-bottom:14px; }
-.wc-review-header h2{ margin:0 0 4px; }
+.wc-review-fullscreen{ max-width: 1320px; margin: 0 auto; }
+.wc-review-header{ text-align:center; margin-bottom:18px; }
+.wc-review-header h2{ margin:0 0 4px; font-size:1.3rem; }
+.wc-review-header #wcReviewRoundLabel{ color: var(--wc-gold-2); font-weight:700; font-size:0.9rem; }
 
-.wc-review-list{ display:flex; flex-direction:column; gap:10px; max-height:56vh; overflow-y:auto; padding-inline-end:4px; }
+.wc-review-list{ display:flex; flex-direction:column; gap:12px; max-height:66vh; overflow-y:auto; padding-inline-end:4px; }
 .wc-review-row{
-  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
-  background: var(--wc-panel-2); border:1px solid var(--wc-line); border-radius: var(--wc-radius-md); padding: 10px 14px;
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  background: var(--wc-panel-2); border:1px solid var(--wc-line); border-radius: var(--wc-radius-md); padding: 14px 18px;
 }
-.wc-review-row-player{ flex:0 0 auto; min-width: 140px; }
-.wc-review-row-cells{ flex:1; display:flex; flex-wrap:wrap; gap:8px; }
+.wc-review-row-player{ flex:0 0 auto; min-width: 160px; }
+.wc-review-row-cells{ flex:1; display:flex; flex-wrap:wrap; gap:10px; }
 .wc-review-cell{
-  position:relative; display:flex; flex-direction:column; align-items:center; gap:2px;
+  position:relative; display:flex; flex-direction:column; align-items:center; gap:3px;
   background: rgba(255,255,255,0.06); border:1px solid var(--wc-line); border-radius:10px;
-  padding: 6px 10px 8px; min-width: 92px;
+  padding: 8px 14px 10px; min-width: 100px;
 }
-.wc-review-cell-label{ font-size:0.68rem; color: var(--wc-text-dim); }
-.wc-review-cell-word{ font-size:0.88rem; font-weight:800; color:#fff; }
+.wc-review-cell-label{ font-size:0.7rem; color: var(--wc-text-dim); }
+.wc-review-cell-word{ font-size:0.95rem; font-weight:800; color:#fff; }
+.wc-review-cell-empty{ opacity:0.6; }
 .wc-review-cell-empty .wc-review-cell-word{ color: var(--wc-text-dim); font-weight:600; }
-.wc-review-cell-accepted{ border-color: rgba(34,197,94,0.6); background: rgba(34,197,94,0.12); }
-.wc-review-cell-rejected{ border-color: rgba(239,68,68,0.6); background: rgba(239,68,68,0.1); opacity:0.75; }
+.wc-review-cell-accepted{ border-color: rgba(34,197,94,0.65); background: rgba(34,197,94,0.14); }
 .wc-review-toggle-btn{
-  position:absolute; top:-8px; left:-8px; width:24px; height:24px; border-radius:50%; border:2px solid var(--wc-black);
-  font-weight:900; font-size:0.8rem; cursor:pointer; color:#fff;
-  background: var(--wc-good);
+  position:absolute; top:-10px; left:-10px; width:26px; height:26px; border-radius:50%; border:2px solid var(--wc-black);
+  font-weight:900; font-size:0.85rem; cursor:pointer; color:#fff; line-height:1;
+  background: rgba(255,255,255,0.18); display:flex; align-items:center; justify-content:center;
 }
-.wc-review-cell-rejected .wc-review-toggle-btn{ background: var(--wc-bad); }
-.wc-review-row-score{ flex:0 0 auto; font-weight:900; color: var(--wc-gold-2); font-size:0.95rem; }
-.wc-review-empty{ text-align:center; color: var(--wc-text-dim); padding: 30px 0; }
-.wc-confirm-btn{ max-width:420px; margin: 18px auto 0; }
+.wc-review-cell-accepted .wc-review-toggle-btn{ background: var(--wc-good); }
 
-/* بطاقة اللاعب المشتركة (avatar+name) داخل صف المراجعة — لا تعديل على
-   الكلاسات نفسها (js/agp-player-card.js)، فقط سياق عرضها هنا. */
+.wc-review-row-actions{ flex:0 0 auto; display:flex; flex-direction:column; gap:6px; }
+.wc-row-action-btn{
+  border:none; border-radius:999px; padding:6px 14px; font-size:0.75rem; font-weight:800; cursor:pointer;
+  font-family:'Tajawal', sans-serif; white-space:nowrap; transition: filter .15s ease;
+}
+.wc-row-action-btn:hover{ filter:brightness(1.1); }
+.wc-row-accept-all{ background: rgba(34,197,94,0.22); border:1px solid rgba(34,197,94,0.6); color:#c8ffdd; }
+.wc-row-reject-all{ background: rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.55); color:#ffd9d9; }
+
+.wc-review-row-score{ flex:0 0 auto; font-weight:900; color: var(--wc-gold-2); font-size:1rem; min-width:64px; text-align:center; }
+.wc-review-empty{ text-align:center; color: var(--wc-text-dim); padding: 40px 0; }
+.wc-confirm-btn{ max-width:460px; margin: 22px auto 0; }
+
 .wc-review-row-player .agp-pcard{ display:flex; align-items:center; gap:8px; }
-.wc-review-row-player .agp-pcard-avatar-basic{ width:36px; height:36px; }
-.wc-review-row-player .agp-pcard-name-basic{ color:#fff; font-weight:700; font-size:0.85rem; max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-
-/* =========================================================
-   CREDITS
-   ========================================================= */
-.wc-credits-row{ max-width:1320px; margin: 26px auto 0; display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
-.wc-credit-box{
-  display:flex; align-items:center; gap:8px; background: var(--wc-panel); border:1px solid var(--wc-line);
-  border-radius:999px; padding:8px 16px; font-size:0.8rem;
-}
-.wc-credit-badge{ color: var(--wc-text-dim); }
-.wc-credit-name{ font-weight:800; color:#fff; }
-.wc-credit-tiktok{ display:flex; align-items:center; gap:5px; color: var(--wc-gold-2); text-decoration:none; font-weight:700; }
-.wc-tiktok-badge{ display:flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:#000; }
+.wc-review-row-player .agp-pcard-avatar-basic{ width:40px; height:40px; }
+.wc-review-row-player .agp-pcard-name-basic{ color:#fff; font-weight:700; font-size:0.9rem; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 /* =========================================================
    نافذة الفائز
@@ -230,7 +238,7 @@ h1, h2, .display{ font-family:'Cairo', sans-serif; }
 .wc-overlay.active{ opacity:1; pointer-events:auto; }
 .wc-modal{
   background: linear-gradient(165deg, var(--wc-indigo), var(--wc-black)); border:2px solid var(--wc-gold);
-  border-radius: 24px; padding: 30px 26px; width: min(440px, 92vw); text-align:center;
+  border-radius: 24px; padding: 30px 26px; width: min(460px, 92vw); text-align:center; max-height:92vh; overflow-y:auto;
   box-shadow: 0 20px 60px rgba(0,0,0,0.6);
 }
 .wc-winner-crown{ font-size:2.6rem; margin-bottom:4px; }
@@ -239,8 +247,25 @@ h1, h2, .display{ font-family:'Cairo', sans-serif; }
 .wc-winner-avatar-wrap .agp-pcard-avatar-basic{ width:84px; height:84px; }
 .wc-winner-avatar-wrap .agp-pcard-name-basic{ display:none; }
 #wcWinnerName{ margin:6px 0; color:#fff; font-size:1.5rem; }
-.wc-winner-score-text{ color: var(--wc-gold-2); font-weight:800; margin: 4px 0 16px; }
-.wc-winner-logo-wrap img{ height:34px; opacity:0.85; margin: 6px 0 16px; }
+.wc-winner-score-text{ color: var(--wc-gold-2); font-weight:800; margin: 4px 0; }
+.wc-winner-points-text{ font-size:0.85rem; color: var(--wc-text-dim); margin: 0 0 6px; }
+.wc-winner-points-text.has-points{ color: var(--wc-gold-2); font-weight:800; }
+.wc-winner-points-text.no-account{ color: var(--wc-text-dim); }
+
+/* بطاقة "آخر شخص بالترتيب" — مزحة لطيفة، تصميم أهدأ ومصغّر مقارنة
+   ببطاقة الفائز (طلب صريح بعد المراجعة). */
+.wc-lastplace-card{
+  margin: 16px 0 4px; padding: 12px 14px; border-radius: 16px; border: 1px dashed rgba(255,255,255,0.3);
+  background: rgba(0,0,0,0.22);
+}
+.wc-lastplace-title{ margin:0 0 8px; font-size:0.85rem; font-weight:800; color: var(--wc-text-dim); }
+.wc-lastplace-avatar-wrap{ display:flex; justify-content:center; margin-bottom:6px; }
+.wc-lastplace-avatar-wrap .agp-pcard-avatar-basic{ width:52px; height:52px; }
+.wc-lastplace-avatar-wrap .agp-pcard-name-basic{ display:none; }
+.wc-lastplace-name{ margin:0; color:#fff; font-weight:700; font-size:0.95rem; }
+.wc-lastplace-score{ margin:2px 0 0; color: var(--wc-text-dim); font-size:0.8rem; }
+
+.wc-winner-logo-wrap img{ height:34px; opacity:0.85; margin: 14px 0 16px; }
 .wc-result-actions{ display:flex; flex-direction:column; gap:8px; }
 .wc-btn-winner-home{ background: rgba(255,255,255,0.1); color:#fff; border:1px solid var(--wc-line); }
 .wc-btn-winner-newmatch{ background: rgba(255,255,255,0.1); color:#fff; border:1px solid var(--wc-line); }
@@ -250,15 +275,8 @@ h1, h2, .display{ font-family:'Cairo', sans-serif; }
    إعادة تلوين شاشة الإعدادات المشتركة (js/agp-game-shell.js) بهوية اللعبة
    ==========================================================================
    ⚠️ هذي الكتلة بالكامل خاصة بصفحة هذي اللعبة فقط — لا لمس على
-   js/agp-game-shell.js نفسه، ولا أي تأثير على أي لعبة أخرى.
-   ⚠️ !important إلزامي: شاشة الإعدادات تُحقَن كـ<style> بالـ<head> وقت
-   التشغيل (بعد ما هذا الملف يكون انقرأ أصلاً).
-   ⚠️ قرار تصميمي: اللونان المطلوبان (#3C3F67 / #191C1B) هما هوية
-   الخلفيات (الصفحة، الصندوق، اللوبي) بكل مكان بهذي اللعبة — لكن أزرار/
-   حالات "مفعَّل" التفاعلية تستخدم لون ذهبي (--wc-gold) بدل نفس اللونين
-   الغامقين، وإلا ما كانت راح تكون مقروءة/مميّزة فوق خلفية غامقة أصلاً
-   بنفس درجتها (نفس مبدأ روليت الفواكه: خلفية بلون اللعبة + تمييز
-   تفاعلي بلون مختلف واضح).
+   js/agp-game-shell.js نفسه. !important إلزامي (الشاشة تُحقَن كـ<style>
+   بالـ<head> وقت التشغيل).
    ========================================================================== */
 
 :root{
@@ -312,6 +330,14 @@ body.agp-shell-active{
   justify-content: center !important; box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important; top: 12px !important; left: 14px !important;
 }
 
+/* ⚠️ [طلب صريح بعد المراجعة] إخفاء "➕ إضافة لوبي جديد" من شاشة
+   الإعدادات المُعاد فتحها منتصف المباراة — عنصر مبني داخل الملف
+   المشترك نفسه (js/agp-game-shell.js)، فالإخفاء هنا فقط عبر CSS من
+   ملف اللعبة (بدون أي لمس للملف المشترك) هو الطريقة الوحيدة المتاحة.
+   يخفي حاوية الزر بالكامل (.agp-settings-player-actions) لأنها بهذي
+   اللعبة تحتوي هذا الزر فقط (ما فيه زر تشغيل تلقائي عام هنا). */
+.agp-settings-player-actions{ display:none !important; }
+
 .wc-settings-home-btn{
   display:block; width:100%; margin-top:10px; padding:10px 14px; border-radius:999px;
   border:1px solid rgba(255,255,255,0.25); background: rgba(0,0,0,0.3); color:#fff;
@@ -321,13 +347,8 @@ body.agp-shell-active{
 .wc-settings-home-btn:hover{ border-color: var(--wc-gold); background: rgba(0,0,0,0.45); }
 
 /* ==========================================================================
-   شاشة اللوبي "بانتظار اللاعبين" — نظام موحَّد منقول حرفياً من نفس
-   التحسينات المطبَّقة بروليت الفواكه (راجع
-   lobby-heading-cards-buttons-prompt.md المرفق)، مع تطبيق هوية هذي
-   اللعبة على خلفية الصندوق نفسها أيضاً (لعبة جديدة بلا هوية سابقة).
+   شاشة اللوبي "بانتظار اللاعبين"
    ========================================================================== */
-
-/* 1) حجم صندوق اللوبي: ارتفاع ثابت 900px (بحد أقصى 92vh)، سكرول داخلي */
 #agp-shell-box.agp-lobby-box{
   background: linear-gradient(165deg, var(--wc-indigo), var(--wc-black)) !important;
   position: relative !important;
@@ -350,7 +371,6 @@ body.agp-shell-active{
 }
 #agp-shell-box.agp-lobby-box > *{ position: relative; z-index: 1; }
 
-/* 2) شبكة بطاقات اللاعبين — 3 أعمدة بالضبط */
 #agp-shell-box.agp-lobby-box .agp-shell-player-list{
   display: grid !important;
   grid-template-columns: repeat(3, 1fr) !important;
@@ -367,7 +387,6 @@ body.agp-shell-active{
 }
 #agp-shell-box.agp-lobby-box .agp-shell-player-list li.wc-lobby-card-wide{ grid-column: span 2 !important; }
 
-/* 3) بطاقة اللاعب العادية (بدون إطار) */
 #agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard{
   background: none !important; border: none !important; padding: 0 !important; border-radius: 0 !important;
   max-width: none !important; gap: 0 !important; display: flex !important; align-items: center !important;
@@ -386,17 +405,14 @@ body.agp-shell-active{
   text-overflow: ellipsis !important; line-height: 1 !important;
 }
 
-/* 4) بطاقة اللاعب المؤطَّرة — تكبير متناسب عبر zoom فقط، بدون تشويه */
 #agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-tpl{ zoom: var(--wc-lobby-frame-zoom, 0.77) !important; }
 
-/* 5) زر "✕" حذف لاعب */
 .wc-lobbyscreen-remove-btn{
   position: absolute; top: -6px; left: -6px; width: 22px; height: 22px; border-radius: 50%;
   background: #ef4444; color: #fff; border: 2px solid var(--wc-black); font-weight: 900; font-size: 13px;
   line-height: 18px; text-align: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.5); z-index: 2; padding: 0;
 }
 
-/* 6) صف الأزرار السفلي — 3 أزرار بصف واحد، 360×48 لكل واحد */
 #agp-shell-box.agp-lobby-box .wc-lobby-actions-row{
   display: flex; gap: 14px; margin-top: auto; padding-top: 14px; justify-content: center; flex-wrap: wrap;
 }

@@ -5,10 +5,8 @@
  * لعبة "Native" مستقلة تماماً (بنفس نمط games/fruit-roulette): صفحتها
  * الخاصة تحمّل AGP Core + js/agp-game-shell.js كاملَين، ثم هذا الملف
  * يسجّل اللعبة ويدير كامل منطقها. لا اعتماد على أي ملف يخص لعبة أخرى،
- * ولا أي تعديل على أي ملف مشترك (js/agp-*.js) — كل التخصيص (عنوان
- * اللوبي، شبكة البطاقات، صف الأزرار، ألوان شاشة الإعدادات...) يتم حصراً
- * عبر حقن CSS/DOM وقت التشغيل من هذا الملف، بنفس أسلوب باقي الألعاب
- * (MutationObserver يراقب #agp-shell-overlay).
+ * ولا أي تعديل على أي ملف مشترك (js/agp-*.js) — كل التخصيص يتم حصراً
+ * عبر حقن CSS/DOM وقت التشغيل من هذا الملف.
  *
  * ⚠️ فكرة اللعبة: حرف عربي عشوائي كل جولة، اللاعبون يكتبون إجاباتهم
  * (اسم/حيوان/نبات/جماد/بلاد — حسب الفئات المفعَّلة) بشات البث خلال وقت
@@ -16,20 +14,23 @@
  * عن كل فئة مقبولة. الفوز إما بالوصول لنقاط مستهدفة أو بعد عدد جولات
  * محدد (اختيار المضيف من الإعدادات).
  *
- * ⚠️ بروتوكول الإجابة بالشات (قرار تصميمي، موضّح للمضيف واللاعبين على
- * الشاشة كل جولة): يكتب اللاعب إجاباته مفصولة بفواصل (, أو ،) بنفس ترتيب
- * الفئات المفعَّلة المعروض بالشاشة. لو فئة واحدة فقط مفعَّلة، تُقرأ الرسالة
- * كاملة كإجابة واحدة (بدون تقسيم) حتى تُقبل الأسماء المكوّنة من كلمتين.
- * كل رسالة جديدة من نفس اللاعب تستبدل إجابته السابقة لنفس الجولة (يسمح
- * له بتصحيح نفسه قبل انتهاء الوقت).
+ * ⚠️ [تحديث بعد المراجعة] الفئات المفعَّلة لم تعد جزءاً من شاشة الإعدادات
+ * المشتركة (js/agp-game-shell.js) — صارت عناصر تحكم حيّة داخل لوحة تحكم
+ * اللعبة نفسها (خمس فئات + "الكل")، يقدر المضيف يغيّرها أي وقت أثناء
+ * المباراة مباشرة بدون فتح أي شاشة إعدادات، وتُطبَّق من الجولة القادمة.
+ * نفس الشيء لاستبعاد الحروف الصعبة — صار سلوكاً تلقائياً دائماً بدل خيار.
  *
- * ⚠️ الإجابات تُقبل فقط من لاعبين منضمّين فعلاً للوبي (AGP.gameManager.getPlayers())
- * — نفس اتفاقية باقي ألعاب المنصة (الانضمام يتم بالكلمة المفتاحية باللوبي
- * قبل بدء الجولة الأولى فقط، بدون لوبي مصغّر لإضافة لاعبين منتصف المباراة
- * بهذه اللعبة تحديداً — قرار نطاق بسيط، بنفس حدود روليت الفواكه/حرب الفريقين).
+ * ⚠️ بروتوكول الإجابة بالشات: يكتب اللاعب إجاباته مفصولة بفواصل (, أو ،)
+ * بنفس ترتيب الفئات المفعَّلة المعروض بالشاشة. فئة واحدة فقط مفعَّلة؟
+ * الرسالة كاملة تُقرأ كإجابة واحدة (بدون تقسيم). كل رسالة جديدة من نفس
+ * اللاعب تستبدل إجابته السابقة لنفس الجولة.
  *
- * يعتمد على: js/agp-core.js وكل ملفات AGP Core (راجع index.html لترتيب
- * التحميل الكامل)، js/agp-game-shell.js، js/agp-player-card.js.
+ * ⚠️ الإجابات تُقبل فقط من لاعبين منضمّين فعلاً للوبي. لا لوبي مصغّر
+ * لإضافة لاعبين منتصف المباراة بهذي اللعبة (نفس حدود روليت الفواكه).
+ *
+ * يعتمد على: js/agp-core.js وكل ملفات AGP Core، js/agp-game-shell.js،
+ * js/agp-player-card.js، auth/auth-client.js (window.AGPAuth — نقاط
+ * منصة حقيقية للفائز فقط، نفس نمط روليت الفواكه بالضبط).
  * ==========================================================================
  */
 
@@ -47,18 +48,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var GAME_ID = 'word-categories';
     var GAME_NAME = 'اسم و حيوان و نبات و جماد و بلاد';
 
-    /* ترتيب ثابت للفئات — نفس الترتيب يُستخدَم لعرض التلميح وتفسير ترتيب
-       الإجابات المفصولة بفواصل بشات البث. */
     var CATEGORIES = [
-        { key: 'name', label: 'اسم', emoji: '👤', toggleKey: 'catName' },
-        { key: 'animal', label: 'حيوان', emoji: '🐾', toggleKey: 'catAnimal' },
-        { key: 'plant', label: 'نبات', emoji: '🌿', toggleKey: 'catPlant' },
-        { key: 'object', label: 'جماد', emoji: '📦', toggleKey: 'catObject' },
-        { key: 'country', label: 'بلاد', emoji: '🌍', toggleKey: 'catCountry' }
+        { key: 'name', label: 'اسم', emoji: '👤' },
+        { key: 'animal', label: 'حيوان', emoji: '🐾' },
+        { key: 'plant', label: 'نبات', emoji: '🌿' },
+        { key: 'object', label: 'جماد', emoji: '📦' },
+        { key: 'country', label: 'بلاد', emoji: '🌍' }
     ];
 
     var LETTERS_ALL = ['ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش',
         'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي'];
+    /* استبعاد الحروف الصعبة صار سلوكاً تلقائياً دائماً (بدون خيار بشاشة
+       الإعدادات) — طلب صريح بعد المراجعة. */
     var HARD_LETTERS = ['ث', 'ذ', 'ض', 'ظ'];
 
     var WIN_MODE_POINTS = 'points';
@@ -75,34 +76,44 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _timerInterval = null;
     var _letterFlickerInterval = null;
     var _submissions = {}; // playerId -> { player, categories: {key: text}, updatedAt }
-    var _reviewState = {}; // playerId -> { key: boolean }
+    var _submissionOrder = []; // ترتيب ثابت لعرض المراجعة — نفس ترتيب وصول أول إجابة لكل لاعب
+    var _reviewState = {}; // playerId -> { key: boolean } — الافتراضي false (غير مقبولة) لكل الخانات
     var _commentUnsub = null;
-    var _playerJoinedUnsub = null;
     var _playerRemovedUnsub = null;
     var _matchActive = false;
+    var _matchStartedAt = 0;
 
-    /* ============ عناصر الصفحة (تُخزَّن مرة واحدة عند initStaticUi) ============ */
-    var wcGameRoot, wcRoundVal, wcCategoryChips, wcLeaderboardList, wcStartBtn, wcEndTimerBtn,
-        wcStageIdle, wcStageCollecting, wcStageReview, wcLetterBadge, wcTimerBarFill, wcTimerVal,
-        wcInstructionsHint, wcParticipantsCount, wcReviewList, wcReviewEmpty, wcConfirmBtn,
+    /* فئات مفعَّلة حيّة — تحكّم كامل من لوحة تحكم اللعبة نفسها (لا علاقة
+       لها بشاشة الإعدادات المشتركة إطلاقاً بعد الآن). */
+    var _selectedCategories = {};
+    CATEGORIES.forEach(function (c) { _selectedCategories[c.key] = true; });
+
+    /* ============ عناصر الصفحة ============ */
+    var wcGameRoot, wcLayout, wcRoundVal, wcCategorySelector, wcLeaderboardList, wcStartBtn, wcEndTimerBtn,
+        wcStageIdle, wcStageCollecting, wcLetterBadge, wcTimerBarFill, wcTimerVal,
+        wcInstructionsHint, wcParticipantsCount,
+        wcReviewFullscreen, wcReviewRoundLabel, wcReviewList, wcReviewEmpty, wcConfirmBtn,
         wcToastWrap, wcLiveRegion, wcWinnerOverlay, wcWinnerAvatarWrap, wcWinnerName,
-        wcWinnerScoreText, wcWinnerHomeBtn, wcNewGameBtn, wcRematchBtn;
+        wcWinnerScoreText, wcWinnerPointsText, wcLastPlaceCard, wcLastPlaceAvatarWrap, wcLastPlaceName,
+        wcLastPlaceScoreText, wcWinnerHomeBtn, wcNewGameBtn, wcRematchBtn;
 
     function cacheDom() {
         wcGameRoot = document.getElementById('wcGameRoot');
+        wcLayout = document.getElementById('wcLayout');
         wcRoundVal = document.getElementById('wcRoundVal');
-        wcCategoryChips = document.getElementById('wcCategoryChips');
+        wcCategorySelector = document.getElementById('wcCategorySelector');
         wcLeaderboardList = document.getElementById('wcLeaderboardList');
         wcStartBtn = document.getElementById('wcStartBtn');
         wcEndTimerBtn = document.getElementById('wcEndTimerBtn');
         wcStageIdle = document.getElementById('wcStageIdle');
         wcStageCollecting = document.getElementById('wcStageCollecting');
-        wcStageReview = document.getElementById('wcStageReview');
         wcLetterBadge = document.getElementById('wcLetterBadge');
         wcTimerBarFill = document.getElementById('wcTimerBarFill');
         wcTimerVal = document.getElementById('wcTimerVal');
         wcInstructionsHint = document.getElementById('wcInstructionsHint');
         wcParticipantsCount = document.getElementById('wcParticipantsCount');
+        wcReviewFullscreen = document.getElementById('wcReviewFullscreen');
+        wcReviewRoundLabel = document.getElementById('wcReviewRoundLabel');
         wcReviewList = document.getElementById('wcReviewList');
         wcReviewEmpty = document.getElementById('wcReviewEmpty');
         wcConfirmBtn = document.getElementById('wcConfirmBtn');
@@ -112,6 +123,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wcWinnerAvatarWrap = document.getElementById('wcWinnerAvatarWrap');
         wcWinnerName = document.getElementById('wcWinnerName');
         wcWinnerScoreText = document.getElementById('wcWinnerScoreText');
+        wcWinnerPointsText = document.getElementById('wcWinnerPointsText');
+        wcLastPlaceCard = document.getElementById('wcLastPlaceCard');
+        wcLastPlaceAvatarWrap = document.getElementById('wcLastPlaceAvatarWrap');
+        wcLastPlaceName = document.getElementById('wcLastPlaceName');
+        wcLastPlaceScoreText = document.getElementById('wcLastPlaceScoreText');
         wcWinnerHomeBtn = document.getElementById('wcWinnerHomeBtn');
         wcNewGameBtn = document.getElementById('wcNewGameBtn');
         wcRematchBtn = document.getElementById('wcRematchBtn');
@@ -140,21 +156,47 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return (player && (player.name || player.id)) || '—';
     }
 
-    /* ============ فئات الجولة الحيّة (تُقرأ من إعدادات الشِل مباشرة —
-       تسمح للمضيف بتعديلها منتصف المباراة عبر ⚙️ الإعدادات، وتُطبَّق من
-       الجولة القادمة تلقائياً). ============ */
-    function liveSettings() {
-        return AGP.gameShell.getSettings();
+    /* ==========================================================================
+       محدِّد الفئات الحي — عناصر تحكم داخل لوحة تحكم اللعبة نفسها (لا علاقة
+       لها بشاشة الإعدادات المشتركة). كل ضغطة تبدّل حالة فئة واحدة فوراً؛
+       زر "الكل" يفعّل الخمس دفعة وحدة. القيمة الحالية تُقرأ مباشرة عند بدء
+       كل جولة (activeCategoriesSelected) — يعني التعديل يُطبَّق من الجولة
+       القادمة تلقائياً، حتى لو تغيّر أثناء جولة شغّالة.
+       ========================================================================== */
+    function renderCategorySelector() {
+        if (!wcCategorySelector) return;
+        var buttonsHtml = CATEGORIES.map(function (cat) {
+            var active = _selectedCategories[cat.key];
+            return '<button type="button" class="wc-cat-toggle' + (active ? ' wc-cat-toggle-active' : '') +
+                '" data-cat-key="' + cat.key + '">' + cat.emoji + ' ' + cat.label + '</button>';
+        }).join('');
+        wcCategorySelector.innerHTML = buttonsHtml +
+            '<button type="button" class="wc-cat-toggle wc-cat-toggle-all" id="wcCatSelectAllBtn">✅ الكل</button>';
+
+        wcCategorySelector.querySelectorAll('.wc-cat-toggle[data-cat-key]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-cat-key');
+                _selectedCategories[key] = !_selectedCategories[key];
+                renderCategorySelector();
+            });
+        });
+        var allBtn = document.getElementById('wcCatSelectAllBtn');
+        if (allBtn) {
+            allBtn.addEventListener('click', function () {
+                CATEGORIES.forEach(function (c) { _selectedCategories[c.key] = true; });
+                renderCategorySelector();
+            });
+        }
     }
 
-    function activeCategoriesFromSettings(settings) {
-        return CATEGORIES.filter(function (cat) { return Boolean(settings[cat.toggleKey]); });
+    function activeCategoriesSelected() {
+        return CATEGORIES.filter(function (cat) { return Boolean(_selectedCategories[cat.key]); });
     }
 
-    /* ============ اختيار حرف عشوائي — يتجنّب تكرار نفس حرف الجولة
-       السابقة، ويستبعد الحروف الصعبة لو مفعَّل بالإعدادات. ============ */
-    function pickRandomLetter(excludeHard) {
-        var pool = excludeHard ? LETTERS_ALL.filter(function (l) { return HARD_LETTERS.indexOf(l) === -1; }) : LETTERS_ALL.slice();
+    /* ============ اختيار حرف عشوائي — يستبعد الحروف الصعبة دائماً
+       (سلوك تلقائي ثابت)، ويتجنّب تكرار نفس حرف الجولة السابقة. ============ */
+    function pickRandomLetter() {
+        var pool = LETTERS_ALL.filter(function (l) { return HARD_LETTERS.indexOf(l) === -1; });
         if (pool.length === 0) pool = LETTERS_ALL.slice();
         var letter;
         var guard = 0;
@@ -166,11 +208,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return letter;
     }
 
-    /* ============ تفسير رسالة شات وارِدة إلى كائن {categoryKey: نص} ============
-       فئة واحدة فقط مفعَّلة ← الرسالة كاملة تُعتبر إجابة واحدة (بدون تقسيم،
-       حتى تُقبل أسماء/بلدان من كلمتين). أكثر من فئة ← تقسيم بالفاصلة
-       (عربية أو إنجليزية) إن وُجدت، وإلا بالمسافات، بنفس ترتيب الفئات
-       المفعَّلة المعروض على الشاشة. */
+    /* ============ تفسير رسالة شات وارِدة إلى كائن {categoryKey: نص} ============ */
     function parseAnswerText(rawText, activeCats) {
         if (typeof rawText !== 'string') return null;
         var raw = rawText.trim();
@@ -191,16 +229,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return result;
     }
 
-    /* ==========================================================================
-       عرض الفئات المفعَّلة (شارات) — يُحدَّث عند كل بدء جولة.
-       ========================================================================== */
-    function renderCategoryChips(activeCats) {
-        if (!wcCategoryChips) return;
-        wcCategoryChips.innerHTML = activeCats.map(function (cat) {
-            return '<span class="wc-cat-chip">' + cat.emoji + ' ' + cat.label + '</span>';
-        }).join('') || '<span class="wc-cat-chip wc-cat-chip-empty">لا توجد فئة مفعَّلة</span>';
-    }
-
     function renderInstructionsHint(activeCats) {
         if (!wcInstructionsHint) return;
         if (activeCats.length === 1) {
@@ -212,18 +240,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* ==========================================================================
-       لوحة الصدارة — من AGP.scoreManager (سجل نقاط عام مشترك، لا يعرف
-       شيئاً عن قواعد اللعبة، فقط رقم لكل معرّف لاعب).
+       لوحة الصدارة — من AGP.scoreManager (سجل نقاط عام مشترك).
        ========================================================================== */
     function renderLeaderboard() {
         if (!wcLeaderboardList) return;
-        var leaderboard = AGP.scoreManager.getLeaderboard().filter(function (row) { return row.score > 0; });
+        var leaderboard = AGP.scoreManager.getLeaderboard();
         if (leaderboard.length === 0) {
             wcLeaderboardList.innerHTML = '<li class="wc-leaderboard-empty">ما فيه نقاط بعد</li>';
             return;
         }
         var players = AGP.gameManager.getPlayers();
-        wcLeaderboardList.innerHTML = leaderboard.slice(0, 10).map(function (row, i) {
+        wcLeaderboardList.innerHTML = leaderboard.map(function (row, i) {
             var player = players.filter(function (p) { return p.id === row.playerId; })[0];
             return '<li><span class="wc-leaderboard-rank">' + (i + 1) + '</span>' +
                 '<span class="wc-leaderboard-name">' + escapeHtml(playerLabel(player) || row.playerId) + '</span>' +
@@ -231,31 +258,41 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }).join('');
     }
 
-    /* ==========================================================================
-       حالة "بدء الجولة" — تحديث نص/ظهور الأزرار حسب رقم الجولة الحالي.
-       ========================================================================== */
     function updateStartButtonLabel() {
         if (!wcStartBtn) return;
         wcStartBtn.textContent = _roundNumber === 0 ? '🎲 بدء الجولة' : '🎲 بدء الجولة التالية';
     }
 
+    /* ==========================================================================
+       التحكم بالمراحل المرئية الثلاث — ⚠️ [إصلاح خلل حقيقي] الإصدار
+       السابق كان يستخدم فقط خاصية hidden، لكن قواعد CSS بهذا الملف كانت
+       تفرض display صريح (flex/grid) على نفس العناصر بتخصيص أعلى من قاعدة
+       المتصفح الافتراضية لـ[hidden]، فتبقى ظاهرة رغم hidden=true (هذا
+       بالضبط سبب ظهور مراجعة الجولة تحت الحرف والمؤقّت وقت الجمع). الحل:
+       قاعدة CSS صريحة `[hidden]{display:none!important}` تكسر أي تعارض
+       تخصيص نهائياً (راجع style.css) — بالإضافة لضبط hidden هنا كالمعتاد.
+       ========================================================================== */
     function setStage(stage) {
         _state = stage;
+        var reviewing = stage === 'reviewing';
+
+        if (wcLayout) wcLayout.hidden = reviewing;
+        if (wcReviewFullscreen) wcReviewFullscreen.hidden = !reviewing;
+
         if (wcStageIdle) wcStageIdle.hidden = stage !== 'idle';
         if (wcStageCollecting) wcStageCollecting.hidden = stage !== 'collecting';
-        if (wcStageReview) wcStageReview.hidden = stage !== 'reviewing';
-        if (wcStartBtn) wcStartBtn.hidden = stage === 'collecting' || stage === 'reviewing';
+
+        if (wcStartBtn) wcStartBtn.hidden = stage === 'collecting';
         if (wcEndTimerBtn) wcEndTimerBtn.hidden = stage !== 'collecting';
     }
 
     /* ==========================================================================
-       بدء جولة جديدة: حرف عشوائي + فئات حيّة من الإعدادات + مؤقّت.
+       بدء جولة جديدة.
        ========================================================================== */
     function startRound() {
-        var settings = liveSettings();
-        var activeCats = activeCategoriesFromSettings(settings);
+        var activeCats = activeCategoriesSelected();
         if (activeCats.length === 0) {
-            showToast('⚠️ فعّل فئة واحدة على الأقل من ⚙️ الإعدادات قبل بدء الجولة');
+            showToast('⚠️ فعّل فئة واحدة على الأقل من لوحة التحكم قبل بدء الجولة');
             return;
         }
         var roster = AGP.gameManager.getPlayers();
@@ -264,16 +301,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return;
         }
 
+        var settings = AGP.gameShell.getSettings();
+
         _roundNumber += 1;
         _activeCategoriesThisRound = activeCats;
-        _currentLetter = pickRandomLetter(Boolean(settings.excludeHardLetters));
+        _currentLetter = pickRandomLetter();
         _roundDurationSeconds = Number(settings.roundDurationSeconds) || 45;
         _timeRemaining = _roundDurationSeconds;
         _submissions = {};
+        _submissionOrder = [];
         _reviewState = {};
 
         if (wcRoundVal) wcRoundVal.textContent = String(_roundNumber);
-        renderCategoryChips(activeCats);
         renderInstructionsHint(activeCats);
         renderParticipantsCount();
         setStage('collecting');
@@ -283,8 +322,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (wcLiveRegion) wcLiveRegion.textContent = 'جولة جديدة بدأت — الحرف ' + _currentLetter;
     }
 
-    /* ============ أنيميشن كشف الحرف — تقليب سريع بين حروف عشوائية ثم
-       الاستقرار على الحرف الفعلي، بنفس روح تدوير عجلة روليت الفواكه. ============ */
     function playLetterRevealAnimation(finalLetter) {
         if (!wcLetterBadge) return;
         clearInterval(_letterFlickerInterval);
@@ -302,8 +339,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }, 60);
     }
 
-    /* ============ المؤقّت — عدّاد محلي بسيط (setInterval)، بنفس أسلوب
-       باقي الألعاب (لا اعتماد على js/agp-timer-manager.js إلزامياً). ============ */
     function startTimer() {
         clearInterval(_timerInterval);
         updateTimerDisplay();
@@ -329,7 +364,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function renderParticipantsCount() {
         if (!wcParticipantsCount) return;
-        var answered = Object.keys(_submissions).length;
+        var answered = _submissionOrder.length;
         var total = AGP.gameManager.getPlayers().length;
         wcParticipantsCount.textContent = answered === 0 ?
             'بانتظار أول إجابة...' :
@@ -337,8 +372,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* ==========================================================================
-       الاستماع لتعليقات البث أثناء مرحلة الجمع فقط — يقبل فقط من لاعبين
-       منضمّين فعلاً باللوبي الحالي (AGP.gameManager.getPlayers()).
+       الاستماع لتعليقات البث أثناء مرحلة الجمع فقط.
        ========================================================================== */
     function wireCommentListener() {
         if (typeof _commentUnsub === 'function') _commentUnsub();
@@ -347,35 +381,36 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
             var roster = AGP.gameManager.getPlayers();
             var player = roster.filter(function (p) { return p.id === payload.id; })[0];
-            if (!player) return; // مو منضم باللوبي — يُتجاهَل
+            if (!player) return;
 
             var parsed = parseAnswerText(payload.text, _activeCategoriesThisRound);
             if (!parsed) return;
             var hasAny = Object.keys(parsed).some(function (k) { return parsed[k]; });
             if (!hasAny) return;
 
+            if (!_submissions[player.id]) _submissionOrder.push(player.id);
             _submissions[player.id] = { player: player, categories: parsed, updatedAt: Date.now() };
             renderParticipantsCount();
         });
     }
 
     /* ==========================================================================
-       انتهاء وقت الجولة (تلقائياً أو بضغط "إنهاء الوقت الآن") → مرحلة
-       المراجعة: قبول تلقائي لأي إجابة غير فارغة (المضيف يرفض الخطأ فقط —
-       أسرع لسياق بث مباشر)، ثم إعادة رسم قائمة المراجعة الكاملة.
+       انتهاء وقت الجولة → مرحلة المراجعة. ⚠️ [تحديث بعد المراجعة] الافتراض
+       صار "غير مقبولة" لكل خانة (بدل القبول التلقائي سابقاً) — المضيف يقبل
+       يدوياً كل إجابة أو يستخدم "قبول الكل"/"رفض الكل" لكل صف.
        ========================================================================== */
     function endCollectingPhase() {
         clearInterval(_timerInterval);
         clearInterval(_letterFlickerInterval);
 
-        Object.keys(_submissions).forEach(function (playerId) {
-            var entry = _submissions[playerId];
+        _submissionOrder.forEach(function (playerId) {
             _reviewState[playerId] = {};
             _activeCategoriesThisRound.forEach(function (cat) {
-                _reviewState[playerId][cat.key] = Boolean(entry.categories[cat.key]);
+                _reviewState[playerId][cat.key] = false;
             });
         });
 
+        if (wcReviewRoundLabel) wcReviewRoundLabel.textContent = '(الجولة ' + _roundNumber + ')';
         setStage('reviewing');
         renderReviewList();
         if (wcLiveRegion) wcLiveRegion.textContent = 'انتهى وقت الجولة — راجع الإجابات واعتمد النتيجة';
@@ -389,14 +424,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function renderReviewList() {
         if (!wcReviewList) return;
-        var playerIds = Object.keys(_submissions);
-        wcReviewEmpty.hidden = playerIds.length > 0;
-        if (playerIds.length === 0) {
+        wcReviewEmpty.hidden = _submissionOrder.length > 0;
+        if (_submissionOrder.length === 0) {
             wcReviewList.innerHTML = '';
             return;
         }
 
-        wcReviewList.innerHTML = playerIds.map(function (playerId) {
+        wcReviewList.innerHTML = _submissionOrder.map(function (playerId) {
             var entry = _submissions[playerId];
             var review = _reviewState[playerId] || {};
             var cardHtml = AGP.playerCard ? AGP.playerCard.renderHtml(entry.player, {}) :
@@ -406,17 +440,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 var word = entry.categories[cat.key] || '';
                 var accepted = Boolean(review[cat.key]);
                 var emptyClass = word ? '' : ' wc-review-cell-empty';
-                var stateClass = word ? (accepted ? ' wc-review-cell-accepted' : ' wc-review-cell-rejected') : '';
-                return '<div class="wc-review-cell' + emptyClass + stateClass + '">' +
+                var acceptedClass = accepted ? ' wc-review-cell-accepted' : '';
+                return '<div class="wc-review-cell' + emptyClass + acceptedClass + '">' +
                     '<span class="wc-review-cell-label">' + cat.emoji + ' ' + cat.label + '</span>' +
                     '<span class="wc-review-cell-word">' + (word ? escapeHtml(word) : 'لا يوجد') + '</span>' +
-                    (word ? '<button type="button" class="wc-review-toggle-btn" data-player-id="' + escapeHtml(playerId) + '" data-cat-key="' + cat.key + '">' + (accepted ? '✓' : '✗') + '</button>' : '') +
+                    (word ? '<button type="button" class="wc-review-toggle-btn" data-player-id="' + escapeHtml(playerId) + '" data-cat-key="' + cat.key + '" title="' + (accepted ? 'مقبولة — اضغط للإلغاء' : 'اضغط للقبول') + '">' + (accepted ? '✅' : '☐') + '</button>' : '') +
                     '</div>';
             }).join('');
 
             return '<div class="wc-review-row">' +
                 '<div class="wc-review-row-player">' + cardHtml + '</div>' +
                 '<div class="wc-review-row-cells">' + cellsHtml + '</div>' +
+                '<div class="wc-review-row-actions">' +
+                '<button type="button" class="wc-row-action-btn wc-row-accept-all" data-player-id="' + escapeHtml(playerId) + '">✅ قبول الكل</button>' +
+                '<button type="button" class="wc-row-action-btn wc-row-reject-all" data-player-id="' + escapeHtml(playerId) + '">❌ رفض الكل</button>' +
+                '</div>' +
                 '<div class="wc-review-row-score">' + roundScoreFor(playerId) + ' نقطة</div>' +
                 '</div>';
         }).join('');
@@ -432,22 +470,44 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 renderReviewList();
             });
         });
+        wcReviewList.querySelectorAll('.wc-row-accept-all').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var pid = btn.getAttribute('data-player-id');
+                setRowAcceptance(pid, true);
+            });
+        });
+        wcReviewList.querySelectorAll('.wc-row-reject-all').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var pid = btn.getAttribute('data-player-id');
+                setRowAcceptance(pid, false);
+            });
+        });
+    }
+
+    function setRowAcceptance(playerId, accepted) {
+        var entry = _submissions[playerId];
+        if (!entry || !_reviewState[playerId]) return;
+        _activeCategoriesThisRound.forEach(function (cat) {
+            if (entry.categories[cat.key]) _reviewState[playerId][cat.key] = accepted;
+        });
+        renderReviewList();
     }
 
     /* ==========================================================================
-       اعتماد نتائج الجولة: إضافة النقاط لسجل AGP.scoreManager المشترك،
-       ثم فحص شرط الفوز حسب اختيار المضيف بالإعدادات.
+       اعتماد نتائج الجولة. ⚠️ [تحديث بعد المراجعة] النقاط تُسجَّل الآن حتى
+       لو صفر (بدل تجاهل الصفر سابقاً) — ضروري حتى يظهر كل من شارك بلوحة
+       الصدارة، ويصير ممكن تحديد "آخر شخص بالترتيب" لبطاقة نهاية المباراة.
        ========================================================================== */
     function confirmRoundResults() {
-        Object.keys(_reviewState).forEach(function (playerId) {
+        _submissionOrder.forEach(function (playerId) {
             var score = roundScoreFor(playerId);
-            if (score > 0) AGP.scoreManager.addPoints(playerId, score);
+            AGP.scoreManager.addPoints(playerId, score);
         });
 
         renderLeaderboard();
         updateStartButtonLabel();
 
-        var settings = liveSettings();
+        var settings = AGP.gameShell.getSettings();
         var winMode = settings.winMode || WIN_MODE_POINTS;
         var winner = null;
 
@@ -464,7 +524,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
 
         if (winner) {
-            openWinnerModal(winner);
+            finalizeMatchAndShowWinner(winner);
         } else {
             setStage('idle');
             showToast('✅ اعتُمدت نتائج الجولة ' + _roundNumber);
@@ -472,19 +532,84 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* ==========================================================================
-       بطاقة الفائز.
+       نهاية المباراة: يحسب "آخر شخص بالترتيب" (بطاقة مزحة)، ويستدعي نظام
+       نقاط منصة ألعاب أيمن الحقيقي (window.AGPAuth) للفائز فقط — نفس نمط
+       روليت الفواكه بالضبط (games/fruit-roulette)، مستورَد هنا بدون أي
+       تعديل على auth/auth-client.js نفسه.
        ========================================================================== */
-    function openWinnerModal(winnerRow) {
+    function finalizeMatchAndShowWinner(winnerRow) {
         var players = AGP.gameManager.getPlayers();
-        var champion = players.filter(function (p) { return p.id === winnerRow.playerId; })[0] || { id: winnerRow.playerId, name: winnerRow.playerId };
+        var champion = players.filter(function (p) { return p.id === winnerRow.playerId; })[0] ||
+            { id: winnerRow.playerId, name: winnerRow.playerId };
 
-        if (wcWinnerName) wcWinnerName.textContent = playerLabel(champion);
-        if (wcWinnerAvatarWrap) {
-            wcWinnerAvatarWrap.innerHTML = AGP.playerCard ? AGP.playerCard.renderHtml(champion, {}) : '';
+        var fullLeaderboard = AGP.scoreManager.getLeaderboard();
+        var lastPlaceRow = fullLeaderboard.length >= 2 ? fullLeaderboard[fullLeaderboard.length - 1] : null;
+        var lastPlacePlayer = lastPlaceRow ?
+            (players.filter(function (p) { return p.id === lastPlaceRow.playerId; })[0] || { id: lastPlaceRow.playerId, name: lastPlaceRow.playerId }) :
+            null;
+
+        var durationMs = _matchStartedAt ? (Date.now() - _matchStartedAt) : 0;
+        // ⚠️ ثلاث حالات محتملة — راجع openWinnerModal: null = تعذّر الاتصال
+        // بخادم النقاط، {} = نجح لكن بلا مطابقة حساب، {added,totalPoints} = نجح فعلياً.
+        var pointsPromise = Promise.resolve(null);
+
+        if (window.AGPAuth && typeof window.AGPAuth.reportRoundCompletion === 'function') {
+            var participants = players.map(function (p) {
+                var id = (p && p.id) || '';
+                var uname = id.indexOf('tiktok:') === 0 ? id.slice('tiktok:'.length) : (p.name || p.id);
+                return { tiktokUsername: uname, won: p.id === champion.id };
+            }).filter(function (p) { return p.tiktokUsername; });
+
+            if (participants.length) {
+                var championUname = (function () {
+                    var id = champion.id || '';
+                    return id.indexOf('tiktok:') === 0 ? id.slice('tiktok:'.length) : (champion.name || champion.id);
+                })();
+                pointsPromise = window.AGPAuth.reportRoundCompletion(participants, durationMs)
+                    .then(function (res) {
+                        var awarded = (res && Array.isArray(res.awarded)) ? res.awarded : [];
+                        var match = awarded.filter(function (a) { return a.tiktokUsername === championUname; })[0];
+                        return match || {};
+                    })
+                    .catch(function () { return null; });
+            }
         }
-        if (wcWinnerScoreText) wcWinnerScoreText.textContent = '🏆 ' + winnerRow.score + ' نقطة بعد ' + _roundNumber + ' جولة';
 
         AGP.events.emit('game:roundEnded', { id: GAME_ID });
+        pointsPromise.then(function (pointsResult) {
+            openWinnerModal(champion, winnerRow, lastPlacePlayer, lastPlaceRow, pointsResult);
+        });
+    }
+
+    function openWinnerModal(champion, winnerRow, lastPlacePlayer, lastPlaceRow, pointsResult) {
+        if (wcWinnerName) wcWinnerName.textContent = playerLabel(champion);
+        if (wcWinnerAvatarWrap) wcWinnerAvatarWrap.innerHTML = AGP.playerCard ? AGP.playerCard.renderHtml(champion, {}) : '';
+        if (wcWinnerScoreText) wcWinnerScoreText.textContent = '🏆 ' + winnerRow.score + ' نقطة بعد ' + _roundNumber + ' جولة';
+
+        if (wcWinnerPointsText) {
+            wcWinnerPointsText.className = 'wc-winner-points-text';
+            if (pointsResult === null) {
+                wcWinnerPointsText.textContent = 'تعذّر جلب نقاط المنصة الآن.';
+            } else if (pointsResult && typeof pointsResult.added === 'number') {
+                wcWinnerPointsText.classList.add('has-points');
+                wcWinnerPointsText.textContent = '⭐ +' + pointsResult.added + ' نقطة بمنصة ألعاب أيمن (المجموع: ' + pointsResult.totalPoints + ')';
+            } else {
+                wcWinnerPointsText.classList.add('no-account');
+                wcWinnerPointsText.textContent = 'لا يوجد حساب مرتبط بهذا اللاعب على المنصة بعد.';
+            }
+        }
+
+        if (wcLastPlaceCard) {
+            if (lastPlacePlayer && lastPlaceRow) {
+                wcLastPlaceCard.hidden = false;
+                if (wcLastPlaceAvatarWrap) wcLastPlaceAvatarWrap.innerHTML = AGP.playerCard ? AGP.playerCard.renderHtml(lastPlacePlayer, {}) : '';
+                if (wcLastPlaceName) wcLastPlaceName.textContent = playerLabel(lastPlacePlayer);
+                if (wcLastPlaceScoreText) wcLastPlaceScoreText.textContent = lastPlaceRow.score + ' نقطة بس 😅';
+            } else {
+                wcLastPlaceCard.hidden = true;
+            }
+        }
+
         if (wcLiveRegion) wcLiveRegion.textContent = playerLabel(champion) + ' فاز باللعبة!';
         if (wcWinnerOverlay) wcWinnerOverlay.classList.add('active');
     }
@@ -493,19 +618,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (wcWinnerOverlay) wcWinnerOverlay.classList.remove('active');
     }
 
-    /* ============ مباراة جديدة (يرجّع لشاشة الإعدادات الكاملة) ============ */
     function newGame() {
         closeWinnerModal();
         AGP.gameManager.resetSession();
         window.location.reload();
     }
 
-    /* ============ إعادة المباراة بنفس اللاعبين (يصفّر النقاط والجولات) ============ */
     function rematchRound() {
         AGP.scoreManager.reset();
         _roundNumber = 0;
         _submissions = {};
+        _submissionOrder = [];
         _reviewState = {};
+        _matchStartedAt = Date.now();
         closeWinnerModal();
         renderLeaderboard();
         updateStartButtonLabel();
@@ -515,28 +640,27 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.events.emit('game:roundStarted', { id: GAME_ID });
     }
 
-    /* ============ بدء المباراة فعلياً — تُستدعى من agp-game-shell.js بعد
-       ضغط المضيف "انهاء وبدء الجولة" باللوبي. ============ */
     function handleStartRound() {
         _matchActive = true;
+        _matchStartedAt = Date.now();
         _roundNumber = 0;
         _submissions = {};
+        _submissionOrder = [];
         _reviewState = {};
         AGP.scoreManager.reset();
+        CATEGORIES.forEach(function (c) { _selectedCategories[c.key] = true; });
 
         if (wcGameRoot) wcGameRoot.style.display = '';
+        renderCategorySelector();
         renderLeaderboard();
         updateStartButtonLabel();
         if (wcRoundVal) wcRoundVal.textContent = '—';
-        var settings = liveSettings();
-        renderCategoryChips(activeCategoriesFromSettings(settings));
         setStage('idle');
         wireCommentListener();
     }
 
-    /* ============ الحد الأقصى للاعبين ============ */
     function enforceMaxPlayers() {
-        var settings = liveSettings();
+        var settings = AGP.gameShell.getSettings();
         var max = settings.maxPlayers;
         if (!max) return;
         if (AGP.gameManager.getPlayersCount() >= max) {
@@ -552,31 +676,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (_submissions[player.id]) {
             delete _submissions[player.id];
             delete _reviewState[player.id];
+            _submissionOrder = _submissionOrder.filter(function (id) { return id !== player.id; });
             if (_state === 'collecting') renderParticipantsCount();
             if (_state === 'reviewing') renderReviewList();
         }
         renderLeaderboard();
     }
 
-    /* ============ حقول شاشة الإعدادات (تُعاد قراءتها بأي وقت عبر
-       AGP.gameShell.getSettings() — نفس الحقول متاحة للتعديل منتصف
-       المباراة عبر ⚙️ إعادة فتح الشاشة، بدون أي كود إضافي). ============ */
+    /* ============ حقول شاشة الإعدادات المشتركة — ⚠️ [تحديث بعد المراجعة]
+       حقول الفئات الخمس + استبعاد الحروف الصعبة أُزيلت من هنا بالكامل
+       (صارت تحكّم حي داخل اللعبة نفسها، راجع renderCategorySelector أعلاه).
+       ما تبقى هنا فقط: حقول لا علاقة لها بالفئات (سعة اللاعبين، من يدخل،
+       مدة الجولة، شرط الفوز). ============ */
     function buildSettingsFields() {
-        var fields = [
+        return [
             { key: 'maxPlayers', type: 'counter', label: '👥 الحد الأقصى لعدد اللاعبين بالمباراة', min: 2, default: 30 },
             {
                 key: 'followersOnly', type: 'pill-choice', label: '🔑 مين يقدر يدخل؟',
                 options: [{ label: 'الكل', value: false }, { label: 'المتابعون فقط', value: true }],
                 default: false
-            }
-        ];
-
-        CATEGORIES.forEach(function (cat) {
-            fields.push({ key: cat.toggleKey, type: 'toggle', label: cat.emoji + ' فئة "' + cat.label + '"', default: true });
-        });
-
-        fields.push(
-            { key: 'excludeHardLetters', type: 'toggle', label: '🚫 استبعاد الحروف الصعبة (ث، ذ، ض، ظ)', default: true },
+            },
             {
                 key: 'roundDurationSeconds', type: 'pill-group', label: '⏱️ مدة كتابة الإجابات',
                 options: [
@@ -599,25 +718,30 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 key: 'totalRounds', type: 'counter', label: '🔁 عدد الجولات الكلي',
                 min: 1, default: 5, showWhen: { key: 'winMode', equals: WIN_MODE_ROUNDS }
             }
-        );
-
-        return fields;
+        ];
     }
 
     /* ==========================================================================
-       تحسينات شاشتي الإعدادات/اللوبي المشتركتين (js/agp-game-shell.js) —
-       خاصة بهذي اللعبة فقط، بدون أي تعديل على الملف المشترك نفسه.
-       نفس أسلوب/قيم روليت الفواكه المُثبَتة عملياً (راجع
-       lobby-heading-cards-buttons-prompt.md) — فقط خلفية صندوق اللوبي
-       نفسها هنا تُطبَّق عليها هوية اللعبة (الأزرق الداكن↔الأسود) بدل ما
-       تبقى كما هي، لأنها لعبة جديدة بلا هوية سابقة (بعكس روليت الفواكه).
+       تحسينات شاشتي الإعدادات/اللوبي المشتركتين — خاصة بهذي اللعبة فقط،
+       بدون أي تعديل على js/agp-game-shell.js نفسه.
        ========================================================================== */
+
+    /* ⚠️ [إصلاح خلل حقيقي بعد المراجعة] كان هذا الزر يظهر أيضاً بشاشة
+       الإعدادات "المُعاد فتحها" منتصف المباراة (isReopened) بالخطأ —
+       لأن مرساة الإدراج القديمة كانت تبحث عن أي عنصر بكلاس
+       .agp-shell-btn-connect، وزر "➕ إضافة لوبي جديد" (#agp-reopen-registration-btn)
+       يشارك نفس الكلاس بتلك الشاشة تحديداً. الحل: التحقق أولاً من وجود
+       حقل اليوزرنيم (#agp-tiktok-username) — موجود حصراً بشاشة الإعدادات
+       الأولى الحقيقية (isReopened=false)، وأبداً لا يُرسَم بالنسخة
+       المُعاد فتحها. زر "➕ إضافة لوبي جديد" نفسه يُخفى عبر CSS فقط
+       (راجع style.css) — طلب صريح، بدون أي تعديل على الملف المشترك. */
     function enhanceSettingsScreen() {
         var box = document.getElementById('agp-shell-box');
         if (!box) return;
         if (box.classList.contains('agp-lobby-box') || box.classList.contains('agp-connecting-box')) return;
+        if (!document.getElementById('agp-tiktok-username')) return; // شاشة مُعاد فتحها منتصف المباراة — لا زر رجوع هنا
         if (box.querySelector('.wc-settings-home-btn')) return;
-        var connectBtn = box.querySelector('.agp-shell-btn-connect');
+        var connectBtn = document.getElementById('agp-connect-btn');
         if (!connectBtn) return;
 
         var btn = document.createElement('button');
@@ -799,6 +923,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 _state = 'idle';
                 _roundNumber = 0;
                 _submissions = {};
+                _submissionOrder = [];
                 _reviewState = {};
                 clearInterval(_timerInterval);
                 clearInterval(_letterFlickerInterval);
@@ -818,16 +943,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _playerRemovedUnsub = AGP.events.on('player:removed', function (payload) {
             handlePlayerRemoved(payload && payload.player);
         });
-        _playerJoinedUnsub = AGP.events.on('player:joined', function () { /* لا حاجة لمنطق إضافي هنا حالياً */ });
 
         AGP.gameShell.init({
             gameId: GAME_ID,
             gameTitle: GAME_NAME,
             settingsTitle: 'إعدادات مباراة اسم و حيوان و نبات و جماد و بلاد',
             gameExplanation: 'يطلع حرف عربي عشوائي كل جولة. اللاعبون يكتبون بشات البث إجاباتهم للفئات المفعَّلة ' +
-                '(اسم/حيوان/نبات/جماد/بلاد) اللي تبدأ بنفس الحرف، خلال الوقت المحدد. بعد انتهاء الوقت تراجع كل ' +
-                'إجابة وتقبلها أو ترفضها، ويُحتسب نقطة لكل إجابة مقبولة. الفوز إما بالوصول لنقاط مستهدفة أو بعد ' +
-                'عدد جولات محدد — اختيارك من الإعدادات، وتقدر تعدّل الفئات المفعَّلة بأي وقت أثناء المباراة.',
+                '(تختارها من لوحة تحكم اللعبة نفسها، تقدر تغيّرها أي وقت) اللي تبدأ بنفس الحرف، خلال الوقت المحدد. ' +
+                'بعد انتهاء الوقت تراجع كل إجابة وتقبلها أو ترفضها، ويُحتسب نقطة لكل إجابة مقبولة. الفوز إما ' +
+                'بالوصول لنقاط مستهدفة أو بعد عدد جولات محدد — اختيارك من الإعدادات.',
             connectButtonLabel: 'اتصال بالبث وبدء الإعدادات',
             minPlayersToStart: 2,
             logoImage: '../../logo.png',
@@ -840,12 +964,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wireSharedShellEnhancements();
     }
 
-    /* ============ التهيئة الأولية للعناصر الثابتة (مرة واحدة عند التحميل) ============ */
     var _uiInitialized = false;
     function initStaticUi() {
         if (_uiInitialized) return;
         _uiInitialized = true;
         cacheDom();
+        renderCategorySelector();
 
         if (wcStartBtn) wcStartBtn.addEventListener('click', startRound);
         if (wcEndTimerBtn) wcEndTimerBtn.addEventListener('click', function () {

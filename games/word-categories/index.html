@@ -6,17 +6,15 @@
 <title>اسم و حيوان و نبات و جماد و بلاد — ألعاب أيمن</title>
 <!--
     صفحة أصلية (Native) للعبة "اسم و حيوان و نبات و جماد و بلاد"، بنفس
-    نمط games/fruit-roulette (لا تعتمد على أي موقع خارجي ولا على جسر
-    postMessage). تحمّل AGP Core كاملاً بنفس ترتيب الصفحة الرئيسية، ثم
-    js/agp-game-shell.js، ثم ملف اللعبة الخاص بها.
+    نمط games/fruit-roulette. لا اعتماد على أي موقع خارجي ولا على جسر
+    postMessage. تحمّل AGP Core كاملاً، ثم js/agp-game-shell.js، ثم ملف
+    اللعبة الخاص بها.
 
     ⚠️ ملف مستقل بالكامل عن أي لعبة أخرى — لا تعديل على أي ملف مشترك
-    (js/agp-*.js) ولا على أي ملف يخص لعبة أخرى. كل التخصيص (شاشة
-    الإعدادات/اللوبي) يتم عبر حقن CSS/DOM وقت التشغيل من
-    agp-word-categories.js نفسه فقط، بنفس أسلوب باقي الألعاب.
+    ولا على أي ملف يخص لعبة أخرى. كل التخصيص يتم عبر حقن CSS/DOM وقت
+    التشغيل من agp-word-categories.js نفسه فقط.
 
-    #wcGameRoot يبقى مخفياً حتى يبدأ المضيف المباراة فعلياً عبر شاشة
-    الإعدادات العامة (js/agp-game-shell.js).
+    #wcGameRoot يبقى مخفياً حتى يبدأ المضيف المباراة فعلياً.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -52,16 +50,16 @@
       </div>
     </header>
 
-    <main class="wc-layout">
+    <!-- ============ الوضع العادي (لوحة تحكم + مسرح الجولة) ============ -->
+    <main class="wc-layout" id="wcLayout">
 
       <!-- ============ لوحة تحكم المضيف ============ -->
       <section class="wc-panel wc-host-panel" aria-label="لوحة تحكم المضيف">
         <h2>🎛️ لوحة التحكم</h2>
 
         <div class="wc-block">
-          <p class="wc-block-title">الفئات المفعّلة هذه الجولة</p>
-          <div class="wc-cat-chips" id="wcCategoryChips"></div>
-          <p class="wc-hint-small">عدّل الفئات بأي وقت من ⚙️ الإعدادات أعلى الصفحة — تُطبَّق من الجولة القادمة.</p>
+          <p class="wc-block-title">الفئات — اختر أي وحدة أو "الكل" (تُطبَّق من الجولة القادمة)</p>
+          <div class="wc-cat-selector" id="wcCategorySelector"></div>
         </div>
 
         <div class="wc-block">
@@ -77,7 +75,7 @@
         <button class="wc-btn wc-btn-danger" id="wcEndTimerBtn" type="button" hidden>⏹️ إنهاء الوقت الآن</button>
       </section>
 
-      <!-- ============ مسرح الجولة ============ -->
+      <!-- ============ مسرح الجولة (الحرف + المؤقّت فقط) ============ -->
       <section class="wc-panel wc-stage-panel" aria-label="مسرح الجولة">
 
         <!-- حالة: بانتظار بدء الجولة -->
@@ -100,47 +98,20 @@
           <p class="wc-participants-count" id="wcParticipantsCount">بانتظار أول إجابة...</p>
         </div>
 
-        <!-- حالة: مراجعة الإجابات -->
-        <div class="wc-stage-review" id="wcStageReview" hidden>
-          <div class="wc-review-header">
-            <h2>📋 مراجعة إجابات الجولة</h2>
-            <p class="wc-hint-small">الفئات المُجابة تُقبل تلقائياً — اضغط ✗ على أي إجابة خاطئة قبل الاعتماد.</p>
-          </div>
-          <div class="wc-review-list" id="wcReviewList"></div>
-          <div class="wc-review-empty" id="wcReviewEmpty" hidden>محد أرسل إجابات هذي الجولة 😅</div>
-          <button class="wc-btn wc-btn-primary wc-confirm-btn" id="wcConfirmBtn" type="button">✅ اعتماد نتائج الجولة</button>
-        </div>
-
       </section>
 
     </main>
 
-    <!-- ============ CREDITS ============ -->
-    <section class="wc-credits-row" aria-label="فريق العمل">
-      <div class="wc-credit-box">
-        <span class="wc-credit-badge">💡 فكرة</span>
-        <span class="wc-credit-name">واي</span>
-        <a class="wc-credit-tiktok" href="https://www.tiktok.com/@lu_24ll" target="_blank" rel="noopener noreferrer">
-          <span class="wc-tiktok-badge" aria-hidden="true">
-            <svg viewBox="0 0 48 48" width="13" height="13" fill="#fff">
-              <path d="M33.5 6c1 4.2 3.7 6.9 8.5 7.2v6.4c-3 .3-5.7-.6-8.5-2.4v13.6c0 8.6-9.4 14.2-17 10.2-4.9-2.6-7.2-8.5-5.2-13.8 2-5.4 7.9-8.4 13.4-6.8v6.8c-2.4-1-5-.3-6.2 1.7-1.2 1.9-.7 4.5 1.1 5.9 1.9 1.5 4.7 1.2 6.2-.7.6-.8.9-1.7.9-2.7V6h6.8z"/>
-            </svg>
-          </span>
-          lu_24ll
-        </a>
+    <!-- ============ مراجعة الإجابات — شاشة كاملة مستقلة، تحل محل
+         .wc-layout كليةً بين انتهاء الوقت واعتماد النتائج ============ -->
+    <section class="wc-review-fullscreen" id="wcReviewFullscreen" hidden aria-label="مراجعة إجابات الجولة">
+      <div class="wc-review-header">
+        <h2>📋 مراجعة إجابات الجولة <span id="wcReviewRoundLabel"></span></h2>
+        <p class="wc-hint-small">اضغط "✅ قبول الكل" أو "❌ رفض الكل" لكل لاعب بسرعة، أو حدد كل إجابة يدوياً — الإجابة تُحسب نقطة بس لو مقبولة.</p>
       </div>
-      <div class="wc-credit-box">
-        <span class="wc-credit-badge">⚙️ تطوير وتنفيذ</span>
-        <span class="wc-credit-name">AYMN</span>
-        <a class="wc-credit-tiktok" href="https://www.tiktok.com/@em70_q" target="_blank" rel="noopener noreferrer">
-          <span class="wc-tiktok-badge" aria-hidden="true">
-            <svg viewBox="0 0 48 48" width="13" height="13" fill="#fff">
-              <path d="M33.5 6c1 4.2 3.7 6.9 8.5 7.2v6.4c-3 .3-5.7-.6-8.5-2.4v13.6c0 8.6-9.4 14.2-17 10.2-4.9-2.6-7.2-8.5-5.2-13.8 2-5.4 7.9-8.4 13.4-6.8v6.8c-2.4-1-5-.3-6.2 1.7-1.2 1.9-.7 4.5 1.1 5.9 1.9 1.5 4.7 1.2 6.2-.7.6-.8.9-1.7.9-2.7V6h6.8z"/>
-            </svg>
-          </span>
-          em70_q
-        </a>
-      </div>
+      <div class="wc-review-list" id="wcReviewList"></div>
+      <div class="wc-review-empty" id="wcReviewEmpty" hidden>محد أرسل إجابات هذي الجولة 😅</div>
+      <button class="wc-btn wc-btn-primary wc-confirm-btn" id="wcConfirmBtn" type="button">✅ اعتماد نتائج الجولة</button>
     </section>
 
     <span class="sr-only" id="wcLiveRegion" role="status" aria-live="assertive"></span>
@@ -153,6 +124,14 @@
         <div class="wc-winner-avatar-wrap" id="wcWinnerAvatarWrap"></div>
         <h2 id="wcWinnerName">—</h2>
         <p class="wc-winner-score-text" id="wcWinnerScoreText"></p>
+        <p class="wc-winner-points-text" id="wcWinnerPointsText"></p>
+
+        <div class="wc-lastplace-card" id="wcLastPlaceCard" hidden>
+          <p class="wc-lastplace-title">🐌 السرعة بدون بديهة!</p>
+          <div class="wc-lastplace-avatar-wrap" id="wcLastPlaceAvatarWrap"></div>
+          <p class="wc-lastplace-name" id="wcLastPlaceName">—</p>
+          <p class="wc-lastplace-score" id="wcLastPlaceScoreText"></p>
+        </div>
 
         <div class="wc-winner-logo-wrap">
           <img src="../../logo.png" alt="">
@@ -191,7 +170,7 @@
 <script src="../../js/agp-round-manager.js"></script>
 <script src="../../js/agp-bootstrap.js"></script>
 
-<!-- طبقة الحسابات (تحميل فقط للتوافق مع بقية المنصة — لا استخدام فعلي بهذي اللعبة) -->
+<!-- طبقة الحسابات — تُستخدَم فعلياً هنا لمنح نقاط منصة ألعاب أيمن الحقيقية للفائز فقط -->
 <script src="../../auth/auth-client.js"></script>
 
 <!-- بطاقة اللاعب المشتركة (صورة + اسم) -->
