@@ -60,7 +60,7 @@ body.tt-active {
 
 /* ---------- الصندوق العام (إعدادات/اتصال) ---------- */
 #tt-overlay {
-    position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center;
+    position: fixed; top: 62px; right: 0; left: 0; bottom: 0; z-index: 30; display: flex; align-items: center; justify-content: center;
     padding: 24px 14px 60px; overflow-y: auto;
 }
 #tt-box {
@@ -211,11 +211,17 @@ body.tt-active {
 #tt-match-screen { max-width: 760px; margin: 0 auto; padding: 18px 14px 100px; }
 
 .tt-match-topbar { text-align: center; margin-bottom: 14px; }
-.tt-round-badge-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px; }
+.tt-round-badge-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px; }
 .tt-round-badge {
     display: inline-block; background: var(--tt-gold-500); color: var(--tt-green-950); font-weight: 900;
     padding: 5px 18px; border-radius: 999px; font-size: 0.9em;
 }
+.tt-timer-badge {
+    display: inline-block; background: var(--tt-green-950); color: var(--tt-gold-300); font-weight: 900;
+    border: 1.5px solid var(--tt-gold-700); padding: 4px 16px; border-radius: 999px; font-size: 0.9em; font-variant-numeric: tabular-nums;
+}
+.tt-timer-badge.tt-timer-urgent { color: #ffb4a8; border-color: #c0392b; animation: tt-timer-pulse 1s infinite; }
+@keyframes tt-timer-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 .tt-leaderboard-toggle-btn {
     background: var(--tt-green-700); color: var(--tt-gold-300); border: 1.5px solid var(--tt-gold-700);
     border-radius: 999px; padding: 5px 16px; font-family: inherit; font-size: 0.85em; font-weight: 800; cursor: pointer;

@@ -60,6 +60,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         { value: 'everyone', label: 'الجميع' },
         { value: 'followers', label: 'المتابعون فقط' }
     ];
+    var GUESS_TIME_OPTIONS = [60, 90, 120, 150]; // بالثواني: 1د / 1:30 / 2د / 2:30
+    var GUESS_TIMER_NAME = 'tt-guess-timer';
+
+    function formatMmSs(totalSeconds) {
+        var m = Math.floor(totalSeconds / 60);
+        var s = totalSeconds % 60;
+        return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+    }
+    function formatGuessTimeLabel(seconds) {
+        return seconds % 60 === 0 ? (seconds / 60 + ' د') : formatMmSs(seconds);
+    }
 
     /* ======================================================================
      *  0) بنك أسئلة احتياطي (Fallback) فقط — يُستخدَم حصراً لو تعذّر تحميل
@@ -284,7 +295,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         tiktokUsername: '',
         keyword: '',
         roundsTarget: 5,
-        joinAccess: 'everyone' // 'everyone' | 'followers'
+        joinAccess: 'everyone', // 'everyone' | 'followers'
+        guessTimeSeconds: 90 // وقت التخمين لكل سؤال (يبدأ من جديد كل جولة)
     };
     var _questionBank = BUILTIN_FALLBACK_QUESTIONS; // يُستبدَل بمحتوى questions-bank.json لو توفّر
     var _questionBankLoaded = false;
@@ -374,6 +386,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return '<button type="button" class="tt-pill-btn tt-access-pill' + active + '" data-value="' + opt.value + '">' + opt.label + '</button>';
         }).join('');
 
+        var guessTimePills = GUESS_TIME_OPTIONS.map(function (v) {
+            var active = (_settings.guessTimeSeconds === v) ? ' tt-pill-active' : '';
+            return '<button type="button" class="tt-pill-btn tt-guesstime-pill' + active + '" data-value="' + v + '">' + formatGuessTimeLabel(v) + '</button>';
+        }).join('');
+
         box.innerHTML =
             '<button type="button" id="tt-settings-back-btn" class="tt-back-to-platform-link">🏠 رجوع للمنصة</button>' +
             '<h2>إعدادات مباراة ' + escapeHtml(GAME_NAME) + '</h2>' +
@@ -390,6 +407,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
             '<div class="tt-field-label-center">مين مسموح له ينضم؟</div>' +
             '<div class="tt-pill-group" id="tt-access-group">' + accessPills + '</div>' +
+
+            '<div class="tt-field-label-center">⏱️ وقت التخمين لكل سؤال</div>' +
+            '<div class="tt-pill-group" id="tt-guesstime-group">' + guessTimePills + '</div>' +
+            '<div class="tt-hint">لمّا ينتهي الوقت، تنكشف باقي الصناديق تلقائياً — نفس تأثير "السؤال التالي".</div>' +
 
             '<div class="tt-field-label-center">عدد الجولات (الأسئلة الفعلية المستهدفة)</div>' +
             '<div class="tt-pill-group" id="tt-rounds-group">' + roundsPills + '</div>' +
@@ -416,6 +437,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('tt-access-group').addEventListener('click', function (e) {
             var btn = e.target.closest('.tt-pill-btn'); if (!btn) return;
             _settings.joinAccess = btn.getAttribute('data-value');
+            renderSettingsScreen();
+        });
+
+        el('tt-guesstime-group').addEventListener('click', function (e) {
+            var btn = e.target.closest('.tt-pill-btn'); if (!btn) return;
+            _settings.guessTimeSeconds = parseInt(btn.getAttribute('data-value'), 10);
             renderSettingsScreen();
         });
 
@@ -667,6 +694,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div class="tt-match-topbar">' +
                 '<div class="tt-round-badge-row">' +
                     '<div class="tt-round-badge">الجولة ' + (_completedRounds + 1) + ' من ' + _settings.roundsTarget + '</div>' +
+                    '<div class="tt-timer-badge" id="tt-timer-badge">⏱️ ' + formatMmSs(_settings.guessTimeSeconds) + '</div>' +
                     '<button type="button" id="tt-leaderboard-toggle-btn" class="tt-leaderboard-toggle-btn">🏆 المتصدرين</button>' +
                 '</div>' +
                 '<div class="tt-question-banner">' + escapeHtml(_currentQuestion.prompt) + '</div>' +
@@ -680,10 +708,36 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</div>';
 
         renderBoxesList();
+        startGuessTimer();
 
         el('tt-skip-btn').addEventListener('click', handleSkipQuestion);
         el('tt-leaderboard-toggle-btn').addEventListener('click', openLeaderboardPanel);
         el('tt-next-btn').addEventListener('click', handleNextQuestion);
+    }
+
+    function startGuessTimer() {
+        if (AGP.timerManager && typeof AGP.timerManager.start === 'function') {
+            AGP.timerManager.start(GUESS_TIMER_NAME, _settings.guessTimeSeconds);
+        }
+    }
+    function stopGuessTimer() {
+        if (AGP.timerManager && typeof AGP.timerManager.stop === 'function') {
+            AGP.timerManager.stop(GUESS_TIMER_NAME);
+        }
+    }
+    function wireGuessTimerListeners() {
+        AGP.events.on('timer:tick', function (payload) {
+            if (payload.name !== GUESS_TIMER_NAME) return;
+            var badge = el('tt-timer-badge');
+            if (!badge) return;
+            badge.textContent = '⏱️ ' + formatMmSs(payload.remainingSeconds);
+            badge.classList.toggle('tt-timer-urgent', payload.remainingSeconds <= 10);
+        });
+        AGP.events.on('timer:ended', function (payload) {
+            if (payload.name !== GUESS_TIMER_NAME) return;
+            if (_screen !== 'match' || _transitioning) return;
+            handleNextQuestion();
+        });
     }
 
     function boxInnerHtml(a) {
@@ -777,6 +831,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function handleSkipQuestion() {
         if (_transitioning) return;
+        stopGuessTimer();
         loadNextQuestionIntoCurrent();
         renderMatchScreen();
     }
@@ -784,6 +839,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function handleNextQuestion() {
         if (_transitioning) return;
         _transitioning = true;
+        stopGuessTimer();
         el('tt-skip-btn').disabled = true;
         el('tt-next-btn').disabled = true;
 
@@ -841,11 +897,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return '<div class="tt-lb-row"><span class="tt-lb-rank">' + (i + 1) + '</span>' + playerCardHtml(p, false) + '<span class="tt-lb-score">' + row.score + '</span></div>';
         }).join('') || '<div class="tt-hint">لا نقاط بعد.</div>';
 
+        var guessTimePills = GUESS_TIME_OPTIONS.map(function (v) {
+            var active = (_settings.guessTimeSeconds === v) ? ' tt-pill-active' : '';
+            return '<button type="button" class="tt-pill-btn tt-admin-guesstime-pill' + active + '" data-value="' + v + '">' + formatGuessTimeLabel(v) + '</button>';
+        }).join('');
+
         ensureAdminEl().innerHTML =
             '<div class="tt-admin-box">' +
                 '<button type="button" id="tt-admin-close-btn" class="tt-admin-close">✖</button>' +
                 '<h3>إدارة مباراة ' + escapeHtml(GAME_NAME) + '</h3>' +
                 '<div class="tt-hint">' + (_screen === 'match' ? ('الجولة ' + (_completedRounds + 1) + ' من ' + _settings.roundsTarget) : 'اللوبي مفتوح بانتظار البدء') + '</div>' +
+                (_screen === 'match' ?
+                    '<div class="tt-panel-title">⏱️ وقت التخمين (يُطبَّق من الجولة الجاية)</div>' +
+                    '<div class="tt-pill-group" id="tt-admin-guesstime-group">' + guessTimePills + '</div>'
+                    : '') +
                 '<div class="tt-panel-title">🏆 لوحة الصدارة الكاملة</div>' +
                 '<div class="tt-leaderboard-list">' + rows + '</div>' +
                 (_screen === 'match' ? '<button type="button" id="tt-admin-end-btn" class="tt-btn-secondary tt-btn-danger">🏁 إنهاء المباراة الآن</button>' : '') +
@@ -859,6 +924,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             closeAdminPanel();
             finalizeMatchAndShowWinner();
         });
+        var guessGroup = el('tt-admin-guesstime-group');
+        if (guessGroup) guessGroup.addEventListener('click', function (e) {
+            var btn = e.target.closest('.tt-pill-btn'); if (!btn) return;
+            _settings.guessTimeSeconds = parseInt(btn.getAttribute('data-value'), 10);
+            renderAdminPanel();
+        });
     }
 
     /* ======================================================================
@@ -866,6 +937,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *      (window.AGPAuth) بنفس نمط لعبة "اسم و حيوان ونبات وجماد وبلاد"
      * ==================================================================== */
     function finalizeMatchAndShowWinner() {
+        stopGuessTimer();
         closeLeaderboardPanel();
         var lb = AGP.scoreManager.getLeaderboard();
         var roster = getRoster();
@@ -1020,7 +1092,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             category: 'trivia-games',
             onLoad: function () { AGP.log('Top Ten: onLoad.'); },
             onRoundEnd: function () { AGP.log('Top Ten: onRoundEnd.'); },
-            onDestroy: function () { AGP.log('Top Ten: onDestroy.'); unwireCommentListener(); }
+            onDestroy: function () { AGP.log('Top Ten: onDestroy.'); unwireCommentListener(); stopGuessTimer(); }
         });
 
         if (!registered) { AGP.log('Top Ten: registration failed (already registered?).'); return; }
@@ -1029,6 +1101,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         injectHeader();
         wirePlatformListeners();
+        wireGuessTimerListeners();
         loadQuestionBank();
         renderSettingsScreen();
     }
