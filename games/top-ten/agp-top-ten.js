@@ -281,6 +281,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _adminPanelOpen = false;
     var _commentUnsub = null;
     var _recentComments = []; // آخر تعليقات وصلت — لصندوق التشخيص باللوبي فقط
+    var _transitioning = false; // يمنع ضغط مزدوج على "تخطي/السؤال التالي" أثناء انتقال الجولة
 
     var _overlayEl = null, _lobbyEl = null, _matchEl = null, _adminEl = null, _winnerEl = null;
 
@@ -509,6 +510,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.scoreManager.reset();
         _completedRounds = 0;
         _matchStartedAt = Date.now();
+        _transitioning = false;
         buildFreshPool();
         loadNextQuestionIntoCurrent();
 
@@ -651,6 +653,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="tt-question-banner">' + escapeHtml(_currentQuestion.prompt) + '</div>' +
             '</div>' +
             '<div id="tt-all-guessed-banner" class="tt-all-guessed-banner" style="display:none;">🎉 تم تخمين كل الصناديق! اضغط "السؤال التالي" للمتابعة.</div>' +
+            '<div id="tt-round-recap-banner" class="tt-round-recap-banner" style="display:none;"></div>' +
             '<div class="tt-match-body">' +
                 '<div class="tt-leaderboard-panel">' +
                     '<div class="tt-panel-title">🏆 لوحة الصدارة</div>' +
@@ -674,13 +677,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!a.revealed) {
             return '<div class="tt-box-face tt-box-back">' +
                 '<span class="tt-box-rank">' + a.rank + '</span>' +
-                '<span class="tt-box-points">' + a.points + ' نقطة</span>' +
                 '<span class="tt-box-mark">؟</span>' +
+                '<span class="tt-box-points">' + a.points + ' نقطة</span>' +
                 '</div>' +
                 '<div class="tt-box-face tt-box-front"></div>';
         }
         var isWinner = !!a.revealedBy;
-        var cardHtml = isWinner ? '<div class="tt-box-player">' + playerCardHtml(a.revealedBy, false) + '</div>' : '<div class="tt-box-unclaimed">⏳ ما تم تخمينها</div>';
+        var cardHtml = isWinner ? '<div class="tt-box-player">' + playerCardHtml(a.revealedBy, false) + '</div>' : '<div class="tt-box-unclaimed">⏳</div>';
         return '<div class="tt-box-face tt-box-back"></div>' +
             '<div class="tt-box-face tt-box-front' + (isWinner ? ' tt-box-front-won' : ' tt-box-front-empty') + '">' +
                 '<span class="tt-box-rank">' + a.rank + '</span>' +
@@ -727,23 +730,39 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function handleSkipQuestion() {
+        if (_transitioning) return;
         loadNextQuestionIntoCurrent();
         renderMatchScreen();
     }
 
     function handleNextQuestion() {
+        if (_transitioning) return;
+        _transitioning = true;
+        el('tt-skip-btn').disabled = true;
+        el('tt-next-btn').disabled = true;
+
+        var missed = _currentQuestion.answers.filter(function (a) { return !a.revealed; }).map(function (a) { return a.text; });
         _currentQuestion.answers.forEach(function (a) { a.revealed = true; });
         renderBoxesList();
 
+        var recapEl = el('tt-round-recap-banner');
+        if (recapEl) {
+            recapEl.innerHTML = missed.length
+                ? '<b>❌ ما تم تخمينه هالجولة:</b> <span class="tt-recap-missed">' + missed.map(function (t) { return escapeHtml(t); }).join('، ') + '</span>'
+                : '<b>🎉 تم تخمين كل إجابات هالجولة!</b>';
+            recapEl.style.display = 'block';
+        }
+
         _completedRounds++;
         window.setTimeout(function () {
+            _transitioning = false;
             if (_completedRounds >= _settings.roundsTarget) {
                 finalizeMatchAndShowWinner();
             } else {
                 loadNextQuestionIntoCurrent();
                 renderMatchScreen();
             }
-        }, 900);
+        }, 1800);
     }
 
     /* ======================================================================
@@ -894,6 +913,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             AGP.scoreManager.reset();
             _completedRounds = 0;
             _matchStartedAt = Date.now();
+            _transitioning = false;
             buildFreshPool();
             loadNextQuestionIntoCurrent();
             AGP.events.emit('game:roundStarted', { gameId: GAME_ID });

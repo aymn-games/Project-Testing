@@ -223,7 +223,10 @@ body.tt-active {
 }
 
 .tt-match-body { display: flex; gap: 16px; align-items: flex-start; }
-.tt-boxes-list { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.tt-boxes-list {
+    flex: 1; min-width: 0;
+    display: grid; grid-template-columns: repeat(5, 1fr); grid-auto-rows: 1fr; gap: 10px;
+}
 .tt-leaderboard-panel {
     width: 230px; flex-shrink: 0; background: var(--tt-green-900); border: 1px solid var(--tt-green-line);
     border-radius: var(--tt-radius-md); padding: 12px; position: sticky; top: 72px;
@@ -234,8 +237,8 @@ body.tt-active {
 .tt-lb-rank { width: 20px; text-align: center; font-weight: 900; color: var(--tt-gold-400); flex-shrink: 0; }
 .tt-lb-score { margin-right: auto; font-weight: 900; color: var(--tt-gold-300); }
 
-/* ---------- الصناديق (تقليب ثلاثي الأبعاد) ---------- */
-.tt-box { perspective: 1200px; height: 78px; }
+/* ---------- الصناديق (شبكة مربعات 5×2، تقليب ثلاثي الأبعاد) ---------- */
+.tt-box { perspective: 1200px; aspect-ratio: 1 / 1; }
 .tt-box-inner {
     position: relative; width: 100%; height: 100%; transform-style: preserve-3d;
     transition: transform 0.65s cubic-bezier(0.4, 0.2, 0.2, 1);
@@ -243,18 +246,20 @@ body.tt-active {
 .tt-box.tt-box-revealed .tt-box-inner { transform: rotateX(180deg); }
 .tt-box-face {
     position: absolute; inset: 0; border-radius: var(--tt-radius-md); backface-visibility: hidden;
-    display: flex; align-items: center; padding: 0 16px; gap: 12px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 6px; gap: 4px;
+    text-align: center;
 }
 .tt-box-back {
     background: linear-gradient(135deg, var(--tt-green-700), var(--tt-green-900));
-    border: 1.5px solid var(--tt-gold-700); justify-content: space-between;
+    border: 1.5px solid var(--tt-gold-700);
 }
 .tt-box-rank {
-    width: 34px; height: 34px; border-radius: 50%; background: var(--tt-gold-500); color: var(--tt-green-950);
-    font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    position: absolute; top: 6px; right: 6px;
+    width: 24px; height: 24px; border-radius: 50%; background: var(--tt-gold-500); color: var(--tt-green-950);
+    font-weight: 900; font-size: 0.75em; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.tt-box-points { color: var(--tt-gold-300); font-weight: 800; font-size: 0.9em; }
-.tt-box-mark { font-size: 1.4em; color: var(--tt-gold-400); font-weight: 900; }
+.tt-box-points { color: var(--tt-gold-300); font-weight: 800; font-size: 0.78em; }
+.tt-box-mark { font-size: 1.8em; color: var(--tt-gold-400); font-weight: 900; line-height: 1; }
 
 .tt-box-front { transform: rotateX(180deg); }
 .tt-box-front-won { background: linear-gradient(135deg, var(--tt-gold-500), var(--tt-gold-700)); border: 1.5px solid var(--tt-gold-300); }
@@ -264,10 +269,21 @@ body.tt-active {
 .tt-box-front-won .tt-box-points { color: var(--tt-green-950); }
 .tt-box-front-empty .tt-box-answer-text,
 .tt-box-front-empty .tt-box-points { color: var(--tt-text-dim); }
-.tt-box-answer-text { flex: 1; font-weight: 800; font-size: 0.95em; }
-.tt-box-player { flex-shrink: 0; }
-.tt-box-player .tt-pcard-wrap { flex-direction: row; }
-.tt-box-unclaimed { flex-shrink: 0; font-size: 0.8em; color: var(--tt-text-dim); }
+.tt-box-answer-text {
+    font-weight: 800; font-size: 0.72em; line-height: 1.25;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.tt-box-player { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.tt-box-player .agp-pcard-avatar-basic { width: 26px !important; height: 26px !important; }
+.tt-box-player .agp-pcard-name-basic { font-size: 9px !important; max-width: 72px; }
+.tt-box-unclaimed { font-size: 1.3em; }
+
+.tt-round-recap-banner {
+    text-align: right; background: var(--tt-green-950); border: 1px solid var(--tt-gold-700);
+    border-radius: var(--tt-radius-md); padding: 10px 14px; margin-bottom: 12px; font-size: 0.85em; line-height: 1.8;
+}
+.tt-round-recap-banner b { color: var(--tt-gold-400); }
+.tt-round-recap-banner .tt-recap-missed { color: var(--tt-text-dim); }
 
 /* ---------- أزرار التحكم أثناء المباراة ---------- */
 .tt-match-controls {
@@ -319,5 +335,7 @@ body.tt-active {
 @media (max-width: 680px) {
     .tt-match-body { flex-direction: column-reverse; }
     .tt-leaderboard-panel { width: 100%; position: static; }
-    .tt-box { height: 72px; }
+}
+@media (max-width: 460px) {
+    .tt-boxes-list { grid-template-columns: repeat(2, 1fr); }
 }
