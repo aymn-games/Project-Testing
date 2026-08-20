@@ -236,11 +236,34 @@ h1, h2, .display{ font-family:'Cairo', sans-serif; }
   z-index: 100010; opacity:0; pointer-events:none; transition: opacity .2s ease;
 }
 .wc-overlay.active{ opacity:1; pointer-events:auto; }
+
+/* بطاقتان منفصلتان جنب بعض (طلب صريح): بطاقة الفائز بحجمها الأصلي +
+   بطاقة أصغر لآخر شخص بالترتيب. تلتف تحتها بشاشات ضيّقة (موبايل/آيباد
+   بالوضع الطولي) بدل ما تنضغط جنب بعض. */
+.wc-winner-cards-row{
+  display:flex; align-items:flex-start; justify-content:center; gap:18px; flex-wrap:wrap; max-width:96vw;
+}
+
 .wc-modal{
   background: linear-gradient(165deg, var(--wc-indigo), var(--wc-black)); border:2px solid var(--wc-gold);
   border-radius: 24px; padding: 30px 26px; width: min(460px, 92vw); text-align:center; max-height:92vh; overflow-y:auto;
   box-shadow: 0 20px 60px rgba(0,0,0,0.6);
 }
+
+/* بطاقة "آخر شخص بالترتيب" — نفس لغة بطاقة الفائز البصرية، بس أصغر
+   وبإطار فضي هادئ بدل الذهبي (يبقى الذهبي مميّزاً للفائز فقط)، وايموجي
+   ضاحك أعلاها بدل التاج. */
+.wc-lastplace-modal{
+  width: min(230px, 60vw); padding: 20px 16px; border-color: rgba(255,255,255,0.35);
+  align-self:center;
+}
+.wc-lastplace-emoji{ font-size:2rem; margin-bottom:2px; }
+.wc-lastplace-title{ margin:0 0 12px; font-size:0.9rem; font-weight:800; color: var(--wc-text-dim); }
+.wc-lastplace-avatar-wrap{ display:flex; justify-content:center; margin-bottom:8px; }
+.wc-lastplace-avatar-wrap .agp-pcard-avatar-basic{ width:56px; height:56px; }
+.wc-lastplace-avatar-wrap .agp-pcard-name-basic{ display:none; }
+.wc-lastplace-name{ margin:0; color:#fff; font-weight:700; font-size:1rem; }
+.wc-lastplace-score{ margin:4px 0 0; color: var(--wc-text-dim); font-size:0.82rem; }
 .wc-winner-crown{ font-size:2.6rem; margin-bottom:4px; }
 .wc-winner-title{ color: var(--wc-gold-2); font-weight:800; margin:0 0 14px; }
 .wc-winner-avatar-wrap{ display:flex; justify-content:center; margin-bottom:10px; }
@@ -251,19 +274,6 @@ h1, h2, .display{ font-family:'Cairo', sans-serif; }
 .wc-winner-points-text{ font-size:0.85rem; color: var(--wc-text-dim); margin: 0 0 6px; }
 .wc-winner-points-text.has-points{ color: var(--wc-gold-2); font-weight:800; }
 .wc-winner-points-text.no-account{ color: var(--wc-text-dim); }
-
-/* بطاقة "آخر شخص بالترتيب" — مزحة لطيفة، تصميم أهدأ ومصغّر مقارنة
-   ببطاقة الفائز (طلب صريح بعد المراجعة). */
-.wc-lastplace-card{
-  margin: 16px 0 4px; padding: 12px 14px; border-radius: 16px; border: 1px dashed rgba(255,255,255,0.3);
-  background: rgba(0,0,0,0.22);
-}
-.wc-lastplace-title{ margin:0 0 8px; font-size:0.85rem; font-weight:800; color: var(--wc-text-dim); }
-.wc-lastplace-avatar-wrap{ display:flex; justify-content:center; margin-bottom:6px; }
-.wc-lastplace-avatar-wrap .agp-pcard-avatar-basic{ width:52px; height:52px; }
-.wc-lastplace-avatar-wrap .agp-pcard-name-basic{ display:none; }
-.wc-lastplace-name{ margin:0; color:#fff; font-weight:700; font-size:0.95rem; }
-.wc-lastplace-score{ margin:2px 0 0; color: var(--wc-text-dim); font-size:0.8rem; }
 
 .wc-winner-logo-wrap img{ height:34px; opacity:0.85; margin: 14px 0 16px; }
 .wc-result-actions{ display:flex; flex-direction:column; gap:8px; }

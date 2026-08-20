@@ -116,32 +116,39 @@
 
     <span class="sr-only" id="wcLiveRegion" role="status" aria-live="assertive"></span>
 
-    <!-- ============ WINNER MODAL ============ -->
+    <!-- ============ WINNER MODAL — بطاقتان منفصلتان جنب بعض: بطاقة
+         الفائز الأصلية بحجمها الكامل + بطاقة أصغر لآخر شخص بالترتيب
+         (طلب صريح بعد المراجعة: مو متداخلة بنفس البطاقة). ============ -->
     <div class="wc-overlay" id="wcWinnerOverlay" role="dialog" aria-modal="true" aria-labelledby="wcWinnerName">
-      <div class="wc-modal wc-winner-modal">
-        <div class="wc-winner-crown">👑</div>
-        <p class="wc-winner-title">بطل لعبة اسم و حيوان و نبات و جماد و بلاد!</p>
-        <div class="wc-winner-avatar-wrap" id="wcWinnerAvatarWrap"></div>
-        <h2 id="wcWinnerName">—</h2>
-        <p class="wc-winner-score-text" id="wcWinnerScoreText"></p>
-        <p class="wc-winner-points-text" id="wcWinnerPointsText"></p>
+      <div class="wc-winner-cards-row">
 
-        <div class="wc-lastplace-card" id="wcLastPlaceCard" hidden>
-          <p class="wc-lastplace-title">🐌 السرعة بدون بديهة!</p>
+        <div class="wc-modal wc-winner-modal">
+          <div class="wc-winner-crown">👑</div>
+          <p class="wc-winner-title">بطل لعبة اسم و حيوان و نبات و جماد و بلاد!</p>
+          <div class="wc-winner-avatar-wrap" id="wcWinnerAvatarWrap"></div>
+          <h2 id="wcWinnerName">—</h2>
+          <p class="wc-winner-score-text" id="wcWinnerScoreText"></p>
+          <p class="wc-winner-points-text" id="wcWinnerPointsText"></p>
+
+          <div class="wc-winner-logo-wrap">
+            <img src="../../logo.png" alt="">
+          </div>
+
+          <div class="wc-result-actions">
+            <button class="wc-btn wc-btn-winner-home" id="wcWinnerHomeBtn" type="button">🏠 العودة لمنصة الألعاب</button>
+            <button class="wc-btn wc-btn-winner-newmatch" id="wcNewGameBtn" type="button">🆕 إعداد مباراة جديدة</button>
+            <button class="wc-btn wc-btn-winner-rematch" id="wcRematchBtn" type="button">🔁 إعادة المباراة بنفس اللاعبين</button>
+          </div>
+        </div>
+
+        <div class="wc-modal wc-lastplace-modal" id="wcLastPlaceCard" hidden>
+          <div class="wc-lastplace-emoji">😂</div>
+          <p class="wc-lastplace-title">لا سرعة ولا بديهة!</p>
           <div class="wc-lastplace-avatar-wrap" id="wcLastPlaceAvatarWrap"></div>
           <p class="wc-lastplace-name" id="wcLastPlaceName">—</p>
           <p class="wc-lastplace-score" id="wcLastPlaceScoreText"></p>
         </div>
 
-        <div class="wc-winner-logo-wrap">
-          <img src="../../logo.png" alt="">
-        </div>
-
-        <div class="wc-result-actions">
-          <button class="wc-btn wc-btn-winner-home" id="wcWinnerHomeBtn" type="button">🏠 العودة لمنصة الألعاب</button>
-          <button class="wc-btn wc-btn-winner-newmatch" id="wcNewGameBtn" type="button">🆕 إعداد مباراة جديدة</button>
-          <button class="wc-btn wc-btn-winner-rematch" id="wcRematchBtn" type="button">🔁 إعادة المباراة بنفس اللاعبين</button>
-        </div>
       </div>
     </div>
 
