@@ -228,6 +228,756 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 { text: 'واي فاي', aliases: ['الواي فاي', 'wifi'] },
                 { text: 'ستوري', aliases: ['الستوري'] }
             ]
+        },
+        {
+            id: 'b11', builtin: true, prompt: 'أشياء نجهزها للسفر',
+            answers: [
+                { text: 'الجواز', aliases: [] },
+                { text: 'التذاكر', aliases: [] },
+                { text: 'الفندق', aliases: [] },
+                { text: 'الكاش', aliases: [] },
+                { text: 'الشاحن', aliases: [] },
+                { text: 'الملابس', aliases: [] },
+                { text: 'الشريحة', aliases: [] },
+                { text: 'العطور', aliases: [] },
+                { text: 'النظارة', aliases: [] },
+                { text: 'الشوبنق', aliases: [] }
+            ]
+        },
+        {
+            id: 'b12', builtin: true, prompt: 'أشياء تتقدم للضيف في المجلس',
+            answers: [
+                { text: 'القهوة', aliases: [] },
+                { text: 'التمر', aliases: [] },
+                { text: 'العود', aliases: [] },
+                { text: 'الشاي', aliases: [] },
+                { text: 'الماء', aliases: [] },
+                { text: 'العشاء', aliases: [] },
+                { text: 'الحلا', aliases: [] },
+                { text: 'العصير', aliases: [] },
+                { text: 'الطيب', aliases: [] },
+                { text: 'الفواكه', aliases: [] }
+            ]
+        },
+        {
+            id: 'b13', builtin: true, prompt: 'أشياء نشتريها لمقاضي البيت الأسبوعية',
+            answers: [
+                { text: 'الحليب', aliases: [] },
+                { text: 'الخبز', aliases: [] },
+                { text: 'البيض', aliases: [] },
+                { text: 'الدجاج', aliases: [] },
+                { text: 'الماء', aliases: [] },
+                { text: 'الخضار', aliases: [] },
+                { text: 'الفواكه', aliases: [] },
+                { text: 'الرز', aliases: [] },
+                { text: 'الزيت', aliases: [] },
+                { text: 'المنظفات', aliases: [] }
+            ]
+        },
+        {
+            id: 'b14', builtin: true, prompt: 'أكلات حاضرة في جمعات العائلة بجدة والرياض',
+            answers: [
+                { text: 'كبسة', aliases: [] },
+                { text: 'جريش', aliases: [] },
+                { text: 'قرصان', aliases: [] },
+                { text: 'سليق', aliases: [] },
+                { text: 'مرقوق', aliases: [] },
+                { text: 'مطازيز', aliases: [] },
+                { text: 'مندي', aliases: [] },
+                { text: 'حنيني', aliases: [] },
+                { text: 'معصوب', aliases: [] },
+                { text: 'سمبوسة', aliases: [] }
+            ]
+        },
+        {
+            id: 'b15', builtin: true, prompt: 'أشياء نأخذها معنا في الكشتة',
+            answers: [
+                { text: 'الحطب', aliases: [] },
+                { text: 'الخيمة', aliases: [] },
+                { text: 'الماء', aliases: [] },
+                { text: 'معاميل القهوة', aliases: [] },
+                { text: 'الفرشة', aliases: [] },
+                { text: 'الذبيحة', aliases: [] },
+                { text: 'الشواية', aliases: [] },
+                { text: 'الكشاف', aliases: [] },
+                { text: 'الشاي', aliases: [] },
+                { text: 'الفحم', aliases: [] }
+            ]
+        },
+        {
+            id: 'b16', builtin: true, prompt: 'أشياء نلبسها في المناسبات والأعياد',
+            answers: [
+                { text: 'الثوب', aliases: [] },
+                { text: 'الشماغ', aliases: [] },
+                { text: 'البشت', aliases: [] },
+                { text: 'العقال', aliases: [] },
+                { text: 'العطر', aliases: [] },
+                { text: 'الكبك', aliases: [] },
+                { text: 'الساعة', aliases: [] },
+                { text: 'الجزمة', aliases: [] },
+                { text: 'العباية', aliases: [] },
+                { text: 'الفستان', aliases: [] }
+            ]
+        },
+        {
+            id: 'b17', builtin: true, prompt: 'أشياء نلقاها في مجلس الرجال',
+            answers: [
+                { text: 'الكنب', aliases: [] },
+                { text: 'الدلة', aliases: [] },
+                { text: 'المباخر', aliases: [] },
+                { text: 'المساند', aliases: [] },
+                { text: 'الفرش', aliases: [] },
+                { text: 'التلفزيون', aliases: [] },
+                { text: 'التمرية', aliases: [] },
+                { text: 'البيالات', aliases: [] },
+                { text: 'الفناجيل', aliases: [] },
+                { text: 'المناديل', aliases: [] }
+            ]
+        },
+        {
+            id: 'b18', builtin: true, prompt: 'أشياء تضيع دائماً بالبيت',
+            answers: [
+                { text: 'الريموت', aliases: [] },
+                { text: 'مفاتيح السيارة', aliases: [] },
+                { text: 'الشاحن', aliases: [] },
+                { text: 'السماعات', aliases: [] },
+                { text: 'الجوال', aliases: [] },
+                { text: 'النظارة', aliases: [] },
+                { text: 'المحفظة', aliases: [] },
+                { text: 'قصافة الأظافر', aliases: [] },
+                { text: 'الولاعة', aliases: [] },
+                { text: 'شبشب البيت', aliases: [] }
+            ]
+        },
+        {
+            id: 'b19', builtin: true, prompt: 'أشياء تسويها أول ما تصحى من النوم',
+            answers: [
+                { text: 'تشوف الجوال', aliases: [] },
+                { text: 'تغسل وجهك', aliases: [] },
+                { text: 'تصلي', aliases: [] },
+                { text: 'تشرب ماء', aliases: [] },
+                { text: 'تسوي قهوة', aliases: [] },
+                { text: 'تفرش أسنانك', aliases: [] },
+                { text: 'تلبس', aliases: [] },
+                { text: 'ترتب السرير', aliases: [] },
+                { text: 'تفطر', aliases: [] },
+                { text: 'تطلع للدوام', aliases: [] }
+            ]
+        },
+        {
+            id: 'b20', builtin: true, prompt: 'أشياء نطلبها من تطبيق التوصيل',
+            answers: [
+                { text: 'وجبة عشاء', aliases: [] },
+                { text: 'قهوة', aliases: [] },
+                { text: 'شاورما', aliases: [] },
+                { text: 'برجر', aliases: [] },
+                { text: 'مقاضي', aliases: [] },
+                { text: 'حلا', aliases: [] },
+                { text: 'عصير', aliases: [] },
+                { text: 'بيتزا', aliases: [] },
+                { text: 'أدوية', aliases: [] },
+                { text: 'ثلج', aliases: [] }
+            ]
+        },
+        {
+            id: 'b21', builtin: true, prompt: 'مشروبات شعبية ومحبوبة بالصيف',
+            answers: [
+                { text: 'ماء بارد', aliases: [] },
+                { text: 'ليمون نعناع', aliases: [] },
+                { text: 'سوبيا', aliases: [] },
+                { text: 'آيس دريب', aliases: [] },
+                { text: 'شاي كرك', aliases: [] },
+                { text: 'عصير ليمون', aliases: [] },
+                { text: 'آيس سبانيش', aliases: [] },
+                { text: 'موهيتو', aliases: [] },
+                { text: 'غازيات', aliases: [] },
+                { text: 'بوظة', aliases: [] }
+            ]
+        },
+        {
+            id: 'b22', builtin: true, prompt: 'أشياء نحرص عليها عند تجهيز سيارة جديدة',
+            answers: [
+                { text: 'التظليل', aliases: [] },
+                { text: 'التأمين', aliases: [] },
+                { text: 'الحماية', aliases: [] },
+                { text: 'التغليف', aliases: [] },
+                { text: 'العطر', aliases: [] },
+                { text: 'الشاحن', aliases: [] },
+                { text: 'حامل الجوال', aliases: [] },
+                { text: 'الفرشات', aliases: [] },
+                { text: 'مظلة الشمس', aliases: [] },
+                { text: 'مواصفات الفل', aliases: [] }
+            ]
+        },
+        {
+            id: 'b23', builtin: true, prompt: 'أشياء نشتريها من البقالة المجاورة',
+            answers: [
+                { text: 'خبز', aliases: [] },
+                { text: 'حليب', aliases: [] },
+                { text: 'ماء', aliases: [] },
+                { text: 'شبس', aliases: [] },
+                { text: 'غندور', aliases: [] },
+                { text: 'بسكويت', aliases: [] },
+                { text: 'عصير', aliases: [] },
+                { text: 'غازيات', aliases: [] },
+                { text: 'أيسكريم', aliases: [] },
+                { text: 'علبة علك', aliases: [] }
+            ]
+        },
+        {
+            id: 'b24', builtin: true, prompt: 'أشياء ضرورية في شنطة المدرس أو الطالب',
+            answers: [
+                { text: 'الكتب', aliases: [] },
+                { text: 'الدفتر', aliases: [] },
+                { text: 'المقلمة', aliases: [] },
+                { text: 'الأقلام', aliases: [] },
+                { text: 'الآيباد', aliases: [] },
+                { text: 'المسطرة', aliases: [] },
+                { text: 'الآلة الحاسبة', aliases: [] },
+                { text: 'الممحاة', aliases: [] },
+                { text: 'البراية', aliases: [] },
+                { text: 'الجدول', aliases: [] }
+            ]
+        },
+        {
+            id: 'b25', builtin: true, prompt: 'أشياء نحضرها لليلة العيد',
+            answers: [
+                { text: 'عيدية', aliases: [] },
+                { text: 'بخور', aliases: [] },
+                { text: 'حلا العيد', aliases: [] },
+                { text: 'ثوب العيد', aliases: [] },
+                { text: 'قهوة', aliases: [] },
+                { text: 'مكسرات', aliases: [] },
+                { text: 'ألعاب نارية', aliases: [] },
+                { text: 'حناء', aliases: [] },
+                { text: 'ورد', aliases: [] },
+                { text: 'بالونات', aliases: [] }
+            ]
+        },
+        {
+            id: 'b26', builtin: true, prompt: 'أنواع حلى وموالح على سفرة رمضان',
+            answers: [
+                { text: 'سمبوسة', aliases: [] },
+                { text: 'لقيمات', aliases: [] },
+                { text: 'شوربة', aliases: [] },
+                { text: 'فيمتو', aliases: [] },
+                { text: 'تارت', aliases: [] },
+                { text: 'كريم كراميل', aliases: [] },
+                { text: 'تمرية', aliases: [] },
+                { text: 'كنافة', aliases: [] },
+                { text: 'قطايف', aliases: [] },
+                { text: 'عصاير', aliases: [] }
+            ]
+        },
+        {
+            id: 'b27', builtin: true, prompt: 'أشياء في شنطة اليد النسائية',
+            answers: [
+                { text: 'المحفظة', aliases: [] },
+                { text: 'الجوال', aliases: [] },
+                { text: 'الروج', aliases: [] },
+                { text: 'العطر', aliases: [] },
+                { text: 'المفاتيح', aliases: [] },
+                { text: 'المناديل', aliases: [] },
+                { text: 'المرايه', aliases: [] },
+                { text: 'معقم', aliases: [] },
+                { text: 'شاحن', aliases: [] },
+                { text: 'بندول', aliases: [] }
+            ]
+        },
+        {
+            id: 'b28', builtin: true, prompt: 'أشياء نراها في المطار',
+            answers: [
+                { text: 'طيارة', aliases: [] },
+                { text: 'شنط', aliases: [] },
+                { text: 'جوازات', aliases: [] },
+                { text: 'بوابات', aliases: [] },
+                { text: 'تفتيش', aliases: [] },
+                { text: 'سير الحقائب', aliases: [] },
+                { text: 'شاشات', aliases: [] },
+                { text: 'طيارين', aliases: [] },
+                { text: 'كافيهات', aliases: [] },
+                { text: 'سوق حرة', aliases: [] }
+            ]
+        },
+        {
+            id: 'b29', builtin: true, prompt: 'أشياء تسويها إذا طفشت بالبيت',
+            answers: [
+                { text: 'تفتح التيكتوك', aliases: [] },
+                { text: 'تتابع مسلسل', aliases: [] },
+                { text: 'تنام', aliases: [] },
+                { text: 'تأكل', aliases: [] },
+                { text: 'تطلع تمشي', aliases: [] },
+                { text: 'تدق على خويك', aliases: [] },
+                { text: 'تلعب بلايستيشن', aliases: [] },
+                { text: 'ترتب غرفتك', aliases: [] },
+                { text: 'تقلب بالتلفزيون', aliases: [] },
+                { text: 'تسوي قهوة', aliases: [] }
+            ]
+        },
+        {
+            id: 'b30', builtin: true, prompt: 'أشياء نشتريها للطفل المولود الجديد',
+            answers: [
+                { text: 'مهد', aliases: [] },
+                { text: 'رضاعة', aliases: [] },
+                { text: 'ملابس', aliases: [] },
+                { text: 'حفاضات', aliases: [] },
+                { text: 'سرير', aliases: [] },
+                { text: 'عربة', aliases: [] },
+                { text: 'مصاصة', aliases: [] },
+                { text: 'بطانية', aliases: [] },
+                { text: 'شامبو', aliases: [] },
+                { text: 'ألعاب', aliases: [] }
+            ]
+        },
+        {
+            id: 'b31', builtin: true, prompt: 'أشياء تسمعها في زحمة الرياض أو الدوام',
+            answers: [
+                { text: 'بوق', aliases: [] },
+                { text: 'فرامل', aliases: [] },
+                { text: 'راديو', aliases: [] },
+                { text: 'سوالف', aliases: [] },
+                { text: 'تنبيه الخريطة', aliases: [] },
+                { text: 'بودكاست', aliases: [] },
+                { text: 'دوريات', aliases: [] },
+                { text: 'مطبات', aliases: [] },
+                { text: 'شيلات', aliases: [] },
+                { text: 'أغاني', aliases: [] }
+            ]
+        },
+        {
+            id: 'b32', builtin: true, prompt: 'مدن سياحية سعودية مشهورة بالصيف أو الشتاء',
+            answers: [
+                { text: 'العلا', aliases: [] },
+                { text: 'أبها', aliases: [] },
+                { text: 'الرياض', aliases: [] },
+                { text: 'جدة', aliases: [] },
+                { text: 'الطائف', aliases: [] },
+                { text: 'الخبر', aliases: [] },
+                { text: 'الباحة', aliases: [] },
+                { text: 'تبوك', aliases: [] },
+                { text: 'جيزان', aliases: [] },
+                { text: 'حائل', aliases: [] }
+            ]
+        },
+        {
+            id: 'b33', builtin: true, prompt: 'أنواع التمور المشهورة بالخليج',
+            answers: [
+                { text: 'سكري', aliases: [] },
+                { text: 'خلاص', aliases: [] },
+                { text: 'عجوة', aliases: [] },
+                { text: 'صقعي', aliases: [] },
+                { text: 'مجدول', aliases: [] },
+                { text: 'خضري', aliases: [] },
+                { text: 'صفري', aliases: [] },
+                { text: 'شيشي', aliases: [] },
+                { text: 'برحي', aliases: [] },
+                { text: 'روثانة', aliases: [] }
+            ]
+        },
+        {
+            id: 'b34', builtin: true, prompt: 'أشياء نحتاجها لعمل شاهي خادر ومخمخ',
+            answers: [
+                { text: 'ورق شاهي', aliases: [] },
+                { text: 'ماء مغلي', aliases: [] },
+                { text: 'سكر', aliases: [] },
+                { text: 'هيل', aliases: [] },
+                { text: 'نعناع', aliases: [] },
+                { text: 'حبق', aliases: [] },
+                { text: 'جمر', aliases: [] },
+                { text: 'بيالات', aliases: [] },
+                { text: 'زعفران', aliases: [] },
+                { text: 'زنجبيل', aliases: [] }
+            ]
+        },
+        {
+            id: 'b35', builtin: true, prompt: 'أشياء نراها في المستشفى',
+            answers: [
+                { text: 'دكتور', aliases: [] },
+                { text: 'ممرضة', aliases: [] },
+                { text: 'محلول', aliases: [] },
+                { text: 'سرير', aliases: [] },
+                { text: 'سماعة', aliases: [] },
+                { text: 'إبرة', aliases: [] },
+                { text: 'أدوية', aliases: [] },
+                { text: 'كرسي متحرك', aliases: [] },
+                { text: 'مواعيد', aliases: [] },
+                { text: 'تحاليل', aliases: [] }
+            ]
+        },
+        {
+            id: 'b36', builtin: true, prompt: 'أشياء تسويها يوم الجمعة',
+            answers: [
+                { text: 'صلاة الجمعة', aliases: [] },
+                { text: 'قراءة الكهف', aliases: [] },
+                { text: 'الاستحمام', aliases: [] },
+                { text: 'التطيب بالعود', aliases: [] },
+                { text: 'غداء العائلة', aliases: [] },
+                { text: 'لبس الشماغ', aliases: [] },
+                { text: 'زيارة الأقارب', aliases: [] },
+                { text: 'القهوة والحلويات', aliases: [] },
+                { text: 'المشي', aliases: [] },
+                { text: 'الراحة', aliases: [] }
+            ]
+        },
+        {
+            id: 'b37', builtin: true, prompt: 'أشياء تجهزها العروس لليلة الزفاف',
+            answers: [
+                { text: 'الفستان الأبيض', aliases: [] },
+                { text: 'المكياج', aliases: [] },
+                { text: 'المسكة', aliases: [] },
+                { text: 'الذهب', aliases: [] },
+                { text: 'الكعب', aliases: [] },
+                { text: 'الصور', aliases: [] },
+                { text: 'العطر', aliases: [] },
+                { text: 'تسريحة الشعر', aliases: [] },
+                { text: 'الحناء', aliases: [] },
+                { text: 'الشبكة', aliases: [] }
+            ]
+        },
+        {
+            id: 'b38', builtin: true, prompt: 'أشياء ضرورية في صالة الجيم',
+            answers: [
+                { text: 'المطارة', aliases: [] },
+                { text: 'المنشفة', aliases: [] },
+                { text: 'الجزمة الرياضية', aliases: [] },
+                { text: 'السماعات', aliases: [] },
+                { text: 'اشتراك الجيم', aliases: [] },
+                { text: 'ساعة رياضية', aliases: [] },
+                { text: 'الملابس', aliases: [] },
+                { text: 'البروتين', aliases: [] },
+                { text: 'قفازات', aliases: [] },
+                { text: 'قفل الخزنة', aliases: [] }
+            ]
+        },
+        {
+            id: 'b39', builtin: true, prompt: 'أشياء تلقاها في شاليه أو استراحة الجمعة',
+            answers: [
+                { text: 'المسبح', aliases: [] },
+                { text: 'الملعب', aliases: [] },
+                { text: 'الشواية', aliases: [] },
+                { text: 'السماعة الكبيرة', aliases: [] },
+                { text: 'جلسة خارجية', aliases: [] },
+                { text: 'المجلس', aliases: [] },
+                { text: 'التلفزيون', aliases: [] },
+                { text: 'المطبخ', aliases: [] },
+                { text: 'بلياردو', aliases: [] },
+                { text: 'بلوت', aliases: [] }
+            ]
+        },
+        {
+            id: 'b40', builtin: true, prompt: 'العاب ورق وجلسات وناسة الشباب',
+            answers: [
+                { text: 'بلوت', aliases: [] },
+                { text: 'أونو', aliases: [] },
+                { text: 'كيرم', aliases: [] },
+                { text: 'جاكارو', aliases: [] },
+                { text: 'شطرنج', aliases: [] },
+                { text: 'ضومنة', aliases: [] },
+                { text: 'فيفا', aliases: [] },
+                { text: 'لعبة إنسان', aliases: [] },
+                { text: 'بنك الحظ', aliases: [] },
+                { text: 'مافيا', aliases: [] }
+            ]
+        },
+        {
+            id: 'b41', builtin: true, prompt: 'أشياء نستخدمها لتنظيف وعطر البيت',
+            answers: [
+                { text: 'البخور', aliases: [] },
+                { text: 'المكنسة', aliases: [] },
+                { text: 'الديتول', aliases: [] },
+                { text: 'الممسحة', aliases: [] },
+                { text: 'معطر الجو', aliases: [] },
+                { text: 'العنبر', aliases: [] },
+                { text: 'صابون الصحون', aliases: [] },
+                { text: 'كلوركس', aliases: [] },
+                { text: 'مناديل معطرة', aliases: [] },
+                { text: 'الريشة', aliases: [] }
+            ]
+        },
+        {
+            id: 'b42', builtin: true, prompt: 'أشياء تحضر في مقاهي القهوة المختصة',
+            answers: [
+                { text: 'v60', aliases: [] },
+                { text: 'إسبريسو', aliases: [] },
+                { text: 'لاتيه', aliases: [] },
+                { text: 'فلات وايت', aliases: [] },
+                { text: 'كيكة بيكان', aliases: [] },
+                { text: 'كرواسون', aliases: [] },
+                { text: 'كولد برو', aliases: [] },
+                { text: 'آيس كركديه', aliases: [] },
+                { text: 'كورتادو', aliases: [] },
+                { text: 'ماتشا', aliases: [] }
+            ]
+        },
+        {
+            id: 'b43', builtin: true, prompt: 'أشياء موجودة بشنطة حارس المرمى أو اللاعب',
+            answers: [
+                { text: 'الجزمة', aliases: [] },
+                { text: 'الشراب', aliases: [] },
+                { text: 'الكسارات', aliases: [] },
+                { text: 'القفازات', aliases: [] },
+                { text: 'الماء', aliases: [] },
+                { text: 'القميص', aliases: [] },
+                { text: 'المنشفة', aliases: [] },
+                { text: 'الرباط', aliases: [] },
+                { text: 'بخاخ المفاصل', aliases: [] },
+                { text: 'حقيبة الرياضة', aliases: [] }
+            ]
+        },
+        {
+            id: 'b44', builtin: true, prompt: 'أشياء نلقاها في المطبخ السعودي',
+            answers: [
+                { text: 'قدر الضغط', aliases: [] },
+                { text: 'الملاعق', aliases: [] },
+                { text: 'الفرن', aliases: [] },
+                { text: 'الثلاجة', aliases: [] },
+                { text: 'الخلاط', aliases: [] },
+                { text: 'القلاية الهوائية', aliases: [] },
+                { text: 'الميكروويف', aliases: [] },
+                { text: 'بيالات وفناجيل', aliases: [] },
+                { text: 'صواني الفرن', aliases: [] },
+                { text: 'سلة بصل', aliases: [] }
+            ]
+        },
+        {
+            id: 'b45', builtin: true, prompt: 'أشياء تخاف منها وتوتر بالمدرسة أو الجامعة',
+            answers: [
+                { text: 'الاختبار النهائي', aliases: [] },
+                { text: 'التحصيلي', aliases: [] },
+                { text: 'القدرات', aliases: [] },
+                { text: 'عرض البرزنتيشن', aliases: [] },
+                { text: 'تأخير الدوام', aliases: [] },
+                { text: 'الرسوب', aliases: [] },
+                { text: 'خصم الدرجات', aliases: [] },
+                { text: 'الواجبات', aliases: [] },
+                { text: 'التفتيش المفاجئ', aliases: [] },
+                { text: 'سؤال المعلم', aliases: [] }
+            ]
+        },
+        {
+            id: 'b46', builtin: true, prompt: 'أشياء نشتريها في مواسم التخفيضات',
+            answers: [
+                { text: 'عطور', aliases: [] },
+                { text: 'ملابس', aliases: [] },
+                { text: 'جوالات', aliases: [] },
+                { text: 'جزم', aliases: [] },
+                { text: 'ساعات', aliases: [] },
+                { text: 'أجهزة منزلية', aliases: [] },
+                { text: 'شاشات', aliases: [] },
+                { text: 'شنط', aliases: [] },
+                { text: 'مكياج', aliases: [] },
+                { text: 'أثاث', aliases: [] }
+            ]
+        },
+        {
+            id: 'b47', builtin: true, prompt: 'أشياء تحب تسويها على البحر والشاطئ',
+            answers: [
+                { text: 'المشي', aliases: [] },
+                { text: 'السباحة', aliases: [] },
+                { text: 'جلسة الشاهي', aliases: [] },
+                { text: 'التصوير', aliases: [] },
+                { text: 'ركوب الدباب', aliases: [] },
+                { text: 'تأمل الغروب', aliases: [] },
+                { text: 'اللعب بالرمل', aliases: [] },
+                { text: 'أكل أيسكريم', aliases: [] },
+                { text: 'ركوب قارب', aliases: [] },
+                { text: 'صيد سمك', aliases: [] }
+            ]
+        },
+        {
+            id: 'b48', builtin: true, prompt: 'أشياء تجيب السعادة فوراً',
+            answers: [
+                { text: 'الراتب', aliases: [] },
+                { text: 'الإجازة', aliases: [] },
+                { text: 'الأكل اللذيذ', aliases: [] },
+                { text: 'النوم الطويل', aliases: [] },
+                { text: 'القهوة', aliases: [] },
+                { text: 'شوفة الحبايب', aliases: [] },
+                { text: 'السفر', aliases: [] },
+                { text: 'هدية مفاجئة', aliases: [] },
+                { text: 'إيداع بنكي', aliases: [] },
+                { text: 'فوز فريقك', aliases: [] }
+            ]
+        },
+        {
+            id: 'b49', builtin: true, prompt: 'أشياء تكره تطلع لك وأنت تسوق',
+            answers: [
+                { text: 'زحمة', aliases: [] },
+                { text: 'حفرة', aliases: [] },
+                { text: 'مطبات', aliases: [] },
+                { text: 'ساهر', aliases: [] },
+                { text: 'تقطيع', aliases: [] },
+                { text: 'إشارة حمراء', aliases: [] },
+                { text: 'بنشر', aliases: [] },
+                { text: 'تريلة', aliases: [] },
+                { text: 'مطر', aliases: [] },
+                { text: 'بنزين', aliases: [] }
+            ]
+        },
+        {
+            id: 'b50', builtin: true, prompt: 'أشياء تشتريها لخيمة البر والتخييم',
+            answers: [
+                { text: 'رواق', aliases: [] },
+                { text: 'طنب', aliases: [] },
+                { text: 'فراش', aliases: [] },
+                { text: 'كشاف', aliases: [] },
+                { text: 'ماطور', aliases: [] },
+                { text: 'منقلة', aliases: [] },
+                { text: 'مروحة', aliases: [] },
+                { text: 'كرسي', aliases: [] },
+                { text: 'تغريزة', aliases: [] },
+                { text: 'بطانية', aliases: [] }
+            ]
+        },
+        {
+            id: 'b51', builtin: true, prompt: 'أشياء نسويها أيام المطر والخير',
+            answers: [
+                { text: 'نطلع للبر', aliases: [] },
+                { text: 'نشرب شاهي', aliases: [] },
+                { text: 'نصور المطر', aliases: [] },
+                { text: 'ندعي', aliases: [] },
+                { text: 'نمشي بالسيارة', aliases: [] },
+                { text: 'نفتح الشبابيك', aliases: [] },
+                { text: 'نأكل شباتي', aliases: [] },
+                { text: 'نشب نار', aliases: [] },
+                { text: 'نلبس ثقيل', aliases: [] },
+                { text: 'نسمع شيلات', aliases: [] }
+            ]
+        },
+        {
+            id: 'b52', builtin: true, prompt: 'أجهزة إلكترونية لا يستغني عنها أي بيت',
+            answers: [
+                { text: 'الجوال', aliases: [] },
+                { text: 'التلفزيون', aliases: [] },
+                { text: 'المكيف', aliases: [] },
+                { text: 'الثلاجة', aliases: [] },
+                { text: 'الراوتر', aliases: [] },
+                { text: 'الغسالة', aliases: [] },
+                { text: 'المايكروويف', aliases: [] },
+                { text: 'الآيباد', aliases: [] },
+                { text: 'القلاية الهوائية', aliases: [] },
+                { text: 'الكمبيوتر', aliases: [] }
+            ]
+        },
+        {
+            id: 'b53', builtin: true, prompt: 'أشياء تكون حاضرة في زواجات الخليج',
+            answers: [
+                { text: 'العرضة', aliases: [] },
+                { text: 'العشاء', aliases: [] },
+                { text: 'البخور', aliases: [] },
+                { text: 'المباشرات', aliases: [] },
+                { text: 'الطقاقات', aliases: [] },
+                { text: 'الكوشة', aliases: [] },
+                { text: 'التصوير', aliases: [] },
+                { text: 'التوزيعات', aliases: [] },
+                { text: 'القهوة والشاي', aliases: [] },
+                { text: 'صبة القهوة', aliases: [] }
+            ]
+        },
+        {
+            id: 'b54', builtin: true, prompt: 'أشياء تحضر في حقيبة الطفل للمدرسة',
+            answers: [
+                { text: 'وجبة', aliases: [] },
+                { text: 'ماء', aliases: [] },
+                { text: 'أقلام', aliases: [] },
+                { text: 'دفاتر', aliases: [] },
+                { text: 'مقلمة', aliases: [] },
+                { text: 'مناديل', aliases: [] },
+                { text: 'جدول', aliases: [] },
+                { text: 'معقم', aliases: [] },
+                { text: 'ألوان', aliases: [] },
+                { text: 'قصة', aliases: [] }
+            ]
+        },
+        {
+            id: 'b55', builtin: true, prompt: 'أشياء تلقاها في درج مكتب الدوام',
+            answers: [
+                { text: 'أقلام', aliases: [] },
+                { text: 'أوراق', aliases: [] },
+                { text: 'ختم', aliases: [] },
+                { text: 'شاحن', aliases: [] },
+                { text: 'بندول', aliases: [] },
+                { text: 'سناك', aliases: [] },
+                { text: 'عطر', aliases: [] },
+                { text: 'علك', aliases: [] },
+                { text: 'دباسة', aliases: [] },
+                { text: 'نظارة', aliases: [] }
+            ]
+        },
+        {
+            id: 'b56', builtin: true, prompt: 'أشياء تشتريها من الصيدلية',
+            answers: [
+                { text: 'بندول', aliases: [] },
+                { text: 'لصق جروح', aliases: [] },
+                { text: 'واقي شمس', aliases: [] },
+                { text: 'شامبو', aliases: [] },
+                { text: 'معجون أسنان', aliases: [] },
+                { text: 'فيتامينات', aliases: [] },
+                { text: 'كمامات', aliases: [] },
+                { text: 'معقم', aliases: [] },
+                { text: 'قطرة عين', aliases: [] },
+                { text: 'مرطب شفايف', aliases: [] }
+            ]
+        },
+        {
+            id: 'b57', builtin: true, prompt: 'تطبيقات حاسبة وجوال مستعملة يومياً بالسعودية',
+            answers: [
+                { text: 'واتساب', aliases: [] },
+                { text: 'توكلنا', aliases: [] },
+                { text: 'أبشر', aliases: [] },
+                { text: 'تيك توك', aliases: [] },
+                { text: 'سناب شات', aliases: [] },
+                { text: 'إنستقرام', aliases: [] },
+                { text: 'خرائط جوجل', aliases: [] },
+                { text: 'تطبيق البنك', aliases: [] },
+                { text: 'جاهز', aliases: [] },
+                { text: 'إكس', aliases: [] }
+            ]
+        },
+        {
+            id: 'b58', builtin: true, prompt: 'أشياء تسويها لما تجيك الإجازة السنوية',
+            answers: [
+                { text: 'تسافر', aliases: [] },
+                { text: 'تنام', aliases: [] },
+                { text: 'تكشت', aliases: [] },
+                { text: 'تجلس مع العائلة', aliases: [] },
+                { text: 'تنسى الدوام', aliases: [] },
+                { text: 'تغير جو', aliases: [] },
+                { text: 'تترفه', aliases: [] },
+                { text: 'تتسوق', aliases: [] },
+                { text: 'تخلص أشغالك', aliases: [] },
+                { text: 'تعدل نومك', aliases: [] }
+            ]
+        },
+        {
+            id: 'b59', builtin: true, prompt: 'أشياء تشتريها للبيت الجديد',
+            answers: [
+                { text: 'مكيفات', aliases: [] },
+                { text: 'كنب', aliases: [] },
+                { text: 'مطابخ', aliases: [] },
+                { text: 'شاشات', aliases: [] },
+                { text: 'سرير', aliases: [] },
+                { text: 'ثلاجة', aliases: [] },
+                { text: 'إضاءات', aliases: [] },
+                { text: 'غسالة', aliases: [] },
+                { text: 'سجاد', aliases: [] },
+                { text: 'ستائر', aliases: [] }
+            ]
+        },
+        {
+            id: 'b60', builtin: true, prompt: 'أشياء توحي لك بالدفء بالشتاء',
+            answers: [
+                { text: 'النار', aliases: [] },
+                { text: 'الفروة', aliases: [] },
+                { text: 'الزنجبيل', aliases: [] },
+                { text: 'الشال', aliases: [] },
+                { text: 'الدفاية', aliases: [] },
+                { text: 'الحنيني', aliases: [] },
+                { text: 'الشاهي', aliases: [] },
+                { text: 'الشوربة', aliases: [] },
+                { text: 'البطانية', aliases: [] },
+                { text: 'الجوارب', aliases: [] }
+            ]
         }
     ];
 
@@ -308,7 +1058,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _adminPanelOpen = false;
     var _commentUnsub = null;
     var _recentComments = []; // آخر تعليقات وصلت — لصندوق التشخيص باللوبي فقط
-    var _transitioning = false; // يمنع ضغط مزدوج على "تخطي/السؤال التالي" أثناء انتقال الجولة
+    var _roundRevealed = false; // كُشفت باقي إجابات الجولة الحالية؟ (تحكم بحالة الزر)
+    var _busyClick = false; // يمنع ضغط مزدوج سريع بين "كشف" و"التالي" بنفس اللحظة
 
     var _overlayEl = null, _lobbyEl = null, _matchEl = null, _adminEl = null, _winnerEl = null;
 
@@ -553,7 +1304,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.scoreManager.reset();
         _completedRounds = 0;
         _matchStartedAt = Date.now();
-        _transitioning = false;
+        _roundRevealed = false;
+        _busyClick = false;
         buildFreshPool();
         loadNextQuestionIntoCurrent();
 
@@ -687,6 +1439,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         hideOverlay();
         if (_lobbyEl) _lobbyEl.style.display = 'none';
         showGearButton();
+        _roundRevealed = false;
 
         var root = ensureMatchEl();
         root.style.display = 'block';
@@ -699,12 +1452,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '</div>' +
                 '<div class="tt-question-banner">' + escapeHtml(_currentQuestion.prompt) + '</div>' +
             '</div>' +
-            '<div id="tt-all-guessed-banner" class="tt-all-guessed-banner" style="display:none;">🎉 تم تخمين كل الصناديق! اضغط "السؤال التالي" للمتابعة.</div>' +
+            '<div id="tt-all-guessed-banner" class="tt-all-guessed-banner" style="display:none;">🎉 تم تخمين كل الصناديق! اضغط "كشف الإجابات" للمتابعة.</div>' +
             '<div id="tt-round-recap-banner" class="tt-round-recap-banner" style="display:none;"></div>' +
             '<div class="tt-boxes-list" id="tt-boxes-list"></div>' +
             '<div class="tt-match-controls">' +
                 '<button type="button" id="tt-skip-btn" class="tt-ctrl-btn tt-ctrl-skip">⏭️ تخطي (بدون احتساب)</button>' +
-                '<button type="button" id="tt-next-btn" class="tt-ctrl-btn tt-ctrl-next">✅ السؤال التالي</button>' +
+                '<button type="button" id="tt-next-btn" class="tt-ctrl-btn tt-ctrl-next">✅ كشف باقي الإجابات</button>' +
             '</div>';
 
         renderBoxesList();
@@ -712,7 +1465,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         el('tt-skip-btn').addEventListener('click', handleSkipQuestion);
         el('tt-leaderboard-toggle-btn').addEventListener('click', openLeaderboardPanel);
-        el('tt-next-btn').addEventListener('click', handleNextQuestion);
+        el('tt-next-btn').addEventListener('click', handleNextBtnClick);
     }
 
     function startGuessTimer() {
@@ -735,8 +1488,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
         AGP.events.on('timer:ended', function (payload) {
             if (payload.name !== GUESS_TIMER_NAME) return;
-            if (_screen !== 'match' || _transitioning) return;
-            handleNextQuestion();
+            // ⚠️ الوقت لما ينتهي يكشف باقي الإجابات بس -- ما ينتقل للسؤال
+            // التالي تلقائياً إطلاقاً. الانتقال يصير فقط بضغطة يدوية ثانية
+            // من المضيف على نفس الزر (بعد ما يتحول لـ"السؤال التالي").
+            if (_screen !== 'match' || _roundRevealed) return;
+            revealRoundAnswers();
         });
     }
 
@@ -830,18 +1586,32 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function handleSkipQuestion() {
-        if (_transitioning) return;
+        if (_roundRevealed || _busyClick) return;
         stopGuessTimer();
         loadNextQuestionIntoCurrent();
         renderMatchScreen();
     }
 
-    function handleNextQuestion() {
-        if (_transitioning) return;
-        _transitioning = true;
+    /**
+     * زر "كشف باقي الإجابات / السؤال التالي" يخدم خطوتين منفصلتين تماماً
+     * (بناءً على طلب صريح): أول ضغطة تكشف الإجابات المتبقية بس -- ما
+     * تنقل لسؤال ثاني إطلاقاً، سواء جت الضغطة يدوية أو تلقائياً من
+     * انتهاء الوقت. لازم ضغطة ثانية صريحة من المضيف عشان ينتقل فعلياً.
+     */
+    function handleNextBtnClick() {
+        if (_busyClick) return;
+        _busyClick = true;
+        if (!_roundRevealed) {
+            revealRoundAnswers();
+        } else {
+            advanceToNextRound();
+        }
+        window.setTimeout(function () { _busyClick = false; }, 400);
+    }
+
+    function revealRoundAnswers() {
         stopGuessTimer();
         el('tt-skip-btn').disabled = true;
-        el('tt-next-btn').disabled = true;
 
         var missed = _currentQuestion.answers.filter(function (a) { return !a.revealed; }).map(function (a) { return a.text; });
         _currentQuestion.answers.forEach(function (a) { a.revealed = true; });
@@ -855,16 +1625,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             recapEl.style.display = 'block';
         }
 
+        _roundRevealed = true;
         _completedRounds++;
-        window.setTimeout(function () {
-            _transitioning = false;
-            if (_completedRounds >= _settings.roundsTarget) {
-                finalizeMatchAndShowWinner();
-            } else {
-                loadNextQuestionIntoCurrent();
-                renderMatchScreen();
-            }
-        }, 1800);
+
+        var nextBtn = el('tt-next-btn');
+        if (nextBtn) {
+            nextBtn.textContent = (_completedRounds >= _settings.roundsTarget) ? '🏁 عرض نتيجة المباراة' : '➡️ السؤال التالي';
+        }
+    }
+
+    function advanceToNextRound() {
+        if (_completedRounds >= _settings.roundsTarget) {
+            finalizeMatchAndShowWinner();
+        } else {
+            loadNextQuestionIntoCurrent();
+            renderMatchScreen();
+        }
     }
 
     /* ======================================================================
@@ -1032,7 +1808,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             AGP.scoreManager.reset();
             _completedRounds = 0;
             _matchStartedAt = Date.now();
-            _transitioning = false;
+            _roundRevealed = false;
+            _busyClick = false;
             buildFreshPool();
             loadNextQuestionIntoCurrent();
             AGP.events.emit('game:roundStarted', { gameId: GAME_ID });
