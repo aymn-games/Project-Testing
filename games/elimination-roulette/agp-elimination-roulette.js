@@ -468,7 +468,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'width:290px;box-sizing:border-box;background:#000;border:1px solid rgba(255,255,255,0.18);',
             'border-radius:16px;padding:10px 14px;transition:background 0.15s,transform 0.15s;}',
             '.er-candidate-card:hover{background:#1a1a1a;transform:translateY(-2px);}',
-            '.er-candidate-num{color:#fff;border-radius:50%;width:34px;height:34px;flex-shrink:0;',
+            '.er-candidate-num{color:#000000;border-radius:50%;width:34px;height:34px;flex-shrink:0;',
             'display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.95em;}',
             // ⚠️ [0.45.8] رقم بطاقة "الإقصاء" تحديداً صار أخضر مميَّز (بدل
             // اللون البنفسجي الأساسي) — طلب صريح لتمييز تبويب الإقصاء عن
