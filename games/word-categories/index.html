@@ -84,6 +84,7 @@
         <div class="wc-panel-divider"></div>
 
         <button class="wc-btn wc-btn-primary" id="wcStartBtn" type="button">🎲 بدء الجولة</button>
+        <button class="wc-btn wc-btn-secondary" id="wcSkipLetterBtn" type="button" hidden>🔁 تخطي الحرف (بدون احتساب جولة)</button>
         <button class="wc-btn wc-btn-danger" id="wcEndTimerBtn" type="button" hidden>⏹️ إنهاء الوقت الآن</button>
       </section>
 
@@ -119,6 +120,7 @@
     <section class="wc-review-fullscreen" id="wcReviewFullscreen" hidden aria-label="مراجعة إجابات الجولة">
       <div class="wc-review-header">
         <h2>📋 مراجعة إجابات الجولة <span id="wcReviewRoundLabel"></span></h2>
+        <p class="wc-review-submitted-count" id="wcReviewSubmittedCount"></p>
         <p class="wc-hint-small">اضغط "✅ قبول الكل" أو "❌ رفض الكل" لكل لاعب بسرعة، أو حدد كل إجابة يدوياً — الإجابة تُحسب نقطة بس لو مقبولة.</p>
       </div>
       <div class="wc-review-list" id="wcReviewList"></div>

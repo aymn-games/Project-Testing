@@ -161,6 +161,7 @@ h1, h2, .display{ font-family:'Cairo', sans-serif; }
 .wc-btn:hover{ filter:brightness(1.08); }
 .wc-btn:active{ transform: scale(0.98); }
 .wc-btn-primary{ background: linear-gradient(90deg, var(--wc-gold-2), var(--wc-gold)); color: var(--wc-black); }
+.wc-btn-secondary{ background: rgba(136,145,255,0.16); border:1px solid rgba(136,145,255,0.55); color: var(--wc-periwinkle); }
 .wc-btn-danger{ background: rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.6); color:#ffd9d9; }
 
 /* =========================================================
@@ -202,6 +203,7 @@ h1, h2, .display{ font-family:'Cairo', sans-serif; }
 .wc-review-header{ text-align:center; margin-bottom:18px; }
 .wc-review-header h2{ margin:0 0 4px; font-size:1.3rem; }
 .wc-review-header #wcReviewRoundLabel{ color: var(--wc-gold-2); font-weight:700; font-size:0.9rem; }
+.wc-review-submitted-count{ margin:6px 0; font-size:1.05rem; font-weight:800; color:#fff; }
 
 .wc-review-list{ display:flex; flex-direction:column; gap:12px; max-height:66vh; overflow-y:auto; padding-inline-end:4px; }
 .wc-review-row{

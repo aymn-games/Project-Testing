@@ -70,6 +70,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _roundNumber = 0;
     var _currentLetter = '';
     var _lastLetter = '';
+    var _usedLettersThisMatch = []; // كل الحروف اللي طلعت هالمباراة — يتجنّبها الاختيار العشوائي قدر الإمكان
     var _activeCategoriesThisRound = [];
     var _roundDurationSeconds = 45;
     var _timeRemaining = 0;
@@ -90,10 +91,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     CATEGORIES.forEach(function (c) { _selectedCategories[c.key] = true; });
 
     /* ============ عناصر الصفحة ============ */
-    var wcGameRoot, wcLayout, wcRoundVal, wcFormatHelpBtn, wcFormatHelpPanel, wcCategorySelector, wcLeaderboardList, wcStartBtn, wcEndTimerBtn,
+    var wcGameRoot, wcLayout, wcRoundVal, wcFormatHelpBtn, wcFormatHelpPanel, wcCategorySelector, wcLeaderboardList, wcStartBtn, wcSkipLetterBtn, wcEndTimerBtn,
         wcStageIdle, wcStageCollecting, wcLetterBadge, wcTimerBarFill, wcTimerVal,
         wcInstructionsHint, wcParticipantsCount,
-        wcReviewFullscreen, wcReviewRoundLabel, wcReviewList, wcReviewEmpty, wcConfirmBtn,
+        wcReviewFullscreen, wcReviewRoundLabel, wcReviewSubmittedCount, wcReviewList, wcReviewEmpty, wcConfirmBtn,
         wcToastWrap, wcLiveRegion, wcWinnerOverlay, wcWinnerAvatarWrap, wcWinnerName,
         wcWinnerScoreText, wcWinnerPointsText, wcLastPlaceCard, wcLastPlaceAvatarWrap, wcLastPlaceName,
         wcLastPlaceScoreText, wcWinnerHomeBtn, wcNewGameBtn, wcRematchBtn;
@@ -108,6 +109,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wcLeaderboardList = document.getElementById('wcLeaderboardList');
         wcStartBtn = document.getElementById('wcStartBtn');
         wcEndTimerBtn = document.getElementById('wcEndTimerBtn');
+        wcSkipLetterBtn = document.getElementById('wcSkipLetterBtn');
         wcStageIdle = document.getElementById('wcStageIdle');
         wcStageCollecting = document.getElementById('wcStageCollecting');
         wcLetterBadge = document.getElementById('wcLetterBadge');
@@ -117,6 +119,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wcParticipantsCount = document.getElementById('wcParticipantsCount');
         wcReviewFullscreen = document.getElementById('wcReviewFullscreen');
         wcReviewRoundLabel = document.getElementById('wcReviewRoundLabel');
+        wcReviewSubmittedCount = document.getElementById('wcReviewSubmittedCount');
         wcReviewList = document.getElementById('wcReviewList');
         wcReviewEmpty = document.getElementById('wcReviewEmpty');
         wcConfirmBtn = document.getElementById('wcConfirmBtn');
@@ -197,17 +200,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* ============ اختيار حرف عشوائي — يستبعد الحروف الصعبة دائماً
-       (سلوك تلقائي ثابت)، ويتجنّب تكرار نفس حرف الجولة السابقة. ============ */
+       (سلوك تلقائي ثابت)، ويتجنّب أي حرف طلع سابقاً بنفس المباراة (مو
+       بس آخر جولة) قدر الإمكان — لو كل الحروف المتاحة سبق استخدامها،
+       يرجع يسمح بالتكرار بدل ما يعلّق. ============ */
     function pickRandomLetter() {
-        var pool = LETTERS_ALL.filter(function (l) { return HARD_LETTERS.indexOf(l) === -1; });
-        if (pool.length === 0) pool = LETTERS_ALL.slice();
+        var basePool = LETTERS_ALL.filter(function (l) { return HARD_LETTERS.indexOf(l) === -1; });
+        if (basePool.length === 0) basePool = LETTERS_ALL.slice();
+
+        var freshPool = basePool.filter(function (l) { return _usedLettersThisMatch.indexOf(l) === -1; });
+        var pool = freshPool.length > 0 ? freshPool : basePool;
+
         var letter;
         var guard = 0;
         do {
             letter = pool[Math.floor(Math.random() * pool.length)];
             guard++;
         } while (pool.length > 1 && letter === _lastLetter && guard < 20);
+
         _lastLetter = letter;
+        _usedLettersThisMatch.push(letter);
         return letter;
     }
 
@@ -299,6 +310,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (wcStageCollecting) wcStageCollecting.hidden = stage !== 'collecting';
 
         if (wcStartBtn) wcStartBtn.hidden = stage === 'collecting';
+        if (wcSkipLetterBtn) wcSkipLetterBtn.hidden = stage !== 'collecting';
         if (wcEndTimerBtn) wcEndTimerBtn.hidden = stage !== 'collecting';
     }
 
@@ -337,6 +349,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         startTimer();
 
         if (wcLiveRegion) wcLiveRegion.textContent = 'جولة جديدة بدأت — الحرف ' + _currentLetter;
+    }
+
+    /* ⚠️ [إضافة بعد المراجعة] "تخطي الحرف" — لو الحرف تكرر أو المضيف
+       ما يبيه لأي سبب، يسحب حرف جديد فوراً ويصفّر المؤقّت والإجابات
+       المستلمة، بدون ما تُحسب هذي "جولة" (رقم الجولة يرجع لنفس قيمته
+       قبل السحب الجديد — ننقصه هنا ثم startRound() نفسها ترجع تزيده). */
+    function handleSkipLetter() {
+        if (_state !== 'collecting') return;
+        _roundNumber -= 1;
+        clearInterval(_timerInterval);
+        clearInterval(_letterFlickerInterval);
+        startRound();
+        showToast('🔁 تم تخطي الحرف — حرف جديد بدون احتساب جولة');
     }
 
     function playLetterRevealAnimation(finalLetter) {
@@ -469,6 +494,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _duplicateWeights = computeDuplicateWeights();
 
         if (wcReviewRoundLabel) wcReviewRoundLabel.textContent = '(الجولة ' + _roundNumber + ')';
+        if (wcReviewSubmittedCount) {
+            var totalRoster = AGP.gameManager.getPlayers().length;
+            wcReviewSubmittedCount.textContent = '📝 ' + _submissionOrder.length + ' من أصل ' + totalRoster + ' لاعب كتبوا إجابات هذي الجولة';
+        }
         setStage('reviewing');
         renderReviewList();
         if (wcLiveRegion) wcLiveRegion.textContent = 'انتهى وقت الجولة — راجع الإجابات واعتمد النتيجة';
@@ -695,6 +724,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _submissionOrder = [];
         _reviewState = {};
         _duplicateWeights = {};
+        _usedLettersThisMatch = [];
+        _lastLetter = '';
         _matchStartedAt = Date.now();
         closeWinnerModal();
         renderLeaderboard();
@@ -713,6 +744,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _submissionOrder = [];
         _reviewState = {};
         _duplicateWeights = {};
+        _usedLettersThisMatch = [];
+        _lastLetter = '';
         AGP.scoreManager.reset();
         CATEGORIES.forEach(function (c) { _selectedCategories[c.key] = true; });
 
@@ -1022,6 +1055,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderCategorySelector();
 
         if (wcStartBtn) wcStartBtn.addEventListener('click', startRound);
+        if (wcSkipLetterBtn) wcSkipLetterBtn.addEventListener('click', handleSkipLetter);
         if (wcEndTimerBtn) wcEndTimerBtn.addEventListener('click', function () {
             clearInterval(_timerInterval);
             endCollectingPhase();
