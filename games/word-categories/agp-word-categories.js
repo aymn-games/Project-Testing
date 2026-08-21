@@ -78,6 +78,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _submissions = {}; // playerId -> { player, categories: {key: text}, updatedAt }
     var _submissionOrder = []; // ترتيب ثابت لعرض المراجعة — نفس ترتيب وصول أول إجابة لكل لاعب
     var _reviewState = {}; // playerId -> { key: boolean } — الافتراضي false (غير مقبولة) لكل الخانات
+    var _duplicateWeights = {}; // playerId -> { key: 1 | 0.5 } — وزن كل إجابة حسب التكرار (راجع computeDuplicateWeights)
     var _commentUnsub = null;
     var _playerRemovedUnsub = null;
     var _matchActive = false;
@@ -89,7 +90,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     CATEGORIES.forEach(function (c) { _selectedCategories[c.key] = true; });
 
     /* ============ عناصر الصفحة ============ */
-    var wcGameRoot, wcLayout, wcRoundVal, wcCategorySelector, wcLeaderboardList, wcStartBtn, wcEndTimerBtn,
+    var wcGameRoot, wcLayout, wcRoundVal, wcFormatHelpBtn, wcFormatHelpPanel, wcCategorySelector, wcLeaderboardList, wcStartBtn, wcEndTimerBtn,
         wcStageIdle, wcStageCollecting, wcLetterBadge, wcTimerBarFill, wcTimerVal,
         wcInstructionsHint, wcParticipantsCount,
         wcReviewFullscreen, wcReviewRoundLabel, wcReviewList, wcReviewEmpty, wcConfirmBtn,
@@ -101,6 +102,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wcGameRoot = document.getElementById('wcGameRoot');
         wcLayout = document.getElementById('wcLayout');
         wcRoundVal = document.getElementById('wcRoundVal');
+        wcFormatHelpBtn = document.getElementById('wcFormatHelpBtn');
+        wcFormatHelpPanel = document.getElementById('wcFormatHelpPanel');
         wcCategorySelector = document.getElementById('wcCategorySelector');
         wcLeaderboardList = document.getElementById('wcLeaderboardList');
         wcStartBtn = document.getElementById('wcStartBtn');
@@ -208,7 +211,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return letter;
     }
 
-    /* ============ تفسير رسالة شات وارِدة إلى كائن {categoryKey: نص} ============ */
+    /* ============ تفسير رسالة شات وارِدة إلى كائن {categoryKey: نص} ============
+       ⚠️ [تحديث بعد المراجعة] الفواصل المقبولة بين الإجابات صارت: فاصلة
+       (، أو ,) أو شرطة (-) أو كلمة "و" لوحدها (لازم مسافة قبلها وبعدها
+       حتى ما تنقطع كلمة تبدأ فعلياً بحرف و مثل "وردة" أو "واحة"). لو ما
+       فيه أي فاصل صريح بالرسالة، يرجع يفصل بالمسافات العادية كالسابق. */
     function parseAnswerText(rawText, activeCats) {
         if (typeof rawText !== 'string') return null;
         var raw = rawText.trim();
@@ -220,7 +227,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return result;
         }
 
-        var parts = /[،,]/.test(raw) ? raw.split(/[،,]+/) : raw.split(/\s+/);
+        var SEPARATOR_RE = /\s*[،,\-]\s*|\s+و\s+/;
+        var hasExplicitSeparator = SEPARATOR_RE.test(raw);
+        var parts = hasExplicitSeparator ? raw.split(SEPARATOR_RE) : raw.split(/\s+/);
         parts = parts.map(function (p) { return p.trim(); }).filter(function (p) { return p.length > 0; });
 
         activeCats.forEach(function (cat, i) {
@@ -229,13 +238,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return result;
     }
 
+    /* تطبيع بسيط للمقارنة بين إجابتين (اكتشاف التكرار) — تريم + مسافات
+       داخلية مفردة + تحويل الأحرف اللاتينية لحروف صغيرة. لا يلمس الإجابة
+       الأصلية المعروضة، يُستخدَم فقط للمقارنة الداخلية. */
+    function normalizeAnswerForCompare(word) {
+        return String(word || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    }
+
     function renderInstructionsHint(activeCats) {
         if (!wcInstructionsHint) return;
         if (activeCats.length === 1) {
-            wcInstructionsHint.textContent = 'اكتبوا بالشات كلمة "' + activeCats[0].label + '" تبدأ بحرف "' + _currentLetter + '"';
+            wcInstructionsHint.textContent = 'اكتبوا بالشات: - ثم كلمة "' + activeCats[0].label + '" تبدأ بحرف "' + _currentLetter + '"';
         } else {
             var order = activeCats.map(function (c) { return c.label; }).join('، ');
-            wcInstructionsHint.textContent = 'اكتبوا بالشات إجاباتكم مفصولة بفاصلة، بهذا الترتيب: ' + order + ' — كلها تبدأ بحرف "' + _currentLetter + '"';
+            wcInstructionsHint.textContent = 'اكتبوا بالشات: - ثم إجاباتكم مفصولة بفاصلة أو شرطة أو كلمة "و"، بهذا الترتيب: ' + order + ' — كلها تبدأ بحرف "' + _currentLetter + '"';
         }
     }
 
@@ -254,7 +270,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var player = players.filter(function (p) { return p.id === row.playerId; })[0];
             return '<li><span class="wc-leaderboard-rank">' + (i + 1) + '</span>' +
                 '<span class="wc-leaderboard-name">' + escapeHtml(playerLabel(player) || row.playerId) + '</span>' +
-                '<span class="wc-leaderboard-score">' + row.score + '</span></li>';
+                '<span class="wc-leaderboard-score">' + formatScore(row.score) + '</span></li>';
         }).join('');
     }
 
@@ -311,6 +327,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _submissions = {};
         _submissionOrder = [];
         _reviewState = {};
+        _duplicateWeights = {};
 
         if (wcRoundVal) wcRoundVal.textContent = String(_roundNumber);
         renderInstructionsHint(activeCats);
@@ -374,16 +391,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     /* ==========================================================================
        الاستماع لتعليقات البث أثناء مرحلة الجمع فقط.
        ========================================================================== */
+    /* ⚠️ [تحديث بعد المراجعة] البث فيه كومنتات عامة كثيرة غير الإجابات
+       (دردشة، تفاعل...). حتى ما تُقرأ بالغلط كإجابة، صار يُعتمَد فقط
+       تعليق يبدأ فعلياً بعلامة "-" — أي شي غيره يُتجاهَل تماماً قبل أي
+       تحليل. العلامة تُقبل ملتصقة بأول كلمة ("-أحمد،...") أو بمسافة
+       بعدها ("- أحمد، ...") — الاثنين سوا. */
     function wireCommentListener() {
         if (typeof _commentUnsub === 'function') _commentUnsub();
         _commentUnsub = AGP.events.on('stream:commentReceived', function (payload) {
             if (_state !== 'collecting' || !payload || typeof payload.text !== 'string') return;
 
+            var trimmedRaw = payload.text.trim();
+            if (trimmedRaw.charAt(0) !== '-') return; // مو رسالة إجابة — تعليق عادي، يُتجاهَل
+            var answerText = trimmedRaw.slice(1).trim();
+            if (!answerText) return;
+
             var roster = AGP.gameManager.getPlayers();
             var player = roster.filter(function (p) { return p.id === payload.id; })[0];
             if (!player) return;
 
-            var parsed = parseAnswerText(payload.text, _activeCategoriesThisRound);
+            var parsed = parseAnswerText(answerText, _activeCategoriesThisRound);
             if (!parsed) return;
             var hasAny = Object.keys(parsed).some(function (k) { return parsed[k]; });
             if (!hasAny) return;
@@ -399,6 +426,36 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
        صار "غير مقبولة" لكل خانة (بدل القبول التلقائي سابقاً) — المضيف يقبل
        يدوياً كل إجابة أو يستخدم "قبول الكل"/"رفض الكل" لكل صف.
        ========================================================================== */
+    /* ⚠️ [إضافة بعد المراجعة] إجابة مكرّرة (نفس الكلمة بالضبط بنفس الفئة،
+       بعد تطبيع بسيط) بين أكثر من لاعب: أول لاعب كتبها (حسب ترتيب وصول
+       أول رسالة له بالجولة) تحسب له نقطة كاملة لو قُبلت، وأي لاعب بعده
+       كتب نفس الكلمة بالضبط تحسب له نص نقطة بس لو قُبلت. */
+    function computeDuplicateWeights() {
+        var weights = {}; // playerId -> { categoryKey: 1 | 0.5 }
+        _submissionOrder.forEach(function (playerId) { weights[playerId] = {}; });
+
+        _activeCategoriesThisRound.forEach(function (cat) {
+            var seenNormalized = {}; // normalizedWord -> true (أول ظهور شفناه)
+            _submissionOrder.forEach(function (playerId) {
+                var entry = _submissions[playerId];
+                var word = entry && entry.categories[cat.key];
+                if (!word) return;
+                var norm = normalizeAnswerForCompare(word);
+                if (seenNormalized[norm]) {
+                    weights[playerId][cat.key] = 0.5;
+                } else {
+                    seenNormalized[norm] = true;
+                    weights[playerId][cat.key] = 1;
+                }
+            });
+        });
+        return weights;
+    }
+
+    function formatScore(n) {
+        return (Math.round(n * 10) / 10).toString().replace(/\.0$/, '');
+    }
+
     function endCollectingPhase() {
         clearInterval(_timerInterval);
         clearInterval(_letterFlickerInterval);
@@ -409,6 +466,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 _reviewState[playerId][cat.key] = false;
             });
         });
+        _duplicateWeights = computeDuplicateWeights();
 
         if (wcReviewRoundLabel) wcReviewRoundLabel.textContent = '(الجولة ' + _roundNumber + ')';
         setStage('reviewing');
@@ -419,7 +477,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function roundScoreFor(playerId) {
         var review = _reviewState[playerId];
         if (!review) return 0;
-        return _activeCategoriesThisRound.reduce(function (sum, cat) { return sum + (review[cat.key] ? 1 : 0); }, 0);
+        var weights = _duplicateWeights[playerId] || {};
+        return _activeCategoriesThisRound.reduce(function (sum, cat) {
+            if (!review[cat.key]) return sum;
+            return sum + (weights[cat.key] || 1);
+        }, 0);
     }
 
     function renderReviewList() {
@@ -433,16 +495,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wcReviewList.innerHTML = _submissionOrder.map(function (playerId) {
             var entry = _submissions[playerId];
             var review = _reviewState[playerId] || {};
+            var weights = _duplicateWeights[playerId] || {};
             var cardHtml = AGP.playerCard ? AGP.playerCard.renderHtml(entry.player, {}) :
                 '<span class="wc-fallback-name">' + escapeHtml(playerLabel(entry.player)) + '</span>';
 
             var cellsHtml = _activeCategoriesThisRound.map(function (cat) {
                 var word = entry.categories[cat.key] || '';
                 var accepted = Boolean(review[cat.key]);
+                var isHalf = word && weights[cat.key] === 0.5;
                 var emptyClass = word ? '' : ' wc-review-cell-empty';
                 var acceptedClass = accepted ? ' wc-review-cell-accepted' : '';
                 return '<div class="wc-review-cell' + emptyClass + acceptedClass + '">' +
-                    '<span class="wc-review-cell-label">' + cat.emoji + ' ' + cat.label + '</span>' +
+                    '<span class="wc-review-cell-label">' + cat.emoji + ' ' + cat.label + (isHalf ? ' <span class="wc-review-cell-half" title="إجابة مكرّرة — نص نقطة بس">½</span>' : '') + '</span>' +
                     '<span class="wc-review-cell-word">' + (word ? escapeHtml(word) : 'لا يوجد') + '</span>' +
                     (word ? '<button type="button" class="wc-review-toggle-btn" data-player-id="' + escapeHtml(playerId) + '" data-cat-key="' + cat.key + '" title="' + (accepted ? 'مقبولة — اضغط للإلغاء' : 'اضغط للقبول') + '">' + (accepted ? '✅' : '☐') + '</button>' : '') +
                     '</div>';
@@ -455,7 +519,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<button type="button" class="wc-row-action-btn wc-row-accept-all" data-player-id="' + escapeHtml(playerId) + '">✅ قبول الكل</button>' +
                 '<button type="button" class="wc-row-action-btn wc-row-reject-all" data-player-id="' + escapeHtml(playerId) + '">❌ رفض الكل</button>' +
                 '</div>' +
-                '<div class="wc-review-row-score">' + roundScoreFor(playerId) + ' نقطة</div>' +
+                '<div class="wc-review-row-score">' + formatScore(roundScoreFor(playerId)) + ' نقطة</div>' +
                 '</div>';
         }).join('');
 
@@ -584,7 +648,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function openWinnerModal(champion, winnerRow, lastPlacePlayer, lastPlaceRow, pointsResult) {
         if (wcWinnerName) wcWinnerName.textContent = playerLabel(champion);
         if (wcWinnerAvatarWrap) wcWinnerAvatarWrap.innerHTML = AGP.playerCard ? AGP.playerCard.renderHtml(champion, {}) : '';
-        if (wcWinnerScoreText) wcWinnerScoreText.textContent = '🏆 ' + winnerRow.score + ' نقطة بعد ' + _roundNumber + ' جولة';
+        if (wcWinnerScoreText) wcWinnerScoreText.textContent = '🏆 ' + formatScore(winnerRow.score) + ' نقطة بعد ' + _roundNumber + ' جولة';
 
         if (wcWinnerPointsText) {
             wcWinnerPointsText.className = 'wc-winner-points-text';
@@ -604,7 +668,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 wcLastPlaceCard.hidden = false;
                 if (wcLastPlaceAvatarWrap) wcLastPlaceAvatarWrap.innerHTML = AGP.playerCard ? AGP.playerCard.renderHtml(lastPlacePlayer, {}) : '';
                 if (wcLastPlaceName) wcLastPlaceName.textContent = playerLabel(lastPlacePlayer);
-                if (wcLastPlaceScoreText) wcLastPlaceScoreText.textContent = lastPlaceRow.score + ' نقطة بس 😅';
+                if (wcLastPlaceScoreText) wcLastPlaceScoreText.textContent = formatScore(lastPlaceRow.score) + ' نقطة بس 😅';
             } else {
                 wcLastPlaceCard.hidden = true;
             }
@@ -630,6 +694,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _submissions = {};
         _submissionOrder = [];
         _reviewState = {};
+        _duplicateWeights = {};
         _matchStartedAt = Date.now();
         closeWinnerModal();
         renderLeaderboard();
@@ -647,6 +712,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _submissions = {};
         _submissionOrder = [];
         _reviewState = {};
+        _duplicateWeights = {};
         AGP.scoreManager.reset();
         CATEGORIES.forEach(function (c) { _selectedCategories[c.key] = true; });
 
@@ -775,41 +841,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    function markWideLobbyCards(box, list) {
-        var items = list.querySelectorAll('li');
-        if (items.length === 0) return 0;
-
-        var availableWidth = list.clientWidth || box.clientWidth || 1400;
-        var GRID_GAP = 10, BUFFER = 8, COLUMNS = 3;
-        var columnWidth = (availableWidth - GRID_GAP * (COLUMNS - 1)) / COLUMNS;
-
-        var pillMaxRef = parseFloat(box.style.getPropertyValue('--wc-lobby-pill-maxw')) || 260;
-        var pillMinRef = parseFloat(box.style.getPropertyValue('--wc-lobby-pill-minw')) || 110;
-        var avatarRef = parseFloat(box.style.getPropertyValue('--wc-lobby-avatar-size')) || 50;
-
-        var totalSlots = 0;
-        for (var i = 0; i < items.length; i++) {
-            var li = items[i];
-            var wide = false;
-            var nameEl = li.querySelector('.agp-pcard-name-basic');
-            if (nameEl) {
-                var textW = nameEl.scrollWidth;
-                if (textW > pillMaxRef) textW = pillMaxRef;
-                var cardW = avatarRef + Math.max(pillMinRef, textW);
-                wide = (cardW + BUFFER) > columnWidth;
-            } else {
-                var tpl = li.querySelector('.agp-pcard-tpl');
-                if (tpl) {
-                    var tplW = tpl.getBoundingClientRect().width || 0;
-                    wide = (tplW + BUFFER) > columnWidth;
-                }
-            }
-            li.classList.toggle('wc-lobby-card-wide', wide);
-            totalSlots += wide ? 2 : 1;
-        }
-        return totalSlots;
-    }
-
+    /* ⚠️ [إعادة تصميم بعد المراجعة] الإصدار السابق كان يقيس عرض كل اسم
+       فعلياً (scrollWidth) ليقرر لو البطاقة "عريضة" (تاخذ عمودين) أو
+       عادية، ضمن شبكة 3 أعمدة تتمدد لتملأ عرض الصندوق. طلب صريح لاحق:
+       كل البطاقات (اسم قصير أو طويل) تاخذ نفس المقاس الثابت (مقاس أوسع
+       بطاقة كانت تُحسب "عريضة" سابقاً)، والبطاقات ما تتمدد لتملأ كل
+       عرض اللوبي — فقط مسافة 1 سنتيمتر فعلية بينها (gap:1cm بCSS مباشرة،
+       يبقى ثابت دائماً). هذا ألغى الحاجة لقياس كل اسم على حدة بالكامل.
+       يبقى فقط: لو عدد اللاعبين كبير جداً ولا يتسع رأسياً بالصندوق
+       الثابت (900px)، الأفاتار/البطاقة/الخط يصغرون سوا بنفس النسبة
+       (المسافة 1cm نفسها ثابتة، ما تصغر) — نفس فكرة النقطة 8 بالبروبمت
+       الأصلي، بس بدون تعقيد قياس العرض لكل اسم. */
     function applyDynamicLobbyCardScale() {
         var box = document.getElementById('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
@@ -818,29 +860,36 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var n = list.querySelectorAll('li').length;
         if (n === 0) return;
 
-        var totalSlots = markWideLobbyCards(box, list);
-
-        var BASE_ROW = 64, BASE_GAP = 10, BASE_AVATAR = 50, BASE_PILL_H = 40,
-            BASE_FONT = 18, BASE_PILL_MINW = 110, BASE_PILL_MAXW = 260, BASE_ZOOM = 0.77;
+        var BASE_AVATAR = 50, BASE_PILL_W = 260, BASE_PILL_H = 50, BASE_FONT = 18, BASE_ZOOM = 0.77;
+        var GAP_PX = 37.8; // 1cm — يُستخدَم هنا فقط لحساب كم بطاقة تتسع بالصف، القيمة الفعلية بالـCSS ثابتة "1cm" دائماً
         var MIN_SCALE = 0.55;
 
-        var rows = Math.ceil(totalSlots / 3);
-        var available = list.clientHeight || 620;
-        var neededFull = rows * BASE_ROW + Math.max(0, rows - 1) * BASE_GAP;
+        var availableWidth = list.clientWidth || box.clientWidth || 832;
+        var availableHeight = list.clientHeight || 620;
+
+        function cardsPerRow(scale) {
+            var cardW = Math.round(BASE_AVATAR * scale) + Math.round(BASE_PILL_W * scale);
+            return Math.max(1, Math.floor((availableWidth + GAP_PX) / (cardW + GAP_PX)));
+        }
+        function neededHeight(scale) {
+            var perRow = cardsPerRow(scale);
+            var rows = Math.ceil(n / perRow);
+            var rowH = Math.round(BASE_PILL_H * scale);
+            return rows * rowH + Math.max(0, rows - 1) * GAP_PX;
+        }
 
         var scale = 1;
-        if (neededFull > available && rows > 0) {
-            scale = available / neededFull;
-            if (scale < MIN_SCALE) scale = MIN_SCALE;
+        if (neededHeight(1) > availableHeight) {
+            scale = MIN_SCALE;
+            for (var s = 1; s >= MIN_SCALE; s -= 0.02) {
+                if (neededHeight(s) <= availableHeight) { scale = s; break; }
+            }
         }
 
         box.style.setProperty('--wc-lobby-avatar-size', Math.round(BASE_AVATAR * scale) + 'px');
+        box.style.setProperty('--wc-lobby-pill-width', Math.round(BASE_PILL_W * scale) + 'px');
         box.style.setProperty('--wc-lobby-pill-height', Math.round(BASE_PILL_H * scale) + 'px');
-        box.style.setProperty('--wc-lobby-font-size', Math.max(14, Math.round(BASE_FONT * scale)) + 'px');
-        box.style.setProperty('--wc-lobby-pill-minw', Math.round(BASE_PILL_MINW * scale) + 'px');
-        box.style.setProperty('--wc-lobby-pill-maxw', Math.round(BASE_PILL_MAXW * scale) + 'px');
-        box.style.setProperty('--wc-lobby-grid-gap', Math.max(4, Math.round(BASE_GAP * scale)) + 'px');
-        box.style.setProperty('--wc-lobby-row-min-height', Math.round(BASE_ROW * scale) + 'px');
+        box.style.setProperty('--wc-lobby-font-size', Math.max(13, Math.round(BASE_FONT * scale)) + 'px');
         box.style.setProperty('--wc-lobby-frame-zoom', (BASE_ZOOM * scale).toFixed(3));
     }
 
@@ -925,6 +974,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 _submissions = {};
                 _submissionOrder = [];
                 _reviewState = {};
+                _duplicateWeights = {};
                 clearInterval(_timerInterval);
                 clearInterval(_letterFlickerInterval);
                 if (typeof _commentUnsub === 'function') { _commentUnsub(); _commentUnsub = null; }
@@ -977,6 +1027,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             endCollectingPhase();
         });
         if (wcConfirmBtn) wcConfirmBtn.addEventListener('click', confirmRoundResults);
+        if (wcFormatHelpBtn) wcFormatHelpBtn.addEventListener('click', function () {
+            if (!wcFormatHelpPanel) return;
+            wcFormatHelpPanel.hidden = !wcFormatHelpPanel.hidden;
+            wcFormatHelpBtn.classList.toggle('active', !wcFormatHelpPanel.hidden);
+        });
         if (wcNewGameBtn) wcNewGameBtn.addEventListener('click', newGame);
         if (wcRematchBtn) wcRematchBtn.addEventListener('click', rematchRound);
         if (wcWinnerHomeBtn) wcWinnerHomeBtn.addEventListener('click', function () {

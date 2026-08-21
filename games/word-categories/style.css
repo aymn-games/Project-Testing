@@ -88,6 +88,22 @@ h1, h2, .display{ font-family:'Cairo', sans-serif; }
 .wc-round-badge-label{ font-size:0.72rem; opacity:0.85; }
 .wc-round-badge strong{ font-size:1.5rem; line-height:1; font-family:'Zain', sans-serif; }
 
+/* ---------- زر "طريقة كتابة الإجابة" — منفصل عن زر شرح اللعبة العام ---------- */
+.wc-format-help-wrap{ max-width:1320px; margin: 0 auto 18px; display:flex; justify-content:center; }
+.wc-format-help-btn{
+  background: rgba(242,184,75,0.14); border:1px solid rgba(242,184,75,0.55); color: var(--wc-gold-2);
+  border-radius:999px; padding:8px 18px; font-family:'Tajawal', sans-serif; font-weight:800; font-size:0.85rem;
+  cursor:pointer; transition: background .15s ease;
+}
+.wc-format-help-btn:hover, .wc-format-help-btn.active{ background: rgba(242,184,75,0.26); }
+.wc-format-help-panel{
+  max-width:640px; margin: 10px auto 0; padding:14px 20px; text-align:center;
+  background: var(--wc-panel-2); border:1px solid rgba(242,184,75,0.4); border-radius: var(--wc-radius-md);
+  font-size:0.85rem; line-height:1.8; color: var(--wc-text);
+}
+.wc-format-help-panel p{ margin:4px 0; }
+.wc-format-help-example{ color: var(--wc-gold-2); font-weight:700; }
+
 /* =========================================================
    LAYOUT (وضع عادي — لوحة تحكم + مسرح الجولة)
    ========================================================= */
@@ -176,7 +192,7 @@ h1, h2, .display{ font-family:'Cairo', sans-serif; }
 .wc-timer-val{ font-family:'Zain', sans-serif; font-size:2rem; color:#fff; min-width:86px; text-align:center; }
 
 .wc-instructions-hint{ font-size:1.05rem; font-weight:700; color: var(--wc-gold-2); margin: 0 0 8px; line-height:1.7; max-width:560px; }
-.wc-participants-count{ font-size:0.92rem; color: var(--wc-text-dim); }
+.wc-participants-count{ font-size:1.4rem; font-weight:800; color:#fff; }
 
 /* =========================================================
    مراجعة الإجابات — شاشة كاملة مستقلة (طلب صريح)، تحل محل .wc-layout
@@ -200,6 +216,11 @@ h1, h2, .display{ font-family:'Cairo', sans-serif; }
   padding: 8px 14px 10px; min-width: 100px;
 }
 .wc-review-cell-label{ font-size:0.7rem; color: var(--wc-text-dim); }
+.wc-review-cell-half{
+  display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px;
+  border-radius:50%; background: var(--wc-gold); color: var(--wc-black); font-size:0.62rem; font-weight:900;
+  vertical-align:middle; margin-inline-start:2px;
+}
 .wc-review-cell-word{ font-size:0.95rem; font-weight:800; color:#fff; }
 .wc-review-cell-empty{ opacity:0.6; }
 .wc-review-cell-empty .wc-review-cell-word{ color: var(--wc-text-dim); font-weight:600; }
@@ -382,20 +403,17 @@ body.agp-shell-active{
 #agp-shell-box.agp-lobby-box > *{ position: relative; z-index: 1; }
 
 #agp-shell-box.agp-lobby-box .agp-shell-player-list{
-  display: grid !important;
-  grid-template-columns: repeat(3, 1fr) !important;
-  grid-auto-flow: dense !important;
-  gap: var(--wc-lobby-grid-gap, 10px) !important;
-  align-items: center !important;
-  justify-items: center !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  align-content: flex-start !important;
+  gap: 1cm !important;
   margin-top: 34px !important;
 }
 #agp-shell-box.agp-lobby-box .agp-shell-player-list li{
   position: relative !important; display: flex !important; align-items: center !important; justify-content: center !important;
-  flex: 0 0 auto !important; min-width: 0 !important; padding: 4px !important;
-  min-height: var(--wc-lobby-row-min-height, 64px) !important; box-sizing: border-box !important;
+  flex: 0 0 auto !important; padding: 0 !important; box-sizing: border-box !important;
 }
-#agp-shell-box.agp-lobby-box .agp-shell-player-list li.wc-lobby-card-wide{ grid-column: span 2 !important; }
 
 #agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard{
   background: none !important; border: none !important; padding: 0 !important; border-radius: 0 !important;
@@ -407,8 +425,12 @@ body.agp-shell-active{
 #agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-avatar-basic--fallback{ font-size: 1.6em !important; }
 #agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-name-basic{
   display: flex !important; align-items: center !important; justify-content: center !important;
-  min-width: var(--wc-lobby-pill-minw, 110px) !important; max-width: var(--wc-lobby-pill-maxw, 260px) !important;
-  height: var(--wc-lobby-pill-height, 40px) !important; box-sizing: border-box !important; padding: 0 20px !important;
+  /* ⚠️ [طلب صريح بعد المراجعة] عرض ثابت واحد لكل البطاقات (بدل مدى
+     min/max يتقلّص حسب طول الاسم) — نفس مقاس بطاقة "لانا الملكة الجميلة"
+     المعتمد، للأسماء القصيرة والطويلة على حدٍ سواء. الاسم الطويل جداً
+     لسا يُقصّ بـ"..." لو تعدّى العرض. */
+  width: var(--wc-lobby-pill-width, 260px) !important;
+  height: var(--wc-lobby-pill-height, 50px) !important; box-sizing: border-box !important; padding: 0 20px !important;
   font-size: var(--wc-lobby-font-size, 18px) !important; font-weight: 800 !important;
   background: rgba(255,255,255,0.14) !important; border: 1px solid rgba(255,255,255,0.32) !important;
   border-radius: 999px !important; white-space: nowrap !important; overflow: hidden !important;
