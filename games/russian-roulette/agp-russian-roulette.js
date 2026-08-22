@@ -738,16 +738,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // ⚠️ العجلة تدور مع عقارب الساعة، المؤشّر ثابت بالأعلى (0deg) —
         // ندور بحيث تنتهي الشريحة المطلوبة تحت المؤشّر تماماً، + لفّات
         // كاملة إضافية للتشويق.
-        // ⚠️ [إصلاح خلل حقيقي] كنّا نخزّن _wheelRotation بعد تصفيرها
-        // (% 360) بينما الـDOM لسا عارض الرقم الكامل غير المُصفَّر — يعني
-        // الدورة الجاية كانت تُحسَب من نقطة بداية أصغر بكثير من الوضع
-        // الفعلي المعروض، فأحياناً يطلع الفرق (وبالتالي الدوران المرئي)
-        // صغير جداً بدل دورة كاملة قوية. الحل: يبقى _wheelRotation الرقم
-        // الكامل المتراكم دائماً (يتطابق مع transform الفعلي بالـDOM)،
-        // بدون أي تصفير — قيمه الكبيرة بعد مباراة طويلة غير مشكلة إطلاقاً
-        // بالنسبة لـCSS rotate().
+        //
+        // ⚠️ [إصلاح خلل حقيقي وأخطر] الصيغة القديمة كانت تحسب دوران هذي
+        // الدورة بافتراض أن العجلة تبدأ من "صفر متبقٍّ" (زي أول دورة
+        // بالضبط)، بينما فعلياً كل دورة تنتهي عند "باقي" (residual) مختلف
+        // = زاوية منتصف شريحة الفائز السابق (منطقي تماماً — هو محسوب
+        // عشان يوصل بالضبط تحت المؤشّر). فكل دورة ثانية وما بعدها كانت
+        // تُضيف الإزاحة المطلوبة للفائز الجديد **فوق** باقٍ خاطئ (باقي
+        // الدورة السابقة، لا صفر)، فتنتهي العجلة فعلياً على شريحة مختلفة
+        // تماماً عن الفهرس (index) اللي فعلياً فتح تبويب الاختيار — بالضبط
+        // الخلل اللي رصدته (تتوقف بصرياً عند شخص، ويطلع بالتبويب شخص
+        // ثاني). الحل الصحيح رياضياً: نحسب "الباقي الحالي" الفعلي
+        // (_wheelRotation % 360) ونشتق منه فقط مقدار الدوران الإضافي
+        // المطلوب فعلياً للوصول للباقي الجديد المطلوب، بدل افتراض بداية
+        // من صفر كل مرة.
+        var requiredResidual = ((360 - targetMid) % 360 + 360) % 360;
+        var currentResidual = ((_wheelRotation % 360) + 360) % 360;
+        var deltaForward = ((requiredResidual - currentResidual) % 360 + 360) % 360;
         var spins = 5 + Math.floor(Math.random() * 3);
-        var finalRotation = _wheelRotation + spins * 360 + (360 - targetMid);
+        var finalRotation = _wheelRotation + spins * 360 + deltaForward;
         _wheelRotation = finalRotation;
 
         var durationMs = wheelSpinDurationMs();
@@ -1198,6 +1207,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * ==================================================================== */
     function buildSettingsFields() {
         return [
+            { key: 'maxPlayers', type: 'counter', label: '👥 الحد الأقصى لعدد اللاعبين بالمباراة', min: 1, default: 30 },
             {
                 key: 'followersOnly', type: 'pill-choice', label: 'من المسموح له بالدخول؟',
                 options: [{ label: 'الجميع', value: false }, { label: 'المتابعين فقط', value: true }], default: false
@@ -1213,6 +1223,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 ], default: 'eliminate_chooser'
             }
         ];
+    }
+
+    // ⚠️ نفس نمط بقية ألعاب المنصة: يستخدم AGP.lobby.close() +
+    // keywordManager.deactivate() صراحة (checkKeyword() الحقيقية لا تتحقق
+    // من AGP.lobby وحدها). عرض "الحالي/الحد الأقصى" باللوبي يظهر تلقائياً
+    // من الملف المشترك بمجرد وجود إعداد باسم maxPlayers (playerCountBadgeHtml).
+    function enforceMaxPlayers() {
+        var settings = AGP.gameShell.getSettings();
+        var max = settings.maxPlayers;
+        if (!max) return;
+        if (AGP.gameManager.getPlayersCount() >= max) {
+            AGP.lobby.close();
+            if (AGP.keywordManager && typeof AGP.keywordManager.deactivate === 'function') {
+                AGP.keywordManager.deactivate();
+            }
+        }
     }
 
     function handleStartRound(settingsValues) {
@@ -1396,7 +1422,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             name: GAME_NAME,
             category: 'elimination-games',
             onLoad: function () { AGP.log('Russian Roulette: onLoad.'); },
-            onPlayerJoin: function () {},
+            onPlayerJoin: function () { enforceMaxPlayers(); },
             onRoundEnd: function () { AGP.log('Russian Roulette: onRoundEnd.'); },
             onDestroy: function () { resetMatchState(); AGP.log('Russian Roulette: onDestroy.'); }
         });
