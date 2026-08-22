@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>روليت الروسي — ألعاب أيمن</title>
+<!--
+    صفحة أصلية (Native) للعبة "روليت الروسي" — نفس نمط بقية ألعاب المنصة
+    الأصلية (راجع games/elimination-roulette، games/word-categories):
+    لا تعتمد على أي موقع خارجي ولا على جسر postMessage
+    (js/agp-game-bridge.js). تحمّل AGP Core كاملاً بنفس ترتيب الصفحة
+    الرئيسية، ثم js/agp-player-card.js، ثم js/agp-game-shell.js (شاشة
+    الإعدادات + الاتصال بتيك توك + اللوبي — ملف عام مشترك، غير مُعدَّل
+    هنا إطلاقاً)، ثم ملف اللعبة الخاص بها (agp-russian-roulette.js). لا
+    تسجيل دخول مطلوب بهذه الصفحة تحديداً — بوابة الدخول (تسجيل الدخول +
+    موافقة الأدمن) تحدث فعلياً بالصفحة الرئيسية قبل ما يوصل الزائر لرابط
+    "العب الآن" أصلاً (نفس آلية بقية الألعاب).
+
+    ميكانيكية اللعبة: مسدس بساقية سداسية (6 غرف)، عدد الطلقات المحشوّة
+    قابل للتحديد من الإعدادات (1–6)، تُخلَط الغرف عشوائياً مرة واحدة لكل
+    "حشوة"، ثم يسحب كل لاعب الزناد بدوره بالتتابع بدون إعادة خلط بينهم
+    (نفس منطق الروليت الروسي الحقيقي) — كل غرفة تُكشَف مرة واحدة فقط قبل
+    ما تُعاد الحشوة تلقائياً بعد استهلاك الغرف الست. الاحتمال المعروض قبل
+    كل سحبة محسوب فعلياً من عدد الطلقات المتبقية ÷ عدد الغرف غير
+    المكشوفة المتبقية (احتمال شرطي حقيقي، يتغيّر مع كل سحبة — وليس نسبة
+    ثابتة 1/6 مكرَّرة).
+-->
+</head>
+<body>
+
+<script src="../../js/agp-core.js"></script>
+<script src="../../js/agp-events.js"></script>
+<script src="../../js/agp-timer-manager.js"></script>
+<script src="../../js/agp-storage-manager.js"></script>
+<script src="../../js/agp-services.js"></script>
+<script src="../../js/agp-stream-connector.js"></script>
+<script src="../../adapters/agp-tiktok-adapter.js"></script>
+<script src="../../js/agp-registry.js"></script>
+<script src="../../js/agp-session.js"></script>
+<script src="../../js/agp-rooms-manager.js"></script>
+<script src="../../js/agp-player-manager.js"></script>
+<script src="../../js/agp-player-source.js"></script>
+<script src="../../js/agp-keyword-manager.js"></script>
+<script src="../../js/agp-queue-manager.js"></script>
+<script src="../../js/agp-score-manager.js"></script>
+<script src="../../js/agp-lobby.js"></script>
+<script src="../../js/agp-game-api.js"></script>
+<script src="../../js/agp-game-engine.js"></script>
+<script src="../../js/agp-game-manager.js"></script>
+<script src="../../js/agp-game-bridge.js"></script>
+<script src="../../js/agp-round-manager.js"></script>
+<script src="../../js/agp-bootstrap.js"></script>
+
+<!-- طبقة الحسابات/النقاط — مستقلة عن AGP.*، تُستخدم فقط لتقرير نقاط نهاية المباراة -->
+<script src="../../auth/auth-client.js"></script>
+
+<!-- بطاقة اللاعب المشتركة (صورة + اسم [+ إطار باللوبي]) — تُحمَّل قبل
+     agp-game-shell.js وملف اللعبة لأن كليهما يستخدمانها اختيارياً -->
+<script src="../../js/agp-player-card.js"></script>
+
+<!-- أنيميشن "الدخولية" (لاعب له دخولية مفعَّلة من لوحة الأدمن) -->
+<script src="../../js/agp-entrance.js"></script>
+
+<!-- شاشة الإعدادات + الاتصال بتيك توك + اللوبي (عام، موجود مسبقاً) -->
+<script src="../../js/agp-game-shell.js"></script>
+
+<!-- منطق لعبة روليت الروسي نفسها -->
+<script src="agp-russian-roulette.js"></script>
+
+</body>
+</html>
