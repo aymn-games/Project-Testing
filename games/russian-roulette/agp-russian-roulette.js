@@ -511,7 +511,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#rr-home-btn{background:transparent;color:#f2e6cf;border:1px solid var(--rr-gold);}',
             '.rr-confetti-piece{position:absolute;top:50%;left:50%;width:8px;height:8px;border-radius:2px;',
             'animation:rr-confetti-fly 1.6s ease-out forwards;}',
-            '@keyframes rr-confetti-fly{to{transform:translate(var(--dx),var(--dy)) rotate(540deg);opacity:0;}}'
+            '@keyframes rr-confetti-fly{to{transform:translate(var(--dx),var(--dy)) rotate(540deg);opacity:0;}}',
+
+            /* ---- شاشة "جاري الاتصال بالبث" — تخصيص محلي لروليت الروسي ----
+             * الشل المشترك يرسم هذي الشاشة بتصميمه الفاتح الافتراضي
+             * (بنفسجي/أبيض) لكل الألعاب. هنا override محلي بس (!important)
+             * يطبّق ثيم بني/أسود/ذهبي + سبينر دوّار CSS بسيط، بدون أي لمس
+             * لملف الشل المشترك نفسه ولا تأثير على أي لعبة ثانية.
+             * حالة الخطأ (تعذّر الاتصال) تبقى نصها الحقيقي كامل — بس
+             * بمظهر تحذيري (أحمر) بدل السبينر. */
+            '#agp-shell-box.agp-connecting-box{width:min(420px,94vw) !important;',
+            'background:linear-gradient(180deg,' + BG_BROWN + ',#000) !important;',
+            'border:2px solid var(--rr-gold) !important;text-align:center !important;',
+            'padding:38px 28px !important;}',
+            '#agp-shell-box.agp-connecting-box h2{color:var(--rr-gold) !important;font-size:1.15em !important;',
+            'margin:0 0 8px !important;}',
+            '#agp-shell-box.agp-connecting-box .agp-shell-status{color:#e8d9b8 !important;font-size:0.9em !important;}',
+            '.rr-conn-spinner{width:52px;height:52px;margin:0 auto 18px;border-radius:50%;',
+            'border:4px solid rgba(242,230,207,0.18);border-top-color:var(--rr-gold);',
+            'animation:rr-conn-spin 0.9s linear infinite;}',
+            '@keyframes rr-conn-spin{to{transform:rotate(360deg);}}',
+            '.rr-conn-error-icon{width:52px;height:52px;margin:0 auto 18px;border-radius:50%;',
+            'background:rgba(220,38,38,0.16);border:2px solid #ef4444;color:#ef4444;font-size:1.6em;',
+            'display:flex;align-items:center;justify-content:center;}',
+            '#agp-shell-box.agp-connecting-box.rr-conn-error{border-color:#ef4444 !important;}',
+            '#agp-shell-box.agp-connecting-box.rr-conn-error h2{color:#ef4444 !important;}'
         ].join('');
         document.head.appendChild(style);
     }
@@ -1397,11 +1421,47 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
     }
 
+    // ⚠️ [override محلي] شاشة "جاري الاتصال بالبث" — الشل المشترك يرسمها
+    // بمظهره الافتراضي (h2 + p.agp-shell-status بس، بدون أي سبينر). هنا
+    // نضيف عنصر سبينر دوّار (أو أيقونة تحذير لو خطأ) بدون تعديل الشل نفسه.
+    function enhanceConnectingScreen() {
+        var box = el('agp-shell-box');
+        if (!box || !box.classList.contains('agp-connecting-box')) return;
+        var statusEl = box.querySelector('.agp-shell-status');
+        var isError = Boolean(statusEl && statusEl.textContent.indexOf('تعذّر') !== -1);
+
+        var existingIcon = box.querySelector('.rr-conn-spinner, .rr-conn-error-icon');
+        var existingIsError = existingIcon && existingIcon.classList.contains('rr-conn-error-icon');
+
+        // لو الأيقونة الصحيحة موجودة أصلاً (نفس الحالة)، ما نسوي شي — يمنع
+        // إعادة الإدراج بكل مرة يشتغل فيها MutationObserver (كان بيسبب حلقة
+        // لا نهائية: إدراج ← mutation ← إعادة تشغيل applyShellEnhancements).
+        if (existingIcon && existingIsError === isError) return;
+
+        if (existingIcon) existingIcon.remove();
+        box.classList.toggle('rr-conn-error', isError);
+
+        var h2 = box.querySelector('h2');
+        if (!h2) return;
+
+        var icon = document.createElement('div');
+        if (isError) {
+            icon.className = 'rr-conn-error-icon';
+            icon.textContent = '⚠️';
+        } else {
+            icon.className = 'rr-conn-spinner';
+            h2.textContent = 'جاري الاتصال بالبث';
+            if (statusEl) statusEl.textContent = 'انتظر قليلاً...';
+        }
+        box.insertBefore(icon, h2);
+    }
+
     function applyShellEnhancements() {
         enhanceSettingsScreen();
         enhanceLobbyScreen();
         enhanceReopenedSettings();
         enhanceMiniLobby();
+        enhanceConnectingScreen();
     }
 
     function wireSharedShellEnhancements() {
