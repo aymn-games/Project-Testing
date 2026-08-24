@@ -1,44 +1,45 @@
 /**
  * ==========================================================================
  *  AGP RUSSIAN ROULETTE — "روليت الروسي" (لعبة أصلية داخل المنصة)
- *  ⚠️ نسخة كاملة مُعاد بناؤها بالكامل بعد جلسة توصيف مطوّلة خطوة بخطوة —
- *     تلغي أي نسخة سابقة لنفس اللعبة (المسدس بالساقية السداسية الظاهرة
- *     تحوّل بالكامل لعجلة دوّارة + محرك احتمال مخفي).
+ *  ⚠️ آخر تحديث: آلية الاحتمال والقلوب أُعيد تعريفها بالكامل (توضيح نهائي
+ *     من المستخدم لآلية اللعبة الحقيقية) — يلغي أي وصف سابق بهذا الملف.
  * ==========================================================================
  *
- * الآلية النهائية المتّفق عليها بالتفصيل:
- *  1) عجلة تدور (نفس مبدأ روليت الإقصاء) وتوقف على لاعب = "صاحب الاختيار".
- *  2) صاحب الاختيار يكتب رقم لاعب آخر (هدف) بشات البث خلال مدة مرحلة
+ * الآلية النهائية (نهائية ومؤكَّدة صراحة، تلغي كل ما قبلها):
+ *  1) شكل اختيار "صاحب الدور" — قابل للتبديل حياً من زر أعلى الشاشة، بين
+ *     عجلة دوّارة أو بكرة سكرول رأسية (سلوت مشين) — الاثنان يستخدمان نفس
+ *     منطق الاختيار بالضبط (pickNextChooserIndex)، فرق شكلي بحت.
+ *  2) صاحب الدور يكتب رقم لاعب آخر (هدف) بشات البث خلال مدة مرحلة
  *     الاختيار (20/25/30/40ث، قابلة للتحديد بالإعدادات).
- *  3) محرك احتمال حقيقي مخفي يحسب النتيجة **للهدف نفسه** (مو صاحب
- *     الاختيار): "طلقة" = إقصاء فوري للهدف. "فاضي" = نجاة، بدون أي إقصاء.
- *  4) ⚠️ قرار تصميم صريح وثّقته للمستخدم: الاحتمال = عدد الطلقات المعباة
- *     هالدورة (bulletsPerRound، 1–4) من أصل 6 غرف — أسطوانة واقعية
- *     قياسية بسعة 6 دائماً (نفس معنى كلمة "ساقية")، تُحشى وتُدار من جديد
- *     بشكل مستقل كل دورة (بدون ذاكرة بين الدورات) — يطابق حرفياً "في كل
- *     دوره تتجدد الطلقه" و"عدد الطلقات المعباه يحدد الاحتمال".
- *  5) "حجم ساقية الطلقات" (3–6) هنا معناه مختلف تماماً: **عدد أرواح كل
- *     لاعب** (قلوب تحت الاسم). القلوب عنصر عرض/إحصاء بصري بحت لعدد
- *     مرّات الاستهداف اللي نجا منها اللاعب — ما لها أي دور بمنع الإقصاء
- *     ولا بحسابه؛ نتيجة "طلقة" تُقصي فوراً بغض النظر عن عدد القلوب
- *     الخضراء المتبقية (مؤكَّد صراحة من المستخدم: "مافي شي اسمه نجاه،
- *     الطلقه تصير اقصاء مباشرة").
- *  6) زرّا "اكمال المبارة بدون اقصاء" / "اقصاء اللاعب و اكمال المباراة"
- *     بشاشة الاختيار = تحكّم يدوي احتياطي متاح للاستريمر بأي وقت (بديل
- *     لكتابة الشات، أو لو ما فيه استجابة): الأبيض يغلق الدور بدون إقصاء
- *     مباشرة. الأحمر يتطلّب اختيار هدف أولاً (ضغط بطاقته بالشبكة) ثم
- *     يقصيه **فوراً كتجاوز يدوي صريح** (بدون المرور بمحرك الاحتمال —
- *     قرار تصميم موثَّق: هذا تجاوز يدوي متعمَّد، بعكس المسار الطبيعي عبر
- *     الشات اللي يمر دائماً بالمحرك الحقيقي).
- *  7) عند إصابة حقيقية عبر المسار الطبيعي (شات): شاشة "الاشتباك" (2ث،
+ *  3) ⚠️ "حجم ساقية الطلقات؟" (3–6) = عدد غرف المسدس **المتاحة فعلياً**
+ *     من أصل 6 (الباقي غرف مغلقة تماماً، خارج اللعب) — ونفس هذا الرقم
+ *     يمثّل أيضاً عدد أرواح كل لاعب (كل لاعب له "سلاحه" الشخصي بنفس
+ *     الحجم). "عدد الطلقات المعباه؟" (1–4) = كم طلقة موزّعة عشوائياً بين
+ *     الغرف المتاحة فقط (مو من أصل 6 دائماً) — الاحتمال الحقيقي لكل
+ *     دورة استهداف = الطلقات ÷ الغرف المتاحة (_appliedLivesCount)،
+ *     وتتبدّل مواقع الطلقات عشوائياً من جديد كل دورة (احتمال مستقل تماماً
+ *     بدون ذاكرة بين الدورات).
+ *  4) ⚠️ استثناء حاسم: لو الهدف وصل لآخر قلب أخضر (روح واحدة متبقية)،
+ *     أي استهداف بعدها = إصابة مضمونة ١٠٠٪ (بدون رمي احتمال إطلاقاً) —
+ *     "ضروري آخر طلقة يطلقها أي لاعب على لاعب ماعنده إلا آخر روح يُقصى
+ *     مباشرة وتُحسب الطلقة صحيحة". هذا يعطي القلوب دوراً ميكانيكياً
+ *     حقيقياً على الروح الأخيرة تحديداً (بعكس التصميم الأقدم اللي كانت
+ *     فيه القلوب عرض بصري بحت بدون أي استثناء).
+ *  5) زرّا "اكمال المبارة بدون اقصاء" / "اقصاء اللاعب و اكمال المباراة"
+ *     بشاشة الاختيار = تحكّم يدوي احتياطي متاح للاستريمر بأي وقت. الأبيض
+ *     يغلق الدور بدون إقصاء مباشرة. الأحمر يتطلّب اختيار هدف أولاً (ضغط
+ *     بطاقته بالشبكة) ثم يقصيه فوراً كتجاوز يدوي صريح (بدون المرور بمحرك
+ *     الاحتمال إطلاقاً — تجاوز متعمَّد، بعكس المسار الطبيعي عبر الشات).
+ *  6) عند إصابة حقيقية عبر المسار الطبيعي (شات): شاشة "الاشتباك" (2ث،
  *     فلاش أحمر + اختفاء صورة الهدف + صوت طلق) ثم شاشة "عملية اقصاء
- *     ناجحة" (3ث إضافية) ثم رجوع تلقائي للعجلة. عند نجاة: شاشة "الاشتباك"
- *     فقط (فلاش أبيض، بدون صوت، 3ث) ثم رجوع مباشر للعجلة.
+ *     ناجحة" (3ث إضافية) ثم رجوع تلقائي. عند نجاة: شاشة "الاشتباك" فقط
+ *     (فلاش أبيض، صوت فشل مميَّز، نص "لم ينجح الاستهداف"، 2ث) ثم رجوع.
  *
- * ⚠️ نطاق هذا التسليم: ركّزت التنفيذ على كل نقطة تم تثبيتها صراحة بالنقاش.
- *   ما أضفت حقل "الحد الأقصى للاعبين" (ما ظهر بأي من صورك المرجعية).
- *   خط Zain مطبَّق !important على كل نصوص اللعبة (شاشة اللعب + شاشات
- *   الشل المشتركة المُعاد تصميمها) بدون استثناء.
+ * ⚠️ تطبيق PLAYER-CARD-STANDARDS.md (معيار مشترك للمنصة): تبويب الاختيار
+ *   وبطاقة الفائز واللوبي وشاشة الإعدادات الأولى أُعيد بناؤها بالكامل
+ *   حسب هذا المعيار — راجع تعليقات كل قسم بالكود لتفاصيل كل شاشة. رقم كل
+ *   لاعب ثابت طول المباراة (assignPlayerNumber)، وعدد إقصاءاته يُتتبَّع
+ *   (_eliminationsCaused) لبطاقة "الأكثر إقصاءً" بشاشة الفائز.
  *
  * الاعتماديات: نفس ترتيب index.html (AGP Core كامل، js/agp-player-card.js،
  *   js/agp-game-shell.js غير مُعدَّل، ثم هذا الملف).
@@ -159,6 +160,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _startedAt = null;
     var _matchActive = false;
     var _wheelSpinning = false;
+    var _wheelDisplayMode = 'wheel'; // 'wheel' | 'reel' — يتحكم فيه الاستريمر بزر أعلى الشاشة
     var _pendingTurn = null;      // { chooser, candidates: [...] }
     var _selectedCandidateIdx = null; // لتفعيل زر "اقصاء اللاعب" اليدوي
     var _commentUnsub = null;
@@ -332,6 +334,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#rr-wheel-hub img{width:42px;height:42px;object-fit:contain;}',
             '#rr-wheel-hub span{font-size:0.78em;font-weight:900;color:#f2e6cf;}',
             '#rr-wheel-hub:disabled{opacity:0.5;cursor:not-allowed;}',
+
+            /* ⚠️ الشكل الثاني الاختياري: بكرة سكرول رأسية بدل العجلة
+             * الدائرية — نفس آلية اختيار "صاحب الدور" بالضبط، بس بشكل
+             * سلوت مشين (تتحرّك الأسماء لفوق وتتوقّف عشوائياً). */
+            '#rr-display-mode-toggle{position:fixed;top:74px;left:50%;transform:translateX(-50%);z-index:400;',
+            'padding:8px 18px;border-radius:999px;border:1px solid var(--rr-gold);background:rgba(0,0,0,0.5);',
+            'color:#f2e6cf;font-weight:700;font-size:0.8em;cursor:pointer;}',
+            '#rr-reel-wrap{position:relative;width:min(320px,80vw);height:300px;margin:6px auto 0;overflow:hidden;',
+            'border:4px solid var(--rr-gold);border-radius:16px;background:#150f07;box-shadow:0 0 24px rgba(0,0,0,0.5);}',
+            '#rr-reel-list{position:absolute;left:0;right:0;top:0;transition:transform 3.8s cubic-bezier(0.15,0.85,0.25,1);}',
+            '.rr-reel-item{height:60px;display:flex;align-items:center;justify-content:center;font-weight:900;',
+            'color:#fff;font-size:1.05em;border-bottom:1px solid rgba(212,175,55,0.15);}',
+            '#rr-reel-pointer-line{position:absolute;top:120px;left:0;right:0;height:60px;border-top:2px solid var(--rr-gold);',
+            'border-bottom:2px solid var(--rr-gold);background:rgba(212,175,55,0.14);pointer-events:none;z-index:2;}',
 
             '#rr-wheel-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}',
             '#rr-wheel-actions button{padding:8px 20px;border-radius:999px;border:1px solid var(--rr-gold);',
@@ -658,9 +674,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function renderWheel() {
         var wheel = el('rr-wheel');
-        if (!wheel) return;
-        wheel.style.background = buildWheelGradient();
-        renderWheelLabels();
+        if (wheel) {
+            wheel.style.background = buildWheelGradient();
+            renderWheelLabels();
+        }
+        // ⚠️ نحدّث محتوى البكرة أيضاً حتى لو مو ظاهرة حالياً — عشان تكون
+        // جاهزة فوراً لو الاستريمر بدّل الشكل وسط المباراة (بعد إقصاء أو
+        // انضمام لاعب جديد مثلاً).
+        if (el('rr-reel-list')) renderReel();
     }
 
     /* ======================================================================
@@ -702,11 +723,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div id="rr-wheel-pointer"></div>' +
                 '<button id="rr-wheel-hub" type="button"><img src="../../logo.png" alt=""><span>تدوير</span></button>' +
             '</div>' +
+            '<div id="rr-reel-wrap" style="display:none;">' +
+                '<div id="rr-reel-pointer-line"></div>' +
+                '<div id="rr-reel-list"></div>' +
+            '</div>' +
             '<div id="rr-wheel-actions">' +
                 '<button id="rr-shuffle-btn" type="button">🔀 إعادة ترتيب عشوائي</button>' +
                 '<button id="rr-autoplay-btn" type="button">▶️ العب التلقائي</button>' +
             '</div>';
         document.body.appendChild(stage);
+
+        var modeToggleBtn = document.createElement('button');
+        modeToggleBtn.id = 'rr-display-mode-toggle';
+        modeToggleBtn.type = 'button';
+        modeToggleBtn.textContent = '🔃 تبديل شكل الاختيار (سكرول)';
+        modeToggleBtn.addEventListener('click', handleDisplayModeToggle);
+        document.body.appendChild(modeToggleBtn);
 
         var toggleBtn = document.createElement('button');
         toggleBtn.id = 'rr-settings-toggle';
@@ -771,7 +803,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         winnerOverlay.id = 'rr-winner-overlay';
         document.body.appendChild(winnerOverlay);
 
-        el('rr-wheel-hub').addEventListener('click', handleSpinClick);
+        el('rr-wheel-hub').addEventListener('click', handleHubClick);
         el('rr-shuffle-btn').addEventListener('click', handleShuffleClick);
         el('rr-autoplay-btn').addEventListener('click', handleAutoPlayToggleClick);
         el('rr-skip-btn').addEventListener('click', handleSkipClick);
@@ -796,14 +828,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return WHEEL_SPIN_DURATION_MS;
     }
 
-    function handleSpinClick() {
-        if (_wheelSpinning || !_matchActive || _alive.length < 2) return;
-        _wheelSpinning = true;
-        el('rr-wheel-hub').disabled = true;
-        playSpinTick();
-
-        // ⚠️ نقلّل احتمال وقوف العجلة على نفس الشخص مرتين متتاليتين —
-        // نستبعده كلياً من احتمالات هذي الدورة لو باقي غيره أحياء.
+    // ⚠️ نفس منطق اختيار "صاحب الدور" بالضبط لشكلي العرض (العجلة والبكرة) —
+    // استبعاد آخر شخص وقفت عنده لتقليل احتمال التكرار المباشر.
+    function pickNextChooserIndex() {
         var pool = _alive;
         if (_lastChooserId && _alive.length > 1) {
             var filtered = _alive.filter(function (p) { return p.id !== _lastChooserId; });
@@ -812,6 +839,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var chosen = pool[Math.floor(Math.random() * pool.length)];
         var winnerIdx = _alive.indexOf(chosen);
         _lastChooserId = chosen.id;
+        return winnerIdx;
+    }
+
+    function handleHubClick() {
+        if (_wheelDisplayMode === 'reel') handleReelSpinClick();
+        else handleSpinClick();
+    }
+
+    function handleSpinClick() {
+        if (_wheelSpinning || !_matchActive || _alive.length < 2) return;
+        _wheelSpinning = true;
+        el('rr-wheel-hub').disabled = true;
+        playSpinTick();
+
+        var winnerIdx = pickNextChooserIndex();
 
         var n = _alive.length;
         var slice = 360 / n;
@@ -850,6 +892,80 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             el('rr-wheel-hub').disabled = false;
             openSelectionScreen(_alive[winnerIdx]);
         }, durationMs);
+    }
+
+    var REEL_ITEM_H = 60;
+    var REEL_REPEATS = 6; // عدد تكرارات قائمة اللاعبين داخل شريط البكرة (مسافة سكرول كافية للتشويق)
+    function renderReel() {
+        var list = el('rr-reel-list');
+        if (!list || !_alive.length) return;
+        var html = '';
+        for (var r = 0; r < REEL_REPEATS; r++) {
+            _alive.forEach(function (p) {
+                html += '<div class="rr-reel-item">' + escapeHtml(playerLabel(p)) + '</div>';
+            });
+        }
+        list.innerHTML = html;
+        list.style.transitionDuration = '0ms';
+        list.style.transform = 'translateY(0px)';
+    }
+
+    function handleReelSpinClick() {
+        if (_wheelSpinning || !_matchActive || _alive.length < 2) return;
+        _wheelSpinning = true;
+        el('rr-wheel-hub').disabled = true;
+        playSpinTick();
+
+        var winnerIdx = pickNextChooserIndex();
+        var n = _alive.length;
+
+        // ⚠️ نرجّع الشريط لبدايته فوراً (بدون أنيميشن) قبل كل دورة —
+        // نفس روح إصلاح خلل العجلة: بداية معروفة وثابتة كل مرة، يلغي أي
+        // احتمال لخطأ تراكمي بالموضع.
+        var list = el('rr-reel-list');
+        list.style.transitionDuration = '0ms';
+        list.style.transform = 'translateY(0px)';
+        // إجبار المتصفح يطبّق التصفير قبل بدء الأنيميشن الجديدة
+        void list.offsetHeight;
+
+        // نهبط عدة تكرارات كاملة (تشويق) + موضع الفائز داخل التكرار الأخير،
+        // ونركّزه تحت خط المؤشّر بمنتصف الإطار (ارتفاع الإطار 300px، مركزه 150px).
+        var targetRepeat = REEL_REPEATS - 1;
+        var targetAbsoluteIndex = targetRepeat * n + winnerIdx;
+        var viewportCenter = 150;
+        var translateY = -(targetAbsoluteIndex * REEL_ITEM_H) + viewportCenter - (REEL_ITEM_H / 2);
+
+        var durationMs = wheelSpinDurationMs();
+        list.style.transitionDuration = durationMs + 'ms';
+        list.style.transform = 'translateY(' + translateY + 'px)';
+
+        window.setTimeout(function () {
+            _wheelSpinning = false;
+            el('rr-wheel-hub').disabled = false;
+            openSelectionScreen(_alive[winnerIdx]);
+        }, durationMs);
+    }
+
+    function handleDisplayModeToggle() {
+        if (_wheelSpinning || _pendingTurn) return; // ⚠️ ما نبدّل الشكل أثناء دوران/اختيار جارٍ
+        _wheelDisplayMode = (_wheelDisplayMode === 'wheel') ? 'reel' : 'wheel';
+        var wheelWrap = el('rr-wheel-wrap');
+        var reelWrap = el('rr-reel-wrap');
+        var toggleBtn = el('rr-display-mode-toggle');
+        if (_wheelDisplayMode === 'reel') {
+            wheelWrap.style.display = 'none';
+            reelWrap.style.display = 'block';
+            renderReel();
+            var hubSpan = document.querySelector('#rr-wheel-hub span');
+            if (hubSpan) hubSpan.textContent = 'تحريك';
+            if (toggleBtn) toggleBtn.textContent = '🔃 تبديل شكل الاختيار (عجلة)';
+        } else {
+            wheelWrap.style.display = '';
+            reelWrap.style.display = 'none';
+            var hubSpan2 = document.querySelector('#rr-wheel-hub span');
+            if (hubSpan2) hubSpan2.textContent = 'تدوير';
+            if (toggleBtn) toggleBtn.textContent = '🔃 تبديل شكل الاختيار (سكرول)';
+        }
     }
 
     function handleShuffleClick() {
@@ -1055,18 +1171,37 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     /* ======================================================================
      *  11) محرك الاحتمال الحقيقي + شاشتا "الاشتباك" / "عملية اقصاء ناجحة"
      * ==================================================================== */
-    function rollEngineHit() {
-        // أسطوانة قياسية 6 غرف، تُحشى وتُدار من جديد كل دورة (مستقلة تماماً
-        // عن الدورة السابقة) بعدد الطلقات المُحدَّد بالإعدادات.
+    // ⚠️ توضيح آلية اللعبة (نهائي، يلغي أي فهم سابق للاحتمال):
+    //  - "حجم ساقية الطلقات؟" = كم غرفة متاحة فعلياً من أصل 6 (الباقي
+    //    يُعتبر مغلقاً كلياً، خارج اللعب) — ونفس الرقم هذا يمثّل أيضاً عدد
+    //    أرواح كل لاعب (_appliedLivesCount). كل لاعب له "سلاحه" الشخصي
+    //    بنفس هذا العدد من الغرف المتاحة.
+    //  - "عدد الطلقات المعباه" = كم طلقة موزّعة عشوائياً بين الغرف
+    //    المتاحة فقط (مو من أصل 6 دائماً) — يعني الاحتمال الحقيقي =
+    //    الطلقات ÷ الغرف المتاحة (_appliedLivesCount)، وتتبدّل مواقع
+    //    الطلقات عشوائياً من جديد كل دورة استهداف (احتمال مستقل، بدون
+    //    ذاكرة بين الدورات — نفس ما كان مطبَّقاً، بس بمقام صحيح الآن).
+    //  - ⚠️ استثناء حاسم: لو الهدف وصل لآخر قلب أخضر (روح واحدة متبقية)،
+    //    أي استهداف بعدها = إصابة مضمونة ١٠٠٪ (بدون رمي احتمال إطلاقاً) —
+    //    "ضروري آخر طلقة يطلقها أي لاعب على لاعب ماعنده إلا آخر روح
+    //    يُقصى مباشرة وتُحسب الطلقة صحيحة".
+    function remainingHearts(p) {
+        var hits = (p && _heartHits[p.id]) || 0;
+        return Math.max(0, _appliedLivesCount - hits);
+    }
+    function rollEngineHit(target) {
+        if (remainingHearts(target) <= 1) return true; // آخر روح = إصابة مضمونة، بدون احتمال
         var bullets = currentBulletsPerRound();
-        return Math.random() < (bullets / REVOLVER_CHAMBERS);
+        var chambers = _appliedLivesCount > 0 ? _appliedLivesCount : 1;
+        if (bullets > chambers) bullets = chambers; // احترازي — ما يصير عدد طلقات أكثر من الغرف المتاحة أصلاً
+        return Math.random() < (bullets / chambers);
     }
 
     function resolveSelection(target) {
         if (!_pendingTurn) return;
         var chooser = _pendingTurn.chooser;
         closeSelectionScreen();
-        var isHit = rollEngineHit();
+        var isHit = rollEngineHit(target);
         showClashScreen(chooser, target, isHit);
     }
 
