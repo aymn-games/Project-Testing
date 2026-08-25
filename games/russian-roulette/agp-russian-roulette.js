@@ -629,10 +629,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'grid-template-columns:repeat(3,1fr) !important;gap:0.5cm !important;max-width:840px;margin:0 auto;',
             'align-items:center;justify-items:center;}',
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{flex:0 0 auto !important;align-items:center;}',
-            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic{width:60px !important;height:60px !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic{width:60px !important;height:60px !important;',
+            'border-width:3px !important;}',
             '#agp-shell-box.agp-lobby-box .agp-pcard-name-basic{font-size:22px !important;padding:0 18px !important;',
             'width:194px !important;max-width:194px !important;overflow:hidden !important;text-overflow:ellipsis !important;',
-            'white-space:nowrap !important;}',
+            'white-space:nowrap !important;background:rgba(255,255,255,0.14) !important;',
+            'border:1px solid rgba(255,255,255,0.32) !important;border-radius:999px !important;box-sizing:border-box !important;',
+            'display:flex !important;align-items:center !important;}',
             /* ⚠️ لاعب عنده إطار (frame) مفعَّل يُرسَم بقالب مختلف تماماً
              * (.agp-pcard-tpl) بارتفاع ثابت 72px مُعايَر لحجم افتراضي أكبر
              * بكثير من بطاقاتنا — بدون هذا التصغير يفيض الصف ويحتاج سكرول
@@ -647,7 +650,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '45%,55%{transform:translateX(var(--rr-slide-dist));}85%,100%{transform:translateX(0);}}',
 
             '.rr-lobby-heading-accent{color:var(--rr-gold) !important;font-weight:900 !important;}',
-            '.rr-lobby-actions-row{display:flex;gap:12px;flex:none;padding-top:16px;justify-content:center;',
+            '.rr-lobby-actions-row{display:flex;gap:12px;flex:none;padding-top:16px;margin-bottom:28px;justify-content:center;',
             'flex-wrap:wrap;}',
             '.rr-lobby-actions-row > *{width:280px !important;padding:14px !important;}',
             '.rr-lobby-action-btn{border-radius:999px;border:1px solid var(--rr-gold);background:transparent;',
@@ -1709,9 +1712,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (_matchActive && _alive.length <= 1) endMatch(_alive[0] || null);
     }
 
+    // ⚠️ [إصلاح خلل حقيقي] enhanceLobbyScreen يفرض 100vw/100vh على
+    // #agp-shell-box كـinline style بأولوية important (تدخّل احترازي كان
+    // ضرورياً هناك) — بس نفس العنصر يُعاد استخدامه لاحقاً لدرج الإعدادات
+    // وسط المباراة ولشاشة الاتصال. الـinline style ما ينمسح تلقائياً
+    // أبداً (الملف المشترك يصفّر className بس مو style)، فيضل عالق
+    // ويكسر حجم أي شاشة ثانية بعده (بالضبط سبب "تبويب الخيارات يفتح
+    // بحجم الشاشة كاملة" اللي رصدته — inline+important يغلب أي قاعدة
+    // stylesheet حتى لو important). نمسحه صراحة أول شي بأي شاشة ثانية.
+    function clearLobbyInlineOverrides(box) {
+        ['width', 'height', 'max-width', 'max-height', 'border-radius', 'margin'].forEach(function (p) {
+            box.style.removeProperty(p);
+        });
+    }
+
     function enhanceReopenedSettings() {
         var box = el('agp-shell-box');
         if (!box || !document.getElementById('agp-settings-player-list')) return;
+        clearLobbyInlineOverrides(box);
         box.classList.add('rr-inmatch-drawer');
 
         var addBtn = document.getElementById('agp-reopen-registration-btn');
@@ -1777,6 +1795,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!box) return;
         if (box.classList.contains('agp-lobby-box') || box.classList.contains('agp-connecting-box')) return;
         if (!document.getElementById('agp-tiktok-username')) return; // شاشة مُعاد فتحها وسط المباراة
+        clearLobbyInlineOverrides(box);
         box.classList.add('rr-pre-match-settings'); // ⚠️ يُعاد إضافتها كل مرّة لأن box.className يُصفَّر بكل إعادة رسم
 
         // ⚠️ تجميع حقول الإعدادات ببطاقات منطقية (قسم ٥ بالمعيار) — مرّة
@@ -1833,6 +1852,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!box) return;
         var doneBtn = document.getElementById('agp-mini-lobby-done-btn');
         if (!doneBtn || doneBtn.getAttribute('data-rr-wired') === '1') return;
+        clearLobbyInlineOverrides(box);
         // ⚠️ الكلمة المفتاحية مرسومة أصلاً داخل .agp-join-keyword-plain
         // بنفس هذي الشاشة (الشل المشترك يعرضها هناك) — نقرأها من الـDOM
         // مباشرة قبل ما نستبدل محتوى الحاوية، لا يوجد getter عام لها.
@@ -1904,7 +1924,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         box.style.setProperty('margin', '0', 'important');
         var h2 = box.querySelector('h2');
         if (h2 && h2.getAttribute('data-rr-heading') !== '1') {
-            h2.innerHTML = 'اللوبي بانتظار اللاعبين <span class="rr-lobby-heading-accent">' + escapeHtml(GAME_NAME) + '</span>';
+            h2.innerHTML = 'لوبي الدخول للعبة "<span class="rr-lobby-heading-accent">' + escapeHtml(GAME_NAME) + '</span>"';
             h2.setAttribute('data-rr-heading', '1');
         }
         var list = document.getElementById('agp-lobby-list');
@@ -1970,6 +1990,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function enhanceConnectingScreen() {
         var box = el('agp-shell-box');
         if (!box || !box.classList.contains('agp-connecting-box')) return;
+        clearLobbyInlineOverrides(box);
         var statusEl = box.querySelector('.agp-shell-status');
         var isError = statusEl && statusEl.textContent.indexOf('تعذّر') !== -1;
         var existingBtn = box.querySelector('.rr-connect-retry-btn');
