@@ -589,13 +589,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * الصافي (832px)، فكانت تنزل كل وحدة لسطر لحالها (flex-wrap
              * يشتغل قسراً). الحل: flex-wrap:nowrap (يمنع النزول لسطر
              * ثاني نهائياً) + عرض مرن يتقاسم المساحة المتاحة (يتساوى مع
-             * 3 أزرار براحة داخل نفس الصف). */
-            '.mc-lobby-actions-row{display:flex;gap:10px;justify-content:center;margin-top:auto;',
-            'padding-top:18px;flex-wrap:nowrap;width:100%;box-sizing:border-box;}',
-            '.mc-lobby-actions-row > *{flex:1 1 0;min-width:0;max-width:270px;height:48px;border-radius:10px;',
-            'font-weight:800;font-size:0.82em;cursor:pointer;border:none;display:flex;align-items:center;',
-            'justify-content:center;gap:6px;box-sizing:border-box;font-family:Cairo,sans-serif;',
-            'text-decoration:none;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
+             * 3 أزرار براحة داخل نفس الصف).
+             * ⚠️ إصلاح إضافي: زر بدء الجولة (#agp-start-round-btn) يحمل
+             * كلاس مشترك (.agp-shell-btn-connect) فيه width:100% بنفس
+             * درجة الأولوية (specificity) تماماً — أحياناً يكسب حسب ترتيب
+             * الحقن بالصفحة. !important هنا يضمن غلبة تنسيقي دائماً
+             * بغض النظر عن الترتيب، بدون أي لمس للملف المشترك نفسه. */
+            '.mc-lobby-actions-row{display:flex !important;gap:10px !important;justify-content:center !important;',
+            'margin-top:auto !important;padding-top:18px;flex-wrap:nowrap !important;width:100% !important;',
+            'box-sizing:border-box;}',
+            '.mc-lobby-actions-row > *{flex:1 1 0 !important;width:auto !important;min-width:0 !important;',
+            'max-width:270px !important;height:48px !important;border-radius:10px;',
+            'font-weight:800;font-size:0.82em;cursor:pointer;border:none;display:flex !important;',
+            'align-items:center;justify-content:center;gap:6px;box-sizing:border-box;font-family:Cairo,sans-serif;',
+            'text-decoration:none;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
+            'margin:0 !important;}',
             '.mc-lobby-back-settings-btn{background:linear-gradient(90deg,#4a1f5c,#2D1932);color:#fff;',
             'border:1px solid rgba(255,255,255,0.3) !important;}',
             '.mc-lobby-home-btn{background:linear-gradient(90deg,var(--agp-accent-2),var(--agp-accent));color:#fff;}',
