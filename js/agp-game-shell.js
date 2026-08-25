@@ -173,12 +173,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-connect-btn{width:auto;min-width:190px;max-width:80%;padding:9px 22px;',
             'margin:10px auto 0;display:block;font-size:0.85em;}',
 
-            /* شاشة "جاري الاتصال" — تطابق القالب البسيط المُرسَل (تبقى
-             * فاتحة عمداً، غير مشمولة بطلب التغميق — شاشة عابرة قصيرة). */
-            '#agp-shell-box.agp-connecting-box{width:min(460px,94vw);height:auto;background:linear-gradient(90deg,#f3eefc,#8b3fd6);',
-            'text-align:center;padding:34px 26px;}',
-            '#agp-shell-box.agp-connecting-box h2{color:#2c1240;font-size:1.3em;}',
-            '#agp-shell-box.agp-connecting-box .agp-shell-status{color:#4a1f6e;}',
+            /* شاشة "جاري الاتصال" — ⚠️ [تحديث معايير الواجهة الموحّدة]
+             * استُبدل التصميم الفاتح المتعمّد سابقاً بتصميم غامق موحّد
+             * (سبينر دوّار + نص مبسّط)، بقرار صريح يلغي الاستثناء القديم.
+             * حالة الخطأ تبقى نصها الحقيقي كامل (وظيفياً مهم للمستخدم). */
+            '#agp-shell-box.agp-connecting-box{width:min(420px,94vw);height:auto;',
+            'background:linear-gradient(180deg,#2D1932,#0a0612);border:2px solid var(--agp-accent);',
+            'text-align:center;padding:38px 28px;}',
+            '#agp-shell-box.agp-connecting-box h2{color:var(--agp-accent-2);font-size:1.15em;margin:0 0 8px;}',
+            '#agp-shell-box.agp-connecting-box .agp-shell-status{color:#e9d3ff;font-size:0.9em;margin-bottom:0;}',
+            '.agp-conn-spinner{width:52px;height:52px;margin:0 auto 18px;border-radius:50%;',
+            'border:4px solid rgba(255,255,255,0.15);border-top-color:var(--agp-accent-2);',
+            'animation:agp-conn-spin 0.9s linear infinite;}',
+            '@keyframes agp-conn-spin{to{transform:rotate(360deg);}}',
+            '#agp-shell-box.agp-connecting-box.agp-conn-error{border-color:#ef4444;}',
+            '#agp-shell-box.agp-connecting-box.agp-conn-error h2{color:#ef4444;}',
+            '.agp-conn-error-icon{width:52px;height:52px;margin:0 auto 18px;border-radius:50%;',
+            'background:rgba(220,38,38,0.16);border:2px solid #ef4444;color:#ef4444;font-size:1.6em;',
+            'display:flex;align-items:center;justify-content:center;}',
             '.agp-shell-status{text-align:center;color:#fff;font-size:0.9em;margin-bottom:12px;}',
 
             /* شاشة اللوبي — ⚠️ [0.44.0] خط Almarai أبرز، بدون شرطة طويلة
@@ -676,8 +688,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function renderConnectingScreen(message) {
         var box = el('agp-shell-box');
-        box.className = 'agp-connecting-box';
-        box.innerHTML = '<h2>جارِ الاتصال...</h2><p class="agp-shell-status">' + (message || 'يرجى الانتظار') + '</p>';
+        // ⚠️ [تحديث معايير الواجهة الموحّدة] تصميم مبسّط: سبينر + عنوان
+        // ثابت "جاري الاتصال بالبث" — أو أيقونة تحذير + نص الخطأ الحقيقي
+        // كامل بحالة الفشل (ما نحذفه، مهم وظيفياً للمستخدم).
+        var isError = Boolean(message && message.indexOf('تعذّر') !== -1);
+        box.className = 'agp-connecting-box' + (isError ? ' agp-conn-error' : '');
+        var iconHtml = isError
+            ? '<div class="agp-conn-error-icon">⚠️</div>'
+            : '<div class="agp-conn-spinner"></div>';
+        var title = isError ? 'تعذّر الاتصال' : 'جاري الاتصال بالبث';
+        var sub = isError ? (message || 'يرجى الانتظار') : 'انتظر قليلاً...';
+        box.innerHTML = iconHtml + '<h2>' + title + '</h2><p class="agp-shell-status">' + sub + '</p>';
     }
 
     function renderLobbyScreen() {
