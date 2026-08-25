@@ -66,7 +66,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         { label: '30 ثانية', value: 30 }
     ];
 
-    var SPIN_DURATION_MS = 12000; // ⚠️ مدة التدوير "الطبيعية" — طلب صريح: 12 ثانية بالضبط
+    // ⚠️ مدة تدوير الموسيقى (قابلة للتحكم من الاستريمر) — أقصى شي 35
+    // ثانية بالضبط (طلب صريح)
+    var SPIN_DURATION_OPTIONS = [
+        { label: '10 ثوانٍ', value: 10 },
+        { label: '15 ثانية', value: 15 },
+        { label: '20 ثانية', value: 20 },
+        { label: '25 ثانية', value: 25 },
+        { label: '30 ثانية', value: 30 },
+        { label: '35 ثانية', value: 35 }
+    ];
+
+    // (SPIN_DURATION_MS الثابت القديم اتحذف — المدة صارت إعداد قابل للتحكم، راجع SPIN_DURATION_OPTIONS)
     var ROTATION_DEG_PER_SEC = 22;
     var RING_TICK_MS = 90;
     var ELIMINATE_STAGGER_MS = 550;
@@ -77,6 +88,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // صوتي نصف الوقت). أول ما ترفع 6.mp3...10.mp3 بنفس مسار shailat/
     // وkhaleeji/، غيّر الرقم تحت لـ10 وخلاص — بدون أي تعديل ثاني بالكود.
     var MUSIC_TRACK_COUNT = 5;
+    // ⚠️ تصنيف "أغاني عراقية" جديد — جاهز بالكود بالكامل (القائمة المنسدلة
+    // + منطق الاختيار)، بس خليت العدد 0 لين ترفع الملفات الفعلية (نفس
+    // احتياط شيلات/خليجية فوق) — أول ما ترفع 1.mp3...10.mp3 بمجلد
+    // sounds/iraqi/، غيّر الرقم تحت لـ10 وخلاص.
+    var IRAQI_TRACK_COUNT = 0;
+    var SPIN_DURATION_MAX_S = 35; // ⚠️ الحد الأقصى لمدة تدوير الموسيقى (طلب صريح)
 
     /* ======================================================================
      *  0) الصوت — مستوى صوت واحد موحَّد لكل شي (مؤثرات قصيرة + موسيقى
@@ -103,29 +120,51 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         } catch (e) { /* تجاهل صامت — الصوت طبقة تحسين، لا يوقف اللعبة */ }
     }
 
-    // طبقة الموسيقى الطويلة
-    var _musicTracks = { shailat: [], khaleeji: [] };
+    // طبقة الموسيقى الطويلة — ثلاث تصنيفات (شيلات/خليجية جاهزتين، عراقية
+    // مجهَّزة الآن بالكود بانتظار الملفات الفعلية منك — راجع الملاحظة
+    // بآخر الرسالة).
+    var _musicTracks = { shailat: [], khaleeji: [], iraqi: [] };
     for (var mi = 1; mi <= MUSIC_TRACK_COUNT; mi++) {
         _musicTracks.shailat.push(SOUND_BASE + 'shailat/' + mi + '.mp3');
         _musicTracks.khaleeji.push(SOUND_BASE + 'khaleeji/' + mi + '.mp3');
     }
+    for (var mj = 1; mj <= IRAQI_TRACK_COUNT; mj++) {
+        _musicTracks.iraqi.push(SOUND_BASE + 'iraqi/' + mj + '.mp3');
+    }
 
-    var _musicMode = 'random';   // 'random' | 'shailat' | 'khaleeji' — يتحكم فيه الاستريمر حياً
+    var _musicMode = 'random';   // 'random' | 'shailat' | 'khaleeji' | 'iraqi' — يتحكم فيه الاستريمر حياً
     var _musicMuted = false;
     var _musicVolume = 0.7;      // 0..1 — المصدر الوحيد للصوت بكل اللعبة (مؤثرات + موسيقى)
     var _currentMusicAudio = null;
+    var _lastMusicUrl = null;    // ⚠️ لمنع تكرار نفس المقطع بالتوالي (طلب صريح)
 
+    // ⚠️ عشوائي حقيقي بدون تكرار نفس المقطع مرتين متتاليتين (ولا بالترتيب)
+    // — يستبعد آخر مقطع اتشغّل من قائمة المرشّحين قبل الاختيار، لو
+    // القسم فيه أكثر من مقطع وحد.
     function pickMusicUrl() {
         var pool;
         if (_musicMode === 'shailat') pool = _musicTracks.shailat;
         else if (_musicMode === 'khaleeji') pool = _musicTracks.khaleeji;
+        else if (_musicMode === 'iraqi') pool = _musicTracks.iraqi;
+        // ⚠️ العراقية ما تدخل بخلط "عشوائي" العام تلقائياً لين ما تأكد لي
+        // إنك رفعت الملفات الفعلية (تجنّباً لصمت صوتي عشوائي). أول ما
+        // ترفعها قول لي وأدمجها بالخلط بسطر واحد.
         else pool = _musicTracks.shailat.concat(_musicTracks.khaleeji);
-        return pool[Math.floor(Math.random() * pool.length)];
+
+        if (!pool || !pool.length) return null;
+        var candidates = pool;
+        if (pool.length > 1 && _lastMusicUrl) {
+            candidates = pool.filter(function (u) { return u !== _lastMusicUrl; });
+        }
+        var url = candidates[Math.floor(Math.random() * candidates.length)];
+        _lastMusicUrl = url;
+        return url;
     }
 
     function startMusic() {
         stopMusic();
         var url = pickMusicUrl();
+        if (!url) return; // ⚠️ قسم بدون ملفات مرفوعة بعد (مثل "عراقية" حالياً) — صمت آمن، بدون خطأ
         var audio = new Audio(url);
         audio.loop = true; // لو انتهى المقطع قبل توقف الدوران، يعيد تلقائياً
         audio.volume = _musicMuted ? 0 : _musicVolume;
@@ -240,6 +279,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             {
                 key: 'selectionTimerSeconds', type: 'pill-group', label: '⏱️ مهلة اختيار الكرسي',
                 options: SELECTION_TIMER_OPTIONS, default: 15
+            },
+            {
+                key: 'spinDurationSeconds', type: 'pill-group', label: '🎵 مدة تدوير الموسيقى',
+                options: SPIN_DURATION_OPTIONS, default: 15
             }
         ];
     }
@@ -268,8 +311,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * بدون تمرير) — لو المحتوى أطول من الشاشة (تكبير كبير، شاشة
              * قصيرة) ما فيه طريقة توصل لباقي الدائرة. الحل: overflow-y
              * يخلي الحلبة نفسها قابلة للتمرير عمودياً لو احتاجت، بدون ما
-             * يأثر على الهيدر الثابت فوقها. */
-            '#mc-stage{position:fixed;inset:0;overflow-y:auto;padding-top:78px;padding-bottom:24px;',
+             * يأثر على الهيدر الثابت فوقها.
+             * ⚠️ إصلاح إضافي (شكوى فعلية): كان شريط التمرير يظهر ويختفي
+             * بشكل متكرر ومزعج مع تغيّر نص شريط الأدوات بين المراحل
+             * (جاهز/دوران/اختيار/إقصاء)، لأن عرض السطر يتغيّر فيتسبب
+             * أحياناً بارتفاع محتوى إضافي بسيط. scrollbar-gutter:stable
+             * يحجز مساحة شريط التمرير دائماً (يظهر أو لا) فما يصير أي
+             * قفز/رجّة بالتخطيط، + min-height ثابت للشريط يقلّل تغيّر
+             * الارتفاع بين المراحل من الأساس. */
+            '#mc-stage{position:fixed;inset:0;overflow-y:auto;scrollbar-gutter:stable;',
+            'padding-top:78px;padding-bottom:24px;',
             'display:flex;flex-direction:column;',
             'align-items:center;z-index:10;font-family:Cairo,sans-serif;direction:rtl;}',
 
@@ -278,9 +329,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * التفاصيل (عدد اللاعبين، الكراسي، رقم الدورة، نوع الموسيقى،
              * الصوت، زر التدوير) بداخله. عرَّضته لعرض أدنى ثابت 760px
              * على الشاشات الواسعة (يتقلّص تلقائياً بالجوال). عدّل الرقم
-             * 760 لأي رقم تبيه بالضبط. */
+             * 760 لأي رقم تبيه بالضبط. min-height ثابت (بدل ارتفاع
+             * تلقائي متغيّر) يمنع "قفزة" الحلبة تحته كل ما تغيّر نص
+             * المرحلة (سبب شريط التمرير المزعج). */
             '#mc-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;',
-            'margin:14px auto 8px;padding:12px 20px;width:min(94vw,760px);box-sizing:border-box;border-radius:999px;',
+            'margin:14px auto 8px;padding:12px 20px;width:min(94vw,760px);min-height:76px;box-sizing:border-box;',
+            'border-radius:24px;',
             'background:linear-gradient(90deg,#3a1750,#2D1932);border:2px solid var(--mc-badge-stroke);',
             'box-shadow:0 4px 18px rgba(0,0,0,0.35);}',
 
@@ -476,26 +530,50 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-box.agp-lobby-box{height:900px !important;max-height:92vh !important;',
             'overflow-y:auto !important;display:flex !important;flex-direction:column;}',
 
+            /* ======================================================================
+             * ⚠️ [تحديث] نظام لوبي-قياسي-v1 (docs/PLAYER-CARD-STANDARDS.md
+             * قسم 3/4/7 — دورت عليه بأحدث نسخة من المستودع وما لقيته
+             * (يبدو ما انرفع لـGitHub بعد)، فطبّقت بالحرف الأرقام اللي
+             * زوَّدتني فيها مباشرة برسالتك + معايير لوبي-قياسي-v1
+             * المحفوظة عندي من محادثات سابقة (تطابقت مع كلامك 100%):
+             * بطاقة 60px، تراكب 22%، لوح اسم عرض ثابت واحد (بدون
+             * min/max)، 3 أعمدة، فجوة 0.5سم، × فوق لوح الاسم، وسلايد
+             * للأسماء الطويلة بدل القصّ. حذفت نظام "البطاقة العريضة"
+             * والتصغير التلقائي من التحديث اللي فات (يخالف مبدأ "ثابت
+             * بدون تغيّر" بالمعيار الجديد). */
             '#agp-lobby-list.agp-shell-player-list{',
-            '--mc-av:50px;--mc-nw-min:110px;--mc-nw-max:260px;--mc-nh:40px;--mc-nf:18px;',
-            '--mc-gap:10px;--mc-zoom:0.77;--mc-row-min:64px;',
-            'display:grid !important;grid-template-columns:repeat(3,1fr);grid-auto-flow:dense;',
-            'gap:var(--mc-gap) !important;margin-top:34px !important;list-style:none;padding:0;}',
+            '--mc-av:60px;--mc-nw:200px;--mc-nh:60px;--mc-overlap:13px;--mc-nf:18px;--mc-gap:19px;',
+            'display:grid !important;grid-template-columns:repeat(3,1fr);',
+            'gap:var(--mc-gap) !important;margin-top:34px !important;list-style:none;padding:0;',
+            'justify-items:center;}',
             '#agp-lobby-list.agp-shell-player-list li{position:relative;display:flex;align-items:center;',
-            'justify-content:center;min-height:var(--mc-row-min);}',
-            '#agp-lobby-list.agp-shell-player-list li.mc-wide-card{grid-column:span 2;}',
+            'justify-content:center;min-height:78px;}',
 
             '#agp-lobby-list .agp-pcard{display:flex !important;align-items:center;gap:0 !important;}',
             '#agp-lobby-list .agp-pcard-avatar-basic{width:var(--mc-av) !important;height:var(--mc-av) !important;',
-            'flex-shrink:0;}',
+            'flex-shrink:0;position:relative;z-index:2;border-radius:50%;}',
             '#agp-lobby-list .agp-pcard-name-basic{display:flex !important;align-items:center;',
-            'justify-content:center;min-width:var(--mc-nw-min);max-width:var(--mc-nw-max);height:var(--mc-nh);',
+            'justify-content:flex-start;width:var(--mc-nw) !important;min-width:var(--mc-nw) !important;',
+            'max-width:var(--mc-nw) !important;height:var(--mc-nh);',
+            'margin-inline-start:calc(-1 * var(--mc-overlap)) !important;',
+            'padding-inline-start:calc(var(--mc-overlap) + 10px);padding-inline-end:14px;',
             'font-size:var(--mc-nf) !important;background:rgba(255,255,255,0.08);',
-            'border:1px solid rgba(255,255,255,0.25);border-radius:999px;padding:0 12px;',
-            'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box;}',
-            '#agp-lobby-list .agp-pcard-tpl{zoom:var(--mc-zoom);}',
+            'border:1px solid rgba(255,255,255,0.25);border-radius:999px;',
+            'white-space:nowrap;overflow:hidden;box-sizing:border-box;position:relative;z-index:1;color:#fff;}',
+            /* ⚠️ سلايد للاسم الطويل (بدل القصّ بـellipsis) — نغلّف النص
+             * بـ .mc-name-inner من JS، ونحرّكه أفقياً لو فاض عن اللوح */
+            '#agp-lobby-list .agp-pcard-name-basic .mc-name-inner{display:inline-block;white-space:nowrap;}',
+            '#agp-lobby-list .agp-pcard-name-basic.mc-name-overflow .mc-name-inner{',
+            'animation:mcNameSlide 3.2s ease-in-out infinite alternate;}',
+            '@keyframes mcNameSlide{0%,15%{transform:translateX(0);}85%,100%{transform:translateX(var(--mc-name-shift,0px));}}',
 
-            '.mc-lobby-remove-btn{position:absolute;top:-6px;left:-6px;width:22px;height:22px;',
+            /* بطاقة مؤطَّرة (Option A) — عرض هدف ثابت = نفس عرض البطاقة
+             * العادية، الارتفاع ناتج تلقائياً حسب نسبة كل إطار (zoom لكل
+             * بطاقة على حدة، محسوب بـJS من عرضها الطبيعي الفعلي — راجع
+             * normalizeFramedCardWidths). */
+            '#agp-lobby-list .agp-pcard-tpl{transform-origin:top right;}',
+
+            '.mc-lobby-remove-btn{position:absolute;top:-8px;left:6px;width:22px;height:22px;',
             'border-radius:50%;background:#ff3b5c;border:2px solid #fff;color:#fff;font-size:11px;',
             'font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;',
             'z-index:5;padding:0;line-height:1;}',
@@ -551,6 +629,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<button type="button" data-mode="random">🔀 عشوائي</button>' +
                 '<button type="button" data-mode="shailat">🎙️ شيلات</button>' +
                 '<button type="button" data-mode="khaleeji">🎵 اغاني خليجية</button>' +
+                '<button type="button" data-mode="iraqi">🎼 اغاني عراقية</button>' +
                 '</div></div>' +
                 '<div class="mc-volume-group">' +
                 '<button type="button" id="mc-mute-btn" class="mc-icon-btn" title="كتم/تشغيل الصوت">🔊</button>' +
@@ -620,7 +699,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             modeOptions.querySelectorAll('button').forEach(function (btn) {
                 btn.onclick = function () {
                     _musicMode = btn.getAttribute('data-mode');
-                    var labels = { random: '🔀 التشغيل العشوائي', shailat: '🎙️ شيلات', khaleeji: '🎵 اغاني خليجية' };
+                    var labels = { random: '🔀 التشغيل العشوائي', shailat: '🎙️ شيلات', khaleeji: '🎵 اغاني خليجية', iraqi: '🎼 اغاني عراقية' };
                     modeBtn.textContent = labels[_musicMode] || labels.random;
                     modeOptions.querySelectorAll('button').forEach(function (b) { b.classList.remove('mc-mode-active'); });
                     btn.classList.add('mc-mode-active');
@@ -808,7 +887,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         startRingLoop();
         startMusic();
 
-        _spinTimeoutId = window.setTimeout(stopSpinAndReveal, SPIN_DURATION_MS);
+        // ⚠️ مدة الدوران صارت قابلة للتحكم من إعدادات المباراة (بدل ثابت
+        // 12 ثانية) — بحد أقصى 35 ثانية مضمون (المُدخل الأقصى بالإعدادات
+        // نفسها 35 أصلاً، بس نضمنها هنا برضو احتياطاً).
+        var seconds = Math.min(SPIN_DURATION_MAX_S, liveSettings().spinDurationSeconds || 15);
+        _spinTimeoutId = window.setTimeout(stopSpinAndReveal, seconds * 1000);
     }
 
     /* ======================================================================
@@ -1380,64 +1463,74 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var players = AGP.gameManager.getPlayers();
         var items = Array.prototype.slice.call(list.children);
 
-        // زر حذف (✕) لكل بطاقة — يستدعي نفس API الحذف الحقيقي المستخدَم
-        // بلوحة الإعدادات (AGP.player.removePlayer)، بدون أي لمس للملف
-        // المشترك — فقط عبر واجهته العامة المُصدَّرة أصلاً.
         items.forEach(function (li, idx) {
             var player = players[idx];
-            if (!player || li.querySelector('.mc-lobby-remove-btn')) return;
-            li.style.position = 'relative';
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'mc-lobby-remove-btn';
-            btn.textContent = '✕';
-            btn.title = 'حذف من اللوبي';
-            btn.onclick = function () {
-                if (AGP.player && typeof AGP.player.removePlayer === 'function') {
-                    AGP.player.removePlayer(player.id);
-                }
-            };
-            li.appendChild(btn);
+            if (!player) return;
+
+            // زر حذف (✕) — فوق لوح الاسم مباشرة (الزاوية العلوية)، يستدعي
+            // نفس API الحذف الحقيقي (AGP.player.removePlayer) بدون أي
+            // لمس للملف المشترك — فقط عبر واجهته العامة المُصدَّرة أصلاً.
+            if (!li.querySelector('.mc-lobby-remove-btn')) {
+                li.style.position = 'relative';
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'mc-lobby-remove-btn';
+                btn.textContent = '✕';
+                btn.title = 'حذف من اللوبي';
+                btn.onclick = function () {
+                    if (AGP.player && typeof AGP.player.removePlayer === 'function') {
+                        AGP.player.removePlayer(player.id);
+                    }
+                };
+                li.appendChild(btn);
+            }
+
+            applyNameSlideIfOverflow(li);
         });
 
-        // بطاقة عريضة (عمودين) لو الاسم أطول من عرض عمود واحد فعلي
-        var gap = 10;
-        var colWidth = list.clientWidth ? (list.clientWidth - 2 * gap) / 3 : 0;
-        if (colWidth > 0) {
-            items.forEach(function (li) {
-                li.classList.remove('mc-wide-card');
-                var nameEl = li.querySelector('.agp-pcard-name-basic, .agp-pcard-tpl-name');
-                if (nameEl && nameEl.scrollWidth > colWidth - 8) {
-                    li.classList.add('mc-wide-card');
-                }
-            });
-        }
-
-        applyLobbyAutoShrink(list, items.length);
+        normalizeFramedCardWidths(list);
     }
 
-    // ⚠️ تصغير متناسب (أفاتار/بلاطة/خط/فجوات/تكبير البطاقة المؤطَّرة) لو
-    // عدد الصفوف المطلوب يتجاوز المساحة الرأسية المتاحة داخل الصندوق
-    // الثابت (900px) — بحد أدنى 55% من الحجم الكامل.
-    function applyLobbyAutoShrink(list, playerCount) {
-        var rows = Math.max(1, Math.ceil(playerCount / 3));
-        var baseRow = 64, baseGap = 10;
-        var neededHeight = rows * baseRow + (rows - 1) * baseGap;
-        // مساحة تقديرية متاحة لقائمة اللاعبين داخل الصندوق (900 ناقص
-        // الحشو، العنوان، سطر التلميح، هامش القائمة العلوي، وصف الأزرار)
-        var availableHeight = 900 - 60 - 60 - 40 - 34 - 82;
-        var scale = 1;
-        if (neededHeight > availableHeight && availableHeight > 0) {
-            scale = Math.max(0.55, availableHeight / neededHeight);
+    // ⚠️ سلايد للاسم الطويل بدل القصّ — نغلّف النص مرة وحدة بـ.mc-name-inner،
+    // ونقيس هل فاض عن عرض اللوح الثابت؛ لو فاض نحسب مسافة الإزاحة
+    // بالضبط (Custom Property) ونفعّل أنيميشن السلايد.
+    function applyNameSlideIfOverflow(li) {
+        var nameEl = li.querySelector('.agp-pcard-name-basic');
+        if (!nameEl) return;
+        var inner = nameEl.querySelector('.mc-name-inner');
+        if (!inner) {
+            var text = nameEl.textContent;
+            nameEl.textContent = '';
+            inner = document.createElement('span');
+            inner.className = 'mc-name-inner';
+            inner.textContent = text;
+            nameEl.appendChild(inner);
         }
-        list.style.setProperty('--mc-av', Math.round(50 * scale) + 'px');
-        list.style.setProperty('--mc-nw-min', Math.round(110 * scale) + 'px');
-        list.style.setProperty('--mc-nw-max', Math.round(260 * scale) + 'px');
-        list.style.setProperty('--mc-nh', Math.round(40 * scale) + 'px');
-        list.style.setProperty('--mc-nf', Math.round(18 * scale) + 'px');
-        list.style.setProperty('--mc-gap', Math.round(10 * scale) + 'px');
-        list.style.setProperty('--mc-zoom', (0.77 * scale).toFixed(3));
-        list.style.setProperty('--mc-row-min', Math.round(64 * scale) + 'px');
+        if (!nameEl.clientWidth || !inner.scrollWidth) return; // بيئة بدون تصيير حقيقي (مثل بيئة الاختبار)
+        var overflow = inner.scrollWidth - nameEl.clientWidth;
+        if (overflow > 2) {
+            nameEl.classList.add('mc-name-overflow');
+            nameEl.style.setProperty('--mc-name-shift', (-(overflow + 6)) + 'px');
+        } else {
+            nameEl.classList.remove('mc-name-overflow');
+        }
+    }
+
+    // ⚠️ بطاقة مؤطَّرة (Option A) — عرض هدف ثابت = نفس عرض البطاقة العادية
+    // (avatar + لوح - تراكب)، الارتفاع ناتج تلقائياً حسب نسبة كل إطار.
+    // الملف المشترك يحسب عرض كل إطار بناءً على ارتفاع ثابت خاص فيه
+    // (CARD_HEIGHT_PX=72px)، فنقرأ عرضه الطبيعي الفعلي (inline style)
+    // ونطبّق zoom لكل بطاقة على حدة يوصلها بالضبط للعرض المستهدف —
+    // بدون أي لمس لملف js/agp-player-card.js المشترك.
+    function normalizeFramedCardWidths(list) {
+        var targetWidth = 60 + 200 - 13; // نفس عرض البطاقة العادية: أفاتار + لوح - تراكب
+        var tplCards = list.querySelectorAll('.agp-pcard-tpl');
+        tplCards.forEach(function (card) {
+            var nativeWidth = parseFloat(card.style.width);
+            if (!nativeWidth) return;
+            var zoom = targetWidth / nativeWidth;
+            card.style.zoom = zoom;
+        });
     }
 
     /* -------- 14ج) صف الأزرار السفلي (إعدادات / بدء الجولة / رجوع للمنصة) -------- */
