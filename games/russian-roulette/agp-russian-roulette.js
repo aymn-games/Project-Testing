@@ -351,11 +351,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#rr-wheel-pointer{position:absolute;top:-18px;left:50%;transform:translateX(-50%);width:0;height:0;',
             'border-left:14px solid transparent;border-right:14px solid transparent;border-top:24px solid var(--rr-gold);',
             'z-index:6;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6));}',
-            /* ⚠️ زر مستقل بالتدفّق الطبيعي (مو معلَّق فوق العجلة بعد الحين)
-             * — يبقى ظاهراً ويشتغل بكل الأوضاع (عجلة/بكرة) بدون استثناء. */
-            '#rr-wheel-hub{margin:14px auto 0;width:96px;height:96px;border-radius:50%;border:4px solid var(--rr-gold);',
-            'cursor:pointer;background:radial-gradient(circle at 35% 30%,#2a1e0c,#0e0b06);display:flex;',
-            'flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 0 20px rgba(132,91,27,0.6);}',
+            /* ⚠️ افتراضياً معلَّق بمنتصف العجلة (زي المطلوب) — عنصر JS
+             * واحد فعلياً يُنقَل بالكود بين العجلة والبكرة حسب الوضع
+             * الحالي (rr-hub-standalone تبدّل موضعه لأسفل البكرة بدون
+             * ما يختفي أبداً — هذا كان الخلل الحقيقي قبل). */
+            '#rr-wheel-hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:7;',
+            'width:96px;height:96px;border-radius:50%;border:4px solid var(--rr-gold);cursor:pointer;',
+            'background:radial-gradient(circle at 35% 30%,#2a1e0c,#0e0b06);display:flex;flex-direction:column;',
+            'align-items:center;justify-content:center;gap:2px;box-shadow:0 0 20px rgba(132,91,27,0.6);}',
+            '#rr-wheel-hub.rr-hub-standalone{position:static;transform:none;margin:14px auto 0;}',
             '#rr-wheel-hub img{width:42px;height:42px;object-fit:contain;}',
             '#rr-wheel-hub span{font-size:0.78em;font-weight:900;color:#f2e6cf;}',
             '#rr-wheel-hub:disabled{opacity:0.5;cursor:not-allowed;}',
@@ -424,7 +428,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.rr-chooser-nm{font-size:1.35em;font-weight:900;color:#fff;}',
             '.rr-chooser-num{width:34px;height:34px;border-radius:50%;background:' + ACCENT2 + ';color:#241a0c;',
             'font-size:1em;font-weight:900;display:flex;align-items:center;justify-content:center;flex:none;}',
-            '.rr-chooser-hearts{display:flex;gap:3px;margin-top:6px;}',
+            '.rr-chooser-hearts{display:flex;gap:3px;margin-top:1px;}',
             '#rr-select-actions{display:flex;flex-direction:row;gap:8px;width:230px;flex:none;}',
             '#rr-select-actions button{flex:1;padding:9px 6px;border-radius:999px;border:none;font-weight:800;',
             'cursor:pointer;font-family:inherit;font-size:0.74em;color:#fff;white-space:nowrap;line-height:1.3;}',
@@ -453,7 +457,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.rr-lc-num{width:32px;height:32px;flex:none;',
             'border-radius:50%;background:' + ACCENT2 + ';color:#241a0c;font-size:1.05em;font-weight:900;',
             'display:flex;align-items:center;justify-content:center;z-index:3;}',
-            '.rr-lc-hearts{display:flex;gap:2px;margin-top:6px;}',
+            '.rr-lc-hearts{display:flex;gap:2px;margin-top:2px;}',
             '.rr-lc-card.rr-candidate-selected .rr-lc-plate{box-shadow:0 0 0 2px #e24b4a;}',
 
             /* ---- شاشة "الاشتباك" ---- */
@@ -477,6 +481,42 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#rr-clash-sentence{text-align:center;color:#f2e6cf;font-size:0.95em;font-weight:700;margin-top:18px;}',
             '#rr-clash-sentence b{font-weight:900;}',
             '#rr-clash-gun{width:70px;height:auto;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.6));}',
+            /* ---- شاشة "نتيجة الإقصاء" الجديدة (rr-elimination-result.html) —
+             * ٥٥٠×٣٥٠ (٤٥٠+١٠٠ زيادة عرض بالضبط)، بديل كامل للتصميم القديم ---- */
+            '#rr-result-overlay{position:fixed;inset:0;z-index:100013;display:none;align-items:center;',
+            'justify-content:center;background:rgba(8,4,16,0.75);padding:16px;}',
+            '#rr-result-box{width:550px;height:350px;max-width:97vw;max-height:94vh;box-sizing:border-box;',
+            'background:linear-gradient(180deg,' + BG_BROWN + ',#000);border:2px solid ' + ACCENT2 + ';',
+            'border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;align-items:center;',
+            'box-shadow:0 0 40px rgba(212,175,55,0.35);position:relative;}',
+            '.rr-result-badge{background:rgba(239,68,68,0.18);border:1px solid rgba(239,68,68,0.5);',
+            'color:#ff6b6b;font-weight:900;font-size:0.7em;padding:4px 12px;border-radius:999px;',
+            'margin-bottom:8px;flex-shrink:0;}',
+            '.rr-result-title{text-align:center;color:#fff;font-weight:900;font-size:1.1em;margin:0 0 4px;flex-shrink:0;}',
+            '.rr-result-sub{text-align:center;color:#e9d3ff;font-size:0.7em;margin-bottom:14px;flex-shrink:0;}',
+            '.rr-result-row{display:flex;align-items:center;justify-content:center;gap:14px;flex:1;}',
+            '.rr-result-card{display:flex;flex-direction:column;align-items:center;gap:8px;width:150px;}',
+            '.rr-result-ring{width:112px;height:112px;border-radius:50%;padding:5px;box-sizing:border-box;}',
+            '.rr-result-ring.rr-eliminator{background:' + ACCENT2 + ';box-shadow:0 0 20px rgba(212,175,55,0.65);}',
+            '.rr-result-ring.rr-eliminated{background:#ef4444;box-shadow:0 0 20px rgba(239,68,68,0.6);opacity:0.9;}',
+            '.rr-result-ring-inner{width:100%;height:100%;border-radius:50%;background:#2D1932;overflow:hidden;',
+            'display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.85em;color:#fff;',
+            'position:relative;}',
+            '.rr-result-ring-inner img{width:100%;height:100%;object-fit:cover;}',
+            '.rr-result-ring.rr-eliminated .rr-result-ring-inner{filter:grayscale(0.6);}',
+            '.rr-result-x-mark{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;',
+            'background:rgba(0,0,0,0.45);font-size:2.4em;color:#ef4444;font-weight:900;}',
+            '.rr-result-role-tag{font-weight:900;font-size:0.68em;padding:3px 11px;border-radius:999px;}',
+            '.rr-result-role-tag.rr-eliminator{background:rgba(212,175,55,0.18);color:' + ACCENT2 + ';',
+            'border:1px solid rgba(212,175,55,0.45);}',
+            '.rr-result-role-tag.rr-eliminated{background:rgba(239,68,68,0.18);color:#f87171;',
+            'border:1px solid rgba(239,68,68,0.45);}',
+            '.rr-result-name{font-size:0.98em;font-weight:900;color:#fff;}',
+            '.rr-result-connector{display:flex;flex-direction:column;align-items:center;gap:3px;color:#9d92b3;}',
+            '.rr-result-connector .rr-arrow{font-size:1.3em;color:#ef4444;}',
+            '.rr-result-connector .rr-verb{font-size:0.62em;font-weight:800;color:#e9d3ff;}',
+            '.rr-result-continue{text-align:center;color:#9d92b3;font-size:0.62em;margin-top:14px;flex-shrink:0;}',
+            '.rr-result-continue b{color:#fff;}',
             '.rr-flash-white{animation:rr-flash-white 0.5s ease-out;}',
             '@keyframes rr-flash-white{0%{box-shadow:0 0 0 0 rgba(255,255,255,0);}30%{box-shadow:0 0 40px 20px rgba(255,255,255,0.9);}100%{box-shadow:0 0 0 0 rgba(255,255,255,0);}}',
             '.rr-flash-red{animation:rr-flash-red 0.6s ease-out;}',
@@ -643,34 +683,37 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * لبطاقة "الأكثر إقصاءً" (حلقة وردية متقطّعة بدل الذهبية). ---- */
             '#rr-winner-overlay{position:fixed;inset:0;z-index:100012;display:none;align-items:center;',
             'justify-content:center;background:rgba(6,4,1,0.88);padding:16px;gap:28px;flex-wrap:wrap;}',
-            '.rr-trophy-card{position:relative;width:250px;height:450px;box-sizing:border-box;border-radius:22px;',
-            'padding:32px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;',
+            '.rr-trophy-card{position:relative;width:375px;height:675px;box-sizing:border-box;border-radius:32px;',
+            'padding:48px 27px;display:flex;flex-direction:column;align-items:center;justify-content:center;',
             'background:none;border:none;',
             'box-shadow:0 0 60px 16px rgba(212,175,55,0.28),0 0 130px 40px rgba(212,175,55,0.16);',
             'animation:rr-glow-pulse 2.6s ease-in-out infinite;}',
             '@keyframes rr-glow-pulse{0%,100%{box-shadow:0 0 60px 16px rgba(212,175,55,0.28),',
             '0 0 130px 40px rgba(212,175,55,0.16);}',
             '50%{box-shadow:0 0 82px 24px rgba(212,175,55,0.42),0 0 165px 50px rgba(212,175,55,0.26);}}',
-            '.rr-trophy-icon{font-size:2.4em;margin-bottom:6px;}',
-            '.rr-trophy-label{font-size:1.05em;font-weight:900;color:#fff;margin-bottom:20px;}',
-            '.rr-ring-wrap{position:relative;width:150px;height:150px;margin:0 auto 18px;border-radius:50%;',
-            'padding:7px;box-sizing:border-box;}',
+            '.rr-trophy-icon{font-size:3.6em;margin-bottom:9px;}',
+            '.rr-trophy-label{font-size:1.55em;font-weight:900;color:#fff;margin-bottom:30px;}',
+            /* ⚠️ الوسم (تاج/هدف) صار فوق الصورة مباشرة (مو زاوية الحلقة) —
+             * مساحة علوية إضافية بالـwrap تفسح له مكان بدون تراكب. */
+            '.rr-ring-wrap{position:relative;width:225px;height:225px;margin:44px auto 27px;border-radius:50%;',
+            'padding:10px;box-sizing:border-box;}',
             '.rr-ring-gold{background:' + ACCENT2 + ';box-shadow:0 0 28px rgba(212,175,55,0.55);}',
             '.rr-ring-pink{border:none;background:repeating-conic-gradient(#e24b4a 0deg 18deg,#3a0a0a 18deg 36deg);',
             'box-shadow:0 0 28px rgba(226,75,74,0.4);}',
             '.rr-ring-inner{width:100%;height:100%;border-radius:50%;background:#2D1932;overflow:hidden;',
-            'display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:2.3em;}',
+            'display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:3.4em;}',
             '.rr-ring-inner img{width:100%;height:100%;object-fit:cover;}',
-            '.rr-ring-badge{position:absolute;bottom:0;right:0;width:40px;height:40px;border-radius:50%;',
-            'display:flex;align-items:center;justify-content:center;font-size:1.3em;border:2px solid #2D1932;}',
+            '.rr-ring-badge{position:absolute;top:-44px;left:50%;transform:translateX(-50%);width:60px;height:60px;',
+            'border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2em;',
+            'border:2px solid #2D1932;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5));}',
             '.rr-badge-winner{background:' + ACCENT2 + ';}',
             '.rr-badge-most{background:#e24b4a;}',
-            '.rr-trophy-name{font-size:1.55em;font-weight:900;color:#fff;}',
-            '.rr-trophy-count{color:#e8d9b8;font-size:1em;margin-top:6px;}',
-            '.rr-trophy-points{margin-top:16px;font-size:1.05em;line-height:1.5;text-align:center;}',
+            '.rr-trophy-name{font-size:2.3em;font-weight:900;color:#fff;}',
+            '.rr-trophy-count{color:#e8d9b8;font-size:1.4em;margin-top:9px;}',
+            '.rr-trophy-points{margin-top:24px;font-size:1.55em;line-height:1.5;text-align:center;}',
             '.rr-points-earned{color:' + ACCENT2 + ';font-weight:800;}',
-            '.rr-winner-actions{width:100%;margin-top:6px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}',
-            '.rr-winner-actions button{padding:11px 24px;border-radius:999px;font-weight:800;font-size:0.9em;',
+            '.rr-winner-actions{width:100%;margin-top:9px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}',
+            '.rr-winner-actions button{padding:14px 28px;border-radius:999px;font-weight:800;font-size:1.1em;',
             'cursor:pointer;font-family:inherit;}',
             '#rr-replay-same-btn{background:linear-gradient(90deg,' + ACCENT2 + ',#a9791c);color:#241a0c;border:none;}',
             '#rr-newmatch-btn{background:#fff;color:#241a0c;border:1px solid ' + ACCENT2 + ';}',
@@ -799,17 +842,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div id="rr-wheel-wrap">' +
                 '<div id="rr-wheel"></div>' +
                 '<div id="rr-wheel-pointer"></div>' +
+                '<button id="rr-wheel-hub" type="button"><img src="../../logo.png" alt=""><span>تدوير</span></button>' +
             '</div>' +
             '<div id="rr-reel-wrap" style="display:none;">' +
                 '<div id="rr-reel-pointer-line"></div>' +
                 '<div id="rr-reel-list"></div>' +
             '</div>' +
-            // ⚠️ [إصلاح خلل حقيقي] زر التدوير/التحريك كان عنصراً داخل
-            // #rr-wheel-wrap نفسه — فلمّا نخفي الصندوق كامل وقت التبديل
-            // لوضع السكرول، الزر يختفي معه ويصير ما فيه أي طريقة تشغّل
-            // البكرة إطلاقاً. صار الحين عنصراً مستقلاً تماماً عن الاثنين،
-            // ظاهر ويشتغل بكل الأوضاع دائماً.
-            '<button id="rr-wheel-hub" type="button"><img src="../../logo.png" alt=""><span>تدوير</span></button>' +
             '<div id="rr-wheel-actions">' +
                 '<button id="rr-shuffle-btn" type="button">🔀 إعادة ترتيب عشوائي</button>' +
                 '<button id="rr-autoplay-btn" type="button">▶️ العب التلقائي</button>' +
@@ -880,6 +918,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div id="rr-clash-sentence"></div>' +
             '</div>';
         document.body.appendChild(clashOverlay);
+
+        var resultOverlay = document.createElement('div');
+        resultOverlay.id = 'rr-result-overlay';
+        resultOverlay.innerHTML =
+            '<div id="rr-result-box">' +
+                '<div class="rr-result-badge">🔴 تم الإقصاء</div>' +
+                '<div class="rr-result-title" id="rr-result-title"></div>' +
+                '<div class="rr-result-sub">نتيجة هذا الدور</div>' +
+                '<div class="rr-result-row">' +
+                    '<div class="rr-result-card">' +
+                        '<div class="rr-result-ring rr-eliminator"><div class="rr-result-ring-inner" id="rr-result-eliminator-avatar"></div></div>' +
+                        '<span class="rr-result-role-tag rr-eliminator">✅ أقصى</span>' +
+                        '<span class="rr-result-name" id="rr-result-eliminator-name"></span>' +
+                    '</div>' +
+                    '<div class="rr-result-connector"><span class="rr-arrow">⟵</span><span class="rr-verb">أقصى</span></div>' +
+                    '<div class="rr-result-card">' +
+                        '<div class="rr-result-ring rr-eliminated"><div class="rr-result-ring-inner" id="rr-result-eliminated-avatar">' +
+                            '<span class="rr-result-x-mark">✕</span></div></div>' +
+                        '<span class="rr-result-role-tag rr-eliminated">❌ انقصى</span>' +
+                        '<span class="rr-result-name" id="rr-result-eliminated-name"></span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="rr-result-continue">اللعبة مستمرة تلقائياً بعد <b>٣</b> ثواني...</div>' +
+            '</div>';
+        document.body.appendChild(resultOverlay);
 
         var winnerOverlay = document.createElement('div');
         winnerOverlay.id = 'rr-winner-overlay';
@@ -1041,18 +1104,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _wheelDisplayMode = (_wheelDisplayMode === 'wheel') ? 'reel' : 'wheel';
         var wheelWrap = el('rr-wheel-wrap');
         var reelWrap = el('rr-reel-wrap');
+        var hub = el('rr-wheel-hub');
         var toggleBtn = el('rr-display-mode-toggle');
         if (_wheelDisplayMode === 'reel') {
             wheelWrap.style.display = 'none';
             reelWrap.style.display = 'block';
             renderReel();
-            var hubSpan = document.querySelector('#rr-wheel-hub span');
+            // ⚠️ ننقل نفس زر التدوير فعلياً (مو نسخة) لتحت البكرة —
+            // يبقى شغّال ومرئي بكل الأوضاع، بدل ما يختفي مع العجلة.
+            hub.classList.add('rr-hub-standalone');
+            reelWrap.insertAdjacentElement('afterend', hub);
+            var hubSpan = hub.querySelector('span');
             if (hubSpan) hubSpan.textContent = 'تحريك';
             if (toggleBtn) toggleBtn.textContent = '🔃 تبديل شكل الاختيار (عجلة)';
         } else {
             wheelWrap.style.display = '';
             reelWrap.style.display = 'none';
-            var hubSpan2 = document.querySelector('#rr-wheel-hub span');
+            hub.classList.remove('rr-hub-standalone');
+            wheelWrap.appendChild(hub);
+            var hubSpan2 = hub.querySelector('span');
             if (hubSpan2) hubSpan2.textContent = 'تدوير';
             if (toggleBtn) toggleBtn.textContent = '🔃 تبديل شكل الاختيار (سكرول)';
         }
@@ -1122,8 +1192,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return '<div class="rr-chooser-card">' +
             '<div class="rr-chooser-ring">' + playerAvatarImgHtml(chooser, 'rr-fallback') + '</div>' +
             '<div>' +
-                '<div class="rr-chooser-nmrow"><span class="rr-chooser-num">' + playerNumber(chooser) + '</span>' +
-                '<span class="rr-chooser-nm">' + escapeHtml(playerLabel(chooser)) + '</span></div>' +
+                '<div class="rr-chooser-nmrow"><span class="rr-chooser-nm">' + escapeHtml(playerLabel(chooser)) + '</span>' +
+                '<span class="rr-chooser-num">' + playerNumber(chooser) + '</span></div>' +
                 '<div class="rr-chooser-hearts">' + heartsRowHtml(chooser) + '</div>' +
             '</div>' +
         '</div>';
@@ -1364,29 +1434,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function showEliminationSuccessScreen(chooser, target, onDone) {
-        var overlay = el('rr-clash-overlay');
-        var box = el('rr-clash-box');
-        var header = el('rr-clash-header');
-        box.className = 'rr-clash-hit';
-        header.className = 'rr-success-title';
-        header.textContent = 'عملية اقصاء ناجحة';
-
-        el('rr-clash-shooter-avatar').innerHTML = playerAvatarImgHtml(chooser, 'rr-avatar-img');
-        el('rr-clash-shooter-name').textContent = playerLabel(chooser);
-        var targetAvatarWrap = el('rr-clash-target-avatar');
-        targetAvatarWrap.className = 'rr-clash-avatar-wrap rr-target rr-target-vanish';
-        targetAvatarWrap.innerHTML = playerAvatarImgHtml(target, 'rr-avatar-img');
-        el('rr-clash-target-name').textContent = playerLabel(target);
-        var sentenceEl = el('rr-clash-sentence');
-        if (sentenceEl) {
-            sentenceEl.innerHTML = 'اللاعب <b>' + escapeHtml(playerLabel(chooser)) + '</b> قام باقصاء <b>' +
-                escapeHtml(playerLabel(target)) + '</b> من العجلة';
-        }
+        var overlay = el('rr-result-overlay');
+        el('rr-result-title').textContent = playerLabel(chooser) + ' أقصى ' + playerLabel(target) + '!';
+        el('rr-result-eliminator-avatar').innerHTML = ringAvatarHtml(chooser);
+        el('rr-result-eliminator-name').textContent = playerLabel(chooser);
+        var elimAvatarEl = el('rr-result-eliminated-avatar');
+        elimAvatarEl.innerHTML = ringAvatarHtml(target) + '<span class="rr-result-x-mark">✕</span>';
+        el('rr-result-eliminated-name').textContent = playerLabel(target);
 
         overlay.style.display = 'flex';
         window.setTimeout(function () {
             overlay.style.display = 'none';
-            targetAvatarWrap.classList.remove('rr-target-vanish');
             if (typeof onDone === 'function') onDone();
         }, 3000);
     }
@@ -1833,6 +1891,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function enhanceLobbyScreen() {
         var box = el('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
+        // ⚠️ [إصلاح خلل حقيقي] الصفحة كانت لسا تطلع بصندوق منتصف الشاشة
+        // بدل صفحة كاملة رغم قاعدة CSS الموجودة أصلاً — تطبيق مباشر عبر
+        // JS بأولوية "important" هنا كضمان إضافي أكيد 100٪، بغض النظر عن
+        // أي تعارض توقيت/أولوية بالـstylesheet ما قدرت أشخّصه بدون اختبار
+        // حي على موقعك.
+        box.style.setProperty('width', '100vw', 'important');
+        box.style.setProperty('height', '100vh', 'important');
+        box.style.setProperty('max-width', '100vw', 'important');
+        box.style.setProperty('max-height', '100vh', 'important');
+        box.style.setProperty('border-radius', '0', 'important');
+        box.style.setProperty('margin', '0', 'important');
         var h2 = box.querySelector('h2');
         if (h2 && h2.getAttribute('data-rr-heading') !== '1') {
             h2.innerHTML = 'اللوبي بانتظار اللاعبين <span class="rr-lobby-heading-accent">' + escapeHtml(GAME_NAME) + '</span>';
@@ -1917,19 +1986,46 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         box.appendChild(btn);
     }
 
+    // ⚠️ [إصلاح خلل حرج] تعليق كامل الصفحة عند فتح الإعدادات — السبب
+    // الأرجح: تعديلات DOM داخل enhance* (مثل نقل/لفّ عناصر) تُطلِق
+    // MutationObserver من جديد، واللي بدوره يستدعي applyShellEnhancements
+    // مرّة ثانية قبل ما تخلص الأولى — حلقة استدعاء متكررة سريعة جداً
+    // تجمّد المتصفح (ليست ملاحظة نظرية بس؛ هذا النمط بالضبط سبب تجمّد
+    // معروف لصفحات فيها MutationObserver يعدّل نفس الشجرة اللي يراقبها).
+    // الحل: قفل إعادة الدخول (ما تشتغل applyShellEnhancements مرتين
+    // بنفس اللحظة) + تجميع (debounce) نبضات المراقب المتلاحقة بفاصل
+    // ٣٠ملي‑ثانية بدل تشغيلها فوراً كل مرة — يقطع أي حلقة محتملة نهائياً
+    // بغض النظر عن أي enhance تحديداً كانت السبب، ويشتغل بكل الأجهزة
+    // (مو خاص بالآيباد فقط زي ما لاحظته).
+    var _enhancementsRunning = false;
+    var _enhancementsPending = false;
     function applyShellEnhancements() {
-        enhanceSettingsScreen();
-        enhanceLobbyScreen();
-        enhanceReopenedSettings();
-        enhanceMiniLobby();
-        enhanceConnectingScreen();
+        if (_enhancementsRunning) { _enhancementsPending = true; return; }
+        _enhancementsRunning = true;
+        try {
+            enhanceSettingsScreen();
+            enhanceLobbyScreen();
+            enhanceReopenedSettings();
+            enhanceMiniLobby();
+            enhanceConnectingScreen();
+        } finally {
+            _enhancementsRunning = false;
+            if (_enhancementsPending) {
+                _enhancementsPending = false;
+                window.setTimeout(applyShellEnhancements, 0);
+            }
+        }
     }
 
     function wireSharedShellEnhancements() {
         applyShellEnhancements();
         var overlay = document.getElementById('agp-shell-overlay');
         if (!overlay) return;
-        var observer = new MutationObserver(applyShellEnhancements);
+        var debounceTimer = null;
+        var observer = new MutationObserver(function () {
+            if (debounceTimer) window.clearTimeout(debounceTimer);
+            debounceTimer = window.setTimeout(applyShellEnhancements, 30);
+        });
         observer.observe(overlay, { childList: true, subtree: true });
     }
 
