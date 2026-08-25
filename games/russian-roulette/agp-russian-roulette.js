@@ -167,6 +167,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _autoPlayActive = false;
     var _autoPlayTimer = null;
     var _lastChooserId = null;      // لتقليل احتمال وقوف العجلة على نفس الشخص مرتين متتاليتين
+    var _streamerUsername = '';     // ⚠️ يوزرنيم الاستريمر المتّصل — يُلتقَط لحظة الضغط على "اتصال" (لعرضه كـ"مُقصي" بالإقصاء اليدوي)
+
+    function streamerVirtualPlayer() {
+        return { id: 'tiktok:' + (_streamerUsername || 'streamer'), name: _streamerUsername || 'المذيع', avatarUrl: null };
+    }
     var _eventLog = [];            // [{icon, text}] — لوحة "أحداث المباراة"
     var _playerNumbers = {};       // playerId -> رقم ثابت طول المباراة (حسب ترتيب دخوله للوبي)
     var _nextPlayerNumber = 1;
@@ -295,12 +300,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#rr-stage{position:fixed;inset:0;padding:86px 16px 24px;display:flex;flex-direction:column;',
             'align-items:center;justify-content:center;gap:14px;overflow-y:auto;direction:rtl;color:#f3eefc;}',
 
-            '#rr-settings-toggle{position:fixed;top:74px;right:16px;z-index:400;padding:8px 18px;border-radius:999px;',
-            'border:1px solid var(--rr-gold);background:rgba(0,0,0,0.5);color:#f2e6cf;font-weight:700;font-size:0.85em;cursor:pointer;}',
+            /* ⚠️ زر عائم دائري (⚙️ بس) بدل الزر النصّي القديم — مطابق للملف
+             * المرجعي (rr-inmatch-settings.html). */
+            '#rr-settings-toggle{position:fixed;top:74px;right:16px;z-index:400;width:50px;height:50px;',
+            'border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,' + BG_BROWN + ',' + ACCENT2 + ');',
+            'color:#fff;font-size:1.3em;display:flex;align-items:center;justify-content:center;',
+            'box-shadow:0 8px 22px rgba(212,175,55,0.4);padding:0;transition:transform .15s;}',
+            '#rr-settings-toggle:hover{transform:scale(1.06);}',
             '#rr-eventlog-toggle{position:fixed;top:74px;left:16px;z-index:400;padding:8px 18px;border-radius:999px;',
             'border:1px solid var(--rr-gold);background:rgba(0,0,0,0.5);color:#f2e6cf;font-weight:700;font-size:0.85em;cursor:pointer;}',
             '#agp-header-settings-btn{display:none !important;}',
             'body.agp-shell-active{background:linear-gradient(170deg,#1a1206 0%,#000 100%) !important;}',
+            /* ⚠️ شاشة "جاري الاتصال" — كانت لسا بلونها البنفسجي الافتراضي
+             * (اللون البنفسجي المستخدَم بالمنصة عموماً). نعيد تصميمها
+             * بهوية اللعبة بالكامل، مع زر رجوع يظهر فقط بحالة الخطأ. */
+            '#agp-shell-box.agp-connecting-box{width:min(420px,94vw) !important;height:auto !important;',
+            'background:linear-gradient(180deg,' + BG_BROWN + ',#000) !important;border:2px solid ' + ACCENT2 + ' !important;',
+            'border-radius:18px !important;text-align:center;padding:38px 28px !important;}',
+            '#agp-shell-box.agp-connecting-box::before{content:"";display:block;width:52px;height:52px;',
+            'margin:0 auto 18px;border-radius:50%;border:4px solid rgba(242,230,207,0.18);',
+            'border-top-color:' + ACCENT2 + ';animation:rr-conn-spin 0.9s linear infinite;}',
+            '@keyframes rr-conn-spin{to{transform:rotate(360deg);}}',
+            '#agp-shell-box.agp-connecting-box h2{color:' + ACCENT2 + ' !important;font-size:1.15em !important;margin:0 0 8px !important;}',
+            '#agp-shell-box.agp-connecting-box .agp-shell-status{color:#e8d9b8 !important;font-size:0.9em !important;}',
+            '.rr-connect-retry-btn{margin-top:18px;padding:11px 26px;border-radius:999px;border:1px solid ' + ACCENT2 + ';',
+            'background:transparent;color:#f2e6cf;font-weight:800;font-size:0.85em;cursor:pointer;font-family:inherit;}',
             /* ⚠️ الهيدر العلوي الثابت (مشترك بين كل الألعاب) كان لسا بلونه
              * البنفسجي الافتراضي — نعيد تلوينه بهوية اللعبة هنا فقط. */
             '#agp-persistent-header{background:linear-gradient(90deg,#1a1206,#000) !important;',
@@ -327,10 +351,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#rr-wheel-pointer{position:absolute;top:-18px;left:50%;transform:translateX(-50%);width:0;height:0;',
             'border-left:14px solid transparent;border-right:14px solid transparent;border-top:24px solid var(--rr-gold);',
             'z-index:6;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6));}',
-            '#rr-wheel-hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:7;',
-            'width:96px;height:96px;border-radius:50%;border:4px solid var(--rr-gold);cursor:pointer;',
-            'background:radial-gradient(circle at 35% 30%,#2a1e0c,#0e0b06);display:flex;flex-direction:column;',
-            'align-items:center;justify-content:center;gap:2px;box-shadow:0 0 20px rgba(132,91,27,0.6);}',
+            /* ⚠️ زر مستقل بالتدفّق الطبيعي (مو معلَّق فوق العجلة بعد الحين)
+             * — يبقى ظاهراً ويشتغل بكل الأوضاع (عجلة/بكرة) بدون استثناء. */
+            '#rr-wheel-hub{margin:14px auto 0;width:96px;height:96px;border-radius:50%;border:4px solid var(--rr-gold);',
+            'cursor:pointer;background:radial-gradient(circle at 35% 30%,#2a1e0c,#0e0b06);display:flex;',
+            'flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 0 20px rgba(132,91,27,0.6);}',
             '#rr-wheel-hub img{width:42px;height:42px;object-fit:contain;}',
             '#rr-wheel-hub span{font-size:0.78em;font-weight:900;color:#f2e6cf;}',
             '#rr-wheel-hub:disabled{opacity:0.5;cursor:not-allowed;}',
@@ -420,14 +445,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'border:3px solid rgba(255,255,255,0.55);flex:none;object-fit:cover;display:flex;align-items:center;',
             'justify-content:center;color:#fff;font-weight:800;position:relative;z-index:2;}',
             '.rr-lc-plate{position:relative;height:48px;width:194px;box-sizing:border-box;',
-            'margin-inline-start:-13px;padding-inline-start:31px;padding-inline-end:58px;',
-            'display:flex;align-items:center;justify-content:flex-start;font-weight:800;color:#fff;',
+            'margin-inline-start:-13px;padding-inline-start:31px;padding-inline-end:10px;',
+            'display:flex;align-items:center;justify-content:flex-start;gap:8px;font-weight:800;color:#fff;',
             'background:rgba(255,255,255,0.1);border:1px solid rgba(212,175,55,0.35);',
             'border-radius:999px;overflow:hidden;z-index:1;}',
-            '.rr-lc-name{font-size:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
-            '.rr-lc-num{position:absolute;left:5px;top:50%;transform:translateY(-50%);width:36px;height:36px;',
-            'border-radius:50%;background:' + ACCENT2 + ';color:#241a0c;font-size:1.15em;font-weight:900;',
-            'display:flex;align-items:center;justify-content:center;z-index:3;flex:none;}',
+            '.rr-lc-name{font-size:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;}',
+            '.rr-lc-num{width:32px;height:32px;flex:none;',
+            'border-radius:50%;background:' + ACCENT2 + ';color:#241a0c;font-size:1.05em;font-weight:900;',
+            'display:flex;align-items:center;justify-content:center;z-index:3;}',
             '.rr-lc-hearts{display:flex;gap:2px;margin-top:6px;}',
             '.rr-lc-card.rr-candidate-selected .rr-lc-plate{box-shadow:0 0 0 2px #e24b4a;}',
 
@@ -503,6 +528,30 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.rr-home-from-settings-btn{background:transparent !important;color:#f2e6cf !important;',
             'border:1px solid var(--rr-gold) !important;border-radius:999px;padding:12px;font-weight:800;',
             'font-size:0.9em;cursor:pointer;font-family:inherit;}',
+            /* ⚠️ درج جانبي ينزلق من يمين الشاشة — إعدادات وسط المباراة */
+            '#agp-shell-overlay:has(.rr-inmatch-drawer){align-items:stretch !important;justify-content:flex-end !important;',
+            'padding:0 !important;}',
+            '#agp-shell-box.rr-inmatch-drawer{width:400px !important;max-width:90vw !important;height:100vh !important;',
+            'max-height:100vh !important;border-radius:0 !important;margin:0 !important;border:none !important;',
+            'border-inline-start:1px solid rgba(212,175,55,0.35) !important;display:flex !important;',
+            'flex-direction:column !important;overflow-y:auto !important;padding:60px 20px 24px !important;',
+            'animation:rr-drawer-in .3s cubic-bezier(0.32,0.72,0,1);}',
+            '@keyframes rr-drawer-in{from{transform:translateX(105%);}to{transform:translateX(0);}}',
+            '#agp-shell-box.rr-inmatch-drawer h2{font-size:1.1em;text-align:center;margin:0 0 14px !important;}',
+            '.rr-add-player-row{margin-bottom:14px;}',
+            '.rr-add-player-row .agp-shell-btn-connect{width:100% !important;}',
+            '.rr-accordion{border:1px solid rgba(212,175,55,0.3);border-radius:14px;overflow:hidden;margin:14px 0;}',
+            '.rr-accordion-head{width:100%;display:flex;align-items:center;justify-content:space-between;',
+            'padding:12px 16px;background:rgba(255,255,255,0.04);border:none;color:#fff;font-weight:800;',
+            'font-size:0.9em;cursor:pointer;font-family:inherit;}',
+            '.rr-accordion-chevron{transition:transform .2s;}',
+            '.rr-accordion.rr-open .rr-accordion-chevron{transform:rotate(180deg);}',
+            '.rr-accordion-body{max-height:0;overflow:hidden;transition:max-height .25s ease;}',
+            '.rr-accordion.rr-open .rr-accordion-body{max-height:320px;overflow-y:auto;}',
+            '.rr-accordion-body .agp-settings-player-row{padding:10px;justify-content:flex-start !important;}',
+            '.rr-exit-btn{background:transparent !important;color:#e24b4a !important;',
+            'border:1px solid #e24b4a !important;border-radius:999px;padding:10px 14px;font-weight:900;',
+            'cursor:pointer;font-size:0.82em;font-family:inherit;white-space:nowrap;}',
 
             '.rr-lobbyscreen-remove-btn{position:absolute;top:-6px;left:-6px;width:22px;height:22px;border-radius:50%;',
             'background:#e24b4a;color:#fff;border:2px solid #000;font-weight:900;font-size:12px;line-height:18px;',
@@ -551,10 +600,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * بلعبة اسم وحيوان ونبات وجماد لنفس المشكلة — النسبة هنا
              * مُعايَرة لتطابق حجم بطاقاتنا الجديد (60px بدل 34px القديم). */
             '#agp-shell-box.agp-lobby-box .agp-pcard-tpl{zoom:0.833;}',
-            /* ⚠️ شارة عائمة أعلى-يسار الشاشة تعرض عدد اللاعبين الحالي (قسم ٤) */
-            '#rr-lobby-count-badge{position:fixed;top:74px;left:16px;z-index:401;',
-            'background:rgba(255,255,255,0.07);border:1px solid rgba(212,175,55,0.4);color:' + ACCENT2 + ';',
-            'font-weight:800;font-size:0.85em;padding:7px 16px;border-radius:999px;box-shadow:0 4px 12px rgba(0,0,0,0.4);}',
+            /* ⚠️ سلايد الأسماء الطويلة داخل بطاقات اللوبي (marquee) */
+            '.rr-name-track{display:inline-block;white-space:nowrap;will-change:transform;}',
+            '.rr-name-track.rr-marquee{animation:rr-pill-slide 4.5s ease-in-out infinite;}',
+            '@keyframes rr-pill-slide{0%,15%{transform:translateX(0);}',
+            '45%,55%{transform:translateX(var(--rr-slide-dist));}85%,100%{transform:translateX(0);}}',
 
             '.rr-lobby-heading-accent{color:var(--rr-gold) !important;font-weight:900 !important;}',
             '.rr-lobby-actions-row{display:flex;gap:12px;flex:none;padding-top:16px;justify-content:center;',
@@ -749,12 +799,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div id="rr-wheel-wrap">' +
                 '<div id="rr-wheel"></div>' +
                 '<div id="rr-wheel-pointer"></div>' +
-                '<button id="rr-wheel-hub" type="button"><img src="../../logo.png" alt=""><span>تدوير</span></button>' +
             '</div>' +
             '<div id="rr-reel-wrap" style="display:none;">' +
                 '<div id="rr-reel-pointer-line"></div>' +
                 '<div id="rr-reel-list"></div>' +
             '</div>' +
+            // ⚠️ [إصلاح خلل حقيقي] زر التدوير/التحريك كان عنصراً داخل
+            // #rr-wheel-wrap نفسه — فلمّا نخفي الصندوق كامل وقت التبديل
+            // لوضع السكرول، الزر يختفي معه ويصير ما فيه أي طريقة تشغّل
+            // البكرة إطلاقاً. صار الحين عنصراً مستقلاً تماماً عن الاثنين،
+            // ظاهر ويشتغل بكل الأوضاع دائماً.
+            '<button id="rr-wheel-hub" type="button"><img src="../../logo.png" alt=""><span>تدوير</span></button>' +
             '<div id="rr-wheel-actions">' +
                 '<button id="rr-shuffle-btn" type="button">🔀 إعادة ترتيب عشوائي</button>' +
                 '<button id="rr-autoplay-btn" type="button">▶️ العب التلقائي</button>' +
@@ -771,7 +826,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var toggleBtn = document.createElement('button');
         toggleBtn.id = 'rr-settings-toggle';
         toggleBtn.type = 'button';
-        toggleBtn.textContent = 'الاعدادات';
+        toggleBtn.textContent = '⚙️';
         toggleBtn.onclick = function () {
             var gearBtn = el('agp-header-settings-btn');
             if (gearBtn) gearBtn.click();
@@ -1104,7 +1159,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
 
         var forceBtn = el('rr-force-eliminate-btn');
-        forceBtn.classList.remove('rr-enabled');
+        forceBtn.textContent = 'إقصاء صاحب الدور';
+        forceBtn.classList.add('rr-enabled'); // ⚠️ الزر شغّال دائماً الآن (مو معطّل لحين اختيار هدف)
 
         el('rr-select-overlay').style.display = 'flex';
         wireCommentListener();
@@ -1117,7 +1173,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('rr-candidates-grid').querySelectorAll('.rr-lc-card[data-index]').forEach(function (card) {
             card.classList.toggle('rr-candidate-selected', parseInt(card.getAttribute('data-index'), 10) === idx);
         });
-        el('rr-force-eliminate-btn').classList.add('rr-enabled');
+        // ⚠️ نفس الزر الأحمر — تتبدّل وظيفته/نصّه فقط حسب وجود اختيار يدوي،
+        // بدون أي زر إضافي (طلب صريح).
+        var target = _pendingTurn.candidates[idx];
+        el('rr-force-eliminate-btn').textContent = 'إقصاء ' + playerLabel(target);
     }
 
     var _selectTickUnsub = null;
@@ -1153,8 +1212,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var chooser = _pendingTurn.chooser;
             if (!chooser || (payload.id !== chooser.id && payload.name !== chooser.name)) return;
             var n = parseInt(payload.text.trim(), 10);
-            if (isNaN(n) || n < 1 || n > _pendingTurn.candidates.length) return;
-            resolveSelection(_pendingTurn.candidates[n - 1]);
+            if (isNaN(n)) return;
+            // ⚠️ [إصلاح خلل حقيقي] الرقم المكتوب بالشات لازم يُطابَق برقم
+            // اللاعب الثابت المعروض فعلياً على بطاقته (playerNumber) — مو
+            // بترتيبه داخل مصفوفة المرشّحين المؤقّتة (اللي تتغيّر ترتيبها
+            // كل جولة). الفرق بين الاثنين هو بالضبط سبب "الرقم ما يُقبل".
+            var target = _pendingTurn.candidates.filter(function (p) { return playerNumber(p) === n; })[0];
+            if (!target) return;
+            resolveSelection(target);
         });
     }
 
@@ -1194,13 +1259,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function handleForceEliminateClick() {
-        if (!_pendingTurn || _selectedCandidateIdx === null) return;
+        if (!_pendingTurn) return;
         var chooser = _pendingTurn.chooser;
-        var target = _pendingTurn.candidates[_selectedCandidateIdx];
+        var streamer = streamerVirtualPlayer();
+        // ⚠️ نفس الزر الأحمر — لو ما فيه اختيار يدوي، يقصي صاحب الدور نفسه.
+        // لو فيه لاعب مُختار يدوياً، يقصي ذاك اللاعب المحدَّد بدلاً منه.
+        // بالحالتين: "المُقصي" اللي يظهر بشاشة النتيجة هو الاستريمر نفسه،
+        // مو صاحب الدور ولا أي لاعب ثاني.
+        var target = (_selectedCandidateIdx !== null) ? _pendingTurn.candidates[_selectedCandidateIdx] : chooser;
         closeSelectionScreen();
-        // ⚠️ تجاوز يدوي صريح — إقصاء مباشر بدون المرور بمحرك الاحتمال.
-        logEvent('❌', playerLabel(chooser) + ' أقصى ' + playerLabel(target) + ' يدوياً (تجاوز الاستريمر)');
-        applyElimination(chooser, target, true);
+        // ⚠️ تجاوز يدوي صريح — إقصاء مباشر بدون المرور بمحرك الاحتمال، لكن
+        // بنفس شاشة "عملية اقصاء ناجحة" المعروضة بالمسار العادي (طلب صريح
+        // — ما كانت تظهر بالتجاوز اليدوي قبل كذا، وهذا خلل أصلحته هنا).
+        logEvent('❌', 'صاحب البث أقصى ' + playerLabel(target) + ' يدوياً');
+        showEliminationSuccessScreen(streamer, target, function () {
+            applyElimination(streamer, target, true);
+        });
     }
 
     /* ======================================================================
@@ -1580,15 +1654,62 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function enhanceReopenedSettings() {
         var box = el('agp-shell-box');
         if (!box || !document.getElementById('agp-settings-player-list')) return;
+        box.classList.add('rr-inmatch-drawer');
+
+        var addBtn = document.getElementById('agp-reopen-registration-btn');
+        var playerRow = box.querySelector('.agp-settings-player-row');
+
+        // ⚠️ "إضافة لاعب جديد" ينتقل لصف بارز أعلى الدرج (مو زر بالفوتر).
+        if (addBtn && !box.querySelector('.rr-add-player-row')) {
+            var addRow = document.createElement('div');
+            addRow.className = 'rr-add-player-row';
+            var h2 = box.querySelector('h2');
+            if (h2) h2.insertAdjacentElement('afterend', addRow);
+            addBtn.textContent = '➕ إضافة لاعب جديد';
+            addRow.appendChild(addBtn);
+        }
+
+        // ⚠️ قائمة "الاعبين المشاركين" تصير قابلة للطي/الفتح (accordion).
+        if (playerRow && !playerRow.closest('.rr-accordion')) {
+            var accordion = document.createElement('div');
+            accordion.className = 'rr-accordion';
+            var head = document.createElement('button');
+            head.type = 'button';
+            head.className = 'rr-accordion-head';
+            var count = AGP.gameManager ? AGP.gameManager.getPlayersCount() : 0;
+            head.innerHTML = '<span>👥 اللاعبين المشاركين (' + count + ')</span><span class="rr-accordion-chevron">▾</span>';
+            playerRow.parentNode.insertBefore(accordion, playerRow);
+            accordion.appendChild(head);
+            var body = document.createElement('div');
+            body.className = 'rr-accordion-body';
+            accordion.appendChild(body);
+            body.appendChild(playerRow);
+            head.addEventListener('click', function () { accordion.classList.toggle('rr-open'); });
+        } else if (playerRow) {
+            var headEl = box.querySelector('.rr-accordion-head span');
+            if (headEl && AGP.gameManager) headEl.textContent = '👥 اللاعبين المشاركين (' + AGP.gameManager.getPlayersCount() + ')';
+        }
+
         if (box.querySelector('.rr-save-btn')) return;
         var actionsBox = box.querySelector('.agp-settings-player-actions');
         if (!actionsBox) return;
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'rr-save-btn';
-        btn.textContent = '💾 حفظ جميع التغييرات';
+        btn.textContent = '💾 حفظ التعديلات';
         btn.onclick = handleSaveChangesClick;
         actionsBox.insertBefore(btn, actionsBox.firstChild);
+
+        var exitBtn = document.createElement('button');
+        exitBtn.type = 'button';
+        exitBtn.className = 'rr-exit-btn';
+        exitBtn.textContent = '🚪 إنهاء اللعبة والعودة لمنصة الألعاب';
+        exitBtn.addEventListener('click', function () {
+            if (window.confirm('هذا بينهي المباراة الحالية ويرجّعك لمنصة ألعاب أيمن. متأكد؟')) {
+                window.location.href = '../../index.html';
+            }
+        });
+        actionsBox.appendChild(exitBtn);
     }
 
     // ⚠️ زر "العودة لمنصة العاب ايمن" جنب زر "اتصل بالبث و انتقل للوبي" —
@@ -1630,6 +1751,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var connectBtn = document.getElementById('agp-connect-btn');
         if (!connectBtn) return;
         connectBtn.textContent = 'الاتصال بالبث والدخول';
+        // ⚠️ نلتقط يوزرنيم الاستريمر لحظة الضغط على الاتصال — بنعرضه لاحقاً
+        // كـ"مُقصي" بشاشة نتيجة الإقصاء وقت أي تجاوز يدوي من الاستريمر
+        // نفسه (زر الإقصاء اليدوي بشاشة الاختيار).
+        connectBtn.addEventListener('click', function () {
+            var input = document.getElementById('agp-tiktok-username');
+            if (input && input.value) _streamerUsername = input.value.trim();
+        });
         var row = document.createElement('div');
         row.className = 'rr-settings-btn-row';
         connectBtn.parentNode.insertBefore(row, connectBtn);
@@ -1670,13 +1798,41 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    // ⚠️ سلايد تلقائي (marquee) للأسماء الطويلة داخل بطاقات اللوبي —
+    // بطاقات اللوبي تُرسَم عبر الملف المشترك (js/agp-player-card.js) اللي
+    // ما نلمسه إطلاقاً، فما نعرف بنية الـDOM الداخلية مسبقاً. الحل الآمن:
+    // نلف نص أي بطاقة (بغض النظر عن بنيتها الأصلية) بعنصر sliding داخلي
+    // وقت التشغيل، ونفعّل الأنيميشن فقط لو النص فعلاً أطول من المساحة
+    // المتاحة — بعلامة data- تمنع لفّه مرتين لو الإصلاح تكرّر.
+    function applyLobbyMarquee(container) {
+        if (!container) return;
+        var names = container.querySelectorAll('.agp-pcard-name-basic');
+        names.forEach(function (nameEl) {
+            if (nameEl.getAttribute('data-rr-marquee-ready') === '1') return;
+            nameEl.setAttribute('data-rr-marquee-ready', '1');
+            var text = nameEl.textContent;
+            nameEl.textContent = '';
+            var track = document.createElement('span');
+            track.className = 'rr-name-track';
+            track.textContent = text;
+            nameEl.appendChild(track);
+            window.requestAnimationFrame(function () {
+                var cs = window.getComputedStyle(nameEl);
+                var padL = parseFloat(cs.paddingLeft) || 0;
+                var padR = parseFloat(cs.paddingRight) || 0;
+                var availableWidth = nameEl.clientWidth - padL - padR;
+                var overflow = track.scrollWidth - availableWidth;
+                if (overflow > 2) {
+                    track.style.setProperty('--rr-slide-dist', '-' + overflow + 'px');
+                    track.classList.add('rr-marquee');
+                }
+            });
+        });
+    }
+
     function enhanceLobbyScreen() {
         var box = el('agp-shell-box');
-        if (!box || !box.classList.contains('agp-lobby-box')) {
-            var existingBadge = el('rr-lobby-count-badge');
-            if (existingBadge) existingBadge.style.display = 'none';
-            return;
-        }
+        if (!box || !box.classList.contains('agp-lobby-box')) return;
         var h2 = box.querySelector('h2');
         if (h2 && h2.getAttribute('data-rr-heading') !== '1') {
             h2.innerHTML = 'اللوبي بانتظار اللاعبين <span class="rr-lobby-heading-accent">' + escapeHtml(GAME_NAME) + '</span>';
@@ -1692,15 +1848,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             list.parentNode.insertBefore(scrollWrap, list);
             scrollWrap.appendChild(list);
         }
-        // ⚠️ شارة عائمة أعلى الشاشة بعدد اللاعبين الحالي.
-        var badge = el('rr-lobby-count-badge');
-        if (!badge) {
-            badge = document.createElement('div');
-            badge.id = 'rr-lobby-count-badge';
-            document.body.appendChild(badge);
-        }
-        badge.style.display = 'block';
-        badge.textContent = '👥 ' + AGP.gameManager.getPlayersCount();
         if (list && AGP.gameManager) {
             var players = AGP.gameManager.getPlayers();
             list.querySelectorAll('li').forEach(function (li, i) {
@@ -1719,6 +1866,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 li.appendChild(btn);
             });
         }
+        if (list) applyLobbyMarquee(list);
         var startBtn = document.getElementById('agp-start-round-btn');
         if (startBtn && !box.querySelector('.rr-lobby-actions-row')) {
             var row = document.createElement('div');
@@ -1746,11 +1894,35 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
     }
 
+    // ⚠️ شاشة "جاري الاتصال" تُستخدَم لحالتين بنفس الصندوق (الملف المشترك):
+    // الانتظار العادي، وحالة الخطأ (يوزرنيم غلط/تعذّر الاتصال) — بدون أي
+    // زر رجوع بالحالتين أصلاً. نميّز حالة الخطأ تحديداً (نص الرسالة يحتوي
+    // "تعذّر") ونضيف زر رجوع لشاشة الإعدادات (حقل اليوزرنيم) بس عندها.
+    function enhanceConnectingScreen() {
+        var box = el('agp-shell-box');
+        if (!box || !box.classList.contains('agp-connecting-box')) return;
+        var statusEl = box.querySelector('.agp-shell-status');
+        var isError = statusEl && statusEl.textContent.indexOf('تعذّر') !== -1;
+        var existingBtn = box.querySelector('.rr-connect-retry-btn');
+        if (!isError) {
+            if (existingBtn) existingBtn.remove();
+            return;
+        }
+        if (existingBtn) return; // مضاف مسبقاً لنفس حالة الخطأ
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'rr-connect-retry-btn';
+        btn.textContent = '🔙 رجوع للإعدادات';
+        btn.addEventListener('click', function () { window.location.reload(); });
+        box.appendChild(btn);
+    }
+
     function applyShellEnhancements() {
         enhanceSettingsScreen();
         enhanceLobbyScreen();
         enhanceReopenedSettings();
         enhanceMiniLobby();
+        enhanceConnectingScreen();
     }
 
     function wireSharedShellEnhancements() {
