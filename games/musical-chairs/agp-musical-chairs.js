@@ -88,11 +88,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // صوتي نصف الوقت). أول ما ترفع 6.mp3...10.mp3 بنفس مسار shailat/
     // وkhaleeji/، غيّر الرقم تحت لـ10 وخلاص — بدون أي تعديل ثاني بالكود.
     var MUSIC_TRACK_COUNT = 5;
-    // ⚠️ تصنيف "أغاني عراقية" جديد — جاهز بالكود بالكامل (القائمة المنسدلة
-    // + منطق الاختيار)، بس خليت العدد 0 لين ترفع الملفات الفعلية (نفس
-    // احتياط شيلات/خليجية فوق) — أول ما ترفع 1.mp3...10.mp3 بمجلد
-    // sounds/iraqi/، غيّر الرقم تحت لـ10 وخلاص.
-    var IRAQI_TRACK_COUNT = 0;
+    var IRAQI_TRACK_COUNT = 10; // ⚠️ 10 مقاطع مرفوعة فعلياً بمجلد sounds/iraqi/ (5 + 5 إضافية) — شغّالة الآن
     var SPIN_DURATION_MAX_S = 35; // ⚠️ الحد الأقصى لمدة تدوير الموسيقى (طلب صريح)
 
     /* ======================================================================
@@ -146,10 +142,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (_musicMode === 'shailat') pool = _musicTracks.shailat;
         else if (_musicMode === 'khaleeji') pool = _musicTracks.khaleeji;
         else if (_musicMode === 'iraqi') pool = _musicTracks.iraqi;
-        // ⚠️ العراقية ما تدخل بخلط "عشوائي" العام تلقائياً لين ما تأكد لي
-        // إنك رفعت الملفات الفعلية (تجنّباً لصمت صوتي عشوائي). أول ما
-        // ترفعها قول لي وأدمجها بالخلط بسطر واحد.
-        else pool = _musicTracks.shailat.concat(_musicTracks.khaleeji);
+        // ⚠️ العراقية صارت جزء من الخلط "عشوائي" العام كمان (نفس مستوى
+        // شيلات/خليجية) — بطلب صريح. بما إن IRAQI_TRACK_COUNT لسه 0
+        // (ما رفعت الملفات بعد)، هالسطر ما يأثر على شي حالياً — أول ما
+        // ترفع الملفات وترفع العدد لـ10، تدخل تلقائياً بكل الأوضاع
+        // (خاصتها + الخلط العام) بدون أي تعديل ثاني.
+        else pool = _musicTracks.shailat.concat(_musicTracks.khaleeji).concat(_musicTracks.iraqi);
 
         if (!pool || !pool.length) return null;
         var candidates = pool;
@@ -396,7 +394,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-eliminated-close-btn:hover{background:rgba(255,255,255,0.28);}',
             '.mc-eliminated-avatars{display:flex;gap:20px 24px;flex-wrap:wrap;justify-content:center;',
             'align-items:flex-start;max-width:min(640px,88vw);max-height:56vh;overflow-y:auto;padding:6px;}',
-            '.mc-eliminated-avatar-item{position:relative;width:88px;height:88px;margin-bottom:18px;',
+            '.mc-eliminated-avatar-item{position:relative;width:88px;height:88px;margin-bottom:30px;',
             'filter:grayscale(0.5);animation:mcElimPop .3s ease;transition:opacity .3s ease,transform .3s ease;}',
             '.mc-eliminated-avatar-item.mc-eliminated-item-out{opacity:0;transform:scale(0.4);}',
             '@keyframes mcElimPop{0%{transform:scale(0);opacity:0;}100%{transform:scale(1);opacity:1;}}',
@@ -405,10 +403,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-eliminated-avatar-item .mc-avatar-fallback{display:flex;align-items:center;justify-content:center;',
             'color:#fff;font-weight:800;font-size:1em;}',
             /* ⚠️ اسم واضح كامل تحت كل صورة — بدون قصّ (مو ellipsis زي قبل)،
-             * يلف لسطرين لو طويل، خط أكبر وأوضح. */
+             * يلف لسطرين لو طويل. خط مضاعف الحجم (0.78em → 1.56em) بطلب
+             * صريح، مع توسيع اللوح شوي عشان يفسح للخط الأكبر. */
             '.mc-eliminated-avatar-item .mc-avatar-name{position:absolute;top:100%;left:50%;transform:translateX(-50%);',
-            'margin-top:6px;font-size:0.78em;font-weight:700;color:#fff;background:rgba(0,0,0,0.75);padding:2px 8px;',
-            'border-radius:10px;white-space:normal;max-width:110px;text-align:center;line-height:1.25;}',
+            'margin-top:8px;font-size:1.56em;font-weight:700;color:#fff;background:rgba(0,0,0,0.75);padding:3px 10px;',
+            'border-radius:10px;white-space:normal;max-width:160px;text-align:center;line-height:1.25;}',
 
 
             /* ⚠️ إصلاح جذري لمشكلة تشوّه الدائرة عند تكبير المتصفح (Zoom) —
@@ -549,7 +548,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-lobby-list.agp-shell-player-list li{position:relative;display:flex;align-items:center;',
             'justify-content:center;min-height:78px;}',
 
-            '#agp-lobby-list .agp-pcard{display:flex !important;align-items:center;gap:0 !important;}',
+            /* ⚠️ إصلاح باگ حقيقي: الغلاف .agp-pcard عنده خلفية/حدود/حشو
+             * خاصة فيه بالملف المشترك (pill شفافة تحيط بالأفاتار+الاسم
+             * سوا) — وأنا زدت خلفية ثانية منفصلة على لوح الاسم فوقها،
+             * فطلعت خلفيتين متراكبتين. الحل: نلغي خلفية الغلاف الخارجي
+             * تماماً، تبقى خلفية لوح الاسم هي الوحيدة الظاهرة. */
+            '#agp-lobby-list .agp-pcard{display:flex !important;align-items:center;gap:0 !important;',
+            'background:none !important;border:none !important;padding:0 !important;',
+            'max-width:none !important;}',
             '#agp-lobby-list .agp-pcard-avatar-basic{width:var(--mc-av) !important;height:var(--mc-av) !important;',
             'flex-shrink:0;position:relative;z-index:2;border-radius:50%;}',
             '#agp-lobby-list .agp-pcard-name-basic{display:flex !important;align-items:center;',
@@ -579,12 +585,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'z-index:5;padding:0;line-height:1;}',
             '.mc-lobby-remove-btn:hover{background:#ff5c78;}',
 
+            /* ⚠️ إصلاح: 360px×3 أزرار = 1080px، أعرض من محتوى صندوق اللوبي
+             * الصافي (832px)، فكانت تنزل كل وحدة لسطر لحالها (flex-wrap
+             * يشتغل قسراً). الحل: flex-wrap:nowrap (يمنع النزول لسطر
+             * ثاني نهائياً) + عرض مرن يتقاسم المساحة المتاحة (يتساوى مع
+             * 3 أزرار براحة داخل نفس الصف). */
             '.mc-lobby-actions-row{display:flex;gap:10px;justify-content:center;margin-top:auto;',
-            'padding-top:18px;flex-wrap:wrap;}',
-            '.mc-lobby-actions-row > *{width:360px;max-width:100%;height:48px;border-radius:10px;',
-            'font-weight:800;font-size:0.95em;cursor:pointer;border:none;display:flex;align-items:center;',
+            'padding-top:18px;flex-wrap:nowrap;width:100%;box-sizing:border-box;}',
+            '.mc-lobby-actions-row > *{flex:1 1 0;min-width:0;max-width:270px;height:48px;border-radius:10px;',
+            'font-weight:800;font-size:0.82em;cursor:pointer;border:none;display:flex;align-items:center;',
             'justify-content:center;gap:6px;box-sizing:border-box;font-family:Cairo,sans-serif;',
-            'text-decoration:none;}',
+            'text-decoration:none;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
             '.mc-lobby-back-settings-btn{background:linear-gradient(90deg,#4a1f5c,#2D1932);color:#fff;',
             'border:1px solid rgba(255,255,255,0.3) !important;}',
             '.mc-lobby-home-btn{background:linear-gradient(90deg,var(--agp-accent-2),var(--agp-accent));color:#fff;}',
@@ -1456,9 +1467,37 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* -------- 14ب) قائمة اللاعبين: شبكة 3 أعمدة + حذف + بطاقة عريضة + تصغير تلقائي -------- */
+    // ⚠️ إصلاح توافق آيباد/الشاشات الضيقة: نظام "الحجم الثابت" (60px
+    // أفاتار + 200px لوح) محسوب على عرض مرجعي 900px لصندوق اللوبي — بس
+    // صندوق اللوبي نفسه بالملف المشترك عرضه الأقصى الفعلي min(900px,
+    // 96vw)، فعلى آيباد بالوضع العمودي (~768-834px عرض شاشة) ينضغط
+    // الصندوق لعرض أضيق من 900px، فيصير عرض العمود الواحد فعلياً أضيق
+    // من مجموع (أفاتار+لوح) الثابت — تنكسر الشبكة. الحل: نقيس العرض
+    // المتاح الحقيقي فعلياً (list.clientWidth، دقيق لأي جهاز/تكبير) ولو
+    // أضيق من المرجع نصغّر كل المقاسات تناسبياً (بحد أدنى 65%) — يحافظ
+    // على نفس النسب والتناسق بدون أي كسر بالشبكة على أي مقاس شاشة.
+    function fitLobbyCardsToAvailableWidth(list) {
+        if (!list.clientWidth) return 60 + 200 - 13; // بيئة بدون تصيير حقيقي — نرجع القيمة المرجعية كما هي
+        var gap = 19;
+        var colWidth = (list.clientWidth - 2 * gap) / 3;
+        var refTotal = 60 + 200 - 13; // العرض المرجعي: أفاتار + لوح - تراكب
+        var scale = 1;
+        if (colWidth > 0 && colWidth < refTotal) {
+            scale = Math.max(0.65, colWidth / refTotal);
+        }
+        list.style.setProperty('--mc-av', (60 * scale).toFixed(1) + 'px');
+        list.style.setProperty('--mc-nw', (200 * scale).toFixed(1) + 'px');
+        list.style.setProperty('--mc-nh', (60 * scale).toFixed(1) + 'px');
+        list.style.setProperty('--mc-overlap', (13 * scale).toFixed(1) + 'px');
+        list.style.setProperty('--mc-nf', (18 * scale).toFixed(1) + 'px');
+        return refTotal * scale;
+    }
+
     function enhanceLobbyList() {
         var list = document.getElementById('agp-lobby-list');
         if (!list) return;
+
+        var targetWidth = fitLobbyCardsToAvailableWidth(list);
 
         var players = AGP.gameManager.getPlayers();
         var items = Array.prototype.slice.call(list.children);
@@ -1488,7 +1527,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             applyNameSlideIfOverflow(li);
         });
 
-        normalizeFramedCardWidths(list);
+        normalizeFramedCardWidths(list, targetWidth);
     }
 
     // ⚠️ سلايد للاسم الطويل بدل القصّ — نغلّف النص مرة وحدة بـ.mc-name-inner،
@@ -1517,13 +1556,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     // ⚠️ بطاقة مؤطَّرة (Option A) — عرض هدف ثابت = نفس عرض البطاقة العادية
-    // (avatar + لوح - تراكب)، الارتفاع ناتج تلقائياً حسب نسبة كل إطار.
-    // الملف المشترك يحسب عرض كل إطار بناءً على ارتفاع ثابت خاص فيه
-    // (CARD_HEIGHT_PX=72px)، فنقرأ عرضه الطبيعي الفعلي (inline style)
-    // ونطبّق zoom لكل بطاقة على حدة يوصلها بالضبط للعرض المستهدف —
-    // بدون أي لمس لملف js/agp-player-card.js المشترك.
-    function normalizeFramedCardWidths(list) {
-        var targetWidth = 60 + 200 - 13; // نفس عرض البطاقة العادية: أفاتار + لوح - تراكب
+    // (avatar + لوح - تراكب، بعد أي تصغير تناسبي لآيباد/شاشة ضيقة)،
+    // الارتفاع ناتج تلقائياً حسب نسبة كل إطار. الملف المشترك يحسب عرض
+    // كل إطار بناءً على ارتفاع ثابت خاص فيه (CARD_HEIGHT_PX=72px)، فنقرأ
+    // عرضه الطبيعي الفعلي (inline style) ونطبّق zoom لكل بطاقة على حدة
+    // يوصلها بالضبط للعرض المستهدف — بدون أي لمس لملف
+    // js/agp-player-card.js المشترك.
+    function normalizeFramedCardWidths(list, targetWidth) {
         var tplCards = list.querySelectorAll('.agp-pcard-tpl');
         tplCards.forEach(function (card) {
             var nativeWidth = parseFloat(card.style.width);
