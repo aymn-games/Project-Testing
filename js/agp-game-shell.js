@@ -199,7 +199,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * بالعنوان، شارة كلمة مفتاحية مميزة، عداد لاعبين X/الحد الأقصى. */
             '#agp-shell-box.agp-lobby-box{background:linear-gradient(170deg,#3a1560,#7a1fb8);',
             'border:2px solid var(--agp-accent-2);width:1440px;max-width:96vw;height:800px;max-height:90vh;',
-            'display:flex;flex-direction:column;position:relative;}', // ⚠️ [0.44.4] position:relative لتثبيت بانر الدخولية (#agp-entrance-stage) بداخل الصندوق نفسه
+            'display:flex;flex-direction:column;position:relative;padding-bottom:0;}', // ⚠️ [0.44.4] position:relative لتثبيت بانر الدخولية (#agp-entrance-stage) بداخل الصندوق نفسه
+            '#agp-shell-box.agp-lobby-box .agp-shell-btn-connect{flex-shrink:0;margin-top:14px;}',
             '#agp-shell-box.agp-lobby-box h2{color:#f3eefc;font-family:Almarai,Cairo,sans-serif;font-weight:800;font-size:1.8em;}',
             '#agp-shell-box.agp-lobby-box .agp-shell-status{color:#e9d3ff;}',
             '.agp-join-hint{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;',
@@ -220,11 +221,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * مشترك بين اللوبي الأول واللوبي الجديد. */
             '.agp-shell-player-list{list-style:none;margin:0 0 16px;padding:0;display:flex;flex-wrap:wrap;',
             'gap:8px;overflow-y:auto;}',
+            /* ⚠️ [تحديث معايير الواجهة الموحّدة] شبكة ٣ أعمدة ثابتة
+             * (لوبي-قياسي-v1) للوبي فقط — بدون لمس القائمة المضغوطة
+             * بشاشة الإعدادات وسط المباراة (تبقى flex-wrap زي ما هي). */
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{display:grid;',
+            'grid-template-columns:repeat(3,1fr);gap:0.5cm;justify-items:center;align-items:end;',
+            'flex-wrap:unset;max-height:none;flex:1;min-height:0;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{flex-direction:column;padding:0;position:relative;}',
             /* ⚠️ [0.47.0] خلفية الشريحة البيضاوية خلف كل عنصر لاعب أُلغيت
              * بالكامل بطلب صريح ("شيل التبويب اللي خلف بطاقة الاسماء") —
              * التخطيط والتباعد بقيا كما هما، فقط بدون الخلفية/الحواف. */
             '.agp-shell-player-list li{display:flex;align-items:center;gap:6px;flex:0 0 auto;',
             'padding:4px 2px;text-align:right;color:#f3eefc;}',
+            '#agp-shell-box.agp-lobby-box .agp-player-remove-btn{position:absolute;top:-6px;left:-6px;',
+            'background:rgba(220,38,38,0.92);border:2px solid rgba(10,6,18,0.9);color:#fff;border-radius:50%;',
+            'width:20px;height:20px;flex-shrink:0;cursor:pointer;font-weight:900;font-size:0.75em;',
+            'line-height:1;z-index:10;padding:0;}',
             '.agp-player-remove-btn{background:rgba(255,77,77,0.18);border:1px solid rgba(255,77,77,0.55);',
             'color:#ffb3b3;border-radius:8px;width:22px;height:22px;flex-shrink:0;cursor:pointer;font-weight:800;',
             'font-size:0.8em;line-height:1;}',
@@ -731,7 +743,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var list = el('agp-lobby-list');
         if (!list) return;
         var players = AGP.gameManager.getPlayers();
-        list.innerHTML = renderPlayerListItemsHtml(players);
+        list.innerHTML = renderPlayerListItemsHtml(players, { removable: true });
+        wireRemovePlayerButtons(list);
         if (AGP.playerCard) AGP.playerCard.fitAllNames(list);
         var countEl = el('agp-lobby-count');
         if (countEl) countEl.innerHTML = playerCountBadgeHtml();
