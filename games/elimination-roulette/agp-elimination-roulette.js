@@ -778,10 +778,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * واجهناها بـ[0.45.19] مع الأسماء الحقيقية الطويلة (بعرض
              * ثابت لا يتغيّر إطلاقاً، الفيض الأفقي مستحيل هيكلياً الآن).
              * ==================================================================== */
+            // ⚠️ [إصلاح] بق حقيقي بلاغه المستخدم من الموقع المنشور فعلياً:
+            // البطاقات كانت تظهر من نص/أسفل منطقة السكرول وتصعد فوق كل ما
+            // زاد عدد اللاعبين. السبب: align-content الافتراضي لصناديق
+            // Grid هو "normal" اللي يتصرّف عملياً كـ"stretch" — يوزّع
+            // الفراغ المتبقي بالحاوية على صفوف auto (بدل تكديسها من فوق
+            // بحجمها الطبيعي)، فكل صف يمتد ليملأ حصة من ارتفاع القائمة
+            // الكامل، وalign-items:end يثبّت البطاقة بأسفل صفها المتمدِّد
+            // هذا — فكل ما زادت الصفوف صغر نصيب كل واحد وصعدت البطاقات
+            // للأعلى. align-content:start يجبر الصفوف على أخذ ارتفاعها
+            // الطبيعي فقط وتكديسها من أعلى القائمة دائماً، بغض النظر عن
+            // عدد اللاعبين.
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list{display:grid !important;',
             'grid-template-columns:repeat(3,1fr) !important;gap:19px !important;',
-            'align-items:end !important;justify-items:center !important;margin-top:34px !important;',
-            'padding-bottom:6px !important;}',
+            'align-content:start !important;align-items:end !important;justify-items:center !important;',
+            'margin-top:34px !important;padding-bottom:6px !important;}',
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{position:relative;display:flex !important;',
             'align-items:flex-end !important;justify-content:center !important;flex:0 0 auto !important;',
             'min-width:0 !important;padding:14px 4px 4px;box-sizing:border-box !important;}',
@@ -847,12 +858,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // (بق حقيقي اكتُشف بالاختبار: كل zoom كان يرجع 1 دائماً).
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-tpl{zoom:1;}',
 
-            // ⚠️ [0.46.1] شارة "✕" لإقصاء لاعب يدوياً — صارت طفلاً مباشراً
-            // للوح الاسم (مو لـ<li>) وموضعتها "فوق لوح الاسم مباشرة"
-            // (طلب صريح)، بدل الزاوية العلوية-اليسرى للبطاقة كاملة سابقاً.
-            // enhanceLobbyList() تُلحقها الآن داخل .agp-pcard-name-basic.
-            '.er-lobby-remove-btn{position:absolute !important;top:-12px !important;left:50% !important;',
-            'transform:translateX(-50%) !important;width:22px;height:22px;',
+            // ⚠️ [0.46.1] شارة "✕" لإقصاء لاعب يدوياً — طفل مباشر للوح
+            // الاسم (مو لـ<li>). enhanceLobbyList() تُلحقها داخل
+            // .agp-pcard-name-basic.
+            // ⚠️ [إصلاح] طلب تعديل صريح لاحق: تنتقل من منتصف أعلى اللوح
+            // لزاويته (أعلى-يسار اللوح تحديداً — الجهة البعيدة عن
+            // الأفاتار اللي يتراكب على الجهة اليمنى، فما تتصادم بصرياً
+            // معه).
+            '.er-lobby-remove-btn{position:absolute !important;top:-8px !important;left:-8px !important;',
+            'transform:none !important;width:22px;height:22px;',
             'border-radius:50%;background:#ef4444;color:#fff;border:2px solid #211528;',
             'font-weight:900;font-size:13px;line-height:18px;text-align:center;cursor:pointer;',
             'box-shadow:0 2px 6px rgba(0,0,0,0.5);z-index:4;}',
