@@ -763,113 +763,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'box-shadow:0 4px 14px rgba(0,0,0,0.35) !important;}',
 
             /* ==================================================================
-             * ⚠️ [0.46.1] إعادة بناء كاملة لشبكة/بطاقات اللوبي حسب
-             * PLAYER-CARD-STANDARDS.md §3-4 (طلب صريح، ملف مرفق) —
-             * يحذف بالكامل نظام [0.45.14]-[0.45.20] القديم: التصغير
-             * التلقائي الديناميكي (MIN_SCALE، applyDynamicLobbyCardScale)،
-             * والبطاقة العريضة (markWideLobbyCards، grid-column:span 2،
-             * .er-lobby-card-wide)، وكل متغيرات CSS --er-lobby-* المرتبطة
-             * فيهم. بدلها: بطاقة بحجم ثابت 60px (بدون أي تصغير حسب عدد
-             * اللاعبين)، شبكة 3 أعمدة ثابتة بفجوة 0.5سم (~19px)، تراكب
-             * الأفاتار على لوح الاسم بنسبة 22% من قطره (بدل الالتصاق
-             * البسيط من [0.45.16])، لوح اسم بعرض ثابت واحد (بدون
-             * min/max متغيّر) مع تمرير (Marquee) للاسم الطويل بدل توسيع
-             * البطاقة أو قصّها — الحل الجذري لمشكلة الفيض الأفقي اللي
-             * واجهناها بـ[0.45.19] مع الأسماء الحقيقية الطويلة (بعرض
-             * ثابت لا يتغيّر إطلاقاً، الفيض الأفقي مستحيل هيكلياً الآن).
+             * ⚠️ [0.48.x] حذف كامل لتخصيص شكل/حجم بطاقات اللوبي المحلي
+             * (كان بهذا المكان من [0.46.1]-[0.46.2]: شبكة 3 أعمدة، حجم
+             * أفاتار 60px، لوح اسم 170×44px، نظام Marquee محلي، وتوحيد
+             * عرض البطاقات المؤطَّرة عبر zoom محسوب بالجافاسكربت).
+             * السبب: js/agp-game-shell.js وjs/agp-player-card.js
+             * المشتركان صار فيهما نفس هذا النظام مبنياً بشكل أصلي (شبكة
+             * 3 أعمدة 0.5cm، AGP.playerCard.renderHtml بحجم 60px وتراكب
+             * 22%، AGP.playerCard.fitAllNames للـMarquee، وقياس عرض
+             * البطاقة المؤطَّرة رياضياً من قياسات الإطار نفسها بدل قياس
+             * DOM حي) — طلب صريح من صاحب المشروع: أي تخصيص محلي مكرِّر
+             * لنفس الشيء يتعارض معه، فيُحذف بالكامل بدل التطبيق فوقه.
+             * ⚠️ تنبيه معروف (بعلم صاحب المشروع، قرار صريح منه بقبوله
+             * مؤقتاً): نسخة الشبكة الجديدة بـjs/agp-game-shell.js ناقصة
+             * align-content:start على شبكة اللاعبين — نفس البق اللي
+             * صلحته هنا محلياً بتاريخ سابق ("البطاقات تصعد من تحت").
+             * بحذف هذا التخصيص المحلي بالكامل (بدون أي استثناء، بطلب
+             * صريح)، هذا البق **يرجع** حتى يُصلَح داخل الملف المشترك
+             * نفسه (خارج نطاق هذا الملف — يحتاج تعديل على
+             * js/agp-game-shell.js مباشرة).
              * ==================================================================== */
-            // ⚠️ [إصلاح] بق حقيقي بلاغه المستخدم من الموقع المنشور فعلياً:
-            // البطاقات كانت تظهر من نص/أسفل منطقة السكرول وتصعد فوق كل ما
-            // زاد عدد اللاعبين. السبب: align-content الافتراضي لصناديق
-            // Grid هو "normal" اللي يتصرّف عملياً كـ"stretch" — يوزّع
-            // الفراغ المتبقي بالحاوية على صفوف auto (بدل تكديسها من فوق
-            // بحجمها الطبيعي)، فكل صف يمتد ليملأ حصة من ارتفاع القائمة
-            // الكامل، وalign-items:end يثبّت البطاقة بأسفل صفها المتمدِّد
-            // هذا — فكل ما زادت الصفوف صغر نصيب كل واحد وصعدت البطاقات
-            // للأعلى. align-content:start يجبر الصفوف على أخذ ارتفاعها
-            // الطبيعي فقط وتكديسها من أعلى القائمة دائماً، بغض النظر عن
-            // عدد اللاعبين.
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{display:grid !important;',
-            'grid-template-columns:repeat(3,1fr) !important;gap:19px !important;',
-            'align-content:start !important;align-items:end !important;justify-items:center !important;',
-            'margin-top:34px !important;padding-bottom:6px !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{position:relative;display:flex !important;',
-            'align-items:flex-end !important;justify-content:center !important;flex:0 0 auto !important;',
-            'min-width:0 !important;padding:14px 4px 4px;box-sizing:border-box !important;}',
-
-            // ---- بطاقة اللاعب الأساسية (بدون إطار) — "لوبي-قياسي-v1"
-            // §3.1: الأفاتار متراكبة على لوح الاسم (مو ملاصقة بدون
-            // تراكب)، عرض اللوح ثابت واحد (بدون min/max)، الاسم الطويل
-            // يسلايد جوّا اللوح بدل ما يوسّع البطاقة أو يُقصّ نهائياً.
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard{background:none !important;',
-            'border:none !important;padding:0 !important;border-radius:0 !important;',
-            'max-width:none !important;gap:0 !important;display:flex !important;align-items:center !important;}',
-            // حجم أفاتار ثابت 60px (طلب صريح — بدون أي تصغير تلقائي حسب
-            // عدد اللاعبين، بعكس النظام القديم بالكامل).
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-avatar-basic{',
-            'width:60px !important;height:60px !important;border-width:3px !important;',
-            'position:relative !important;z-index:2 !important;flex-shrink:0 !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-avatar-basic--fallback{',
-            'font-size:1.6em !important;}',
-            // لوح الاسم: عرض/ارتفاع ثابتان (170×44px)، تراكب الأفاتار
-            // عليه بـ22% من قطر الأفاتار (60×0.22≈13px) عبر
-            // margin-inline-end سالب على اللوح نفسه (العنصر الثاني
-            // بالصف — الأفاتار أول عنصر تُرسمه js/agp-player-card.js
-            // فيظهر يمين البطاقة بصفحة RTL، واللوح يسارها فيتراكب معه).
-            // overflow:visible هنا عمداً (بعكس كل الإصدارات السابقة) —
-            // القصّ صار على غلاف داخلي (.er-name-marquee-clip) فقط، حتى
-            // تقدر شارة الحذف ✕ (تُضاف كطفل مباشر للوح) تظهر فوقه بدون
-            // ما يقصّها overflow:hidden لو كانت على اللوح نفسه.
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-name-basic{',
-            'position:relative !important;overflow:visible !important;',
-            'display:flex !important;align-items:center !important;justify-content:center !important;',
-            'width:170px !important;height:44px !important;flex-shrink:0 !important;',
-            'box-sizing:border-box !important;padding:0 !important;font-size:16px !important;',
-            'font-weight:800 !important;background:rgba(255,255,255,0.14) !important;',
-            'border:1px solid rgba(255,255,255,0.32) !important;border-radius:999px !important;',
-            'margin-inline-end:-13px !important;z-index:1 !important;line-height:1 !important;}',
-            // غلاف القصّ الداخلي (يحمل overflow:hidden الفعلي) + النص
-            // المتحرّك جوّاه — راجع applyLobbyNameMarquee() بالجافاسكربت:
-            // يقيس فيض النص الحقيقي (scrollWidth) ويفعّل التمرير فقط لو
-            // احتاج الاسم فعلاً (الأسماء القصيرة تتوسّط بدون أي حركة).
-            '.er-name-marquee-clip{display:flex !important;align-items:center !important;',
-            'justify-content:center !important;width:100% !important;height:100% !important;',
-            'overflow:hidden !important;border-radius:999px !important;padding:0 14px !important;',
-            'box-sizing:border-box !important;}',
-            '.er-name-marquee-inner{display:inline-block !important;white-space:nowrap !important;}',
-            '.er-name-marquee-inner.er-name-marquee-active{',
-            'animation:er-lobby-marquee var(--er-marquee-dur,4s) ease-in-out infinite alternate !important;}',
-            '@keyframes er-lobby-marquee{from{transform:translateX(0);}to{transform:translateX(var(--er-marquee-dist,0px));}}',
-
-            // ---- بطاقة اللاعب المؤطَّرة (عنده إطار مفعَّل) — "الخيار أ"
-            // §3.2: عرض هدف ثابت = نفس عرض البطاقة العادية بالضبط،
-            // الارتفاع ناتج ومتغيّر حسب نسبة كل صورة إطار. يستبدل نظام
-            // الـzoom الموحَّد القديم (رقم ثابت واحد لكل البطاقات) —
-            // normalizeFramedCardWidths() بالجافاسكربت تقيس العرض
-            // الطبيعي لكل بطاقة مؤطَّرة على حدة وتحسب نسبة zoom خاصة بها
-            // توصّلها بالضبط لعرض البطاقة العادية (كل إطار له نسبة أبعاد
-            // مختلفة، فمحتاج zoom مختلف لكل واحد لتوحيد العرض تحديداً).
-            // align-items:end على الشبكة (أعلى) يحاذي كل الصفوف من
-            // الأسفل حتى تبقى مرتّبة رغم اختلاف ارتفاع البطاقات المؤطَّرة.
-            // ⚠️ بدون !important عمداً هنا — normalizeFramedCardWidths()
-            // تكتب zoom مباشرة كـinline style لكل بطاقة (قيمة مختلفة لكل
-            // واحدة)، ولو كانت هذي القاعدة !important بتطغى دائماً على
-            // الـinline (قاعدة كاسكيد CSS قياسية)، فتُلغي التطبيع تماماً
-            // (بق حقيقي اكتُشف بالاختبار: كل zoom كان يرجع 1 دائماً).
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-tpl{zoom:1;}',
-
-            // ⚠️ [0.46.1] شارة "✕" لإقصاء لاعب يدوياً — طفل مباشر للوح
-            // الاسم (مو لـ<li>). enhanceLobbyList() تُلحقها داخل
-            // .agp-pcard-name-basic.
-            // ⚠️ [إصلاح] طلب تعديل صريح لاحق: تنتقل من منتصف أعلى اللوح
-            // لزاويته (أعلى-يسار اللوح تحديداً — الجهة البعيدة عن
-            // الأفاتار اللي يتراكب على الجهة اليمنى، فما تتصادم بصرياً
-            // معه).
-            '.er-lobby-remove-btn{position:absolute !important;top:-8px !important;left:-8px !important;',
-            'transform:none !important;width:22px;height:22px;',
-            'border-radius:50%;background:#ef4444;color:#fff;border:2px solid #211528;',
-            'font-weight:900;font-size:13px;line-height:18px;text-align:center;cursor:pointer;',
-            'box-shadow:0 2px 6px rgba(0,0,0,0.5);z-index:4;}',
 
             // ⚠️ [0.45.15] صف أزرار اللوبي السفلي — طلب صريح جديد: الثلاثة
             // أزرار (العودة للإعدادات، بدء الجولة، رجوع للمنصة) بصف واحد
@@ -2270,127 +2183,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         connectBtn.insertAdjacentElement('afterend', makeBackToPlatformBtn());
     }
 
-    /**
-     * ⚠️ علامة ✕ لإقصاء لاعب يدوياً من شاشة اللوبي (قبل بدء المباراة) —
-     * طلب صريح (صورة 2)، وهي نفس ميزة "النقطة 7" المؤجَّلة سابقاً. تنبيه
-     * صادق عن حدود الطريقة: renderLobbyPlayerList (بالملف المشترك) ما
-     * يحط أي data-player-id على عناصر <li> باللوبي (بعكس قائمة منتصف
-     * المباراة اللي تستخدم opts.removable الجاهزة أصلاً). فبدل تعديل
-     * الملف المشترك، نطابق كل <li> بترتيبه (index) مع نفس ترتيب
-     * AGP.gameManager.getPlayers() — نفس المصدر ونفس الدالة اللي
-     * renderLobbyPlayerList تستخدمها لبناء القائمة أصلاً، فالترتيب يطابق
-     * عملياً بكل الحالات الطبيعية (index-based وليس id-based، بنفس
-     * الإقرار الصادق الموجود بتعليق روليت الفواكه الأصلي).
-     */
-    function enhanceLobbyList() {
-        var list = el('agp-lobby-list');
-        if (!list || !AGP.gameManager) return;
-        var players = AGP.gameManager.getPlayers();
-        var items = list.querySelectorAll('li');
-        items.forEach(function (li, i) {
-            var player = players[i];
-            if (!player || !player.id) return;
-            // ⚠️ [0.46.1] الزر صار طفلاً للوح الاسم (.agp-pcard-name-basic)
-            // مو لـ<li> — راجع تعليق CSS `.er-lobby-remove-btn` بالأعلى
-            // لسبب النقل (موضعته الجديدة "فوق لوح الاسم مباشرة").
-            var pill = li.querySelector('.agp-pcard-name-basic');
-            var host = pill || li;
-            if (host.querySelector('.er-lobby-remove-btn')) return;
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'er-lobby-remove-btn';
-            btn.title = 'إقصاء اللاعب قبل بدء المباراة';
-            btn.textContent = '✕';
-            btn.addEventListener('click', function (ev) {
-                ev.stopPropagation();
-                if (AGP.player && typeof AGP.player.removePlayer === 'function') {
-                    AGP.player.removePlayer(player.id);
-                }
-            });
-            host.appendChild(btn);
-        });
-    }
-
-    /**
-     * ⚠️ [0.46.1] تمرير (Marquee) لاسم اللاعب الطويل جوّا لوح الاسم ذي
-     * العرض الثابت (170px) — PLAYER-CARD-STANDARDS.md §3.1: "الاسم
-     * الطويل يسلايد جوّا اللوح بدل ما يُقصّ أو يكبّر البطاقة". نلفّ نص
-     * كل لوح بغلاف قصّ (.er-name-marquee-clip، overflow:hidden) + نص
-     * داخلي (.er-name-marquee-inner) مرة وحدة فقط (لو الشاشة أعادت رسم
-     * القائمة من الصفر — كما يحصل مع أي انضمام/مغادرة لاعب — بنلفّ من
-     * جديد تلقائياً لأن renderLobbyPlayerList بالملف المشترك يمسح
-     * innerHTML الأصلي). نقيس الفيض الحقيقي (scrollWidth) ونفعّل حركة
-     * الانزلاق فقط لو احتاج الاسم فعلاً (قصير = يتوسّط بدون أي حركة).
-     */
-    function applyLobbyNameMarquee(list) {
-        var pills = list.querySelectorAll('.agp-pcard-name-basic');
-        pills.forEach(function (pill) {
-            var clip = pill.querySelector('.er-name-marquee-clip');
-            var inner;
-            if (!clip) {
-                var text = pill.textContent;
-                var removeBtn = pill.querySelector('.er-lobby-remove-btn');
-                pill.textContent = '';
-                clip = document.createElement('span');
-                clip.className = 'er-name-marquee-clip';
-                inner = document.createElement('span');
-                inner.className = 'er-name-marquee-inner';
-                inner.textContent = text;
-                clip.appendChild(inner);
-                pill.appendChild(clip);
-                if (removeBtn) pill.appendChild(removeBtn); // يرجّع زر الحذف بعد إعادة اللف (لو كان موجوداً أصلاً)
-            } else {
-                inner = clip.querySelector('.er-name-marquee-inner');
-            }
-            if (!inner) return;
-            var overflow = inner.scrollWidth - clip.clientWidth;
-            if (overflow > 4) {
-                var dur = Math.max(3, overflow / 20).toFixed(1);
-                inner.style.setProperty('--er-marquee-dist', (-overflow - 6) + 'px');
-                inner.style.setProperty('--er-marquee-dur', dur + 's');
-                inner.classList.add('er-name-marquee-active');
-            } else {
-                inner.classList.remove('er-name-marquee-active');
-            }
-        });
-    }
-
-    /**
-     * ⚠️ [0.46.1] توحيد عرض البطاقات المؤطَّرة (عندها إطار مقتنى) —
-     * PLAYER-CARD-STANDARDS.md §3.2 "الخيار أ": عرض هدف ثابت = نفس عرض
-     * البطاقة العادية بنفس اللوبي، والارتفاع ناتج حسب نسبة كل صورة
-     * إطار (بعضها مربّعة، بعضها عريضة). نقيس أولاً عرض بطاقة عادية
-     * واحدة فعلياً (أفاتار+لوح متراكبين، بعد كل تنسيقات CSS)، ثم لكل
-     * بطاقة مؤطَّرة: نصفّر الـzoom مؤقتاً لقياس عرضها الطبيعي، ونحسب
-     * نسبة zoom خاصة توصّلها بالضبط للعرض المستهدف — كل إطار له نسبة
-     * أبعاد مختلفة فيحتاج zoom مختلف (بعكس النظام القديم اللي كان
-     * يستخدم رقم zoom واحد موحَّد لكل البطاقات مهما كان الإطار).
-     */
-    function normalizeFramedCardWidths(list) {
-        var items = list.querySelectorAll('li');
-        if (items.length === 0) return;
-
-        var targetW = 0;
-        for (var i = 0; i < items.length; i++) {
-            var basicCard = items[i].querySelector('.agp-pcard-avatar-basic');
-            if (basicCard) {
-                var cardEl = items[i].querySelector('.agp-pcard');
-                if (cardEl) { targetW = cardEl.getBoundingClientRect().width; break; }
-            }
-        }
-        if (!targetW) targetW = 217; // مرجع تقديري (60px أفاتار + 170px لوح - 13px تراكب) لو كل اللاعبين مؤطَّرين
-
-        items.forEach(function (li) {
-            var tpl = li.querySelector('.agp-pcard-tpl');
-            if (!tpl) return;
-            tpl.style.zoom = '1';
-            var naturalW = tpl.getBoundingClientRect().width;
-            if (naturalW > 0) {
-                var z = targetW / naturalW;
-                tpl.style.zoom = z.toFixed(3);
-            }
-        });
-    }
+    // ⚠️ [0.48.x] enhanceLobbyList() (زر ✕ محلي index-based)، applyLobbyNameMarquee()
+    // (Marquee محلي)، وnormalizeFramedCardWidths() (توحيد عرض البطاقات
+    // المؤطَّرة عبر zoom محسوب) — الثلاثة حُذفت بالكامل من هنا. السبب:
+    // js/agp-game-shell.js وjs/agp-player-card.js المشتركان صار فيهما
+    // نفس هذي الميزات الثلاث أصلياً (renderLobbyPlayerList يمرّر
+    // removable:true فتضيف زر حذف حقيقي مرتبط بمعرّف اللاعب الفعلي
+    // data-remove-player-id عبر wireRemovePlayerButtons، وAGP.playerCard.
+    // fitAllNames تُستدعى تلقائياً بعد كل رسم قائمة فتطبّق الـMarquee
+    // بنفسها، وrenderFramedHtml تحسب عرض البطاقة المؤطَّرة رياضياً من
+    // قياسات الإطار مباشرة بدل قياس DOM حي) — فأي نسخة محلية مكرِّرة
+    // لنفس الشيء تتعارض بصرياً معها. حُذفت الثلاثة بالكامل بطلب صريح،
+    // بدون أي استثناء ولا حل مؤقّت محلي.
 
     // ⚠️ [0.45.14] عنوان اللوبي بلونين — يستبدل نص "اللوبي بانتظار
     // اللاعبين" (المُعرَّف بالملف المشترك) بنص جديد بلونين، حسب تصميم
@@ -2465,17 +2269,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function applyShellEnhancements() {
         enhanceSettingsScreen();
-        // ⚠️ [0.46.1] الترتيب هنا مهم: المرور (Marquee) يلفّ نص لوح الاسم
-        // الخام أولاً (قبل ما يُضاف زر الحذف ✕)، حتى ما يختلط نص الزر
-        // بنص اللاعب عند قراءة textContent. enhanceLobbyList() بعدها
-        // تُلحق الزر كطفل شقيق للّف الجديد (مو داخله)، وnormalizeFramed-
-        // CardWidths() تقيس عرض بطاقة عادية بعد استقرار كل التنسيقات.
-        var lobbyList = el('agp-lobby-list');
-        if (lobbyList) {
-            applyLobbyNameMarquee(lobbyList);
-            enhanceLobbyList();
-            normalizeFramedCardWidths(lobbyList);
-        }
+        // ⚠️ [0.48.x] لا حاجة لأي معالجة يدوية لقائمة اللوبي هنا بعد
+        // الآن — الملف المشترك (renderLobbyPlayerList) يبني زر الحذف
+        // والـMarquee وأحجام البطاقات تلقائياً بنفسه. راجع تعليق الحذف
+        // أعلى enhanceLobbyHeading() لتفاصيل ما كان هنا سابقاً.
         enhanceLobbyHeading();
         enhanceLobbyWatermarkAndActions();
     }
