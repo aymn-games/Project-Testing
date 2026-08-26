@@ -323,6 +323,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '@keyframes rr-conn-spin{to{transform:rotate(360deg);}}',
             '#agp-shell-box.agp-connecting-box h2{color:' + ACCENT2 + ' !important;font-size:1.15em !important;margin:0 0 8px !important;}',
             '#agp-shell-box.agp-connecting-box .agp-shell-status{color:#e8d9b8 !important;font-size:0.9em !important;}',
+            /* ⚠️ [إصلاح خلل حقيقي] كان يظهر مؤشّر دوران ثانٍ (أزرق) فوق
+             * مؤشّري الذهبي — بحثت بالملف المشترك وما لقيت أي عنصر
+             * مؤشّر ثانٍ بمصدره الأصلي (markup الشل يحتوي فقط h2 + نص
+             * الحالة)، فمصدره غير مؤكَّد (ربما تراكم DOM قديم). حل حاسم:
+             * نُخفي صراحة أي عنصر ثانٍ داخل الصندوق غير العناصر المعروفة
+             * عندي فعلياً — يقطع المشكلة بغض النظر عن مصدرها الحقيقي.
+             */
+            '#agp-shell-box.agp-connecting-box > *:not(h2):not(.agp-shell-status):not(.rr-connect-retry-btn){',
+            'display:none !important;}',
             '.rr-connect-retry-btn{margin-top:18px;padding:11px 26px;border-radius:999px;border:1px solid ' + ACCENT2 + ';',
             'background:transparent;color:#f2e6cf;font-weight:800;font-size:0.85em;cursor:pointer;font-family:inherit;}',
             /* ⚠️ الهيدر العلوي الثابت (مشترك بين كل الألعاب) كان لسا بلونه
@@ -611,44 +620,62 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-settings-player-list .agp-pcard-avatar-basic{width:26px !important;height:26px !important;}',
             '#agp-settings-player-list .agp-pcard-name-basic{font-size:11px !important;width:auto !important;',
             'max-width:none !important;flex:1;}',
-            /* ⚠️ شاشة اللوبي — منقولة بالحرف من نمط لعبة الكراسي الموسيقية
-             * (تنسيق مُثبَت وشغّال فعلياً) بدل الصفحة الكاملة 100vh السابقة:
-             * صندوق بارتفاع ثابت محدود (900px، حد أقصى 92% من الشاشة)،
-             * يتمرّر ككتلة وحدة لو المحتوى تجاوزه. */
+            /* ⚠️ شاشة اللوبي — "لوبي-قياسي-v1" بالحرف (نفس الأرقام الشغّالة
+             * فعلياً بلعبة الكراسي الموسيقية). صندوق بارتفاع ثابت محدود
+             * (900px، حد أقصى 92% من الشاشة)، scrollbar-gutter:stable
+             * يمنع القفز المزعج للشريط. */
             '#agp-shell-box.agp-lobby-box{height:900px !important;max-height:92vh !important;',
-            'overflow-y:auto !important;display:flex !important;flex-direction:column;}',
+            'overflow-y:auto !important;scrollbar-gutter:stable;display:flex !important;flex-direction:column;}',
             '#agp-shell-box.agp-lobby-box h2{flex:none;text-align:center;}',
-            /* ٣ أعمدة، فجوة، وقياسات البطاقة — نفس القيم المستخدَمة فعلياً
-             * بلعبة الكراسي (متغيّرات CSS بدل أرقام مكرَّرة). */
+            /* ⚠️ [تفادي باگ حقيقي] .agp-pcard (الغلاف بالملف المشترك) عنده
+             * خلفية/حدود/حشو pill خاصة فيه أصلاً — لو تركناها + خلفية
+             * لوح الاسم فوقها، تطلع خلفيتين متراكبتين. نلغيها كاملة هنا،
+             * ولوح الاسم يصير المصدر الوحيد للخلفية المرئية. */
+            '#agp-shell-box.agp-lobby-box .agp-pcard{background:none !important;border:none !important;',
+            'padding:0 !important;max-width:none !important;gap:0 !important;}',
+            /* ٣ أعمدة، فجوة 0.5سم، هامش علوي يفادي القصّ مع سطر التلميح فوقه. */
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list{',
-            '--rr-av:60px;--rr-nw-min:130px;--rr-nw-max:260px;--rr-nh:48px;--rr-nf:22px;',
-            '--rr-gap:0.5cm;--rr-zoom:0.833;--rr-row-min:70px;',
-            'display:grid !important;grid-template-columns:repeat(3,1fr) !important;grid-auto-flow:dense;',
-            'gap:var(--rr-gap) !important;margin-top:20px !important;list-style:none;padding:0;}',
+            '--rr-av:60px;--rr-nw:200px;--rr-overlap:13px;--rr-nh:60px;--rr-nf:18px;',
+            '--rr-gap:0.5cm;--rr-scale:1;',
+            'display:grid !important;grid-template-columns:repeat(3,1fr) !important;',
+            'gap:var(--rr-gap) !important;margin-top:34px !important;list-style:none;padding:0;}',
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{position:relative;display:flex !important;',
-            'align-items:center;justify-content:center;min-height:var(--rr-row-min);}',
-            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic{width:var(--rr-av) !important;',
-            'height:var(--rr-av) !important;border-width:3px !important;flex-shrink:0;}',
+            'align-items:center;justify-content:center;min-height:calc(var(--rr-av) * var(--rr-scale));}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic{',
+            'width:calc(var(--rr-av) * var(--rr-scale)) !important;',
+            'height:calc(var(--rr-av) * var(--rr-scale)) !important;border-width:3px !important;',
+            'flex-shrink:0;position:relative;z-index:2;}',
+            /* ⚠️ لوح اسم بعرض ثابت واحد (200px × النسبة المتجاوبة) — بدون
+             * min/max متغيّر حسب طول الاسم. الأفاتار يتراكب عليه بمقدار
+             * ٢٢٪ من قطره (margin سالب). الاسم الطويل يسلايد بدل ما يُقصّ
+             * (rr-name-inner، مُفعَّل عبر JS). */
             '#agp-shell-box.agp-lobby-box .agp-pcard-name-basic{display:flex !important;align-items:center;',
-            'justify-content:center;min-width:var(--rr-nw-min);max-width:var(--rr-nw-max);height:var(--rr-nh);',
-            'font-size:var(--rr-nf) !important;padding:0 18px !important;overflow:hidden !important;',
-            'text-overflow:ellipsis !important;white-space:nowrap !important;background:rgba(255,255,255,0.14) !important;',
-            'border:1px solid rgba(255,255,255,0.32) !important;border-radius:999px !important;box-sizing:border-box !important;}',
-            /* ⚠️ لاعب عنده إطار (frame) مفعَّل يُرسَم بقالب مختلف تماماً
-             * (.agp-pcard-tpl) بارتفاع ثابت 72px مُعايَر لحجم افتراضي أكبر
-             * بكثير من بطاقاتنا — بدون هذا التصغير يفيض الصف ويحتاج سكرول
-             * أفقي ويبين مقصوصاً من فوق. نفس تقنية "زووم" المستخدَمة أصلاً
-             * بلعبة الكراسي وبلعبة اسم وحيوان ونبات وجماد لنفس المشكلة. */
-            '#agp-shell-box.agp-lobby-box .agp-pcard-tpl{zoom:var(--rr-zoom);}',
+            'justify-content:center;width:calc(var(--rr-nw) * var(--rr-scale)) !important;',
+            'height:calc(var(--rr-nh) * var(--rr-scale)) !important;',
+            'font-size:calc(var(--rr-nf) * var(--rr-scale)) !important;padding:0 calc(14px * var(--rr-scale)) !important;',
+            'margin-inline-start:calc(var(--rr-overlap) * var(--rr-scale) * -1) !important;',
+            'overflow:hidden !important;white-space:nowrap !important;background:rgba(255,255,255,0.14) !important;',
+            'border:1px solid rgba(255,255,255,0.32) !important;border-radius:999px !important;',
+            'box-sizing:border-box !important;position:relative;z-index:1;}',
+            '.rr-name-inner{display:inline-block;white-space:nowrap;will-change:transform;}',
+            '.rr-name-inner.rr-marquee{animation:rr-name-slide 3.2s ease-in-out infinite alternate;}',
+            '@keyframes rr-name-slide{from{transform:translateX(0);}to{transform:translateX(var(--rr-slide-dist));}}',
+            /* ⚠️ لاعب عنده إطار (frame) مفعَّل — عرضه الطبيعي (inline style
+             * بالملف المشترك) يختلف حسب نسبة كل قالب إطار. نحسب zoom لكل
+             * بطاقة على حدة بـJS (targetWidth ÷ nativeWidth) بدل نسبة
+             * ثابتة واحدة تشوّه بعض الإطارات. */
+            '#agp-shell-box.agp-lobby-box .agp-pcard-tpl{transform-origin:center center;}',
 
             '.rr-lobby-heading-accent{color:var(--rr-gold) !important;font-weight:900 !important;}',
-            /* ⚠️ صف الأزرار الثلاثة — margin-top:auto يدفعه لأسفل الصندوق
-             * المحدود (مو 100vh)، بنفس تنسيق لعبة الكراسي بالضبط. */
-            '.rr-lobby-actions-row{display:flex;gap:10px;justify-content:center;margin-top:auto;',
-            'padding-top:18px;flex-wrap:wrap;}',
-            '.rr-lobby-actions-row > *{width:280px !important;max-width:100%;height:48px;border-radius:10px !important;',
-            'font-weight:800;font-size:0.9em;cursor:pointer;border:none;display:flex;align-items:center;',
-            'justify-content:center;gap:6px;box-sizing:border-box;font-family:inherit;padding:10px !important;}',
+            /* صف الأزرار الثلاثة — margin-top:auto يدفعه لأسفل الصندوق
+             * المحدود، flex:1+max-width يفادي كسر السطر بعرض 900px. */
+            '.rr-lobby-actions-row{display:flex !important;gap:10px !important;justify-content:center;',
+            'margin-top:auto !important;padding-top:18px !important;flex-wrap:nowrap !important;}',
+            '.rr-lobby-actions-row > *{flex:1 1 0 !important;max-width:270px !important;width:auto !important;',
+            'height:48px !important;border-radius:10px !important;font-weight:800 !important;font-size:0.85em !important;',
+            'cursor:pointer !important;border:none !important;display:flex !important;align-items:center !important;',
+            'justify-content:center !important;gap:6px;box-sizing:border-box !important;font-family:inherit !important;',
+            'padding:10px !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}',
             '.rr-lobby-action-btn{background:linear-gradient(90deg,#4a2f0f,#241a0c);color:#fff;',
             'border:1px solid rgba(255,255,255,0.3) !important;}',
             '.rr-lobby-home-btn{background:linear-gradient(90deg,var(--rr-gold),#8a7024);color:#241a0c;}',
@@ -1879,6 +1906,68 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    // ⚠️ سلايد الأسماء الطويلة (بدل قصّ ellipsis) — نلف النص بعنصر داخلي
+    // ونقيس overflow فعلياً، نفس أسلوب لعبة الكراسي بالضبط.
+    function applyLobbyMarquee(container) {
+        if (!container) return;
+        container.querySelectorAll('.agp-pcard-name-basic').forEach(function (nameEl) {
+            var inner = nameEl.querySelector('.rr-name-inner');
+            if (!inner) {
+                var text = nameEl.textContent;
+                nameEl.textContent = '';
+                inner = document.createElement('span');
+                inner.className = 'rr-name-inner';
+                inner.textContent = text;
+                nameEl.appendChild(inner);
+            }
+            inner.classList.remove('rr-marquee');
+            window.requestAnimationFrame(function () {
+                var overflow = inner.scrollWidth - nameEl.clientWidth;
+                if (overflow > 2) {
+                    inner.style.setProperty('--rr-slide-dist', '-' + overflow + 'px');
+                    inner.classList.add('rr-marquee');
+                }
+            });
+        });
+    }
+
+    // ⚠️ لاعب عنده إطار — عرضه الطبيعي مختلف حسب نسبة كل قالب (inline
+    // style بالملف المشترك). نحسب zoom لكل بطاقة على حدة (الهدف الثابت
+    // ÷ العرض الطبيعي) بدل نسبة واحدة تشوّه بعض الإطارات.
+    function applyLobbyFrameScaling(container, scale) {
+        if (!container) return;
+        var targetWidth = (60 + 200 - 13) * scale; // أفاتار + لوح − التراكب، بنفس نسبة الاستجابة الحالية
+        container.querySelectorAll('.agp-pcard-tpl').forEach(function (card) {
+            var nativeWidth = parseFloat(card.style.width);
+            if (!nativeWidth) return;
+            card.style.zoom = targetWidth / nativeWidth;
+        });
+    }
+
+    // ⚠️ تجاوب حقيقي (آيباد/شاشات ضيقة): نقيس المساحة المتاحة فعلياً
+    // (clientWidth) بدل الاعتماد على vw تقريبية، ونصغّر كل القياسات
+    // تناسبياً لو العمود الواحد أضيق من 247px المرجعية (حد أدنى 65٪).
+    function computeLobbyScale() {
+        var list = document.getElementById('agp-lobby-list');
+        if (!list) return;
+        var gapPx = 19; // 0.5cm ≈ 19px
+        var colWidth = (list.clientWidth - gapPx * 2) / 3;
+        var referenceWidth = 247; // 60 + 200 − 13
+        var scale = Math.min(1, colWidth / referenceWidth);
+        if (scale < 0.65) scale = 0.65;
+        list.style.setProperty('--rr-scale', scale);
+        applyLobbyFrameScaling(list, scale);
+    }
+
+    var _lobbyResizeTimer = null;
+    function scheduleLobbyRescale() {
+        if (_lobbyResizeTimer) window.clearTimeout(_lobbyResizeTimer);
+        _lobbyResizeTimer = window.setTimeout(computeLobbyScale, 200);
+    }
+    window.addEventListener('resize', function () {
+        if (document.getElementById('agp-lobby-list')) scheduleLobbyRescale();
+    });
+
     function enhanceLobbyScreen() {
         var box = el('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
@@ -1907,6 +1996,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 li.appendChild(btn);
             });
         }
+        if (list) {
+            computeLobbyScale();
+            applyLobbyMarquee(list);
+        }
         var startBtn = document.getElementById('agp-start-round-btn');
         if (startBtn && !box.querySelector('.rr-lobby-actions-row')) {
             var row = document.createElement('div');
@@ -1933,6 +2026,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             row.appendChild(startBtn);
             row.appendChild(homeBtn);
             box.appendChild(row);
+
         }
     }
 
