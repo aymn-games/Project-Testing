@@ -226,6 +226,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * بشاشة الإعدادات وسط المباراة (تبقى flex-wrap زي ما هي). */
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list{display:grid;',
             'grid-template-columns:repeat(3,1fr);gap:0.5cm;justify-items:center;align-items:end;',
+            'align-content:start;overflow-y:auto;',
             'flex-wrap:unset;max-height:none;flex:1;min-height:0;}',
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{flex-direction:column;padding:0;position:relative;}',
             /* ⚠️ [0.47.0] خلفية الشريحة البيضاوية خلف كل عنصر لاعب أُلغيت
