@@ -769,7 +769,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function handleStartRoundClick() {
-        var minPlayers = _config.minPlayersToStart || 1;
+        // ⚠️ إضافة (لعبة الخزنة): لو اللعبة عرَّفت حقل إعداد باسم
+        // "minPlayers" (قابل للتعديل حياً من شاشة الإعدادات)، يُستخدَم
+        // بدل الرقم الثابت minPlayersToStart. أي لعبة أخرى ما تعرّف هذا
+        // المفتاح (كل الألعاب الحالية) تبقى بسلوكها القديم تماماً —
+        // بدون أي تأثير عليها.
+        var minPlayers = (typeof _settingsValues.minPlayers === 'number') ? _settingsValues.minPlayers : (_config.minPlayersToStart || 1);
         if (AGP.gameManager.getPlayers().length < minPlayers) {
             renderLobbyScreen();
             var status = el('agp-lobby-list');
