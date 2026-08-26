@@ -142,7 +142,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     var STYLE_ID = 'agp-pcard-styles';
 
-    var CARD_HEIGHT_PX = 72; // ارتفاع البطاقة المعروضة باللوبي (ثابت للكل — العرض يختلف حسب نسبة كل إطار)
+    var AVATAR_SIZE_PX = 60; // ⭐ حجم البطاقة المعتمد (لوبي-قياسي-v1) — 60 أو 65
+    var PILL_WIDTH_RATIO = 210 / 65; // نسبة عرض لوح الاسم الثابت لكل حجم أفاتار
+    var OVERLAP_RATIO = 0.22; // تراكب الصورة على اللوح = 22% من قطر الأفاتار
+    function basicCardTotalWidth(avatarSize) {
+        var pillW = Math.round(avatarSize * PILL_WIDTH_RATIO);
+        var overlap = Math.round(avatarSize * OVERLAP_RATIO);
+        return avatarSize + pillW - overlap;
+    }
 
     // ⚠️ [0.44.8] جدول قياسات كل إطار — راجع تعليق القالب أعلى الملف.
     // المفتاح = اسم ملف الصورة بالضبط (player.frame.imageFilename).
@@ -271,29 +278,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var style = document.createElement('style');
         style.id = STYLE_ID;
         style.textContent = [
-            /* ---- البطاقة الأساسية (بدون إطار) ---- */
-            '.agp-pcard{display:inline-flex;align-items:center;gap:8px;',
-            'background:rgba(255,255,255,0.08);border:1px solid rgba(216,120,255,0.3);',
-            'border-radius:999px;padding:4px 14px 4px 4px;max-width:220px;box-sizing:border-box;',
+            /* ---- البطاقة الأساسية (بدون إطار) — لوبي-قياسي-v1 ---- */
+            '.agp-pcard{display:inline-flex;align-items:center;',
             'font-family:Cairo,sans-serif;direction:rtl;vertical-align:middle;}',
             '.agp-pcard--out{opacity:0.45;text-decoration:line-through;}',
 
-            '.agp-pcard-avatar-basic{width:32px;height:32px;border-radius:50%;flex-shrink:0;',
-            'object-fit:cover;border:2px solid rgba(255,255,255,0.55);background:#5a2585;}',
+            '.agp-pcard-avatar-basic{border-radius:50%;flex-shrink:0;position:relative;z-index:2;',
+            'object-fit:cover;border:3px solid rgba(255,255,255,0.55);background:#5a2585;}',
             '.agp-pcard-avatar-basic--fallback{display:flex;align-items:center;justify-content:center;',
-            'color:#f3eefc;font-size:0.72em;font-weight:800;}',
+            'color:#f3eefc;font-weight:800;}',
 
-            '.agp-pcard-name-basic{font-size:0.85em;font-weight:700;color:#f3eefc;',
+            '.agp-pcard-name-basic{display:flex;align-items:center;justify-content:flex-start;',
+            'box-sizing:border-box;font-weight:700;color:#f3eefc;background:rgba(255,255,255,0.1);',
+            'border:1px solid rgba(216,120,255,0.32);border-radius:999px;position:relative;z-index:1;',
             'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '@keyframes agpPcardSlide{0%,15%{transform:translateX(0);}45%,55%{transform:translateX(var(--pcard-slide-dist));}85%,100%{transform:translateX(0);}}',
+            '.agp-pcard-name-basic.agp-pcard-marquee{animation:agpPcardSlide 4.5s ease-in-out infinite;}',
 
-            /* ---- [0.44.8] البطاقة المؤطَّرة (إطار مفعَّل — اللوبي فقط) ----
-             * هذا الكلاس يحدد فقط الخصائص الثابتة المشتركة بين كل
-             * الإطارات (الموضع/الطبقات/شكل النص). أما القياسات المتغيرة
-             * فعلياً بين إطار وآخر (العرض/الارتفاع الحقيقيين، إزاحة
-             * القص، موقع/حجم الصورة والاسم) فتُحقَن inline لكل بطاقة
-             * حسب FRAME_TEMPLATES[imageFilename] — راجع
-             * buildFramedInlineStyles أدناه. */
-            '.agp-pcard-tpl{display:inline-block;position:relative;height:' + CARD_HEIGHT_PX + 'px;',
+            /* ---- البطاقة المؤطَّرة — الخيار أ: عرض ثابت = نفس عرض
+             * البطاقة العادية، الارتفاع ناتج ومتغيّر حسب نسبة كل إطار ---- */
+            '.agp-pcard-tpl{display:inline-block;position:relative;',
             'overflow:hidden;flex-shrink:0;vertical-align:middle;}',
             '.agp-pcard-tpl-avatar{position:absolute;border-radius:50%;',
             'object-fit:cover;background:#5a2585;z-index:1;}',
@@ -318,14 +322,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * @param {Object} tpl - مدخل من FRAME_TEMPLATES
      * @returns {Object} قياسات جاهزة للحقن inline
      */
-    function computeLayout(tpl) {
-        var scale = CARD_HEIGHT_PX / tpl.contentHeight;
-        var cardWidthPx = Math.round(tpl.canvasW * scale * 100) / 100;
-        var frameImgWidthPx = cardWidthPx; // القص أفقي غير مطلوب (المحتوى يمتد شبه حافة-لحافة بكل الملفات المفحوصة)
+    function computeLayout(tpl, targetWidthPx) {
+        var scale = targetWidthPx / tpl.canvasW;
+        var cardHeightPx = Math.round(tpl.contentHeight * scale * 100) / 100;
+        var frameImgWidthPx = targetWidthPx;
         var frameImgHeightPx = Math.round(tpl.canvasH * scale * 100) / 100;
         var frameTopOffsetPx = Math.round(-(tpl.contentTop * scale) * 100) / 100;
         return {
-            cardWidthPx: cardWidthPx,
+            cardWidthPx: targetWidthPx,
+            cardHeightPx: cardHeightPx,
             frameImgWidthPx: frameImgWidthPx,
             frameImgHeightPx: frameImgHeightPx,
             frameTopOffsetPx: frameTopOffsetPx
@@ -339,13 +344,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function renderBasicHtml(player, opts) {
         var name = (player && player.name) || (player && player.id) || '—';
         var avatarUrl = player && player.avatarUrl;
+        var h = (opts && opts.size) || AVATAR_SIZE_PX;
+        var pillW = Math.round(h * PILL_WIDTH_RATIO);
+        var overlap = Math.round(h * OVERLAP_RATIO);
+        var padStart = Math.round(h * 0.3) + overlap;
+        var padEnd = Math.round(h * 0.3);
+        var avStyle = 'width:' + h + 'px;height:' + h + 'px;';
+        var fbStyle = avStyle + 'font-size:' + Math.round(h * 0.32) + 'px;';
         var avatarHtml = avatarUrl
-            ? '<img class="agp-pcard-avatar-basic" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;agp-pcard-avatar-basic agp-pcard-avatar-basic--fallback&quot;>' + escapeHtml(initials(name)) + '</div>\';">'
-            : '<div class="agp-pcard-avatar-basic agp-pcard-avatar-basic--fallback">' + escapeHtml(initials(name)) + '</div>';
+            ? '<img class="agp-pcard-avatar-basic" style="' + avStyle + '" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;agp-pcard-avatar-basic agp-pcard-avatar-basic--fallback&quot; style=&quot;' + fbStyle + '&quot;>' + escapeHtml(initials(name)) + '</div>\';">'
+            : '<div class="agp-pcard-avatar-basic agp-pcard-avatar-basic--fallback" style="' + fbStyle + '">' + escapeHtml(initials(name)) + '</div>';
+        var pillStyle = 'width:' + pillW + 'px;height:' + Math.round(h * 52 / 65) + 'px;' +
+            'margin-inline-start:-' + overlap + 'px;padding-inline-start:' + padStart + 'px;' +
+            'padding-inline-end:' + padEnd + 'px;font-size:' + Math.max(11, Math.round(h * 30 / 65)) + 'px;';
 
         return '<span class="agp-pcard' + (opts && opts.outClass ? ' ' + opts.outClass : '') + '">' +
             avatarHtml +
-            '<span class="agp-pcard-name-basic" data-agp-pcard-name="1">' + escapeHtml(name) + '</span>' +
+            '<span class="agp-pcard-name-basic" style="' + pillStyle + '" data-agp-pcard-name="1">' + escapeHtml(name) + '</span>' +
             '</span>';
     }
 
@@ -362,9 +377,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var frameSrc = basePath + imageFilename;
 
         var tpl = getTemplate(imageFilename);
-        var layout = computeLayout(tpl);
+        var h = (opts && opts.size) || AVATAR_SIZE_PX;
+        var layout = computeLayout(tpl, basicCardTotalWidth(h));
 
-        var wrapStyle = 'width:' + layout.cardWidthPx + 'px';
+        var wrapStyle = 'width:' + layout.cardWidthPx + 'px;height:' + layout.cardHeightPx + 'px';
         var avatarStyle = 'left:' + tpl.avatarLeftPct + '%;top:' + tpl.avatarTopPct + '%;' +
             'width:' + tpl.avatarWidthPct + '%;height:' + tpl.avatarHeightPct + '%;';
         var frameImgStyle = 'top:' + layout.frameTopOffsetPx + 'px;' +
@@ -417,18 +433,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
          */
         fitAllNames: function (rootEl) {
             if (!rootEl || typeof rootEl.querySelectorAll !== 'function') return;
-            var MAX_FONT = 13, MIN_FONT = 8;
             var nodes = rootEl.querySelectorAll('[data-agp-pcard-name="1"]');
             for (var i = 0; i < nodes.length; i++) {
                 var node = nodes[i];
-                var fontSize = MAX_FONT;
-                node.style.fontSize = fontSize + 'px';
-                while (node.scrollWidth > node.clientWidth && fontSize > MIN_FONT) {
-                    fontSize -= 1;
-                    node.style.fontSize = fontSize + 'px';
+                node.classList.remove('agp-pcard-marquee');
+                node.style.removeProperty('--pcard-slide-dist');
+                var overflow = node.scrollWidth - node.clientWidth;
+                if (overflow > 2) {
+                    node.style.setProperty('--pcard-slide-dist', '-' + overflow + 'px');
+                    node.classList.add('agp-pcard-marquee');
                 }
-                // لسا فايض حتى بأصغر حجم مقروء — القص بـellipsis (CSS
-                // موجود أصلاً بالـCSS) يتكفّل بالباقي.
             }
         }
     };
