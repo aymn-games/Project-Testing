@@ -611,50 +611,49 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-settings-player-list .agp-pcard-avatar-basic{width:26px !important;height:26px !important;}',
             '#agp-settings-player-list .agp-pcard-name-basic{font-size:11px !important;width:auto !important;',
             'max-width:none !important;flex:1;}',
-            /* ⚠️ شاشة اللوبي — قسم ٤ بالمعيار: صفحة كاملة 100vh (بدون سكرول
-             * على مستوى الصفحة)، وفقط منطقة شبكة البطاقات تتحرّك داخلياً،
-             * وتتوقف قبل الشريط السفلي الثابت دائماً. */
-            '#agp-shell-box.agp-lobby-box{width:100vw !important;height:100vh !important;',
-            'max-width:100vw !important;max-height:100vh !important;border-radius:0 !important;margin:0 !important;',
-            'display:flex !important;flex-direction:column !important;overflow:hidden !important;padding:70px 16px 20px !important;}',
-            '#agp-shell-box.agp-lobby-box h2{flex:none;text-align:center;border-bottom:1px solid rgba(212,175,55,0.3);',
-            'padding-bottom:14px;margin-bottom:10px !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-join-hint{flex:none;font-size:1.05em !important;}',
-            '#agp-shell-box.agp-lobby-box #agp-entrance-stage,',
-            '#agp-shell-box.agp-lobby-box #agp-entrance-settled-list{flex:none;}',
-            '#rr-lobby-scroll{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;margin-top:1cm;}',
-            /* ⚠️ ٣ أعمدة ثابتة دائماً (طلب صريح بالمعيار) — بفجوة ٠.٥سم،
-             * بعرض متوسّط الشاشة، بدل flex-wrap يتفاعل مع عدد اللاعبين. */
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{display:grid !important;',
-            'grid-template-columns:repeat(3,1fr) !important;gap:0.5cm !important;max-width:840px;margin:0 auto;',
-            'align-items:center;justify-items:center;}',
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{flex:0 0 auto !important;align-items:center;}',
-            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic{width:60px !important;height:60px !important;',
-            'border-width:3px !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-pcard-name-basic{font-size:22px !important;padding:0 18px !important;',
-            'width:194px !important;max-width:194px !important;overflow:hidden !important;text-overflow:ellipsis !important;',
-            'white-space:nowrap !important;background:rgba(255,255,255,0.14) !important;',
-            'border:1px solid rgba(255,255,255,0.32) !important;border-radius:999px !important;box-sizing:border-box !important;',
-            'display:flex !important;align-items:center !important;}',
+            /* ⚠️ شاشة اللوبي — منقولة بالحرف من نمط لعبة الكراسي الموسيقية
+             * (تنسيق مُثبَت وشغّال فعلياً) بدل الصفحة الكاملة 100vh السابقة:
+             * صندوق بارتفاع ثابت محدود (900px، حد أقصى 92% من الشاشة)،
+             * يتمرّر ككتلة وحدة لو المحتوى تجاوزه. */
+            '#agp-shell-box.agp-lobby-box{height:900px !important;max-height:92vh !important;',
+            'overflow-y:auto !important;display:flex !important;flex-direction:column;}',
+            '#agp-shell-box.agp-lobby-box h2{flex:none;text-align:center;}',
+            /* ٣ أعمدة، فجوة، وقياسات البطاقة — نفس القيم المستخدَمة فعلياً
+             * بلعبة الكراسي (متغيّرات CSS بدل أرقام مكرَّرة). */
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{',
+            '--rr-av:60px;--rr-nw-min:130px;--rr-nw-max:260px;--rr-nh:48px;--rr-nf:22px;',
+            '--rr-gap:0.5cm;--rr-zoom:0.833;--rr-row-min:70px;',
+            'display:grid !important;grid-template-columns:repeat(3,1fr) !important;grid-auto-flow:dense;',
+            'gap:var(--rr-gap) !important;margin-top:20px !important;list-style:none;padding:0;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{position:relative;display:flex !important;',
+            'align-items:center;justify-content:center;min-height:var(--rr-row-min);}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic{width:var(--rr-av) !important;',
+            'height:var(--rr-av) !important;border-width:3px !important;flex-shrink:0;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-name-basic{display:flex !important;align-items:center;',
+            'justify-content:center;min-width:var(--rr-nw-min);max-width:var(--rr-nw-max);height:var(--rr-nh);',
+            'font-size:var(--rr-nf) !important;padding:0 18px !important;overflow:hidden !important;',
+            'text-overflow:ellipsis !important;white-space:nowrap !important;background:rgba(255,255,255,0.14) !important;',
+            'border:1px solid rgba(255,255,255,0.32) !important;border-radius:999px !important;box-sizing:border-box !important;}',
             /* ⚠️ لاعب عنده إطار (frame) مفعَّل يُرسَم بقالب مختلف تماماً
              * (.agp-pcard-tpl) بارتفاع ثابت 72px مُعايَر لحجم افتراضي أكبر
              * بكثير من بطاقاتنا — بدون هذا التصغير يفيض الصف ويحتاج سكرول
              * أفقي ويبين مقصوصاً من فوق. نفس تقنية "زووم" المستخدَمة أصلاً
-             * بلعبة اسم وحيوان ونبات وجماد لنفس المشكلة — النسبة هنا
-             * مُعايَرة لتطابق حجم بطاقاتنا الجديد (60px بدل 34px القديم). */
-            '#agp-shell-box.agp-lobby-box .agp-pcard-tpl{zoom:0.833;}',
-            /* ⚠️ سلايد الأسماء الطويلة داخل بطاقات اللوبي (marquee) */
-            '.rr-name-track{display:inline-block;white-space:nowrap;will-change:transform;}',
-            '.rr-name-track.rr-marquee{animation:rr-pill-slide 4.5s ease-in-out infinite;}',
-            '@keyframes rr-pill-slide{0%,15%{transform:translateX(0);}',
-            '45%,55%{transform:translateX(var(--rr-slide-dist));}85%,100%{transform:translateX(0);}}',
+             * بلعبة الكراسي وبلعبة اسم وحيوان ونبات وجماد لنفس المشكلة. */
+            '#agp-shell-box.agp-lobby-box .agp-pcard-tpl{zoom:var(--rr-zoom);}',
 
             '.rr-lobby-heading-accent{color:var(--rr-gold) !important;font-weight:900 !important;}',
-            '.rr-lobby-actions-row{display:flex;gap:12px;flex:none;padding-top:16px;margin-bottom:28px;justify-content:center;',
-            'flex-wrap:wrap;}',
-            '.rr-lobby-actions-row > *{width:280px !important;padding:14px !important;}',
-            '.rr-lobby-action-btn{border-radius:999px;border:1px solid var(--rr-gold);background:transparent;',
-            'color:#f2e6cf;font-weight:800;font-size:0.85em;cursor:pointer;padding:10px;}',
+            /* ⚠️ صف الأزرار الثلاثة — margin-top:auto يدفعه لأسفل الصندوق
+             * المحدود (مو 100vh)، بنفس تنسيق لعبة الكراسي بالضبط. */
+            '.rr-lobby-actions-row{display:flex;gap:10px;justify-content:center;margin-top:auto;',
+            'padding-top:18px;flex-wrap:wrap;}',
+            '.rr-lobby-actions-row > *{width:280px !important;max-width:100%;height:48px;border-radius:10px !important;',
+            'font-weight:800;font-size:0.9em;cursor:pointer;border:none;display:flex;align-items:center;',
+            'justify-content:center;gap:6px;box-sizing:border-box;font-family:inherit;padding:10px !important;}',
+            '.rr-lobby-action-btn{background:linear-gradient(90deg,#4a2f0f,#241a0c);color:#fff;',
+            'border:1px solid rgba(255,255,255,0.3) !important;}',
+            '.rr-lobby-home-btn{background:linear-gradient(90deg,var(--rr-gold),#8a7024);color:#241a0c;}',
+            '#agp-start-round-btn.rr-lobby-start-btn{background:linear-gradient(90deg,#1fbf6a,#0e8f4e) !important;',
+            'color:#fff !important;}',
 
             /* ⚠️ سبب فعلي لظهور الأزرار كدوائر: الملف المشترك يحدد
              * .agp-settings-player-actions بعرض ثابت 220px وعمود رأسي،
@@ -1163,7 +1162,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // نكتفي بإعادة جدولة الفحص لاحقاً بدون أي تدخّل، لين يُغلَق
             // الدور بشكل طبيعي (شات/زر يدوي/انتهاء وقت) فيرجع الدوران تلقائياً.
             if (!_wheelSpinning && !_pendingTurn && _alive.length > 1) {
-                handleSpinClick();
+                // ⚠️ [إصلاح خلل حقيقي] كان يستدعي handleSpinClick مباشرة
+                // (خاص بالعجلة بس) — فما يشتغل إطلاقاً وقت وضع السكرول.
+                // نفس المُوزِّع اللي يستخدمه زر التدوير نفسه، يشتغل صح
+                // بالوضعين.
+                handleHubClick();
             }
             scheduleAutoStep();
         }, 4800);
@@ -1876,67 +1879,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    // ⚠️ سلايد تلقائي (marquee) للأسماء الطويلة داخل بطاقات اللوبي —
-    // بطاقات اللوبي تُرسَم عبر الملف المشترك (js/agp-player-card.js) اللي
-    // ما نلمسه إطلاقاً، فما نعرف بنية الـDOM الداخلية مسبقاً. الحل الآمن:
-    // نلف نص أي بطاقة (بغض النظر عن بنيتها الأصلية) بعنصر sliding داخلي
-    // وقت التشغيل، ونفعّل الأنيميشن فقط لو النص فعلاً أطول من المساحة
-    // المتاحة — بعلامة data- تمنع لفّه مرتين لو الإصلاح تكرّر.
-    function applyLobbyMarquee(container) {
-        if (!container) return;
-        var names = container.querySelectorAll('.agp-pcard-name-basic');
-        names.forEach(function (nameEl) {
-            if (nameEl.getAttribute('data-rr-marquee-ready') === '1') return;
-            nameEl.setAttribute('data-rr-marquee-ready', '1');
-            var text = nameEl.textContent;
-            nameEl.textContent = '';
-            var track = document.createElement('span');
-            track.className = 'rr-name-track';
-            track.textContent = text;
-            nameEl.appendChild(track);
-            window.requestAnimationFrame(function () {
-                var cs = window.getComputedStyle(nameEl);
-                var padL = parseFloat(cs.paddingLeft) || 0;
-                var padR = parseFloat(cs.paddingRight) || 0;
-                var availableWidth = nameEl.clientWidth - padL - padR;
-                var overflow = track.scrollWidth - availableWidth;
-                if (overflow > 2) {
-                    track.style.setProperty('--rr-slide-dist', '-' + overflow + 'px');
-                    track.classList.add('rr-marquee');
-                }
-            });
-        });
-    }
-
     function enhanceLobbyScreen() {
         var box = el('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
-        // ⚠️ [إصلاح خلل حقيقي] الصفحة كانت لسا تطلع بصندوق منتصف الشاشة
-        // بدل صفحة كاملة رغم قاعدة CSS الموجودة أصلاً — تطبيق مباشر عبر
-        // JS بأولوية "important" هنا كضمان إضافي أكيد 100٪، بغض النظر عن
-        // أي تعارض توقيت/أولوية بالـstylesheet ما قدرت أشخّصه بدون اختبار
-        // حي على موقعك.
-        box.style.setProperty('width', '100vw', 'important');
-        box.style.setProperty('height', '100vh', 'important');
-        box.style.setProperty('max-width', '100vw', 'important');
-        box.style.setProperty('max-height', '100vh', 'important');
-        box.style.setProperty('border-radius', '0', 'important');
-        box.style.setProperty('margin', '0', 'important');
+        clearLobbyInlineOverrides(box); // ⚠️ يمسح أي بقايا من شاشة ثانية قبل ما يفرض شي جديد
         var h2 = box.querySelector('h2');
         if (h2 && h2.getAttribute('data-rr-heading') !== '1') {
             h2.innerHTML = 'لوبي الدخول للعبة "<span class="rr-lobby-heading-accent">' + escapeHtml(GAME_NAME) + '</span>"';
             h2.setAttribute('data-rr-heading', '1');
         }
         var list = document.getElementById('agp-lobby-list');
-        // ⚠️ نلف شبكة البطاقات بحاوية سكرول داخلية خاصة بها — الهيدر
-        // والبانر وشريط الأزرار السفلي يبقون ثابتين دائماً، بس هذي المنطقة
-        // اللي تتحرّك (قسم ٤ بالمعيار).
-        if (list && !list.closest('#rr-lobby-scroll')) {
-            var scrollWrap = document.createElement('div');
-            scrollWrap.id = 'rr-lobby-scroll';
-            list.parentNode.insertBefore(scrollWrap, list);
-            scrollWrap.appendChild(list);
-        }
         if (list && AGP.gameManager) {
             var players = AGP.gameManager.getPlayers();
             list.querySelectorAll('li').forEach(function (li, i) {
@@ -1955,12 +1907,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 li.appendChild(btn);
             });
         }
-        if (list) applyLobbyMarquee(list);
         var startBtn = document.getElementById('agp-start-round-btn');
         if (startBtn && !box.querySelector('.rr-lobby-actions-row')) {
             var row = document.createElement('div');
             row.className = 'rr-lobby-actions-row';
-            startBtn.parentNode.insertBefore(row, startBtn);
 
             var backBtn = document.createElement('button');
             backBtn.type = 'button';
@@ -1973,13 +1923,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             });
             var homeBtn = document.createElement('button');
             homeBtn.type = 'button';
-            homeBtn.className = 'rr-lobby-action-btn';
+            homeBtn.className = 'rr-lobby-home-btn';
             homeBtn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
             homeBtn.addEventListener('click', function () { window.location.href = '../../index.html'; });
+
+            startBtn.classList.add('rr-lobby-start-btn'); // نفس العنصر، ننقله بس (بدون تكرار ولا تعديل نصّه)
 
             row.appendChild(backBtn);
             row.appendChild(startBtn);
             row.appendChild(homeBtn);
+            box.appendChild(row);
         }
     }
 
