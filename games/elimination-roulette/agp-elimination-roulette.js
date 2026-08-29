@@ -589,8 +589,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * الفوز)، وحلقة "متقطّعة وردية" لصاحب الأكثر إقصاءً (تلمّح
              * لعلامة استهداف/إقصاء) — بشارة أيقونة صغيرة فوق كل حلقة،
              * بنفس ألوان صورة 4. */
+            /* ⚠️ [0.52.0] طلب صريح: شاشة الفائز بدون "لوح/تبويب" خلف
+             * البطاقتين — الصندوق المشترك (#er-modal-box) يفقد خلفيته/حدّه/
+             * ظلّه/حشوته هنا فقط (كلاس er-winner-panel، محدود بهذه الشاشة —
+             * راجع renderWinnerScreen)، وخلفية الشاشة (اللي خلف الطبقة، أي
+             * شاشة اللعب الفعلية) تصبح مغبّشة (backdrop-filter) بدل الطبقة
+             * شبه المعتمة القديمة. بقية "تبويبات" اللعبة (نافذة الدور/
+             * الإعلان/اختيار الهدية) تبقى بشكلها المصمَت القديم — الكلاسان
+             * er-winner-panel/er-winner-backdrop يُزالان فوراً عند فتح أيٍّ
+             * منها (راجع التعليقات المطابقة بتلك الدوال). */
+            '#er-modal-overlay.er-winner-backdrop{background:rgba(8,4,16,0.38);',
+            'backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}',
+            '#er-modal-box.er-winner-panel{background:none;border:none;box-shadow:none;',
+            'padding:0;width:auto;max-width:100%;overflow:visible;}',
             '#er-winner-box{text-align:center;}',
-            '#er-winner-box h2{font-family:Almarai,Cairo,sans-serif;font-size:1.6em;color:#fff;}',
+            '#er-winner-box h2{font-family:Almarai,Cairo,sans-serif;font-size:1.6em;color:#fff;',
+            'text-shadow:0 2px 12px rgba(0,0,0,0.65);}',
             '.er-trophy-cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:14px 0 18px;}',
             /* ⚠️ [0.46.0] حجم موحَّد 250×250 لكل بطاقة، وبدون أي خلفية أو
              * حدود إطلاقاً (أُلغيتا بالكامل) — تأثير "تطاير" (confetti)
@@ -599,16 +613,29 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * الموحَّد للطرفين — الفائز والأكثر إقصاءً — بطلب صريح)، مع
              * نبضة خفيفة مستمرة. overflow صار visible بدل hidden حتى لا
              * يُقصّ التوهّج (ولا قصاصات confetti التي تتخطى حدود الصندوق
-             * أحياناً — إصلاح فني إضافي وُجد أثناء المراجعة). */
-            '.er-trophy-card{position:relative;width:250px;height:250px;box-sizing:border-box;',
-            'border-radius:18px;padding:20px 14px;display:flex;flex-direction:column;align-items:center;',
-            'justify-content:center;overflow:visible;background:none;border:none;',
-            'box-shadow:0 0 55px 14px rgba(255,255,255,0.4),0 0 120px 35px rgba(216,120,255,0.6);',
+             * أحياناً — إصلاح فني إضافي وُجد أثناء المراجعة).
+             * ⚠️ [0.52.0] إعادة تصميم شكل البطاقة نفسها بالكامل بحسب SVG
+             * مرجعي زوَّدنا بها المستخدم بالضبط: مستطيل 300×400 (بدل مربّع
+             * 250×250)، خلفية زجاجية شبه شفافة (#656262 بشفافية 50%)، حدّ
+             * أسود 3px، وظل داخلي خفيف أعلى البطاقة (كما بملف الفلتر
+             * بالـSVG). توهّج التمرير (glow) القديم أُبقي كما هو فوق هذا
+             * كله (نفس القرار السابق، لم يُطلَب إلغاؤه). */
+            '.er-trophy-card{position:relative;width:300px;height:400px;max-width:88vw;',
+            'max-height:min(400px,74vh);box-sizing:border-box;',
+            'border-radius:15px;padding:26px 18px;display:flex;flex-direction:column;align-items:center;',
+            'justify-content:center;gap:4px;overflow:visible;background:rgba(101,98,98,0.5);',
+            'border:3px solid #000;',
+            'box-shadow:inset 0 4px 2px rgba(0,0,0,0.25),0 0 55px 14px rgba(255,255,255,0.4),0 0 120px 35px rgba(216,120,255,0.6);',
             'animation:er-trophy-glow-pulse 2.6s ease-in-out infinite;}',
-            '@keyframes er-trophy-glow-pulse{0%,100%{box-shadow:0 0 55px 14px rgba(255,255,255,0.4),',
-            '0 0 120px 35px rgba(216,120,255,0.6);}',
-            '50%{box-shadow:0 0 75px 22px rgba(255,255,255,0.6),0 0 150px 45px rgba(216,120,255,0.78);}}',
+            '@keyframes er-trophy-glow-pulse{0%,100%{box-shadow:inset 0 4px 2px rgba(0,0,0,0.25),',
+            '0 0 55px 14px rgba(255,255,255,0.4),0 0 120px 35px rgba(216,120,255,0.6);}',
+            '50%{box-shadow:inset 0 4px 2px rgba(0,0,0,0.25),',
+            '0 0 75px 22px rgba(255,255,255,0.6),0 0 150px 45px rgba(216,120,255,0.78);}}',
             '.er-trophy-card .er-trophy-label{font-size:0.85em;font-weight:800;color:#fff;margin-bottom:10px;}',
+            // ⚠️ [0.52.0] أيقونة تاج الفائز الحقيقية (CROWN_ICON_DATA_URI) —
+            // ببطاقة الفائز فقط، فوق التسمية مباشرة.
+            '.er-trophy-crown{width:74px;height:74px;object-fit:contain;margin-bottom:2px;',
+            'filter:drop-shadow(0 3px 8px rgba(0,0,0,0.5));}',
 
             '.er-ring-wrap{position:relative;width:88px;height:88px;margin:0 auto 10px;border-radius:50%;',
             'padding:5px;box-sizing:border-box;}',
@@ -1489,6 +1516,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         if (AGP.playerCard) AGP.playerCard.fitAllNames(box);
 
+        // ⚠️ [0.52.0] تنظيف: لو الصندوق كان بوضع "شاشة الفائز" (بدون خلفية/
+        // حدّ + خلفية مغبّشة) من عرض سابق، رجّعه للوضع المصمَت الطبيعي —
+        // نافذة الدور هذي تبقى بشكلها القديم دون أي تغيير.
+        overlay.classList.remove('er-winner-backdrop');
+
         box.querySelectorAll('.er-candidate-card').forEach(function (row) {
             row.onclick = function () {
                 var i = parseInt(row.getAttribute('data-index'), 10);
@@ -1648,6 +1680,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             ? 'er-announce-effect-red er-announce-target-fadeout'
             : 'er-announce-effect-green er-announce-target-revive-ring';
         var targetHtml = announcePersonHtml(data.target, targetEffectClass);
+
+        // ⚠️ [0.52.0] تنظيف: راجع نفس التعليق بـrenderTurnModal أعلاه —
+        // محدود بشاشة الفائز فقط، تبويب الإعلان يبقى بشكله المصمَت القديم.
+        overlay.classList.remove('er-winner-backdrop');
 
         box.className = 'er-announce-box ' + (isEliminate ? 'er-announce-eliminate' : 'er-announce-revive');
         box.innerHTML =
@@ -1986,7 +2022,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function trophyCardHtml(player, opts) {
         opts = opts || {};
+        // ⚠️ [0.52.0] تاج ذهبي زخرفي فوق حلقة صورة الفائز فقط (opts.showCrown)
+        // — الأيقونة الحقيقية المزوَّدة من المستخدم (CROWN_ICON_DATA_URI)،
+        // لا تظهر ببطاقة "الأكثر إقصاءً".
+        var crownHtml = opts.showCrown
+            ? '<img class="er-trophy-crown" src="' + CROWN_ICON_DATA_URI + '" alt="">'
+            : '';
         return '<div class="er-trophy-card ' + (opts.cls || '') + '"' + (opts.cardId ? ' id="' + opts.cardId + '"' : '') + '>' +
+            crownHtml +
             '<div class="er-trophy-label">' + opts.label + '</div>' +
             ringHtml(player, opts.kind) +
             '<div class="er-trophy-name">' + escapeHtml(playerLabel(player)) + '</div>' +
@@ -2009,6 +2052,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // البطاقة القديمة المُلغاة بالكامل (طلب صريح). قصاصات ملوَّنة CSS/JS
     // بحتة (بدون أي صور خارجية، اتساقاً مع قيد "لا صور جاهزة" المطبَّق
     // بكل المشروع) تنطلق من مركز البطاقة بزوايا/مسافات عشوائية.
+    // ⚠️ [0.52.0] أيقونة تاج الفائز — صورة PNG ثابتة زوَّدنا بها المستخدم
+    // (أيقونة تاج مسطّحة ذهبية بقاعدة برتقالية وجوهرة بنفسجية)، مُضمَّنة
+    // هنا كـ data URI (base64) داخل هذا الملف نفسه — بدون أي رابط خارجي
+    // ولا ملف صورة منفصل (يبقى الملف قائماً بذاته). أُعيد تحجيمها محلياً
+    // (512×512 الأصلية → 160×160 + ضغط ألوان) لتصغير حجمها قبل التضمين
+    // فقط — الشكل البصري نفسه بلا أي تعديل تصميمي.
+    var CROWN_ICON_DATA_URI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAACgCAMAAAC8EZcfAAAAwFBMVEX80xb84zX81h7431z7lAD72FL+5zT94Vj95Fn8jwCZZ578kgDUr3azh4n9mgH/qFb5XAC4uAp1Paj/f3/HoIR/fwD///+/fwD//6oAAAD95Fn91AL9mQD93i/6xwD7iAH+5DP//wD+pwn/qQD/fwCBS6GQWrP+mAD+vgD/4QL/AAD//1T//n79mAH91AL7iQH/82D+1wN6Q6X/vz/6yAD+tgH6yAD7yQL91QL90gP7igD+1AT95FH91AP93jD+5WB9Tnm4AAAAQHRSTlNhE6HtKBjXWqih/2r//8sDAwP/Av8CAQQDAP7+/v79/v4B/gMC//9IBP4BAwKvz8P+D/8E0f8rDrFRVi0QjtL+LQhbUQAAC01JREFUeNrtnIl22joQhmUgSbM16XIXYexY2JcYk9DSkBCapHn/t7qSVy0zsth6OfegnqatS6yPf2Z+jQSB0D0f5AB4AIRGnB0U3Agw6aVZtr+AMb0dnvKvewuY0I/DQY+xfQWMaW8wGJ5zzj0FTOn9cDD42IvZfgIm9JzzDXgWJmwPAa/zAOeDBzneN0AR1fPBoCakbAXHzpLkNyjYOx3c3JSAw4+3+6Vglpx/u8lHRTj4eB6zzPm59dapfLJKdQxuqlGF+dHVbhJ6+/gx2TFg7/RmoAByCXvOgMLds3jHOcgRG8Lh4L63mrvf090CitUtr5KccMjVo8xNP5YLOBiskYWrKciT6I+SUMhn5hSbTAD7Zr3C3d0zYv2VJE5oQfgtBuLF6i+qfPS2TFrwWW13qbvOermCkBZ39KjT8fgfsjld53lRe6d7XqzbLOR2MziF+Y750Ahp7zwv/orRvbLWBGRMSNjLEogvCoJIJsyyxptqe7+/XUHDtTrq0+E3U0BW8AnCo5owtxfD3e/pTgGTrHdvZmBc8QVB90NDyK6r9bEiHA5OexnbJSA47mq+qN///uFVzsOfkr0P+fK9+10dixMbn0r4F+8mzitA4TN0pV6cbF+/grCJMr2+pr0S8JSu2ohvBZDpfBohT9ifOeA3Gu96JXHk0wmvi/Wnx//y+wFBviIPWXOY08sDvOt2CzZuD+LLCZt840u4cPf/BJB2jiE+QUivGvP8Ofi2s46aeezLxLvDAH9FMGC/K9s5+9mrQ85SxvjvLQGyKi4TBq98JCoIDcATeoc1vvm4YtsA5DfxSKf74eTIbPVKE0QINb7KYfhNXsjz9Jm8IDdcDZBRrxNFUf/79z43DvCGDzDhCf8P+IZv/tj3+e+3h3ZC0lqjr8fH5czfu69fwBt6EOEJvwy1Gmw2FXh8BMcdr/UUrw3wLq/RegGDkwoiRPgo+/O55OPfcNxp6nw9wCvqRXKBniA3NAiR+uAhXTZ8QRR5bUFuAZzQTiTpwiWcUBdCjI/jlAIWrWPUgRPVFTCjV79kwH53gj1jQRhUhFh8RYX4jYAc8NdmCvL7BUqI+6/YDRn7O6gMu0vvGLbjmpUFUgG2xbgN8LW4UzvgFfOaGB8xNMIVYBniXw8bAdbrWLN4MXu25o/FU5V/+1RRsLNhkXAPPpaK8zuaXEmZDOUjj7B5U/o2lnOQbFYkopeS5+3fMZca6XdPsHnrGEdlCrYdgLYZ9aS2jyifFw3dn0pPg6dCSsm4SkJhg7GbUTPGHAg54BH2KE8SMI8xUiaLKsYcjwf4Cj2wYw1g0ZkxROyJ6BaqqbEclEvE6uiMksoIo46HPagAyr+SouWZzVie6fDk9Dhqsn/SXiJ4maR06VdG+Isi8RUYs8Wi6MwI/URT3p350+dlAicOY0dBs5yAhA9KiZT1/gDp91Lx5QWCiNwjnTAM52QmBGf0aV60Z+PpE0jIlIah+wpkF7sy2v4ucIIVN3wR/+Uh03GgUAx/zjcJhD7xvxVj7L9AtVLKUwF2j9iXthKBy4Rli6m00PESmYB8YcEnuF4omXFcvyKcwoBaR3Onb070EoHLhHuq1ArmgEDFJbNSvzAHSgnxawX5hSVQKEwFFFN7+ooNtfzass1SqvCJZS6GbNKv8MQgZB7KgM9mWlQdjSSOZjZmiUBlwioDLPngToar4Ut8/pTIuPzfsXlIrzXVxUomE7IHcGfcVfKFlStI3ciAVcLoIlSJdMCZ8T1qjQA7jkkGCag5kmSA9QCqpAL0NcBGUQYAqiloTH4FlIheJqlkgA2g2e8zmuqAc5kQzEEGAXLCchn9Qj3sZKEuk5g++UonjTaDcZGDTUgJ8WXCZZy21kht2MxSIkqZ8B5ravKBVZLGRAFcktp2csolnRkbYy+Cj66Oio0H8/DDo+IRCVtM1QJGq4TFVAYcTxdEMm5xfUk1rwZrpEyxB1a0Y7CAIg+yiciRyTPEl1fJJ/0cSC6KsVhJ8qXPbwjftBMduEaa478YKZGmTFLdANEqSemsIy0j4+cnmhBROKQzrwHFVfnkrtw29SFCbjbIKtKUyd3CMEAZMFFO5Z6aZW7K26vcPYv2iy2e5hW4v5RErDae4PT9E3uExVOY4Xz8xql0jF2Hl2NMn6oGtemoSbPEvC1oihzOGISvaInkZeIBBt0ASkczKV106i5mTDhb8YYSUjfZ0pqSd4bMXiNVGdgEFP//AhiguZbw6pXCy9uspNqAkGY7qFh4FWa8RsrusGMFfP8wtfCJJPSM8IrRrLikSdG5ssa8pXmYLTVSDLuA/b6Nr1pLlPAWC1pi7ItTrc8ZT1/yzaitRsQI7IDvAWgwslWzT2p4+dxvdQ3IgMRXl2mfiAMDa43UAuIP6Fv4qipRw5snGDMAE7E5UQHHPMyxvUbaBCwAMT5RJXET3mbmGRDijKZzDTAPs7VGHATsB36AD56EZG7wyVsjgjY6ZZiPrYDtAtaPQQCN8GpNH6GWJKwLcCNAC2EUmHi+sOkUVJCEEKAg3CDCNkCYT+yGIQUTYztQj80E7GMeE/kwnz8DAQ2rbid0ExCREJPP95/lHofgW1KF8N1RwMtLRwlxPtmmFUCsSopEdAO8+Pz5wkVCPLyqTWsKPoUoICSiGeGLH//88+OiHRCXT68RGTDTGhp9dN/bBOyeCcCzbluM7XzTlGbwIXoCWjUaZlPAS87HCS/tElrDm9t0jJzyW5PQDLMh4EXOx8eFDdAun2bTKiBq1ZKI7zhgt8QbjYAgN3y+nU+kIKagxaqBMBsRPvtRAY7OMMAoaOXz1fMrGTDL6LwNsAmzLuBlwzcafYXLpC28eY2o+3Kibpw7fjthEWZdwAuZbzTqQhK2h1e3aQOQOAAWYdYE7J6pgEYaRpJ8tgnGSwtgi1UrYdYANb7R6NIMsgOebtMG4MINsN6lVa9NXOh8o5HuNb4b33RhAaz6hXZAX91tNg7TDD3ITni6TeuAblUivWBeTv71swmoV3LXKTiaTZuAxA0wspcIWCZuybO0Kpg4JmGgnycAOdg1tvAuqePrLzMQ/ZXauRMg0idIhF+xU5CWGtEPhQl4yB6uFmHAZ87AHXLr0G3aAHRLwgDYi2iF3IWOwhwAly2AsZNVg5s5JQ0vLCddq9i0mYMuVRLAR25SkC9tJ13WFJy1AFZddbiygDyCox94P+gmoWHTJqCLVWNnlpaO2rFMDJs2AT+1V0mAnprjexJXCZfGa2NmiFurBD/vQHd1zoCzVkBeJy1WHVhOpbF9sWuZTM2XPwnyemi4hoAiyJ8/X1qPaVa0aQCw1artx/qXly3nSCvWCKSgPQkDxxOttSR8cQhxm1W7HQmuCeg5APKHzC0xDqLNAG1lAr0hAQC0W/WmAtokhGoEALRbdbQpoE3CpZOC1r1nEG1WInYJZ8AbsyDABW7VGwtoA5wytzfZWs6qtyEgGmOegp+cAC1WHWxBQFRCyKZBQMsx4TYijEv4Ar0jEwwxZtWbriItEs4cAekfRUMT7kZAFPAZfBcyAd9L3EFfVtyGgHDHANo0Boi87rklAREJl9TRZlCr3h4gKOGTc4gz2KqjcmzO994HbTpz/mmI8pM5mjHc/Xg8hd+pjwA2P9mvfADBLsf9ngMOD4AHwAPgAXCPAQePj9rdHocbX3hUL2wCOOArZajcjF94tF545BeG1guhdmETQDG9cjMxm6/PFlov+NpTGBoXNgXU5QhXAwx1jbcJePOo3VxMpyZQ6IctFzRg8STDHVbxcOsXDj54ADwAHgAPgP8nwDj/DMRm3JjLwPYBz+GfeCfIp6T8VMftzkePZmt9EMTvG9lqn1QRJ8qIdz6SNT9K4z8fB8D/PeC/QZ+CRt3wTxkAAAAASUVORK5CYII=';
+
     var CONFETTI_COLORS = ['#ffd400', '#ff4dff', '#00c2ff', '#7c3aed', '#4ade80', '#ff6b8a'];
     function spawnConfetti(container, count) {
         if (!container) return;
@@ -2042,6 +2093,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (winner) {
             cardsHtml += trophyCardHtml(winner, {
                 cls: 'er-trophy-winner', label: '🏆 الفائز', kind: 'winner', cardId: 'er-trophy-card-winner',
+                showCrown: true,
                 pointsHtml: pointsHtmlFor(pointsResult, winner)
             });
         }
@@ -2053,8 +2105,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             });
         }
 
-        box.className = 'er-modal-box';
+        // ⚠️ [0.52.0] طلب صريح: شاشة الفائز تحديداً بدون "لوح/تبويب" خلف
+        // البطاقتين — بدل الصندوق المشترك المصمَت (er-modal-box، تدرّج
+        // بنفسجي + حدّ + ظل)، الخلفية (شاشة اللعب خلفها) تصبح مغبّشة
+        // (backdrop-filter) والبطاقتان تطفوان مباشرة فوقها. كلاسا
+        // er-winner-panel/er-winner-backdrop محدودان بهذه الشاشة فقط
+        // (تُزال من renderTurnModal/showResultAnnouncement/openGiftPickerModal
+        // فور فتح أي منها) — بقية "تبويبات" اللعبة (الإقصاء/الإرجاع/
+        // الإعلان/اختيار الهدية) تبقى بشكلها المصمَت القديم بدون أي تغيير.
+        box.className = 'er-winner-panel';
         box.style.textAlign = 'center';
+        overlay.classList.add('er-winner-backdrop');
         box.innerHTML =
             '<div id="er-winner-box">' +
             '<h2>🏁 انتهت المباراة!</h2>' +
@@ -2138,6 +2199,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<span class="er-gift-coins">' + giftCoinsText(g) + '</span>' +
                 '</button>';
         }).join('');
+
+        // ⚠️ [0.52.0] تنظيف: راجع نفس التعليق بـrenderTurnModal أعلاه —
+        // محدود بشاشة الفائز فقط، منبثقة اختيار الهدية تبقى بشكلها المصمَت القديم.
+        overlay.classList.remove('er-winner-backdrop');
 
         box.className = '';
         box.style.textAlign = 'center';
