@@ -223,9 +223,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'gap:8px;overflow-y:auto;}',
             /* ⚠️ [تحديث معايير الواجهة الموحّدة] شبكة ٣ أعمدة ثابتة
              * (لوبي-قياسي-v1) للوبي فقط — بدون لمس القائمة المضغوطة
-             * بشاشة الإعدادات وسط المباراة (تبقى flex-wrap زي ما هي). */
+             * بشاشة الإعدادات وسط المباراة (تبقى flex-wrap زي ما هي).
+             * ⚠️ [استثناء موافَق عليه صراحةً — تعديل مؤقّت للمعاينة] طلب
+             * المستخدم صراحةً تغيير عدد الأعمدة من 3 إلى 4 والمسافة من
+             * 0.5cm إلى 0.1cm، بدون أي تغيير على حجم صندوق اللوبي نفسه
+             * (#agp-shell-box.agp-lobby-box) — هذا تعديل محدود ومباشر على
+             * ملف مشترك بموافقة صريحة لهذا التغيير تحديداً فقط، وليس
+             * إذناً عاماً لباقي التصميم الجديد (المخطط 1684×109 لسا
+             * ينتظر موافقة منفصلة). */
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list{display:grid;',
-            'grid-template-columns:repeat(3,1fr);gap:0.5cm;justify-items:center;align-items:end;',
+            'grid-template-columns:repeat(4,1fr);gap:0.1cm;justify-items:center;align-items:end;',
             'align-content:start;overflow-y:auto;',
             'flex-wrap:unset;max-height:none;flex:1;min-height:0;}',
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{flex-direction:column;padding:0;position:relative;}',
