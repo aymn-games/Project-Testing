@@ -288,9 +288,34 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         document.head.appendChild(sheet);
     }
 
+    // ⚠️ [0.51.0] خط "Tajawal" — طلب صريح بملف style.css مرجعي أرسله
+    // المستخدم لشاشة الإعدادات الأولى تحديداً (family:'Tajawal'). يُحمَّل
+    // بنفس أسلوب ensureZainFont أعلاه (حارس id يمنع التكرار، صفر لمس
+    // للملف المشترك)، ويُطبَّق فقط على .er-settings-initial-box عبر CSS
+    // (راجع injectStageStyles) — خط Zain الحالي يبقى كما هو لبقية شاشات
+    // اللعبة (اللوبي، العجلة...إلخ)، خارج نطاق هذا التعديل.
+    function ensureTajawalFont() {
+        if (el('er-tajawal-font-link')) return;
+        var pre1 = document.createElement('link');
+        pre1.rel = 'preconnect';
+        pre1.href = 'https://fonts.googleapis.com';
+        var pre2 = document.createElement('link');
+        pre2.rel = 'preconnect';
+        pre2.href = 'https://fonts.gstatic.com';
+        pre2.crossOrigin = 'anonymous';
+        var sheet = document.createElement('link');
+        sheet.id = 'er-tajawal-font-link';
+        sheet.rel = 'stylesheet';
+        sheet.href = 'https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap';
+        document.head.appendChild(pre1);
+        document.head.appendChild(pre2);
+        document.head.appendChild(sheet);
+    }
+
     function injectStageStyles() {
         if (el('er-stage-styles')) return;
         ensureZainFont();
+        ensureTajawalFont();
         var style = document.createElement('style');
         style.id = 'er-stage-styles';
         style.textContent = [
@@ -819,36 +844,172 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-back-to-platform-btn:hover{background:rgba(255,255,255,0.18);}',
 
             /* ================================================================
-             * ⚠️ [0.46.1] شاشة الإعدادات الأولى (قبل بدء المباراة) — تصميم
-             * "بطاقات مجمّعة" بحدود مدوّرة، PLAYER-CARD-STANDARDS.md §5.
-             * محدود صراحة بـ .er-settings-initial-box (كلاس نضيفه نحن فقط
-             * على شاشة الإعدادات الأولى تحديداً — راجع تعليق
-             * enhanceSettingsScreen لسبب التفريق) — صفر تأثير على شاشة
-             * الإعدادات المعاد فتحها أثناء المباراة (الدرج الجانبي، قسم ٦
-             * بالمعيار، خارج نطاق هذا التعديل تماماً).
+             * ⚠️ [0.51.0] شاشة الإعدادات الأولى — تطبيق حرفي لملف مرجعي
+             * (HTML+CSS) أرسله المستخدم بالكامل (`wahaj_v2.html`/`style.css`)
+             * يعرض بالضبط الشكل المطلوب. كل القيم أدناه (ألوان، مقاسات،
+             * حشوات، خط Tajawal) منسوخة حرفياً من ذاك الملف، ومطبَّقة على
+             * عناصر الملف المشترك الفعلية (لا يمكن تغيير الـHTML الذي
+             * يولّده js/agp-game-shell.js نفسه، فقط إعادة تنسيقه/تلوينه
+             * محلياً + بعض إعادة ترتيب DOM المحدود اللازم عبر
+             * layoutInitialSettingsFields أدناه). محدود صراحة
+             * بـ.er-settings-initial-box — صفر تأثير على شاشة الإعدادات
+             * المعاد فتحها أثناء المباراة أو شاشة اللوبي.
+             * ⚠️ استثناء واحد صريح بطلب المستخدم: خلفية الصندوق نفسه
+             * بقيت #2A1443 (نفس التصميم السابق [0.50.0])، بدل خلفية
+             * الصفحة #0A0612 المستخدَمة بالملف المرجعي (لأن ذاك ملف
+             * صفحة مستقلة، بينما هذا صندوق حوار فوق خلفية اللعبة
+             * الأصلية أصلاً).
              * ================================================================ */
-            '#agp-shell-box.er-settings-initial-box{width:min(760px,96vw) !important;',
-            'max-width:min(760px,96vw) !important;height:min(88vh,760px) !important;',
-            'max-height:min(88vh,760px) !important;display:flex !important;flex-direction:column !important;',
-            'overflow:hidden !important;padding:20px 22px 18px !important;position:relative;}',
-            '#agp-shell-box.er-settings-initial-box > h2{flex:0 0 auto !important;font-size:1.1em !important;',
-            'margin:0 0 16px !important;text-align:center !important;}',
+            '#agp-shell-box.er-settings-initial-box{width:min(750px,96vw) !important;',
+            'max-width:min(750px,96vw) !important;height:min(90vh,760px) !important;',
+            'max-height:min(90vh,760px) !important;display:flex !important;flex-direction:column !important;',
+            'overflow:hidden !important;padding:24px 20px 20px !important;position:relative;',
+            'background:#2A1443 !important;border:1px solid rgba(0,215,255,0.25) !important;',
+            'font-family:"Tajawal",sans-serif !important;}',
+            '#agp-shell-box.er-settings-initial-box *{font-family:"Tajawal",sans-serif !important;}',
+            '#agp-shell-box.er-settings-initial-box > h2{flex:0 0 auto !important;font-size:26px !important;',
+            'font-weight:900 !important;color:#E5007F !important;text-align:center !important;',
+            'margin:0 0 15px !important;padding:0 !important;border-bottom:none !important;}',
+            // .divider-main (خط تحت العنوان مباشرة) — عنصر DOM مضاف محلياً
+            // (راجع layoutInitialSettingsFields)، مطابقةً حرفياً للملف
+            // المرجعي (عنصر منفصل، لا border-bottom على h2 نفسه).
+            '#agp-shell-box.er-settings-initial-box .er-settings-top-divider{flex:0 0 auto;height:1px;',
+            'background:rgba(255,255,255,0.2);margin:0 0 22px;}',
             '#agp-shell-box.er-settings-initial-box .er-settings-scroll{flex:1 1 auto !important;',
             'min-height:0 !important;overflow-y:auto !important;padding:2px 4px 6px !important;}',
-            '#agp-shell-box.er-settings-initial-box .er-settings-footer{flex:0 0 auto !important;',
-            'display:flex !important;flex-direction:column !important;align-items:center !important;',
-            'gap:8px !important;padding-top:14px !important;margin-top:8px !important;',
-            'border-top:1px solid rgba(255,255,255,0.14) !important;}',
-            '#agp-shell-box.er-settings-initial-box .er-settings-footer .agp-shell-btn-connect{',
-            'width:100% !important;max-width:420px !important;margin:0 !important;}',
-            '#agp-shell-box.er-settings-initial-box .er-settings-footer .er-back-to-platform-btn{margin:0 !important;}',
-            '.er-settings-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);',
-            'border-radius:16px;padding:14px 16px 4px;margin-bottom:14px;}',
-            '.er-settings-card:last-child{margin-bottom:0;}',
-            '.er-settings-card-title{font-weight:900;font-size:0.92em;color:var(--er-accent2);',
-            'margin:0 0 10px;opacity:0.9;}',
+            // .settings-form
+            '#agp-shell-box.er-settings-initial-box .er-settings-block{display:flex !important;',
+            'flex-direction:column !important;gap:18px !important;}',
+            // .divider-sub
+            '#agp-shell-box.er-settings-initial-box .er-settings-divider{flex:0 0 auto;height:1px;',
+            'background:rgba(255,255,255,0.1);margin:15px 0;}',
+
+            // .setting-row — صف موحَّد: نص يمين، قيمة يسار (نفس سلوك
+            // الملف المشترك الافتراضي بـRTL، فقط إلغاء الحدود/الحشو
+            // الفردي القديم لكل صف لصالح gap:18px بمستوى القائمة).
             '#agp-shell-box.er-settings-initial-box .agp-shell-field,',
-            '#agp-shell-box.er-settings-initial-box .agp-shell-row{margin:0 0 10px !important;}'
+            '#agp-shell-box.er-settings-initial-box .agp-shell-row{margin:0 !important;',
+            'padding:0 !important;border-bottom:none !important;display:flex !important;',
+            'justify-content:space-between !important;align-items:center !important;width:100% !important;',
+            'flex-wrap:wrap !important;}',
+            // .setting-label
+            '#agp-shell-box.er-settings-initial-box .agp-shell-field label,',
+            '#agp-shell-box.er-settings-initial-box .agp-shell-row-label{font-size:16px !important;',
+            'font-weight:700 !important;color:#fff !important;text-align:right !important;}',
+
+            // .custom-input (حقلا يوزرنيم/كلمة مفتاحية)
+            '#agp-shell-box.er-settings-initial-box .agp-shell-field input[type=text]{',
+            'background:#2A1443 !important;border:1px solid rgba(0,215,255,0.4) !important;',
+            'border-radius:8px !important;padding:10px 15px !important;color:#fff !important;',
+            'font-size:14px !important;font-weight:400 !important;outline:none !important;',
+            'width:260px !important;max-width:55% !important;box-sizing:border-box !important;',
+            'text-align:right !important;}',
+            '#agp-shell-box.er-settings-initial-box .agp-shell-field input[type=text]:focus{',
+            'border-color:#00D7FF !important;box-shadow:0 0 8px rgba(0,215,255,0.4) !important;}',
+
+            // .gap-10 (صفوف الأزرار المتعددة)
+            '#agp-shell-box.er-settings-initial-box .agp-pill-group{gap:10px !important;}',
+            // .btn-toggle / .btn-toggle.active
+            '#agp-shell-box.er-settings-initial-box .agp-pill-btn{',
+            'background:rgba(42,20,67,0.6) !important;border:1px solid rgba(255,255,255,0.2) !important;',
+            'color:#fff !important;padding:8px 16px !important;border-radius:20px !important;',
+            'font-size:14px !important;font-weight:400 !important;transition:0.3s !important;}',
+            '#agp-shell-box.er-settings-initial-box .agp-pill-btn.agp-pill-active{',
+            'background:#2A1443 !important;border-color:#00D7FF !important;color:#00D7FF !important;}',
+
+            // ⚠️ طلب صريح بالملف المرجعي: صناديق الأرقام بدون أزرار +/−
+            // ظاهرة (مربع رقم فاضي يُكتَب فيه مباشرة). الأزرار تبقى
+            // موجودة بالـDOM وتعمل فعلياً (display:none فقط) — لا حاجة
+            // لأي تغيير على منطق العدّاد بالملف المشترك، فقط إخفاء بصري.
+            '#agp-shell-box.er-settings-initial-box .agp-shell-counter-row button{display:none !important;}',
+            '#agp-shell-box.er-settings-initial-box .agp-shell-counter-row{justify-content:flex-end !important;}',
+            // .custom-input.small-input
+            '#agp-shell-box.er-settings-initial-box .agp-count-input{',
+            'background:#2A1443 !important;border:1px solid rgba(0,215,255,0.4) !important;',
+            'border-radius:8px !important;padding:10px 15px !important;color:#fff !important;',
+            'font-size:14px !important;font-weight:400 !important;outline:none !important;',
+            'width:100px !important;text-align:center !important;box-sizing:border-box !important;}',
+            '#agp-shell-box.er-settings-initial-box .agp-count-input:focus{',
+            'border-color:#00D7FF !important;box-shadow:0 0 8px rgba(0,215,255,0.4) !important;}',
+
+            // .switch / .slider — مفتاح تشغيل/إيقاف "الإنعاش عن طريق
+            // الدعم" أُعيد بناؤه بصرياً بالكامل حسب الملف المرجعي (مسار
+            // رمادي #333، أخضر #25D366 عند التفعيل، مقبض أبيض دائري).
+            '#agp-shell-box.er-settings-initial-box .agp-toggle-switch{width:50px !important;',
+            'height:26px !important;}',
+            '#agp-shell-box.er-settings-initial-box .agp-toggle-track{background:#333 !important;',
+            'box-shadow:none !important;border-radius:34px !important;transition:0.4s !important;}',
+            '#agp-shell-box.er-settings-initial-box .agp-toggle-track::before{background:#fff !important;',
+            'box-shadow:none !important;width:18px !important;height:18px !important;left:4px !important;',
+            'top:4px !important;border-radius:50% !important;transition:0.4s !important;}',
+            '#agp-shell-box.er-settings-initial-box .agp-toggle-switch input:checked + .agp-toggle-track{',
+            'background:#25D366 !important;}',
+            '#agp-shell-box.er-settings-initial-box .agp-toggle-switch input:checked + .agp-toggle-track::before{',
+            'transform:translateX(24px) !important;}',
+
+            // .conditional-section — يلفّ صفّي "كم مرة مسموح له بالعودة"
+            // و"اختار نوع الدعم" فقط (بدون صف التفعيل نفسه)، بخط تمييز
+            // وردي على الحافة اليمنى (طلب الملف المرجعي حرفياً).
+            '#agp-shell-box.er-settings-initial-box .er-conditional-section{display:flex !important;',
+            'flex-direction:column !important;gap:18px !important;margin-top:5px !important;',
+            'border-right:2px solid #E5007F !important;padding-right:15px !important;}',
+
+            // .gift-box + .btn-gift.active — تُطبَّق هنا على غلاف محلي
+            // جديد (.er-gift-box-wrap) حول زر اختيار الهدية (modal-trigger)
+            // نفسه، بدل صفّ أزرار هدايا ثابتة كالملف المرجعي: اللعبة
+            // الفعلية عندها ٢٠ هدية حقيقية (COMMON_GIFTS) بدل ٤ أمثلة
+            // بالمرجع، فبقيت آلية الفتح بنافذة منبثقة (المعتمَدة صراحة
+            // بطلب سابق: "النافذة المنبثقة الحالية تكفي") — فقط الشكل
+            // البصري للزر نفسه صار يحاكي "صندوق هدية نشط" من التصميم.
+            '#agp-shell-box.er-settings-initial-box .er-gift-box-wrap{display:inline-flex !important;',
+            'background:#2A1443 !important;padding:8px !important;border-radius:10px !important;',
+            'border:1px solid rgba(0,215,255,0.3) !important;}',
+            '#agp-shell-box.er-settings-initial-box .er-gift-box-wrap .agp-modal-trigger-btn{',
+            'display:inline-flex !important;align-items:center !important;gap:6px !important;',
+            'background:#E5007F !important;border:none !important;color:#fff !important;',
+            'padding:6px 12px !important;border-radius:6px !important;font-size:13px !important;',
+            'font-weight:400 !important;max-width:220px !important;overflow:hidden !important;',
+            'text-overflow:ellipsis !important;white-space:nowrap !important;}',
+            '#agp-shell-box.er-settings-initial-box .er-gift-name-icon{width:16px !important;',
+            'height:16px !important;flex-shrink:0 !important;}',
+
+            // .bottom-bar — هنا شريط سفلي ثابت داخل حدود الصندوق نفسه (لا
+            // حاجة لـposition:fixed على مستوى الصفحة، الصندوق أصلاً حوار
+            // مركزي)، بنفس ترتيب العناصر: زر الاتصال بالأخضر مُمركَز
+            // أفقياً بالمنتصف (position:absolute + تمركز)، ورابط "العودة
+            // للمنصة ←" أسفل اليمين — بالضبط كالملف المرجعي. الزر يبقى
+            // ظاهراً دائماً (خارج .er-settings-scroll القابلة للتمرير)
+            // بغضّ النظر عن عدد الخيارات، كطلب سابق صريح لا يزال سارياً.
+            '#agp-shell-box.er-settings-initial-box .er-settings-footer{flex:0 0 auto !important;',
+            'display:block !important;position:relative !important;min-height:64px !important;',
+            'padding:16px 6px 4px !important;margin-top:10px !important;',
+            'border-top:1px solid rgba(255,255,255,0.1) !important;}',
+            // .btn-connect
+            '#agp-shell-box.er-settings-initial-box .er-settings-footer .agp-shell-btn-connect{',
+            'position:absolute !important;left:50% !important;top:16px !important;',
+            'transform:translateX(-50%) !important;width:auto !important;max-width:none !important;',
+            'margin:0 !important;background:#25D366 !important;color:#000 !important;',
+            'font-weight:900 !important;font-size:16px !important;padding:12px 40px !important;',
+            'border-radius:25px !important;box-shadow:0 0 15px rgba(37,211,102,0.4) !important;',
+            'overflow:hidden !important;}',
+            // ⚠️ [0.49.0] شريط "شيمر" خلف زر الاتصال — لا يزال مطلوباً
+            // (لم يُلغَ بالملف المرجعي)، محفوظ كما هو.
+            '#agp-shell-box.er-settings-initial-box .er-settings-footer .agp-shell-btn-connect::after{',
+            'content:"";position:absolute;top:0;bottom:0;width:55%;left:-60%;',
+            'background:linear-gradient(100deg,transparent,rgba(255,255,255,0.5),transparent);',
+            'animation:er-connect-shimmer 2.6s ease-in-out infinite;pointer-events:none;}',
+            '@keyframes er-connect-shimmer{0%{left:-60%;}55%{left:115%;}100%{left:115%;}}',
+            // .back-link — نفس عنصر/دالة makeBackToPlatformBtn المشتركة مع
+            // شاشة اللوبي بلا أي تعديل على onclick/homeNavigate؛ فقط نص
+            // هذا العنصر بالذات (بعد إنشائه هنا) يُستبدَل محلياً — صفر
+            // تأثير على شاشة اللوبي.
+            '#agp-shell-box.er-settings-initial-box .er-settings-footer .er-back-to-platform-btn{',
+            'position:absolute !important;right:6px !important;top:50% !important;',
+            'transform:translateY(-50%) !important;margin:0 !important;padding:0 !important;',
+            'border:none !important;background:transparent !important;font-size:14px !important;',
+            'font-weight:400 !important;color:#fff !important;}',
+            '#agp-shell-box.er-settings-initial-box .er-settings-footer .er-back-to-platform-btn:hover{',
+            'color:#00D7FF !important;background:transparent !important;}'
         ].join('');
         document.head.appendChild(style);
     }
@@ -2000,23 +2161,33 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function buildSettingsFields() {
         return [
             {
-                key: 'maxPlayers', type: 'counter', label: '👥 الحد الأقصى لعدد اللاعبين بالمباراة',
+                // ⚠️ [0.49.0] نص التسمية عُدِّل ليطابق التصميم الجديد المرفق
+                // حرفياً ("كم الحد الاقصى لعدد الاعبين") — بطلب صريح "هذا
+                // ترتيب الاعدادات نفذ". النوع/المفتاح/السلوك بلا تغيير.
+                key: 'maxPlayers', type: 'counter', label: '👥 كم الحد الأقصى لعدد اللاعبين',
                 min: 2, default: 20
             },
             {
-                key: 'followersOnly', type: 'pill-choice', label: '🔑 مين يقدر يدخل؟',
+                // ⚠️ [0.50.0] ترتيب الخيارين عُدِّل ليطابق مسودة Frame 2
+                // حرفياً ("الجميع | المتابعين فقط") — القيم الافتراضية بلا
+                // أي تغيير.
+                key: 'followersOnly', type: 'pill-choice', label: '🔑 السماح بالدخول',
                 options: [
                     { label: '👥 الجميع', value: false },
-                    { label: '❤️ المتابعون فقط', value: true }
+                    { label: '❤️ المتابعين فقط', value: true }
                 ],
                 default: false
             },
             {
-                // ⚠️ [0.45.12] نص توضيحي مختصر أُضيف للتسمية نفسها (لا يوجد
-                // حقل hint/description منفصل بنظام الإعدادات المشترك) —
-                // طلب صريح لتوضيح آلية "انعاش صديق" دون الحاجة لشرح خارجي.
-                key: 'friendRevivalEnabled', type: 'toggle',
-                label: '🎗️ ميزة انعاش صديق (لو توقفت العجلة على نفس الاسم مرتين متتاليتين، يرجع أحد المُقصَين)',
+                // ⚠️ [0.49.0] صار pill-choice بدل toggle (بطلب التصميم
+                // الجديد: خياران واضحان بدل مفتاح تشغيل/إيقاف)، بنفس
+                // المفتاح/الافتراضي (false = لا شيء) — صفر تغيير على منطق
+                // اللعبة نفسه (friendRevivalEnabled لا يزال Boolean).
+                key: 'friendRevivalEnabled', type: 'pill-choice', label: '🎗️ عند تكرار اسم لاعب لمرتين متتاليتين',
+                options: [
+                    { label: 'ينعش صديق مُقصى', value: true },
+                    { label: 'لا شيء', value: false }
+                ],
                 default: false
             },
             {
@@ -2024,14 +2195,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 default: false
             },
             {
-                key: 'giftRevivalGiftName', type: 'modal-trigger', label: 'الهدية المختارة',
+                key: 'giftRevivalGiftName', type: 'modal-trigger', label: 'اختار نوع الدعم',
                 default: COMMON_GIFTS[0].value,
                 formatValue: giftLabelFor,
                 onOpen: openGiftPickerModal,
                 showWhen: { key: 'giftRevivalEnabled', equals: true }
             },
             {
-                key: 'giftRevivalMaxCount', type: 'counter', label: 'كم مرة يقدر ينعش نفسه (طول المباراة)',
+                key: 'giftRevivalMaxCount', type: 'counter', label: 'كم مرة مسموح له بالعودة',
                 min: 1, default: 1,
                 showWhen: { key: 'giftRevivalEnabled', equals: true }
             },
@@ -2102,61 +2273,135 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * ⚠️ [0.46.1] تجميع حقول شاشة الإعدادات الأولى (قبل بدء المباراة) في
-     * بطاقات مجمّعة بحدود مدوّرة — PLAYER-CARD-STANDARDS.md §5. renderSettingsScreen
-     * (بالملف المشترك) يبني كل الحقول كأشقاء مسطّحة داخل #agp-shell-box
-     * (بدون أي حاوية تجميع)، فنعيد ترتيبها هنا بنقل عناصر موجودة فعلياً
-     * (moveNode عبر appendChild، يحافظ على كل مستمعات الأحداث المرتبطة
-     * بها) إلى بطاقتين جديدتين — دون أي تعديل على js/agp-game-shell.js
-     * نفسه. تُطابَق الحقول الأربعة الثابتة (يوزرنيم/كلمة مفتاحية/حد
-     * اللاعبين/مين يدخل) عبر id/data-key معروفة مسبقاً، بغضّ النظر عن
-     * ترتيبها الفعلي بالـDOM — فيبقى الترتيب الظاهر مطابقاً تماماً
-     * للترتيب الثابت المطلوب حتى لو تغيّر ترتيب buildSettingsFields()
-     * مستقبلاً. الدالة idempotent (تتحقق من .er-settings-scroll أول شي).
+     * ⚠️ [0.51.0] يبني ترتيب شاشة الإعدادات الأولى مطابقاً حرفياً لملف
+     * مرجعي (`wahaj_v2.html` + `style.css`) أرسله المستخدم بالكامل —
+     * هيكل "صفوف مسطّحة موحَّدة" (كل خيار = صف واحد) داخل حاوية بعرض
+     * أقصى 750px، بفاصلين أفقيين بالضبط: الأول عنصر DOM صريح
+     * (.er-settings-top-divider) تحت العنوان مباشرة (الملف المرجعي يبنيه
+     * كعنصر منفصل لا border-bottom)، والثاني (.er-settings-divider)
+     * بين حقل الكلمة المفتاحية وحقل "كم الحد الأقصى لعدد اللاعبين".
+     * نفس تقنية [0.46.1]/[0.49.0]/[0.50.0] الأساسية (نقل عناصر DOM
+     * موجودة فعلياً عبر appendChild — يحافظ على كل مستمعات الأحداث
+     * المرتبطة بها — دون أي تعديل على js/agp-game-shell.js نفسه).
+     * إضافتان جديدتان مطابقةً للملف المرجعي:
+     *  - صف "الإنعاش عن طريق الدعم" (التفعيل) يبقى صفاً عادياً بالقائمة
+     *    الرئيسية، بينما صفّا "كم مرة مسموح له بالعودة" و"اختار نوع
+     *    الدعم" الشرطيّان (showWhen) يُلَفّان معاً بغلاف
+     *    `.er-conditional-section` (خط تمييز وردي على الحافة اليمنى —
+     *    يطابق `.conditional-section{border-right:2px solid #E5007F}`
+     *    بالملف المرجعي حرفياً).
+     *  - زر اختيار الهدية (modal-trigger) يُلَفّ بغلاف محلي
+     *    `.er-gift-box-wrap` (يحاكي بصرياً `.gift-box` بالملف المرجعي)
+     *    — الآلية البرمجية (نافذة منبثقة بكل الهدايا الحقيقية العشرين،
+     *    بدل صف ٤ أزرار هدايا ثابتة كالملف المرجعي) بقيت كما اعتمدها
+     *    المستخدم صراحة سابقاً ("النافذة المنبثقة الحالية تكفي") —
+     *    فقط الشكل البصري للزر تغيّر ليحاكي "صندوق هدية نشط".
+     * الدالة idempotent (تتحقق من .er-settings-scroll أول شي) — تُعاد
+     * فعلياً بالكامل مع كل renderSettingsScreen جديد، فتُطابِق الحالة
+     * الحالية للحقول الشرطية تلقائياً في كل مرة.
      */
-    function groupInitialSettingsFields(box) {
+    function layoutInitialSettingsFields(box) {
         if (box.querySelector('.er-settings-scroll')) return;
         var connectBtn = el('agp-connect-btn');
         if (!connectBtn) return;
+
+        function rowFor(dataKeySelector) {
+            var ctl = box.querySelector(dataKeySelector);
+            return ctl ? ctl.closest('.agp-shell-row') : null;
+        }
 
         var usernameInput = el('agp-tiktok-username');
         var usernameField = usernameInput ? usernameInput.closest('.agp-shell-field') : null;
         var keywordInput = el('agp-keyword');
         var keywordField = keywordInput ? keywordInput.closest('.agp-shell-field') : null;
-        var maxPlayersCtl = box.querySelector('[data-key="maxPlayers"]');
-        var maxPlayersRow = maxPlayersCtl ? maxPlayersCtl.closest('.agp-shell-row') : null;
-        var followersCtl = box.querySelector('[data-key="followersOnly"]');
-        var followersRow = followersCtl ? followersCtl.closest('.agp-shell-row') : null;
 
-        var groupARows = [usernameField, keywordField, maxPlayersRow, followersRow].filter(Boolean);
-        var allRows = Array.prototype.slice.call(box.querySelectorAll('.agp-shell-row'));
-        var groupBRows = allRows.filter(function (r) { return groupARows.indexOf(r) === -1; });
+        var maxPlayersRow = rowFor('[data-key="maxPlayers"]');
+        var followersRow = rowFor('[data-key="followersOnly"]');
+        var friendRevivalRow = rowFor('[data-key="friendRevivalEnabled"]');
+        var giftEnabledRow = rowFor('[data-key="giftRevivalEnabled"]');
+        var giftMaxCountRow = rowFor('[data-key="giftRevivalMaxCount"]');
+        var giftNameTrigger = box.querySelector('[data-trigger-key="giftRevivalGiftName"]');
+        var giftNameRow = giftNameTrigger ? giftNameTrigger.closest('.agp-shell-row') : null;
+        var timerRow = rowFor('[data-key="eliminationTimerSeconds"]');
+        var timeoutRow = rowFor('[data-key="eliminationTimeoutBehavior"]');
+
+        // .divider-main — عنصر DOM صريح تحت العنوان مباشرة (خارج منطقة
+        // السكرول، ثابت مع العنوان).
+        var topDivider = document.createElement('div');
+        topDivider.className = 'er-settings-top-divider';
+        var heading = box.querySelector('h2');
+        if (heading) heading.insertAdjacentElement('afterend', topDivider);
+        else box.insertBefore(topDivider, box.firstChild);
 
         var scrollWrap = document.createElement('div');
         scrollWrap.className = 'er-settings-scroll';
 
-        var cardA = document.createElement('div');
-        cardA.className = 'er-settings-card';
-        cardA.innerHTML = '<div class="er-settings-card-title">🔗 الاتصال والدخول</div>';
-        groupARows.forEach(function (fieldEl) { cardA.appendChild(fieldEl); });
-        scrollWrap.appendChild(cardA);
+        var identityBlock = document.createElement('div');
+        identityBlock.className = 'er-settings-block';
+        [usernameField, keywordField].filter(Boolean).forEach(function (fieldEl) { identityBlock.appendChild(fieldEl); });
+        scrollWrap.appendChild(identityBlock);
 
-        if (groupBRows.length) {
-            var cardB = document.createElement('div');
-            cardB.className = 'er-settings-card';
-            cardB.innerHTML = '<div class="er-settings-card-title">🎮 خيارات اللعبة</div>';
-            groupBRows.forEach(function (fieldEl) { cardB.appendChild(fieldEl); });
-            scrollWrap.appendChild(cardB);
+        var divider = document.createElement('div');
+        divider.className = 'er-settings-divider';
+        scrollWrap.appendChild(divider);
+
+        // .gift-box — غلاف بصري محلي حول زر اختيار الهدية نفسه (لا يغيّر
+        // الزر أو مستمع الحدث عليه، فقط يضيف حاوية أب حوله).
+        if (giftNameTrigger) {
+            giftNameRow.classList.add('er-gift-name-row');
+            var giftBoxWrap = document.createElement('div');
+            giftBoxWrap.className = 'er-gift-box-wrap';
+            giftNameTrigger.parentNode.insertBefore(giftBoxWrap, giftNameTrigger);
+            giftBoxWrap.appendChild(giftNameTrigger);
         }
 
-        var heading = box.querySelector('h2');
-        if (heading) heading.insertAdjacentElement('afterend', scrollWrap);
-        else box.insertBefore(scrollWrap, box.firstChild);
+        var optionsBlock = document.createElement('div');
+        optionsBlock.className = 'er-settings-block';
+        [maxPlayersRow, followersRow, friendRevivalRow, giftEnabledRow]
+            .filter(Boolean).forEach(function (fieldEl) { optionsBlock.appendChild(fieldEl); });
+
+        // .conditional-section — يلفّ فقط الصفّين الشرطيّين (عدّاد
+        // المرات + صندوق اختيار الهدية)، لا صف التفعيل نفسه.
+        if (giftMaxCountRow || giftNameRow) {
+            var conditionalSection = document.createElement('div');
+            conditionalSection.className = 'er-conditional-section';
+            [giftMaxCountRow, giftNameRow].filter(Boolean).forEach(function (fieldEl) { conditionalSection.appendChild(fieldEl); });
+            optionsBlock.appendChild(conditionalSection);
+        }
+
+        [timerRow, timeoutRow].filter(Boolean).forEach(function (fieldEl) { optionsBlock.appendChild(fieldEl); });
+        scrollWrap.appendChild(optionsBlock);
+
+        topDivider.insertAdjacentElement('afterend', scrollWrap);
 
         var footer = document.createElement('div');
         footer.className = 'er-settings-footer';
         footer.appendChild(connectBtn);
         box.appendChild(footer);
+    }
+
+    /**
+     * ⚠️ [0.49.0] زر اختيار الهدية (modal-trigger) بالملف المشترك يعرض
+     * نصاً محميّاً بـescapeHtml فقط عمداً (راجع renderField بـ
+     * js/agp-game-shell.js) — لا يمكن حقن <img> عبر formatValue. لعرض
+     * أيقونة الهدية الفعلية داخل الصندوق (طلب التصميم الجديد: "بعد
+     * الاختيار تظهر داخل المربع الصغير") نعيد بناء محتوى الزر محلياً هنا
+     * بعد كل رسم، بالقيمة الحالية الفعلية (AGP.gameShell.getSettings()).
+     * idempotent: تتحقق أولاً أن الأيقونة المعروضة مطابقة للقيمة الحالية
+     * قبل إعادة الكتابة، لتفادي أي وميض غير ضروري مع كل mutation.
+     */
+    function enhanceGiftNameBox(box) {
+        var btn = box.querySelector('.er-gift-name-row .agp-modal-trigger-btn');
+        if (!btn || !AGP.gameShell || typeof AGP.gameShell.getSettings !== 'function') return;
+        var currentValue = AGP.gameShell.getSettings().giftRevivalGiftName;
+        var match = COMMON_GIFTS.filter(function (g) { return g.value === currentValue; })[0];
+        if (!match) return;
+        var existingIcon = btn.querySelector('.er-gift-name-icon');
+        if (existingIcon && existingIcon.getAttribute('data-gift-value') === match.value) return;
+        btn.innerHTML =
+            '<img class="er-gift-name-icon" data-gift-value="' + escapeHtml(match.value) + '" ' +
+            'src="' + giftIconUrl(match) + '" alt="" loading="lazy" onerror="this.style.display=\'none\';">' +
+            '<span class="er-gift-name-text">' + escapeHtml(giftLabelFor(match.value)) + '</span>';
     }
 
     // ⚠️ زر "رجوع للمنصة" بشاشة الإعدادات الأولى (قبل الاتصال بالبث) —
@@ -2176,11 +2421,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (box.classList.contains('agp-lobby-box') || box.classList.contains('agp-connecting-box')) return;
         var isInitial = !!el('agp-tiktok-username');
         box.classList.toggle('er-settings-initial-box', isInitial);
-        if (isInitial) groupInitialSettingsFields(box);
+        if (isInitial) {
+            layoutInitialSettingsFields(box);
+            enhanceGiftNameBox(box);
+        }
         if (box.querySelector('.er-back-to-platform-btn')) return;
         var connectBtn = box.querySelector('.agp-shell-btn-connect');
         if (!connectBtn) return;
-        connectBtn.insertAdjacentElement('afterend', makeBackToPlatformBtn());
+        var backBtn = makeBackToPlatformBtn();
+        // ⚠️ [0.50.0] طلب صريح بمسودة Frame 2: نص الرابط بشاشة الإعدادات
+        // الأولى تحديداً صار "العودة للمنصة ←" (بدل "🏠 رجوع لمنصة ألعاب
+        // أيمن"). التعديل هنا فقط — على نص هذا العنصر بالذات بعد إنشائه
+        // محلياً — وليس على makeBackToPlatformBtn()/homeNavigate() نفسها
+        // (تبقيان مشتركتين وبلا تغيير مع شاشة اللوبي)، فلا يتأثر نص أو
+        // شكل الزر المطابق بشاشة اللوبي إطلاقاً.
+        if (isInitial) backBtn.textContent = 'العودة للمنصة ←';
+        connectBtn.insertAdjacentElement('afterend', backBtn);
     }
 
     // ⚠️ [0.48.x] enhanceLobbyList() (زر ✕ محلي index-based)، applyLobbyNameMarquee()
@@ -2351,12 +2607,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.gameShell.init({
             gameId: GAME_ID,
             gameTitle: GAME_NAME,
-            settingsTitle: 'إعدادات مباراة روليت الإقصاء',
+            settingsTitle: 'إعدادات لعبة روليت الإقصاء',
             gameExplanation: 'تدور العجلة وتتوقف عند أحد اللاعبين، فيختار رقم لاعب آخر ليقصيه من الشات. ' +
                 'لو وقفت العجلة على نفس الشخص مرتين متتاليتين (ولو مفعّلة ميزة انعاش صديق)، يقدر يرجّع مُقصى بدل الإقصاء ' +
                 '(كل مُقصى يترجّع بهذي الطريقة مرة واحدة فقط طول المباراة). ' +
                 'المُقصى يقدر يرجع بإرسال هدية معيّنة لو مفعّلة ميزة الإنعاش بالدعم. تستمر المباراة حتى يبقى لاعب واحد.',
-            connectButtonLabel: 'الاتصال بالبث والدخول',
+            connectButtonLabel: 'الاتصال بالبث والانتقال للوبي',
             minPlayersToStart: 2,
             logoImage: '../../logo.png',
             homeUrl: '../../index.html',
