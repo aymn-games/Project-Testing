@@ -558,36 +558,69 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * صندوق صغير (~650×300) بجملة واحدة "اللاعب [أفاتار+اسم] قام
              * بإقصاء/بإرجاع [أفاتار+اسم]" بدل الأيقونة+العنوان+الاسم
              * الكبير القديم. تُستخدَم أيضاً بإعلان إنعاش "انعاش صديق". */
-            // ⚠️ [0.53.0] طلب صريح: حجم هذا الصندوق ("تبويب الإقصاء" — إعلان
-            // نتيجة الإقصاء/الإرجاع) صار 550×350 بدل 650×(حتى 300) —
-            // مطابقة حرفية لحجم الصندوق المكافئ بلعبة روليت الروسي عند
-            // الإقصاء الناجح (#rr-result-box، محلي بذاك الملف، لم يُلمَس
-            // هنا). height صارت ثابتة 550 بدل auto+حد أقصى حتى يطابق
-            // الحجم فعلياً (مو بس حد أقصى) — المحتوى يبقى في المنتصف
-            // رأسياً فلا يبدو فارغاً.
-            '#er-modal-box.er-announce-box{width:550px;max-width:92vw;height:350px;max-height:90vh;',
-            'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;',
-            'padding:30px 24px;box-sizing:border-box;}',
+            // ⚠️ [0.55.0] طلب صريح جديد بجدول قياسات + SVG مرجعي دقيق —
+            // يستبدل حجم/شكل [0.53.0] (كان 550×350 مطابقة تقريبية لروليت
+            // الروسي): الحجم الآن 500×350 بالضبط (من الجدول: "الصندوق كامل
+            // w500/h350")، خلفية مصمَتة #561972 (بدل التدرّج البنفسجي
+            // الافتراضي)، حدّ أسود 6px، حواف بزاوية بسيطة جداً (7px بدل
+            // 20px الافتراضية) — كل هذا حرفياً من الـSVG المرجعي المرسَل.
+            '#er-modal-box.er-announce-box{width:500px;max-width:92vw;height:350px;max-height:90vh;',
+            'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;',
+            'padding:26px 24px;box-sizing:border-box;background:#561972;border:6px solid #000;',
+            'border-radius:7px;box-shadow:0 10px 30px rgba(0,0,0,0.5);}',
             '.er-announce-box .er-announce-sentence{font-size:1.25em;font-weight:800;text-align:center;',
             'line-height:2.4;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;}',
-            // ⚠️ [0.54.0] عنوان جديد أعلى التبويب ("🎯 إقصاء ناجح"/"🎗️ إرجاع
-            // ناجح") — يستبدل الجملة الطويلة القديمة، راجع showResultAnnouncement().
-            '.er-announce-title{font-size:1.5em;font-weight:900;color:#fff;text-align:center;',
-            'text-shadow:0 2px 10px rgba(0,0,0,0.5);}',
+            // ⚠️ [0.55.0] العنوان صار جملة كاملة تتضمّن اسمَي الطرفين حرفياً
+            // ("قام X بإقصاء Y بنجاح") — يستبدل عنوان [0.54.0] المختصر
+            // ("🎯 إقصاء ناجح" بدون أسماء). حجم الخط قُلِّل قليلاً (1.15em
+            // بدل 1.5em) لأن الجملة أطول بكثير الآن وتحتاج تلائم عرض
+            // 500px بدون التفاف مبالغ فيه. راجع showResultAnnouncement().
+            '.er-announce-title{font-size:1.15em;font-weight:900;color:#fff;text-align:center;',
+            'line-height:1.5;text-shadow:0 2px 10px rgba(0,0,0,0.5);}',
             '.er-announce-eliminate .er-announce-title{color:#ff8da3;}',
             '.er-announce-revive .er-announce-title{color:#7dffb0;}',
-            // ⚠️ [0.54.0] صف الصورتين + الأيقونة بينهما، بمنتصف التبويب.
-            '.er-announce-row{display:flex;align-items:center;justify-content:center;gap:22px;}',
-            '.er-announce-mid-icon{font-size:2em;line-height:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5));}',
+            // ⚠️ [0.55.0] صف بطاقتَي الطرفين، بمنتصف التبويب — بدون أيقونة
+            // بينهما هذي المرة (استُبدلت بوسمَي الدور تحت كل حلقة).
+            '.er-announce-row{display:flex;align-items:flex-start;justify-content:center;gap:50px;}',
+            // ⚠️ [0.55.0] بطاقة شخص واحدة (حلقة + وسم دور + اسم) — 145px
+            // عرض ثابت حسب الجدول، 8px فاصل رأسي بين عناصرها الثلاثة.
+            '.er-announce-person-card{width:145px;display:flex;flex-direction:column;',
+            'align-items:center;gap:8px;}',
+            // ⚠️ [0.55.0] حلقة 112px قطر — بنفس تقنية .er-ring-wrap/.er-ring-inner
+            // المستخدمة ببطاقتَي شاشة الفائز (خلفية ملوَّنة + padding 5px
+            // يُنتج سماكة الحلقة تلقائياً حول الصورة، بدل حدّ/stroke).
+            '.er-announce-ring{width:112px;height:112px;border-radius:50%;padding:5px;box-sizing:border-box;}',
+            '.er-announce-ring .er-ring-avatar,.er-announce-ring .er-ring-avatar--fallback{',
+            'width:100%;height:100%;}',
+            '.er-announce-ring-green{background:#22c55e;}',
+            '.er-announce-ring-red{background:#ef4444;}',
+            // تشبّع رمادي 60% (يبقى 40% من الألوان) + شفافية 0.9 — للطرف
+            // "المُقصى" تحديداً، حسب الجدول.
+            '.er-announce-ring-desaturate .er-ring-avatar,',
+            '.er-announce-ring-desaturate .er-ring-avatar--fallback{filter:saturate(0.4);opacity:0.9;}',
+            // ⚠️ [0.55.0] وسم الدور — كبسولة صغيرة تحت الحلقة مباشرة.
+            '.er-announce-role-badge{padding:3px 12px;border-radius:999px;font-size:12px;',
+            'font-weight:800;color:#fff;white-space:nowrap;}',
+            '.er-announce-badge-green{background:#22c55e;}',
+            '.er-announce-badge-red{background:#ef4444;}',
+            // ⚠️ [0.54.0] كانت 0.55em (نسبية لسياق .er-announce-sentence
+            // القديم بـfont-size:1.25em) — بعد حذف ذاك الغلاف صار حجم ثابت
+            // صريح (14px) بدل نسبة قد تصغر بالخطأ بسياقها الجديد.
+            // ⚠️ [0.55.0] أُضيف text-align:center — البطاقة صارت بعرض ثابت
+            // 145px فقد الاسم قد يلتف لسطرين لو طويلاً.
+            '.er-announce-person-name{font-size:14px;font-weight:800;color:#fff;text-align:center;}',
+            // ⚠️ [0.55.0] .er-announce-person/.er-announce-avatar-wrap لم تعودا
+            // مستخدَمتين من showResultAnnouncement() (استُبدلتا بـ
+            // .er-announce-person-card/.er-announce-ring)، لكن أُبقيتا هنا
+            // بدون حذف — لا يزال يعتمد عليهما showGiftReviveCard() فعلياً
+            // (بطاقة "إنعاش بالدعم" العائمة) وannouncePersonHtml() القديمة
+            // (غير مستخدَمة حالياً لكن مُبقاة). حذفهما كان سيكسر بطاقة
+            // الإنعاش العائمة بالخطأ — اكتُشف وصُحِّح قبل التسليم.
             '.er-announce-person{display:inline-flex;flex-direction:column;align-items:center;gap:4px;',
             'vertical-align:middle;}',
             '.er-announce-avatar-wrap{display:block;width:106px;height:106px;border-radius:50%;position:relative;}',
             '.er-announce-avatar-wrap .er-ring-avatar,.er-announce-avatar-wrap .er-ring-avatar--fallback{',
             'width:106px;height:106px;}',
-            // ⚠️ [0.54.0] كانت 0.55em (نسبية لسياق .er-announce-sentence
-            // القديم بـfont-size:1.25em) — بعد حذف ذاك الغلاف صار حجم ثابت
-            // صريح (14px) بدل نسبة قد تصغر بالخطأ بسياقها الجديد.
-            '.er-announce-person-name{font-size:14px;font-weight:800;color:#fff;}',
             /* تأثير أحمر خلف صورة المُقصى + تلاشي الصورة */
             '.er-announce-effect-red{box-shadow:0 0 0 6px rgba(255,77,109,0.25),0 0 30px 10px rgba(255,77,109,0.55);',
             'border-radius:50%;}',
@@ -1709,37 +1742,63 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var isEliminate = type === 'eliminate';
         playSound(isEliminate ? 'eliminate' : 'revive');
 
-        var chooserHtml = data.chooser ? announcePersonHtml(data.chooser, '') : '';
-        var targetEffectClass = isEliminate
-            ? 'er-announce-effect-red er-announce-target-fadeout'
-            : 'er-announce-effect-green er-announce-target-revive-ring';
-        var targetHtml = announcePersonHtml(data.target, targetEffectClass);
-
         // ⚠️ [0.52.0] تنظيف: راجع نفس التعليق بـrenderTurnModal أعلاه —
         // محدود بشاشة الفائز فقط، تبويب الإعلان يبقى بشكله المصمَت القديم.
         overlay.classList.remove('er-winner-backdrop');
 
-        // ⚠️ [0.54.0] طلب صريح (بعد مراجعة المستخدم لتبويب الإعلان الحقيقي
-        // على الموقع المنشور): إعادة ترتيب/تبسيط النصوص — عنوان كبير أعلى
-        // التبويب ("🎯 إقصاء ناجح"/"🎗️ إرجاع ناجح" بدل الجملة الطويلة
-        // القديمة "اللاعب X قام بإقصاء Y")، وأيقونة بين الصورتين (💥 للإقصاء
-        // تماشياً مع تأثير التلاشي الأحمر الموجود أصلاً، 💚 للإرجاع تماشياً
-        // مع الحلقة الخضراء الموجودة أصلاً — لم يحدَّد المستخدم أيقونة
-        // بعينها، هذا اختياري بحكمي الخاص موثَّق بالـCHANGELOG)، مع بقاء
-        // اسمَي المُقصي (صاحب الدور) والمُقصى/المُرجَع تحت كل صورة كما كانا،
-        // والكل بمنتصف التبويب. حالة عدم وجود مُقصي (إقصاء تلقائي بانتهاء
-        // الوقت) تعرض العنوان + صورة الهدف فقط بدون أيقونة (ما فيه طرفين
-        // لعرض أيقونة "بينهما").
-        var titleText = isEliminate ? '🎯 إقصاء ناجح' : '🎗️ إرجاع ناجح';
-        var iconHtml = '<span class="er-announce-mid-icon">' + (isEliminate ? '💥' : '💚') + '</span>';
-        var rowHtml = chooserHtml
-            ? (chooserHtml + iconHtml + targetHtml)
-            : targetHtml;
+        // ⚠️ [0.55.0] طلب صريح جديد (بعد مراجعة [0.54.0] الفعلية على
+        // الموقع المنشور) بمواصفات دقيقة جداً (جدول قياسات + SVG مرجعي
+        // 500×350): يستبدل تصميم [0.54.0] بالكامل (العنوان المختصر
+        // "🎯 إقصاء ناجح" + الأيقونة بين الصورتين) بـ: (أ) جملة كاملة أعلى
+        // التبويب تتضمّن اسمَي الطرفين حرفياً ("قام X بإقصاء Y بنجاح")،
+        // (ب) بطاقة شخص لكل طرف (145px عرض) فيها حلقة ملوَّنة حول الصورة
+        // (112px، حشوة 5px) + وسم دور (كبسولة صغيرة: "✅ أقصى"/"❌ انقصى")
+        // + الاسم — بترتيب رأسي وفاصل 8px بين كل عنصر، بدون أي أيقونة
+        // منفصلة بين الصورتين هذي المرة (الوسمان يكفيان لتمييز الدورين).
+        // صورة الطرف "المُقصى" فقط تُعرَض بتشبّع رمادي 60% (filter:saturate)
+        // + شفافية 0.9 حسب الجدول المُرسَل.
+        // ⚠️ حالة الإرجاع (revive) لم تُذكَر بالطلب (كل الأرقام/الألوان
+        // كانت خاصة بحالة الإقصاء تحديداً) — مدّدتها بحكمي الخاص بنفس
+        // البنية (جملة + بطاقتان بنفس المقاسات)، بلون أخضر لطرفي الإرجاع
+        // معاً (بدل أحمر/أخضر) بما إنه فعل إيجابي للطرفين، مع وسمَين
+        // مختلفَين نصّياً ("✅ رجّع"/"💚 رجع") للتمييز بينهما بدل اللون —
+        // موثَّق بالـCHANGELOG، قابل للتعديل لو تبي تفاصيل مختلفة لها.
+        var actorName = data.chooser ? playerLabel(data.chooser) : '';
+        var targetName = playerLabel(data.target);
+        var titleHtml;
+        if (data.chooser) {
+            titleHtml = isEliminate
+                ? ('قام ' + escapeHtml(actorName) + ' بإقصاء ' + escapeHtml(targetName) + ' بنجاح')
+                : ('قام ' + escapeHtml(actorName) + ' بإرجاع ' + escapeHtml(targetName) + ' بنجاح');
+        } else {
+            titleHtml = isEliminate
+                ? ('تم إقصاء ' + escapeHtml(targetName) + ' بنجاح')
+                : ('تم إرجاع ' + escapeHtml(targetName) + ' بنجاح');
+        }
+
+        var actorCardHtml = data.chooser
+            ? announcePersonCardHtml(data.chooser, {
+                ringClass: 'er-announce-ring-green',
+                badgeClass: 'er-announce-badge-green',
+                badgeText: isEliminate ? '✅ أقصى' : '✅ رجّع'
+            })
+            : '';
+        var targetCardHtml = isEliminate
+            ? announcePersonCardHtml(data.target, {
+                ringClass: 'er-announce-ring-red er-announce-ring-desaturate',
+                badgeClass: 'er-announce-badge-red',
+                badgeText: '❌ انقصى'
+            })
+            : announcePersonCardHtml(data.target, {
+                ringClass: 'er-announce-ring-green',
+                badgeClass: 'er-announce-badge-green',
+                badgeText: '💚 رجع'
+            });
 
         box.className = 'er-announce-box ' + (isEliminate ? 'er-announce-eliminate' : 'er-announce-revive');
         box.innerHTML =
-            '<div class="er-announce-title">' + titleText + '</div>' +
-            '<div class="er-announce-row">' + rowHtml + '</div>';
+            '<div class="er-announce-title">' + titleHtml + '</div>' +
+            '<div class="er-announce-row">' + actorCardHtml + targetCardHtml + '</div>';
 
         overlay.style.display = 'flex';
 
@@ -1752,11 +1811,30 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }, 3000);
     }
 
+    // ⚠️ [0.55.0] لم تعد showResultAnnouncement() تستخدم هذي الدالة (استُبدلت
+    // بـannouncePersonCardHtml أدناه) — أُبقيت بدون حذف لأنها غير مؤذية
+    // ولضمان صفر أثر جانبي على أي كود آخر قد يعتمد عليها لاحقاً.
     function announcePersonHtml(player, effectClass) {
         return '<span class="er-announce-person">' +
             '<span class="er-announce-avatar-wrap ' + effectClass + '">' + ringAvatarHtml(player) + '</span>' +
             '<span class="er-announce-person-name">' + escapeHtml(playerLabel(player)) + '</span>' +
             '</span>';
+    }
+
+    /**
+     * ⚠️ [0.55.0] بطاقة شخص جديدة لتبويب إعلان النتيجة (حلقة ملوَّنة حول
+     * الصورة + وسم دور كبسولة + الاسم) — حسب مواصفات دقيقة أرسلها
+     * المستخدم (جدول قياسات + SVG مرجعي). راجع showResultAnnouncement()
+     * والتعليق المطوَّل هناك للسياق الكامل.
+     * @param {Object} opts - {ringClass, badgeClass, badgeText}
+     */
+    function announcePersonCardHtml(player, opts) {
+        opts = opts || {};
+        return '<div class="er-announce-person-card">' +
+            '<div class="er-announce-ring ' + (opts.ringClass || '') + '">' + ringAvatarHtml(player) + '</div>' +
+            '<div class="er-announce-role-badge ' + (opts.badgeClass || '') + '">' + (opts.badgeText || '') + '</div>' +
+            '<div class="er-announce-person-name">' + escapeHtml(playerLabel(player)) + '</div>' +
+            '</div>';
     }
 
     /* ======================================================================
