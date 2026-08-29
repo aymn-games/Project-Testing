@@ -561,13 +561,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // ⚠️ [0.55.0] طلب صريح جديد بجدول قياسات + SVG مرجعي دقيق —
             // يستبدل حجم/شكل [0.53.0] (كان 550×350 مطابقة تقريبية لروليت
             // الروسي): الحجم الآن 500×350 بالضبط (من الجدول: "الصندوق كامل
-            // w500/h350")، خلفية مصمَتة #561972 (بدل التدرّج البنفسجي
-            // الافتراضي)، حدّ أسود 6px، حواف بزاوية بسيطة جداً (7px بدل
-            // 20px الافتراضية) — كل هذا حرفياً من الـSVG المرجعي المرسَل.
+            // w500/h350")، خلفية مصمَتة #561972 — كل هذا حرفياً من الـSVG
+            // المرجعي المرسَل.
+            // ⚠️ [0.56.0] طلب صريح من المستخدم بعد مراجعته الفعلية على
+            // الموقع المنشور: تكبير الزوايا الدائرية (border-radius) من
+            // 7px إلى 12px، وتغيير لون حدّ الصندوق من أسود (#000) إلى
+            // بنفسجي غامق (#380862) — عرض الحدّ نفسه (6px) لم يُذكَر
+            // بالطلب فأبقيته كما هو.
             '#er-modal-box.er-announce-box{width:500px;max-width:92vw;height:350px;max-height:90vh;',
             'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;',
-            'padding:26px 24px;box-sizing:border-box;background:#561972;border:6px solid #000;',
-            'border-radius:7px;box-shadow:0 10px 30px rgba(0,0,0,0.5);}',
+            'padding:26px 24px;box-sizing:border-box;background:#561972;border:6px solid #380862;',
+            'border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.5);}',
             '.er-announce-box .er-announce-sentence{font-size:1.25em;font-weight:800;text-align:center;',
             'line-height:2.4;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;}',
             // ⚠️ [0.55.0] العنوان صار جملة كاملة تتضمّن اسمَي الطرفين حرفياً
@@ -598,6 +602,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // "المُقصى" تحديداً، حسب الجدول.
             '.er-announce-ring-desaturate .er-ring-avatar,',
             '.er-announce-ring-desaturate .er-ring-avatar--fallback{filter:saturate(0.4);opacity:0.9;}',
+            // ⚠️ [0.56.0] طلب صريح جديد: أنيميشن 3 ثوانٍ بالأحمر ثم اختفاء
+            // لصورة اللاعب "المُقصى" تحديداً (نفس مدة عرض الصندوق قبل
+            // إغلاقه التلقائي بـsetTimeout(...,3000) داخل
+            // showResultAnnouncement() — الاختفاء يكتمل تماماً مع إغلاق
+            // الصندوق). طُبِّق على حلقتَي الأحمر+التشبّع معاً (تركيبة
+            // "المُقصى" الوحيدة في الكود حالياً) بدون التأثير على حلقة
+            // الإرجاع الخضراء.
+            '@keyframes er-announce-eliminate-glow{0%{box-shadow:0 0 0 0 rgba(239,68,68,0.65);}',
+            '45%{box-shadow:0 0 26px 12px rgba(239,68,68,0.9);}',
+            '100%{box-shadow:0 0 10px 3px rgba(239,68,68,0.15);}}',
+            '.er-announce-ring-red{animation:er-announce-eliminate-glow 3s ease forwards;}',
+            '@keyframes er-announce-eliminate-fade{0%{opacity:1;}55%{opacity:0.9;}100%{opacity:0;}}',
+            '.er-announce-ring-desaturate .er-ring-avatar,',
+            '.er-announce-ring-desaturate .er-ring-avatar--fallback{',
+            'animation:er-announce-eliminate-fade 3s ease forwards;}',
             // ⚠️ [0.55.0] وسم الدور — كبسولة صغيرة تحت الحلقة مباشرة.
             '.er-announce-role-badge{padding:3px 12px;border-radius:999px;font-size:12px;',
             'font-weight:800;color:#fff;white-space:nowrap;}',
