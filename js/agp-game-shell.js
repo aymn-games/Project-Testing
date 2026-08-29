@@ -423,8 +423,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var savedUsername = preservedUsername || (AGP.storageManager ? AGP.storageManager.get('agp-last-username', '') : '');
 
         var baseFieldsHtml = isReopened ? '' :
-            '<div class="agp-shell-field"><label>' + iconImg(_config.usernameIcon) + 'اكتب يوزر نيم حساب تيك توك</label><input type="text" id="agp-tiktok-username" placeholder="ayman_live" value="' + escapeHtml(savedUsername) + '"></div>' +
-            '<div class="agp-shell-field"><label>' + iconImg(_config.keywordIcon) + 'الكلمة المفتاحية لدخول المبارة</label><input type="text" id="agp-keyword" placeholder="JOIN" value="' + escapeHtml(preservedKeyword) + '"></div>';
+            '<div class="agp-shell-field"><label>' + iconImg(_config.usernameIcon) + 'اكتب يوزر البث بالتيك توك</label><input type="text" id="agp-tiktok-username" placeholder="ayman_live" value="' + escapeHtml(savedUsername) + '"></div>' +
+            '<div class="agp-shell-field"><label>' + iconImg(_config.keywordIcon) + 'الكلمه المفتاحية للدخول</label><input type="text" id="agp-keyword" placeholder="JOIN" value="' + escapeHtml(preservedKeyword) + '"></div>';
 
         var connectBtnHtml = isReopened ? '' :
             '<button class="agp-shell-btn-connect" id="agp-connect-btn">' + (_config.connectButtonLabel || 'اتصال بالبث') + '</button>';
