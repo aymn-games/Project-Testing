@@ -566,15 +566,28 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // الحجم فعلياً (مو بس حد أقصى) — المحتوى يبقى في المنتصف
             // رأسياً فلا يبدو فارغاً.
             '#er-modal-box.er-announce-box{width:550px;max-width:92vw;height:350px;max-height:90vh;',
-            'display:flex;align-items:center;justify-content:center;padding:30px 24px;box-sizing:border-box;}',
+            'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;',
+            'padding:30px 24px;box-sizing:border-box;}',
             '.er-announce-box .er-announce-sentence{font-size:1.25em;font-weight:800;text-align:center;',
             'line-height:2.4;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;}',
+            // ⚠️ [0.54.0] عنوان جديد أعلى التبويب ("🎯 إقصاء ناجح"/"🎗️ إرجاع
+            // ناجح") — يستبدل الجملة الطويلة القديمة، راجع showResultAnnouncement().
+            '.er-announce-title{font-size:1.5em;font-weight:900;color:#fff;text-align:center;',
+            'text-shadow:0 2px 10px rgba(0,0,0,0.5);}',
+            '.er-announce-eliminate .er-announce-title{color:#ff8da3;}',
+            '.er-announce-revive .er-announce-title{color:#7dffb0;}',
+            // ⚠️ [0.54.0] صف الصورتين + الأيقونة بينهما، بمنتصف التبويب.
+            '.er-announce-row{display:flex;align-items:center;justify-content:center;gap:22px;}',
+            '.er-announce-mid-icon{font-size:2em;line-height:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5));}',
             '.er-announce-person{display:inline-flex;flex-direction:column;align-items:center;gap:4px;',
             'vertical-align:middle;}',
             '.er-announce-avatar-wrap{display:block;width:106px;height:106px;border-radius:50%;position:relative;}',
             '.er-announce-avatar-wrap .er-ring-avatar,.er-announce-avatar-wrap .er-ring-avatar--fallback{',
             'width:106px;height:106px;}',
-            '.er-announce-person-name{font-size:0.55em;font-weight:800;color:#fff;}',
+            // ⚠️ [0.54.0] كانت 0.55em (نسبية لسياق .er-announce-sentence
+            // القديم بـfont-size:1.25em) — بعد حذف ذاك الغلاف صار حجم ثابت
+            // صريح (14px) بدل نسبة قد تصغر بالخطأ بسياقها الجديد.
+            '.er-announce-person-name{font-size:14px;font-weight:800;color:#fff;}',
             /* تأثير أحمر خلف صورة المُقصى + تلاشي الصورة */
             '.er-announce-effect-red{box-shadow:0 0 0 6px rgba(255,77,109,0.25),0 0 30px 10px rgba(255,77,109,0.55);',
             'border-radius:50%;}',
@@ -1696,7 +1709,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var isEliminate = type === 'eliminate';
         playSound(isEliminate ? 'eliminate' : 'revive');
 
-        var verb = isEliminate ? 'قام بإقصاء' : 'قام بإرجاع';
         var chooserHtml = data.chooser ? announcePersonHtml(data.chooser, '') : '';
         var targetEffectClass = isEliminate
             ? 'er-announce-effect-red er-announce-target-fadeout'
@@ -1707,13 +1719,27 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // محدود بشاشة الفائز فقط، تبويب الإعلان يبقى بشكله المصمَت القديم.
         overlay.classList.remove('er-winner-backdrop');
 
+        // ⚠️ [0.54.0] طلب صريح (بعد مراجعة المستخدم لتبويب الإعلان الحقيقي
+        // على الموقع المنشور): إعادة ترتيب/تبسيط النصوص — عنوان كبير أعلى
+        // التبويب ("🎯 إقصاء ناجح"/"🎗️ إرجاع ناجح" بدل الجملة الطويلة
+        // القديمة "اللاعب X قام بإقصاء Y")، وأيقونة بين الصورتين (💥 للإقصاء
+        // تماشياً مع تأثير التلاشي الأحمر الموجود أصلاً، 💚 للإرجاع تماشياً
+        // مع الحلقة الخضراء الموجودة أصلاً — لم يحدَّد المستخدم أيقونة
+        // بعينها، هذا اختياري بحكمي الخاص موثَّق بالـCHANGELOG)، مع بقاء
+        // اسمَي المُقصي (صاحب الدور) والمُقصى/المُرجَع تحت كل صورة كما كانا،
+        // والكل بمنتصف التبويب. حالة عدم وجود مُقصي (إقصاء تلقائي بانتهاء
+        // الوقت) تعرض العنوان + صورة الهدف فقط بدون أيقونة (ما فيه طرفين
+        // لعرض أيقونة "بينهما").
+        var titleText = isEliminate ? '🎯 إقصاء ناجح' : '🎗️ إرجاع ناجح';
+        var iconHtml = '<span class="er-announce-mid-icon">' + (isEliminate ? '💥' : '💚') + '</span>';
+        var rowHtml = chooserHtml
+            ? (chooserHtml + iconHtml + targetHtml)
+            : targetHtml;
+
         box.className = 'er-announce-box ' + (isEliminate ? 'er-announce-eliminate' : 'er-announce-revive');
         box.innerHTML =
-            '<div class="er-announce-sentence">' +
-            (chooserHtml
-                ? ('اللاعب ' + chooserHtml + ' ' + verb + ' ' + targetHtml)
-                : (isEliminate ? ('تم إقصاء ' + targetHtml) : ('تم إرجاع ' + targetHtml))) +
-            '</div>';
+            '<div class="er-announce-title">' + titleText + '</div>' +
+            '<div class="er-announce-row">' + rowHtml + '</div>';
 
         overlay.style.display = 'flex';
 
