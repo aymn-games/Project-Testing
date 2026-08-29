@@ -413,7 +413,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // الجديدة (#er-modal-chooser-card) بالظهور فوق الصندوق كعنصر
             // شقيق منفصل بفاصل واضح (مو تراكب/overlap) — بدل التموضع
             // المطلق القديم.
-            '#er-modal-overlay{position:fixed;inset:0;z-index:100010;display:none;flex-direction:column;',
+            // ⚠️ [0.53.0] طلب صريح: الهيدر الثابت العلوي (#agp-persistent-header
+            // بالملف المشترك js/agp-game-shell.js، z-index:99998) يبقى
+            // ظاهراً دائماً فوق كل نوافذ اللعبة المنبثقة (الإقصاء/الإرجاع/
+            // الإعلان/اختيار الهدية/شاشة الفائز) — بدل ما يختفي خلفها
+            // (كان z-index هذا الصندوق 100010، أعلى من الهيدر، فيغطّيه/
+            // يطمسه بالكامل خاصة بعد إضافة التغبيش بشاشة الفائز [0.52.0]).
+            // خُفِّض هنا محلياً فقط (99990 — أقل من 99998) بدون أي لمس
+            // للملف المشترك؛ يبقى أعلى من كل عناصر شاشة اللعب العادية.
+            // ⚠️ يبقى شاشة الإعدادات/اللوبي (#agp-shell-overlay، z-index:99999
+            // بالملف المشترك) تغطّي الهيدر كما هي — تلك خارج نطاق هذا
+            // الإصلاح (لم يُطلَب صراحة تغيير سلوكها، وتغييرها يحتاج لمس
+            // الملف المشترك).
+            '#er-modal-overlay{position:fixed;inset:0;z-index:99990;display:none;flex-direction:column;',
             'align-items:center;justify-content:center;gap:18px;padding:16px;background:rgba(8,4,16,0.72);}',
             // ⚠️ [0.44.0] تعديل: height ثابتة 800px كانت تترك فراغاً فارغاً
             // كبيراً أسفل المحتوى بالتبويبات الأقصر (منبثقة اختيار الهدية،
@@ -546,8 +558,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * صندوق صغير (~650×300) بجملة واحدة "اللاعب [أفاتار+اسم] قام
              * بإقصاء/بإرجاع [أفاتار+اسم]" بدل الأيقونة+العنوان+الاسم
              * الكبير القديم. تُستخدَم أيضاً بإعلان إنعاش "انعاش صديق". */
-            '#er-modal-box.er-announce-box{width:650px;max-width:92vw;height:auto;max-height:300px;',
-            'display:flex;align-items:center;justify-content:center;padding:30px 24px;}',
+            // ⚠️ [0.53.0] طلب صريح: حجم هذا الصندوق ("تبويب الإقصاء" — إعلان
+            // نتيجة الإقصاء/الإرجاع) صار 550×350 بدل 650×(حتى 300) —
+            // مطابقة حرفية لحجم الصندوق المكافئ بلعبة روليت الروسي عند
+            // الإقصاء الناجح (#rr-result-box، محلي بذاك الملف، لم يُلمَس
+            // هنا). height صارت ثابتة 550 بدل auto+حد أقصى حتى يطابق
+            // الحجم فعلياً (مو بس حد أقصى) — المحتوى يبقى في المنتصف
+            // رأسياً فلا يبدو فارغاً.
+            '#er-modal-box.er-announce-box{width:550px;max-width:92vw;height:350px;max-height:90vh;',
+            'display:flex;align-items:center;justify-content:center;padding:30px 24px;box-sizing:border-box;}',
             '.er-announce-box .er-announce-sentence{font-size:1.25em;font-weight:800;text-align:center;',
             'line-height:2.4;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;}',
             '.er-announce-person{display:inline-flex;flex-direction:column;align-items:center;gap:4px;',
@@ -636,6 +655,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // ببطاقة الفائز فقط، فوق التسمية مباشرة.
             '.er-trophy-crown{width:74px;height:74px;object-fit:contain;margin-bottom:2px;',
             'filter:drop-shadow(0 3px 8px rgba(0,0,0,0.5));}',
+            // ⚠️ [0.53.0] اسم اللعبة فوق تسمية "🏆 الفائز" — ببطاقة الفائز فقط.
+            '.er-trophy-game-name{font-size:0.8em;font-weight:800;color:#e9d3ff;',
+            'text-shadow:0 1px 6px rgba(0,0,0,0.5);margin-bottom:2px;}',
 
             '.er-ring-wrap{position:relative;width:88px;height:88px;margin:0 auto 10px;border-radius:50%;',
             'padding:5px;box-sizing:border-box;}',
@@ -2028,8 +2050,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var crownHtml = opts.showCrown
             ? '<img class="er-trophy-crown" src="' + CROWN_ICON_DATA_URI + '" alt="">'
             : '';
+        // ⚠️ [0.53.0] طلب صريح: اسم اللعبة "روليت الإقصاء" فوق تسمية
+        // "🏆 الفائز" مباشرة — ببطاقة الفائز فقط (نفس شرط opts.showCrown،
+        // أكّد المستخدم الاثنين معاً خاصّان بهذي البطاقة تحديداً).
+        var gameNameHtml = opts.showCrown
+            ? '<div class="er-trophy-game-name">روليت الإقصاء</div>'
+            : '';
         return '<div class="er-trophy-card ' + (opts.cls || '') + '"' + (opts.cardId ? ' id="' + opts.cardId + '"' : '') + '>' +
             crownHtml +
+            gameNameHtml +
             '<div class="er-trophy-label">' + opts.label + '</div>' +
             ringHtml(player, opts.kind) +
             '<div class="er-trophy-name">' + escapeHtml(playerLabel(player)) + '</div>' +
