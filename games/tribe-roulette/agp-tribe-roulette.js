@@ -702,56 +702,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'padding:10px 18px;border-radius:999px;font-size:0.85em;font-weight:700;box-shadow:0 6px 16px rgba(0,0,0,0.35);}',
 
             /* ---- شاشة نهاية المباراة ----
-             * ⚠️ [0.45.0] تصميم بطاقات جديد بالكامل (البطاقة القديمة
-             * أُلغيت كلياً) — حلقة (ring) بسيطة حول الصورة الدائرية تناسب
-             * اللعبة نفسها: حلقة "ذهبية دوّارة" للفائز (تلمّح لعجلة
-             * الفوز)، وحلقة "متقطّعة وردية" لصاحب الأكثر إقصاءً (تلمّح
-             * لعلامة استهداف/إقصاء) — بشارة أيقونة صغيرة فوق كل حلقة،
-             * بنفس ألوان صورة 4. */
+             * ⚠️ [تثبيت الشكل النهائي — طلب صريح 2026] بطاقتا الفائز/
+             * الأكثر إقصاءً صارتا تُبنَيان عبر AGP.playerCard.renderTrophyCard()
+             * المشتركة (js/agp-player-card.js) بدل تصميم .tr-trophy-*
+             * المحلي المكرَّر (كان نسخة طبق الأصل من روليت الإقصاء قبل ما
+             * تنتقل هي لملف مشترك) — أُزيل بالكامل هنا، فقط CSS القطع
+             * المحلية البحتة (صف البطاقات، الأزرار، التطاير) باقٍ. */
             '#tr-winner-box{text-align:center;}',
-            '#tr-winner-box h2{font-family:Almarai,Cairo,sans-serif;font-size:1.6em;color:#fff;}',
+            '#tr-winner-box h2{font-family:Almarai,Cairo,sans-serif;font-size:1.35em;color:#fff;}',
             '.tr-trophy-cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:14px 0 18px;}',
-            /* ⚠️ [0.46.0] حجم موحَّد 250×250 لكل بطاقة، وبدون أي خلفية أو
-             * حدود إطلاقاً (أُلغيتا بالكامل) — تأثير "تطاير" (confetti)
-             * هو البديل الاحتفالي الآن، راجع spawnConfetti().
-             * ⚠️ [0.47.0] تأثير "إشعاع/توهّج" جديد حول كل بطاقة (نفس اللون
-             * الموحَّد للطرفين — الفائز والأكثر إقصاءً — بطلب صريح)، مع
-             * نبضة خفيفة مستمرة. overflow صار visible بدل hidden حتى لا
-             * يُقصّ التوهّج (ولا قصاصات confetti التي تتخطى حدود الصندوق
-             * أحياناً — إصلاح فني إضافي وُجد أثناء المراجعة). */
-            '.tr-trophy-card{position:relative;width:250px;height:250px;box-sizing:border-box;',
-            'border-radius:18px;padding:20px 14px;display:flex;flex-direction:column;align-items:center;',
-            'justify-content:center;overflow:visible;background:none;border:none;',
-            'box-shadow:0 0 55px 14px rgba(255,255,255,0.4),0 0 120px 35px rgba(216,120,255,0.6);',
-            'animation:tr-trophy-glow-pulse 2.6s ease-in-out infinite;}',
-            '@keyframes tr-trophy-glow-pulse{0%,100%{box-shadow:0 0 55px 14px rgba(255,255,255,0.4),',
-            '0 0 120px 35px rgba(216,120,255,0.6);}',
-            '50%{box-shadow:0 0 75px 22px rgba(255,255,255,0.6),0 0 150px 45px rgba(216,120,255,0.78);}}',
-            '.tr-trophy-card .tr-trophy-label{font-size:0.85em;font-weight:800;color:#fff;margin-bottom:10px;}',
 
-            '.tr-ring-wrap{position:relative;width:88px;height:88px;margin:0 auto 10px;border-radius:50%;',
-            'padding:5px;box-sizing:border-box;}',
-            '.tr-ring-winner{background:conic-gradient(from 0deg,#ffd400,#fff6cf,#ffd400,#c9960a,#ffd400);',
-            'box-shadow:0 0 20px rgba(255,212,0,0.55);}',
-            '.tr-ring-most{background:repeating-conic-gradient(' + C_PINK + ' 0deg 18deg,' + C_PINK_DK + ' 18deg 36deg);',
-            'box-shadow:0 0 20px rgba(255,77,255,0.4);}',
-            '.tr-ring-inner{width:100%;height:100%;border-radius:50%;background:#2D1932;overflow:hidden;}',
+            /* ⚠️ [أُبقيتا عمداً] .tr-ring-avatar/.tr-ring-avatar--fallback —
+             * ما كانتا خاصتين بالبطاقة المحذوفة فقط، تُستخدَمان محلياً
+             * كأساس (base) لعناصر ring ثانية بمكان آخر بالملف (بطاقة
+             * الاختيار/الإعلان/الإرجاع — راجع ringAvatarHtml() واستخداماتها
+             * الأربعة أدناه)، فحذفهما كان يكسر تلك الشاشات. */
             '.tr-ring-avatar{width:100%;height:100%;border-radius:50%;object-fit:cover;background:#5a2585;display:block;}',
             '.tr-ring-avatar--fallback{display:flex;align-items:center;justify-content:center;',
             'color:#fff;font-weight:800;font-size:1.4em;}',
-            '.tr-ring-badge{position:absolute;bottom:-2px;right:-2px;width:28px;height:28px;border-radius:50%;',
-            'display:flex;align-items:center;justify-content:center;font-size:0.95em;border:2px solid #2D1932;}',
-            '.tr-ring-badge.tr-badge-winner{background:#ffd400;}',
-            '.tr-ring-badge.tr-badge-most{background:var(--tr-pink);}',
-
-            '.tr-trophy-name{font-size:1.15em;font-weight:900;color:#fff;}',
-            '.tr-trophy-count{color:#e9d3ff;font-size:0.85em;margin-top:4px;}',
-
-            /* ---- عرض النقاط المكتسبة ---- */
-            '.tr-trophy-points{margin-top:10px;font-size:0.85em;line-height:1.4;}',
-            '.tr-trophy-points.tr-points-earned{color:#ffd400;font-weight:800;}',
-            '.tr-trophy-points .tr-points-sub{display:block;color:#e9d3ff;font-weight:500;font-size:0.85em;margin-top:2px;}',
-            '.tr-trophy-points.tr-points-noaccount{color:#e9d3ff;font-size:0.8em;}',
 
             '.tr-winner-actions{display:flex;gap:10px;flex-wrap:wrap;}',
             '.tr-btn-secondary{flex:1;min-width:180px;padding:12px;border-radius:999px;border:none;',
@@ -2085,23 +2053,28 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *  3) الحساب غير مرتبط/غير موثَّق (النتيجة نجحت لكن بدون سطر لهذا
      *     اللاعب) → "لازم يسوي حساب" تلقائياً.
      */
+    // ⚠️ [تثبيت الشكل النهائي — طلب صريح 2026] كلاسات agp-trophy-* المشتركة
+    // (js/agp-player-card.js) بدل tr-trophy-* المحلية المحذوفة — نفس
+    // renderTrophyCard المشتركة تتوقّع بالضبط هذي الأسماء لتنسيق النقاط.
     function pointsHtmlFor(pointsResult, player) {
         if (!pointsResult) {
-            return '<div class="tr-trophy-points tr-points-noaccount">تعذّر جلب النقاط الآن</div>';
+            return '<div class="agp-trophy-points agp-points-noaccount">تعذّر جلب النقاط الآن</div>';
         }
         var awarded = findAwardedFor(pointsResult, player);
         if (awarded) {
-            return '<div class="tr-trophy-points tr-points-earned">+' + awarded.added + ' نقطة' +
-                '<span class="tr-points-sub">تظهر في بروفايلك</span></div>';
+            return '<div class="agp-trophy-points agp-points-earned">+' + awarded.added + ' نقطة' +
+                '<span class="agp-points-sub">تظهر في بروفايلك</span></div>';
         }
-        return '<div class="tr-trophy-points tr-points-noaccount">لازم يسوي حساب عشان تظهر نقاطك بالبروفايل</div>';
+        return '<div class="agp-trophy-points agp-points-noaccount">لازم يسوي حساب عشان تظهر نقاطك بالبروفايل</div>';
     }
 
     /**
-     * ⚠️ [0.45.0] بطاقة أفاتار دائرية بحلقة رمزية بسيطة (بدون الاعتماد
-     * على AGP.playerCard هنا عمداً — تلك الوحدة تبني بطاقة "بيضاوية:
-     * صورة+اسم بجانب بعض"، بينما التصميم الجديد يحتاج صورة دائرية مستقلة
-     * داخل حلقة، والاسم نص منفصل تحتها، مطابقةً لنموذج المستخدم المرجعي).
+     * ⚠️ [0.45.0] بطاقة أفاتار دائرية بسيطة بحلقة رمزية — تُستخدَم بأكثر
+     * من مكان بالملف (بطاقة الاختيار/الإعلان/الإرجاع)، مو بشاشة الفائز
+     * فقط. ⚠️ [تثبيت الشكل النهائي — طلب صريح 2026] ringHtml/trophyCardHtml
+     * (تصميم بطاقة الفائز المحلي المكرَّر تحديداً) حُذفتا — renderWinnerScreen
+     * أدناه يستدعي AGP.playerCard.renderTrophyCard() المشتركة بدلها.
+     * ringAvatarHtml نفسها باقية لأنها أساس مستقل تعتمد عليه شاشات أخرى.
      */
     function ringAvatarHtml(player) {
         var name = playerLabel(player);
@@ -2110,25 +2083,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return avatarUrl
             ? '<img class="tr-ring-avatar" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;tr-ring-avatar tr-ring-avatar--fallback&quot;>' + escapeHtml(initials) + '</div>\';">'
             : '<div class="tr-ring-avatar tr-ring-avatar--fallback">' + escapeHtml(initials) + '</div>';
-    }
-
-    function ringHtml(player, kind) {
-        var badgeIcon = kind === 'winner' ? '👑' : '⚔️';
-        return '<div class="tr-ring-wrap tr-ring-' + kind + '">' +
-            '<div class="tr-ring-inner">' + ringAvatarHtml(player) + '</div>' +
-            '<div class="tr-ring-badge tr-badge-' + kind + '">' + badgeIcon + '</div>' +
-            '</div>';
-    }
-
-    function trophyCardHtml(player, opts) {
-        opts = opts || {};
-        return '<div class="tr-trophy-card ' + (opts.cls || '') + '"' + (opts.cardId ? ' id="' + opts.cardId + '"' : '') + '>' +
-            '<div class="tr-trophy-label">' + opts.label + '</div>' +
-            ringHtml(player, opts.kind) +
-            '<div class="tr-trophy-name">' + escapeHtml(playerLabel(player)) + '</div>' +
-            (opts.extra || '') +
-            (opts.pointsHtml || '') +
-            '</div>';
     }
 
     function computeMostEliminations() {
@@ -2174,17 +2128,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var mostElim = computeMostEliminations();
 
+        // ⚠️ [تثبيت الشكل النهائي — طلب صريح 2026] عبر AGP.playerCard.
+        // renderTrophyCard() المشتركة بدل trophyCardHtml() المحلية
+        // المحذوفة. showCrown:true بدون crownIconDataUri — الملف المشترك
+        // يستخدم تاجاً افتراضياً تلقائياً (ما يحتاج هذي اللعبة توفّر
+        // أيقونتها الخاصة). لا label/gameName/extra بعد الآن — نفس
+        // المعلومة صارت بسطر h2 واحد فوق صف البطاقتين.
         var cardsHtml = '';
         if (winner) {
-            cardsHtml += trophyCardHtml(winner, {
-                cls: 'tr-trophy-winner', label: '🏆 الفائز', kind: 'winner', cardId: 'tr-trophy-card-winner',
+            cardsHtml += AGP.playerCard.renderTrophyCard(winner, {
+                cls: 'tr-trophy-winner', kind: 'winner', cardId: 'tr-trophy-card-winner',
+                showCrown: true,
                 pointsHtml: pointsHtmlFor(pointsResult, winner)
             });
         }
         if (mostElim) {
-            cardsHtml += trophyCardHtml(mostElim.player, {
-                cls: 'tr-trophy-most', label: '⚔️ الأكثر إقصاءً', kind: 'most', cardId: 'tr-trophy-card-most',
-                extra: '<div class="tr-trophy-count">' + mostElim.count + ' إقصاء</div>',
+            cardsHtml += AGP.playerCard.renderTrophyCard(mostElim.player, {
+                cls: 'tr-trophy-most', kind: 'most', cardId: 'tr-trophy-card-most',
                 pointsHtml: pointsHtmlFor(pointsResult, mostElim.player)
             });
         }
@@ -2193,17 +2153,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         box.style.textAlign = 'center';
         box.innerHTML =
             '<div id="tr-winner-box">' +
-            '<h2>🏁 انتهت المباراة!</h2>' +
-            '<div class="tr-trophy-cards">' + (cardsHtml || '<p class="tr-trophy-label">بدون فائز</p>') + '</div>' +
+            '<h2>🏁 انتهت المباراة .. الشخص الرهيب الي فاز بلعبة "' + escapeHtml(GAME_NAME) + '"</h2>' +
+            '<div class="tr-trophy-cards">' + (cardsHtml || '<p style="color:#fff;font-weight:800;">بدون فائز</p>') + '</div>' +
             '<div class="tr-winner-actions">' +
-            '<button class="tr-btn-secondary" id="tr-replay-same-btn">🔄 إعادة المباراة بنفس اللاعبين</button>' +
+            '<button class="tr-btn-secondary" id="tr-home-btn">⬅️ رجوع لمنصة الألعاب</button>' +
             '<button class="tr-btn-secondary" id="tr-new-match-btn">🆕 بدء مباراة جديدة</button>' +
+            '<button class="tr-btn-secondary" id="tr-replay-same-btn">🔄 إعادة المباراة بنفس اللاعبين</button>' +
             '</div></div>';
 
         document.getElementById('tr-replay-same-btn').onclick = handleReplaySamePlayers;
         document.getElementById('tr-new-match-btn').onclick = function () {
             AGP.gameManager.resetSession(); // يبث game:reset — يستدعي onDestroy() تلقائياً
             window.location.reload();
+        };
+        // ⚠️ زر "رجوع لمنصة الألعاب" — نفس سلوك زر 🏠 بالهيدر الثابت
+        // بالضبط (agp-game-shell.js: agp-header-home-btn).
+        document.getElementById('tr-home-btn').onclick = function () {
+            var headerHomeBtn = document.getElementById('agp-header-home-btn');
+            if (headerHomeBtn) headerHomeBtn.click();
         };
 
         overlay.style.display = 'flex';
