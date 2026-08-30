@@ -32,6 +32,27 @@
  *   شائعة تماماً — أي زائر يقدر يكتب أي يوزرنيم بلوحة الستريمر لمشاهدة
  *   بثه فقط، بدون تشغيل إحصائيات)، لا يُسجَّل أي بث ولا تتأثر أي إحصائية
  *   — بصمت، بدون أي خطأ أو تغيير سلوك ظاهر بالواجهة.
+ *
+ * ⚠️ [0.65.0] تجميع كتابات إحصائيات البث (Batching) — إصلاح اختناق حقيقي
+ * مُتحقَّق منه: كل حدث comment/gift/follow/roomUser كان يستدعي فوراً كتابة
+ * SQLite متزامنة (`better-sqlite3` — `.run()` يحجب Event Loop لحد اكتمال
+ * الكتابة فعلياً على القرص) عبر authService.incrementBroadcastStat/
+ * addGiftValue/updateBroadcastViewerStats. بث نشط بجمهور حقيقي يرسل هذي
+ * الأحداث بمعدل عالٍ جداً (خصوصاً roomUser، يصل بلا أي تصفية من
+ * tiktok-connector.js أصلاً)، وبما إن Node عملية واحدة تخدم كل الاتصالات/
+ * الألعاب بنفس اللحظة (وخطة Render الحالية محدودة بـ0.5 CPU)، هذا يسدّ
+ * Event Loop لحظياً لكل الاتصالات وقت الانفجار — يظهر للمستخدم كـ"تعليق"
+ * باللعبة.
+ *
+ * الإصلاح: كل اتصال يجمّع عدّاداته بالذاكرة فقط (entry.pendingStats) بدل
+ * الكتابة الفورية، وتُفرَّغ دفعة واحدة لكل اتصال نشط كل
+ * STATS_FLUSH_INTERVAL_MS (منطق التفريغ نفسه أيضاً عند ختم أي بث —
+ * endActiveBroadcastIfAny — لضمان عدم ضياع آخر دفعة غير مُفرَّغة). لا
+ * تغيير على شكل/دقة الأرقام النهائية بجدول broadcasts إطلاقاً — فقط تقليل
+ * عدد مرات الكتابة الفعلية على القرص من (محتمل مئات بالثانية) إلى مرة كل
+ * بضع ثوانٍ. لا تعديل على auth-service.js ولا على tiktok-connector.js ولا
+ * على البروتوكول أو أي رسالة صادرة للمتصفح (sendEnvelope يبقى فورياً كما
+ * هو — البطء المُصلَح هنا خاص بالكتابة على القرص فقط).
  * ==========================================================================
  */
 
@@ -48,6 +69,79 @@ var logger = require('../utils/logger');
 var authService = require('../auth/auth-service');
 
 var WEBSOCKET_MAGIC_PATH_CHECK = null; // لا قيد على المسار حالياً (تطوير محلي)
+
+// [0.65.0] راجع تعليق التوثيق أعلى الملف — تجميع كتابات الإحصائيات.
+var STATS_FLUSH_INTERVAL_MS = 5000;
+var _statsFlushIntervalStarted = false;
+
+/**
+ * إنشاء عدّادات معلَّقة فارغة لاتصال معيّن لو ما وُجدت أصلاً (يُستدعى
+ * فقط عند أول حدث فعلي لاتصال معيّن — لا داعي لإنشائها لكل الاتصالات
+ * سلفاً، أغلبها لن يُشغِّل أي بث أصلاً).
+ * @param {Object} entry - سجل الاتصال من connection-registry
+ */
+function ensurePendingStats(entry) {
+  if (!entry.pendingStats) {
+    entry.pendingStats = { comments: 0, gifts: 0, giftsValue: 0, follows: 0, viewerCurrent: null, viewerTotal: null };
+  }
+}
+
+/**
+ * تفريغ العدّادات المعلَّقة لاتصال واحد إلى قاعدة البيانات دفعة واحدة
+ * (استدعاء واحد لكل نوع إحصائية، بدل استدعاء لكل حدث فردي وصل أثناء
+ * فترة التجميع). لا يفعل شيئاً بصمت لو لا يوجد بث نشط أو لا عدّادات
+ * معلَّقة أصلاً.
+ * @param {Object} entry
+ */
+function flushPendingStats(entry) {
+  if (!entry || !entry.activeBroadcastId || !entry.pendingStats) return;
+  var pending = entry.pendingStats;
+  var broadcastId = entry.activeBroadcastId;
+
+  if (pending.comments > 0) {
+    try { authService.incrementBroadcastStat(broadcastId, 'comment', pending.comments); } catch (err) { logger.error('WS Server: batched comment stat flush failed:', err); }
+    pending.comments = 0;
+  }
+  if (pending.follows > 0) {
+    try { authService.incrementBroadcastStat(broadcastId, 'follow', pending.follows); } catch (err) { logger.error('WS Server: batched follow stat flush failed:', err); }
+    pending.follows = 0;
+  }
+  if (pending.gifts > 0) {
+    try {
+      authService.incrementBroadcastStat(broadcastId, 'gift', pending.gifts);
+      if (pending.giftsValue > 0) authService.addGiftValue(broadcastId, pending.giftsValue);
+    } catch (err) {
+      logger.error('WS Server: batched gift stat flush failed:', err);
+    }
+    pending.gifts = 0;
+    pending.giftsValue = 0;
+  }
+  if (pending.viewerCurrent !== null) {
+    try { authService.updateBroadcastViewerStats(broadcastId, pending.viewerCurrent, pending.viewerTotal); } catch (err) { logger.error('WS Server: batched viewer stat flush failed:', err); }
+    pending.viewerCurrent = null;
+    pending.viewerTotal = null;
+  }
+}
+
+/**
+ * تفريغ العدّادات المعلَّقة لكل الاتصالات النشطة حالياً — تُستدعى دورياً
+ * فقط (setInterval أدناه)، وليست جزءاً من مسار أي حدث فردي.
+ */
+function flushAllPendingStats() {
+  registry.listConnectionIds().forEach(function (connectionId) {
+    flushPendingStats(registry.get(connectionId));
+  });
+}
+
+/**
+ * تشغيل مؤقّت التفريغ الدوري مرة واحدة فقط (حماية من تشغيل أكثر من
+ * مؤقّت لو استُدعيت attachWebSocketServer أكثر من مرة سهواً).
+ */
+function startStatsFlushInterval() {
+  if (_statsFlushIntervalStarted) return;
+  _statsFlushIntervalStarted = true;
+  setInterval(flushAllPendingStats, STATS_FLUSH_INTERVAL_MS);
+}
 
 /**
  * إرسال غلاف رسالة واحد (بُني عبر protocol/message-builder.js) إلى
@@ -73,12 +167,16 @@ function sendEnvelope(socket, envelope) {
  */
 function endActiveBroadcastIfAny(entry) {
   if (!entry || !entry.activeBroadcastId) return;
+  // [0.65.0] تفريغ أي عدّادات معلَّقة لم تُكتب بعد قبل ختم البث — بدون
+  // هذا، آخر دفعة تجميع (حتى ٥ ثوانٍ) تضيع نهائياً عند إغلاق الاتصال.
+  flushPendingStats(entry);
   try {
     authService.endBroadcast(entry.activeBroadcastId);
   } catch (err) {
     logger.error('WS Server: failed to end broadcast ' + entry.activeBroadcastId + ':', err);
   }
   entry.activeBroadcastId = null;
+  entry.pendingStats = null;
 }
 
 /**
@@ -175,9 +273,11 @@ function handleConnectMessage(connectionId, socket, payload) {
       // بالباك إند ثم فقدانه هنا قبل وصوله للمتصفح).
       sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, data.isFollower, data.avatarUrl, data.frame));
 
-      // [0.45.0]
+      // [0.45.0] / [0.65.0] تجميع بالذاكرة بدل كتابة SQLite فورية —
+      // راجع تعليق التوثيق أعلى الملف. تُفرَّغ دورياً عبر flushAllPendingStats.
       if (entry.activeBroadcastId) {
-        try { authService.incrementBroadcastStat(entry.activeBroadcastId, 'comment'); } catch (err) { logger.error('WS Server: comment stat increment failed:', err); }
+        ensurePendingStats(entry);
+        entry.pendingStats.comments++;
       }
     },
 
@@ -188,36 +288,38 @@ function handleConnectMessage(connectionId, socket, payload) {
       // منطق تيك توك للهدايا القابلة للتسلسل — data.repeatCount يعكس
       // العدد الكلي المُرسَل بالفعل بحدث النهاية الواحد، راجع
       // tiktok-connector.js تعليق GIFT أعلاه).
+      // [0.65.0] تجميع بالذاكرة بدل كتابتين SQLite فوريتين لكل هدية.
       if (entry.activeBroadcastId) {
-        try {
-          authService.incrementBroadcastStat(entry.activeBroadcastId, 'gift');
-          var totalValue = (Number(data.giftValue) || 0) * (Number(data.repeatCount) || 1);
-          authService.addGiftValue(entry.activeBroadcastId, totalValue);
-        } catch (err) {
-          logger.error('WS Server: gift stat increment failed:', err);
-        }
+        ensurePendingStats(entry);
+        entry.pendingStats.gifts++;
+        var totalValue = (Number(data.giftValue) || 0) * (Number(data.repeatCount) || 1);
+        entry.pendingStats.giftsValue += totalValue;
       }
     },
 
     onFollow: function (data) {
       sendEnvelope(socket, builder.buildFollowMessage(platform, data.id, data.name));
 
-      // [0.45.0]
+      // [0.45.0] / [0.65.0] تجميع بالذاكرة — راجع تعليق التوثيق أعلى الملف.
       if (entry.activeBroadcastId) {
-        try { authService.incrementBroadcastStat(entry.activeBroadcastId, 'follow'); } catch (err) { logger.error('WS Server: follow stat increment failed:', err); }
+        ensurePendingStats(entry);
+        entry.pendingStats.follows++;
       }
     },
 
     // [0.45.10] عدد المشاهدين — تخزين فقط بجدول broadcasts (لإحصائيات
     // الأدمن + شريط أفضل الاستريمرز)، بدون أي رسالة جديدة للمتصفح (غير
     // مطلوب حالياً، راجع docs/CHANGELOG.md).
+    // [0.65.0] هذا الحدث تحديداً هو الأخطر قبل الإصلاح — يصل بمعدل عالٍ
+    // جداً وبلا أي تصفية من tiktok-connector.js. الآن يُخزَّن آخر قيمة
+    // وصلت بالذاكرة فقط (بدون تراكم — القيمة الحالية تكفي، MAX() تُطبَّق
+    // وقت الكتابة الفعلية بـauth-service.js كما هي)، وتُكتب دفعة كل
+    // STATS_FLUSH_INTERVAL_MS بدل كل حدث فردي.
     onViewerUpdate: function (data) {
       if (entry.activeBroadcastId) {
-        try {
-          authService.updateBroadcastViewerStats(entry.activeBroadcastId, data.current, data.totalUsers);
-        } catch (err) {
-          logger.error('WS Server: viewer stats update failed:', err);
-        }
+        ensurePendingStats(entry);
+        entry.pendingStats.viewerCurrent = Number(data.current) || 0;
+        entry.pendingStats.viewerTotal = Number(data.totalUsers) || 0;
       }
     }
   });
@@ -361,6 +463,9 @@ module.exports = {
     httpServer.on('upgrade', function (req, socket) {
       handleUpgrade(req, socket);
     });
+
+    // [0.65.0] راجع تعليق التوثيق أعلى الملف — يبدأ تفريغ الإحصائيات الدوري.
+    startStatsFlushInterval();
 
     logger.log('WS Server: attached to HTTP server, listening for WebSocket upgrades.');
   }
