@@ -205,6 +205,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // ⚠️ [0.46.0] حالة "العب" (الدوران التلقائي) — راجع handleAutoPlayToggle/maybeAutoSpin/stopAutoPlay.
     var _autoPlayActive = false;
     var _autoPlayTimer = null;
+    // ⚠️ [0.61.0] رقم كل لاعب ثابت طول المباراة (يُحسب حسب ترتيب دخوله
+    // للوبي عند بداية المباراة، أو ترتيب انضمامه وسط مباراة جارية) — راجع
+    // assignPlayerNumber/playerNumber أدناه. يحل محل فهرس المصفوفة
+    // المتغيّر (i+1) المستخدَم سابقاً بعرض ومطابقة رقم الشات بنافذتَي
+    // الإقصاء/الإرجاع — كان يتغيّر كل جولة مع تقلّص _alive، فيصير الرقم
+    // المكتوب بالشات لا يطابق شيء أو يطابق لاعباً مختلفاً عن المقصود.
+    var _playerNumbers = {};       // playerId -> رقم ثابت
+    var _nextPlayerNumber = 1;
+    // ⚠️ [0.61.0] فهرس المرشَّح المُختار يدوياً بنافذة "اختيار الإقصاء"
+    // الجديدة (النقر على بطاقة = تحديد فقط، الإقصاء الفعلي يصير بالزر
+    // الأحمر — راجع selectCandidateManually/handleForceEliminateClick).
+    // null يعني "بدون اختيار يدوي" فيقصي الزر صاحب الدور نفسه افتراضياً.
+    var _selectedCandidateIdx = null;
+    // ⚠️ [0.62.0] معرِّف setTimeout الخاص بإخفاء تبويب "عودة لاعب" تلقائياً
+    // — راجع showReviveSplash() أدناه.
+    var _reviveSplashTimer = null;
 
     function resetMatchState() {
         _alive = [];
@@ -220,7 +236,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _eliminationCounts = {};
         if (_autoPlayTimer) { window.clearTimeout(_autoPlayTimer); _autoPlayTimer = null; }
         _autoPlayActive = false;
+        _playerNumbers = {};
+        _nextPlayerNumber = 1;
+        _selectedCandidateIdx = null;
+        if (_reviveSplashTimer) { window.clearTimeout(_reviveSplashTimer); _reviveSplashTimer = null; }
+        var splashOverlay = el('er-revive-splash-overlay');
+        if (splashOverlay) splashOverlay.style.display = 'none';
     }
+
+    // ⚠️ [0.61.0] راجع تعليق _playerNumbers أعلاه — يُستدعى مرة واحدة فقط
+    // لكل لاعب فعلياً (بداية المباراة بترتيب اللوبي، انضمام وسط مباراة،
+    // أو "إعادة بنفس اللاعبين" بعد resetMatchState الذي يصفّر الجدول).
+    function assignPlayerNumber(p) {
+        if (!p || !p.id) return;
+        if (_playerNumbers[p.id] == null) {
+            _playerNumbers[p.id] = _nextPlayerNumber++;
+        }
+    }
+    function playerNumber(p) { return (p && _playerNumbers[p.id]) || '?'; }
 
     function liveSettings() {
         return (AGP.gameShell && typeof AGP.gameShell.getSettings === 'function') ? AGP.gameShell.getSettings() : (_settings || {});
@@ -441,109 +474,98 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'padding:28px 32px;color:#fff;box-shadow:0 0 50px rgba(124,58,237,0.55);}',
             '#er-modal-box h2{margin:0 0 6px;font-size:1.5em;text-align:center;color:#fff;font-weight:800;',
             'font-family:Almarai,Cairo,sans-serif;}',
-            // ⚠️ [0.45.8] تبويب "اختيار الإقصاء" تحديداً يتميّز بحدّ وعنوان
-            // أخضرين (بدل الأساسي البنفسجي) — طلب صريح، بينما تبويب
-            // "انعاش الصديق" (نفس الصندوق، roleClass مختلف) يبقى بالمظهر
-            // الأساسي بدون تمييز. الكلاس er-role-eliminate/er-role-revive
-            // يُضاف على #er-modal-box نفسه من renderTurnModal() (بدل
-            // تفريغه بالكامل كما كان سابقاً).
-            '#er-modal-box.er-role-eliminate{border-color:#22c55e;}',
-            '#er-modal-box.er-role-eliminate h2{color:#22c55e;}',
-            /* اسم صاحب الدور وكلمة "يختار!" — كل وحدة مميَّزة بلون مختلف
-             * ⚠️ [0.45.0] طلب صريح: تمييز الاسم عن كلمة "يختار!" بألوان
-             * مختلفة (كانا سطراً واحداً بلون واحد سابقاً) — يطبَّق تلقائياً
-             * على نافذتي الإقصاء والإرجاع لأنهما يستخدمان نفس الدالة. */
-            /* ---- [0.46.0] "بطاقة اختيار" فوق نافذة الدور — تحل محل نص
-             * "الاسم يختار!" القديم بالكامل. دائرة أفاتار بحلقة ملوَّنة
-             * (أخضر لنافذة الإقصاء، أحمر لنافذة الإرجاع — بالضبط كما أكّد
-             * المستخدم رغم كونه عكس المتوقَّع منطقياً) + الاسم تحتها. */
-            '#er-modal-chooser-card{display:none;flex-direction:column;align-items:center;gap:6px;}',
-            '.er-chooser-card-ring{position:relative;width:110px;height:110px;border-radius:50%;',
-            'padding:5px;box-sizing:border-box;}',
-            '.er-chooser-card-ring.er-role-eliminate{background:#22c55e;box-shadow:0 0 22px rgba(34,197,94,0.65);}',
-            '.er-chooser-card-ring.er-role-revive{background:#ef4444;box-shadow:0 0 22px rgba(239,68,68,0.65);}',
-            '.er-chooser-card-inner{width:100%;height:100%;border-radius:50%;background:#2D1932;overflow:hidden;}',
-            '.er-chooser-card-name{font-size:1.15em;font-weight:900;color:#fff;text-align:center;}',
-            // ⚠️ [0.45.7] زرّا تحكّم يدوي جديدان للمضيف — يظهران فقط بنافذة
-            // الإقصاء (roleClass er-role-eliminate)، مبنيان بـchooserCardHtml().
-            // بديل يدوي اختياري لآلية كتابة الرقم بشات البث الموجودة أصلاً
-            // — الاثنان يبقيان شغّالين معاً (لا إلغاء لأي منهما).
-            // ⚠️ [0.45.12] تعديل صريح: الزرّان كانا فوق بعض عمودياً (column)
-            // بعرض 200px موحّد للاثنين — صار بجانب بعض أفقياً (row) بطلب
-            // المستخدم، كل زر ياخذ نصف المساحة (flex:1) بدل عرض ثابت.
-            // ⚠️ [0.45.13] إصلاح: width:100% كانت تحسب نسبة لعرض الحاوية
-            // الأب (#er-modal-chooser-card) اللي بدورها auto-width بحجم
-            // أضيق محتوى (حلقة الأفاتار 110px) — فعملياً الصف كان يضيق
-            // كثيراً (~277px)، ونص زر "إقصاء صاحب الدور" كان ينكسر
-            // لسطرين ويطوّل الزر — طلب صريح: عرض ثابت أوسع (380px) بدل
-            // النسبة المئوية، يفرض على الحاوية الأب تتوسع لتلائمه، فيصير
-            // فيه مساحة كافية لكل النص بسطر وحد + الزر يصير أقصر ارتفاعاً.
-            '.er-chooser-actions{display:flex;flex-direction:row;gap:8px;margin-top:12px;',
-            'width:380px;max-width:92vw;}',
-            '.er-chooser-action-btn{flex:1;padding:9px 8px;border-radius:999px;border:none;font-weight:800;',
-            'cursor:pointer;font-family:inherit;font-size:0.85em;color:#fff;white-space:nowrap;',
-            'line-height:1.3;transition:transform 0.15s,box-shadow 0.15s;}',
-            '.er-chooser-action-btn:hover{transform:translateY(-2px);}',
-            '.er-chooser-action-eliminate{background:linear-gradient(90deg,#ef4444,#b91c1c);',
-            'box-shadow:0 4px 14px rgba(239,68,68,0.45);}',
-            '.er-chooser-action-resume{background:linear-gradient(90deg,var(--er-accent2),var(--er-accent));',
-            'box-shadow:0 4px 14px rgba(124,58,237,0.45);}',
             '#er-modal-sub{text-align:center;color:#e9d3ff;font-size:0.95em;margin-bottom:10px;}',
-            '#er-modal-timer{text-align:center;font-weight:900;font-size:2.2em;color:#ffe066;margin-bottom:16px;',
-            'transition:color 0.2s;}',
-            '#er-modal-timer.er-timer-warning{color:#ff4d6d;animation:er-pulse 1s infinite;}',
-            '@keyframes er-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}',
 
-            /* ---- [0.45.8] بطاقات مرشَّحين أُعيد تصميمها مرة أخرى — شبكة
-             * أفقية (4 بطاقات بالصف الواحد) بدل الصفوف العمودية المتراكبة
-             * السابقة ([0.45.7])، بطلب صريح بعد مراجعة الشكل على الموقع
-             * الحي: كل بطاقة الآن مربّعة الشكل تقريباً بخلفية سوداء صريحة،
-             * تحتوي الصورة + رقم الاختيار + الاسم بجانب بعض، بحجم مريح
-             * للقراءة من جوال أثناء البث المباشر. نفس البنية تُستخدَم
-             * تلقائياً بنافذتي الإقصاء والإرجاع معاً (دالة renderTurnModal
-             * واحدة مشتركة بين الاثنتين). */
-            // ⚠️ [0.45.12] تكبير بطاقات المرشَّحين بطلب صريح (أرقام محددة من
-            // المستخدم): عرض البطاقة 270→290px، الأفاتار 44→47px، رقم
-            // البطاقة 32→34px، خط الاسم ~15px→17px (انظر تعليق أدناه).
-            '#er-candidates-grid{display:flex;flex-flow:row wrap;gap:14px;justify-content:center;',
-            'width:100%;max-width:1180px;margin:0 auto;}',
-            '.er-candidate-card{display:flex;align-items:center;gap:10px;cursor:pointer;',
-            'width:290px;box-sizing:border-box;background:#000;border:1px solid rgba(255,255,255,0.18);',
-            'border-radius:16px;padding:10px 14px;transition:background 0.15s,transform 0.15s;}',
-            '.er-candidate-card:hover{background:#1a1a1a;transform:translateY(-2px);}',
-            '.er-candidate-num{color:#fff;border-radius:50%;width:34px;height:34px;flex-shrink:0;',
-            'display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.95em;}',
-            // ⚠️ [0.45.8] رقم بطاقة "الإقصاء" تحديداً صار أخضر مميَّز (بدل
-            // اللون البنفسجي الأساسي) — طلب صريح لتمييز تبويب الإقصاء عن
-            // بقية التبويبات، بنفس الأخضر المستخدم أصلاً بحلقة "صاحب
-            // الدور" (er-role-eliminate) لنفس النافذة، للتناسق.
-            // ⚠️ [0.45.13] طلب صريح: رقم البادج الأخضر (الإقصاء) تحديداً
-            // يكبر ويكون أوضح أكثر من الرقم الأساسي (34px) — البادج
-            // الأرجواني (نافذة الإرجاع) يبقى بحجمه بدون تغيير.
-            '.er-candidate-num.er-role-eliminate{background:#22c55e;width:40px !important;',
-            'height:40px !important;font-size:1.15em !important;}',
-            // ⚠️ [0.45.13] شارة "🔴 مرحلة الإقصاء" — تظهر فقط بأعلى نافذة
-            // اختيار الإقصاء (isEliminate)، طلب صريح لتوضيح المرحلة
-            // الحالية للمشاهدين بالبث.
-            '.er-phase-badge-wrap{text-align:center;margin-bottom:8px;}',
-            '.er-phase-badge{display:inline-block;padding:4px 16px;border-radius:999px;',
-            'background:rgba(34,197,94,0.18);border:1px solid rgba(34,197,94,0.65);color:#22c55e;',
-            'font-weight:900;font-size:0.85em;letter-spacing:0.3px;}',
-            // ⚠️ بطاقة اللاعب المشتركة (agp-pcard) داخل شبكة المرشَّحين هنا
-            // فقط — تكبير الصورة/الاسم بمحدِّدات مقيَّدة بـ#er-candidates-grid
-            // (لا تلمس .agp-pcard بأي مكان آخر بالمنصة، ولا الملف المشترك
-            // نفسه) + !important لضمان الأولوية بغضّ النظر عن ترتيب حقن
-            // الأنماط بين هذا الملف وjs/agp-player-card.js.
-            '#er-candidates-grid .agp-pcard{display:flex !important;flex:1;flex-direction:row-reverse;',
-            'align-items:center;gap:10px;min-width:0;}',
-            '#er-candidates-grid .agp-pcard-avatar-basic{width:47px !important;height:47px !important;',
-            'flex-shrink:0;}',
-            // ⚠️ [0.45.12] المستخدم طلب "1.20em و 17px" لخط اسم المرشَّح —
-            // القيمتان لا تتطابقان تماماً إلا بافتراض حجم أساس غير معتاد،
-            // فاستُخدمت القيمة الصريحة غير الملتبسة (17px) مباشرةً.
-            '#er-candidates-grid .agp-pcard-name-basic{font-size:17px !important;font-weight:800 !important;',
-            'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
-            '.er-candidate-num.er-role-revive{background:var(--er-accent2);}',
+            /* ==================================================================
+             * ⚠️ [0.61.0] نافذتا "اختيار الإقصاء" و"فرصة الإرجاع" — صندوق
+             * جديد كلياً مستقل عن #er-modal-box القديم أعلاه (اللي بقي
+             * الآن محصوراً بتبويبَي "إعلان النتيجة" و"شاشة الفائز" و"اختيار
+             * هدية الإنعاش" فقط). التصميم منقول بالحرف من نافذة "مرحلة
+             * الاختيار" بلعبة روليت الروسي (games/russian-roulette)، بطلب
+             * صريح من صاحب المشروع، بألوان هوية روليت الإقصاء الخاصة بدل
+             * الذهبي/البني الأصلي هناك. القديم (#er-modal-chooser-card +
+             * chooserCardHtml + .er-chooser-actions/.er-candidate-* +
+             * .er-phase-badge*) حُذف بالكامل — ما عاد يُستخدَم من أي مكان
+             * (renderTurnModal الجديد أدناه لا يبنيه إطلاقاً). ---- */
+            '#er-select-overlay{position:fixed;inset:0;z-index:99990;display:none;align-items:center;',
+            'justify-content:center;background:rgba(8,4,16,0.72);padding:16px;}',
+            '#er-select-box{width:1150px;max-width:97vw;height:700px;max-height:94vh;border-radius:20px;',
+            'padding:14px 18px 18px;box-sizing:border-box;color:#fff;font-family:Almarai,Cairo,sans-serif;',
+            'background:linear-gradient(180deg,#5F3976,#211528);border:2px solid var(--er-accent);position:relative;overflow:hidden;',
+            'box-shadow:0 0 50px rgba(124,58,237,0.55);display:flex;flex-direction:column;}',
+            // ⚠️ نفس تمييز الأخضر/الأحمر المعتمَد أصلاً بالنافذة القديمة
+            // (إقصاء=أخضر، إرجاع=أحمر — بالضبط كما أكّد صاحب المشروع سابقاً).
+            '#er-select-box.er-role-eliminate{border-color:#22c55e;}',
+            '#er-select-box.er-role-revive{border-color:#ef4444;}',
+            '#er-select-box::before{content:"";position:absolute;inset:0;background:url(../../logo.png) no-repeat center;',
+            'background-size:220px auto;opacity:0.2;pointer-events:none;}',
+            '#er-select-box > *{position:relative;z-index:1;}',
+            '#er-select-title{text-align:center;font-size:0.92em;color:#9d92b3;margin-bottom:6px;flex:none;}',
+            '#er-select-title b{color:var(--er-accent2);font-weight:900;}',
+            // ⚠️ [0.62.0] عُكس اللون هنا عمداً (كان أخضر=إقصاء/أحمر=إنعاش)
+            // ليطابق نظام الألوان الجديد لأرقام اللاعبين بنفس النافذتين
+            // (أحمر=إقصاء، أخضر=إنعاش) — طلب صريح لتوحيد لغة الألوان.
+            // ملاحظة: حدّ الصندوق الخارجي نفسه (border-color أدناه) بقي
+            // على تمييزه القديم (أخضر=إقصاء/أحمر=إنعاش) بدون تغيير، لأن
+            // الطلب اقتصر على أرقام اللاعبين ونص العنوان تحديداً.
+            '#er-select-box.er-role-eliminate #er-select-title b{color:#ef4444;}',
+            '#er-select-box.er-role-revive #er-select-title b{color:#22c55e;}',
+            /* ---- صف واحد: بطاقة صاحب الدور المكبَّرة + الأزرار (متمركزان معاً) ---- */
+            '#er-chooser-row{display:flex;align-items:center;justify-content:center;gap:26px;margin-bottom:12px;flex:none;}',
+            '.er-select-chooser-card{display:flex;align-items:center;gap:12px;}',
+            '.er-select-chooser-ring{width:88px;height:88px;border-radius:50%;padding:4px;box-sizing:border-box;flex:none;}',
+            '.er-select-chooser-ring.er-role-eliminate{background:#22c55e;box-shadow:0 0 22px rgba(34,197,94,0.65);}',
+            '.er-select-chooser-ring.er-role-revive{background:#ef4444;box-shadow:0 0 22px rgba(239,68,68,0.65);}',
+            '.er-select-chooser-ring .er-ring-avatar,.er-select-chooser-ring .er-ring-avatar--fallback{width:100%;height:100%;font-size:1.5em;}',
+            '.er-select-chooser-nmrow{display:flex;align-items:center;gap:10px;margin-top:1px;}',
+            '.er-select-chooser-nm{font-size:1.35em;font-weight:900;color:#fff;}',
+            // ⚠️ [0.62.0] كانت خلفية ثابتة (--er-accent2) بصرف النظر عن
+            // النوع، وحجم 34px. طلب صريح جديد: تكبير بدرجة (34→42px) +
+            // لون خلفية حسب النوع (أحمر=إقصاء، أخضر=إنعاش) بدل اللون
+            // الثابت — راجع roleClass المُمرَّر بالـHTML بـselectChooserCardHtml.
+            '.er-select-chooser-num{width:42px;height:42px;border-radius:50%;color:#fff;',
+            'font-size:1.15em;font-weight:900;display:flex;align-items:center;justify-content:center;flex:none;}',
+            '.er-select-chooser-num.er-role-eliminate{background:#ef4444;}',
+            '.er-select-chooser-num.er-role-revive{background:#22c55e;}',
+            '#er-select-actions{display:flex;flex-direction:row;gap:8px;width:230px;flex:none;}',
+            '#er-select-actions button{flex:1;padding:9px 6px;border-radius:999px;border:none;font-weight:800;',
+            'cursor:pointer;font-family:inherit;font-size:0.74em;color:#fff;white-space:nowrap;line-height:1.3;',
+            'transition:transform 0.15s,box-shadow 0.15s;}',
+            '#er-select-actions button:hover{transform:translateY(-2px);}',
+            '#er-select-resume-btn{background:linear-gradient(90deg,var(--er-accent2),var(--er-accent));',
+            'box-shadow:0 4px 14px rgba(124,58,237,0.45);}',
+            '#er-force-eliminate-btn{background:linear-gradient(90deg,#ef4444,#b91c1c);',
+            'box-shadow:0 4px 14px rgba(239,68,68,0.45);}',
+            /* ---- المؤقّت — سطر مستقل بعد صف صاحب الدور، بارز وكبير ---- */
+            '#er-select-timer{text-align:center;font-weight:900;font-size:1.5em;color:#ffe066;margin-bottom:10px;',
+            'flex:none;transition:color 0.2s;}',
+            '#er-select-timer.er-timer-warning{color:#ff4d6d;animation:er-pulse 1s infinite;}',
+            '@keyframes er-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}',
+            /* ---- شبكة المرشّحين — ٤ أعمدة ثابتة، بطاقة لوبي-قياسي-v1
+             * (تراكب أفاتار ٦٠px على لوح اسم دائري بمقدار ٢٢٪ تقريباً)،
+             * الرقم الثابت جزء عادي من تدفّق لوح الاسم (مو موضع مطلق). ---- */
+            '#er-select-candidates-grid{flex:1;min-height:0;overflow-y:auto;display:grid;',
+            'grid-template-columns:repeat(4,1fr);gap:0.5cm;align-content:flex-start;padding:4px 2px 6px;}',
+            '.er-select-cand-card{display:flex;flex-direction:column;align-items:center;cursor:pointer;}',
+            '.er-select-cand-row{display:inline-flex;align-items:center;}',
+            '.er-select-cand-avatar{width:60px;height:60px;border-radius:50%;flex:none;position:relative;z-index:2;',
+            'overflow:hidden;box-sizing:border-box;border:3px solid rgba(255,255,255,0.55);}',
+            '.er-select-cand-avatar .er-ring-avatar,.er-select-cand-avatar .er-ring-avatar--fallback{width:100%;height:100%;font-size:1.1em;}',
+            '.er-select-cand-plate{position:relative;height:48px;width:194px;box-sizing:border-box;',
+            'margin-inline-start:-13px;padding-inline-start:31px;padding-inline-end:10px;',
+            'display:flex;align-items:center;justify-content:flex-start;gap:8px;font-weight:800;color:#fff;',
+            'background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.28);',
+            'border-radius:999px;overflow:hidden;z-index:1;}',
+            '.er-select-cand-name{font-size:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;}',
+            // ⚠️ [0.62.0] تكبير بدرجة (32→40px) + لون خلفية أحمر بنافذة
+            // الإقصاء (كان أخضر) وأخضر بنافذة الإنعاش (كان أزرق فاتح
+            // --er-accent2) — طلب صريح جديد لتوحيد لغة الألوان بالنافذتين.
+            '.er-select-cand-num{width:40px;height:40px;flex:none;color:#fff;',
+            'border-radius:50%;font-size:1.2em;font-weight:900;',
+            'display:flex;align-items:center;justify-content:center;z-index:3;}',
+            '.er-select-cand-num.er-role-eliminate{background:#ef4444;}',
+            '.er-select-cand-num.er-role-revive{background:#22c55e;}',
+            '.er-select-cand-card.er-cand-selected .er-select-cand-plate{box-shadow:0 0 0 2px #ef4444;}',
 
             /* ---- تبويب إعلان النتيجة (4 ثوانٍ) ----
              * ⚠️ [0.44.0] إصلاح: كانت هذي القواعد مكتوبة بمُحدِّد ID
@@ -631,10 +653,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // ⚠️ [0.55.0] .er-announce-person/.er-announce-avatar-wrap لم تعودا
             // مستخدَمتين من showResultAnnouncement() (استُبدلتا بـ
             // .er-announce-person-card/.er-announce-ring)، لكن أُبقيتا هنا
-            // بدون حذف — لا يزال يعتمد عليهما showGiftReviveCard() فعلياً
-            // (بطاقة "إنعاش بالدعم" العائمة) وannouncePersonHtml() القديمة
-            // (غير مستخدَمة حالياً لكن مُبقاة). حذفهما كان سيكسر بطاقة
-            // الإنعاش العائمة بالخطأ — اكتُشف وصُحِّح قبل التسليم.
+            // بدون حذف — كانت تُستخدَم أيضاً من showGiftReviveCard() (بطاقة
+            // "إنعاش بالدعم" العائمة) ومن announcePersonHtml() القديمة.
+            // ⚠️ [0.62.0] showGiftReviveCard() نفسها أُزيلت بهذا الإصدار
+            // (استُبدلت بتبويب "عودة لاعب" الجديد — راجع showReviveSplash()
+            // و#er-revive-splash-box أدناه)، فبقيت هاتان القاعدتان بلا أي
+            // استخدام فعلي إلا عبر announcePersonHtml() غير المستخدَمة أصلاً
+            // — أُبقيتا بلا حذف بنفس منطق الإبقاء السابق (صفر أثر جانبي).
             '.er-announce-person{display:inline-flex;flex-direction:column;align-items:center;gap:4px;',
             'vertical-align:middle;}',
             '.er-announce-avatar-wrap{display:block;width:106px;height:106px;border-radius:50%;position:relative;}',
@@ -652,13 +677,45 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '@keyframes er-target-revive-ring{0%{box-shadow:0 0 0 6px rgba(255,77,109,0.35),0 0 30px 10px rgba(255,77,109,0.5);}',
             '100%{box-shadow:0 0 0 6px rgba(74,222,128,0.25),0 0 30px 10px rgba(74,222,128,0.55);}}',
             '.er-announce-target-revive-ring{animation:er-target-revive-ring 1.6s ease forwards;}',
-            /* بطاقة إنعاش-بالهدية العائمة (toast غير مقاطِع — راجع showGiftReviveCard) */
-            '.er-gift-revive-card{display:flex;align-items:center;gap:10px;background:rgba(20,8,35,0.95);',
-            'border:1px solid rgba(74,222,128,0.55);color:#f3eefc;padding:8px 18px 8px 8px;border-radius:999px;',
-            'font-size:0.85em;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,0.4);}',
-            '.er-gift-revive-card .er-announce-avatar-wrap{width:40px;height:40px;}',
-            '.er-gift-revive-card .er-announce-avatar-wrap .er-ring-avatar,',
-            '.er-gift-revive-card .er-announce-avatar-wrap .er-ring-avatar--fallback{width:40px;height:40px;font-size:0.8em;}',
+
+            /* ======================================================================
+             *  [0.62.0] تبويب "عودة لاعب" — نافذة احتفالية موحَّدة تظهر وسط
+             *  الشاشة فوق كل شيء (حتى فوق نافذة الاختيار المفتوحة، تماماً
+             *  مثل بطاقة "إنعاش بالدعم" العائمة القديمة اللي كانت بنفس
+             *  الغرض — راجع تعليق showReviveSplash() أدناه للسياق الكامل)،
+             *  تحل محل كل من: (أ) الإشعار الصغير أسفل الشاشة عند الإنعاش
+             *  بالدعم، (ب) تبويب "قام X بإرجاع Y" عند نجاح إنعاش صديق —
+             *  طلب صريح جديد بتوحيد عرض أي إنعاش ناجح، بصرف النظر عن سببه،
+             *  بنافذة واحدة جميلة بدل تصميمين مختلفين سابقاً.
+             *  ⚠️ pointer-events:none على الغلاف بالكامل — تبويب معلوماتي
+             *  بحت بدون أي زر، ولا يجوز أن يحجب النقر على أي عنصر تفاعلي
+             *  تحته (نفس فلسفة toast/بطاقة الإنعاش العائمة القديمة تماماً).
+             * ==================================================================== */
+            '#er-revive-splash-overlay{position:fixed;inset:0;z-index:100030;display:none;',
+            'align-items:center;justify-content:center;pointer-events:none;}',
+            '#er-revive-splash-box{width:300px;height:300px;box-sizing:border-box;border-radius:24px;',
+            'border:4px solid #22c55e;background:radial-gradient(circle at 50% 32%,rgba(34,197,94,0.28),rgba(10,20,14,0.94) 72%);',
+            'box-shadow:0 0 60px rgba(34,197,94,0.65),0 20px 50px rgba(0,0,0,0.5);',
+            'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;',
+            'padding:18px;text-align:center;color:#fff;font-family:Almarai,Cairo,sans-serif;',
+            'opacity:0;transform:scale(0.6);}',
+            '#er-revive-splash-box.er-revive-splash-anim{animation:er-revive-pop 0.45s cubic-bezier(.34,1.56,.64,1) forwards;}',
+            '@keyframes er-revive-pop{0%{opacity:0;transform:scale(0.5);}60%{opacity:1;transform:scale(1.08);}100%{opacity:1;transform:scale(1);}}',
+            // ⚠️ [0.63.0] القلب صار صورة PNG مرفوعة من صاحب المشروع (بدل
+            // إيموجي 💚 نصّي) — راجع revive-heart.png بجانب index.html
+            // بنفس مجلد اللعبة، وHTML الجديد بترتيب: قلب، نص السبب،
+            // صورة اللاعب، الاسم (بدل: قلب، صورة، اسم، سبب سابقاً) —
+            // طلب صريح جديد بإعادة ترتيب المحتوى.
+            '.er-revive-splash-heart{width:58px;height:58px;object-fit:contain;',
+            'animation:er-revive-heartbeat 1s ease-in-out infinite;',
+            'filter:drop-shadow(0 0 10px rgba(34,197,94,0.85));}',
+            '@keyframes er-revive-heartbeat{0%,100%{transform:scale(1);}25%{transform:scale(1.18);}45%{transform:scale(0.96);}}',
+            '.er-revive-splash-reason{font-size:0.82em;font-weight:700;color:#c9f7d8;line-height:1.4;}',
+            '.er-revive-splash-avatar{width:92px;height:92px;border-radius:50%;border:3px solid #22c55e;',
+            'box-shadow:0 0 18px rgba(34,197,94,0.6);overflow:hidden;flex:none;}',
+            '.er-revive-splash-avatar .er-ring-avatar,.er-revive-splash-avatar .er-ring-avatar--fallback{',
+            'width:100%;height:100%;font-size:1.6em;}',
+            '.er-revive-splash-name{font-size:1.15em;font-weight:900;color:#fff;}',
 
             /* ---- Toasts ---- */
             '#er-toast-wrap{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:100020;',
@@ -1104,10 +1161,45 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             overlay.innerHTML = '<div id="er-modal-chooser-card"></div><div id="er-modal-box"></div>';
             document.body.appendChild(overlay);
         }
+        // ⚠️ [0.61.0] صندوق "اختيار الإقصاء/الإرجاع" الجديد — عنصر مستقل
+        // كلياً عن #er-modal-overlay أعلاه (راجع تعليق CSS المفصَّل بأعلى
+        // الملف). يُبنى هيكله مرة واحدة فقط هنا (نفس أسلوب #er-modal-overlay)،
+        // ثم renderTurnModal() تحدّث محتوى #er-select-chooser-slot/
+        // #er-select-candidates-grid فقط بكل فتحة دور — لا إعادة بناء كاملة
+        // ولا إعادة ربط مستمعي الأزرار في كل مرة.
+        if (!el('er-select-overlay')) {
+            var selectOverlay = document.createElement('div');
+            selectOverlay.id = 'er-select-overlay';
+            selectOverlay.innerHTML =
+                '<div id="er-select-box">' +
+                    '<div id="er-select-title"></div>' +
+                    '<div id="er-chooser-row">' +
+                        '<div id="er-select-chooser-slot"></div>' +
+                        '<div id="er-select-actions">' +
+                            '<button id="er-force-eliminate-btn" type="button">❌ إقصاء صاحب الدور</button>' +
+                            '<button id="er-select-resume-btn" type="button">▶️ استئناف اللعبة</button>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div id="er-select-timer"></div>' +
+                    '<div id="er-select-candidates-grid"></div>' +
+                '</div>';
+            document.body.appendChild(selectOverlay);
+            el('er-force-eliminate-btn').addEventListener('click', handleForceEliminateClick);
+            el('er-select-resume-btn').addEventListener('click', handleSelectResumeClick);
+        }
         if (!el('er-toast-wrap')) {
             var toastWrap = document.createElement('div');
             toastWrap.id = 'er-toast-wrap';
             document.body.appendChild(toastWrap);
+        }
+        // ⚠️ [0.62.0] تبويب "عودة لاعب" الجديد — راجع تعليق CSS المفصَّل
+        // أعلى الملف وتعليق showReviveSplash() أدناه. عنصر مستقل تماماً،
+        // يُبنى مرة واحدة فقط هنا بنفس أسلوب بقية عناصر ensureScaffolding().
+        if (!el('er-revive-splash-overlay')) {
+            var splashOverlay = document.createElement('div');
+            splashOverlay.id = 'er-revive-splash-overlay';
+            splashOverlay.innerHTML = '<div id="er-revive-splash-box"></div>';
+            document.body.appendChild(splashOverlay);
         }
     }
 
@@ -1513,141 +1605,189 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         logEvent('revive', '💚 ' + playerLabel(target) + ' رجع للعبة' +
             (chooserPlayer ? (' بواسطة ' + playerLabel(chooserPlayer)) : ''));
 
-        showResultAnnouncement('revive', {
-            target: target,
-            chooser: chooserPlayer
-        }, function onDone() {
+        // ⚠️ [0.62.0] راجع showReviveSplash() أدناه — استُبدل تبويب "قام X
+        // بإرجاع Y" (بطاقتَي الشخصين، showResultAnnouncement('revive',...))
+        // بتبويب "عودة لاعب" الموحَّد الجديد بطلب صريح. onDone (استمرار
+        // الدوران التلقائي) بقي كما هو تماماً، فقط استُدعي من الدالة
+        // الجديدة بدل القديمة.
+        showReviveSplash(target, { reason: 'friend', chooser: chooserPlayer }, function onDone() {
             maybeAutoSpin();
         });
     }
 
     /* ======================================================================
      *  7) نافذة الدور المشتركة (إقصاء أو إرجاع) — عرض + عدّاد + استماع للشات
-     * ==================================================================== */
+     *  ⚠️ [0.61.0] إعادة بناء كاملة — صندوق جديد (#er-select-overlay/box)
+     *  منقول بالحرف من تصميم "مرحلة الاختيار" بروليت الروسي (بطلب صريح
+     *  من صاحب المشروع)، يحل محل التصميم القديم لكلتا نافذتَي الإقصاء
+     *  والإرجاع معاً. النقر على بطاقة مرشَّح بنافذة الإقصاء يُحدِّدها فقط
+     *  (حدود حمراء + تفعيل نص الزر الأحمر) — الإقصاء الفعلي يصير بالزر.
+     *  نافذة الإرجاع ما فيها زر أحمر إطلاقاً (ما فيه "هدف افتراضي" منطقي
+     *  للإرجاع — طلب صريح): النقر على بطاقة مرشَّح يُرجعها فوراً، وزر
+     *  "استئناف اللعبة" الوحيد يغلق بدون إرجاع أحد (نفس أثر كتابة "تخطي"
+     *  بالشات، الموجودة من قبل ولم تتغيّر). ==================================================================== */
     function renderTurnModal() {
-        var overlay = el('er-modal-overlay');
-        var box = el('er-modal-box');
+        ensureScaffolding();
+        var overlay = el('er-select-overlay');
+        var box = el('er-select-box');
         if (!overlay || !box || !_pendingTurn) return;
 
         var isRevive = _pendingTurn.type === 'revive';
         var roleClass = isRevive ? 'er-role-revive' : 'er-role-eliminate';
-        var title = isRevive ? '🎗️ فرصة إرجاع!' : 'اختيار الإقصاء';
-        var subtitle = isRevive
-            ? 'وقف عليه العجلة مرتين متتاليتين — يقدر يرجّع لاعب مُقصى! اكتب رقم اللاعب بشات البث، أو اكتب "تخطي" للتجاوز'
-            : 'اكتب رقم اللاعب بشات البث للإقصاء';
+        box.className = roleClass;
 
-        var rows = _pendingTurn.candidates.map(function (p, i) {
-            return '<div class="er-candidate-card" data-index="' + i + '">' +
-                '<span class="er-candidate-num ' + roleClass + '">' + (i + 1) + '</span>' +
-                playerCardHtml(p) +
-                '</div>';
+        // ⚠️ [0.61.0] سطر علوي واحد مدمج بدون أي بادج منفصل — نفس صياغة
+        // روليت الروسي بالحرف، بدون ذكر كلمة "إقصاء" (تنطبق على النافذتين
+        // معاً). نافذة الإرجاع ما فيها زر أحمر (راجع تعليق الدالة أعلاه)،
+        // فالجزء "من الأزرار تحت" غير دقيق لها — استُبدل بوصف يطابق آلية
+        // النقر الفوري الفعلية بدل نسخ نص لا ينطبق تماماً.
+        // ⚠️ [0.62.0] طلب صريح جديد: الكلمة العريضة صارت تُسمّي المرحلة
+        // نفسها ("مرحلة الإقصاء"/"مرحلة الإنعاش") بدل الاسم العام "مرحلة
+        // الاختيار" — لتوضيح فوري لنوع النافذة المفتوحة. لون الكلمة تبع
+        // نفس نظام الأحمر=إقصاء/أخضر=إنعاش الجديد (راجع #er-select-title b
+        // بالـCSS أعلاه، بُدِّل من الأخضر/الأحمر المعاكس السابق).
+        var titleLine = isRevive
+            ? '<b>مرحلة الإنعاش</b> — اختر من الشات بكتابة الرقم، أو يدوياً بالنقر على بطاقة اللاعب'
+            : '<b>مرحلة الإقصاء</b> — اختر من الشات بكتابة الرقم، أو يدوياً من الأزرار تحت';
+        el('er-select-title').innerHTML = titleLine;
+
+        el('er-select-chooser-slot').innerHTML = selectChooserCardHtml(_pendingTurn.chooser, roleClass);
+
+        var grid = el('er-select-candidates-grid');
+        grid.innerHTML = _pendingTurn.candidates.map(function (p, i) {
+            return selectCandidateCardHtml(p, i, roleClass);
         }).join('');
-
-        // ⚠️ [0.45.13] طلب صريح: كتابة "مرحلة الإقصاء" داخل نافذة اختيار
-        // الإقصاء تحديداً (بدون نافذة الإرجاع) — توضيح إضافي للمشاهدين.
-        var phaseBadgeHtml = !isRevive
-            ? '<div class="er-phase-badge-wrap"><span class="er-phase-badge">🔴 مرحلة الإقصاء</span></div>'
-            : '';
-
-        box.className = roleClass; // ⚠️ [0.45.8] يميّز تبويب الإقصاء بلون أخضر (راجع CSS)
-        box.innerHTML =
-            phaseBadgeHtml +
-            '<h2>' + title + '</h2>' +
-            '<div id="er-modal-sub">' + subtitle + '</div>' +
-            '<div id="er-modal-timer"></div>' +
-            '<div id="er-candidates-grid">' + rows + '</div>';
-
-        // ⚠️ [0.46.0] بطاقة الاختيار (أفاتار+اسم بحلقة ملوَّنة) تظهر فوق
-        // الصندوق كعنصر شقيق منفصل بفاصل واضح (gap على #er-modal-overlay)
-        // — بدل نص "الاسم يختار!" الملغى بالكامل.
-        var chooserCard = el('er-modal-chooser-card');
-        if (chooserCard) {
-            chooserCard.innerHTML = chooserCardHtml(_pendingTurn.chooser, roleClass, !isRevive);
-            chooserCard.style.display = 'flex';
-        }
-
-        if (AGP.playerCard) AGP.playerCard.fitAllNames(box);
-
-        // ⚠️ [0.52.0] تنظيف: لو الصندوق كان بوضع "شاشة الفائز" (بدون خلفية/
-        // حدّ + خلفية مغبّشة) من عرض سابق، رجّعه للوضع المصمَت الطبيعي —
-        // نافذة الدور هذي تبقى بشكلها القديم دون أي تغيير.
-        overlay.classList.remove('er-winner-backdrop');
-
-        box.querySelectorAll('.er-candidate-card').forEach(function (row) {
-            row.onclick = function () {
-                var i = parseInt(row.getAttribute('data-index'), 10);
-                resolveTurnSelection(i);
+        grid.querySelectorAll('.er-select-cand-card[data-index]').forEach(function (card) {
+            card.onclick = function () {
+                var idx = parseInt(card.getAttribute('data-index'), 10);
+                if (isRevive) {
+                    // ⚠️ ما فيه زر تأكيد بنافذة الإرجاع — النقر يُرجع فوراً،
+                    // نفس السلوك القديم بالضبط.
+                    resolveTurnSelection(idx);
+                } else {
+                    selectCandidateManually(idx);
+                }
             };
         });
 
-        // ⚠️ [0.45.7] زرّا تحكّم يدوي — بديل اختياري لكتابة الرقم بشات
-        // البث، لا يلغيها (الاثنان يبقيان شغّالين معاً). يظهران فقط
-        // بنافذة الإقصاء (chooserCardHtml بنَتهما فقط لو isEliminate=true).
-        var eliminateChooserBtn = el('er-chooser-eliminate-btn');
-        if (eliminateChooserBtn) {
-            eliminateChooserBtn.onclick = function () {
-                var chooser = _pendingTurn && _pendingTurn.chooser;
-                if (!chooser) return;
-                AGP.timerManager.stop(TIMER_NAME);
-                eliminatePlayer(chooser, chooser.id);
-            };
-        }
-        var resumeBtn = el('er-chooser-resume-btn');
-        if (resumeBtn) {
-            resumeBtn.onclick = function () {
-                AGP.timerManager.stop(TIMER_NAME);
-                closeTurnModal();
-                // ⚠️ [0.45.10] نفس تصفير الدوران — راجع تعليق handleSpinClick.
-                resetWheelSpinPosition();
-                maybeAutoSpin();
-            };
-        }
+        var forceBtn = el('er-force-eliminate-btn');
+        forceBtn.style.display = isRevive ? 'none' : '';
+        if (!isRevive) forceBtn.textContent = '❌ إقصاء صاحب الدور';
+        _selectedCandidateIdx = null;
+
+        if (AGP.playerCard) AGP.playerCard.fitAllNames(grid);
 
         overlay.style.display = 'flex';
     }
 
     // ⚠️ playerCardHtml معزولة بدالة واحدة — تستخدم AGP.playerCard
     // المشترك (js/agp-player-card.js) بدون إطار (showFrame:false) عمداً؛
-    // نافذتا الإقصاء/الإرجاع تعرض البطاقة الأساسية دائماً حتى لو اللاعب
-    // يملك إطاراً مفعَّلاً (الإطار يظهر باللوبي فقط، قرار موثَّق أصلاً).
+    // ما زالت تُستخدَم بتبويب "إعلان النتيجة" (showResultAnnouncement) —
+    // راجع أدناه. نافذتا الإقصاء/الإرجاع الجديدتان لهما بطاقة محلية خاصة
+    // (selectCandidateCardHtml) بدل هذي، لتطابق تصميم روليت الروسي بالحرف.
     function playerCardHtml(p) {
         if (!AGP.playerCard) return '<span>' + escapeHtml(playerLabel(p)) + '</span>';
         return AGP.playerCard.renderHtml(p, { showFrame: false });
     }
 
-    // ⚠️ [0.46.0] "بطاقة اختيار" — تُعاد استخدام ringAvatarHtml() نفسها
-    // المستخدَمة ببطاقات شاشة الفائز (دائرة أفاتار + fallback أحرف أولى).
-    // ⚠️ [0.45.7] isEliminate=true يضيف زرّي "إقصاء صاحب الدور"/"استئناف
-    // اللعب" (تحكّم يدوي جديد بطلب صريح، مصدره تصميم مرجعي زوَّدنا به
-    // المستخدم) — تحديداً بنافذة الإقصاء فقط، ما ينطبق على نافذة الإرجاع
-    // (الإقصاء اليدوي مايعني شي بسياق الإرجاع، والإرجاع أصلاً عنده تخطي
-    // عبر كتابة "تخطي" بالشات — بلا تغيير هناك).
-    function chooserCardHtml(chooser, roleClass, isEliminate) {
-        var actionsHtml = isEliminate ?
-            '<div class="er-chooser-actions">' +
-            '<button type="button" class="er-chooser-action-btn er-chooser-action-eliminate" id="er-chooser-eliminate-btn">❌ إقصاء صاحب الدور</button>' +
-            '<button type="button" class="er-chooser-action-btn er-chooser-action-resume" id="er-chooser-resume-btn">▶️ استئناف اللعب</button>' +
-            '</div>' : '';
-        return '<div class="er-chooser-card-ring ' + roleClass + '">' +
-            '<div class="er-chooser-card-inner">' + ringAvatarHtml(chooser) + '</div>' +
+    // ⚠️ [0.61.0] بطاقة "صاحب الدور" المكبَّرة داخل صف #er-chooser-row —
+    // حلقة 88px (ringAvatarHtml نفسها المستخدَمة بشاشة الفائز/الإعلان) +
+    // اسمه + رقمه الثابت (playerNumber) بجانب بعض.
+    function selectChooserCardHtml(chooser, roleClass) {
+        return '<div class="er-select-chooser-card">' +
+            '<div class="er-select-chooser-ring ' + roleClass + '">' + ringAvatarHtml(chooser) + '</div>' +
+            '<div>' +
+                '<div class="er-select-chooser-nmrow">' +
+                    '<span class="er-select-chooser-nm" data-agp-pcard-name="1">' + escapeHtml(playerLabel(chooser)) + '</span>' +
+                    '<span class="er-select-chooser-num ' + roleClass + '">' + playerNumber(chooser) + '</span>' +
+                '</div>' +
             '</div>' +
-            '<div class="er-chooser-card-name">' + escapeHtml(playerLabel(chooser)) + '</div>' +
-            actionsHtml;
+        '</div>';
     }
 
-    function hideChooserCard() {
-        var card = el('er-modal-chooser-card');
-        if (card) { card.style.display = 'none'; card.innerHTML = ''; }
+    // ⚠️ [0.61.0] بطاقة مرشَّح بشبكة الاختيار — أفاتار 60px يتراكب على لوح
+    // اسم دائري (نفس نمط لوبي-قياسي-v1)، والرقم الثابت (playerNumber)
+    // عنصر عادي داخل تدفّق لوح الاسم مباشرة بعد النص (مو موضع مطلق).
+    function selectCandidateCardHtml(p, index, roleClass) {
+        return '<div class="er-select-cand-card" data-index="' + index + '">' +
+            '<div class="er-select-cand-row">' +
+                '<div class="er-select-cand-avatar">' + ringAvatarHtml(p) + '</div>' +
+                '<div class="er-select-cand-plate">' +
+                    '<span class="er-select-cand-name" data-agp-pcard-name="1">' + escapeHtml(playerLabel(p)) + '</span>' +
+                    '<span class="er-select-cand-num ' + roleClass + '">' + playerNumber(p) + '</span>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    }
+
+    // ⚠️ [0.61.0] تحديد يدوي (نافذة الإقصاء فقط) — النقر على بطاقة مرشَّح
+    // لا يُقصيه فوراً، فقط يحدِّده (حدود حمراء) ويبدّل نص الزر الأحمر
+    // لـ"إقصاء [الاسم]" بدل "إقصاء صاحب الدور" الافتراضي. الإقصاء الفعلي
+    // يصير فقط بالضغط على الزر (handleForceEliminateClick).
+    function selectCandidateManually(idx) {
+        if (!_pendingTurn || _pendingTurn.type !== 'eliminate') return;
+        _selectedCandidateIdx = idx;
+        var grid = el('er-select-candidates-grid');
+        if (grid) {
+            grid.querySelectorAll('.er-select-cand-card[data-index]').forEach(function (card) {
+                card.classList.toggle('er-cand-selected', parseInt(card.getAttribute('data-index'), 10) === idx);
+            });
+        }
+        var target = _pendingTurn.candidates[idx];
+        var btn = el('er-force-eliminate-btn');
+        if (btn && target) btn.textContent = '❌ إقصاء ' + playerLabel(target);
+    }
+
+    // ⚠️ [0.61.0] الزر الأحمر (نافذة الإقصاء فقط، مخفي بنافذة الإرجاع) —
+    // بدون اختيار يدوي = يقصي صاحب الدور نفسه (نفس أثر الزر القديم
+    // "إقصاء صاحب الدور" بالضبط). بعد اختيار بطاقة يدوياً = يقصي ذاك
+    // المرشَّح المحدَّد بدلاً منه. eliminatePlayer() نفسها تتولّى إغلاق
+    // النافذة واحتساب "الأكثر إقصاءً" (بشرط الهدف != صاحب الدور).
+    function handleForceEliminateClick() {
+        if (!_pendingTurn || _pendingTurn.type !== 'eliminate') return;
+        var chooser = _pendingTurn.chooser;
+        if (!chooser) return;
+        var target = (_selectedCandidateIdx !== null && _pendingTurn.candidates[_selectedCandidateIdx])
+            ? _pendingTurn.candidates[_selectedCandidateIdx]
+            : chooser;
+        AGP.timerManager.stop(TIMER_NAME);
+        eliminatePlayer(target, chooser.id);
+    }
+
+    // ⚠️ [0.61.0] "استئناف اللعبة" — الزر الوحيد بنافذة الإرجاع، وأحد
+    // زرَّين بنافذة الإقصاء. يغلق الدور بدون أي إقصاء/إرجاع. بنافذة
+    // الإقصاء فقط: نفس تصفير دوران العجلة القديم (راجع تعليق
+    // handleSpinClick) + استئناف "العب" التلقائي لو مفعَّل — بنافذة
+    // الإرجاع لا تصفير ولا استئناف تلقائي (بالضبط مطابقة لأثر كتابة
+    // "تخطي" بالشات الموجود من قبل بدون تغيير).
+    function handleSelectResumeClick() {
+        if (!_pendingTurn) return;
+        var isRevive = _pendingTurn.type === 'revive';
+        AGP.timerManager.stop(TIMER_NAME);
+        closeTurnModal();
+        if (!isRevive) {
+            resetWheelSpinPosition();
+            maybeAutoSpin();
+        }
     }
 
     var _turnTickUnsub = null;
     var _turnEndUnsub = null;
     var _warningPlayedForSecond = null;
 
+    // ⚠️ #er-modal-chooser-card عنصر قديم من التصميم السابق لنافذتَي
+    // الإقصاء/الإرجاع — لم يعد يُملأ بأي محتوى من renderTurnModal الجديد
+    // (0.61.0)، لكن showResultAnnouncement/renderWinnerScreen ما زالا
+    // يستدعيان هذي الدالة دفاعياً (احتياطاً لو بقي ظاهراً من حالة سابقة)
+    // — إبقاؤها بلا ضرر، أرخص من تتبّع كل نداء لها وحذفه.
+    function hideChooserCard() {
+        var card = el('er-modal-chooser-card');
+        if (card) { card.style.display = 'none'; card.innerHTML = ''; }
+    }
+
     function closeTurnModal() {
-        var overlay = el('er-modal-overlay');
+        var overlay = el('er-select-overlay');
         if (overlay) overlay.style.display = 'none';
-        hideChooserCard();
         AGP.timerManager.stop(TIMER_NAME);
         if (typeof _turnTickUnsub === 'function') _turnTickUnsub();
         if (typeof _turnEndUnsub === 'function') _turnEndUnsub();
@@ -1655,6 +1795,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _turnEndUnsub = null;
         _pendingTurn = null;
         _warningPlayedForSecond = null;
+        _selectedCandidateIdx = null;
     }
 
     function startTurnTimer(onTimeout) {
@@ -1678,7 +1819,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function updateTimerDisplay(seconds) {
-        var t = el('er-modal-timer');
+        var t = el('er-select-timer');
         if (!t) return;
         t.textContent = '⏱️ ' + seconds + ' ث';
         t.classList.toggle('er-timer-warning', seconds > 0 && seconds <= 10);
@@ -1715,6 +1856,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * @param {Object} data - {target, chooser} كائنا لاعب كاملين (وليس
      *   نصوصاً فقط كما كان بالتصميم القديم). chooser قد يكون null (مثلاً
      *   إقصاء صاحب الدور نفسه عند انتهاء الوقت).
+     * ⚠️ [0.62.0] لم تعد تُستدعى إطلاقاً بـtype='revive' (استُبدل استدعاؤها
+     * بـshowReviveSplash() الجديدة بطلب صريح — راجع تعليقها). فرع الإرجاع
+     * بهذي الدالة (isEliminate===false) صار كوداً غير مستخدَم حالياً، أُبقي
+     * بدون حذف بنفس منطق الإبقاء المعتمَد بهذا الملف (صفر أثر جانبي، قابل
+     * للرجوع له لاحقاً لو احتاج الأمر). فرع الإقصاء (type='eliminate') لا
+     * يزال يُستدعى فعلياً وبلا أي تغيير.
      */
     function showResultAnnouncement(type, data, onDone) {
         ensureScaffolding();
@@ -1834,7 +1981,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var text = payload.text.trim();
 
             // ⚠️ "تخطي" مسموحة فقط بنافذة الإرجاع — تُغلق النافذة بدون
-            // إرجاع أي أحد. لا يوجد زر لهذا بالواجهة عمداً (طلب صريح).
+            // إرجاع أي أحد (نفس أثر زر "استئناف اللعبة" الجديد بالضبط —
+            // [0.61.0] أضاف الزر كبديل يدوي، لم يلغِ "تخطي" بالشات).
             if (_pendingTurn.type === 'revive' && text === 'تخطي') {
                 AGP.timerManager.stop(TIMER_NAME);
                 closeTurnModal();
@@ -1842,8 +1990,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             }
 
             var n = parseInt(text, 10);
-            if (isNaN(n) || n < 1 || n > _pendingTurn.candidates.length) return;
-            resolveTurnSelection(n - 1);
+            if (isNaN(n)) return;
+            // ⚠️ [0.61.0] إصلاح خلل حقيقي: الرقم المكتوب بالشات يُطابَق
+            // برقم اللاعب الثابت (playerNumber — راجع تعليقها أعلى الملف)
+            // المعروض فعلياً على بطاقته، وليس بفهرس المصفوفة المؤقتة
+            // (candidates) اللي يتغيّر ترتيبها كل جولة مع تقلّص/تبدّل
+            // _alive — هذا الفرق بالضبط كان يخلي الرقم "ما يُقبل" أحياناً.
+            var idx = -1;
+            for (var i = 0; i < _pendingTurn.candidates.length; i++) {
+                if (playerNumber(_pendingTurn.candidates[i]) === n) { idx = i; break; }
+            }
+            if (idx === -1) return;
+            resolveTurnSelection(idx);
         });
     }
 
@@ -1883,31 +2041,86 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         realignWheelAfterRosterChange();
 
         logEvent('gift', '🎁 ' + playerLabel(entry.player) + ' رجع للعبة عن طريق الدعم');
-        showGiftReviveCard(entry.player);
+        // ⚠️ [0.62.0] راجع showReviveSplash() أدناه — استُبدلت
+        // showGiftReviveCard() (الإشعار الصغير أسفل الشاشة) بتبويب "عودة
+        // لاعب" الجديد بطلب صريح.
+        showReviveSplash(entry.player, { reason: 'gift' });
         // ⚠️ لا نضيفه لقائمة نافذة إقصاء مفتوحة حالياً لو موجودة — يظهر
         // فقط بداية الدورة الجاية على العجلة (موجود أصلاً بـ_alive الآن).
     }
 
     /**
-     * ⚠️ [0.46.0] "إنعاش بالدعم" (هدية) قد يحدث بأي لحظة — حتى وسط نافذة
+     * ⚠️ [0.46.0→0.62.0] "عودة لاعب" — نافذة احتفالية موحَّدة لأي إنعاش
+     * ناجح، بصرف النظر عن سببه (بالدعم أو عبر آلية "انعاش صديق" بنافذة
+     * الاختيار). تحل محل تصميمين منفصلين سابقاً: (أ) showGiftReviveCard()
+     * القديمة (إشعار صغير أسفل الشاشة لحالة الدعم فقط)، (ب) فرع الإرجاع
+     * بـshowResultAnnouncement() (بطاقتَي "مين رجّع مين" لحالة انعاش
+     * الصديق فقط) — طلب صريح جديد بتوحيد العرض بنافذة واحدة جميلة بدل
+     * تصميمين مختلفين. فرع الإقصاء بـshowResultAnnouncement() لم يتأثر
+     * إطلاقاً ولا يزال يعمل بشكله القديم (لم يُذكَر بالطلب).
+     *
+     * ⚠️ [0.46.0] الإنعاش بالدعم (هدية) قد يحدث بأي لحظة — حتى وسط نافذة
      * دور مفتوحة — فلا يجوز استخدام تبويب #er-modal-box نفسه (يقاطع
-     * الدور الجاري). بطاقة عائمة منفصلة بنفس فكرة/حجم toast لكن بمحتوى
-     * مخصَّص (أفاتار المُنعَش + توهّج أخضر)، تختفي تلقائياً — قرار تصميم
-     * بتفويض صريح من المستخدم بهذي النقطة ("محتواه حسب الحاجة وموقعه
-     * نفذ بالطريقة الي تشوفها انسب").
+     * الدور الجاري). لنفس السبب بالضبط، #er-revive-splash-overlay عنصر
+     * مستقل تماماً بـpointer-events:none، لا يتفاعل مع أي نقر ولا يقاطع
+     * أي نافذة مفتوحة تحته — يظهر فوقها فقط بصرياً لمدة ثانيتين ثم يختفي
+     * تلقائياً من تلقاء نفسه.
+     * @param {Object} player - اللاعب الذي عاد للعبة
+     * @param {Object} opts - {reason: 'gift'|'friend', chooser?: player}
+     *   chooser (اختياري، لحالة 'friend' فقط) - اللاعب صاحب الدور الذي
+     *   اختار إرجاعه، لعرض اسمه بنص السبب (نفس المعلومة اللي كانت تُعرَض
+     *   سابقاً ببطاقة "مين رجّع مين").
+     * @param {Function} [onDone] - ⚠️ يُستدعى بعد اختفاء التبويب تلقائياً
+     *   (بعد ثانيتين بالضبط) — نفس دور onDone بـshowResultAnnouncement()،
+     *   يحافظ على استمرار تدفّق اللعبة (مثلاً maybeAutoSpin() بعد إنعاش
+     *   عبر "انعاش صديق"). حالة "بالدعم" لا تمرّر onDone لأنها لا تُتبَع
+     *   بأي إجراء إضافي بالكود الأصلي (كانت تُظهر الإشعار وتكتفي).
      */
-    function showGiftReviveCard(player) {
-        var wrap = el('er-toast-wrap');
-        if (!wrap) return;
-        var card = document.createElement('div');
-        card.className = 'er-gift-revive-card';
-        card.innerHTML =
-            '<span class="er-announce-avatar-wrap er-announce-effect-green">' + ringAvatarHtml(player) + '</span>' +
-            '<span class="er-gift-revive-text">🎁 ' + escapeHtml(playerLabel(player)) + ' رجع للعبة عن طريق الدعم!</span>';
-        wrap.appendChild(card);
-        window.setTimeout(function () {
-            if (card.parentNode) card.parentNode.removeChild(card);
-        }, 4200);
+    function showReviveSplash(player, opts, onDone) {
+        opts = opts || {};
+        ensureScaffolding();
+        var overlay = el('er-revive-splash-overlay');
+        var box = el('er-revive-splash-box');
+        if (!overlay || !box || !player) {
+            if (typeof onDone === 'function') onDone();
+            return;
+        }
+
+        playSound('revive');
+
+        var reasonHtml;
+        if (opts.reason === 'friend' && opts.chooser) {
+            reasonHtml = '💚 ' + escapeHtml(playerLabel(opts.chooser)) + ' أرجعه للعبة عن طريق إنعاش صديق!';
+        } else if (opts.reason === 'friend') {
+            reasonHtml = '💚 رجع للعبة عن طريق إنعاش صديق!';
+        } else {
+            reasonHtml = '🎁 رجع للعبة عن طريق الدعم!';
+        }
+
+        // ⚠️ [0.63.0] ترتيب جديد بطلب صريح: قلب (صورة PNG) أعلى التبويب،
+        // مباشرة تحته نص السبب، ثم صورة اللاعب، ثم اسمه تحت الصورة —
+        // بدل الترتيب القديم (قلب، صورة، اسم، سبب). نفس الترتيب يطبَّق
+        // على حالتَي 'gift' و'friend' معاً (نفس القالب لكلتيهما).
+        box.innerHTML =
+            '<img class="er-revive-splash-heart" src="revive-heart.png" alt="">' +
+            '<div class="er-revive-splash-reason">' + reasonHtml + '</div>' +
+            '<div class="er-revive-splash-avatar">' + ringAvatarHtml(player) + '</div>' +
+            '<div class="er-revive-splash-name">' + escapeHtml(playerLabel(player)) + '</div>';
+
+        overlay.style.display = 'flex';
+        // ⚠️ إعادة تشغيل أنيميشن pop-in لو ظهرت النافذة مرتين متتاليتين
+        // بسرعة (مثلاً هديتان إنعاش خلال أقل من ثانيتين) — إزالة الكلاس
+        // ثم فرض إعادة تدفّق (reflow) عبر offsetWidth قبل إضافته من جديد.
+        box.classList.remove('er-revive-splash-anim');
+        void box.offsetWidth;
+        box.classList.add('er-revive-splash-anim');
+
+        if (_reviveSplashTimer) window.clearTimeout(_reviveSplashTimer);
+        _reviveSplashTimer = window.setTimeout(function () {
+            overlay.style.display = 'none';
+            _reviveSplashTimer = null;
+            if (typeof onDone === 'function') onDone();
+        }, 2000);
     }
 
     /* ======================================================================
@@ -1959,6 +2172,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var alreadyEliminated = _eliminated.some(function (e) { return e.player.id === newPlayer.id; });
         if (alreadyAlive || alreadyEliminated) return;
         _alive.push(newPlayer);
+        assignPlayerNumber(newPlayer); // ⚠️ [0.61.0] راجع تعليق _playerNumbers
         realignWheelAfterRosterChange();
     }
 
@@ -2253,10 +2467,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var overlay = el('er-modal-overlay');
         if (overlay) overlay.style.display = 'none';
+        var selectOverlay = el('er-select-overlay');
+        if (selectOverlay) selectOverlay.style.display = 'none';
 
         stopAutoPlay();
         resetMatchState();
         _alive = roster;
+        _alive.forEach(function (p) { assignPlayerNumber(p); }); // ⚠️ [0.61.0] مباراة جديدة كلياً — أرقام جديدة بترتيب هذي القائمة
         _startedAt = Date.now();
         _matchActive = true;
 
@@ -2398,6 +2615,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         resetMatchState();
         _settings = settingsValues;
         _alive = AGP.gameManager.getPlayers().slice();
+        _alive.forEach(function (p) { assignPlayerNumber(p); }); // ⚠️ [0.61.0] رقم ثابت بترتيب دخول اللوبي
         _startedAt = Date.now();
         _matchActive = true;
 
