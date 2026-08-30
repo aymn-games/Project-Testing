@@ -373,6 +373,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (AGP.playerCard && rootEl) AGP.playerCard.fitAllNames(rootEl);
     }
 
+    function lobbyCardHtml(p) {
+        return '<div class="tw-lobby-card-wrap">' +
+            '<button type="button" class="tw-lobby-remove-x" data-id="' + escapeAttr(p.id) + '" title="حذف اللاعب">✕</button>' +
+            playerCardHtml(p, true) +
+        '</div>';
+    }
+
+    function wireLobbyRemoveButtons(container) {
+        if (!container) return;
+        container.querySelectorAll('.tw-lobby-remove-x').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                AGP.player.removePlayer(btn.getAttribute('data-id'));
+                renderLobbyPlayerGrids();
+            });
+        });
+    }
+
     function renderLobbyPlayerGrids() {
         var gridRed = el('tw-lobby-grid-red');
         var gridBlue = el('tw-lobby-grid-blue');
@@ -384,20 +401,29 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('tw-lobby-count-red').textContent = playersRed.length + ' / ' + _settings.maxTeamSize;
         el('tw-lobby-count-blue').textContent = playersBlue.length + ' / ' + _settings.maxTeamSize;
 
-        gridRed.innerHTML = playersRed.map(function (p) { return playerCardHtml(p, true); }).join('') || '<div class="tw-lobby-empty-slot"></div>';
-        gridBlue.innerHTML = playersBlue.map(function (p) { return playerCardHtml(p, true); }).join('') || '<div class="tw-lobby-empty-slot"></div>';
+        gridRed.innerHTML = playersRed.map(lobbyCardHtml).join('') || '<div class="tw-lobby-empty-slot"></div>';
+        gridBlue.innerHTML = playersBlue.map(lobbyCardHtml).join('') || '<div class="tw-lobby-empty-slot"></div>';
         fitCardNames(gridRed);
         fitCardNames(gridBlue);
+        wireLobbyRemoveButtons(gridRed);
+        wireLobbyRemoveButtons(gridBlue);
 
         var startBtn = el('tw-start-round-btn');
         if (startBtn) startBtn.disabled = !(playersRed.length && playersBlue.length);
+    }
+
+    function findPlayerById(id) {
+        var players = AGP.player.getAllPlayers();
+        for (var i = 0; i < players.length; i++) {
+            if (players[i].id === id) return players[i];
+        }
+        return null;
     }
 
     function wireCommentListenerForJoining() {
         if (_commentUnsub) return;
         _commentUnsub = AGP.events.on('stream:commentReceived', function (payload) {
             if (!_registrationOpen || !payload || typeof payload.text !== 'string' || !payload.id) return;
-            if (AGP.player.hasPlayer(payload.id)) return;
 
             var text = normalizeArabicText(payload.text);
             var kwBlue = normalizeArabicText(_settings.teamBlueKeyword);
@@ -407,7 +433,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             else if (text === kwRed) team = TEAM_RED;
             if (!team) return;
 
-            if (getTeamPlayers(team).length >= _settings.maxTeamSize) return; // الفريق مكتمل
+            var existing = findPlayerById(payload.id);
+            if (existing && existing.team === team) return; // منضم بنفس الفريق أصلاً
+
+            if (getTeamPlayers(team).length >= _settings.maxTeamSize) return; // الفريق المستهدف مكتمل
+
+            // لو منضم بفريق ثاني، يتحوّل بحرية للفريق الجديد (قبل بدء الجولة فقط)
+            if (existing) AGP.player.removePlayer(payload.id);
 
             AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, team: team });
         });
@@ -720,7 +752,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             overlay.innerHTML =
                 '<div class="tw-card-reveal-box">' +
                     '<div class="tw-card-emoji">' + emoji + '</div>' +
-                    '<div class="tw-card-value ' + (isPositive ? 'tw-value-positive' : 'tw-value-negative') + '">' + (isPositive ? '+' : '-') + magnitude + '</div>' +
+                    '<div class="tw-card-value ' + (isPositive ? 'tw-value-positive' : 'tw-value-negative') + '">' + (isPositive ? '' : '-') + magnitude + '</div>' +
                     '<div class="tw-card-effect-text">' + effectText + '</div>' +
                 '</div>';
         }

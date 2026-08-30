@@ -172,6 +172,16 @@ body.tw-active {
 .tw-vs-label { font-size: 1.7em; font-weight: 900; color: var(--tw-red); text-shadow: 0 0 14px rgba(228,37,40,0.6); }
 
 .tw-player-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tw-lobby-card-wrap { position: relative; }
+.tw-lobby-remove-x {
+    position: absolute; top: -8px; right: -8px; z-index: 2; width: 22px; height: 22px; border-radius: 50%;
+    background: #ff2d2d; color: #fff; border: 2px solid #1a0a0a; font-size: 0.75em; font-weight: 900;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+}
+/* تحسين تباين بطاقة اللاعب المشتركة (agp-player-card.js) فوق خلفيات
+   حرب الفريقين الملوّنة -- تخصيص CSS محلي فقط، بدون أي لمس للملف
+   المشترك نفسه */
+.agp-pcard { background: rgba(0,0,0,0.55) !important; border-color: rgba(255,255,255,0.3) !important; }
 .tw-player-card {
     background: #e9e6e6; border-radius: 999px; display: flex; align-items: center; justify-content: space-between;
     padding: 6px 8px 6px 14px; min-height: 46px;
@@ -269,22 +279,25 @@ body.tw-active {
 /* شريط النقاط: رفيع، ملتصق بأعلى الشاشة تحت الهيدر مباشرة، ثابت مهما
    كبرت الشاشة أو تمددت (مش تبويب/صندوق كبير زي قبل) */
 .tw-scorebar {
-    position: fixed; top: 60px; left: 0; right: 0; z-index: 9997; height: 44px;
-    display: flex; align-items: center; justify-content: center; gap: 24px;
-    background: rgba(10,5,10,0.92); border-bottom: 2px solid var(--tw-red);
+    position: fixed; top: 60px; left: 0; right: 0; z-index: 9997; height: 54px;
+    display: flex; align-items: center; justify-content: center; gap: 28px;
+    background: rgba(10,5,10,0.95); border-bottom: 2px solid var(--tw-red);
 }
-.tw-scorebar-team { display: flex; align-items: center; gap: 8px; }
+.tw-scorebar-team { display: flex; align-items: center; gap: 10px; }
 .tw-scorebar-dot { width: 10px; height: 10px; border-radius: 50%; }
 .tw-dot-blue { background: var(--tw-blue); }
 .tw-dot-red { background: var(--tw-red); }
-.tw-scorebar-name { font-size: 0.85em; font-weight: 700; color: #fff; }
-.tw-scorebar-val { font-size: 1.1em; font-weight: 900; }
-.tw-val-blue { color: var(--tw-blue); }
-.tw-val-red { color: var(--tw-red); }
-.tw-scorebar-vs { font-size: 0.8em; color: var(--tw-gold); font-weight: 800; }
+.tw-scorebar-name { font-size: 1em; font-weight: 800; color: #fff; }
+.tw-scorebar-val {
+    font-size: 1.7em; font-weight: 900; line-height: 1; padding: 3px 14px; border-radius: 8px;
+    background: rgba(255,255,255,0.1);
+}
+.tw-val-blue { color: var(--tw-blue); text-shadow: 0 0 10px rgba(19,79,190,0.6); }
+.tw-val-red { color: var(--tw-red); text-shadow: 0 0 10px rgba(228,37,40,0.6); }
+.tw-scorebar-vs { font-size: 0.9em; color: var(--tw-gold); font-weight: 900; }
 
 .tw-turn-indicator {
-    position: fixed; top: 104px; left: 0; right: 0; z-index: 9996;
+    position: fixed; top: 114px; left: 0; right: 0; z-index: 9996;
     display: flex; align-items: center; justify-content: center; gap: 8px;
     text-align: center; padding: 6px 10px; background: rgba(0,0,0,0.5);
     font-size: 0.85em; font-weight: 700;
@@ -292,7 +305,7 @@ body.tw-active {
 .tw-turn-timer { font-weight: 900; font-size: 1.2em; color: var(--tw-gold); margin-right: 8px; }
 .tw-roster-turn-label { color: var(--tw-gold); font-weight: 900; }
 
-#tw-match-screen { padding-top: 148px; padding-left: 20px; padding-right: 20px; padding-bottom: 40px; max-width: 1500px; margin: 0 auto; }
+#tw-match-screen { padding-top: 158px; padding-left: 20px; padding-right: 20px; padding-bottom: 40px; max-width: 1500px; margin: 0 auto; }
 
 /* تخطيط ثلاثي: قائمة الفريق الأزرق | الشبكة | قائمة الفريق الأحمر */
 .tw-match-body { display: flex; gap: 24px; align-items: flex-start; justify-content: center; }
