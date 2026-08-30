@@ -698,55 +698,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * نبضة خفيفة مستمرة. overflow صار visible بدل hidden حتى لا
              * يُقصّ التوهّج (ولا قصاصات confetti التي تتخطى حدود الصندوق
              * أحياناً — إصلاح فني إضافي وُجد أثناء المراجعة).
-             * ⚠️ [0.52.0] إعادة تصميم شكل البطاقة نفسها بالكامل بحسب SVG
-             * مرجعي زوَّدنا بها المستخدم بالضبط: مستطيل 300×400 (بدل مربّع
-             * 250×250)، خلفية زجاجية شبه شفافة (#656262 بشفافية 50%)، حدّ
-             * أسود 3px، وظل داخلي خفيف أعلى البطاقة (كما بملف الفلتر
-             * بالـSVG). توهّج التمرير (glow) القديم أُبقي كما هو فوق هذا
-             * كله (نفس القرار السابق، لم يُطلَب إلغاؤه). */
-            '.er-trophy-card{position:relative;width:300px;height:400px;max-width:88vw;',
-            'max-height:min(400px,74vh);box-sizing:border-box;',
-            'border-radius:15px;padding:26px 18px;display:flex;flex-direction:column;align-items:center;',
-            'justify-content:center;gap:4px;overflow:visible;background:rgba(101,98,98,0.5);',
-            'border:3px solid #000;',
-            'box-shadow:inset 0 4px 2px rgba(0,0,0,0.25),0 0 55px 14px rgba(255,255,255,0.4),0 0 120px 35px rgba(216,120,255,0.6);',
-            'animation:er-trophy-glow-pulse 2.6s ease-in-out infinite;}',
-            '@keyframes er-trophy-glow-pulse{0%,100%{box-shadow:inset 0 4px 2px rgba(0,0,0,0.25),',
-            '0 0 55px 14px rgba(255,255,255,0.4),0 0 120px 35px rgba(216,120,255,0.6);}',
-            '50%{box-shadow:inset 0 4px 2px rgba(0,0,0,0.25),',
-            '0 0 75px 22px rgba(255,255,255,0.6),0 0 150px 45px rgba(216,120,255,0.78);}}',
-            '.er-trophy-card .er-trophy-label{font-size:0.85em;font-weight:800;color:#fff;margin-bottom:10px;}',
-            // ⚠️ [0.52.0] أيقونة تاج الفائز الحقيقية (CROWN_ICON_DATA_URI) —
-            // ببطاقة الفائز فقط، فوق التسمية مباشرة.
-            '.er-trophy-crown{width:74px;height:74px;object-fit:contain;margin-bottom:2px;',
-            'filter:drop-shadow(0 3px 8px rgba(0,0,0,0.5));}',
-            // ⚠️ [0.53.0] اسم اللعبة فوق تسمية "🏆 الفائز" — ببطاقة الفائز فقط.
-            '.er-trophy-game-name{font-size:0.8em;font-weight:800;color:#e9d3ff;',
-            'text-shadow:0 1px 6px rgba(0,0,0,0.5);margin-bottom:2px;}',
-
-            '.er-ring-wrap{position:relative;width:88px;height:88px;margin:0 auto 10px;border-radius:50%;',
-            'padding:5px;box-sizing:border-box;}',
-            '.er-ring-winner{background:conic-gradient(from 0deg,#ffd400,#fff6cf,#ffd400,#c9960a,#ffd400);',
-            'box-shadow:0 0 20px rgba(255,212,0,0.55);}',
-            '.er-ring-most{background:repeating-conic-gradient(' + C_PINK + ' 0deg 18deg,' + C_PINK_DK + ' 18deg 36deg);',
-            'box-shadow:0 0 20px rgba(255,77,255,0.4);}',
-            '.er-ring-inner{width:100%;height:100%;border-radius:50%;background:#2D1932;overflow:hidden;}',
+             * ⚠️ [إصلاح مشترك] تصميم البطاقة نفسه (المستطيل 300×400
+             * الزجاجي، الحلقة الملوَّنة، التاج، النقاط، إلخ) انتقل بالكامل
+             * لملف مشترك (js/agp-player-card.js →
+             * AGP.playerCard.renderTrophyCard) بطلب صريح من صاحب المشروع،
+             * حتى تقدر أي لعبة ثانية تستخدم نفس التصميم بدون إعادة بنائه.
+             * CSS البطاقة نفسها (.agp-trophy-*) لم يعد موجوداً هنا إطلاقاً
+             * — راجع js/agp-player-card.js. بقيت هنا فقط CSS القطع
+             * المحلية البحتة (خلفية الشاشة المغبّشة، صف البطاقات، أزرار
+             * "إعادة/مباراة جديدة") + .er-ring-avatar/.er-ring-avatar--fallback
+             * (لا تزالان مستخدَمتين محلياً بمكان آخر — إعلان الإقصاء/
+             * الإرجاع وبطاقة الإنعاش العائمة، راجع ringAvatarHtml()). */
             '.er-ring-avatar{width:100%;height:100%;border-radius:50%;object-fit:cover;background:#5a2585;display:block;}',
             '.er-ring-avatar--fallback{display:flex;align-items:center;justify-content:center;',
             'color:#fff;font-weight:800;font-size:1.4em;}',
-            '.er-ring-badge{position:absolute;bottom:-2px;right:-2px;width:28px;height:28px;border-radius:50%;',
-            'display:flex;align-items:center;justify-content:center;font-size:0.95em;border:2px solid #2D1932;}',
-            '.er-ring-badge.er-badge-winner{background:#ffd400;}',
-            '.er-ring-badge.er-badge-most{background:var(--er-pink);}',
-
-            '.er-trophy-name{font-size:1.15em;font-weight:900;color:#fff;}',
-            '.er-trophy-count{color:#e9d3ff;font-size:0.85em;margin-top:4px;}',
-
-            /* ---- عرض النقاط المكتسبة ---- */
-            '.er-trophy-points{margin-top:10px;font-size:0.85em;line-height:1.4;}',
-            '.er-trophy-points.er-points-earned{color:#ffd400;font-weight:800;}',
-            '.er-trophy-points .er-points-sub{display:block;color:#e9d3ff;font-weight:500;font-size:0.85em;margin-top:2px;}',
-            '.er-trophy-points.er-points-noaccount{color:#e9d3ff;font-size:0.8em;}',
 
             '.er-winner-actions{display:flex;gap:10px;flex-wrap:wrap;}',
             '.er-btn-secondary{flex:1;min-width:180px;padding:12px;border-radius:999px;border:none;',
@@ -2130,16 +2095,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *  3) الحساب غير مرتبط/غير موثَّق (النتيجة نجحت لكن بدون سطر لهذا
      *     اللاعب) → "لازم يسوي حساب" تلقائياً.
      */
+    // ⚠️ [إصلاح مشترك] أسماء الكلاسات هنا صارت agp-trophy-points/
+    // agp-points-* (بدل er-trophy-points/er-points-* القديمة) لتطابق
+    // التنسيق المشترك الجديد المُعرَّف بـjs/agp-player-card.js (راجع
+    // AGP.playerCard.renderTrophyCard) — هذا HTML يُمرَّر لها عبر
+    // opts.pointsHtml، فلازم يستخدم نفس أسماء كلاساتها بالضبط.
     function pointsHtmlFor(pointsResult, player) {
         if (!pointsResult) {
-            return '<div class="er-trophy-points er-points-noaccount">تعذّر جلب النقاط الآن</div>';
+            return '<div class="agp-trophy-points agp-points-noaccount">تعذّر جلب النقاط الآن</div>';
         }
         var awarded = findAwardedFor(pointsResult, player);
         if (awarded) {
-            return '<div class="er-trophy-points er-points-earned">+' + awarded.added + ' نقطة' +
-                '<span class="er-points-sub">تظهر في بروفايلك</span></div>';
+            return '<div class="agp-trophy-points agp-points-earned">+' + awarded.added + ' نقطة' +
+                '<span class="agp-points-sub">تظهر في بروفايلك</span></div>';
         }
-        return '<div class="er-trophy-points er-points-noaccount">لازم يسوي حساب عشان تظهر نقاطك بالبروفايل</div>';
+        return '<div class="agp-trophy-points agp-points-noaccount">لازم يسوي حساب عشان تظهر نقاطك بالبروفايل</div>';
     }
 
     /**
@@ -2157,38 +2127,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             : '<div class="er-ring-avatar er-ring-avatar--fallback">' + escapeHtml(initials) + '</div>';
     }
 
-    function ringHtml(player, kind) {
-        var badgeIcon = kind === 'winner' ? '👑' : '⚔️';
-        return '<div class="er-ring-wrap er-ring-' + kind + '">' +
-            '<div class="er-ring-inner">' + ringAvatarHtml(player) + '</div>' +
-            '<div class="er-ring-badge er-badge-' + kind + '">' + badgeIcon + '</div>' +
-            '</div>';
-    }
-
-    function trophyCardHtml(player, opts) {
-        opts = opts || {};
-        // ⚠️ [0.52.0] تاج ذهبي زخرفي فوق حلقة صورة الفائز فقط (opts.showCrown)
-        // — الأيقونة الحقيقية المزوَّدة من المستخدم (CROWN_ICON_DATA_URI)،
-        // لا تظهر ببطاقة "الأكثر إقصاءً".
-        var crownHtml = opts.showCrown
-            ? '<img class="er-trophy-crown" src="' + CROWN_ICON_DATA_URI + '" alt="">'
-            : '';
-        // ⚠️ [0.53.0] طلب صريح: اسم اللعبة "روليت الإقصاء" فوق تسمية
-        // "🏆 الفائز" مباشرة — ببطاقة الفائز فقط (نفس شرط opts.showCrown،
-        // أكّد المستخدم الاثنين معاً خاصّان بهذي البطاقة تحديداً).
-        var gameNameHtml = opts.showCrown
-            ? '<div class="er-trophy-game-name">روليت الإقصاء</div>'
-            : '';
-        return '<div class="er-trophy-card ' + (opts.cls || '') + '"' + (opts.cardId ? ' id="' + opts.cardId + '"' : '') + '>' +
-            crownHtml +
-            gameNameHtml +
-            '<div class="er-trophy-label">' + opts.label + '</div>' +
-            ringHtml(player, opts.kind) +
-            '<div class="er-trophy-name">' + escapeHtml(playerLabel(player)) + '</div>' +
-            (opts.extra || '') +
-            (opts.pointsHtml || '') +
-            '</div>';
-    }
+    // ⚠️ [إصلاح مشترك] ringHtml()/trophyCardHtml() المحليتان القديمتان
+    // (بطاقة "300×400 زجاجية + حلقة ملوَّنة") حُذفتا من هنا بالكامل —
+    // انتقل نفس التصميم لدالة مشتركة AGP.playerCard.renderTrophyCard()
+    // بـjs/agp-player-card.js، تستدعيها renderWinnerScreen() أدناه
+    // مباشرة. ringAvatarHtml() أعلاه أُبقيت كما هي (لا تزال مستخدَمة
+    // بمكان آخر — إعلان الإقصاء/الإرجاع وبطاقة الإنعاش العائمة).
 
     function computeMostEliminations() {
         var bestId = null, bestCount = 0;
@@ -2241,18 +2185,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var mostElim = computeMostEliminations();
 
+        // ⚠️ [إصلاح مشترك] بطاقتا الفائز/الأكثر إقصاءً تُبنَيان الآن عبر
+        // AGP.playerCard.renderTrophyCard() المشتركة (js/agp-player-card.js)
+        // بدل trophyCardHtml() المحلية المحذوفة — نفس المعطيات بالضبط
+        // (كلاس، تسمية، نوع الحلقة، id، تاج+اسم لعبة لبطاقة الفائز فقط،
+        // نقاط) لضمان نفس الشكل البصري 100% بعد النقل.
         var cardsHtml = '';
         if (winner) {
-            cardsHtml += trophyCardHtml(winner, {
+            cardsHtml += AGP.playerCard.renderTrophyCard(winner, {
                 cls: 'er-trophy-winner', label: '🏆 الفائز', kind: 'winner', cardId: 'er-trophy-card-winner',
-                showCrown: true,
+                showCrown: true, crownIconDataUri: CROWN_ICON_DATA_URI, gameName: 'روليت الإقصاء',
                 pointsHtml: pointsHtmlFor(pointsResult, winner)
             });
         }
         if (mostElim) {
-            cardsHtml += trophyCardHtml(mostElim.player, {
+            cardsHtml += AGP.playerCard.renderTrophyCard(mostElim.player, {
                 cls: 'er-trophy-most', label: '⚔️ الأكثر إقصاءً', kind: 'most', cardId: 'er-trophy-card-most',
-                extra: '<div class="er-trophy-count">' + mostElim.count + ' إقصاء</div>',
+                extra: '<div class="agp-trophy-extra">' + mostElim.count + ' إقصاء</div>',
                 pointsHtml: pointsHtmlFor(pointsResult, mostElim.player)
             });
         }
@@ -2271,7 +2220,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         box.innerHTML =
             '<div id="er-winner-box">' +
             '<h2>🏁 انتهت المباراة!</h2>' +
-            '<div class="er-trophy-cards">' + (cardsHtml || '<p class="er-trophy-label">بدون فائز</p>') + '</div>' +
+            '<div class="er-trophy-cards">' + (cardsHtml || '<p class="agp-trophy-label">بدون فائز</p>') + '</div>' +
             '<div class="er-winner-actions">' +
             '<button class="er-btn-secondary" id="er-replay-same-btn">🔄 إعادة المباراة بنفس اللاعبين</button>' +
             '<button class="er-btn-secondary" id="er-new-match-btn">🆕 بدء مباراة جديدة</button>' +
