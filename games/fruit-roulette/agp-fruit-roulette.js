@@ -153,6 +153,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _alive = [];              // لاعبو المباراة الحاليون (كائنات AGP: id/name/avatarUrl)
     var _eliminated = [];         // [{ player }] مُقصَون قابلون للإنعاش بالدعم
     var _giftReviveCounts = {};   // player.id -> عدد مرات الإنعاش المستخدَمة (طول المباراة)
+
+    // ⚠️ [0.66.0] مهلة إضافية قبل إعلان الفائز نهائياً عند آخر إقصاء ممكن
+    // ينهي المباراة — تعطي فرصة حقيقية لهدية إنعاش "بالطريق" (وصلت فعلياً
+    // من المُرسِل لكن لسا ما وصلت/انعالجت عندنا بسبب تأخير شبكة/تيك توك
+    // طبيعي) تنقذ آخر لاعب مُقصى قبل ما تُقفَل المباراة. راجع تعليق
+    // checkGameOver() أدناه للتفاصيل الكاملة.
+    var FINAL_ELIMINATION_GIFT_GRACE_MS = 6000;
     var _isSpinning = false;
     var _currentRotation = 0;
     var _muted = false;
@@ -993,7 +1000,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function wireGiftListener() {
         _giftUnsub = AGP.events.on('stream:giftReceived', function (payload) {
             var settings = liveSettings();
-            if (!_matchActive || !settings.giftRevivalEnabled) return;
+            if (!settings.giftRevivalEnabled) return;
             if (!payload || !payload.giftName) return;
             if (payload.giftName !== settings.giftRevivalGiftName) return;
 
@@ -1001,6 +1008,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 return e.player.id === payload.id || e.player.name === payload.name;
             })[0];
             if (!entry) return;
+
+            // ⚠️ [0.66.0] المباراة خلصت فعلياً (حتى بعد مهلة
+            // FINAL_ELIMINATION_GIFT_GRACE_MS الجديدة بـcheckGameOver) قبل
+            // ما توصل هذي الهدية — نوضّح للمضيف إنها وصلت متأخر بدل ما
+            // تختفي بصمت تام بدون أي أثر.
+            if (!_matchActive) {
+                showToast('🎁 وصلت هدية إنعاش لـ' + playerLabel(entry.player) + ' بعد ما خلصت المباراة');
+                return;
+            }
 
             var maxCount = settings.giftRevivalMaxCount || 1;
             var usedCount = _giftReviveCounts[entry.player.id] || 0;
@@ -1054,7 +1070,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     /* ============ نهاية اللعبة / الفائز ============ */
     function checkGameOver() {
         if (_alive.length === 1) {
-            endMatch(_alive[0]);
+            // ⚠️ [0.66.0] هذا الإقصاء قد يكون الأخير (سينهي المباراة). قبل
+            // هذا الإصلاح كان endMatch() يُستدعى فوراً بلا أي مهلة — أي
+            // هدية إنعاش "بالطريق" (وصلت فعلياً من المُرسِل لكن لسا ما
+            // وصلت عندنا بسبب تأخير شبكة/تيك توك طبيعي) كانت تضيع حتماً
+            // بصفر فرصة (استدعاء متزامن كامل، بلا أي نقطة انتظار إطلاقاً).
+            // الآن ننتظر FINAL_ELIMINATION_GIFT_GRACE_MS أولاً — مستمع
+            // الهدايا (wireGiftListener) يبقى شغّالاً طول هذي المهلة بلا
+            // أي تعديل عليه (المباراة لسا _matchActive = true)، فلو وصلت
+            // هدية إنعاش صحيحة لنفس اللاعب المُقصى للتو خلالها،
+            // revivePlayerByEntry الموجودة أصلاً ترجعه تلقائياً لـ_alive.
+            // نعيد فحص _alive.length هنا بعد المهلة: لو رجع لاعب (صار
+            // العدد أكثر من 1)، لا نسوي شيء — اللعبة تكمل بحالتها الحالية
+            // عادي؛ لو لا، تُعلَن النتيجة كما كانت من قبل بالضبط.
+            window.setTimeout(function () {
+                if (_alive.length === 1) {
+                    endMatch(_alive[0]);
+                }
+            }, FINAL_ELIMINATION_GIFT_GRACE_MS);
         } else if (_alive.length === 0) {
             winnerStrip.classList.remove('show');
         }
