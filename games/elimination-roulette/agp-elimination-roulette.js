@@ -2399,23 +2399,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var mostElim = computeMostEliminations();
 
-        // ⚠️ [إصلاح مشترك] بطاقتا الفائز/الأكثر إقصاءً تُبنَيان الآن عبر
-        // AGP.playerCard.renderTrophyCard() المشتركة (js/agp-player-card.js)
-        // بدل trophyCardHtml() المحلية المحذوفة — نفس المعطيات بالضبط
-        // (كلاس، تسمية، نوع الحلقة، id، تاج+اسم لعبة لبطاقة الفائز فقط،
-        // نقاط) لضمان نفس الشكل البصري 100% بعد النقل.
+        // ⚠️ [تثبيت الشكل النهائي — طلب صريح 2026] بطاقتا الفائز/الأكثر
+        // إقصاءً تُبنَيان عبر AGP.playerCard.renderTrophyCard() المشتركة
+        // (js/agp-player-card.js) — بدون label/gameName/extra بعد الآن،
+        // البطاقة صارت: تاج (فائز فقط) ← صورة ← اسم ← فراغ ← نقاط فقط.
+        // نفس المعلومة (اسم اللعبة + مين فاز) انتقلت لسطر واحد فوق صف
+        // البطاقتين (h2 أدناه) بدل تكرارها داخل كل بطاقة.
         var cardsHtml = '';
         if (winner) {
             cardsHtml += AGP.playerCard.renderTrophyCard(winner, {
-                cls: 'er-trophy-winner', label: '🏆 الفائز', kind: 'winner', cardId: 'er-trophy-card-winner',
-                showCrown: true, crownIconDataUri: CROWN_ICON_DATA_URI, gameName: 'روليت الإقصاء',
+                cls: 'er-trophy-winner', kind: 'winner', cardId: 'er-trophy-card-winner',
+                showCrown: true, crownIconDataUri: CROWN_ICON_DATA_URI,
                 pointsHtml: pointsHtmlFor(pointsResult, winner)
             });
         }
         if (mostElim) {
             cardsHtml += AGP.playerCard.renderTrophyCard(mostElim.player, {
-                cls: 'er-trophy-most', label: '⚔️ الأكثر إقصاءً', kind: 'most', cardId: 'er-trophy-card-most',
-                extra: '<div class="agp-trophy-extra">' + mostElim.count + ' إقصاء</div>',
+                cls: 'er-trophy-most', kind: 'most', cardId: 'er-trophy-card-most',
                 pointsHtml: pointsHtmlFor(pointsResult, mostElim.player)
             });
         }
@@ -2433,17 +2433,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         overlay.classList.add('er-winner-backdrop');
         box.innerHTML =
             '<div id="er-winner-box">' +
-            '<h2>🏁 انتهت المباراة!</h2>' +
-            '<div class="er-trophy-cards">' + (cardsHtml || '<p class="agp-trophy-label">بدون فائز</p>') + '</div>' +
+            '<h2>🏁 انتهت المباراة .. الشخص الرهيب الي فاز بلعبة "' + escapeHtml(GAME_NAME) + '"</h2>' +
+            '<div class="er-trophy-cards">' + (cardsHtml || '<p style="color:#fff;font-weight:800;">بدون فائز</p>') + '</div>' +
             '<div class="er-winner-actions">' +
-            '<button class="er-btn-secondary" id="er-replay-same-btn">🔄 إعادة المباراة بنفس اللاعبين</button>' +
+            '<button class="er-btn-secondary" id="er-home-btn">⬅️ رجوع لمنصة الألعاب</button>' +
             '<button class="er-btn-secondary" id="er-new-match-btn">🆕 بدء مباراة جديدة</button>' +
+            '<button class="er-btn-secondary" id="er-replay-same-btn">🔄 إعادة المباراة بنفس اللاعبين</button>' +
             '</div></div>';
 
         document.getElementById('er-replay-same-btn').onclick = handleReplaySamePlayers;
         document.getElementById('er-new-match-btn').onclick = function () {
             AGP.gameManager.resetSession(); // يبث game:reset — يستدعي onDestroy() تلقائياً
             window.location.reload();
+        };
+        // ⚠️ زر "رجوع لمنصة الألعاب" — يقفل اللعبة بالكامل، نفس سلوك
+        // زر 🏠 بالهيدر الثابت بالضبط (agp-game-shell.js:
+        // injectPersistentHeader → agp-header-home-btn)، بدل تكرار منطق
+        // التنقّل (homeUrl) هنا محلياً.
+        document.getElementById('er-home-btn').onclick = function () {
+            var headerHomeBtn = document.getElementById('agp-header-home-btn');
+            if (headerHomeBtn) headerHomeBtn.click();
         };
 
         overlay.style.display = 'flex';
