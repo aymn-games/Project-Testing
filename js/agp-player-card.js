@@ -273,6 +273,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     };
     var DEFAULT_TEMPLATE_KEY = 'frame-founder.png'; // احتياط دفاعي فقط — إطار غير موجود بالجدول يظهر بقياسات founder بدل ما ينكسر كلياً
 
+    // ⚠️ [تثبيت بطاقة الفائز — تكتمل تلقائياً لأي لعبة] تاج افتراضي مشترك
+    // (نفس أيقونة CROWN_ICON_DATA_URI المنسوخة سابقاً محلياً بروليت
+    // الإقصاء فقط). قبل هذا كانت كل لعبة تحتاج تجيب أيقونة التاج بنفسها
+    // وتمررها عبر opts.crownIconDataUri — لو نسيتها، showCrown:true ما
+    // يطلع تاجاً (فشل صامت). الآن renderTrophyCard تستخدم هذا الافتراضي
+    // تلقائياً لو اللعبة ما مرّرت أيقونة خاصة بها، فأي لعبة تستدعي
+    // showCrown:true تضمن بطاقة كاملة دايماً بدون أي إعداد إضافي.
+    var DEFAULT_CROWN_DATA_URI = 'data:image/png;base64,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';
+
     function getTemplate(imageFilename) {
         return FRAME_TEMPLATES[imageFilename] || FRAME_TEMPLATES[DEFAULT_TEMPLATE_KEY];
     }
@@ -310,9 +319,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-pcard-name-basic{display:flex;align-items:center;justify-content:flex-start;',
             'box-sizing:border-box;font-weight:700;color:#f3eefc;background:rgba(255,255,255,0.1);',
             'border:1px solid rgba(216,120,255,0.32);border-radius:999px;position:relative;z-index:1;',
-            'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            'overflow:hidden;}',
+            /* ⚠️ [إصلاح جذري — "تحرّك الأسماء"] السلايد ما عاد يُطبَّق على
+             * .agp-pcard-name-basic نفسها (اللوح/الصندوق بخلفيته وحدوده) —
+             * ذاك كان يحرّك الصندوق كاملاً بصرياً (transform لا يتقيّد
+             * بـoverflow:hidden لعنصره هو نفسه، فقط يقصّ أبناءه)، فيتحرّك
+             * اللوح فعلياً يمين/يسار ويتراكب مع الأفاتار/البطاقة المجاورة
+             * له بالصف (بالضبط الخلل اللي ظهر بالفيديو). الحل: نغلّف النص
+             * بعنصر داخلي (.agp-pcard-name-inner) والسلايد يتحرّك هو فقط،
+             * محصوراً داخل صندوق اللوح الثابت (overflow:hidden) اللي ما
+             * يتحرّك أبداً — نفس الأسلوب المطبَّق محلياً مسبقاً بلعبتي
+             * الكراسي الموسيقية (mc-name-inner) والروليت الروسي
+             * (rr-name-inner)، الآن معمَّم بالملف المشترك لكل الألعاب. */
+            '.agp-pcard-name-inner{display:inline-block;white-space:nowrap;}',
             '@keyframes agpPcardSlide{0%,15%{transform:translateX(0);}45%,55%{transform:translateX(var(--pcard-slide-dist));}85%,100%{transform:translateX(0);}}',
-            '.agp-pcard-name-basic.agp-pcard-marquee{animation:agpPcardSlide 4.5s ease-in-out infinite;}',
+            '.agp-pcard-name-inner.agp-pcard-marquee{animation:agpPcardSlide 4.5s ease-in-out infinite;}',
 
             /* ---- البطاقة المؤطَّرة — ⚠️ [إصلاح جذري لتفاوت الارتفاع]
              * كانت أصلاً: عرض ثابت = نفس عرض البطاقة العادية، والارتفاع
@@ -337,8 +358,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'z-index:2;pointer-events:none;}',
             '.agp-pcard-tpl-name{position:absolute;z-index:3;',
             'display:flex;align-items:center;justify-content:center;overflow:hidden;',
-            'font-weight:800;color:#fff;text-align:center;line-height:1.1;white-space:nowrap;',
-            'text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.6);box-sizing:border-box;}',
+            'font-weight:800;color:#fff;text-align:center;line-height:1.1;',
+            'text-shadow:0 1px 2px rgba(0,0,0,.6);box-sizing:border-box;}',
 
             /* ==================================================================
              * ⚠️ [منقول من games/elimination-roulette/agp-elimination-roulette.js]
@@ -351,10 +372,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * هذا الملف المشترك، وتجنّباً لأي تعارض مع كلاسات أي لعبة).
              * راجع AGP.playerCard.renderTrophyCard أدناه للاستخدام.
              * ================================================================== */
-            '.agp-trophy-card{position:relative;width:300px;height:400px;max-width:88vw;',
-            'max-height:min(400px,74vh);box-sizing:border-box;',
-            'border-radius:15px;padding:26px 18px;display:flex;flex-direction:column;align-items:center;',
-            'justify-content:center;gap:4px;overflow:visible;background:rgba(101,98,98,0.5);',
+            /* ⚠️ [تثبيت الشكل النهائي — طلب صريح] مقاس البطاقة 250×300 (كان
+             * 300×400)، وترتيب المحتوى صار: تاج → صورة اللاعب (الحلقة) →
+             * الاسم → فراغ بسيط → النقاط. "التسمية" النصية (🏆 الفائز/
+             * ⚔️ الأكثر إقصاءً) واسم اللعبة داخل البطاقة أُلغيا كلياً —
+             * نفس المعلومة صارت بسطر واحد فوق كل بطاقات الفائزين (تبنيه كل
+             * لعبة بنفسها فوق .agp-trophy-cards، مثل "🏁 انتهت المباراة ..
+             * الشخص الرهيب الي فاز بلعبة "اسم اللعبة""), فما عاد يحتاج
+             * تكرارها داخل كل بطاقة. */
+            '.agp-trophy-card{position:relative;width:250px;height:300px;max-width:88vw;',
+            'max-height:min(300px,74vh);box-sizing:border-box;',
+            'border-radius:15px;padding:20px 14px;display:flex;flex-direction:column;align-items:center;',
+            'justify-content:center;overflow:visible;background:rgba(101,98,98,0.5);',
             'border:3px solid #000;',
             'box-shadow:inset 0 4px 2px rgba(0,0,0,0.25),0 0 55px 14px rgba(255,255,255,0.4),0 0 120px 35px rgba(216,120,255,0.6);',
             'animation:agpTrophyGlowPulse 2.6s ease-in-out infinite;}',
@@ -362,12 +391,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '0 0 55px 14px rgba(255,255,255,0.4),0 0 120px 35px rgba(216,120,255,0.6);}',
             '50%{box-shadow:inset 0 4px 2px rgba(0,0,0,0.25),',
             '0 0 75px 22px rgba(255,255,255,0.6),0 0 150px 45px rgba(216,120,255,0.78);}}',
-            '.agp-trophy-label{font-size:0.85em;font-weight:800;color:#fff;margin-bottom:10px;}',
-            '.agp-trophy-crown{width:74px;height:74px;object-fit:contain;margin-bottom:2px;',
+            '.agp-trophy-crown{width:58px;height:58px;object-fit:contain;margin-bottom:6px;',
             'filter:drop-shadow(0 3px 8px rgba(0,0,0,0.5));}',
-            '.agp-trophy-game-name{font-size:0.8em;font-weight:800;color:#e9d3ff;',
-            'text-shadow:0 1px 6px rgba(0,0,0,0.5);margin-bottom:2px;}',
-            '.agp-trophy-ring-wrap{position:relative;width:88px;height:88px;margin:0 auto 10px;border-radius:50%;',
+            '.agp-trophy-ring-wrap{position:relative;width:84px;height:84px;margin:0 auto 10px;border-radius:50%;',
             'padding:5px;box-sizing:border-box;}',
             '.agp-trophy-ring-winner{background:conic-gradient(from 0deg,#ffd400,#fff6cf,#ffd400,#c9960a,#ffd400);',
             'box-shadow:0 0 20px rgba(255,212,0,0.55);}',
@@ -381,9 +407,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'display:flex;align-items:center;justify-content:center;font-size:0.95em;border:2px solid #2D1932;}',
             '.agp-trophy-ring-badge.agp-trophy-badge-winner{background:#ffd400;}',
             '.agp-trophy-ring-badge.agp-trophy-badge-most{background:#ff4dff;}',
-            '.agp-trophy-name{font-size:1.15em;font-weight:900;color:#fff;}',
-            '.agp-trophy-extra{color:#e9d3ff;font-size:0.85em;margin-top:4px;}',
-            '.agp-trophy-points{margin-top:10px;font-size:0.85em;line-height:1.4;}',
+            /* ⚠️ margin-bottom هنا هو "الفراغ البسيط" المطلوب بين الاسم
+             * والنقاط (بدل gap عام على البطاقة كلها، حتى ما يفرّق التاج/
+             * الحلقة عن بعض بلا داعي). */
+            '.agp-trophy-name{font-size:1.1em;font-weight:900;color:#fff;margin-bottom:14px;}',
+            '.agp-trophy-extra{color:#e9d3ff;font-size:0.85em;margin-top:-8px;margin-bottom:8px;}',
+            '.agp-trophy-points{font-size:0.85em;line-height:1.4;text-align:center;}',
             '.agp-trophy-points.agp-points-earned{color:#ffd400;font-weight:800;}',
             '.agp-trophy-points .agp-points-sub{display:block;color:#e9d3ff;font-weight:500;font-size:0.85em;margin-top:2px;}',
             '.agp-trophy-points.agp-points-noaccount{color:#e9d3ff;font-size:0.8em;}'
@@ -490,7 +519,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         return '<span class="agp-pcard' + (opts && opts.outClass ? ' ' + opts.outClass : '') + '"' + outerStyle + '>' +
             avatarHtml +
-            '<span class="agp-pcard-name-basic" style="' + pillStyle + '" data-agp-pcard-name="1">' + escapeHtml(name) + '</span>' +
+            '<span class="agp-pcard-name-basic" style="' + pillStyle + '" data-agp-pcard-name="1">' +
+            '<span class="agp-pcard-name-inner">' + escapeHtml(name) + '</span>' +
+            '</span>' +
             '</span>';
     }
 
@@ -545,7 +576,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return '<span class="agp-pcard-tpl' + (opts && opts.outClass ? ' ' + opts.outClass : '') + '" style="' + wrapStyle + '">' +
             avatarHtml +
             '<span class="agp-pcard-tpl-frame-img" style="' + frameImgStyle + '"></span>' +
-            '<span class="agp-pcard-tpl-name" data-agp-pcard-name="1" style="' + nameStyle + '">' + escapeHtml(name) + '</span>' +
+            '<span class="agp-pcard-tpl-name" data-agp-pcard-name="1" style="' + nameStyle + '">' +
+            '<span class="agp-pcard-name-inner">' + escapeHtml(name) + '</span>' +
+            '</span>' +
             '</span>';
     }
 
@@ -594,39 +627,51 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
          */
         fitAllNames: function (rootEl) {
             if (!rootEl || typeof rootEl.querySelectorAll !== 'function') return;
+            // ⚠️ [إصلاح جذري — "تحرّك الأسماء" باللوبي وبقوائم اللاعبين]
+            // node هنا هو صندوق اللوح الثابت (الخلفية/الحدود/الحجم —
+            // data-agp-pcard-name="1")، ما يتحرّك أبداً ويبقى overflow:hidden
+            // (قصّاص/إطار ثابت). inner هو الامتداد الفعلي للنص بداخله —
+            // هو فقط من يتحرّك (transform) لو فاض النص عن عرض الصندوق،
+            // بالضبط زي شريط الأخبار (marquee) الحقيقي. قبل هذا الإصلاح
+            // كان الـtransform يُطبَّق على node نفسه (الصندوق)، فيتحرّك
+            // اللوح كاملاً بصرياً ويتراكب مع العناصر المجاورة له بالصف —
+            // هذا كان السبب الجذري الفعلي لمشكلة "تحرّك أسماء اللاعبين"
+            // (تكرّرت بأكثر من لعبة لأن الكل يستخدم نفس هذا الملف المشترك).
             var nodes = rootEl.querySelectorAll('[data-agp-pcard-name="1"]');
             for (var i = 0; i < nodes.length; i++) {
                 var node = nodes[i];
-                node.classList.remove('agp-pcard-marquee');
-                node.style.removeProperty('--pcard-slide-dist');
-                var overflow = node.scrollWidth - node.clientWidth;
+                var inner = node.querySelector('.agp-pcard-name-inner');
+                if (!inner) continue; // بطاقة بتركيب قديم غير متوقَّع — تجاهل بأمان
+                inner.classList.remove('agp-pcard-marquee');
+                inner.style.removeProperty('--pcard-slide-dist');
+                var overflow = inner.scrollWidth - node.clientWidth;
                 if (overflow > 2) {
-                    node.style.setProperty('--pcard-slide-dist', '-' + overflow + 'px');
-                    node.classList.add('agp-pcard-marquee');
+                    inner.style.setProperty('--pcard-slide-dist', '-' + overflow + 'px');
+                    inner.classList.add('agp-pcard-marquee');
                 }
             }
         },
 
         /**
-         * ⚠️ [منقول من games/elimination-roulette/agp-elimination-roulette.js]
-         * بطاقة "فائز/تتويج" زجاجية (300×400، خلفية شبه شفافة + توهّج
-         * نابض) — بُنيت أول مرة محلياً بلعبة روليت الإقصاء ([0.52.0]/
-         * [0.53.0])، ونُقلت هنا لتصبح مشتركة لكل الألعاب بطلب صريح من
-         * صاحب المشروع، بدل تكرار نفس الكود بكل لعبة على حدة. القيم
-         * البصرية (الأبعاد/الألوان/التوهّج) منسوخة حرفياً كما هي — لا أي
-         * تغيير تصميمي بهذا النقل. أي لعبة تستدعيها مباشرة بدون أي بناء
-         * إضافي — راجع مثال حقيقي بـ renderWinnerScreen() في
-         * games/elimination-roulette/agp-elimination-roulette.js.
+         * ⚠️ [تثبيت الشكل النهائي — طلب صريح 2026] بطاقة "فائز/تتويج"
+         * زجاجية مشتركة، 250×300، بترتيب ثابت من فوق لتحت: تاج (لو
+         * showCrown) ← صورة اللاعب (حلقة ملوَّنة) ← الاسم ← فراغ بسيط ←
+         * النقاط. النص التوضيحي ("🏆 الفائز"/"⚔️ الأكثر إقصاءً" واسم
+         * اللعبة) أُلغي من داخل البطاقة نفسها — صار مسؤولية اللعبة
+         * المستدعية تعرضه بسطر واحد فوق صف البطاقات كلها (مثال:
+         * "🏁 انتهت المباراة .. الشخص الرهيب الي فاز بلعبة "اسم اللعبة"")
+         * بدل تكراره داخل كل بطاقة على حدة. أصل التصميم كان محلياً بلعبة
+         * روليت الإقصاء، نُقل هنا ليصبح مشتركاً لكل الألعاب — أي لعبة
+         * تستدعيه مباشرة بدون أي بناء إضافي، راجع مثال حقيقي بـ
+         * renderWinnerScreen() في games/elimination-roulette/agp-elimination-roulette.js.
          *
          * @param {Object} player - كائن اللاعب (id, name, avatarUrl?)
          * @param {Object} [opts]
          * @param {string} [opts.kind='winner'] - 'winner' (حلقة ذهبية دوّارة + شارة 👑) أو 'most' (حلقة وردية متقطّعة + شارة ⚔️ افتراضياً) — أي قيمة أخرى تحتاج CSS إضافي محلي من اللعبة نفسها لتلوين الحلقة/الشارة
          * @param {string} [opts.badgeIcon] - استبدال أيقونة الشارة الافتراضية (👑/⚔️)
-         * @param {string} [opts.label] - نص التسمية أعلى الحلقة (مثلاً '🏆 الفائز') — بدون تسمية لو لم يُمرَّر
-         * @param {boolean} [opts.showCrown=false] - أظهر تاجاً + اسم اللعبة أعلى البطاقة (عادة لبطاقة الفائز الرئيسية فقط)
-         * @param {string} [opts.crownIconDataUri] - data URI لصورة التاج (كل لعبة توفّر أيقونتها الخاصة عبر هذا الحقل؛ بدون قيمة = بدون تاج حتى لو showCrown=true)
-         * @param {string} [opts.gameName] - اسم اللعبة المعروض تحت التاج مباشرة (يظهر فقط مع showCrown)
-         * @param {string} [opts.extra] - HTML إضافي حر يُعرض تحت الاسم (مثلاً عدد مرات الإقصاء) — استخدم كلاس agp-trophy-extra للتنسيق الموحَّد
+         * @param {boolean} [opts.showCrown=false] - أظهر تاجاً أعلى البطاقة (عادة لبطاقة الفائز الرئيسية فقط)
+         * @param {string} [opts.crownIconDataUri] - data URI لصورة تاج مخصَّصة (اختياري) — لو ما مُرِّرت وshowCrown=true، تُستخدَم أيقونة تاج افتراضية مشتركة (DEFAULT_CROWN_DATA_URI) تلقائياً، فأي لعبة تضمن بطاقة كاملة بدون إعداد إضافي
+         * @param {string} [opts.extra] - HTML إضافي حر (اختياري) يُعرض بين الاسم والنقاط — استخدم كلاس agp-trophy-extra للتنسيق الموحَّد
          * @param {string} [opts.pointsHtml] - HTML جاهز لعرض النقاط (كل لعبة تبنيه بنفسها حسب منطق نقاطها/حسابها الخاص) — استخدم كلاسات agp-trophy-points/agp-points-earned/agp-points-sub/agp-points-noaccount للتنسيق الموحَّد
          * @param {string} [opts.cls] - كلاس إضافي على عنصر البطاقة نفسه
          * @param {string} [opts.cardId] - id على عنصر البطاقة (مفيد لاستهداف تأثير احتفالي مثل confetti)
@@ -637,11 +682,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             opts = opts || {};
             var kind = opts.kind || 'winner';
             var badgeIcon = opts.badgeIcon || (kind === 'winner' ? '👑' : '⚔️');
-            var crownHtml = (opts.showCrown && opts.crownIconDataUri)
-                ? '<img class="agp-trophy-crown" src="' + opts.crownIconDataUri + '" alt="">'
-                : '';
-            var gameNameHtml = (opts.showCrown && opts.gameName)
-                ? '<div class="agp-trophy-game-name">' + escapeHtml(opts.gameName) + '</div>'
+            var crownHtml = opts.showCrown
+                ? '<img class="agp-trophy-crown" src="' + (opts.crownIconDataUri || DEFAULT_CROWN_DATA_URI) + '" alt="">'
                 : '';
             var ringHtml = '<div class="agp-trophy-ring-wrap agp-trophy-ring-' + kind + '">' +
                 '<div class="agp-trophy-ring-inner">' + trophyRingAvatarHtml(player) + '</div>' +
@@ -650,8 +692,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var name = (player && (player.name || player.id)) || '—';
             return '<div class="agp-trophy-card' + (opts.cls ? ' ' + opts.cls : '') + '"' + (opts.cardId ? ' id="' + opts.cardId + '"' : '') + '>' +
                 crownHtml +
-                gameNameHtml +
-                (opts.label ? '<div class="agp-trophy-label">' + opts.label + '</div>' : '') +
                 ringHtml +
                 '<div class="agp-trophy-name">' + escapeHtml(name) + '</div>' +
                 (opts.extra || '') +
