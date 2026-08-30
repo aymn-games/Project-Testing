@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>منح الإطارات — AGP</title>
+<link rel="stylesheet" href="dashboard-core/css/style.css">
+<link rel="stylesheet" href="auth/auth.css">
+<!--
+  ==========================================================================
+  [إضافة جديدة] شاشة منح إطارات مستقلة — لا تعدّل أي شيء بـadmin-settings.html
+  ولا بأي ملف مشترك. تعرض فقط (قراءة) نفس بيانات adminGetCollectiblesCatalog
+  الموجودة أصلاً (كتالوج + إطارات حصرية)، وتستخدم بالضبط نفس استدعاءات
+  adminGrantFrame/adminRevokeFrame الموجودة أصلاً بـauth-client.js دون أي
+  تعديل عليها.
+
+  التصنيف لـ7 تبويبات يتم بالكامل على الواجهة فقط (front-end)، بقراءة بادئة
+  اسم ملف كل إطار (image_filename) — بدون أي حقل جديد بقاعدة البيانات:
+    frame-club-*      → نوادي
+    frame-country-*   → دول خليجية والسعودية
+    frame-general-*   → عام
+    frame-girls-*     → بنات
+    frame-boys-*      → عيال
+    frame-rare-*      → نادرة
+    أي شي غير مطابق (الإطارات الأساسية القديمة: founder/streamer/... )
+                      → أخرى (كتالوج أساسي)
+  أي إطار جديد يُرفَع مستقبلاً باسم يطابق أحد الأنماط أعلاه يترتب بتبويبه
+  تلقائياً، بدون أي تعديل على هذا الملف.
+  ==========================================================================
+-->
+<style>
+  .gf-layout { display: flex; flex-direction: column; gap: var(--space-4); }
+  .gf-grant-bar {
+    position: sticky; top: 0; z-index: 5; background: var(--panel-bg, #14141c);
+    border: 1px solid var(--border-light); border-radius: var(--radius-sm);
+    padding: var(--space-3); display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: flex-end;
+  }
+  .gf-selected-chip {
+    display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px;
+    background: var(--bg); border: 1px solid var(--border-light); font-size: 13px; min-height: 34px;
+  }
+  .gf-selected-chip img { width: 26px; height: 26px; object-fit: contain; border-radius: 4px; }
+  .gf-selected-chip.is-empty { color: var(--text-dim, #9aa); }
+  .gf-search { flex: 1; min-width: 200px; }
+  .gf-tabs { display: flex; gap: 8px; margin-bottom: var(--space-3); flex-wrap: wrap; }
+  .gf-tab-btn {
+    background: transparent; border: 1px solid var(--border-light); color: var(--text-dim, #9aa);
+    border-radius: 10px; padding: 8px 16px; font-family: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+  }
+  .gf-tab-btn.is-active { background: var(--accent, #7c3aed); color: #fff; border-color: transparent; }
+  .gf-tab-panel { display: none; }
+  .gf-tab-panel.is-active { display: block; }
+  .gf-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3);
+  }
+  .gf-card {
+    background: var(--bg); border: 2px solid var(--border-light); border-radius: var(--radius-sm);
+    padding: 10px; cursor: pointer; text-align: center; transition: border-color .15s;
+  }
+  .gf-card:hover { border-color: var(--accent, #7c3aed); }
+  .gf-card.is-selected { border-color: var(--accent, #7c3aed); background: rgba(124,58,237,0.12); }
+  .gf-card img { width: 100%; height: 70px; object-fit: contain; margin-bottom: 6px; }
+  .gf-card-name { font-size: 12px; line-height: 1.4; }
+  .gf-card-status { font-size: 11px; color: #3ddc84; margin-top: 4px; }
+</style>
+</head>
+<body class="auth-checking">
+<header class="topbar">
+<div class="topbar-brand">
+<span class="topbar-logo topbar-logo--img"><img src="logo.png" alt="ألعاب أيمن"></span>
+<span class="topbar-title">منح الإطارات</span>
+</div>
+<div class="auth-topbar-account">
+<a class="btn btn-sm" href="admin.html">المستخدمون</a>
+<a class="btn btn-sm" href="admin-settings.html">إعدادات الأدمن</a>
+<a class="btn btn-sm" href="dashboard-core/index.html">لوحة التحكم</a>
+<span class="badge" id="account-role">—</span>
+<span class="stat-value" id="account-username">—</span>
+<button class="btn btn-sm" id="btn-account-logout">تسجيل خروج</button>
+</div>
+</header>
+<div class="main" style="padding: var(--space-5);">
+<div class="auth-message" id="page-message"></div>
+
+<div class="gf-layout">
+
+<!-- ---- شريط المنح الثابت أعلى الصفحة ---- -->
+<div class="gf-grant-bar">
+<div class="field" style="min-width:130px;">
+<label for="gf-user-id">معرّف المستخدم (id)</label>
+<input type="number" id="gf-user-id" placeholder="مثال: 3">
+</div>
+<div class="field" style="min-width:220px;">
+<label>الإطار المختار</label>
+<div class="gf-selected-chip is-empty" id="gf-selected-chip">اختر إطاراً من القائمة بالأسفل</div>
+</div>
+<div class="field" style="min-width:150px;">
+<label for="gf-entrance-template">نموذج الدخولية (اختياري)</label>
+<select id="gf-entrance-template">
+<option value="">افتراضي الكتالوج</option>
+<option value="gold">الذهبي الفخم</option>
+<option value="neon">النيون المستقبلي</option>
+<option value="fire">الناري القوي</option>
+<option value="ice">الجليدي الملكي</option>
+</select>
+</div>
+<div class="field gf-search">
+<label for="gf-entrance-text">نص الدخولية (اختياري)</label>
+<input type="text" id="gf-entrance-text" placeholder="اتركه فاضي لاستخدام النص الافتراضي">
+</div>
+<button class="btn btn-sm btn-primary" id="btn-gf-grant">منح الإطار</button>
+<button class="btn btn-sm btn-danger" id="btn-gf-revoke">سحب الإطار</button>
+</div>
+<div class="auth-message" id="gf-grant-message"></div>
+
+<!-- ---- البحث ---- -->
+<div class="field" style="max-width:320px;">
+<label for="gf-search-input">بحث (بالأخص لتبويب النوادي)</label>
+<input type="text" id="gf-search-input" placeholder="اكتب اسم الإطار أو النادي…">
+</div>
+
+<!-- ---- التبويبات ---- -->
+<div class="gf-tabs" id="gf-tabs">
+<button type="button" class="gf-tab-btn is-active" data-gf-tab="club">نوادي</button>
+<button type="button" class="gf-tab-btn" data-gf-tab="country">دول خليجية والسعودية</button>
+<button type="button" class="gf-tab-btn" data-gf-tab="general">عام</button>
+<button type="button" class="gf-tab-btn" data-gf-tab="girls">بنات</button>
+<button type="button" class="gf-tab-btn" data-gf-tab="boys">عيال</button>
+<button type="button" class="gf-tab-btn" data-gf-tab="rare">نادرة</button>
+<button type="button" class="gf-tab-btn" data-gf-tab="other">أخرى (كتالوج أساسي)</button>
+</div>
+
+<div id="gf-panels">
+<div class="gf-tab-panel is-active" data-gf-panel="club"><div class="gf-grid" data-gf-grid="club"></div><p class="empty-note" data-gf-empty="club" style="display:none;">لا توجد إطارات بهذا القسم بعد.</p></div>
+<div class="gf-tab-panel" data-gf-panel="country"><div class="gf-grid" data-gf-grid="country"></div><p class="empty-note" data-gf-empty="country" style="display:none;">لا توجد إطارات بهذا القسم بعد.</p></div>
+<div class="gf-tab-panel" data-gf-panel="general"><div class="gf-grid" data-gf-grid="general"></div><p class="empty-note" data-gf-empty="general" style="display:none;">لا توجد إطارات بهذا القسم بعد.</p></div>
+<div class="gf-tab-panel" data-gf-panel="girls"><div class="gf-grid" data-gf-grid="girls"></div><p class="empty-note" data-gf-empty="girls" style="display:none;">لا توجد إطارات بهذا القسم بعد.</p></div>
+<div class="gf-tab-panel" data-gf-panel="boys"><div class="gf-grid" data-gf-grid="boys"></div><p class="empty-note" data-gf-empty="boys" style="display:none;">لا توجد إطارات بهذا القسم بعد.</p></div>
+<div class="gf-tab-panel" data-gf-panel="rare"><div class="gf-grid" data-gf-grid="rare"></div><p class="empty-note" data-gf-empty="rare" style="display:none;">لا توجد إطارات بهذا القسم بعد.</p></div>
+<div class="gf-tab-panel" data-gf-panel="other"><div class="gf-grid" data-gf-grid="other"></div><p class="empty-note" data-gf-empty="other" style="display:none;">لا توجد إطارات بهذا القسم بعد.</p></div>
+</div>
+
+</div>
+</div>
+<script src="auth/auth-client.js"></script>
+<script>
+'use strict';
+/**
+ * [إضافة جديدة] منطق شاشة منح الإطارات — قراءة فقط من
+ * adminGetCollectiblesCatalog، تصنيف على الواجهة حسب بادئة اسم الملف، ونفس
+ * استدعاءات adminGrantFrame/adminRevokeFrame الموجودة أصلاً دون أي تعديل.
+ */
+(function () {
+    function escapeHtml(value) {
+        var div = document.createElement('div');
+        div.textContent = value === null || value === undefined ? '' : String(value);
+        return div.innerHTML;
+    }
+
+    var CATEGORY_PATTERNS = [
+        { key: 'club', re: /^frame-club-/ },
+        { key: 'country', re: /^frame-country-/ },
+        { key: 'general', re: /^frame-general-/ },
+        { key: 'girls', re: /^frame-girls-/ },
+        { key: 'boys', re: /^frame-boys-/ },
+        { key: 'rare', re: /^frame-rare-/ }
+    ];
+    function categorize(imageFilename) {
+        for (var i = 0; i < CATEGORY_PATTERNS.length; i++) {
+            if (CATEGORY_PATTERNS[i].re.test(imageFilename || '')) return CATEGORY_PATTERNS[i].key;
+        }
+        return 'other';
+    }
+
+    var allItems = []; // { frameType, frameRef, imageFilename, displayName }
+    var selected = null; // { frameType, frameRef, imageFilename, displayName }
+    var searchTerm = '';
+
+    var chipEl = document.getElementById('gf-selected-chip');
+    function renderChip() {
+        if (!selected) {
+            chipEl.className = 'gf-selected-chip is-empty';
+            chipEl.innerHTML = 'اختر إطاراً من القائمة بالأسفل';
+            return;
+        }
+        chipEl.className = 'gf-selected-chip';
+        chipEl.innerHTML = '<img src="' + escapeHtml(selected.imageFilename) + '" alt="">' +
+            '<span>' + escapeHtml(selected.displayName || selected.imageFilename) + '</span>';
+    }
+
+    function cardHtml(item) {
+        var isSelected = selected && selected.frameType === item.frameType && String(selected.frameRef) === String(item.frameRef);
+        return '<div class="gf-card' + (isSelected ? ' is-selected' : '') + '" data-frame-type="' + item.frameType + '" data-frame-ref="' + escapeHtml(item.frameRef) + '">' +
+            '<img src="' + escapeHtml(item.imageFilename) + '" alt="" loading="lazy">' +
+            '<div class="gf-card-name">' + escapeHtml(item.displayName || item.imageFilename) + '</div>' +
+            '<div class="gf-card-status">✅ جاهز</div>' +
+            '</div>';
+    }
+
+    function matchesSearch(item) {
+        if (!searchTerm) return true;
+        var haystack = (item.displayName + ' ' + item.imageFilename).toLowerCase();
+        return haystack.indexOf(searchTerm) !== -1;
+    }
+
+    function renderGrids() {
+        var byCategory = { club: [], country: [], general: [], girls: [], boys: [], rare: [], other: [] };
+        allItems.forEach(function (item) {
+            if (!matchesSearch(item)) return;
+            byCategory[categorize(item.imageFilename)].push(item);
+        });
+        Object.keys(byCategory).forEach(function (key) {
+            var gridEl = document.querySelector('[data-gf-grid="' + key + '"]');
+            var emptyEl = document.querySelector('[data-gf-empty="' + key + '"]');
+            var items = byCategory[key];
+            gridEl.innerHTML = items.map(cardHtml).join('');
+            emptyEl.style.display = items.length ? 'none' : 'block';
+            gridEl.style.display = items.length ? 'grid' : 'none';
+        });
+        Array.prototype.forEach.call(document.querySelectorAll('.gf-card'), function (card) {
+            card.addEventListener('click', function () {
+                var frameType = card.getAttribute('data-frame-type');
+                var frameRef = card.getAttribute('data-frame-ref');
+                var found = allItems.filter(function (it) { return it.frameType === frameType && String(it.frameRef) === frameRef; })[0];
+                if (!found) return;
+                selected = found;
+                renderChip();
+                renderGrids();
+            });
+        });
+    }
+
+    document.getElementById('gf-search-input').addEventListener('input', function () {
+        searchTerm = (this.value || '').trim().toLowerCase();
+        renderGrids();
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-gf-tab]'), function (btn) {
+        btn.addEventListener('click', function () {
+            Array.prototype.forEach.call(document.querySelectorAll('[data-gf-tab]'), function (b) { b.classList.remove('is-active'); });
+            btn.classList.add('is-active');
+            var tab = btn.getAttribute('data-gf-tab');
+            Array.prototype.forEach.call(document.querySelectorAll('[data-gf-panel]'), function (panel) {
+                panel.classList.toggle('is-active', panel.getAttribute('data-gf-panel') === tab);
+            });
+        });
+    });
+
+    var pageMessageEl = document.getElementById('page-message');
+    function showPageMessage(text, type) {
+        pageMessageEl.textContent = text;
+        pageMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+
+    function loadCatalog() {
+        window.AGPAuth.adminGetCollectiblesCatalog().then(function (result) {
+            if (!result.success) { showPageMessage('تعذّر تحميل الإطارات.', 'error'); return; }
+            var catalogItems = (result.catalog || []).map(function (row) {
+                return { frameType: 'catalog', frameRef: row.slug, imageFilename: row.image_filename, displayName: row.display_name_ar };
+            });
+            var customItems = (result.customFrames || []).map(function (row) {
+                return { frameType: 'custom', frameRef: row.id, imageFilename: row.image_filename, displayName: row.display_name_ar };
+            });
+            allItems = catalogItems.concat(customItems);
+            renderGrids();
+        });
+    }
+
+    var grantMessageEl = document.getElementById('gf-grant-message');
+    function showGrantMessage(text, type) {
+        grantMessageEl.textContent = text;
+        grantMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+
+    document.getElementById('btn-gf-grant').addEventListener('click', function () {
+        var userId = Number(document.getElementById('gf-user-id').value);
+        if (!userId) { showGrantMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
+        if (!selected) { showGrantMessage('اختر إطاراً من القائمة أولاً.', 'error'); return; }
+        var button = this;
+        button.disabled = true;
+        window.AGPAuth.adminGrantFrame(userId, selected.frameType, selected.frameRef, {
+            entranceTemplate: document.getElementById('gf-entrance-template').value,
+            entranceText: document.getElementById('gf-entrance-text').value
+        }).then(function (result) {
+            showGrantMessage(result.success ? 'تم منح الإطار.' : ('تعذّر المنح: ' + (result.error || 'unknown')), result.success ? 'success' : 'error');
+        }).finally(function () { button.disabled = false; });
+    });
+
+    document.getElementById('btn-gf-revoke').addEventListener('click', function () {
+        var userId = Number(document.getElementById('gf-user-id').value);
+        if (!userId) { showGrantMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
+        if (!selected) { showGrantMessage('اختر إطاراً من القائمة أولاً.', 'error'); return; }
+        var button = this;
+        button.disabled = true;
+        window.AGPAuth.adminRevokeFrame(userId, selected.frameType, selected.frameRef).then(function (result) {
+            showGrantMessage(result.success ? 'تم سحب الإطار.' : 'تعذّر السحب.', result.success ? 'success' : 'error');
+        }).finally(function () { button.disabled = false; });
+    });
+
+    document.getElementById('btn-account-logout').addEventListener('click', function () {
+        window.AGPAuth.logout().then(function () { window.location.href = 'login.html'; });
+    });
+
+    window.AGPAuth.requireAdmin('login.html').then(function (user) {
+        if (!user) return;
+        document.body.classList.remove('auth-checking');
+        document.getElementById('account-username').textContent = user.username;
+        document.getElementById('account-role').textContent = user.role;
+        loadCatalog();
+    });
+}());
+</script>
+</body>
+</html>
