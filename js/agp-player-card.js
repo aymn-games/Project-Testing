@@ -143,6 +143,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var STYLE_ID = 'agp-pcard-styles';
 
     var AVATAR_SIZE_PX = 60; // ⭐ حجم البطاقة المعتمد (لوبي-قياسي-v1) — 60 أو 65
+
+    // ⚠️ [0.60.0] ارتفاع موحَّد للوبي فقط — بطاقة بإطار أو بدون إطار، كلاهما
+    // بهذا الارتفاع بالضبط لو opts.showFrame===true (يعني سياق اللوبي حصراً،
+    // راجع js/agp-game-shell.js:535 اللي يمرّر showFrame:true دايماً لكل
+    // لاعبي اللوبي بصرف النظر لو عنده إطار فعلاً أو لا). السبب: بعد توحيد
+    // ارتفاع كل الإطارات الـ12 مع بعض ([0.59.0])، تبيّن إنه لازم يتوحّد
+    // أيضاً مع بطاقة اللاعب اللي بدون إطار أصلاً (كانت لسا 66px) — وإلا
+    // يرجع نفس نوع التفاوت (بس بين "بإطار" و"بدون" بدل "إطار وإطار").
+    // القيمة 100 اختيار وسط بموافقة صريحة من صاحب المشروع: تكفي عشان
+    // تستوعب 8 من 12 إطار بدون أي قصّ إطلاقاً، والـ4 الباقية تُقصّ بنفس
+    // منطق القص المتمركز على الصورة+الاسم في computeLayout() (لا قصّ على
+    // الصورة أو الاسم نفسه، فقط الزخرفة الزائدة). البطاقة بدون إطار ما
+    // عندها محتوى إضافي يملأ الفراغ (زي زخرفة الإطارات)، فبيصير عندها
+    // فراغ فارغ فوق/تحت الصورة+الاسم — مقبول بموافقة صاحب المشروع، ويُحل
+    // بمحاذاة المحتوى للمنتصف رأسياً (.agp-pcard already align-items:center).
+    // ⚠️ هذا الثابت ما يؤثر إطلاقاً على استخدامات البطاقة الأساسية خارج
+    // اللوبي (مثلاً قوائم اختيار الإقصاء/الإرجاع بروليت الإقصاء — تستدعي
+    // renderHtml بـshowFrame:false عمداً، فتبقى بارتفاعها الطبيعي كما هي).
+    var LOBBY_CARD_HEIGHT_PX = 100;
     var PILL_WIDTH_RATIO = 210 / 65; // نسبة عرض لوح الاسم الثابت لكل حجم أفاتار
     var OVERLAP_RATIO = 0.22; // تراكب الصورة على اللوح = 22% من قطر الأفاتار
     function basicCardTotalWidth(avatarSize) {
@@ -295,8 +314,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '@keyframes agpPcardSlide{0%,15%{transform:translateX(0);}45%,55%{transform:translateX(var(--pcard-slide-dist));}85%,100%{transform:translateX(0);}}',
             '.agp-pcard-name-basic.agp-pcard-marquee{animation:agpPcardSlide 4.5s ease-in-out infinite;}',
 
-            /* ---- البطاقة المؤطَّرة — الخيار أ: عرض ثابت = نفس عرض
-             * البطاقة العادية، الارتفاع ناتج ومتغيّر حسب نسبة كل إطار ---- */
+            /* ---- البطاقة المؤطَّرة — ⚠️ [إصلاح جذري لتفاوت الارتفاع]
+             * كانت أصلاً: عرض ثابت = نفس عرض البطاقة العادية، والارتفاع
+             * ناتج ومتغيّر حسب نسبة كل إطار (بعض الإطارات كانت تنتج
+             * بطاقات أطول بـ66px من إطارات أخرى بنفس العرض تماماً — هذا
+             * كان السبب الجذري الفعلي لمشكلة "البطاقات تتحرك/تتفاوت"
+             * باللوبي اللي بلّغ عنها صاحب المشروع، خصوصاً مع
+             * align-items:end بشبكة اللوبي في js/agp-game-shell.js).
+             * الحل: عكس المعادلة — الآن الارتفاع ثابت (يطابق ارتفاع
+             * البطاقة الأساسية بدون إطار)، والعرض هو المتغيّر حسب تصميم
+             * كل إطار (راجع computeLayout/renderFramedHtml أدناه). النتيجة:
+             * كل البطاقات (بإطار أو بدون) بنفس الارتفاع بالضبط بأي صف،
+             * فرق العرض بينها غير ملحوظ بصرياً مع justify-items:center. ---- */
             '.agp-pcard-tpl{display:inline-block;position:relative;',
             'overflow:hidden;flex-shrink:0;vertical-align:middle;}',
             '.agp-pcard-tpl-avatar{position:absolute;border-radius:50%;',
@@ -309,31 +338,125 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-pcard-tpl-name{position:absolute;z-index:3;',
             'display:flex;align-items:center;justify-content:center;overflow:hidden;',
             'font-weight:800;color:#fff;text-align:center;line-height:1.1;white-space:nowrap;',
-            'text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.6);box-sizing:border-box;}'
+            'text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.6);box-sizing:border-box;}',
+
+            /* ==================================================================
+             * ⚠️ [منقول من games/elimination-roulette/agp-elimination-roulette.js]
+             * بطاقة "فائز/تتويج" زجاجية مشتركة — كانت محلية بالكامل بلعبة
+             * روليت الإقصاء ([0.52.0]/[0.53.0])، نُقلت هنا بطلب صريح من
+             * صاحب المشروع عشان أي لعبة تقدر تستخدم نفس التصميم بدون
+             * إعادة بنائه من الصفر. القيم (الأبعاد/الألوان/التوهّج) منسوخة
+             * حرفياً كما هي بالملف الأصلي — لا تغيير تصميمي، فقط تسمية
+             * الكلاسات تغيّرت من بادئة er- إلى agp-trophy- (اتساقاً مع بقية
+             * هذا الملف المشترك، وتجنّباً لأي تعارض مع كلاسات أي لعبة).
+             * راجع AGP.playerCard.renderTrophyCard أدناه للاستخدام.
+             * ================================================================== */
+            '.agp-trophy-card{position:relative;width:300px;height:400px;max-width:88vw;',
+            'max-height:min(400px,74vh);box-sizing:border-box;',
+            'border-radius:15px;padding:26px 18px;display:flex;flex-direction:column;align-items:center;',
+            'justify-content:center;gap:4px;overflow:visible;background:rgba(101,98,98,0.5);',
+            'border:3px solid #000;',
+            'box-shadow:inset 0 4px 2px rgba(0,0,0,0.25),0 0 55px 14px rgba(255,255,255,0.4),0 0 120px 35px rgba(216,120,255,0.6);',
+            'animation:agpTrophyGlowPulse 2.6s ease-in-out infinite;}',
+            '@keyframes agpTrophyGlowPulse{0%,100%{box-shadow:inset 0 4px 2px rgba(0,0,0,0.25),',
+            '0 0 55px 14px rgba(255,255,255,0.4),0 0 120px 35px rgba(216,120,255,0.6);}',
+            '50%{box-shadow:inset 0 4px 2px rgba(0,0,0,0.25),',
+            '0 0 75px 22px rgba(255,255,255,0.6),0 0 150px 45px rgba(216,120,255,0.78);}}',
+            '.agp-trophy-label{font-size:0.85em;font-weight:800;color:#fff;margin-bottom:10px;}',
+            '.agp-trophy-crown{width:74px;height:74px;object-fit:contain;margin-bottom:2px;',
+            'filter:drop-shadow(0 3px 8px rgba(0,0,0,0.5));}',
+            '.agp-trophy-game-name{font-size:0.8em;font-weight:800;color:#e9d3ff;',
+            'text-shadow:0 1px 6px rgba(0,0,0,0.5);margin-bottom:2px;}',
+            '.agp-trophy-ring-wrap{position:relative;width:88px;height:88px;margin:0 auto 10px;border-radius:50%;',
+            'padding:5px;box-sizing:border-box;}',
+            '.agp-trophy-ring-winner{background:conic-gradient(from 0deg,#ffd400,#fff6cf,#ffd400,#c9960a,#ffd400);',
+            'box-shadow:0 0 20px rgba(255,212,0,0.55);}',
+            '.agp-trophy-ring-most{background:repeating-conic-gradient(#ff4dff 0deg 18deg,#7f267f 18deg 36deg);',
+            'box-shadow:0 0 20px rgba(255,77,255,0.4);}',
+            '.agp-trophy-ring-inner{width:100%;height:100%;border-radius:50%;background:#2D1932;overflow:hidden;}',
+            '.agp-trophy-ring-avatar{width:100%;height:100%;border-radius:50%;object-fit:cover;background:#5a2585;display:block;}',
+            '.agp-trophy-ring-avatar--fallback{display:flex;align-items:center;justify-content:center;',
+            'color:#fff;font-weight:800;font-size:1.4em;}',
+            '.agp-trophy-ring-badge{position:absolute;bottom:-2px;right:-2px;width:28px;height:28px;border-radius:50%;',
+            'display:flex;align-items:center;justify-content:center;font-size:0.95em;border:2px solid #2D1932;}',
+            '.agp-trophy-ring-badge.agp-trophy-badge-winner{background:#ffd400;}',
+            '.agp-trophy-ring-badge.agp-trophy-badge-most{background:#ff4dff;}',
+            '.agp-trophy-name{font-size:1.15em;font-weight:900;color:#fff;}',
+            '.agp-trophy-extra{color:#e9d3ff;font-size:0.85em;margin-top:4px;}',
+            '.agp-trophy-points{margin-top:10px;font-size:0.85em;line-height:1.4;}',
+            '.agp-trophy-points.agp-points-earned{color:#ffd400;font-weight:800;}',
+            '.agp-trophy-points .agp-points-sub{display:block;color:#e9d3ff;font-weight:500;font-size:0.85em;margin-top:2px;}',
+            '.agp-trophy-points.agp-points-noaccount{color:#e9d3ff;font-size:0.8em;}'
         ].join('');
         document.head.appendChild(style);
     }
 
     /**
-     * يحسب كل القياسات الفعلية (px/%) لإطار معيّن حسب FRAME_TEMPLATES —
-     * نفس منطق القص بصرياً (حاوية بارتفاع CARD_HEIGHT_PX + overflow:
-     * hidden + صورة خلفية أكبر منها بإزاحة سالبة للأعلى) لكل الإطارات،
-     * لكن بأبعاد/إزاحة خاصة بكل قالب بدل رقم عام واحد.
+     * يحسب كل القياسات الفعلية (px) لإطار معيّن حسب FRAME_TEMPLATES.
+     *
+     * ⚠️ [توحيد كامل — عرض وارتفاع ثابتان معاً] تاريخ هذي الدالة:
+     * 1) الأصل: تثبّت العرض، الارتفاع ناتج حسب نسبة كل إطار → فرق
+     *    ارتفاع وصل 66px بين إطار وآخر (سبب مشكلة "تحرّك" البطاقات).
+     * 2) إصلاح أول: عكس المعادلة (تثبّت الارتفاع، العرض هو المتغيّر) —
+     *    حلّ مشكلة الحركة لكن خلّى عرض البطاقات يتفاوت بوضوح بين إطار
+     *    وآخر (طلب توضيح من صاحب المشروع لاحقاً "ليش فيه تفاوت بالحجم؟").
+     * 3) هذا الإصلاح (توحيد كامل، بموافقة صريحة رغم مخاطرة القص):
+     *    العرض **و** الارتفاع كلاهما ثابتان الآن (targetWidthPx/
+     *    targetHeightPx، بنفس قيم البطاقة الأساسية بدون إطار) لكل
+     *    البطاقات بصرف النظر عن الإطار. لتحقيق هذا: نحسب الصورة
+     *    بالمقياس المبني على العرض (نفس منطق الإصلاح الأصلي [1] —
+     *    الارتفاع الناتج غالباً أطول من targetHeightPx)، ثم "نقصّ"
+     *    رأسياً نافذة بحجم targetHeightPx بالضبط من داخل هذا الارتفاع
+     *    الطبيعي — **متمركزة على منطقة الصورة+الاسم تحديداً** (وليس
+     *    قصّاً أعمى من الأسفل أو الأعلى)، حتى لا يُقتَطع أي جزء من
+     *    الصورة الشخصية أو لوحة الاسم، فقط الزخرفة الزائدة على الأطراف.
+     *    تحقّقت حسابياً (سكربت Python منفصل قبل التطبيق) أن منطقة
+     *    الصورة+الاسم تتّسع فعلياً ضمن targetHeightPx بكل الإطارات الـ12
+     *    المسجَّلة حالياً بهامش لا بأس به — أي إطار جديد يُضاف مستقبلاً
+     *    يحتاج نفس التحقّق قبل اعتماده.
      * @param {Object} tpl - مدخل من FRAME_TEMPLATES
-     * @returns {Object} قياسات جاهزة للحقن inline
+     * @param {number} targetWidthPx - العرض الثابت المطلوب لكل البطاقات
+     * @param {number} targetHeightPx - الارتفاع الثابت المطلوب لكل البطاقات
+     * @returns {Object} قياسات جاهزة للحقن inline (px فقط، حتى للعناصر الداخلية الرأسية — راجع avatarTopPx/nameTopPx أدناه)
      */
-    function computeLayout(tpl, targetWidthPx) {
+    function computeLayout(tpl, targetWidthPx, targetHeightPx) {
         var scale = targetWidthPx / tpl.canvasW;
-        var cardHeightPx = Math.round(tpl.contentHeight * scale * 100) / 100;
+        var naturalContentHeightPx = tpl.contentHeight * scale;
         var frameImgWidthPx = targetWidthPx;
         var frameImgHeightPx = Math.round(tpl.canvasH * scale * 100) / 100;
-        var frameTopOffsetPx = Math.round(-(tpl.contentTop * scale) * 100) / 100;
+
+        // نطاق الصورة+الاسم الفعلي (px) داخل نافذة المحتوى الطبيعية (قبل أي قص)
+        var avatarTopPx = tpl.avatarTopPct / 100 * naturalContentHeightPx;
+        var avatarBottomPx = avatarTopPx + tpl.avatarHeightPct / 100 * naturalContentHeightPx;
+        var nameTopPx = tpl.nameTopPct / 100 * naturalContentHeightPx;
+        var nameBottomPx = nameTopPx + tpl.nameHeightPct / 100 * naturalContentHeightPx;
+        var contentMinY = Math.min(avatarTopPx, nameTopPx);
+        var contentMaxY = Math.max(avatarBottomPx, nameBottomPx);
+        var contentCenterY = (contentMinY + contentMaxY) / 2;
+
+        // نافذة القص الرأسي (targetHeightPx) مُتمركزة على منتصف منطقة
+        // الصورة+الاسم، مثبَّتة ضمن حدود نافذة المحتوى الطبيعية (لا نعرض
+        // فراغاً خارج الصورة نفسها لو الإطار كان أقصر أصلاً من الهدف).
+        var maxCropTop = Math.max(0, naturalContentHeightPx - targetHeightPx);
+        var cropTop = contentCenterY - targetHeightPx / 2;
+        if (cropTop < 0) cropTop = 0;
+        if (cropTop > maxCropTop) cropTop = maxCropTop;
+
+        var frameTopOffsetPx = Math.round((-(tpl.contentTop * scale) - cropTop) * 100) / 100;
+
         return {
             cardWidthPx: targetWidthPx,
-            cardHeightPx: cardHeightPx,
+            cardHeightPx: targetHeightPx,
             frameImgWidthPx: frameImgWidthPx,
             frameImgHeightPx: frameImgHeightPx,
-            frameTopOffsetPx: frameTopOffsetPx
+            frameTopOffsetPx: frameTopOffsetPx,
+            // ⚠️ px صريحة (وليست % كالسابق) لأن % كانت تُحسَب بالأصل على
+            // نافذة المحتوى الطبيعية الكاملة — بعد القص صار الغلاف نفسه
+            // (targetHeightPx) أقصر من تلك النافذة، فلازم إحداثيات مطلقة.
+            avatarTopPx: Math.round((avatarTopPx - cropTop) * 100) / 100,
+            avatarHeightPx: Math.round((tpl.avatarHeightPct / 100 * naturalContentHeightPx) * 100) / 100,
+            nameTopPx: Math.round((nameTopPx - cropTop) * 100) / 100,
+            nameHeightPx: Math.round((tpl.nameHeightPct / 100 * naturalContentHeightPx) * 100) / 100
         };
     }
 
@@ -357,8 +480,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var pillStyle = 'width:' + pillW + 'px;height:' + Math.round(h * 52 / 65) + 'px;' +
             'margin-inline-start:-' + overlap + 'px;padding-inline-start:' + padStart + 'px;' +
             'padding-inline-end:' + padEnd + 'px;font-size:' + Math.max(11, Math.round(h * 30 / 65)) + 'px;';
+        // ⚠️ [0.60.0] لو الاستدعاء من سياق اللوبي (opts.showFrame===true —
+        // راجع تعليق LOBBY_CARD_HEIGHT_PX أعلاه) نثبّت ارتفاع الغلاف
+        // الخارجي بنفس ارتفاع البطاقات المؤطَّرة، ونعتمد على
+        // align-items:center الموجودة أصلاً بـ.agp-pcard لتوسيط الصورة+
+        // الاسم رأسياً داخل هذا الارتفاع (بدل ما يبقيان ملتصقين بارتفاعهما
+        // الطبيعي الأصغر). خارج اللوبي (showFrame:false) لا تغيير إطلاقاً.
+        var outerStyle = (opts && opts.showFrame) ? ' style="height:' + LOBBY_CARD_HEIGHT_PX + 'px"' : '';
 
-        return '<span class="agp-pcard' + (opts && opts.outClass ? ' ' + opts.outClass : '') + '">' +
+        return '<span class="agp-pcard' + (opts && opts.outClass ? ' ' + opts.outClass : '') + '"' + outerStyle + '>' +
             avatarHtml +
             '<span class="agp-pcard-name-basic" style="' + pillStyle + '" data-agp-pcard-name="1">' + escapeHtml(name) + '</span>' +
             '</span>';
@@ -378,11 +508,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var tpl = getTemplate(imageFilename);
         var h = (opts && opts.size) || AVATAR_SIZE_PX;
-        var layout = computeLayout(tpl, basicCardTotalWidth(h));
+        // ⚠️ [توحيد كامل — عرض وارتفاع ثابتان معاً] العرض ثابت بنفس عرض
+        // البطاقة الأساسية بدون إطار (basicCardTotalWidth(h)). الارتفاع
+        // ⚠️ [0.60.0] بقى ثابتاً مستقلاً عن h — LOBBY_CARD_HEIGHT_PX (100،
+        // راجع تعليقها أعلاه) بدل h+6 (كان يساوي فقط بالصدفة ارتفاع
+        // البطاقة الأساسية بحجمها الافتراضي). بهذا كل البطاقات (بإطار أو
+        // بدون، بأي إطار) نفس المقاس تماماً — راجع تعليق computeLayout()
+        // أعلاه لتفاصيل منطق القصّ المتمركز على الصورة+الاسم الذي يحقّق
+        // هذا بدون تشويه أو قصّ خاطئ.
+        var targetWidthPx = basicCardTotalWidth(h);
+        var targetHeightPx = LOBBY_CARD_HEIGHT_PX;
+        var layout = computeLayout(tpl, targetWidthPx, targetHeightPx);
 
         var wrapStyle = 'width:' + layout.cardWidthPx + 'px;height:' + layout.cardHeightPx + 'px';
-        var avatarStyle = 'left:' + tpl.avatarLeftPct + '%;top:' + tpl.avatarTopPct + '%;' +
-            'width:' + tpl.avatarWidthPct + '%;height:' + tpl.avatarHeightPct + '%;';
+        // ⚠️ top/height بالبكسل الصريح (layout.avatarTopPx/avatarHeightPx)
+        // وليس % — لازم بعد القص لأن % كانت محسوبة أصلاً على نافذة
+        // المحتوى الطبيعية غير المقصوصة (راجع computeLayout). left/width
+        // تبقى % بأمان لأن العرض لم يُقصّ أفقياً إطلاقاً.
+        var avatarStyle = 'left:' + tpl.avatarLeftPct + '%;top:' + layout.avatarTopPx + 'px;' +
+            'width:' + tpl.avatarWidthPct + '%;height:' + layout.avatarHeightPx + 'px;';
         var frameImgStyle = 'top:' + layout.frameTopOffsetPx + 'px;' +
             'width:' + layout.frameImgWidthPx + 'px;height:' + layout.frameImgHeightPx + 'px;' +
             'background-size:' + layout.frameImgWidthPx + 'px ' + layout.frameImgHeightPx + 'px;' +
@@ -390,8 +534,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // [0.45.5] tpl.textColor اختياري — لو موجود يطغى على اللون الأبيض
         // الافتراضي بالـCSS (بعض لوحات الأسماء فاتحة واللون الأبيض غير
         // مقروء عليها، أو مطلوب لون هوية محدد زي إطار الأهلي).
-        var nameStyle = 'left:' + tpl.nameLeftPct + '%;top:' + tpl.nameTopPct + '%;' +
-            'width:' + tpl.nameWidthPct + '%;height:' + tpl.nameHeightPct + '%;' +
+        var nameStyle = 'left:' + tpl.nameLeftPct + '%;top:' + layout.nameTopPx + 'px;' +
+            'width:' + tpl.nameWidthPct + '%;height:' + layout.nameHeightPx + 'px;' +
             (tpl.textColor ? 'color:' + tpl.textColor + ';' : '');
 
         var avatarHtml = avatarUrl
@@ -403,6 +547,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<span class="agp-pcard-tpl-frame-img" style="' + frameImgStyle + '"></span>' +
             '<span class="agp-pcard-tpl-name" data-agp-pcard-name="1" style="' + nameStyle + '">' + escapeHtml(name) + '</span>' +
             '</span>';
+    }
+
+    /**
+     * ⚠️ [منقول من games/elimination-roulette/agp-elimination-roulette.js]
+     * صورة دائرية بسيطة (بدون اسم) داخل حلقة بطاقة الفائز — منقولة حرفياً
+     * من دالة ringAvatarHtml() المحلية هناك (نفسها لا تزال موجودة محلياً
+     * بذاك الملف، تُستخدَم لأغراض أخرى غير بطاقة الفائز — لم تُحذَف).
+     * لا تعتمد على renderBasicHtml/renderFramedHtml أعلاه عمداً — تصميم
+     * مختلف كلياً (صورة دائرية مستقلة داخل حلقة ملوَّنة + شارة أيقونة).
+     */
+    function trophyRingAvatarHtml(player) {
+        var name = (player && (player.name || player.id)) || '—';
+        var avatarUrl = player && player.avatarUrl;
+        var initialsText = (name || '').trim().slice(0, 2).toUpperCase() || '؟';
+        return avatarUrl
+            ? '<img class="agp-trophy-ring-avatar" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;agp-trophy-ring-avatar agp-trophy-ring-avatar--fallback&quot;>' + escapeHtml(initialsText) + '</div>\';">'
+            : '<div class="agp-trophy-ring-avatar agp-trophy-ring-avatar--fallback">' + escapeHtml(initialsText) + '</div>';
     }
 
     AGP.playerCard = {
@@ -444,6 +605,58 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     node.classList.add('agp-pcard-marquee');
                 }
             }
+        },
+
+        /**
+         * ⚠️ [منقول من games/elimination-roulette/agp-elimination-roulette.js]
+         * بطاقة "فائز/تتويج" زجاجية (300×400، خلفية شبه شفافة + توهّج
+         * نابض) — بُنيت أول مرة محلياً بلعبة روليت الإقصاء ([0.52.0]/
+         * [0.53.0])، ونُقلت هنا لتصبح مشتركة لكل الألعاب بطلب صريح من
+         * صاحب المشروع، بدل تكرار نفس الكود بكل لعبة على حدة. القيم
+         * البصرية (الأبعاد/الألوان/التوهّج) منسوخة حرفياً كما هي — لا أي
+         * تغيير تصميمي بهذا النقل. أي لعبة تستدعيها مباشرة بدون أي بناء
+         * إضافي — راجع مثال حقيقي بـ renderWinnerScreen() في
+         * games/elimination-roulette/agp-elimination-roulette.js.
+         *
+         * @param {Object} player - كائن اللاعب (id, name, avatarUrl?)
+         * @param {Object} [opts]
+         * @param {string} [opts.kind='winner'] - 'winner' (حلقة ذهبية دوّارة + شارة 👑) أو 'most' (حلقة وردية متقطّعة + شارة ⚔️ افتراضياً) — أي قيمة أخرى تحتاج CSS إضافي محلي من اللعبة نفسها لتلوين الحلقة/الشارة
+         * @param {string} [opts.badgeIcon] - استبدال أيقونة الشارة الافتراضية (👑/⚔️)
+         * @param {string} [opts.label] - نص التسمية أعلى الحلقة (مثلاً '🏆 الفائز') — بدون تسمية لو لم يُمرَّر
+         * @param {boolean} [opts.showCrown=false] - أظهر تاجاً + اسم اللعبة أعلى البطاقة (عادة لبطاقة الفائز الرئيسية فقط)
+         * @param {string} [opts.crownIconDataUri] - data URI لصورة التاج (كل لعبة توفّر أيقونتها الخاصة عبر هذا الحقل؛ بدون قيمة = بدون تاج حتى لو showCrown=true)
+         * @param {string} [opts.gameName] - اسم اللعبة المعروض تحت التاج مباشرة (يظهر فقط مع showCrown)
+         * @param {string} [opts.extra] - HTML إضافي حر يُعرض تحت الاسم (مثلاً عدد مرات الإقصاء) — استخدم كلاس agp-trophy-extra للتنسيق الموحَّد
+         * @param {string} [opts.pointsHtml] - HTML جاهز لعرض النقاط (كل لعبة تبنيه بنفسها حسب منطق نقاطها/حسابها الخاص) — استخدم كلاسات agp-trophy-points/agp-points-earned/agp-points-sub/agp-points-noaccount للتنسيق الموحَّد
+         * @param {string} [opts.cls] - كلاس إضافي على عنصر البطاقة نفسه
+         * @param {string} [opts.cardId] - id على عنصر البطاقة (مفيد لاستهداف تأثير احتفالي مثل confetti)
+         * @returns {string} HTML لبطاقة واحدة
+         */
+        renderTrophyCard: function (player, opts) {
+            injectStyles();
+            opts = opts || {};
+            var kind = opts.kind || 'winner';
+            var badgeIcon = opts.badgeIcon || (kind === 'winner' ? '👑' : '⚔️');
+            var crownHtml = (opts.showCrown && opts.crownIconDataUri)
+                ? '<img class="agp-trophy-crown" src="' + opts.crownIconDataUri + '" alt="">'
+                : '';
+            var gameNameHtml = (opts.showCrown && opts.gameName)
+                ? '<div class="agp-trophy-game-name">' + escapeHtml(opts.gameName) + '</div>'
+                : '';
+            var ringHtml = '<div class="agp-trophy-ring-wrap agp-trophy-ring-' + kind + '">' +
+                '<div class="agp-trophy-ring-inner">' + trophyRingAvatarHtml(player) + '</div>' +
+                '<div class="agp-trophy-ring-badge agp-trophy-badge-' + kind + '">' + badgeIcon + '</div>' +
+                '</div>';
+            var name = (player && (player.name || player.id)) || '—';
+            return '<div class="agp-trophy-card' + (opts.cls ? ' ' + opts.cls : '') + '"' + (opts.cardId ? ' id="' + opts.cardId + '"' : '') + '>' +
+                crownHtml +
+                gameNameHtml +
+                (opts.label ? '<div class="agp-trophy-label">' + opts.label + '</div>' : '') +
+                ringHtml +
+                '<div class="agp-trophy-name">' + escapeHtml(name) + '</div>' +
+                (opts.extra || '') +
+                (opts.pointsHtml || '') +
+                '</div>';
         }
     };
 
