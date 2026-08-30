@@ -706,46 +706,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'border-radius:999px;padding:10px 14px;font-weight:900;cursor:pointer;font-size:0.82em;',
             'font-family:inherit;white-space:nowrap;}',
 
-            /* ---- شاشة الفائز — بطاقة أساسية ٢٥٠×٤٥٠ (فائز واحد دائماً
-             * بروليت الروسي) — حلقة صورة ثابتة (بدون دوران)، وسم داخل حدود
-             * الحلقة نفسها (مو تاج عائم فوقها). نفس القالب يُعاد استخدامه
-             * لبطاقة "الأكثر إقصاءً" (حلقة وردية متقطّعة بدل الذهبية). ---- */
-            '#rr-winner-overlay{position:fixed;inset:0;z-index:100012;display:none;align-items:center;',
-            'justify-content:center;background:rgba(6,4,1,0.88);padding:16px;gap:28px;flex-wrap:wrap;}',
-            '.rr-trophy-card{position:relative;width:375px;height:675px;box-sizing:border-box;border-radius:32px;',
-            'padding:48px 27px;display:flex;flex-direction:column;align-items:center;justify-content:center;',
-            'background:none;border:none;',
-            'box-shadow:0 0 60px 16px rgba(212,175,55,0.28),0 0 130px 40px rgba(212,175,55,0.16);',
-            'animation:rr-glow-pulse 2.6s ease-in-out infinite;}',
-            '@keyframes rr-glow-pulse{0%,100%{box-shadow:0 0 60px 16px rgba(212,175,55,0.28),',
-            '0 0 130px 40px rgba(212,175,55,0.16);}',
-            '50%{box-shadow:0 0 82px 24px rgba(212,175,55,0.42),0 0 165px 50px rgba(212,175,55,0.26);}}',
-            '.rr-trophy-icon{font-size:3.6em;margin-bottom:9px;}',
-            '.rr-trophy-label{font-size:1.55em;font-weight:900;color:#fff;margin-bottom:30px;}',
-            /* ⚠️ الوسم (تاج/هدف) صار فوق الصورة مباشرة (مو زاوية الحلقة) —
-             * مساحة علوية إضافية بالـwrap تفسح له مكان بدون تراكب. */
-            '.rr-ring-wrap{position:relative;width:225px;height:225px;margin:44px auto 27px;border-radius:50%;',
-            'padding:10px;box-sizing:border-box;}',
-            '.rr-ring-gold{background:' + ACCENT2 + ';box-shadow:0 0 28px rgba(212,175,55,0.55);}',
-            '.rr-ring-pink{border:none;background:repeating-conic-gradient(#e24b4a 0deg 18deg,#3a0a0a 18deg 36deg);',
-            'box-shadow:0 0 28px rgba(226,75,74,0.4);}',
-            '.rr-ring-inner{width:100%;height:100%;border-radius:50%;background:#2D1932;overflow:hidden;',
-            'display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:3.4em;}',
-            '.rr-ring-inner img{width:100%;height:100%;object-fit:cover;}',
-            '.rr-ring-badge{position:absolute;top:-44px;left:50%;transform:translateX(-50%);width:60px;height:60px;',
-            'border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2em;',
-            'border:2px solid #2D1932;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5));}',
-            '.rr-badge-winner{background:' + ACCENT2 + ';}',
-            '.rr-badge-most{background:#e24b4a;}',
-            '.rr-trophy-name{font-size:2.3em;font-weight:900;color:#fff;}',
-            '.rr-trophy-count{color:#e8d9b8;font-size:1.4em;margin-top:9px;}',
-            '.rr-trophy-points{margin-top:24px;font-size:1.55em;line-height:1.5;text-align:center;}',
-            '.rr-points-earned{color:' + ACCENT2 + ';font-weight:800;}',
+            /* ---- شاشة الفائز ----
+             * ⚠️ [تثبيت الشكل النهائي — طلب صريح 2026] بطاقة "فائز/تتويج"
+             * المحلية (rr-trophy، rr-ring، ٣٧٥×٦٧٥، تصميم سينمائي منفرد)
+             * اتحدت مع باقي الألعاب — صارت تستخدم
+             * AGP.playerCard.renderTrophyCard() المشتركة (250×300، نفس
+             * ترتيب المحتوى بكل الألعاب) بدل تصميمها الخاص. CSS القطع
+             * المحلية البحتة (خلفية الشاشة المعتمة، صف الأزرار، التطاير)
+             * باقٍ فقط. */
+            '#rr-winner-overlay{position:fixed;inset:0;z-index:100012;display:none;flex-direction:column;',
+            'align-items:center;justify-content:center;background:rgba(6,4,1,0.88);padding:16px;gap:16px;}',
+            '#rr-winner-overlay h2{font-family:Almarai,Cairo,sans-serif;font-size:1.4em;color:#fff;',
+            'text-align:center;text-shadow:0 2px 12px rgba(0,0,0,0.65);margin:0;}',
+            '.rr-trophy-cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;}',
             '.rr-winner-actions{width:100%;margin-top:9px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}',
             '.rr-winner-actions button{padding:14px 28px;border-radius:999px;font-weight:800;font-size:1.1em;',
             'cursor:pointer;font-family:inherit;}',
             '#rr-replay-same-btn{background:linear-gradient(90deg,' + ACCENT2 + ',#a9791c);color:#241a0c;border:none;}',
             '#rr-newmatch-btn{background:#fff;color:#241a0c;border:1px solid ' + ACCENT2 + ';}',
+            '#rr-home-btn{background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.4);}',
             '.rr-confetti-piece{position:absolute;top:50%;left:50%;width:8px;height:8px;border-radius:2px;',
             'animation:rr-confetti-fly 1.6s ease-out forwards;}',
             '@keyframes rr-confetti-fly{to{transform:translate(var(--dx),var(--dy)) rotate(540deg);opacity:0;}}'
@@ -1548,11 +1527,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!uname) return null;
         return pointsResult.awarded.filter(function (a) { return a.tiktokUsername === uname; })[0] || null;
     }
+    // ⚠️ [تثبيت الشكل النهائي — طلب صريح 2026] كلاسات agp-trophy-points/
+    // agp-points-* المشتركة (js/agp-player-card.js) بدل rr-points-earned
+    // المحلية المحذوفة — renderTrophyCard المشتركة تتوقّع بالضبط هذي
+    // الأسماء لتنسيق النقاط.
     function pointsHtmlForInline(pointsResult, player) {
-        if (!pointsResult) return '<span class="rr-points-earned">تعذّر جلب النقاط الآن</span>';
+        if (!pointsResult) {
+            return '<div class="agp-trophy-points agp-points-noaccount">تعذّر جلب النقاط الآن</div>';
+        }
         var awarded = findAwardedFor(pointsResult, player);
-        if (awarded) return '<span class="rr-points-earned">+ ' + awarded.added + ' نقطة</span>';
-        return '<span class="rr-points-earned">اربط حسابك عشان تظهر نقاطك</span>';
+        if (awarded) {
+            return '<div class="agp-trophy-points agp-points-earned">+' + awarded.added + ' نقطة' +
+                '<span class="agp-points-sub">تظهر في بروفايلك</span></div>';
+        }
+        return '<div class="agp-trophy-points agp-points-noaccount">اربط حسابك عشان تظهر نقاطك</div>';
     }
 
     var CONFETTI_COLORS = [C_GOLD, '#e8c56b', '#4ade80', '#fff'];
@@ -1582,56 +1570,47 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             : '<span class="rr-fallback">' + escapeHtml(initials) + '</span>';
     }
 
-    function findTopEliminator(excludeId) {
-        var allPlayers = AGP.gameManager.getPlayers();
-        var best = null, bestCount = 0;
-        allPlayers.forEach(function (p) {
-            var c = _eliminationsCaused[p.id] || 0;
-            if (c > bestCount && p.id !== excludeId) { best = p; bestCount = c; }
-        });
-        return best ? { player: best, count: bestCount } : null;
-    }
-
+    // ⚠️ [تثبيت الشكل النهائي — طلب صريح 2026] عبر AGP.playerCard.
+    // renderTrophyCard() المشتركة بدل تصميم .rr-trophy-* المحلي المحذوف.
+    // showCrown:true + crownIconDataUri: ICON_CROWN (أيقونة تاج اللعبة
+    // الخاصة، بدل الافتراضية المشتركة — كانت معرَّفة مسبقاً بالملف بدون
+    // استخدام فعلي). لا label/gameName/extra — نفس المعلومة صارت بسطر
+    // h2 واحد فوق صف البطاقات.
     function renderWinnerScreen(winner, pointsResult) {
         var overlay = el('rr-winner-overlay');
         if (!overlay) return;
-        var topElim = winner ? findTopEliminator(winner.id) : null;
 
-        var winnerCardHtml = winner ? (
-            '<div class="rr-trophy-card">' +
-                '<div class="rr-trophy-icon">🏆</div>' +
-                '<div class="rr-trophy-label">الفائز</div>' +
-                '<div class="rr-ring-wrap rr-ring-gold">' +
-                    '<div class="rr-ring-inner">' + ringAvatarHtml(winner) + '</div>' +
-                    '<span class="rr-ring-badge rr-badge-winner">👑</span>' +
-                '</div>' +
-                '<div class="rr-trophy-name">' + escapeHtml(playerLabel(winner)) + '</div>' +
-                '<div class="rr-trophy-points">' + pointsHtmlForInline(pointsResult, winner) + '</div>' +
-            '</div>'
-        ) : '<div style="color:#f2e6cf;">ما بقي أحد بالمباراة.</div>';
+        // ⚠️ [طلب صريح 2026] روليت الروسي: بطاقة واحدة فقط دايماً (الفائز)
+        // — بعكس روليت الإقصاء/القبائل (فائز + الأكثر إقصاءً). ما فيه
+        // بطاقة ثانية هنا نهائياً.
+        var cardsHtml = '';
+        if (winner) {
+            cardsHtml += AGP.playerCard.renderTrophyCard(winner, {
+                cls: 'rr-trophy-winner', kind: 'winner', cardId: 'rr-trophy-card-winner',
+                showCrown: true, crownIconDataUri: ICON_CROWN,
+                pointsHtml: pointsHtmlForInline(pointsResult, winner)
+            });
+        }
 
-        var elimCardHtml = topElim ? (
-            '<div class="rr-trophy-card">' +
-                '<div class="rr-trophy-icon">⚔️</div>' +
-                '<div class="rr-trophy-label">الأكثر إقصاءً</div>' +
-                '<div class="rr-ring-wrap rr-ring-pink">' +
-                    '<div class="rr-ring-inner">' + ringAvatarHtml(topElim.player) + '</div>' +
-                    '<span class="rr-ring-badge rr-badge-most">🎯</span>' +
-                '</div>' +
-                '<div class="rr-trophy-name">' + escapeHtml(playerLabel(topElim.player)) + '</div>' +
-                '<div class="rr-trophy-count">أقصى ' + topElim.count + (topElim.count === 1 ? ' لاعب' : ' لاعبين') + '</div>' +
-            '</div>'
-        ) : '';
-
-        overlay.innerHTML = winnerCardHtml + elimCardHtml +
+        overlay.innerHTML =
+            '<h2>🏁 انتهت المباراة .. الشخص الرهيب الي فاز بلعبة "' + escapeHtml(GAME_NAME) + '"</h2>' +
+            '<div class="rr-trophy-cards">' + (cardsHtml || '<p style="color:#f2e6cf;">ما بقي أحد بالمباراة.</p>') + '</div>' +
             '<div class="rr-winner-actions">' +
-                '<button type="button" id="rr-replay-same-btn">🔁 إعادة نفس اللاعبين</button>' +
+                '<button type="button" id="rr-home-btn">⬅️ رجوع لمنصة الألعاب</button>' +
                 '<button type="button" id="rr-newmatch-btn">✨ مباراة جديدة</button>' +
+                '<button type="button" id="rr-replay-same-btn">🔁 إعادة نفس اللاعبين</button>' +
             '</div>';
 
         overlay.style.display = 'flex';
-        if (winner) { playWinFanfare(); spawnConfetti(overlay, 34); }
+        if (winner) {
+            playWinFanfare();
+            spawnConfetti(el('rr-trophy-card-winner') || overlay, 34);
+        }
         el('rr-newmatch-btn').onclick = function () { window.location.reload(); };
+        el('rr-home-btn').onclick = function () {
+            var headerHomeBtn = document.getElementById('agp-header-home-btn');
+            if (headerHomeBtn) headerHomeBtn.click();
+        };
         el('rr-replay-same-btn').onclick = function () {
             var survivorsRoster = AGP.gameManager.getPlayers().slice();
             overlay.style.display = 'none';
