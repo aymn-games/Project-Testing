@@ -55,26 +55,28 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var GAME_NAME = 'روليت القبائل';
     var TIMER_NAME = 'tribe-roulette-turn';
 
-    // ⚠️ [0.44.0] ألوان المنصة الرسمية — مطابقة تماماً لمتغيرات CSS
-    // الجذرية بـindex.html (--accent/--accent-2/--accent-pink)، راجع
-    // docs/UI_GUIDELINES.md. تُستخدَم بالعجلة والنوافذ بدل الألوان
-    // اليدوية التقريبية القديمة.
-    var C_ACCENT = '#7c3aed';   // بنفسجي أساسي
-    var C_ACCENT2 = '#00c2ff';  // سماوي (لمسات محدودة عمداً)
-    var C_PINK = '#ff4dff';     // وردي
-    var C_ACCENT_LT = '#a78bfa';
+    // ⚠️ [تصحيح هوية] ألوان "روليت القبائل" الخاصة — سماوي/بنفسجي مطابق
+    // لعجلة اللعبة القديمة (#80d4ff/#330066)، بدل بنفسجي/سماوي روليت
+    // الإقصاء الأصلي. C_ACCENT (المتغيّر الأساسي --tr-accent، يُستخدم
+    // لحدود الصناديق العامة) صار سماوياً، C_ACCENT2 (ثانوي، يُستخدم مع
+    // C_ACCENT بتدرّجات الأزرار) صار بنفسجياً — كل الأماكن اللي تستخدم
+    // var(--tr-accent)/var(--tr-accent2) بهذا الملف تتحدّث تلقائياً.
+    var C_ACCENT = '#80d4ff';   // سماوي أساسي (مطابق للعجلة)
+    var C_ACCENT2 = '#7c3aed';  // بنفسجي ثانوي
+    var C_PINK = '#ff4dff';     // وردي (يبقى بلا تغيير — خاص بحلقة "الأكثر إقصاءً" بشاشة الفائز فقط)
+    var C_ACCENT_LT = '#b3e6ff';
     var C_PINK_LT = '#ff8de8';
-    var C_ACCENT2_LT = '#7de0ff';
+    var C_ACCENT2_LT = '#a78bfa';
 
     // ⚠️ [0.45.0] نسخة غامقة من نفس ألوان العجلة أعلاه (لعجلة أغمق كما
     // طلب المستخدم) — كل لون = نفس اللون الأصلي بسطوع ~50%. راجع
     // docs/CHANGELOG.md للطريقة الحسابية.
-    var C_ACCENT_DK = '#3e1d76';
-    var C_ACCENT2_DK = '#00617f';
+    var C_ACCENT_DK = '#3f6a80';
+    var C_ACCENT2_DK = '#3e1d76';
     var C_PINK_DK = '#7f267f';
-    var C_ACCENT_LT_DK = '#53457d';
+    var C_ACCENT_LT_DK = '#597380';
     var C_PINK_LT_DK = '#7f4674';
-    var C_ACCENT2_LT_DK = '#3e707f';
+    var C_ACCENT2_LT_DK = '#53457d';
     var WHEEL_PALETTE = [C_ACCENT_DK, C_PINK_DK, C_ACCENT2_DK, C_ACCENT_LT_DK, C_PINK_LT_DK, C_ACCENT2_LT_DK];
 
     // ⚠️ [0.45.0] لون العناصر الي كانت بيضاء فوق/داخل العجلة (حلقة
@@ -228,6 +230,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _autoPlayActive = false;
     var _autoPlayTimer = null;
 
+    // ⚠️ [نافذة الاختيار الجديدة] فهرس المرشَّح المُختار يدوياً بنافذة
+    // الإقصاء (النقر على بطاقة = تحديد فقط، الإقصاء الفعلي يصير بالزر
+    // الأحمر — راجع selectCandidateManually/handleForceEliminateClick).
+    // null يعني "بدون اختيار يدوي" فيقصي الزر صاحب الدور نفسه افتراضياً.
+    var _selectedCandidateIdx = null;
+    // ⚠️ [تبويب "عودة لاعب" الجديد] معرِّف setTimeout الخاص بإخفائه
+    // تلقائياً — راجع showReviveSplash() أدناه.
+    var _reviveSplashTimer = null;
+
     function resetMatchState() {
         _alive = [];
         _eliminated = [];
@@ -242,6 +253,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _eliminationCounts = {};
         if (_autoPlayTimer) { window.clearTimeout(_autoPlayTimer); _autoPlayTimer = null; }
         _autoPlayActive = false;
+        _selectedCandidateIdx = null;
+        if (_reviveSplashTimer) { window.clearTimeout(_reviveSplashTimer); _reviveSplashTimer = null; }
+        var splashOverlay = el('tr-revive-splash-overlay');
+        if (splashOverlay) splashOverlay.style.display = 'none';
     }
 
     function liveSettings() {
@@ -575,6 +590,111 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.tr-gift-revive-card .tr-announce-avatar-wrap .tr-ring-avatar,',
             '.tr-gift-revive-card .tr-announce-avatar-wrap .tr-ring-avatar--fallback{width:40px;height:40px;font-size:0.8em;}',
 
+            /* ======================================================================
+             *  [نافذة "مرحلة الاختيار" الجديدة] — منقولة بالحرف من التصميم
+             *  الأخير المعتمَد فعلياً بروليت الإقصاء (#er-select-overlay/box)،
+             *  بطلب صريح، بألوان هوية روليت القبائل (سماوي/بنفسجي) بدل
+             *  بنفسجي/وردي روليت الإقصاء. تحل محل الصندوق القديم
+             *  (#tr-modal-overlay/box) لخصوص نافذتَي الإقصاء/الإرجاع فقط —
+             *  ذاك الصندوق يبقى مستخدَماً بدون تغيير لتبويب إعلان النتيجة
+             *  وشاشة الفائز ونافذة اختيار الهدية (خارج نطاق هذا الطلب).
+             * ==================================================================== */
+            '#tr-select-overlay{position:fixed;inset:0;z-index:99990;display:none;align-items:center;',
+            'justify-content:center;background:rgba(8,4,16,0.72);padding:16px;}',
+            '#tr-select-box{width:1150px;max-width:97vw;height:700px;max-height:94vh;border-radius:20px;',
+            'padding:14px 18px 18px;box-sizing:border-box;color:#fff;font-family:Almarai,Cairo,sans-serif;',
+            'background:linear-gradient(180deg,#5F3976,#211528);border:2px solid var(--tr-accent);position:relative;overflow:hidden;',
+            'box-shadow:0 0 50px rgba(128,212,255,0.45);display:flex;flex-direction:column;}',
+            // ⚠️ نفس تمييز الأحمر/الأخضر المعتمَد أصلاً (إقصاء=أحمر بأرقام
+            // المرشَّحين وعنوان التبويب، إرجاع=أخضر) — لغة ألوان وظيفية
+            // (خطر/أمان) منفصلة عن هوية اللعبة نفسها، بلا تغيير.
+            '#tr-select-box.tr-role-eliminate{border-color:#22c55e;}',
+            '#tr-select-box.tr-role-revive{border-color:#ef4444;}',
+            '#tr-select-box::before{content:"";position:absolute;inset:0;background:url(../../logo.png) no-repeat center;',
+            'background-size:220px auto;opacity:0.2;pointer-events:none;}',
+            '#tr-select-box > *{position:relative;z-index:1;}',
+            '#tr-select-title{text-align:center;font-size:0.92em;color:#9d92b3;margin-bottom:6px;flex:none;}',
+            '#tr-select-title b{color:var(--tr-accent);font-weight:900;}',
+            '#tr-select-box.tr-role-eliminate #tr-select-title b{color:#ef4444;}',
+            '#tr-select-box.tr-role-revive #tr-select-title b{color:#22c55e;}',
+            /* ---- صف واحد: بطاقة صاحب الدور المكبَّرة + الأزرار (متمركزان معاً) ---- */
+            '#tr-chooser-row{display:flex;align-items:center;justify-content:center;gap:26px;margin-bottom:12px;flex:none;}',
+            '.tr-select-chooser-card{display:flex;align-items:center;gap:12px;}',
+            '.tr-select-chooser-ring{width:88px;height:88px;border-radius:50%;padding:4px;box-sizing:border-box;flex:none;}',
+            '.tr-select-chooser-ring.tr-role-eliminate{background:#22c55e;box-shadow:0 0 22px rgba(34,197,94,0.65);}',
+            '.tr-select-chooser-ring.tr-role-revive{background:#ef4444;box-shadow:0 0 22px rgba(239,68,68,0.65);}',
+            '.tr-select-chooser-ring .tr-ring-avatar,.tr-select-chooser-ring .tr-ring-avatar--fallback{width:100%;height:100%;font-size:1.5em;}',
+            '.tr-select-chooser-nmrow{display:flex;align-items:center;gap:10px;margin-top:1px;}',
+            '.tr-select-chooser-nm{font-size:1.35em;font-weight:900;color:#fff;}',
+            '#tr-select-actions{display:flex;flex-direction:row;gap:8px;width:230px;flex:none;}',
+            '#tr-select-actions button{flex:1;padding:9px 6px;border-radius:999px;border:none;font-weight:800;',
+            'cursor:pointer;font-family:inherit;font-size:0.74em;color:#fff;white-space:nowrap;line-height:1.3;',
+            'transition:transform 0.15s,box-shadow 0.15s;}',
+            '#tr-select-actions button:hover{transform:translateY(-2px);}',
+            '#tr-select-resume-btn{background:linear-gradient(90deg,var(--tr-accent2),var(--tr-accent));',
+            'box-shadow:0 4px 14px rgba(128,212,255,0.4);}',
+            '#tr-force-eliminate-btn{background:linear-gradient(90deg,#ef4444,#b91c1c);',
+            'box-shadow:0 4px 14px rgba(239,68,68,0.45);}',
+            /* ---- المؤقّت — سطر مستقل بعد صف صاحب الدور، بارز وكبير ---- */
+            '#tr-select-timer{text-align:center;font-weight:900;font-size:1.5em;color:#ffe066;margin-bottom:10px;',
+            'flex:none;transition:color 0.2s;}',
+            '#tr-select-timer.tr-timer-warning{color:#ff4d6d;animation:tr-pulse 1s infinite;}',
+            /* ---- شبكة المرشّحين — ٤ أعمدة ثابتة، بطاقة لوبي-قياسي-v1 ---- */
+            '#tr-select-candidates-grid{flex:1;min-height:0;overflow-y:auto;display:grid;',
+            'grid-template-columns:repeat(4,1fr);gap:0.5cm;align-content:flex-start;padding:4px 2px 6px;}',
+            '.tr-select-cand-card{display:flex;flex-direction:column;align-items:center;cursor:pointer;}',
+            '.tr-select-cand-row{display:inline-flex;align-items:center;}',
+            '.tr-select-cand-avatar{width:60px;height:60px;border-radius:50%;flex:none;position:relative;z-index:2;',
+            'overflow:hidden;box-sizing:border-box;border:3px solid rgba(255,255,255,0.55);}',
+            '.tr-select-cand-avatar .tr-ring-avatar,.tr-select-cand-avatar .tr-ring-avatar--fallback{width:100%;height:100%;font-size:1.1em;}',
+            // ⚠️ خاص بروليت القبائل: بديل الأفاتار المخفي (تبويب الإقصاء
+            // فقط) — نفس أبعاد/موضع .tr-select-cand-avatar بالضبط، ظل
+            // غامق + علامة استفهام بدل الصورة الحقيقية.
+            '.tr-select-cand-avatar-hidden{background:radial-gradient(circle at 35% 30%,#3e1d76,#150a29);',
+            'display:flex;align-items:center;justify-content:center;font-size:1.6em;color:rgba(255,255,255,0.75);}',
+            '.tr-select-cand-plate{position:relative;height:48px;width:194px;box-sizing:border-box;',
+            'margin-inline-start:-13px;padding-inline-start:31px;padding-inline-end:10px;',
+            'display:flex;align-items:center;justify-content:flex-start;gap:8px;font-weight:800;color:#fff;',
+            'background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.28);',
+            'border-radius:999px;overflow:hidden;z-index:1;}',
+            '.tr-select-cand-name{font-size:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;}',
+            '.tr-select-cand-num{width:40px;height:40px;flex:none;color:#fff;',
+            'border-radius:50%;font-size:1.2em;font-weight:900;',
+            'display:flex;align-items:center;justify-content:center;z-index:3;}',
+            '.tr-select-cand-num.tr-role-eliminate{background:#ef4444;}',
+            '.tr-select-cand-num.tr-role-revive{background:#22c55e;}',
+            '.tr-select-cand-card.tr-cand-selected .tr-select-cand-plate{box-shadow:0 0 0 2px #ef4444;}',
+
+            /* ======================================================================
+             *  [تبويب "عودة لاعب" الجديد] — منقول بالحرف من التصميم الأخير
+             *  المعتمَد فعلياً بروليت الإقصاء (#er-revive-splash-overlay/box)،
+             *  بألوان هوية روليت القبائل. يحل محل تبويب "إعلان النتيجة"
+             *  القديم لحالة الإرجاع فقط (كلا النوعين: انعاش صديق + الدعم) —
+             *  حالة الإقصاء تبقى بتبويب إعلان النتيجة القديم بلا أي تغيير
+             *  (خارج نطاق هذا الطلب). قلب PNG مرفوع خصيصاً لهذي اللعبة
+             *  (revive-heart.png، بجانب index.html بنفس مجلد اللعبة).
+             * ==================================================================== */
+            '#tr-revive-splash-overlay{position:fixed;inset:0;z-index:100030;display:none;',
+            'align-items:center;justify-content:center;pointer-events:none;}',
+            '#tr-revive-splash-box{width:300px;height:300px;box-sizing:border-box;border-radius:24px;',
+            'border:4px solid var(--tr-accent);background:radial-gradient(circle at 50% 32%,rgba(128,212,255,0.28),rgba(8,16,24,0.94) 72%);',
+            'box-shadow:0 0 60px rgba(128,212,255,0.55),0 20px 50px rgba(0,0,0,0.5);',
+            'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;',
+            'padding:18px;text-align:center;color:#fff;font-family:Almarai,Cairo,sans-serif;',
+            'opacity:0;transform:scale(0.6);}',
+            '#tr-revive-splash-box.tr-revive-splash-anim{animation:tr-revive-pop 0.45s cubic-bezier(.34,1.56,.64,1) forwards;}',
+            '@keyframes tr-revive-pop{0%{opacity:0;transform:scale(0.5);}60%{opacity:1;transform:scale(1.08);}100%{opacity:1;transform:scale(1);}}',
+            '.tr-revive-splash-heart{width:58px;height:58px;object-fit:contain;',
+            'animation:tr-revive-heartbeat 1s ease-in-out infinite;',
+            'filter:drop-shadow(0 0 10px rgba(128,212,255,0.85));}',
+            '@keyframes tr-revive-heartbeat{0%,100%{transform:scale(1);}25%{transform:scale(1.18);}45%{transform:scale(0.96);}}',
+            '.tr-revive-splash-reason{font-size:0.82em;font-weight:700;color:#cdeeff;line-height:1.4;}',
+            '.tr-revive-splash-avatar{width:92px;height:92px;border-radius:50%;border:3px solid var(--tr-accent);',
+            'box-shadow:0 0 18px rgba(128,212,255,0.6);overflow:hidden;flex:none;}',
+            '.tr-revive-splash-avatar .tr-ring-avatar,.tr-revive-splash-avatar .tr-ring-avatar--fallback{',
+            'width:100%;height:100%;font-size:1.6em;}',
+            '.tr-revive-splash-name{font-size:1.15em;font-weight:900;color:#fff;}',
+
             /* ---- Toasts ---- */
             '#tr-toast-wrap{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:100020;',
             'display:flex;flex-direction:column;gap:8px;align-items:center;}',
@@ -724,15 +844,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-settings-close-btn{color:#ffffff !important;font-weight:900 !important;',
             'text-shadow:0 1px 4px rgba(0,0,0,0.5) !important;}',
 
-            // ⚠️ [0.45.14] طلب صريح (تصميم Figma مُزوَّد): صندوق اللوبي
-            // برجع لارتفاع ثابت — 900px هذي المرة (بدل 800px الأصلي وبدل
-            // auto اللي جربناها بـ[0.45.12]) — بحد أقصى 92vh للشاشات
-            // الأقصر. تنبيه صادق: لو عدد اللاعبين كبير جداً، المحتوى
-            // يتجاوز 900px ويصير سكرول داخل الصندوق نفسه (overflow-y:auto
-            // موروثة من القاعدة الأساسية #agp-shell-box) — هذا تحديداً
-            // الفرق بين الخيارين اللي عُرضا على المستخدم، واختار الثابت.
-            '#agp-shell-box.agp-lobby-box{height:900px !important;max-height:92vh !important;',
-            'overflow-y:auto !important;}',
+            // ⚠️ [منقول بالحرف من التحديث الأخير لروليت الإقصاء] معيار
+            // PLAYER-CARD-STANDARDS.md §4: الشاشة تبقى ثابتة بدون أي
+            // سكرول على مستوى الصفحة/الصندوق نفسه — فقط منطقة شبكة
+            // البطاقات (#agp-lobby-list) عندها سكرول داخلي، ويتوقف دائماً
+            // قبل الشريط السفلي بغضّ النظر عن عدد اللاعبين. يستبدل نظام
+            // الصندوق الثابت 900px + التصغير التلقائي الديناميكي (القديم
+            // بهذا الملف) بالكامل — الصندوق صار flex عمودي: العناصر
+            // الثابتة (العنوان، سطر التلميح، الشريط السفلي) بحجمها
+            // الطبيعي، وشبكة البطاقات وحدها تاخذ المساحة المتبقية وتسكرل
+            // لو لزم.
+            '#agp-shell-box.agp-lobby-box{height:min(94vh,980px) !important;max-height:94vh !important;',
+            'display:flex !important;flex-direction:column !important;overflow:hidden !important;}',
+            '#agp-shell-box.agp-lobby-box > h2,',
+            '#agp-shell-box.agp-lobby-box > .agp-join-hint,',
+            '#agp-shell-box.agp-lobby-box > #agp-entrance-stage,',
+            '#agp-shell-box.agp-lobby-box > #agp-entrance-settled-list{flex:0 0 auto !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{flex:1 1 auto !important;',
+            'min-height:0 !important;overflow-y:auto !important;}',
 
             // ⚠️ شعار "Ayman Games" كخلفية شفافة (25%) بمنتصف صندوق اللوبي —
             // طلب صريح. يُضاف كعنصر img عبر enhanceLobbyWatermarkAndActions()،
@@ -766,113 +895,47 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // المشترك (.agp-join-keyword-badge) فوق الخلفية الغامقة الجديدة.
             '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge{box-shadow:0 0 22px rgba(0,194,255,0.75) !important;}',
 
-            // ⚠️ [0.45.14] إعادة تصميم شبكة بطاقات اللاعبين باللوبي —
-            // يستبدل تكبير zoom الموحَّد لكل البطاقات ([0.45.12]/[0.45.13])
-            // بتصميمين منفصلين حسب نوع البطاقة (تفصيل كامل بالتعليقات
-            // أدناه)، بطلب صريح مبني على تصميم Figma مُزوَّد + توضيح
-            // صريح لعدد الأعمدة (3 بالضبط، وليس تلقائي).
-            // ⚠️ [0.45.15] margin-top إضافي — طلب صريح لحل قصّ بصري ظاهر
-            // بأعلى الصف الأول من البطاقات (ملتصقة بصف التلميح/الكلمة
-            // المفتاحية فوقها)، بنزول ~1 سم تقريباً.
-            // ⚠️ [0.45.16] طلب صريح: تقريب البطاقات من بعض (gap 18→10px)
-            // مع إبقاء 3 أعمدة بالضبط + ارتفاع أدنى موحَّد لكل صف
-            // (min-height على li) حتى تتساوى الصفوف طولياً بين البطاقات
-            // المؤطَّرة (~83px) والأساسية (~84px) رغم اختلاف نظام كل نوع.
-            // ⚠️ [0.45.18] طلب صريح: تقليص تلقائي لحجم البطاقات لو عدد
-            // اللاعبين كبير (أكثر من 15 — أكثر من 5 صفوف) حتى يظهر الكل
-            // بدون أي قصّ بصري، بدل الاعتماد على السكرول الداخلي. القيم
-            // أدناه صارت متغيرات CSS (custom properties) بدل أرقام ثابتة
-            // — applyDynamicLobbyCardScale() تحسبها وتحقنها ديناميكياً
-            // حسب عدد اللاعبين الفعلي + المساحة الرأسية المتاحة فعلياً
-            // (مقاسة من list.clientHeight)، وتُعاد الحساب تلقائياً مع كل
-            // انضمام/مغادرة لاعب (نفس MutationObserver الموجود أصلاً).
-            // القيم الافتراضية (fallback) هي أرقام الحجم الكامل المعتمدة.
-            // ⚠️ [0.45.19] طلب صريح بعد اختبار بأسماء حقيقية (إنجليزية/
-            // إيموجي طويلة، عكس أسماء الاختبار القصيرة "لاعب_1"): بلاطة
-            // اسم طويلة كانت تتوسّع حتى الحد الأقصى (520px) وتفرض على
-            // شبكة 3 أعمدة عرضاً أكبر من المتاح فعلياً — يسبب فيض أفقي
-            // حقيقي (سكرول جانبي + قصّ بصري للعمود الأول). المحاولة
-            // الأولى (تبديل كامل الشبكة لعمودين) كانت أوسع من المطلوب —
-            // طلب المستخدم صراحةً إبقاء 3 أعمدة كقاعدة عامة، وفقط
-            // البطاقة صاحبة الاسم الطويل تاخذ عرض عمودين (`grid-column:
-            // span 2`) بدل تغيير الشبكة كلها. الفحص (markWideLobbyCards)
-            // يحدد لكل بطاقة على حدة هل عرضها الطبيعي أكبر من عرض عمود
-            // واحد متاح، ويضيف كلاس `.tr-lobby-card-wide` لها فقط لو
-            // كذا. `grid-auto-flow:dense` يسمح للبطاقات القصيرة اللاحقة
-            // تملأ أي فراغ متبقي بنفس الصف بدل ترك فراغ فارغ.
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{display:grid !important;',
-            'grid-template-columns:repeat(3,1fr) !important;grid-auto-flow:dense !important;',
-            'gap:var(--tr-lobby-grid-gap,10px) !important;',
-            'align-items:center !important;justify-items:center !important;margin-top:34px !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{position:relative;display:flex !important;',
-            'align-items:center !important;justify-content:center !important;flex:0 0 auto !important;',
-            'min-width:0 !important;padding:4px !important;',
-            'min-height:var(--tr-lobby-row-min-height,88px) !important;box-sizing:border-box !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li.tr-lobby-card-wide{',
-            'grid-column:span 2 !important;}',
+            // ⚠️ [منقول بالحرف من التحديث الأخير لروليت الإقصاء] شارة عدد
+            // اللاعبين — "شارة عائمة أعلى الشاشة" بدل بقائها بنص سطر
+            // التلميح. العنصر نفسه (#agp-lobby-count) موجود أصلاً بالملف
+            // المشترك ومُعبَّأ تلقائياً، هذا فقط يفصلها بصرياً ويعوّمها
+            // أعلى يمين الصندوق بدل تدفقها العادي بالسطر.
+            '#agp-shell-box.agp-lobby-box #agp-lobby-count{position:absolute !important;top:14px !important;',
+            'left:20px !important;z-index:3 !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-player-count-badge{background:rgba(0,0,0,0.45) !important;',
+            'border:1px solid rgba(255,255,255,0.35) !important;border-radius:999px !important;',
+            'padding:6px 16px !important;font-weight:900 !important;font-size:0.95em !important;',
+            'box-shadow:0 4px 14px rgba(0,0,0,0.35) !important;}',
 
-            // ---- بطاقة اللاعب الأساسية (بدون إطار) — تصميم "بلاطة اسم +
-            // دائرة أفاتار منفصلة بجانبها"، مطابق لصورة Figma:
-            // بلاطة الاسم بعرض أدنى 300px (يتوسع تلقائياً لو الاسم طويل،
-            // يبقى بالنص لو قصير)، ارتفاع ثابت 80px، خط 40px. الأفاتار
-            // دائرة منفصلة 84×84px بجانبها (مو بداخلها). الحاوية الأصلية
-            // .agp-pcard صارت شفافة (بدون خلفية/حدود خاصة فيها) — الشكل
-            // البصري صار على البلاطة والدائرة نفسهما.
-            // ⚠️ [0.45.16] طلب صريح: إزالة الفراغ بين دائرة الأفاتار وبلاطة
-            // الاسم — يصيران ملتصقين ببعض (gap:0 بدل 12px).
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard{background:none !important;',
-            'border:none !important;padding:0 !important;border-radius:0 !important;',
-            'max-width:none !important;gap:0 !important;display:flex !important;align-items:center !important;}',
-            // ⚠️ [0.45.17] طلب صريح: حجم دائرة الأفاتار 84→75px (الأساس
-            // الكامل — [0.45.18] يصغّره أكثر ديناميكياً لو زاد اللاعبين).
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-avatar-basic{',
-            'width:var(--tr-lobby-avatar-size,65px) !important;height:var(--tr-lobby-avatar-size,65px) !important;',
-            'border-width:3px !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-avatar-basic--fallback{',
-            'font-size:1.6em !important;}',
-            // ⚠️ [0.45.15] طلب صريح: ارتفاع البلاطة 80→60px، خط الاسم
-            // 40→35px (أساس كامل — [0.45.18] يصغّره ديناميكياً أيضاً).
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-name-basic{',
-            'display:flex !important;align-items:center !important;justify-content:center !important;',
-            'min-width:var(--tr-lobby-pill-minw,260px) !important;max-width:var(--tr-lobby-pill-maxw,450px) !important;',
-            'height:var(--tr-lobby-pill-height,52px) !important;',
-            'box-sizing:border-box !important;padding:0 20px !important;font-size:var(--tr-lobby-font-size,30px) !important;',
-            'font-weight:800 !important;background:rgba(255,255,255,0.14) !important;',
-            'border:1px solid rgba(255,255,255,0.32) !important;border-radius:999px !important;',
-            'white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important;',
-            'line-height:1 !important;}',
+            /* ==================================================================
+             * ⚠️ [حذف كامل — منقول بالحرف من التحديث الأخير لروليت الإقصاء]
+             * تخصيص شكل/حجم بطاقات اللوبي المحلي (الشبكة 3 أعمدة، حجم
+             * الأفاتار/البلاطة، نظام "البطاقة العريضة"، والتصغير التلقائي
+             * الديناميكي) حُذف بالكامل من هنا. السبب: js/agp-game-shell.js
+             * وjs/agp-player-card.js المشتركان صار فيهما نفس هذا النظام
+             * مبنياً بشكل أصلي (شبكة 4 أعمدة، AGP.playerCard.renderHtml
+             * بحجم موحَّد وتراكب، AGP.playerCard.fitAllNames للـMarquee،
+             * وقياس عرض البطاقة المؤطَّرة رياضياً) — أي تخصيص محلي مكرِّر
+             * لنفس الشيء يتعارض بصرياً معه، فحُذف بدل التطبيق فوقه (نفس
+             * القرار المعتمَد فعلياً بروليت الإقصاء، بطلب صريح).
+             * ⚠️ فائدة إضافية مباشرة لهذا الحذف: الشبكة المحلية القديمة
+             * هنا كانت بدون align-content:start (نفس علّة "البطاقات تصعد
+             * من تحت" الموجودة حالياً بلعبتَي روليت الروسي والكراسي
+             * الموسيقية — كلتاهما لسا فيهما شبكة محلية مشابهة بدون
+             * align-content). الاعتماد الآن على شبكة الملف المشترك
+             * (المُصلَحة فعلياً بـalign-content:start) يتفادى نفس العلة
+             * هنا تلقائياً، بدون أي كود إضافي.
+             * ==================================================================== */
 
-            // ---- بطاقة اللاعب المؤطَّرة (عنده إطار مفعَّل) — نظام مختلف
-            // كلياً بالملف المشترك (js/agp-player-card.js): قماشة صورة
-            // واحدة (إطار+صورة+اسم مدموجين) بأبعاد مبنية حسب نسبة كل
-            // ملف إطار على حدة (ارتفاع أساس ثابت 72px بالملف المشترك،
-            // ما نقدر نلمسه). تكبير أي جزء بمقاس منفصل (زي 84px أفاتار)
-            // بيمدّد صورة الإطار بالقوة ويشوّهها — بدل هذا، تكبير
-            // متناسب بالكامل (zoom على القماشة كوحدة واحدة) يقارب نفس
-            // الحجم العام (~83px بدل 72px) بدون أي تشويه — بالضبط القرار
-            // اللي تم تأكيده صراحة.
-            // ⚠️ [0.45.18] نفس نسبة التصغير الديناميكي تنطبق على البطاقات
-            // المؤطَّرة أيضاً (zoom أساسه 1.15 يتغيّر مع --tr-lobby-scale)
-            // حتى تبقى الصفوف متوازنة بالطول مع البطاقات الأساسية بكل
-            // الأحجام، بدون أي تشويه (zoom يبقى تكبيراً متناسباً للقماشة
-            // كوحدة واحدة دائماً، بغضّ النظر عن قيمته).
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li .agp-pcard-tpl{',
-            'zoom:var(--tr-lobby-frame-zoom,1.00) !important;}',
-
-            // ⚠️ زر "✕" لإقصاء لاعب يدوياً قبل بدء المباراة (بطاقات اللوبي) —
-            // يُضاف كعنصر عبر enhanceLobbyList()، هذا فقط شكله. حجمه بقي
-            // بدون تغيير (طلب صريح: "حجم قريب من الحالي").
-            '.tr-lobby-remove-btn{position:absolute;top:-6px;left:-6px;width:22px;height:22px;',
-            'border-radius:50%;background:#ef4444;color:#fff;border:2px solid #211528;',
-            'font-weight:900;font-size:13px;line-height:18px;text-align:center;cursor:pointer;',
-            'box-shadow:0 2px 6px rgba(0,0,0,0.5);z-index:2;}',
-
-            // ⚠️ [0.45.15] صف أزرار اللوبي السفلي — طلب صريح جديد: الثلاثة
-            // أزرار (العودة للإعدادات، بدء الجولة، رجوع للمنصة) بصف واحد
-            // جنب بعض، بنفس المقاس بالضبط (W360×H48)، بدل صفّين متفاوتَي
-            // الحجم كما كان بـ[0.45.14]. المقاس ثابت (مو flex:1) + الصف
+            // ⚠️ [0.45.15] صف أزرار اللوبي السفلي — الثلاثة أزرار (العودة
+            // للإعدادات، بدء الجولة، رجوع للمنصة) بصف واحد جنب بعض، بنفس
+            // المقاس بالضبط (W360×H48). المقاس ثابت (مو flex:1) + الصف
             // نفسه في المنتصف (justify-content:center).
-            '.tr-lobby-actions-row{display:flex;gap:14px;margin-top:14px;justify-content:center;',
+            // ⚠️ flex:0 0 auto — الصف يبقى بحجمه الطبيعي (شريط سفلي ثابت)
+            // جوّا الصندوق اللي صار flex-column، ولا يتأثر بمساحة القائمة
+            // القابلة للتمدد/السكرول فوقه.
+            '#agp-shell-box.agp-lobby-box .tr-lobby-actions-row{flex:0 0 auto !important;',
+            'display:flex;gap:14px;margin-top:14px;justify-content:center;',
             'flex-wrap:wrap;}',
             '.tr-lobby-actions-row > *{width:360px !important;height:48px !important;',
             'max-width:360px !important;flex:0 0 360px !important;box-sizing:border-box !important;',
@@ -885,12 +948,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-box.agp-lobby-box .tr-lobby-actions-row #agp-start-round-btn{',
             'background:linear-gradient(90deg,#22c55e,#16a34a) !important;color:#fff !important;}',
 
-            // ⚠️ زر "رجوع للمنصة" — طلب صريح [0.45.15]: بشاشة اللوبي صار
-            // ضمن نفس صف الأزرار الثلاثة (W360×H48 موحَّد أعلاه)، بينما
-            // بشاشة الإعدادات الأولى (صورة 1، خارج نطاق هذا التعديل) بقي
-            // بشكله الأصلي (block بعرض تلقائي) — القاعدة العامة أدناه
-            // تبقى الافتراضي، ومحدِّد .tr-lobby-actions-row أعلى تخصيصاً
-            // فيطغى فقط داخل صف اللوبي.
+            // ⚠️ زر "رجوع للمنصة" — بشاشة اللوبي صار ضمن نفس صف الأزرار
+            // الثلاثة (W360×H48 موحَّد أعلاه)، بينما بشاشة الإعدادات
+            // الأولى بقي بشكله الأصلي (block بعرض تلقائي) — القاعدة
+            // العامة أدناه تبقى الافتراضي، ومحدِّد .tr-lobby-actions-row
+            // أعلى تخصيصاً فيطغى فقط داخل صف اللوبي.
             '.tr-back-to-platform-btn{display:block;margin:14px auto 0;padding:10px 22px;',
             'border-radius:999px;border:1px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.08);',
             'color:#f3eefc;font-family:inherit;font-weight:800;font-size:0.9em;cursor:pointer;',
@@ -911,10 +973,44 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             overlay.innerHTML = '<div id="tr-modal-chooser-card"></div><div id="tr-modal-box"></div>';
             document.body.appendChild(overlay);
         }
+        // ⚠️ صندوق "اختيار الإقصاء/الإرجاع" الجديد — منقول بالحرف من
+        // تصميم روليت الإقصاء الأخير (#er-select-overlay). عنصر مستقل
+        // كلياً عن #tr-modal-overlay أعلاه (يبقى مستخدَماً فقط لإعلان
+        // النتيجة/الفائز/اختيار الهدية). يُبنى مرة واحدة فقط هنا —
+        // renderTurnModal() تحدّث المحتوى الداخلي فقط بكل فتحة دور.
+        if (!el('tr-select-overlay')) {
+            var selectOverlay = document.createElement('div');
+            selectOverlay.id = 'tr-select-overlay';
+            selectOverlay.innerHTML =
+                '<div id="tr-select-box">' +
+                    '<div id="tr-select-title"></div>' +
+                    '<div id="tr-chooser-row">' +
+                        '<div id="tr-select-chooser-slot"></div>' +
+                        '<div id="tr-select-actions">' +
+                            '<button id="tr-force-eliminate-btn" type="button">❌ إقصاء صاحب الدور</button>' +
+                            '<button id="tr-select-resume-btn" type="button">▶️ استئناف اللعبة</button>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div id="tr-select-timer"></div>' +
+                    '<div id="tr-select-candidates-grid"></div>' +
+                '</div>';
+            document.body.appendChild(selectOverlay);
+            el('tr-force-eliminate-btn').addEventListener('click', handleForceEliminateClick);
+            el('tr-select-resume-btn').addEventListener('click', handleSelectResumeClick);
+        }
         if (!el('tr-toast-wrap')) {
             var toastWrap = document.createElement('div');
             toastWrap.id = 'tr-toast-wrap';
             document.body.appendChild(toastWrap);
+        }
+        // ⚠️ تبويب "عودة لاعب" الجديد — منقول بالحرف من تصميم روليت
+        // الإقصاء الأخير (#er-revive-splash-overlay). عنصر مستقل تماماً،
+        // يُبنى مرة واحدة فقط هنا بنفس أسلوب بقية عناصر ensureScaffolding().
+        if (!el('tr-revive-splash-overlay')) {
+            var splashOverlay = document.createElement('div');
+            splashOverlay.id = 'tr-revive-splash-overlay';
+            splashOverlay.innerHTML = '<div id="tr-revive-splash-box"></div>';
+            document.body.appendChild(splashOverlay);
         }
     }
 
@@ -1374,146 +1470,179 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         logEvent('revive', '💚 ' + playerLabel(target) + ' رجع للعبة' +
             (chooserPlayer ? (' بواسطة ' + playerLabel(chooserPlayer)) : ''));
 
-        showResultAnnouncement('revive', {
-            target: target,
-            chooser: chooserPlayer
-        }, function onDone() {
+        // ⚠️ استُبدل تبويب إعلان النتيجة القديم بتبويب "عودة لاعب" الجديد
+        // الموحَّد (نفس الدالة المستخدَمة لإنعاش الدعم — راجع showReviveSplash
+        // أدناه). onDone (استمرار الدوران التلقائي) بقي كما هو تماماً.
+        showReviveSplash(target, { reason: 'friend', chooser: chooserPlayer }, function onDone() {
             maybeAutoSpin();
         });
     }
 
     /* ======================================================================
      *  7) نافذة الدور المشتركة (إقصاء أو إرجاع) — عرض + عدّاد + استماع للشات
+     *  ⚠️ منقولة بالحرف من تصميم روليت الإقصاء الأخير (renderTurnModal
+     *  الجديدة، #er-select-overlay/box)، بفارقين مقصودين لروليت القبائل:
+     *   1) تبويب الإقصاء: بطاقات المرشَّحين تعرض اسم قبيلة + شخصية مخفية
+     *      (tribeCandidateCardHtml) بدل الصورة/الاسم الحقيقي.
+     *   2) الرقم المعروض على كل بطاقة **ليس** رقم اللاعب الثابت الجديد
+     *      (playerNumber) المستخدَم بروليت الإقصاء — هو فهرس عرض عشوائي
+     *      (i+1) يُعاد خلطه كل دورة (candidates أصلاً مخلوطة مسبقاً —
+     *      راجع openEliminationWindow/openRevivalWindow). قرار مقصود:
+     *      رقم ثابت مرتبط بلاعب معيّن يكسر تمويه الهوية بتبويب الإقصاء
+     *      (المشاهد يتعلّم "رقم ٣ = فلان" رغم تغيّر اسم القبيلة)، ويخالف
+     *      طلب المستخدم الصريح السابق بإلغاء الأرقام الثابتة بتبويب
+     *      الإرجاع. باقي التصميم (الأبعاد، صفّ صاحب الدور+الأزرار،
+     *      المؤقّت، الشبكة) منقول بالحرف.
      * ==================================================================== */
     function renderTurnModal() {
-        var overlay = el('tr-modal-overlay');
-        var box = el('tr-modal-box');
+        ensureScaffolding();
+        var overlay = el('tr-select-overlay');
+        var box = el('tr-select-box');
         if (!overlay || !box || !_pendingTurn) return;
 
         var isRevive = _pendingTurn.type === 'revive';
         var roleClass = isRevive ? 'tr-role-revive' : 'tr-role-eliminate';
-        var title = isRevive ? '🎗️ فرصة إرجاع!' : 'اختر قبيلة';
-        var subtitle = isRevive
-            ? 'وقف عليه العجلة مرتين متتاليتين — يقدر يرجّع لاعب مُقصى! اكتب رقم اللاعب بشات البث، أو اكتب "تخطي" للتجاوز'
-            : 'القبائل تخفي خلفها بقية اللاعبين — اكتب رقم القبيلة بشات البث لتحديد من يتم استهدافه';
+        box.className = roleClass;
 
-        // ⚠️ تبويب الاختيار (الإقصاء) تحديداً: الهوية الحقيقية مخفية —
-        // كل بطاقة تعرض اسم قبيلة عشوائي (tribeCardHtml) بدل صورة/اسم
-        // اللاعب الحقيقي (playerCardHtml). تبويب الإرجاع يبقى بالهوية
-        // الحقيقية ظاهرة بالكامل — بدون أي تغيير عن روليت الإقصاء.
+        var titleLine = isRevive
+            ? '<b>مرحلة الإنعاش</b> — اختر من الشات بكتابة الرقم، أو يدوياً بالنقر على بطاقة اللاعب'
+            : '<b>مرحلة الإقصاء</b> — اختر من الشات بكتابة رقم القبيلة، أو يدوياً من الأزرار تحت';
+        el('tr-select-title').innerHTML = titleLine;
+
+        el('tr-select-chooser-slot').innerHTML = selectChooserCardHtml(_pendingTurn.chooser, roleClass);
+
+        // ⚠️ تبويب الإقصاء تحديداً: الهوية الحقيقية مخفية — كل بطاقة
+        // تعرض اسم قبيلة عشوائي بدل صورة/اسم اللاعب الحقيقي. تبويب
+        // الإرجاع يبقى بالهوية الحقيقية ظاهرة بالكامل.
         var tribeLabels = !isRevive ? randomTribeLabels(_pendingTurn.candidates.length) : null;
-        var rows = _pendingTurn.candidates.map(function (p, i) {
-            return '<div class="tr-candidate-card" data-index="' + i + '">' +
-                '<span class="tr-candidate-num ' + roleClass + '">' + (i + 1) + '</span>' +
-                (isRevive ? playerCardHtml(p) : tribeCardHtml(tribeLabels[i])) +
-                '</div>';
+        var grid = el('tr-select-candidates-grid');
+        grid.innerHTML = _pendingTurn.candidates.map(function (p, i) {
+            return isRevive
+                ? selectCandidateCardHtml(p, i, roleClass)
+                : tribeCandidateCardHtml(tribeLabels[i], i, roleClass);
         }).join('');
-
-        // ⚠️ [0.45.13] طلب صريح: كتابة "مرحلة الإقصاء" داخل نافذة اختيار
-        // الإقصاء تحديداً (بدون نافذة الإرجاع) — توضيح إضافي للمشاهدين.
-        var phaseBadgeHtml = !isRevive
-            ? '<div class="tr-phase-badge-wrap"><span class="tr-phase-badge">🔴 مرحلة الإقصاء</span></div>'
-            : '';
-
-        box.className = roleClass; // ⚠️ [0.45.8] يميّز تبويب الإقصاء بلون أخضر (راجع CSS)
-        box.innerHTML =
-            phaseBadgeHtml +
-            '<h2>' + title + '</h2>' +
-            '<div id="tr-modal-sub">' + subtitle + '</div>' +
-            '<div id="tr-modal-timer"></div>' +
-            '<div id="tr-candidates-grid">' + rows + '</div>';
-
-        // ⚠️ [0.46.0] بطاقة الاختيار (أفاتار+اسم بحلقة ملوَّنة) تظهر فوق
-        // الصندوق كعنصر شقيق منفصل بفاصل واضح (gap على #tr-modal-overlay)
-        // — بدل نص "الاسم يختار!" الملغى بالكامل.
-        var chooserCard = el('tr-modal-chooser-card');
-        if (chooserCard) {
-            chooserCard.innerHTML = chooserCardHtml(_pendingTurn.chooser, roleClass, !isRevive);
-            chooserCard.style.display = 'flex';
-        }
-
-        if (AGP.playerCard) AGP.playerCard.fitAllNames(box);
-
-        box.querySelectorAll('.tr-candidate-card').forEach(function (row) {
-            row.onclick = function () {
-                var i = parseInt(row.getAttribute('data-index'), 10);
-                resolveTurnSelection(i);
+        grid.querySelectorAll('.tr-select-cand-card[data-index]').forEach(function (card) {
+            card.onclick = function () {
+                var idx = parseInt(card.getAttribute('data-index'), 10);
+                if (isRevive) {
+                    // ⚠️ ما فيه زر تأكيد بنافذة الإرجاع — النقر يُرجع فوراً.
+                    resolveTurnSelection(idx);
+                } else {
+                    selectCandidateManually(idx, tribeLabels[idx]);
+                }
             };
         });
 
-        // ⚠️ [0.45.7] زرّا تحكّم يدوي — بديل اختياري لكتابة الرقم بشات
-        // البث، لا يلغيها (الاثنان يبقيان شغّالين معاً). يظهران فقط
-        // بنافذة الإقصاء (chooserCardHtml بنَتهما فقط لو isEliminate=true).
-        var eliminateChooserBtn = el('tr-chooser-eliminate-btn');
-        if (eliminateChooserBtn) {
-            eliminateChooserBtn.onclick = function () {
-                var chooser = _pendingTurn && _pendingTurn.chooser;
-                if (!chooser) return;
-                AGP.timerManager.stop(TIMER_NAME);
-                eliminatePlayer(chooser, chooser.id);
-            };
-        }
-        var resumeBtn = el('tr-chooser-resume-btn');
-        if (resumeBtn) {
-            resumeBtn.onclick = function () {
-                AGP.timerManager.stop(TIMER_NAME);
-                closeTurnModal();
-                // ⚠️ [0.45.10] نفس تصفير الدوران — راجع تعليق handleSpinClick.
-                resetWheelSpinPosition();
-                maybeAutoSpin();
-            };
-        }
+        var forceBtn = el('tr-force-eliminate-btn');
+        forceBtn.style.display = isRevive ? 'none' : '';
+        if (!isRevive) forceBtn.textContent = '❌ إقصاء صاحب الدور';
+        _selectedCandidateIdx = null;
+
+        if (AGP.playerCard) AGP.playerCard.fitAllNames(grid);
 
         overlay.style.display = 'flex';
     }
 
     // ⚠️ playerCardHtml معزولة بدالة واحدة — تستخدم AGP.playerCard
     // المشترك (js/agp-player-card.js) بدون إطار (showFrame:false) عمداً؛
-    // نافذتا الإقصاء/الإرجاع تعرض البطاقة الأساسية دائماً حتى لو اللاعب
-    // يملك إطاراً مفعَّلاً (الإطار يظهر باللوبي فقط، قرار موثَّق أصلاً).
+    // ما زالت تُستخدَم بتبويب "إعلان النتيجة" (showResultAnnouncement).
     function playerCardHtml(p) {
         if (!AGP.playerCard) return '<span>' + escapeHtml(playerLabel(p)) + '</span>';
         return AGP.playerCard.renderHtml(p, { showFrame: false });
     }
 
-    /**
-     * ⚠️ بطاقة "قبيلة" — تستخدَم حصراً بتبويب الاختيار (الإقصاء) بدل
-     * playerCardHtml() أعلاه، حتى تبقى هوية الهدف الحقيقية مخفية تماماً
-     * عن الشات وقت الاختيار (تُكشَف لاحقاً فقط بتبويب إعلان النتيجة —
-     * showResultAnnouncement بدون أي تعديل). شخصية مخفية (ظل + علامة
-     * استفهام) بدل الصورة الحقيقية، بنفس أبعاد دائرة الأفاتار الأساسية
-     * (.agp-pcard-avatar-basic) حتى يتطابق شكل الصف مع تبويب الإرجاع.
-     */
-    function tribeCardHtml(tribeLabel) {
-        return '<span class="agp-pcard tr-tribe-pcard">' +
-            '<span class="tr-tribe-avatar" aria-hidden="true">❔</span>' +
-            '<span class="agp-pcard-name-basic tr-tribe-name">' + escapeHtml(tribeLabel) + '</span>' +
-            '</span>';
-    }
-
-    // ⚠️ [0.46.0] "بطاقة اختيار" — تُعاد استخدام ringAvatarHtml() نفسها
-    // المستخدَمة ببطاقات شاشة الفائز (دائرة أفاتار + fallback أحرف أولى).
-    // ⚠️ [0.45.7] isEliminate=true يضيف زرّي "إقصاء صاحب الدور"/"استئناف
-    // اللعب" (تحكّم يدوي جديد بطلب صريح، مصدره تصميم مرجعي زوَّدنا به
-    // المستخدم) — تحديداً بنافذة الإقصاء فقط، ما ينطبق على نافذة الإرجاع
-    // (الإقصاء اليدوي مايعني شي بسياق الإرجاع، والإرجاع أصلاً عنده تخطي
-    // عبر كتابة "تخطي" بالشات — بلا تغيير هناك).
-    function chooserCardHtml(chooser, roleClass, isEliminate) {
-        var actionsHtml = isEliminate ?
-            '<div class="tr-chooser-actions">' +
-            '<button type="button" class="tr-chooser-action-btn tr-chooser-action-eliminate" id="tr-chooser-eliminate-btn">❌ إقصاء صاحب الدور</button>' +
-            '<button type="button" class="tr-chooser-action-btn tr-chooser-action-resume" id="tr-chooser-resume-btn">▶️ استئناف اللعب</button>' +
-            '</div>' : '';
-        return '<div class="tr-chooser-card-ring ' + roleClass + '">' +
-            '<div class="tr-chooser-card-inner">' + ringAvatarHtml(chooser) + '</div>' +
+    // ⚠️ بطاقة "صاحب الدور" المكبَّرة داخل صف #tr-chooser-row — حلقة
+    // ٨٨px + اسمه. بدون رقم بجانب الاسم (بعكس روليت الإقصاء) — لا يوجد
+    // "رقم ثابت" بروليت القبائل أصلاً (راجع تعليق renderTurnModal أعلاه)،
+    // وهوية صاحب الدور نفسها دائماً ظاهرة وواضحة، فرقم بجانبها بلا فائدة.
+    function selectChooserCardHtml(chooser, roleClass) {
+        return '<div class="tr-select-chooser-card">' +
+            '<div class="tr-select-chooser-ring ' + roleClass + '">' + ringAvatarHtml(chooser) + '</div>' +
+            '<div>' +
+                '<div class="tr-select-chooser-nmrow">' +
+                    '<span class="tr-select-chooser-nm" data-agp-pcard-name="1">' + escapeHtml(playerLabel(chooser)) + '</span>' +
+                '</div>' +
             '</div>' +
-            '<div class="tr-chooser-card-name">' + escapeHtml(playerLabel(chooser)) + '</div>' +
-            actionsHtml;
+        '</div>';
     }
 
-    function hideChooserCard() {
-        var card = el('tr-modal-chooser-card');
-        if (card) { card.style.display = 'none'; card.innerHTML = ''; }
+    // ⚠️ بطاقة مرشَّح بشبكة الاختيار — تبويب الإرجاع فقط (هوية حقيقية
+    // ظاهرة): أفاتار ٦٠px يتراكب على لوح اسم دائري، رقم عرض عشوائي
+    // (index+1، مو رقم ثابت — راجع تعليق renderTurnModal) داخل تدفّق
+    // لوح الاسم.
+    function selectCandidateCardHtml(p, index, roleClass) {
+        return '<div class="tr-select-cand-card" data-index="' + index + '">' +
+            '<div class="tr-select-cand-row">' +
+                '<div class="tr-select-cand-avatar">' + ringAvatarHtml(p) + '</div>' +
+                '<div class="tr-select-cand-plate">' +
+                    '<span class="tr-select-cand-name" data-agp-pcard-name="1">' + escapeHtml(playerLabel(p)) + '</span>' +
+                    '<span class="tr-select-cand-num ' + roleClass + '">' + (index + 1) + '</span>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    }
+
+    // ⚠️ بطاقة مرشَّح بشبكة الاختيار — تبويب الإقصاء فقط (هوية مخفية):
+    // نفس تخطيط selectCandidateCardHtml بالضبط، لكن دائرة "شخصية مخفية"
+    // (❔) بدل الأفاتار الحقيقي، واسم قبيلة عشوائي بدل اسم اللاعب.
+    function tribeCandidateCardHtml(tribeLabel, index, roleClass) {
+        return '<div class="tr-select-cand-card" data-index="' + index + '">' +
+            '<div class="tr-select-cand-row">' +
+                '<div class="tr-select-cand-avatar tr-select-cand-avatar-hidden" aria-hidden="true">❔</div>' +
+                '<div class="tr-select-cand-plate">' +
+                    '<span class="tr-select-cand-name">' + escapeHtml(tribeLabel) + '</span>' +
+                    '<span class="tr-select-cand-num ' + roleClass + '">' + (index + 1) + '</span>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    }
+
+    // ⚠️ تحديد يدوي (نافذة الإقصاء فقط) — النقر على بطاقة مرشَّح لا
+    // يُقصيه فوراً، فقط يحدِّده (حدود حمراء) ويبدّل نص الزر الأحمر
+    // لـ"إقصاء [اسم القبيلة]" بدل "إقصاء صاحب الدور" الافتراضي — اسم
+    // القبيلة تحديداً، مو الاسم الحقيقي، حتى يبقى التمويه سارياً لين
+    // لحظة الضغط الفعلي على الزر. الإقصاء الفعلي يصير فقط بالضغط عليه
+    // (handleForceEliminateClick).
+    function selectCandidateManually(idx, tribeLabel) {
+        if (!_pendingTurn || _pendingTurn.type !== 'eliminate') return;
+        _selectedCandidateIdx = idx;
+        var grid = el('tr-select-candidates-grid');
+        if (grid) {
+            grid.querySelectorAll('.tr-select-cand-card[data-index]').forEach(function (card) {
+                card.classList.toggle('tr-cand-selected', parseInt(card.getAttribute('data-index'), 10) === idx);
+            });
+        }
+        var btn = el('tr-force-eliminate-btn');
+        if (btn && tribeLabel) btn.textContent = '❌ إقصاء ' + tribeLabel;
+    }
+
+    // ⚠️ الزر الأحمر (نافذة الإقصاء فقط، مخفي بنافذة الإرجاع) — بدون
+    // اختيار يدوي = يقصي صاحب الدور نفسه. بعد اختيار بطاقة يدوياً = يقصي
+    // ذاك المرشَّح المحدَّد (الحقيقي — الهوية المخفاة كانت بصرياً فقط،
+    // eliminatePlayer تتعامل مع كائن اللاعب الحقيقي دائماً).
+    function handleForceEliminateClick() {
+        if (!_pendingTurn || _pendingTurn.type !== 'eliminate') return;
+        var chooser = _pendingTurn.chooser;
+        if (!chooser) return;
+        var target = (_selectedCandidateIdx !== null && _pendingTurn.candidates[_selectedCandidateIdx])
+            ? _pendingTurn.candidates[_selectedCandidateIdx]
+            : chooser;
+        AGP.timerManager.stop(TIMER_NAME);
+        eliminatePlayer(target, chooser.id);
+    }
+
+    // ⚠️ "استئناف اللعبة" — الزر الوحيد بنافذة الإرجاع، وأحد زرَّين بنافذة
+    // الإقصاء. يغلق الدور بدون أي إقصاء/إرجاع. بنافذة الإقصاء فقط: نفس
+    // تصفير دوران العجلة القديم + استئناف "العب" التلقائي لو مفعَّل.
+    function handleSelectResumeClick() {
+        if (!_pendingTurn) return;
+        var isRevive = _pendingTurn.type === 'revive';
+        AGP.timerManager.stop(TIMER_NAME);
+        closeTurnModal();
+        if (!isRevive) {
+            resetWheelSpinPosition();
+            maybeAutoSpin();
+        }
     }
 
     var _turnTickUnsub = null;
@@ -1521,9 +1650,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _warningPlayedForSecond = null;
 
     function closeTurnModal() {
-        var overlay = el('tr-modal-overlay');
+        var overlay = el('tr-select-overlay');
         if (overlay) overlay.style.display = 'none';
-        hideChooserCard();
         AGP.timerManager.stop(TIMER_NAME);
         if (typeof _turnTickUnsub === 'function') _turnTickUnsub();
         if (typeof _turnEndUnsub === 'function') _turnEndUnsub();
@@ -1531,6 +1659,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _turnEndUnsub = null;
         _pendingTurn = null;
         _warningPlayedForSecond = null;
+        _selectedCandidateIdx = null;
+    }
+
+    // ⚠️ #tr-modal-chooser-card عنصر من التصميم القديم لنافذتَي الإقصاء/
+    // الإرجاع — لم يعد يُملأ بأي محتوى من renderTurnModal الجديد، لكن
+    // showResultAnnouncement/renderWinnerScreen ما زالا يستدعيان هذي
+    // الدالة دفاعياً (احتياطاً لو بقي ظاهراً من حالة سابقة) — إبقاؤها
+    // بلا ضرر.
+    function hideChooserCard() {
+        var card = el('tr-modal-chooser-card');
+        if (card) { card.style.display = 'none'; card.innerHTML = ''; }
     }
 
     function startTurnTimer(onTimeout) {
@@ -1554,7 +1693,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function updateTimerDisplay(seconds) {
-        var t = el('tr-modal-timer');
+        var t = el('tr-select-timer');
         if (!t) return;
         t.textContent = '⏱️ ' + seconds + ' ث';
         t.classList.toggle('tr-timer-warning', seconds > 0 && seconds <= 10);
@@ -1697,31 +1836,68 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         realignWheelAfterRosterChange();
 
         logEvent('gift', '🎁 ' + playerLabel(entry.player) + ' رجع للعبة عن طريق الدعم');
-        showGiftReviveCard(entry.player);
+        // ⚠️ استُبدلت البطاقة العائمة القديمة (showGiftReviveCard) بتبويب
+        // "عودة لاعب" الموحَّد الجديد — راجع showReviveSplash أدناه.
+        showReviveSplash(entry.player, { reason: 'gift' });
         // ⚠️ لا نضيفه لقائمة نافذة إقصاء مفتوحة حالياً لو موجودة — يظهر
         // فقط بداية الدورة الجاية على العجلة (موجود أصلاً بـ_alive الآن).
     }
 
     /**
-     * ⚠️ [0.46.0] "إنعاش بالدعم" (هدية) قد يحدث بأي لحظة — حتى وسط نافذة
-     * دور مفتوحة — فلا يجوز استخدام تبويب #tr-modal-box نفسه (يقاطع
-     * الدور الجاري). بطاقة عائمة منفصلة بنفس فكرة/حجم toast لكن بمحتوى
-     * مخصَّص (أفاتار المُنعَش + توهّج أخضر)، تختفي تلقائياً — قرار تصميم
-     * بتفويض صريح من المستخدم بهذي النقطة ("محتواه حسب الحاجة وموقعه
-     * نفذ بالطريقة الي تشوفها انسب").
+     * ⚠️ [تبويب "عودة لاعب" الجديد] نافذة احتفالية موحَّدة تظهر وسط
+     * الشاشة فوق كل شيء (حتى فوق نافذة الاختيار المفتوحة لو مفتوحة بنفس
+     * اللحظة، بدون مقاطعتها — pointer-events:none + z-index أعلى من كل
+     * عنصر بالصفحة)، تحل محل: (أ) البطاقة العائمة القديمة (إنعاش بالدعم
+     * فقط)، (ب) تبويب إعلان النتيجة لحالة الإرجاع (انعاش صديق فقط) —
+     * منقولة بالحرف من تصميم روليت الإقصاء الأخير (showReviveSplash)،
+     * بألوان هوية روليت القبائل. تختفي تلقائياً بعد ثانيتين بالضبط.
+     * @param {Object} player - اللاعب الذي عاد للعبة
+     * @param {Object} opts - {reason: 'gift'|'friend', chooser?: player}
+     * @param {Function} [onDone] - يُستدعى بعد اختفاء التبويب تلقائياً
+     *   (بعد ثانيتين بالضبط) — يحافظ على استمرار تدفّق اللعبة (مثلاً
+     *   maybeAutoSpin() بعد إنعاش عبر "انعاش صديق"). حالة "بالدعم" لا
+     *   تمرّر onDone (لا إجراء إضافي مطلوب بعدها).
      */
-    function showGiftReviveCard(player) {
-        var wrap = el('tr-toast-wrap');
-        if (!wrap) return;
-        var card = document.createElement('div');
-        card.className = 'tr-gift-revive-card';
-        card.innerHTML =
-            '<span class="tr-announce-avatar-wrap tr-announce-effect-green">' + ringAvatarHtml(player) + '</span>' +
-            '<span class="tr-gift-revive-text">🎁 ' + escapeHtml(playerLabel(player)) + ' رجع للعبة عن طريق الدعم!</span>';
-        wrap.appendChild(card);
-        window.setTimeout(function () {
-            if (card.parentNode) card.parentNode.removeChild(card);
-        }, 4200);
+    function showReviveSplash(player, opts, onDone) {
+        opts = opts || {};
+        ensureScaffolding();
+        var overlay = el('tr-revive-splash-overlay');
+        var box = el('tr-revive-splash-box');
+        if (!overlay || !box || !player) {
+            if (typeof onDone === 'function') onDone();
+            return;
+        }
+
+        playSound('revive');
+
+        var reasonHtml;
+        if (opts.reason === 'friend' && opts.chooser) {
+            reasonHtml = '💚 ' + escapeHtml(playerLabel(opts.chooser)) + ' أرجعه للعبة عن طريق إنعاش صديق!';
+        } else if (opts.reason === 'friend') {
+            reasonHtml = '💚 رجع للعبة عن طريق إنعاش صديق!';
+        } else {
+            reasonHtml = '🎁 رجع للعبة عن طريق الدعم!';
+        }
+
+        box.innerHTML =
+            '<img class="tr-revive-splash-heart" src="revive-heart.png" alt="">' +
+            '<div class="tr-revive-splash-reason">' + reasonHtml + '</div>' +
+            '<div class="tr-revive-splash-avatar">' + ringAvatarHtml(player) + '</div>' +
+            '<div class="tr-revive-splash-name">' + escapeHtml(playerLabel(player)) + '</div>';
+
+        overlay.style.display = 'flex';
+        // ⚠️ إعادة تشغيل أنيميشن pop-in لو ظهرت النافذة مرتين متتاليتين
+        // بسرعة — إزالة الكلاس ثم فرض إعادة تدفّق (reflow) قبل إضافته.
+        box.classList.remove('tr-revive-splash-anim');
+        void box.offsetWidth;
+        box.classList.add('tr-revive-splash-anim');
+
+        if (_reviveSplashTimer) window.clearTimeout(_reviveSplashTimer);
+        _reviveSplashTimer = window.setTimeout(function () {
+            overlay.style.display = 'none';
+            _reviveSplashTimer = null;
+            if (typeof onDone === 'function') onDone();
+        }, 2000);
     }
 
     /* ======================================================================
@@ -2234,148 +2410,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         connectBtn.insertAdjacentElement('afterend', makeBackToPlatformBtn());
     }
 
-    /**
-     * ⚠️ علامة ✕ لإقصاء لاعب يدوياً من شاشة اللوبي (قبل بدء المباراة) —
-     * طلب صريح (صورة 2)، وهي نفس ميزة "النقطة 7" المؤجَّلة سابقاً. تنبيه
-     * صادق عن حدود الطريقة: renderLobbyPlayerList (بالملف المشترك) ما
-     * يحط أي data-player-id على عناصر <li> باللوبي (بعكس قائمة منتصف
-     * المباراة اللي تستخدم opts.removable الجاهزة أصلاً). فبدل تعديل
-     * الملف المشترك، نطابق كل <li> بترتيبه (index) مع نفس ترتيب
-     * AGP.gameManager.getPlayers() — نفس المصدر ونفس الدالة اللي
-     * renderLobbyPlayerList تستخدمها لبناء القائمة أصلاً، فالترتيب يطابق
-     * عملياً بكل الحالات الطبيعية (index-based وليس id-based، بنفس
-     * الإقرار الصادق الموجود بتعليق روليت الفواكه الأصلي).
-     */
-    function enhanceLobbyList() {
-        var list = el('agp-lobby-list');
-        if (!list || !AGP.gameManager) return;
-        var players = AGP.gameManager.getPlayers();
-        var items = list.querySelectorAll('li');
-        items.forEach(function (li, i) {
-            if (li.querySelector('.tr-lobby-remove-btn')) return;
-            var player = players[i];
-            if (!player || !player.id) return;
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'tr-lobby-remove-btn';
-            btn.title = 'إقصاء اللاعب قبل بدء المباراة';
-            btn.textContent = '✕';
-            btn.addEventListener('click', function (ev) {
-                ev.stopPropagation();
-                if (AGP.player && typeof AGP.player.removePlayer === 'function') {
-                    AGP.player.removePlayer(player.id);
-                }
-            });
-            li.appendChild(btn);
-        });
-    }
-
-    /**
-     * ⚠️ [0.45.18] تصغير تلقائي لحجم بطاقات اللوبي لو عدد اللاعبين كبير
-     * (أكثر من ~15 — أكثر من 5 صفوف بشبكة 3 أعمدة) — طلب صريح بعد ما
-     * جُرِّب 18 لاعباً وطلع قصّ بصري حقيقي بالصف السادس مع الحجم الكامل
-     * الثابت (900px صندوق ثابت، طلب مؤكَّد سابقاً). بدل الاعتماد على
-     * سكرول داخلي، نقيس المساحة الرأسية المتاحة فعلياً لقائمة اللاعبين
-     * (list.clientHeight — القيمة اللي يفرضها تخطيط flex-column الثابت
-     * بالفعل، بعد ما "تقتص" حصة القائمة من الصندوق الثابت 900px) ونحسب
-     * أصغر نسبة تكبير (scale) تخلي كل الصفوف تنضم بدون قصّ، ثم نحقن
-     * القيم الجديدة كمتغيّرات CSS (custom properties) على الصندوق —
-     * القواعد بـinjectStageStyles() تستخدم var(--tr-lobby-*, <حجم كامل
-     * افتراضي>) فتتحدَّث تلقائياً. يُعاد الحساب مع كل تغيّر بعدد
-     * اللاعبين (نفس MutationObserver الموجود، عبر applyShellEnhancements).
-     */
-    /**
-     * ⚠️ [0.45.19] بدل تبديل كامل الشبكة لعمودين (محاولة أولى رُفضت
-     * صراحةً من المستخدم: "لا غلط خل ثلاثه اسماء بس لو حصل فيه اسم
-     * طويل يصبح اسمين بجانب بعض") — الشبكة تبقى 3 أعمدة دائماً، وفقط
-     * البطاقة صاحبة الاسم الطويل (اللي عرضها الطبيعي أكبر من عرض عمود
-     * واحد متاح فعلياً) تاخذ عرض عمودين (`grid-column:span 2`، عبر
-     * كلاس `.tr-lobby-card-wide`)، فيصير بصف تلك البطاقة مكان لبطاقة
-     * واحدة إضافية بجانبها بس (بدل 2). بقية الصفوف اللي كل أسمائها
-     * قصيرة تبقى 3 بطاقات بالضبط بدون أي تغيير. نقرأ القيم الحالية
-     * المُطبَّقة فعلياً (أفاتار/بلاطة بعد أي تصغير سابق) بدل أرقام أساس
-     * ثابتة، حتى يتطابق القرار مع الحجم الفعلي المعروض حالياً.
-     */
-    function markWideLobbyCards(box, list) {
-        var items = list.querySelectorAll('li');
-        if (items.length === 0) return 0;
-
-        var availableWidth = list.clientWidth || box.clientWidth || 1400;
-        var GRID_GAP = 10, BUFFER = 8, COLUMNS = 3;
-        var columnWidth = (availableWidth - GRID_GAP * (COLUMNS - 1)) / COLUMNS;
-
-        var avatarRef = parseFloat(box.style.getPropertyValue('--tr-lobby-avatar-size')) || 65;
-        var pillMinRef = parseFloat(box.style.getPropertyValue('--tr-lobby-pill-minw')) || 260;
-        var pillMaxRef = parseFloat(box.style.getPropertyValue('--tr-lobby-pill-maxw')) || 450;
-
-        var totalSlots = 0;
-        for (var i = 0; i < items.length; i++) {
-            var li = items[i];
-            var wide = false;
-            var nameEl = li.querySelector('.agp-pcard-name-basic');
-            if (nameEl) {
-                var textW = nameEl.scrollWidth;
-                if (textW > pillMaxRef) textW = pillMaxRef; // بعد هذا الحد ellipsis يتكفّل بالقصّ بغضّ النظر عن مساحة العمود
-                var cardW = avatarRef + Math.max(pillMinRef, textW);
-                wide = (cardW + BUFFER) > columnWidth;
-            } else {
-                var tpl = li.querySelector('.agp-pcard-tpl'); // بطاقة مؤطَّرة — عرضها مبني على صورة الإطار نفسها
-                if (tpl) {
-                    var tplW = tpl.getBoundingClientRect().width || 0;
-                    wide = (tplW + BUFFER) > columnWidth;
-                }
-            }
-            li.classList.toggle('tr-lobby-card-wide', wide);
-            totalSlots += wide ? 2 : 1;
-        }
-        return totalSlots;
-    }
-
-    function applyDynamicLobbyCardScale() {
-        var box = el('agp-shell-box');
-        if (!box || !box.classList.contains('agp-lobby-box')) return;
-        var list = el('agp-lobby-list');
-        if (!list) return;
-        var n = list.querySelectorAll('li').length;
-        if (n === 0) return;
-
-        // ⚠️ [0.45.19] البطاقات العريضة (اسم طويل) تاخذ مكان بطاقتين —
-        // totalSlots يحسب "عدد المواقع الفعلي" المطلوب (بطاقة عادية=1،
-        // عريضة=2) عشان تقدير عدد الصفوف يبقى دقيقاً لحساب التصغير
-        // الرأسي أدناه، بدل الاعتماد على عدد اللاعبين الخام فقط.
-        var totalSlots = markWideLobbyCards(box, list);
-
-        // ⚠️ أرقام الأساس (الحجم الكامل عند 100% — نفس القيم الافتراضية
-        // بقواعد CSS): صف كامل ≈ 88px (أفاتار 65px+حدود + حشو li)،
-        // فجوة 10px بين الصفوف.
-        // ⚠️ [0.45.20] طلب صريح: تصغير إضافي للحجم الكامل الأساسي (~13%)
-        // بعد موافقة المستخدم على تخطيط [0.45.19] — أفاتار 75→65،
-        // بلاطة 60→52، خط 35→30، عرض البلاطة 300-520→260-450، صف
-        // 100→88، تكبير الإطار 1.15→1.00 (نفس نسبة التخفيض تقريباً على
-        // الكل حتى تبقى النسب متوازنة بين البطاقات المؤطَّرة والأساسية).
-        var BASE_ROW = 88, BASE_GAP = 10, BASE_AVATAR = 65, BASE_PILL_H = 52,
-            BASE_FONT = 30, BASE_PILL_MINW = 260, BASE_PILL_MAXW = 450, BASE_ZOOM = 1.00;
-        var MIN_SCALE = 0.55; // حد أدنى — تحته الخط/الأفاتار يصير غير مقروء بالبث
-
-        var rows = Math.ceil(totalSlots / 3);
-        var available = list.clientHeight || 620;
-        var neededFull = rows * BASE_ROW + Math.max(0, rows - 1) * BASE_GAP;
-
-        var scale = 1;
-        if (neededFull > available && rows > 0) {
-            scale = available / neededFull;
-            if (scale < MIN_SCALE) scale = MIN_SCALE;
-        }
-
-        box.style.setProperty('--tr-lobby-avatar-size', Math.round(BASE_AVATAR * scale) + 'px');
-        box.style.setProperty('--tr-lobby-pill-height', Math.round(BASE_PILL_H * scale) + 'px');
-        box.style.setProperty('--tr-lobby-font-size', Math.max(14, Math.round(BASE_FONT * scale)) + 'px');
-        box.style.setProperty('--tr-lobby-pill-minw', Math.round(BASE_PILL_MINW * scale) + 'px');
-        box.style.setProperty('--tr-lobby-pill-maxw', Math.round(BASE_PILL_MAXW * scale) + 'px');
-        box.style.setProperty('--tr-lobby-grid-gap', Math.max(4, Math.round(BASE_GAP * scale)) + 'px');
-        box.style.setProperty('--tr-lobby-row-min-height', Math.round(BASE_ROW * scale) + 'px');
-        box.style.setProperty('--tr-lobby-frame-zoom', (BASE_ZOOM * scale).toFixed(3));
-    }
+    // ⚠️ [حذف كامل — منقول بالحرف من التحديث الأخير لروليت الإقصاء]
+    // enhanceLobbyList() (زر ✕ محلي index-based)، markWideLobbyCards()
+    // وapplyDynamicLobbyCardScale() (التصغير التلقائي المحلي) — الثلاثة
+    // حُذفت بالكامل من هنا. السبب: js/agp-game-shell.js وjs/agp-player-
+    // card.js المشتركان صار فيهما نفس هذي الميزات أصلياً (renderLobbyPlayerList
+    // يمرّر removable:true فتضيف زر حذف حقيقي مرتبط بمعرّف اللاعب الفعلي،
+    // وAGP.playerCard.fitAllNames تطبّق الـMarquee بنفسها، وrenderFramedHtml
+    // تحسب عرض البطاقة المؤطَّرة رياضياً) — فأي نسخة محلية مكرِّرة لنفس
+    // الشيء تتعارض بصرياً معها. حُذفت الثلاثة بالكامل، بدون أي استثناء
+    // ولا حل مؤقّت محلي (نفس القرار المعتمَد فعلياً بروليت الإقصاء).
 
     // ⚠️ [0.45.14] عنوان اللوبي بلونين — يستبدل نص "اللوبي بانتظار
     // اللاعبين" (المُعرَّف بالملف المشترك) بنص جديد بلونين، حسب تصميم
@@ -2450,8 +2494,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function applyShellEnhancements() {
         enhanceSettingsScreen();
-        enhanceLobbyList();
-        applyDynamicLobbyCardScale();
+        // ⚠️ لا حاجة لأي معالجة يدوية لقائمة اللوبي هنا بعد الآن — الملف
+        // المشترك (renderLobbyPlayerList) يبني زر الحذف والـMarquee
+        // وأحجام البطاقات تلقائياً بنفسه. راجع التعليق أعلى هذا القسم
+        // لتفاصيل ما كان هنا سابقاً.
         enhanceLobbyHeading();
         enhanceLobbyWatermarkAndActions();
     }
