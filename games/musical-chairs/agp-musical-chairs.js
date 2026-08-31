@@ -353,10 +353,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-icon-btn{border:none;background:none;color:#fff;font-size:1.05em;cursor:pointer;line-height:1;padding:2px;}',
             '#mc-volume-slider{width:80px;accent-color:var(--mc-gold);cursor:pointer;}',
 
-            '.mc-music-mode{position:relative;}',
+            '.mc-music-mode{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;}',
+            '.mc-music-mode-label{font-size:0.68em;color:#d9c3ef;font-weight:700;white-space:nowrap;}',
             '.mc-music-mode-btn{border:none;border-radius:999px;padding:9px 16px;font-weight:800;font-size:0.85em;',
             'color:#fff;background:#141018;border:1px solid #3a3040;cursor:pointer;display:flex;align-items:center;gap:6px;}',
-            '.mc-music-mode-options{position:absolute;top:110%;right:0;background:#1c1424;border:1px solid var(--mc-badge-stroke);',
+            '.mc-music-mode-options{position:absolute;top:calc(100% + 4px);right:0;background:#1c1424;border:1px solid var(--mc-badge-stroke);',
             'border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:4px;min-width:150px;z-index:50;',
             'box-shadow:0 6px 18px rgba(0,0,0,0.5);}',
             '.mc-music-mode-options[hidden]{display:none;}',
@@ -442,9 +443,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#mc-chairs-ring{position:absolute;inset:0;}',
             '#mc-players-ring{position:absolute;inset:0;}',
 
-            '.mc-chair{position:absolute;width:15%;height:15%;transform:translate(-50%,-50%);',
+            /* ⚠️ الكرسي صار صورة فوتوغرافية حقيقية (نسبة عرض:ارتفاع طبيعية
+             * ~0.67، أطول من عرضها) بدل الرسم المربّع القديم — الحاوية
+             * صارت مستطيلة تناسب شكلها الطبيعي بدل مربّع، وobject-fit:
+             * contain يحافظ على تناسق الصورة بدون أي تمديد أو تشويه. */
+            '.mc-chair{position:absolute;width:13%;height:19%;transform:translate(-50%,-50%);',
             'display:flex;align-items:center;justify-content:center;}',
-            '.mc-chair-svg{width:100%;height:100%;filter:drop-shadow(0 0 8px rgba(255,176,32,0.55));transition:filter .25s;}',
+            '.mc-chair-svg{width:100%;height:100%;object-fit:contain;',
+            'filter:drop-shadow(0 0 8px rgba(255,176,32,0.55));transition:filter .25s;}',
             '.mc-chair.mc-chair-taken .mc-chair-svg{filter:drop-shadow(0 0 14px rgba(124,58,237,0.9));}',
             /* ⚠️ تكبير + توضيح رقم الكرسي — خلفية سوداء + رقم أبيض، عشان
              * يبين واضح بشاشات الجوال بالبث (كان اللون الذهبي صعب يبين
@@ -486,10 +492,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '@keyframes mcToastIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}',
 
             /* شاشة الفائز + فيديو الاحتفال */
-            '#mc-winner-box h2{background:linear-gradient(90deg,var(--mc-gold),var(--agp-accent-2));',
+            /* ⚠️ إزالة الخلفية البنفسجية/الحدود/التوهج عن صندوق الشل خاص
+             * بشاشة الفائز فقط (Override محلي بملفي، بدون أي لمس لملف
+             * agp-game-shell.js المشترك) — يبقى المحتوى (العنوان، الفيديو،
+             * البطاقة، الأزرار) عائم مباشرة بدون لوحة خلفية حوله. */
+            '#agp-shell-box.mc-winner-screen{background:none !important;',
+            'border:none !important;box-shadow:none !important;}',
+            '.mc-winner-screen h2{background:linear-gradient(90deg,var(--mc-gold),var(--agp-accent-2));',
             '-webkit-background-clip:text;background-clip:text;color:transparent;}',
+            /* ⚠️ خلفية مغبّشة (Glassmorphism) على صندوق الفيديو — تتّسق
+             * بصرياً مع زجاجية البطاقة الرسمية المشتركة (.agp-trophy-card)
+             * تحته مباشرة، بدل الخلفية المصمتة القديمة. */
             '.mc-winner-video-wrap{width:250px;height:250px;margin:6px auto 14px;border-radius:18px;',
             'overflow:hidden;position:relative;border:3px solid var(--mc-video-glow);',
+            'background:rgba(101,98,98,0.5);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);',
             'box-shadow:0 0 18px var(--mc-video-glow),0 0 38px var(--mc-video-glow);',
             'animation:mcVideoPulse 1.8s ease-in-out infinite;}',
             '@keyframes mcVideoPulse{0%,100%{box-shadow:0 0 14px var(--mc-video-glow),0 0 26px var(--mc-video-glow);}',
@@ -498,13 +514,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-winner-video-unmute{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);',
             'background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:999px;padding:5px 12px;',
             'font-size:0.8em;cursor:pointer;font-family:Cairo,sans-serif;}',
-            '.mc-winner-card{display:flex;flex-direction:column;align-items:center;gap:10px;',
-            'padding:18px;border-radius:16px;background:rgba(255,255,255,0.06);',
-            'border:1px solid var(--mc-gold);margin:0 0 14px;}',
-            '.mc-winner-avatar{width:96px;height:96px;border-radius:50%;object-fit:cover;',
-            'border:3px solid var(--mc-gold);box-shadow:0 0 22px rgba(255,176,32,0.7);}',
-            '.mc-winner-name{font-weight:900;font-size:1.2em;color:#fff;}',
-            '.mc-winner-points{color:var(--mc-gold);font-weight:800;font-size:0.9em;}',
+            /* ⚠️ حاوية توسيط بس لبطاقة AGP.playerCard.renderTrophyCard —
+             * البطاقة نفسها بدون أي تعديل على تصميمها (من الملف المشترك). */
+            '.mc-trophy-wrap{display:flex;justify-content:center;margin:0 0 14px;}',
             '.mc-winner-video-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;',
             'font-size:3em;background:rgba(0,0,0,0.3);}',
 
@@ -542,7 +554,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * بدون تغيّر" بالمعيار الجديد). */
             '#agp-lobby-list.agp-shell-player-list{',
             '--mc-av:60px;--mc-nw:200px;--mc-nh:60px;--mc-overlap:13px;--mc-nf:18px;--mc-gap:19px;',
-            'display:grid !important;grid-template-columns:repeat(3,1fr);',
+            'display:grid !important;grid-template-columns:repeat(4,1fr);',
             'gap:var(--mc-gap) !important;margin-top:34px !important;list-style:none;padding:0;',
             'justify-items:center;}',
             '#agp-lobby-list.agp-shell-player-list li{position:relative;display:flex;align-items:center;',
@@ -643,6 +655,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<span class="mc-badge" id="mc-players-badge">👥 <span id="mc-players-badge-num">0</span></span>' +
                 '<span id="mc-round-info"><span class="mc-round-num-inline" id="mc-round-num"></span> — <span id="mc-round-sub"></span></span>' +
                 '<div class="mc-music-mode">' +
+                '<span class="mc-music-mode-label">اختار نوع الأغاني</span>' +
                 '<button type="button" id="mc-music-mode-btn" class="mc-music-mode-btn">🔀 التشغيل العشوائي</button>' +
                 '<div class="mc-music-mode-options" id="mc-music-mode-options" hidden>' +
                 '<button type="button" data-mode="random">🔀 عشوائي</button>' +
@@ -749,25 +762,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return { x: 50 + radiusPct * Math.cos(rad), y: 50 + radiusPct * Math.sin(rad) };
     }
 
-    // ⚠️ إصلاح باگ حقيقي: كل الكراسي كانت تستخدم نفس معرِّف SVG الحرفي
-    // "mcChairGrad" (أول Grad مكرر بكل كرسي بنفس الصفحة) — معرِّفات SVG
-    // المكرَّرة بنفس المستند ممكن تسبب فشل رسم التدرّج بمتصفحات حقيقية
-    // (خصوصاً بعد استبدال innerHTML كل دورة). الحل: معرِّف فريد لكل كرسي
-    // برقم index بالكرسي نفسه.
-    function chairSvg(idx) {
-        var gradId = 'mcChairGrad' + idx;
-        return '<svg class="mc-chair-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
-            '<defs><linearGradient id="' + gradId + '" x1="0" y1="0" x2="0" y2="1">' +
-            '<stop offset="0%" stop-color="#ffd166"/><stop offset="100%" stop-color="#ffb020"/>' +
-            '</linearGradient></defs>' +
-            '<rect x="14" y="6" width="30" height="8" rx="3" fill="url(#' + gradId + ')"/>' +
-            '<rect x="14" y="14" width="8" height="26" rx="2" fill="url(#' + gradId + ')" opacity="0.9"/>' +
-            '<rect x="10" y="26" width="38" height="9" rx="3" fill="url(#' + gradId + ')"/>' +
-            '<rect x="12" y="35" width="6" height="20" rx="2" fill="#c97a12"/>' +
-            '<rect x="40" y="35" width="6" height="20" rx="2" fill="#c97a12"/>' +
-            '<rect x="18" y="35" width="6" height="16" rx="2" fill="#c97a12"/>' +
-            '<rect x="34" y="35" width="6" height="16" rx="2" fill="#c97a12"/>' +
-            '</svg>';
+    // ⚠️ استبدلنا رسم الـSVG المسطّح بصورة كرسي واقعية حقيقية (chair.png،
+    // زوَّدنا بها صاحب المشروع، مقصوصة الخلفية شفافة) — بطلب صريح لشكل
+    // أكثر واقعية. lazy-load + alt فاضي (زخرفي بحت، ما يحمل معنى إضافي).
+    function chairSvg() {
+        return '<img class="mc-chair-svg" src="images/chair.png" alt="" loading="lazy">';
     }
 
     function avatarInnerHtml(player) {
@@ -809,7 +808,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!ring) return;
         ring.innerHTML = _chairs.map(function (chair, idx) {
             return '<div class="mc-chair" id="mc-chair-' + idx + '" style="left:' + chair.x + '%;top:' + chair.y + '%;">' +
-                chairSvg(idx) + '<span class="mc-chair-number">' + chair.number + '</span></div>';
+                chairSvg() + '<span class="mc-chair-number">' + chair.number + '</span></div>';
         }).join('');
     }
 
@@ -843,7 +842,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 div.id = 'mc-chair-' + idx;
                 div.style.left = chair.x + '%';
                 div.style.top = chair.y + '%';
-                div.innerHTML = chairSvg(idx) + '<span class="mc-chair-number">' + chair.number + '</span>';
+                div.innerHTML = chairSvg() + '<span class="mc-chair-number">' + chair.number + '</span>';
                 ring.appendChild(div);
             }
         }
@@ -1324,19 +1323,34 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!box || !overlay) return;
 
         box.id = 'mc-winner-box';
-        box.className = '';
+        // ⚠️ إصلاح: كنت أرجّع box.id لـ"agp-shell-box" بعد الرسم مباشرة (تحت)،
+        // فأي تنسيق CSS يستهدف #mc-winner-box ما كان يشتغل أبداً وقت
+        // العرض الفعلي. الحل: كلاس ثابت يبقى، بدل الاعتماد على الآيدي
+        // المؤقت وحده.
+        box.className = 'mc-winner-screen';
         var awarded = winner ? findAwardedFor(pointsResult, winner) : null;
-        var pointsHtml = awarded ? '<div class="mc-winner-points">+' + awarded.points + ' نقطة 🎉</div>' : '';
+
+        // ⚠️ صار يستخدم البطاقة الرسمية المشتركة (AGP.playerCard.renderTrophyCard)
+        // بدل بطاقة الكراسي الموسيقية المحلية القديمة — بطلب صريح، بدون
+        // أي لمس أو تعديل على تصميمها بملف js/agp-player-card.js المشترك
+        // نفسه، فقط استدعاء واجهتها العامة الجاهزة.
+        var trophyHtml = '';
+        if (winner) {
+            var pointsHtml = awarded
+                ? '<div class="agp-trophy-points">+' + awarded.points + ' نقطة 🎉</div>'
+                : '';
+            trophyHtml = AGP.playerCard.renderTrophyCard(winner, {
+                kind: 'winner',
+                showCrown: true,
+                pointsHtml: pointsHtml
+            });
+        }
 
         box.innerHTML =
             '<h2>🏆 انتهت المباراة</h2>' +
             (winner ? winnerVideoHtml() : '') +
             (winner
-                ? '<div class="mc-winner-card">' +
-                  '<img class="mc-winner-avatar" src="' + escapeHtml(winner.avatarUrl || '') + '" onerror="this.style.display=\'none\';" alt="">' +
-                  '<div class="mc-winner-name">' + escapeHtml(playerLabel(winner)) + '</div>' +
-                  '<div>👑 آخر لاعب على كرسي!</div>' + pointsHtml +
-                  '</div>'
+                ? '<div class="mc-trophy-wrap">' + trophyHtml + '</div>'
                 : '<p class="agp-shell-status" style="text-align:center;">ما فيه فائز واضح لهذي المباراة.</p>') +
             '<div class="mc-winner-actions">' +
             '<button class="agp-shell-btn-connect mc-winner-action-btn" id="mc-new-match-btn">🔄 مباراة جديدة</button>' +
@@ -1357,6 +1371,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         document.getElementById('mc-replay-same-btn').onclick = function () {
             stopWinnerVideo(); // ⚠️ إصلاح: يمنع تراكم صوت الفيديو فوق الدورة الجديدة
             overlay.style.display = 'none';
+            box.className = ''; // ⚠️ إصلاح: يمنع بقاء كلاس "mc-winner-screen" عالق لو فُتحت لوحة الإعدادات لاحقاً
             resetMatchState();
             _alive = AGP.gameManager.getPlayers().slice();
             _customDeficitCurrent = (liveSettings().customDeficitStart) || 5;
@@ -1475,6 +1490,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* -------- 14ب) قائمة اللاعبين: شبكة 3 أعمدة + حذف + بطاقة عريضة + تصغير تلقائي -------- */
+    // ⚠️ 4 أعمدة ثابتة (بدل 3 سابقاً، بطلب صريح) — العرض المرجعي للبطاقة
+    // (247px) أعرض من عمود واحد بـ4 أعمدة (~194px)، فنفس نظام التصغير
+    // التناسقي المبني أصلاً لتوافق الآيباد (راجع التعليق تحت) يشتغل هنا
+    // تلقائياً بدون أي منطق إضافي: يصغّر كل المقاسات تناسبياً (~78%)
+    // عشان تنضبط بالضبط بـ4 أعمدة بدل 3، بنفس الشكل والنسب.
+    //
     // ⚠️ إصلاح توافق آيباد/الشاشات الضيقة: نظام "الحجم الثابت" (60px
     // أفاتار + 200px لوح) محسوب على عرض مرجعي 900px لصندوق اللوبي — بس
     // صندوق اللوبي نفسه بالملف المشترك عرضه الأقصى الفعلي min(900px,
@@ -1487,7 +1508,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function fitLobbyCardsToAvailableWidth(list) {
         if (!list.clientWidth) return 60 + 200 - 13; // بيئة بدون تصيير حقيقي — نرجع القيمة المرجعية كما هي
         var gap = 19;
-        var colWidth = (list.clientWidth - 2 * gap) / 3;
+        var colWidth = (list.clientWidth - 3 * gap) / 4; // 4 أعمدة = 3 فجوات بينها
         var refTotal = 60 + 200 - 13; // العرض المرجعي: أفاتار + لوح - تراكب
         var scale = 1;
         if (colWidth > 0 && colWidth < refTotal) {
