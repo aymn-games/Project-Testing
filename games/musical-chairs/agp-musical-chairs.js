@@ -476,7 +476,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'box-shadow:0 0 14px rgba(0,0,0,0.9);transition:transform .35s cubic-bezier(.34,1.56,.64,1);',
             'z-index:3;-webkit-text-stroke:0.6px #fff;}',
             '.mc-chair-number.mc-chair-revealed{transform:translate(-50%,-50%) scale(1);}',
-            '.mc-chair-number.mc-chair-taken{border-color:var(--agp-accent-2);}',
+            /* ⚠️ إصلاح باگ حقيقي: الرقم كان يبقى ظاهر حتى بعد ما يحجزه
+             * لاعب (بس تغيّر لون حدوده) — المفروض يختفي تماماً بمجرد ما
+             * ينحجز الكرسي. scale(0) هنا يكسب على scale(1) من حالة
+             * "مكشوف" (نفس درجة الأولوية، بس هذا القانون بعدها بالترتيب)
+             * فيرجع يصغّر لصفر بنفس أنيميشن الظهور بس بالعكس. */
+            '.mc-chair-number.mc-chair-taken{border-color:var(--agp-accent-2);',
+            'transform:translate(-50%,-50%) scale(0) !important;}',
 
             /* ⚠️ صورة اللاعب صُغِّرت لـ8% (كانت 11%) — عشان لو قعد لاعب
              * على كرسي، أفاتاره ما يغطي كرسي مجاور. */
@@ -579,7 +585,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * بدون تغيّر" بالمعيار الجديد). */
             '#agp-lobby-list.agp-shell-player-list{',
             '--mc-av:60px;--mc-nw:200px;--mc-nh:60px;--mc-overlap:13px;--mc-nf:18px;--mc-gap:19px;',
-            'display:grid !important;grid-template-columns:repeat(4,1fr);align-content:start;',
+            'display:grid !important;grid-template-columns:repeat(4,1fr);',
             'gap:var(--mc-gap) !important;margin-top:34px !important;list-style:none;padding:0;',
             'justify-items:center;}',
             '#agp-lobby-list.agp-shell-player-list li{position:relative;display:flex;align-items:center;',
@@ -1667,18 +1673,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var player = players[idx];
             if (!player) return;
 
-            // ⚠️ [إصلاح جديد] كنت ألصق الزر بلوح الاسم نفسه (.agp-pcard-
-            // name-basic) عشان يتحرك صح مع اللوح بغض النظر عن توسيط li —
-            // لكن اللوح عنده overflow:hidden (لازم للسلايد بالأسماء
-            // الطويلة)، فكان يقصّ الجزء العلوي من الزر (top:-9px يطلع
-            // خارج صندوق اللوح فيُقصّ). الحل: الزر يُلصَق بـli (بدون
-            // overflow:hidden)، لكن موضعه يُحسب من مكان اللوح الفعلي
-            // (getBoundingClientRect) بدل موضع ثابت بـCSS — يحافظ على نفس
-            // الإصلاح القديم (يتحرك صح مع اللوح) بدون مشكلة القصّ الجديدة.
+            // ⚠️ إصلاح: كنت أضيف الزر للـli نفسه، بس li عنده justify-content:
+            // center (يوسّط البطاقة داخل عمود الشبكة)، فلو البطاقة أضيق من
+            // عرض العمود يصير الزر بموضع ثابت من حافة li مو حافة اللوح
+            // الفعلية — ينزاح عن مكانه الصحيح. الحل: نلصقه بلوح الاسم نفسه
+            // (.agp-pcard-name-basic) مباشرة، بنهايته (طرفه البعيد عن
+            // الأفاتار) — يتحرك صح مع اللوح دائماً بغض النظر عن التوسيط.
             var plateEl = li.querySelector('.agp-pcard-name-basic');
             applyNameSlideIfOverflow(li); // ⚠️ يجب هذا قبل إضافة زر الحذف — يقرأ نص اللوح عبر
             // textContent؛ لو الزر مضاف قبله بيتضمّن نص الزر بالغلط ويُمسح الزر لما يصفّر المحتوى.
-            if (plateEl && !li.querySelector('.mc-lobby-remove-btn')) {
+            if (plateEl && !plateEl.querySelector('.mc-lobby-remove-btn')) {
                 var btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'mc-lobby-remove-btn';
@@ -1689,11 +1693,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         AGP.player.removePlayer(player.id);
                     }
                 };
-                li.appendChild(btn);
-                var liRect = li.getBoundingClientRect();
-                var plateRect = plateEl.getBoundingClientRect();
-                btn.style.top = Math.round(plateRect.top - liRect.top - 9) + 'px';
-                btn.style.left = Math.round(plateRect.left - liRect.left - 6) + 'px';
+                plateEl.appendChild(btn);
             }
         });
 
