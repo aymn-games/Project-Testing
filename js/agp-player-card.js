@@ -245,6 +245,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 8.14, avatarTopPct: 21.97, avatarWidthPct: 25.07, avatarHeightPct: 60.67,
             nameLeftPct: 43.95, nameTopPct: 41.40, nameWidthPct: 41.86, nameHeightPct: 27.39
         },
+        // [0.66.1] إطار نادي الهلال "التاج والوشاح" — أول إطار من مجموعة
+        // إطارات الأندية الجديدة (متجر خارجي، منح يدوي من admin-grant-frame.html).
+        // مقاس فعلياً بالبكسل من ملف PNG شفاف حقيقي (2172×724، تحقّقت من
+        // قناة الألفا). لوحة الاسم خلفيتها صورة استاد داكنة عموماً — الأبيض
+        // الافتراضي مقروء بدون حاجة textColor (بطلب صريح: كل إطارات الهلال
+        // تستخدم الأبيض).
+        'frame-club-hilal-crown.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 183, contentHeight: 416,
+            avatarLeftPct: 10.54, avatarTopPct: 2.40, avatarWidthPct: 18.46, avatarHeightPct: 95.19,
+            nameLeftPct: 36.83, nameTopPct: 25.72, nameWidthPct: 55.71, nameHeightPct: 66.11
+        },
+        // [0.66.1] إطار نادي الهلال "أفق الرياض" (وشاح ونخلة وبرج المملكة) —
+        // نفس مجموعة إطارات الأندية أعلاه، نفس منهجية القياس ولون النص
+        // الأبيض الافتراضي.
+        'frame-club-hilal-city.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 184, contentHeight: 422,
+            avatarLeftPct: 11.00, avatarTopPct: 2.37, avatarWidthPct: 19.06, avatarHeightPct: 95.26,
+            nameLeftPct: 34.30, nameTopPct: 39.34, nameWidthPct: 49.95, nameHeightPct: 55.69
+        },
         // [0.45.1] إطار "الأهلي" — مقاس فعلياً بالبكسل من الملف المرفوع (1536×1024،
         // فتحة صورة دائرية شفافة حقيقية يسار + بلاطة اسم بيضاء فاضية يمين، نفس
         // منهجية القياس المتبعة لكل الإطارات أعلاه — تحقّق بصري بصندوقين قبل الاعتماد).
