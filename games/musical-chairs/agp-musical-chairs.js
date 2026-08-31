@@ -331,7 +331,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * تلقائي متغيّر) يمنع "قفزة" الحلبة تحته كل ما تغيّر نص
              * المرحلة (سبب شريط التمرير المزعج). */
             '#mc-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;',
-            'margin:14px auto 8px;padding:12px 20px;width:min(94vw,760px);min-height:76px;box-sizing:border-box;',
+            'margin:14px auto 8px;padding:12px 20px;width:min(94vw,850px);min-height:76px;box-sizing:border-box;',
             'border-radius:24px;',
             'background:linear-gradient(90deg,#3a1750,#2D1932);border:2px solid var(--mc-badge-stroke);',
             'box-shadow:0 4px 18px rgba(0,0,0,0.35);}',
@@ -350,19 +350,28 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
             '.mc-volume-group{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.25);',
             'border-radius:999px;padding:4px 10px;}',
-            '.mc-icon-btn{border:none;background:none;color:#fff;font-size:1.05em;cursor:pointer;line-height:1;padding:2px;}',
-            '#mc-volume-slider{width:80px;accent-color:var(--mc-gold);cursor:pointer;}',
+            /* ⚠️ تحسين لمس للجوال/الآيباد: زر الكتم كان بلا مساحة لمس
+             * حقيقية (بس حجم الأيقونة نفسها) — صار له مساحة لمس دنيا
+             * مريحة (44×44px تقريباً حسب توصية Apple/Google لأزرار اللمس). */
+            '.mc-icon-btn{border:none;background:none;color:#fff;font-size:1.2em;cursor:pointer;',
+            'line-height:1;min-width:38px;min-height:38px;display:flex;align-items:center;justify-content:center;',
+            'padding:4px;}',
+            '#mc-volume-slider{width:80px;height:26px;accent-color:var(--mc-gold);cursor:pointer;}',
 
             '.mc-music-mode{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;}',
             '.mc-music-mode-label{font-size:0.68em;color:#d9c3ef;font-weight:700;white-space:nowrap;}',
             '.mc-music-mode-btn{border:none;border-radius:999px;padding:9px 16px;font-weight:800;font-size:0.85em;',
             'color:#fff;background:#141018;border:1px solid #3a3040;cursor:pointer;display:flex;align-items:center;gap:6px;}',
+            /* ⚠️ تحسين لمس: عرض أدنى للقائمة نفسها (بدل تعتمد على المحتوى
+             * بس)، وسقف أقصى + حماية من الفيض خارج حدود الشاشة الضيقة
+             * (آيباد/جوال) عبر max-width محسوب من عرض الشاشة نفسها. */
             '.mc-music-mode-options{position:absolute;top:calc(100% + 4px);right:0;background:#1c1424;border:1px solid var(--mc-badge-stroke);',
-            'border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:4px;min-width:150px;z-index:50;',
+            'border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:4px;min-width:170px;',
+            'max-width:min(240px,90vw);z-index:50;',
             'box-shadow:0 6px 18px rgba(0,0,0,0.5);}',
             '.mc-music-mode-options[hidden]{display:none;}',
-            '.mc-music-mode-options button{border:none;background:none;color:#f3eefc;text-align:right;padding:7px 10px;',
-            'border-radius:8px;font-size:0.85em;cursor:pointer;font-family:Cairo,sans-serif;}',
+            '.mc-music-mode-options button{border:none;background:none;color:#f3eefc;text-align:right;padding:11px 12px;',
+            'min-height:40px;border-radius:8px;font-size:0.9em;cursor:pointer;font-family:Cairo,sans-serif;}',
             '.mc-music-mode-options button:hover,.mc-music-mode-options button.mc-mode-active{background:var(--agp-accent);color:#fff;}',
 
             '.mc-badge{border:4px solid var(--mc-badge-stroke);background:var(--mc-badge-fill);',
@@ -388,9 +397,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-eliminated-logo{width:64px;height:64px;object-fit:contain;flex-shrink:0;}',
             '.mc-eliminated-title{color:#fff;font-weight:800;font-size:1.2em;white-space:nowrap;}',
             /* ⚠️ زر إغلاق يدوي — الطريقة الوحيدة لإخفاء التبويب الآن */
-            '.mc-eliminated-close-btn{position:absolute;top:14px;left:14px;width:34px;height:34px;',
+            '.mc-eliminated-close-btn{position:absolute;top:14px;left:14px;width:42px;height:42px;',
             'border-radius:50%;background:rgba(255,255,255,0.12);border:2px solid #fff;color:#fff;',
-            'font-size:1.05em;font-weight:900;cursor:pointer;display:flex;align-items:center;',
+            'font-size:1.2em;font-weight:900;cursor:pointer;display:flex;align-items:center;',
             'justify-content:center;z-index:5;padding:0;line-height:1;pointer-events:auto;}',
             '.mc-eliminated-close-btn:hover{background:rgba(255,255,255,0.28);}',
             '.mc-eliminated-avatars{display:flex;gap:20px 24px;flex-wrap:wrap;justify-content:center;',
@@ -447,22 +456,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * ~0.67، أطول من عرضها) بدل الرسم المربّع القديم — الحاوية
              * صارت مستطيلة تناسب شكلها الطبيعي بدل مربّع، وobject-fit:
              * contain يحافظ على تناسق الصورة بدون أي تمديد أو تشويه. */
-            '.mc-chair{position:absolute;width:13%;height:19%;transform:translate(-50%,-50%);',
+            /* ⚠️ مقاس الكرسي: 65×100px بالضبط عند أقصى حجم للحلقة (600px) —
+             * محسوبة كنسبة مئوية (10.83%/16.67%) حتى يبقى الحجم متجاوباً
+             * تلقائياً على الشاشات الأصغر (نفس فلسفة النظام القديم، بس
+             * بالمقاس الجديد المطلوب). */
+            '.mc-chair{position:absolute;width:10.83%;height:16.67%;transform:translate(-50%,-50%);',
             'display:flex;align-items:center;justify-content:center;}',
             '.mc-chair-svg{width:100%;height:100%;object-fit:contain;',
             'filter:drop-shadow(0 0 8px rgba(255,176,32,0.55));transition:filter .25s;}',
             '.mc-chair.mc-chair-taken .mc-chair-svg{filter:drop-shadow(0 0 14px rgba(124,58,237,0.9));}',
-            /* ⚠️ تكبير + توضيح رقم الكرسي — خلفية سوداء + رقم أبيض، عشان
-             * يبين واضح بشاشات الجوال بالبث (كان اللون الذهبي صعب يبين
-             * على المشاهدين). */
-            '.mc-chair-number{position:absolute;top:0%;left:50%;transform:translateX(-50%) scale(0);',
-            'background:#000;color:#fff;border:2px solid var(--mc-gold);',
-            'font-weight:900;font-size:1.5em;border-radius:999px;padding:3px 13px;min-width:1.5em;text-align:center;',
-            'box-shadow:0 0 12px rgba(0,0,0,0.85);transition:transform .35s cubic-bezier(.34,1.56,.64,1);}',
-            '.mc-chair.mc-chair-revealed .mc-chair-number{transform:translateX(-50%) scale(1);}',
-            '.mc-chair.mc-chair-taken .mc-chair-number{border-color:var(--agp-accent-2);}',
+            /* ⚠️ رقم الكرسي — صار عنصر مستقل (مو جوّا .mc-chair بعد الآن)
+             * يتموضع شعاعياً بموقعه الخاص (badgeX/badgeY محسوبة بـJS حسب
+             * زاوية كل كرسي وحلقته) بدل موضع ثابت "لفوق" — يمنع تراكب
+             * رقم كرسي داخلي وراء كرسي خارجي نهائياً. كبّرته وخشّنت حدوده
+             * أكثر عشان يبين واضح جداً بشاشات الجوال بالبث المباشر. */
+            '.mc-chair-number{position:absolute;transform:translate(-50%,-50%) scale(0);',
+            'background:#000;color:#fff;border:3px solid var(--mc-gold);',
+            'font-weight:900;font-size:1.85em;border-radius:999px;padding:4px 15px;min-width:1.6em;text-align:center;',
+            'box-shadow:0 0 14px rgba(0,0,0,0.9);transition:transform .35s cubic-bezier(.34,1.56,.64,1);',
+            'z-index:3;-webkit-text-stroke:0.6px #fff;}',
+            '.mc-chair-number.mc-chair-revealed{transform:translate(-50%,-50%) scale(1);}',
+            '.mc-chair-number.mc-chair-taken{border-color:var(--agp-accent-2);}',
 
-            '.mc-avatar{position:absolute;width:11%;height:11%;transform:translate(-50%,-50%);',
+            /* ⚠️ صورة اللاعب صُغِّرت لـ8% (كانت 11%) — عشان لو قعد لاعب
+             * على كرسي، أفاتاره ما يغطي كرسي مجاور. */
+            '.mc-avatar{position:absolute;width:8%;height:8%;transform:translate(-50%,-50%);',
             'display:flex;align-items:center;justify-content:center;transition:left .1s linear,top .1s linear;}',
             '.mc-avatar.mc-avatar-seating{transition:left .5s cubic-bezier(.34,1.56,.64,1),top .5s cubic-bezier(.34,1.56,.64,1);}',
             '.mc-avatar-img,.mc-avatar-fallback{width:100%;height:100%;border-radius:50%;object-fit:cover;',
@@ -534,6 +552,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             /* ⚠️ اسم اللعبة بجانب عنوان اللوبي — بلون ذهبي مميّز عن باقي النص */
             '.mc-lobby-game-tag{color:var(--mc-gold);}',
 
+            /* ⚠️ تغميق خلفية صندوق اللوبي نفسه بس (65%) — بطاقات اللاعبين
+             * ما تتأثر إطلاقاً (لها خلفيتها الخاصة المنفصلة). التدرّج
+             * الأصلي فعلياً بالملف المشترك للوبي تحديداً هو
+             * linear-gradient(170deg,#3a1560,#7a1fb8) — مو تدرّج الصندوق
+             * العام، فحسبت النسخة الأغمق منه بالضبط (65% أغمق). */
+            '#agp-shell-box.agp-lobby-box{background:linear-gradient(170deg,#140722,#2b0b40) !important;}',
+
             /* ======================================================================
              * ⚠️ تحسينات شاشة اللوبي (شبكة اللاعبين + صف الأزرار) — بدون
              * أي تغيير على لون خلفية صندوق اللوبي نفسه (قرار صريح).
@@ -591,11 +616,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * normalizeFramedCardWidths). */
             '#agp-lobby-list .agp-pcard-tpl{transform-origin:top right;}',
 
-            '.mc-lobby-remove-btn{position:absolute;top:-8px;left:6px;width:22px;height:22px;',
+            /* ⚠️ الزر صار child للوح الاسم نفسه (.agp-pcard-name-basic،
+             * position:relative أصلاً بالأعلى)، بموضع نهاية اللوح (طرفه
+             * البعيد عن الأفاتار) — بدل موضعه القديم نسبة لـli اللي كان
+             * ينزاح بسبب توسيط الشبكة. */
+            '.mc-lobby-remove-btn{position:absolute;top:-9px;left:-6px;width:22px;height:22px;',
             'border-radius:50%;background:#ff3b5c;border:2px solid #fff;color:#fff;font-size:11px;',
             'font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;',
             'z-index:5;padding:0;line-height:1;}',
             '.mc-lobby-remove-btn:hover{background:#ff5c78;}',
+
+            /* ⚠️ إخفاء بادج "الدخولية" (ميزة معطوبة حالياً حسب صاحب
+             * المشروع) من شاشة اللوبي تحديداً — override محلي بملفنا،
+             * بدون أي لمس لملف js/agp-entrance.js المشترك نفسه. */
+            '#agp-entrance-settled-list{display:none !important;}',
 
             /* ⚠️ إصلاح: 360px×3 أزرار = 1080px، أعرض من محتوى صندوق اللوبي
              * الصافي (832px)، فكانت تنزل كل وحدة لسطر لحالها (flex-wrap
@@ -662,6 +696,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<button type="button" data-mode="shailat">🎙️ شيلات</button>' +
                 '<button type="button" data-mode="khaleeji">🎵 اغاني خليجية</button>' +
                 '<button type="button" data-mode="iraqi">🎼 اغاني عراقية</button>' +
+                '</div></div>' +
+                '<div class="mc-music-mode">' +
+                '<span class="mc-music-mode-label">مدة تشغيل الأغنية</span>' +
+                '<button type="button" id="mc-spin-duration-btn" class="mc-music-mode-btn">⏱️ 15 ثانية</button>' +
+                '<div class="mc-music-mode-options" id="mc-spin-duration-options" hidden>' +
+                '<button type="button" data-secs="10">10 ثوانٍ</button>' +
+                '<button type="button" data-secs="15">15 ثانية</button>' +
+                '<button type="button" data-secs="20">20 ثانية</button>' +
+                '<button type="button" data-secs="25">25 ثانية</button>' +
+                '<button type="button" data-secs="30">30 ثانية</button>' +
+                '<button type="button" data-secs="35">35 ثانية</button>' +
                 '</div></div>' +
                 '<div class="mc-volume-group">' +
                 '<button type="button" id="mc-mute-btn" class="mc-icon-btn" title="كتم/تشغيل الصوت">🔊</button>' +
@@ -740,9 +785,38 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             });
         }
 
+        // ⚠️ جديد: زر "مدة تشغيل الأغنية" — نفس أسلوب زر نوع الموسيقى
+        // بالضبط (خيار يفتح قائمة). الاختيار يحدَّث حياً على نفس إعداد
+        // spinDurationSeconds (نفس مصدر الحقيقة المستخدَم بشاشة الإعدادات
+        // الأولى)، عبر AGP.gameShell.setSetting — بدون متغيّر مواز.
+        var durBtn = el('mc-spin-duration-btn');
+        var durOptions = el('mc-spin-duration-options');
+        if (durBtn && durOptions) {
+            var currentSecs = liveSettings().spinDurationSeconds || 15;
+            durBtn.textContent = '⏱️ ' + currentSecs + ' ثانية';
+            durOptions.querySelectorAll('button').forEach(function (b) {
+                if (Number(b.getAttribute('data-secs')) === currentSecs) b.classList.add('mc-mode-active');
+            });
+
+            durBtn.onclick = function () { durOptions.hidden = !durOptions.hidden; };
+            durOptions.querySelectorAll('button').forEach(function (btn) {
+                btn.onclick = function () {
+                    var secs = Number(btn.getAttribute('data-secs'));
+                    if (AGP.gameShell.setSetting) AGP.gameShell.setSetting('spinDurationSeconds', secs);
+                    durBtn.textContent = '⏱️ ' + secs + ' ثانية';
+                    durOptions.querySelectorAll('button').forEach(function (b) { b.classList.remove('mc-mode-active'); });
+                    btn.classList.add('mc-mode-active');
+                    durOptions.hidden = true;
+                };
+            });
+        }
+
         document.addEventListener('click', function (e) {
             if (modeOptions && !modeOptions.hidden && modeBtn && !modeBtn.contains(e.target) && !modeOptions.contains(e.target)) {
                 modeOptions.hidden = true;
+            }
+            if (durOptions && !durOptions.hidden && durBtn && !durBtn.contains(e.target) && !durOptions.contains(e.target)) {
+                durOptions.hidden = true;
             }
         });
     }
@@ -760,6 +834,42 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function angleToXY(angleDeg, radiusPct) {
         var rad = (angleDeg - 90) * Math.PI / 180;
         return { x: 50 + radiusPct * Math.cos(rad), y: 50 + radiusPct * Math.sin(rad) };
+    }
+
+    // ⚠️ نظام حلقات متعددة للكراسي — بطلب صريح: 18 كرسي كحد أقصى بالحلقة
+    // الواحدة (بالترتيب)، ولو العدد أكبر تُفتح حلقة ثانية أصغر بالداخل
+    // (وثالثة لو لزم، بدون حد أقصى نظري لعدد الحلقات). كل حلقة تالية
+    // تنزاح زاوياً نص الفجوة عن اللي قبلها، حتى ما تترص كراسي حلقتين
+    // فوق بعض بنفس الخط الشعاعي (يحافظ على وضوح رقم كل كرسي، ما يصير
+    // كرسي وراء كرسي ثاني).
+    var CHAIRS_PER_RING = 18;
+    var CHAIR_OUTER_RADIUS = 32;   // % — نفس نصف القطر القديم (الحلقة الأولى/الخارجية)
+    var CHAIR_RING_GAP = 9;        // % — المسافة بين كل حلقة والتالية لها
+
+    function chairRingRadius(ringIdx) {
+        return Math.max(11, CHAIR_OUTER_RADIUS - ringIdx * CHAIR_RING_GAP);
+    }
+
+    function chairPositionForIndex(idx, total) {
+        var ringIdx = Math.floor(idx / CHAIRS_PER_RING);
+        var idxInRing = idx % CHAIRS_PER_RING;
+        var startOfRing = ringIdx * CHAIRS_PER_RING;
+        var countInThisRing = Math.min(CHAIRS_PER_RING, total - startOfRing);
+        var angle = (360 / countInThisRing) * idxInRing;
+        angle += ringIdx * (180 / countInThisRing); // إزاحة نص الفجوة لكل حلقة تالية (تدريج/Stagger)
+        var pos = angleToXY(angle, chairRingRadius(ringIdx));
+        return { x: pos.x, y: pos.y, angle: angle, ring: ringIdx };
+    }
+
+    // ⚠️ موقع رقم الكرسي (شعاعي حسب الحلقة) — الحلقة الخارجية (0) يطلع
+    // رقمها للخارج (بعيد عن المركز، تجاه الفراغ خارج الكراسي كلها)،
+    // والحلقات الداخلية (1+) تطلع أرقامها للداخل (تجاه الفراغ الفاضي
+    // بمنتصف الدائرة) — بطلب صريح، يمنع أي تراكب بين أرقام حلقتين
+    // مختلفتين نهائياً (كل حلقة تستخدم الفراغ اللي جنبها بس).
+    function chairBadgePosition(angleDeg, ringIdx, chairRadius) {
+        var dirSign = ringIdx === 0 ? 1 : -1;
+        var badgeRadius = Math.max(4, chairRadius + dirSign * 7);
+        return angleToXY(angleDeg, badgeRadius);
     }
 
     // ⚠️ استبدلنا رسم الـSVG المسطّح بصورة كرسي واقعية حقيقية (chair.png،
@@ -797,8 +907,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var used = {};
         var chairs = [];
         for (var i = 0; i < count; i++) {
-            var pos = angleToXY((360 / count) * i, 32);
-            chairs.push({ number: randomFreeChairNumber(used), x: pos.x, y: pos.y, occupantId: null });
+            var pos = chairPositionForIndex(i, count);
+            var radius = chairRingRadius(pos.ring);
+            var badge = chairBadgePosition(pos.angle, pos.ring, radius);
+            chairs.push({
+                number: randomFreeChairNumber(used), x: pos.x, y: pos.y,
+                badgeX: badge.x, badgeY: badge.y, occupantId: null
+            });
         }
         return chairs;
     }
@@ -808,7 +923,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!ring) return;
         ring.innerHTML = _chairs.map(function (chair, idx) {
             return '<div class="mc-chair" id="mc-chair-' + idx + '" style="left:' + chair.x + '%;top:' + chair.y + '%;">' +
-                chairSvg() + '<span class="mc-chair-number">' + chair.number + '</span></div>';
+                chairSvg() + '</div>' +
+                '<span class="mc-chair-number" id="mc-chair-num-' + idx + '" style="left:' + chair.badgeX + '%;top:' + chair.badgeY + '%;">' +
+                chair.number + '</span>';
         }).join('');
     }
 
@@ -832,18 +949,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         while (_chairs.length < newTotal) {
             var idx = _chairs.length;
-            var pos = angleToXY((360 / newTotal) * idx, 32);
-            var chair = { number: randomFreeChairNumber(used), x: pos.x, y: pos.y, occupantId: null };
+            var pos = chairPositionForIndex(idx, newTotal);
+            var radius = chairRingRadius(pos.ring);
+            var badge = chairBadgePosition(pos.angle, pos.ring, radius);
+            var chair = {
+                number: randomFreeChairNumber(used), x: pos.x, y: pos.y,
+                badgeX: badge.x, badgeY: badge.y, occupantId: null
+            };
             _chairs.push(chair);
 
             if (ring) {
                 var div = document.createElement('div');
-                div.className = 'mc-chair' + (showRevealed ? ' mc-chair-revealed' : '');
+                div.className = 'mc-chair';
                 div.id = 'mc-chair-' + idx;
                 div.style.left = chair.x + '%';
                 div.style.top = chair.y + '%';
-                div.innerHTML = chairSvg() + '<span class="mc-chair-number">' + chair.number + '</span>';
+                div.innerHTML = chairSvg();
                 ring.appendChild(div);
+
+                var badgeEl = document.createElement('span');
+                badgeEl.className = 'mc-chair-number' + (showRevealed ? ' mc-chair-revealed' : '');
+                badgeEl.id = 'mc-chair-num-' + idx;
+                badgeEl.style.left = chair.badgeX + '%';
+                badgeEl.style.top = chair.badgeY + '%';
+                badgeEl.textContent = chair.number;
+                ring.appendChild(badgeEl);
             }
         }
         updateBadges();
@@ -950,6 +1080,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var chairEl = el('mc-chair-' + chairIdx);
         if (chairEl) chairEl.classList.add('mc-chair-taken');
+        var badgeElTaken = el('mc-chair-num-' + chairIdx);
+        if (badgeElTaken) badgeElTaken.classList.add('mc-chair-taken');
 
         var avatarEl = el('mc-avatar-' + player.id);
         if (avatarEl) {
@@ -1036,8 +1168,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (btn) { btn.disabled = true; btn.textContent = '▶️ تدوير'; btn.classList.remove('mc-spin-btn-active'); }
 
         _chairs.forEach(function (c, idx) {
-            var chairEl = el('mc-chair-' + idx);
-            if (chairEl) chairEl.classList.add('mc-chair-revealed');
+            var badgeEl = el('mc-chair-num-' + idx);
+            if (badgeEl) badgeEl.classList.add('mc-chair-revealed');
         });
         playSound('reveal');
 
@@ -1535,11 +1667,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var player = players[idx];
             if (!player) return;
 
-            // زر حذف (✕) — فوق لوح الاسم مباشرة (الزاوية العلوية)، يستدعي
-            // نفس API الحذف الحقيقي (AGP.player.removePlayer) بدون أي
-            // لمس للملف المشترك — فقط عبر واجهته العامة المُصدَّرة أصلاً.
-            if (!li.querySelector('.mc-lobby-remove-btn')) {
-                li.style.position = 'relative';
+            // ⚠️ إصلاح: كنت أضيف الزر للـli نفسه، بس li عنده justify-content:
+            // center (يوسّط البطاقة داخل عمود الشبكة)، فلو البطاقة أضيق من
+            // عرض العمود يصير الزر بموضع ثابت من حافة li مو حافة اللوح
+            // الفعلية — ينزاح عن مكانه الصحيح. الحل: نلصقه بلوح الاسم نفسه
+            // (.agp-pcard-name-basic) مباشرة، بنهايته (طرفه البعيد عن
+            // الأفاتار) — يتحرك صح مع اللوح دائماً بغض النظر عن التوسيط.
+            var plateEl = li.querySelector('.agp-pcard-name-basic');
+            applyNameSlideIfOverflow(li); // ⚠️ يجب هذا قبل إضافة زر الحذف — يقرأ نص اللوح عبر
+            // textContent؛ لو الزر مضاف قبله بيتضمّن نص الزر بالغلط ويُمسح الزر لما يصفّر المحتوى.
+            if (plateEl && !plateEl.querySelector('.mc-lobby-remove-btn')) {
                 var btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'mc-lobby-remove-btn';
@@ -1550,10 +1687,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         AGP.player.removePlayer(player.id);
                     }
                 };
-                li.appendChild(btn);
+                plateEl.appendChild(btn);
             }
-
-            applyNameSlideIfOverflow(li);
         });
 
         normalizeFramedCardWidths(list, targetWidth);
