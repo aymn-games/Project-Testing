@@ -579,7 +579,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * بدون تغيّر" بالمعيار الجديد). */
             '#agp-lobby-list.agp-shell-player-list{',
             '--mc-av:60px;--mc-nw:200px;--mc-nh:60px;--mc-overlap:13px;--mc-nf:18px;--mc-gap:19px;',
-            'display:grid !important;grid-template-columns:repeat(4,1fr);',
+            'display:grid !important;grid-template-columns:repeat(4,1fr);align-content:start;',
             'gap:var(--mc-gap) !important;margin-top:34px !important;list-style:none;padding:0;',
             'justify-items:center;}',
             '#agp-lobby-list.agp-shell-player-list li{position:relative;display:flex;align-items:center;',
