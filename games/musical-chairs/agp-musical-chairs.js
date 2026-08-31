@@ -1667,16 +1667,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var player = players[idx];
             if (!player) return;
 
-            // ⚠️ إصلاح: كنت أضيف الزر للـli نفسه، بس li عنده justify-content:
-            // center (يوسّط البطاقة داخل عمود الشبكة)، فلو البطاقة أضيق من
-            // عرض العمود يصير الزر بموضع ثابت من حافة li مو حافة اللوح
-            // الفعلية — ينزاح عن مكانه الصحيح. الحل: نلصقه بلوح الاسم نفسه
-            // (.agp-pcard-name-basic) مباشرة، بنهايته (طرفه البعيد عن
-            // الأفاتار) — يتحرك صح مع اللوح دائماً بغض النظر عن التوسيط.
+            // ⚠️ [إصلاح جديد] كنت ألصق الزر بلوح الاسم نفسه (.agp-pcard-
+            // name-basic) عشان يتحرك صح مع اللوح بغض النظر عن توسيط li —
+            // لكن اللوح عنده overflow:hidden (لازم للسلايد بالأسماء
+            // الطويلة)، فكان يقصّ الجزء العلوي من الزر (top:-9px يطلع
+            // خارج صندوق اللوح فيُقصّ). الحل: الزر يُلصَق بـli (بدون
+            // overflow:hidden)، لكن موضعه يُحسب من مكان اللوح الفعلي
+            // (getBoundingClientRect) بدل موضع ثابت بـCSS — يحافظ على نفس
+            // الإصلاح القديم (يتحرك صح مع اللوح) بدون مشكلة القصّ الجديدة.
             var plateEl = li.querySelector('.agp-pcard-name-basic');
             applyNameSlideIfOverflow(li); // ⚠️ يجب هذا قبل إضافة زر الحذف — يقرأ نص اللوح عبر
             // textContent؛ لو الزر مضاف قبله بيتضمّن نص الزر بالغلط ويُمسح الزر لما يصفّر المحتوى.
-            if (plateEl && !plateEl.querySelector('.mc-lobby-remove-btn')) {
+            if (plateEl && !li.querySelector('.mc-lobby-remove-btn')) {
                 var btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'mc-lobby-remove-btn';
@@ -1687,7 +1689,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         AGP.player.removePlayer(player.id);
                     }
                 };
-                plateEl.appendChild(btn);
+                li.appendChild(btn);
+                var liRect = li.getBoundingClientRect();
+                var plateRect = plateEl.getBoundingClientRect();
+                btn.style.top = Math.round(plateRect.top - liRect.top - 9) + 'px';
+                btn.style.left = Math.round(plateRect.left - liRect.left - 6) + 'px';
             }
         });
 
