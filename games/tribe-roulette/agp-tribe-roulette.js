@@ -225,13 +225,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _giftUnsub = null;
     var _giftReviveCounts = {}; // playerId -> عدد مرات الإنعاش بالدعم المستخدَمة (طول المباراة)
     var _friendRevivedIds = {}; // playerId -> true (استُخدمت له فرصة "انعاش صديق" مرة، مرة واحدة طول عمره بالمباراة)
-
-    // ⚠️ [0.66.0] مهلة إضافية قبل إعلان الفائز نهائياً عند آخر إقصاء ممكن
-    // ينهي المباراة — تعطي فرصة حقيقية لهدية إنعاش "بالطريق" (وصلت فعلياً
-    // من المُرسِل لكن لسا ما وصلت/انعالجت عندنا بسبب تأخير شبكة/تيك توك
-    // طبيعي) تنقذ آخر لاعب مُقصى قبل ما تُقفَل المباراة. راجع تعليق
-    // eliminatePlayer() أدناه للتفاصيل الكاملة.
-    var FINAL_ELIMINATION_GIFT_GRACE_MS = 6000;
     var _eliminationCounts = {}; // playerId (المُقصي) -> عدد من أقصاهم فعلياً
     // ⚠️ [0.46.0] حالة "العب" (الدوران التلقائي) — راجع handleAutoPlayToggle/maybeAutoSpin/stopAutoPlay.
     var _autoPlayActive = false;
@@ -388,30 +381,41 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // width فقط عبر نفس الصيغة، وheight يُشتَق منها تلقائياً عبر
             // aspect-ratio:1 — قيمة واحدة محسوبة، صفر احتمال تباعد بينهما.
             '#tr-wheel-wrap{position:relative;width:min(440px,88vw);aspect-ratio:1;margin-top:46px;}',
-            '#tr-wheel-bezel{position:absolute;inset:-14px;border-radius:50%;',
-            'background:linear-gradient(135deg,var(--tr-accent2),var(--tr-accent),var(--tr-pink));',
-            'box-shadow:0 0 46px rgba(124,58,237,0.65),inset 0 0 0 6px rgba(156,143,176,0.25);}',
-            '.tr-bulb{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff8dd;',
-            'box-shadow:0 0 8px 2px rgba(255,244,180,0.85);}',
-            /* ⚠️ [0.45.0] حلقة العجلة كانت بيضاء (rgba(255,255,255,0.92))
-             * — صارت C_WHEEL_TRIM (غامقة لكن أفتح/مختلفة عن ألوان
-             * العجلة الغامقة نفسها، حتى تبقى مميّزة فوقها). */
-            '#tr-wheel-canvas{position:absolute;inset:8px;display:block;border-radius:50%;',
-            'border:5px solid ' + C_WHEEL_TRIM + ';box-shadow:inset 0 0 30px rgba(0,0,0,0.35);}',
-            '#tr-wheel-pointer{position:absolute;top:-20px;left:50%;transform:translateX(-50%);',
-            'width:0;height:0;border-left:16px solid transparent;border-right:16px solid transparent;',
-            'border-top:26px solid ' + C_WHEEL_TRIM + ';z-index:6;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));}',
+            // ⚠️ [اعتماد التصميم الاحترافي الجديد] حلقة اللمبات القديمة
+            // (#tr-wheel-bezel + .tr-bulb، 16 عنصر DOM ثابت) حُذفت بالكامل
+            // — الإطار الذهبي المزدوج والحلقة المعدنية الغامقة و24 "قفل"
+            // ذهبي مضيء صارت كلها تُرسَم مباشرة داخل الكانفس نفسه
+            // (drawWheelCanvas)، بنفس منطق نموذج التصميم المعتمَد من
+            // المستخدم بالحرف — أبسط وأدق (تدور فعلياً مع العجلة، بعكس
+            // الحلقة الثابتة القديمة اللي ما كانت تدور إطلاقاً).
+            // ⚠️ الحدود/التوهّج على عنصر الكانفس نفسه أُزيلا من CSS —
+            // الإطار الذهبي + هالة التوهّج السماوية صارا جزءاً من الرسم
+            // نفسه (canvas) بدل حدّ CSS خارجي، فما فيه ازدواجية.
+            '#tr-wheel-canvas{position:absolute;inset:0;display:block;}',
+            // ⚠️ مؤشّر SVG جديد (دمعة سماوية متدرّجة) بدل مثلث CSS
+            // البسيط القديم — منقول بالحرف من نموذج التصميم المعتمَد.
+            '#tr-wheel-pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);',
+            'width:36px;height:46px;z-index:6;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.55));}',
 
-            /* ---- محور المنتصف = زر الدوران (شعار + كلمة "دور") ---- */
+            /* ---- محور المنتصف = زر الدوران (تصميم معدني/ذهبي جديد،
+             * منقول بالحرف من نموذج التصميم المعتمَد) ---- */
             '#tr-spin-hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:7;',
-            'width:104px;height:104px;border-radius:50%;border:4px solid ' + C_WHEEL_TRIM + ';cursor:pointer;',
-            'background:radial-gradient(circle at 35% 30%,#2a1443,#0e0e16);',
+            'width:96px;height:96px;border-radius:50%;border:3px solid #ffd97a;cursor:pointer;',
+            'background:radial-gradient(circle at 38% 32%,#2a1a4a 0%,#150a29 55%,#0a0514 100%);',
             'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;',
-            'box-shadow:0 0 24px rgba(0,194,255,0.6),0 4px 10px rgba(0,0,0,0.5);padding:0;}',
-            '#tr-spin-hub img{width:44px;height:44px;object-fit:contain;border-radius:50%;}',
-            '#tr-spin-hub span{font-size:0.82em;font-weight:900;color:#fff;font-family:Almarai,Cairo,sans-serif;}',
+            'box-shadow:0 0 0 3px rgba(128,212,255,0.35),0 0 22px rgba(128,212,255,0.55),',
+            'inset 0 2px 6px rgba(255,255,255,0.25),inset 0 -8px 16px rgba(0,0,0,0.55);padding:0;',
+            'transition:transform 0.12s ease;}',
+            '#tr-spin-hub:not(:disabled):active{transform:translate(-50%,-50%) scale(0.94);}',
+            '#tr-spin-hub img{width:38px;height:38px;object-fit:contain;border-radius:50%;',
+            'filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6));}',
+            '#tr-spin-hub span{font-size:0.78em;font-weight:900;color:#ffe9b8;',
+            'text-shadow:0 1px 3px rgba(0,0,0,0.7);letter-spacing:0.5px;',
+            'font-family:Almarai,Cairo,sans-serif;}',
             '#tr-spin-hub:disabled{opacity:0.55;cursor:not-allowed;}',
-            '#tr-spin-hub:not(:disabled):hover{box-shadow:0 0 34px rgba(0,194,255,0.85),0 4px 14px rgba(0,0,0,0.5);}',
+            '#tr-spin-hub:not(:disabled):hover{box-shadow:0 0 0 3px rgba(128,212,255,0.5),',
+            '0 0 30px rgba(128,212,255,0.8),inset 0 2px 6px rgba(255,255,255,0.25),',
+            'inset 0 -8px 16px rgba(0,0,0,0.55);}',
 
             /* ---- نافذة الدور (إقصاء/إرجاع) — 1300×800 ----
              * ⚠️ [0.45.0] عرّض من 1200 لـ1300، وصار بنفس تدريج/ألوان
@@ -709,24 +713,56 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'padding:10px 18px;border-radius:999px;font-size:0.85em;font-weight:700;box-shadow:0 6px 16px rgba(0,0,0,0.35);}',
 
             /* ---- شاشة نهاية المباراة ----
-             * ⚠️ [تثبيت الشكل النهائي — طلب صريح 2026] بطاقتا الفائز/
-             * الأكثر إقصاءً صارتا تُبنَيان عبر AGP.playerCard.renderTrophyCard()
-             * المشتركة (js/agp-player-card.js) بدل تصميم .tr-trophy-*
-             * المحلي المكرَّر (كان نسخة طبق الأصل من روليت الإقصاء قبل ما
-             * تنتقل هي لملف مشترك) — أُزيل بالكامل هنا، فقط CSS القطع
-             * المحلية البحتة (صف البطاقات، الأزرار، التطاير) باقٍ. */
+             * ⚠️ [0.45.0] تصميم بطاقات جديد بالكامل (البطاقة القديمة
+             * أُلغيت كلياً) — حلقة (ring) بسيطة حول الصورة الدائرية تناسب
+             * اللعبة نفسها: حلقة "ذهبية دوّارة" للفائز (تلمّح لعجلة
+             * الفوز)، وحلقة "متقطّعة وردية" لصاحب الأكثر إقصاءً (تلمّح
+             * لعلامة استهداف/إقصاء) — بشارة أيقونة صغيرة فوق كل حلقة،
+             * بنفس ألوان صورة 4. */
             '#tr-winner-box{text-align:center;}',
-            '#tr-winner-box h2{font-family:Almarai,Cairo,sans-serif;font-size:1.35em;color:#fff;}',
+            '#tr-winner-box h2{font-family:Almarai,Cairo,sans-serif;font-size:1.6em;color:#fff;}',
             '.tr-trophy-cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:14px 0 18px;}',
+            /* ⚠️ [0.46.0] حجم موحَّد 250×250 لكل بطاقة، وبدون أي خلفية أو
+             * حدود إطلاقاً (أُلغيتا بالكامل) — تأثير "تطاير" (confetti)
+             * هو البديل الاحتفالي الآن، راجع spawnConfetti().
+             * ⚠️ [0.47.0] تأثير "إشعاع/توهّج" جديد حول كل بطاقة (نفس اللون
+             * الموحَّد للطرفين — الفائز والأكثر إقصاءً — بطلب صريح)، مع
+             * نبضة خفيفة مستمرة. overflow صار visible بدل hidden حتى لا
+             * يُقصّ التوهّج (ولا قصاصات confetti التي تتخطى حدود الصندوق
+             * أحياناً — إصلاح فني إضافي وُجد أثناء المراجعة). */
+            '.tr-trophy-card{position:relative;width:250px;height:250px;box-sizing:border-box;',
+            'border-radius:18px;padding:20px 14px;display:flex;flex-direction:column;align-items:center;',
+            'justify-content:center;overflow:visible;background:none;border:none;',
+            'box-shadow:0 0 55px 14px rgba(255,255,255,0.4),0 0 120px 35px rgba(216,120,255,0.6);',
+            'animation:tr-trophy-glow-pulse 2.6s ease-in-out infinite;}',
+            '@keyframes tr-trophy-glow-pulse{0%,100%{box-shadow:0 0 55px 14px rgba(255,255,255,0.4),',
+            '0 0 120px 35px rgba(216,120,255,0.6);}',
+            '50%{box-shadow:0 0 75px 22px rgba(255,255,255,0.6),0 0 150px 45px rgba(216,120,255,0.78);}}',
+            '.tr-trophy-card .tr-trophy-label{font-size:0.85em;font-weight:800;color:#fff;margin-bottom:10px;}',
 
-            /* ⚠️ [أُبقيتا عمداً] .tr-ring-avatar/.tr-ring-avatar--fallback —
-             * ما كانتا خاصتين بالبطاقة المحذوفة فقط، تُستخدَمان محلياً
-             * كأساس (base) لعناصر ring ثانية بمكان آخر بالملف (بطاقة
-             * الاختيار/الإعلان/الإرجاع — راجع ringAvatarHtml() واستخداماتها
-             * الأربعة أدناه)، فحذفهما كان يكسر تلك الشاشات. */
+            '.tr-ring-wrap{position:relative;width:88px;height:88px;margin:0 auto 10px;border-radius:50%;',
+            'padding:5px;box-sizing:border-box;}',
+            '.tr-ring-winner{background:conic-gradient(from 0deg,#ffd400,#fff6cf,#ffd400,#c9960a,#ffd400);',
+            'box-shadow:0 0 20px rgba(255,212,0,0.55);}',
+            '.tr-ring-most{background:repeating-conic-gradient(' + C_PINK + ' 0deg 18deg,' + C_PINK_DK + ' 18deg 36deg);',
+            'box-shadow:0 0 20px rgba(255,77,255,0.4);}',
+            '.tr-ring-inner{width:100%;height:100%;border-radius:50%;background:#2D1932;overflow:hidden;}',
             '.tr-ring-avatar{width:100%;height:100%;border-radius:50%;object-fit:cover;background:#5a2585;display:block;}',
             '.tr-ring-avatar--fallback{display:flex;align-items:center;justify-content:center;',
             'color:#fff;font-weight:800;font-size:1.4em;}',
+            '.tr-ring-badge{position:absolute;bottom:-2px;right:-2px;width:28px;height:28px;border-radius:50%;',
+            'display:flex;align-items:center;justify-content:center;font-size:0.95em;border:2px solid #2D1932;}',
+            '.tr-ring-badge.tr-badge-winner{background:#ffd400;}',
+            '.tr-ring-badge.tr-badge-most{background:var(--tr-pink);}',
+
+            '.tr-trophy-name{font-size:1.15em;font-weight:900;color:#fff;}',
+            '.tr-trophy-count{color:#e9d3ff;font-size:0.85em;margin-top:4px;}',
+
+            /* ---- عرض النقاط المكتسبة ---- */
+            '.tr-trophy-points{margin-top:10px;font-size:0.85em;line-height:1.4;}',
+            '.tr-trophy-points.tr-points-earned{color:#ffd400;font-weight:800;}',
+            '.tr-trophy-points .tr-points-sub{display:block;color:#e9d3ff;font-weight:500;font-size:0.85em;margin-top:2px;}',
+            '.tr-trophy-points.tr-points-noaccount{color:#e9d3ff;font-size:0.8em;}',
 
             '.tr-winner-actions{display:flex;gap:10px;flex-wrap:wrap;}',
             '.tr-btn-secondary{flex:1;min-width:180px;padding:12px;border-radius:999px;border:none;',
@@ -819,6 +855,79 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-settings-close-btn{color:#ffffff !important;font-weight:900 !important;',
             'text-shadow:0 1px 4px rgba(0,0,0,0.5) !important;}',
 
+            /* ======================================================================
+             *  [نموذج "settings-no-box" المعتمَد] شاشة الإعدادات الأولى فقط
+             *  (قبل أي اتصال بالبث) — بدون أي صندوق/تبويب يحيط الحقول:
+             *  الحقول موزَّعة مباشرة على الصفحة بعمودين (عمود ذهبي = خط
+             *  فاصل تحت كل حقل بدل خلفية بطاقة)، عنوان كبير بتدرّج لوني،
+             *  زر الاتصال عائم بالمنتصف. الإعدادات المعاد فتحها أثناء
+             *  المباراة (زر ⚙️) تبقى بشكلها الأصلي (صندوق) بلا أي تغيير —
+             *  محدَّدة بكلاس `.tr-settings-initial-box` فقط (يُضاف عبر
+             *  enhanceSettingsScreen حصراً للشاشة الأولى الحقيقية).
+             *  ⚠️ عدد الحقول الفعلي يتغيّر ديناميكياً (حقلا هدية الإنعاش
+             *  مخفيان إلا لو "الإنعاش عن طريق الدعم" مفعَّل) — العمودان
+             *  مبنيان بـCSS Multi-column (column-count:2) بدل CSS Grid
+             *  عمداً: يتدفّق المحتوى تلقائياً ويعيد توازنه مع أي حقل
+             *  يظهر/يختفي، بدون أي حساب `nth-of-type` هش قد ينكسر مع أول
+             *  تغيير بعدد الحقول الظاهرة.
+             * ==================================================================== */
+            '#agp-shell-overlay:has(#agp-shell-box.tr-settings-initial-box){padding:0 !important;',
+            'align-items:flex-start !important;overflow-y:auto !important;',
+            'background:',
+            'radial-gradient(ellipse 900px 500px at 50% -8%,rgba(128,212,255,0.16),transparent 60%),',
+            'radial-gradient(ellipse 700px 500px at 90% 100%,rgba(124,58,237,0.18),transparent 60%),',
+            'linear-gradient(180deg,#0d0818 0%,#090614 45%,#05030a 100%) !important;}',
+            '#agp-shell-box.tr-settings-initial-box{width:min(980px,94vw) !important;max-width:min(980px,94vw) !important;',
+            'height:auto !important;max-height:none !important;overflow-y:visible !important;',
+            'background:none !important;border:none !important;border-radius:0 !important;',
+            'box-shadow:none !important;padding:56px 24px 60px !important;box-sizing:border-box !important;',
+            'column-count:2 !important;column-gap:60px !important;column-fill:auto !important;}',
+            // العنوان — يخرج من تدفّق العمودين (column-span:all) بتدرّج
+            // لوني سماوي→بنفسجي، مع خط فاصل قصير متوهّج تحته.
+            '#agp-shell-box.tr-settings-initial-box h2{column-span:all !important;margin:0 0 42px !important;',
+            'font-size:clamp(24px,4vw,38px) !important;font-weight:900 !important;text-align:center !important;',
+            'background:linear-gradient(90deg,var(--tr-accent),#d0b3ff 55%,var(--tr-accent2)) !important;',
+            '-webkit-background-clip:text !important;background-clip:text !important;',
+            '-webkit-text-fill-color:transparent !important;position:relative;padding-bottom:20px;}',
+            '#agp-shell-box.tr-settings-initial-box h2::after{content:"";position:absolute;bottom:0;',
+            'left:50%;transform:translateX(-50%);width:64px;height:3px;border-radius:3px;',
+            'background:linear-gradient(90deg,transparent,var(--tr-accent),transparent);}',
+            // كل حقل (سواء .agp-shell-field الأساسية أو .agp-shell-row
+            // العامة) يمتنع عن الانكسار بين عمود وآخر، وياخذ فاصل خطي
+            // رفيع تحته بدل خلفية بطاقة — الحقول "تطفو" على الصفحة مباشرة.
+            '#agp-shell-box.tr-settings-initial-box .agp-shell-field,',
+            '#agp-shell-box.tr-settings-initial-box .agp-shell-row{break-inside:avoid !important;',
+            'padding:20px 0 !important;border-bottom:1px solid rgba(255,255,255,0.08) !important;}',
+            // حقلا اليوزرنيم/الكلمة المفتاحية — تسمية مصغّرة فوق، إدخال
+            // كبير تحتها بخط سفلي بدل صندوق كامل (بدل الصف الأفقي المتزامن).
+            '#agp-shell-box.tr-settings-initial-box .agp-shell-field{flex-direction:column !important;',
+            'align-items:flex-start !important;gap:10px !important;}',
+            '#agp-shell-box.tr-settings-initial-box .agp-shell-field label{font-size:0.82em !important;',
+            'color:#b7a9d6 !important;font-weight:700 !important;}',
+            '#agp-shell-box.tr-settings-initial-box .agp-shell-field input[type=text]{',
+            'max-width:none !important;width:100% !important;background:transparent !important;',
+            'border:none !important;border-bottom:2px solid transparent !important;border-radius:0 !important;',
+            'padding:4px 0 !important;font-size:1.25em !important;font-weight:700 !important;',
+            'text-align:right !important;transition:border-color 0.2s;}',
+            '#agp-shell-box.tr-settings-initial-box .agp-shell-field input[type=text]:focus{',
+            'border-bottom-color:var(--tr-accent) !important;outline:none !important;}',
+            // أزرار القطاع (pill-choice/pill-group) — مفرَّغة/محدَّدة بدل
+            // بيضاء صلدة، تتحوّل لتدرّج هوية اللعبة عند التفعيل.
+            '#agp-shell-box.tr-settings-initial-box .agp-pill-btn{background:transparent !important;',
+            'border:1px solid rgba(255,255,255,0.16) !important;color:#a99cc4 !important;}',
+            '#agp-shell-box.tr-settings-initial-box .agp-pill-btn.agp-pill-active{',
+            'background:linear-gradient(90deg,var(--tr-accent2),var(--tr-accent)) !important;',
+            'color:#0a0612 !important;border-color:transparent !important;}',
+            // زر الاتصال — يخرج من تدفّق العمودين، حجم طبيعي (مو 100%)
+            // ويتمركز بالمنتصف عبر display:table+margin:auto (بديل مضبوط
+            // لتوسيط عنصر بعرضه الطبيعي داخل حاوية multi-column).
+            '#agp-shell-box.tr-settings-initial-box .agp-shell-btn-connect{column-span:all !important;',
+            'display:table !important;width:auto !important;margin:34px auto 0 !important;',
+            'padding:16px 64px !important;font-size:1.05em !important;letter-spacing:0.4px;',
+            'box-shadow:0 10px 34px rgba(128,212,255,0.3),0 0 0 1px rgba(255,255,255,0.15) inset !important;}',
+            '#agp-shell-box.tr-settings-initial-box .tr-back-to-platform-btn{column-span:all !important;}',
+            '@media (max-width:720px){#agp-shell-box.tr-settings-initial-box{column-count:1 !important;}}',
+
             // ⚠️ [منقول بالحرف من التحديث الأخير لروليت الإقصاء] معيار
             // PLAYER-CARD-STANDARDS.md §4: الشاشة تبقى ثابتة بدون أي
             // سكرول على مستوى الصفحة/الصندوق نفسه — فقط منطقة شبكة
@@ -838,13 +947,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list{flex:1 1 auto !important;',
             'min-height:0 !important;overflow-y:auto !important;}',
 
-            // ⚠️ شعار "Ayman Games" كخلفية شفافة (25%) بمنتصف صندوق اللوبي —
-            // طلب صريح. يُضاف كعنصر img عبر enhanceLobbyWatermarkAndActions()،
-            // هذا فقط موضعته/شفافيته.
-            '#tr-lobby-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);',
-            'width:55%;max-width:420px;opacity:0.25;pointer-events:none;z-index:0;}',
-            // العناصر الحقيقية بصندوق اللوبي فوق الشعار دائماً.
-            '#agp-shell-box.agp-lobby-box > *:not(#tr-lobby-watermark){position:relative;z-index:1;}',
+            // ⚠️ [نموذج "lobby-no-box" المعتمَد] الشعار الشفاف بمنتصف
+            // اللوبي حُذف — راجع تعليق enhanceLobbyWatermarkAndActions().
 
             // ⚠️ [0.45.14] تدرّج جديد خاص باللوبي فقط (5D336A→000000 —
             // من صورة Figma زوَّدنا بها المستخدم)، يستبدل التدرّج الموحَّد
@@ -932,7 +1036,30 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'border-radius:999px;border:1px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.08);',
             'color:#f3eefc;font-family:inherit;font-weight:800;font-size:0.9em;cursor:pointer;',
             'transition:background 0.15s;}',
-            '.tr-back-to-platform-btn:hover{background:rgba(255,255,255,0.18);}'
+            '.tr-back-to-platform-btn:hover{background:rgba(255,255,255,0.18);}',
+
+            /* ======================================================================
+             *  [نموذج "lobby-no-box" المعتمَد] شاشة اللوبي — بدون أي
+             *  صندوق/تبويب يحيط المحتوى: العنوان مباشرة على الصفحة، شارة
+             *  العدد عائمة أعلى اليسار، شبكة اللاعبين تطفو مباشرة، وشريط
+             *  الأزرار السفلي عائم بلا خلفية — كل شي فوق خلفية الصفحة
+             *  الكونية نفسها (نفس أسلوب settings-no-box تماماً). التخطيط
+             *  الداخلي (flex-column، سكرول داخلي لشبكة اللاعبين فقط) من
+             *  التحديث السابق يبقى بلا أي تغيير — فقط "چروم" الصندوق
+             *  نفسه (خلفية/حدّ/ظل/عرض ثابت) هو المُزال هنا.
+             * ==================================================================== */
+            '#agp-shell-overlay:has(#agp-shell-box.agp-lobby-box){padding:0 !important;',
+            'align-items:flex-start !important;overflow-y:auto !important;',
+            'background:',
+            'radial-gradient(ellipse 900px 500px at 50% -8%,rgba(128,212,255,0.14),transparent 60%),',
+            'radial-gradient(ellipse 700px 500px at 90% 100%,rgba(124,58,237,0.16),transparent 60%),',
+            'linear-gradient(180deg,#0d0818 0%,#090614 45%,#05030a 100%) !important;}',
+            '#agp-shell-box.agp-lobby-box{width:min(1180px,94vw) !important;max-width:min(1180px,94vw) !important;',
+            'background:none !important;border:none !important;border-radius:0 !important;',
+            'box-shadow:none !important;padding:44px 10px 26px !important;box-sizing:border-box !important;}',
+            // العنوان يكبر شوي بدون صندوق يحدّه بصرياً — نفس الألوان
+            // ثنائية اللون بلا تغيير (enhanceLobbyHeading لم يتغيّر).
+            '#agp-shell-box.agp-lobby-box h2{font-size:1.5em !important;margin-bottom:14px !important;}',
         ].join('');
         document.head.appendChild(style);
     }
@@ -1004,9 +1131,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // عادي بترتيب العمود حتى يتحرك الزر تلقائياً معه عند تغيير الحجم.
         stage.innerHTML =
             '<div id="tr-wheel-wrap">' +
-            '<div id="tr-wheel-bezel"></div>' +
-            '<div id="tr-wheel-pointer"></div>' +
             '<canvas id="tr-wheel-canvas"></canvas>' +
+            // ⚠️ [اعتماد التصميم الاحترافي الجديد] مؤشّر SVG (دمعة سماوية
+            // متدرّجة) بدل مثلث CSS البسيط القديم — منقول بالحرف من نموذج
+            // التصميم المعتمَد من المستخدم.
+            '<svg id="tr-wheel-pointer" viewBox="0 0 46 58">' +
+            '<defs><linearGradient id="tr-ptr-grad" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0%" stop-color="#c9f3ff"/>' +
+            '<stop offset="55%" stop-color="#80d4ff"/>' +
+            '<stop offset="100%" stop-color="#3f9fd6"/>' +
+            '</linearGradient></defs>' +
+            '<path d="M23 58 C 12 40, 2 30, 2 17 A21 21 0 0 1 44 17 C 44 30, 34 40, 23 58 Z" ' +
+            'fill="url(#tr-ptr-grad)" stroke="#e8fbff" stroke-width="1.5"/>' +
+            '<circle cx="23" cy="18" r="7" fill="#0a0612" opacity="0.85"/>' +
+            '</svg>' +
             '<button id="tr-spin-hub" title="دوّر العجلة"><img src="../../logo.png" alt="ألعاب أيمن"><span>دور</span></button>' +
             '</div>' +
             '<div id="tr-wheel-zoom-row">' +
@@ -1017,7 +1155,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<button id="tr-shuffle-btn" type="button">🔀 إعادة ترتيب عشوائية</button>';
 
         applyWheelSize(_wheelSizePx);
-        renderWheelBulbs();
         drawWheelCanvas();
         el('tr-spin-hub').onclick = handleSpinClick;
         el('tr-shuffle-btn').onclick = handleShuffleClick;
@@ -1051,39 +1188,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         applyWheelSize(_wheelSizePx); // يستدعي drawWheelCanvas() داخلياً أصلاً
     }
 
-    // ⚠️ حلقة "مصابيح" زخرفية ثابتة حول العجلة (16 نقطة) — تُبنى مرة
-    // واحدة فقط (لا تعتمد على عدد اللاعبين). بدون تغيير عن روليت
-    // الإقصاء — عنصر DOM منفصل تماماً عن الكانفس، لا علاقة له بالرسم.
-    function renderWheelBulbs() {
-        var bezel = el('tr-wheel-bezel');
-        if (!bezel || bezel.dataset.built) return;
-        var n = 16;
-        for (var i = 0; i < n; i++) {
-            var angle = (360 / n) * i;
-            var bulb = document.createElement('div');
-            bulb.className = 'tr-bulb';
-            bulb.style.top = '50%';
-            bulb.style.left = '50%';
-            bulb.style.transform = 'rotate(' + angle + 'deg) translate(0,-50%) rotate(-' + angle + 'deg)';
-            bulb.style.marginTop = '-4.5px';
-            bulb.style.marginLeft = '-4.5px';
-            // ⚠️ تموضع فعلي عبر transform مبني على نصف قطر الحلقة نفسها
-            bulb.style.transform =
-                'translate(-50%,-50%) rotate(' + angle + 'deg) translate(0,-50%)';
-            bezel.appendChild(bulb);
-        }
-        bezel.dataset.built = '1';
-    }
-
     /* ======================================================================
-     *  3ب) رسم العجلة على <canvas> — منقول ومُعاد تلوينه من كود اللعبة
-     *      القديمة المستقلة (roulette-game/script.js: drawWheel)، بدل
-     *      Conic Gradient بـCSS المستخدَم بروليت الإقصاء. الألوان
-     *      البديلة صارت WHEEL_PALETTE (ثوابت المنصة الرسمية) بدل الأزرق
-     *      السماوي/البنفسجي اليدوي القديم. راجع التعليق فوق _wheelRotation
-     *      أدناه لشرح نظام الزوايا (بالراديان، صفر = محاذاة القطعة صفر
-     *      تحت المؤشر بالأعلى، مطابق تماماً لسلوك نسخة CSS القديمة).
+     *  3ب) رسم العجلة على <canvas> — منقول بالحرف من نموذج التصميم
+     *      الاحترافي المعتمَد من المستخدم (عجلة كازينو ثنائية اللون
+     *      بتدرّجات + إطار ذهبي مزدوج + حلقة معدنية غامقة + "أقفال"
+     *      ذهبية مضيئة حول المحيط + هالة توهّج سماوية + مؤشّر SVG منفصل).
+     *      يستبدل النسخة المسطّحة القديمة (WHEEL_PALETTE بدون تدرّجات،
+     *      حلقة لمبات DOM ثابتة) بالكامل. نظام الزوايا نفسه بدون تغيير
+     *      (بالراديان، -π/2 = محاذاة القطعة رقم 0 تحت المؤشر عند
+     *      _wheelRotation=0)، فمنطق الدوران بـhandleSpinClick لم يحتَج
+     *      أي تعديل.
      */
+    var TR_SEG_COLORS = [
+        { a: '#3a1f66', b: '#1a0d33' },  // بنفسجي غامق متدرّج
+        { a: '#0e0a17', b: '#050308' }   // شبه أسود متدرّج
+    ];
+    var TR_RIM_GOLD = '#ffd97a';
+    var TR_RIM_CYAN = '#80d4ff';
+    var TR_SEP_COLOR = 'rgba(255,217,122,0.55)';
+
     function drawWheelCanvas() {
         var canvas = el('tr-wheel-canvas');
         var wrap = el('tr-wheel-wrap');
@@ -1102,56 +1225,164 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var ctx = canvas.getContext('2d');
         var cx = canvas.width / 2, cy = canvas.height / 2;
-        var radius = canvas.width / 2 - 4 * dpr;
+        var outerR = canvas.width / 2 - 6 * dpr;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         var n = _alive.length;
         if (!n) {
             ctx.beginPath();
-            ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
-            ctx.fillStyle = '#2a1443';
+            ctx.arc(cx, cy, outerR, 0, 2 * Math.PI);
+            ctx.fillStyle = '#111';
             ctx.fill();
             return;
         }
 
+        // ---- ظل عام أسفل العجلة (إحساس بالعمق) ----
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy + 6 * dpr, outerR, 0, 2 * Math.PI);
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.filter = 'blur(10px)';
+        ctx.fill();
+        ctx.restore();
+
+        // ---- هالة توهّج سماوية خارجية (خلف القطع) ----
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerR + 4 * dpr, 0, 2 * Math.PI);
+        ctx.strokeStyle = TR_RIM_CYAN;
+        ctx.lineWidth = 10 * dpr;
+        ctx.globalAlpha = 0.35;
+        ctx.filter = 'blur(6px)';
+        ctx.stroke();
+        ctx.restore();
+
+        var segR = outerR - 10 * dpr; // نصف قطر القطع نفسها (داخل الإطار الذهبي)
         var anglePer = (2 * Math.PI) / n;
         // ⚠️ حجم الخط يتقلص تلقائياً كلما زاد عدد اللاعبين حتى تبقى
         // الأسماء مقروءة — نفس منطق اللعبة القديمة بالضبط.
-        var fontSize = Math.max(11, Math.min(18, 260 / n)) * dpr;
-        var maxChars = n <= 8 ? 16 : 10;
+        var fontSize = Math.max(11, Math.min(20, 280 / n)) * dpr;
+        var maxChars = n <= 8 ? 14 : 9;
+        var twoPi = 2 * Math.PI;
 
         for (var i = 0; i < n; i++) {
             // ⚠️ -π/2 ثابتة تحاذي القطعة رقم 0 تحت المؤشر (أعلى العجلة)
-            // عند _wheelRotation=0 — بالضبط سلوك segment 0 بنسخة CSS
-            // القديمة (conic-gradient يبدأ من الأعلى افتراضياً).
+            // عند _wheelRotation=0 — نفس نظام الزوايا الأصلي بدون تغيير.
             var startAng = _wheelRotation + i * anglePer - Math.PI / 2;
             var endAng = startAng + anglePer;
+            var mid = startAng + anglePer / 2;
+            var pair = TR_SEG_COLORS[i % TR_SEG_COLORS.length];
+
+            var grad = ctx.createRadialGradient(cx, cy, segR * 0.15, cx, cy, segR);
+            grad.addColorStop(0, pair.a);
+            grad.addColorStop(1, pair.b);
 
             ctx.beginPath();
             ctx.moveTo(cx, cy);
-            ctx.arc(cx, cy, radius, startAng, endAng);
+            ctx.arc(cx, cy, segR, startAng, endAng);
             ctx.closePath();
-            ctx.fillStyle = WHEEL_PALETTE[i % WHEEL_PALETTE.length];
+            ctx.fillStyle = grad;
             ctx.fill();
-            ctx.lineWidth = 2 * dpr;
-            ctx.strokeStyle = C_WHEEL_TRIM;
+
+            // لمعة داخلية خفيفة قرب المركز (إحساس معدني/زجاجي)
+            ctx.save();
+            ctx.clip();
+            var shine = ctx.createRadialGradient(cx, cy, 0, cx, cy, segR * 0.55);
+            shine.addColorStop(0, 'rgba(255,255,255,0.10)');
+            shine.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = shine;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+
+            // فاصل ذهبي رفيع بين كل قطعة والتي تليها
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + segR * Math.cos(startAng), cy + segR * Math.sin(startAng));
+            ctx.strokeStyle = TR_SEP_COLOR;
+            ctx.lineWidth = 1.6 * dpr;
             ctx.stroke();
+
+            // ---- اسم اللاعب — مع إصلاح النصوص المقلوبة بالنصف الأيسر
+            // (تأثير معروف بعجلات canvas الدوّارة): نلف النص 180° إضافية
+            // ونعكس نقطة الإرساء للقطع اللي زاويتها بين 90°-270°، فيبقى
+            // النص مستقيماً ومقروءاً بشكل صحيح بكل مكان حول العجلة. ----
+            var normMid = ((mid % twoPi) + twoPi) % twoPi;
+            var flip = normMid > Math.PI / 2 && normMid < (3 * Math.PI) / 2;
 
             ctx.save();
             ctx.translate(cx, cy);
-            ctx.rotate(startAng + anglePer / 2);
-            ctx.textAlign = 'right';
+            ctx.rotate(mid + (flip ? Math.PI : 0));
+            ctx.textAlign = flip ? 'left' : 'right';
             ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#f1e9fb';
-            ctx.font = 'bold ' + fontSize.toFixed(1) + 'px Zain,Cairo,sans-serif';
+            ctx.fillStyle = '#f3ecff';
+            ctx.font = '800 ' + fontSize.toFixed(1) + 'px Zain,Cairo,sans-serif';
+            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx.shadowBlur = 4 * dpr;
 
             var label = playerLabel(_alive[i]);
             if (label.length > maxChars) label = label.slice(0, maxChars - 1) + '…';
-            ctx.fillText(label, radius - 15 * dpr, 5 * dpr);
+            var textX = flip ? -(segR - 20 * dpr) : (segR - 20 * dpr);
+            ctx.fillText(label, textX, 0);
             ctx.restore();
         }
+
+        // ---- إطار ذهبي مزدوج (bezel) حول محيط القطع ----
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, segR + 5 * dpr, 0, 2 * Math.PI);
+        ctx.lineWidth = 5 * dpr;
+        var bezelGrad = ctx.createLinearGradient(cx, cy - outerR, cx, cy + outerR);
+        bezelGrad.addColorStop(0, '#fff3d0');
+        bezelGrad.addColorStop(0.5, TR_RIM_GOLD);
+        bezelGrad.addColorStop(1, '#9a6a1e');
+        ctx.strokeStyle = bezelGrad;
+        ctx.stroke();
+        ctx.restore();
+
+        // ---- حلقة معدنية خارجية غامقة (جسم العجلة الفعلي) ----
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerR, 0, 2 * Math.PI);
+        ctx.arc(cx, cy, segR + 7 * dpr, 0, 2 * Math.PI, true);
+        var ringGrad = ctx.createLinearGradient(cx, cy - outerR, cx, cy + outerR);
+        ringGrad.addColorStop(0, '#241238');
+        ringGrad.addColorStop(0.5, '#150a22');
+        ringGrad.addColorStop(1, '#0a0512');
+        ctx.fillStyle = ringGrad;
+        ctx.fill('evenodd');
+        ctx.restore();
+
+        // ---- "أقفال" زخرفية ذهبية مضيئة حول الحلقة الخارجية (بديل
+        // احترافي لحلقة اللمبات DOM القديمة — تدور فعلياً مع العجلة) ----
+        var studCount = 24;
+        var studR = (outerR + segR + 7 * dpr) / 2;
+        for (var s = 0; s < studCount; s++) {
+            var a = (twoPi / studCount) * s + _wheelRotation * 0.15;
+            var sx = cx + studR * Math.cos(a);
+            var sy = cy + studR * Math.sin(a);
+            ctx.beginPath();
+            ctx.arc(sx, sy, 2.6 * dpr, 0, twoPi);
+            var studGrad = ctx.createRadialGradient(sx - 1, sy - 1, 0, sx, sy, 3 * dpr);
+            studGrad.addColorStop(0, '#fff9e6');
+            studGrad.addColorStop(1, TR_RIM_GOLD);
+            ctx.fillStyle = studGrad;
+            ctx.shadowColor = 'rgba(255,217,122,0.9)';
+            ctx.shadowBlur = 5 * dpr;
+            ctx.fill();
+        }
+
+        // ---- إطار ذهبي خارجي رفيع نهائي ----
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerR - 1 * dpr, 0, 2 * Math.PI);
+        ctx.lineWidth = 2 * dpr;
+        ctx.strokeStyle = TR_RIM_GOLD;
+        ctx.globalAlpha = 0.85;
+        ctx.stroke();
+        ctx.restore();
     }
+
 
     /**
      * ⚠️ [0.45.7] إصلاح خلل حقيقي: كل ما يتغيّر عدد/ترتيب اللاعبين الأحياء
@@ -1404,22 +1635,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             chooser: (eliminatorPlayer && eliminatorPlayer.id !== target.id) ? eliminatorPlayer : null
         }, function onDone() {
             if (_alive.length <= 1) {
-                // ⚠️ [0.66.0] هذا الإقصاء قد يكون الأخير (سينهي المباراة).
-                // بدل إعلان الفائز فوراً، ننتظر FINAL_ELIMINATION_GIFT_GRACE_MS
-                // إضافية أولاً — مستمع الهدايا (wireGiftListener) يبقى شغّالاً
-                // طول هذي المهلة بلا أي تعديل عليه (المباراة لسا _matchActive
-                // = true)، فلو وصلت هدية إنعاش صحيحة لنفس اللاعب المُقصى للتو
-                // خلالها، revivePlayerByEntry الموجودة أصلاً ترجعه تلقائياً
-                // لـ_alive. نعيد فحص _alive.length هنا بعد المهلة: لو رجع
-                // لاعب، تكمل المباراة عادي (maybeAutoSpin) بدل إعلان فائز
-                // خاطئ؛ لو لا، تُعلَن النتيجة كما كانت من قبل بالضبط.
-                window.setTimeout(function () {
-                    if (_alive.length <= 1) {
-                        endMatch(_alive[0] || null);
-                    } else {
-                        maybeAutoSpin();
-                    }
-                }, FINAL_ELIMINATION_GIFT_GRACE_MS);
+                endMatch(_alive[0] || null);
             } else {
                 maybeAutoSpin();
             }
@@ -1796,7 +2012,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function wireGiftListener() {
         _giftUnsub = AGP.events.on('stream:giftReceived', function (payload) {
             var settings = liveSettings();
-            if (!settings.giftRevivalEnabled) return;
+            if (!_matchActive || !settings.giftRevivalEnabled) return;
             if (!payload || !payload.giftName) return;
             if (payload.giftName !== settings.giftRevivalGiftName) return;
 
@@ -1804,15 +2020,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 return e.player.id === payload.id || e.player.name === payload.name;
             })[0];
             if (!entry) return;
-
-            // ⚠️ [0.66.0] المباراة خلصت فعلياً (حتى بعد مهلة
-            // FINAL_ELIMINATION_GIFT_GRACE_MS الجديدة بـeliminatePlayer) قبل
-            // ما توصل هذي الهدية — نوضّح للمضيف إنها وصلت متأخر بدل ما
-            // تختفي بصمت تام بدون أي أثر.
-            if (!_matchActive) {
-                showToast('🎁 وصلت هدية إنعاش لـ' + playerLabel(entry.player) + ' بعد ما خلصت المباراة');
-                return;
-            }
 
             var maxCount = settings.giftRevivalMaxCount || 1;
             var usedCount = _giftReviveCounts[entry.player.id] || 0;
@@ -2084,28 +2291,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *  3) الحساب غير مرتبط/غير موثَّق (النتيجة نجحت لكن بدون سطر لهذا
      *     اللاعب) → "لازم يسوي حساب" تلقائياً.
      */
-    // ⚠️ [تثبيت الشكل النهائي — طلب صريح 2026] كلاسات agp-trophy-* المشتركة
-    // (js/agp-player-card.js) بدل tr-trophy-* المحلية المحذوفة — نفس
-    // renderTrophyCard المشتركة تتوقّع بالضبط هذي الأسماء لتنسيق النقاط.
     function pointsHtmlFor(pointsResult, player) {
         if (!pointsResult) {
-            return '<div class="agp-trophy-points agp-points-noaccount">تعذّر جلب النقاط الآن</div>';
+            return '<div class="tr-trophy-points tr-points-noaccount">تعذّر جلب النقاط الآن</div>';
         }
         var awarded = findAwardedFor(pointsResult, player);
         if (awarded) {
-            return '<div class="agp-trophy-points agp-points-earned">+' + awarded.added + ' نقطة' +
-                '<span class="agp-points-sub">تظهر في بروفايلك</span></div>';
+            return '<div class="tr-trophy-points tr-points-earned">+' + awarded.added + ' نقطة' +
+                '<span class="tr-points-sub">تظهر في بروفايلك</span></div>';
         }
-        return '<div class="agp-trophy-points agp-points-noaccount">لازم يسوي حساب عشان تظهر نقاطك بالبروفايل</div>';
+        return '<div class="tr-trophy-points tr-points-noaccount">لازم يسوي حساب عشان تظهر نقاطك بالبروفايل</div>';
     }
 
     /**
-     * ⚠️ [0.45.0] بطاقة أفاتار دائرية بسيطة بحلقة رمزية — تُستخدَم بأكثر
-     * من مكان بالملف (بطاقة الاختيار/الإعلان/الإرجاع)، مو بشاشة الفائز
-     * فقط. ⚠️ [تثبيت الشكل النهائي — طلب صريح 2026] ringHtml/trophyCardHtml
-     * (تصميم بطاقة الفائز المحلي المكرَّر تحديداً) حُذفتا — renderWinnerScreen
-     * أدناه يستدعي AGP.playerCard.renderTrophyCard() المشتركة بدلها.
-     * ringAvatarHtml نفسها باقية لأنها أساس مستقل تعتمد عليه شاشات أخرى.
+     * ⚠️ [0.45.0] بطاقة أفاتار دائرية بحلقة رمزية بسيطة (بدون الاعتماد
+     * على AGP.playerCard هنا عمداً — تلك الوحدة تبني بطاقة "بيضاوية:
+     * صورة+اسم بجانب بعض"، بينما التصميم الجديد يحتاج صورة دائرية مستقلة
+     * داخل حلقة، والاسم نص منفصل تحتها، مطابقةً لنموذج المستخدم المرجعي).
      */
     function ringAvatarHtml(player) {
         var name = playerLabel(player);
@@ -2114,6 +2316,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return avatarUrl
             ? '<img class="tr-ring-avatar" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;tr-ring-avatar tr-ring-avatar--fallback&quot;>' + escapeHtml(initials) + '</div>\';">'
             : '<div class="tr-ring-avatar tr-ring-avatar--fallback">' + escapeHtml(initials) + '</div>';
+    }
+
+    function ringHtml(player, kind) {
+        var badgeIcon = kind === 'winner' ? '👑' : '⚔️';
+        return '<div class="tr-ring-wrap tr-ring-' + kind + '">' +
+            '<div class="tr-ring-inner">' + ringAvatarHtml(player) + '</div>' +
+            '<div class="tr-ring-badge tr-badge-' + kind + '">' + badgeIcon + '</div>' +
+            '</div>';
+    }
+
+    function trophyCardHtml(player, opts) {
+        opts = opts || {};
+        return '<div class="tr-trophy-card ' + (opts.cls || '') + '"' + (opts.cardId ? ' id="' + opts.cardId + '"' : '') + '>' +
+            '<div class="tr-trophy-label">' + opts.label + '</div>' +
+            ringHtml(player, opts.kind) +
+            '<div class="tr-trophy-name">' + escapeHtml(playerLabel(player)) + '</div>' +
+            (opts.extra || '') +
+            (opts.pointsHtml || '') +
+            '</div>';
     }
 
     function computeMostEliminations() {
@@ -2159,23 +2380,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var mostElim = computeMostEliminations();
 
-        // ⚠️ [تثبيت الشكل النهائي — طلب صريح 2026] عبر AGP.playerCard.
-        // renderTrophyCard() المشتركة بدل trophyCardHtml() المحلية
-        // المحذوفة. showCrown:true بدون crownIconDataUri — الملف المشترك
-        // يستخدم تاجاً افتراضياً تلقائياً (ما يحتاج هذي اللعبة توفّر
-        // أيقونتها الخاصة). لا label/gameName/extra بعد الآن — نفس
-        // المعلومة صارت بسطر h2 واحد فوق صف البطاقتين.
         var cardsHtml = '';
         if (winner) {
-            cardsHtml += AGP.playerCard.renderTrophyCard(winner, {
-                cls: 'tr-trophy-winner', kind: 'winner', cardId: 'tr-trophy-card-winner',
-                showCrown: true,
+            cardsHtml += trophyCardHtml(winner, {
+                cls: 'tr-trophy-winner', label: '🏆 الفائز', kind: 'winner', cardId: 'tr-trophy-card-winner',
                 pointsHtml: pointsHtmlFor(pointsResult, winner)
             });
         }
         if (mostElim) {
-            cardsHtml += AGP.playerCard.renderTrophyCard(mostElim.player, {
-                cls: 'tr-trophy-most', kind: 'most', cardId: 'tr-trophy-card-most',
+            cardsHtml += trophyCardHtml(mostElim.player, {
+                cls: 'tr-trophy-most', label: '⚔️ الأكثر إقصاءً', kind: 'most', cardId: 'tr-trophy-card-most',
+                extra: '<div class="tr-trophy-count">' + mostElim.count + ' إقصاء</div>',
                 pointsHtml: pointsHtmlFor(pointsResult, mostElim.player)
             });
         }
@@ -2184,24 +2399,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         box.style.textAlign = 'center';
         box.innerHTML =
             '<div id="tr-winner-box">' +
-            '<h2>🏁 انتهت المباراة .. الشخص الرهيب الي فاز بلعبة "' + escapeHtml(GAME_NAME) + '"</h2>' +
-            '<div class="tr-trophy-cards">' + (cardsHtml || '<p style="color:#fff;font-weight:800;">بدون فائز</p>') + '</div>' +
+            '<h2>🏁 انتهت المباراة!</h2>' +
+            '<div class="tr-trophy-cards">' + (cardsHtml || '<p class="tr-trophy-label">بدون فائز</p>') + '</div>' +
             '<div class="tr-winner-actions">' +
-            '<button class="tr-btn-secondary" id="tr-home-btn">⬅️ رجوع لمنصة الألعاب</button>' +
-            '<button class="tr-btn-secondary" id="tr-new-match-btn">🆕 بدء مباراة جديدة</button>' +
             '<button class="tr-btn-secondary" id="tr-replay-same-btn">🔄 إعادة المباراة بنفس اللاعبين</button>' +
+            '<button class="tr-btn-secondary" id="tr-new-match-btn">🆕 بدء مباراة جديدة</button>' +
             '</div></div>';
 
         document.getElementById('tr-replay-same-btn').onclick = handleReplaySamePlayers;
         document.getElementById('tr-new-match-btn').onclick = function () {
             AGP.gameManager.resetSession(); // يبث game:reset — يستدعي onDestroy() تلقائياً
             window.location.reload();
-        };
-        // ⚠️ زر "رجوع لمنصة الألعاب" — نفس سلوك زر 🏠 بالهيدر الثابت
-        // بالضبط (agp-game-shell.js: agp-header-home-btn).
-        document.getElementById('tr-home-btn').onclick = function () {
-            var headerHomeBtn = document.getElementById('agp-header-home-btn');
-            if (headerHomeBtn) headerHomeBtn.click();
         };
 
         overlay.style.display = 'flex';
@@ -2402,6 +2610,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var box = el('agp-shell-box');
         if (!box) return;
         if (box.classList.contains('agp-lobby-box') || box.classList.contains('agp-connecting-box')) return;
+        // ⚠️ [نموذج "settings-no-box" المعتمَد] الشاشة الأولى فقط (قبل أي
+        // اتصال بالبث) — نميّزها بوجود #agp-tiktok-username (لا يُبنى
+        // إطلاقاً بالإعدادات المعاد فتحها أثناء المباراة). الكلاس يفعّل
+        // تخطيط الصفحة الكاملة بدون صندوق (راجع CSS تحت `.tr-settings-
+        // initial-box` بـinjectStageStyles) — الإعدادات المعاد فتحها
+        // تبقى بشكلها الأصلي (صندوق) بلا أي تغيير.
+        var isInitial = !!el('agp-tiktok-username');
+        box.classList.toggle('tr-settings-initial-box', isInitial);
         if (box.querySelector('.tr-back-to-platform-btn')) return;
         var connectBtn = box.querySelector('.agp-shell-btn-connect');
         if (!connectBtn) return;
@@ -2447,13 +2663,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var box = el('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
 
-        if (!box.querySelector('#tr-lobby-watermark')) {
-            var img = document.createElement('img');
-            img.id = 'tr-lobby-watermark';
-            img.src = '../../logo.png';
-            img.alt = '';
-            box.insertBefore(img, box.firstChild);
-        }
+        // ⚠️ [نموذج "lobby-no-box" المعتمَد] شعار "ألعاب أيمن" الشفاف
+        // بمنتصف الصندوق حُذف — كان مصمَّماً أصلاً ليجلس خلف حدود صندوق
+        // محدود الحجم؛ بدون ذاك الصندوق، يظهر كبقعة غامقة غريبة بمنتصف
+        // صفحة كاملة (تأكَّد بصرياً أثناء بناء النموذج المعتمَد). الصفحة
+        // الآن تعتمد فقط على التدرّج الكوني الخلفي (راجع تعليق CSS تحت
+        // `#agp-shell-overlay:has(...agp-lobby-box)`) بدل أي شعار مضاف.
 
         var startBtn = el('agp-start-round-btn');
         if (!startBtn) return;
