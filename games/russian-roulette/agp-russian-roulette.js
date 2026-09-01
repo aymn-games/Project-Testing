@@ -669,30 +669,93 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.rr-home-from-settings-btn{background:transparent !important;color:#f2e6cf !important;',
             'border:1px solid var(--rr-gold) !important;border-radius:999px;padding:12px 24px;font-weight:800;',
             'font-size:0.9em;cursor:pointer;font-family:inherit;}',
-            /* ⚠️ درج جانبي ينزلق من يمين الشاشة — إعدادات وسط المباراة */
+            /* ⚠️ درج جانبي ينزلق من يمين الشاشة — إعدادات وسط المباراة.
+             * [نموذج "درج الإعدادات الجانبي" منقول من روليت القبائل]
+             * بتبويبين (⚙️ الإعدادات / 👥 اللاعبون) بدل نظام الأكورديون
+             * القديم — نفس هيكل header+tabs+body+footer بالحرف. */
             '#agp-shell-overlay:has(.rr-inmatch-drawer){align-items:stretch !important;justify-content:flex-end !important;',
             'padding:0 !important;}',
-            '#agp-shell-box.rr-inmatch-drawer{width:400px !important;max-width:90vw !important;height:100vh !important;',
-            'max-height:100vh !important;border-radius:0 !important;margin:0 !important;border:none !important;',
+            '#agp-shell-box.rr-inmatch-drawer{position:fixed !important;top:0 !important;right:0 !important;',
+            'left:auto !important;width:400px !important;max-width:90vw !important;height:100vh !important;',
+            'max-height:100vh !important;border-radius:0 !important;margin:0 !important;',
+            'background:rgba(15,10,3,0.96) !important;border:none !important;',
             'border-inline-start:1px solid rgba(212,175,55,0.35) !important;display:flex !important;',
-            'flex-direction:column !important;overflow-y:auto !important;padding:60px 20px 24px !important;',
+            'flex-direction:column !important;overflow:hidden !important;padding:0 !important;',
             'animation:rr-drawer-in .3s cubic-bezier(0.32,0.72,0,1);}',
             '@keyframes rr-drawer-in{from{transform:translateX(105%);}to{transform:translateX(0);}}',
-            '#agp-shell-box.rr-inmatch-drawer h2{font-size:1.1em;text-align:center;margin:0 0 14px !important;}',
-            '.rr-add-player-row{margin-bottom:14px;}',
-            '.rr-add-player-row .agp-shell-btn-connect{width:100% !important;}',
-            '.rr-accordion{border:1px solid rgba(212,175,55,0.3);border-radius:14px;overflow:hidden;margin:14px 0;}',
-            '.rr-accordion-head{width:100%;display:flex;align-items:center;justify-content:space-between;',
-            'padding:12px 16px;background:rgba(255,255,255,0.04);border:none;color:#fff;font-weight:800;',
-            'font-size:0.9em;cursor:pointer;font-family:inherit;}',
-            '.rr-accordion-chevron{transition:transform .2s;}',
-            '.rr-accordion.rr-open .rr-accordion-chevron{transform:rotate(180deg);}',
-            '.rr-accordion-body{max-height:0;overflow:hidden;transition:max-height .25s ease;}',
-            '.rr-accordion.rr-open .rr-accordion-body{max-height:320px;overflow-y:auto;}',
-            '.rr-accordion-body .agp-settings-player-row{padding:10px;justify-content:flex-start !important;}',
-            '.rr-exit-btn{background:transparent !important;color:#e24b4a !important;',
+            '.rr-drawer-header{display:flex;align-items:center;justify-content:space-between;',
+            'padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.08);flex:none;}',
+            '.rr-drawer-header h2{font-size:1em !important;font-weight:900;margin:0 !important;',
+            'padding:0 !important;color:#fff;}',
+            '.rr-drawer-tabs{display:flex;gap:6px;padding:10px 18px 0;flex:none;}',
+            '.rr-drawer-tabs button{flex:1;padding:8px 0;border-radius:8px 8px 0 0;border:none;cursor:pointer;',
+            'background:transparent;color:#c9b48a;font-family:inherit;font-weight:800;font-size:0.82em;',
+            'border-bottom:2px solid transparent;}',
+            '.rr-drawer-tabs button.rr-tab-active{color:#fff;border-bottom-color:' + ACCENT2 + ';',
+            'background:rgba(212,175,55,0.06);}',
+            '.rr-drawer-body{flex:1;min-height:0;overflow-y:auto;padding:14px 18px 18px;}',
+            '.rr-drawer-footer{flex:none;padding:12px 18px 16px;border-top:1px solid rgba(255,255,255,0.08);',
+            'display:flex;flex-direction:column;gap:8px;}',
+            '.rr-drawer-body .agp-shell-row{display:flex !important;align-items:center !important;',
+            'justify-content:space-between !important;gap:10px;padding:12px 0 !important;',
+            'border-bottom:1px solid rgba(255,255,255,0.07);margin:0 !important;}',
+            '.rr-drawer-body .agp-shell-row-label{font-size:0.82em !important;color:#c9b48a !important;',
+            'font-weight:700 !important;}',
+            '.rr-add-player-row{margin-top:6px;}',
+            '.rr-add-player-row .agp-shell-btn-connect{width:100% !important;border:1px dashed ' + ACCENT2 + ' !important;',
+            'background:rgba(212,175,55,0.08) !important;color:#f2e6cf !important;}',
+            '.rr-exit-btn{background:transparent !important;color:#e24b4a !important;width:100%;',
             'border:1px solid #e24b4a !important;border-radius:999px;padding:10px 14px;font-weight:900;',
             'cursor:pointer;font-size:0.82em;font-family:inherit;white-space:nowrap;}',
+            '#agp-shell-box.rr-inmatch-drawer.rr-tab-players .agp-shell-row,',
+            '#agp-shell-box.rr-inmatch-drawer.rr-tab-players .agp-shell-field,',
+            '#agp-shell-box.rr-inmatch-drawer.rr-tab-players .rr-add-player-row{display:none !important;}',
+            '#agp-shell-box.rr-inmatch-drawer:not(.rr-tab-players) #rr-players-tab{display:none !important;}',
+            // ---- تبويب اللاعبين المخصَّص (بحث + فلتر + قائمة موحَّدة) ----
+            '#rr-players-tab-search{width:100%;padding:8px 12px;border-radius:9px;',
+            'background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#fff;',
+            'font-family:inherit;font-size:0.8em;margin-bottom:10px;box-sizing:border-box;}',
+            '#rr-players-tab-filter{display:flex;gap:5px;margin-bottom:10px;}',
+            '#rr-players-tab-filter button{flex:1;padding:5px 2px;border-radius:7px;',
+            'border:1px solid rgba(255,255,255,0.14);background:transparent;color:#c9b48a;',
+            'font-family:inherit;font-weight:800;font-size:0.68em;cursor:pointer;}',
+            '#rr-players-tab-filter button.rr-filter-active{background:rgba(212,175,55,0.14);',
+            'border-color:' + ACCENT2 + ';color:#f2e6cf;}',
+            '.rr-prow{display:flex;align-items:center;gap:8px;padding:7px 0;',
+            'border-bottom:1px solid rgba(255,255,255,0.05);}',
+            '.rr-prow.rr-prow-out{opacity:0.6;}',
+            '.rr-prow .rr-prow-avatar{width:26px;height:26px;border-radius:50%;flex:none;overflow:hidden;}',
+            '.rr-prow.rr-prow-out .rr-prow-avatar{filter:grayscale(1);}',
+            '.rr-prow .rr-prow-avatar .agp-pcard-avatar-basic,.rr-prow .rr-prow-avatar .agp-pcard-avatar-basic--fallback{',
+            'width:100%;height:100%;font-size:0.7em;}',
+            '.rr-prow .rr-prow-name{flex:1;font-size:0.8em;font-weight:700;overflow:hidden;',
+            'text-overflow:ellipsis;white-space:nowrap;color:#fff;}',
+            '.rr-prow .rr-prow-status{font-size:0.6em;padding:2px 8px;border-radius:999px;font-weight:800;flex:none;}',
+            '.rr-prow .rr-prow-status.rr-status-live{background:rgba(34,197,94,0.15);color:#4ade80;',
+            'border:1px solid rgba(74,222,128,0.4);}',
+            '.rr-prow .rr-prow-status.rr-status-out{background:rgba(239,68,68,0.15);color:#f87171;',
+            'border:1px solid rgba(248,113,113,0.4);}',
+            '.rr-prow .rr-prow-action{width:22px;height:22px;border-radius:50%;border:none;',
+            'color:#fff;font-weight:900;font-size:0.65em;cursor:pointer;flex:none;}',
+            '.rr-prow .rr-prow-action.rr-action-eliminate{background:#e24b4a;}',
+            '.rr-prow .rr-prow-action.rr-action-revive{background:linear-gradient(135deg,#4ade80,#16a34a);}',
+            // ---- لوحة استقبال لاعبين جدد — حدود مدببة ذهبية ----
+            '#agp-shell-overlay:has(#agp-shell-box.rr-mini-lobby-active){align-items:center !important;',
+            'justify-content:center !important;background:rgba(5,3,10,0.55) !important;backdrop-filter:blur(3px);',
+            'padding:0 !important;}',
+            '#agp-shell-box.rr-mini-lobby-active{width:420px !important;max-width:92vw !important;',
+            'height:auto !important;max-height:88vh !important;margin:0 !important;',
+            'padding:26px 26px 22px !important;box-sizing:border-box !important;',
+            'background:rgba(20,15,5,0.55) !important;backdrop-filter:blur(14px);',
+            'border:1.5px solid ' + ACCENT2 + ' !important;border-radius:0 !important;',
+            'clip-path:polygon(20px 0,100% 0,100% calc(100% - 20px),calc(100% - 20px) 100%,0 100%,0 20px);',
+            'box-shadow:0 0 0 1px rgba(212,175,55,0.15),0 0 40px rgba(212,175,55,0.35),',
+            '0 20px 60px rgba(0,0,0,0.5) !important;position:relative;overflow-y:auto;}',
+            '#agp-shell-box.rr-mini-lobby-active::before,#agp-shell-box.rr-mini-lobby-active::after{',
+            'content:"";position:absolute;width:26px;height:1.5px;background:' + ACCENT2 + ';',
+            'box-shadow:0 0 8px rgba(212,175,55,0.9);}',
+            '#agp-shell-box.rr-mini-lobby-active::before{top:0;left:0;transform:rotate(45deg) translate(-7px,-7px);}',
+            '#agp-shell-box.rr-mini-lobby-active::after{bottom:0;right:0;transform:rotate(45deg) translate(7px,7px);}',
 
             '.rr-lobbyscreen-remove-btn{position:absolute;top:-6px;left:-6px;width:22px;height:22px;border-radius:50%;',
             'background:#e24b4a;color:#fff;border:2px solid #000;font-weight:900;font-size:12px;line-height:18px;',
@@ -1845,56 +1908,95 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    var _reopenedDrawerTab = 'settings';
+    var _playersTabFilter = 'all';
+
     function enhanceReopenedSettings() {
         var box = el('agp-shell-box');
         if (!box || !document.getElementById('agp-settings-player-list')) return;
         clearLobbyInlineOverrides(box);
         box.classList.add('rr-inmatch-drawer');
+        box.classList.toggle('rr-tab-players', _reopenedDrawerTab === 'players');
 
-        var addBtn = document.getElementById('agp-reopen-registration-btn');
-        var playerRow = box.querySelector('.agp-settings-player-row');
-
-        // ⚠️ "إضافة لاعب جديد" ينتقل لصف بارز أعلى الدرج (مو زر بالفوتر).
-        if (addBtn && !box.querySelector('.rr-add-player-row')) {
-            var addRow = document.createElement('div');
-            addRow.className = 'rr-add-player-row';
-            var h2 = box.querySelector('h2');
-            if (h2) h2.insertAdjacentElement('afterend', addRow);
-            addBtn.textContent = '➕ إضافة لاعب جديد';
-            addRow.appendChild(addBtn);
+        if (box.firstElementChild && box.firstElementChild.classList.contains('rr-drawer-header')) {
+            box.querySelectorAll('.rr-drawer-tabs button').forEach(function (b) {
+                b.classList.toggle('rr-tab-active', b.getAttribute('data-tab') === _reopenedDrawerTab);
+            });
+            return;
         }
 
-        // ⚠️ قائمة "الاعبين المشاركين" تصير قابلة للطي/الفتح (accordion).
-        if (playerRow && !playerRow.closest('.rr-accordion')) {
-            var accordion = document.createElement('div');
-            accordion.className = 'rr-accordion';
-            var head = document.createElement('button');
-            head.type = 'button';
-            head.className = 'rr-accordion-head';
-            var count = AGP.gameManager ? AGP.gameManager.getPlayersCount() : 0;
-            head.innerHTML = '<span>👥 اللاعبين المشاركين (' + count + ')</span><span class="rr-accordion-chevron">▾</span>';
-            playerRow.parentNode.insertBefore(accordion, playerRow);
-            accordion.appendChild(head);
-            var body = document.createElement('div');
-            body.className = 'rr-accordion-body';
-            accordion.appendChild(body);
-            body.appendChild(playerRow);
-            head.addEventListener('click', function () { accordion.classList.toggle('rr-open'); });
-        } else if (playerRow) {
-            var headEl = box.querySelector('.rr-accordion-head span');
-            if (headEl && AGP.gameManager) headEl.textContent = '👥 اللاعبين المشاركين (' + AGP.gameManager.getPlayersCount() + ')';
+        var originalChildren = Array.prototype.slice.call(box.children);
+        var closeBtn = document.getElementById('agp-settings-close-btn');
+        var h2 = originalChildren.filter(function (n) { return n.tagName === 'H2'; })[0];
+        var fieldNodes = originalChildren.filter(function (n) { return n !== closeBtn && n !== h2; });
+        box.innerHTML = '';
+
+        var header = document.createElement('div');
+        header.className = 'rr-drawer-header';
+        if (h2) header.appendChild(h2);
+        if (closeBtn) header.appendChild(closeBtn);
+        box.appendChild(header);
+
+        var tabs = document.createElement('div');
+        tabs.className = 'rr-drawer-tabs';
+        tabs.innerHTML =
+            '<button type="button" data-tab="settings">⚙️ الإعدادات</button>' +
+            '<button type="button" data-tab="players">👥 اللاعبون</button>';
+        tabs.querySelectorAll('button').forEach(function (btn) {
+            btn.classList.toggle('rr-tab-active', btn.getAttribute('data-tab') === _reopenedDrawerTab);
+            btn.onclick = function () {
+                _reopenedDrawerTab = btn.getAttribute('data-tab');
+                box.classList.toggle('rr-tab-players', _reopenedDrawerTab === 'players');
+                tabs.querySelectorAll('button').forEach(function (b) { b.classList.toggle('rr-tab-active', b === btn); });
+                if (_reopenedDrawerTab === 'players') renderReopenedPlayersTab();
+            };
+        });
+        box.appendChild(tabs);
+
+        var bodyWrap = document.createElement('div');
+        bodyWrap.className = 'rr-drawer-body';
+        fieldNodes.forEach(function (n) {
+            // ⚠️ حقل إدارة اللاعبين الجاهز من الملف المشترك (القائمة +
+            // الأزرار) نستبعده هنا — تبويب اللاعبين المخصَّص يحل محله بالكامل.
+            if (n.querySelector && n.querySelector('#agp-settings-player-list')) return;
+            bodyWrap.appendChild(n);
+        });
+
+        var reopenBtn = bodyWrap.querySelector('#agp-reopen-registration-btn');
+        var addRow = document.createElement('div');
+        addRow.className = 'rr-add-player-row';
+        if (reopenBtn) {
+            reopenBtn.textContent = '➕ إضافة لاعب جديد';
+            addRow.appendChild(reopenBtn);
         }
+        bodyWrap.appendChild(addRow);
 
-        if (box.querySelector('.rr-save-btn')) return;
-        var actionsBox = box.querySelector('.agp-settings-player-actions');
-        if (!actionsBox) return;
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'rr-save-btn';
-        btn.textContent = '💾 حفظ التعديلات';
-        btn.onclick = handleSaveChangesClick;
-        actionsBox.insertBefore(btn, actionsBox.firstChild);
+        var playersTab = document.createElement('div');
+        playersTab.id = 'rr-players-tab';
+        playersTab.innerHTML =
+            '<input type="text" id="rr-players-tab-search" placeholder="🔍 دوّر على لاعب...">' +
+            '<div id="rr-players-tab-filter">' +
+            '<button type="button" data-filter="all">الكل</button>' +
+            '<button type="button" data-filter="live">🟢 نشطون</button>' +
+            '<button type="button" data-filter="out">🔴 مقصون</button>' +
+            '</div>' +
+            '<div id="rr-players-tab-list"></div>';
+        playersTab.querySelector('#rr-players-tab-search').oninput = function () { renderReopenedPlayersTab(); };
+        playersTab.querySelectorAll('#rr-players-tab-filter button').forEach(function (b) {
+            b.classList.toggle('rr-filter-active', b.getAttribute('data-filter') === _playersTabFilter);
+            b.onclick = function () { _playersTabFilter = b.getAttribute('data-filter'); renderReopenedPlayersTab(); };
+        });
+        bodyWrap.appendChild(playersTab);
+        box.appendChild(bodyWrap);
 
+        var footer = document.createElement('div');
+        footer.className = 'rr-drawer-footer';
+        var saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'rr-save-btn';
+        saveBtn.textContent = '💾 حفظ التعديلات';
+        saveBtn.onclick = handleSaveChangesClick;
+        footer.appendChild(saveBtn);
         var exitBtn = document.createElement('button');
         exitBtn.type = 'button';
         exitBtn.className = 'rr-exit-btn';
@@ -1904,7 +2006,72 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 window.location.href = '../../index.html';
             }
         });
-        actionsBox.appendChild(exitBtn);
+        footer.appendChild(exitBtn);
+        box.appendChild(footer);
+
+        if (_reopenedDrawerTab === 'players') renderReopenedPlayersTab();
+    }
+
+    function renderReopenedPlayersTab() {
+        var listEl = el('rr-players-tab-list');
+        if (!listEl) return;
+        var query = ((el('rr-players-tab-search') || {}).value || '').trim().toLowerCase();
+        var rows = _alive.map(function (p) { return { player: p, status: 'live' }; })
+            .concat(_eliminated.map(function (e) { return { player: e.player, status: 'out' }; }));
+        if (_playersTabFilter !== 'all') rows = rows.filter(function (r) { return r.status === _playersTabFilter; });
+        if (query) rows = rows.filter(function (r) { return playerLabel(r.player).toLowerCase().indexOf(query) !== -1; });
+        rows.sort(function (a, b) { return playerLabel(a.player).localeCompare(playerLabel(b.player), 'ar'); });
+
+        var filterWrap = el('rr-players-tab-filter');
+        if (filterWrap) {
+            filterWrap.querySelectorAll('button').forEach(function (b) {
+                b.classList.toggle('rr-filter-active', b.getAttribute('data-filter') === _playersTabFilter);
+            });
+        }
+        if (!rows.length) {
+            listEl.innerHTML = '<div style="text-align:center;color:#9d8a5f;font-size:0.78em;padding:20px 0;">ولا لاعب مطابق</div>';
+            return;
+        }
+        listEl.innerHTML = rows.map(function (r) {
+            var isLive = r.status === 'live';
+            var actionHtml = isLive
+                ? '<button type="button" class="rr-prow-action rr-action-eliminate" data-id="' + escapeHtml(r.player.id) + '" title="إقصاء يدوي">✕</button>'
+                : '<button type="button" class="rr-prow-action rr-action-revive" data-id="' + escapeHtml(r.player.id) + '" title="إرجاع يدوي">↩</button>';
+            return '<div class="rr-prow' + (isLive ? '' : ' rr-prow-out') + '">' +
+                '<span class="rr-prow-avatar">' + ringAvatarHtml(r.player) + '</span>' +
+                '<span class="rr-prow-name">' + escapeHtml(playerLabel(r.player)) + '</span>' +
+                '<span class="rr-prow-status ' + (isLive ? 'rr-status-live' : 'rr-status-out') + '">' + (isLive ? 'نشط' : 'مقصى') + '</span>' +
+                actionHtml + '</div>';
+        }).join('');
+        listEl.querySelectorAll('.rr-action-eliminate').forEach(function (btn) {
+            btn.onclick = function () { manuallyEliminatePlayer(btn.getAttribute('data-id')); };
+        });
+        listEl.querySelectorAll('.rr-action-revive').forEach(function (btn) {
+            btn.onclick = function () { manuallyRevivePlayer(btn.getAttribute('data-id')); };
+        });
+    }
+
+    function manuallyEliminatePlayer(playerId) {
+        var idx = _alive.findIndex(function (p) { return p.id === playerId; });
+        if (idx === -1) return;
+        var player = _alive[idx];
+        _alive.splice(idx, 1);
+        _eliminated.push({ player: player });
+        renderWheel();
+        logEvent('🗑️', playerLabel(player) + ' تم إقصاؤه يدوياً من لوحة الإعدادات');
+        renderReopenedPlayersTab();
+        if (_matchActive && _alive.length <= 1) endMatch(_alive[0] || null);
+    }
+
+    function manuallyRevivePlayer(playerId) {
+        var idx = _eliminated.findIndex(function (e) { return e.player.id === playerId; });
+        if (idx === -1) return;
+        var entry = _eliminated[idx];
+        _eliminated.splice(idx, 1);
+        _alive.push(entry.player);
+        renderWheel();
+        logEvent('↩️', playerLabel(entry.player) + ' تم إرجاعه يدوياً من لوحة الإعدادات');
+        renderReopenedPlayersTab();
     }
 
     // ⚠️ زر "العودة لمنصة العاب ايمن" جنب زر "اتصل بالبث و انتقل للوبي" —
@@ -1966,6 +2133,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var keywordEl = box.querySelector('.agp-join-keyword-plain');
         var keyword = (keywordEl && keywordEl.textContent) || '';
         doneBtn.setAttribute('data-rr-wired', '1');
+        box.classList.add('rr-mini-lobby-active');
         var h2 = box.querySelector('h2');
         if (h2) h2.textContent = 'لوبي استقبال الاعبين الجدد لعبة الروليت الروسي';
         var hint = box.querySelector('.agp-join-hint-text');
