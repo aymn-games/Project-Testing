@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الأكثر نشاطاً — منصة ألعاب أيمن</title>
+<meta name="description" content="قائمة أكثر استريمرز منصة ألعاب أيمن نشاطاً بإجمالي ساعات البث.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!--
+    صفحة "عرض الكل" لبطاقة "🔥 الأكثر نشاطاً" بالصفحة الرئيسية —
+    نفس هيكل top-supporters.html بالضبط (نفس لوحة الألوان ونفس أسلوب
+    .top-row) لكن بمصدر بيانات مختلف: GET /api/public/top-streamers
+    (window.AGPAuth.getTopStreamers) بدل الداعمين. لا تبويبات هنا —
+    قائمة واحدة مرتَّبة تنازلياً بإجمالي ساعات البث. راجع docs/CHANGELOG.md.
+-->
+<style>
+    :root {
+        --bg: #0e0e16; --surface: #150c26; --surface-2: #1c1233;
+        --border: rgba(124, 58, 237, 0.28); --text: #ffffff; --text-muted: #b9aed1;
+        --accent: #7c3aed; --accent-2: #00c2ff; --accent-pink: #ff4dff;
+        --accent-gradient: linear-gradient(90deg, #7c3aed, #ff4dff);
+        --gold-gradient: linear-gradient(90deg, #ffc857, #ff8a3d);
+        --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--text); }
+    a { text-decoration: none; color: inherit; }
+    header.topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 16px 32px; border-bottom: 1px solid var(--border);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.2em; }
+    .brand-logo { height: 44px; width: auto; display: block; }
+    .home-link {
+        border: 1px solid var(--border); border-radius: 999px; padding: 8px 18px;
+        font-weight: 700; font-size: 0.9em; color: var(--text-muted);
+    }
+    .home-link:hover { color: var(--text); border-color: var(--accent); }
+
+    main { max-width: 720px; margin: 0 auto; padding: 48px 24px 60px; }
+
+    .top-header { text-align: center; margin-bottom: 28px; }
+    .top-icon { font-size: 3em; margin-bottom: 10px; }
+    h1 {
+        font-size: 2em; font-weight: 800; margin: 0 0 12px;
+        background: var(--accent-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .top-intro { color: var(--text-muted); line-height: 1.8; }
+
+    .top-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+    .top-row {
+        display: flex; align-items: center; gap: 14px;
+        background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+        padding: 14px 18px; transition: transform .15s ease, border-color .15s ease;
+    }
+    .top-row:hover { transform: translateY(-1px); border-color: var(--accent); }
+    .top-row--1 { border-color: rgba(255, 200, 87, 0.6); box-shadow: 0 0 24px rgba(255, 200, 87, 0.15); background: linear-gradient(90deg, rgba(255,200,87,0.08), var(--surface) 40%); }
+    .top-row--2 { border-color: rgba(200, 200, 210, 0.5); background: linear-gradient(90deg, rgba(200,200,210,0.08), var(--surface) 40%); }
+    .top-row--3 { border-color: rgba(205, 140, 90, 0.5); background: linear-gradient(90deg, rgba(205,140,90,0.08), var(--surface) 40%); }
+
+    .top-rank { font-size: 1.5em; min-width: 36px; text-align: center; font-weight: 800; color: var(--text-muted); flex-shrink: 0; }
+
+    .top-avatar {
+        width: 42px; height: 42px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+        border: 2px solid var(--border); background: var(--surface-2);
+    }
+    .top-avatar--placeholder {
+        display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff;
+        background: var(--accent-gradient);
+    }
+
+    .top-info { flex: 1; min-width: 0; }
+    .top-name { font-weight: 800; font-size: 1.05em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .top-meta { color: var(--text-muted); font-size: 0.85em; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .top-amount { font-weight: 800; font-size: 1.1em; color: var(--accent-pink); white-space: nowrap; flex-shrink: 0; }
+
+    .top-empty {
+        text-align: center; color: var(--text-muted); background: var(--surface);
+        border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; line-height: 1.9;
+    }
+    .top-empty a { color: var(--accent-2); text-decoration: underline; }
+
+    footer { border-top: 1px solid var(--border); padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.85em; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+    <a href="index.html" class="brand"><img src="logo.png" alt="ألعاب أيمن" class="brand-logo"></a>
+    <a href="index.html" class="home-link">الرئيسية</a>
+</header>
+
+<main>
+    <div class="top-header">
+        <div class="top-icon">🔥</div>
+        <h1>الأكثر نشاطاً</h1>
+        <p class="top-intro">أكثر استريمرز منصة ألعاب أيمن نشاطاً، مرتَّبين حسب إجمالي ساعات البث.</p>
+    </div>
+
+    <ul class="top-list" id="top-streamers-list">
+        <li class="top-empty">جارٍ التحميل…</li>
+    </ul>
+</main>
+
+<footer>© منصة ألعاب أيمن — جميع الحقوق محفوظة</footer>
+
+<script src="auth/auth-client.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    var MEDALS = ['🥇', '🥈', '🥉'];
+
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str == null ? '' : String(str);
+        return div.innerHTML;
+    }
+
+    function avatarHtml(s) {
+        if (s.avatarBase64) {
+            return '<img class="top-avatar" src="' + escapeHtml(s.avatarBase64) + '" alt="">';
+        }
+        var initial = (s.displayName || '؟').trim().charAt(0).toUpperCase();
+        return '<div class="top-avatar top-avatar--placeholder">' + escapeHtml(initial) + '</div>';
+    }
+
+    var listEl = document.getElementById('top-streamers-list');
+    var hasAuthClient = window.AGPAuth && typeof window.AGPAuth.getTopStreamers === 'function';
+
+    function loadTop() {
+        if (!hasAuthClient) return;
+        window.AGPAuth.getTopStreamers(50).then(function (result) {
+            var streamers = (result && result.success && result.streamers) || [];
+            if (!streamers.length) {
+                listEl.innerHTML = '<li class="top-empty">ما فيه استريمرز نشِطون بالساعات بعد.</li>';
+                return;
+            }
+            listEl.innerHTML = streamers.map(function (s, index) {
+                var rank = index + 1;
+                var rowClass = rank <= 3 ? ' top-row--' + rank : '';
+                var rankDisplay = rank <= 3 ? MEDALS[rank - 1] : '#' + rank;
+                var handle = s.tiktokUsername ? '@' + s.tiktokUsername : '';
+                return '<li class="top-row' + rowClass + '">' +
+                    '<div class="top-rank">' + rankDisplay + '</div>' +
+                    avatarHtml(s) +
+                    '<div class="top-info"><div class="top-name">' + escapeHtml(s.displayName) + '</div>' +
+                    '<div class="top-meta">' + escapeHtml(handle) + '</div></div>' +
+                    '<div class="top-amount">' + s.totalHours + ' ساعة</div>' +
+                    '</li>';
+            }).join('');
+        }).catch(function () {
+            listEl.innerHTML = '<li class="top-empty">تعذّر تحميل القائمة حالياً.</li>';
+        });
+    }
+
+    if (hasAuthClient) loadTop();
+    else listEl.innerHTML = '<li class="top-empty">تعذّر تحميل القائمة حالياً.</li>';
+}());
+</script>
+</body>
+</html>

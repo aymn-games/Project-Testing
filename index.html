@@ -204,67 +204,64 @@
     #home-highlights { max-width: 900px; margin: 0 auto 36px; display: flex; flex-direction: column; gap: 16px; }
 
     .spotlight-card {
-        position: relative; border-radius: var(--radius); padding: 20px 18px 18px;
+        position: relative; border-radius: var(--radius); padding: 16px 16px 12px;
         background: linear-gradient(160deg, rgba(137,83,230,0.20), rgba(21,12,38,0.92) 55%), var(--surface);
         border: 1px solid rgba(247, 203, 112, 0.35);
         box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset, 0 14px 32px -18px rgba(137,83,230,0.5);
-        overflow: hidden; text-align: right;
+        overflow: hidden;
     }
-    .spotlight-eyebrow {
-        display: flex; align-items: center; justify-content: center; gap: 6px;
-        font-size: 0.76em; font-weight: 800; color: #f7cb70; margin-bottom: 12px;
+    .spotlight-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .spotlight-head h3 { margin: 0; font-size: 1em; font-weight: 800; display: flex; align-items: center; gap: 6px; color: #f7cb70; }
+    .spotlight-row {
+        display: flex; align-items: center; gap: 10px; padding: 8px 2px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
     }
-    .spotlight-eyebrow .line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(247,203,112,0.5), transparent); max-width: 60px; }
-    .spotlight-body { display: flex; align-items: center; gap: 14px; }
-    .spotlight-avatar-wrap { position: relative; flex-shrink: 0; width: 72px; height: 72px; }
-    .spotlight-avatar-ring {
-        position: absolute; inset: -4px; border-radius: 50%;
-        background: conic-gradient(from 0deg, #f7cb70, #f69758, #f767f7, #8953e6, #f7cb70);
-        animation: spin 6s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @media (prefers-reduced-motion: reduce) { .spotlight-avatar-ring { animation: none; } }
+    .spotlight-row:last-child { border-bottom: none; }
+    .spotlight-rank { width: 18px; flex-shrink: 0; text-align: center; font-weight: 800; font-size: 0.82em; color: #f7cb70; }
     .spotlight-avatar {
-        position: absolute; inset: 4px; border-radius: 50%; overflow: hidden;
+        width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
         background: var(--accent-gradient); display: flex; align-items: center; justify-content: center;
-        font-weight: 800; font-size: 1.5em; color: #fff; border: 3px solid var(--surface);
+        font-weight: 800; color: #fff; font-size: 0.85em; border: 2px solid rgba(255,255,255,0.08);
     }
     .spotlight-avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .spotlight-crown { position: absolute; top: -13px; left: -6px; font-size: 1.3em; filter: drop-shadow(0 2px 5px rgba(0,0,0,.5)); z-index: 2; }
     .spotlight-info { flex: 1; min-width: 0; }
-    .spotlight-name { font-weight: 800; font-size: 1.15em; margin: 0 0 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .spotlight-tag { font-size: 0.8em; color: var(--text-muted); margin-bottom: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .spotlight-stat {
-        display: inline-flex; align-items: center; gap: 5px; font-size: 0.78em; font-weight: 700;
-        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
-        padding: 5px 10px; border-radius: 999px; color: var(--text);
-    }
-    .spotlight-stat b { color: #f7cb70; font-weight: 800; }
-    .spotlight-empty { text-align: center; color: var(--text-muted); font-size: 0.9em; font-weight: 700; padding: 10px 4px; }
+    .spotlight-name { font-weight: 700; font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .spotlight-hours { font-size: 0.78em; font-weight: 800; color: var(--accent-pink); white-space: nowrap; flex-shrink: 0; }
+    .spotlight-empty { text-align: center; color: var(--text-muted); font-size: 0.88em; font-weight: 700; padding: 12px 4px; }
 
     .supporters-card {
-        border-radius: var(--radius); padding: 16px 16px 6px; background: var(--surface);
+        border-radius: var(--radius); padding: 16px 16px 12px; background: var(--surface);
         border: 1px solid var(--border); box-shadow: 0 12px 28px -20px rgba(0,0,0,0.6);
     }
-    .supporters-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .supporters-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
     .supporters-head h3 { margin: 0; font-size: 1em; font-weight: 800; display: flex; align-items: center; gap: 6px; }
     .supporter-row {
-        display: flex; align-items: center; gap: 12px; padding: 10px 4px;
+        display: flex; align-items: flex-start; gap: 10px; padding: 8px 2px;
         border-bottom: 1px solid rgba(255,255,255,0.06);
     }
     .supporter-row:last-child { border-bottom: none; }
     .supporter-avatar {
-        width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+        width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; overflow: hidden; margin-top: 1px;
         background: var(--accent-gradient); display: flex; align-items: center; justify-content: center;
-        font-weight: 800; color: #fff; font-size: 0.92em; border: 2px solid rgba(255,255,255,0.08);
+        font-weight: 800; color: #fff; font-size: 0.85em; border: 2px solid rgba(255,255,255,0.08);
     }
     .supporter-avatar img { width: 100%; height: 100%; object-fit: cover; }
     .supporter-info { flex: 1; min-width: 0; text-align: right; }
-    .supporter-name { font-weight: 700; font-size: 0.92em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .supporter-time { font-size: 0.74em; color: var(--text-muted); margin-top: 1px; }
-    .supporter-amount { font-weight: 800; font-size: 0.92em; color: var(--accent-pink); white-space: nowrap; flex-shrink: 0; }
-    .supporters-empty { text-align: center; color: var(--text-muted); font-size: 0.88em; font-weight: 600; padding: 16px 6px; line-height: 1.8; }
+    .supporter-name-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .supporter-name { font-weight: 700; font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .supporter-amount { font-weight: 800; font-size: 0.85em; color: var(--accent-pink); white-space: nowrap; flex-shrink: 0; }
+    .supporter-message {
+        font-size: 0.78em; color: var(--text-muted); margin-top: 2px; overflow: hidden;
+        text-overflow: ellipsis; white-space: nowrap;
+    }
+    .supporters-empty { text-align: center; color: var(--text-muted); font-size: 0.88em; font-weight: 600; padding: 14px 6px; line-height: 1.8; }
     .supporters-empty a { color: var(--accent-2); }
+
+    /* زر "عرض الكل" — تحت القائمتين، يربط بصفحة القائمة الكاملة المطابقة */
+    .mini-list-cta {
+        display: block; text-align: center; margin-top: 8px; padding-top: 8px;
+        border-top: 1px solid rgba(255,255,255,0.07); font-size: 0.82em; font-weight: 800; color: var(--accent-2);
+    }
 
     /* تخطيط جنباً إلى جنب على الشاشات الأعرض — راجع media query الرئيسية آخر الملف */
 
@@ -735,10 +732,11 @@
 -->
 <div id="home-highlights">
     <div class="spotlight-card" id="streamer-spotlight">
-        <div class="spotlight-eyebrow"><span class="line"></span> 🔥 الاستريمر الأكثر نشاطاً <span class="line"></span></div>
+        <div class="spotlight-head"><h3>🔥 الأكثر نشاطاً</h3></div>
         <div id="spotlight-body-wrap">
             <div class="spotlight-empty">ما فيه استريمرز نشِطون بالساعات بعد.</div>
         </div>
+        <a href="top-streamers.html" class="mini-list-cta">عرض الكل ←</a>
     </div>
 
     <div class="supporters-card">
@@ -748,6 +746,7 @@
         <div id="supporters-list-wrap">
             <div class="supporters-empty">لتفعيل الاشتراك مجاناً بعد إنشاء حسابك تواصل معنا عبر تيك توك <a href="https://www.tiktok.com/@em70_q" target="_blank">@em70_q</a></div>
         </div>
+        <a href="top-supporters.html" class="mini-list-cta">عرض الكل ←</a>
     </div>
 </div>
 
@@ -1549,8 +1548,8 @@
             return 'قبل ' + Math.floor(hours / 24) + ' يوم';
         }
 
-        // بطاقة الاستريمر الأكثر نشاطاً — أعلى استريمر واحد فقط بإجمالي
-        // ساعات البث (راجع getTopStreamersByHours بـauth-service.js).
+        // بطاقة "الأكثر نشاطاً" — أعلى 3 استريمرز بإجمالي ساعات البث
+        // (راجع getTopStreamersByHours بـauth-service.js).
         (function wireStreamerSpotlight() {
             var wrap = document.getElementById('spotlight-body-wrap');
             if (!wrap || !window.AGPAuth || typeof window.AGPAuth.getTopStreamers !== 'function') return;
@@ -1558,29 +1557,24 @@
 
             function render(streamers) {
                 if (!streamers || !streamers.length) { wrap.innerHTML = defaultHtml; return; }
-                var s = streamers[0];
-                var initial = htEscapeHtml((s.displayName || '؟').trim().charAt(0).toUpperCase());
-                var avatarInner = s.avatarBase64
-                    ? '<img src="' + htEscapeHtml(s.avatarBase64) + '" alt="">'
-                    : initial;
-                var handle = s.tiktokUsername ? '@' + htEscapeHtml(s.tiktokUsername) : '';
-                wrap.innerHTML =
-                    '<div class="spotlight-body">' +
-                        '<div class="spotlight-avatar-wrap">' +
-                            '<div class="spotlight-crown">👑</div>' +
-                            '<div class="spotlight-avatar-ring"></div>' +
-                            '<div class="spotlight-avatar">' + avatarInner + '</div>' +
-                        '</div>' +
+                wrap.innerHTML = streamers.map(function (s, i) {
+                    var initial = htEscapeHtml((s.displayName || '؟').trim().charAt(0).toUpperCase());
+                    var avatarInner = s.avatarBase64
+                        ? '<img src="' + htEscapeHtml(s.avatarBase64) + '" alt="">'
+                        : initial;
+                    return '<div class="spotlight-row">' +
+                        '<div class="spotlight-rank">#' + (i + 1) + '</div>' +
+                        '<div class="spotlight-avatar">' + avatarInner + '</div>' +
                         '<div class="spotlight-info">' +
                             '<div class="spotlight-name">' + htEscapeHtml(s.displayName) + '</div>' +
-                            '<div class="spotlight-tag">' + handle + '</div>' +
-                            '<span class="spotlight-stat">⏱️ <b>' + s.totalHours + '</b> ساعة بث</span>' +
                         '</div>' +
+                        '<div class="spotlight-hours">' + s.totalHours + ' ساعة</div>' +
                     '</div>';
+                }).join('');
             }
 
             function refresh() {
-                window.AGPAuth.getTopStreamers(1).then(function (result) {
+                window.AGPAuth.getTopStreamers(3).then(function (result) {
                     if (!result || !result.success) { wrap.innerHTML = defaultHtml; return; }
                     render(result.streamers || []);
                 }).catch(function () { wrap.innerHTML = defaultHtml; });
@@ -1590,8 +1584,10 @@
             window.setInterval(refresh, 180000); // إعادة جلب كل 3 دقائق (الساعات تتغيّر ببطء)
         }());
 
-        // قائمة "آخر الداعمين" — آخر 5 داعمين (الأحدث أولاً)، مع الوقت
-        // النسبي من created_at (راجع decorateRow بـsupporters-service.js).
+        // قائمة "آخر الداعمين" — آخر 3 داعمين (الأحدث أولاً)، مع الوقت
+        // النسبي من created_at ورسالة الداعم (لو موجودة) — راجع decorateRow
+        // بـsupporters-service.js. سطر وحد فقط للرسالة (قص بالنقاط) حتى لا
+        // يطول ارتفاع البطاقة.
         (function wireSupportersList() {
             var wrap = document.getElementById('supporters-list-wrap');
             if (!wrap || !window.AGPAuth || typeof window.AGPAuth.getRecentSupporters !== 'function') return;
@@ -1606,19 +1602,24 @@
                     var avatarInner = (s.linked && s.avatarBase64)
                         ? '<img src="' + htEscapeHtml(s.avatarBase64) + '" alt="">'
                         : initial;
+                    var messageHtml = s.message
+                        ? '<div class="supporter-message">' + htEscapeHtml(s.message) + '</div>'
+                        : '';
                     return '<div class="supporter-row">' +
                         '<div class="supporter-avatar">' + avatarInner + '</div>' +
                         '<div class="supporter-info">' +
-                            '<div class="supporter-name">' + htEscapeHtml(s.name) + '</div>' +
-                            '<div class="supporter-time">' + formatTimeAgo(s.created_at) + '</div>' +
+                            '<div class="supporter-name-row">' +
+                                '<span class="supporter-name">' + htEscapeHtml(s.name) + '</span>' +
+                                '<span class="supporter-amount">' + formatSupporterAmount(s.amount) + '</span>' +
+                            '</div>' +
+                            messageHtml +
                         '</div>' +
-                        '<div class="supporter-amount">' + formatSupporterAmount(s.amount) + '</div>' +
                     '</div>';
                 }).join('');
             }
 
             function refresh() {
-                window.AGPAuth.getRecentSupporters(5).then(function (result) {
+                window.AGPAuth.getRecentSupporters(3).then(function (result) {
                     if (!result || !result.success) { wrap.innerHTML = defaultHtml; return; }
                     render(result.supporters || []);
                 }).catch(function () { wrap.innerHTML = defaultHtml; });
