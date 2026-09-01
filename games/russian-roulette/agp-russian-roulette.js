@@ -168,6 +168,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _autoPlayTimer = null;
     var _lastChooserId = null;      // لتقليل احتمال وقوف العجلة على نفس الشخص مرتين متتاليتين
     var _streamerUsername = '';     // ⚠️ يوزرنيم الاستريمر المتّصل — يُلتقَط لحظة الضغط على "اتصال" (لعرضه كـ"مُقصي" بالإقصاء اليدوي)
+    // ⚠️ [نموذج "تبويب الاتصال فوق شاشة الإعدادات" منقول من روليت القبائل]
+    var _connectingFlowActive = false;
+    var _savedSettingsNodes = null;
 
     function streamerVirtualPlayer() {
         return { id: 'tiktok:' + (_streamerUsername || 'streamer'), name: _streamerUsername || 'المذيع', avatarUrl: null };
@@ -329,11 +332,41 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * الحالة)، فمصدره غير مؤكَّد (ربما تراكم DOM قديم). حل حاسم:
              * نُخفي صراحة أي عنصر ثانٍ داخل الصندوق غير العناصر المعروفة
              * عندي فعلياً — يقطع المشكلة بغض النظر عن مصدرها الحقيقي.
+             * ⚠️ [محدَّث] box ما يبقى بحالة agp-connecting-box بصرياً بعد
+             * الآن أصلاً (enhanceConnectingScreen يستردّ شاشة الإعدادات
+             * فوراً) — هذي القاعدة تبقى فقط كطبقة حماية احتياطية لو صار
+             * أي تأخير لحظي بين المرحلتين.
              */
-            '#agp-shell-box.agp-connecting-box > *:not(h2):not(.agp-shell-status):not(.rr-connect-retry-btn){',
+            '#agp-shell-box.agp-connecting-box > *:not(h2):not(.agp-shell-status){',
             'display:none !important;}',
-            '.rr-connect-retry-btn{margin-top:18px;padding:11px 26px;border-radius:999px;border:1px solid ' + ACCENT2 + ';',
-            'background:transparent;color:#f2e6cf;font-weight:800;font-size:0.85em;cursor:pointer;font-family:inherit;}',
+            /* ======================================================================
+             *  [نموذج "تبويب الاتصال فوق شاشة الإعدادات" منقول من روليت
+             *  القبائل] — عنصران منفصلان بـdocument.body مباشرة، فوق
+             *  شاشة الإعدادات المستردَّة بالكامل.
+             * ==================================================================== */
+            '#rr-connect-dim{display:none;position:fixed;inset:0;z-index:160000;',
+            'background:rgba(5,3,10,0.5);backdrop-filter:blur(2px);}',
+            '#rr-connect-popup{display:none;position:fixed;top:50%;left:50%;',
+            'transform:translate(-50%,-50%);z-index:160001;width:320px;max-width:88vw;',
+            'padding:34px 26px 28px;border-radius:20px;background:rgba(20,15,5,0.92);',
+            'backdrop-filter:blur(16px);border:1.5px solid ' + ACCENT2 + ';',
+            'box-shadow:0 0 0 1px rgba(212,175,55,0.15),0 0 40px rgba(212,175,55,0.4),',
+            '0 20px 60px rgba(0,0,0,0.5);text-align:center;color:#fff;',
+            'font-family:Almarai,Cairo,sans-serif;}',
+            '#rr-connect-popup .rr-connect-spinner{width:46px;height:46px;margin:0 auto 18px;',
+            'border-radius:50%;border:4px solid rgba(212,175,55,0.2);',
+            'border-top-color:' + ACCENT2 + ';animation:rr-connect-spin 0.9s linear infinite;}',
+            '@keyframes rr-connect-spin{to{transform:rotate(360deg);}}',
+            '#rr-connect-popup h3{font-size:17px;font-weight:900;color:#fff;margin-bottom:6px;}',
+            '#rr-connect-popup p{font-size:13px;color:#c9b48a;}',
+            '#rr-connect-popup.rr-connect-error{border-color:#ef4444;',
+            'box-shadow:0 0 0 1px rgba(239,68,68,0.15),0 0 40px rgba(239,68,68,0.35),',
+            '0 20px 60px rgba(0,0,0,0.5);}',
+            '#rr-connect-popup.rr-connect-error h3{color:#ff8da3;}',
+            '#rr-connect-popup .rr-connect-error-icon{font-size:40px;margin-bottom:10px;}',
+            '#rr-connect-close-btn{position:absolute;top:12px;left:12px;width:28px;height:28px;',
+            'border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:#fff;',
+            'font-size:13px;cursor:pointer;}',
             /* ⚠️ الهيدر العلوي الثابت (مشترك بين كل الألعاب) كان لسا بلونه
              * البنفسجي الافتراضي — نعيد تلوينه بهوية اللعبة هنا فقط. */
             '#agp-persistent-header{background:linear-gradient(90deg,#1a1206,#000) !important;',
@@ -538,7 +571,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-overlay{background:rgba(8,5,1,0.55) !important;}',
             '#agp-shell-box{background:linear-gradient(180deg,' + BG_BROWN + ',#000) !important;',
             'opacity:1 !important;border:2px solid var(--rr-gold) !important;}',
-            '#agp-shell-box.agp-lobby-box{background:linear-gradient(180deg,' + BG_BROWN + 'e6,#000e) !important;}',
+            /* ======================================================================
+             *  [نموذج "lobby-no-box" منقول من روليت القبائل] شاشة اللوبي —
+             *  بدون أي صندوق/تبويب يحيط المحتوى: العنوان مباشرة على
+             *  الصفحة، شبكة اللاعبين (نفس نظام "لوبي-قياسي-v1" الحالي
+             *  بدون أي تغيير على شكل البطاقات نفسها) تطفو مباشرة، وشريط
+             *  الأزرار السفلي عائم بلا خلفية — كل شي فوق خلفية الصفحة
+             *  الكونية نفسها (نفس أسلوب settings-no-box أعلاه بالحرف).
+             * ==================================================================== */
+            '#agp-shell-overlay:has(#agp-shell-box.agp-lobby-box){padding:0 !important;',
+            'align-items:flex-start !important;overflow-y:auto !important;',
+            'background:',
+            'radial-gradient(ellipse 900px 500px at 50% -8%,rgba(212,175,55,0.14),transparent 60%),',
+            'radial-gradient(ellipse 700px 500px at 90% 100%,rgba(132,91,27,0.18),transparent 60%),',
+            'linear-gradient(180deg,#150e05 0%,#0d0904 45%,#050302 100%) !important;}',
+            '#agp-shell-box.agp-lobby-box{background:none !important;}',
             '#agp-shell-box h2{color:#f2e6cf !important;}',
             '#agp-header-title{color:#e8c56b !important;}',
             '.agp-shell-row-label{color:#fff !important;}',
@@ -554,28 +601,73 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'border-radius:50% !important;width:30px;height:30px;padding:0 !important;',
             'display:inline-flex;align-items:center;justify-content:center;}',
             '.agp-shell-btn-connect{background:var(--rr-gold) !important;color:#241a0c !important;border:none !important;}',
-            /* ⚠️ شاشة الإعدادات الأولى (قبل الاتصال) — قسم ٥ بالمعيار:
-             * صفحة كاملة 100vh بدل صندوق منبثق بمنتصف الشاشة، بطاقات
-             * منطقية بحدود مدوّرة، عرض أقصى ~720px للمحتوى، سكرول داخلي. */
-            '#agp-shell-box.rr-pre-match-settings{width:100vw !important;height:100vh !important;',
-            'max-width:100vw !important;max-height:100vh !important;border-radius:0 !important;margin:0 !important;',
-            'overflow-y:auto !important;padding:76px 16px 30px !important;box-sizing:border-box;}',
-            '#agp-shell-box.rr-pre-match-settings h2{text-align:center;max-width:720px;margin:0 auto 18px !important;}',
-            '#agp-shell-box.rr-pre-match-settings > .agp-field-wrap,',
-            '#agp-shell-box.rr-pre-match-settings > div:not(.rr-setting-card):not(.rr-settings-btn-row)',
-            '{max-width:720px;margin-left:auto !important;margin-right:auto !important;}',
-            '.rr-setting-card{max-width:720px;margin:0 auto 16px;background:rgba(255,255,255,0.04);',
-            'border:1px solid rgba(212,175,55,0.35);border-radius:16px;padding:4px 18px;box-sizing:border-box;}',
-            '.rr-setting-card-label{font-size:0.78em;color:#c9b48a;font-weight:800;padding:10px 0 2px;}',
-            '.rr-settings-btn-row{max-width:720px;margin:10px auto 0;}',
+            /* ======================================================================
+             *  [نموذج "settings-no-box" منقول من روليت القبائل] شاشة
+             *  الإعدادات الأولى — بدون أي صندوق/تبويب يحيط الحقول: تخطيط
+             *  عمودين (CSS Multi-column) على خلفية الصفحة الكونية مباشرة،
+             *  عنوان كبير بتدرّج لوني، حقول اليوزرنيم/الكلمة المفتاحية
+             *  بخط سفلي بدل صندوق كامل. نفس الفلسفة والبنية بالحرف من
+             *  games/tribe-roulette/agp-tribe-roulette.js، بألوان هوية
+             *  روليت الروسي (--rr-gold/ACCENT2) بدل السماوي/البنفسجي.
+             *  ⚠️ حذفت بطاقات التجميع القديمة (.rr-setting-card، صف واحد
+             *  عمودي 720px) بالكامل — الحقول تطفو مباشرة الآن، مفصولة
+             *  بخط تحتي رفيع فقط (نفس منطق الحذف الموثَّق بروليت القبائل:
+             *  Multi-column يتكيّف تلقائياً مع أي حقل يظهر/يختفي ديناميكياً
+             *  بدل حسابات موضع يدوية هشة).
+             * ==================================================================== */
+            '#agp-shell-overlay:has(#agp-shell-box.rr-pre-match-settings){padding:0 !important;',
+            'align-items:flex-start !important;overflow-y:auto !important;',
+            'background:',
+            'radial-gradient(ellipse 900px 500px at 50% -8%,rgba(212,175,55,0.14),transparent 60%),',
+            'radial-gradient(ellipse 700px 500px at 90% 100%,rgba(132,91,27,0.18),transparent 60%),',
+            'linear-gradient(180deg,#150e05 0%,#0d0904 45%,#050302 100%) !important;}',
+            '#agp-shell-box.rr-pre-match-settings{width:min(980px,94vw) !important;max-width:min(980px,94vw) !important;',
+            'height:auto !important;max-height:none !important;overflow-y:visible !important;',
+            'background:none !important;border:none !important;border-radius:0 !important;',
+            'box-shadow:none !important;padding:56px 24px 60px !important;box-sizing:border-box !important;',
+            'column-count:2 !important;column-gap:60px !important;column-fill:auto !important;margin:0 !important;}',
+            '#agp-shell-box.rr-pre-match-settings h2{column-span:all !important;margin:0 0 42px !important;',
+            'max-width:none !important;font-size:clamp(24px,4vw,38px) !important;font-weight:900 !important;',
+            'text-align:center !important;',
+            'background:linear-gradient(90deg,' + ACCENT2 + ',#f2e6cf 55%,' + ACCENT2 + ') !important;',
+            '-webkit-background-clip:text !important;background-clip:text !important;',
+            '-webkit-text-fill-color:transparent !important;position:relative;padding-bottom:20px;}',
+            '#agp-shell-box.rr-pre-match-settings h2::after{content:"";position:absolute;bottom:0;',
+            'left:50%;transform:translateX(-50%);width:64px;height:3px;border-radius:3px;',
+            'background:linear-gradient(90deg,transparent,' + ACCENT2 + ',transparent);}',
+            '#agp-shell-box.rr-pre-match-settings .agp-shell-field,',
+            '#agp-shell-box.rr-pre-match-settings .agp-shell-row{break-inside:avoid !important;',
+            'padding:20px 0 !important;border-bottom:1px solid rgba(255,255,255,0.08) !important;',
+            'max-width:none !important;margin:0 !important;}',
+            '#agp-shell-box.rr-pre-match-settings .agp-shell-field{flex-direction:column !important;',
+            'align-items:flex-start !important;gap:10px !important;}',
+            '#agp-shell-box.rr-pre-match-settings .agp-shell-field label{font-size:0.82em !important;',
+            'color:#c9b48a !important;font-weight:700 !important;}',
+            '#agp-shell-box.rr-pre-match-settings .agp-shell-field input[type=text]{',
+            'max-width:none !important;width:100% !important;background:transparent !important;',
+            'border:none !important;border-bottom:2px solid transparent !important;border-radius:0 !important;',
+            'padding:4px 0 !important;font-size:1.25em !important;font-weight:700 !important;',
+            'text-align:right !important;transition:border-color 0.2s;color:#fff;}',
+            '#agp-shell-box.rr-pre-match-settings .agp-shell-field input[type=text]:focus{',
+            'border-bottom-color:' + ACCENT2 + ' !important;outline:none !important;}',
+            '#agp-shell-box.rr-pre-match-settings .agp-pill-btn{background:transparent !important;',
+            'border:1px solid rgba(255,255,255,0.16) !important;color:#c9b48a !important;}',
+            '#agp-shell-box.rr-pre-match-settings .agp-pill-btn.agp-pill-active{',
+            'background:linear-gradient(90deg,var(--rr-gold),' + ACCENT2 + ') !important;',
+            'color:#241a0c !important;border-color:transparent !important;}',
+            '#agp-shell-box.rr-pre-match-settings .agp-shell-btn-connect{column-span:all !important;',
+            'display:table !important;width:auto !important;margin:34px auto 0 !important;',
+            'padding:16px 64px !important;font-size:1.05em !important;letter-spacing:0.4px;',
+            'box-shadow:0 10px 34px rgba(212,175,55,0.3),0 0 0 1px rgba(255,255,255,0.15) inset !important;}',
+            '#agp-shell-box.rr-pre-match-settings .rr-home-from-settings-btn{column-span:all !important;',
+            'display:table !important;width:auto !important;margin:14px auto 0 !important;}',
+            '@media (max-width:720px){#agp-shell-box.rr-pre-match-settings{column-count:1 !important;}}',
             '.agp-shell-counter-row button{border-color:' + ACCENT2 + ' !important;color:#fff !important;',
             'background:transparent !important;}',
             '.agp-count-input{border-color:' + ACCENT2 + ' !important;background:#0d0904 !important;',
             'color:#fff !important;}',
-            '.rr-settings-btn-row{display:flex;gap:10px;}',
-            '.rr-settings-btn-row > *{flex:1;width:auto !important;}',
             '.rr-home-from-settings-btn{background:transparent !important;color:#f2e6cf !important;',
-            'border:1px solid var(--rr-gold) !important;border-radius:999px;padding:12px;font-weight:800;',
+            'border:1px solid var(--rr-gold) !important;border-radius:999px;padding:12px 24px;font-weight:800;',
             'font-size:0.9em;cursor:pointer;font-family:inherit;}',
             /* ⚠️ درج جانبي ينزلق من يمين الشاشة — إعدادات وسط المباراة */
             '#agp-shell-overlay:has(.rr-inmatch-drawer){align-items:stretch !important;justify-content:flex-end !important;',
@@ -624,9 +716,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * فعلياً بلعبة الكراسي الموسيقية). صندوق بارتفاع ثابت محدود
              * (900px، حد أقصى 92% من الشاشة)، scrollbar-gutter:stable
              * يمنع القفز المزعج للشريط. */
-            '#agp-shell-box.agp-lobby-box{height:900px !important;max-height:92vh !important;',
-            'overflow-y:auto !important;scrollbar-gutter:stable;display:flex !important;flex-direction:column;}',
-            '#agp-shell-box.agp-lobby-box h2{flex:none;text-align:center;}',
+            '#agp-shell-box.agp-lobby-box{width:min(1180px,94vw) !important;max-width:min(1180px,94vw) !important;',
+            'height:auto !important;min-height:100vh !important;max-height:none !important;',
+            'border:none !important;box-shadow:none !important;border-radius:0 !important;',
+            'overflow-y:visible !important;scrollbar-gutter:auto;display:flex !important;flex-direction:column;',
+            'padding:44px 10px 26px !important;box-sizing:border-box !important;margin:0 !important;}',
+            '#agp-shell-box.agp-lobby-box h2{flex:none;text-align:center;font-size:1.5em !important;}',
             /* ⚠️ [تفادي باگ حقيقي] .agp-pcard (الغلاف بالملف المشترك) عنده
              * خلفية/حدود/حشو pill خاصة فيه أصلاً — لو تركناها + خلفية
              * لوح الاسم فوقها، تطلع خلفيتين متراكبتين. نلغيها كاملة هنا،
@@ -667,6 +762,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-box.agp-lobby-box .agp-pcard-tpl{transform-origin:center center;}',
 
             '.rr-lobby-heading-accent{color:var(--rr-gold) !important;font-weight:900 !important;}',
+            // ⚠️ [نموذج "قالب الكلمة المفتاحية الجديد" منقول من روليت
+            // القبائل] بطاقة زجاجية بحدود ذهبية متوهّجة + أيقونة مفتاح،
+            // بدل التدرّج الجاهز من الملف المشترك. عدد اللاعبين
+            // (#agp-lobby-count) already بتدفّقه الطبيعي بنفس الصف —
+            // روليت الروسي ما كان فيها أي تخصيص محلي يفصله أصلاً.
+            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge{background:rgba(212,175,55,0.12) !important;',
+            'backdrop-filter:blur(6px);border:1.5px solid ' + ACCENT2 + ' !important;',
+            'box-shadow:0 0 16px rgba(212,175,55,0.5) !important;color:#f2e6cf !important;',
+            'font-weight:900 !important;letter-spacing:0.5px;border-radius:999px !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge::before{content:"🔑 ";}',
+            '#agp-shell-box.agp-lobby-box .agp-player-count-badge{background:rgba(255,255,255,0.06) !important;',
+            'border:1px solid rgba(255,255,255,0.2) !important;border-radius:999px !important;',
+            'padding:6px 16px !important;font-weight:800 !important;font-size:0.95em !important;',
+            'box-shadow:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-player-count-badge::before{content:"👥 ";}',
             /* صف الأزرار الثلاثة — margin-top:auto يدفعه لأسفل الصندوق
              * المحدود، flex:1+max-width يفادي كسر السطر بعرض 900px. */
             '.rr-lobby-actions-row{display:flex !important;gap:10px !important;justify-content:center;',
@@ -1807,30 +1917,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         clearLobbyInlineOverrides(box);
         box.classList.add('rr-pre-match-settings'); // ⚠️ يُعاد إضافتها كل مرّة لأن box.className يُصفَّر بكل إعادة رسم
 
-        // ⚠️ تجميع حقول الإعدادات ببطاقات منطقية (قسم ٥ بالمعيار) — مرّة
-        // وحدة فقط لكل رسم (نتحقق من وجود بطاقة سابقاً قبل التكرار).
-        if (!box.querySelector('.rr-setting-card')) {
-            var rows = Array.prototype.slice.call(box.querySelectorAll('.agp-shell-row'));
-            if (rows.length >= 6) {
-                var card1 = document.createElement('div');
-                card1.className = 'rr-setting-card';
-                var label1 = document.createElement('div');
-                label1.className = 'rr-setting-card-label';
-                label1.textContent = 'اللاعبون';
-                rows[0].parentNode.insertBefore(card1, rows[0]);
-                card1.appendChild(label1);
-                card1.appendChild(rows[0]);
-                card1.appendChild(rows[1]);
-
-                var card2 = document.createElement('div');
-                card2.className = 'rr-setting-card';
-                var label2 = document.createElement('div');
-                label2.className = 'rr-setting-card-label';
-                label2.textContent = 'إعدادات المسدس';
-                card1.parentNode.insertBefore(card2, rows[2]);
-                card2.appendChild(label2);
-                for (var i = 2; i < rows.length; i++) card2.appendChild(rows[i]);
-            }
+        // ⚠️ [نموذج "تبويب الاتصال فوق شاشة الإعدادات" منقول من روليت
+        // القبائل] نعترض onclick الأصلي لزر الاتصال: قبل ما نمرّر التنفيذ
+        // للدالة الأصلية، نحفظ كل عناصر box الحيّة (بمستمعات أحداثها
+        // سليمة، نقل DOM حقيقي لا استنساخ) بمصفوفة منفصلة —
+        // enhanceConnectingScreen() تستردّها فور اكتشاف حالة الاتصال،
+        // بدل شاشة "جاري الاتصال" المستقلة القديمة (وبدل window.location.reload()
+        // القديمة عند الفشل). idempotent عبر dataset فلاغ.
+        var connectBtnForWrap = document.getElementById('agp-connect-btn');
+        if (connectBtnForWrap && !connectBtnForWrap.dataset.rrConnectWired) {
+            connectBtnForWrap.dataset.rrConnectWired = '1';
+            var originalConnectHandler = connectBtnForWrap.onclick;
+            connectBtnForWrap.onclick = function (ev) {
+                _connectingFlowActive = true;
+                _savedSettingsNodes = Array.prototype.slice.call(box.children);
+                if (typeof originalConnectHandler === 'function') originalConnectHandler.call(connectBtnForWrap, ev);
+            };
         }
 
         if (box.querySelector('.rr-home-from-settings-btn')) return;
@@ -1844,16 +1946,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var input = document.getElementById('agp-tiktok-username');
             if (input && input.value) _streamerUsername = input.value.trim();
         });
-        var row = document.createElement('div');
-        row.className = 'rr-settings-btn-row';
-        connectBtn.parentNode.insertBefore(row, connectBtn);
-        row.appendChild(connectBtn);
         var homeBtn = document.createElement('button');
         homeBtn.type = 'button';
         homeBtn.className = 'rr-home-from-settings-btn';
         homeBtn.textContent = 'العودة لمنصة العاب ايمن';
         homeBtn.addEventListener('click', function () { window.location.href = '../../index.html'; });
-        row.appendChild(homeBtn);
+        connectBtn.insertAdjacentElement('afterend', homeBtn);
     }
 
     function enhanceMiniLobby() {
@@ -2013,24 +2111,74 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // الانتظار العادي، وحالة الخطأ (يوزرنيم غلط/تعذّر الاتصال) — بدون أي
     // زر رجوع بالحالتين أصلاً. نميّز حالة الخطأ تحديداً (نص الرسالة يحتوي
     // "تعذّر") ونضيف زر رجوع لشاشة الإعدادات (حقل اليوزرنيم) بس عندها.
+    /**
+     * ⚠️ [نموذج "تبويب الاتصال فوق شاشة الإعدادات" منقول من روليت
+     * القبائل] يستبدل الشاشة القديمة (زر "🔙 رجوع للإعدادات" كان يعمل
+     * window.location.reload() — يفقد كل شي، حتى القيم المكتوبة). الآن:
+     * نسترد شاشة الإعدادات الحقيقية (العقد المحفوظة وقت الضغط على
+     * الاتصال) ونعرض تبويباً عائماً صغيراً فوقها — سبينر أثناء الاتصال،
+     * تحذير + زر ✕ عند الفشل (يخفي التبويب فقط، الإعدادات تبقى تفاعلية
+     * خلفه بدون أي إعادة تحميل).
+     */
     function enhanceConnectingScreen() {
         var box = el('agp-shell-box');
-        if (!box || !box.classList.contains('agp-connecting-box')) return;
-        clearLobbyInlineOverrides(box);
-        var statusEl = box.querySelector('.agp-shell-status');
-        var isError = statusEl && statusEl.textContent.indexOf('تعذّر') !== -1;
-        var existingBtn = box.querySelector('.rr-connect-retry-btn');
-        if (!isError) {
-            if (existingBtn) existingBtn.remove();
+        if (!box) return;
+
+        if (!_connectingFlowActive) {
+            var idlePopup = el('rr-connect-popup');
+            if (idlePopup) idlePopup.style.display = 'none';
+            var idleDim = el('rr-connect-dim');
+            if (idleDim) idleDim.style.display = 'none';
             return;
         }
-        if (existingBtn) return; // مضاف مسبقاً لنفس حالة الخطأ
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'rr-connect-retry-btn';
-        btn.textContent = '🔙 رجوع للإعدادات';
-        btn.addEventListener('click', function () { window.location.reload(); });
-        box.appendChild(btn);
+
+        if (box.classList.contains('agp-lobby-box')) {
+            _connectingFlowActive = false;
+            _savedSettingsNodes = null;
+            var donePopup = el('rr-connect-popup');
+            if (donePopup) donePopup.style.display = 'none';
+            var doneDim = el('rr-connect-dim');
+            if (doneDim) doneDim.style.display = 'none';
+            return;
+        }
+
+        if (box.classList.contains('agp-connecting-box')) {
+            var statusEl = box.querySelector('.agp-shell-status');
+            var isError = statusEl && statusEl.textContent.indexOf('تعذّر') !== -1;
+            box.innerHTML = '';
+            box.className = 'rr-pre-match-settings';
+            if (_savedSettingsNodes) {
+                _savedSettingsNodes.forEach(function (n) { box.appendChild(n); });
+            }
+
+            if (!el('rr-connect-dim')) {
+                var dim = document.createElement('div');
+                dim.id = 'rr-connect-dim';
+                document.body.appendChild(dim);
+            }
+            var popup = el('rr-connect-popup');
+            if (!popup) {
+                popup = document.createElement('div');
+                popup.id = 'rr-connect-popup';
+                document.body.appendChild(popup);
+            }
+            el('rr-connect-dim').style.display = 'block';
+            popup.style.display = 'block';
+            popup.classList.toggle('rr-connect-error', isError);
+            popup.innerHTML =
+                (isError ? '<button type="button" id="rr-connect-close-btn">✕</button>' : '') +
+                '<div class="' + (isError ? 'rr-connect-error-icon' : 'rr-connect-spinner') + '">' +
+                (isError ? '⚠️' : '') + '</div>' +
+                '<h3>' + (isError ? 'تعذّر الاتصال' : 'جاري الاتصال بالبث') + '</h3>' +
+                '<p>' + (isError ? 'تأكد من اسم المستخدم وحاول مرة ثانية' : 'انتظر قليلاً...') + '</p>';
+            if (isError) {
+                el('rr-connect-close-btn').onclick = function () {
+                    popup.style.display = 'none';
+                    el('rr-connect-dim').style.display = 'none';
+                    _connectingFlowActive = false;
+                };
+            }
+        }
     }
 
     // ⚠️ [إصلاح خلل حرج] تعليق كامل الصفحة عند فتح الإعدادات — السبب
