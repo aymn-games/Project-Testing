@@ -54,13 +54,18 @@
         --bg: #0e0e16;
         --surface: #150c26;
         --surface-2: #1c1233;
-        --border: rgba(124, 58, 237, 0.28);
+        --border: rgba(137, 83, 230, 0.26);
         --text: #ffffff;
         --text-muted: #b9aed1;
-        --accent: #7c3aed;
-        --accent-2: #00c2ff;
-        --accent-pink: #ff4dff;
-        --accent-gradient: linear-gradient(90deg, #7c3aed, #ff4dff);
+        /*
+            [تخفيف نصوع بسيط] نفس الهوية اللونية (بنفسجي/سماوي/وردي) لكن
+            بتشبّع أخف وإضاءة أعلى قليلاً بدل الألوان النيون الحادة
+            السابقة (7c3aed / 00c2ff / ff4dff) — بطلب صاحب المنصة.
+        */
+        --accent: #8953e6;
+        --accent-2: #1ec0f3;
+        --accent-pink: #f767f7;
+        --accent-gradient: linear-gradient(90deg, #8953e6, #f767f7);
         --radius: 14px;
         --radius-sm: 8px;
     }
@@ -96,7 +101,7 @@
     .bg-decor span:nth-child(6) { top: 30%; left: 45%; font-size: 2em; }
     .bg-decor span:nth-child(7) { top: 88%; right: 20%; font-size: 2.6em; }
     .bg-decor span:nth-child(8) { top: 5%; left: 40%; font-size: 1.8em; }
-    header.topbar, .hero, .categories, .highlight-tabs, #games-section, .teaser, .teaser-pills,
+    header.topbar, .hero, .categories, #home-highlights, #games-section, .teaser, .teaser-pills,
     .stats-section, footer, .announcement-overlay, #splash-screen { position: relative; z-index: 1; }
 
     /*
@@ -188,128 +193,122 @@
         padding: 2px 9px; font-size: 0.75em; font-weight: 800;
     }
 
-    /* [0.45.21] تبويب موحَّد "🔥 الأكثر نشاطاً" / "💜 داعمين المنصة" —
-       يحل محل شريطين منفصلين (تكر متحرك + بانر دعم) بعنصر واحد واضح
-       بتبويبين حقيقيين يختار بينهما الزائر. راجع wireHighlightTabs()
-       آخر الصفحة وdocs/CHANGELOG.md. البطاقة نفسها تبقى ظاهرة دائماً
-       (خلافاً لسلوك [0.45.10] القديم اللي كان يخفي الشريط كلياً لو ما
-       فيه بيانات) — كل تبويب يعرض رسالة فارغة واضحة بدل الاختفاء،
-       لأنها الآن عنصر واجهة ثابت لا "شريط إشعار" عابر. */
-    .highlight-tabs {
-        max-width: 900px;
-        margin: 0 auto 36px;
-        border-radius: var(--radius);
-        background: var(--surface);
-        border: 1px solid var(--border);
-        overflow: hidden;
-        box-shadow: 0 0 0 1px rgba(255, 77, 255, 0.06), 0 8px 24px rgba(0, 0, 0, 0.25);
-    }
-    .ht-tabbar {
-        display: flex;
-        gap: 6px;
-        padding: 10px 10px 0;
-    }
-    .ht-tab-btn {
-        flex: 1;
-        border: none;
-        background: transparent;
-        color: var(--text-muted);
-        cursor: pointer;
-        font-family: inherit;
-        font-weight: 800;
-        font-size: 0.92em;
-        padding: 10px 14px;
-        border-radius: 999px 999px 0 0;
-        transition: background .18s ease, color .18s ease;
-    }
-    .ht-tab-btn.active {
-        background: var(--accent-gradient);
-        color: #0e0e16;
-    }
-    .ht-panel {
-        display: none;
-        height: 92px;
-        position: relative;
-        overflow: hidden;
-    }
-    .ht-panel.active { display: block; }
-    .ht-empty {
-        position: absolute; inset: 0;
-        display: none; align-items: center; justify-content: center;
-        color: var(--text-muted); font-size: 0.9em; font-weight: 700; padding: 0 20px; text-align: center;
-    }
-    .ht-empty.is-visible { display: flex; }
+    /* [0.46.0] "نجوم المنصة" — بطاقة Spotlight لأنشط استريمر (من GET
+       /api/public/top-streamers) + قائمة "آخر الداعمين" (من
+       window.AGPAuth.getRecentSupporters)، بدل التبويبين القديمين
+       (تكر متحرك + بانر نصي دائري). البيانات نفسها ونفس مصادر الـAPI،
+       فقط عرض أوضح وأكثر احترافية. راجع wireStarsSpotlight() آخر
+       الصفحة + docs/CHANGELOG.md. تتوسّع لصفّين جنباً إلى جنب على
+       الشاشات الأعرض من 860px (تابلت/كمبيوتر) — راجع media query آخر
+       ملف الـCSS. */
+    #home-highlights { max-width: 900px; margin: 0 auto 36px; display: flex; flex-direction: column; gap: 16px; }
 
-    .tst-track-wrap {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        padding-top: 4px;
+    .spotlight-card {
+        position: relative; border-radius: var(--radius); padding: 20px 18px 18px;
+        background: linear-gradient(160deg, rgba(137,83,230,0.20), rgba(21,12,38,0.92) 55%), var(--surface);
+        border: 1px solid rgba(247, 203, 112, 0.35);
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset, 0 14px 32px -18px rgba(137,83,230,0.5);
+        overflow: hidden; text-align: right;
     }
-    .tst-track {
-        display: flex;
-        align-items: center;
-        white-space: nowrap;
-        animation: tst-scroll 28s linear infinite;
-        will-change: transform;
+    .spotlight-eyebrow {
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+        font-size: 0.76em; font-weight: 800; color: #f7cb70; margin-bottom: 12px;
     }
-    .ht-panel:hover .tst-track { animation-play-state: paused; }
-    @keyframes tst-scroll {
-        from { transform: translateX(0); }
-        to   { transform: translateX(-50%); } /* المحتوى مُكرَّر مرتين — راجع JS */
+    .spotlight-eyebrow .line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(247,203,112,0.5), transparent); max-width: 60px; }
+    .spotlight-body { display: flex; align-items: center; gap: 14px; }
+    .spotlight-avatar-wrap { position: relative; flex-shrink: 0; width: 72px; height: 72px; }
+    .spotlight-avatar-ring {
+        position: absolute; inset: -4px; border-radius: 50%;
+        background: conic-gradient(from 0deg, #f7cb70, #f69758, #f767f7, #8953e6, #f7cb70);
+        animation: spin 6s linear infinite;
     }
-    .tst-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 0 22px;
-        font-size: 0.95em;
-        font-weight: 700;
-        color: var(--text);
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .spotlight-avatar-ring { animation: none; } }
+    .spotlight-avatar {
+        position: absolute; inset: 4px; border-radius: 50%; overflow: hidden;
+        background: var(--accent-gradient); display: flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: 1.5em; color: #fff; border: 3px solid var(--surface);
     }
-    .tst-item .tst-rank {
-        font-size: 0.85em;
-        color: var(--accent-2);
-        font-weight: 800;
+    .spotlight-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .spotlight-crown { position: absolute; top: -13px; left: -6px; font-size: 1.3em; filter: drop-shadow(0 2px 5px rgba(0,0,0,.5)); z-index: 2; }
+    .spotlight-info { flex: 1; min-width: 0; }
+    .spotlight-name { font-weight: 800; font-size: 1.15em; margin: 0 0 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .spotlight-tag { font-size: 0.8em; color: var(--text-muted); margin-bottom: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .spotlight-stat {
+        display: inline-flex; align-items: center; gap: 5px; font-size: 0.78em; font-weight: 700;
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+        padding: 5px 10px; border-radius: 999px; color: var(--text);
     }
-    .tst-item .tst-hours {
-        color: var(--accent-pink);
-        font-weight: 800;
-        font-size: 0.85em;
+    .spotlight-stat b { color: #f7cb70; font-weight: 800; }
+    .spotlight-empty { text-align: center; color: var(--text-muted); font-size: 0.9em; font-weight: 700; padding: 10px 4px; }
+
+    .supporters-card {
+        border-radius: var(--radius); padding: 16px 16px 6px; background: var(--surface);
+        border: 1px solid var(--border); box-shadow: 0 12px 28px -20px rgba(0,0,0,0.6);
     }
-    .tst-avatar {
-        width: 26px; height: 26px; border-radius: 50%; object-fit: cover;
-        border: 1.5px solid var(--border); background: var(--surface-2); flex: none;
+    .supporters-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .supporters-head h3 { margin: 0; font-size: 1em; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+    .supporter-row {
+        display: flex; align-items: center; gap: 12px; padding: 10px 4px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
     }
-    .tst-avatar--placeholder {
-        display: flex; align-items: center; justify-content: center;
-        font-weight: 800; font-size: 0.75em; color: #fff; background: var(--accent-gradient);
+    .supporter-row:last-child { border-bottom: none; }
+    .supporter-avatar {
+        width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+        background: var(--accent-gradient); display: flex; align-items: center; justify-content: center;
+        font-weight: 800; color: #fff; font-size: 0.92em; border: 2px solid rgba(255,255,255,0.08);
     }
-    .tst-sep {
-        width: 4px; height: 4px; border-radius: 50%;
-        background: var(--accent-gradient);
-        flex: none;
-        margin: 0 8px;
-        opacity: 0.8;
+    .supporter-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .supporter-info { flex: 1; min-width: 0; text-align: right; }
+    .supporter-name { font-weight: 700; font-size: 0.92em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .supporter-time { font-size: 0.74em; color: var(--text-muted); margin-top: 1px; }
+    .supporter-amount { font-weight: 800; font-size: 0.92em; color: var(--accent-pink); white-space: nowrap; flex-shrink: 0; }
+    .supporters-empty { text-align: center; color: var(--text-muted); font-size: 0.88em; font-weight: 600; padding: 16px 6px; line-height: 1.8; }
+    .supporters-empty a { color: var(--accent-2); }
+
+    /* تخطيط جنباً إلى جنب على الشاشات الأعرض — راجع media query الرئيسية آخر الملف */
+
+    /* [0.46.0] صف "🆕 أضيفت حديثاً" — صف واحد أفقي (قابل للسحب بالجوال)
+       فوق شبكة الألعاب الكاملة، يبرز آخر الألعاب المضافة/المنقولة
+       للنظام الأصلي (Native). عدّل data-agp-game-id هنا مباشرة لو تبي
+       تبرز ألعاباً غيرها لاحقاً — لا علاقة له بمنطق AGP.* (روابط عادية
+       فقط، نسخة مصغّرة من game-card). */
+    .new-games-row-wrap { max-width: 1200px; margin: 0 auto 30px; padding: 0 20px; }
+    .new-games-row-title {
+        display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.02em;
+        margin-bottom: 12px; color: var(--text); justify-content: center;
+    }
+    .new-games-row-title .new-badge {
+        background: var(--accent-gradient); color: #0e0e16; font-size: 0.7em; font-weight: 800;
+        padding: 3px 10px; border-radius: 999px;
+    }
+    .new-games-row {
+        display: flex; gap: 14px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x proximity;
+        justify-content: center;
+    }
+    .new-game-chip {
+        scroll-snap-align: start; flex: 0 0 auto; width: 168px; background: var(--surface);
+        border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; text-align: right;
+        transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .new-game-chip:hover { transform: translateY(-3px); border-color: var(--accent); }
+    .new-game-chip img { width: 100%; height: 84px; object-fit: cover; display: block; }
+    .new-game-chip-info { padding: 8px 10px 10px; }
+    .new-game-chip-title { display: block; font-weight: 700; font-size: 0.82em; margin-bottom: 6px; }
+    .new-game-chip a.btn-play {
+        display: block; text-align: center; font-size: 0.78em; padding: 6px 8px; border-radius: 999px;
+        background: var(--accent-gradient); color: #0e0e16; font-weight: 800;
     }
 
-    /* لوحة "داعمين المنصة" — بديل .sub-banner القديمة (نفس روح
-       #supporters-banner-text وbackend/supporters/supporters-service.js)
-       لكن كتبويب داخل .highlight-tabs بدل بانر مستقل. تلاشي بسيط بين
-       كل داعم والي بعده، مو قفزة مفاجئة. */
-    .ht-supporters-inner {
-        position: absolute; inset: 0;
-        display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 24px;
-    }
-    #supporters-banner-text { display: inline-block; transition: opacity 0.35s ease; font-weight: 700; font-size: 0.95em; }
-    #supporters-banner-text.is-fading { opacity: 0; }
-    #supporters-banner-text a { color: var(--accent-2); text-decoration: underline; }
-    #supporters-banner-text .supporter-name { color: var(--accent-2); font-weight: 800; }
-    #supporters-banner-text .supporter-amount { color: var(--accent-pink); font-weight: 800; }
-    #supporters-banner-text .supporter-avatar {
-        width: 22px; height: 22px; border-radius: 50%; object-fit: cover;
-        vertical-align: middle; margin-inline-end: 4px;
+    /* [0.46.0] تبويب "قريباً: متجر ألعاب أيمن" — تحت البانر الرئيسي مباشرة
+       وفوق شريط الفئات. زر معطَّل عمداً (لا رابط فعلي بعد) بنفس أسلوب
+       btn-pill--disabled الموجود بشريط الفئات تحته. */
+    .store-teaser-wrap { display: flex; justify-content: center; margin: 0 0 18px; }
+    .store-teaser {
+        display: inline-flex; align-items: center; gap: 8px; cursor: not-allowed;
+        background: linear-gradient(90deg, rgba(137,83,230,0.16), rgba(247,118,247,0.10));
+        border: 1px dashed rgba(247, 203, 112, 0.45); color: var(--text);
+        font-weight: 800; font-size: 0.9em; padding: 9px 20px; border-radius: 999px;
     }
 
     .section-title-bar {
@@ -568,6 +567,26 @@
     @media (prefers-reduced-motion: reduce) {
         #welcome-confetti-layer { display: none; }
     }
+
+    /* [0.46.0] توسعة الشاشات الأكبر (تابلت/آيباد وكمبيوتر) — نفس التصميم
+       بالضبط، فقط استغلال أوضح للمساحة بدل مسافات فارغة كبيرة على
+       الجوانب. لا تغيير على شاشات الجوال (أقل من 860px). */
+    @media (min-width: 760px) {
+        header.topbar { padding: 18px 48px; }
+        .hero { max-width: 1080px; }
+        #home-highlights {
+            max-width: 1080px; flex-direction: row; align-items: stretch;
+        }
+        #home-highlights .spotlight-card { flex: 1 1 46%; display: flex; flex-direction: column; justify-content: center; }
+        #home-highlights .supporters-card { flex: 1 1 54%; }
+        .container { gap: 26px; }
+        .footer-columns { gap: 60px; }
+    }
+    @media (min-width: 1300px) {
+        .hero { max-width: 1180px; }
+        #home-highlights { max-width: 1180px; }
+        .container, .section-title-bar, .new-games-row-wrap { max-width: 1320px; }
+    }
 </style>
 </head>
 <body>
@@ -694,6 +713,14 @@
     <a class="tiktok-cta" href="https://www.tiktok.com/@em70_q" target="_blank">🎵 حسابنا تيك توك</a>
 </div>
 
+<!-- [0.46.0] تبويب "قريباً: متجر ألعاب أيمن" — تحت البانر مباشرة، معطَّل
+     لحين جهوزية المتجر فعلياً (إطارات وأشياء إضافية للألعاب). -->
+<div class="store-teaser-wrap">
+    <button type="button" class="store-teaser" disabled title="قريباً">
+        🛍️ متجر ألعاب أيمن <span class="soon-tag">قريباً</span>
+    </button>
+</div>
+
 <div class="categories">
     <a href="#games-section" class="btn btn-pill btn-pill--active">🎵 ألعاب تيك توك</a>
     <button class="btn btn-pill btn-pill--disabled" disabled>💬 ألعاب دسكورد <span class="soon-tag">قريباً</span></button>
@@ -701,25 +728,25 @@
 </div>
 
 <!--
-    [0.45.21] تبويب موحَّد "🔥 الأكثر نشاطاً" (أعلى الاستريمرز بإجمالي
-    ساعات البث، من GET /api/public/top-streamers) و"💜 داعمين المنصة"
-    (آخر الداعمين، من window.AGPAuth.getRecentSupporters) — بدل شريطين
-    منفصلين سابقاً. راجع wireHighlightTabs() آخر الصفحة + docs/CHANGELOG.md.
+    [0.46.0] "نجوم المنصة" — بطاقة Spotlight لأنشط استريمر (أعلى استريمر
+    بإجمالي ساعات البث، من GET /api/public/top-streamers) وقائمة "آخر
+    الداعمين" (من window.AGPAuth.getRecentSupporters). راجع
+    wireStreamerSpotlight() وwireSupportersList() آخر الصفحة + docs/CHANGELOG.md.
 -->
-<div class="highlight-tabs" id="highlight-tabs">
-    <div class="ht-tabbar">
-        <button type="button" class="ht-tab-btn active" data-ht-tab="streamers">🔥 الأكثر نشاطاً</button>
-        <button type="button" class="ht-tab-btn" data-ht-tab="supporters">💜 داعمين المنصة</button>
-    </div>
-    <div class="ht-panel active" data-ht-panel="streamers" id="top-streamers-ticker">
-        <div class="tst-track-wrap">
-            <div class="tst-track" id="tst-track"></div>
+<div id="home-highlights">
+    <div class="spotlight-card" id="streamer-spotlight">
+        <div class="spotlight-eyebrow"><span class="line"></span> 🔥 الاستريمر الأكثر نشاطاً <span class="line"></span></div>
+        <div id="spotlight-body-wrap">
+            <div class="spotlight-empty">ما فيه استريمرز نشِطون بالساعات بعد.</div>
         </div>
-        <div class="ht-empty" id="tst-empty">ما فيه استريمرز نشِطون بالساعات بعد.</div>
     </div>
-    <div class="ht-panel" data-ht-panel="supporters">
-        <div class="ht-supporters-inner">
-            <span id="supporters-banner-text">لتفعيل الاشتراك مجاناً بعد إنشاء حسابك تواصل معنا عبر تيك توك <span>@em70_q</span></span>
+
+    <div class="supporters-card">
+        <div class="supporters-head">
+            <h3>💜 آخر الداعمين</h3>
+        </div>
+        <div id="supporters-list-wrap">
+            <div class="supporters-empty">لتفعيل الاشتراك مجاناً بعد إنشاء حسابك تواصل معنا عبر تيك توك <a href="https://www.tiktok.com/@em70_q" target="_blank">@em70_q</a></div>
         </div>
     </div>
 </div>
@@ -733,6 +760,35 @@
         الصفحة وdocs/CHANGELOG.md.
     -->
     <div class="games-lock-message" id="games-lock-message"></div>
+
+    <!-- [0.46.0] صف "أضيفت حديثاً" — راجع .new-games-row-wrap بالـCSS
+         أعلاه. الروابط نفس روابط بطاقاتها الكاملة بالأسفل بالضبط. -->
+    <div class="new-games-row-wrap">
+        <div class="new-games-row-title"><span class="new-badge">جديد</span> أضيفت حديثاً</div>
+        <div class="new-games-row">
+            <div class="new-game-chip">
+                <img src="tribe-roulette-cover.png" alt="غلاف لعبة روليت القبائل" onerror="this.style.display='none';">
+                <div class="new-game-chip-info">
+                    <span class="new-game-chip-title">🏹 روليت القبائل</span>
+                    <a href="games/tribe-roulette/index.html" target="_blank" class="btn-play">العب الآن</a>
+                </div>
+            </div>
+            <div class="new-game-chip">
+                <img src="russian-roulette-cover.png" alt="غلاف لعبة روليت الروسي" onerror="this.style.display='none';">
+                <div class="new-game-chip-info">
+                    <span class="new-game-chip-title">🔫 روليت الروسي</span>
+                    <a href="games/russian-roulette/index.html" target="_blank" class="btn-play">العب الآن</a>
+                </div>
+            </div>
+            <div class="new-game-chip">
+                <img src="musical-chairs-cover.png" alt="غلاف لعبة الكراسي الموسيقية" onerror="this.style.display='none';">
+                <div class="new-game-chip-info">
+                    <span class="new-game-chip-title">🎵 الكراسي الموسيقية</span>
+                    <a href="games/musical-chairs/index.html" target="_blank" class="btn-play">العب الآن</a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="container">
 
@@ -1473,131 +1529,103 @@
             });
         }
 
-        // تبديل التبويبين "🔥 الأكثر نشاطاً" / "💜 داعمين المنصة" — راجع
-        // .highlight-tabs بالـHTML أعلاه وdocs/CHANGELOG.md [0.45.21].
-        (function wireHighlightTabs() {
-            var tabButtons = document.querySelectorAll('.ht-tab-btn');
-            var panels = document.querySelectorAll('.ht-panel');
-            if (!tabButtons.length || !panels.length) return;
-            tabButtons.forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    var target = btn.getAttribute('data-ht-tab');
-                    tabButtons.forEach(function (b) { b.classList.toggle('active', b === btn); });
-                    panels.forEach(function (p) { p.classList.toggle('active', p.getAttribute('data-ht-panel') === target); });
-                });
-            });
-        }());
-
-        // شريط الداعمين — يحل محل نص "لتفعيل الاشتراك..." الثابت القديم
-        // (راجع #supporters-banner-text أعلاه وbackend/supporters/
-        // supporters-service.js). آخر 3 داعمين، كل وحد يظهر 4 ثوانٍ
-        // بالتدوير المتكرر؛ لو دعم شخص جديد يحل مكان الأقدم تلقائياً (عبر
-        // إعادة الجلب الدورية أدناه). لا داعمين بعد = يبقى النص الافتراضي
-        // كما هو بالـHTML (تواصل تيك توك)، بدون أي تغيير.
-        var supportersBannerText = document.getElementById('supporters-banner-text');
-        if (supportersBannerText && window.AGPAuth && typeof window.AGPAuth.getRecentSupporters === 'function') {
-            var supportersList = [];
-            var supportersIndex = 0;
-            var defaultBannerHtml = supportersBannerText.innerHTML;
-
-            function formatSupporterAmount(amount) {
-                var n = Number(amount) || 0;
-                return (n % 1 === 0 ? n.toString() : n.toFixed(2)) + ' دولار';
-            }
-
-            function renderSupporterAt(index) {
-                if (!supportersList.length) {
-                    supportersBannerText.innerHTML = defaultBannerHtml;
-                    return;
-                }
-                var s = supportersList[index % supportersList.length];
-                // [0.45.21] لو الداعم مربوط بحساب فعلي (s.linked)، نعرض صورة
-                // بروفايله الحيّة بجانب اسمه — راجع backend/supporters/
-                // supporters-service.js (decorateRow).
-                var avatarHtml = (s.linked && s.avatarBase64)
-                    ? '<img class="supporter-avatar" src="' + htEscapeHtml(s.avatarBase64) + '" alt="">'
-                    : '';
-                var html = '🎉 ' + avatarHtml + '<span class="supporter-name">' + htEscapeHtml(s.name) + '</span> دعم المنصة بمبلغ ' +
-                    '<span class="supporter-amount">' + formatSupporterAmount(s.amount) + '</span>';
-                if (s.message) html += ' — ' + htEscapeHtml(s.message);
-                supportersBannerText.innerHTML = html;
-            }
-
-            function rotateSupporters() {
-                if (!supportersList.length) return;
-                supportersBannerText.classList.add('is-fading');
-                window.setTimeout(function () {
-                    supportersIndex = (supportersIndex + 1) % supportersList.length;
-                    renderSupporterAt(supportersIndex);
-                    supportersBannerText.classList.remove('is-fading');
-                }, 350); // بعد انتهاء التلاشي (transition: 0.35s بالـ CSS)
-            }
-
-            function refreshSupportersList() {
-                window.AGPAuth.getRecentSupporters().then(function (result) {
-                    if (!result || !result.success) return;
-                    supportersList = result.supporters || [];
-                    supportersIndex = 0;
-                    renderSupporterAt(0);
-                }).catch(function () { /* لا اتصال بالخادم — يبقى النص الافتراضي، بصمت */ });
-            }
-
-            refreshSupportersList();
-            window.setInterval(rotateSupporters, 4000); // تبديل العرض كل 4 ثوانٍ
-            window.setInterval(refreshSupportersList, 30000); // إعادة جلب دورية (يلتقط أي دعم جديد)
+        // [0.46.0] "نجوم المنصة" — بطاقة Spotlight لأنشط استريمر + قائمة
+        // آخر الداعمين. يحل محل التبويبين القديمين (تكر متحرك + بانر
+        // نصي دائري) بعرض ثابت واضح دفعة وحدة، نفس مصادر البيانات
+        // بالضبط (GET /api/public/top-streamers وwindow.AGPAuth.
+        // getRecentSupporters). راجع #home-highlights بالـHTML أعلاه.
+        function formatSupporterAmount(amount) {
+            var n = Number(amount) || 0;
+            return (n % 1 === 0 ? n.toString() : n.toFixed(2)) + ' دولار';
+        }
+        function formatTimeAgo(ts) {
+            var diff = Date.now() - Number(ts || 0);
+            if (!isFinite(diff) || diff < 0) diff = 0;
+            var mins = Math.floor(diff / 60000);
+            if (mins < 1) return 'الآن';
+            if (mins < 60) return 'قبل ' + mins + ' دقيقة';
+            var hours = Math.floor(mins / 60);
+            if (hours < 24) return 'قبل ' + hours + ' ساعة';
+            return 'قبل ' + Math.floor(hours / 24) + ' يوم';
         }
 
-        // [0.45.10] (محدَّث [0.45.21]) تبويب "الأكثر نشاطاً" — أعلى
-        // الاستريمرز بإجمالي ساعات البث، الآن بصورة البروفايل والاسم
-        // المعروض (اللي حاطينه الاستريمر فوق بروفايله) بدل يوزرنيم تيك
-        // توك الخام. لو ما فيه بيانات، يظهر نص فارغ واضح داخل التبويب
-        // نفسه (راجع #tst-empty) بدل إخفاء العنصر كله كالسابق — لأنه
-        // الآن جزء من تبويب ثابت لا شريط إشعار عابر. المحتوى يُكرَّر
-        // مرتين بالـDOM حتى تبقى الحلقة الحركية (@keyframes tst-scroll)
-        // سلسة بدون قفزة عند إعادة البداية — تقنية Marquee قياسية بلا
-        // أي مكتبة خارجية.
-        (function wireTopStreamersTicker() {
-            var track = document.getElementById('tst-track');
-            var emptyEl = document.getElementById('tst-empty');
-            if (!track || !emptyEl || !window.AGPAuth || typeof window.AGPAuth.getTopStreamers !== 'function') return;
+        // بطاقة الاستريمر الأكثر نشاطاً — أعلى استريمر واحد فقط بإجمالي
+        // ساعات البث (راجع getTopStreamersByHours بـauth-service.js).
+        (function wireStreamerSpotlight() {
+            var wrap = document.getElementById('spotlight-body-wrap');
+            if (!wrap || !window.AGPAuth || typeof window.AGPAuth.getTopStreamers !== 'function') return;
+            var defaultHtml = wrap.innerHTML;
 
-            function buildItemsHtml(streamers) {
-                return streamers.map(function (s, i) {
-                    var hoursLabel = (s.totalHours === 1) ? 'ساعة' : 'ساعة';
-                    var avatarHtml = s.avatarBase64
-                        ? '<img class="tst-avatar" src="' + htEscapeHtml(s.avatarBase64) + '" alt="">'
-                        : '<span class="tst-avatar tst-avatar--placeholder">' + htEscapeHtml((s.displayName || '؟').trim().charAt(0).toUpperCase()) + '</span>';
-                    return '<span class="tst-item"><span class="tst-rank">#' + (i + 1) + '</span> ' +
-                        avatarHtml + ' ' + htEscapeHtml(s.displayName) +
-                        ' <span class="tst-hours">' + s.totalHours + ' ' + hoursLabel + '</span></span>' +
-                        '<span class="tst-sep" aria-hidden="true"></span>';
+            function render(streamers) {
+                if (!streamers || !streamers.length) { wrap.innerHTML = defaultHtml; return; }
+                var s = streamers[0];
+                var initial = htEscapeHtml((s.displayName || '؟').trim().charAt(0).toUpperCase());
+                var avatarInner = s.avatarBase64
+                    ? '<img src="' + htEscapeHtml(s.avatarBase64) + '" alt="">'
+                    : initial;
+                var handle = s.tiktokUsername ? '@' + htEscapeHtml(s.tiktokUsername) : '';
+                wrap.innerHTML =
+                    '<div class="spotlight-body">' +
+                        '<div class="spotlight-avatar-wrap">' +
+                            '<div class="spotlight-crown">👑</div>' +
+                            '<div class="spotlight-avatar-ring"></div>' +
+                            '<div class="spotlight-avatar">' + avatarInner + '</div>' +
+                        '</div>' +
+                        '<div class="spotlight-info">' +
+                            '<div class="spotlight-name">' + htEscapeHtml(s.displayName) + '</div>' +
+                            '<div class="spotlight-tag">' + handle + '</div>' +
+                            '<span class="spotlight-stat">⏱️ <b>' + s.totalHours + '</b> ساعة بث</span>' +
+                        '</div>' +
+                    '</div>';
+            }
+
+            function refresh() {
+                window.AGPAuth.getTopStreamers(1).then(function (result) {
+                    if (!result || !result.success) { wrap.innerHTML = defaultHtml; return; }
+                    render(result.streamers || []);
+                }).catch(function () { wrap.innerHTML = defaultHtml; });
+            }
+
+            refresh();
+            window.setInterval(refresh, 180000); // إعادة جلب كل 3 دقائق (الساعات تتغيّر ببطء)
+        }());
+
+        // قائمة "آخر الداعمين" — آخر 5 داعمين (الأحدث أولاً)، مع الوقت
+        // النسبي من created_at (راجع decorateRow بـsupporters-service.js).
+        (function wireSupportersList() {
+            var wrap = document.getElementById('supporters-list-wrap');
+            if (!wrap || !window.AGPAuth || typeof window.AGPAuth.getRecentSupporters !== 'function') return;
+            var defaultHtml = wrap.innerHTML;
+
+            function render(list) {
+                if (!list || !list.length) { wrap.innerHTML = defaultHtml; return; }
+                wrap.innerHTML = list.map(function (s) {
+                    var initial = htEscapeHtml((s.name || '؟').trim().charAt(0).toUpperCase());
+                    // [كما كان سابقاً] لو الداعم مربوط بحساب فعلي نعرض صورة
+                    // بروفايله الحيّة بدل الحرف الأول.
+                    var avatarInner = (s.linked && s.avatarBase64)
+                        ? '<img src="' + htEscapeHtml(s.avatarBase64) + '" alt="">'
+                        : initial;
+                    return '<div class="supporter-row">' +
+                        '<div class="supporter-avatar">' + avatarInner + '</div>' +
+                        '<div class="supporter-info">' +
+                            '<div class="supporter-name">' + htEscapeHtml(s.name) + '</div>' +
+                            '<div class="supporter-time">' + formatTimeAgo(s.created_at) + '</div>' +
+                        '</div>' +
+                        '<div class="supporter-amount">' + formatSupporterAmount(s.amount) + '</div>' +
+                    '</div>';
                 }).join('');
             }
 
-            function refreshTicker() {
-                // [0.45.10] أعلى 5 استريمرز فقط بالساعات (بدل 20) — بما
-                // أن الاستعلام بالخادم مرتَّب تنازلياً بالساعات مع LIMIT
-                // حيّ (راجع getTopStreamersByHours بـauth-service.js)، أي
-                // استريمر جديد يتجاوز صاحب الساعات الأقل بالخمسة الحاليين
-                // يحل محله تلقائياً بأول تحديث تالٍ (كل 3 دقائق) — بلا أي
-                // منطق إضافي مطلوب هنا، فقط تغيير الرقم المطلوب.
-                window.AGPAuth.getTopStreamers(5).then(function (result) {
-                    if (!result || !result.success || !result.streamers || !result.streamers.length) {
-                        track.innerHTML = '';
-                        emptyEl.classList.add('is-visible');
-                        return;
-                    }
-                    var itemsHtml = buildItemsHtml(result.streamers);
-                    track.innerHTML = itemsHtml + itemsHtml; // تكرار مرتين لحلقة سلسة
-                    emptyEl.classList.remove('is-visible');
-                }).catch(function () {
-                    track.innerHTML = '';
-                    emptyEl.classList.add('is-visible'); // لا اتصال بالخادم — نص فارغ واضح بدل شريط مكسور
-                });
+            function refresh() {
+                window.AGPAuth.getRecentSupporters(5).then(function (result) {
+                    if (!result || !result.success) { wrap.innerHTML = defaultHtml; return; }
+                    render(result.supporters || []);
+                }).catch(function () { wrap.innerHTML = defaultHtml; });
             }
 
-            refreshTicker();
-            window.setInterval(refreshTicker, 180000); // إعادة جلب كل 3 دقائق (الساعات تتغيّر ببطء)
+            refresh();
+            window.setInterval(refresh, 30000); // إعادة جلب دورية (يلتقط أي دعم جديد)
         }());
     }());
 </script>
