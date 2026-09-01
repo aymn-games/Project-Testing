@@ -166,6 +166,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var WHEEL_SIZE_MAX = 640;
     var WHEEL_SIZE_DEFAULT = 440;
     var _wheelSizePx = WHEEL_SIZE_DEFAULT; // يبقى كما هو عبر renderStage() المتكرّرة (خارج resetMatchState() عمداً)
+    // ⚠️ [نموذج "تبديل عجلة/سكرول" المعتمَد] 'wheel' أو 'reel' — يبقى
+    // كما هو عبر renderStage() المتكرّرة (نفس فلسفة _wheelSizePx أعلاه).
+    var _displayMode = 'wheel';
+    var REEL_REPEATS = 10; // عدد تكرارات قائمة اللاعبين داخل شريط البكرة (مسافة سكرول كافية للتشويق)
+    var _reelOffset = 0;
 
     /* ======================================================================
      *  0) الصوت — أربعة مقاطع مولَّدة برمجياً (راجع الملاحظة الصادقة أعلى
@@ -366,6 +371,58 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'font-family:inherit;font-weight:700;font-size:0.85em;cursor:pointer;}',
             '#tr-shuffle-btn:disabled{opacity:0.4;cursor:not-allowed;}',
             '#tr-shuffle-btn:not(:disabled):hover{background:rgba(255,255,255,0.16);}',
+
+            /* ======================================================================
+             *  [نموذج "تبديل عجلة/سكرول" المعتمَد] زر التبديل فوق العجلة،
+             *  بكرة السكرول الرأسية البديلة، وصف الأزرار السفلي الموحَّد
+             *  (إعادة ترتيب + العب التلقائي بجانب بعض).
+             * ==================================================================== */
+            '#tr-display-toggle-row{display:flex;align-items:center;gap:10px;margin-bottom:2px;}',
+            '#tr-display-toggle-row button{padding:8px 18px;border-radius:999px;',
+            'border:1px solid rgba(255,255,255,0.16);background:transparent;color:#a99cc4;',
+            'font-family:inherit;font-weight:800;font-size:0.8em;cursor:pointer;transition:all 0.15s;}',
+            '#tr-display-toggle-row button.tr-mode-active{background:linear-gradient(90deg,var(--tr-accent2),var(--tr-accent));',
+            'color:#0a0612;border-color:transparent;}',
+            '#tr-stage-btn-row{display:flex;align-items:center;gap:12px;margin-top:2px;}',
+            '#tr-stage-btn-row #tr-shuffle-btn{margin-top:0;}',
+            '#tr-autoplay-btn{padding:9px 22px;border-radius:999px;border:none;cursor:pointer;',
+            'font-family:inherit;font-weight:800;font-size:0.85em;color:#fff;',
+            'background:linear-gradient(90deg,#22c55e,#16a34a);box-shadow:0 4px 14px rgba(34,197,94,0.3);}',
+            '#tr-autoplay-btn.tr-autoplay-active{background:linear-gradient(90deg,#ef4444,#b91c1c);',
+            'box-shadow:0 4px 14px rgba(239,68,68,0.35);}',
+            // ⚠️ زر "العب التلقائي" القديم بدرج الإعدادات الجانبي صار
+            // مكرَّراً (نفس الوظيفة، نفس الحالة المتزامنة) بعد إضافة الزر
+            // الجديد بالشاشة الرئيسية — نُخفيه بدل حذف منطقه بالكامل
+            // (أبسط وأقل خطورة، بلا أي تعديل على js/agp-game-shell.js).
+            '#agp-midmatch-toggle-btn{display:none !important;}',
+
+            /* ---- بكرة السكرول الرأسية (شكل بديل للعجلة الدائرية) ---- */
+            '#tr-reel-wrap{position:relative;margin:0 auto;border-radius:24px;',
+            'background:linear-gradient(180deg,#150a22,#0a0512);',
+            'box-shadow:0 0 0 3px #9a6a1e,0 0 0 6px #ffd97a,0 0 34px rgba(128,212,255,0.4),',
+            'inset 0 0 26px rgba(0,0,0,0.6);overflow:hidden;}',
+            '#tr-reel-wrap::before,#tr-reel-wrap::after{content:"";position:absolute;left:0;right:0;',
+            'height:22%;z-index:3;pointer-events:none;}',
+            '#tr-reel-wrap::before{top:0;background:linear-gradient(180deg,#0a0512 15%,transparent);}',
+            '#tr-reel-wrap::after{bottom:0;background:linear-gradient(0deg,#0a0512 15%,transparent);}',
+            '.tr-reel-marker{position:absolute;left:10px;right:10px;height:2px;z-index:4;',
+            'background:linear-gradient(90deg,transparent,#80d4ff,transparent);',
+            'box-shadow:0 0 10px rgba(128,212,255,0.9);}',
+            '.tr-reel-marker-top{top:calc(var(--tr-reel-item-h, 100px) * 1);}',
+            '.tr-reel-marker-bottom{top:calc(var(--tr-reel-item-h, 100px) * 2);}',
+            '#tr-reel-list{position:absolute;left:0;right:0;top:0;will-change:transform;}',
+            '.tr-reel-item{height:var(--tr-reel-item-h, 100px);display:flex;align-items:center;',
+            'justify-content:center;gap:10px;opacity:0.4;transition:opacity 0.15s;}',
+            '.tr-reel-item-av{width:20%;aspect-ratio:1;border-radius:50%;flex:none;overflow:hidden;',
+            'border:2px solid rgba(255,255,255,0.35);}',
+            '.tr-reel-item-av .tr-ring-avatar,.tr-reel-item-av .tr-ring-avatar--fallback{',
+            'width:100%;height:100%;font-size:1.3em;}',
+            '.tr-reel-item-name{font-size:1em;font-weight:800;color:#9d92b3;',
+            'max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '.tr-reel-item.tr-reel-highlight{opacity:1;}',
+            '.tr-reel-item.tr-reel-highlight .tr-reel-item-av{width:26%;border-color:#ffd97a;',
+            'box-shadow:0 0 16px rgba(255,217,122,0.6);}',
+            '.tr-reel-item.tr-reel-highlight .tr-reel-item-name{font-size:1.25em;color:#fff;}',
 
             /* ---- العجلة الحقيقية (canvas 2D + حلقة مصابيح) — منقولة
              * ومُعاد تلوينها من كود اللعبة القديمة المستقلة (بدل
@@ -1423,6 +1480,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // ⚠️ [0.48.0] موشر تكبير/تصغير العجلة بين العجلة والزر — عنصر
         // عادي بترتيب العمود حتى يتحرك الزر تلقائياً معه عند تغيير الحجم.
         stage.innerHTML =
+            '<div id="tr-display-toggle-row">' +
+            '<button type="button" id="tr-mode-wheel-btn" class="tr-mode-active">🎡 عجلة دوارة</button>' +
+            '<button type="button" id="tr-mode-reel-btn">🎰 سكرول</button>' +
+            '</div>' +
             '<div id="tr-wheel-wrap">' +
             '<canvas id="tr-wheel-canvas"></canvas>' +
             // ⚠️ [اعتماد التصميم الاحترافي الجديد] مؤشّر SVG (دمعة سماوية
@@ -1440,21 +1501,68 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</svg>' +
             '<button id="tr-spin-hub" title="دوّر العجلة"><img src="../../logo.png" alt="ألعاب أيمن"><span>دور</span></button>' +
             '</div>' +
+            // ⚠️ [نموذج "تبديل عجلة/سكرول" المعتمَد] بكرة سكرول رأسية —
+            // بديل شكلي بحت (نفس منطق اختيار الفائز بالضبط، راجع
+            // handleSpinClick) بشكل شريط أفقي/رأسي بدل الدائرة الدوّارة.
+            // مخفية افتراضياً (تبدأ العجلة نشطة)، تُبنى محتوياتها فعلياً
+            // عبر renderReel() فقط أول ما يتفعّل وضع السكرول.
+            '<div id="tr-reel-wrap" style="display:none">' +
+            '<div class="tr-reel-marker tr-reel-marker-top"></div>' +
+            '<div class="tr-reel-marker tr-reel-marker-bottom"></div>' +
+            '<div id="tr-reel-list"></div>' +
+            '</div>' +
             '<div id="tr-wheel-zoom-row">' +
             '<span>🔍−</span>' +
             '<input type="range" id="tr-wheel-zoom-slider" min="' + WHEEL_SIZE_MIN + '" max="' + WHEEL_SIZE_MAX + '" step="10" value="' + _wheelSizePx + '" title="تكبير/تصغير العجلة">' +
             '<span>🔍+</span>' +
             '</div>' +
-            '<button id="tr-shuffle-btn" type="button">🔀 إعادة ترتيب عشوائية</button>';
+            '<div id="tr-stage-btn-row">' +
+            '<button id="tr-shuffle-btn" type="button">🔀 إعادة ترتيب عشوائية</button>' +
+            '<button id="tr-autoplay-btn" type="button">▶️ العب التلقائي</button>' +
+            '</div>';
 
         applyWheelSize(_wheelSizePx);
         drawWheelCanvas();
         el('tr-spin-hub').onclick = handleSpinClick;
         el('tr-shuffle-btn').onclick = handleShuffleClick;
+        el('tr-autoplay-btn').onclick = handleAutoPlayButtonClick;
+        updateAutoPlayButtonLabel();
+        el('tr-mode-wheel-btn').onclick = function () { setDisplayMode('wheel'); };
+        el('tr-mode-reel-btn').onclick = function () { setDisplayMode('reel'); };
         el('tr-wheel-zoom-slider').oninput = function () {
             handleWheelZoomChange(parseInt(this.value, 10));
         };
     }
+
+    /**
+     * ⚠️ [نموذج "تبديل عجلة/سكرول" المعتمَد] يبدّل شكل الاختيار المعروض
+     * (عجلة دوّارة أو بكرة سكرول رأسية) — الاثنان يستخدمان نفس منطق
+     * اختيار الفائز بالضبط (handleSpinClick)، فرق شكلي بصري بحت. لا يُسمَح
+     * بالتبديل أثناء دوران فعلي (_wheelSpinning) تفادياً لقطع أنيميشن نصفها.
+     */
+    function setDisplayMode(mode) {
+        if (_wheelSpinning) return;
+        if (mode === _displayMode) return;
+        _displayMode = mode;
+        var wheelBtn = el('tr-mode-wheel-btn');
+        var reelBtn = el('tr-mode-reel-btn');
+        var wheelWrap = el('tr-wheel-wrap');
+        var reelWrap = el('tr-reel-wrap');
+        var zoomRow = el('tr-wheel-zoom-row');
+        if (wheelBtn) wheelBtn.classList.toggle('tr-mode-active', mode === 'wheel');
+        if (reelBtn) reelBtn.classList.toggle('tr-mode-active', mode === 'reel');
+        if (wheelWrap) wheelWrap.style.display = mode === 'wheel' ? '' : 'none';
+        if (reelWrap) reelWrap.style.display = mode === 'reel' ? '' : 'none';
+        // ⚠️ موشر التكبير خاص بشكل العجلة الدائرية فقط (نصف قطر/زوايا) —
+        // البكرة تتحجّم تلقائياً بنفس منطق التجاوب الجديد (applyReelSize)
+        // بدون تحكّم يدوي منفصل، فما فيه داعٍ له بوضع السكرول.
+        if (zoomRow) zoomRow.style.display = mode === 'wheel' ? '' : 'none';
+        if (mode === 'reel') {
+            applyReelSize();
+            renderReel();
+        }
+    }
+
 
     /**
      * ⚠️ [0.48.0] يضبط حجم العجلة فعلياً (inline style، يتجاوز الحجم
@@ -1473,6 +1581,50 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // إعادة رسم فعلية بعد أي تغيير بحجم الحاوية — أبعاد الكانفس
         // الداخلية (canvas.width/height) لا تتحدّث تلقائياً مع CSS.
         drawWheelCanvas();
+    }
+
+    /**
+     * ⚠️ [إصلاح خلل حقيقي — لاحظه المستخدم فعلياً عبر صورة آيباد] الحجم
+     * الآمن (viewportSafeMax داخل applyWheelSize) كان يُحسَب مرة وحدة بس
+     * وقت التحميل الأول أو تحريك موشر التكبير يدوياً — بدون أي مستمع
+     * لحدث resize، فلو كبّر/صغّر المستخدم نافذة المتصفح فعلياً (أو صار
+     * تبديل حجم الشاشة تلقائياً بالآيباد عبر تدوير الجهاز أو تغيير وضع
+     * تقسيم الشاشة)، العجلة تفضل بنفس القياس القديم حتى لو صار أكبر أو
+     * أصغر من المساحة المتاحة الفعلية — تطلع طافحة أو مقصوصة. الحل:
+     * مستمع resize (بتأخير debounce 150ms تفادياً لإعادة رسم الكانفس
+     * عشرات المرات أثناء السحب المستمر لحواف النافذة) يعيد استدعاء نفس
+     * applyWheelSize/applyReelSize بنفس _wheelSizePx الحالي — يعيد حساب
+     * viewportSafeMax ضد أبعاد النافذة الجديدة تلقائياً.
+     */
+    var _resizeDebounceTimer = null;
+    function handleWindowResize() {
+        if (_resizeDebounceTimer) window.clearTimeout(_resizeDebounceTimer);
+        _resizeDebounceTimer = window.setTimeout(function () {
+            _resizeDebounceTimer = null;
+            if (el('tr-wheel-wrap')) applyWheelSize(_wheelSizePx);
+            if (el('tr-reel-wrap') && _displayMode === 'reel') applyReelSize();
+        }, 150);
+    }
+    window.addEventListener('resize', handleWindowResize);
+    window.addEventListener('orientationchange', handleWindowResize);
+
+    /**
+     * ⚠️ [نموذج "تبديل عجلة/سكرول" المعتمَد] نفس فلسفة applyWheelSize
+     * بالضبط (حدّ آمن 88vw) — البكرة تتحجّم تلقائياً بنفس _wheelSizePx
+     * (موشر التكبير اليدوي مخفي بوضع السكرول، لكن القيمة المحفوظة تبقى
+     * الأساس المشترك بين الشكلين). العرض أضيق من الارتفاع عمداً (بكرة
+     * رأسية، مو دائرة).
+     */
+    function applyReelSize() {
+        var wrap = el('tr-reel-wrap');
+        if (!wrap) return;
+        var viewportSafeMax = Math.floor(window.innerWidth * 0.88);
+        var applied = Math.max(WHEEL_SIZE_MIN, Math.min(_wheelSizePx, viewportSafeMax));
+        wrap.style.width = Math.round(applied * 0.78) + 'px';
+        wrap.style.height = applied + 'px';
+        var itemH = applied / 3;
+        wrap.style.setProperty('--tr-reel-item-h', itemH + 'px');
+        if (_displayMode === 'reel') renderReel();
     }
 
     function handleWheelZoomChange(px) {
@@ -1698,6 +1850,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function resetWheelSpinPosition() {
         _wheelRotation = 0;
         drawWheelCanvas();
+        // ⚠️ [نموذج "تبديل عجلة/سكرول" المعتمَد] نفس التصفير ينطبق على
+        // البكرة أيضاً — بغضّ النظر عن أيهما الظاهر حالياً، حتى تبقى
+        // الاثنتان متزامنتين ولا تفاجئ المستخدم بموضع غريب لو بدّل الشكل
+        // وسط المباراة.
+        _reelOffset = 0;
+        if (_displayMode === 'reel') renderReel();
     }
 
     function realignWheelAfterRosterChange() {
@@ -1707,6 +1865,65 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // تُرسَم القطعة رقم 0 تحت المؤشر مباشرة (نفس منطق التصفير القديم).
         _wheelRotation = 0;
         drawWheelCanvas();
+        _reelOffset = 0;
+        if (_displayMode === 'reel') renderReel();
+    }
+
+    /**
+     * ⚠️ [نموذج "تبديل عجلة/سكرول" المعتمَد] يبني شريط البكرة — قائمة
+     * _alive مكرَّرة REEL_REPEATS مرة (مسافة سكرول كافية بصرياً). يُعاد
+     * بناؤها بالكامل مع أي تغيير بالتشكيلة (نفس مناسبات realignWheelAfterRosterChange)
+     * أو أول تفعيل لوضع السكرول.
+     */
+    function renderReel() {
+        var list = el('tr-reel-list');
+        if (!list) return;
+        var n = _alive.length;
+        if (!n) { list.innerHTML = ''; return; }
+        var html = '';
+        for (var r = 0; r < REEL_REPEATS; r++) {
+            for (var i = 0; i < n; i++) {
+                var p = _alive[i];
+                html += '<div class="tr-reel-item">' +
+                    '<div class="tr-reel-item-av">' + ringAvatarHtml(p) + '</div>' +
+                    '<span class="tr-reel-item-name">' + escapeHtml(playerLabel(p)) + '</span>' +
+                    '</div>';
+            }
+        }
+        list.innerHTML = html;
+        list.style.transform = 'translateY(' + _reelOffset + 'px)';
+        updateReelHighlight();
+    }
+
+    function updateReelHighlight() {
+        var wrap = el('tr-reel-wrap');
+        var list = el('tr-reel-list');
+        if (!wrap || !list) return;
+        var itemH = parseFloat(getComputedStyle(wrap).getPropertyValue('--tr-reel-item-h')) || 100;
+        var centerY = itemH * 1.5; // منتصف الحاوية (3 صفوف مرئية، بين العلامتين)
+        var items = list.children;
+        for (var i = 0; i < items.length; i++) {
+            var itemCenter = i * itemH + itemH / 2 + _reelOffset;
+            items[i].classList.toggle('tr-reel-highlight', Math.abs(itemCenter - centerY) < itemH / 2);
+        }
+    }
+
+    /**
+     * ⚠️ [نموذج "العب التلقائي بجانب إعادة الترتيب" المعتمَد] زر جديد
+     * بالشاشة الرئيسية (بجانب "🔀 إعادة ترتيب عشوائية") يتحكّم بنفس
+     * _autoPlayActive المُستخدَم أصلاً من زر الدرج الجانبي (handleAutoPlayToggle
+     * بدون تغيير) — الزرّان يبقيان متزامنين دائماً عبر updateAutoPlayButtonLabel().
+     */
+    function handleAutoPlayButtonClick() {
+        handleAutoPlayToggle(!_autoPlayActive);
+        updateAutoPlayButtonLabel();
+    }
+
+    function updateAutoPlayButtonLabel() {
+        var btn = el('tr-autoplay-btn');
+        if (!btn) return;
+        btn.textContent = _autoPlayActive ? '⏸️ إيقاف التلقائي' : '▶️ العب التلقائي';
+        btn.classList.toggle('tr-autoplay-active', _autoPlayActive);
     }
 
     // ⚠️ [0.46.0] "إعادة ترتيب عشوائية" — يخلط ترتيب اللاعبين الأحياء
@@ -1786,8 +2003,29 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (filteredPool.length > 0) spinPool = filteredPool;
         }
         var winner = spinPool[Math.floor(Math.random() * spinPool.length)];
-        var winnerIndex = _alive.indexOf(winner); // فهرس حقيقي داخل _alive الكامل — لازم لحساب زاوية القطعة الصحيحة بالرسم
 
+        function onSpinDone() {
+            _wheelSpinning = false;
+            if (spinBtn) spinBtn.disabled = false;
+            handleWheelLanded(winner);
+        }
+
+        // ⚠️ [نموذج "تبديل عجلة/سكرول" المعتمَد] نفس "winner" المُختار
+        // أعلاه (منطق واحد موحَّد) يُمرَّر لأي من الأنيميشنين — فرق شكلي
+        // بصري بحت بين الاثنين، لا علاقة له بمنطق اللعب نفسه.
+        if (_displayMode === 'reel') {
+            spinReelTo(winner, onSpinDone);
+        } else {
+            spinWheelTo(winner, onSpinDone);
+        }
+    }
+
+    /**
+     * ⚠️ منطق الدوران الأصلي (كان مدموجاً داخل handleSpinClick قبل فصل
+     * شكلَي العرض) — بدون أي تغيير على حساباته.
+     */
+    function spinWheelTo(winner, onDone) {
+        var winnerIndex = _alive.indexOf(winner); // فهرس حقيقي داخل _alive الكامل — لازم لحساب زاوية القطعة الصحيحة بالرسم
         var n = _alive.length;
         var anglePer = (2 * Math.PI) / n;
         var segmentCenterLocal = winnerIndex * anglePer + anglePer / 2;
@@ -1811,9 +2049,57 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             drawWheelCanvas();
 
             if (progress >= 1) {
-                _wheelSpinning = false;
-                if (spinBtn) spinBtn.disabled = false;
-                handleWheelLanded(winner);
+                onDone();
+            } else {
+                window.requestAnimationFrame(frame);
+            }
+        }
+        window.requestAnimationFrame(frame);
+    }
+
+    /**
+     * ⚠️ [نموذج "تبديل عجلة/سكرول" المعتمَد] أنيميشن البكرة — نفس مدة
+     * ونفس تسارع/تباطؤ (easeOutCubic، 3.3 ثانية) مطابق لأنيميشن العجلة
+     * بالضبط، لإحساس متّسق بغضّ النظر عن الشكل المفعَّل. نحرّك
+     * translateY على #tr-reel-list من موضعها الحالي (_reelOffset) لموضع
+     * جديد يحاذي نسخة "آمنة" (منتصف التكرارات تقريباً) من الفائز مقابل
+     * الخط المركزي بالضبط.
+     */
+    function spinReelTo(winner, onDone) {
+        var itemH = parseFloat(getComputedStyle(el('tr-reel-wrap')).getPropertyValue('--tr-reel-item-h')) || 100;
+        var n = _alive.length;
+        var winnerIndex = _alive.indexOf(winner);
+        // ⚠️ نستهدف نسخة قريبة من منتصف التكرارات (REEL_REPEATS/2) —
+        // تضمن مسافة سكرول كافية بصرياً بغضّ النظر عن الموضع الحالي.
+        var targetRepeat = Math.floor(REEL_REPEATS / 2);
+        var targetItemIndex = targetRepeat * n + winnerIndex;
+        // مركز العنصر الهدف يحاذي الخط المركزي (منتصف الحاوية، بين
+        // العلامتين) — الحاوية 3 صفوف مرئية، فالمنتصف = itemH*1.5.
+        var targetOffset = -(targetItemIndex * itemH + itemH / 2) + itemH * 1.5;
+
+        var startOffset = _reelOffset;
+        var totalDelta = targetOffset - startOffset;
+        // ⚠️ لو الحركة قصيرة جداً بالصدفة (نادر)، نضيف دورة كاملة إضافية
+        // كاملة حتى تحس بحركة سكرول حقيقية دائماً (مطابقة لمبدأ "fullSpins"
+        // بالعجلة).
+        var listHeight = REEL_REPEATS * n * itemH;
+        if (Math.abs(totalDelta) < listHeight * 0.5) totalDelta -= listHeight;
+
+        var spinTimeTotal = 3300;
+        var startTime = null;
+
+        function frame(now) {
+            if (startTime === null) startTime = now;
+            var elapsed = now - startTime;
+            var progress = Math.min(elapsed / spinTimeTotal, 1);
+            var eased = easeOutCubic(progress);
+            _reelOffset = startOffset + totalDelta * eased;
+            var list = el('tr-reel-list');
+            if (list) list.style.transform = 'translateY(' + _reelOffset + 'px)';
+            updateReelHighlight();
+
+            if (progress >= 1) {
+                onDone();
             } else {
                 window.requestAnimationFrame(frame);
             }
@@ -1859,6 +2145,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             window.clearTimeout(_autoPlayTimer);
             _autoPlayTimer = null;
         }
+        // ⚠️ [نموذج "العب التلقائي بجانب إعادة الترتيب" المعتمَد] يبقي
+        // زر الشاشة الرئيسية متزامناً حتى لو التبديل صار من مصدر ثانٍ
+        // (زر الدرج الجانبي القديم، أو استدعاء برمجي آخر مستقبلاً).
+        updateAutoPlayButtonLabel();
     }
 
     function maybeAutoSpin() {
@@ -1885,7 +2175,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *  5) نافذة الإقصاء
      * ==================================================================== */
     function openEliminationWindow(chooser) {
-        var candidates = _alive.filter(function (p) { return p.id !== chooser.id; });
+        // ⚠️ [تعديل صريح] صاحب الدور لم يعد مستثنى من قائمة المرشَّحين —
+        // يظهر هو نفسه كأحد بطاقات القبائل المموَّهة، فيقدر (بدون ما يدري،
+        // لأن هويته مخفية خلف اسم قبيلة زي الباقي) يختار نفسه بالصدفة
+        // ويُقصي نفسه فعلياً. قبل هذا التعديل كان مستبعداً تماماً
+        // (`.filter(p => p.id !== chooser.id)`)، فكان إقصاء النفس مستحيلاً
+        // إلا يدوياً عبر الزر الافتراضي بدون تحديد بطاقة.
+        var candidates = _alive.slice();
         if (!candidates.length) return;
         // ⚠️ خلط الترتيب — رقم البطاقة (واسم القبيلة خلفها) لا يرتبط بأي
         // ترتيب ثابت للاعبين (نفس مبدأ عدم ثبات الأرقام المطلوب بتبويب
