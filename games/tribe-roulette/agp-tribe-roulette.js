@@ -448,6 +448,27 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // يُضاف على #tr-modal-box نفسه من renderTurnModal() (بدل
             // تفريغه بالكامل كما كان سابقاً).
             '#tr-modal-box.tr-role-eliminate{border-color:#22c55e;}',
+
+            /* ======================================================================
+             *  [نموذج معتمَد: شاشة الفائز الشفافة + فيديو] — يُلغي خلفية/حدّ/
+             *  ظل #tr-modal-box الموحَّدة لحالة الفائز تحديداً (لا يؤثر على
+             *  تبويب إعلان النتيجة ولا اختيار الهدية، نفس الصندوق مستخدَم
+             *  للثلاثة بأدوار مختلفة). محتوى شاشة الفائز ينزل قليلاً عن
+             *  أعلى الشاشة (padding-top إضافي)، ومربع فيديو 160×160 بحدود
+             *  سماوية مضيئة نابضة يظهر فوق العنوان مباشرة.
+             * ==================================================================== */
+            '#tr-modal-box.tr-winner-transparent{background:none !important;border:none !important;',
+            'box-shadow:none !important;padding-top:70px !important;}',
+            '#tr-winner-video-badge{width:160px;height:160px;border-radius:22px;overflow:hidden;',
+            'margin:0 auto 24px;border:3px solid var(--tr-accent);position:relative;background:#000;',
+            'box-shadow:0 0 0 1px rgba(128,212,255,0.3),0 0 30px rgba(128,212,255,0.7),',
+            '0 0 60px rgba(124,58,237,0.4);animation:tr-video-badge-pulse 2s ease-in-out infinite;}',
+            '@keyframes tr-video-badge-pulse{0%,100%{box-shadow:0 0 0 1px rgba(128,212,255,0.3),',
+            '0 0 30px rgba(128,212,255,0.7),0 0 60px rgba(124,58,237,0.4);}',
+            '50%{box-shadow:0 0 0 1px rgba(128,212,255,0.5),0 0 40px rgba(128,212,255,0.9),',
+            '0 0 75px rgba(124,58,237,0.6);}}',
+            '#tr-winner-video-badge video{width:100%;height:100%;object-fit:cover;display:block;}',
+
             '#tr-modal-box.tr-role-eliminate h2{color:#22c55e;}',
             /* اسم صاحب الدور وكلمة "يختار!" — كل وحدة مميَّزة بلون مختلف
              * ⚠️ [0.45.0] طلب صريح: تمييز الاسم عن كلمة "يختار!" بألوان
@@ -558,41 +579,45 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.tr-tribe-name{font-size:17px;font-weight:800;overflow:hidden;',
             'text-overflow:ellipsis;white-space:nowrap;}',
 
-            /* ---- تبويب إعلان النتيجة (4 ثوانٍ) ----
-             * ⚠️ [0.44.0] إصلاح: كانت هذي القواعد مكتوبة بمُحدِّد ID
-             * (#tr-announce-box) بينما الكود يطبّقها فعلياً كـclassName
-             * على نفس صندوق #tr-modal-box (id يبقى tr-modal-box دائماً) —
-             * فما كانت تُطابَق إطلاقاً، وتبويب الإعلان كان يظهر بدون أي
-             * تنسيق (نص متكدّس بالزاوية). صُححت لمحدِّدات class. */
-            /* ⚠️ [0.45.0] ألوان الإعلان (كانت مصمَّمة لخلفية فاتحة) كُبِّرت
-             * سطوعاً لتبقى مقروءة فوق الخلفية الغامقة الجديدة — تعديل
-             * تقني ضروري للقراءة، مو مطلوباً صراحة بس لازم للتناسق. */
-            /* ---- [0.46.0] إعادة تصميم كاملة لتبويب إعلان النتيجة —
-             * صندوق صغير (~650×300) بجملة واحدة "اللاعب [أفاتار+اسم] قام
-             * بإقصاء/بإرجاع [أفاتار+اسم]" بدل الأيقونة+العنوان+الاسم
-             * الكبير القديم. تُستخدَم أيضاً بإعلان إنعاش "انعاش صديق". */
-            '#tr-modal-box.tr-announce-box{width:650px;max-width:92vw;height:auto;max-height:300px;',
-            'display:flex;align-items:center;justify-content:center;padding:30px 24px;}',
-            '.tr-announce-box .tr-announce-sentence{font-size:1.25em;font-weight:800;text-align:center;',
-            'line-height:2.4;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;}',
-            '.tr-announce-person{display:inline-flex;flex-direction:column;align-items:center;gap:4px;',
-            'vertical-align:middle;}',
-            '.tr-announce-avatar-wrap{display:block;width:106px;height:106px;border-radius:50%;position:relative;}',
-            '.tr-announce-avatar-wrap .tr-ring-avatar,.tr-announce-avatar-wrap .tr-ring-avatar--fallback{',
-            'width:106px;height:106px;}',
-            '.tr-announce-person-name{font-size:0.55em;font-weight:800;color:#fff;}',
-            /* تأثير أحمر خلف صورة المُقصى + تلاشي الصورة */
-            '.tr-announce-effect-red{box-shadow:0 0 0 6px rgba(255,77,109,0.25),0 0 30px 10px rgba(255,77,109,0.55);',
-            'border-radius:50%;}',
-            '@keyframes tr-target-fadeout{0%{opacity:1;}60%{opacity:1;}100%{opacity:0.15;}}',
-            '.tr-announce-target-fadeout img,.tr-announce-target-fadeout .tr-ring-avatar--fallback{',
-            'animation:tr-target-fadeout 2.6s ease forwards;}',
-            /* تأثير أخضر خلف صورة المُرجَع + تحوّل الحلقة من أحمر لأخضر */
-            '.tr-announce-effect-green{box-shadow:0 0 0 6px rgba(74,222,128,0.25),0 0 30px 10px rgba(74,222,128,0.55);',
-            'border-radius:50%;}',
-            '@keyframes tr-target-revive-ring{0%{box-shadow:0 0 0 6px rgba(255,77,109,0.35),0 0 30px 10px rgba(255,77,109,0.5);}',
-            '100%{box-shadow:0 0 0 6px rgba(74,222,128,0.25),0 0 30px 10px rgba(74,222,128,0.55);}}',
-            '.tr-announce-target-revive-ring{animation:tr-target-revive-ring 1.6s ease forwards;}',
+            /* ======================================================================
+             *  [نموذج معتمَد: "elimination-roulette-current-new"] تبويب إعلان
+             *  النتيجة — منقول بالحرف من التصميم الحالي فعلياً بروليت
+             *  الإقصاء (er-announce-*)، يستبدل التصميم القديم بالكامل
+             *  (الجملة المتكدّسة مع الصور بمنتصف النص). جملة كاملة أعلى
+             *  الصندوق تتضمّن اسمَي الطرفين حرفياً، وبطاقة شخص منفصلة لكل
+             *  طرف (حلقة ملوَّنة + وسم دور كبسولة + اسم). الألوان الوظيفية
+             *  (أخضر=فعل ناجح/من قام به، أحمر=المُقصى، تعتيم+تشبّع أقل
+             *  لصورة المُقصى فقط) بلا أي تغيير عن المصدر — لغة ألوان
+             *  خطر/أمان عامة، منفصلة عن هوية اللعبة (بنفس مبدأ كل تبويبات
+             *  هذي اللعبة السابقة). الحجم والمقاسات (500×350، حلقة 112px،
+             *  بطاقة 145px) مطابقة حرفياً بلا تغيير.
+             * ==================================================================== */
+            '#tr-modal-box.tr-announce-box{width:500px;max-width:92vw;height:350px;max-height:90vh;',
+            'display:flex;flex-direction:column;align-items:center;justify-content:center;',
+            'gap:22px;padding:24px;box-sizing:border-box;}',
+            '.tr-announce-title{font-size:1.15em;font-weight:900;color:#fff;text-align:center;',
+            'line-height:1.4;}',
+            '.tr-announce-eliminate .tr-announce-title{color:#ff8da3;}',
+            '.tr-announce-revive .tr-announce-title{color:#7dffb0;}',
+            '.tr-announce-row{display:flex;align-items:flex-start;justify-content:center;gap:50px;}',
+            '.tr-announce-person-card{width:145px;display:flex;flex-direction:column;',
+            'align-items:center;gap:8px;}',
+            '.tr-announce-ring{width:112px;height:112px;border-radius:50%;padding:5px;box-sizing:border-box;}',
+            '.tr-announce-ring .tr-ring-avatar,.tr-announce-ring .tr-ring-avatar--fallback{',
+            'width:100%;height:100%;font-size:2em;}',
+            '.tr-announce-ring-green{background:#22c55e;}',
+            '.tr-announce-ring-red{background:#ef4444;}',
+            '@keyframes tr-announce-eliminate-glow{0%{box-shadow:0 0 0 0 rgba(239,68,68,0.6);}',
+            '100%{box-shadow:0 0 24px 6px rgba(239,68,68,0.35);}}',
+            '.tr-announce-ring-red{animation:tr-announce-eliminate-glow 3s ease forwards;}',
+            '.tr-announce-ring-desaturate .tr-ring-avatar,',
+            '.tr-announce-ring-desaturate .tr-ring-avatar--fallback{',
+            'filter:saturate(0.4);opacity:0.9;}',
+            '.tr-announce-role-badge{padding:3px 12px;border-radius:999px;font-size:12px;',
+            'font-weight:800;color:#fff;}',
+            '.tr-announce-badge-green{background:#22c55e;}',
+            '.tr-announce-badge-red{background:#ef4444;}',
+            '.tr-announce-person-name{font-size:14px;font-weight:800;color:#fff;text-align:center;}',
             /* بطاقة إنعاش-بالهدية العائمة (toast غير مقاطِع — راجع showGiftReviveCard) */
             '.tr-gift-revive-card{display:flex;align-items:center;gap:10px;background:rgba(20,8,35,0.95);',
             'border:1px solid rgba(74,222,128,0.55);color:#f3eefc;padding:8px 18px 8px 8px;border-radius:999px;',
@@ -610,26 +635,47 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              *  ذاك الصندوق يبقى مستخدَماً بدون تغيير لتبويب إعلان النتيجة
              *  وشاشة الفائز ونافذة اختيار الهدية (خارج نطاق هذا الطلب).
              * ==================================================================== */
-            '#tr-select-overlay{position:fixed;inset:0;z-index:99990;display:none;align-items:center;',
-            'justify-content:center;background:rgba(8,4,16,0.72);padding:16px;}',
-            '#tr-select-box{width:1150px;max-width:97vw;height:700px;max-height:94vh;border-radius:20px;',
-            'padding:14px 18px 18px;box-sizing:border-box;color:#fff;font-family:Almarai,Cairo,sans-serif;',
-            'background:linear-gradient(180deg,#5F3976,#211528);border:2px solid var(--tr-accent);position:relative;overflow:hidden;',
-            'box-shadow:0 0 50px rgba(128,212,255,0.45);display:flex;flex-direction:column;}',
-            // ⚠️ نفس تمييز الأحمر/الأخضر المعتمَد أصلاً (إقصاء=أحمر بأرقام
-            // المرشَّحين وعنوان التبويب، إرجاع=أخضر) — لغة ألوان وظيفية
-            // (خطر/أمان) منفصلة عن هوية اللعبة نفسها، بلا تغيير.
-            '#tr-select-box.tr-role-eliminate{border-color:#22c55e;}',
-            '#tr-select-box.tr-role-revive{border-color:#ef4444;}',
-            '#tr-select-box::before{content:"";position:absolute;inset:0;background:url(../../logo.png) no-repeat center;',
-            'background-size:220px auto;opacity:0.2;pointer-events:none;}',
+            // ⚠️ [إصلاح خلل حقيقي مؤكَّد] z-index كان 99990 — أقل من
+            // #agp-shell-overlay (99999، الملف المشترك). لو انفتح درج
+            // الإعدادات (زر ⚙️) بينما نافذة اختيار مفتوحة أصلاً (دور
+            // جارٍ، أو دوران تلقائي بالخلفية عبر "العب التلقائي")، درج
+            // الإعدادات كان يغطّيها بصرياً بالكامل ويمنع أي تفاعل معها
+            // فعلياً — تبدو "معطّلة" أو "ما تشتغل" لين تغلق درج الإعدادات
+            // يدوياً فتظهر خلفه فجأة. رفعناه فوق 99999 حتى تبقى نافذة
+            // الاختيار مرئية وقابلة للتفاعل دائماً بغضّ النظر عن حالة
+            // درج الإعدادات.
+            // ⚠️ [نموذج معتمَد: تبويبا الاختيار بدون صندوق] نفس فلسفة
+            // settings-no-box/lobby-no-box بالضبط — الخلفية الغامقة/الشعار
+            // المائي واللوح المحدود العرض (1150px) أُزيلا بالكامل، والمحتوى
+            // يطفو مباشرة على خلفية الصفحة الكونية الموحَّدة (نفس التدرّج
+            // المستخدَم بشاشتَي الإعدادات واللوبي).
+            '#tr-select-overlay{position:fixed;inset:0;z-index:150000;display:none;align-items:flex-start;',
+            'justify-content:center;overflow-y:auto;padding:0;',
+            'background:',
+            'radial-gradient(ellipse 900px 500px at 50% -8%,rgba(128,212,255,0.14),transparent 60%),',
+            'radial-gradient(ellipse 700px 500px at 90% 100%,rgba(124,58,237,0.16),transparent 60%),',
+            'linear-gradient(180deg,#0d0818 0%,#090614 45%,#05030a 100%);}',
+            '#tr-select-box{width:min(1400px,96vw);max-width:96vw;height:auto;min-height:100vh;',
+            'padding:34px 30px 30px;box-sizing:border-box;color:#fff;font-family:Almarai,Cairo,sans-serif;',
+            'background:none;border:none;position:relative;overflow:visible;',
+            'box-shadow:none;display:flex;flex-direction:column;}',
+            // ⚠️ شعار "ألعاب أيمن" الشفاف (25%) — يظهر بمنتصف الشاشة خلف
+            // كل المحتوى بتبويبي الإقصاء والإرجاع معاً (نفس #tr-select-box
+            // المشترك بينهما، يميّزهما فقط كلاس tr-role-eliminate/revive).
+            // ثابت بمنتصف الشاشة (position:fixed) بدل مرتبط بارتفاع
+            // الصندوق نفسه (الصندوق الآن min-height:100vh فقط، بلا ارتفاع
+            // ثابت) — يبقى مركزياً بصرياً بغضّ النظر عن طول المحتوى.
+            '#tr-select-box::before{content:"";position:fixed;top:50%;left:50%;',
+            'transform:translate(-50%,-50%);width:360px;height:360px;',
+            'background:url(../../logo.png) no-repeat center;background-size:contain;',
+            'opacity:0.25;pointer-events:none;z-index:0;}',
             '#tr-select-box > *{position:relative;z-index:1;}',
-            '#tr-select-title{text-align:center;font-size:0.92em;color:#9d92b3;margin-bottom:6px;flex:none;}',
+            '#tr-select-title{text-align:center;font-size:1.05em;color:#9d92b3;margin-bottom:16px;flex:none;}',
             '#tr-select-title b{color:var(--tr-accent);font-weight:900;}',
             '#tr-select-box.tr-role-eliminate #tr-select-title b{color:#ef4444;}',
             '#tr-select-box.tr-role-revive #tr-select-title b{color:#22c55e;}',
             /* ---- صف واحد: بطاقة صاحب الدور المكبَّرة + الأزرار (متمركزان معاً) ---- */
-            '#tr-chooser-row{display:flex;align-items:center;justify-content:center;gap:26px;margin-bottom:12px;flex:none;}',
+            '#tr-chooser-row{display:flex;align-items:center;justify-content:center;gap:26px;margin-bottom:20px;flex:none;}',
             '.tr-select-chooser-card{display:flex;align-items:center;gap:12px;}',
             '.tr-select-chooser-ring{width:88px;height:88px;border-radius:50%;padding:4px;box-sizing:border-box;flex:none;}',
             '.tr-select-chooser-ring.tr-role-eliminate{background:#22c55e;box-shadow:0 0 22px rgba(34,197,94,0.65);}',
@@ -647,25 +693,36 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#tr-force-eliminate-btn{background:linear-gradient(90deg,#ef4444,#b91c1c);',
             'box-shadow:0 4px 14px rgba(239,68,68,0.45);}',
             /* ---- المؤقّت — سطر مستقل بعد صف صاحب الدور، بارز وكبير ---- */
-            '#tr-select-timer{text-align:center;font-weight:900;font-size:1.5em;color:#ffe066;margin-bottom:10px;',
+            '#tr-select-timer{text-align:center;font-weight:900;font-size:1.5em;color:#ffe066;margin-bottom:16px;',
             'flex:none;transition:color 0.2s;}',
             '#tr-select-timer.tr-timer-warning{color:#ff4d6d;animation:tr-pulse 1s infinite;}',
-            /* ---- شبكة المرشّحين — ٤ أعمدة ثابتة، بطاقة لوبي-قياسي-v1 ---- */
-            '#tr-select-candidates-grid{flex:1;min-height:0;overflow-y:auto;display:grid;',
-            'grid-template-columns:repeat(4,1fr);gap:0.5cm;align-content:flex-start;padding:4px 2px 6px;}',
+            /* ---- شبكة المرشّحين — ٥ بطاقات بكل صف ---- */
+            '#tr-select-candidates-grid{flex:1;min-height:0;display:grid;',
+            'grid-template-columns:repeat(5,1fr);gap:16px;align-content:flex-start;padding:4px 2px 30px;',
+            'max-width:1250px;margin:0 auto;width:100%;}',
+            // ⚠️ [إصلاح خلل حقيقي — لُقِط أثناء فحص الاستجابة على شاشات
+            // صغيرة] بدون هذا الاستعلام، ٥ أعمدة ثابتة + صف صاحب الدور
+            // بعرض غير مرن كانا يطفحان أفقياً بشدة على شاشات جوال ضيقة
+            // (~375px) — بطاقات مقصوصة من الطرفين، وصف الأزرار/الصورة
+            // يخرج خارج حدود الشاشة كلياً. نخفّض الأعمدة تدريجياً ونسمح
+            // لصف صاحب الدور بالالتفاف على أكثر من سطر بدل الفيض الأفقي.
+            '@media (max-width:900px){#tr-select-candidates-grid{grid-template-columns:repeat(3,1fr);',
+            'gap:10px;}}',
+            '@media (max-width:520px){#tr-select-candidates-grid{grid-template-columns:repeat(2,1fr);',
+            'gap:8px;}',
+            '#tr-chooser-row{flex-wrap:wrap;gap:12px;}',
+            '#tr-select-actions{width:100%;max-width:280px;}',
+            '.tr-tribe-only-card{height:56px;}',
+            '.tr-tribe-only-name{font-size:1.1em;}',
+            '.tr-select-cand-plate{width:100%;max-width:194px;}}',
             '.tr-select-cand-card{display:flex;flex-direction:column;align-items:center;cursor:pointer;}',
             '.tr-select-cand-row{display:inline-flex;align-items:center;}',
             '.tr-select-cand-avatar{width:60px;height:60px;border-radius:50%;flex:none;position:relative;z-index:2;',
             'overflow:hidden;box-sizing:border-box;border:3px solid rgba(255,255,255,0.55);}',
             '.tr-select-cand-avatar .tr-ring-avatar,.tr-select-cand-avatar .tr-ring-avatar--fallback{width:100%;height:100%;font-size:1.1em;}',
-            // ⚠️ خاص بروليت القبائل: بديل الأفاتار المخفي (تبويب الإقصاء
-            // فقط) — نفس أبعاد/موضع .tr-select-cand-avatar بالضبط، ظل
-            // غامق + علامة استفهام بدل الصورة الحقيقية.
-            '.tr-select-cand-avatar-hidden{background:radial-gradient(circle at 35% 30%,#3e1d76,#150a29);',
-            'display:flex;align-items:center;justify-content:center;font-size:1.6em;color:rgba(255,255,255,0.75);}',
             '.tr-select-cand-plate{position:relative;height:48px;width:194px;box-sizing:border-box;',
             'margin-inline-start:-13px;padding-inline-start:31px;padding-inline-end:10px;',
-            'display:flex;align-items:center;justify-content:flex-start;gap:8px;font-weight:800;color:#fff;',
+            'display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:800;color:#fff;',
             'background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.28);',
             'border-radius:999px;overflow:hidden;z-index:1;}',
             '.tr-select-cand-name{font-size:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;}',
@@ -675,6 +732,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.tr-select-cand-num.tr-role-eliminate{background:#ef4444;}',
             '.tr-select-cand-num.tr-role-revive{background:#22c55e;}',
             '.tr-select-cand-card.tr-cand-selected .tr-select-cand-plate{box-shadow:0 0 0 2px #ef4444;}',
+            '.tr-select-cand-card.tr-cand-selected .tr-tribe-only-card{box-shadow:0 0 0 2px #ef4444,0 0 18px rgba(239,68,68,0.5);}',
+            // ⚠️ [نموذج معتمَد: بطاقة قبيلة نظيفة] تبويب الإقصاء تحديداً —
+            // بدون أي أفاتار/شخصية مخفية إطلاقاً، فقط اسم القبيلة + رقم
+            // الاختيار داخل بطاقة واحدة مرتّبة (بدل نظام التراكب القديم
+            // المصمَّم أصلاً لصورة حقيقية). صف أفقي واحد: رقم دائري
+            // بنفسجي + اسم القبيلة بجانبه، كل بطاقة بعرضها الكامل داخل
+            // عمود الشبكة (لا عرض ثابت يدوي، يتكيّف تلقائياً مع 5 أعمدة).
+            '.tr-tribe-only-card{width:100%;height:64px;border-radius:14px;',
+            'background:linear-gradient(180deg,rgba(60,31,102,0.45),rgba(10,5,18,0.65));',
+            'border:1px solid rgba(255,255,255,0.16);',
+            'display:flex;flex-direction:row;align-items:center;justify-content:space-between;',
+            'padding:0 12px;box-sizing:border-box;transition:transform 0.15s,border-color 0.15s;}',
+            '.tr-select-cand-card:hover .tr-tribe-only-card{transform:translateY(-3px);border-color:rgba(255,255,255,0.32);}',
+            '.tr-tribe-only-num{width:48px;height:48px;border-radius:50%;flex:none;color:#000;',
+            'font-size:1.5em;font-weight:900;display:flex;align-items:center;justify-content:center;}',
+            '.tr-tribe-only-num.tr-role-eliminate{background:var(--tr-accent2);}',
+            '.tr-tribe-only-name{font-size:1.3em;font-weight:900;color:#fff;text-align:center;flex:1;',
+            'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;',
+            'text-shadow:0 1px 6px rgba(128,212,255,0.35);}',
 
             /* ======================================================================
              *  [تبويب "عودة لاعب" الجديد] — منقول بالحرف من التصميم الأخير
@@ -730,7 +806,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * نبضة خفيفة مستمرة. overflow صار visible بدل hidden حتى لا
              * يُقصّ التوهّج (ولا قصاصات confetti التي تتخطى حدود الصندوق
              * أحياناً — إصلاح فني إضافي وُجد أثناء المراجعة). */
-            '.tr-trophy-card{position:relative;width:250px;height:250px;box-sizing:border-box;',
+            '.tr-trophy-card{position:relative;width:250px;height:300px;box-sizing:border-box;',
             'border-radius:18px;padding:20px 14px;display:flex;flex-direction:column;align-items:center;',
             'justify-content:center;overflow:visible;background:none;border:none;',
             'box-shadow:0 0 55px 14px rgba(255,255,255,0.4),0 0 120px 35px rgba(216,120,255,0.6);',
@@ -928,6 +1004,38 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-box.tr-settings-initial-box .tr-back-to-platform-btn{column-span:all !important;}',
             '@media (max-width:720px){#agp-shell-box.tr-settings-initial-box{column-count:1 !important;}}',
 
+            /* ======================================================================
+             *  [نموذج "تبويب الاتصال فوق شاشة الإعدادات" المعتمَد] —
+             *  عنصران منفصلان تماماً عن #agp-shell-overlay/#agp-shell-box
+             *  (يُبنَيان مرة واحدة بـdocument.body مباشرة عبر enhanceConnectingScreen)،
+             *  فوق شاشة الإعدادات المستردَّة بالكامل — سبينر أثناء
+             *  الاتصال، تحذير أحمر + زر ✕ عند الفشل (زر الإغلاق يُخفي
+             *  التبويب فقط، شاشة الإعدادات خلفه تبقى ظاهرة وتفاعلية).
+             * ==================================================================== */
+            '#tr-connect-dim{display:none;position:fixed;inset:0;z-index:160000;',
+            'background:rgba(5,3,10,0.5);backdrop-filter:blur(2px);}',
+            '#tr-connect-popup{display:none;position:fixed;top:50%;left:50%;',
+            'transform:translate(-50%,-50%);z-index:160001;width:320px;max-width:88vw;',
+            'padding:34px 26px 28px;border-radius:20px;background:rgba(20,12,34,0.9);',
+            'backdrop-filter:blur(16px);border:1.5px solid var(--tr-accent);',
+            'box-shadow:0 0 0 1px rgba(128,212,255,0.15),0 0 40px rgba(128,212,255,0.4),',
+            '0 20px 60px rgba(0,0,0,0.5);text-align:center;color:#fff;',
+            'font-family:Almarai,Cairo,sans-serif;}',
+            '#tr-connect-popup .tr-connect-spinner{width:46px;height:46px;margin:0 auto 18px;',
+            'border-radius:50%;border:4px solid rgba(128,212,255,0.2);',
+            'border-top-color:var(--tr-accent);animation:tr-connect-spin 0.9s linear infinite;}',
+            '@keyframes tr-connect-spin{to{transform:rotate(360deg);}}',
+            '#tr-connect-popup h3{font-size:17px;font-weight:900;color:#fff;margin-bottom:6px;}',
+            '#tr-connect-popup p{font-size:13px;color:#9d92b3;}',
+            '#tr-connect-popup.tr-connect-error{border-color:#ef4444;',
+            'box-shadow:0 0 0 1px rgba(239,68,68,0.15),0 0 40px rgba(239,68,68,0.35),',
+            '0 20px 60px rgba(0,0,0,0.5);}',
+            '#tr-connect-popup.tr-connect-error h3{color:#ff8da3;}',
+            '#tr-connect-popup .tr-connect-error-icon{font-size:40px;margin-bottom:10px;}',
+            '#tr-connect-close-btn{position:absolute;top:12px;left:12px;width:28px;height:28px;',
+            'border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:#fff;',
+            'font-size:13px;cursor:pointer;}',
+
             // ⚠️ [منقول بالحرف من التحديث الأخير لروليت الإقصاء] معيار
             // PLAYER-CARD-STANDARDS.md §4: الشاشة تبقى ثابتة بدون أي
             // سكرول على مستوى الصفحة/الصندوق نفسه — فقط منطقة شبكة
@@ -970,21 +1078,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.tr-lobby-title-accent{color:#ffb648 !important;text-shadow:0 2px 10px rgba(255,182,72,0.4) !important;}',
             '#agp-shell-box.agp-lobby-box .agp-join-hint-text{color:#d9c8e8 !important;',
             'font-weight:400 !important;}',
-            // إبراز إضافي لبادج الكلمة المفتاحية الجاهزة أصلاً بالملف
-            // المشترك (.agp-join-keyword-badge) فوق الخلفية الغامقة الجديدة.
-            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge{box-shadow:0 0 22px rgba(0,194,255,0.75) !important;}',
-
-            // ⚠️ [منقول بالحرف من التحديث الأخير لروليت الإقصاء] شارة عدد
-            // اللاعبين — "شارة عائمة أعلى الشاشة" بدل بقائها بنص سطر
-            // التلميح. العنصر نفسه (#agp-lobby-count) موجود أصلاً بالملف
-            // المشترك ومُعبَّأ تلقائياً، هذا فقط يفصلها بصرياً ويعوّمها
-            // أعلى يمين الصندوق بدل تدفقها العادي بالسطر.
-            '#agp-shell-box.agp-lobby-box #agp-lobby-count{position:absolute !important;top:14px !important;',
-            'left:20px !important;z-index:3 !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-player-count-badge{background:rgba(0,0,0,0.45) !important;',
-            'border:1px solid rgba(255,255,255,0.35) !important;border-radius:999px !important;',
-            'padding:6px 16px !important;font-weight:900 !important;font-size:0.95em !important;',
-            'box-shadow:0 4px 14px rgba(0,0,0,0.35) !important;}',
+            // ⚠️ [نموذج "قالب الكلمة المفتاحية الجديد" المعتمَد] بطاقة
+            // زجاجية بحدود سماوية متوهّجة + أيقونة مفتاح، تستبدل التدرّج
+            // الجاهز من الملف المشترك بالكامل (!important يطغى فوقه).
+            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge{background:rgba(128,212,255,0.1) !important;',
+            'backdrop-filter:blur(6px);border:1.5px solid var(--tr-accent) !important;',
+            'box-shadow:0 0 16px rgba(128,212,255,0.5) !important;color:#cdeeff !important;',
+            'font-weight:900 !important;letter-spacing:0.5px;border-radius:999px !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge::before{content:"🔑 ";}',
+            // ⚠️ [نموذج "قالب الكلمة المفتاحية الجديد" المعتمَد] عدد
+            // اللاعبين رجع لتدفّقه الطبيعي بنفس صف الكلمة المفتاحية (بدل
+            // الشارة العائمة المنفصلة أعلى الصندوق من التحديث السابق)،
+            // بشكل متناسق مع القالب الجديد بدل التصميم الأسود القديم.
+            '#agp-shell-box.agp-lobby-box #agp-lobby-count{position:static !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-player-count-badge{background:rgba(255,255,255,0.06) !important;',
+            'border:1px solid rgba(255,255,255,0.2) !important;border-radius:999px !important;',
+            'padding:6px 16px !important;font-weight:800 !important;font-size:0.95em !important;',
+            'box-shadow:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-player-count-badge::before{content:"👥 ";}',
 
             /* ==================================================================
              * ⚠️ [حذف كامل — منقول بالحرف من التحديث الأخير لروليت الإقصاء]
@@ -1060,6 +1171,188 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // العنوان يكبر شوي بدون صندوق يحدّه بصرياً — نفس الألوان
             // ثنائية اللون بلا تغيير (enhanceLobbyHeading لم يتغيّر).
             '#agp-shell-box.agp-lobby-box h2{font-size:1.5em !important;margin-bottom:14px !important;}',
+
+            /* ======================================================================
+             *  [نموذج "درج الإعدادات الجانبي" المعتمَد] الإعدادات المعاد
+             *  فتحها أثناء المباراة (زر ⚙️ بالهيدر) — تحويل #agp-shell-box
+             *  (بحالة isReopened=true بالملف المشترك، مُميَّزة بوجود
+             *  #agp-settings-close-btn) من صندوق مركزي لدرج ينفتح من
+             *  الحافة اليمنى بارتفاع كامل الشاشة، بتبويبين (⚙️ الإعدادات
+             *  / 👥 اللاعبون). حقول الإعدادات نفسها (fieldsHtml) تبقى من
+             *  إنتاج الملف المشترك بدون أي تغيير على منطقها — فقط
+             *  التخطيط/الشكل هنا. تبويب اللاعبين مبني بالكامل محلياً
+             *  (renderReopenedPlayersTab) لأنه يحتاج بيانات _alive/
+             *  _eliminated الخاصة باللعبة، غير متوفرة بالملف المشترك.
+             * ==================================================================== */
+            '#agp-shell-overlay:has(#agp-shell-box.tr-reopened-drawer){padding:0 !important;',
+            'background:rgba(5,3,10,0.45) !important;}',
+            // ⚠️ [تصحيح] موضعة مباشرة بـposition:fixed+top/right على
+            // الصندوق نفسه، بدل الاعتماد على justify-content بالحاوية
+            // الأب (#agp-shell-overlay) — في dir="rtl" فإن flex-end بصف
+            // (row) عادي يعني الطرف الأيسر فعلياً (بداية/نهاية المحور
+            // الرئيسي تتبع اتجاه الكتابة)، فكانت الدرج يظهر يسار الشاشة
+            // بالغلط بدل يمينها رغم "flex-end" (خلل حقيقي انتُبه له
+            // بالاختبار البصري الفعلي). fixed+right:0 يتجاوز هذا اللبس
+            // كلياً بغضّ النظر عن اتجاه الصفحة.
+            '#agp-shell-box.tr-reopened-drawer{position:fixed !important;top:0 !important;right:0 !important;',
+            'left:auto !important;width:360px !important;max-width:88vw !important;',
+            'height:100vh !important;max-height:100vh !important;margin:0 !important;',
+            'background:rgba(15,9,26,0.96) !important;backdrop-filter:blur(12px);',
+            'border:none !important;border-inline-start:1px solid rgba(128,212,255,0.3) !important;',
+            'border-radius:0 !important;box-shadow:-12px 0 40px rgba(0,0,0,0.5) !important;',
+            'padding:0 !important;box-sizing:border-box !important;display:flex !important;',
+            'flex-direction:column !important;overflow:hidden !important;}',
+            // ⚠️ [تصحيح] header/tabs/body/footer صارت عناصر DOM حقيقية
+            // (تُبنى فعلياً بـenhanceReopenedDrawer عبر نقل العناصر
+            // إليها، مو مجرد كلاسات CSS فوق عناصر متفرّقة بترتيب "order"
+            // بدون غلاف فعلي — ذاك كان الخلل الجذري: الحقول كانت تفيض
+            // خارج الصندوق لأنه ما فيه أي عنصر فعلي بـoverflow-y:auto
+            // يحصرها). البنية الفعلية الآن: box > header + tabs + body
+            // (overflow-y:auto، فيها الحقول + تبويب اللاعبين) + footer.
+            '#agp-shell-box.tr-reopened-drawer .tr-drawer-header{display:flex;align-items:center;',
+            'justify-content:space-between;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.08);',
+            'flex:none;}',
+            '#agp-shell-box.tr-reopened-drawer .tr-drawer-header h2{font-size:1em !important;',
+            'font-weight:900;margin:0 !important;padding:0 !important;text-shadow:none !important;color:#fff;',
+            'position:static !important;}',
+            '#agp-shell-box.tr-reopened-drawer #agp-settings-close-btn{position:static !important;',
+            'width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.08) !important;',
+            'color:#fff !important;font-size:0.9em !important;flex:none;display:flex !important;',
+            'align-items:center;justify-content:center;}',
+            '#agp-shell-box.tr-reopened-drawer .tr-drawer-tabs{display:flex;gap:6px;padding:10px 18px 0;flex:none;}',
+            '.tr-drawer-tabs button{flex:1;padding:8px 0;border-radius:8px 8px 0 0;border:none;cursor:pointer;',
+            'background:transparent;color:#8f83a8;font-family:inherit;font-weight:800;font-size:0.82em;',
+            'border-bottom:2px solid transparent;}',
+            '.tr-drawer-tabs button.tr-tab-active{color:#fff;border-bottom-color:var(--tr-accent);',
+            'background:rgba(128,212,255,0.06);}',
+            '#agp-shell-box.tr-reopened-drawer .tr-drawer-body{flex:1;min-height:0;overflow-y:auto;',
+            'padding:14px 18px 18px;}',
+            '#agp-shell-box.tr-reopened-drawer .tr-drawer-footer{flex:none;padding:12px 18px 16px;',
+            'border-top:1px solid rgba(255,255,255,0.08);}',
+
+            // ⚠️ حقول الإعدادات نفسها (منتَجة من الملف المشترك، لا تغيير
+            // بمنطقها) — إعادة تنسيق بصري فقط لتصغيرها داخل عرض 360px،
+            // صف واحد لكل حقل (تسمية+تحكّم بجانب بعض) بدل التخطيط الأصلي.
+            '#agp-shell-box.tr-reopened-drawer .agp-shell-row{display:flex !important;',
+            'align-items:center !important;justify-content:space-between !important;gap:10px;',
+            'padding:12px 0 !important;border-bottom:1px solid rgba(255,255,255,0.07);margin:0 !important;}',
+            '#agp-shell-box.tr-reopened-drawer .agp-shell-row-label{font-size:0.82em !important;',
+            'color:#cdbfe8 !important;font-weight:700 !important;order:2;}',
+            '#agp-shell-box.tr-reopened-drawer .agp-pill-group{order:1;display:flex;flex-wrap:wrap;',
+            'gap:5px;justify-content:flex-end;}',
+            '#agp-shell-box.tr-reopened-drawer .agp-pill-group button{padding:5px 10px !important;',
+            'font-size:0.78em !important;}',
+            // العداد — الرقم بالمنتصف حقل رقمي قابل للكتابة مباشرة أصلاً
+            // (input[type=number] من الملف المشترك)، هنا فقط تصغير حجمه
+            // ليناسب عرض الدرج.
+            '#agp-shell-box.tr-reopened-drawer .agp-shell-counter-row{order:1;}',
+            '#agp-shell-box.tr-reopened-drawer .agp-count-input{width:44px !important;font-size:0.82em !important;}',
+            '#agp-shell-box.tr-reopened-drawer .agp-toggle-switch{order:1;}',
+
+            // ⚠️ "قائمة اللاعبين" المُنتَجة من الملف المشترك (playerManagementHtml)
+            // — نُخفي قائمتها الداخلية (.agp-settings-player-box) لأننا
+            // نبني تبويب لاعبين خاصاً بنا (renderReopenedPlayersTab) يجمع
+            // النشطين والمقصيين معاً، لكن نُبقي زر "➕ فتح دخول لاعبين
+            // جدد" (بعد إعادة تسميته عبر JS) ظاهراً بآخر تبويب الإعدادات
+            // بالضبط بمكانه بترتيب DOM الأصلي.
+            '#agp-shell-box.tr-reopened-drawer .agp-settings-player-box{display:none !important;}',
+            '#agp-shell-box.tr-reopened-drawer .agp-settings-player-row{display:block !important;}',
+            '#agp-shell-box.tr-reopened-drawer #agp-settings-player-count{display:none !important;}',
+            '#agp-shell-box.tr-reopened-drawer .agp-shell-field:has(#agp-settings-player-count) > label{display:none !important;}',
+            '#agp-shell-box.tr-reopened-drawer #agp-reopen-registration-btn{width:100% !important;',
+            'margin-top:6px !important;border:1px dashed rgba(128,212,255,0.5) !important;',
+            'background:rgba(128,212,255,0.08) !important;color:#cdeeff !important;}',
+            // تبويب اللاعبين يخفي كل حقول الإعدادات (كل .agp-shell-row +
+            // حقل إدارة اللاعبين بالكامل بما فيه زر "فتح دخول") — يظهر
+            // بدلها حاوية تبويب اللاعبين المخصَّصة (#tr-players-tab).
+            '#agp-shell-box.tr-reopened-drawer.tr-tab-players .agp-shell-row,',
+            '#agp-shell-box.tr-reopened-drawer.tr-tab-players .agp-shell-field:has(#agp-settings-player-count){',
+            'display:none !important;}',
+            '#agp-shell-box.tr-reopened-drawer:not(.tr-tab-players) #tr-players-tab{display:none !important;}',
+
+            // ---- تبويب اللاعبين المخصَّص (بحث + فلتر + قائمة موحَّدة) ----
+            '#tr-players-tab-search{width:100%;padding:8px 12px;border-radius:9px;',
+            'background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#fff;',
+            'font-family:inherit;font-size:0.8em;margin-bottom:10px;box-sizing:border-box;}',
+            '#tr-players-tab-filter{display:flex;gap:5px;margin-bottom:10px;}',
+            '#tr-players-tab-filter button{flex:1;padding:5px 2px;border-radius:7px;',
+            'border:1px solid rgba(255,255,255,0.14);background:transparent;color:#a99cc4;',
+            'font-family:inherit;font-weight:800;font-size:0.68em;cursor:pointer;}',
+            '#tr-players-tab-filter button.tr-filter-active{background:rgba(128,212,255,0.14);',
+            'border-color:var(--tr-accent);color:#cdeeff;}',
+            '.tr-prow{display:flex;align-items:center;gap:8px;padding:7px 0;',
+            'border-bottom:1px solid rgba(255,255,255,0.05);}',
+            '.tr-prow.tr-prow-out{opacity:0.6;}',
+            '.tr-prow .tr-prow-avatar{width:26px;height:26px;border-radius:50%;flex:none;overflow:hidden;}',
+            '.tr-prow.tr-prow-out .tr-prow-avatar{filter:grayscale(1);}',
+            '.tr-prow .tr-prow-avatar .tr-ring-avatar,.tr-prow .tr-prow-avatar .tr-ring-avatar--fallback{',
+            'width:100%;height:100%;font-size:0.7em;}',
+            '.tr-prow .tr-prow-name{flex:1;font-size:0.8em;font-weight:700;overflow:hidden;',
+            'text-overflow:ellipsis;white-space:nowrap;}',
+            '.tr-prow .tr-prow-status{font-size:0.6em;padding:2px 8px;border-radius:999px;font-weight:800;flex:none;}',
+            '.tr-prow .tr-prow-status.tr-status-live{background:rgba(34,197,94,0.15);color:#4ade80;',
+            'border:1px solid rgba(74,222,128,0.4);}',
+            '.tr-prow .tr-prow-status.tr-status-out{background:rgba(239,68,68,0.15);color:#f87171;',
+            'border:1px solid rgba(248,113,113,0.4);}',
+            '.tr-prow .tr-prow-action{width:22px;height:22px;border-radius:50%;border:none;',
+            'color:#fff;font-weight:900;font-size:0.65em;cursor:pointer;flex:none;}',
+            '.tr-prow .tr-prow-action.tr-action-eliminate{background:#ef4444;}',
+            '.tr-prow .tr-prow-action.tr-action-revive{background:linear-gradient(135deg,#22c55e,#16a34a);}',
+
+            // ---- زر الرجوع الصغير (سهم+نص، بلا خلفية/حدود) — يظهر أسفل
+            // الدرج بشكل ثابت (tr-drawer-footer)، بلا علاقة بتبويب اللاعبين.
+            '.tr-drawer-back-link{width:100%;padding:4px;border:none;background:transparent;',
+            'color:#8f83a8;font-family:inherit;font-weight:700;font-size:0.72em;cursor:pointer;',
+            'display:flex;align-items:center;justify-content:center;gap:5px;}',
+            '.tr-drawer-back-link:hover{color:#cdbfe8;}',
+            '.tr-drawer-back-hint{text-align:center;font-size:0.62em;color:#4a4260;margin-top:2px;}',
+
+            /* ======================================================================
+             *  [نموذج "لوحة استقبال لاعبين جدد" المعتمَد] شاشة "إضافة لوبي
+             *  جديد" (تظهر بعد الضغط على زر "فتح دخول لاعبين جدد"، مُنتَجة
+             *  بالكامل من handleReopenRegistrationClick بالملف المشترك) —
+             *  تصميم مختلف عمداً عن باقي شاشات اللعبة: لوحة عائمة شفافة/
+             *  زجاجية بحدود مدببة (زوايا مقصوصة) بلون هوية اللعبة السماوي،
+             *  فوق العجلة مباشرة (بدل استبدال الدرج بالكامل بصندوق داكن
+             *  عادي). نكتشف هذي الحالة بوجود #agp-mini-lobby-list (فريد
+             *  لهذي الشاشة تحديداً) — enhanceMiniLobbyPanel() يضيف الكلاس
+             *  المميِّز tr-mini-lobby-active.
+             * ==================================================================== */
+            '#agp-shell-overlay:has(#agp-shell-box.tr-mini-lobby-active){padding:0 !important;',
+            'align-items:center !important;justify-content:center !important;',
+            'background:rgba(5,3,10,0.55) !important;backdrop-filter:blur(3px);}',
+            '#agp-shell-box.tr-mini-lobby-active{width:420px !important;max-width:92vw !important;',
+            'height:auto !important;max-height:88vh !important;margin:0 !important;',
+            'padding:26px 26px 22px !important;box-sizing:border-box !important;',
+            'background:rgba(20,12,34,0.55) !important;backdrop-filter:blur(14px);',
+            'border:1.5px solid #80d4ff !important;border-radius:0 !important;',
+            'clip-path:polygon(20px 0,100% 0,100% calc(100% - 20px),calc(100% - 20px) 100%,0 100%,0 20px);',
+            'box-shadow:0 0 0 1px rgba(128,212,255,0.15),0 0 40px rgba(128,212,255,0.35),',
+            '0 20px 60px rgba(0,0,0,0.5) !important;position:relative;overflow-y:auto;}',
+            '#agp-shell-box.tr-mini-lobby-active::before,#agp-shell-box.tr-mini-lobby-active::after{',
+            'content:"";position:absolute;width:26px;height:1.5px;background:#80d4ff;',
+            'box-shadow:0 0 8px rgba(128,212,255,0.9);}',
+            '#agp-shell-box.tr-mini-lobby-active::before{top:0;left:0;transform:rotate(45deg) translate(-7px,-7px);}',
+            '#agp-shell-box.tr-mini-lobby-active::after{bottom:0;right:0;transform:rotate(45deg) translate(7px,7px);}',
+            '#agp-shell-box.tr-mini-lobby-active h2{text-align:center !important;font-size:1.05em !important;',
+            'margin-bottom:6px !important;}',
+            '#agp-shell-box.tr-mini-lobby-active .agp-join-hint{text-align:center;}',
+            '#agp-shell-box.tr-mini-lobby-active #agp-mini-lobby-list{display:grid !important;',
+            'grid-template-columns:1fr 1fr !important;gap:8px !important;max-height:130px;overflow-y:auto;',
+            'margin:14px 0 !important;list-style:none;padding:0;}',
+            '#agp-shell-box.tr-mini-lobby-active #agp-mini-lobby-list li{background:rgba(255,255,255,0.06);',
+            'border:1px solid rgba(255,255,255,0.14);border-radius:10px;padding:6px 8px;position:relative;}',
+            '#agp-shell-box.tr-mini-lobby-active .tr-mini-remove-btn{position:absolute;top:-5px;left:-5px;',
+            'width:18px;height:18px;border-radius:50%;background:#ef4444;color:#fff;border:2px solid #150a29;',
+            'font-weight:900;font-size:10px;line-height:14px;text-align:center;cursor:pointer;z-index:2;}',
+            '#agp-shell-box.tr-mini-lobby-active .agp-shell-btn-connect{',
+            'background:linear-gradient(90deg,#7c3aed,#80d4ff) !important;color:#0a0612 !important;}',
+            // "بانتظار انضمام" — مؤشّر نابض يُضاف قبل قائمة اللاعبين مباشرة.
+            '.tr-mini-live-dot{display:flex;align-items:center;justify-content:center;gap:6px;',
+            'margin-top:8px;font-size:0.75em;color:#80d4ff;font-weight:800;}',
+            '.tr-mini-live-dot .dot{width:8px;height:8px;border-radius:50%;background:#80d4ff;',
+            'box-shadow:0 0 8px #80d4ff;animation:tr-mini-pulse 1.2s ease-in-out infinite;}',
+            '@keyframes tr-mini-pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(0.7);}}',
         ].join('');
         document.head.appendChild(style);
     }
@@ -1477,8 +1770,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _wheelSpinning = true;
         playSound('spin');
 
-        var winnerIndex = Math.floor(Math.random() * _alive.length);
-        var winner = _alive[winnerIndex];
+        // ⚠️ [إصلاح خلل حقيقي — لاحظه المستخدم فعلياً] بدون هذا الاستثناء،
+        // الاختيار عشوائي بحت (Math.random) بلا أي ذاكرة — مع عدد لاعبين
+        // قليل (خصوصاً قرب نهاية المباراة، لاعبان-ثلاثة)، هذا يعني إحصائياً
+        // أن نفس اللاعب يقدر يتكرر 3، 4، 5 مرات متتالية بسهولة، ويحس وكأن
+        // العجلة "عالقة" أو معطوبة. الحل: لو نفس اللاعب فاز بآخر دورتين
+        // متتاليتين فعلاً (_repeatStreak >= 2)، يُستبعَد من قائمة هذي
+        // الدورة فقط (لو فيه لاعب ثاني متاح) — يضمن حداً أقصى دورتين
+        // متتاليتين بالضبط، **بدون** إلغاء إمكانية الوصول لدورتين متتاليتين
+        // أصلاً (هذا بالذات هو الشرط اللي يفتح نافذة "انعاش صديق" — راجع
+        // handleWheelLanded أدناه، fon لازم يبقى ممكناً).
+        var spinPool = _alive;
+        if (_repeatStreak >= 2 && _lastWheelWinnerId !== null && _alive.length > 1) {
+            var filteredPool = _alive.filter(function (p) { return p.id !== _lastWheelWinnerId; });
+            if (filteredPool.length > 0) spinPool = filteredPool;
+        }
+        var winner = spinPool[Math.floor(Math.random() * spinPool.length)];
+        var winnerIndex = _alive.indexOf(winner); // فهرس حقيقي داخل _alive الكامل — لازم لحساب زاوية القطعة الصحيحة بالرسم
 
         var n = _alive.length;
         var anglePer = (2 * Math.PI) / n;
@@ -1793,12 +2101,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // (❔) بدل الأفاتار الحقيقي، واسم قبيلة عشوائي بدل اسم اللاعب.
     function tribeCandidateCardHtml(tribeLabel, index, roleClass) {
         return '<div class="tr-select-cand-card" data-index="' + index + '">' +
-            '<div class="tr-select-cand-row">' +
-                '<div class="tr-select-cand-avatar tr-select-cand-avatar-hidden" aria-hidden="true">❔</div>' +
-                '<div class="tr-select-cand-plate">' +
-                    '<span class="tr-select-cand-name">' + escapeHtml(tribeLabel) + '</span>' +
-                    '<span class="tr-select-cand-num ' + roleClass + '">' + (index + 1) + '</span>' +
-                '</div>' +
+            '<div class="tr-tribe-only-card">' +
+                '<span class="tr-tribe-only-num ' + roleClass + '">' + (index + 1) + '</span>' +
+                '<span class="tr-tribe-only-name">' + escapeHtml(tribeLabel) + '</span>' +
             '</div>' +
         '</div>';
     }
@@ -1838,17 +2143,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     // ⚠️ "استئناف اللعبة" — الزر الوحيد بنافذة الإرجاع، وأحد زرَّين بنافذة
-    // الإقصاء. يغلق الدور بدون أي إقصاء/إرجاع. بنافذة الإقصاء فقط: نفس
-    // تصفير دوران العجلة القديم + استئناف "العب" التلقائي لو مفعَّل.
+    // الإقصاء. يغلق الدور بدون أي إقصاء/إرجاع. كلا النوعين لا يغيّران
+    // التشكيلة، فكلاهما يحتاجان نفس تصفير دوران العجلة + استئناف "العب"
+    // التلقائي لو مفعَّل.
+    // ⚠️ [إصلاح خلل حقيقي — لُقِط أثناء فحص شامل للعبة] كان تصفير الدوران
+    // واستئناف "العب" التلقائي مقصورين على نافذة الإقصاء فقط (isRevive
+    // يتخطاهما بالكامل) — يعني استئناف اللعبة من نافذة الإرجاع تحديداً
+    // كان يُبقي دوران العجلة المتراكم من الدورة السابقة (نفس علّة "توقّف
+    // السهم بصرياً على لاعب مختلف" الموثَّقة بكل مكان آخر بهذا الملف)،
+    // وأيضاً يوقف "العب التلقائي" بصمت بدون أي تنبيه. صار السلوك موحَّداً
+    // للنوعين الآن.
     function handleSelectResumeClick() {
         if (!_pendingTurn) return;
-        var isRevive = _pendingTurn.type === 'revive';
         AGP.timerManager.stop(TIMER_NAME);
         closeTurnModal();
-        if (!isRevive) {
-            resetWheelSpinPosition();
-            maybeAutoSpin();
-        }
+        resetWheelSpinPosition();
+        maybeAutoSpin();
     }
 
     var _turnTickUnsub = null;
@@ -1925,17 +2235,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* ======================================================================
-     *  7ب) تبويب إعلان النتيجة (إقصاء/إرجاع) — 4 ثوانٍ + صوت
+     *  7ب) تبويب إعلان النتيجة (إقصاء/إرجاع) — 3 ثوانٍ + صوت
      * ==================================================================== */
     /**
-     * ⚠️ [0.46.0] إعادة تصميم كاملة: بدل الأيقونة+العنوان+الاسم الكبير
-     * القديم، صندوق صغير (~650×300) بجملة واحدة "اللاعب [أفاتار+اسم] قام
-     * بإقصاء/بإرجاع [أفاتار+اسم]". تأثير أحمر+تلاشي لصورة المُقصى،
-     * تأثير أخضر + تحوّل حلقة المُرجَع من أحمر لأخضر (بالضبط كما أكّد
-     * المستخدم بالطلب).
-     * @param {Object} data - {target, chooser} كائنا لاعب كاملين (وليس
-     *   نصوصاً فقط كما كان بالتصميم القديم). chooser قد يكون null (مثلاً
-     *   إقصاء صاحب الدور نفسه عند انتهاء الوقت).
+     * ⚠️ [نموذج معتمَد: "elimination-roulette-current-new"] منقول بالحرف
+     * من التصميم الحالي فعلياً بروليت الإقصاء — يستبدل التصميم القديم
+     * (جملة واحدة متكدّسة مع الصور بمنتصف النص). جملة كاملة أعلى الصندوق
+     * تتضمّن اسمَي الطرفين حرفياً ("قام X بإقصاء Y بنجاح")، وبطاقة شخص
+     * منفصلة لكل طرف (حلقة ملوَّنة + وسم دور كبسولة + اسم) — راجع
+     * announcePersonCardHtml أدناه.
+     * @param {Object} data - {target, chooser} كائنا لاعب كاملين. chooser
+     *   قد يكون null (مثلاً إقصاء صاحب الدور نفسه عند انتهاء الوقت).
      */
     function showResultAnnouncement(type, data, onDone) {
         ensureScaffolding();
@@ -1947,25 +2257,45 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var isEliminate = type === 'eliminate';
         playSound(isEliminate ? 'eliminate' : 'revive');
 
-        var verb = isEliminate ? 'قام بإقصاء' : 'قام بإرجاع';
-        var chooserHtml = data.chooser ? announcePersonHtml(data.chooser, '') : '';
-        var targetEffectClass = isEliminate
-            ? 'tr-announce-effect-red tr-announce-target-fadeout'
-            : 'tr-announce-effect-green tr-announce-target-revive-ring';
-        var targetHtml = announcePersonHtml(data.target, targetEffectClass);
+        var actorName = data.chooser ? playerLabel(data.chooser) : '';
+        var targetName = playerLabel(data.target);
+        var titleHtml;
+        if (data.chooser) {
+            titleHtml = isEliminate
+                ? ('قام ' + escapeHtml(actorName) + ' بإقصاء ' + escapeHtml(targetName) + ' بنجاح')
+                : ('قام ' + escapeHtml(actorName) + ' بإرجاع ' + escapeHtml(targetName) + ' بنجاح');
+        } else {
+            titleHtml = isEliminate
+                ? ('تم إقصاء ' + escapeHtml(targetName) + ' بنجاح')
+                : ('تم إرجاع ' + escapeHtml(targetName) + ' بنجاح');
+        }
+
+        var actorCardHtml = data.chooser
+            ? announcePersonCardHtml(data.chooser, {
+                ringClass: 'tr-announce-ring-green',
+                badgeClass: 'tr-announce-badge-green',
+                badgeText: isEliminate ? '✅ أقصى' : '✅ رجّع'
+            })
+            : '';
+        var targetCardHtml = isEliminate
+            ? announcePersonCardHtml(data.target, {
+                ringClass: 'tr-announce-ring-red tr-announce-ring-desaturate',
+                badgeClass: 'tr-announce-badge-red',
+                badgeText: '❌ انقصى'
+            })
+            : announcePersonCardHtml(data.target, {
+                ringClass: 'tr-announce-ring-green',
+                badgeClass: 'tr-announce-badge-green',
+                badgeText: '💚 رجع'
+            });
 
         box.className = 'tr-announce-box ' + (isEliminate ? 'tr-announce-eliminate' : 'tr-announce-revive');
         box.innerHTML =
-            '<div class="tr-announce-sentence">' +
-            (chooserHtml
-                ? ('اللاعب ' + chooserHtml + ' ' + verb + ' ' + targetHtml)
-                : (isEliminate ? ('تم إقصاء ' + targetHtml) : ('تم إرجاع ' + targetHtml))) +
-            '</div>';
+            '<div class="tr-announce-title">' + titleHtml + '</div>' +
+            '<div class="tr-announce-row">' + actorCardHtml + targetCardHtml + '</div>';
 
         overlay.style.display = 'flex';
 
-        // ⚠️ [0.45.12] تقليل مدة ظهور تبويب الإعلان من 4 ثوانٍ إلى 3 —
-        // طلب صريح.
         window.setTimeout(function () {
             overlay.style.display = 'none';
             box.className = '';
@@ -1973,11 +2303,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }, 3000);
     }
 
-    function announcePersonHtml(player, effectClass) {
-        return '<span class="tr-announce-person">' +
-            '<span class="tr-announce-avatar-wrap ' + effectClass + '">' + ringAvatarHtml(player) + '</span>' +
-            '<span class="tr-announce-person-name">' + escapeHtml(playerLabel(player)) + '</span>' +
-            '</span>';
+    /**
+     * ⚠️ بطاقة شخص لتبويب إعلان النتيجة (حلقة ملوَّنة حول الصورة + وسم
+     * دور كبسولة + الاسم) — منقولة بالحرف من announcePersonCardHtml
+     * بروليت الإقصاء. @param {Object} opts - {ringClass, badgeClass, badgeText}
+     */
+    function announcePersonCardHtml(player, opts) {
+        opts = opts || {};
+        return '<div class="tr-announce-person-card">' +
+            '<div class="tr-announce-ring ' + (opts.ringClass || '') + '">' + ringAvatarHtml(player) + '</div>' +
+            '<div class="tr-announce-role-badge ' + (opts.badgeClass || '') + '">' + (opts.badgeText || '') + '</div>' +
+            '<div class="tr-announce-person-name">' + escapeHtml(playerLabel(player)) + '</div>' +
+            '</div>';
     }
 
     /* ======================================================================
@@ -2123,6 +2460,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (aliveIdx === -1 && elimIdx === -1) return; // ما كان جزءاً من مباراة نشطة أصلاً (حذف قبل بدء الجولة مثلاً)
 
         realignWheelAfterRosterChange();
+        // ⚠️ [نموذج "درج الإعدادات الجانبي" المعتمَد] تحديث حي لتبويب
+        // اللاعبين لو الدرج مفتوح فعلاً على هذا التبويب وقت الحذف —
+        // idempotent (renderReopenedPlayersTab نفسها تتحقق من وجود
+        // #tr-players-tab-list أولاً وترجع فوراً لو مو موجود).
+        renderReopenedPlayersTab();
 
         // لو كان صاحب الدور بالضبط باللي حُذف وسط نافذة مفتوحة، نُلغي
         // الدور بالكامل (بدون إقصاء/إرجاع) بدل حالة غير متّسقة.
@@ -2156,6 +2498,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (alreadyAlive || alreadyEliminated) return;
         _alive.push(newPlayer);
         realignWheelAfterRosterChange();
+        renderReopenedPlayersTab();
     }
 
     /* ======================================================================
@@ -2395,10 +2738,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             });
         }
 
-        box.className = 'tr-modal-box';
+        box.className = 'tr-modal-box tr-winner-transparent';
         box.style.textAlign = 'center';
         box.innerHTML =
             '<div id="tr-winner-box">' +
+            // ⚠️ مربع الفيديو 160×160 — يشتغل تلقائياً (autoplay) فور ظهور
+            // شاشة الفائز. muted إلزامي: كل المتصفحات تمنع autoplay بصوت
+            // بدون تفاعل مستخدم أول، بغضّ النظر عن أي إعداد آخر — قيد
+            // متصفحات حقيقي، مو اختيارنا. onerror يخفي المربع بالكامل لو
+            // ملف الفيديو غير موجود (بدل مربع أسود فارغ مكسور).
+            '<div id="tr-winner-video-badge">' +
+            '<video src="winner-video.mp4" autoplay muted playsinline ' +
+            'onerror="this.closest(\'#tr-winner-video-badge\').style.display=\'none\'"></video>' +
+            '</div>' +
             '<h2>🏁 انتهت المباراة!</h2>' +
             '<div class="tr-trophy-cards">' + (cardsHtml || '<p class="tr-trophy-label">بدون فائز</p>') + '</div>' +
             '<div class="tr-winner-actions">' +
@@ -2610,6 +2962,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var box = el('agp-shell-box');
         if (!box) return;
         if (box.classList.contains('agp-lobby-box') || box.classList.contains('agp-connecting-box')) return;
+        // ⚠️ [نموذج "درج الإعدادات الجانبي" المعتمَد] الإعدادات المعاد
+        // فتحها أثناء المباراة صار لها معالج مخصَّص كلياً (enhanceReopenedDrawer)
+        // بما فيه زر رجوع صغير خاص بها (.tr-drawer-back-link). بدون هذا
+        // الفحص، querySelector('.agp-shell-btn-connect') أدناه كان يطابق
+        // زر "➕ فتح دخول لاعبين جدد" بالغلط (نفس الكلاس الأصلي من الملف
+        // المشترك) ويضيف زر رجوع مكرَّر وسط حقول الإعدادات — خلل حقيقي
+        // انتُبه له بالاختبار الفعلي.
+        if (el('agp-settings-close-btn')) return;
+        // ⚠️ شاشة "إضافة لوبي جديد" (استقبال لاعبين جدد) أيضاً بلا
+        // #agp-settings-close-btn (box.innerHTML مختلف كلياً هناك) —
+        // بدون هذا الفحص، querySelector('.agp-shell-btn-connect') تحت
+        // كان يطابق زر "✅ إكمال المباراة" بالغلط ويضيف زر رجوع غير
+        // مطلوب على تلك الشاشة (خلل حقيقي انتُبه له بالاختبار الفعلي).
+        if (el('agp-mini-lobby-list')) return;
         // ⚠️ [نموذج "settings-no-box" المعتمَد] الشاشة الأولى فقط (قبل أي
         // اتصال بالبث) — نميّزها بوجود #agp-tiktok-username (لا يُبنى
         // إطلاقاً بالإعدادات المعاد فتحها أثناء المباراة). الكلاس يفعّل
@@ -2618,6 +2984,30 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // تبقى بشكلها الأصلي (صندوق) بلا أي تغيير.
         var isInitial = !!el('agp-tiktok-username');
         box.classList.toggle('tr-settings-initial-box', isInitial);
+
+        // ⚠️ [نموذج "تبويب الاتصال فوق شاشة الإعدادات" المعتمَد] الملف
+        // المشترك يستبدل box.innerHTML بالكامل وقت "جاري الاتصال" (يمسح
+        // شاشة الإعدادات فعلياً، مو بس يخفيها) — راجع renderConnectingScreen
+        // بـjs/agp-game-shell.js. بدل تعديل ذاك الملف، نعترض onclick الأصلي
+        // لزر الاتصال هنا محلياً: قبل ما نمرّر التنفيذ للدالة الأصلية،
+        // نحفظ كل عناصر box الحيّة (بمستمعات أحداثها سليمة، مجرد نقل
+        // DOM حقيقي — لا استنساخ/تسلسل نصّي يفقد المستمعات) بحاوية مخفية
+        // منفصلة. enhanceConnectingScreen() أدناه تستردّها فور اكتشاف حالة
+        // الاتصال. idempotent عبر dataset فلاغ (تُلف مرة واحدة فقط، مهما
+        // تكرّر استدعاء enhanceSettingsScreen على نفس الزر).
+        if (isInitial) {
+            var connectBtnForWrap = box.querySelector('.agp-shell-btn-connect');
+            if (connectBtnForWrap && !connectBtnForWrap.dataset.trConnectWired) {
+                connectBtnForWrap.dataset.trConnectWired = '1';
+                var originalConnectHandler = connectBtnForWrap.onclick;
+                connectBtnForWrap.onclick = function (ev) {
+                    _connectingFlowActive = true;
+                    _savedSettingsNodes = Array.prototype.slice.call(box.children);
+                    if (typeof originalConnectHandler === 'function') originalConnectHandler.call(connectBtnForWrap, ev);
+                };
+            }
+        }
+
         if (box.querySelector('.tr-back-to-platform-btn')) return;
         var connectBtn = box.querySelector('.agp-shell-btn-connect');
         if (!connectBtn) return;
@@ -2705,6 +3095,314 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
     }
 
+    // ⚠️ [نموذج "درج الإعدادات الجانبي" المعتمَد] يتذكّر أي تبويب كان
+    // مفتوحاً عبر عمليات renderSettingsScreen(true) المتكرّرة (كل تغيير
+    // بحقل إعداد يعيد بناء #agp-shell-box بالكامل من الصفر — الملف
+    // المشترك، غير قابل للتفادي بدون تعديله)، حتى ما يرجع المستخدم
+    // لتبويب "الإعدادات" تلقائياً كل مرة يبدّل فيها حقلاً وهو بتبويب
+    // "اللاعبون". يُصفَّر فقط عند إغلاق الدرج (✕) أو فتحه من جديد.
+    var _reopenedDrawerTab = 'settings';
+    var _playersTabFilter = 'all';
+    // ⚠️ [نموذج "تبويب الاتصال فوق شاشة الإعدادات" المعتمَد]
+    var _connectingFlowActive = false;
+    var _savedSettingsNodes = null;
+
+    /**
+     * ⚠️ يحوّل #agp-shell-box (حالة isReopened=true بالملف المشترك) من
+     * صندوق مركزي لدرج جانبي بتبويبين. يُستدعى من applyShellEnhancements
+     * (عبر MutationObserver) — يُعاد بناء الأغلفة (header/tabs/body/footer)
+     * بالكامل بكل استدعاء لأن الملف المشترك يستبدل box.innerHTML بالكامل
+     * مع أي تغيير حقل (راجع renderSettingsScreen بالملف المشترك)، فمافي
+     * فايدة من فحص "already wrapped" — لكن _reopenedDrawerTab (متغيّر
+     * وحدة، خارج هذي الدالة) يحافظ على التبويب النشط عبر كل عملية إعادة
+     * بناء.
+     */
+    function enhanceReopenedDrawer() {
+        var box = el('agp-shell-box');
+        if (!box) return;
+        var closeBtn = el('agp-settings-close-btn');
+        if (!closeBtn || box.classList.contains('agp-lobby-box')) {
+            box.classList.remove('tr-reopened-drawer', 'tr-tab-players');
+            return; // مو حالة "معاد فتحها"
+        }
+
+        // ⚠️ [إصلاح حلقة لا نهائية — باغ حقيقي مؤكَّد بالاختبار الفعلي]
+        // هذي الدالة تُستدعى من MutationObserver يراقب #agp-shell-box.
+        // بناء الأغلفة أدناه (تفريغ box.innerHTML وإعادة توزيع العناصر)
+        // هو بحدّ ذاته تغيير DOM حقيقي — لو نفّذناه بكل استدعاء بلا
+        // شرط، كل عملية بناء تُطلق المراقب من جديد، اللي يستدعي هذي
+        // الدالة تاني، اللي تعيد البناء تاني... حلقة لا نهائية فعلية
+        // (جرّبتها حرفياً، علّقت المتصفح). الفحص هنا يفرّق صح بين حالتين:
+        // "الملف المشترك أعاد بناء box.innerHTML فعلياً من جديد" (يحصل
+        // فقط عند renderSettingsScreen — عنصرها الأول دائماً closeBtn أو
+        // h2 مباشرة، مو أي عنصر بكلاسنا المحلي)، مقابل "هذا مجرد صدى
+        // لتعديلاتنا نحن" (العنصر الأول أصلاً tr-drawer-header من مرة
+        // سابقة). بالحالة الثانية نوقف فوراً بدون أي DOM mutation إضافي
+        // — فقط تحديث حالة زر التبويب النشط (تغيير كلاس بسيط، غير كافٍ
+        // وحده لإطلاق نفس شرط "طفل أول تغيّر" فيهرب من الحلقة).
+        if (box.firstElementChild && box.firstElementChild.classList.contains('tr-drawer-header')) {
+            box.classList.toggle('tr-tab-players', _reopenedDrawerTab === 'players');
+            box.querySelectorAll('.tr-drawer-tabs button').forEach(function (b) {
+                b.classList.toggle('tr-tab-active', b.getAttribute('data-tab') === _reopenedDrawerTab);
+            });
+            return;
+        }
+
+        // ⚠️ [تصحيح جذري] box.innerHTML يُستبدَل بالكامل من الملف المشترك
+        // مع كل تغيير حقل — يعني عناصر header/tabs/body/footer (لو
+        // بُنيت بمرة سابقة) اختفت فعلياً، فلا فايدة من فحص "موجودة
+        // مسبقاً". نعيد بناء الأغلفة بالكامل بكل استدعاء: نلتقط كل
+        // عناصر box الحالية (كما أنتجها الملف المشترك للتو) بمصفوفة
+        // ثابتة أولاً (قبل أي نقل، وإلا live HTMLCollection تتغيّر أثناء
+        // التكرار نفسه)، ثم نعيد توزيعها داخل أغلفة حقيقية.
+        var originalChildren = Array.prototype.slice.call(box.children);
+        var h2 = originalChildren.filter(function (n) { return n.tagName === 'H2'; })[0];
+        var connectBtn = originalChildren.filter(function (n) { return n.classList && n.classList.contains('agp-shell-btn-connect'); })[0];
+        // بقية العناصر (كل حقول الإعدادات + حقل إدارة اللاعبين) — كل
+        // شيء غير closeBtn/h2/connectBtn (الأخير عادة غير موجود أصلاً
+        // بحالة isReopened=true، لكن نستثنيه احتياطاً).
+        var fieldNodes = originalChildren.filter(function (n) {
+            return n !== closeBtn && n !== h2 && n !== connectBtn;
+        });
+
+        box.classList.add('tr-reopened-drawer');
+        box.classList.toggle('tr-tab-players', _reopenedDrawerTab === 'players');
+        box.innerHTML = ''; // نفرّغه تماماً — كل العناصر أعلاه محفوظة بمتغيّرات JS، مو مفقودة
+
+        // ---- الهيدر: العنوان + زر الإغلاق بصف واحد ----
+        var header = document.createElement('div');
+        header.className = 'tr-drawer-header';
+        if (h2) header.appendChild(h2);
+        // زر الإغلاق الأصلي — نحفظ سلوكه (hideRelocatedControls+hideOverlay،
+        // دالتان داخليتان بالملف المشترك غير مُصدَّرتين) ونضيف فوقه
+        // تصفير التبويب المحفوظ محلياً، بدل استبداله بالكامل (كان يُفقِد
+        // السلوك الأصلي فعلياً — bug حقيقي انتُبه له أثناء المراجعة).
+        var originalCloseHandler = closeBtn.onclick;
+        closeBtn.onclick = function () {
+            _reopenedDrawerTab = 'settings';
+            if (typeof originalCloseHandler === 'function') originalCloseHandler.call(closeBtn);
+        };
+        header.appendChild(closeBtn);
+        box.appendChild(header);
+
+        // ---- شريط التبويبين ----
+        var tabs = document.createElement('div');
+        tabs.className = 'tr-drawer-tabs';
+        tabs.innerHTML =
+            '<button type="button" data-tab="settings">⚙️ الإعدادات</button>' +
+            '<button type="button" data-tab="players">👥 اللاعبون</button>';
+        tabs.querySelectorAll('button').forEach(function (btn) {
+            btn.classList.toggle('tr-tab-active', btn.getAttribute('data-tab') === _reopenedDrawerTab);
+            btn.onclick = function () {
+                _reopenedDrawerTab = btn.getAttribute('data-tab');
+                box.classList.toggle('tr-tab-players', _reopenedDrawerTab === 'players');
+                tabs.querySelectorAll('button').forEach(function (b) {
+                    b.classList.toggle('tr-tab-active', b === btn);
+                });
+                if (_reopenedDrawerTab === 'players') renderReopenedPlayersTab();
+            };
+        });
+        box.appendChild(tabs);
+
+        // ---- الجسم القابل للسكرول: كل حقول الإعدادات + تبويب اللاعبين ----
+        var bodyWrap = document.createElement('div');
+        bodyWrap.className = 'tr-drawer-body';
+        fieldNodes.forEach(function (n) { bodyWrap.appendChild(n); });
+
+        // زر "➕ إضافة لوبي جديد" الأصلي (من الملف المشترك، داخل fieldNodes
+        // أصلاً ضمن حقل إدارة اللاعبين) — إعادة تسمية فقط، نفس onclick
+        // الأصلي (handleReopenRegistrationClick) بدون أي تغيير على منطقه.
+        var reopenBtn = bodyWrap.querySelector('#agp-reopen-registration-btn');
+        if (reopenBtn) reopenBtn.textContent = '➕ فتح دخول لاعبين جدد';
+
+        var playersTab = document.createElement('div');
+        playersTab.id = 'tr-players-tab';
+        playersTab.innerHTML =
+            '<input type="text" id="tr-players-tab-search" placeholder="🔍 دوّر على لاعب...">' +
+            '<div id="tr-players-tab-filter">' +
+            '<button type="button" data-filter="all">الكل</button>' +
+            '<button type="button" data-filter="live">🟢 نشطون</button>' +
+            '<button type="button" data-filter="out">🔴 مقصون</button>' +
+            '</div>' +
+            '<div id="tr-players-tab-list"></div>';
+        playersTab.querySelector('#tr-players-tab-search').oninput = function () { renderReopenedPlayersTab(); };
+        playersTab.querySelectorAll('#tr-players-tab-filter button').forEach(function (b) {
+            b.classList.toggle('tr-filter-active', b.getAttribute('data-filter') === _playersTabFilter);
+            b.onclick = function () { _playersTabFilter = b.getAttribute('data-filter'); renderReopenedPlayersTab(); };
+        });
+        bodyWrap.appendChild(playersTab);
+        box.appendChild(bodyWrap);
+
+        // ---- التذييل الثابت: زر رجوع صغير (سهم+نص) تحت "فتح دخول
+        // لاعبين جدد" مباشرة (بترتيب DOM — الزر داخل bodyWrap فوقه) ----
+        var footer = document.createElement('div');
+        footer.className = 'tr-drawer-footer';
+        var link = document.createElement('button');
+        link.type = 'button';
+        link.className = 'tr-drawer-back-link';
+        link.innerHTML = '<span>↩</span> رجوع لمنصة ألعاب أيمن';
+        link.onclick = homeNavigate;
+        var hint = document.createElement('div');
+        hint.className = 'tr-drawer-back-hint';
+        hint.textContent = 'هذا الزر يرجّعك أيضاً لمنصة الألعاب الرئيسية';
+        footer.appendChild(link);
+        footer.appendChild(hint);
+        box.appendChild(footer);
+
+        if (connectBtn) box.appendChild(connectBtn); // احتياط فقط — عادة غير موجود بحالة isReopened=true
+
+        if (_reopenedDrawerTab === 'players') renderReopenedPlayersTab();
+    }
+
+    /**
+     * ⚠️ يجمع اللاعبين النشطين (_alive) والمقصيين (_eliminated) بقائمة
+     * واحدة — كل الأسماء اللي شاركت بالمباراة منذ بدايتها، بدون استثناء
+     * (بعكس قائمة اللوبي الأصلية اللي تعرض النشطين فقط). فلتر بحث بالاسم
+     * + فلتر حالة (الكل/نشطون/مقصون)، ترتيب أبجدي. كل صف نشط له زر ×
+     * أحمر (إقصاء يدوي هادئ، بدون تبويب إعلان نتيجة)، وكل صف مقصى له زر
+     * ↩ أخضر (إرجاع يدوي فوري — **بدون** فحص _friendRevivedIds، فيرجع
+     * حتى لو خلصت فرصة "انعاش صديق" الخاصة به، بطلب صريح).
+     */
+    function renderReopenedPlayersTab() {
+        var listEl = el('tr-players-tab-list');
+        if (!listEl) return;
+
+        var query = ((el('tr-players-tab-search') || {}).value || '').trim().toLowerCase();
+        var rows = _alive.map(function (p) { return { player: p, status: 'live' }; })
+            .concat(_eliminated.map(function (e) { return { player: e.player, status: 'out' }; }));
+
+        if (_playersTabFilter !== 'all') {
+            rows = rows.filter(function (r) { return r.status === _playersTabFilter; });
+        }
+        if (query) {
+            rows = rows.filter(function (r) { return playerLabel(r.player).toLowerCase().indexOf(query) !== -1; });
+        }
+        rows.sort(function (a, b) { return playerLabel(a.player).localeCompare(playerLabel(b.player), 'ar'); });
+
+        // تحديث حالة أزرار الفلتر (تُبنى مرة واحدة فقط بـenhanceReopenedDrawer،
+        // نحدّث الكلاس النشط فقط هنا).
+        var filterWrap = el('tr-players-tab-filter');
+        if (filterWrap) {
+            filterWrap.querySelectorAll('button').forEach(function (b) {
+                b.classList.toggle('tr-filter-active', b.getAttribute('data-filter') === _playersTabFilter);
+            });
+        }
+
+        if (!rows.length) {
+            listEl.innerHTML = '<div style="text-align:center;color:#6b6280;font-size:0.78em;padding:20px 0;">ولا لاعب مطابق</div>';
+            return;
+        }
+
+        listEl.innerHTML = rows.map(function (r) {
+            var isLive = r.status === 'live';
+            var actionHtml = isLive
+                ? '<button type="button" class="tr-prow-action tr-action-eliminate" data-id="' + escapeHtml(r.player.id) + '" title="إقصاء يدوي">✕</button>'
+                : '<button type="button" class="tr-prow-action tr-action-revive" data-id="' + escapeHtml(r.player.id) + '" title="إرجاع يدوي">↩</button>';
+            return '<div class="tr-prow' + (isLive ? '' : ' tr-prow-out') + '">' +
+                '<span class="tr-prow-avatar">' + ringAvatarHtml(r.player) + '</span>' +
+                '<span class="tr-prow-name">' + escapeHtml(playerLabel(r.player)) + '</span>' +
+                '<span class="tr-prow-status ' + (isLive ? 'tr-status-live' : 'tr-status-out') + '">' + (isLive ? 'نشط' : 'مقصى') + '</span>' +
+                actionHtml +
+                '</div>';
+        }).join('');
+
+        listEl.querySelectorAll('.tr-action-eliminate').forEach(function (btn) {
+            btn.onclick = function () { manuallyEliminatePlayer(btn.getAttribute('data-id')); };
+        });
+        listEl.querySelectorAll('.tr-action-revive').forEach(function (btn) {
+            btn.onclick = function () { manuallyRevivePlayer(btn.getAttribute('data-id')); };
+        });
+    }
+
+    /**
+     * ⚠️ إقصاء يدوي هادئ من لوحة الإعدادات — بعكس eliminatePlayer()
+     * (المستخدَمة لحظة اختيار العجلة)، بدون تبويب إعلان نتيجة ولا صوت
+     * احتفالي؛ فقط نقل اللاعب من _alive لـ_eliminated + تحديث العجلة +
+     * سطر بانر بسيط. لا تُستدعى closeTurnModal لأنها إجراء إداري منفصل
+     * تماماً عن تدفّق الدور الحالي (لو فيه دور مفتوح، يستمر بلا تأثير).
+     */
+    function manuallyEliminatePlayer(playerId) {
+        var idx = _alive.findIndex(function (p) { return p.id === playerId; });
+        if (idx === -1) return;
+        var player = _alive[idx];
+        _alive.splice(idx, 1);
+        _eliminated.push({ player: player });
+
+        realignWheelAfterRosterChange();
+        logEvent('eliminate', '🗑️ ' + playerLabel(player) + ' تم إقصاؤه يدوياً من لوحة الإعدادات');
+        renderReopenedPlayersTab();
+
+        if (_matchActive && _alive.length <= 1) {
+            endMatch(_alive[0] || null);
+        }
+    }
+
+    /**
+     * ⚠️ إرجاع يدوي فوري من لوحة الإعدادات — **بدون** فحص _friendRevivedIds
+     * (بعكس آلية "انعاش صديق" التلقائية بالعجلة)، بطلب صريح: يرجع حتى
+     * لو خلصت فرصة الإنعاش الخاصة به سابقاً. بدون تبويب "عودة لاعب"
+     * الاحتفالي (showReviveSplash) — إجراء إداري هادئ، مو لحظة لعب.
+     */
+    function manuallyRevivePlayer(playerId) {
+        var idx = _eliminated.findIndex(function (e) { return e.player.id === playerId; });
+        if (idx === -1) return;
+        var entry = _eliminated[idx];
+        _eliminated.splice(idx, 1);
+        _alive.push(entry.player);
+
+        realignWheelAfterRosterChange();
+        logEvent('gift', '↩️ ' + playerLabel(entry.player) + ' تم إرجاعه يدوياً من لوحة الإعدادات');
+        renderReopenedPlayersTab();
+    }
+
+    /**
+     * ⚠️ [نموذج "لوحة استقبال لاعبين جدد" المعتمَد] شاشة "إضافة لوبي
+     * جديد" (تُنتَج بالكامل من handleReopenRegistrationClick بالملف
+     * المشترك) — نكتشفها بوجود #agp-mini-lobby-list (فريد لها)، نضيف
+     * كلاس tr-mini-lobby-active (راجع CSS: لوحة شفافة بحدود مدببة)،
+     * مؤشّر "بانتظار انضمام" نابض، وزر × لكل بطاقة لاعب جديد ينضم حياً
+     * (الملف المشترك لا يمرّر removable هنا أصلاً — نضيفه محلياً).
+     */
+    function enhanceMiniLobbyPanel() {
+        var box = el('agp-shell-box');
+        if (!box) return;
+        var miniList = el('agp-mini-lobby-list');
+        if (!miniList) {
+            box.classList.remove('tr-mini-lobby-active');
+            return;
+        }
+        box.classList.add('tr-mini-lobby-active');
+
+        var hint = box.querySelector('.agp-join-hint');
+        if (hint && !hint.querySelector('.tr-mini-live-dot')) {
+            var dot = document.createElement('div');
+            dot.className = 'tr-mini-live-dot';
+            dot.innerHTML = '<span class="dot"></span>بانتظار انضمام لاعبين جدد الآن...';
+            hint.appendChild(dot);
+        }
+
+        miniList.querySelectorAll('li').forEach(function (li) {
+            if (li.querySelector('.tr-mini-remove-btn')) return;
+            var nameEl = li.querySelector('.agp-pcard-name-basic');
+            var name = nameEl ? nameEl.textContent : null;
+            if (!name || !AGP.gameManager) return;
+            var match = AGP.gameManager.getPlayers().find(function (p) { return playerLabel(p) === name; });
+            if (!match) return;
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'tr-mini-remove-btn';
+            btn.title = 'إزالة قبل الإكمال';
+            btn.textContent = '✕';
+            btn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                if (AGP.player && typeof AGP.player.removePlayer === 'function') {
+                    AGP.player.removePlayer(match.id);
+                }
+            });
+            li.appendChild(btn);
+        });
+    }
+
     function applyShellEnhancements() {
         enhanceSettingsScreen();
         // ⚠️ لا حاجة لأي معالجة يدوية لقائمة اللوبي هنا بعد الآن — الملف
@@ -2713,6 +3411,92 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // لتفاصيل ما كان هنا سابقاً.
         enhanceLobbyHeading();
         enhanceLobbyWatermarkAndActions();
+        // ⚠️ [نموذج "درج الإعدادات الجانبي" المعتمَد] الإعدادات المعاد
+        // فتحها أثناء المباراة (زر ⚙️ بالهيدر) — تحويلها لدرج جانبي
+        // بتبويبين + تجميل شاشة "إضافة لوبي جديد" (استقبال لاعبين جدد).
+        enhanceReopenedDrawer();
+        enhanceMiniLobbyPanel();
+        // ⚠️ [نموذج "تبويب الاتصال فوق شاشة الإعدادات" المعتمَد]
+        enhanceConnectingScreen();
+    }
+
+    /**
+     * ⚠️ [نموذج "تبويب الاتصال فوق شاشة الإعدادات" المعتمَد] بدل شاشة
+     * "جاري الاتصال" الكاملة المستقلة (سلوك الملف المشترك الافتراضي)،
+     * نسترد شاشة الإعدادات الحقيقية (العقد المحفوظة فعلياً بـenhanceSettingsScreen
+     * وقت الضغط على زر الاتصال) ونعرض تبويباً عائماً صغيراً فوقها بدلاً
+     * من محتوى box الافتراضي. عند النجاح (انتقال فعلي لشاشة اللوبي)
+     * نخفي التبويب وننسى العقد المحفوظة. عند الفشل، زر ✕ يخفي التبويب
+     * فقط — شاشة الإعدادات المستردَّة تبقى ظاهرة وقابلة للتفاعل مباشرة
+     * (بدون أي إعادة تحميل صفحة).
+     */
+    function enhanceConnectingScreen() {
+        var box = el('agp-shell-box');
+        if (!box) return;
+
+        if (!_connectingFlowActive) {
+            var idlePopup = el('tr-connect-popup');
+            if (idlePopup) idlePopup.style.display = 'none';
+            var idleDim = el('tr-connect-dim');
+            if (idleDim) idleDim.style.display = 'none';
+            return;
+        }
+
+        if (box.classList.contains('agp-lobby-box')) {
+            // ⚠️ نجح الاتصال فعلاً — انتقلنا لشاشة اللوبي، العقد المحفوظة
+            // (شاشة الإعدادات القديمة) لم تعد مطلوبة إطلاقاً.
+            _connectingFlowActive = false;
+            _savedSettingsNodes = null;
+            var donePopup = el('tr-connect-popup');
+            if (donePopup) donePopup.style.display = 'none';
+            var doneDim = el('tr-connect-dim');
+            if (doneDim) doneDim.style.display = 'none';
+            return;
+        }
+
+        if (box.classList.contains('agp-connecting-box')) {
+            // ⚠️ لحظة اكتشاف حالة "جاري الاتصال" الافتراضية — نلتقط حالة
+            // النجاح/الفشل قبل ما نمحيها، ثم نستبدل محتوى box بالعقد
+            // الحقيقية المحفوظة (نقل DOM حي، لا استنساخ نصّي — المستمعات
+            // كلها سليمة). هذا التبديل نفسه يُخرج box من كلاس
+            // agp-connecting-box، فلن يتكرّر هذا الشرط مجدداً لين محاولة
+            // اتصال جديدة فعلية (نفس آلية closeBtn بدرج الإعدادات —
+            // لا حلقة لا نهائية).
+            var isError = box.classList.contains('agp-conn-error');
+            box.innerHTML = '';
+            box.className = 'tr-settings-initial-box';
+            if (_savedSettingsNodes) {
+                _savedSettingsNodes.forEach(function (n) { box.appendChild(n); });
+            }
+
+            if (!el('tr-connect-dim')) {
+                var dim = document.createElement('div');
+                dim.id = 'tr-connect-dim';
+                document.body.appendChild(dim);
+            }
+            var popup = el('tr-connect-popup');
+            if (!popup) {
+                popup = document.createElement('div');
+                popup.id = 'tr-connect-popup';
+                document.body.appendChild(popup);
+            }
+            el('tr-connect-dim').style.display = 'block';
+            popup.style.display = 'block';
+            popup.classList.toggle('tr-connect-error', isError);
+            popup.innerHTML =
+                (isError ? '<button type="button" id="tr-connect-close-btn">✕</button>' : '') +
+                '<div class="' + (isError ? 'tr-connect-error-icon' : 'tr-connect-spinner') + '">' +
+                (isError ? '⚠️' : '') + '</div>' +
+                '<h3>' + (isError ? 'تعذّر الاتصال' : 'جاري الاتصال بالبث') + '</h3>' +
+                '<p>' + (isError ? 'تأكد من اسم المستخدم وحاول مرة ثانية' : 'انتظر قليلاً...') + '</p>';
+            if (isError) {
+                el('tr-connect-close-btn').onclick = function () {
+                    popup.style.display = 'none';
+                    el('tr-connect-dim').style.display = 'none';
+                    _connectingFlowActive = false;
+                };
+            }
+        }
     }
 
     function wireSharedShellEnhancements() {
@@ -2721,6 +3505,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!overlay) return;
         var observer = new MutationObserver(applyShellEnhancements);
         observer.observe(overlay, { childList: true, subtree: true });
+
+        // ⚠️ [إصلاح إضافي — طبقة حماية ثانية لنفس الخلل] بجانب رفع
+        // z-index نافذة الاختيار فوق درج الإعدادات (الإصلاح الجذري
+        // بـCSS)، نمنع فتح درج الإعدادات أصلاً أثناء دور مفتوح — يلغي
+        // احتمال تراكب نافذتين بالمرة، بدل الاعتماد على ترتيب الطبقات
+        // فقط. الزر (#agp-header-settings-btn) يُبنى مرة واحدة بالملف
+        // المشترك (injectPersistentHeader، يبقى بالـDOM طول الوقت مثل
+        // الـoverlay تماماً)، فربطه هنا مرة واحدة كافٍ.
+        var gearBtn = el('agp-header-settings-btn');
+        if (gearBtn && !gearBtn.dataset.trGuarded) {
+            var originalGearHandler = gearBtn.onclick;
+            gearBtn.onclick = function (ev) {
+                if (_pendingTurn) {
+                    showToast('أنهِ الدور الحالي أولاً قبل فتح الإعدادات');
+                    return;
+                }
+                if (typeof originalGearHandler === 'function') originalGearHandler.call(gearBtn, ev);
+            };
+            gearBtn.dataset.trGuarded = '1';
+        }
     }
 
     function registerGame() {
