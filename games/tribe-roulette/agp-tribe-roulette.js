@@ -330,9 +330,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         document.head.appendChild(sheet);
     }
 
+    // ⚠️ [نموذج معتمَد] خط "Alan Sans" — تبويب نتيجة الإقصاء تحديداً
+    // (العنوان + أسماء اللاعبين + الأوسمة)، بخط عريض (900). نفس نمط
+    // ensureZainFont أعلاه بالحرف — ملف منفصل، حارس تكرار بمعرِّف مستقل.
+    function ensureAlanSansFont() {
+        if (el('tr-alansans-font-link')) return;
+        var pre1 = document.createElement('link');
+        pre1.rel = 'preconnect';
+        pre1.href = 'https://fonts.googleapis.com';
+        var pre2 = document.createElement('link');
+        pre2.rel = 'preconnect';
+        pre2.href = 'https://fonts.gstatic.com';
+        pre2.crossOrigin = 'anonymous';
+        var sheet = document.createElement('link');
+        sheet.id = 'tr-alansans-font-link';
+        sheet.rel = 'stylesheet';
+        sheet.href = 'https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300..900&display=swap';
+        document.head.appendChild(pre1);
+        document.head.appendChild(pre2);
+        document.head.appendChild(sheet);
+    }
+
     function injectStageStyles() {
         if (el('tr-stage-styles')) return;
         ensureZainFont();
+        ensureAlanSansFont();
         var style = document.createElement('style');
         style.id = 'tr-stage-styles';
         style.textContent = [
@@ -651,9 +673,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * ==================================================================== */
             '#tr-modal-box.tr-announce-box{width:500px;max-width:92vw;height:350px;max-height:90vh;',
             'display:flex;flex-direction:column;align-items:center;justify-content:center;',
-            'gap:22px;padding:24px;box-sizing:border-box;}',
+            'gap:22px;padding:24px;box-sizing:border-box;',
+            // ⚠️ [نموذج معتمَد] خلفية سوداء غامقة بدل التدرّج البنفسجي
+            // الافتراضي — نفس شكل/حدّ/مقاس #tr-modal-box الأساسي بالحرف
+            // (بدون تغيير على border/border-radius/box-shadow)، خاص بتبويب
+            // نتيجة الإقصاء تحديداً (لا يؤثر على شاشة الفائز ولا اختيار
+            // الهدية، اللي تستخدمان نفس #tr-modal-box بأدوار مختلفة).
+            'background:#0a0510 !important;}',
             '.tr-announce-title{font-size:1.15em;font-weight:900;color:#fff;text-align:center;',
-            'line-height:1.4;}',
+            'line-height:1.4;font-family:"Alan Sans",Almarai,Cairo,sans-serif;}',
             '.tr-announce-eliminate .tr-announce-title{color:#ff8da3;}',
             '.tr-announce-revive .tr-announce-title{color:#7dffb0;}',
             '.tr-announce-row{display:flex;align-items:flex-start;justify-content:center;gap:50px;}',
@@ -662,8 +690,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.tr-announce-ring{width:112px;height:112px;border-radius:50%;padding:5px;box-sizing:border-box;}',
             '.tr-announce-ring .tr-ring-avatar,.tr-announce-ring .tr-ring-avatar--fallback{',
             'width:100%;height:100%;font-size:2em;}',
-            '.tr-announce-ring-green{background:#22c55e;}',
-            '.tr-announce-ring-red{background:#ef4444;}',
+            // ⚠️ [تعديل صريح] أخضر/أحمر (خطر/أمان وظيفي) استُبدلا بألوان
+            // هوية اللعبة (سماوي=مين أقصى، بنفسجي=مين انقصى) على حلقة
+            // ووسم كل شخص. الأنيميشن المتوهّج خلف صورة المُقصى تحديداً
+            // **يبقى أحمر** بطلب صريح (إشارة خطر وظيفية منفصلة عن لون
+            // الحلقة الثابت، بنفس مبدأ باقي تبويبات اللعبة) — يختفي فوراً
+            // مع اختفاء الصورة نفسها لأن الاثنين داخل نفس الصندوق الذي
+            // يُخفى دفعة واحدة (display:none) بعد 3 ثوانٍ بالضبط، بلا أي
+            // تلاشٍ منفصل يكسر التزامن.
+            '.tr-announce-ring-green{background:var(--tr-accent);}',
+            '.tr-announce-ring-red{background:var(--tr-accent2);}',
             '@keyframes tr-announce-eliminate-glow{0%{box-shadow:0 0 0 0 rgba(239,68,68,0.6);}',
             '100%{box-shadow:0 0 24px 6px rgba(239,68,68,0.35);}}',
             '.tr-announce-ring-red{animation:tr-announce-eliminate-glow 3s ease forwards;}',
@@ -671,10 +707,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.tr-announce-ring-desaturate .tr-ring-avatar--fallback{',
             'filter:saturate(0.4);opacity:0.9;}',
             '.tr-announce-role-badge{padding:3px 12px;border-radius:999px;font-size:12px;',
-            'font-weight:800;color:#fff;}',
-            '.tr-announce-badge-green{background:#22c55e;}',
-            '.tr-announce-badge-red{background:#ef4444;}',
-            '.tr-announce-person-name{font-size:14px;font-weight:800;color:#fff;text-align:center;}',
+            'font-weight:900;color:#fff;font-family:"Alan Sans",Almarai,Cairo,sans-serif;}',
+            '.tr-announce-badge-green{background:var(--tr-accent);color:#0a0612;}',
+            '.tr-announce-badge-red{background:var(--tr-accent2);}',
+            '.tr-announce-person-name{font-size:14px;font-weight:900;color:#fff;text-align:center;',
+            'font-family:"Alan Sans",Almarai,Cairo,sans-serif;}',
+            // ⚠️ [نموذج "إقصاء النفس" المعتمَد] عنوان بديل مختصر (سطر واحد
+            // بدون إيموجي — نفس طول الصندوق الأصلي بالضبط، بلا أي زيادة
+            // بالارتفاع) لحالة إقصاء اللاعب نفسه (اختياراً أو بانتهاء الوقت).
+            '.tr-announce-self-title{color:#ffb648 !important;white-space:nowrap;}',
             /* بطاقة إنعاش-بالهدية العائمة (toast غير مقاطِع — راجع showGiftReviveCard) */
             '.tr-gift-revive-card{display:flex;align-items:center;gap:10px;background:rgba(20,8,35,0.95);',
             'border:1px solid rgba(74,222,128,0.55);color:#f3eefc;padding:8px 18px 8px 8px;border-radius:999px;',
@@ -788,8 +829,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'display:flex;align-items:center;justify-content:center;z-index:3;}',
             '.tr-select-cand-num.tr-role-eliminate{background:#ef4444;}',
             '.tr-select-cand-num.tr-role-revive{background:#22c55e;}',
-            '.tr-select-cand-card.tr-cand-selected .tr-select-cand-plate{box-shadow:0 0 0 2px #ef4444;}',
-            '.tr-select-cand-card.tr-cand-selected .tr-tribe-only-card{box-shadow:0 0 0 2px #ef4444,0 0 18px rgba(239,68,68,0.5);}',
+            '.tr-select-cand-card.tr-cand-selected .tr-select-cand-plate{box-shadow:0 0 0 2px #ffffff;}',
+            '.tr-select-cand-card.tr-cand-selected .tr-tribe-only-card{border:2px solid #ffffff;',
+            'box-shadow:0 0 0 2px rgba(255,255,255,0.3),0 0 20px rgba(255,255,255,0.55);',
+            'background:linear-gradient(180deg,rgba(90,60,140,0.55),rgba(20,10,30,0.75));',
+            'transform:scale(1.04);}',
+            '.tr-select-cand-card.tr-cand-selected .tr-tribe-only-num{background:#fff !important;color:#7c3aed !important;}',
             // ⚠️ [نموذج معتمَد: بطاقة قبيلة نظيفة] تبويب الإقصاء تحديداً —
             // بدون أي أفاتار/شخصية مخفية إطلاقاً، فقط اسم القبيلة + رقم
             // الاختيار داخل بطاقة واحدة مرتّبة (بدل نظام التراكب القديم
@@ -897,11 +942,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.tr-trophy-points .tr-points-sub{display:block;color:#e9d3ff;font-weight:500;font-size:0.85em;margin-top:2px;}',
             '.tr-trophy-points.tr-points-noaccount{color:#e9d3ff;font-size:0.8em;}',
 
-            '.tr-winner-actions{display:flex;gap:10px;flex-wrap:wrap;}',
-            '.tr-btn-secondary{flex:1;min-width:180px;padding:12px;border-radius:999px;border:none;',
-            'font-weight:800;cursor:pointer;font-family:inherit;font-size:0.95em;}',
+            '.tr-winner-actions{display:flex;flex-direction:column;align-items:center;gap:10px;}',
+            '.tr-winner-actions-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}',
+            // ⚠️ [تعديل صريح] flex:1 + min-width:180px كانا يمدّدان الأزرار
+            // بالعرض بغضّ النظر عن طول النص — صار كل زر يتحجّم حسب نصّه
+            // فقط (padding فقط، بدون تمديد إجباري)، حتى لو صار قصيراً.
+            '.tr-btn-secondary{padding:10px 20px;border-radius:999px;border:none;',
+            'font-weight:800;cursor:pointer;font-family:inherit;font-size:0.9em;white-space:nowrap;}',
             '#tr-replay-same-btn{background:linear-gradient(90deg,var(--tr-accent2),var(--tr-accent));color:#0b0616;}',
             '#tr-new-match-btn{background:#fff;border:1px solid var(--tr-accent);color:#5a2585;}',
+            '.tr-btn-home{background:transparent;border:1px solid rgba(255,255,255,0.25);color:#cdbfe8;}',
 
             /* ---- أزرار اختيار الهدية (أيقونة Twemoji + اسم + قيمة عملات) ---- */
             '.agp-pill-btn.tr-gift-btn{display:inline-flex;flex-direction:column;align-items:center;',
@@ -2231,12 +2281,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         closeTurnModal();
 
         var eliminatorPlayer = eliminatorId ? findPlayerByIdAnywhere(eliminatorId) : null;
+        var isSelfElimination = !!(eliminatorPlayer && eliminatorPlayer.id === target.id);
         logEvent('eliminate', '❌ ' + playerLabel(target) + ' تم إقصاؤه' +
-            (eliminatorPlayer && eliminatorPlayer.id !== target.id ? (' بواسطة ' + playerLabel(eliminatorPlayer)) : ''));
+            (eliminatorPlayer && !isSelfElimination ? (' بواسطة ' + playerLabel(eliminatorPlayer)) : (isSelfElimination ? ' (أقصى نفسه)' : '')));
 
+        // ⚠️ [إصلاح خلل حقيقي — لاحظه المستخدم فعلياً] لما يختار صاحب
+        // الدور نفسه بالصدفة (القبيلة المموَّهة اللي تمثّله هو)، chooser
+        // كان يُمرَّر null عمداً (بما إنه "نفس" target) — فتبويب النتيجة
+        // كان يبني بطاقة "من انقصى" بس، بدون بطاقة "من أقصى" إطلاقاً.
+        // الآن: نمرّر نفس اللاعب لكلا الحقلين، فتظهر صورته بالجهتين
+        // (منطقياً صحيح — هو نفسه اللي أقصى ونفسه اللي انقصى).
         showResultAnnouncement('eliminate', {
             target: target,
-            chooser: (eliminatorPlayer && eliminatorPlayer.id !== target.id) ? eliminatorPlayer : null
+            chooser: eliminatorPlayer,
+            isSelfElimination: isSelfElimination
         }, function onDone() {
             if (_alive.length <= 1) {
                 endMatch(_alive[0] || null);
@@ -2556,7 +2614,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var actorName = data.chooser ? playerLabel(data.chooser) : '';
         var targetName = playerLabel(data.target);
         var titleHtml;
-        if (data.chooser) {
+        if (data.isSelfElimination) {
+            // ⚠️ [نموذج معتمَد] نص خاص لحالة إقصاء النفس — سطر واحد، بلا
+            // إيموجي، بنفس ارتفاع العنوان العادي بالضبط (ما يكبّر الصندوق).
+            titleHtml = escapeHtml(targetName) + ' أقصى نفسه.. الله لا يبلانا كذا!';
+        } else if (data.chooser) {
             titleHtml = isEliminate
                 ? ('قام ' + escapeHtml(actorName) + ' بإقصاء ' + escapeHtml(targetName) + ' بنجاح')
                 : ('قام ' + escapeHtml(actorName) + ' بإرجاع ' + escapeHtml(targetName) + ' بنجاح');
@@ -2587,7 +2649,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         box.className = 'tr-announce-box ' + (isEliminate ? 'tr-announce-eliminate' : 'tr-announce-revive');
         box.innerHTML =
-            '<div class="tr-announce-title">' + titleHtml + '</div>' +
+            '<div class="tr-announce-title' + (data.isSelfElimination ? ' tr-announce-self-title' : '') + '">' + titleHtml + '</div>' +
             '<div class="tr-announce-row">' + actorCardHtml + targetCardHtml + '</div>';
 
         overlay.style.display = 'flex';
@@ -3038,26 +3100,35 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         box.style.textAlign = 'center';
         box.innerHTML =
             '<div id="tr-winner-box">' +
-            // ⚠️ مربع الفيديو 160×160 — يشتغل تلقائياً (autoplay) فور ظهور
-            // شاشة الفائز. muted إلزامي: كل المتصفحات تمنع autoplay بصوت
-            // بدون تفاعل مستخدم أول، بغضّ النظر عن أي إعداد آخر — قيد
-            // متصفحات حقيقي، مو اختيارنا. onerror يخفي المربع بالكامل لو
-            // ملف الفيديو غير موجود (بدل مربع أسود فارغ مكسور).
+            // ⚠️ [تعديل صريح] muted أُزيلت بطلب صريح — تنبيه مهم: أغلب
+            // المتصفحات (خصوصاً Safari/آيباد) تمنع تشغيل فيديو autoplay
+            // بصوت تلقائياً بدون أي تفاعل مستخدم مباشر مع الصفحة قبلها؛
+            // لو صار هذا، الفيديو ممكن ما يشتغل تلقائياً إطلاقاً بهذي
+            // المتصفحات (يحتاج المستخدم يضغط تشغيل يدوياً). loop مُضافة
+            // كما طُلب. onerror يخفي المربع بالكامل لو الملف غير موجود.
             '<div id="tr-winner-video-badge">' +
-            '<video src="winner-video.mp4" autoplay muted playsinline ' +
+            '<video src="winner-video.mp4" autoplay loop playsinline ' +
             'onerror="this.closest(\'#tr-winner-video-badge\').style.display=\'none\'"></video>' +
             '</div>' +
             '<h2>🏁 انتهت المباراة!</h2>' +
             '<div class="tr-trophy-cards">' + (cardsHtml || '<p class="tr-trophy-label">بدون فائز</p>') + '</div>' +
             '<div class="tr-winner-actions">' +
+            '<div class="tr-winner-actions-row">' +
             '<button class="tr-btn-secondary" id="tr-replay-same-btn">🔄 إعادة المباراة بنفس اللاعبين</button>' +
             '<button class="tr-btn-secondary" id="tr-new-match-btn">🆕 بدء مباراة جديدة</button>' +
+            '</div>' +
+            '<button class="tr-btn-secondary tr-btn-home" id="tr-winner-home-btn">🏠 العودة للرئيسية</button>' +
             '</div></div>';
 
         document.getElementById('tr-replay-same-btn').onclick = handleReplaySamePlayers;
         document.getElementById('tr-new-match-btn').onclick = function () {
+            stopWinnerVideo();
             AGP.gameManager.resetSession(); // يبث game:reset — يستدعي onDestroy() تلقائياً
             window.location.reload();
+        };
+        document.getElementById('tr-winner-home-btn').onclick = function () {
+            stopWinnerVideo();
+            window.location.href = '../../index.html';
         };
 
         overlay.style.display = 'flex';
@@ -3067,6 +3138,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (mostElim) spawnConfetti(el('tr-trophy-card-most'), 20);
         }, 120);
     }
+
+    /**
+     * ⚠️ [تعديل صريح] يوقف فيديو شاشة الفائز فعلياً (pause + تصفير + قطع
+     * المصدر) عند مغادرة الشاشة بأي زر من الثلاثة — بدون هذا، الفيديو
+     * (خصوصاً بعد إضافة loop) يفضل يشتغل بالخلفية بلا داعٍ حتى لو
+     * الـmodal اختفى بصرياً.
+     */
+    function stopWinnerVideo() {
+        var video = document.querySelector('#tr-winner-video-badge video');
+        if (!video) return;
+        video.pause();
+        video.currentTime = 0;
+        video.removeAttribute('src');
+        video.load();
+    }
+
 
     /**
      * ⚠️ "إعادة المباراة بنفس اللاعبين" — يتخطى شاشتي الإعدادات واللوبي
@@ -3079,6 +3166,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var roster = _alive.concat(_eliminated.map(function (e) { return e.player; }));
         if (!roster.length) return;
 
+        stopWinnerVideo();
         var overlay = el('tr-modal-overlay');
         if (overlay) overlay.style.display = 'none';
 
