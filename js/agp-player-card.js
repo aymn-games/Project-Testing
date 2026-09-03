@@ -264,6 +264,44 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 11.00, avatarTopPct: 2.37, avatarWidthPct: 19.06, avatarHeightPct: 95.26,
             nameLeftPct: 34.30, nameTopPct: 39.34, nameWidthPct: 49.95, nameHeightPct: 55.69
         },
+        // [0.66.2] إطار نادي الهلال "الكأس والملعب" — نفس مجموعة إطارات
+        // الأندية، قياس من أعلى بكسل فعلي غير شفاف (مو حافة دائرة الصورة)
+        // بعد تصحيح المنهجية. أبيض افتراضي (خلفية داكنة).
+        'frame-club-hilal-trophy.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 10, contentHeight: 595,
+            avatarLeftPct: 11.14, avatarTopPct: 25.55, avatarWidthPct: 20.81, avatarHeightPct: 73.45,
+            nameLeftPct: 33.15, nameTopPct: 44.54, nameWidthPct: 55.02, nameHeightPct: 54.29
+        },
+        // [0.66.2] إطار نادي الهلال "النجوم" — نفس المجموعة، أبيض افتراضي.
+        'frame-club-hilal-stars.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 25, contentHeight: 575,
+            avatarLeftPct: 10.04, avatarTopPct: 22.78, avatarWidthPct: 20.17, avatarHeightPct: 75.83,
+            nameLeftPct: 37.06, nameTopPct: 38.26, nameWidthPct: 49.72, nameHeightPct: 60.87
+        },
+        // [0.66.2] إطار نادي النصر "التاج الملكي" — خلفية اللوح صفراء/ذهبية،
+        // الاسم أزرق (مو أبيض) بطلب صريح — نفس كل إطارات النصر.
+        'frame-club-nassr-crown.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 6, contentHeight: 594,
+            avatarLeftPct: 9.21, avatarTopPct: 33.50, avatarWidthPct: 18.55, avatarHeightPct: 65.15,
+            nameLeftPct: 40.06, nameTopPct: 46.97, nameWidthPct: 51.33, nameHeightPct: 49.66,
+            textColor: '#0a1a5c'
+        },
+        // [0.66.2] إطار نادي النصر "النسر الملكي" — نفس ملاحظة اللون أعلاه.
+        'frame-club-nassr-eagle.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 5, contentHeight: 585,
+            avatarLeftPct: 10.31, avatarTopPct: 34.53, avatarWidthPct: 17.86, avatarHeightPct: 64.10,
+            nameLeftPct: 40.52, nameTopPct: 57.26, nameWidthPct: 47.88, nameHeightPct: 41.88,
+            textColor: '#0a1a5c'
+        },
+        // [0.66.2] إطار نادي النصر "أفق الرياض" — ⚠️ مقاس الكانفاس مختلف
+        // شوي (2156×729 بدل 2172×724) عن باقي دفعة النصر/الهلال، بيّنت
+        // هذا لصاحب المشروع وقت القياس الأول. نفس ملاحظة اللون الأزرق.
+        'frame-club-nassr-palm.png': {
+            canvasW: 2156, canvasH: 729, contentTop: 12, contentHeight: 578,
+            avatarLeftPct: 8.91, avatarTopPct: 29.41, avatarWidthPct: 18.55, avatarHeightPct: 66.27,
+            nameLeftPct: 38.50, nameTopPct: 47.23, nameWidthPct: 52.18, nameHeightPct: 51.90,
+            textColor: '#0a1a5c'
+        },
         // [0.45.1] إطار "الأهلي" — مقاس فعلياً بالبكسل من الملف المرفوع (1536×1024،
         // فتحة صورة دائرية شفافة حقيقية يسار + بلاطة اسم بيضاء فاضية يمين، نفس
         // منهجية القياس المتبعة لكل الإطارات أعلاه — تحقّق بصري بصندوقين قبل الاعتماد).
