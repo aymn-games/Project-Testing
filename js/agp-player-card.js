@@ -302,6 +302,40 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             nameLeftPct: 38.50, nameTopPct: 47.23, nameWidthPct: 52.18, nameHeightPct: 51.90,
             textColor: '#0a1a5c'
         },
+        // [0.66.3] إطار نادي الاتحاد "التاج والنمر" — قياس من أعلى بكسل
+        // فعلي غير شفاف. خلفية اللوح ذهبية/صفراء — الاسم أسود (هوية النادي
+        // أسود+ذهبي) بطلب صريح، مو أبيض ولا أزرق.
+        'frame-club-ittihad-crown.png': {
+            canvasW: 2157, canvasH: 729, contentTop: 12, contentHeight: 601,
+            avatarLeftPct: 6.54, avatarTopPct: 32.11, avatarWidthPct: 19.75, avatarHeightPct: 65.72,
+            nameLeftPct: 37.55, nameTopPct: 45.42, nameWidthPct: 54.24, nameHeightPct: 53.74,
+            textColor: '#161208'
+        },
+        // [0.66.3] إطار نادي الاتحاد "النمر" — ⚠️ اللوح فيه كلمة "ITTIHAD"
+        // مرسومة ثابتة داخل نفس منطقة الاسم (مو زخرفة منفصلة) — بموافقة
+        // صريحة من صاحب المشروع، اسم اللاعب يُكتب فوقها كما هي. أبيض
+        // (بطلبه، مختلف عن إطار الاتحاد الأول اللي لونه أسود).
+        'frame-club-ittihad-tiger.png': {
+            canvasW: 2158, canvasH: 729, contentTop: 14, contentHeight: 589,
+            avatarLeftPct: 7.41, avatarTopPct: 32.94, avatarWidthPct: 19.79, avatarHeightPct: 64.01,
+            nameLeftPct: 39.16, nameTopPct: 44.31, nameWidthPct: 53.99, nameHeightPct: 54.84
+        },
+        // [0.66.4] إطار "بنات" — القطة الوردية. لوح فاضٍ تماماً من أي نص
+        // (سليم). ⚠️ خلفية اللوح زهري فاتح — الأبيض ضعيف التباين عليها،
+        // بس أُبقي أبيض بطلب صريح من صاحب المشروع رغم التنبيه.
+        'frame-girls-kitty.png': {
+            canvasW: 2103, canvasH: 748, contentTop: 14, contentHeight: 556,
+            avatarLeftPct: 9.80, avatarTopPct: 22.66, avatarWidthPct: 20.21, avatarHeightPct: 74.46,
+            nameLeftPct: 37.09, nameTopPct: 51.44, nameWidthPct: 45.17, nameHeightPct: 47.66
+        },
+        // [0.66.4] إطار "بنات" — الفراشة الوردية. لوح رخامي فاضٍ من أي نص.
+        // ⚠️ خلفية فاتحة (نفس ملاحظة إطار القطة) — أبيض بطلب صريح رغم
+        // ضعف التباين النسبي.
+        'frame-girls-butterfly.png': {
+            canvasW: 2089, canvasH: 753, contentTop: 0, contentHeight: 580,
+            avatarLeftPct: 12.59, avatarTopPct: 27.59, avatarWidthPct: 20.20, avatarHeightPct: 71.55,
+            nameLeftPct: 38.30, nameTopPct: 56.55, nameWidthPct: 49.31, nameHeightPct: 33.45
+        },
         // [0.45.1] إطار "الأهلي" — مقاس فعلياً بالبكسل من الملف المرفوع (1536×1024،
         // فتحة صورة دائرية شفافة حقيقية يسار + بلاطة اسم بيضاء فاضية يمين، نفس
         // منهجية القياس المتبعة لكل الإطارات أعلاه — تحقّق بصري بصندوقين قبل الاعتماد).
