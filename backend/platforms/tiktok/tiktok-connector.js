@@ -61,6 +61,20 @@ var MAX_RECONNECT_ATTEMPTS = 5;
 var BASE_RECONNECT_DELAY_MS = 1000;
 var MAX_RECONNECT_DELAY_MS = 30000;
 
+// ⚠️ [إصلاح 2026-09-04] بگ حقيقي مؤكَّد داخل tiktok-live-connector (كل
+// الإصدارات حتى 2.4.4 وقت هذا الإصلاح): عند رجوع تيك توك برد 429 على
+// سيرفر التوقيع، المكتبة تمرر response.data (بدون .headers) بدل response
+// الكامل لباني SignatureRateLimitError، فتكسر بـ:
+//   TypeError: Cannot read properties of undefined (reading 'retry-after')
+// هذا يخفي رسالة الـ rate-limit الحقيقية ويوصل كخطأ اتصال عام غامض.
+// نكتشف هذا الخطأ تحديداً هنا (بدون أي تعديل على node_modules) ونتعامل
+// معه كـ rate-limit فعلي من تيك توك: رسالة واضحة + انتظار أطول قبل أي
+// إعادة محاولة (لأن إعادة المحاولة السريعة تزيد الحظر سوءاً).
+var SIGN_RATE_LIMIT_COOLDOWN_MS = 60000; // دقيقة واحدة قبل إعادة المحاولة
+function isSignRateLimitCrash(err) {
+    return !!(err && err instanceof TypeError && typeof err.message === 'string' && err.message.indexOf('retry-after') !== -1);
+}
+
 var TikTokLib;
 try {
     TikTokLib = require('tiktok-live-connector');
@@ -248,7 +262,7 @@ function createTikTokConnector() {
         }
     }
 
-    function attemptReconnect() {
+    function attemptReconnect(overrideDelayMs) {
         if (_intentionalDisconnect) return;
 
         if (_reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
@@ -257,8 +271,15 @@ function createTikTokConnector() {
             return;
         }
 
-        var delay = Math.min(BASE_RECONNECT_DELAY_MS * Math.pow(2, _reconnectAttempts), MAX_RECONNECT_DELAY_MS);
-        delay += Math.floor(Math.random() * 500); // jitter بسيط لتفادي محاولات متزامنة
+        var delay;
+        if (typeof overrideDelayMs === 'number') {
+            // تأخير مخصَّص (مثلاً rate-limit من تيك توك) — أطول من الباك-أوف
+            // العادي عمداً، لتفادي زيادة الحظر بمحاولات سريعة متتالية.
+            delay = overrideDelayMs;
+        } else {
+            delay = Math.min(BASE_RECONNECT_DELAY_MS * Math.pow(2, _reconnectAttempts), MAX_RECONNECT_DELAY_MS);
+            delay += Math.floor(Math.random() * 500); // jitter بسيط لتفادي محاولات متزامنة
+        }
         _reconnectAttempts++;
 
         logger.log('TikTok Connector: reconnecting (attempt ' + _reconnectAttempts + '/' + MAX_RECONNECT_ATTEMPTS + ') in ' + delay + 'ms…');
@@ -373,6 +394,18 @@ function createTikTokConnector() {
                 if (_intentionalDisconnect) return; // نفس المنطق — لا تأثير لأي وعد متأخر بعد فصل متعمَّد
                 _connected = false;
                 logger.error('TikTok Connector: connect() failed:', err);
+
+                if (isSignRateLimitCrash(err)) {
+                    // تيك توك رجّع rate-limit فعلي (429) على سيرفر التوقيع —
+                    // المكتبة تكسر برسالة TypeError غامضة بدل رسالة واضحة.
+                    // نبلّغ برسالة صريحة، ونعيد المحاولة تلقائياً بعد تهدئة
+                    // أطول (بدل الباك-أوف العادي) لتفادي زيادة الحظر.
+                    logger.error('TikTok Connector: TikTok sign-server rate limit hit (library crash on retry-after parsing).');
+                    _callbacks.onStatus('error', 'تيك توك حدّد عدد محاولات الاتصال مؤقتاً بسبب كثرة المحاولات — جاري إعادة المحاولة خلال دقيقة تقريباً.');
+                    attemptReconnect(SIGN_RATE_LIMIT_COOLDOWN_MS);
+                    return;
+                }
+
                 if (isReconnectAttempt) {
                     attemptReconnect();
                 } else {
