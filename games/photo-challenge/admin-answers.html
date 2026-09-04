@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إدارة صور تحدي الصور — أدمن</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zain:ital,wght@0,200;0,300;0,400;0,700;0,800;0,900;1,300;1,400&display=swap" rel="stylesheet">
+
+<!--
+    ==========================================================================
+     صفحة إدارة بنك صور "تحدي الصور" — أدمن فقط.
+     ==========================================================================
+     محمية بنفس آلية admin.html الموجودة أصلاً (window.AGPAuth.requireAdmin)
+     — بدون أي نقطة API جديدة على الباك اند وبدون أي تعديل على
+     auth/auth-client.js نفسه. ملف ذاتي الاكتفاء تماماً، نفس بنية
+     games/top-ten/admin-questions.html بالحرف.
+
+     المصدر الحقيقي لصور التحدي وإجاباتها هو ملف
+     games/photo-challenge/answers-bank.json. هذه الصفحة تفتح على نفس
+     الملف الحالي (fetch)، تخليك تعدّل/تضيف/تحذف، وبعدها تنزّل نسخة
+     محدثة منه تروح ترفعها يدوياً بنفس رابط الرفع المعتاد.
+
+     ⚠️ مهم: هذا مشروع Static بالكامل -- ما فيه سيرفر يخزّن ملفات صور.
+     اختيار الصورة هنا للمعاينة والتسمية بس؛ لازم ترفع ملف الصورة نفسه
+     يدوياً لمجلد games/photo-challenge/challenge-images/ بنفس اسم
+     الملف المكتوب هنا (بجانب رفع answers-bank.json).
+    ==========================================================================
+-->
+
+<style>
+:root {
+    --aq-green-950: #03130d; --aq-green-900: #052119; --aq-green-800: #0a3626;
+    --aq-green-700: #0f4a34; --aq-green-line: rgba(31, 158, 115, 0.28);
+    --aq-gold-700: #a8802a; --aq-gold-500: #d9a83e; --aq-gold-400: #f3c352; --aq-gold-300: #ffe2a1;
+    --aq-text: #f4f8f5; --aq-text-dim: rgba(244, 248, 245, 0.68);
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0; font-family: 'Zain', 'Tahoma', sans-serif; direction: rtl;
+    background: linear-gradient(160deg, var(--aq-green-950), var(--aq-green-900));
+    color: var(--aq-text); min-height: 100vh; padding: 20px 16px 60px;
+}
+body.auth-checking .aq-content { display: none; }
+.aq-checking-msg { text-align: center; padding: 60px 20px; color: var(--aq-text-dim); }
+body:not(.auth-checking) .aq-checking-msg { display: none; }
+
+.aq-wrap { max-width: 760px; margin: 0 auto; }
+.aq-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+.aq-title { font-size: 1.4em; font-weight: 900; color: var(--aq-gold-400); }
+.aq-back { color: var(--aq-text-dim); text-decoration: none; font-size: 0.9em; }
+.aq-back:hover { color: var(--aq-gold-400); }
+
+.aq-panel {
+    background: linear-gradient(165deg, var(--aq-green-800), var(--aq-green-900));
+    border: 1px solid var(--aq-green-line); border-radius: 16px; padding: 18px 18px 22px; margin-bottom: 18px;
+}
+.aq-panel h2 { color: var(--aq-gold-400); font-size: 1.1em; margin: 0 0 12px; }
+.aq-hint { color: var(--aq-text-dim); font-size: 0.85em; line-height: 1.7; }
+.aq-hint code { background: var(--aq-green-950); padding: 2px 6px; border-radius: 4px; }
+
+.aq-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.aq-btn {
+    padding: 10px 18px; border-radius: 10px; font-family: inherit; font-size: 0.95em; font-weight: 800;
+    cursor: pointer; border: none;
+}
+.aq-btn-primary { background: linear-gradient(135deg, var(--aq-gold-400), var(--aq-gold-700)); color: var(--aq-green-950); }
+.aq-btn-secondary { background: var(--aq-green-700); color: var(--aq-gold-300); border: 1.5px solid var(--aq-gold-700); }
+.aq-btn:hover { filter: brightness(1.08); }
+.aq-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.aq-q-card { background: var(--aq-green-950); border: 1px solid var(--aq-green-line); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; display:flex; gap:12px; align-items:center; }
+.aq-q-thumb { width:56px; height:56px; border-radius:10px; background:var(--aq-green-800) center/cover no-repeat; border:1px solid var(--aq-green-line); flex-shrink:0; }
+.aq-q-card-body{ flex:1; min-width:0; }
+.aq-q-file { font-weight: 800; font-size: 0.95em; color: var(--aq-gold-300); word-break: break-all; }
+.aq-q-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.aq-icon-btn { background: none; border: none; cursor: pointer; font-size: 1.05em; opacity: 0.8; padding: 4px; }
+.aq-icon-btn:hover { opacity: 1; }
+.aq-q-answers { margin-top: 8px; display: none; flex-wrap: wrap; gap: 6px; }
+.aq-q-card.aq-expanded .aq-q-answers { display: flex; }
+.aq-q-answer-chip { background: var(--aq-green-800); border: 1px solid var(--aq-gold-700); border-radius: 999px; padding: 3px 10px; font-size: 0.8em; }
+
+.aq-row-field { position: relative; margin-bottom: 14px; }
+.aq-row-field input[type="text"] {
+    width: 100%; padding: 12px 14px; font-size: 1em; background: var(--aq-green-950);
+    border: 1.5px solid var(--aq-green-line); border-radius: 8px; color: var(--aq-text); font-family: inherit; direction: rtl;
+}
+.aq-row-field input:focus { outline: none; border-color: var(--aq-gold-500); }
+.aq-row-field label { display: block; margin-top: 5px; font-size: 0.78em; color: var(--aq-text-dim); }
+
+.aq-image-picker { display:flex; align-items:center; gap:14px; margin-bottom:14px; }
+.aq-image-preview { width:80px; height:80px; border-radius:12px; background:var(--aq-green-950) center/cover no-repeat; border:1.5px dashed var(--aq-green-line); flex-shrink:0; }
+
+.aq-answer-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.aq-answer-input { flex: 1; padding: 9px 10px; background: var(--aq-green-900); border: 1.5px solid var(--aq-green-line); border-radius: 8px; color: var(--aq-text); font-family: inherit; direction: rtl; font-size: 0.9em; }
+.aq-answer-input:focus { outline: none; border-color: var(--aq-gold-500); }
+.aq-answer-remove-btn { flex-shrink:0; background:none; border:1px solid #c0392b; color:#ffb4a8; border-radius:8px; width:32px; height:32px; cursor:pointer; font-size:0.9em; }
+
+.aq-error { color: #ffb4a8; background: rgba(192, 57, 43, 0.18); border: 1px solid #c0392b; border-radius: 8px; padding: 9px 12px; margin: 10px 0; font-size: 0.88em; text-align: center; display: none; }
+.aq-success { color: var(--aq-gold-300); background: var(--aq-green-950); border: 1px solid var(--aq-gold-700); border-radius: 8px; padding: 9px 12px; margin: 10px 0; font-size: 0.88em; text-align: center; display: none; }
+</style>
+</head>
+<body class="auth-checking">
+
+<div class="aq-checking-msg">جارِ التحقق من صلاحيات الأدمن...</div>
+
+<div class="aq-content">
+<div class="aq-wrap">
+
+    <div class="aq-header">
+        <div class="aq-title">🛠️ إدارة صور تحدي الصور</div>
+        <a class="aq-back" href="../../index.html">🏠 رجوع للمنصة</a>
+    </div>
+
+    <div class="aq-panel">
+        <div class="aq-hint">
+            هذه الصفحة تعدّل نسخة محلية بالمتصفح بس — أي تعديل ما يوصل للعبة
+            الفعلية إلا بعد ما تضغط <b>"⬇️ تنزيل ملف البيانات"</b> تحت، وترفع
+            الملف الناتج (<code>answers-bank.json</code>) لنفس مكان ملف اللعبة
+            بمستودع GitHub (استبدال الملف الحالي)، بنفس طريقة رفعك المعتادة.
+            <br><br>
+            ⚠️ اختيار الصورة هنا للمعاينة والتسمية بس — لازم ترفع ملف الصورة
+            نفسه (تصديره من Canva) يدوياً لمجلد
+            <code>games/photo-challenge/challenge-images/</code> بنفس الاسم
+            المكتوب بخانة "اسم ملف الصورة"، جنب رفع ملف البيانات.
+        </div>
+    </div>
+
+    <div class="aq-toolbar">
+        <button type="button" id="aq-add-btn" class="aq-btn aq-btn-primary">➕ صورة جديدة</button>
+        <button type="button" id="aq-reload-btn" class="aq-btn aq-btn-secondary">🔄 إعادة تحميل من الملف المنشور حالياً</button>
+        <button type="button" id="aq-download-btn" class="aq-btn aq-btn-primary">⬇️ تنزيل ملف البيانات</button>
+    </div>
+
+    <div id="aq-status-error" class="aq-error"></div>
+    <div id="aq-status-success" class="aq-success"></div>
+
+    <div class="aq-panel">
+        <h2>الصور الحالية (<span id="aq-count">0</span>)</h2>
+        <div id="aq-list"></div>
+    </div>
+
+    <div id="aq-form-panel" class="aq-panel" style="display:none;"></div>
+
+</div>
+</div>
+
+<script src="../../auth/auth-client.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    var _challenges = [];
+    var _editingId = null; // null = وضع إضافة، غير ذلك = وضع تعديل
+    var _formPreviewObjectUrl = null; // معاينة محلية فقط -- ما تُرفع ولا تُحفظ
+
+    function el(id) { return document.getElementById(id); }
+    function escapeHtml(str) {
+        return String(str == null ? '' : str).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+    function showError(msg) {
+        var e = el('aq-status-error'); e.textContent = msg; e.style.display = 'block';
+        el('aq-status-success').style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function showSuccess(msg) {
+        var s = el('aq-status-success'); s.textContent = msg; s.style.display = 'block';
+        el('aq-status-error').style.display = 'none';
+    }
+
+    function loadBankFromServer() {
+        return fetch('answers-bank.json', { cache: 'no-store' })
+            .then(function (res) { return res.ok ? res.json() : null; })
+            .then(function (data) {
+                _challenges = (data && Array.isArray(data.challenges)) ? data.challenges : [];
+                renderList();
+                if (!_challenges.length) showError('ما فيه ملف بيانات منشور بعد، أو الملف فاضي — ابدأ بإضافة صورة جديدة.');
+            })
+            .catch(function () {
+                _challenges = [];
+                renderList();
+                showError('تعذّر تحميل ملف البيانات الحالي (شبكة أو الملف مو موجود بعد) — تقدر تبدأ بإضافة صور جديدة من الصفر.');
+            });
+    }
+
+    function renderList() {
+        el('aq-count').textContent = _challenges.length;
+        var listEl = el('aq-list');
+        listEl.innerHTML = _challenges.map(function (c) {
+            var chips = c.answers.map(function (a) { return '<span class="aq-q-answer-chip">' + escapeHtml(a) + '</span>'; }).join('');
+            var thumbStyle = c.imageFile ? ' style="background-image:url(\'challenge-images/' + escapeHtml(c.imageFile) + '\')"' : '';
+            return '<div class="aq-q-card" id="aq-qcard-' + escapeHtml(c.id) + '">' +
+                '<div class="aq-q-thumb"' + thumbStyle + '></div>' +
+                '<div class="aq-q-card-body">' +
+                    '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">' +
+                        '<span class="aq-q-file">' + escapeHtml(c.imageFile || '(بدون اسم ملف)') + '</span>' +
+                        '<span class="aq-q-actions">' +
+                            '<button type="button" class="aq-icon-btn aq-toggle-btn" data-id="' + escapeHtml(c.id) + '" title="عرض الإجابات">👁️</button>' +
+                            '<button type="button" class="aq-icon-btn aq-edit-btn" data-id="' + escapeHtml(c.id) + '" title="تعديل">✏️</button>' +
+                            '<button type="button" class="aq-icon-btn aq-delete-btn" data-id="' + escapeHtml(c.id) + '" title="حذف">🗑️</button>' +
+                        '</span>' +
+                    '</div>' +
+                    '<div class="aq-q-answers">' + chips + '</div>' +
+                '</div>' +
+            '</div>';
+        }).join('') || '<div class="aq-hint">لا يوجد أي صورة بعد.</div>';
+
+        Array.prototype.forEach.call(listEl.querySelectorAll('.aq-toggle-btn'), function (btn) {
+            btn.addEventListener('click', function () {
+                el('aq-qcard-' + btn.getAttribute('data-id')).classList.toggle('aq-expanded');
+            });
+        });
+        Array.prototype.forEach.call(listEl.querySelectorAll('.aq-edit-btn'), function (btn) {
+            btn.addEventListener('click', function () { openForm(btn.getAttribute('data-id')); });
+        });
+        Array.prototype.forEach.call(listEl.querySelectorAll('.aq-delete-btn'), function (btn) {
+            btn.addEventListener('click', function () {
+                var id = btn.getAttribute('data-id');
+                var c = _challenges.filter(function (x) { return x.id === id; })[0];
+                if (!c) return;
+                if (!window.confirm('تحذف الصورة "' + (c.imageFile || '') + '"؟')) return;
+                _challenges = _challenges.filter(function (x) { return x.id !== id; });
+                renderList();
+                showSuccess('تم الحذف محلياً — لا تنسى تنزيل الملف وترفعه عشان يصير التغيير فعلي.');
+            });
+        });
+    }
+
+    function buildFormHtml(existing) {
+        var answers = existing && existing.answers && existing.answers.length ? existing.answers : [''];
+        var rows = answers.map(function (ans) { return answerRowHtml(ans); }).join('');
+        return '<h2>' + (existing ? 'تعديل صورة' : 'صورة جديدة') + '</h2>' +
+            '<div class="aq-image-picker">' +
+                '<div class="aq-image-preview" id="aq-form-preview"' + (existing && existing.imageFile ? ' style="background-image:url(\'challenge-images/' + escapeHtml(existing.imageFile) + '\')"' : '') + '></div>' +
+                '<div style="flex:1;">' +
+                    '<input type="file" id="aq-form-file-picker" accept="image/*">' +
+                    '<div class="aq-hint" style="margin-top:6px;">اختيار الملف هنا للمعاينة وتعبئة الاسم تلقائياً بس — الرفع الفعلي يدوي (شوف التنبيه فوق).</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="aq-row-field">' +
+                '<input type="text" id="aq-form-filename" placeholder="مثال: challenge-01.png" value="' + escapeHtml(existing ? existing.imageFile : '') + '">' +
+                '<label>اسم ملف الصورة (لازم يطابق بالضبط الملف اللي بترفعه لمجلد challenge-images)</label>' +
+            '</div>' +
+            '<div class="aq-hint" style="margin-bottom:8px;">أضف كل الصياغات المقبولة كإجابة صحيحة لهذي الصورة (كل وحدة بخانة لحالها).</div>' +
+            '<div id="aq-answers-list">' + rows + '</div>' +
+            '<button type="button" id="aq-add-answer-btn" class="aq-btn aq-btn-secondary" style="margin-bottom:14px;">➕ إضافة صياغة إجابة</button>' +
+            '<div id="aq-form-error" class="aq-error"></div>' +
+            '<div style="display:flex; gap:10px; margin-top:6px;">' +
+                '<button type="button" id="aq-form-save-btn" class="aq-btn aq-btn-primary">💾 حفظ</button>' +
+                '<button type="button" id="aq-form-cancel-btn" class="aq-btn aq-btn-secondary">إلغاء</button>' +
+            '</div>';
+    }
+
+    function answerRowHtml(value) {
+        return '<div class="aq-answer-row">' +
+            '<input type="text" class="aq-answer-input" placeholder="مثال: برج خليفة" value="' + escapeHtml(value || '') + '">' +
+            '<button type="button" class="aq-answer-remove-btn" title="حذف هذي الصياغة">✕</button>' +
+        '</div>';
+    }
+
+    function wireAnswerRowRemove(row) {
+        row.querySelector('.aq-answer-remove-btn').addEventListener('click', function () {
+            if (el('aq-answers-list').querySelectorAll('.aq-answer-row').length <= 1) return; // خلّي وحدة على الأقل
+            row.remove();
+        });
+    }
+
+    function openForm(editId) {
+        el('aq-status-error').style.display = 'none';
+        el('aq-status-success').style.display = 'none';
+        _editingId = editId || null;
+        var existing = _editingId ? _challenges.filter(function (c) { return c.id === _editingId; })[0] : null;
+        var panel = el('aq-form-panel');
+        panel.style.display = 'block';
+        panel.innerHTML = buildFormHtml(existing);
+
+        Array.prototype.forEach.call(panel.querySelectorAll('.aq-answer-row'), wireAnswerRowRemove);
+
+        el('aq-add-answer-btn').addEventListener('click', function () {
+            var wrapper = document.createElement('div');
+            wrapper.innerHTML = answerRowHtml('');
+            var row = wrapper.firstChild;
+            el('aq-answers-list').appendChild(row);
+            wireAnswerRowRemove(row);
+        });
+
+        el('aq-form-file-picker').addEventListener('change', function (e) {
+            var file = e.target.files && e.target.files[0];
+            if (!file) return;
+            if (_formPreviewObjectUrl) URL.revokeObjectURL(_formPreviewObjectUrl);
+            _formPreviewObjectUrl = URL.createObjectURL(file);
+            el('aq-form-preview').style.backgroundImage = 'url(\'' + _formPreviewObjectUrl + '\')';
+            if (!el('aq-form-filename').value) el('aq-form-filename').value = file.name;
+        });
+
+        el('aq-form-save-btn').addEventListener('click', function () {
+            var imageFile = (el('aq-form-filename').value || '').trim();
+            var answerInputs = Array.prototype.slice.call(panel.querySelectorAll('.aq-answer-input'));
+            var answers = answerInputs.map(function (inp) { return (inp.value || '').trim(); }).filter(Boolean);
+            var errEl = el('aq-form-error');
+
+            if (!imageFile) { errEl.textContent = 'لازم تكتب اسم ملف الصورة.'; errEl.style.display = 'block'; return; }
+            if (!answers.length) { errEl.textContent = 'لازم تضيف صياغة إجابة صحيحة وحدة على الأقل.'; errEl.style.display = 'block'; return; }
+
+            if (_editingId) {
+                var idx = _challenges.findIndex(function (c) { return c.id === _editingId; });
+                _challenges[idx] = { id: _editingId, imageFile: imageFile, answers: answers };
+            } else {
+                _challenges.push({ id: 'img' + Date.now(), imageFile: imageFile, answers: answers });
+            }
+
+            panel.style.display = 'none';
+            panel.innerHTML = '';
+            _editingId = null;
+            renderList();
+            showSuccess('تم الحفظ محلياً — لا تنسى تنزيل الملف وترفع ملف الصورة أيضاً عشان يصير التغيير فعلي باللعبة.');
+        });
+
+        el('aq-form-cancel-btn').addEventListener('click', function () {
+            panel.style.display = 'none';
+            panel.innerHTML = '';
+            _editingId = null;
+        });
+
+        if (typeof panel.scrollIntoView === 'function') {
+            panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    function downloadBank() {
+        if (!_challenges.length) { showError('ما فيه أي صورة تنزّلها — أضف صورة وحدة على الأقل أول.'); return; }
+        var payload = { updatedAt: new Date().toISOString(), challenges: _challenges };
+        var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'answers-bank.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showSuccess('تم تنزيل الملف — ارفعه الحين لمكان اللعبة بـGitHub (استبدال الملف الحالي)، مع ملفات الصور بمجلد challenge-images، عشان يصير التحديث فعلي.');
+    }
+
+    el('aq-add-btn').addEventListener('click', function () { openForm(null); });
+    el('aq-reload-btn').addEventListener('click', function () {
+        if (!window.confirm('تفقد أي تعديل محلي غير محفوظ بملف. تبي تكمل؟')) return;
+        loadBankFromServer();
+    });
+    el('aq-download-btn').addEventListener('click', downloadBank);
+
+    window.AGPAuth.requireAdmin('../../login.html', '../../dashboard-core/index.html').then(function (user) {
+        if (!user) return;
+        document.body.classList.remove('auth-checking');
+        loadBankFromServer();
+    });
+}());
+</script>
+
+</body>
+</html>
