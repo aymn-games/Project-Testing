@@ -799,10 +799,10 @@
                 </div>
             </div>
             <div class="new-game-chip">
-                <img src="musical-chairs-cover.png" alt="غلاف لعبة الكراسي الموسيقية" onerror="this.style.display='none';">
+                <img src="photo-challenge-cover.png" alt="غلاف لعبة تحدي الصور" onerror="this.style.display='none';">
                 <div class="new-game-chip-info">
-                    <span class="new-game-chip-title">🎵 الكراسي الموسيقية</span>
-                    <a href="games/musical-chairs/index.html" target="_blank" class="btn-play">العب الآن</a>
+                    <span class="new-game-chip-title">🖼️ تحدي الصور</span>
+                    <a href="games/photo-challenge/index.html" target="_blank" class="btn-play">العب الآن</a>
                 </div>
             </div>
         </div>
@@ -954,14 +954,22 @@
     </div>
 </div>
 
-            <div class="game-cover-wrap">
-                <img src="coming-soon-9-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
-            </div>
-            <div class="game-info">
-                <span class="game-title">🎮 لعبة جديدة #9</span>
-                <button class="btn-soon" disabled>🔒 قريباً</button>
-            </div>
-        </div>
+        <div class="game-card game-card--v2" data-agp-game-id="photo-challenge" data-agp-game-status="active">
+    <div class="game-cover-wrap">
+        <img src="photo-challenge-cover.png" alt="غلاف لعبة تحدي الصور" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+    </div>
+    <div class="game-info">
+        <span class="game-title">🖼️ تحدي الصور (Photo Challenge)</span>
+        <a href="games/photo-challenge/index.html" target="_blank" class="btn-play">العب الآن</a>
+        <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
+        <p class="game-description">
+            فريقان يتنافسان بكلمة مفتاحية منفصلة لكل فريق. كل جولة تظهر صورة تحدي، وأول لاعب يكتب
+            الإجابة الصحيحة بالشات يسجّل نقطة لفريقه (3 نقاط بأول 15 ثانية، نقطتان قبل نص الوقت،
+            نقطة بعده). لاعب يجاوب صح مرتين متتاليتين يكسب أفضلية يسكت فيها لاعب من الفريق الخصم
+            جولة كاملة. أول فريق يوصل نقاط الفوز المحددة يفوز!
+        </p>
+    </div>
+</div>
         <div class="game-card game-card--v2 game-card--soon" data-agp-game-id="coming-soon-10" data-agp-game-status="coming-soon">
             <div class="game-cover-wrap">
                 <img src="coming-soon-10-cover.png" alt="" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
