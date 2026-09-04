@@ -10,6 +10,8 @@ body.pc-active{
     font-family:'Zain',Cairo,sans-serif;
     color:#fff;
     min-height:100vh;
+    padding-top:56px;
+    box-sizing:border-box;
     background:
         radial-gradient(ellipse 900px 500px at 50% -8%,rgba(128,212,255,0.16),transparent 60%),
         radial-gradient(ellipse 700px 500px at 90% 100%,rgba(124,58,237,0.18),transparent 60%),
@@ -17,6 +19,43 @@ body.pc-active{
     background-attachment:fixed;
     background-size:cover;
 }
+
+/* ---------------------------------------------------------------------
+   الهيدر الأساسي الثابت -- بهوية اللعبة (سماوي/بنفسجي) بدل تدرّج المنصة
+   العام. حاضر بكل شاشات اللعبة (الإعدادات، اللوبي، المباراة).
+--------------------------------------------------------------------- */
+#pc-header{
+    position:fixed;
+    top:0; left:0; right:0;
+    z-index:500;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 20px;
+    background:linear-gradient(90deg,rgba(13,8,24,0.92),rgba(30,15,60,0.85));
+    border-bottom:1px solid rgba(128,212,255,0.35);
+    box-shadow:0 2px 20px rgba(128,212,255,0.12);
+}
+.pc-header-icons{ display:flex; gap:8px; align-items:center; }
+.pc-header-icon-btn{
+    width:34px; height:34px; border-radius:50%;
+    border:1px solid rgba(128,212,255,0.45);
+    background:rgba(255,255,255,0.06);
+    color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-size:15px;
+}
+#pc-header-title{
+    background:rgba(0,0,0,0.35);
+    border:1px solid rgba(128,212,255,0.25);
+    border-radius:999px;
+    padding:6px 22px;
+    color:#cdeeff;
+    font-weight:700;
+    font-size:0.9em;
+}
+#pc-header-brand{ display:flex; align-items:center; }
+#pc-header-brand img{ height:36px; width:auto; }
 
 /* ---------------------------------------------------------------------
    شاشة الإعدادات — قالب "settings-no-box" (منقول بالحرف من روليت القبائل):
@@ -185,6 +224,277 @@ body.pc-active{
     transition:background 0.15s;
 }
 .pc-back-btn:hover{ background:rgba(255,255,255,0.18); }
+
+/* ---------------------------------------------------------------------
+   شاشة اللوبي -- عنوان اللعبة أعلى + الفريقين جنب بعض بفاصل VS، كل فريق
+   تحته شبكة لاعبيه (بطاقات AGP.playerCard القياسية، حجم 60px الافتراضي).
+--------------------------------------------------------------------- */
+#pc-lobby{
+    width:min(1100px,94vw);
+    margin:0 auto;
+    padding:44px 24px 40px;
+    box-sizing:border-box;
+    display:none;
+}
+#pc-lobby h2{
+    margin:0 0 6px;
+    font-size:34px;
+    font-weight:900;
+    text-align:center;
+    background:linear-gradient(90deg,var(--pc-accent),#d0b3ff 55%,var(--pc-accent2));
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+}
+.pc-lobby-sub{
+    text-align:center;
+    color:#9d92b3;
+    font-size:14px;
+    margin-bottom:30px;
+}
+
+.pc-lobby-panels{
+    display:flex;
+    align-items:stretch;
+    gap:24px;
+}
+.pc-lobby-team{ flex:1; min-width:0; }
+.pc-lobby-team-header{
+    border-radius:14px;
+    padding:16px;
+    text-align:center;
+    margin-bottom:12px;
+    border:1.5px solid;
+}
+.pc-lobby-team-header.pc-team1{ border-color:var(--pc-team1); background:rgba(128,212,255,0.08); }
+.pc-lobby-team-header.pc-team2{ border-color:var(--pc-team2); background:rgba(255,77,255,0.08); }
+.pc-lobby-team-name{ font-size:20px; font-weight:900; }
+.pc-team1 .pc-lobby-team-name{ color:#cdeeff; }
+.pc-team2 .pc-lobby-team-name{ color:#ffd6fb; }
+.pc-lobby-team-keyword{ font-size:13px; opacity:0.85; }
+.pc-team1 .pc-lobby-team-keyword{ color:#9dd6f5; }
+.pc-team2 .pc-lobby-team-keyword{ color:#f5a3ec; }
+
+.pc-lobby-count{
+    text-align:center;
+    color:#fff;
+    font-weight:800;
+    font-size:14px;
+    margin-bottom:12px;
+}
+
+.pc-lobby-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:10px;
+}
+@media (max-width:720px){
+    .pc-lobby-grid{ grid-template-columns:1fr 1fr; }
+}
+.pc-lobby-card-wrap{ position:relative; }
+.pc-lobby-remove-x{
+    position:absolute;
+    top:-6px;
+    left:-6px;
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    border:none;
+    background:#ef4444;
+    color:#fff;
+    font-size:11px;
+    line-height:20px;
+    text-align:center;
+    cursor:pointer;
+    z-index:3;
+}
+.pc-lobby-empty-slot{
+    border:2px dashed rgba(255,255,255,0.25);
+    border-radius:999px;
+    min-height:44px;
+}
+.pc-team1 .pc-lobby-empty-slot{ border-color:rgba(128,212,255,0.3); }
+.pc-team2 .pc-lobby-empty-slot{ border-color:rgba(255,77,255,0.3); }
+
+.pc-vs-label{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0 4px;
+    font-size:26px;
+    font-weight:900;
+    color:#d0b3ff;
+    text-shadow:0 0 14px rgba(124,58,237,0.6);
+}
+@media (max-width:720px){
+    .pc-lobby-panels{ flex-direction:column; }
+    .pc-vs-label{ padding:6px 0; }
+}
+
+.pc-lobby-actions{
+    display:flex;
+    gap:16px;
+    justify-content:center;
+    align-items:center;
+    margin-top:34px;
+    flex-wrap:wrap;
+}
+.pc-lobby-actions > button{
+    width:280px;
+    height:48px;
+    padding:0 14px;
+    border-radius:999px;
+    font-weight:800;
+    font-size:14px;
+    font-family:inherit;
+    cursor:pointer;
+}
+.pc-lobby-btn-settings,
+.pc-lobby-btn-platform{
+    border:1px solid rgba(255,255,255,0.35);
+    background:rgba(255,255,255,0.1);
+    color:#fff;
+}
+.pc-lobby-btn-start{
+    border:none;
+    background:linear-gradient(90deg,#22c55e,#16a34a);
+    color:#fff;
+}
+.pc-lobby-btn-start:disabled{ opacity:0.45; cursor:not-allowed; }
+
+/* ---------------------------------------------------------------------
+   شاشة المباراة -- تبويب العرض 600×400 بحواف متوهجة بالنص، الفريقين
+   يمين/يسار الشاشة (اسم + نقاط + لاعبين)، زر واحد يبدأ عد تنازلي 3-2-1
+   ثم يتحوّل لأزرار الجولة (زيادة الوقت / إنهاء دون احتساب نقاط).
+--------------------------------------------------------------------- */
+#pc-match{
+    width:min(1080px,96vw);
+    margin:0 auto;
+    padding:30px 24px 44px;
+    box-sizing:border-box;
+    display:none;
+    align-items:flex-start;
+    justify-content:center;
+    gap:22px;
+}
+
+.pc-side-panel{ width:190px; flex-shrink:0; }
+.pc-side-team-header{
+    border-radius:14px;
+    padding:14px;
+    text-align:center;
+    margin-bottom:12px;
+    border:1.5px solid;
+}
+.pc-side-team-header.pc-team1{ border-color:var(--pc-team1); background:rgba(128,212,255,0.08); }
+.pc-side-team-header.pc-team2{ border-color:var(--pc-team2); background:rgba(255,77,255,0.08); }
+.pc-side-team-name{ font-size:16px; font-weight:900; }
+.pc-team1 .pc-side-team-name{ color:#cdeeff; }
+.pc-team2 .pc-side-team-name{ color:#ffd6fb; }
+.pc-side-team-score{ font-size:19px; font-weight:900; margin-top:2px; }
+.pc-team1 .pc-side-team-score{ color:var(--pc-team1); }
+.pc-team2 .pc-side-team-score{ color:var(--pc-team2); }
+
+.pc-side-player-list{ display:flex; flex-direction:column; gap:8px; }
+.pc-side-player-chip{
+    background:rgba(255,255,255,0.05);
+    border-radius:999px;
+    padding:7px 10px;
+    display:flex; align-items:center; gap:8px;
+}
+.pc-side-player-chip.pc-team1{ border:1px solid rgba(128,212,255,0.3); }
+.pc-side-player-chip.pc-team2{ border:1px solid rgba(255,77,255,0.3); }
+.pc-side-player-avatar{
+    width:24px; height:24px; border-radius:50%;
+    background:#3a2f52 center/cover no-repeat;
+    flex-shrink:0;
+}
+.pc-side-player-name{ font-size:12px; color:#fff; }
+
+.pc-stage-col{ display:flex; flex-direction:column; align-items:center; }
+.pc-stage-box{
+    width:600px; max-width:100%; height:400px;
+    box-sizing:border-box;
+    border-radius:20px;
+    background:rgba(20,12,34,0.55);
+    border:2px solid var(--pc-accent);
+    box-shadow:0 0 25px rgba(128,212,255,0.55),0 0 55px rgba(124,58,237,0.35),inset 0 0 30px rgba(128,212,255,0.08);
+    display:flex; flex-direction:column;
+    padding:18px;
+    position:relative;
+    overflow:hidden;
+}
+.pc-stage-hint-row{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.pc-stage-hint{ color:#cdeeff; font-size:14px; font-weight:800; text-align:right; }
+.pc-answer-timer{
+    display:none;
+    align-items:center; gap:6px;
+    background:rgba(0,0,0,0.35);
+    border:1px solid rgba(128,212,255,0.4);
+    border-radius:999px;
+    padding:5px 14px;
+    font-size:15px; font-weight:900;
+    color:#cdeeff;
+}
+.pc-answer-timer.pc-low{ border-color:#ef4444; color:#ff8da3; }
+.pc-stage-inner{
+    flex:1; width:100%;
+    border:2px dashed rgba(255,255,255,0.18);
+    border-radius:14px;
+    display:flex; align-items:center; justify-content:center;
+    color:#6d6180; font-size:13px;
+    position:relative;
+    overflow:hidden;
+}
+.pc-stage-inner.pc-has-image{ border-style:solid; border-color:rgba(128,212,255,0.35); color:#e9defc; font-size:15px; font-weight:700; }
+.pc-stage-watermark{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none;
+}
+.pc-stage-watermark img{ width:55%; opacity:0.4; }
+.pc-stage-image-label{ position:relative; }
+
+.pc-countdown-overlay{
+    position:absolute; inset:0;
+    display:none;
+    align-items:center; justify-content:center;
+    background:rgba(5,3,10,0.75);
+    backdrop-filter:blur(3px);
+    border-radius:18px;
+}
+.pc-countdown-num{
+    font-size:120px; font-weight:900;
+    background:linear-gradient(90deg,var(--pc-accent),#d0b3ff 55%,var(--pc-accent2));
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    animation:pc-countdown-pop 0.5s ease;
+}
+@keyframes pc-countdown-pop{ 0%{ transform:scale(0.4); opacity:0; } 60%{ transform:scale(1.15); opacity:1; } 100%{ transform:scale(1); } }
+
+.pc-match-btn-row{ margin-top:20px; display:flex; gap:14px; align-items:center; flex-wrap:wrap; justify-content:center; }
+.pc-btn-show-start{
+    border:none; border-radius:999px;
+    background:linear-gradient(90deg,var(--pc-accent2),var(--pc-accent));
+    color:#0a0612;
+    padding:12px 26px;
+    font-weight:800; font-size:14px; font-family:inherit; cursor:pointer;
+    box-shadow:0 10px 30px rgba(128,212,255,0.3);
+}
+.pc-timer-label{ color:#cdeeff; font-size:13px; font-weight:800; }
+.pc-btn-add-time{
+    padding:8px 16px; border:1px solid rgba(255,255,255,0.25); border-radius:999px;
+    background:transparent; color:#a99cc4; font-size:12px; font-weight:800; font-family:inherit; cursor:pointer;
+}
+.pc-btn-end-round{
+    padding:10px 22px; border:1px solid #ef4444; border-radius:999px;
+    background:rgba(239,68,68,0.12); color:#ff8da3; font-weight:800; font-size:13px; font-family:inherit; cursor:pointer;
+}
+
+@media (max-width:900px){
+    #pc-match{ flex-direction:column; align-items:center; }
+    .pc-side-panel{ width:100%; max-width:600px; }
+    .pc-side-player-list{ flex-direction:row; flex-wrap:wrap; }
+}
 
 /* ---------------------------------------------------------------------
    تبويب الاتصال بالبث — يظهر فوق شاشة الإعدادات (منقول بالحرف من قالب
