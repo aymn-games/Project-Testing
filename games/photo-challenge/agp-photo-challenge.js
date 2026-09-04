@@ -511,6 +511,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 _answerInterval = null;
                 _answerRemaining = 0;
                 _activeSilence = null; // انتهى الوقت -- الإسكات ينتهي مع الجولة
+                valEl.textContent = formatAnswerTime(_answerRemaining);
+                showTimeoutPopup(); // ما حد جاوب -- يعرض تبويب انتهاء الوقت، وينتقل بس لما يضغط المستخدم الزر
+                return;
             }
             valEl.textContent = formatAnswerTime(_answerRemaining);
         }, 1000);
@@ -521,6 +524,50 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var timerEl = el('pc-answer-timer');
         if (timerEl) { timerEl.style.display = 'none'; timerEl.classList.remove('pc-low'); }
         _activeSilence = null; // انتهت الجولة -- الإسكات ينتهي معها
+    }
+
+    /* ---- تبويب "انتهى الوقت" -- ما يبيّن الإجابة، وينتقل للجولة الجاية
+     *      بس لما يضغط المستخدم الزر يدوياً. ---- */
+    function ensureTimeoutPopup() {
+        if (!el('pc-timeout-dim')) {
+            var dim = document.createElement('div');
+            dim.id = 'pc-timeout-dim';
+            document.body.appendChild(dim);
+        }
+        if (!el('pc-timeout-popup')) {
+            var popup = document.createElement('div');
+            popup.id = 'pc-timeout-popup';
+            document.body.appendChild(popup);
+        }
+        return el('pc-timeout-popup');
+    }
+
+    function showTimeoutPopup() {
+        var popup = ensureTimeoutPopup();
+        var answerText = _currentChallenge ? _currentChallenge.answers[0] : '';
+        el('pc-timeout-dim').style.display = 'flex';
+        popup.style.display = 'block';
+        popup.innerHTML =
+            '<div class="pc-timeout-icon">⏰</div>' +
+            '<h3>انتهى الوقت!</h3>' +
+            '<p>جاري الانتقال للصورة التالية...</p>' +
+            (answerText
+                ? '<div class="pc-timeout-answer-row">الإجابة الصحيحة: <span class="pc-timeout-answer-blur" id="pc-timeout-answer-blur">' + escapeHtml(answerText) + '</span></div>' +
+                  '<div class="pc-timeout-answer-hint">الإجابة مخفية عشان ما ينحرق السؤال</div>'
+                : '') +
+            '<button type="button" class="pc-btn-timeout-next" id="pc-timeout-next-btn">⏭ الجولة التالية</button>';
+        if (answerText) {
+            el('pc-timeout-answer-blur').addEventListener('click', function () { this.classList.toggle('pc-revealed'); });
+        }
+        el('pc-timeout-next-btn').addEventListener('click', function () {
+            hideTimeoutPopup();
+            handleShowImageAndStart();
+        });
+    }
+
+    function hideTimeoutPopup() {
+        if (el('pc-timeout-dim')) el('pc-timeout-dim').style.display = 'none';
+        if (el('pc-timeout-popup')) el('pc-timeout-popup').style.display = 'none';
     }
 
     function addAnswerTime(seconds) {
@@ -546,10 +593,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
         el('pc-end-round-btn').addEventListener('click', function () {
             stopAnswerTimer();
-            // ⚠️ بناء تدريجي: التحقق من صحة الإجابات نفسه (لتحديد الفائز
-            // بالجولة قبل انتهاء الوقت) غير مبني بعد -- هذا الزر ينهي
-            // الجولة يدوياً بدون احتساب نقاط لأي فريق.
-            AGP.log('Photo Challenge: إنهاء الجولة دون احتساب نقاط.');
+            handleShowImageAndStart(); // يتخطى مباشرة للصورة الجاية بدون احتساب نقاط لأي فريق
         });
     }
 
@@ -616,11 +660,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         setTimeout(function () { floatEl.remove(); }, 1600);
     }
 
-    /* ---- ظهور "الإجابة الصحيحة" -- تُستدعى مع: مين جاوب، فريقه، نص
-     *      الإجابة الصحيحة نفسها، والنقاط المستحقة (3/2/1 حسب التوقيت).
-     *      ⚠️ بناء تدريجي: ما فيه لسا محرك يتحقق من الإجابات الواردة
-     *      بالشات ويستدعي هذي الدالة تلقائياً -- محتاجين نحدد أول كيف
-     *      بيُدخَل نص الإجابة الصحيحة لكل جولة قبل ربط الاستدعاء التلقائي. */
+    /* ---- ظهور "الإجابة الصحيحة" -- تُستدعى من محرك التحقق الفعلي
+     *      (wireAnswerCheckingListener تحت) بمين جاوب، فريقه، النص
+     *      الأساسي للإجابة الصحيحة، والنقاط المستحقة (3/2/1 حسب التوقيت). */
     function revealCorrectAnswer(playerId, playerTeam, answerText, pointsAwarded) {
         stopAnswerTimer();
 
@@ -664,6 +706,36 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         el('pc-match-btn-row').innerHTML = '<button type="button" class="pc-btn-next-round" id="pc-next-round-btn">⏭ الجولة التالية</button>';
         el('pc-next-round-btn').addEventListener('click', handleShowImageAndStart);
+    }
+
+    /* ---- محرك التحقق الفعلي من الإجابات الواردة بالشات -- يقارن كل
+     *      تعليق بكل الصياغات المقبولة (الأساسية + المشابهة) لصورة
+     *      الجولة الحالية عبر answers-bank.json. أول إجابة صحيحة توقف
+     *      الجولة وتستدعي revealCorrectAnswer بالنقاط المستحقة حسب
+     *      توقيتها (3 أول 15 ثانية / 2 قبل نص الوقت / 1 بعده). ---- */
+    var _answerCheckUnsub = null;
+
+    function wireAnswerCheckingListener() {
+        if (_answerCheckUnsub) return;
+        _answerCheckUnsub = AGP.events.on('stream:commentReceived', function (payload) {
+            if (_answerInterval == null || !_currentChallenge || !payload || typeof payload.text !== 'string' || !payload.id) return;
+
+            // رسالة اللاعب المُسكَت لا تُحتسب كإجابة إطلاقاً -- إنفاذ
+            // الإسكات (wireSilenceEnforcementListener) هو اللي يتكفل بها.
+            if (_activeSilence && payload.id === _activeSilence.playerId) return;
+
+            var player = findPlayerById(payload.id);
+            if (!player || !player.team) return; // لازم يكون لاعب منضم لفريق
+
+            var text = normalizeArabicText(payload.text);
+            var isCorrect = _currentChallenge.answers.some(function (a) { return normalizeArabicText(a) === text; });
+            if (!isCorrect) return;
+
+            var elapsed = _settings.answerDurationSeconds - _answerRemaining;
+            var pointsAwarded = elapsed <= 15 ? 3 : (elapsed <= _settings.answerDurationSeconds / 2 ? 2 : 1);
+
+            revealCorrectAnswer(payload.id, player.team, _currentChallenge.answers[0], pointsAwarded);
+        });
     }
 
     function renderMatchScreen() {
@@ -1017,6 +1089,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         injectHeader();
         wirePlatformListeners();
         wireSilenceEnforcementListener();
+        wireAnswerCheckingListener();
         loadChallengeBank();
         renderSettingsScreen();
     }

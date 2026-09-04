@@ -646,6 +646,55 @@ body.pc-active{
 @keyframes pc-toast-in{ from{ transform:translateX(-20px); opacity:0; } to{ transform:translateX(0); opacity:1; } }
 
 /* ---------------------------------------------------------------------
+   تبويب "انتهى الوقت" -- يظهر لما ينتهي عداد الجولة بدون أي إجابة صحيحة.
+   ما يبيّن الإجابة (عشان ما يُحرق الجواب)، وينتقل للجولة الجاية فقط لما
+   يضغط المستخدم زر الانتقال يدوياً.
+--------------------------------------------------------------------- */
+#pc-timeout-dim{
+    display:none;
+    position:fixed; inset:0; z-index:175000;
+    background:rgba(5,3,10,0.65);
+    backdrop-filter:blur(2px);
+    align-items:center; justify-content:center;
+}
+#pc-timeout-popup{
+    display:none;
+    position:fixed; top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    z-index:175001;
+    width:340px; max-width:90vw;
+    padding:32px 28px 26px;
+    border-radius:20px;
+    background:rgba(20,12,34,0.94);
+    backdrop-filter:blur(16px);
+    border:1.5px solid var(--pc-accent);
+    box-shadow:0 0 0 1px rgba(128,212,255,0.15),0 0 40px rgba(128,212,255,0.4),0 20px 60px rgba(0,0,0,0.5);
+    text-align:center;
+    color:#fff;
+    font-family:'Zain',Cairo,sans-serif;
+}
+.pc-timeout-icon{ font-size:42px; margin-bottom:8px; }
+#pc-timeout-popup h3{ font-size:19px; font-weight:900; color:#cdeeff; margin:0 0 8px; }
+#pc-timeout-popup p{ font-size:13.5px; color:#9d92b3; margin:0 0 16px; }
+.pc-timeout-answer-row{ font-size:13px; color:#c9b8e0; margin:0 0 6px; }
+.pc-timeout-answer-hint{ font-size:11px; color:#8f7ba8; margin:0 0 20px; }
+.pc-timeout-answer-blur{
+    filter:blur(6px);
+    cursor:pointer;
+    font-weight:800;
+    color:#fff;
+    transition:filter 0.2s;
+    display:inline-block;
+}
+.pc-timeout-answer-blur.pc-revealed{ filter:none; }
+.pc-btn-timeout-next{
+    border:none; border-radius:999px;
+    background:linear-gradient(90deg,var(--pc-accent2),var(--pc-accent));
+    color:#0a0612; padding:11px 28px;
+    font-weight:800; font-size:14px; font-family:inherit; cursor:pointer;
+}
+
+/* ---------------------------------------------------------------------
    تبويب "الأفضلية" -- إجابتين صح متتاليتين. أعرض من تبويب الاتصال (520px)
    وبحواف ذهبية متوهجة (تمييزه عن السماوي). يعرض لاعبي الفريق الآخر
    بأرقام -- اللاعب صاحب الأفضلية يكتب الرقم بالشات فيُسكَت ذاك اللاعب
