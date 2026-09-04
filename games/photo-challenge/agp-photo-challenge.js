@@ -57,6 +57,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         team2Name: 'الفريق الثاني',
         team2Keyword: '',
         followersOnly: false,
+        maxPlayers: null, // فاضي = بدون حد أقصى
         answerDurationSeconds: 90,
         winPoints: 20
     };
@@ -174,6 +175,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<span class="pc-row-label">🔑 مين يقدر يدخل؟</span>' +
             '</div>' +
 
+            '<div class="pc-max-players-field">' +
+                '<label>👥 عدد اللاعبين المسموح لهم بالدخول</label>' +
+                '<input type="number" id="pc-input-maxPlayers" placeholder="بدون حد" min="1" value="' + (_settings.maxPlayers != null ? _settings.maxPlayers : '') + '">' +
+            '</div>' +
+
             '<div class="pc-row" id="pc-row-duration" style="flex-direction:column;align-items:stretch;">' +
                 '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">' +
                     '<div class="pc-pill-group">' + durationPills + '</div>' +
@@ -201,6 +207,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('pc-input-team1Keyword').addEventListener('input', function (e) { _settings.team1Keyword = e.target.value; });
         el('pc-input-team2Name').addEventListener('input', function (e) { _settings.team2Name = e.target.value; });
         el('pc-input-team2Keyword').addEventListener('input', function (e) { _settings.team2Keyword = e.target.value; });
+        el('pc-input-maxPlayers').addEventListener('input', function (e) {
+            var v = parseInt(e.target.value, 10);
+            _settings.maxPlayers = (e.target.value === '' || isNaN(v) || v < 1) ? null : v;
+        });
 
         el('pc-row-followersOnly').addEventListener('click', function (e) {
             var btn = e.target.closest('.pc-pill-btn'); if (!btn) return;
