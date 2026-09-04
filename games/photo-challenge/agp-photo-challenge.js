@@ -324,6 +324,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _commentUnsub = AGP.events.on('stream:commentReceived', function (payload) {
             if (!_registrationOpen || !payload || typeof payload.text !== 'string' || !payload.id) return;
 
+            // ⚠️ فلترة "متابعين فقط" محلياً هنا -- الفلتر المشترك
+            // (agp-tiktok-adapter.js) يقرأ فقط من AGP.gameShell.getSettings()
+            // الخاص بالألعاب المعتمدة على الشِل المشترك، ولعبتنا غير
+            // معتمدة عليه (كلمتان مفتاحيتان منفصلتان)، فيتجاهله تماماً.
+            // نفس منطق الفلتر بالضبط، منقول هنا بدون أي تعديل على الملف
+            // المشترك نفسه.
+            if (_settings.followersOnly && !payload.isFollower) return;
+
             var text = normalizeArabicText(payload.text);
             var kw1 = normalizeArabicText(_settings.team1Keyword);
             var kw2 = normalizeArabicText(_settings.team2Keyword);
@@ -930,6 +938,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // شبكة أمان: أي مصدر نقاط مستقبلي (مثل محرك التحقق من الإجابات
         // اللي بيُبنى بمرحلة لاحقة) يُفحص تلقائياً بعد كل تغيير نقاط.
         AGP.events.on('score:changed', function () { checkForWinner(); });
+
+        // ⚠️ إصلاح خلل: بدون هذا، انضمام لاعب عبر الشات (أو حذفه، أو
+        // تبديله لفريق ثاني) يصير فعلياً بالخلفية لكن شبكة اللوبي ما
+        // تنعرض محدَّثة أبداً -- يبين وكأن الكتابة بالشات "ما تشتغل".
+        AGP.events.on('player:joined', function () { if (_screen === 'lobby') renderLobbyPlayerGrids(); });
+        AGP.events.on('player:removed', function () { if (_screen === 'lobby') renderLobbyPlayerGrids(); });
     }
 
     function registerGame() {
