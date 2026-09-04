@@ -456,15 +456,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * ~0.67، أطول من عرضها) بدل الرسم المربّع القديم — الحاوية
              * صارت مستطيلة تناسب شكلها الطبيعي بدل مربّع، وobject-fit:
              * contain يحافظ على تناسق الصورة بدون أي تمديد أو تشويه. */
-            /* ⚠️ مقاس الكرسي: 65×100px بالضبط عند أقصى حجم للحلقة (600px) —
-             * محسوبة كنسبة مئوية (10.83%/16.67%) حتى يبقى الحجم متجاوباً
-             * تلقائياً على الشاشات الأصغر (نفس فلسفة النظام القديم، بس
-             * بالمقاس الجديد المطلوب). */
-            '.mc-chair{position:absolute;width:10.83%;height:16.67%;transform:translate(-50%,-50%);',
-            'display:flex;align-items:center;justify-content:center;}',
+            /* ⚠️ مقاس الكرسي صُغِّر شوي (كان 65×100px، صار 55×85px عند
+             * أقصى حجم للحلقة 600px) — بطلب صريح. + transition لموقعه
+             * (left/top) عشان أي إعادة توزيع لاحقة (لو انضم لاعب جديد
+             * أثناء الدورة وزاد عدد الكراسي) تصير بحركة ناعمة سلسة، مو
+             * قفزة مفاجئة. */
+            '.mc-chair{position:absolute;width:9.17%;height:14.17%;transform:translate(-50%,-50%);',
+            'display:flex;align-items:center;justify-content:center;transition:left .3s ease,top .3s ease,opacity .4s ease,transform .4s ease;}',
             '.mc-chair-svg{width:100%;height:100%;object-fit:contain;',
             'filter:drop-shadow(0 0 8px rgba(255,176,32,0.55));transition:filter .25s;}',
             '.mc-chair.mc-chair-taken .mc-chair-svg{filter:drop-shadow(0 0 14px rgba(124,58,237,0.9));}',
+            /* ⚠️ جديد: الكرسي يختفي بالكامل (فيد + تصغير خفيف) بعد ما
+             * توصل صورة اللاعب فوقه — بطلب صريح. */
+            '.mc-chair.mc-chair-vanish{opacity:0;transform:translate(-50%,-50%) scale(0.7);pointer-events:none;}',
             /* ⚠️ رقم الكرسي — صار عنصر مستقل (مو جوّا .mc-chair بعد الآن)
              * يتموضع شعاعياً بموقعه الخاص (badgeX/badgeY محسوبة بـJS حسب
              * زاوية كل كرسي وحلقته) بدل موضع ثابت "لفوق" — يمنع تراكب
@@ -473,7 +477,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-chair-number{position:absolute;transform:translate(-50%,-50%) scale(0);',
             'background:#000;color:#fff;border:3px solid var(--mc-gold);',
             'font-weight:900;font-size:1.85em;border-radius:999px;padding:4px 15px;min-width:1.6em;text-align:center;',
-            'box-shadow:0 0 14px rgba(0,0,0,0.9);transition:transform .35s cubic-bezier(.34,1.56,.64,1);',
+            'box-shadow:0 0 14px rgba(0,0,0,0.9);transition:transform .35s cubic-bezier(.34,1.56,.64,1),left .3s ease,top .3s ease;',
             'z-index:3;-webkit-text-stroke:0.6px #fff;}',
             '.mc-chair-number.mc-chair-revealed{transform:translate(-50%,-50%) scale(1);}',
             /* ⚠️ إصلاح باگ حقيقي: الرقم كان يبقى ظاهر حتى بعد ما يحجزه
@@ -939,6 +943,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // (نفس منطق حساب عدد الكراسي بالدورة، بس مطبَّق على العدد الجديد للأحياء)
     // بدون ما نلمس مواقع/أرقام الكراسي الموجودة أصلاً (نضيف بس الكرسي
     // الناقص كعنصر جديد، حتى ما نحرّك كرسي لاعب قاعد عليه فعلاً).
+    // ⚠️ إصلاح باگ حقيقي: كانت الدالة تضيف الكرسي الجديد فقط بموقع
+    // محسوب على افتراض "لو التوزيع صار من جديد لكل الكراسي (القديمة
+    // + الجديدة)"، بس الكراسي القديمة فعلياً ما كانت تتحرك من مكانها —
+    // فتصادم/تراكم حقيقي بين كرسي جديد وكرسي قديم بنفس المكان تقريباً
+    // (لأن صيغة حساب الزاوية للكرسي الجديد كانت تفترض عدد إجمالي مختلف
+    // عن اللي استُخدم فعلياً وقت رسم الكراسي القديمة).
+    //
+    // الحل الصحيح: نعيد توزيع **كل** الكراسي (القديمة والجديدة سوا)
+    // بالتساوي حسب العدد الجديد، ونحرّك عناصر DOM الموجودة فعلياً
+    // لمواقعها الجديدة بسلاسة (عندها transition أصلاً) — بما فيها أي
+    // لاعب قاعد فعلاً على كرسي، نحرّك أفاتاره معه لنفس الموقع الجديد
+    // (تحريك بسيط وسلس، أفضل بكثير من تصادم الكراسي).
     function addChairsIfNeeded() {
         if (!_matchActive || _chairs.length === 0) return;
         var mode = liveSettings().chairDeficitMode || 'auto';
@@ -948,38 +964,59 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         if (targetCount <= _chairs.length) return;
 
+        var ring = el('mc-chairs-ring');
+        var showRevealed = _selectionOpen;
         var used = usedChairNumbers();
         var newTotal = targetCount;
-        var ring = el('mc-chairs-ring');
-        var showRevealed = _selectionOpen; // لو الاختيار شغّال أصلاً، الكرسي الجديد يطلع مكشوف فوراً
+        var oldCount = _chairs.length;
 
-        while (_chairs.length < newTotal) {
-            var idx = _chairs.length;
+        for (var idx = 0; idx < newTotal; idx++) {
             var pos = chairPositionForIndex(idx, newTotal);
             var radius = chairRingRadius(pos.ring);
             var badge = chairBadgePosition(pos.angle, pos.ring, radius);
-            var chair = {
-                number: randomFreeChairNumber(used), x: pos.x, y: pos.y,
-                badgeX: badge.x, badgeY: badge.y, occupantId: null
-            };
-            _chairs.push(chair);
 
-            if (ring) {
-                var div = document.createElement('div');
-                div.className = 'mc-chair';
-                div.id = 'mc-chair-' + idx;
-                div.style.left = chair.x + '%';
-                div.style.top = chair.y + '%';
-                div.innerHTML = chairSvg();
-                ring.appendChild(div);
+            if (idx < oldCount) {
+                // كرسي موجود أصلاً — نحدّث موقعه فقط (نفس الرقم وحالة
+                // الإشغال كما هي، ما نغيّرهم إطلاقاً).
+                var chair = _chairs[idx];
+                chair.x = pos.x; chair.y = pos.y;
+                chair.badgeX = badge.x; chair.badgeY = badge.y;
 
-                var badgeEl = document.createElement('span');
-                badgeEl.className = 'mc-chair-number' + (showRevealed ? ' mc-chair-revealed' : '');
-                badgeEl.id = 'mc-chair-num-' + idx;
-                badgeEl.style.left = chair.badgeX + '%';
-                badgeEl.style.top = chair.badgeY + '%';
-                badgeEl.textContent = chair.number;
-                ring.appendChild(badgeEl);
+                var chairEl = el('mc-chair-' + idx);
+                if (chairEl) { chairEl.style.left = chair.x + '%'; chairEl.style.top = chair.y + '%'; }
+                var badgeElExisting = el('mc-chair-num-' + idx);
+                if (badgeElExisting) { badgeElExisting.style.left = chair.badgeX + '%'; badgeElExisting.style.top = chair.badgeY + '%'; }
+
+                // لو فيه لاعب قاعد فعلاً على هذا الكرسي، نحرّك أفاتاره معه
+                if (chair.occupantId) {
+                    var occupantAvatar = el('mc-avatar-' + chair.occupantId);
+                    if (occupantAvatar) { occupantAvatar.style.left = chair.x + '%'; occupantAvatar.style.top = chair.y + '%'; }
+                }
+            } else {
+                // كرسي جديد بالكامل
+                var newChair = {
+                    number: randomFreeChairNumber(used), x: pos.x, y: pos.y,
+                    badgeX: badge.x, badgeY: badge.y, occupantId: null
+                };
+                _chairs.push(newChair);
+
+                if (ring) {
+                    var div = document.createElement('div');
+                    div.className = 'mc-chair';
+                    div.id = 'mc-chair-' + idx;
+                    div.style.left = newChair.x + '%';
+                    div.style.top = newChair.y + '%';
+                    div.innerHTML = chairSvg();
+                    ring.appendChild(div);
+
+                    var badgeEl = document.createElement('span');
+                    badgeEl.className = 'mc-chair-number' + (showRevealed ? ' mc-chair-revealed' : '');
+                    badgeEl.id = 'mc-chair-num-' + idx;
+                    badgeEl.style.left = newChair.badgeX + '%';
+                    badgeEl.style.top = newChair.badgeY + '%';
+                    badgeEl.textContent = newChair.number;
+                    ring.appendChild(badgeEl);
+                }
             }
         }
         updateBadges();
@@ -1095,6 +1132,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarEl.style.left = chair.x + '%';
             avatarEl.style.top = chair.y + '%';
             window.setTimeout(function () { avatarEl.classList.add('mc-avatar-safe'); }, 480);
+        }
+
+        // ⚠️ جديد: الكرسي نفسه يختفي بعد ما توصل صورة اللاعب فوقه (بطلب
+        // صريح) — نفس توقيت وصول الأفاتار تقريباً (480ms، بعد أنيميشن
+        // الجلوس)، عبر فيد سلس (opacity) بدل اختفاء مفاجئ.
+        if (chairEl) {
+            window.setTimeout(function () { chairEl.classList.add('mc-chair-vanish'); }, 480);
         }
 
         playSound('claim');
