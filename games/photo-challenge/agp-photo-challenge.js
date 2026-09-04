@@ -427,6 +427,39 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _answerInterval = null;
     var _answerRemaining = 0;
 
+    /* ---- بنك صور التحدي (answers-bank.json) -- عشوائي بدون تكرار: كل
+     *      صورة تظهر مرة وحدة طول المباراة، ولو خلصت كل الصور يعاد
+     *      خلطها من جديد ويبدأ دور جديد. ---- */
+    var _challengeBank = [];
+    var _challengeQueue = [];
+    var _currentChallenge = null;
+
+    function loadChallengeBank() {
+        fetch('answers-bank.json', { cache: 'no-store' })
+            .then(function (res) { return res.ok ? res.json() : null; })
+            .then(function (data) {
+                _challengeBank = (data && Array.isArray(data.challenges)) ? data.challenges.filter(function (c) { return c.imageFile && c.answers && c.answers[0]; }) : [];
+            })
+            .catch(function () { _challengeBank = []; });
+    }
+
+    function shuffleArray(arr) {
+        var a = arr.slice();
+        for (var i = a.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+        }
+        return a;
+    }
+
+    // يرجع الصورة الجاية بدون تكرار؛ لو خلصت كل الصور يعيد خلط البنك
+    // كامل من جديد ويبدأ دور جديد.
+    function pickNextChallenge() {
+        if (!_challengeBank.length) return null;
+        if (!_challengeQueue.length) _challengeQueue = shuffleArray(_challengeBank);
+        return _challengeQueue.pop();
+    }
+
     function ensureMatchEl() {
         if (_matchEl) return _matchEl;
         _matchEl = document.createElement('div');
@@ -528,11 +561,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         // تصفير التبويب من حالة "إجابة صحيحة" لو راجعين من جولة سابقة
         stageBox.classList.remove('pc-result-mode');
+        stageInner.classList.remove('pc-has-real-image');
+        stageInner.style.backgroundImage = '';
         el('pc-result-panel').style.display = 'none';
         el('pc-stage-image-label').style.display = '';
         var watermarkEl = document.querySelector('#pc-stage-inner .pc-stage-watermark');
         if (watermarkEl) watermarkEl.style.display = '';
         document.querySelectorAll('.pc-side-player-chip.pc-correct').forEach(function (chip) { chip.classList.remove('pc-correct'); });
+
+        _currentChallenge = pickNextChallenge();
 
         overlay.style.display = 'flex';
         var count = 3;
@@ -544,8 +581,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 clearInterval(interval);
                 overlay.style.display = 'none';
                 stageInner.classList.add('pc-has-image');
-                // ⚠️ بناء تدريجي: مصدر صورة التحدي الفعلي غير مبني بعد.
-                el('pc-stage-image-label').textContent = '🖼️ صورة التحدي هنا';
+
+                if (_currentChallenge) {
+                    stageInner.classList.add('pc-has-real-image');
+                    stageInner.style.backgroundImage = "url('challenge-images/" + encodeURIComponent(_currentChallenge.imageFile) + "')";
+                } else {
+                    // ⚠️ ما فيه صور مضافة ببنك التحدي بعد (answers-bank.json فاضي) -- ارفع صور من صفحة الإدارة أول.
+                    el('pc-stage-image-label').textContent = '⚠️ ما فيه صور مضافة ببنك التحدي بعد';
+                }
+
                 showMatchRoundButtons();
                 startAnswerTimer();
 
@@ -973,6 +1017,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         injectHeader();
         wirePlatformListeners();
         wireSilenceEnforcementListener();
+        loadChallengeBank();
         renderSettingsScreen();
     }
 

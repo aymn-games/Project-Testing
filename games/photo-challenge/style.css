@@ -466,6 +466,9 @@ body.pc-active{
     overflow:hidden;
 }
 .pc-stage-inner.pc-has-image{ border-style:solid; border-color:rgba(128,212,255,0.35); color:#e9defc; font-size:15px; font-weight:700; }
+.pc-stage-inner.pc-has-real-image{ background-size:cover; background-position:center; }
+.pc-stage-inner.pc-has-real-image .pc-stage-watermark,
+.pc-stage-inner.pc-has-real-image .pc-stage-image-label{ display:none; }
 .pc-stage-watermark{
     position:absolute; inset:0;
     display:flex; align-items:center; justify-content:center;
