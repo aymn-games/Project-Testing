@@ -1,0 +1,251 @@
+:root{
+    --pc-accent:#80d4ff;   /* سماوي أساسي */
+    --pc-accent2:#7c3aed;  /* بنفسجي ثانوي */
+    --pc-team1:#80d4ff;    /* لون كلمة الفريق الأول (سماوي) */
+    --pc-team2:#ff4dff;    /* لون كلمة الفريق الثاني (وردي) */
+}
+
+body.pc-active{
+    margin:0;
+    font-family:'Zain',Cairo,sans-serif;
+    color:#fff;
+    min-height:100vh;
+    background:
+        radial-gradient(ellipse 900px 500px at 50% -8%,rgba(128,212,255,0.16),transparent 60%),
+        radial-gradient(ellipse 700px 500px at 90% 100%,rgba(124,58,237,0.18),transparent 60%),
+        linear-gradient(180deg,#0d0818 0%,#090614 45%,#05030a 100%);
+    background-attachment:fixed;
+    background-size:cover;
+}
+
+/* ---------------------------------------------------------------------
+   شاشة الإعدادات — قالب "settings-no-box" (منقول بالحرف من روليت القبائل):
+   بدون أي صندوق/تبويب يحيط الحقول، الحقول موزَّعة مباشرة على الصفحة،
+   عمودين على الشاشات الواسعة، عمود واحد على الجوال.
+--------------------------------------------------------------------- */
+#pc-settings{
+    width:min(980px,94vw);
+    margin:0 auto;
+    padding:56px 24px 60px;
+    box-sizing:border-box;
+    column-count:2;
+    column-gap:60px;
+    column-fill:auto;
+}
+@media (max-width:720px){
+    #pc-settings{ column-count:1; }
+}
+
+#pc-settings h2{
+    column-span:all;
+    margin:0 0 42px;
+    font-size:clamp(24px,4vw,38px);
+    font-weight:900;
+    text-align:center;
+    background:linear-gradient(90deg,var(--pc-accent),#d0b3ff 55%,var(--pc-accent2));
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+    position:relative;
+    padding-bottom:20px;
+}
+#pc-settings h2::after{
+    content:"";
+    position:absolute;
+    bottom:0;
+    left:50%;
+    transform:translateX(-50%);
+    width:64px;
+    height:3px;
+    border-radius:3px;
+    background:linear-gradient(90deg,transparent,var(--pc-accent),transparent);
+}
+
+.pc-field{
+    break-inside:avoid;
+    padding:20px 0;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:10px;
+}
+.pc-field label{
+    font-size:0.82em;
+    color:#b7a9d6;
+    font-weight:700;
+}
+.pc-field input[type=text]{
+    max-width:none;
+    width:100%;
+    background:transparent;
+    border:none;
+    border-bottom:2px solid transparent;
+    border-radius:0;
+    padding:4px 0;
+    font-size:1.25em;
+    font-weight:700;
+    color:#fff;
+    text-align:right;
+    font-family:inherit;
+    transition:border-color 0.2s;
+}
+.pc-field input[type=text]:focus{
+    border-bottom-color:var(--pc-accent);
+    outline:none;
+}
+.pc-field.pc-team1 input[type=text]#pc-input-team1Keyword{ color:var(--pc-team1); }
+.pc-field.pc-team2 input[type=text]#pc-input-team2Keyword{ color:var(--pc-team2); }
+.pc-field.pc-team1 input[type=text]#pc-input-team1Keyword{ border-bottom-color:rgba(128,212,255,0.5); }
+.pc-field.pc-team2 input[type=text]#pc-input-team2Keyword{ border-bottom-color:rgba(255,77,255,0.5); }
+
+.pc-row{
+    break-inside:avoid;
+    padding:18px 0;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+}
+.pc-row-label{
+    font-size:14px;
+    color:#f3eefc;
+    font-weight:700;
+}
+.pc-pill-group{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+.pc-pill-btn{
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.16);
+    color:#a99cc4;
+    border-radius:999px;
+    padding:7px 16px;
+    font-size:13px;
+    font-weight:800;
+    font-family:inherit;
+    cursor:pointer;
+}
+.pc-pill-btn.pc-pill-active{
+    background:linear-gradient(90deg,var(--pc-accent2),var(--pc-accent));
+    color:#0a0612;
+    border-color:transparent;
+}
+.pc-hint{
+    width:100%;
+    font-size:12px;
+    color:#8f7ba8;
+    line-height:1.7;
+    text-align:center;
+}
+
+.pc-error-msg{
+    column-span:all;
+    text-align:center;
+    color:#ff8da3;
+    font-size:13px;
+    font-weight:700;
+    margin-top:10px;
+}
+
+.pc-btn-connect{
+    column-span:all;
+    display:table;
+    margin:34px auto 0;
+    padding:16px 64px;
+    border:none;
+    border-radius:999px;
+    background:linear-gradient(90deg,var(--pc-accent2),var(--pc-accent));
+    color:#0a0612;
+    font-weight:800;
+    font-size:1.05em;
+    letter-spacing:0.4px;
+    font-family:inherit;
+    cursor:pointer;
+    box-shadow:0 10px 34px rgba(128,212,255,0.3),0 0 0 1px rgba(255,255,255,0.15) inset;
+}
+
+.pc-back-btn{
+    column-span:all;
+    display:block;
+    margin:14px auto 0;
+    padding:10px 22px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,0.25);
+    background:rgba(255,255,255,0.08);
+    color:#f3eefc;
+    font-family:inherit;
+    font-weight:800;
+    font-size:0.9em;
+    cursor:pointer;
+    transition:background 0.15s;
+}
+.pc-back-btn:hover{ background:rgba(255,255,255,0.18); }
+
+/* ---------------------------------------------------------------------
+   تبويب الاتصال بالبث — يظهر فوق شاشة الإعدادات (منقول بالحرف من قالب
+   روليت القبائل): سبينر أثناء الاتصال، تحذير أحمر + زر ✕ عند الفشل.
+   زر الإغلاق يُخفي التبويب فقط، شاشة الإعدادات خلفه تبقى ظاهرة وتفاعلية.
+--------------------------------------------------------------------- */
+#pc-connect-dim{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:160000;
+    background:rgba(5,3,10,0.5);
+    backdrop-filter:blur(2px);
+}
+#pc-connect-popup{
+    display:none;
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    z-index:160001;
+    width:320px;
+    max-width:88vw;
+    padding:34px 26px 28px;
+    border-radius:20px;
+    background:rgba(20,12,34,0.9);
+    backdrop-filter:blur(16px);
+    border:1.5px solid var(--pc-accent);
+    box-shadow:0 0 0 1px rgba(128,212,255,0.15),0 0 40px rgba(128,212,255,0.4),0 20px 60px rgba(0,0,0,0.5);
+    text-align:center;
+    color:#fff;
+    font-family:'Zain',Cairo,sans-serif;
+}
+#pc-connect-popup .pc-connect-spinner{
+    width:46px;
+    height:46px;
+    margin:0 auto 18px;
+    border-radius:50%;
+    border:4px solid rgba(128,212,255,0.2);
+    border-top-color:var(--pc-accent);
+    animation:pc-connect-spin 0.9s linear infinite;
+}
+@keyframes pc-connect-spin{ to{ transform:rotate(360deg); } }
+#pc-connect-popup h3{ font-size:17px; font-weight:900; color:#fff; margin:0 0 6px; }
+#pc-connect-popup p{ font-size:13px; color:#9d92b3; margin:0; }
+#pc-connect-popup.pc-connect-error{
+    border-color:#ef4444;
+    box-shadow:0 0 0 1px rgba(239,68,68,0.15),0 0 40px rgba(239,68,68,0.35),0 20px 60px rgba(0,0,0,0.5);
+}
+#pc-connect-popup.pc-connect-error h3{ color:#ff8da3; }
+.pc-connect-error-icon{ font-size:40px; margin-bottom:10px; }
+#pc-connect-close-btn{
+    position:absolute;
+    top:12px;
+    left:12px;
+    width:28px;
+    height:28px;
+    border-radius:50%;
+    background:rgba(255,255,255,0.1);
+    border:none;
+    color:#fff;
+    font-size:13px;
+    cursor:pointer;
+}

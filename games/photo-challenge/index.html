@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تحدي الصور — ألعاب أيمن</title>
+
+<!-- خط Zain (Google Fonts) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zain:ital,wght@0,200;0,300;0,400;0,700;0,800;0,900;1,300;1,400&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="style.css">
+<!--
+    ==========================================================================
+     تحدي الصور (Photo Challenge) — لعبة أصلية (Native) داخل مستودع
+     Project-Testing، بنفس نمط games/team-war من ناحية طريقة التحميل فقط:
+     كلمتان مفتاحيتان منفصلتان (وحدة لكل فريق) — شاشة الإعدادات المشتركة
+     js/agp-game-shell.js تدعم كلمة مفتاحية واحدة بس، فما تكفي هذي اللعبة
+     (نفس سبب بناء حرب الفريقين كلعبة مستقلة). هوية بصرية مستقلة (خط Zain
+     فقط + قالب "settings-no-box" منقول بالحرف من روليت القبائل)، لا اعتماد
+     على js/agp-game-shell.js إطلاقاً. لا تعديل على أي ملف موجود بالمشروع.
+
+     ⚠️ بناء تدريجي: هذا الملف حالياً يغطي شاشة الإعدادات + تبويب الاتصال
+     بالبث فوقها فقط (بالضبط كما اعتُمد بالمعاينة). بقية الشاشات (اللوبي،
+     المباراة، شاشة الفائز) غير مبنية بعد — تُضاف صفحة بصفحة لاحقاً.
+    ==========================================================================
+-->
+</head>
+<body>
+
+<script src="../../js/agp-core.js"></script>
+<script src="../../js/agp-events.js"></script>
+<script src="../../js/agp-timer-manager.js"></script>
+<script src="../../js/agp-storage-manager.js"></script>
+<script src="../../js/agp-services.js"></script>
+<script src="../../js/agp-stream-connector.js"></script>
+<script src="../../adapters/agp-tiktok-adapter.js"></script>
+<script src="../../js/agp-registry.js"></script>
+<script src="../../js/agp-session.js"></script>
+<script src="../../js/agp-rooms-manager.js"></script>
+<script src="../../js/agp-player-manager.js"></script>
+<script src="../../js/agp-player-source.js"></script>
+<script src="../../js/agp-keyword-manager.js"></script>
+<script src="../../js/agp-queue-manager.js"></script>
+<script src="../../js/agp-score-manager.js"></script>
+<script src="../../js/agp-lobby.js"></script>
+<script src="../../js/agp-game-api.js"></script>
+<script src="../../js/agp-game-engine.js"></script>
+<script src="../../js/agp-game-manager.js"></script>
+<script src="../../js/agp-game-bridge.js"></script>
+<script src="../../js/agp-round-manager.js"></script>
+<script src="../../js/agp-bootstrap.js"></script>
+
+<script src="../../js/agp-player-card.js"></script>
+
+<!-- منطق لعبة تحدي الصور نفسها (بدون agp-game-shell.js) -->
+<script src="agp-photo-challenge.js"></script>
+
+</body>
+</html>
