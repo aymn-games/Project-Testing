@@ -455,6 +455,57 @@ body.pc-active{
 .pc-stage-watermark img{ width:55%; opacity:0.4; }
 .pc-stage-image-label{ position:relative; }
 
+/* ---- حالة "إجابة صحيحة" -- التبويب يتحول لحدود خضراء ويعرض النتيجة ---- */
+.pc-stage-box.pc-result-mode{
+    border-color:#22c55e;
+    box-shadow:0 0 25px rgba(34,197,94,0.55),0 0 55px rgba(34,197,94,0.25),inset 0 0 30px rgba(34,197,94,0.08);
+}
+.pc-result-panel{
+    display:none;
+    flex-direction:column; align-items:center; justify-content:center;
+    width:100%; height:100%; text-align:center;
+}
+.pc-result-check{ font-size:52px; margin-bottom:6px; animation:pc-result-pop 0.5s ease; }
+@keyframes pc-result-pop{ 0%{ transform:scale(0.3); opacity:0; } 60%{ transform:scale(1.15); opacity:1; } 100%{ transform:scale(1); } }
+.pc-result-title{ font-size:21px; font-weight:900; color:#7CFC9A; margin-bottom:12px; }
+.pc-result-player-row{ display:flex; align-items:center; gap:12px; background:rgba(0,0,0,0.3); border-radius:999px; padding:8px 18px; margin-bottom:10px; }
+.pc-result-avatar{ width:34px; height:34px; border-radius:50%; background:#3a2f52 center/cover no-repeat; }
+.pc-result-player-name{ font-size:15px; font-weight:800; color:#fff; }
+.pc-result-team-badge{ font-size:10.5px; font-weight:800; padding:3px 10px; border-radius:999px; }
+.pc-result-team-badge.team1{ background:rgba(128,212,255,0.18); color:var(--pc-team1); border:1px solid var(--pc-team1); }
+.pc-result-team-badge.team2{ background:rgba(255,77,255,0.18); color:var(--pc-team2); border:1px solid var(--pc-team2); }
+.pc-result-answer-row{ font-size:13px; color:#e9d9c2; margin-bottom:14px; }
+.pc-result-answer-row b{ color:#fff; font-weight:800; }
+.pc-result-points{
+    font-size:30px; font-weight:900; color:#7CFC9A;
+    background:rgba(34,197,94,0.12); border:1.5px solid #22c55e; border-radius:16px;
+    padding:7px 24px; box-shadow:0 0 20px rgba(34,197,94,0.35);
+}
+.pc-result-points-sub{ font-size:11px; color:#9d92b3; margin-top:6px; }
+
+.pc-btn-next-round{
+    border:none; border-radius:999px;
+    background:linear-gradient(90deg,var(--pc-accent2),var(--pc-accent));
+    color:#0a0612; padding:12px 30px;
+    font-weight:800; font-size:14px; font-family:inherit; cursor:pointer;
+}
+
+/* ---- بطاقة اللاعب اللي جاوب صح تتوهج بحدود خضراء بلوحة الفريق ---- */
+.pc-side-player-chip.pc-correct{
+    border-color:#22c55e !important;
+    box-shadow:0 0 14px rgba(34,197,94,0.55);
+}
+
+/* ---- رقم النقاط العائم فوق نقاط الفريق لحظة احتسابها ---- */
+.pc-side-team-score{ position:relative; }
+.pc-score-float{
+    position:absolute; top:-18px; left:50%; transform:translateX(-50%);
+    color:#7CFC9A; font-weight:900; font-size:15px;
+    animation:pc-score-float-up 1.6s ease forwards;
+    pointer-events:none;
+}
+@keyframes pc-score-float-up{ 0%{ opacity:0; transform:translate(-50%,4px); } 25%{ opacity:1; } 100%{ opacity:0; transform:translate(-50%,-22px); } }
+
 .pc-countdown-overlay{
     position:absolute; inset:0;
     display:none;
@@ -495,6 +546,151 @@ body.pc-active{
     .pc-side-panel{ width:100%; max-width:600px; }
     .pc-side-player-list{ flex-direction:row; flex-wrap:wrap; }
 }
+
+/* ---------------------------------------------------------------------
+   تبويب نهاية المباراة -- يظهر فوق شاشة المباراة نفسها (خلفيتها تبين
+   مغبّشة/معتّمة خلفه عن طريق backdrop-filter). بطاقات أسماء لاعبي الفريق
+   الفائز بحلقة ذهبية دوّارة + تاج، وتحتها 3 أزرار.
+--------------------------------------------------------------------- */
+#pc-winner-dim{
+    display:none;
+    position:fixed; inset:0; z-index:190000;
+    background:rgba(5,3,10,0.6);
+    backdrop-filter:blur(3px);
+    align-items:center; justify-content:center;
+    padding:20px;
+}
+#pc-winner-card{
+    width:min(760px,94%);
+    padding:34px 30px;
+    border-radius:24px;
+    background:rgba(20,12,34,0.85);
+    backdrop-filter:blur(18px);
+    border:1.5px solid #ffb648;
+    box-shadow:0 0 0 1px rgba(255,182,72,0.15),0 0 50px rgba(255,182,72,0.4),0 25px 70px rgba(0,0,0,0.5);
+    text-align:center;
+    color:#fff;
+    font-family:'Zain',Cairo,sans-serif;
+}
+.pc-winner-trophy{ font-size:48px; margin-bottom:6px; }
+.pc-winner-title{ margin:0 0 4px; font-size:27px; font-weight:900; color:#ffd699; text-shadow:0 0 20px rgba(255,182,72,0.5); }
+.pc-winner-score{ color:#9d92b3; font-size:14px; margin-bottom:30px; }
+.pc-winner-score b.pc-team1{ color:var(--pc-team1); font-weight:900; }
+.pc-winner-score b.pc-team2{ color:var(--pc-team2); font-weight:900; }
+
+.pc-winner-cards{ display:flex; justify-content:center; gap:18px; flex-wrap:wrap; margin-bottom:32px; }
+.pc-winner-card-item{ width:130px; text-align:center; }
+.pc-winner-avatar-wrap{ position:relative; width:90px; height:90px; margin:0 auto 8px; }
+.pc-winner-ring{
+    position:absolute; inset:0; border-radius:50%; padding:4px;
+    background:conic-gradient(from 0deg,#ffb648,#ffe6b8,#ffb648);
+    -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 4px));
+    mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 4px));
+    animation:pc-winner-spin 5s linear infinite;
+}
+@keyframes pc-winner-spin{ to{ transform:rotate(360deg); } }
+.pc-winner-avatar{ position:absolute; inset:7px; border-radius:50%; background:#3a2f52 center/cover no-repeat; }
+.pc-winner-crown{ position:absolute; top:-6px; left:50%; transform:translateX(-50%); font-size:18px; }
+.pc-winner-name{ color:#fff; font-weight:800; font-size:13px; }
+
+.pc-winner-actions{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+.pc-winner-btn{ padding:11px 22px; border-radius:999px; font-weight:800; font-size:13px; font-family:inherit; cursor:pointer; }
+.pc-winner-btn-replay{ border:none; background:linear-gradient(90deg,var(--pc-accent2),var(--pc-accent)); color:#0a0612; }
+.pc-winner-btn-newmatch{ border:1px solid rgba(255,255,255,0.35); background:transparent; color:#fff; }
+.pc-winner-btn-home{ border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.08); color:#f3eefc; }
+
+/* ---------------------------------------------------------------------
+   تنبيهات Toast -- تظهر أعلى يسار الشاشة وتختفي تلقائياً بعد 3 ثواني.
+--------------------------------------------------------------------- */
+#pc-toast-container{
+    position:fixed;
+    top:70px; left:20px;
+    z-index:180000;
+    display:flex; flex-direction:column; gap:10px;
+    pointer-events:none;
+}
+.pc-toast{
+    background:rgba(24,16,10,0.95);
+    border:1px solid #ffb648;
+    box-shadow:0 0 20px rgba(255,182,72,0.3),0 8px 24px rgba(0,0,0,0.4);
+    border-radius:12px;
+    padding:12px 18px;
+    color:#ffd699;
+    font-size:13px;
+    font-weight:700;
+    max-width:320px;
+    animation:pc-toast-in 0.25s ease;
+}
+@keyframes pc-toast-in{ from{ transform:translateX(-20px); opacity:0; } to{ transform:translateX(0); opacity:1; } }
+
+/* ---------------------------------------------------------------------
+   تبويب "الأفضلية" -- إجابتين صح متتاليتين. أعرض من تبويب الاتصال (520px)
+   وبحواف ذهبية متوهجة (تمييزه عن السماوي). يعرض لاعبي الفريق الآخر
+   بأرقام -- اللاعب صاحب الأفضلية يكتب الرقم بالشات فيُسكَت ذاك اللاعب
+   تلقائياً. لا يُغلق إلا يدوياً بزر ✕.
+--------------------------------------------------------------------- */
+#pc-advantage-dim{
+    display:none;
+    position:fixed; inset:0; z-index:170000;
+    background:rgba(5,3,10,0.65);
+    backdrop-filter:blur(2px);
+}
+#pc-advantage-popup{
+    display:none;
+    position:fixed; top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    z-index:170001;
+    width:520px; max-width:92vw;
+    padding:30px 30px 26px;
+    border-radius:20px;
+    background:rgba(24,16,10,0.94);
+    backdrop-filter:blur(16px);
+    border:1.5px solid #ffb648;
+    box-shadow:0 0 0 1px rgba(255,182,72,0.15),0 0 40px rgba(255,182,72,0.4),0 20px 60px rgba(0,0,0,0.5);
+    text-align:center;
+    color:#fff;
+    font-family:'Zain',Cairo,sans-serif;
+}
+#pc-advantage-close-btn{
+    position:absolute; top:14px; left:14px;
+    width:30px; height:30px; border-radius:50%;
+    background:rgba(255,255,255,0.1); border:none; color:#fff;
+    font-size:14px; cursor:pointer;
+}
+.pc-adv-icon{ font-size:38px; margin-bottom:6px; }
+#pc-advantage-popup h3{ font-size:19px; font-weight:900; color:#ffd699; margin:0 0 12px; }
+#pc-advantage-popup p{ font-size:13.5px; color:#e9d9c2; line-height:1.9; margin:0 0 22px; }
+#pc-advantage-popup p b{ font-weight:800; }
+.pc-adv-section-label{ font-size:12.5px; color:#c9b89a; font-weight:700; margin-bottom:12px; }
+.pc-adv-numbered-list{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
+    margin-bottom:20px;
+}
+.pc-adv-numbered-row{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 14px;
+    border-radius:999px;
+    border:1px solid rgba(255,77,255,0.3);
+    background:rgba(255,77,255,0.06);
+}
+.pc-adv-numbered-row .pc-adv-num-badge{
+    width:26px; height:26px; border-radius:50%;
+    background:linear-gradient(90deg,var(--pc-accent2),var(--pc-accent));
+    color:#0a0612; font-weight:900; font-size:13px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+}
+.pc-adv-numbered-row .pc-adv-p-name{ font-size:13px; font-weight:700; color:#fff; }
+.pc-adv-numbered-row.pc-adv-picked{ border-color:#ffb648; background:rgba(255,182,72,0.14); }
+.pc-adv-numbered-row.pc-adv-picked .pc-adv-p-name{ color:#ffd699; }
+.pc-adv-chat-hint{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    background:rgba(0,0,0,0.3); border:1px dashed rgba(255,182,72,0.4);
+    border-radius:12px; padding:10px 14px;
+    font-size:12.5px; color:#ffd699; font-weight:700;
+    margin-bottom:16px;
+}
+.pc-adv-confirm-note{ font-size:12.5px; color:#8fbf8f; font-weight:700; display:none; }
 
 /* ---------------------------------------------------------------------
    تبويب الاتصال بالبث — يظهر فوق شاشة الإعدادات (منقول بالحرف من قالب

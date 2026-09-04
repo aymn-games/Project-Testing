@@ -419,7 +419,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function sidePlayerChipHtml(p, team) {
         var avatarStyle = p.avatarUrl ? ' style="background-image:url(\'' + escapeAttr(p.avatarUrl) + '\')"' : '';
-        return '<div class="pc-side-player-chip ' + team + '">' +
+        return '<div class="pc-side-player-chip ' + team + '" data-player-id="' + escapeAttr(p.id) + '">' +
             '<div class="pc-side-player-avatar"' + avatarStyle + '></div>' +
             '<span class="pc-side-player-name">' + escapeHtml(p.name || p.id) + '</span>' +
         '</div>';
@@ -459,6 +459,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 clearInterval(_answerInterval);
                 _answerInterval = null;
                 _answerRemaining = 0;
+                _activeSilence = null; // انتهى الوقت -- الإسكات ينتهي مع الجولة
             }
             valEl.textContent = formatAnswerTime(_answerRemaining);
         }, 1000);
@@ -468,6 +469,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (_answerInterval) { clearInterval(_answerInterval); _answerInterval = null; }
         var timerEl = el('pc-answer-timer');
         if (timerEl) { timerEl.style.display = 'none'; timerEl.classList.remove('pc-low'); }
+        _activeSilence = null; // انتهت الجولة -- الإسكات ينتهي معها
     }
 
     function addAnswerTime(seconds) {
@@ -493,8 +495,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
         el('pc-end-round-btn').addEventListener('click', function () {
             stopAnswerTimer();
-            // ⚠️ بناء تدريجي: منطق تسجيل النقاط الفعلي وإنهاء الجولة كاملاً غير مبني بعد.
-            AGP.log('Photo Challenge: إنهاء الجولة دون احتساب نقاط -- لسا ما بُني.');
+            // ⚠️ بناء تدريجي: التحقق من صحة الإجابات نفسه (لتحديد الفائز
+            // بالجولة قبل انتهاء الوقت) غير مبني بعد -- هذا الزر ينهي
+            // الجولة يدوياً بدون احتساب نقاط لأي فريق.
+            AGP.log('Photo Challenge: إنهاء الجولة دون احتساب نقاط.');
         });
     }
 
@@ -502,6 +506,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var overlay = el('pc-countdown-overlay');
         var numEl = el('pc-countdown-num');
         var stageInner = el('pc-stage-inner');
+        var stageBox = stageInner.closest('.pc-stage-box');
+
+        // تصفير التبويب من حالة "إجابة صحيحة" لو راجعين من جولة سابقة
+        stageBox.classList.remove('pc-result-mode');
+        el('pc-result-panel').style.display = 'none';
+        el('pc-stage-image-label').style.display = '';
+        var watermarkEl = document.querySelector('#pc-stage-inner .pc-stage-watermark');
+        if (watermarkEl) watermarkEl.style.display = '';
+        document.querySelectorAll('.pc-side-player-chip.pc-correct').forEach(function (chip) { chip.classList.remove('pc-correct'); });
 
         overlay.style.display = 'flex';
         var count = 3;
@@ -517,10 +530,78 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 el('pc-stage-image-label').textContent = '🖼️ صورة التحدي هنا';
                 showMatchRoundButtons();
                 startAnswerTimer();
+
+                // ⚠️ الإسكات "للجولة الجاية" يصير سارياً الآن بالضبط -- مع
+                // بداية هذي الجولة -- وينتهي تلقائياً معها (بالوقت أو
+                // بزر الإنهاء).
+                if (_pendingSilence) {
+                    _activeSilence = { playerId: _pendingSilence.playerId, playerName: _pendingSilence.playerName, bonusTeam: _pendingSilence.bonusTeam, penalized: false };
+                    _pendingSilence = null;
+                }
                 return;
             }
             numEl.textContent = count;
         }, 800);
+    }
+
+    function showScoreFloat(team, amount) {
+        var scoreEl = el('pc-side-score-' + team);
+        if (!scoreEl) return;
+        var floatEl = document.createElement('span');
+        floatEl.className = 'pc-score-float';
+        floatEl.textContent = '+' + amount;
+        scoreEl.appendChild(floatEl);
+        setTimeout(function () { floatEl.remove(); }, 1600);
+    }
+
+    /* ---- ظهور "الإجابة الصحيحة" -- تُستدعى مع: مين جاوب، فريقه، نص
+     *      الإجابة الصحيحة نفسها، والنقاط المستحقة (3/2/1 حسب التوقيت).
+     *      ⚠️ بناء تدريجي: ما فيه لسا محرك يتحقق من الإجابات الواردة
+     *      بالشات ويستدعي هذي الدالة تلقائياً -- محتاجين نحدد أول كيف
+     *      بيُدخَل نص الإجابة الصحيحة لكل جولة قبل ربط الاستدعاء التلقائي. */
+    function revealCorrectAnswer(playerId, playerTeam, answerText, pointsAwarded) {
+        stopAnswerTimer();
+
+        var player = findPlayerById(playerId);
+        var playerName = player ? (player.name || player.id) : playerId;
+        var teamName = (playerTeam === TEAM1) ? _settings.team1Name : _settings.team2Name;
+        var timeLabel = pointsAwarded >= 3 ? 'جاوب بأول 15 ثانية' : (pointsAwarded === 2 ? 'جاوب قبل نص الوقت' : 'جاوب بعد نص الوقت');
+
+        var stageInner = el('pc-stage-inner');
+        var stageBox = stageInner.closest('.pc-stage-box');
+        stageBox.classList.add('pc-result-mode');
+        el('pc-stage-image-label').style.display = 'none';
+        var watermarkEl = document.querySelector('#pc-stage-inner .pc-stage-watermark');
+        if (watermarkEl) watermarkEl.style.display = 'none';
+
+        var avatarStyle = (player && player.avatarUrl) ? ' style="background-image:url(\'' + escapeAttr(player.avatarUrl) + '\')"' : '';
+        var panel = el('pc-result-panel');
+        panel.innerHTML =
+            '<div class="pc-result-check">✅</div>' +
+            '<div class="pc-result-title">إجابة صحيحة!</div>' +
+            '<div class="pc-result-player-row">' +
+                '<div class="pc-result-avatar"' + avatarStyle + '></div>' +
+                '<div>' +
+                    '<div class="pc-result-player-name">' + escapeHtml(playerName) + '</div>' +
+                    '<span class="pc-result-team-badge ' + playerTeam + '">' + escapeHtml(teamName) + '</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="pc-result-answer-row">الإجابة الصحيحة: <b>' + escapeHtml(answerText) + '</b></div>' +
+            '<div class="pc-result-points">+' + pointsAwarded + ' نقاط</div>' +
+            '<div class="pc-result-points-sub">' + timeLabel + '</div>';
+        panel.style.display = 'flex';
+
+        var chip = document.querySelector('.pc-side-player-chip[data-player-id="' + playerId + '"]');
+        if (chip) chip.classList.add('pc-correct');
+
+        var key = (playerTeam === TEAM1) ? SCORE_KEY_TEAM1 : SCORE_KEY_TEAM2;
+        AGP.scoreManager.addPoints(key, pointsAwarded);
+        updateSideScoreDisplay(playerTeam);
+        showScoreFloat(playerTeam, pointsAwarded);
+        checkForWinner();
+
+        el('pc-match-btn-row').innerHTML = '<button type="button" class="pc-btn-next-round" id="pc-next-round-btn">⏭ الجولة التالية</button>';
+        el('pc-next-round-btn').addEventListener('click', handleShowImageAndStart);
     }
 
     function renderMatchScreen() {
@@ -542,6 +623,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '<div class="pc-stage-inner" id="pc-stage-inner">' +
                         '<div class="pc-stage-watermark"><img src="../../logo.png" alt="" onerror="this.style.display=\'none\'"></div>' +
                         '<span class="pc-stage-image-label" id="pc-stage-image-label">هنا تُعرض صورة التحدي</span>' +
+                        '<div class="pc-result-panel" id="pc-result-panel"></div>' +
                     '</div>' +
                     '<div class="pc-countdown-overlay" id="pc-countdown-overlay">' +
                         '<div class="pc-countdown-num" id="pc-countdown-num">3</div>' +
@@ -558,7 +640,236 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* ======================================================================
-     *  6) تبويب الاتصال بالبث -- يظهر فوق شاشة الإعدادات (منقول بالحرف من
+     *  6) تبويب نهاية المباراة -- يظهر فوق شاشة المباراة نفسها (خلفيتها
+     *     تبين مغبّشة/معتّمة خلفه). بطاقات لاعبي الفريق الفائز + 3 أزرار.
+     * ==================================================================== */
+    var _winnerDeclared = false;
+    var _winnerDim = null;
+    var _winnerCard = null;
+
+    function ensureWinnerOverlay() {
+        if (!_winnerDim) {
+            _winnerDim = document.createElement('div');
+            _winnerDim.id = 'pc-winner-dim';
+            _winnerCard = document.createElement('div');
+            _winnerCard.id = 'pc-winner-card';
+            _winnerDim.appendChild(_winnerCard);
+            document.body.appendChild(_winnerDim);
+        }
+        return _winnerCard;
+    }
+
+    function winnerCardHtml(p) {
+        var avatarStyle = p.avatarUrl ? ' style="background-image:url(\'' + escapeAttr(p.avatarUrl) + '\')"' : '';
+        return '<div class="pc-winner-card-item">' +
+            '<div class="pc-winner-avatar-wrap">' +
+                '<div class="pc-winner-ring"></div>' +
+                '<div class="pc-winner-avatar"' + avatarStyle + '></div>' +
+                '<div class="pc-winner-crown">👑</div>' +
+            '</div>' +
+            '<div class="pc-winner-name">' + escapeHtml(p.name || p.id) + '</div>' +
+        '</div>';
+    }
+
+    function renderWinnerScreen(winningTeam) {
+        if (_winnerDeclared) return;
+        _winnerDeclared = true;
+
+        stopAnswerTimer();
+        var overlay = el('pc-countdown-overlay');
+        if (overlay) overlay.style.display = 'none';
+
+        var losingTeam = (winningTeam === TEAM1) ? TEAM2 : TEAM1;
+        var winningTeamName = (winningTeam === TEAM1) ? _settings.team1Name : _settings.team2Name;
+        var winScore = AGP.scoreManager.getScore(winningTeam === TEAM1 ? SCORE_KEY_TEAM1 : SCORE_KEY_TEAM2);
+        var loseScore = AGP.scoreManager.getScore(losingTeam === TEAM1 ? SCORE_KEY_TEAM1 : SCORE_KEY_TEAM2);
+        var winningPlayers = getTeamPlayers(winningTeam);
+
+        var card = ensureWinnerOverlay();
+        card.innerHTML =
+            '<div class="pc-winner-trophy">🏆</div>' +
+            '<h2 class="pc-winner-title">فريق ' + escapeHtml(winningTeamName) + ' فاز بالمباراة!</h2>' +
+            '<div class="pc-winner-score">بنتيجة ' +
+                '<b class="' + winningTeam + '">' + winScore + '</b> مقابل ' +
+                '<b class="' + losingTeam + '">' + loseScore + '</b>' +
+            '</div>' +
+            '<div class="pc-winner-cards">' + winningPlayers.map(winnerCardHtml).join('') + '</div>' +
+            '<div class="pc-winner-actions">' +
+                '<button type="button" class="pc-winner-btn pc-winner-btn-replay" id="pc-winner-replay-btn">🔁 إعادة المباراة بنفس اللاعبين</button>' +
+                '<button type="button" class="pc-winner-btn pc-winner-btn-newmatch" id="pc-winner-newmatch-btn">✨ مباراة جديدة</button>' +
+                '<button type="button" class="pc-winner-btn pc-winner-btn-home" id="pc-winner-home-btn">🏠 العودة للصفحة الرئيسية</button>' +
+            '</div>';
+
+        _winnerDim.style.display = 'flex';
+
+        el('pc-winner-replay-btn').addEventListener('click', function () {
+            AGP.scoreManager.reset(SCORE_KEY_TEAM1);
+            AGP.scoreManager.reset(SCORE_KEY_TEAM2);
+            updateSideScoreDisplay(TEAM1);
+            updateSideScoreDisplay(TEAM2);
+            _winnerDim.style.display = 'none';
+            _winnerDeclared = false;
+            renderMatchScreen(); // يرجع لشاشة المباراة بنفس الفريقين واللاعبين، جاهزة لجولة جديدة
+        });
+        el('pc-winner-newmatch-btn').addEventListener('click', function () { window.location.reload(); });
+        el('pc-winner-home-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+    }
+
+    function checkForWinner() {
+        if (_screen !== 'match' || _winnerDeclared) return;
+        var score1 = AGP.scoreManager.getScore(SCORE_KEY_TEAM1);
+        var score2 = AGP.scoreManager.getScore(SCORE_KEY_TEAM2);
+        if (score1 >= _settings.winPoints) renderWinnerScreen(TEAM1);
+        else if (score2 >= _settings.winPoints) renderWinnerScreen(TEAM2);
+    }
+
+    /* ======================================================================
+     *  7) تبويب "الأفضلية" -- إجابتين صح متتاليتين. يعرض لاعبي الفريق
+     *     الآخر بأرقام؛ اللاعب صاحب الأفضلية يكتب الرقم بالشات فيُسكَت
+     *     ذاك اللاعب تلقائياً للجولة الجاية. لو جاوب رغم الإسكات، تُحتسب
+     *     نقطة إضافية لفريق صاحب الأفضلية. لا يُغلق التبويب إلا يدوياً
+     *     بزر ✕ (منطق ربطه بشرط "إجابتين صح متتاليتين" الفعلي -- بعد
+     *     بناء محرك التحقق من الإجابات، لسا ما بُني -- بناء تدريجي).
+     * ==================================================================== */
+    var _pendingSilence = null; // {playerId, playerName, bonusTeam} -- يُطبَّق أول ما تبدأ الجولة الجاية
+    var _activeSilence = null;  // {playerId, playerName, bonusTeam, penalized} -- ساري بالجولة الحالية فقط
+    var _advantageOpponentTeam = null;
+    var _advantageOpponentTeamName = '';
+    var _advantageAdvantagedPlayerId = null;
+    var _advantageCommentUnsub = null;
+    var _silenceEnforceUnsub = null;
+
+    function ensureAdvantagePopup() {
+        if (!el('pc-advantage-dim')) {
+            var dim = document.createElement('div');
+            dim.id = 'pc-advantage-dim';
+            document.body.appendChild(dim);
+        }
+        if (!el('pc-advantage-popup')) {
+            var popup = document.createElement('div');
+            popup.id = 'pc-advantage-popup';
+            document.body.appendChild(popup);
+        }
+        return el('pc-advantage-popup');
+    }
+
+    function wireAdvantageChatListener() {
+        if (_advantageCommentUnsub) return;
+        _advantageCommentUnsub = AGP.events.on('stream:commentReceived', function (payload) {
+            if (!_advantageAdvantagedPlayerId || !payload || typeof payload.text !== 'string' || !payload.id) return;
+            if (payload.id !== _advantageAdvantagedPlayerId) return; // غير صاحب الأفضلية -- تجاهل
+
+            var num = parseInt(normalizeArabicText(payload.text), 10);
+            var row = el('pc-advantage-popup') && el('pc-advantage-popup').querySelector('.pc-adv-numbered-row[data-num="' + num + '"]');
+            if (!row) return;
+
+            applySilence(row.getAttribute('data-player-id'), row.querySelector('.pc-adv-p-name').textContent);
+        });
+    }
+
+    function applySilence(playerId, playerName) {
+        var bonusTeam = (_advantageOpponentTeam === TEAM1) ? TEAM2 : TEAM1;
+        _pendingSilence = { playerId: playerId, playerName: playerName, bonusTeam: bonusTeam };
+
+        var popup = el('pc-advantage-popup');
+        popup.querySelectorAll('.pc-adv-numbered-row').forEach(function (row) {
+            row.classList.toggle('pc-adv-picked', row.getAttribute('data-player-id') === playerId);
+        });
+        var note = el('pc-advantage-confirm-note');
+        note.textContent = '🔇 تم إسكات "' + playerName + '" للجولة الجاية';
+        note.style.display = 'block';
+    }
+
+    function hideAdvantagePopup() {
+        if (el('pc-advantage-dim')) el('pc-advantage-dim').style.display = 'none';
+        if (el('pc-advantage-popup')) el('pc-advantage-popup').style.display = 'none';
+        _advantageAdvantagedPlayerId = null;
+        _advantageOpponentTeam = null;
+    }
+
+    // يُستدعى مع لاعب جاوب صح مرتين متتاليتين -- الربط الفعلي بمحرك
+    // التحقق من الإجابات يصير بمرحلة لاحقة (بناء تدريجي).
+    function showAdvantagePopup(advantagedPlayerId, advantagedPlayerName, advantagedTeam) {
+        wireAdvantageChatListener();
+
+        _advantageAdvantagedPlayerId = advantagedPlayerId;
+        _advantageOpponentTeam = (advantagedTeam === TEAM1) ? TEAM2 : TEAM1;
+        _advantageOpponentTeamName = (_advantageOpponentTeam === TEAM1) ? _settings.team1Name : _settings.team2Name;
+        var advantagedTeamName = (advantagedTeam === TEAM1) ? _settings.team1Name : _settings.team2Name;
+        var opponentPlayers = getTeamPlayers(_advantageOpponentTeam);
+
+        var numberedRows = opponentPlayers.map(function (p, i) {
+            return '<div class="pc-adv-numbered-row" data-num="' + (i + 1) + '" data-player-id="' + escapeAttr(p.id) + '">' +
+                '<span class="pc-adv-num-badge">' + (i + 1) + '</span>' +
+                '<span class="pc-adv-p-name">' + escapeHtml(p.name || p.id) + '</span>' +
+            '</div>';
+        }).join('');
+
+        var popup = ensureAdvantagePopup();
+        el('pc-advantage-dim').style.display = 'block';
+        popup.style.display = 'block';
+        popup.innerHTML =
+            '<button type="button" id="pc-advantage-close-btn">✕</button>' +
+            '<div class="pc-adv-icon">⚡</div>' +
+            '<h3>أفضلية إجابتين متتاليتين!</h3>' +
+            '<p>' +
+                '<b style="color:#ffb648;">' + escapeHtml(advantagedPlayerName) + '</b> من فريق ' +
+                '<b>' + escapeHtml(advantagedTeamName) + '</b> جاوبت صح مرتين على التوالي. ' +
+                'اكتب رقم اللاعب من فريق <b>' + escapeHtml(_advantageOpponentTeamName) + '</b> اللي تبي تسكته الجولة الجاية. ' +
+                'لو جاوب رغم الإسكات، تُحتسب نقطة إضافية لفريق ' + escapeHtml(advantagedTeamName) + '.' +
+            '</p>' +
+            '<div class="pc-adv-section-label">لاعبو فريق ' + escapeHtml(_advantageOpponentTeamName) + ':</div>' +
+            '<div class="pc-adv-numbered-list">' + numberedRows + '</div>' +
+            '<div class="pc-adv-chat-hint">💬 يكتب رقم اللاعب بشات البث</div>' +
+            '<div class="pc-adv-confirm-note" id="pc-advantage-confirm-note"></div>';
+
+        el('pc-advantage-close-btn').addEventListener('click', hideAdvantagePopup);
+    }
+
+    /* ---- إنفاذ الإسكات: أي رسالة من اللاعب المُسكَت أثناء الجولة الجاية
+     *      تحسب نقطة فورية لصالح الفريق الآخر، والجولة تستمر عادي (ما
+     *      تنتهي) لحد ما توصل إجابة صحيحة أو ينتهي الوقت. ---- */
+    function updateSideScoreDisplay(team) {
+        var scoreEl = el('pc-side-score-' + team);
+        if (!scoreEl) return;
+        var key = (team === TEAM1) ? SCORE_KEY_TEAM1 : SCORE_KEY_TEAM2;
+        scoreEl.textContent = AGP.scoreManager.getScore(key);
+    }
+
+    function showToast(message) {
+        var container = el('pc-toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'pc-toast-container';
+            document.body.appendChild(container);
+        }
+        var toast = document.createElement('div');
+        toast.className = 'pc-toast';
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(function () { toast.remove(); }, 3000);
+    }
+
+    function wireSilenceEnforcementListener() {
+        if (_silenceEnforceUnsub) return;
+        _silenceEnforceUnsub = AGP.events.on('stream:commentReceived', function (payload) {
+            if (!_activeSilence || _activeSilence.penalized) return;
+            if (!payload || !payload.id || payload.id !== _activeSilence.playerId) return;
+            if (_answerInterval == null) return; // الجولة مو نشطة حالياً
+
+            _activeSilence.penalized = true;
+            var key = (_activeSilence.bonusTeam === TEAM1) ? SCORE_KEY_TEAM1 : SCORE_KEY_TEAM2;
+            AGP.scoreManager.addPoints(key, 1);
+            updateSideScoreDisplay(_activeSilence.bonusTeam);
+            checkForWinner();
+
+            var bonusTeamName = (_activeSilence.bonusTeam === TEAM1) ? _settings.team1Name : _settings.team2Name;
+            showToast('🔇 ' + _activeSilence.playerName + ' جاوب رغم الإسكات! نقطة إضافية لفريق ' + bonusTeamName);
+        });
+    }
+
+    /* ======================================================================
+     *  8) تبويب الاتصال بالبث -- يظهر فوق شاشة الإعدادات (منقول بالحرف من
      *     قالب روليت القبائل). زر ✕ عند الفشل يُخفي التبويب فقط، شاشة
      *     الإعدادات خلفه تبقى ظاهرة وتفاعلية.
      * ==================================================================== */
@@ -600,7 +911,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* ======================================================================
-     *  7) الاستماع لأحداث المنصة العامة + التسجيل
+     *  9) الاستماع لأحداث المنصة العامة + التسجيل
      * ==================================================================== */
     function wirePlatformListeners() {
         AGP.events.on('stream:statusChanged', function (payload) {
@@ -615,6 +926,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 showConnectOverlay(true);
             }
         });
+
+        // شبكة أمان: أي مصدر نقاط مستقبلي (مثل محرك التحقق من الإجابات
+        // اللي بيُبنى بمرحلة لاحقة) يُفحص تلقائياً بعد كل تغيير نقاط.
+        AGP.events.on('score:changed', function () { checkForWinner(); });
     }
 
     function registerGame() {
@@ -633,6 +948,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         injectHeader();
         wirePlatformListeners();
+        wireSilenceEnforcementListener();
         renderSettingsScreen();
     }
 
