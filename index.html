@@ -102,7 +102,7 @@
     .bg-decor span:nth-child(7) { top: 88%; right: 20%; font-size: 2.6em; }
     .bg-decor span:nth-child(8) { top: 5%; left: 40%; font-size: 1.8em; }
     header.topbar, .hero, .categories, #home-highlights, #games-section, .teaser, .teaser-pills,
-    .stats-section, footer, .announcement-overlay, #splash-screen { position: relative; z-index: 1; }
+    .stats-section, footer, .announcement-overlay { position: relative; z-index: 1; }
 
     /*
         أنيميشن ظهور بسيط عند الوصول للقسم بالسكرول (Reveal on scroll) —
@@ -157,8 +157,9 @@
 
     .hero {
         max-width: 900px; margin: 40px auto; padding: 32px; border-radius: var(--radius);
-        background: linear-gradient(160deg, rgba(124,58,237,0.14), rgba(255,77,255,0.07));
+        background: rgba(23,23,43,0.30);
         border: 1px solid var(--border);
+        box-shadow: 0 0 24px 6px rgba(34,197,94,0.35), 0 0 48px 14px rgba(34,197,94,0.15);
     }
     /*
         شارة "منصة مجانية" — أيقونة فقط بدون نص (راجع docs/CHANGELOG.md)،
@@ -273,7 +274,7 @@
     .new-games-row-wrap { max-width: 1200px; margin: 0 auto 30px; padding: 0 20px; }
     .new-games-row-title {
         display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.02em;
-        margin-bottom: 12px; color: var(--text); justify-content: center;
+        margin-bottom: 12px; color: var(--text); justify-content: flex-start;
     }
     .new-games-row-title .new-badge {
         background: var(--accent-gradient); color: #0e0e16; font-size: 0.7em; font-weight: 800;
@@ -281,7 +282,7 @@
     }
     .new-games-row {
         display: flex; gap: 14px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x proximity;
-        justify-content: center;
+        justify-content: flex-start;
     }
     .new-game-chip {
         scroll-snap-align: start; flex: 0 0 auto; width: 168px; background: var(--surface);
@@ -297,21 +298,50 @@
         background: var(--accent-gradient); color: #0e0e16; font-weight: 800;
     }
 
-    /* [0.46.0] تبويب "قريباً: متجر ألعاب أيمن" — تحت البانر الرئيسي مباشرة
-       وفوق شريط الفئات. زر معطَّل عمداً (لا رابط فعلي بعد) بنفس أسلوب
-       btn-pill--disabled الموجود بشريط الفئات تحته. */
-    .store-teaser-wrap { display: flex; justify-content: center; margin: 0 0 18px; }
+    /* رابط "انتقل إلى الإطارات" — تحت البانر الرئيسي مباشرة وفوق بانر
+       الإطارات. رابط نصي بسيط (بدون شكل زر) ينقل مباشرة لمتجر الإطارات. */
+    .store-teaser-wrap { display: flex; justify-content: center; margin: 0 0 16px; }
     .store-teaser {
-        display: inline-flex; align-items: center; gap: 8px; cursor: not-allowed;
-        background: linear-gradient(90deg, rgba(137,83,230,0.16), rgba(247,118,247,0.10));
-        border: 1px dashed rgba(247, 203, 112, 0.45); color: var(--text);
-        font-weight: 800; font-size: 0.9em; padding: 9px 20px; border-radius: 999px;
+        display: inline-flex; align-items: center; gap: 8px;
+        color: var(--accent-2); font-weight: 700; font-size: 0.95em;
+        text-decoration: none; padding-bottom: 2px;
+        border-bottom: 1px solid rgba(216, 120, 255, 0.4);
+        transition: border-color 0.15s ease, color 0.15s ease;
+    }
+    .store-teaser:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* بانر الإطارات — تحت رابط "انتقل إلى الإطارات"، متجاوب بعرض 100%
+       على جميع الشاشات (جوال / آيباد / كمبيوتر) بنفس نسبة الصورة. */
+    .frames-banner-wrap { display: flex; justify-content: center; margin: 0 0 18px; }
+    .frames-banner-link { display: block; width: 100%; max-width: 900px; }
+    .frames-banner {
+        display: block; width: 100%; height: auto; border-radius: var(--radius);
     }
 
     .section-title-bar {
         max-width: 1200px; margin: 0 auto 24px; padding: 12px 24px; border-radius: 999px;
         background: var(--accent-gradient); color: #0e0e16; font-weight: 800; font-size: 1.1em;
     }
+
+    /* عنوان قسم "ألعاب البث" — يبرز أنه قسم مستقل بالمنصة بدل الشريط
+       الطويل السابق. أصغر واحترافي، يبدأ من اليمين، مع رابط اختياري
+       لعرض كل الألعاب على الطرف الآخر. */
+    .games-section-header {
+        max-width: 1200px; margin: 0 auto 22px; padding: 0 20px;
+        display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    }
+    .games-section-eyebrow { color: var(--accent-2); font-size: 0.78em; font-weight: 700; margin-bottom: 6px; }
+    .games-section-title-row { display: flex; align-items: center; gap: 12px; }
+    .games-section-icon {
+        width: 36px; height: 36px; border-radius: 10px; background: var(--accent-gradient);
+        display: flex; align-items: center; justify-content: center; font-size: 1.05em; flex-shrink: 0;
+    }
+    .games-section-title { margin: 0; color: var(--text); font-size: 1.4em; font-weight: 800; }
+    .games-section-viewall {
+        color: var(--accent-2); font-size: 0.85em; font-weight: 700; text-decoration: none;
+        border-bottom: 1px solid rgba(216, 120, 255, 0.4); padding-bottom: 2px; white-space: nowrap;
+    }
+    .games-section-viewall:hover { color: var(--accent); border-color: var(--accent); }
 
     .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 22px; max-width: 1200px; margin: 0 auto 40px; padding: 0 20px; }
     .game-card {
@@ -440,47 +470,6 @@
         font-weight: 700; cursor: pointer; font-size: 0.9em; background: var(--accent-gradient); color: #0e0e16;
     }
 
-    /*
-        شاشة البداية (Splash) — شعار كبير على خلفية مغبشة أول ما تفتح
-        الصفحة، يدخل بأنيميشن دخول بارز (تكبير+دوران+توهّج) ثم نبض
-        هادئ، ويختفي تلقائياً بعد ثانيتين بأنيميشن خروج مماثل بالقوة
-        (تكبير+تمويه+تلاشي). لا تمنع أي محتوى تحتها من التحميل أو
-        العمل — طبقة بصرية بحتة فوق الصفحة. راجع السكربت آخر الصفحة.
-    */
-    #splash-screen {
-        position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center;
-        background: rgba(14, 14, 22, 0.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-        transition: opacity 0.5s ease; opacity: 1;
-    }
-    .splash-logo-wrap {
-        position: relative; display: inline-flex; align-items: center; justify-content: center;
-        transition: transform 0.5s cubic-bezier(.4,0,.2,1), filter 0.5s ease;
-    }
-    .splash-logo-wrap::before {
-        content: ''; position: absolute; inset: -35%; border-radius: 50%; z-index: -1;
-        background: radial-gradient(circle, rgba(124, 58, 237, 0.4), rgba(255, 77, 255, 0.18) 55%, transparent 72%);
-        animation: splashGlowPulse 1.8s ease-in-out 0.9s infinite;
-    }
-    #splash-screen img {
-        width: clamp(140px, 24vw, 220px); height: auto;
-        animation: splashIntro 0.9s cubic-bezier(.34, 1.56, .64, 1) both,
-                   splashPulse 1.8s ease-in-out 0.9s infinite;
-    }
-    @keyframes splashIntro {
-        0% { transform: scale(0.25) rotate(-20deg); opacity: 0; filter: blur(10px) drop-shadow(0 0 0 rgba(255, 77, 255, 0)); }
-        55% { transform: scale(1.18) rotate(6deg); opacity: 1; filter: blur(0) drop-shadow(0 0 26px rgba(255, 77, 255, 0.55)); }
-        80% { transform: scale(0.96) rotate(-2deg); }
-        100% { transform: scale(1) rotate(0deg); filter: blur(0) drop-shadow(0 0 16px rgba(124, 58, 237, 0.4)); }
-    }
-    @keyframes splashGlowPulse { 0%, 100% { transform: scale(0.85); opacity: 0.55; } 50% { transform: scale(1.2); opacity: 1; } }
-    @keyframes splashPulse { 0%, 100% { transform: scale(1); opacity: 0.92; } 50% { transform: scale(1.06); opacity: 1; } }
-    #splash-screen.splash-hide { opacity: 0; pointer-events: none; }
-    #splash-screen.splash-hide .splash-logo-wrap { transform: scale(1.4) rotate(8deg); filter: blur(10px); }
-    @media (prefers-reduced-motion: reduce) {
-        #splash-screen img { animation: none; }
-        .splash-logo-wrap::before { animation: none; }
-        .splash-logo-wrap, #splash-screen.splash-hide .splash-logo-wrap { transition: none; transform: none; filter: none; }
-    }
 
     /*
         حفلة ترحيب الستريمر الجديد — تظهر تلقائياً من السكربت آخر الصفحة
@@ -582,14 +571,12 @@
     @media (min-width: 1300px) {
         .hero { max-width: 1180px; }
         #home-highlights { max-width: 1180px; }
-        .container, .section-title-bar, .new-games-row-wrap { max-width: 1320px; }
+        .container, .section-title-bar, .new-games-row-wrap, .games-section-header { max-width: 1320px; }
     }
 </style>
 </head>
 <body>
 
-<!-- شاشة البداية — راجع #splash-screen بالأعلى والسكربت آخر الصفحة -->
-<div id="splash-screen"><div class="splash-logo-wrap"><img src="logo.png" alt="ألعاب أيمن"></div></div>
 
 <!-- أيقونات خلفية زخرفية ثابتة — راجع .bg-decor بالأعلى، بدون أي حركة -->
 <div class="bg-decor" aria-hidden="true">
@@ -710,12 +697,23 @@
     <a class="tiktok-cta" href="https://www.tiktok.com/@em70_q" target="_blank">🎵 حسابنا تيك توك</a>
 </div>
 
-<!-- [0.46.0] تبويب "قريباً: متجر ألعاب أيمن" — تحت البانر مباشرة، معطَّل
-     لحين جهوزية المتجر فعلياً (إطارات وأشياء إضافية للألعاب). -->
+<!-- رابط "انتقل إلى الإطارات" — تحت البانر مباشرة، ينقل لمتجر الإطارات الخارجي. -->
 <div class="store-teaser-wrap">
-    <button type="button" class="store-teaser" disabled title="قريباً">
-        🛍️ متجر ألعاب أيمن <span class="soon-tag">قريباً</span>
-    </button>
+    <a href="https://aymngames.dev.zid.store" target="_blank" rel="noopener" class="store-teaser">
+        انتقل إلى الإطارات
+    </a>
+</div>
+
+<!--
+    بانر الإطارات — ملف جديد باسم frames-banner.png (أو .jpg) بجذر
+    المستودع، بجانب logo.png و hero-banner.png. يُعرَض هنا فقط لو الملف
+    موجود فعلياً (onerror يخفي العنصر كلياً لو الملف غير مرفوع بعد).
+    الرابط ينقل لمتجر الإطارات الخارجي مثل رابط "انتقل إلى الإطارات" أعلاه.
+-->
+<div class="frames-banner-wrap">
+    <a href="https://aymngames.dev.zid.store" target="_blank" rel="noopener" class="frames-banner-link">
+        <img src="frames-banner.png" alt="اكتشف الإطارات المميزة لاسمك" class="frames-banner" onerror="this.closest('.frames-banner-wrap').style.display='none';">
+    </a>
 </div>
 
 <div class="categories">
@@ -751,7 +749,16 @@
 </div>
 
 <div id="games-section">
-    <div class="section-title-bar">ألعاب البث</div>
+    <div class="games-section-header">
+        <div>
+            <div class="games-section-eyebrow">قسم جديد بالمنصة</div>
+            <div class="games-section-title-row">
+                <div class="games-section-icon">🎮</div>
+                <h2 class="games-section-title">ألعاب البث</h2>
+            </div>
+        </div>
+        <a href="#games-section" class="games-section-viewall">عرض كل الألعاب ←</a>
+    </div>
 
     <!--
         رسالة قفل الألعاب — مخفية افتراضياً، تظهر فقط لو ضغط زائر بدون
@@ -1117,24 +1124,11 @@
 </script>
 
 <!--
-    شاشة البداية (Splash) + أنيميشن ظهور الأقسام عند السكرول — بصري بحت،
-    مستقل تماماً عن AGP.* وعن AGPAuth (يعمل حتى لو فشل تحميلهما لأي سبب).
-    راجع docs/CHANGELOG.md.
+    أنيميشن ظهور الأقسام عند السكرول — بصري بحت، مستقل تماماً عن AGP.*
+    وعن AGPAuth (يعمل حتى لو فشل تحميلهما لأي سبب). راجع docs/CHANGELOG.md.
 -->
 <script>
     (function () {
-        // شاشة البداية — تختفي تلقائياً بعد ثانيتين بأنيميشن خروج بارز، ثم
-        // تُزال من الـ DOM كلياً حتى لا تبقى عنصراً خفياً يعيق أي شيء.
-        var splash = document.getElementById('splash-screen');
-        if (splash) {
-            window.setTimeout(function () {
-                splash.classList.add('splash-hide');
-                window.setTimeout(function () {
-                    if (splash.parentNode) splash.parentNode.removeChild(splash);
-                }, 500); // بعد انتهاء أنيميشن الخروج (transition: 0.5s بالـ CSS)
-            }, 2000);
-        }
-
         // أنيميشن ظهور بسيط للأقسام عند وصولها للشاشة بالسكرول. لو
         // IntersectionObserver غير مدعوم (متصفح قديم جداً)، ما نضيف كلاس
         // js-reveal-ready أصلاً فتبقى العناصر ظاهرة طبيعياً بحكم fallback
