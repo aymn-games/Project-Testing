@@ -51,7 +51,7 @@
             والتدرّج الرئيسي (--accent-gradient) بنفسجي↔وردي بدل بنفسجي↔سماوي
             زي ما كان، حتى يقل حضور السماوي البصري بالموقع ككل.
         */
-        --bg: #0e0e16;
+        --bg: #10232B;
         --surface: #150c26;
         --surface-2: #1c1233;
         --border: rgba(137, 83, 230, 0.26);
@@ -144,6 +144,17 @@
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
     .nav-support-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(255, 77, 255, 0.4); color: #fff !important; }
+
+    /* زر "الإطارات" بالهيدر — بجانب زر دعم المنصة، أسلوب outline أهدأ
+       حتى ما ينافس زر دعم المنصة البارز. يربط لمتجر الإطارات الخارجي. */
+    .nav-frames-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        background: transparent; color: var(--text) !important; font-weight: 800;
+        padding: 8px 18px; border-radius: 999px; font-size: 0.92em;
+        border: 1px solid var(--border);
+        transition: border-color 0.2s ease, color 0.2s ease;
+    }
+    .nav-frames-btn:hover { border-color: var(--accent-2); color: var(--accent-2) !important; }
     .auth-actions { display: flex; gap: 10px; }
     .btn {
         border: none; border-radius: 999px; padding: 9px 20px; font-family: inherit;
@@ -668,6 +679,7 @@
         <a href="#games-section">الألعاب</a>
         <a href="#">البث المباشر</a>
         <a href="#">المجتمع</a>
+        <a href="https://aymngames.dev.zid.store" target="_blank" rel="noopener" class="nav-frames-btn">🖼️ الإطارات</a>
         <a href="support.html" class="nav-support-btn">💜 دعم المنصة</a>
     </nav>
     <div class="auth-actions" id="auth-actions">
