@@ -81,6 +81,8 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
 .aq-q-answers { margin-top: 8px; display: none; flex-wrap: wrap; gap: 6px; }
 .aq-q-card.aq-expanded .aq-q-answers { display: flex; }
 .aq-q-answer-chip { background: var(--aq-green-800); border: 1px solid var(--aq-gold-700); border-radius: 999px; padding: 3px 10px; font-size: 0.8em; }
+.aq-q-answer-chip-primary { background: var(--aq-gold-700); border-color: var(--aq-gold-400); color: var(--aq-green-950); font-weight: 800; }
+.aq-primary-answer-input { border-color: var(--aq-gold-500) !important; }
 
 .aq-row-field { position: relative; margin-bottom: 14px; }
 .aq-row-field input[type="text"] {
@@ -191,7 +193,11 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
         el('aq-count').textContent = _challenges.length;
         var listEl = el('aq-list');
         listEl.innerHTML = _challenges.map(function (c) {
-            var chips = c.answers.map(function (a) { return '<span class="aq-q-answer-chip">' + escapeHtml(a) + '</span>'; }).join('');
+            var chips = c.answers.map(function (a, i) {
+                return i === 0
+                    ? '<span class="aq-q-answer-chip aq-q-answer-chip-primary">⭐ ' + escapeHtml(a) + '</span>'
+                    : '<span class="aq-q-answer-chip">' + escapeHtml(a) + '</span>';
+            }).join('');
             var thumbStyle = c.imageFile ? ' style="background-image:url(\'challenge-images/' + escapeHtml(c.imageFile) + '\')"' : '';
             return '<div class="aq-q-card" id="aq-qcard-' + escapeHtml(c.id) + '">' +
                 '<div class="aq-q-thumb"' + thumbStyle + '></div>' +
@@ -231,8 +237,10 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
     }
 
     function buildFormHtml(existing) {
-        var answers = existing && existing.answers && existing.answers.length ? existing.answers : [''];
-        var rows = answers.map(function (ans) { return answerRowHtml(ans); }).join('');
+        var allAnswers = existing && existing.answers && existing.answers.length ? existing.answers : [''];
+        var primaryAnswer = allAnswers[0] || '';
+        var variantAnswers = allAnswers.slice(1);
+        var variantRows = variantAnswers.map(function (ans) { return answerRowHtml(ans); }).join('');
         return '<h2>' + (existing ? 'تعديل صورة' : 'صورة جديدة') + '</h2>' +
             '<div class="aq-image-picker">' +
                 '<div class="aq-image-preview" id="aq-form-preview"' + (existing && existing.imageFile ? ' style="background-image:url(\'challenge-images/' + escapeHtml(existing.imageFile) + '\')"' : '') + '></div>' +
@@ -245,9 +253,13 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
                 '<input type="text" id="aq-form-filename" placeholder="مثال: challenge-01.png" value="' + escapeHtml(existing ? existing.imageFile : '') + '">' +
                 '<label>اسم ملف الصورة (لازم يطابق بالضبط الملف اللي بترفعه لمجلد challenge-images)</label>' +
             '</div>' +
-            '<div class="aq-hint" style="margin-bottom:8px;">أضف كل الصياغات المقبولة كإجابة صحيحة لهذي الصورة (كل وحدة بخانة لحالها).</div>' +
-            '<div id="aq-answers-list">' + rows + '</div>' +
-            '<button type="button" id="aq-add-answer-btn" class="aq-btn aq-btn-secondary" style="margin-bottom:14px;">➕ إضافة صياغة إجابة</button>' +
+            '<div class="aq-row-field">' +
+                '<input type="text" id="aq-form-primary-answer" class="aq-primary-answer-input" placeholder="مثال: برج خليفة" value="' + escapeHtml(primaryAnswer) + '">' +
+                '<label>⭐ الإجابة الأساسية — هذي اللي تظهر بشاشة الكشف وقت اللعب</label>' +
+            '</div>' +
+            '<div class="aq-hint" style="margin-bottom:8px;">أضف أي صياغات ثانية مشابهة لنفس الإجابة الأساسية (مثال: بالإنجليزي، أو بدون "ال"، أو خطأ إملائي شائع) — تُحسب صحيحة بالضبط زي الإجابة الأساسية، بس ما تظهر بالشاشة، فقط الإجابة الأساسية فوق هي اللي تظهر.</div>' +
+            '<div id="aq-answers-list">' + variantRows + '</div>' +
+            '<button type="button" id="aq-add-answer-btn" class="aq-btn aq-btn-secondary" style="margin-bottom:14px;">➕ إضافة صياغة مشابهة</button>' +
             '<div id="aq-form-error" class="aq-error"></div>' +
             '<div style="display:flex; gap:10px; margin-top:6px;">' +
                 '<button type="button" id="aq-form-save-btn" class="aq-btn aq-btn-primary">💾 حفظ</button>' +
@@ -257,7 +269,7 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
 
     function answerRowHtml(value) {
         return '<div class="aq-answer-row">' +
-            '<input type="text" class="aq-answer-input" placeholder="مثال: برج خليفة" value="' + escapeHtml(value || '') + '">' +
+            '<input type="text" class="aq-answer-input" placeholder="مثال: Burj Khalifa" value="' + escapeHtml(value || '') + '">' +
             '<button type="button" class="aq-answer-remove-btn" title="حذف هذي الصياغة">✕</button>' +
         '</div>';
     }
@@ -299,12 +311,14 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
 
         el('aq-form-save-btn').addEventListener('click', function () {
             var imageFile = (el('aq-form-filename').value || '').trim();
-            var answerInputs = Array.prototype.slice.call(panel.querySelectorAll('.aq-answer-input'));
-            var answers = answerInputs.map(function (inp) { return (inp.value || '').trim(); }).filter(Boolean);
+            var primaryAnswer = (el('aq-form-primary-answer').value || '').trim();
+            var variantInputs = Array.prototype.slice.call(panel.querySelectorAll('.aq-answer-input'));
+            var variants = variantInputs.map(function (inp) { return (inp.value || '').trim(); }).filter(Boolean);
+            var answers = [primaryAnswer].concat(variants);
             var errEl = el('aq-form-error');
 
             if (!imageFile) { errEl.textContent = 'لازم تكتب اسم ملف الصورة.'; errEl.style.display = 'block'; return; }
-            if (!answers.length) { errEl.textContent = 'لازم تضيف صياغة إجابة صحيحة وحدة على الأقل.'; errEl.style.display = 'block'; return; }
+            if (!primaryAnswer) { errEl.textContent = 'لازم تكتب الإجابة الأساسية.'; errEl.style.display = 'block'; return; }
 
             if (_editingId) {
                 var idx = _challenges.findIndex(function (c) { return c.id === _editingId; });
