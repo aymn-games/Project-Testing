@@ -465,24 +465,38 @@ function generateVerificationCode(userId) {
 }
 
 /**
- * جلب HTML صفحة بروفايل تيك توك العامة كنص خام.
+ * يفحص نص HTML: هل هو صفحة "تحقّق إنك إنسان" من تيك توك بدل البروفايل
+ * الفعلي؟ مُستخرَجة كدالة مستقلة حتى تُستخدَم من فحص إعادة المحاولة
+ * وسجل التشخيص بنفس المنطق دون تكرار.
+ * @param {string} html
+ * @returns {boolean}
+ */
+function looksLikeTikTokBotCheck(html) {
+    return /verify you.{0,20}human|captcha|are you a robot|please enable javascript/i.test(html || '');
+}
+
+/**
+ * جلب صفحة واحدة عبر https، مع متابعة إعادة التوجيه (redirect) يدوياً —
+ * https.get لا يتابعها تلقائياً، وتيك توك يرسلها أحياناً (خصوصاً
+ * لبروفايلات أقل شهرة/أحدث، أقل تخزيناً مؤقتاً على شبكته) مما كان
+ * يُفشِل التحقق فوراً قبل هذا التعديل. حتى 3 قفزات دفاعياً ضد أي حلقة.
+ * @param {string} url
+ * @param {Object} headers
+ * @param {number} redirectsLeft
  * @returns {Promise<string>}
  */
-function fetchPublicProfileHtml(tiktokUsername) {
+function fetchFollowingRedirects(url, headers, redirectsLeft) {
     return new Promise(function (resolve, reject) {
-        var url = 'https://www.tiktok.com/@' + encodeURIComponent(tiktokUsername);
-        // ⚠️ [0.44.1] هيدرز أشبه بمتصفح حقيقي — تيك توك معروف بحجب/تقديم
-        // صفحة تحقّق-من-إنك-إنسان (بدل البروفايل الحقيقي) لطلبات فيها
-        // هيدرز واضحة إنها من سكربت/سيرفر لا متصفح. هذا يقلّل احتمال
-        // الحجب لكنه **ما يضمنه كلياً** — راجع الملاحظة الصادقة بأعلى الملف.
-        var headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8'
-        };
         https.get(url, { headers: headers }, function (res) {
-            if (res.statusCode !== 200) {
-                reject(new Error('profile_fetch_failed_status_' + res.statusCode));
+            var status = res.statusCode;
+            if (status >= 300 && status < 400 && res.headers.location && redirectsLeft > 0) {
+                res.resume();
+                var nextUrl = new URL(res.headers.location, url).toString();
+                resolve(fetchFollowingRedirects(nextUrl, headers, redirectsLeft - 1));
+                return;
+            }
+            if (status !== 200) {
+                reject(new Error('profile_fetch_failed_status_' + status));
                 res.resume();
                 return;
             }
@@ -491,6 +505,47 @@ function fetchPublicProfileHtml(tiktokUsername) {
             res.on('end', function () { resolve(Buffer.concat(chunks).toString('utf8')); });
         }).on('error', reject);
     });
+}
+
+/**
+ * تأخير بسيط (ms) — يُستخدَم بين محاولات إعادة الجلب.
+ * @returns {Promise<void>}
+ */
+function delay(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+}
+
+/**
+ * جلب HTML صفحة بروفايل تيك توك العامة كنص خام، مع إعادة محاولة تلقائية
+ * (حتى مرتين إضافيتين، بفاصل قصير) لو الرد الأول كان صفحة "تحقّق إنك
+ * إنسان" بدل البروفايل الفعلي — [0.44.2] هذي الصفحة تظهر بشكل انتقائي
+ * (أكثر مع بروفايلات جديدة/أقل شهرة، أقل تخزيناً مؤقتاً على شبكة تيك
+ * توك)، والمحاولة التالية غالباً تنجح لنفس البروفايل. راجع الملاحظة
+ * الصادقة بأعلى الملف — هذا يقلّل احتمال الفشل لكنه ما يضمنه كلياً.
+ * @returns {Promise<string>}
+ */
+async function fetchPublicProfileHtml(tiktokUsername) {
+    var url = 'https://www.tiktok.com/@' + encodeURIComponent(tiktokUsername);
+    // ⚠️ [0.44.1] هيدرز أشبه بمتصفح حقيقي — تيك توك معروف بحجب/تقديم
+    // صفحة تحقّق-من-إنك-إنسان (بدل البروفايل الحقيقية) لطلبات فيها
+    // هيدرز واضحة إنها من سكربت/سيرفر لا متصفح. هذا يقلّل احتمال
+    // الحجب لكنه **ما يضمنه كلياً** — راجع الملاحظة الصادقة بأعلى الملف.
+    var headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8'
+    };
+
+    var attempts = 3;
+    var lastHtml = '';
+    for (var i = 0; i < attempts; i++) {
+        lastHtml = await fetchFollowingRedirects(url, headers, 3);
+        if (!looksLikeTikTokBotCheck(lastHtml)) return lastHtml;
+        // [0.44.2] رد بدا صفحة bot-check — لو ما زال فيه محاولات، ننتظر
+        // شوي ونعيد الجلب بدل الفشل الفوري.
+        if (i < attempts - 1) await delay(800 + i * 700);
+    }
+    return lastHtml; // آخر محاولة (bot-check على الأغلب) — verifyTikTokOwnership يشخّصها ويرجع خطأ واضح
 }
 
 /**
@@ -516,7 +571,7 @@ async function verifyTikTokOwnership(userId, tiktokUsername) {
         // طول الصفحة المستلَمة فعلياً + أول 300 حرف منها، ونعلّم لو فيها
         // كلمات دلالية معروفة لصفحات "تحقّق من إنك إنسان" بتيك توك. هذا
         // يخلينا نشوف بالضبط وش رجع تيك توك فعلياً بدل ما نفترض.
-        var looksLikeBotCheck = /verify you.{0,20}human|captcha|are you a robot|please enable javascript/i.test(html);
+        var looksLikeBotCheck = looksLikeTikTokBotCheck(html);
         logger.error(
             'Auth: TikTok verification code not found in fetched page for "' + tiktokUsername + '". ' +
             'html_length=' + html.length + ' looks_like_bot_check=' + looksLikeBotCheck + ' ' +
