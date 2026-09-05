@@ -713,25 +713,29 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              *  بخط تحتي رفيع فقط (نفس منطق الحذف الموثَّق بروليت القبائل:
              *  Multi-column يتكيّف تلقائياً مع أي حقل يظهر/يختفي ديناميكياً
              *  بدل حسابات موضع يدوية هشة).
+             *  ⚠️ [رجوع مقصود لنموذج عمودين] كانت هذي الشاشة تحوّلت لصندوق
+             *  ثابت الحجم (88vh/780px) بعمود واحد وسكرول داخلي، لتفادي
+             *  تجاوز الشاشة. أُعيدت الآن لتخطيط العمودين الأصلي (نفس تقنية
+             *  روليت القبائل بالحرف: column-count:2 على الصندوق نفسه،
+             *  height:auto، بدون أي عنصر سكرول داخلي وسيط) بطلب صريح من
+             *  أيمن. الحقول أصبحت أبناء مباشرين للصندوق (بلا wrapper) —
+             *  نفس بنية DOM المستخدَمة بروليت القبائل تماماً؛ الصفحة نفسها
+             *  (overlay) هي اللي تسكرول لو المحتوى طال، مو صندوق داخلي.
              * ==================================================================== */
             '#agp-shell-overlay:has(#agp-shell-box.rr-pre-match-settings){padding:0 !important;',
-            'align-items:center !important;overflow-y:auto !important;',
+            'align-items:flex-start !important;overflow-y:auto !important;',
             'background:',
             'radial-gradient(ellipse 900px 500px at 50% -8%,rgba(212,175,55,0.14),transparent 60%),',
             'radial-gradient(ellipse 700px 500px at 90% 100%,rgba(132,91,27,0.18),transparent 60%),',
             'linear-gradient(180deg,#150e05 0%,#0d0904 45%,#050302 100%) !important;}',
-            /* ⚠️ الصندوق صار مقاسه ثابت (لا يتجاوز حجم الشاشة) بدل
-             * height:auto القديم: display:flex عمودي — العنوان ثابت
-             * بالأعلى، حقول الإعدادات بمنطقة سكرول داخلية واحدة (عمود
-             * واحد بدل عمودين)، وزرّا الاتصال والعودة ثابتان بالأسفل
-             * خارج منطقة السكرول تماماً. */
             '#agp-shell-box.rr-pre-match-settings{width:min(980px,94vw) !important;max-width:min(980px,94vw) !important;',
-            'height:min(88vh,780px) !important;max-height:88vh !important;overflow:hidden !important;',
-            'display:flex !important;flex-direction:column !important;',
+            'height:auto !important;max-height:none !important;overflow:visible !important;',
+            'display:block !important;',
+            'column-count:2 !important;column-gap:60px !important;column-fill:auto !important;',
             'background:none !important;border:none !important;border-radius:0 !important;',
-            'box-shadow:none !important;padding:40px 24px 28px !important;box-sizing:border-box !important;',
+            'box-shadow:none !important;padding:56px 24px 60px !important;box-sizing:border-box !important;',
             'margin:0 !important;}',
-            '#agp-shell-box.rr-pre-match-settings h2{flex-shrink:0 !important;margin:0 0 24px !important;',
+            '#agp-shell-box.rr-pre-match-settings h2{column-span:all !important;margin:0 0 42px !important;',
             'max-width:none !important;font-size:clamp(24px,4vw,38px) !important;font-weight:900 !important;',
             'text-align:center !important;',
             'background:linear-gradient(90deg,' + ACCENT2 + ',#f2e6cf 55%,' + ACCENT2 + ') !important;',
@@ -740,11 +744,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-box.rr-pre-match-settings h2::after{content:"";position:absolute;bottom:0;',
             'left:50%;transform:translateX(-50%);width:64px;height:3px;border-radius:3px;',
             'background:linear-gradient(90deg,transparent,' + ACCENT2 + ',transparent);}',
-            /* منطقة السكرول الداخلية — تُبنى بـJS (wrapSettingsFieldsForScroll)
-             * حول كل حقول الإعدادات فقط، بدون لمس ملف الشل المشترك. */
-            '#agp-shell-box.rr-pre-match-settings .rr-settings-fields-scroll{',
-            'flex:1 1 auto !important;min-height:0 !important;overflow-y:auto !important;',
-            'column-count:1 !important;padding:0 4px 0 14px !important;margin:0 !important;}',
             '#agp-shell-box.rr-pre-match-settings .agp-shell-field,',
             '#agp-shell-box.rr-pre-match-settings .agp-shell-row{break-inside:avoid !important;',
             'padding:20px 0 !important;border-bottom:1px solid rgba(255,255,255,0.08) !important;',
@@ -765,12 +764,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-box.rr-pre-match-settings .agp-pill-btn.agp-pill-active{',
             'background:linear-gradient(90deg,var(--rr-gold),' + ACCENT2 + ') !important;',
             'color:#241a0c !important;border-color:transparent !important;}',
-            '#agp-shell-box.rr-pre-match-settings .agp-shell-btn-connect{flex-shrink:0 !important;',
-            'display:table !important;width:auto !important;margin:20px auto 0 !important;',
+            '#agp-shell-box.rr-pre-match-settings .agp-shell-btn-connect{column-span:all !important;',
+            'display:table !important;width:auto !important;margin:34px auto 0 !important;',
             'padding:16px 64px !important;font-size:1.05em !important;letter-spacing:0.4px;',
             'box-shadow:0 10px 34px rgba(212,175,55,0.3),0 0 0 1px rgba(255,255,255,0.15) inset !important;}',
-            '#agp-shell-box.rr-pre-match-settings .rr-home-from-settings-btn{flex-shrink:0 !important;',
+            '#agp-shell-box.rr-pre-match-settings .rr-home-from-settings-btn{column-span:all !important;',
             'display:table !important;width:auto !important;margin:14px auto 0 !important;}',
+            '@media (max-width:720px){#agp-shell-box.rr-pre-match-settings{column-count:1 !important;}}',
             '.agp-shell-counter-row button{border-color:' + ACCENT2 + ' !important;color:#fff !important;',
             'background:transparent !important;}',
             '.agp-count-input{border-color:' + ACCENT2 + ' !important;background:#0d0904 !important;',
@@ -2447,29 +2447,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderReopenedPlayersTab();
     }
 
-    // ⚠️ يجمع كل حقول الإعدادات (بين العنوان وزر الاتصال) داخل صندوق
-    // واحد قابل للسكرول الداخلي، ويترك زرّي "الاتصال" و"العودة للمنصة"
-    // خارجه ثابتين بالأسفل. box.innerHTML يُعاد بالكامل من ملف الشل
-    // المشترك بكل تفاعل (pill/toggle/input) — لذا الدالة idempotent
-    // وتُستدعى من enhanceSettingsScreen() في كل مرة (نفس نمط زر العودة
-    // أدناه)، بدون أي تعديل على js/agp-game-shell.js نفسه.
-    function wrapSettingsFieldsForScroll(box) {
-        if (box.querySelector('.rr-settings-fields-scroll')) return;
-        var h2 = box.querySelector('h2');
-        var connectBtn = document.getElementById('agp-connect-btn');
-        if (!h2 || !connectBtn || connectBtn.parentElement !== box) return;
-        var wrapper = document.createElement('div');
-        wrapper.className = 'rr-settings-fields-scroll';
-        var node = h2.nextSibling;
-        var toMove = [];
-        while (node && node !== connectBtn) {
-            toMove.push(node);
-            node = node.nextSibling;
-        }
-        toMove.forEach(function (n) { wrapper.appendChild(n); });
-        box.insertBefore(wrapper, connectBtn);
-    }
-
     // ⚠️ زر "العودة لمنصة العاب ايمن" جنب زر "اتصل بالبث و انتقل للوبي" —
     // شاشة الإعدادات الأولى فقط (قبل الاتصال)، مو المُعاد فتحها وسط المباراة.
     function enhanceSettingsScreen() {
@@ -2479,7 +2456,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!document.getElementById('agp-tiktok-username')) return; // شاشة مُعاد فتحها وسط المباراة
         clearLobbyInlineOverrides(box);
         box.classList.add('rr-pre-match-settings'); // ⚠️ يُعاد إضافتها كل مرّة لأن box.className يُصفَّر بكل إعادة رسم
-        wrapSettingsFieldsForScroll(box);
 
         // ⚠️ [نموذج "تبويب الاتصال فوق شاشة الإعدادات" منقول من روليت
         // القبائل] نعترض onclick الأصلي لزر الاتصال: قبل ما نمرّر التنفيذ
