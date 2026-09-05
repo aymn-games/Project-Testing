@@ -472,7 +472,12 @@ function generateVerificationCode(userId) {
  * @returns {boolean}
  */
 function looksLikeTikTokBotCheck(html) {
-    return /verify you.{0,20}human|captcha|are you a robot|please enable javascript/i.test(html || '');
+    // [0.44.3] أُزيلت "please enable javascript" — عبارة عامة موجودة حتى
+    // بصفحات تيك توك الحقيقية (noscript افتراضي لأي SPA)، كانت تُصنَّف
+    // خطأً كـ"تحقق إنسان" رغم إنها الصفحة الفعلية (لاحظنا html_length
+    // ~366KB — حجم صفحة حقيقية كاملة، لا صفحة حظر). أبقينا فقط عبارات
+    // خاصة فعلياً بصفحة التحدي.
+    return /verify you.{0,20}human|captcha|are you a robot/i.test(html || '');
 }
 
 /**
@@ -572,9 +577,15 @@ async function verifyTikTokOwnership(userId, tiktokUsername) {
         // كلمات دلالية معروفة لصفحات "تحقّق من إنك إنسان" بتيك توك. هذا
         // يخلينا نشوف بالضبط وش رجع تيك توك فعلياً بدل ما نفترض.
         var looksLikeBotCheck = looksLikeTikTokBotCheck(html);
+        // [0.44.3] نطبع أيضاً محتوى og:description (وصف البروفايل — عادة
+        // يحوي البايو أو جزءاً منه) عشان نعرف هل البايو أصلاً وصل بالصفحة
+        // المستلمة أو تيك توك ما يرسله لهذا الحساب تحديداً — بدون هذا لا
+        // نفرّق بين "المستخدم ما حفظ الكود" و"تيك توك يحذف البايو من الرد".
+        var descriptionTag = extractMetaTagContent(html, 'og:description');
         logger.error(
             'Auth: TikTok verification code not found in fetched page for "' + tiktokUsername + '". ' +
             'html_length=' + html.length + ' looks_like_bot_check=' + looksLikeBotCheck + ' ' +
+            'og_description=' + JSON.stringify(descriptionTag) + ' ' +
             'snippet=' + JSON.stringify(html.slice(0, 300).replace(/\s+/g, ' '))
         );
         return { success: false, error: 'code_not_found_in_bio' };
