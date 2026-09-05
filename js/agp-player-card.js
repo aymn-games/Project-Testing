@@ -331,6 +331,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // [0.66.4] إطار "بنات" — الفراشة الوردية. لوح رخامي فاضٍ من أي نص.
         // ⚠️ خلفية فاتحة (نفس ملاحظة إطار القطة) — أبيض بطلب صريح رغم
         // ضعف التباين النسبي.
+        // [0.66.5] إطار "دول خليجية والسعودية" — الصقر والهلال. لوح رخامي
+        // فاضٍ من أي نص. خلفية فاتحة (كريمي) — أخضر غامق بطلب صريح (هوية
+        // العلم السعودي)، مو أبيض.
+        'frame-country-ksa-falcon.png': {
+            canvasW: 2089, canvasH: 753, contentTop: 38, contentHeight: 550,
+            avatarLeftPct: 10.77, avatarTopPct: 25.27, avatarWidthPct: 20.68, avatarHeightPct: 73.82,
+            nameLeftPct: 39.01, nameTopPct: 60.36, nameWidthPct: 47.87, nameHeightPct: 31.82,
+            textColor: '#0a3d1f'
+        },
+        // [0.66.5] إطار "دول خليجية والسعودية" — الدلة والتمر. لوح رخام
+        // داكن فاضٍ من أي نص. خلفية داكنة — أبيض افتراضي مقروء بدون تعديل.
+        'frame-country-ksa-dallah.png': {
+            canvasW: 2103, canvasH: 748, contentTop: 2, contentHeight: 613,
+            avatarLeftPct: 8.37, avatarTopPct: 28.55, avatarWidthPct: 20.78, avatarHeightPct: 70.64,
+            nameLeftPct: 36.62, nameTopPct: 71.13, nameWidthPct: 54.21, nameHeightPct: 25.61
+        },
         'frame-girls-butterfly.png': {
             canvasW: 2089, canvasH: 753, contentTop: 0, contentHeight: 580,
             avatarLeftPct: 12.59, avatarTopPct: 27.59, avatarWidthPct: 20.20, avatarHeightPct: 71.55,
