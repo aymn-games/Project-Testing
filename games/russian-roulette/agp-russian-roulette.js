@@ -143,6 +143,36 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         playTone(360, 150, { type: 'sine', peak: 0.22, slideTo: 220 });
         window.setTimeout(function () { playTone(260, 200, { type: 'sine', peak: 0.2, slideTo: 160 }); }, 130);
     }
+    // ⚠️ صوت "كشف نتيجة الإقصاء" — ضربة باص عميقة (impact، بنفس تقنية
+    // playNoiseBang لكن بتردد أخفض وأهدأ، بدون طقطقة الطلقة) + نغمة هابطة
+    // درامية فوقها + رنّة قصيرة صاعدة تعلوها. يشتغل لحظة ظهور الشاشة،
+    // مختلف عن صوت الطلقة نفسها (يصير فوق بمرحلة الاشتباك السابقة لها).
+    function playResultRevealSound() {
+        var ctx = audioCtx();
+        if (!ctx) return;
+        try {
+            var dur = 0.5;
+            var buffer = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+            var data = buffer.getChannelData(0);
+            for (var i = 0; i < data.length; i++) {
+                var decay = 1 - (i / data.length);
+                data[i] = (Math.random() * 2 - 1) * decay * decay * 0.6;
+            }
+            var noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+            var lowpass = ctx.createBiquadFilter();
+            lowpass.type = 'lowpass';
+            lowpass.frequency.setValueAtTime(500, ctx.currentTime);
+            lowpass.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + dur);
+            var gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.7 * currentVolume(), ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+            noise.connect(lowpass); lowpass.connect(gain); gain.connect(ctx.destination);
+            noise.start();
+            playTone(180, 400, { type: 'sine', peak: 0.3, slideTo: 70 });
+            window.setTimeout(function () { playTone(700, 150, { type: 'triangle', peak: 0.18, slideTo: 900 }); }, 60);
+        } catch (e) { /* تجاهل صامت */ }
+    }
     function playWinFanfare() {
         [523, 659, 784, 1046].forEach(function (f, idx) {
             window.setTimeout(function () { playTone(f, 260, { type: 'triangle', peak: 0.24 }); }, idx * 130);
@@ -162,6 +192,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _wheelSpinning = false;
     var _wheelDisplayMode = 'wheel'; // 'wheel' | 'reel' — يتحكم فيه الاستريمر بزر أعلى الشاشة
     var _pendingTurn = null;      // { chooser, candidates: [...] }
+    // ⚠️ [إصلاح خلل حقيقي] "العب التلقائي" كان يتحقق بس من _pendingTurn،
+    // بينما resolveSelection() يصفّر _pendingTurn فوراً (عبر closeSelectionScreen)
+    // قبل ما تفتح شاشتا "مرحلة الاشتباك" و"عملية اقصاء ناجحة" أصلاً — يعني
+    // فيه نافذة زمنية (لين 5+ ثواني) تكون فيها الشاشتان ظاهرتان بينما
+    // _pendingTurn و_wheelSpinning كلاهما false، فيدخل مؤقّت العب التلقائي
+    // (4.8 ثانية) ويشغّل دوران/اختيار جديد فوق الشاشة المعروضة. هذا المتغيّر
+    // يغطّي بالضبط هالفترة (من لحظة resolveSelection/handleForceEliminateClick
+    // لين انتهاء applyElimination أو فرع الإخفاق بـshowClashScreen).
+    var _resolutionInProgress = false;
     var _selectedCandidateIdx = null; // لتفعيل زر "اقصاء اللاعب" اليدوي
     var _commentUnsub = null;
     var _autoPlayActive = false;
@@ -189,6 +228,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _matchActive = false;
         _wheelSpinning = false;
         _pendingTurn = null;
+        _resolutionInProgress = false;
         _selectedCandidateIdx = null;
         if (_autoPlayTimer) { window.clearTimeout(_autoPlayTimer); _autoPlayTimer = null; }
         _autoPlayActive = false;
@@ -385,18 +425,34 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.rr-eventlog-item{font-size:0.78em;color:#f2e6cf;border-bottom:1px solid rgba(255,255,255,0.1);',
             'padding-bottom:6px;line-height:1.5;}',
 
-            '#rr-wheel-wrap{position:relative;width:min(460px,88vw);aspect-ratio:1;margin-top:6px;}',
-            '#rr-wheel{position:absolute;inset:0;border-radius:50%;border:5px solid var(--rr-gold);',
-            'box-shadow:0 0 30px rgba(0,0,0,0.6);transition:transform 3.4s cubic-bezier(0.15,0.85,0.25,1);overflow:hidden;}',
-            '.rr-wheel-label{position:absolute;top:50%;left:50%;transform-origin:center;font-size:0.72em;',
-            'font-weight:800;color:#f2e6cf;text-shadow:0 1px 3px rgba(0,0,0,0.9);white-space:nowrap;pointer-events:none;}',
+            /* ⚠️ العجلة صارت 3D: منظور + ميلان (rotateX) بدل القرص المسطّح
+             * القديم. الدوران وقت الاختيار (rotateZ) يصير على نفس المحور
+             * المائل — handleSpinClick يدمج الاثنين بسطر transform واحد.
+             * السُمك الحقيقي للحافة يتحقق بعدة طبقات مكرّرة (rr-wheel-depth-
+             * layer) بعمق متزايد وإضاءة أغمق تدريجياً، والتفاصيل الكاملة
+             * (شرائح متدرّجة + لمعة + فواصل + إطار ذهبي مزدوج + مسامير +
+             * هالة + أسماء بالطول) تترسم فوقها بـCanvas واحد فقط. */
+            '#rr-wheel-wrap{position:relative;width:min(460px,88vw);aspect-ratio:1;margin-top:6px;',
+            'perspective:1100px;}',
+            '#rr-wheel-ground-shadow{position:absolute;left:50%;bottom:-8%;transform:translateX(-50%);',
+            'width:82%;height:16%;border-radius:50%;',
+            'background:radial-gradient(ellipse at center,rgba(0,0,0,0.55),transparent 70%);',
+            'filter:blur(5px);pointer-events:none;}',
+            '#rr-wheel{position:absolute;inset:0;transform-style:preserve-3d;',
+            'transform:rotateX(52deg);transition:transform 3.4s cubic-bezier(0.15,0.85,0.25,1);}',
+            '.rr-wheel-depth-layer{position:absolute;inset:0;border-radius:50%;}',
+            '.rr-wheel-gloss{position:absolute;inset:0;border-radius:50%;pointer-events:none;',
+            'background:radial-gradient(ellipse at 32% 24%,rgba(255,255,255,0.28),transparent 55%);}',
+            '#rr-wheel-canvas{position:absolute;inset:0;display:block;}',
             '#rr-wheel-pointer{position:absolute;top:-18px;left:50%;transform:translateX(-50%);width:0;height:0;',
             'border-left:14px solid transparent;border-right:14px solid transparent;border-top:24px solid var(--rr-gold);',
             'z-index:6;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6));}',
             /* ⚠️ افتراضياً معلَّق بمنتصف العجلة (زي المطلوب) — عنصر JS
              * واحد فعلياً يُنقَل بالكود بين العجلة والبكرة حسب الوضع
              * الحالي (rr-hub-standalone تبدّل موضعه لأسفل البكرة بدون
-             * ما يختفي أبداً — هذا كان الخلل الحقيقي قبل). */
+             * ما يختفي أبداً — هذا كان الخلل الحقيقي قبل). بعيد عمداً عن
+             * preserve-3d العجلة — يضل مسطّح وواجه للكاميرا دايماً بغض
+             * النظر عن ميلان العجلة، عشان يضل سهل القراءة والنقر. */
             '#rr-wheel-hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:7;',
             'width:96px;height:96px;border-radius:50%;border:4px solid var(--rr-gold);cursor:pointer;',
             'background:radial-gradient(circle at 35% 30%,#2a1e0c,#0e0b06);display:flex;flex-direction:column;',
@@ -446,116 +502,159 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.rr-hearts-row{display:flex;gap:2px;justify-content:center;margin-top:4px;}',
             '.rr-heart-pip{width:13px;height:13px;object-fit:contain;}',
 
-            /* ---- شاشة "مرحلة الاختيار" ---- */
+            /* ---- شاشة "مرحلة الاختيار" — إعادة تصميم: بدون صندوق/إطار
+             * خلفي (نفس أسلوب شاشتي الاشتباك والنتيجة)، تطفو مباشرة فوق
+             * خلفية شفافة مموّهة. الشبكة صارت 5 أعمدة بدل 4. رقم اللاعب
+             * كبر وصار مربع مدوّر الحواف بدل دائرة صغيرة (أوضح بالبث)،
+             * وثابت دايماً بنهاية لوح الاسم (space-between) بغض النظر عن
+             * طول الاسم. صف القلوب صار داخل حدود نفس لوح الاسم (تحت
+             * الاسم مباشرة) بدل صف منفصل تحت اللوح من برّه. ---- */
             '#rr-select-overlay{position:fixed;inset:0;z-index:100010;display:none;align-items:center;',
-            'justify-content:center;background:rgba(6,4,1,0.82);padding:16px;}',
-            '#rr-select-box{width:1150px;max-width:97vw;height:700px;max-height:94vh;border-radius:20px;',
-            'padding:14px 18px 18px;box-sizing:border-box;',
-            'background:linear-gradient(180deg,#241a0c,#0d0904);border:2px solid var(--rr-gold);position:relative;overflow:hidden;',
-            'box-shadow:0 0 50px rgba(212,175,55,0.3);display:flex;flex-direction:column;}',
-            '#rr-select-box::before{content:"";position:absolute;inset:0;background:url(../../logo.png) no-repeat center;',
-            'background-size:220px auto;opacity:0.2;pointer-events:none;}',
-            '#rr-select-box > *{position:relative;z-index:1;}',
-            '#rr-select-title{text-align:center;font-size:0.92em;color:#9d92b3;margin-bottom:6px;flex:none;}',
+            'justify-content:center;background:rgba(5,3,1,0.25);',
+            'backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);',
+            'padding:24px;}',
+            '#rr-select-box{width:min(1300px,96vw);height:min(760px,92vh);box-sizing:border-box;',
+            'display:flex;flex-direction:column;}',
+            '#rr-select-title{text-align:center;font-size:1em;color:#e9d3ff;margin-bottom:10px;flex:none;',
+            'text-shadow:0 2px 6px rgba(0,0,0,0.8);}',
             '#rr-select-title b{color:' + ACCENT2 + ';font-weight:900;}',
             /* ---- صف واحد فوق: بطاقة صاحب الدور المكبَّرة + زرّا التحكم اليدوي (متمركزان معاً) ---- */
-            '#rr-chooser-row{display:flex;align-items:center;justify-content:center;gap:26px;margin-bottom:12px;flex:none;}',
+            '#rr-chooser-row{display:flex;align-items:center;justify-content:center;gap:26px;margin-bottom:14px;flex:none;}',
             '.rr-chooser-card{display:flex;align-items:center;gap:12px;}',
-            '.rr-chooser-ring{width:88px;height:88px;border-radius:50%;padding:4px;box-sizing:border-box;flex:none;',
-            'background:' + ACCENT2 + ';box-shadow:0 0 18px rgba(212,175,55,0.55);}',
+            '.rr-chooser-ring{width:96px;height:96px;border-radius:50%;padding:4px;box-sizing:border-box;flex:none;',
+            'background:' + ACCENT2 + ';box-shadow:0 0 24px rgba(212,175,55,0.65);}',
             '.rr-chooser-ring img,.rr-chooser-ring .rr-fallback{width:100%;height:100%;border-radius:50%;',
             'object-fit:cover;background:#241a0c;display:flex;align-items:center;',
-            'justify-content:center;color:#fff;font-weight:900;font-size:1.5em;overflow:hidden;}',
+            'justify-content:center;color:#fff;font-weight:900;font-size:1.6em;overflow:hidden;}',
             '.rr-chooser-nmrow{display:flex;align-items:center;gap:10px;}',
-            '.rr-chooser-nm{font-size:1.35em;font-weight:900;color:#fff;}',
-            '.rr-chooser-num{width:34px;height:34px;border-radius:50%;background:' + ACCENT2 + ';color:#241a0c;',
+            '.rr-chooser-nm{font-size:1.5em;font-weight:900;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,0.8);}',
+            '.rr-chooser-num{width:36px;height:36px;border-radius:50%;background:' + ACCENT2 + ';color:#241a0c;',
             'font-size:1em;font-weight:900;display:flex;align-items:center;justify-content:center;flex:none;}',
-            '.rr-chooser-hearts{display:flex;gap:3px;margin-top:1px;}',
+            '.rr-chooser-hearts{display:flex;gap:3px;margin-top:2px;}',
             '#rr-select-actions{display:flex;flex-direction:row;gap:8px;width:230px;flex:none;}',
-            '#rr-select-actions button{flex:1;padding:9px 6px;border-radius:999px;border:none;font-weight:800;',
-            'cursor:pointer;font-family:inherit;font-size:0.74em;color:#fff;white-space:nowrap;line-height:1.3;}',
+            '#rr-select-actions button{flex:1;padding:10px 6px;border-radius:999px;border:none;font-weight:800;',
+            'cursor:pointer;font-family:inherit;font-size:0.78em;color:#fff;white-space:nowrap;line-height:1.3;',
+            'box-shadow:0 4px 14px rgba(0,0,0,0.5);}',
             '#rr-skip-btn{background:linear-gradient(90deg,' + ACCENT2 + ',#8a7024);color:#241a0c;}',
             '#rr-force-eliminate-btn{background:linear-gradient(90deg,#e24b4a,#b91c1c);opacity:0.5;cursor:not-allowed;}',
             '#rr-force-eliminate-btn.rr-enabled{opacity:1;cursor:pointer;}',
             /* ---- المؤقّت — سطر مستقل بعد صف صاحب الدور مباشرة، بارز وكبير ---- */
-            '#rr-select-timer{text-align:center;font-weight:900;font-size:1.5em;color:#ffe066;margin-bottom:10px;flex:none;}',
+            '#rr-select-timer{text-align:center;font-weight:900;font-size:1.7em;color:#ffe066;margin-bottom:14px;flex:none;',
+            'text-shadow:0 2px 10px rgba(0,0,0,0.8);}',
 
-            /* ---- شبكة المرشّحين — ٤ أعمدة ثابتة، بطاقة لوبي-قياسي-v1
-             * بالضبط (تراكب الأفاتار ٢٢٪ على لوح اسم دائري بالكامل، مو
-             * ملاصقة بحافة مسطّحة) — القلوب صف مستقل ملاصق أسفل اللوح. ---- */
             '#rr-candidates-grid{flex:1;min-height:0;overflow-y:auto;display:grid;',
-            'grid-template-columns:repeat(4,1fr);gap:0.5cm;align-content:flex-start;padding:4px 2px 6px;}',
+            'grid-template-columns:repeat(5,1fr);gap:0.5cm;align-content:flex-start;padding:4px 6px 10px;}',
             '.rr-lc-card{display:flex;flex-direction:column;align-items:center;cursor:pointer;}',
-            '.rr-lc-row{display:inline-flex;align-items:center;}',
-            '.rr-lc-avatar{width:60px;height:60px;border-radius:50%;background:var(--rr-gold);',
+            '.rr-lc-row{display:inline-flex;align-items:center;width:100%;}',
+            '.rr-lc-avatar{width:56px;height:56px;border-radius:50%;background:var(--rr-gold);',
             'border:3px solid rgba(255,255,255,0.55);flex:none;object-fit:cover;display:flex;align-items:center;',
-            'justify-content:center;color:#fff;font-weight:800;position:relative;z-index:2;}',
-            '.rr-lc-plate{position:relative;height:48px;width:194px;box-sizing:border-box;',
-            'margin-inline-start:-13px;padding-inline-start:31px;padding-inline-end:10px;',
-            'display:flex;align-items:center;justify-content:flex-start;gap:8px;font-weight:800;color:#fff;',
+            'justify-content:center;color:#fff;font-weight:800;position:relative;z-index:2;align-self:center;}',
+            '.rr-lc-plate{position:relative;min-height:58px;flex:1;min-width:0;box-sizing:border-box;',
+            'margin-inline-start:-12px;padding-inline-start:30px;padding-inline-end:6px;padding-block:6px;',
+            'display:flex;flex-direction:column;justify-content:center;gap:3px;font-weight:800;color:#fff;',
             'background:rgba(255,255,255,0.1);border:1px solid rgba(212,175,55,0.35);',
-            'border-radius:999px;overflow:hidden;z-index:1;}',
-            '.rr-lc-name{font-size:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;}',
-            '.rr-lc-num{width:32px;height:32px;flex:none;',
-            'border-radius:50%;background:' + ACCENT2 + ';color:#241a0c;font-size:1.05em;font-weight:900;',
-            'display:flex;align-items:center;justify-content:center;z-index:3;}',
-            '.rr-lc-hearts{display:flex;gap:2px;margin-top:2px;}',
+            'border-radius:24px;overflow:hidden;z-index:1;}',
+            '.rr-lc-plate-toprow{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;}',
+            '.rr-lc-name{font-size:0.95em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0;}',
+            /* ⚠️ الرقم كُبِّر بشكل واضح وتحوّل لمربع مدوّر الحواف بدل دائرة
+             * صغيرة، وخط الرقم نفسه كبر معه (1.5em) — أوضح للمشاهدين بالبث. */
+            '.rr-lc-num{min-width:42px;height:42px;padding:0 6px;flex:none;',
+            'border-radius:11px;background:' + ACCENT2 + ';color:#241a0c;font-size:1.5em;font-weight:900;',
+            'display:flex;align-items:center;justify-content:center;z-index:3;',
+            'box-shadow:0 2px 6px rgba(0,0,0,0.4);}',
+            '.rr-lc-hearts{display:flex;gap:2px;justify-content:flex-start;padding-inline-start:2px;}',
             '.rr-lc-card.rr-candidate-selected .rr-lc-plate{box-shadow:0 0 0 2px #e24b4a;}',
 
-            /* ---- شاشة "الاشتباك" ---- */
+            /* ---- شاشة "الاشتباك" — إعادة تصميم: بدون صندوق/إطار خلفي،
+             * تطفو مباشرة فوق خلفية شفافة مموّهة (blur) بدل الخلفية شبه
+             * المعتمة القديمة، وحجم أكبر بكثير (أفاتار 260px بدل 130px).
+             * حالة "الإصابة" كانت تُميَّز بتغيير لون حدود الصندوق
+             * (rr-clash-hit على #rr-clash-box) — بما إن الصندوق نفسه زال،
+             * صار التمييز بصبغة حمراء خفيفة على خلفية الأوفرلاي الشفافة
+             * نفسها (rr-clash-hit-bg على #rr-clash-overlay، انظر
+             * showClashScreen). ---- */
             '#rr-clash-overlay{position:fixed;inset:0;z-index:100011;display:none;align-items:center;',
-            'justify-content:center;background:rgba(6,4,1,0.86);padding:16px;}',
-            '#rr-clash-box{width:1000px;max-width:95vw;border-radius:20px;padding:30px;box-sizing:border-box;',
-            'background:linear-gradient(180deg,#3a2810,#1a1206);border:2px solid var(--rr-gold);position:relative;',
-            'overflow:hidden;}',
-            '#rr-clash-box.rr-clash-hit{border-color:#e24b4a;}',
-            '#rr-clash-header{text-align:center;color:#e8c56b;font-weight:900;font-size:1.1em;margin-bottom:16px;}',
-            '#rr-clash-header.rr-success-title{color:#4ade80;}',
-            '#rr-clash-header.rr-miss-title{color:#fff;}',
-            '#rr-clash-row{display:flex;align-items:center;justify-content:center;gap:60px;}',
+            'justify-content:center;background:rgba(5,3,1,0.25);',
+            'backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);',
+            'transition:background 0.4s;padding:16px;}',
+            '#rr-clash-overlay.rr-clash-hit-bg{background:rgba(60,10,8,0.32);}',
+            '#rr-clash-box{width:min(1100px,94vw);text-align:center;}',
+            '#rr-clash-header{text-align:center;font-weight:900;font-size:clamp(28px,4.5vw,52px);',
+            'margin-bottom:50px;text-shadow:0 4px 20px rgba(0,0,0,0.7);',
+            'background:linear-gradient(90deg,#e8c56b,#fff3cf 50%,#e8c56b);',
+            '-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}',
+            '#rr-clash-header.rr-success-title{-webkit-text-fill-color:#4ade80;background:none;}',
+            '#rr-clash-header.rr-miss-title{-webkit-text-fill-color:#fff;background:none;}',
+            '#rr-clash-row{display:flex;align-items:center;justify-content:center;gap:110px;}',
             '.rr-clash-side{text-align:center;position:relative;}',
-            '.rr-clash-avatar-wrap{width:130px;height:130px;border-radius:50%;padding:4px;margin:0 auto;',
+            '.rr-clash-avatar-wrap{width:260px;height:260px;border-radius:50%;padding:6px;margin:0 auto;',
             'position:relative;}',
-            '.rr-clash-avatar-wrap.rr-shooter{border:3px solid #4ade80;box-shadow:0 0 20px rgba(74,222,128,0.55);}',
-            '.rr-clash-avatar-wrap.rr-target{border:3px solid rgba(255,255,255,0.4);}',
+            '.rr-clash-avatar-wrap.rr-shooter{border:5px solid #4ade80;box-shadow:0 0 60px rgba(74,222,128,0.6);}',
+            '.rr-clash-avatar-wrap.rr-target{border:5px solid rgba(255,255,255,0.45);',
+            'box-shadow:0 0 40px rgba(255,255,255,0.15);}',
             '.rr-clash-avatar-wrap img.rr-avatar-img{width:100%;height:100%;border-radius:50%;object-fit:cover;}',
-            '.rr-clash-name{font-weight:800;color:#fff;margin-top:8px;}',
-            '#rr-clash-sentence{text-align:center;color:#f2e6cf;font-size:0.95em;font-weight:700;margin-top:18px;}',
+            '.rr-clash-name{font-weight:800;color:#fff;margin-top:18px;font-size:1.5em;',
+            'text-shadow:0 2px 8px rgba(0,0,0,0.8);}',
+            '#rr-clash-sentence{text-align:center;color:#f2e6cf;font-size:1.2em;font-weight:700;margin-top:36px;',
+            'text-shadow:0 2px 6px rgba(0,0,0,0.8);}',
             '#rr-clash-sentence b{font-weight:900;}',
-            '#rr-clash-gun{width:70px;height:auto;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.6));}',
+            '#rr-clash-gun{width:130px;height:auto;filter:drop-shadow(0 6px 14px rgba(0,0,0,0.7));}',
             /* ---- شاشة "نتيجة الإقصاء" الجديدة (rr-elimination-result.html) —
              * ٥٥٠×٣٥٠ (٤٥٠+١٠٠ زيادة عرض بالضبط)، بديل كامل للتصميم القديم ---- */
+            /* ---- شاشة "نتيجة الإقصاء" — إعادة تصميم احترافي: دخول تدريجي
+             * (تلاشي+تكبير) بدل الظهور المفاجئ، كل العناصر الحمراء (الوسم،
+             * الحلقة، الوسم النصي) تتلاشى بالظهور مع بعض بفارق توقيت بسيط
+             * بدل القفزة الفورية، صورة المُقصى تختفي فعلياً (بلور+تعتيم+
+             * تصغير) بدل البقاء ثابتة مع لون رمادي بس، وأيقونة 💀 بدل
+             * السهم بين البطاقتين. التفعيل الفعلي بـshowEliminationSuccessScreen. ---- */
             '#rr-result-overlay{position:fixed;inset:0;z-index:100013;display:none;align-items:center;',
             'justify-content:center;background:rgba(8,4,16,0.75);padding:16px;}',
             '#rr-result-box{width:550px;height:350px;max-width:97vw;max-height:94vh;box-sizing:border-box;',
             'background:linear-gradient(180deg,' + BG_BROWN + ',#000);border:2px solid ' + ACCENT2 + ';',
             'border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;align-items:center;',
-            'box-shadow:0 0 40px rgba(212,175,55,0.35);position:relative;}',
+            'box-shadow:0 0 40px rgba(212,175,55,0.35);position:relative;',
+            'opacity:0;transform:scale(0.88);transition:opacity 0.45s ease-out,transform 0.45s cubic-bezier(0.2,0.9,0.3,1.2);}',
+            '#rr-result-box.rr-shown{opacity:1;transform:scale(1);}',
             '.rr-result-badge{background:rgba(239,68,68,0.18);border:1px solid rgba(239,68,68,0.5);',
             'color:#ff6b6b;font-weight:900;font-size:0.7em;padding:4px 12px;border-radius:999px;',
-            'margin-bottom:8px;flex-shrink:0;}',
+            'margin-bottom:8px;flex-shrink:0;opacity:0;transition:opacity 0.6s ease-out 0.35s;}',
+            '.rr-result-badge.rr-shown{opacity:1;}',
             '.rr-result-title{text-align:center;color:#fff;font-weight:900;font-size:1.1em;margin:0 0 4px;flex-shrink:0;}',
             '.rr-result-sub{text-align:center;color:#e9d3ff;font-size:0.7em;margin-bottom:14px;flex-shrink:0;}',
             '.rr-result-row{display:flex;align-items:center;justify-content:center;gap:14px;flex:1;}',
             '.rr-result-card{display:flex;flex-direction:column;align-items:center;gap:8px;width:150px;}',
             '.rr-result-ring{width:112px;height:112px;border-radius:50%;padding:5px;box-sizing:border-box;}',
             '.rr-result-ring.rr-eliminator{background:' + ACCENT2 + ';box-shadow:0 0 20px rgba(212,175,55,0.65);}',
-            '.rr-result-ring.rr-eliminated{background:#ef4444;box-shadow:0 0 20px rgba(239,68,68,0.6);opacity:0.9;}',
+            '.rr-result-ring.rr-eliminated{background:#ef4444;box-shadow:0 0 20px rgba(239,68,68,0.6);',
+            'opacity:0;transition:opacity 0.7s ease-out 0.35s,box-shadow 0.7s ease-out 0.35s;}',
+            '.rr-result-ring.rr-eliminated.rr-shown{opacity:0.9;}',
             '.rr-result-ring-inner{width:100%;height:100%;border-radius:50%;background:#2D1932;overflow:hidden;',
             'display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.85em;color:#fff;',
-            'position:relative;}',
+            'position:relative;transition:opacity 1s ease-in,filter 1s ease-in,transform 1s ease-in;}',
             '.rr-result-ring-inner img{width:100%;height:100%;object-fit:cover;}',
             '.rr-result-ring.rr-eliminated .rr-result-ring-inner{filter:grayscale(0.6);}',
+            /* ⚠️ اختفاء تدريجي حقيقي لصورة المُقصى (بدل التدرّج الرمادي بس) —
+             * تُضاف هذي الكلاس بـJS بعد لحظة من ظهور الحلقة الحمراء. */
+            '.rr-result-ring-inner.rr-vanish{opacity:0;filter:blur(8px) brightness(0.3) grayscale(1);transform:scale(0.75);}',
             '.rr-result-x-mark{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;',
-            'background:rgba(0,0,0,0.45);font-size:2.4em;color:#ef4444;font-weight:900;}',
+            'background:rgba(0,0,0,0.45);font-size:2.4em;color:#ef4444;font-weight:900;',
+            'opacity:0;transition:opacity 0.5s ease-out 0.9s;}',
+            '.rr-result-x-mark.rr-shown{opacity:1;}',
             '.rr-result-role-tag{font-weight:900;font-size:0.68em;padding:3px 11px;border-radius:999px;}',
             '.rr-result-role-tag.rr-eliminator{background:rgba(212,175,55,0.18);color:' + ACCENT2 + ';',
             'border:1px solid rgba(212,175,55,0.45);}',
             '.rr-result-role-tag.rr-eliminated{background:rgba(239,68,68,0.18);color:#f87171;',
-            'border:1px solid rgba(239,68,68,0.45);}',
+            'border:1px solid rgba(239,68,68,0.45);opacity:0;transition:opacity 0.6s ease-out 0.5s;}',
+            '.rr-result-role-tag.rr-eliminated.rr-shown{opacity:1;}',
             '.rr-result-name{font-size:0.98em;font-weight:900;color:#fff;}',
             '.rr-result-connector{display:flex;flex-direction:column;align-items:center;gap:3px;color:#9d92b3;}',
-            '.rr-result-connector .rr-arrow{font-size:1.3em;color:#ef4444;}',
+            '.rr-result-connector .rr-connector-icon{font-size:2em;line-height:1;',
+            'filter:drop-shadow(0 0 6px rgba(239,68,68,0.7));',
+            'opacity:0;transform:scale(0.6);transition:opacity 0.5s ease-out 0.6s,transform 0.5s ease-out 0.6s;}',
+            '.rr-result-connector .rr-connector-icon.rr-shown{opacity:1;transform:scale(1);',
+            'animation:rr-gun-pulse 1.6s ease-in-out 1.1s infinite;}',
+            '@keyframes rr-gun-pulse{0%,100%{filter:drop-shadow(0 0 6px rgba(239,68,68,0.7));}',
+            '50%{filter:drop-shadow(0 0 14px rgba(239,68,68,1));}}',
             '.rr-result-connector .rr-verb{font-size:0.62em;font-weight:800;color:#e9d3ff;}',
             '.rr-result-continue{text-align:center;color:#9d92b3;font-size:0.62em;margin-top:14px;flex-shrink:0;}',
             '.rr-result-continue b{color:#fff;}',
@@ -580,11 +679,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              *  الكونية نفسها (نفس أسلوب settings-no-box أعلاه بالحرف).
              * ==================================================================== */
             '#agp-shell-overlay:has(#agp-shell-box.agp-lobby-box){padding:0 !important;',
-            'align-items:flex-start !important;overflow-y:auto !important;',
+            'align-items:center !important;overflow-y:hidden !important;',
             'background:',
-            'radial-gradient(ellipse 900px 500px at 50% -8%,rgba(212,175,55,0.14),transparent 60%),',
-            'radial-gradient(ellipse 700px 500px at 90% 100%,rgba(132,91,27,0.18),transparent 60%),',
-            'linear-gradient(180deg,#150e05 0%,#0d0904 45%,#050302 100%) !important;}',
+            'radial-gradient(ellipse 900px 500px at 50% -8%,rgba(212,175,55,0.09),transparent 60%),',
+            'radial-gradient(ellipse 700px 500px at 90% 100%,rgba(132,91,27,0.11),transparent 60%),',
+            'linear-gradient(180deg,#0f0a04 0%,#070502 45%,#000000 100%) !important;}',
             '#agp-shell-box.agp-lobby-box{background:none !important;}',
             '#agp-shell-box h2{color:#f2e6cf !important;}',
             '#agp-header-title{color:#e8c56b !important;}',
@@ -616,17 +715,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              *  بدل حسابات موضع يدوية هشة).
              * ==================================================================== */
             '#agp-shell-overlay:has(#agp-shell-box.rr-pre-match-settings){padding:0 !important;',
-            'align-items:flex-start !important;overflow-y:auto !important;',
+            'align-items:center !important;overflow-y:auto !important;',
             'background:',
             'radial-gradient(ellipse 900px 500px at 50% -8%,rgba(212,175,55,0.14),transparent 60%),',
             'radial-gradient(ellipse 700px 500px at 90% 100%,rgba(132,91,27,0.18),transparent 60%),',
             'linear-gradient(180deg,#150e05 0%,#0d0904 45%,#050302 100%) !important;}',
+            /* ⚠️ الصندوق صار مقاسه ثابت (لا يتجاوز حجم الشاشة) بدل
+             * height:auto القديم: display:flex عمودي — العنوان ثابت
+             * بالأعلى، حقول الإعدادات بمنطقة سكرول داخلية واحدة (عمود
+             * واحد بدل عمودين)، وزرّا الاتصال والعودة ثابتان بالأسفل
+             * خارج منطقة السكرول تماماً. */
             '#agp-shell-box.rr-pre-match-settings{width:min(980px,94vw) !important;max-width:min(980px,94vw) !important;',
-            'height:auto !important;max-height:none !important;overflow-y:visible !important;',
+            'height:min(88vh,780px) !important;max-height:88vh !important;overflow:hidden !important;',
+            'display:flex !important;flex-direction:column !important;',
             'background:none !important;border:none !important;border-radius:0 !important;',
-            'box-shadow:none !important;padding:56px 24px 60px !important;box-sizing:border-box !important;',
-            'column-count:2 !important;column-gap:60px !important;column-fill:auto !important;margin:0 !important;}',
-            '#agp-shell-box.rr-pre-match-settings h2{column-span:all !important;margin:0 0 42px !important;',
+            'box-shadow:none !important;padding:40px 24px 28px !important;box-sizing:border-box !important;',
+            'margin:0 !important;}',
+            '#agp-shell-box.rr-pre-match-settings h2{flex-shrink:0 !important;margin:0 0 24px !important;',
             'max-width:none !important;font-size:clamp(24px,4vw,38px) !important;font-weight:900 !important;',
             'text-align:center !important;',
             'background:linear-gradient(90deg,' + ACCENT2 + ',#f2e6cf 55%,' + ACCENT2 + ') !important;',
@@ -635,6 +740,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-box.rr-pre-match-settings h2::after{content:"";position:absolute;bottom:0;',
             'left:50%;transform:translateX(-50%);width:64px;height:3px;border-radius:3px;',
             'background:linear-gradient(90deg,transparent,' + ACCENT2 + ',transparent);}',
+            /* منطقة السكرول الداخلية — تُبنى بـJS (wrapSettingsFieldsForScroll)
+             * حول كل حقول الإعدادات فقط، بدون لمس ملف الشل المشترك. */
+            '#agp-shell-box.rr-pre-match-settings .rr-settings-fields-scroll{',
+            'flex:1 1 auto !important;min-height:0 !important;overflow-y:auto !important;',
+            'column-count:1 !important;padding:0 4px 0 14px !important;margin:0 !important;}',
             '#agp-shell-box.rr-pre-match-settings .agp-shell-field,',
             '#agp-shell-box.rr-pre-match-settings .agp-shell-row{break-inside:avoid !important;',
             'padding:20px 0 !important;border-bottom:1px solid rgba(255,255,255,0.08) !important;',
@@ -655,13 +765,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-box.rr-pre-match-settings .agp-pill-btn.agp-pill-active{',
             'background:linear-gradient(90deg,var(--rr-gold),' + ACCENT2 + ') !important;',
             'color:#241a0c !important;border-color:transparent !important;}',
-            '#agp-shell-box.rr-pre-match-settings .agp-shell-btn-connect{column-span:all !important;',
-            'display:table !important;width:auto !important;margin:34px auto 0 !important;',
+            '#agp-shell-box.rr-pre-match-settings .agp-shell-btn-connect{flex-shrink:0 !important;',
+            'display:table !important;width:auto !important;margin:20px auto 0 !important;',
             'padding:16px 64px !important;font-size:1.05em !important;letter-spacing:0.4px;',
             'box-shadow:0 10px 34px rgba(212,175,55,0.3),0 0 0 1px rgba(255,255,255,0.15) inset !important;}',
-            '#agp-shell-box.rr-pre-match-settings .rr-home-from-settings-btn{column-span:all !important;',
+            '#agp-shell-box.rr-pre-match-settings .rr-home-from-settings-btn{flex-shrink:0 !important;',
             'display:table !important;width:auto !important;margin:14px auto 0 !important;}',
-            '@media (max-width:720px){#agp-shell-box.rr-pre-match-settings{column-count:1 !important;}}',
             '.agp-shell-counter-row button{border-color:' + ACCENT2 + ' !important;color:#fff !important;',
             'background:transparent !important;}',
             '.agp-count-input{border-color:' + ACCENT2 + ' !important;background:#0d0904 !important;',
@@ -775,14 +884,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-settings-player-list .agp-pcard-avatar-basic{width:26px !important;height:26px !important;}',
             '#agp-settings-player-list .agp-pcard-name-basic{font-size:11px !important;width:auto !important;',
             'max-width:none !important;flex:1;}',
-            /* ⚠️ شاشة اللوبي — "لوبي-قياسي-v1" بالحرف (نفس الأرقام الشغّالة
-             * فعلياً بلعبة الكراسي الموسيقية). صندوق بارتفاع ثابت محدود
-             * (900px، حد أقصى 92% من الشاشة)، scrollbar-gutter:stable
-             * يمنع القفز المزعج للشريط. */
+            /* ⚠️ شاشة اللوبي — "لوبي-قياسي-v1" بالحرف. الصندوق صار بمقاس
+             * ثابت لا يتغيّر أبداً (100vh بالضبط) بدل height:auto القديم:
+             * العنوان + سطر الانضمام ثابتان بالأعلى، شبكة اللاعبين وحدها
+             * تسكرول داخلياً (flex:1)، وشريط الأزرار (وفيه زر "ابدأ
+             * الجولة") ثابت بالأسفل خارج السكرول دايماً، مهما كبر عدد
+             * اللاعبين. */
             '#agp-shell-box.agp-lobby-box{width:min(1180px,94vw) !important;max-width:min(1180px,94vw) !important;',
-            'height:auto !important;min-height:100vh !important;max-height:none !important;',
+            'height:100vh !important;min-height:100vh !important;max-height:100vh !important;',
             'border:none !important;box-shadow:none !important;border-radius:0 !important;',
-            'overflow-y:visible !important;scrollbar-gutter:auto;display:flex !important;flex-direction:column;',
+            'overflow:hidden !important;position:relative !important;',
+            'display:flex !important;flex-direction:column;',
             'padding:44px 10px 26px !important;box-sizing:border-box !important;margin:0 !important;}',
             '#agp-shell-box.agp-lobby-box h2{flex:none;text-align:center;font-size:1.5em !important;}',
             /* ⚠️ [تفادي باگ حقيقي] .agp-pcard (الغلاف بالملف المشترك) عنده
@@ -791,12 +903,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * ولوح الاسم يصير المصدر الوحيد للخلفية المرئية. */
             '#agp-shell-box.agp-lobby-box .agp-pcard{background:none !important;border:none !important;',
             'padding:0 !important;max-width:none !important;gap:0 !important;}',
-            /* ٣ أعمدة، فجوة 0.5سم، هامش علوي يفادي القصّ مع سطر التلميح فوقه. */
+            /* ⚠️ شعار المنصة كخلفية شفافة داخل صندوق اللوبي فقط — عنصر
+             * منفصل (rr-lobby-logo-watermark) يُدرَج بـJS كأول عنصر داخل
+             * الصندوق (position:absolute)، فيرسم خلف بقية المحتوى بترتيب
+             * DOM العادي بدون أي حاجة لـz-index سالب (سالب كان يخفيه
+             * بالكامل خلف خلفية الصندوق نفسها — تأكدت منها باختبار مباشر). */
+            '.rr-lobby-logo-watermark{position:absolute !important;inset:0 !important;',
+            'background:url("../../logo.png") center/280px no-repeat !important;',
+            'opacity:0.4 !important;pointer-events:none !important;}',
+            /* ⚠️ منطقة السكرول الوحيدة بشاشة اللوبي: شبكة اللاعبين بس —
+             * تكبر لتاخذ كل المساحة المتبقية (flex:1) وتسكرول داخلياً لو
+             * عدد اللاعبين تجاوز المساحة، بدل ما الصندوق كله يكبر. */
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list{',
-            '--rr-av:60px;--rr-nw:200px;--rr-overlap:13px;--rr-nh:60px;--rr-nf:18px;',
+            '--rr-av:45px;--rr-nw:150px;--rr-overlap:10px;--rr-nh:45px;--rr-nf:14px;',
             '--rr-gap:0.5cm;--rr-scale:1;',
-            'display:grid !important;grid-template-columns:repeat(3,1fr) !important;',
-            'gap:var(--rr-gap) !important;margin-top:34px !important;list-style:none;padding:0;}',
+            'display:grid !important;grid-template-columns:repeat(6,1fr) !important;',
+            'flex:1 1 auto !important;min-height:0 !important;overflow-y:auto !important;',
+            'align-content:flex-start !important;',
+            'gap:var(--rr-gap) !important;margin-top:34px !important;list-style:none;padding:0 4px 10px 14px;}',
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{position:relative;display:flex !important;',
             'align-items:center;justify-content:center;min-height:calc(var(--rr-av) * var(--rr-scale));}',
             '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic{',
@@ -843,7 +967,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             /* صف الأزرار الثلاثة — margin-top:auto يدفعه لأسفل الصندوق
              * المحدود، flex:1+max-width يفادي كسر السطر بعرض 900px. */
             '.rr-lobby-actions-row{display:flex !important;gap:10px !important;justify-content:center;',
-            'margin-top:auto !important;padding-top:18px !important;flex-wrap:nowrap !important;}',
+            'flex-shrink:0 !important;margin-top:auto !important;padding-top:18px !important;flex-wrap:nowrap !important;}',
             '.rr-lobby-actions-row > *{flex:1 1 0 !important;max-width:270px !important;width:auto !important;',
             'height:48px !important;border-radius:10px !important;font-weight:800 !important;font-size:0.85em !important;',
             'cursor:pointer !important;border:none !important;display:flex !important;align-items:center !important;',
@@ -900,7 +1024,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#rr-home-btn{background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.4);}',
             '.rr-confetti-piece{position:absolute;top:50%;left:50%;width:8px;height:8px;border-radius:2px;',
             'animation:rr-confetti-fly 1.6s ease-out forwards;}',
-            '@keyframes rr-confetti-fly{to{transform:translate(var(--dx),var(--dy)) rotate(540deg);opacity:0;}}'
+            '@keyframes rr-confetti-fly{to{transform:translate(var(--dx),var(--dy)) rotate(540deg);opacity:0;}}',
+            /* ⚠️ تبويب فيديو الفوز — حواف متوهّجة خفيفة نابضة، 125×160 —
+             * يشتغل تلقائياً بالصوت ويتكرر لحد ما تُغلَق شاشة الفوز من
+             * أي واحد من الأزرار الثلاثة (انظر renderWinnerScreen). */
+            '.rr-video-badge{width:125px;height:160px;border-radius:14px;overflow:hidden;position:relative;',
+            'background:#000;border:2px solid rgba(212,175,55,0.7);flex:none;',
+            'box-shadow:0 0 14px rgba(212,175,55,0.55),0 0 28px rgba(212,175,55,0.3);',
+            'animation:rr-video-badge-glow 2.4s ease-in-out infinite;}',
+            '@keyframes rr-video-badge-glow{0%,100%{box-shadow:0 0 14px rgba(212,175,55,0.55),0 0 28px rgba(212,175,55,0.3);}',
+            '50%{box-shadow:0 0 22px rgba(212,175,55,0.85),0 0 42px rgba(212,175,55,0.5);}}',
+            '.rr-video-badge video{width:100%;height:100%;object-fit:cover;display:block;}'
         ].join('');
         document.head.appendChild(style);
     }
@@ -932,59 +1066,241 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return 'conic-gradient(' + stops.join(',') + ')';
     }
 
-    function renderWheelDividers() {
-        var layer = el('rr-wheel-dividers');
-        if (!layer) return;
-        var n = _alive.length;
-        var html = '';
-        for (var i = 0; i < n; i++) {
-            var angle = (360 / n) * i;
-            html += '<div class="rr-divider-line" style="transform:rotate(' + angle + 'deg);"></div>';
+    // ⚠️ نفس ألوان هوية روليت الروسي، بصيغة أزواج تدرّج شعاعي (بدل اللون
+    // المسطّح الواحد اللي كان يُستخدم بـbuildWheelGradient) — أسلوب رسم
+    // العجلة مسحوب بالحرف من عجلة روليت القبائل (drawWheelCanvas)، وطبّقته
+    // بألوان روليت الروسي. راجع أيضاً buildWheelGradient أعلاه، تستمر
+    // مستخدَمة لطبقات العمق (السُمك) لأنها أرخص من رسمها بالكانفس.
+    var RR_SEG_PAIRS = [
+        { a: '#c9962e', b: '#4a3410' },  // ذهبي متدرّج
+        { a: '#2b2b2b', b: '#050505' }   // أسود متدرّج
+    ];
+    var RR_SEG_BRONZE = { a: '#8a6a2f', b: '#2e2210' }; // كسر تكرار اللون بعدد شرائح فردي (بديل C_BRONZE)
+    var RR_RIM_GOLD = '#f0c14b';
+    var RR_GLOW_AMBER = '#ffb347';
+    var RR_SEP_COLOR = 'rgba(240,193,75,0.55)';
+    var RR_WHEEL_GLOW_MARGIN = 24; // px CSS — يغطي أقصى امتداد لهالة التوهج بهامش أمان
+
+    // ⚠️ طبقات العمق (تحاكي سُمك حافة الاسطوانة الحقيقي بمنظور الميلان
+    // 3D) — نفس تدرّج buildWheelGradient المسطّح القديم، مكرّر بعدة طبقات
+    // بعمق (translateZ) وإضاءة (brightness) متناقصين. أرخص بكثير من رسم
+    // كل طبقة بكانفس، وغير مرئية بالتفصيل أصلاً (تبين كحافة مظلَّلة بس).
+    var WHEEL_DEPTH_LAYERS = 14;
+    function buildWheelDepthLayers(wheel) {
+        var gradient = buildWheelGradient();
+        var layers = wheel.querySelectorAll('.rr-wheel-depth-layer');
+        if (layers.length !== WHEEL_DEPTH_LAYERS) {
+            for (var k = 0; k < layers.length; k++) layers[k].remove();
+            for (var d = WHEEL_DEPTH_LAYERS; d >= 1; d--) {
+                var layer = document.createElement('div');
+                layer.className = 'rr-wheel-depth-layer';
+                var z = -d * 1.6;
+                var brightness = 0.32 + (1 - d / WHEEL_DEPTH_LAYERS) * 0.4;
+                layer.style.transform = 'translateZ(' + z + 'px)';
+                layer.style.filter = 'brightness(' + brightness.toFixed(2) + ')';
+                wheel.insertBefore(layer, wheel.firstChild);
+            }
+            layers = wheel.querySelectorAll('.rr-wheel-depth-layer');
         }
-        layer.innerHTML = html;
+        for (var i = 0; i < layers.length; i++) layers[i].style.background = gradient;
     }
 
-    function renderWheelLabels() {
-        var wheel = el('rr-wheel');
-        if (!wheel) return;
+    // ⚠️ الوجه الأمامي بالتفصيل الكامل — نفس أسلوب رسم عجلة روليت القبائل
+    // بالحرف (Canvas حقيقي، تدرّج شعاعي لكل شريحة، لمعة زجاجية، فواصل
+    // ذهبية، إطار مزدوج، حلقة غامقة، مسامير مضيئة، هالة توهج)، بألوان
+    // روليت الروسي، مع الأسماء بالطول (radial) وتصحيح انقلاب النص بالنص
+    // الأيسر. [إصلاح نسبة تقريب حقيقي] حجم الكانفس يُقرَّب مرّة وحدة بس
+    // (canvasPx) بدل تقريب حجم العجلة والهامش كل واحد لحاله — فرق التقريب
+    // المزدوج كان يخلي رسمة العجلة تنزاح جزء بكسل عن مركز #rr-wheel-wrap
+    // الحقيقي، ما يبين إلا بالتكبير. [إصلاح RTL حقيقي] الصفحة كلها
+    // dir="rtl"، وتحديد left+width بـJS بدون إلغاء right صراحة يخلي
+    // المتصفح يتجاهل left ويعتمد right (قاعدة CSS للعناصر over-constrained
+    // باتجاه RTL) — فتنزاح رسمة العجلة كاملة عن مركزها الحقيقي بمقدار
+    // الهامش. نلغي right/bottom صراحة لتفادي هالخلل.
+    function drawWheelCanvas(wheel) {
+        var canvas = wheel.querySelector('#rr-wheel-canvas');
+        if (!canvas) {
+            canvas = document.createElement('canvas');
+            canvas.id = 'rr-wheel-canvas';
+            wheel.appendChild(canvas);
+        }
+        var sizeCss = wheel.clientWidth;
+        if (!sizeCss) return;
+        var dpr = window.devicePixelRatio || 1;
+        var canvasCssSize = sizeCss + RR_WHEEL_GLOW_MARGIN * 2;
+        var canvasPx = Math.round(canvasCssSize * dpr);
+        canvas.width = canvasPx; canvas.height = canvasPx;
+        canvas.style.width = canvasCssSize + 'px';
+        canvas.style.height = canvasCssSize + 'px';
+        canvas.style.left = (-RR_WHEEL_GLOW_MARGIN) + 'px';
+        canvas.style.top = (-RR_WHEEL_GLOW_MARGIN) + 'px';
+        canvas.style.right = 'auto';
+        canvas.style.bottom = 'auto';
+        canvas.style.transform = 'translateZ(2px)';
+
+        var ctx = canvas.getContext('2d');
+        var cx = canvas.width / 2, cy = canvas.height / 2;
+        var scale = canvas.width / canvasCssSize;
+        var outerR = (sizeCss / 2) * scale - 6 * scale;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
         var n = _alive.length;
-        var labelsHtml = '';
-        // ⚠️ إصلاح: كنّا نعتمد على translate(٪) اللي تُحسَب بالنسبة لحجم
-        // العنصر نفسه (سطر النص) لا حجم العجلة — ما كان يوصّل الاسم فعلياً
-        // لمنتصف الشريحة. الحين نحسب موضع كل اسم بالمثلثات مباشرة (نسبة
-        // مئوية حقيقية من قطر العجلة عبر left/top)، ونثبّته بعيداً عن
-        // المحور (بالقرب من الحافة الخارجية، بعيداً عن زر "تدوير" بالمنتصف).
-        var R = 36; // % من نصف قطر العجلة (0=المركز، 50=الحافة تماماً)
+        if (!n) return;
+        var twoPi = 2 * Math.PI;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerR + 4 * scale, 0, twoPi);
+        ctx.strokeStyle = RR_GLOW_AMBER;
+        ctx.lineWidth = 10 * scale;
+        ctx.globalAlpha = 0.3;
+        ctx.filter = 'blur(6px)';
+        ctx.stroke();
+        ctx.restore();
+
+        var segR = outerR - 10 * scale;
+        var anglePer = twoPi / n;
+        var fontSize = Math.max(11, Math.min(20, 280 / n)) * scale;
+        var maxChars = n <= 8 ? 14 : 9;
+
+        var pairs = RR_SEG_PAIRS.slice();
+        var lastPairIdx = (n - 1) % pairs.length;
+        var firstPairIdx = 0 % pairs.length;
+        var useBronzeForLast = n > 1 && lastPairIdx === firstPairIdx;
+
         for (var i = 0; i < n; i++) {
-            var midAngle = (360 / n) * i + (360 / n) / 2; // 0deg = الأعلى، بنفس اتجاه conic-gradient
-            var rad = midAngle * Math.PI / 180;
-            var x = 50 + R * Math.sin(rad);
-            var y = 50 - R * Math.cos(rad);
-            labelsHtml += '<span class="rr-wheel-label" style="left:' + x.toFixed(2) + '%;top:' + y.toFixed(2) + '%;' +
-                'transform:translate(-50%,-50%) rotate(' + midAngle.toFixed(2) + 'deg);">' +
-                escapeHtml(playerLabel(_alive[i])) + '</span>';
+            var startAng = i * anglePer - Math.PI / 2;
+            var endAng = startAng + anglePer;
+            var mid = startAng + anglePer / 2;
+            var pair = (useBronzeForLast && i === n - 1) ? RR_SEG_BRONZE : pairs[i % pairs.length];
+
+            var grad = ctx.createRadialGradient(cx, cy, segR * 0.15, cx, cy, segR);
+            grad.addColorStop(0, pair.a);
+            grad.addColorStop(1, pair.b);
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, segR, startAng, endAng);
+            ctx.closePath();
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            ctx.save();
+            ctx.clip();
+            var shine = ctx.createRadialGradient(cx, cy, 0, cx, cy, segR * 0.55);
+            shine.addColorStop(0, 'rgba(255,255,255,0.10)');
+            shine.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = shine;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + segR * Math.cos(startAng), cy + segR * Math.sin(startAng));
+            ctx.strokeStyle = RR_SEP_COLOR;
+            ctx.lineWidth = 1.6 * scale;
+            ctx.stroke();
+
+            var normMid = ((mid % twoPi) + twoPi) % twoPi;
+            var flip = normMid > Math.PI / 2 && normMid < (3 * Math.PI) / 2;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(mid + (flip ? Math.PI : 0));
+            ctx.textAlign = flip ? 'left' : 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#f2e6cf';
+            ctx.font = '800 ' + fontSize.toFixed(1) + 'px Zain,Tahoma,Arial,sans-serif';
+            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx.shadowBlur = 4 * scale;
+
+            var label = playerLabel(_alive[i]);
+            if (label.length > maxChars) label = label.slice(0, maxChars - 1) + '…';
+            var textX = flip ? -(segR - 20 * scale) : (segR - 20 * scale);
+            ctx.fillText(label, textX, 0);
+            ctx.restore();
         }
-        var existingLabels = wheel.querySelector('.rr-wheel-labels-layer');
-        if (!existingLabels) {
-            existingLabels = document.createElement('div');
-            existingLabels.className = 'rr-wheel-labels-layer';
-            existingLabels.style.cssText = 'position:absolute;inset:0;';
-            wheel.appendChild(existingLabels);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, segR + 5 * scale, 0, twoPi);
+        ctx.lineWidth = 5 * scale;
+        var bezelGrad = ctx.createLinearGradient(cx, cy - outerR, cx, cy + outerR);
+        bezelGrad.addColorStop(0, '#fff3d0');
+        bezelGrad.addColorStop(0.5, RR_RIM_GOLD);
+        bezelGrad.addColorStop(1, '#9a6a1e');
+        ctx.strokeStyle = bezelGrad;
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerR, 0, twoPi);
+        ctx.arc(cx, cy, segR + 7 * scale, 0, twoPi, true);
+        var ringGrad = ctx.createLinearGradient(cx, cy - outerR, cx, cy + outerR);
+        ringGrad.addColorStop(0, '#3a2810');
+        ringGrad.addColorStop(0.5, '#1d1408');
+        ringGrad.addColorStop(1, '#0a0704');
+        ctx.fillStyle = ringGrad;
+        ctx.fill('evenodd');
+        ctx.restore();
+
+        var studCount = 24;
+        var studR = (outerR + segR + 7 * scale) / 2;
+        for (var s = 0; s < studCount; s++) {
+            var a = (twoPi / studCount) * s;
+            var sx = cx + studR * Math.cos(a);
+            var sy = cy + studR * Math.sin(a);
+            ctx.beginPath();
+            ctx.arc(sx, sy, 2.6 * scale, 0, twoPi);
+            var studGrad = ctx.createRadialGradient(sx - 1, sy - 1, 0, sx, sy, 3 * scale);
+            studGrad.addColorStop(0, '#fff9e6');
+            studGrad.addColorStop(1, RR_RIM_GOLD);
+            ctx.fillStyle = studGrad;
+            ctx.shadowColor = 'rgba(240,193,75,0.9)';
+            ctx.shadowBlur = 5 * scale;
+            ctx.fill();
         }
-        existingLabels.innerHTML = labelsHtml;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerR - 1 * scale, 0, twoPi);
+        ctx.lineWidth = 2 * scale;
+        ctx.strokeStyle = RR_RIM_GOLD;
+        ctx.globalAlpha = 0.85;
+        ctx.stroke();
+        ctx.restore();
     }
 
     function renderWheel() {
         var wheel = el('rr-wheel');
         if (wheel) {
-            wheel.style.background = buildWheelGradient();
-            renderWheelLabels();
+            buildWheelDepthLayers(wheel);
+            if (!wheel.querySelector('.rr-wheel-gloss')) {
+                var gloss = document.createElement('div');
+                gloss.className = 'rr-wheel-gloss';
+                gloss.style.transform = 'translateZ(3px)';
+                wheel.appendChild(gloss);
+            }
+            drawWheelCanvas(wheel);
         }
         // ⚠️ نحدّث محتوى البكرة أيضاً حتى لو مو ظاهرة حالياً — عشان تكون
         // جاهزة فوراً لو الاستريمر بدّل الشكل وسط المباراة (بعد إقصاء أو
         // انضمام لاعب جديد مثلاً).
         if (el('rr-reel-list')) renderReel();
     }
+
+    // ⚠️ الكانفس يحتاج إعادة رسم صريحة عند تغيّر حجم #rr-wheel (خلافاً
+    // لخلفية CSS القديمة اللي كانت تتمدّد تلقائياً) — مثال حقيقي مشابه:
+    // computeLobbyScale المستخدَم لنفس الغرض بشاشة اللوبي.
+    var _wheelResizeTimer = null;
+    window.addEventListener('resize', function () {
+        if (_wheelResizeTimer) window.clearTimeout(_wheelResizeTimer);
+        _wheelResizeTimer = window.setTimeout(function () {
+            var wheel = el('rr-wheel');
+            if (wheel && _alive.length) drawWheelCanvas(wheel);
+        }, 120);
+    });
 
     /* ======================================================================
      *  6) قائمة الأحياء بالأسفل (بطاقات + قلوب)
@@ -1021,9 +1337,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         stage.id = 'rr-stage';
         stage.innerHTML =
             '<div id="rr-wheel-wrap">' +
+                '<div id="rr-wheel-ground-shadow"></div>' +
                 '<div id="rr-wheel"></div>' +
                 '<div id="rr-wheel-pointer"></div>' +
-                '<button id="rr-wheel-hub" type="button"><img src="../../logo.png" alt=""><span>تدوير</span></button>' +
+                '<button id="rr-wheel-hub" type="button"><img src="../../logo.png" alt=""><span>دور</span></button>' +
             '</div>' +
             '<div id="rr-reel-wrap" style="display:none;">' +
                 '<div id="rr-reel-pointer-line"></div>' +
@@ -1113,7 +1430,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         '<span class="rr-result-role-tag rr-eliminator">✅ أقصى</span>' +
                         '<span class="rr-result-name" id="rr-result-eliminator-name"></span>' +
                     '</div>' +
-                    '<div class="rr-result-connector"><span class="rr-arrow">⟵</span><span class="rr-verb">أقصى</span></div>' +
+                    '<div class="rr-result-connector"><span class="rr-connector-icon">💀</span><span class="rr-verb">أقصى</span></div>' +
                     '<div class="rr-result-card">' +
                         '<div class="rr-result-ring rr-eliminated"><div class="rr-result-ring-inner" id="rr-result-eliminated-avatar">' +
                             '<span class="rr-result-x-mark">✕</span></div></div>' +
@@ -1211,7 +1528,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var durationMs = wheelSpinDurationMs();
         var wheel = el('rr-wheel');
         wheel.style.transitionDuration = durationMs + 'ms';
-        wheel.style.transform = 'rotate(' + finalRotation + 'deg)';
+        // ⚠️ العجلة صارت 3D (مائلة rotateX)، فالدوران وقت الاختيار لازم
+        // يصير rotateZ فوق نفس الميلان بسطر transform واحد، بدل rotate()
+        // المسطّح القديم اللي كان بيلغي الميلان تماماً. حساب finalRotation
+        // نفسه ما تغيّر ولا حرف.
+        wheel.style.transform = 'rotateX(52deg) rotateZ(' + finalRotation + 'deg)';
 
         window.setTimeout(function () {
             _wheelSpinning = false;
@@ -1304,7 +1625,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             hub.classList.remove('rr-hub-standalone');
             wheelWrap.appendChild(hub);
             var hubSpan2 = hub.querySelector('span');
-            if (hubSpan2) hubSpan2.textContent = 'تدوير';
+            if (hubSpan2) hubSpan2.textContent = 'دور';
             if (toggleBtn) toggleBtn.textContent = '🔃 تبديل شكل الاختيار (سكرول)';
         }
     }
@@ -1340,7 +1661,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // عشوائي بديل عنه. لو فيه دور اختيار مفتوح حالياً (_pendingTurn)،
             // نكتفي بإعادة جدولة الفحص لاحقاً بدون أي تدخّل، لين يُغلَق
             // الدور بشكل طبيعي (شات/زر يدوي/انتهاء وقت) فيرجع الدوران تلقائياً.
-            if (!_wheelSpinning && !_pendingTurn && _alive.length > 1) {
+            if (!_wheelSpinning && !_pendingTurn && !_resolutionInProgress && _alive.length > 1) {
                 // ⚠️ [إصلاح خلل حقيقي] كان يستدعي handleSpinClick مباشرة
                 // (خاص بالعجلة بس) — فما يشتغل إطلاقاً وقت وضع السكرول.
                 // نفس المُوزِّع اللي يستخدمه زر التدوير نفسه، يشتغل صح
@@ -1389,11 +1710,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div class="rr-lc-row">' +
                 playerAvatarImgHtml(p, 'rr-lc-avatar') +
                 '<div class="rr-lc-plate">' +
-                    '<span class="rr-lc-name">' + escapeHtml(playerLabel(p)) + '</span>' +
-                    '<span class="rr-lc-num">' + playerNumber(p) + '</span>' +
+                    '<div class="rr-lc-plate-toprow"><span class="rr-lc-name">' + escapeHtml(playerLabel(p)) + '</span>' +
+                    '<span class="rr-lc-num">' + playerNumber(p) + '</span></div>' +
+                    '<div class="rr-lc-hearts">' + heartsRowHtml(p) + '</div>' +
                 '</div>' +
             '</div>' +
-            '<div class="rr-lc-hearts">' + heartsRowHtml(p) + '</div>' +
         '</div>';
     }
 
@@ -1516,6 +1837,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function handleForceEliminateClick() {
         if (!_pendingTurn) return;
         var chooser = _pendingTurn.chooser;
+        _resolutionInProgress = true; // ⚠️ يبقى true طول عرض شاشة "عملية اقصاء ناجحة" — يُصفَّر بـapplyElimination
         var streamer = streamerVirtualPlayer();
         // ⚠️ نفس الزر الأحمر — لو ما فيه اختيار يدوي، يقصي صاحب الدور نفسه.
         // لو فيه لاعب مُختار يدوياً، يقصي ذاك اللاعب المحدَّد بدلاً منه.
@@ -1564,6 +1886,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function resolveSelection(target) {
         if (!_pendingTurn) return;
         var chooser = _pendingTurn.chooser;
+        _resolutionInProgress = true; // ⚠️ يبقى true طول عرض شاشتي الاشتباك/النتيجة — يُصفَّر بـapplyElimination أو فرع الإخفاق
         closeSelectionScreen();
         var isHit = rollEngineHit(target);
         showClashScreen(chooser, target, isHit);
@@ -1571,9 +1894,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function showClashScreen(chooser, target, isHit) {
         var overlay = el('rr-clash-overlay');
-        var box = el('rr-clash-box');
         var header = el('rr-clash-header');
-        box.className = isHit ? 'rr-clash-hit' : '';
+        overlay.classList.toggle('rr-clash-hit-bg', isHit); // ⚠️ بديل تلوين حدود الصندوق القديم (الصندوق زال بالتصميم الجديد)
         header.className = '';
         header.textContent = 'مرحلة الاشتباك';
         var sentenceEl = el('rr-clash-sentence');
@@ -1613,6 +1935,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 });
             } else {
                 renderRoster();
+                _resolutionInProgress = false; // ⚠️ إخفاق = ما فيه شاشة نتيجة بعدها، نصفّر هنا مباشرة
                 if (_autoPlayActive) scheduleAutoStep();
             }
         }, isHit ? 2000 : 2000);
@@ -1620,14 +1943,45 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function showEliminationSuccessScreen(chooser, target, onDone) {
         var overlay = el('rr-result-overlay');
+        var box = el('rr-result-box');
+        var badge = box.querySelector('.rr-result-badge');
+        var elimRing = box.querySelector('.rr-result-ring.rr-eliminated');
+        var elimTag = box.querySelector('.rr-result-role-tag.rr-eliminated');
+        var connectorIcon = box.querySelector('.rr-connector-icon');
+        // ⚠️ نصفّر كل كلاسات الدخول التدريجي أول شي — العناصر هذي ثابتة
+        // (ما تُعاد بالـinnerHTML كل مرة زي الأفاتارات)، فلازم نرجّعها
+        // لحالة "قبل الظهور" قبل إعادة التشغيل، وإلا الانتقال ما يتكرر.
+        box.classList.remove('rr-shown');
+        badge.classList.remove('rr-shown');
+        elimRing.classList.remove('rr-shown');
+        elimTag.classList.remove('rr-shown');
+        if (connectorIcon) connectorIcon.classList.remove('rr-shown');
+
         el('rr-result-title').textContent = playerLabel(chooser) + ' أقصى ' + playerLabel(target) + '!';
         el('rr-result-eliminator-avatar').innerHTML = ringAvatarHtml(chooser);
         el('rr-result-eliminator-name').textContent = playerLabel(chooser);
         var elimAvatarEl = el('rr-result-eliminated-avatar');
+        elimAvatarEl.classList.remove('rr-vanish');
         elimAvatarEl.innerHTML = ringAvatarHtml(target) + '<span class="rr-result-x-mark">✕</span>';
         el('rr-result-eliminated-name').textContent = playerLabel(target);
+        var xMark = elimAvatarEl.querySelector('.rr-result-x-mark');
 
         overlay.style.display = 'flex';
+        playResultRevealSound();
+        void box.offsetWidth; // ⚠️ يجبر إعادة حساب الأنماط عشان الانتقال (transition) يشتغل من جديد كل مرة
+        box.classList.add('rr-shown');
+        badge.classList.add('rr-shown');
+        elimRing.classList.add('rr-shown');
+        elimTag.classList.add('rr-shown');
+        if (xMark) xMark.classList.add('rr-shown');
+        if (connectorIcon) connectorIcon.classList.add('rr-shown');
+
+        // ⚠️ اختفاء صورة المُقصى فعلياً (بلور+تعتيم+تصغير) بعد لحظة من
+        // ظهور الحلقة الحمراء — ينتهي قبل نهاية الـ3 ثواني المعروضة.
+        window.setTimeout(function () {
+            elimAvatarEl.classList.add('rr-vanish');
+        }, 1000);
+
         window.setTimeout(function () {
             overlay.style.display = 'none';
             if (typeof onDone === 'function') onDone();
@@ -1635,6 +1989,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function applyElimination(chooser, target, isManualOverride) {
+        _resolutionInProgress = false; // ⚠️ نقطة الإغلاق المشتركة لمساري الإصابة والتجاوز اليدوي — شاشة النتيجة اختفت الآن فعلياً
         var idx = _alive.findIndex(function (p) { return p.id === target.id; });
         if (idx !== -1) _alive.splice(idx, 1);
         _eliminated.push({ player: target });
@@ -1765,7 +2120,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             });
         }
 
+        // ⚠️ تبويب فيديو الفوز — يبان بس لما فيه فائز فعلي، فوق أعلى شي
+        // بالشاشة (فوق العنوان حتى). autoplay+loop+muted=false (نبيه
+        // يشتغل بصوته فعلياً).
+        var videoBadgeHtml = winner
+            ? '<div class="rr-video-badge"><video id="rr-winner-video" src="video/winner-video.mp4" autoplay loop playsinline></video></div>'
+            : '';
+
         overlay.innerHTML =
+            videoBadgeHtml +
             '<h2>🏁 انتهت المباراة .. الشخص الرهيب الي فاز بلعبة "' + escapeHtml(GAME_NAME) + '"</h2>' +
             '<div class="rr-trophy-cards">' + (cardsHtml || '<p style="color:#f2e6cf;">ما بقي أحد بالمباراة.</p>') + '</div>' +
             '<div class="rr-winner-actions">' +
@@ -1779,12 +2142,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             playWinFanfare();
             spawnConfetti(el('rr-trophy-card-winner') || overlay, 34);
         }
-        el('rr-newmatch-btn').onclick = function () { window.location.reload(); };
+        // ⚠️ الفيديو لازم يتوقف ويرجع لبدايته لحظة إغلاق شاشة الفوز من أي
+        // واحد من الأزرار الثلاثة — وإلا يضل شغّال بالخلفية بدون داعي.
+        function stopWinnerVideo() {
+            var v = el('rr-winner-video');
+            if (v) { v.pause(); v.currentTime = 0; }
+        }
+        el('rr-newmatch-btn').onclick = function () { stopWinnerVideo(); window.location.reload(); };
         el('rr-home-btn').onclick = function () {
+            stopWinnerVideo();
             var headerHomeBtn = document.getElementById('agp-header-home-btn');
             if (headerHomeBtn) headerHomeBtn.click();
         };
         el('rr-replay-same-btn').onclick = function () {
+            stopWinnerVideo();
             var survivorsRoster = AGP.gameManager.getPlayers().slice();
             overlay.style.display = 'none';
             resetMatchState();
@@ -2069,9 +2440,34 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var entry = _eliminated[idx];
         _eliminated.splice(idx, 1);
         _alive.push(entry.player);
+        _heartHits[entry.player.id] = 0; // ⚠️ إرجاع يدوي = أرواح جديدة كاملة، مو استكمال من نفس الضربات القديمة
         renderWheel();
-        logEvent('↩️', playerLabel(entry.player) + ' تم إرجاعه يدوياً من لوحة الإعدادات');
+        renderRoster(); // ⚠️ عشان صف القلوب بالأسفل يعكس الأرواح الجديدة فوراً
+        logEvent('↩️', playerLabel(entry.player) + ' تم إرجاعه يدوياً من لوحة الإعدادات بأرواح جديدة كاملة');
         renderReopenedPlayersTab();
+    }
+
+    // ⚠️ يجمع كل حقول الإعدادات (بين العنوان وزر الاتصال) داخل صندوق
+    // واحد قابل للسكرول الداخلي، ويترك زرّي "الاتصال" و"العودة للمنصة"
+    // خارجه ثابتين بالأسفل. box.innerHTML يُعاد بالكامل من ملف الشل
+    // المشترك بكل تفاعل (pill/toggle/input) — لذا الدالة idempotent
+    // وتُستدعى من enhanceSettingsScreen() في كل مرة (نفس نمط زر العودة
+    // أدناه)، بدون أي تعديل على js/agp-game-shell.js نفسه.
+    function wrapSettingsFieldsForScroll(box) {
+        if (box.querySelector('.rr-settings-fields-scroll')) return;
+        var h2 = box.querySelector('h2');
+        var connectBtn = document.getElementById('agp-connect-btn');
+        if (!h2 || !connectBtn || connectBtn.parentElement !== box) return;
+        var wrapper = document.createElement('div');
+        wrapper.className = 'rr-settings-fields-scroll';
+        var node = h2.nextSibling;
+        var toMove = [];
+        while (node && node !== connectBtn) {
+            toMove.push(node);
+            node = node.nextSibling;
+        }
+        toMove.forEach(function (n) { wrapper.appendChild(n); });
+        box.insertBefore(wrapper, connectBtn);
     }
 
     // ⚠️ زر "العودة لمنصة العاب ايمن" جنب زر "اتصل بالبث و انتقل للوبي" —
@@ -2083,6 +2479,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!document.getElementById('agp-tiktok-username')) return; // شاشة مُعاد فتحها وسط المباراة
         clearLobbyInlineOverrides(box);
         box.classList.add('rr-pre-match-settings'); // ⚠️ يُعاد إضافتها كل مرّة لأن box.className يُصفَّر بكل إعادة رسم
+        wrapSettingsFieldsForScroll(box);
 
         // ⚠️ [نموذج "تبويب الاتصال فوق شاشة الإعدادات" منقول من روليت
         // القبائل] نعترض onclick الأصلي لزر الاتصال: قبل ما نمرّر التنفيذ
@@ -2181,7 +2578,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // ÷ العرض الطبيعي) بدل نسبة واحدة تشوّه بعض الإطارات.
     function applyLobbyFrameScaling(container, scale) {
         if (!container) return;
-        var targetWidth = (60 + 200 - 13) * scale; // أفاتار + لوح − التراكب، بنفس نسبة الاستجابة الحالية
+        var targetWidth = (45 + 150 - 10) * scale; // أفاتار + لوح − التراكب، بنفس نسبة الاستجابة الحالية (مقاس 45 الجديد)
         container.querySelectorAll('.agp-pcard-tpl').forEach(function (card) {
             var nativeWidth = parseFloat(card.style.width);
             if (!nativeWidth) return;
@@ -2196,8 +2593,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var list = document.getElementById('agp-lobby-list');
         if (!list) return;
         var gapPx = 19; // 0.5cm ≈ 19px
-        var colWidth = (list.clientWidth - gapPx * 2) / 3;
-        var referenceWidth = 247; // 60 + 200 − 13
+        var colWidth = (list.clientWidth - gapPx * 5) / 6;
+        var referenceWidth = 185; // 45 + 150 − 10 (مقاس 45 الجديد)
         var scale = Math.min(1, colWidth / referenceWidth);
         if (scale < 0.65) scale = 0.65;
         list.style.setProperty('--rr-scale', scale);
@@ -2217,6 +2614,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var box = el('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
         clearLobbyInlineOverrides(box); // ⚠️ يمسح أي بقايا من شاشة ثانية قبل ما يفرض شي جديد
+        if (!box.querySelector('.rr-lobby-logo-watermark')) {
+            var watermark = document.createElement('div');
+            watermark.className = 'rr-lobby-logo-watermark';
+            box.insertBefore(watermark, box.firstChild);
+        }
         var h2 = box.querySelector('h2');
         if (h2 && h2.getAttribute('data-rr-heading') !== '1') {
             h2.innerHTML = 'لوبي الدخول للعبة "<span class="rr-lobby-heading-accent">' + escapeHtml(GAME_NAME) + '</span>"';
