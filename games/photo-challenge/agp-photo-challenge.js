@@ -700,6 +700,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var key = (playerTeam === TEAM1) ? SCORE_KEY_TEAM1 : SCORE_KEY_TEAM2;
         AGP.scoreManager.addPoints(key, pointsAwarded);
+        AGP.scoreManager.addPoints(playerId, pointsAwarded); // نقاط شخصية للاعب نفسه (منفصلة عن مجموع الفريق)
         updateSideScoreDisplay(playerTeam);
         showScoreFloat(playerTeam, pointsAwarded);
         checkForWinner();
@@ -795,6 +796,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function winnerCardHtml(p) {
         var avatarStyle = p.avatarUrl ? ' style="background-image:url(\'' + escapeAttr(p.avatarUrl) + '\')"' : '';
+        var personalPoints = AGP.scoreManager.getScore(p.id);
         return '<div class="pc-winner-card-item">' +
             '<div class="pc-winner-avatar-wrap">' +
                 '<div class="pc-winner-ring"></div>' +
@@ -802,6 +804,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="pc-winner-crown">👑</div>' +
             '</div>' +
             '<div class="pc-winner-name">' + escapeHtml(p.name || p.id) + '</div>' +
+            '<div class="pc-winner-points">' + personalPoints + ' نقطة</div>' +
         '</div>';
     }
 
@@ -839,6 +842,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('pc-winner-replay-btn').addEventListener('click', function () {
             AGP.scoreManager.reset(SCORE_KEY_TEAM1);
             AGP.scoreManager.reset(SCORE_KEY_TEAM2);
+            AGP.player.getAllPlayers().forEach(function (p) { AGP.scoreManager.reset(p.id); });
             updateSideScoreDisplay(TEAM1);
             updateSideScoreDisplay(TEAM2);
             _winnerDim.style.display = 'none';

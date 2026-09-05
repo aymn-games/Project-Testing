@@ -484,6 +484,9 @@ body.pc-active{
 }
 .pc-result-panel{
     display:none;
+    position:absolute; inset:0;
+    background:rgba(5,15,10,0.82);
+    backdrop-filter:blur(3px);
     flex-direction:column; align-items:center; justify-content:center;
     width:100%; height:100%; text-align:center;
 }
@@ -614,6 +617,7 @@ body.pc-active{
 .pc-winner-avatar{ position:absolute; inset:7px; border-radius:50%; background:#3a2f52 center/cover no-repeat; }
 .pc-winner-crown{ position:absolute; top:-6px; left:50%; transform:translateX(-50%); font-size:18px; }
 .pc-winner-name{ color:#fff; font-weight:800; font-size:13px; }
+.pc-winner-points{ color:#ffd699; font-weight:700; font-size:11px; margin-top:2px; }
 
 .pc-winner-actions{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
 .pc-winner-btn{ padding:11px 22px; border-radius:999px; font-weight:800; font-size:13px; font-family:inherit; cursor:pointer; }
