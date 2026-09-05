@@ -369,6 +369,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // بدون حد معدني واضح يفصل اللوح عن العلم (بخلاف تصاميم الاستوديو
         // الاحترافية)، فحدود اللوح هنا مبنية على تقدير بصري لتفادي كلمة
         // ALHILAL المرسومة على العلم (تقريباً x1830-2000), تأكد بعد الرفع.
+        // [0.66.6] إطار نادي الهلال "الذئب الملحمي" (ChatGPT). ⚠️ نفس
+        // ملاحظة الإطار قبله — بدون حد معدني واضح، حدود اللوح بتقدير بصري.
+        // كلمة ALHILAL موجودة مرتين (العلم يمين، ونسخة صغيرة يسار قرب حافة
+        // دائرة الصورة) — برّا لوح الاسم، ما تتعارض مع اسم اللاعب.
+        'frame-club-hilal-wolf.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 37, contentHeight: 555,
+            avatarLeftPct: 4.88, avatarTopPct: 39.64, avatarWidthPct: 16.39, avatarHeightPct: 59.46,
+            nameLeftPct: 32.23, nameTopPct: 49.19, nameWidthPct: 55.25, nameHeightPct: 47.75
+        },
         'frame-club-hilal-flag.png': {
             canvasW: 2172, canvasH: 724, contentTop: 36, contentHeight: 549,
             avatarLeftPct: 7.04, avatarTopPct: 33.88, avatarWidthPct: 16.80, avatarHeightPct: 64.12,
