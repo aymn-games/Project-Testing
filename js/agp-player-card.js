@@ -342,6 +342,38 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         },
         // [0.66.5] إطار "دول خليجية والسعودية" — الدلة والتمر. لوح رخام
         // داكن فاضٍ من أي نص. خلفية داكنة — أبيض افتراضي مقروء بدون تعديل.
+        // [0.66.6] إطار "عام" — الاستاد الذهبي (تولّده ChatGPT حسب السكربت
+        // المعتمد). لوح فاضٍ من نص، خلفية متدرجة (سماء داكنة فوق/عشب فاتح
+        // تحت) — أبيض افتراضي (لم يتأكد لون بديل).
+        'frame-general-stadium.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 14, contentHeight: 571,
+            avatarLeftPct: 10.45, avatarTopPct: 35.73, avatarWidthPct: 15.93, avatarHeightPct: 59.90,
+            nameLeftPct: 38.21, nameTopPct: 40.98, nameWidthPct: 53.87, nameHeightPct: 58.15
+        },
+        // [0.66.6] إطار "نادرة" — تنين النار (ChatGPT). ⚠️ فتحة الصورة
+        // أصغر من المعتاد (~310px بدل ~400px). لوح داكن فاضٍ من نص، أبيض
+        // مقروء افتراضياً.
+        'frame-rare-dragon.png': {
+            canvasW: 2076, canvasH: 758, contentTop: 78, contentHeight: 476,
+            avatarLeftPct: 6.98, avatarTopPct: 34.24, avatarWidthPct: 15.08, avatarHeightPct: 64.71,
+            nameLeftPct: 36.61, nameTopPct: 38.24, nameWidthPct: 52.02, nameHeightPct: 54.62
+        },
+        // [0.66.6] إطار "بنات" — التاج والورد (ChatGPT). لوح وردي غامق
+        // (مو فاتح) فاضٍ من نص — أبيض مقروء بدون تعديل.
+        'frame-girls-crown-rose.png': {
+            canvasW: 2112, canvasH: 744, contentTop: 0, contentHeight: 597,
+            avatarLeftPct: 7.86, avatarTopPct: 36.68, avatarWidthPct: 17.80, avatarHeightPct: 62.48,
+            nameLeftPct: 35.51, nameTopPct: 51.09, nameWidthPct: 53.50, nameHeightPct: 41.88
+        },
+        // [0.66.6] إطار نادي الهلال "العلم والمدينة" (ChatGPT) — ⚠️ التصميم
+        // بدون حد معدني واضح يفصل اللوح عن العلم (بخلاف تصاميم الاستوديو
+        // الاحترافية)، فحدود اللوح هنا مبنية على تقدير بصري لتفادي كلمة
+        // ALHILAL المرسومة على العلم (تقريباً x1830-2000), تأكد بعد الرفع.
+        'frame-club-hilal-flag.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 36, contentHeight: 549,
+            avatarLeftPct: 7.04, avatarTopPct: 33.88, avatarWidthPct: 16.80, avatarHeightPct: 64.12,
+            nameLeftPct: 32.23, nameTopPct: 42.62, nameWidthPct: 50.65, nameHeightPct: 56.47
+        },
         'frame-country-ksa-dallah.png': {
             canvasW: 2103, canvasH: 748, contentTop: 2, contentHeight: 613,
             avatarLeftPct: 8.37, avatarTopPct: 28.55, avatarWidthPct: 20.78, avatarHeightPct: 70.64,
