@@ -10,12 +10,15 @@
  * لا تعديل على أي ملف موجود بالمشروع.
  *
  * ⚠️ بناء تدريجي: هذا الملف حالياً يغطي شاشة الإعدادات + تبويب الاتصال
- * فقط (بالضبط كما اعتُمد بالنموذج). اللوبي/المباراة/شاشة الفائز غير
- * مبنية بعد -- تحتاج تحديد آلية اللعب الفعلية (عدد الخيارات، شكل
- * الاختيار، شرط الإقصاء بعد اختيار خاطئ إن وُجد، إلخ) قبل بنائها.
+ * + شاشة اللوبي (بالضبط كما اعتُمد بالنموذج: بدون صندوق، بطاقات مباشرة
+ * على الخلفية، 6 لاعبين بالصف بحجم 46px، شعار خلفية بشفافية 40%).
+ * شاشة المباراة/شاشة الفائز غير مبنيتين بعد -- تحتاج تحديد آلية اللعب
+ * الفعلية (عدد الخيارات، شكل الاختيار، شرط الإقصاء بعد اختيار خاطئ إن
+ * وُجد، إلخ) قبل بنائهما.
  *
  * الخدمات العامة المُعاد استخدامها بدون أي تعديل عليها:
- *   AGP.player / AGP.timerManager / AGP.streamConnector / AGP.events
+ *   AGP.player / AGP.playerCard / AGP.timerManager / AGP.streamConnector /
+ *   AGP.lobby / AGP.events
  * ==========================================================================
  */
 
@@ -36,12 +39,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var GAME_NAME = 'الخزنة';
 
     var CHOICE_SECONDS_OPTIONS = [10, 15, 20, 25];
+    var LOBBY_CARD_SIZE = 46; // معتمد بالنموذج -- يفتح 6 بطاقات بالصف براحة
 
     /* ======================================================================
      *  0) الحالة الداخلية
      * ==================================================================== */
-    var _screen = 'settings'; // settings | connecting (فوق نفس الشاشة)
+    var _screen = 'settings'; // settings | connecting | lobby
     var _rootEl = null;
+    var _lobbyEl = null;
+    var _registrationOpen = false;
+    var _commentUnsub = null;
 
     var _settings = {
         tiktokUsername: '',
@@ -87,14 +94,94 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         document.body.appendChild(header);
 
         el('kz-header-home-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
-        el('kz-header-info-btn').addEventListener('click', function () {
-            // ⚠️ بناء تدريجي: شاشة الشرح غير مبنية بعد.
-            AGP.log('Khazna: زر الشرح -- الشاشة لسا ما بُنيت.');
-        });
+        el('kz-header-info-btn').addEventListener('click', function () { showInstructions(); });
         el('kz-header-settings-btn').addEventListener('click', function () {
             // ⚠️ بناء تدريجي: إعادة فتح الإعدادات أثناء المباراة غير مبنية بعد.
             AGP.log('Khazna: زر الإعدادات -- إعادة الفتح أثناء المباراة لسا ما بُنيت.');
         });
+    }
+
+    /* ======================================================================
+     *  2.5) تعليمات اللعبة -- تظهر تلقائياً أول ما تُفتح شاشة اللعبة (فوق
+     *       شاشة الإعدادات)، وتُفتح لاحقاً يدوياً عبر زر "!" بالهيدر.
+     *       دخول/خروج بأنيميشن (تكبير + تلاشي)، زر "ابدأ اللعب" بالأسفل
+     *       يقفلها ويكشف الشاشة اللي خلفها.
+     * ==================================================================== */
+    var _instrShown = false;
+
+    function ensureInstructionsEls() {
+        if (el('kz-instructions-dim')) return;
+
+        var dim = document.createElement('div');
+        dim.id = 'kz-instructions-dim';
+        document.body.appendChild(dim);
+
+        var card = document.createElement('div');
+        card.id = 'kz-instructions-card';
+        card.innerHTML =
+            '<div class="kz-instr-icon">🔐</div>' +
+            '<h2>تعليمات لعبة الخزنة</h2>' +
+            '<div class="kz-instr-sub">اقرأ زين قبل ما تبدأ</div>' +
+
+            '<div class="kz-instr-section">' +
+                '<div class="kz-instr-emoji">🕰️</div>' +
+                '<div class="kz-instr-text">' +
+                    'بتطلع لكم <b>ساعات من داخل الخزنة</b> بتوقيت معيّن — احفظوا <b>توقيت كل ساعة وترتيبها</b>، ' +
+                    'وبعدها اختاروا <b>الخيار الصحيح</b> اللي يطابق الترتيب والتواقيت.' +
+                '</div>' +
+            '</div>' +
+
+            '<div class="kz-instr-section">' +
+                '<div class="kz-instr-emoji">⚔️</div>' +
+                '<div class="kz-instr-text">' +
+                    '<b>الإقصاء:</b>' +
+                    '<ul>' +
+                        '<li>كل جولة يُقصى <b>آخر لاعبين</b> بالإجابة</li>' +
+                        '<li>لما يوصل العدد لـ <b>4 لاعبين</b>، يُقصى <b>لاعب واحد بس</b> كل جولة</li>' +
+                        '<li>لازم يكون فيه إجابة على الأقل — لو محد جاوب، ما يُقصى أحد وتستمر اللعبة</li>' +
+                    '</ul>' +
+                '</div>' +
+            '</div>' +
+
+            '<div class="kz-instr-section">' +
+                '<div class="kz-instr-emoji">📈</div>' +
+                '<div class="kz-instr-text"><b>الصعوبة تزيد تدريجياً:</b> كل جولتين تنضاف ساعة جديدة.</div>' +
+            '</div>' +
+
+            '<div class="kz-instr-tip">⚡ احفظوا التواقيت وترتيبها صح، وجاوبوا <b>بأسرع وقت</b> — كل ما ترسلون إجابتكم أبكر، كل ما تضمنون عدم الإقصاء.</div>' +
+
+            '<button type="button" id="kz-instr-start-btn">🚀 ابدأ اللعب</button>';
+        document.body.appendChild(card);
+
+        el('kz-instr-start-btn').addEventListener('click', function () { hideInstructions(); });
+    }
+
+    function showInstructions() {
+        ensureInstructionsEls();
+        var dim = el('kz-instructions-dim');
+        var card = el('kz-instructions-card');
+        dim.style.display = 'block';
+        card.style.display = 'block';
+        card.classList.remove('kz-hide');
+        void card.offsetWidth; // إجبار إعادة رسم عشان الأنيميشن يشتغل من جديد لو تكرر الفتح
+        requestAnimationFrame(function () {
+            dim.classList.add('kz-show');
+            card.classList.add('kz-show');
+        });
+        _instrShown = true;
+    }
+
+    function hideInstructions() {
+        var dim = el('kz-instructions-dim');
+        var card = el('kz-instructions-card');
+        if (!dim || !card) return;
+        dim.classList.remove('kz-show');
+        card.classList.remove('kz-show');
+        card.classList.add('kz-hide');
+        setTimeout(function () {
+            dim.style.display = 'none';
+            card.style.display = 'none';
+        }, 380);
     }
 
     /* ======================================================================
@@ -249,15 +336,358 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (payload.status === 'connecting') {
                 _screen = 'connecting';
                 showConnectOverlay(false);
-            } else if (payload.status === 'connected') {
+            } else if (payload.status === 'connected' && _screen !== 'lobby') {
                 hideConnectOverlay();
-                // ⚠️ بناء تدريجي: شاشة اللوبي غير مبنية بعد -- تحتاج تحديد
-                // آلية اللعب الفعلية أولاً.
-                AGP.log('Khazna: تم الاتصال بالبث -- شاشة اللوبي لسا ما بُنيت.');
+                renderLobbyScreen();
             } else if (payload.status === 'error') {
                 showConnectOverlay(true);
             }
         });
+
+        // ⚠️ إصلاح خلل: بدون هذا، انضمام لاعب عبر الشات (أو حذفه) يصير
+        // فعلياً بالخلفية لكن شبكة اللوبي ما تنعرض محدَّثة أبداً.
+        AGP.events.on('player:joined', function () { if (_screen === 'lobby') renderLobbyGrid(); });
+        AGP.events.on('player:removed', function () { if (_screen === 'lobby') renderLobbyGrid(); });
+    }
+
+    /* ======================================================================
+     *  5) شاشة اللوبي -- بدون صندوق، بطاقات اللاعبين مباشرة على خلفية
+     *     الشاشة (نفس أسلوب لوبي روليت القبائل "lobby-no-box")، شبكة
+     *     6 أعمدة بحجم 46px (معتمد بالنموذج)، شعار خلفية بشفافية 40%.
+     * ==================================================================== */
+    function findPlayerById(id) {
+        var players = AGP.player.getAllPlayers();
+        for (var i = 0; i < players.length; i++) {
+            if (players[i].id === id) return players[i];
+        }
+        return null;
+    }
+
+    function playerCardHtml(p) {
+        if (AGP.playerCard) {
+            return AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', size: LOBBY_CARD_SIZE, outClass: 'kz-pcard-wrap' });
+        }
+        var avatar = p.avatarUrl ? escapeAttr(p.avatarUrl) : '';
+        return '<span class="kz-pcard-wrap">' + (avatar ? '<img src="' + avatar + '">' : '') + escapeHtml(p.name || p.id) + '</span>';
+    }
+
+    function lobbyCardHtml(p) {
+        return '<div class="kz-lobby-card-wrap">' +
+            '<button type="button" class="kz-lobby-remove-x" data-id="' + escapeAttr(p.id) + '" title="حذف اللاعب">✕</button>' +
+            playerCardHtml(p) +
+        '</div>';
+    }
+
+    function wireLobbyRemoveButtons(container) {
+        if (!container) return;
+        container.querySelectorAll('.kz-lobby-remove-x').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                AGP.player.removePlayer(btn.getAttribute('data-id'));
+                renderLobbyGrid();
+            });
+        });
+    }
+
+    function renderLobbyGrid() {
+        var grid = el('kz-lobby-grid');
+        if (!grid) return;
+        var players = AGP.player.getAllPlayers();
+        el('kz-lobby-count').textContent = players.length + ' لاعبين';
+        grid.innerHTML = players.map(lobbyCardHtml).join('') || '<div class="kz-lobby-empty">بانتظار أول لاعب...</div>';
+        if (AGP.playerCard) AGP.playerCard.fitAllNames(grid);
+        wireLobbyRemoveButtons(grid);
+        el('kz-start-round-btn').disabled = players.length === 0;
+    }
+
+    function wireCommentListenerForJoining() {
+        if (_commentUnsub) return;
+        _commentUnsub = AGP.events.on('stream:commentReceived', function (payload) {
+            if (!_registrationOpen || !payload || typeof payload.text !== 'string' || !payload.id) return;
+            if (_settings.followersOnly && !payload.isFollower) return;
+
+            var text = normalizeArabicText(payload.text);
+            var keyword = normalizeArabicText(_settings.joinKeyword);
+            if (!keyword || text !== keyword) return;
+
+            if (findPlayerById(payload.id)) return; // منضم أصلاً
+
+            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null });
+        });
+    }
+
+    function ensureLobbyEl() {
+        if (_lobbyEl) return _lobbyEl;
+        _lobbyEl = document.createElement('div');
+        _lobbyEl.id = 'kz-lobby';
+        document.body.appendChild(_lobbyEl);
+        return _lobbyEl;
+    }
+
+    function renderLobbyScreen() {
+        _screen = 'lobby';
+        _registrationOpen = true;
+        if (_rootEl) _rootEl.style.display = 'none';
+        if (AGP.lobby && typeof AGP.lobby.open === 'function') AGP.lobby.open();
+        wireCommentListenerForJoining();
+
+        var root = ensureLobbyEl();
+        root.style.display = 'flex';
+        root.innerHTML =
+            '<img id="kz-lobby-watermark" src="../../logo.png" alt="" onerror="this.style.display=\'none\'">' +
+            '<h2><span class="kz-title-plain">لوبي دخول لعبة - </span><span class="kz-title-accent">' + escapeHtml(GAME_NAME) + '</span></h2>' +
+            '<div class="kz-join-hint">' +
+                '<span class="kz-badge kz-keyword-badge">' + escapeHtml(_settings.joinKeyword) + '</span>' +
+                '<span class="kz-badge kz-count-badge" id="kz-lobby-count">0 لاعبين</span>' +
+            '</div>' +
+            '<div id="kz-lobby-grid"></div>' +
+            '<div id="kz-lobby-actions">' +
+                '<button type="button" id="kz-lobby-back-settings-btn" class="kz-btn-settings">⚙️ العودة لإعدادات المباراة</button>' +
+                '<button type="button" id="kz-start-round-btn" class="kz-btn-start" disabled>ابدأ الجولة</button>' +
+                '<button type="button" id="kz-lobby-back-platform-btn" class="kz-btn-platform">🏠 رجوع لمنصة ألعاب أيمن</button>' +
+            '</div>';
+
+        renderLobbyGrid();
+
+        el('kz-lobby-back-settings-btn').addEventListener('click', function () {
+            var ok = window.confirm('بترجع لشاشة الإعدادات وينقطع الاتصال الحالي بالبث. تبي تكمل؟');
+            if (ok) window.location.reload();
+        });
+        el('kz-lobby-back-platform-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('kz-start-round-btn').addEventListener('click', function () { startMatch(); });
+    }
+
+    /* ======================================================================
+     *  6) شاشة المباراة -- تتابع فتح الجولة (الخزنة + الساعات + مؤقت
+     *     الحفظ + الخزنة ترجع وتقفل + تبويب الخيارات A/B/C). منقول
+     *     بالحرف من النموذج المعتمد.
+     *
+     *     ⚠️ بناء تدريجي: التتابع البصري كامل وشغّال، لكن جمع إجابات
+     *     اللاعبين الفعلية (كيف يرسل اللاعب A/B/C -- عبر كتابتها بالشات
+     *     مثلاً؟) ومنطق الإقصاء (آخر لاعبين / لاعب واحد عند 4، بدون
+     *     إقصاء لو محد جاوب، زيادة ساعة كل جولتين، تكرار الجولات لين
+     *     يفضل لاعب وحد، شاشة الفائز) لسا ما اتربطوا -- محتاجين تأكيد
+     *     آلية الإرسال الفعلية قبل ما أبنيهم.
+     * ==================================================================== */
+    var MEMORIZE_SECONDS = 15;
+    var _matchEl = null;
+
+    function pickRandomHours(n) {
+        var pool = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+        for (var i = pool.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+        }
+        return pool.slice(0, n);
+    }
+
+    function clockFaceSvg(h) {
+        var hourAngle = (h % 12) * 30; // بدون دقائق -- العقرب يشاور بالضبط على الساعة الكاملة
+        var ticks = '';
+        for (var hr = 0; hr < 12; hr++) {
+            var isMajor = (hr % 3 === 0);
+            var len = isMajor ? 12 : 7;
+            var width = isMajor ? 3.5 : 2;
+            ticks += '<line x1="75" y1="10" x2="75" y2="' + (10 + len) + '" stroke="#e8d9ff" stroke-opacity="' + (isMajor ? 0.85 : 0.5) + '" stroke-width="' + width + '" stroke-linecap="round" transform="rotate(' + (hr * 30) + ' 75 75)"/>';
+        }
+        return '<svg width="150" height="150" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">' +
+            '<defs><radialGradient id="kzcf' + h + '" cx="35%" cy="30%" r="75%">' +
+                '<stop offset="0%" stop-color="#9a9ea6"/><stop offset="50%" stop-color="#4d5058"/><stop offset="100%" stop-color="#1c1e23"/>' +
+            '</radialGradient></defs>' +
+            '<circle cx="75" cy="75" r="72" fill="url(#kzcf' + h + ')" stroke="#000" stroke-width="3"/>' +
+            '<circle cx="75" cy="75" r="60" fill="#150a20" stroke="#7c3aed" stroke-opacity="0.4" stroke-width="2"/>' +
+            '<g>' + ticks + '</g>' +
+            '<line x1="75" y1="75" x2="75" y2="42" stroke="#fff" stroke-width="5" stroke-linecap="round" transform="rotate(' + hourAngle + ' 75 75)"/>' +
+            '<line x1="75" y1="75" x2="75" y2="26" stroke="var(--gold)" stroke-width="3.5" stroke-linecap="round" transform="rotate(0 75 75)"/>' +
+            '<circle cx="75" cy="75" r="5" fill="var(--gold)"/>' +
+        '</svg>';
+    }
+
+    function vaultSvgMarkup() {
+        return '<svg width="300" height="335" viewBox="0 0 340 380" xmlns="http://www.w3.org/2000/svg">' +
+            '<defs>' +
+                '<radialGradient id="kzDoorFace" cx="38%" cy="32%" r="75%"><stop offset="0%" stop-color="#8b8f97"/><stop offset="45%" stop-color="#5a5f68"/><stop offset="80%" stop-color="#33363d"/><stop offset="100%" stop-color="#1c1e23"/></radialGradient>' +
+                '<linearGradient id="kzFrameMetal" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#5b5f68"/><stop offset="50%" stop-color="#26282d"/><stop offset="100%" stop-color="#0f1013"/></linearGradient>' +
+                '<radialGradient id="kzDialFace" cx="40%" cy="35%" r="70%"><stop offset="0%" stop-color="#f3d78a"/><stop offset="55%" stop-color="#d8ab3f"/><stop offset="100%" stop-color="#8a6a1e"/></radialGradient>' +
+                '<linearGradient id="kzHandleBar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c94b3f"/><stop offset="50%" stop-color="#7f1f19"/><stop offset="100%" stop-color="#3d0d0a"/></linearGradient>' +
+                '<filter id="kzSoftShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000" flood-opacity="0.55"/></filter>' +
+            '</defs>' +
+            '<rect x="14" y="18" width="312" height="348" rx="20" fill="url(#kzFrameMetal)" filter="url(#kzSoftShadow)"/>' +
+            '<rect x="14" y="18" width="312" height="348" rx="20" fill="none" stroke="#000" stroke-opacity="0.4" stroke-width="2"/>' +
+            '<g fill="#111318" stroke="#050506" stroke-width="1.5"><rect x="4" y="60" width="20" height="46" rx="6"/><rect x="4" y="270" width="20" height="46" rx="6"/></g>' +
+            '<circle cx="170" cy="192" r="128" fill="#050308"/>' +
+            '<g class="kz-door">' +
+                '<circle cx="170" cy="192" r="150" fill="url(#kzDoorFace)" stroke="#111318" stroke-width="4"/>' +
+                '<circle cx="170" cy="192" r="130" fill="none" stroke="#0d0e10" stroke-width="6"/>' +
+                '<g fill="#0f1013" opacity="0.85"><circle cx="170" cy="52" r="5"/><circle cx="170" cy="332" r="5"/><circle cx="30" cy="192" r="5"/><circle cx="310" cy="192" r="5"/><circle cx="72" cy="80" r="5"/><circle cx="268" cy="80" r="5"/><circle cx="72" cy="304" r="5"/><circle cx="268" cy="304" r="5"/></g>' +
+                '<circle cx="170" cy="192" r="62" fill="#15171b" stroke="#000" stroke-width="3"/>' +
+                '<circle cx="170" cy="192" r="54" fill="url(#kzDialFace)" stroke="#5a4416" stroke-width="2"/>' +
+                '<g stroke="#5a4416" stroke-width="1.5"><line x1="170" y1="146" x2="170" y2="154"/><line x1="170" y1="230" x2="170" y2="238"/><line x1="124" y1="192" x2="132" y2="192"/><line x1="208" y1="192" x2="216" y2="192"/></g>' +
+                '<circle cx="170" cy="192" r="10" fill="#3a2c0d"/><circle cx="170" cy="192" r="5" fill="#e8b64c"/>' +
+                '<g><rect x="266" y="160" width="20" height="64" rx="8" fill="url(#kzHandleBar)" stroke="#20090a" stroke-width="2"/><rect x="286" y="182" width="30" height="20" rx="6" fill="#7f1f19" stroke="#20090a" stroke-width="2"/></g>' +
+                '<ellipse cx="120" cy="130" rx="60" ry="24" fill="#ffffff" opacity="0.10"/>' +
+            '</g>' +
+        '</svg>';
+    }
+
+    var _audioCtx = null;
+    function playMechSound(kind) {
+        try {
+            _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            var t0 = _audioCtx.currentTime;
+            var thud = _audioCtx.createOscillator();
+            var thudGain = _audioCtx.createGain();
+            thud.type = 'sine';
+            thud.frequency.setValueAtTime(kind === 'open' ? 95 : 70, t0);
+            thud.frequency.exponentialRampToValueAtTime(40, t0 + 0.25);
+            thudGain.gain.setValueAtTime(0.35, t0);
+            thudGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.3);
+            thud.connect(thudGain).connect(_audioCtx.destination);
+            thud.start(t0); thud.stop(t0 + 0.3);
+
+            var bufferSize = _audioCtx.sampleRate * 0.2;
+            var noiseBuffer = _audioCtx.createBuffer(1, bufferSize, _audioCtx.sampleRate);
+            var data = noiseBuffer.getChannelData(0);
+            for (var i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+            var noise = _audioCtx.createBufferSource();
+            noise.buffer = noiseBuffer;
+            var noiseFilter = _audioCtx.createBiquadFilter();
+            noiseFilter.type = 'bandpass';
+            noiseFilter.frequency.value = kind === 'open' ? 1400 : 900;
+            var noiseGain = _audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(0.25, t0);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.18);
+            noise.connect(noiseFilter).connect(noiseGain).connect(_audioCtx.destination);
+            noise.start(t0);
+        } catch (e) { /* تجاهل بيئات بدون صوت */ }
+    }
+
+    function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    function ensureMatchEl() {
+        if (_matchEl) return _matchEl;
+        _matchEl = document.createElement('div');
+        _matchEl.id = 'kz-match';
+        _matchEl.innerHTML =
+            '<div id="kz-vault">' + vaultSvgMarkup() + '</div>' +
+            '<div id="kz-flying-clocks"></div>' +
+            '<div id="kz-memorize-badge"><div class="kz-mem-num" id="kz-mem-num">' + MEMORIZE_SECONDS + '</div><div class="kz-mem-label">ثانية للحفظ</div></div>' +
+            '<div id="kz-options"></div>';
+        document.body.appendChild(_matchEl);
+        return _matchEl;
+    }
+
+    function shuffleArr(arr) {
+        var a = arr.slice();
+        for (var i = a.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+        }
+        return a;
+    }
+
+    function buildShuffledOptions(correctOrder) {
+        var correctIdx = Math.floor(Math.random() * 3);
+        var opts = [];
+        for (var i = 0; i < 3; i++) opts.push(i === correctIdx ? correctOrder.slice() : shuffleArr(correctOrder));
+        for (var k = 0; k < 3; k++) {
+            if (k !== correctIdx && opts[k].join() === correctOrder.join()) opts[k] = shuffleArr(correctOrder);
+        }
+        return { opts: opts, correctIdx: correctIdx };
+    }
+
+    async function runRoundSequence(clockCount) {
+        ensureMatchEl();
+        var hours = pickRandomHours(clockCount);
+        var vault = el('kz-vault');
+        var flyBox = el('kz-flying-clocks');
+        vault.classList.remove('kz-in', 'kz-open');
+        el('kz-options').classList.remove('kz-show');
+        el('kz-options').innerHTML = '';
+        el('kz-memorize-badge').classList.remove('kz-show');
+
+        flyBox.innerHTML = hours.map(function (h, i) {
+            return '<div class="kz-flying-clock" id="kz-fc-' + i + '">' + clockFaceSvg(h) + '</div>';
+        }).join('');
+
+        var n = hours.length;
+        var spacing = 170;
+        var positions = hours.map(function (_, i) { return (i - (n - 1) / 2) * spacing; });
+
+        void vault.offsetWidth;
+        vault.classList.add('kz-in');
+        await wait(1500);
+        await wait(300);
+        vault.classList.add('kz-open');
+        playMechSound('open');
+        await wait(700);
+
+        hours.forEach(function (_, i) {
+            setTimeout(function () {
+                var c = el('kz-fc-' + i);
+                c.classList.add('kz-out');
+                c.style.transform = 'translate(' + positions[i] + 'px,0) scale(1)';
+            }, i * 180);
+        });
+        await wait(n * 180 + 400);
+
+        vault.classList.remove('kz-in', 'kz-open');
+        await wait(1500);
+
+        el('kz-memorize-badge').classList.add('kz-show');
+        var secs = MEMORIZE_SECONDS;
+        el('kz-mem-num').textContent = secs;
+        while (secs > 0) {
+            await wait(1000);
+            secs -= 1;
+            el('kz-mem-num').textContent = Math.max(secs, 0);
+        }
+        el('kz-memorize-badge').classList.remove('kz-show');
+
+        vault.classList.add('kz-in');
+        await wait(1500);
+        await wait(300);
+        vault.classList.add('kz-open');
+        playMechSound('open');
+        await wait(700);
+
+        hours.forEach(function (_, i) {
+            setTimeout(function () {
+                var c = el('kz-fc-' + i);
+                c.style.transform = 'translate(0,0) scale(0.2)';
+                c.classList.remove('kz-out');
+            }, i * 140);
+        });
+        await wait(n * 140 + 500);
+
+        vault.classList.remove('kz-open');
+        playMechSound('close');
+        await wait(700);
+        vault.classList.remove('kz-in');
+        await wait(1500);
+
+        var data = buildShuffledOptions(hours.map(String));
+        var letters = ['A', 'B', 'C'];
+        var rows = data.opts.map(function (order, i) {
+            return '<div class="kz-option-row" data-idx="' + i + '">' +
+                '<div class="kz-option-letter">' + letters[i] + '</div>' +
+                '<div class="kz-option-times">' + order.map(function (t) { return '<span>' + escapeHtml(t) + '</span>'; }).join('') + '</div>' +
+            '</div>';
+        }).join('');
+        el('kz-options').innerHTML = '<div id="kz-options-panel">' + rows + '</div>';
+        el('kz-options').classList.add('kz-show');
+
+        // ⚠️ بناء تدريجي: هذا مجرد عرض الخيارات -- جمع إجابات اللاعبين
+        // الفعلية عبر الشات ومنطق الإقصاء (آخر لاعبين/لاعب واحد عند 4،
+        // بدون إقصاء لو محد جاوب، تكرار الجولات، شاشة الفائز) لسا محتاج
+        // تأكيد آلية إرسال الإجابة قبل ربطه.
+        AGP.log('Khazna: الخيارات ظاهرة -- منطق جمع الإجابات والإقصاء لسا ما اتربط.');
+    }
+
+    function startMatch() {
+        if (AGP.lobby && typeof AGP.lobby.close === 'function') AGP.lobby.close();
+        var lobbyEl = el('kz-lobby');
+        if (lobbyEl) lobbyEl.style.display = 'none';
+        runRoundSequence(3);
     }
 
     function registerGame() {
@@ -277,6 +707,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         injectHeader();
         wirePlatformListeners();
         renderSettingsScreen();
+        showInstructions(); // ⚠️ تظهر تلقائياً أول ما تُفتح شاشة اللعبة
     }
 
     if (document.readyState === 'loading') {
