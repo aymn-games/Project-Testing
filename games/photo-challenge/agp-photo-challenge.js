@@ -81,6 +81,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             .toLowerCase();
     }
 
+    // يحوّل الأرقام العربية/الفارسية (١٢٣) لأرقام إنجليزية (123) -- عشان
+    // بادئة "1-" / "2-" اللي يكتبها مشارك من الشات تنعرف بأي صيغة أرقام.
+    function normalizeDigits(text) {
+        if (typeof text !== 'string') return '';
+        var map = { '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4', '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9',
+                    '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4', '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9' };
+        return text.replace(/[٠-٩۰-۹]/g, function (d) { return map[d]; });
+    }
+
     /* ======================================================================
      *  2) الهيدر الأساسي الثابت -- بهوية اللعبة (سماوي/بنفسجي)
      * ==================================================================== */
@@ -95,10 +104,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<button type="button" class="pc-header-icon-btn" id="pc-header-settings-btn" title="الإعدادات">⚙️</button>' +
             '</div>' +
             '<div id="pc-header-title">' + escapeHtml(GAME_NAME) + '</div>' +
-            '<div id="pc-header-brand"><img src="../../logo.png" alt="ألعاب أيمن" onerror="this.style.display=\'none\'"></div>';
+            '<div style="display:flex;align-items:center;gap:14px;">' +
+                '<button type="button" id="pc-header-exit-btn">🚪 خروج من اللعبة</button>' +
+                '<div id="pc-header-brand"><img src="../../logo.png" alt="ألعاب أيمن" onerror="this.style.display=\'none\'"></div>' +
+            '</div>';
         document.body.appendChild(header);
 
         el('pc-header-home-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('pc-header-exit-btn').addEventListener('click', function () {
+            if (window.confirm('تبي تخرج من اللعبة؟ أي مباراة شغالة بتنقطع.')) window.location.href = '../../index.html';
+        });
         el('pc-header-info-btn').addEventListener('click', function () {
             // ⚠️ بناء تدريجي: شاشة الشرح غير مبنية بعد.
             AGP.log('Photo Challenge: زر الشرح -- الشاشة لسا ما بُنيت.');
@@ -661,13 +676,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* ---- ظهور "الإجابة الصحيحة" -- تُستدعى من محرك التحقق الفعلي
-     *      (wireAnswerCheckingListener تحت) بمين جاوب، فريقه، النص
-     *      الأساسي للإجابة الصحيحة، والنقاط المستحقة (3/2/1 حسب التوقيت). */
-    function revealCorrectAnswer(playerId, playerTeam, answerText, pointsAwarded) {
+     *      بمين جاوب، فريقه، النص الأساسي للإجابة الصحيحة، والنقاط
+     *      المستحقة (3/2/1 حسب التوقيت). isGuest=true لمشارك من الشات
+     *      كتب بادئة الرقم (1-/2-) بدون ما يكون منضم أصلاً كلاعب --
+     *      يستخدم اسمه/صورته الحقيقية من التعليق، وما يلمس قائمة
+     *      لاعبي الفريق ولا نقاطه الشخصية. */
+    function revealCorrectAnswer(playerId, playerTeam, answerText, pointsAwarded, isGuest, guestName, guestAvatarUrl) {
         stopAnswerTimer();
 
-        var player = findPlayerById(playerId);
-        var playerName = player ? (player.name || player.id) : playerId;
+        var player = isGuest ? null : findPlayerById(playerId);
+        var playerName = isGuest ? guestName : (player ? (player.name || player.id) : playerId);
+        var avatarUrl = isGuest ? guestAvatarUrl : (player ? player.avatarUrl : null);
         var teamName = (playerTeam === TEAM1) ? _settings.team1Name : _settings.team2Name;
         var timeLabel = pointsAwarded >= 3 ? 'جاوب بأول 15 ثانية' : (pointsAwarded === 2 ? 'جاوب قبل نص الوقت' : 'جاوب بعد نص الوقت');
 
@@ -678,11 +697,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var watermarkEl = document.querySelector('#pc-stage-inner .pc-stage-watermark');
         if (watermarkEl) watermarkEl.style.display = 'none';
 
-        var avatarStyle = (player && player.avatarUrl) ? ' style="background-image:url(\'' + escapeAttr(player.avatarUrl) + '\')"' : '';
+        var avatarStyle = avatarUrl ? ' style="background-image:url(\'' + escapeAttr(avatarUrl) + '\')"' : '';
         var panel = el('pc-result-panel');
         panel.innerHTML =
             '<div class="pc-result-check">✅</div>' +
             '<div class="pc-result-title">إجابة صحيحة!</div>' +
+            (isGuest ? '<div class="pc-guest-badge">🎙️ مشارك من الشات (مو منضم للفريق)</div>' : '') +
             '<div class="pc-result-player-row">' +
                 '<div class="pc-result-avatar"' + avatarStyle + '></div>' +
                 '<div>' +
@@ -695,12 +715,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div class="pc-result-points-sub">' + timeLabel + '</div>';
         panel.style.display = 'flex';
 
-        var chip = document.querySelector('.pc-side-player-chip[data-player-id="' + playerId + '"]');
-        if (chip) chip.classList.add('pc-correct');
+        if (!isGuest) {
+            var chip = document.querySelector('.pc-side-player-chip[data-player-id="' + playerId + '"]');
+            if (chip) chip.classList.add('pc-correct');
+        }
 
         var key = (playerTeam === TEAM1) ? SCORE_KEY_TEAM1 : SCORE_KEY_TEAM2;
         AGP.scoreManager.addPoints(key, pointsAwarded);
-        AGP.scoreManager.addPoints(playerId, pointsAwarded); // نقاط شخصية للاعب نفسه (منفصلة عن مجموع الفريق)
+        if (!isGuest) AGP.scoreManager.addPoints(playerId, pointsAwarded); // نقاط شخصية -- بس للاعبين المنضمين فعلاً
         updateSideScoreDisplay(playerTeam);
         showScoreFloat(playerTeam, pointsAwarded);
         checkForWinner();
@@ -739,6 +761,35 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    /* ---- مشاركة من الشات بدون انضمام -- أي حد يكتب بادئة رقم الفريق
+     *      (1- أو 2-) قبل إجابته مباشرة يشارك بإجابته لصالح ذاك الفريق
+     *      بالرقم الثابت، بغض النظر عن اسمه أو كونه منضم أصلاً كلاعب.
+     *      يظهر باسمه وصورته الحقيقية من التعليق، بدون ما يدخل ضمن
+     *      قائمة لاعبي الفريق. ---- */
+    var _guestAnswerUnsub = null;
+
+    function wireGuestAnswerListener() {
+        if (_guestAnswerUnsub) return;
+        _guestAnswerUnsub = AGP.events.on('stream:commentReceived', function (payload) {
+            if (_answerInterval == null || !_currentChallenge || !payload || typeof payload.text !== 'string' || !payload.id) return;
+            if (_activeSilence && payload.id === _activeSilence.playerId) return;
+
+            var normalizedDigits = normalizeDigits(payload.text.trim());
+            var match = normalizedDigits.match(/^([12])-\s*(.+)$/);
+            if (!match) return;
+
+            var team = (match[1] === '1') ? TEAM1 : TEAM2;
+            var text = normalizeArabicText(match[2]);
+            var isCorrect = _currentChallenge.answers.some(function (a) { return normalizeArabicText(a) === text; });
+            if (!isCorrect) return;
+
+            var elapsed = _settings.answerDurationSeconds - _answerRemaining;
+            var pointsAwarded = elapsed <= 15 ? 3 : (elapsed <= _settings.answerDurationSeconds / 2 ? 2 : 1);
+
+            revealCorrectAnswer(payload.id, team, _currentChallenge.answers[0], pointsAwarded, true, payload.name || payload.id, payload.avatarUrl || null);
+        });
+    }
+
     function renderMatchScreen() {
         _screen = 'match';
         if (_lobbyEl) _lobbyEl.style.display = 'none';
@@ -766,6 +817,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '</div>' +
                 '<div class="pc-match-btn-row" id="pc-match-btn-row">' +
                     '<button type="button" class="pc-btn-show-start" id="pc-show-start-btn">إظهار الصورة وبدء الجولة</button>' +
+                '</div>' +
+                '<div class="pc-guest-hint">' +
+                    '<span>💬 اللي ما دخل اللعبة يقدر يشارك برضو! اكتب <b class="team1">1</b> قبل إجابتك وتُحتسب لفريق <b class="team1">' + escapeHtml(_settings.team1Name) + '</b>، أو اكتب <b class="team2">2</b> قبل إجابتك وتُحتسب لفريق <b class="team2">' + escapeHtml(_settings.team2Name) + '</b></span>' +
                 '</div>' +
             '</div>' +
 
@@ -1094,6 +1148,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wirePlatformListeners();
         wireSilenceEnforcementListener();
         wireAnswerCheckingListener();
+        wireGuestAnswerListener();
         loadChallengeBank();
         renderSettingsScreen();
     }

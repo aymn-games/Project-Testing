@@ -55,6 +55,18 @@ body.pc-active{
     font-size:0.9em;
 }
 #pc-header-brand{ display:flex; align-items:center; }
+#pc-header-exit-btn{
+    border:1px solid rgba(239,68,68,0.5);
+    background:rgba(239,68,68,0.12);
+    color:#ff8da3;
+    border-radius:999px;
+    padding:7px 16px;
+    font-family:'Zain',Cairo,sans-serif;
+    font-weight:800;
+    font-size:0.85em;
+    cursor:pointer;
+}
+#pc-header-exit-btn:hover{ background:rgba(239,68,68,0.22); }
 #pc-header-brand img{ height:36px; width:auto; }
 
 /* ---------------------------------------------------------------------
@@ -493,6 +505,7 @@ body.pc-active{
 .pc-result-check{ font-size:52px; margin-bottom:6px; animation:pc-result-pop 0.5s ease; }
 @keyframes pc-result-pop{ 0%{ transform:scale(0.3); opacity:0; } 60%{ transform:scale(1.15); opacity:1; } 100%{ transform:scale(1); } }
 .pc-result-title{ font-size:21px; font-weight:900; color:#7CFC9A; margin-bottom:12px; }
+.pc-guest-badge{ background:linear-gradient(90deg,var(--pc-accent2),var(--pc-accent)); color:#0a0612; font-size:10.5px; font-weight:900; border-radius:999px; padding:3px 12px; margin-bottom:10px; }
 .pc-result-player-row{ display:flex; align-items:center; gap:12px; background:rgba(0,0,0,0.3); border-radius:999px; padding:8px 18px; margin-bottom:10px; }
 .pc-result-avatar{ width:34px; height:34px; border-radius:50%; background:#3a2f52 center/cover no-repeat; }
 .pc-result-player-name{ font-size:15px; font-weight:800; color:#fff; }
@@ -548,6 +561,15 @@ body.pc-active{
 @keyframes pc-countdown-pop{ 0%{ transform:scale(0.4); opacity:0; } 60%{ transform:scale(1.15); opacity:1; } 100%{ transform:scale(1); } }
 
 .pc-match-btn-row{ margin-top:20px; display:flex; gap:14px; align-items:center; flex-wrap:wrap; justify-content:center; }
+.pc-guest-hint{
+    margin-top:14px; width:100%;
+    background:rgba(128,212,255,0.06); border:1px dashed rgba(128,212,255,0.35); border-radius:12px;
+    padding:10px 16px; text-align:center;
+}
+.pc-guest-hint span{ font-size:12px; color:#cdeeff; line-height:1.9; }
+.pc-guest-hint b{ font-weight:800; }
+.pc-guest-hint b.team1{ color:var(--pc-team1); }
+.pc-guest-hint b.team2{ color:var(--pc-team2); }
 .pc-btn-show-start{
     border:none; border-radius:999px;
     background:linear-gradient(90deg,var(--pc-accent2),var(--pc-accent));
