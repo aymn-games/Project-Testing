@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>أونو - اللعب</title>
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --violet: #7c3aed;
+    --violet2: #d878ff;
+    --card-w: 60px;
+    --card-h: 86px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Zain', sans-serif;
+    background: radial-gradient(circle at 50% 20%, #1b0f2e 0%, #0d0714 75%);
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* الطاولة */
+  .table-stage {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .table-3d {
+    position: relative;
+    width: min(78vw, 520px);
+    height: min(78vw, 520px);
+  }
+  .table-img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 18px 24px rgba(0,0,0,.5));
+  }
+  .table-logo {
+    position: absolute;
+    left: 50%; top: 33%;
+    transform: translate(-50%, -50%);
+    font-size: clamp(28px, 6vw, 46px);
+    font-weight: 800;
+    color: var(--violet2);
+    opacity: 0.3;
+    letter-spacing: 2px;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* الكراسي */
+  .seat {
+    position: absolute;
+    display: flex; flex-direction: column; align-items: center;
+    transform: translate(-50%, -50%);
+    width: clamp(56px, 9vw, 84px);
+  }
+  .seat-name {
+    font-size: 11px; color: #e5dcf5; font-weight: 700;
+    background: rgba(26,15,43,.75); border: 1px solid var(--input-border, #3a2a55);
+    padding: 2px 8px; border-radius: 10px;
+    margin-bottom: 4px; white-space: nowrap; max-width: 90px;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .seat.active .seat-name { border-color: var(--violet2); color: var(--violet2); }
+  .seat-team { font-size: 9px; color: #7a6a9c; margin-bottom: 2px; }
+  .chair-wrap { position: relative; width: 100%; }
+  .chair-img { width: 100%; display: block; filter: drop-shadow(0 4px 8px rgba(0,0,0,.5)); }
+  .seat.active .chair-img { filter: drop-shadow(0 0 10px var(--violet2)); }
+  .seat.mine .chair-img { filter: drop-shadow(0 0 10px #ffcf5c); }
+  .seat-avatar-img {
+    position: absolute; bottom: 30%; left: 50%;
+    transform: translateX(-50%);
+    width: 68%;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,.5));
+  }
+  .seat-count {
+    position: absolute; top: 2px; right: 2px;
+    background: #1a0f2b; border: 1px solid var(--violet2);
+    color: #fff; font-size: 10px; font-weight: 800;
+    border-radius: 10px; padding: 1px 6px; z-index: 2;
+  }
+
+  /* كومة الأوراق يمين الشاشة */
+  .pile-stack {
+    position: fixed;
+    top: 50%; right: clamp(10px, 3vw, 24px);
+    transform: translateY(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    z-index: 6;
+  }
+  .draw-mini-wrap { position: relative; width: var(--card-w); height: var(--card-h); }
+  .draw-mini-wrap .card { position: absolute; }
+  .draw-mini-wrap .card:nth-child(1) { top: 4px; left: 4px; }
+  .draw-mini-wrap .card:nth-child(2) { top: 2px; left: 2px; }
+  .draw-mini-wrap .card:nth-child(3) { top: 0; left: 0; }
+  .pile-label { font-size: 10px; color: #a89bc4; text-align: center; }
+
+  .card {
+    width: var(--card-w); height: var(--card-h);
+    border-radius: 9px;
+    position: relative;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    box-sizing: border-box;
+  }
+  .card-back {
+    background: linear-gradient(180deg, #1b0f2e, #120a1f);
+    border: 2px solid var(--violet);
+  }
+  .card-back .back-oval {
+    width: 74%; height: 78%;
+    border-radius: 50%;
+    border: 2px solid var(--violet2);
+    background: rgba(124,58,237,0.15);
+    display: flex; align-items: center; justify-content: center;
+    transform: rotate(-20deg);
+  }
+  .card-back .back-oval span { font-weight: 700; font-size: 11px; color: var(--violet2); transform: rotate(20deg); }
+
+  .card-face { border: 3px solid white; }
+  .card-face .face-oval {
+    width: 74%; height: 78%;
+    border-radius: 50%;
+    background: #161616;
+    display: flex; align-items: center; justify-content: center;
+    transform: rotate(-20deg);
+  }
+  .card-face .face-oval span { font-weight: 800; transform: rotate(20deg); font-size: calc(var(--card-w) * 0.34); }
+  .card-face .corner { position: absolute; font-size: 10px; font-weight: 800; color: white; }
+  .card-face .corner.tl { top: 4px; left: 6px; }
+  .card-face .corner.br { bottom: 4px; right: 6px; transform: rotate(180deg); }
+
+  /* يد اللاعب */
+  .hand-wrap { position: relative; padding: 4px 0 clamp(78px, 12vw, 96px); }
+  .turn-banner {
+    text-align: center; font-size: 13px; font-weight: 700;
+    color: var(--violet2); min-height: 18px; padding-bottom: 4px;
+  }
+  .hand-row {
+    display: flex; justify-content: center;
+    overflow-x: auto; padding: 8px clamp(20px, 8vw, 60px) 4px;
+    scrollbar-width: none;
+  }
+  .hand-row::-webkit-scrollbar { display: none; }
+  .hand-card { margin-left: -18px; transition: transform .18s ease; cursor: pointer; }
+  .hand-card:first-child { margin-left: 0; }
+  .hand-card.lifted { transform: translateY(-18px); z-index: 5; }
+  .hand-card.shake { animation: shake .3s; }
+  @keyframes shake {
+    0%,100% { transform: translateY(-18px) translateX(0); }
+    25% { transform: translateY(-18px) translateX(-6px); }
+    75% { transform: translateY(-18px) translateX(6px); }
+  }
+
+  .auto-draw-toast {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+    background: rgba(26,15,43,.95); border: 1px solid var(--violet2);
+    padding: 8px 16px; border-radius: 12px; font-size: 12px;
+    color: #e5dcf5; opacity: 0; transition: opacity .3s;
+    z-index: 20; pointer-events: none;
+  }
+  .auto-draw-toast.show { opacity: 1; }
+
+  .uno-btn {
+    position: fixed; left: 16px; bottom: calc(18px + env(safe-area-inset-bottom));
+    width: 60px; height: 60px; border-radius: 50%;
+    background: linear-gradient(135deg, #E24B4A, #A32D2D);
+    border: 3px solid #ffcf5c;
+    color: #fff; font-family: 'Zain', sans-serif;
+    font-size: 13px; font-weight: 800;
+    display: none; align-items: center; justify-content: center;
+    cursor: pointer; box-shadow: 0 0 20px rgba(226,75,74,.6);
+    animation: pulse 1s infinite; z-index: 15;
+  }
+  .uno-btn.show { display: flex; }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+  .uno-timer {
+    position: fixed; left: 12px; bottom: calc(10px + env(safe-area-inset-bottom));
+    width: 68px; height: 4px; border-radius: 4px; background: #3a2a55;
+    display: none; overflow: hidden; z-index: 15;
+  }
+  .uno-timer.show { display: block; }
+  .uno-timer-fill { height: 100%; background: #ffcf5c; width: 100%; transition: width linear; }
+
+  @media (min-width: 700px) { :root { --card-w: 70px; --card-h: 100px; } }
+  @media (min-width: 1024px) { :root { --card-w: 82px; --card-h: 118px; } }
+</style>
+</head>
+<body>
+
+<div class="table-stage">
+  <div class="table-3d" id="table-3d">
+    <img class="table-img" src="assets/table.png" alt="الطاولة">
+    <div class="table-logo">AGP</div>
+  </div>
+</div>
+
+<div class="pile-stack">
+  <div>
+    <div class="draw-mini-wrap" id="draw-pile-stack"></div>
+    <div class="pile-label">اسحب <span id="draw-count"></span></div>
+  </div>
+  <div>
+    <div class="card card-face" id="discard-top"></div>
+    <div class="pile-label">الطاولة</div>
+  </div>
+</div>
+
+<div class="hand-wrap">
+  <div class="turn-banner" id="turn-banner"></div>
+  <div class="hand-row" id="hand-row"></div>
+</div>
+
+<div class="auto-draw-toast" id="auto-toast"></div>
+<div class="uno-timer" id="uno-timer"><div class="uno-timer-fill" id="uno-timer-fill"></div></div>
+<button class="uno-btn" id="uno-btn" onclick="callUno()">أونو!</button>
+
+<script>
+const COLORS = {
+  red:    { bg: '#E24B4A', text: '#E24B4A' },
+  yellow: { bg: '#EF9F27', text: '#EF9F27' },
+  green:  { bg: '#639922', text: '#639922' },
+  blue:   { bg: '#378ADD', text: '#378ADD' },
+  black:  { bg: '#161616', text: '#fff' },
+};
+function symbolFor(v) {
+  if (v === 'skip') return '⦸';
+  if (v === 'reverse') return '⇄';
+  if (v === 'draw2') return '+2';
+  if (v === 'wild') return '★';
+  if (v === 'draw4') return '+4';
+  return v;
+}
+
+/* بيانات تجريبية — تُستبدل بحالة حقيقية من WebSocket */
+const ROOM_MODE = 'team'; // 'solo' أو 'team'
+let players = [
+  { name: 'أنت',  count: 7, team: 0, mine: true,  gender: 'boy' },
+  { name: 'أيمن', count: 5, team: 1, gender: 'boy' },
+  { name: 'سارة', count: 3, team: 0, gender: 'girl' },
+  { name: 'فهد',  count: 4, team: 1, gender: 'boy' },
+];
+const AVATAR_SRC = { boy: 'assets/avatar-boy.png', girl: 'assets/avatar-girl.png' };
+let activeSeatIndex = 2; // فهرس اللاعب اللي عليه الدور حالياً (ضمن مصفوفة المقاعد بعد الترتيب)
+
+let discardTop = { color: 'red', value: '5' };
+let drawPileCount = 42;
+let yourHand = [
+  { color: 'red', value: '5' },
+  { color: 'blue', value: '5' },
+  { color: 'green', value: 'skip' },
+  { color: 'yellow', value: '9' },
+  { color: 'black', value: 'wild' },
+  { color: 'red', value: 'reverse' },
+  { color: 'black', value: 'draw4' },
+];
+let yourTurn = false;
+let liftedIndex = null;
+let unoTimerHandle = null;
+let unoCalled = false;
+
+function cardEl(card, face = true) {
+  const el = document.createElement('div');
+  el.className = 'card ' + (face ? 'card-face' : 'card-back');
+  if (face) {
+    const c = COLORS[card.color];
+    el.style.background = c.bg;
+    const oval = document.createElement('div');
+    oval.className = 'face-oval';
+    const span = document.createElement('span');
+    span.textContent = symbolFor(card.value);
+    span.style.color = c.text;
+    oval.appendChild(span);
+    el.appendChild(oval);
+    ['tl','br'].forEach(pos => {
+      const cnr = document.createElement('div');
+      cnr.className = 'corner ' + pos;
+      cnr.textContent = symbolFor(card.value);
+      el.appendChild(cnr);
+    });
+  } else {
+    el.innerHTML = '<div class="back-oval"><span>AGP</span></div>';
+  }
+  return el;
+}
+
+/* ترتيب المقاعد: لاعبك دايم بالأسفل (جنوب)، والبقية بعكس اتجاه الساعة حوله.
+   في وضع الفرق: المقعد i والمقعد i + (العدد/2) دايماً نفس الفريق، فتصير الشريكة مقابلك. */
+function seatOrder() {
+  if (ROOM_MODE !== 'team') return players;
+  const teamCount = players.length / 2;
+  const byTeam = {};
+  players.forEach(p => { (byTeam[p.team] = byTeam[p.team] || []).push(p); });
+  const you = players.find(p => p.mine);
+  const teamIds = Object.keys(byTeam).sort((a,b)=> (byTeam[a].includes(you)?-1:1) - (byTeam[b].includes(you)?-1:1));
+  const ordered = [];
+  const maxLen = Math.max(...Object.values(byTeam).map(t => t.length));
+  for (let round = 0; round < maxLen; round++) {
+    teamIds.forEach(tid => { if (byTeam[tid][round]) ordered.push(byTeam[tid][round]); });
+  }
+  const meIdx = ordered.findIndex(p => p.mine);
+  return ordered.slice(meIdx).concat(ordered.slice(0, meIdx));
+}
+
+function renderSeats() {
+  const table = document.getElementById('table-3d');
+  table.querySelectorAll('.seat').forEach(s => s.remove());
+  const order = seatOrder();
+  const n = order.length;
+  const rx = 42, ry = 15; // نسبة مئوية تقريبية لحافة سطح الطاولة بالصورة الجديدة
+  const cy = 33; // مركز سطح الطاولة رأسياً (الجزء العلوي، فوق قاعدة الطاولة)
+  order.forEach((p, i) => {
+    if (p.mine) return; // مقعدك يمثله شريط يدك بالأسفل، ما نكرره على الطاولة
+    const angle = (Math.PI / 2) + (i * (2 * Math.PI / n)); // البداية من الجنوب (أنت) وباتجاه عقارب الساعة
+    const x = 50 + rx * Math.cos(angle);
+    const y = cy + ry * Math.sin(angle);
+    const seat = document.createElement('div');
+    seat.className = 'seat' + (activeSeatIndex === players.indexOf(p) ? ' active' : '');
+    seat.style.left = x + '%';
+    seat.style.top = y + '%';
+    seat.innerHTML = `
+      <div class="seat-name">${p.name}</div>
+      ${ROOM_MODE === 'team' ? `<div class="seat-team">فريق ${p.team + 1}</div>` : ''}
+      <div class="chair-wrap">
+        <span class="seat-count">${p.count}</span>
+        <img class="chair-img" src="assets/chair.png" alt="كرسي">
+        <img class="seat-avatar-img" src="${AVATAR_SRC[p.gender] || AVATAR_SRC.boy}" alt="${p.name}">
+      </div>`;
+    table.appendChild(seat);
+  });
+}
+
+function renderPiles() {
+  document.getElementById('draw-count').textContent = drawPileCount;
+  const stack = document.getElementById('draw-pile-stack');
+  stack.innerHTML = '';
+  for (let i = 0; i < 3; i++) stack.appendChild(cardEl({}, false));
+
+  const top = document.getElementById('discard-top');
+  const fresh = cardEl(discardTop, true);
+  fresh.id = 'discard-top';
+  top.replaceWith(fresh);
+}
+
+function renderHand() {
+  const row = document.getElementById('hand-row');
+  row.innerHTML = '';
+  yourHand.forEach((card, i) => {
+    const el = cardEl(card, true);
+    el.classList.add('hand-card');
+    if (liftedIndex === i) el.classList.add('lifted');
+    el.onclick = () => handleCardTap(i);
+    row.appendChild(el);
+  });
+  const activeName = players[activeSeatIndex]?.name;
+  document.getElementById('turn-banner').textContent = yourTurn ? 'دورك الآن!' : (activeName ? 'دور ' + activeName : '');
+}
+
+function isPlayable(card) {
+  if (card.color === 'black') return true;
+  return card.color === discardTop.color || card.value === discardTop.value;
+}
+
+function handleCardTap(i) {
+  if (!yourTurn) return;
+  if (liftedIndex !== i) { liftedIndex = i; renderHand(); return; }
+  const card = yourHand[i];
+  if (isPlayable(card)) {
+    playCard(i);
+  } else {
+    const el = document.querySelectorAll('.hand-card')[i];
+    el.classList.add('shake');
+    setTimeout(() => el.classList.remove('shake'), 300);
+  }
+}
+
+function playCard(i) {
+  discardTop = yourHand[i];
+  yourHand.splice(i, 1);
+  liftedIndex = null;
+  renderPiles();
+  renderHand();
+  checkUnoState();
+  maybeEndTurn();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('auto-toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* السحب تلقائي: يتفحص إذا ما فيه ورقة قابلة للعب بدورك، ويسحب لك تلقائياً */
+function maybeAutoDraw() {
+  if (!yourTurn) return;
+  const hasPlayable = yourHand.some(isPlayable);
+  if (hasPlayable) return;
+  setTimeout(() => {
+    yourHand.push({ color: 'yellow', value: '3' });
+    drawPileCount--;
+    renderPiles();
+    renderHand();
+    showToast('ما عندك ورقة مناسبة، تم السحب تلقائياً');
+    checkUnoState();
+    const nowHasPlayable = yourHand.some(isPlayable);
+    if (!nowHasPlayable) setTimeout(maybeEndTurn, 1200);
+  }, 900);
+}
+
+function maybeEndTurn() {
+  // نقطة وصل مستقبلية لتمرير الدور فعلياً عبر WebSocket
+}
+
+function checkUnoState() {
+  const unoBtn = document.getElementById('uno-btn');
+  const timerBox = document.getElementById('uno-timer');
+  const fill = document.getElementById('uno-timer-fill');
+  clearTimeout(unoTimerHandle);
+
+  if (yourHand.length === 1 && !unoCalled) {
+    unoBtn.classList.add('show');
+    timerBox.classList.add('show');
+    fill.style.transition = 'none';
+    fill.style.width = '100%';
+    requestAnimationFrame(() => {
+      fill.style.transition = 'width 5s linear';
+      fill.style.width = '0%';
+    });
+    unoTimerHandle = setTimeout(() => {
+      if (!unoCalled) {
+        showToast('نسيت تضغط أونو! سحبت ورقتين عقوبة');
+        yourHand.push({ color: 'green', value: '2' }, { color: 'blue', value: '4' });
+        renderHand();
+        resetUnoUI();
+      }
+    }, 5000);
+  } else {
+    unoCalled = false;
+    resetUnoUI();
+  }
+}
+
+function resetUnoUI() {
+  document.getElementById('uno-btn').classList.remove('show');
+  document.getElementById('uno-timer').classList.remove('show');
+}
+
+function callUno() {
+  unoCalled = true;
+  clearTimeout(unoTimerHandle);
+  resetUnoUI();
+}
+
+/* بداية تجريبية: نخلي دورك يبدأ بعد ثانية عشان تشوف السحب التلقائي والتفاعل */
+renderSeats();
+renderPiles();
+renderHand();
+setTimeout(() => {
+  yourTurn = true;
+  renderHand();
+  maybeAutoDraw();
+}, 1000);
+</script>
+
+</body>
+</html>
