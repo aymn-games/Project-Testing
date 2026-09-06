@@ -201,7 +201,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // يغطّي بالضبط هالفترة (من لحظة resolveSelection/handleForceEliminateClick
     // لين انتهاء applyElimination أو فرع الإخفاق بـshowClashScreen).
     var _resolutionInProgress = false;
-    var _selectedCandidateIdx = null; // لتفعيل زر "اقصاء اللاعب" اليدوي
     var _commentUnsub = null;
     var _autoPlayActive = false;
     var _autoPlayTimer = null;
@@ -229,7 +228,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _wheelSpinning = false;
         _pendingTurn = null;
         _resolutionInProgress = false;
-        _selectedCandidateIdx = null;
         if (_autoPlayTimer) { window.clearTimeout(_autoPlayTimer); _autoPlayTimer = null; }
         _autoPlayActive = false;
         _lastChooserId = null;
@@ -425,22 +423,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.rr-eventlog-item{font-size:0.78em;color:#f2e6cf;border-bottom:1px solid rgba(255,255,255,0.1);',
             'padding-bottom:6px;line-height:1.5;}',
 
-            /* ⚠️ العجلة صارت 3D: منظور + ميلان (rotateX) بدل القرص المسطّح
-             * القديم. الدوران وقت الاختيار (rotateZ) يصير على نفس المحور
-             * المائل — handleSpinClick يدمج الاثنين بسطر transform واحد.
-             * السُمك الحقيقي للحافة يتحقق بعدة طبقات مكرّرة (rr-wheel-depth-
-             * layer) بعمق متزايد وإضاءة أغمق تدريجياً، والتفاصيل الكاملة
-             * (شرائح متدرّجة + لمعة + فواصل + إطار ذهبي مزدوج + مسامير +
-             * هالة + أسماء بالطول) تترسم فوقها بـCanvas واحد فقط. */
-            '#rr-wheel-wrap{position:relative;width:min(460px,88vw);aspect-ratio:1;margin-top:6px;',
-            'perspective:1100px;}',
+            /* ⚠️ رجعت العجلة قرص مسطّح عادي (بدون منظور/ميلان 3D) بناءً على
+             * طلب صريح — أُلغي perspective عن #rr-wheel-wrap وrotateX عن
+             * #rr-wheel، فيصير الدوران وقت الاختيار rotateZ نظيف بدون أي
+             * ميلان (راجع handleSpinClick). طبقات العمق (rr-wheel-depth-
+             * layer) كانت تحاكي سُمك الحافة تحت المنظور المائل فقط — بدون
+             * تلك المنظور ما إلها أي أثر بصري، فتوقّف بناؤها بـrenderWheel
+             * (دالة buildWheelDepthLayers نفسها بقيت موجودة بدون استخدام
+             * تفادياً لأي تعديل زائد عن المطلوب). display:none هنا حماية
+             * إضافية بالحالة النادرة اللي تكون فيها موجودة بالـDOM أصلاً.
+             * التفاصيل الكاملة (شرائح متدرّجة + لمعة + فواصل + إطار ذهبي
+             * مزدوج + مسامير + هالة + أسماء بالطول) تترسم بـCanvas واحد
+             * فقط، ما تغيّرت ولا حرف. */
+            '#rr-wheel-wrap{position:relative;width:min(460px,88vw);aspect-ratio:1;margin-top:6px;}',
             '#rr-wheel-ground-shadow{position:absolute;left:50%;bottom:-8%;transform:translateX(-50%);',
             'width:82%;height:16%;border-radius:50%;',
             'background:radial-gradient(ellipse at center,rgba(0,0,0,0.55),transparent 70%);',
             'filter:blur(5px);pointer-events:none;}',
-            '#rr-wheel{position:absolute;inset:0;transform-style:preserve-3d;',
-            'transform:rotateX(52deg);transition:transform 3.4s cubic-bezier(0.15,0.85,0.25,1);}',
-            '.rr-wheel-depth-layer{position:absolute;inset:0;border-radius:50%;}',
+            '#rr-wheel{position:absolute;inset:0;',
+            'transform:none;transition:transform 3.4s cubic-bezier(0.15,0.85,0.25,1);}',
+            '.rr-wheel-depth-layer{display:none;}',
             '.rr-wheel-gloss{position:absolute;inset:0;border-radius:50%;pointer-events:none;',
             'background:radial-gradient(ellipse at 32% 24%,rgba(255,255,255,0.28),transparent 55%);}',
             '#rr-wheel-canvas{position:absolute;inset:0;display:block;}',
@@ -563,7 +565,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'display:flex;align-items:center;justify-content:center;z-index:3;',
             'box-shadow:0 2px 6px rgba(0,0,0,0.4);}',
             '.rr-lc-hearts{display:flex;gap:2px;justify-content:flex-start;padding-inline-start:2px;}',
-            '.rr-lc-card.rr-candidate-selected .rr-lc-plate{box-shadow:0 0 0 2px #e24b4a;}',
 
             /* ---- شاشة "الاشتباك" — إعادة تصميم: بدون صندوق/إطار خلفي،
              * تطفو مباشرة فوق خلفية شفافة مموّهة (blur) بدل الخلفية شبه
@@ -810,7 +811,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'border-bottom:1px solid rgba(255,255,255,0.07);margin:0 !important;}',
             '.rr-drawer-body .agp-shell-row-label{font-size:0.82em !important;color:#c9b48a !important;',
             'font-weight:700 !important;}',
-            '.rr-add-player-row{margin-top:6px;}',
+            '.rr-add-player-row{margin:0 0 16px !important;padding-bottom:16px !important;',
+            'border-bottom:1px solid rgba(255,255,255,0.08) !important;}',
             '.rr-add-player-row .agp-shell-btn-connect{width:100% !important;border:1px dashed ' + ACCENT2 + ' !important;',
             'background:rgba(212,175,55,0.08) !important;color:#f2e6cf !important;}',
             '.rr-exit-btn{background:transparent !important;color:#e24b4a !important;width:100%;',
@@ -848,23 +850,66 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'color:#fff;font-weight:900;font-size:0.65em;cursor:pointer;flex:none;}',
             '.rr-prow .rr-prow-action.rr-action-eliminate{background:#e24b4a;}',
             '.rr-prow .rr-prow-action.rr-action-revive{background:linear-gradient(135deg,#4ade80,#16a34a);}',
-            // ---- لوحة استقبال لاعبين جدد — حدود مدببة ذهبية ----
+            // ---- لوحة استقبال لاعبين جدد — نافذة 700×800 وسط الشاشة،
+            // شفافية 70% بهوية اللعبة الذهبية (طلب صريح)، شبكة 3 أعمدة
+            // بنفس مقاس بطاقات اللوبي الأساسي بالحرف (--rr-av وبقية
+            // المتغيّرات منسوخة من #agp-shell-box.agp-lobby-box أعلاه). ----
             '#agp-shell-overlay:has(#agp-shell-box.rr-mini-lobby-active){align-items:center !important;',
             'justify-content:center !important;background:rgba(5,3,10,0.55) !important;backdrop-filter:blur(3px);',
             'padding:0 !important;}',
-            '#agp-shell-box.rr-mini-lobby-active{width:420px !important;max-width:92vw !important;',
-            'height:auto !important;max-height:88vh !important;margin:0 !important;',
-            'padding:26px 26px 22px !important;box-sizing:border-box !important;',
-            'background:rgba(20,15,5,0.55) !important;backdrop-filter:blur(14px);',
-            'border:1.5px solid ' + ACCENT2 + ' !important;border-radius:0 !important;',
-            'clip-path:polygon(20px 0,100% 0,100% calc(100% - 20px),calc(100% - 20px) 100%,0 100%,0 20px);',
-            'box-shadow:0 0 0 1px rgba(212,175,55,0.15),0 0 40px rgba(212,175,55,0.35),',
-            '0 20px 60px rgba(0,0,0,0.5) !important;position:relative;overflow-y:auto;}',
-            '#agp-shell-box.rr-mini-lobby-active::before,#agp-shell-box.rr-mini-lobby-active::after{',
-            'content:"";position:absolute;width:26px;height:1.5px;background:' + ACCENT2 + ';',
-            'box-shadow:0 0 8px rgba(212,175,55,0.9);}',
-            '#agp-shell-box.rr-mini-lobby-active::before{top:0;left:0;transform:rotate(45deg) translate(-7px,-7px);}',
-            '#agp-shell-box.rr-mini-lobby-active::after{bottom:0;right:0;transform:rotate(45deg) translate(7px,7px);}',
+            '#agp-shell-box.rr-mini-lobby-active{width:700px !important;max-width:94vw !important;',
+            'height:800px !important;max-height:92vh !important;margin:0 !important;',
+            'padding:28px 26px 22px !important;box-sizing:border-box !important;',
+            'display:flex !important;flex-direction:column !important;',
+            'background:rgba(69,48,15,0.7) !important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);',
+            'border:1.5px solid ' + ACCENT2 + ' !important;border-radius:22px !important;',
+            'box-shadow:0 0 0 1px rgba(212,175,55,0.15),0 0 40px rgba(212,175,55,0.25),',
+            '0 20px 60px rgba(0,0,0,0.5) !important;position:relative;overflow:hidden;}',
+            '#agp-shell-box.rr-mini-lobby-active h2{flex:none !important;text-align:center !important;',
+            'font-size:1.3em !important;margin:0 0 12px !important;max-width:none !important;',
+            'background:linear-gradient(90deg,' + ACCENT2 + ',#f2e6cf 55%,' + ACCENT2 + ') !important;',
+            '-webkit-background-clip:text !important;background-clip:text !important;',
+            '-webkit-text-fill-color:transparent !important;}',
+            '#agp-shell-box.rr-mini-lobby-active .rr-mini-close-btn{position:absolute;top:16px;left:16px;',
+            'width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,0.35);',
+            'border:1px solid rgba(255,255,255,0.18);color:#f2e6cf;display:flex;align-items:center;',
+            'justify-content:center;font-size:16px;cursor:pointer;z-index:3;padding:0;}',
+            '#agp-shell-box.rr-mini-lobby-active .agp-join-hint{flex:none !important;text-align:center;',
+            'display:flex !important;flex-direction:column !important;align-items:center !important;gap:8px;}',
+            '#agp-shell-box.rr-mini-lobby-active .agp-join-keyword-plain{display:inline-block;',
+            'background:linear-gradient(90deg,' + ACCENT2 + ',#f2e6cf);color:#241a0c;font-weight:900;',
+            'padding:4px 16px;border-radius:999px;font-size:1.05em;letter-spacing:0.5px;}',
+            '#agp-shell-box.rr-mini-lobby-active .rr-mini-live-dot{display:flex;align-items:center;',
+            'justify-content:center;gap:6px;font-size:0.8em;color:#c9e8d3;font-weight:700;}',
+            '#agp-shell-box.rr-mini-lobby-active .rr-mini-live-dot .dot{width:9px;height:9px;',
+            'border-radius:50%;background:#4ade80;animation:rr-mini-pulse 1.3s ease-in-out infinite;}',
+            '@keyframes rr-mini-pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(0.7);}}',
+            '#agp-mini-lobby-count{display:block;color:#c9b48a;font-size:0.75em;margin-top:4px;}',
+            /* شبكة اللاعبين — 3 بالصف، نفس مقاس بطاقات اللوبي الأساسي
+             * بالحرف (agp-lobby-box أعلاه يستخدم 45px/150px/45px/10px/14px). */
+            '#agp-shell-box.rr-mini-lobby-active #agp-mini-lobby-list{',
+            '--rr-av:45px;--rr-nw:150px;--rr-overlap:10px;--rr-nh:45px;--rr-nf:14px;',
+            'flex:1 1 auto !important;min-height:0 !important;overflow-y:auto !important;',
+            'display:grid !important;grid-template-columns:repeat(3,1fr) !important;',
+            'gap:0.5cm 10px !important;margin:16px 0 0 !important;padding:4px 4px 10px !important;',
+            'list-style:none;}',
+            '#agp-shell-box.rr-mini-lobby-active #agp-mini-lobby-list li{position:relative;',
+            'display:flex !important;align-items:center;justify-content:center;',
+            'min-height:calc(var(--rr-av) * 1);}',
+            '#agp-shell-box.rr-mini-lobby-active .agp-pcard-avatar-basic{',
+            'width:var(--rr-av) !important;height:var(--rr-av) !important;border-width:3px !important;',
+            'flex-shrink:0;position:relative;z-index:2;}',
+            '#agp-shell-box.rr-mini-lobby-active .agp-pcard-name-basic{display:flex !important;',
+            'align-items:center;justify-content:center;width:var(--rr-nw) !important;',
+            'height:var(--rr-nh) !important;font-size:var(--rr-nf) !important;padding:0 14px !important;',
+            'margin-inline-start:calc(var(--rr-overlap) * -1) !important;overflow:hidden !important;',
+            'white-space:nowrap !important;background:rgba(255,255,255,0.14) !important;',
+            'border:1px solid rgba(255,255,255,0.32) !important;border-radius:999px !important;',
+            'box-sizing:border-box !important;position:relative;z-index:1;}',
+            '#agp-shell-box.rr-mini-lobby-active #agp-mini-lobby-done-btn{flex:none !important;',
+            'display:block !important;width:100% !important;margin:16px 0 0 !important;',
+            'padding:14px 0 !important;font-size:0.95em !important;letter-spacing:0.4px;',
+            'box-shadow:0 10px 26px rgba(212,175,55,0.3),0 0 0 1px rgba(255,255,255,0.15) inset !important;}',
 
             '.rr-lobbyscreen-remove-btn{position:absolute;top:-6px;left:-6px;width:22px;height:22px;border-radius:50%;',
             'background:#e24b4a;color:#fff;border:2px solid #000;font-weight:900;font-size:12px;line-height:18px;',
@@ -1275,7 +1320,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function renderWheel() {
         var wheel = el('rr-wheel');
         if (wheel) {
-            buildWheelDepthLayers(wheel);
+            // ⚠️ العجلة صارت مسطّحة (بدون منظور/ميلان) — طبقات العمق ما إلها
+            // أثر بصري بعد الآن، فتوقّفنا عن بنائها هنا (راجع تعليق CSS
+            // .rr-wheel-depth-layer أعلاه).
             if (!wheel.querySelector('.rr-wheel-gloss')) {
                 var gloss = document.createElement('div');
                 gloss.className = 'rr-wheel-gloss';
@@ -1528,11 +1575,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var durationMs = wheelSpinDurationMs();
         var wheel = el('rr-wheel');
         wheel.style.transitionDuration = durationMs + 'ms';
-        // ⚠️ العجلة صارت 3D (مائلة rotateX)، فالدوران وقت الاختيار لازم
-        // يصير rotateZ فوق نفس الميلان بسطر transform واحد، بدل rotate()
-        // المسطّح القديم اللي كان بيلغي الميلان تماماً. حساب finalRotation
-        // نفسه ما تغيّر ولا حرف.
-        wheel.style.transform = 'rotateX(52deg) rotateZ(' + finalRotation + 'deg)';
+        // ⚠️ العجلة رجعت مسطّحة (بدون ميلان rotateX)، فالدوران وقت الاختيار
+        // rotateZ نظيف بس. حساب finalRotation نفسه ما تغيّر ولا حرف.
+        wheel.style.transform = 'rotateZ(' + finalRotation + 'deg)';
 
         window.setTimeout(function () {
             _wheelSpinning = false;
@@ -1722,37 +1767,30 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var candidates = _alive.filter(function (p) { return p.id !== chooser.id; });
         if (!candidates.length) return; // ما فيه هدف ممكن (نظرياً ما يصير مع alive.length>=2)
         _pendingTurn = { chooser: chooser, candidates: candidates };
-        _selectedCandidateIdx = null;
 
         el('rr-chooser-slot').innerHTML = chooserCardHtml(chooser);
 
+        // ⚠️ [طلب صريح] الضغط على بطاقة أي لاعب = الاستريمر يختار بدالة
+        // صاحب الدور مباشرة — نفس بالضبط مسار الاختيار من الشات
+        // (resolveSelection عبر محرك الاحتمال الحقيقي + شاشة "مرحلة
+        // الاشتباك")، بدون أي إقصاء مباشر/تجاوز. ما فيه خطوة "تحديد ثم
+        // تأكيد" بعد الآن — نقرة وحدة كافية.
         var grid = el('rr-candidates-grid');
         grid.innerHTML = candidates.map(function (p, i) { return candidateCardHtml(p, i); }).join('');
         grid.querySelectorAll('.rr-lc-card[data-index]').forEach(function (card) {
             card.onclick = function () {
-                selectCandidateManually(parseInt(card.getAttribute('data-index'), 10));
+                var idx = parseInt(card.getAttribute('data-index'), 10);
+                resolveSelection(candidates[idx]);
             };
         });
 
         var forceBtn = el('rr-force-eliminate-btn');
         forceBtn.textContent = 'إقصاء صاحب الدور';
-        forceBtn.classList.add('rr-enabled'); // ⚠️ الزر شغّال دائماً الآن (مو معطّل لحين اختيار هدف)
+        forceBtn.classList.add('rr-enabled');
 
         el('rr-select-overlay').style.display = 'flex';
         wireCommentListener();
         startSelectionTimer();
-    }
-
-    function selectCandidateManually(idx) {
-        if (!_pendingTurn) return;
-        _selectedCandidateIdx = idx;
-        el('rr-candidates-grid').querySelectorAll('.rr-lc-card[data-index]').forEach(function (card) {
-            card.classList.toggle('rr-candidate-selected', parseInt(card.getAttribute('data-index'), 10) === idx);
-        });
-        // ⚠️ نفس الزر الأحمر — تتبدّل وظيفته/نصّه فقط حسب وجود اختيار يدوي،
-        // بدون أي زر إضافي (طلب صريح).
-        var target = _pendingTurn.candidates[idx];
-        el('rr-force-eliminate-btn').textContent = 'إقصاء ' + playerLabel(target);
     }
 
     var _selectTickUnsub = null;
@@ -1805,7 +1843,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (typeof _commentUnsub === 'function') _commentUnsub();
         _commentUnsub = null;
         _pendingTurn = null;
-        _selectedCandidateIdx = null;
     }
 
     function handleSkipClick() {
@@ -1839,11 +1876,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var chooser = _pendingTurn.chooser;
         _resolutionInProgress = true; // ⚠️ يبقى true طول عرض شاشة "عملية اقصاء ناجحة" — يُصفَّر بـapplyElimination
         var streamer = streamerVirtualPlayer();
-        // ⚠️ نفس الزر الأحمر — لو ما فيه اختيار يدوي، يقصي صاحب الدور نفسه.
-        // لو فيه لاعب مُختار يدوياً، يقصي ذاك اللاعب المحدَّد بدلاً منه.
-        // بالحالتين: "المُقصي" اللي يظهر بشاشة النتيجة هو الاستريمر نفسه،
-        // مو صاحب الدور ولا أي لاعب ثاني.
-        var target = (_selectedCandidateIdx !== null) ? _pendingTurn.candidates[_selectedCandidateIdx] : chooser;
+        // ⚠️ [بعد فصل مسار اختيار الهدف عن هذا الزر] الضغط على بطاقة أي
+        // لاعب يحل الدور فوراً عبر resolveSelection (محرك الاحتمال
+        // الحقيقي) — هذا الزر الأحمر بقي حصراً لتجاوز صاحب الدور نفسه.
+        var target = chooser;
         closeSelectionScreen();
         // ⚠️ تجاوز يدوي صريح — إقصاء مباشر بدون المرور بمحرك الاحتمال، لكن
         // بنفس شاشة "عملية اقصاء ناجحة" المعروضة بالمسار العادي (طلب صريح
@@ -2326,21 +2362,33 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var bodyWrap = document.createElement('div');
         bodyWrap.className = 'rr-drawer-body';
+        var reopenBtn = null;
         fieldNodes.forEach(function (n) {
-            // ⚠️ حقل إدارة اللاعبين الجاهز من الملف المشترك (القائمة +
-            // الأزرار) نستبعده هنا — تبويب اللاعبين المخصَّص يحل محله بالكامل.
-            if (n.querySelector && n.querySelector('#agp-settings-player-list')) return;
+            // ⚠️ [إصلاح خلل حقيقي] حقل إدارة اللاعبين الجاهز من الملف
+            // المشترك (القائمة + زر "إضافة لوبي جديد") نستبعده هنا —
+            // تبويب اللاعبين المخصَّص يحل محل القائمة بالكامل. لكن الزر
+            // #agp-reopen-registration-btn محشور داخل نفس هذا الحقل بالضبط
+            // بالملف المشترك (عنصر واحد يجمع القائمة والزر معاً) — كان
+            // الاستبعاد القديم يرمي الزر مع القائمة بالغلط، فما كان
+            // "➕ دخول لاعب جديد" يظهر إطلاقاً رغم وجود الكود أدناه له.
+            // نسحب الزر قبل الاستبعاد بدل ما يضيع معه.
+            if (n.querySelector && n.querySelector('#agp-settings-player-list')) {
+                var btnInside = n.querySelector('#agp-reopen-registration-btn');
+                if (btnInside) reopenBtn = btnInside;
+                return;
+            }
             bodyWrap.appendChild(n);
         });
 
-        var reopenBtn = bodyWrap.querySelector('#agp-reopen-registration-btn');
+        // ⚠️ [طلب صريح] الزر يظهر أعلى تبويب "الإعدادات"، فوق كل الحقول
+        // مباشرة — مو بالأسفل.
         var addRow = document.createElement('div');
         addRow.className = 'rr-add-player-row';
         if (reopenBtn) {
-            reopenBtn.textContent = '➕ إضافة لاعب جديد';
+            reopenBtn.textContent = '➕ دخول لاعب جديد';
             addRow.appendChild(reopenBtn);
         }
-        bodyWrap.appendChild(addRow);
+        bodyWrap.insertBefore(addRow, bodyWrap.firstChild);
 
         var playersTab = document.createElement('div');
         playersTab.id = 'rr-players-tab';
@@ -2500,18 +2548,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var doneBtn = document.getElementById('agp-mini-lobby-done-btn');
         if (!doneBtn || doneBtn.getAttribute('data-rr-wired') === '1') return;
         clearLobbyInlineOverrides(box);
-        // ⚠️ الكلمة المفتاحية مرسومة أصلاً داخل .agp-join-keyword-plain
-        // بنفس هذي الشاشة (الشل المشترك يعرضها هناك) — نقرأها من الـDOM
-        // مباشرة قبل ما نستبدل محتوى الحاوية، لا يوجد getter عام لها.
-        var keywordEl = box.querySelector('.agp-join-keyword-plain');
-        var keyword = (keywordEl && keywordEl.textContent) || '';
         doneBtn.setAttribute('data-rr-wired', '1');
         box.classList.add('rr-mini-lobby-active');
         var h2 = box.querySelector('h2');
         if (h2) h2.textContent = 'لوبي استقبال الاعبين الجدد لعبة الروليت الروسي';
+        // ⚠️ [طلب صريح] نص التعليمات ثابت، وبادج الكلمة المفتاحية
+        // (.agp-join-keyword-plain — مرسوم أصلاً بنفس الشاشة من الملف
+        // المشترك) يبقى العنصر الوحيد المعروض للكلمة نفسها — بدل تكرارها
+        // مرتين (نص + بادج).
         var hint = box.querySelector('.agp-join-hint-text');
-        if (hint) hint.innerHTML = 'اكتب <span style="color:#e8c56b;font-weight:900;">"' + escapeHtml(keyword) + '"</span> في شات البث للدخول';
-        doneBtn.textContent = 'انهاء الدخول واكمال المباراة';
+        if (hint) hint.textContent = 'لدخول لاعبين جدد للمباراة اكتبوا بالشات:';
+        // ⚠️ مؤشّر "جاري الاستماع" نابض — يُضاف مرة وحدة فقط (idempotent).
+        var hintWrap = box.querySelector('.agp-join-hint');
+        if (hintWrap && !hintWrap.querySelector('.rr-mini-live-dot')) {
+            var dot = document.createElement('div');
+            dot.className = 'rr-mini-live-dot';
+            dot.innerHTML = '<span class="dot"></span>جاري الاستماع للشات...';
+            hintWrap.appendChild(dot);
+        }
+        doneBtn.textContent = '💾 حفظ واكمال المباراة';
         // ⚠️ الزر أصلاً مربوط بـhandleMiniLobbyDone الداخلية (ترجع لشاشة
         // الإعدادات الرئيسية) — نضيف مستمعاً إضافياً (بدون إزالة الأصلي)
         // يغلق التبويب بالكامل مباشرة بعده بنفس اللحظة، حتى يرجع الاستريمر
@@ -2522,6 +2577,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 if (overlay) overlay.style.display = 'none';
             }, 0);
         });
+        // ⚠️ [طلب صريح] علامة ✕ تقفل تبويب اللوبي — تُنفّذ بالضبط نفس
+        // إجراء زر "حفظ واكمال المباراة" (ما فيه مسار "إلغاء" منفصل أصلاً؛
+        // الانضمام حي وتلقائي بمجرد كتابة الكلمة، فـ"إغلاق" و"حفظ" نفس الشي).
+        if (!box.querySelector('.rr-mini-close-btn')) {
+            var closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'rr-mini-close-btn';
+            closeBtn.textContent = '✕';
+            closeBtn.addEventListener('click', function () { doneBtn.click(); });
+            box.appendChild(closeBtn);
+        }
     }
 
     // ⚠️ سلايد الأسماء الطويلة (بدل قصّ ellipsis) — نلف النص بعنصر داخلي
