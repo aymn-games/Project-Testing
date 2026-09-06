@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>أونو - غرفة الانتظار</title>
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --violet: #7c3aed;
+    --violet2: #d878ff;
+    --input-border: #3a2a55;
+    --card-border: #4b3070;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Zain', sans-serif;
+    background: radial-gradient(circle at 50% 0%, #1b0f2e 0%, #0d0714 70%);
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px 100px;
+  }
+  .room-code-box {
+    text-align: center;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 16px 26px;
+    margin-bottom: 22px;
+  }
+  .room-code-box p { font-size: 13px; color: #a89bc4; margin-bottom: 6px; }
+  .room-code-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+  }
+  .room-code {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: 4px;
+    background: linear-gradient(90deg, var(--violet2), var(--violet));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .copy-btn {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    border: 1px solid var(--input-border);
+    background: rgba(255,255,255,0.05);
+    color: #c9bde3;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .status-line {
+    font-size: 14px;
+    color: #a89bc4;
+    margin-bottom: 18px;
+    text-align: center;
+  }
+  .status-line b { color: var(--violet2); }
+
+  .teams-wrap {
+    width: 100%;
+    max-width: 460px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .team-block {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--input-border);
+    border-radius: 16px;
+    padding: 12px;
+  }
+  .team-title {
+    font-size: 13px;
+    color: #a89bc4;
+    font-weight: 700;
+    margin-bottom: 10px;
+    padding: 0 4px;
+  }
+  .player-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5cm;
+  }
+  .player-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .avatar {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--violet), #5b21b6);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 800;
+    border: 2px solid var(--violet2);
+    margin-bottom: 6px;
+  }
+  .avatar.host { border-color: #ffcf5c; }
+  .avatar.empty {
+    background: rgba(255,255,255,0.03);
+    border: 2px dashed var(--input-border);
+  }
+  .p-name {
+    font-size: 13px;
+    color: #e5dcf5;
+    max-width: 68px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .p-name.empty { color: #6b5c85; }
+  .host-tag {
+    font-size: 10px;
+    color: #ffcf5c;
+    margin-top: 1px;
+  }
+
+  .bottom-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+    background: linear-gradient(0deg, #0d0714 60%, transparent);
+    display: flex;
+    justify-content: center;
+  }
+  .start-btn {
+    width: 100%;
+    max-width: 460px;
+    padding: 15px;
+    border-radius: 14px;
+    border: none;
+    background: linear-gradient(135deg, var(--violet2), var(--violet));
+    color: #fff;
+    font-family: 'Zain', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(124,58,237,.4);
+  }
+  .start-btn:disabled {
+    opacity: 0.4;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+  .waiting-note {
+    width: 100%;
+    max-width: 460px;
+    text-align: center;
+    font-size: 14px;
+    color: #a89bc4;
+    padding: 15px;
+  }
+</style>
+</head>
+<body>
+
+<div class="room-code-box">
+  <p>كود الغرفة</p>
+  <div class="room-code-row">
+    <span class="room-code" id="room-code">4821</span>
+    <button class="copy-btn" onclick="copyCode()">⧉</button>
+  </div>
+</div>
+
+<p class="status-line" id="status-line">في انتظار اللاعبين... <b id="joined-count">3</b> / <span id="total-count">6</span></p>
+
+<div class="teams-wrap" id="teams-wrap"></div>
+
+<div class="bottom-bar">
+  <!-- إذا كان المستخدم هو صاحب الغرفة يظهر الزر، غير كذا يظهر ملاحظة الانتظار -->
+  <button class="start-btn" id="start-btn" disabled onclick="startGame()">ابدأ الجولة</button>
+</div>
+
+<script>
+// بيانات تجريبية للعرض فقط — تُستبدل ببيانات حقيقية من WebSocket
+const isHost = true;
+const playMode = 'team'; // 'solo' أو 'team'
+const totalSlots = 6;    // إجمالي عدد اللاعبين المطلوب (فردي) أو اللاعبين الكلي (فرق = عدد الفرق × 2)
+const players = [
+  { name: 'أيمن', host: true, team: 1 },
+  { name: 'سارة', host: false, team: 1 },
+  { name: 'فهد', host: false, team: 2 },
+];
+
+function initials(name) {
+  return name.trim().charAt(0);
+}
+
+function render() {
+  document.getElementById('total-count').textContent = totalSlots;
+  document.getElementById('joined-count').textContent = players.length;
+
+  const wrap = document.getElementById('teams-wrap');
+  wrap.innerHTML = '';
+
+  if (playMode === 'solo') {
+    const block = document.createElement('div');
+    block.className = 'team-block';
+    const grid = document.createElement('div');
+    grid.className = 'player-grid';
+    for (let i = 0; i < totalSlots; i++) {
+      grid.appendChild(playerCardEl(players[i]));
+    }
+    block.appendChild(grid);
+    wrap.appendChild(block);
+  } else {
+    const teamCount = totalSlots / 2;
+    for (let t = 1; t <= teamCount; t++) {
+      const block = document.createElement('div');
+      block.className = 'team-block';
+      const title = document.createElement('div');
+      title.className = 'team-title';
+      title.textContent = 'الفريق ' + t;
+      block.appendChild(title);
+      const grid = document.createElement('div');
+      grid.className = 'player-grid';
+      const teamPlayers = players.filter(p => p.team === t);
+      for (let i = 0; i < 2; i++) {
+        grid.appendChild(playerCardEl(teamPlayers[i]));
+      }
+      block.appendChild(grid);
+      wrap.appendChild(block);
+    }
+  }
+
+  const startBtn = document.getElementById('start-btn');
+  if (!isHost) {
+    startBtn.replaceWith(Object.assign(document.createElement('p'), {
+      className: 'waiting-note',
+      textContent: 'بانتظار صاحب الغرفة لبدء الجولة...'
+    }));
+  } else {
+    startBtn.disabled = players.length < totalSlots;
+  }
+}
+
+function playerCardEl(player) {
+  const card = document.createElement('div');
+  card.className = 'player-card';
+  const av = document.createElement('div');
+  av.className = 'avatar' + (!player ? ' empty' : player.host ? ' host' : '');
+  av.textContent = player ? initials(player.name) : '';
+  const name = document.createElement('div');
+  name.className = 'p-name' + (!player ? ' empty' : '');
+  name.textContent = player ? player.name : 'شاغر';
+  card.appendChild(av);
+  card.appendChild(name);
+  if (player && player.host) {
+    const tag = document.createElement('div');
+    tag.className = 'host-tag';
+    tag.textContent = 'صاحب الغرفة';
+    card.appendChild(tag);
+  }
+  wrapIfNeeded(card);
+  return card;
+}
+
+function wrapIfNeeded(card) {} // مكان مخصص لأي منطق إضافي لاحقاً
+
+function copyCode() {
+  navigator.clipboard.writeText(document.getElementById('room-code').textContent);
+}
+
+function startGame() {
+  // TODO: ربط ببداية اللعبة الفعلية عبر WebSocket
+  alert('بدء اللعبة (تجريبي)');
+}
+
+render();
+</script>
+
+</body>
+</html>
