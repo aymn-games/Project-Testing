@@ -697,6 +697,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var watermarkEl = document.querySelector('#pc-stage-inner .pc-stage-watermark');
         if (watermarkEl) watermarkEl.style.display = 'none';
 
+        // نوع "تخمين شخصية" -- الصورة المقصوصة تتبدّل للصورة الكاملة
+        // لحظة الكشف عن الإجابة الصحيحة.
+        if (_currentChallenge && _currentChallenge.type === 'reveal' && _currentChallenge.revealImageFile) {
+            stageInner.style.backgroundImage = "url('challenge-images/" + encodeURIComponent(_currentChallenge.revealImageFile) + "')";
+        }
+
         var avatarStyle = avatarUrl ? ' style="background-image:url(\'' + escapeAttr(avatarUrl) + '\')"' : '';
         var panel = el('pc-result-panel');
         panel.innerHTML =

@@ -82,7 +82,13 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
 .aq-q-card.aq-expanded .aq-q-answers { display: flex; }
 .aq-q-answer-chip { background: var(--aq-green-800); border: 1px solid var(--aq-gold-700); border-radius: 999px; padding: 3px 10px; font-size: 0.8em; }
 .aq-q-answer-chip-primary { background: var(--aq-gold-700); border-color: var(--aq-gold-400); color: var(--aq-green-950); font-weight: 800; }
+.aq-q-type-badge { background: var(--aq-green-700); border: 1px solid var(--aq-gold-700); color: var(--aq-gold-300); border-radius: 999px; padding: 2px 8px; font-size: 0.72em; font-weight: 800; margin-inline-start: 8px; white-space: nowrap; }
 .aq-primary-answer-input { border-color: var(--aq-gold-500) !important; }
+.aq-row-field select {
+    width: 100%; padding: 12px 14px; font-size: 1em; background: var(--aq-green-950);
+    border: 1.5px solid var(--aq-green-line); border-radius: 8px; color: var(--aq-text); font-family: inherit; direction: rtl;
+}
+.aq-row-field select:focus { outline: none; border-color: var(--aq-gold-500); }
 
 .aq-row-field { position: relative; margin-bottom: 14px; }
 .aq-row-field input[type="text"] {
@@ -157,6 +163,7 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
     var _challenges = [];
     var _editingId = null; // null = وضع إضافة، غير ذلك = وضع تعديل
     var _formPreviewObjectUrl = null; // معاينة محلية فقط -- ما تُرفع ولا تُحفظ
+    var _revealPreviewObjectUrl = null; // معاينة محلية للصورة الكاملة (نوع "تخمين شخصية") -- ما تُرفع ولا تُحفظ
 
     function el(id) { return document.getElementById(id); }
     function escapeHtml(str) {
@@ -193,17 +200,18 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
         el('aq-count').textContent = _challenges.length;
         var listEl = el('aq-list');
         listEl.innerHTML = _challenges.map(function (c) {
-            var chips = c.answers.map(function (a, i) {
+            var chips = (c.answers || []).map(function (a, i) {
                 return i === 0
                     ? '<span class="aq-q-answer-chip aq-q-answer-chip-primary">⭐ ' + escapeHtml(a) + '</span>'
                     : '<span class="aq-q-answer-chip">' + escapeHtml(a) + '</span>';
             }).join('');
             var thumbStyle = c.imageFile ? ' style="background-image:url(\'challenge-images/' + escapeHtml(c.imageFile) + '\')"' : '';
+            var typeBadge = c.type === 'reveal' ? '<span class="aq-q-type-badge">🔍 تخمين شخصية</span>' : '';
             return '<div class="aq-q-card" id="aq-qcard-' + escapeHtml(c.id) + '">' +
                 '<div class="aq-q-thumb"' + thumbStyle + '></div>' +
                 '<div class="aq-q-card-body">' +
                     '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">' +
-                        '<span class="aq-q-file">' + escapeHtml(c.imageFile || '(بدون اسم ملف)') + '</span>' +
+                        '<span class="aq-q-file">' + escapeHtml(c.imageFile || '(بدون اسم ملف)') + typeBadge + '</span>' +
                         '<span class="aq-q-actions">' +
                             '<button type="button" class="aq-icon-btn aq-toggle-btn" data-id="' + escapeHtml(c.id) + '" title="عرض الإجابات">👁️</button>' +
                             '<button type="button" class="aq-icon-btn aq-edit-btn" data-id="' + escapeHtml(c.id) + '" title="تعديل">✏️</button>' +
@@ -237,22 +245,53 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
     }
 
     function buildFormHtml(existing) {
+        var type = (existing && existing.type) || 'full';
         var allAnswers = existing && existing.answers && existing.answers.length ? existing.answers : [''];
         var primaryAnswer = allAnswers[0] || '';
         var variantAnswers = allAnswers.slice(1);
         var variantRows = variantAnswers.map(function (ans) { return answerRowHtml(ans); }).join('');
+
+        var mainImagePreview = existing && existing.imageFile ? ' style="background-image:url(\'challenge-images/' + escapeHtml(existing.imageFile) + '\')"' : '';
+        var revealImagePreview = existing && existing.revealImageFile ? ' style="background-image:url(\'challenge-images/' + escapeHtml(existing.revealImageFile) + '\')"' : '';
+
         return '<h2>' + (existing ? 'تعديل صورة' : 'صورة جديدة') + '</h2>' +
-            '<div class="aq-image-picker">' +
-                '<div class="aq-image-preview" id="aq-form-preview"' + (existing && existing.imageFile ? ' style="background-image:url(\'challenge-images/' + escapeHtml(existing.imageFile) + '\')"' : '') + '></div>' +
-                '<div style="flex:1;">' +
-                    '<input type="file" id="aq-form-file-picker" accept="image/*">' +
-                    '<div class="aq-hint" style="margin-top:6px;">اختيار الملف هنا للمعاينة وتعبئة الاسم تلقائياً بس — الرفع الفعلي يدوي (شوف التنبيه فوق).</div>' +
+
+            '<div class="aq-row-field" style="margin-bottom:16px;">' +
+                '<select id="aq-form-type">' +
+                    '<option value="full"' + (type === 'full' ? ' selected' : '') + '>🖼️ صورة كاملة</option>' +
+                    '<option value="reveal"' + (type === 'reveal' ? ' selected' : '') + '>🔍 تخمين شخصية (جزء من صورة)</option>' +
+                '</select>' +
+                '<label>نوع التحدي</label>' +
+            '</div>' +
+
+            '<div id="aq-main-image-section">' +
+                '<div class="aq-image-picker">' +
+                    '<div class="aq-image-preview" id="aq-form-preview"' + mainImagePreview + '></div>' +
+                    '<div style="flex:1;">' +
+                        '<input type="file" id="aq-form-file-picker" accept="image/*">' +
+                        '<div class="aq-hint" style="margin-top:6px;" id="aq-main-image-hint">اختيار الملف هنا للمعاينة وتعبئة الاسم تلقائياً بس — الرفع الفعلي يدوي (شوف التنبيه فوق).</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="aq-row-field">' +
+                    '<input type="text" id="aq-form-filename" placeholder="مثال: challenge-01.png" value="' + escapeHtml(existing ? (existing.imageFile || '') : '') + '">' +
+                    '<label id="aq-main-filename-label">اسم ملف الصورة (لازم يطابق بالضبط الملف اللي بترفعه لمجلد challenge-images)</label>' +
                 '</div>' +
             '</div>' +
-            '<div class="aq-row-field">' +
-                '<input type="text" id="aq-form-filename" placeholder="مثال: challenge-01.png" value="' + escapeHtml(existing ? existing.imageFile : '') + '">' +
-                '<label>اسم ملف الصورة (لازم يطابق بالضبط الملف اللي بترفعه لمجلد challenge-images)</label>' +
+
+            '<div id="aq-reveal-image-section" style="display:' + (type === 'reveal' ? 'block' : 'none') + ';">' +
+                '<div class="aq-image-picker">' +
+                    '<div class="aq-image-preview" id="aq-form-reveal-preview"' + revealImagePreview + '></div>' +
+                    '<div style="flex:1;">' +
+                        '<input type="file" id="aq-form-reveal-file-picker" accept="image/*">' +
+                        '<div class="aq-hint" style="margin-top:6px;">الصورة الكاملة اللي تنكشف بعد الإجابة أو انتهاء الوقت.</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="aq-row-field">' +
+                    '<input type="text" id="aq-form-reveal-filename" placeholder="مثال: challenge-01-full.png" value="' + escapeHtml(existing ? (existing.revealImageFile || '') : '') + '">' +
+                    '<label>اسم ملف الصورة الكاملة (بنفس مجلد challenge-images)</label>' +
+                '</div>' +
             '</div>' +
+
             '<div class="aq-row-field">' +
                 '<input type="text" id="aq-form-primary-answer" class="aq-primary-answer-input" placeholder="مثال: برج خليفة" value="' + escapeHtml(primaryAnswer) + '">' +
                 '<label>⭐ الإجابة الأساسية — هذي اللي تظهر بشاشة الكشف وقت اللعب</label>' +
@@ -300,6 +339,17 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
             wireAnswerRowRemove(row);
         });
 
+        el('aq-form-type').addEventListener('change', function () {
+            var isReveal = el('aq-form-type').value === 'reveal';
+            el('aq-reveal-image-section').style.display = isReveal ? 'block' : 'none';
+            el('aq-main-image-hint').textContent = isReveal
+                ? 'هذي الصورة المقصوصة/المقرّبة اللي تظهر أول الجولة — اختيار الملف هنا للمعاينة وتعبئة الاسم تلقائياً بس.'
+                : 'اختيار الملف هنا للمعاينة وتعبئة الاسم تلقائياً بس — الرفع الفعلي يدوي (شوف التنبيه فوق).';
+            el('aq-main-filename-label').textContent = isReveal
+                ? 'اسم ملف الصورة المقصوصة (لازم يطابق بالضبط الملف اللي بترفعه لمجلد challenge-images)'
+                : 'اسم ملف الصورة (لازم يطابق بالضبط الملف اللي بترفعه لمجلد challenge-images)';
+        });
+
         el('aq-form-file-picker').addEventListener('change', function (e) {
             var file = e.target.files && e.target.files[0];
             if (!file) return;
@@ -309,8 +359,19 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
             if (!el('aq-form-filename').value) el('aq-form-filename').value = file.name;
         });
 
+        el('aq-form-reveal-file-picker').addEventListener('change', function (e) {
+            var file = e.target.files && e.target.files[0];
+            if (!file) return;
+            if (_revealPreviewObjectUrl) URL.revokeObjectURL(_revealPreviewObjectUrl);
+            _revealPreviewObjectUrl = URL.createObjectURL(file);
+            el('aq-form-reveal-preview').style.backgroundImage = 'url(\'' + _revealPreviewObjectUrl + '\')';
+            if (!el('aq-form-reveal-filename').value) el('aq-form-reveal-filename').value = file.name;
+        });
+
         el('aq-form-save-btn').addEventListener('click', function () {
+            var type = el('aq-form-type').value;
             var imageFile = (el('aq-form-filename').value || '').trim();
+            var revealImageFile = (el('aq-form-reveal-filename').value || '').trim();
             var primaryAnswer = (el('aq-form-primary-answer').value || '').trim();
             var variantInputs = Array.prototype.slice.call(panel.querySelectorAll('.aq-answer-input'));
             var variants = variantInputs.map(function (inp) { return (inp.value || '').trim(); }).filter(Boolean);
@@ -318,20 +379,24 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
             var errEl = el('aq-form-error');
 
             if (!imageFile) { errEl.textContent = 'لازم تكتب اسم ملف الصورة.'; errEl.style.display = 'block'; return; }
+            if (type === 'reveal' && !revealImageFile) { errEl.textContent = 'لازم تكتب اسم ملف الصورة الكاملة (نوع "تخمين شخصية").'; errEl.style.display = 'block'; return; }
             if (!primaryAnswer) { errEl.textContent = 'لازم تكتب الإجابة الأساسية.'; errEl.style.display = 'block'; return; }
+
+            var challenge = { id: _editingId || ('img' + Date.now()), type: type, imageFile: imageFile, answers: answers };
+            if (type === 'reveal') challenge.revealImageFile = revealImageFile;
 
             if (_editingId) {
                 var idx = _challenges.findIndex(function (c) { return c.id === _editingId; });
-                _challenges[idx] = { id: _editingId, imageFile: imageFile, answers: answers };
+                _challenges[idx] = challenge;
             } else {
-                _challenges.push({ id: 'img' + Date.now(), imageFile: imageFile, answers: answers });
+                _challenges.push(challenge);
             }
 
             panel.style.display = 'none';
             panel.innerHTML = '';
             _editingId = null;
             renderList();
-            showSuccess('تم الحفظ محلياً — لا تنسى تنزيل الملف وترفع ملف الصورة أيضاً عشان يصير التغيير فعلي باللعبة.');
+            showSuccess('تم الحفظ محلياً — لا تنسى تنزيل الملف وترفع ملف' + (type === 'reveal' ? 'ات الصور' : ' الصورة') + ' أيضاً عشان يصير التغيير فعلي باللعبة.');
         });
 
         el('aq-form-cancel-btn').addEventListener('click', function () {
