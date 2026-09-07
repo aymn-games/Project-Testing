@@ -270,6 +270,17 @@ function adminResetDeviceLock(userId) {
 }
 
 /**
+ * [0.45.11] الأدمن فقط — يفعّل/يطفي سماح تغيير الجهاز لمرة واحدة لحساب
+ * ستريمر مقفول بجهاز. يُستهلَك تلقائياً بأول تسجيل دخول تالٍ.
+ * @param {number} userId
+ * @param {boolean} allow
+ * @returns {Promise<Object>}
+ */
+function adminAllowDeviceChange(userId, allow) {
+    return request('/api/admin/allow-device-change', { method: 'POST', body: { userId: userId, allow: allow } });
+}
+
+/**
  * بروفايل عام لأي مستخدم عبر الـID العام (custom_id) — بدون تسجيل
  * دخول، يصلح للاستدعاء من صفحة profile.html العامة مباشرة.
  * @param {string} customId
@@ -680,6 +691,7 @@ global.AGPAuth = {
     adminSetCustomId: adminSetCustomId,
     adminDeleteUser: adminDeleteUser,
     adminResetDeviceLock: adminResetDeviceLock,
+    adminAllowDeviceChange: adminAllowDeviceChange,
     getPublicProfile: getPublicProfile,
     getAnnouncement: getAnnouncement,
     adminSetAnnouncement: adminSetAnnouncement,
