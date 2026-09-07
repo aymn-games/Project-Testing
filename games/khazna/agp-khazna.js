@@ -95,10 +95,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         el('kz-header-home-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
         el('kz-header-info-btn').addEventListener('click', function () { showInstructions(); });
-        el('kz-header-settings-btn').addEventListener('click', function () {
-            // ⚠️ بناء تدريجي: إعادة فتح الإعدادات أثناء المباراة غير مبنية بعد.
-            AGP.log('Khazna: زر الإعدادات -- إعادة الفتح أثناء المباراة لسا ما بُنيت.');
-        });
+        el('kz-header-settings-btn').addEventListener('click', function () { openInMatchDrawer(); });
+    }
+
+    /* ======================================================================
+     *  2.4) بانر "فكرة اللعبة من الاستريمر" -- ثابت بزاوية الشاشة (position:
+     *       fixed، ما يختفي عند أي تمرير)، فوق كل شاشات اللعبة، بحدود
+     *       ذهبية متوهجة، يفتح حساب صاحب الفكرة بالتيك توك (zp.oi) بتبويب
+     *       جديد عند الضغط.
+     * ==================================================================== */
+    function injectIdeaBanner() {
+        if (el('kz-idea-banner-link')) return;
+        var link = document.createElement('a');
+        link.id = 'kz-idea-banner-link';
+        link.href = 'https://www.tiktok.com/@zp.oi';
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.innerHTML = '<img id="kz-idea-banner" src="idea-banner.jpg" alt="فكرة اللعبة من الاستريمر -- @zp.oi">';
+        document.body.appendChild(link);
     }
 
     /* ======================================================================
@@ -469,6 +483,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *     آلية الإرسال الفعلية قبل ما أبنيهم.
      * ==================================================================== */
     var MEMORIZE_SECONDS = 15;
+    var _roundNumber = 1;
+    var _matchStartedAt = null;
     var _matchEl = null;
 
     function pickRandomHours(n) {
@@ -497,7 +513,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<circle cx="75" cy="75" r="60" fill="#150a20" stroke="#7c3aed" stroke-opacity="0.4" stroke-width="2"/>' +
             '<g>' + ticks + '</g>' +
             '<line x1="75" y1="75" x2="75" y2="42" stroke="#fff" stroke-width="5" stroke-linecap="round" transform="rotate(' + hourAngle + ' 75 75)"/>' +
-            '<line x1="75" y1="75" x2="75" y2="26" stroke="var(--gold)" stroke-width="3.5" stroke-linecap="round" transform="rotate(0 75 75)"/>' +
             '<circle cx="75" cy="75" r="5" fill="var(--gold)"/>' +
         '</svg>';
     }
@@ -568,12 +583,81 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _matchEl = document.createElement('div');
         _matchEl.id = 'kz-match';
         _matchEl.innerHTML =
-            '<div id="kz-vault">' + vaultSvgMarkup() + '</div>' +
-            '<div id="kz-flying-clocks"></div>' +
-            '<div id="kz-memorize-badge"><div class="kz-mem-num" id="kz-mem-num">' + MEMORIZE_SECONDS + '</div><div class="kz-mem-label">ثانية للحفظ</div></div>' +
-            '<div id="kz-options"></div>';
+            '<div id="kz-picker">' +
+                '<h3>🎯 مين عليه الدور؟</h3>' +
+                '<div id="kz-reel-window"><div id="kz-reel-highlight-tab"></div><div id="kz-reel-track"></div></div>' +
+                '<button type="button" id="kz-picker-btn">🎲 تحريك</button>' +
+                '<div id="kz-picker-result"><div class="kz-picked-name" id="kz-picked-name"></div><div class="kz-picked-sub">🔥 الدور عندك -- جاوب قبلهم!</div></div>' +
+            '</div>' +
+            '<div id="kz-round">' +
+                '<div id="kz-turn-badge"><div id="kz-turn-avatar"></div><div class="kz-turn-name" id="kz-turn-name"></div><div class="kz-turn-sub">🔥 الدور عندك -- جاوب قبلهم!</div></div>' +
+                '<div id="kz-vault">' + vaultSvgMarkup() + '</div>' +
+                '<div id="kz-flying-clocks"></div>' +
+                '<div id="kz-memorize-badge"><div class="kz-mem-num" id="kz-mem-num">' + MEMORIZE_SECONDS + '</div><div class="kz-mem-label">ثانية للحفظ</div></div>' +
+                '<div id="kz-options">' +
+                    '<div id="kz-answer-timer"><div class="kz-ans-num" id="kz-ans-num">' + _settings.chooseSeconds + '</div><div class="kz-ans-label">ثانية لاختيار الإجابة</div></div>' +
+                    '<div id="kz-options-panel-holder"></div>' +
+                '</div>' +
+            '</div>';
         document.body.appendChild(_matchEl);
         return _matchEl;
+    }
+
+    /* ---------------- عجلة اختيار اللاعب صاحب الدور ---------------- */
+    var REEL_ITEM_H = 60;
+    var _answerInterval = null;
+
+    function buildReel(names) {
+        var loopNames = [];
+        for (var r = 0; r < 8; r++) loopNames = loopNames.concat(names);
+        var track = el('kz-reel-track');
+        track.innerHTML = loopNames.map(function (n) { return '<div class="kz-reel-name">' + escapeHtml(n) + '</div>'; }).join('');
+        track.style.transition = 'none';
+        track.style.transform = 'translateY(0)';
+        return loopNames;
+    }
+
+    function spinPickerAndStart(clockCount) {
+        ensureMatchEl();
+        el('kz-picker').style.display = 'flex';
+        el('kz-picker').classList.remove('kz-hidden');
+        el('kz-round').classList.remove('kz-show');
+        el('kz-turn-badge').classList.remove('kz-show');
+        el('kz-reel-highlight-tab').classList.remove('kz-locked');
+        el('kz-picker-result').classList.remove('kz-show');
+        el('kz-picked-name').textContent = '';
+
+        var players = AGP.player.getAllPlayers();
+        var pickList = players.length ? players : [{ id: 'demo', name: 'لاعب', avatarUrl: null }];
+        var names = pickList.map(function (p) { return p.name || p.id; });
+        var loopNames = buildReel(names);
+        void el('kz-reel-track').offsetWidth;
+
+        el('kz-picker-btn').disabled = true;
+        var windowH = el('kz-reel-window').clientHeight;
+        var centerOffset = windowH / 2 - REEL_ITEM_H / 2;
+        var targetIndex = Math.floor(loopNames.length * 0.6) + Math.floor(Math.random() * names.length);
+        var pickedName = loopNames[targetIndex];
+        var pickedPlayer = pickList[targetIndex % pickList.length];
+        var targetY = -(targetIndex * REEL_ITEM_H) + centerOffset;
+
+        var track = el('kz-reel-track');
+        track.style.transition = 'transform 3.2s cubic-bezier(.12,.7,.15,1)';
+        requestAnimationFrame(function () { track.style.transform = 'translateY(' + targetY + 'px)'; });
+
+        setTimeout(function () {
+            var items = track.querySelectorAll('.kz-reel-name');
+            if (items[targetIndex]) items[targetIndex].classList.add('kz-locked-name');
+            el('kz-reel-highlight-tab').classList.add('kz-locked');
+            el('kz-picked-name').textContent = pickedName;
+            el('kz-picker-result').classList.add('kz-show');
+            el('kz-picker-btn').disabled = false;
+            setTimeout(function () {
+                el('kz-picker').classList.add('kz-hidden');
+                el('kz-round').classList.add('kz-show');
+                runRoundSequence(clockCount, pickedPlayer);
+            }, 1400);
+        }, 3300);
     }
 
     function shuffleArr(arr) {
@@ -595,22 +679,37 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return { opts: opts, correctIdx: correctIdx };
     }
 
-    async function runRoundSequence(clockCount) {
-        ensureMatchEl();
+    async function runRoundSequence(clockCount, turnPlayer) {
         var hours = pickRandomHours(clockCount);
         var vault = el('kz-vault');
         var flyBox = el('kz-flying-clocks');
         vault.classList.remove('kz-in', 'kz-open');
         el('kz-options').classList.remove('kz-show');
-        el('kz-options').innerHTML = '';
+        el('kz-options-panel-holder').innerHTML = '';
         el('kz-memorize-badge').classList.remove('kz-show');
+
+        var turnName = (turnPlayer && (turnPlayer.name || turnPlayer.id)) || '';
+        el('kz-turn-name').textContent = turnName;
+        var avatarEl = el('kz-turn-avatar');
+        if (turnPlayer && turnPlayer.avatarUrl) {
+            avatarEl.innerHTML = '<img src="' + escapeAttr(turnPlayer.avatarUrl) + '" alt="">';
+        } else {
+            avatarEl.innerHTML = '';
+            avatarEl.textContent = turnName.charAt(0) || '؟';
+        }
+        // ⚠️ تظهر فوراً وتبقى ظاهرة طول الجولة كاملة (حتى مرحلة الخيارات)
+        el('kz-turn-badge').classList.add('kz-show');
 
         flyBox.innerHTML = hours.map(function (h, i) {
             return '<div class="kz-flying-clock" id="kz-fc-' + i + '">' + clockFaceSvg(h) + '</div>';
         }).join('');
 
         var n = hours.length;
-        var spacing = 170;
+        // ⭐ متجاوب: نقيس عرض الساعة الفعلي المعروض (يتغيّر حسب clamp() بالـCSS
+        // على حجم الشاشة) بدل رقم ثابت، عشان تتوزّع صح على أي مقاس شاشة.
+        var clockEl0 = el('kz-fc-0');
+        var clockWidth = (clockEl0 && clockEl0.getBoundingClientRect().width) || 150;
+        var spacing = clockWidth + 20;
         var positions = hours.map(function (_, i) { return (i - (n - 1) / 2) * spacing; });
 
         void vault.offsetWidth;
@@ -673,21 +772,485 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="kz-option-times">' + order.map(function (t) { return '<span>' + escapeHtml(t) + '</span>'; }).join('') + '</div>' +
             '</div>';
         }).join('');
-        el('kz-options').innerHTML = '<div id="kz-options-panel">' + rows + '</div>';
+        el('kz-options-panel-holder').innerHTML = '<div id="kz-options-panel">' + rows + '</div>';
         el('kz-options').classList.add('kz-show');
 
-        // ⚠️ بناء تدريجي: هذا مجرد عرض الخيارات -- جمع إجابات اللاعبين
-        // الفعلية عبر الشات ومنطق الإقصاء (آخر لاعبين/لاعب واحد عند 4،
-        // بدون إقصاء لو محد جاوب، تكرار الجولات، شاشة الفائز) لسا محتاج
-        // تأكيد آلية إرسال الإجابة قبل ربطه.
-        AGP.log('Khazna: الخيارات ظاهرة -- منطق جمع الإجابات والإقصاء لسا ما اتربط.');
+        await runAnswerPhase(data, turnPlayer, clockCount);
+    }
+
+    /* ======================================================================
+     *  7) مرحلة جمع الإجابات + منطق الإقصاء (نظام "المستهدف")
+     *
+     *     - اللاعبون يجاوبون بكتابة A أو B أو C بالشات (أول إجابة فقط
+     *       تُحسب لكل لاعب هالجولة).
+     *     - لما "المستهدف" يجاوب صح: يُقصى فوراً كل من لم يجاوب صح لهالحين
+     *       -- إلا إذا كان المستهدف هو آخر واحد يجاوب صح (يعني الباقين
+     *       كلهم جاوبوا صح قبله)، فحينها يُقصى هو بس.
+     *     - لو انتهى الوقت قبل ما المستهدف يجاوب صح: يُقصى كل من لم
+     *       يجاوب صح (بما فيهم المستهدف نفسه لو ما جاوب صح).
+     *     - بعدها يظهر تبويب بأسماء المُقصَين، ثم تبدأ جولة جديدة تلقائياً
+     *       (بلاعبين أقل، وصعوبة أعلى كل جولتين) لين يفضل لاعب واحد.
+     * ==================================================================== */
+    function normalizeAnswerLetter(text) {
+        if (typeof text !== 'string') return null;
+        var t = text.trim().toLowerCase();
+        if (t === 'a' || t === 'أ' || t === 'ا') return 'a';
+        if (t === 'b' || t === 'ب') return 'b';
+        if (t === 'c' || t === 'C'.toLowerCase() || t === 'س') return 'c';
+        return null;
+    }
+
+    function runAnswerPhase(data, turnPlayer, clockCount) {
+        return new Promise(function (resolve) {
+            var roundEnded = false;
+            var answeredIds = {};
+            var correctOrder = []; // مصفوفة player id بترتيب الإجابة الصحيحة
+
+            function markRowsResult() {
+                el('kz-options').querySelectorAll('.kz-option-row').forEach(function (r2, i2) {
+                    r2.classList.toggle('kz-correct', i2 === data.correctIdx);
+                    if (i2 !== data.correctIdx) r2.classList.add('kz-wrong');
+                });
+            }
+
+            function showEliminatedPanel(eliminatedPlayers) {
+                var names = eliminatedPlayers.map(function (p) { return p.name || p.id; });
+                var html = '<div id="kz-eliminated-panel">' +
+                    '<div class="kz-elim-title">❌ تم إقصاء</div>' +
+                    (names.length
+                        ? '<div class="kz-elim-list">' + names.map(function (n) { return '<div class="kz-elim-name">' + escapeHtml(n) + '</div>'; }).join('') + '</div>'
+                        : '<div class="kz-elim-empty">محد انقصى هالجولة</div>') +
+                    '</div>';
+                var holder = document.createElement('div');
+                holder.id = 'kz-eliminated-holder';
+                holder.innerHTML = html;
+                el('kz-options').appendChild(holder);
+                requestAnimationFrame(function () { holder.classList.add('kz-show'); });
+            }
+
+            async function endRound(eliminatedIds) {
+                if (roundEnded) return;
+                roundEnded = true;
+                clearInterval(_answerInterval);
+                if (chatUnsub) chatUnsub();
+                markRowsResult();
+
+                var allPlayers = AGP.player.getAllPlayers();
+                var eliminatedPlayers = allPlayers.filter(function (p) { return eliminatedIds.indexOf(p.id) !== -1; });
+                showEliminatedPanel(eliminatedPlayers);
+
+                eliminatedIds.forEach(function (id) { AGP.player.removePlayer(id); });
+                _eliminatedPlayers = _eliminatedPlayers.concat(eliminatedPlayers); // لتبويب "المشاركون" بدرج الإعدادات
+
+                await wait(3200);
+
+                var remaining = AGP.player.getAllPlayers();
+                var holder = el('kz-eliminated-holder');
+                if (holder) holder.remove();
+                el('kz-options').classList.remove('kz-show');
+                el('kz-turn-badge').classList.remove('kz-show');
+
+                if (remaining.length <= 1) {
+                    await renderWinnerScreen(remaining[0] || null);
+                    resolve();
+                    return;
+                }
+
+                var nextRound = _roundNumber + 1;
+                var nextClockCount = clockCount + (nextRound % 2 === 0 ? 1 : 0);
+                _roundNumber = nextRound;
+                resolve();
+                spinPickerAndStart(nextClockCount);
+            }
+
+            function checkTargetTrigger(justAnsweredId) {
+                if (!turnPlayer || justAnsweredId !== turnPlayer.id) return;
+                var others = AGP.player.getAllPlayers().filter(function (p) { return p.id !== turnPlayer.id; });
+                var othersAllCorrect = others.every(function (p) { return correctOrder.indexOf(p.id) !== -1; });
+                if (othersAllCorrect) {
+                    endRound([turnPlayer.id]); // المستهدف آخر واحد جاوب صح -- يُقصى هو بس
+                } else {
+                    var toEliminate = others.filter(function (p) { return correctOrder.indexOf(p.id) === -1; }).map(function (p) { return p.id; });
+                    endRound(toEliminate);
+                }
+            }
+
+            var chatUnsub = AGP.events.on('stream:commentReceived', function (payload) {
+                if (roundEnded || !payload || !payload.id) return;
+                if (answeredIds[payload.id]) return;
+                var letter = normalizeAnswerLetter(payload.text);
+                if (!letter) return;
+                answeredIds[payload.id] = true;
+                var chosenIdx = { a: 0, b: 1, c: 2 }[letter];
+                if (chosenIdx === data.correctIdx) {
+                    correctOrder.push(payload.id);
+                    checkTargetTrigger(payload.id);
+                }
+            });
+
+            var ansSecs = _settings.chooseSeconds;
+            el('kz-ans-num').textContent = ansSecs;
+            clearInterval(_answerInterval);
+            _answerInterval = setInterval(function () {
+                ansSecs -= 1;
+                el('kz-ans-num').textContent = Math.max(ansSecs, 0);
+                if (ansSecs <= 0) {
+                    clearInterval(_answerInterval);
+                    if (!roundEnded) {
+                        var toEliminate = AGP.player.getAllPlayers()
+                            .filter(function (p) { return correctOrder.indexOf(p.id) === -1; })
+                            .map(function (p) { return p.id; });
+                        endRound(toEliminate);
+                    }
+                }
+            }, 1000);
+        });
     }
 
     function startMatch() {
         if (AGP.lobby && typeof AGP.lobby.close === 'function') AGP.lobby.close();
         var lobbyEl = el('kz-lobby');
         if (lobbyEl) lobbyEl.style.display = 'none';
-        runRoundSequence(3);
+        ensureMatchEl();
+        _roundNumber = 1;
+        _matchStartedAt = Date.now();
+        _eliminatedPlayers = [];
+        el('kz-picker-btn').onclick = function () { spinPickerAndStart(3); };
+        spinPickerAndStart(3);
+    }
+
+    /* ======================================================================
+     *  8) الإعدادات داخل المباراة -- درج جانبي (نفس نمط روليت القبائل
+     *     المعتمَد): تبويبان (⚙️ الإعدادات بدون يوزر/كلمة مفتاحية / 👥
+     *     المشاركون بحث+فلتر+إقصاء يدوي+إرجاع)، وزر "إضافة لاعب جديد"
+     *     يفتح لوبي إضافي (700×800، خلفية سوداء 15%، حدود ذهبية، زوايا
+     *     17%) بنفس آلية دخول اللوبي الأصلي.
+     * ==================================================================== */
+    var _eliminatedPlayers = [];
+    var _drawerTab = 'settings';
+    var _playersTabFilter = 'all';
+    var _playersTabSearch = '';
+
+    function ensureDrawerEl() {
+        if (el('kz-drawer')) return;
+
+        var dim = document.createElement('div');
+        dim.id = 'kz-drawer-dim';
+        document.body.appendChild(dim);
+
+        var drawer = document.createElement('div');
+        drawer.id = 'kz-drawer';
+        drawer.innerHTML =
+            '<div class="kz-drawer-header"><h2>⚙️ إعدادات المباراة</h2><button type="button" class="kz-drawer-close-btn" id="kz-drawer-close-btn">✕</button></div>' +
+            '<div class="kz-drawer-tabs">' +
+                '<button type="button" class="kz-tab-active" data-tab="settings">⚙️ الإعدادات</button>' +
+                '<button type="button" data-tab="players">👥 المشاركون</button>' +
+            '</div>' +
+            '<div class="kz-drawer-body">' +
+                '<div id="kz-settings-tab"></div>' +
+                '<div id="kz-players-tab">' +
+                    '<input type="text" id="kz-players-tab-search" placeholder="🔍 دوّر على لاعب...">' +
+                    '<div id="kz-players-tab-filter">' +
+                        '<button type="button" class="kz-filter-active" data-filter="all">الكل</button>' +
+                        '<button type="button" data-filter="live">🟢 نشطون</button>' +
+                        '<button type="button" data-filter="out">🔴 مقصون</button>' +
+                    '</div>' +
+                    '<div id="kz-players-tab-list"></div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="kz-drawer-footer">' +
+                '<button type="button" id="kz-open-mini-lobby-btn">➕ إضافة لاعب جديد</button>' +
+                '<button type="button" class="kz-exit-btn" id="kz-exit-btn">🚪 الخروج من اللعبة</button>' +
+                '<button type="button" class="kz-drawer-back-link" id="kz-back-platform-btn">↩ رجوع لمنصة ألعاب أيمن</button>' +
+            '</div>';
+        document.body.appendChild(drawer);
+
+        renderSettingsTabFields();
+
+        el('kz-drawer-close-btn').addEventListener('click', closeInMatchDrawer);
+        dim.addEventListener('click', closeInMatchDrawer);
+        el('kz-open-mini-lobby-btn').addEventListener('click', openMiniLobby);
+        el('kz-exit-btn').addEventListener('click', function () {
+            if (window.confirm('بتخرج من اللعبة وترجع لمنصة ألعاب أيمن. تكمل؟')) window.location.href = '../../index.html';
+        });
+        el('kz-back-platform-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+
+        drawer.querySelectorAll('.kz-drawer-tabs button').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                _drawerTab = btn.getAttribute('data-tab');
+                drawer.querySelectorAll('.kz-drawer-tabs button').forEach(function (b) { b.classList.toggle('kz-tab-active', b === btn); });
+                drawer.classList.toggle('kz-tab-players', _drawerTab === 'players');
+                if (_drawerTab === 'players') renderPlayersTab();
+            });
+        });
+
+        el('kz-players-tab-filter').addEventListener('click', function (e) {
+            var btn = e.target.closest('button'); if (!btn) return;
+            _playersTabFilter = btn.getAttribute('data-filter');
+            el('kz-players-tab-filter').querySelectorAll('button').forEach(function (b) { b.classList.remove('kz-filter-active'); });
+            btn.classList.add('kz-filter-active');
+            renderPlayersTab();
+        });
+        el('kz-players-tab-search').addEventListener('input', function (e) {
+            _playersTabSearch = e.target.value.trim();
+            renderPlayersTab();
+        });
+    }
+
+    function renderSettingsTabFields() {
+        var joinPills = [
+            { value: false, label: 'الجميع' },
+            { value: true, label: 'المتابعون فقط' }
+        ].map(function (opt) {
+            var active = (_settings.followersOnly === opt.value) ? ' kz-active' : '';
+            return '<button type="button" class="kz-pill-btn' + active + '" data-key="followersOnly" data-value="' + opt.value + '">' + opt.label + '</button>';
+        }).join('');
+        var choicePills = CHOICE_SECONDS_OPTIONS.map(function (v) {
+            var active = (_settings.chooseSeconds === v) ? ' kz-active' : '';
+            return '<button type="button" class="kz-pill-btn' + active + '" data-key="chooseSeconds" data-value="' + v + '">' + v + 'ث</button>';
+        }).join('');
+
+        el('kz-settings-tab').innerHTML =
+            '<div class="kz-row" id="kz-drawer-row-followersOnly"><div class="kz-pill-group">' + joinPills + '</div><span class="kz-row-label">🔑 مين يقدر يدخل؟</span></div>' +
+            '<div class="kz-row" id="kz-drawer-row-chooseSeconds"><div class="kz-pill-group">' + choicePills + '</div><span class="kz-row-label">⏱️ وقت الاختيار</span></div>' +
+            '<button type="button" class="kz-save-btn" id="kz-drawer-save-btn">💾 حفظ التغييرات</button>';
+
+        el('kz-drawer-row-followersOnly').addEventListener('click', function (e) {
+            var btn = e.target.closest('.kz-pill-btn'); if (!btn) return;
+            _settings.followersOnly = (btn.getAttribute('data-value') === 'true');
+            renderSettingsTabFields();
+        });
+        el('kz-drawer-row-chooseSeconds').addEventListener('click', function (e) {
+            var btn = e.target.closest('.kz-pill-btn'); if (!btn) return;
+            _settings.chooseSeconds = parseInt(btn.getAttribute('data-value'), 10);
+            renderSettingsTabFields();
+        });
+        el('kz-drawer-save-btn').addEventListener('click', function () {
+            el('kz-drawer-save-btn').textContent = '✅ تم الحفظ';
+            setTimeout(function () { el('kz-drawer-save-btn').textContent = '💾 حفظ التغييرات'; }, 1400);
+        });
+    }
+
+    function renderPlayersTab() {
+        var alive = AGP.player.getAllPlayers().map(function (p) { return { id: p.id, name: p.name || p.id, out: false }; });
+        var out = _eliminatedPlayers.map(function (p) { return { id: p.id, name: p.name || p.id, out: true }; });
+        var list = alive.concat(out).filter(function (p) {
+            if (_playersTabFilter === 'live' && p.out) return false;
+            if (_playersTabFilter === 'out' && !p.out) return false;
+            if (_playersTabSearch && p.name.indexOf(_playersTabSearch) === -1) return false;
+            return true;
+        });
+
+        el('kz-players-tab-list').innerHTML = list.map(function (p) {
+            return '<div class="kz-p-row' + (p.out ? ' kz-p-out' : '') + '">' +
+                '<div class="kz-p-avatar">' + escapeHtml((p.name || '؟').charAt(0)) + '</div>' +
+                '<div class="kz-p-name">' + escapeHtml(p.name) + '</div>' +
+                (p.out
+                    ? '<button type="button" class="kz-p-revive-btn" data-id="' + escapeAttr(p.id) + '">↩</button>'
+                    : '<button type="button" class="kz-p-x-btn" data-id="' + escapeAttr(p.id) + '">✕</button>') +
+            '</div>';
+        }).join('') || '<div style="text-align:center;color:#8f7ba8;font-size:12px;padding:20px 0;">محد يطابق البحث</div>';
+
+        el('kz-players-tab-list').querySelectorAll('.kz-p-x-btn').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var id = b.getAttribute('data-id');
+                var p = AGP.player.getAllPlayers().filter(function (pp) { return pp.id === id; })[0];
+                if (p) { _eliminatedPlayers.push(p); AGP.player.removePlayer(id); }
+                renderPlayersTab();
+            });
+        });
+        el('kz-players-tab-list').querySelectorAll('.kz-p-revive-btn').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var id = b.getAttribute('data-id');
+                var idx = -1;
+                _eliminatedPlayers.forEach(function (p, i) { if (p.id === id) idx = i; });
+                if (idx !== -1) {
+                    AGP.player.addPlayer(_eliminatedPlayers[idx]);
+                    _eliminatedPlayers.splice(idx, 1);
+                }
+                renderPlayersTab();
+            });
+        });
+    }
+
+    function openInMatchDrawer() {
+        ensureDrawerEl();
+        renderSettingsTabFields();
+        if (_drawerTab === 'players') renderPlayersTab();
+        el('kz-drawer-dim').style.display = 'block';
+        el('kz-drawer').style.display = 'flex';
+        void el('kz-drawer').offsetWidth;
+        requestAnimationFrame(function () {
+            el('kz-drawer-dim').classList.add('kz-show');
+            el('kz-drawer').classList.add('kz-show');
+        });
+    }
+
+    function closeInMatchDrawer() {
+        var dim = el('kz-drawer-dim'), drawer = el('kz-drawer');
+        if (!dim || !drawer) return;
+        dim.classList.remove('kz-show');
+        drawer.classList.remove('kz-show');
+        setTimeout(function () { dim.style.display = 'none'; drawer.style.display = 'none'; }, 350);
+    }
+
+    /* ---------------- لوبي إضافة لاعبين جدد (700×800) ---------------- */
+    var _miniLobbyUnsub = null;
+    var _miniLobbyAccepting = false;
+
+    function ensureMiniLobbyEl() {
+        if (el('kz-mini-lobby')) return;
+
+        var dim = document.createElement('div');
+        dim.id = 'kz-mini-dim';
+        document.body.appendChild(dim);
+
+        var box = document.createElement('div');
+        box.id = 'kz-mini-lobby';
+        box.innerHTML =
+            '<button type="button" id="kz-mini-close-btn">✕</button>' +
+            '<div id="kz-mini-body">' +
+                '<h2>لوبي إضافة لاعبين جدد</h2>' +
+                '<div id="kz-mini-sub">افتح الدخول مؤقتاً لضم لاعبين جدد للمباراة الحالية</div>' +
+                '<div class="kz-mini-hint">' +
+                    '<span class="kz-mini-badge kz-mini-keyword-badge" id="kz-mini-keyword-badge"></span>' +
+                    '<span class="kz-mini-badge kz-mini-count-badge" id="kz-mini-count">0 لاعبين جدد</span>' +
+                '</div>' +
+                '<div id="kz-mini-grid"></div>' +
+            '</div>' +
+            '<div id="kz-mini-footer">' +
+                '<button type="button" id="kz-mini-complete-btn">✅ اكتمل الدخول</button>' +
+                '<button type="button" id="kz-mini-save-btn">💾 حفظ وإكمال المباراة</button>' +
+            '</div>';
+        document.body.appendChild(box);
+
+        el('kz-mini-close-btn').addEventListener('click', closeMiniLobby);
+        dim.addEventListener('click', closeMiniLobby);
+        el('kz-mini-complete-btn').addEventListener('click', function () {
+            _miniLobbyAccepting = false;
+            el('kz-mini-complete-btn').classList.add('kz-done');
+            el('kz-mini-complete-btn').textContent = '🔒 الدخول مقفول';
+        });
+        el('kz-mini-save-btn').addEventListener('click', closeMiniLobby);
+    }
+
+    var _miniJoinedIds = [];
+
+    function renderMiniGrid() {
+        var newPlayers = AGP.player.getAllPlayers().filter(function (p) { return _miniJoinedIds.indexOf(p.id) !== -1; });
+        var grid = el('kz-mini-grid');
+        if (!newPlayers.length) {
+            grid.innerHTML = '<div class="kz-mini-empty">بانتظار أول لاعب جديد...</div>';
+        } else {
+            grid.innerHTML = newPlayers.map(lobbyCardHtml).join('');
+            if (AGP.playerCard) AGP.playerCard.fitAllNames(grid);
+            wireLobbyRemoveButtons(grid); // نفس زر ✕ الأصلي -- يشتغل بنفس منطق AGP.player.removePlayer
+        }
+        el('kz-mini-count').textContent = newPlayers.length + ' لاعبين جدد';
+    }
+
+    function wireMiniLobbyJoining() {
+        if (_miniLobbyUnsub) return;
+        _miniLobbyUnsub = AGP.events.on('stream:commentReceived', function (payload) {
+            if (!_miniLobbyAccepting || !payload || typeof payload.text !== 'string' || !payload.id) return;
+            if (_settings.followersOnly && !payload.isFollower) return;
+            var text = normalizeArabicText(payload.text);
+            var keyword = normalizeArabicText(_settings.joinKeyword);
+            if (!keyword || text !== keyword) return;
+            if (findPlayerById(payload.id)) return;
+            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null });
+            _miniJoinedIds.push(payload.id);
+            renderMiniGrid();
+        });
+    }
+
+    function openMiniLobby() {
+        closeInMatchDrawer();
+        ensureMiniLobbyEl();
+        _miniJoinedIds = [];
+        _miniLobbyAccepting = true;
+        wireMiniLobbyJoining();
+        el('kz-mini-keyword-badge').textContent = '🔑 ' + (_settings.joinKeyword || '');
+        el('kz-mini-complete-btn').classList.remove('kz-done');
+        el('kz-mini-complete-btn').textContent = '✅ اكتمل الدخول';
+        renderMiniGrid();
+
+        el('kz-mini-dim').style.display = 'block';
+        el('kz-mini-lobby').style.display = 'flex';
+        void el('kz-mini-lobby').offsetWidth;
+        requestAnimationFrame(function () {
+            el('kz-mini-dim').classList.add('kz-show');
+            el('kz-mini-lobby').classList.add('kz-show');
+        });
+    }
+
+    function closeMiniLobby() {
+        _miniLobbyAccepting = false;
+        var dim = el('kz-mini-dim'), box = el('kz-mini-lobby');
+        if (!dim || !box) return;
+        dim.classList.remove('kz-show');
+        box.classList.remove('kz-show');
+        setTimeout(function () { dim.style.display = 'none'; box.style.display = 'none'; }, 350);
+    }
+
+    /* ======================================================================
+     *  9) شاشة الفائز -- بطاقة AGP.playerCard.renderTrophyCard المشتركة
+     *     (250×300، تاج + حلقة صورة + اسم + نقاط)، بنفس مسار تقرير
+     *     النقاط الحقيقي المعتمَد بروليت الإقصاء (window.AGPAuth.
+     *     reportRoundCompletion) -- بدون أي تعديل على قيم النقاط نفسها،
+     *     النظام العام الموحَّد فقط.
+     * ==================================================================== */
+    function tiktokUsernameFor(player) {
+        var id = (player && player.id) || '';
+        if (id.indexOf('tiktok:') === 0) return id.slice('tiktok:'.length);
+        return (player && (player.name || player.id)) || '';
+    }
+
+    function findAwardedFor(pointsResult, player) {
+        if (!pointsResult || pointsResult.success !== true || !Array.isArray(pointsResult.awarded)) return null;
+        var uname = tiktokUsernameFor(player);
+        if (!uname) return null;
+        return pointsResult.awarded.filter(function (a) { return a.tiktokUsername === uname; })[0] || null;
+    }
+
+    function pointsHtmlFor(pointsResult, player) {
+        if (!pointsResult) {
+            return '<div class="agp-trophy-points agp-points-noaccount">تعذّر جلب النقاط الآن</div>';
+        }
+        var awarded = findAwardedFor(pointsResult, player);
+        if (awarded) {
+            return '<div class="agp-trophy-points agp-points-earned">+' + awarded.added + ' نقطة' +
+                '<span class="agp-points-sub">تظهر في بروفايلك</span></div>';
+        }
+        return '<div class="agp-trophy-points agp-points-noaccount">لازم يسوي حساب عشان تظهر نقاطك بالبروفايل</div>';
+    }
+
+    async function renderWinnerScreen(winner) {
+        var durationMs = _matchStartedAt ? (Date.now() - _matchStartedAt) : 0;
+        var pointsPromise = Promise.resolve(null);
+
+        if (window.AGPAuth && typeof window.AGPAuth.reportRoundCompletion === 'function') {
+            var allParticipants = (winner ? [winner] : []).concat(_eliminatedPlayers);
+            var participants = allParticipants.map(function (p) {
+                return { tiktokUsername: tiktokUsernameFor(p), won: Boolean(winner) && p.id === winner.id };
+            }).filter(function (p) { return p.tiktokUsername; });
+
+            if (participants.length) {
+                pointsPromise = window.AGPAuth.reportRoundCompletion(participants, durationMs).catch(function () { return null; });
+            }
+        }
+
+        var pointsResult = await pointsPromise;
+
+        el('kz-round').innerHTML =
+            '<div id="kz-winner-wrap">' +
+                '<div id="kz-winner-label">🏁 انتهت المباراة .. الشخص الرهيب الي فاز بلعبة "الخزنة"</div>' +
+                (winner
+                    ? AGP.playerCard.renderTrophyCard(winner, { kind: 'winner', showCrown: true, pointsHtml: pointsHtmlFor(pointsResult, winner) })
+                    : '<div id="kz-no-winner">ما فيه فائز -- كل اللاعبين انقصوا</div>') +
+            '</div>';
+
+        AGP.events.emit('game:roundEnded', { id: GAME_ID });
     }
 
     function registerGame() {
@@ -705,6 +1268,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.gameManager.loadGame(GAME_ID);
 
         injectHeader();
+        injectIdeaBanner();
         wirePlatformListeners();
         renderSettingsScreen();
         showInstructions(); // ⚠️ تظهر تلقائياً أول ما تُفتح شاشة اللعبة
