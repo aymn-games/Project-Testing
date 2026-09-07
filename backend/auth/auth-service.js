@@ -22,6 +22,7 @@ var OAuth2Client = require('google-auth-library').OAuth2Client;
 var collectiblesService = require('../collectibles/collectibles-service');
 var pointsService = require('../points/points-service');
 var streamerLevelService = require('../points/streamer-level-service');
+var emailService = require('../email/email-service');
 
 var SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 يوماً
 var googleClient = config.googleClientId ? new OAuth2Client(config.googleClientId) : null;
@@ -248,6 +249,88 @@ function createSessionFor(user) {
     db.prepare('INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)')
         .run(token, user.id, now(), now() + SESSION_DURATION_MS);
     return token;
+}
+
+var PASSWORD_RESET_CODE_TTL_MS = 15 * 60 * 1000; // 15 دقيقة
+
+/**
+ * [0.45.11] الخطوة ١ من استرجاع كلمة المرور — يولّد رمز 6 أرقام
+ * ويرسله بالبريد عبر emailService، لو الحساب موجود فعلاً.
+ *
+ * ⚠️ يرجع {success: true} **دائماً** بغض النظر عن وجود الحساب من
+ * عدمه — منع تعداد الإيميلات المسجَّلة (Email Enumeration): لو
+ * رجّعنا خطأ صريح لإيميل غير موجود، أي شخص يقدر يجرّب إيميلات
+ * ويكتشف مين مسجَّل بالمنصة ومين لا. الشيء الوحيد اللي يختلف داخلياً
+ * هو إننا لا نولّد رمز ولا نرسل شي لو الحساب مو موجود.
+ *
+ * ⚠️ ملاحظة صادقة: لا حد لعدد الطلبات (Rate Limiting) حالياً على
+ * هذا الإندبوينت — نفس القيد الموثَّق أعلاه لـgenerateVerificationCode
+ * (لا نظام Rate Limiting HTTP فعلي بالمشروع بعد، راجع config.js
+ * §rateLimits). يعني تقنياً يقدر أي شخص يطلب رموز متكررة لنفس
+ * الإيميل ويستهلك حصة إرسال Resend المجانية — قيد ناعم يُعالَج لاحقاً
+ * لو صار مشكلة فعلية، لا وعد زائف بحماية غير موجودة.
+ *
+ * @param {string} email
+ * @returns {Promise<{success: boolean}>}
+ */
+async function requestPasswordReset(email) {
+    email = (email || '').trim().toLowerCase();
+    if (!isValidEmail(email)) return { success: true }; // نفس مبدأ عدم التعداد أعلاه
+
+    var user = db.prepare('SELECT id, email FROM users WHERE email = ?').get(email);
+    if (!user) return { success: true };
+
+    var code = String(crypto.randomInt(100000, 1000000)); // 6 أرقام
+    var expires = now() + PASSWORD_RESET_CODE_TTL_MS;
+    db.prepare('UPDATE users SET password_reset_code = ?, password_reset_expires = ? WHERE id = ?')
+        .run(code, expires, user.id);
+
+    var sendResult = await emailService.sendPasswordResetEmail(user.email, code);
+    if (!sendResult.success) {
+        logger.error('Auth: تعذّر إرسال إيميل استرجاع كلمة المرور لحساب id=' + user.id + ' — ' + sendResult.error);
+        // لا نكشف فشل الإرسال للمستخدم (نفس مبدأ عدم التعداد) — لكن
+        // نصفّر الرمز المخزَّن حتى لا يبقى صالحاً بدون ما يعرفه صاحبه.
+        db.prepare('UPDATE users SET password_reset_code = NULL, password_reset_expires = NULL WHERE id = ?').run(user.id);
+    }
+
+    return { success: true };
+}
+
+/**
+ * [0.45.11] الخطوة ٢ — يتحقق من الرمز وصلاحيته، يحدّث كلمة المرور،
+ * ويصفّر الرمز (استخدام لمرة واحدة). كمان يفسخ كل جلسات الحساب
+ * الحالية (خروج تلقائي من كل الأجهزة) — صمام أمان قياسي بعد تغيير
+ * كلمة مرور: لو الرمز وصل لشخص غير صاحب الحساب (بريد مخترق مثلاً)،
+ * أي جلسة سابقة (حتى لو مسروقة) تُفسَخ فوراً بمجرد إعادة التعيين.
+ *
+ * @param {string} email
+ * @param {string} code
+ * @param {string} newPassword
+ * @returns {{success: boolean, error?: string}}
+ */
+function resetPasswordWithCode(email, code, newPassword) {
+    email = (email || '').trim().toLowerCase();
+    code = (code || '').trim();
+    if (!code) return { success: false, error: 'missing_code' };
+    if (!newPassword || newPassword.length < 6) return { success: false, error: 'weak_password' };
+
+    var user = db.prepare('SELECT id, password_reset_code, password_reset_expires FROM users WHERE email = ?').get(email);
+    // رسالة خطأ عامة موحّدة لكل حالات الفشل (حساب غير موجود / رمز
+    // خاطئ / منتهي) — نفس مبدأ عدم كشف تفاصيل داخلية للمستخدم.
+    if (!user || !user.password_reset_code || user.password_reset_code !== code) {
+        return { success: false, error: 'invalid_or_expired_code' };
+    }
+    if (!user.password_reset_expires || now() > user.password_reset_expires) {
+        db.prepare('UPDATE users SET password_reset_code = NULL, password_reset_expires = NULL WHERE id = ?').run(user.id);
+        return { success: false, error: 'invalid_or_expired_code' };
+    }
+
+    var newHash = password.hashPassword(newPassword);
+    db.prepare('UPDATE users SET password_hash = ?, password_reset_code = NULL, password_reset_expires = NULL WHERE id = ?')
+        .run(newHash, user.id);
+    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
+
+    return { success: true };
 }
 
 /**
@@ -1247,6 +1330,8 @@ module.exports = {
     adminResetDeviceLock: adminResetDeviceLock,
     adminSetAllowDeviceChange: adminSetAllowDeviceChange,
     adminSetSuperAdmin: adminSetSuperAdmin,
+    requestPasswordReset: requestPasswordReset,
+    resetPasswordWithCode: resetPasswordWithCode,
     updateBroadcastViewerStats: updateBroadcastViewerStats,
     getTopStreamersByHours: getTopStreamersByHours,
     getAdminStreamerStats: getAdminStreamerStats,
