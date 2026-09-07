@@ -11,15 +11,15 @@
   مرجعي معتمد). ملف ذاتي الاكتفاء، لا اعتماد على dashboard-core/css/
   style.css أو auth/auth.css.
 
-  الوظيفة كما هي: نفس AGPAuth.login/loginWithGoogle تماماً. **ملاحظة
-  صادقة**: التصميم المرجعي يعرض حقل "بريد إلكتروني أو اسم مستخدم"
-  ورابط "نسيت كلمة المرور؟" — الخادم الحالي (auth-service.login) يقبل
-  البريد الإلكتروني فقط (لا دخول باسم المستخدم)، ولا يوجد نظام استرجاع
-  كلمة مرور فعلي (لا خدمة بريد مُعدَّة). لتفادي اختراع وظيفة غير
-  موجودة: حقل الدخول هنا "البريد الإلكتروني" فقط (يطابق الخادم فعلياً)،
-  ورابط "نسيت كلمة المرور" يعرض ملاحظة "قريباً" بدل الادّعاء بأنه يعمل.
-  خانة "تذكرني" عنصر واجهة بحت (الجلسة أصلاً تُحفَظ محلياً ٣٠ يوماً
-  بغض النظر عنها) — لا تُرسِل أي شيء للخادم.
+  الوظيفة كما هي: نفس AGPAuth.login/loginWithGoogle تماماً. حقل الدخول
+  "البريد الإلكتروني" فقط (يطابق الخادم فعلياً — لا دخول باسم مستخدم).
+
+  [0.45.11] "نسيت كلمة المرور؟" الآن ميزة حقيقية (كانت "قريباً" فقط
+  قبل هذا التعديل) — راجع backend/auth/auth-service.js
+  (requestPasswordReset/resetPasswordWithCode) وbackend/email/
+  email-service.js (إرسال عبر Resend). خطوتين داخل بانل واحد: إيميل →
+  رمز 6 أرقام + كلمة مرور جديدة. خانة "تذكرني" عنصر واجهة بحت (الجلسة
+  أصلاً تُحفَظ محلياً ٣٠ يوماً بغض النظر عنها) — لا تُرسِل أي شيء للخادم.
   ==========================================================================
 -->
 
@@ -169,6 +169,28 @@
     .au-forgot-note { font-size: 11.5px; color: var(--pink-light); margin-top: -12px; margin-bottom: 16px; display: none; }
     .au-forgot-note.is-visible { display: block; }
 
+    .au-reset-panel {
+        display: none;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--card-border);
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 18px;
+    }
+    .au-reset-panel.is-visible { display: block; }
+    .au-reset-panel .au-field { margin-bottom: 12px; }
+    .au-reset-panel .au-field:last-of-type { margin-bottom: 0; }
+    .au-reset-panel-title { font-size: 13px; font-weight: 700; margin-bottom: 12px; color: var(--text-primary); }
+    .au-reset-panel-hint { font-size: 11.5px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.6; }
+    .au-btn--secondary {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text-primary);
+        border: 1px solid var(--card-border);
+        margin-top: 12px;
+        height: 44px;
+    }
+    .au-btn--secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
     .au-btn {
         width: 100%;
         height: 48px;
@@ -275,10 +297,44 @@
                 </label>
                 <button type="button" class="au-forgot-link" id="forgot-password-btn">نسيت كلمة المرور؟</button>
             </div>
-            <div class="au-forgot-note" id="forgot-password-note">ميزة استرجاع كلمة المرور قريباً — تواصل مع الأدمن حالياً لإعادة تعيينها.</div>
 
             <button type="submit" class="au-btn au-btn--primary" id="login-submit">تسجيل الدخول</button>
         </form>
+
+        <!-- [0.45.11] استرجاع كلمة المرور — خطوتين، خارج نموذج الدخول
+             حتى ما يتعارض submit مع login-form. راجع auth/auth-client.js
+             (forgotPassword/resetPasswordWithCode). -->
+        <div class="au-reset-panel" id="reset-panel">
+            <div id="reset-step-1">
+                <div class="au-reset-panel-title">استرجاع كلمة المرور</div>
+                <div class="au-reset-panel-hint">اكتب إيميلك وبنرسل لك رمز مكوّن من 6 أرقام لإعادة تعيين كلمة المرور.</div>
+                <div class="au-field">
+                    <div class="au-input-wrap">
+                        <span class="au-icon">✉️</span>
+                        <input type="email" id="reset-email" placeholder="بريدك الإلكتروني">
+                    </div>
+                </div>
+                <button type="button" class="au-btn au-btn--secondary" id="reset-send-code-btn">إرسال الرمز</button>
+            </div>
+            <div id="reset-step-2" style="display:none;">
+                <div class="au-reset-panel-title">أدخل الرمز وكلمة المرور الجديدة</div>
+                <div class="au-reset-panel-hint">أرسلنا رمزاً لبريدك، صالح لمدة 15 دقيقة.</div>
+                <div class="au-field">
+                    <div class="au-input-wrap">
+                        <span class="au-icon">🔢</span>
+                        <input type="text" id="reset-code" placeholder="رمز مكوّن من 6 أرقام" inputmode="numeric" maxlength="6">
+                    </div>
+                </div>
+                <div class="au-field">
+                    <div class="au-input-wrap">
+                        <span class="au-icon">🔒</span>
+                        <input type="password" id="reset-new-password" placeholder="كلمة المرور الجديدة">
+                        <button type="button" class="au-eye-toggle" data-toggle-for="reset-new-password">👁</button>
+                    </div>
+                </div>
+                <button type="button" class="au-btn au-btn--secondary" id="reset-confirm-btn">تعيين كلمة المرور</button>
+            </div>
+        </div>
 
         <div class="au-divider">أو</div>
 
@@ -354,10 +410,82 @@
         });
     });
 
-    // لا نظام استرجاع كلمة مرور فعلياً حالياً — نعرض ملاحظة صريحة بدل
-    // رابط لا يعمل. راجع الملاحظة الصادقة أعلى الملف.
+    // [0.45.11] استرجاع كلمة المرور — خطوتين فعليتين (بدل ملاحظة
+    // "قريباً" القديمة). راجع auth/auth-client.js.
+    var resetPanel = document.getElementById('reset-panel');
+    var resetStep1 = document.getElementById('reset-step-1');
+    var resetStep2 = document.getElementById('reset-step-2');
+    var resetEmailInput = document.getElementById('reset-email');
+    var resetSendCodeBtn = document.getElementById('reset-send-code-btn');
+    var resetCodeInput = document.getElementById('reset-code');
+    var resetNewPasswordInput = document.getElementById('reset-new-password');
+    var resetConfirmBtn = document.getElementById('reset-confirm-btn');
+
     document.getElementById('forgot-password-btn').addEventListener('click', function () {
-        document.getElementById('forgot-password-note').classList.toggle('is-visible');
+        resetPanel.classList.toggle('is-visible');
+        if (resetPanel.classList.contains('is-visible') && !resetEmailInput.value) {
+            // تعبئة الإيميل تلقائياً لو المستخدم كتبه أصلاً بنموذج الدخول.
+            resetEmailInput.value = document.getElementById('email').value.trim();
+        }
+    });
+
+    resetSendCodeBtn.addEventListener('click', function () {
+        var email = resetEmailInput.value.trim();
+        if (!email) { showMessage('اكتب إيميلك أول.', 'error'); return; }
+        resetSendCodeBtn.disabled = true;
+        resetSendCodeBtn.textContent = 'جارٍ الإرسال...';
+        AGPAuth.forgotPassword(email)
+            .then(function () {
+                // [0.45.11] الخادم يرجع success:true دائماً بغض النظر عن
+                // وجود الحساب (منع تعداد الإيميلات) — نفس الرسالة للحالتين.
+                showMessage('لو الإيميل مسجَّل عندنا، وصلك رمز بالبريد. تفقّد صندوق الوارد (وسلة السبام أيضاً).', 'ok');
+                resetStep1.style.display = 'none';
+                resetStep2.style.display = 'block';
+            })
+            .catch(function () {
+                showMessage('تعذّر الوصول للخادم. حاول مرة أخرى.', 'error');
+            })
+            .finally(function () {
+                resetSendCodeBtn.disabled = false;
+                resetSendCodeBtn.textContent = 'إرسال الرمز';
+            });
+    });
+
+    var RESET_ERROR_LABELS = {
+        invalid_or_expired_code: 'الرمز غير صحيح أو منتهي الصلاحية — تأكد منه أو اطلب رمزاً جديداً.',
+        weak_password: 'كلمة المرور الجديدة قصيرة جداً (6 أحرف على الأقل).',
+        missing_code: 'اكتب الرمز اللي وصلك بالبريد.'
+    };
+
+    resetConfirmBtn.addEventListener('click', function () {
+        var email = resetEmailInput.value.trim();
+        var code = resetCodeInput.value.trim();
+        var newPassword = resetNewPasswordInput.value;
+        if (!code || !newPassword) { showMessage('اكتب الرمز وكلمة المرور الجديدة.', 'error'); return; }
+        resetConfirmBtn.disabled = true;
+        resetConfirmBtn.textContent = 'جارٍ التعيين...';
+        AGPAuth.resetPasswordWithCode(email, code, newPassword)
+            .then(function (result) {
+                if (result.success) {
+                    showMessage('تم تغيير كلمة المرور بنجاح — سجّل دخولك بكلمة المرور الجديدة.', 'ok');
+                    resetPanel.classList.remove('is-visible');
+                    resetStep1.style.display = 'block';
+                    resetStep2.style.display = 'none';
+                    resetCodeInput.value = '';
+                    resetNewPasswordInput.value = '';
+                    document.getElementById('email').value = email;
+                    document.getElementById('password').focus();
+                } else {
+                    showMessage(RESET_ERROR_LABELS[result.error] || 'تعذّر تغيير كلمة المرور.', 'error');
+                }
+            })
+            .catch(function () {
+                showMessage('تعذّر الوصول للخادم. حاول مرة أخرى.', 'error');
+            })
+            .finally(function () {
+                resetConfirmBtn.disabled = false;
+                resetConfirmBtn.textContent = 'تعيين كلمة المرور';
+            });
     });
 
     // [0.45.6] device_locked: بيانات الدخول صحيحة لكن هذا حساب ستريمر
