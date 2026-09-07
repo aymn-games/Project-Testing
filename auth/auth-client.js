@@ -128,6 +128,31 @@ function loginWithGoogle(idToken) {
 }
 
 /**
+ * [0.45.11] استرجاع كلمة المرور — خطوة ١: يطلب إرسال رمز للإيميل.
+ * يرجع {success:true} دائماً (حتى لو الإيميل غير مسجَّل — منع تعداد
+ * الإيميلات من الواجهة، راجع authService.requestPasswordReset).
+ * @param {string} email
+ * @returns {Promise<Object>}
+ */
+function forgotPassword(email) {
+    return request('/api/auth/forgot-password', { method: 'POST', body: { email: email } });
+}
+
+/**
+ * [0.45.11] استرجاع كلمة المرور — خطوة ٢: يتحقق من الرمز ويحدّث
+ * كلمة المرور. لا يسجّل دخول تلقائياً بعد النجاح (كل الجلسات القديمة
+ * انفسخت، راجع authService.resetPasswordWithCode) — المستخدم يدخل
+ * بكلمة مروره الجديدة من نموذج الدخول العادي.
+ * @param {string} email
+ * @param {string} code
+ * @param {string} newPassword
+ * @returns {Promise<Object>}
+ */
+function resetPasswordWithCode(email, code, newPassword) {
+    return request('/api/auth/reset-password', { method: 'POST', body: { email: email, code: code, newPassword: newPassword } });
+}
+
+/**
  * [0.45.6] اختيار نوع الحساب الإجباري (لاعب/استريمر) بعد أول دخول بجوجل
  * لحساب جديد — راجع choose-account-type.html وneedsAccountTypeChoice أدناه.
  * @param {boolean} wantsToBeStreamer
@@ -673,6 +698,8 @@ global.AGPAuth = {
     signup: signup,
     login: login,
     loginWithGoogle: loginWithGoogle,
+    forgotPassword: forgotPassword,
+    resetPasswordWithCode: resetPasswordWithCode,
     logout: logout,
     me: me,
     refreshUser: refreshUser,
