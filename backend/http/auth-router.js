@@ -81,6 +81,10 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/users/delete', requireAuth: true, requireAdmin: true, handler: handleAdminDeleteUser },
   // [0.45.6] تصفير قيد الجهاز الواحد لستريمر معتمد — صمام أمان يدوي.
   { method: 'POST', path: '/api/admin/reset-device-lock', requireAuth: true, requireAdmin: true, handler: handleAdminResetDeviceLock },
+  // [0.45.11] سماح تغيير الجهاز لمرة واحدة (يُستهلَك تلقائياً بأول دخول جديد).
+  { method: 'POST', path: '/api/admin/allow-device-change', requireAuth: true, requireAdmin: true, handler: handleAdminAllowDeviceChange },
+  // [0.45.11] سوبر أدمن — تجاوز كامل لقيد الجهاز، حساب بحساب.
+  { method: 'POST', path: '/api/admin/super-admin', requireAuth: true, requireAdmin: true, handler: handleAdminSetSuperAdmin },
   { method: 'GET', path: '/api/profile', requireAuth: false, handler: handlePublicProfile },
   { method: 'GET', path: '/api/announcement', requireAuth: false, handler: handleGetAnnouncement },
   { method: 'POST', path: '/api/admin/announcement', requireAuth: true, requireAdmin: true, handler: handleAdminSetAnnouncement },
@@ -252,6 +256,18 @@ function handleAdminDeleteUser(req, res, body) {
 /** [0.45.6] الأدمن فقط — تصفير قيد الجهاز الواحد لستريمر معتمد. */
 function handleAdminResetDeviceLock(req, res, body) {
   var result = authService.adminResetDeviceLock(body.userId);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+/** [0.45.11] الأدمن فقط — تفعيل/تعطيل سماح تغيير الجهاز لمرة واحدة. body: {userId, allow: boolean} */
+function handleAdminAllowDeviceChange(req, res, body) {
+  var result = authService.adminSetAllowDeviceChange(body.userId, Boolean(body.allow));
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+/** [0.45.11] الأدمن فقط — تفعيل/تعطيل وضع سوبر أدمن لحساب محدد. body: {userId, isSuperAdmin: boolean} */
+function handleAdminSetSuperAdmin(req, res, body) {
+  var result = authService.adminSetSuperAdmin(body.userId, Boolean(body.isSuperAdmin));
   sendJson(res, result.success ? 200 : 400, result);
 }
 
