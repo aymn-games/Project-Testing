@@ -324,6 +324,26 @@ ensureColumn('broadcasts', 'total_unique_viewers', 'INTEGER NOT NULL DEFAULT 0')
 ensureColumn('users', 'display_name', 'TEXT');
 ensureColumn('users', 'avatar_image_base64', 'TEXT');
 
+// [0.45.11] سوبر أدمن — يتجاوز قيد الجهاز (checkDeviceLock) بالكامل بغض
+// النظر عن bound_device_id، يدخل من أي جهاز دائماً. 0 افتراضياً لكل
+// الحسابات (بما فيها حسابات الأدمن الأخرى) — يُفعَّل يدوياً فقط، ليس
+// تلقائياً بمجرد role='admin'. راجع backend/auth/auth-service.js
+// (checkDeviceLock).
+ensureColumn('users', 'is_super_admin', 'INTEGER NOT NULL DEFAULT 0');
+
+// [0.45.11] سماح تغيير الجهاز — استخدام لمرة واحدة فقط. الأدمن يفعّله
+// (1) لحساب ستريمر مقفول بجهاز؛ أول تسجيل دخول تالٍ من أي جهاز يُقبل
+// ويحدّث bound_device_id للجهاز الجديد، والعمود يرجع 0 تلقائياً بنفس
+// اللحظة (راجع checkDeviceLock بـauth-service.js) — القيد يشتغل فوراً
+// على الجهاز الجديد من الدخول اللي بعده، بدون تدخل يدوي إضافي من الأدمن.
+ensureColumn('users', 'allow_device_change', 'INTEGER NOT NULL DEFAULT 0');
+
+// [0.45.11] تفعيل سوبر أدمن مرة واحدة لحساب أيمن (aymanff66@gmail.com)
+// فقط — استعلام آمن للتكرار (Idempotent): يعمل شي فقط أول مرة يشتغل
+// فيها السيرفر بعد هذا التعديل، بعدها الشرط WHERE ما يطابق شي فيصير
+// no-op بكل مرة تالية. لا يُفعَّل لأي حساب أدمن آخر تلقائياً.
+db.prepare("UPDATE users SET is_super_admin = 1 WHERE email = 'aymanff66@gmail.com' AND is_super_admin = 0").run();
+
 // [0.45.14] ربط اختياري بين صف دعم (supporters) وحساب مسجَّل فعلياً
 // بالمنصة (users.id) — NULL افتراضياً (الداعم قد لا يملك حساباً، يبقى
 // السلوك القديم كما هو تماماً بالاسم النصي وحده). لو الأدمن ربط الصف
