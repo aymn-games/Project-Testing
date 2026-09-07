@@ -225,8 +225,13 @@
             // [0.45.6] قيد الجهاز الواحد (راجع backend/auth/auth-service.js:
             // checkDeviceLock) — عرض حالة فقط (🔒 مربوط / — غير مربوط بعد)
             // + زر تصفير يدوي (صمام أمان لو الستريمر غيّر جهازه فعلاً).
-            var deviceLockCell = (u.deviceLocked ? '🔒 مربوط' : '—') +
-                '<br><button class="btn btn-sm" data-user-id="' + u.id + '" data-reset-device-lock title="تصفير القيد — يسمح بالدخول من جهاز جديد">↺ تصفير</button>';
+            // [0.45.11] + زر "سماح بجهاز جديد" — استخدام لمرة وحدة، يُصفَّر
+            // تلقائياً بأول دخول جاي من أي جهاز (لا يحتاج تصفير يدوي بعدها).
+            var deviceLockCell = (u.is_super_admin ? '⭐ سوبر أدمن (بدون قيد)' : (u.deviceLocked ? '🔒 مربوط' : '—')) +
+                (u.is_super_admin ? '' :
+                    '<br><button class="btn btn-sm" data-user-id="' + u.id + '" data-reset-device-lock title="تصفير القيد — يسمح بالدخول من جهاز جديد">↺ تصفير</button>' +
+                    ' <button class="btn btn-sm" data-user-id="' + u.id + '" data-allow-device-change data-current="' + (u.allow_device_change ? '1' : '0') + '" title="سماح لمرة وحدة — أول دخول من جهاز جديد يُقبل تلقائياً ثم يرجع القيد">' +
+                    (u.allow_device_change ? '✅ مفعّل (اضغط للإلغاء)' : '🔓 سماح بجهاز جديد') + '</button>');
             return '<tr>' +
                 '<td>' + u.id + '</td>' +
                 '<td>' + escapeHtml(u.username) + '</td>' +
@@ -310,6 +315,23 @@
                         loadUsers();
                     } else {
                         showMessage('تعذّر التصفير: ' + (result.error || 'unknown'), 'error');
+                    }
+                }).finally(function () { button.disabled = false; });
+            });
+        });
+
+        // [0.45.11] سماح تغيير الجهاز لمرة وحدة — الزر يبدّل الحالة (تفعيل/إلغاء).
+        Array.prototype.forEach.call(tbody.querySelectorAll('[data-allow-device-change]'), function (button) {
+            button.addEventListener('click', function () {
+                var userId = Number(button.getAttribute('data-user-id'));
+                var currentlyOn = button.getAttribute('data-current') === '1';
+                button.disabled = true;
+                window.AGPAuth.adminAllowDeviceChange(userId, !currentlyOn).then(function (result) {
+                    if (result.success) {
+                        showMessage(currentlyOn ? 'تم إلغاء السماح.' : 'تم — أول تسجيل دخول جاي من أي جهاز رح يُقبل تلقائياً، وبعدها يرجع القيد وحده.', 'success');
+                        loadUsers();
+                    } else {
+                        showMessage('تعذّر: ' + (result.error || 'unknown'), 'error');
                     }
                 }).finally(function () { button.disabled = false; });
             });
