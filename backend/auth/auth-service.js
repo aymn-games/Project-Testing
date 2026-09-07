@@ -179,15 +179,28 @@ function signup(username, email, plainPassword, wantsToBeStreamer) {
  * مختلفاً أو وضع تصفح خفي على **نفس جهازه الفعلي** يقدر يتحايل على القيد.
  * هذا ليس خللاً بالتنفيذ — أقصى حماية ممكنة تقنياً بهذا السياق، لا وعد
  * زائف بحماية أقوى مما هو فعلياً موجود.
+ * [0.45.11] سوبر أدمن (is_super_admin=1) يتجاوز هذا الفحص بالكامل —
+ * يدخل من أي جهاز دائماً، يُفعَّل يدوياً لحساب محدد فقط (راجع
+ * adminSetSuperAdmin أدناه)، لا ينسحب تلقائياً على كل الأدمنية.
+ *
+ * [0.45.11] allow_device_change=1 يسمح بتجاوز عدم التطابق **مرة واحدة
+ * فقط** — أول تسجيل دخول من جهاز جديد يُقبل، bound_device_id يتحدّث
+ * للجهاز الجديد، والعلم يُصفَّر تلقائياً بنفس العملية (استخدام لمرة
+ * واحدة، القيد يشتغل من جديد على الجهاز الجديد بالدخول اللي بعده).
+ *
  * @param {Object} user - صف قاعدة بيانات كامل (permissions لسا نص JSON خام)
  * @param {string|null|undefined} deviceId
  * @returns {{allowed: boolean, bind?: boolean}}
  */
 function checkDeviceLock(user, deviceId) {
+    if (user.is_super_admin) return { allowed: true, bind: false };
     var isApprovedStreamer = Boolean(JSON.parse(user.permissions || '{}').can_run_games);
     if (!isApprovedStreamer) return { allowed: true };
     if (!user.bound_device_id) return { allowed: true, bind: true };
-    if (!deviceId || deviceId !== user.bound_device_id) return { allowed: false };
+    if (!deviceId || deviceId !== user.bound_device_id) {
+        if (user.allow_device_change) return { allowed: true, bind: true, consumeAllowChange: true };
+        return { allowed: false };
+    }
     return { allowed: true };
 }
 
@@ -210,7 +223,11 @@ function login(email, plainPassword, deviceId) {
     var deviceCheck = checkDeviceLock(user, deviceId);
     if (!deviceCheck.allowed) return { success: false, error: 'device_locked' };
     if (deviceCheck.bind && deviceId) {
-        db.prepare('UPDATE users SET bound_device_id = ? WHERE id = ?').run(deviceId, user.id);
+        if (deviceCheck.consumeAllowChange) {
+            db.prepare('UPDATE users SET bound_device_id = ?, allow_device_change = 0 WHERE id = ?').run(deviceId, user.id);
+        } else {
+            db.prepare('UPDATE users SET bound_device_id = ? WHERE id = ?').run(deviceId, user.id);
+        }
     }
 
     var token = createSessionFor(user);
@@ -307,7 +324,11 @@ async function loginWithGoogle(idToken, deviceId) {
     );
     if (!deviceCheck.allowed) return { success: false, error: 'device_locked' };
     if (deviceCheck.bind && deviceId) {
-        db.prepare('UPDATE users SET bound_device_id = ? WHERE id = ?').run(deviceId, existing.id);
+        if (deviceCheck.consumeAllowChange) {
+            db.prepare('UPDATE users SET bound_device_id = ?, allow_device_change = 0 WHERE id = ?').run(deviceId, existing.id);
+        } else {
+            db.prepare('UPDATE users SET bound_device_id = ? WHERE id = ?').run(deviceId, existing.id);
+        }
     }
 
     // "existing" قد يكون صف قاعدة بيانات فعلي (permissions نص JSON،
@@ -820,6 +841,37 @@ function adminResetDeviceLock(userId) {
 }
 
 /**
+ * [0.45.11] الأدمن فقط — يفعّل/يطفي سماح تغيير الجهاز لمرة واحدة لحساب
+ * ستريمر مقفول بجهاز. يُستهلَك تلقائياً بأول تسجيل دخول تالٍ من أي جهاز
+ * (راجع checkDeviceLock/login أعلاه) — هذه الدالة فقط تفعّل/تطفي العلم
+ * يدوياً، الاستهلاك التلقائي منطق منفصل بدالة login.
+ * @param {number} userId
+ * @param {boolean} allow
+ * @returns {{success: boolean, error?: string}}
+ */
+function adminSetAllowDeviceChange(userId, allow) {
+    var user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+    if (!user) return { success: false, error: 'user_not_found' };
+    db.prepare('UPDATE users SET allow_device_change = ? WHERE id = ?').run(allow ? 1 : 0, userId);
+    return { success: true };
+}
+
+/**
+ * [0.45.11] الأدمن فقط — يفعّل/يطفي وضع سوبر أدمن لحساب محدد (تجاوز
+ * كامل لقيد الجهاز، راجع checkDeviceLock أعلاه). لا يُفعَّل تلقائياً
+ * لأي حساب أدمن — يدوي بحت، حساب بحساب.
+ * @param {number} userId
+ * @param {boolean} isSuperAdmin
+ * @returns {{success: boolean, error?: string}}
+ */
+function adminSetSuperAdmin(userId, isSuperAdmin) {
+    var user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+    if (!user) return { success: false, error: 'user_not_found' };
+    db.prepare('UPDATE users SET is_super_admin = ? WHERE id = ?').run(isSuperAdmin ? 1 : 0, userId);
+    return { success: true };
+}
+
+/**
  * حفلة ترحيب الستريمر الجديد (راجع docs/CHANGELOG.md) — تُستدعى ذاتياً
  * من صاحب الحساب بعد ما يكمل الحفلة كاملة فعلياً (سلايدات + قص الشريطة
  * + العد التنازلي)، وليس مجرد فتحها. بعدها ما تتكرر تلقائياً أبداً.
@@ -1093,7 +1145,7 @@ function updateAvatarImage(userId, dataUrl) {
  * كل المستخدمين مع إحصائياتهم المجمَّعة — للوحة الأدمن فقط.
  */
 function listAllUsersWithStats() {
-    var users = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen, bound_device_id, created_at FROM users ORDER BY created_at ASC').all();
+    var users = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen, bound_device_id, is_super_admin, allow_device_change, created_at FROM users ORDER BY created_at ASC').all();
     return users.map(function (u) {
         // شفاء ذاتي — نفس منطق validateSession، حتى تظهر لوحة الأدمن
         // دائماً IDً لكل حساب حتى القديم منه قبل هذه الميزة.
@@ -1114,6 +1166,8 @@ function listAllUsersWithStats() {
             welcome_completed: Boolean(u.welcome_completed),
             account_type_chosen: u.account_type_chosen === undefined ? true : Boolean(u.account_type_chosen),
             deviceLocked: deviceLocked,
+            is_super_admin: Boolean(u.is_super_admin),
+            allow_device_change: Boolean(u.allow_device_change),
             stats: getUserStats(u.id),
             // للوحة الأدمن فقط (جدول المستخدمين) — نفس بيانات النقاط/
             // المقتنيات المُرفَقة في getPublicProfile، لكن هنا لكل المستخدمين
@@ -1191,6 +1245,8 @@ module.exports = {
     chooseAccountType: chooseAccountType,
     deleteUser: deleteUser,
     adminResetDeviceLock: adminResetDeviceLock,
+    adminSetAllowDeviceChange: adminSetAllowDeviceChange,
+    adminSetSuperAdmin: adminSetSuperAdmin,
     updateBroadcastViewerStats: updateBroadcastViewerStats,
     getTopStreamersByHours: getTopStreamersByHours,
     getAdminStreamerStats: getAdminStreamerStats,
