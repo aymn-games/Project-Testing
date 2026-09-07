@@ -631,29 +631,32 @@ body.kz-active{
 
 #kz-options{
     position:absolute; inset:0;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    display:flex; flex-direction:column; align-items:center;
+    justify-content:flex-start;
+    padding-top:clamp(180px,26vh,230px); /* ⭐ يحجز مساحة بادج اللاعب فوق -- يمنع أي تداخل */
+    gap:16px;
     opacity:0; pointer-events:none;
     transition:opacity 0.5s ease;
     z-index:6;
+    overflow-y:auto;
 }
 #kz-options.kz-show{ opacity:1; pointer-events:auto; }
+/* ⭐ حذفنا الصندوق/التبويب الكبير المحيط بالخيارات -- الخيارات الآن
+   مباشرة على الشاشة، غلاف بسيط بدون حدود ولا خلفية، بس يرتبها بعمود */
 #kz-options-panel{
-    width:clamp(320px,60vw,600px); height:clamp(300px,55vh,400px); max-width:94vw; /* ⭐ متجاوب */
-    background:rgba(20,12,34,0.35);
-    backdrop-filter:blur(6px);
-    border:2px solid var(--kz-accent2);
-    border-radius:13%;
-    box-shadow:0 0 0 1px rgba(124,58,237,0.25),0 30px 70px rgba(0,0,0,0.5),0 0 50px rgba(124,58,237,0.25);
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; padding:20px;
+    width:clamp(320px,60vw,600px); max-width:94vw;
+    display:flex; flex-direction:column; align-items:center; gap:16px;
 }
 .kz-option-row{
     display:flex; align-items:center; gap:22px;
-    padding:14px 34px; border-radius:999px;
-    border:1.5px solid rgba(255,255,255,0.16);
-    background:rgba(255,255,255,0.04);
+    padding:16px 34px; border-radius:18px;
+    border:2.5px solid rgba(216,120,255,0.55); /* ⭐ حدود بارزة لكل لوح خيار لحاله */
+    background:rgba(20,12,34,0.4);
+    backdrop-filter:blur(4px);
+    box-shadow:0 0 0 1px rgba(124,58,237,0.15),0 10px 26px rgba(0,0,0,0.4);
     cursor:pointer;
     transition:border-color 0.2s, background 0.2s, transform 0.15s;
-    width:78%; justify-content:center;
+    width:100%; justify-content:center;
 }
 .kz-option-row:hover{ transform:translateY(-2px); border-color:var(--gold); background:rgba(255,255,255,0.07); }
 .kz-option-letter{
@@ -796,7 +799,7 @@ body.kz-active{
     border-radius:999px; padding:4px 16px;
 }
 
-#kz-answer-timer{ text-align:center; margin-bottom:16px; }
+#kz-answer-timer{ text-align:center; }
 #kz-answer-timer .kz-ans-num{ font-size:clamp(26px,4vw,34px); font-weight:900; color:var(--gold2); text-shadow:0 0 14px rgba(232,182,76,0.55); }
 #kz-answer-timer .kz-ans-label{ font-size:12px; color:#d9c8e8; margin-top:2px; }
 
@@ -985,7 +988,6 @@ body.kz-active{
     border:1.5px solid rgba(124,58,237,0.35);
     border-radius:16px;
     padding:10px 14px;
-    margin-bottom:14px;
 }
 #kz-answered-status{
     display:flex; align-items:center; justify-content:center; gap:18px;

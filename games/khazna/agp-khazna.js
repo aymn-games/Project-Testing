@@ -687,6 +687,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
+    function roundContentHtml() {
+        return '<div id="kz-turn-badge"><div id="kz-turn-avatar"></div><div class="kz-turn-name" id="kz-turn-name"></div><div class="kz-turn-sub">🔥 الدور عندك -- جاوب قبلهم!</div></div>' +
+            '<div id="kz-vault-stage">' +
+                '<div id="kz-vault">' + vaultSvgMarkup() + '</div>' +
+                '<div id="kz-flying-clocks"></div>' +
+            '</div>' +
+            '<div id="kz-memorize-badge"><div class="kz-mem-num" id="kz-mem-num">' + MEMORIZE_SECONDS + '</div><div class="kz-mem-label">ثانية للحفظ</div></div>' +
+            '<div id="kz-options">' +
+                '<div id="kz-answered-bar">' +
+                    '<div id="kz-answered-status">' +
+                        '<span>👥 باقي بالمباراة: <span class="kz-stat-num" id="kz-remaining-num">0</span></span>' +
+                        '<span>✅ جاوبوا: <span class="kz-stat-live" id="kz-answered-num">0</span> / <span id="kz-answered-total">0</span></span>' +
+                    '</div>' +
+                    '<div id="kz-answered-grid"></div>' +
+                '</div>' +
+                '<div id="kz-answer-timer"><div class="kz-ans-num" id="kz-ans-num">' + _settings.chooseSeconds + '</div><div class="kz-ans-label">ثانية لاختيار الإجابة</div></div>' +
+                '<div id="kz-options-panel-holder"></div>' +
+            '</div>';
+    }
+
     function ensureMatchEl() {
         if (_matchEl) return _matchEl;
         _matchEl = document.createElement('div');
@@ -697,25 +717,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div id="kz-reel-window"><div id="kz-reel-highlight-tab"></div><div id="kz-reel-track"></div></div>' +
                 '<button type="button" id="kz-picker-btn">🎲 تحريك</button>' +
             '</div>' +
-            '<div id="kz-round">' +
-                '<div id="kz-turn-badge"><div id="kz-turn-avatar"></div><div class="kz-turn-name" id="kz-turn-name"></div><div class="kz-turn-sub">🔥 الدور عندك -- جاوب قبلهم!</div></div>' +
-                '<div id="kz-vault-stage">' +
-                    '<div id="kz-vault">' + vaultSvgMarkup() + '</div>' +
-                    '<div id="kz-flying-clocks"></div>' +
-                '</div>' +
-                '<div id="kz-memorize-badge"><div class="kz-mem-num" id="kz-mem-num">' + MEMORIZE_SECONDS + '</div><div class="kz-mem-label">ثانية للحفظ</div></div>' +
-                '<div id="kz-options">' +
-                    '<div id="kz-answered-bar">' +
-                        '<div id="kz-answered-status">' +
-                            '<span>👥 باقي بالمباراة: <span class="kz-stat-num" id="kz-remaining-num">0</span></span>' +
-                            '<span>✅ جاوبوا: <span class="kz-stat-live" id="kz-answered-num">0</span> / <span id="kz-answered-total">0</span></span>' +
-                        '</div>' +
-                        '<div id="kz-answered-grid"></div>' +
-                    '</div>' +
-                    '<div id="kz-answer-timer"><div class="kz-ans-num" id="kz-ans-num">' + _settings.chooseSeconds + '</div><div class="kz-ans-label">ثانية لاختيار الإجابة</div></div>' +
-                    '<div id="kz-options-panel-holder"></div>' +
-                '</div>' +
-            '</div>';
+            '<div id="kz-round">' + roundContentHtml() + '</div>';
         document.body.appendChild(_matchEl);
         return _matchEl;
     }
@@ -1142,6 +1144,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _roundNumber = 1;
         _matchStartedAt = Date.now();
         _eliminatedPlayers = [];
+        // ⭐ إصلاح: تعبئة أسماء السكرول فوراً عند دخول شاشة اللعب (بدون
+        // دوران) -- بدل ما تطلع فاضية لين أول ضغطة تحريك
+        var initialPlayers = AGP.player.getAllPlayers();
+        var initialNames = initialPlayers.length ? initialPlayers.map(function (p) { return p.name || p.id; }) : ['لاعب'];
+        buildReel(initialNames);
         // ⭐ السكرول ما يتحرك تلقائياً -- بس عند ضغط "🎲 تحريك" يدوياً
         el('kz-picker-btn').onclick = function () { spinPickerAndStart(3); };
     }
@@ -1493,6 +1500,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             _eliminatedPlayers = [];
             _roundNumber = 1;
             _matchStartedAt = Date.now();
+            // ⭐ إصلاح: شاشة الفائز كانت تمسح محتوى #kz-round بالكامل
+            // (البادج/الخزنة/الساعات/الخيارات) بدون رجعتهم -- لازم نعيد
+            // بناء نفس الهيكل قبل أي جولة جديدة، وإلا كل أزرار الإعدادات
+            // والسكرول يتعطلوا لأن عناصرهم صارت مو موجودة بالـDOM أصلاً
+            el('kz-round').innerHTML = roundContentHtml();
             spinPickerAndStart(3);
         });
         el('kz-newmatch-btn').addEventListener('click', function () {
