@@ -344,6 +344,13 @@ ensureColumn('users', 'allow_device_change', 'INTEGER NOT NULL DEFAULT 0');
 // no-op بكل مرة تالية. لا يُفعَّل لأي حساب أدمن آخر تلقائياً.
 db.prepare("UPDATE users SET is_super_admin = 1 WHERE email = 'aymanff66@gmail.com' AND is_super_admin = 0").run();
 
+// [0.45.11] استرجاع كلمة المرور — كود مؤقت (نفس أسلوب
+// tiktok_verification_code أعلاه) + وقت انتهاء صلاحية. NULL يعني لا
+// طلب استرجاع معلّق حالياً. راجع backend/auth/auth-service.js
+// (requestPasswordReset/resetPasswordWithCode).
+ensureColumn('users', 'password_reset_code', 'TEXT');
+ensureColumn('users', 'password_reset_expires', 'INTEGER');
+
 // [0.45.14] ربط اختياري بين صف دعم (supporters) وحساب مسجَّل فعلياً
 // بالمنصة (users.id) — NULL افتراضياً (الداعم قد لا يملك حساباً، يبقى
 // السلوك القديم كما هو تماماً بالاسم النصي وحده). لو الأدمن ربط الصف
