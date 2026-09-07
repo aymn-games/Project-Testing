@@ -594,14 +594,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<h3>🎯 مين عليه الدور؟</h3>' +
                 '<div id="kz-reel-window"><div id="kz-reel-highlight-tab"></div><div id="kz-reel-track"></div></div>' +
                 '<button type="button" id="kz-picker-btn">🎲 تحريك</button>' +
-                '<div id="kz-picker-result"><div class="kz-picked-name" id="kz-picked-name"></div><div class="kz-picked-sub">🔥 الدور عندك -- جاوب قبلهم!</div></div>' +
             '</div>' +
             '<div id="kz-round">' +
                 '<div id="kz-turn-badge"><div id="kz-turn-avatar"></div><div class="kz-turn-name" id="kz-turn-name"></div><div class="kz-turn-sub">🔥 الدور عندك -- جاوب قبلهم!</div></div>' +
-                '<div id="kz-vault">' + vaultSvgMarkup() + '</div>' +
-                '<div id="kz-flying-clocks"></div>' +
+                '<div id="kz-vault-stage">' +
+                    '<div id="kz-vault">' + vaultSvgMarkup() + '</div>' +
+                    '<div id="kz-flying-clocks"></div>' +
+                '</div>' +
                 '<div id="kz-memorize-badge"><div class="kz-mem-num" id="kz-mem-num">' + MEMORIZE_SECONDS + '</div><div class="kz-mem-label">ثانية للحفظ</div></div>' +
                 '<div id="kz-options">' +
+                    '<div id="kz-answered-bar">' +
+                        '<div id="kz-answered-status">' +
+                            '<span>👥 باقي بالمباراة: <span class="kz-stat-num" id="kz-remaining-num">0</span></span>' +
+                            '<span>✅ جاوبوا: <span class="kz-stat-live" id="kz-answered-num">0</span> / <span id="kz-answered-total">0</span></span>' +
+                        '</div>' +
+                        '<div id="kz-answered-grid"></div>' +
+                    '</div>' +
                     '<div id="kz-answer-timer"><div class="kz-ans-num" id="kz-ans-num">' + _settings.chooseSeconds + '</div><div class="kz-ans-label">ثانية لاختيار الإجابة</div></div>' +
                     '<div id="kz-options-panel-holder"></div>' +
                 '</div>' +
@@ -631,8 +639,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('kz-round').classList.remove('kz-show');
         el('kz-turn-badge').classList.remove('kz-show');
         el('kz-reel-highlight-tab').classList.remove('kz-locked');
-        el('kz-picker-result').classList.remove('kz-show');
-        el('kz-picked-name').textContent = '';
 
         var players = AGP.player.getAllPlayers();
         var pickList = players.length ? players : [{ id: 'demo', name: 'لاعب', avatarUrl: null }];
@@ -644,7 +650,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var windowH = el('kz-reel-window').clientHeight;
         var centerOffset = windowH / 2 - REEL_ITEM_H / 2;
         var targetIndex = Math.floor(loopNames.length * 0.6) + Math.floor(Math.random() * names.length);
-        var pickedName = loopNames[targetIndex];
         var pickedPlayer = pickList[targetIndex % pickList.length];
         var targetY = -(targetIndex * REEL_ITEM_H) + centerOffset;
 
@@ -656,15 +661,58 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var items = track.querySelectorAll('.kz-reel-name');
             if (items[targetIndex]) items[targetIndex].classList.add('kz-locked-name');
             el('kz-reel-highlight-tab').classList.add('kz-locked');
-            el('kz-picked-name').textContent = pickedName;
-            el('kz-picker-result').classList.add('kz-show');
             el('kz-picker-btn').disabled = false;
+
             setTimeout(function () {
-                el('kz-picker').classList.add('kz-hidden');
-                el('kz-round').classList.add('kz-show');
-                runRoundSequence(clockCount, pickedPlayer);
-            }, 1400);
+                flyPickedCardToTop(pickedPlayer, clockCount);
+            }, 500); // وقفة قصيرة يبين فيها التوهج حول الاسم قبل ما البطاقة تطير
         }, 3300);
+    }
+
+    /* ---------------- طيران بطاقة اللاعب من السكرول لأعلى الشاشة ---------------- */
+    function flyPickedCardToTop(turnPlayer, clockCount) {
+        var turnName = (turnPlayer && (turnPlayer.name || turnPlayer.id)) || '';
+        el('kz-turn-name').textContent = turnName;
+        var avatarEl = el('kz-turn-avatar');
+        if (turnPlayer && turnPlayer.avatarUrl) {
+            avatarEl.innerHTML = '<img src="' + escapeAttr(turnPlayer.avatarUrl) + '" alt="">';
+        } else {
+            avatarEl.innerHTML = '';
+            avatarEl.textContent = turnName.charAt(0) || '؟';
+        }
+
+        el('kz-round').classList.add('kz-show');
+        var badge = el('kz-turn-badge');
+        badge.style.transition = 'none';
+        badge.classList.add('kz-show');
+
+        // نقيس مكان تبويب السكرول المقفول (نقطة الانطلاق) ومكان الشارة
+        // بوضعها الطبيعي أعلى الشاشة (نقطة الوصول)، ونحسب الفرق بينهم
+        var tabRect = el('kz-reel-highlight-tab').getBoundingClientRect();
+        void badge.offsetWidth;
+        var badgeRect = badge.getBoundingClientRect();
+        var dx = (tabRect.left + tabRect.width / 2) - (badgeRect.left + badgeRect.width / 2);
+        var dy = (tabRect.top + tabRect.height / 2) - (badgeRect.top + badgeRect.height / 2);
+
+        badge.style.transformOrigin = 'center top';
+        badge.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(0.5)';
+        void badge.offsetWidth;
+        badge.style.transition = 'transform 0.65s cubic-bezier(.2,.8,.2,1.05), opacity 0.3s ease';
+
+        // السكرول يختفي بنفس لحظة طيران البطاقة
+        el('kz-picker').classList.add('kz-hidden');
+
+        requestAnimationFrame(function () {
+            badge.style.transform = 'translate(0,0) scale(1)';
+        });
+
+        setTimeout(function () {
+            badge.style.transition = '';
+            badge.style.transform = '';
+            setTimeout(function () {
+                runRoundSequence(clockCount, turnPlayer);
+            }, 500); // نص ثانية بعد وصول البطاقة، قبل ما تظهر الخزنة
+        }, 700);
     }
 
     function shuffleArr(arr) {
@@ -712,12 +760,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }).join('');
 
         var n = hours.length;
-        // ⭐ متجاوب: نقيس عرض الساعة الفعلي المعروض (يتغيّر حسب clamp() بالـCSS
-        // على حجم الشاشة) بدل رقم ثابت، عشان تتوزّع صح على أي مقاس شاشة.
-        var clockEl0 = el('kz-fc-0');
-        var clockWidth = (clockEl0 && clockEl0.getBoundingClientRect().width) || 150;
-        var spacing = clockWidth + 20;
-        var positions = hours.map(function (_, i) { return (i - (n - 1) / 2) * spacing; });
 
         void vault.offsetWidth;
         vault.classList.add('kz-in');
@@ -727,14 +769,33 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         playMechSound('open');
         await wait(700);
 
+        // ⭐ خروج الساعات من جوّة الخزنة فعلياً: نقيس مركز الخزنة الحقيقي
+        // ومكان كل ساعة النهائي بالصف (Flexbox)، ونخليها تبدأ بالضبط من
+        // مركز الخزنة وتتحرك لمكانها -- مو رقم مسافة ثابت.
+        var vaultRect = vault.getBoundingClientRect();
+        var vaultCenterX = vaultRect.left + vaultRect.width / 2;
+        var vaultCenterY = vaultRect.top + vaultRect.height / 2;
+
         hours.forEach(function (_, i) {
+            var c = el('kz-fc-' + i);
+            var finalRect = c.getBoundingClientRect();
+            var finalCenterX = finalRect.left + finalRect.width / 2;
+            var finalCenterY = finalRect.top + finalRect.height / 2;
+            var startDx = vaultCenterX - finalCenterX;
+            var startDy = vaultCenterY - finalCenterY;
+
+            c.style.transition = 'none';
+            c.style.transform = 'translate(' + startDx + 'px,' + startDy + 'px) scale(0.15) rotate(-20deg)';
+            c.style.opacity = '0';
+            void c.offsetWidth;
+            c.style.transition = 'transform 0.8s cubic-bezier(.2,.75,.25,1.2), opacity 0.4s ease';
+
             setTimeout(function () {
-                var c = el('kz-fc-' + i);
-                c.classList.add('kz-out');
-                c.style.transform = 'translate(' + positions[i] + 'px,0) scale(1)';
+                c.style.transform = 'translate(0,0) scale(1) rotate(0deg)';
+                c.style.opacity = '1';
             }, i * 180);
         });
-        await wait(n * 180 + 400);
+        await wait(n * 180 + 500);
 
         vault.classList.remove('kz-in', 'kz-open');
         await wait(1500);
@@ -756,11 +817,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         playMechSound('open');
         await wait(700);
 
+        // سحب الساعات لجوّة الخزنة -- نفس المنطق بالعكس: من مكانها
+        // الحالي لمركز الخزنة (بعد ما رجعت وفتحت)
+        var vaultRect2 = vault.getBoundingClientRect();
+        var vaultCenterX2 = vaultRect2.left + vaultRect2.width / 2;
+        var vaultCenterY2 = vaultRect2.top + vaultRect2.height / 2;
+
         hours.forEach(function (_, i) {
             setTimeout(function () {
                 var c = el('kz-fc-' + i);
-                c.style.transform = 'translate(0,0) scale(0.2)';
-                c.classList.remove('kz-out');
+                var curRect = c.getBoundingClientRect();
+                var curCenterX = curRect.left + curRect.width / 2;
+                var curCenterY = curRect.top + curRect.height / 2;
+                var dx = vaultCenterX2 - curCenterX;
+                var dy = vaultCenterY2 - curCenterY;
+                c.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(0.15) rotate(20deg)';
+                c.style.opacity = '0';
             }, i * 140);
         });
         await wait(n * 140 + 500);
@@ -813,6 +885,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var answeredIds = {};
             var correctOrder = []; // مصفوفة player id بترتيب الإجابة الصحيحة
 
+            function renderAnsweredBar() {
+                var all = AGP.player.getAllPlayers();
+                var answeredPlayers = all.filter(function (p) { return answeredIds[p.id]; });
+                el('kz-remaining-num').textContent = all.length;
+                el('kz-answered-num').textContent = answeredPlayers.length;
+                el('kz-answered-total').textContent = all.length;
+                // ⭐ بدون تقييد بعدد ثابت -- شبكة 7 أعمدة تفتح صف جديد
+                // تلقائياً كل ما زاد عدد اللاعبين اللي جاوبوا (مثلاً عند 14)
+                el('kz-answered-grid').innerHTML = answeredPlayers.map(function (p) {
+                    var nm = p.name || p.id;
+                    return '<div class="kz-answered-chip"><div class="kz-chip-avatar">' + escapeHtml(nm.charAt(0)) + '</div><div class="kz-chip-name">' + escapeHtml(nm) + '</div></div>';
+                }).join('');
+            }
+            renderAnsweredBar();
+
             function markRowsResult() {
                 el('kz-options').querySelectorAll('.kz-option-row').forEach(function (r2, i2) {
                     r2.classList.toggle('kz-correct', i2 === data.correctIdx);
@@ -863,11 +950,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     return;
                 }
 
-                var nextRound = _roundNumber + 1;
-                var nextClockCount = clockCount + (nextRound % 2 === 0 ? 1 : 0);
-                _roundNumber = nextRound;
+                // ⭐ عدد الساعات ثابت طول المباراة (ما يزيد كل جولتين -- طلب صريح)
+                _roundNumber += 1;
                 resolve();
-                spinPickerAndStart(nextClockCount);
+                spinPickerAndStart(clockCount);
             }
 
             function checkTargetTrigger(justAnsweredId) {
@@ -888,6 +974,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 var letter = normalizeAnswerLetter(payload.text);
                 if (!letter) return;
                 answeredIds[payload.id] = true;
+                renderAnsweredBar();
                 var chosenIdx = { a: 0, b: 1, c: 2 }[letter];
                 if (chosenIdx === data.correctIdx) {
                     correctOrder.push(payload.id);
@@ -1165,6 +1252,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var keyword = normalizeArabicText(_settings.joinKeyword);
             if (!keyword || text !== keyword) return;
             if (findPlayerById(payload.id)) return;
+            // ⭐ اللاعب المُقصى ما يرجع تلقائياً بكتابة الكلمة المفتاحية --
+            // بس عبر زر "↩" اليدوي بتبويب المشاركين (طلب صريح)
+            if (_eliminatedPlayers.some(function (p) { return p.id === payload.id; })) return;
             AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null });
             _miniJoinedIds.push(payload.id);
             renderMiniGrid();
