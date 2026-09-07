@@ -74,6 +74,10 @@ var ROUTES = [
   // [0.45.6] اختيار نوع الحساب الإجباري (لاعب/استريمر) بعد أول دخول
   // بجوجل لحساب جديد كلياً — راجع choose-account-type.html.
   { method: 'POST', path: '/api/auth/account-type', requireAuth: true, handler: handleChooseAccountType },
+  // [0.45.11] استرجاع كلمة المرور — خطوتين، بدون Auth (المستخدم أصلاً
+  // خارج جلسته). راجع authService.requestPasswordReset/resetPasswordWithCode.
+  { method: 'POST', path: '/api/auth/forgot-password', requireAuth: false, handler: handleForgotPassword },
+  { method: 'POST', path: '/api/auth/reset-password', requireAuth: false, handler: handleResetPassword },
   { method: 'GET', path: '/api/admin/users', requireAuth: true, requireAdmin: true, handler: handleAdminListUsers },
   { method: 'POST', path: '/api/admin/permissions', requireAuth: true, requireAdmin: true, handler: handleAdminSetPermission },
   { method: 'POST', path: '/api/admin/custom-id', requireAuth: true, requireAdmin: true, handler: handleAdminSetCustomId },
@@ -165,6 +169,25 @@ function handleGoogleLogin(req, res, body) {
     var status = result.success ? 200 : (result.error === 'device_locked' ? 403 : 401);
     sendJson(res, status, result);
   });
+}
+
+/**
+ * [0.45.11] خطوة ١ — يرجع {success:true} دائماً (منع تعداد الإيميلات،
+ * راجع authService.requestPasswordReset). body: {email}
+ */
+function handleForgotPassword(req, res, body) {
+  return authService.requestPasswordReset(body.email).then(function (result) {
+    sendJson(res, 200, result);
+  });
+}
+
+/**
+ * [0.45.11] خطوة ٢ — يتحقق من الرمز ويحدّث كلمة المرور. body:
+ * {email, code, newPassword}
+ */
+function handleResetPassword(req, res, body) {
+  var result = authService.resetPasswordWithCode(body.email, body.code, body.newPassword);
+  sendJson(res, result.success ? 200 : 400, result);
 }
 
 function handleLogout(req, res, body, user, token) {
