@@ -48,6 +48,16 @@ module.exports = {
     googleClientId: process.env.GOOGLE_CLIENT_ID || '777683353907-hkemaaft5t7mktgtjvlf47ptuqk93qbg.apps.googleusercontent.com',
 
     /**
+     * [0.45.11] مفتاح Resend API لإرسال إيميلات المعاملات (حالياً:
+     * رمز إعادة تعيين كلمة المرور). يُقرَأ حصراً من متغيّر بيئة
+     * RESEND_API_KEY — لا قيمة افتراضية مكتوبة هنا إطلاقاً (لا سر
+     * بالكود، نفس مبدأ googleClientId أعلاه لكن بدون قيمة تطوير
+     * افتراضية لأن Resend ما يوفر مفتاح تجريبي عام). فارغ = ميزة
+     * إرسال الإيميل معطّلة بأمان (راجع backend/email/email-service.js).
+     */
+    resendApiKey: process.env.RESEND_API_KEY || '',
+
+    /**
      * حدود عامة أولية لمعدّل الرسائل (راجع §8 في وثيقة المعمارية) —
      * قيم مبدئية فقط، لا أي منطق تطبيق فعلي بعد (ذلك في
      * utils/rate-limiter.js لاحقاً).
