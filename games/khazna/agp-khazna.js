@@ -583,6 +583,108 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         } catch (e) { /* تجاهل بيئات بدون صوت */ }
     }
 
+    /* ======================================================================
+     *  مؤثرات صوتية إضافية (كلها مُصنَّعة بـWeb Audio، نفس أسلوب
+     *  playMechSound) -- طلب صريح:
+     *   - playChime: صوت وقوف السكرول على اسم لاعب
+     *   - playWhoosh: خروج/رجوع الساعات من الخزنة
+     *   - playTick: وصول كل إجابة
+     *   - playElimSound: ظهور تبويب الإقصاء
+     *   - playWinnerFanfare: ظهور بطاقة الفائز
+     * ==================================================================== */
+    function playChime() {
+        try {
+            _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            var t0 = _audioCtx.currentTime;
+            [660, 880].forEach(function (freq, i) {
+                var t = t0 + i * 0.09;
+                var osc = _audioCtx.createOscillator();
+                var gain = _audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, t);
+                gain.gain.setValueAtTime(0.001, t);
+                gain.gain.exponentialRampToValueAtTime(0.3, t + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+                osc.connect(gain).connect(_audioCtx.destination);
+                osc.start(t); osc.stop(t + 0.35);
+            });
+        } catch (e) {}
+    }
+
+    function playWhoosh() {
+        try {
+            _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            var t0 = _audioCtx.currentTime;
+            var bufferSize = _audioCtx.sampleRate * 0.35;
+            var noiseBuffer = _audioCtx.createBuffer(1, bufferSize, _audioCtx.sampleRate);
+            var data = noiseBuffer.getChannelData(0);
+            for (var i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / bufferSize);
+            var noise = _audioCtx.createBufferSource();
+            noise.buffer = noiseBuffer;
+            var filter = _audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(400, t0);
+            filter.frequency.exponentialRampToValueAtTime(2200, t0 + 0.35);
+            var gain = _audioCtx.createGain();
+            gain.gain.setValueAtTime(0.001, t0);
+            gain.gain.exponentialRampToValueAtTime(0.22, t0 + 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.35);
+            noise.connect(filter).connect(gain).connect(_audioCtx.destination);
+            noise.start(t0);
+        } catch (e) {}
+    }
+
+    function playTick() {
+        try {
+            _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            var t0 = _audioCtx.currentTime;
+            var osc = _audioCtx.createOscillator();
+            var gain = _audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(1250, t0);
+            gain.gain.setValueAtTime(0.12, t0);
+            gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.09);
+            osc.connect(gain).connect(_audioCtx.destination);
+            osc.start(t0); osc.stop(t0 + 0.09);
+        } catch (e) {}
+    }
+
+    function playElimSound() {
+        try {
+            _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            var t0 = _audioCtx.currentTime;
+            var osc = _audioCtx.createOscillator();
+            var gain = _audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(260, t0);
+            osc.frequency.exponentialRampToValueAtTime(70, t0 + 0.55);
+            gain.gain.setValueAtTime(0.001, t0);
+            gain.gain.exponentialRampToValueAtTime(0.28, t0 + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.6);
+            osc.connect(gain).connect(_audioCtx.destination);
+            osc.start(t0); osc.stop(t0 + 0.6);
+        } catch (e) {}
+    }
+
+    function playWinnerFanfare() {
+        try {
+            _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            var t0 = _audioCtx.currentTime;
+            [523, 659, 784, 1046].forEach(function (freq, i) {
+                var t = t0 + i * 0.13;
+                var osc = _audioCtx.createOscillator();
+                var gain = _audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, t);
+                gain.gain.setValueAtTime(0.001, t);
+                gain.gain.exponentialRampToValueAtTime(0.28, t + 0.03);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+                osc.connect(gain).connect(_audioCtx.destination);
+                osc.start(t); osc.stop(t + 0.5);
+            });
+        } catch (e) {}
+    }
+
     function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
     function ensureMatchEl() {
@@ -661,6 +763,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var items = track.querySelectorAll('.kz-reel-name');
             if (items[targetIndex]) items[targetIndex].classList.add('kz-locked-name');
             el('kz-reel-highlight-tab').classList.add('kz-locked');
+            playChime();
             el('kz-picker-btn').disabled = false;
 
             setTimeout(function () {
@@ -726,10 +829,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function buildShuffledOptions(correctOrder) {
         var correctIdx = Math.floor(Math.random() * 3);
-        var opts = [];
-        for (var i = 0; i < 3; i++) opts.push(i === correctIdx ? correctOrder.slice() : shuffleArr(correctOrder));
-        for (var k = 0; k < 3; k++) {
-            if (k !== correctIdx && opts[k].join() === correctOrder.join()) opts[k] = shuffleArr(correctOrder);
+        var opts = [null, null, null];
+        opts[correctIdx] = correctOrder.slice();
+
+        // ⭐ يضمن الثلاث خيارات مختلفين عن بعضهم تماماً (مو بس عن ترتيب
+        // الصح) -- طلب صريح
+        for (var i = 0; i < 3; i++) {
+            if (i === correctIdx) continue;
+            var attempt, tries = 0;
+            do {
+                attempt = shuffleArr(correctOrder);
+                tries++;
+            } while (opts.some(function (o) { return o && o.join() === attempt.join(); }) && tries < 30);
+            opts[i] = attempt;
         }
         return { opts: opts, correctIdx: correctIdx };
     }
@@ -755,8 +867,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // ⚠️ تظهر فوراً وتبقى ظاهرة طول الجولة كاملة (حتى مرحلة الخيارات)
         el('kz-turn-badge').classList.add('kz-show');
 
+        var orderHintHtml =
+            '<div class="kz-order-hint">' +
+                '<span>ابدأ من هنا</span>' +
+                '<svg viewBox="0 0 70 14" xmlns="http://www.w3.org/2000/svg">' +
+                    '<line x1="65" y1="7" x2="8" y2="7" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round"/>' +
+                    '<path d="M8 7 L16 2 M8 7 L16 12" stroke="var(--gold)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
+                '</svg>' +
+            '</div>';
         flyBox.innerHTML = hours.map(function (h, i) {
-            return '<div class="kz-flying-clock" id="kz-fc-' + i + '">' + clockFaceSvg(h) + '</div>';
+            return '<div class="kz-flying-clock" id="kz-fc-' + i + '">' + (i === 0 ? orderHintHtml : '') + clockFaceSvg(h) + '</div>';
         }).join('');
 
         var n = hours.length;
@@ -795,6 +915,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 c.style.opacity = '1';
             }, i * 180);
         });
+        playWhoosh();
         await wait(n * 180 + 500);
 
         vault.classList.remove('kz-in', 'kz-open');
@@ -835,6 +956,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 c.style.opacity = '0';
             }, i * 140);
         });
+        playWhoosh();
         await wait(n * 140 + 500);
 
         vault.classList.remove('kz-open');
@@ -920,6 +1042,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 holder.innerHTML = html;
                 el('kz-options').appendChild(holder);
                 requestAnimationFrame(function () { holder.classList.add('kz-show'); });
+                playElimSound();
+
+                // ⭐ أنيميشن اختفاء اللاعبين المُقصَين واحد تلو الآخر (بعد
+                // ما يبينون كلهم أول شوي)
+                var nameEls = holder.querySelectorAll('.kz-elim-name');
+                setTimeout(function () {
+                    nameEls.forEach(function (nEl, i) {
+                        setTimeout(function () { nEl.classList.add('kz-elim-gone'); }, i * 280);
+                    });
+                }, 1100);
             }
 
             async function endRound(eliminatedIds) {
@@ -974,6 +1106,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 var letter = normalizeAnswerLetter(payload.text);
                 if (!letter) return;
                 answeredIds[payload.id] = true;
+                playTick();
                 renderAnsweredBar();
                 var chosenIdx = { a: 0, b: 1, c: 2 }[letter];
                 if (chosenIdx === data.correctIdx) {
@@ -1009,8 +1142,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _roundNumber = 1;
         _matchStartedAt = Date.now();
         _eliminatedPlayers = [];
+        // ⭐ السكرول ما يتحرك تلقائياً -- بس عند ضغط "🎲 تحريك" يدوياً
         el('kz-picker-btn').onclick = function () { spinPickerAndStart(3); };
-        spinPickerAndStart(3);
     }
 
     /* ======================================================================
@@ -1338,6 +1471,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
 
         var pointsResult = await pointsPromise;
+        if (winner) playWinnerFanfare();
 
         el('kz-round').innerHTML =
             '<div id="kz-winner-wrap">' +
@@ -1345,7 +1479,28 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 (winner
                     ? AGP.playerCard.renderTrophyCard(winner, { kind: 'winner', showCrown: true, pointsHtml: pointsHtmlFor(pointsResult, winner) })
                     : '<div id="kz-no-winner">ما فيه فائز -- كل اللاعبين انقصوا</div>') +
+                '<div id="kz-end-actions">' +
+                    '<button type="button" id="kz-replay-btn">🔁 إعادة المباراة بنفس اللاعبين</button>' +
+                    '<button type="button" id="kz-newmatch-btn">🆕 مباراة جديدة</button>' +
+                    '<button type="button" id="kz-exit-btn">🚪 الخروج</button>' +
+                '</div>' +
             '</div>';
+
+        el('kz-replay-btn').addEventListener('click', function () {
+            // "بنفس اللاعبين" = يرجع كل اللاعبين اللي شاركوا بالمباراة
+            // (المُقصَين برضو)، مو بس الفائز الباقي
+            _eliminatedPlayers.forEach(function (p) { AGP.player.addPlayer(p); });
+            _eliminatedPlayers = [];
+            _roundNumber = 1;
+            _matchStartedAt = Date.now();
+            spinPickerAndStart(3);
+        });
+        el('kz-newmatch-btn').addEventListener('click', function () {
+            window.location.reload();
+        });
+        el('kz-exit-btn').addEventListener('click', function () {
+            window.location.href = '../../index.html';
+        });
 
         AGP.events.emit('game:roundEnded', { id: GAME_ID });
     }
