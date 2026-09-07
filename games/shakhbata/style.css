@@ -1,0 +1,353 @@
+:root{
+    --shk-accent:#7c3aed;
+    --shk-accent2:#d878ff;
+    --gold:#e8b64c;
+    --gold2:#f3d78a;
+}
+
+body.shk-active{
+    margin:0;
+    font-family:'Zain',Cairo,sans-serif;
+    color:#fff;
+    min-height:100vh;
+    padding-top:56px;
+    box-sizing:border-box;
+    background:
+        radial-gradient(ellipse 900px 500px at 50% -8%,rgba(124,58,237,0.18),transparent 60%),
+        radial-gradient(ellipse 700px 500px at 90% 100%,rgba(216,120,255,0.16),transparent 60%),
+        linear-gradient(180deg,#0d0818 0%,#090614 45%,#05030a 100%);
+    background-attachment:fixed;
+    background-size:cover;
+    overflow-x:hidden;
+}
+
+/* ---------------------------------------------------------------------
+   الهيدر الأساسي الثابت
+--------------------------------------------------------------------- */
+#shk-header{
+    position:fixed; top:0; left:0; right:0; z-index:500;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 20px;
+    background:linear-gradient(90deg,rgba(13,8,24,0.92),rgba(30,15,60,0.85));
+    border-bottom:1px solid rgba(124,58,237,0.35);
+    box-shadow:0 2px 20px rgba(124,58,237,0.12);
+}
+.shk-header-icons{ display:flex; gap:8px; align-items:center; }
+.shk-header-icon-btn{
+    width:34px; height:34px; border-radius:50%;
+    border:1px solid rgba(124,58,237,0.45);
+    background:rgba(255,255,255,0.06);
+    color:#fff; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:15px;
+}
+#shk-header-title{
+    background:rgba(0,0,0,0.35);
+    border:1px solid rgba(124,58,237,0.25);
+    border-radius:999px; padding:6px 22px;
+    color:#e6d9ff; font-weight:700; font-size:0.9em;
+}
+#shk-header-brand{ display:flex; align-items:center; }
+#shk-header-brand img{ height:36px; width:auto; }
+
+/* ---------------------------------------------------------------------
+   شاشة الإعدادات — "settings-no-box"
+--------------------------------------------------------------------- */
+#shk-settings{
+    width:min(980px,94vw); margin:0 auto; padding:56px 24px 60px;
+    box-sizing:border-box; column-count:2; column-gap:60px; column-fill:auto;
+}
+@media (max-width:720px){ #shk-settings{ column-count:1; } }
+
+#shk-settings h2{
+    column-span:all; margin:0 0 42px;
+    font-size:clamp(24px,4vw,38px); font-weight:900; text-align:center;
+    background:linear-gradient(90deg,var(--shk-accent2),#d0b3ff 55%,var(--shk-accent));
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    position:relative; padding-bottom:20px;
+}
+#shk-settings h2::after{
+    content:""; position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+    width:64px; height:3px; border-radius:3px;
+    background:linear-gradient(90deg,transparent,var(--shk-accent2),transparent);
+}
+
+.shk-field{
+    break-inside:avoid; padding:20px 0; border-bottom:1px solid rgba(255,255,255,0.08);
+    display:flex; flex-direction:column; align-items:flex-start; gap:10px;
+}
+.shk-field label{ font-size:0.82em; color:#b7a9d6; font-weight:700; }
+.shk-field input[type=text]{
+    max-width:none; width:100%; background:transparent; border:none;
+    border-bottom:2px solid transparent; border-radius:0; padding:4px 0;
+    font-size:1.25em; font-weight:700; color:#fff; text-align:right;
+    font-family:inherit; transition:border-color 0.2s;
+}
+.shk-field input[type=text]:focus{ border-bottom-color:var(--shk-accent2); outline:none; }
+.shk-field input[type=text]::placeholder{ color:#5c516f; }
+
+.shk-row{
+    break-inside:avoid; padding:18px 0; border-bottom:1px solid rgba(255,255,255,0.08);
+    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+}
+.shk-row-label{ font-size:14px; color:#f3eefc; font-weight:700; }
+.shk-pill-group{ display:flex; gap:8px; flex-wrap:wrap; }
+.shk-pill-btn{
+    background:transparent; border:1px solid rgba(255,255,255,0.16); color:#a99cc4;
+    border-radius:999px; padding:7px 16px; font-size:13px; font-weight:800;
+    font-family:inherit; cursor:pointer;
+}
+.shk-pill-btn.shk-pill-active{
+    background:linear-gradient(90deg,var(--shk-accent),var(--shk-accent2));
+    color:#0a0612; border-color:transparent;
+}
+.shk-hint{ width:100%; font-size:12px; color:#8f7ba8; margin-top:-4px; }
+
+.shk-error-msg{
+    column-span:all; text-align:center; color:#ff8da3; font-size:13px;
+    font-weight:700; margin:6px 0 10px;
+}
+
+.shk-btn-connect{
+    column-span:all; margin-top:20px; padding:15px 0; border:none; border-radius:999px;
+    background:linear-gradient(90deg,var(--shk-accent),var(--shk-accent2));
+    color:#0a0612; font-family:inherit; font-weight:900; font-size:1.05em; cursor:pointer;
+}
+.shk-back-btn{
+    column-span:all; margin-top:12px; padding:12px 0; border:none; border-radius:999px;
+    background:transparent; border:1px solid rgba(255,255,255,0.18); color:#c9bfe0;
+    font-family:inherit; font-weight:700; font-size:0.85em; cursor:pointer;
+}
+
+/* ---------------------------------------------------------------------
+   تبويب الاتصال بالبث
+--------------------------------------------------------------------- */
+#shk-connect-dim{ display:none; position:fixed; inset:0; z-index:9000; background:rgba(5,3,10,0.6); }
+#shk-connect-popup{
+    display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:320px; max-width:88vw; z-index:9001; text-align:center;
+    background:rgba(15,9,26,0.96); backdrop-filter:blur(10px);
+    border:1px solid rgba(124,58,237,0.4); border-radius:20px;
+    box-shadow:0 30px 70px rgba(0,0,0,0.55); padding:34px 24px;
+    font-family:'Zain',Cairo,sans-serif; color:#fff;
+}
+#shk-connect-popup h3{ margin:14px 0 6px; font-size:1.1em; }
+#shk-connect-popup p{ margin:0; font-size:13px; color:#a99cc4; }
+.shk-connect-spinner{
+    width:44px; height:44px; margin:0 auto; border-radius:50%;
+    border:4px solid rgba(255,255,255,0.15); border-top-color:var(--shk-accent2);
+    animation:shk-spin 1s linear infinite;
+}
+@keyframes shk-spin{ to{ transform:rotate(360deg); } }
+.shk-connect-error-icon{ font-size:34px; }
+#shk-connect-popup.shk-connect-error{ border-color:rgba(239,68,68,0.5); }
+#shk-connect-close-btn{
+    position:absolute; top:14px; left:16px; width:28px; height:28px; border-radius:50%;
+    border:none; background:rgba(255,255,255,0.1); color:#fff; cursor:pointer;
+}
+
+/* ---------------------------------------------------------------------
+   شاشة اللوبي
+--------------------------------------------------------------------- */
+#shk-lobby{
+    display:none; position:fixed; inset:0; z-index:100; flex-direction:column;
+    align-items:center; padding:70px 20px 26px; box-sizing:border-box; overflow-y:auto;
+}
+#shk-lobby-watermark{
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    max-width:340px; opacity:0.4; pointer-events:none; z-index:-1;
+}
+#shk-lobby h2{ margin:0 0 14px; font-size:clamp(20px,3.5vw,30px); font-weight:900; text-align:center; }
+.shk-title-plain{ color:#e6d9ff; }
+.shk-title-accent{
+    background:linear-gradient(90deg,var(--shk-accent2),var(--shk-accent));
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.shk-join-hint{ display:flex; gap:10px; margin-bottom:22px; flex-wrap:wrap; justify-content:center; }
+.shk-badge{
+    border-radius:999px; padding:6px 16px; font-weight:700; font-size:13px;
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18);
+}
+.shk-keyword-badge{ background:rgba(124,58,237,0.16); border-color:rgba(124,58,237,0.5); color:#e0cfff; }
+#shk-lobby-grid{
+    width:100%; max-width:920px; display:grid;
+    grid-template-columns:repeat(6,46px); justify-content:center; gap:0.5cm;
+    padding:10px 0 20px; flex:1;
+}
+@media (max-width:520px){ #shk-lobby-grid{ grid-template-columns:repeat(4,46px); } }
+.shk-lobby-empty{ grid-column:1/-1; color:#8f7ba8; font-size:13px; padding:30px 0; }
+.shk-lobby-card-wrap{ position:relative; }
+.shk-lobby-remove-x{
+    position:absolute; top:-4px; left:-4px; z-index:2; width:18px; height:18px;
+    border-radius:50%; border:none; background:rgba(239,68,68,0.85); color:#fff;
+    font-size:10px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
+#shk-lobby-actions{ width:100%; max-width:420px; display:flex; flex-direction:column; gap:10px; margin-top:auto; }
+.shk-btn-start{
+    padding:14px 0; border:none; border-radius:999px;
+    background:linear-gradient(90deg,var(--shk-accent),var(--shk-accent2));
+    color:#0a0612; font-family:inherit; font-weight:900; font-size:1em; cursor:pointer;
+}
+.shk-btn-start:disabled{ opacity:0.4; cursor:not-allowed; }
+.shk-btn-settings, .shk-btn-platform{
+    padding:11px 0; border-radius:999px; border:1px solid rgba(255,255,255,0.18);
+    background:transparent; color:#c9bfe0; font-family:inherit; font-weight:700;
+    font-size:0.85em; cursor:pointer;
+}
+
+/* ---------------------------------------------------------------------
+   شاشة المباراة (الرسم)
+--------------------------------------------------------------------- */
+#shk-match{
+    display:none; position:fixed; inset:0; z-index:100; flex-direction:column;
+    padding-top:56px; box-sizing:border-box;
+}
+#shk-round-bar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 18px; flex:none;
+}
+.shk-round-label{ font-size:13px; color:#c9bfe0; font-weight:700; }
+.shk-timer{
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18);
+    padding:5px 14px; border-radius:999px; font-weight:900; font-size:15px; min-width:38px; text-align:center;
+}
+.shk-timer.shk-warn{ color:#ff6b6b; border-color:#ff6b6b; }
+
+#shk-secret-box{
+    display:flex; gap:8px; padding:10px 18px; flex:none;
+    background:rgba(124,58,237,0.08); border-bottom:1px dashed rgba(255,255,255,0.12);
+}
+#shk-secret-input{
+    flex:1; padding:10px 14px; border-radius:12px; background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.15); color:#fff; font-family:inherit; font-size:14px;
+}
+#shk-secret-input::placeholder{ color:#5c516f; }
+#shk-lock-word-btn{
+    padding:0 18px; border:none; border-radius:12px;
+    background:linear-gradient(90deg,var(--shk-accent),var(--shk-accent2));
+    color:#0a0612; font-family:inherit; font-weight:800; font-size:13px; cursor:pointer;
+    white-space:nowrap;
+}
+#shk-lock-word-btn:disabled{ opacity:0.4; cursor:not-allowed; }
+
+#shk-canvas-wrap{ flex:1; position:relative; touch-action:none; overflow:hidden; }
+#shk-canvas{ width:100%; height:100%; display:block; background:#150a20; cursor:crosshair; touch-action:none; }
+
+#shk-tools-bar{
+    display:flex; align-items:center; gap:10px; padding:10px 18px; flex:none;
+    border-top:1px solid rgba(255,255,255,0.1); overflow-x:auto;
+}
+.shk-color-swatches{ display:flex; gap:6px; }
+.shk-color-swatches span{
+    width:24px; height:24px; border-radius:50%; display:inline-block; cursor:pointer;
+    border:2px solid rgba(255,255,255,0.2); flex:none;
+}
+.shk-color-swatches span.shk-active{ border-color:#fff; transform:scale(1.15); }
+#shk-brush-size{ width:80px; flex:none; }
+.shk-tool-btn{
+    width:34px; height:34px; border-radius:10px; border:1px solid rgba(255,255,255,0.15);
+    background:rgba(255,255,255,0.05); font-size:15px; cursor:pointer; flex:none;
+}
+
+#shk-live-scorers{
+    display:flex; gap:8px; padding:8px 18px; overflow-x:auto; flex:none;
+    border-top:1px solid rgba(255,255,255,0.1); min-height:38px; align-items:center;
+}
+.shk-scorer-pill{
+    display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px;
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15);
+    font-size:12.5px; white-space:nowrap; flex:none;
+}
+.shk-scorer-pill.shk-first{ border-color:var(--gold); color:var(--gold2); }
+.shk-scorer-pill.shk-second{ border-color:#c0c0c0; color:#e6e6e6; }
+
+#shk-bottom-bar{ padding:12px 18px 16px; flex:none; }
+.shk-btn-next{
+    width:100%; padding:14px 0; border:none; border-radius:999px;
+    background:linear-gradient(90deg,var(--shk-accent),var(--shk-accent2));
+    color:#0a0612; font-family:inherit; font-weight:900; font-size:1em; cursor:pointer;
+}
+.shk-btn-next:disabled{ opacity:0.4; cursor:not-allowed; }
+
+/* ---------------------------------------------------------------------
+   الدرج الجانبي (إعدادات + لاعبين أثناء اللعب)
+--------------------------------------------------------------------- */
+#shk-drawer-dim{ display:none; position:fixed; inset:0; z-index:9000; background:rgba(5,3,10,0.45); opacity:0; transition:opacity 0.3s ease; }
+#shk-drawer-dim.shk-show{ opacity:1; }
+#shk-drawer{
+    display:none; position:fixed; top:0; right:0; width:340px; max-width:88vw; height:100vh; z-index:9001;
+    background:rgba(15,9,26,0.96); backdrop-filter:blur(12px);
+    border-inline-start:1px solid rgba(124,58,237,0.3); box-shadow:-12px 0 40px rgba(0,0,0,0.5);
+    transform:translateX(100%); transition:transform 0.35s cubic-bezier(.2,.8,.2,1.05);
+    flex-direction:column; overflow:hidden; font-family:'Zain',Cairo,sans-serif; color:#fff;
+}
+#shk-drawer.shk-show{ transform:translateX(0); }
+.shk-drawer-header{ display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid rgba(255,255,255,0.08); flex:none; }
+.shk-drawer-header h2{ font-size:1em; font-weight:900; margin:0; }
+.shk-drawer-close-btn{ width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.08); border:none; color:#fff; font-size:0.9em; cursor:pointer; }
+.shk-drawer-body{ flex:1; min-height:0; overflow-y:auto; padding:14px 18px 18px; }
+.shk-p-row{ display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:8px 10px; margin-bottom:8px; }
+.shk-p-name{ flex:1; font-size:13px; font-weight:700; }
+.shk-p-score{ font-size:12px; color:var(--gold2); }
+.shk-p-x-btn{ width:26px; height:26px; border-radius:50%; border:none; background:rgba(239,68,68,0.18); color:#ff8da3; font-size:12px; cursor:pointer; }
+.shk-drawer-footer{ flex:none; padding:14px 18px 16px; border-top:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:10px; }
+#shk-open-mini-lobby-btn{
+    padding:11px 0; border:none; border-radius:999px; background:linear-gradient(90deg,#22c1a0,#4fe0c4);
+    color:#052018; font-family:inherit; font-weight:900; font-size:13px; cursor:pointer;
+}
+.shk-exit-btn{
+    padding:11px 0; border-radius:999px; border:1px solid rgba(239,68,68,0.5);
+    background:rgba(239,68,68,0.16); color:#ff8da3; font-family:inherit; font-weight:800; font-size:12.5px; cursor:pointer;
+}
+
+/* ---------------------------------------------------------------------
+   لوبي إضافة لاعبين جدد أثناء المباراة
+--------------------------------------------------------------------- */
+#shk-mini-dim{ display:none; position:fixed; inset:0; z-index:9500; background:rgba(5,3,10,0.55); backdrop-filter:blur(3px); opacity:0; transition:opacity 0.3s ease; }
+#shk-mini-dim.shk-show{ opacity:1; }
+#shk-mini-lobby{
+    display:none; position:fixed; top:50%; left:50%;
+    width:700px; height:760px; max-width:94vw; max-height:92vh; z-index:9501;
+    transform:translate(-50%,-50%) scale(0.92); opacity:0;
+    transition:transform 0.35s cubic-bezier(.2,.8,.2,1.1), opacity 0.3s ease;
+    background:rgba(0,0,0,0.15); backdrop-filter:blur(10px);
+    border:2px solid var(--shk-accent2); border-radius:6%;
+    box-shadow:0 0 0 1px rgba(124,58,237,0.2),0 30px 80px rgba(0,0,0,0.6);
+    flex-direction:column; overflow:hidden; font-family:'Zain',Cairo,sans-serif; color:#fff;
+}
+#shk-mini-lobby.shk-show{ transform:translate(-50%,-50%) scale(1); opacity:1; }
+#shk-mini-close-btn{ position:absolute; top:22px; left:26px; z-index:5; width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; font-size:15px; cursor:pointer; }
+#shk-mini-body{ flex:1; min-height:0; overflow-y:auto; padding:54px 46px 20px; text-align:center; }
+#shk-mini-body h2{ margin:0 0 8px; font-size:1.5em; font-weight:900; }
+#shk-mini-sub{ font-size:13px; color:#d9c8e8; margin-bottom:22px; }
+.shk-mini-hint{ display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:24px; flex-wrap:wrap; }
+.shk-mini-badge{ border-radius:999px; padding:6px 16px; font-weight:700; font-size:13px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); }
+.shk-mini-keyword-badge{ background:rgba(124,58,237,0.12); border:1px solid rgba(124,58,237,0.4); color:#e0cfff; }
+#shk-mini-grid{ display:grid; grid-template-columns:repeat(2,184px); justify-content:center; gap:0.5cm; padding:6px 0 10px; min-height:120px; }
+.shk-mini-empty{ grid-column:1/-1; color:#8f7ba8; font-size:12.5px; padding:20px 0; }
+#shk-mini-footer{ flex:none; padding:16px 30px 26px; border-top:1px solid rgba(255,255,255,0.1); display:flex; flex-direction:column; gap:10px; }
+#shk-mini-complete-btn{ padding:12px 0; border-radius:999px; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.08); color:#f3eefc; font-family:inherit; font-weight:800; font-size:0.9em; cursor:pointer; }
+#shk-mini-complete-btn.shk-done{ border-color:var(--shk-accent2); background:rgba(124,58,237,0.14); color:#e0cfff; }
+#shk-mini-save-btn{ padding:13px 0; border:none; border-radius:999px; background:linear-gradient(90deg,var(--shk-accent),var(--shk-accent2)); color:#0a0612; font-family:inherit; font-weight:900; font-size:0.95em; cursor:pointer; }
+
+/* ---------------------------------------------------------------------
+   شاشة الفائز
+--------------------------------------------------------------------- */
+#shk-winner{
+    display:none; position:fixed; inset:0; z-index:100; flex-direction:column;
+    align-items:center; justify-content:center; gap:22px; text-align:center; padding:20px; box-sizing:border-box;
+}
+#shk-winner-label{ font-size:15px; font-weight:800; color:#e9d3ff; max-width:80%; }
+#shk-no-winner{ font-size:16px; color:#a99cc4; }
+
+/* ---------------------------------------------------------------------
+   توست بسيط
+--------------------------------------------------------------------- */
+#shk-toasts{ position:fixed; top:66px; left:14px; z-index:9999; display:flex; flex-direction:column; gap:8px; }
+.shk-toast{
+    padding:9px 14px; border-radius:12px; font-size:13px; font-weight:700;
+    background:rgba(15,9,26,0.95); border:1px solid rgba(255,255,255,0.15); color:#fff;
+    animation:shk-toast-out 3s forwards;
+}
+.shk-toast.shk-success{ border-color:#22c55e; color:#8ff0b0; }
+.shk-toast.shk-error{ border-color:#ef4444; color:#ff8da3; }
+@keyframes shk-toast-out{ 0%,80%{ opacity:1; } 100%{ opacity:0; } }
