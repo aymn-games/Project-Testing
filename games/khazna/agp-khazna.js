@@ -138,33 +138,40 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div class="kz-instr-sub">اقرأ زين قبل ما تبدأ</div>' +
 
             '<div class="kz-instr-section">' +
+                '<div class="kz-instr-emoji">🎯</div>' +
+                '<div class="kz-instr-text">' +
+                    'أول كل جولة تدور عجلة وتوقف على <b>لاعب مستهدف</b> — اسمه يبقى ظاهر فوق طول الجولة.' +
+                '</div>' +
+            '</div>' +
+
+            '<div class="kz-instr-section">' +
                 '<div class="kz-instr-emoji">🕰️</div>' +
                 '<div class="kz-instr-text">' +
                     'بتطلع لكم <b>ساعات من داخل الخزنة</b> بتوقيت معيّن — احفظوا <b>توقيت كل ساعة وترتيبها</b>، ' +
-                    'وبعدها اختاروا <b>الخيار الصحيح</b> اللي يطابق الترتيب والتواقيت.' +
+                    'وبعدها اختاروا <b>الخيار الصحيح (A/B/C)</b> بكتابته بالشات.' +
                 '</div>' +
             '</div>' +
 
             '<div class="kz-instr-section">' +
                 '<div class="kz-instr-emoji">⚔️</div>' +
                 '<div class="kz-instr-text">' +
-                    '<b>الإقصاء:</b>' +
+                    '<b>الإقصاء يدور حول اللاعب المستهدف:</b>' +
                     '<ul>' +
-                        '<li>كل جولة يُقصى <b>آخر لاعبين</b> بالإجابة</li>' +
-                        '<li>لما يوصل العدد لـ <b>4 لاعبين</b>، يُقصى <b>لاعب واحد بس</b> كل جولة</li>' +
-                        '<li>لازم يكون فيه إجابة على الأقل — لو محد جاوب، ما يُقصى أحد وتستمر اللعبة</li>' +
+                        '<li>لما <b>المستهدف يجاوب صح</b>، يُقصى فوراً كل من لسا ما جاوب صح</li>' +
+                        '<li>لو المستهدف كان <b>آخر واحد يجاوب صح</b> (الكل جاوب قبله)، يُقصى <b>هو بس</b></li>' +
+                        '<li>لو انتهى الوقت، يُقصى <b>كل من لم يجاوب صح</b> (بما فيهم المستهدف)</li>' +
                     '</ul>' +
                 '</div>' +
             '</div>' +
 
             '<div class="kz-instr-section">' +
                 '<div class="kz-instr-emoji">📈</div>' +
-                '<div class="kz-instr-text"><b>الصعوبة تزيد تدريجياً:</b> كل جولتين تنضاف ساعة جديدة.</div>' +
+                '<div class="kz-instr-text"><b>الصعوبة تزيد تدريجياً:</b> كل جولتين تنضاف ساعة جديدة، لين يفضل لاعب واحد فائز.</div>' +
             '</div>' +
 
             '<div class="kz-instr-tip">⚡ احفظوا التواقيت وترتيبها صح، وجاوبوا <b>بأسرع وقت</b> — كل ما ترسلون إجابتكم أبكر، كل ما تضمنون عدم الإقصاء.</div>' +
 
-            '<button type="button" id="kz-instr-start-btn">🚀 ابدأ اللعب</button>';
+            '<button type="button" id="kz-instr-start-btn">🚀 فهمت، رجوع للعبة</button>';
         document.body.appendChild(card);
 
         el('kz-instr-start-btn').addEventListener('click', function () { hideInstructions(); });
@@ -1271,7 +1278,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         injectIdeaBanner();
         wirePlatformListeners();
         renderSettingsScreen();
-        showInstructions(); // ⚠️ تظهر تلقائياً أول ما تُفتح شاشة اللعبة
+        // ⚠️ التعليمات ما عادت تظهر تلقائياً -- تُفتح فقط يدوياً عبر زر "!" بالهيدر.
     }
 
     if (document.readyState === 'loading') {
