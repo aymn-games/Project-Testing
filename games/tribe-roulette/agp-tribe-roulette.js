@@ -1205,24 +1205,29 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-box.agp-lobby-box .agp-player-count-badge::before{content:"👥 ";}',
 
             /* ==================================================================
-             * ⚠️ [حذف كامل — منقول بالحرف من التحديث الأخير لروليت الإقصاء]
-             * تخصيص شكل/حجم بطاقات اللوبي المحلي (الشبكة 3 أعمدة، حجم
-             * الأفاتار/البلاطة، نظام "البطاقة العريضة"، والتصغير التلقائي
-             * الديناميكي) حُذف بالكامل من هنا. السبب: js/agp-game-shell.js
-             * وjs/agp-player-card.js المشتركان صار فيهما نفس هذا النظام
-             * مبنياً بشكل أصلي (شبكة 4 أعمدة، AGP.playerCard.renderHtml
-             * بحجم موحَّد وتراكب، AGP.playerCard.fitAllNames للـMarquee،
-             * وقياس عرض البطاقة المؤطَّرة رياضياً) — أي تخصيص محلي مكرِّر
-             * لنفس الشيء يتعارض بصرياً معه، فحُذف بدل التطبيق فوقه (نفس
-             * القرار المعتمَد فعلياً بروليت الإقصاء، بطلب صريح).
-             * ⚠️ فائدة إضافية مباشرة لهذا الحذف: الشبكة المحلية القديمة
-             * هنا كانت بدون align-content:start (نفس علّة "البطاقات تصعد
-             * من تحت" الموجودة حالياً بلعبتَي روليت الروسي والكراسي
-             * الموسيقية — كلتاهما لسا فيهما شبكة محلية مشابهة بدون
-             * align-content). الاعتماد الآن على شبكة الملف المشترك
-             * (المُصلَحة فعلياً بـalign-content:start) يتفادى نفس العلة
-             * هنا تلقائياً، بدون أي كود إضافي.
+             * ⚠️ [تدقيق شامل — رجوع مقصود عن قرار الحذف السابق] بطلب
+             * صريح جديد: توحيد شكل اللوبي مع آخر تعديل معتمَد بروليت
+             * الإقصاء — شبكة 5 أعمدة (بدل 4 الافتراضية بالملف المشترك)،
+             * بطاقة 45px (بدل 60px الافتراضي)، بفجوة 10px/6px متقاربة،
+             * ورقم/زر حذف اللاعب داخل حدود البطاقة (بدل خارجها). نفس
+             * صيغة الحساب الحقيقية بحجم 45px من js/agp-player-card.js:
+             * pillW=145px، overlap=10px، padStart=24px، padEnd=14px،
+             * ارتفاع اللوح=36px، خط=21px. محدود بالكامل لسياق اللوبي —
+             * صفر تأثير على قائمة اللاعبين وسط المباراة.
              * ==================================================================== */
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{display:grid !important;',
+            'grid-template-columns:repeat(5,1fr) !important;gap:10px 6px !important;',
+            'justify-items:center !important;align-items:end !important;align-content:start !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic{width:45px !important;height:45px !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-name-basic{width:145px !important;height:36px !important;',
+            'margin-inline-start:-10px !important;padding-inline-start:24px !important;',
+            'padding-inline-end:14px !important;font-size:21px !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic--fallback{font-size:14px !important;}',
+            '#agp-shell-box.agp-lobby-box li:has(> .agp-pcard) .agp-player-remove-btn,',
+            '#agp-shell-box.agp-lobby-box .agp-player-remove-btn{',
+            'top:0 !important;left:auto !important;right:0 !important;',
+            'width:16px !important;height:16px !important;font-size:9px !important;z-index:5;',
+            'border-radius:50% !important;}',
 
             // ⚠️ [0.45.15] صف أزرار اللوبي السفلي — الثلاثة أزرار (العودة
             // للإعدادات، بدء الجولة، رجوع للمنصة) بصف واحد جنب بعض، بنفس
