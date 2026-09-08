@@ -147,8 +147,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div class="kz-instr-section">' +
                 '<div class="kz-instr-emoji">🕰️</div>' +
                 '<div class="kz-instr-text">' +
-                    'بتطلع لكم <b>ساعات من داخل الخزنة</b> بتوقيت معيّن — احفظوا <b>توقيت كل ساعة وترتيبها</b>، ' +
-                    'وبعدها اختاروا <b>الخيار الصحيح (A/B/C)</b> بكتابته بالشات.' +
+                    'بتطلع لكم <b>ساعات من داخل الخزنة</b> بتوقيت معيّن ومرقّمة (1، 2، 3...) — احفظوا <b>توقيت كل ساعة حسب رقمها</b>.' +
+                '</div>' +
+            '</div>' +
+
+            '<div class="kz-instr-section">' +
+                '<div class="kz-instr-emoji">✍️</div>' +
+                '<div class="kz-instr-text">' +
+                    'وأنتم شايفين الساعات، اكتبوا <b>أرقام الساعات بالترتيب</b> بالشات برسالة وحدة (مثال: <b>12 9 7</b>) -- أرقام عربي أو إنجليزي، وبأي فاصل بينها.' +
                 '</div>' +
             '</div>' +
 
@@ -159,17 +165,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '<ul>' +
                         '<li>لما <b>المستهدف يجاوب صح</b>، يُقصى فوراً كل من لسا ما جاوب صح</li>' +
                         '<li>لو المستهدف كان <b>آخر واحد يجاوب صح</b> (الكل جاوب قبله)، يُقصى <b>هو بس</b></li>' +
+                        '<li>لو كل الباقين جاوبوا (صح أو غلط) والمستهدف لسا ما جاوب، تنتهي الجولة على طول</li>' +
                         '<li>لو انتهى الوقت، يُقصى <b>كل من لم يجاوب صح</b> (بما فيهم المستهدف)</li>' +
                     '</ul>' +
                 '</div>' +
             '</div>' +
 
-            '<div class="kz-instr-section">' +
-                '<div class="kz-instr-emoji">📈</div>' +
-                '<div class="kz-instr-text"><b>الصعوبة تزيد تدريجياً:</b> كل جولتين تنضاف ساعة جديدة، لين يفضل لاعب واحد فائز.</div>' +
-            '</div>' +
-
-            '<div class="kz-instr-tip">⚡ احفظوا التواقيت وترتيبها صح، وجاوبوا <b>بأسرع وقت</b> — كل ما ترسلون إجابتكم أبكر، كل ما تضمنون عدم الإقصاء.</div>' +
+            '<div class="kz-instr-tip">⚡ الساعات تختفي أول ما تنحسم الجولة (مو لازم ينتهي الوقت) -- جاوبوا <b>بأسرع وقت</b> وبالترتيب الصح.</div>' +
 
             '<button type="button" id="kz-instr-start-btn">🚀 فهمت، رجوع للعبة</button>';
         document.body.appendChild(card);
@@ -489,7 +491,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *     يفضل لاعب وحد، شاشة الفائز) لسا ما اتربطوا -- محتاجين تأكيد
      *     آلية الإرسال الفعلية قبل ما أبنيهم.
      * ==================================================================== */
-    var MEMORIZE_SECONDS = 15;
     var _roundNumber = 1;
     var _matchStartedAt = null;
     var _matchEl = null;
@@ -592,6 +593,36 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *   - playElimSound: ظهور تبويب الإقصاء
      *   - playWinnerFanfare: ظهور بطاقة الفائز
      * ==================================================================== */
+    function playReelTick() {
+        try {
+            _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            var t0 = _audioCtx.currentTime;
+            var osc = _audioCtx.createOscillator();
+            var gain = _audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(320, t0);
+            gain.gain.setValueAtTime(0.09, t0);
+            gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.05);
+            osc.connect(gain).connect(_audioCtx.destination);
+            osc.start(t0); osc.stop(t0 + 0.05);
+        } catch (e) {}
+    }
+
+    /* صوت دوران السكرول -- سلسلة نقرات متباعدة تدريجياً (نفس إحساس
+       تباطؤ عجلة الحظ الحقيقي)، متزامنة مع مدة الدوران 3.2 ثانية */
+    function playReelSpinSound(durationMs) {
+        var elapsed = 0;
+        var gap = 55; // يبدأ سريع
+        function scheduleNext() {
+            if (elapsed >= durationMs - 150) return;
+            playReelTick();
+            elapsed += gap;
+            gap = Math.min(gap * 1.13, 260); // يتباطأ تدريجياً
+            setTimeout(scheduleNext, gap);
+        }
+        scheduleNext();
+    }
+
     function playChime() {
         try {
             _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
@@ -689,22 +720,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function roundContentHtml() {
         return '<div id="kz-turn-badge"><div id="kz-turn-avatar"></div><div class="kz-turn-name" id="kz-turn-name"></div><div class="kz-turn-sub">🔥 الدور عندك -- جاوب قبلهم!</div></div>' +
+            // ⭐ صف الحالة -- تحت اسم اللاعب مباشرة، يبقى ظاهر طول الجولة
+            '<div id="kz-stats-row">' +
+                '<div class="kz-stat-pill" id="kz-stat-remaining"><span class="kz-stat-icon">👥</span>المتبقين <span class="kz-stat-val" id="kz-remaining-num">0</span></div>' +
+                '<div class="kz-stat-pill" id="kz-stat-answers"><span class="kz-stat-icon">✅</span>الإجابات <span class="kz-stat-val" id="kz-answered-num">0</span>/<span id="kz-answered-total">0</span></div>' +
+                '<div class="kz-stat-pill" id="kz-stat-time"><span class="kz-stat-icon">⏱️</span>الوقت <span class="kz-stat-val" id="kz-time-num">--</span></div>' +
+            '</div>' +
             '<div id="kz-vault-stage">' +
                 '<div id="kz-vault">' + vaultSvgMarkup() + '</div>' +
                 '<div id="kz-flying-clocks"></div>' +
             '</div>' +
-            '<div id="kz-memorize-badge"><div class="kz-mem-num" id="kz-mem-num">' + MEMORIZE_SECONDS + '</div><div class="kz-mem-label">ثانية للحفظ</div></div>' +
-            '<div id="kz-options">' +
-                '<div id="kz-answered-bar">' +
-                    '<div id="kz-answered-status">' +
-                        '<span>👥 باقي بالمباراة: <span class="kz-stat-num" id="kz-remaining-num">0</span></span>' +
-                        '<span>✅ جاوبوا: <span class="kz-stat-live" id="kz-answered-num">0</span> / <span id="kz-answered-total">0</span></span>' +
-                    '</div>' +
-                    '<div id="kz-answered-grid"></div>' +
-                '</div>' +
-                '<div id="kz-answer-timer"><div class="kz-ans-num" id="kz-ans-num">' + _settings.chooseSeconds + '</div><div class="kz-ans-label">ثانية لاختيار الإجابة</div></div>' +
-                '<div id="kz-options-panel-holder"></div>' +
-            '</div>';
+            // ⭐ نص إرشاد الإجابة -- يظهر طول ظهور الساعات (نفس مدة نافذة
+            // استقبال الإجابات)، يوضح كتابة أرقام الساعات بالترتيب بالشات
+            '<div id="kz-answer-instruction"><div class="kz-instr-main">✍️ اكتب <b>أرقام الساعات بالترتيب</b> بالشات برسالة وحدة (مثال: <b>12 9 7</b>)</div></div>';
     }
 
     function ensureMatchEl() {
@@ -736,12 +764,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return loopNames;
     }
 
+    /* ⭐ يعرض شاشة العجلة جاهزة (بأسماء اللاعبين معبّية) وتوقف -- ما
+       تدور إلا بضغطة "🎲 تحريك" اليدوية. تُستخدم أول ما تبدأ المباراة
+       وبعد كل جولة/إقصاء برضو (نفس السلوك بالضبط، بدون دوران تلقائي) */
+    function showPickerReadyForSpin(clockCount) {
+        el('kz-picker').style.display = 'flex';
+        el('kz-picker').classList.remove('kz-hidden');
+        el('kz-round').classList.remove('kz-show');
+        el('kz-reel-highlight-tab').classList.remove('kz-locked');
+
+        var players = AGP.player.getAllPlayers();
+        var names = players.length ? players.map(function (p) { return p.name || p.id; }) : ['لاعب'];
+        buildReel(names);
+
+        el('kz-picker-btn').onclick = function () { spinPickerAndStart(clockCount); };
+    }
+
     function spinPickerAndStart(clockCount) {
         ensureMatchEl();
         el('kz-picker').style.display = 'flex';
         el('kz-picker').classList.remove('kz-hidden');
         el('kz-round').classList.remove('kz-show');
         el('kz-turn-badge').classList.remove('kz-show');
+        el('kz-stats-row').classList.remove('kz-show');
+        el('kz-answer-instruction').classList.remove('kz-show');
+        el('kz-stat-time').classList.remove('kz-active');
         el('kz-reel-highlight-tab').classList.remove('kz-locked');
 
         var players = AGP.player.getAllPlayers();
@@ -760,6 +807,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var track = el('kz-reel-track');
         track.style.transition = 'transform 3.2s cubic-bezier(.12,.7,.15,1)';
         requestAnimationFrame(function () { track.style.transform = 'translateY(' + targetY + 'px)'; });
+        playReelSpinSound(3200);
 
         setTimeout(function () {
             var items = track.querySelectorAll('.kz-reel-name');
@@ -820,42 +868,255 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }, 700);
     }
 
-    function shuffleArr(arr) {
-        var a = arr.slice();
-        for (var i = a.length - 1; i > 0; i--) {
-            var j = Math.floor(Math.random() * (i + 1));
-            var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
-        }
-        return a;
+    /* ======================================================================
+     *  7) مرحلة الإجابة -- تكتب أثناء ظهور الساعات نفسها (بدون شاشة
+     *     خيارات A/B/C منفصلة). اللاعب يكتب أرقام الساعات بالترتيب
+     *     بالشات في رسالة وحدة (عربي أو إنجليزي، أي فاصل بين الأرقام).
+     *     نظام الإقصاء "المستهدف" نفسه بالضبط:
+     *      - لما "المستهدف" يجاوب صح: يُقصى فوراً كل من لسا ما جاوب صح
+     *        -- إلا لو المستهدف آخر واحد يجاوب صح (البقية جاوبوا قبله)،
+     *        فحينها يُقصى هو بس.
+     *      - لو كل اللاعبين ما عدا المستهدف خلّصوا إجاباتهم (بغض النظر
+     *        عن حاله)، تنتهي نافذة الإجابة فوراً بدون انتظار الوقت أو
+     *        المستهدف -- الساعات تختفي مباشرة بدون أنيميشن الخزنة.
+     *      - لو انتهى الوقت المحدد (مدة اختيار الإجابة من الإعدادات):
+     *        يُقصى كل من لم يجاوب صح، وتشتغل أنيميشن رجوع الساعات
+     *        للخزنة الطبيعية قبل عرض النتيجة.
+     * ==================================================================== */
+    function normalizeDigits(s) {
+        return s
+            .replace(/[\u0660-\u0669]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
+            .replace(/[\u06F0-\u06F9]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); });
     }
 
-    function buildShuffledOptions(correctOrder) {
-        var correctIdx = Math.floor(Math.random() * 3);
-        var opts = [null, null, null];
-        opts[correctIdx] = correctOrder.slice();
+    // ⭐ يقبل أرقام عربية أو إنجليزية بأي فاصل بينها (مسافة/فاصلة عادية
+    // أو عربية/شرطة) -- بس يرفض أي رسالة فيها نص إضافي غير الأرقام
+    // والفواصل (يمنع أي تطابق عرضي مع كلام عادي بالشات)
+    function parseAnswerSequence(text) {
+        if (typeof text !== 'string') return null;
+        var s = normalizeDigits(text.trim());
+        if (!/^[0-9]{1,2}([\s,،-]+[0-9]{1,2})*$/.test(s)) return null;
+        var matches = s.match(/[0-9]{1,2}/g);
+        if (!matches || !matches.length) return null;
+        return matches.map(function (m) { return String(parseInt(m, 10)); });
+    }
 
-        // ⭐ يضمن الثلاث خيارات مختلفين عن بعضهم تماماً (مو بس عن ترتيب
-        // الصح) -- طلب صريح
-        for (var i = 0; i < 3; i++) {
-            if (i === correctIdx) continue;
-            var attempt, tries = 0;
-            do {
-                attempt = shuffleArr(correctOrder);
-                tries++;
-            } while (opts.some(function (o) { return o && o.join() === attempt.join(); }) && tries < 30);
-            opts[i] = attempt;
+    function sequencesEqual(a, b) {
+        if (!a || !b || a.length !== b.length) return false;
+        for (var i = 0; i < a.length; i++) { if (a[i] !== b[i]) return false; }
+        return true;
+    }
+
+    /* ---------------- شريط اللاعبين اللي جاوبوا -- أعمدة يمين الشاشة ---------------- */
+    function ensureAnsweredSideEl() {
+        var side = el('kz-answered-side');
+        if (side) return side;
+        side = document.createElement('div');
+        side.id = 'kz-answered-side';
+        document.body.appendChild(side);
+        return side;
+    }
+    function clearAnsweredSide() {
+        var side = el('kz-answered-side');
+        if (side) side.innerHTML = '';
+    }
+    function addAnsweredSideChip(player) {
+        var side = ensureAnsweredSideEl();
+        var cols = side.querySelectorAll('.kz-answered-side-col');
+        var lastCol = cols.length ? cols[cols.length - 1] : null;
+        if (!lastCol || lastCol.children.length >= 10) {
+            lastCol = document.createElement('div');
+            lastCol.className = 'kz-answered-side-col';
+            side.appendChild(lastCol); // ⭐ row-reverse بالأب -- كل عامود جديد ينضاف لليسار
         }
-        return { opts: opts, correctIdx: correctIdx };
+        var nm = (player && (player.name || player.id)) || '؟';
+        var chip = document.createElement('div');
+        chip.className = 'kz-answered-side-chip';
+        chip.innerHTML = '<div class="kz-chip-avatar">' + escapeHtml(nm.charAt(0)) + '</div>';
+        lastCol.appendChild(chip);
+    }
+
+    /* ---------------- تبويب "الإجابة الصحيحة" الأخضر -- نص ثابت بكل الحالات ---------------- */
+    function showCorrectAnswerReveal(correctSeq) {
+        return new Promise(function (resolveReveal) {
+            var holder = document.createElement('div');
+            holder.id = 'kz-correct-reveal-holder';
+            holder.innerHTML =
+                '<div id="kz-correct-reveal-panel">' +
+                    '<div class="kz-correct-reveal-title">⏰ انتهى وقت الإجابة .. وكانت الإجابة الصحيحة</div>' +
+                    '<div class="kz-correct-reveal-times">' + correctSeq.map(function (t) { return '<span>' + escapeHtml(t) + '</span>'; }).join('') + '</div>' +
+                '</div>';
+            el('kz-round').appendChild(holder);
+            requestAnimationFrame(function () { holder.classList.add('kz-show'); });
+            playChime();
+
+            setTimeout(function () {
+                holder.classList.remove('kz-show');
+                holder.classList.add('kz-hide');
+                setTimeout(function () { holder.remove(); resolveReveal(); }, 400);
+            }, 3000);
+        });
+    }
+
+    /* ---------------- تبويبي الناجين/المقصين + زر الجولة التالية اليدوي ---------------- */
+    function showResultPanel(survivors, eliminated) {
+        return new Promise(function (resolveNext) {
+            var survivorNames = survivors.map(function (p) { return p.name || p.id; });
+            var eliminatedNames = eliminated.map(function (p) { return p.name || p.id; });
+            var html =
+                '<div id="kz-result-panel">' +
+                    '<div class="kz-result-tabs">' +
+                        '<div class="kz-result-tab kz-result-tab-survivors">' +
+                            '<div class="kz-result-tab-title">✅ الناجين</div>' +
+                            (survivorNames.length
+                                ? '<div class="kz-result-list">' + survivorNames.map(function (n) { return '<div class="kz-result-name kz-result-name-ok">' + escapeHtml(n) + '</div>'; }).join('') + '</div>'
+                                : '<div class="kz-result-empty">محد نجا</div>') +
+                        '</div>' +
+                        '<div class="kz-result-tab kz-result-tab-eliminated">' +
+                            '<div class="kz-result-tab-title">❌ المُقصَين</div>' +
+                            (eliminatedNames.length
+                                ? '<div class="kz-result-list">' + eliminatedNames.map(function (n) { return '<div class="kz-result-name kz-result-name-bad">' + escapeHtml(n) + '</div>'; }).join('') + '</div>'
+                                : '<div class="kz-result-empty">محد انقصى</div>') +
+                        '</div>' +
+                    '</div>' +
+                    '<button type="button" id="kz-next-round-btn">الجولة التالية</button>' +
+                '</div>';
+            var holder = document.createElement('div');
+            holder.id = 'kz-result-holder';
+            holder.innerHTML = html;
+            el('kz-round').appendChild(holder);
+            requestAnimationFrame(function () { holder.classList.add('kz-show'); });
+            playElimSound();
+
+            el('kz-next-round-btn').addEventListener('click', function () {
+                holder.classList.remove('kz-show');
+                setTimeout(function () { holder.remove(); resolveNext(); }, 350);
+            });
+        });
+    }
+
+    /* ---------------- نافذة استقبال الإجابات -- تشتغل طول ظهور الساعات ---------------- */
+    function collectAnswers(correctSeq, turnPlayer) {
+        return new Promise(function (resolve) {
+            var roundEnded = false;
+            var answeredIds = {};
+            var correctOrder = []; // مصفوفة player id بترتيب الإجابة الصحيحة
+
+            clearAnsweredSide();
+
+            function finish(eliminatedIds, timedOut) {
+                if (roundEnded) return;
+                roundEnded = true;
+                clearInterval(_answerInterval);
+                if (chatUnsub) chatUnsub();
+                resolve({ eliminatedIds: eliminatedIds, timedOut: Boolean(timedOut) });
+            }
+
+            function eliminateNotCorrect() {
+                return AGP.player.getAllPlayers()
+                    .filter(function (p) { return correctOrder.indexOf(p.id) === -1; })
+                    .map(function (p) { return p.id; });
+            }
+
+            function recordAnswer(player) {
+                answeredIds[player.id] = true;
+                playTick();
+                var all = AGP.player.getAllPlayers();
+                el('kz-remaining-num').textContent = all.length;
+                el('kz-answered-total').textContent = all.length;
+                el('kz-answered-num').textContent = Object.keys(answeredIds).length;
+                addAnsweredSideChip(player);
+            }
+
+            function checkTargetTrigger(justAnsweredId) {
+                if (!turnPlayer || justAnsweredId !== turnPlayer.id) return;
+                var others = AGP.player.getAllPlayers().filter(function (p) { return p.id !== turnPlayer.id; });
+                var othersAllCorrect = others.every(function (p) { return correctOrder.indexOf(p.id) !== -1; });
+                if (othersAllCorrect) {
+                    finish([turnPlayer.id], false); // المستهدف آخر واحد جاوب صح -- يُقصى هو بس
+                } else {
+                    var toEliminate = others.filter(function (p) { return correctOrder.indexOf(p.id) === -1; }).map(function (p) { return p.id; });
+                    finish(toEliminate, false);
+                }
+            }
+
+            // ⭐ لو كل اللاعبين ما عدا المستهدف خلّصوا إجاباتهم (بغض النظر
+            // عن صح أو غلط) -- تنتهي نافذة الإجابة فوراً بدون انتظار
+            // المستهدف أو الوقت
+            function checkAllOthersAnswered() {
+                if (roundEnded || !turnPlayer) return;
+                var others = AGP.player.getAllPlayers().filter(function (p) { return p.id !== turnPlayer.id; });
+                if (others.length > 0 && others.every(function (p) { return answeredIds[p.id]; })) {
+                    finish(eliminateNotCorrect(), false);
+                }
+            }
+
+            var chatUnsub = AGP.events.on('stream:commentReceived', function (payload) {
+                if (roundEnded || !payload || !payload.id) return;
+                if (answeredIds[payload.id]) return;
+                var seq = parseAnswerSequence(payload.text);
+                if (!seq) return;
+                var player = findPlayerById(payload.id);
+                if (!player) return;
+                recordAnswer(player);
+                if (sequencesEqual(seq, correctSeq)) {
+                    correctOrder.push(payload.id);
+                    checkTargetTrigger(payload.id);
+                }
+                if (!roundEnded) checkAllOthersAnswered();
+            });
+
+            var secs = _settings.chooseSeconds;
+            el('kz-stat-time').classList.add('kz-active');
+            el('kz-time-num').textContent = secs;
+            clearInterval(_answerInterval);
+            _answerInterval = setInterval(function () {
+                secs -= 1;
+                el('kz-time-num').textContent = Math.max(secs, 0);
+                if (secs <= 0) {
+                    clearInterval(_answerInterval);
+                    if (!roundEnded) finish(eliminateNotCorrect(), true);
+                }
+            }, 1000);
+        });
+    }
+
+    /* ---------------- إنهاء الجولة: كشف الإجابة + نتيجة الناجين/المقصين ---------------- */
+    async function concludeRound(eliminatedIds, turnPlayer, clockCount, correctSeq) {
+        await showCorrectAnswerReveal(correctSeq);
+
+        var allPlayers = AGP.player.getAllPlayers();
+        var eliminatedPlayers = allPlayers.filter(function (p) { return eliminatedIds.indexOf(p.id) !== -1; });
+        var survivorPlayers = allPlayers.filter(function (p) { return eliminatedIds.indexOf(p.id) === -1; });
+
+        eliminatedIds.forEach(function (id) { AGP.player.removePlayer(id); });
+        _eliminatedPlayers = _eliminatedPlayers.concat(eliminatedPlayers); // لتبويب "المشاركون" بدرج الإعدادات
+
+        el('kz-turn-badge').classList.remove('kz-show');
+        el('kz-stats-row').classList.remove('kz-show');
+        el('kz-stat-time').classList.remove('kz-active');
+
+        var remaining = AGP.player.getAllPlayers();
+        if (remaining.length <= 1) {
+            await renderWinnerScreen(remaining[0] || null);
+            return;
+        }
+
+        await showResultPanel(survivorPlayers, eliminatedPlayers);
+
+        // ⭐ عدد الساعات ثابت طول المباراة (ما يزيد كل جولتين -- طلب صريح)
+        _roundNumber += 1;
+        showPickerReadyForSpin(clockCount);
     }
 
     async function runRoundSequence(clockCount, turnPlayer) {
         var hours = pickRandomHours(clockCount);
+        var correctSeq = hours.map(String);
         var vault = el('kz-vault');
         var flyBox = el('kz-flying-clocks');
         vault.classList.remove('kz-in', 'kz-open');
-        el('kz-options').classList.remove('kz-show');
-        el('kz-options-panel-holder').innerHTML = '';
-        el('kz-memorize-badge').classList.remove('kz-show');
+        el('kz-answer-instruction').classList.remove('kz-show');
+        el('kz-stat-time').classList.remove('kz-active');
 
         var turnName = (turnPlayer && (turnPlayer.name || turnPlayer.id)) || '';
         el('kz-turn-name').textContent = turnName;
@@ -866,19 +1127,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarEl.innerHTML = '';
             avatarEl.textContent = turnName.charAt(0) || '؟';
         }
-        // ⚠️ تظهر فوراً وتبقى ظاهرة طول الجولة كاملة (حتى مرحلة الخيارات)
+        // ⚠️ تظهر فوراً وتبقى ظاهرة طول الجولة كاملة (حتى مرحلة الإجابة)
         el('kz-turn-badge').classList.add('kz-show');
 
-        var orderHintHtml =
-            '<div class="kz-order-hint">' +
-                '<span>ابدأ من هنا</span>' +
-                '<svg viewBox="0 0 70 14" xmlns="http://www.w3.org/2000/svg">' +
-                    '<line x1="65" y1="7" x2="8" y2="7" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round"/>' +
-                    '<path d="M8 7 L16 2 M8 7 L16 12" stroke="var(--gold)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
-                '</svg>' +
-            '</div>';
+        // ⭐ صف الحالة (المتبقين/الإجابات/الوقت) يظهر فوراً مع الاسم --
+        // يبقى ظاهر لحد آخر الجولة، القيم تتحدّث حية لاحقاً بمرحلة الإجابة
+        var startPlayers = AGP.player.getAllPlayers();
+        el('kz-remaining-num').textContent = startPlayers.length;
+        el('kz-answered-num').textContent = '0';
+        el('kz-answered-total').textContent = startPlayers.length;
+        el('kz-time-num').textContent = '--';
+        el('kz-stats-row').classList.add('kz-show');
+
+        // ⭐ كل ساعة بعمود مستقل مع رقم ترتيبها فوقها
         flyBox.innerHTML = hours.map(function (h, i) {
-            return '<div class="kz-flying-clock" id="kz-fc-' + i + '">' + (i === 0 ? orderHintHtml : '') + clockFaceSvg(h) + '</div>';
+            return '<div class="kz-clock-col" id="kz-fc-' + i + '">' +
+                       '<div class="kz-clock-num">' + (i + 1) + '</div>' +
+                       '<div class="kz-flying-clock">' + clockFaceSvg(h) + '</div>' +
+                   '</div>';
         }).join('');
 
         var n = hours.length;
@@ -899,7 +1165,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var vaultCenterY = vaultRect.top + vaultRect.height / 2;
 
         hours.forEach(function (_, i) {
-            var c = el('kz-fc-' + i);
+            var col = el('kz-fc-' + i);
+            col.style.opacity = '1'; // ⭐ رقم الترتيب يظهر فوراً مع فتح الخزنة، ثابت بمكانه
+            var c = col.querySelector('.kz-flying-clock');
             var finalRect = c.getBoundingClientRect();
             var finalCenterX = finalRect.left + finalRect.width / 2;
             var finalCenterY = finalRect.top + finalRect.height / 2;
@@ -923,218 +1191,56 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         vault.classList.remove('kz-in', 'kz-open');
         await wait(1500);
 
-        el('kz-memorize-badge').classList.add('kz-show');
-        var secs = MEMORIZE_SECONDS;
-        el('kz-mem-num').textContent = secs;
-        while (secs > 0) {
-            await wait(1000);
-            secs -= 1;
-            el('kz-mem-num').textContent = Math.max(secs, 0);
-        }
-        el('kz-memorize-badge').classList.remove('kz-show');
+        // ⭐ من هاللحظة (الساعات ظاهرة كاملة، الخزنة اختفت) تبدأ نافذة
+        // استقبال الإجابات -- بنفس مدة "اختيار الإجابة" من الإعدادات
+        el('kz-answer-instruction').classList.add('kz-show');
+        var result = await collectAnswers(correctSeq, turnPlayer);
+        el('kz-answer-instruction').classList.remove('kz-show');
+        el('kz-stat-time').classList.remove('kz-active');
 
-        vault.classList.add('kz-in');
-        await wait(1500);
-        await wait(300);
-        vault.classList.add('kz-open');
-        playMechSound('open');
-        await wait(700);
+        if (result.timedOut) {
+            // ⭐ انتهى الوقت بدون حسم مبكر -- ترجع الساعات للخزنة بنفس
+            // أنيميشن الفتح/السحب/الإغلاق الطبيعية
+            vault.classList.add('kz-in');
+            await wait(1500);
+            await wait(300);
+            vault.classList.add('kz-open');
+            playMechSound('open');
+            await wait(700);
 
-        // سحب الساعات لجوّة الخزنة -- نفس المنطق بالعكس: من مكانها
-        // الحالي لمركز الخزنة (بعد ما رجعت وفتحت)
-        var vaultRect2 = vault.getBoundingClientRect();
-        var vaultCenterX2 = vaultRect2.left + vaultRect2.width / 2;
-        var vaultCenterY2 = vaultRect2.top + vaultRect2.height / 2;
+            var vaultRect2 = vault.getBoundingClientRect();
+            var vaultCenterX2 = vaultRect2.left + vaultRect2.width / 2;
+            var vaultCenterY2 = vaultRect2.top + vaultRect2.height / 2;
 
-        hours.forEach(function (_, i) {
-            setTimeout(function () {
-                var c = el('kz-fc-' + i);
-                var curRect = c.getBoundingClientRect();
-                var curCenterX = curRect.left + curRect.width / 2;
-                var curCenterY = curRect.top + curRect.height / 2;
-                var dx = vaultCenterX2 - curCenterX;
-                var dy = vaultCenterY2 - curCenterY;
-                c.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(0.15) rotate(20deg)';
-                c.style.opacity = '0';
-            }, i * 140);
-        });
-        playWhoosh();
-        await wait(n * 140 + 500);
-
-        vault.classList.remove('kz-open');
-        playMechSound('close');
-        await wait(700);
-        vault.classList.remove('kz-in');
-        await wait(1500);
-
-        var data = buildShuffledOptions(hours.map(String));
-        var letters = ['A', 'B', 'C'];
-        var rows = data.opts.map(function (order, i) {
-            return '<div class="kz-option-row" data-idx="' + i + '">' +
-                '<div class="kz-option-letter">' + letters[i] + '</div>' +
-                '<div class="kz-option-times">' + order.map(function (t) { return '<span>' + escapeHtml(t) + '</span>'; }).join('') + '</div>' +
-            '</div>';
-        }).join('');
-        el('kz-options-panel-holder').innerHTML = '<div id="kz-options-panel">' + rows + '</div>';
-        el('kz-options').classList.add('kz-show');
-
-        await runAnswerPhase(data, turnPlayer, clockCount);
-    }
-
-    /* ======================================================================
-     *  7) مرحلة جمع الإجابات + منطق الإقصاء (نظام "المستهدف")
-     *
-     *     - اللاعبون يجاوبون بكتابة A أو B أو C بالشات (أول إجابة فقط
-     *       تُحسب لكل لاعب هالجولة).
-     *     - لما "المستهدف" يجاوب صح: يُقصى فوراً كل من لم يجاوب صح لهالحين
-     *       -- إلا إذا كان المستهدف هو آخر واحد يجاوب صح (يعني الباقين
-     *       كلهم جاوبوا صح قبله)، فحينها يُقصى هو بس.
-     *     - لو انتهى الوقت قبل ما المستهدف يجاوب صح: يُقصى كل من لم
-     *       يجاوب صح (بما فيهم المستهدف نفسه لو ما جاوب صح).
-     *     - بعدها يظهر تبويب بأسماء المُقصَين، ثم تبدأ جولة جديدة تلقائياً
-     *       (بلاعبين أقل، وصعوبة أعلى كل جولتين) لين يفضل لاعب واحد.
-     * ==================================================================== */
-    function normalizeAnswerLetter(text) {
-        if (typeof text !== 'string') return null;
-        var t = text.trim().toLowerCase();
-        if (t === 'a' || t === 'أ' || t === 'ا') return 'a';
-        if (t === 'b' || t === 'ب') return 'b';
-        if (t === 'c' || t === 'C'.toLowerCase() || t === 'س') return 'c';
-        return null;
-    }
-
-    function runAnswerPhase(data, turnPlayer, clockCount) {
-        return new Promise(function (resolve) {
-            var roundEnded = false;
-            var answeredIds = {};
-            var correctOrder = []; // مصفوفة player id بترتيب الإجابة الصحيحة
-
-            function renderAnsweredBar() {
-                var all = AGP.player.getAllPlayers();
-                var answeredPlayers = all.filter(function (p) { return answeredIds[p.id]; });
-                el('kz-remaining-num').textContent = all.length;
-                el('kz-answered-num').textContent = answeredPlayers.length;
-                el('kz-answered-total').textContent = all.length;
-                // ⭐ بدون تقييد بعدد ثابت -- شبكة 7 أعمدة تفتح صف جديد
-                // تلقائياً كل ما زاد عدد اللاعبين اللي جاوبوا (مثلاً عند 14)
-                el('kz-answered-grid').innerHTML = answeredPlayers.map(function (p) {
-                    var nm = p.name || p.id;
-                    return '<div class="kz-answered-chip"><div class="kz-chip-avatar">' + escapeHtml(nm.charAt(0)) + '</div><div class="kz-chip-name">' + escapeHtml(nm) + '</div></div>';
-                }).join('');
-            }
-            renderAnsweredBar();
-
-            function markRowsResult() {
-                el('kz-options').querySelectorAll('.kz-option-row').forEach(function (r2, i2) {
-                    r2.classList.toggle('kz-correct', i2 === data.correctIdx);
-                    if (i2 !== data.correctIdx) r2.classList.add('kz-wrong');
-                });
-            }
-
-            function showEliminatedPanel(eliminatedPlayers) {
-                var names = eliminatedPlayers.map(function (p) { return p.name || p.id; });
-                var html = '<div id="kz-eliminated-panel">' +
-                    '<div class="kz-elim-title">❌ تم إقصاء</div>' +
-                    (names.length
-                        ? '<div class="kz-elim-list">' + names.map(function (n) { return '<div class="kz-elim-name">' + escapeHtml(n) + '</div>'; }).join('') + '</div>'
-                        : '<div class="kz-elim-empty">محد انقصى هالجولة</div>') +
-                    '</div>';
-                var holder = document.createElement('div');
-                holder.id = 'kz-eliminated-holder';
-                holder.innerHTML = html;
-                el('kz-options').appendChild(holder);
-                requestAnimationFrame(function () { holder.classList.add('kz-show'); });
-                playElimSound();
-
-                // ⭐ أنيميشن اختفاء اللاعبين المُقصَين واحد تلو الآخر (بعد
-                // ما يبينون كلهم أول شوي)
-                var nameEls = holder.querySelectorAll('.kz-elim-name');
+            hours.forEach(function (_, i) {
                 setTimeout(function () {
-                    nameEls.forEach(function (nEl, i) {
-                        setTimeout(function () { nEl.classList.add('kz-elim-gone'); }, i * 280);
-                    });
-                }, 1100);
-            }
-
-            async function endRound(eliminatedIds) {
-                if (roundEnded) return;
-                roundEnded = true;
-                clearInterval(_answerInterval);
-                if (chatUnsub) chatUnsub();
-                markRowsResult();
-
-                var allPlayers = AGP.player.getAllPlayers();
-                var eliminatedPlayers = allPlayers.filter(function (p) { return eliminatedIds.indexOf(p.id) !== -1; });
-                showEliminatedPanel(eliminatedPlayers);
-
-                eliminatedIds.forEach(function (id) { AGP.player.removePlayer(id); });
-                _eliminatedPlayers = _eliminatedPlayers.concat(eliminatedPlayers); // لتبويب "المشاركون" بدرج الإعدادات
-
-                await wait(3200);
-
-                var remaining = AGP.player.getAllPlayers();
-                var holder = el('kz-eliminated-holder');
-                if (holder) holder.remove();
-                el('kz-options').classList.remove('kz-show');
-                el('kz-turn-badge').classList.remove('kz-show');
-
-                if (remaining.length <= 1) {
-                    await renderWinnerScreen(remaining[0] || null);
-                    resolve();
-                    return;
-                }
-
-                // ⭐ عدد الساعات ثابت طول المباراة (ما يزيد كل جولتين -- طلب صريح)
-                _roundNumber += 1;
-                resolve();
-                spinPickerAndStart(clockCount);
-            }
-
-            function checkTargetTrigger(justAnsweredId) {
-                if (!turnPlayer || justAnsweredId !== turnPlayer.id) return;
-                var others = AGP.player.getAllPlayers().filter(function (p) { return p.id !== turnPlayer.id; });
-                var othersAllCorrect = others.every(function (p) { return correctOrder.indexOf(p.id) !== -1; });
-                if (othersAllCorrect) {
-                    endRound([turnPlayer.id]); // المستهدف آخر واحد جاوب صح -- يُقصى هو بس
-                } else {
-                    var toEliminate = others.filter(function (p) { return correctOrder.indexOf(p.id) === -1; }).map(function (p) { return p.id; });
-                    endRound(toEliminate);
-                }
-            }
-
-            var chatUnsub = AGP.events.on('stream:commentReceived', function (payload) {
-                if (roundEnded || !payload || !payload.id) return;
-                if (answeredIds[payload.id]) return;
-                var letter = normalizeAnswerLetter(payload.text);
-                if (!letter) return;
-                answeredIds[payload.id] = true;
-                playTick();
-                renderAnsweredBar();
-                var chosenIdx = { a: 0, b: 1, c: 2 }[letter];
-                if (chosenIdx === data.correctIdx) {
-                    correctOrder.push(payload.id);
-                    checkTargetTrigger(payload.id);
-                }
+                    var c = el('kz-fc-' + i).querySelector('.kz-flying-clock');
+                    var curRect = c.getBoundingClientRect();
+                    var curCenterX = curRect.left + curRect.width / 2;
+                    var curCenterY = curRect.top + curRect.height / 2;
+                    var dx = vaultCenterX2 - curCenterX;
+                    var dy = vaultCenterY2 - curCenterY;
+                    c.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(0.15) rotate(20deg)';
+                    c.style.opacity = '0';
+                }, i * 140);
             });
+            playWhoosh();
+            await wait(n * 140 + 500);
 
-            var ansSecs = _settings.chooseSeconds;
-            el('kz-ans-num').textContent = ansSecs;
-            clearInterval(_answerInterval);
-            _answerInterval = setInterval(function () {
-                ansSecs -= 1;
-                el('kz-ans-num').textContent = Math.max(ansSecs, 0);
-                if (ansSecs <= 0) {
-                    clearInterval(_answerInterval);
-                    if (!roundEnded) {
-                        var toEliminate = AGP.player.getAllPlayers()
-                            .filter(function (p) { return correctOrder.indexOf(p.id) === -1; })
-                            .map(function (p) { return p.id; });
-                        endRound(toEliminate);
-                    }
-                }
-            }, 1000);
-        });
+            vault.classList.remove('kz-open');
+            playMechSound('close');
+            await wait(700);
+            vault.classList.remove('kz-in');
+            await wait(1500);
+        } else {
+            // ⭐ حسم مبكر (المستهدف جاوب صح، أو كل الباقين خلّصوا) --
+            // الساعات تختفي مباشرة بدون أي أنيميشن خزنة -- طلب صريح
+            flyBox.innerHTML = '';
+        }
+
+        await concludeRound(result.eliminatedIds, turnPlayer, clockCount, correctSeq);
     }
+
 
     function startMatch() {
         if (AGP.lobby && typeof AGP.lobby.close === 'function') AGP.lobby.close();
@@ -1144,13 +1250,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _roundNumber = 1;
         _matchStartedAt = Date.now();
         _eliminatedPlayers = [];
-        // ⭐ إصلاح: تعبئة أسماء السكرول فوراً عند دخول شاشة اللعب (بدون
-        // دوران) -- بدل ما تطلع فاضية لين أول ضغطة تحريك
-        var initialPlayers = AGP.player.getAllPlayers();
-        var initialNames = initialPlayers.length ? initialPlayers.map(function (p) { return p.name || p.id; }) : ['لاعب'];
-        buildReel(initialNames);
-        // ⭐ السكرول ما يتحرك تلقائياً -- بس عند ضغط "🎲 تحريك" يدوياً
-        el('kz-picker-btn').onclick = function () { spinPickerAndStart(3); };
+        showPickerReadyForSpin(3);
     }
 
     /* ======================================================================
@@ -1194,7 +1294,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</div>' +
             '<div class="kz-drawer-footer">' +
                 '<button type="button" id="kz-open-mini-lobby-btn">➕ إضافة لاعب جديد</button>' +
-                '<button type="button" class="kz-exit-btn" id="kz-exit-btn">🚪 الخروج من اللعبة</button>' +
                 '<button type="button" class="kz-drawer-back-link" id="kz-back-platform-btn">↩ رجوع لمنصة ألعاب أيمن</button>' +
             '</div>';
         document.body.appendChild(drawer);
@@ -1204,9 +1303,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('kz-drawer-close-btn').addEventListener('click', closeInMatchDrawer);
         dim.addEventListener('click', closeInMatchDrawer);
         el('kz-open-mini-lobby-btn').addEventListener('click', openMiniLobby);
-        el('kz-exit-btn').addEventListener('click', function () {
-            if (window.confirm('بتخرج من اللعبة وترجع لمنصة ألعاب أيمن. تكمل؟')) window.location.href = '../../index.html';
-        });
         el('kz-back-platform-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
 
         drawer.querySelectorAll('.kz-drawer-tabs button').forEach(function (btn) {
@@ -1505,7 +1601,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // بناء نفس الهيكل قبل أي جولة جديدة، وإلا كل أزرار الإعدادات
             // والسكرول يتعطلوا لأن عناصرهم صارت مو موجودة بالـDOM أصلاً
             el('kz-round').innerHTML = roundContentHtml();
-            spinPickerAndStart(3);
+            showPickerReadyForSpin(3);
         });
         el('kz-newmatch-btn').addEventListener('click', function () {
             window.location.reload();

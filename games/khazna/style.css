@@ -565,9 +565,12 @@ body.kz-active{
 }
 
 /* ⭐ الخزنة منحازة شوي لليسار، والساعات تطلع بنفس صفها الأفقي (مو فوقها
-   ولا خلفها) -- طلب صريح */
+   ولا خلفها) -- طلب صريح. تاخذ المساحة المتبقية تحت صف الحالة (flex:1)
+   بدل تموضع مطلق كامل الشاشة -- يمنع أي تراكب مع اسم اللاعب/صف الحالة */
 #kz-vault-stage{
-    position:absolute; inset:0;
+    flex:1 1 auto;
+    min-height:0;
+    width:100%;
     z-index:2;
     display:flex; align-items:center; justify-content:center;
     padding-inline-end:14%;
@@ -591,84 +594,38 @@ body.kz-active{
 #kz-flying-clocks{
     position:relative;
     flex:0 0 auto;
-    display:flex; align-items:center; justify-content:center; gap:18px;
-    min-height:clamp(80px,11vw,130px);
+    display:flex; align-items:flex-start; justify-content:center; gap:22px;
     z-index:5;
+}
+
+/* ⭐ كل ساعة عمود مستقل: رقم ترتيبها فوق بمسافة واضحة (ما يلاصقها)،
+   ثم وجه الساعة تحته -- طلب صريح */
+.kz-clock-col{
+    display:flex; flex-direction:column; align-items:center;
+    opacity:0;
+}
+.kz-clock-num{
+    width:30px; height:30px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:15px; font-weight:900; color:#0a0612;
+    background:linear-gradient(135deg,var(--gold2),var(--gold) 65%,#c99a30);
+    box-shadow:0 0 0 3px rgba(232,182,76,0.18),0 6px 16px rgba(0,0,0,0.4);
+    margin-bottom:12px;
+    flex:0 0 auto;
 }
 .kz-flying-clock{
     position:relative;
-    width:clamp(80px,11vw,130px); height:clamp(80px,11vw,130px); /* ⭐ متجاوب */
+    width:clamp(78px,10.5vw,120px); height:clamp(78px,10.5vw,120px); /* ⭐ متجاوب */
     flex:0 0 auto;
     opacity:0;
     filter:drop-shadow(0 8px 14px rgba(0,0,0,0.5));
 }
 .kz-flying-clock svg{ width:100%; height:100%; display:block; }
 
-/* ⭐ سهم + نص "ابدأ من هنا" فوق أول ساعة بالضبط (مو فوق الصف كامل) */
-.kz-order-hint{
-    position:absolute;
-    bottom:calc(100% + 6px);
-    left:50%; transform:translateX(-50%);
-    display:flex; flex-direction:column; align-items:center; gap:4px;
-    white-space:nowrap;
-    color:#c9bfe0; font-size:11.5px; font-weight:800;
-    z-index:6;
-}
-.kz-order-hint svg{ width:70px; height:14px; }
+/* ⚠️ شاشة الخيارات A/B/C اتلغت بالكامل -- الإجابة الآن تُكتب مباشرة
+   بالشات (أرقام الساعات بالترتيب) أثناء ظهور الساعات نفسها */
 
-#kz-memorize-badge{
-    position:absolute;
-    top:32%; left:50%; /* ⭐ تحت بادج اللاعب مباشرة، ما يتداخل معه */
-    transform:translateX(-50%) scale(0.8);
-    opacity:0;
-    transition:opacity 0.4s ease, transform 0.4s ease;
-    z-index:5;
-    text-align:center;
-}
-#kz-memorize-badge.kz-show{ opacity:1; transform:translateX(-50%) scale(1); }
-#kz-memorize-badge .kz-mem-num{ font-size:clamp(30px,4.5vw,44px); font-weight:900; color:var(--gold2); text-shadow:0 0 18px rgba(232,182,76,0.6); }
-#kz-memorize-badge .kz-mem-label{ font-size:12px; color:#d9c8e8; margin-top:2px; }
-
-#kz-options{
-    position:absolute; inset:0;
-    display:flex; flex-direction:column; align-items:center;
-    justify-content:flex-start;
-    padding-top:clamp(180px,26vh,230px); /* ⭐ يحجز مساحة بادج اللاعب فوق -- يمنع أي تداخل */
-    gap:16px;
-    opacity:0; pointer-events:none;
-    transition:opacity 0.5s ease;
-    z-index:6;
-    overflow-y:auto;
-}
-#kz-options.kz-show{ opacity:1; pointer-events:auto; }
-/* ⭐ حذفنا الصندوق/التبويب الكبير المحيط بالخيارات -- الخيارات الآن
-   مباشرة على الشاشة، غلاف بسيط بدون حدود ولا خلفية، بس يرتبها بعمود */
-#kz-options-panel{
-    width:clamp(320px,60vw,600px); max-width:94vw;
-    display:flex; flex-direction:column; align-items:center; gap:16px;
-}
-.kz-option-row{
-    display:flex; align-items:center; gap:22px;
-    padding:16px 34px; border-radius:18px;
-    border:2.5px solid rgba(216,120,255,0.55); /* ⭐ حدود بارزة لكل لوح خيار لحاله */
-    background:rgba(20,12,34,0.4);
-    backdrop-filter:blur(4px);
-    box-shadow:0 0 0 1px rgba(124,58,237,0.15),0 10px 26px rgba(0,0,0,0.4);
-    cursor:pointer;
-    transition:border-color 0.2s, background 0.2s, transform 0.15s;
-    width:100%; justify-content:center;
-}
-.kz-option-row:hover{ transform:translateY(-2px); border-color:var(--gold); background:rgba(255,255,255,0.07); }
-.kz-option-letter{
-    display:inline-flex; align-items:center; justify-content:center;
-    width:42px; height:42px; border-radius:50%; flex:0 0 auto;
-    background:linear-gradient(90deg,var(--kz-accent),var(--kz-accent2));
-    color:#0a0612; font-weight:900; font-size:18px;
-}
-.kz-option-times{ display:flex; align-items:center; gap:12px; font-size:22px; color:#f0e9fa; font-weight:800; }
-.kz-option-times span:not(:last-child)::after{ content:" - "; color:#a99cc4; }
-.kz-option-row.kz-correct{ border-color:#22c1a0; box-shadow:0 0 0 2px rgba(34,193,160,0.5); }
-.kz-option-row.kz-wrong{ border-color:#ef4444; opacity:0.45; }
 
 /* ---------------------------------------------------------------------
    عجلة اختيار اللاعب صاحب الدور -- سكرول عمودي، تظهر أول ما تبدأ
@@ -769,10 +726,21 @@ body.kz-active{
    شارة اسم اللاعب صاحب الدور (مع صورته) -- تظهر فور اختياره وتبقى
    ثابتة فوق طول الجولة كاملة (حتى مرحلة الخيارات)
 --------------------------------------------------------------------- */
+/* ⭐ #kz-round صار عمود عمودي (flex column) بدل تموضع مطلق بالنسب --
+   كل عنصر (الاسم/صف الحالة/الساعات/نص الإرشاد) ياخذ مساحته الحقيقية
+   بالترتيب، بدون أي تخمين نسب ولا تراكب */
 #kz-round{ display:none; position:absolute; inset:0; }
-#kz-round.kz-show{ display:block; }
+#kz-round.kz-show{
+    display:flex; flex-direction:column; align-items:center;
+    padding-top:26px;
+    /* ⭐ يحجز مساحة يمين الشاشة لشريط اللاعبين اللي جاوبوا (#kz-answered-side)
+       بحد أدنى ثابت (يغطي عمودين على الأقل) حتى على تكبير المتصفح
+       (Ctrl +) حيث تتقلص المساحة الفعلية -- يمنع أي تراكب */
+    padding-inline-end:clamp(96px,10vw,170px);
+}
+
 #kz-turn-badge{
-    position:absolute; top:8%; left:50%; transform:translateX(-50%);
+    flex:0 0 auto;
     display:flex; flex-direction:column; align-items:center; gap:6px;
     z-index:7;
     opacity:0; transition:opacity 0.4s ease;
@@ -799,48 +767,109 @@ body.kz-active{
     border-radius:999px; padding:4px 16px;
 }
 
-#kz-answer-timer{ text-align:center; }
-#kz-answer-timer .kz-ans-num{ font-size:clamp(26px,4vw,34px); font-weight:900; color:var(--gold2); text-shadow:0 0 14px rgba(232,182,76,0.55); }
-#kz-answer-timer .kz-ans-label{ font-size:12px; color:#d9c8e8; margin-top:2px; }
+/* ---------------------------------------------------------------------
+   صف الحالة -- مباشرة تحت اسم اللاعب المستهدف: المتبقين / الإجابات /
+   الوقت بجانب بعض بنفس الصف. يبقى ظاهر طول الجولة (مرحلة الساعات
+   والحفظ ومرحلة اختيار الإجابة على حدٍ سواء) بدل عداد منفصل بنص الشاشة
+--------------------------------------------------------------------- */
+#kz-stats-row{
+    flex:0 0 auto;
+    margin-top:14px;
+    display:flex; align-items:center; justify-content:center;
+    gap:10px;
+    flex-wrap:wrap;
+    z-index:7;
+    opacity:0; transition:opacity 0.4s ease;
+}
+#kz-stats-row.kz-show{ opacity:1; }
+.kz-stat-pill{
+    display:flex; align-items:center; gap:6px;
+    background:rgba(20,12,34,0.55);
+    backdrop-filter:blur(6px);
+    border:1.5px solid rgba(124,58,237,0.35);
+    border-radius:999px;
+    padding:7px 16px;
+    font-size:13px; font-weight:800; color:#f0e9fa;
+    white-space:nowrap;
+}
+.kz-stat-pill .kz-stat-icon{ font-size:14px; }
+.kz-stat-pill .kz-stat-val{ color:var(--gold2); font-weight:900; }
+#kz-stat-time.kz-active{ border-color:var(--gold); box-shadow:0 0 16px rgba(232,182,76,0.3); }
+#kz-stat-time.kz-active .kz-stat-val{ font-size:15px; }
 
 /* ---------------------------------------------------------------------
-   تبويب المُقصَين -- يظهر بعد انتهاء مرحلة الإجابة (فوز المستهدف أو
-   انتهاء الوقت)
+   نص إرشاد الإجابة -- أسفل مسرح الساعات مباشرة، يظهر وقت مرحلة الحفظ
+   ويختفي لما تبويب الخيارات A/B/C يطلع (الخيارات نفسها توضح الحرف)
 --------------------------------------------------------------------- */
-#kz-eliminated-holder{
+#kz-answer-instruction{
+    flex:0 0 auto;
+    margin-bottom:26px;
+    text-align:center;
+    opacity:0;
+    transition:opacity 0.5s ease;
+    padding:0 16px;
+    z-index:6;
+}
+#kz-answer-instruction.kz-show{ opacity:1; }
+#kz-answer-instruction .kz-instr-main{ font-size:14.5px; font-weight:800; color:#f0e9fa; }
+#kz-answer-instruction .kz-instr-main b{ color:var(--gold2); }
+
+/* ---------------------------------------------------------------------
+   نتيجة الجولة -- تبويبين جنب بعض (✅ الناجين / ❌ المُقصَين) + زر
+   "الجولة التالية" يدوي تحتهم (بدل الانتقال التلقائي)
+--------------------------------------------------------------------- */
+#kz-result-holder{
     position:absolute; inset:0;
     display:flex; align-items:center; justify-content:center;
     z-index:8;
     opacity:0;
     transition:opacity 0.4s ease;
 }
-#kz-eliminated-holder.kz-show{ opacity:1; }
-#kz-eliminated-panel{
-    width:420px; max-width:90vw;
-    max-height:70vh;
+#kz-result-holder.kz-show{ opacity:1; }
+#kz-result-panel{
+    width:min(620px,92vw);
+    max-height:78vh;
+    display:flex; flex-direction:column; align-items:center;
+    gap:16px;
+}
+.kz-result-tabs{
+    display:flex; gap:14px;
+    width:100%;
+    flex-wrap:wrap;
+}
+.kz-result-tab{
+    flex:1 1 220px;
+    max-height:52vh;
     overflow-y:auto;
     background:rgba(20,12,34,0.55);
     backdrop-filter:blur(8px);
-    border:2px solid #ef4444;
-    border-radius:20px;
-    box-shadow:0 0 0 1px rgba(239,68,68,0.2),0 30px 70px rgba(0,0,0,0.55);
-    padding:22px 20px;
+    border-radius:18px;
+    padding:16px 14px;
     text-align:center;
 }
-.kz-elim-title{ font-size:18px; font-weight:900; color:#ff8da3; margin-bottom:14px; }
-.kz-elim-list{ display:flex; flex-direction:column; gap:8px; }
-.kz-elim-name{
-    background:rgba(239,68,68,0.1);
-    border:1px solid rgba(239,68,68,0.3);
+.kz-result-tab-survivors{ border:2px solid #22c1a0; box-shadow:0 0 0 1px rgba(34,193,160,0.2),0 20px 50px rgba(0,0,0,0.45); }
+.kz-result-tab-eliminated{ border:2px solid #ef4444; box-shadow:0 0 0 1px rgba(239,68,68,0.2),0 20px 50px rgba(0,0,0,0.45); }
+.kz-result-tab-title{ font-size:15px; font-weight:900; margin-bottom:12px; }
+.kz-result-tab-survivors .kz-result-tab-title{ color:#6fe6c9; }
+.kz-result-tab-eliminated .kz-result-tab-title{ color:#ff8da3; }
+.kz-result-list{ display:flex; flex-direction:column; gap:8px; }
+.kz-result-name{
     border-radius:999px;
     padding:8px 14px;
-    font-size:14px; font-weight:800; color:#f0e9fa;
-    opacity:1; transform:scale(1);
-    transition:opacity 0.4s ease, transform 0.4s ease;
+    font-size:13.5px; font-weight:800; color:#f0e9fa;
 }
-/* ⭐ اختفاء كل لاعب مُقصى واحد تلو الآخر (أنيميشن متسلسل) */
-.kz-elim-name.kz-elim-gone{ opacity:0; transform:scale(0.7); }
-.kz-elim-empty{ font-size:13px; color:#8f7ba8; }
+.kz-result-name-ok{ background:rgba(34,193,160,0.12); border:1px solid rgba(34,193,160,0.35); }
+.kz-result-name-bad{ background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); }
+.kz-result-empty{ font-size:12.5px; color:#8f7ba8; }
+#kz-next-round-btn{
+    padding:11px 34px;
+    border:none; border-radius:999px;
+    background:linear-gradient(90deg,var(--kz-accent),var(--kz-accent2));
+    color:#0a0612; font-family:'Zain',Cairo,sans-serif; font-weight:900; font-size:0.92em;
+    cursor:pointer;
+    box-shadow:0 8px 26px rgba(124,58,237,0.35);
+}
+
 
 #kz-winner-placeholder{
     position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
@@ -892,7 +921,6 @@ body.kz-active{
 
 .kz-drawer-footer{ flex:none; padding:14px 18px 16px; border-top:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:10px; }
 #kz-open-mini-lobby-btn{ padding:11px 0; border:none; border-radius:999px; background:linear-gradient(90deg,#22c1a0,#4fe0c4); color:#052018; font-family:inherit; font-weight:900; font-size:13px; cursor:pointer; }
-.kz-exit-btn{ padding:11px 0; border-radius:999px; border:1px solid rgba(239,68,68,0.5); background:rgba(239,68,68,0.16); color:#ff8da3; font-family:inherit; font-weight:800; font-size:12.5px; cursor:pointer; }
 .kz-drawer-back-link{ background:none; border:none; color:#c9bfe0; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; text-align:center; }
 
 /* ---------------------------------------------------------------------
@@ -978,51 +1006,40 @@ body.kz-active{
 }
 
 /* ---------------------------------------------------------------------
-   شريط اللاعبين اللي وصلت إجاباتهم -- فوق تبويب الخيارات، شبكة 7
-   أعمدة مفتوحة (تفتح صف جديد تلقائياً لو زاد العدد عن 7، مثلاً عند 14)
+   شريط اللاعبين اللي جاوبوا -- أعمدة عمودية متلاصقة بحافة الشاشة اليمنى،
+   كل عامود فيه 10 لاعبين، وينضاف عامود جديد لليسار كل ما اكتمل عامود
 --------------------------------------------------------------------- */
-#kz-answered-bar{
-    width:min(600px,94vw);
-    background:rgba(20,12,34,0.4);
-    backdrop-filter:blur(6px);
-    border:1.5px solid rgba(124,58,237,0.35);
-    border-radius:16px;
-    padding:10px 14px;
+#kz-answered-side{
+    position:fixed;
+    top:56px; right:0; bottom:0;
+    z-index:400;
+    display:flex; flex-direction:row-reverse; /* أول عامود بالـDOM = أقصى اليمين، والي بعده يتزايد لليسار */
+    align-items:flex-start;
+    pointer-events:none;
 }
-#kz-answered-status{
-    display:flex; align-items:center; justify-content:center; gap:18px;
-    font-size:12.5px; font-weight:800; color:#d9c8e8;
-    margin-bottom:8px;
-    flex-wrap:wrap;
+.kz-answered-side-col{
+    display:flex; flex-direction:column;
+    width:44px;
 }
-#kz-answered-status .kz-stat-num{ color:var(--gold2); font-weight:900; }
-#kz-answered-status .kz-stat-live{ color:#6fe6c9; font-weight:900; }
-#kz-answered-grid{
-    display:grid;
-    grid-template-columns:repeat(7,1fr);
-    gap:6px;
-    max-height:calc(45px * 3 + 12px); /* سقف عرض 3 صفوف قبل ما يصير سكرول داخلي */
-    overflow-y:auto;
+.kz-answered-side-chip{
+    width:44px; height:44px;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(34,193,160,0.16);
+    border-bottom:1px solid rgba(5,3,10,0.4);
+    animation:kz-chip-in 0.3s cubic-bezier(.2,.8,.2,1.2);
 }
-.kz-answered-chip{
-    height:45px;
-    border-radius:10px;
-    background:rgba(34,193,160,0.12);
-    border:1px solid rgba(34,193,160,0.4);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:2px;
-    animation:kz-chip-in 0.35s cubic-bezier(.2,.8,.2,1.2);
-}
-@keyframes kz-chip-in{ from{ opacity:0; transform:scale(0.7); } to{ opacity:1; transform:scale(1); } }
-.kz-answered-chip .kz-chip-avatar{
-    width:18px; height:18px; border-radius:50%;
+.kz-answered-side-chip .kz-chip-avatar{
+    width:26px; height:26px; border-radius:50%;
     background:radial-gradient(circle at 35% 30%,#8f6bff,#5b2fd6 55%,#2b1466 100%);
     display:flex; align-items:center; justify-content:center;
-    font-size:9px; font-weight:900; color:#fff;
+    font-size:11px; font-weight:900; color:#fff;
+    box-shadow:0 0 0 2px rgba(34,193,160,0.5);
 }
-.kz-answered-chip .kz-chip-name{ font-size:9.5px; font-weight:800; color:#eafff6; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:0 3px; }
+@keyframes kz-chip-in{ from{ opacity:0; transform:scale(0.7); } to{ opacity:1; transform:scale(1); } }
 @media (max-width:480px){
-    #kz-answered-grid{ grid-template-columns:repeat(4,1fr); }
+    .kz-answered-side-col{ width:36px; }
+    .kz-answered-side-chip{ width:36px; height:36px; }
+    .kz-answered-side-chip .kz-chip-avatar{ width:22px; height:22px; font-size:9.5px; }
 }
 
 /* ---------------------------------------------------------------------
@@ -1041,3 +1058,32 @@ body.kz-active{
 #kz-replay-btn{ border:none; background:linear-gradient(90deg,#22c1a0,#4fe0c4); color:#052018; }
 #kz-newmatch-btn{ border:none; background:linear-gradient(90deg,var(--kz-accent),var(--kz-accent2)); color:#0a0612; }
 #kz-exit-btn{ border:1px solid rgba(239,68,68,0.5); background:rgba(239,68,68,0.16); color:#ff8da3; }
+
+/* ---------------------------------------------------------------------
+   تبويب "الإجابة الصحيحة" الأخضر -- يظهر بعد ما كل اللاعبين يخلّصون
+   اختيارهم، قبل تبويب الإقصاء. 300×300، خلفية خضراء شفافة 30%، حدود
+   خضراء، دخول/خروج بأنيميشن، يبقى 3 ثواني
+--------------------------------------------------------------------- */
+#kz-correct-reveal-holder{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    z-index:9;
+}
+#kz-correct-reveal-panel{
+    width:300px; height:300px; max-width:88vw; max-height:70vh;
+    background:rgba(34,193,160,0.3);
+    border:2.5px solid #22c1a0;
+    border-radius:24px;
+    box-shadow:0 0 0 1px rgba(34,193,160,0.25),0 0 40px rgba(34,193,160,0.35),0 30px 70px rgba(0,0,0,0.5);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+    padding:24px;
+    text-align:center;
+    opacity:0;
+    transform:scale(0.75);
+    transition:opacity 0.4s ease, transform 0.4s cubic-bezier(.2,.8,.2,1.15);
+}
+#kz-correct-reveal-holder.kz-show #kz-correct-reveal-panel{ opacity:1; transform:scale(1); }
+#kz-correct-reveal-holder.kz-hide #kz-correct-reveal-panel{ opacity:0; transform:scale(0.8); }
+.kz-correct-reveal-title{ font-size:16px; font-weight:900; color:#eafff6; }
+.kz-correct-reveal-times{ display:flex; align-items:center; gap:14px; font-size:28px; font-weight:900; color:#fff; }
+.kz-correct-reveal-times span:not(:last-child)::after{ content:" - "; color:#bdf5e6; }
