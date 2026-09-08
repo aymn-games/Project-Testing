@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-08T18:54:56.807Z",
+  "updatedAt": "2026-09-08T19:37:24.408Z",
   "challenges": [
     {
       "id": "img1788519307029",
@@ -531,6 +531,470 @@
       "imageFile": "71.png",
       "answers": [
         "يونيسيف"
+      ]
+    },
+    {
+      "id": "img1788894404168",
+      "type": "full",
+      "imageFile": "72.png",
+      "answers": [
+        "افغانستان"
+      ]
+    },
+    {
+      "id": "img1788894471568",
+      "type": "full",
+      "imageFile": "73.png",
+      "answers": [
+        "ابن سيناء"
+      ]
+    },
+    {
+      "id": "img1788894528423",
+      "type": "full",
+      "imageFile": "74.png",
+      "answers": [
+        "بابريكا",
+        "ببريكا"
+      ]
+    },
+    {
+      "id": "img1788894582024",
+      "type": "full",
+      "imageFile": "75.png",
+      "answers": [
+        "بريدة",
+        "بريده"
+      ]
+    },
+    {
+      "id": "img1788894606439",
+      "type": "full",
+      "imageFile": "76.png",
+      "answers": [
+        "بلجيكا"
+      ]
+    },
+    {
+      "id": "img1788894630959",
+      "type": "full",
+      "imageFile": "77.png",
+      "answers": [
+        "درب التبانة",
+        "درب التبانه"
+      ]
+    },
+    {
+      "id": "img1788894653431",
+      "type": "full",
+      "imageFile": "78.png",
+      "answers": [
+        "شامخ"
+      ]
+    },
+    {
+      "id": "img1788894691703",
+      "type": "full",
+      "imageFile": "79.png",
+      "answers": [
+        "شرذمة",
+        "شرذمه"
+      ]
+    },
+    {
+      "id": "img1788894715536",
+      "type": "full",
+      "imageFile": "80.png",
+      "answers": [
+        "شيخوخة",
+        "شيخوخه"
+      ]
+    },
+    {
+      "id": "img1788894733823",
+      "type": "full",
+      "imageFile": "81.png",
+      "answers": [
+        "شيرازي"
+      ]
+    },
+    {
+      "id": "img1788894758080",
+      "type": "full",
+      "imageFile": "82.png",
+      "answers": [
+        "غجر"
+      ]
+    },
+    {
+      "id": "img1788894779584",
+      "type": "full",
+      "imageFile": "83.png",
+      "answers": [
+        "قرطبة",
+        "قرطبه"
+      ]
+    },
+    {
+      "id": "img1788894816600",
+      "type": "full",
+      "imageFile": "84.png",
+      "answers": [
+        "قصب السكر",
+        "قصب سكر"
+      ]
+    },
+    {
+      "id": "img1788894867688",
+      "type": "full",
+      "imageFile": "85.png",
+      "answers": [
+        "لاجديد يذكر ولا قديم يعاد",
+        "لا جديد يذكر و لا قديم يعاد"
+      ]
+    },
+    {
+      "id": "img1788894888280",
+      "type": "full",
+      "imageFile": "86.png",
+      "answers": [
+        "لوسيد"
+      ]
+    },
+    {
+      "id": "img1788894908696",
+      "type": "full",
+      "imageFile": "87.png",
+      "answers": [
+        "شرطي"
+      ]
+    },
+    {
+      "id": "img1788894932880",
+      "type": "full",
+      "imageFile": "88.png",
+      "answers": [
+        "ريتاج"
+      ]
+    },
+    {
+      "id": "img1788894974976",
+      "type": "full",
+      "imageFile": "89.png",
+      "answers": [
+        "تمثال الحرية",
+        "تمثال الحريه"
+      ]
+    },
+    {
+      "id": "img1788894996896",
+      "type": "full",
+      "imageFile": "90.png",
+      "answers": [
+        "مومباي"
+      ]
+    },
+    {
+      "id": "img1788895013223",
+      "type": "full",
+      "imageFile": "91.png",
+      "answers": [
+        "تمساح"
+      ]
+    },
+    {
+      "id": "img1788895035264",
+      "type": "full",
+      "imageFile": "92.png",
+      "answers": [
+        "فلاورد"
+      ]
+    },
+    {
+      "id": "img1788895103944",
+      "type": "full",
+      "imageFile": "93.png",
+      "answers": [
+        "الفرزدق",
+        "فرزدق"
+      ]
+    },
+    {
+      "id": "img1788895130128",
+      "type": "full",
+      "imageFile": "94.png",
+      "answers": [
+        "كاساديا",
+        "كساديا"
+      ]
+    },
+    {
+      "id": "img1788895149808",
+      "type": "full",
+      "imageFile": "95.png",
+      "answers": [
+        "عطار"
+      ]
+    },
+    {
+      "id": "img1788895169696",
+      "type": "full",
+      "imageFile": "96.png",
+      "answers": [
+        "بندة",
+        "بنده"
+      ]
+    },
+    {
+      "id": "img1788895202024",
+      "type": "full",
+      "imageFile": "97.png",
+      "answers": [
+        "صحراء",
+        "صحرى",
+        "صحرا"
+      ]
+    },
+    {
+      "id": "img1788895259752",
+      "type": "full",
+      "imageFile": "98.png",
+      "answers": [
+        "بانانا",
+        "بنانا"
+      ]
+    },
+    {
+      "id": "img1788895277496",
+      "type": "full",
+      "imageFile": "99.png",
+      "answers": [
+        "راكون"
+      ]
+    },
+    {
+      "id": "img1788895302440",
+      "type": "full",
+      "imageFile": "100.png",
+      "answers": [
+        "شباب",
+        "الشباب"
+      ]
+    },
+    {
+      "id": "img1788895412393",
+      "type": "full",
+      "imageFile": "101.png",
+      "answers": [
+        "طبرجل"
+      ]
+    },
+    {
+      "id": "img1788895431776",
+      "type": "full",
+      "imageFile": "102.png",
+      "answers": [
+        "مختبر"
+      ]
+    },
+    {
+      "id": "img1788895457864",
+      "type": "full",
+      "imageFile": "103.png",
+      "answers": [
+        "هشاشة",
+        "هشاشه"
+      ]
+    },
+    {
+      "id": "img1788895490000",
+      "type": "full",
+      "imageFile": "104.png",
+      "answers": [
+        "صبار"
+      ]
+    },
+    {
+      "id": "img1788895524232",
+      "type": "full",
+      "imageFile": "105.png",
+      "answers": [
+        "بازار",
+        "بزار"
+      ]
+    },
+    {
+      "id": "img1788895566352",
+      "type": "full",
+      "imageFile": "106.png",
+      "answers": [
+        "سامسونج",
+        "سمسونج",
+        "سامسونق",
+        "سمسونق"
+      ]
+    },
+    {
+      "id": "img1788895591264",
+      "type": "full",
+      "imageFile": "107.png",
+      "answers": [
+        "مركبة",
+        "مركبه"
+      ]
+    },
+    {
+      "id": "img1788895710776",
+      "type": "full",
+      "imageFile": "108.png",
+      "answers": [
+        "مالكوم"
+      ]
+    },
+    {
+      "id": "img1788895727632",
+      "type": "full",
+      "imageFile": "109.png",
+      "answers": [
+        "مخرج"
+      ]
+    },
+    {
+      "id": "img1788895749696",
+      "type": "full",
+      "imageFile": "110.png",
+      "answers": [
+        "زنجبيل"
+      ]
+    },
+    {
+      "id": "img1788895784776",
+      "type": "full",
+      "imageFile": "111.png",
+      "answers": [
+        "ماجيك"
+      ]
+    },
+    {
+      "id": "img1788895808600",
+      "type": "full",
+      "imageFile": "112.png",
+      "answers": [
+        "بيكاكس"
+      ]
+    },
+    {
+      "id": "img1788895881056",
+      "type": "full",
+      "imageFile": "113.png",
+      "answers": [
+        "كتاب"
+      ]
+    },
+    {
+      "id": "img1788895904856",
+      "type": "full",
+      "imageFile": "114.png",
+      "answers": [
+        "نيبال"
+      ]
+    },
+    {
+      "id": "img1788895957344",
+      "type": "full",
+      "imageFile": "115.png",
+      "answers": [
+        "بلغاريا"
+      ]
+    },
+    {
+      "id": "img1788895977320",
+      "type": "full",
+      "imageFile": "116.png",
+      "answers": [
+        "تيماء"
+      ]
+    },
+    {
+      "id": "img1788896001824",
+      "type": "full",
+      "imageFile": "117.png",
+      "answers": [
+        "اوزباكستان"
+      ]
+    },
+    {
+      "id": "img1788896027912",
+      "type": "full",
+      "imageFile": "118.png",
+      "answers": [
+        "كهرمان"
+      ]
+    },
+    {
+      "id": "img1788896053760",
+      "type": "full",
+      "imageFile": "119.png",
+      "answers": [
+        "توشيبا",
+        "تو شيبا"
+      ]
+    },
+    {
+      "id": "img1788896080952",
+      "type": "full",
+      "imageFile": "120.png",
+      "answers": [
+        "استنتاج"
+      ]
+    },
+    {
+      "id": "img1788896099080",
+      "type": "full",
+      "imageFile": "121.png",
+      "answers": [
+        "لبتون"
+      ]
+    },
+    {
+      "id": "img1788896144496",
+      "type": "full",
+      "imageFile": "122.png",
+      "answers": [
+        "ابي جا",
+        "ابي جاء"
+      ]
+    },
+    {
+      "id": "img1788896172448",
+      "type": "full",
+      "imageFile": "123.png",
+      "answers": [
+        "بنتلي"
+      ]
+    },
+    {
+      "id": "img1788896190656",
+      "type": "full",
+      "imageFile": "124.png",
+      "answers": [
+        "جمبري"
+      ]
+    },
+    {
+      "id": "img1788896207008",
+      "type": "full",
+      "imageFile": "125.png",
+      "answers": [
+        "القطيف"
+      ]
+    },
+    {
+      "id": "img1788896230289",
+      "type": "full",
+      "imageFile": "126.png",
+      "answers": [
+        "سامي الجابر"
       ]
     }
   ]
