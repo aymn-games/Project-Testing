@@ -420,14 +420,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#er-shuffle-btn:disabled{opacity:0.4;cursor:not-allowed;}',
             '#er-shuffle-btn:not(:disabled):hover{background:rgba(255,255,255,0.16);}',
 
-            /* ---- [0.56.0] الشكل الثاني الاختياري: بكرة سكرول رأسية بدل
+            /* ---- [0.61.0] الشكل الثاني الاختياري: بكرة سكرول رأسية بدل
              * العجلة — نفس نظام روليت الروسي (rr-reel) بالحرف، بألوان
-             * روليت الإقصاء. زر التبديل ثابت أعلى الشاشة. */
-            '#er-display-mode-toggle{position:fixed;top:74px;left:50%;transform:translateX(-50%);',
-            'z-index:400;padding:8px 18px;border-radius:999px;border:1px solid var(--er-accent2);',
-            'background:rgba(0,0,0,0.5);color:#f2e6cf;font-family:inherit;font-weight:700;',
-            'font-size:0.8em;cursor:pointer;}',
+             * روليت الإقصاء. الاختيار بينهما صار حقل إعدادات حقيقي
+             * (wheelDisplayMode) بدل زر عائم فوق الشاشة — راجع
+             * enhanceWheelModeField/setWheelDisplayMode. */
             '#er-reel-wrap{display:none;position:relative;width:min(560px,90vw);height:450px;',
+            'max-height:70vh;',
             'margin:46px auto 0;border-radius:16px;background:rgba(0,0,0,0.35);',
             'border:2px solid var(--er-accent2);box-shadow:0 0 30px rgba(0,0,0,0.5);overflow:hidden;',
             'mask-image:linear-gradient(180deg,transparent 0%,#000 22%,#000 78%,transparent 100%);',
@@ -452,6 +451,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'pointer-events:none;border-top:2px solid var(--er-pink);border-bottom:2px solid var(--er-pink);',
             'background:linear-gradient(90deg,rgba(229,0,127,0.12),rgba(0,215,255,0.06));z-index:2;}',
             '#er-spin-hub.er-hub-standalone{position:static;transform:none;margin:14px auto 0;}',
+            // ⚠️ [0.61.0] نص التوضيح تحت حقل "شكل عجلة الحظ" بشاشتَي
+            // الإعدادات (الأولى والدرج) — عنصر عادي بتدفّق الصف، يُضاف
+            // مرة واحدة عبر enhanceWheelModeField.
+            '.er-field-note{font-size:0.72em;color:#9dd6c2;margin:-6px 0 4px;padding:0 2px;',
+            'text-align:right;opacity:0.9;}',
 
             /* ---- [0.55.0] زر "العب التلقائي" — انتقل من داخل درج
              * الإعدادات (كان midMatchToggleButton بالملف المشترك) لتحت
@@ -1029,6 +1033,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'margin-inline-start:-10px !important;padding-inline-start:24px !important;',
             'padding-inline-end:14px !important;font-size:21px !important;}',
             '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic--fallback{font-size:14px !important;}',
+            // ⚠️ [تدقيق شامل] زر حذف اللاعب (🗑️) على البطاقات غير المؤطَّرة
+            // كان بموضع الملف المشترك الافتراضي (top:-6px;left:-6px —
+            // خارج حدود البطاقة تماماً)، يكسر التقارب مع البطاقات
+            // المؤطَّرة المجاورة بشبكة 5 الأعمدة. صار بزاوية دائرة
+            // الصورة (top:0;right:0)، داخل حدود البطاقة بالضبط، وأصغر
+            // (16px بدل 20px) ليضمن يفضل داخل حدود دائرة 45px. محدود
+            // صراحة بـ:has(> .agp-pcard) حتى ما يأثر على البطاقات
+            // المؤطَّرة (.agp-pcard-tpl) إطلاقاً.
+            '#agp-shell-box.agp-lobby-box li:has(> .agp-pcard) .agp-player-remove-btn{',
+            'top:0 !important;left:auto !important;right:0 !important;',
+            'width:16px !important;height:16px !important;font-size:9px !important;z-index:5;}',
 
             // ⚠️ [0.45.15] صف أزرار اللوبي السفلي — طلب صريح جديد: الثلاثة
             // أزرار (العودة للإعدادات، بدء الجولة، رجوع للمنصة) بصف واحد
@@ -1234,7 +1249,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * طبقتنا. راجع ensureConnLayer/showConnLayer/syncConnLayer.
              * ================================================================ */
             '#agp-shell-box.agp-connecting-box,#agp-shell-box.agp-conn-error{visibility:hidden !important;}',
-            '#er-conn-layer{position:fixed;inset:0;z-index:500;display:none;',
+            '#er-conn-layer{position:fixed;inset:0;z-index:100010;display:none;',
             'align-items:center;justify-content:center;}',
             '#er-conn-layer.show{display:flex;}',
             '#er-conn-layer .er-conn-backdrop{position:absolute;inset:0;overflow:hidden;',
@@ -1292,14 +1307,46 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'font-size:0.82em !important;color:#d9a9c6 !important;font-weight:700 !important;}',
             '#agp-shell-box.er-inmatch-drawer:not(.er-tab-players) .er-drawer-players-tab{display:none !important;}',
             '#agp-shell-box.er-inmatch-drawer.er-tab-players .er-drawer-body{display:none !important;}',
-            '.er-drawer-players-tab .agp-settings-player-row{display:flex !important;flex-direction:column !important;}',
-            '.er-drawer-players-tab .agp-settings-player-box{width:100% !important;height:auto !important;',
-            'max-height:min(50vh,420px) !important;}',
-            '.er-drawer-players-tab .agp-settings-player-actions{width:100% !important;',
-            'flex-direction:row !important;}',
-            '.er-drawer-players-tab .agp-settings-player-actions .agp-shell-btn-connect{',
-            'background:linear-gradient(90deg,#E5007F,#00D7FF) !important;color:#150819 !important;',
-            'border:none !important;}',
+            // ⚠️ [0.60.0] حقل إدارة اللاعبين الجاهز من الملف المشترك يبقى
+            // بتبويب الإعدادات (بدل نقله لتبويب اللاعبين) — نُخفي قائمته
+            // الداخلية وعدّاده فقط، ونُبقي زر "➕ فتح دخول لاعبين جدد"
+            // (بعد إعادة تسميته) ظاهراً بمكانه الأصلي بترتيب DOM.
+            '#agp-shell-box.er-inmatch-drawer .agp-settings-player-box{display:none !important;}',
+            '#agp-shell-box.er-inmatch-drawer .agp-settings-player-row{display:block !important;}',
+            '#agp-shell-box.er-inmatch-drawer #agp-settings-player-count{display:none !important;}',
+            '#agp-shell-box.er-inmatch-drawer .agp-shell-field:has(#agp-settings-player-count) > label{display:none !important;}',
+            '#agp-shell-box.er-inmatch-drawer #agp-reopen-registration-btn{width:100% !important;',
+            'margin-top:6px !important;border:1px dashed rgba(0,215,255,0.5) !important;',
+            'background:rgba(0,215,255,0.08) !important;color:#cdeeff !important;}',
+            // ---- تبويب اللاعبين المخصَّص (بحث + فلتر + قائمة موحَّدة) —
+            // نفس نموذج روليت القبائل بالحرف، بألوان روليت الإقصاء. ----
+            '#er-players-tab-search{width:100%;padding:8px 12px;border-radius:9px;',
+            'background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#fff;',
+            'font-family:inherit;font-size:0.8em;margin-bottom:10px;box-sizing:border-box;}',
+            '#er-players-tab-filter{display:flex;gap:5px;margin-bottom:10px;}',
+            '#er-players-tab-filter button{flex:1;padding:5px 2px;border-radius:7px;',
+            'border:1px solid rgba(255,255,255,0.14);background:transparent;color:#d9a9c6;',
+            'font-family:inherit;font-weight:800;font-size:0.68em;cursor:pointer;}',
+            '#er-players-tab-filter button.er-filter-active{background:rgba(0,215,255,0.14);',
+            'border-color:#00D7FF;color:#fff;}',
+            '.er-prow{display:flex;align-items:center;gap:8px;padding:7px 0;',
+            'border-bottom:1px solid rgba(255,255,255,0.05);}',
+            '.er-prow.er-prow-out{opacity:0.6;}',
+            '.er-prow .er-prow-avatar{width:26px;height:26px;border-radius:50%;flex:none;overflow:hidden;}',
+            '.er-prow.er-prow-out .er-prow-avatar{filter:grayscale(1);}',
+            '.er-prow .er-prow-avatar .er-ring-avatar,.er-prow .er-prow-avatar .er-ring-avatar--fallback{',
+            'width:100%;height:100%;font-size:0.7em;}',
+            '.er-prow .er-prow-name{flex:1;font-size:0.8em;font-weight:700;overflow:hidden;',
+            'text-overflow:ellipsis;white-space:nowrap;}',
+            '.er-prow .er-prow-status{font-size:0.6em;padding:2px 8px;border-radius:999px;font-weight:800;flex:none;}',
+            '.er-prow .er-prow-status.er-status-live{background:rgba(34,197,94,0.15);color:#4ade80;',
+            'border:1px solid rgba(74,222,128,0.4);}',
+            '.er-prow .er-prow-status.er-status-out{background:rgba(239,68,68,0.15);color:#f87171;',
+            'border:1px solid rgba(248,113,113,0.4);}',
+            '.er-prow .er-prow-action{width:22px;height:22px;border-radius:50%;border:none;',
+            'color:#fff;font-weight:900;font-size:0.65em;cursor:pointer;flex:none;}',
+            '.er-prow .er-prow-action.er-action-eliminate{background:#ef4444;}',
+            '.er-prow .er-prow-action.er-action-revive{background:linear-gradient(135deg,#22c55e,#16a34a);}',
 
             /* ================================================================
              * ⚠️ [0.55.0] نافذة "إضافة لوبي جديد" — 700×800، شفافية 70%،
@@ -1421,12 +1468,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             stage.id = 'er-stage';
             document.body.appendChild(stage);
         }
-        // ⚠️ [0.46.0] أسماء اللاعبين رجعت مكتوبة داخل قطع العجلة نفسها
-        // (renderWheelLabels)، وزر "إعادة ترتيب عشوائية" تحت العجلة.
-        // ⚠️ [0.48.0] موشر تكبير/تصغير العجلة بين العجلة والزر — عنصر
-        // عادي بترتيب العمود حتى يتحرك الزر تلقائياً معه عند تغيير الحجم.
         stage.innerHTML =
-            '<button id="er-display-mode-toggle" type="button">🔃 تبديل شكل الاختيار (سكرول)</button>' +
             '<div id="er-wheel-wrap">' +
             '<div id="er-wheel-bezel"></div>' +
             '<div id="er-wheel-pointer"></div>' +
@@ -1452,21 +1494,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderReel();
         el('er-spin-hub').onclick = handleSpinClick;
         el('er-shuffle-btn').onclick = handleShuffleClick;
-        el('er-display-mode-toggle').onclick = handleDisplayModeToggle;
         el('er-autoplay-btn').onclick = function () {
             handleAutoPlayToggle(!_autoPlayActive);
             updateAutoPlayBtnLabel();
         };
         updateAutoPlayBtnLabel();
-        // ⚠️ [0.56.0] لو الشكل المحفوظ من مباراة سابقة كان "سكرول"، نطبّقه
-        // مباشرة على هذا التصيير الجديد أيضاً (نفس فلسفة _wheelSizePx —
-        // يبقى محفوظاً عبر renderStage() المتكرّرة). handleDisplayModeToggle
-        // تقلب الحالة، فنستدعيها هنا فقط لو الحالة المحفوظة "reel" مسبقاً
-        // بينما الـDOM دايماً يبدأ بشكل العجلة الافتراضي.
-        if (_wheelDisplayMode === 'reel') {
-            _wheelDisplayMode = 'wheel'; // نرجّعها حتى handleDisplayModeToggle تقلبها لـ'reel' بشكل صحيح
-            handleDisplayModeToggle();
-        }
+        // ⚠️ [0.61.0] زر "🔃 تبديل شكل الاختيار" العائم فوق الشاشة أُزيل
+        // بالكامل — شكل عجلة الحظ صار حقل إعدادات حقيقي (wheelDisplayMode
+        // بـbuildSettingsFields) يظهر داخل درج الإعدادات، بدل زر مستقل.
+        // الوضع المحفوظ (يبقى عبر renderStage() المتكرّرة، نفس فلسفة
+        // _wheelSizePx) يُطبَّق هنا مباشرة عبر setWheelDisplayMode.
+        var savedMode = _wheelDisplayMode;
+        _wheelDisplayMode = 'wheel'; // الـDOM دايماً يبدأ بشكل العجلة الافتراضي
+        if (savedMode === 'reel') setWheelDisplayMode('reel');
         el('er-wheel-zoom-slider').oninput = function () {
             handleWheelZoomChange(parseInt(this.value, 10));
         };
@@ -1750,36 +1790,76 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }, 3800);
     }
 
-    // ⚠️ [0.56.0] يبدّل بين شكل العجلة وشكل البكرة — زر "العب التلقائي"
-    // (er-autoplay-btn) ثابت مكانه تحت أي من الشكلين، بلا أي تغيير على
-    // منطقه؛ فقط زر التدوير نفسه (er-spin-hub) ينتقل فعلياً (نفس العنصر،
-    // مو نسخة) بين تحت العجلة وتحت البكرة، بنفس أسلوب روليت الروسي.
-    function handleDisplayModeToggle() {
-        if (_pendingTurn) return;
-        _wheelDisplayMode = (_wheelDisplayMode === 'wheel') ? 'reel' : 'wheel';
+    // ⚠️ [0.61.0] setWheelDisplayMode(mode) تستبدل handleDisplayModeToggle()
+    // بالكامل — تُستدعى الآن من حقل الإعدادات الحقيقي wheelDisplayMode
+    // (راجع enhanceWheelModeField أدناه)، بمعامل صريح ('wheel'|'reel')
+    // بدل تبديل ثنائي، لأن مصدر الاستدعاء صار زرَّي pill-choice منفصلين
+    // (مو زر واحد يقلب حالته). لا فحص _pendingTurn بعد الآن — بطلب صريح
+    // "يطبَّق مباشرة عند اختيار أي خيار منهم" حتى أثناء دور مفتوح. زر
+    // "العب التلقائي" (er-autoplay-btn) ثابت مكانه تحت أي من الشكلين
+    // بلا أي تغيير على منطقه؛ فقط زر التدوير نفسه (er-spin-hub) ينتقل
+    // فعلياً (نفس العنصر، مو نسخة) بين تحت العجلة وتحت البكرة.
+    function setWheelDisplayMode(mode) {
+        if (mode !== 'wheel' && mode !== 'reel') return;
+        _wheelDisplayMode = mode;
         var wheelWrap = el('er-wheel-wrap');
         var reelWrap = el('er-reel-wrap');
         var hub = el('er-spin-hub');
-        var toggleBtn = el('er-display-mode-toggle');
         var zoomRow = el('er-wheel-zoom-row');
+        // الشاشة لسا ما فُتحت (قبل بدء المباراة) — بس _wheelDisplayMode
+        // اتسجّلت، وتُطبَّق تلقائياً أول ما renderStage() تشتغل.
         if (!wheelWrap || !reelWrap || !hub) return;
 
-        if (_wheelDisplayMode === 'reel') {
+        if (mode === 'reel') {
             wheelWrap.style.display = 'none';
             if (zoomRow) zoomRow.style.display = 'none';
             reelWrap.style.display = 'block';
             renderReel();
             hub.classList.add('er-hub-standalone');
             reelWrap.insertAdjacentElement('afterend', hub);
-            if (toggleBtn) toggleBtn.textContent = '🔃 تبديل شكل الاختيار (عجلة)';
         } else {
             wheelWrap.style.display = '';
             if (zoomRow) zoomRow.style.display = '';
             reelWrap.style.display = 'none';
             hub.classList.remove('er-hub-standalone');
             wheelWrap.appendChild(hub);
-            if (toggleBtn) toggleBtn.textContent = '🔃 تبديل شكل الاختيار (سكرول)';
         }
+    }
+
+    // ⚠️ [0.61.0] حقل "🎡 شكل عجلة الحظ" (wheelDisplayMode) صار حقل
+    // إعدادات حقيقي بـbuildSettingsFields — يظهر بشاشة الإعدادات الأولى
+    // ودرج وسط المباراة معاً تلقائياً (نفس أي حقل pill-choice آخر). هذي
+    // الدالة تضيف نص التوضيح تحته ("💡 السكرول خيار آمن") وتربط كل زر
+    // pill بمستمع إضافي (addEventListener — لا يتعارض مع مستمع الملف
+    // المشترك .onclick الذي يحفظ القيمة بـ_settingsValues فقط) يستدعي
+    // setWheelDisplayMode() فوراً، بدل انتظار أول دوران جديد.
+    function enhanceWheelModeField() {
+        var box = el('agp-shell-box');
+        if (!box) return;
+        var pillBtns = box.querySelectorAll('[data-key="wheelDisplayMode"]');
+        if (!pillBtns.length) return;
+        var row = pillBtns[0].closest('.agp-shell-row');
+        if (row && (!row.nextElementSibling || !row.nextElementSibling.classList.contains('er-field-note'))) {
+            var note = document.createElement('div');
+            note.className = 'er-field-note';
+            note.textContent = '💡 السكرول خيار آمن';
+            row.insertAdjacentElement('afterend', note);
+        }
+        pillBtns.forEach(function (btn) {
+            // ⚠️ [تدقيق شامل] حارس ضد تكرار المستمع: أي حركة DOM ثانوية
+            // داخل #agp-shell-overlay (مثلاً سحب شريط "مستوى الصوت" —
+            // oninput بالملف المشترك يحدّث textContent مباشرة بدون إعادة
+            // بناء كاملة) تُشغّل MutationObserver من جديد فتُعاد
+            // enhanceWheelModeField() على نفس الأزرار الحيّة بلا تغيير —
+            // بدون هذا الحارس كان كل سحبة بالسلايدر تضيف مستمع click
+            // إضافي فوق نفس الزر (تراكم فعلي، مو تسريب ذاكرة خطير بس
+            // استدعاءات مكرَّرة غير ضرورية لكل ضغطة مستقبلية).
+            if (btn.getAttribute('data-er-wired') === '1') return;
+            btn.setAttribute('data-er-wired', '1');
+            btn.addEventListener('click', function () {
+                setWheelDisplayMode(btn.getAttribute('data-value'));
+            });
+        });
     }
 
     function handleWheelLanded(winner) {
@@ -2964,6 +3044,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 default: 'eliminate_chooser'
             },
             {
+                // ⚠️ [0.61.0] كان زر عائم مستقل فوق شاشة اللعب (🔃 تبديل شكل
+                // الاختيار) — صار حقل إعدادات حقيقي بطلب صريح، يظهر بشاشة
+                // الإعدادات الأولى ودرج وسط المباراة معاً. التطبيق الفوري
+                // على شاشة اللعب نفسها (لا ينتظر دوران جديد) عبر
+                // enhanceWheelModeField/setWheelDisplayMode أعلاه، لأن
+                // الملف المشترك ما عنده onChange hook لحقول الإعدادات.
+                key: 'wheelDisplayMode', type: 'pill-choice', label: '🎡 شكل عجلة الحظ',
+                options: [
+                    { label: '🎡 عجلة', value: 'wheel' },
+                    { label: '📜 سكرول', value: 'reel' }
+                ],
+                default: 'wheel'
+            },
+            {
                 // ⚠️ [0.45.0] صار خطاً قابلاً للتحريك (slider) بدل عدّاد +/-،
                 // ويظهر فقط بالإعدادات المفتوحة أثناء مباراة نشطة (onlyMidMatch)
                 // — مخفي كلياً بشاشة الإعدادات الأولى قبل بدء المباراة.
@@ -3239,16 +3333,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
     }
 
-    // ⚠️ [0.55.0] درج إعدادات وسط المباراة — نفس نموذج "الدرج الجانبي"
-    // المستخدَم حرفياً بروليت الروسي (منقول أصلاً من روليت القبائل):
-    // ينزلق من يمين الشاشة، كامل الارتفاع، بتبويبين (⚙️ الإعدادات/
-    // 👥 اللاعبون) بدل الصندوق المركزي التقليدي. تبويب اللاعبين يحتوي
-    // عنصر إدارة اللاعبين الجاهز من الملف المشترك (القائمة + زر "➕
-    // إضافة لوبي جديد") كما هو، بدون إعادة بناء بحث/فلتر مخصَّص إضافي.
-    // idempotent: لو الصندوق أصلاً بشكل الدرج (firstElementChild
-    // .er-drawer-header) نكتفي بتحديث التبويب النشط فقط، لتفادي حلقة
-    // لا نهائية مع MutationObserver المراقِب لنفس الصندوق.
+    // ⚠️ [0.60.0] درج إعدادات وسط المباراة — تبويب اللاعبين استُبدل
+    // بالكامل بنفس نموذج روليت القبائل الفعلي (renderReopenedPlayersTab):
+    // بحث + فلتر (الكل/نشطون/مقصون) + قائمة موحَّدة تجمع _alive و
+    // _eliminated معاً (كل من شارك بالمباراة، بعكس قائمة اللوبي)، كل صف
+    // نشط بزر × أحمر (إقصاء يدوي هادئ) وكل صف مقصى بزر ↩ أخضر (إرجاع
+    // يدوي فوري، بدون فحص _friendRevivedIds). يلغي التصميم القديم
+    // [0.55.0] (تضمين عنصر إدارة اللاعبين الجاهز من الملف المشترك كما
+    // هو) بالكامل على هذا الجزء فقط — باقي الدرج (الرأس/التبويبات/حقول
+    // الإعدادات) بلا تغيير.
     var _erDrawerTab = 'settings';
+    var _erPlayersTabFilter = 'all';
 
     function enhanceReopenedDrawer() {
         var box = el('agp-shell-box');
@@ -3261,6 +3356,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             box.querySelectorAll('.er-drawer-tabs button').forEach(function (b) {
                 b.classList.toggle('er-tab-active', b.getAttribute('data-tab') === _erDrawerTab);
             });
+            if (_erDrawerTab === 'players') renderReopenedPlayersTab();
             return;
         }
 
@@ -3287,23 +3383,133 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 _erDrawerTab = btn.getAttribute('data-tab');
                 box.classList.toggle('er-tab-players', _erDrawerTab === 'players');
                 tabs.querySelectorAll('button').forEach(function (b) { b.classList.toggle('er-tab-active', b === btn); });
+                if (_erDrawerTab === 'players') renderReopenedPlayersTab();
             };
         });
         box.appendChild(tabs);
 
+        // ---- الجسم القابل للسكرول: كل حقول الإعدادات + حقل إدارة
+        // اللاعبين كاملاً (قائمته الداخلية مخفية بـCSS، زر "➕ إضافة لوبي
+        // جديد" يبقى ظاهراً بمكانه الأصلي، بعد إعادة تسميته). ----
         var bodyWrap = document.createElement('div');
         bodyWrap.className = 'er-drawer-body';
-        var playersNode = null;
-        fieldNodes.forEach(function (n) {
-            if (n.querySelector && n.querySelector('#agp-settings-player-list')) { playersNode = n; return; }
-            bodyWrap.appendChild(n);
-        });
+        fieldNodes.forEach(function (n) { bodyWrap.appendChild(n); });
+        var reopenBtn = bodyWrap.querySelector('#agp-reopen-registration-btn');
+        if (reopenBtn) reopenBtn.textContent = '➕ فتح دخول لاعبين جدد';
         box.appendChild(bodyWrap);
 
         var playersTab = document.createElement('div');
         playersTab.className = 'er-drawer-players-tab';
-        if (playersNode) playersTab.appendChild(playersNode);
+        playersTab.id = 'er-players-tab';
+        playersTab.innerHTML =
+            '<input type="text" id="er-players-tab-search" placeholder="🔍 دوّر على لاعب...">' +
+            '<div id="er-players-tab-filter">' +
+            '<button type="button" data-filter="all">الكل</button>' +
+            '<button type="button" data-filter="live">🟢 نشطون</button>' +
+            '<button type="button" data-filter="out">🔴 مقصون</button>' +
+            '</div>' +
+            '<div id="er-players-tab-list"></div>';
+        playersTab.querySelector('#er-players-tab-search').oninput = function () { renderReopenedPlayersTab(); };
+        playersTab.querySelectorAll('#er-players-tab-filter button').forEach(function (b) {
+            b.classList.toggle('er-filter-active', b.getAttribute('data-filter') === _erPlayersTabFilter);
+            b.onclick = function () { _erPlayersTabFilter = b.getAttribute('data-filter'); renderReopenedPlayersTab(); };
+        });
         box.appendChild(playersTab);
+
+        if (_erDrawerTab === 'players') renderReopenedPlayersTab();
+    }
+
+    /**
+     * ⚠️ [0.60.0] نفس منطق روليت القبائل بالحرف — يجمع _alive و_eliminated
+     * بقائمة واحدة (كل من شارك بالمباراة)، فلتر بحث بالاسم + فلتر حالة،
+     * ترتيب أبجدي عربي. صف نشط = زر × أحمر (manuallyEliminatePlayer)،
+     * صف مقصى = زر ↩ أخضر (manuallyRevivePlayer).
+     */
+    function renderReopenedPlayersTab() {
+        var listEl = el('er-players-tab-list');
+        if (!listEl) return;
+
+        var query = ((el('er-players-tab-search') || {}).value || '').trim().toLowerCase();
+        var rows = _alive.map(function (p) { return { player: p, status: 'live' }; })
+            .concat(_eliminated.map(function (e) { return { player: e.player, status: 'out' }; }));
+
+        if (_erPlayersTabFilter !== 'all') {
+            rows = rows.filter(function (r) { return r.status === _erPlayersTabFilter; });
+        }
+        if (query) {
+            rows = rows.filter(function (r) { return playerLabel(r.player).toLowerCase().indexOf(query) !== -1; });
+        }
+        rows.sort(function (a, b) { return playerLabel(a.player).localeCompare(playerLabel(b.player), 'ar'); });
+
+        var filterWrap = el('er-players-tab-filter');
+        if (filterWrap) {
+            filterWrap.querySelectorAll('button').forEach(function (b) {
+                b.classList.toggle('er-filter-active', b.getAttribute('data-filter') === _erPlayersTabFilter);
+            });
+        }
+
+        if (!rows.length) {
+            listEl.innerHTML = '<div style="text-align:center;color:#6b6280;font-size:0.78em;padding:20px 0;">ولا لاعب مطابق</div>';
+            return;
+        }
+
+        listEl.innerHTML = rows.map(function (r) {
+            var isLive = r.status === 'live';
+            var actionHtml = isLive
+                ? '<button type="button" class="er-prow-action er-action-eliminate" data-id="' + escapeHtml(r.player.id) + '" title="إقصاء يدوي">✕</button>'
+                : '<button type="button" class="er-prow-action er-action-revive" data-id="' + escapeHtml(r.player.id) + '" title="إرجاع يدوي">↩</button>';
+            return '<div class="er-prow' + (isLive ? '' : ' er-prow-out') + '">' +
+                '<span class="er-prow-avatar">' + ringAvatarHtml(r.player) + '</span>' +
+                '<span class="er-prow-name">' + escapeHtml(playerLabel(r.player)) + '</span>' +
+                '<span class="er-prow-status ' + (isLive ? 'er-status-live' : 'er-status-out') + '">' + (isLive ? 'نشط' : 'مقصى') + '</span>' +
+                actionHtml +
+                '</div>';
+        }).join('');
+
+        listEl.querySelectorAll('.er-action-eliminate').forEach(function (btn) {
+            btn.onclick = function () { manuallyEliminatePlayer(btn.getAttribute('data-id')); };
+        });
+        listEl.querySelectorAll('.er-action-revive').forEach(function (btn) {
+            btn.onclick = function () { manuallyRevivePlayer(btn.getAttribute('data-id')); };
+        });
+    }
+
+    /**
+     * ⚠️ إقصاء يدوي هادئ من لوحة الإعدادات — بعكس eliminatePlayer()،
+     * بدون تبويب إعلان نتيجة ولا صوت احتفالي؛ فقط نقل اللاعب من _alive
+     * لـ_eliminated + تحديث العجلة/البكرة + سطر بانر بسيط.
+     */
+    function manuallyEliminatePlayer(playerId) {
+        var idx = _alive.findIndex(function (p) { return p.id === playerId; });
+        if (idx === -1) return;
+        var player = _alive[idx];
+        _alive.splice(idx, 1);
+        _eliminated.push({ player: player });
+
+        realignWheelAfterRosterChange();
+        logEvent('eliminate', '🗑️ ' + playerLabel(player) + ' تم إقصاؤه يدوياً من لوحة الإعدادات');
+        renderReopenedPlayersTab();
+
+        if (_matchActive && _alive.length <= 1) {
+            endMatch(_alive[0] || null);
+        }
+    }
+
+    /**
+     * ⚠️ إرجاع يدوي فوري من لوحة الإعدادات — بدون فحص _friendRevivedIds
+     * (بعكس آلية "انعاش صديق" التلقائية بالعجلة/البكرة)، بلا تبويب
+     * "عودة لاعب" الاحتفالي — إجراء إداري هادئ.
+     */
+    function manuallyRevivePlayer(playerId) {
+        var idx = _eliminated.findIndex(function (e) { return e.player.id === playerId; });
+        if (idx === -1) return;
+        var entry = _eliminated[idx];
+        _eliminated.splice(idx, 1);
+        _alive.push(entry.player);
+
+        realignWheelAfterRosterChange();
+        logEvent('gift', '↩️ ' + playerLabel(entry.player) + ' تم إرجاعه يدوياً من لوحة الإعدادات');
+        renderReopenedPlayersTab();
     }
 
     // ⚠️ [0.55.0] نافذة "إضافة لوبي جديد" — تصميم جديد بطلب صريح: نافذة
@@ -3345,6 +3551,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         enhanceSettingsScreen();
         enhanceReopenedDrawer();
         enhanceMiniLobby();
+        enhanceWheelModeField();
         // ⚠️ [0.48.x] لا حاجة لأي معالجة يدوية لقائمة اللوبي هنا بعد
         // الآن — الملف المشترك (renderLobbyPlayerList) يبني زر الحذف
         // والـMarquee وأحجام البطاقات تلقائياً بنفسه. راجع تعليق الحذف
@@ -3459,6 +3666,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
 
         if (box.classList.contains('agp-connecting-box')) {
+            // ⚠️ [تدقيق شامل] إصلاح خلل حقيقي: لو وصلت حالة "connecting"
+            // جديدة (إعادة اتصال تلقائية) بينما مؤقّت استرجاع الإعدادات
+            // من حالة خطأ سابقة (_erConnErrorTimer) لسا شغّال، كان يبقى
+            // معلَّقاً ويطلق renderSettingsScreen() لاحقاً فوق محاولة
+            // اتصال جديدة قائمة فعلياً — يلغيه هنا فوراً.
+            clearTimeout(_erConnErrorTimer);
+            _erConnErrorShown = false;
             // اتصال جارٍ (أول ضغطة، أو إعادة اتصال تلقائية بدون ضغطة
             // جديدة) — الطبقة أصلاً ظاهرة لو صدرت من ضغطة الزر؛ لو صدرت
             // من حدث خارجي (بدون ghost جديد) نعرضها بأحدث حالة متاحة.
@@ -3469,6 +3683,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
 
         // خرجنا من حالتي الاتصال/الخطأ تماماً.
+        clearTimeout(_erConnErrorTimer);
         _erConnErrorShown = false;
         if (box.classList.contains('agp-lobby-box')) {
             hideConnLayer();
