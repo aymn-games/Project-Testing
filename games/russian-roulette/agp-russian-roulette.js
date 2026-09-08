@@ -911,11 +911,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'padding:14px 0 !important;font-size:0.95em !important;letter-spacing:0.4px;',
             'box-shadow:0 10px 26px rgba(212,175,55,0.3),0 0 0 1px rgba(255,255,255,0.15) inset !important;}',
 
-            '.rr-lobbyscreen-remove-btn{position:absolute;top:-6px;left:-6px;width:22px;height:22px;border-radius:50%;',
-            'background:#e24b4a;color:#fff;border:2px solid #000;font-weight:900;font-size:12px;line-height:18px;',
-            'text-align:center;cursor:pointer;z-index:2;padding:0;}',
+            // ⚠️ [تدقيق شامل — منقول بالحرف من روليت الإقصاء] زر حذف
+            // اللاعب كان خارج حدود البطاقة تماماً (top:-6px;left:-6px)،
+            // يكسر التقارب مع البطاقات المجاورة بالشبكة. صار بزاوية
+            // دائرة الصورة (top:0;right:0)، داخل حدود البطاقة، وأصغر
+            // (16px بدل 22px) ليضمن يفضل داخل حدود دائرة 45px.
+            '.rr-lobbyscreen-remove-btn{position:absolute;top:0;left:auto;right:0;width:16px;height:16px;border-radius:50%;',
+            'background:#e24b4a;color:#fff;border:1px solid rgba(255,255,255,0.6);font-weight:900;font-size:9px;line-height:14px;',
+            'text-align:center;cursor:pointer;z-index:5;padding:0;box-shadow:0 1px 4px rgba(0,0,0,0.5);}',
             '.agp-shell-player-list li{position:relative !important;}',
-            '.agp-player-remove-btn{background:#e24b4a !important;border-radius:50% !important;color:#fff !important;}',
+            '.agp-player-remove-btn{background:#e24b4a !important;border-radius:50% !important;color:#fff !important;',
+            'top:0 !important;left:auto !important;right:0 !important;width:16px !important;height:16px !important;',
+            'font-size:9px !important;}',
             /* ⚠️ الإطارات تبقى تظهر طبيعياً باللوبي (نفس بقية الألعاب) —
              * تُخفى فقط داخل تبويب "الاعبين المشاركين" وسط المباراة (طلب
              * صريح: بدون إطارات هناك تحديداً، بشكل موحّد للجميع). */
@@ -959,14 +966,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             /* ⚠️ منطقة السكرول الوحيدة بشاشة اللوبي: شبكة اللاعبين بس —
              * تكبر لتاخذ كل المساحة المتبقية (flex:1) وتسكرول داخلياً لو
              * عدد اللاعبين تجاوز المساحة، بدل ما الصندوق كله يكبر. */
+            // ⚠️ [تدقيق شامل — طلب توحيد صريح مع روليت الإقصاء] الشبكة
+            // كانت 6 أعمدة بفجوة 0.5cm موحَّدة — صارت 5 أعمدة بفجوة
+            // 10px/6px (صف/عمود) بالضبط كروليت الإقصاء. باقي متغيرات
+            // الحجم (--rr-av:45px إلخ) بلا تغيير — كانت أصلاً مطابقة.
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list{',
             '--rr-av:45px;--rr-nw:150px;--rr-overlap:10px;--rr-nh:45px;--rr-nf:14px;',
-            '--rr-gap:0.5cm;--rr-scale:1;',
-            'display:grid !important;grid-template-columns:repeat(6,1fr) !important;',
+            '--rr-scale:1;',
+            'display:grid !important;grid-template-columns:repeat(5,1fr) !important;',
             'flex:1 1 auto !important;min-height:0 !important;overflow-y:auto !important;',
             'align-content:flex-start !important;',
-            'gap:var(--rr-gap) !important;margin-top:34px !important;list-style:none;padding:0 4px 10px 14px;}',
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{position:relative;display:flex !important;',
+            'gap:10px 6px !important;margin-top:34px !important;list-style:none;padding:0 4px 10px 14px;}',            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{position:relative;display:flex !important;',
             'align-items:center;justify-content:center;min-height:calc(var(--rr-av) * var(--rr-scale));}',
             '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic{',
             'width:calc(var(--rr-av) * var(--rr-scale)) !important;',
