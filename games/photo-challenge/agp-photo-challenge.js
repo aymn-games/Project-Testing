@@ -90,6 +90,49 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return text.replace(/[٠-٩۰-۹]/g, function (d) { return map[d]; });
     }
 
+    // مسافة التحرير (Levenshtein) -- لقبول أخطاء إملائية بسيطة/صياغة قريبة.
+    function levenshteinDistance(a, b) {
+        var m = a.length, n = b.length;
+        if (!m) return n;
+        if (!n) return m;
+        var prev = new Array(n + 1);
+        var curr = new Array(n + 1);
+        for (var j = 0; j <= n; j++) prev[j] = j;
+        for (var i = 1; i <= m; i++) {
+            curr[0] = i;
+            for (j = 1; j <= n; j++) {
+                var cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+            }
+            var tmp = prev; prev = curr; curr = tmp;
+        }
+        return prev[n];
+    }
+
+    // يقبل تطابق تام، أو قريب جداً (خطأ إملائي/صياغة قريبة) حسب طول
+    // الكلمة -- كلمات قصيرة تبقى صارمة عشان نتفادى قبول إجابات غلط.
+    function isCloseEnoughMatch(guess, target) {
+        if (guess === target) return true;
+        var maxLen = Math.max(guess.length, target.length);
+        if (maxLen <= 4) return false; // كلمات قصيرة جداً: تطابق تام بس
+        var threshold = maxLen <= 6 ? 1 : (maxLen <= 10 ? 2 : 3);
+        return levenshteinDistance(guess, target) <= threshold;
+    }
+
+    // يتحقق من نص الإجابة مقابل كل صياغات التحدي (تام أول، وبعدين تقريبي).
+    function checkAnswerMatch(rawText, challenge) {
+        var guess = normalizeArabicText(rawText);
+        if (!guess) return false;
+        var i;
+        for (i = 0; i < challenge.answers.length; i++) {
+            if (normalizeArabicText(challenge.answers[i]) === guess) return true;
+        }
+        for (i = 0; i < challenge.answers.length; i++) {
+            if (isCloseEnoughMatch(guess, normalizeArabicText(challenge.answers[i]))) return true;
+        }
+        return false;
+    }
+
     /* ======================================================================
      *  2) الهيدر الأساسي الثابت -- بهوية اللعبة (سماوي/بنفسجي)
      * ==================================================================== */
@@ -423,6 +466,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('pc-lobby-back-platform-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
         el('pc-start-round-btn').addEventListener('click', function () {
             _registrationOpen = false;
+            _roundStarted = true;
             renderMatchScreen();
         });
 
@@ -756,9 +800,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var player = findPlayerById(payload.id);
             if (!player || !player.team) return; // لازم يكون لاعب منضم لفريق
 
-            var text = normalizeArabicText(payload.text);
-            var isCorrect = _currentChallenge.answers.some(function (a) { return normalizeArabicText(a) === text; });
-            if (!isCorrect) return;
+            if (!checkAnswerMatch(payload.text, _currentChallenge)) return;
 
             var elapsed = _settings.answerDurationSeconds - _answerRemaining;
             var pointsAwarded = elapsed <= 15 ? 3 : (elapsed <= _settings.answerDurationSeconds / 2 ? 2 : 1);
@@ -781,13 +823,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (_activeSilence && payload.id === _activeSilence.playerId) return;
 
             var normalizedDigits = normalizeDigits(payload.text.trim());
-            var match = normalizedDigits.match(/^([12])-\s*(.+)$/);
+            var match = normalizedDigits.match(/^([12])[-\s]*(.+)$/);
             if (!match) return;
 
             var team = (match[1] === '1') ? TEAM1 : TEAM2;
-            var text = normalizeArabicText(match[2]);
-            var isCorrect = _currentChallenge.answers.some(function (a) { return normalizeArabicText(a) === text; });
-            if (!isCorrect) return;
+            if (!checkAnswerMatch(match[2], _currentChallenge)) return;
 
             var elapsed = _settings.answerDurationSeconds - _answerRemaining;
             var pointsAwarded = elapsed <= 15 ? 3 : (elapsed <= _settings.answerDurationSeconds / 2 ? 2 : 1);
@@ -1111,9 +1151,30 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     /* ======================================================================
      *  9) الاستماع لأحداث المنصة العامة + التسجيل
      * ==================================================================== */
+    var _roundStarted = false;
+
     function wirePlatformListeners() {
         AGP.events.on('stream:statusChanged', function (payload) {
             if (payload.platform !== 'tiktok') return;
+
+            // ⚠️ إصلاح خلل حقيقي (نفس الخلل المعروف والمُصلَح فعلياً
+            // بـ js/agp-game-shell.js -- نفس النمط منقول هنا بالحرف):
+            // وصول "connected" مرة ثانية منتصف المباراة شائع فعلياً --
+            // إعادة اتصال تلقائية بتيك توك بعد انقطاع مؤقّت، أو حتى
+            // إعادة اتصال قناة WebSocket بيننا وبين الباك إند نفسها
+            // (agp-tiktok-adapter.js). بدون هذا الفحص، كان أي "connected"
+            // وارد بعد بدء الجولة يعيد _screen لـ'lobby' (عبر
+            // renderLobbyScreen)، وهذا يُعطّل checkForWinner() نهائياً
+            // (شرطها _screen === 'match')، فتستمر النقاط تتراكم بلا حد --
+            // بالضبط الخلل اللي صار مع أحد الاستريمرز ووصلت النقاط لـ50
+            // بدل نقاط الفوز المحددة. بعد بدء الجولة، نتجاهل أي تغيّر
+            // بحالة الاتصال هنا تماماً -- الاتصال يُدار بالخلفية بشكل
+            // مستقل، ولا داعي لأي شاشة تتفاعل معه.
+            if (_roundStarted) {
+                AGP.log('Photo Challenge: ignoring stream:statusChanged("' + payload.status + '") -- round already started.');
+                return;
+            }
+
             if (payload.status === 'connecting') {
                 _screen = 'connecting';
                 showConnectOverlay(false);
