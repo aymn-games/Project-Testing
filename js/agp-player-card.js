@@ -373,6 +373,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // ملاحظة الإطار قبله — بدون حد معدني واضح، حدود اللوح بتقدير بصري.
         // كلمة ALHILAL موجودة مرتين (العلم يمين، ونسخة صغيرة يسار قرب حافة
         // دائرة الصورة) — برّا لوح الاسم، ما تتعارض مع اسم اللاعب.
+        // [0.66.7] إطار نادي الأهلي "جوهرة جدة" — لوح داكن فيه شعار
+        // نخلة+سيوف كزخرفة خلفية (مو نص)، فاضٍ من أي حروف. أبيض متمركز
+        // افتراضياً بدون أي تعديل (نفس كل الإطارات).
+        'frame-club-ahli-jawahara.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 12, contentHeight: 583,
+            avatarLeftPct: 9.16, avatarTopPct: 24.53, avatarWidthPct: 19.94, avatarHeightPct: 71.70,
+            nameLeftPct: 32.92, nameTopPct: 52.83, nameWidthPct: 50.41, nameHeightPct: 46.31
+        },
         'frame-club-hilal-wolf.png': {
             canvasW: 2172, canvasH: 724, contentTop: 37, contentHeight: 555,
             avatarLeftPct: 4.88, avatarTopPct: 39.64, avatarWidthPct: 16.39, avatarHeightPct: 59.46,
