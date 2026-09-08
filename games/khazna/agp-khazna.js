@@ -44,7 +44,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     /* ======================================================================
      *  0) الحالة الداخلية
      * ==================================================================== */
-    var _screen = 'settings'; // settings | connecting | lobby
+    var _screen = 'settings'; // settings | connecting | lobby | match
+    function setScreen(name) {
+        _screen = name;
+        var bannerGroup = el('kz-idea-banner-group');
+        if (bannerGroup) bannerGroup.classList.toggle('kz-show', name === 'match');
+    }
     var _rootEl = null;
     var _lobbyEl = null;
     var _registrationOpen = false;
@@ -105,14 +110,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *       جديد عند الضغط.
      * ==================================================================== */
     function injectIdeaBanner() {
-        if (el('kz-idea-banner-link')) return;
-        var link = document.createElement('a');
-        link.id = 'kz-idea-banner-link';
-        link.href = 'https://www.tiktok.com/@zp.oi';
-        link.target = '_blank';
-        link.rel = 'noopener';
-        link.innerHTML = '<img id="kz-idea-banner" src="idea-banner.jpg" alt="فكرة اللعبة من الاستريمر -- @zp.oi">';
-        document.body.appendChild(link);
+        if (el('kz-idea-banner-group')) return;
+        var group = document.createElement('div');
+        group.id = 'kz-idea-banner-group';
+        group.innerHTML =
+            '<div id="kz-idea-banner-caption">💡 صاحب فكرة اللعبة</div>' +
+            '<a id="kz-idea-banner-link" href="https://www.tiktok.com/@zp.oi" target="_blank" rel="noopener">' +
+                '<img id="kz-idea-banner" src="idea-banner.jpg" alt="فكرة اللعبة من الاستريمر -- @zp.oi">' +
+            '</a>';
+        document.body.appendChild(group);
     }
 
     /* ======================================================================
@@ -221,7 +227,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function renderSettingsScreen() {
-        _screen = 'settings';
+        setScreen('settings');
         var root = ensureRoot();
         root.style.display = 'block';
 
@@ -353,17 +359,57 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     /* ======================================================================
      *  5) الاستماع لأحداث المنصة العامة
      * ==================================================================== */
+    /* ⭐ شارة صغيرة غير مزعجة (مو تبويب يغطي الشاشة كاملة) تظهر لو
+       انقطع الاتصال أثناء مباراة شغالة -- ما توقف ولا تلمس أي تايمر أو
+       حالة جولة، بس تنبيه بصري بسيط لحد ما يرجع الاتصال */
+    function ensureReconnectBadgeEl() {
+        var badge = el('kz-reconnect-badge');
+        if (badge) return badge;
+        badge = document.createElement('div');
+        badge.id = 'kz-reconnect-badge';
+        badge.innerHTML = '<span class="kz-reconnect-spinner"></span><span id="kz-reconnect-text">🔄 يعيد الاتصال بالبث...</span>';
+        document.body.appendChild(badge);
+        return badge;
+    }
+    function showReconnectingBadge(isError) {
+        var badge = ensureReconnectBadgeEl();
+        badge.classList.toggle('kz-reconnect-error', Boolean(isError));
+        el('kz-reconnect-text').textContent = isError ? '⚠️ انقطع الاتصال بالبث .. نحاول نرجعه' : '🔄 يعيد الاتصال بالبث...';
+        badge.classList.add('kz-show');
+    }
+    function hideReconnectingBadge() {
+        var badge = el('kz-reconnect-badge');
+        if (badge) badge.classList.remove('kz-show');
+    }
+
     function wirePlatformListeners() {
         AGP.events.on('stream:statusChanged', function (payload) {
             if (payload.platform !== 'tiktok') return;
             if (payload.status === 'connecting') {
-                _screen = 'connecting';
-                showConnectOverlay(false);
-            } else if (payload.status === 'connected' && _screen !== 'lobby') {
-                hideConnectOverlay();
-                renderLobbyScreen();
+                if (_screen === 'match') {
+                    // ⭐ انقطاع مؤقت أثناء مباراة شغالة -- ما نغيّر _screen
+                    // ولا نغطي شاشة اللعب، بس شارة صغيرة
+                    showReconnectingBadge(false);
+                } else {
+                    setScreen('connecting');
+                    showConnectOverlay(false);
+                }
+            } else if (payload.status === 'connected') {
+                if (_screen === 'match') {
+                    // ⭐ رجع الاتصال أثناء المباراة -- نخفي الشارة بس، ما
+                    // نعيد رسم أي شي؛ الجولة/التايمر/حالة اللاعبين كلها
+                    // فضلت زي ما هي (تايمرات جافاسكربت ما توقفت أصلاً)
+                    hideReconnectingBadge();
+                } else if (_screen !== 'lobby') {
+                    hideConnectOverlay();
+                    renderLobbyScreen();
+                }
             } else if (payload.status === 'error') {
-                showConnectOverlay(true);
+                if (_screen === 'match') {
+                    showReconnectingBadge(true);
+                } else {
+                    showConnectOverlay(true);
+                }
             }
         });
 
@@ -447,7 +493,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function renderLobbyScreen() {
-        _screen = 'lobby';
+        setScreen('lobby');
         _registrationOpen = true;
         if (_rootEl) _rootEl.style.display = 'none';
         if (AGP.lobby && typeof AGP.lobby.open === 'function') AGP.lobby.open();
@@ -772,6 +818,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('kz-picker').classList.remove('kz-hidden');
         el('kz-round').classList.remove('kz-show');
         el('kz-reel-highlight-tab').classList.remove('kz-locked');
+        clearAnsweredSide(); // ⭐ يمنع بقاء بطاقات الجولة الماضية ظاهرة على شاشة العجلة
 
         var players = AGP.player.getAllPlayers();
         var names = players.length ? players.map(function (p) { return p.name || p.id; }) : ['لاعب'];
@@ -907,33 +954,34 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return true;
     }
 
-    /* ---------------- شريط اللاعبين اللي جاوبوا -- أعمدة يمين الشاشة ---------------- */
+    /* ---------------- شريط اللاعبين اللي جاوبوا -- عمودي بحافة الشاشة اليمنى ---------------- */
     function ensureAnsweredSideEl() {
-        var side = el('kz-answered-side');
-        if (side) return side;
-        side = document.createElement('div');
-        side.id = 'kz-answered-side';
-        document.body.appendChild(side);
-        return side;
+        var wrap = el('kz-answered-side-wrap');
+        if (wrap) return wrap;
+        wrap = document.createElement('div');
+        wrap.id = 'kz-answered-side-wrap';
+        wrap.innerHTML =
+            '<div id="kz-answered-side-title">✅ اللاعبين الي وصلت إجاباتهم (<b id="kz-answered-side-count">0</b>)</div>' +
+            '<div id="kz-answered-side"></div>';
+        document.body.appendChild(wrap);
+        return wrap;
     }
     function clearAnsweredSide() {
-        var side = el('kz-answered-side');
-        if (side) side.innerHTML = '';
+        var list = el('kz-answered-side');
+        if (list) list.innerHTML = '';
+        var countEl = el('kz-answered-side-count');
+        if (countEl) countEl.textContent = '0';
     }
     function addAnsweredSideChip(player) {
-        var side = ensureAnsweredSideEl();
-        var cols = side.querySelectorAll('.kz-answered-side-col');
-        var lastCol = cols.length ? cols[cols.length - 1] : null;
-        if (!lastCol || lastCol.children.length >= 10) {
-            lastCol = document.createElement('div');
-            lastCol.className = 'kz-answered-side-col';
-            side.appendChild(lastCol); // ⭐ row-reverse بالأب -- كل عامود جديد ينضاف لليسار
-        }
+        ensureAnsweredSideEl();
+        var list = el('kz-answered-side');
         var nm = (player && (player.name || player.id)) || '؟';
         var chip = document.createElement('div');
         chip.className = 'kz-answered-side-chip';
-        chip.innerHTML = '<div class="kz-chip-avatar">' + escapeHtml(nm.charAt(0)) + '</div>';
-        lastCol.appendChild(chip);
+        chip.innerHTML = '<div class="kz-chip-avatar">' + escapeHtml(nm.charAt(0)) + '</div><div class="kz-chip-name">' + escapeHtml(nm) + '</div>';
+        list.appendChild(chip);
+        var countEl = el('kz-answered-side-count');
+        if (countEl) countEl.textContent = list.children.length;
     }
 
     /* ---------------- تبويب "الإجابة الصحيحة" الأخضر -- نص ثابت بكل الحالات ---------------- */
@@ -1247,6 +1295,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var lobbyEl = el('kz-lobby');
         if (lobbyEl) lobbyEl.style.display = 'none';
         ensureMatchEl();
+        setScreen('match');
         _roundNumber = 1;
         _matchStartedAt = Date.now();
         _eliminatedPlayers = [];

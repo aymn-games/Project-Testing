@@ -733,10 +733,10 @@ body.kz-active{
 #kz-round.kz-show{
     display:flex; flex-direction:column; align-items:center;
     padding-top:26px;
-    /* ⭐ يحجز مساحة يمين الشاشة لشريط اللاعبين اللي جاوبوا (#kz-answered-side)
-       بحد أدنى ثابت (يغطي عمودين على الأقل) حتى على تكبير المتصفح
-       (Ctrl +) حيث تتقلص المساحة الفعلية -- يمنع أي تراكب */
-    padding-inline-end:clamp(96px,10vw,170px);
+    /* ⭐ يحجز مساحة يمين الشاشة لشريط اللاعبين اللي جاوبوا (#kz-answered-side-wrap،
+       أقصى عرض ~100px + 14px مسافة من الحافة) حتى على تكبير المتصفح (Ctrl +) --
+       يمنع أي تراكب */
+    padding-inline-end:clamp(76px,8vw,130px);
 }
 
 #kz-turn-badge{
@@ -972,24 +972,71 @@ body.kz-active{
 #kz-no-winner{ font-size:16px; color:#a99cc4; }
 
 /* ---------------------------------------------------------------------
+   شارة "يعيد الاتصال" -- صغيرة وغير مزعجة، تظهر بس لو انقطع الاتصال
+   أثناء مباراة شغالة (بدل تغطية الشاشة كاملة زي تبويب الاتصال الأساسي)
+--------------------------------------------------------------------- */
+#kz-reconnect-badge{
+    position:fixed;
+    top:66px; left:50%; transform:translateX(-50%) translateY(-8px);
+    z-index:50000;
+    display:flex; align-items:center; gap:8px;
+    background:rgba(20,12,34,0.9);
+    backdrop-filter:blur(6px);
+    border:1.5px solid rgba(232,182,76,0.5);
+    border-radius:999px;
+    padding:8px 18px;
+    font-size:12.5px; font-weight:800; color:#fbe3a1;
+    box-shadow:0 10px 26px rgba(0,0,0,0.45);
+    opacity:0; pointer-events:none;
+    transition:opacity 0.3s ease, transform 0.3s ease;
+}
+#kz-reconnect-badge.kz-show{ opacity:1; transform:translateX(-50%) translateY(0); }
+#kz-reconnect-badge.kz-reconnect-error{ border-color:rgba(239,68,68,0.6); color:#ff8da3; }
+.kz-reconnect-spinner{
+    width:14px; height:14px; border-radius:50%;
+    border:2px solid rgba(255,255,255,0.25); border-top-color:var(--gold2);
+    animation:kz-reconnect-spin 0.8s linear infinite;
+    flex:0 0 auto;
+}
+@keyframes kz-reconnect-spin{ to{ transform:rotate(360deg); } }
+
+/* ---------------------------------------------------------------------
    بانر "فكرة اللعبة من الاستريمر" -- ثابت بزاوية الشاشة (لا يختفي عند
    أي تمرير)، بعيد عن أزرار اللوبي/المباراة السفلية، حدود ذهبية متوهجة
 --------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------
+   بانر "فكرة اللعبة من الاستريمر" -- يظهر بس بشاشة اللعب (الجولة)،
+   مخفي بالإعدادات/اللوبي/الاتصال/التعليمات. أكبر 50% من القياس الأصلي
+   (140×60 → 210×90)، مع عنوان فوقه، والمجموعة كلها بشفافية 50% ثابتة
+--------------------------------------------------------------------- */
+#kz-idea-banner-group{
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    position:fixed;
+    bottom:16px; left:4px; /* ⭐ مسحوب شوي أكثر ناحية اليسار عن قبل */
+    z-index:800;
+    opacity:0; pointer-events:none; /* مخفي افتراضياً */
+    transition:opacity 0.35s ease;
+}
+#kz-idea-banner-group.kz-show{ opacity:0.5; pointer-events:auto; } /* ⭐ شفافية 50% ثابتة */
+#kz-idea-banner-caption{
+    font-size:12px; font-weight:900; color:var(--gold2);
+    background:rgba(10,6,18,0.6);
+    border-radius:999px;
+    padding:3px 12px;
+    white-space:nowrap;
+}
 #kz-idea-banner-link{
     display:block;
-    position:fixed;
-    bottom:12px; left:12px;
-    z-index:800;
-    width:140px;
-    height:60px;
+    width:210px; /* ⭐ 140 × 1.5 */
+    height:90px; /* ⭐ 60 × 1.5 */
     text-decoration:none;
 }
 #kz-idea-banner{
     display:block;
     width:100%;
     height:100%;
-    object-fit:contain; /* لا يقص ولا يشوّه -- النسبة الحقيقية 3:1 تختلف شوي عن صندوق 140×60 */
-    border-radius:6px;
+    object-fit:contain;
+    border-radius:8px;
     border:1.5px solid rgba(232,182,76,0.6);
     background:rgba(0,0,0,0.35);
     box-shadow:0 0 8px 1px rgba(232,182,76,0.35),0 0 18px 3px rgba(124,58,237,0.35),0 6px 14px rgba(0,0,0,0.5);
@@ -1002,44 +1049,69 @@ body.kz-active{
     50%{ box-shadow:0 0 12px 2px rgba(232,182,76,0.55),0 0 26px 5px rgba(124,58,237,0.5),0 6px 14px rgba(0,0,0,0.5); }
 }
 @media (max-width:480px){
-    #kz-idea-banner-link{ width:110px; height:47px; bottom:8px; left:8px; }
+    #kz-idea-banner-link{ width:165px; height:71px; }
+    #kz-idea-banner-group{ bottom:10px; left:2px; }
 }
 
 /* ---------------------------------------------------------------------
-   شريط اللاعبين اللي جاوبوا -- أعمدة عمودية متلاصقة بحافة الشاشة اليمنى،
-   كل عامود فيه 10 لاعبين، وينضاف عامود جديد لليسار كل ما اكتمل عامود
+   شريط اللاعبين اللي جاوبوا -- عمودي بحافة الشاشة اليمنى، عنوان بصندوق
+   بعدّاد حي فوقه، وكل شي (العنوان/الصناديق/الخط) يتكيف مع حجم الشاشة
+   عن طريق clamp() بدل أرقام px ثابتة
 --------------------------------------------------------------------- */
-#kz-answered-side{
+#kz-answered-side-wrap{
     position:fixed;
-    top:56px; right:0; bottom:0;
+    top:56px; right:14px; bottom:14px;
     z-index:400;
-    display:flex; flex-direction:row-reverse; /* أول عامود بالـDOM = أقصى اليمين، والي بعده يتزايد لليسار */
-    align-items:flex-start;
+    display:flex; flex-direction:column; align-items:flex-end;
+    gap:8px;
+    padding-top:8px;
     pointer-events:none;
+    overflow-y:auto;
 }
-.kz-answered-side-col{
+#kz-answered-side-title{
+    background:rgba(20,12,34,0.6);
+    border:1.5px solid rgba(111,230,201,0.35); /* ⭐ حدود نعناعية هادية */
+    border-radius:10px;
+    padding:6px 10px;
+    text-align:center;
+    font-size:clamp(10px,1vw,12px);
+    font-weight:800; color:#c9bfe0;
+    width:clamp(72px,9vw,100px);
+}
+#kz-answered-side-title b{ color:#6fe6c9; display:block; font-size:clamp(12px,1.2vw,14px); }
+#kz-answered-side{
     display:flex; flex-direction:column;
-    width:44px;
+    align-items:flex-end;
+    gap:6px;
 }
 .kz-answered-side-chip{
-    width:44px; height:44px;
-    display:flex; align-items:center; justify-content:center;
-    background:rgba(34,193,160,0.16);
-    border-bottom:1px solid rgba(5,3,10,0.4);
+    width:clamp(72px,9vw,100px); height:clamp(24px,2.6vw,30px);
+    display:flex; align-items:center; justify-content:flex-start;
+    gap:6px;
+    padding:0 8px;
+    border-radius:8px;
+    background:rgba(20,12,34,0.55);
+    border:1.5px solid rgba(111,230,201,0.4); /* ⭐ نفس حدود العنوان -- متناسقين */
     animation:kz-chip-in 0.3s cubic-bezier(.2,.8,.2,1.2);
+    overflow:hidden;
 }
 .kz-answered-side-chip .kz-chip-avatar{
-    width:26px; height:26px; border-radius:50%;
+    width:clamp(16px,1.8vw,20px); height:clamp(16px,1.8vw,20px); border-radius:50%;
+    flex:0 0 auto;
     background:radial-gradient(circle at 35% 30%,#8f6bff,#5b2fd6 55%,#2b1466 100%);
     display:flex; align-items:center; justify-content:center;
-    font-size:11px; font-weight:900; color:#fff;
+    font-size:9.5px; font-weight:900; color:#fff;
     box-shadow:0 0 0 2px rgba(34,193,160,0.5);
+}
+.kz-answered-side-chip .kz-chip-name{
+    font-size:clamp(9.5px,1vw,10.5px); font-weight:800; color:#eafff6;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 @keyframes kz-chip-in{ from{ opacity:0; transform:scale(0.7); } to{ opacity:1; transform:scale(1); } }
 @media (max-width:480px){
-    .kz-answered-side-col{ width:36px; }
-    .kz-answered-side-chip{ width:36px; height:36px; }
-    .kz-answered-side-chip .kz-chip-avatar{ width:22px; height:22px; font-size:9.5px; }
+    #kz-answered-side-wrap{ right:8px; }
+    #kz-answered-side-title, .kz-answered-side-chip{ width:66px; }
+    .kz-answered-side-chip{ height:24px; }
 }
 
 /* ---------------------------------------------------------------------
