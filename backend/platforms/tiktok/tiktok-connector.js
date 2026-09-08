@@ -83,6 +83,16 @@ try {
     logger.error('TikTok Connector: "tiktok-live-connector" is not installed. Run `npm install` in backend/.');
 }
 
+// ⚠️ [إصلاح 2026-09-09] بدون signApiKey، توقيع WebSocket يمر على الطبقة
+// المجانية (Community) من EulerStream — محدودة جداً، وهذا كان السبب
+// الجذري لتأخر/فشل الاتصال بمعظم البثوث. المفتاح يُقرأ من env var
+// EULERSTREAM_API_KEY (مضبوط على Render)؛ لو غير موجود، نستمر على
+// الطبقة المجانية بدل ما نكسر — فقط نسجّل تحذير واضح بالسجلات.
+var EULERSTREAM_API_KEY = process.env.EULERSTREAM_API_KEY || null;
+if (!EULERSTREAM_API_KEY) {
+    logger.error('TikTok Connector: EULERSTREAM_API_KEY not set — falling back to EulerStream free/community tier (heavily rate-limited). Set this env var to fix slow/failed connections.');
+}
+
 /**
  * استخراج {id, name, uniqueId} موحَّد من كائن مستخدم واردٍ من المكتبة،
  * بأمان حتى لو كانت بعض الحقول مفقودة.
@@ -298,7 +308,10 @@ function createTikTokConnector() {
      */
     function startConnection(isReconnectAttempt) {
         try {
-            _connection = new TikTokLib.TikTokLiveConnection(_username, {});
+            _connection = new TikTokLib.TikTokLiveConnection(
+                _username,
+                EULERSTREAM_API_KEY ? { signApiKey: EULERSTREAM_API_KEY } : {}
+            );
         } catch (err) {
             logger.error('TikTok Connector: failed to construct connection:', err);
             if (isReconnectAttempt) {
