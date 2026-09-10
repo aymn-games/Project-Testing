@@ -1,8 +1,8 @@
 :root{
-    --cn-accent:#7c3aed;   /* بنفسجي أساسي (لون المنصة الافتراضي) */
-    --cn-accent2:#d878ff;  /* بنفسجي فاتح ثانوي */
-    --cn-team1:#ef4444;    /* لون الفريق الأحمر */
-    --cn-team2:#3b82f6;    /* لون الفريق الأزرق */
+    --cn-accent:#6d3fb0;   /* بنفسجي أساسي -- أغمق/أنعم */
+    --cn-accent2:#a56ee0;  /* بنفسجي فاتح ثانوي -- أغمق/أنعم */
+    --cn-team1:#b3453f;    /* أحمر مطفّى/أغمق */
+    --cn-team2:#3d5f9e;    /* أزرق مطفّى/أغمق */
 }
 
 body.cn-active{
@@ -13,9 +13,9 @@ body.cn-active{
     padding-top:56px;
     box-sizing:border-box;
     background:
-        radial-gradient(ellipse 900px 500px at 50% -8%,rgba(124,58,237,0.18),transparent 60%),
-        radial-gradient(ellipse 700px 500px at 90% 100%,rgba(216,120,255,0.16),transparent 60%),
-        linear-gradient(180deg,#0d0818 0%,#090614 45%,#05030a 100%);
+        radial-gradient(ellipse 900px 500px at 50% -8%,rgba(109,63,176,0.12),transparent 60%),
+        radial-gradient(ellipse 700px 500px at 90% 100%,rgba(165,110,224,0.10),transparent 60%),
+        linear-gradient(180deg,#0a0713 0%,#07050f 45%,#040309 100%);
     background-attachment:fixed;
     background-size:cover;
 }
@@ -134,8 +134,8 @@ body.cn-active{
 }
 .cn-field input[type=text]::placeholder{ color:#5c516f; }
 
-.cn-field.cn-team1 input[type=text]#cn-input-team1Keyword{ color:var(--cn-team1); border-bottom-color:rgba(239,68,68,0.5); }
-.cn-field.cn-team2 input[type=text]#cn-input-team2Keyword{ color:var(--cn-team2); border-bottom-color:rgba(59,130,246,0.5); }
+.cn-field.cn-team1 input[type=text]#cn-input-team1Keyword{ color:var(--cn-team1); border-bottom-color:rgba(179,69,63,0.5); }
+.cn-field.cn-team2 input[type=text]#cn-input-team2Keyword{ color:var(--cn-team2); border-bottom-color:rgba(61,95,158,0.5); }
 
 .cn-row{
     break-inside:avoid;
@@ -316,3 +316,430 @@ body.cn-active{
     border-top-color:var(--cn-accent2);
     animation:cn-connect-spin 0.9s linear infinite;
 }
+
+/* ---------------------------------------------------------------------
+   شاشة اللوبي — منسوخة بالحرف من تصميم Claude Design المعتمد
+   (Codenames Lobby.dc.html): هيدر عنوان مركزي + شارة LIVE (نفس هيدر
+   شاشة اللعب)، شارة "في انتظار اللاعبين" بنقطة خضراء نابضة، قسمين
+   جنب بعض (أحمر | أزرق) بدون فاصل VS، 3 أعمدة ثابتة بكل قسم، بطاقة
+   لاعب مخصصة بالتصميم (دائرة أفاتار + لوحة اسم متراكبة بتأثير زجاجي)،
+   وشريط سفلي بزرين فقط (رجوع للرئيسية / إنهاء الدخول وبدء المباراة).
+   ⚠️ هذا التصميم يستبدل استخدام نظام AGP.playerCard المشترك بالبطاقة
+   المخصصة أدناه (بطلب صريح لمطابقة تصميم Claude Design بالحرف).
+--------------------------------------------------------------------- */
+@keyframes cn-lobby-pulse{ 0%,100%{ opacity:0.35; } 50%{ opacity:1; } }
+
+#cn-lobby{
+    display:none;
+    position:fixed;
+    inset:0;
+    flex-direction:column;
+    overflow:hidden;
+    font-family:'Zain',Cairo,sans-serif;
+    color:#e9dcff;
+    background:linear-gradient(160deg,#0a0713 0%,#070511 55%,#040309 100%);
+}
+
+/* -------- هيدر اللوبي: عنوان مركزي فقط + شارة LIVE (مطابق لهيدر شاشة اللعب) -------- */
+.cn-lobby-header{
+    flex:0 0 56px; height:56px;
+    display:flex; align-items:center; justify-content:flex-end;
+    padding:0 14px;
+    background:rgba(255,255,255,0.035);
+    border-bottom:1px solid rgba(255,255,255,0.07);
+    position:relative;
+}
+.cn-lobby-header-title{
+    position:absolute; left:0; right:0; top:0; height:56px;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none;
+    font-weight:800; font-size:22px; letter-spacing:2.9px; color:#f3ecff;
+}
+.cn-lobby-live{ display:flex; align-items:center; gap:8px; }
+.cn-lobby-live-dot{ width:26px; height:26px; border-radius:8px; background:linear-gradient(135deg,var(--cn-team1) 0%,var(--cn-team2) 100%); }
+.cn-lobby-live span{ font-size:clamp(12px,1.8vmin,17px); font-weight:700; color:rgba(233,220,255,0.6); letter-spacing:1.5px; }
+
+/* -------- شارة "في انتظار اللاعبين" -------- */
+.cn-lobby-waitbar{
+    flex:0 0 auto;
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+    gap:10px; padding:clamp(7px,1.4vmin,14px) 14px;
+    background:rgba(255,255,255,0.02);
+    border-bottom:1px solid rgba(255,255,255,0.05);
+}
+.cn-lobby-wait-pill{
+    margin:0 auto;
+    display:flex; align-items:center; gap:9px;
+    padding:clamp(5px,1vmin,9px) clamp(10px,1.8vmin,18px);
+    border-radius:999px;
+    background:rgba(90,200,140,0.16); border:1px solid rgba(90,200,140,0.45);
+}
+.cn-lobby-wait-pill .dot{ width:9px; height:9px; border-radius:999px; background:#7ee0a8; animation:cn-lobby-pulse 1.4s ease-in-out infinite; }
+.cn-lobby-wait-pill span.txt{ font-weight:800; font-size:clamp(13px,2vmin,20px); color:#d3f7e2; white-space:nowrap; }
+
+/* -------- الجسم: قسمين جنب بعض -------- */
+.cn-lobby-main{
+    flex:1 1 auto; min-height:0;
+    display:flex; flex-direction:column; gap:clamp(8px,1.4vmin,16px);
+    padding:clamp(10px,1.8vmin,20px) clamp(12px,1.8vmin,22px);
+}
+.cn-lobby-panels{
+    flex:1 1 auto; min-height:0;
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:clamp(10px,1.6vmin,18px);
+}
+
+.cn-lobby-team{
+    min-height:0;
+    display:flex; flex-direction:column; gap:clamp(8px,1.3vmin,14px);
+    padding:clamp(10px,1.6vmin,18px); border-radius:18px; border:1px solid;
+}
+.cn-lobby-team.cn-team1{ background:rgba(179,69,63,0.12); border-color:rgba(179,69,63,0.30); }
+.cn-lobby-team.cn-team2{ background:rgba(61,95,158,0.12); border-color:rgba(61,95,158,0.32); }
+
+.cn-lobby-team-head{ flex:0 0 auto; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; }
+.cn-lobby-team-name{ font-family:Cairo,sans-serif; font-weight:800; font-size:clamp(14px,2.2vmin,22px); }
+.cn-team1 .cn-lobby-team-name{ color:#f5d3d0; }
+.cn-team2 .cn-lobby-team-name{ color:#cfdcf5; }
+
+.cn-lobby-keyword-pill{
+    display:flex; align-items:center; gap:7px;
+    padding:5px 11px; border-radius:999px;
+    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
+}
+.cn-lobby-keyword-pill .lbl{ font-weight:700; font-size:clamp(11px,1.6vmin,16px); color:rgba(240,228,255,0.6); }
+.cn-lobby-keyword-pill .val{ font-family:Cairo,sans-serif; font-weight:700; font-size:clamp(12px,1.8vmin,18px); color:#fff; }
+
+.cn-lobby-count-pill{ display:flex; align-items:center; gap:6px; padding:5px 11px; border-radius:999px; border:1px solid; }
+.cn-team1 .cn-lobby-count-pill{ background:rgba(179,69,63,0.26); border-color:rgba(179,69,63,0.45); }
+.cn-team2 .cn-lobby-count-pill{ background:rgba(61,95,158,0.28); border-color:rgba(61,95,158,0.5); }
+.cn-lobby-count-pill .lbl{ font-weight:700; font-size:clamp(11px,1.6vmin,16px); }
+.cn-team1 .cn-lobby-count-pill .lbl{ color:#f5d3d0; }
+.cn-team2 .cn-lobby-count-pill .lbl{ color:#cfdcf5; }
+.cn-lobby-count-pill .val{ font-weight:900; font-size:clamp(13px,2vmin,20px); color:#fff; }
+
+/* -------- شبكة اللاعبين: 3 أعمدة ثابتة -------- */
+.cn-lobby-grid{
+    flex:1 1 auto; min-height:0; overflow-y:auto;
+    display:grid; grid-template-columns:repeat(3,minmax(0,200px));
+    justify-content:center; grid-auto-rows:min-content;
+    gap:1cm; align-content:start;
+}
+.cn-lobby-empty-slot{ grid-column:1 / -1; text-align:center; color:#6b6280; font-size:12px; padding:24px 0; }
+
+/* -------- بطاقة اللاعب المخصصة (تصميم Claude Design بالحرف) -------- */
+.cn-lobby-pcard{ width:100%; max-width:200px; aspect-ratio:400 / 167; display:flex; flex-direction:row; align-items:center; min-width:0; }
+.cn-lobby-pcard-avatar{
+    flex:0 0 25%; aspect-ratio:1 / 1; border-radius:999px;
+    background:#5A2585; border:1.5px solid rgba(255,255,255,0.45);
+    display:flex; align-items:center; justify-content:center; overflow:hidden; z-index:2;
+    font-family:Cairo,sans-serif; font-weight:700; font-size:clamp(10px,1.6vmin,15px); color:#F3EEFC;
+}
+.cn-lobby-pcard-pill{
+    flex:1 1 auto; min-width:0; height:64%;
+    margin-inline-start:-5.5%; padding:0 7% 0 4%;
+    border-radius:999px; background:rgba(255,255,255,0.10);
+    border:1px solid rgba(201,166,255,0.35); backdrop-filter:blur(8px);
+    display:flex; align-items:center; gap:4%;
+}
+.cn-lobby-pcard-name{ flex:1 1 auto; min-width:0; text-align:center; font-family:Cairo,sans-serif; font-weight:700; font-size:clamp(9px,1.35vmin,14px); color:#F3EEFC; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cn-lobby-pcard-remove{
+    flex:0 0 auto; width:clamp(14px,1.9vmin,19px); height:clamp(14px,1.9vmin,19px); padding:0;
+    border-radius:999px; display:flex; align-items:center; justify-content:center;
+    background:rgba(179,69,63,0.35); border:1px solid rgba(179,69,63,0.55); color:#ffdedb;
+    font-family:Cairo,sans-serif; font-weight:700; font-size:clamp(8px,1.15vmin,11px); line-height:1; cursor:pointer;
+}
+.cn-lobby-pcard-remove:hover{ background:rgba(179,69,63,0.7); }
+
+/* -------- الشريط السفلي: زرين فقط -------- */
+#cn-lobby-actions{
+    flex:0 0 auto;
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:10px;
+}
+#cn-lobby-actions button{
+    display:flex; align-items:center; gap:8px;
+    height:clamp(42px,6vmin,54px); padding:0 clamp(16px,2.6vmin,28px);
+    border-radius:13px; font-family:inherit; font-weight:800; font-size:clamp(14px,2.3vmin,21px);
+    cursor:pointer; white-space:nowrap;
+}
+.cn-lobby-btn-platform{ background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:#efe6ff; }
+.cn-lobby-btn-start{
+    padding:0 clamp(20px,3.2vmin,36px) !important;
+    background:rgba(90,200,140,0.2); border:1px solid rgba(90,200,140,0.5); color:#d3f7e2;
+    font-size:clamp(15px,2.5vmin,23px) !important;
+}
+.cn-lobby-btn-start:disabled{ opacity:0.45; cursor:not-allowed; }
+
+   شاشة اللعب (Match Screen) — منسوخة بالحرف من تصميم Claude Design
+   المعتمد (Codenames Stream Overlay.dc.html): هيدر عنوان مركزي + شارة
+   LIVE، شريط حالة (دور الفريق/التلميح/المؤقت/زر الإعدادات)، لوحتي فريق
+   جانبيتين (سباي ماستر/مؤكّد/قائمة لاعبين/أحداث)، شبكة كلمات 5×5،
+   و3 نوافذ منبثقة (لاعبين جدد/باركود/طلبات). بيانات وهمية مؤقتاً --
+   الربط بالمنطق الحقيقي مرحلة قادمة منفصلة.
+--------------------------------------------------------------------- */
+#cn-match{
+    display:none;
+    position:fixed;
+    inset:0;
+    flex-direction:column;
+    overflow:hidden;
+    font-family:'Zain',Cairo,sans-serif;
+    color:#e9dcff;
+    background:linear-gradient(160deg,#0a0713 0%,#070511 55%,#040309 100%);
+}
+
+/* -------- هيدر شاشة اللعب: عنوان مركزي فقط + شارة LIVE -------- */
+.cn-match-header{
+    flex:0 0 56px; height:56px;
+    display:flex; align-items:center; justify-content:flex-end;
+    padding:0 14px;
+    background:rgba(255,255,255,0.035);
+    border-bottom:1px solid rgba(255,255,255,0.07);
+    position:relative;
+}
+.cn-match-header-title{
+    position:absolute; left:0; right:0; top:0; height:56px;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none;
+    font-weight:800; font-size:22px; letter-spacing:2.9px; color:#f3ecff;
+}
+.cn-match-live{
+    display:flex; align-items:center; gap:8px;
+}
+.cn-match-live-dot{
+    width:26px; height:26px; border-radius:8px;
+    background:linear-gradient(135deg,var(--cn-team1) 0%,var(--cn-team2) 100%);
+}
+.cn-match-live span{
+    font-size:clamp(12px,1.8vmin,17px); font-weight:700;
+    color:rgba(233,220,255,0.6); letter-spacing:1.5px;
+}
+
+/* -------- شريط الحالة -------- */
+.cn-match-statusbar{
+    flex:0 0 auto;
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+    gap:10px;
+    padding:clamp(7px,1.4vmin,14px) 14px;
+    background:rgba(255,255,255,0.02);
+    border-bottom:1px solid rgba(255,255,255,0.05);
+    position:relative;
+}
+.cn-match-turn-badge{
+    display:flex; align-items:center; gap:8px;
+    padding:clamp(5px,1vmin,9px) clamp(10px,1.8vmin,18px);
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,0.18);
+}
+.cn-match-turn-badge .dot{ width:9px; height:9px; border-radius:999px; background:rgba(255,255,255,0.85); }
+.cn-match-turn-badge span.label{ font-weight:800; font-size:clamp(13px,2vmin,20px); color:#fff; white-space:nowrap; }
+
+.cn-match-hint-area{ display:flex; align-items:center; gap:clamp(6px,1.2vmin,10px); min-width:0; }
+.cn-match-clue-num{
+    flex:0 0 auto; width:clamp(34px,5vmin,48px); height:clamp(34px,5vmin,48px);
+    border-radius:10px; display:flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,0.13); border:1px solid rgba(255,255,255,0.2);
+    font-weight:900; font-size:clamp(16px,2.6vmin,26px); color:#fff;
+}
+.cn-match-clue-text{
+    flex:1 1 auto; min-width:clamp(90px,14vw,220px);
+    display:flex; align-items:center; justify-content:center;
+    height:clamp(34px,5vmin,48px); padding:0 clamp(12px,2vmin,22px);
+    border-radius:10px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16);
+    font-weight:800; font-size:clamp(18px,3.2vmin,34px); color:#fff;
+    letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.cn-match-pick-timer{
+    flex:0 0 auto; display:flex; align-items:center; gap:8px;
+    height:clamp(34px,5vmin,48px); padding:0 clamp(9px,1.5vmin,15px);
+    border-radius:10px; background:rgba(255,215,94,0.12); border:1px solid rgba(255,215,94,0.35);
+}
+.cn-match-pick-timer .lbl{ font-weight:800; font-size:clamp(11px,1.7vmin,17px); color:#ffe89b; white-space:nowrap; }
+.cn-match-pick-timer .val{ font-weight:900; font-size:clamp(15px,2.5vmin,25px); color:#fff; font-variant-numeric:tabular-nums; }
+
+.cn-match-settings-wrap{ flex:0 0 auto; position:relative; display:flex; align-items:center; }
+.cn-match-settings-btn{
+    display:flex; align-items:center; gap:8px;
+    padding:clamp(6px,1vmin,10px) clamp(11px,1.7vmin,18px);
+    border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18);
+    color:#efe6ff; font-family:inherit; font-weight:800; font-size:clamp(12px,1.9vmin,19px);
+    cursor:pointer; white-space:nowrap;
+}
+.cn-match-settings-btn.cn-open{ background:rgba(255,255,255,0.16); }
+.cn-match-settings-panel{
+    display:none;
+    position:absolute; top:calc(100% + 10px); inset-inline-end:0; z-index:40;
+    width:min(300px,80vw); padding:10px; border-radius:16px;
+    background:rgba(18,13,31,0.97); border:1px solid rgba(255,255,255,0.12);
+    box-shadow:0 18px 46px rgba(0,0,0,0.55);
+    flex-direction:column; gap:7px;
+}
+.cn-match-settings-panel.cn-open{ display:flex; }
+.cn-match-settings-panel-label{ padding:2px 6px 6px; font-weight:800; font-size:15px; color:rgba(240,228,255,0.55); }
+.cn-match-settings-item{
+    display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:11px;
+    font-family:inherit; font-weight:800; font-size:18px; cursor:pointer; text-align:start;
+    border:1px solid; background:none;
+}
+.cn-match-settings-item.green{ background:rgba(90,200,140,0.14); border-color:rgba(90,200,140,0.42); color:#c8f0d8; }
+.cn-match-settings-item.purple{ background:rgba(201,166,255,0.13); border-color:rgba(201,166,255,0.38); color:#e6d4ff; }
+.cn-match-settings-item.gold{ background:rgba(255,215,94,0.12); border-color:rgba(255,215,94,0.36); color:#ffe89b; }
+.cn-match-settings-item.red{ background:rgba(179,69,63,0.18); border-color:rgba(179,69,63,0.45); color:#f4cfcc; }
+.cn-match-settings-divider{ height:1px; margin:3px 0; background:rgba(255,255,255,0.10); }
+
+/* -------- الجسم: لوحة أحمر / الشبكة / لوحة أزرق -------- */
+.cn-match-body{
+    flex:1 1 auto; min-height:0;
+    display:flex; align-items:stretch; gap:clamp(8px,1.4vmin,16px);
+    padding:clamp(8px,1.6vmin,18px) clamp(10px,1.6vmin,18px) clamp(12px,2vmin,22px);
+}
+
+.cn-match-side{
+    flex:0 1 clamp(140px,24vw,350px); min-width:0; min-height:0;
+    display:flex; flex-direction:column; gap:clamp(6px,1vmin,10px);
+    padding:clamp(8px,1.4vmin,14px); border-radius:16px; border:1px solid;
+}
+.cn-match-side.t1{ background:rgba(179,69,63,0.10); border-color:rgba(179,69,63,0.35); }
+.cn-match-side.t2{ background:rgba(61,95,158,0.10); border-color:rgba(61,95,158,0.38); }
+
+.cn-match-side-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.cn-match-side-head .name{ font-weight:800; font-size:clamp(14px,2.2vmin,24px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.t1 .cn-match-side-head .name{ color:#f5d3d0; }
+.t2 .cn-match-side-head .name{ color:#cfdcf5; }
+.cn-match-side-head .count{
+    flex:0 0 auto; min-width:clamp(26px,3.6vmin,38px); height:clamp(26px,3.6vmin,38px); padding:0 8px;
+    border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-weight:900; font-size:clamp(14px,2.2vmin,22px); color:#fff;
+}
+.cn-match-side-divider{ height:1px; background:rgba(255,255,255,0.10); }
+
+.cn-match-roles-row{ display:flex; gap:clamp(6px,1vmin,10px); min-width:0; }
+.cn-match-role-card{
+    flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:5px;
+    padding:clamp(6px,1vmin,10px) 6px; border-radius:12px; border:1px solid;
+}
+.t1 .cn-match-role-card.spymaster{ background:rgba(179,69,63,0.20); border-color:rgba(179,69,63,0.45); }
+.t2 .cn-match-role-card.spymaster{ background:rgba(61,95,158,0.22); border-color:rgba(61,95,158,0.5); }
+.cn-match-role-card.confirmer{ background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.14); }
+.cn-match-role-card .role-label{ font-weight:800; font-size:clamp(11px,1.6vmin,16px); white-space:nowrap; }
+.t1 .cn-match-role-card.spymaster .role-label{ color:#f5d3d0; }
+.t2 .cn-match-role-card.spymaster .role-label{ color:#cfdcf5; }
+.cn-match-role-card.confirmer .role-label{ color:#e6d9ff; }
+.cn-match-role-card .role-row{ display:flex; align-items:center; gap:5px; max-width:100%; min-width:0; }
+.cn-match-role-card .role-name{ flex:1 1 auto; min-width:0; font-weight:700; font-size:clamp(12px,1.8vmin,18px); color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cn-match-role-x{
+    flex:0 0 auto; width:clamp(18px,2.4vmin,24px); height:clamp(18px,2.4vmin,24px); padding:0;
+    border-radius:6px; display:flex; align-items:center; justify-content:center;
+    background:rgba(179,69,63,0.30); border:1px solid rgba(179,69,63,0.55); color:#ffdedb;
+    font-family:inherit; font-weight:900; font-size:clamp(11px,1.6vmin,15px); line-height:1; cursor:pointer;
+}
+
+.cn-match-roster{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:6px; overflow-y:auto; overflow-x:hidden; padding-inline-end:2px; }
+.cn-match-roster-row{ flex:0 0 auto; display:flex; align-items:center; gap:clamp(6px,1vmin,10px); padding:clamp(5px,0.9vmin,9px) clamp(6px,1vmin,10px); border-radius:10px; background:rgba(255,255,255,0.045); min-width:0; }
+.cn-match-roster-avatar{ width:clamp(22px,3vmin,30px); height:clamp(22px,3vmin,30px); flex:0 0 auto; border-radius:999px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:clamp(11px,1.6vmin,15px); color:#fff; }
+.t1 .cn-match-roster-avatar{ background:rgba(179,69,63,0.35); }
+.t2 .cn-match-roster-avatar{ background:rgba(61,95,158,0.40); }
+.cn-match-roster-name{ flex:1 1 auto; min-width:0; font-weight:700; font-size:clamp(12px,1.9vmin,19px); color:#f0e4ff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cn-match-roster-btn{ flex:0 0 auto; width:clamp(18px,2.4vmin,24px); height:clamp(18px,2.4vmin,24px); padding:0; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:clamp(10px,1.5vmin,14px); line-height:1; cursor:pointer; border:1px solid; }
+.cn-match-roster-btn.spy{ background:rgba(201,166,255,0.18); border-color:rgba(201,166,255,0.42); color:#e6d4ff; }
+.cn-match-roster-btn.confirm{ background:rgba(90,200,140,0.18); border-color:rgba(90,200,140,0.42); color:#c8f0d8; }
+.cn-match-roster-btn.remove{ background:rgba(179,69,63,0.28); border-color:rgba(179,69,63,0.5); color:#ffdedb; font-family:inherit; font-weight:900; font-size:clamp(11px,1.6vmin,15px); }
+
+.cn-match-events{ flex:0 0 34%; min-height:0; display:flex; flex-direction:column; gap:6px; }
+.cn-match-events-label{ font-weight:800; font-size:clamp(12px,1.7vmin,17px); color:rgba(240,228,255,0.7); }
+.cn-match-events-box{ flex:1 1 auto; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:5px; padding:clamp(6px,1vmin,10px); border-radius:14px; background:rgba(255,255,255,0.045); border:1px solid rgba(255,255,255,0.10); }
+.cn-match-events-box div{ flex:0 0 auto; font-weight:700; font-size:clamp(11px,1.6vmin,16px); line-height:1.4; color:#ded0f7; }
+
+/* -------- شبكة الكلمات 5×5 -------- */
+.cn-match-grid{
+    flex:1 1 auto; min-width:0; min-height:0;
+    display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); grid-template-rows:repeat(5,minmax(0,1fr));
+    gap:clamp(5px,1.1vmin,12px); padding:clamp(8px,1.4vmin,14px);
+    border-radius:18px; background:rgba(255,255,255,0.022); border:1px solid rgba(255,255,255,0.06);
+}
+.cn-match-tile{
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    padding:8% 6% 6%; border-radius:9px; cursor:pointer; overflow:hidden; position:relative;
+    container-type:size; gap:2px;
+    transition:background 160ms ease, transform 120ms ease;
+    background:#3B3355; border:1px solid rgba(255,255,255,0.14);
+}
+.cn-match-tile-num{ position:absolute; top:4px; inset-inline-start:6px; font-weight:900; font-size:clamp(10px,20cqmin,20px); line-height:1; color:#ffd75e; }
+.cn-match-tile-word{ font-weight:800; line-height:1.25; font-size:clamp(9px,17cqmin,26px); letter-spacing:0.2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; color:#F2EAFF; }
+.cn-match-tile-icon{ flex:1 1 auto; width:100%; min-height:0; display:flex; align-items:center; justify-content:center; }
+.cn-match-tile-icon svg{ width:60cqmin; height:60cqmin; }
+
+.cn-match-tile.revealed{ opacity:1; }
+.cn-match-tile.revealed-t1{ background:var(--cn-team1); border-color:rgba(255,255,255,0.14); }
+.cn-match-tile.revealed-t1 .cn-match-tile-word,
+.cn-match-tile.revealed-t2 .cn-match-tile-word{ color:#fff; }
+.cn-match-tile.revealed-t2{ background:var(--cn-team2); border-color:rgba(255,255,255,0.14); }
+.cn-match-tile.revealed-neutral{ background:#D0D7DE; border-color:rgba(0,0,0,0.18); }
+.cn-match-tile.revealed-neutral .cn-match-tile-word{ color:#1A1D28; }
+.cn-match-tile.revealed-neutral .cn-match-tile-num{ color:#5d6470; }
+.cn-match-tile.revealed-assassin{ background:#0F1117; border-color:rgba(255,255,255,0.35); }
+.cn-match-tile.revealed-assassin .cn-match-tile-word{ color:#f0e8ff; }
+.cn-match-tile.dim{ opacity:0.62; }
+
+/* -------- الطبقة الشفافة للنوافذ المنبثقة -------- */
+.cn-match-overlay{
+    display:none;
+    position:absolute; inset:0; z-index:60;
+    align-items:center; justify-content:center;
+    background:rgba(4,3,9,0.72); backdrop-filter:blur(3px);
+}
+.cn-match-overlay.cn-open{ display:flex; }
+
+.cn-match-modal{
+    display:flex; flex-direction:column; gap:12px;
+    padding:18px; border-radius:20px;
+    background:linear-gradient(165deg,#171029 0%,#0c0917 100%);
+    border:1px solid rgba(255,255,255,0.14);
+    box-shadow:0 26px 60px rgba(0,0,0,0.6);
+}
+.cn-match-modal-head{ flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.cn-match-modal-head span{ font-weight:800; font-size:22px; color:#f3ecff; }
+.cn-match-modal-close{
+    flex:0 0 auto; width:32px; height:32px; padding:0; border-radius:9px;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16); color:#efe6ff;
+    font-family:inherit; font-weight:900; font-size:16px; cursor:pointer;
+}
+
+.cn-modal-players{ width:500px; height:500px; max-width:92vw; max-height:82vh; }
+.cn-modal-players-list{ flex:1 1 auto; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:12px; border-radius:14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09); }
+.cn-modal-players-row{ flex:0 0 auto; display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:11px; background:rgba(255,255,255,0.05); }
+.cn-modal-players-avatar{ width:30px; height:30px; flex:0 0 auto; border-radius:999px; background:rgba(201,166,255,0.25); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; color:#fff; }
+.cn-modal-players-name{ flex:1 1 auto; min-width:0; font-weight:700; font-size:19px; color:#f0e4ff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cn-modal-players-team{ flex:0 0 auto; font-weight:800; font-size:16px; color:rgba(240,228,255,0.5); }
+.cn-modal-players-save{ flex:0 0 auto; height:48px; border-radius:12px; background:rgba(90,200,140,0.2); border:1px solid rgba(90,200,140,0.5); color:#d3f7e2; font-family:inherit; font-weight:800; font-size:20px; cursor:pointer; }
+
+.cn-modal-barcode{ width:300px; height:300px; max-width:92vw; max-height:82vh; padding:14px; gap:10px; }
+.cn-modal-barcode-box{ flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center; border-radius:14px; background:#fff; }
+.cn-modal-barcode-pattern{ width:74%; height:74%; background:repeating-linear-gradient(90deg,#0F1117 0 6px,#fff 6px 10px,#0F1117 10px 13px,#fff 13px 20px); }
+
+.cn-modal-requests{ width:280px; height:340px; max-width:92vw; max-height:82vh; padding:12px; gap:9px; }
+.cn-modal-requests-list{ flex:1 1 auto; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:7px; }
+.cn-modal-requests-row{ flex:0 0 auto; display:flex; align-items:center; gap:5px; padding:7px 8px; border-radius:10px; background:rgba(255,255,255,0.05); }
+.cn-modal-requests-name{ flex:1 1 auto; min-width:0; font-weight:700; font-size:15px; color:#f0e4ff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cn-modal-requests-btn{ flex:0 0 auto; width:22px; height:22px; padding:0; border-radius:6px; display:flex; align-items:center; justify-content:center; font-family:inherit; font-weight:900; font-size:12px; cursor:pointer; border:1px solid; }
+.cn-modal-requests-btn.reject{ background:rgba(179,69,63,0.28); border-color:rgba(179,69,63,0.5); color:#ffdedb; }
+.cn-modal-requests-btn.accept{ background:rgba(90,200,140,0.22); border-color:rgba(90,200,140,0.5); color:#c8f0d8; }
+
+/* ---------------------------------------------------------------------
+   إضافات منطق اللعبة الحقيقي: شارات تحديد اللاعبين فوق الصندوق، حالة
+   الدور النشط لأيقونات السباي ماستر/المؤكّد، وبانر الفوز.
+--------------------------------------------------------------------- */
+.cn-match-tile-selections{
+    position:absolute; bottom:4px; left:0; right:0;
+    display:flex; align-items:center; justify-content:center; gap:2px;
+    flex-wrap:wrap;
+}
+.cn-match-tile-sel-avatar{
+    width:16px; height:16px; border-radius:999px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:9px; font-weight:800; color:#fff;
+    background:rgba(201,166,255,0.55); border:1px solid rgba(255,255,255,0.5);
+}
+.cn-match-roster-btn.cn-active-role{ box-shadow:0 0 0 2px rgba(255,255,255,0.5) inset; }
+.cn-modal-winner{ width:340px; max-width:90vw; text-align:center; align-items:center; }

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>سباي ماستر — كود نيمز</title>
+<!--
+    ==========================================================================
+     صفحة جوال خفيفة مستقلة (لا تحمّل أي ملف من js/ أو backend/auth، ولا
+     تعتمد على AGP.* إطلاقاً) -- يفتحها اللاعب بمسح الـQR من شاشة اللعب.
+     الاتصال بقناة websocket/room-relay-server.js المنفصلة تماماً عن
+     بروتوكول التيك توك (راجع التعليق أعلى ذاك الملف). لا هوية تيك توك
+     هنا؛ اسم يدوي + طلب + موافقة يدوية من الاستريمر فقط.
+    ==========================================================================
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+    --accent2:#a56ee0;
+    --team1:#b3453f;
+    --team2:#3d5f9e;
+}
+*{ box-sizing:border-box; }
+html,body{ margin:0; min-height:100%; font-family:'Zain',sans-serif; color:#e9dcff;
+    background:linear-gradient(160deg,#0a0713 0%,#070511 55%,#040309 100%); }
+body{ display:flex; flex-direction:column; align-items:center; padding:22px 16px 40px; }
+
+h1{ font-size:20px; font-weight:900; color:#f3ecff; margin:6px 0 22px; text-align:center; }
+
+.sm-card{ width:100%; max-width:380px; display:flex; flex-direction:column; gap:14px; }
+
+label{ font-size:13px; font-weight:700; color:rgba(240,228,255,0.65); }
+input[type=text]{
+    width:100%; padding:12px 14px; border-radius:12px; font-family:inherit; font-size:16px;
+    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.18); color:#fff;
+}
+.sm-team-row{ display:flex; gap:10px; }
+.sm-team-btn{
+    flex:1 1 0; padding:14px 8px; border-radius:12px; font-family:inherit; font-weight:800; font-size:15px;
+    cursor:pointer; border:1.5px solid; background:rgba(255,255,255,0.05); color:#e9dcff;
+}
+.sm-team-btn.t1{ border-color:rgba(179,69,63,0.4); }
+.sm-team-btn.t2{ border-color:rgba(61,95,158,0.4); }
+.sm-team-btn.sm-selected.t1{ background:rgba(179,69,63,0.28); border-color:var(--team1); }
+.sm-team-btn.sm-selected.t2{ background:rgba(61,95,158,0.28); border-color:var(--team2); }
+
+.sm-submit{
+    padding:14px; border-radius:12px; border:none; font-family:inherit; font-weight:800; font-size:16px;
+    background:rgba(90,200,140,0.22); border:1px solid rgba(90,200,140,0.5); color:#d3f7e2; cursor:pointer;
+}
+.sm-submit:disabled{ opacity:0.4; cursor:not-allowed; }
+.sm-error{ color:#ffb3ad; font-size:13px; text-align:center; }
+
+.sm-status{ text-align:center; display:flex; flex-direction:column; align-items:center; gap:14px; padding:40px 10px; }
+.sm-spinner{ width:34px; height:34px; border-radius:999px; border:3px solid rgba(165,110,224,0.25); border-top-color:var(--accent2); animation:sm-spin 0.9s linear infinite; }
+@keyframes sm-spin{ to{ transform:rotate(360deg); } }
+.sm-status p{ font-size:14px; color:rgba(240,228,255,0.7); }
+
+.sm-grid{ width:100%; max-width:420px; display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+.sm-tile{
+    aspect-ratio:1/1; border-radius:8px; display:flex; align-items:center; justify-content:center; text-align:center;
+    font-weight:800; font-size:clamp(9px,2.6vw,13px); padding:4%; color:#fff; border:1px solid rgba(255,255,255,0.15);
+}
+.sm-tile.red{ background:var(--team1); }
+.sm-tile.blue{ background:var(--team2); }
+.sm-tile.neutral{ background:#D0D7DE; color:#1A1D28; }
+.sm-tile.assassin{ background:#0F1117; color:#f0e8ff; border-color:rgba(255,255,255,0.35); }
+.sm-legend{ display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-top:16px; font-size:12px; color:rgba(240,228,255,0.6); }
+.sm-legend span{ display:inline-flex; align-items:center; gap:5px; }
+.sm-legend i{ width:11px; height:11px; border-radius:3px; display:inline-block; }
+</style>
+</head>
+<body>
+
+<h1 id="sm-title">سباي ماستر — كود نيمز</h1>
+
+<div class="sm-card" id="sm-root"></div>
+
+<script>
+var params = new URLSearchParams(window.location.search);
+var ROOM = params.get('room');
+var BACKEND_WS_URL = 'wss://project-testing-akds.onrender.com/ws/room-relay';
+
+var _state = 'form'; // form | pending | approved | rejected | error
+var _selectedTeam = null;
+var _requestId = 'sm_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+var _socket = null;
+var _board = null;
+
+function el(id) { return document.getElementById(id); }
+function escapeHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function render() {
+    var root = el('sm-root');
+
+    if (!ROOM) {
+        root.innerHTML = '<div class="sm-status"><p class="sm-error">رابط غير صالح -- امسح الـQR من شاشة اللعب مباشرة.</p></div>';
+        return;
+    }
+
+    if (_state === 'form') {
+        root.innerHTML =
+            '<label>اسمك</label>' +
+            '<input type="text" id="sm-name-input" placeholder="اكتب اسمك">' +
+            '<label>أي فريق؟</label>' +
+            '<div class="sm-team-row">' +
+                '<button type="button" class="sm-team-btn t1" id="sm-pick-t1">الفريق الأحمر</button>' +
+                '<button type="button" class="sm-team-btn t2" id="sm-pick-t2">الفريق الأزرق</button>' +
+            '</div>' +
+            '<div class="sm-error" id="sm-form-error" style="display:none"></div>' +
+            '<button type="button" class="sm-submit" id="sm-submit-btn">إرسال طلب سباي ماستر</button>';
+
+        el('sm-pick-t1').addEventListener('click', function () { _selectedTeam = 'team1'; render(); });
+        el('sm-pick-t2').addEventListener('click', function () { _selectedTeam = 'team2'; render(); });
+        if (_selectedTeam === 'team1') el('sm-pick-t1').classList.add('sm-selected');
+        if (_selectedTeam === 'team2') el('sm-pick-t2').classList.add('sm-selected');
+        el('sm-submit-btn').addEventListener('click', submitRequest);
+        return;
+    }
+
+    if (_state === 'pending') {
+        root.innerHTML = '<div class="sm-status"><div class="sm-spinner"></div><p>بانتظار موافقة الاستريمر...</p></div>';
+        return;
+    }
+
+    if (_state === 'rejected') {
+        root.innerHTML = '<div class="sm-status"><p class="sm-error">ما تمت الموافقة على طلبك.</p></div>' +
+            '<button type="button" class="sm-submit" id="sm-retry-btn">حاول مرة ثانية</button>';
+        el('sm-retry-btn').addEventListener('click', function () { _state = 'form'; render(); });
+        return;
+    }
+
+    if (_state === 'approved') {
+        el('sm-title').textContent = 'خريطة الألوان السرية';
+        root.innerHTML = '<div class="sm-grid" id="sm-grid"></div>' +
+            '<div class="sm-legend">' +
+                '<span><i style="background:var(--team1)"></i> فريقهم أحمر</span>' +
+                '<span><i style="background:var(--team2)"></i> فريقهم أزرق</span>' +
+                '<span><i style="background:#D0D7DE"></i> محايد</span>' +
+                '<span><i style="background:#0F1117"></i> القاتل</span>' +
+            '</div>';
+        renderGrid();
+        return;
+    }
+
+    root.innerHTML = '<div class="sm-status"><p class="sm-error">انقطع الاتصال -- أعد فتح الصفحة من جديد.</p></div>';
+}
+
+function renderGrid() {
+    var gridEl = el('sm-grid');
+    if (!gridEl || !_board) return;
+    gridEl.innerHTML = _board.map(function (pair) {
+        return '<div class="sm-tile ' + pair[1] + '">' + escapeHtml(pair[0]) + '</div>';
+    }).join('');
+}
+
+function submitRequest() {
+    var name = (el('sm-name-input').value || '').trim();
+    var errEl = el('sm-form-error');
+    if (!name) { errEl.textContent = 'اكتب اسمك أول.'; errEl.style.display = 'block'; return; }
+    if (!_selectedTeam) { errEl.textContent = 'اختر فريقك.'; errEl.style.display = 'block'; return; }
+
+    send({ type: 'spymaster_request', requestId: _requestId, name: name, team: _selectedTeam });
+    _state = 'pending';
+    render();
+}
+
+function send(obj) {
+    if (_socket && _socket.readyState === WebSocket.OPEN) {
+        try { _socket.send(JSON.stringify(obj)); } catch (err) { /* تجاهل بصمت */ }
+    }
+}
+
+function connect() {
+    if (!ROOM) { render(); return; }
+    _socket = new WebSocket(BACKEND_WS_URL);
+
+    _socket.addEventListener('open', function () {
+        send({ type: 'join', room: ROOM });
+    });
+
+    _socket.addEventListener('message', function (evt) {
+        var msg;
+        try { msg = JSON.parse(evt.data); } catch (err) { return; }
+        if (!msg || typeof msg !== 'object') return;
+
+        if (msg.type === 'spymaster_approve' && msg.requestId === _requestId) {
+            _board = msg.board || null;
+            _state = 'approved';
+            render();
+            return;
+        }
+        if (msg.type === 'spymaster_reject' && msg.requestId === _requestId) {
+            _state = 'rejected';
+            render();
+            return;
+        }
+        if (msg.type === 'board_update' && _state === 'approved') {
+            _board = msg.board || _board;
+            renderGrid();
+            return;
+        }
+    });
+
+    _socket.addEventListener('close', function () {
+        if (_state === 'approved' || _state === 'pending') { _state = 'error'; render(); }
+    });
+    _socket.addEventListener('error', function () { /* سيتبعه close */ });
+}
+
+render();
+connect();
+</script>
+</body>
+</html>
