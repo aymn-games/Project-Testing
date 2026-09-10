@@ -279,6 +279,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function lobbyCardHtml(p) {
+        // ⚠️ إصلاح: كانت كل بطاقات اللوبي تمر ببطاقتنا المخصصة (تصميم
+        // Claude Design بالحرف) اللي ما تستدعي AGP.playerCard.renderHtml
+        // إطلاقاً -- فنظام الإطارات الحقيقي (js/agp-player-card.js) ما كان
+        // يُستدعى أبداً، حتى لو اللاعب يملك إطاراً فعلياً. الآن: لاعب يملك
+        // إطار (p.frame) يُعرض بالنظام المشترك الحقيقي (showFrame:true) --
+        // نفس منطق الإطارات بكل اللعبة، بدون إعادة تنفيذه هنا يدوياً.
+        // لاعب بدون إطار يبقى ببطاقتنا المخصصة كما هي.
+        if (p.frame && AGP.playerCard) {
+            return '<div class="cn-lobby-pcard cn-lobby-pcard-framed">' +
+                '<button type="button" class="cn-lobby-pcard-remove-framed" data-id="' + escapeAttr(p.id) + '" title="حذف اللاعب">✕</button>' +
+                AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', size: 50, outClass: 'cn-lobby-framed-inner' }) +
+            '</div>';
+        }
         return '<div class="cn-lobby-pcard">' +
             '<div class="cn-lobby-pcard-avatar">' + escapeHtml(playerInitial(p)) + '</div>' +
             '<div class="cn-lobby-pcard-pill">' +
@@ -290,7 +303,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function wireLobbyRemoveButtons(container) {
         if (!container) return;
-        container.querySelectorAll('.cn-lobby-pcard-remove').forEach(function (btn) {
+        container.querySelectorAll('.cn-lobby-pcard-remove, .cn-lobby-pcard-remove-framed').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 AGP.player.removePlayer(btn.getAttribute('data-id'));
                 renderLobbyPlayerGrids();
@@ -497,8 +510,37 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         confirmer: {},                       // { team1: playerId, team2: playerId }
         selections: {},                      // idx -> [playerId, ...]
         events: { team1: [], team2: [] },
-        lastStartingTeam: null               // لمنع تكرار نفس الفريق البادئ بمباراة جديدة تالية
+        lastStartingTeam: null,              // لمنع تكرار نفس الفريق البادئ بمباراة جديدة تالية
+        justRevealed: []                     // [idx, ...] الصناديق المكشوفة بآخر دورة تحديث فقط -- لتشغيل حركة الانبثاق مرة وحدة
     };
+
+    /* ---------------------------------------------------------------------
+       الصوت -- نفس نمط games/tribe-roulette (Audio عناصر حقيقية + حماية
+       iOS الموثَّقة هناك: عدم استدعاء play() إطلاقاً لو مستوى الصوت صفر،
+       لأن مجرد الاستدعاء على iOS يسكت أي صوت خلفية شغّال بجهاز الاستريمر).
+       لا إعداد صوت حي هنا (كود نيمز لعبة غير shell، بدون AGP.gameShell) --
+       مستوى ثابت معقول بدل ذلك.
+    --------------------------------------------------------------------- */
+    var SOUND_BASE = 'sounds/';
+    var _sounds = {
+        correct: new Audio(SOUND_BASE + 'correct.wav'),
+        wrong: new Audio(SOUND_BASE + 'wrong.wav'),
+        assassin: new Audio(SOUND_BASE + 'assassin.wav')
+    };
+    var SOUND_VOLUME = 0.7;
+
+    function playSound(name) {
+        var a = _sounds[name];
+        if (!a || SOUND_VOLUME <= 0) return;
+        try {
+            a.volume = SOUND_VOLUME;
+            a.currentTime = 0;
+            var p = a.play();
+            if (p && typeof p.catch === 'function') {
+                p.catch(function () { /* المتصفح يمنع أحياناً تشغيلاً تلقائياً قبل أول تفاعل مستخدم -- تجاهل صامت */ });
+            }
+        } catch (err) { /* تجاهل صامت -- الصوت طبقة تحسين، لا يوقف اللعبة */ }
+    }
 
     function pushEvent(team, text) {
         var list = _match.events[team];
@@ -573,6 +615,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return new URL('spymaster.html?room=' + encodeURIComponent(room), window.location.href).href;
     }
 
+    function buildEvenVariants(count) {
+        var arr = [];
+        for (var i = 0; i < count; i++) arr.push((i % 2) + 1); // توزيع متساوٍ قدر الإمكان بين الصورتين (1/2)
+        return shuffleArray(arr);
+    }
+
     function generateBoard(startingTeam) {
         var words = shuffleArray(WORD_POOL).slice(0, 25);
         var otherT = otherTeam(startingTeam);
@@ -583,7 +631,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             .concat(['assassin']);
         roles = shuffleArray(roles);
 
-        _match.words = words.map(function (w, i) { return [w, roles[i]]; });
+        var redVariants = buildEvenVariants(roles.filter(function (r) { return r === 'red'; }).length);
+        var blueVariants = buildEvenVariants(roles.filter(function (r) { return r === 'blue'; }).length);
+        var redI = 0, blueI = 0;
+
+        _match.words = words.map(function (w, i) {
+            var role = roles[i];
+            var variant = 1;
+            if (role === 'red') variant = redVariants[redI++];
+            else if (role === 'blue') variant = blueVariants[blueI++];
+            return [w, role, variant];
+        });
         _match.revealed = {};
         _match.selections = {};
         _match.countTeam1 = (startingTeam === TEAM1) ? 9 : 8;
@@ -634,6 +692,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!pair) return 'stop';
         var role = pair[1];
         _match.revealed[idx] = true;
+        _match.justRevealed.push(idx);
         delete _match.selections[idx];
 
         if (role === 'assassin') {
@@ -641,12 +700,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             _match.winnerTeam = otherTeam(_match.turn);
             _match.loseReason = 'assassin';
             pushEvent(_match.turn, 'فتح فريقهم الصندوق الأسود -- خسارة فورية 💀');
+            playSound('assassin');
             return 'stop';
         }
 
         if (role === roleOfTeam(_match.turn)) {
             if (_match.turn === TEAM1) _match.countTeam1--; else _match.countTeam2--;
             pushEvent(_match.turn, 'كشف «' + pair[0] + '» ✓ (صندوق صحيح)');
+            playSound('correct');
             if (countRemaining(roleOfTeam(_match.turn)) === 0) {
                 _match.gameOver = true;
                 _match.winnerTeam = _match.turn;
@@ -657,6 +718,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         if (role === 'neutral') {
             pushEvent(_match.turn, 'كشف «' + pair[0] + '» -- صندوق محايد، انتهى الدور');
+            playSound('wrong');
             return 'stop';
         }
 
@@ -664,6 +726,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var otherT = otherTeam(_match.turn);
         if (otherT === TEAM1) _match.countTeam1--; else _match.countTeam2--;
         pushEvent(_match.turn, 'كشف «' + pair[0] + '» -- صندوق الفريق الثاني، انتهى الدور');
+        playSound('wrong');
         if (countRemaining(roleOfTeam(otherT)) === 0) {
             _match.gameOver = true;
             _match.winnerTeam = otherT;
@@ -844,7 +907,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function renderGridHtml() {
         return _match.words.map(function (pair, i) {
-            var word = pair[0], role = pair[1];
+            var word = pair[0], role = pair[1], variant = pair[2] || 1;
             var shown = !!_match.revealed[i];
             if (!shown) {
                 return '<div class="cn-match-tile" data-idx="' + i + '">' +
@@ -853,10 +916,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     selectionBadgesHtml(i) +
                 '</div>';
             }
-            return '<div class="cn-match-tile ' + fillForRole(role) + '" data-idx="' + i + '">' +
+            var popClass = (_match.justRevealed.indexOf(i) !== -1) ? ' cn-tile-pop' : '';
+            var imgClass = 'cn-tile-img-' + role + ((role === 'red' || role === 'blue') ? ('-' + variant) : '');
+            return '<div class="cn-match-tile ' + fillForRole(role) + popClass + '" data-idx="' + i + '">' +
                 '<span class="cn-match-tile-num">' + (i + 1) + '</span>' +
                 '<div class="cn-match-tile-icon">' + tileIconSvg(role) + '</div>' +
                 '<span class="cn-match-tile-word">' + escapeHtml(word) + '</span>' +
+                '<div class="cn-match-tile-image-layer ' + imgClass + '"></div>' +
             '</div>';
         }).join('');
     }
@@ -970,8 +1036,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function renderWinnerBannerHtml() {
         if (!_match.gameOver) return '';
         var winnerName = (_match.winnerTeam === TEAM1) ? _settings.team1Name : _settings.team2Name;
-        var reasonTxt = (_match.loseReason === 'assassin') ? 'الفريق الخصم فتح الصندوق الأسود 💀' : 'كشف كل صناديقه ✅';
-        return '<div class="cn-match-overlay cn-open">' +
+        var isAssassin = (_match.loseReason === 'assassin');
+        var reasonTxt = isAssassin ? 'الفريق الخصم فتح الصندوق الأسود 💀' : 'كشف كل صناديقه ✅';
+        return '<div class="cn-match-overlay cn-open' + (isAssassin ? ' cn-assassin-flash' : '') + '">' +
             '<div class="cn-match-modal cn-modal-winner">' +
                 '<div class="cn-match-modal-head"><span>🏆 فاز ' + escapeHtml(winnerName) + '</span></div>' +
                 '<div style="text-align:center;color:#e6d9ff;font-size:15px">' + reasonTxt + '</div>' +
@@ -1033,6 +1100,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
             (_match.gameOver ? renderWinnerBannerHtml() : renderMatchOverlayHtml());
 
+        _match.justRevealed = [];
         wireMatchHandlers();
     }
 

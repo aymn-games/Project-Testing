@@ -451,6 +451,17 @@ body.cn-active{
 }
 .cn-lobby-pcard-remove:hover{ background:rgba(179,69,63,0.7); }
 
+/* بطاقة لاعب مالك إطار حقيقي -- تُعرض بالنظام المشترك (agp-player-card.js) */
+.cn-lobby-pcard.cn-lobby-pcard-framed{ position:relative; justify-content:center; }
+.cn-lobby-pcard-remove-framed{
+    position:absolute; top:-4px; left:6px; z-index:5;
+    width:18px; height:18px; padding:0; border-radius:999px;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(179,69,63,0.35); border:1px solid rgba(179,69,63,0.55); color:#ffdedb;
+    font-family:Cairo,sans-serif; font-weight:700; font-size:11px; line-height:1; cursor:pointer;
+}
+.cn-lobby-pcard-remove-framed:hover{ background:rgba(179,69,63,0.7); }
+
 /* -------- الشريط السفلي: زرين فقط -------- */
 #cn-lobby-actions{
     flex:0 0 auto;
@@ -660,14 +671,14 @@ body.cn-active{
 .cn-match-tile{
     display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
     padding:8% 6% 6%; border-radius:9px; cursor:pointer; overflow:hidden; position:relative;
-    container-type:size; gap:2px;
+    gap:2px;
     transition:background 160ms ease, transform 120ms ease;
     background:#3B3355; border:1px solid rgba(255,255,255,0.14);
 }
-.cn-match-tile-num{ position:absolute; top:4px; inset-inline-start:6px; font-weight:900; font-size:clamp(10px,20cqmin,20px); line-height:1; color:#ffd75e; }
-.cn-match-tile-word{ font-weight:800; line-height:1.25; font-size:clamp(9px,17cqmin,26px); letter-spacing:0.2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; color:#F2EAFF; }
+.cn-match-tile-num{ position:absolute; top:4px; inset-inline-start:6px; font-weight:900; font-size:clamp(10px,2.2vmin,20px); line-height:1; color:#ffd75e; }
+.cn-match-tile-word{ font-weight:800; line-height:1.25; font-size:clamp(9px,1.9vmin,26px); letter-spacing:0.2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; color:#F2EAFF; }
 .cn-match-tile-icon{ flex:1 1 auto; width:100%; min-height:0; display:flex; align-items:center; justify-content:center; }
-.cn-match-tile-icon svg{ width:60cqmin; height:60cqmin; }
+.cn-match-tile-icon svg{ width:clamp(16px,5.5vmin,34px); height:clamp(16px,5.5vmin,34px); }
 
 .cn-match-tile.revealed{ opacity:1; }
 .cn-match-tile.revealed-t1{ background:var(--cn-team1); border-color:rgba(255,255,255,0.14); }
@@ -743,3 +754,52 @@ body.cn-active{
 }
 .cn-match-roster-btn.cn-active-role{ box-shadow:0 0 0 2px rgba(255,255,255,0.5) inset; }
 .cn-modal-winner{ width:340px; max-width:90vw; text-align:center; align-items:center; }
+
+/* ---------------------------------------------------------------------
+   حركة انبثاق الصندوق عند فتحه (اهتزاز + تطاير خفيف خلال ~0.6 ثانية)
+--------------------------------------------------------------------- */
+@keyframes cn-tile-reveal-burst{
+    0%   { transform:scale(1) rotate(0deg); }
+    18%  { transform:scale(1.16) rotate(-5deg) translateY(-4%); }
+    36%  { transform:scale(0.93) rotate(4deg) translateY(2%); }
+    54%  { transform:scale(1.06) rotate(-2.5deg); }
+    72%  { transform:scale(0.98) rotate(1.5deg); }
+    100% { transform:scale(1) rotate(0deg); }
+}
+.cn-match-tile.cn-tile-pop{ animation:cn-tile-reveal-burst 0.6s cubic-bezier(.36,.07,.19,.97); z-index:2; }
+
+/* ---------------------------------------------------------------------
+   طبقة صورة تغطي الصندوق بعد الفتح (تحدّدها حسب الصندوق/لونه) -- تخفي
+   الكلمة افتراضياً، وترتفع/تختفي عند تمرير الماوس فتظهر الكلمة تحتها.
+   الصور نفسها لسا لازم تُرفع بمسار games/codenames/images/tile-<role>.png
+   (بدون رفعها، الطبقة شفافة ببساطة ولا تؤثر على أي شي).
+--------------------------------------------------------------------- */
+.cn-match-tile-image-layer{
+    position:absolute; inset:0; border-radius:inherit;
+    background-size:cover; background-position:center;
+    transition:transform 260ms ease, opacity 260ms ease;
+    pointer-events:none;
+}
+.cn-tile-img-red-1{ background-image:url('images/tile-red-1.png'); }
+.cn-tile-img-red-2{ background-image:url('images/tile-red-2.png'); }
+.cn-tile-img-blue-1{ background-image:url('images/tile-blue-1.png'); }
+.cn-tile-img-blue-2{ background-image:url('images/tile-blue-2.png'); }
+.cn-tile-img-neutral{ background-image:url('images/tile-neutral.png'); }
+.cn-tile-img-assassin{ background-image:url('images/tile-assassin.png'); }
+.cn-match-tile:hover .cn-match-tile-image-layer{
+    transform:translateY(-14%) scale(0.94);
+    opacity:0;
+}
+
+/* ---------------------------------------------------------------------
+   فلاش تعتيم خاص عند فتح الصندوق الأسود (فوق خلفية النافذة المنبثقة
+   العادية) -- ظلام أقوى ونبضة حمراء خفيفة قبل ما يستقر على شاشة الفوز.
+--------------------------------------------------------------------- */
+@keyframes cn-assassin-flash-kf{
+    0%   { background:rgba(4,3,9,0); }
+    12%  { background:rgba(20,2,2,0.95); }
+    30%  { background:rgba(179,69,63,0.35); }
+    50%  { background:rgba(20,2,2,0.92); }
+    100% { background:rgba(4,3,9,0.72); }
+}
+.cn-match-overlay.cn-assassin-flash{ animation:cn-assassin-flash-kf 1.2s ease-out; }
