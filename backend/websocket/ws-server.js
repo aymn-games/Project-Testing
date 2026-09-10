@@ -14,6 +14,13 @@
  * mock-connector.js ولا tiktok-connector.js مباشرة إطلاقاً، فيبقى عاماً
  * تماماً بصرف النظر عمّا يقرره الموجِّه (Router).
  *
+ * ⚠️ تحديث (نظام QR السباي ماستر -- كود نيمز): طلبات الترقية على المسار
+ * '/ws/room-relay' تحديداً تُوجَّه الآن لقناة websocket/room-relay-server.js
+ * المنفصلة تماماً (Relay عام حسب room، بلا أي منطق لعبة). أي طلب ترقية
+ * آخر (بدون مسار -- المسار الافتراضي الذي يستخدمه adapters/agp-tiktok-adapter.js
+ * دائماً) يسلك نفس المسار القديم تماماً بلا أي تغيير على بروتوكول التيك
+ * توك الموثَّق أعلاه.
+ *
  * ⚠️ [0.45.0] تتبّع إحصائيات البث — أول ربط فعلي: كانت
  * backend/auth/auth-service.js (startBroadcast/endBroadcast/
  * incrementBroadcastStat/addGiftValue) موجودة وجاهزة منذ البداية، لكن
@@ -63,6 +70,7 @@ var frame = require('./ws-frame');
 var schema = require('../protocol/message-schema');
 var builder = require('../protocol/message-builder');
 var MESSAGE_TYPES = require('../protocol/message-types').MESSAGE_TYPES;
+var roomRelay = require('./room-relay-server');
 var connectorRouter = require('../platforms/connector-router');
 var registry = require('./connection-registry');
 var logger = require('../utils/logger');
@@ -461,6 +469,11 @@ module.exports = {
    */
   attachWebSocketServer: function (httpServer) {
     httpServer.on('upgrade', function (req, socket) {
+      var pathname = (req.url || '').split('?')[0];
+      if (pathname === '/ws/room-relay') {
+        roomRelay.handleUpgrade(req, socket);
+        return;
+      }
       handleUpgrade(req, socket);
     });
 
