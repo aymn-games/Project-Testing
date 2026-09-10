@@ -779,35 +779,6 @@
     -->
     <div class="games-lock-message" id="games-lock-message"></div>
 
-    <!-- [0.46.0] صف "أضيفت حديثاً" — راجع .new-games-row-wrap بالـCSS
-         أعلاه. الروابط نفس روابط بطاقاتها الكاملة بالأسفل بالضبط. -->
-    <div class="new-games-row-wrap">
-        <div class="new-games-row-title"><span class="new-badge">جديد</span> أضيفت حديثاً</div>
-        <div class="new-games-row">
-            <div class="new-game-chip">
-                <img src="tribe-roulette-cover.png" alt="غلاف لعبة روليت القبائل" onerror="this.style.display='none';">
-                <div class="new-game-chip-info">
-                    <span class="new-game-chip-title">🏹 روليت القبائل</span>
-                    <a href="games/tribe-roulette/index.html" target="_blank" class="btn-play">العب الآن</a>
-                </div>
-            </div>
-            <div class="new-game-chip">
-                <img src="russian-roulette-cover.png" alt="غلاف لعبة روليت الروسي" onerror="this.style.display='none';">
-                <div class="new-game-chip-info">
-                    <span class="new-game-chip-title">🔫 روليت الروسي</span>
-                    <a href="games/russian-roulette/index.html" target="_blank" class="btn-play">العب الآن</a>
-                </div>
-            </div>
-            <div class="new-game-chip">
-                <img src="photo-challenge-cover.png" alt="غلاف لعبة تحدي الصور" onerror="this.style.display='none';">
-                <div class="new-game-chip-info">
-                    <span class="new-game-chip-title">🖼️ تحدي الصور</span>
-                    <a href="games/photo-challenge/index.html" target="_blank" class="btn-play">العب الآن</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="container">
 
         <!--
@@ -829,132 +800,22 @@
             العنوان/الرابط هنا مباشرة عند تجهيز كل لعبة، ونفعّلها كـ"active"
             وقتها. راجع docs/CHANGELOG.md.
         -->
-        <!--
-            روليت الإقصاء — أول لعبة أصلية (Native) تُبنى داخل نفس هذا
-            المستودع مباشرة (بدون موقع خارجي ولا جسر postMessage)، عبر
-            games/elimination-roulette/. راجع docs/CHANGELOG.md.
-        -->
-        <div class="game-card game-card--v2" data-agp-game-id="elimination-roulette" data-agp-game-status="active">
-            <div class="game-cover-wrap">
-                <img src="elimination-roulette-cover.png" alt="غلاف لعبة روليت الإقصاء" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
-            </div>
-            <div class="game-info">
-                <span class="game-title">🎡 روليت الإقصاء (Elimination Roulette)</span>
-                <a href="games/elimination-roulette/index.html" target="_blank" class="btn-play">العب الآن</a>
-                <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
-                <p class="game-description">
-                    عجلة تدور وتتوقف عند أحد اللاعبين، فيختار رقم لاعب آخر يقصيه من شات البث. لو وقفت العجلة على نفس الشخص مرتين متتاليتين يقدر يرجّع لاعباً مُقصى بدل الإقصاء (لو مفعّلة ميزة انعاش صديق). أي مُقصى يقدر يرجع بإرسال هدية معيّنة يحددها الاستريمر (لو مفعّلة ميزة الإنعاش بالدعم). تستمر المباراة حتى يبقى لاعب واحد فائز!
-                </p>
-            </div>
-        </div>
-        <div class="game-card game-card--v2" data-agp-game-id="fruit-roulette" data-agp-game-status="active">
-            <div class="game-cover-wrap">
-                <img src="fruit-roulette-cover.png" alt="غلاف لعبة روليت الفواكه" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
-            </div>
-            <div class="game-info">
-                <span class="game-title">🍉 روليت الفواكه (Fruit Roulette)</span>
-                <a href="games/fruit-roulette/index.html" target="_blank" class="btn-play">العب الآن</a>
-                <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
-                <p class="game-description">
-                    عجلة تدور وتتوقف عند أحد اللاعبين، فيفتح صندوقاً من أربعة بكتابة رقمه في شات البث (هو فقط، وقت دوره). ثلاثة صناديق آمنة تحتوي فاكهة، وواحد أو أكثر يخفي "الشخصية الخفية" ويقصي صاحب الدور. عدد الصناديق المخفية يرتفع تدريجياً كل ما انتهى مؤقت الجولة. تستمر المباراة حتى يبقى لاعب واحد فائز!
-                </p>
-            </div>
-        </div>
-<div class="game-card game-card--v2" data-agp-game-id="musical-chairs" data-agp-game-status="active">
+        <div class="game-card game-card--v2" data-agp-game-id="codenames" data-agp-game-status="active">
     <div class="game-cover-wrap">
-        <img src="musical-chairs-cover.png" alt="غلاف لعبة الكراسي الموسيقية" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+        <img src="codenames-cover.png" alt="غلاف لعبة كود نيمز" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
     </div>
     <div class="game-info">
-        <span class="game-title">🎵 الكراسي الموسيقية (Musical Chairs)</span>
-        <a href="games/musical-chairs/index.html" target="_blank" class="btn-play">العب الآن</a>
+        <span class="game-title">🕵️ كود نيمز (Codenames)</span>
+        <a href="games/codenames/index.html" target="_blank" class="btn-play">العب الآن</a>
         <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
         <p class="game-description">
-            تدور الأفاتارات حول حلقة الكراسي، وفجأة تتوقف الموسيقى وتظهر أرقام على كل كرسي.
-            كل لاعب يكتب رقم الكرسي اللي يبيه بالشات — أول وحد يكتب الرقم الصحيح يفوز فيه.
-            أي لاعب ما يلقى كرسي يُقصى فوراً. عدد الكراسي ينقص كل دورة (تلقائي أو مخصّص)
-            لين يبقى لاعب واحد فقط — هو الفائز!
+            فريقان (أحمر وأزرق) وسباي ماستر لكل فريق يشوف خريطة الكلمات السرية عبر رابط QR خاص بجواله.
+            يعطي السباي ماستر تلميحًا بكلمة واحدة ورقم، والفريق يخمّن الكلمات المرتبطة بالشات.
+            أول فريق يكشف كل كلماته يفوز — بس احذروا الصندوق الأسود!
         </p>
     </div>
 </div>
-       <div class="game-card game-card--v2" data-agp-game-id="team-war" data-agp-game-status="active">
-    <div class="game-cover-wrap">
-        <img src="team-war-cover.png" alt="غلاف لعبة حرب الفريقين" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
-    </div>
-    <div class="game-info">
-        <span class="game-title">⚔️ حرب الفريقين (Team War)</span>
-        <a href="games/team-war/index.html" target="_blank" class="btn-play">العب الآن</a>
-        <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
-        <p class="game-description">
-            فريقان (أزرق وأحمر) يتنافسان بالنقاط. المشاهدين ينضمون بكومنت مباشر بكلمة فريقهم،
-            وكل لاعب بدوره يكتب رقم مربع بالشات ليفتحه — رقم موجب يخصم من نقاط الفريق الخصم،
-            وسالب يخصم من نقاط فريقه هو. فيه صناديق خاصة مفاجئة تقدر تلغي دور لاعب أو تعطيك دور
-            إضافي. أول فريق تنتهي نقاطه يخسر!
-        </p>
-    </div>
-</div>
-    <div class="game-card game-card--v2" data-agp-game-id="word-categories" data-agp-game-status="active">
-    <div class="game-cover-wrap">
-        <img src="word-categories-cover.png" alt="غلاف لعبة اسم و حيوان و نبات و جماد و بلاد" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
-    </div>
-    <div class="game-info">
-        <span class="game-title">🔤 اسم و حيوان و نبات و جماد و بلاد (Word Categories)</span>
-        <a href="games/word-categories/index.html" target="_blank" class="btn-play">العب الآن</a>
-        <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
-        <p class="game-description">
-            حرف عربي عشوائي كل جولة، واللاعبون يكتبون إجاباتهم (اسم/حيوان/نبات/جماد/بلاد) بشات البث خلال وقت محدد.
-            بعد انتهاء الوقت يراجع المضيف كل إجابة ويقبلها أو يرفضها — كل إجابة مقبولة نقطة واحدة.
-            الفوز إما بالوصول لنقاط مستهدفة أو بعد عدد جولات محدد، حسب اختيار المضيف.
-        </p>
-    </div>
-</div>
-
-        <div class="game-card game-card--v2" data-agp-game-id="top-ten" data-agp-game-status="active">
-            <div class="game-cover-wrap">
-                <img src="top-ten-cover.png" alt="غلاف لعبة خمّن العشرة" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
-            </div>
-            <div class="game-info">
-                <span class="game-title">🏆 خمّن العشرة</span>
-                <a href="games/top-ten/index.html" target="_blank" class="btn-play">العب الآن</a>
-                <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
-                <p class="game-description">
-                    سؤال واحد كل جولة (مثل "اكتب عشر أشياء نسويها بالسفر") وعشرة صناديق مرتبة من الأهم للأقل أهمية —
-                    الصندوق رقم 1 يساوي 10 نقاط وينزل تدريجياً لين صندوق رقم 10 يساوي نقطة وحدة. المشاهدون ينضمون
-                    بكلمة مفتاحية بالشات (الجميع أو المتابعون بس، حسب اختيارك)، وأي متسابق يكتب إجابة صح (كلمة وحدة
-                    بسيطة) تتحط فوراً باسمه وصورته بصندوقها. فيه عدّاد وقت اختياري لكل سؤال، وينكشف الباقي تلقائياً
-                    لمّا ينتهي — أو يتحكم المضيف يدوياً بـ"السؤال التالي" أو "تخطي". تنتهي المباراة بعد عدد الجولات
-                    المستهدف وتظهر بطاقة الفائز بأعلى نقاط.
-                </p>
-            </div>
-        </div>
-        <div class="game-card game-card--v2" data-agp-game-id="russian-roulette" data-agp-game-status="active">
-    <div class="game-cover-wrap">
-        <img src="russian-roulette-cover.png" alt="غلاف لعبة روليت الروسي" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
-    </div>
-    <div class="game-info">
-        <span class="game-title">🔫 روليت الروسي (Russian Roulette)</span>
-        <a href="games/russian-roulette/index.html" target="_blank" class="btn-play">العب الآن</a>
-        <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
-        <p class="game-description">
-            عجلة أو بكرة سكرول تختار لاعباً يدوّر عليه الدور، فيختار رقم لاعب آخر من شات البث يستهدفه. محرك احتمال مخفي يحدد النتيجة حسب حجم ساقية الطلقات وعدد الطلقات المعبأة، مع إصابة مضمونة على آخر روح. تستمر المباراة حتى يبقى لاعب واحد فائز!
-        </p>
-    </div>
-</div>
-
-        <div class="game-card game-card--v2" data-agp-game-id="tribe-roulette" data-agp-game-status="active">
-    <div class="game-cover-wrap">
-        <img src="tribe-roulette-cover.png" alt="غلاف لعبة روليت القبائل" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
-    </div>
-    <div class="game-info">
-        <span class="game-title">🏹 روليت القبائل (Tribe Roulette)</span>
-        <a href="games/tribe-roulette/index.html" target="_blank" class="btn-play">العب الآن</a>
-        <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
-        <p class="game-description">
-            عجلة تختار لاعباً يدوّر عليه الدور، فتظهر له قبائل تخفي خلفها بقية اللاعبين — يختار رقم قبيلة من الشات ليقصي من خلفها، بدون معرفة هويته الحقيقية إلا بعد الإقصاء. لو وقفت العجلة على نفس الشخص مرتين متتاليتين، يقدر يرجّع مُقصى بدل الإقصاء. تستمر المباراة حتى يبقى لاعب واحد فائز!
-        </p>
-    </div>
-</div>
-
-        <div class="game-card game-card--v2" data-agp-game-id="photo-challenge" data-agp-game-status="active">
+<div class="game-card game-card--v2" data-agp-game-id="photo-challenge" data-agp-game-status="active">
     <div class="game-cover-wrap">
         <img src="photo-challenge-cover.png" alt="غلاف لعبة تحدي الصور" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
     </div>
@@ -985,6 +846,128 @@
         </p>
     </div>
 </div>
+<div class="game-card game-card--v2" data-agp-game-id="team-war" data-agp-game-status="active">
+    <div class="game-cover-wrap">
+        <img src="team-war-cover.png" alt="غلاف لعبة حرب الفريقين" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+    </div>
+    <div class="game-info">
+        <span class="game-title">⚔️ حرب الفريقين (Team War)</span>
+        <a href="games/team-war/index.html" target="_blank" class="btn-play">العب الآن</a>
+        <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
+        <p class="game-description">
+            فريقان (أزرق وأحمر) يتنافسان بالنقاط. المشاهدين ينضمون بكومنت مباشر بكلمة فريقهم،
+            وكل لاعب بدوره يكتب رقم مربع بالشات ليفتحه — رقم موجب يخصم من نقاط الفريق الخصم،
+            وسالب يخصم من نقاط فريقه هو. فيه صناديق خاصة مفاجئة تقدر تلغي دور لاعب أو تعطيك دور
+            إضافي. أول فريق تنتهي نقاطه يخسر!
+        </p>
+    </div>
+</div>
+<!--
+            روليت الإقصاء — أول لعبة أصلية (Native) تُبنى داخل نفس هذا
+            المستودع مباشرة (بدون موقع خارجي ولا جسر postMessage)، عبر
+            games/elimination-roulette/. راجع docs/CHANGELOG.md.
+        -->
+        <div class="game-card game-card--v2" data-agp-game-id="elimination-roulette" data-agp-game-status="active">
+            <div class="game-cover-wrap">
+                <img src="elimination-roulette-cover.png" alt="غلاف لعبة روليت الإقصاء" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+            </div>
+            <div class="game-info">
+                <span class="game-title">🎡 روليت الإقصاء (Elimination Roulette)</span>
+                <a href="games/elimination-roulette/index.html" target="_blank" class="btn-play">العب الآن</a>
+                <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
+                <p class="game-description">
+                    عجلة تدور وتتوقف عند أحد اللاعبين، فيختار رقم لاعب آخر يقصيه من شات البث. لو وقفت العجلة على نفس الشخص مرتين متتاليتين يقدر يرجّع لاعباً مُقصى بدل الإقصاء (لو مفعّلة ميزة انعاش صديق). أي مُقصى يقدر يرجع بإرسال هدية معيّنة يحددها الاستريمر (لو مفعّلة ميزة الإنعاش بالدعم). تستمر المباراة حتى يبقى لاعب واحد فائز!
+                </p>
+            </div>
+        </div>
+<div class="game-card game-card--v2" data-agp-game-id="tribe-roulette" data-agp-game-status="active">
+    <div class="game-cover-wrap">
+        <img src="tribe-roulette-cover.png" alt="غلاف لعبة روليت القبائل" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+    </div>
+    <div class="game-info">
+        <span class="game-title">🏹 روليت القبائل (Tribe Roulette)</span>
+        <a href="games/tribe-roulette/index.html" target="_blank" class="btn-play">العب الآن</a>
+        <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
+        <p class="game-description">
+            عجلة تختار لاعباً يدوّر عليه الدور، فتظهر له قبائل تخفي خلفها بقية اللاعبين — يختار رقم قبيلة من الشات ليقصي من خلفها، بدون معرفة هويته الحقيقية إلا بعد الإقصاء. لو وقفت العجلة على نفس الشخص مرتين متتاليتين، يقدر يرجّع مُقصى بدل الإقصاء. تستمر المباراة حتى يبقى لاعب واحد فائز!
+        </p>
+    </div>
+</div>
+<div class="game-card game-card--v2" data-agp-game-id="russian-roulette" data-agp-game-status="active">
+    <div class="game-cover-wrap">
+        <img src="russian-roulette-cover.png" alt="غلاف لعبة روليت الروسي" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+    </div>
+    <div class="game-info">
+        <span class="game-title">🔫 روليت الروسي (Russian Roulette)</span>
+        <a href="games/russian-roulette/index.html" target="_blank" class="btn-play">العب الآن</a>
+        <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
+        <p class="game-description">
+            عجلة أو بكرة سكرول تختار لاعباً يدوّر عليه الدور، فيختار رقم لاعب آخر من شات البث يستهدفه. محرك احتمال مخفي يحدد النتيجة حسب حجم ساقية الطلقات وعدد الطلقات المعبأة، مع إصابة مضمونة على آخر روح. تستمر المباراة حتى يبقى لاعب واحد فائز!
+        </p>
+    </div>
+</div>
+<div class="game-card game-card--v2" data-agp-game-id="fruit-roulette" data-agp-game-status="active">
+            <div class="game-cover-wrap">
+                <img src="fruit-roulette-cover.png" alt="غلاف لعبة روليت الفواكه" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+            </div>
+            <div class="game-info">
+                <span class="game-title">🍉 روليت الفواكه (Fruit Roulette)</span>
+                <a href="games/fruit-roulette/index.html" target="_blank" class="btn-play">العب الآن</a>
+                <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
+                <p class="game-description">
+                    عجلة تدور وتتوقف عند أحد اللاعبين، فيفتح صندوقاً من أربعة بكتابة رقمه في شات البث (هو فقط، وقت دوره). ثلاثة صناديق آمنة تحتوي فاكهة، وواحد أو أكثر يخفي "الشخصية الخفية" ويقصي صاحب الدور. عدد الصناديق المخفية يرتفع تدريجياً كل ما انتهى مؤقت الجولة. تستمر المباراة حتى يبقى لاعب واحد فائز!
+                </p>
+            </div>
+        </div>
+<div class="game-card game-card--v2" data-agp-game-id="musical-chairs" data-agp-game-status="active">
+    <div class="game-cover-wrap">
+        <img src="musical-chairs-cover.png" alt="غلاف لعبة الكراسي الموسيقية" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+    </div>
+    <div class="game-info">
+        <span class="game-title">🎵 الكراسي الموسيقية (Musical Chairs)</span>
+        <a href="games/musical-chairs/index.html" target="_blank" class="btn-play">العب الآن</a>
+        <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
+        <p class="game-description">
+            تدور الأفاتارات حول حلقة الكراسي، وفجأة تتوقف الموسيقى وتظهر أرقام على كل كرسي.
+            كل لاعب يكتب رقم الكرسي اللي يبيه بالشات — أول وحد يكتب الرقم الصحيح يفوز فيه.
+            أي لاعب ما يلقى كرسي يُقصى فوراً. عدد الكراسي ينقص كل دورة (تلقائي أو مخصّص)
+            لين يبقى لاعب واحد فقط — هو الفائز!
+        </p>
+    </div>
+</div>
+<div class="game-card game-card--v2" data-agp-game-id="word-categories" data-agp-game-status="active">
+    <div class="game-cover-wrap">
+        <img src="word-categories-cover.png" alt="غلاف لعبة اسم و حيوان و نبات و جماد و بلاد" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+    </div>
+    <div class="game-info">
+        <span class="game-title">🔤 اسم و حيوان و نبات و جماد و بلاد (Word Categories)</span>
+        <a href="games/word-categories/index.html" target="_blank" class="btn-play">العب الآن</a>
+        <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
+        <p class="game-description">
+            حرف عربي عشوائي كل جولة، واللاعبون يكتبون إجاباتهم (اسم/حيوان/نبات/جماد/بلاد) بشات البث خلال وقت محدد.
+            بعد انتهاء الوقت يراجع المضيف كل إجابة ويقبلها أو يرفضها — كل إجابة مقبولة نقطة واحدة.
+            الفوز إما بالوصول لنقاط مستهدفة أو بعد عدد جولات محدد، حسب اختيار المضيف.
+        </p>
+    </div>
+</div>
+<div class="game-card game-card--v2" data-agp-game-id="top-ten" data-agp-game-status="active">
+            <div class="game-cover-wrap">
+                <img src="top-ten-cover.png" alt="غلاف لعبة خمّن العشرة" class="game-cover" onerror="this.style.display='none'; this.parentElement.classList.add('no-cover');">
+            </div>
+            <div class="game-info">
+                <span class="game-title">🏆 خمّن العشرة</span>
+                <a href="games/top-ten/index.html" target="_blank" class="btn-play">العب الآن</a>
+                <button class="btn-toggle-desc" onclick="toggleDescription(this)">📋 تفاصيل اللعبة</button>
+                <p class="game-description">
+                    سؤال واحد كل جولة (مثل "اكتب عشر أشياء نسويها بالسفر") وعشرة صناديق مرتبة من الأهم للأقل أهمية —
+                    الصندوق رقم 1 يساوي 10 نقاط وينزل تدريجياً لين صندوق رقم 10 يساوي نقطة وحدة. المشاهدون ينضمون
+                    بكلمة مفتاحية بالشات (الجميع أو المتابعون بس، حسب اختيارك)، وأي متسابق يكتب إجابة صح (كلمة وحدة
+                    بسيطة) تتحط فوراً باسمه وصورته بصندوقها. فيه عدّاد وقت اختياري لكل سؤال، وينكشف الباقي تلقائياً
+                    لمّا ينتهي — أو يتحكم المضيف يدوياً بـ"السؤال التالي" أو "تخطي". تنتهي المباراة بعد عدد الجولات
+                    المستهدف وتظهر بطاقة الفائز بأعلى نقاط.
+                </p>
+            </div>
+        </div>
 
 
         <!--
