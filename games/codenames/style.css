@@ -546,7 +546,14 @@ body.cn-active{
 .cn-match-turn-badge .dot{ width:9px; height:9px; border-radius:999px; background:rgba(255,255,255,0.85); }
 .cn-match-turn-badge span.label{ font-weight:800; font-size:clamp(13px,2vmin,20px); color:#fff; white-space:nowrap; }
 
-.cn-match-hint-area{ display:flex; align-items:center; gap:clamp(6px,1.2vmin,10px); min-width:0; }
+.cn-match-hint-area{ display:flex; align-items:center; justify-content:center; gap:clamp(6px,1.2vmin,10px); min-width:0; flex:1 1 auto; }
+.cn-match-begin-btn{
+    height:clamp(34px,5vmin,48px); padding:0 clamp(22px,3.4vmin,40px);
+    border-radius:999px; border:none; cursor:pointer;
+    background:linear-gradient(90deg,#2f7d4f,#245f3d); color:#eafff0;
+    font-family:inherit; font-weight:900; font-size:clamp(16px,2.6vmin,24px);
+    box-shadow:0 0 18px rgba(47,125,79,0.5);
+}
 .cn-match-clue-num{
     flex:0 0 auto; width:clamp(34px,5vmin,48px); height:clamp(34px,5vmin,48px);
     border-radius:10px; display:flex; align-items:center; justify-content:center;
