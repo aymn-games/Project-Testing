@@ -91,9 +91,44 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* ======================================================================
-     *  2) الهيدر الأساسي الثابت -- بهوية اللعبة (بنفسجي). بدون أيقونتي
-     *     "!" و"⚙️" حالياً لأن التعليمات والدرج الجانبي غير مبنيين بعد
-     *     بهذه المرحلة (شاشة إعدادات فقط).
+     *  2) "طريقة اللعب" -- نافذة مشتركة (زر بالوبي الأساسي + زر داخل
+     *     إعدادات المباراة). المحتوى أدناه نص مؤقت بانتظار التعليمات
+     *     الفعلية من صاحب المشروع -- ✏️ عدّل HOW_TO_PLAY_HTML بس، بدون
+     *     لمس بقية هذا القسم.
+     * ==================================================================== */
+    var HOW_TO_PLAY_HTML = '<p style="text-align:center;color:rgba(240,228,255,0.5);font-size:14px">' +
+        'سيتم إضافة شرح طريقة اللعب هنا قريبًا.' +
+    '</p>';
+
+    var _howToPlayEl = null;
+
+    function ensureHowToPlayEl() {
+        if (_howToPlayEl) return _howToPlayEl;
+        _howToPlayEl = document.createElement('div');
+        _howToPlayEl.id = 'cn-htp-overlay';
+        document.body.appendChild(_howToPlayEl);
+        return _howToPlayEl;
+    }
+
+    function hideHowToPlay() {
+        if (_howToPlayEl) _howToPlayEl.className = '';
+    }
+
+    function showHowToPlay() {
+        var overlayEl = ensureHowToPlayEl();
+        overlayEl.className = 'cn-open';
+        overlayEl.innerHTML =
+            '<div class="cn-htp-modal">' +
+                '<div class="cn-htp-head"><span>📖 طريقة اللعب</span><button type="button" class="cn-htp-close" id="cn-htp-close-btn">✕</button></div>' +
+                '<div class="cn-htp-body">' + HOW_TO_PLAY_HTML + '</div>' +
+            '</div>';
+        el('cn-htp-close-btn').addEventListener('click', hideHowToPlay);
+    }
+
+    /* ======================================================================
+     *  3) الهيدر الأساسي الثابت -- بهوية اللعبة (بنفسجي). بدون أيقونة "⚙️"
+     *     حالياً لأن الدرج الجانبي غير مبني بعد بهذه المرحلة (شاشة إعدادات
+     *     فقط).
      * ==================================================================== */
     function injectHeader() {
         if (el('cn-header')) return;
@@ -329,7 +364,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (p.frame && AGP.playerCard) {
             return AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', size: 50, outClass: 'cn-lobby-framed-inner' });
         }
-        return '<div class="cn-lobby-pcard-avatar">' + escapeHtml(playerInitial(p)) + '</div>' +
+        var avatarInner = p.avatarUrl
+            ? '<img src="' + escapeAttr(p.avatarUrl) + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">'
+            : escapeHtml(playerInitial(p));
+        return '<div class="cn-lobby-pcard-avatar">' + avatarInner + '</div>' +
             '<div class="cn-lobby-pcard-pill">' +
                 '<span class="cn-lobby-pcard-name">' + escapeHtml(p.name || p.id) + '</span>' +
                 (extraPillContent || '') +
@@ -431,6 +469,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         root.style.display = 'flex';
         root.innerHTML =
             '<div class="cn-lobby-header">' +
+                '<button type="button" class="cn-lobby-htp-btn" id="cn-lobby-htp-btn">📖 طريقة اللعب</button>' +
                 '<div class="cn-lobby-header-title">' + escapeHtml(GAME_NAME) + '</div>' +
                 '<div class="cn-lobby-live"><span class="cn-lobby-live-dot"></span><span>LIVE</span></div>' +
             '</div>' +
@@ -468,6 +507,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         renderLobbyPlayerGrids();
 
+        el('cn-lobby-htp-btn').addEventListener('click', showHowToPlay);
         el('cn-lobby-back-platform-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
         el('cn-start-round-btn').addEventListener('click', function () {
             _registrationOpen = false;
@@ -531,6 +571,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * ==================================================================== */
     var _matchEl = null;
     var _matchCommentUnsub = null;
+    var _matchJoinUnsub = null;
+    var _matchJoinQueue = []; // { id, name, team } -- لاعبون جدد كتبوا كلمة مفتاحية فريق أثناء المباراة، بانتظار الحفظ
     var _matchUI = { settingsOpen: false, modal: null };
 
     // بنك كلمات موسّع (998 كلمة) -- مزوَّد من صاحب المشروع
@@ -692,7 +734,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         lastStartingTeam: null,              // لمنع تكرار نفس الفريق البادئ بمباراة جديدة تالية
         justRevealed: [],                    // [idx, ...] الصناديق المكشوفة بآخر دورة تحديث فقط -- لتشغيل حركة الانبثاق مرة وحدة
         previousWords: null,                 // كلمات آخر لوحة -- تُستبعد بالكامل من توليد اللوحة الجديدة (ريست/مباراة جديدة)
-        timerStarted: false                  // ما يبدأ وقت التلميح ولا تُقبل أوامر الشات إلا بعد ضغط "▶ ابدأ" يدويًا
+        timerStarted: false,                 // ما يبدأ وقت التلميح ولا تُقبل أوامر الشات إلا بعد ضغط "▶ ابدأ" يدويًا
+        pendingWin: null,                    // { team, reason } -- كل الصناديق انكشفت وينتظر ضغط "إعلان الفوز" اليدوي
+        forceRevealed: {}                    // idx -> true لصناديق انكشفت تلقائيًا بنهاية المباراة (ما اختارها أحد) -- تُعرض بلونها فقط بدون صورة/أيقونة
     };
 
     /* ---------------------------------------------------------------------
@@ -772,14 +816,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _relaySocket.addEventListener('close', function () { _relaySocket = null; });
     }
 
+    function buildSpymasterBoardPayload() {
+        return _match.words.map(function (pair, i) { return [pair[0], pair[1], !!_match.revealed[i]]; });
+    }
+
     function broadcastBoardToSpymasters() {
-        relaySend({ type: 'board_update', board: _match.words });
+        relaySend({ type: 'board_update', board: buildSpymasterBoardPayload() });
     }
 
     function approveSpymasterRequest(requestId) {
         var req = _spymasterRequests.filter(function (r) { return r.requestId === requestId; })[0];
         if (!req) return;
-        relaySend({ type: 'spymaster_approve', requestId: requestId, board: _match.words });
+        relaySend({ type: 'spymaster_approve', requestId: requestId, board: buildSpymasterBoardPayload() });
         pushEvent(req.team, req.name + ' وافق الاستريمر على طلبه سباي ماستر (جوال)');
         _spymasterRequests = _spymasterRequests.filter(function (r) { return r.requestId !== requestId; });
         renderMatchScreen();
@@ -835,6 +883,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
         _match.previousWords = words;
         _match.revealed = {};
+        _match.forceRevealed = {};
         _match.selections = {};
         _match.countTeam1 = (startingTeam === TEAM1) ? 9 : 8;
         _match.countTeam2 = (startingTeam === TEAM2) ? 9 : 8;
@@ -870,10 +919,41 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderMatchScreen();
     }
 
+    /* ---------------------------------------------------------------------
+       تنبيه منتصف الشاشة -- عنصر ثابت مستقل عن دورة renderMatchScreen()
+       (ما يُمسَح مع كل إعادة رسم) يظهر لمدة محددة وسط الشاشة وبعدها
+       يختفي تلقائيًا (التلميح نفسه يبقى بمكانه الدائم بشريط الحالة).
+    --------------------------------------------------------------------- */
+    var _centerBannerEl = null;
+    var _centerBannerTimeout = null;
+
+    function ensureCenterBannerEl() {
+        if (_centerBannerEl) return _centerBannerEl;
+        _centerBannerEl = document.createElement('div');
+        _centerBannerEl.id = 'cn-center-banner';
+        document.body.appendChild(_centerBannerEl);
+        return _centerBannerEl;
+    }
+
+    function showCenterBanner(html, durationMs, extraClass) {
+        var bannerEl = ensureCenterBannerEl();
+        if (_centerBannerTimeout) clearTimeout(_centerBannerTimeout);
+        bannerEl.className = 'cn-open' + (extraClass ? ' ' + extraClass : '');
+        bannerEl.innerHTML = html;
+        _centerBannerTimeout = setTimeout(function () { bannerEl.classList.remove('cn-open'); }, durationMs);
+    }
+
+    function showTurnBanner() {
+        var isT1 = (_match.turn === TEAM1);
+        var name = isT1 ? _settings.team1Name : _settings.team2Name;
+        showCenterBanner('<div class="cn-banner-turn-label">الآن دور</div><div class="cn-banner-turn-name">' + escapeHtml(name) + '</div>', 2000, isT1 ? 'cn-team1' : 'cn-team2');
+    }
+
     function beginMatchTimer() {
         if (_match.timerStarted || _match.gameOver) return;
         _match.timerStarted = true;
         startHintTimer();
+        showTurnBanner();
         renderMatchScreen();
     }
 
@@ -887,23 +967,35 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
        منطق كشف الصندوق -- يرجع 'continue' لو يقدر يكمل فتح صناديق ثانية
        بنفس رسالة التأكيد، أو 'stop' لو لازم يتوقف فورًا (محايد/فريق ثاني/قاتل)
     --------------------------------------------------------------------- */
+    function revealAllBoxes() {
+        for (var i = 0; i < _match.words.length; i++) {
+            if (!_match.revealed[i]) _match.forceRevealed[i] = true; // ما اختاروه فعليًا -- يُعرض بلونه فقط بدون صورة
+            _match.revealed[i] = true;
+        }
+        _match.selections = {};
+        broadcastBoardToSpymasters();
+    }
+
+    function triggerPendingWin(team, reason) {
+        _match.pendingWin = { team: team, reason: reason };
+        stopMatchTimers();
+        revealAllBoxes();
+    }
+
     function openBox(idx) {
-        if (_match.revealed[idx] || _match.gameOver) return 'stop';
+        if (_match.revealed[idx] || _match.gameOver || _match.pendingWin) return 'stop';
         var pair = _match.words[idx];
         if (!pair) return 'stop';
         var role = pair[1];
         _match.revealed[idx] = true;
         _match.justRevealed.push(idx);
         delete _match.selections[idx];
+        broadcastBoardToSpymasters();
 
         if (role === 'assassin') {
-            _match.gameOver = true;
-            _match.winnerTeam = otherTeam(_match.turn);
-            _match.loseReason = 'assassin';
             pushEvent(_match.turn, 'فتح فريقهم الصندوق الأسود -- خسارة فورية 💀');
             playSound('assassin');
-            stopMatchTimers();
-            awardWinnerPoints();
+            triggerPendingWin(otherTeam(_match.turn), 'assassin');
             return 'stop';
         }
 
@@ -912,11 +1004,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             pushEvent(_match.turn, 'كشف «' + pair[0] + '» ✓ (صندوق صحيح)');
             playSound('correct');
             if (countRemaining(roleOfTeam(_match.turn)) === 0) {
-                _match.gameOver = true;
-                _match.winnerTeam = _match.turn;
-                _match.loseReason = 'boxes';
-                stopMatchTimers();
-                awardWinnerPoints();
+                triggerPendingWin(_match.turn, 'boxes');
+                return 'stop';
             }
             return 'continue';
         }
@@ -933,11 +1022,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         pushEvent(_match.turn, 'كشف «' + pair[0] + '» -- صندوق الفريق الثاني، انتهى الدور');
         playSound('wrong');
         if (countRemaining(roleOfTeam(otherT)) === 0) {
-            _match.gameOver = true;
-            _match.winnerTeam = otherT;
-            _match.loseReason = 'boxes';
-            stopMatchTimers();
-            awardWinnerPoints();
+            triggerPendingWin(otherT, 'boxes');
+            return 'stop';
         }
         return 'stop';
     }
@@ -956,11 +1042,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    // ⚠️ قبل إعلان الفوز: كل الصناديق تنكشف (triggerPendingWin أعلاه) ويظهر
+    // زر "🏆 إعلان الفوز" بمكان التلميح/الوقت -- الاستريمر هو من يضغطه
+    // يدويًا، وهذا بالضبط ما ينقل لشاشة الفوز (مو تلقائي فور تحقق الشرط).
+    function declareWin() {
+        if (!_match.pendingWin || _match.gameOver) return;
+        _match.gameOver = true;
+        _match.winnerTeam = _match.pendingWin.team;
+        _match.loseReason = _match.pendingWin.reason;
+        _match.pendingWin = null;
+        awardWinnerPoints();
+        renderMatchScreen();
+    }
+
     function switchTurnIfNotOver() {
-        if (_match.gameOver) return;
+        if (_match.gameOver || _match.pendingWin) return;
         _match.turn = otherTeam(_match.turn);
         _match.activeHint = null;
         _match.selections = {};
+        showTurnBanner();
     }
 
     /* ---------------------------------------------------------------------
@@ -1035,9 +1135,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function processConfirmIndices(indices) {
         for (var i = 0; i < indices.length; i++) {
-            if (_match.gameOver) break;
+            if (_match.gameOver || _match.pendingWin) break;
             var result = openBox(indices[i] - 1);
-            if (result === 'stop') { switchTurnIfNotOver(); if (!_match.gameOver) startHintTimer(); break; }
+            if (result === 'stop') {
+                if (!_match.pendingWin) { switchTurnIfNotOver(); if (!_match.gameOver) startHintTimer(); }
+                break;
+            }
         }
         renderMatchScreen();
     }
@@ -1055,6 +1158,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _match.activeHint = { word: word, number: number };
         pushEvent(_match.turn, 'أعطى التلميح «' + word + ' ' + number + '»');
         startGuessTimer();
+        var isT1 = (_match.turn === TEAM1);
+        showCenterBanner('<div class="cn-banner-hint-word">' + escapeHtml(word) + '</div><div class="cn-banner-hint-num">' + number + '</div>', 2000, isT1 ? 'cn-team1' : 'cn-team2');
         renderMatchScreen();
     }
 
@@ -1070,10 +1175,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderMatchScreen();
     }
 
+    function wireMatchJoinListener() {
+        if (_matchJoinUnsub) return;
+        _matchJoinUnsub = AGP.events.on('stream:commentReceived', function (payload) {
+            if (_screen !== 'match' || _match.gameOver) return;
+            if (!payload || typeof payload.text !== 'string' || !payload.id) return;
+            if (findPlayerById(payload.id)) return; // منضم بأحد الفريقين أصلاً
+            if (_matchJoinQueue.some(function (q) { return q.id === payload.id; })) return; // بالطابور أصلاً
+
+            var text = normalizeArabicText(payload.text);
+            var kw1 = normalizeArabicText(_settings.team1Keyword);
+            var kw2 = normalizeArabicText(_settings.team2Keyword);
+            var team = null;
+            if (text === kw1) team = TEAM1;
+            else if (text === kw2) team = TEAM2;
+            if (!team) return;
+
+            _matchJoinQueue.push({ id: payload.id, name: payload.name || payload.id, team: team });
+            if (_matchUI.modal === 'players') renderMatchScreen();
+        });
+    }
+
     function wireMatchCommentListener() {
         if (_matchCommentUnsub) return;
         _matchCommentUnsub = AGP.events.on('stream:commentReceived', function (payload) {
-            if (_screen !== 'match' || _match.gameOver || !_match.timerStarted) return;
+            if (_screen !== 'match' || _match.gameOver || _match.pendingWin || !_match.timerStarted) return;
             if (!payload || typeof payload.text !== 'string' || !payload.id) return;
 
             var raw = payload.text.trim();
@@ -1129,7 +1255,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var hintMatch = norm.match(/^(\d{1,2})\s+(\S.*)$/);
             if (hintMatch) {
                 if (isActiveTeam && !_match.activeHint && payload.id === _match.spymaster[turn]) {
-                    applyHint(hintMatch[2].trim(), Number(hintMatch[1]));
+                    var hintWord = hintMatch[2].trim();
+                    if (/\s/.test(hintWord)) {
+                        showCenterBanner('<div class="cn-banner-warn">تسولف؟ 😅<br>اكتب كلمة وحدة بس بالتلميح!</div>', 3000, 'cn-warn');
+                    } else {
+                        applyHint(hintWord, Number(hintMatch[1]));
+                    }
                 }
                 return;
             }
@@ -1193,6 +1324,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return '<div class="cn-match-tile-selections">' +
             ids.slice(0, 5).map(function (pid) {
                 var p = findPlayerById(pid);
+                if (p && p.avatarUrl) {
+                    return '<span class="cn-match-tile-sel-avatar"><img src="' + escapeAttr(p.avatarUrl) + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;"></span>';
+                }
                 return '<span class="cn-match-tile-sel-avatar">' + escapeHtml(p ? playerInitial(p) : '؟') + '</span>';
             }).join('') +
         '</div>';
@@ -1210,6 +1344,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '</div>';
             }
             var popClass = (_match.justRevealed.indexOf(i) !== -1) ? ' cn-tile-pop' : '';
+
+            if (_match.forceRevealed[i]) {
+                // ⚠️ صندوق انكشف تلقائيًا بنهاية المباراة (ما اختاره أحد فعليًا) --
+                // يُعرض بلونه فقط (أحمر/أزرق/أسود/أبيض حسب دوره)، بدون أيقونة ولا صورة شخصية
+                return '<div class="cn-match-tile ' + fillForRole(role) + ' cn-tile-force-revealed' + popClass + '" data-idx="' + i + '">' +
+                    '<span class="cn-match-tile-num">' + (i + 1) + '</span>' +
+                    '<span class="cn-match-tile-word">' + escapeHtml(word) + '</span>' +
+                '</div>';
+            }
+
             var imgClass = 'cn-tile-img-' + role + ((role === 'red' || role === 'blue') ? ('-' + variant) : '');
             return '<div class="cn-match-tile ' + fillForRole(role) + popClass + '" data-idx="' + i + '">' +
                 '<span class="cn-match-tile-num">' + (i + 1) + '</span>' +
@@ -1233,8 +1377,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var confBtn = isConf
                 ? '<button type="button" class="cn-match-roster-btn confirm cn-active-role" data-role="confirmer" data-team="' + team + '" data-id="' + escapeAttr(p.id) + '" title="إلغاء تأكيد الأجوبة">✓</button>'
                 : (confFilled ? '' : '<button type="button" class="cn-match-roster-btn confirm" data-role="confirmer" data-team="' + team + '" data-id="' + escapeAttr(p.id) + '" title="تحويل إلى تأكيد الأجوبة">✓</button>');
+            var avatarInner = p.avatarUrl
+                ? '<img src="' + escapeAttr(p.avatarUrl) + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">'
+                : escapeHtml(playerInitial(p));
             return '<div class="cn-match-roster-row">' +
-                '<span class="cn-match-roster-avatar">' + escapeHtml(playerInitial(p)) + '</span>' +
+                '<span class="cn-match-roster-avatar">' + avatarInner + '</span>' +
                 '<span class="cn-match-roster-name">' + escapeHtml(p.name || p.id) + '</span>' +
                 spyBtn + confBtn +
             '</div>';
@@ -1288,12 +1435,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var html = '<div class="cn-match-overlay' + (open ? ' cn-open' : '') + '" id="cn-match-overlay">';
 
         if (_matchUI.modal === 'players') {
-            var joining = []; // ⚠️ نظام دخول لاعبين أثناء المباراة لسا غير مربوط بمنطق حقيقي
             html += '<div class="cn-match-modal cn-modal-players">' +
                 '<div class="cn-match-modal-head"><span>دخول اللاعبين الجدد للمباراة</span>' +
                     '<button type="button" class="cn-match-modal-close" id="cn-match-modal-close">✕</button></div>' +
                 '<div class="cn-modal-players-list">' +
-                (joining.length ? '' : '<div style="text-align:center;color:rgba(240,228,255,0.4);font-size:14px;padding:20px 0">ما فيه طلبات دخول حالياً</div>') +
+                (_matchJoinQueue.length
+                    ? _matchJoinQueue.map(function (q) {
+                        var teamLabel = (q.team === TEAM1) ? _settings.team1Name : _settings.team2Name;
+                        return '<div class="cn-modal-players-row">' +
+                            '<span class="cn-modal-players-avatar">' + escapeHtml(playerInitial(q)) + '</span>' +
+                            '<span class="cn-modal-players-name">' + escapeHtml(q.name) + '</span>' +
+                            '<span class="cn-modal-players-team">' + escapeHtml(teamLabel) + '</span>' +
+                        '</div>';
+                    }).join('')
+                    : '<div style="text-align:center;color:rgba(240,228,255,0.4);font-size:14px;padding:20px 0">ما فيه طلبات دخول حالياً</div>') +
                 '</div>' +
                 '<button type="button" class="cn-modal-players-save" id="cn-match-modal-save">حفظ وإكمال المباراة</button>' +
             '</div>';
@@ -1365,6 +1520,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (_rootEl) _rootEl.style.display = 'none';
         if (_lobbyEl) _lobbyEl.style.display = 'none';
         wireMatchCommentListener();
+        wireMatchJoinListener();
         wireMatchTimerListeners();
         connectRelay();
 
@@ -1374,8 +1530,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var isT1Turn = (_match.turn === TEAM1);
         var turnName = isT1Turn ? _settings.team1Name : _settings.team2Name;
         var hintAreaHtml;
-        if (!_match.timerStarted) {
-            hintAreaHtml = '<button type="button" class="cn-match-begin-btn" id="cn-match-begin-btn">▶ ابدأ</button>';
+        if (_match.pendingWin) {
+            hintAreaHtml = '<button type="button" class="cn-match-declare-win-btn" id="cn-match-declare-win-btn">🏆 إعلان الفوز</button>';
+        } else if (!_match.timerStarted) {
+            hintAreaHtml = '<button type="button" class="cn-match-begin-btn" id="cn-match-begin-btn">▶ ابدأ</button>' +
+                '<span class="cn-match-begin-hint">تأكد إن الكل متفق على كلماته قبل الضغط</span>';
         } else {
             var hintHtml = _match.activeHint
                 ? '<div class="cn-match-clue-num">' + _match.activeHint.number + '</div><div class="cn-match-clue-text">' + escapeHtml(_match.activeHint.word) + '</div>'
@@ -1407,6 +1566,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         '<button type="button" class="cn-match-settings-item purple" id="cn-match-open-barcode"><span>▦</span><span>باركود السباي ماستر</span></button>' +
                         '<button type="button" class="cn-match-settings-item gold" id="cn-match-open-requests"><span>✉</span><span>طلبات السباي ماستر</span></button>' +
                         '<button type="button" class="cn-match-settings-item purple" id="cn-match-open-timers"><span>⏳</span><span>تعديل الوقت</span></button>' +
+                        '<button type="button" class="cn-match-settings-item gold" id="cn-match-open-htp"><span>📖</span><span>طريقة اللعب</span></button>' +
                         '<div class="cn-match-settings-divider"></div>' +
                         (!_match.matchStarted && !_match.gameOver
                             ? '<button type="button" class="cn-match-settings-item purple" id="cn-match-reset-btn"><span>🔄</span><span>ريست الكلمات</span></button><div class="cn-match-settings-divider"></div>'
@@ -1448,6 +1608,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var beginBtn = el('cn-match-begin-btn');
         if (beginBtn) beginBtn.addEventListener('click', beginMatchTimer);
+        var declareWinBtn = el('cn-match-declare-win-btn');
+        if (declareWinBtn) declareWinBtn.addEventListener('click', declareWin);
 
         var openPlayersBtn = el('cn-match-open-players');
         if (openPlayersBtn) openPlayersBtn.addEventListener('click', function () { _matchUI.modal = 'players'; _matchUI.settingsOpen = false; renderMatchScreen(); });
@@ -1457,6 +1619,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (openRequestsBtn) openRequestsBtn.addEventListener('click', function () { _matchUI.modal = 'requests'; _matchUI.settingsOpen = false; renderMatchScreen(); });
         var openTimersBtn = el('cn-match-open-timers');
         if (openTimersBtn) openTimersBtn.addEventListener('click', function () { _matchUI.modal = 'timers'; _matchUI.settingsOpen = false; renderMatchScreen(); });
+        var openHtpBtn = el('cn-match-open-htp');
+        if (openHtpBtn) openHtpBtn.addEventListener('click', function () { _matchUI.settingsOpen = false; renderMatchScreen(); showHowToPlay(); });
         var resetBtn = el('cn-match-reset-btn');
         if (resetBtn) resetBtn.addEventListener('click', function () { _matchUI.settingsOpen = false; resetBoard(); });
         var exitBtn = el('cn-match-exit-btn');
@@ -1485,7 +1649,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var closeBtn = el('cn-match-modal-close');
         if (closeBtn) closeBtn.addEventListener('click', function () { _matchUI.modal = null; renderMatchScreen(); });
         var saveBtn = el('cn-match-modal-save');
-        if (saveBtn) saveBtn.addEventListener('click', function () { _matchUI.modal = null; renderMatchScreen(); });
+        if (saveBtn) saveBtn.addEventListener('click', function () {
+            _matchJoinQueue.forEach(function (q) {
+                if (!findPlayerById(q.id)) AGP.player.addPlayer({ id: q.id, name: q.name, team: q.team });
+            });
+            _matchJoinQueue = [];
+            _matchUI.modal = null;
+            renderMatchScreen();
+        });
         var newMatchBtn = el('cn-match-new-match-btn');
         if (newMatchBtn) newMatchBtn.addEventListener('click', function () { startNewMatch(false); renderMatchScreen(); });
         var replayBtn = el('cn-match-replay-btn');
