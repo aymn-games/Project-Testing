@@ -66,7 +66,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         team1Name: 'الفريق الأحمر',
         team1Keyword: '',
         team2Name: 'الفريق الأزرق',
-        team2Keyword: ''
+        team2Keyword: '',
+        hintSeconds: 150,   // وقت السباي ماستر لإرسال التلميح -- افتراضي 2:30 (خيارات: 2:00/2:30/3:00)
+        guessSeconds: 120   // وقت التخمين/التأكيد بعد التلميح -- افتراضي 2:00 (خيارات: 1:30/2:00/2:30)
     };
 
     function el(id) { return document.getElementById(id); }
@@ -134,6 +136,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return '<button type="button" class="cn-pill-btn' + active + '" data-key="followersOnly" data-value="' + opt.value + '">' + opt.label + '</button>';
         }).join('');
 
+        var hintPills = [
+            { value: 120, label: '2:00' },
+            { value: 150, label: '2:30' },
+            { value: 180, label: '3:00' }
+        ].map(function (opt) {
+            var active = (_settings.hintSeconds === opt.value) ? ' cn-pill-active' : '';
+            return '<button type="button" class="cn-pill-btn' + active + '" data-key="hintSeconds" data-value="' + opt.value + '">' + opt.label + '</button>';
+        }).join('');
+
+        var guessPills = [
+            { value: 90, label: '1:30' },
+            { value: 120, label: '2:00' },
+            { value: 150, label: '2:30' }
+        ].map(function (opt) {
+            var active = (_settings.guessSeconds === opt.value) ? ' cn-pill-active' : '';
+            return '<button type="button" class="cn-pill-btn' + active + '" data-key="guessSeconds" data-value="' + opt.value + '">' + opt.label + '</button>';
+        }).join('');
+
         root.innerHTML =
             '<h2>إعدادات مباراة كود نيمز</h2>' +
 
@@ -165,6 +185,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<span class="cn-row-label">🔑 مين يقدر يدخل؟</span>' +
             '</div>' +
 
+            '<div class="cn-row" id="cn-row-hintSeconds">' +
+                '<div class="cn-pill-group">' + hintPills + '</div>' +
+                '<span class="cn-row-label">⏳ وقت إرسال التلميح من السباي ماستر</span>' +
+            '</div>' +
+
+            '<div class="cn-row" id="cn-row-guessSeconds">' +
+                '<div class="cn-pill-group">' + guessPills + '</div>' +
+                '<span class="cn-row-label">⏳ وقت اختيار اللاعبين وتأكيد الإجابة</span>' +
+            '</div>' +
+
             '<div id="cn-settings-error" class="cn-error-msg" style="display:none;"></div>' +
 
             '<button type="button" id="cn-connect-btn" class="cn-btn-connect">اتصال بالبث وبدء الإعدادات</button>' +
@@ -183,6 +213,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('cn-row-followersOnly').addEventListener('click', function (e) {
             var btn = e.target.closest('.cn-pill-btn'); if (!btn) return;
             _settings.followersOnly = (btn.getAttribute('data-value') === 'true');
+            renderSettingsScreen();
+        });
+        el('cn-row-hintSeconds').addEventListener('click', function (e) {
+            var btn = e.target.closest('.cn-pill-btn'); if (!btn) return;
+            _settings.hintSeconds = Number(btn.getAttribute('data-value'));
+            renderSettingsScreen();
+        });
+        el('cn-row-guessSeconds').addEventListener('click', function (e) {
+            var btn = e.target.closest('.cn-pill-btn'); if (!btn) return;
+            _settings.guessSeconds = Number(btn.getAttribute('data-value'));
             renderSettingsScreen();
         });
 
@@ -278,7 +318,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return name ? name.charAt(0) : '؟';
     }
 
-    function lobbyCardHtml(p) {
+    function playerCardInnerHtml(p, extraPillContent) {
         // ⚠️ إصلاح: كانت كل بطاقات اللوبي تمر ببطاقتنا المخصصة (تصميم
         // Claude Design بالحرف) اللي ما تستدعي AGP.playerCard.renderHtml
         // إطلاقاً -- فنظام الإطارات الحقيقي (js/agp-player-card.js) ما كان
@@ -287,17 +327,34 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // نفس منطق الإطارات بكل اللعبة، بدون إعادة تنفيذه هنا يدوياً.
         // لاعب بدون إطار يبقى ببطاقتنا المخصصة كما هي.
         if (p.frame && AGP.playerCard) {
-            return '<div class="cn-lobby-pcard cn-lobby-pcard-framed">' +
-                '<button type="button" class="cn-lobby-pcard-remove-framed" data-id="' + escapeAttr(p.id) + '" title="حذف اللاعب">✕</button>' +
-                AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', size: 50, outClass: 'cn-lobby-framed-inner' }) +
-            '</div>';
+            return AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', size: 50, outClass: 'cn-lobby-framed-inner' });
         }
-        return '<div class="cn-lobby-pcard">' +
-            '<div class="cn-lobby-pcard-avatar">' + escapeHtml(playerInitial(p)) + '</div>' +
+        return '<div class="cn-lobby-pcard-avatar">' + escapeHtml(playerInitial(p)) + '</div>' +
             '<div class="cn-lobby-pcard-pill">' +
                 '<span class="cn-lobby-pcard-name">' + escapeHtml(p.name || p.id) + '</span>' +
-                '<button type="button" class="cn-lobby-pcard-remove" data-id="' + escapeAttr(p.id) + '" title="حذف اللاعب">✕</button>' +
-            '</div>' +
+                (extraPillContent || '') +
+            '</div>';
+    }
+
+    function lobbyCardHtml(p) {
+        if (p.frame && AGP.playerCard) {
+            return '<div class="cn-lobby-pcard cn-lobby-pcard-framed">' +
+                '<button type="button" class="cn-lobby-pcard-remove-framed" data-id="' + escapeAttr(p.id) + '" title="حذف اللاعب">✕</button>' +
+                playerCardInnerHtml(p) +
+            '</div>';
+        }
+        var removeBtn = '<button type="button" class="cn-lobby-pcard-remove" data-id="' + escapeAttr(p.id) + '" title="حذف اللاعب">✕</button>';
+        return '<div class="cn-lobby-pcard">' + playerCardInnerHtml(p, removeBtn) + '</div>';
+    }
+
+    function winnerCardHtml(p) {
+        var avatarInner = p.avatarUrl
+            ? '<img src="' + escapeAttr(p.avatarUrl) + '" alt="">'
+            : escapeHtml(playerInitial(p));
+        return '<div class="cn-winner-card">' +
+            '<div class="cn-winner-card-avatar">' + avatarInner + '</div>' +
+            '<div class="cn-winner-card-name">' + escapeHtml(p.name || p.id) + '</div>' +
+            '<div class="cn-winner-card-points">+' + WINNER_POINTS_PER_PLAYER + '</div>' +
         '</div>';
     }
 
@@ -659,20 +716,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return otherTeam(_match.lastStartingTeam);
     }
 
-    function startNewMatch() {
+    function startNewMatch(keepRoles) {
         var starting = pickRandomStartingTeam();
         _match.lastStartingTeam = starting;
         _match.matchStarted = false;
-        _match.spymaster = {};
-        _match.confirmer = {};
+        if (!keepRoles) { _match.spymaster = {}; _match.confirmer = {}; }
         _match.events = { team1: [], team2: [] };
         generateBoard(starting);
+        startHintTimer();
     }
 
     function resetBoard() {
         if (_match.matchStarted || _match.gameOver) return;
         var newStarting = otherTeam(_match.turn);
         generateBoard(newStarting);
+        startHintTimer();
         renderMatchScreen();
     }
 
@@ -701,6 +759,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             _match.loseReason = 'assassin';
             pushEvent(_match.turn, 'فتح فريقهم الصندوق الأسود -- خسارة فورية 💀');
             playSound('assassin');
+            stopMatchTimers();
+            awardWinnerPoints();
             return 'stop';
         }
 
@@ -712,6 +772,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 _match.gameOver = true;
                 _match.winnerTeam = _match.turn;
                 _match.loseReason = 'boxes';
+                stopMatchTimers();
+                awardWinnerPoints();
             }
             return 'continue';
         }
@@ -731,8 +793,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             _match.gameOver = true;
             _match.winnerTeam = otherT;
             _match.loseReason = 'boxes';
+            stopMatchTimers();
+            awardWinnerPoints();
         }
         return 'stop';
+    }
+
+    /* ---------------------------------------------------------------------
+       نقاط الفوز -- عبر AGP.scoreManager المشترك (نفس نظام النقاط
+       بالمنصة، js/agp-score-manager.js) بدل أي حساب مستقل. كل لاعب
+       بالفريق الفائز ياخذ نفس عدد النقاط.
+    --------------------------------------------------------------------- */
+    var WINNER_POINTS_PER_PLAYER = 3;
+
+    function awardWinnerPoints() {
+        if (!_match.winnerTeam || !AGP.scoreManager) return;
+        getTeamPlayers(_match.winnerTeam).forEach(function (p) {
+            AGP.scoreManager.addPoints(p.id, WINNER_POINTS_PER_PLAYER);
+        });
     }
 
     function switchTurnIfNotOver() {
@@ -742,11 +820,81 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _match.selections = {};
     }
 
+    /* ---------------------------------------------------------------------
+       مؤقّتات الدور -- عبر AGP.timerManager المشترك (js/agp-timer-manager.js)
+       بدل إدارة setInterval يدوياً. مؤقّتان مسمّيان لا يشتغلان بنفس الوقت
+       أبداً: وقت التلميح (قبل ما السباي ماستر يرسل)، ووقت الاختيار/التأكيد
+       (بعد إرسال التلميح). انتهاء أي منهم بدون فعل = انتقال فوري للدور.
+    --------------------------------------------------------------------- */
+    var TIMER_HINT = 'codenames-hint';
+    var TIMER_GUESS = 'codenames-guess';
+    var _matchTimersWired = false;
+
+    function startHintTimer() {
+        AGP.timerManager.stop(TIMER_GUESS);
+        AGP.timerManager.start(TIMER_HINT, _settings.hintSeconds);
+    }
+
+    function startGuessTimer() {
+        AGP.timerManager.stop(TIMER_HINT);
+        AGP.timerManager.start(TIMER_GUESS, _settings.guessSeconds);
+    }
+
+    function stopMatchTimers() {
+        AGP.timerManager.stop(TIMER_HINT);
+        AGP.timerManager.stop(TIMER_GUESS);
+    }
+
+    function formatSeconds(s) {
+        s = Math.max(0, s);
+        var m = Math.floor(s / 60), r = s % 60;
+        return m + ':' + (r < 10 ? '0' : '') + r;
+    }
+
+    function renderTimerPillGroup(key, options) {
+        return options.map(function (opt) {
+            var active = (_settings[key] === opt.value) ? ' cn-pill-active' : '';
+            return '<button type="button" class="cn-pill-btn' + active + '" data-key="' + key + '" data-value="' + opt.value + '">' + opt.label + '</button>';
+        }).join('');
+    }
+
+    function updateTimerTickDisplay(remainingSeconds) {
+        var valEl = el('cn-match-timer-val');
+        if (valEl) valEl.textContent = formatSeconds(remainingSeconds);
+    }
+
+    function handleMatchTimerEnded(timerName) {
+        if (_screen !== 'match' || _match.gameOver) return;
+        if (timerName === TIMER_HINT) {
+            pushEvent(_match.turn, 'ما أرسل السباي ماستر التلميح بالوقت المحدد -- انتقل الدور');
+        } else if (timerName === TIMER_GUESS) {
+            pushEvent(_match.turn, 'انتهى وقت الاختيار قبل التأكيد الكامل -- انتقل الدور');
+        } else {
+            return;
+        }
+        switchTurnIfNotOver();
+        startHintTimer();
+        renderMatchScreen();
+    }
+
+    function wireMatchTimerListeners() {
+        if (_matchTimersWired) return;
+        _matchTimersWired = true;
+        AGP.events.on('timer:ended', function (payload) {
+            if (payload && payload.name) handleMatchTimerEnded(payload.name);
+        });
+        AGP.events.on('timer:tick', function (payload) {
+            if (!payload || _screen !== 'match') return;
+            if (payload.name !== TIMER_HINT && payload.name !== TIMER_GUESS) return;
+            updateTimerTickDisplay(payload.remainingSeconds);
+        });
+    }
+
     function processConfirmIndices(indices) {
         for (var i = 0; i < indices.length; i++) {
             if (_match.gameOver) break;
             var result = openBox(indices[i] - 1);
-            if (result === 'stop') { switchTurnIfNotOver(); break; }
+            if (result === 'stop') { switchTurnIfNotOver(); if (!_match.gameOver) startHintTimer(); break; }
         }
         renderMatchScreen();
     }
@@ -763,6 +911,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _match.matchStarted = true;
         _match.activeHint = { word: word, number: number };
         pushEvent(_match.turn, 'أعطى التلميح «' + word + ' ' + number + '»');
+        startGuessTimer();
         renderMatchScreen();
     }
 
@@ -795,6 +944,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 if (isActiveTeam && _match.activeHint && payload.id === _match.confirmer[turn]) {
                     pushEvent(turn, 'تخطى بقية التخمين');
                     switchTurnIfNotOver();
+                    startHintTimer();
                     renderMatchScreen();
                 }
                 return;
@@ -1027,6 +1177,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     : '<div style="text-align:center;color:rgba(240,228,255,0.4);font-size:14px;padding:20px 0">ما فيه طلبات حالياً</div>') +
                 '</div>' +
             '</div>';
+        } else if (_matchUI.modal === 'timers') {
+            var hintPills = renderTimerPillGroup('hintSeconds', [{ value: 120, label: '2:00' }, { value: 150, label: '2:30' }, { value: 180, label: '3:00' }]);
+            var guessPills = renderTimerPillGroup('guessSeconds', [{ value: 90, label: '1:30' }, { value: 120, label: '2:00' }, { value: 150, label: '2:30' }]);
+            html += '<div class="cn-match-modal cn-modal-timers">' +
+                '<div class="cn-match-modal-head"><span>⏳ تعديل الوقت</span>' +
+                    '<button type="button" class="cn-match-modal-close" id="cn-match-modal-close">✕</button></div>' +
+                '<div class="cn-row" id="cn-match-row-hintSeconds"><div class="cn-pill-group">' + hintPills + '</div><span class="cn-row-label">وقت إرسال التلميح من السباي ماستر</span></div>' +
+                '<div class="cn-row" id="cn-match-row-guessSeconds"><div class="cn-pill-group">' + guessPills + '</div><span class="cn-row-label">وقت اختيار اللاعبين وتأكيد الإجابة</span></div>' +
+                '<div style="text-align:center;color:rgba(240,228,255,0.5);font-size:12px">التعديل يطبَّق فورًا على الوقت الحالي إذا كان من نفس نوع المرحلة الشغّالة الآن</div>' +
+            '</div>';
         }
 
         html += '</div>';
@@ -1038,11 +1198,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var winnerName = (_match.winnerTeam === TEAM1) ? _settings.team1Name : _settings.team2Name;
         var isAssassin = (_match.loseReason === 'assassin');
         var reasonTxt = isAssassin ? 'الفريق الخصم فتح الصندوق الأسود 💀' : 'كشف كل صناديقه ✅';
+        var winners = getTeamPlayers(_match.winnerTeam);
+        var cardsHtml = winners.length
+            ? '<div class="cn-winner-cards">' + winners.map(winnerCardHtml).join('') + '</div>'
+            : '';
         return '<div class="cn-match-overlay cn-open' + (isAssassin ? ' cn-assassin-flash' : '') + '">' +
             '<div class="cn-match-modal cn-modal-winner">' +
-                '<div class="cn-match-modal-head"><span>🏆 فاز ' + escapeHtml(winnerName) + '</span></div>' +
+                '<div class="cn-winner-trophy">🏆</div>' +
+                '<div class="cn-match-modal-head" style="justify-content:center"><span>فاز ' + escapeHtml(winnerName) + '</span></div>' +
                 '<div style="text-align:center;color:#e6d9ff;font-size:15px">' + reasonTxt + '</div>' +
-                '<button type="button" class="cn-modal-players-save" id="cn-match-new-match-btn">مباراة جديدة</button>' +
+                cardsHtml +
+                '<div class="cn-winner-actions">' +
+                    '<button type="button" class="cn-modal-players-save" id="cn-match-new-match-btn">مباراة جديدة</button>' +
+                    '<button type="button" class="cn-winner-btn-replay" id="cn-match-replay-btn">إعادة المباراة بنفس اللاعبين</button>' +
+                    '<button type="button" class="cn-winner-btn-home" id="cn-match-home-btn">🏠 العودة للرئيسية</button>' +
+                '</div>' +
             '</div>' +
         '</div>';
     }
@@ -1052,6 +1222,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (_rootEl) _rootEl.style.display = 'none';
         if (_lobbyEl) _lobbyEl.style.display = 'none';
         wireMatchCommentListener();
+        wireMatchTimerListeners();
         connectRelay();
 
         var root = ensureMatchEl();
@@ -1062,6 +1233,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var hintHtml = _match.activeHint
             ? '<div class="cn-match-clue-num">' + _match.activeHint.number + '</div><div class="cn-match-clue-text">' + escapeHtml(_match.activeHint.word) + '</div>'
             : '<div class="cn-match-clue-text" style="opacity:0.55">بانتظار التلميح...</div>';
+        var timerLabel = _match.activeHint ? 'وقت الاختيار' : 'وقت التلميح';
+        var timerSeconds = _match.activeHint ? AGP.timerManager.getRemainingSeconds(TIMER_GUESS) : AGP.timerManager.getRemainingSeconds(TIMER_HINT);
+        var timerHtml = '<div class="cn-match-pick-timer"><span class="lbl">' + timerLabel + '</span><span class="val" id="cn-match-timer-val">' + formatSeconds(timerSeconds) + '</span></div>';
 
         root.innerHTML =
             '<div class="cn-match-header">' +
@@ -1073,7 +1247,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="cn-match-turn-badge" id="cn-match-turn-badge" style="background:' + (isT1Turn ? 'var(--cn-team1)' : 'var(--cn-team2)') + '">' +
                     '<span class="dot"></span><span class="label">دور ' + escapeHtml(turnName) + '</span>' +
                 '</div>' +
-                '<div class="cn-match-hint-area">' + hintHtml + '</div>' +
+                '<div class="cn-match-hint-area">' + hintHtml + timerHtml + '</div>' +
                 '<div class="cn-match-settings-wrap">' +
                     '<button type="button" class="cn-match-settings-btn' + (_matchUI.settingsOpen ? ' cn-open' : '') + '" id="cn-match-settings-btn">' +
                         '<span>⚙</span><span>الإعدادات</span>' +
@@ -1083,6 +1257,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         '<button type="button" class="cn-match-settings-item green" id="cn-match-open-players"><span>＋</span><span>إدخال لاعب جديد</span></button>' +
                         '<button type="button" class="cn-match-settings-item purple" id="cn-match-open-barcode"><span>▦</span><span>باركود السباي ماستر</span></button>' +
                         '<button type="button" class="cn-match-settings-item gold" id="cn-match-open-requests"><span>✉</span><span>طلبات السباي ماستر</span></button>' +
+                        '<button type="button" class="cn-match-settings-item purple" id="cn-match-open-timers"><span>⏳</span><span>تعديل الوقت</span></button>' +
                         '<div class="cn-match-settings-divider"></div>' +
                         (!_match.matchStarted && !_match.gameOver
                             ? '<button type="button" class="cn-match-settings-item purple" id="cn-match-reset-btn"><span>🔄</span><span>ريست الكلمات</span></button><div class="cn-match-settings-divider"></div>'
@@ -1128,12 +1303,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (openBarcodeBtn) openBarcodeBtn.addEventListener('click', function () { _matchUI.modal = 'barcode'; _matchUI.settingsOpen = false; renderMatchScreen(); });
         var openRequestsBtn = el('cn-match-open-requests');
         if (openRequestsBtn) openRequestsBtn.addEventListener('click', function () { _matchUI.modal = 'requests'; _matchUI.settingsOpen = false; renderMatchScreen(); });
+        var openTimersBtn = el('cn-match-open-timers');
+        if (openTimersBtn) openTimersBtn.addEventListener('click', function () { _matchUI.modal = 'timers'; _matchUI.settingsOpen = false; renderMatchScreen(); });
         var resetBtn = el('cn-match-reset-btn');
         if (resetBtn) resetBtn.addEventListener('click', function () { _matchUI.settingsOpen = false; resetBoard(); });
         var exitBtn = el('cn-match-exit-btn');
         if (exitBtn) exitBtn.addEventListener('click', function () {
             var ok = window.confirm('بترجع لمنصة ألعاب أيمن. تبي تكمل؟');
-            if (ok) window.location.href = '../../index.html';
+            if (ok) { stopMatchTimers(); window.location.href = '../../index.html'; }
+        });
+
+        var hintRow = el('cn-match-row-hintSeconds');
+        if (hintRow) hintRow.addEventListener('click', function (e) {
+            var btn = e.target.closest('.cn-pill-btn'); if (!btn) return;
+            _settings.hintSeconds = Number(btn.getAttribute('data-value'));
+            // يطبَّق فورًا فقط لو مرحلة انتظار التلميح هي الشغّالة حاليًا
+            if (!_match.activeHint && !_match.gameOver) startHintTimer();
+            renderMatchScreen();
+        });
+        var guessRow = el('cn-match-row-guessSeconds');
+        if (guessRow) guessRow.addEventListener('click', function (e) {
+            var btn = e.target.closest('.cn-pill-btn'); if (!btn) return;
+            _settings.guessSeconds = Number(btn.getAttribute('data-value'));
+            // يطبَّق فورًا فقط لو مرحلة الاختيار/التأكيد هي الشغّالة حاليًا
+            if (_match.activeHint && !_match.gameOver) startGuessTimer();
+            renderMatchScreen();
         });
 
         var closeBtn = el('cn-match-modal-close');
@@ -1141,7 +1335,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var saveBtn = el('cn-match-modal-save');
         if (saveBtn) saveBtn.addEventListener('click', function () { _matchUI.modal = null; renderMatchScreen(); });
         var newMatchBtn = el('cn-match-new-match-btn');
-        if (newMatchBtn) newMatchBtn.addEventListener('click', function () { startNewMatch(); renderMatchScreen(); });
+        if (newMatchBtn) newMatchBtn.addEventListener('click', function () { startNewMatch(false); renderMatchScreen(); });
+        var replayBtn = el('cn-match-replay-btn');
+        if (replayBtn) replayBtn.addEventListener('click', function () { startNewMatch(true); renderMatchScreen(); });
+        var homeBtn = el('cn-match-home-btn');
+        if (homeBtn) homeBtn.addEventListener('click', function () { stopMatchTimers(); window.location.href = '../../index.html'; });
 
         var qrBox = el('cn-match-qr-box');
         if (qrBox && window.QRCode) {

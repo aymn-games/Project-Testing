@@ -753,7 +753,39 @@ body.cn-active{
     background:rgba(201,166,255,0.55); border:1px solid rgba(255,255,255,0.5);
 }
 .cn-match-roster-btn.cn-active-role{ box-shadow:0 0 0 2px rgba(255,255,255,0.5) inset; }
-.cn-modal-winner{ width:340px; max-width:90vw; text-align:center; align-items:center; }
+.cn-modal-winner{ width:480px; max-width:92vw; max-height:86vh; overflow-y:auto; text-align:center; align-items:center; }
+.cn-modal-timers{ width:420px; max-width:92vw; }
+.cn-winner-trophy{ font-size:44px; line-height:1; margin-bottom:-4px; }
+
+.cn-winner-cards{
+    width:100%; display:flex; flex-direction:row; flex-wrap:nowrap;
+    justify-content:center; gap:14px; margin-top:8px;
+    overflow-x:auto; padding-bottom:2px;
+}
+.cn-winner-card{
+    flex:0 0 auto; width:86px; display:flex; flex-direction:column; align-items:center; gap:6px;
+}
+.cn-winner-card-avatar{
+    width:64px; height:64px; border-radius:999px; overflow:hidden;
+    background:#5A2585; border:2px solid rgba(255,215,94,0.7);
+    display:flex; align-items:center; justify-content:center;
+    font-family:Cairo,sans-serif; font-weight:800; font-size:22px; color:#fff;
+    box-shadow:0 0 14px rgba(255,215,94,0.25);
+}
+.cn-winner-card-avatar img{ width:100%; height:100%; object-fit:cover; }
+.cn-winner-card-name{
+    font-weight:700; font-size:13px; color:#f0e4ff; max-width:100%;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.cn-winner-card-points{ font-weight:900; font-size:13px; color:#ffe89b; }
+
+.cn-winner-actions{ width:100%; display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+.cn-winner-btn-replay,
+.cn-winner-btn-home{
+    height:44px; border-radius:12px; font-family:inherit; font-weight:800; font-size:15px; cursor:pointer;
+}
+.cn-winner-btn-replay{ border:1px solid rgba(165,110,224,0.45); background:rgba(165,110,224,0.15); color:#e6d4ff; }
+.cn-winner-btn-home{ border:1px solid rgba(255,255,255,0.22); background:rgba(255,255,255,0.06); color:#efe6ff; }
 
 /* ---------------------------------------------------------------------
    حركة انبثاق الصندوق عند فتحه (اهتزاز + تطاير خفيف خلال ~0.6 ثانية)
