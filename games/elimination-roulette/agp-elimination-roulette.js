@@ -1686,6 +1686,29 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * ==================================================================== */
     var _wheelRotation = 0;
 
+    // ⚠️ [تحديث] تقليل احتمالية وقوف العجلة/البكرة على نفس اللاعب اللي
+    // فاز بالدورة الماضية مباشرة — بدون منعه نهائياً (يبقى ممكناً، فقط
+    // أقل احتمالاً). وزنه يُخفَّض إلى REPEAT_WINNER_WEIGHT من وزن بقية
+    // اللاعبين (يتساوون فيما بينهم بالاحتمالية كالسابق تماماً). يعتمد على
+    // _lastWheelWinnerId (تُحدَّث بـhandleWheelLanded بعد كل هبوط) —
+    // بهذي اللحظة تحديداً لسا تحمل فائز الدورة *السابقة* قبل استبدالها.
+    var REPEAT_WINNER_WEIGHT = 0.35;
+
+    function pickWeightedWinnerIndex() {
+        var n = _alive.length;
+        if (n <= 1) return 0;
+        var weights = _alive.map(function (p) {
+            return (p.id === _lastWheelWinnerId) ? REPEAT_WINNER_WEIGHT : 1;
+        });
+        var total = weights.reduce(function (a, b) { return a + b; }, 0);
+        var r = Math.random() * total;
+        for (var i = 0; i < n; i++) {
+            r -= weights[i];
+            if (r <= 0) return i;
+        }
+        return n - 1; // احتياط لأخطاء تقريب الفاصلة العائمة
+    }
+
     /**
      * ⚠️ [0.45.10] إصلاح خلل حقيقي مؤكَّد: توقّف السهم بصرياً على اسم
      * لاعب، بينما تبويب الاختيار يفتح لصاحب دور مختلف فعلياً (ملاحظة
@@ -1719,7 +1742,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (spinBtn) spinBtn.disabled = true;
         playSound('spin');
 
-        var winnerIndex = Math.floor(Math.random() * _alive.length);
+        var winnerIndex = pickWeightedWinnerIndex();
         var winner = _alive[winnerIndex];
 
         var n = _alive.length;
@@ -1763,7 +1786,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (spinBtn) spinBtn.disabled = true;
         playSound('spin');
 
-        var winnerIndex = Math.floor(Math.random() * _alive.length);
+        var winnerIndex = pickWeightedWinnerIndex();
         var winner = _alive[winnerIndex];
         var n = _alive.length;
 
