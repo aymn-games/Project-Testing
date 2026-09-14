@@ -50,6 +50,7 @@
 <div class="adm-tabs" id="settings-tabs">
   <button type="button" class="adm-tab-btn is-active" data-settings-tab="announcement">الإعلان</button>
   <button type="button" class="adm-tab-btn" data-settings-tab="supporters">الداعمون</button>
+  <button type="button" class="adm-tab-btn" data-settings-tab="partners">شركاء الإبداع</button>
   <button type="button" class="adm-tab-btn" data-settings-tab="theme">ثيم المناسبات</button>
   <button type="button" class="adm-tab-btn" data-settings-tab="catalog">كتالوج الإطارات</button>
   <button type="button" class="adm-tab-btn" data-settings-tab="custom-frames">إطارات حصرية</button>
@@ -115,6 +116,44 @@ placeholder="اكتب النص اللي تبي المستخدمين يشوفون
 <table class="table">
 <thead><tr><th>الاسم</th><th>الرسالة</th><th>المبلغ</th><th>التاريخ</th><th></th></tr></thead>
 <tbody id="supporters-tbody"><tr><td class="table-empty" colspan="5">جارٍ التحميل…</td></tr></tbody>
+</table>
+</div>
+</section>
+</section>
+
+<!-- ---- شركاء الإبداع ---- -->
+<section class="adm-tab-panel" data-settings-panel="partners">
+<section class="panel panel-wide">
+<div class="panel-head"><h2>شركاء الإبداع</h2></div>
+<p class="empty-note" style="margin-bottom: var(--space-3);">
+اكتب معرّف الحساب (ID) وتأكد من الاسم والصورة قبل الإضافة، ثم اختر الفئة. يظهر الشخص فوراً بقسم "شركاء الإبداع" بالصفحة الرئيسية — كل بياناته (الاسم والصورة) تُسحَب حيّة من حسابه، فلو غيّرها لاحقاً تتحدّث تلقائياً بدون أي تعديل هنا.
+</p>
+<div style="display:flex; gap: var(--space-3); flex-wrap:wrap; align-items:flex-end; margin-bottom: var(--space-3);">
+<div class="field" style="flex:1; min-width:160px;">
+<label for="partner-id-input">معرّف الحساب (ID)</label>
+<input type="text" id="partner-id-input" placeholder="مثال: AY-0001">
+</div>
+<button class="btn btn-sm" id="btn-partner-search" type="button">بحث</button>
+</div>
+<div id="partner-preview" style="display:none; align-items:center; gap:12px; padding:10px 14px; border-radius:10px; background:var(--bg); border:1px solid var(--border-light); margin-bottom: var(--space-3);">
+<img id="partner-preview-avatar" src="" alt="" style="width:40px; height:40px; border-radius:50%; object-fit:cover; display:none;">
+<span id="partner-preview-name" style="font-weight:600;"></span>
+</div>
+<div style="display:flex; gap: var(--space-3); flex-wrap:wrap; align-items:flex-end; margin-bottom: var(--space-3);">
+<div class="field" style="width:200px;">
+<label for="partner-category-select">الفئة</label>
+<select id="partner-category-select">
+<option value="idea">أصحاب الأفكار</option>
+<option value="dev">فريق التطوير</option>
+</select>
+</div>
+<button class="btn btn-sm btn-primary" id="btn-add-partner" disabled>إضافة</button>
+</div>
+<div class="auth-message" id="partner-message"></div>
+<div class="table-wrap" style="margin-top: var(--space-4);">
+<table class="table">
+<thead><tr><th>الاسم</th><th>ID</th><th>الفئة</th><th></th></tr></thead>
+<tbody id="partners-tbody"><tr><td class="table-empty" colspan="4">جارٍ التحميل…</td></tr></tbody>
 </table>
 </div>
 </section>
@@ -402,6 +441,82 @@ placeholder="اكتب النص اللي تبي المستخدمين يشوفون
         window.AGPAuth.adminDeleteSupporter(id).then(function () { loadSupporters(); });
     });
 
+    /* ---- شركاء الإبداع ---- */
+    var partnerMessageEl = document.getElementById('partner-message');
+    var partnersTbody = document.getElementById('partners-tbody');
+    var partnerIdInput = document.getElementById('partner-id-input');
+    var partnerCategorySelect = document.getElementById('partner-category-select');
+    var partnerPreviewEl = document.getElementById('partner-preview');
+    var partnerPreviewAvatar = document.getElementById('partner-preview-avatar');
+    var partnerPreviewName = document.getElementById('partner-preview-name');
+    var btnAddPartner = document.getElementById('btn-add-partner');
+    var CATEGORY_LABELS = { idea: 'أصحاب الأفكار', dev: 'فريق التطوير' };
+
+    function showPartnerMessage(text, type) {
+        partnerMessageEl.textContent = text;
+        partnerMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+    function loadPartners() {
+        partnersTbody.innerHTML = '<tr><td class="table-empty" colspan="4">جارٍ التحميل…</td></tr>';
+        window.AGPAuth.adminListPartners().then(function (result) {
+            if (!result.success) { partnersTbody.innerHTML = '<tr><td class="table-empty" colspan="4">تعذّر تحميل القائمة.</td></tr>'; return; }
+            var partners = result.partners || [];
+            if (!partners.length) { partnersTbody.innerHTML = '<tr><td class="table-empty" colspan="4">لا يوجد شركاء إبداع بعد.</td></tr>'; return; }
+            partnersTbody.innerHTML = partners.map(function (p) {
+                return '<tr><td>' + escapeHtml(p.name) + '</td><td style="direction:ltr; text-align:start;">' + escapeHtml(p.customId) + '</td><td>' + (CATEGORY_LABELS[p.category] || p.category) + '</td>' +
+                    '<td><button class="btn btn-sm btn-danger" data-delete-partner="' + p.id + '">حذف</button></td></tr>';
+            }).join('');
+        });
+    }
+    document.getElementById('btn-partner-search').addEventListener('click', function () {
+        var customId = (partnerIdInput.value || '').trim();
+        if (!customId) { showPartnerMessage('اكتب معرّف الحساب أولاً.', 'error'); return; }
+        var button = this;
+        button.disabled = true;
+        partnerPreviewEl.style.display = 'none';
+        btnAddPartner.disabled = true;
+        window.AGPAuth.adminFindSupporterUser(customId).then(function (result) {
+            if (result.success && result.user) {
+                partnerPreviewName.textContent = result.user.name;
+                if (result.user.avatarBase64) {
+                    partnerPreviewAvatar.src = result.user.avatarBase64;
+                    partnerPreviewAvatar.style.display = '';
+                } else {
+                    partnerPreviewAvatar.style.display = 'none';
+                }
+                partnerPreviewEl.style.display = 'flex';
+                btnAddPartner.disabled = false;
+                showPartnerMessage('', '');
+                partnerMessageEl.className = 'auth-message';
+            } else {
+                showPartnerMessage('ما فيه حساب بهذا المعرّف.', 'error');
+            }
+        }).finally(function () { button.disabled = false; });
+    });
+    btnAddPartner.addEventListener('click', function () {
+        var customId = (partnerIdInput.value || '').trim();
+        if (!customId) { showPartnerMessage('اكتب معرّف الحساب أولاً.', 'error'); return; }
+        var button = this;
+        button.disabled = true;
+        window.AGPAuth.adminAddPartner(customId, partnerCategorySelect.value).then(function (result) {
+            if (result.success) {
+                showPartnerMessage('تمت الإضافة — يظهر الآن بالصفحة الرئيسية.', 'success');
+                partnerIdInput.value = '';
+                partnerPreviewEl.style.display = 'none';
+                loadPartners();
+            } else {
+                showPartnerMessage('تعذّرت الإضافة: ' + (result.error || 'unknown'), 'error');
+            }
+        }).finally(function () { button.disabled = false; });
+    });
+    partnersTbody.addEventListener('click', function (event) {
+        var button = event.target.closest ? event.target.closest('[data-delete-partner]') : null;
+        if (!button) return;
+        var id = button.getAttribute('data-delete-partner');
+        button.disabled = true;
+        window.AGPAuth.adminDeletePartner(id).then(function () { loadPartners(); });
+    });
+
     /* ---- ثيم المناسبات ---- */
     var THEME_PRESETS = {
         'national-day': { accent: '#006c35', accentPink: '#c9a24b', accent2: '#ffffff' },
@@ -644,6 +759,7 @@ placeholder="اكتب النص اللي تبي المستخدمين يشوفون
         loadAnnouncement();
         loadCatalog();
         loadSupporters();
+        loadPartners();
         loadThemeStatus();
         loadSpLevels();
     });
