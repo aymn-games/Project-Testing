@@ -469,13 +469,42 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     if (linkLeaderboardCard('توب الداعمين للمنصة', 'top-supporters.html')) done++;
     if (linkLeaderboardCard('توب الاستريمرز الأكثر نشاطاً', 'top-streamers.html')) done++;
+
+    var supportLink = Array.prototype.slice.call(document.querySelectorAll('nav a'))
+      .find(function(a){ return a.textContent.trim() === 'دعم المنصة'; });
+    if (supportLink && !supportLink.dataset.patched) {
+      supportLink.setAttribute('href', 'https://creators.sa/aymngame');
+      supportLink.setAttribute('target', '_blank');
+      supportLink.dataset.patched = '1';
+
+      if (!document.querySelector('nav a[data-frames-link]')) {
+        var framesLink = supportLink.cloneNode(true);
+        framesLink.textContent = 'الإطارات';
+        framesLink.setAttribute('href', 'https://aymngames.zid.store/');
+        framesLink.setAttribute('target', '_blank');
+        framesLink.setAttribute('data-frames-link', '1');
+        supportLink.parentNode.insertBefore(framesLink, supportLink.nextSibling);
+      }
+      done++;
+    }
+
+    var footerAbout = Array.prototype.slice.call(document.querySelectorAll('footer p'))[0];
+    if (footerAbout && !footerAbout.dataset.contactAdded) {
+      var contact = document.createElement('p');
+      contact.style.cssText = 'margin:10px 0 0;font-size:13px;line-height:1.9;color:#9aa1b1;';
+      contact.innerHTML = '🎵 تيك توك: <a href="https://www.tiktok.com/@em70_q" target="_blank" style="color:#b28cf5;">@em70_q</a><br>📱 واتساب: <a href="https://wa.me/966582411235" target="_blank" style="color:#b28cf5;">0582411235</a>';
+      footerAbout.parentNode.insertBefore(contact, footerAbout.nextSibling);
+      footerAbout.dataset.contactAdded = '1';
+      done++;
+    }
+
     return done;
   }
   var tries = 0;
   var timer = setInterval(function(){
     tries++;
     var n = patchLinks();
-    if (n >= 7 || tries > 80) { clearInterval(timer); }
+    if (n >= 9 || tries > 80) { clearInterval(timer); }
   }, 250);
 })();
 </script>
