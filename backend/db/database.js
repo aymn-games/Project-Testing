@@ -278,6 +278,13 @@ ensureColumn('users', 'tiktok_display_name', 'TEXT');
 // فعلي (بعد مطابقة الحساب الموثَّق) — راجع [0.44.2] بـdocs/CHANGELOG.md.
 ensureColumn('user_points', 'games_played', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('user_points', 'games_won', 'INTEGER NOT NULL DEFAULT 0');
+// [جديد] إجمالي وقت اللعب الفعلي للاعب (مللي ثانية) — كان durationMs
+// يُستخدَم فقط لحظياً لحساب نقاط الساعات (points-service.js) بدون أي
+// تراكم مخزَّن. الآن يُراكَم هنا أيضاً حتى نقدر نطلع "الأكثر نشاطاً
+// بالساعات" للاعبين (مقابل الاستريمرز اللي عندهم broadcasts.started_at/
+// ended_at أصلاً) — راجع getTopPlayersByHours/getTopPlayersByWins
+// بـpoints-service.js و/api/public/top-players-* بـauth-router.js.
+ensureColumn('user_points', 'total_play_ms', 'INTEGER NOT NULL DEFAULT 0');
 // [0.45.0] تفعيل/إيقاف ذاتي للدخولية من البروفايل — 1 (افتراضي) يعني
 // "مفعّلة" لكل الصفوف الحالية، فلا يتغيّر أي سلوك ظاهر لأي مستخدم عنده
 // دخولية اليوم. 0 = الستريمر أطفأها بنفسه؛ يبقى القالب/النص محفوظين
