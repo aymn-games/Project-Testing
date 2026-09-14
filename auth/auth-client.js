@@ -82,11 +82,18 @@ function getDeviceId() {
  * @param {Object} [options] - {method, body}
  * @returns {Promise<Object>}
  */
+/**
+ * [أداء] Content-Type كان يُرسَل حتى على طلبات GET البسيطة بدون body —
+ * هذا يجبر المتصفح يسوي CORS preflight (طلب OPTIONS كامل) قبل أي طلب،
+ * حتى العلني منها بدون تسجيل دخول (مؤكَّد من قياس GTmetrix الحقيقي:
+ * كل استدعاء علني كان يتضاعف لطلبين). نرسله الآن فقط لما فيه body فعلي.
+ */
 function request(path, options) {
     options = options || {};
-    var headers = { 'Content-Type': 'application/json' };
+    var headers = {};
     var token = getToken();
     if (token) headers['Authorization'] = 'Bearer ' + token;
+    if (options.body) headers['Content-Type'] = 'application/json';
 
     return fetch(API_BASE + path, {
         method: options.method || 'GET',
