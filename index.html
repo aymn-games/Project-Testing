@@ -758,6 +758,12 @@ document.addEventListener('DOMContentLoaded', async function() {
   setTimeout(loadRealPartners, 2000);
 
   function applyResponsiveFixes(){
+    var scanEl = Array.prototype.slice.call(document.querySelectorAll('*'))
+      .find(function(e){ return getComputedStyle(e).animationName === 'nl-scan'; });
+    if (scanEl && !scanEl.dataset.scanDisabled) {
+      scanEl.style.animation = 'none';
+      scanEl.dataset.scanDisabled = '1';
+    }
     var w = window.innerWidth;
     var isNarrow = w <= 900;
     var isMobile = w <= 480;
