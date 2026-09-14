@@ -500,6 +500,159 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     return done;
   }
+
+  function arDigits(n){
+    return String(n).replace(/[0-9]/g, function(d){ return "٠١٢٣٤٥٦٧٨٩"[d]; });
+  }
+  var RANK_COLORS = ["#f0d68a","#cfd4de","#d09a6a","#7c7590","#7c7590"];
+
+  function findCardRowsContainer(titleText){
+    var titleDiv = Array.prototype.slice.call(document.querySelectorAll('*'))
+      .find(function(e){ return e.children.length <= 1 && e.textContent.trim() === titleText; });
+    if (!titleDiv) return null;
+    var card = titleDiv.parentElement.parentElement;
+    return card && card.children[2] ? card.children[2] : null;
+  }
+
+  function loadRealSupporters(){
+    if (!window.AGPAuth || !window.AGPAuth.getTopSupporters) return;
+    var rows = findCardRowsContainer('توب الداعمين للمنصة');
+    if (!rows || rows.dataset.realData) return;
+    window.AGPAuth.getTopSupporters().then(function(result){
+      var supporters = (result && result.success && result.supporters) || [];
+      if (!supporters.length) return;
+      rows.innerHTML = '';
+      supporters.slice(0, 5).forEach(function(s, idx){
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:start;gap:12px;padding:12px 10px;border-radius:14px;transition:background .2s;';
+        var rankSpan = document.createElement('span');
+        rankSpan.style.cssText = 'flex:none;width:26px;text-align:center;font-family:\'Noto Kufi Arabic\',sans-serif;font-size:14px;font-weight:700;color:' + (RANK_COLORS[idx] || '#7c7590') + ';';
+        rankSpan.textContent = arDigits(idx + 1);
+        var infoWrap = document.createElement('span');
+        infoWrap.style.cssText = 'flex:1;min-width:0;';
+        var nameSpan = document.createElement('span');
+        nameSpan.style.cssText = 'display:block;font-family:\'Noto Kufi Arabic\',sans-serif;font-size:15px;color:#f4f2fb;';
+        nameSpan.textContent = s.name || '—';
+        var metaSpan = document.createElement('span');
+        metaSpan.style.cssText = 'display:block;margin-top:4px;font-size:13px;line-height:1.7;color:#968ea4;';
+        metaSpan.textContent = s.donationsCount === 1 ? 'دعم واحد' : ((s.donationsCount || 0) + ' مرات دعم');
+        infoWrap.appendChild(nameSpan);
+        infoWrap.appendChild(metaSpan);
+        var amountSpan = document.createElement('span');
+        amountSpan.style.cssText = 'flex:none;font-family:\'Noto Kufi Arabic\',sans-serif;font-size:14px;font-weight:700;color:#b28cf5;';
+        amountSpan.textContent = s.totalAmount ? (arDigits(s.totalAmount) + ' ريال') : '—';
+        row.appendChild(rankSpan);
+        row.appendChild(infoWrap);
+        row.appendChild(amountSpan);
+        rows.appendChild(row);
+      });
+      rows.dataset.realData = '1';
+    }).catch(function(){});
+  }
+
+  function loadRealStreamers(){
+    if (!window.AGPAuth || !window.AGPAuth.getTopStreamers) return;
+    var rows = findCardRowsContainer('توب الاستريمرز الأكثر نشاطاً');
+    if (!rows || rows.dataset.realData) return;
+    window.AGPAuth.getTopStreamers(5).then(function(result){
+      var streamers = (result && result.success && result.streamers) || [];
+      if (!streamers.length) return;
+      rows.innerHTML = '';
+      streamers.slice(0, 5).forEach(function(s, idx){
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 10px;border-radius:14px;transition:background .2s;';
+        var rankSpan = document.createElement('span');
+        rankSpan.style.cssText = 'flex:none;width:24px;text-align:center;font-size:13.5px;font-weight:700;color:' + (RANK_COLORS[idx] || '#7c7590') + ';';
+        rankSpan.textContent = arDigits(idx + 1);
+        var avatar = document.createElement('span');
+        avatar.style.cssText = 'flex:none;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:repeating-linear-gradient(135deg,#3b2340 0 6px,#241729 6px 12px);';
+        var infoWrap = document.createElement('span');
+        infoWrap.style.cssText = 'flex:1;min-width:0;';
+        var nameSpan = document.createElement('span');
+        nameSpan.style.cssText = 'display:block;font-family:\'Noto Kufi Arabic\',sans-serif;font-size:15px;color:#f4f2fb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+        nameSpan.textContent = s.displayName || '—';
+        var handleSpan = document.createElement('span');
+        handleSpan.style.cssText = 'display:block;margin-top:2px;font-size:12.5px;color:#c98fbe;direction:ltr;text-align:start;';
+        handleSpan.textContent = s.tiktokUsername ? ('@' + s.tiktokUsername) : '';
+        infoWrap.appendChild(nameSpan);
+        infoWrap.appendChild(handleSpan);
+        var hoursWrap = document.createElement('span');
+        hoursWrap.style.cssText = 'flex:none;text-align:center;';
+        var hoursNum = document.createElement('span');
+        hoursNum.style.cssText = 'display:block;font-family:\'Noto Kufi Arabic\',sans-serif;font-size:16px;font-weight:700;color:#f0aee4;';
+        hoursNum.textContent = arDigits(s.totalHours || 0);
+        var hoursLbl = document.createElement('span');
+        hoursLbl.style.cssText = 'display:block;margin-top:2px;font-size:11px;color:#968ea4;';
+        hoursLbl.textContent = 'ساعة بث';
+        hoursWrap.appendChild(hoursNum);
+        hoursWrap.appendChild(hoursLbl);
+        row.appendChild(rankSpan);
+        row.appendChild(avatar);
+        row.appendChild(infoWrap);
+        row.appendChild(hoursWrap);
+        rows.appendChild(row);
+      });
+      rows.dataset.realData = '1';
+
+      var viewAllLink = Array.prototype.slice.call(document.querySelectorAll('a'))
+        .find(function(a){ return a.getAttribute('href') === 'top-streamers.html' && a.textContent.trim() === 'عرض الكل'; });
+      if (viewAllLink) viewAllLink.remove();
+    }).catch(function(){});
+  }
+
+  setTimeout(loadRealSupporters, 600);
+  setTimeout(loadRealStreamers, 600);
+  setTimeout(loadRealSupporters, 2000);
+  setTimeout(loadRealStreamers, 2000);
+
+  function loadRealPlayers(){
+    if (!window.AGPAuth || !window.AGPAuth.getTopPlayersByWins) return;
+    var rows = findCardRowsContainer('توب اللاعبين الأكثر نشاطاً');
+    if (!rows || rows.dataset.realData) return;
+    window.AGPAuth.getTopPlayersByWins(5).then(function(result){
+      var players = (result && result.success && result.players) || [];
+      if (!players.length) return;
+      rows.innerHTML = '';
+      players.slice(0, 5).forEach(function(pl, idx){
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:11px 10px;border-radius:14px;transition:background .2s;';
+        var rankSpan = document.createElement('span');
+        rankSpan.style.cssText = 'flex:none;width:24px;text-align:center;font-size:13.5px;font-weight:700;color:' + (RANK_COLORS[idx] || '#7c7590') + ';';
+        rankSpan.textContent = arDigits(idx + 1);
+        var avatar = document.createElement('span');
+        avatar.style.cssText = 'flex:none;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:repeating-linear-gradient(135deg,#232a4d 0 6px,#171b33 6px 12px);';
+        var infoWrap = document.createElement('span');
+        infoWrap.style.cssText = 'flex:1;min-width:0;';
+        var nameSpan = document.createElement('span');
+        nameSpan.style.cssText = 'display:block;font-family:\'Noto Kufi Arabic\',sans-serif;font-size:15px;color:#f4f2fb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+        nameSpan.textContent = pl.displayName || '—';
+        var metaSpan = document.createElement('span');
+        metaSpan.style.cssText = 'display:block;margin-top:2px;font-size:12.5px;color:#8f9ac2;direction:ltr;text-align:start;';
+        metaSpan.textContent = pl.customId || '';
+        infoWrap.appendChild(nameSpan);
+        infoWrap.appendChild(metaSpan);
+        var winsWrap = document.createElement('span');
+        winsWrap.style.cssText = 'flex:none;text-align:center;';
+        var winsNum = document.createElement('span');
+        winsNum.style.cssText = 'display:block;font-family:\'Noto Kufi Arabic\',sans-serif;font-size:16px;font-weight:700;color:#a8bcff;';
+        winsNum.textContent = arDigits(pl.gamesWon || 0);
+        var winsLbl = document.createElement('span');
+        winsLbl.style.cssText = 'display:block;margin-top:2px;font-size:11px;color:#968ea4;';
+        winsLbl.textContent = 'فوز';
+        winsWrap.appendChild(winsNum);
+        winsWrap.appendChild(winsLbl);
+        row.appendChild(rankSpan);
+        row.appendChild(avatar);
+        row.appendChild(infoWrap);
+        row.appendChild(winsWrap);
+        rows.appendChild(row);
+      });
+      rows.dataset.realData = '1';
+    }).catch(function(){});
+  }
+  setTimeout(loadRealPlayers, 600);
+  setTimeout(loadRealPlayers, 2000);
+
   var tries = 0;
   var timer = setInterval(function(){
     tries++;
