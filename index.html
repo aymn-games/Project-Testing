@@ -786,6 +786,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         header.style.borderRadius = '999px';
         header.style.padding = '12px 20px 12px 14px';
       }
+      // [أداء] backdrop-filter:blur() مكلف جداً على بعض كروت الشاشة بويندوز
+      // خصوصاً مع هيدر عائم أثناء التمرير — نستبدله بخلفية شبه معتمة
+      // بدون بلور، نفس الإحساس البصري تقريباً بدون تكلفة الرسم المتكررة.
+      header.style.backdropFilter = 'none';
+      header.style.webkitBackdropFilter = 'none';
+      header.style.background = 'rgba(10,9,16,.92)';
     }
 
     var nav = document.querySelector('nav');
@@ -811,39 +817,23 @@ document.addEventListener('DOMContentLoaded', async function() {
       });
     if (heading) {
       heading.style.fontSize = isMobile ? '9vw' : (isNarrow ? '6.5vw' : '');
-      heading.style.lineHeight = isNarrow ? '1.3' : '';
-      heading.style.width = isNarrow ? 'auto' : '';
-      heading.style.maxWidth = isNarrow ? '92vw' : '';
-      heading.style.height = isNarrow ? 'auto' : '';
-      heading.style.margin = isNarrow ? '0 auto' : '';
-      heading.style.whiteSpace = isNarrow ? 'normal' : '';
+      heading.style.lineHeight = isNarrow ? '1.3' : '1.28';
+      heading.style.width = 'auto';
+      heading.style.maxWidth = isNarrow ? '92vw' : '90%';
+      heading.style.height = 'auto';
+      heading.style.margin = isNarrow ? '0 auto' : '0';
+      heading.style.whiteSpace = 'normal';
+      heading.style.display = 'block';
       var headingParent = heading.parentElement;
-      if (headingParent && isNarrow) {
-        if (!headingParent.dataset.origSaved) {
-          headingParent.dataset.origPosition = headingParent.style.position || '';
-          headingParent.dataset.origLeft = headingParent.style.left || '';
-          headingParent.dataset.origTop = headingParent.style.top || '';
-          headingParent.dataset.origWidth = headingParent.style.width || '';
-          headingParent.dataset.origHeight = headingParent.style.height || '';
-          headingParent.dataset.origTextAlign = headingParent.style.textAlign || '';
-          headingParent.dataset.origMargin = headingParent.style.margin || '';
-          headingParent.dataset.origSaved = '1';
-        }
-        headingParent.style.position = 'relative';
-        headingParent.style.left = '0';
-        headingParent.style.top = '0';
-        headingParent.style.width = '100%';
+      if (headingParent) {
+        headingParent.style.position = 'static';
+        headingParent.style.left = 'auto';
+        headingParent.style.top = 'auto';
+        headingParent.style.width = 'auto';
         headingParent.style.height = 'auto';
-        headingParent.style.textAlign = 'center';
-        headingParent.style.margin = '26px auto 0';
-      } else if (headingParent && headingParent.dataset.origSaved) {
-        headingParent.style.position = headingParent.dataset.origPosition;
-        headingParent.style.left = headingParent.dataset.origLeft;
-        headingParent.style.top = headingParent.dataset.origTop;
-        headingParent.style.width = headingParent.dataset.origWidth;
-        headingParent.style.height = headingParent.dataset.origHeight;
-        headingParent.style.textAlign = headingParent.dataset.origTextAlign;
-        headingParent.style.margin = headingParent.dataset.origMargin;
+        headingParent.style.overflow = 'visible';
+        headingParent.style.textAlign = isNarrow ? 'center' : '';
+        headingParent.style.margin = isNarrow ? '26px auto 0' : '26px 0 0';
       }
     }
 
@@ -852,29 +842,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         return e.children.length === 0 && e.textContent.indexOf('مجتمع البث والاستريم') !== -1;
       });
     subEls.forEach(function(e){
-      if (isNarrow) {
-        if (!e.dataset.origSaved) {
-          e.dataset.origFontSize = e.style.fontSize || '';
-          e.dataset.origWidth = e.style.width || '';
-          e.dataset.origHeight = e.style.height || '';
-          e.dataset.origMaxWidth = e.style.maxWidth || '';
-          e.dataset.origMargin = e.style.margin || '';
-          e.dataset.origWhiteSpace = e.style.whiteSpace || '';
-          e.dataset.origSaved = '1';
-        }
-        e.style.fontSize = isMobile ? '5.2vw' : '3.6vw';
-        e.style.width = 'auto';
-        e.style.height = 'auto';
-        e.style.maxWidth = '92vw';
-        e.style.margin = '0 auto';
-        e.style.whiteSpace = 'normal';
-      } else if (e.dataset.origSaved) {
-        e.style.fontSize = e.dataset.origFontSize;
-        e.style.width = e.dataset.origWidth;
-        e.style.height = e.dataset.origHeight;
-        e.style.maxWidth = e.dataset.origMaxWidth;
-        e.style.margin = e.dataset.origMargin;
-        e.style.whiteSpace = e.dataset.origWhiteSpace;
+      e.style.fontSize = isMobile ? '5.2vw' : (isNarrow ? '3.6vw' : '22px');
+      e.style.width = 'auto';
+      e.style.height = 'auto';
+      e.style.maxWidth = isNarrow ? '92vw' : '90%';
+      e.style.margin = isNarrow ? '0 auto' : '14px 0 0';
+      e.style.whiteSpace = 'normal';
+      e.style.display = 'block';
+      var subParent = e.parentElement;
+      if (subParent) {
+        subParent.style.position = 'static';
+        subParent.style.left = 'auto';
+        subParent.style.top = 'auto';
+        subParent.style.width = 'auto';
+        subParent.style.height = 'auto';
+        subParent.style.overflow = 'visible';
       }
     });
 
@@ -885,6 +867,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   applyResponsiveFixes();
   setTimeout(applyResponsiveFixes, 500);
   setTimeout(applyResponsiveFixes, 1500);
+  try {
+    document.fonts.ready.then(applyResponsiveFixes);
+    document.fonts.addEventListener('loadingdone', applyResponsiveFixes);
+  } catch (e) {}
 
   var tries = 0;
   var timer = setInterval(function(){
