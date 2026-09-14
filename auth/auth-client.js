@@ -632,6 +632,36 @@ function adminDeleteSupporter(id) {
 }
 
 /* ----------------------------------------------------------------------
+ * شركاء الإبداع — راجع backend/partners/partners-service.js
+ * ---------------------------------------------------------------------- */
+
+/** عام بدون تسجيل دخول — قسم "شركاء الإبداع" بالصفحة الرئيسية. */
+function getPartners() {
+    return request('/api/partners', { method: 'GET' });
+}
+
+/** الأدمن فقط — كل شركاء الإبداع (لوحة الإدارة). */
+function adminListPartners() {
+    return request('/api/admin/partners', { method: 'GET' });
+}
+
+/**
+ * الأدمن فقط — ربط حساب (عبر custom_id) كشريك إبداع. category: 'idea'
+ * (أصحاب الأفكار) أو 'dev' (فريق التطوير).
+ * @param {string} customId
+ * @param {'idea'|'dev'} category
+ * @returns {Promise<Object>}
+ */
+function adminAddPartner(customId, category) {
+    return request('/api/admin/partners', { method: 'POST', body: { customId: customId, category: category } });
+}
+
+/** الأدمن فقط — حذف ربط شريك إبداع واحد. */
+function adminDeletePartner(id) {
+    return request('/api/admin/partners/delete', { method: 'POST', body: { id: id } });
+}
+
+/* ----------------------------------------------------------------------
  * ثيم المناسبات — راجع backend/theme/site-theme-service.js
  * ---------------------------------------------------------------------- */
 
@@ -773,6 +803,10 @@ global.AGPAuth = {
     adminAddSupporter: adminAddSupporter,
     adminFindSupporterUser: adminFindSupporterUser,
     adminDeleteSupporter: adminDeleteSupporter,
+    getPartners: getPartners,
+    adminListPartners: adminListPartners,
+    adminAddPartner: adminAddPartner,
+    adminDeletePartner: adminDeletePartner,
     getSiteTheme: getSiteTheme,
     adminSetSiteTheme: adminSetSiteTheme,
     adminClearSiteTheme: adminClearSiteTheme,
