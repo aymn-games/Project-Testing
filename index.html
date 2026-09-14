@@ -805,7 +805,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     var heading = Array.prototype.slice.call(document.querySelectorAll('*'))
-      .find(function(e){ return e.children.length <= 1 && e.textContent.trim() === 'منصة ألعاب أيمن'; });
+      .find(function(e){
+        return e.children.length <= 1 && e.textContent.indexOf('يمن') !== -1 &&
+          parseFloat(getComputedStyle(e).fontSize) > 25;
+      });
     if (heading) {
       heading.style.fontSize = isMobile ? '9vw' : (isNarrow ? '6.5vw' : '');
       heading.style.lineHeight = isNarrow ? '1.3' : '';
@@ -816,6 +819,16 @@ document.addEventListener('DOMContentLoaded', async function() {
       heading.style.whiteSpace = isNarrow ? 'normal' : '';
       var headingParent = heading.parentElement;
       if (headingParent && isNarrow) {
+        if (!headingParent.dataset.origSaved) {
+          headingParent.dataset.origPosition = headingParent.style.position || '';
+          headingParent.dataset.origLeft = headingParent.style.left || '';
+          headingParent.dataset.origTop = headingParent.style.top || '';
+          headingParent.dataset.origWidth = headingParent.style.width || '';
+          headingParent.dataset.origHeight = headingParent.style.height || '';
+          headingParent.dataset.origTextAlign = headingParent.style.textAlign || '';
+          headingParent.dataset.origMargin = headingParent.style.margin || '';
+          headingParent.dataset.origSaved = '1';
+        }
         headingParent.style.position = 'relative';
         headingParent.style.left = '0';
         headingParent.style.top = '0';
@@ -823,14 +836,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         headingParent.style.height = 'auto';
         headingParent.style.textAlign = 'center';
         headingParent.style.margin = '26px auto 0';
-      } else if (headingParent) {
-        headingParent.style.position = '';
-        headingParent.style.left = '';
-        headingParent.style.top = '';
-        headingParent.style.width = '';
-        headingParent.style.height = '';
-        headingParent.style.textAlign = '';
-        headingParent.style.margin = '';
+      } else if (headingParent && headingParent.dataset.origSaved) {
+        headingParent.style.position = headingParent.dataset.origPosition;
+        headingParent.style.left = headingParent.dataset.origLeft;
+        headingParent.style.top = headingParent.dataset.origTop;
+        headingParent.style.width = headingParent.dataset.origWidth;
+        headingParent.style.height = headingParent.dataset.origHeight;
+        headingParent.style.textAlign = headingParent.dataset.origTextAlign;
+        headingParent.style.margin = headingParent.dataset.origMargin;
       }
     }
 
@@ -839,12 +852,30 @@ document.addEventListener('DOMContentLoaded', async function() {
         return e.children.length === 0 && e.textContent.indexOf('مجتمع البث والاستريم') !== -1;
       });
     subEls.forEach(function(e){
-      e.style.fontSize = isMobile ? '5.2vw' : (isNarrow ? '3.6vw' : '');
-      e.style.width = isNarrow ? 'auto' : '';
-      e.style.height = isNarrow ? 'auto' : '';
-      e.style.maxWidth = isNarrow ? '92vw' : '';
-      e.style.margin = isNarrow ? '0 auto' : '';
-      e.style.whiteSpace = isNarrow ? 'normal' : '';
+      if (isNarrow) {
+        if (!e.dataset.origSaved) {
+          e.dataset.origFontSize = e.style.fontSize || '';
+          e.dataset.origWidth = e.style.width || '';
+          e.dataset.origHeight = e.style.height || '';
+          e.dataset.origMaxWidth = e.style.maxWidth || '';
+          e.dataset.origMargin = e.style.margin || '';
+          e.dataset.origWhiteSpace = e.style.whiteSpace || '';
+          e.dataset.origSaved = '1';
+        }
+        e.style.fontSize = isMobile ? '5.2vw' : '3.6vw';
+        e.style.width = 'auto';
+        e.style.height = 'auto';
+        e.style.maxWidth = '92vw';
+        e.style.margin = '0 auto';
+        e.style.whiteSpace = 'normal';
+      } else if (e.dataset.origSaved) {
+        e.style.fontSize = e.dataset.origFontSize;
+        e.style.width = e.dataset.origWidth;
+        e.style.height = e.dataset.origHeight;
+        e.style.maxWidth = e.dataset.origMaxWidth;
+        e.style.margin = e.dataset.origMargin;
+        e.style.whiteSpace = e.dataset.origWhiteSpace;
+      }
     });
 
     var heroSection = heading ? heading.closest('section, header, div[style*="max-width"]') : null;
