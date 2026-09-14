@@ -478,6 +478,78 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (equipped) setSiblingAfter('الإطار المفعّل', equipped.displayNameAr || equipped.frameRef);
     }
 
+    /* ---- الصورة الحقيقية للبروفايل (ما كانت مربوطة إطلاقاً قبل) ---- */
+    var avatarBox = Array.prototype.slice.call(document.querySelectorAll('div'))
+      .find(function(e){
+        var st = e.getAttribute('style') || '';
+        return st.indexOf('repeating-linear-gradient(135deg') !== -1 && e.children.length === 0;
+      });
+    if (avatarBox && p.avatar_image_base64) {
+      avatarBox.style.background = 'none';
+      var img = document.createElement('img');
+      img.src = p.avatar_image_base64;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:21px;';
+      avatarBox.appendChild(img);
+    }
+
+    /* ---- تفعيل زر "تعديل الملف" (كان noop حرفياً بالتصميم الأصلي) ---- */
+    var cachedUserForEdit = null;
+    try { cachedUserForEdit = window.AGPAuth && window.AGPAuth.getCachedUser ? window.AGPAuth.getCachedUser() : null; } catch (e) {}
+    var isOwnerForEdit = Boolean(cachedUserForEdit && cachedUserForEdit.custom_id && cachedUserForEdit.custom_id === p.custom_id);
+    if (isOwnerForEdit) {
+      var editBtn = Array.prototype.slice.call(document.querySelectorAll('button'))
+        .find(function(e){ return e.textContent.trim() === 'تعديل الملف'; });
+      if (editBtn && !editBtn.dataset.wired) {
+        editBtn.dataset.wired = '1';
+        var fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/png,image/jpeg,image/webp';
+        fileInput.style.display = 'none';
+        document.body.appendChild(fileInput);
+
+        editBtn.addEventListener('click', function(){
+          var choice = window.prompt('اكتب اسم العرض الجديد (أو اتركه فاضي وألغِ للتعديل على الصورة بدلاً)، ثم اضغط موافق:', p.display_name || p.username || '');
+          if (choice !== null && choice.trim()) {
+            editBtn.disabled = true;
+            window.AGPAuth.updateDisplayName(choice.trim()).then(function(result){
+              editBtn.disabled = false;
+              if (result && result.success) window.location.reload();
+              else window.alert('تعذّر تحديث الاسم: ' + (result && result.error ? result.error : 'خطأ غير معروف'));
+            }).catch(function(){ editBtn.disabled = false; });
+            return;
+          }
+          fileInput.click();
+        });
+
+        fileInput.addEventListener('change', function(){
+          var file = fileInput.files && fileInput.files[0];
+          if (!file) return;
+          var reader = new FileReader();
+          reader.onload = function(){
+            var img = new Image();
+            img.onload = function(){
+              var maxSide = 240;
+              var scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+              var canvas = document.createElement('canvas');
+              canvas.width = Math.round(img.width * scale);
+              canvas.height = Math.round(img.height * scale);
+              var ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              var dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+              editBtn.disabled = true;
+              window.AGPAuth.updateAvatarImage(dataUrl).then(function(result){
+                editBtn.disabled = false;
+                if (result && result.success) window.location.reload();
+                else window.alert('تعذّر تحديث الصورة: ' + (result && result.error ? result.error : 'الصورة كبيرة جداً، جرّب صورة أصغر'));
+              }).catch(function(){ editBtn.disabled = false; });
+            };
+            img.src = reader.result;
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+    }
+
     if (p.tiktok_verified && p.tiktok_username) {
       var badge = findLeaf('غير مربوط');
       if (badge) {
