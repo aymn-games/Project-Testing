@@ -546,6 +546,28 @@ function getTopStreamers(limit) {
 }
 
 /**
+ * [جديد] أعلى اللاعبين بعدد مرات الفوز — بدون تسجيل دخول، بديل صادق
+ * لـ"الأكثر نشاطاً" لغير الستريمرز. راجع backend/points/points-service.js.
+ * @param {number} [limit]
+ * @returns {Promise<Object>}
+ */
+function getTopPlayersByWins(limit) {
+    var qs = limit ? ('?limit=' + encodeURIComponent(limit)) : '';
+    return request('/api/public/top-players-wins' + qs, { method: 'GET' });
+}
+
+/**
+ * [جديد] أعلى اللاعبين بساعات اللعب الفعلية — بدون تسجيل دخول. البيانات
+ * تبدأ من صفر لكل اللاعبين لحظة إضافة هذا النظام (لا سجل تاريخي قبله).
+ * @param {number} [limit]
+ * @returns {Promise<Object>}
+ */
+function getTopPlayersByHours(limit) {
+    var qs = limit ? ('?limit=' + encodeURIComponent(limit)) : '';
+    return request('/api/public/top-players-hours' + qs, { method: 'GET' });
+}
+
+/**
  * [0.45.10] الأدمن فقط — إحصائيات تجميعية للستريمرز (إجمالي الساعات،
  * إجمالي المشاهدات، عدد الستريمرز المسجَّلين، وأعلى 10 بالساعات).
  * تستدعيها admin-stats.html — راجع getAdminStreamerStats() بـ
@@ -741,6 +763,8 @@ global.AGPAuth = {
     completeWelcome: completeWelcome,
     adminResetWelcome: adminResetWelcome,
     getTopStreamers: getTopStreamers,
+    getTopPlayersByWins: getTopPlayersByWins,
+    getTopPlayersByHours: getTopPlayersByHours,
     getAdminStreamerStats: getAdminStreamerStats,
     getAdminUserStats: getAdminUserStats,
     getRecentSupporters: getRecentSupporters,
