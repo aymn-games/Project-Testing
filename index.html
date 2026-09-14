@@ -640,10 +640,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     }).catch(function(){});
   }
 
-  setTimeout(loadRealSupporters, 600);
-  setTimeout(loadRealStreamers, 600);
-  setTimeout(loadRealSupporters, 2000);
-  setTimeout(loadRealStreamers, 2000);
+  // [أداء] كانت كل دالة تُستدعى مرتين دائماً (٦٠٠ و٢٠٠٠ ملّي ثانية) حتى
+  // لو نجحت أول مرة — يضاعف عدد الطلبات لكل زائر بلا داعٍ (مؤكَّد من
+  // GTmetrix: كل استدعاء علني كان يتكرر فعلياً). استدعاء واحد كافٍ؛
+  // الحارس (dataset.realData) بكل دالة أصلاً يمنع أي ازدواجية لو تكرر.
+  setTimeout(loadRealSupporters, 700);
+  setTimeout(loadRealStreamers, 700);
 
   function loadRealPlayers(){
     if (!window.AGPAuth || !window.AGPAuth.getTopPlayersByWins) return;
@@ -687,8 +689,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       rows.dataset.realData = '1';
     }).catch(function(){});
   }
-  setTimeout(loadRealPlayers, 600);
-  setTimeout(loadRealPlayers, 2000);
+  setTimeout(loadRealPlayers, 700);
 
   function loadRealPartners(){
     if (!window.AGPAuth || !window.AGPAuth.getPartners) return;
@@ -754,16 +755,24 @@ document.addEventListener('DOMContentLoaded', async function() {
       groupsWrap.dataset.realData = '1';
     }).catch(function(){});
   }
-  setTimeout(loadRealPartners, 600);
-  setTimeout(loadRealPartners, 2000);
+  setTimeout(loadRealPartners, 700);
 
   function applyResponsiveFixes(){
-    var scanEl = Array.prototype.slice.call(document.querySelectorAll('*'))
-      .find(function(e){ return getComputedStyle(e).animationName === 'nl-scan'; });
-    if (scanEl && !scanEl.dataset.scanDisabled) {
-      scanEl.style.animation = 'none';
-      scanEl.dataset.scanDisabled = '1';
-    }
+    // [أداء حرج] هذي الحركات الزخرفية بالخلفية (مدارات ضبابية، nl-aurora،
+    // nl-float، nl-pulse، nl-scan) كانت تخفّض معدل الإطارات لأقل من ١ إطار
+    // بالثانية على بعض أجهزة ويندوز (مؤكَّد بقياس فعلي) — على الأغلب
+    // بسبب تراكب عدة طبقات مموَّهة (blur) متحركة باستمرار وتكلفتها على
+    // معالج الرسومات. نطفيها نهائياً؛ شريط الأخبار المتحرك وحركة الدخول
+    // ما تأثرت ولا تنطفي (كانت بريئة بالقياس).
+    var AMBIENT_ANIMS = ['nl-orbit', 'nl-orbit2', 'nl-aurora', 'nl-float', 'nl-float2', 'nl-pulse', 'nl-scan'];
+    Array.prototype.slice.call(document.querySelectorAll('*')).forEach(function(e){
+      if (e.dataset.ambientDisabled) return;
+      var animName = getComputedStyle(e).animationName;
+      if (AMBIENT_ANIMS.indexOf(animName) !== -1) {
+        e.style.animation = 'none';
+        e.dataset.ambientDisabled = '1';
+      }
+    });
     var w = window.innerWidth;
     var isNarrow = w <= 900;
     var isMobile = w <= 480;
