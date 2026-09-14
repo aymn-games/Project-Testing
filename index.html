@@ -851,7 +851,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       heading.style.width = 'auto';
       heading.style.maxWidth = isNarrow ? '92vw' : '90%';
       heading.style.height = 'auto';
-      heading.style.margin = isNarrow ? '0 auto' : '0';
+      heading.style.margin = isNarrow ? '0 auto' : '0 auto';
       heading.style.whiteSpace = 'normal';
       heading.style.display = 'block';
       var headingParent = heading.parentElement;
@@ -862,8 +862,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         headingParent.style.width = 'auto';
         headingParent.style.height = 'auto';
         headingParent.style.overflow = 'visible';
-        headingParent.style.textAlign = isNarrow ? 'center' : '';
-        headingParent.style.margin = isNarrow ? '26px auto 0' : '26px 0 0';
+        headingParent.style.textAlign = 'center';
+        headingParent.style.margin = isNarrow ? '26px auto 0' : '26px auto 0';
       }
     }
 
@@ -876,7 +876,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       e.style.width = 'auto';
       e.style.height = 'auto';
       e.style.maxWidth = isNarrow ? '92vw' : '90%';
-      e.style.margin = isNarrow ? '0 auto' : '14px 0 0';
+      e.style.margin = isNarrow ? '0 auto' : '14px auto 0';
       e.style.whiteSpace = 'normal';
       e.style.display = 'block';
       var subParent = e.parentElement;
