@@ -532,11 +532,30 @@ document.addEventListener('DOMContentLoaded', async function() {
     return wrap;
   }
 
+  function addCardIcon(card, emoji, bg){
+    if (!card || card.dataset.iconAdded) return;
+    var header = card.children[0];
+    var titleDiv = header && header.children[0];
+    if (!titleDiv) return;
+    var iconSpan = document.createElement('span');
+    iconSpan.style.cssText = 'flex:none;width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;background:' + bg + ';';
+    iconSpan.textContent = emoji;
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;align-items:center;gap:10px;min-width:0;';
+    header.insertBefore(wrap, titleDiv);
+    wrap.appendChild(iconSpan);
+    wrap.appendChild(titleDiv);
+    card.dataset.iconAdded = '1';
+  }
+
   function loadRealSupporters(){
     if (!window.AGPAuth || !window.AGPAuth.getTopSupporters) return;
     var card = findCard('توب الداعمين للمنصة');
     var rows = card && card.children[2] ? card.children[2] : null;
     if (!rows || rows.dataset.realData) return;
+    addCardIcon(card, '💜', 'linear-gradient(135deg,#7a3fd4,#b28cf5)');
+    var supTitle = card.children[0] && card.children[0].children[0] && card.children[0].children[0].children[1];
+    if (supTitle) supTitle.textContent = 'داعمين المنصة عبر الدونيشن';
 
     Promise.all([
       window.AGPAuth.getTopSupporters(),
@@ -593,6 +612,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (!window.AGPAuth || !window.AGPAuth.getTopStreamers) return;
     var rows = findCardRowsContainer('توب الاستريمرز الأكثر نشاطاً');
     if (!rows || rows.dataset.realData) return;
+    addCardIcon(findCard('توب الاستريمرز الأكثر نشاطاً'), '📡', 'linear-gradient(135deg,#a03fd4,#e07ad4)');
     window.AGPAuth.getTopStreamers(5).then(function(result){
       var streamers = (result && result.success && result.streamers) || [];
       if (!streamers.length) return;
@@ -651,6 +671,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (!window.AGPAuth || !window.AGPAuth.getTopPlayersByWins) return;
     var rows = findCardRowsContainer('توب اللاعبين الأكثر نشاطاً');
     if (!rows || rows.dataset.realData) return;
+    addCardIcon(findCard('توب اللاعبين الأكثر نشاطاً'), '🎮', 'linear-gradient(135deg,#3f5fd4,#7f9cf5)');
     window.AGPAuth.getTopPlayersByWins(5).then(function(result){
       var players = (result && result.success && result.players) || [];
       if (!players.length) return;
@@ -868,6 +889,33 @@ document.addEventListener('DOMContentLoaded', async function() {
         subParent.style.overflow = 'visible';
       }
     });
+
+    var captionEl = Array.prototype.slice.call(document.querySelectorAll('p'))
+      .find(function(e){ return e.textContent.trim() === 'صنعت بالسعودية وبايدي سعودية'; });
+    if (captionEl) {
+      captionEl.style.position = 'static';
+      captionEl.style.left = 'auto';
+      captionEl.style.top = 'auto';
+      captionEl.style.textTransform = 'none';
+      captionEl.style.margin = '16px auto 0';
+      captionEl.style.fontSize = isMobile ? '13px' : '14px';
+    }
+    var badgeSpans = Array.prototype.slice.call(document.querySelectorAll('span'))
+      .filter(function(e){
+        var t = e.textContent.trim();
+        return t === 'مجتمع عربي كامل' || t === 'ألعاب متنوعة' || t === 'العاب متنوعة' || t === 'مجانية بالكامل';
+      });
+    badgeSpans.forEach(function(e){
+      if (e.textContent.trim() === 'العاب متنوعة') e.textContent = 'ألعاب متنوعة';
+      e.style.position = 'static';
+      e.style.left = 'auto';
+      e.style.top = 'auto';
+    });
+    if (badgeSpans[0] && badgeSpans[0].parentElement) {
+      var badgesWrap = badgeSpans[0].parentElement;
+      badgesWrap.style.position = 'static';
+      badgesWrap.style.marginTop = '20px';
+    }
 
     var heroSection = heading ? heading.closest('section, header, div[style*="max-width"]') : null;
     if (heroSection) { heroSection.style.overflow = 'hidden'; heroSection.style.maxWidth = '100vw'; }
