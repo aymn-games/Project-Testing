@@ -433,6 +433,9 @@ document.addEventListener('DOMContentLoaded', async function() {
       return d.toLocaleDateString('ar-u-ca-gregory', { year: 'numeric', month: 'long', day: 'numeric' });
     } catch (e) { return '—'; }
   }
+  function arDigits(n){
+    return String(n).replace(/[0-9]/g, function(d){ return "٠١٢٣٤٥٦٧٨٩"[d]; });
+  }
   function roleLabel(p){
     if (p.role === 'admin') return 'أدمن';
     return p.can_run_games ? 'ستريمر' : 'لاعب';
@@ -488,6 +491,139 @@ document.addEventListener('DOMContentLoaded', async function() {
       var handle = findLeaf('@username');
       if (handle) handle.textContent = '@' + p.tiktok_username;
     }
+
+    var cachedUser = null;
+    try { cachedUser = window.AGPAuth && window.AGPAuth.getCachedUser ? window.AGPAuth.getCachedUser() : null; } catch (e) {}
+    var isOwner = Boolean(cachedUser && cachedUser.custom_id && cachedUser.custom_id === p.custom_id);
+
+    window.__profileData = p;
+    window.__profileIsOwner = isOwner;
+
+    /* ---- زر لوحة التحكم (للأدمن فقط، بحساب نفسه) ---- */
+    if (isOwner && p.role === 'admin' && !document.querySelector('[data-admin-btn]')) {
+      var topRightBox = heading ? heading.parentElement.parentElement.parentElement : null;
+      if (topRightBox) {
+        var adminLink = document.createElement('a');
+        adminLink.href = 'admin-settings.html';
+        adminLink.setAttribute('data-admin-btn', '1');
+        adminLink.style.cssText = 'display:inline-block;margin-top:12px;padding:10px 18px;border-radius:10px;background:linear-gradient(135deg,#7a3fd4,#b28cf5);color:#f3ecff;font-size:13.5px;font-weight:600;text-align:center;';
+        adminLink.textContent = '⚙️ لوحة تحكم الأدمن';
+        topRightBox.appendChild(adminLink);
+      }
+    }
+
+    wireCollectibles();
+  }
+
+  function wireCollectibles(){
+    var p = window.__profileData;
+    if (!p) return false;
+    var isOwner = window.__profileIsOwner;
+    var wiredSomething = false;
+
+    /* ---- إطاراتي (المقتنيات) ---- */
+    var framesTitle = findLeaf('إطاراتي');
+    if (framesTitle && !framesTitle.dataset.wired) {
+      framesTitle.dataset.wired = '1';
+      wiredSomething = true;
+      var framesPanel = framesTitle.parentElement.parentElement;
+      var framesHeader = framesPanel.children[0];
+      var framesGrid = framesPanel.children[1];
+      var frames = p.frames || [];
+      if (framesHeader.children[1]) framesHeader.children[1].textContent = arDigits(frames.length) + (frames.length === 1 ? ' إطار' : ' إطار');
+      framesGrid.innerHTML = '';
+      if (!frames.length) {
+        var emptyMsg = document.createElement('div');
+        emptyMsg.style.cssText = 'grid-column:1/-1;font-size:13px;color:#8f8ea3;padding:10px 0;';
+        emptyMsg.textContent = 'ما عندك إطارات بعد.';
+        framesGrid.appendChild(emptyMsg);
+      } else {
+        frames.forEach(function(f){
+          var card = document.createElement('div');
+          card.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03);';
+          var imgBox = document.createElement('div');
+          imgBox.style.cssText = 'height:48px;border-radius:11px;background:repeating-linear-gradient(135deg,#221d33 0 8px,#171326 8px 16px);border:1px solid rgba(255,255,255,.08);overflow:hidden;display:flex;align-items:center;justify-content:center;';
+          if (f.imageFilename) {
+            var img = document.createElement('img');
+            img.src = f.imageFilename;
+            img.style.cssText = 'max-height:100%;max-width:100%;object-fit:contain;';
+            img.onerror = function(){ img.style.display = 'none'; };
+            imgBox.appendChild(img);
+          }
+          var nameDiv = document.createElement('div');
+          nameDiv.style.cssText = 'font-size:12.5px;line-height:1.6;color:#f4f2fb;min-height:34px;';
+          nameDiv.textContent = f.displayNameAr || f.frameRef;
+          card.appendChild(imgBox);
+          card.appendChild(nameDiv);
+          if (f.equipped) {
+            var badgeEl = document.createElement('span');
+            badgeEl.style.cssText = 'padding:8px 10px;border-radius:10px;font-size:11.5px;text-align:center;background:rgba(126,224,166,.14);color:#7ee0a6;border:1px solid rgba(126,224,166,.35);';
+            badgeEl.textContent = 'مفعّل الآن';
+            card.appendChild(badgeEl);
+          } else if (isOwner) {
+            var btn = document.createElement('button');
+            btn.style.cssText = 'padding:8px 10px;border-radius:10px;cursor:pointer;font-family:\'IBM Plex Sans Arabic\',sans-serif;font-size:11.5px;border:1px solid rgba(178,140,245,.35);background:transparent;color:#c6b4f2;';
+            btn.textContent = 'تفعيل';
+            btn.addEventListener('click', function(){
+              btn.disabled = true;
+              btn.textContent = 'جارٍ...';
+              window.AGPAuth.equipFrame(f.frameType, f.frameRef).then(function(result){
+                if (result && result.success) window.location.reload();
+                else { btn.disabled = false; btn.textContent = 'تفعيل'; }
+              }).catch(function(){ btn.disabled = false; btn.textContent = 'تفعيل'; });
+            });
+            card.appendChild(btn);
+          } else {
+            var muted = document.createElement('span');
+            muted.style.cssText = 'padding:8px 10px;border-radius:10px;font-size:11.5px;text-align:center;color:#8f8ea3;border:1px solid rgba(255,255,255,.08);';
+            muted.textContent = 'غير مفعّل';
+            card.appendChild(muted);
+          }
+          framesGrid.appendChild(card);
+        });
+      }
+    }
+
+    /* ---- دخولياتي الحالية ---- */
+    var entranceTitle = findLeaf('دخولياتي الحالية');
+    if (entranceTitle && !entranceTitle.dataset.wired) {
+      entranceTitle.dataset.wired = '1';
+      wiredSomething = true;
+      var entrancePanel = entranceTitle.parentElement.parentElement;
+      var entranceGrid = entrancePanel.children[1];
+      entranceGrid.innerHTML = '';
+      if (p.entrance) {
+        var eCard = document.createElement('div');
+        eCard.style.cssText = 'display:flex;align-items:center;gap:12px;padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03);';
+        var eIcon = document.createElement('span');
+        eIcon.style.cssText = 'flex:none;width:36px;height:36px;border-radius:11px;background:repeating-linear-gradient(135deg,#221d33 0 8px,#171326 8px 16px);';
+        var eInfo = document.createElement('span');
+        eInfo.style.cssText = 'flex:1;min-width:0;';
+        var eName = document.createElement('span');
+        eName.style.cssText = 'display:block;font-size:14px;color:#f4f2fb;';
+        eName.textContent = p.entrance.template_key || '—';
+        var eText = document.createElement('span');
+        eText.style.cssText = 'display:block;margin-top:3px;font-size:12px;color:#968ea4;';
+        eText.textContent = p.entrance.entrance_text || '';
+        var eStatus = document.createElement('span');
+        eStatus.style.cssText = 'display:block;margin-top:5px;font-size:11px;color:' + (p.entrance.enabled === false ? '#e08a8a' : '#7ee0a6') + ';';
+        eStatus.textContent = p.entrance.enabled === false ? 'موقوفة ⏸️' : 'مفعّلة ✅';
+        eInfo.appendChild(eName);
+        eInfo.appendChild(eText);
+        eInfo.appendChild(eStatus);
+        eCard.appendChild(eIcon);
+        eCard.appendChild(eInfo);
+        entranceGrid.appendChild(eCard);
+      } else {
+        var eEmpty = document.createElement('div');
+        eEmpty.style.cssText = 'font-size:13px;color:#8f8ea3;padding:6px 0;';
+        eEmpty.textContent = 'ما عندك دخولية مفعّلة بعد.';
+        entranceGrid.appendChild(eEmpty);
+      }
+    }
+
+    /* ---- زر لوحة التحكم (للأدمن فقط، بحساب نفسه) ---- */
+    return wiredSomething;
   }
 
   function init(){
@@ -524,6 +660,10 @@ document.addEventListener('DOMContentLoaded', async function() {
       } else {
         window.location.href = 'index.html';
       }
+    }
+    if (t === 'المقتنيات') {
+      setTimeout(wireCollectibles, 60);
+      setTimeout(wireCollectibles, 300);
     }
   }, true);
 })();
