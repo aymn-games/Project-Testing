@@ -506,41 +506,82 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
   var RANK_COLORS = ["#f0d68a","#cfd4de","#d09a6a","#7c7590","#7c7590"];
 
-  function findCardRowsContainer(titleText){
+  function findCard(titleText){
     var titleDiv = Array.prototype.slice.call(document.querySelectorAll('*'))
       .find(function(e){ return e.children.length <= 1 && e.textContent.trim() === titleText; });
-    if (!titleDiv) return null;
-    var card = titleDiv.parentElement.parentElement;
+    return titleDiv ? titleDiv.parentElement.parentElement : null;
+  }
+  function findCardRowsContainer(titleText){
+    var card = findCard(titleText);
     return card && card.children[2] ? card.children[2] : null;
+  }
+
+  var TOP3_BADGE = [
+    { bg: 'rgba(240,214,138,.16)', fg: '#f0d68a', border: 'rgba(240,214,138,.45)' },
+    { bg: 'rgba(207,212,222,.14)', fg: '#cfd4de', border: 'rgba(207,212,222,.4)' },
+    { bg: 'rgba(208,154,106,.16)', fg: '#d09a6a', border: 'rgba(208,154,106,.45)' }
+  ];
+  function buildIdMeta(customId, idx){
+    var wrap = document.createElement('span');
+    if (!customId) { wrap.style.display = 'none'; return wrap; }
+    if (idx < 3) {
+      wrap.style.cssText = 'display:inline-flex;align-items:center;gap:4px;margin-top:5px;padding:2px 9px;border-radius:999px;background:' + TOP3_BADGE[idx].bg + ';border:1px solid ' + TOP3_BADGE[idx].border + ';font-size:11px;font-weight:700;color:' + TOP3_BADGE[idx].fg + ';direction:ltr;';
+      wrap.textContent = 'ID ' + customId;
+    } else {
+      wrap.style.cssText = 'display:block;margin-top:4px;font-size:12px;color:#8f9ac2;direction:ltr;text-align:start;';
+      wrap.textContent = 'ID ' + customId;
+    }
+    return wrap;
   }
 
   function loadRealSupporters(){
     if (!window.AGPAuth || !window.AGPAuth.getTopSupporters) return;
-    var rows = findCardRowsContainer('توب الداعمين للمنصة');
+    var card = findCard('توب الداعمين للمنصة');
+    var rows = card && card.children[2] ? card.children[2] : null;
     if (!rows || rows.dataset.realData) return;
-    window.AGPAuth.getTopSupporters().then(function(result){
-      var supporters = (result && result.success && result.supporters) || [];
+
+    Promise.all([
+      window.AGPAuth.getTopSupporters(),
+      window.AGPAuth.getRecentSupporters ? window.AGPAuth.getRecentSupporters(50).catch(function(){ return null; }) : Promise.resolve(null)
+    ]).then(function(results){
+      var topResult = results[0];
+      var recentResult = results[1];
+      var supporters = (topResult && topResult.success && topResult.supporters) || [];
       if (!supporters.length) return;
+
+      var messageByName = {};
+      if (recentResult && recentResult.success && recentResult.supporters) {
+        recentResult.supporters.forEach(function(r){
+          if (r.message && !messageByName[r.name]) messageByName[r.name] = r.message;
+        });
+      }
+
+      // [أكبر قليلاً] زيادة الحشو وحجم الخط بهذي البطاقة تحديداً بناءً على طلب المستخدم
+      card.style.padding = '32px 26px 24px';
+      var headerTitle = card.children[0] && card.children[0].children[0];
+      if (headerTitle) headerTitle.style.fontSize = '21px';
+
       rows.innerHTML = '';
       supporters.slice(0, 5).forEach(function(s, idx){
         var row = document.createElement('div');
-        row.style.cssText = 'display:flex;align-items:start;gap:12px;padding:12px 10px;border-radius:14px;transition:background .2s;';
+        row.style.cssText = 'display:flex;align-items:start;gap:13px;padding:13px 11px;border-radius:14px;transition:background .2s;';
         var rankSpan = document.createElement('span');
-        rankSpan.style.cssText = 'flex:none;width:26px;text-align:center;font-family:\'Noto Kufi Arabic\',sans-serif;font-size:14px;font-weight:700;color:' + (RANK_COLORS[idx] || '#7c7590') + ';';
+        rankSpan.style.cssText = 'flex:none;width:28px;text-align:center;font-family:\'Noto Kufi Arabic\',sans-serif;font-size:15px;font-weight:700;color:' + (RANK_COLORS[idx] || '#7c7590') + ';';
         rankSpan.textContent = arDigits(idx + 1);
         var infoWrap = document.createElement('span');
         infoWrap.style.cssText = 'flex:1;min-width:0;';
         var nameSpan = document.createElement('span');
-        nameSpan.style.cssText = 'display:block;font-family:\'Noto Kufi Arabic\',sans-serif;font-size:15px;color:#f4f2fb;';
+        nameSpan.style.cssText = 'display:block;font-family:\'Noto Kufi Arabic\',sans-serif;font-size:16px;color:#f4f2fb;';
         nameSpan.textContent = s.name || '—';
         var metaSpan = document.createElement('span');
-        metaSpan.style.cssText = 'display:block;margin-top:4px;font-size:13px;line-height:1.7;color:#968ea4;';
-        metaSpan.textContent = s.donationsCount === 1 ? 'دعم واحد' : ((s.donationsCount || 0) + ' مرات دعم');
+        metaSpan.style.cssText = 'display:block;margin-top:4px;font-size:13.5px;line-height:1.7;color:#968ea4;';
+        var msg = messageByName[s.name];
+        metaSpan.textContent = msg ? msg : (s.donationsCount === 1 ? 'دعم واحد' : ((s.donationsCount || 0) + ' مرات دعم'));
         infoWrap.appendChild(nameSpan);
         infoWrap.appendChild(metaSpan);
         var amountSpan = document.createElement('span');
-        amountSpan.style.cssText = 'flex:none;font-family:\'Noto Kufi Arabic\',sans-serif;font-size:14px;font-weight:700;color:#b28cf5;';
-        amountSpan.textContent = s.totalAmount ? (arDigits(s.totalAmount) + ' ريال') : '—';
+        amountSpan.style.cssText = 'flex:none;font-family:\'Noto Kufi Arabic\',sans-serif;font-size:15px;font-weight:700;color:#b28cf5;direction:ltr;';
+        amountSpan.textContent = s.totalAmount ? ('$' + Number(s.totalAmount).toLocaleString('en-US')) : '—';
         row.appendChild(rankSpan);
         row.appendChild(infoWrap);
         row.appendChild(amountSpan);
@@ -572,10 +613,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         nameSpan.style.cssText = 'display:block;font-family:\'Noto Kufi Arabic\',sans-serif;font-size:15px;color:#f4f2fb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
         nameSpan.textContent = s.displayName || '—';
         var handleSpan = document.createElement('span');
-        handleSpan.style.cssText = 'display:block;margin-top:2px;font-size:12.5px;color:#c98fbe;direction:ltr;text-align:start;';
+        handleSpan.style.cssText = 'display:block;margin-top:2px;font-size:12px;color:#c98fbe;direction:ltr;text-align:start;';
         handleSpan.textContent = s.tiktokUsername ? ('@' + s.tiktokUsername) : '';
         infoWrap.appendChild(nameSpan);
         infoWrap.appendChild(handleSpan);
+        infoWrap.appendChild(buildIdMeta(s.customId, idx));
         var hoursWrap = document.createElement('span');
         hoursWrap.style.cssText = 'flex:none;text-align:center;';
         var hoursNum = document.createElement('span');
@@ -626,11 +668,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         var nameSpan = document.createElement('span');
         nameSpan.style.cssText = 'display:block;font-family:\'Noto Kufi Arabic\',sans-serif;font-size:15px;color:#f4f2fb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
         nameSpan.textContent = pl.displayName || '—';
-        var metaSpan = document.createElement('span');
-        metaSpan.style.cssText = 'display:block;margin-top:2px;font-size:12.5px;color:#8f9ac2;direction:ltr;text-align:start;';
-        metaSpan.textContent = pl.customId || '';
         infoWrap.appendChild(nameSpan);
-        infoWrap.appendChild(metaSpan);
+        infoWrap.appendChild(buildIdMeta(pl.customId, idx));
         var winsWrap = document.createElement('span');
         winsWrap.style.cssText = 'flex:none;text-align:center;';
         var winsNum = document.createElement('span');
