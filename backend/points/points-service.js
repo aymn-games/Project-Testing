@@ -98,8 +98,8 @@ function awardForRoundCompletion(userId, params) {
     // النقاط لبلوغ السقف اليومي. awardPoints أعلاه ضمِنت وجود صف
     // user_points لهذا المستخدم، فهذا التحديث آمن دائماً بعده مباشرة.
     db.prepare(
-        'UPDATE user_points SET games_played = games_played + 1, games_won = games_won + ? WHERE user_id = ?'
-    ).run(params.won ? 1 : 0, userId);
+        'UPDATE user_points SET games_played = games_played + 1, games_won = games_won + ?, total_play_ms = total_play_ms + ? WHERE user_id = ?'
+    ).run(params.won ? 1 : 0, params.durationMs || 0, userId);
 
     return result;
 }
@@ -148,9 +148,70 @@ function getUserPoints(userId) {
     };
 }
 
+/**
+ * [جديد] أعلى اللاعبين بعدد مرات الفوز — عام، بديل صادق عن "الأكثر
+ * نشاطاً" لغير الستريمرز (نفس فلسفة getTopStreamersByHours بـ
+ * auth-service.js: بيانات علنية غير حساسة فقط — بدون بريد أو أي شيء
+ * حساس). يستبعد من لا جولات فائزة له بعد.
+ * @param {number} [limit]
+ * @returns {Array<{username: string, displayName: string, avatarBase64: (string|null), customId: (string|null), gamesWon: number, gamesPlayed: number}>}
+ */
+function getTopPlayersByWins(limit) {
+    var rows = db.prepare(
+        `SELECT u.username, u.display_name AS displayName, u.avatar_image_base64 AS avatarBase64,
+                u.custom_id AS customId, p.games_won AS gamesWon, p.games_played AS gamesPlayed
+         FROM user_points p
+         JOIN users u ON u.id = p.user_id
+         WHERE p.games_won > 0
+         ORDER BY p.games_won DESC, p.games_played ASC
+         LIMIT ?`
+    ).all(limit || 20);
+    return rows.map(function (r) {
+        return {
+            username: r.username,
+            displayName: r.displayName || r.username,
+            avatarBase64: r.avatarBase64 || null,
+            customId: r.customId || null,
+            gamesWon: r.gamesWon || 0,
+            gamesPlayed: r.gamesPlayed || 0
+        };
+    });
+}
+
+/**
+ * [جديد] أعلى اللاعبين بساعات اللعب الفعلية (total_play_ms المتراكم من
+ * awardForRoundCompletion أعلاه). يستبعد من ما له وقت لعب مسجَّل بعد —
+ * البيانات تبدأ من صفر لكل اللاعبين لحظة إضافة هذا العمود (لا سجل
+ * تاريخي قبله)، فتترسّخ القائمة تدريجياً مع الجولات الجديدة فقط.
+ * @param {number} [limit]
+ * @returns {Array<{username: string, displayName: string, avatarBase64: (string|null), customId: (string|null), totalHours: number}>}
+ */
+function getTopPlayersByHours(limit) {
+    var rows = db.prepare(
+        `SELECT u.username, u.display_name AS displayName, u.avatar_image_base64 AS avatarBase64,
+                u.custom_id AS customId, p.total_play_ms AS totalMs
+         FROM user_points p
+         JOIN users u ON u.id = p.user_id
+         WHERE p.total_play_ms > 0
+         ORDER BY p.total_play_ms DESC
+         LIMIT ?`
+    ).all(limit || 20);
+    return rows.map(function (r) {
+        return {
+            username: r.username,
+            displayName: r.displayName || r.username,
+            avatarBase64: r.avatarBase64 || null,
+            customId: r.customId || null,
+            totalHours: Math.round((r.totalMs / 3600000) * 10) / 10
+        };
+    });
+}
+
 module.exports = {
     awardPoints: awardPoints,
     awardForRoundCompletion: awardForRoundCompletion,
     getUserPoints: getUserPoints,
+    getTopPlayersByWins: getTopPlayersByWins,
+    getTopPlayersByHours: getTopPlayersByHours,
     DAILY_CAP: DAILY_CAP
 };
