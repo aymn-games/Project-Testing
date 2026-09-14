@@ -134,6 +134,11 @@ var ROUTES = [
   // بدون تسجيل دخول (نفس فلسفة /api/announcement و/api/theme)، يرجع
   // فقط يوزرنيم تيك توك + ساعات، بدون أي بيانات حساب حساسة.
   { method: 'GET', path: '/api/public/top-streamers', requireAuth: false, handler: handleTopStreamers },
+  // ---- [جديد] أعلى اللاعبين بالفوز/بالساعات — عام بدون تسجيل دخول،
+  // نفس فلسفة /api/public/top-streamers بالضبط. راجع
+  // backend/points/points-service.js (getTopPlayersByWins/ByHours).
+  { method: 'GET', path: '/api/public/top-players-wins', requireAuth: false, handler: handleTopPlayersByWins },
+  { method: 'GET', path: '/api/public/top-players-hours', requireAuth: false, handler: handleTopPlayersByHours },
   // ---- [0.45.10] إحصائيات لوحة الأدمن — راجع backend/auth/auth-service.js
   // (getAdminStreamerStats/getAdminUserStats) للملاحظات الصادقة حول
   // دقة "إجمالي المشاهدات" (غير مؤكَّدة ضد بث حقيقي من هذه البيئة).
@@ -601,6 +606,30 @@ function handleTopStreamers(req, res) {
   });
   var limit = Math.min(50, Math.max(1, parseInt(limitRaw, 10) || 20));
   sendJson(res, 200, { success: true, streamers: authService.getTopStreamersByHours(limit) });
+}
+
+/** [جديد] أعلى اللاعبين بعدد مرات الفوز — عام، لبطاقة "الأكثر نشاطاً" بالصفحة الرئيسية. */
+function handleTopPlayersByWins(req, res) {
+  var queryString = (req.url || '').split('?')[1] || '';
+  var limitRaw = '';
+  queryString.split('&').forEach(function (pair) {
+    var kv = pair.split('=');
+    if (decodeURIComponent(kv[0] || '') === 'limit') limitRaw = decodeURIComponent(kv[1] || '');
+  });
+  var limit = Math.min(50, Math.max(1, parseInt(limitRaw, 10) || 20));
+  sendJson(res, 200, { success: true, players: pointsService.getTopPlayersByWins(limit) });
+}
+
+/** [جديد] أعلى اللاعبين بساعات اللعب الفعلية — عام، بديل مستقبلي/تكميلي لبطاقة اللاعبين. */
+function handleTopPlayersByHours(req, res) {
+  var queryString = (req.url || '').split('?')[1] || '';
+  var limitRaw = '';
+  queryString.split('&').forEach(function (pair) {
+    var kv = pair.split('=');
+    if (decodeURIComponent(kv[0] || '') === 'limit') limitRaw = decodeURIComponent(kv[1] || '');
+  });
+  var limit = Math.min(50, Math.max(1, parseInt(limitRaw, 10) || 20));
+  sendJson(res, 200, { success: true, players: pointsService.getTopPlayersByHours(limit) });
 }
 
 /** [0.45.10] الأدمن فقط — إحصائيات الاستريمرز المجمَّعة. */
