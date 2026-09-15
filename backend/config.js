@@ -58,6 +58,27 @@ module.exports = {
     resendApiKey: process.env.RESEND_API_KEY || '',
 
     /**
+     * [جديد] بيانات اعتماد TikTok Login Kit (OAuth 2.0) — تسجيل دخول
+     * حقيقي بدل كود البايو القديم (راجع verifyTikTokOwnership بـ
+     * auth-service.js، الطريقة القديمة). Client Key مو سري فعلياً
+     * (يظهر بالـ URL أصلاً)، لكن نخليه متغيّر بيئة برضه بنفس نمط
+     * googleClientId فوق حتى يسهل تغييره بدون لمس الكود. Client Secret
+     * سري تماماً — بدون أي قيمة افتراضية، نفس مبدأ resendApiKey.
+     */
+    tiktokClientKey: process.env.TIKTOK_CLIENT_KEY || '',
+    tiktokClientSecret: process.env.TIKTOK_CLIENT_SECRET || '',
+    tiktokRedirectUri: process.env.TIKTOK_REDIRECT_URI || 'https://aymngames.online/api/auth/tiktok/oauth/callback',
+
+    /**
+     * [جديد] مفتاح توقيع state الخاص بـ TikTok OAuth (حماية CSRF —
+     * نرمّز فيه هوية المستخدم اللي بدأ الربط، موقّع بـHMAC، بدل جدول
+     * قاعدة بيانات منفصل لحفظ الحالات المؤقتة). لازم تضبطه فعلياً
+     * بالإنتاج عبر متغيّر بيئة TIKTOK_STATE_SECRET؛ القيمة الافتراضية
+     * هنا للتطوير المحلي فقط ولا تصلح للإنتاج أبداً.
+     */
+    tiktokStateSecret: process.env.TIKTOK_STATE_SECRET || 'dev-only-insecure-state-secret-change-me',
+
+    /**
      * حدود عامة أولية لمعدّل الرسائل (راجع §8 في وثيقة المعمارية) —
      * قيم مبدئية فقط، لا أي منطق تطبيق فعلي بعد (ذلك في
      * utils/rate-limiter.js لاحقاً).
