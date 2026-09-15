@@ -225,6 +225,20 @@ db.exec(`
     );
     CREATE INDEX IF NOT EXISTS idx_supporters_created ON supporters(created_at);
 
+    -- [جديد] شركاء الإبداع (قسم "شركاء الإبداع" بالصفحة الرئيسية) — يربط
+    -- حساب مسجَّل فعلي بفئة (أصحاب أفكار / فريق تطوير). لا نخزّن اسم أو
+    -- صورة هنا عمداً — كلها تُقرأ حيّة من users عند العرض (JOIN)، فلو
+    -- الشخص غيّر اسم عرضه أو صورته تتحدّث تلقائياً بدون أي تعديل هنا.
+    -- راجع backend/partners/partners-service.js.
+    CREATE TABLE IF NOT EXISTS creative_partners (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        category TEXT NOT NULL CHECK (category IN ('idea', 'dev')),
+        created_at INTEGER NOT NULL,
+        UNIQUE(user_id, category)
+    );
+    CREATE INDEX IF NOT EXISTS idx_creative_partners_category ON creative_partners(category);
+
     -- ثيم ألوان مؤقت للمناسبات — صف واحد ثابت (id = 1)، يُستبدَل بالكامل
     -- مع كل تفعيل جديد من الأدمن (نفس نمط جدول announcement بالضبط).
     -- active = 0 يعني الموقع بألوانه الافتراضية (index.html:root)، مافي
@@ -272,6 +286,11 @@ ensureColumn('users', 'welcome_completed', 'INTEGER NOT NULL DEFAULT 0');
 // تيك توك بالمشروع، قد يفشل أحياناً فيرجع null بدون كسر التحقق نفسه.
 ensureColumn('users', 'tiktok_avatar_url', 'TEXT');
 ensureColumn('users', 'tiktok_display_name', 'TEXT');
+// [جديد] معرّف تيك توك الثابت (open_id) — يوصل بس من تسجيل الدخول
+// الرسمي (OAuth)، مو من طريقة كود البايو القديمة. نحتاجه لمنع نفس
+// حساب التيك توك من الارتباط بأكثر من حساب AGP بالغلط — راجع
+// backend/auth/tiktok-oauth-service.js.
+ensureColumn('users', 'tiktok_open_id', 'TEXT');
 // عدّادات جولات مكتملة/فوز — لتفعيل بطاقة "إحصائيات اللاعب" بالبروفايل
 // (كانت "قريباً" ثابتة، ما فيه عدّاد حقيقي مخزَّن قبل هذا). تُحدَّث من
 // backend/points/points-service.js عند كل استدعاء awardForRoundCompletion
