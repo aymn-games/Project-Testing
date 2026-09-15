@@ -509,7 +509,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             e.preventDefault();
             var token = window.AGPAuth && window.AGPAuth.getToken ? window.AGPAuth.getToken() : null;
             if (!token) { window.location.href = 'login.html'; return; }
-            window.location.href = '/api/auth/tiktok/oauth/start?token=' + encodeURIComponent(token);
+            var apiBase = (window.AGPAuth && window.AGPAuth.API_BASE) || '';
+            window.location.href = apiBase + '/api/auth/tiktok/oauth/start?token=' + encodeURIComponent(token);
           });
         }
         // "إلغاء الربط" يبقى بسلوكه القديم (إن وجد) — إلغاء ربط حقيقي
