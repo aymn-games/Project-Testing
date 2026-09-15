@@ -67,7 +67,18 @@ module.exports = {
      */
     tiktokClientKey: process.env.TIKTOK_CLIENT_KEY || '',
     tiktokClientSecret: process.env.TIKTOK_CLIENT_SECRET || '',
-    tiktokRedirectUri: process.env.TIKTOK_REDIRECT_URI || 'https://aymngames.online/api/auth/tiktok/oauth/callback',
+    tiktokRedirectUri: process.env.TIKTOK_REDIRECT_URI || 'https://project-testing-akds.onrender.com/api/auth/tiktok/oauth/callback',
+
+    /**
+     * [جديد] عنوان الموقع الفعلي (aymngames.online) — منفصل تماماً عن
+     * دومين هذا السيرفر نفسه (project-testing-akds.onrender.com، راجع
+     * auth-client.js:API_BASE بالفرونت إند). نحتاجه فقط لبناء رابط
+     * إعادة توجيه *مطلَق* بنهاية تسجيل دخول تيك توك (راجع
+     * handleTikTokOAuthCallback بـauth-router.js) — رابط نسبي كان
+     * يرجّع المستخدم بالغلط لنفس دومين هذا السيرفر (404) بدل الموقع
+     * الحقيقي.
+     */
+    frontendBaseUrl: process.env.FRONTEND_BASE_URL || 'https://aymngames.online',
 
     /**
      * [جديد] مفتاح توقيع state الخاص بـ TikTok OAuth (حماية CSRF —
