@@ -249,7 +249,7 @@ function handleTikTokOAuthStart(req, res) {
   var token = params.get('token');
   var user = token ? authService.validateSession(token) : null;
   if (!user) {
-    res.writeHead(302, { Location: '/login.html?tiktok_error=not_logged_in' });
+    res.writeHead(302, { Location: config.frontendBaseUrl + '/login.html?tiktok_error=not_logged_in' });
     return res.end();
   }
   var authorizeUrl = tiktokOAuthService.buildAuthorizeUrl(user.id);
@@ -266,7 +266,7 @@ async function handleTikTokOAuthCallback(req, res) {
   var deniedByUser = params.get('error'); // المستخدم رفض الموافقة بصفحة تيك توك نفسها
 
   function redirectToProfile(status) {
-    res.writeHead(302, { Location: '/profile.html?tiktok_link=' + status });
+    res.writeHead(302, { Location: config.frontendBaseUrl + '/profile.html?tiktok_link=' + status });
     res.end();
   }
 
