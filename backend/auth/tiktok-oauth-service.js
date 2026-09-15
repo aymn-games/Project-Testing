@@ -70,7 +70,7 @@ function buildAuthorizeUrl(userId) {
     var state = signState(userId);
     var params = new URLSearchParams({
         client_key: config.tiktokClientKey,
-        scope: 'user.info.basic',
+        scope: 'user.info.basic,user.info.profile',
         response_type: 'code',
         redirect_uri: config.tiktokRedirectUri,
         state: state
@@ -108,20 +108,16 @@ async function exchangeCodeForToken(code) {
 }
 
 /**
- * بيانات المستخدم الحقيقية من تيك توك (open_id، الاسم المعروض،
- * الصورة) — user.info.basic فقط، كافية لهدفنا. ⚠️ [إصلاح] كنا نطلب
- * حقل "username" أيضاً، لكن هذا الحقل ما هو موثَّق ضمن نطاق
- * user.info.basic بتوثيق تيك توك الرسمي (فقط open_id، union_id،
- * avatar_url، display_name) — احتمال قوي إنه هو سبب فشل الطلب بالكامل
- * (تيك توك يرفض الطلب كله لو فيه حقل غير مصرَّح به بدل ما يتجاهله).
- * شلناه؛ لو رجع فعلاً بدون خطأ الآن، نعرف السبب بالتأكيد ونقرر بعدها
- * كيف نجيب اليوزرنيم الحقيقي (على الأغلب يحتاج نطاق user.info.profile
- * إضافي، يحتاج مراجعة تيك توك).
+ * بيانات المستخدم الحقيقية من تيك توك — open_id/display_name/avatar_url
+ * تحت user.info.basic، وuseranme (اليوزرنيم الفعلي المستخدَم بمطابقة
+ * شات البث) تحت user.info.profile (مؤكَّد من توثيق تيك توك الرسمي —
+ * هذا سبب فشل الطلب سابقاً لما طلبناه بدون الصلاحية هذي). الاثنين
+ * مطلوبين الآن بـbuildAuthorizeUrl أعلاه.
  * @returns {Promise<{success:boolean, user?:Object, error?:string}>}
  */
 async function fetchTikTokUserInfo(accessToken) {
     try {
-        var fields = 'open_id,display_name,avatar_url';
+        var fields = 'open_id,display_name,avatar_url,username';
         var res = await fetch(USER_INFO_URL + '?fields=' + fields, {
             headers: { 'Authorization': 'Bearer ' + accessToken }
         });
