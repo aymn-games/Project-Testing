@@ -733,11 +733,15 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     window.AGPAuth.getPartners().then(function(result){
       if (!result || !result.success) return;
-      // الباك-إند يرجّع idea/dev مباشرة على مستوى result نفسه (بدون مفتاح
-      // partners وسيط) — قراءة result.partners كانت تطلع دائماً undefined
-      // فتصير القائمتين فاضيتين دايماً، فتُخفى البطاقة كاملة (renderGroup
-      // تُخفي المجموعة لو list.length == 0) رغم وجود بيانات حقيقية فعلاً.
-      var partners = { idea: result.idea || [], dev: result.dev || [] };
+      // [تصحيح] راجعت backend/http/auth-router.js فعلياً هالمرة:
+      // handleGetPartners يرجّع { success, partners: { idea, dev } } —
+      // بمفتاح partners وسيط فعلاً (partners-service.js's getPartnersPublic
+      // يبني { idea, dev } وrouter يغلّفها بـ"partners"). تعديل سابق هنا
+      // كان مبنياً على افتراض غير محقَّق من ملف آخر (بدون partners
+      // وسيط) فصار يقرأ result.idea/result.dev اللي دائماً undefined —
+      // نفس مشكلة "القائمة الفاضية" اللي كانت من قبل، بس بالاتجاه
+      // المعاكس. رجعناها لقراءة result.partners الصحيحة.
+      var partners = result.partners || { idea: [], dev: [] };
 
       function buildCard(p, idx){
         var card = document.createElement('div');
