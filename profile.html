@@ -497,6 +497,50 @@ document.addEventListener('DOMContentLoaded', async function() {
     try { cachedUserForEdit = window.AGPAuth && window.AGPAuth.getCachedUser ? window.AGPAuth.getCachedUser() : null; } catch (e) {}
     var isOwnerForEdit = Boolean(cachedUserForEdit && cachedUserForEdit.custom_id && cachedUserForEdit.custom_id === p.custom_id);
     if (isOwnerForEdit) {
+      var linkBtn = Array.prototype.slice.call(document.querySelectorAll('button'))
+        .find(function(e){ var t = e.textContent.trim(); return t === 'ربط الحساب' || t === 'إلغاء الربط'; });
+      if (linkBtn && !linkBtn.dataset.tiktokWired) {
+        linkBtn.dataset.tiktokWired = '1';
+        if (linkBtn.textContent.trim() === 'ربط الحساب') {
+          // [تسجيل دخول تيك توك الرسمي] يستبدل التبديل المحلي الوهمي
+          // (كان يغيّر شكل الزر بس بدون أي ربط حقيقي) برابط فعلي
+          // يوديك لصفحة تيك توك — راجع backend/auth/tiktok-oauth-service.js.
+          linkBtn.addEventListener('click', function(e){
+            e.preventDefault();
+            var token = window.AGPAuth && window.AGPAuth.getToken ? window.AGPAuth.getToken() : null;
+            if (!token) { window.location.href = 'login.html'; return; }
+            window.location.href = '/api/auth/tiktok/oauth/start?token=' + encodeURIComponent(token);
+          });
+        }
+        // "إلغاء الربط" يبقى بسلوكه القديم (إن وجد) — إلغاء ربط حقيقي
+        // موجود أصلاً بمسار ثاني (tiktok/unlink)، خارج نطاق هذا التعديل.
+      }
+
+      /* ---- نتيجة رجوع تيك توك (?tiktok_link=...) ---- */
+      var linkResultParam = new URLSearchParams(window.location.search).get('tiktok_link');
+      if (linkResultParam && !document.querySelector('[data-tiktok-result-shown]')) {
+        var msgMap = {
+          success: 'تم ربط حساب تيك توك بنجاح! ✅',
+          cancelled: 'ألغيت عملية الربط.',
+          invalid_state: 'انتهت صلاحية محاولة الربط، جرّب مرة ثانية.',
+          missing_code: 'حصل خطأ أثناء الربط، جرّب مرة ثانية.',
+          token_exchange_failed: 'تعذّر إكمال الربط مع تيك توك، جرّب مرة ثانية.',
+          user_info_failed: 'تعذّر جلب بيانات حسابك من تيك توك، جرّب مرة ثانية.',
+          already_linked: 'حساب التيك توك هذا مرتبط بحساب AGP ثاني بالفعل.',
+          link_failed: 'تعذّر حفظ الربط، جرّب مرة ثانية.'
+        };
+        var banner = document.createElement('div');
+        banner.setAttribute('data-tiktok-result-shown', '1');
+        var ok = linkResultParam === 'success';
+        banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:999;padding:12px 20px;border-radius:12px;font-size:14px;background:' + (ok ? 'rgba(126,224,166,.16)' : 'rgba(224,138,138,.16)') + ';border:1px solid ' + (ok ? 'rgba(126,224,166,.4)' : 'rgba(224,138,138,.4)') + ';color:' + (ok ? '#7ee0a6' : '#e08a8a') + ';';
+        banner.textContent = msgMap[linkResultParam] || 'حصل خطأ غير متوقع.';
+        document.body.appendChild(banner);
+        setTimeout(function(){ banner.remove(); }, 6000);
+        var cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, '', cleanUrl);
+        if (ok) setTimeout(function(){ window.location.reload(); }, 900);
+      }
+
       var editBtn = Array.prototype.slice.call(document.querySelectorAll('button'))
         .find(function(e){ return e.textContent.trim() === 'تعديل الملف'; });
       if (editBtn && !editBtn.dataset.wired) {
