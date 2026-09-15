@@ -534,6 +534,22 @@ document.addEventListener('DOMContentLoaded', async function() {
     return wrap;
   }
 
+  function buildAvatar(avatarBase64, size, placeholderBg){
+    var el;
+    if (avatarBase64) {
+      el = document.createElement('img');
+      el.src = avatarBase64;
+      el.style.cssText = 'flex:none;width:' + size + 'px;height:' + size + 'px;border-radius:50%;border:1px solid rgba(255,255,255,.14);object-fit:cover;';
+      el.onerror = function(){
+        el.replaceWith(buildAvatar(null, size, placeholderBg));
+      };
+    } else {
+      el = document.createElement('span');
+      el.style.cssText = 'flex:none;width:' + size + 'px;height:' + size + 'px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:' + placeholderBg + ';';
+    }
+    return el;
+  }
+
   function loadRealSupporters(){
     if (!window.AGPAuth || !window.AGPAuth.getTopSupporters) return;
     var card = findCard('توب الداعمين للمنصة');
@@ -605,8 +621,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         var rankSpan = document.createElement('span');
         rankSpan.style.cssText = 'flex:none;width:24px;text-align:center;font-size:13.5px;font-weight:700;color:' + (RANK_COLORS[idx] || '#7c7590') + ';';
         rankSpan.textContent = arDigits(idx + 1);
-        var avatar = document.createElement('span');
-        avatar.style.cssText = 'flex:none;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:repeating-linear-gradient(135deg,#3b2340 0 6px,#241729 6px 12px);';
+        var avatar = buildAvatar(s.avatarBase64, 44, 'repeating-linear-gradient(135deg,#3b2340 0 6px,#241729 6px 12px)');
         var infoWrap = document.createElement('span');
         infoWrap.style.cssText = 'flex:1;min-width:0;';
         var nameSpan = document.createElement('span');
@@ -642,10 +657,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     }).catch(function(){});
   }
 
-  setTimeout(loadRealSupporters, 600);
-  setTimeout(loadRealStreamers, 600);
-  setTimeout(loadRealSupporters, 2000);
-  setTimeout(loadRealStreamers, 2000);
+  // [إصلاح باگ حقيقي] كل دالة loadReal* كانت تُستدعى مرتين فقط بتأخير
+  // ثابت (٦٠٠ و٢٠٠٠ مللي ثانية) — لو ما اكتمل تركيب الصفحة الحقيقية
+  // (استبدال documentElement) قبل هالوقتين، الدالة ترجع فوراً (العنوان
+  // اللي تدوّر عليه بالـDOM ما يكون موجود بعد) ولا تُعاد المحاولة أبداً،
+  // فتبقى البيانات الحقيقية (بما فيها الصور الشخصية وقائمة شركاء الإبداع)
+  // غير معروضة نهائياً على أي اتصال أبطأ من المعتاد. نفس فكرة الاستطلاع
+  // (polling) المستخدمة أصلاً مع patchLinks بالأسفل: نكرر المحاولة كل
+  // ٣٠٠ مللي ثانية لمدة ٩ ثوانٍ تقريباً؛ كل دالة أصلاً تتحقق من
+  // dataset.realData فترجع فوراً بلا أي تكلفة إضافية بعد أول نجاح.
+  function pollUntilReady(fn){
+    var tries = 0;
+    var t = setInterval(function(){
+      tries++;
+      fn();
+      if (tries >= 30) clearInterval(t);
+    }, 300);
+  }
+  pollUntilReady(loadRealSupporters);
+  pollUntilReady(loadRealStreamers);
 
   function loadRealPlayers(){
     if (!window.AGPAuth || !window.AGPAuth.getTopPlayersByWins) return;
@@ -661,8 +691,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         var rankSpan = document.createElement('span');
         rankSpan.style.cssText = 'flex:none;width:24px;text-align:center;font-size:13.5px;font-weight:700;color:' + (RANK_COLORS[idx] || '#7c7590') + ';';
         rankSpan.textContent = arDigits(idx + 1);
-        var avatar = document.createElement('span');
-        avatar.style.cssText = 'flex:none;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:repeating-linear-gradient(135deg,#232a4d 0 6px,#171b33 6px 12px);';
+        var avatar = buildAvatar(pl.avatarBase64, 40, 'repeating-linear-gradient(135deg,#232a4d 0 6px,#171b33 6px 12px)');
         var infoWrap = document.createElement('span');
         infoWrap.style.cssText = 'flex:1;min-width:0;';
         var nameSpan = document.createElement('span');
@@ -689,8 +718,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       rows.dataset.realData = '1';
     }).catch(function(){});
   }
-  setTimeout(loadRealPlayers, 600);
-  setTimeout(loadRealPlayers, 2000);
+  pollUntilReady(loadRealPlayers);
 
   function loadRealPartners(){
     if (!window.AGPAuth || !window.AGPAuth.getPartners) return;
@@ -705,7 +733,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     window.AGPAuth.getPartners().then(function(result){
       if (!result || !result.success) return;
-      var partners = result.partners || { idea: [], dev: [] };
+      // الباك-إند يرجّع idea/dev مباشرة على مستوى result نفسه (بدون مفتاح
+      // partners وسيط) — قراءة result.partners كانت تطلع دائماً undefined
+      // فتصير القائمتين فاضيتين دايماً، فتُخفى البطاقة كاملة (renderGroup
+      // تُخفي المجموعة لو list.length == 0) رغم وجود بيانات حقيقية فعلاً.
+      var partners = { idea: result.idea || [], dev: result.dev || [] };
 
       function buildCard(p){
         var card = document.createElement('div');
@@ -756,8 +788,36 @@ document.addEventListener('DOMContentLoaded', async function() {
       groupsWrap.dataset.realData = '1';
     }).catch(function(){});
   }
-  setTimeout(loadRealPartners, 600);
-  setTimeout(loadRealPartners, 2000);
+  pollUntilReady(loadRealPartners);
+
+  // [أداء] عناصر الخلفية الزخرفية (مدارات ضبابية nl-orbit/nl-orbit2،
+  // nl-aurora، nl-float/nl-float2، nl-pulse، nl-scan) تعمل باستمرار طوال
+  // عمر الصفحة عبر عدة طبقات blur متراكبة، وblur الهيدر اللاصق
+  // (backdrop-filter) يُعاد رسمه كل إطار أثناء التمرير — هذا الجمع يُنزّل
+  // معدل الإطارات بشكل كبير على أجهزة أضعف ويُشعر المستخدم بثقل التصفح.
+  // نطفئ الأنيميشن الزخرفي بعد ظهوره أول مرة (يبقى شكله الثابت) ونستبدل
+  // blur الهيدر بخلفية شبه معتمة بنفس الإحساس البصري تقريباً، بدون
+  // تكلفة الرسم المتكررة. شريط الأخبار المتحرك (nl-marquee) غير مشمول
+  // عمداً — حركته بسيطة وغير مكلفة.
+  function reduceAmbientCost(){
+    var AMBIENT_ANIMS = ['nl-orbit', 'nl-orbit2', 'nl-aurora', 'nl-float', 'nl-float2', 'nl-pulse', 'nl-scan'];
+    Array.prototype.slice.call(document.querySelectorAll('*')).forEach(function(e){
+      if (e.dataset.ambientDisabled) return;
+      var animName = getComputedStyle(e).animationName;
+      if (AMBIENT_ANIMS.indexOf(animName) !== -1) {
+        e.style.animation = 'none';
+        e.dataset.ambientDisabled = '1';
+      }
+    });
+    var header = document.querySelector('header');
+    if (header && !header.dataset.blurReduced) {
+      header.style.backdropFilter = 'none';
+      header.style.webkitBackdropFilter = 'none';
+      header.style.background = 'rgba(10,9,16,.92)';
+      header.dataset.blurReduced = '1';
+    }
+  }
+  pollUntilReady(reduceAmbientCost);
 
   var tries = 0;
   var timer = setInterval(function(){
