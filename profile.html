@@ -499,6 +499,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (isOwnerForEdit) {
       var linkBtn = Array.prototype.slice.call(document.querySelectorAll('button'))
         .find(function(e){ var t = e.textContent.trim(); return t === 'ربط الحساب' || t === 'إلغاء الربط'; });
+      // [إصلاح] الزر كان يعرض دايماً "ربط الحساب" (حالة محلية وهمية
+      // بالمكوّن، ما تعكس p.tiktok_verified الحقيقي) — يعني ما فيه طريقة
+      // توصل لزر "إلغاء الربط" أصلاً حتى لو الحساب موثّق فعلاً. نصحّح
+      // النص فعلياً حسب حالة التوثيق الحقيقية قبل ما نربط أي حدث.
+      if (linkBtn && p.tiktok_verified) linkBtn.textContent = 'إلغاء الربط';
       if (linkBtn && !linkBtn.dataset.tiktokWired) {
         linkBtn.dataset.tiktokWired = '1';
         if (linkBtn.textContent.trim() === 'ربط الحساب') {
@@ -512,9 +517,20 @@ document.addEventListener('DOMContentLoaded', async function() {
             var apiBase = (window.AGPAuth && window.AGPAuth.API_BASE) || '';
             window.location.href = apiBase + '/api/auth/tiktok/oauth/start?token=' + encodeURIComponent(token);
           });
+        } else {
+          // [إصلاح] "إلغاء الربط" ما كان مربوط بأي شي حقيقي أبداً — الدالة
+          // موجودة أصلاً بـauth-client.js (unlinkTikTok) وبالباك-إند
+          // (POST /api/auth/tiktok/unlink)، بس محد وصلها بالزر.
+          linkBtn.addEventListener('click', function(){
+            if (!window.confirm('متأكد تبي تلغي ربط حساب تيك توك؟')) return;
+            linkBtn.disabled = true;
+            window.AGPAuth.unlinkTikTok().then(function(result){
+              linkBtn.disabled = false;
+              if (result && result.success) window.location.reload();
+              else window.alert('تعذّر إلغاء الربط: ' + (result && result.error ? result.error : 'خطأ غير معروف'));
+            }).catch(function(){ linkBtn.disabled = false; });
+          });
         }
-        // "إلغاء الربط" يبقى بسلوكه القديم (إن وجد) — إلغاء ربط حقيقي
-        // موجود أصلاً بمسار ثاني (tiktok/unlink)، خارج نطاق هذا التعديل.
       }
 
       /* ---- نتيجة رجوع تيك توك (?tiktok_link=...) ---- */
