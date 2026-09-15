@@ -840,12 +840,13 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     var nav = document.querySelector('nav');
     if (nav) {
+      nav.style.columnGap = '18px';
+      nav.style.rowGap = isNarrow ? '10px' : '18px';
       if (isNarrow) {
         nav.style.order = '3';
         nav.style.width = '100%';
         nav.style.flexWrap = 'wrap';
         nav.style.justifyContent = 'center';
-        nav.style.rowGap = '8px';
       } else {
         nav.style.order = '';
         nav.style.width = '';
@@ -889,7 +890,7 @@ document.addEventListener('DOMContentLoaded', async function() {
               if (!panel) {
                 panel = document.createElement('div');
                 panel.setAttribute('data-mobile-panel', '1');
-                panel.style.cssText = 'margin-top:10px;border-radius:20px;border:1px solid rgba(178,140,245,.25);background:linear-gradient(180deg,#1a1526,#0d0b14);box-shadow:0 24px 60px -30px rgba(122,63,212,.6);overflow:hidden;';
+                panel.style.cssText = 'margin-top:10px;border-radius:20px;border:1px solid rgba(178,140,245,.25);background:linear-gradient(180deg,#1a1526,#0d0b14);box-shadow:0 24px 60px -30px rgba(122,63,212,.6);overflow:hidden;pointer-events:auto;position:relative;z-index:61;';
                 var stickyWrap = header.closest('div[style*="position:sticky"], div[style*="position: sticky"]');
                 (stickyWrap || header.parentElement).appendChild(panel);
               }

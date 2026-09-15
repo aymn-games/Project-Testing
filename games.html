@@ -480,5 +480,34 @@ document.addEventListener('DOMContentLoaded', async function() {
   setTimeout(rebuild, 3000);
 })();
 </script>
+
+<script>
+  // [أداء حرج] نفس السبب اللي شخّصناه بـ index.html: هيدر sticky مع
+  // backdrop-filter:blur() + طبقات خلفية متحركة مموَّهة (g-aurora،
+  // g-pulse) — كل تمرير يجبر المتصفح يعيد رسم البلور، وهذا يسبب تهنيج
+  // ملموس بالتمرير. نفس الإصلاح: نوقف الحركات الزخرفية، ونستبدل بلور
+  // الهيدر بخلفية شبه معتمة بدون بلور.
+  function applyGamesPerfFix(){
+    var AMBIENT_ANIMS = ['g-aurora', 'g-pulse'];
+    Array.prototype.slice.call(document.querySelectorAll('*')).forEach(function(e){
+      if (e.dataset.ambientDisabled) return;
+      var animName = getComputedStyle(e).animationName;
+      if (AMBIENT_ANIMS.indexOf(animName) !== -1) {
+        e.style.animation = 'none';
+        e.dataset.ambientDisabled = '1';
+      }
+    });
+    var header = document.querySelector('header');
+    if (header && !header.dataset.perfFixed) {
+      header.dataset.perfFixed = '1';
+      header.style.backdropFilter = 'none';
+      header.style.webkitBackdropFilter = 'none';
+      header.style.background = 'rgba(10,9,16,.92)';
+    }
+  }
+  applyGamesPerfFix();
+  setTimeout(applyGamesPerfFix, 500);
+  setTimeout(applyGamesPerfFix, 1500);
+</script>
 </body>
 </html>
