@@ -206,16 +206,23 @@ function checkDeviceLock(user, deviceId) {
 }
 
 /**
- * تسجيل الدخول — يُنشئ جلسة جديدة عند النجاح.
- * @param {string} email
+ * تسجيل الدخول — يقبل البريد الإلكتروني أو اسم المستخدم بنفس الحقل
+ * (نفس ما تطلبه شاشة الدخول فعلياً: حقل واحد بعنوان "البريد الإلكتروني
+ * أو اسم المستخدم"). نميّز بينهما بوجود "@" فقط — كافٍ عملياً لأن
+ * أسماء المستخدمين لا تحتوي "@" أصلاً (يُرفض أي username فيه "@" عند
+ * التسجيل ضمنياً عبر isValidEmail على حقل البريد المنفصل). يُنشئ جلسة
+ * جديدة عند النجاح.
+ * @param {string} identifier - بريد إلكتروني أو اسم مستخدم
  * @param {string} plainPassword
  * @param {string} [deviceId] - [0.45.6] معرّف الجهاز من auth-client.js —
  *   يُستخدَم فقط لو الحساب ستريمر معتمد (raجع checkDeviceLock أعلاه).
  * @returns {{success: boolean, token?: string, user?: Object, error?: string}}
  */
-function login(email, plainPassword, deviceId) {
-    email = (email || '').trim().toLowerCase();
-    var user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+function login(identifier, plainPassword, deviceId) {
+    identifier = (identifier || '').trim();
+    var user = identifier.indexOf('@') !== -1
+        ? db.prepare('SELECT * FROM users WHERE email = ?').get(identifier.toLowerCase())
+        : db.prepare('SELECT * FROM users WHERE username = ?').get(identifier);
 
     if (!user || !password.verifyPassword(plainPassword || '', user.password_hash)) {
         return { success: false, error: 'invalid_credentials' };
