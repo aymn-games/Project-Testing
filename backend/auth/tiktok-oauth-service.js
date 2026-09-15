@@ -26,6 +26,7 @@
 var crypto = require('crypto');
 var db = require('../db/database');
 var config = require('../config');
+var logger = require('../utils/logger');
 
 var AUTHORIZE_URL = 'https://www.tiktok.com/v2/auth/authorize/';
 var TOKEN_URL = 'https://open.tiktokapis.com/v2/oauth/token/';
@@ -96,31 +97,42 @@ async function exchangeCodeForToken(code) {
         });
         var data = await res.json();
         if (!res.ok || !data.access_token) {
+            logger.error('TikTok OAuth: token exchange failed. status=' + res.status + ' body=' + JSON.stringify(data));
             return { success: false, error: (data && (data.error_description || data.error)) || 'token_exchange_failed' };
         }
         return { success: true, accessToken: data.access_token };
     } catch (err) {
+        logger.error('TikTok OAuth: token exchange network error:', err.message);
         return { success: false, error: 'token_exchange_network_error' };
     }
 }
 
 /**
- * بيانات المستخدم الحقيقية من تيك توك (open_id، اليوزرنيم الفعلي،
- * الاسم المعروض، الصورة) — user.info.basic فقط، كافية لهدفنا.
+ * بيانات المستخدم الحقيقية من تيك توك (open_id، الاسم المعروض،
+ * الصورة) — user.info.basic فقط، كافية لهدفنا. ⚠️ [إصلاح] كنا نطلب
+ * حقل "username" أيضاً، لكن هذا الحقل ما هو موثَّق ضمن نطاق
+ * user.info.basic بتوثيق تيك توك الرسمي (فقط open_id، union_id،
+ * avatar_url، display_name) — احتمال قوي إنه هو سبب فشل الطلب بالكامل
+ * (تيك توك يرفض الطلب كله لو فيه حقل غير مصرَّح به بدل ما يتجاهله).
+ * شلناه؛ لو رجع فعلاً بدون خطأ الآن، نعرف السبب بالتأكيد ونقرر بعدها
+ * كيف نجيب اليوزرنيم الحقيقي (على الأغلب يحتاج نطاق user.info.profile
+ * إضافي، يحتاج مراجعة تيك توك).
  * @returns {Promise<{success:boolean, user?:Object, error?:string}>}
  */
 async function fetchTikTokUserInfo(accessToken) {
     try {
-        var fields = 'open_id,username,display_name,avatar_url';
+        var fields = 'open_id,display_name,avatar_url';
         var res = await fetch(USER_INFO_URL + '?fields=' + fields, {
             headers: { 'Authorization': 'Bearer ' + accessToken }
         });
         var data = await res.json();
         if (!res.ok || !data.data || !data.data.user) {
+            logger.error('TikTok OAuth: user info fetch failed. status=' + res.status + ' body=' + JSON.stringify(data));
             return { success: false, error: (data && data.error && data.error.message) || 'user_info_failed' };
         }
         return { success: true, user: data.data.user };
     } catch (err) {
+        logger.error('TikTok OAuth: user info network error:', err.message);
         return { success: false, error: 'user_info_network_error' };
     }
 }
