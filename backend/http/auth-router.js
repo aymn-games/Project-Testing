@@ -18,12 +18,14 @@
 'use strict';
 
 var authService = require('../auth/auth-service');
+var tiktokOAuthService = require('../auth/tiktok-oauth-service');
 var announcementService = require('../announcements/announcement-service');
 var collectiblesService = require('../collectibles/collectibles-service');
 var pointsService = require('../points/points-service');
 var streamerLevelService = require('../points/streamer-level-service');
 var supportersService = require('../supporters/supporters-service');
 var siteThemeService = require('../theme/site-theme-service');
+var partnersService = require('../partners/partners-service');
 var logger = require('../utils/logger');
 var config = require('../config');
 var response = require('./response');
@@ -68,6 +70,13 @@ var ROUTES = [
   { method: 'GET', path: '/api/auth/me', requireAuth: true, handler: handleMe },
   { method: 'POST', path: '/api/auth/tiktok/link', requireAuth: true, handler: handleTikTokLink },
   { method: 'POST', path: '/api/auth/tiktok/verification-code', requireAuth: true, handler: handleTikTokVerificationCode },
+  // ---- [جديد] تسجيل دخول تيك توك الرسمي (OAuth Login Kit) — البديل
+  // الموصى به لطريقة كود البايو أعلاه. راجع backend/auth/tiktok-oauth-service.js.
+  // requireAuth: false بالاثنين لأنهما مسارا تنقّل متصفح خام (زر <a>
+  // وإعادة توجيه من تيك توك) — لا يقدر يرفق ترويسة Authorization، لذا
+  // نتحقق من الجلسة يدوياً داخل handleTikTokOAuthStart عبر ?token=.
+  { method: 'GET', path: '/api/auth/tiktok/oauth/start', requireAuth: false, handler: handleTikTokOAuthStart },
+  { method: 'GET', path: '/api/auth/tiktok/oauth/callback', requireAuth: false, handler: handleTikTokOAuthCallback },
   { method: 'POST', path: '/api/auth/tiktok/verify', requireAuth: true, handler: handleTikTokVerify },
   { method: 'POST', path: '/api/auth/tiktok/unlink', requireAuth: true, handler: handleTikTokUnlink },
   { method: 'POST', path: '/api/auth/custom-id', requireAuth: true, handler: handleCustomId },
@@ -126,6 +135,13 @@ var ROUTES = [
   // [0.45.14] معاينة حيّة (اسم+صورة) لحساب قبل ربطه بصف دعم — راجع
   // supportersService.findUserForLinking.
   { method: 'GET', path: '/api/admin/supporters/find-user', requireAuth: true, requireAdmin: true, handler: handleAdminFindSupporterUser },
+  // ---- [جديد] شركاء الإبداع — راجع backend/partners/partners-service.js.
+  // نفس فلسفة الداعمين تماماً (عرض علني + إدارة أدمن)، إلا إنه يربط
+  // بحساب مسجَّل حقيقي (JOIN وقت القراءة) بدل تخزين اسم/صورة نصاً.
+  { method: 'GET', path: '/api/partners', requireAuth: false, handler: handleGetPartners },
+  { method: 'GET', path: '/api/admin/partners', requireAuth: true, requireAdmin: true, handler: handleAdminListPartners },
+  { method: 'POST', path: '/api/admin/partners', requireAuth: true, requireAdmin: true, handler: handleAdminAddPartner },
+  { method: 'POST', path: '/api/admin/partners/delete', requireAuth: true, requireAdmin: true, handler: handleAdminDeletePartner },
   // ---- ثيم المناسبات — راجع backend/theme/site-theme-service.js
   { method: 'GET', path: '/api/theme', requireAuth: false, handler: handleGetTheme },
   { method: 'POST', path: '/api/admin/theme', requireAuth: true, requireAdmin: true, handler: handleAdminSetTheme },
@@ -218,6 +234,58 @@ function handleTikTokVerify(req, res, body, user) {
   return authService.verifyTikTokOwnership(user.id, body.tiktokUsername).then(function (result) {
     sendJson(res, result.success ? 200 : 400, result);
   });
+}
+
+/* -----------------------------------------------------------------------
+ * تسجيل دخول تيك توك الرسمي (OAuth Login Kit) — راجع
+ * backend/auth/tiktok-oauth-service.js. الاثنين requireAuth:false لأنهما
+ * تنقّل متصفح خام، لا fetch() برأس Authorization.
+ * ----------------------------------------------------------------------- */
+
+/** يبدأ تدفق OAuth — زر "ربط الحساب" بالبروفايل يودي لهذا المسار مباشرة (?token=<جلسة المستخدم>). */
+function handleTikTokOAuthStart(req, res) {
+  var queryString = (req.url || '').split('?')[1] || '';
+  var params = new URLSearchParams(queryString);
+  var token = params.get('token');
+  var user = token ? authService.validateSession(token) : null;
+  if (!user) {
+    res.writeHead(302, { Location: '/login.html?tiktok_error=not_logged_in' });
+    return res.end();
+  }
+  var authorizeUrl = tiktokOAuthService.buildAuthorizeUrl(user.id);
+  res.writeHead(302, { Location: authorizeUrl });
+  res.end();
+}
+
+/** يستقبل رد تيك توك (code+state)، يربط الحساب فعلياً، ويرجّع المستخدم لبروفايله. */
+async function handleTikTokOAuthCallback(req, res) {
+  var queryString = (req.url || '').split('?')[1] || '';
+  var params = new URLSearchParams(queryString);
+  var code = params.get('code');
+  var state = params.get('state');
+  var deniedByUser = params.get('error'); // المستخدم رفض الموافقة بصفحة تيك توك نفسها
+
+  function redirectToProfile(status) {
+    res.writeHead(302, { Location: '/profile.html?tiktok_link=' + status });
+    res.end();
+  }
+
+  if (deniedByUser) return redirectToProfile('cancelled');
+
+  var userId = tiktokOAuthService.verifyState(state);
+  if (!userId) return redirectToProfile('invalid_state');
+  if (!code) return redirectToProfile('missing_code');
+
+  var tokenResult = await tiktokOAuthService.exchangeCodeForToken(code);
+  if (!tokenResult.success) return redirectToProfile('token_exchange_failed');
+
+  var infoResult = await tiktokOAuthService.fetchTikTokUserInfo(tokenResult.accessToken);
+  if (!infoResult.success) return redirectToProfile('user_info_failed');
+
+  var linkResult = tiktokOAuthService.linkVerifiedAccount(userId, infoResult.user);
+  if (!linkResult.success) return redirectToProfile(linkResult.error === 'tiktok_account_already_linked_elsewhere' ? 'already_linked' : 'link_failed');
+
+  return redirectToProfile('success');
 }
 
 /**
@@ -566,6 +634,35 @@ function handleAdminFindSupporterUser(req, res) {
   });
   var result = supportersService.findUserForLinking(customId);
   sendJson(res, result.success ? 200 : 404, result);
+}
+
+/* -----------------------------------------------------------------------
+ * شركاء الإبداع — راجع backend/partners/partners-service.js
+ * ----------------------------------------------------------------------- */
+
+/** عام بدون تسجيل دخول — قسم "شركاء الإبداع" بالصفحة الرئيسية. */
+function handleGetPartners(req, res) {
+  sendJson(res, 200, { success: true, partners: partnersService.getPartnersPublic() });
+}
+
+/** الأدمن فقط — كل شركاء الإبداع (لوحة الإدارة). */
+function handleAdminListPartners(req, res) {
+  sendJson(res, 200, { success: true, partners: partnersService.listPartnersAdmin() });
+}
+
+/**
+ * الأدمن فقط — ربط حساب (عبر custom_id) كشريك إبداع بفئة معيّنة. نفس
+ * فلسفة handleAdminFindSupporterUser أعلاه للمعاينة أولاً — الأدمن
+ * يبحث بالـID، يتأكد من الاسم/الصورة، بعدين يضغط إضافة.
+ */
+function handleAdminAddPartner(req, res, body) {
+  var result = partnersService.addPartnerByCustomId(body.customId, body.category);
+  sendJson(res, result.success ? 201 : 400, result);
+}
+
+/** الأدمن فقط — حذف ربط شريك إبداع واحد. */
+function handleAdminDeletePartner(req, res, body) {
+  sendJson(res, 200, partnersService.removePartner(body.id));
 }
 
 /* -----------------------------------------------------------------------
