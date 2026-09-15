@@ -806,6 +806,30 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
   pollUntilReady(loadRealPartners);
 
+  // [بيانات حقيقية] "حساب مسجّل في المنصة" كان رقماً وهمياً ثابتاً
+  // (١٢٤٬٠٠٠) من بيانات القالب التجريبية. نستبدله بالعدّاد الحقيقي من
+  // /api/stats. "المنصة" هو التبويب الافتراضي عند فتح الصفحة، فالبطاقة
+  // موجودة بالـDOM من البداية؛ لو المستخدم بدّل لتبويب ثاني ورجع، محرك
+  // القالب يعيد رسمها من بياناته الأصلية (نفس محدودية بقية دوال
+  // loadReal* هنا أصلاً — لا يوجد ربط مستمر بالحالة الداخلية للمكوّن).
+  function loadRealStats(){
+    if (!window.AGPAuth || !window.AGPAuth.getPlatformStats) return;
+    var valueDiv = Array.prototype.slice.call(document.querySelectorAll('div'))
+      .find(function(e){ return e.children.length <= 1 && e.textContent.trim() === 'حساب مسجّل في المنصة'; });
+    if (!valueDiv) return;
+    var card = valueDiv.parentElement;
+    if (!card || card.dataset.realStats) return;
+    var numberDiv = card.children[0];
+    if (!numberDiv) return;
+    window.AGPAuth.getPlatformStats().then(function(result){
+      var total = result && result.success && result.stats ? result.stats.totalUsers : null;
+      if (total == null) return;
+      numberDiv.textContent = arDigits(total.toLocaleString('en-US').replace(/,/g, '٬'));
+      card.dataset.realStats = '1';
+    }).catch(function(){});
+  }
+  pollUntilReady(loadRealStats);
+
   // [أداء] عناصر الخلفية الزخرفية (مدارات ضبابية nl-orbit/nl-orbit2،
   // nl-aurora، nl-float/nl-float2، nl-pulse، nl-scan) تعمل باستمرار طوال
   // عمر الصفحة عبر عدة طبقات blur متراكبة، وblur الهيدر اللاصق

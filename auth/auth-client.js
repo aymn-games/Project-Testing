@@ -605,6 +605,11 @@ function getTopSupporters() {
     return request('/api/supporters/top', { method: 'GET' });
 }
 
+/** عام بدون تسجيل دخول — عدّاد الحسابات الإجمالي، للصفحة الرئيسية. */
+function getPlatformStats() {
+    return request('/api/stats', { method: 'GET' });
+}
+
 /** الأدمن فقط — كل صفوف الدعم (لوحة الإدارة بـadmin.html). */
 function adminListSupporters() {
     return request('/api/admin/supporters', { method: 'GET' });
@@ -806,6 +811,7 @@ global.AGPAuth = {
     getAdminUserStats: getAdminUserStats,
     getRecentSupporters: getRecentSupporters,
     getTopSupporters: getTopSupporters,
+    getPlatformStats: getPlatformStats,
     adminListSupporters: adminListSupporters,
     adminAddSupporter: adminAddSupporter,
     adminFindSupporterUser: adminFindSupporterUser,

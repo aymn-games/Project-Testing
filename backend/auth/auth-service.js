@@ -1186,6 +1186,17 @@ function getAdminUserStats() {
 }
 
 /**
+ * [إحصائيات عامة للواجهة الرئيسية] نسخة عامة (بدون Auth) من نفس عدّاد
+ * الحسابات المستخدم بـ getAdminUserStats، لعرضه بصفحة الهبوط ("حساب
+ * مسجّل في المنصة"). تكشف فقط عدداً إجمالياً — لا أسماء مستخدمين ولا
+ * أي بيانات شخصية، بعكس getAdminUserStats المحمي بصلاحية أدمن.
+ */
+function getPublicPlatformStats() {
+    var totalUsers = db.prepare('SELECT COUNT(*) AS c FROM users').get().c;
+    return { totalUsers: totalUsers };
+}
+
+/**
  * [0.45.10] تحديث اسم العرض بالبروفايل (منفصل عن username الثابت لتسجيل
  * الدخول). حد أقصى 40 حرفاً، يُرفض الفارغ تماماً بعد trim (لو المستخدم
  * يبي يرجع للاسم الافتراضي، NULL صراحة عبر عدم إرسال حقل، لا سلسلة فارغة).
@@ -1336,6 +1347,7 @@ module.exports = {
     getTopStreamersByHours: getTopStreamersByHours,
     getAdminStreamerStats: getAdminStreamerStats,
     getAdminUserStats: getAdminUserStats,
+    getPublicPlatformStats: getPublicPlatformStats,
     updateDisplayName: updateDisplayName,
     updateAvatarImage: updateAvatarImage
 };

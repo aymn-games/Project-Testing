@@ -99,6 +99,9 @@ var ROUTES = [
   // [0.45.11] سوبر أدمن — تجاوز كامل لقيد الجهاز، حساب بحساب.
   { method: 'POST', path: '/api/admin/super-admin', requireAuth: true, requireAdmin: true, handler: handleAdminSetSuperAdmin },
   { method: 'GET', path: '/api/profile', requireAuth: false, handler: handlePublicProfile },
+  // [عام، بدون Auth] عدّاد الحسابات الإجمالي فقط لصفحة الهبوط — نسخة
+  // عامة مصغّرة من /api/admin/stats/users، بدون أي بيانات شخصية.
+  { method: 'GET', path: '/api/stats', requireAuth: false, handler: handlePublicStats },
   { method: 'GET', path: '/api/announcement', requireAuth: false, handler: handleGetAnnouncement },
   { method: 'POST', path: '/api/admin/announcement', requireAuth: true, requireAdmin: true, handler: handleAdminSetAnnouncement },
   // ---- المقتنيات (إطارات + دخوليات) والنقاط — راجع
@@ -737,6 +740,11 @@ function handleAdminStreamerStats(req, res) {
 /** [0.45.10] الأدمن فقط — إحصائيات المستخدمين المجمَّعة. */
 function handleAdminUserStats(req, res) {
   sendJson(res, 200, { success: true, stats: authService.getAdminUserStats() });
+}
+
+/** عام (بدون Auth) — عدّاد الحسابات الإجمالي فقط، لصفحة الهبوط. */
+function handlePublicStats(req, res) {
+  sendJson(res, 200, { success: true, stats: authService.getPublicPlatformStats() });
 }
 
 /**
