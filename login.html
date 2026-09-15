@@ -471,7 +471,37 @@ document.addEventListener('DOMContentLoaded', async function() {
     var lbl = divs.find(function(d){ return d.children.length <= 1 && d.textContent.trim() === 'اسم المستخدم'; });
     if (lbl) lbl.textContent = 'البريد الإلكتروني';
   }
-  setInterval(relabelLoginField, 500);
+  // [إصلاح باگ حقيقي] كان setInterval بدون حد أقصى ولا clearInterval —
+  // يستمر يفحص الـDOM كل نصف ثانية إلى الأبد طالما الصفحة مفتوحة، حتى
+  // بعد نجاح إعادة التسمية من أول مرة. نوقفه بعد أول نجاح أو بعد ٢٠
+  // ثانية كحد أقصى.
+  var __relabelTries = 0;
+  var __relabelTimer = setInterval(function(){
+    __relabelTries++;
+    relabelLoginField();
+    if (__relabelTries >= 40) clearInterval(__relabelTimer);
+  }, 500);
+
+  // [أداء] نفس السبب المشخَّص بباقي صفحات المنصة: طبقات خلفية متحركة
+  // مموَّهة (a-aurora، a-pulse، a-float) تعمل باستمرار — نوقفها بعد
+  // ظهورها أول مرة.
+  function applyLoginPerfFix(){
+    var AMBIENT_ANIMS = ['a-aurora', 'a-pulse', 'a-float'];
+    Array.prototype.slice.call(document.querySelectorAll('*')).forEach(function(e){
+      if (e.dataset.ambientDisabled) return;
+      var animName = getComputedStyle(e).animationName;
+      if (AMBIENT_ANIMS.indexOf(animName) !== -1) {
+        e.style.animation = 'none';
+        e.dataset.ambientDisabled = '1';
+      }
+    });
+  }
+  var __perfTries = 0;
+  var __perfTimer = setInterval(function(){
+    __perfTries++;
+    applyLoginPerfFix();
+    if (__perfTries >= 30) clearInterval(__perfTimer);
+  }, 300);
 })();
 </script>
 </body>

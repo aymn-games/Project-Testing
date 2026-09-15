@@ -819,6 +819,189 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
   pollUntilReady(reduceAmbientCost);
 
+  // [هيدر الجوال] الهيدر الأصلي مصمّم لعرض كل روابط nav بصف واحد أفقي —
+  // على شاشة جوال هذا يتكدّس أو يفيض. تحت 900px نلفّ الهيدر ونضع nav
+  // بصف ثانٍ؛ تحت 480px نخفي nav وزر الحساب تماماً ونستبدلهما بزر
+  // ثلاث شرطات يفتح قائمة منسدلة تحتوي كل الروابط (بنفس الحالة الحالية
+  // للروابط بعد أي تعديل من patchLinks، لأن الاستنساخ ياخذ كل الخصائص
+  // الحالية للعنصر وقت فتح القائمة).
+  function applyHeaderResponsive(){
+    var w = window.innerWidth;
+    var isNarrow = w <= 900;
+    var isMobile = w <= 480;
+
+    var header = document.querySelector('header');
+    if (header) {
+      if (isNarrow) {
+        header.style.flexWrap = 'wrap';
+        header.style.justifyContent = 'center';
+        header.style.rowGap = '12px';
+        header.style.borderRadius = '26px';
+        header.style.padding = '14px 16px';
+      } else {
+        header.style.flexWrap = '';
+        header.style.justifyContent = 'space-between';
+        header.style.rowGap = '';
+        header.style.borderRadius = '999px';
+        header.style.padding = '12px 20px 12px 14px';
+      }
+    }
+
+    var nav = document.querySelector('nav');
+    if (nav) {
+      nav.style.columnGap = '35px';
+      nav.style.rowGap = isNarrow ? '10px' : '35px';
+      if (isNarrow) {
+        nav.style.order = '3';
+        nav.style.width = '100%';
+        nav.style.flexWrap = 'wrap';
+        nav.style.justifyContent = 'center';
+      } else {
+        nav.style.order = '';
+        nav.style.width = '';
+        nav.style.flexWrap = '';
+        nav.style.justifyContent = '';
+      }
+    }
+
+    if (!header || !nav) return;
+
+    var accountLink = Array.prototype.slice.call(header.children).find(function(e){
+      return e.tagName === 'A' && e !== nav.parentElement && header.children[0] !== e &&
+        Array.prototype.indexOf.call(header.children, e) > Array.prototype.indexOf.call(header.children, nav);
+    });
+    var burger = header.querySelector('[data-burger]');
+
+    if (isMobile) {
+      nav.style.display = 'none';
+      if (accountLink) accountLink.style.display = 'none';
+      if (!burger) {
+        burger = document.createElement('button');
+        burger.setAttribute('data-burger', '1');
+        burger.setAttribute('aria-label', 'القائمة');
+        burger.style.cssText = 'flex:none;width:42px;height:42px;border-radius:12px;border:1px solid rgba(178,140,245,.35);background:rgba(122,63,212,.12);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;order:2;';
+        for (var bi = 0; bi < 3; bi++) {
+          var line = document.createElement('span');
+          line.style.cssText = 'display:block;width:18px;height:2px;background:#c6b4f2;border-radius:2px;transition:transform .25s,opacity .25s;';
+          burger.appendChild(line);
+        }
+        header.appendChild(burger);
+        burger.addEventListener('click', function(){
+          var panel = document.querySelector('[data-mobile-panel]');
+          var open = panel && panel.style.display !== 'none';
+          if (open) {
+            panel.style.display = 'none';
+            burger.children[0].style.transform = '';
+            burger.children[1].style.opacity = '1';
+            burger.children[2].style.transform = '';
+            return;
+          }
+          if (!panel) {
+            panel = document.createElement('div');
+            panel.setAttribute('data-mobile-panel', '1');
+            panel.style.cssText = 'margin-top:10px;border-radius:20px;border:1px solid rgba(178,140,245,.25);background:linear-gradient(180deg,#1a1526,#0d0b14);box-shadow:0 24px 60px -30px rgba(122,63,212,.6);overflow:hidden;pointer-events:auto;position:relative;z-index:61;';
+            header.insertAdjacentElement('afterend', panel);
+          }
+          panel.innerHTML = '';
+          Array.prototype.slice.call(nav.querySelectorAll('a')).forEach(function(a){
+            var clone = a.cloneNode(true);
+            clone.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:15px 20px;color:#e7e9ee;text-decoration:none;font-size:15px;border-bottom:1px solid rgba(255,255,255,.06);background:transparent;';
+            panel.appendChild(clone);
+          });
+          if (accountLink) {
+            var ctaWrap = document.createElement('div');
+            ctaWrap.style.cssText = 'padding:14px;';
+            var ctaClone = accountLink.cloneNode(true);
+            ctaClone.style.cssText = 'display:block;text-align:center;padding:13px;border-radius:999px;background:linear-gradient(135deg,#7a3fd4,#b28cf5);color:#f3ecff;font-weight:600;font-size:14.5px;';
+            ctaWrap.appendChild(ctaClone);
+            panel.appendChild(ctaWrap);
+          }
+          panel.style.display = 'block';
+          burger.children[0].style.transform = 'translateY(6px) rotate(45deg)';
+          burger.children[1].style.opacity = '0';
+          burger.children[2].style.transform = 'translateY(-6px) rotate(-45deg)';
+        });
+      }
+    } else {
+      nav.style.display = '';
+      if (accountLink) accountLink.style.display = '';
+      if (burger) burger.remove();
+      var existingPanel = document.querySelector('[data-mobile-panel]');
+      if (existingPanel) existingPanel.remove();
+    }
+  }
+  window.addEventListener('resize', applyHeaderResponsive);
+  pollUntilReady(applyHeaderResponsive);
+
+  // [مقاسات الشاشة] عناصر البطاقة الترويسية (الشارة، العنوان الرئيسي،
+  // الوصف) مُثبَّتة بإحداثيات مطلقة (position:absolute بقيم px ثابتة)
+  // بدل التدفق الطبيعي — هذا يصلح فقط لعرض شاشة واحد محدد ويسبب فيض
+  // النص خارج الشاشة على أي مقاس أصغر (جوال/آيباد). نرجعها للتدفق
+  // الطبيعي (position:static) داخل حاويتها المتمركزة أصلاً
+  // (max-width:760px;margin:0 auto)، فتتوسّط وتلتف تلقائياً على أي عرض.
+  function fixHeroLayout(){
+    if (document.body.dataset.heroFixed) return;
+    var badge = Array.prototype.slice.call(document.querySelectorAll('div'))
+      .find(function(e){ return e.children.length === 1 && e.textContent.trim() === 'ابدا بثك ولا تشيل هم'; });
+    if (badge) {
+      badge.style.position = 'static';
+      badge.style.top = 'auto';
+      badge.style.left = 'auto';
+      badge.style.margin = '0 auto 22px';
+    }
+
+    var heading = document.querySelector('h1');
+    if (heading) {
+      heading.style.position = 'static';
+      heading.style.left = 'auto';
+      heading.style.top = 'auto';
+      heading.style.width = 'auto';
+      heading.style.height = 'auto';
+      heading.style.margin = '0 auto';
+      Array.prototype.slice.call(heading.querySelectorAll('span')).forEach(function(s){
+        s.style.width = 'auto';
+        s.style.height = 'auto';
+      });
+    }
+
+    var caption = Array.prototype.slice.call(document.querySelectorAll('p'))
+      .find(function(e){ return e.textContent.trim() === 'صنعت بالسعودية وبايدي سعودية'; });
+    if (caption) {
+      caption.style.position = 'static';
+      caption.style.top = 'auto';
+      caption.style.left = 'auto';
+      caption.style.textTransform = 'none';
+      caption.style.margin = '16px auto 0';
+    }
+
+    // [إصلاح خطأ حقيقي] {{ formNote }} يطلع كنص خام حرفي — القالب ماكان
+    // يحلّه أبداً. نخفيه بدل ما يظهر للزائر.
+    var formNote = Array.prototype.slice.call(document.querySelectorAll('*'))
+      .find(function(e){ return e.children.length === 0 && e.textContent.trim() === '{{ formNote }}'; });
+    if (formNote) formNote.style.display = 'none';
+
+    // [إصلاح خطأ حقيقي] شارات "مجتمع عربي كامل / ألعاب متنوعة / مجانية
+    // بالكامل" كانت مثبَّتة بـposition:absolute بإحداثيات ثابتة تتراكب
+    // فوق نص الوصف بدل الظهور تحته — حاويتها أصلاً flex مع wrap وgap
+    // صحيحين، فقط رجّعها لتدفّقها الطبيعي كفى لحل التراكب. ونصحح خطأ
+    // إملائي بسيط بنفس الوقت (العاب ← ألعاب).
+    var badgeSpans = Array.prototype.slice.call(document.querySelectorAll('span'))
+      .filter(function(e){
+        var t = e.textContent.trim();
+        return t === 'مجتمع عربي كامل' || t === 'ألعاب متنوعة' || t === 'العاب متنوعة' || t === 'مجانية بالكامل';
+      });
+    badgeSpans.forEach(function(e){
+      if (e.textContent.trim() === 'العاب متنوعة') e.textContent = 'ألعاب متنوعة';
+      e.style.position = 'static';
+      e.style.top = 'auto';
+      e.style.left = 'auto';
+      e.style.zIndex = 'auto';
+    });
+
+    if (badge || heading || caption || badgeSpans.length) document.body.dataset.heroFixed = '1';
+  }
+  pollUntilReady(fixHeroLayout);
+
   var tries = 0;
   var timer = setInterval(function(){
     tries++;

@@ -505,9 +505,131 @@ document.addEventListener('DOMContentLoaded', async function() {
       header.style.background = 'rgba(10,9,16,.92)';
     }
   }
-  applyGamesPerfFix();
-  setTimeout(applyGamesPerfFix, 500);
-  setTimeout(applyGamesPerfFix, 1500);
+  // [إصلاح باگ حقيقي] نفس دالة الأداء كانت تُستدعى مرتين فقط بتوقيت
+  // ثابت — لو تأخر تركيب الصفحة الحقيقية أكثر من هالوقت ما تنطبق أبداً.
+  // نكررها كل ٣٠٠ مللي ثانية لمدة ٩ ثوانٍ تقريباً؛ الدالة نفسها محمية
+  // بـdataset فلا تكلفة إضافية بعد أول نجاح.
+  var __perfTries = 0;
+  var __perfTimer = setInterval(function(){
+    __perfTries++;
+    applyGamesPerfFix();
+    if (__perfTries >= 30) clearInterval(__perfTimer);
+  }, 300);
+
+  // [هيدر الجوال] نفس إصلاح index.html — تحت 900px نلفّ الهيدر، وتحت
+  // 480px نستبدل nav وزر الحساب بزر ثلاث شرطات يفتح قائمة منسدلة.
+  function applyHeaderResponsive(){
+    var w = window.innerWidth;
+    var isNarrow = w <= 900;
+    var isMobile = w <= 480;
+
+    var header = document.querySelector('header');
+    if (header) {
+      if (isNarrow) {
+        header.style.flexWrap = 'wrap';
+        header.style.justifyContent = 'center';
+        header.style.rowGap = '12px';
+        header.style.borderRadius = '26px';
+        header.style.padding = '14px 16px';
+      } else {
+        header.style.flexWrap = '';
+        header.style.justifyContent = 'space-between';
+        header.style.rowGap = '';
+        header.style.borderRadius = '999px';
+        header.style.padding = '12px 20px 12px 14px';
+      }
+    }
+
+    var nav = document.querySelector('nav');
+    if (nav) {
+      nav.style.columnGap = '35px';
+      nav.style.rowGap = isNarrow ? '10px' : '35px';
+      if (isNarrow) {
+        nav.style.order = '3';
+        nav.style.width = '100%';
+        nav.style.flexWrap = 'wrap';
+        nav.style.justifyContent = 'center';
+      } else {
+        nav.style.order = '';
+        nav.style.width = '';
+        nav.style.flexWrap = '';
+        nav.style.justifyContent = '';
+      }
+    }
+
+    if (!header || !nav) return;
+
+    var accountLink = Array.prototype.slice.call(header.children).find(function(e){
+      return e.tagName === 'A' && e !== nav.parentElement && header.children[0] !== e &&
+        Array.prototype.indexOf.call(header.children, e) > Array.prototype.indexOf.call(header.children, nav);
+    });
+    var burger = header.querySelector('[data-burger]');
+
+    if (isMobile) {
+      nav.style.display = 'none';
+      if (accountLink) accountLink.style.display = 'none';
+      if (!burger) {
+        burger = document.createElement('button');
+        burger.setAttribute('data-burger', '1');
+        burger.setAttribute('aria-label', 'القائمة');
+        burger.style.cssText = 'flex:none;width:42px;height:42px;border-radius:12px;border:1px solid rgba(178,140,245,.35);background:rgba(122,63,212,.12);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;order:2;';
+        for (var bi = 0; bi < 3; bi++) {
+          var line = document.createElement('span');
+          line.style.cssText = 'display:block;width:18px;height:2px;background:#c6b4f2;border-radius:2px;transition:transform .25s,opacity .25s;';
+          burger.appendChild(line);
+        }
+        header.appendChild(burger);
+        burger.addEventListener('click', function(){
+          var panel = document.querySelector('[data-mobile-panel]');
+          var open = panel && panel.style.display !== 'none';
+          if (open) {
+            panel.style.display = 'none';
+            burger.children[0].style.transform = '';
+            burger.children[1].style.opacity = '1';
+            burger.children[2].style.transform = '';
+            return;
+          }
+          if (!panel) {
+            panel = document.createElement('div');
+            panel.setAttribute('data-mobile-panel', '1');
+            panel.style.cssText = 'margin-top:10px;border-radius:20px;border:1px solid rgba(178,140,245,.25);background:linear-gradient(180deg,#1a1526,#0d0b14);box-shadow:0 24px 60px -30px rgba(122,63,212,.6);overflow:hidden;pointer-events:auto;position:relative;z-index:61;';
+            header.insertAdjacentElement('afterend', panel);
+          }
+          panel.innerHTML = '';
+          Array.prototype.slice.call(nav.querySelectorAll('a')).forEach(function(a){
+            var clone = a.cloneNode(true);
+            clone.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:15px 20px;color:#e7e9ee;text-decoration:none;font-size:15px;border-bottom:1px solid rgba(255,255,255,.06);background:transparent;';
+            panel.appendChild(clone);
+          });
+          if (accountLink) {
+            var ctaWrap = document.createElement('div');
+            ctaWrap.style.cssText = 'padding:14px;';
+            var ctaClone = accountLink.cloneNode(true);
+            ctaClone.style.cssText = 'display:block;text-align:center;padding:13px;border-radius:999px;background:linear-gradient(135deg,#7a3fd4,#b28cf5);color:#f3ecff;font-weight:600;font-size:14.5px;';
+            ctaWrap.appendChild(ctaClone);
+            panel.appendChild(ctaWrap);
+          }
+          panel.style.display = 'block';
+          burger.children[0].style.transform = 'translateY(6px) rotate(45deg)';
+          burger.children[1].style.opacity = '0';
+          burger.children[2].style.transform = 'translateY(-6px) rotate(-45deg)';
+        });
+      }
+    } else {
+      nav.style.display = '';
+      if (accountLink) accountLink.style.display = '';
+      if (burger) burger.remove();
+      var existingPanel = document.querySelector('[data-mobile-panel]');
+      if (existingPanel) existingPanel.remove();
+    }
+  }
+  window.addEventListener('resize', applyHeaderResponsive);
+  var __hdrTries = 0;
+  var __hdrTimer = setInterval(function(){
+    __hdrTries++;
+    applyHeaderResponsive();
+    if (__hdrTries >= 30) clearInterval(__hdrTimer);
+  }, 300);
 </script>
 </body>
 </html>
