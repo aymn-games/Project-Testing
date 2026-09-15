@@ -739,7 +739,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     window.AGPAuth.getPartners().then(function(result){
       if (!result || !result.success) return;
-      var partners = result.partners || { idea: [], dev: [] };
+      // [إصلاح باگ حقيقي] كنت أقرأ result.partners.idea/dev، لكن
+      // الباك-إند يرجّع idea/dev مباشرة على مستوى result نفسه (بدون
+      // مفتاح partners وسيط) — فكانت القائمتين تطلعان فاضيتين دايماً،
+      // فتنخفي البطاقة كاملة رغم وجود بيانات حقيقية فعلاً.
+      var partners = { idea: result.idea || [], dev: result.dev || [] };
 
       function buildCard(p){
         var card = document.createElement('div');
@@ -791,6 +795,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     }).catch(function(){});
   }
   setTimeout(loadRealPartners, 700);
+  setTimeout(loadRealPartners, 1500);
+  setTimeout(loadRealPartners, 3000);
 
   function applyResponsiveFixes(){
     // [أداء حرج] هذي الحركات الزخرفية بالخلفية (مدارات ضبابية، nl-aurora،
@@ -840,8 +846,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     var nav = document.querySelector('nav');
     if (nav) {
-      nav.style.columnGap = '18px';
-      nav.style.rowGap = isNarrow ? '10px' : '18px';
+      nav.style.columnGap = '35px';
+      nav.style.rowGap = isNarrow ? '10px' : '35px';
       if (isNarrow) {
         nav.style.order = '3';
         nav.style.width = '100%';
