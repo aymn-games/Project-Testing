@@ -595,7 +595,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
     }
 
-    if (p.tiktok_verified && p.tiktok_username) {
+    if (p.tiktok_verified) {
       var badge = findLeaf('غير مربوط');
       if (badge) {
         badge.textContent = 'موثّق ✅';
@@ -604,7 +604,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         badge.style.borderColor = 'rgba(126,224,166,0.35)';
       }
       var handle = findLeaf('@username');
-      if (handle) handle.textContent = '@' + p.tiktok_username;
+      // [مؤقت] اليوزرنيم الحقيقي مو متوفر حالياً من تيك توك (يحتاج
+      // صلاحية إضافية تحتاج مراجعة رسمية — راجع الملاحظة بـ
+      // tiktok-oauth-service.js). نعرض حالة الربط بوضوح بدل نص "@username"
+      // الوهمي الثابت لحد ما يتوفر اليوزرنيم الحقيقي.
+      if (handle) handle.textContent = p.tiktok_username ? ('@' + p.tiktok_username) : 'الحساب مرتبط ✅ (اليوزرنيم قريباً)';
     }
 
     var cachedUser = null;
