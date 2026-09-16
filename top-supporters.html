@@ -42,7 +42,6 @@
     }
     .top-intro { color: var(--text-muted); line-height: 1.8; }
 
-    /* ---- [0.45.14] تبويبات "الأعلى دعماً" / "أحدث الداعمين" ---- */
     .top-tabs {
         display: flex; gap: 8px; background: var(--surface); border: 1px solid var(--border);
         border-radius: 999px; padding: 5px; margin: 0 0 22px; max-width: 340px; margin-inline: auto;
@@ -154,9 +153,6 @@
         return (n % 1 === 0 ? n.toString() : n.toFixed(2)) + ' دولار';
     }
 
-    // [0.45.14] صورة البروفايل لو الداعم مربوط بحساب فعلي (s.linked)،
-    // وإلا دائرة بالحرف الأول من الاسم كبديل — راجع
-    // backend/supporters/supporters-service.js (decorateRow/listTop).
     function avatarHtml(s) {
         if (s.linked && s.avatarBase64) {
             return '<img class="top-avatar" src="' + escapeHtml(s.avatarBase64) + '" alt="">';
@@ -221,8 +217,6 @@
         });
     }
 
-    // تبديل التبويبات — نفس فكرة profile.html (.pp-tabs) لكن نسخة محلية
-    // بسيطة خاصة بهذي الصفحة (لا اعتمادية بينهما).
     var tabButtons = document.querySelectorAll('.top-tab-btn');
     var recentLoaded = false;
     for (var i = 0; i < tabButtons.length; i++) {

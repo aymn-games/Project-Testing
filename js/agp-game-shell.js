@@ -809,13 +809,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             }
         },
 
-        /**
-         * ⚠️ [0.46.0] تصفير حالة زر التشغيل التلقائي العام من خارج هذا
-         * الملف — تستدعيها اللعبة عند انتهاء/إعادة المباراة، حتى لا يبقى
-         * الزر عالقاً على "إيقاف" (نصاً) بينما حلقة التشغيل التلقائي
-         * الفعلية بملف اللعبة توقّفت فعلياً.
-         * @param {boolean} active
-         */
+        /** Called by the game on match end/reset so the toggle button
+         * doesn't stay stuck showing "stop" once auto-play has actually stopped. */
         setMidMatchToggleActive: function (active) {
             _midMatchToggleActive = Boolean(active);
             if (_overlayEl && _overlayEl.style.display !== 'none' && _lastIsReopened) {

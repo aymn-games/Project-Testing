@@ -8,13 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-<!--
-    صفحة "عرض الكل" لبطاقة "🔥 الأكثر نشاطاً" بالصفحة الرئيسية —
-    نفس هيكل top-supporters.html بالضبط (نفس لوحة الألوان ونفس أسلوب
-    .top-row) لكن بمصدر بيانات مختلف: GET /api/public/top-streamers
-    (window.AGPAuth.getTopStreamers) بدل الداعمين. لا تبويبات هنا —
-    قائمة واحدة مرتَّبة تنازلياً بإجمالي ساعات البث. راجع docs/CHANGELOG.md.
--->
+<!-- "See all" page for the "Most active" home card. Same structure/styling
+     as top-supporters.html, sourced from GET /api/public/top-streamers
+     (window.AGPAuth.getTopStreamers), sorted by total stream hours. -->
 <style>
     :root {
         --bg: #0e0e16; --surface: #150c26; --surface-2: #1c1233;

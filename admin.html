@@ -6,22 +6,10 @@
 <title>لوحة الأدمن — AGP</title>
 <link rel="stylesheet" href="dashboard-core/css/style.css">
 <link rel="stylesheet" href="auth/auth.css">
-<!--
-  ==========================================================================
-  [0.45.0] إعادة تنظيم admin.html — تقسيم المستخدمين لتبويبين (لاعبون/
-  ستريمرز) مع بحث لكل تبويب، ونقل كل أقسام "الإعدادات" (الإعلان، الداعمون،
-  الثيم، كتالوج الإطارات، الإطارات الحصرية، منح/سحب مقتنى، الدخولية
-  المستقلة، مستويات SP) لصفحة ثانية منظّمة بتبويبات: admin-settings.html.
-
-  لا تعديل على أي مسار HTTP موجود، ولا على أي دالة بـauth-client.js —
-  فقط إعادة توزيع نفس العناصر/الاستدعاءات الموجودة أصلاً بين صفحتين بدل
-  صفحة واحدة طويلة. راجع docs/CHANGELOG.md [0.45.0].
-  ==========================================================================
--->
+<!-- Users management, split into player/streamer tabs with per-tab search.
+     Everything else (announcement, supporters, theme, frame catalog,
+     entrances, SP levels) lives in admin-settings.html. -->
 <style>
-  /* تبويبات بسيطة مستقلة تماماً عن dashboard-core/css/style.css — لا
-     تعديل على ذلك الملف المشترك مع باقي الصفحات، فقط أصناف جديدة محلية
-     لهذه الصفحة بالذات (نفس فلسفة .game-card--v2 بـindex.html: إضافي فقط). */
   .adm-tabs { display: flex; gap: 8px; margin-bottom: var(--space-4); flex-wrap: wrap; }
   .adm-tab-btn {
     background: transparent; border: 1px solid var(--border-light); color: var(--text-dim, #9aa);
@@ -57,10 +45,9 @@
 <button class="btn btn-sm" id="btn-refresh-users"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg>تحديث</button>
 </div>
 
-<!-- [0.45.0] تبويبان: لاعبون (لا صلاحية ألعاب ولا طلبوا يكونون ستريمرز)
-     وستريمرز (أدمن، أو can_run_games مفعّلة، أو طلب أن يكون ستريمر وقت
-     التسجيل is_streamer). التصنيف بمنطق العميل فقط من نفس بيانات
-     adminListUsers الموجودة أصلاً — لا تعديل على الخادم. -->
+<!-- "Streamers" tab = admin, or can_run_games enabled, or requested
+     is_streamer at signup; everything else is "Players". Classified
+     client-side from adminListUsers' existing data. -->
 <div class="adm-tabs" id="user-tabs">
   <button type="button" class="adm-tab-btn is-active" data-user-tab="players">اللاعبون</button>
   <button type="button" class="adm-tab-btn" data-user-tab="streamers">الستريمرز</button>
@@ -117,12 +104,6 @@
 <script src="auth/auth-client.js"></script>
 <script>
 'use strict';
-/**
- * [0.45.0] لوحة الأدمن — المستخدمون فقط الآن (تبويبا لاعبون/ستريمرز).
- * باقي الأقسام (الإعلان، الداعمون، الثيم، الكتالوج، منح/سحب، الدخولية
- * المستقلة، مستويات SP) انتقلت لـadmin-settings.html — راجع تعليق أعلى
- * الملف. نفس منطق محمية AGPAuth.requireAdmin كما كان بالضبط.
- */
 (function () {
     var KNOWN_PERMISSION_KEYS = ['can_run_games'];
     var messageEl = document.getElementById('admin-message');
@@ -141,7 +122,6 @@
         return escapeHtml(value).replace(/"/g, '&quot;');
     }
 
-    // [0.45.0] تبويبات المستخدمين — نفس نمط تبويبات profile.html.
     Array.prototype.forEach.call(document.querySelectorAll('[data-user-tab]'), function (btn) {
         btn.addEventListener('click', function () {
             Array.prototype.forEach.call(document.querySelectorAll('[data-user-tab]'), function (b) { b.classList.remove('is-active'); });
@@ -177,8 +157,6 @@
             escapeHtml(u.points && u.points.currentLevel ? (u.points.currentLevel.displayNameAr || u.points.currentLevel.slug) : 'بلا مستوى');
     }
 
-    // [0.45.6] زر حذف حساب نهائي — مشترك بين تبويبي اللاعبين والستريمرز.
-    // تأكيد صريح عبر confirm() قبل أي استدعاء فعلي (لا تراجع بعد الحذف).
     function deleteUserCell(u) {
         return '<button class="btn btn-sm" data-user-id="' + u.id + '" data-delete-user title="حذف الحساب نهائياً — لا تراجع">🗑️ حذف</button>';
     }
@@ -196,13 +174,8 @@
                 '<td>' + escapeHtml(u.email) + '</td>' +
                 '<td>' + (u.tiktok_username ? (escapeHtml(u.tiktok_username) + (u.tiktok_verified ? ' ✅' : '')) : '—') + '</td>' +
                 '<td class="mono">' + customIdCell(u) + '</td>' +
-                // [0.45.6] نفس checkbox صلاحية can_run_games الموجود بتبويب
-                // الستريمرز — الآن متاح مباشرة من هنا (أول مكان يظهر فيه أي
-                // لاعب جديد فعلاً)، بدل ما يحتاج الأدمن يبحث عنه بتبويب ثاني
-                // أصلاً مصمم يستثنيه (raجع isStreamerLike). wireRowActions
-                // أدناه عام لأي checkbox[data-permission-key] بأي جدول، فلا
-                // تعديل إضافي هناك — يعيد تحميل القائمة تلقائياً بعد النجاح
-                // فينتقل الحساب لتبويب الستريمرز فوراً.
+                // Toggling this reloads the list, moving the account to
+                // the Streamers tab immediately (see isStreamerLike).
                 '<td>' + commonPermCells(u) + '</td>' +
                 '<td>' + levelCell(u) + '</td>' +
                 '<td>' + (u.equippedFrame ? escapeHtml(u.equippedFrame.displayNameAr || u.equippedFrame.frameRef) : '—') + '</td>' +
@@ -222,11 +195,6 @@
             var welcomeResetBtn = '<br><button class="btn btn-sm" data-user-id="' + u.id + '" data-reset-welcome title="' +
                 (u.welcome_completed ? 'شافها كاملة من قبل — اضغط لإعادتها له مرة وحدة' : 'لسا ما شافها') +
                 '">🎉 إعادة الترحيب</button>';
-            // [0.45.6] قيد الجهاز الواحد (راجع backend/auth/auth-service.js:
-            // checkDeviceLock) — عرض حالة فقط (🔒 مربوط / — غير مربوط بعد)
-            // + زر تصفير يدوي (صمام أمان لو الستريمر غيّر جهازه فعلاً).
-            // [0.45.11] + زر "سماح بجهاز جديد" — استخدام لمرة وحدة، يُصفَّر
-            // تلقائياً بأول دخول جاي من أي جهاز (لا يحتاج تصفير يدوي بعدها).
             var deviceLockCell = (u.is_super_admin ? '⭐ سوبر أدمن (بدون قيد)' : (u.deviceLocked ? '🔒 مربوط' : '—')) +
                 (u.is_super_admin ? '' :
                     '<br><button class="btn btn-sm" data-user-id="' + u.id + '" data-reset-device-lock title="تصفير القيد — يسمح بالدخول من جهاز جديد">↺ تصفير</button>' +
@@ -286,7 +254,6 @@
             });
         });
 
-        // [0.45.6] حذف حساب نهائياً — تأكيد صريح قبل أي استدعاء فعلي.
         Array.prototype.forEach.call(tbody.querySelectorAll('[data-delete-user]'), function (button) {
             button.addEventListener('click', function () {
                 var userId = Number(button.getAttribute('data-user-id'));
@@ -304,7 +271,6 @@
             });
         });
 
-        // [0.45.6] تصفير قيد الجهاز الواحد لستريمر معتمد.
         Array.prototype.forEach.call(tbody.querySelectorAll('[data-reset-device-lock]'), function (button) {
             button.addEventListener('click', function () {
                 var userId = Number(button.getAttribute('data-user-id'));
@@ -320,7 +286,6 @@
             });
         });
 
-        // [0.45.11] سماح تغيير الجهاز لمرة وحدة — الزر يبدّل الحالة (تفعيل/إلغاء).
         Array.prototype.forEach.call(tbody.querySelectorAll('[data-allow-device-change]'), function (button) {
             button.addEventListener('click', function () {
                 var userId = Number(button.getAttribute('data-user-id'));

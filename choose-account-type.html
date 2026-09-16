@@ -5,26 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>اختر نوع حسابك — AGP</title>
 
-<!--
-  ==========================================================================
-  [0.45.6] صفحة جديدة كلياً — خطوة إجبارية بعد أول تسجيل دخول بجوجل لحساب
-  جديد كلياً على المنصة. السبب: قبل هذا الإصدار، أي تسجيل عبر جوجل كان
-  يُنشئ حساب "لاعب" صامتاً بدون أي اختيار من صاحب الحساب (خلافاً لنموذج
-  التسجيل العادي بكلمة مرور اللي فيه بطاقتا لاعب/استريمر صريحتان —
-  signup.html). هذه الصفحة تسد الفجوة: تُفرَض فقط لو
-  AGPAuth.needsAccountTypeChoice(user) === true (راجع auth/auth-client.js
-  وbackend/auth/auth-service.js: chooseAccountType) — لا تظهر أبداً لحساب
-  اختار نوعه أصلاً (كل الحسابات القديمة، وكل تسجيل بكلمة مرور عادي).
-
-  ⚠️ نفس التنويه دائماً: اختيار "استريمر" هنا **طلب أولي فقط** — لا يمنح
-  صلاحية تشغيل الألعاب تلقائياً (can_run_games تبقى قرار الأدمن دائماً من
-  admin.html)، تماماً مثل بطاقتي لاعب/استريمر بصفحة signup.html العادية.
-
-  نفس الهوية البصرية المرجعية المستخدمة بـlogin.html/signup.html/
-  profile.html (ملف ذاتي الاكتفاء، لا اعتماد على dashboard-core/css/
-  style.css أو auth/auth.css).
-  ==========================================================================
--->
+<!-- Mandatory step after a brand-new account's first Google sign-in
+     (only shown when AGPAuth.needsAccountTypeChoice(user) is true — never
+     for accounts that already chose a type). "Streamer" here is just a
+     request, same as signup.html — can_run_games is still admin-granted.
+     Self-contained page, no dependency on dashboard-core/css or auth.css. -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -59,6 +44,8 @@
     }
 
     a { color: inherit; text-decoration: none; }
+
+    body.auth-checking .au-wrap { display: none; }
 
     .au-wrap {
         max-width: 460px;
@@ -196,10 +183,6 @@
 <script>
 'use strict';
 
-/**
- * [0.45.6] راجع تعليق أعلى الملف. لا شيء هنا يُنشئ جلسة جديدة — يعتمد
- * على جلسة موجودة أصلاً (Google login نجح فعلاً قبل الوصول لهذه الصفحة).
- */
 (function () {
     var messageEl = document.getElementById('auth-message');
     var form = document.getElementById('choice-form');
@@ -210,8 +193,7 @@
         messageEl.className = 'au-message au-message--visible au-message--' + type;
     }
 
-    // اللوحة حصراً لحساب الأدمن — أي حساب آخر يروح لبروفايله العام.
-    // نفس دالة goAfterAuth بـlogin.html/signup.html بالضبط.
+    // Dashboard is admin-only; every other account goes to its public profile.
     function goAfterAuth(user) {
         if (AGPAuth.canAccessDashboard(user)) {
             window.location.href = 'dashboard-core/index.html';
@@ -252,9 +234,8 @@
             });
     });
 
-    // محمية بجلسة صالحة فقط (requireAuth) — لو الحساب اختار نوعه أصلاً
-    // (وصل هنا برابط مباشر يدوياً مثلاً)، نكمله لوجهته العادية فوراً بدل
-    // عرض شاشة اختيار لا داعي لها.
+    // If the account already chose a type (e.g. reached this page directly
+    // by URL), skip straight to its normal destination.
     AGPAuth.requireAuth('login.html').then(function (user) {
         if (!user) return;
         if (!AGPAuth.needsAccountTypeChoice(user)) {

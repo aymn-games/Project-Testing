@@ -1,61 +1,20 @@
 /**
- * ==========================================================================
- *  AGP ELIMINATION ROULETTE — "روليت الإقصاء" (لعبة أصلية داخل المنصة)
- * ==========================================================================
+ * AGP ELIMINATION ROULETTE — "روليت الإقصاء" (لعبة أصلية داخل المنصة).
+ * لعبة Native، لا نافذة خارجية ولا postMessage؛ صفحتها الخاصة تحمّل
+ * AGP Core كاملاً + هذا الملف مباشرة.
  *
- * لعبة أصلية (Native) داخل نفس مستودع Project-Testing — لا تحتاج نافذة
- * خارجية ولا postMessage إطلاقاً؛ صفحتها الخاصة
- * (games/elimination-roulette/index.html) تحمّل AGP Core كاملاً + هذا
- * الملف مباشرة.
+ * ⚠️ "انعاش صديق": كل لاعب يترجَّع بهذي الطريقة مرة واحدة فقط طول عمره
+ * بالمباراة (يُستثنى من قوائم الإرجاع القادمة بعدها).
  *
- * ⚠️ [0.44.0] تحديث تصميم شامل (جلسة تصميم كاملة اتُّفق عليها خطوة بخطوة
- *   قبل التنفيذ — راجع docs/CHANGELOG.md لتفاصيل كل نقطة). أبرز ما تغيّر:
- *   - عجلة حقيقية (Conic Gradient ملوَّنة بألوان المنصة الرسمية + حلقة
- *     مصابيح زخرفية)، بدل الدائرة الخطية البسيطة القديمة.
- *   - أسماء اللاعبين انتقلت لشريط منظّم أعلى العجلة (بدل توزيعها على
- *     محيط العجلة نفسها).
- *   - زر الدوران صار شعار "ألعاب أيمن" بمنتصف العجلة (بدل زر منفصل تحتها).
- *   - نوافذ الإقصاء/الإرجاع بحجم أكبر (1200×800)، بطاقات لاعبين جنباً
- *     لجنب بدون خلفية صف مستطيلة، اسم صاحب الدور بارز منفصل، موقّت أوضح
- *     وأكبر مع صوت تنبيه بآخر 10 ثوانٍ، وتبويب إعلان نتيجة منفصل (4 ثوانٍ
- *     + صوت) بعد كل اختيار.
- *   - نافذة الإرجاع بدون زر "تخطي" بالواجهة — التخطي عبر كتابة "تخطي"
- *     بالشات من صاحب الدور نفسه فقط.
- *   - "انعاش صديق": كل لاعب يترجَّع بهذي الطريقة **مرة واحدة فقط طول
- *     عمره بالمباراة** (يُستثنى من قوائم الإرجاع القادمة بعدها)، لا حد
- *     على عدد مرات تفعيل الآلية نفسها.
- *   - إصلاح فعلي لثغرة الحد الأقصى للاعبين: كان `AGP.lobby.close()` غير
- *     كافٍ وحده لوقف الانضمام الفعلي (مسار الكلمة المفتاحية الحقيقي —
- *     `agp-keyword-manager.js checkKeyword()` — لا يتحقق من حالة
- *     `AGP.lobby` إطلاقاً، فقط من علمه الداخلي `_active`)؛ الآن نستدعي
- *     أيضاً `AGP.keywordManager.deactivate()` صراحة عند الوصول للحد.
- *   - مزامنة حذف لاعب (زر 🗑️ الجديد بشاشة الإعدادات أثناء المباراة —
- *     js/agp-game-shell.js) مع حالة العجلة الداخلية هنا (`player:removed`).
- *   - نافذة اختيار هدية الإنعاش صارت تبويباً منبثقاً مبنياً بالكامل هنا
- *     (لا تعديل على نوع حقل عام جديد بـagp-game-shell.js اسمه
- *     'modal-trigger' — الشاشة العامة لا تعرف شيئاً عن الهدايا نفسها).
- *   - صوت للعجلة/الإقصاء/الإرجاع/التنبيه + حقل تحكم بمستوى الصوت
- *     بالإعدادات. ⚠️ ملاحظة صادقة: الأصوات الأربعة (spin/eliminate/revive/
- *     warning-beep) مُولَّدة برمجياً (نغمات بسيطة عبر Python/numpy)، مو
- *     مكتبة أصوات احترافية جاهزة — بديل عملي متاح فوراً، يمكن استبدالها
- *     بأي ملفات صوت حقيقية بنفس الأسماء بمجلد sounds/ وقتما تجهز.
- *   - تعديل الإعدادات أثناء المباراة (موقّت/هدية/عدد إنعاشات...) يُطبَّق
- *     فوراً على الدور القادم مباشرة — القراءة صارت حيّة من
- *     `AGP.gameShell.getSettings()` بدل نسخة مجمَّدة وقت بدء المباراة.
- *   - شاشة الفائز: بطاقة الفائز + بطاقة "الأكثر إقصاءً"، وزرّا "إعادة
- *     بنفس اللاعبين" (يتخطى الإعدادات واللوبي، يستبعد المحذوفين يدوياً
- *     تلقائياً) و"مباراة جديدة" (يحتفظ باليوزرنيم عبر AGP.storageManager
- *     — التعديل بـagp-game-shell.js).
- *   - نظام النقاط: **بدون أي تغيير** — التزام صريح بالنظام العام الموحّد
- *     للمنصة (+4 مشاركة/+20 فوز عبر window.AGPAuth.reportRoundCompletion)،
- *     بدون أي قيم مخصَّصة لهذي اللعبة (قرار صريح بالنقاش).
+ * ⚠️ الحد الأقصى للاعبين: AGP.lobby.close() وحدها لا تكفي لوقف الانضمام
+ * (مسار الكلمة المفتاحية الحقيقي في agp-keyword-manager.js لا يتحقق من
+ * حالة AGP.lobby)، فيُستدعى أيضاً AGP.keywordManager.deactivate() صراحة.
  *
- * الاعتماديات (بنفس ترتيب index.html القياسي، راجع docs/CLAUDE.md):
- *   js/agp-core.js … js/agp-bootstrap.js (AGP Core كامل)، ثم
- *   js/agp-player-card.js، ثم js/agp-game-shell.js (شاشة الإعدادات +
- *   الاتصال بتيك توك + اللوبي — ملف عام، مُعدَّل بنفس هذا الإصدار لكن
- *   يبقى عاماً قابلاً لإعادة الاستخدام)، ثم هذا الملف.
- * ==========================================================================
+ * نظام النقاط بدون أي قيم مخصَّصة لهذي اللعبة -- نفس النظام العام الموحّد
+ * (window.AGPAuth.reportRoundCompletion).
+ *
+ * الاعتماديات (بنفس ترتيب index.html القياسي): js/agp-core.js …
+ * js/agp-bootstrap.js، ثم js/agp-player-card.js، ثم js/agp-game-shell.js.
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -70,7 +29,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var GAME_NAME = 'روليت الإقصاء';
     var TIMER_NAME = 'elimination-roulette-turn';
 
-    // ⚠️ [0.44.0] ألوان المنصة الرسمية — مطابقة تماماً لمتغيرات CSS
+    // ⚠️ ألوان المنصة الرسمية — مطابقة تماماً لمتغيرات CSS
     // الجذرية بـindex.html (--accent/--accent-2/--accent-pink)، راجع
     // docs/UI_GUIDELINES.md. تُستخدَم بالعجلة والنوافذ بدل الألوان
     // اليدوية التقريبية القديمة.
@@ -81,7 +40,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var C_PINK_LT = '#ff8de8';
     var C_ACCENT2_LT = '#7de0ff';
 
-    // ⚠️ [0.45.0] نسخة غامقة من نفس ألوان العجلة أعلاه (لعجلة أغمق كما
+    // ⚠️ نسخة غامقة من نفس ألوان العجلة أعلاه (لعجلة أغمق كما
     // طلب المستخدم) — كل لون = نفس اللون الأصلي بسطوع ~50%. راجع
     // docs/CHANGELOG.md للطريقة الحسابية.
     var C_ACCENT_DK = '#3e1d76';
@@ -92,13 +51,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var C_ACCENT2_LT_DK = '#3e707f';
     var WHEEL_PALETTE = [C_ACCENT_DK, C_PINK_DK, C_ACCENT2_DK, C_ACCENT_LT_DK, C_PINK_LT_DK, C_ACCENT2_LT_DK];
 
-    // ⚠️ [0.45.0] لون العناصر الي كانت بيضاء فوق/داخل العجلة (حلقة
+    // ⚠️ لون العناصر الي كانت بيضاء فوق/داخل العجلة (حلقة
     // الحافة، السهم المؤشّر، حدود زر الدوران) — صار غامقاً بدل الأبيض
     // بناءً على طلب المستخدم، لكن مقصود يكون أفتح/مختلف عن ألوان العجلة
     // الغامقة أعلاه حتى يبقى مميّزاً وواضحاً فوقها (مو أسود بحت).
     var C_WHEEL_TRIM = '#9c8fb0';
 
-    // ⚠️ [0.45.0] قيم عملات كل هدية بحسب بحث فعلي بمصادر عامة (streamwrapped.com،
+    // ⚠️ قيم عملات كل هدية بحسب بحث فعلي بمصادر عامة (streamwrapped.com،
     // bettertok.app، joinotto.com) — راجع الملاحظة الصادقة بـCHANGELOG:
     // "Confetti Battle" ما لقيت له قيمة مؤكدة بأي مصدر، تظهر "؟" بدلها.
     // أيقونات الهدايا: Twemoji (jdecked/twemoji، رخصة MIT + CC-BY 4.0) —
@@ -134,7 +93,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return { label: s + 'ث', value: s };
     });
 
-    // ⚠️ [0.48.0] موشر تكبير/تصغير العجلة — حدود الحجم بالبكسل + القيمة
+    // ⚠️ موشر تكبير/تصغير العجلة — حدود الحجم بالبكسل + القيمة
     // الافتراضية (تطابق 440px القديمة الثابتة). القيمة الحالية تُحفَظ
     // بمتغيّر وحدة (_wheelSizePx أدناه مع بقية حالة المباراة) حتى تبقى
     // كما هي عبر renderStage() المتكرّرة (إعادة مباراة بنفس اللاعبين...).
@@ -143,7 +102,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var WHEEL_SIZE_DEFAULT = 440;
     var _wheelSizePx = WHEEL_SIZE_DEFAULT; // يبقى كما هو عبر renderStage() المتكرّرة (خارج resetMatchState() عمداً)
 
-    // ⚠️ [0.56.0] شكل الاختيار الثاني الاختياري — بكرة سكرول رأسية بدل
+    // ⚠️ شكل الاختيار الثاني الاختياري — بكرة سكرول رأسية بدل
     // العجلة الدائرية (نفس نظام روليت الروسي rr-reel بالحرف). يبقى
     // كما هو عبر renderStage() المتكرّرة، بنفس فلسفة _wheelSizePx أعلاه.
     var _wheelDisplayMode = 'wheel'; // 'wheel' | 'reel'
@@ -172,7 +131,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function playSound(name) {
         var a = _sounds[name];
         if (!a) return;
-        // ⚠️ [0.45.11] إصلاح خلل حقيقي: لو مستوى الصوت صفر، الكود كان
+        // ⚠️ إصلاح خلل حقيقي: لو مستوى الصوت صفر، الكود كان
         // يستدعي play() فعلياً (بس بصوت صامت volume=0) بدل تجاهل الاستدعاء
         // بالكامل. على iOS تحديداً، مجرد استدعاء play() على أي عنصر
         // <audio> (حتى بصوت صفر) يخلي Safari يستولي على جلسة الصوت
@@ -209,17 +168,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _giftReviveCounts = {}; // playerId -> عدد مرات الإنعاش بالدعم المستخدَمة (طول المباراة)
     var _friendRevivedIds = {}; // playerId -> true (استُخدمت له فرصة "انعاش صديق" مرة، مرة واحدة طول عمره بالمباراة)
 
-    // ⚠️ [0.66.0] مهلة إضافية قبل إعلان الفائز نهائياً عند آخر إقصاء ممكن
+    // ⚠️ مهلة إضافية قبل إعلان الفائز نهائياً عند آخر إقصاء ممكن
     // ينهي المباراة — تعطي فرصة حقيقية لهدية إنعاش "بالطريق" (وصلت فعلياً
     // من المُرسِل لكن لسا ما وصلت/انعالجت عندنا بسبب تأخير شبكة/تيك توك
     // طبيعي) تنقذ آخر لاعب مُقصى قبل ما تُقفَل المباراة. راجع تعليق
     // eliminatePlayer() أدناه للتفاصيل الكاملة.
     var FINAL_ELIMINATION_GIFT_GRACE_MS = 500;
     var _eliminationCounts = {}; // playerId (المُقصي) -> عدد من أقصاهم فعلياً
-    // ⚠️ [0.46.0] حالة "العب" (الدوران التلقائي) — راجع handleAutoPlayToggle/maybeAutoSpin/stopAutoPlay.
+    // ⚠️ حالة "العب" (الدوران التلقائي) — راجع handleAutoPlayToggle/maybeAutoSpin/stopAutoPlay.
     var _autoPlayActive = false;
     var _autoPlayTimer = null;
-    // ⚠️ [0.61.0] رقم كل لاعب ثابت طول المباراة (يُحسب حسب ترتيب دخوله
+    // ⚠️ رقم كل لاعب ثابت طول المباراة (يُحسب حسب ترتيب دخوله
     // للوبي عند بداية المباراة، أو ترتيب انضمامه وسط مباراة جارية) — راجع
     // assignPlayerNumber/playerNumber أدناه. يحل محل فهرس المصفوفة
     // المتغيّر (i+1) المستخدَم سابقاً بعرض ومطابقة رقم الشات بنافذتَي
@@ -227,17 +186,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // المكتوب بالشات لا يطابق شيء أو يطابق لاعباً مختلفاً عن المقصود.
     var _playerNumbers = {};       // playerId -> رقم ثابت
     var _nextPlayerNumber = 1;
-    // ⚠️ [0.59.0] selectCandidateManually/_selectedCandidateIdx حُذفتا
+    // ⚠️ selectCandidateManually/_selectedCandidateIdx حُذفتا
     // بالكامل — راجع تعليق handleForceEliminateClick أدناه.
 
-    // ⚠️ [0.59.0] معرِّف/كائن "المُقصي الافتراضي" لحالتَي إقصاء صاحب
+    // ⚠️ معرِّف/كائن "المُقصي الافتراضي" لحالتَي إقصاء صاحب
     // الدور نفسه (الزر الأحمر، وانتهاء الوقت بسلوك "يُقصى صاحب الدور") —
     // بطلب صريح: تظهر بطاقة فعلية باسم "الاستريمر" بتبويب الإعلان بدل
     // الشكل القديم بلا بطاقة مُقصي إطلاقاً. ليس لاعباً حقيقياً، فما
     // يُحتسَب بإحصائية "الأكثر إقصاءً" (راجع eliminatePlayer أدناه).
     var STREAMER_ELIMINATOR_ID = '__streamer__';
     var STREAMER_VIRTUAL_PLAYER = { id: STREAMER_ELIMINATOR_ID, name: 'الاستريمر' };
-    // ⚠️ [0.62.0] معرِّف setTimeout الخاص بإخفاء تبويب "عودة لاعب" تلقائياً
+    // ⚠️ معرِّف setTimeout الخاص بإخفاء تبويب "عودة لاعب" تلقائياً
     // — راجع showReviveSplash() أدناه.
     var _reviveSplashTimer = null;
 
@@ -262,7 +221,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (splashOverlay) splashOverlay.style.display = 'none';
     }
 
-    // ⚠️ [0.61.0] راجع تعليق _playerNumbers أعلاه — يُستدعى مرة واحدة فقط
+    // ⚠️ راجع تعليق _playerNumbers أعلاه — يُستدعى مرة واحدة فقط
     // لكل لاعب فعلياً (بداية المباراة بترتيب اللوبي، انضمام وسط مباراة،
     // أو "إعادة بنفس اللاعبين" بعد resetMatchState الذي يصفّر الجدول).
     function assignPlayerNumber(p) {
@@ -289,7 +248,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function playerLabel(p) { return (p && (p.name || p.id)) || '—'; }
 
     /**
-     * ⚠️ [0.46.0] إصلاح فعلي لثغرة نقاط: player.name هو الاسم المستعار
+     * ⚠️ إصلاح فعلي لثغرة نقاط: player.name هو الاسم المستعار
      * (nickname) بتيك توك، وليس اليوزرنيم الحقيقي (@handle) المستخدَم
      * فعلياً بمطابقة الباك إند (auth-service.js findVerifiedUserByTikTok
      * يقارن tiktok_username الحقيقي المُدخَل يدوياً وقت التوثيق —
@@ -316,7 +275,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return null;
     }
 
-    // ⚠️ [0.45.9] خط "Zain" — طلب صريح (خط أوضح لشاشات الإعدادات/عناوين
+    // ⚠️ خط "Zain" — طلب صريح (خط أوضح لشاشات الإعدادات/عناوين
     // التبويبات وغيرها). يُحمَّل هنا فقط (لا يُلمَس js/agp-game-shell.js
     // المشترك ولا أي لعبة أخرى) — نفس رابط Google Fonts المرسَل بالضبط،
     // بحارس (guard) بمعرِّف العنصر يمنع التكرار لو استُدعيت الدالة أكثر
@@ -339,7 +298,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         document.head.appendChild(sheet);
     }
 
-    // ⚠️ [0.51.0] خط "Tajawal" — طلب صريح بملف style.css مرجعي أرسله
+    // ⚠️ خط "Tajawal" — طلب صريح بملف style.css مرجعي أرسله
     // المستخدم لشاشة الإعدادات الأولى تحديداً (family:'Tajawal'). يُحمَّل
     // بنفس أسلوب ensureZainFont أعلاه (حارس id يمنع التكرار، صفر لمس
     // للملف المشترك)، ويُطبَّق فقط على .er-settings-initial-box عبر CSS
@@ -372,13 +331,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         style.textContent = [
             ':root{--er-accent:' + C_ACCENT + ';--er-accent2:' + C_ACCENT2 + ';--er-pink:' + C_PINK + ';}',
 
-            // ⚠️ [0.46.1] هامش body الافتراضي للمتصفح (8px) كان يسبب سكرول
+            // ⚠️ هامش body الافتراضي للمتصفح (8px) كان يسبب سكرول
             // صفحة بمقدار 16px حتى مع صندوق اللوبي المضبوط على 100vh.
             // هذا تصفير خاص بصفحة روليت الإقصاء فقط (الشيت هنا يُحقن فقط
             // عند تشغيل هذه اللعبة) — لا يمس أي ملف مشترك ولا أي لعبة ثانية.
             'html,body{margin:0 !important;padding:0 !important;}',
 
-            // ⚠️ [0.45.9] خط "Zain" يطغى على كل خطوط اللعبة — أوضح للقراءة
+            // ⚠️ خط "Zain" يطغى على كل خطوط اللعبة — أوضح للقراءة
             // بحسب طلب المستخدم. Cairo يبقى احتياطياً (fallback) لو تأخّر
             // تحميل الخط. ملاحظة تقنية: body{font-family:...} وحده لا
             // يكفي — أي عنصر له font-family مُحدَّد مباشرة عليه (كل
@@ -398,7 +357,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#er-stage{position:fixed;inset:0;padding-top:70px;display:flex;flex-direction:column;',
             'align-items:center;justify-content:flex-start;gap:14px;overflow-y:auto;font-family:Cairo,sans-serif;direction:rtl;color:#f3eefc;}',
 
-            /* ---- [0.46.0] أسماء اللاعبين رجعت — لكن هذي المرة مكتوبة
+            /* ---- أسماء اللاعبين رجعت — لكن هذي المرة مكتوبة
              * مباشرة داخل كل قطعة من قطع العجلة نفسها (نص فقط، بدون أي
              * صور بروفايل)، بدل الشريط المنفصل القديم المُلغى بـ[0.45.0]. */
             '.er-wheel-label{position:absolute;top:50%;left:50%;transform-origin:center;',
@@ -406,7 +365,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;',
             'pointer-events:none;text-align:center;}',
 
-            /* ---- [0.48.0] موشر تكبير/تصغير العجلة — عنصر عادي بترتيب
+            /* ---- موشر تكبير/تصغير العجلة — عنصر عادي بترتيب
              * العمود (#er-stage flex-direction:column) بين العجلة وزر
              * إعادة الترتيب العشوائي، حتى يتحرك الأخير تلقائياً معه لما
              * يتغيّر حجم العجلة فوقه (بدل التموضع المطلق). */
@@ -420,7 +379,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#er-shuffle-btn:disabled{opacity:0.4;cursor:not-allowed;}',
             '#er-shuffle-btn:not(:disabled):hover{background:rgba(255,255,255,0.16);}',
 
-            /* ---- [0.61.0] الشكل الثاني الاختياري: بكرة سكرول رأسية بدل
+            /* ---- الشكل الثاني الاختياري: بكرة سكرول رأسية بدل
              * العجلة — نفس نظام روليت الروسي (rr-reel) بالحرف، بألوان
              * روليت الإقصاء. الاختيار بينهما صار حقل إعدادات حقيقي
              * (wheelDisplayMode) بدل زر عائم فوق الشاشة — راجع
@@ -451,13 +410,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'pointer-events:none;border-top:2px solid var(--er-pink);border-bottom:2px solid var(--er-pink);',
             'background:linear-gradient(90deg,rgba(229,0,127,0.12),rgba(0,215,255,0.06));z-index:2;}',
             '#er-spin-hub.er-hub-standalone{position:static;transform:none;margin:14px auto 0;}',
-            // ⚠️ [0.61.0] نص التوضيح تحت حقل "شكل عجلة الحظ" بشاشتَي
+            // ⚠️ نص التوضيح تحت حقل "شكل عجلة الحظ" بشاشتَي
             // الإعدادات (الأولى والدرج) — عنصر عادي بتدفّق الصف، يُضاف
             // مرة واحدة عبر enhanceWheelModeField.
             '.er-field-note{font-size:0.72em;color:#9dd6c2;margin:-6px 0 4px;padding:0 2px;',
             'text-align:right;opacity:0.9;}',
 
-            /* ---- [0.55.0] زر "العب التلقائي" — انتقل من داخل درج
+            /* ---- زر "العب التلقائي" — انتقل من داخل درج
              * الإعدادات (كان midMatchToggleButton بالملف المشترك) لتحت
              * العجلة مباشرة بشاشة اللعب، بطلب صريح. نفس منطق التفعيل/
              * الإيقاف (handleAutoPlayToggle) بلا أي تغيير، فقط مكان الزر. */
@@ -469,9 +428,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'border-color:transparent;color:#0b0616;font-weight:900;}',
 
             /* ---- العجلة الحقيقية (Conic Gradient + حلقة مصابيح) ----
-             * ⚠️ [0.45.0] margin-top زاد من 8px لـ46px (نزول العجلة شوي
+             * ⚠️ margin-top زاد من 8px لـ46px (نزول العجلة شوي
              * كما طلب المستخدم، تقريباً 1 سم — قياس تقريبي غير دقيق). */
-            // ⚠️ [0.45.7] إصلاح خلل حقيقي: width وheight كانا يُحسَبان بصيغتين
+            // ⚠️ إصلاح خلل حقيقي: width وheight كانا يُحسَبان بصيغتين
             // منفصلتين (min(440px,88vw) لكل واحد) — عند مستويات تكبير معيّنة
             // بالمتصفح (Ctrl+، مثلاً 175%/200%) يحسبهما Chromium بقيمتين
             // مختلفتين فعلياً رغم تطابق الصيغة نصياً (خلل استُنسِخ وأُكِّد
@@ -484,7 +443,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'box-shadow:0 0 46px rgba(124,58,237,0.65),inset 0 0 0 6px rgba(156,143,176,0.25);}',
             '.er-bulb{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff8dd;',
             'box-shadow:0 0 8px 2px rgba(255,244,180,0.85);}',
-            /* ⚠️ [0.45.0] حلقة العجلة كانت بيضاء (rgba(255,255,255,0.92))
+            /* ⚠️ حلقة العجلة كانت بيضاء (rgba(255,255,255,0.92))
              * — صارت C_WHEEL_TRIM (غامقة لكن أفتح/مختلفة عن ألوان
              * العجلة الغامقة نفسها، حتى تبقى مميّزة فوقها). */
             '#er-wheel{position:absolute;inset:8px;border-radius:50%;border:5px solid ' + C_WHEEL_TRIM + ';',
@@ -505,14 +464,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#er-spin-hub:not(:disabled):hover{box-shadow:0 0 34px rgba(0,194,255,0.85),0 4px 14px rgba(0,0,0,0.5);}',
 
             /* ---- نافذة الدور (إقصاء/إرجاع) — 1300×800 ----
-             * ⚠️ [0.45.0] عرّض من 1200 لـ1300، وصار بنفس تدريج/ألوان
+             * ⚠️ عرّض من 1200 لـ1300، وصار بنفس تدريج/ألوان
              * صورة 4 (884B98 → 2D1932) بدل التدريج الفاتح القديم، والخط
              * أبيض بدل البنفسجي الغامق القديم. */
-            // ⚠️ [0.46.0] flex-direction:column + gap: تسمح لبطاقة الاختيار
+            // ⚠️ flex-direction:column + gap: تسمح لبطاقة الاختيار
             // الجديدة (#er-modal-chooser-card) بالظهور فوق الصندوق كعنصر
             // شقيق منفصل بفاصل واضح (مو تراكب/overlap) — بدل التموضع
             // المطلق القديم.
-            // ⚠️ [0.53.0] طلب صريح: الهيدر الثابت العلوي (#agp-persistent-header
+            // ⚠️ طلب صريح: الهيدر الثابت العلوي (#agp-persistent-header
             // بالملف المشترك js/agp-game-shell.js، z-index:99998) يبقى
             // ظاهراً دائماً فوق كل نوافذ اللعبة المنبثقة (الإقصاء/الإرجاع/
             // الإعلان/اختيار الهدية/شاشة الفائز) — بدل ما يختفي خلفها
@@ -526,12 +485,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // الملف المشترك).
             '#er-modal-overlay{position:fixed;inset:0;z-index:99990;display:none;flex-direction:column;',
             'align-items:center;justify-content:center;gap:18px;padding:16px;background:rgba(8,4,16,0.72);}',
-            // ⚠️ [0.44.0] تعديل: height ثابتة 800px كانت تترك فراغاً فارغاً
+            // ⚠️ تعديل: height ثابتة 800px كانت تترك فراغاً فارغاً
             // كبيراً أسفل المحتوى بالتبويبات الأقصر (منبثقة اختيار الهدية،
             // إعلان النتيجة، شاشة الفائز) — نفس الملاحظة اللي طلعت
             // بالاختبار البصري لصندوق شاشة الإعدادات المشتركة. حوّلتها
             // لـheight:auto مع max-height:800px (سقف أقصى فقط).
-            // ⚠️ [0.45.8] تدرّج الخلفية (884B98→2D1932) صار (5F3976→211528) —
+            // ⚠️ تدرّج الخلفية (884B98→2D1932) صار (5F3976→211528) —
             // نفس التدرّج بالضبط طلبه المستخدم موحَّداً بكل "تبويبات"
             // اللعبة (الإعدادات/اللوبي/الإقصاء/الإنعاش/الفائز)، راجع
             // التعليق المطابق بـ#agp-shell-box أدناه لشاشتي الإعدادات واللوبي.
@@ -543,7 +502,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#er-modal-sub{text-align:center;color:#e9d3ff;font-size:0.95em;margin-bottom:10px;}',
 
             /* ==================================================================
-             * ⚠️ [0.61.0] نافذتا "اختيار الإقصاء" و"فرصة الإرجاع" — صندوق
+             * ⚠️ نافذتا "اختيار الإقصاء" و"فرصة الإرجاع" — صندوق
              * جديد كلياً مستقل عن #er-modal-box القديم أعلاه (اللي بقي
              * الآن محصوراً بتبويبَي "إعلان النتيجة" و"شاشة الفائز" و"اختيار
              * هدية الإنعاش" فقط). التصميم منقول بالحرف من نافذة "مرحلة
@@ -554,7 +513,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * .er-phase-badge*) حُذف بالكامل — ما عاد يُستخدَم من أي مكان
              * (renderTurnModal الجديد أدناه لا يبنيه إطلاقاً). ---- */
             /* ================================================================
-             * ⚠️ [0.58.0] شاشة اختيار الإقصاء/الإنعاش (نفس #er-select-box
+             * ⚠️ شاشة اختيار الإقصاء/الإنعاش (نفس #er-select-box
              * المشتركة بين الحالتين عبر roleClass) — إزالة الصندوق
              * بالكامل بطلب صريح: العنوان/بطاقة صاحب الدور/الأزرار/
              * المؤقت/شبكة المرشّحين تطفو مباشرة فوق شاشة اللعب، بدل
@@ -577,7 +536,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#er-select-title{text-align:center;font-size:0.95em;color:#d9c8e8;margin-bottom:18px;flex:none;',
             'text-shadow:0 2px 10px rgba(0,0,0,0.8);}',
             '#er-select-title b{color:var(--er-accent2);font-weight:900;}',
-            // ⚠️ [0.62.0] عُكس اللون هنا عمداً (كان أخضر=إقصاء/أحمر=إنعاش)
+            // ⚠️ عُكس اللون هنا عمداً (كان أخضر=إقصاء/أحمر=إنعاش)
             // ليطابق نظام الألوان الجديد لأرقام اللاعبين بنفس النافذتين
             // (أحمر=إقصاء، أخضر=إنعاش) — طلب صريح لتوحيد لغة الألوان.
             '#er-select-box.er-role-eliminate #er-select-title b{color:#ef4444;}',
@@ -591,7 +550,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-select-chooser-ring .er-ring-avatar,.er-select-chooser-ring .er-ring-avatar--fallback{width:100%;height:100%;font-size:1.5em;}',
             '.er-select-chooser-nmrow{display:flex;align-items:center;gap:10px;margin-top:1px;}',
             '.er-select-chooser-nm{font-size:1.35em;font-weight:900;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.8);}',
-            // ⚠️ [0.62.0] كانت خلفية ثابتة (--er-accent2) بصرف النظر عن
+            // ⚠️ كانت خلفية ثابتة (--er-accent2) بصرف النظر عن
             // النوع، وحجم 34px. طلب صريح جديد: تكبير بدرجة (34→42px) +
             // لون خلفية حسب النوع (أحمر=إقصاء، أخضر=إنعاش) بدل اللون
             // الثابت — راجع roleClass المُمرَّر بالـHTML بـselectChooserCardHtml.
@@ -624,7 +583,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-select-cand-avatar{width:60px;height:60px;border-radius:50%;flex:none;position:relative;z-index:2;',
             'overflow:hidden;box-sizing:border-box;border:3px solid rgba(255,255,255,0.55);}',
             '.er-select-cand-avatar .er-ring-avatar,.er-select-cand-avatar .er-ring-avatar--fallback{width:100%;height:100%;font-size:1.1em;}',
-            // ⚠️ [0.58.0] justify-content صار space-between بدل flex-start
+            // ⚠️ justify-content صار space-between بدل flex-start
             // (وشال gap) — طلب صريح: الرقم يبقى ثابتاً بنهاية حدود اللوح
             // دايماً (ملاصق الحافة الداخلية) بدل ما يطفو بمسافة متغيّرة
             // بعد الاسم مباشرة حسب طول الاسم.
@@ -634,7 +593,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);backdrop-filter:blur(4px);',
             'border-radius:999px;overflow:hidden;z-index:1;}',
             '.er-select-cand-name{font-size:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;}',
-            // ⚠️ [0.62.0] تكبير بدرجة (32→40px) + لون خلفية أحمر بنافذة
+            // ⚠️ تكبير بدرجة (32→40px) + لون خلفية أحمر بنافذة
             // الإقصاء (كان أخضر) وأخضر بنافذة الإنعاش (كان أزرق فاتح
             // --er-accent2) — طلب صريح جديد لتوحيد لغة الألوان بالنافذتين.
             '.er-select-cand-num{width:40px;height:40px;flex:none;color:#fff;',
@@ -645,22 +604,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-select-cand-card.er-cand-selected .er-select-cand-plate{box-shadow:0 0 0 2px #ef4444;}',
 
             /* ---- تبويب إعلان النتيجة (4 ثوانٍ) ----
-             * ⚠️ [0.44.0] إصلاح: كانت هذي القواعد مكتوبة بمُحدِّد ID
+             * ⚠️ إصلاح: كانت هذي القواعد مكتوبة بمُحدِّد ID
              * (#er-announce-box) بينما الكود يطبّقها فعلياً كـclassName
              * على نفس صندوق #er-modal-box (id يبقى er-modal-box دائماً) —
              * فما كانت تُطابَق إطلاقاً، وتبويب الإعلان كان يظهر بدون أي
              * تنسيق (نص متكدّس بالزاوية). صُححت لمحدِّدات class. */
-            /* ⚠️ [0.45.0] ألوان الإعلان (كانت مصمَّمة لخلفية فاتحة) كُبِّرت
+            /* ⚠️ ألوان الإعلان (كانت مصمَّمة لخلفية فاتحة) كُبِّرت
              * سطوعاً لتبقى مقروءة فوق الخلفية الغامقة الجديدة — تعديل
              * تقني ضروري للقراءة، مو مطلوباً صراحة بس لازم للتناسق. */
-            /* ---- [0.46.0] إعادة تصميم كاملة لتبويب إعلان النتيجة —
+            /* ---- إعادة تصميم كاملة لتبويب إعلان النتيجة —
              * صندوق صغير (~650×300) بجملة واحدة "اللاعب [أفاتار+اسم] قام
              * بإقصاء/بإرجاع [أفاتار+اسم]" بدل الأيقونة+العنوان+الاسم
              * الكبير القديم. تُستخدَم أيضاً بإعلان إنعاش "انعاش صديق". */
-            // ⚠️ [0.55.0] طلب صريح جديد بجدول قياسات + SVG مرجعي دقيق —
+            // ⚠️ طلب صريح جديد بجدول قياسات + SVG مرجعي دقيق —
             // يستبدل حجم/شكل [0.53.0] (كان 550×350 مطابقة تقريبية لروليت
             // الروسي): الحجم الآن 500×350 بالضبط (من الجدول: "الصندوق كامل
-            // ⚠️ [0.57.0] طلب صريح جديد: خلفية الصندوق صارت شبه شفافة
+            // ⚠️ طلب صريح جديد: خلفية الصندوق صارت شبه شفافة
             // (أبيض 15% شفافية بدل بنفسجي مصمَت #561972)، حدّ بنفسجي
             // شفاف 30% بدل بنفسجي غامق مصمَت، وزوايا مدببة أكثر (17px
             // بدل 12px). يستبدل [0.56.0] بالكامل على هذي الثلاث خصائص
@@ -672,12 +631,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'border-radius:17px;box-shadow:0 10px 30px rgba(0,0,0,0.5);}',
             '.er-announce-box .er-announce-sentence{font-size:1.25em;font-weight:800;text-align:center;',
             'line-height:2.4;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;}',
-            // ⚠️ [0.55.0] العنوان صار جملة كاملة تتضمّن اسمَي الطرفين حرفياً
+            // ⚠️ العنوان صار جملة كاملة تتضمّن اسمَي الطرفين حرفياً
             // ("قام X بإقصاء Y بنجاح") — يستبدل عنوان [0.54.0] المختصر
             // ("🎯 إقصاء ناجح" بدون أسماء). حجم الخط قُلِّل قليلاً (1.15em
             // بدل 1.5em) لأن الجملة أطول بكثير الآن وتحتاج تلائم عرض
             // 500px بدون التفاف مبالغ فيه. راجع showResultAnnouncement().
-            // ⚠️ [0.57.0] طلب صريح: الجملة صارت أعرض/أبرز — حجم الخط كبر
+            // ⚠️ طلب صريح: الجملة صارت أعرض/أبرز — حجم الخط كبر
             // (1.35em بدل 1.15em) مع ظل مضاعف يبرزها أكثر فوق الخلفية
             // الشفافة الجديدة.
             '.er-announce-title{font-size:1.35em;font-weight:900;color:#fff;text-align:center;',
@@ -685,16 +644,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'text-shadow:0 2px 8px rgba(0,0,0,0.4),0 0 1px #fff;}',
             '.er-announce-eliminate .er-announce-title{color:#ff8da3;}',
             '.er-announce-revive .er-announce-title{color:#7dffb0;}',
-            // ⚠️ [0.57.0] فجوة الصف قلّت (30px بدل 50px) حتى تتّسع لإيموجي
+            // ⚠️ فجوة الصف قلّت (30px بدل 50px) حتى تتّسع لإيموجي
             // الإقصاء الجديد (💀) بين البطاقتين — راجع showResultAnnouncement().
             '.er-announce-row{display:flex;align-items:center;justify-content:center;gap:30px;}',
             '.er-announce-vs-emoji{font-size:40px;align-self:center;',
             'filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5));}',
-            // ⚠️ [0.55.0] بطاقة شخص واحدة (حلقة + وسم دور + اسم) — 145px
+            // ⚠️ بطاقة شخص واحدة (حلقة + وسم دور + اسم) — 145px
             // عرض ثابت حسب الجدول، 8px فاصل رأسي بين عناصرها الثلاثة.
             '.er-announce-person-card{width:145px;display:flex;flex-direction:column;',
             'align-items:center;gap:8px;}',
-            // ⚠️ [0.55.0] حلقة 112px قطر — بنفس تقنية .er-ring-wrap/.er-ring-inner
+            // ⚠️ حلقة 112px قطر — بنفس تقنية .er-ring-wrap/.er-ring-inner
             // المستخدمة ببطاقتَي شاشة الفائز (خلفية ملوَّنة + padding 5px
             // يُنتج سماكة الحلقة تلقائياً حول الصورة، بدل حدّ/stroke).
             '.er-announce-ring{width:112px;height:112px;border-radius:50%;padding:5px;box-sizing:border-box;}',
@@ -706,7 +665,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // "المُقصى" تحديداً، حسب الجدول.
             '.er-announce-ring-desaturate .er-ring-avatar,',
             '.er-announce-ring-desaturate .er-ring-avatar--fallback{filter:saturate(0.4);opacity:0.9;}',
-            // ⚠️ [0.56.0] طلب صريح جديد: أنيميشن 3 ثوانٍ بالأحمر ثم اختفاء
+            // ⚠️ طلب صريح جديد: أنيميشن 3 ثوانٍ بالأحمر ثم اختفاء
             // لصورة اللاعب "المُقصى" تحديداً (نفس مدة عرض الصندوق قبل
             // إغلاقه التلقائي بـsetTimeout(...,3000) داخل
             // showResultAnnouncement() — الاختفاء يكتمل تماماً مع إغلاق
@@ -721,23 +680,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-announce-ring-desaturate .er-ring-avatar,',
             '.er-announce-ring-desaturate .er-ring-avatar--fallback{',
             'animation:er-announce-eliminate-fade 3s ease forwards;}',
-            // ⚠️ [0.55.0] وسم الدور — كبسولة صغيرة تحت الحلقة مباشرة.
+            // ⚠️ وسم الدور — كبسولة صغيرة تحت الحلقة مباشرة.
             '.er-announce-role-badge{padding:3px 12px;border-radius:999px;font-size:12px;',
             'font-weight:800;color:#fff;white-space:nowrap;}',
             '.er-announce-badge-green{background:#22c55e;}',
             '.er-announce-badge-red{background:#ef4444;}',
-            // ⚠️ [0.54.0] كانت 0.55em (نسبية لسياق .er-announce-sentence
+            // ⚠️ كانت 0.55em (نسبية لسياق .er-announce-sentence
             // القديم بـfont-size:1.25em) — بعد حذف ذاك الغلاف صار حجم ثابت
             // صريح (14px) بدل نسبة قد تصغر بالخطأ بسياقها الجديد.
-            // ⚠️ [0.55.0] أُضيف text-align:center — البطاقة صارت بعرض ثابت
+            // ⚠️ أُضيف text-align:center — البطاقة صارت بعرض ثابت
             // 145px فقد الاسم قد يلتف لسطرين لو طويلاً.
             '.er-announce-person-name{font-size:14px;font-weight:800;color:#fff;text-align:center;}',
-            // ⚠️ [0.55.0] .er-announce-person/.er-announce-avatar-wrap لم تعودا
+            // ⚠️ .er-announce-person/.er-announce-avatar-wrap لم تعودا
             // مستخدَمتين من showResultAnnouncement() (استُبدلتا بـ
             // .er-announce-person-card/.er-announce-ring)، لكن أُبقيتا هنا
             // بدون حذف — كانت تُستخدَم أيضاً من showGiftReviveCard() (بطاقة
             // "إنعاش بالدعم" العائمة) ومن announcePersonHtml() القديمة.
-            // ⚠️ [0.62.0] showGiftReviveCard() نفسها أُزيلت بهذا الإصدار
+            // ⚠️ showGiftReviveCard() نفسها أُزيلت بهذا الإصدار
             // (استُبدلت بتبويب "عودة لاعب" الجديد — راجع showReviveSplash()
             // و#er-revive-splash-box أدناه)، فبقيت هاتان القاعدتان بلا أي
             // استخدام فعلي إلا عبر announcePersonHtml() غير المستخدَمة أصلاً
@@ -761,7 +720,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-announce-target-revive-ring{animation:er-target-revive-ring 1.6s ease forwards;}',
 
             /* ======================================================================
-             *  [0.62.0] تبويب "عودة لاعب" — نافذة احتفالية موحَّدة تظهر وسط
+             *  تبويب "عودة لاعب" — نافذة احتفالية موحَّدة تظهر وسط
              *  الشاشة فوق كل شيء (حتى فوق نافذة الاختيار المفتوحة، تماماً
              *  مثل بطاقة "إنعاش بالدعم" العائمة القديمة اللي كانت بنفس
              *  الغرض — راجع تعليق showReviveSplash() أدناه للسياق الكامل)،
@@ -783,7 +742,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'opacity:0;transform:scale(0.6);}',
             '#er-revive-splash-box.er-revive-splash-anim{animation:er-revive-pop 0.45s cubic-bezier(.34,1.56,.64,1) forwards;}',
             '@keyframes er-revive-pop{0%{opacity:0;transform:scale(0.5);}60%{opacity:1;transform:scale(1.08);}100%{opacity:1;transform:scale(1);}}',
-            // ⚠️ [0.63.0] القلب صار صورة PNG مرفوعة من صاحب المشروع (بدل
+            // ⚠️ القلب صار صورة PNG مرفوعة من صاحب المشروع (بدل
             // إيموجي 💚 نصّي) — راجع revive-heart.png بجانب index.html
             // بنفس مجلد اللعبة، وHTML الجديد بترتيب: قلب، نص السبب،
             // صورة اللاعب، الاسم (بدل: قلب، صورة، اسم، سبب سابقاً) —
@@ -806,13 +765,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'padding:10px 18px;border-radius:999px;font-size:0.85em;font-weight:700;box-shadow:0 6px 16px rgba(0,0,0,0.35);}',
 
             /* ---- شاشة نهاية المباراة ----
-             * ⚠️ [0.45.0] تصميم بطاقات جديد بالكامل (البطاقة القديمة
+             * ⚠️ تصميم بطاقات جديد بالكامل (البطاقة القديمة
              * أُلغيت كلياً) — حلقة (ring) بسيطة حول الصورة الدائرية تناسب
              * اللعبة نفسها: حلقة "ذهبية دوّارة" للفائز (تلمّح لعجلة
              * الفوز)، وحلقة "متقطّعة وردية" لصاحب الأكثر إقصاءً (تلمّح
              * لعلامة استهداف/إقصاء) — بشارة أيقونة صغيرة فوق كل حلقة،
              * بنفس ألوان صورة 4. */
-            /* ⚠️ [0.52.0] طلب صريح: شاشة الفائز بدون "لوح/تبويب" خلف
+            /* ⚠️ طلب صريح: شاشة الفائز بدون "لوح/تبويب" خلف
              * البطاقتين — الصندوق المشترك (#er-modal-box) يفقد خلفيته/حدّه/
              * ظلّه/حشوته هنا فقط (كلاس er-winner-panel، محدود بهذه الشاشة —
              * راجع renderWinnerScreen)، وخلفية الشاشة (اللي خلف الطبقة، أي
@@ -829,10 +788,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#er-winner-box h2{font-family:Almarai,Cairo,sans-serif;font-size:1.6em;color:#fff;',
             'text-shadow:0 2px 12px rgba(0,0,0,0.65);}',
             '.er-trophy-cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:14px 0 18px;}',
-            /* ⚠️ [0.46.0] حجم موحَّد 250×250 لكل بطاقة، وبدون أي خلفية أو
+            /* ⚠️ حجم موحَّد 250×250 لكل بطاقة، وبدون أي خلفية أو
              * حدود إطلاقاً (أُلغيتا بالكامل) — تأثير "تطاير" (confetti)
              * هو البديل الاحتفالي الآن، راجع spawnConfetti().
-             * ⚠️ [0.47.0] تأثير "إشعاع/توهّج" جديد حول كل بطاقة (نفس اللون
+             * ⚠️ تأثير "إشعاع/توهّج" جديد حول كل بطاقة (نفس اللون
              * الموحَّد للطرفين — الفائز والأكثر إقصاءً — بطلب صريح)، مع
              * نبضة خفيفة مستمرة. overflow صار visible بدل hidden حتى لا
              * يُقصّ التوهّج (ولا قصاصات confetti التي تتخطى حدود الصندوق
@@ -865,15 +824,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-gift-name{font-size:0.82em;font-weight:700;}',
             '.er-gift-coins{font-size:0.72em;opacity:0.8;}',
 
-            /* ---- [0.46.0] تأثير التطاير الاحتفالي (بطاقات شاشة الفائز) ---- */
+            /* ---- تأثير التطاير الاحتفالي (بطاقات شاشة الفائز) ---- */
             '.er-confetti-piece{position:absolute;top:50%;left:50%;width:8px;height:8px;border-radius:2px;',
             'pointer-events:none;opacity:0;animation:er-confetti-burst 1.4s ease-out forwards;}',
             '@keyframes er-confetti-burst{0%{opacity:1;transform:translate(-50%,-50%) translate(0,0) rotate(0deg);}',
             '100%{opacity:0;transform:translate(-50%,-50%) translate(var(--dx),var(--dy)) rotate(540deg);}}',
 
             /* ---- بانر أحداث المباراة (يسار الشاشة، من تحت الشعار) ----
-             * ⚠️ [0.47.0] العرض صار 250px بدل 450px (طلب صريح).
-             * ⚠️ [0.45.7] صار مخفياً افتراضياً (display:none) — يظهر فقط
+             * ⚠️ العرض صار 250px بدل 450px (طلب صريح).
+             * ⚠️ صار مخفياً افتراضياً (display:none) — يظهر فقط
              * بإضافة الكلاس er-log-visible (زر إظهار/إخفاء مخصَّص، راجع
              * ensureEventLog/#er-event-log-toggle أدناه). بما إنه
              * position:fixed أصلاً (خارج تخطيط #er-stage تماماً)، إخفاؤه/
@@ -894,7 +853,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#er-event-log-toggle.er-log-toggle-active{background:rgba(124,58,237,0.55);',
             'border-color:var(--er-accent2);}',
 
-            /* ---- [0.45.7] تحسين بصري لمفتاحي تفعيل "انعاش صديق"/"الإنعاش
+            /* ---- تحسين بصري لمفتاحي تفعيل "انعاش صديق"/"الإنعاش
              * عن طريق الدعم" بشاشة الإعدادات — طلب صريح: الشكل بحالتي
              * التشغيل/الإيقاف "مو متناسق"، يحتاج يكون أوضح. تباين واضح
              * الآن: رمادي غامق مطفأ (OFF) ← أخضر متوهّج بارز (ON)، بدل
@@ -920,7 +879,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'label.agp-toggle-switch:has(input[data-key="giftRevivalEnabled"]:checked) .agp-toggle-track::before{',
             'content:"✓" !important;color:#16a34a !important;transform:translateX(-20px) !important;}',
 
-            /* ---- [0.45.8] توحيد لون/تدرّج خلفية "تبويبات" شاشتي الإعدادات
+            /* ---- توحيد لون/تدرّج خلفية "تبويبات" شاشتي الإعدادات
              * واللوبي (#agp-shell-box بكلاسيه) بنفس تدرّج (5F3976→211528)
              * المستخدم بـ#er-modal-box أعلاه — طلب صريح لتوحيد شكل كل
              * شاشات اللعبة. #agp-shell-box معرَّف أصلاً بالملف المشترك
@@ -931,7 +890,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * صفحة روليت الإقصاء تحديداً دون أي تأثير على أي لعبة أخرى
              * تستخدم نفس الصندوق المشترك (لا تعديل بالملف المشترك نفسه إطلاقاً). */
             '#agp-shell-box{background:linear-gradient(180deg,#5F3976,#211528) !important;}',
-            /* ⚠️ [0.54.0] لوبي بدون صندوق/تبويب خلفي — بطلب صريح: نفس
+            /* ⚠️ لوبي بدون صندوق/تبويب خلفي — بطلب صريح: نفس
              * نموذج "lobby-no-box" المطبَّق حرفياً بروليت الروسي (منقول
              * أصلاً من روليت القبائل). العنوان/سطر التلميح/شبكة البطاقات/
              * الشريط السفلي تطفو مباشرة فوق خلفية الصفحة الكونية (الصندوق
@@ -948,7 +907,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-box.agp-lobby-box{background:none !important;border:none !important;',
             'box-shadow:none !important;position:relative;overflow:hidden;}',
 
-            /* ---- [0.45.12] تعديلات إضافية على صندوق الإعدادات/اللوبي
+            /* ---- تعديلات إضافية على صندوق الإعدادات/اللوبي
              * المشترك (#agp-shell-box) — كل القواعد هنا !important ومحقونة
              * من هذا الملف فقط (بعد تنسيق الملف المشترك)، فتطغى فقط على
              * صفحة روليت الإقصاء دون لمس js/agp-game-shell.js إطلاقاً. */
@@ -958,7 +917,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-settings-close-btn{color:#ffffff !important;font-weight:900 !important;',
             'text-shadow:0 1px 4px rgba(0,0,0,0.5) !important;}',
 
-            // ⚠️ [0.46.1] معيار PLAYER-CARD-STANDARDS.md §4: الشاشة تبقى
+            // ⚠️ معيار PLAYER-CARD-STANDARDS.md §4: الشاشة تبقى
             // ثابتة بدون أي سكرول على مستوى الصفحة/الصندوق نفسه — فقط
             // منطقة شبكة البطاقات (#agp-lobby-list) عندها سكرول داخلي،
             // ويتوقف دائماً قبل الشريط السفلي بغضّ النظر عن عدد اللاعبين.
@@ -984,7 +943,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // العناصر الحقيقية بصندوق اللوبي فوق الشعار دائماً.
             '#agp-shell-box.agp-lobby-box > *:not(#er-lobby-watermark){position:relative;z-index:1;}',
 
-            // ⚠️ [0.45.14] عنوان اللوبي بلونين — طلب صريح حسب تصميم
+            // ⚠️ عنوان اللوبي بلونين — طلب صريح حسب تصميم
             // Figma: جزء أبيض ثابت + جزء ملوَّن مميَّز ("روليت الإقصاء")،
             // يستبدل تمييز اللون الذهبي الموحَّد المستخدَم سابقاً بـ[0.45.12].
             // النص نفسه (وليس فقط اللون) يتغيّر أيضاً — يُطبَّق عبر
@@ -999,7 +958,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // المشترك (.agp-join-keyword-badge) فوق الخلفية الغامقة الجديدة.
             '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge{box-shadow:0 0 22px rgba(0,194,255,0.75) !important;}',
 
-            // ⚠️ [0.46.1] شارة عدد اللاعبين — PLAYER-CARD-STANDARDS.md §4:
+            // ⚠️ شارة عدد اللاعبين — PLAYER-CARD-STANDARDS.md §4:
             // "شارة عائمة أعلى الشاشة" بدل بقائها بنص سطر التلميح. العنصر
             // نفسه (#agp-lobby-count) موجود أصلاً بالملف المشترك ومُعبَّأ
             // تلقائياً (playerCountBadgeHtml)، هذا فقط يفصلها بصرياً
@@ -1012,7 +971,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'box-shadow:0 4px 14px rgba(0,0,0,0.35) !important;}',
 
             /* ==================================================================
-             * ⚠️ [0.54.0] رجوع مقصود عن قرار الحذف السابق [0.48.x] — بطلب
+             * ⚠️ رجوع مقصود عن قرار الحذف السابق [0.48.x] — بطلب
              * صريح جديد من صاحب المشروع: شبكة 5 أعمدة (بدل 4 الافتراضية
              * بالملف المشترك)، وحجم بطاقة 45px (بدل 60px الافتراضي)،
              * بفجوة متقاربة. هذا تخصيص محلي على حجم/شبكة البطاقات
@@ -1045,12 +1004,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'top:0 !important;left:auto !important;right:0 !important;',
             'width:16px !important;height:16px !important;font-size:9px !important;z-index:5;}',
 
-            // ⚠️ [0.45.15] صف أزرار اللوبي السفلي — طلب صريح جديد: الثلاثة
+            // ⚠️ صف أزرار اللوبي السفلي — طلب صريح جديد: الثلاثة
             // أزرار (العودة للإعدادات، بدء الجولة، رجوع للمنصة) بصف واحد
             // جنب بعض، بنفس المقاس بالضبط (W360×H48)، بدل صفّين متفاوتَي
             // الحجم كما كان بـ[0.45.14]. المقاس ثابت (مو flex:1) + الصف
             // نفسه في المنتصف (justify-content:center).
-            // ⚠️ [0.46.1] flex:0 0 auto — الصف يبقى بحجمه الطبيعي (شريط
+            // ⚠️ flex:0 0 auto — الصف يبقى بحجمه الطبيعي (شريط
             // سفلي ثابت) جوّا الصندوق اللي صار flex-column، ولا يتأثر
             // بمساحة القائمة القابلة للتمدد/السكرول فوقه.
             '#agp-shell-box.agp-lobby-box .er-lobby-actions-row{flex:0 0 auto !important;',
@@ -1080,7 +1039,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-back-to-platform-btn:hover{background:rgba(255,255,255,0.18);}',
 
             /* ================================================================
-             * ⚠️ [0.52.0] شاشة الإعدادات الأولى — استبدال تصميم [0.51.0]
+             * ⚠️ شاشة الإعدادات الأولى — استبدال تصميم [0.51.0]
              * (صندوق ثابت الحجم بتمرير داخلي وشريط سفلي) بنموذج
              * "settings-no-box" حرفياً، نفس النموذج المستخدَم بروليت
              * الروسي (منقول أصلاً من روليت القبائل): بدون أي صندوق/تبويب
@@ -1223,7 +1182,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'color:#06170f !important;font-weight:900 !important;font-size:16px !important;',
             'border-radius:25px !important;letter-spacing:0.4px;position:relative;overflow:hidden;',
             'box-shadow:0 10px 34px rgba(37,211,102,0.4),0 0 0 1px rgba(255,255,255,0.15) inset !important;}',
-            // ⚠️ [0.49.0] شريط "شيمر" خلف زر الاتصال — لا يزال مطلوباً، محفوظ كما هو.
+            // ⚠️ شريط "شيمر" خلف زر الاتصال — لا يزال مطلوباً، محفوظ كما هو.
             '#agp-shell-box.er-settings-initial-box .agp-shell-btn-connect::after{',
             'content:"";position:absolute;top:0;bottom:0;width:55%;left:-60%;',
             'background:linear-gradient(100deg,transparent,rgba(255,255,255,0.5),transparent);',
@@ -1242,7 +1201,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '@media (max-width:720px){#agp-shell-box.er-settings-initial-box{column-count:1 !important;}}',
 
             /* ================================================================
-             * ⚠️ [0.53.0] طبقة الاتصال المخصَّصة (#er-conn-layer) — عنصر
+             * ⚠️ طبقة الاتصال المخصَّصة (#er-conn-layer) — عنصر
              * منفصل تماماً عن #agp-shell-box، يُضاف مرة واحدة إلى body.
              * صندوق الاتصال/الخطأ الأصلي المشترك يُخفى بصرياً (لا يُحذف
              * ولا يُعدَّل — فقط visibility:hidden) لتفادي الازدواج مع
@@ -1273,7 +1232,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#er-conn-layer .er-conn-sub{margin:0;font-size:13px;color:#cbb8d6;}',
 
             /* ================================================================
-             * ⚠️ [0.55.0] درج إعدادات وسط المباراة — نفس نموذج روليت
+             * ⚠️ درج إعدادات وسط المباراة — نفس نموذج روليت
              * الروسي/القبائل: ينزلق من يمين الشاشة، كامل الارتفاع، بدل
              * الصندوق المركزي. راجع enhanceReopenedDrawer أعلاه.
              * ================================================================ */
@@ -1307,7 +1266,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'font-size:0.82em !important;color:#d9a9c6 !important;font-weight:700 !important;}',
             '#agp-shell-box.er-inmatch-drawer:not(.er-tab-players) .er-drawer-players-tab{display:none !important;}',
             '#agp-shell-box.er-inmatch-drawer.er-tab-players .er-drawer-body{display:none !important;}',
-            // ⚠️ [0.60.0] حقل إدارة اللاعبين الجاهز من الملف المشترك يبقى
+            // ⚠️ حقل إدارة اللاعبين الجاهز من الملف المشترك يبقى
             // بتبويب الإعدادات (بدل نقله لتبويب اللاعبين) — نُخفي قائمته
             // الداخلية وعدّاده فقط، ونُبقي زر "➕ فتح دخول لاعبين جدد"
             // (بعد إعادة تسميته) ظاهراً بمكانه الأصلي بترتيب DOM.
@@ -1349,7 +1308,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-prow .er-prow-action.er-action-revive{background:linear-gradient(135deg,#22c55e,#16a34a);}',
 
             /* ================================================================
-             * ⚠️ [0.55.0] نافذة "إضافة لوبي جديد" — 700×800، شفافية 70%،
+             * ⚠️ نافذة "إضافة لوبي جديد" — 700×800، شفافية 70%،
              * حدود بلون واحد، شبكة 3 أعمدة ببطاقات 45px متقاربة (بلا فجوة
              * صف). راجع enhanceMiniLobby أعلاه.
              * ================================================================ */
@@ -1417,7 +1376,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             overlay.innerHTML = '<div id="er-modal-chooser-card"></div><div id="er-modal-box"></div>';
             document.body.appendChild(overlay);
         }
-        // ⚠️ [0.61.0] صندوق "اختيار الإقصاء/الإرجاع" الجديد — عنصر مستقل
+        // ⚠️ صندوق "اختيار الإقصاء/الإرجاع" الجديد — عنصر مستقل
         // كلياً عن #er-modal-overlay أعلاه (راجع تعليق CSS المفصَّل بأعلى
         // الملف). يُبنى هيكله مرة واحدة فقط هنا (نفس أسلوب #er-modal-overlay)،
         // ثم renderTurnModal() تحدّث محتوى #er-select-chooser-slot/
@@ -1448,7 +1407,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             toastWrap.id = 'er-toast-wrap';
             document.body.appendChild(toastWrap);
         }
-        // ⚠️ [0.62.0] تبويب "عودة لاعب" الجديد — راجع تعليق CSS المفصَّل
+        // ⚠️ تبويب "عودة لاعب" الجديد — راجع تعليق CSS المفصَّل
         // أعلى الملف وتعليق showReviveSplash() أدناه. عنصر مستقل تماماً،
         // يُبنى مرة واحدة فقط هنا بنفس أسلوب بقية عناصر ensureScaffolding().
         if (!el('er-revive-splash-overlay')) {
@@ -1499,7 +1458,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             updateAutoPlayBtnLabel();
         };
         updateAutoPlayBtnLabel();
-        // ⚠️ [0.61.0] زر "🔃 تبديل شكل الاختيار" العائم فوق الشاشة أُزيل
+        // ⚠️ زر "🔃 تبديل شكل الاختيار" العائم فوق الشاشة أُزيل
         // بالكامل — شكل عجلة الحظ صار حقل إعدادات حقيقي (wheelDisplayMode
         // بـbuildSettingsFields) يظهر داخل درج الإعدادات، بدل زر مستقل.
         // الوضع المحفوظ (يبقى عبر renderStage() المتكرّرة، نفس فلسفة
@@ -1512,7 +1471,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         };
     }
 
-    // ⚠️ [0.55.0] يحدّث نص/شكل زر "العب التلقائي" تحت العجلة حسب
+    // ⚠️ يحدّث نص/شكل زر "العب التلقائي" تحت العجلة حسب
     // _autoPlayActive الحالية — يُستدعى عند كل ضغطة على الزر نفسه، وعند
     // إيقاف التلقائي تلقائياً من مكان آخر (stopAutoPlay عند انتهاء/تصفير
     // المباراة) حتى ما يبقى الزر عالقاً على "إيقاف" بصرياً.
@@ -1524,7 +1483,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * ⚠️ [0.48.0] يضبط حجم العجلة فعلياً (inline style، يتجاوز الحجم
+     * ⚠️ يضبط حجم العجلة فعلياً (inline style، يتجاوز الحجم
      * الافتراضي بـCSS) + يحسب حداً آمناً بالنسبة لعرض الشاشة الحالي
      * (88vw، نفس سقف CSS الأصلي القديم) حتى ما تطفح العجلة خارج الشاشة
      * بشاشات صغيرة حتى لو الموشر مضبوط على قيمة أكبر.
@@ -1587,7 +1546,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wheel.style.background = 'conic-gradient(' + stops.join(',') + ')';
     }
 
-    // ⚠️ [0.46.0] اسم كل لاعب مكتوب داخل قطعته من العجلة مباشرة — تُبنى
+    // ⚠️ اسم كل لاعب مكتوب داخل قطعته من العجلة مباشرة — تُبنى
     // كعناصر ابن داخل #er-wheel نفسه (بدل حاوية منفصلة) حتى تدور تلقائياً
     // مع دوران العجلة (transform:rotate() على العنصر الأب ينطبق تلقائياً
     // على كل أبنائه)، بنفس نمط التموضع الشعاعي المستخدَم بـrenderWheelBulbs().
@@ -1615,7 +1574,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * ⚠️ [0.45.7] إصلاح خلل حقيقي: كل ما يتغيّر عدد/ترتيب اللاعبين الأحياء
+     * ⚠️ إصلاح خلل حقيقي: كل ما يتغيّر عدد/ترتيب اللاعبين الأحياء
      * (إقصاء، إرجاع، انضمام لاعب أثناء المباراة، إعادة ترتيب عشوائية)
      * تُعاد بناء قطع العجلة من الصفر (renderWheelSlices/renderWheelLabels)
      * — لكن دوران العجلة الفعلي (_wheelRotation، من آخر دورة سبِن) كان
@@ -1628,7 +1587,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * مؤقتاً ثم تُعاد فوراً)، حتى تبقى العجلة دائماً متوافقة مع تشكيلتها
      * الحالية إلى حين الدورة القادمة الفعلية.
      */
-    // ⚠️ [0.45.10] استُخرجت من realignWheelAfterRosterChange() لتصفير دوران
+    // ⚠️ استُخرجت من realignWheelAfterRosterChange() لتصفير دوران
     // العجلة بمفردها (بدون إعادة رسم القطع/الأسماء غير اللازمة لو
     // التشكيلة نفسها ما تغيّرت) — راجع تعليق handleSpinClick أدناه لشرح
     // سبب الحاجة لهذا التصفير بعد كل دور ينتهي، مو فقط عند تغيّر التشكيلة.
@@ -1648,7 +1607,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         resetWheelSpinPosition();
     }
 
-    // ⚠️ [0.46.0] "إعادة ترتيب عشوائية" — يخلط ترتيب اللاعبين الأحياء
+    // ⚠️ "إعادة ترتيب عشوائية" — يخلط ترتيب اللاعبين الأحياء
     // فقط (Fisher-Yates) ثم يعيد رسم القطع + الأسماء بالترتيب الجديد.
     // مُعطَّل أثناء نافذة دور مفتوحة أو أثناء دوران العجلة نفسها (نفس
     // شرط تعطيل زر الدوران) تفادياً لتغيير الترتيب وسط عملية جارية.
@@ -1710,7 +1669,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * ⚠️ [0.45.10] إصلاح خلل حقيقي مؤكَّد: توقّف السهم بصرياً على اسم
+     * ⚠️ إصلاح خلل حقيقي مؤكَّد: توقّف السهم بصرياً على اسم
      * لاعب، بينما تبويب الاختيار يفتح لصاحب دور مختلف فعلياً (ملاحظة
      * وصلتنا من المستخدم مع صور من الموقع الحي).
      *
@@ -1759,7 +1718,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }, 3300);
     }
 
-    // ⚠️ [0.56.0] نفس آلية بكرة السكرول الرأسية بروليت الروسي بالحرف
+    // ⚠️ نفس آلية بكرة السكرول الرأسية بروليت الروسي بالحرف
     // (renderReel/handleReelSpinClick هناك) — تنتهي بنفس handleWheelLanded
     // المشتركة مع نمط العجلة، فمنطق "وقفت العجلة عند..." (تكرار/انعاش
     // صديق/فتح نافذة الإقصاء) بلا أي تغيير بغضّ النظر عن الشكل المستخدَم.
@@ -1813,7 +1772,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }, 3800);
     }
 
-    // ⚠️ [0.61.0] setWheelDisplayMode(mode) تستبدل handleDisplayModeToggle()
+    // ⚠️ setWheelDisplayMode(mode) تستبدل handleDisplayModeToggle()
     // بالكامل — تُستدعى الآن من حقل الإعدادات الحقيقي wheelDisplayMode
     // (راجع enhanceWheelModeField أدناه)، بمعامل صريح ('wheel'|'reel')
     // بدل تبديل ثنائي، لأن مصدر الاستدعاء صار زرَّي pill-choice منفصلين
@@ -1849,7 +1808,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
     }
 
-    // ⚠️ [0.61.0] حقل "🎡 شكل عجلة الحظ" (wheelDisplayMode) صار حقل
+    // ⚠️ حقل "🎡 شكل عجلة الحظ" (wheelDisplayMode) صار حقل
     // إعدادات حقيقي بـbuildSettingsFields — يظهر بشاشة الإعدادات الأولى
     // ودرج وسط المباراة معاً تلقائياً (نفس أي حقل pill-choice آخر). هذي
     // الدالة تضيف نص التوضيح تحته ("💡 السكرول خيار آمن") وتربط كل زر
@@ -1962,13 +1921,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var behavior = liveSettings().eliminationTimeoutBehavior;
         closeTurnModal();
         if (behavior === 'eliminate_chooser') {
-            // ⚠️ [0.59.0] كان chooser.id (بلا بطاقة مُقصي بتبويب الإعلان) —
+            // ⚠️ كان chooser.id (بلا بطاقة مُقصي بتبويب الإعلان) —
             // صار STREAMER_ELIMINATOR_ID بطلب صريح، نفس أثر الزر الأحمر
             // بالضبط: يظهر "الاستريمر" كمُقصي فعلي بالتبويب.
             eliminatePlayer(chooser, STREAMER_ELIMINATOR_ID);
         } else {
             // 'skip_turn' — بدون إقصاء؛ لو "العب" مفعّل نكمل الدوران تلقائياً
-            // ⚠️ [0.45.10] لازم تصفير دوران العجلة هنا رغم عدم تغيّر
+            // ⚠️ لازم تصفير دوران العجلة هنا رغم عدم تغيّر
             // التشكيلة — راجع تعليق handleSpinClick لشرح سبب الخلل الحقيقي
             // (توقّف السهم بصرياً على لاعب مختلف عن صاحب الدور الفعلي).
             resetWheelSpinPosition();
@@ -1988,7 +1947,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _alive.splice(idx, 1);
         _eliminated.push({ player: target });
 
-        // ⚠️ [0.59.0] "الاستريمر" (STREAMER_ELIMINATOR_ID) مستثنى من
+        // ⚠️ "الاستريمر" (STREAMER_ELIMINATOR_ID) مستثنى من
         // إحصائية "الأكثر إقصاءً" — ليس لاعباً حقيقياً بالمباراة.
         if (eliminatorId && eliminatorId !== target.id && eliminatorId !== STREAMER_ELIMINATOR_ID) {
             _eliminationCounts[eliminatorId] = (_eliminationCounts[eliminatorId] || 0) + 1;
@@ -1997,7 +1956,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         realignWheelAfterRosterChange();
         closeTurnModal();
 
-        // ⚠️ [0.59.0] STREAMER_ELIMINATOR_ID يُحوَّل لبطاقة افتراضية فعلية
+        // ⚠️ STREAMER_ELIMINATOR_ID يُحوَّل لبطاقة افتراضية فعلية
         // ("الاستريمر") بدل findPlayerByIdAnywhere العادية (ما يوجد
         // كلاعب حقيقي بأي مصفوفة).
         var eliminatorPlayer = eliminatorId === STREAMER_ELIMINATOR_ID
@@ -2011,7 +1970,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             chooser: (eliminatorPlayer && eliminatorPlayer.id !== target.id) ? eliminatorPlayer : null
         }, function onDone() {
             if (_alive.length <= 1) {
-                // ⚠️ [0.66.0] هذا الإقصاء قد يكون الأخير (سينهي المباراة).
+                // ⚠️ هذا الإقصاء قد يكون الأخير (سينهي المباراة).
                 // بدل إعلان الفائز فوراً، ننتظر FINAL_ELIMINATION_GIFT_GRACE_MS
                 // إضافية أولاً — مستمع الهدايا (wireGiftListener) يبقى شغّالاً
                 // طول هذي المهلة بلا أي تعديل عليه (المباراة لسا _matchActive
@@ -2042,7 +2001,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderTurnModal();
         startTurnTimer(function onTimeout() {
             closeTurnModal(); // انتهاء الوقت بدون اختيار = تفويت فرصة الإرجاع فقط
-            // ⚠️ [0.45.10] نفس تصفير الدوران المطلوب بكل مسار لا يغيّر
+            // ⚠️ نفس تصفير الدوران المطلوب بكل مسار لا يغيّر
             // التشكيلة — راجع تعليق handleSpinClick.
             resetWheelSpinPosition();
             maybeAutoSpin();
@@ -2063,7 +2022,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         logEvent('revive', '💚 ' + playerLabel(target) + ' رجع للعبة' +
             (chooserPlayer ? (' بواسطة ' + playerLabel(chooserPlayer)) : ''));
 
-        // ⚠️ [0.62.0] راجع showReviveSplash() أدناه — استُبدل تبويب "قام X
+        // ⚠️ راجع showReviveSplash() أدناه — استُبدل تبويب "قام X
         // بإرجاع Y" (بطاقتَي الشخصين، showResultAnnouncement('revive',...))
         // بتبويب "عودة لاعب" الموحَّد الجديد بطلب صريح. onDone (استمرار
         // الدوران التلقائي) بقي كما هو تماماً، فقط استُدعي من الدالة
@@ -2075,7 +2034,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     /* ======================================================================
      *  7) نافذة الدور المشتركة (إقصاء أو إرجاع) — عرض + عدّاد + استماع للشات
-     *  ⚠️ [0.61.0] إعادة بناء كاملة — صندوق جديد (#er-select-overlay/box)
+     *  ⚠️ إعادة بناء كاملة — صندوق جديد (#er-select-overlay/box)
      *  منقول بالحرف من تصميم "مرحلة الاختيار" بروليت الروسي (بطلب صريح
      *  من صاحب المشروع)، يحل محل التصميم القديم لكلتا نافذتَي الإقصاء
      *  والإرجاع معاً. النقر على بطاقة مرشَّح بنافذة الإقصاء يُحدِّدها فقط
@@ -2094,12 +2053,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var roleClass = isRevive ? 'er-role-revive' : 'er-role-eliminate';
         box.className = roleClass;
 
-        // ⚠️ [0.61.0] سطر علوي واحد مدمج بدون أي بادج منفصل — نفس صياغة
+        // ⚠️ سطر علوي واحد مدمج بدون أي بادج منفصل — نفس صياغة
         // روليت الروسي بالحرف، بدون ذكر كلمة "إقصاء" (تنطبق على النافذتين
         // معاً). نافذة الإرجاع ما فيها زر أحمر (راجع تعليق الدالة أعلاه)،
         // فالجزء "من الأزرار تحت" غير دقيق لها — استُبدل بوصف يطابق آلية
         // النقر الفوري الفعلية بدل نسخ نص لا ينطبق تماماً.
-        // ⚠️ [0.62.0] طلب صريح جديد: الكلمة العريضة صارت تُسمّي المرحلة
+        // ⚠️ طلب صريح جديد: الكلمة العريضة صارت تُسمّي المرحلة
         // نفسها ("مرحلة الإقصاء"/"مرحلة الإنعاش") بدل الاسم العام "مرحلة
         // الاختيار" — لتوضيح فوري لنوع النافذة المفتوحة. لون الكلمة تبع
         // نفس نظام الأحمر=إقصاء/أخضر=إنعاش الجديد (راجع #er-select-title b
@@ -2118,7 +2077,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         grid.querySelectorAll('.er-select-cand-card[data-index]').forEach(function (card) {
             card.onclick = function () {
                 var idx = parseInt(card.getAttribute('data-index'), 10);
-                // ⚠️ [0.59.0] طلب صريح جديد: النقر على بطاقة مرشَّح بشاشة
+                // ⚠️ طلب صريح جديد: النقر على بطاقة مرشَّح بشاشة
                 // الإقصاء صار يُقصي فوراً (نفس resolveTurnSelection
                 // المستخدَمة أصلاً بشاشة الإرجاع — تماماً كأن صاحب الدور
                 // كتب رقم اللاعب بالشات) — يلغي خطوة "تحديد ثم تأكيد
@@ -2129,7 +2088,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var forceBtn = el('er-force-eliminate-btn');
         forceBtn.style.display = isRevive ? 'none' : '';
-        // ⚠️ [0.59.0] الزر الأحمر صار مخصَّصاً حصراً لإقصاء صاحب الدور
+        // ⚠️ الزر الأحمر صار مخصَّصاً حصراً لإقصاء صاحب الدور
         // نفسه (لا وجود لحالة "مرشَّح محدَّد" بعد الآن، لأن النقر على
         // بطاقة مرشَّح صار يُقصي فوراً بدل التحديد) — نص ثابت دائماً.
         if (!isRevive) forceBtn.textContent = '❌ إقصاء صاحب الدور';
@@ -2149,7 +2108,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return AGP.playerCard.renderHtml(p, { showFrame: false });
     }
 
-    // ⚠️ [0.61.0] بطاقة "صاحب الدور" المكبَّرة داخل صف #er-chooser-row —
+    // ⚠️ بطاقة "صاحب الدور" المكبَّرة داخل صف #er-chooser-row —
     // حلقة 88px (ringAvatarHtml نفسها المستخدَمة بشاشة الفائز/الإعلان) +
     // اسمه + رقمه الثابت (playerNumber) بجانب بعض.
     function selectChooserCardHtml(chooser, roleClass) {
@@ -2164,7 +2123,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         '</div>';
     }
 
-    // ⚠️ [0.61.0] بطاقة مرشَّح بشبكة الاختيار — أفاتار 60px يتراكب على لوح
+    // ⚠️ بطاقة مرشَّح بشبكة الاختيار — أفاتار 60px يتراكب على لوح
     // اسم دائري (نفس نمط لوبي-قياسي-v1)، والرقم الثابت (playerNumber)
     // عنصر عادي داخل تدفّق لوح الاسم مباشرة بعد النص (مو موضع مطلق).
     function selectCandidateCardHtml(p, index, roleClass) {
@@ -2179,11 +2138,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         '</div>';
     }
 
-    // ⚠️ [0.59.0] selectCandidateManually() حُذفت بالكامل — النقر على بطاقة
+    // ⚠️ selectCandidateManually() حُذفت بالكامل — النقر على بطاقة
     // مرشَّح صار يُقصي فوراً (resolveTurnSelection)، ما عاد فيه حالة
     // "تحديد بدون تأكيد" تحتاج تمييزاً بصرياً أو نص زر متغيّر.
 
-    // ⚠️ [0.59.0] الزر الأحمر (نافذة الإقصاء فقط، مخفي بنافذة الإرجاع) —
+    // ⚠️ الزر الأحمر (نافذة الإقصاء فقط، مخفي بنافذة الإرجاع) —
     // يُقصي صاحب الدور نفسه حصراً الآن (لا وجود لحالة "مرشَّح محدَّد"
     // بعد إلغاء selectCandidateManually). eliminatorId صار
     // STREAMER_ELIMINATOR_ID بدل chooser.id نفسه — بطلب صريح: يظهر
@@ -2199,7 +2158,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         eliminatePlayer(chooser, STREAMER_ELIMINATOR_ID);
     }
 
-    // ⚠️ [0.61.0] "استئناف اللعبة" — الزر الوحيد بنافذة الإرجاع، وأحد
+    // ⚠️ "استئناف اللعبة" — الزر الوحيد بنافذة الإرجاع، وأحد
     // زرَّين بنافذة الإقصاء. يغلق الدور بدون أي إقصاء/إرجاع. بنافذة
     // الإقصاء فقط: نفس تصفير دوران العجلة القديم (راجع تعليق
     // handleSpinClick) + استئناف "العب" التلقائي لو مفعَّل — بنافذة
@@ -2292,7 +2251,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *  7ب) تبويب إعلان النتيجة (إقصاء/إرجاع) — 4 ثوانٍ + صوت
      * ==================================================================== */
     /**
-     * ⚠️ [0.46.0] إعادة تصميم كاملة: بدل الأيقونة+العنوان+الاسم الكبير
+     * ⚠️ إعادة تصميم كاملة: بدل الأيقونة+العنوان+الاسم الكبير
      * القديم، صندوق صغير (~650×300) بجملة واحدة "اللاعب [أفاتار+اسم] قام
      * بإقصاء/بإرجاع [أفاتار+اسم]". تأثير أحمر+تلاشي لصورة المُقصى،
      * تأثير أخضر + تحوّل حلقة المُرجَع من أحمر لأخضر (بالضبط كما أكّد
@@ -2300,7 +2259,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * @param {Object} data - {target, chooser} كائنا لاعب كاملين (وليس
      *   نصوصاً فقط كما كان بالتصميم القديم). chooser قد يكون null (مثلاً
      *   إقصاء صاحب الدور نفسه عند انتهاء الوقت).
-     * ⚠️ [0.62.0] لم تعد تُستدعى إطلاقاً بـtype='revive' (استُبدل استدعاؤها
+     * ⚠️ لم تعد تُستدعى إطلاقاً بـtype='revive' (استُبدل استدعاؤها
      * بـshowReviveSplash() الجديدة بطلب صريح — راجع تعليقها). فرع الإرجاع
      * بهذي الدالة (isEliminate===false) صار كوداً غير مستخدَم حالياً، أُبقي
      * بدون حذف بنفس منطق الإبقاء المعتمَد بهذا الملف (صفر أثر جانبي، قابل
@@ -2317,11 +2276,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var isEliminate = type === 'eliminate';
         playSound(isEliminate ? 'eliminate' : 'revive');
 
-        // ⚠️ [0.52.0] تنظيف: راجع نفس التعليق بـrenderTurnModal أعلاه —
+        // ⚠️ تنظيف: راجع نفس التعليق بـrenderTurnModal أعلاه —
         // محدود بشاشة الفائز فقط، تبويب الإعلان يبقى بشكله المصمَت القديم.
         overlay.classList.remove('er-winner-backdrop');
 
-        // ⚠️ [0.55.0] طلب صريح جديد (بعد مراجعة [0.54.0] الفعلية على
+        // ⚠️ طلب صريح جديد (بعد مراجعة [0.54.0] الفعلية على
         // الموقع المنشور) بمواصفات دقيقة جداً (جدول قياسات + SVG مرجعي
         // 500×350): يستبدل تصميم [0.54.0] بالكامل (العنوان المختصر
         // "🎯 إقصاء ناجح" + الأيقونة بين الصورتين) بـ: (أ) جملة كاملة أعلى
@@ -2370,7 +2329,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 badgeText: '💚 رجع'
             });
 
-        // ⚠️ [0.57.0] طلب صريح: إيموجي 💀 بين البطاقتين يمثّل الإقصاء —
+        // ⚠️ طلب صريح: إيموجي 💀 بين البطاقتين يمثّل الإقصاء —
         // لحالة الإقصاء فقط (ما له معنى بحالة الإرجاع، فما أُضيف لها).
         var vsEmojiHtml = isEliminate ? '<span class="er-announce-vs-emoji">💀</span>' : '';
         box.className = 'er-announce-box ' + (isEliminate ? 'er-announce-eliminate' : 'er-announce-revive');
@@ -2380,7 +2339,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         overlay.style.display = 'flex';
 
-        // ⚠️ [0.45.12] تقليل مدة ظهور تبويب الإعلان من 4 ثوانٍ إلى 3 —
+        // ⚠️ تقليل مدة ظهور تبويب الإعلان من 4 ثوانٍ إلى 3 —
         // طلب صريح.
         window.setTimeout(function () {
             overlay.style.display = 'none';
@@ -2389,7 +2348,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }, 3000);
     }
 
-    // ⚠️ [0.55.0] لم تعد showResultAnnouncement() تستخدم هذي الدالة (استُبدلت
+    // ⚠️ لم تعد showResultAnnouncement() تستخدم هذي الدالة (استُبدلت
     // بـannouncePersonCardHtml أدناه) — أُبقيت بدون حذف لأنها غير مؤذية
     // ولضمان صفر أثر جانبي على أي كود آخر قد يعتمد عليها لاحقاً.
     function announcePersonHtml(player, effectClass) {
@@ -2400,7 +2359,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * ⚠️ [0.55.0] بطاقة شخص جديدة لتبويب إعلان النتيجة (حلقة ملوَّنة حول
+     * ⚠️ بطاقة شخص جديدة لتبويب إعلان النتيجة (حلقة ملوَّنة حول
      * الصورة + وسم دور كبسولة + الاسم) — حسب مواصفات دقيقة أرسلها
      * المستخدم (جدول قياسات + SVG مرجعي). راجع showResultAnnouncement()
      * والتعليق المطوَّل هناك للسياق الكامل.
@@ -2438,7 +2397,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
             var n = parseInt(text, 10);
             if (isNaN(n)) return;
-            // ⚠️ [0.61.0] إصلاح خلل حقيقي: الرقم المكتوب بالشات يُطابَق
+            // ⚠️ إصلاح خلل حقيقي: الرقم المكتوب بالشات يُطابَق
             // برقم اللاعب الثابت (playerNumber — راجع تعليقها أعلى الملف)
             // المعروض فعلياً على بطاقته، وليس بفهرس المصفوفة المؤقتة
             // (candidates) اللي يتغيّر ترتيبها كل جولة مع تقلّص/تبدّل
@@ -2467,7 +2426,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             })[0];
             if (!entry) return;
 
-            // ⚠️ [0.66.0] المباراة خلصت فعلياً (حتى بعد مهلة
+            // ⚠️ المباراة خلصت فعلياً (حتى بعد مهلة
             // FINAL_ELIMINATION_GIFT_GRACE_MS الجديدة بـeliminatePlayer) قبل
             // ما توصل هذي الهدية — نوضّح للمضيف إنها وصلت متأخر بدل ما
             // تختفي بصمت تام بدون أي أثر.
@@ -2497,7 +2456,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         realignWheelAfterRosterChange();
 
         logEvent('gift', '🎁 ' + playerLabel(entry.player) + ' رجع للعبة عن طريق الدعم');
-        // ⚠️ [0.62.0] راجع showReviveSplash() أدناه — استُبدلت
+        // ⚠️ راجع showReviveSplash() أدناه — استُبدلت
         // showGiftReviveCard() (الإشعار الصغير أسفل الشاشة) بتبويب "عودة
         // لاعب" الجديد بطلب صريح.
         showReviveSplash(entry.player, { reason: 'gift' });
@@ -2506,7 +2465,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * ⚠️ [0.46.0→0.62.0] "عودة لاعب" — نافذة احتفالية موحَّدة لأي إنعاش
+     * ⚠️ "عودة لاعب" — نافذة احتفالية موحَّدة لأي إنعاش
      * ناجح، بصرف النظر عن سببه (بالدعم أو عبر آلية "انعاش صديق" بنافذة
      * الاختيار). تحل محل تصميمين منفصلين سابقاً: (أ) showGiftReviveCard()
      * القديمة (إشعار صغير أسفل الشاشة لحالة الدعم فقط)، (ب) فرع الإرجاع
@@ -2515,7 +2474,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * تصميمين مختلفين. فرع الإقصاء بـshowResultAnnouncement() لم يتأثر
      * إطلاقاً ولا يزال يعمل بشكله القديم (لم يُذكَر بالطلب).
      *
-     * ⚠️ [0.46.0] الإنعاش بالدعم (هدية) قد يحدث بأي لحظة — حتى وسط نافذة
+     * ⚠️ الإنعاش بالدعم (هدية) قد يحدث بأي لحظة — حتى وسط نافذة
      * دور مفتوحة — فلا يجوز استخدام تبويب #er-modal-box نفسه (يقاطع
      * الدور الجاري). لنفس السبب بالضبط، #er-revive-splash-overlay عنصر
      * مستقل تماماً بـpointer-events:none، لا يتفاعل مع أي نقر ولا يقاطع
@@ -2553,7 +2512,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             reasonHtml = '🎁 رجع للعبة عن طريق الدعم!';
         }
 
-        // ⚠️ [0.63.0] ترتيب جديد بطلب صريح: قلب (صورة PNG) أعلى التبويب،
+        // ⚠️ ترتيب جديد بطلب صريح: قلب (صورة PNG) أعلى التبويب،
         // مباشرة تحته نص السبب، ثم صورة اللاعب، ثم اسمه تحت الصورة —
         // بدل الترتيب القديم (قلب، صورة، اسم، سبب). نفس الترتيب يطبَّق
         // على حالتَي 'gift' و'friend' معاً (نفس القالب لكلتيهما).
@@ -2616,7 +2575,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * ⚠️ [0.45.7] إصلاح خلل انضمام لاعب أثناء مباراة نشطة (زر "إضافة لوبي
+     * ⚠️ إصلاح خلل انضمام لاعب أثناء مباراة نشطة (زر "إضافة لوبي
      * جديد" بشاشة الإعدادات) — راجع تعليق مستمع player:joined أعلاه.
      * لا يُنفَّذ شيء إلا لو فعلاً فيه مباراة جارية والّلاعب ما كان موجوداً
      * أصلاً (لا بالأحياء ولا بالمُقصَين — تفادياً لتكرار وهمي لو وصل
@@ -2628,7 +2587,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var alreadyEliminated = _eliminated.some(function (e) { return e.player.id === newPlayer.id; });
         if (alreadyAlive || alreadyEliminated) return;
         _alive.push(newPlayer);
-        assignPlayerNumber(newPlayer); // ⚠️ [0.61.0] راجع تعليق _playerNumbers
+        assignPlayerNumber(newPlayer); // ⚠️ راجع تعليق _playerNumbers
         realignWheelAfterRosterChange();
     }
 
@@ -2641,7 +2600,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var EVENT_ICONS = { spin: '🎡', eliminate: '❌', revive: '💚', join: '➕', gift: '🎁' };
     var EVENT_LOG_MAX = 60;
 
-    // ⚠️ [0.45.7] البانر صار مخفياً افتراضياً (راجع CSS er-log-visible) —
+    // ⚠️ البانر صار مخفياً افتراضياً (راجع CSS er-log-visible) —
     // زر دائري صغير ثابت بأعلى يسار الشاشة يُظهره/يُخفيه. البانر نفسه
     // position:fixed خارج تخطيط #er-stage بالكامل، فإخفاؤه/إظهاره لا
     // يزاحم ولا يحرّك أي عنصر بشاشة اللعب — الزر ثابت بمكانه بغضّ النظر
@@ -2702,7 +2661,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     /* ======================================================================
      *  12) نهاية المباراة + تقرير النقاط (نفس مسار dashboard-core الحقيقي
      *      — بدون أي تعديل بقيم النقاط نفسها، النظام العام الموحّد فقط)
-     *  ⚠️ [0.45.0] الاستدعاء كان "أرسل وانسَ" (fire-and-forget) بدون
+     *  ⚠️ الاستدعاء كان "أرسل وانسَ" (fire-and-forget) بدون
      *  قراءة النتيجة — الآن نُنظر نتيجته فعلياً (result.awarded) قبل رسم
      *  شاشة الفائز، عشان نعرض النقاط المكتسبة فعلياً على البطاقة.
      * ==================================================================== */
@@ -2743,7 +2702,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * ⚠️ [0.45.0] يبحث عن سطر هذا اللاعب داخل result.awarded (يُطابَق
+     * ⚠️ يبحث عن سطر هذا اللاعب داخل result.awarded (يُطابَق
      * بـtiktokUsername فقط — نفس المفتاح المُرسَل بالمشاركين أعلاه).
      * موجود فقط لو الحساب مرتبط وموثَّق (راجع authService.findVerifiedUserByTikTok
      * بالباك إند) — غير ذلك يرجع null (يعني "بدون حساب مرتبط").
@@ -2756,7 +2715,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * ⚠️ [0.45.0] نص النقاط بجانب البطاقة — 3 حالات:
+     * ⚠️ نص النقاط بجانب البطاقة — 3 حالات:
      *  1) pointsResult === null (فشل الاتصال بالنظام العام، أو AGPAuth غير
      *     متوفر أصلاً) → نص محايد "تعذّر جلب النقاط الآن"، لأننا فعلياً
      *     ما نعرف لو صاحب حساب أو لا (تفرّق صريحة عن حالة 3).
@@ -2783,7 +2742,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * ⚠️ [0.45.0] بطاقة أفاتار دائرية بحلقة رمزية بسيطة (بدون الاعتماد
+     * ⚠️ بطاقة أفاتار دائرية بحلقة رمزية بسيطة (بدون الاعتماد
      * على AGP.playerCard هنا عمداً — تلك الوحدة تبني بطاقة "بيضاوية:
      * صورة+اسم بجانب بعض"، بينما التصميم الجديد يحتاج صورة دائرية مستقلة
      * داخل حلقة، والاسم نص منفصل تحتها، مطابقةً لنموذج المستخدم المرجعي).
@@ -2814,11 +2773,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return player ? { player: player, count: bestCount } : null;
     }
 
-    // ⚠️ [0.46.0] "تأثير تطاير" احتفالي عند الفوز — بديل خلفية/حدود
+    // ⚠️ "تأثير تطاير" احتفالي عند الفوز — بديل خلفية/حدود
     // البطاقة القديمة المُلغاة بالكامل (طلب صريح). قصاصات ملوَّنة CSS/JS
     // بحتة (بدون أي صور خارجية، اتساقاً مع قيد "لا صور جاهزة" المطبَّق
     // بكل المشروع) تنطلق من مركز البطاقة بزوايا/مسافات عشوائية.
-    // ⚠️ [0.52.0] أيقونة تاج الفائز — صورة PNG ثابتة زوَّدنا بها المستخدم
+    // ⚠️ أيقونة تاج الفائز — صورة PNG ثابتة زوَّدنا بها المستخدم
     // (أيقونة تاج مسطّحة ذهبية بقاعدة برتقالية وجوهرة بنفسجية)، مُضمَّنة
     // هنا كـ data URI (base64) داخل هذا الملف نفسه — بدون أي رابط خارجي
     // ولا ملف صورة منفصل (يبقى الملف قائماً بذاته). أُعيد تحجيمها محلياً
@@ -2876,7 +2835,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             });
         }
 
-        // ⚠️ [0.52.0] طلب صريح: شاشة الفائز تحديداً بدون "لوح/تبويب" خلف
+        // ⚠️ طلب صريح: شاشة الفائز تحديداً بدون "لوح/تبويب" خلف
         // البطاقتين — بدل الصندوق المشترك المصمَت (er-modal-box، تدرّج
         // بنفسجي + حدّ + ظل)، الخلفية (شاشة اللعب خلفها) تصبح مغبّشة
         // (backdrop-filter) والبطاقتان تطفوان مباشرة فوقها. كلاسا
@@ -2938,7 +2897,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         stopAutoPlay();
         resetMatchState();
         _alive = roster;
-        _alive.forEach(function (p) { assignPlayerNumber(p); }); // ⚠️ [0.61.0] مباراة جديدة كلياً — أرقام جديدة بترتيب هذي القائمة
+        _alive.forEach(function (p) { assignPlayerNumber(p); }); // ⚠️ مباراة جديدة كلياً — أرقام جديدة بترتيب هذي القائمة
         _startedAt = Date.now();
         _matchActive = true;
 
@@ -2959,7 +2918,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * ⚠️ [0.44.0] نافذة اختيار الهدية — تبويب منبثق مبني بالكامل هنا
+     * ⚠️ نافذة اختيار الهدية — تبويب منبثق مبني بالكامل هنا
      * (استجابةً لـfield.type === 'modal-trigger' الجديد بـagp-game-shell.js
      * — الملف العام لا يعرف شيئاً عن الهدايا نفسها). يعمل حتى قبل بدء
      * المباراة (يُفتح من شاشة الإعدادات الأولى)، فيبني عناصره الخاصة
@@ -2971,7 +2930,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var box = el('er-modal-box');
         if (!overlay || !box) return;
 
-        // ⚠️ [0.45.0] أيقونة كل هدية = صورة Twemoji حقيقية (رخصة MIT + CC-BY 4.0،
+        // ⚠️ أيقونة كل هدية = صورة Twemoji حقيقية (رخصة MIT + CC-BY 4.0،
         // مو صور تيك توك الرسمية) + اسم الهدية + قيمتها الحقيقية بالعملات
         // (بحسب بحث فعلي — راجع الملاحظة أعلى COMMON_GIFTS وCHANGELOG).
         var itemsHtml = COMMON_GIFTS.map(function (g) {
@@ -2983,7 +2942,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '</button>';
         }).join('');
 
-        // ⚠️ [0.52.0] تنظيف: راجع نفس التعليق بـrenderTurnModal أعلاه —
+        // ⚠️ تنظيف: راجع نفس التعليق بـrenderTurnModal أعلاه —
         // محدود بشاشة الفائز فقط، منبثقة اختيار الهدية تبقى بشكلها المصمَت القديم.
         overlay.classList.remove('er-winner-backdrop');
 
@@ -3009,14 +2968,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function buildSettingsFields() {
         return [
             {
-                // ⚠️ [0.49.0] نص التسمية عُدِّل ليطابق التصميم الجديد المرفق
+                // ⚠️ نص التسمية عُدِّل ليطابق التصميم الجديد المرفق
                 // حرفياً ("كم الحد الاقصى لعدد الاعبين") — بطلب صريح "هذا
                 // ترتيب الاعدادات نفذ". النوع/المفتاح/السلوك بلا تغيير.
                 key: 'maxPlayers', type: 'counter', label: '👥 كم الحد الأقصى لعدد اللاعبين',
                 min: 2, default: 20
             },
             {
-                // ⚠️ [0.50.0] ترتيب الخيارين عُدِّل ليطابق مسودة Frame 2
+                // ⚠️ ترتيب الخيارين عُدِّل ليطابق مسودة Frame 2
                 // حرفياً ("الجميع | المتابعين فقط") — القيم الافتراضية بلا
                 // أي تغيير.
                 key: 'followersOnly', type: 'pill-choice', label: '🔑 السماح بالدخول',
@@ -3027,7 +2986,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 default: false
             },
             {
-                // ⚠️ [0.49.0] صار pill-choice بدل toggle (بطلب التصميم
+                // ⚠️ صار pill-choice بدل toggle (بطلب التصميم
                 // الجديد: خياران واضحان بدل مفتاح تشغيل/إيقاف)، بنفس
                 // المفتاح/الافتراضي (false = لا شيء) — صفر تغيير على منطق
                 // اللعبة نفسه (friendRevivalEnabled لا يزال Boolean).
@@ -3067,7 +3026,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 default: 'eliminate_chooser'
             },
             {
-                // ⚠️ [0.61.0] كان زر عائم مستقل فوق شاشة اللعب (🔃 تبديل شكل
+                // ⚠️ كان زر عائم مستقل فوق شاشة اللعب (🔃 تبديل شكل
                 // الاختيار) — صار حقل إعدادات حقيقي بطلب صريح، يظهر بشاشة
                 // الإعدادات الأولى ودرج وسط المباراة معاً. التطبيق الفوري
                 // على شاشة اللعب نفسها (لا ينتظر دوران جديد) عبر
@@ -3081,7 +3040,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 default: 'wheel'
             },
             {
-                // ⚠️ [0.45.0] صار خطاً قابلاً للتحريك (slider) بدل عدّاد +/-،
+                // ⚠️ صار خطاً قابلاً للتحريك (slider) بدل عدّاد +/-،
                 // ويظهر فقط بالإعدادات المفتوحة أثناء مباراة نشطة (onlyMidMatch)
                 // — مخفي كلياً بشاشة الإعدادات الأولى قبل بدء المباراة.
                 key: 'soundVolume', type: 'slider', label: '🔊 مستوى الصوت',
@@ -3094,7 +3053,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         resetMatchState();
         _settings = settingsValues;
         _alive = AGP.gameManager.getPlayers().slice();
-        _alive.forEach(function (p) { assignPlayerNumber(p); }); // ⚠️ [0.61.0] رقم ثابت بترتيب دخول اللوبي
+        _alive.forEach(function (p) { assignPlayerNumber(p); }); // ⚠️ رقم ثابت بترتيب دخول اللوبي
         _startedAt = Date.now();
         _matchActive = true;
 
@@ -3106,7 +3065,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     /* ======================================================================
      *  تحسينات شاشتي الإعدادات/اللوبي المشتركتين (js/agp-game-shell.js) —
      *  خاصة بروليت الإقصاء فقط، بدون أي تعديل على الملف المشترك نفسه.
-     *  ⚠️ [0.45.12] نفس التقنية المُثبَتة فعلياً بلعبة روليت الفواكه (نفس
+     *  ⚠️ نفس التقنية المُثبَتة فعلياً بلعبة روليت الفواكه (نفس
      *  المنصة، ملف مختلف تماماً) — بعد سؤال صريح من المستخدم "هل راح
      *  يتاثر اي شي بخصوصها؟" تحقّقنا من الكود الحي الفعلي لروليت الفواكه
      *  (git show origin/main) وتأكّدنا إنها تستخدم بالضبط هذي الطريقة:
@@ -3136,7 +3095,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * ⚠️ [0.52.0] يبني ترتيب شاشة الإعدادات الأولى بنموذج "بدون صندوق"
+     * ⚠️ يبني ترتيب شاشة الإعدادات الأولى بنموذج "بدون صندوق"
      * (settings-no-box) — نفس النموذج المطبَّق حرفياً بروليت الروسي:
      * الحقول تصبح أبناء مباشرين لـ#agp-shell-box (بلا wrapper وسيط)،
      * فتتوزّع تلقائياً على عمودين عبر CSS Multi-column (راجع
@@ -3213,7 +3172,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * ⚠️ [0.49.0] زر اختيار الهدية (modal-trigger) بالملف المشترك يعرض
+     * ⚠️ زر اختيار الهدية (modal-trigger) بالملف المشترك يعرض
      * نصاً محميّاً بـescapeHtml فقط عمداً (راجع renderField بـ
      * js/agp-game-shell.js) — لا يمكن حقن <img> عبر formatValue. لعرض
      * أيقونة الهدية الفعلية داخل الصندوق (طلب التصميم الجديد: "بعد
@@ -3239,7 +3198,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // ⚠️ زر "رجوع للمنصة" بشاشة الإعدادات الأولى (قبل الاتصال بالبث) —
     // طلب صريح (صورة 1)، بالإضافة لأيقونة 🏠 الثابتة بالهيدر أصلاً.
     //
-    // ⚠️ [0.46.1] التفريق بين شاشة الإعدادات الأولى وشاشة الإعدادات
+    // ⚠️ التفريق بين شاشة الإعدادات الأولى وشاشة الإعدادات
     // المعاد فتحها أثناء المباراة (زر الترس ⚙️، درج قسم ٦ بالمعيار):
     // كلاهما يستخدم نفس #agp-shell-box بدون أي كلاس مميِّز من الملف
     // المشترك نفسه، فنميّز بينهم بوجود #agp-tiktok-username (موجود فقط
@@ -3262,7 +3221,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var connectBtn = box.querySelector('.agp-shell-btn-connect');
         if (!connectBtn) return;
         var backBtn = makeBackToPlatformBtn();
-        // ⚠️ [0.50.0] طلب صريح بمسودة Frame 2: نص الرابط بشاشة الإعدادات
+        // ⚠️ طلب صريح بمسودة Frame 2: نص الرابط بشاشة الإعدادات
         // الأولى تحديداً صار "العودة للمنصة ←" (بدل "🏠 رجوع لمنصة ألعاب
         // أيمن"). التعديل هنا فقط — على نص هذا العنصر بالذات بعد إنشائه
         // محلياً — وليس على makeBackToPlatformBtn()/homeNavigate() نفسها
@@ -3285,7 +3244,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // لنفس الشيء تتعارض بصرياً معها. حُذفت الثلاثة بالكامل بطلب صريح،
     // بدون أي استثناء ولا حل مؤقّت محلي.
 
-    // ⚠️ [0.45.14] عنوان اللوبي بلونين — يستبدل نص "اللوبي بانتظار
+    // ⚠️ عنوان اللوبي بلونين — يستبدل نص "اللوبي بانتظار
     // اللاعبين" (المُعرَّف بالملف المشترك) بنص جديد بلونين، حسب تصميم
     // Figma مُزوَّد من المستخدم. تعديل DOM من كودنا فقط (استبدال
     // innerHTML لعنصر h2 موجود أصلاً) — صفر لمس لملف
@@ -3300,7 +3259,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         h2.setAttribute('data-er-heading', '1');
     }
 
-    // ⚠️ [0.45.14] شعار "ألعاب أيمن" شفاف بمنتصف صندوق اللوبي (من [0.45.12])
+    // ⚠️ شعار "ألعاب أيمن" شفاف بمنتصف صندوق اللوبي (من [0.45.12])
     // + صف الأزرار السفلي الجديد (طلب صريح، صورة 5): "العودة لاعدادات
     // المباراة" (جديد كلياً — يلغي الاتصال الحالي بالبث ويرجّع لشاشة
     // البداية عبر إعادة تحميل الصفحة، بعد تأكيد المستخدم؛ نفس الأسلوب
@@ -3349,14 +3308,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             row.appendChild(startBtn); // ينقل الزر الأصلي (بعنصره ونفس onclick) داخل الصف الجديد
         }
 
-        // ⚠️ [0.45.15] طلب صريح: زر "رجوع للمنصة" صار ضمن نفس الصف (ثلاثة
+        // ⚠️ طلب صريح: زر "رجوع للمنصة" صار ضمن نفس الصف (ثلاثة
         // أزرار بصف واحد، W360×H48 موحَّد) بدل عنصر منفصل تحت الصف.
         if (!row.querySelector('.er-back-to-platform-btn')) {
             row.appendChild(makeBackToPlatformBtn());
         }
     }
 
-    // ⚠️ [0.60.0] درج إعدادات وسط المباراة — تبويب اللاعبين استُبدل
+    // ⚠️ درج إعدادات وسط المباراة — تبويب اللاعبين استُبدل
     // بالكامل بنفس نموذج روليت القبائل الفعلي (renderReopenedPlayersTab):
     // بحث + فلتر (الكل/نشطون/مقصون) + قائمة موحَّدة تجمع _alive و
     // _eliminated معاً (كل من شارك بالمباراة، بعكس قائمة اللوبي)، كل صف
@@ -3443,7 +3402,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * ⚠️ [0.60.0] نفس منطق روليت القبائل بالحرف — يجمع _alive و_eliminated
+     * ⚠️ نفس منطق روليت القبائل بالحرف — يجمع _alive و_eliminated
      * بقائمة واحدة (كل من شارك بالمباراة)، فلتر بحث بالاسم + فلتر حالة،
      * ترتيب أبجدي عربي. صف نشط = زر × أحمر (manuallyEliminatePlayer)،
      * صف مقصى = زر ↩ أخضر (manuallyRevivePlayer).
@@ -3535,7 +3494,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderReopenedPlayersTab();
     }
 
-    // ⚠️ [0.55.0] نافذة "إضافة لوبي جديد" — تصميم جديد بطلب صريح: نافذة
+    // ⚠️ نافذة "إضافة لوبي جديد" — تصميم جديد بطلب صريح: نافذة
     // مركزية 700×800، شفافية 70% (نفس نموذج rr-mini-lobby-active بروليت
     // الروسي)، حدود بلون واحد، شبكة 3 أعمدة ببطاقات 45px متقاربة (بلا
     // فجوة صف — نفس المعاينة المعتمدة)، زر ✕ للإغلاق يرجّع لدرج
@@ -3584,7 +3543,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* ======================================================================
-     *  ⚠️ [0.53.0] طبقة "جاري الاتصال بالبث" فوق شاشة الإعدادات — بطلب
+     *  ⚠️ طبقة "جاري الاتصال بالبث" فوق شاشة الإعدادات — بطلب
      *  صريح: بدل ما تُستبدَل شاشة الإعدادات بالكامل بصندوق الاتصال
      *  المشترك (agp-connecting-box)، نعترض العملية محلياً (صفر تعديل
      *  على js/agp-game-shell.js): نلتقط نسخة بصرية (clone، غير تفاعلية)
@@ -3731,7 +3690,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function registerGame() {
-        // ⚠️ [0.45.7] إصلاح خلل: كان يُنادى أول مرة فقط عند بدء أول مباراة
+        // ⚠️ إصلاح خلل: كان يُنادى أول مرة فقط عند بدء أول مباراة
         // (renderStage → ensureScaffolding)، فتحسين مفتاحي "انعاش صديق"/
         // "الإنعاش عن طريق الدعم" (CSS داخل نفس الأنماط المحقونة هنا)
         // ما كان يظهر إطلاقاً بشاشة الإعدادات الأولى (قبل بدء أي مباراة)
@@ -3771,14 +3730,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             handlePlayerRemoved(payload && payload.player);
         });
 
-        // ⚠️ [0.46.0] تسجيل مستمر بانضمام لاعب جديد بانر أحداث المباراة.
-        // ⚠️ [0.47.0] أُلغي مستمع "كل هدية تصل من شات البث" العام الذي
+        // ⚠️ تسجيل مستمر بانضمام لاعب جديد بانر أحداث المباراة.
+        // ⚠️ أُلغي مستمع "كل هدية تصل من شات البث" العام الذي
         // كان مُضافاً هنا بـ[0.46.0] — كان يسجّل أي هدية حقيقية بغضّ
         // النظر عن علاقتها بالمباراة (سبام غير مرتبط)، بطلب صريح إن
         // البانر يعرض "أحداث المباراة" فقط. تسجيل الهدية اللي فعلاً
         // تسبّب إنعاش لاعب لا يزال قائماً (راجع revivePlayerByEntry
         // أدناه) — تلك حدث مباراة حقيقي، بعكس أي هدية عشوائية بالشات.
-        // ⚠️ [0.45.7] إصلاح خلل حقيقي: هذا المستمع كان يسجّل الحدث بالبانر
+        // ⚠️ إصلاح خلل حقيقي: هذا المستمع كان يسجّل الحدث بالبانر
         // فقط، بدون أي ربط فعلي للاعب الجديد بمصفوفة الأحياء الداخلية —
         // فلاعب ينضم عبر "إضافة لوبي جديد" أثناء مباراة نشطة كان يظهر
         // بقائمة اللوبي المصغَّرة بالإعدادات فقط، ولا يدخل العجلة إطلاقاً.
@@ -3808,14 +3767,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             assetBasePath: '../../',
             settingsFields: buildSettingsFields(),
             onStartRound: handleStartRound
-            // ⚠️ [0.55.0] midMatchToggleButton (زر "العب التلقائي" داخل درج
+            // ⚠️ midMatchToggleButton (زر "العب التلقائي" داخل درج
             // الإعدادات) أُزيل من هنا بطلب صريح — الزر صار عنصراً محلياً
             // مستقلاً تحت العجلة مباشرة بشاشة اللعب (راجع renderStage/
             // updateAutoPlayBtnLabel أعلاه)، خارج درج الإعدادات تماماً.
             // handleAutoPlayToggle نفسها بلا أي تغيير — فقط مصدر النداء تغيّر.
         });
 
-        // ⚠️ [0.45.12] تفعيل تحسينات شاشتي الإعدادات/اللوبي (زر رجوع
+        // ⚠️ تفعيل تحسينات شاشتي الإعدادات/اللوبي (زر رجوع
         // للمنصة، ✕ الإقصاء اليدوي، الشعار الشفاف) — راجع التعليق التفصيلي
         // فوق تعريف الدوال أعلاه.
         wireSharedShellEnhancements();

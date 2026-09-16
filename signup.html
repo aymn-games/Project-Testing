@@ -5,27 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إنشاء حساب — AGP</title>
 
-<!--
-  ==========================================================================
-  AGP SIGNUP PAGE — تصميم جديد بنفس الهوية البصرية المستخدمة في
-  profile.html (تصميم مرجعي معتمد، لم يُغيَّر). ملف ذاتي الاكتفاء
-  (self-contained) بنفس فلسفة profile.html/index.html — لا اعتماد على
-  dashboard-core/css/style.css أو auth/auth.css، حتى لا يتأثر أي شيء آخر.
-
-  الوظيفة كما هي بالكامل: نفس AGPAuth.signup() ونفس تدفق تسجيل الدخول
-  التلقائي بعد إنشاء الحساب ونفس Google Identity Services — لا تعديل
-  على أي منها. الإضافات الوحيدة:
-    - حقل "تأكيد كلمة المرور": تحقق واجهة فقط (لا يُرسَل للخادم، الخادم
-      أصلاً يستقبل كلمة مرور واحدة فقط).
-    - اختيار نوع الحساب صار بشكل بطاقتين (لاعب/استريمر) بدل Checkbox،
-      لكن يُترجَم لنفس المتغيّر wantsToBeStreamer المُرسَل لـ
-      AGPAuth.signup() تماماً كالسابق — **لا يمنح صلاحية ستريمر فعلية**،
-      فقط طلب أولي كما كان الـCheckbox (الموافقة الفعلية تبقى من الأدمن
-      عبر can_run_games، راجع docs/CHANGELOG.md). الافتراضي الآن "لاعب"
-      بدل "استريمر" (كان الـCheckbox مُفعَّلاً افتراضياً سابقاً) تماشياً
-      مع التصميم المرجعي.
-  ==========================================================================
--->
+<!-- Self-contained signup page (no dependency on dashboard-core/css or
+     auth.css). Account type is two selectable cards (player/streamer)
+     that map to the same wantsToBeStreamer flag AGPAuth.signup() always
+     took — still just a request, not an actual grant (can_run_games
+     stays admin-controlled). -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -159,7 +143,6 @@
     }
     .au-hint { font-size: 11.5px; color: var(--text-secondary); margin-top: 6px; }
 
-    /* نوع الحساب — بطاقتان قابلتان للاختيار (Radio مخفي) */
     .au-account-type { margin-bottom: 18px; }
     .au-account-type > label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
     .au-type-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -330,10 +313,6 @@
 <script>
 'use strict';
 
-/**
- * منطق إنشاء الحساب — نفس AGPAuth.signup()/login() بالضبط، لم يتغيّر
- * شيء بالتدفق سوى شكل الحقول. راجع docs/CHANGELOG.md.
- */
 (function () {
     var GOOGLE_CLIENT_ID = '777683353907-hkemaaft5t7mktgtjvlf47ptuqk93qbg.apps.googleusercontent.com';
 
@@ -353,8 +332,7 @@
         already_exists: 'يوجد حساب مسجَّل مسبقاً بنفس البريد أو اسم المستخدم.'
     };
 
-    // اللوحة حصراً لحساب الأدمن — أي حساب آخر يروح لبروفايله العام
-    // بدل اللوحة. راجع AGPAuth.canAccessDashboard وdocs/CHANGELOG.md.
+    // Dashboard is admin-only; every other account goes to its public profile.
     function goAfterAuth(user) {
         if (AGPAuth.canAccessDashboard(user)) {
             window.location.href = 'dashboard-core/index.html';
@@ -363,8 +341,6 @@
         }
     }
 
-    // [0.45.6] راجع نفس الدالة بـlogin.html — يحوّل لشاشة اختيار نوع
-    // الحساب الإجبارية بدل اللوحة مباشرة لو الحساب (جوجل جديد) لم يختر بعد.
     function goAfterAuthOrChoice(user) {
         if (AGPAuth.needsAccountTypeChoice(user)) {
             window.location.href = 'choose-account-type.html';
@@ -379,7 +355,6 @@
         });
     }
 
-    // إظهار/إخفاء كلمة المرور — عنصر واجهة بحت، لا علاقة له بالبيانات المُرسَلة.
     Array.prototype.forEach.call(document.querySelectorAll('.au-eye-toggle'), function (btn) {
         btn.addEventListener('click', function () {
             var input = document.getElementById(btn.getAttribute('data-toggle-for'));
@@ -387,7 +362,6 @@
         });
     });
 
-    // بطاقات نوع الحساب — تحديث شكل الاختيار + ملاحظة توضيحية لو "استريمر".
     var typeCards = [document.getElementById('type-card-player'), document.getElementById('type-card-streamer')];
     var streamerNote = document.getElementById('streamer-note');
     function refreshTypeCards() {
@@ -411,8 +385,6 @@
         var passwordConfirm = document.getElementById('password-confirm').value;
         var wantsStreamer = document.getElementById('type-card-streamer').querySelector('input').checked;
 
-        // تحقق واجهة فقط — لا يُرسَل شيء إضافي للخادم (الخادم يستقبل
-        // كلمة مرور واحدة فقط كما كان دائماً).
         if (password !== passwordConfirm) {
             showMessage('كلمتا المرور غير متطابقتين.', 'error');
             return;
@@ -426,8 +398,7 @@
                     showMessage(ERROR_LABELS[result.error] || 'تعذّر إنشاء الحساب.', 'error');
                     return null;
                 }
-                // إنشاء الحساب لا يُنشئ جلسة تلقائياً (auth-service.signup لا
-                // يُرجِع Token) — تسجيل دخول مباشر بنفس البيانات فور النجاح.
+                // Signup doesn't create a session itself — log in immediately after.
                 return AGPAuth.login(email, password);
             })
             .then(function (loginResult) {

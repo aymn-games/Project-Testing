@@ -6,28 +6,13 @@
 <title>منح الإطارات — AGP</title>
 <link rel="stylesheet" href="dashboard-core/css/style.css">
 <link rel="stylesheet" href="auth/auth.css">
-<!--
-  ==========================================================================
-  [إضافة جديدة] شاشة منح إطارات مستقلة — لا تعدّل أي شيء بـadmin-settings.html
-  ولا بأي ملف مشترك. تعرض فقط (قراءة) نفس بيانات adminGetCollectiblesCatalog
-  الموجودة أصلاً (كتالوج + إطارات حصرية)، وتستخدم بالضبط نفس استدعاءات
-  adminGrantFrame/adminRevokeFrame الموجودة أصلاً بـauth-client.js دون أي
-  تعديل عليها.
-
-  التصنيف لـ7 تبويبات يتم بالكامل على الواجهة فقط (front-end)، بقراءة بادئة
-  اسم ملف كل إطار (image_filename) — بدون أي حقل جديد بقاعدة البيانات:
-    frame-club-*      → نوادي
-    frame-country-*   → دول خليجية والسعودية
-    frame-general-*   → عام
-    frame-girls-*     → بنات
-    frame-boys-*      → عيال
-    frame-rare-*      → نادرة
-    أي شي غير مطابق (الإطارات الأساسية القديمة: founder/streamer/... )
-                      → أخرى (كتالوج أساسي)
-  أي إطار جديد يُرفَع مستقبلاً باسم يطابق أحد الأنماط أعلاه يترتب بتبويبه
-  تلقائياً، بدون أي تعديل على هذا الملف.
-  ==========================================================================
--->
+<!-- Standalone frame-granting screen. Reads adminGetCollectiblesCatalog
+     (catalog + custom frames) and uses the existing adminGrantFrame/
+     adminRevokeFrame calls unmodified. The 7 tabs are purely a front-end
+     grouping by image filename prefix (frame-club-*, frame-country-*,
+     frame-general-*, frame-girls-*, frame-boys-*, frame-rare-*, else
+     "other") — no new database field, so a new frame file automatically
+     sorts into the right tab by naming convention alone. -->
 <style>
   .gf-layout { display: flex; flex-direction: column; gap: var(--space-4); }
   .gf-grant-bar {
@@ -85,7 +70,6 @@
 
 <div class="gf-layout">
 
-<!-- ---- شريط المنح الثابت أعلى الصفحة ---- -->
 <div class="gf-grant-bar">
 <div class="field" style="min-width:130px;">
 <label for="gf-user-id">معرّف المستخدم (id)</label>
@@ -114,13 +98,11 @@
 </div>
 <div class="auth-message" id="gf-grant-message"></div>
 
-<!-- ---- البحث ---- -->
 <div class="field" style="max-width:320px;">
 <label for="gf-search-input">بحث (بالأخص لتبويب النوادي)</label>
 <input type="text" id="gf-search-input" placeholder="اكتب اسم الإطار أو النادي…">
 </div>
 
-<!-- ---- التبويبات ---- -->
 <div class="gf-tabs" id="gf-tabs">
 <button type="button" class="gf-tab-btn is-active" data-gf-tab="club">نوادي</button>
 <button type="button" class="gf-tab-btn" data-gf-tab="country">دول خليجية والسعودية</button>
@@ -146,11 +128,6 @@
 <script src="auth/auth-client.js"></script>
 <script>
 'use strict';
-/**
- * [إضافة جديدة] منطق شاشة منح الإطارات — قراءة فقط من
- * adminGetCollectiblesCatalog، تصنيف على الواجهة حسب بادئة اسم الملف، ونفس
- * استدعاءات adminGrantFrame/adminRevokeFrame الموجودة أصلاً دون أي تعديل.
- */
 (function () {
     function escapeHtml(value) {
         var div = document.createElement('div');

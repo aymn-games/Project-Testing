@@ -91,11 +91,6 @@
         والمجتمع. أي دعم — كبير أو صغير — نقدّره فعلاً ونذكرك فيه هنا وبصفحة توب الداعمين.
     </p>
 
-    <!--
-        رابط الدعم الفعلي (منصة كريترز/دكان تب سابقاً) — أُضيف الرابط
-        الحقيقي بـ[0.45.4] (راجع docs/CHANGELOG.md). لو احتجت تغييره
-        مستقبلاً، بدّل href هنا مباشرة من GitHub، بدون أي تعديل ثاني.
-    -->
     <a class="support-donate-btn" href="https://creators.sa/aymngame" id="support-donate-link" target="_blank" rel="noopener">
         🎁 ادعم الآن عبر كريترز
     </a>
@@ -121,6 +116,12 @@
 (function () {
     'use strict';
 
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str == null ? '' : String(str);
+        return div.innerHTML;
+    }
+
     function formatAmount(amount) {
         var n = Number(amount) || 0;
         return (n % 1 === 0 ? n.toString() : n.toFixed(2)) + ' دولار';
@@ -135,7 +136,7 @@
                 return;
             }
             listEl.innerHTML = supporters.map(function (s) {
-                return '<li><span class="rs-name">' + s.name + '</span>' +
+                return '<li><span class="rs-name">' + escapeHtml(s.name) + '</span>' +
                     '<span class="rs-amount">' + formatAmount(s.amount) + '</span></li>';
             }).join('');
         }).catch(function () {

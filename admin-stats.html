@@ -6,27 +6,15 @@
 <title>لوحة الأدمن — الإحصائيات — AGP</title>
 <link rel="stylesheet" href="dashboard-core/css/style.css">
 <link rel="stylesheet" href="auth/auth.css">
-<!--
-  ==========================================================================
-  [0.45.10] admin-stats.html — صفحة جديدة كلياً، خارج AGP.* بالكامل، بنفس
-  نمط admin.html/admin-settings.html (تبويبات .adm-tab-btn/.adm-tab-panel،
-  حماية AGPAuth.requireAdmin، نفس أصناف dashboard-core/css/style.css).
-  تعرض بيانات جاهزة أصلاً من الخادم (getAdminStreamerStats/getAdminUserStats
-  بـbackend/auth/auth-service.js، عبر مسارات /api/admin/stats/* الموجودة
-  أصلاً بـauth-router.js) — لا مسار HTTP جديد، ولا تعديل على أي ملف موجود
-  غير auth/auth-client.js (إضافة دالتين استدعاء فقط، راجع docs/CHANGELOG.md).
-
-  زر "تحميل CSV" بكل تبويب يبني ملفاً محلياً بالمتصفح (Blob) من نفس
-  البيانات المعروضة أصلاً — بدون أي استدعاء خادم إضافي.
-
-  ⚠️ ملاحظة صادقة (نفس الملاحظة الموثَّقة بـauth-service.js): "إجمالي
-  المشاهدات" مبني على حقل totalUser من مكتبة tiktok-live-connector، لم
-  يُختبَر فعلياً ضد بث حقيقي من هذه البيئة. و"الأكثر نشاطاً" لغير
-  الاستريمرز (لاعبون عاديون) غير قابل للقياس حالياً — لا يوجد تتبّع
-  جلسات/دخول لهم، فقط عدّاد جولات ألعاب مكتملة (راجع تبويب "المستخدمون"
-  أدناه لعرض هذا القيد بوضوح بدل افتراض رقم غير موجود.)
-  ==========================================================================
--->
+<!-- Admin stats page, same pattern as admin.html/admin-settings.html
+     (tabs, AGPAuth.requireAdmin, dashboard-core/css/style.css classes).
+     CSV export buttons build a local Blob from already-displayed data,
+     no extra server call.
+     Honesty note: "total views" is built from tiktok-live-connector's
+     totalUser field, never verified against a real stream from this
+     environment. "Most active" for regular (non-streamer) players is
+     currently just a completed-rounds counter — there's no session/login
+     tracking for them yet. -->
 <style>
   .adm-tabs { display: flex; gap: 8px; margin-bottom: var(--space-4); flex-wrap: wrap; }
   .adm-tab-btn {
@@ -38,9 +26,6 @@
   .adm-tab-panel { display: none; }
   .adm-tab-panel.is-active { display: block; }
 
-  /* [0.45.10] بطاقات أرقام كبيرة — محلية لهذه الصفحة فقط، نفس فلسفة
-     أصناف admin.html المحلية (إضافي فوق dashboard-core/css/style.css
-     بدل تعديله). */
   .stats-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-4); }
   .stats-card {
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
@@ -83,9 +68,8 @@
   <button type="button" class="adm-tab-btn" data-stats-tab="users">إحصائيات المستخدمين</button>
 </div>
 
-<!-- ==================== تبويب: إحصائيات الستريمرز ==================== -->
 <div class="adm-tab-panel is-active" data-stats-panel="streamers">
-  <div class="stats-note">⚠️ "إجمالي المشاهدات" مبني على بيانات لم تُختبَر فعلياً ضد بث حقيقي من هذه البيئة — راجع docs/CHANGELOG.md.</div>
+  <div class="stats-note">⚠️ "إجمالي المشاهدات" مبني على بيانات لم تُختبَر فعلياً ضد بث حقيقي من هذه البيئة.</div>
   <div class="stats-cards">
     <div class="stats-card"><div class="stats-card-num" id="st-total-streamers">—</div><div class="stats-card-label">عدد الستريمرز المسجَّلين</div></div>
     <div class="stats-card"><div class="stats-card-num" id="st-total-hours">—</div><div class="stats-card-label">إجمالي ساعات البث</div></div>
@@ -103,9 +87,8 @@
   </div>
 </div>
 
-<!-- ==================== تبويب: إحصائيات المستخدمين ==================== -->
 <div class="adm-tab-panel" data-stats-panel="users">
-  <div class="stats-note">⚠️ لا يوجد تتبّع جلسات/دخول للاعبين العاديين حالياً، فـ"الأكثر نشاطاً" هنا معروض فقط لمن لعب جولات فعلية (عدّاد games_played) — راجع docs/CHANGELOG.md.</div>
+  <div class="stats-note">⚠️ لا يوجد تتبّع جلسات/دخول للاعبين العاديين حالياً، فـ"الأكثر نشاطاً" هنا معروض فقط لمن لعب جولات فعلية (عدّاد games_played).</div>
   <div class="stats-cards">
     <div class="stats-card"><div class="stats-card-num" id="us-total-users">—</div><div class="stats-card-label">إجمالي المستخدمين المسجَّلين</div></div>
     <div class="stats-card"><div class="stats-card-num" id="us-total-streamers">—</div><div class="stats-card-label">عدد الستريمرز</div></div>
@@ -136,12 +119,6 @@
 <script src="auth/auth-client.js"></script>
 <script>
 'use strict';
-/**
- * [0.45.10] لوحة الأدمن — الإحصائيات. نفس نمط admin.html بالضبط (تبويبات،
- * حماية requireAdmin، escapeHtml). لا تعديل على أي مسار HTTP أو دالة
- * موجودة — فقط استهلاك getAdminStreamerStats/getAdminUserStats الجديدتين
- * بـauth-client.js.
- */
 (function () {
     var messageEl = document.getElementById('admin-message');
     var lastStreamerStats = null;
@@ -158,7 +135,6 @@
         return div.innerHTML;
     }
 
-    // تبويبات — نفس نمط admin.html/profile.html بالضبط.
     Array.prototype.forEach.call(document.querySelectorAll('[data-stats-tab]'), function (btn) {
         btn.addEventListener('click', function () {
             Array.prototype.forEach.call(document.querySelectorAll('[data-stats-tab]'), function (b) { b.classList.remove('is-active'); });
@@ -215,9 +191,7 @@
         }).join('');
     }
 
-    // [0.45.10] تصدير CSV محلي بالمتصفح (Blob) — بدون أي استدعاء خادم
-    // إضافي، من نفس البيانات المعروضة أصلاً. ﻿ بالبداية (BOM) حتى
-    // يفتح إكسل الملف بترميز UTF-8 صحيح (أحرف عربية سليمة).
+    // Leading BOM so Excel opens the file with correct UTF-8 (Arabic text).
     function downloadCsv(filename, rows) {
         var csv = '﻿' + rows.map(function (row) {
             return row.map(function (cell) {

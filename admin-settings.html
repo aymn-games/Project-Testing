@@ -6,16 +6,9 @@
 <title>إعدادات الأدمن — AGP</title>
 <link rel="stylesheet" href="dashboard-core/css/style.css">
 <link rel="stylesheet" href="auth/auth.css">
-<!--
-  ==========================================================================
-  [0.45.0] صفحة جديدة — كل أقسام "الإعدادات" التي كانت بـadmin.html
-  (الإعلان، الداعمون، ثيم المناسبات، كتالوج الإطارات، الإطارات الحصرية،
-  منح/سحب مقتنى، الدخولية المستقلة) منظّمة الآن بتبويبات هنا، + تبويب
-  جديد لمستويات SP (streamer_levels — راجع
-  backend/points/streamer-level-service.js). نفس عناصر/استدعاءات
-  auth-client.js الموجودة أصلاً دون أي تعديل عليها، فقط أُعيد ترتيبها.
-  ==========================================================================
--->
+<!-- Admin settings tabs: announcement, supporters, creative partners,
+     event theme, frame catalog, custom frames, grant/revoke, entrance,
+     SP levels (backend/points/streamer-level-service.js). -->
 <style>
   .adm-tabs { display: flex; gap: 8px; margin-bottom: var(--space-4); flex-wrap: wrap; }
   .adm-tab-btn {
@@ -304,7 +297,7 @@ placeholder="اكتب النص اللي تبي المستخدمين يشوفون
 </section>
 </section>
 
-<!-- ---- [0.45.0] مستويات SP ---- -->
+<!-- ---- مستويات SP ---- -->
 <section class="adm-tab-panel" data-settings-panel="sp-levels">
 <section class="panel panel-wide">
 <div class="panel-head">
@@ -330,11 +323,6 @@ placeholder="اكتب النص اللي تبي المستخدمين يشوفون
 <script src="auth/auth-client.js"></script>
 <script>
 'use strict';
-/**
- * [0.45.0] إعدادات الأدمن — كل الأقسام التي كانت أصلاً بـadmin.html
- * (نفس منطق كل قسم دون أي تعديل)، منظّمة بتبويبات، + تبويب جديد لمستويات
- * SP. نفس محمية AGPAuth.requireAdmin بالضبط.
- */
 (function () {
     function escapeHtml(value) {
         var div = document.createElement('div');
@@ -715,7 +703,7 @@ placeholder="اكتب النص اللي تبي المستخدمين يشوفون
         });
     });
 
-    /* ---- [0.45.0] مستويات SP ---- */
+    /* ---- مستويات SP ---- */
     var spLevelsMessageEl = document.getElementById('sp-levels-message');
     var spLevelsTbody = document.getElementById('sp-levels-table-body');
     function showSpLevelsMessage(text, type) {
