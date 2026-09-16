@@ -734,22 +734,13 @@ function chooseAccountType(userId, wantsToBeStreamer) {
 }
 
 /**
- * [0.45.6] حذف حساب نهائياً — الأدمن فقط (زر "حذف الحساب" بـadmin.html،
- * لكل من الستريمرز واللاعبين). يحذف يدوياً كل الصفوف المرتبطة بكل جدول
- * قبل حذف صف المستخدم نفسه.
+ * حذف حساب نهائياً — الأدمن فقط. يحذف يدوياً كل الصفوف المرتبطة بكل
+ * جدول قبل حذف صف المستخدم نفسه.
  *
- * ⚠️ **سبب الحذف اليدوي الصريح بدل الاعتماد على `ON DELETE CASCADE`
- * المكتوب أصلاً بتعريفات الجداول** (sessions/broadcasts/user_frames/
- * user_entrances/user_points كلها REFERENCES users(id) ON DELETE CASCADE):
- * تحقّقت من backend/db/database.js — **`PRAGMA foreign_keys` غير مفعَّل
- * إطلاقاً بهذا المشروع** (SQLite يترك قيود المفاتيح الأجنبية معطَّلة
- * افتراضياً ما لم يُفعَّل هذا الـPRAGMA صراحة لكل اتصال، وهو غير موجود
- * بـdatabase.js). يعني عملياً: كل تعريفات `ON DELETE CASCADE` الحالية
- * **خاملة تماماً** ولا تُنفَّذ فعلياً — حذف مستخدم بـ`DELETE FROM users`
- * وحده كان سيترك صفوفاً يتيمة (Orphan Rows) بكل تلك الجداول. لم ألمس
- * PRAGMA foreign_keys نفسه (تفعيله الآن قد يكسر أي بيانات يتيمة موجودة
- * فعلياً بالإنتاج من قبل هذا الإصدار)، فقط أضفت حذفاً يدوياً صريحاً هنا
- * يغطي نفس الأثر بأمان تام بغض النظر عن حالة الـPRAGMA.
+ * ⚠️ حذف يدوي صريح بدل الاعتماد على `ON DELETE CASCADE` المكتوب بتعريفات
+ * الجداول: `PRAGMA foreign_keys` غير مفعَّل بهذا المشروع (database.js)،
+ * فكل تعريفات CASCADE خاملة فعلياً — `DELETE FROM users` وحده كان سيترك
+ * صفوفاً يتيمة. لم نفعّل الـPRAGMA (قد يكسر بيانات يتيمة موجودة بالإنتاج).
  * @param {number} userId
  * @returns {{success: boolean, error?: string}}
  */
@@ -757,8 +748,7 @@ function deleteUser(userId) {
     var user = db.prepare('SELECT id, role FROM users WHERE id = ?').get(userId);
     if (!user) return { success: false, error: 'user_not_found' };
 
-    // منع حذف آخر حساب أدمن بالمنصة — لو انحذف بالغلط ما تبقى أي طريقة
-    // دخول للوحة الأدمن إطلاقاً (لا نظام استرجاع/تعيين أدمن آخر حالياً).
+    // منع حذف آخر حساب أدمن — لا نظام استرجاع/تعيين أدمن آخر حالياً.
     if (user.role === 'admin') {
         var adminCount = db.prepare("SELECT COUNT(*) AS c FROM users WHERE role = 'admin'").get().c;
         if (adminCount <= 1) return { success: false, error: 'cannot_delete_last_admin' };
@@ -776,10 +766,8 @@ function deleteUser(userId) {
 }
 
 /**
- * [0.45.6] الأدمن فقط — يصفّر قيد الجهاز الواحد لستريمر معتمد (صمام أمان
- * لو الستريمر غيّر جهازه فعلاً بشكل مشروع — جهاز جديد، فورمات، إلخ) —
- * راجع checkDeviceLock أعلاه. بعد التصفير، أول تسجيل دخول جاي (من أي
- * جهاز) يصير هو الجهاز المربوط الجديد تلقائياً.
+ * الأدمن فقط — يصفّر قيد الجهاز الواحد لستريمر معتمد. بعد التصفير، أول
+ * تسجيل دخول جاي (من أي جهاز) يصير هو الجهاز المربوط الجديد.
  * @param {number} userId
  * @returns {{success: boolean, error?: string}}
  */
@@ -791,10 +779,8 @@ function adminResetDeviceLock(userId) {
 }
 
 /**
- * [0.45.11] الأدمن فقط — يفعّل/يطفي سماح تغيير الجهاز لمرة واحدة لحساب
- * ستريمر مقفول بجهاز. يُستهلَك تلقائياً بأول تسجيل دخول تالٍ من أي جهاز
- * (راجع checkDeviceLock/login أعلاه) — هذه الدالة فقط تفعّل/تطفي العلم
- * يدوياً، الاستهلاك التلقائي منطق منفصل بدالة login.
+ * الأدمن فقط — يفعّل/يطفي سماح تغيير الجهاز لمرة واحدة. يُستهلَك تلقائياً
+ * بأول تسجيل دخول تالٍ من أي جهاز (منطق منفصل بدالة login).
  * @param {number} userId
  * @param {boolean} allow
  * @returns {{success: boolean, error?: string}}
@@ -807,9 +793,8 @@ function adminSetAllowDeviceChange(userId, allow) {
 }
 
 /**
- * [0.45.11] الأدمن فقط — يفعّل/يطفي وضع سوبر أدمن لحساب محدد (تجاوز
- * كامل لقيد الجهاز، راجع checkDeviceLock أعلاه). لا يُفعَّل تلقائياً
- * لأي حساب أدمن — يدوي بحت، حساب بحساب.
+ * الأدمن فقط — يفعّل/يطفي وضع سوبر أدمن لحساب محدد (تجاوز كامل لقيد
+ * الجهاز). يدوي بحت، حساب بحساب.
  * @param {number} userId
  * @param {boolean} isSuperAdmin
  * @returns {{success: boolean, error?: string}}
@@ -894,11 +879,9 @@ function addGiftValue(broadcastId, value) {
 }
 
 /**
- * [0.45.10] تحديث لقطة عدد المشاهدين لبث معيّن — تُستدعى من ws-server.js
- * عند كل حدث roomUser حقيقي من تيك توك (راجع onViewerUpdate بـ
- * tiktok-connector.js). MAX(...) بدل الكتابة المباشرة عمداً — أحداث
- * roomUser قد تصل بترتيب غير مضمون 100%، فهذا يمنع رجوع الرقم للخلف
- * سهواً بلقطة متأخرة الوصول لكن أقدم زمنياً.
+ * تحديث لقطة عدد المشاهدين لبث معيّن — تُستدعى من ws-server.js عند كل
+ * حدث roomUser. MAX(...) بدل الكتابة المباشرة عمداً — أحداث roomUser قد
+ * تصل بترتيب غير مضمون، فهذا يمنع رجوع الرقم للخلف بلقطة متأخرة الوصول.
  * @param {number} broadcastId
  * @param {number} currentViewers - عدد المشاهدين المتزامن الآن (حقل `total`)
  * @param {number} totalUsers - العدد التراكمي الكلي المرصود لحد الآن (حقل `totalUser`)
@@ -933,17 +916,10 @@ function getUserStats(userId) {
 }
 
 /**
- * [0.45.10] أعلى الاستريمرز بعدد ساعات البث الإجمالي — لشريط الصفحة
- * الرئيسية (عام، بدون Bearer). يرجع فقط بيانات غير حساسة: يوزرنيم
- * تيك توك + إجمالي الساعات — لا بريد، لا id داخلي، لا أي بيانات حساب.
- * يشترط حساباً موثَّقاً فعلياً (tiktok_verified=1) وله يوزرنيم مسجَّل،
- * وبث واحد مكتمل (ended_at IS NOT NULL) على الأقل.
- *
- * [0.45.21] أُضيف: اسم العرض وصورة البروفايل اللي حاطينها الاستريمر
- * بصفحته (`users.display_name`/`avatar_image_base64`) — نفس البيانات
- * العلنية أصلاً بالبروفايل العام (`GET /api/profile?id=`)، ليست بيانات
- * جديدة حساسة. `displayName` تسقط تلقائياً لاسم المستخدم لو ما عيّن
- * الاستريمر اسم عرض بعد، حتى تبقى الواجهة دائماً عندها اسم تعرضه.
+ * أعلى الاستريمرز بعدد ساعات البث الإجمالي — لشريط الصفحة الرئيسية (عام،
+ * بدون Bearer). يرجع فقط بيانات غير حساسة، يشترط حساباً موثَّقاً فعلياً
+ * (tiktok_verified=1) وبث واحد مكتمل على الأقل. displayName تسقط تلقائياً
+ * لاسم المستخدم لو ما عيّن الاستريمر اسم عرض بعد.
  * @param {number} [limit]
  * @returns {Array<{tiktokUsername: string, displayName: string, avatarBase64: (string|null), customId: (string|null), totalHours: number}>}
  */
@@ -972,11 +948,8 @@ function getTopStreamersByHours(limit) {
 }
 
 /**
- * [0.45.10] إحصائيات مجمَّعة عن كل الاستريمرز — لتبويب "إحصائيات
- * الاستريمرز" بلوحة الأدمن فقط.
- * ⚠️ ملاحظة صادقة: total_views مبنية على حقل totalUser من مكتبة
- * tiktok-live-connector — لم تُختبَر ضد بث حقيقي من هذه البيئة، راجع
- * التعليق بـbackend/db/database.js عند عمود total_unique_viewers.
+ * إحصائيات مجمَّعة عن كل الاستريمرز — لتبويب "إحصائيات الاستريمرز" بلوحة
+ * الأدمن فقط. total_views مبنية على حقل totalUser من مكتبة tiktok-live-connector.
  */
 function getAdminStreamerStats() {
     var totals = db.prepare(
@@ -1019,14 +992,10 @@ function getAdminStreamerStats() {
 }
 
 /**
- * [0.45.10] إحصائيات مجمَّعة عن كل المستخدمين (لاعبين + استريمرز) —
- * لتبويب "المستخدمون" بلوحة الأدمن. ⚠️ ملاحظة صادقة: "الأكثر استخداماً
- * للمنصة" لغير الاستريمرز (لاعبون عاديون بدون بث) غير قابل للقياس حالياً
- * — لا يوجد أي تتبّع جلسات/دخول بالمنصة لهم (فقط عدّاد جولات ألعاب
- * مكتملة games_played لمن لعب فعلياً عبر نظام النقاط). لهذا نعرض "الأكثر
- * استخداماً" هنا بمعنى: الاستريمرز حسب ساعات البث (نفس بيانات
- * getAdminStreamerStats)، + قائمة منفصلة لأكثر اللاعبين حسب عدد الجولات
- * المكتملة (games_played) — بدون افتراض رقم "استخدام عام" غير موجود.
+ * إحصائيات مجمَّعة عن كل المستخدمين (لاعبين + استريمرز) — لتبويب
+ * "المستخدمون" بلوحة الأدمن. "الأكثر استخداماً" للاعبين العاديين غير
+ * قابل للقياس (لا تتبّع جلسات لهم)، لذا نعرض أكثرهم حسب جولات مكتملة
+ * (games_played) فقط.
  */
 function getAdminUserStats() {
     var totalUsers = db.prepare('SELECT COUNT(*) AS c FROM users').get().c;
@@ -1053,10 +1022,8 @@ function getAdminUserStats() {
 }
 
 /**
- * [إحصائيات عامة للواجهة الرئيسية] نسخة عامة (بدون Auth) من نفس عدّاد
- * الحسابات المستخدم بـ getAdminUserStats، لعرضه بصفحة الهبوط ("حساب
- * مسجّل في المنصة"). تكشف فقط عدداً إجمالياً — لا أسماء مستخدمين ولا
- * أي بيانات شخصية، بعكس getAdminUserStats المحمي بصلاحية أدمن.
+ * نسخة عامة (بدون Auth) من عدّاد الحسابات لصفحة الهبوط — تكشف فقط عدداً
+ * إجمالياً، لا أسماء ولا بيانات شخصية.
  */
 function getPublicPlatformStats() {
     var totalUsers = db.prepare('SELECT COUNT(*) AS c FROM users').get().c;
@@ -1064,9 +1031,8 @@ function getPublicPlatformStats() {
 }
 
 /**
- * [0.45.10] تحديث اسم العرض بالبروفايل (منفصل عن username الثابت لتسجيل
- * الدخول). حد أقصى 40 حرفاً، يُرفض الفارغ تماماً بعد trim (لو المستخدم
- * يبي يرجع للاسم الافتراضي، NULL صراحة عبر عدم إرسال حقل، لا سلسلة فارغة).
+ * تحديث اسم العرض بالبروفايل (منفصل عن username الثابت). حد أقصى 40
+ * حرفاً، يُرفض الفارغ تماماً بعد trim.
  */
 function updateDisplayName(userId, displayName) {
     var trimmed = (displayName || '').trim();
@@ -1076,17 +1042,9 @@ function updateDisplayName(userId, displayName) {
     return { success: true, displayName: trimmed };
 }
 
-// ⚠️ [تصحيح حقيقي بعد اختبار — 0.45.10] كانت القيمة الأولى 350KB، لكن
-// backend/http/body-parser.js يفرض حداً أقصى عاماً لكل جسم طلب HTTP =
-// 100KB (MAX_BODY_BYTES، موجود مسبقاً لكل مسارات Auth/Admin) — أي صورة
-// أكبر من ~100KB كانت تُسقَط الاتصال خام (ECONNRESET) قبل ما تصل هذا
-// التحقق أصلاً، بدل رسالة خطأ واضحة 400. اكتُشف هذا فعلياً باختبار
-// تكامل حقيقي (طلب HTTP فعلي بصورة كبيرة)، لا افتراضاً. الحل: تخفيض
-// الحد هنا ليبقى **دون** حد body-parser.js بهامش أمان كافٍ لغلاف JSON
-// (~85KB للصورة نفسها بعد Base64، يعادل ~62KB للصورة الأصلية تقريباً) —
-// يفرض هذا صوراً صغيرة/مضغوطة فعلاً (لا صور بدقة كاملة)؛ الواجهة
-// الأمامية يفضَّل تصغّر/تضغط الصورة (Canvas) قبل الإرسال بدل الاعتماد
-// على هذا الرفض فقط.
+// ⚠️ يجب أن يبقى دون حد body-parser.js (MAX_BODY_BYTES = 100KB لكل جسم
+// طلب HTTP) بهامش أمان لغلاف JSON — وإلا تُسقَط الاتصالات خام (ECONNRESET)
+// بدل رسالة خطأ 400 واضحة. ~85KB للصورة بعد Base64 يفرض صوراً صغيرة/مضغوطة.
 var MAX_AVATAR_BASE64_LENGTH = 85 * 1024;
 
 /**
@@ -1108,17 +1066,15 @@ function updateAvatarImage(userId, dataUrl) {
 function listAllUsersWithStats() {
     var users = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen, bound_device_id, is_super_admin, allow_device_change, created_at FROM users ORDER BY created_at ASC').all();
     return users.map(function (u) {
-        // شفاء ذاتي — نفس منطق validateSession، حتى تظهر لوحة الأدمن
-        // دائماً IDً لكل حساب حتى القديم منه قبل هذه الميزة.
+        // شفاء ذاتي — نفس منطق validateSession.
         if (!u.custom_id) {
             u.custom_id = generatePublicId();
             db.prepare('UPDATE users SET custom_id = ? WHERE id = ?').run(u.custom_id, u.id);
         }
         var frames = collectiblesService.getUserFrames(u.id);
         var equipped = frames.filter(function (f) { return f.equipped; })[0] || null;
-        // [0.45.6] deviceLocked: true/false فقط لعرض حالة قيد الجهاز بلوحة
-        // الأدمن — لا يُرسَل معرّف الجهاز الفعلي (bound_device_id) نفسه
-        // إطلاقاً للواجهة، لا داعي له هناك (فقط "مربوط أو لا؟").
+        // deviceLocked: true/false فقط لعرض حالة قيد الجهاز — لا يُرسَل
+        // معرّف الجهاز الفعلي (bound_device_id) للواجهة.
         var deviceLocked = Boolean(u.bound_device_id);
         delete u.bound_device_id;
         return Object.assign({}, u, {
@@ -1130,9 +1086,6 @@ function listAllUsersWithStats() {
             is_super_admin: Boolean(u.is_super_admin),
             allow_device_change: Boolean(u.allow_device_change),
             stats: getUserStats(u.id),
-            // للوحة الأدمن فقط (جدول المستخدمين) — نفس بيانات النقاط/
-            // المقتنيات المُرفَقة في getPublicProfile، لكن هنا لكل المستخدمين
-            // دفعة واحدة بدل طلب منفصل لكل بروفايل.
             points: pointsService.getUserPoints(u.id),
             framesCount: frames.length,
             equippedFrame: equipped ? { frameType: equipped.frameType, frameRef: equipped.frameRef, displayNameAr: equipped.displayNameAr } : null
