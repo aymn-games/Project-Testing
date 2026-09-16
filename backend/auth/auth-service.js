@@ -290,8 +290,7 @@ function resetPasswordWithCode(email, code, newPassword) {
  *   Console — راجع README.md)، وإلا يرفض فوراً بخطأ واضح.
  *
  * @param {string} idToken - الرمز القادم من زر تسجيل الدخول بجوجل بالمتصفح
- * @param {string} [deviceId] - [0.45.6] معرّف الجهاز من auth-client.js —
- *   نفس شرط checkDeviceLock بدالة login أعلاه (يؤثر فقط على ستريمر معتمد).
+ * @param {string} [deviceId] - نفس شرط checkDeviceLock بدالة login أعلاه.
  * @returns {Promise<{success: boolean, token?: string, user?: Object, error?: string}>}
  */
 async function loginWithGoogle(idToken, deviceId) {
@@ -807,9 +806,8 @@ function adminSetSuperAdmin(userId, isSuperAdmin) {
 }
 
 /**
- * حفلة ترحيب الستريمر الجديد (راجع docs/CHANGELOG.md) — تُستدعى ذاتياً
- * من صاحب الحساب بعد ما يكمل الحفلة كاملة فعلياً (سلايدات + قص الشريطة
- * + العد التنازلي)، وليس مجرد فتحها. بعدها ما تتكرر تلقائياً أبداً.
+ * حفلة ترحيب الستريمر الجديد — تُستدعى بعد ما يكمل الحفلة كاملة فعلياً،
+ * وليس مجرد فتحها. بعدها ما تتكرر تلقائياً أبداً.
  * @param {number} userId
  */
 function completeWelcome(userId) {

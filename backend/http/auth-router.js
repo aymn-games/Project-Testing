@@ -1,18 +1,8 @@
 /**
- * ==========================================================================
- * AGP AUTH ROUTER — يوصّل backend/auth/auth-service.js بواجهة HTTP فعلية
- * ==========================================================================
- *
- * قبل هذا الملف: auth-service.js/database.js/password.js كانت منطقاً
- * كاملاً وجاهزاً (حسابات، جلسات، تحقق تيك توك، صلاحيات أدمن) لكن غير
- * موصول بأي شيء — لا مسار HTTP يستدعيه، ولا صفحة واجهة تستخدمه. هذا
- * الملف هو نقطة الربط الوحيدة؛ لا تعديل على auth-service.js نفسه.
- *
- * جدول مسارات بسيط + دالة `handle(req, res)` واحدة تُستدعى من
- * server.js لكل طلب يبدأ بـ "/api/". لا معرفة هنا بـ WebSocket أو
- * تيك توك أو أي شيء آخر في backend/ — مسؤولية واحدة: HTTP API للحسابات
- * والإدارة، راجع docs/BACKEND_ARCHITECTURE.md §10 للبروتوكول الكامل.
- * ==========================================================================
+ * AGP AUTH ROUTER — يوصّل backend/auth/auth-service.js بواجهة HTTP فعلية.
+ * جدول مسارات بسيط + دالة `handle(req, res)` واحدة تُستدعى من server.js
+ * لكل طلب يبدأ بـ "/api/". لا معرفة هنا بـ WebSocket أو تيك توك — مسؤولية
+ * واحدة: HTTP API للحسابات والإدارة.
  */
 
 'use strict';
@@ -58,6 +48,22 @@ function requireUser(req) {
 }
 
 /**
+ * قراءة قيمة واحدة من query string الطلب (مثال: ?id=abc&limit=5).
+ * @param {http.IncomingMessage} req
+ * @param {string} key
+ * @returns {string} فارغ لو غير موجود
+ */
+function getQueryParam(req, key) {
+  var queryString = (req.url || '').split('?')[1] || '';
+  var value = '';
+  queryString.split('&').forEach(function (pair) {
+    var kv = pair.split('=');
+    if (decodeURIComponent(kv[0] || '') === key) value = decodeURIComponent(kv[1] || '');
+  });
+  return value;
+}
+
+/**
  * جدول المسارات: كل عنصر {method, path, handler}. الـ handler يستقبل
  * (req, res, body, user) — user يكون null لو المسار لا يتطلب Auth.
  * requireAuth/requireAdmin يُطبَّقان تلقائياً قبل استدعاء الـ handler.
@@ -70,41 +76,33 @@ var ROUTES = [
   { method: 'GET', path: '/api/auth/me', requireAuth: true, handler: handleMe },
   { method: 'POST', path: '/api/auth/tiktok/link', requireAuth: true, handler: handleTikTokLink },
   { method: 'POST', path: '/api/auth/tiktok/verification-code', requireAuth: true, handler: handleTikTokVerificationCode },
-  // ---- [جديد] تسجيل دخول تيك توك الرسمي (OAuth Login Kit) — البديل
-  // الموصى به لطريقة كود البايو أعلاه. راجع backend/auth/tiktok-oauth-service.js.
-  // requireAuth: false بالاثنين لأنهما مسارا تنقّل متصفح خام (زر <a>
-  // وإعادة توجيه من تيك توك) — لا يقدر يرفق ترويسة Authorization، لذا
-  // نتحقق من الجلسة يدوياً داخل handleTikTokOAuthStart عبر ?token=.
+  // ---- تسجيل دخول تيك توك الرسمي (OAuth Login Kit) — البديل الموصى به
+  // لطريقة كود البايو أعلاه. requireAuth: false بالاثنين لأنهما مسارا
+  // تنقّل متصفح خام — لا يقدران يرفقان ترويسة Authorization، لذا نتحقق
+  // من الجلسة يدوياً داخل handleTikTokOAuthStart عبر ?token=.
   { method: 'GET', path: '/api/auth/tiktok/oauth/start', requireAuth: false, handler: handleTikTokOAuthStart },
   { method: 'GET', path: '/api/auth/tiktok/oauth/callback', requireAuth: false, handler: handleTikTokOAuthCallback },
   { method: 'POST', path: '/api/auth/tiktok/verify', requireAuth: true, handler: handleTikTokVerify },
   { method: 'POST', path: '/api/auth/tiktok/unlink', requireAuth: true, handler: handleTikTokUnlink },
   { method: 'POST', path: '/api/auth/custom-id', requireAuth: true, handler: handleCustomId },
-  // [0.45.6] اختيار نوع الحساب الإجباري (لاعب/استريمر) بعد أول دخول
-  // بجوجل لحساب جديد كلياً — راجع choose-account-type.html.
+  // اختيار نوع الحساب الإجباري بعد أول دخول بجوجل لحساب جديد كلياً.
   { method: 'POST', path: '/api/auth/account-type', requireAuth: true, handler: handleChooseAccountType },
-  // [0.45.11] استرجاع كلمة المرور — خطوتين، بدون Auth (المستخدم أصلاً
-  // خارج جلسته). راجع authService.requestPasswordReset/resetPasswordWithCode.
+  // استرجاع كلمة المرور — خطوتين، بدون Auth (المستخدم أصلاً خارج جلسته).
   { method: 'POST', path: '/api/auth/forgot-password', requireAuth: false, handler: handleForgotPassword },
   { method: 'POST', path: '/api/auth/reset-password', requireAuth: false, handler: handleResetPassword },
   { method: 'GET', path: '/api/admin/users', requireAuth: true, requireAdmin: true, handler: handleAdminListUsers },
   { method: 'POST', path: '/api/admin/permissions', requireAuth: true, requireAdmin: true, handler: handleAdminSetPermission },
   { method: 'POST', path: '/api/admin/custom-id', requireAuth: true, requireAdmin: true, handler: handleAdminSetCustomId },
-  // [0.45.6] حذف حساب نهائياً (لاعب أو ستريمر) — زر بـadmin.html.
   { method: 'POST', path: '/api/admin/users/delete', requireAuth: true, requireAdmin: true, handler: handleAdminDeleteUser },
-  // [جديد] حذف ذاتي — أي مستخدم مسجّل دخول يقدر يحذف حسابه هو بس (requireAdmin غير موجود عمداً، requireAuth فقط).
+  // حذف ذاتي — requireAdmin غير موجود عمداً، requireAuth فقط.
   { method: 'POST', path: '/api/profile/delete-account', requireAuth: true, handler: handleDeleteMyAccount },
-  // [0.45.6] تصفير قيد الجهاز الواحد لستريمر معتمد — صمام أمان يدوي.
   { method: 'POST', path: '/api/admin/reset-device-lock', requireAuth: true, requireAdmin: true, handler: handleAdminResetDeviceLock },
-  // [0.45.11] سماح تغيير الجهاز لمرة واحدة (يُستهلَك تلقائياً بأول دخول جديد).
   { method: 'POST', path: '/api/admin/allow-device-change', requireAuth: true, requireAdmin: true, handler: handleAdminAllowDeviceChange },
-  // [0.45.11] سوبر أدمن — تجاوز كامل لقيد الجهاز، حساب بحساب.
   { method: 'POST', path: '/api/admin/super-admin', requireAuth: true, requireAdmin: true, handler: handleAdminSetSuperAdmin },
   { method: 'GET', path: '/api/profile', requireAuth: false, handler: handlePublicProfile },
   { method: 'GET', path: '/api/announcement', requireAuth: false, handler: handleGetAnnouncement },
   { method: 'POST', path: '/api/admin/announcement', requireAuth: true, requireAdmin: true, handler: handleAdminSetAnnouncement },
-  // ---- المقتنيات (إطارات + دخوليات) والنقاط — راجع
-  // backend/collectibles/collectibles-service.js وbackend/points/points-service.js
+  // ---- المقتنيات (إطارات + دخوليات) والنقاط
   { method: 'GET', path: '/api/admin/collectibles/catalog', requireAuth: true, requireAdmin: true, handler: handleAdminGetCatalog },
   { method: 'POST', path: '/api/admin/collectibles/catalog', requireAuth: true, requireAdmin: true, handler: handleAdminUpdateCatalog },
   { method: 'POST', path: '/api/admin/collectibles/custom-frame', requireAuth: true, requireAdmin: true, handler: handleAdminCreateCustomFrame },
@@ -390,12 +388,7 @@ function handleAdminSetSuperAdmin(req, res, body) {
  * tiktok...) undefined عمداً. راجع docs/CHANGELOG.md.
  */
 function handlePublicProfile(req, res, body, user) {
-  var queryString = (req.url || '').split('?')[1] || '';
-  var customId = '';
-  queryString.split('&').forEach(function (pair) {
-    var kv = pair.split('=');
-    if (decodeURIComponent(kv[0] || '') === 'id') customId = decodeURIComponent(kv[1] || '');
-  });
+  var customId = getQueryParam(req, 'id');
   var profile = authService.getPublicProfile(customId);
   if (!profile) {
     sendJson(res, 404, { success: false, error: 'not_found' });
@@ -594,15 +587,9 @@ function handleAdminResetWelcome(req, res, body) {
  * نمط قراءة query string في handlePublicProfile أعلاه.
  */
 function handleGetRecentSupporters(req, res) {
-  var queryString = (req.url || '').split('?')[1] || '';
   var limit = 3;
-  queryString.split('&').forEach(function (pair) {
-    var kv = pair.split('=');
-    if (decodeURIComponent(kv[0] || '') === 'limit') {
-      var n = parseInt(decodeURIComponent(kv[1] || ''), 10);
-      if (isFinite(n) && n > 0) limit = Math.min(n, 50);
-    }
-  });
+  var n = parseInt(getQueryParam(req, 'limit'), 10);
+  if (isFinite(n) && n > 0) limit = Math.min(n, 50);
   sendJson(res, 200, { success: true, supporters: supportersService.listRecent(limit) });
 }
 
@@ -640,12 +627,7 @@ function handleAdminDeleteSupporter(req, res, body) {
  * يقرأ query string بهذا الراوتر).
  */
 function handleAdminFindSupporterUser(req, res) {
-  var queryString = (req.url || '').split('?')[1] || '';
-  var customId = '';
-  queryString.split('&').forEach(function (pair) {
-    var kv = pair.split('=');
-    if (decodeURIComponent(kv[0] || '') === 'customId') customId = decodeURIComponent(kv[1] || '');
-  });
+  var customId = getQueryParam(req, 'customId');
   var result = supportersService.findUserForLinking(customId);
   sendJson(res, result.success ? 200 : 404, result);
 }
@@ -709,37 +691,19 @@ function handleAdminClearTheme(req, res) {
  * 50 دفاعياً حتى لو طُلب رقم أكبر أو غير صالح).
  */
 function handleTopStreamers(req, res) {
-  var queryString = (req.url || '').split('?')[1] || '';
-  var limitRaw = '';
-  queryString.split('&').forEach(function (pair) {
-    var kv = pair.split('=');
-    if (decodeURIComponent(kv[0] || '') === 'limit') limitRaw = decodeURIComponent(kv[1] || '');
-  });
-  var limit = Math.min(50, Math.max(1, parseInt(limitRaw, 10) || 20));
+  var limit = Math.min(50, Math.max(1, parseInt(getQueryParam(req, 'limit'), 10) || 20));
   sendJson(res, 200, { success: true, streamers: authService.getTopStreamersByHours(limit) });
 }
 
 /** [جديد] أعلى اللاعبين بعدد مرات الفوز — عام، لبطاقة "الأكثر نشاطاً" بالصفحة الرئيسية. */
 function handleTopPlayersByWins(req, res) {
-  var queryString = (req.url || '').split('?')[1] || '';
-  var limitRaw = '';
-  queryString.split('&').forEach(function (pair) {
-    var kv = pair.split('=');
-    if (decodeURIComponent(kv[0] || '') === 'limit') limitRaw = decodeURIComponent(kv[1] || '');
-  });
-  var limit = Math.min(50, Math.max(1, parseInt(limitRaw, 10) || 20));
+  var limit = Math.min(50, Math.max(1, parseInt(getQueryParam(req, 'limit'), 10) || 20));
   sendJson(res, 200, { success: true, players: pointsService.getTopPlayersByWins(limit) });
 }
 
 /** [جديد] أعلى اللاعبين بساعات اللعب الفعلية — عام، بديل مستقبلي/تكميلي لبطاقة اللاعبين. */
 function handleTopPlayersByHours(req, res) {
-  var queryString = (req.url || '').split('?')[1] || '';
-  var limitRaw = '';
-  queryString.split('&').forEach(function (pair) {
-    var kv = pair.split('=');
-    if (decodeURIComponent(kv[0] || '') === 'limit') limitRaw = decodeURIComponent(kv[1] || '');
-  });
-  var limit = Math.min(50, Math.max(1, parseInt(limitRaw, 10) || 20));
+  var limit = Math.min(50, Math.max(1, parseInt(getQueryParam(req, 'limit'), 10) || 20));
   sendJson(res, 200, { success: true, players: pointsService.getTopPlayersByHours(limit) });
 }
 

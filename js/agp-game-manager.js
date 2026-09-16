@@ -30,11 +30,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     AGP.gameManager = {
 
-        /**
-         * تسجيل لعبة جديدة. تفويض مباشر لـ AGP.gameAPI.register(game).
-         * @param {Object} game
-         * @returns {boolean}
-         */
         registerGame: function (game) {
             if (!AGP.gameAPI || typeof AGP.gameAPI.register !== 'function') {
                 AGP.log('Game Manager: Game API not available, cannot register.');
@@ -43,11 +38,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return AGP.gameAPI.register(game);
         },
 
-        /**
-         * إلغاء تسجيل لعبة. تفويض مباشر لـ AGP.gameAPI.unregister(id).
-         * @param {string} id
-         * @returns {boolean}
-         */
         unregisterGame: function (id) {
             if (!AGP.gameAPI || typeof AGP.gameAPI.unregister !== 'function') {
                 AGP.log('Game Manager: Game API not available, cannot unregister.');
@@ -56,12 +46,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return AGP.gameAPI.unregister(id);
         },
 
-        /**
-         * تحميل لعبة مسجَّلة مسبقاً في المحرك. تفويض مباشر لـ
-         * AGP.gameEngine.loadGame(id).
-         * @param {string} id
-         * @returns {boolean}
-         */
         loadGame: function (id) {
             if (!AGP.gameEngine || typeof AGP.gameEngine.loadGame !== 'function') {
                 AGP.log('Game Manager: Game Engine not available, cannot load game.');
@@ -70,12 +54,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return AGP.gameEngine.loadGame(id);
         },
 
-        /**
-         * إلغاء تحميل اللعبة الحالية من المحرك. تفويض مباشر لـ
-         * AGP.gameEngine.destroy() (أقرب مكافئ موجود فعلياً لمفهوم
-         * "unload" — راجع الملاحظة أعلى الملف).
-         * @returns {boolean}
-         */
         unloadGame: function () {
             if (!AGP.gameEngine || typeof AGP.gameEngine.destroy !== 'function') {
                 AGP.log('Game Manager: Game Engine not available, cannot unload game.');
@@ -84,11 +62,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return AGP.gameEngine.destroy();
         },
 
-        /**
-         * جلب اللعبة المحمَّلة حالياً في المحرك. تفويض مباشر لـ
-         * AGP.gameEngine.getLoadedGame().
-         * @returns {Object|null}
-         */
         getCurrentGame: function () {
             if (!AGP.gameEngine || typeof AGP.gameEngine.getLoadedGame !== 'function') {
                 return null;
@@ -96,11 +69,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return AGP.gameEngine.getLoadedGame();
         },
 
-        /**
-         * جلب كل الألعاب المسجَّلة. تفويض مباشر لـ
-         * AGP.gameAPI.getAllGames().
-         * @returns {Array<Object>}
-         */
         getRegisteredGames: function () {
             if (!AGP.gameAPI || typeof AGP.gameAPI.getAllGames !== 'function') {
                 return [];
@@ -108,11 +76,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return AGP.gameAPI.getAllGames();
         },
 
-        /**
-         * فتح التسجيل لانضمام لاعبين جدد. تفويض مباشر لـ
-         * AGP.lobby.open().
-         * @returns {boolean}
-         */
         openRegistration: function () {
             if (!AGP.lobby || typeof AGP.lobby.open !== 'function') {
                 AGP.log('Game Manager: Lobby not available, cannot open registration.');
@@ -121,10 +84,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return AGP.lobby.open();
         },
 
-        /**
-         * إغلاق التسجيل. تفويض مباشر لـ AGP.lobby.close().
-         * @returns {boolean}
-         */
         closeRegistration: function () {
             if (!AGP.lobby || typeof AGP.lobby.close !== 'function') {
                 AGP.log('Game Manager: Lobby not available, cannot close registration.');
@@ -133,11 +92,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return AGP.lobby.close();
         },
 
-        /**
-         * تشغيل اللعبة المحمَّلة حالياً. تفويض مباشر لـ
-         * AGP.gameEngine.start().
-         * @returns {boolean}
-         */
         startGame: function () {
             if (!AGP.gameEngine || typeof AGP.gameEngine.start !== 'function') {
                 AGP.log('Game Manager: Game Engine not available, cannot start game.');
@@ -146,11 +100,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return AGP.gameEngine.start();
         },
 
-        /**
-         * إيقاف اللعبة الجارية حالياً. تفويض مباشر لـ
-         * AGP.gameEngine.stop().
-         * @returns {boolean}
-         */
         stopGame: function () {
             if (!AGP.gameEngine || typeof AGP.gameEngine.stop !== 'function') {
                 AGP.log('Game Manager: Game Engine not available, cannot stop game.');
@@ -159,14 +108,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return AGP.gameEngine.stop();
         },
 
-        /**
-         * إعادة ضبط الجلسة الحالية. لا توجد دالة "إعادة ضبط" في أي وحدة
-         * أصلية؛ الآلية الوحيدة الموجودة أصلاً هي حدث `game:reset` نفسه
-         * (الذي تطلقه لعبة الروليت عن نفسها، ويستمع له Round Manager
-         * وLobby أصلاً). هذه الدالة تُطلِق نفس الحدث الموجود، ولا تخترع
-         * أي آلية إعادة ضبط جديدة.
-         * @returns {boolean}
-         */
         resetSession: function () {
             if (!AGP.events || typeof AGP.events.emit !== 'function') {
                 AGP.log('Game Manager: Event Bus not available, cannot reset session.');
@@ -177,10 +118,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return true;
         },
 
-        /**
-         * جلب حالة اللوبي الحالية. تفويض مباشر لـ AGP.lobby.getLobbyState().
-         * @returns {string|null}
-         */
         getLobbyState: function () {
             if (!AGP.lobby || typeof AGP.lobby.getLobbyState !== 'function') {
                 return null;
@@ -188,10 +125,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return AGP.lobby.getLobbyState();
         },
 
-        /**
-         * جلب حالة الجولة الحالية. تفويض مباشر لـ AGP.roundManager.getState().
-         * @returns {string|null}
-         */
         getRoundState: function () {
             if (!AGP.roundManager || typeof AGP.roundManager.getState !== 'function') {
                 return null;
@@ -199,11 +132,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return AGP.roundManager.getState();
         },
 
-        /**
-         * جلب قائمة اللاعبين الحاليين. تفويض مباشر لـ
-         * AGP.player.getAllPlayers().
-         * @returns {Array<Object>}
-         */
         getPlayers: function () {
             if (!AGP.player || typeof AGP.player.getAllPlayers !== 'function') {
                 return [];
@@ -211,11 +139,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return AGP.player.getAllPlayers();
         },
 
-        /**
-         * جلب عدد اللاعبين الحاليين. تفويض مباشر لـ
-         * AGP.player.getPlayersCount().
-         * @returns {number}
-         */
         getPlayersCount: function () {
             if (!AGP.player || typeof AGP.player.getPlayersCount !== 'function') {
                 return 0;

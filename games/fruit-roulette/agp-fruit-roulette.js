@@ -415,15 +415,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         startRoundTimerInterval();
     }
 
-    /* ============ قائمة اللاعبين (مصدرها AGP الحي — لا إدخال يدوي) ============
-       ⚠️ إصلاح بگ حقيقي: الإصدار القديم كان يثبّت لون كل لاعب حسب ترتيب
-       انضمامه (PALETTE[index % 6])، بدون أي اعتبار لمن يجاوره فعلياً
-       بالعجلة. بعد إقصاءات متتالية، ترتيب "من يجاور من" يتغيّر، فيصير
-       فيه احتمال حقيقي إن لاعبين متجاورين ينتهي بهم المطاف بنفس الرقم
-       المعياري (index % 6) فنفس اللون. الحل: نحسب الألوان من جديد في كل
-       رسم بناءً على الترتيب الحالي الفعلي بـ_alive، مع ضمان صريح إن كل
-       لون يختلف عن جاره السابق وعن أول لون بالحلقة (لتغطية التفاف
-       العجلة بين آخر قطعة وأولها). */
+    // قائمة اللاعبين (مصدرها AGP الحي -- لا إدخال يدوي). الألوان تُحسب من
+    // جديد بكل رسم بناءً على الترتيب الحالي الفعلي بـ_alive (بدل تثبيتها
+    // حسب ترتيب الانضمام)، مع ضمان أن كل لون يختلف عن جاره وعن أول لون
+    // بالحلقة (يغطي التفاف العجلة بين آخر قطعة وأولها) -- وإلا بعد
+    // إقصاءات متتالية قد ينتهي بلاعبين متجاورين نفس اللون.
     var _colorsByIndex = [];
     function recomputeColors() {
         var n = _alive.length;
@@ -475,11 +471,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     : '<span>' + escapeHtml(p.name || p.id) + '</span>';
                 row.appendChild(cardWrap);
 
-                // ⚠️ X حذف مباشر ونهائي من المباراة كاملة (يستدعي نفس
-                // AGP.player.removePlayer المستخدَمة بشاشة الإعدادات
-                // المشتركة — راجع player:removed listener بالأسفل، هو
-                // من يحدّث الواجهة فعلياً بعد الحذف). لو حاب يرجع، لازم
-                // يدخل من جديد عبر "إضافة لوبي جديد" + الكلمة المفتاحية.
+                // X حذف مباشر ونهائي من المباراة كاملة؛ للرجوع لازم يدخل
+                // من جديد عبر "إضافة لوبي جديد" + الكلمة المفتاحية.
                 var removeBtn = document.createElement('button');
                 removeBtn.type = 'button';
                 removeBtn.className = 'fr-lobby-remove-btn';
@@ -512,8 +505,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         playClick();
     }
 
-    /* ============ إقصاء لاعب من المباراة (محلي فقط — لا يمس قائمة AGP
-       العامة) — يُنقَل لقائمة _eliminated القابلة للإنعاش بالدعم. ============ */
+    // إقصاء لاعب من المباراة (محلي فقط -- لا يمس قائمة AGP العامة)،
+    // يُنقَل لقائمة _eliminated القابلة للإنعاش بالدعم.
     function eliminateFromMatch(player) {
         _alive = _alive.filter(function (p) { return p.id !== player.id; });
         _eliminated.push({ player: player });
@@ -533,8 +526,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         showGiftReviveCard(entry.player);
     }
 
-    // ⚠️ [0.46.0]-إقتباس: بطاقة عائمة منفصلة (مو toast نصي عادي) — أفاتار
-    // المُنعَش + نص، تختفي تلقائياً. نفس فكرة روليت الإقصاء بالضبط.
+    // بطاقة عائمة منفصلة (مو toast نصي عادي) -- أفاتار المُنعَش + نص،
+    // تختفي تلقائياً.
     function showGiftReviveCard(player) {
         if (!frToastWrap) return;
         var card = document.createElement('div');
@@ -545,10 +538,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         window.setTimeout(function () { if (card.parentNode) card.parentNode.removeChild(card); }, 4200);
     }
 
-    // ⚠️ حذف إداري حقيقي (زر 🗑️ بشاشة الإعدادات أثناء المباراة —
-    // js/agp-game-shell.js عبر AGP.player.removePlayer، يبث player:removed)
-    // — منفصل تماماً عن إقصاء اللعبة نفسها (صندوق الشخصية الخفية)،
-    // ويتحقق من كلتا القائمتين (أحياء + مُقصَون قابلون للإنعاش).
+    // حذف إداري حقيقي (زر 🗑️ بشاشة الإعدادات أثناء المباراة) -- منفصل
+    // تماماً عن إقصاء اللعبة نفسها، يتحقق من كلتا القائمتين (أحياء +
+    // مُقصَون قابلون للإنعاش).
     function handlePlayerRemoved(removedPlayer) {
         if (!removedPlayer || !removedPlayer.id) return;
 
@@ -571,11 +563,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         checkGameOver();
     }
 
-    // ⚠️ إصلاح خلل حقيقي: انضمام لاعب أثناء مباراة نشطة (عبر "إضافة لوبي
-    // جديد" بشاشة الإعدادات) كان يُسجَّل بسجل المنصة العام لكن ما يدخل
-    // فعلياً لقائمة اللعبة ولا العجلة — لم يكن فيه أي استماع لهذا الحدث
-    // إطلاقاً. الإصلاح: نتحقق أن مباراة فعلاً نشطة وأن اللاعب مو موجود
-    // مسبقاً (لا بالأحياء ولا بالمُقصَين القابلين للإنعاش)، ثم نضيفه فوراً.
+    // انضمام لاعب أثناء مباراة نشطة (عبر "إضافة لوبي جديد") -- يتحقق أن
+    // اللاعب مو موجود مسبقاً (لا بالأحياء ولا بالمُقصَين)، ثم يضيفه فوراً.
     function handlePlayerJoined(newPlayer) {
         if (!_matchActive || !newPlayer || !newPlayer.id) return;
 
@@ -605,10 +594,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         playClick();
     }
 
-    /* ⚠️ أسماء أفقية بحتة: نحسب موقع كل اسم بمثلثات (نفس صيغة حلقة
-       اللمبات بـbuildBulbs) بدل تدوير النص نفسه — فيبقى أفقياً 100%
-       بغض النظر عن موقعه حول محيط العجلة. حجم الخط يصغر تلقائياً كل ما
-       زاد عدد اللاعبين (تقليل التزاحم). */
+    // أسماء أفقية بحتة: نحسب موقع كل اسم بمثلثات بدل تدوير النص نفسه، فيبقى
+    // أفقياً 100% بغض النظر عن موقعه حول محيط العجلة.
     function labelFontSizeFor(n) {
         if (n <= 6) return '0.95rem';
         if (n <= 10) return '0.82rem';
@@ -721,9 +708,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }, 4650);
     }
 
-    /* ============ نافذة صندوق الفواكه ============
-       ⚠️ رقم كل صندوق (١-٤) ثابت بترتيب موضعه، وهو نفسه الرقم المطلوب
-       كتابته بشات البث. لا علاقة للرقم بمحتوى الصندوق (آمن/خفي). */
     function pickSafeFruits(count) {
         var pool = SAFE_FRUITS.slice().sort(function () { return Math.random() - 0.5; });
         var picked = [];
@@ -740,9 +724,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         resultText.textContent = '';
         continueBtn.hidden = true;
         _crateResolved = false;
-        // ⚠️ صف الإقصاء اليدوي/الإغلاق بدون إقصاء متاح من لحظة فتح
-        // النافذة، ويُخفى تلقائياً بمجرد ما يُفتح أي صندوق (راجع
-        // handleCrateClick/resolveCrateSelection).
+        // صف الإقصاء اليدوي/الإغلاق بدون إقصاء متاح من لحظة فتح النافذة،
+        // ويُخفى تلقائياً بمجرد ما يُفتح أي صندوق.
         if (frManualActions) frManualActions.hidden = false;
 
         var hiddenCount = Math.min(eliminationLevel, CRATE_COUNT - 1);
@@ -808,12 +791,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         fruitOverlay.classList.add('active');
     }
 
-    /**
-     * ⚠️ نقطة دخول واحدة لكلا مدخلي الاختيار (نقرة يدوية أو رقم بالشات)
-     * — تُستدعى فقط بفهرس الصندوق (0-based)، بعد التحقق من الهوية إن كان
-     * المصدر شات البث (راجع wireCommentListener أدناه).
-     * @param {number} index
-     */
+    // نقطة دخول واحدة لكلا مدخلي الاختيار (نقرة يدوية أو رقم بالشات).
     function resolveCrateSelection(index) {
         if (_crateResolved || !_crateData[index]) return;
         var crateEl = crateGrid.querySelector('.crate[data-index="' + index + '"]');
@@ -842,9 +820,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 if (liveRegion) liveRegion.textContent = 'تم إقصاء ' + playerLabel(eliminatedPlayer) + '.';
                 crateResult.classList.add('show');
 
-                // ⚠️ إقصاء تلقائي بلا أي تأكيد يدوي من المضيف — رسالة
-                // النتيجة تظهر 1.6 ثانية (يكفي البث يقرأها) ثم يُنفَّذ
-                // الإقصاء فعلياً وتُغلَق النافذة تلقائياً.
+                // إقصاء تلقائي بلا تأكيد يدوي -- رسالة النتيجة تظهر 1.6
+                // ثانية ثم يُنفَّذ الإقصاء وتُغلَق النافذة تلقائياً.
                 window.setTimeout(function () {
                     eliminateFromMatch(eliminatedPlayer);
                     closeFruitPopup();
@@ -860,12 +837,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }, 650);
     }
 
-    /**
-     * ⚠️ إقصاء يدوي مباشر من المضيف — بدون فتح أي صندوق إطلاقاً. متاح
-     * فقط طول ما النافذة مفتوحة وقبل أي اختيار (نفس شرط _crateResolved
-     * المستخدَم بالاختيار العادي، عشان ما يتصادم مع اختيار متزامن جاي
-     * من الشات بنفس اللحظة).
-     */
+    // إقصاء يدوي مباشر من المضيف -- بدون فتح أي صندوق. يتشارك شرط
+    // _crateResolved مع الاختيار العادي حتى لا يتصادم مع اختيار متزامن
+    // جاي من الشات بنفس اللحظة.
     function handleManualEliminate() {
         if (_crateResolved || !_activeWinner) return;
         _crateResolved = true;
@@ -876,11 +850,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         closeFruitPopup();
     }
 
-    /**
-     * ⚠️ إغلاق يدوي بدون إقصاء — يرجّع لشاشة العجلة مباشرة، اللاعب يبقى
-     * بالمباراة عادي (يشتغل حتى قبل فتح أي صندوق، بعكس زر "متابعة اللعب"
-     * القديم اللي يظهر فقط بعد كشف صندوق آمن).
-     */
+    // إغلاق يدوي بدون إقصاء -- يرجّع لشاشة العجلة مباشرة، اللاعب يبقى
+    // بالمباراة عادي (يشتغل حتى قبل فتح أي صندوق).
     function handleManualClose() {
         if (_crateResolved) return; // بعد كشف صندوق، الإغلاق يصير عبر continueBtn فقط
         playClick();
@@ -892,18 +863,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _activeWinner = null;
         _crateData = [];
         onFruitPopupClose();
-        // ⚠️ إعادة ضبط دوران العجلة لنقطة الصفر بعد إغلاق أي نافذة اختيار
-        // (بأي زر: متابعة/إقصاء تلقائي/إقصاء يدوي/إغلاق بدون إقصاء) —
-        // طلب صريح لتقليل الإحساس البصري بتكرار نفس الاسم عدة مرات ورا
-        // بعض. هذا يمس فقط زاوية البداية البصرية؛ اختيار الفائز التالي
-        // يبقى عشوائياً بالكامل وبمعزل تام (Math.random() بدالة spin) —
-        // صفر خطر تصادم بين الاسم المعروض والاسم الفائز فعلياً.
+        // إعادة ضبط دوران العجلة لنقطة الصفر بعد إغلاق أي نافذة اختيار --
+        // يمس فقط زاوية البداية البصرية؛ اختيار الفائز التالي يبقى
+        // عشوائياً بالكامل (Math.random() بدالة spin).
         _currentRotation = 0;
         snapWheelTo(0);
         currentTurnName.textContent = '—';
     }
 
-    /* ============ الاستماع لشات البث — رقم الصندوق فقط من صاحب الدور ============ */
+    // الاستماع لشات البث -- رقم الصندوق فقط من صاحب الدور.
     function wireCommentListener() {
         _commentUnsub = AGP.events.on('stream:commentReceived', function (payload) {
             if (!_activeWinner || _crateResolved || !payload || typeof payload.text !== 'string') return;
@@ -918,8 +886,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    /* ============ الإنعاش عن طريق الدعم — عبر حدث stream:giftReceived
-       الموجود أصلاً (نفس آلية روليت الإقصاء بالضبط). ============ */
+    // الإنعاش عن طريق الدعم -- عبر حدث stream:giftReceived.
     function wireGiftListener() {
         _giftUnsub = AGP.events.on('stream:giftReceived', function (payload) {
             var settings = liveSettings();
@@ -932,10 +899,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             })[0];
             if (!entry) return;
 
-            // ⚠️ [0.66.0] المباراة خلصت فعلياً (حتى بعد مهلة
-            // FINAL_ELIMINATION_GIFT_GRACE_MS الجديدة بـcheckGameOver) قبل
-            // ما توصل هذي الهدية — نوضّح للمضيف إنها وصلت متأخر بدل ما
-            // تختفي بصمت تام بدون أي أثر.
+            // المباراة خلصت فعلياً قبل ما توصل هذي الهدية -- نوضّح للمضيف
+            // إنها وصلت متأخر بدل ما تختفي بصمت.
             if (!_matchActive) {
                 showToast('🎁 وصلت هدية إنعاش لـ' + playerLabel(entry.player) + ' بعد ما خلصت المباراة');
                 return;
@@ -959,12 +924,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return match.label + ' · ' + giftCoinsText(match);
     }
 
-    /**
-     * نافذة اختيار الهدية — مبنية مسبقاً بـHTML (خارج #frGameRoot عمداً،
-     * راجع index.html) عشان تكون متاحة من شاشة الإعدادات الأولى قبل بدء
-     * أي مباراة. z-index أعلى من #agp-shell-overlay (99999) بـstyle.css
-     * — بدونه الضغط على الهدايا ما يشتغل لو فُتحت من داخل شاشة الإعدادات.
-     */
+    // نافذة اختيار الهدية -- مبنية مسبقاً بـHTML (خارج #frGameRoot عمداً)
+    // عشان تكون متاحة من شاشة الإعدادات الأولى. z-index أعلى من
+    // #agp-shell-overlay بـstyle.css -- بدونه الضغط ما يشتغل من داخل
+    // شاشة الإعدادات.
     function openGiftPickerModal(currentValue) {
         if (!frGiftPickerOverlay || !frGiftGrid) return;
 
@@ -990,22 +953,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         frGiftPickerOverlay.classList.add('active');
     }
 
-    /* ============ نهاية اللعبة / الفائز ============ */
     function checkGameOver() {
         if (_alive.length === 1) {
-            // ⚠️ [0.66.0] هذا الإقصاء قد يكون الأخير (سينهي المباراة). قبل
-            // هذا الإصلاح كان endMatch() يُستدعى فوراً بلا أي مهلة — أي
-            // هدية إنعاش "بالطريق" (وصلت فعلياً من المُرسِل لكن لسا ما
-            // وصلت عندنا بسبب تأخير شبكة/تيك توك طبيعي) كانت تضيع حتماً
-            // بصفر فرصة (استدعاء متزامن كامل، بلا أي نقطة انتظار إطلاقاً).
-            // الآن ننتظر FINAL_ELIMINATION_GIFT_GRACE_MS أولاً — مستمع
-            // الهدايا (wireGiftListener) يبقى شغّالاً طول هذي المهلة بلا
-            // أي تعديل عليه (المباراة لسا _matchActive = true)، فلو وصلت
-            // هدية إنعاش صحيحة لنفس اللاعب المُقصى للتو خلالها،
-            // revivePlayerByEntry الموجودة أصلاً ترجعه تلقائياً لـ_alive.
-            // نعيد فحص _alive.length هنا بعد المهلة: لو رجع لاعب (صار
-            // العدد أكثر من 1)، لا نسوي شيء — اللعبة تكمل بحالتها الحالية
-            // عادي؛ لو لا، تُعلَن النتيجة كما كانت من قبل بالضبط.
+            // هذا الإقصاء قد يكون الأخير. ننتظر FINAL_ELIMINATION_GIFT_GRACE_MS
+            // أولاً -- مستمع الهدايا يبقى شغّالاً طول هذي المهلة (المباراة
+            // لسا _matchActive = true)، فلو وصلت هدية إنعاش صحيحة لنفس
+            // اللاعب المُقصى للتو خلالها، revivePlayerByEntry ترجعه
+            // تلقائياً لـ_alive قبل ما نعيد فحص الطول هنا.
             window.setTimeout(function () {
                 if (_alive.length === 1) {
                     endMatch(_alive[0]);
@@ -1026,9 +980,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (typeof _giftUnsub === 'function') { _giftUnsub(); _giftUnsub = null; }
 
         var durationMs = _startedAt ? (Date.now() - _startedAt) : 0;
-        // ⚠️ ثلاث حالات محتملة لنتيجة النقاط — راجع openWinnerModal:
-        // null = تعذّر الاتصال بخادم النقاط، {} = نجح لكن بلا مطابقة
-        // لهذا اللاعب (لا حساب مرتبط)، {added, totalPoints} = نجح فعلياً.
+        // ⚠️ ثلاث حالات يقرأها openWinnerModal: null = تعذّر الاتصال
+        // بخادم النقاط، {} = نجح بلا مطابقة حساب، {added,totalPoints} = نجح فعلياً.
         var pointsPromise = Promise.resolve(null);
 
         if (window.AGPAuth && typeof window.AGPAuth.reportRoundCompletion === 'function') {
@@ -1088,19 +1041,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         playChime();
     }
 
-    /**
-     * ⚠️ فيديو احتفالي — أساس فقط لو الملف غير مرفوع بعد
-     * (games/fruit-roulette/folder_images/winner_video.mp4)، وإلا الصندوق
-     * كامل يختفي تلقائياً (onerror مربوط مرة وحدة بـinitStaticUi عبر
-     * setupWinnerVideo) — صفر مساحة فاضية أو أيقونة مكسورة بالواجهة.
-     * لو موجود: يتكرر باستمرار (loop) وبصوت مسموع، ويستمر لحد ما المضيف
-     * يضغط أي زر من أزرار بطاقة الفائز الثلاثة (راجع closeWinnerModal —
-     * تُستدعى من الثلاثة كلهم: rematchRound/newGame/winnerHomeBtn).
-     * ⚠️ محاولة تشغيل بصوت غير مكتوم أولاً؛ لو المتصفح رفض (سياسة
-     * autoplay بدون تفاعل مسبق — نادر هنا لأن المضيف أصلاً تفاعل مع
-     * الصفحة كثير قبل ما توصل لهذي اللحظة)، نتراجع لتشغيل مكتوم كحل
-     * احتياطي بدل ما الفيديو ما يشتغل إطلاقاً.
-     */
+    // فيديو احتفالي -- لو الملف غير مرفوع، الصندوق كامل يختفي تلقائياً
+    // (onerror). لو موجود، يتكرر بصوت مسموع لحد ما المضيف يضغط زر من
+    // أزرار بطاقة الفائز.
     function setupWinnerVideo() {
         if (!winnerVideo || !winnerVideoWrap) return;
         winnerVideo.addEventListener('error', function () {
@@ -1116,8 +1059,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var playPromise = winnerVideo.play();
             if (playPromise && typeof playPromise.catch === 'function') {
                 playPromise.catch(function () {
-                    // رفض المتصفح التشغيل بصوت — نتراجع لمكتوم عشان الفيديو
-                    // على الأقل يشتغل بصرياً بدل ما يتوقف كلياً.
+                    // رفض المتصفح التشغيل بصوت (سياسة autoplay) -- نتراجع
+                    // لمكتوم بدل ما الفيديو يتوقف كلياً.
                     winnerVideo.muted = true;
                     winnerVideo.play().catch(function () {});
                 });

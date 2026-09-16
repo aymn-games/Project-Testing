@@ -1,39 +1,21 @@
 /**
- * ==========================================================================
- *  AGP ENTRANCE — أنيميشن "الدخولية" للاعبين المميَّزين (لوبي فقط)
- * ==========================================================================
+ * AGP ENTRANCE — "entrance" intro animation for players with one active
+ * (backend/collectibles: user_entrances). Player joins with
+ * player.entrance set -> large intro banner for a few seconds (PLAY_MS)
+ * -> fades and settles into a small permanent glowing badge for as long
+ * as they stay, removed automatically when they leave.
  *
- * ⚠️ [0.44.4] ملف جديد كلياً — أول ربط فعلي لنظام الدخوليات
- * (backend/collectibles/collectibles-service.js: user_entrances) بأي
- * واجهة لعبة. النظام كان مبنياً بالكامل بالباك إند + لوحة الأدمن منذ
- * [0.37.0] (يمكن للأدمن يعيّن دخولية لأي مستخدم من admin.html)، لكن ما
- * كان فيه أي كود بأي لعبة يستهلكها أو يعرضها — هذا الملف يسدّ تلك
- * الفجوة بالضبط.
+ * The 4 visual templates (gold/neon/fire/ice) match
+ * entrance-animations-preview.html exactly (colors/timing/sequence),
+ * already reviewed and approved separately — not reinvented here.
  *
- * التصميم البصري (4 نماذج: gold/neon/fire/ice) مأخوذ حرفياً من ملف
- * المعاينة التجريبية `entrance-animations-preview.html` المُسلَّم
- * سابقاً لصاحب المشروع للمراجعة والموافقة عليه (نفس الألوان، التوقيت،
- * وتسلسل الحركة بالضبط) — لا تصميم جديد اختُرع هنا.
+ * Scoped deliberately: only runs if #agp-entrance-stage and
+ * #agp-entrance-settled-list exist on the page (currently only the main
+ * lobby screen, js/agp-game-shell.js: renderLobbyScreen). Silently no-ops
+ * elsewhere — no manual wiring needed per page.
  *
- * السلوك: لاعب ينضم وله دخولية مفعَّلة (player.entrance من بيانات
- * الانضمام، تصل أصلاً عبر tiktok-connector.js →
- * agp-tiktok-adapter.js → AGP.player.addPlayer) → بانر دخول كبير
- * لبضع ثوانٍ (راجع PLAY_MS) → يختفي ويستقر تلقائياً كبطاقة صغيرة دائمة
- * (توهج مستمر) تفضل طول بقاء اللاعب، وتُزال تلقائياً لو خرج.
- *
- * ⚠️ نطاق متعمَّد: يعمل فقط لو موجود بالصفحة عنصرا الحاويتين الثابتين
- *   (#agp-entrance-stage للبانر، #agp-entrance-settled-list للبطاقات
- *   المستقرة) — حالياً هذول موجودان فقط بشاشة "اللوبي — بانتظار
- *   اللاعبين" الرئيسية (js/agp-game-shell.js: renderLobbyScreen)، بنفس
- *   منطق "الإطار يظهر باللوبي حصراً" المُتَّبع أصلاً بـ
- *   js/agp-player-card.js. لا حاجة أي ربط يدوي إضافي — الملف يبحث عن
- *   الحاويتين بأمان بكل مرة (id ثابت)، ولو مو موجودتين (شاشة ثانية،
- *   أو أثناء الجولة نفسها) يتجاهل بصمت.
- *
- * يعتمد على js/agp-core.js (لـ AGP.events) وjs/agp-player-manager.js
- * (أحداث player:joined/player:removed/player:listReset) فقط — لا
- * اعتماد على أي لعبة أو AGP.gameShell مباشرة.
- * ==========================================================================
+ * Requires js/agp-core.js and js/agp-player-manager.js (player:joined/
+ * removed/listReset events) only.
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -50,7 +32,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     var VALID_TEMPLATES = { gold: true, neon: true, fire: true, ice: true };
 
-    // ⚠️ نفس التوقيت بالضبط من entrance-animations-preview.html (playMs لكل نموذج)
+    // Matches entrance-animations-preview.html's playMs per template exactly
     var PLAY_MS = { gold: 4300, neon: 3800, fire: 3900, ice: 4300 };
 
     function el(id) { return document.getElementById(id); }
@@ -161,12 +143,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         document.head.appendChild(style);
     }
 
-    // playerId -> عنصر البطاقة المستقرة (لحذفها لو خرج اللاعب)
-    var _settledByPlayerId = {};
+    var _settledByPlayerId = {}; // playerId -> badge element
 
     function settleBadge(player, templateKey) {
         var list = el(LIST_ID);
-        if (!list) return; // خرجنا من شاشة اللوبي أثناء تشغيل البانر — لا شيء يُعرض، آمن
+        if (!list) return; // left the lobby screen while the banner was playing
         var badge = document.createElement('span');
         badge.className = 'agp-entrance-settled agp-entrance-settled-' + templateKey;
         badge.setAttribute('data-agp-entrance-player-id', escapeHtml(String(player.id)));
@@ -187,11 +168,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function playEntrance(player) {
         var stage = el(STAGE_ID);
-        if (!stage) return; // مو داخل شاشة اللوبي الرئيسية حالياً — تجاهل بصمت (راجع تعليق النطاق أعلى الملف)
+        if (!stage) return; // not on the main lobby screen right now
 
         var entrance = player && player.entrance;
         var templateKey = entrance && entrance.templateKey;
-        if (!VALID_TEMPLATES[templateKey]) return; // بدون دخولية مفعَّلة، أو قيمة غير معروفة
+        if (!VALID_TEMPLATES[templateKey]) return; // no active entrance, or unknown value
 
         injectStyles();
 
@@ -212,7 +193,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</span>';
 
         stage.appendChild(box);
-        void box.offsetWidth; // إجبار إعادة رسم قبل إضافة كلاس التشغيل، عشان الأنيميشن يبدأ من الصفر دائماً
+        void box.offsetWidth; // force reflow so the animation always restarts from 0
         box.classList.add('play');
 
         var duration = PLAY_MS[templateKey] || 4000;
@@ -238,20 +219,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     AGP.playerEntrance = {
         /**
-         * ⚠️ [0.44.4] مزامنة البطاقات المستقرة مع القائمة الحالية —
-         * تُستدعى مرة وحدة كل ما تُبنى شاشة اللوبي من الصفر (راجع
-         * agp-game-shell.js: renderLobbyScreen). تغطي حالة اللاعبين
-         * اللي انضموا *قبل* فتح شاشة اللوبي (مثلاً وقت شاشة الإعدادات)
-         * — ما ياخذون بانر الدخول الكبير (فاتهم أصلاً)، لكن يظهر لهم
-         * مباشرة البطاقة المستقرة بدون ما يضيع تأثير الدخولية كلياً.
-         * آمنة تُستدعى بأي وقت — تتجاهل لاعب بدون دخولية بصمت.
-         * @param {Array<Object>} players - AGP.gameManager.getPlayers() الحالية
+         * Syncs settled badges with the current player list. Called once
+         * whenever the lobby screen is rebuilt (agp-game-shell.js:
+         * renderLobbyScreen), to cover players who joined before the
+         * lobby screen was open (they missed the big intro banner but
+         * still get the settled badge).
+         * @param {Array<Object>} players - current AGP.gameManager.getPlayers()
          */
         syncSettled: function (players) {
             var list = el(LIST_ID);
             if (!list) return;
             (players || []).forEach(function (player) {
-                if (!player || _settledByPlayerId[player.id]) return; // موجودة أصلاً أو بانر شغّال حالياً
+                if (!player || _settledByPlayerId[player.id]) return; // already settled or banner in progress
                 var templateKey = player.entrance && player.entrance.templateKey;
                 if (!VALID_TEMPLATES[templateKey]) return;
                 injectStyles();
