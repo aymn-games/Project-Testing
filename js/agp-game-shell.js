@@ -644,9 +644,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function renderConnectingScreen(message) {
         var box = el('agp-shell-box');
-        // ⚠️ [تحديث معايير الواجهة الموحّدة] تصميم مبسّط: سبينر + عنوان
-        // ثابت "جاري الاتصال بالبث" — أو أيقونة تحذير + نص الخطأ الحقيقي
-        // كامل بحالة الفشل (ما نحذفه، مهم وظيفياً للمستخدم).
         var isError = Boolean(message && message.indexOf('تعذّر') !== -1);
         box.className = 'agp-connecting-box' + (isError ? ' agp-conn-error' : '');
         var iconHtml = isError
@@ -665,18 +662,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div class="agp-join-hint"><span class="agp-join-hint-text">عشان تدخل المباراة اكتب بالشات:</span>' +
             '<span class="agp-join-keyword-badge">' + escapeHtml(_lastKeyword) + '</span>' +
             '<span id="agp-lobby-count"></span></div>' +
-            // ⚠️ [0.44.4] حاويتا الدخولية (بانر دخول كبير مؤقت + بطاقات
-            // مستقرة صغيرة دائمة) — راجع js/agp-entrance.js. فارغتان
-            // افتراضياً، الملف يملؤهما فقط لو انضم لاعب له دخولية مفعَّلة.
+            // Entrance containers (intro banner + settled badges), filled by
+            // js/agp-entrance.js only for players with an active entrance.
             '<div id="agp-entrance-stage"></div>' +
             '<div id="agp-entrance-settled-list"></div>' +
             '<ul class="agp-shell-player-list" id="agp-lobby-list"></ul>' +
             '<button class="agp-shell-btn-connect" id="agp-start-round-btn">انهاء وبدء الجولة</button>';
 
         renderLobbyPlayerList();
-        // ⚠️ [0.44.4] بطاقات مستقرة فورية لأي لاعب انضم قبل فتح هذي
-        // الشاشة (راجع AGP.playerEntrance.syncSettled). ما يشغّل بانر
-        // الدخول الكبير لهم (فاتهم أصلاً) — فقط البطاقة الصغيرة الدائمة.
         if (AGP.playerEntrance) AGP.playerEntrance.syncSettled(AGP.gameManager.getPlayers());
         document.getElementById('agp-start-round-btn').onclick = handleStartRoundClick;
     }
@@ -774,20 +767,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.events.on('stream:statusChanged', function (payload) {
             if (payload.platform !== 'tiktok') return;
 
-            // ⚠️ إصلاح خلل حقيقي: هذا المستمع كان يعيد عرض شاشة اللوبي
-            // الأولى (renderLobbyScreen — وفيها زر "انهاء وبدء الجولة"
-            // اللي يستدعي onStartRound من جديد) عند أي "connected" واردة،
-            // **حتى لو المباراة شغّالة أصلاً**. وصول "connected" مرة ثانية
-            // منتصف مباراة شائع فعلياً: إعادة اتصال تلقائية بتيك توك بعد
-            // انقطاع مؤقّت (tiktok-connector.js)، أو حتى إعادة اتصال
-            // قناة WebSocket بيننا وبين الباك إند نفسها (agp-tiktok-adapter.js).
-            // لو صادف هذا وقت كانت شاشة الإعدادات مفتوحة (مثلاً الاستريمر
-            // فاتحها عشان يضيف لاعب جديد عبر "فتح التسجيل")، كانت تُستبدَل
-            // فجأة بشاشة اللوبي الأولى، وضغط "انهاء وبدء الجولة" ظناً إنه
-            // المسار الصحيح لإضافة لاعب كان يصفّر المباراة بالكامل (كل
-            // اللاعبين، حتى المُقصَون، يرجعون للعجلة). بعد بدء الجولة،
-            // نتجاهل أي تغيّر بحالة الاتصال هنا تماماً — الاتصال نفسه
-            // يُدار بالخلفية بشكل مستقل، ولا داعي لأي شاشة تتفاعل معه.
+            // Ignore connection status changes entirely once the round has
+            // started: a "connected" event can legitimately re-fire mid-match
+            // (TikTok auto-reconnect, or our own WebSocket reconnecting to the
+            // backend) — reacting to it would replace whatever screen is open
+            // (e.g. settings, opened to add a player) with the initial lobby
+            // screen, and pressing its "start round" button again would reset
+            // the whole match.
             if (_roundStarted) {
                 AGP.log('Game Shell: ignoring stream:statusChanged("' + payload.status + '") — round already started.');
                 return;
@@ -803,8 +789,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             renderSettingsPlayerList();
             renderMiniLobbyList();
         });
-        // ⚠️ [0.44.0] حذف لاعب (زر 🗑️ بقائمة الإعدادات) يبث player:removed
-        // — لازم نعيد رسم نفس القوائم الثلاث لتحديث العدّاد والقائمة فوراً.
         AGP.events.on('player:removed', function () {
             renderLobbyPlayerList();
             renderSettingsPlayerList();
@@ -816,14 +800,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         init: init,
         getSettings: function () { return Object.assign({}, _settingsValues); },
 
-        /**
-         * ⚠️ [0.44.0] يسمح للعبة بتحديث قيمة إعداد واحد من خارج الشاشة
-         * العامة (مثلاً بعد اختيار من نافذة مخصَّصة تبنيها اللعبة نفسها،
-         * راجع field.type === 'modal-trigger' أعلاه)، ثم يُعاد رسم شاشة
-         * الإعدادات فوراً لتعكس القيمة الجديدة على الزر.
-         * @param {string} key
-         * @param {*} value
-         */
+        /** Lets a game update a setting from outside this file (e.g. after a
+         * modal-trigger field's custom modal), re-rendering settings to match. */
         setSetting: function (key, value) {
             _settingsValues[key] = value;
             if (_overlayEl && _overlayEl.style.display !== 'none') {
