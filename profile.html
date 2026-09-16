@@ -7,7 +7,7 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #060609; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
     #__bundler_loading { position: fixed; bottom: 20px; right: 20px; font: 13px/1.4 -apple-system, BlinkMacSystemFont, sans-serif; color: #666; background: #fff; padding: 8px 14px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.12); z-index: 10000; }
-    #__bundler_thumbnail { display: none; position: fixed; inset: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: #060609; z-index: 9999; }
+    #__bundler_thumbnail { position: fixed; inset: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #060609; z-index: 9999; }
     #__bundler_thumbnail svg { width: 100%; height: 100%; object-fit: contain; }
     #__bundler_placeholder { color: #999; font-size: 14px; }
   </style>
@@ -647,6 +647,44 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
     }
 
+    /* ---- [جديد] زر حذف الحساب الذاتي — كل مستخدم يقدر يحذف حسابه هو
+       بس (requireAuth فقط بالباك-إند، بدون requireAdmin) — راجع
+       handleDeleteMyAccount بـauth-router.js. تأكيد مزدوج (اكتب كلمة
+       + confirm) لأنه إجراء نهائي بلا رجعة. ---- */
+    if (isOwner && !document.querySelector('[data-delete-account-btn]')) {
+      var topRightBoxDel = heading ? heading.parentElement.parentElement.parentElement : null;
+      if (topRightBoxDel) {
+        var delBtn = document.createElement('button');
+        delBtn.setAttribute('data-delete-account-btn', '1');
+        delBtn.style.cssText = 'display:block;width:100%;margin-top:10px;padding:9px 18px;border-radius:10px;border:1px solid rgba(224,90,90,.4);background:rgba(224,90,90,.08);color:#e05a5a;font-size:12.5px;font-weight:600;text-align:center;cursor:pointer;';
+        delBtn.textContent = 'حذف الحساب نهائياً';
+        delBtn.addEventListener('click', function(){
+          var typed = window.prompt('هذا الإجراء نهائي ولا يمكن التراجع عنه — كل بياناتك ونقاطك وربط حسابك بتيك توك بتُحذف تماماً.\n\nاكتب كلمة "حذف" بالضبط للتأكيد:');
+          if (typed === null) return;
+          if (typed.trim() !== 'حذف') { window.alert('لم تتطابق الكلمة — تم إلغاء الحذف.'); return; }
+          if (!window.confirm('تأكيد أخير: هل أنت متأكد تماماً من حذف حسابك نهائياً؟')) return;
+          delBtn.disabled = true;
+          delBtn.textContent = 'جارٍ الحذف...';
+          window.AGPAuth.deleteMyAccount().then(function(result){
+            if (result && result.success) {
+              try { window.AGPAuth.logout && window.AGPAuth.logout(); } catch(e) {}
+              try { localStorage.removeItem('agp_auth_token'); localStorage.removeItem('agp_auth_user'); } catch(e) {}
+              window.alert('تم حذف حسابك نهائياً.');
+              window.location.href = 'index.html';
+            } else {
+              delBtn.disabled = false;
+              delBtn.textContent = 'حذف الحساب نهائياً';
+              window.alert('تعذّر حذف الحساب: ' + (result && result.error ? result.error : 'خطأ غير معروف'));
+            }
+          }).catch(function(){
+            delBtn.disabled = false;
+            delBtn.textContent = 'حذف الحساب نهائياً';
+          });
+        });
+        topRightBoxDel.appendChild(delBtn);
+      }
+    }
+
     wireCollectibles();
   }
 
@@ -801,102 +839,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       setTimeout(wireCollectibles, 300);
     }
   }, true);
-
-  // [أداء] نفس السبب المشخَّص بصفحات أخرى بالمنصة: طبقات خلفية متحركة
-  // مموَّهة (v-aurora، v-pulse) + هيدر sticky ببلور (backdrop-filter)
-  // يُعاد رسمه كل إطار تمرير — نوقف الحركة الزخرفية ونستبدل بلور الهيدر
-  // بخلفية شبه معتمة.
-  function applyProfilePerfFix(){
-    var AMBIENT_ANIMS = ['v-aurora', 'v-pulse'];
-    Array.prototype.slice.call(document.querySelectorAll('*')).forEach(function(e){
-      if (e.dataset.ambientDisabled) return;
-      var animName = getComputedStyle(e).animationName;
-      if (AMBIENT_ANIMS.indexOf(animName) !== -1) {
-        e.style.animation = 'none';
-        e.dataset.ambientDisabled = '1';
-      }
-    });
-    var header = document.querySelector('header');
-    if (header && !header.dataset.perfFixed) {
-      header.dataset.perfFixed = '1';
-      header.style.backdropFilter = 'none';
-      header.style.webkitBackdropFilter = 'none';
-      header.style.background = 'rgba(6,6,10,.92)';
-    }
-  }
-  var __perfTries = 0;
-  var __perfTimer = setInterval(function(){
-    __perfTries++;
-    applyProfilePerfFix();
-    if (__perfTries >= 30) clearInterval(__perfTimer);
-  }, 300);
-
-  // [هيدر الجوال] هيدر هذي الصفحة أبسط (رابط الرئيسية + nav فيه
-  // الرئيسية/الألعاب/التصنيف/تسجيل خروج) لكن بلا قائمة جوال — نفس نمط
-  // زر الثلاث شرطات المستخدم بباقي صفحات المنصة.
-  function applyHeaderResponsive(){
-    var w = window.innerWidth;
-    var isMobile = w <= 480;
-    var header = document.querySelector('header');
-    var nav = document.querySelector('nav');
-    if (!header || !nav) return;
-
-    var burger = header.querySelector('[data-burger]');
-    if (isMobile) {
-      nav.style.display = 'none';
-      if (!burger) {
-        burger = document.createElement('button');
-        burger.setAttribute('data-burger', '1');
-        burger.setAttribute('aria-label', 'القائمة');
-        burger.style.cssText = 'flex:none;width:42px;height:42px;border-radius:12px;border:1px solid rgba(178,140,245,.35);background:rgba(122,63,212,.12);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;';
-        for (var bi = 0; bi < 3; bi++) {
-          var line = document.createElement('span');
-          line.style.cssText = 'display:block;width:18px;height:2px;background:#c6b4f2;border-radius:2px;transition:transform .25s,opacity .25s;';
-          burger.appendChild(line);
-        }
-        header.appendChild(burger);
-        burger.addEventListener('click', function(){
-          var panel = document.querySelector('[data-mobile-panel]');
-          var open = panel && panel.style.display !== 'none';
-          if (open) {
-            panel.style.display = 'none';
-            burger.children[0].style.transform = '';
-            burger.children[1].style.opacity = '1';
-            burger.children[2].style.transform = '';
-            return;
-          }
-          if (!panel) {
-            panel = document.createElement('div');
-            panel.setAttribute('data-mobile-panel', '1');
-            panel.style.cssText = 'margin-top:10px;border-radius:20px;border:1px solid rgba(178,140,245,.25);background:linear-gradient(180deg,#1a1526,#0d0b14);box-shadow:0 24px 60px -30px rgba(122,63,212,.6);overflow:hidden;pointer-events:auto;position:relative;z-index:61;';
-            header.insertAdjacentElement('afterend', panel);
-          }
-          panel.innerHTML = '';
-          Array.prototype.slice.call(nav.querySelectorAll('a')).forEach(function(a){
-            var clone = a.cloneNode(true);
-            clone.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:15px 20px;color:#e7e9ee;text-decoration:none;font-size:15px;border-bottom:1px solid rgba(255,255,255,.06);background:transparent;';
-            panel.appendChild(clone);
-          });
-          panel.style.display = 'block';
-          burger.children[0].style.transform = 'translateY(6px) rotate(45deg)';
-          burger.children[1].style.opacity = '0';
-          burger.children[2].style.transform = 'translateY(-6px) rotate(-45deg)';
-        });
-      }
-    } else {
-      nav.style.display = 'flex';
-      if (burger) burger.remove();
-      var existingPanel = document.querySelector('[data-mobile-panel]');
-      if (existingPanel) existingPanel.remove();
-    }
-  }
-  window.addEventListener('resize', applyHeaderResponsive);
-  var __hdrTries = 0;
-  var __hdrTimer = setInterval(function(){
-    __hdrTries++;
-    applyHeaderResponsive();
-    if (__hdrTries >= 30) clearInterval(__hdrTimer);
-  }, 300);
 })();
 </script>
 </body>
