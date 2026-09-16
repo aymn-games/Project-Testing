@@ -1,55 +1,28 @@
 /**
- * ==========================================================================
- *  AGP TIKTOK CONNECTOR — تنفيذ فعلي كامل (يشمل إعادة الاتصال التلقائية)
- * ==========================================================================
- *
- * ⚠️ اتصال حقيقي بخدمة تيك توك الداخلية غير الموثَّقة رسمياً، عبر مكتبة
- *   خارجية واحدة معتمَدة صراحة: `tiktok-live-connector` (الاعتماد
- *   الوحيد في backend/package.json). لا بروتوكول تيك توك مكتوب يدوياً
- *   هنا — هذا الملف طبقة ترجمة فوق المكتبة فقط.
- *
- * يطبّق **نفس شكل الموصِّل بالضبط** الذي يطبّقه
- * platforms/mock/mock-connector.js:
+ * AGP TIKTOK CONNECTOR — اتصال حقيقي بخدمة تيك توك عبر `tiktok-live-connector`.
+ * يطبّق نفس شكل الموصِّل الذي يطبّقه platforms/mock/mock-connector.js:
  *
  *   createTikTokConnector() -> { connect(options, callbacks), disconnect(), isConnected() }
- *
  *   callbacks = {
- *     onStatus(status, message?),   // فقط 'connecting'/'connected'/'error'
- *                                    // من هنا (لا 'disconnected' — تلك
- *                                    // مسؤولية ws-server.js عند تلقّي
- *                                    // رسالة disconnect من المتصفح فقط،
- *                                    // بلا تغيير على هذا العقد).
- *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance }), // ⚠️ [0.44.4] entrance جديد
+ *     onStatus(status, message?),   // فقط 'connecting'/'connected'/'error' من هنا
+ *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance }),
  *     onGift({ id, name, giftName, giftValue, repeatCount }),
  *     onFollow({ id, name }),
- *     onViewerUpdate({ current, totalUsers })   // [0.45.10] اختياري — لو
- *                                                 // ما استقبله الاستدعاء
- *                                                 // (callbacks بلا هذي
- *                                                 // الدالة)، لا يُستمَع
- *                                                 // لحدث roomUser إطلاقاً
+ *     onViewerUpdate({ current, totalUsers })   // اختياري
  *   }
  *
- * لا تعديل على platforms/connector-router.js (يبقى نقطة التبديل الوحيدة
- * كما هي)، ولا على websocket/ws-server.js، ولا على بروتوكول الرسائل.
+ * إعادة الاتصال (Reconnect):
+ *   - انقطاع غير متوقَّع بعد اتصال ناجح -> إعادة محاولة تلقائية بتأخير
+ *     تصاعدي (Exponential Backoff + Jitter)، حتى حد أقصى من المحاولات.
+ *   - فشل الاتصال الأول (يوزرنيم خاطئ/غير مباشر الآن) -> لا إعادة محاولة،
+ *     يُبلَّغ كخطأ فوراً.
+ *   - قطع متعمَّد عبر disconnect() -> لا أي محاولة إعادة اتصال.
  *
- * ⚠️ إعادة الاتصال (Reconnect) — راجع docs/BACKEND_ARCHITECTURE.md §5:
- *   - انقطاع غير متوقَّع (بعد اتصال ناجح فعلاً) -> محاولات إعادة اتصال
- *     تلقائية بتأخير تصاعدي (Exponential Backoff + Jitter)، حتى حد
- *     أقصى من المحاولات، دون أي تدخّل من المتصفح.
- *   - فشل الاتصال الأول (اسم مستخدم خاطئ/غير مباشر الآن) -> لا إعادة
- *     محاولة تلقائية إطلاقاً؛ يُبلَّغ كخطأ فوراً (تجنّباً لقصف خدمة تيك
- *     توك غير الموثَّقة بمحاولات على إعداد خاطئ من الأساس).
- *   - قطع الاتصال المتعمَّد عبر disconnect() -> لا أي محاولة إعادة
- *     اتصال إطلاقاً (يُميَّز صراحة عن الانقطاع غير المتوقَّع).
- *
- * تطبيع الأحداث (محقَّق من الحزمة المثبَّتة فعلياً v2.4.3):
- *   chat   -> data.user.displayId (⚠️ [0.44.3] صُحِّح — راجع تعليق extractUser)،
- *             data.user.nickname, data.content (⚠️ مؤكَّد باختبار حقيقي، ليس data.comment)
+ * تطبيع الأحداث (محقَّق من الحزمة v2.4.3):
+ *   chat   -> data.user.displayId، data.user.nickname، data.content (وليس data.comment)
  *   gift   -> data.user.{displayId,nickname}, data.gift.{name,diamondCount,type}, data.repeatCount, data.repeatEnd
- *             (هدايا قابلة للتسلسل type===1: حدث واحد نهائي فقط عند
- *             repeatEnd، تطابقاً مع سلوك موصِّل المحاكاة).
- *   follow -> WebcastEvent.FOLLOW منفصل تماماً عن SOCIAL/SHARE.
- * ==========================================================================
+ *             (هدايا قابلة للتسلسل type===1: حدث واحد نهائي فقط عند repeatEnd)
+ *   follow -> WebcastEvent.FOLLOW منفصل عن SOCIAL/SHARE.
  */
 
 'use strict';
@@ -61,15 +34,11 @@ var MAX_RECONNECT_ATTEMPTS = 5;
 var BASE_RECONNECT_DELAY_MS = 1000;
 var MAX_RECONNECT_DELAY_MS = 30000;
 
-// ⚠️ [إصلاح 2026-09-04] بگ حقيقي مؤكَّد داخل tiktok-live-connector (كل
-// الإصدارات حتى 2.4.4 وقت هذا الإصلاح): عند رجوع تيك توك برد 429 على
-// سيرفر التوقيع، المكتبة تمرر response.data (بدون .headers) بدل response
-// الكامل لباني SignatureRateLimitError، فتكسر بـ:
-//   TypeError: Cannot read properties of undefined (reading 'retry-after')
-// هذا يخفي رسالة الـ rate-limit الحقيقية ويوصل كخطأ اتصال عام غامض.
-// نكتشف هذا الخطأ تحديداً هنا (بدون أي تعديل على node_modules) ونتعامل
-// معه كـ rate-limit فعلي من تيك توك: رسالة واضحة + انتظار أطول قبل أي
-// إعادة محاولة (لأن إعادة المحاولة السريعة تزيد الحظر سوءاً).
+// ⚠️ بگ مؤكَّد داخل tiktok-live-connector (حتى 2.4.4): عند رد 429 من سيرفر
+// التوقيع، المكتبة تمرر response.data (بدون .headers) لباني
+// SignatureRateLimitError فتكسر بـ "Cannot read properties of undefined
+// (reading 'retry-after')" — يخفي رسالة الـ rate-limit الحقيقية. نكتشف
+// هذا الخطأ هنا ونتعامل معه كـ rate-limit فعلي: رسالة واضحة + انتظار أطول.
 var SIGN_RATE_LIMIT_COOLDOWN_MS = 60000; // دقيقة واحدة قبل إعادة المحاولة
 function isSignRateLimitCrash(err) {
     return !!(err && err instanceof TypeError && typeof err.message === 'string' && err.message.indexOf('retry-after') !== -1);
@@ -83,43 +52,23 @@ try {
     logger.error('TikTok Connector: "tiktok-live-connector" is not installed. Run `npm install` in backend/.');
 }
 
-// ⚠️ [إصلاح 2026-09-09] بدون signApiKey، توقيع WebSocket يمر على الطبقة
-// المجانية (Community) من EulerStream — محدودة جداً، وهذا كان السبب
-// الجذري لتأخر/فشل الاتصال بمعظم البثوث. المفتاح يُقرأ من env var
-// EULERSTREAM_API_KEY (مضبوط على Render)؛ لو غير موجود، نستمر على
-// الطبقة المجانية بدل ما نكسر — فقط نسجّل تحذير واضح بالسجلات.
+// ⚠️ بدون signApiKey، توقيع WebSocket يمر على الطبقة المجانية (Community)
+// من EulerStream — محدودة جداً، سبب تأخر/فشل الاتصال بمعظم البثوث. لو
+// EULERSTREAM_API_KEY غير موجود، نستمر على الطبقة المجانية بدل ما نكسر.
 var EULERSTREAM_API_KEY = process.env.EULERSTREAM_API_KEY || null;
 if (!EULERSTREAM_API_KEY) {
     logger.error('TikTok Connector: EULERSTREAM_API_KEY not set — falling back to EulerStream free/community tier (heavily rate-limited). Set this env var to fix slow/failed connections.');
 }
 
 /**
- * استخراج {id, name, uniqueId} موحَّد من كائن مستخدم واردٍ من المكتبة،
- * بأمان حتى لو كانت بعض الحقول مفقودة.
+ * استخراج {id, name, uniqueId} موحَّد من كائن مستخدم واردٍ من المكتبة.
  *
- * ⚠️ [0.44.3] إصلاح خطأ حقيقي جذري — مؤكَّد هذي المرة بفحص مباشر لكود
- * المكتبة المثبَّتة فعلياً (node_modules/tiktok-live-proto، التبعية
- * الفعلية لـ tiktok-live-connector@2.4.3)، وليس تخميناً: رسالة الـ User
- * الخام القادمة من بروتوكول تيك توك الحالي (Webcast proto v3) **لا
- * تحتوي حقل uniqueId إطلاقاً** — تيك توك أزالته من البروتوكول الخام.
- * الحقل البديل الفعلي بنفس المعنى (اليوزرنيم القابل للعرض) هو
- * `displayId`. كان الكود القديم يعتمد على `user.uniqueId` فقط، فكان
- * يتساقط دائماً تقريباً على `user.id` (رقم داخلي خام لتيك توك، مثل
- * "7029124818248565761") بدل اليوزرنيم الحقيقي — وهذا يفسّر بدقة العطل
- * المُبلَّغ (الإطار ما يظهر أبداً باللوبي رغم توثيق الحساب فعلاً):
- * `getEquippedFrameForVerifiedTikTok` يقارن هذا الرقم الخام مع
- * `users.tiktok_username` (يوزرنيم حقيقي) فلا يتطابق أبداً — ونفس
- * المشكلة تنطبق على مطابقة النقاط عبر auth-router.js. راجع أيضاً
- * السطر اللي يستدعي extractEquippedFrame أدناه (يستخدم uniqueId
- * المُرجَع من هذي الدالة، فيستفيد من الإصلاح تلقائياً بدون تعديل إضافي).
- *
- * نُبقي `user.uniqueId` كخيار احتياطي ثانٍ (لو رجعته نسخة مستقبلية من
- * المكتبة) قبل السقوط لـ `user.id` كملاذ أخير فقط، بدل حذفه كلياً.
- *
- * ملاحظة صادقة: هذا التفسير مبني على فحص فعلي لكود المكتبة (أدلة
- * حقيقية، مو تخميناً)، لكن لم يُختبَر بعد ضد بث حقيقي من هذه البيئة (لا
- * وصول شبكي لتيك توك هنا كالعادة) — سجل التشخيص أدناه (أول 5 أحداث)
- * سيؤكد القيمة الفعلية لـ displayId على بثّك الحقيقي بعد الرفع.
+ * ⚠️ رسالة الـ User الخام من بروتوكول تيك توك الحالي (Webcast proto v3)
+ * لا تحتوي حقل uniqueId — تيك توك أزالته. الحقل البديل بنفس المعنى هو
+ * `displayId`؛ الاعتماد على uniqueId فقط يتساقط على `user.id` (رقم داخلي
+ * خام) بدل اليوزرنيم الحقيقي، فيكسر مطابقة الإطارات/النقاط بمقارنة هذا
+ * الرقم مع users.tiktok_username. نُبقي uniqueId كخيار احتياطي ثانٍ قبل
+ * السقوط لـ user.id كملاذ أخير.
  */
 var _extractUserDebugLogsRemaining = 5;
 function extractUser(data) {
@@ -144,13 +93,9 @@ function extractUser(data) {
 }
 
 /**
- * ⚠️ [جديد] استخراج رابط صورة بروفايل تيك توك — **غير مؤكَّد بالكامل**،
- * بنفس تحفّظ extractIsFollower أعلاه: لم يُختبَر ضد بث حقيقي من هذه
- * البيئة (لا وصول شبكي لتيك توك هنا). المكتبة (v2.4.3) تُوثِّق شكل
- * profilePicture بأكثر من صيغة محتملة حسب نسخة الحدث، فهذي محاولة آمنة
- * تجرّب كل الأشكال المعروفة بالترتيب وترجع null لو ما لقت شيء — بدل ما
- * تفشل بصمت أو ترمي خطأ. يحتاج تأكيداً فعلياً على بث حقيقي بعد الرفع
- * (بنفس أسلوب ?agpDebug=1 المستخدم لـ isFollower).
+ * استخراج رابط صورة بروفايل تيك توك — المكتبة تُوثِّق شكل profilePicture
+ * بأكثر من صيغة محتملة حسب نسخة الحدث، فتُجرَّب كل الأشكال المعروفة
+ * بالترتيب وتُرجَع null لو ما لقت شيء.
  */
 function extractAvatarUrl(data) {
     var user = (data && data.user) || {};
@@ -165,10 +110,8 @@ function extractAvatarUrl(data) {
 }
 
 /**
- * ⚠️ [جديد] الإطار المفعَّل حالياً (لو وُجد) لصاحب هذا التعليق — فقط لو
- * يملك حساباً مسجَّلاً بالمنصة، وثّق ملكية نفس يوزرنيم التيك توك هذا
- * فعلياً (راجع collectibles-service.js). فشل الاستعلام (قاعدة بيانات
- * غير متاحة مثلاً) لا يوقف معالجة التعليق — فقط يُعتبَر "بدون إطار".
+ * الإطار المفعَّل حالياً (لو وُجد) لصاحب هذا التعليق. فشل الاستعلام لا
+ * يوقف معالجة التعليق — فقط يُعتبَر "بدون إطار".
  * @param {string} uniqueId
  * @returns {{frameType: string, frameRef: string, imageFilename: string}|null}
  */
@@ -182,11 +125,8 @@ function extractEquippedFrame(uniqueId) {
 }
 
 /**
- * ⚠️ [0.44.4] الدخولية المفعَّلة حالياً (لو وُجدت) لصاحب هذا التعليق —
- * نفس شرط/منطق extractEquippedFrame أعلاه بالضبط، راجع
- * collectiblesService.getEquippedEntranceForVerifiedTikTok. كانت
- * الدخولية مبنية بالباك إند فقط بدون أي مسار يوصلها لهذا الحدث —
- * هذا أول ربط فعلي لها.
+ * الدخولية المفعَّلة حالياً (لو وُجدت) لصاحب هذا التعليق — نفس منطق
+ * extractEquippedFrame أعلاه.
  * @param {string} uniqueId
  * @returns {{templateKey: string, entranceText: string}|null}
  */
@@ -200,30 +140,19 @@ function extractEquippedEntrance(uniqueId) {
 }
 
 /**
- * ⚠️ استخراج "هل هذا المعلِّق متابع لصاحب البث؟" — عبر
- * `data.user.followInfo.followStatus` (حقل موجود فعلياً بالحزمة
- * المثبَّتة، تأكَّدت منه مباشرة بفحص تعريفات TypeScript الداخلية).
- *
- * ⚠️ **غير مؤكَّد بالكامل**: القيمة بالضبط لـ followStatus (نص، مثل "1"
- * أو "2") **غير موثَّقة رسمياً** من تيك توك، ولم أقدر أختبرها ضد بث
- * حقيقي (لا وصول شبكي لتيك توك من بيئة التطوير هذه). المنطق هنا أفضل
- * تفسير منطقي متاح — يحتاج تأكيداً فعلياً بعد الرفع على بيئتك.
- */
-/**
- * ⚠️ استخراج "هل هذا المعلِّق متابع لصاحب البث؟" — عبر
+ * استخراج "هل هذا المعلِّق متابع لصاحب البث؟" عبر
  * `data.user.followInfo.followStatus`.
  *
- * ⚠️ **تخميني الأول (status === '1' || '2') ثبت أنه غير صحيح باختبار
- * حقيقي** — شخص غير متابع دخل رغم تفعيل "متابعين فقط". بدل تخمين قيمة
- * ثانية بلا دليل، هذي النسخة تُرجِع بيانات تشخيصية خام مع كل تعليق (عبر
- * _debugFollowStatus) لنشوف القيمة الحقيقية مباشرة بمتصفحك (بنفس طريقة
- * ?agpDebug=1 المعتادة)، ثم نصحّح الشرط بدقة بدل التخمين.
+ * ⚠️ القيمة بالضبط لـ followStatus غير موثَّقة رسمياً من تيك توك. التخمين
+ * الأول (status === '1' || '2') ثبت أنه غير صحيح باختبار حقيقي — لذلك
+ * تُرسَل بيانات تشخيصية خام مع كل تعليق (_debugFollowStatus) لتصحيح
+ * الشرط لاحقاً بدقة بدل التخمين.
  */
 function extractIsFollower(data) {
     var followInfo = data && data.user && data.user.followInfo;
     if (!followInfo || !followInfo.followStatus) return false;
     var status = String(followInfo.followStatus);
-    return status === '1' || status === '2'; // ⚠️ لا يزال تخميناً — بانتظار القيم الحقيقية من _debugFollowStatus
+    return status === '1' || status === '2'; // تخميني — بانتظار القيم الحقيقية من _debugFollowStatus
 }
 
 function extractFollowDebugInfo(data) {
@@ -262,7 +191,7 @@ function createTikTokConnector() {
     var _reconnectAttempts = 0;
     var _reconnectTimer = null;
     var _username = null;
-    var _followersOnly = false; // ⚠️ لم تعد تُستخدَم للفلترة هنا — الفلترة انتقلت للواجهة الأمامية لتشخيص أسهل (راجع agp-shell-config.js)
+    var _followersOnly = false; // لم تعد تُستخدَم للفلترة هنا — انتقلت للواجهة الأمامية
     var _callbacks = null;
 
     function clearReconnectTimer() {
@@ -325,21 +254,18 @@ function createTikTokConnector() {
         _connection.on(TikTokLib.WebcastEvent.CHAT, function (data) {
             var user = extractUser(data);
 
-            // ⚠️ إصلاح خطأ حقيقي: الحقل الفعلي بالرسالة المفكوكة هو
-            // "content"، وليس "comment" كما أوحى مثال README نفسه (توثيق
-            // مضلِّل مقارنة بالحقل الخام الفعلي). أُكِّد هذا مباشرة عبر
-            // اختبار حقيقي على بث فعلي (كان النص يصل فارغاً دائماً قبل
-            // هذا الإصلاح). نُبقي data.comment كاحتياط دفاعي فقط.
+            // الحقل الفعلي بالرسالة المفكوكة هو "content"، وليس "comment"
+            // كما أوحى مثال README (مضلِّل). نُبقي data.comment كاحتياط دفاعي.
             var commentText = (data && (data.content || data.comment)) || '';
             var followDebug = extractFollowDebugInfo(data);
             _callbacks.onComment({
                 id: user.id,
                 name: user.name,
                 text: commentText,
-                isFollower: extractIsFollower(data), // ⚠️ لا يزال تخميناً، راجع _debugFollowStatus أدناه
-                avatarUrl: extractAvatarUrl(data), // ⚠️ [جديد] غير مؤكَّد بالكامل، راجع تعليق extractAvatarUrl
-                frame: extractEquippedFrame(user.uniqueId), // ⚠️ [جديد] null لو بدون حساب موثَّق/إطار مفعَّل
-                entrance: extractEquippedEntrance(user.uniqueId), // ⚠️ [0.44.4] null لو بدون حساب موثَّق/دخولية مفعَّلة
+                isFollower: extractIsFollower(data),
+                avatarUrl: extractAvatarUrl(data),
+                frame: extractEquippedFrame(user.uniqueId),
+                entrance: extractEquippedEntrance(user.uniqueId),
                 _debugFollowStatus: followDebug.followStatus,
                 _debugIsFollowerOfAnchor: followDebug.isFollowerOfAnchor
             });
@@ -368,11 +294,7 @@ function createTikTokConnector() {
             _callbacks.onFollow({ id: user.id, name: user.name });
         });
 
-        // [0.45.10] roomUser -> عدد المشاهدين. حقول data.total/data.totalUser
-        // نصية (String) بمخطط WebcastRoomUserSeqMessage المثبَّت فعلياً —
-        // راجع الملاحظة الصادقة أعلى الملف وبـbackend/db/database.js
-        // (لم تُختبَر ضد بث حقيقي من هذه البيئة). فحص وجود onViewerUpdate
-        // دفاعياً — موصِّل المحاكاة قد لا يستدعيها بنفس التكرار.
+        // roomUser -> عدد المشاهدين. فحص وجود onViewerUpdate دفاعياً.
         if (_callbacks.onViewerUpdate) {
             _connection.on(TikTokLib.WebcastEvent.ROOM_USER, function (data) {
                 var current = Number(data && data.total) || 0;

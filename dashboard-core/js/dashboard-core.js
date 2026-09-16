@@ -1,22 +1,7 @@
 /**
- * ==========================================================================
- *  AGP DASHBOARD (CORE) — أول لوحة تحكم دائمة، تعمل فوق AGP Core فقط
- * ==========================================================================
- *
- * هذا الملف هو منطق الواجهة فقط. لا يحتوي على أي منطق منصة جديد ولا أي
- * State Machine خاصة به — كل قسم (Component) هنا يقرأ حالته حصراً من
- * الـ Manager المالك لها فعلياً في AGP Core، وكل زر يستدعي دالة عامة
- * موجودة أصلاً في ذلك الـ Manager (أو يبث حدث AGP.events موجود أصلاً،
- * بنفس الطريقة التي تستخدمها أي لعبة متصلة فعلياً).
- *
- * التنظيم: كل قسم في الواجهة (Session/Room/Lobby/Queue/Players/Round/
- * Timer/Event Log) له "Component" مستقل هنا (كائن بدالة render() تقرأ
- * وتعرض حالته، ودوال الأفعال إن وُجدت)، حتى يسهل توسيع كل قسم لاحقاً
- * دون التأثير على البقية — هذا الأساس الذي ستُبنى عليه لوحة الـ Streamer
- * النهائية لاحقاً، دون إعادة كتابة أي شيء هنا.
- *
- * لا اتصال شبكي، لا TikTok، لا Manager جديد، لا تعديل على أي ملف Core.
- * ==========================================================================
+ * AGP DASHBOARD (CORE) — منطق واجهة فقط، لا منطق منصة خاص به. كل قسم
+ * (Component) هنا يقرأ حالته من الـ Manager المالك لها فعلياً في AGP
+ * Core ويستدعي دوال عامة موجودة أصلاً فيه (أو يبث حدث AGP.events).
  */
 
 window.AGPDashboardCore = window.AGPDashboardCore || {};
@@ -26,20 +11,11 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
 
     var AGP = window.AymanGamesPlatform;
 
-    /**
-     * ⚠️ قرار منتج (وليس تقني): معظم الألعاب الحالية (الروليت وغيرها)
-     * ألعاب فردية، لا تعتمد فرقاً. مكوّنا الفرق أدناه (teamSettings،
-     * playersByTeam) **لم يُحذفا ولم يتغيّر منطقهما إطلاقاً** — فقط
-     * تعطيل عرضهما التلقائي هنا عبر هذا العلم الواحد، حتى تبقى الآلية
-     * جاهزة فوراً لأي لعبة مستقبلية تحتاج فرقاً فعلياً (بتفعيل هذا العلم
-     * فقط، دون أي إعادة كتابة). عناصر الواجهة المقابلة مخفاة في
-     * index.html (لا محذوفة) لنفس السبب.
-     */
+    // معظم الألعاب الحالية فردية ولا تعتمد فرقاً؛ teamSettings/
+    // playersByTeam تبقى مبنية وجاهزة لكن معطّلة العرض هنا عبر هذا العلم.
     var TEAM_FEATURES_ENABLED = false;
 
-    /* ----------------------------------------------------------------
-     * أدوات مساعدة صغيرة للواجهة فقط (DOM)، لا علاقة لها بـ AGP Core.
-     * ---------------------------------------------------------------- */
+    // أدوات مساعدة صغيرة للواجهة فقط (DOM)، لا علاقة لها بـ AGP Core.
     function el(id) {
         return document.getElementById(id);
     }
@@ -97,11 +73,8 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         if (target) target.disabled = !!disabled;
     }
 
-    /* ==================================================================
-     *  Guided Workflow — عرضي بحت، لا حالة جديدة. كل شيء يُشتق من قراءات
-     *  AGP الموجودة أصلاً (getCurrentGame/hasActiveRoom/getRoundState/
-     *  keywordManager.isActive)، ويستدعي نفس دوال الأزرار الموجودة أصلاً.
-     * ================================================================== */
+    // Guided Workflow — عرضي بحت، لا حالة جديدة. مشتق من قراءات AGP
+    // الموجودة أصلاً ويستدعي نفس دوال الأزرار.
     var WORKFLOW_STEPS = [
         { key: 'select-game', label: 'اختيار اللعبة' },
         { key: 'create-room', label: 'إنشاء غرفة' },
@@ -169,8 +142,6 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
 
             setText('workflow-next-text', state.text);
 
-            // تفعيل/تعطيل الأزرار الأربعة الأساسية فقط، حسب نفس القراءات
-            // أعلاه (لا حالة جديدة).
             var hasRoom = AGP.roomsManager.hasActiveRoom();
             var roundState = AGP.gameManager.getRoundState();
 
@@ -187,15 +158,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         }
     };
 
-    /* ==================================================================
-     *  Modal — أداة عرض عامة (تأكيد/تفاصيل)، لا علاقة لها بـ AGP إطلاقاً.
-     *  أي Component يحتاج تأكيداً أو نافذة تفاصيل يستخدم هذا بدل بناء
-     *  نافذته الخاصة، حتى يبقى شكل وسلوك كل النوافذ موحّداً.
-     * ================================================================== */
-    /* ==================================================================
-     *  Toast — إشعارات عابرة عامة (نجاح/خطأ/معلومة). لا علاقة لها بـ AGP
-     *  إطلاقاً؛ أي كود يستدعيها بنص جاهز فقط.
-     * ================================================================== */
+    // Toast — إشعارات عابرة عامة (نجاح/خطأ/معلومة)، لا علاقة لها بـ AGP.
     NS.toast = {
         show: function (message, type) {
             var container = el('toast-container');
@@ -207,8 +170,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
             toast.textContent = message;
             container.appendChild(toast);
 
-            // إعادة تدفق قسري (Reflow) قبل إضافة صنف الظهور، حتى يعمل
-            // الانتقال (Transition) بدل القفز المباشر للحالة النهائية.
+            // reflow قسري قبل إضافة صنف الظهور حتى يعمل الـ transition.
             void toast.offsetWidth;
             toast.classList.add('toast--visible');
 
@@ -264,8 +226,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         }
     };
 
-    // إغلاق النافذة المنبثقة بمفتاح Escape، أو بالنقر خارج صندوقها —
-    // تحسين إتاحة/استخدام بحت، لا يغيّر أي سلوك موجود.
+    // إغلاق نافذة Modal بمفتاح Escape أو بالنقر خارج صندوقها.
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') NS.modal.hide();
     });
@@ -278,14 +239,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
      * ================================================================== */
     NS.components = {};
 
-    /**
-     * Game — يقرأ اللعبة النشطة الحالية عبر AGP.gameManager.getCurrentGame()
-     * (تفويض لـ AGP.gameEngine.getLoadedGame())، ويحمّل أي لعبة مسجَّلة
-     * بمعرّفها عبر AGP.gameManager.loadGame(id). عام تماماً: لا يعرف شيئاً
-     * عن الروليت أو أي لعبة بعينها — أي لعبة مستقبلية (تيك توك مستقبلاً)
-     * تُسجَّل بنفس الطريقة (AGP.gameManager.registerGame) ستظهر هنا فور
-     * تحميلها بنفس هذا الكود، دون أي تعديل.
-     */
+    // Game — يقرأ اللعبة النشطة الحالية، ويحمّل أي لعبة مسجَّلة بمعرّفها.
     NS.components.game = {
         render: function () {
             var current = AGP.gameManager.getCurrentGame();
@@ -303,14 +257,8 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         }
     };
 
-    /**
-     * Game Selector — يقرأ كل الألعاب المسجَّلة عبر
-     * AGP.gameManager.getRegisteredGames() (تفويض لـ AGP.gameAPI.getAllGames)
-     * ويعرضها كقائمة قابلة للاختيار، بدل كتابة المعرّف يدوياً. الاختيار
-     * يملأ حقل gameIdInput الموجود أصلاً ثم يستدعي Load Game بنفس الآلية.
-     * عام تماماً: لا يعرف شيئاً عن الروليت أو أي لعبة بعينها؛ أي لعبة
-     * تُسجَّل مستقبلاً (بما فيها ألعاب تيك توك) تظهر هنا تلقائياً.
-     */
+    // Game Selector — يعرض كل الألعاب المسجَّلة كقائمة قابلة للاختيار،
+    // بدل كتابة المعرّف يدوياً.
     NS.components.gameSelector = {
         render: function () {
             var games = AGP.gameManager.getRegisteredGames();
@@ -343,19 +291,9 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         }
     };
 
-    /**
-     * Stream Status — قراءة فقط، عبر AGP.streamConnector الموجود أصلاً
-     * (منصات مسجَّلة كـ Stubs فقط: tiktok/youtube/twitch). لا اتصال فعلي
-     * هنا ولا في Core نفسه؛ الحالة الحقيقية اليوم "disconnected" دائماً،
-     * وتُعرَض كما هي بصدق دون أي محاكاة.
-     */
-    /**
-     * Stream Status — قراءة عبر AGP.streamConnector الموجود أصلاً. لتيك
-     * توك تحديداً، موصِّل حقيقي مربوط فعلياً (عبر
-     * adapters/tiktok/agp-tiktok-adapter.js) — الضغط على Connect يقرأ
-     * يوزرنيم فعلي من #tiktok-username-input ويرسله. يوتيوب/تويتش تبقى
-     * Stub فارغة (بلا موصِّل حقيقي بعد).
-     */
+    // Stream Status — لتيك توك موصِّل حقيقي (adapters/tiktok/), يقرأ
+    // اليوزرنيم من #tiktok-username-input عند Connect. يوتيوب/تويتش
+    // تبقيان Stub فارغة بلا موصِّل حقيقي بعد.
     NS.components.streamStatus = {
         render: function () {
             if (!AGP.streamConnector) return;
@@ -396,7 +334,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
                 var username = input ? input.value.trim() : '';
                 if (!username) {
                     if (input) input.focus();
-                    return; // لا اتصال بدون يوزرنيم فعلي لتيك توك تحديداً
+                    return;
                 }
                 options.username = username;
             }
@@ -409,22 +347,11 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         }
     };
 
-    /* ==================================================================
-     *  Roulette Controls — لوحة خاصة بالروليت تحديداً (وليست عامة)، لكن
-     *  كل آلية استخدمتها هنا موجودة أصلاً في AGP Core بالفعل. أي لعبة
-     *  مستقبلية تحتاج لوحة إعدادات مشابهة تبني نفس النمط (بمفتاح تخزين
-     *  خاص بها، وطابعَي مؤقّت خاصَّين بها)، دون أي تعديل على هذا الملف.
-     * ================================================================== */
-
     var TEAM_SETTINGS_KEY = 'roulette:teamSettings';
     var DEFAULT_TEAM_SETTINGS = { teamCount: 2, playersPerTeam: 5, teamNames: ['الفريق أ', 'الفريق ب'] };
 
-    /**
-     * Team Settings — تخزين/قراءة إعدادات الفرق حصراً عبر
-     * AGP.storageManager (تخزين عام namespaced موجود أصلاً). لا يفرض
-     * أي قاعدة لعب (لا يمنع تجاوز عدد اللاعبين لكل فريق مثلاً)؛ مجرد
-     * تفضيلات معروضة، لأن لا وحدة Core تفرض قواعد كهذه اليوم.
-     */
+    // Team Settings — تخزين/قراءة عبر AGP.storageManager. لا يفرض أي
+    // قاعدة لعب (لا يمنع تجاوز عدد اللاعبين لكل فريق مثلاً)، مجرد تفضيلات.
     NS.components.teamSettings = {
         getSettings: function () {
             return AGP.storageManager.get(TEAM_SETTINGS_KEY, DEFAULT_TEAM_SETTINGS);
@@ -457,9 +384,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         }
     };
 
-    /**
-     * Join Keyword — تفويض كامل لـ AGP.keywordManager الموجود أصلاً.
-     */
+    // Join Keyword — تفويض كامل لـ AGP.keywordManager.
     NS.components.keyword = {
         render: function () {
             setText('keyword-current', AGP.keywordManager.getKeyword());
@@ -481,13 +406,9 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         }
     };
 
-    /**
-     * Registration Timer / Round Timer — كلاهما فوق AGP.timerManager
-     * الموجود أصلاً، بأسماء مؤقّتات ثابتة ('registration'/'round').
-     * عند انتهاء أيّهما (timer:ended)، تُستدعى نفس دالة اللوحة الموجودة
-     * أصلاً (closeRegistration/إطلاق game:roundEnded) تلقائياً — هذا
-     * الربط التلقائي موجود في هذا الملف (لوحة)، وليس داخل AGP Core نفسه.
-     */
+    // Registration Timer / Round Timer — فوق AGP.timerManager بأسماء
+    // ثابتة ('registration'/'round'). ربط انتهاء المؤقّت بإغلاق التسجيل/
+    // إنهاء الجولة يحدث في attachRouletteAutoActions أدناه، وليس هنا.
     NS.components.timers = {
         render: function () {
             setText('registration-timer-remaining',
@@ -515,13 +436,9 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         }
     };
 
-    /**
-     * Winner Display — لا يوجد Manager يخزّن "آخر فائز" في Core اليوم؛
-     * هذا المكوّن يستمع فقط لحدث game:winnerSelected (تُبلِّغه الروليت
-     * فعلياً عبر Game Bridge) ويحتفظ بآخر قيمة محلياً للعرض. لا يُنشئ
-     * أي حالة جديدة في AGP نفسها، ولا يخزّنها بشكل دائم (تُفرَّغ عند
-     * game:reset، ولا تنجو من إعادة تحميل الصفحة).
-     */
+    // Winner Display — لا يوجد Manager يخزّن "آخر فائز" في Core؛ يستمع
+    // لحدث game:winnerSelected ويحتفظ بآخر قيمة محلياً (لا تنجو من
+    // إعادة تحميل الصفحة، تُفرَّغ عند game:reset).
     NS.components.winner = {
         _last: null,
         render: function () {
@@ -537,14 +454,9 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         }
     };
 
-    /**
-     * Players by Team — يقرأ فقط عبر AGP.gameManager.getPlayers() (نفس
-     * مصدر جدول اللاعبين العام)، ويجمعهم حسب حقل player.team إن وُجد
-     * (Player Manager يحفظ أي حقل إضافي كما هو دون تفسير — راجع
-     * agp-player-manager.js). لا توجد اليوم أي آلية Core تُسنِد فريقاً
-     * للاعب تلقائياً؛ هذا العرض صادق مع الواقع (الكل "Unassigned" حتى
-     * يُمرَّر حقل team فعلياً عند الانضمام من مصدر ما).
-     */
+    // Players by Team — يجمع اللاعبين حسب player.team إن وُجد. لا آلية
+    // Core تُسنِد فريقاً تلقائياً، فالكل "Unassigned" حتى يُمرَّر team
+    // فعلياً عند الانضمام.
     NS.components.playersByTeam = {
         render: function () {
             var players = AGP.gameManager.getPlayers();
@@ -586,11 +498,8 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         }
     };
 
-    /**
-     * Game Settings Placeholder — عام تماماً، لا يعرف شيئاً عن الفرق أو
-     * أي منطق لعبة بعينها. مكان مؤقت لحين بناء إطار "إعدادات لكل لعبة"
-     * عام (موثَّق كعمل مستقبلي في ARCHITECTURE.md، لم يُبنَ بعد).
-     */
+    // Game Settings Placeholder — مكان مؤقت لحين بناء إطار "إعدادات لكل
+    // لعبة" عام (لم يُبنَ بعد).
     NS.components.gameSettingsPlaceholder = {
         render: function () {
             var current = AGP.gameManager.getCurrentGame();
@@ -602,19 +511,15 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         }
     };
 
-    /**
-     * Session — يقرأ حصراً من AGP.session. لا زر خاص به (لا توجد دالة
-     * عامة لإنشاء جلسة مباشرة من هنا؛ ذلك يحدث تلقائياً عبر Create Room).
-     */
+    // Session — يقرأ حصراً من AGP.session. لا زر خاص به؛ الجلسة تُنشأ
+    // تلقائياً عبر Create Room.
     NS.components.session = {
         render: function () {
             setText('session-state', AGP.session.getState());
         }
     };
 
-    /**
-     * Room — يقرأ ويكتب حصراً عبر AGP.roomsManager.
-     */
+    // Room — يقرأ ويكتب حصراً عبر AGP.roomsManager.
     NS.components.room = {
         render: function () {
             setText('room-state', AGP.roomsManager.getRoomState());
@@ -626,13 +531,8 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         }
     };
 
-    /**
-     * Lobby — يقرأ عبر AGP.gameManager.getLobbyState() (تفويض لـ
-     * AGP.lobby.getLobbyState())، ويكتب عبر AGP.gameManager
-     * .openRegistration()/closeRegistration() (تفويض لـ AGP.lobby.open()/
-     * close()) — نقطة الاتصال الموصى بها من أي Dashboard، كما هو موثَّق
-     * في agp-game-manager.js نفسه.
-     */
+    // Lobby — يقرأ/يكتب عبر AGP.gameManager.getLobbyState()/
+    // openRegistration()/closeRegistration() — نقطة الاتصال الموصى بها.
     NS.components.lobby = {
         render: function () {
             setText('lobby-state', AGP.gameManager.getLobbyState());
@@ -646,12 +546,8 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         }
     };
 
-    /**
-     * Queue — يقرأ ويكتب حصراً عبر AGP.queueManager. لا واجهة إضافة هنا
-     * (Enqueue ليست من الأزرار المطلوبة لهذه المرحلة)؛ Admit Next/All
-     * تقبلان أي لاعبين موجودين بالفعل في الطابور من أي مصدر آخر (مثل
-     * AGP.keywordManager أو استدعاء مباشر من الـ Console).
-     */
+    // Queue — يقرأ ويكتب حصراً عبر AGP.queueManager. لا واجهة إضافة هنا؛
+    // Admit Next/All تقبلان لاعبين موجودين بالفعل في الطابور.
     NS.components.queue = {
         render: function () {
             var queue = AGP.queueManager.getQueue();
@@ -669,29 +565,13 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
     };
 
     /**
-     * Players — قراءة فقط، عبر AGP.gameManager.getPlayersCount()/
-     * getPlayers() (تفويض لـ AGP.player). لا زر إضافة هنا؛ الانضمام
-     * يحدث عبر Lobby.requestJoin أو أي مصدر آخر متصل بـ AGP.playerSource.
-     */
-    /**
-     * Players — يقرأ عبر AGP.gameManager.getPlayers() (تفويض لـ
-     * AGP.player.getAllPlayers). زر الحذف (Phase 2: Player management)
-     * يستدعي AGP.player.removePlayer(id) مباشرة — موجودة أصلاً في Core
-     * ولم تُستخدَم من قبل في أي لوحة.
-     */
-    /**
      * Players — يقرأ عبر AGP.gameManager.getPlayers()، يحذف عبر
-     * AGP.player.removePlayer(id) (نفس المصدر الوحيد كما كان). كل ما
-     * أُضيف هنا (بحث/فلترة/تحديد جماعي/تأكيد/تفاصيل) منطق عرض بحت فوق
-     * نفس البيانات — لا قراءة أو كتابة جديدة على AGP.
+     * AGP.player.removePlayer(id).
      *
-     * ⚠️ قيد منصّة حقيقي: مصدر الانضمام (`player.source`) يُضبَط فقط
-     * عند الانضمام عبر AGP.playerSource (كلمة المرور/الطابور/أي مصدر
-     * مسجَّل). الانضمام المباشر عبر AGP.lobby.requestJoin() **لا يضبط
-     * هذا الحقل إطلاقاً** (Lobby يستدعي AGP.player.addPlayer() مباشرة،
-     * بدون المرور بـ PlayerSource — فجوة معمارية موثَّقة سابقاً في
-     * ARCHITECTURE.md، لم تُصلَح). لذلك أي لاعب بلا `source` يُعرَض هنا
-     * بصدق كـ"Lobby / Direct" بدل افتراض قيمة قد تكون خاطئة.
+     * ⚠️ الانضمام المباشر عبر AGP.lobby.requestJoin() لا يضبط
+     * `player.source` إطلاقاً (Lobby يستدعي AGP.player.addPlayer()
+     * مباشرة، بدون المرور بـ PlayerSource) — لاعب بلا `source` يُعرَض
+     * هنا كـ"Lobby / Direct" بدل افتراض قيمة قد تكون خاطئة.
      */
     NS.components.players = {
         _search: '',
@@ -717,9 +597,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
             var allPlayers = AGP.gameManager.getPlayers();
             setText('players-count', allPlayers.length);
 
-            // خيارات الفلتر تُبنى ديناميكياً من المصادر الموجودة فعلياً
-            // في اللاعبين الحاليين + 'lobby' كقيمة افتراضية صريحة — عام
-            // تماماً، يعمل لأي مصدر مستقبلي (تيك توك مثلاً) دون تعديل.
+            // خيارات الفلتر تُبنى ديناميكياً من المصادر الموجودة فعلياً.
             var sources = {};
             allPlayers.forEach(function (p) { sources[p.source || 'lobby'] = true; });
             var filterEl = el('playersSourceFilter');
@@ -834,8 +712,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
             if (bar) bar.style.display = count > 0 ? 'flex' : 'none';
         },
 
-        /* ---- Remove (single + bulk), always behind confirmation ---- */
-
+        // Remove (single + bulk), always behind confirmation.
         confirmRemove: function (playerId) {
             var player = AGP.player.findPlayer(playerId);
             var label = player ? (player.name || player.id) : playerId;
@@ -868,8 +745,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
             });
         },
 
-        /* ---- Details panel — generic, lists every field on the player object ---- */
-
+        // Details panel — generic, lists every field on the player object.
         viewDetails: function (playerId) {
             var player = AGP.player.findPlayer(playerId);
             if (!player) return;
@@ -893,27 +769,15 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
     };
 
     /**
-     * Round — يقرأ عبر AGP.gameManager.getRoundState() (تفويض لـ
-     * AGP.roundManager.getState()). لا توجد دالة عامة لفرض حالة الجولة
-     * (Round Manager يُصمَّم عمداً بلا setState())، لذا Start/End هنا
-     * يبثّان بالضبط نفس حدثي AGP.events اللذين ترسلهما أي لعبة متصلة
-     * فعلياً (`game:roundStarted`/`game:roundEnded`)، فتمر عبر Round
-     * Manager وSession وGame API بنفس المسار الحقيقي تماماً.
-     */
-    /**
-     * ⚠️ نظام النقاط (راجع backend/points/points-service.js): عند إنهاء
-     * جولة، تُرسَل قائمة المشاركين الحاليين (AGP.gameManager.getPlayers())
-     * + الفائز الأخير (NS.components.winner._last) + مدة الجولة (بين
-     * start() وend() هنا) لـ /api/points/round-complete، الذي يطابق كل
-     * لاعب بحساب مسجَّل موثَّق تيك توك (بصمت يتجاهل من لا حساب له).
+     * Round — Start/End يبثّان نفس حدثي AGP.events اللذين ترسلهما أي
+     * لعبة متصلة فعلياً (game:roundStarted/roundEnded)، لا setState()
+     * مباشر (Round Manager عمداً بلا واحدة).
      *
-     * ⚠️ افتراض صريح غير مؤكَّد: `player.name` (أو player.id لو الاسم
-     * غير موجود) يُفترَض أنه يوزرنيم تيك توك نفسه — هذا الحقل يُضبَط من
-     * مصدر انضمام اللاعب (Lobby/Queue/PlayerSource)، ولا توثيق مؤكَّد هنا
-     * أنه دائماً نفس يوزرنيم تيك توك الحقيقي حرفياً بكل مصدر انضمام. لو
-     * تبيّن لاحقاً أنه مختلف، التعديل يقتصر على السطر اللي يبني
-     * `participants` أدناه فقط. الإرسال نفسه لا يكسر أي شيء لو فشل
-     * (Promise catch صامت) — لا يعطّل تدفّق إنهاء الجولة العادي.
+     * ⚠️ عند end()، تُرسَل قائمة المشاركين + الفائز + مدة الجولة لـ
+     * /api/points/round-complete. `player.name` (أو player.id) يُفترَض
+     * أنه يوزرنيم تيك توك نفسه دون تأكيد لكل مصدر انضمام — لو تبيّن
+     * خلاف ذلك، التعديل يقتصر على بناء `participants` أدناه. الإرسال
+     * صامت الفشل (catch فارغ) ولا يعطّل تدفّق إنهاء الجولة.
      */
     NS.components.round = {
         _startedAt: null,
@@ -933,20 +797,14 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
                 var winnerKey = winner && (winner.id || winner.name);
                 var players = AGP.gameManager.getPlayers();
                 var participants = players.map(function (player) {
-                    // ⚠️ [إصلاح باگ حقيقي — 0.44.0] كان يُرسَل هنا اسم العرض
-                    // (player.name، قابل للتغيير) أو player.id بصيغته الكاملة
-                    // "tiktok:اليوزرنيم" — كلاهما لا يطابق أبداً tiktok_username
-                    // الحقيقي المخزَّن بالحساب (مقارنة حرفية بالباك إند)، فتقرير
-                    // النقاط كان يفشل بصمت لكل المشاركين تقريباً. نفس الإصلاح
-                    // المطبَّق بـ games/elimination-roulette/agp-elimination-roulette.js.
+                    // player.id may be "tiktok:username" — strip the prefix so
+                    // it matches tiktok_username literally on the backend.
                     var rawId = (player.id || '').indexOf('tiktok:') === 0 ? player.id.slice(7) : player.id;
                     return { tiktokUsername: rawId, won: Boolean(winnerKey) && (player.id === winnerKey || player.name === winnerKey) };
                 }).filter(function (p) { return p.tiktokUsername; });
 
                 if (participants.length) {
-                    window.AGPAuth.reportRoundCompletion(participants, durationMs).catch(function () {
-                        // فشل صامت — لا نمنع إنهاء الجولة نفسه بسبب هذا (راجع الملاحظة أعلاه).
-                    });
+                    window.AGPAuth.reportRoundCompletion(participants, durationMs).catch(function () {});
                 }
             }
 
@@ -954,11 +812,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         }
     };
 
-    /**
-     * Timer — قراءة فقط، عبر AGP.timerManager. لا مؤقّت يبدأ تلقائياً
-     * من هذه اللوحة (لم يُطلَب زر لذلك)؛ يعرض أي مؤقّتات نشطة فعلياً
-     * بدأتها وحدة أخرى (لعبة، أو مستقبلاً Round Manager).
-     */
+    // Timer — قراءة فقط عبر AGP.timerManager؛ يعرض مؤقّتات بدأتها وحدة أخرى.
     NS.components.timer = {
         render: function () {
             var names = AGP.timerManager.getActiveTimers();
@@ -970,10 +824,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         }
     };
 
-    /**
-     * Event Log — يعرض فقط أحداث AGP.events القادمة فعلياً من Core (لا
-     * يُنشئ أي حدث بنفسه، ولا يفسّرها).
-     */
+    // Event Log — يعرض فقط أحداث AGP.events القادمة من Core.
     NS.components.eventLog = {
         log: function (eventName, payload) {
             var logEl = el('event-log');
@@ -988,32 +839,21 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         }
     };
 
-    /**
-     * Controls — Reset العام. يستخدم دالة Facade الموثَّقة خصيصاً لهذا
-     * الغرض (AGP.gameManager.resetSession())، التي تبث game:reset —
-     * نفس الحدث الذي تبثّه أي لعبة متصلة فعلياً عن نفسها.
-     */
+    // Controls — Reset العام، يستدعي AGP.gameManager.resetSession()
+    // التي تبث game:reset.
     NS.components.controls = {
         reset: function () {
             AGP.gameManager.resetSession();
         }
     };
 
-    /* ==================================================================
-     *  التحديث + الاستماع لأحداث AGP Core (قائمة صريحة، بدون Wildcard)
-     * ================================================================== */
-    /* ==================================================================
-     *  Tabs — تنظيم عرضي بحت (Phase 2: Dashboard UX)، لا علاقة له بـ AGP.
-     *  يُخفي/يُظهر أقسام الصفحة فقط؛ كل Component أعلاه يستمر في القراءة
-     *  والتحديث بشكل طبيعي بغضّ النظر عن أي تبويب ظاهر حالياً.
-     * ================================================================== */
+    // Tabs — تنظيم عرضي بحت، يُخفي/يُظهر أقسام الصفحة فقط.
     NS.tabs = {
         show: function (tabName) {
             document.querySelectorAll('.tab-panel').forEach(function (panel) {
                 var isActive = panel.getAttribute('data-tab') === tabName;
                 panel.style.display = isActive ? '' : 'none';
                 if (isActive) {
-                    // إعادة تشغيل انتقال الظهور البسيط عند كل تبديل تبويب.
                     panel.classList.remove('tab-panel--enter');
                     void panel.offsetWidth;
                     panel.classList.add('tab-panel--enter');
@@ -1070,10 +910,6 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         'timer:started', 'timer:tick', 'timer:stopped', 'timer:ended'
     ];
 
-    // استماعات ذات غرض محدد (بالإضافة للتسجيل العام أعلاه): التقاط
-    // الفائز، وربط انتهاء المؤقّتات المسمّاة تلقائياً بنفس أفعال اللوحة
-    // الموجودة أصلاً (بدل انتظار ضغطة يدوية). هذا الربط منطق لوحة، وليس
-    // تعديلاً على AGP.timerManager أو Game Bridge أو الروليت نفسها.
     function attachRouletteAutoActions() {
         AGP.events.on('game:winnerSelected', function (payload) {
             NS.components.winner.setWinner(payload);
@@ -1081,13 +917,9 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         AGP.events.on('game:reset', function () {
             NS.components.winner.clear();
 
-            // ⚠️ إصلاح تدقيق: AGP.timerManager لا يعرف شيئاً عن دورة حياة
-            // الجلسة/الجولة (لا يستمع لأي حدث بنفسه). أي مؤقّت مسمّى بدأ
-            // قبل إعادة الضبط كان يستمر يعمل في الخلفية بصمت، ثم يُطلِق
-            // timer:ended لاحقاً فيؤدي لاستدعاء closeRegistration()/
-            // game:roundEnded على جولة مستقبلية غير متعلقة به إطلاقاً.
-            // إيقافه هنا صريحاً يمنع ذلك تماماً. لا تعديل على
-            // AGP.timerManager نفسه؛ فقط استدعاء stop() الموجودة أصلاً.
+            // AGP.timerManager doesn't know about session/round lifecycle —
+            // without this, a timer started before reset keeps running and
+            // later fires timer:ended against an unrelated future round.
             AGP.timerManager.stop('registration');
             AGP.timerManager.stop('round');
         });
@@ -1101,10 +933,7 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         });
     }
 
-    // خريطة أحداث "ملحوظة" فقط (مجموعة فرعية مختارة من WATCHED_EVENTS
-    // أعلاه) تُطلِق إشعاراً عابراً (Toast) بالإضافة للتسجيل في Event Log
-    // — لا حدث جديد، ولا قراءة AGP إضافية، فقط نص عرضي أوضح للأحداث
-    // المهمة للمذيع تحديداً.
+    // Subset of WATCHED_EVENTS that also triggers a toast notification.
     var TOAST_EVENTS = {
         'room:created': function () { return { message: 'تم إنشاء الغرفة.', type: 'success' }; },
         'room:closed': function () { return { message: 'تم إغلاق الغرفة.', type: 'info' }; },
@@ -1139,8 +968,6 @@ window.AGPDashboardCore = window.AGPDashboardCore || {};
         NS.tabs.show('game');
         refreshAll();
 
-        // إخفاء طبقة التحميل الأولية بعد أول رسم فعلي للوحة (تحسين حالة
-        // تحميل بحت، لا علاقة له بمنطق AGP).
         var loadingOverlay = el('loading-overlay');
         if (loadingOverlay) loadingOverlay.classList.add('loading-overlay--hidden');
     });

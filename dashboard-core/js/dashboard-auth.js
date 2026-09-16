@@ -1,38 +1,19 @@
 /**
- * ==========================================================================
- *  AGP DASHBOARD AUTH — بوابة دخول للوحة الستريمر + قسم "Account"
- * ==========================================================================
- *
- * ملف جديد، منفصل تماماً عن dashboard-core.js (لم يُلمَس إطلاقاً) ومن
- * AGP.* (لا علاقة له بـ window.AymanGamesPlatform — يستخدم فقط
- * window.AGPAuth من auth/auth-client.js). مسؤوليتان فقط:
- *
- *   1) بوابة دخول: يتحقق من جلسة صالحة فعلياً (AGPAuth.requireAuth)
- *      فور تحميل الصفحة، ويحوّل لصفحة الدخول لو غير صالحة — قبل أن
- *      يُتاح لأي كود AGP.* آخر (dashboard-core.js أو أي agp-*.js) رؤية
- *      أي بيانات. راجع auth/auth.css (.auth-checking) لمنع "ومضة"
- *      ظهور اللوحة قبل التحويل.
- *   2) قسم "Account" داخل تبويب Stream & Room الموجود فعلاً: عرض اسم
- *      المستخدم/الدور في الشريط العلوي + زر Logout، وربط عناصر ربط/
- *      تحقق تيك توك + Custom ID (كلها مُضافة في index.html بجانب حقل
- *      TikTok username الحالي، دون لمسه).
- * ==========================================================================
+ * AGP DASHBOARD AUTH — بوابة دخول للوحة الستريمر + قسم "Account".
+ * مستقل عن AGP.* (يستخدم فقط window.AGPAuth من auth/auth-client.js).
+ * يتحقق من جلسة صالحة قبل أن يُتاح لأي كود آخر رؤية بيانات اللوحة.
  */
 
 'use strict';
 
 (function () {
 
-    /**
-     * يُنفَّذ فوراً (لا ينتظر DOMContentLoaded) — أول شيء يحدث في الصفحة
-     * فعلياً، حتى يكون التحويل لصفحة الدخول (لو لزم) أسرع ما يمكن.
-     */
+    // يُنفَّذ فوراً (لا ينتظر DOMContentLoaded) حتى يكون التحويل لصفحة
+    // الدخول (لو لزم) أسرع ما يمكن.
     window.AGPAuth.requireAuth('../login.html').then(function (user) {
         if (!user) return; // تحويل قيد التنفيذ فعلاً داخل requireAuth
 
-        // هذي اللوحة حصراً لحساب الأدمن — أي حساب آخر (عادي أو ستريمر
-        // موافَق عليه) يُحوَّل لصفحة بروفايله العامة بدل ما يشوف اللوحة.
-        // راجع AGPAuth.canAccessDashboard وdocs/CHANGELOG.md.
+        // هذي اللوحة حصراً لحساب الأدمن — غيره يُحوَّل لبروفايله العام.
         if (!window.AGPAuth.canAccessDashboard(user)) {
             window.location.href = '../profile.html?id=' + encodeURIComponent(user.custom_id || '');
             return;
@@ -47,11 +28,7 @@
         }
     });
 
-    /**
-     * كل ما يحتاج DOM جاهزاً: عرض بيانات الحساب في الشريط العلوي، وربط
-     * أزرار قسم Account. يُستدعى مرة واحدة فقط بعد تأكيد جلسة صالحة.
-     * @param {Object} user
-     */
+    // يُستدعى مرة واحدة فقط بعد تأكيد جلسة صالحة.
     function wireDashboard(user) {
         renderAccountBar(user);
         wireLogout();
@@ -78,12 +55,8 @@
         });
     }
 
-    /**
-     * قسم Account: ربط تيك توك (بايو)، وCustom ID. أخطاء الشبكة/الخادم
-     * تُعرَض كنص حالة بسيط بجانب كل زر (نفس فلسفة `.empty-note` في
-     * dashboard-core.js) — لا نافذة Toast جديدة، تفادياً لأي اعتماد على
-     * داخليات dashboard-core.js.
-     */
+    // قسم Account: ربط تيك توك (بايو)، وCustom ID. أخطاء تُعرَض كنص حالة
+    // بسيط بجانب كل زر بدل Toast، تفادياً لأي اعتماد على dashboard-core.js.
     function wireAccountPanel(user) {
         var tiktokUsernameInput = document.getElementById('account-tiktok-username');
         var tiktokStatusEl = document.getElementById('account-tiktok-status');
@@ -96,9 +69,8 @@
             tiktokUsernameInput.value = user.tiktok_username;
         }
 
-        // كل حساب يوصله ID عام (custom_id) تلقائياً من الخادم فور
-        // التسجيل (راجع backend/auth/auth-service.js — generatePublicId)؛
-        // نعبّئه هنا ونجهّز رابط البروفايل العام مباشرة.
+        // كل حساب يوصله ID عام (custom_id) تلقائياً من الخادم؛ نعبّئه هنا
+        // ونجهّز رابط البروفايل العام مباشرة.
         function applyCustomId(customId) {
             if (customIdInput && customId) customIdInput.value = customId;
             if (viewProfileLink) viewProfileLink.href = 'profile.html?id=' + encodeURIComponent(customId || '');

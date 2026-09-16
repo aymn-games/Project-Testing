@@ -1,14 +1,6 @@
 /**
- * ==========================================================================
- *  DASHBOARD ROUTER — نظام تنقّل بسيط بين الصفحات (Hash-Based Routing)
- * ==========================================================================
- *
- * نظام تنقّل صغير جداً، مبني فوق hash الرابط (#/dashboard, #/games/xyz...)،
- * بدون أي مكتبة خارجية. مسؤول فقط عن: تسجيل المسارات، مطابقة الرابط
- * الحالي، واستدعاء دالة العرض (render) المناسبة داخل حاوية المحتوى.
- *
- * لا علاقة له بـ AGP Platform إطلاقاً في هذه المرحلة.
- * ==========================================================================
+ * DASHBOARD ROUTER — نظام تنقّل بسيط فوق hash الرابط
+ * (#/dashboard, #/games/xyz...)، بدون أي مكتبة خارجية.
  */
 
 window.AGPDashboard = window.AGPDashboard || {};
@@ -44,7 +36,6 @@ window.AGPDashboard = window.AGPDashboard || {};
 
     function getCurrentPath() {
         var hash = window.location.hash || '';
-        // إزالة الـ '#' من البداية، والتأكد من وجود '/' في البداية
         var path = hash.replace(/^#/, '');
         if (path === '') path = '/dashboard';
         if (path.charAt(0) !== '/') path = '/' + path;
@@ -72,12 +63,10 @@ window.AGPDashboard = window.AGPDashboard || {};
         var contentEl = document.getElementById('dashboard-content');
 
         if (!matched) {
-            // مسار غير معروف: رجوع افتراضي لصفحة Dashboard
             window.location.hash = '#/dashboard';
             return;
         }
 
-        // إظهار/إخفاء الـ Shell (Top Bar + Sidebar) حسب نوع المسار
         document.body.classList.toggle('dashboard-shell--public', matched.route.isPublic);
 
         if (contentEl) {
@@ -85,7 +74,6 @@ window.AGPDashboard = window.AGPDashboard || {};
             matched.route.renderFn(matched.params, contentEl);
         }
 
-        // تحديث تظليل العنصر النشط في Sidebar (إن كانت الوحدة محمَّلة)
         if (NS.layout && typeof NS.layout.highlightActiveRoute === 'function') {
             NS.layout.highlightActiveRoute(path);
         }
@@ -103,10 +91,8 @@ window.AGPDashboard = window.AGPDashboard || {};
         navigate: navigate,
         getCurrentPath: getCurrentPath,
 
-        // يعيد رسم المسار الحالي كما هو (نفس renderCurrentRoute الداخلية)،
-        // بدون أي تغيير في الـ hash أو منطق المطابقة. أُضيف خصيصاً حتى
-        // تستطيع وحدات أخرى (مثل dashboard-live.js) طلب إعادة رسم الصفحة
-        // الحالية عند تغيّر بيانات AGP، دون تكرار منطق renderCurrentRoute.
+        // Lets other modules (e.g. dashboard-live.js) re-render the
+        // current page when AGP data changes, without touching the hash.
         refresh: renderCurrentRoute
     };
 

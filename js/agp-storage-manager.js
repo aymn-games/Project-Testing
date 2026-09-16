@@ -1,14 +1,7 @@
 /**
- * ==========================================================================
- *  AGP STORAGE MANAGER — تخزين محلي عام (namespaced، بدون منطق لعبة)
- * ==========================================================================
- * غلاف عام فوق localStorage بمساحة اسم موحّدة (`agp:`)، مع تسلسل/فك
- * تسلسل JSON تلقائي، حتى لا تتعامل أي وحدة مستقبلية مع localStorage
- * مباشرة أو تتصادم المفاتيح بين الوحدات. لا اتصال شبكي، لا منطق لعبة.
- * إن لم يتوفر localStorage (مثلاً وضع خاص)، يعمل فوق ذاكرة مؤقتة داخل
- * الصفحة (In-Memory Fallback) حتى لا ينهار أي كود يعتمد عليه.
- * يعتمد على js/agp-core.js فقط.
- * ==========================================================================
+ * AGP STORAGE MANAGER — namespaced (`agp:`) wrapper over localStorage with
+ * automatic JSON serialization. Falls back to an in-memory store when
+ * localStorage is unavailable (e.g. private browsing).
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -43,12 +36,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     AGP.storageManager = {
 
-        /**
-         * حفظ قيمة (أي نوع قابل لتسلسل JSON) تحت مفتاح.
-         * @param {string} key
-         * @param {*} value
-         * @returns {boolean}
-         */
         set: function (key, value) {
             if (!key) return false;
             var serialized;
@@ -72,12 +59,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return true;
         },
 
-        /**
-         * جلب قيمة محفوظة، أو defaultValue إن لم توجد/تعذّر فكّها.
-         * @param {string} key
-         * @param {*} [defaultValue]
-         * @returns {*}
-         */
         get: function (key, defaultValue) {
             if (!key) return defaultValue !== undefined ? defaultValue : null;
 

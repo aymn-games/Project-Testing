@@ -175,7 +175,6 @@
 <div class="teams-wrap" id="teams-wrap"></div>
 
 <div class="bottom-bar">
-  <!-- إذا كان المستخدم هو صاحب الغرفة يظهر الزر، غير كذا يظهر ملاحظة الانتظار -->
   <button class="start-btn" id="start-btn" disabled onclick="startGame()">ابدأ الجولة</button>
 </div>
 
@@ -259,11 +258,8 @@ function playerCardEl(player) {
     tag.textContent = 'صاحب الغرفة';
     card.appendChild(tag);
   }
-  wrapIfNeeded(card);
   return card;
 }
-
-function wrapIfNeeded(card) {} // مكان مخصص لأي منطق إضافي لاحقاً
 
 function copyCode() {
   navigator.clipboard.writeText(document.getElementById('room-code').textContent);

@@ -1,39 +1,18 @@
 /**
- * ==========================================================================
- *  AGP MOCK CONNECTOR (Backend) — يولّد بيانات محاكاة، بلا معرفة بـ AGP
- * ==========================================================================
+ * AGP MOCK CONNECTOR (Backend) — يولّد بيانات محاكاة، بلا معرفة بحالة
+ * الواجهة الأمامية (مثل أي موصِّل حقيقي، لا يمكنه معرفة الكلمة المفعَّلة
+ * بمتصفح آخر). يطبّق نفس "شكل الموصِّل" الذي يطبّقه
+ * platforms/tiktok/tiktok-connector.js، ما يسمح بالتبديل بينهما عبر
+ * platforms/connector-router.js فقط:
  *
- * هذا هو المصدر الفعلي لبيانات المحاكاة الآن (بدل agp-mock-live-adapter.js
- * القديم في المتصفح، الذي كان يولّدها محلياً). لا يعرف هذا الملف شيئاً
- * عن AGP.keywordManager أو أي حالة واجهة أمامية — تماماً كما يُفترض بأي
- * محوِّل خلفي حقيقي (لا يمكنه "معرفة" الكلمة المفعَّلة في متصفح آخر).
- * المتصفح (adapters/tiktok/agp-tiktok-adapter.js) هو من يقرر لاحقاً ماذا
- * يفعل بكل تعليق وارد — تماماً كما سيحدث مع تيك توك الحقيقي.
- *
- * يطبّق نفس "شكل موصِّل" (Connector Shape) الذي سيطبّقه
- * platforms/tiktok/tiktok-connector.js عند تنفيذه فعلياً لاحقاً:
- *
- *   connect(options, callbacks)
- *   disconnect()
- *   isConnected()
- *
+ *   connect(options, callbacks) / disconnect() / isConnected()
  *   callbacks = {
  *     onStatus(status, message?),   // 'connected' | 'error' فقط من هنا
- *                                    // ('connecting'/'disconnected' تُدار
- *                                    // مركزياً من ws-server.js نفسه)
  *     onComment({ id, name, text }),
  *     onGift({ id, name, giftName, giftValue, repeatCount }),
  *     onFollow({ id, name }),
- *     onViewerUpdate({ current, totalUsers })   // [0.45.10] محاكاة بسيطة —
- *                                                 // current يتذبذب،
- *                                                 // totalUsers يزيد فقط
- *                                                 // (يحاكي مشاهدين جدد)
+ *     onViewerUpdate({ current, totalUsers })   // current يتذبذب، totalUsers يزيد فقط
  *   }
- *
- * هذا التطابق في الشكل هو ما يسمح لاحقاً باستبدال هذا الملف بموصِّل
- * تيك توك الحقيقي دون تعديل websocket/ws-server.js إطلاقاً — فقط تغيير
- * سطر واحد في platforms/connector-router.js (راجعه).
- * ==========================================================================
  */
 
 'use strict';
@@ -45,9 +24,6 @@ var MOCK_USERNAMES = [
     'layla_x', 'khalid.stream', 'reem_here', 'yousef99', 'hind_live'
 ];
 
-// 'JOIN' مُضمَّنة عمداً بين الاحتمالات — قيمة كلمة انضمام افتراضية
-// شائعة أثناء الاختبار، لكن هذا الملف لا "يعرف" أي كلمة مفعَّلة فعلياً؛
-// المتصفح هو من يقرر إن كانت مطابقة أم لا.
 var MOCK_COMMENT_TEXTS = [
     'JOIN', '🔥🔥🔥', 'lets go!', 'من وين البث', 'حياكم', '😂😂',
     'yesss', 'شنو اللعبة هذي', 'gg', '👏👏', 'join'
@@ -70,16 +46,13 @@ function randomViewer() {
 }
 
 /**
- * إنشاء نسخة موصِّل محاكاة جديدة ومستقلة (اتصال واحد = نسخة واحدة)،
- * حتى لا تتشارك عدة اتصالات متصفح نفس المؤقّت (Interval) بالخطأ.
+ * إنشاء نسخة موصِّل محاكاة جديدة ومستقلة (اتصال واحد = نسخة واحدة).
  * @returns {{connect: function, disconnect: function, isConnected: function}}
  */
 function createMockConnector() {
     var _intervalId = null;
     var _viewerIntervalId = null;
     var _connected = false;
-    // [0.45.10] محاكاة عدد مشاهدين — current يتذبذب حول قيمة عشوائية،
-    // totalUsers تراكمي يزيد فقط (يحاكي انضمام مشاهدين جدد بمرور الوقت).
     var _totalUsers = Math.floor(10 + Math.random() * 20);
 
     function tick(callbacks) {

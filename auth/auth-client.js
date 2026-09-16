@@ -1,17 +1,12 @@
 /**
- * ==========================================================================
- * AGP AUTH CLIENT — طبقة عميل مشتركة لصفحات الحسابات (خارج AGP.* تماماً)
- * ==========================================================================
+ * AGP AUTH CLIENT — shared client layer for account pages, connects
+ * login.html / signup.html / admin.html / dashboard-core to
+ * backend/http/auth-router.js (see docs/BACKEND_ARCHITECTURE.md §10).
+ * Deliberately separate from window.AymanGamesPlatform (AGP), hence its
+ * own namespace: window.AGPAuth.
  *
- * يوصّل صفحات login.html / signup.html / admin.html وقسم "Account" في
- * dashboard-core بواجهة backend/http/auth-router.js (راجع
- * docs/BACKEND_ARCHITECTURE.md §10). لا علاقة له بـ window.AymanGamesPlatform
- * (AGP) — تلك namespace خاصة بمنطق المنصة/الألعاب المجمّد، وهذا نظام
- * حسابات/إدارة منفصل تماماً، لذا يُعرَّف تحت اسم مستقل: window.AGPAuth.
- *
- * الجلسة تُخزَّن في localStorage (مفتاح واحد ثابت)، وتُرفَق تلقائياً في
- * كل طلب محمي عبر ترويسة Authorization: Bearer <token>.
- * ==========================================================================
+ * Session is stored in localStorage and attached to every protected
+ * request via an Authorization: Bearer <token> header.
  */
 
 (function (global) {
@@ -20,12 +15,10 @@
 var API_BASE = 'https://project-testing-akds.onrender.com';
 var TOKEN_KEY = 'agp_auth_token';
 var USER_KEY = 'agp_auth_user';
-var DEVICE_ID_KEY = 'agp_device_id'; // [0.45.6] راجع getDeviceId أدناه
+var DEVICE_ID_KEY = 'agp_device_id';
 
-/* ----------------------------------------------------------------------
- * تخزين محلي — Token + آخر بيانات مستخدم معروفة (للعرض الفوري قبل
- * تأكيد /api/auth/me، لا تُعتمَد كمصدر حقيقة وحيد).
- * ---------------------------------------------------------------------- */
+/* Local storage — token + last-known user, used for instant display
+ * before /api/auth/me confirms; not treated as the source of truth. */
 
 function getToken() {
     try { return localStorage.getItem(TOKEN_KEY) || null; } catch (err) { return null; }
@@ -35,14 +28,14 @@ function setSession(token, user) {
     try {
         localStorage.setItem(TOKEN_KEY, token);
         localStorage.setItem(USER_KEY, JSON.stringify(user || {}));
-    } catch (err) { /* localStorage غير متاح — لا كسر للصفحة */ }
+    } catch (err) { /* localStorage unavailable — don't break the page */ }
 }
 
 function clearSession() {
     try {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
-    } catch (err) { /* لا شيء */ }
+    } catch (err) {}
 }
 
 function getCachedUser() {
@@ -53,13 +46,12 @@ function getCachedUser() {
 }
 
 /**
- * [0.45.6] معرّف "جهاز" ثابت لهذا المتصفح — رقم عشوائي يُولَّد مرة واحدة
- * فقط ويُخزَّن بـlocalStorage للأبد (لا ينتهي، خلافاً للـToken). يُستخدَم
- * حصراً لقيد الجهاز الواحد لحسابات الستريمر المعتمدين (راجع
- * backend/auth/auth-service.js: checkDeviceLock) — **ليس بصمة جهاز
- * حقيقية**، مجرد رقم محلي بالمتصفح. مسح بيانات المتصفح أو استخدام متصفح/
- * وضع تصفح مختلف يُولِّد رقماً جديداً بالكامل (نفس القيد الناعم الموثَّق
- * صراحة بـauth-service.js وdocs/CHANGELOG.md).
+ * Stable per-browser "device" id — random, generated once and persisted
+ * forever in localStorage. Used only for the single-device lock on
+ * approved streamer accounts (see auth-service.js: checkDeviceLock).
+ * NOT a real device fingerprint — clearing browser data or using a
+ * different browser/profile yields a new id (an intentionally soft
+ * constraint).
  * @returns {string|null}
  */
 function getDeviceId() {
@@ -70,23 +62,21 @@ function getDeviceId() {
             localStorage.setItem(DEVICE_ID_KEY, id);
         }
         return id;
-    } catch (err) { return null; } // localStorage غير متاح — القيد ببساطة لا يُطبَّق (نفس تحفّظ باقي localStorage بالملف)
+    } catch (err) { return null; }
 }
 
 /**
- * طلب عام لأي مسار API. يُرفِق Authorization تلقائياً لو كان هناك
- * Token مخزَّن. يرجع دائماً كائن الاستجابة المُحلَّل (JSON)، حتى في
- * حالات الفشل (شكله دائماً {success: boolean, ...}) — الاستثناء
- * الوحيد هو فشل الشبكة نفسه (لا اتصال بالخادم إطلاقاً).
- * @param {string} path - مثل '/api/auth/login'
+ * Generic request to any API path. Attaches Authorization automatically
+ * when a token is stored. Always resolves to the parsed JSON response,
+ * even on failure ({success: boolean, ...}) — the only exception is an
+ * actual network failure (no connection to the server at all).
+ *
+ * Content-Type is sent only when there's a body: sending it unconditionally
+ * forces a CORS preflight (extra OPTIONS request) on every call, including
+ * public GETs with no login.
+ * @param {string} path - e.g. '/api/auth/login'
  * @param {Object} [options] - {method, body}
  * @returns {Promise<Object>}
- */
-/**
- * [أداء] Content-Type كان يُرسَل حتى على طلبات GET البسيطة بدون body —
- * هذا يجبر المتصفح يسوي CORS preflight (طلب OPTIONS كامل) قبل أي طلب،
- * حتى العلني منها بدون تسجيل دخول (مؤكَّد من قياس GTmetrix الحقيقي:
- * كل استدعاء علني كان يتضاعف لطلبين). نرسله الآن فقط لما فيه body فعلي.
  */
 function request(path, options) {
     options = options || {};
@@ -107,9 +97,7 @@ function request(path, options) {
     });
 }
 
-/* ----------------------------------------------------------------------
- * دوال Auth — تطابق مسارات http/auth-router.js واحداً لواحد
- * ---------------------------------------------------------------------- */
+/* Auth functions — map 1:1 to http/auth-router.js routes */
 
 function signup(username, email, password, wantsToBeStreamer) {
     return request('/api/auth/signup', {
@@ -135,46 +123,29 @@ function loginWithGoogle(idToken) {
 }
 
 /**
- * [0.45.11] استرجاع كلمة المرور — خطوة ١: يطلب إرسال رمز للإيميل.
- * يرجع {success:true} دائماً (حتى لو الإيميل غير مسجَّل — منع تعداد
- * الإيميلات من الواجهة، راجع authService.requestPasswordReset).
- * @param {string} email
- * @returns {Promise<Object>}
+ * Password reset step 1: request a code by email. Always resolves
+ * {success:true}, even for an unregistered email — prevents email
+ * enumeration from the client (see authService.requestPasswordReset).
  */
 function forgotPassword(email) {
     return request('/api/auth/forgot-password', { method: 'POST', body: { email: email } });
 }
 
 /**
- * [0.45.11] استرجاع كلمة المرور — خطوة ٢: يتحقق من الرمز ويحدّث
- * كلمة المرور. لا يسجّل دخول تلقائياً بعد النجاح (كل الجلسات القديمة
- * انفسخت، راجع authService.resetPasswordWithCode) — المستخدم يدخل
- * بكلمة مروره الجديدة من نموذج الدخول العادي.
- * @param {string} email
- * @param {string} code
- * @param {string} newPassword
- * @returns {Promise<Object>}
+ * Password reset step 2: verify the code and set the new password.
+ * Does not auto-login after success (all old sessions are invalidated) —
+ * the user logs in with the new password via the normal form.
  */
 function resetPasswordWithCode(email, code, newPassword) {
     return request('/api/auth/reset-password', { method: 'POST', body: { email: email, code: code, newPassword: newPassword } });
 }
 
-/**
- * [0.45.6] اختيار نوع الحساب الإجباري (لاعب/استريمر) بعد أول دخول بجوجل
- * لحساب جديد — راجع choose-account-type.html وneedsAccountTypeChoice أدناه.
- * @param {boolean} wantsToBeStreamer
- * @returns {Promise<Object>}
- */
+/** Mandatory account-type choice (player/streamer) after first Google
+ * sign-in on a brand-new account — see choose-account-type.html. */
 function chooseAccountType(wantsToBeStreamer) {
     return request('/api/auth/account-type', { method: 'POST', body: { wantsToBeStreamer: Boolean(wantsToBeStreamer) } });
 }
 
-/**
- * هل هذا المستخدم لازم يشوف شاشة اختيار نوع الحساب الإجبارية الآن؟ —
- * صحيح فقط لحسابات جوجل جديدة كلياً من [0.45.6] فصاعداً لم تختر بعد.
- * @param {Object} user
- * @returns {boolean}
- */
 function needsAccountTypeChoice(user) {
     return Boolean(user) && user.account_type_chosen === false;
 }
@@ -184,7 +155,7 @@ function logout() {
         clearSession();
         return result;
     }).catch(function () {
-        clearSession(); // حتى لو فشل الطلب (لا اتصال)، لا داعي لإبقاء المستخدم "مسجَّل دخول" محلياً
+        clearSession(); // even if the request fails (offline), don't stay "logged in" locally
         return { success: true };
     });
 }
@@ -194,14 +165,11 @@ function me() {
 }
 
 /**
- * يحدّث بيانات المستخدم المخزَّنة محلياً (localStorage) من الخادم
- * مباشرة — بدون أي تحويل أو تسجيل خروج عند الفشل، خلافاً لـ
- * requireAuth أدناه. يحل مشكلة بيانات مخزَّنة قديمة (مثال: الأدمن
- * وافق على can_run_games لحساب بعد ما كان صاحبه سجّل دخوله أصلاً —
- * الجلسة المحلية المخزَّنة تبقى بالصلاحية القديمة لحد ما يسجّل خروج
- * ويدخل من جديد، أو تُستدعى هذه الدالة). تُستخدَم بصفحات عامة مثل
- * index.html حيث لا نريد فرض requireAuth (لا تسجيل دخول إلزامي).
- * @returns {Promise<Object|null>} المستخدم المحدَّث، أو null لو فشل
+ * Refreshes the locally cached user from the server without redirecting
+ * or logging out on failure (unlike requireAuth). Used on public pages
+ * (e.g. index.html) to pick up server-side permission changes without
+ * forcing a login.
+ * @returns {Promise<Object|null>}
  */
 function refreshUser() {
     if (!getToken()) return Promise.resolve(null);
@@ -226,17 +194,14 @@ function verifyTikTok(tiktokUsername) {
     return request('/api/auth/tiktok/verify', { method: 'POST', body: { tiktokUsername: tiktokUsername } });
 }
 
-/**
- * إلغاء ربط تيك توك يدوياً (زر صريح من المستخدم فقط) — الربط
- * الموثَّق لا ينتهي أبداً من نفسه، حتى لو شال المستخدم الكود من
- * بايو حسابه بتيك توك بعد التحقق. راجع docs/CHANGELOG.md.
- * @returns {Promise<Object>}
- */
+/** Manual TikTok unlink (explicit user action only) — a verified link
+ * never expires on its own, even if the user removes the code from
+ * their TikTok bio afterward. */
 function unlinkTikTok() {
     return request('/api/auth/tiktok/unlink', { method: 'POST' });
 }
 
-/** [جديد] حذف الحساب الذاتي — نهائي ولا رجعة فيه. راجع handleDeleteMyAccount بالباك-إند. */
+/** Self-service account deletion — final, no undo. */
 function deleteMyAccount() {
     return request('/api/profile/delete-account', { method: 'POST' });
 }
@@ -245,21 +210,15 @@ function setCustomId(customId) {
     return request('/api/auth/custom-id', { method: 'POST', body: { customId: customId } });
 }
 
-/**
- * [0.45.10] تعديل اسم العرض بالبروفايل (صاحب الجلسة فقط — user.id من
- * الجلسة بالخادم، لا يُرسَل هنا). راجع backend/http/auth-router.js
- * (handleUpdateDisplayName).
- */
+/** Updates the session owner's display name (user id comes from the
+ * server-side session, never sent here). */
 function updateDisplayName(displayName) {
     return request('/api/profile/display-name', { method: 'POST', body: { displayName: displayName } });
 }
 
-/**
- * [0.45.10] تعديل صورة بروفايل المستخدم — imageDataUrl كامل جاهز (Data
- * URL، مثال "data:image/png;base64,..."). حد أقصى ~85KB بعد الترميز
- * (راجع MAX_AVATAR_BASE64_LENGTH بـauth-service.js) — يفضَّل تصغير/
- * ضغط الصورة (Canvas) بالمتصفح قبل الاستدعاء.
- */
+/** imageDataUrl is a ready Data URL (e.g. "data:image/png;base64,...").
+ * Max ~85KB after encoding (MAX_AVATAR_BASE64_LENGTH in auth-service.js) —
+ * resize/compress client-side before calling. */
 function updateAvatarImage(imageDataUrl) {
     return request('/api/profile/avatar', { method: 'POST', body: { imageDataUrl: imageDataUrl } });
 }
@@ -275,11 +234,8 @@ function adminSetPermission(userId, permissionKey, value) {
     });
 }
 
-/**
- * الأدمن فقط — يعدّل الـID العام (custom_id) لأي مستخدم بمعرفة id
- * حسابه الداخلي (userId)، خلافاً لـ setCustomId أعلاه اللي يقتصر
- * دائماً على حساب الجلسة الحالية نفسها.
- */
+/** Admin only — sets a user's public custom_id by internal userId,
+ * unlike setCustomId above which always targets the current session. */
 function adminSetCustomId(userId, customId) {
     return request('/api/admin/custom-id', {
         method: 'POST',
@@ -287,64 +243,35 @@ function adminSetCustomId(userId, customId) {
     });
 }
 
-/**
- * [0.45.6] الأدمن فقط — حذف حساب نهائياً (لاعب أو ستريمر). لا تراجع.
- * @param {number} userId
- * @returns {Promise<Object>}
- */
+/** Admin only — permanently deletes an account. No undo. */
 function adminDeleteUser(userId) {
     return request('/api/admin/users/delete', { method: 'POST', body: { userId: userId } });
 }
 
-/**
- * [0.45.6] الأدمن فقط — تصفير قيد الجهاز الواحد لستريمر معتمد (صمام أمان
- * لو الستريمر غيّر جهازه فعلاً بشكل مشروع).
- * @param {number} userId
- * @returns {Promise<Object>}
- */
+/** Admin only — resets the single-device lock for an approved streamer. */
 function adminResetDeviceLock(userId) {
     return request('/api/admin/reset-device-lock', { method: 'POST', body: { userId: userId } });
 }
 
-/**
- * [0.45.11] الأدمن فقط — يفعّل/يطفي سماح تغيير الجهاز لمرة واحدة لحساب
- * ستريمر مقفول بجهاز. يُستهلَك تلقائياً بأول تسجيل دخول تالٍ.
- * @param {number} userId
- * @param {boolean} allow
- * @returns {Promise<Object>}
- */
+/** Admin only — allows a device-locked streamer one device change,
+ * consumed automatically on their next login. */
 function adminAllowDeviceChange(userId, allow) {
     return request('/api/admin/allow-device-change', { method: 'POST', body: { userId: userId, allow: allow } });
 }
 
-/**
- * بروفايل عام لأي مستخدم عبر الـID العام (custom_id) — بدون تسجيل
- * دخول، يصلح للاستدعاء من صفحة profile.html العامة مباشرة.
- * @param {string} customId
- * @returns {Promise<Object>}
- */
+/** Public profile by custom_id — no login required. */
 function getPublicProfile(customId) {
     return request('/api/profile?id=' + encodeURIComponent(customId), { method: 'GET' });
 }
 
-/**
- * الإعلان الحالي (إن كان نشطاً) — بدون تسجيل دخول، تستدعيها
- * index.html عند التحميل لعرض نافذة منبثقة لكل زائر. النتيجة
- * result.announcement تكون null لو ما فيه إعلان نشط حالياً.
- * @returns {Promise<Object>}
- */
+/** Current active announcement, if any — no login required.
+ * result.announcement is null when nothing is active. */
 function getAnnouncement() {
     return request('/api/announcement', { method: 'GET' });
 }
 
-/**
- * الأدمن فقط — نشر/تحديث الإعلان الحالي (يظهر فوراً لكل زائر جديد
- * للصفحة الرئيسية). imageFilename اختياري: اسم ملف مرفوع لجذر
- * المستودع (بنفس أسلوب logo.png/hero-banner.png)، مو رفع صورة فعلي.
- * @param {string} text
- * @param {string} [imageFilename]
- * @returns {Promise<Object>}
- */
+/** Admin only — publishes/updates the current announcement. imageFilename
+ * is a filename already uploaded to the repo root, not an actual upload. */
 function adminSetAnnouncement(text, imageFilename) {
     return request('/api/admin/announcement', {
         method: 'POST',
@@ -352,19 +279,13 @@ function adminSetAnnouncement(text, imageFilename) {
     });
 }
 
-/**
- * الأدمن فقط — إزالة الإعلان الحالي فوراً (يختفي من الصفحة الرئيسية
- * لكل الزوار من اللحظة التالية). النص القديم يبقى محفوظاً بالخادم.
- * @returns {Promise<Object>}
- */
+/** Admin only — clears the current announcement immediately. */
 function adminClearAnnouncement() {
     return request('/api/admin/announcement', { method: 'POST', body: { active: false } });
 }
 
-/* ----------------------------------------------------------------------
- * المقتنيات (إطارات + دخوليات) والنقاط — راجع
- * backend/collectibles/collectibles-service.js وbackend/points/points-service.js
- * ---------------------------------------------------------------------- */
+/* Collectibles (frames + entrances) and points — see
+ * backend/collectibles/collectibles-service.js and backend/points/points-service.js */
 
 function adminGetCollectiblesCatalog() {
     return request('/api/admin/collectibles/catalog', { method: 'GET' });
@@ -416,28 +337,18 @@ function adminClearEntrance(userId) {
     return request('/api/admin/entrance', { method: 'POST', body: { userId: userId, clear: true } });
 }
 
-/**
- * صاحب الحساب يفعّل أحد إطاراته المملوكة (من صفحة بروفايله الخاصة فقط).
- */
+/** Owner equips one of their owned frames (own profile page only). */
 function equipFrame(frameType, frameRef) {
     return request('/api/collectibles/equip', { method: 'POST', body: { frameType: frameType, frameRef: frameRef } });
 }
 
-/**
- * [0.45.0] صاحب الحساب يفعّل/يوقف دخوليته الحالية بنفسه — لا يحذفها
- * (يبقى القالب/النص محفوظين لإعادة التفعيل بضغطة واحدة). راجع
- * backend/collectibles/collectibles-service.js (setEntranceEnabled).
- * @param {boolean} enabled
- * @returns {Promise<Object>}
- */
+/** Owner toggles their entrance on/off without deleting it (template/text
+ * stay saved for one-click re-enable). */
 function toggleEntrance(enabled) {
     return request('/api/entrance/toggle', { method: 'POST', body: { enabled: Boolean(enabled) } });
 }
 
-/**
- * تُستدعى من dashboard-core عند إنهاء جولة — راجع dashboard-core/js/
- * dashboard-core.js. participants: [{tiktokUsername, won}].
- */
+/** Called by dashboard-core on round end. participants: [{tiktokUsername, won}]. */
 function reportRoundCompletion(participants, durationMs) {
     return request('/api/points/round-complete', {
         method: 'POST',
@@ -445,25 +356,13 @@ function reportRoundCompletion(participants, durationMs) {
     });
 }
 
-/* ----------------------------------------------------------------------
- * [0.45.0] مستوى الستريمر (SP) — راجع
- * backend/points/streamer-level-service.js
- * ---------------------------------------------------------------------- */
+/* Streamer level (SP) — see backend/points/streamer-level-service.js */
 
-/**
- * عتبات مستويات SP الحالية (مسار عام، بدون تسجيل دخول).
- * @returns {Promise<Object>}
- */
 function getStreamerLevels() {
     return request('/api/streamer-levels', { method: 'GET' });
 }
 
-/**
- * الأدمن فقط — تعديل عتبة/اسم مستوى SP موجود مسبقاً.
- * @param {string} slug
- * @param {{minSp?: number, displayNameAr?: string}} fields
- * @returns {Promise<Object>}
- */
+/** Admin only — edits an existing SP level's threshold/name. */
 function adminUpdateStreamerLevel(slug, fields) {
     return request('/api/admin/streamer-levels', {
         method: 'POST',
@@ -471,229 +370,121 @@ function adminUpdateStreamerLevel(slug, fields) {
     });
 }
 
-/**
- * هل هذا المستخدم يقدر يدخل لوحة الستريمر (dashboard-core)؟ حصراً
- * حساب الأدمن — أي حساب آخر (عادي أو ستريمر موافَق عليه) يُحوَّل
- * دائماً لصفحة بروفايله العامة بدل اللوحة. راجع docs/CHANGELOG.md.
- * @param {Object} user
- * @returns {boolean}
- */
+/** Only admin accounts can access the streamer dashboard (dashboard-core);
+ * every other account is redirected to its public profile instead. */
 function canAccessDashboard(user) {
     return Boolean(user && user.role === 'admin');
 }
 
-/**
- * هل هذا المستخدم يقدر "يفتح" الألعاب (أزرار "العب الآن" بالصفحة
- * الرئيسية)؟ الأدمن دائماً يقدر، أو أي حساب وافق له الأدمن صراحة
- * على صلاحية can_run_games من admin.html (راجع setPermission/
- * adminSetPermission). تسجيل الحساب كـ"يبي يكون ستريمر" (مربع
- * الاختيار بصفحة signup.html) مجرّد طلب أولي لا يمنح فتح الألعاب
- * تلقائياً — الموافقة الفعلية دايماً من الأدمن.
- * @param {Object} user
- * @returns {boolean}
- */
+/** Admins can always play; otherwise requires the admin-granted
+ * can_run_games permission. Checking "wants to be streamer" at signup is
+ * just a request — it never grants this on its own. */
 function canPlayGames(user) {
     if (!user) return false;
     if (user.role === 'admin') return true;
     return Boolean(user.permissions && user.permissions.can_run_games);
 }
 
-/**
- * هل هذا المستخدم لازم يشوف "حفلة ترحيب الستريمر الجديد" الآن؟ —
- * حساب ستريمر موافَق عليه فعلياً (نفس شرط canPlayGames، بدون
- * الأدمن نفسه — الحفلة لستريمر جديد لا لصاحب المنصة) ولم يكملها
- * كاملة بعد (welcome_completed). راجع docs/CHANGELOG.md.
- * @param {Object} user
- * @returns {boolean}
- */
+/** True for an approved streamer (same condition as canPlayGames, excluding
+ * admin) who hasn't finished the new-streamer welcome flow yet. */
 function needsWelcome(user) {
     if (!user || user.role === 'admin') return false;
     return Boolean(user.permissions && user.permissions.can_run_games) && !user.welcome_completed;
 }
 
-/**
- * صاحب الحساب يعلّم الحفلة كمكتملة بعد ما يشوفها كاملة فعلياً
- * (آخر خطوة بالعد التنازلي) — راجع index.html.
- * @returns {Promise<Object>}
- */
 function completeWelcome() {
     return request('/api/auth/welcome/complete', { method: 'POST' });
 }
 
-/**
- * الأدمن فقط — يصفّر حالة الترحيب لمستخدم معيّن فتطلع له الحفلة
- * مرة وحدة إضافية بأول زيارة جاية.
- * @param {number} userId
- * @returns {Promise<Object>}
- */
+/** Admin only — resets a user's welcome flag so it shows again next visit. */
 function adminResetWelcome(userId) {
     return request('/api/admin/welcome/reset', { method: 'POST', body: { userId: userId } });
 }
 
-/* ----------------------------------------------------------------------
- * داعمو المنصة — راجع backend/supporters/supporters-service.js
- * ---------------------------------------------------------------------- */
+/* Platform supporters — see backend/supporters/supporters-service.js */
 
-/**
- * آخر 3 داعمين (افتراضياً) — بدون تسجيل دخول، تستدعيها index.html
- * للشريط المتحرك.
- * @returns {Promise<Object>}
- */
 function getRecentSupporters(limit) {
     var path = '/api/supporters/recent';
     if (limit) path += '?limit=' + encodeURIComponent(limit);
     return request(path, { method: 'GET' });
 }
 
-/**
- * [0.45.10] أعلى الاستريمرز بإجمالي ساعات البث — بدون تسجيل دخول،
- * تستدعيها index.html لشريط "الاستريمرز الأكثر ساعات". يرجع فقط يوزرنيم
- * تيك توك + إجمالي الساعات لكل استريمر — بدون أي بيانات حساب حساسة.
- * @param {number} [limit]
- * @returns {Promise<Object>}
- */
+/** Top streamers by total stream hours. Returns TikTok username + hours
+ * only, no sensitive account data. */
 function getTopStreamers(limit) {
     var qs = limit ? ('?limit=' + encodeURIComponent(limit)) : '';
     return request('/api/public/top-streamers' + qs, { method: 'GET' });
 }
 
-/**
- * [جديد] أعلى اللاعبين بعدد مرات الفوز — بدون تسجيل دخول، بديل صادق
- * لـ"الأكثر نشاطاً" لغير الستريمرز. راجع backend/points/points-service.js.
- * @param {number} [limit]
- * @returns {Promise<Object>}
- */
 function getTopPlayersByWins(limit) {
     var qs = limit ? ('?limit=' + encodeURIComponent(limit)) : '';
     return request('/api/public/top-players-wins' + qs, { method: 'GET' });
 }
 
-/**
- * [جديد] أعلى اللاعبين بساعات اللعب الفعلية — بدون تسجيل دخول. البيانات
- * تبدأ من صفر لكل اللاعبين لحظة إضافة هذا النظام (لا سجل تاريخي قبله).
- * @param {number} [limit]
- * @returns {Promise<Object>}
- */
+/** Top players by actual play hours. Data starts at zero for everyone
+ * from when this system was added — no retroactive history. */
 function getTopPlayersByHours(limit) {
     var qs = limit ? ('?limit=' + encodeURIComponent(limit)) : '';
     return request('/api/public/top-players-hours' + qs, { method: 'GET' });
 }
 
-/**
- * [0.45.10] الأدمن فقط — إحصائيات تجميعية للستريمرز (إجمالي الساعات،
- * إجمالي المشاهدات، عدد الستريمرز المسجَّلين، وأعلى 10 بالساعات).
- * تستدعيها admin-stats.html — راجع getAdminStreamerStats() بـ
- * backend/auth/auth-service.js.
- * @returns {Promise<Object>}
- */
 function getAdminStreamerStats() {
     return request('/api/admin/stats/streamers', { method: 'GET' });
 }
 
-/**
- * [0.45.10] الأدمن فقط — إحصائيات عامة للمستخدمين (عدد المسجَّلين،
- * عدد الستريمرز، عدد الموثَّقين بتيك توك، وأعلى اللاعبين بعدد الجولات
- * كبديل صادق عن "الأكثر نشاطاً" لغير الستريمرز — راجع الملاحظة الصادقة
- * بـgetAdminUserStats() بـbackend/auth/auth-service.js).
- * @returns {Promise<Object>}
- */
 function getAdminUserStats() {
     return request('/api/admin/stats/users', { method: 'GET' });
 }
 
-/**
- * توب الداعمين (مجموع المبالغ لكل اسم) — بدون تسجيل دخول، تستدعيها
- * صفحة top-supporters.html.
- * @returns {Promise<Object>}
- */
 function getTopSupporters() {
     return request('/api/supporters/top', { method: 'GET' });
 }
 
-/** الأدمن فقط — كل صفوف الدعم (لوحة الإدارة بـadmin.html). */
 function adminListSupporters() {
     return request('/api/admin/supporters', { method: 'GET' });
 }
 
-/**
- * الأدمن فقط — إضافة دعم جديد يدوياً (بعد ما يشوفه فعلياً بلوحة
- * تحكم كريترز — لا ربط تلقائي بعد، راجع docs/CHANGELOG.md).
- * @param {string} name
- * @param {string} message
- * @param {number} amount
- * @returns {Promise<Object>}
- */
+/** Admin only — manually adds a support entry (no automatic linking yet). */
 function adminAddSupporter(name, message, amount, customId) {
     return request('/api/admin/supporters', { method: 'POST', body: { name: name, message: message, amount: amount, customId: customId } });
 }
 
-/**
- * [0.45.14] معاينة حيّة (اسم+صورة) لحساب عبر custom_id — تُستخدَم
- * بلوحة الأدمن قبل تأكيد ربط صف دعم بحساب فعلي. راجع
- * backend/supporters/supporters-service.js (findUserForLinking).
- * @param {string} customId
- * @returns {Promise<Object>}
- */
+/** Live preview (name+avatar) of an account by custom_id, used before
+ * confirming a support-row link. */
 function adminFindSupporterUser(customId) {
     return request('/api/admin/supporters/find-user?customId=' + encodeURIComponent(customId || ''), { method: 'GET' });
 }
 
-/** الأدمن فقط — حذف صف دعم واحد (تصحيح خطأ إدخال يدوي). */
 function adminDeleteSupporter(id) {
     return request('/api/admin/supporters/delete', { method: 'POST', body: { id: id } });
 }
 
-/* ----------------------------------------------------------------------
- * شركاء الإبداع — راجع backend/partners/partners-service.js
- * ---------------------------------------------------------------------- */
+/* Creative partners — see backend/partners/partners-service.js */
 
-/** عام بدون تسجيل دخول — قسم "شركاء الإبداع" بالصفحة الرئيسية. */
 function getPartners() {
     return request('/api/partners', { method: 'GET' });
 }
 
-/** الأدمن فقط — كل شركاء الإبداع (لوحة الإدارة). */
 function adminListPartners() {
     return request('/api/admin/partners', { method: 'GET' });
 }
 
-/**
- * الأدمن فقط — ربط حساب (عبر custom_id) كشريك إبداع. category: 'idea'
- * (أصحاب الأفكار) أو 'dev' (فريق التطوير).
- * @param {string} customId
- * @param {'idea'|'dev'} category
- * @returns {Promise<Object>}
- */
+/** category: 'idea' or 'dev'. */
 function adminAddPartner(customId, category) {
     return request('/api/admin/partners', { method: 'POST', body: { customId: customId, category: category } });
 }
 
-/** الأدمن فقط — حذف ربط شريك إبداع واحد. */
 function adminDeletePartner(id) {
     return request('/api/admin/partners/delete', { method: 'POST', body: { id: id } });
 }
 
-/* ----------------------------------------------------------------------
- * ثيم المناسبات — راجع backend/theme/site-theme-service.js
- * ---------------------------------------------------------------------- */
+/* Event theme — see backend/theme/site-theme-service.js */
 
-/**
- * الثيم الحالي (إن كان نشطاً) — بدون تسجيل دخول، تستدعيها
- * index.html عند التحميل. result.theme تكون null لو غير مفعَّل.
- * @returns {Promise<Object>}
- */
+/** result.theme is null when no theme is active. */
 function getSiteTheme() {
     return request('/api/theme', { method: 'GET' });
 }
 
-/**
- * الأدمن فقط — تفعيل/تحديث ثيم المناسبة (3 أكواد لون Hex).
- * @param {string|null} presetKey
- * @param {string} accent
- * @param {string} accent2
- * @param {string} accentPink
- * @returns {Promise<Object>}
- */
 function adminSetSiteTheme(presetKey, accent, accent2, accentPink) {
     return request('/api/admin/theme', {
         method: 'POST',
@@ -701,21 +492,14 @@ function adminSetSiteTheme(presetKey, accent, accent2, accentPink) {
     });
 }
 
-/** الأدمن فقط — تعطيل الثيم فوراً (رجوع للألوان الافتراضية). */
 function adminClearSiteTheme() {
     return request('/api/admin/theme/clear', { method: 'POST' });
 }
 
-/* ----------------------------------------------------------------------
- * حرّاس صفحات — تُستدعى في أول سطر من أي صفحة محمية
- * ---------------------------------------------------------------------- */
+/* Page guards — called as the first line of any protected page */
 
-/**
- * يتأكد أن هناك جلسة صالحة فعلياً (يستدعي /api/auth/me، لا يكتفي
- * بوجود Token محلي). لو غير صالحة يمسح الجلسة ويحوّل لصفحة الدخول.
- * @param {string} [redirectTo] - رابط صفحة الدخول (افتراضي: login.html)
- * @returns {Promise<Object|null>} بيانات المستخدم عند النجاح فقط
- */
+/** Confirms a session is actually valid (calls /api/auth/me, not just
+ * checking a local token exists). Clears and redirects to login on failure. */
 function requireAuth(redirectTo) {
     if (!getToken()) {
         global.location.href = redirectTo || 'login.html';
@@ -733,16 +517,10 @@ function requireAuth(redirectTo) {
 }
 
 /**
- * مثل requireAuth، لكن يرفض أيضاً أي مستخدم دوره ليس 'admin'.
- *
- * مستخدم مسجَّل دخول فعلياً لكن دوره ليس admin يُحوَّل لـ
- * `nonAdminRedirectTo` (افتراضياً لوحته الخاصة) بدل `redirectTo`
- * (صفحة الدخول) — لو حوَّلناه لصفحة الدخول، ستكتشف تلك الصفحة نفسها
- * أن جلسته صالحة وتُعيد تحويله لِلوحته تلقائياً على أي حال (راجع
- * login.html)، فتحويله مباشرة أوضح وأقصر.
- * @param {string} [redirectTo] - لغير المسجَّلين دخولهم إطلاقاً
- * @param {string} [nonAdminRedirectTo] - للمسجَّلين دخولهم بدور غير admin
- * @returns {Promise<Object|null>}
+ * Like requireAuth, but also rejects any logged-in user whose role isn't
+ * 'admin', sending them to `nonAdminRedirectTo` (their own dashboard by
+ * default) instead of the login page — avoids a redirect loop where the
+ * login page would just detect the valid session and bounce them back.
  */
 function requireAdmin(redirectTo, nonAdminRedirectTo) {
     return requireAuth(redirectTo).then(function (user) {

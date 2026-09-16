@@ -1,42 +1,15 @@
 /**
- * ==========================================================================
- *  AGP PLAYER MANAGER — المسؤول الوحيد عن إدارة اللاعبين (Player Manager)
- * ==========================================================================
+ * AGP PLAYER MANAGER — the sole owner of player-list management.
+ * No game logic (roles, teams, scores) and no TikTok/stream coupling.
  *
- * هذا الملف هو **المسؤول الوحيد** عن إدارة قائمة اللاعبين داخل الجلسة
- * الحالية على المنصة (لا يوجد ولا يجوز أن يوجد أي Player Manager آخر).
- * لا يحتوي على أي منطق لعبة (أدوار، فرق، نقاط...)، ولا أي ارتباط بتيك
- * توك أو أي منصة بث. (ملاحظة: كان هذا الملف باسم `agp-player.js` في
- * مراحل سابقة، وأُعيدت تسميته إلى `agp-player-manager.js` لتوضيح دوره
- * كمرجع وحيد — المنطق الداخلي لم يتغيّر إطلاقاً بهذه التسمية).
+ * Works directly on the array from AGP.session.getPlayersRef() (shared
+ * reference, not its own copy) so Session Manager and Player Manager
+ * always see the same data. Falls back to an internal array if no
+ * session exists yet. Every list change is broadcast via AGP.events
+ * under the player:* namespace (joinRequested/joinRejected/joined/
+ * removed/listReset) rather than calling other modules directly.
  *
- * العلاقة مع Session Manager (agp-session.js):
- *   Player Manager **لا يملك** قائمة اللاعبين بشكل مستقل؛ هو يعمل فوق
- *   نفس المصفوفة التي تُدار من `AGP.session.getPlayersRef()` (مرجع
- *   واحد مشترك)، تماماً كما هو موثّق في `agp-session.js`:
- *   "Session Manager لا يضيف/يحذف لاعبين، فقط يحتفظ بمكان موحّد يشير
- *   إليه Player Manager". هذا الملف هو ذلك الطرف الآخر من العلاقة.
- *
- *   إن لم توجد جلسة نشطة بعد (مثلاً استُخدم هذا الملف قبل إنشاء أي
- *   جلسة، أو حُمّل بشكل مستقل)، يعمل Player Manager فوق مصفوفة احتياطية
- *   داخلية خاصة به (Fallback) حتى لا ينهار، لكن الاستخدام الطبيعي دائماً
- *   يكون بعد `AGP.session.createSession(...)`.
- *
- * العلاقة مع Event Bus (agp-events.js / agp-core.js):
- *   كل تغيير في قائمة اللاعبين يُبث كحدث عبر `AGP.events`، بدل أي
- *   استدعاء مباشر لوحدات أخرى (Lobby, Round Manager, Game Engine
- *   مستقبلاً تستمع لهذه الأحداث بدل استدعاء Player Manager مباشرة قدر
- *   الإمكان). الأحداث المستخدمة ضمن Namespace خاص بهذه الوحدة (`player:*`):
- *     - player:joinRequested  -> عند محاولة انضمام لاعب (قبل أي تحقق)
- *     - player:joinRejected   -> عند رفض الانضمام (بيانات ناقصة/تكرار)
- *     - player:joined         -> عند إضافة اللاعب فعلياً بنجاح
- *     - player:removed        -> عند حذف لاعب من القائمة
- *     - player:listReset      -> عند تصفير قائمة اللاعبين بالكامل
- *
- * يعتمد هذا الملف على وجود js/agp-core.js (لـ AGP.log) و js/agp-events.js
- * (لدعم AGP.events.once إن احتيج لاحقاً) قبله، ويُفضَّل تحميله بعد
- * js/agp-session.js لأنه يستخدم AGP.session.getPlayersRef() عند توفرها.
- * ==========================================================================
+ * Load after js/agp-session.js.
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};

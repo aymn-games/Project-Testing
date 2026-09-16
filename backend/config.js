@@ -1,116 +1,47 @@
 /**
- * ==========================================================================
- *  AGP BACKEND CONFIG — إعدادات عامة فقط، بدون أي أسرار مكتوبة مباشرة
- * ==========================================================================
- *
- * يتبع هذا الملف docs/BACKEND_ARCHITECTURE.md §2 و§9 بالضبط. لا يحتوي
- * على أي بيانات اعتماد (Credentials) لأي منصة — تلك مسؤولية منفصلة
- * تماماً تُضاف لاحقاً عند بناء موصِّل تيك توك الفعلي (خارج نطاق هذه
- * المرحلة إطلاقاً).
- *
- * كل قيمة هنا افتراضية آمنة للتطوير المحلي. لا تفعيل لأي اتصال فعلي هنا؛
- * هذا الملف بيانات إعداد بحتة (Config)، لا منطق تنفيذي.
- * ==========================================================================
+ * AGP BACKEND CONFIG — إعدادات عامة فقط، بدون أي أسرار مكتوبة مباشرة.
+ * لا بيانات اعتماد لأي منصة هنا؛ كل قيمة افتراضية آمنة للتطوير المحلي.
  */
 
 'use strict';
 
 module.exports = {
-    /**
-     * منفذ خادم HTTP/WebSocket. يُقرَأ من متغيّر بيئة PORT إن وُجد،
-     * وإلا يُستخدَم المنفذ الافتراضي أدناه للتطوير المحلي.
-     */
     port: process.env.PORT ? Number(process.env.PORT) : 8787,
 
-    /**
-     * قائمة النطاقات المسموح لها بفتح اتصال WebSocket مع هذا الخادم
-     * (راجع §9 — لا اتصال من أي أصل غير مصرَّح له). فارغة/محلية الآن
-     * لغرض التطوير فقط؛ تُملأ فعلياً بنطاق الإنتاج الحقيقي لاحقاً.
-     */
+    // نطاقات WebSocket المسموحة — فارغة/محلية الآن، تُملأ بنطاق الإنتاج لاحقاً.
     allowedOrigins: [
         'http://localhost',
         'http://127.0.0.1'
     ],
 
-    /**
-     * وضع التصحيح — نفس فكرة AGP.config.debug تماماً (راجع
-     * js/agp-core.js)، لكن هذا إعداد خادم Node منفصل تماماً، لا علاقة
-     * له بإعداد الواجهة الأمامية. افتراضياً مفعَّل محلياً فقط.
-     */
     debug: process.env.NODE_ENV !== 'production',
 
-    /**
-     * معرّف عميل Google (Client ID) لتسجيل الدخول بحساب Google.
-     * ⚠️ لازم تُنشئه بنفسك من Google Cloud Console — لا يمكن توليده
-     * تلقائياً. راجع خطوات الإنشاء في README.md. اتركه فارغاً الآن
-     * إلى أن تجهّزه.
-     */
+    // ⚠️ لازم يُنشأ من Google Cloud Console — راجع README.md.
     googleClientId: process.env.GOOGLE_CLIENT_ID || '777683353907-hkemaaft5t7mktgtjvlf47ptuqk93qbg.apps.googleusercontent.com',
 
-    /**
-     * [0.45.11] مفتاح Resend API لإرسال إيميلات المعاملات (حالياً:
-     * رمز إعادة تعيين كلمة المرور). يُقرَأ حصراً من متغيّر بيئة
-     * RESEND_API_KEY — لا قيمة افتراضية مكتوبة هنا إطلاقاً (لا سر
-     * بالكود، نفس مبدأ googleClientId أعلاه لكن بدون قيمة تطوير
-     * افتراضية لأن Resend ما يوفر مفتاح تجريبي عام). فارغ = ميزة
-     * إرسال الإيميل معطّلة بأمان (راجع backend/email/email-service.js).
-     */
+    // مفتاح Resend API لإيميل استرجاع كلمة المرور. فارغ = الميزة معطّلة بأمان.
     resendApiKey: process.env.RESEND_API_KEY || '',
 
-    /**
-     * [جديد] بيانات اعتماد TikTok Login Kit (OAuth 2.0) — تسجيل دخول
-     * حقيقي بدل كود البايو القديم (راجع verifyTikTokOwnership بـ
-     * auth-service.js، الطريقة القديمة). Client Key مو سري فعلياً
-     * (يظهر بالـ URL أصلاً)، لكن نخليه متغيّر بيئة برضه بنفس نمط
-     * googleClientId فوق حتى يسهل تغييره بدون لمس الكود. Client Secret
-     * سري تماماً — بدون أي قيمة افتراضية، نفس مبدأ resendApiKey.
-     */
+    // بيانات اعتماد TikTok Login Kit (OAuth 2.0). Client Secret سري تماماً، بلا قيمة افتراضية.
     tiktokClientKey: process.env.TIKTOK_CLIENT_KEY || '',
     tiktokClientSecret: process.env.TIKTOK_CLIENT_SECRET || '',
     tiktokRedirectUri: process.env.TIKTOK_REDIRECT_URI || 'https://project-testing-akds.onrender.com/api/auth/tiktok/oauth/callback',
 
-    /**
-     * [جديد] عنوان الموقع الفعلي (aymngames.online) — منفصل تماماً عن
-     * دومين هذا السيرفر نفسه (project-testing-akds.onrender.com، راجع
-     * auth-client.js:API_BASE بالفرونت إند). نحتاجه فقط لبناء رابط
-     * إعادة توجيه *مطلَق* بنهاية تسجيل دخول تيك توك (راجع
-     * handleTikTokOAuthCallback بـauth-router.js) — رابط نسبي كان
-     * يرجّع المستخدم بالغلط لنفس دومين هذا السيرفر (404) بدل الموقع
-     * الحقيقي.
-     */
+    // ⚠️ دومين الموقع الفعلي (منفصل عن دومين هذا السيرفر) — لازم يكون مطلقاً
+    // لبناء رابط إعادة التوجيه بنهاية تسجيل دخول تيك توك، وإلا يرجّع المستخدم لدومين السيرفر (404).
     frontendBaseUrl: process.env.FRONTEND_BASE_URL || 'https://aymngames.online',
 
-    /**
-     * [جديد] مفتاح توقيع state الخاص بـ TikTok OAuth (حماية CSRF —
-     * نرمّز فيه هوية المستخدم اللي بدأ الربط، موقّع بـHMAC، بدل جدول
-     * قاعدة بيانات منفصل لحفظ الحالات المؤقتة). لازم تضبطه فعلياً
-     * بالإنتاج عبر متغيّر بيئة TIKTOK_STATE_SECRET؛ القيمة الافتراضية
-     * هنا للتطوير المحلي فقط ولا تصلح للإنتاج أبداً.
-     */
+    // ⚠️ مفتاح توقيع HMAC لحماية CSRF بحالة TikTok OAuth. القيمة الافتراضية
+    // للتطوير المحلي فقط — يجب ضبط TIKTOK_STATE_SECRET بالإنتاج.
     tiktokStateSecret: process.env.TIKTOK_STATE_SECRET || 'dev-only-insecure-state-secret-change-me',
 
-    /**
-     * حدود عامة أولية لمعدّل الرسائل (راجع §8 في وثيقة المعمارية) —
-     * قيم مبدئية فقط، لا أي منطق تطبيق فعلي بعد (ذلك في
-     * utils/rate-limiter.js لاحقاً).
-     */
+    // قيم مبدئية فقط، لا منطق تطبيق فعلي بعد (راجع utils/rate-limiter.js).
     rateLimits: {
         maxMessagesPerSecondPerConnection: 20
     },
 
-    /**
-     * النطاقات المسموح لها بالوصول لواجهة HTTP API (Auth/Admin —
-     * راجع docs/BACKEND_ARCHITECTURE.md §10). منفصل تماماً عن
-     * allowedOrigins أعلاه (ذاك لـ WebSocket، لم يُلمَس).
-     *
-     * الجلسات هنا تُمرَّر عبر ترويسة `Authorization: Bearer <token>`
-     * فقط (لا كوكيز إطلاقاً)، فلا خطر CSRF من قبول أي أصل — بخلاف
-     * الكوكيز، Token لا يُرفَق تلقائياً من المتصفح. لذلك الافتراضي هنا
-     * `['*']` (يعكس أصل الطلب نفسه في `Access-Control-Allow-Origin`،
-     * راجع http/response.js)، ويمكن تضييقه فعلياً بضبط متغيّر بيئة
-     * `CORS_ORIGINS` (مفصول بفواصل) بمجرد معرفة نطاق الفرونت إند
-     * النهائي في الإنتاج.
-     */
+    // ⚠️ الجلسات تُمرَّر عبر Authorization Bearer فقط (لا كوكيز)، فلا خطر
+    // CSRF من قبول أي أصل — لذلك الافتراضي '*'. يمكن تضييقه عبر CORS_ORIGINS.
     corsAllowedOrigins: process.env.CORS_ORIGINS
         ? process.env.CORS_ORIGINS.split(',').map(function (s) { return s.trim(); }).filter(Boolean)
         : ['*']

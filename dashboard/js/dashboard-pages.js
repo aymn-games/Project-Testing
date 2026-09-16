@@ -1,19 +1,8 @@
 /**
- * ==========================================================================
- *  DASHBOARD PAGES — صفحات الواجهة (متصلة بحالة AGP الحقيقية)
- * ==========================================================================
- *
- * كل دالة عرض هنا تقرأ حالة حقيقية من AGP عند كل استدعاء لها (لا نسخة
- * محفوظة قديمة): قوائم الألعاب/التصنيفات عبر AGP.mockData (بيانات حقيقية
- * فعلياً من AGP.gameManager.getRegisteredGames()، الاسم للتوافق فقط —
- * راجع dashboard-data.js)، وStatus/Players/Controls في صفحة اللعبة عبر
- * AGP.gameManager مباشرة. لا يوجد أي منطق تحديث حي هنا بحد ذاته — إعادة
- * استدعاء دوال renderXxxPage هذه تلقائياً عند أي حدث AGP حقيقي هي مسؤولية
- * dashboard-live.js عبر AGPDashboard.router.refresh() (لا شيء في هذا
- * الملف يستمع لـ AGP.events مباشرة). لا يزال لا يوجد Widgets أو Settings
- * حقيقية للألعاب — تلك تبقى حاويات فارغة مخصَّصة لكل لعبة، حسب المعمارية
- * المعتمَدة، ولا Stream Connector فعلي (حالة البث تبقى عرضاً ثابتاً).
- * ==========================================================================
+ * DASHBOARD PAGES — صفحات الواجهة. كل دالة renderXxxPage تقرأ حالة
+ * حقيقية من AGP عند كل استدعاء (عبر NS.mockData / AGP.gameManager
+ * مباشرة)؛ إعادة الاستدعاء التلقائي عند أحداث AGP مسؤولية
+ * dashboard-live.js، لا شيء هنا يستمع لـ AGP.events مباشرة.
  */
 
 window.AGPDashboard = window.AGPDashboard || {};
@@ -29,10 +18,6 @@ window.AGPDashboard = window.AGPDashboard || {};
             '</div>';
     }
 
-    /**
-     * جلب اسم التصنيف من معرّفه (مستخرجة كدالة مشتركة لتفادي تكرار نفس
-     * البحث في أكثر من مكان — نفس المنطق الموجود أصلاً، بدون أي إضافة).
-     */
     function getCategoryNameById(categoryId) {
         var categories = NS.mockData.getCategories();
         var name = '';
@@ -42,10 +27,7 @@ window.AGPDashboard = window.AGPDashboard || {};
         return name;
     }
 
-    /**
-     * بطاقة لعبة بسيطة (تُستخدَم في أكثر من قسم بالصفحة الرئيسية).
-     * تعتمد فقط على بيانات AGP.mockData الموجودة أصلاً — لا منطق جديد.
-     */
+    // بطاقة لعبة بسيطة، تُستخدَم في أكثر من قسم بالصفحة الرئيسية.
     function buildGameCardHtml(game) {
         var categoryName = getCategoryNameById(game.category);
 
@@ -63,9 +45,7 @@ window.AGPDashboard = window.AGPDashboard || {};
         );
     }
 
-    /**
-     * صف قسم أفقي (عنوان + بطاقات، أو رسالة حالة فارغة لو ما فيه بيانات).
-     */
+    // صف قسم أفقي (عنوان + بطاقات، أو رسالة حالة فارغة لو ما فيه بيانات).
     function buildSectionHtml(title, games, emptyMessage) {
         var innerHtml;
         var countBadge = games.length > 0
@@ -88,11 +68,8 @@ window.AGPDashboard = window.AGPDashboard || {};
         );
     }
 
-    /**
-     * بانر "مميّز" أعلى الصفحة الرئيسية — يبرز أول لعبة متاحة في بيانات
-     * AGP.mockData (لا يوجد بعد أي منطق "آخر لعبة فُتحت فعلياً"، فهذا
-     * أقرب تمثيل صادق متاح حالياً من البيانات الوهمية الموجودة).
-     */
+    // بانر "مميّز" أعلى الصفحة الرئيسية — يبرز أول لعبة متاحة (لا يوجد
+    // بعد أي منطق "آخر لعبة فُتحت فعلياً").
     function buildHeroBannerHtml(game) {
         var categoryName = getCategoryNameById(game.category);
         return (
@@ -121,10 +98,7 @@ window.AGPDashboard = window.AGPDashboard || {};
 
         var heroHtml = allGames.length > 0 ? buildHeroBannerHtml(allGames[0]) : '';
 
-        // ملاحظة: لا يوجد بعد أي منطق تتبّع فعلي لـ"الأخيرة/الجديد"، ولا
-        // بيانات وهمية لـ"المفضلة" — لذلك تُعرَض القوائم المتاحة فقط من
-        // AGP.mockData.getGames() كما هي، وتظهر حالة فارغة صادقة لما لا
-        // توجد بيانات، بدل اختلاق محتوى.
+        // لا يوجد بعد تتبّع فعلي لـ"الأخيرة/الجديد" ولا بيانات لـ"المفضلة".
         var sectionsHtml =
             buildSectionHtml('آخر الألعاب', allGames, '🔍 لا توجد ألعاب مفتوحة مؤخراً بعد.') +
             buildSectionHtml('المفضلة ⭐', [], '⭐ لم تُضِف أي لعبة للمفضلة بعد.') +
@@ -182,15 +156,8 @@ window.AGPDashboard = window.AGPDashboard || {};
             '</div>';
     }
 
-    /**
-     * قسم فارغ موحَّد الشكل (تُستخدَم للأقسام الستة كلها). لا فرق حقيقي
-     * في المنطق بين الأقسام — فقط عنوان/أيقونة/رسالة مختلفة لكل واحد.
-     * @param {string} icon - إيموجي الأيقونة
-     * @param {string} name - اسم القسم (Status, Players...)
-     * @param {string} message - نص الحالة الفارغة
-     * @param {boolean} [ownedByGame] - true لو القسم مخصَّص للعبة نفسها
-     *   (Widgets/Settings)، فتظهر شارة توضيحية مختلفة بدل الرسالة العادية.
-     */
+    // قسم فارغ موحَّد الشكل. ownedByGame=true (Widgets/Settings) يعرض
+    // شارة توضيحية مختلفة بدل الرسالة العادية.
     function buildGamePageSectionHtml(icon, name, message, ownedByGame) {
         var emptyHtml = ownedByGame
             ? '<p class="game-page-section-empty game-page-section-empty--owned">🔌 ' + message + '</p>'
@@ -206,12 +173,7 @@ window.AGPDashboard = window.AGPDashboard || {};
         );
     }
 
-    /**
-     * قسم Status — معاينة الشكل النهائي فقط بقيم ثابتة محايدة ("—")، بلا
-     * أي اتصال بـ AGP.roundManager/AGP.lobby الحقيقيَّين.
-     */
-    // خرائط عرض عربية لقيم حالات AGP.lobby / AGP.roundManager (نفس القيم
-    // الرسمية الموثَّقة في agp-lobby.js / agp-round-manager.js أنفسهما).
+    // خرائط عرض عربية لقيم حالات AGP.lobby / AGP.roundManager.
     var LOBBY_STATE_LABELS = {
         'closed': 'مغلق',
         'registration_open': 'التسجيل مفتوح',
@@ -228,14 +190,8 @@ window.AGPDashboard = window.AGPDashboard || {};
         'round_ended': 'انتهت'
     };
 
-    /**
-     * قسم Status — قراءة لقطة (Snapshot) من الحالة الحقيقية عند كل رسم
-     * لصفحة اللعبة، من AGP.lobby / AGP.roundManager / AGP.gameManager
-     * (كلها موجودة أصلاً بدون أي تعديل). الآن حية فعلياً: عندما تكون
-     * صفحة اللعبة هذه هي المسار الحالي، dashboard-live.js يستدعي
-     * renderGamePage من جديد تلقائياً عند أي حدث AGP ذي صلة (لا شيء هنا
-     * يستمع لـ AGP.events مباشرة). لو AGP غير محمَّلة، تظهر "—" بأمان.
-     */
+    // قسم Status — قراءة لقطة من الحالة الحقيقية عند كل رسم. لو AGP غير
+    // محمَّلة، تظهر "—" بأمان.
     function buildStatusSectionHtml(gameId) {
         var agp = window.AymanGamesPlatform || null;
 
@@ -282,13 +238,7 @@ window.AGPDashboard = window.AGPDashboard || {};
         );
     }
 
-    /**
-     * قسم Players — قراءة لقطة من AGP.player الحقيقي (عبر
-     * AGP.gameManager.getPlayers، موجودة أصلاً بدون أي تعديل)، تتحدث حياً
-     * بنفس آلية قسم Status أعلاه (إعادة رسم كامل للصفحة عبر
-     * dashboard-live.js عند أي حدث AGP ذي صلة). لو AGP غير محمَّلة أو لا
-     * يوجد لاعبون فعلاً، تظهر حالة فارغة صادقة كما كانت.
-     */
+    // قسم Players — قراءة لقطة من AGP.gameManager.getPlayers().
     function buildPlayersSectionHtml() {
         var agp = window.AymanGamesPlatform || null;
         var players = [];
@@ -319,10 +269,6 @@ window.AGPDashboard = window.AGPDashboard || {};
         );
     }
 
-    /**
-     * قسم Controls — معاينة الأزرار النهائية بشكلها الفعلي، لكنها غير
-     * فعّالة تماماً (بدون أي مستمع نقر أو استدعاء AGP.lobby/AGP.gameEngine).
-     */
     function buildControlsSectionHtml() {
         var buttons = [
             { action: 'open-registration', label: 'فتح التسجيل' },
@@ -345,8 +291,6 @@ window.AGPDashboard = window.AGPDashboard || {};
     }
 
     // خريطة اسم الفعل (data-action) <-> دالة AGP.gameManager المقابلة.
-    // Dashboard لا يستدعي AGP.gameEngine أو AGP.lobby مباشرة إطلاقاً —
-    // فقط عبر AGP.gameManager (الواجهة الموحّدة الموصى بها).
     var CONTROL_ACTIONS = {
         'open-registration': 'openRegistration',
         'close-registration': 'closeRegistration',
@@ -362,11 +306,6 @@ window.AGPDashboard = window.AGPDashboard || {};
         var categoryName = game ? getCategoryNameById(game.category) : '';
         var categoryAttr = game ? game.category : '';
 
-        // ملاحظة: Status وPlayers يقرآن لقطة حقيقية من AGP (Round
-        // Manager/Lobby/Player Manager). Controls أصبح فعّالاً الآن،
-        // يستدعي AGP.gameManager فقط (لا AGP.gameEngine/AGP.lobby
-        // مباشرة). Widgets وSettings يبقيان حاويتين فارغتين مخصَّصتين
-        // للعبة نفسها — لا ربط بهما بعد.
         contentEl.innerHTML =
             '<div class="game-page" data-category="' + categoryAttr + '">' +
                 '<div class="game-page-header page-header">' +
@@ -388,9 +327,7 @@ window.AGPDashboard = window.AGPDashboard || {};
                 buildGamePageSectionHtml('📜', 'Logs', 'لا يوجد نشاط مسجَّل بعد.') +
             '</div>';
 
-        // تفويض نقرات Controls عبر حدث واحد (Event Delegation) بدل
-        // مستمع لكل زر. كل فعل يمرّ حصراً عبر AGP.gameManager، ثم تُعاد
-        // معاينة الصفحة لتعكس الحالة الجديدة فوراً.
+        // Event delegation for Controls clicks; re-renders after each action.
         var controlsRow = contentEl.querySelector('.controls-button-row');
         if (controlsRow) {
             controlsRow.addEventListener('click', function (event) {

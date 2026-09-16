@@ -1,66 +1,22 @@
 /**
- * ==========================================================================
- * AGP WS SERVER — تنفيذ فعلي كامل (Phase 5)، بدون أي مكتبة خارجية
- * ==========================================================================
+ * AGP WS SERVER — تنفيذ WebSocket كامل: مصافحة (ws-handshake.js)، تأطير/فك
+ * تأطير الرسائل (ws-frame.js)، وتوجيه الرسائل حسب البروتوكول. لا معرفة
+ * هنا بتيك توك تحديداً؛ التوجيه لأي منصة يمر عبر platforms/connector-router.js.
  *
- * تنفيذ حقيقي الآن (بعد أن كان هيكلاً فارغاً في Phase 4): مصافحة
- * WebSocket كاملة (Handshake عبر websocket/ws-handshake.js)، وتأطير/فك
- * تأطير الرسائل (Framing عبر websocket/ws-frame.js)، وتوجيه الرسائل
- * الواردة حسب البروتوكول الموثَّق في docs/BACKEND_ARCHITECTURE.md §3-4
- * بالضبط — بدون أي تغيير على شكل الرسائل نفسه.
+ * طلبات الترقية على المسار '/ws/room-relay' تُوجَّه لقناة
+ * websocket/room-relay-server.js المنفصلة (Relay عام حسب room). أي طلب
+ * ترقية آخر يسلك مسار بروتوكول التيك توك المعتاد.
  *
- * لا معرفة هنا بتيك توك تحديداً؛ التوجيه لأي منصة (mock أو tiktok لاحقاً)
- * يمر عبر platforms/connector-router.js — هذا الملف لا يستورد
- * mock-connector.js ولا tiktok-connector.js مباشرة إطلاقاً، فيبقى عاماً
- * تماماً بصرف النظر عمّا يقرره الموجِّه (Router).
+ * تتبّع إحصائيات البث: عند "connect" لمنصة 'tiktok' بيوزرنيم مطابق لحساب
+ * موثَّق (authService.findVerifiedUserByTikTok)، يُسجَّل صف broadcasts
+ * جديد؛ عند disconnect/إغلاق الاتصال يُختَم. يوزرنيم غير مرتبط بحساب لا
+ * يُسجَّل له أي بث (حالة شائعة: مشاهدة بث أي شخص بدون حساب).
  *
- * ⚠️ تحديث (نظام QR السباي ماستر -- كود نيمز): طلبات الترقية على المسار
- * '/ws/room-relay' تحديداً تُوجَّه الآن لقناة websocket/room-relay-server.js
- * المنفصلة تماماً (Relay عام حسب room، بلا أي منطق لعبة). أي طلب ترقية
- * آخر (بدون مسار -- المسار الافتراضي الذي يستخدمه adapters/agp-tiktok-adapter.js
- * دائماً) يسلك نفس المسار القديم تماماً بلا أي تغيير على بروتوكول التيك
- * توك الموثَّق أعلاه.
- *
- * ⚠️ [0.45.0] تتبّع إحصائيات البث — أول ربط فعلي: كانت
- * backend/auth/auth-service.js (startBroadcast/endBroadcast/
- * incrementBroadcastStat/addGiftValue) موجودة وجاهزة منذ البداية، لكن
- * لا شيء يستدعيها فعلياً — كل الإحصائيات كانت تبقى صفراً للأبد. الربط
- * هنا **فقط** (لا تعديل على البروتوكول، ولا على
- * platforms/connector-router.js، ولا على tiktok-connector.js، ولا على
- * أي ملف js/agp-*.js بالواجهة الأمامية):
- *
- *   عند "connect" لمنصة 'tiktok' بيوزرنيم مطابق لحساب موثَّق فعلياً
- *   بالمنصة (authService.findVerifiedUserByTikTok) → يُعتبَر "بث بدأ"
- *   لصاحب ذلك الحساب، ويُسجَّل صف جديد بجدول broadcasts. عند "disconnect"
- *   (يدوي أو إغلاق الاتصال) يُختَم بث ذلك الصف. كل تعليق/هدية/متابعة
- *   واردة أثناء ذلك تزيد عدّاد الإحصائية المطابقة لنفس الصف.
- *
- *   لو يوزرنيم المتصَل به **غير** مرتبط بأي حساب موثَّق بالمنصة (حالة
- *   شائعة تماماً — أي زائر يقدر يكتب أي يوزرنيم بلوحة الستريمر لمشاهدة
- *   بثه فقط، بدون تشغيل إحصائيات)، لا يُسجَّل أي بث ولا تتأثر أي إحصائية
- *   — بصمت، بدون أي خطأ أو تغيير سلوك ظاهر بالواجهة.
- *
- * ⚠️ [0.65.0] تجميع كتابات إحصائيات البث (Batching) — إصلاح اختناق حقيقي
- * مُتحقَّق منه: كل حدث comment/gift/follow/roomUser كان يستدعي فوراً كتابة
- * SQLite متزامنة (`better-sqlite3` — `.run()` يحجب Event Loop لحد اكتمال
- * الكتابة فعلياً على القرص) عبر authService.incrementBroadcastStat/
- * addGiftValue/updateBroadcastViewerStats. بث نشط بجمهور حقيقي يرسل هذي
- * الأحداث بمعدل عالٍ جداً (خصوصاً roomUser، يصل بلا أي تصفية من
- * tiktok-connector.js أصلاً)، وبما إن Node عملية واحدة تخدم كل الاتصالات/
- * الألعاب بنفس اللحظة (وخطة Render الحالية محدودة بـ0.5 CPU)، هذا يسدّ
- * Event Loop لحظياً لكل الاتصالات وقت الانفجار — يظهر للمستخدم كـ"تعليق"
- * باللعبة.
- *
- * الإصلاح: كل اتصال يجمّع عدّاداته بالذاكرة فقط (entry.pendingStats) بدل
- * الكتابة الفورية، وتُفرَّغ دفعة واحدة لكل اتصال نشط كل
- * STATS_FLUSH_INTERVAL_MS (منطق التفريغ نفسه أيضاً عند ختم أي بث —
- * endActiveBroadcastIfAny — لضمان عدم ضياع آخر دفعة غير مُفرَّغة). لا
- * تغيير على شكل/دقة الأرقام النهائية بجدول broadcasts إطلاقاً — فقط تقليل
- * عدد مرات الكتابة الفعلية على القرص من (محتمل مئات بالثانية) إلى مرة كل
- * بضع ثوانٍ. لا تعديل على auth-service.js ولا على tiktok-connector.js ولا
- * على البروتوكول أو أي رسالة صادرة للمتصفح (sendEnvelope يبقى فورياً كما
- * هو — البطء المُصلَح هنا خاص بالكتابة على القرص فقط).
- * ==========================================================================
+ * ⚠️ تجميع كتابات الإحصائيات (Batching): كتابة SQLite متزامنة لكل حدث
+ * comment/gift/follow/roomUser كانت تحجب Event Loop عند معدل أحداث عالٍ
+ * (خطة Render محدودة بـ0.5 CPU)، يظهر كـ"تعليق" باللعبة. الإصلاح: كل
+ * اتصال يجمّع عدّاداته بالذاكرة (entry.pendingStats) وتُفرَّغ دفعة واحدة
+ * كل STATS_FLUSH_INTERVAL_MS، وأيضاً عند ختم أي بث (لتفادي ضياع آخر دفعة).
  */
 
 'use strict';
@@ -76,16 +32,10 @@ var registry = require('./connection-registry');
 var logger = require('../utils/logger');
 var authService = require('../auth/auth-service');
 
-var WEBSOCKET_MAGIC_PATH_CHECK = null; // لا قيد على المسار حالياً (تطوير محلي)
-
-// [0.65.0] راجع تعليق التوثيق أعلى الملف — تجميع كتابات الإحصائيات.
 var STATS_FLUSH_INTERVAL_MS = 5000;
 var _statsFlushIntervalStarted = false;
 
 /**
- * إنشاء عدّادات معلَّقة فارغة لاتصال معيّن لو ما وُجدت أصلاً (يُستدعى
- * فقط عند أول حدث فعلي لاتصال معيّن — لا داعي لإنشائها لكل الاتصالات
- * سلفاً، أغلبها لن يُشغِّل أي بث أصلاً).
  * @param {Object} entry - سجل الاتصال من connection-registry
  */
 function ensurePendingStats(entry) {
@@ -95,10 +45,7 @@ function ensurePendingStats(entry) {
 }
 
 /**
- * تفريغ العدّادات المعلَّقة لاتصال واحد إلى قاعدة البيانات دفعة واحدة
- * (استدعاء واحد لكل نوع إحصائية، بدل استدعاء لكل حدث فردي وصل أثناء
- * فترة التجميع). لا يفعل شيئاً بصمت لو لا يوجد بث نشط أو لا عدّادات
- * معلَّقة أصلاً.
+ * تفريغ العدّادات المعلَّقة لاتصال واحد إلى قاعدة البيانات دفعة واحدة.
  * @param {Object} entry
  */
 function flushPendingStats(entry) {
@@ -131,20 +78,14 @@ function flushPendingStats(entry) {
   }
 }
 
-/**
- * تفريغ العدّادات المعلَّقة لكل الاتصالات النشطة حالياً — تُستدعى دورياً
- * فقط (setInterval أدناه)، وليست جزءاً من مسار أي حدث فردي.
- */
+/** تفريغ العدّادات المعلَّقة لكل الاتصالات النشطة — تُستدعى دورياً فقط. */
 function flushAllPendingStats() {
   registry.listConnectionIds().forEach(function (connectionId) {
     flushPendingStats(registry.get(connectionId));
   });
 }
 
-/**
- * تشغيل مؤقّت التفريغ الدوري مرة واحدة فقط (حماية من تشغيل أكثر من
- * مؤقّت لو استُدعيت attachWebSocketServer أكثر من مرة سهواً).
- */
+/** تشغيل مؤقّت التفريغ الدوري مرة واحدة فقط. */
 function startStatsFlushInterval() {
   if (_statsFlushIntervalStarted) return;
   _statsFlushIntervalStarted = true;
@@ -167,16 +108,13 @@ function sendEnvelope(socket, envelope) {
 }
 
 /**
- * [0.45.0] ختم بث نشط مرتبط بهذا الاتصال (لو وُجد) — يُستدعى قبل أي
- * إعادة اتصال، وعند disconnect صريح، وعند إغلاق الاتصال (Socket). لا
- * يفعل شيئاً بصمت لو لا يوجد بث نشط (يوزرنيم غير مرتبط بحساب موثَّق —
- * الحالة الأشيع).
+ * ختم بث نشط مرتبط بهذا الاتصال (لو وُجد) — يُستدعى قبل أي إعادة اتصال،
+ * وعند disconnect صريح، وعند إغلاق الاتصال.
  * @param {Object} entry - سجل الاتصال من connection-registry
  */
 function endActiveBroadcastIfAny(entry) {
   if (!entry || !entry.activeBroadcastId) return;
-  // [0.65.0] تفريغ أي عدّادات معلَّقة لم تُكتب بعد قبل ختم البث — بدون
-  // هذا، آخر دفعة تجميع (حتى ٥ ثوانٍ) تضيع نهائياً عند إغلاق الاتصال.
+  // تفريغ أي عدّادات معلَّقة قبل ختم البث، وإلا تضيع آخر دفعة تجميع.
   flushPendingStats(entry);
   try {
     authService.endBroadcast(entry.activeBroadcastId);
@@ -198,10 +136,8 @@ function cleanupConnection(connectionId) {
     entry.activeConnector.disconnect();
   }
 
-  // [0.45.0] العميل قد يُغلق التبويب/يفقد الشبكة دون إرسال "disconnect"
-  // صريح أبداً — بدون هذا، يبقى البث "مفتوحاً" للأبد بقاعدة البيانات
-  // (ended_at = NULL) حتى لو توقّف فعلياً. نفس مبدأ تنظيف activeConnector
-  // أعلاه بالضبط، لبث نشط بدل موصِّل نشط.
+  // العميل قد يُغلق التبويب/يفقد الشبكة دون "disconnect" صريح — بدون هذا،
+  // يبقى البث "مفتوحاً" للأبد بقاعدة البيانات (ended_at = NULL).
   endActiveBroadcastIfAny(entry);
 
   registry.remove(connectionId);
@@ -218,19 +154,14 @@ function handleConnectMessage(connectionId, socket, payload) {
 
   var platform = payload.platform;
 
-  // ⚠️ إصلاح تسريب "اتصال مزدوج": أي موصِّل نشط سابق لنفس هذا الاتصال
-  // يُفصَل بالكامل أولاً (يوقف مؤقّتات إعادة اتصاله الخاصة، ويُنهي
-  // اتصاله الفعلي) قبل إنشاء أي موصِّل جديد — يمنع بقاء الموصِّل
-  // القديم يعمل بالخلفية ويكتب على نفس المقبس (Socket) بعد أن فقد
-  // المتصفح أي مرجع له فعلياً.
+  // ⚠️ أي موصِّل نشط سابق لنفس هذا الاتصال يُفصَل بالكامل أولاً قبل إنشاء
+  // موصِّل جديد — يمنع بقاء الموصِّل القديم يعمل بالخلفية ويكتب على نفس
+  // المقبس بعد أن فقد المتصفح أي مرجع له (تسريب "اتصال مزدوج").
   if (entry.activeConnector && typeof entry.activeConnector.disconnect === 'function') {
     logger.log('WS Server: disposing previous connector for connection ' + connectionId + ' before replacing it.');
     entry.activeConnector.disconnect();
   }
-  // [0.45.0] أي بث نشط سابق لهذا الاتصال يُختَم أيضاً بنفس لحظة استبدال
-  // الموصِّل — نفس منطق تنظيف activeConnector أعلاه تماماً، لتفادي بقاء
-  // صف broadcasts "مفتوحاً" بلا داعٍ لو المتصفح غيّر اليوزرنيم المتصَل
-  // به دون قطع الاتصال صراحة أولاً.
+  // أي بث نشط سابق لهذا الاتصال يُختَم أيضاً بنفس لحظة استبدال الموصِّل.
   endActiveBroadcastIfAny(entry);
 
   entry.activeConnector = null;
@@ -249,13 +180,8 @@ function handleConnectMessage(connectionId, socket, payload) {
   entry.activeConnector = connector;
   entry.activePlatform = platform;
 
-  // [0.45.0] لو يوزرنيم تيك توك المطلوب مراقبته مرتبط فعلياً بحساب
-  // موثَّق بالمنصة (نفس تحقّق getEquippedFrameForVerifiedTikTok تماماً)،
-  // يُسجَّل بث جديد لصاحب ذلك الحساب فوراً — بصرف النظر عن نجاح الاتصال
-  // الفعلي بتيك توك لاحقاً أم لا (بث "بدأ" من منظورنا بمجرد طلب المراقبة؛
-  // لو فشل الاتصال فعلياً، ينتهي هذا الصف بسرعة عند disconnect/إعادة
-  // المحاولة التالية، بدون أي أثر ضار). لا شيء يحدث بصمت لو اليوزرنيم
-  // غير مرتبط بأي حساب — الحالة الأشيع (مراقبة بث أي شخص بدون حساب هنا).
+  // لو يوزرنيم تيك توك المطلوب مراقبته مرتبط بحساب موثَّق، يُسجَّل بث
+  // جديد فوراً — بصرف النظر عن نجاح الاتصال الفعلي بتيك توك لاحقاً.
   if (platform === 'tiktok' && payload.username) {
     try {
       var matchedUser = authService.findVerifiedUserByTikTok(payload.username);
@@ -274,15 +200,9 @@ function handleConnectMessage(connectionId, socket, payload) {
     },
 
     onComment: function (data) {
-      // ⚠️ [0.42.2] data.isFollower يُمرَّر الآن للرسالة الصادرة —
-      // كان يُحسَب بـ tiktok-connector.js لكن يُفقَد هنا سابقاً.
-      // ⚠️ [جديد] data.avatarUrl وdata.frame يُمرَّران أيضاً — نفس
-      // مبدأ 0.42.2 بالضبط، تجنّباً لتكرار نفس الخطأ (حساب صحيح
-      // بالباك إند ثم فقدانه هنا قبل وصوله للمتصفح).
       sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, data.isFollower, data.avatarUrl, data.frame));
 
-      // [0.45.0] / [0.65.0] تجميع بالذاكرة بدل كتابة SQLite فورية —
-      // راجع تعليق التوثيق أعلى الملف. تُفرَّغ دورياً عبر flushAllPendingStats.
+      // تجميع بالذاكرة بدل كتابة SQLite فورية — تُفرَّغ دورياً عبر flushAllPendingStats.
       if (entry.activeBroadcastId) {
         ensurePendingStats(entry);
         entry.pendingStats.comments++;
@@ -292,11 +212,8 @@ function handleConnectMessage(connectionId, socket, payload) {
     onGift: function (data) {
       sendEnvelope(socket, builder.buildGiftMessage(platform, data.id, data.name, data.giftName, data.giftValue, data.repeatCount));
 
-      // [0.45.0] قيمة الهدية الفعلية = قيمة الوحدة × عدد التكرار (نفس
-      // منطق تيك توك للهدايا القابلة للتسلسل — data.repeatCount يعكس
-      // العدد الكلي المُرسَل بالفعل بحدث النهاية الواحد، راجع
-      // tiktok-connector.js تعليق GIFT أعلاه).
-      // [0.65.0] تجميع بالذاكرة بدل كتابتين SQLite فوريتين لكل هدية.
+      // قيمة الهدية الفعلية = قيمة الوحدة × عدد التكرار. تجميع بالذاكرة
+      // بدل كتابتين SQLite فوريتين لكل هدية.
       if (entry.activeBroadcastId) {
         ensurePendingStats(entry);
         entry.pendingStats.gifts++;
@@ -308,21 +225,15 @@ function handleConnectMessage(connectionId, socket, payload) {
     onFollow: function (data) {
       sendEnvelope(socket, builder.buildFollowMessage(platform, data.id, data.name));
 
-      // [0.45.0] / [0.65.0] تجميع بالذاكرة — راجع تعليق التوثيق أعلى الملف.
       if (entry.activeBroadcastId) {
         ensurePendingStats(entry);
         entry.pendingStats.follows++;
       }
     },
 
-    // [0.45.10] عدد المشاهدين — تخزين فقط بجدول broadcasts (لإحصائيات
-    // الأدمن + شريط أفضل الاستريمرز)، بدون أي رسالة جديدة للمتصفح (غير
-    // مطلوب حالياً، راجع docs/CHANGELOG.md).
-    // [0.65.0] هذا الحدث تحديداً هو الأخطر قبل الإصلاح — يصل بمعدل عالٍ
-    // جداً وبلا أي تصفية من tiktok-connector.js. الآن يُخزَّن آخر قيمة
-    // وصلت بالذاكرة فقط (بدون تراكم — القيمة الحالية تكفي، MAX() تُطبَّق
-    // وقت الكتابة الفعلية بـauth-service.js كما هي)، وتُكتب دفعة كل
-    // STATS_FLUSH_INTERVAL_MS بدل كل حدث فردي.
+    // عدد المشاهدين — تخزين فقط بجدول broadcasts، بدون رسالة جديدة للمتصفح.
+    // أعلى معدل أحداث قبل الإصلاح؛ يُخزَّن آخر قيمة بالذاكرة فقط (بدون
+    // تراكم) وتُكتب دفعة كل STATS_FLUSH_INTERVAL_MS بدل كل حدث فردي.
     onViewerUpdate: function (data) {
       if (entry.activeBroadcastId) {
         ensurePendingStats(entry);
@@ -343,7 +254,6 @@ function handleDisconnectMessage(connectionId, socket, payload) {
   if (entry.activeConnector && typeof entry.activeConnector.disconnect === 'function') {
     entry.activeConnector.disconnect();
   }
-  // [0.45.0] ختم البث النشط (إن وُجد) بنفس لحظة قطع الاتصال الصريح.
   endActiveBroadcastIfAny(entry);
 
   entry.activeConnector = null;
@@ -416,10 +326,8 @@ function attachDataHandler(connectionId, socket) {
     }
   });
 
-  // العميل قد ينهي جهته (FIN) دون إرسال إطار Close صريح (شبكة انقطعت،
-  // تبويب أُغلِق فجأة، تطبيق تحطَّم...) — بدون هذا، يبقى المقبس نصف
-  // مفتوح للأبد ولا يُطلَق حدث 'close' أبداً، فلا يُنظَّف الاتصال ولا
-  // موصِّله النشط إطلاقاً. إنهاء جهتنا فوراً يُكمل الإغلاق بأمان.
+  // العميل قد ينهي جهته (FIN) دون إطار Close صريح — بدون هذا، يبقى
+  // المقبس نصف مفتوح للأبد ولا يُطلَق 'close'، فلا يُنظَّف الاتصال.
   socket.on('end', function () { socket.end(); });
 
   socket.on('close', function () { cleanupConnection(connectionId); });
@@ -463,8 +371,7 @@ function handleUpgrade(req, socket) {
 
 module.exports = {
   /**
-   * ربط خادم WebSocket بخادم HTTP موجود فعلياً. تنفيذ حقيقي كامل
-   * الآن — لا حاجة لأي تعديل على server.js الذي يستدعي هذه الدالة.
+   * ربط خادم WebSocket بخادم HTTP موجود فعلياً.
    * @param {http.Server} httpServer
    */
   attachWebSocketServer: function (httpServer) {
@@ -477,7 +384,6 @@ module.exports = {
       handleUpgrade(req, socket);
     });
 
-    // [0.65.0] راجع تعليق التوثيق أعلى الملف — يبدأ تفريغ الإحصائيات الدوري.
     startStatsFlushInterval();
 
     logger.log('WS Server: attached to HTTP server, listening for WebSocket upgrades.');

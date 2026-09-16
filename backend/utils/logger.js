@@ -1,22 +1,13 @@
 /**
- * ==========================================================================
- *  AGP BACKEND LOGGER — أداة تسجيل بسيطة تحترم وضع Debug
- * ==========================================================================
- *
- * نفس فكرة AGP.log تماماً (js/agp-core.js في الواجهة الأمامية)، لكن هذه
- * نسخة مستقلة لعملية Node الخلفية — لا اعتماد بينهما إطلاقاً. تُستخدَم
- * داخل كل ملفات backend/ بدل console.log مباشرة، حتى يسهل التحكم
- * بالتسجيل مركزياً من config.js (config.debug).
- * ==========================================================================
+ * AGP BACKEND LOGGER — أداة تسجيل بسيطة، تُستخدَم بدل console.log مباشرة
+ * حتى يسهل التحكم بالتسجيل مركزياً من config.js (config.debug).
  */
 
 'use strict';
 
 var config = require('../config');
 
-/**
- * تسجيل رسالة تصحيح عادية (لا تظهر إن كان config.debug = false).
- */
+/** تسجيل رسالة تصحيح (لا تظهر إن كان config.debug = false). */
 function log() {
     if (!config.debug) return;
     var args = Array.prototype.slice.call(arguments);
@@ -24,9 +15,7 @@ function log() {
     console.log.apply(console, args);
 }
 
-/**
- * تسجيل خطأ — يظهر دائماً بصرف النظر عن وضع Debug (الأخطاء لا تُكتَم).
- */
+/** تسجيل خطأ — يظهر دائماً بصرف النظر عن وضع Debug. */
 function error() {
     var args = Array.prototype.slice.call(arguments);
     args.unshift('[AGP Backend]');
@@ -34,11 +23,8 @@ function error() {
 }
 
 /**
- * تسجيل معلومة تشغيلية مهمة — تظهر دائماً بصرف النظر عن وضع Debug، مثل
- * error()، لكن عبر console.log بدل console.error (مو خطأ فعلياً). تُستخدَم
- * لحالات لازم يشوفها صاحب المشروع في أي بيئة (مثل نوع مسار قاعدة
- * البيانات المستخدَم فعلياً) — على عكس log() اللي تُكتَم بالإنتاج لأن
- * Render يضبط NODE_ENV=production تلقائياً (config.debug تصير false).
+ * تسجيل معلومة تشغيلية مهمة — تظهر دائماً بعكس log()، لأن Render يضبط
+ * NODE_ENV=production تلقائياً (فتصير config.debug=false وتُكتَم log()).
  */
 function info() {
     var args = Array.prototype.slice.call(arguments);

@@ -178,8 +178,8 @@
 </div>
 
 <div class="tabs">
-  <button class="tab-btn active" onclick="showTab('create')">إنشاء غرفة</button>
-  <button class="tab-btn" onclick="showTab('join')">الدخول لغرفة</button>
+  <button class="tab-btn active" onclick="showTab('create', event)">إنشاء غرفة</button>
+  <button class="tab-btn" onclick="showTab('join', event)">الدخول لغرفة</button>
 </div>
 
 <!-- إنشاء غرفة -->
@@ -237,11 +237,11 @@ let playMode = 'solo';
 let soloCount = 4;
 let teamCount = 2;
 
-function showTab(tab) {
+function showTab(tab, evt) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + tab).classList.add('active');
-  event.currentTarget.classList.add('active');
+  evt.currentTarget.classList.add('active');
 }
 
 function setDeviceMode(mode) {

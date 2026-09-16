@@ -1,18 +1,7 @@
 /**
- * ==========================================================================
- *  AGP ANNOUNCEMENT SERVICE — إعلان/تنبيه واحد يديره الأدمن للزوار
- * ==========================================================================
- *
- * منطق بحت هنا (بدون أي معالجة HTTP — ذلك في backend/http/auth-router.js)،
- * بنفس فلسفة backend/auth/auth-service.js تماماً: ملف واحد بمسؤولية
- * واحدة، لا اعتماديات خارجية جديدة.
- *
- * صف واحد ثابت (id = 1) في جدول announcement (راجع backend/db/database.js)
- * — الأدمن ينشر نصاً (وصورة اختيارية عبر اسم ملف مرفوع لجذر المستودع،
- * بنفس أسلوب logo.png/hero-banner.png الحالي، لا نظام رفع صور جديد)،
- * ويقدر يزيله في أي وقت. الزوار (حتى غير المسجَّلين) يشوفونه بالصفحة
- * الرئيسية فقط، بنافذة منبثقة، في كل زيارة طالما نشط.
- * ==========================================================================
+ * AGP ANNOUNCEMENT SERVICE — إعلان/تنبيه واحد يديره الأدمن للزوار.
+ * صف واحد ثابت (id = 1) في جدول announcement؛ الزوار (حتى غير المسجَّلين)
+ * يشوفونه بالصفحة الرئيسية بنافذة منبثقة، في كل زيارة طالما نشط.
  */
 
 'use strict';
@@ -22,10 +11,7 @@ var db = require('../db/database');
 function now() { return Date.now(); }
 
 /**
- * الإعلان الحالي إن كان نشطاً فعلاً — تُستدعى من مسار عام (بدون تسجيل
- * دخول) لتُعرَض بالصفحة الرئيسية. ترجع null لو غير نشط أو غير موجود
- * إطلاقاً (لا فرق للزائر بين الحالتين).
- * @returns {{text: string, imageFilename: string|null}|null}
+ * @returns {{text: string, imageFilename: string|null}|null} null لو غير نشط أو غير موجود
  */
 function getActiveAnnouncement() {
     var row = db.prepare('SELECT text, image_filename, active FROM announcement WHERE id = 1').get();
@@ -34,10 +20,9 @@ function getActiveAnnouncement() {
 }
 
 /**
- * نشر/تحديث الإعلان — الأدمن فقط (يُتحقَّق من الدور بطبقة الراوت، لا
- * فحص صلاحية هنا). يستبدل نص/صورة الإعلان بالكامل ويُفعّله فوراً.
+ * نشر/تحديث الإعلان — الأدمن فقط (يُتحقَّق من الدور بطبقة الراوت).
  * @param {string} text
- * @param {string} [imageFilename] - اسم ملف مرفوع لجذر المستودع، اختياري
+ * @param {string} [imageFilename]
  * @returns {{success: boolean, error?: string}}
  */
 function setAnnouncement(text, imageFilename) {
@@ -53,9 +38,7 @@ function setAnnouncement(text, imageFilename) {
 }
 
 /**
- * إزالة الإعلان فوراً (يختفي من الصفحة الرئيسية لكل الزوار من اللحظة
- * التالية). النص القديم يبقى محفوظاً بالصف (active = 0 فقط، لا حذف)
- * حتى يقدر الأدمن يشوفه/يعيد نشره لاحقاً بدون إعادة كتابته من الصفر.
+ * إزالة الإعلان فوراً. النص القديم يبقى محفوظاً (active = 0 فقط، لا حذف).
  * @returns {{success: boolean}}
  */
 function clearAnnouncement() {

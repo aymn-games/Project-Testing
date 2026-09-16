@@ -1,21 +1,9 @@
 /**
- * ==========================================================================
- *  DASHBOARD LAYOUT — Top Bar + Sidebar (Shell ثابت)
- * ==========================================================================
- *
- * يبني هيكل الـ Shell الثابت مرة واحدة عند تحميل الصفحة: شريط علوي بسيط
- * وقائمة جانبية. قائمة التصنيفات في الـ Sidebar تُقرَأ من
- * AGP.mockData.getCategories() (بيانات حقيقية فعلياً من
- * AGP.gameManager.getRegisteredGames()، راجع dashboard-data.js — الاسم
- * "mockData" للتوافق فقط). أزرار حالة البث/الحساب في الـ Top Bar تبقى
- * عناصر بصرية ثابتة (لا Stream Connector في هذه المرحلة).
- *
- * تحديث حي (جديد): الـ Sidebar وحدها (لا الـ Top Bar) تشترك في نبضة
- * AGP Dashboard Live Updates (`AGPDashboard.live.subscribe`، من
- * dashboard-live.js) لإعادة رسم نفسها تلقائياً عند أي حدث AGP حقيقي
- * (مثل تسجيل لعبة جديدة بتصنيف جديد)، دون أي علاقة بمحتوى الصفحة
- * الحالية (ذلك مسؤولية AGPDashboard.router.refresh() بشكل منفصل تماماً).
- * ==========================================================================
+ * DASHBOARD LAYOUT — Top Bar + Sidebar (Shell ثابت). قائمة التصنيفات
+ * تُقرَأ من NS.mockData.getCategories() (بيانات حقيقية من
+ * AGP.gameManager.getRegisteredGames() — الاسم "mockData" للتوافق فقط).
+ * الـ Sidebar وحدها تشترك في AGPDashboard.live.subscribe لإعادة الرسم
+ * تلقائياً عند أي حدث AGP حقيقي.
  */
 
 window.AGPDashboard = window.AGPDashboard || {};
@@ -58,19 +46,14 @@ window.AGPDashboard = window.AGPDashboard || {};
 
         sidebarEl.innerHTML = html;
 
-        // إعادة رسم الـ Sidebar (عبر التحديث الحي أو التحميل الأول) تفقد
-        // تظليل الرابط النشط الحالي، لذلك نعيد تطبيقه فوراً هنا بدل
-        // الانتظار لتنقّل يدوي لاحق. نقرأ المسار الحالي من الراوتر نفسه
-        // (موجود أصلاً)، بدون أي منطق توجيه جديد.
+        // Re-rendering the sidebar loses the active-link highlight, so
+        // reapply it immediately from the router's current path.
         if (NS.router && typeof NS.router.getCurrentPath === 'function') {
             highlightActiveRoute(NS.router.getCurrentPath());
         }
     }
 
-    /**
-     * تظليل رابط Sidebar المطابق للمسار الحالي.
-     * @param {string} currentPath
-     */
+    // تظليل رابط Sidebar المطابق للمسار الحالي.
     function highlightActiveRoute(currentPath) {
         var links = document.querySelectorAll('.sidebar-link[data-path]');
         links.forEach(function (link) {
@@ -87,10 +70,6 @@ window.AGPDashboard = window.AGPDashboard || {};
 
     window.addEventListener('load', renderShell);
 
-    // تحديث حي: الـ Sidebar تشترك في النظام العام (AGPDashboard.live) بدل
-    // الاستماع لـ AGP.events مباشرة، فتُعاد رسمها تلقائياً كلما تغيّرت
-    // تصنيفات/ألعاب المنصة الحقيقية (تسجيل لعبة جديدة، إلخ)، دون أي
-    // منطق AGP.events جديد هنا — dashboard-live.js هو المصدر الوحيد.
     if (NS.live && typeof NS.live.subscribe === 'function') {
         NS.live.subscribe(renderSidebar);
     }

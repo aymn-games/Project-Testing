@@ -1,18 +1,8 @@
 /**
- * ==========================================================================
- *  AGP SITE THEME SERVICE — ثيم ألوان مؤقت للمناسبات (اليوم الوطني وغيره)
- * ==========================================================================
- *
- * منطق بحت هنا (بدون أي معالجة HTTP — ذلك في backend/http/auth-router.js)،
- * بنفس فلسفة backend/announcements/announcement-service.js تماماً: صف
- * واحد ثابت (id = 1) يُستبدَل بالكامل مع كل تفعيل جديد من الأدمن.
- *
- * لا علاقة له بأي منطق AGP.* — فقط 3 أكواد لون (accent/accent_2/
- * accent_pink) يقرأها index.html ويطبّقها فوق متغيرات CSS الموجودة
- * أصلاً (--accent/--accent-2/--accent-pink) وقت التحميل، عبر
- * document.documentElement.style.setProperty — لا تعديل على أي ملف CSS
- * ثابت، تراجع فوري بمجرد التعطيل (active = 0). راجع docs/CHANGELOG.md.
- * ==========================================================================
+ * AGP SITE THEME SERVICE — ثيم ألوان مؤقت للمناسبات. صف واحد ثابت (id = 1)
+ * يُستبدَل بالكامل مع كل تفعيل جديد. 3 أكواد لون (accent/accent_2/accent_pink)
+ * يقرأها index.html ويطبّقها فوق متغيرات CSS الموجودة عبر
+ * document.documentElement.style.setProperty وقت التحميل.
  */
 
 'use strict';
@@ -22,9 +12,7 @@ var db = require('../db/database');
 function now() { return Date.now(); }
 
 /**
- * الثيم الحالي إن كان نشطاً فعلاً — تُستدعى من مسار عام (بدون تسجيل
- * دخول) لتُطبَّق بالصفحة الرئيسية. ترجع null لو غير نشط أو غير موجود.
- * @returns {{presetKey: string|null, accent: string, accent2: string, accentPink: string}|null}
+ * @returns {{presetKey: string|null, accent: string, accent2: string, accentPink: string}|null} null لو غير نشط
  */
 function getActiveTheme() {
     var row = db.prepare('SELECT active, preset_key, accent, accent_2, accent_pink FROM site_theme WHERE id = 1').get();
@@ -38,9 +26,8 @@ function getActiveTheme() {
 }
 
 /**
- * تفعيل ثيم جديد (أو تحديث الثيم النشط الحالي) — الأدمن فقط. الأكواد
- * الثلاثة إلزامية (Hex صالح، مثال: "#006C35")؛ presetKey اختياري (اسم
- * الثيم الجاهز المختار، أو null لثيم مخصَّص بالكامل).
+ * تفعيل ثيم جديد (أو تحديث الحالي) — الأدمن فقط. الأكواد الثلاثة إلزامية
+ * (Hex صالح، مثال: "#006C35")؛ presetKey اختياري.
  * @param {string|null} presetKey
  * @param {string} accent
  * @param {string} accent2
@@ -67,9 +54,7 @@ function setTheme(presetKey, accent, accent2, accentPink) {
 }
 
 /**
- * تعطيل الثيم فوراً — الموقع يرجع لألوانه الافتراضية من اللحظة
- * التالية لكل زائر. الأكواد القديمة تبقى محفوظة (active = 0 فقط، لا
- * حذف) حتى يقدر الأدمن يعيد تفعيلها بسرعة بدون إعادة كتابتها.
+ * تعطيل الثيم فوراً. الأكواد القديمة تبقى محفوظة (active = 0 فقط، لا حذف).
  * @returns {{success: boolean}}
  */
 function clearTheme() {

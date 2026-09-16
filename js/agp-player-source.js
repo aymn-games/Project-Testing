@@ -1,21 +1,12 @@
 /**
- * ==========================================================================
- *  AGP PLAYER SOURCE LAYER — طبقة عامة لمصادر اللاعبين (بدون ربط فعلي)
- * ==========================================================================
- * واجهة موحّدة يستخدمها أي "مصدر" مستقبلي (Stream Connector لاحقاً، أو
- * إضافة يدوية من Dashboard، أو أي مصدر آخر) لإرسال لاعب جديد للمنصة،
- * دون أن يعرف المصدر تفاصيل Player Manager نفسه. لا يُدير قائمة لاعبين
- * خاصة به؛ فقط يُطبِّع الطلب ويُمرِّره لـ AGP.player.addPlayer الوحيد
- * فعلياً (المالك الوحيد لقائمة اللاعبين، كما هو موثَّق في
- * agp-player-manager.js)، مع وسم كل لاعب بمصدره.
- *
- * لا اتصال فعلي بأي مصدر هنا (لا TikTok ولا غيره) — فقط العقد العام:
+ * AGP PLAYER SOURCE LAYER — unified entry point any source (stream
+ * connector, manual dashboard add, etc.) uses to submit a new player
+ * without knowing Player Manager's internals. Normalizes and forwards to
+ * AGP.player.addPlayer (sole owner of the player list), tagging each
+ * player with its source. Contract:
  *   AGP.playerSource.registerSource('tiktok', { label: '...' });
  *   AGP.playerSource.submitPlayer('tiktok', { id, name, ... });
- *
- * يعتمد على js/agp-core.js, js/agp-events.js, js/agp-player-manager.js
- * قبله.
- * ==========================================================================
+ * Requires js/agp-core.js, js/agp-events.js, js/agp-player-manager.js.
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -57,13 +48,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return Object.keys(_sources);
         },
 
-        /**
-         * نقطة الدخول الموحّدة لإضافة لاعب من أي مصدر مسجَّل. لا تُضيف
-         * اللاعب بنفسها؛ تُطبِّعه وتُمرِّره لـ AGP.player.addPlayer.
-         * @param {string} sourceKey - يجب أن يكون مسجَّلاً مسبقاً عبر registerSource
-         * @param {Object} rawPlayerData - يجب أن تحتوي {id, ...} على الأقل
-         * @returns {Object|null} كائن اللاعب المُضاف، أو null عند الرفض
-         */
+        /** sourceKey must already be registered via registerSource. */
         submitPlayer: function (sourceKey, rawPlayerData) {
             if (!_sources[sourceKey]) {
                 AGP.log('Player Source: submission rejected, unknown source "' + sourceKey + '".');
