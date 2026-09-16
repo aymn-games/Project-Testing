@@ -1,16 +1,7 @@
 /**
- * ==========================================================================
- *  AGP TEAM WAR -- "حرب الفرقين" (لعبة أصلية داخل المنصة)
- * ==========================================================================
- * لعبة أصلية (Native) بنفس نمط games/musical-chairs من ناحية طريقة التحميل
- * فقط -- الهوية البصرية والشاشات كلها مستقلة تماماً (خط Zain، ألوان خاصة،
- * لا اعتماد على js/agp-game-shell.js إطلاقاً). راجع رأس index.html لتفاصيل
- * القرار المعماري الكامل.
- *
- * الخدمات العامة المُعاد استخدامها بدون أي تعديل عليها:
- *   AGP.player / AGP.scoreManager / AGP.timerManager / AGP.streamConnector
- *   AGP.lobby / AGP.gameManager
- * ==========================================================================
+ * AGP TEAM WAR -- "حرب الفرقين" (لعبة أصلية داخل المنصة، بنمط
+ * games/musical-chairs من ناحية طريقة التحميل فقط -- الهوية البصرية
+ * والشاشات مستقلة تماماً، لا اعتماد على js/agp-game-shell.js).
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -68,9 +59,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var SPECIAL_EXTRA_TURN = 'extra_turn';
     var SPECIAL_TYPES = [SPECIAL_SKIP_OPPONENT, SPECIAL_SKIP_TEAMMATE, SPECIAL_EXTRA_TURN];
 
-    /* ======================================================================
-     *  0) الحالة الداخلية
-     * ==================================================================== */
+    // الحالة الداخلية
     var _screen = 'settings'; // settings | connecting | lobby | match | winner
     var _overlayEl = null;
     var _lobbyEl = null;
@@ -109,9 +98,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
     function escapeHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
-    /* ======================================================================
-     *  1) أدوات نصية: تطبيع عربي + تحويل أرقام عربية-هندية لإنجليزية
-     * ==================================================================== */
+    // أدوات نصية: تطبيع عربي + تحويل أرقام عربية-هندية لإنجليزية
     function normalizeArabicText(text) {
         if (typeof text !== 'string') return '';
         return text
@@ -142,9 +129,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return match ? parseInt(match[1], 10) : null;
     }
 
-    /* ======================================================================
-     *  2) الهيدر الثابت
-     * ==================================================================== */
     function injectHeader() {
         if (el('tw-header')) return;
         document.body.classList.add('tw-active');
@@ -167,9 +151,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (btn) btn.style.display = 'flex';
     }
 
-    /* ======================================================================
-     *  3) الصندوق العام (إعدادات/اتصال)
-     * ==================================================================== */
     function ensureOverlay() {
         if (_overlayEl) return _overlayEl;
         _overlayEl = document.createElement('div');
@@ -181,9 +162,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function hideOverlay() { if (_overlayEl) _overlayEl.style.display = 'none'; }
     function showOverlay() { ensureOverlay().style.display = 'flex'; }
 
-    /* ======================================================================
-     *  4) شاشة الإعدادات
-     * ==================================================================== */
     function renderSettingsScreen() {
         _screen = 'settings';
         showOverlay();
@@ -301,9 +279,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</div>';
     }
 
-    /* ======================================================================
-     *  5) اللوبي
-     * ==================================================================== */
     function getTeamPlayers(team) {
         return AGP.player.getAllPlayers().filter(function (p) { return p.team === team; });
     }
@@ -445,9 +420,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    /* ======================================================================
-     *  6) بدء الجولة
-     * ==================================================================== */
     function handleStartRound() {
         var playersRed = getTeamPlayers(TEAM_RED);
         var playersBlue = getTeamPlayers(TEAM_BLUE);
@@ -477,9 +449,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         startSelectionTimer();
     }
 
-    /* ======================================================================
-     *  7) شاشة اللعب -- الشبكة، الأدوار، كشف البطاقة (تصميم خاص)
-     * ==================================================================== */
+    // شاشة اللعب -- الشبكة، الأدوار، كشف البطاقة (تصميم خاص)
     function shuffleArray(arr) {
         var a = arr.slice();
         for (var i = a.length - 1; i > 0; i--) {
@@ -691,7 +661,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function wireTurnCommentListener() {
         if (_turnCommentUnsub) return;
         _turnCommentUnsub = AGP.events.on('stream:commentReceived', handleTurnComment);
+    }
 
+    // مسجَّلة مرة واحدة فقط (وليس بكل startFreshMatch) لتفادي تراكم
+    // مستمعين مكررين على timer:ended عبر مباريات متعددة.
+    var _timerListenersWired = false;
+    function wireTimerListeners() {
+        if (_timerListenersWired) return;
+        _timerListenersWired = true;
         AGP.events.on('timer:tick', function (payload) {
             if (payload.name !== SELECTION_TIMER_NAME) return;
             var t = el('tw-turn-timer-val');
@@ -802,9 +779,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderWinnerScreen(winningTeam);
     }
 
-    /* ======================================================================
-     *  8) لوحة إدارة المباراة (زر ⚙️) -- صندوق عائم ينزلق من الجهة
-     * ==================================================================== */
+    // لوحة إدارة المباراة (زر ⚙️) -- صندوق عائم ينزلق من الجهة
     function ensureAdminPanelEl() {
         if (_adminPanelEl) return _adminPanelEl;
         _adminPanelEl = document.createElement('div');
@@ -898,9 +873,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         window.location.href = '../../index.html';
     }
 
-    /* ======================================================================
-     *  9) اللوبي الفرعي (إضافة لاعب لمقعد فاضي وسط المباراة)
-     * ==================================================================== */
+    // اللوبي الفرعي (إضافة لاعب لمقعد فاضي وسط المباراة)
     function ensureSubLobbyEl() {
         if (_subLobbyEl) return _subLobbyEl;
         _subLobbyEl = document.createElement('div');
@@ -964,9 +937,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _subLobbyCandidate = null;
     }
 
-    /* ======================================================================
-     *  10) شاشة الفوز
-     * ==================================================================== */
     function ensureWinnerEl() {
         if (_winnerEl) return _winnerEl;
         _winnerEl = document.createElement('div');
@@ -1037,9 +1007,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderSettingsScreen();
     }
 
-    /* ======================================================================
-     *  11) الاستماع لأحداث المنصة العامة + التسجيل
-     * ==================================================================== */
     function wirePlatformListeners() {
         AGP.events.on('stream:statusChanged', function (payload) {
             if (payload.platform !== 'tiktok') return;
@@ -1074,6 +1041,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         injectHeader();
         wirePlatformListeners();
+        wireTimerListeners();
         renderSettingsScreen();
     }
 

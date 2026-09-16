@@ -1,28 +1,12 @@
 /**
- * ==========================================================================
- *  AGP SHAKHBATA -- "شخبطة" (لعبة أصلية داخل المنصة)
- * ==========================================================================
- * لعبة أصلية (Native) بنفس نمط games/khazna من ناحية طريقة التحميل (بدون
- * js/agp-game-shell.js). الهوية البصرية: قالب "settings-no-box" منقول
- * بالحرف من الخزنة. خط Zain فقط. لا تعديل على أي ملف موجود بالمشروع (بما
- * فيها ملفات الخزنة نفسها).
+ * AGP SHAKHBATA -- "شخبطة" (لعبة أصلية داخل المنصة، بنمط games/khazna).
  *
- * الفكرة: الستريمر يرسم شي يختاره (كلمة يكتبها بمربع نص سري -- ما تظهر
- * للمشاهدين)، والمشاهدين يخمنون بكتابة الجواب بالشات. أول تخمين صحيح
- * (تطابق تقريبي يسمح بأخطاء إملائية بسيطة) ياخذ 3 نقاط، الثاني نقطتين،
- * والباقي (لين العدد المحدد بالإعدادات) نقطة وحدة لكل واحد.
+ * الفكرة: الستريمر يرسم شي يختاره (كلمة سرية ما تظهر للمشاهدين)، والمشاهدون
+ * يخمنون بالشات. أول تخمين صحيح (تطابق تقريبي، يسمح بأخطاء إملائية بسيطة)
+ * ياخذ 3 نقاط، الثاني نقطتين، والباقي (لين العدد المحدد بالإعدادات) نقطة.
  *
- * ⚠️ ملاحظة دمج: هذا الملف مبني بالاعتماد على قراءة فعلية لكود
- * games/khazna/agp-khazna.js (نفس الإصدار المرفوع بالريبو وقت الكتابة).
- * الخدمات العامة المُعاد استخدامها بدون أي تعديل عليها:
- *   AGP.player / AGP.playerCard / AGP.streamConnector / AGP.events /
- *   AGP.gameManager
- *
- * نقطة واحدة غير مؤكدة 100%: ما وصلت لاستخدام فعلي لـ AGP.timerManager
- * بكود الخزنة اللي قريته (المؤقتات هناك كانت setTimeout/setInterval
- * عادية)، فاستخدمت نفس الأسلوب هنا. لو عندكم معيار موحّد لازم يمر عبر
- * AGP.timerManager، سهل تستبدل دالتي startRoundTimer/stopRoundTimer تحت.
- * ==========================================================================
+ * المؤقتات هنا setTimeout/setInterval عادية وليست عبر AGP.timerManager
+ * (نفس أسلوب games/khazna).
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -47,9 +31,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var LOBBY_CARD_SIZE = 46;
     var PALETTE = ['#f2eefc', '#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#7c3aed', '#ec4899', '#000000'];
 
-    /* ======================================================================
-     *  0) الحالة الداخلية
-     * ==================================================================== */
+    // الحالة الداخلية
     var _screen = 'settings'; // settings | connecting | lobby | match | winner
     var _rootEl = null;
     var _lobbyEl = null;
@@ -81,9 +63,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
     function escapeHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
-    /* ======================================================================
-     *  1) أدوات نصية: تطبيع عربي + تحقق تقريبي من التخمين
-     * ==================================================================== */
+    // أدوات نصية: تطبيع عربي + تحقق تقريبي من التخمين
     function normalizeArabicText(text) {
         if (typeof text !== 'string') return '';
         return text
@@ -119,9 +99,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return levenshtein(g, t) <= allowedErrors;
     }
 
-    /* ======================================================================
-     *  2) الهيدر الأساسي الثابت
-     * ==================================================================== */
     function injectHeader() {
         if (el('shk-header')) return;
         var header = document.createElement('div');
@@ -136,9 +113,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('shk-header-home-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
     }
 
-    /* ======================================================================
-     *  3) شاشة الإعدادات -- قالب "settings-no-box"
-     * ==================================================================== */
+    // شاشة الإعدادات -- قالب "settings-no-box"
     function ensureRoot() {
         if (_rootEl) return _rootEl;
         document.body.classList.add('shk-active');
@@ -246,9 +221,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.streamConnector.connect('tiktok', { username: username });
     }
 
-    /* ======================================================================
-     *  4) تبويب الاتصال بالبث
-     * ==================================================================== */
     function ensureConnectOverlay() {
         if (!el('shk-connect-dim')) {
             var dim = document.createElement('div');
@@ -282,9 +254,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (el('shk-connect-popup')) el('shk-connect-popup').style.display = 'none';
     }
 
-    /* ======================================================================
-     *  5) الاستماع لأحداث المنصة العامة
-     * ==================================================================== */
     function wirePlatformListeners() {
         AGP.events.on('stream:statusChanged', function (payload) {
             if (payload.platform !== 'tiktok') return;
@@ -303,9 +272,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.events.on('player:removed', function () { if (_screen === 'lobby') renderLobbyGrid(); });
     }
 
-    /* ======================================================================
-     *  6) شاشة اللوبي (نفس نمط الخزنة: بدون صندوق، شبكة 6 أعمدة 46px)
-     * ==================================================================== */
+    // شاشة اللوبي (نفس نمط الخزنة: بدون صندوق، شبكة 6 أعمدة 46px)
     function findPlayerById(id) {
         var players = AGP.player.getAllPlayers();
         for (var i = 0; i < players.length; i++) if (players[i].id === id) return players[i];
@@ -402,9 +369,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('shk-start-round-btn').addEventListener('click', function () { startMatch(); });
     }
 
-    /* ======================================================================
-     *  7) شاشة المباراة (الرسم + التخمين)
-     * ==================================================================== */
+    // شاشة المباراة (الرسم + التخمين)
     function ensureMatchEl() {
         if (_matchEl) return _matchEl;
         _matchEl = document.createElement('div');
@@ -546,9 +511,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }).join('');
     }
 
-    /* ======================================================================
-     *  8) لوحة الرسم (Canvas) -- الستريمر فقط يرسم
-     * ==================================================================== */
+    // لوحة الرسم (Canvas) -- الستريمر فقط يرسم
     var _ctx = null, _drawing = false, _currentColor = PALETTE[0], _currentSize = 6, _isEraser = false, _strokes = [];
 
     function setupCanvas() {
@@ -645,9 +608,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _strokes.length = 0;
     }
 
-    /* ======================================================================
-     *  9) الدرج الجانبي (إعدادات + لاعبين أثناء اللعب)
-     * ==================================================================== */
+    // الدرج الجانبي (إعدادات + لاعبين أثناء اللعب)
     function ensureDrawerEl() {
         if (el('shk-drawer')) return;
         var dim = document.createElement('div');
@@ -824,12 +785,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         setTimeout(function () { dim.style.display = 'none'; box.style.display = 'none'; }, 350);
     }
 
-    /* ======================================================================
-     *  10) شاشة الفائز -- بطاقة AGP.playerCard.renderTrophyCard المشتركة،
-     *      بنفس مسار تقرير النقاط الحقيقي المعتمَد (window.AGPAuth.
-     *      reportRoundCompletion) -- بدون أي تعديل على قيم النقاط، النظام
-     *      العام الموحَّد فقط.
-     * ==================================================================== */
+    // شاشة الفائز -- بطاقة AGP.playerCard.renderTrophyCard، بنفس مسار
+    // تقرير النقاط الحقيقي (window.AGPAuth.reportRoundCompletion).
     function tiktokUsernameFor(player) {
         var id = (player && player.id) || '';
         if (id.indexOf('tiktok:') === 0) return id.slice('tiktok:'.length);
@@ -896,9 +853,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.events.emit('game:roundEnded', { id: GAME_ID });
     }
 
-    /* ======================================================================
-     *  11) توست بسيط
-     * ==================================================================== */
     function ensureToastsEl() {
         if (el('shk-toasts')) return;
         var wrap = document.createElement('div');
@@ -914,9 +868,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         setTimeout(function () { t.remove(); }, 3000);
     }
 
-    /* ======================================================================
-     *  12) التسجيل بالمنصة
-     * ==================================================================== */
     function registerGame() {
         var registered = AGP.gameManager.registerGame({
             id: GAME_ID,

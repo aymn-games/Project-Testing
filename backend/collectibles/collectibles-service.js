@@ -1,34 +1,18 @@
 /**
- * ==========================================================================
- * AGP COLLECTIBLES SERVICE — إطارات + دخوليات (منح/سحب/تفعيل)
- * ==========================================================================
- *
- * منطق بحت هنا (بدون أي معالجة HTTP — ذلك في auth-router.js). يدير 3
+ * AGP COLLECTIBLES SERVICE — إطارات + دخوليات (منح/سحب/تفعيل). يدير 3
  * أشياء منفصلة لكل مستخدم:
+ * 1) كتالوج الإطارات الثابت (frame_catalog) — 4 "خاصة" + 7 "مستوى".
+ * 2) إطارات حصرية حرة (custom_frames) — اسم ملف حر يكتبه الأدمن كل منح.
+ * 3) الدخولية (user_entrances) — نموذج أنيميشن (gold/neon/fire/ice) + نص
+ *    حر، مع عمود enabled (تفعيل/إيقاف ذاتي من صاحب الحساب).
  *
- * 1) كتالوج الإطارات الثابت (frame_catalog) — 4 "خاصة" (founder/
- * streamer/supporter/distinguished) + 7 "مستوى" — أسماء ملفاتها
- * ثابتة، يرفعها الأدمن يدوياً لجذر المستودع (نفس أسلوب logo.png).
+ * قاعدة "الحزمة التلقائية": منح أي إطار من الأربعة "الخاصة" يمنح تلقائياً
+ * دخولية مطابقة (من frame_catalog.default_entrance_*، أو مخصصة). أي إطار
+ * آخر (مستوى أو حصري) لا يمنح دخولية — فقط الأدمن يضيفها عبر setEntrance().
  *
- * 2) إطارات حصرية حرة (custom_frames) — اسم ملف حر يكتبه الأدمن كل
- * مرة يمنح فيها، بدون قيد على الكتالوج الثابت.
- *
- * 3) الدخولية (user_entrances) — نموذج أنيميشن ثابت بالواجهة (gold/
- * neon/fire/ice) + نص حر لكل مستخدم. [0.45.0] + عمود enabled (تفعيل/
- * إيقاف ذاتي من صاحب الحساب — راجع setEntranceEnabled أدناه).
- *
- * قاعدة "الحزمة التلقائية": منح أي إطار من الأربعة "الخاصة" (founder/
- * streamer/supporter/distinguished) يمنح تلقائياً دخولية مطابقة أيضاً
- * (افتراضياً من frame_catalog.default_entrance_*، أو نص/نموذج مخصص لو
- * مرَّره المستدعي). أي إطار آخر (مستوى أو حصري) لا يمنح دخولية إطلاقاً —
- * فقط الأدمن يقدر يضيفها يدوياً بشكل منفصل عبر setEntrance().
- *
- * ⚠️ صلاحية تجاوز الأدمن: grantFrame أدناه لا تتحقق أبداً من
- * level_points_required — أي إطار (حتى المقفول بمستوى) يُمنح فوراً لأي
- * مستخدم يستدعيها الأدمن من أجله، بصرف النظر عن نقاطه الفعلية. فتح
- * المستوى تلقائياً (autoGrantOnLevelUp) هو مسار إضافي منفصل تماماً،
- * وليس القيد الوحيد.
- * ==========================================================================
+ * ⚠️ grantFrame لا تتحقق من level_points_required — أي إطار يُمنح فوراً
+ * بصرف النظر عن نقاط المستخدم؛ فتح المستوى تلقائياً (autoGrantOnLevelUp)
+ * مسار إضافي منفصل، وليس القيد الوحيد.
  */
 
 'use strict';
@@ -136,7 +120,7 @@ function grantFrame(userId, frameType, frameRef, opts) {
       userId,
       opts.entranceTemplate || catalogEntry.default_entrance_template || 'gold',
       opts.entranceText || catalogEntry.default_entrance_text || '',
-      opts.grantedBy === 'auto_permission' ? 'auto_bundle' : 'auto_bundle'
+      'auto_bundle'
     );
   }
 
@@ -211,15 +195,11 @@ function getUserFrames(userId) {
 }
 
 /**
- * ⚠️ الإطار المفعَّل حالياً (equipped) لمستخدم مسجَّل بالمنصة،
- * *فقط* لو ربط ووثَّق (tiktok_verified = 1) نفس يوزرنيم التيك توك
- * الممرَّر — يُستخدَم من tiktok-connector.js عند كل تعليق وارد بالشات
- * عشان نعرف هل هذا المعلِّق يملك إطاراً مفعَّلاً يظهر ببطاقته باللوبي.
+ * الإطار المفعَّل حالياً لمستخدم مسجَّل، فقط لو ربط ووثَّق (tiktok_verified
+ * = 1) نفس يوزرنيم التيك توك الممرَّر. يُستخدَم عند كل تعليق وارد بالشات.
  *
- * ⚠️ الاستعلام هنا مكرَّر عمداً (بدل استدعاء
- * authService.findVerifiedUserByTikTok) لتفادي اعتمادية دائرية —
- * auth-service.js يستورد هذا الملف أصلاً، فلا يجوز العكس. نفس شرط
- * التحقق بالضبط (tiktok_verified = 1، مطابقة غير حساسة لحالة الأحرف).
+ * ⚠️ الاستعلام مكرَّر عمداً (بدل authService.findVerifiedUserByTikTok)
+ * لتفادي اعتمادية دائرية — auth-service.js يستورد هذا الملف أصلاً.
  *
  * @param {string} tiktokUsername - يوزرنيم تيك توك خام (بدون بادئة 'tiktok:')
  * @returns {{frameType: string, frameRef: string, imageFilename: string}|null}
@@ -228,9 +208,8 @@ function getEquippedFrameForVerifiedTikTok(tiktokUsername) {
   tiktokUsername = (tiktokUsername || '').trim();
   if (!tiktokUsername) return null;
 
-  // [0.45.6] "= ? COLLATE NOCASE" بدل LOWER(tiktok_username) = LOWER(?) —
-  // يسمح باستخدام فهرس idx_users_tiktok_username_nocase (راجع backend/
-  // db/database.js) بدل مسح جدول users كاملاً على كل تعليق وارد بالشات.
+  // "= ? COLLATE NOCASE" بدل LOWER() — يسمح باستخدام فهرس
+  // idx_users_tiktok_username_nocase بدل مسح جدول users كاملاً كل تعليق.
   var user = db.prepare(
     'SELECT id FROM users WHERE tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE'
   ).get(tiktokUsername);
@@ -255,29 +234,13 @@ function getEquippedFrameForVerifiedTikTok(tiktokUsername) {
 }
 
 /**
- * ⚠️ [0.44.4] الدخولية النشطة حالياً لمستخدم مسجَّل بالمنصة، *فقط* لو
- * ربط ووثَّق (tiktok_verified = 1) نفس يوزرنيم التيك توك الممرَّر —
- * نظير getEquippedFrameForVerifiedTikTok أعلاه بالضبط (نفس منطق
- * التحقق ونفس سبب تكرار الاستعلام بدل استدعاء auth-service.js).
+ * الدخولية النشطة حالياً لمستخدم مسجَّل، فقط لو ربط ووثَّق نفس يوزرنيم
+ * التيك توك الممرَّر — نظير getEquippedFrameForVerifiedTikTok أعلاه.
  *
- * ⚠️ [0.45.0] تُستبعَد الآن أي دخولية مُطفأة ذاتياً من صاحبها
- * (enabled = 0) — تماماً كأنها غير موجودة من منظور اللوبي، رغم بقاء
- * قالبها/نصها محفوظين بالصف بقاعدة البيانات (راجع setEntranceEnabled
- * أدناه لإعادة التفعيل بضغطة واحدة).
- *
- * ⚠️ [0.45.11] **شرط جديد**: الدخولية الآن تتطلب أيضاً وجود **إطار
- * مُجهَّز فعلاً** (user_frames.equipped = 1) لنفس المستخدم — نفس شرط
- * getEquippedFrameForVerifiedTikTok أعلاه بالضبط، بطلب صريح من صاحب
- * المنصة بعد تشخيص حالة حقيقية: حساب عنده دخولية مفعَّلة (enabled=1)
- * وإطار *ممنوح* لكن غير *مُجهَّز* من صاحبه بعد — النتيجة: الإطار ما
- * يظهر (متوقَّع، ما جُهِّز)، لكن الدخولية أيضاً ما ظهرت رغم إنها كانت
- * "مفعَّلة" بالبروفايل — لأن التفعيل الذاتي (enabled) شيء، وتجهيز إطار
- * فعلي شيء ثاني تماماً، وما كان فيه ربط بينهما. الحل: اعتماد "نفس أساس
- * تفعيل الإطار" كشرط إضافي للدخولية، بدل الاعتماد فقط على enabled
- * المنفصل — يعني: **دخولية بلا إطار مُجهَّز = لا تظهر باللوبي إطلاقاً**،
- * حتى لو enabled=1. لا حذف لأي بيانات — enabled يبقى كما هو بقاعدة
- * البيانات (يقدر المستخدم لسا يوقفها/يفعّلها من بروفايله بشكل طبيعي)،
- * فقط شرط عرض إضافي بهذي الدالة تحديداً.
+ * تُستبعَد أي دخولية مُطفأة ذاتياً (enabled = 0)، وأيضاً أي دخولية بلا
+ * إطار مُجهَّز فعلاً (user_frames.equipped = 1) لنفس المستخدم — تفعيل
+ * الدخولية ذاتياً وتجهيز إطار شيئان منفصلان، وكلاهما مطلوب للظهور باللوبي.
+ * لا حذف بيانات — enabled يبقى كما هو، فقط شرط عرض إضافي هنا.
  * @param {string} tiktokUsername - يوزرنيم تيك توك خام (بدون بادئة 'tiktok:')
  * @returns {{templateKey: string, entranceText: string}|null}
  */
@@ -285,15 +248,13 @@ function getEquippedEntranceForVerifiedTikTok(tiktokUsername) {
   tiktokUsername = (tiktokUsername || '').trim();
   if (!tiktokUsername) return null;
 
-  // [0.45.6] نفس تعليق getEquippedFrameForVerifiedTikTok أعلاه بالضبط.
   var user = db.prepare(
     'SELECT id FROM users WHERE tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE'
   ).get(tiktokUsername);
 
   if (!user) return null;
 
-  // [0.45.11] الشرط الجديد: إطار مُجهَّز فعلاً (بصرف النظر عن نوعه —
-  // كتالوج أو حصري، ونوعه بالضبط غير مهم هنا، فقط وجوده).
+  // إطار مُجهَّز فعلاً (بصرف النظر عن نوعه، فقط وجوده).
   var hasEquippedFrame = db.prepare('SELECT id FROM user_frames WHERE user_id = ? AND equipped = 1').get(user.id);
   if (!hasEquippedFrame) return null;
 
@@ -308,11 +269,8 @@ function getEquippedEntranceForVerifiedTikTok(tiktokUsername) {
  * ---------------------------------------------------------------------- */
 
 /**
- * تعيين/استبدال الدخولية النشطة لمستخدم بالكامل — سواء تلقائياً (كجزء
- * من حزمة إطار خاص) أو يدوياً من الأدمن بشكل منفصل تماماً عن أي إطار.
- * [0.45.0] كل استبدال/تعيين جديد يعيد enabled = 1 تلقائياً (منح جديد
- * من الأدمن يُفترَض يكون فعّالاً فوراً، حتى لو كانت دخولية سابقة
- * لنفس المستخدم مطفأة ذاتياً قبل هذا).
+ * تعيين/استبدال الدخولية النشطة لمستخدم بالكامل — تلقائياً (حزمة إطار
+ * خاص) أو يدوياً من الأدمن. كل تعيين جديد يعيد enabled = 1 تلقائياً.
  * @param {'gold'|'neon'|'fire'|'ice'} templateKey
  */
 function setEntrance(userId, templateKey, entranceText, source) {
@@ -335,10 +293,7 @@ function getEntrance(userId) {
 }
 
 /**
- * [0.45.0] تفعيل/إيقاف ذاتي من صاحب الحساب نفسه — لا يحذف الصف (يبقى
- * القالب/النص محفوظين لإعادة التفعيل بضغطة واحدة لاحقاً)، فقط يبدّل
- * عمود enabled. يفشل بأمان (success: false) لو المستخدم ما عنده
- * دخولية أصلاً (لا شيء لتفعيله/إيقافه).
+ * تفعيل/إيقاف ذاتي من صاحب الحساب — لا يحذف الصف، فقط يبدّل عمود enabled.
  * @param {number} userId
  * @param {boolean} enabled
  * @returns {{success: boolean, error?: string}}

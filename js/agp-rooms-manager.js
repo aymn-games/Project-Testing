@@ -1,25 +1,9 @@
 /**
- * ==========================================================================
- *  AGP ROOMS MANAGER — غرفة نشطة واحدة فقط (بنية قابلة للترقية لاحقاً)
- * ==========================================================================
- * تنفيذ فعلي لمفهوم "الغرفة" فوق Session Manager الموجود (بدون إعادة
- * تنفيذ منطقه — يستدعي دواله العامة فقط). المنصة تدعم **غرفة نشطة واحدة
- * فقط** حالياً (قرار معماري صريح). البنية الداخلية مع ذلك خريطة
- * `roomId -> room` منذ البداية، حتى تسمح ترقية مستقبلية لـ Multi-room
- * بإضافة معامل `roomId` اختياري للدوال العامة فقط، دون إعادة هيكلة أي
- * بيانات داخلية هنا أو أي تعديل على بقية الـ Managers (Session, Round
- * Manager, Lobby...) التي لا تعرف عن هذا الملف إطلاقاً.
- *
- * ✅ تحديث: `agp-round-manager.js` يمر الآن عبر `AGP.roomsManager.createRoom()`/
- *   `closeRoom()` (بدل استدعاء `AGP.session` مباشرة) عند دخول/مغادرة
- *   `registration_open`/`idle`، وكذلك عند الدخول المباشر لـ `in_progress`
- *   (مسار الألعاب التي تتخطى Lobby، عبر `ensureSessionReadyForRound()`).
- *   `_activeRoomId` هنا يبقى متزامناً مع الجلسة الفعلية في كل المسارات.
- *
- * الأحداث (`room:*`): room:created, room:closed.
- * لا اتصال فعلي، لا واجهة، لا كود خاص بأي لعبة.
- * يعتمد على js/agp-core.js, js/agp-events.js, js/agp-session.js قبله.
- * ==========================================================================
+ * AGP ROOMS MANAGER — implements "room" on top of Session Manager. Only
+ * one active room is supported currently, but the internal store is
+ * already a roomId -> room map so multi-room support can be added later
+ * without restructuring. Events: room:created, room:closed.
+ * Requires js/agp-core.js, js/agp-events.js, js/agp-session.js.
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -30,8 +14,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     if (!AGP.log) { AGP.log = function () {}; }
     if (!AGP.events) { AGP.events = { emit: function () {}, on: function () { return function () {}; } }; }
 
-    // خريطة منذ البداية (وليس متغيّراً واحداً) خصيصاً لتسهيل ترقية
-    // Multi-room مستقبلاً دون إعادة هيكلة البيانات الداخلية.
     var _rooms = {};        // roomId -> { id, gameId, createdAt }
     var _activeRoomId = null;
 
@@ -41,12 +23,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     AGP.roomsManager = {
 
-        /**
-         * إنشاء الغرفة النشطة الوحيدة. يرفض الإنشاء إن وُجدت غرفة نشطة
-         * بالفعل (قيد "غرفة واحدة" الصريح لهذه المرحلة).
-         * @param {string} [gameId]
-         * @returns {Object|null}
-         */
+        /** Rejects if a room is already active (single-room mode). */
         createRoom: function (gameId) {
             if (_activeRoomId) {
                 AGP.log('Rooms Manager: a room is already active ("' + _activeRoomId + '"); single-room mode allows only one.');
@@ -58,10 +35,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             _rooms[roomId] = room;
             _activeRoomId = roomId;
 
-            // ⚠️ إصلاح تكامل: getState() تُعيد 'session_ended' (truthy)
-            // بعد انتهاء أي جلسة سابقة، وليس null — الفحص السابق كان
-            // يمنع إنشاء أي جلسة جديدة بعد أول جلسة تنتهي. يُعتبَر الآن
-            // عدم وجود جلسة أو انتهاؤها حالتين تستدعيان إنشاء جلسة جديدة.
+            // getState() returns 'session_ended' (truthy), not null, after a
+            // session ends — must check for that state explicitly, or no
+            // new session ever gets created after the first one ends.
             if (AGP.session && typeof AGP.session.createSession === 'function') {
                 var currentState = AGP.session.getState();
                 if (!currentState || currentState === AGP.session.STATES.SESSION_ENDED) {
@@ -74,10 +50,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return room;
         },
 
-        /**
-         * إغلاق الغرفة النشطة (إن وُجدت)، وإنهاء الجلسة المرتبطة بها.
-         * @returns {boolean}
-         */
         closeRoom: function () {
             if (!_activeRoomId) return false;
             var room = _rooms[_activeRoomId];
@@ -102,11 +74,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return !!_activeRoomId;
         },
 
-        /**
-         * تفويض مباشر لحالة Session المرتبطة بالغرفة النشطة (لا نسخة
-         * موازية لحالة الجلسة هنا).
-         * @returns {string|null}
-         */
         getRoomState: function () {
             if (!AGP.session || typeof AGP.session.getState !== 'function') return null;
             return AGP.session.getState();

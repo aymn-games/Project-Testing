@@ -1,22 +1,12 @@
 /**
- * ==========================================================================
- *  AGP DATABASE — قاعدة بيانات دائمة (SQLite عبر better-sqlite3)
- * ==========================================================================
+ * AGP DATABASE — قاعدة بيانات دائمة (SQLite عبر better-sqlite3). ملف واحد
+ * على القرص (agp-data.sqlite)، لا سيرفر قاعدة بيانات منفصل.
  *
- * ملف واحد على القرص (agp-data.sqlite)، لا سيرفر قاعدة بيانات منفصل.
- *
- * ⚠️ **قرص Render الدائم (Persistent Disk) إلزامي لبقاء البيانات فعلياً**:
- *   Render (الاستضافة الحالية) يمسح أي ملفات محلية غير موجودة على قرص
- *   دائم مُرفَق صراحةً، وذلك في كل مرة تُعاد فيها الخدمة (نشر جديد، أو
- *   حتى مجرد استيقاظ الخدمة بعد فترة خمول على الخطط غير المدفوعة) —
- *   هذا سبب اختفاء الحسابات (حتى حساب الأدمن) المُلاحَظ فعلياً، وليس
- *   خللاً بمنطق التطبيق. الحل: إرفاق قرص دائم (Persistent Disk) من
- *   لوحة Render بمسار وصل (Mount Path) قيمته بالضبط `/var/data`، على
- *   خطة مدفوعة (الخطط المجانية لا تدعم الأقراص الدائمة إطلاقاً). لو
- *   ذلك المسار موجود فعلياً (أي القرص مُرفَق ومُوصَّل)، قاعدة البيانات
- *   تُخزَّن فيه تلقائياً؛ غير ذلك (بيئة تطوير محلية، أو الخدمة بدون قرص
- *   مُرفَق بعد) ترجع لنفس السلوك القديم بالضبط (ملف بجانب مجلد backend/).
- *   راجع docs/CHANGELOG.md للتفاصيل الكاملة وخطوات الإعداد على Render.
+ * ⚠️ Render يمسح أي ملفات محلية غير موجودة على قرص دائم مُرفَق صراحةً، في
+ *   كل إعادة نشر أو استيقاظ بعد خمول — سبب اختفاء الحسابات الملاحَظ سابقاً.
+ *   الحل: إرفاق قرص دائم بمسار وصل `/var/data` (خطة مدفوعة). لو ذلك
+ *   المسار موجود، قاعدة البيانات تُخزَّن فيه تلقائياً؛ غير ذلك ترجع لملف
+ *   بجانب مجلد backend/.
  *
  * الجداول:
  *   users          — حسابات الستريمرز (+ حساب أدمن واحد)
@@ -55,10 +45,8 @@ var RENDER_DISK_MOUNT_PATH = '/var/data';
 var DB_DIR = fs.existsSync(RENDER_DISK_MOUNT_PATH) ? RENDER_DISK_MOUNT_PATH : path.join(__dirname, '..');
 var DB_PATH = path.join(DB_DIR, 'agp-data.sqlite');
 
-// ⚠️ عمداً logger.info() وليس logger.log(): هذا السطر لازم يظهر دائماً
-// حتى بالإنتاج (حيث Render يضبط NODE_ENV=production تلقائياً فتصير
-// config.debug=false وتُكتَم logger.log() العادية) — التأكد من مسار
-// قاعدة البيانات الفعلي معلومة تشغيلية حرجة، مو تفصيل تصحيح عادي.
+// logger.info() عمداً وليس logger.log(): يظهر حتى بالإنتاج (config.debug=false)
+// لأن مسار قاعدة البيانات الفعلي معلومة تشغيلية حرجة.
 logger.info('Database: using ' + (DB_DIR === RENDER_DISK_MOUNT_PATH ? 'persistent Render disk' : 'local (non-persistent) path') + ' — ' + DB_PATH);
 
 var db = new Database(DB_PATH);
@@ -103,24 +91,16 @@ db.exec(`
 
     CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
     CREATE INDEX IF NOT EXISTS idx_broadcasts_user ON broadcasts(user_id);
-    -- [0.45.6] فهرس على tiktok_username بمطابقة غير حساسة لحالة الأحرف
-    -- (COLLATE NOCASE) — راجع backend/collectibles/collectibles-service.js
-    -- (getEquippedFrameForVerifiedTikTok/getEquippedEntranceForVerifiedTikTok)
-    -- وbackend/auth/auth-service.js (findVerifiedUserByTikTok): كل الثلاثة
-    -- تُستدعى على **كل تعليق وارد من الشات المباشر بتيك توك** (راجع
-    -- backend/websocket/ws-server.js)، وكانت تلف الاستعلام بـLOWER(column)
-    -- بدل LOWER(?) فقط — وهذا يُبطِل أي فهرس عادي على العمود نفسه (SQLite
-    -- لا يقدر يستخدم فهرساً على تعبير LOWER(tiktok_username) بدون فهرس
-    -- تعبيري مخصَّص)، فيضطر كل استعلام لمسح كامل جدول users تسلسلياً —
-    -- استعلام متزامن (better-sqlite3) يوقف حلقة الأحداث بـNode بالكامل
-    -- لكل الاتصالات أثناء تنفيذه، على كل تعليق، طوال مدة أي بث حي. هذا
-    -- الفهرس + تعديل الاستعلامات لاستخدام "= ? COLLATE NOCASE" بدل
-    -- LOWER() يحل المشكلة فعلياً (الفهرس أصبح قابلاً للاستخدام).
+    -- ⚠️ فهرس بمطابقة غير حساسة لحالة الأحرف (COLLATE NOCASE) — استعلامات
+    -- findVerifiedUserByTikTok/getEquippedFrameForVerifiedTikTok تُستدعى
+    -- على كل تعليق وارد من الشات المباشر؛ لفّها بـLOWER(column) كان يُبطِل
+    -- أي فهرس عادي فيضطر لمسح الجدول تسلسلياً لكل تعليق، ما يوقف حلقة
+    -- الأحداث بـNode (استعلام better-sqlite3 متزامن). استخدام
+    -- "= ? COLLATE NOCASE" بدل LOWER() مع هذا الفهرس يحل المشكلة.
     CREATE INDEX IF NOT EXISTS idx_users_tiktok_username_nocase ON users(tiktok_username COLLATE NOCASE);
 
-    -- إعلان/تنبيه واحد يديره الأدمن، يظهر للزوار بالصفحة الرئيسية (نافذة
-    -- منبثقة). صف واحد ثابت (id = 1) يُستبدَل بالكامل مع كل نشر جديد —
-    -- راجع backend/announcements/announcement-service.js.
+    -- إعلان/تنبيه واحد يديره الأدمن، يظهر للزوار بالصفحة الرئيسية. صف
+    -- واحد ثابت (id = 1) يُستبدَل بالكامل مع كل نشر جديد.
     CREATE TABLE IF NOT EXISTS announcement (
         id INTEGER PRIMARY KEY CHECK (id = 1),
         text TEXT,
@@ -129,16 +109,11 @@ db.exec(`
         updated_at INTEGER
     );
 
-    -- ========================================================
-    -- نظام المقتنيات (إطارات + دخوليات) والنقاط/المستويات — راجع
-    -- backend/collectibles/collectibles-service.js وbackend/points/points-service.js
-    -- ========================================================
+    -- نظام المقتنيات (إطارات + دخوليات) والنقاط/المستويات.
 
-    -- كتالوج الإطارات الثابتة/المحجوزة: 4 صفوف "خاصة" (founder/streamer/
-    -- supporter/distinguished — تُمنح تلقائياً أو يدوياً وتأتي مع دخولية
-    -- + توهج تلقائياً)، و7 صفوف "مستوى" (تُفتح تلقائياً عند بلوغ عدد
-    -- النقاط الذي يحدده الأدمن). أسماء الملفات ثابتة يرفعها الأدمن يدوياً
-    -- لجذر المستودع بنفس أسلوب logo.png — راجع ensureFrameCatalogSeed أدناه.
+    -- كتالوج الإطارات الثابتة/المحجوزة: 4 صفوف "خاصة" (تُمنح تلقائياً أو
+    -- يدوياً وتأتي مع دخولية + توهج)، و7 صفوف "مستوى" (تُفتح تلقائياً عند
+    -- بلوغ عدد النقاط الذي يحدده الأدمن).
     CREATE TABLE IF NOT EXISTS frame_catalog (
         slug TEXT PRIMARY KEY,
         image_filename TEXT NOT NULL,
@@ -150,8 +125,7 @@ db.exec(`
         default_entrance_text TEXT
     );
 
-    -- إطارات حصرية بأسماء ملفات حرة يرفعها الأدمن لاحقاً (خارج الكتالوج
-    -- الثابت أعلاه) — كل صف مقتنى واحد قابل للمنح لأي مستخدم يدوياً.
+    -- إطارات حصرية بأسماء ملفات حرة يرفعها الأدمن، خارج الكتالوج الثابت.
     CREATE TABLE IF NOT EXISTS custom_frames (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         image_filename TEXT NOT NULL,
@@ -160,10 +134,9 @@ db.exec(`
     );
 
     -- ملكية الإطارات لكل مستخدم. frame_type يحدد المصدر ('catalog' يشير
-    -- إلى frame_catalog.slug عبر frame_ref، 'custom' يشير إلى
-    -- custom_frames.id عبر frame_ref كنص). equipped = الإطار الظاهر
-    -- حالياً (واحد فقط في كل مرة لكل مستخدم — يُطبَّق بمنطق التطبيق، لا
-    -- قيد قاعدة بيانات).
+    -- إلى frame_catalog.slug، 'custom' يشير إلى custom_frames.id، كلاهما
+    -- عبر frame_ref). equipped = الإطار الظاهر حالياً (واحد فقط لكل
+    -- مستخدم — يُطبَّق بمنطق التطبيق، لا قيد قاعدة بيانات).
     CREATE TABLE IF NOT EXISTS user_frames (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -175,9 +148,8 @@ db.exec(`
         UNIQUE(user_id, frame_type, frame_ref)
     );
 
-    -- الدخولية النشطة لكل مستخدم (نموذج أنيميشن ثابت بالواجهة + نص حر) —
-    -- صف واحد لكل مستخدم، يُستبدَل بالكامل مع كل منح جديد (تلقائي مع
-    -- إطار خاص، أو يدوي مستقل من الأدمن).
+    -- الدخولية النشطة لكل مستخدم — صف واحد لكل مستخدم، يُستبدَل بالكامل
+    -- مع كل منح جديد (تلقائي مع إطار خاص، أو يدوي من الأدمن).
     CREATE TABLE IF NOT EXISTS user_entrances (
         user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
         template_key TEXT NOT NULL,
@@ -186,13 +158,9 @@ db.exec(`
         updated_at INTEGER NOT NULL
     );
 
-    -- [0.45.0] كتالوج مستويات "SP" (نقاط الستريمر) — بنفس فلسفة
-    -- frame_catalog kind='level' (عتبات نقاط قابلة للتعديل من الأدمن)،
-    -- لكن بجدول منفصل بدل إضافة قيمة جديدة لقيد CHECK(kind IN (...))
-    -- الحالي بـ frame_catalog (تعديل قيد CHECK بـSQLite يتطلب إعادة بناء
-    -- الجدول بالكامل — قرار غير آمن بلا داعٍ، بينما جدول جديد كامل
-    -- إضافة بحتة بلا أي خطر على البيانات الحالية). راجع
-    -- backend/points/streamer-level-service.js.
+    -- كتالوج مستويات "SP" (نقاط الستريمر) — عتبات قابلة للتعديل من الأدمن.
+    -- جدول منفصل عن frame_catalog بدل تعديل قيد CHECK(kind IN (...))
+    -- الحالي (يتطلب إعادة بناء الجدول بالكامل بـSQLite).
     CREATE TABLE IF NOT EXISTS streamer_levels (
         slug TEXT PRIMARY KEY,
         display_name_ar TEXT NOT NULL DEFAULT '',
@@ -212,10 +180,7 @@ db.exec(`
 
     CREATE INDEX IF NOT EXISTS idx_user_frames_user ON user_frames(user_id);
 
-    -- سجل داعمي المنصة — كل صف تبرّع/دعم واحد. إدخال يدوي حالياً من
-    -- الأدمن (admin.html) بعد ما يشوفه فعلياً بلوحة تحكم كريترز/دكان
-    -- تب — راجع backend/supporters/supporters-service.js. لا ربط حساب
-    -- مستخدم هنا عمداً (الداعم قد لا يملك حساباً بالمنصة أصلاً).
+    -- سجل داعمي المنصة — كل صف تبرّع/دعم واحد، إدخال يدوي من الأدمن.
     CREATE TABLE IF NOT EXISTS supporters (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -225,11 +190,8 @@ db.exec(`
     );
     CREATE INDEX IF NOT EXISTS idx_supporters_created ON supporters(created_at);
 
-    -- [جديد] شركاء الإبداع (قسم "شركاء الإبداع" بالصفحة الرئيسية) — يربط
-    -- حساب مسجَّل فعلي بفئة (أصحاب أفكار / فريق تطوير). لا نخزّن اسم أو
-    -- صورة هنا عمداً — كلها تُقرأ حيّة من users عند العرض (JOIN)، فلو
-    -- الشخص غيّر اسم عرضه أو صورته تتحدّث تلقائياً بدون أي تعديل هنا.
-    -- راجع backend/partners/partners-service.js.
+    -- شركاء الإبداع — يربط حساب مسجَّل بفئة (أصحاب أفكار / فريق تطوير).
+    -- لا نخزّن اسم أو صورة هنا؛ تُقرأ حيّة من users عند العرض (JOIN).
     CREATE TABLE IF NOT EXISTS creative_partners (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -240,9 +202,7 @@ db.exec(`
     CREATE INDEX IF NOT EXISTS idx_creative_partners_category ON creative_partners(category);
 
     -- ثيم ألوان مؤقت للمناسبات — صف واحد ثابت (id = 1)، يُستبدَل بالكامل
-    -- مع كل تفعيل جديد من الأدمن (نفس نمط جدول announcement بالضبط).
-    -- active = 0 يعني الموقع بألوانه الافتراضية (index.html:root)، مافي
-    -- أي تأثير. راجع backend/theme/site-theme-service.js.
+    -- مع كل تفعيل جديد. active = 0 يعني الموقع بألوانه الافتراضية.
     CREATE TABLE IF NOT EXISTS site_theme (
         id INTEGER PRIMARY KEY CHECK (id = 1),
         active INTEGER NOT NULL DEFAULT 0,
@@ -254,11 +214,7 @@ db.exec(`
     );
 `);
 
-/**
- * ترقية آمنة لقاعدة بيانات كانت موجودة قبل هذا التعديل (أُنشئت بدون
- * أعمدة google_id/tiktok_username) — تضيفهم فقط إن لم يكونا موجودين،
- * بدون فقدان أي بيانات مخزَّنة مسبقاً.
- */
+/** ترقية آمنة: تضيف عموداً فقط إن لم يكن موجوداً، بدون فقدان بيانات. */
 function ensureColumn(table, column, definition) {
     var existing = db.prepare('PRAGMA table_info(' + table + ')').all();
     var hasColumn = existing.some(function (col) { return col.name === column; });
@@ -274,124 +230,70 @@ ensureColumn('users', 'tiktok_verification_code', 'TEXT');
 ensureColumn('users', 'custom_id', 'TEXT');
 ensureColumn('users', 'is_streamer', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'permissions', "TEXT NOT NULL DEFAULT '{}'");
-// حفلة ترحيب الستريمر الجديد (راجع docs/CHANGELOG.md) — 0 = لسا ما
-// شافها كاملة (تظهر له بـindex.html)، 1 = خلص شافها، ما تتكرر تلقائياً
-// إلا لو الأدمن صفّرها له صراحة من admin.html.
+// حفلة ترحيب الستريمر الجديد — 0 = لسا ما شافها كاملة، 1 = خلص شافها.
 ensureColumn('users', 'welcome_completed', 'INTEGER NOT NULL DEFAULT 0');
-// صورة بروفايل تيك توك واسم العرض — تُلتقَط مرة واحدة فقط لحظة نجاح
-// التحقق الفعلي (verifyTikTokOwnership بـbackend/auth/auth-service.js)
-// من نفس صفحة البروفايل العامة المجلوبة أصلاً للتحقق من الكود، بدون أي
-// طلب شبكي إضافي. تُعرَض بصفحة البروفايل (profile.html) بمجرد الربط.
-// ⚠️ استخراج تقريبي (meta tags) من HTML عام — نفس تحفّظ باقي استخراجات
-// تيك توك بالمشروع، قد يفشل أحياناً فيرجع null بدون كسر التحقق نفسه.
+// صورة بروفايل تيك توك واسم العرض — تُلتقَط مرة واحدة لحظة نجاح التحقق
+// الفعلي (verifyTikTokOwnership). استخراج تقريبي (meta tags)، قد يفشل
+// أحياناً فيرجع null بدون كسر التحقق نفسه.
 ensureColumn('users', 'tiktok_avatar_url', 'TEXT');
 ensureColumn('users', 'tiktok_display_name', 'TEXT');
-// [جديد] معرّف تيك توك الثابت (open_id) — يوصل بس من تسجيل الدخول
-// الرسمي (OAuth)، مو من طريقة كود البايو القديمة. نحتاجه لمنع نفس
-// حساب التيك توك من الارتباط بأكثر من حساب AGP بالغلط — راجع
-// backend/auth/tiktok-oauth-service.js.
+// معرّف تيك توك الثابت (open_id) — يوصل من تسجيل الدخول الرسمي (OAuth)
+// فقط، يمنع نفس حساب التيك توك من الارتباط بأكثر من حساب AGP بالغلط.
 ensureColumn('users', 'tiktok_open_id', 'TEXT');
-// عدّادات جولات مكتملة/فوز — لتفعيل بطاقة "إحصائيات اللاعب" بالبروفايل
-// (كانت "قريباً" ثابتة، ما فيه عدّاد حقيقي مخزَّن قبل هذا). تُحدَّث من
-// backend/points/points-service.js عند كل استدعاء awardForRoundCompletion
-// فعلي (بعد مطابقة الحساب الموثَّق) — راجع [0.44.2] بـdocs/CHANGELOG.md.
+// عدّادات جولات مكتملة/فوز — لبطاقة "إحصائيات اللاعب" بالبروفايل، تُحدَّث
+// من awardForRoundCompletion بـpoints-service.js.
 ensureColumn('user_points', 'games_played', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('user_points', 'games_won', 'INTEGER NOT NULL DEFAULT 0');
-// [جديد] إجمالي وقت اللعب الفعلي للاعب (مللي ثانية) — كان durationMs
-// يُستخدَم فقط لحظياً لحساب نقاط الساعات (points-service.js) بدون أي
-// تراكم مخزَّن. الآن يُراكَم هنا أيضاً حتى نقدر نطلع "الأكثر نشاطاً
-// بالساعات" للاعبين (مقابل الاستريمرز اللي عندهم broadcasts.started_at/
-// ended_at أصلاً) — راجع getTopPlayersByHours/getTopPlayersByWins
-// بـpoints-service.js و/api/public/top-players-* بـauth-router.js.
+// إجمالي وقت اللعب الفعلي للاعب (مللي ثانية) — لـ"الأكثر نشاطاً بالساعات"
+// (getTopPlayersByHours بـpoints-service.js).
 ensureColumn('user_points', 'total_play_ms', 'INTEGER NOT NULL DEFAULT 0');
-// [0.45.0] تفعيل/إيقاف ذاتي للدخولية من البروفايل — 1 (افتراضي) يعني
-// "مفعّلة" لكل الصفوف الحالية، فلا يتغيّر أي سلوك ظاهر لأي مستخدم عنده
-// دخولية اليوم. 0 = الستريمر أطفأها بنفسه؛ يبقى القالب/النص محفوظين
-// بالصف نفسه (بدون حذف) لإعادة التفعيل بضغطة واحدة — راجع
-// backend/http/auth-router.js (POST /api/entrance/toggle) وprofile.html.
+// تفعيل/إيقاف ذاتي للدخولية من البروفايل — 1 افتراضي (مفعّلة)، 0 يعني
+// الستريمر أطفأها بنفسه (القالب/النص يبقيان محفوظين لإعادة التفعيل).
 ensureColumn('user_entrances', 'enabled', 'INTEGER NOT NULL DEFAULT 1');
-// [0.45.6] اختيار نوع الحساب (لاعب/استريمر) بعد تسجيل الدخول عبر جوجل —
-// افتراضي 1 (أي "تم الاختيار") لكل الصفوف الحالية عمداً، فلا يتأثر أي
-// حساب موجود مسبقاً (كلها اختارت نوعها فعلاً وقت التسجيل العادي بكلمة
-// مرور، أو دخلت بجوجل قبل هذا الإصدار وتُعامَل كأنها اختارت "لاعب" ضمنياً
-// بدل إجبارها فجأة على شاشة اختيار لم تكن موجودة وقتها). فقط حسابات جوجل
-// الجديدة كلياً من هذا الإصدار فصاعداً تُنشأ بـ0 (يحتاج اختيار إجباري) —
-// راجع backend/auth/auth-service.js (loginWithGoogle/chooseAccountType).
+// اختيار نوع الحساب (لاعب/استريمر) بعد تسجيل الدخول عبر جوجل — افتراضي 1
+// ("تم الاختيار") للحسابات الحالية؛ فقط حسابات جوجل الجديدة تُنشأ بـ0.
 ensureColumn('users', 'account_type_chosen', 'INTEGER NOT NULL DEFAULT 1');
-// [0.45.6] قيد جهاز واحد لحسابات الستريمر المعتمدين (can_run_games=true)
-// — معرّف جهاز عشوائي (يُولَّد ويُخزَّن بـlocalStorage بالمتصفح، راجع
-// auth/auth-client.js: getDeviceId) يُربَط تلقائياً بأول تسجيل دخول ناجح
-// بعد اعتماد الحساب كستريمر فعلي. NULL = لا قيد بعد (لسا ما سجّل دخول
-// كستريمر معتمد، أو الأدمن صفّر القيد يدوياً). راجع backend/auth/
-// auth-service.js (checkDeviceLock) — **قيد ناعم وليس صلباً، حدوده
-// موثَّقة صراحة بالكود وبـdocs/CHANGELOG.md**، لا قيد إطلاقاً على الحسابات
-// غير المعتمدة كستريمر (لاعبون عاديون يدخلون من أي جهاز بلا أي تأثير).
+// قيد جهاز واحد لحسابات الستريمر المعتمدين — معرّف جهاز يُربَط تلقائياً
+// بأول تسجيل دخول بعد اعتماد الحساب. NULL = لا قيد بعد. قيد ناعم وليس
+// صلباً (راجع checkDeviceLock بـauth-service.js)؛ لا قيد على لاعبين عاديين.
 ensureColumn('users', 'bound_device_id', 'TEXT');
 
-// [0.45.10] عدد المشاهدين لكل بث — يُحدَّث من حدث roomUser الحقيقي من
-// مكتبة tiktok-live-connector (راجع backend/platforms/tiktok/
-// tiktok-connector.js). peak_viewers = أعلى عدد مشاهدين متزامن لُوحظ
-// خلال البث (من حقل المكتبة `total`)، total_unique_viewers = آخر قيمة
-// مرصودة لعدد المشاهدين التراكمي الكلي (من حقل المكتبة `totalUser`).
-// ⚠️ ملاحظة صادقة: أسماء الحقول (`total`/`totalUser`) من نوع بروتوكول
-// تيك توك غير الرسمي `WebcastRoomUserSeqMessage` بالمكتبة المثبَّتة
-// فعلياً (v2.4.3) — لم تُختبَر ضد بث حقيقي من هذه البيئة (لا اتصال
-// شبكي فعلي هنا)، فالافتراض إن `totalUser` = العدد التراكمي الكلي
-// (المطابق لما تسميه تيك توك "المشاهدات") مبني على اسم الحقل نفسه لا
-// اختبار فعلي — يحتاج تأكيداً من بث حقيقي بعد الرفع.
+// عدد المشاهدين لكل بث — من حدث roomUser بمكتبة tiktok-live-connector.
+// peak_viewers = أعلى عدد متزامن (حقل `total`)، total_unique_viewers =
+// آخر قيمة تراكمية مرصودة (حقل `totalUser`).
 ensureColumn('broadcasts', 'peak_viewers', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('broadcasts', 'total_unique_viewers', 'INTEGER NOT NULL DEFAULT 0');
 
-// [0.45.10] اسم عرض منفصل عن username (المعرّف الثابت لتسجيل الدخول،
-// لا يتغيّر) — يقدر المستخدم يعدّله بنفسه من البروفايل. NULL = لسا ما
-// عدّله، يُعرَض username كبديل. صورة البروفايل تُخزَّن Base64 مباشرة
-// بقاعدة البيانات (لا يوجد نظام تخزين ملفات بالباك إند حالياً) — حد
-// أقصى للحجم يُفرَض بمستوى الكود (auth-service.js) قبل التخزين، لا هنا.
+// اسم عرض منفصل عن username (المعرّف الثابت لتسجيل الدخول) — يعدّله
+// المستخدم من البروفايل. صورة البروفايل تُخزَّن Base64 مباشرة (لا نظام
+// تخزين ملفات بالباك إند)؛ الحد الأقصى للحجم يُفرَض بمستوى الكود.
 ensureColumn('users', 'display_name', 'TEXT');
 ensureColumn('users', 'avatar_image_base64', 'TEXT');
 
-// [0.45.11] سوبر أدمن — يتجاوز قيد الجهاز (checkDeviceLock) بالكامل بغض
-// النظر عن bound_device_id، يدخل من أي جهاز دائماً. 0 افتراضياً لكل
-// الحسابات (بما فيها حسابات الأدمن الأخرى) — يُفعَّل يدوياً فقط، ليس
-// تلقائياً بمجرد role='admin'. راجع backend/auth/auth-service.js
-// (checkDeviceLock).
+// سوبر أدمن — يتجاوز قيد الجهاز (checkDeviceLock) بالكامل، يدخل من أي
+// جهاز دائماً. 0 افتراضياً لكل الحسابات، يُفعَّل يدوياً فقط.
 ensureColumn('users', 'is_super_admin', 'INTEGER NOT NULL DEFAULT 0');
 
-// [0.45.11] سماح تغيير الجهاز — استخدام لمرة واحدة فقط. الأدمن يفعّله
-// (1) لحساب ستريمر مقفول بجهاز؛ أول تسجيل دخول تالٍ من أي جهاز يُقبل
-// ويحدّث bound_device_id للجهاز الجديد، والعمود يرجع 0 تلقائياً بنفس
-// اللحظة (راجع checkDeviceLock بـauth-service.js) — القيد يشتغل فوراً
-// على الجهاز الجديد من الدخول اللي بعده، بدون تدخل يدوي إضافي من الأدمن.
+// سماح تغيير الجهاز — استخدام لمرة واحدة. الأدمن يفعّله لحساب مقفول
+// بجهاز؛ أول تسجيل دخول تالٍ من أي جهاز يُقبل ويحدّث bound_device_id،
+// والعمود يرجع 0 تلقائياً بنفس اللحظة.
 ensureColumn('users', 'allow_device_change', 'INTEGER NOT NULL DEFAULT 0');
 
-// [0.45.11] تفعيل سوبر أدمن مرة واحدة لحساب أيمن (aymanff66@gmail.com)
-// فقط — استعلام آمن للتكرار (Idempotent): يعمل شي فقط أول مرة يشتغل
-// فيها السيرفر بعد هذا التعديل، بعدها الشرط WHERE ما يطابق شي فيصير
-// no-op بكل مرة تالية. لا يُفعَّل لأي حساب أدمن آخر تلقائياً.
+// تفعيل سوبر أدمن مرة واحدة لحساب أيمن — استعلام آمن للتكرار (Idempotent).
 db.prepare("UPDATE users SET is_super_admin = 1 WHERE email = 'aymanff66@gmail.com' AND is_super_admin = 0").run();
 
-// [0.45.11] استرجاع كلمة المرور — كود مؤقت (نفس أسلوب
-// tiktok_verification_code أعلاه) + وقت انتهاء صلاحية. NULL يعني لا
-// طلب استرجاع معلّق حالياً. راجع backend/auth/auth-service.js
-// (requestPasswordReset/resetPasswordWithCode).
+// استرجاع كلمة المرور — كود مؤقت + وقت انتهاء صلاحية. NULL = لا طلب معلّق.
 ensureColumn('users', 'password_reset_code', 'TEXT');
 ensureColumn('users', 'password_reset_expires', 'INTEGER');
 
-// [0.45.14] ربط اختياري بين صف دعم (supporters) وحساب مسجَّل فعلياً
-// بالمنصة (users.id) — NULL افتراضياً (الداعم قد لا يملك حساباً، يبقى
-// السلوك القديم كما هو تماماً بالاسم النصي وحده). لو الأدمن ربط الصف
-// بحساب معيّن، تُعرَض الصفحة الرئيسية/صفحة توب الداعمين اسم العرض
-// وصورة البروفايل *الحيّة* لذلك الحساب بدل النص الثابت وقت الإدخال —
-// راجع backend/supporters/supporters-service.js.
+// ربط اختياري بين صف دعم (supporters) وحساب مسجَّل (users.id) — NULL
+// افتراضياً. لو مربوط، تُعرَض اسم/صورة الحساب الحيّة بدل النص الثابت.
 ensureColumn('supporters', 'user_id', 'INTEGER');
 
 /**
- * تهيئة أولية لكتالوج الإطارات الثابت (4 خاصة + 7 مستويات) — تُنفَّذ مرة
- * واحدة فقط لكل صف (INSERT OR IGNORE بمفتاح slug)، فلا خطر إعادة الكتابة
- * فوق تعديلات الأدمن اللاحقة (اسم عرض عربي، نقاط المستوى، نص/نموذج
- * الدخولية الافتراضي) في أي تشغيل لاحق للخادم. مستويات النقاط تُترَك
- * NULL عمداً (غير مفعَّلة) لحد ما الأدمن يحددها بنفسه من لوحة التحكم —
- * راجع backend/collectibles/collectibles-service.js.
+ * تهيئة أولية لكتالوج الإطارات الثابت (4 خاصة + 7 مستويات) — INSERT OR
+ * IGNORE بمفتاح slug، فلا خطر إعادة الكتابة فوق تعديلات الأدمن اللاحقة.
+ * مستويات النقاط تُترَك NULL عمداً لحد ما الأدمن يحددها.
  */
 var DEFAULT_FRAME_CATALOG = [
     { slug: 'founder', image_filename: 'frame-founder.png', kind: 'special', bundles_entrance: 1, default_entrance_template: 'gold', default_entrance_text: 'مؤسس المنصة دخل البث!' },
@@ -427,11 +329,8 @@ var DEFAULT_FRAME_CATALOG = [
 }());
 
 /**
- * [0.45.0] تهيئة أولية لكتالوج مستويات SP — نفس أسلوب ensureFrameCatalogSeed
- * أعلاه بالضبط (INSERT OR IGNORE بمفتاح slug)، فلا خطر إعادة الكتابة فوق
- * تعديلات الأدمن اللاحقة على min_sp/display_name_ar. القيم الابتدائية
- * تصميم جديد بالكامل (راجع docs/CHANGELOG.md [0.45.0] للتفاصيل والمبرر) —
- * قابلة للتعديل الكامل من admin.html لاحقاً بدون أي حاجة لتعديل الكود.
+ * تهيئة أولية لكتالوج مستويات SP — نفس أسلوب ensureFrameCatalogSeed أعلاه،
+ * قابلة للتعديل الكامل من admin.html لاحقاً.
  */
 var DEFAULT_STREAMER_LEVELS = [
     { slug: 'sp-level-1', display_name_ar: 'مستوى 1 — مبتدئ', min_sp: 0, sort_order: 1 },

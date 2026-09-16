@@ -1,23 +1,11 @@
 /**
- * ==========================================================================
- *  AGP PHOTO CHALLENGE -- "تحدي الصور" (لعبة أصلية داخل المنصة)
- * ==========================================================================
- * لعبة أصلية (Native) بنفس نمط games/team-war من ناحية طريقة التحميل فقط
- * (كلمتان مفتاحيتان منفصلتان -- وحدة لكل فريق -- شاشة الإعدادات المشتركة
- * js/agp-game-shell.js تدعم كلمة مفتاحية واحدة بس، فما تكفي هذي اللعبة).
- * الهوية البصرية: قالب "settings-no-box" منقول بالحرف من روليت القبائل
- * (بدون صندوق يحيط الحقول، عنوان بتدرّج لوني، حقول بخط سفلي بدل صناديق)
- * + تبويب اتصال بالبث (سبينر / تحذير فشل) يظهر فوق نفس الشاشة تماماً
- * كما هو معتمد بروليت القبائل. خط Zain فقط. لا اعتماد على
- * js/agp-game-shell.js ولا على أي لعبة ثانية، لا تعديل على أي ملف موجود.
+ * AGP PHOTO CHALLENGE -- "تحدي الصور" (لعبة أصلية داخل المنصة، بنمط
+ * games/team-war من ناحية طريقة التحميل فقط). كلمتان مفتاحيتان منفصلتان
+ * (وحدة لكل فريق) -- js/agp-game-shell.js يدعم كلمة واحدة بس، فلا اعتماد
+ * عليه هنا. الهوية البصرية: قالب "settings-no-box" منقول من روليت القبائل.
  *
- * ⚠️ بناء تدريجي: هذا الملف حالياً يغطي شاشة الإعدادات + تبويب الاتصال
- * فقط. اللوبي/المباراة/شاشة الفائز غير مبنية بعد.
- *
- * الخدمات العامة المُعاد استخدامها بدون أي تعديل عليها:
- *   AGP.player / AGP.scoreManager / AGP.timerManager / AGP.streamConnector
- *   AGP.lobby / AGP.gameManager / AGP.events
- * ==========================================================================
+ * ⚠️ تبويب "الأفضلية" (showAdvantagePopup، إجابتين صح متتاليتين) مبني
+ * لكن غير مربوط بمحرك التحقق من الإجابات بعد -- لا يُستدعى من أي مكان.
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -44,9 +32,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     ];
     var WIN_POINTS_OPTIONS = [15, 20, 25];
 
-    /* ======================================================================
-     *  0) الحالة الداخلية
-     * ==================================================================== */
     var _screen = 'settings'; // settings | connecting (فوق نفس الشاشة)
     var _rootEl = null;
 
@@ -66,9 +51,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
     function escapeHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
-    /* ======================================================================
-     *  1) أدوات نصية: تطبيع عربي (لمقارنة الكلمات المفتاحية)
-     * ==================================================================== */
     function normalizeArabicText(text) {
         if (typeof text !== 'string') return '';
         return text
@@ -133,9 +115,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return false;
     }
 
-    /* ======================================================================
-     *  2) الهيدر الأساسي الثابت -- بهوية اللعبة (سماوي/بنفسجي)
-     * ==================================================================== */
     function injectHeader() {
         if (el('pc-header')) return;
         var header = document.createElement('div');
@@ -158,18 +137,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (window.confirm('تبي تخرج من اللعبة؟ أي مباراة شغالة بتنقطع.')) window.location.href = '../../index.html';
         });
         el('pc-header-info-btn').addEventListener('click', function () {
-            // ⚠️ بناء تدريجي: شاشة الشرح غير مبنية بعد.
             AGP.log('Photo Challenge: زر الشرح -- الشاشة لسا ما بُنيت.');
         });
         el('pc-header-settings-btn').addEventListener('click', function () {
-            // ⚠️ بناء تدريجي: إعادة فتح الإعدادات أثناء المباراة غير مبنية بعد.
             AGP.log('Photo Challenge: زر الإعدادات -- إعادة الفتح أثناء المباراة لسا ما بُنيت.');
         });
     }
 
-    /* ======================================================================
-     *  3) شاشة الإعدادات -- قالب "settings-no-box" (منقول من روليت القبائل)
-     * ==================================================================== */
     function ensureRoot() {
         if (_rootEl) return _rootEl;
         document.body.classList.add('pc-active');
@@ -309,10 +283,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.streamConnector.connect('tiktok', { username: username });
     }
 
-    /* ======================================================================
-     *  4) شاشة اللوبي -- اسم اللعبة أعلى + الفريقين جنب بعض بفاصل VS، كل
-     *     فريق تحته شبكة لاعبيه (بطاقات AGP.playerCard القياسية 60px).
-     * ==================================================================== */
     var TEAM1 = 'team1';
     var TEAM2 = 'team2';
 
@@ -392,12 +362,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _commentUnsub = AGP.events.on('stream:commentReceived', function (payload) {
             if (!_registrationOpen || !payload || typeof payload.text !== 'string' || !payload.id) return;
 
-            // ⚠️ فلترة "متابعين فقط" محلياً هنا -- الفلتر المشترك
-            // (agp-tiktok-adapter.js) يقرأ فقط من AGP.gameShell.getSettings()
-            // الخاص بالألعاب المعتمدة على الشِل المشترك، ولعبتنا غير
-            // معتمدة عليه (كلمتان مفتاحيتان منفصلتان)، فيتجاهله تماماً.
-            // نفس منطق الفلتر بالضبط، منقول هنا بدون أي تعديل على الملف
-            // المشترك نفسه.
+            // فلترة "متابعين فقط" محلياً هنا -- الفلتر المشترك
+            // (agp-tiktok-adapter.js) يقرأ فقط من AGP.gameShell.getSettings(),
+            // وهذي اللعبة غير معتمدة على الشِل المشترك فيتجاهلها.
             if (_settings.followersOnly && !payload.isFollower) return;
 
             var text = normalizeArabicText(payload.text);
@@ -473,12 +440,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderLobbyPlayerGrids();
     }
 
-    /* ======================================================================
-     *  5) شاشة المباراة -- تبويب العرض 600×400 بحواف متوهجة، الفريقين
-     *     يمين/يسار الشاشة (اسم + نقاط + لاعبين)، زر واحد "إظهار الصورة
-     *     وبدء الجولة" يبدأ عد تنازلي 3-2-1 ثم يتحوّل لأزرار الجولة
-     *     (زيادة الوقت / إنهاء دون احتساب نقاط).
-     * ==================================================================== */
     var SCORE_KEY_TEAM1 = 'photo-challenge:team1';
     var SCORE_KEY_TEAM2 = 'photo-challenge:team2';
 
@@ -486,9 +447,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _answerInterval = null;
     var _answerRemaining = 0;
 
-    /* ---- بنك صور التحدي (answers-bank.json) -- عشوائي بدون تكرار: كل
-     *      صورة تظهر مرة وحدة طول المباراة، ولو خلصت كل الصور يعاد
-     *      خلطها من جديد ويبدأ دور جديد. ---- */
     var _challengeBank = [];
     var _challengeQueue = [];
     var _currentChallenge = null;
@@ -571,7 +529,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 _answerRemaining = 0;
                 _activeSilence = null; // انتهى الوقت -- الإسكات ينتهي مع الجولة
                 valEl.textContent = formatAnswerTime(_answerRemaining);
-                showTimeoutPopup(); // ما حد جاوب -- يعرض تبويب انتهاء الوقت، وينتقل بس لما يضغط المستخدم الزر
+                showTimeoutPopup();
                 return;
             }
             valEl.textContent = formatAnswerTime(_answerRemaining);
@@ -585,8 +543,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _activeSilence = null; // انتهت الجولة -- الإسكات ينتهي معها
     }
 
-    /* ---- تبويب "انتهى الوقت" -- ما يبيّن الإجابة، وينتقل للجولة الجاية
-     *      بس لما يضغط المستخدم الزر يدوياً. ---- */
     function ensureTimeoutPopup() {
         if (!el('pc-timeout-dim')) {
             var dim = document.createElement('div');
@@ -652,7 +608,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
         el('pc-end-round-btn').addEventListener('click', function () {
             stopAnswerTimer();
-            handleShowImageAndStart(); // يتخطى مباشرة للصورة الجاية بدون احتساب نقاط لأي فريق
+            handleShowImageAndStart();
         });
     }
 
@@ -689,16 +645,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     stageInner.classList.add('pc-has-real-image');
                     stageInner.style.backgroundImage = "url('challenge-images/" + encodeURIComponent(_currentChallenge.imageFile) + "')";
                 } else {
-                    // ⚠️ ما فيه صور مضافة ببنك التحدي بعد (answers-bank.json فاضي) -- ارفع صور من صفحة الإدارة أول.
                     el('pc-stage-image-label').textContent = '⚠️ ما فيه صور مضافة ببنك التحدي بعد';
                 }
 
                 showMatchRoundButtons();
                 startAnswerTimer();
 
-                // ⚠️ الإسكات "للجولة الجاية" يصير سارياً الآن بالضبط -- مع
-                // بداية هذي الجولة -- وينتهي تلقائياً معها (بالوقت أو
-                // بزر الإنهاء).
+                // الإسكات "للجولة الجاية" يصير سارياً الآن بالضبط، وينتهي
+                // تلقائياً معها (بالوقت أو بزر الإنهاء).
                 if (_pendingSilence) {
                     _activeSilence = { playerId: _pendingSilence.playerId, playerName: _pendingSilence.playerName, bonusTeam: _pendingSilence.bonusTeam, penalized: false };
                     _pendingSilence = null;
@@ -719,12 +673,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         setTimeout(function () { floatEl.remove(); }, 1600);
     }
 
-    /* ---- ظهور "الإجابة الصحيحة" -- تُستدعى من محرك التحقق الفعلي
-     *      بمين جاوب، فريقه، النص الأساسي للإجابة الصحيحة، والنقاط
-     *      المستحقة (3/2/1 حسب التوقيت). isGuest=true لمشارك من الشات
-     *      كتب بادئة الرقم (1-/2-) بدون ما يكون منضم أصلاً كلاعب --
-     *      يستخدم اسمه/صورته الحقيقية من التعليق، وما يلمس قائمة
-     *      لاعبي الفريق ولا نقاطه الشخصية. */
+    // ظهور "الإجابة الصحيحة". isGuest=true لمشارك من الشات كتب بادئة
+    // الرقم (1-/2-) بدون ما يكون منضم أصلاً كلاعب -- يستخدم اسمه/صورته
+    // الحقيقية من التعليق، وما يلمس قائمة لاعبي الفريق ولا نقاطه الشخصية.
     function revealCorrectAnswer(playerId, playerTeam, answerText, pointsAwarded, isGuest, guestName, guestAvatarUrl) {
         stopAnswerTimer();
 
@@ -781,11 +732,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('pc-next-round-btn').addEventListener('click', handleShowImageAndStart);
     }
 
-    /* ---- محرك التحقق الفعلي من الإجابات الواردة بالشات -- يقارن كل
-     *      تعليق بكل الصياغات المقبولة (الأساسية + المشابهة) لصورة
-     *      الجولة الحالية عبر answers-bank.json. أول إجابة صحيحة توقف
-     *      الجولة وتستدعي revealCorrectAnswer بالنقاط المستحقة حسب
-     *      توقيتها (3 أول 15 ثانية / 2 قبل نص الوقت / 1 بعده). ---- */
+    // محرك التحقق الفعلي من الإجابات الواردة بالشات -- أول إجابة صحيحة
+    // توقف الجولة وتستدعي revealCorrectAnswer بالنقاط حسب توقيتها.
     var _answerCheckUnsub = null;
 
     function wireAnswerCheckingListener() {
@@ -809,11 +757,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    /* ---- مشاركة من الشات بدون انضمام -- أي حد يكتب بادئة رقم الفريق
-     *      (1- أو 2-) قبل إجابته مباشرة يشارك بإجابته لصالح ذاك الفريق
-     *      بالرقم الثابت، بغض النظر عن اسمه أو كونه منضم أصلاً كلاعب.
-     *      يظهر باسمه وصورته الحقيقية من التعليق، بدون ما يدخل ضمن
-     *      قائمة لاعبي الفريق. ---- */
+    // مشاركة من الشات بدون انضمام -- بادئة رقم الفريق (1- أو 2-) قبل
+    // الإجابة تحسبها لصالح ذاك الفريق دون إضافة كاتبها كلاعب.
     var _guestAnswerUnsub = null;
 
     function wireGuestAnswerListener() {
@@ -874,10 +819,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('pc-show-start-btn').addEventListener('click', handleShowImageAndStart);
     }
 
-    /* ======================================================================
-     *  6) تبويب نهاية المباراة -- يظهر فوق شاشة المباراة نفسها (خلفيتها
-     *     تبين مغبّشة/معتّمة خلفه). بطاقات لاعبي الفريق الفائز + 3 أزرار.
-     * ==================================================================== */
     var _winnerDeclared = false;
     var _winnerDim = null;
     var _winnerCard = null;
@@ -947,7 +888,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             updateSideScoreDisplay(TEAM2);
             _winnerDim.style.display = 'none';
             _winnerDeclared = false;
-            renderMatchScreen(); // يرجع لشاشة المباراة بنفس الفريقين واللاعبين، جاهزة لجولة جديدة
+            renderMatchScreen();
         });
         el('pc-winner-newmatch-btn').addEventListener('click', function () { window.location.reload(); });
         el('pc-winner-home-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
@@ -961,14 +902,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         else if (score2 >= _settings.winPoints) renderWinnerScreen(TEAM2);
     }
 
-    /* ======================================================================
-     *  7) تبويب "الأفضلية" -- إجابتين صح متتاليتين. يعرض لاعبي الفريق
-     *     الآخر بأرقام؛ اللاعب صاحب الأفضلية يكتب الرقم بالشات فيُسكَت
-     *     ذاك اللاعب تلقائياً للجولة الجاية. لو جاوب رغم الإسكات، تُحتسب
-     *     نقطة إضافية لفريق صاحب الأفضلية. لا يُغلق التبويب إلا يدوياً
-     *     بزر ✕ (منطق ربطه بشرط "إجابتين صح متتاليتين" الفعلي -- بعد
-     *     بناء محرك التحقق من الإجابات، لسا ما بُني -- بناء تدريجي).
-     * ==================================================================== */
+    // تبويب "الأفضلية" -- إجابتين صح متتاليتين. يعرض لاعبي الفريق الآخر
+    // بأرقام؛ صاحب الأفضلية يكتب الرقم بالشات فيُسكَت ذاك اللاعب تلقائياً
+    // للجولة الجاية. لو جاوب رغم الإسكات، تُحتسب نقطة إضافية لصاحب الأفضلية.
     var _pendingSilence = null; // {playerId, playerName, bonusTeam} -- يُطبَّق أول ما تبدأ الجولة الجاية
     var _activeSilence = null;  // {playerId, playerName, bonusTeam, penalized} -- ساري بالجولة الحالية فقط
     var _advantageOpponentTeam = null;
@@ -1064,9 +1000,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('pc-advantage-close-btn').addEventListener('click', hideAdvantagePopup);
     }
 
-    /* ---- إنفاذ الإسكات: أي رسالة من اللاعب المُسكَت أثناء الجولة الجاية
-     *      تحسب نقطة فورية لصالح الفريق الآخر، والجولة تستمر عادي (ما
-     *      تنتهي) لحد ما توصل إجابة صحيحة أو ينتهي الوقت. ---- */
     function updateSideScoreDisplay(team) {
         var scoreEl = el('pc-side-score-' + team);
         if (!scoreEl) return;
@@ -1088,6 +1021,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         setTimeout(function () { toast.remove(); }, 3000);
     }
 
+    // إنفاذ الإسكات: أي رسالة من اللاعب المُسكَت أثناء الجولة الجاية
+    // تحسب نقطة فورية لصالح الفريق الآخر، والجولة تستمر عادي.
     function wireSilenceEnforcementListener() {
         if (_silenceEnforceUnsub) return;
         _silenceEnforceUnsub = AGP.events.on('stream:commentReceived', function (payload) {
@@ -1106,11 +1041,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    /* ======================================================================
-     *  8) تبويب الاتصال بالبث -- يظهر فوق شاشة الإعدادات (منقول بالحرف من
-     *     قالب روليت القبائل). زر ✕ عند الفشل يُخفي التبويب فقط، شاشة
-     *     الإعدادات خلفه تبقى ظاهرة وتفاعلية.
-     * ==================================================================== */
     function ensureConnectOverlay() {
         if (!el('pc-connect-dim')) {
             var dim = document.createElement('div');
@@ -1148,28 +1078,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (el('pc-connect-popup')) el('pc-connect-popup').style.display = 'none';
     }
 
-    /* ======================================================================
-     *  9) الاستماع لأحداث المنصة العامة + التسجيل
-     * ==================================================================== */
     var _roundStarted = false;
 
     function wirePlatformListeners() {
         AGP.events.on('stream:statusChanged', function (payload) {
             if (payload.platform !== 'tiktok') return;
 
-            // ⚠️ إصلاح خلل حقيقي (نفس الخلل المعروف والمُصلَح فعلياً
-            // بـ js/agp-game-shell.js -- نفس النمط منقول هنا بالحرف):
-            // وصول "connected" مرة ثانية منتصف المباراة شائع فعلياً --
-            // إعادة اتصال تلقائية بتيك توك بعد انقطاع مؤقّت، أو حتى
-            // إعادة اتصال قناة WebSocket بيننا وبين الباك إند نفسها
-            // (agp-tiktok-adapter.js). بدون هذا الفحص، كان أي "connected"
-            // وارد بعد بدء الجولة يعيد _screen لـ'lobby' (عبر
-            // renderLobbyScreen)، وهذا يُعطّل checkForWinner() نهائياً
-            // (شرطها _screen === 'match')، فتستمر النقاط تتراكم بلا حد --
-            // بالضبط الخلل اللي صار مع أحد الاستريمرز ووصلت النقاط لـ50
-            // بدل نقاط الفوز المحددة. بعد بدء الجولة، نتجاهل أي تغيّر
-            // بحالة الاتصال هنا تماماً -- الاتصال يُدار بالخلفية بشكل
-            // مستقل، ولا داعي لأي شاشة تتفاعل معه.
+            // ⚠️ "connected" يمكن يصل مرة ثانية منتصف المباراة (إعادة
+            // اتصال تلقائية بتيك توك أو بقناة WebSocket الخلفية). بدون
+            // هذا الفحص، أي "connected" بعد بدء الجولة يعيد _screen
+            // لـ'lobby' فيُعطّل checkForWinner() (شرطها _screen==='match')
+            // وتتراكم النقاط بلا حد.
             if (_roundStarted) {
                 AGP.log('Photo Challenge: ignoring stream:statusChanged("' + payload.status + '") -- round already started.');
                 return;
@@ -1186,13 +1105,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             }
         });
 
-        // شبكة أمان: أي مصدر نقاط مستقبلي (مثل محرك التحقق من الإجابات
-        // اللي بيُبنى بمرحلة لاحقة) يُفحص تلقائياً بعد كل تغيير نقاط.
         AGP.events.on('score:changed', function () { checkForWinner(); });
 
-        // ⚠️ إصلاح خلل: بدون هذا، انضمام لاعب عبر الشات (أو حذفه، أو
-        // تبديله لفريق ثاني) يصير فعلياً بالخلفية لكن شبكة اللوبي ما
-        // تنعرض محدَّثة أبداً -- يبين وكأن الكتابة بالشات "ما تشتغل".
         AGP.events.on('player:joined', function () { if (_screen === 'lobby') renderLobbyPlayerGrids(); });
         AGP.events.on('player:removed', function () { if (_screen === 'lobby') renderLobbyPlayerGrids(); });
     }

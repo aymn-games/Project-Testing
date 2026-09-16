@@ -1,23 +1,11 @@
 /**
- * ==========================================================================
- *  AGP STREAM CONNECTOR — الأساس العام لربط منصات البث (بدون اتصال فعلي)
- * ==========================================================================
- * مدير عام فوق خدمات البث الموجودة كـ Stubs في agp-services.js
- * (TikTokService/YouTubeService/TwitchService). يفرض عقداً موحّداً
- * (connectToLiveStream/disconnectFromLiveStream) ويتتبّع حالة كل منصة
- * (disconnected/connecting/connected/error) عبر AGP.events. لا اتصال
- * فعلي بأي منصة، ولا منطق خاص بتيك توك هنا تحديداً — عام تماماً وقابل
- * لتسجيل أي منصة بث مستقبلية بنفس العقد.
- *
- * ⚠️ إصلاح تدقيق (قبل تكامل تيك توك): لم يكن هناك أي طريقة عامة لأي
- *   خدمة حقيقية (TikTokService لاحقاً) لتُبلِّغ الموصِّل بنجاح/فشل
- *   الاتصال الفعلي بعد استدعاء connectToLiveStream() — كانت الحالة
- *   تبقى 'connecting' للأبد بلا تأكيد. أُضيفت الآن reportStatus(key,
- *   status) كنقطة الاتصال العامة الوحيدة لهذا الغرض. لا تغيير على أي
- *   دالة أخرى أو سلوك موجود؛ إضافة فقط.
- *
- * يعتمد على js/agp-core.js, js/agp-events.js, js/agp-services.js قبله.
- * ==========================================================================
+ * AGP STREAM CONNECTOR — manages the stream-service stubs in
+ * agp-services.js (TikTokService/YouTubeService/TwitchService) behind a
+ * uniform connectToLiveStream/disconnectFromLiveStream contract, tracking
+ * each platform's status (disconnected/connecting/connected/error) via
+ * AGP.events. connect() only sets status to 'connecting' — a real service
+ * must call reportStatus(key, status) itself to confirm success/failure,
+ * or the status would otherwise sit at 'connecting' forever.
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -80,11 +68,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return Object.keys(_platforms);
         },
 
-        // لا يوجد تأكيد تلقائي لنجاح الاتصال؛ الحالة تبقى "connecting"
-        // حتى تستدعي الخدمة الفعلية reportStatus() بنفسها (أدناه) لتؤكد
-        // النجاح ('connected') أو الفشل ('error'). استدعاء الخدمة نفسه
-        // محميّ بـ try/catch حتى لا يكسر استثناء متزامن داخل تنفيذها
-        // بقية المنصة.
         connect: function (key, options) {
             var entry = getEntry(key);
             if (!entry) {
@@ -117,17 +100,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return true;
         },
 
-        /**
-         * نقطة الاتصال العامة الوحيدة لأي خدمة منصة حقيقية (مثل
-         * TikTokService مستقبلاً) لتُبلِّغ الموصِّل بحالة اتصالها
-         * الفعلية بعد connectToLiveStream()/disconnectFromLiveStream()
-         * — عادة 'connected' عند النجاح الفعلي، أو 'error' عند الفشل.
-         * هذا يُغلِق الفجوة التي كانت تُبقي الحالة 'connecting' للأبد
-         * بلا تأكيد حقيقي.
-         * @param {string} key - معرّف المنصة (مثل 'tiktok')
-         * @param {string} status - إحدى قيم AGP.streamConnector.STATUS
-         * @returns {boolean} true إن قُبِل التحديث فعلياً
-         */
+        /** Called by a real platform service to confirm connect/disconnect
+         * outcome (status must be one of AGP.streamConnector.STATUS). */
         reportStatus: function (key, status) {
             if (!getEntry(key)) {
                 AGP.log('Stream Connector: cannot report status, unknown platform "' + key + '".');
@@ -152,7 +126,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
     };
 
-    // تسجيل المنصات الثلاث الموجودة فعلياً كـ Stubs — بدون أي اتصال فعلي.
     if (AGP.services) {
         if (AGP.services.TikTokService) registerPlatform('tiktok', AGP.services.TikTokService);
         if (AGP.services.YouTubeService) registerPlatform('youtube', AGP.services.YouTubeService);

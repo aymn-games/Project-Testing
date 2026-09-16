@@ -1,13 +1,6 @@
 /**
- * ==========================================================================
- *  AGP TIMER MANAGER — مؤقّتات عامة قابلة لإعادة الاستخدام (بدون منطق لعبة)
- * ==========================================================================
- * أداة عامة لإدارة عدّادات تنازلية مسمّاة (تسجيل، مدة جولة، إلخ)، بدون
- * أي منطق خاص بلعبة أو واجهة. أي لعبة/وحدة مستقبلية تطلب مؤقّتاً باسم
- * فريد، وتستمع لأحداث `timer:*` عبر AGP.events بدل إدارة setInterval
- * بنفسها. لا اتصال فعلي، لا واجهة.
- * يعتمد على js/agp-core.js, js/agp-events.js قبله فقط.
- * ==========================================================================
+ * AGP TIMER MANAGER — generic named countdown timers. Callers listen for
+ * timer:* events via AGP.events instead of managing their own setInterval.
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -54,13 +47,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     AGP.timerManager = {
 
-        /**
-         * بدء (أو استبدال) مؤقّت مسمّى.
-         * @param {string} name - معرّف فريد للمؤقّت
-         * @param {number} durationSeconds - المدة بالثواني
-         * @param {number} [tickIntervalMs] - فاصل النبض (افتراضياً 1000)
-         * @returns {boolean}
-         */
+        /** Starts (or replaces) a named timer. */
         start: function (name, durationSeconds, tickIntervalMs) {
             if (!name || !durationSeconds || durationSeconds <= 0) {
                 AGP.log('Timer Manager: cannot start, invalid name/duration.');

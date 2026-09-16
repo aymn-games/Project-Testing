@@ -1,16 +1,10 @@
 /**
- * ==========================================================================
- *  AGP QUEUE MANAGER — طابور اللاعبين المرشَّحين (بدون ربط فعلي)
- * ==========================================================================
- * طابور وسيط عام بين أي مصدر مرشِّح للاعبين وبين قبولهم فعلياً. يمنع
- * التكرار (داخل الطابور نفسه، وضد اللاعبين المنضمين فعلاً عبر
- * AGP.player.hasPlayer)، ويُدخِل اللاعب حصراً عبر
- * AGP.playerSource.submitPlayer عند القبول — لا يلمس AGP.player مباشرة
- * ولا يعرف شيئاً عن مصدر اللاعب الحقيقي (يُمرَّر معه عند الإضافة للطابور).
- * لا اتصال فعلي، لا واجهة، لا كود خاص بأي لعبة.
- * يعتمد على js/agp-core.js, js/agp-events.js, js/agp-player-manager.js,
- * js/agp-player-source.js قبله.
- * ==========================================================================
+ * AGP QUEUE MANAGER — holding queue between a candidate source and actual
+ * admission. Rejects duplicates (within the queue, and against
+ * AGP.player.hasPlayer), and admits only through
+ * AGP.playerSource.submitPlayer — never touches AGP.player directly.
+ * Requires js/agp-core.js, js/agp-events.js, js/agp-player-manager.js,
+ * js/agp-player-source.js.
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -36,12 +30,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     AGP.queueManager = {
 
-        /**
-         * إضافة لاعب مرشَّح إلى الطابور (لا يُقبَل فعلياً بعد).
-         * @param {string} sourceKey - المصدر الحقيقي (يُستخدم لاحقاً عند القبول)
-         * @param {Object} playerData - يجب أن تحتوي {id, ...} على الأقل
-         * @returns {boolean}
-         */
         enqueue: function (sourceKey, playerData) {
             if (!playerData || !playerData.id) {
                 AGP.log('Queue Manager: rejected, missing player id.');
@@ -67,10 +55,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return true;
         },
 
-        /**
-         * إزالة وإرجاع أول عنصر في الطابور دون قبوله فعلياً.
-         * @returns {Object|null} { sourceKey, playerData }
-         */
+        /** Removes and returns the first item without admitting it. */
         dequeue: function () {
             var item = _queue.shift();
             if (!item) return null;
@@ -102,11 +87,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return _queue.length;
         },
 
-        /**
-         * قبول أول لاعب في الطابور فعلياً، عبر AGP.playerSource.submitPlayer
-         * (باستخدام sourceKey المخزَّن معه عند الإضافة للطابور).
-         * @returns {Object|null} كائن اللاعب المُضاف، أو null
-         */
         admitNext: function () {
             var item = _queue.shift();
             if (!item) return null;
@@ -128,10 +108,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return player;
         },
 
-        /**
-         * قبول كل من في الطابور، لاعباً تلو الآخر بنفس ترتيب الدخول.
-         * @returns {Array<Object>} قائمة اللاعبين المقبولين فعلياً فقط
-         */
         admitAll: function () {
             var admitted = [];
             var player;

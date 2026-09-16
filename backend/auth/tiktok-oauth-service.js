@@ -1,24 +1,15 @@
 /**
- * ==========================================================================
- *  AGP TIKTOK OAUTH SERVICE — تسجيل دخول تيك توك الرسمي (Login Kit v2)
- * ==========================================================================
+ * AGP TIKTOK OAUTH SERVICE — تسجيل دخول تيك توك الرسمي (Login Kit v2).
+ * بديل حقيقي لطريقة "كود بالبايو" القديمة (verifyTikTokOwnership
+ * بـauth-service.js، تبقى كخيار احتياطي).
  *
- * هذا البديل الحقيقي لطريقة "كود بالبايو" القديمة (verifyTikTokOwnership
- * بـauth-service.js) — تلك تبقى بالكود كخيار احتياطي، لكن هذا المسار هو
- * الموصى به الآن: تسجيل دخول تيك توك الرسمي عبر OAuth 2.0، بدون أي كود
- * يدوي وبدون استخراج HTML عرضة للحجب.
- *
- * التدفق (راجع docs التيك توك الرسمية — Login Kit v2 OAuth):
- *   1) buildAuthorizeUrl()  — رابط "تسجيل الدخول بتيك توك" اللي نوجّه له
- *      المستخدم، فيه state موقّع (HMAC) يحمل هويته حتى نعرف نربط لمين
- *      لما يرجع (بدون جدول قاعدة بيانات منفصل لحفظ حالات مؤقتة).
- *   2) exchangeCodeForToken() — تبادل الكود اللي رجّعه تيك توك بـaccess
- *      token فعلي (على السيرفر فقط، أبداً بالمتصفح — التوكن لا يُكشَف).
- *   3) fetchTikTokUserInfo() — بيانات المستخدم الحقيقية (open_id، اليوزر
- *      نيم الفعلي، الاسم المعروض، الصورة) باستخدام access token.
- *   4) linkVerifiedAccount() — يحفظ الربط بقاعدة البيانات، مع منع نفس
- *      حساب تيك توك (نفس open_id) من الارتباط بأكثر من حساب AGP.
- * ==========================================================================
+ * التدفق:
+ *   1) buildAuthorizeUrl()  — رابط "تسجيل الدخول بتيك توك"، فيه state
+ *      موقّع (HMAC) يحمل هوية المستخدم بدون جدول قاعدة بيانات منفصل.
+ *   2) exchangeCodeForToken() — تبادل الكود بـaccess token (سيرفر فقط).
+ *   3) fetchTikTokUserInfo() — بيانات المستخدم الحقيقية عبر access token.
+ *   4) linkVerifiedAccount() — يحفظ الربط، مع منع نفس open_id من
+ *      الارتباط بأكثر من حساب AGP.
  */
 
 'use strict';
@@ -109,10 +100,8 @@ async function exchangeCodeForToken(code) {
 
 /**
  * بيانات المستخدم الحقيقية من تيك توك — open_id/display_name/avatar_url
- * تحت user.info.basic، وuseranme (اليوزرنيم الفعلي المستخدَم بمطابقة
- * شات البث) تحت user.info.profile (مؤكَّد من توثيق تيك توك الرسمي —
- * هذا سبب فشل الطلب سابقاً لما طلبناه بدون الصلاحية هذي). الاثنين
- * مطلوبين الآن بـbuildAuthorizeUrl أعلاه.
+ * تحت user.info.basic، وusername (لمطابقة شات البث) تحت user.info.profile؛
+ * كلا الصلاحيتين مطلوبتان بـbuildAuthorizeUrl أعلاه.
  * @returns {Promise<{success:boolean, user?:Object, error?:string}>}
  */
 async function fetchTikTokUserInfo(accessToken) {

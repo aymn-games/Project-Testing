@@ -1,13 +1,6 @@
 /**
- * ==========================================================================
- *  AGP SCORE MANAGER — سجل نقاط عام لكل لاعب (بدون قواعد لعبة)
- * ==========================================================================
- * سجل نقاط عام مبني فوق معرّفات اللاعبين (لا يفرض أي قاعدة احتساب —
- * تلك مسؤولية كل لعبة). إضافة/طرح/تعيين نقاط، وترتيب لوحة صدارة عامة.
- * لا يلمس AGP.player (لا يحذف/يضيف لاعبين)، فقط يربط رقماً بمعرّف لاعب
- * موجود بالفعل. لا اتصال فعلي، لا واجهة، لا كود خاص بأي لعبة.
- * يعتمد على js/agp-core.js, js/agp-events.js قبله.
- * ==========================================================================
+ * AGP SCORE MANAGER — generic per-player-id score ledger; scoring rules
+ * are each game's own responsibility. Never touches AGP.player itself.
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -51,10 +44,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return _scores[playerId] || 0;
         },
 
-        /**
-         * لوحة صدارة مرتّبة تنازلياً حسب النقاط.
-         * @returns {Array<{playerId: string, score: number}>}
-         */
         getLeaderboard: function () {
             return Object.keys(_scores)
                 .map(function (playerId) {
@@ -63,10 +52,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 .sort(function (a, b) { return b.score - a.score; });
         },
 
-        /**
-         * تصفير نقاط لاعب واحد، أو الجميع إن لم يُمرَّر معرّف.
-         * @param {string} [playerId]
-         */
+        /** Resets one player's score, or everyone's if playerId is omitted. */
         reset: function (playerId) {
             if (playerId) {
                 delete _scores[playerId];

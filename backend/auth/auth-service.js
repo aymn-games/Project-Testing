@@ -1,14 +1,8 @@
 /**
- * ==========================================================================
- *  AGP AUTH SERVICE — حسابات، جلسات، وتتبّع إحصائيات البثوث
- * ==========================================================================
+ * AGP AUTH SERVICE — حسابات، جلسات، وتتبّع إحصائيات البثوث. منطق بحت هنا
+ * (بدون أي معالجة HTTP — ذلك بطبقة الراوت).
  *
- * منطق بحت هنا (بدون أي معالجة HTTP — ذلك في طبقة الراوت لاحقاً)، حتى
- * يكون قابلاً للاختبار المباشر بمعزل عن الشبكة تماماً.
- *
- * أول حساب يُنشَأ بالنظام يصبح 'admin' تلقائياً (صاحب المنصة)؛ كل حساب
- * بعده يكون 'streamer' افتراضياً.
- * ==========================================================================
+ * أول حساب يُنشَأ بالنظام يصبح 'admin' تلقائياً؛ كل حساب بعده 'streamer'.
  */
 
 'use strict';
@@ -34,31 +28,18 @@ function isValidEmail(email) {
 }
 
 /* ----------------------------------------------------------------------
- * [0.45.7→0.45.8] إطار "من البداية" الحصري — راجع js/agp-player-card.js:
- * FRAME_TEMPLATES['frame-founders-month.png'] لقياسات الإطار نفسه.
+ * إطار "من البداية" الحصري. شرط المنح مركَّب من قيدين معاً (أيهما يتحقق
+ * أولاً يوقف المنح): (1) زمني — التسجيل والتوثيق قبل FOUNDERS_MONTH_CUTOFF_MS،
+ * (2) عددي — أول FOUNDERS_MONTH_MAX_GRANTS حساباً فقط.
  *
- * ⚠️ [0.45.8] تصحيح شرط المنح بطلب صريح من صاحب المنصة — الشرط الآن
- * **مركَّب من قيدين معاً، أيهما يتحقق أولاً يوقف العرض**:
- *   1. زمني: يجب أن يحصل التسجيل + التوثيق قبل FOUNDERS_MONTH_CUTOFF_MS
- *      (تاريخ ثابت مكتوب صراحة، لا حساب ديناميكي "شهر من التشغيل").
- *   2. عددي: أول FOUNDERS_MONTH_MAX_GRANTS حساباً فقط (مو أي عدد بعدها).
- *
- * **تغيّر جوهري عن [0.45.7]**: المنح لم يعد يحصل وقت التسجيل مباشرة —
- * صار يحصل فقط عند **نجاح توثيق تيك توك فعلياً** (verifyTikTokOwnership
- * أدناه)، لأن الشرط صراحة "يسجّل **و** يوثّق حسابه" — تسجيل وحده غير
- * كافٍ. حساب يسجّل ولا يوثّق تيك توك أبداً لا يحصل على الإطار إطلاقاً،
- * بصرف النظر عن تاريخ تسجيله.
- *
- * ⚠️ ملاحظة صادقة: هذا يخص فقط حسابات تسجّل/توثّق **من هذا الإصدار
- * فصاعداً** — أي حساب موثَّق تيك توك مسبقاً (قبل رفع هذا الكود) لا يُمنح
- * الإطار بأثر رجعي، حتى لو كان من أوائل حسابات المنصة تاريخياً. لو تبي
- * تشمل حسابات قديمة موثَّقة أصلاً، هذا يحتاج قراراً ومنحاً يدوياً منفصلاً
- * (عبر admin-settings.html)، مو جزءاً من هذا المنطق التلقائي.
+ * ⚠️ المنح يحصل فقط عند نجاح توثيق تيك توك فعلياً (verifyTikTokOwnership
+ * أدناه)، لا وقت التسجيل — تسجيل وحده غير كافٍ. حساب موثَّق تيك توك
+ * مسبقاً (قبل هذا الإصدار) لا يُمنح الإطار بأثر رجعي.
  * ---------------------------------------------------------------------- */
 var FOUNDERS_MONTH_FRAME_FILENAME = 'frame-founders-month.png';
 var FOUNDERS_MONTH_DISPLAY_NAME_AR = 'من البداية';
-var FOUNDERS_MONTH_CUTOFF_MS = Date.parse('2026-09-15T00:00:00Z'); // شهر واحد من [0.45.7]
-var FOUNDERS_MONTH_MAX_GRANTS = 100; // [0.45.8]
+var FOUNDERS_MONTH_CUTOFF_MS = Date.parse('2026-09-15T00:00:00Z');
+var FOUNDERS_MONTH_MAX_GRANTS = 100;
 
 /**
  * يضمن وجود صف `custom_frames` واحد لإطار "من البداية" (بدون تكرار عند
@@ -73,8 +54,7 @@ function ensureFoundersMonthCustomFrameId() {
 }
 
 /**
- * [0.45.8] عدد المرات اللي مُنح فيها إطار "من البداية" حتى الآن (لكل
- * حسابات المنصة) — يُستخدَم لفرض سقف الـ100 شخص.
+ * عدد المرات اللي مُنح فيها إطار "من البداية" — لفرض سقف الـ100 شخص.
  * @param {number} frameId
  * @returns {number}
  */
@@ -85,14 +65,10 @@ function countFoundersMonthGrants(frameId) {
 }
 
 /**
- * [0.45.8] يمنح إطار "من البداية" ويفعّله تلقائياً (equip) — يُستدعى
- * **حصراً من verifyTikTokOwnership عند نجاح التوثيق فعلياً** (راجع
- * التعليق أعلى الملف لسبب هذا التغيير عن [0.45.7]). فحص مزدوج قبل أي
- * منح: (1) لسا قبل تاريخ الانتهاء، (2) لسا تحت سقف الـ100. **كل الفحص
- * والمنح هنا متزامن بالكامل (بدون أي await بينهما)** — عمداً، لتفادي
- * أي Race Condition بين توثيقين متزامنين يشوفان نفس العدّاد ويتجاوزان
- * الـ100 معاً (Node أحادي الخيط، فلا كود آخر يشتغل بين استعلامَي العدّ
- * والإدراج طالما ما فيه await بينهما).
+ * يمنح إطار "من البداية" ويفعّله تلقائياً — يُستدعى حصراً من
+ * verifyTikTokOwnership عند نجاح التوثيق. فحص مزدوج: قبل تاريخ الانتهاء،
+ * وتحت سقف الـ100. ⚠️ الفحص والمنح متزامنان بالكامل (بدون await بينهما)
+ * عمداً، لتفادي Race Condition بين توثيقين متزامنين يتجاوزان الـ100 معاً.
  * @param {number} userId
  */
 function grantFoundersMonthFrameIfEligible(userId) {
@@ -100,8 +76,7 @@ function grantFoundersMonthFrameIfEligible(userId) {
     var frameId = ensureFoundersMonthCustomFrameId();
     if (!frameId) return;
 
-    // لو مُنح له مسبقاً (مثال: أعاد توثيق حسابه مرة ثانية) — لا تحسبه
-    // مرتين ولا تعيد المنح.
+    // لو مُنح له مسبقاً — لا تحسبه مرتين ولا تعيد المنح.
     var already = db.prepare(
         "SELECT id FROM user_frames WHERE user_id = ? AND frame_type = 'custom' AND frame_ref = ?"
     ).get(userId, String(frameId));
@@ -114,11 +89,9 @@ function grantFoundersMonthFrameIfEligible(userId) {
 }
 
 /**
- * رقم عرض عام (Public ID) — رقم عشوائي من 8 أرقام على الأقل، فريد بكل
- * قاعدة البيانات. يُولَّد تلقائياً لكل حساب جديد (signup أو أول دخول
- * بجوجل)، ويُستخدم كـ custom_id الافتراضي — يبقى نفس العمود، فقط الآن
- * يُملأ تلقائياً بدل ما يُترَك فارغاً. الأدمن أو المستخدم نفسه يقدر
- * يغيّره لاحقاً عبر setCustomId (نفس الدالة أدناه، بدون أي تعديل عليها).
+ * رقم عرض عام (Public ID) — رقم عشوائي من 8 أرقام، فريد بكل قاعدة
+ * البيانات. يُولَّد تلقائياً لكل حساب جديد ويُستخدم كـ custom_id
+ * الافتراضي؛ قابل للتغيير لاحقاً عبر setCustomId.
  * @returns {string}
  */
 function generatePublicId() {
@@ -157,37 +130,21 @@ function signup(username, email, plainPassword, wantsToBeStreamer) {
 
     logger.log('Auth: new user signed up: ' + username + ' (role: ' + role + ', streamer: ' + Boolean(isStreamer) + ', id: ' + publicId + ')');
 
-    // [0.45.8] عرض "من البداية" الحصري لم يعد يُمنح هنا (وقت التسجيل) —
-    // صار يُمنح فقط عند نجاح توثيق تيك توك فعلياً، راجع verifyTikTokOwnership
-    // أدناه والتعليق أعلى الملف لسبب هذا التغيير عن [0.45.7].
-
     return { success: true, user: { id: info.lastInsertRowid, username: username, email: email, role: role, is_streamer: Boolean(isStreamer), custom_id: publicId, permissions: {} } };
 }
 
 /**
- * ⚠️ [0.45.6] قيد جهاز واحد لحسابات الستريمر المعتمدين فقط (can_run_games
- * = true — نفس المعيار المستخدم بكل مكان آخر بالمشروع لـ"استريمر معتمد
- * فعلياً"، راجع canPlayGames بـauth/auth-client.js). لا قيد إطلاقاً على
- * حسابات اللاعبين العاديين أو الستريمرز اللي لسا الأدمن ما وافق عليهم.
+ * قيد جهاز واحد لحسابات الستريمر المعتمدين فقط (can_run_games = true).
+ * لا قيد على لاعبين عاديين أو ستريمرز لم يوافق عليهم الأدمن بعد.
  *
- * ⚠️ ملاحظة صادقة صريحة (نفس أسلوب التوثيق بكل هذا المشروع): هذا قيد
- * "ناعم" (soft) لا "صلب" (hard) — الجهاز يُعرَّف برقم عشوائي يُولَّد
- * ويُخزَّن بـlocalStorage بالمتصفح (راجع auth/auth-client.js:
- * getDeviceId)، **مو بصمة جهاز حقيقية (Hardware Fingerprint)** — المتصفح
- * أصلاً لا يسمح بالوصول لمعرّف جهاز ثابت حقيقي لأسباب خصوصية، ولا توجد
- * طريقة أخرى متاحة من صفحة ويب عادية (بدون تطبيق أصلي/Native App). يعني
- * عملياً: أي شخص يمسح بيانات المتصفح (localStorage) أو يستخدم متصفحاً
- * مختلفاً أو وضع تصفح خفي على **نفس جهازه الفعلي** يقدر يتحايل على القيد.
- * هذا ليس خللاً بالتنفيذ — أقصى حماية ممكنة تقنياً بهذا السياق، لا وعد
- * زائف بحماية أقوى مما هو فعلياً موجود.
- * [0.45.11] سوبر أدمن (is_super_admin=1) يتجاوز هذا الفحص بالكامل —
- * يدخل من أي جهاز دائماً، يُفعَّل يدوياً لحساب محدد فقط (راجع
- * adminSetSuperAdmin أدناه)، لا ينسحب تلقائياً على كل الأدمنية.
+ * ⚠️ قيد "ناعم" لا "صلب" — الجهاز يُعرَّف برقم عشوائي بـlocalStorage
+ * بالمتصفح (auth-client.js: getDeviceId)، وليس بصمة جهاز حقيقية. أي شخص
+ * يمسح بيانات المتصفح أو يستخدم متصفحاً مختلفاً يقدر يتحايل عليه — أقصى
+ * حماية ممكنة تقنياً من صفحة ويب عادية، لا وعد بحماية أقوى.
  *
- * [0.45.11] allow_device_change=1 يسمح بتجاوز عدم التطابق **مرة واحدة
- * فقط** — أول تسجيل دخول من جهاز جديد يُقبل، bound_device_id يتحدّث
- * للجهاز الجديد، والعلم يُصفَّر تلقائياً بنفس العملية (استخدام لمرة
- * واحدة، القيد يشتغل من جديد على الجهاز الجديد بالدخول اللي بعده).
+ * سوبر أدمن (is_super_admin=1) يتجاوز الفحص بالكامل، يُفعَّل يدوياً لحساب
+ * محدد فقط. allow_device_change=1 يسمح بتجاوز عدم التطابق مرة واحدة —
+ * يُستهلَك تلقائياً بعد أول تسجيل دخول من جهاز جديد.
  *
  * @param {Object} user - صف قاعدة بيانات كامل (permissions لسا نص JSON خام)
  * @param {string|null|undefined} deviceId
@@ -206,16 +163,11 @@ function checkDeviceLock(user, deviceId) {
 }
 
 /**
- * تسجيل الدخول — يقبل البريد الإلكتروني أو اسم المستخدم بنفس الحقل
- * (نفس ما تطلبه شاشة الدخول فعلياً: حقل واحد بعنوان "البريد الإلكتروني
- * أو اسم المستخدم"). نميّز بينهما بوجود "@" فقط — كافٍ عملياً لأن
- * أسماء المستخدمين لا تحتوي "@" أصلاً (يُرفض أي username فيه "@" عند
- * التسجيل ضمنياً عبر isValidEmail على حقل البريد المنفصل). يُنشئ جلسة
- * جديدة عند النجاح.
+ * تسجيل الدخول — يقبل البريد الإلكتروني أو اسم المستخدم بنفس الحقل،
+ * نميّز بينهما بوجود "@" فقط. يُنشئ جلسة جديدة عند النجاح.
  * @param {string} identifier - بريد إلكتروني أو اسم مستخدم
  * @param {string} plainPassword
- * @param {string} [deviceId] - [0.45.6] معرّف الجهاز من auth-client.js —
- *   يُستخدَم فقط لو الحساب ستريمر معتمد (raجع checkDeviceLock أعلاه).
+ * @param {string} [deviceId] - معرّف الجهاز، يُستخدَم فقط لو ستريمر معتمد.
  * @returns {{success: boolean, token?: string, user?: Object, error?: string}}
  */
 function login(identifier, plainPassword, deviceId) {
@@ -261,21 +213,14 @@ function createSessionFor(user) {
 var PASSWORD_RESET_CODE_TTL_MS = 15 * 60 * 1000; // 15 دقيقة
 
 /**
- * [0.45.11] الخطوة ١ من استرجاع كلمة المرور — يولّد رمز 6 أرقام
- * ويرسله بالبريد عبر emailService، لو الحساب موجود فعلاً.
+ * الخطوة ١ من استرجاع كلمة المرور — يولّد رمز 6 أرقام ويرسله بالبريد،
+ * لو الحساب موجود فعلاً.
  *
- * ⚠️ يرجع {success: true} **دائماً** بغض النظر عن وجود الحساب من
- * عدمه — منع تعداد الإيميلات المسجَّلة (Email Enumeration): لو
- * رجّعنا خطأ صريح لإيميل غير موجود، أي شخص يقدر يجرّب إيميلات
- * ويكتشف مين مسجَّل بالمنصة ومين لا. الشيء الوحيد اللي يختلف داخلياً
- * هو إننا لا نولّد رمز ولا نرسل شي لو الحساب مو موجود.
+ * ⚠️ يرجع {success: true} دائماً بغض النظر عن وجود الحساب — منع تعداد
+ * الإيميلات المسجَّلة (Email Enumeration).
  *
- * ⚠️ ملاحظة صادقة: لا حد لعدد الطلبات (Rate Limiting) حالياً على
- * هذا الإندبوينت — نفس القيد الموثَّق أعلاه لـgenerateVerificationCode
- * (لا نظام Rate Limiting HTTP فعلي بالمشروع بعد، راجع config.js
- * §rateLimits). يعني تقنياً يقدر أي شخص يطلب رموز متكررة لنفس
- * الإيميل ويستهلك حصة إرسال Resend المجانية — قيد ناعم يُعالَج لاحقاً
- * لو صار مشكلة فعلية، لا وعد زائف بحماية غير موجودة.
+ * ⚠️ لا حد لعدد الطلبات (Rate Limiting) حالياً — يمكن استنزاف حصة إرسال
+ * Resend المجانية بطلبات متكررة، قيد يُعالَج لاحقاً لو صار مشكلة فعلية.
  *
  * @param {string} email
  * @returns {Promise<{success: boolean}>}
@@ -295,8 +240,7 @@ async function requestPasswordReset(email) {
     var sendResult = await emailService.sendPasswordResetEmail(user.email, code);
     if (!sendResult.success) {
         logger.error('Auth: تعذّر إرسال إيميل استرجاع كلمة المرور لحساب id=' + user.id + ' — ' + sendResult.error);
-        // لا نكشف فشل الإرسال للمستخدم (نفس مبدأ عدم التعداد) — لكن
-        // نصفّر الرمز المخزَّن حتى لا يبقى صالحاً بدون ما يعرفه صاحبه.
+        // لا نكشف فشل الإرسال للمستخدم — لكن نصفّر الرمز حتى لا يبقى صالحاً بدون علم صاحبه.
         db.prepare('UPDATE users SET password_reset_code = NULL, password_reset_expires = NULL WHERE id = ?').run(user.id);
     }
 
@@ -304,11 +248,9 @@ async function requestPasswordReset(email) {
 }
 
 /**
- * [0.45.11] الخطوة ٢ — يتحقق من الرمز وصلاحيته، يحدّث كلمة المرور،
- * ويصفّر الرمز (استخدام لمرة واحدة). كمان يفسخ كل جلسات الحساب
- * الحالية (خروج تلقائي من كل الأجهزة) — صمام أمان قياسي بعد تغيير
- * كلمة مرور: لو الرمز وصل لشخص غير صاحب الحساب (بريد مخترق مثلاً)،
- * أي جلسة سابقة (حتى لو مسروقة) تُفسَخ فوراً بمجرد إعادة التعيين.
+ * الخطوة ٢ — يتحقق من الرمز وصلاحيته، يحدّث كلمة المرور، ويصفّر الرمز.
+ * يفسخ أيضاً كل جلسات الحساب الحالية (خروج من كل الأجهزة) — صمام أمان:
+ * لو الرمز وصل لشخص غير صاحب الحساب، أي جلسة مسروقة تُفسَخ فوراً.
  *
  * @param {string} email
  * @param {string} code
@@ -322,8 +264,7 @@ function resetPasswordWithCode(email, code, newPassword) {
     if (!newPassword || newPassword.length < 6) return { success: false, error: 'weak_password' };
 
     var user = db.prepare('SELECT id, password_reset_code, password_reset_expires FROM users WHERE email = ?').get(email);
-    // رسالة خطأ عامة موحّدة لكل حالات الفشل (حساب غير موجود / رمز
-    // خاطئ / منتهي) — نفس مبدأ عدم كشف تفاصيل داخلية للمستخدم.
+    // رسالة خطأ عامة موحّدة لكل حالات الفشل — لا كشف تفاصيل داخلية.
     if (!user || !user.password_reset_code || user.password_reset_code !== code) {
         return { success: false, error: 'invalid_or_expired_code' };
     }
@@ -387,25 +328,19 @@ async function loginWithGoogle(idToken, deviceId) {
                 username = baseUsername + suffix++;
             }
             var publicId = generatePublicId();
-            // ⚠️ [0.45.6] account_type_chosen = 0 صراحة (خلافاً لقيمة العمود
-            // الافتراضية 1 بقاعدة البيانات) — حساب جوجل جديد كلياً **لازم**
-            // يختار لاعب/استريمر يدوياً بخطوة إجبارية بعد الدخول مباشرة (راجع
-            // choose-account-type.html)، بدل الافتراض الصامت القديم "لاعب"
-            // بدون علم صاحب الحساب. راجع docs/CHANGELOG.md [0.45.6].
+            // ⚠️ account_type_chosen = 0 صراحة (خلافاً للقيمة الافتراضية 1
+            // بقاعدة البيانات) — حساب جوجل جديد كلياً لازم يختار لاعب/
+            // استريمر بخطوة إجبارية بعد الدخول (choose-account-type.html).
             var info = db.prepare(
                 'INSERT INTO users (username, email, google_id, role, custom_id, created_at, account_type_chosen) VALUES (?, ?, ?, ?, ?, ?, ?)'
             ).run(username, email, googleId, role, publicId, now(), 0);
             existing = { id: info.lastInsertRowid, username: username, email: email, role: role, custom_id: publicId, account_type_chosen: 0 };
             logger.log('Auth: new user signed up via Google: ' + username + ' (role: ' + role + ', id: ' + publicId + ') — account type choice pending');
-
-            // [0.45.8] عرض "من البداية" لم يعد يُمنح هنا — راجع التعليق
-            // أعلى الملف (يُمنح فقط عند نجاح توثيق تيك توك).
         }
     }
 
-    // [0.45.6] قيد الجهاز الواحد يُطبَّق هنا أيضاً (نفس دالة checkDeviceLock
-    // المستخدمة بـlogin العادي) — يعمل فقط لو الحساب ستريمر معتمد فعلاً
-    // (can_run_games)، بصرف النظر عن طريقة الدخول (كلمة مرور أو جوجل).
+    // قيد الجهاز الواحد يُطبَّق هنا أيضاً (نفس checkDeviceLock بـlogin
+    // العادي)، بصرف النظر عن طريقة الدخول.
     var deviceCheck = checkDeviceLock(
         Object.assign({ permissions: '{}' }, existing, {
             permissions: typeof existing.permissions === 'string' ? existing.permissions : JSON.stringify(existing.permissions || {})
@@ -421,10 +356,8 @@ async function loginWithGoogle(idToken, deviceId) {
         }
     }
 
-    // "existing" قد يكون صف قاعدة بيانات فعلي (permissions نص JSON،
-    // is_streamer رقم 0/1) أو كائناً جديداً بُني يدوياً بالأعلى (فرع
-    // الحساب الجديد كلياً، بدون هذين الحقلين إطلاقاً) — توحيد الشكل هنا
-    // قبل الإرجاع بدل تكرار المنطق بكل فرع.
+    // "existing" قد يكون صف قاعدة بيانات فعلي أو كائناً جديداً بُني
+    // يدوياً بالأعلى — توحيد الشكل هنا قبل الإرجاع.
     var sessionToken = createSessionFor(existing);
     return {
         success: true,
@@ -466,13 +399,10 @@ function setCustomId(userId, customId) {
 }
 
 /**
- * بروفايل مستخدم عبر الـID العام (custom_id) — يُستدعى من مسار عام
- * (auth-router.js لا يتطلّب تسجيل دخول لاستدعائه)، لكن الراوتر نفسه هو
- * من يقرّر أي جزء من هذا الكائن يُرسَل فعلياً للمتصفح: صاحب الحساب أو
- * الأدمن يشوفون كل شيء، أي أحد آخر يشوف فقط username/custom_id (راجع
- * handlePublicProfile في auth-router.js وdocs/CHANGELOG.md — لا عرض
- * علني لبروفايلات الآخرين بعد الآن). حقول آمنة أصلاً حتى بالإرجاع
- * الكامل: لا بريد، لا الآيدي الداخلي (id) — راجع docs/BACKEND_ARCHITECTURE.md §10.
+ * بروفايل مستخدم عبر الـID العام (custom_id) — مسار عام، لكن الراوتر
+ * (handlePublicProfile بـauth-router.js) هو من يقرّر أي جزء من هذا
+ * الكائن يُرسَل فعلياً: صاحب الحساب أو الأدمن يشوفون كل شيء، غيرهم فقط
+ * username/custom_id. لا بريد ولا الآيدي الداخلي (id) حتى بالإرجاع الكامل.
  * @param {string} customId
  * @returns {Object|null}
  */
@@ -494,73 +424,51 @@ function getPublicProfile(customId) {
         can_run_games: Boolean(JSON.parse(user.permissions || '{}').can_run_games),
         tiktok_username: user.tiktok_verified ? user.tiktok_username : null,
         tiktok_verified: Boolean(user.tiktok_verified),
-        // ⚠️ [جديد — 0.44.0] تُلتقَط لحظة نجاح التحقق فقط (verifyTikTokOwnership
-        // أدناه)، من نفس صفحة البروفايل العامة، استخراج تقريبي (meta tags) —
-        // قد ترجع null لو تعذّر الاستخراج، بدون أي أثر على صحة التحقق نفسه.
+        // استخراج تقريبي (meta tags) لحظة نجاح التحقق — قد ترجع null بدون أثر على صحة التحقق نفسه.
         tiktok_avatar_url: user.tiktok_verified ? (user.tiktok_avatar_url || null) : null,
         tiktok_display_name: user.tiktok_verified ? (user.tiktok_display_name || null) : null,
-        // [0.45.10] اسم عرض + صورة بروفايل يعدّلهما المستخدم بنفسه —
-        // منفصلان تماماً عن username (ثابت) وtiktok_display_name/
-        // tiktok_avatar_url (من تيك توك). راجع updateDisplayName/
-        // updateAvatarImage أدناه.
+        // اسم عرض + صورة بروفايل يعدّلهما المستخدم بنفسه — منفصلان عن
+        // username (ثابت) وtiktok_display_name/tiktok_avatar_url (من تيك توك).
         display_name: user.display_name || null,
         avatar_image_base64: user.avatar_image_base64 || null,
         joined_at: user.created_at,
         stats: {
             total_broadcasts: stats.total_broadcasts,
-            total_comments: stats.total_comments, // [0.45.0] كانت محسوبة بـgetUserStats لكن غير مُرفَقة هنا
+            total_comments: stats.total_comments,
             total_gifts: stats.total_gifts,
             total_gifts_value: stats.total_gifts_value,
             total_follows: stats.total_follows,
             total_players: stats.total_players,
             total_live_ms: stats.total_live_ms
         },
-        // نظام النقاط/المستويات + المقتنيات (إطارات + دخولية) — راجع
-        // backend/points/points-service.js وbackend/collectibles/collectibles-service.js.
-        // handlePublicProfile في auth-router.js هو من يقرر إرسال هذا الحقل
-        // أصلاً (صاحب الحساب أو الأدمن فقط)؛ هذا الملف لا يعرف شيئاً عن
-        // تلك القاعدة، فقط يُرفِق البيانات لو الكائن كامل سيُرسَل.
+        // نظام النقاط/المستويات + المقتنيات — handlePublicProfile بـ
+        // auth-router.js يقرر إرسال هذه الحقول فقط لصاحب الحساب أو الأدمن.
         points: pointsService.getUserPoints(user.id),
         frames: collectiblesService.getUserFrames(user.id),
         entrance: collectiblesService.getEntrance(user.id),
-        // [0.45.0] مستوى الستريمر (SP) — راجع backend/points/streamer-level-service.js.
-        // بنفس بوابة الخصوصية على "points" أعلاه بالضبط (handlePublicProfile
-        // بـauth-router.js يقرر إرسالها فقط لصاحب الحساب أو الأدمن).
         streamerLevel: streamerLevelService.getStreamerLevelInfo(user.id)
     };
 }
 
 /**
- * إيجاد حساب مسجَّل بالمنصة له يوزرنيم تيك توك **موثَّق فعلياً**
- * (tiktok_verified = 1) يطابق الاسم المُمرَّر — يُستخدَم لربط مشاركة
- * لاعب بجولة (معروف فقط بيوزرنيم تيك توك من لوحة الستريمر) بحساب فعلي
- * على المنصة لمنحه نقاطاً (راجع backend/points/points-service.js). مطابقة
- * غير حساسة لحالة الأحرف (تيك توك نفسه غير حساس لحالة الأحرف).
+ * إيجاد حساب مسجَّل له يوزرنيم تيك توك موثَّق فعلياً (tiktok_verified = 1)
+ * يطابق الاسم المُمرَّر — يُستخدَم لربط مشاركة لاعب بجولة بحساب فعلي
+ * لمنحه نقاطاً. مطابقة غير حساسة لحالة الأحرف.
  * @param {string} tiktokUsername
  * @returns {{id: number}|null}
  */
 function findVerifiedUserByTikTok(tiktokUsername) {
     tiktokUsername = (tiktokUsername || '').trim();
     if (!tiktokUsername) return null;
-    // [0.45.6] "= ? COLLATE NOCASE" بدل LOWER(tiktok_username) = LOWER(?) —
-    // نفس نتيجة المطابقة (غير حساسة لحالة الأحرف) لكن قابلة لاستخدام فهرس
-    // idx_users_tiktok_username_nocase (راجع backend/db/database.js)، خلافاً
-    // لِلف العمود بـLOWER() اللي يُبطِل أي فهرس عادي ويفرض مسحاً تسلسلياً
-    // كاملاً لجدول users على كل استدعاء — هذا يُستدعى لكل تعليق وارد بالشات.
+    // "= ? COLLATE NOCASE" بدل LOWER() — قابل لاستخدام فهرس
+    // idx_users_tiktok_username_nocase بدل مسح جدول users كاملاً كل تعليق.
     return db.prepare(
         'SELECT id FROM users WHERE tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE'
     ).get(tiktokUsername) || null;
 }
 
 /* ----------------------------------------------------------------------
- * التحقق من ملكية حساب تيك توك عبر كود مؤقّت بالبايو
- * ----------------------------------------------------------------------
- * ⚠️ ملاحظة صريحة: الجزء الذي يجلب صفحة البروفايل العامة من تيك توك
- *   (verifyTikTokOwnership أدناه) **لم يُختبَر فعلياً ضد تيك توك حقيقي**
- *   من هذه البيئة (لا يوجد وصول شبكي لـ tiktok.com من بيئة التطوير
- *   هذه، تماماً كما حدث سابقاً مع موصِّل تيك توك نفسه). الكود مكتوب
- *   بأفضل ما هو معروف عن بنية صفحة البروفايل العامة، لكن يحتاج اختباراً
- *   حقيقياً على بيئتك قبل الاعتماد عليه كاملاً.
+ * التحقق من ملكية حساب تيك توك عبر كود مؤقّت بالبايو.
  * ---------------------------------------------------------------------- */
 
 var https = require('https');
@@ -583,19 +491,15 @@ function generateVerificationCode(userId) {
  * @returns {boolean}
  */
 function looksLikeTikTokBotCheck(html) {
-    // [0.44.3] أُزيلت "please enable javascript" — عبارة عامة موجودة حتى
-    // بصفحات تيك توك الحقيقية (noscript افتراضي لأي SPA)، كانت تُصنَّف
-    // خطأً كـ"تحقق إنسان" رغم إنها الصفحة الفعلية (لاحظنا html_length
-    // ~366KB — حجم صفحة حقيقية كاملة، لا صفحة حظر). أبقينا فقط عبارات
-    // خاصة فعلياً بصفحة التحدي.
+    // "please enable javascript" أُزيلت عمداً — عبارة عامة موجودة حتى
+    // بصفحات حقيقية (noscript افتراضي لأي SPA)، كانت تُصنَّف خطأً كـ"تحقق
+    // إنسان". أبقينا فقط عبارات خاصة فعلياً بصفحة التحدي.
     return /verify you.{0,20}human|captcha|are you a robot/i.test(html || '');
 }
 
 /**
  * جلب صفحة واحدة عبر https، مع متابعة إعادة التوجيه (redirect) يدوياً —
- * https.get لا يتابعها تلقائياً، وتيك توك يرسلها أحياناً (خصوصاً
- * لبروفايلات أقل شهرة/أحدث، أقل تخزيناً مؤقتاً على شبكته) مما كان
- * يُفشِل التحقق فوراً قبل هذا التعديل. حتى 3 قفزات دفاعياً ضد أي حلقة.
+ * https.get لا يتابعها تلقائياً. حتى 3 قفزات دفاعياً ضد أي حلقة.
  * @param {string} url
  * @param {Object} headers
  * @param {number} redirectsLeft
@@ -632,20 +536,15 @@ function delay(ms) {
 }
 
 /**
- * جلب HTML صفحة بروفايل تيك توك العامة كنص خام، مع إعادة محاولة تلقائية
- * (حتى مرتين إضافيتين، بفاصل قصير) لو الرد الأول كان صفحة "تحقّق إنك
- * إنسان" بدل البروفايل الفعلي — [0.44.2] هذي الصفحة تظهر بشكل انتقائي
- * (أكثر مع بروفايلات جديدة/أقل شهرة، أقل تخزيناً مؤقتاً على شبكة تيك
- * توك)، والمحاولة التالية غالباً تنجح لنفس البروفايل. راجع الملاحظة
- * الصادقة بأعلى الملف — هذا يقلّل احتمال الفشل لكنه ما يضمنه كلياً.
+ * جلب HTML صفحة بروفايل تيك توك العامة، مع إعادة محاولة تلقائية (حتى
+ * مرتين إضافيتين) لو الرد الأول كان صفحة "تحقّق إنك إنسان" بدل البروفايل
+ * الفعلي — تظهر بشكل انتقائي، والمحاولة التالية غالباً تنجح.
  * @returns {Promise<string>}
  */
 async function fetchPublicProfileHtml(tiktokUsername) {
     var url = 'https://www.tiktok.com/@' + encodeURIComponent(tiktokUsername);
-    // ⚠️ [0.44.1] هيدرز أشبه بمتصفح حقيقي — تيك توك معروف بحجب/تقديم
-    // صفحة تحقّق-من-إنك-إنسان (بدل البروفايل الحقيقية) لطلبات فيها
-    // هيدرز واضحة إنها من سكربت/سيرفر لا متصفح. هذا يقلّل احتمال
-    // الحجب لكنه **ما يضمنه كلياً** — راجع الملاحظة الصادقة بأعلى الملف.
+    // هيدرز أشبه بمتصفح حقيقي — تيك توك معروف بحجب/تقديم صفحة تحقّق
+    // لطلبات فيها هيدرز واضحة إنها من سكربت/سيرفر لا متصفح.
     var headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -657,8 +556,7 @@ async function fetchPublicProfileHtml(tiktokUsername) {
     for (var i = 0; i < attempts; i++) {
         lastHtml = await fetchFollowingRedirects(url, headers, 3);
         if (!looksLikeTikTokBotCheck(lastHtml)) return lastHtml;
-        // [0.44.2] رد بدا صفحة bot-check — لو ما زال فيه محاولات، ننتظر
-        // شوي ونعيد الجلب بدل الفشل الفوري.
+        // رد بدا صفحة bot-check — لو ما زال فيه محاولات، ننتظر ونعيد الجلب.
         if (i < attempts - 1) await delay(800 + i * 700);
     }
     return lastHtml; // آخر محاولة (bot-check على الأغلب) — verifyTikTokOwnership يشخّصها ويرجع خطأ واضح
@@ -683,15 +581,10 @@ async function verifyTikTokOwnership(userId, tiktokUsername) {
     }
 
     if (html.indexOf(user.tiktok_verification_code) === -1) {
-        // ⚠️ [جديد — 0.44.1] تشخيص حقيقي بدل التخمين: نطبع بسجلات الخادم
-        // طول الصفحة المستلَمة فعلياً + أول 300 حرف منها، ونعلّم لو فيها
-        // كلمات دلالية معروفة لصفحات "تحقّق من إنك إنسان" بتيك توك. هذا
-        // يخلينا نشوف بالضبط وش رجع تيك توك فعلياً بدل ما نفترض.
+        // تشخيص: طول الصفحة + أول 300 حرف + هل تبدو صفحة "تحقّق إنسان"،
+        // ومحتوى og:description (يحوي البايو عادة) — للتفريق بين "المستخدم
+        // ما حفظ الكود" و"تيك توك يحذف البايو من الرد".
         var looksLikeBotCheck = looksLikeTikTokBotCheck(html);
-        // [0.44.3] نطبع أيضاً محتوى og:description (وصف البروفايل — عادة
-        // يحوي البايو أو جزءاً منه) عشان نعرف هل البايو أصلاً وصل بالصفحة
-        // المستلمة أو تيك توك ما يرسله لهذا الحساب تحديداً — بدون هذا لا
-        // نفرّق بين "المستخدم ما حفظ الكود" و"تيك توك يحذف البايو من الرد".
         var descriptionTag = extractMetaTagContent(html, 'og:description');
         logger.error(
             'Auth: TikTok verification code not found in fetched page for "' + tiktokUsername + '". ' +
@@ -702,13 +595,9 @@ async function verifyTikTokOwnership(userId, tiktokUsername) {
         return { success: false, error: 'code_not_found_in_bio' };
     }
 
-    // ⚠️ [جديد — 0.44.0] نفس صفحة البروفايل المجلوبة أعلاه للتحقق من
-    // الكود تُستخدَم أيضاً لاستخراج صورة/اسم عرض تيك توك — بدون أي طلب
-    // شبكي إضافي. استخراج تقريبي عبر meta tags (og:image/og:title) —
-    // **غير مؤكَّد بالكامل ولم يُختبَر ضد تيك توك حقيقي** من هذه البيئة
-    // (نفس تحفّظ verifyTikTokOwnership نفسها أعلاه). فشل الاستخراج هنا
-    // لا يُفشِل التحقق نفسه إطلاقاً — يبقى الحساب موثَّقاً بأي حال، فقط
-    // الصورة/الاسم يرجعوا null ويُعرَض بديل افتراضي بالواجهة.
+    // نفس صفحة البروفايل المجلوبة أعلاه تُستخدَم أيضاً لاستخراج صورة/اسم
+    // عرض تيك توك (meta tags og:image/og:title)، بدون طلب شبكي إضافي.
+    // فشل الاستخراج لا يُفشِل التحقق — الصورة/الاسم يرجعوا null فقط.
     var avatarUrl = extractProfileAvatarFromHtml(html);
     var displayName = extractProfileDisplayNameFromHtml(html);
 
@@ -716,8 +605,6 @@ async function verifyTikTokOwnership(userId, tiktokUsername) {
         'UPDATE users SET tiktok_verified = 1, tiktok_username = ?, tiktok_avatar_url = ?, tiktok_display_name = ? WHERE id = ?'
     ).run(tiktokUsername, avatarUrl, displayName, userId);
 
-    // [0.45.8] عرض "من البداية" الحصري — نقطة المنح الوحيدة الآن (بعد
-    // التوثيق الفعلي، لا وقت التسجيل) — راجع التعليق أعلى الملف.
     grantFoundersMonthFrameIfEligible(userId);
 
     return { success: true };

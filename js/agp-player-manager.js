@@ -17,27 +17,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 (function (AGP) {
     'use strict';
 
-    // حماية بسيطة في حال تم تحميل هذا الملف قبل agp-core.js بالخطأ
     if (!AGP.log) {
         AGP.log = function () {};
     }
     if (!AGP.events) {
-        // نسخة بديلة بسيطة جداً (Fallback) حتى لا ينهار الملف لو حُمّل بمفرده،
-        // لكن الاستخدام الطبيعي دائماً بعد تحميل agp-core.js/agp-events.js.
         AGP.events = { emit: function () {}, on: function () { return function () {}; } };
     }
 
-    /* ----------------------------------------------------------------
-     * 1) مصدر قائمة اللاعبين (Players Source)
-     * ----------------------------------------------------------------
-     * Player Manager لا يخزّن قائمته الخاصة عندما توجد جلسة نشطة؛ بدلاً
-     * من ذلك يقرأ/يعدّل المصفوفة المشتركة نفسها التي يحتفظ بها Session
-     * Manager (`AGP.session.getPlayersRef()`). هذا يضمن أن كل من
-     * Session Manager وPlayer Manager (وأي وحدة قادمة) يريان نفس البيانات
-     * دائماً دون الحاجة لمزامنة يدوية بينهما.
-     * ---------------------------------------------------------------- */
-
-    // مصفوفة احتياطية تُستخدم فقط إذا لم توجد جلسة نشطة عبر AGP.session
+    // Used only when there's no active AGP.session
     var _fallbackPlayers = [];
 
     function getPlayersArray() {
@@ -49,9 +36,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return _fallbackPlayers;
     }
 
-    /* ----------------------------------------------------------------
-     * 2) دوال مساعدة داخلية
-     * ---------------------------------------------------------------- */
     function findIndexById(players, playerId) {
         for (var i = 0; i < players.length; i++) {
             if (players[i] && players[i].id === playerId) return i;
@@ -59,21 +43,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return -1;
     }
 
-    /* ----------------------------------------------------------------
-     * 3) واجهة AGP.player العامة
-     * ---------------------------------------------------------------- */
     AGP.player = {
 
-        /**
-         * محاولة إضافة لاعب جديد إلى قائمة الجلسة الحالية.
-         * يتجاهل الانضمام المكرر تلقائياً (بنفس الـ id).
-         *
-         * @param {Object} playerData - بيانات اللاعب، ويجب أن تحتوي على
-         *   الأقل على { id, name }. أي حقول إضافية تُحفظ كما هي دون
-         *   تفسير أو تعديل من هذا الملف (لا معنى/دور لعبة يُفرض هنا).
-         * @returns {Object|null} كائن اللاعب المُضاف عند النجاح، أو
-         *   null عند الرفض (بيانات ناقصة أو تكرار).
-         */
+        /** Ignores duplicate joins (same id). */
         addPlayer: function (playerData) {
             AGP.events.emit('player:joinRequested', { playerData: playerData });
 
@@ -103,8 +75,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 joinedAt: Date.now()
             };
 
-            // أي حقول إضافية غير الحقول الأساسية تُنسخ كما هي (بدون
-            // تفسير)، حتى تبقى هذه الوحدة عامة وغير مرتبطة بلعبة معيّنة.
             Object.keys(playerData).forEach(function (key) {
                 if (key !== 'id' && key !== 'name' && !(key in player)) {
                     player[key] = playerData[key];
@@ -119,11 +89,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return player;
         },
 
-        /**
-         * حذف لاعب من قائمة الجلسة الحالية عن طريق الـ id.
-         * @param {string} playerId
-         * @returns {boolean} true إذا تم الحذف فعلياً، false إن لم يوجد.
-         */
         removePlayer: function (playerId) {
             var players = getPlayersArray();
             var index = findIndexById(players, playerId);
@@ -142,50 +107,28 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return true;
         },
 
-        /**
-         * البحث عن لاعب معيّن عن طريق الـ id.
-         * @param {string} playerId
-         * @returns {Object|null}
-         */
         findPlayer: function (playerId) {
             var players = getPlayersArray();
             var index = findIndexById(players, playerId);
             return index === -1 ? null : players[index];
         },
 
-        /**
-         * التحقق من وجود لاعب معيّن ضمن القائمة الحالية.
-         * @param {string} playerId
-         * @returns {boolean}
-         */
         hasPlayer: function (playerId) {
             return this.findPlayer(playerId) !== null;
         },
 
-        /**
-         * إرجاع قائمة اللاعبين الحالية كنسخة (Copy) آمنة للقراءة، حتى لا
-         * يستطيع أي كود خارجي تعديل القائمة الأصلية مباشرة دون المرور
-         * عبر addPlayer/removePlayer/reset.
-         * @returns {Array<Object>}
-         */
+        /** Returns a copy — external code can't mutate the real list
+         * without going through addPlayer/removePlayer/reset. */
         getAllPlayers: function () {
             return getPlayersArray().slice();
         },
 
-        /**
-         * إرجاع عدد اللاعبين الحاليين. دالة مساعدة بسيطة لتفادي كتابة
-         * getAllPlayers().length في كل مكان.
-         * @returns {number}
-         */
         getPlayersCount: function () {
             return getPlayersArray().length;
         },
 
-        /**
-         * تصفير قائمة اللاعبين بالكامل (مثلاً عند بدء جلسة جديدة أو
-         * إعادة ضبط يدوية). يُفرغ المصفوفة الأصلية دون استبدال مرجعها،
-         * حتى تبقى Session Manager (وأي وحدة أخرى) تشير لنفس المصفوفة.
-         */
+        /** Clears in place (doesn't replace the array reference) so
+         * Session Manager keeps pointing at the same array. */
         reset: function () {
             var players = getPlayersArray();
             players.length = 0;

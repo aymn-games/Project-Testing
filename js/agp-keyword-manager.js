@@ -1,14 +1,7 @@
 /**
- * ==========================================================================
- *  AGP KEYWORD MANAGER — إدارة كلمة الانضمام العامة (بدون ربط فعلي)
- * ==========================================================================
- * مسؤولة فقط عن: تعيين/تغيير/تفعيل/إيقاف كلمة انضمام واحدة، والتحقق من
- * تطابق نص وارد معها. عند القبول، تُمرِّر اللاعب حصراً عبر
- * AGP.playerSource.submitPlayer('keyword', ...) — لا تلمس AGP.player
- * مباشرة ولا تعرف شيئاً عن مصدر النص (تيك توك أو غيره). لا اتصال فعلي،
- * لا واجهة، لا كود خاص بأي لعبة.
- * يعتمد على js/agp-core.js, js/agp-events.js, js/agp-player-source.js قبله.
- * ==========================================================================
+ * AGP KEYWORD MANAGER — sets/activates a single join keyword and checks
+ * incoming text against it. On match, submits the player only through
+ * AGP.playerSource.submitPlayer('keyword', ...).
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -66,13 +59,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return _active;
         },
 
-        /**
-         * التحقق من نص وارد مقابل الكلمة الحالية. عند التطابق (والتفعيل
-         * فعّال)، يُمرَّر اللاعب حصراً عبر AGP.playerSource.submitPlayer.
-         * @param {string} text - النص المطلوب مطابقته بالكلمة
-         * @param {Object} playerData - بيانات اللاعب المرشَّح للانضمام
-         * @returns {Object|null} كائن اللاعب المُضاف عند القبول، أو null
-         */
         checkKeyword: function (text, playerData) {
             if (!_active || !_keyword) {
                 AGP.events.emit('keyword:rejected', { reason: 'inactive', text: text, playerData: playerData });
