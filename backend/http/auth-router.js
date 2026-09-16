@@ -92,6 +92,8 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/custom-id', requireAuth: true, requireAdmin: true, handler: handleAdminSetCustomId },
   // [0.45.6] حذف حساب نهائياً (لاعب أو ستريمر) — زر بـadmin.html.
   { method: 'POST', path: '/api/admin/users/delete', requireAuth: true, requireAdmin: true, handler: handleAdminDeleteUser },
+  // [جديد] حذف ذاتي — أي مستخدم مسجّل دخول يقدر يحذف حسابه هو بس (requireAdmin غير موجود عمداً، requireAuth فقط).
+  { method: 'POST', path: '/api/profile/delete-account', requireAuth: true, handler: handleDeleteMyAccount },
   // [0.45.6] تصفير قيد الجهاز الواحد لستريمر معتمد — صمام أمان يدوي.
   { method: 'POST', path: '/api/admin/reset-device-lock', requireAuth: true, requireAdmin: true, handler: handleAdminResetDeviceLock },
   // [0.45.11] سماح تغيير الجهاز لمرة واحدة (يُستهلَك تلقائياً بأول دخول جديد).
@@ -99,9 +101,6 @@ var ROUTES = [
   // [0.45.11] سوبر أدمن — تجاوز كامل لقيد الجهاز، حساب بحساب.
   { method: 'POST', path: '/api/admin/super-admin', requireAuth: true, requireAdmin: true, handler: handleAdminSetSuperAdmin },
   { method: 'GET', path: '/api/profile', requireAuth: false, handler: handlePublicProfile },
-  // [عام، بدون Auth] عدّاد الحسابات الإجمالي فقط لصفحة الهبوط — نسخة
-  // عامة مصغّرة من /api/admin/stats/users، بدون أي بيانات شخصية.
-  { method: 'GET', path: '/api/stats', requireAuth: false, handler: handlePublicStats },
   { method: 'GET', path: '/api/announcement', requireAuth: false, handler: handleGetAnnouncement },
   { method: 'POST', path: '/api/admin/announcement', requireAuth: true, requireAdmin: true, handler: handleAdminSetAnnouncement },
   // ---- المقتنيات (إطارات + دخوليات) والنقاط — راجع
@@ -349,6 +348,18 @@ function handleAdminSetCustomId(req, res, body) {
 /** [0.45.6] الأدمن فقط — حذف حساب نهائياً (لاعب أو ستريمر). راجع authService.deleteUser. */
 function handleAdminDeleteUser(req, res, body) {
   var result = authService.deleteUser(body.userId);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+/**
+ * [جديد] حذف الحساب الذاتي — يحذف المستخدم لنفسه فقط (user.id من
+ * الجلسة الحالية، أبداً من body — عمداً بدون أي userId بالطلب، حتى
+ * ما تصير فيه ثغرة تسمح لمستخدم يحذف حساب غيره). يعيد استخدام نفس
+ * authService.deleteUser الحقيقي اللي يحذف يدوياً كل الصفوف المرتبطة
+ * (راجع تعليقه أعلاه لسبب الحذف اليدوي).
+ */
+function handleDeleteMyAccount(req, res, body, user) {
+  var result = authService.deleteUser(user.id);
   sendJson(res, result.success ? 200 : 400, result);
 }
 
@@ -740,11 +751,6 @@ function handleAdminStreamerStats(req, res) {
 /** [0.45.10] الأدمن فقط — إحصائيات المستخدمين المجمَّعة. */
 function handleAdminUserStats(req, res) {
   sendJson(res, 200, { success: true, stats: authService.getAdminUserStats() });
-}
-
-/** عام (بدون Auth) — عدّاد الحسابات الإجمالي فقط، لصفحة الهبوط. */
-function handlePublicStats(req, res) {
-  sendJson(res, 200, { success: true, stats: authService.getPublicPlatformStats() });
 }
 
 /**

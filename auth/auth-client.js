@@ -236,6 +236,11 @@ function unlinkTikTok() {
     return request('/api/auth/tiktok/unlink', { method: 'POST' });
 }
 
+/** [جديد] حذف الحساب الذاتي — نهائي ولا رجعة فيه. راجع handleDeleteMyAccount بالباك-إند. */
+function deleteMyAccount() {
+    return request('/api/profile/delete-account', { method: 'POST' });
+}
+
 function setCustomId(customId) {
     return request('/api/auth/custom-id', { method: 'POST', body: { customId: customId } });
 }
@@ -605,11 +610,6 @@ function getTopSupporters() {
     return request('/api/supporters/top', { method: 'GET' });
 }
 
-/** عام بدون تسجيل دخول — عدّاد الحسابات الإجمالي، للصفحة الرئيسية. */
-function getPlatformStats() {
-    return request('/api/stats', { method: 'GET' });
-}
-
 /** الأدمن فقط — كل صفوف الدعم (لوحة الإدارة بـadmin.html). */
 function adminListSupporters() {
     return request('/api/admin/supporters', { method: 'GET' });
@@ -771,6 +771,7 @@ global.AGPAuth = {
     requestTikTokVerificationCode: requestTikTokVerificationCode,
     verifyTikTok: verifyTikTok,
     unlinkTikTok: unlinkTikTok,
+    deleteMyAccount: deleteMyAccount,
     setCustomId: setCustomId,
     updateDisplayName: updateDisplayName,
     updateAvatarImage: updateAvatarImage,
@@ -811,7 +812,6 @@ global.AGPAuth = {
     getAdminUserStats: getAdminUserStats,
     getRecentSupporters: getRecentSupporters,
     getTopSupporters: getTopSupporters,
-    getPlatformStats: getPlatformStats,
     adminListSupporters: adminListSupporters,
     adminAddSupporter: adminAddSupporter,
     adminFindSupporterUser: adminFindSupporterUser,
