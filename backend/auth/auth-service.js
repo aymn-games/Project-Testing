@@ -611,22 +611,11 @@ async function verifyTikTokOwnership(userId, tiktokUsername) {
 }
 
 /**
- * [0.45.0] استخراج قيمة content من وسم <meta> يطابق property/name معيّن،
- * **بصرف النظر عن ترتيب الخصائص بالوسم**. الإصدار القديم كان يفترض
- * ترتيباً ثابتاً (property أولاً ثم content مباشرة)، وهذا يفشل بصمت لو
- * تيك توك (أو أي React SSR — علامته المعتادة سمة data-rh) وضع خاصية
- * أخرى (مثل data-rh="true") قبل property بنفس الوسم — نمط شائع جداً في
- * صفحات React Helmet SSR. هذا الإصدار يبحث أولاً عن كامل وسم <meta ...>
- * الذي يحتوي property="<key>" (بأي مكان بالوسم)، ثم يستخرج content منه
- * بمعزل عن الترتيب. لا يرمي أبداً — يرجع null عند أي فشل.
- *
- * ⚠️ ملاحظة صادقة: هذا تحسين مبني على سبب فشل معروف وشائع (اختلاف ترتيب
- * الخصائص)، لكن **لم يُختبَر بعد ضد تيك توك حقيقي** من هذه البيئة (لا
- * وصول شبكي لتيك توك هنا، نفس تحفّظ verifyTikTokOwnership وباقي
- * استخراجات تيك توك بالمشروع). لو تيك توك أصلاً لا يُرسِل وسوم og:image/
- * og:title لطلبات غير المتصفح (User-Agent غير حقيقي)، هذا الإصلاح وحده
- * لن يكفي — سجل التشخيص أدناه (أول 5 محاولات فقط) سيوضّح ذلك مباشرة
- * بسجلات الخادم بعد الرفع.
+ * استخراج قيمة content من وسم <meta> يطابق property/name معيّن، بصرف
+ * النظر عن ترتيب الخصائص بالوسم — بعض صفحات React Helmet SSR تضع خاصية
+ * أخرى (مثل data-rh="true") قبل property بنفس الوسم. يبحث عن كامل وسم
+ * <meta ...> المحتوي property="<key>" ثم يستخرج content منه بمعزل عن
+ * الترتيب. لا يرمي أبداً — يرجع null عند أي فشل.
  * @param {string} html
  * @param {string} propertyKey - مثل 'og:image' أو 'og:title'
  * @returns {string|null}
@@ -642,11 +631,7 @@ function extractMetaTagContent(html, propertyKey) {
 }
 
 var _tiktokExtractionDebugLogsRemaining = 5;
-/**
- * تسجيل تشخيصي محدود (أول 5 محاولات استخراج فقط، بنفس أسلوب
- * _extractUserDebugLogsRemaining بـtiktok-connector.js) — يوضّح هل HTML
- * المجلوب فعلياً يحتوي وسوم og: من الأساس أم لا، بدل التخمين لاحقاً.
- */
+/** تسجيل تشخيصي محدود (أول 5 محاولات) — يوضّح هل HTML يحتوي وسوم og: أم لا. */
 function _logTikTokExtractionDiagnostics(label, html, extractedValue) {
     if (_tiktokExtractionDebugLogsRemaining <= 0) return;
     _tiktokExtractionDebugLogsRemaining--;
@@ -692,17 +677,14 @@ function extractProfileDisplayNameFromHtml(html) {
 }
 
 /**
- * إلغاء ربط تيك توك يدوياً من قِبل صاحب الحساب نفسه. التحقق (unlink)
- * لا يحدث تلقائياً أبداً بأي مكان آخر في هذا الملف — بمجرد
- * `tiktok_verified = 1` يبقى الحساب "مرتبط" للأبد بلا حاجة لأي إعادة
- * تحقق دورية، حتى لو المستخدم شال الكود من بايو حسابه بتيك توك بعد ما
- * تحقق مرة وحدة. هذه الدالة هي المخرج الوحيد لإلغاء الربط.
+ * إلغاء ربط تيك توك يدوياً من قِبل صاحب الحساب — المخرج الوحيد لإلغاء
+ * الربط؛ بمجرد tiktok_verified = 1 يبقى الحساب مرتبطاً بلا إعادة تحقق دورية.
  * @param {number} userId
  * @returns {{success: boolean}}
  */
 function unlinkTikTok(userId) {
-    // ⚠️ [0.44.0] تصفير tiktok_avatar_url/tiktok_display_name أيضاً — وإلا
-    // تبقى صورة/اسم الحساب القديم عالقة لو ربط لاحقاً حساب تيك توك مختلف.
+    // تصفير tiktok_avatar_url/tiktok_display_name أيضاً — وإلا تبقى صورة/
+    // اسم الحساب القديم عالقة لو ربط لاحقاً حساب تيك توك مختلف.
     db.prepare('UPDATE users SET tiktok_username = NULL, tiktok_verified = 0, tiktok_verification_code = NULL, tiktok_avatar_url = NULL, tiktok_display_name = NULL WHERE id = ?').run(userId);
     return { success: true };
 }
@@ -716,13 +698,6 @@ function validateSession(token) {
     var session = db.prepare('SELECT * FROM sessions WHERE token = ?').get(token);
     if (!session || session.expires_at < now()) return null;
 
-    // ⚠️ [إصلاح باگ حقيقي — 0.44.0] tiktok_verified وtiktok_avatar_url/
-    // tiktok_display_name كانوا غايبين تماماً عن هذا الاستعلام — أي كود
-    // مستقبلي يعتمد على AGPAuth.me().tiktok_verified كان بيشوفه دائماً
-    // undefined (يعني "غير موثَّق") حتى لو الحساب موثَّق فعلياً بقاعدة
-    // البيانات. profile.html نفسها ما تأثّرت (تستخدم getPublicProfile
-    // أدناه، اللي كان صحيحاً أصلاً)، لكن هذا كان قنبلة موقوتة لأي واجهة
-    // ثانية تعتمد على /api/auth/me مباشرة.
     var user = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, tiktok_avatar_url, tiktok_display_name, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen FROM users WHERE id = ?').get(session.user_id);
     if (!user) return null;
 
@@ -743,11 +718,9 @@ function validateSession(token) {
 }
 
 /**
- * [0.45.6] الاختيار الإجباري لنوع الحساب (لاعب/استريمر) بعد أول دخول
- * بجوجل لحساب جديد كلياً — راجع loginWithGoogle وchoose-account-type.html.
- * نفس أثر مربع الاختيار wantsToBeStreamer وقت التسجيل العادي بالضبط
- * (يضبط is_streamer فقط — **لا يمنح صلاحية تشغيل الألعاب تلقائياً**،
- * الموافقة الفعلية تبقى من الأدمن عبر can_run_games كما كان دائماً).
+ * الاختيار الإجباري لنوع الحساب (لاعب/استريمر) بعد أول دخول بجوجل لحساب
+ * جديد كلياً. يضبط is_streamer فقط — لا يمنح صلاحية تشغيل الألعاب
+ * تلقائياً، الموافقة الفعلية تبقى من الأدمن عبر can_run_games.
  * @param {number} userId - من الجلسة نفسها دائماً، لا يُمرَّر من body خام
  * @param {boolean} wantsToBeStreamer
  * @returns {{success: boolean, error?: string}}

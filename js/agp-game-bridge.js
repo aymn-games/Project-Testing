@@ -142,8 +142,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             playLinkEl.addEventListener('click', handlePlayButtonClick);
             window.addEventListener('message', handleMessageFromGameWindow);
 
-            // تمرير أحداث دورة حياة Game Engine (الخاصة بهذه اللعبة فقط،
-            // بمقارنة payload.id) إلى نافذة اللعبة الفعلية.
             forwardedEvents.forEach(function (eventName) {
                 AGP.events.on(eventName, function (payload) {
                     if (!payload || payload.id !== id) return;
@@ -157,11 +155,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 getGameWindow: function () { return _gameWindow; },
                 sendToGameWindow: sendToGameWindow,
 
-                /**
-                 * قطع الاتصال: إزالة مستمعي النقر والرسائل، وتفريغ مرجع
-                 * النافذة. لا يُلغي تسجيل اللعبة من Game API؛ تلك مسؤولية
-                 * منفصلة تماماً (AGP.gameAPI.unregister أو onDestroy).
-                 */
+                /** Doesn't unregister the game from Game API — that's separate. */
                 disconnect: function () {
                     playLinkEl.removeEventListener('click', handlePlayButtonClick);
                     window.removeEventListener('message', handleMessageFromGameWindow);
