@@ -1073,16 +1073,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (winnerVideo) winnerVideo.pause();
     }
 
-    /* ============ مباراة جديدة / إعادة الجولة ============ */
     function newGame() {
         closeWinnerModal();
-        // ⚠️ إصلاح بگ حقيقي: AGP.gameManager.resetSession() لحالها ما
-        // ترجّع شاشة الإعدادات — تبث game:reset فقط (يستدعي onDestroy
-        // عندنا)، لكن ما فيه أي مستمع بـjs/agp-game-shell.js نفسه يعيد
-        // إظهار الأوفرلاي/الصندوق بعدها، فتطلع صفحة فاضية بلا أي واجهة.
-        // نفس الحل المعتمد بزر "رجوع للإعدادات" باللوبي: إعادة تحميل
-        // الصفحة بالكامل هي الطريقة الوحيدة الموثوقة لرجوع شاشة الإعدادات
-        // الحقيقية (بزر الاتصال + حقل اليوزرنيم + الكلمة المفتاحية).
+        // ⚠️ AGP.gameManager.resetSession() وحدها ما ترجّع شاشة الإعدادات
+        // (تبث game:reset فقط)؛ ما فيه مستمع بـjs/agp-game-shell.js يعيد
+        // إظهار الأوفرلاي بعدها، فتطلع صفحة فاضية. إعادة تحميل الصفحة هي
+        // الطريقة الوحيدة الموثوقة لرجوع شاشة الإعدادات الحقيقية.
         AGP.gameManager.resetSession();
         window.location.reload();
     }
@@ -1117,8 +1113,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.events.emit('game:roundStarted', { id: GAME_ID });
     }
 
-    /* ============ بدء المباراة فعلياً (تُستدعى من agp-game-shell.js بعد
-       ضغط المضيف "ابدأ" بشاشة الإعدادات) ============ */
+    // بدء المباراة فعلياً (تُستدعى من agp-game-shell.js بعد ضغط المضيف
+    // "ابدأ" بشاشة الإعدادات).
     function handleStartRound(settingsValues) {
         _settings = settingsValues || {};
         _roundDuration = _settings.roundDurationMinutes ? Number(_settings.roundDurationMinutes) : 240;
@@ -1146,7 +1142,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wireGiftListener();
     }
 
-    /* ============ الحد الأقصى للاعبين — نفس آلية روليت الإقصاء تماماً ============ */
     function enforceMaxPlayers() {
         if (!AGP.gameShell) return;
         var settings = AGP.gameShell.getSettings();
@@ -1160,7 +1155,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
     }
 
-    /* ============ التسجيل بالمنصة ============ */
     function buildSettingsFields() {
         return [
             { key: 'maxPlayers', type: 'counter', label: '👥 الحد الأقصى لعدد اللاعبين بالمباراة', min: 2, default: 20 },
@@ -1189,15 +1183,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         ];
     }
 
-    /* ==========================================================================
-       تحسينات شاشتي الإعدادات/اللوبي المشتركتين (js/agp-game-shell.js) —
-       خاصة بروليت الفواكه فقط، بدون أي تعديل على الملف المشترك نفسه.
-       ⚠️ الطريقة: MutationObserver يراقب #agp-shell-overlay (تُنشأ مرة
-       وحدة عند init()، تبقى بالـDOM طول الوقت) ويعيد حقن عناصرنا في كل
-       مرة يُعاد فيها بناء محتوى #agp-shell-box (كل تنقّل بين شاشة
-       إعدادات/اتصال/لوبي يمسح المحتوى بالكامل). كل دالة idempotent
-       (تتأكد أول شي إن عنصرها مو موجود مسبقاً قبل ما تضيفه).
-       ========================================================================== */
+    // تحسينات شاشتي الإعدادات/اللوبي المشتركتين، خاصة بروليت الفواكه فقط.
+    // MutationObserver يراقب #agp-shell-overlay ويعيد حقن عناصرنا في كل
+    // مرة يُعاد فيها بناء محتوى #agp-shell-box؛ كل دالة idempotent.
     function enhanceSettingsScreen() {
         var box = document.getElementById('agp-shell-box');
         if (!box) return;
@@ -1214,16 +1202,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         connectBtn.insertAdjacentElement('afterend', btn);
     }
 
-    /**
-     * ⚠️ زر X حذف مباشر لكل لاعب بقائمة اللوبي. تنبيه صادق عن حدود
-     * الطريقة: renderLobbyPlayerList (بالملف المشترك) ما يحط أي
-     * data-player-id على عناصر <li> باللوبي (بعكس شاشة الإعدادات وسط
-     * المباراة اللي تستخدم opts.removable الجاهزة أصلاً). فبدل تعديل
-     * الملف المشترك، نطابق كل <li> بترتيبه (index) مع نفس ترتيب
-     * AGP.gameManager.getPlayers() — نفس المصدر ونفس الدالة اللي
-     * renderLobbyPlayerList تستخدمها لبناء القائمة أصلاً، فالترتيب يطابق
-     * عملياً بكل الحالات الطبيعية.
-     */
+    // زر X حذف مباشر لكل لاعب بقائمة اللوبي. renderLobbyPlayerList
+    // (بالملف المشترك) ما يحط data-player-id على عناصر <li>، فنطابق كل
+    // <li> بترتيبه (index) مع نفس ترتيب AGP.gameManager.getPlayers()
+    // (نفس المصدر اللي renderLobbyPlayerList تستخدمه لبناء القائمة).
     function enhanceLobbyList() {
         var list = document.getElementById('agp-lobby-list');
         if (!list || !AGP.gameManager) return;
@@ -1233,10 +1215,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (li.querySelector('.fr-lobbyscreen-remove-btn')) return;
             var player = players[i];
             if (!player || !player.id) return;
-            // ⚠️ شارة صغيرة عائمة فوق زاوية البطاقة (position:absolute عبر
-            // CSS) — بدل إدراجها كعنصر شقيق بصف flex عادي (كانت تسبب خربطة
-            // بصرية واضحة، البطاقات ما مصممة أصلاً لاستيعاب عنصر إضافي
-            // بجانبها). راجع style.css: #agp-lobby-list li{position:relative}.
+            // شارة عائمة فوق زاوية البطاقة (position:absolute عبر CSS)،
+            // مو عنصر شقيق بصف flex -- البطاقات مو مصممة لاستيعاب عنصر
+            // إضافي بجانبها (راجع style.css: #agp-lobby-list li{position:relative}).
             var btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'fr-lobbyscreen-remove-btn';
@@ -1251,15 +1232,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    /**
-     * ⚠️ [مطابق لنفس التحسين المطبَّق بروليت الإقصاء] بطاقة الاسم الطويل
-     * (خصوصاً أسماء إنجليزية/إيموجي) قد تحتاج عرض بلاطة أكبر من عرض
-     * عمود واحد متاح فعلياً بشبكة 3 أعمدة — بدل تصغير الشبكة كلها
-     * لعمودين، تلك البطاقة وحدها تاخذ عرض عمودين (`grid-column:span 2`
-     * عبر كلاس .fr-lobby-card-wide)، والباقي يبقى 3 أعمدة بالضبط.
-     * الفحص بقياس العرض الحقيقي غير المقصوص للاسم (scrollWidth) مقابل
-     * عرض العمود المتاح فعلياً.
-     */
+    // بطاقة الاسم الطويل قد تحتاج عرض بلاطة أكبر من عمود واحد بشبكة 3
+    // أعمدة -- بدل تصغير الشبكة كلها، تلك البطاقة وحدها تاخذ عمودين
+    // (.fr-lobby-card-wide)، بقياس العرض الحقيقي (scrollWidth) للاسم.
     function markWideLobbyCards(box, list) {
         var items = list.querySelectorAll('li');
         if (items.length === 0) return 0;
@@ -1295,16 +1270,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return totalSlots;
     }
 
-    /**
-     * ⚠️ [مطابق لنفس التحسين المطبَّق بروليت الإقصاء] تصغير تلقائي متناسب
-     * لحجم بطاقات اللوبي لو عدد اللاعبين كبير (يتجاوز المساحة الرأسية
-     * المتاحة داخل الصندوق الثابت 900px) — بدل الاعتماد فقط على السكرول
-     * الداخلي. نقيس المساحة المتاحة فعلياً (list.clientHeight) ونحسب
-     * أصغر نسبة تكبير (scale) تخلي كل الصفوف تنضم بدون قصّ، بحد أدنى
-     * 55% (تحته الخط/الأفاتار يصير غير مقروء بالبث). القيم تُحقَن
-     * كمتغيّرات CSS (custom properties) تستخدمها القواعد بـstyle.css
-     * عبر var(--fr-lobby-*, <حجم كامل افتراضي>)، فتتحدَّث تلقائياً.
-     */
+    // تصغير تلقائي متناسب لحجم بطاقات اللوبي لو عدد اللاعبين كبير (يتجاوز
+    // المساحة الرأسية المتاحة)، بحد أدنى 55% (تحته الخط/الأفاتار يصير
+    // غير مقروء بالبث). القيم تُحقَن كمتغيّرات CSS يستخدمها style.css.
     function applyDynamicLobbyCardScale() {
         var box = document.getElementById('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
@@ -1315,16 +1283,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var totalSlots = markWideLobbyCards(box, list);
 
-        // ⚠️ إصلاح بگ حقيقي (مؤكَّد بالحساب): عرض صندوق اللوبي الفعلي
-        // 900px بحشو 34px يمين/يسار (من الملف المشترك) = محتوى ≈832px،
-        // فعرض العمود الواحد بشبكة 3 أعمدة (فجوة 10px) ≈ 270px فقط.
-        // القيم القديمة المنقولة (أفاتار 65 + أدنى عرض بلاطة 260) كانت
-        // تحتاج 333px حتى بأقصر اسم ممكن — أكبر من عرض العمود نفسه، فكل
-        // بطاقة كانت تُعلَّم "عريضة" (span 2) بغضّ النظر عن طول اسمها
-        // الفعلي، وهذا سبب التخطيط المكسور بالصورة. القيم الجديدة محسوبة
-        // فعلياً لتتناسب مع عرض العمود الحقيقي — اسم قصير عادي يبقى
-        // بعمود واحد، وفقط الأسماء الطويلة فعلاً (كثرة إيموجي/نص) تاخذ
-        // عمودين.
+        // ⚠️ القيم أدناه محسوبة لتتناسب مع عرض العمود الحقيقي لصندوق
+        // اللوبي (900px بحشو 34px يمين/يسار ≈832px محتوى، فعمود واحد من
+        // 3 بشبكة ≈270px) -- اسم قصير عادي يبقى بعمود واحد، وفقط الأسماء
+        // الطويلة فعلاً تاخذ عمودين.
         var BASE_ROW = 64, BASE_GAP = 10, BASE_AVATAR = 50, BASE_PILL_H = 40,
             BASE_FONT = 18, BASE_PILL_MINW = 110, BASE_PILL_MAXW = 260, BASE_ZOOM = 0.77;
         var MIN_SCALE = 0.55;
@@ -1349,12 +1311,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         box.style.setProperty('--fr-lobby-frame-zoom', (BASE_ZOOM * scale).toFixed(3));
     }
 
-    /**
-     * 8) صف الأزرار السفلي الموحَّد: "العودة لاعدادات المباراة" (جديد —
-     * تأكيد ثم إعادة تحميل الصفحة) + زر البدء الأصلي (نفس العنصر ونفس
-     * onclick المُعرَّف بالملف المشترك — يُنقَل داخل الصف، بدون أي تغيير
-     * على نصّه) + "رجوع لمنصة ألعاب أيمن" — الثلاثة بصف واحد.
-     */
+    // صف الأزرار السفلي الموحَّد: "العودة لاعدادات المباراة" + زر البدء
+    // الأصلي (نفس العنصر ونفس onclick، يُنقَل داخل الصف) + "رجوع للمنصة".
     function enhanceLobbyActions() {
         var box = document.getElementById('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
@@ -1372,17 +1330,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             backSettingsBtn.className = 'fr-lobby-action-btn';
             backSettingsBtn.textContent = '⚙️ العودة لاعدادات المباراة';
             backSettingsBtn.addEventListener('click', function () {
-                // ⚠️ ليس نفس ⚙️ الهيدر الثابت عمداً: ذاك يفتح شاشة إعدادات
-                // "مختصرة" (بدون حقل يوزرنيم/كلمة مفتاحية). لا توجد دالة
-                // عامة مصدَّرة تفتح النسخة الكاملة من خارج الملف المشترك،
-                // فأقرب طريقة نظيفة وموثوقة هي إعادة تحميل الصفحة بالكامل.
                 if (window.confirm('بيرجّعك لشاشة إعدادات المباراة الأولى، ويلغي الاتصال الحالي بالبث ويقفل اللوبي — بيحتاج اتصال جديد بعدها. تكمل؟')) {
                     window.location.reload();
                 }
             });
 
             row.appendChild(backSettingsBtn);
-            row.appendChild(startBtn); // ينقل الزر الأصلي (بعنصره ونفس onclick) داخل الصف الجديد بدون أي تغيير بنصّه
+            row.appendChild(startBtn);
         }
 
         if (!row.querySelector('.fr-lobby-home-btn')) {
@@ -1395,11 +1349,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
     }
 
-    /**
-     * عنوان اللوبي بلونين: النص الأصلي "اللوبي بانتظار اللاعبين" أبيض،
-     * واسم اللعبة بجانبه بالأصفر — استبدال innerHTML لعنصر h2 الموجود
-     * أصلاً بالملف المشترك، بدون أي تعديل على الملف نفسه.
-     */
+    // عنوان اللوبي بلونين: النص الأصلي أبيض، واسم اللعبة بجانبه بالأصفر.
     function enhanceLobbyHeading() {
         var box = document.getElementById('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
@@ -1458,7 +1408,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _playerRemovedUnsub = AGP.events.on('player:removed', function (payload) {
             handlePlayerRemoved(payload && payload.player);
         });
-        // ⚠️ إصلاح خلل الانضمام أثناء مباراة نشطة — راجع handlePlayerJoined.
         _playerJoinedUnsub = AGP.events.on('player:joined', function (payload) {
             handlePlayerJoined(payload && payload.player);
         });
@@ -1483,7 +1432,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wireSharedShellEnhancements();
     }
 
-    /* ============ التهيئة الأولية للعناصر الثابتة (مرة واحدة عند التحميل) ============ */
     var _uiInitialized = false;
     function initStaticUi() {
         if (_uiInitialized) return;

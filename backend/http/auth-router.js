@@ -111,58 +111,41 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/entrance', requireAuth: true, requireAdmin: true, handler: handleAdminSetEntrance },
   { method: 'POST', path: '/api/collectibles/equip', requireAuth: true, handler: handleEquipFrame },
   { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
-  // ---- [0.45.0] تفعيل/إيقاف الدخولية ذاتياً من صاحب الحساب — راجع
-  // backend/collectibles/collectibles-service.js (setEntranceEnabled).
-  // نفس نمط handleEquipFrame أدناه بالضبط (صاحب الجلسة فقط، user.id من
-  // الجلسة نفسها لا من body، حتى ما يقدر أحد يبدّل دخولية غيره).
+  // تفعيل/إيقاف الدخولية ذاتياً — نفس نمط handleEquipFrame (صاحب الجلسة فقط).
   { method: 'POST', path: '/api/entrance/toggle', requireAuth: true, handler: handleToggleEntrance },
-  // ---- [0.45.0] مستوى الستريمر (SP) — راجع
-  // backend/points/streamer-level-service.js. القراءة العامة لعتبات
-  // المستويات مسموحة بدون تسجيل دخول (نفس فلسفة /api/announcement) —
-  // لا بيانات حساسة هنا، فقط عتبات SP الثابتة للعرض. التعديل أدمن فقط.
+  // ---- مستوى الستريمر (SP). القراءة العامة لعتبات المستويات مسموحة
+  // بدون تسجيل دخول — لا بيانات حساسة، فقط عتبات ثابتة للعرض.
   { method: 'GET', path: '/api/streamer-levels', requireAuth: false, handler: handleGetStreamerLevels },
   { method: 'POST', path: '/api/admin/streamer-levels', requireAuth: true, requireAdmin: true, handler: handleAdminUpdateStreamerLevel },
-  // ---- حفلة ترحيب الستريمر الجديد — راجع docs/CHANGELOG.md
+  // ---- حفلة ترحيب الستريمر الجديد
   { method: 'POST', path: '/api/auth/welcome/complete', requireAuth: true, handler: handleCompleteWelcome },
   { method: 'POST', path: '/api/admin/welcome/reset', requireAuth: true, requireAdmin: true, handler: handleAdminResetWelcome },
-  // ---- داعمو المنصة — إدخال يدوي من الأدمن حالياً، راجع
-  // backend/supporters/supporters-service.js وdocs/CHANGELOG.md
+  // ---- داعمو المنصة — إدخال يدوي من الأدمن حالياً
   { method: 'GET', path: '/api/supporters/recent', requireAuth: false, handler: handleGetRecentSupporters },
   { method: 'GET', path: '/api/supporters/top', requireAuth: false, handler: handleGetTopSupporters },
   { method: 'GET', path: '/api/admin/supporters', requireAuth: true, requireAdmin: true, handler: handleAdminListSupporters },
   { method: 'POST', path: '/api/admin/supporters', requireAuth: true, requireAdmin: true, handler: handleAdminAddSupporter },
   { method: 'POST', path: '/api/admin/supporters/delete', requireAuth: true, requireAdmin: true, handler: handleAdminDeleteSupporter },
-  // [0.45.14] معاينة حيّة (اسم+صورة) لحساب قبل ربطه بصف دعم — راجع
-  // supportersService.findUserForLinking.
   { method: 'GET', path: '/api/admin/supporters/find-user', requireAuth: true, requireAdmin: true, handler: handleAdminFindSupporterUser },
-  // ---- [جديد] شركاء الإبداع — راجع backend/partners/partners-service.js.
-  // نفس فلسفة الداعمين تماماً (عرض علني + إدارة أدمن)، إلا إنه يربط
-  // بحساب مسجَّل حقيقي (JOIN وقت القراءة) بدل تخزين اسم/صورة نصاً.
+  // ---- شركاء الإبداع — نفس فلسفة الداعمين (عرض علني + إدارة أدمن)،
+  // إلا إنه يربط بحساب مسجَّل حقيقي (JOIN وقت القراءة) بدل اسم/صورة نصاً.
   { method: 'GET', path: '/api/partners', requireAuth: false, handler: handleGetPartners },
   { method: 'GET', path: '/api/admin/partners', requireAuth: true, requireAdmin: true, handler: handleAdminListPartners },
   { method: 'POST', path: '/api/admin/partners', requireAuth: true, requireAdmin: true, handler: handleAdminAddPartner },
   { method: 'POST', path: '/api/admin/partners/delete', requireAuth: true, requireAdmin: true, handler: handleAdminDeletePartner },
-  // ---- ثيم المناسبات — راجع backend/theme/site-theme-service.js
+  // ---- ثيم المناسبات
   { method: 'GET', path: '/api/theme', requireAuth: false, handler: handleGetTheme },
   { method: 'POST', path: '/api/admin/theme', requireAuth: true, requireAdmin: true, handler: handleAdminSetTheme },
   { method: 'POST', path: '/api/admin/theme/clear', requireAuth: true, requireAdmin: true, handler: handleAdminClearTheme },
-  // ---- [0.45.10] شريط "أكثر الاستريمرز ساعات" بالصفحة الرئيسية — عام
-  // بدون تسجيل دخول (نفس فلسفة /api/announcement و/api/theme)، يرجع
-  // فقط يوزرنيم تيك توك + ساعات، بدون أي بيانات حساب حساسة.
+  // ---- شريط "أكثر الاستريمرز ساعات" وأعلى اللاعبين بالفوز/بالساعات —
+  // عام بدون تسجيل دخول، بيانات غير حساسة فقط.
   { method: 'GET', path: '/api/public/top-streamers', requireAuth: false, handler: handleTopStreamers },
-  // ---- [جديد] أعلى اللاعبين بالفوز/بالساعات — عام بدون تسجيل دخول،
-  // نفس فلسفة /api/public/top-streamers بالضبط. راجع
-  // backend/points/points-service.js (getTopPlayersByWins/ByHours).
   { method: 'GET', path: '/api/public/top-players-wins', requireAuth: false, handler: handleTopPlayersByWins },
   { method: 'GET', path: '/api/public/top-players-hours', requireAuth: false, handler: handleTopPlayersByHours },
-  // ---- [0.45.10] إحصائيات لوحة الأدمن — راجع backend/auth/auth-service.js
-  // (getAdminStreamerStats/getAdminUserStats) للملاحظات الصادقة حول
-  // دقة "إجمالي المشاهدات" (غير مؤكَّدة ضد بث حقيقي من هذه البيئة).
+  // ---- إحصائيات لوحة الأدمن
   { method: 'GET', path: '/api/admin/stats/streamers', requireAuth: true, requireAdmin: true, handler: handleAdminStreamerStats },
   { method: 'GET', path: '/api/admin/stats/users', requireAuth: true, requireAdmin: true, handler: handleAdminUserStats },
-  // ---- [0.45.10] تعديل بروفايل المستخدم (اسم عرض + صورة) — صاحب
-  // الجلسة فقط (user.id من الجلسة، لا من body، حتى ما يقدر أحد يعدّل
-  // بروفايل غيره — نفس نمط handleEquipFrame/handleToggleEntrance).
+  // ---- تعديل بروفايل المستخدم (اسم عرض + صورة) — صاحب الجلسة فقط.
   { method: 'POST', path: '/api/profile/display-name', requireAuth: true, handler: handleUpdateDisplayName },
   { method: 'POST', path: '/api/profile/avatar', requireAuth: true, handler: handleUpdateAvatar }
 ];
@@ -177,9 +160,8 @@ function handleSignup(req, res, body) {
 }
 
 function handleLogin(req, res, body) {
-  // [0.45.6] body.deviceId اختياري — يؤثر فقط على حسابات ستريمر معتمدة
-  // (can_run_games)، راجع authService.checkDeviceLock. خطأ 'device_locked'
-  // يُرجَع بـ403 (مو 401 — بيانات الدخول صحيحة، فقط الجهاز مرفوض).
+  // body.deviceId اختياري — يؤثر فقط على حسابات ستريمر معتمدة. خطأ
+  // 'device_locked' يُرجَع بـ403 (مو 401 — بيانات الدخول صحيحة).
   var result = authService.login(body.email, body.password, body.deviceId);
   var status = result.success ? 200 : (result.error === 'device_locked' ? 403 : 401);
   sendJson(res, status, result);
@@ -192,20 +174,14 @@ function handleGoogleLogin(req, res, body) {
   });
 }
 
-/**
- * [0.45.11] خطوة ١ — يرجع {success:true} دائماً (منع تعداد الإيميلات،
- * راجع authService.requestPasswordReset). body: {email}
- */
+/** خطوة ١ — يرجع {success:true} دائماً (منع تعداد الإيميلات). body: {email} */
 function handleForgotPassword(req, res, body) {
   return authService.requestPasswordReset(body.email).then(function (result) {
     sendJson(res, 200, result);
   });
 }
 
-/**
- * [0.45.11] خطوة ٢ — يتحقق من الرمز ويحدّث كلمة المرور. body:
- * {email, code, newPassword}
- */
+/** خطوة ٢ — يتحقق من الرمز ويحدّث كلمة المرور. body: {email, code, newPassword} */
 function handleResetPassword(req, res, body) {
   var result = authService.resetPasswordWithCode(body.email, body.code, body.newPassword);
   sendJson(res, result.success ? 200 : 400, result);
@@ -237,9 +213,7 @@ function handleTikTokVerify(req, res, body, user) {
 }
 
 /* -----------------------------------------------------------------------
- * تسجيل دخول تيك توك الرسمي (OAuth Login Kit) — راجع
- * backend/auth/tiktok-oauth-service.js. الاثنين requireAuth:false لأنهما
- * تنقّل متصفح خام، لا fetch() برأس Authorization.
+ * تسجيل دخول تيك توك الرسمي (OAuth Login Kit).
  * ----------------------------------------------------------------------- */
 
 /** يبدأ تدفق OAuth — زر "ربط الحساب" بالبروفايل يودي لهذا المسار مباشرة (?token=<جلسة المستخدم>). */
@@ -288,11 +262,7 @@ async function handleTikTokOAuthCallback(req, res) {
   return redirectToProfile('success');
 }
 
-/**
- * إلغاء ربط تيك توك يدوياً — بطلب صريح من صاحب الحساب فقط (زر "إلغاء
- * الربط" بصفحة البروفايل). لا علاقة له بأي فحص تلقائي دوري — غير
- * موجود أصلاً. راجع authService.unlinkTikTok وdocs/CHANGELOG.md.
- */
+/** إلغاء ربط تيك توك يدوياً — بطلب صريح من صاحب الحساب فقط. */
 function handleTikTokUnlink(req, res, body, user) {
   var result = authService.unlinkTikTok(user.id);
   sendJson(res, 200, result);
@@ -303,10 +273,7 @@ function handleCustomId(req, res, body, user) {
   sendJson(res, result.success ? 200 : 400, result);
 }
 
-/**
- * [0.45.6] اختيار نوع الحساب الإجباري (لاعب/استريمر) — user.id من الجلسة
- * نفسها دائماً (مو من body)، حتى ما يقدر أي مستخدم يبدّل نوع حساب غيره.
- */
+/** اختيار نوع الحساب الإجباري — user.id من الجلسة نفسها، لا من body. */
 function handleChooseAccountType(req, res, body, user) {
   var result = authService.chooseAccountType(user.id, Boolean(body.wantsToBeStreamer));
   sendJson(res, result.success ? 200 : 400, result);
@@ -317,13 +284,9 @@ function handleAdminListUsers(req, res) {
 }
 
 /**
- * ⚠️ منح تلقائي مرتبط: تفعيل صلاحية can_run_games تحديداً (وليس أي
- * صلاحية أخرى) يمنح تلقائياً إطار "streamer" الخاص (+ دخولية + توهج
- * تلقائياً معه، راجع frame_catalog.bundles_entrance) — هذا هو "الإطار
- * التلقائي" المتفَق عليه: لا يُمنح عند مجرد إنشاء الحساب كستريمر
- * (is_streamer)، فقط عند موافقة الأدمن الفعلية على تشغيل الألعاب. تعطيل
- * الصلاحية لاحقاً **لا يسحب الإطار تلقائياً** (قرار منتج: الإطار إنجاز
- * مكتسب، سحبه يحتاج فعل يدوي صريح من الأدمن عبر /api/admin/collectibles/revoke).
+ * ⚠️ منح تلقائي مرتبط: تفعيل can_run_games تحديداً يمنح تلقائياً إطار
+ * "streamer" الخاص (+ دخولية + توهج معه). تعطيل الصلاحية لاحقاً لا يسحب
+ * الإطار تلقائياً — سحبه يحتاج فعل يدوي عبر /api/admin/collectibles/revoke.
  */
 function handleAdminSetPermission(req, res, body) {
   var result = authService.setPermission(body.userId, body.permissionKey, Boolean(body.value));
@@ -343,49 +306,40 @@ function handleAdminSetCustomId(req, res, body) {
   sendJson(res, result.success ? 200 : 400, result);
 }
 
-/** [0.45.6] الأدمن فقط — حذف حساب نهائياً (لاعب أو ستريمر). راجع authService.deleteUser. */
+/** الأدمن فقط — حذف حساب نهائياً (لاعب أو ستريمر). */
 function handleAdminDeleteUser(req, res, body) {
   var result = authService.deleteUser(body.userId);
   sendJson(res, result.success ? 200 : 400, result);
 }
 
-/**
- * [جديد] حذف الحساب الذاتي — يحذف المستخدم لنفسه فقط (user.id من
- * الجلسة الحالية، أبداً من body — عمداً بدون أي userId بالطلب، حتى
- * ما تصير فيه ثغرة تسمح لمستخدم يحذف حساب غيره). يعيد استخدام نفس
- * authService.deleteUser الحقيقي اللي يحذف يدوياً كل الصفوف المرتبطة
- * (راجع تعليقه أعلاه لسبب الحذف اليدوي).
- */
+/** حذف الحساب الذاتي — user.id من الجلسة الحالية، أبداً من body. */
 function handleDeleteMyAccount(req, res, body, user) {
   var result = authService.deleteUser(user.id);
   sendJson(res, result.success ? 200 : 400, result);
 }
 
-/** [0.45.6] الأدمن فقط — تصفير قيد الجهاز الواحد لستريمر معتمد. */
+/** الأدمن فقط — تصفير قيد الجهاز الواحد لستريمر معتمد. */
 function handleAdminResetDeviceLock(req, res, body) {
   var result = authService.adminResetDeviceLock(body.userId);
   sendJson(res, result.success ? 200 : 400, result);
 }
 
-/** [0.45.11] الأدمن فقط — تفعيل/تعطيل سماح تغيير الجهاز لمرة واحدة. body: {userId, allow: boolean} */
+/** الأدمن فقط — تفعيل/تعطيل سماح تغيير الجهاز لمرة واحدة. body: {userId, allow: boolean} */
 function handleAdminAllowDeviceChange(req, res, body) {
   var result = authService.adminSetAllowDeviceChange(body.userId, Boolean(body.allow));
   sendJson(res, result.success ? 200 : 400, result);
 }
 
-/** [0.45.11] الأدمن فقط — تفعيل/تعطيل وضع سوبر أدمن لحساب محدد. body: {userId, isSuperAdmin: boolean} */
+/** الأدمن فقط — تفعيل/تعطيل وضع سوبر أدمن لحساب محدد. body: {userId, isSuperAdmin: boolean} */
 function handleAdminSetSuperAdmin(req, res, body) {
   var result = authService.adminSetSuperAdmin(body.userId, Boolean(body.isSuperAdmin));
   sendJson(res, result.success ? 200 : 400, result);
 }
 
 /**
- * بروفايل عبر ?id=<custom_id> بالرابط — بدون تسجيل دخول إلزامي (مسار
- * الوحيد بالراوتر اللي يقرأ query string). **الخصوصية**: لا عرض علني
- * لبروفايل أي أحد بعد الآن — البيانات الكاملة (إحصائيات، تيك توك...)
- * تُرسَل فقط لصاحب الحساب نفسه أو للأدمن؛ أي طرف آخر (زائر أو حساب
- * مختلف) يستلم فقط username/custom_id، بقية الحقول (role, stats,
- * tiktok...) undefined عمداً. راجع docs/CHANGELOG.md.
+ * بروفايل عبر ?id=<custom_id> بالرابط — بدون تسجيل دخول إلزامي. البيانات
+ * الكاملة تُرسَل فقط لصاحب الحساب أو للأدمن؛ أي طرف آخر يستلم فقط
+ * username/custom_id.
  */
 function handlePublicProfile(req, res, body, user) {
   var customId = getQueryParam(req, 'id');
@@ -427,8 +381,7 @@ function handleAdminSetAnnouncement(req, res, body) {
 }
 
 /* -----------------------------------------------------------------------
- * المقتنيات (إطارات + دخوليات) والنقاط — كل Handler يستدعي دالة واحدة
- * موجودة أصلاً في collectiblesService/pointsService، بدون منطق هنا.
+ * المقتنيات (إطارات + دخوليات) والنقاط.
  * ----------------------------------------------------------------------- */
 
 function handleAdminGetCatalog(req, res) {
@@ -474,9 +427,8 @@ function handleAdminRevokeFrame(req, res, body) {
 }
 
 /**
- * تعيين/إزالة دخولية مستخدم يدوياً — مستقل تماماً عن أي إطار (يُستخدَم
- * لإعطاء دخولية لمستخدم لا يملك أحد الإطارات الأربعة "الخاصة"، أو
- * لتخصيص نص/نموذج مختلف عن الافتراضي). body.clear === true يزيلها.
+ * تعيين/إزالة دخولية مستخدم يدوياً — مستقل تماماً عن أي إطار.
+ * body.clear === true يزيلها.
  */
 function handleAdminSetEntrance(req, res, body) {
   if (body.clear) {
@@ -487,20 +439,15 @@ function handleAdminSetEntrance(req, res, body) {
   sendJson(res, 200, result);
 }
 
-/**
- * صاحب الحساب نفسه يفعّل أحد إطاراته المملوكة كإطاره الظاهر الوحيد —
- * راجع Q4 بخصوص تصميم المقتنيات: "المستخدم يفعّل من بروفايله الخاص".
- */
+/** صاحب الحساب نفسه يفعّل أحد إطاراته المملوكة كإطاره الظاهر الوحيد. */
 function handleEquipFrame(req, res, body, user) {
   var result = collectiblesService.setEquipped(user.id, body.frameType, body.frameRef);
   sendJson(res, result.success ? 200 : 400, result);
 }
 
 /**
- * [0.45.0] تفعيل/إيقاف ذاتي للدخولية — نفس نمط handleEquipFrame تماماً
- * (user.id من الجلسة نفسها، لا من body). body.enabled: true/false.
- * يرجع {success:false, error:'no_entrance'} بهدوء لو المستخدم ما عنده
- * دخولية أصلاً (لا شيء لتفعيله/إيقافه).
+ * تفعيل/إيقاف ذاتي للدخولية — نفس نمط handleEquipFrame (user.id من
+ * الجلسة نفسها). body.enabled: true/false.
  */
 function handleToggleEntrance(req, res, body, user) {
   var result = collectiblesService.setEntranceEnabled(user.id, Boolean(body.enabled));
@@ -508,11 +455,9 @@ function handleToggleEntrance(req, res, body, user) {
 }
 
 /**
- * تُستدعى من dashboard-core عند إنهاء جولة (راجع dashboard-core/js/
- * dashboard-core.js — NS.components.round.end). body.participants: مصفوفة
- * {tiktokUsername, won}. كل مشارك يُطابَق بحساب مسجَّل موثَّق تيك توك
- * (findVerifiedUserByTikTok) قبل منح أي نقاط — لا نقاط لمن لا حساب له
- * أو لم يوثّق تيك توك، بصمت (لا خطأ، هذا سلوك متوقَّع وليس استثنائياً).
+ * تُستدعى من dashboard-core عند إنهاء جولة. body.participants: مصفوفة
+ * {tiktokUsername, won}. كل مشارك يُطابَق بحساب مسجَّل موثَّق تيك توك قبل
+ * منح أي نقاط — لا نقاط لمن لا حساب له، بصمت.
  */
 function handleRoundComplete(req, res, body) {
   var participants = Array.isArray(body.participants) ? body.participants : [];
@@ -528,22 +473,15 @@ function handleRoundComplete(req, res, body) {
 }
 
 /* -----------------------------------------------------------------------
- * [0.45.0] مستوى الستريمر (SP) — راجع backend/points/streamer-level-service.js
+ * مستوى الستريمر (SP).
  * ----------------------------------------------------------------------- */
 
-/**
- * عتبات مستويات SP الحالية — مسار عام (لا بيانات حساسة، فقط جدول
- * عتبات ثابت)، يُستخدَم لو أردنا لاحقاً عرضه بصفحة عامة (مثل "كيف تكسب
- * SP؟" المشابهة لقسم XP الحالي بالبروفايل).
- */
+/** عتبات مستويات SP الحالية — مسار عام، لا بيانات حساسة. */
 function handleGetStreamerLevels(req, res) {
   sendJson(res, 200, { success: true, levels: streamerLevelService.listLevels() });
 }
 
-/**
- * الأدمن فقط — تعديل عتبة/اسم مستوى SP موجود مسبقاً (7 مستويات ثابتة
- * العدد، نفس فلسفة frame_catalog.level — لا إنشاء/حذف هنا).
- */
+/** الأدمن فقط — تعديل عتبة/اسم مستوى SP موجود مسبقاً (لا إنشاء/حذف). */
 function handleAdminUpdateStreamerLevel(req, res, body) {
   var ok = streamerLevelService.updateStreamerLevel(body.slug, {
     minSp: body.minSp,
@@ -553,39 +491,25 @@ function handleAdminUpdateStreamerLevel(req, res, body) {
 }
 
 /* -----------------------------------------------------------------------
- * حفلة ترحيب الستريمر الجديد — راجع docs/CHANGELOG.md
+ * حفلة ترحيب الستريمر الجديد.
  * ----------------------------------------------------------------------- */
 
-/**
- * يُستدعى من index.html بعد ما صاحب الحساب يكمل الحفلة كاملة فعلياً
- * (كل السلايدات + قص الشريطة + العد التنازلي) — من user.id بالجلسة
- * نفسها، مو من body، حتى ما يقدر أي مستخدم يعلّم حساب غيره كمكتمل.
- */
+/** يُستدعى من index.html بعد ما صاحب الحساب يكمل الحفلة كاملة فعلياً. */
 function handleCompleteWelcome(req, res, body, user) {
   sendJson(res, 200, authService.completeWelcome(user.id));
 }
 
-/**
- * الأدمن فقط — يصفّر حالة الترحيب لمستخدم معيّن (زر "إعادة الترحيب"
- * بجدول admin.html، بجانب صلاحية الألعاب لكل مستخدم).
- */
+/** الأدمن فقط — يصفّر حالة الترحيب لمستخدم معيّن. */
 function handleAdminResetWelcome(req, res, body) {
   var result = authService.resetWelcome(body.userId);
   sendJson(res, result.success ? 200 : 400, result);
 }
 
 /* -----------------------------------------------------------------------
- * داعمو المنصة — راجع backend/supporters/supporters-service.js
+ * داعمو المنصة.
  * ----------------------------------------------------------------------- */
 
-/**
- * آخر N داعمين (افتراضياً 3) — مسار عام بدون تسجيل دخول، يستدعيه
- * index.html للشريط المتحرك بدل نص "لتفعيل الاشتراك..." القديم (بدون
- * ?limit، يبقى بنفس السلوك القديم تماماً: 3 فقط). [0.45.14]: أضيف دعم
- * اختياري لـ?limit=N (محدود بـ50 كحد أقصى دفاعي) حتى تقدر
- * top-supporters.html تطلب قائمة أطول لتبويب "أحدث الداعمين" — نفس
- * نمط قراءة query string في handlePublicProfile أعلاه.
- */
+/** آخر N داعمين (افتراضياً 3، ?limit=N اختياري حتى 50) — مسار عام. */
 function handleGetRecentSupporters(req, res) {
   var limit = 3;
   var n = parseInt(getQueryParam(req, 'limit'), 10);
@@ -593,10 +517,7 @@ function handleGetRecentSupporters(req, res) {
   sendJson(res, 200, { success: true, supporters: supportersService.listRecent(limit) });
 }
 
-/**
- * توب الداعمين (مجموع مبالغ كل اسم) — مسار عام، تستدعيه صفحة
- * top-supporters.html الجديدة.
- */
+/** توب الداعمين (مجموع مبالغ كل اسم) — مسار عام. */
 function handleGetTopSupporters(req, res) {
   sendJson(res, 200, { success: true, supporters: supportersService.listTop(50) });
 }
@@ -606,10 +527,7 @@ function handleAdminListSupporters(req, res) {
   sendJson(res, 200, { success: true, supporters: supportersService.listAll(200) });
 }
 
-/**
- * الأدمن فقط — إضافة دعم جديد يدوياً بعد ما يشوفه فعلياً بلوحة تحكم
- * كريترز (لا ربط تلقائي بعد — راجع تعليق أعلى supporters-service.js).
- */
+/** الأدمن فقط — إضافة دعم جديد يدوياً. */
 function handleAdminAddSupporter(req, res, body) {
   var result = supportersService.addSupporter(body.name, body.message, body.amount, body.customId);
   sendJson(res, result.success ? 201 : 400, result);
@@ -620,12 +538,7 @@ function handleAdminDeleteSupporter(req, res, body) {
   sendJson(res, 200, supportersService.deleteSupporter(body.id));
 }
 
-/**
- * [0.45.14] الأدمن فقط — بحث عن حساب عبر ?customId=... لعرض معاينة
- * حيّة (اسم+صورة) قبل تأكيد ربطه بصف دعم. نفس نمط قراءة query string
- * المستخدَم بـhandlePublicProfile أعلاه (المسار الوحيد الآخر الذي
- * يقرأ query string بهذا الراوتر).
- */
+/** الأدمن فقط — بحث عن حساب عبر ?customId=... لعرض معاينة قبل ربطه بصف دعم. */
 function handleAdminFindSupporterUser(req, res) {
   var customId = getQueryParam(req, 'customId');
   var result = supportersService.findUserForLinking(customId);
@@ -633,7 +546,7 @@ function handleAdminFindSupporterUser(req, res) {
 }
 
 /* -----------------------------------------------------------------------
- * شركاء الإبداع — راجع backend/partners/partners-service.js
+ * شركاء الإبداع.
  * ----------------------------------------------------------------------- */
 
 /** عام بدون تسجيل دخول — قسم "شركاء الإبداع" بالصفحة الرئيسية. */
@@ -646,11 +559,7 @@ function handleAdminListPartners(req, res) {
   sendJson(res, 200, { success: true, partners: partnersService.listPartnersAdmin() });
 }
 
-/**
- * الأدمن فقط — ربط حساب (عبر custom_id) كشريك إبداع بفئة معيّنة. نفس
- * فلسفة handleAdminFindSupporterUser أعلاه للمعاينة أولاً — الأدمن
- * يبحث بالـID، يتأكد من الاسم/الصورة، بعدين يضغط إضافة.
- */
+/** الأدمن فقط — ربط حساب (عبر custom_id) كشريك إبداع بفئة معيّنة. */
 function handleAdminAddPartner(req, res, body) {
   var result = partnersService.addPartnerByCustomId(body.customId, body.category);
   sendJson(res, result.success ? 201 : 400, result);
@@ -662,14 +571,10 @@ function handleAdminDeletePartner(req, res, body) {
 }
 
 /* -----------------------------------------------------------------------
- * ثيم المناسبات — راجع backend/theme/site-theme-service.js
+ * ثيم المناسبات.
  * ----------------------------------------------------------------------- */
 
-/**
- * الثيم الحالي (إن كان نشطاً) — مسار عام بدون تسجيل دخول، تستدعيه
- * index.html عند التحميل ليطبّق الألوان فوراً. theme: null بهدوء لو
- * غير مفعَّل (لا خطأ) — الموقع يبقى بألوانه الافتراضية.
- */
+/** الثيم الحالي (إن كان نشطاً) — مسار عام. theme: null بهدوء لو غير مفعَّل. */
 function handleGetTheme(req, res) {
   sendJson(res, 200, { success: true, theme: siteThemeService.getActiveTheme() });
 }
@@ -685,52 +590,41 @@ function handleAdminClearTheme(req, res) {
   sendJson(res, 200, siteThemeService.clearTheme());
 }
 
-/**
- * [0.45.10] أعلى الاستريمرز بالساعات — عام، لشريط الصفحة الرئيسية.
- * ?limit=<n> اختياري (افتراضي 20 من authService، يُحدَّد هنا بحد أقصى
- * 50 دفاعياً حتى لو طُلب رقم أكبر أو غير صالح).
- */
+/** أعلى الاستريمرز بالساعات — عام. ?limit=<n> اختياري، محدود بـ50. */
 function handleTopStreamers(req, res) {
   var limit = Math.min(50, Math.max(1, parseInt(getQueryParam(req, 'limit'), 10) || 20));
   sendJson(res, 200, { success: true, streamers: authService.getTopStreamersByHours(limit) });
 }
 
-/** [جديد] أعلى اللاعبين بعدد مرات الفوز — عام، لبطاقة "الأكثر نشاطاً" بالصفحة الرئيسية. */
+/** أعلى اللاعبين بعدد مرات الفوز — عام، لبطاقة "الأكثر نشاطاً" بالصفحة الرئيسية. */
 function handleTopPlayersByWins(req, res) {
   var limit = Math.min(50, Math.max(1, parseInt(getQueryParam(req, 'limit'), 10) || 20));
   sendJson(res, 200, { success: true, players: pointsService.getTopPlayersByWins(limit) });
 }
 
-/** [جديد] أعلى اللاعبين بساعات اللعب الفعلية — عام، بديل مستقبلي/تكميلي لبطاقة اللاعبين. */
+/** أعلى اللاعبين بساعات اللعب الفعلية — عام. */
 function handleTopPlayersByHours(req, res) {
   var limit = Math.min(50, Math.max(1, parseInt(getQueryParam(req, 'limit'), 10) || 20));
   sendJson(res, 200, { success: true, players: pointsService.getTopPlayersByHours(limit) });
 }
 
-/** [0.45.10] الأدمن فقط — إحصائيات الاستريمرز المجمَّعة. */
+/** الأدمن فقط — إحصائيات الاستريمرز المجمَّعة. */
 function handleAdminStreamerStats(req, res) {
   sendJson(res, 200, { success: true, stats: authService.getAdminStreamerStats() });
 }
 
-/** [0.45.10] الأدمن فقط — إحصائيات المستخدمين المجمَّعة. */
+/** الأدمن فقط — إحصائيات المستخدمين المجمَّعة. */
 function handleAdminUserStats(req, res) {
   sendJson(res, 200, { success: true, stats: authService.getAdminUserStats() });
 }
 
-/**
- * [0.45.10] صاحب الجلسة يعدّل اسم العرض الخاص به — user.id من الجلسة
- * حصراً (لا من body)، نفس نمط handleEquipFrame.
- */
+/** صاحب الجلسة يعدّل اسم العرض الخاص به — user.id من الجلسة حصراً. */
 function handleUpdateDisplayName(req, res, body, user) {
   var result = authService.updateDisplayName(user.id, body.displayName);
   sendJson(res, result.success ? 200 : 400, result);
 }
 
-/**
- * [0.45.10] صاحب الجلسة يعدّل صورة بروفايله — يستقبل Data URL كامل
- * (base64) جاهز من المتصفح، راجع authService.updateAvatarImage للحدود
- * (النوع/الحجم الأقصى).
- */
+/** صاحب الجلسة يعدّل صورة بروفايله — Data URL كامل (base64) من المتصفح. */
 function handleUpdateAvatar(req, res, body, user) {
   var result = authService.updateAvatarImage(user.id, body.imageDataUrl);
   sendJson(res, result.success ? 200 : 400, result);
@@ -755,8 +649,7 @@ function matchRoute(method, pathname) {
 
 /**
  * نقطة الدخول الوحيدة — تُستدعى من server.js لكل طلب "/api/*". تتكفّل
- * بـ CORS، الـ Preflight، تحليل الجسم، فحص Auth/Admin، ومعالجة الأخطاء
- * دفاعياً (لا throw غير ممسوك يوقف السيرفر بالكامل).
+ * بـ CORS، الـ Preflight، تحليل الجسم، فحص Auth/Admin، ومعالجة الأخطاء دفاعياً.
  * @param {http.IncomingMessage} req
  * @param {http.ServerResponse} res
  */
@@ -778,12 +671,9 @@ function handle(req, res) {
 
   var token = extractBearerToken(req);
 
-  // فحص Auth "اختياري" دائماً — حتى المسارات العامة (requireAuth: false)
-  // تعرف الآن هوية المُرسِل لو أرفق Token صالحاً (مثال: handlePublicProfile
-  // يحتاج يعرف "هل هذا صاحب الحساب؟" مع بقاء المسار عاماً وصولاً). هذا لا
-  // يغيّر أي سلوك سابق: المسارات المحمية (requireAuth: true) ترفض 401
-  // بالضبط كما كانت، والمسارات العامة تجاهلت "user" أصلاً قبل هذا التعديل.
-
+  // فحص Auth "اختياري" دائماً — حتى المسارات العامة تعرف هوية المُرسِل
+  // لو أرفق Token صالحاً (مثال: handlePublicProfile يحتاج يعرف "هل هذا
+  // صاحب الحساب؟"). المسارات المحمية (requireAuth: true) ترفض 401 كالعادة.
   var user = requireUser(req);
 
   if (route.requireAuth) {

@@ -1,66 +1,22 @@
 /**
- * ==========================================================================
- *  AGP MOCK LIVE ADAPTER — محاكاة محلية بالكامل، بدون أي اتصال فعلي
- * ==========================================================================
+ * AGP MOCK LIVE ADAPTER — fully local simulation, no real connection.
  *
- * ⚠️ DEPRECATED منذ Phase 5: لم يعد هذا الملف مُحمَّلاً في
- *   dashboard-core/index.html. المحاكاة انتقلت للخادم الخلفي
- *   (backend/platforms/mock/mock-connector.js)، والمتصفح يستقبلها الآن
- *   عبر adapters/tiktok/agp-tiktok-adapter.js (جسر WebSocket). محفوظ
- *   هنا للمرجعية فقط، ولم يُحذَف أو يُعدَّل منطقه.
+ * DEPRECATED: no longer loaded by dashboard-core/index.html. Simulation
+ * moved server-side (backend/platforms/mock/mock-connector.js); the
+ * browser now receives it via adapters/agp-tiktok-adapter.js's WebSocket
+ * bridge. Kept here for reference only, not wired into any page.
  *
- * هذا الملف **ليس Manager جديداً وليس تعديلاً على AGP Core**. هو تطبيق
- * فعلي (Implementation) للعقد الموجود أصلاً في `AGP.services.TikTokService`
- * (المعرَّف كهيكل فارغ في `js/agp-services.js`)، تماماً بنفس الأربع
- * دوال المتوقَّعة: `connectToLiveStream`, `disconnectFromLiveStream`,
- * `onComment`, `onGift` — بدون أي دالة إضافية، وبدون أي تغيير على
- * `AGP.streamConnector` أو أي ملف Core آخر.
+ * Implements the AGP.services.TikTokService contract (connectToLiveStream/
+ * disconnectFromLiveStream/onComment/onGift) by mutating the existing
+ * object in place — AGP.streamConnector already holds a reference to it,
+ * so mutating in place makes it pick up this simulation regardless of
+ * load order relative to agp-stream-connector.js.
  *
- * الطريقة: نُعدِّل (Mutate) دوال الكائن **الموجود بالفعل**
- * `AGP.services.TikTokService` في مكانها، بدل استبدال الكائن بالكامل.
- * السبب: `AGP.streamConnector` سجّل بالفعل مرجعاً (Reference) لنفس هذا
- * الكائن عند تحميل `agp-stream-connector.js` (يتحقق فقط أن الدوال
- * موجودة كنوع Function، لا من سلوكها). تعديل الدوال داخل نفس الكائن
- * يجعل ما يستدعيه `AGP.streamConnector.connect('tiktok')` هو نسخة
- * المحاكاة هذه تلقائياً، بصرف النظر عن ترتيب تحميل هذا الملف بالنسبة
- * لـ agp-stream-connector.js.
- *
- * ⚠️ الاستبدال المستقبلي (بدون أي تعديل على Core أو Dashboard):
- *   لاستبدال هذا الملف بالمحوِّل الحقيقي لاحقاً، يكفي:
- *     1) عدم تحميل هذا الملف (`adapters/mock/agp-mock-live-adapter.js`).
- *     2) تحميل `adapters/tiktok/agp-tiktok-adapter.js` (مستقبلاً) بدلاً
- *        عنه — بنفس الأسلوب بالضبط (تعديل دوال نفس الكائن
- *        `AGP.services.TikTokService` في مكانها).
- *   لا يوجد أي كود آخر في المشروع (Core أو Dashboard) يعرف اسم هذا
- *   الملف أو يستورده مباشرة؛ الربط الوحيد هو عبر العقد الموحّد نفسه.
- *
- * ما يُحاكيه هذا الملف محلياً فقط (بدون شبكة، بدون Node.js):
- *   - حالات اتصال واقعية (تأخير بسيط عشوائي قبل "connected"، ثم محاكاة
- *     نبض حي عبر setInterval يولّد أحداثاً بشكل دوري).
- *   - تعليقات (بعضها يطابق كلمة الانضمام الحالية إن كانت مفعَّلة).
- *   - هدايا.
- *   - متابعات جديدة.
- *
- * كيف يتواصل مع AGP Core (نفس الأربع نقاط الموثَّقة في تصميم محوِّل
- * تيك توك، بدون أي إضافة):
- *   - AGP.streamConnector.reportStatus('tiktok', status) — دورة الحياة
- *     فقط. لا نداء مباشر لأي دالة أخرى في streamConnector.
- *   - AGP.keywordManager.checkKeyword(text, playerData) — عند وجود
- *     تعليق يطابق كلمة انضمام مفعَّلة (تستدعي هي AGP.playerSource
- *     داخلياً؛ لا نداء مباشر لـ AGP.player من هنا إطلاقاً).
- *   - AGP.queueManager.enqueue('tiktok', playerData) — للتعليقات التي
- *     لا تطابق كلمة انضمام (أو لا كلمة مفعَّلة أصلاً)، لإظهار مسار
- *     Queue أيضاً (كلا المسارين المصمَّمين، لا مسار واحد فقط).
- *   - AGP.events.emit('stream:giftReceived' / 'stream:followReceived', …)
- *     — Namespace جديد للأحداث فقط (نص، لا كود)، بنفس اصطلاح
- *     "منصّة:فعل" الموثَّق أصلاً في agp-events.js. لا تعديل على ناقل
- *     الأحداث نفسه.
- *
- * لا منطق خاص بأي لعبة هنا إطلاقاً. لا Manager جديد. لا تعديل على AGP
- * Core أو Dashboard. يعتمد على وجود js/agp-core.js, js/agp-events.js,
- * js/agp-services.js, js/agp-stream-connector.js, js/agp-keyword-manager.js,
- * js/agp-queue-manager.js قبله (يعمل بأمان حتى لو تأخر تحميله بعدها).
- * ==========================================================================
+ * Simulates: connection delay then a periodic setInterval heartbeat
+ * producing comments (some matching the active join keyword), gifts, and
+ * follows — routed through the same AGP Core entry points a real adapter
+ * would use (streamConnector.reportStatus, keywordManager.checkKeyword,
+ * queueManager.enqueue, stream:giftReceived/followReceived events).
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -109,18 +65,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return { id: PLATFORM_KEY + ':' + username.toLowerCase(), name: username };
     }
 
-    /* ----------------------------------------------------------------
-     * محاكاة استقبال تعليق — نفس مسارَي الانضمام المصمَّمين في معمارية
-     * محوِّل تيك توك (Keyword أو Queue)، بلا منطق جديد بينهما هنا؛ فقط
-     * توجيه لما هو موجود فعلاً في AGP Core.
-     * ---------------------------------------------------------------- */
     function simulateComment() {
         var viewer = randomViewer();
         var keywordActive = AGP.keywordManager && AGP.keywordManager.isActive();
         var currentKeyword = keywordActive ? AGP.keywordManager.getKeyword() : null;
 
-        // ~40% من التعليقات أثناء تفعيل الكلمة تكون مطابقة فعلياً، لإظهار
-        // مسار الانضمام الحقيقي، والباقي دردشة عامة لا تُطابِق شيئاً.
+        // ~40% of comments match the active keyword to exercise the real
+        // join path; the rest are generic chat that matches nothing.
         var text = (keywordActive && currentKeyword && Math.random() < 0.4)
             ? currentKeyword
             : pick(MOCK_FILLER_COMMENTS);
@@ -137,10 +88,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
     }
 
-    /* ----------------------------------------------------------------
-     * محاكاة استقبال هدية — حدث فقط (stream:giftReceived)، بلا أي قرار
-     * لعب من هنا. ما يحدث بالهدية (نقاط، إلخ) قرار لاحق منفصل تماماً.
-     * ---------------------------------------------------------------- */
     function simulateGift() {
         var viewer = randomViewer();
         var gift = pick(MOCK_GIFTS);
@@ -158,10 +105,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.events.emit('stream:giftReceived', payload);
     }
 
-    /* ----------------------------------------------------------------
-     * محاكاة متابعة جديدة — حدث فقط، لا علاقة له بانضمام لاعب إطلاقاً
-     * (متابعة اللاعب لا تعني رغبته باللعب).
-     * ---------------------------------------------------------------- */
     function simulateFollow() {
         var viewer = randomViewer();
         AGP.events.emit('stream:followReceived', {
@@ -195,16 +138,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
     }
 
-    /* ----------------------------------------------------------------
-     * تطبيق العقد الأربعة — نفس أسماء الدوال المتوقَّعة تماماً، معدَّلة
-     * في مكانها على الكائن الموجود أصلاً.
-     * ---------------------------------------------------------------- */
     AGP.services.TikTokService.connectToLiveStream = function (options) {
         AGP.log('Mock Live Adapter: simulating connection…', options);
         _connecting = true;
 
         setTimeout(function () {
-            if (!_connecting) return; // أُلغي الاتصال قبل اكتمال المحاكاة
+            if (!_connecting) return; // disconnected before the simulated delay finished
 
             if (!AGP.streamConnector || typeof AGP.streamConnector.reportStatus !== 'function') {
                 AGP.log('Mock Live Adapter: AGP.streamConnector.reportStatus not available.');

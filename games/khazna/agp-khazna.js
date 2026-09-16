@@ -1,25 +1,11 @@
 /**
- * ==========================================================================
- *  AGP KHAZNA -- "الخزنة" (لعبة أصلية داخل المنصة)
- * ==========================================================================
- * لعبة أصلية (Native) بنفس نمط games/team-war و games/photo-challenge من
- * ناحية طريقة التحميل (بدون js/agp-game-shell.js). الهوية البصرية: قالب
- * "settings-no-box" منقول بالحرف من روليت القبائل/تحدي الصور (بدون صندوق
- * يحيط الحقول، عنوان بتدرّج لوني، حقول بخط سفلي بدل صناديق) + تبويب اتصال
- * بالبث (سبينر / تحذير فشل) يظهر فوق نفس الشاشة تماماً. خط Zain فقط.
- * لا تعديل على أي ملف موجود بالمشروع.
+ * AGP KHAZNA -- "الخزنة" (لعبة أصلية داخل المنصة، بنمط games/team-war و
+ * games/photo-challenge من ناحية طريقة التحميل، بدون js/agp-game-shell.js).
  *
- * ⚠️ بناء تدريجي: هذا الملف حالياً يغطي شاشة الإعدادات + تبويب الاتصال
- * + شاشة اللوبي (بالضبط كما اعتُمد بالنموذج: بدون صندوق، بطاقات مباشرة
- * على الخلفية، 6 لاعبين بالصف بحجم 46px، شعار خلفية بشفافية 40%).
- * شاشة المباراة/شاشة الفائز غير مبنيتين بعد -- تحتاج تحديد آلية اللعب
- * الفعلية (عدد الخيارات، شكل الاختيار، شرط الإقصاء بعد اختيار خاطئ إن
- * وُجد، إلخ) قبل بنائهما.
- *
- * الخدمات العامة المُعاد استخدامها بدون أي تعديل عليها:
- *   AGP.player / AGP.playerCard / AGP.timerManager / AGP.streamConnector /
- *   AGP.lobby / AGP.events
- * ==========================================================================
+ * كل جولة: عجلة تختار "لاعب مستهدف"، تظهر ساعات مرقّمة من الخزنة، واللاعبون
+ * يكتبون أرقام الساعات بالترتيب بالشات. الإقصاء يدور حول المستهدف: إذا هو
+ * جاوب صح، يُقصى كل من لسا ما جاوب (أو هو وحده لو كان آخر من جاوب صح)؛
+ * إذا انتهى الوقت، يُقصى كل من لم يجاوب صح (بما فيهم المستهدف).
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -41,9 +27,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var CHOICE_SECONDS_OPTIONS = [10, 15, 20, 25];
     var LOBBY_CARD_SIZE = 46; // معتمد بالنموذج -- يفتح 6 بطاقات بالصف براحة
 
-    /* ======================================================================
-     *  0) الحالة الداخلية
-     * ==================================================================== */
     var _screen = 'settings'; // settings | connecting | lobby | match
     function setScreen(name) {
         _screen = name;
@@ -66,9 +49,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function escapeAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
     function escapeHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
-    /* ======================================================================
-     *  1) أدوات نصية: تطبيع عربي (لمقارنة الكلمة المفتاحية)
-     * ==================================================================== */
     function normalizeArabicText(text) {
         if (typeof text !== 'string') return '';
         return text
@@ -81,9 +61,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             .toLowerCase();
     }
 
-    /* ======================================================================
-     *  2) الهيدر الأساسي الثابت -- بهوية اللعبة (بنفسجي)
-     * ==================================================================== */
     function injectHeader() {
         if (el('kz-header')) return;
         var header = document.createElement('div');
@@ -103,12 +80,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('kz-header-settings-btn').addEventListener('click', function () { openInMatchDrawer(); });
     }
 
-    /* ======================================================================
-     *  2.4) بانر "فكرة اللعبة من الاستريمر" -- ثابت بزاوية الشاشة (position:
-     *       fixed، ما يختفي عند أي تمرير)، فوق كل شاشات اللعبة، بحدود
-     *       ذهبية متوهجة، يفتح حساب صاحب الفكرة بالتيك توك (zp.oi) بتبويب
-     *       جديد عند الضغط.
-     * ==================================================================== */
+    // بانر "فكرة اللعبة من الاستريمر" -- ثابت بزاوية الشاشة، يفتح حساب
+    // صاحب الفكرة بالتيك توك (zp.oi) بتبويب جديد عند الضغط.
     function injectIdeaBanner() {
         if (el('kz-idea-banner-group')) return;
         var group = document.createElement('div');
@@ -121,12 +94,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         document.body.appendChild(group);
     }
 
-    /* ======================================================================
-     *  2.5) تعليمات اللعبة -- تظهر تلقائياً أول ما تُفتح شاشة اللعبة (فوق
-     *       شاشة الإعدادات)، وتُفتح لاحقاً يدوياً عبر زر "!" بالهيدر.
-     *       دخول/خروج بأنيميشن (تكبير + تلاشي)، زر "ابدأ اللعب" بالأسفل
-     *       يقفلها ويكشف الشاشة اللي خلفها.
-     * ==================================================================== */
+    // تعليمات اللعبة -- تُفتح يدوياً عبر زر "!" بالهيدر.
     var _instrShown = false;
 
     function ensureInstructionsEls() {
@@ -213,10 +181,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }, 380);
     }
 
-    /* ======================================================================
-     *  3) شاشة الإعدادات -- قالب "settings-no-box" (منقول من روليت
-     *     القبائل/تحدي الصور)
-     * ==================================================================== */
     function ensureRoot() {
         if (_rootEl) return _rootEl;
         document.body.classList.add('kz-active');
@@ -314,11 +278,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.streamConnector.connect('tiktok', { username: username });
     }
 
-    /* ======================================================================
-     *  4) تبويب الاتصال بالبث -- يظهر فوق شاشة الإعدادات (منقول بالحرف من
-     *     قالب روليت القبائل/تحدي الصور). زر ✕ عند الفشل يُخفي التبويب
-     *     فقط، شاشة الإعدادات خلفه تبقى ظاهرة وتفاعلية.
-     * ==================================================================== */
     function ensureConnectOverlay() {
         if (!el('kz-connect-dim')) {
             var dim = document.createElement('div');
@@ -356,12 +315,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (el('kz-connect-popup')) el('kz-connect-popup').style.display = 'none';
     }
 
-    /* ======================================================================
-     *  5) الاستماع لأحداث المنصة العامة
-     * ==================================================================== */
-    /* ⭐ شارة صغيرة غير مزعجة (مو تبويب يغطي الشاشة كاملة) تظهر لو
-       انقطع الاتصال أثناء مباراة شغالة -- ما توقف ولا تلمس أي تايمر أو
-       حالة جولة، بس تنبيه بصري بسيط لحد ما يرجع الاتصال */
+    // شارة صغيرة غير مزعجة تظهر لو انقطع الاتصال أثناء مباراة شغالة --
+    // ما توقف ولا تلمس أي تايمر أو حالة جولة.
     function ensureReconnectBadgeEl() {
         var badge = el('kz-reconnect-badge');
         if (badge) return badge;
@@ -387,8 +342,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (payload.platform !== 'tiktok') return;
             if (payload.status === 'connecting') {
                 if (_screen === 'match') {
-                    // ⭐ انقطاع مؤقت أثناء مباراة شغالة -- ما نغيّر _screen
-                    // ولا نغطي شاشة اللعب، بس شارة صغيرة
                     showReconnectingBadge(false);
                 } else {
                     setScreen('connecting');
@@ -396,9 +349,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 }
             } else if (payload.status === 'connected') {
                 if (_screen === 'match') {
-                    // ⭐ رجع الاتصال أثناء المباراة -- نخفي الشارة بس، ما
-                    // نعيد رسم أي شي؛ الجولة/التايمر/حالة اللاعبين كلها
-                    // فضلت زي ما هي (تايمرات جافاسكربت ما توقفت أصلاً)
+                    // رجع الاتصال أثناء المباراة -- الجولة/التايمر ما توقفوا أصلاً.
                     hideReconnectingBadge();
                 } else if (_screen !== 'lobby') {
                     hideConnectOverlay();
@@ -413,17 +364,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             }
         });
 
-        // ⚠️ إصلاح خلل: بدون هذا، انضمام لاعب عبر الشات (أو حذفه) يصير
-        // فعلياً بالخلفية لكن شبكة اللوبي ما تنعرض محدَّثة أبداً.
         AGP.events.on('player:joined', function () { if (_screen === 'lobby') renderLobbyGrid(); });
         AGP.events.on('player:removed', function () { if (_screen === 'lobby') renderLobbyGrid(); });
     }
 
-    /* ======================================================================
-     *  5) شاشة اللوبي -- بدون صندوق، بطاقات اللاعبين مباشرة على خلفية
-     *     الشاشة (نفس أسلوب لوبي روليت القبائل "lobby-no-box")، شبكة
-     *     6 أعمدة بحجم 46px (معتمد بالنموذج)، شعار خلفية بشفافية 40%.
-     * ==================================================================== */
     function findPlayerById(id) {
         var players = AGP.player.getAllPlayers();
         for (var i = 0; i < players.length; i++) {
@@ -525,18 +469,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('kz-start-round-btn').addEventListener('click', function () { startMatch(); });
     }
 
-    /* ======================================================================
-     *  6) شاشة المباراة -- تتابع فتح الجولة (الخزنة + الساعات + مؤقت
-     *     الحفظ + الخزنة ترجع وتقفل + تبويب الخيارات A/B/C). منقول
-     *     بالحرف من النموذج المعتمد.
-     *
-     *     ⚠️ بناء تدريجي: التتابع البصري كامل وشغّال، لكن جمع إجابات
-     *     اللاعبين الفعلية (كيف يرسل اللاعب A/B/C -- عبر كتابتها بالشات
-     *     مثلاً؟) ومنطق الإقصاء (آخر لاعبين / لاعب واحد عند 4، بدون
-     *     إقصاء لو محد جاوب، زيادة ساعة كل جولتين، تكرار الجولات لين
-     *     يفضل لاعب وحد، شاشة الفائز) لسا ما اتربطوا -- محتاجين تأكيد
-     *     آلية الإرسال الفعلية قبل ما أبنيهم.
-     * ==================================================================== */
     var _roundNumber = 1;
     var _matchStartedAt = null;
     var _matchEl = null;
@@ -630,15 +562,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         } catch (e) { /* تجاهل بيئات بدون صوت */ }
     }
 
-    /* ======================================================================
-     *  مؤثرات صوتية إضافية (كلها مُصنَّعة بـWeb Audio، نفس أسلوب
-     *  playMechSound) -- طلب صريح:
-     *   - playChime: صوت وقوف السكرول على اسم لاعب
-     *   - playWhoosh: خروج/رجوع الساعات من الخزنة
-     *   - playTick: وصول كل إجابة
-     *   - playElimSound: ظهور تبويب الإقصاء
-     *   - playWinnerFanfare: ظهور بطاقة الفائز
-     * ==================================================================== */
+    // مؤثرات صوتية إضافية (Web Audio): playChime = وقوف السكرول على اسم
+    // لاعب، playWhoosh = خروج/رجوع الساعات، playTick = وصول إجابة،
+    // playElimSound = ظهور تبويب الإقصاء، playWinnerFanfare = بطاقة الفائز.
     function playReelTick() {
         try {
             _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
@@ -810,15 +736,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return loopNames;
     }
 
-    /* ⭐ يعرض شاشة العجلة جاهزة (بأسماء اللاعبين معبّية) وتوقف -- ما
-       تدور إلا بضغطة "🎲 تحريك" اليدوية. تُستخدم أول ما تبدأ المباراة
-       وبعد كل جولة/إقصاء برضو (نفس السلوك بالضبط، بدون دوران تلقائي) */
+    // يعرض شاشة العجلة جاهزة وتوقف -- ما تدور إلا بضغطة "🎲 تحريك" اليدوية.
     function showPickerReadyForSpin(clockCount) {
         el('kz-picker').style.display = 'flex';
         el('kz-picker').classList.remove('kz-hidden');
         el('kz-round').classList.remove('kz-show');
         el('kz-reel-highlight-tab').classList.remove('kz-locked');
-        clearAnsweredSide(); // ⭐ يمنع بقاء بطاقات الجولة الماضية ظاهرة على شاشة العجلة
+        clearAnsweredSide();
 
         var players = AGP.player.getAllPlayers();
         var names = players.length ? players.map(function (p) { return p.name || p.id; }) : ['لاعب'];
@@ -915,21 +839,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }, 700);
     }
 
-    /* ======================================================================
-     *  7) مرحلة الإجابة -- تكتب أثناء ظهور الساعات نفسها (بدون شاشة
-     *     خيارات A/B/C منفصلة). اللاعب يكتب أرقام الساعات بالترتيب
-     *     بالشات في رسالة وحدة (عربي أو إنجليزي، أي فاصل بين الأرقام).
-     *     نظام الإقصاء "المستهدف" نفسه بالضبط:
-     *      - لما "المستهدف" يجاوب صح: يُقصى فوراً كل من لسا ما جاوب صح
-     *        -- إلا لو المستهدف آخر واحد يجاوب صح (البقية جاوبوا قبله)،
-     *        فحينها يُقصى هو بس.
-     *      - لو كل اللاعبين ما عدا المستهدف خلّصوا إجاباتهم (بغض النظر
-     *        عن حاله)، تنتهي نافذة الإجابة فوراً بدون انتظار الوقت أو
-     *        المستهدف -- الساعات تختفي مباشرة بدون أنيميشن الخزنة.
-     *      - لو انتهى الوقت المحدد (مدة اختيار الإجابة من الإعدادات):
-     *        يُقصى كل من لم يجاوب صح، وتشتغل أنيميشن رجوع الساعات
-     *        للخزنة الطبيعية قبل عرض النتيجة.
-     * ==================================================================== */
     function normalizeDigits(s) {
         return s
             .replace(/[\u0660-\u0669]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
@@ -1302,13 +1211,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         showPickerReadyForSpin(3);
     }
 
-    /* ======================================================================
-     *  8) الإعدادات داخل المباراة -- درج جانبي (نفس نمط روليت القبائل
-     *     المعتمَد): تبويبان (⚙️ الإعدادات بدون يوزر/كلمة مفتاحية / 👥
-     *     المشاركون بحث+فلتر+إقصاء يدوي+إرجاع)، وزر "إضافة لاعب جديد"
-     *     يفتح لوبي إضافي (700×800، خلفية سوداء 15%، حدود ذهبية، زوايا
-     *     17%) بنفس آلية دخول اللوبي الأصلي.
-     * ==================================================================== */
     var _eliminatedPlayers = [];
     var _drawerTab = 'settings';
     var _playersTabFilter = 'all';
@@ -1575,13 +1477,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         setTimeout(function () { dim.style.display = 'none'; box.style.display = 'none'; }, 350);
     }
 
-    /* ======================================================================
-     *  9) شاشة الفائز -- بطاقة AGP.playerCard.renderTrophyCard المشتركة
-     *     (250×300، تاج + حلقة صورة + اسم + نقاط)، بنفس مسار تقرير
-     *     النقاط الحقيقي المعتمَد بروليت الإقصاء (window.AGPAuth.
-     *     reportRoundCompletion) -- بدون أي تعديل على قيم النقاط نفسها،
-     *     النظام العام الموحَّد فقط.
-     * ==================================================================== */
+    // شاشة الفائز -- بطاقة AGP.playerCard.renderTrophyCard، بنفس مسار
+    // تقرير النقاط الحقيقي (window.AGPAuth.reportRoundCompletion).
     function tiktokUsernameFor(player) {
         var id = (player && player.id) || '';
         if (id.indexOf('tiktok:') === 0) return id.slice('tiktok:'.length);

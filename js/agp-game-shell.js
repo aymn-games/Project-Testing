@@ -1,23 +1,17 @@
 /**
- * ==========================================================================
- *  AGP GAME SHELL — وحدة مشتركة قابلة لإعادة الاستخدام لكل الألعاب
- * ==========================================================================
+ * AGP GAME SHELL — reusable settings/connect/lobby/round-start UI shared
+ * across games. Each game loads this file itself (with full AGP Core
+ * before it) and drives its own settings/connect/lobby/round-start flow.
+ * Uses only AGP Core's existing public interfaces.
  *
- * ⚠️ قرار معماري: كل لعبة تحمّل هذا الملف بنفسها (مع AGP Core كاملاً
- *   قبله) وتُدير هي نفسها دورة إعدادات/اتصال/لوبي/بدء الجولة.
+ * Icons are passed as relative paths from each game's own icons/ folder
+ * (icon: 'icons/xxx.png') — none are embedded here, keeping this file
+ * game-agnostic.
  *
- * لا تعديل على AGP Core — يستخدم فقط الواجهات العامة الموجودة أصلاً.
- *
- * ⚠️ الأيقونات: تُمرَّر كمسار نسبي (icon: 'icons/xxx.png') من كل لعبة —
- *   لا أيقونات مضمَّنة بهذا الملف نفسه، حتى يبقى عاماً لأي لعبة بأيقوناتها
- *   الخاصة. الأيقونتان gear.svg (زر الإعدادات بالهيدر) وأي أيقونة حقل
- *   تُحمَّل من مجلد اللعبة نفسها (icons/) عبر _config.headerGearIcon
- *   و field.icon.
- *
- * أنواع حقول الإعدادات: 'pill-choice' (خياران)، 'pill-group' (أكثر)،
- *   'counter' (+/-)، 'toggle' (توافق قديم). كل حقل يقبل icon (مسار صورة)
- *   و showWhen:{key,equals} (رؤية شرطية).
- * ==========================================================================
+ * Settings field types: 'pill-choice' (2 options), 'pill-group' (more),
+ * 'counter' (+/-), 'slider', 'toggle', 'modal-trigger' (game-built modal).
+ * Each field accepts icon (image path) and showWhen:{key,equals}
+ * (conditional visibility).
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -35,15 +29,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _settingsValues = {};
     var _lastKeyword = '';
 
-    // ⚠️ [0.46.0] حالة زر التشغيل التلقائي العام (راجع _config.midMatchToggleButton
-    // بـrenderSettingsScreen) — يُصفَّر عبر AGP.gameShell.setMidMatchToggleActive(false)
-    // من اللعبة نفسها عند انتهاء/إعادة المباراة.
+    // State of the optional generic auto-play toggle button (see
+    // _config.midMatchToggleButton in renderSettingsScreen); reset via
+    // AGP.gameShell.setMidMatchToggleActive(false) by the game itself.
     var _midMatchToggleActive = false;
 
-    // ⚠️ [إصلاح خلل حقيقي] تصير true فور بدء الجولة (زر "انهاء وبدء
-    // الجولة") ولا ترجع false إلا بإعادة تحميل الصفحة (مباراة جديدة —
-    // نفس أسلوب اللعبة نفسها). راجع تعليق مستمع stream:statusChanged
-    // أدناه لسبب وجودها.
+    // True once the round starts (see handleStartRoundClick), only reset
+    // by a page reload — see the stream:statusChanged listener below.
     var _roundStarted = false;
 
     function el(id) { return document.getElementById(id); }
@@ -67,13 +59,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var style = document.createElement('style');
         style.textContent = [
-            /* ⚠️ [0.44.0] ألوان المنصة الرسمية (مطابقة تماماً لمتغيرات CSS
-             * الجذرية بـindex.html: --accent/--accent-2/--accent-pink) —
-             * تُستخدَم هنا بدل الألوان اليدوية المتقاربة القديمة (#9b3fe0،
-             * #22d3ee، #a855f7، #d878ff...) حتى تطابق هوية المنصة حرفياً،
-             * بدون أي تغيير بصري غير ضروري (نفس البنية والتدرجات القديمة،
-             * بس بقيم الألوان الرسمية). راجع docs/UI_GUIDELINES.md.
-             */
+            /* Matches the platform's official accent colors from index.html
+             * (--accent/--accent-2/--accent-pink) — see docs/UI_GUIDELINES.md. */
             ':root{--agp-accent:#7c3aed;--agp-accent-2:#00c2ff;--agp-accent-pink:#ff4dff;}',
 
             'body.agp-shell-active{background:linear-gradient(170deg,#0b0616 0%,#2a0e3d 55%,#6d1fb0 100%);',
@@ -280,9 +267,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var gearIcon = _config.headerGearIcon ? '<img src="' + _config.headerGearIcon + '" alt="">' : '⚙️';
 
-        // ⚠️ [0.44.0] حذف نص "ألعاب أيمن" بجانب اللوقو (يبقى اللوقو فقط،
-        // بحجم أكبر) — بناءً على طلب صريح. لو ما فيه صورة لوقو مُمرَّرة
-        // (حالة دفاعية)، نرجع للشارة النصية "A" القديمة كبديل وحيد.
+        // Falls back to the "A" text badge if no logo image is configured.
         var brandHtml = _config.logoImage ?
             '<img class="agp-brand-logo-img" src="' + _config.logoImage + '" alt="ألعاب أيمن">' :
             '<span class="agp-brand-badge">A</span>';
@@ -299,9 +284,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div id="agp-header-brand">' + brandHtml + '</div>';
         document.body.appendChild(header);
 
-        // ⚠️ [0.44.0] زر "العودة للمنصة" — يرجع للصفحة الرئيسية. المسار
-        // نسبي (homeUrl) تحدِّده كل لعبة حسب عمق مجلدها (راجع
-        // agp-elimination-roulette.js: '../../index.html').
+        // homeUrl is relative, set per-game based on folder depth.
         document.getElementById('agp-header-home-btn').onclick = function () {
             window.location.href = _config.homeUrl || '../../index.html';
         };
@@ -336,10 +319,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *  شاشة الإعدادات
      * ================================================================== */
     function isFieldVisible(field) {
-        // ⚠️ [0.45.0] onlyMidMatch: حقل يظهر فقط لو شاشة الإعدادات مفتوحة
-        // أثناء مباراة نشطة (أُعيد فتحها بزر الترس ⚙️) — يُخفى تماماً
-        // بشاشة الإعدادات الأولية قبل بدء أي مباراة. مثال: مستوى الصوت
-        // (لا معنى له قبل أن تبدأ أصوات اللعبة أصلاً).
+        // onlyMidMatch: only shown when settings are reopened mid-match
+        // (e.g. volume, meaningless before the game's sounds start).
         if (field.onlyMidMatch && !_lastIsReopened) return false;
         if (!field.showWhen) return true;
         return _settingsValues[field.showWhen.key] === field.showWhen.equals;
@@ -369,8 +350,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + '</span></div>';
         }
 
-        // ⚠️ [0.45.0] نوع حقل جديد: شريط تمرير (slider) — بدل عداد +/-،
-        // يُستخدَم حالياً لمستوى الصوت (مع onlyMidMatch:true).
         if (field.type === 'slider') {
             var sliderMin = typeof field.min === 'number' ? field.min : 0;
             var sliderMax = typeof field.max === 'number' ? field.max : 10;
@@ -389,13 +368,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + '</span></div>';
         }
 
-        // ⚠️ [0.44.0] نوع حقل جديد عام: زر يفتح تبويباً/نافذة مخصَّصة
-        // تبنيها اللعبة نفسها بالكامل (لا يعرف هذا الملف شيئاً عن محتواها
-        // — مجرد زر + استدعاء callback اللعبة عند الضغط). القيمة المعروضة
-        // على الزر تُبنى عبر field.formatValue(value) لو موجودة، وإلا القيمة
-        // الخام. عند اختيار اللعبة لقيمة جديدة، تستدعي
-        // AGP.gameShell.setSetting(key, value) فتُحدَّث القيمة ويُعاد رسم
-        // الحقل تلقائياً.
+        // Opens a game-built modal on click; this file knows nothing about
+        // its content. Game calls AGP.gameShell.setSetting(key, value) to
+        // update and trigger a re-render.
         if (field.type === 'modal-trigger') {
             var currentVal = _settingsValues[field.key];
             var displayVal = (typeof field.formatValue === 'function') ? field.formatValue(currentVal) : currentVal;
@@ -411,9 +386,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function renderSettingsScreen(isReopened) {
         _lastIsReopened = Boolean(isReopened);
-        // ⚠️ إصلاح: نحفظ القيم الحالية لليوزرنيم/الكلمة المفتاحية قبل
-        // إعادة البناء (كانت تُمسَح مع كل ضغطة على أي زر تبديل، لأن
-        // الشاشة تُعاد بناؤها بالكامل لتحديث الرؤية الشرطية).
+        // Preserve username/keyword field values across the full re-render
+        // triggered by any toggle click (conditional field visibility).
         var preservedUsername = (el('agp-tiktok-username') && el('agp-tiktok-username').value) || '';
         var preservedKeyword = (el('agp-keyword') && el('agp-keyword').value) || '';
 
@@ -424,9 +398,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var closeBtnHtml = isReopened ?
             '<button type="button" id="agp-settings-close-btn" style="position:absolute;top:14px;left:18px;background:none;border:none;font-size:1.3em;cursor:pointer;color:#5a2585;">✕</button>' : '';
 
-        // ⚠️ [0.44.0] لو ما فيه قيمة محفوظة بالجلسة الحالية (أول رسم)، نرجع
-        // لآخر يوزرنيم محفوظ عبر AGP.storageManager (يبقى بعد "مباراة
-        // جديدة" ← reload الصفحة، بدل ما يُطلَب من الاستريمر كتابته كل مرة).
+        // Falls back to the last saved username (survives a page reload)
         var savedUsername = preservedUsername || (AGP.storageManager ? AGP.storageManager.get('agp-last-username', '') : '');
 
         var baseFieldsHtml = isReopened ? '' :
@@ -436,11 +408,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var connectBtnHtml = isReopened ? '' :
             '<button class="agp-shell-btn-connect" id="agp-connect-btn">' + (_config.connectButtonLabel || 'اتصال بالبث') + '</button>';
 
-        // ⚠️ [0.46.0] زر تشغيل تلقائي عام اختياري — تحدِّده اللعبة عبر
-        // _config.midMatchToggleButton (نفس فلسفة modal-trigger: هذا
-        // الملف لا يعرف معناه الفعلي، فقط يعرض زراً بحالتين ويستدعي
-        // onToggle عند الضغط). يظهر أسفل زر "إضافة لوبي جديد" بنفس عمود
-        // الأزرار.
+        // Optional generic auto-play toggle button, configured by the game
+        // via _config.midMatchToggleButton — this file just renders a
+        // two-state button and calls onToggle.
         var midMatchToggleHtml = '';
         if (isReopened && _config.midMatchToggleButton) {
             var btnCfg = _config.midMatchToggleButton;
@@ -491,12 +461,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
     }
 
-    /**
-     * ⚠️ إضافة: أدوات التحكم (إعادة ترتيب/تصفير) وحقل اسم الستريمر —
-     * تبقى بمكانها الأصلي بالـ DOM (لا نقلها فعلياً، تجنّباً لفقدانها
-     * عند أي إعادة رسم لاحقة تمسح محتوى الصندوق)، فقط تظهر بصرياً وهي
-     * مثبَّتة فوق شاشة الإعدادات المفتوحة، وتختفي معها تماماً.
-     */
+    /** Controls stay in their original DOM position (not actually moved,
+     * to avoid losing them on re-render) — only visually pinned above the
+     * open settings screen via CSS class. */
     function showRelocatedControls() {
         var controls = document.getElementById('left-controls');
         var streamerName = document.getElementById('streamer-name-wrapper');
@@ -511,20 +478,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (streamerName) streamerName.classList.remove('agp-relocated-into-settings');
     }
 
-    /**
-     * ⚠️ بطاقة اللاعب المشتركة (صورة + اسم [+ إطار]) — راجع
-     * js/agp-player-card.js. showFrame:true دائماً هنا لأن الدوال
-     * الثلاث اللي تستخدم هذي الدالة (renderSettingsPlayerList،
-     * renderMiniLobbyList، renderLobbyPlayerList) كلها شاشات "لوبي"
-     * (قبل/أثناء بدء المباراة، قبل أي إقصاء) — القرار الصريح إن الإطار
-     * يظهر باللوبي حصراً، وهذي الثلاث كلها لوبي بمعناه.
-     */
-    // ⚠️ [0.44.0] removable:true يضيف زر حذف نهائي لكل صف (يُستخدَم فقط
-    // بقائمة "أثناء المباراة" داخل الإعدادات المُعاد فتحها — لا يظهر
-    // باللوبي الأول ولا باللوبي المصغَّر، حتى لا يُحذَف لاعب بالخطأ قبل
-    // بدء المباراة أصلاً حيث لا داعي لذلك). الحذف الفعلي عبر
-    // AGP.player.removePlayer الموجودة أصلاً (تبث player:removed — أي
-    // لعبة تستمع لها لتزامن حالتها الداخلية، راجع agp-elimination-roulette.js).
+    /** Shared player card (avatar + name [+ frame], js/agp-player-card.js).
+     * showFrame is always true here since all three callers are lobby
+     * screens (frames are shown in the lobby only, by design).
+     * opts.removable adds a delete button per row (used only in the
+     * mid-match reopened settings list); deletion goes through
+     * AGP.player.removePlayer, which emits player:removed. */
     function renderPlayerListItemsHtml(players, opts) {
         opts = opts || {};
         if (!AGP.playerCard) return players.map(function (p) { return '<li>' + escapeHtml(p.name || p.id) + '</li>'; }).join('');
@@ -542,17 +501,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             btn.onclick = function () {
                 var id = btn.getAttribute('data-remove-player-id');
                 if (AGP.player && typeof AGP.player.removePlayer === 'function') {
-                    AGP.player.removePlayer(id); // يبث player:removed — إعادة رسم القوائم تتم عبر مستمع player:joined/player:removed أدناه
+                    AGP.player.removePlayer(id); // list re-renders via the player:removed listener below
                 }
             };
         });
     }
 
-    /**
-     * ⚠️ [0.44.0] عداد "الحالي/الحد الأقصى" — يُعرَض فقط لو اللعبة عرَّفت
-     * حقل إعداد باسم maxPlayers (أي لعبة، عام وليس خاصاً بلعبة معيّنة).
-     * @returns {string} مثل " (6 / 15)" أو نص فارغ لو ما فيه حد أقصى مُعرَّف
-     */
+    /** Shown only if the game defines a maxPlayers settings field. */
     function playerCountBadgeHtml() {
         var max = _settingsValues.maxPlayers;
         if (!max) return '';
@@ -571,19 +526,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (countEl) countEl.innerHTML = playerCountBadgeHtml();
     }
 
-    /**
-     * ⚠️ إعادة تصميم: بدل إضافة لاعب يدوياً بالاسم، الزر يفتح "لوبي
-     * مصغّر" — يُعيد تفعيل الكلمة المفتاحية فقط (بدون لمس حالة الجلسة/
-     * الجولة إطلاقاً، فلا يتأثر اللاعبون الحاليون ولا تُعاد الجولة).
-     * اللاعبون المقصيون سابقاً **لا يعودون للعجلة أبداً** هنا — هذا
-     * المسار يضيف لاعبين جدد فقط عبر نفس مسار player:joined الحقيقي،
-     * ولا علاقة له بقائمة eliminatedPlayers الخاصة باللعبة إطلاقاً.
-     */
+    /** "Add new lobby" reactivates the join keyword only — doesn't touch
+     * session/round state, so current players are unaffected. Previously
+     * eliminated players never come back through this path; it only adds
+     * new players via the normal player:joined flow. */
     var _miniLobbyKnownIds = null;
 
     function handleReopenRegistrationClick() {
-        // ⚠️ [0.44.0] لو أصلاً وصلنا الحد الأقصى، ما نفتح تسجيلاً جديداً
-        // إطلاقاً — بدل ما نفتح نافذة تقبل كتابة الكلمة المفتاحية بلا فائدة.
         var max = _settingsValues.maxPlayers;
         if (max && AGP.gameManager.getPlayers().length >= max) {
             var box0 = el('agp-shell-box');
@@ -620,10 +569,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var countEl = el('agp-mini-lobby-count');
         if (countEl) countEl.innerHTML = playerCountBadgeHtml();
 
-        // ⚠️ [0.44.0] وصلنا الحد الأقصى وسط اللوبي المصغَّر نفسه (وصل
-        // آخر لاعب بالضبط بينما النافذة مفتوحة) — نوقف الكلمة المفتاحية
-        // فوراً (تزامناً مع enforceMaxPlayers بملف اللعبة) ونعطّل الزر
-        // اسمياً فقط (الإكمال يبقى ممكناً لإغلاق النافذة).
+        // Hit maxPlayers while the mini-lobby window is still open — deactivate
+        // the join keyword immediately (in sync with the game's enforceMaxPlayers).
         var max = _settingsValues.maxPlayers;
         if (max && AGP.gameManager.getPlayers().length >= max && AGP.keywordManager.isActive()) {
             AGP.keywordManager.deactivate();
@@ -637,16 +584,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function wireFieldEvents() {
-        // ⚠️ [0.45.0] إصلاح خطأ حرج: كل هذي المستمعات (pill/counter/count-input)
-        // كانت تستدعي renderSettingsScreen() بدون تمرير _lastIsReopened —
-        // فكانت تعيد رسم الشاشة **كأنها تُفتح لأول مرة** (تُظهر حقلي
-        // اليوزرنيم/الكلمة المفتاحية وزر "اتصال بالبث" من جديد) بمجرد
-        // تعديل أي إعداد (حد اللاعبين، موقّت الإقصاء، مين يقدر يدخل...)
-        // أثناء مباراة نشطة — يبان للمستخدم وكأن المباراة "انلغت" وتطلب
-        // اتصال جديد، رغم إن المباراة الفعلية بالخلفية ما توقفت أصلاً.
-        // كان فقط مستمع مفتاح التبديل (toggle) بالأسفل مصلَّحاً صح من
-        // الإصدار الماضي. الإصلاح: كل المستمعات الأربعة تمرر _lastIsReopened
-        // الآن، فتبقى الشاشة بوضعها الصحيح والمباراة تكمل بدون انقطاع.
+        // All these listeners must pass _lastIsReopened to renderSettingsScreen —
+        // otherwise re-rendering after a mid-match setting change would show
+        // the screen as if opened fresh (username/keyword fields, connect button).
         _overlayEl.querySelectorAll('.agp-pill-btn').forEach(function (btn) {
             btn.onclick = function () {
                 var key = btn.getAttribute('data-key');
@@ -676,7 +616,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 renderSettingsScreen(_lastIsReopened);
             };
         });
-        // ⚠️ [0.45.0] نوع حقل جديد: 'slider' (شريط تمرير — راجع renderField).
         _overlayEl.querySelectorAll('.agp-slider-input').forEach(function (input) {
             input.oninput = function () {
                 var key = input.getAttribute('data-key');
@@ -687,13 +626,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             input.onchange = function () { renderSettingsScreen(_lastIsReopened); };
         });
         _overlayEl.querySelectorAll('#agp-shell-box input[type=checkbox]').forEach(function (chk) {
-            // ⚠️ [0.44.0] إصلاح: كانت لا تُعيد رسم شاشة الإعدادات بعد
-            // تغيير أي مفتاح toggle، فالحقول الشرطية (showWhen) المرتبطة
-            // بمفتاح toggle (مثل حقل اختيار هدية الإنعاش) ما كانت تظهر/
-            // تختفي فوراً عند تفعيل/تعطيل المفتاح — لاحظته بالاختبار
-            // البصري لهذا الإصدار (كان موجوداً بالكود الأصلي قبل هذا
-            // الإصدار، غير متعلق مباشرة بأي طلب من التعديلات المتفق
-            // عليها، لكنه يمنع ميزة منبثقة الهدية من الظهور فعلياً).
+            // Must re-render so showWhen-conditional fields tied to this
+            // toggle appear/disappear immediately.
             chk.onchange = function () {
                 _settingsValues[chk.getAttribute('data-key')] = chk.checked;
                 renderSettingsScreen(_lastIsReopened);
