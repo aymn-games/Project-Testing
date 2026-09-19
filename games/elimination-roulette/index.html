@@ -5,14 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>روليت الإقصاء — ألعاب أيمن</title>
 <!--
-    صفحة أصلية (Native) للعبة "روليت الإقصاء"، لا تعتمد على أي موقع
-    خارجي ولا على جسر postMessage (js/agp-game-bridge.js) — بعكس روليت
-    القبائل القديمة. تحمّل AGP Core كاملاً بنفس ترتيب الصفحة الرئيسية
-    (راجع docs/CLAUDE.md وdocs/ARCHITECTURE.md)، ثم js/agp-game-shell.js
-    (ملف عام موجود مسبقاً بالمستودع، غير مُعدَّل هنا)، ثم ملف اللعبة
-    الخاص بها. لا تسجيل دخول مطلوب بهذه الصفحة تحديداً — بوابة الدخول
-    (تسجيل الدخول + موافقة الأدمن) تحدث فعلياً بالصفحة الرئيسية قبل ما
-    يوصل الزائر لرابط "العب الآن" أصلاً (نفس آلية بقية الألعاب).
+    Native page for "Elimination Roulette" — no external site or
+    postMessage bridge (js/agp-game-bridge.js) dependency, unlike the old
+    Tribe Roulette. Loads AGP Core in full, in the same order as the main
+    page (see docs/CLAUDE.md and docs/ARCHITECTURE.md), then
+    js/agp-game-shell.js (a pre-existing shared file, not modified here),
+    then this game's own file. No login is required on this page
+    specifically — the entry gate (login + admin approval) already
+    happens on the main page before a visitor ever reaches the "Play Now"
+    link (same mechanism as every other game).
 -->
 </head>
 <body>
@@ -40,24 +41,24 @@
 <script src="../../js/agp-round-manager.js"></script>
 <script src="../../js/agp-bootstrap.js"></script>
 
-<!-- طبقة الحسابات/النقاط — مستقلة عن AGP.*، تُستخدم فقط لتقرير نقاط نهاية المباراة -->
+<!-- Accounts/points layer — independent of AGP.*, used only to report end-of-match points -->
 <script src="../../auth/auth-client.js"></script>
 
-<!-- ⚠️ [جديد] بطاقة اللاعب المشتركة (صورة + اسم [+ إطار باللوبي]) — تُحمَّل
-     قبل agp-game-shell.js وملف اللعبة لأن كليهما يستخدمانها اختيارياً
-     (AGP.playerCard?) -->
+<!-- Shared player card (photo + name [+ lobby frame]) — loaded before
+     agp-game-shell.js and this game's own file since both use it
+     optionally (AGP.playerCard?) -->
 <script src="../../js/agp-player-card.js"></script>
 
-<!-- ⚠️ [0.44.4] أنيميشن "الدخولية" (لاعب له دخولية مفعَّلة من لوحة
-     الأدمن) — تُحمَّل بعد agp-player-manager.js (تستمع لأحداثه) وقبل
-     agp-game-shell.js (يوفّر حاويتَي البانر/البطاقات المستقرة بشاشة
-     اللوبي). راجع js/agp-entrance.js. -->
+<!-- "Entrance" animation (a player with an entrance enabled from the
+     admin panel) — loaded after agp-player-manager.js (listens to its
+     events) and before agp-game-shell.js (provides the stable
+     banner/card containers on the lobby screen). See js/agp-entrance.js. -->
 <script src="../../js/agp-entrance.js"></script>
 
-<!-- شاشة الإعدادات + الاتصال بتيك توك + اللوبي (عام، موجود مسبقاً) -->
+<!-- Settings screen + TikTok connection + lobby (shared, pre-existing) -->
 <script src="../../js/agp-game-shell.js"></script>
 
-<!-- منطق لعبة روليت الإقصاء نفسها -->
+<!-- This game's own logic -->
 <script src="agp-elimination-roulette.js"></script>
 
 </body>
