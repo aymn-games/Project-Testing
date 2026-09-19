@@ -869,7 +869,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * styles, scoped by the same ID + !important — so it only
              * affects this game's page, never any other game sharing that
              * box. */
-            '#agp-shell-box{background:linear-gradient(180deg,#5F3976,#211528) !important;}',
+            // :not(.er-settings-initial-box) — this fallback must not
+            // outrank the settings screen's own background:none rule
+            // below. Both are !important, and since that rule now also
+            // matches via a same-specificity [id^="agp-shell-box"]
+            // attribute selector (needed so the connecting-layer's ghost
+            // snapshot, id="agp-shell-box-ghost", keeps its styling too —
+            // see the connecting-layer comment further down), it can no
+            // longer out-specificity a plain #agp-shell-box ID selector.
+            // Excluding the class here is simpler than re-adding an ID
+            // variant to every one of those rules.
+            '#agp-shell-box:not(.er-settings-initial-box){background:linear-gradient(180deg,#5F3976,#211528) !important;}',
             /* Lobby without a surrounding box — the title/hint line/card
              * grid/bottom bar float directly over the page's aurora
              * background (the box itself has no background/border). The
