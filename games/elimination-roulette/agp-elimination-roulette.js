@@ -40,22 +40,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var C_PINK_LT = '#ff8de8';
     var C_ACCENT2_LT = '#7de0ff';
 
-    // Darker version of the same wheel colors above (for a darker wheel) —
-    // each color is the original at ~50% brightness. See
-    // docs/CHANGELOG.md for the calculation method.
-    var C_ACCENT_DK = '#3e1d76';
-    var C_ACCENT2_DK = '#00617f';
-    var C_PINK_DK = '#7f267f';
-    var C_ACCENT_LT_DK = '#53457d';
-    var C_PINK_LT_DK = '#7f4674';
-    var C_ACCENT2_LT_DK = '#3e707f';
-    var WHEEL_PALETTE = [C_ACCENT_DK, C_PINK_DK, C_ACCENT2_DK, C_ACCENT_LT_DK, C_PINK_LT_DK, C_ACCENT2_LT_DK];
+    // 3-shade violet wheel palette, matching the design_handoff_post_lobby
+    // spec (Roulette.dc.html) exactly. Slices are assigned so no two
+    // adjacent ones (including the wrap-around last<->first) share a
+    // color — see assignWheelColors()/_wheelColors below.
+    var WHEEL_PALETTE = ['#7d6fd8', '#5a4fc4', '#9a8fe0'];
 
-    // Trim color for elements that used to be plain white (bezel ring,
-    // pointer arrow, spin-button border) — darker now, but deliberately
-    // lighter/distinct from the dark wheel colors above so it still stands
-    // out clearly against them (not pure black).
-    var C_WHEEL_TRIM = '#9c8fb0';
+    // Trim color for the wheel's outer ring/pointer/spin-hub border —
+    // matches the design spec's #b9a3e8.
+    var C_WHEEL_TRIM = '#b9a3e8';
 
     // Coin values researched from public sources (streamwrapped.com,
     // bettertok.app, joinotto.com). Icons: gifts with an "iconId" use the
@@ -120,6 +113,29 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _wheelDisplayMode = 'wheel'; // 'wheel' | 'reel'
     var REEL_ITEM_H = 150;
     var REEL_REPEATS = 6;
+
+    // Wheel-slice colors, parallel to _alive by index — recomputed only
+    // when the player count actually changes (see renderWheelSlices), same
+    // "keep it stable across same-length re-renders" behavior as the
+    // design_handoff_post_lobby spec's Component.assignColors/state.colors.
+    var _wheelColors = [];
+
+    // Greedy no-repeat-adjacent color picker (matches the design spec's
+    // Component.assignColors exactly) — treats the slice ring as circular,
+    // so the last slice also can't match the first one.
+    function assignWheelColors(n) {
+        if (n <= 0) return [];
+        if (n === 1) return [WHEEL_PALETTE[0]];
+        var result = [];
+        for (var i = 0; i < n; i++) {
+            var forbidden = [result[i - 1]];
+            if (i === n - 1) forbidden.push(result[0]);
+            var options = WHEEL_PALETTE.filter(function (c) { return forbidden.indexOf(c) === -1; });
+            if (!options.length) options = WHEEL_PALETTE.filter(function (c) { return c !== result[i - 1]; });
+            result.push(options[Math.floor(Math.random() * options.length)]);
+        }
+        return result;
+    }
 
     /* ======================================================================
      *  0) Sound — four programmatically generated clips + a volume level
@@ -231,6 +247,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _autoPlayActive = false;
         _playerNumbers = {};
         _nextPlayerNumber = 1;
+        _wheelColors = [];
         if (_reviveSplashTimer) { window.clearTimeout(_reviveSplashTimer); _reviveSplashTimer = null; }
         var splashOverlay = el('er-revive-splash-overlay');
         if (splashOverlay) splashOverlay.style.display = 'none';
@@ -411,25 +428,32 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
             /* ---- Player names, written directly inside each wheel slice
              * (text only, no profile photos) instead of a separate strip. ---- */
-            '.er-wheel-label{position:absolute;top:50%;left:50%;transform-origin:center;',
-            'font-size:0.68em;font-weight:800;color:#f1e9fb;text-shadow:0 1px 3px rgba(0,0,0,0.8);',
-            'max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;',
-            'pointer-events:none;text-align:center;}',
+            '.er-wheel-label-slot{position:absolute;inset:0;}',
+            '.er-wheel-label{position:absolute;top:9%;left:50%;transform:translate(-50%,-50%) rotate(90deg);',
+            'display:inline-block;font-family:"Noto Kufi Arabic",sans-serif;font-size:14px;font-weight:700;',
+            'color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.45);max-width:90px;overflow:hidden;',
+            'text-overflow:ellipsis;white-space:nowrap;pointer-events:none;}',
 
             /* ---- Wheel zoom slider — a normal element in the column
              * flow (#er-stage flex-direction:column) between the wheel and
              * the shuffle button, so the latter moves automatically when
              * the wheel's size changes above it (instead of absolute
              * positioning). ---- */
-            '#er-wheel-zoom-row{display:flex;align-items:center;gap:10px;font-size:0.82em;color:#e9d3ff;}',
-            '#er-wheel-zoom-slider{width:170px;accent-color:var(--er-accent2);cursor:pointer;}',
+            '#er-wheel-zoom-row{display:flex;align-items:center;gap:10px;font-size:0.82em;color:#cfc7e2;}',
+            '#er-wheel-zoom-slider{width:170px;accent-color:#7a3fd4;cursor:pointer;}',
 
-            /* ---- Shuffle button (below the wheel) ---- */
-            '#er-shuffle-btn{margin-top:2px;padding:9px 22px;border-radius:999px;',
-            'border:1px solid var(--er-accent2);background:rgba(255,255,255,0.08);color:#fff;',
-            'font-family:inherit;font-weight:700;font-size:0.85em;cursor:pointer;}',
+            // Row wrapping the shuffle/auto-play buttons — matches the
+            // design spec's "shared post-spin flow" action row exactly.
+            '#er-post-spin-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}',
+
+            /* ---- Shuffle button (below the wheel) — matches the design
+             * spec's neutral pill style exactly. ---- */
+            '#er-shuffle-btn{margin-top:2px;padding:12px 22px;border-radius:999px;',
+            'border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#cfc7e2;',
+            'font-family:"IBM Plex Sans Arabic",sans-serif;font-weight:600;font-size:13.5px;cursor:pointer;',
+            'transition:border-color .25s,color .25s;}',
             '#er-shuffle-btn:disabled{opacity:0.4;cursor:not-allowed;}',
-            '#er-shuffle-btn:not(:disabled):hover{background:rgba(255,255,255,0.16);}',
+            '#er-shuffle-btn:not(:disabled):hover{border-color:rgba(178,140,245,.5);color:#e9e4f5;}',
 
             /* ---- The optional second shape: a vertical scroll reel
              * instead of the wheel — same system as Russian Roulette's
@@ -473,12 +497,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * directly under the wheel on the game screen. Same
              * enable/disable logic (handleAutoPlayToggle), only the
              * button's location changed. ---- */
-            '#er-autoplay-btn{margin-top:8px;padding:9px 22px;border-radius:999px;',
-            'border:1px solid var(--er-accent2);background:rgba(255,255,255,0.08);color:#fff;',
-            'font-family:inherit;font-weight:700;font-size:0.85em;cursor:pointer;}',
-            '#er-autoplay-btn:hover{background:rgba(255,255,255,0.16);}',
-            '#er-autoplay-btn.er-autoplay-active{background:linear-gradient(90deg,var(--er-accent2),var(--er-accent));',
-            'border-color:transparent;color:#0b0616;font-weight:900;}',
+            '#er-autoplay-btn{margin-top:0;padding:12px 22px;border-radius:999px;',
+            'border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#cfc7e2;',
+            'font-family:"IBM Plex Sans Arabic",sans-serif;font-weight:600;font-size:13.5px;cursor:pointer;',
+            'transition:background .25s,color .25s,border-color .25s;}',
+            '#er-autoplay-btn.er-autoplay-active{background:#7a3fd4;border-color:#7a3fd4;color:#f3ecff;}',
 
             /* ---- The wheel itself (conic gradient + bulb ring) ---- */
             // Fixed bug: width and height used to be computed via two
@@ -489,31 +512,27 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // instead of square. Fix: only width uses the formula; height
             // is derived from it via aspect-ratio:1 — one computed value,
             // zero chance of the two drifting apart.
-            '#er-wheel-wrap{position:relative;width:min(440px,88vw);aspect-ratio:1;margin-top:46px;}',
-            '#er-wheel-bezel{position:absolute;inset:-14px;border-radius:50%;',
-            'background:linear-gradient(135deg,var(--er-accent2),var(--er-accent),var(--er-pink));',
-            'box-shadow:0 0 46px rgba(124,58,237,0.65),inset 0 0 0 6px rgba(156,143,176,0.25);}',
-            '.er-bulb{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff8dd;',
-            'box-shadow:0 0 8px 2px rgba(255,244,180,0.85);}',
-            // The wheel's trim ring uses C_WHEEL_TRIM (a darker, distinct
-            // tone) instead of plain white, so it still stands out against
-            // the darker wheel slice colors.
-            '#er-wheel{position:absolute;inset:8px;border-radius:50%;border:5px solid ' + C_WHEEL_TRIM + ';',
-            'transition:transform 3.2s cubic-bezier(0.15,0.85,0.25,1);box-shadow:inset 0 0 30px rgba(0,0,0,0.35);overflow:hidden;}',
-            '#er-wheel-pointer{position:absolute;top:-20px;left:50%;transform:translateX(-50%);',
+            // Matches design_handoff_post_lobby/Roulette.dc.html exactly: no
+            // separate bezel/bulb-ring element — the double box-shadow ring
+            // (dark navy + violet glow) lives directly on #er-wheel itself.
+            '#er-wheel-wrap{position:relative;width:min(76vh,660px);max-width:88vw;aspect-ratio:1;margin-top:46px;}',
+            '#er-wheel{position:absolute;inset:0;border-radius:50%;overflow:hidden;',
+            'transition:transform 3.4s cubic-bezier(.15,.75,.15,1);',
+            'box-shadow:0 30px 70px -30px rgba(0,0,0,.9),0 0 0 10px #12101d,0 0 0 13px rgba(178,140,245,.35);}',
+            '#er-wheel-pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);',
             'width:0;height:0;border-left:16px solid transparent;border-right:16px solid transparent;',
-            'border-top:26px solid ' + C_WHEEL_TRIM + ';z-index:6;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));}',
+            'border-top:26px solid ' + C_WHEEL_TRIM + ';z-index:6;filter:drop-shadow(0 4px 0 #2b1a4d);}',
 
-            /* ---- Center hub = the spin button (logo + "Spin" label) ---- */
-            '#er-spin-hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:7;',
-            'width:104px;height:104px;border-radius:50%;border:4px solid ' + C_WHEEL_TRIM + ';cursor:pointer;',
-            'background:radial-gradient(circle at 35% 30%,#2a1443,#0e0e16);',
-            'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;',
-            'box-shadow:0 0 24px rgba(0,194,255,0.6),0 4px 10px rgba(0,0,0,0.5);padding:0;}',
-            '#er-spin-hub img{width:44px;height:44px;object-fit:contain;border-radius:50%;}',
-            '#er-spin-hub span{font-size:0.82em;font-weight:900;color:#fff;font-family:Almarai,Cairo,sans-serif;}',
+            /* ---- Center hub = the spin button ---- */
+            '#er-spin-hub{position:absolute;inset:43%;border-radius:50%;',
+            'border:3px solid rgba(178,140,245,.5);cursor:pointer;',
+            'background:radial-gradient(circle at 35% 30%,#241f3d,#14121f);',
+            'display:flex;align-items:center;justify-content:center;',
+            'box-shadow:0 0 0 6px #050508,0 10px 26px -10px rgba(0,0,0,.8);padding:0;transition:transform .2s;}',
+            '#er-spin-hub span{font-family:"Noto Kufi Arabic",sans-serif;font-size:clamp(11px,1.3vw,14px);',
+            'font-weight:700;color:#e9e4f5;}',
             '#er-spin-hub:disabled{opacity:0.55;cursor:not-allowed;}',
-            '#er-spin-hub:not(:disabled):hover{box-shadow:0 0 34px rgba(0,194,255,0.85),0 4px 14px rgba(0,0,0,0.5);}',
+            '#er-spin-hub:not(:disabled):hover{transform:scale(1.04);}',
 
             /* ---- Turn window (eliminate/revive) — 1300x800 ---- */
             // flex-direction:column + gap lets the chooser card
@@ -553,158 +572,149 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * was removed entirely — nothing renders it anymore
              * (renderTurnModal below never builds it). ---- */
             /* ================================================================
-             * Elimination/revival selection screen (shared #er-select-box
-             * between both cases via roleClass) — no surrounding box: the
-             * title/chooser card/buttons/timer/candidate grid float
-             * directly over the game screen, with a 30% black dim layer
-             * behind them (keeps the game screen visible while making the
-             * cards clearer). Eliminate vs. revive is now distinguished
-             * purely by inner element colors (chooser ring, numbers, the
-             * bold word in the title).
+             * Elimination/revival selection screen ("chooser panel") —
+             * matches design_handoff_post_lobby/Roulette.dc.html's
+             * chooserOpen modal exactly: a near-fullscreen inset:24px panel
+             * (not a transparent overlay floating over the game screen
+             * anymore), red-bordered for eliminate / green for revive (this
+             * game's own existing role-color convention — the design spec
+             * only shows the eliminate case, since "friend revival" isn't
+             * part of that prototype). The ✕ top-left closes with no
+             * elimination/revival (handleSelectResumeClick, unchanged
+             * behavior) — the spec has no equivalent of the old
+             * "eliminate the turn holder" red button, so that's kept as a
+             * small secondary link under the instruction line instead of
+             * removing the feature.
              * ================================================================ */
+            // padding-top clears the shared persistent header (50px,
+            // z-index above this overlay) — the design spec's own inset:24px
+            // assumes no such fixed header, since its layout starts at the
+            // real page top.
             '#er-select-overlay{position:fixed;inset:0;z-index:99990;display:none;',
-            'align-items:flex-start;justify-content:center;padding:0;}',
-            '#er-select-overlay::before{content:"";position:fixed;inset:0;',
-            'background:rgba(0,0,0,0.3);pointer-events:none;z-index:0;}',
-            '#er-select-box{width:min(1150px,97vw);max-width:97vw;height:100vh;max-height:100vh;',
-            'padding:90px 24px 24px;box-sizing:border-box;color:#fff;font-family:Almarai,Cairo,sans-serif;',
-            'background:none;border:none;position:relative;overflow:hidden;box-shadow:none;',
-            'display:flex;flex-direction:column;z-index:1;}',
-            '#er-select-box > *{position:relative;z-index:1;}',
-            '#er-select-title{text-align:center;font-size:0.95em;color:#d9c8e8;margin-bottom:18px;flex:none;',
-            'text-shadow:0 2px 10px rgba(0,0,0,0.8);}',
-            '#er-select-title b{color:var(--er-accent2);font-weight:900;}',
-            // Colors intentionally swapped (was green=eliminate/red=revive)
-            // to match the players' number colors elsewhere in these same
-            // windows (red=eliminate, green=revive) — one consistent color
-            // language.
-            '#er-select-box.er-role-eliminate #er-select-title b{color:#ef4444;}',
-            '#er-select-box.er-role-revive #er-select-title b{color:#22c55e;}',
-            /* ---- One row: the enlarged chooser card + buttons (centered together) ---- */
-            '#er-chooser-row{display:flex;align-items:center;justify-content:center;gap:26px;margin-bottom:12px;flex:none;}',
-            '.er-select-chooser-card{display:flex;align-items:center;gap:12px;}',
-            '.er-select-chooser-ring{width:88px;height:88px;border-radius:50%;padding:4px;box-sizing:border-box;flex:none;}',
+            'align-items:stretch;justify-content:stretch;padding:74px 24px 24px;}',
+            '#er-select-box{width:100%;height:100%;box-sizing:border-box;color:#fff;',
+            'font-family:"Noto Kufi Arabic",sans-serif;position:relative;overflow:hidden;',
+            'display:flex;flex-direction:column;border-radius:28px;',
+            'border:2px solid rgba(224,115,111,.4);',
+            'background:radial-gradient(circle at 50% 20%,rgba(178,140,245,.12),transparent 55%),rgba(10,9,16,.9);',
+            'backdrop-filter:blur(6px);',
+            'box-shadow:0 0 0 6px rgba(224,115,111,.08),0 30px 70px -30px rgba(0,0,0,.8);',
+            'animation:er-select-fadein .25s ease both;}',
+            '#er-select-box.er-role-revive{border-color:rgba(34,197,94,.4);',
+            'box-shadow:0 0 0 6px rgba(34,197,94,.08),0 30px 70px -30px rgba(0,0,0,.8);}',
+            '@keyframes er-select-fadein{from{opacity:0}to{opacity:1}}',
+            '#er-select-close-btn{position:absolute;top:18px;left:18px;width:34px;height:34px;',
+            'display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:10px;',
+            'border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:#cfc7e2;',
+            'font-size:16px;line-height:1;z-index:2;padding:0;}',
+            '#er-select-phase-label{position:absolute;top:22px;right:24px;font-family:"Cairo",sans-serif;',
+            'font-weight:900;font-size:clamp(16px,2vw,20px);text-shadow:2px 2px 0 #2b1a4d;z-index:2;}',
+            '#er-select-box.er-role-eliminate #er-select-phase-label{color:#e0736f;}',
+            '#er-select-box.er-role-revive #er-select-phase-label{color:#22c55e;}',
+            /* ---- Chooser row: "صاحب الاختيار" label + ring avatar + name ---- */
+            '#er-chooser-row{flex:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;',
+            'gap:14px;padding:clamp(20px,3vh,32px) clamp(24px,4vw,60px);text-align:center;}',
+            '.er-select-chooser-card{display:contents;}',
+            '.er-select-chooser-label{flex:none;font-family:"Cairo",sans-serif;font-weight:900;',
+            'font-size:clamp(18px,2.4vw,26px);color:#b28cf5;}',
+            '.er-select-chooser-ring{width:52px;height:52px;border-radius:50%;padding:3px;box-sizing:border-box;flex:none;}',
             '.er-select-chooser-ring.er-role-eliminate{background:#22c55e;box-shadow:0 0 22px rgba(34,197,94,0.65);}',
             '.er-select-chooser-ring.er-role-revive{background:#ef4444;box-shadow:0 0 22px rgba(239,68,68,0.65);}',
-            '.er-select-chooser-ring .er-ring-avatar,.er-select-chooser-ring .er-ring-avatar--fallback{width:100%;height:100%;font-size:1.5em;}',
-            '.er-select-chooser-nmrow{display:flex;align-items:center;gap:10px;margin-top:1px;}',
-            '.er-select-chooser-nm{font-size:1.35em;font-weight:900;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,0.8);}',
-            // Background color now depends on the role (red=eliminate,
-            // green=revive) instead of a fixed accent color — see the
-            // roleClass passed in selectChooserCardHtml's markup.
-            '.er-select-chooser-num{width:42px;height:42px;border-radius:50%;color:#fff;',
-            'font-size:1.15em;font-weight:900;display:flex;align-items:center;justify-content:center;flex:none;}',
-            '.er-select-chooser-num.er-role-eliminate{background:#ef4444;}',
-            '.er-select-chooser-num.er-role-revive{background:#22c55e;}',
-            '#er-select-actions{display:flex;flex-direction:row;gap:8px;width:230px;flex:none;}',
-            '#er-select-actions button{flex:1;padding:9px 6px;border-radius:999px;border:none;font-weight:800;',
-            'cursor:pointer;font-family:inherit;font-size:0.74em;color:#fff;white-space:nowrap;line-height:1.3;',
-            'transition:transform 0.15s,box-shadow 0.15s;}',
-            '#er-select-actions button:hover{transform:translateY(-2px);}',
-            '#er-select-resume-btn{background:linear-gradient(90deg,var(--er-accent2),var(--er-accent));',
-            'box-shadow:0 4px 14px rgba(124,58,237,0.45);}',
-            '#er-force-eliminate-btn{background:linear-gradient(90deg,#ef4444,#b91c1c);',
-            'box-shadow:0 4px 14px rgba(239,68,68,0.45);}',
-            /* ---- Countdown timer — its own line below the chooser row, large and prominent ---- */
-            '#er-select-timer{text-align:center;font-weight:900;font-size:1.5em;color:#ffe066;margin-bottom:10px;',
-            'flex:none;transition:color 0.2s;text-shadow:0 2px 10px rgba(0,0,0,0.8);}',
+            '.er-select-chooser-ring .er-ring-avatar,.er-select-chooser-ring .er-ring-avatar--fallback{width:100%;height:100%;font-size:1.1em;}',
+            '.er-select-chooser-nmrow{display:contents;}',
+            '.er-select-chooser-nm{flex:none;font-family:"Noto Kufi Arabic",sans-serif;font-size:19px;',
+            'font-weight:700;color:#f4f2fb;}',
+            // The fixed number badge (playerNumber) still renders next to
+            // the name — kept from the previous design (useful for the
+            // "type a number in chat" flow), just restyled to a small
+            // neutral violet pill instead of a bold role-colored circle.
+            '.er-select-chooser-num{flex:none;padding:2px 9px;border-radius:999px;color:#e9e4f5;',
+            'font-family:"Noto Kufi Arabic",sans-serif;font-size:12.5px;font-weight:900;',
+            'background:rgba(178,140,245,.18);border:1px solid rgba(178,140,245,.4);}',
+            '#er-select-title{flex:none;text-align:center;margin-top:-10px;font-size:13.5px;color:#a79fbb;}',
+            // Secondary "eliminate the turn holder" link — not part of the
+            // design spec (which has no equivalent), kept as a small text
+            // link so the feature isn't lost, styled to stay visually
+            // secondary to the ✕/candidate-grid flow.
+            '#er-force-eliminate-btn{flex:none;display:block;margin:8px auto 0;padding:0;border:none;',
+            'background:none;cursor:pointer;font-family:"IBM Plex Sans Arabic",sans-serif;font-size:12px;',
+            'font-weight:600;color:#e0736f;text-decoration:underline;text-underline-offset:3px;}',
+            '#er-force-eliminate-btn:hover{color:#ff9b96;}',
+            '#er-select-divider{flex:none;height:2px;margin:16px clamp(24px,4vw,60px) 0;',
+            'background:linear-gradient(90deg,transparent,rgba(178,140,245,.5),transparent);}',
+            /* ---- Countdown timer ---- */
+            '#er-select-timer{flex:none;text-align:center;font-weight:900;font-size:1.3em;color:#ffe066;',
+            'margin-top:14px;transition:color 0.2s;text-shadow:0 2px 10px rgba(0,0,0,0.8);}',
             '#er-select-timer.er-timer-warning{color:#ff4d6d;animation:er-pulse 1s infinite;}',
             '@keyframes er-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}',
-            /* ---- Candidate grid — fixed 4 columns, standard-lobby-card-v1
-             * style (60px avatar overlapping a pill name plate by ~22%),
-             * the fixed number is a normal part of the plate's flow (not
-             * absolutely positioned). ---- */
-            '#er-select-candidates-grid{flex:1;min-height:0;overflow-y:auto;display:grid;',
-            'grid-template-columns:repeat(4,1fr);gap:0.5cm;align-content:flex-start;padding:4px 2px 6px;',
-            'width:min(900px,92vw);margin:0 auto;}',
-            '.er-select-cand-card{display:flex;flex-direction:column;align-items:center;cursor:pointer;}',
-            '.er-select-cand-row{display:inline-flex;align-items:center;}',
-            '.er-select-cand-avatar{width:60px;height:60px;border-radius:50%;flex:none;position:relative;z-index:2;',
-            'overflow:hidden;box-sizing:border-box;border:3px solid rgba(255,255,255,0.55);}',
-            '.er-select-cand-avatar .er-ring-avatar,.er-select-cand-avatar .er-ring-avatar--fallback{width:100%;height:100%;font-size:1.1em;}',
-            // justify-content:space-between (no gap) keeps the number
-            // pinned to the plate's inner edge, instead of floating right
-            // after the name at a distance that varies with name length.
-            '.er-select-cand-plate{position:relative;height:48px;width:194px;box-sizing:border-box;',
-            'margin-inline-start:-13px;padding-inline-start:31px;padding-inline-end:10px;',
-            'display:flex;align-items:center;justify-content:space-between;font-weight:800;color:#fff;',
-            'background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);backdrop-filter:blur(4px);',
-            'border-radius:999px;overflow:hidden;z-index:1;}',
-            '.er-select-cand-name{font-size:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;}',
-            // Red in the elimination window, green in the revival window —
-            // same color language as the rest of these two windows.
-            '.er-select-cand-num{width:40px;height:40px;flex:none;color:#fff;',
-            'border-radius:50%;font-size:1.2em;font-weight:900;',
-            'display:flex;align-items:center;justify-content:center;z-index:3;}',
-            '.er-select-cand-num.er-role-eliminate{background:#ef4444;}',
-            '.er-select-cand-num.er-role-revive{background:#22c55e;}',
-            '.er-select-cand-card.er-cand-selected .er-select-cand-plate{box-shadow:0 0 0 2px #ef4444;}',
+            /* ---- Candidate grid — 6-per-row pill buttons, matching the
+             * design spec's chooserOptions grid exactly. ---- */
+            '#er-select-candidates-grid{flex:1;min-height:0;overflow-y:auto;',
+            'padding:clamp(16px,2.6vh,26px) clamp(24px,4vw,60px);}',
+            '#er-select-candidates-grid-inner{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));',
+            'gap:9px;justify-content:center;}',
+            '.er-select-cand-card{display:flex;align-items:center;justify-content:center;gap:9px;',
+            'padding:9px 10px;cursor:pointer;border-radius:14px;border:1px solid rgba(224,115,111,.25);',
+            'background:rgba(224,115,111,.07);transition:transform .15s,border-color .15s;}',
+            '.er-select-cand-card:hover{transform:translateY(-2px);border-color:rgba(224,115,111,.55);}',
+            '#er-select-box.er-role-revive .er-select-cand-card{border-color:rgba(34,197,94,.25);',
+            'background:rgba(34,197,94,.07);}',
+            '#er-select-box.er-role-revive .er-select-cand-card:hover{border-color:rgba(34,197,94,.55);}',
+            '.er-select-cand-avatar{flex:none;width:40px;height:40px;border-radius:50%;overflow:hidden;',
+            'border:1px solid rgba(255,255,255,.18);}',
+            '.er-select-cand-avatar .er-ring-avatar,.er-select-cand-avatar .er-ring-avatar--fallback{',
+            'width:100%;height:100%;font-size:1em;}',
+            '.er-select-cand-name{flex:1;min-width:0;text-align:center;font-size:15.5px;font-weight:600;',
+            'color:#f4f2fb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '.er-select-cand-num{flex:none;width:28px;height:28px;border-radius:50%;display:flex;',
+            'align-items:center;justify-content:center;background:rgba(178,140,245,.18);',
+            'border:1px solid rgba(178,140,245,.4);font-family:"Noto Kufi Arabic",sans-serif;',
+            'font-size:14.5px;font-weight:900;color:#e9e4f5;}',
 
             /* ---- Result-announcement tab (4 seconds) ---- */
             /* Announcement colors (originally designed for a light
              * background) were brightened to stay readable over the dark
              * background. */
-            /* ---- Result-announcement tab, redesigned — a small box
-             * (~650x300) with a single sentence "[avatar+name] eliminated/
-             * revived [avatar+name]" instead of the old big icon+title+name
-             * layout. Also used for the "friend revival" announcement. */
-            '#er-modal-box.er-announce-box{width:500px;max-width:92vw;height:350px;max-height:90vh;',
-            'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;',
-            'padding:26px 24px;box-sizing:border-box;background:rgba(255,255,255,0.15);',
-            'border:6px solid rgba(124,58,237,0.3);',
-            'border-radius:17px;box-shadow:0 10px 30px rgba(0,0,0,0.5);}',
-            '.er-announce-box .er-announce-sentence{font-size:1.25em;font-weight:800;text-align:center;',
-            'line-height:2.4;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;}',
-            // The title is a full sentence naming both players ("X
-            // successfully eliminated Y") rather than a generic label with
-            // no names — see showResultAnnouncement().
-            '.er-announce-title{font-size:1.35em;font-weight:900;color:#fff;text-align:center;',
-            'line-height:1.5;letter-spacing:0.3px;',
-            'text-shadow:0 2px 8px rgba(0,0,0,0.4),0 0 1px #fff;}',
-            '.er-announce-eliminate .er-announce-title{color:#ff8da3;}',
-            '.er-announce-revive .er-announce-title{color:#7dffb0;}',
-            // Row gap sized to fit the elimination emoji (💀) between the
-            // two cards — see showResultAnnouncement().
-            '.er-announce-row{display:flex;align-items:center;justify-content:center;gap:30px;}',
-            '.er-announce-vs-emoji{font-size:40px;align-self:center;',
-            'filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5));}',
-            // Single-person card (ring + role badge + name), fixed 145px
-            // width, 8px vertical gap between its three elements.
-            '.er-announce-person-card{width:145px;display:flex;flex-direction:column;',
-            'align-items:center;gap:8px;}',
-            // 112px ring — same technique as the winner-screen cards
-            // (colored background + 5px padding produces the ring
-            // thickness automatically around the photo, instead of a
-            // border/stroke).
-            '.er-announce-ring{width:112px;height:112px;border-radius:50%;padding:5px;box-sizing:border-box;}',
+            /* ---- Result-announcement ("reveal") card — matches
+             * design_handoff_post_lobby/Roulette.dc.html's revealOpen modal
+             * exactly: 450x250, a single sentence, two ring avatars with a
+             * ⚔️ between them, eliminated side vanishes 3s after the card
+             * appears. Also used defensively by the (currently dead, see
+             * the comment above the 'revive' branch below) friend-revive
+             * path, kept green/green for that case. */
+            '#er-modal-box.er-announce-box{width:450px;height:250px;max-width:94vw;max-height:90vh;',
+            'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;',
+            'padding:0 16px;box-sizing:border-box;',
+            'background:linear-gradient(180deg,rgba(26,23,42,.97),rgba(10,9,16,.99));',
+            'border:1px solid rgba(178,140,245,.28);',
+            'border-radius:26px;box-shadow:0 40px 90px -46px rgba(0,0,0,1);',
+            'animation:rl-cardin .45s cubic-bezier(.22,1,.36,1) both;}',
+            '@keyframes rl-cardin{from{opacity:0;transform:translateY(24px) scale(.94)}to{opacity:1;transform:none}}',
+            '.er-announce-title{text-align:center;font-family:"Noto Kufi Arabic",sans-serif;font-size:15px;',
+            'font-weight:700;line-height:1.6;padding:0 16px;}',
+            '.er-announce-title-actor{color:#7ee0a6;}',
+            '.er-announce-title-target{color:#e0736f;}',
+            '.er-announce-row{display:flex;align-items:center;gap:0;}',
+            '.er-announce-vs-emoji{flex:none;font-size:24px;margin:0 40px;',
+            'filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));}',
+            '.er-announce-person-card{display:flex;flex-direction:column;align-items:center;gap:8px;}',
+            // 92px ring — same "colored background + padding" ring
+            // technique as before, just resized to match the spec exactly.
+            '.er-announce-ring{width:92px;height:92px;border-radius:50%;padding:4px;box-sizing:border-box;}',
             '.er-announce-ring .er-ring-avatar,.er-announce-ring .er-ring-avatar--fallback{',
             'width:100%;height:100%;}',
-            '.er-announce-ring-green{background:#22c55e;}',
-            '.er-announce-ring-red{background:#ef4444;}',
-            // Desaturated + slightly transparent — for the eliminated side
-            // specifically.
-            '.er-announce-ring-desaturate .er-ring-avatar,',
-            '.er-announce-ring-desaturate .er-ring-avatar--fallback{filter:saturate(0.4);opacity:0.9;}',
-            // 3-second red glow-then-fade animation for the eliminated
-            // player's photo specifically (matches the box's own
-            // setTimeout(...,3000) auto-close in showResultAnnouncement() —
-            // the fade completes right as the box closes). Applied only to
-            // the red+desaturated ring combo (the only "eliminated" styling
-            // in this file), leaving the green revival ring untouched.
-            '@keyframes er-announce-eliminate-glow{0%{box-shadow:0 0 0 0 rgba(239,68,68,0.65);}',
-            '45%{box-shadow:0 0 26px 12px rgba(239,68,68,0.9);}',
-            '100%{box-shadow:0 0 10px 3px rgba(239,68,68,0.15);}}',
-            '.er-announce-ring-red{animation:er-announce-eliminate-glow 3s ease forwards;}',
-            '@keyframes er-announce-eliminate-fade{0%{opacity:1;}55%{opacity:0.9;}100%{opacity:0;}}',
-            '.er-announce-ring-desaturate .er-ring-avatar,',
-            '.er-announce-ring-desaturate .er-ring-avatar--fallback{',
-            'animation:er-announce-eliminate-fade 3s ease forwards;}',
-            // Role badge — small pill directly under the ring.
-            '.er-announce-role-badge{padding:3px 12px;border-radius:999px;font-size:12px;',
-            'font-weight:800;color:#fff;white-space:nowrap;}',
-            '.er-announce-badge-green{background:#22c55e;}',
-            '.er-announce-badge-red{background:#ef4444;}',
-            '.er-announce-person-name{font-size:14px;font-weight:800;color:#fff;text-align:center;}',
+            '.er-announce-ring-green{background:#7ee0a6;box-shadow:0 0 22px rgba(126,224,166,.4);}',
+            '.er-announce-ring-red{background:#e0736f;box-shadow:0 0 22px rgba(224,115,111,.4);}',
+            // Vanish animation — starts 3s after the card appears (the
+            // card itself stays on screen 5.2s total: 3s static + this 2s
+            // animation — see the showResultAnnouncement() setTimeout).
+            '@keyframes er-announce-vanish{0%{opacity:1;transform:scale(1);}55%{opacity:1;transform:scale(1);}',
+            '100%{opacity:.1;transform:scale(.8);}}',
+            '.er-announce-ring-vanish{animation:er-announce-vanish 2s ease 3s forwards;}',
+            '.er-announce-person-name{font-family:"Noto Kufi Arabic",sans-serif;font-size:12.5px;',
+            'font-weight:700;}',
+            '.er-announce-person-name-green{color:#7ee0a6;}',
+            '.er-announce-person-name-red{color:#e0736f;}',
             // .er-announce-person/.er-announce-avatar-wrap are no longer
             // used by showResultAnnouncement() (replaced by
             // .er-announce-person-card/.er-announce-ring), but are kept
@@ -1554,20 +1564,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             selectOverlay.id = 'er-select-overlay';
             selectOverlay.innerHTML =
                 '<div id="er-select-box">' +
-                    '<div id="er-select-title"></div>' +
+                    '<button id="er-select-close-btn" type="button" title="استئناف اللعبة">✕</button>' +
+                    '<span id="er-select-phase-label"></span>' +
                     '<div id="er-chooser-row">' +
                         '<div id="er-select-chooser-slot"></div>' +
-                        '<div id="er-select-actions">' +
-                            '<button id="er-force-eliminate-btn" type="button">❌ إقصاء صاحب الدور</button>' +
-                            '<button id="er-select-resume-btn" type="button">▶️ استئناف اللعبة</button>' +
-                        '</div>' +
                     '</div>' +
+                    '<div id="er-select-title"></div>' +
+                    '<button id="er-force-eliminate-btn" type="button">إقصاء صاحب الدور مباشرة</button>' +
                     '<div id="er-select-timer"></div>' +
-                    '<div id="er-select-candidates-grid"></div>' +
+                    '<div id="er-select-divider"></div>' +
+                    '<div id="er-select-candidates-grid"><div id="er-select-candidates-grid-inner"></div></div>' +
                 '</div>';
             document.body.appendChild(selectOverlay);
             el('er-force-eliminate-btn').addEventListener('click', handleForceEliminateClick);
-            el('er-select-resume-btn').addEventListener('click', handleSelectResumeClick);
+            el('er-select-close-btn').addEventListener('click', handleSelectResumeClick);
         }
         if (!el('er-toast-wrap')) {
             var toastWrap = document.createElement('div');
@@ -1596,10 +1606,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
         stage.innerHTML =
             '<div id="er-wheel-wrap">' +
-            '<div id="er-wheel-bezel"></div>' +
             '<div id="er-wheel-pointer"></div>' +
             '<div id="er-wheel"></div>' +
-            '<button id="er-spin-hub" title="دوّر العجلة"><img src="../../logo.png" alt="ألعاب أيمن"><span>دور</span></button>' +
+            '<button id="er-spin-hub" title="دوّر العجلة"><span>أدر</span></button>' +
             '</div>' +
             '<div id="er-reel-wrap">' +
             '<div id="er-reel-pointer-line"></div>' +
@@ -1610,13 +1619,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<input type="range" id="er-wheel-zoom-slider" min="' + WHEEL_SIZE_MIN + '" max="' + WHEEL_SIZE_MAX + '" step="10" value="' + _wheelSizePx + '" title="تكبير/تصغير العجلة">' +
             '<span>🔍+</span>' +
             '</div>' +
-            '<button id="er-shuffle-btn" type="button">🔀 إعادة ترتيب عشوائية</button>' +
-            '<button id="er-autoplay-btn" type="button"></button>';
+            '<div id="er-post-spin-actions">' +
+            '<button id="er-shuffle-btn" type="button">إعادة ترتيب عشوائية للأسماء</button>' +
+            '<button id="er-autoplay-btn" type="button"></button>' +
+            '</div>';
 
         applyWheelSize(_wheelSizePx);
-        renderWheelBulbs();
         renderWheelSlices();
         renderWheelLabels();
+        updateSpinHubLabel(false);
         renderReel();
         el('er-spin-hub').onclick = handleSpinClick;
         el('er-shuffle-btn').onclick = handleShuffleClick;
@@ -1646,6 +1657,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         btn.textContent = _autoPlayActive ? '⏸️ إيقاف التلقائي' : '▶️ العب التلقائي';
     }
 
+    // Spin-hub label — matches the design spec's three states exactly
+    // ("أدر"/"جاري..."/"انتهت"); previously a static "دور" the whole time.
+    function updateSpinHubLabel(spinning) {
+        var span = document.querySelector('#er-spin-hub span');
+        if (!span) return;
+        span.textContent = spinning ? 'جاري...' : (_alive.length > 1 ? 'أدر' : 'انتهت');
+    }
+
     /**
      * Applies the wheel's size via inline style (overrides the CSS default),
      * clamped to a safe viewport-relative max (88vw) so it can't overflow
@@ -1671,36 +1690,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     // Decorative fixed ring of 16 "bulbs" around the wheel — built once
     // (doesn't depend on player count).
-    function renderWheelBulbs() {
-        var bezel = el('er-wheel-bezel');
-        if (!bezel || bezel.dataset.built) return;
-        var n = 16;
-        for (var i = 0; i < n; i++) {
-            var angle = (360 / n) * i;
-            var bulb = document.createElement('div');
-            bulb.className = 'er-bulb';
-            bulb.style.top = '50%';
-            bulb.style.left = '50%';
-            // Positioned via a transform built from the ring's own radius.
-            bulb.style.transform =
-                'translate(-50%,-50%) rotate(' + angle + 'deg) translate(0,-50%)';
-            bezel.appendChild(bulb);
-        }
-        bezel.dataset.built = '1';
-    }
-
     function renderWheelSlices() {
         var wheel = el('er-wheel');
         if (!wheel) return;
         var n = _alive.length;
         if (!n) { wheel.style.background = '#2a1443'; return; }
+        // Only reassign colors when the player count actually changed —
+        // keeps them stable across a plain re-render (e.g. renderWheelLabels
+        // alone), matching the design spec's Component.renderVals() (colors
+        // only recomputed when their length no longer matches n).
+        if (_wheelColors.length !== n) _wheelColors = assignWheelColors(n);
         var anglePer = 360 / n;
         var stops = [];
         for (var i = 0; i < n; i++) {
-            var color = WHEEL_PALETTE[i % WHEEL_PALETTE.length];
             var from = (anglePer * i).toFixed(2);
             var to = (anglePer * (i + 1)).toFixed(2);
-            stops.push(color + ' ' + from + 'deg ' + to + 'deg');
+            stops.push(_wheelColors[i] + ' ' + from + 'deg ' + to + 'deg');
         }
         wheel.style.background = 'conic-gradient(' + stops.join(',') + ')';
     }
@@ -1709,27 +1714,28 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // children of #er-wheel itself (not a separate container) so they spin
     // automatically with the wheel (the parent's transform:rotate() applies
     // to all children) — same radial-positioning approach as
-    // renderWheelBulbs().
+    // Matches design_handoff_post_lobby/Roulette.dc.html's wheelLabels
+    // markup exactly: a full-size wrapper per slice, rotated to the
+    // slice's center angle, holding a label pinned near the rim (top:9%)
+    // with its own counter-rotate(90deg) so the text reads along the
+    // radius instead of tangentially.
     function renderWheelLabels() {
         var wheel = el('er-wheel');
         if (!wheel) return;
-        wheel.querySelectorAll('.er-wheel-label').forEach(function (n) { if (n.parentNode) n.parentNode.removeChild(n); });
+        wheel.querySelectorAll('.er-wheel-label-slot').forEach(function (n) { if (n.parentNode) n.parentNode.removeChild(n); });
         var n = _alive.length;
         if (!n) return;
-        // A percentage translate(0,-X%) would be relative to the label's
-        // own size, not the wheel's, so all names would collapse to a tiny
-        // circle at the wheel's center (behind the spin button, invisible).
-        // Compute an actual pixel radius from #er-wheel's real clientWidth
-        // instead.
-        var radiusPx = wheel.clientWidth ? (wheel.clientWidth / 2) * 0.62 : 130;
         var anglePer = 360 / n;
         _alive.forEach(function (p, i) {
             var angle = anglePer * i + anglePer / 2;
-            var label = document.createElement('div');
+            var slot = document.createElement('div');
+            slot.className = 'er-wheel-label-slot';
+            slot.style.transform = 'rotate(' + angle + 'deg)';
+            var label = document.createElement('span');
             label.className = 'er-wheel-label';
             label.textContent = playerLabel(p);
-            label.style.transform = 'translate(-50%,-50%) rotate(' + angle + 'deg) translate(0,-' + radiusPx.toFixed(1) + 'px)';
-            wheel.appendChild(label);
+            slot.appendChild(label);
+            wheel.appendChild(slot);
         });
     }
 
@@ -1765,6 +1771,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderWheelSlices();
         renderWheelLabels();
         resetWheelSpinPosition();
+        updateSpinHubLabel(false);
     }
 
     // "Shuffle" — reorders only the alive players (Fisher-Yates), then
@@ -1785,6 +1792,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (spinBtn && spinBtn.disabled) return; // wheel is currently spinning
         if (_alive.length < 2) return;
         shuffleArray(_alive);
+        // Force a fresh color draw even though the player count didn't
+        // change — matches the design spec's shuffle() explicitly calling
+        // Component.assignColors() again, instead of renderWheelSlices()'s
+        // usual "only recompute if the count changed" shortcut.
+        _wheelColors = [];
         realignWheelAfterRosterChange();
     }
 
@@ -1859,6 +1871,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function handleWheelSpinClick() {
         var spinBtn = el('er-spin-hub');
         if (spinBtn) spinBtn.disabled = true;
+        updateSpinHubLabel(true);
         playSound('spin');
 
         var winnerIndex = pickWeightedWinnerIndex();
@@ -1874,6 +1887,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         window.setTimeout(function () {
             if (spinBtn) spinBtn.disabled = false;
+            updateSpinHubLabel(false);
             handleWheelLanded(winner);
         }, 3300);
     }
@@ -1904,6 +1918,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function handleReelSpinClick() {
         var spinBtn = el('er-spin-hub');
         if (spinBtn) spinBtn.disabled = true;
+        updateSpinHubLabel(true);
         playSound('spin');
 
         var winnerIndex = pickWeightedWinnerIndex();
@@ -1926,6 +1941,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         window.setTimeout(function () {
             if (spinBtn) spinBtn.disabled = false;
+            updateSpinHubLabel(false);
             var items = list.querySelectorAll('.er-reel-item');
             items.forEach(function (it) { it.classList.remove('er-reel-highlight'); });
             if (items[targetAbsoluteIndex]) items[targetAbsoluteIndex].classList.add('er-reel-highlight');
@@ -2220,18 +2236,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var roleClass = isRevive ? 'er-role-revive' : 'er-role-eliminate';
         box.className = roleClass;
 
-        // One combined title line, no separate badge. The bold word names
-        // the phase itself ("elimination phase"/"revival phase"), colored
-        // by the same red=eliminate/green=revive system as the rest of
-        // this window (see #er-select-title b in the CSS above).
-        var titleLine = isRevive
-            ? '<b>مرحلة الإنعاش</b> — اختر من الشات بكتابة الرقم، أو يدوياً بالنقر على بطاقة اللاعب'
-            : '<b>مرحلة الإقصاء</b> — اختر من الشات بكتابة الرقم، أو يدوياً من الأزرار تحت';
-        el('er-select-title').innerHTML = titleLine;
+        // Phase label (top-right, matches the design spec's "مرحلة
+        // الإقصاء") + a plain instruction line below the chooser row —
+        // replaces the old single title line that mixed both together.
+        el('er-select-phase-label').textContent = isRevive ? 'مرحلة الإنعاش' : 'مرحلة الإقصاء';
+        el('er-select-title').textContent = isRevive
+            ? 'اختر من الشات بكتابة الرقم، أو يدوياً بالنقر على بطاقة اللاعب'
+            : 'اكتب اسم أي لاعب مشارك في شات البث لإقصائه، أو يدوياً بالنقر على بطاقته';
 
         el('er-select-chooser-slot').innerHTML = selectChooserCardHtml(_pendingTurn.chooser, roleClass);
 
-        var grid = el('er-select-candidates-grid');
+        var grid = el('er-select-candidates-grid-inner');
         grid.innerHTML = _pendingTurn.candidates.map(function (p, i) {
             return selectCandidateCardHtml(p, i, roleClass);
         }).join('');
@@ -2247,12 +2262,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             };
         });
 
+        // The design spec has no equivalent of this button at all (see the
+        // CSS comment above #er-force-eliminate-btn) — kept as a secondary
+        // link, elimination-window only.
         var forceBtn = el('er-force-eliminate-btn');
         forceBtn.style.display = isRevive ? 'none' : '';
-        // The red button now exclusively eliminates the turn holder
-        // themselves (there's no "selected candidate" state anymore, since
-        // clicking a candidate card eliminates immediately) — fixed label.
-        if (!isRevive) forceBtn.textContent = '❌ إقصاء صاحب الدور';
 
         if (AGP.playerCard) AGP.playerCard.fitAllNames(grid);
 
@@ -2273,14 +2287,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // The enlarged "turn holder" card inside the #er-chooser-row —
     // an 88px ring (same ringAvatarHtml used on the winner/announcement
     // screens) + their name + fixed number (playerNumber) side by side.
+    // Matches the design spec's chooser row exactly ("صاحب الاختيار" label
+    // + ring avatar + name, all inline) — the fixed number badge
+    // (playerNumber) is kept alongside the name (not in the spec, but
+    // still useful for the "type a number in chat" flow).
     function selectChooserCardHtml(chooser, roleClass) {
         return '<div class="er-select-chooser-card">' +
+            '<span class="er-select-chooser-label">صاحب الاختيار</span>' +
             '<div class="er-select-chooser-ring ' + roleClass + '">' + ringAvatarHtml(chooser) + '</div>' +
-            '<div>' +
-                '<div class="er-select-chooser-nmrow">' +
-                    '<span class="er-select-chooser-nm" data-agp-pcard-name="1">' + escapeHtml(playerLabel(chooser)) + '</span>' +
-                    '<span class="er-select-chooser-num ' + roleClass + '">' + playerNumber(chooser) + '</span>' +
-                '</div>' +
+            '<div class="er-select-chooser-nmrow">' +
+                '<span class="er-select-chooser-nm" data-agp-pcard-name="1">' + escapeHtml(playerLabel(chooser)) + '</span>' +
+                '<span class="er-select-chooser-num">' + playerNumber(chooser) + '</span>' +
             '</div>' +
         '</div>';
     }
@@ -2289,15 +2306,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // pill name plate (standard-lobby-card-v1 style), with the fixed
     // number (playerNumber) a normal part of the plate's flow right after
     // the name (not absolutely positioned).
+    // Matches the design spec's chooserOptions pick-button exactly — a
+    // flat pill (avatar + name + number badge in one row) instead of the
+    // previous overlapping-avatar-on-a-plate card style.
     function selectCandidateCardHtml(p, index, roleClass) {
         return '<div class="er-select-cand-card" data-index="' + index + '">' +
-            '<div class="er-select-cand-row">' +
-                '<div class="er-select-cand-avatar">' + ringAvatarHtml(p) + '</div>' +
-                '<div class="er-select-cand-plate">' +
-                    '<span class="er-select-cand-name" data-agp-pcard-name="1">' + escapeHtml(playerLabel(p)) + '</span>' +
-                    '<span class="er-select-cand-num ' + roleClass + '">' + playerNumber(p) + '</span>' +
-                '</div>' +
-            '</div>' +
+            '<div class="er-select-cand-avatar">' + ringAvatarHtml(p) + '</div>' +
+            '<span class="er-select-cand-name" data-agp-pcard-name="1">' + escapeHtml(playerLabel(p)) + '</span>' +
+            '<span class="er-select-cand-num">' + playerNumber(p) + '</span>' +
         '</div>';
     }
 
@@ -2455,53 +2471,49 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // positive outcome for everyone, with two differently-worded
         // badges ("✅ revived"/"💚 returned") to tell the roles apart
         // instead of color.
-        var actorName = data.chooser ? playerLabel(data.chooser) : '';
         var targetName = playerLabel(data.target);
         var titleHtml;
         if (data.chooser) {
+            var actorName = playerLabel(data.chooser);
             titleHtml = isEliminate
-                ? ('قام ' + escapeHtml(actorName) + ' بإقصاء ' + escapeHtml(targetName) + ' بنجاح')
-                : ('قام ' + escapeHtml(actorName) + ' بإرجاع ' + escapeHtml(targetName) + ' بنجاح');
+                ? ('<span class="er-announce-title-actor">' + escapeHtml(actorName) + '</span> أقصى اللاعب ' +
+                    '<span class="er-announce-title-target">' + escapeHtml(targetName) + '</span>')
+                : ('<span class="er-announce-title-actor">' + escapeHtml(actorName) + '</span> أرجع اللاعب ' +
+                    '<span class="er-announce-title-actor">' + escapeHtml(targetName) + '</span>');
         } else {
             titleHtml = isEliminate
-                ? ('تم إقصاء ' + escapeHtml(targetName) + ' بنجاح')
-                : ('تم إرجاع ' + escapeHtml(targetName) + ' بنجاح');
+                ? ('تم إقصاء <span class="er-announce-title-target">' + escapeHtml(targetName) + '</span> بنجاح')
+                : ('تم إرجاع <span class="er-announce-title-actor">' + escapeHtml(targetName) + '</span> بنجاح');
         }
 
         var actorCardHtml = data.chooser
-            ? announcePersonCardHtml(data.chooser, {
-                ringClass: 'er-announce-ring-green',
-                badgeClass: 'er-announce-badge-green',
-                badgeText: isEliminate ? '✅ أقصى' : '✅ رجّع'
-            })
+            ? announcePersonCardHtml(data.chooser, { ringClass: 'er-announce-ring-green', nameClass: 'er-announce-person-name-green' })
             : '';
         var targetCardHtml = isEliminate
-            ? announcePersonCardHtml(data.target, {
-                ringClass: 'er-announce-ring-red er-announce-ring-desaturate',
-                badgeClass: 'er-announce-badge-red',
-                badgeText: '❌ انقصى'
-            })
-            : announcePersonCardHtml(data.target, {
-                ringClass: 'er-announce-ring-green',
-                badgeClass: 'er-announce-badge-green',
-                badgeText: '💚 رجع'
-            });
+            ? announcePersonCardHtml(data.target, { ringClass: 'er-announce-ring-red', nameClass: 'er-announce-person-name-red', vanish: true })
+            : announcePersonCardHtml(data.target, { ringClass: 'er-announce-ring-green', nameClass: 'er-announce-person-name-green' });
 
-        // The 💀 emoji between the two cards represents elimination —
-        // eliminate case only (doesn't make sense for revive, so it's omitted there).
-        var vsEmojiHtml = isEliminate ? '<span class="er-announce-vs-emoji">💀</span>' : '';
+        // ⚔️ between the two cards, matching the design spec exactly —
+        // eliminate case only (doesn't make sense for revive, so it's
+        // omitted there, same as the old 💀 emoji before it).
+        var vsEmojiHtml = isEliminate ? '<span class="er-announce-vs-emoji">⚔️</span>' : '';
         box.className = 'er-announce-box ' + (isEliminate ? 'er-announce-eliminate' : 'er-announce-revive');
         box.innerHTML =
             '<div class="er-announce-title">' + titleHtml + '</div>' +
-            '<div class="er-announce-row">' + actorCardHtml + vsEmojiHtml + targetCardHtml + '</div>';
+            (actorCardHtml || targetCardHtml ?
+                '<div class="er-announce-row">' + actorCardHtml + vsEmojiHtml + targetCardHtml + '</div>' : '');
 
         overlay.style.display = 'flex';
 
+        // 5.2s total (matches the design spec exactly): the card sits
+        // still for 3s, then the eliminated side's er-announce-ring-vanish
+        // animation (3s delay, 2s duration — see the CSS above) plays out
+        // over the last 2.2s before this closes it.
         window.setTimeout(function () {
             overlay.style.display = 'none';
             box.className = '';
             if (typeof onDone === 'function') onDone();
-        }, 3000);
+        }, 5200);
     }
 
     // showResultAnnouncement() no longer uses this function (replaced by
@@ -2515,17 +2527,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * Person card for the result-announcement tab (colored ring around the
-     * photo + role badge pill + name). See showResultAnnouncement() above
-     * for full context.
-     * @param {Object} opts - {ringClass, badgeClass, badgeText}
+     * Person card for the result-announcement ("reveal") card — colored
+     * ring around the photo + name, matching the design spec exactly.
+     * @param {Object} opts - {ringClass, nameClass, vanish}
      */
     function announcePersonCardHtml(player, opts) {
         opts = opts || {};
         return '<div class="er-announce-person-card">' +
-            '<div class="er-announce-ring ' + (opts.ringClass || '') + '">' + ringAvatarHtml(player) + '</div>' +
-            '<div class="er-announce-role-badge ' + (opts.badgeClass || '') + '">' + (opts.badgeText || '') + '</div>' +
-            '<div class="er-announce-person-name">' + escapeHtml(playerLabel(player)) + '</div>' +
+            '<div class="er-announce-ring ' + (opts.ringClass || '') + (opts.vanish ? ' er-announce-ring-vanish' : '') + '">' +
+                ringAvatarHtml(player) +
+            '</div>' +
+            '<div class="er-announce-person-name ' + (opts.nameClass || '') + '">' + escapeHtml(playerLabel(player)) + '</div>' +
             '</div>';
     }
 
