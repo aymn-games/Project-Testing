@@ -887,7 +887,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * scroll for the card grid only — PLAYER-CARD-STANDARDS.md §4)
              * is unchanged, only the background/border.
              */
+            // overflow-y:auto safety net — same reasoning as the settings
+            // overlay below: if 94vh/94dvh ever computes taller than the
+            // real visible viewport on a given device, the bottom action
+            // row must still be reachable by scrolling the page, not
+            // permanently stuck off-screen.
             '#agp-shell-overlay:has(#agp-shell-box.agp-lobby-box){padding:0 !important;',
+            'overflow-y:auto !important;',
             'background:',
             'radial-gradient(60% 45% at 18% 8%,rgba(122,63,212,.22),transparent 70%),',
             'radial-gradient(50% 40% at 88% 40%,rgba(214,168,60,.14),transparent 72%),',
@@ -922,8 +928,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // to 1120px (this screen's own value in the design spec,
             // matching Lobby.dc.html's max-width:1120px) lets it use a
             // tablet or laptop's width properly instead of stopping short at 900.
+            // 94vh -> 94dvh override for the same reason as the settings
+            // screen's 100dvh comment further down: vh alone can be taller
+            // than the real visible viewport on mobile/tablet Safari while
+            // the browser chrome is showing.
             '#agp-shell-box.agp-lobby-box{width:min(94vw,1120px) !important;',
             'max-width:min(94vw,1120px) !important;height:min(94vh,980px) !important;max-height:94vh !important;',
+            'height:min(94dvh,980px) !important;max-height:94dvh !important;',
             'display:flex !important;flex-direction:column !important;overflow:hidden !important;}',
             '#agp-shell-box.agp-lobby-box > h2,',
             '#agp-shell-box.agp-lobby-box > .er-lobby-subtitle,',
@@ -1084,8 +1095,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * .er-settings-initial-box — no effect on the mid-match drawer
              * or the lobby screen.
              * ================================================================ */
+            // overflow-y:auto (not hidden) is a safety net: the box below
+            // is sized to fit the viewport exactly, so this shouldn't need
+            // to scroll in practice, but on a device where the viewport
+            // height is miscalculated (see the 100dvh comment below) the
+            // footer/connect button must still be reachable by scrolling
+            // the page itself, instead of being permanently stuck off-screen.
             '#agp-shell-overlay:has(#agp-shell-box.er-settings-initial-box){padding:0 !important;',
-            'align-items:flex-start !important;justify-content:center !important;overflow:hidden !important;',
+            'align-items:flex-start !important;justify-content:center !important;overflow-y:auto !important;',
             'background:',
             'radial-gradient(60% 45% at 18% 8%,rgba(122,63,212,.22),transparent 70%),',
             'radial-gradient(50% 40% at 88% 40%,rgba(70,40,150,.22),transparent 72%),',
@@ -1101,9 +1118,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // comfortably (this is text/form content, not a photo grid)
             // but actually uses a tablet or small-laptop's width instead
             // of abandoning it.
+            // 100vh on mobile/tablet Safari is the *largest* possible
+            // viewport (as if the address/tab bar were hidden), not the
+            // actually-visible area — so a box sized off plain 100vh can
+            // be taller than what's really on screen while the browser
+            // chrome is showing, pushing the footer/connect button below
+            // the visible fold. 100dvh (dynamic viewport height) tracks
+            // the real visible height instead; declared after the 100vh
+            // line so older browsers that don't understand dvh simply
+            // ignore it and keep the vh-based fallback above.
             '[id^="agp-shell-box"].er-settings-initial-box{width:min(1040px,94vw) !important;',
             'max-width:min(1040px,94vw) !important;height:calc(100vh - 70px) !important;',
-            'max-height:calc(100vh - 70px) !important;margin:70px 0 0 !important;overflow:visible !important;',
+            'height:calc(100dvh - 70px) !important;',
+            'max-height:calc(100vh - 70px) !important;max-height:calc(100dvh - 70px) !important;',
+            'margin:70px 0 0 !important;overflow:visible !important;',
             'display:flex !important;flex-direction:column !important;align-items:center !important;',
             'column-count:auto !important;column-gap:0 !important;',
             'background:none !important;border:none !important;border-radius:0 !important;',
