@@ -855,15 +855,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * :not(.er-settings-initial-box) — the initial settings
              * screen has its own complete toggle redesign below (plain
              * knob, no ✓/✕ glyph, sized/positioned for its own 50x28
-             * track). Before this exclusion, this rule's :has()-based
-             * selector was more specific than that redesign's, so it won
-             * every conflicting declaration (content, size, position, the
-             * -20px travel distance) — with a track/knob sized for this
-             * rule's own layout, that pushed the knob to a negative
-             * offset that visibly spilled outside the switch on the left
-             * when checked ("the button's shape goes outside its frame").
-             * Excluding this screen here is simpler and safer than trying
-             * to out-specificity a :has() selector for every property.
+             * track), so this older mid-match-drawer styling must never
+             * apply there. The two rule sets are scoped to disjoint states
+             * of the same shared box (a plain :not() exclusion, not a
+             * specificity contest), so which one is more specific never
+             * matters — only one of them can ever match a given element.
              */
             '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="friendRevivalEnabled"]) .agp-toggle-track,',
             '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="giftRevivalEnabled"]) .agp-toggle-track{',
@@ -893,16 +889,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * styles, scoped by the same ID + !important — so it only
              * affects this game's page, never any other game sharing that
              * box. */
-            // :not(.er-settings-initial-box) — this fallback must not
-            // outrank the settings screen's own background:none rule
-            // below. Both are !important, and since that rule now also
-            // matches via a same-specificity [id^="agp-shell-box"]
-            // attribute selector (needed so the connecting-layer's ghost
-            // snapshot, id="agp-shell-box-ghost", keeps its styling too —
-            // see the connecting-layer comment further down), it can no
-            // longer out-specificity a plain #agp-shell-box ID selector.
-            // Excluding the class here is simpler than re-adding an ID
-            // variant to every one of those rules.
+            // :not(.er-settings-initial-box) — the settings screen sets
+            // its own background:none below via a plain class selector
+            // (.er-settings-initial-box, matching both the real box and
+            // its connecting-layer ghost clone — see the connecting-layer
+            // comment further down). This exclusion keeps the two rules
+            // scoped to disjoint states instead of relying on specificity.
             '#agp-shell-box:not(.er-settings-initial-box){background:linear-gradient(180deg,#5F3976,#211528) !important;}',
             /* Lobby without a surrounding box — the title/hint line/card
              * grid/bottom bar float directly over the page's aurora
@@ -1125,7 +1117,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // height is miscalculated (see the 100dvh comment below) the
             // footer/connect button must still be reachable by scrolling
             // the page itself, instead of being permanently stuck off-screen.
-            '#agp-shell-overlay:has(#agp-shell-box.er-settings-initial-box){padding:0 !important;',
+            '#agp-shell-overlay:has(.er-settings-initial-box){padding:0 !important;',
             'align-items:flex-start !important;justify-content:center !important;overflow-y:auto !important;',
             'background:',
             'radial-gradient(60% 45% at 18% 8%,rgba(122,63,212,.22),transparent 70%),',
@@ -1151,7 +1143,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // the real visible height instead; declared after the 100vh
             // line so older browsers that don't understand dvh simply
             // ignore it and keep the vh-based fallback above.
-            '[id^="agp-shell-box"].er-settings-initial-box{width:min(1040px,94vw) !important;',
+            '.er-settings-initial-box{width:min(1040px,94vw) !important;',
             'max-width:min(1040px,94vw) !important;height:calc(100vh - 70px) !important;',
             'height:calc(100dvh - 70px) !important;',
             'max-height:calc(100vh - 70px) !important;max-height:calc(100dvh - 70px) !important;',
@@ -1161,8 +1153,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'background:none !important;border:none !important;border-radius:0 !important;',
             'box-shadow:none !important;padding:16px 4px 0 !important;box-sizing:border-box !important;',
             'font-family:"IBM Plex Sans Arabic",sans-serif !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box *{font-family:"IBM Plex Sans Arabic",sans-serif !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box > h2{flex:0 0 auto !important;margin:0 0 4px !important;',
+            '.er-settings-initial-box *{font-family:"IBM Plex Sans Arabic",sans-serif !important;}',
+            '.er-settings-initial-box > h2{flex:0 0 auto !important;margin:0 0 4px !important;',
             'max-width:none !important;width:100% !important;font-size:clamp(24px,3.6vw,40px) !important;',
             'font-weight:900 !important;line-height:1.4 !important;text-align:center !important;',
             'padding:0 !important;border-bottom:none !important;position:static;',
@@ -1171,147 +1163,147 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'background-size:200% 100% !important;-webkit-background-clip:text !important;',
             'background-clip:text !important;-webkit-text-fill-color:transparent !important;',
             'animation:er-settings-wave 9s linear infinite !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box > h2::after{content:none !important;}',
+            '.er-settings-initial-box > h2::after{content:none !important;}',
             '@keyframes er-settings-wave{0%{background-position:0% 50%}100%{background-position:200% 50%}}',
 
             // Scroll area — flex:1 so the header/footer stay put and only
             // the fields scroll; scrollbar hidden (still scrolls via touch/
             // wheel), fade-out + thin glow line hint more content below.
-            '[id^="agp-shell-box"].er-settings-initial-box .er-settings-scroll{position:relative;',
+            '.er-settings-initial-box .er-settings-scroll{position:relative;',
             'flex:1 1 auto;min-height:0;width:100%;margin-top:18px;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .er-settings-scroll-inner{box-sizing:border-box;',
+            '.er-settings-initial-box .er-settings-scroll-inner{box-sizing:border-box;',
             'height:100%;overflow-y:auto;display:flex;flex-direction:column;gap:16px;',
             'padding:0 2px 26px;scrollbar-width:none;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .er-settings-scroll-inner::-webkit-scrollbar{',
+            '.er-settings-initial-box .er-settings-scroll-inner::-webkit-scrollbar{',
             'display:none;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .er-settings-fade{position:absolute;inset:auto 0 0;',
+            '.er-settings-initial-box .er-settings-fade{position:absolute;inset:auto 0 0;',
             'height:44px;background:linear-gradient(transparent,#08060d);pointer-events:none;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .er-settings-glowline{position:absolute;inset:auto 0 0;',
+            '.er-settings-initial-box .er-settings-glowline{position:absolute;inset:auto 0 0;',
             'height:1px;background:linear-gradient(90deg,transparent,rgba(178,140,245,.55),transparent);',
             'pointer-events:none;}',
 
             // Plain rows — label right, control left, spaced only by the
             // scroll wrapper's gap (no divider lines, matching the design).
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-shell-field,',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-shell-row{border-bottom:none !important;',
+            '.er-settings-initial-box .agp-shell-field,',
+            '.er-settings-initial-box .agp-shell-row{border-bottom:none !important;',
             'padding:2px 0 !important;max-width:none !important;margin:0 !important;display:flex !important;',
             'justify-content:space-between !important;align-items:center !important;width:100% !important;',
             'flex-wrap:wrap !important;gap:12px !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-shell-field{flex-direction:column !important;',
+            '.er-settings-initial-box .agp-shell-field{flex-direction:column !important;',
             'align-items:flex-start !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-shell-field label,',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-shell-row-label{font-size:16px !important;',
+            '.er-settings-initial-box .agp-shell-field label,',
+            '.er-settings-initial-box .agp-shell-row-label{font-size:16px !important;',
             'font-weight:600 !important;color:#f4f2fb !important;text-align:right !important;',
             'font-family:"Noto Kufi Arabic",sans-serif !important;}',
 
             // Username/keyword text inputs — capsule pill, centered text.
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-shell-field input[type=text]{',
+            '.er-settings-initial-box .agp-shell-field input[type=text]{',
             'max-width:none !important;width:100% !important;background:rgba(255,255,255,.04) !important;',
             'border:1px solid rgba(255,255,255,.14) !important;border-radius:999px !important;',
             'padding:13px 18px !important;font-size:15px !important;font-weight:400 !important;',
             'text-align:center !important;transition:border-color .25s !important;color:#f4f2fb !important;',
             'box-sizing:border-box !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-shell-field input[type=text]:focus,',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-shell-field input[type=text]:not(:placeholder-shown){',
+            '.er-settings-initial-box .agp-shell-field input[type=text]:focus,',
+            '.er-settings-initial-box .agp-shell-field input[type=text]:not(:placeholder-shown){',
             'border-color:rgba(178,140,245,.6) !important;outline:none !important;}',
 
             // Pill groups/buttons — capsule track, solid purple when active.
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-pill-group{gap:8px !important;padding:4px !important;',
+            '.er-settings-initial-box .agp-pill-group{gap:8px !important;padding:4px !important;',
             'border-radius:999px !important;',
             'background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02)) !important;',
             'border:1px solid rgba(255,255,255,.12) !important;',
             'box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 3px 10px -6px rgba(0,0,0,.6) !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-pill-btn{background:transparent !important;',
+            '.er-settings-initial-box .agp-pill-btn{background:transparent !important;',
             'border:none !important;color:#a79fbb !important;padding:10px 16px !important;',
             'border-radius:999px !important;font-size:13.5px !important;font-weight:600 !important;',
             'transition:.25s !important;white-space:nowrap;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-pill-btn.agp-pill-active{',
+            '.er-settings-initial-box .agp-pill-btn.agp-pill-active{',
             'background:#7a3fd4 !important;color:#f3ecff !important;',
             'box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 4px 10px -4px rgba(122,63,212,.7) !important;}',
 
             // Max-players counter — +/- buttons stay hidden (existing
             // behavior: type the number directly), pill-shaped field.
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-shell-counter-row button{display:none !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-shell-counter-row{justify-content:flex-end !important;',
+            '.er-settings-initial-box .agp-shell-counter-row button{display:none !important;}',
+            '.er-settings-initial-box .agp-shell-counter-row{justify-content:flex-end !important;',
             'flex:1;max-width:220px;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-count-input{',
+            '.er-settings-initial-box .agp-count-input{',
             'background:rgba(255,255,255,.04) !important;border:1px solid rgba(255,255,255,.14) !important;',
             'border-radius:999px !important;padding:13px 18px !important;width:100% !important;',
             'height:auto !important;color:#f4f2fb !important;font-size:15px !important;',
             'font-weight:400 !important;outline:none !important;text-align:center !important;',
             'box-sizing:border-box !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-count-input:focus{',
+            '.er-settings-initial-box .agp-count-input:focus{',
             'border-color:rgba(178,140,245,.55) !important;}',
 
             // Toggle switch — classic pill (50x28, 20px knob, 22px travel),
             // solid purple when on. Overrides the green ✓/✕ variant defined
             // above for this screen only (higher specificity via the ID).
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-toggle-switch{width:50px !important;',
+            '.er-settings-initial-box .agp-toggle-switch{width:50px !important;',
             'height:28px !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-toggle-track{',
+            '.er-settings-initial-box .agp-toggle-track{',
             'background:rgba(255,255,255,.07) !important;border:1px solid rgba(255,255,255,.14) !important;',
             'box-shadow:none !important;border-radius:999px !important;',
             'transition:background .25s,border-color .25s !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-toggle-track::before{content:none !important;',
+            '.er-settings-initial-box .agp-toggle-track::before{content:none !important;',
             'background:#8f88a3 !important;box-shadow:none !important;width:20px !important;',
             'height:20px !important;left:3px !important;top:3px !important;border-radius:50% !important;',
             'transition:transform .25s,background .25s !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-toggle-switch input:checked + .agp-toggle-track{',
+            '.er-settings-initial-box .agp-toggle-switch input:checked + .agp-toggle-track{',
             'background:#7a3fd4 !important;border-color:#7a3fd4 !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-toggle-switch input:checked + .agp-toggle-track::before{',
+            '.er-settings-initial-box .agp-toggle-switch input:checked + .agp-toggle-track::before{',
             'background:#f3ecff !important;transform:translateX(-22px) !important;}',
 
             // "Card" sections (revive-by-gift, friend-revival) — bordered
             // rounded panel, built by wrapping the row(s) in .er-settings-card
             // inside layoutInitialSettingsFields().
-            '[id^="agp-shell-box"].er-settings-initial-box .er-settings-card{width:100%;',
+            '.er-settings-initial-box .er-settings-card{width:100%;',
             'padding:16px 18px;border-radius:20px;border:1px solid rgba(255,255,255,.09);',
             'background:rgba(255,255,255,.03);box-sizing:border-box;display:flex;',
             'flex-direction:column;gap:12px;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .er-settings-card > .agp-shell-row,',
-            '[id^="agp-shell-box"].er-settings-initial-box .er-settings-card > .agp-shell-field{padding:0 !important;}',
+            '.er-settings-initial-box .er-settings-card > .agp-shell-row,',
+            '.er-settings-initial-box .er-settings-card > .agp-shell-field{padding:0 !important;}',
 
             // Conditional fields (revive count + gift picker) — shown only
             // while the revive toggle is on, separated by a thin top divider
             // instead of the previous side accent bar.
-            '[id^="agp-shell-box"].er-settings-initial-box .er-conditional-section{display:flex !important;',
+            '.er-settings-initial-box .er-conditional-section{display:flex !important;',
             'flex-direction:column !important;gap:14px !important;margin-top:4px !important;',
             'padding-top:16px !important;border-top:1px solid rgba(255,255,255,.07) !important;',
             'border-right:none !important;padding-right:0 !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .er-conditional-section .agp-shell-row{',
+            '.er-settings-initial-box .er-conditional-section .agp-shell-row{',
             'border-bottom:none !important;padding:0 !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .er-gift-name-row{flex-direction:column !important;',
+            '.er-settings-initial-box .er-gift-name-row{flex-direction:column !important;',
             'align-items:flex-start !important;gap:8px !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .er-gift-name-row .agp-shell-row-label{order:-1;}',
+            '.er-settings-initial-box .er-gift-name-row .agp-shell-row-label{order:-1;}',
 
             // Gift picker trigger — dashed-border button spanning the row,
             // matching the design's "اختيار هدية من هدايا تيك توك" control.
             // The popup itself (all real TikTok gifts) is unchanged.
-            '[id^="agp-shell-box"].er-settings-initial-box .er-gift-box-wrap{display:flex !important;',
+            '.er-settings-initial-box .er-gift-box-wrap{display:flex !important;',
             'width:100% !important;background:none !important;padding:0 !important;border:none !important;',
             'border-radius:0 !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .er-gift-box-wrap .agp-modal-trigger-btn{',
+            '.er-settings-initial-box .er-gift-box-wrap .agp-modal-trigger-btn{',
             'display:flex !important;width:100% !important;align-items:center !important;',
             'justify-content:space-between !important;gap:12px !important;',
             'background:rgba(122,63,212,.07) !important;border:1px dashed rgba(178,140,245,.4) !important;',
             'color:#e7e9ee !important;padding:12px 16px !important;border-radius:16px !important;',
             'font-size:13.5px !important;font-weight:400 !important;max-width:none !important;',
             'overflow:visible !important;text-overflow:clip !important;white-space:normal !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .er-gift-name-icon{width:16px !important;',
+            '.er-settings-initial-box .er-gift-name-icon{width:16px !important;',
             'height:16px !important;flex-shrink:0 !important;}',
 
             // Caption under the "wheel shape" pills (enhanceWheelModeField).
-            '[id^="agp-shell-box"].er-settings-initial-box .er-field-note{color:#8f88a3 !important;',
+            '.er-settings-initial-box .er-field-note{color:#8f88a3 !important;',
             'text-align:right !important;}',
 
             // Footer — the two bottom buttons side by side (primary button
             // on the right, back link on the left, per the design), instead
             // of the previous stacked column-spanning blocks.
-            '[id^="agp-shell-box"].er-settings-initial-box .er-settings-footer{flex:0 0 auto !important;',
+            '.er-settings-initial-box .er-settings-footer{flex:0 0 auto !important;',
             'width:100% !important;display:flex !important;flex-wrap:wrap !important;',
             'align-items:center !important;justify-content:center !important;',
             'gap:clamp(16px,3vw,36px) !important;padding:20px 0 26px !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-shell-btn-connect{',
+            '.er-settings-initial-box .agp-shell-btn-connect{',
             'order:1;column-span:none !important;display:inline-flex !important;',
             'align-items:center !important;justify-content:center !important;width:auto !important;',
             'max-width:none !important;margin:0 !important;padding:16px 42px !important;',
@@ -1320,14 +1312,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'letter-spacing:0.4px;font-family:"Noto Kufi Arabic",sans-serif !important;',
             'box-shadow:0 1px 0 rgba(255,255,255,.25) inset,0 22px 46px -24px rgba(122,63,212,1) !important;',
             'transition:background .25s,transform .25s !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .agp-shell-btn-connect:hover{',
+            '.er-settings-initial-box .agp-shell-btn-connect:hover{',
             'background:#9a6cf0 !important;transform:translateY(-2px);}',
-            '[id^="agp-shell-box"].er-settings-initial-box .er-back-to-platform-btn{',
+            '.er-settings-initial-box .er-back-to-platform-btn{',
             'order:2;column-span:none !important;display:inline-flex !important;',
             'align-items:center !important;width:auto !important;margin:0 !important;padding:0 !important;',
             'border:none !important;background:transparent !important;font-size:14px !important;',
             'font-weight:400 !important;color:#a79fbb !important;transition:color .25s !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box .er-back-to-platform-btn:hover{',
+            '.er-settings-initial-box .er-back-to-platform-btn:hover{',
             'color:#d3bcff !important;background:transparent !important;}',
 
             /* ================================================================
@@ -3803,11 +3795,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var kInput = el('agp-keyword');
         _erConnKeywordBackup = kInput ? kInput.value : '';
         var ghost = box.cloneNode(true);
-        // A distinct id (not a duplicate of the real box's, which would
-        // confuse getElementById callers) that still matches this game's
-        // [id^="agp-shell-box"] design-scoping selectors, so the cloned
-        // snapshot keeps its styling instead of rendering as bare
-        // unstyled HTML around the connecting spinner.
+        // A distinct id, only so it never duplicates the real box's id and
+        // confuses a getElementById('agp-shell-box') call elsewhere. The
+        // settings-screen design CSS is scoped purely by the
+        // .er-settings-initial-box class (see injectStageStyles), which
+        // cloneNode(true) already copies onto this ghost — so it keeps its
+        // styling regardless of what id it carries.
         ghost.id = 'agp-shell-box-ghost';
         var layer = ensureConnLayer();
         var backdrop = layer.querySelector('.er-conn-backdrop');
