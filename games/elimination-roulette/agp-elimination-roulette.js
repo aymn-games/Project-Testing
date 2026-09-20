@@ -306,6 +306,27 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return null;
     }
 
+    /**
+     * Reads the stream connection verified once on the games-library page
+     * (games.html's "اتصل بالبث" widget) so this game's settings screen
+     * doesn't need its own username field — see
+     * enhanceConnectionStatusField() below. Written directly to
+     * localStorage by games.html (it deliberately loads none of the AGP.*
+     * scripts — see its own comment there), using the same 'agp:' prefix
+     * and JSON.stringify format as js/agp-storage-manager.js so both sides
+     * agree on the format without either one depending on the other.
+     */
+    var STREAM_CONNECTION_STORAGE_KEY = 'agp:agp-stream-connection';
+    function getSavedStreamConnection() {
+        try {
+            var raw = window.localStorage.getItem(STREAM_CONNECTION_STORAGE_KEY);
+            if (!raw) return null;
+            var data = JSON.parse(raw);
+            if (!data || typeof data.username !== 'string' || !data.username) return null;
+            return data;
+        } catch (e) { return null; }
+    }
+
     // "Zain" font — a clearer font for the settings screens/tab titles and
     // elsewhere. Loaded only here (never touches the shared
     // js/agp-game-shell.js or any other game), guarded by the element's id
@@ -1165,6 +1186,27 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'animation:er-settings-wave 9s linear infinite !important;}',
             '.er-settings-initial-box > h2::after{content:none !important;}',
             '@keyframes er-settings-wave{0%{background-position:0% 50%}100%{background-position:200% 50%}}',
+
+            // Stream-connection status pill (replaces the username text
+            // field — see enhanceConnectionStatusField()). Sits above the
+            // title as its own flex item (box is flex-direction:column, so
+            // DOM order alone puts it there — no need for an "order" hack).
+            '.er-settings-initial-box .er-conn-status-badge{flex:0 0 auto;',
+            'display:inline-flex;align-items:center;gap:9px;margin:0 0 12px;padding:7px 16px;',
+            'border-radius:999px;font-size:12.5px;font-family:"IBM Plex Sans Arabic",sans-serif;',
+            'border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#cfc7e2;}',
+            '.er-settings-initial-box .er-conn-status-badge.er-conn-status-connected{',
+            'border-color:rgba(126,224,166,.35);background:rgba(126,224,166,.08);}',
+            '.er-settings-initial-box .er-conn-status-dot{width:8px;height:8px;border-radius:50%;',
+            'background:#8f88a3;flex:none;}',
+            '.er-settings-initial-box .er-conn-status-badge.er-conn-status-connected .er-conn-status-dot{',
+            'background:#7ee0a6;animation:er-lobby-blink 1.8s ease-in-out infinite;}',
+            '.er-settings-initial-box .er-conn-status-user{font-family:"Noto Kufi Arabic",sans-serif;',
+            'font-weight:700;color:#f4f2fb;direction:ltr;}',
+            '.er-settings-initial-box .er-conn-status-link{color:#b28cf5;font-weight:700;text-decoration:none;}',
+            '.er-settings-initial-box .er-conn-status-link:hover{color:#d3bcff;}',
+            '.er-settings-initial-box .agp-shell-btn-connect:disabled{opacity:.45 !important;',
+            'cursor:not-allowed !important;transform:none !important;}',
 
             // Scroll area — flex:1 so the header/footer stay put and only
             // the fields scroll; scrollbar hidden (still scrolls via touch/
@@ -3234,6 +3276,65 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * (e.g. any toggle click), so this runs again each time and re-groups
      * the fresh elements to match their current conditional visibility.
      */
+    /**
+     * Replaces the shared file's username text field with a small
+     * connection-status pill reflecting the stream connection already
+     * verified once on the games-library page (games.html) — the user
+     * shouldn't have to retype it per game. The username field itself is
+     * left in the DOM (just hidden) rather than removed, since
+     * handleConnectClick() in js/agp-game-shell.js reads its .value
+     * directly; this fills that value from the saved connection instead of
+     * requiring input.
+     *
+     * Runs on every enhanceSettingsScreen() tick (not gated behind
+     * layoutInitialSettingsFields()'s one-time layout guard) so it can also
+     * react to a 'storage' event fired after the games-library tab
+     * connects while this settings screen is already open — see the
+     * addEventListener('storage', ...) call further below. Every operation
+     * here is a cheap, idempotent DOM update, safe to repeat on each tick.
+     */
+    function enhanceConnectionStatusField(box) {
+        var usernameInput = el('agp-tiktok-username');
+        if (!usernameInput) return; // not the initial settings screen
+        var usernameField = usernameInput.closest('.agp-shell-field');
+        // setProperty(...,'important') — a plain .style.display='none' loses
+        // to this screen's own '.agp-shell-field{display:flex !important}'
+        // rule (see injectStageStyles); an inline !important always outranks
+        // an author-stylesheet !important rule, so this is the one way to
+        // actually hide it from here.
+        if (usernameField) usernameField.style.setProperty('display', 'none', 'important');
+
+        var saved = getSavedStreamConnection();
+        if (saved) usernameInput.value = saved.username;
+
+        var connectBtn = el('agp-connect-btn');
+        if (connectBtn) connectBtn.disabled = !saved;
+
+        var badge = box.querySelector('.er-conn-status-badge');
+        if (!badge) {
+            badge = document.createElement('div');
+            badge.className = 'er-conn-status-badge';
+            box.insertBefore(badge, box.firstChild);
+        }
+        badge.classList.toggle('er-conn-status-connected', !!saved);
+        badge.innerHTML = saved ?
+            '<span class="er-conn-status-dot"></span>' +
+            '<span>متصل بالبث</span>' +
+            '<span class="er-conn-status-user">@' + escapeHtml(saved.username) + '</span>' :
+            '<span class="er-conn-status-dot"></span>' +
+            '<span>لم يتم الاتصال بالبث بعد</span>' +
+            '<a class="er-conn-status-link" href="../../games.html">اتصل من مكتبة الألعاب ↗</a>';
+    }
+
+    // Lets the settings screen react live if the games-library tab
+    // connects (or disconnects) while this screen is already open, instead
+    // of only picking it up on the next full page load.
+    window.addEventListener('storage', function (e) {
+        if (e.key !== STREAM_CONNECTION_STORAGE_KEY) return;
+        var box = el('agp-shell-box');
+        if (box && box.classList.contains('er-settings-initial-box')) enhanceConnectionStatusField(box);
+    });
+
     function layoutInitialSettingsFields(box) {
         var connectBtn = el('agp-connect-btn');
         if (!connectBtn) return;
@@ -3364,6 +3465,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (isInitial) {
             layoutInitialSettingsFields(box);
             enhanceGiftNameBox(box);
+            enhanceConnectionStatusField(box);
         }
         if (box.querySelector('.er-back-to-platform-btn')) return;
         var connectBtn = box.querySelector('.agp-shell-btn-connect');

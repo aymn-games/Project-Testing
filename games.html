@@ -693,6 +693,29 @@ document.addEventListener('DOMContentLoaded', async function() {
   var connectUsername = '';
   var connectErrorMsg = '';
 
+  // Lets a game page (currently only elimination-roulette — see its own
+  // getSavedStreamConnection()) reuse this verified username instead of
+  // asking the streamer to retype it. This page deliberately loads none of
+  // the AGP.* scripts (see the comment above), so it writes localStorage
+  // directly instead of going through js/agp-storage-manager.js — but uses
+  // that same module's 'agp:' key prefix and JSON.stringify format, so
+  // either side can read what the other wrote without depending on it.
+  var STREAM_CONNECTION_STORAGE_KEY = 'agp:agp-stream-connection';
+  function saveVerifiedStreamConnection(username) {
+    try {
+      localStorage.setItem(STREAM_CONNECTION_STORAGE_KEY, JSON.stringify({
+        platform: 'tiktok', username: username, connectedAt: Date.now()
+      }));
+      // Also feeds js/agp-game-shell.js's own pre-existing per-device
+      // username memory (AGP.storageManager key 'agp-last-username'),
+      // used to prefill this same field on every other game.
+      localStorage.setItem('agp:agp-last-username', JSON.stringify(username));
+    } catch (e) {}
+  }
+  function clearVerifiedStreamConnection() {
+    try { localStorage.removeItem(STREAM_CONNECTION_STORAGE_KEY); } catch (e) {}
+  }
+
   function ensureConnectStyles(){
     if (document.getElementById('agp-connect-styles')) return;
     var style = document.createElement('style');
@@ -851,21 +874,25 @@ document.addEventListener('DOMContentLoaded', async function() {
           renderConnectUI();
         } else if (status === 'connected') {
           connectState = 'connected';
+          saveVerifiedStreamConnection(connectUsername);
           renderConnectUI();
         } else if (status === 'error') {
           connectState = 'error';
           connectErrorMsg = envelope.payload.message || 'الحساب غير موجود أو غير مباشر الآن — تأكد إنه يبث فعلاً';
+          clearVerifiedStreamConnection();
           closeConnectSocketSilently();
           renderConnectUI();
         } else if (status === 'disconnected') {
           connectState = 'idle';
           connectUsername = '';
+          clearVerifiedStreamConnection();
           closeConnectSocketSilently();
           renderConnectUI();
         }
       } else if (envelope.type === 'error') {
         connectState = 'error';
         connectErrorMsg = envelope.payload.message || 'حدث خطأ أثناء الاتصال بالخادم';
+        clearVerifiedStreamConnection();
         closeConnectSocketSilently();
         renderConnectUI();
       }
@@ -875,6 +902,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (connectState === 'connecting' || connectState === 'connected') {
         connectState = 'error';
         connectErrorMsg = 'تعذر الوصول لخادم البث، حاول مرة ثانية';
+        clearVerifiedStreamConnection();
         renderConnectUI();
       }
     };
@@ -884,6 +912,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (connectState === 'connecting' || connectState === 'connected') {
         connectState = 'error';
         connectErrorMsg = 'انقطع الاتصال بالخادم';
+        clearVerifiedStreamConnection();
         renderConnectUI();
       }
     };
@@ -899,6 +928,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     connectState = 'idle';
     connectUsername = '';
     connectErrorMsg = '';
+    clearVerifiedStreamConnection();
     renderConnectUI();
   }
 
