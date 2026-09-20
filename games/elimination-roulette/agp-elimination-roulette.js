@@ -1330,7 +1330,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-settings-initial-box .agp-shell-field label,',
             '.er-settings-initial-box .agp-shell-row-label{font-size:16px !important;',
             'font-weight:600 !important;color:#f4f2fb !important;text-align:right !important;',
-            'font-family:"Noto Kufi Arabic",sans-serif !important;}',
+            'font-family:"Noto Kufi Arabic",sans-serif !important;display:flex !important;',
+            'flex-direction:column !important;align-items:flex-end !important;gap:3px !important;}',
 
             // Username/keyword text inputs — capsule pill, centered text.
             '.er-settings-initial-box .agp-shell-field input[type=text]{',
@@ -3610,7 +3611,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // rows from scratch on every render.
     function addFieldDescription(row, text) {
         if (!row) return;
-        var label = row.querySelector('.agp-shell-row-label, label');
+        var label = row.querySelector('.agp-shell-row-label') || row.querySelector('label');
         if (!label || label.querySelector('.er-field-desc')) return;
         var desc = document.createElement('span');
         desc.className = 'er-field-desc';
