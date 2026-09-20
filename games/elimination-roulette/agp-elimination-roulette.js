@@ -1408,38 +1408,50 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'font-family:"IBM Plex Sans Arabic",sans-serif;}',
 
             /* ================================================================
-             * Mid-match settings drawer — same layout as Russian
-             * Roulette/Tribe Roulette: slides in from the right edge, full
-             * height, instead of a centered box. See enhanceReopenedDrawer above.
+             * Mid-match settings drawer ("الإعدادات") — matches the design
+             * spec's settingsOpen modal exactly: a top-left anchored panel
+             * (was a right-edge full-height slide-in drawer before this
+             * redesign) with a segmented اللاعبون/الإعدادات tab control.
+             * See enhanceReopenedDrawer above. The "اللاعبون" tab keeps its
+             * existing search+status-filter (more capable than the spec's
+             * two static lists) — a real feature, not dropped just to
+             * match the simpler prototype — restyled only.
              * ================================================================ */
-            '#agp-shell-overlay:has(#agp-shell-box.er-inmatch-drawer){align-items:stretch !important;',
-            'justify-content:flex-end !important;padding:0 !important;}',
-            '#agp-shell-box.er-inmatch-drawer{position:fixed !important;top:0 !important;right:0 !important;',
-            'left:auto !important;width:400px !important;max-width:90vw !important;height:100vh !important;',
-            'max-height:100vh !important;border-radius:0 !important;margin:0 !important;',
-            'background:rgba(15,8,20,0.96) !important;border:none !important;',
-            'border-inline-start:1px solid rgba(0,215,255,0.35) !important;display:flex !important;',
-            'flex-direction:column !important;overflow:hidden !important;padding:0 !important;',
-            'animation:er-drawer-in .3s cubic-bezier(0.32,0.72,0,1);}',
-            '@keyframes er-drawer-in{from{transform:translateX(105%);}to{transform:translateX(0);}}',
+            '#agp-shell-overlay:has(#agp-shell-box.er-inmatch-drawer){align-items:flex-start !important;',
+            'justify-content:flex-start !important;padding:74px 14px 14px !important;}',
+            '#agp-shell-box.er-inmatch-drawer{position:relative !important;top:auto !important;',
+            'right:auto !important;left:auto !important;width:350px !important;max-width:94vw !important;',
+            'height:900px !important;max-height:calc(100vh - 74px) !important;',
+            'max-height:calc(100dvh - 74px) !important;border-radius:20px !important;margin:0 !important;',
+            'background:rgba(13,11,22,.97) !important;border:1px solid rgba(178,140,245,.3) !important;',
+            'display:flex !important;flex-direction:column !important;overflow:hidden !important;',
+            'padding:0 !important;box-shadow:0 40px 90px -50px rgba(0,0,0,1) !important;',
+            'animation:er-select-fadein .2s ease both;}',
             '.er-drawer-header{display:flex;align-items:center;justify-content:space-between;',
             'padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.08);flex:none;}',
-            '.er-drawer-header h2{font-size:1em !important;font-weight:900;margin:0 !important;',
-            'padding:0 !important;color:#fff;}',
-            '.er-drawer-tabs{display:flex;gap:6px;padding:10px 18px 0;flex:none;}',
-            '.er-drawer-tabs button{flex:1;padding:8px 0;border-radius:8px 8px 0 0;border:none;cursor:pointer;',
-            'background:transparent;color:#d9a9c6;font-family:inherit;font-weight:800;font-size:0.82em;',
-            'border-bottom:2px solid transparent;}',
-            '.er-drawer-tabs button.er-tab-active{color:#fff;border-bottom-color:#00D7FF;',
-            'background:rgba(229,0,127,0.08);}',
-            '.er-drawer-body,.er-drawer-players-tab{flex:1;min-height:0;overflow-y:auto;padding:14px 18px 18px;}',
+            '.er-drawer-header h2{font-size:15.5px !important;font-weight:700 !important;margin:0 !important;',
+            'padding:0 !important;font-family:"Noto Kufi Arabic",sans-serif !important;color:#f4f2fb;}',
+            '.er-drawer-header #agp-settings-close-btn{position:static !important;width:30px;height:30px;',
+            'display:flex;align-items:center;justify-content:center;border-radius:9px;',
+            'border:1px solid rgba(255,255,255,.14) !important;background:transparent !important;',
+            'color:#cfc7e2 !important;font-size:15px !important;text-shadow:none !important;}',
+            '.er-drawer-tabs{display:flex;gap:6px;padding:12px 16px 0;flex:none;}',
+            '.er-drawer-tabs button{flex:1;padding:10px 8px;border:0;cursor:pointer;border-radius:12px;',
+            'font-family:"IBM Plex Sans Arabic",sans-serif;font-size:12.5px;font-weight:600;',
+            'background:rgba(255,255,255,.04);color:#a79fbb;transition:background .2s,color .2s;}',
+            '.er-drawer-tabs button.er-tab-active{background:#7a3fd4;color:#f3ecff;}',
+            '.er-drawer-body,.er-drawer-players-tab{flex:1;min-height:0;overflow-y:auto;padding:14px 16px;}',
             '.er-drawer-body .agp-shell-row,.er-drawer-players-tab .agp-shell-row,',
             '.er-drawer-body .agp-shell-field,.er-drawer-players-tab .agp-shell-field{display:flex !important;',
-            'align-items:center !important;justify-content:space-between !important;gap:10px;',
-            'padding:12px 0 !important;border-bottom:1px solid rgba(255,255,255,0.07);margin:0 !important;}',
+            'align-items:center !important;justify-content:space-between !important;gap:10px;flex-wrap:wrap;',
+            'padding:14px 16px !important;margin:0 0 12px !important;border-radius:18px;',
+            'border:1px solid rgba(255,255,255,.09) !important;',
+            'background:linear-gradient(180deg,rgba(28,24,44,.9),rgba(14,12,22,.9)) !important;}',
+            '.er-drawer-body .agp-shell-field{flex-direction:column !important;align-items:flex-start !important;}',
             '.er-drawer-body .agp-shell-row-label,.er-drawer-players-tab .agp-shell-row-label,',
             '.er-drawer-body .agp-shell-field label,.er-drawer-players-tab .agp-shell-field label{',
-            'font-size:0.82em !important;color:#d9a9c6 !important;font-weight:700 !important;}',
+            'font-size:13px !important;color:#f4f2fb !important;font-weight:700 !important;',
+            'font-family:"Noto Kufi Arabic",sans-serif !important;}',
             '#agp-shell-box.er-inmatch-drawer:not(.er-tab-players) .er-drawer-players-tab{display:none !important;}',
             '#agp-shell-box.er-inmatch-drawer.er-tab-players .er-drawer-body{display:none !important;}',
             // The shared file's ready-made player-management field stays in
@@ -1448,41 +1460,54 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // "add new lobby" button (renamed) stays visible in its
             // original DOM position.
             '#agp-shell-box.er-inmatch-drawer .agp-settings-player-box{display:none !important;}',
-            '#agp-shell-box.er-inmatch-drawer .agp-settings-player-row{display:block !important;}',
+            '#agp-shell-box.er-inmatch-drawer .agp-settings-player-row{display:block !important;',
+            'border:none !important;background:none !important;padding:0 !important;}',
             '#agp-shell-box.er-inmatch-drawer #agp-settings-player-count{display:none !important;}',
             '#agp-shell-box.er-inmatch-drawer .agp-shell-field:has(#agp-settings-player-count) > label{display:none !important;}',
             '#agp-shell-box.er-inmatch-drawer #agp-reopen-registration-btn{width:100% !important;',
-            'margin-top:6px !important;border:1px dashed rgba(0,215,255,0.5) !important;',
-            'background:rgba(0,215,255,0.08) !important;color:#cdeeff !important;}',
-            // ---- Custom players tab (search + filter + unified list) —
-            // same layout as Tribe Roulette, recolored for this game. ----
-            '#er-players-tab-search{width:100%;padding:8px 12px;border-radius:9px;',
-            'background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#fff;',
-            'font-family:inherit;font-size:0.8em;margin-bottom:10px;box-sizing:border-box;}',
-            '#er-players-tab-filter{display:flex;gap:5px;margin-bottom:10px;}',
-            '#er-players-tab-filter button{flex:1;padding:5px 2px;border-radius:7px;',
-            'border:1px solid rgba(255,255,255,0.14);background:transparent;color:#d9a9c6;',
-            'font-family:inherit;font-weight:800;font-size:0.68em;cursor:pointer;}',
-            '#er-players-tab-filter button.er-filter-active{background:rgba(0,215,255,0.14);',
-            'border-color:#00D7FF;color:#fff;}',
-            '.er-prow{display:flex;align-items:center;gap:8px;padding:7px 0;',
-            'border-bottom:1px solid rgba(255,255,255,0.05);}',
-            '.er-prow.er-prow-out{opacity:0.6;}',
+            'margin:0 !important;display:flex !important;align-items:center;justify-content:center;gap:8px;',
+            'padding:13px 14px !important;border-radius:14px !important;',
+            'border:1px solid rgba(178,140,245,.4) !important;',
+            'background:linear-gradient(135deg,rgba(122,63,212,.28),rgba(178,140,245,.1)) !important;',
+            'color:#f0e9ff !important;font-family:"Noto Kufi Arabic",sans-serif !important;',
+            'font-weight:700 !important;font-size:13.5px !important;}',
+            // ---- End-game footer button — no equivalent existed before
+            // this redesign; the shared header's own 🏠 button already
+            // navigates home, this just adds the spec's prominent shortcut
+            // for it, reusing the exact same homeNavigate() handler.
+            '.er-drawer-footer{flex:none;padding:14px 16px;border-top:1px solid rgba(255,255,255,.08);}',
+            '.er-drawer-end-btn{width:100%;padding:13px 18px;border:1px solid transparent;cursor:pointer;',
+            'border-radius:14px;background:rgba(224,115,111,.16);color:#ff9b96;',
+            'font-family:"Noto Kufi Arabic",sans-serif;font-size:14px;font-weight:700;',
+            'transition:background .2s;}',
+            '.er-drawer-end-btn:hover{background:rgba(224,115,111,.28);}',
+            // ---- Custom players tab (search + filter + unified list) ----
+            '#er-players-tab-search{width:100%;padding:10px 14px;border-radius:999px;',
+            'background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);color:#f4f2fb;',
+            'font-family:"IBM Plex Sans Arabic",sans-serif;font-size:13px;margin-bottom:10px;',
+            'box-sizing:border-box;}',
+            '#er-players-tab-filter{display:flex;gap:5px;margin-bottom:12px;}',
+            '#er-players-tab-filter button{flex:1;padding:7px 2px;border-radius:999px;',
+            'border:1px solid rgba(255,255,255,.14);background:transparent;color:#a79fbb;',
+            'font-family:"IBM Plex Sans Arabic",sans-serif;font-weight:600;font-size:11.5px;cursor:pointer;}',
+            '#er-players-tab-filter button.er-filter-active{background:#7a3fd4;',
+            'border-color:#7a3fd4;color:#f3ecff;}',
+            '.er-prow{display:flex;align-items:center;gap:8px;padding:8px 11px;margin-bottom:5px;',
+            'border-radius:11px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);}',
+            '.er-prow.er-prow-out{background:rgba(224,115,111,.05);border-color:rgba(224,115,111,.18);}',
             '.er-prow .er-prow-avatar{width:26px;height:26px;border-radius:50%;flex:none;overflow:hidden;}',
             '.er-prow.er-prow-out .er-prow-avatar{filter:grayscale(1);}',
             '.er-prow .er-prow-avatar .er-ring-avatar,.er-prow .er-prow-avatar .er-ring-avatar--fallback{',
             'width:100%;height:100%;font-size:0.7em;}',
-            '.er-prow .er-prow-name{flex:1;font-size:0.8em;font-weight:700;overflow:hidden;',
+            '.er-prow .er-prow-name{flex:1;font-size:12px;font-weight:400;color:#e7e9ee;overflow:hidden;',
             'text-overflow:ellipsis;white-space:nowrap;}',
-            '.er-prow .er-prow-status{font-size:0.6em;padding:2px 8px;border-radius:999px;font-weight:800;flex:none;}',
-            '.er-prow .er-prow-status.er-status-live{background:rgba(34,197,94,0.15);color:#4ade80;',
-            'border:1px solid rgba(74,222,128,0.4);}',
-            '.er-prow .er-prow-status.er-status-out{background:rgba(239,68,68,0.15);color:#f87171;',
-            'border:1px solid rgba(248,113,113,0.4);}',
-            '.er-prow .er-prow-action{width:22px;height:22px;border-radius:50%;border:none;',
+            '.er-prow.er-prow-out .er-prow-name{color:#cfc7e2;text-decoration:line-through;',
+            'text-decoration-color:#e0736f;}',
+            '.er-prow .er-prow-status{display:none;}',
+            '.er-prow .er-prow-action{width:20px;height:20px;border-radius:50%;border:none;',
             'color:#fff;font-weight:900;font-size:0.65em;cursor:pointer;flex:none;}',
-            '.er-prow .er-prow-action.er-action-eliminate{background:#ef4444;}',
-            '.er-prow .er-prow-action.er-action-revive{background:linear-gradient(135deg,#22c55e,#16a34a);}',
+            '.er-prow .er-prow-action.er-action-eliminate{background:rgba(224,115,111,.12);color:#e0736f;}',
+            '.er-prow .er-prow-action.er-action-revive{background:rgba(126,224,166,.14);color:#7ee0a6;}',
 
             /* ================================================================
              * "Add new player" window ("إدخال لاعب جديد") — matches the
@@ -3664,9 +3689,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var tabs = document.createElement('div');
         tabs.className = 'er-drawer-tabs';
+        // Order matches the design spec exactly (اللاعبون first in the DOM
+        // — rightmost in this RTL page — then الإعدادات), plain labels
+        // with no emoji.
         tabs.innerHTML =
-            '<button type="button" data-tab="settings">⚙️ الإعدادات</button>' +
-            '<button type="button" data-tab="players">👥 اللاعبون</button>';
+            '<button type="button" data-tab="players">اللاعبون</button>' +
+            '<button type="button" data-tab="settings">الإعدادات</button>';
         tabs.querySelectorAll('button').forEach(function (btn) {
             btn.classList.toggle('er-tab-active', btn.getAttribute('data-tab') === _erDrawerTab);
             btn.onclick = function () {
@@ -3685,7 +3713,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         bodyWrap.className = 'er-drawer-body';
         fieldNodes.forEach(function (n) { bodyWrap.appendChild(n); });
         var reopenBtn = bodyWrap.querySelector('#agp-reopen-registration-btn');
-        if (reopenBtn) reopenBtn.textContent = '➕ فتح دخول لاعبين جدد';
+        if (reopenBtn) reopenBtn.innerHTML = '<span style="font-size:15px">+</span>إدخال لاعب جديد';
         box.appendChild(bodyWrap);
 
         var playersTab = document.createElement('div');
@@ -3705,6 +3733,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             b.onclick = function () { _erPlayersTabFilter = b.getAttribute('data-filter'); renderReopenedPlayersTab(); };
         });
         box.appendChild(playersTab);
+
+        // Sticky footer, matches the design spec exactly — always visible
+        // regardless of which tab is open. No new behavior: reuses the
+        // exact same homeNavigate() the header's own 🏠 button already
+        // calls, just as a more prominent, explicitly-labeled shortcut.
+        var footer = document.createElement('div');
+        footer.className = 'er-drawer-footer';
+        var endBtn = document.createElement('button');
+        endBtn.type = 'button';
+        endBtn.className = 'er-drawer-end-btn';
+        endBtn.textContent = 'إنهاء اللعب';
+        endBtn.addEventListener('click', homeNavigate);
+        footer.appendChild(endBtn);
+        box.appendChild(footer);
 
         if (_erDrawerTab === 'players') renderReopenedPlayersTab();
     }
