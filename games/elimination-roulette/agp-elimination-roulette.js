@@ -913,7 +913,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // vertical flex column: fixed elements (title, hint line,
             // bottom bar) keep their natural size (flex:0 0 auto), and the
             // card grid alone takes the remaining space and scrolls if needed.
-            '#agp-shell-box.agp-lobby-box{height:min(94vh,980px) !important;max-height:94vh !important;',
+            // Width wasn't overridden here before, so the box quietly
+            // inherited the shared file's fixed 900px default (max-width
+            // 96vw) — fine on a phone, but a fixed cap well short of what
+            // a tablet/laptop screen actually has leaves a visibly narrow
+            // column with large empty margins on both sides. min(94vw,…)
+            // already shrinks properly on small screens; raising the cap
+            // to 1120px (this screen's own value in the design spec,
+            // matching Lobby.dc.html's max-width:1120px) lets it use a
+            // tablet or laptop's width properly instead of stopping short at 900.
+            '#agp-shell-box.agp-lobby-box{width:min(94vw,1120px) !important;',
+            'max-width:min(94vw,1120px) !important;height:min(94vh,980px) !important;max-height:94vh !important;',
             'display:flex !important;flex-direction:column !important;overflow:hidden !important;}',
             '#agp-shell-box.agp-lobby-box > h2,',
             '#agp-shell-box.agp-lobby-box > .er-lobby-subtitle,',
@@ -1084,8 +1094,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px),',
             'linear-gradient(180deg,#0d0a14 0%,#08060d 45%,#050508 100%) !important;',
             'background-size:auto,auto,auto,88px 88px,88px 88px,auto !important;}',
-            '[id^="agp-shell-box"].er-settings-initial-box{width:min(860px,94vw) !important;',
-            'max-width:min(860px,94vw) !important;height:calc(100vh - 70px) !important;',
+            // width:min(94vw,…) already shrinks correctly on narrow
+            // screens; a flat 860px cap just stops growing past ~915px
+            // wide and leaves a visibly narrow column with big empty
+            // margins on tablet/laptop screens. 1040px still reads
+            // comfortably (this is text/form content, not a photo grid)
+            // but actually uses a tablet or small-laptop's width instead
+            // of abandoning it.
+            '[id^="agp-shell-box"].er-settings-initial-box{width:min(1040px,94vw) !important;',
+            'max-width:min(1040px,94vw) !important;height:calc(100vh - 70px) !important;',
             'max-height:calc(100vh - 70px) !important;margin:70px 0 0 !important;overflow:visible !important;',
             'display:flex !important;flex-direction:column !important;align-items:center !important;',
             'column-count:auto !important;column-gap:0 !important;',
