@@ -1535,7 +1535,29 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-drawer-body .agp-shell-row-label,.er-drawer-players-tab .agp-shell-row-label,',
             '.er-drawer-body .agp-shell-field label,.er-drawer-players-tab .agp-shell-field label{',
             'font-size:13px !important;color:#f4f2fb !important;font-weight:700 !important;',
-            'font-family:"Noto Kufi Arabic",sans-serif !important;}',
+            'font-family:"Noto Kufi Arabic",sans-serif !important;',
+            'display:flex !important;flex-direction:column !important;align-items:flex-end !important;gap:3px;}',
+            // Small gray sub-line under a field's label — matches the
+            // design spec's two-line card copy (bold label + explanation);
+            // added via addFieldDescription() below, both here and on the
+            // initial settings screen.
+            '.er-field-desc{font-size:11.5px !important;font-weight:400 !important;color:#8f88a3 !important;',
+            'font-family:"IBM Plex Sans Arabic",sans-serif !important;white-space:normal !important;',
+            'text-align:right;}',
+            // Card wrapper for giftRevivalEnabled + its conditional fields
+            // in the drawer — same "un-card" trick as .er-settings-card on
+            // the initial screen (the row inside keeps its own layout, just
+            // loses its individual border/background so the group reads as
+            // one card instead of a card-in-a-card).
+            '.er-drawer-card{border-radius:18px;border:1px solid rgba(255,255,255,.09);',
+            'background:linear-gradient(180deg,rgba(28,24,44,.9),rgba(14,12,22,.9));',
+            'margin:0 0 12px;padding:14px 16px;box-sizing:border-box;}',
+            '.er-drawer-card > .agp-shell-row{padding:0 !important;margin:0 !important;',
+            'border:none !important;background:none !important;}',
+            '.er-drawer-card .er-conditional-section{display:flex;flex-direction:column;gap:10px;',
+            'margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.07);}',
+            '.er-drawer-card .er-conditional-section .agp-shell-row{padding:0 !important;',
+            'margin:0 !important;border:none !important;background:none !important;}',
             '#agp-shell-box.er-inmatch-drawer:not(.er-tab-players) .er-drawer-players-tab{display:none !important;}',
             '#agp-shell-box.er-inmatch-drawer.er-tab-players .er-drawer-body{display:none !important;}',
             // The shared file's ready-made player-management field stays in
@@ -3305,15 +3327,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 default: false
             },
             {
-                // Rendered as pill-choice rather than toggle (two explicit
-                // options instead of an on/off switch), but the underlying
-                // value is still a plain Boolean (friendRevivalEnabled) —
-                // no change to the game logic that reads it.
-                key: 'friendRevivalEnabled', type: 'pill-choice', label: '🎗️ عند تكرار اسم لاعب لمرتين متتاليتين',
-                options: [
-                    { label: 'ينعش صديق مُقصى', value: true },
-                    { label: 'لا شيء', value: false }
-                ],
+                // Both design specs (Match Setup.dc.html and
+                // handoff_roulette_recent_features/Roulette.dc.html) show
+                // this as a plain on/off toggle, not a two-option pill
+                // choice — switched to match; same underlying Boolean
+                // value, no change to the game logic that reads it.
+                key: 'friendRevivalEnabled', type: 'toggle', label: 'تكرار الاسم يرجّع اللاعب',
                 default: false
             },
             {
@@ -3544,6 +3563,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         // "Card" section — friend-revival row alone.
         if (friendRevivalRow) {
+            addFieldDescription(friendRevivalRow, 'يرجّع لاعب مقصى للعبة عند تكرار اسمه');
             var friendCard = document.createElement('div');
             friendCard.className = 'er-settings-card';
             friendCard.appendChild(friendRevivalRow);
@@ -3553,6 +3573,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // "Card" section — gift-revival toggle + its conditional fields
         // (revive count, gift picker) together, matching the design.
         if (giftEnabledRow) {
+            addFieldDescription(giftEnabledRow, 'كل هدية دعم تعطي انعاش إضافي للدخول');
             var giftCard = document.createElement('div');
             giftCard.className = 'er-settings-card';
             giftCard.appendChild(giftEnabledRow);
@@ -3579,6 +3600,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         footer.className = 'er-settings-footer';
         footer.appendChild(connectBtn);
         box.appendChild(footer);
+    }
+
+    // Appends a small gray explanation line under a field's label, matching
+    // the design specs' two-line card copy (bold label + sub-description) —
+    // used on both the initial settings screen and the mid-match drawer,
+    // each with its own screen-appropriate wording. Idempotent (checks for
+    // an existing .er-field-desc first) since both screens rebuild these
+    // rows from scratch on every render.
+    function addFieldDescription(row, text) {
+        if (!row) return;
+        var label = row.querySelector('.agp-shell-row-label, label');
+        if (!label || label.querySelector('.er-field-desc')) return;
+        var desc = document.createElement('span');
+        desc.className = 'er-field-desc';
+        desc.textContent = text;
+        label.appendChild(desc);
     }
 
     /**
@@ -3784,7 +3821,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var header = document.createElement('div');
         header.className = 'er-drawer-header';
-        if (h2) header.appendChild(h2);
+        if (h2) {
+            // Matches handoff_roulette_recent_features/Roulette.dc.html's
+            // settingsOpen panel exactly ("الإعدادات" alone) — the shared
+            // file's own default ("إعدادات لعبة روليت الإقصاء") is the
+            // right title for the *initial* pre-match screen, not this
+            // mid-match panel.
+            h2.textContent = 'الإعدادات';
+            header.appendChild(h2);
+        }
         if (closeBtn) header.appendChild(closeBtn);
         box.appendChild(header);
 
@@ -3807,14 +3852,59 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
         box.appendChild(tabs);
 
-        // ---- Scrollable body: every settings field + the full
-        // player-management field (its internal list hidden via CSS, the
-        // "add new lobby" button stays visible in its original spot, renamed). ----
+        // ---- Scrollable body — matches handoff_roulette_recent_features/
+        // Roulette.dc.html's settingsOpen "الإعدادات" tab exactly: only
+        // "إدخال لاعب جديد", "شكل عجلة الحظ", "الانعاش بالدعم", and
+        // "تكرار الاسم يرجّع اللاعب" — maxPlayers/followersOnly/the
+        // elimination timer/timeout fields are pre-match-only concerns
+        // (who's already allowed to join, how long a turn lasts) that
+        // don't belong in this reference at all, so they're hidden here —
+        // still fully editable on the initial settings screen, unchanged. ----
+        function findFieldNode(selector) {
+            for (var i = 0; i < fieldNodes.length; i++) {
+                if (fieldNodes[i].querySelector && fieldNodes[i].querySelector(selector)) return fieldNodes[i];
+            }
+            return null;
+        }
+        var playerMgmtRow = fieldNodes.filter(function (n) { return n.classList && n.classList.contains('agp-settings-player-row'); })[0];
+        var wheelModeRow = findFieldNode('[data-key="wheelDisplayMode"]');
+        var giftEnabledRow = findFieldNode('[data-key="giftRevivalEnabled"]');
+        var giftMaxCountRow = findFieldNode('[data-key="giftRevivalMaxCount"]');
+        var giftNameTrigger = box.querySelector('[data-trigger-key="giftRevivalGiftName"]');
+        var giftNameRow = giftNameTrigger ? findFieldNode('[data-trigger-key="giftRevivalGiftName"]') : null;
+        var friendRevivalRow = findFieldNode('[data-key="friendRevivalEnabled"]');
+        var soundVolumeRow = findFieldNode('[data-key="soundVolume"]'); // onlyMidMatch — not in the design spec, kept anyway (pre-existing feature)
+
         var bodyWrap = document.createElement('div');
         bodyWrap.className = 'er-drawer-body';
-        fieldNodes.forEach(function (n) { bodyWrap.appendChild(n); });
-        var reopenBtn = bodyWrap.querySelector('#agp-reopen-registration-btn');
-        if (reopenBtn) reopenBtn.innerHTML = '<span style="font-size:15px">+</span>إدخال لاعب جديد';
+
+        if (playerMgmtRow) {
+            var reopenBtn = playerMgmtRow.querySelector('#agp-reopen-registration-btn');
+            if (reopenBtn) reopenBtn.innerHTML = '<span style="font-size:15px">+</span>إدخال لاعب جديد';
+            bodyWrap.appendChild(playerMgmtRow);
+        }
+        if (wheelModeRow) {
+            addFieldDescription(wheelModeRow, 'اختر الطريقة التي تظهر بها نتيجة الإقصاء');
+            bodyWrap.appendChild(wheelModeRow);
+        }
+        if (giftEnabledRow) {
+            addFieldDescription(giftEnabledRow, 'كل هدية دعم تعيد لاعباً مقصياً للعبة');
+            var giftCard = document.createElement('div');
+            giftCard.className = 'er-drawer-card';
+            giftCard.appendChild(giftEnabledRow);
+            if (giftMaxCountRow || giftNameRow) {
+                var conditionalSection = document.createElement('div');
+                conditionalSection.className = 'er-conditional-section';
+                [giftMaxCountRow, giftNameRow].filter(Boolean).forEach(function (n) { conditionalSection.appendChild(n); });
+                giftCard.appendChild(conditionalSection);
+            }
+            bodyWrap.appendChild(giftCard);
+        }
+        if (friendRevivalRow) {
+            addFieldDescription(friendRevivalRow, 'إذا كتب اسمه مرتين متتاليتين في التعليقات');
+            bodyWrap.appendChild(friendRevivalRow);
+        }
+        if (soundVolumeRow) bodyWrap.appendChild(soundVolumeRow);
         box.appendChild(bodyWrap);
 
         var playersTab = document.createElement('div');
