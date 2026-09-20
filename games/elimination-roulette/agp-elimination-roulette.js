@@ -3532,7 +3532,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var countText = el('er-lobby-live-count-text');
         if (countText) {
-            countText.textContent = AGP.gameManager.getPlayers().length + ' لاعب في اللوبي';
+            // Same infinite-loop trap as enhanceConnectionStatusField() below:
+            // .textContent replaces the text node even when the string is
+            // unchanged, which is a childList mutation the MutationObserver
+            // driving applyShellEnhancements() reacts to — an unconditional
+            // assignment here would re-trigger this function forever.
+            var newCountText = AGP.gameManager.getPlayers().length + ' لاعب في اللوبي';
+            if (countText.textContent !== newCountText) countText.textContent = newCountText;
         }
     }
 
@@ -3707,23 +3713,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             });
         }
 
-        if (!rows.length) {
-            listEl.innerHTML = '<div style="text-align:center;color:#6b6280;font-size:0.78em;padding:20px 0;">ولا لاعب مطابق</div>';
-            return;
-        }
-
-        listEl.innerHTML = rows.map(function (r) {
-            var isLive = r.status === 'live';
-            var actionHtml = isLive
-                ? '<button type="button" class="er-prow-action er-action-eliminate" data-id="' + escapeHtml(r.player.id) + '" title="إقصاء يدوي">✕</button>'
-                : '<button type="button" class="er-prow-action er-action-revive" data-id="' + escapeHtml(r.player.id) + '" title="إرجاع يدوي">↩</button>';
-            return '<div class="er-prow' + (isLive ? '' : ' er-prow-out') + '">' +
-                '<span class="er-prow-avatar">' + ringAvatarHtml(r.player) + '</span>' +
-                '<span class="er-prow-name">' + escapeHtml(playerLabel(r.player)) + '</span>' +
-                '<span class="er-prow-status ' + (isLive ? 'er-status-live' : 'er-status-out') + '">' + (isLive ? 'نشط' : 'مقصى') + '</span>' +
-                actionHtml +
-                '</div>';
-        }).join('');
+        // Same infinite-loop trap fixed in enhanceConnectionStatusField() and
+        // enhanceLobbyHeading() above: this function itself is re-invoked on
+        // every applyShellEnhancements() tick while this tab is open (see
+        // enhanceReopenedDrawer()), and an unconditional innerHTML write is a
+        // childList mutation that would re-trigger the observer driving that
+        // same tick forever. Comparing against the current markup first
+        // keeps a tick with nothing new (no join/leave/elimination) a real
+        // no-op — also skipping the onclick rewiring below, which is only
+        // needed when the buttons themselves were actually rebuilt.
+        var desiredHtml = !rows.length ?
+            '<div style="text-align:center;color:#6b6280;font-size:0.78em;padding:20px 0;">ولا لاعب مطابق</div>' :
+            rows.map(function (r) {
+                var isLive = r.status === 'live';
+                var actionHtml = isLive
+                    ? '<button type="button" class="er-prow-action er-action-eliminate" data-id="' + escapeHtml(r.player.id) + '" title="إقصاء يدوي">✕</button>'
+                    : '<button type="button" class="er-prow-action er-action-revive" data-id="' + escapeHtml(r.player.id) + '" title="إرجاع يدوي">↩</button>';
+                return '<div class="er-prow' + (isLive ? '' : ' er-prow-out') + '">' +
+                    '<span class="er-prow-avatar">' + ringAvatarHtml(r.player) + '</span>' +
+                    '<span class="er-prow-name">' + escapeHtml(playerLabel(r.player)) + '</span>' +
+                    '<span class="er-prow-status ' + (isLive ? 'er-status-live' : 'er-status-out') + '">' + (isLive ? 'نشط' : 'مقصى') + '</span>' +
+                    actionHtml +
+                    '</div>';
+            }).join('');
+        if (listEl.innerHTML === desiredHtml) return;
+        listEl.innerHTML = desiredHtml;
 
         listEl.querySelectorAll('.er-action-eliminate').forEach(function (btn) {
             btn.onclick = function () { manuallyEliminatePlayer(btn.getAttribute('data-id')); };
