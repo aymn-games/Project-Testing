@@ -1485,59 +1485,72 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-prow .er-prow-action.er-action-revive{background:linear-gradient(135deg,#22c55e,#16a34a);}',
 
             /* ================================================================
-             * "Add new lobby" window — 700x800, 70% transparency, single-color
-             * border, 3-column grid of tightly-packed 45px cards (no row gap).
-             * See enhanceMiniLobby above.
+             * "Add new player" window ("إدخال لاعب جديد") — matches the
+             * design spec's addOpen modal exactly: 600x900 violet glass
+             * panel, gold keyword pill, 2-column chip grid. Built from the
+             * shared shell's own mini-lobby fields (h2/agp-join-hint/
+             * #agp-mini-lobby-list/#agp-mini-lobby-done-btn — a keyword
+             * re-open + merge flow, functionally identical to the spec's
+             * "type the same keyword in the comments" staged-players door),
+             * only restyled here. See enhanceMiniLobby above.
              * ================================================================ */
             '#agp-shell-overlay:has(#agp-shell-box.er-mini-lobby-active){align-items:center !important;',
-            'justify-content:center !important;background:rgba(5,3,10,0.55) !important;',
-            'padding:0 !important;}',
-            '#agp-shell-box.er-mini-lobby-active{width:700px !important;max-width:94vw !important;',
-            'height:800px !important;max-height:92vh !important;margin:0 !important;',
-            'padding:28px 26px 22px !important;box-sizing:border-box !important;',
+            'justify-content:center !important;background:rgba(3,3,6,.72) !important;',
+            'padding:20px !important;}',
+            '#agp-shell-box.er-mini-lobby-active{width:600px !important;max-width:94vw !important;',
+            'height:900px !important;max-height:90vh !important;margin:0 !important;',
+            'padding:16px 18px 18px !important;box-sizing:border-box !important;',
             'display:flex !important;flex-direction:column !important;',
-            'background:rgba(42,20,67,0.7) !important;backdrop-filter:blur(18px);',
-            '-webkit-backdrop-filter:blur(18px);border:1.5px solid #E5007F !important;',
-            'border-radius:22px !important;',
-            'box-shadow:0 0 0 1px rgba(229,0,127,0.15),0 0 40px rgba(229,0,127,0.25),',
-            '0 20px 60px rgba(0,0,0,0.5) !important;position:relative;overflow:hidden;}',
+            'background:rgba(20,18,32,.6) !important;backdrop-filter:blur(10px);',
+            '-webkit-backdrop-filter:blur(10px);border:2px solid rgba(178,140,245,.5) !important;',
+            'border-radius:24px !important;box-shadow:none !important;position:relative;overflow:hidden;}',
             '#agp-shell-box.er-mini-lobby-active h2{flex:none !important;text-align:center !important;',
-            'font-size:1.35em !important;margin:0 0 12px !important;max-width:none !important;',
-            'background:linear-gradient(90deg,#E5007F,#f2cfe2 55%,#E5007F) !important;',
-            '-webkit-background-clip:text !important;background-clip:text !important;',
-            '-webkit-text-fill-color:transparent !important;}',
-            '.er-mini-lobby-close-btn{position:absolute;top:16px;left:16px;width:34px;height:34px;',
-            'border-radius:50%;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.18);',
-            'color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;',
-            'cursor:pointer;z-index:3;padding:0;font-family:inherit;}',
+            'font-family:"Noto Kufi Arabic",sans-serif !important;font-size:15.5px !important;',
+            'font-weight:700 !important;margin:0 0 12px !important;max-width:none !important;',
+            'background:none !important;color:#f4f2fb !important;-webkit-text-fill-color:#f4f2fb !important;}',
+            '.er-mini-lobby-info{flex:none;margin-bottom:14px;padding:16px 18px;border-radius:18px;',
+            'background:linear-gradient(135deg,rgba(122,63,212,.22),rgba(178,140,245,.08));',
+            'border:1px solid rgba(178,140,245,.35);}',
+            '.er-mini-lobby-info p{margin:0;font-family:"Noto Kufi Arabic",sans-serif;font-size:14px;',
+            'font-weight:600;line-height:1.9;color:#f0e9ff;}',
+            '.er-mini-lobby-info p + p{margin-top:8px;font-family:"IBM Plex Sans Arabic",sans-serif;',
+            'font-size:12.5px;font-weight:400;line-height:1.85;color:#c6b4f2;}',
+            '.er-mini-lobby-close-btn{position:absolute;top:16px;left:18px;width:30px;height:30px;',
+            'border-radius:9px;background:transparent;border:1px solid rgba(255,255,255,0.16);',
+            'color:#cfc7e2;display:flex;align-items:center;justify-content:center;font-size:15px;',
+            'cursor:pointer;z-index:3;padding:0;font-family:inherit;line-height:1;}',
             '#agp-shell-box.er-mini-lobby-active .agp-join-hint{flex:none !important;text-align:center;',
-            'display:flex !important;flex-direction:column !important;align-items:center !important;gap:8px;}',
-            '#agp-shell-box.er-mini-lobby-active .agp-join-keyword-plain{display:inline-block;',
-            'background:linear-gradient(90deg,#E5007F,#00D7FF);color:#150819;font-weight:900;',
-            'padding:4px 16px;border-radius:999px;font-size:1.05em;letter-spacing:0.5px;}',
-            '#agp-mini-lobby-count{display:block;color:#cbb8d6;font-size:0.75em;margin-top:4px;}',
-            // Player grid — 3 columns, 45px cards (same real math used by
-            // the lobby grid above: name plate 145px, overlap 10px,
-            // padStart=24px, padEnd=14px, height=36px, font=21px), no row gap.
+            'display:flex !important;flex-direction:column !important;align-items:center !important;gap:8px;',
+            'margin-bottom:14px;}',
+            '#agp-shell-box.er-mini-lobby-active .agp-join-keyword-plain{display:inline-flex;',
+            'align-items:center;gap:10px;background:rgba(214,168,60,.12) !important;',
+            'border:1px solid rgba(240,205,106,.4);color:#f0cd6a !important;font-weight:900;',
+            'font-family:"Cairo",sans-serif;padding:12px 20px;border-radius:999px;font-size:19px;}',
+            '#agp-mini-lobby-count{display:block;color:#cfc7e2;font-size:0.75em;margin-top:4px;}',
+            // Player grid — 2 columns of pill chips (45px tall), matching
+            // the spec's staged-player chip layout exactly.
             '#agp-shell-box.er-mini-lobby-active #agp-mini-lobby-list{',
             'flex:1 1 auto !important;min-height:0 !important;overflow-y:auto !important;',
-            'display:grid !important;grid-template-columns:repeat(3,1fr) !important;',
-            'gap:0px 10px !important;margin:16px 0 0 !important;padding:4px 4px 10px !important;',
+            'display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important;',
+            'gap:8px !important;margin:0 !important;padding:4px 4px 10px !important;',
             'list-style:none;}',
             '#agp-shell-box.er-mini-lobby-active #agp-mini-lobby-list li{position:relative;',
-            'display:flex !important;align-items:center;justify-content:center;}',
-            '#agp-shell-box.er-mini-lobby-active .agp-pcard-avatar-basic{width:45px !important;',
-            'height:45px !important;flex-shrink:0;position:relative;z-index:2;}',
-            '#agp-shell-box.er-mini-lobby-active .agp-pcard-name-basic{width:145px !important;',
-            'height:36px !important;margin-inline-start:-10px !important;',
-            'padding-inline-start:24px !important;padding-inline-end:14px !important;',
-            'font-size:21px !important;}',
+            'display:flex !important;align-items:center;justify-content:center;height:45px;',
+            'border-radius:999px;border:1px solid rgba(255,255,255,.14);',
+            'background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));}',
+            '#agp-shell-box.er-mini-lobby-active .agp-pcard-avatar-basic{width:36px !important;',
+            'height:36px !important;flex-shrink:0;position:relative;z-index:2;margin-inline-start:5px;}',
+            '#agp-shell-box.er-mini-lobby-active .agp-pcard-name-basic{width:auto !important;',
+            'flex:1 1 auto;height:auto !important;margin-inline-start:-10px !important;',
+            'padding-inline-start:20px !important;padding-inline-end:10px !important;',
+            'font-size:11.5px !important;background:none !important;border:none !important;}',
             '#agp-shell-box.er-mini-lobby-active #agp-mini-lobby-done-btn{flex:none !important;',
-            'display:block !important;width:100% !important;margin:16px 0 0 !important;',
-            'padding:14px 0 !important;font-size:0.95em !important;letter-spacing:0.4px;',
-            'background:linear-gradient(90deg,#E5007F,#00D7FF) !important;color:#150819 !important;',
-            'border:none !important;border-radius:999px !important;',
-            'box-shadow:0 10px 26px rgba(229,0,127,0.3),0 0 0 1px rgba(255,255,255,0.15) inset !important;}'
+            'display:block !important;width:100% !important;margin:14px 0 0 !important;',
+            'padding:13px 20px !important;font-size:14.5px !important;font-weight:700 !important;',
+            'font-family:"Noto Kufi Arabic",sans-serif !important;letter-spacing:0;',
+            'background:#7a3fd4 !important;color:#f3ecff !important;',
+            'border:none !important;border-radius:14px !important;',
+            'box-shadow:0 16px 34px -20px rgba(122,63,212,1) !important;}'
         ].join('');
         document.head.appendChild(style);
     }
@@ -3848,6 +3861,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             closeBtn.textContent = '✕';
             closeBtn.onclick = closeMiniLobbyToSettings;
             box.insertBefore(closeBtn, box.firstChild);
+        }
+        // Explanatory info card, matching the design spec's addOpen modal
+        // (not present at all before this redesign) — inserted once, right
+        // after the title.
+        if (!box.querySelector('.er-mini-lobby-info')) {
+            var info = document.createElement('div');
+            info.className = 'er-mini-lobby-info';
+            info.innerHTML =
+                '<p>هذا الباب مخصص للاعبين الجدد اللي ما دخلوا الجولة الحالية بعد</p>' +
+                '<p>اطلب منهم كتابة الكلمة المفتاحية نفسها في التعليقات، وبيظهرون هنا تلقائياً جاهزين للدمج</p>';
+            var h2 = box.querySelector('h2');
+            if (h2) h2.insertAdjacentElement('afterend', info);
         }
     }
 
