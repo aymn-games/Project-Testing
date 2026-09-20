@@ -3317,13 +3317,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             box.insertBefore(badge, box.firstChild);
         }
         badge.classList.toggle('er-conn-status-connected', !!saved);
-        badge.innerHTML = saved ?
+        // The MutationObserver driving applyShellEnhancements() watches this
+        // whole subtree for childList changes only (see wireSharedShellEnhancements()
+        // below) — an unconditional innerHTML assignment here would tear
+        // down and rebuild the badge's children on every tick regardless of
+        // whether anything actually changed, which itself is a childList
+        // mutation, which would re-trigger the observer, forever (a real bug
+        // that shipped briefly: it pegged the tab at 100% CPU and made any
+        // other settings field unresponsive to click, since the event loop
+        // never got a free tick). Comparing against the current markup
+        // first keeps this a genuine no-op when nothing changed.
+        var desiredHtml = saved ?
             '<span class="er-conn-status-dot"></span>' +
             '<span>متصل بالبث</span>' +
             '<span class="er-conn-status-user">@' + escapeHtml(saved.username) + '</span>' :
             '<span class="er-conn-status-dot"></span>' +
             '<span>لم يتم الاتصال بالبث بعد</span>' +
             '<a class="er-conn-status-link" href="../../games.html">اتصل من مكتبة الألعاب ↗</a>';
+        if (badge.innerHTML !== desiredHtml) badge.innerHTML = desiredHtml;
     }
 
     // Lets the settings screen react live if the games-library tab
