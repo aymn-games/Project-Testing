@@ -180,6 +180,62 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         } catch (e) { /* ignore silently — sound is a nice-to-have layer, never blocks the game */ }
     }
 
+    /**
+     * Short synthesized cues (Web Audio oscillators) for moments that have
+     * no matching pre-recorded clip in sounds/ (only spin/eliminate/revive/
+     * warning exist) — a "tab appeared" chime (elimination/revival chooser
+     * panel opening) and a match-end fanfare. Generated at runtime instead
+     * of shipping new binary assets. Same volume-0-skips-entirely rule as
+     * playSound() above (never touch the audio session at all when muted).
+     */
+    var _audioCtx = null;
+    function ensureAudioCtx() {
+        if (_audioCtx) return _audioCtx;
+        var Ctor = window.AudioContext || window.webkitAudioContext;
+        if (!Ctor) return null;
+        try { _audioCtx = new Ctor(); } catch (e) { _audioCtx = null; }
+        return _audioCtx;
+    }
+
+    function playTone(freq, startOffset, duration, gainScale) {
+        var ctx = ensureAudioCtx();
+        if (!ctx) return;
+        var t0 = ctx.currentTime + startOffset;
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, t0);
+        var peak = 0.22 * currentVolume() * gainScale;
+        gain.gain.setValueAtTime(0, t0);
+        gain.gain.linearRampToValueAtTime(peak, t0 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t0);
+        osc.stop(t0 + duration + 0.05);
+    }
+
+    // Two-note ascending chime — plays when the elimination/revival chooser
+    // panel appears ("ظهور تبويب الاختيار/الإقصاء/الإنعاش"). Pitched
+    // slightly higher for the revive (green) role than the eliminate (red)
+    // one, echoing the same red=danger/green=positive language used
+    // throughout these two windows.
+    function playTabAppearChime(isRevive) {
+        if (currentVolume() <= 0) return;
+        var base = isRevive ? 660 : 520;
+        playTone(base, 0, 0.16, 1);
+        playTone(base * 1.5, 0.09, 0.18, 0.85);
+    }
+
+    // Three-note ascending fanfare — match end (no pre-recorded clip for
+    // this exists in sounds/).
+    function playMatchEndSound() {
+        if (currentVolume() <= 0) return;
+        playTone(523.25, 0, 0.22, 1);
+        playTone(659.25, 0.16, 0.22, 1);
+        playTone(783.99, 0.32, 0.5, 1.1);
+    }
+
     /* ======================================================================
      *  1) In-match state (fully local to this file)
      * ==================================================================== */
@@ -759,27 +815,37 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * ==================================================================== */
             '#er-revive-splash-overlay{position:fixed;inset:0;z-index:100030;display:none;',
             'align-items:center;justify-content:center;pointer-events:none;}',
+            // Matches handoff_roulette_recent_features/Roulette.dc.html's
+            // post-revive confirmation card exactly: 300x300, green
+            // themed, icon badge + pulsing/rotating rings, then avatar,
+            // then a two-line headline/sub-line instead of the previous
+            // heart-PNG + reason-then-avatar layout.
             '#er-revive-splash-box{width:300px;height:300px;box-sizing:border-box;border-radius:24px;',
             'border:4px solid #22c55e;background:radial-gradient(circle at 50% 32%,rgba(34,197,94,0.28),rgba(10,20,14,0.94) 72%);',
             'box-shadow:0 0 60px rgba(34,197,94,0.65),0 20px 50px rgba(0,0,0,0.5);',
-            'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;',
+            'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;',
             'padding:18px;text-align:center;color:#fff;font-family:Almarai,Cairo,sans-serif;',
             'opacity:0;transform:scale(0.6);}',
             '#er-revive-splash-box.er-revive-splash-anim{animation:er-revive-pop 0.45s cubic-bezier(.34,1.56,.64,1) forwards;}',
             '@keyframes er-revive-pop{0%{opacity:0;transform:scale(0.5);}60%{opacity:1;transform:scale(1.08);}100%{opacity:1;transform:scale(1);}}',
-            // The heart is a PNG (revive-heart.png, next to index.html in
-            // this game's folder) instead of a text emoji; content order is
-            // heart, reason text, player photo, name.
-            '.er-revive-splash-heart{width:58px;height:58px;object-fit:contain;',
-            'animation:er-revive-heartbeat 1s ease-in-out infinite;',
-            'filter:drop-shadow(0 0 10px rgba(34,197,94,0.85));}',
-            '@keyframes er-revive-heartbeat{0%,100%{transform:scale(1);}25%{transform:scale(1.18);}45%{transform:scale(0.96);}}',
-            '.er-revive-splash-reason{font-size:0.82em;font-weight:700;color:#c9f7d8;line-height:1.4;}',
-            '.er-revive-splash-avatar{width:92px;height:92px;border-radius:50%;border:3px solid #22c55e;',
-            'box-shadow:0 0 18px rgba(34,197,94,0.6);overflow:hidden;flex:none;}',
+            '.er-revive-splash-icon-wrap{position:relative;width:76px;height:76px;flex:none;',
+            'display:flex;align-items:center;justify-content:center;}',
+            '.er-revive-splash-icon-ring{position:absolute;inset:0;border-radius:50%;',
+            'box-shadow:0 0 0 0 rgba(34,197,94,0.55);animation:er-revive-ring-pulse 1.6s ease-out infinite;}',
+            '@keyframes er-revive-ring-pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,0.55);}',
+            '100%{box-shadow:0 0 0 16px rgba(34,197,94,0);}}',
+            '.er-revive-splash-icon-dashed{position:absolute;inset:-8px;border-radius:50%;',
+            'border:2px dashed rgba(126,224,166,0.55);animation:er-revive-ring-spin 6s linear infinite;}',
+            '@keyframes er-revive-ring-spin{to{transform:rotate(360deg);}}',
+            '.er-revive-splash-icon{position:relative;width:76px;height:76px;border-radius:50%;',
+            'background:rgba(34,197,94,0.18);border:2px solid #22c55e;display:flex;align-items:center;',
+            'justify-content:center;font-size:34px;line-height:1;}',
+            '.er-revive-splash-avatar{width:44px;height:44px;border-radius:50%;border:2px solid #22c55e;',
+            'box-shadow:0 0 12px rgba(34,197,94,0.6);overflow:hidden;flex:none;}',
             '.er-revive-splash-avatar .er-ring-avatar,.er-revive-splash-avatar .er-ring-avatar--fallback{',
-            'width:100%;height:100%;font-size:1.6em;}',
-            '.er-revive-splash-name{font-size:1.15em;font-weight:900;color:#fff;}',
+            'width:100%;height:100%;font-size:1em;}',
+            '.er-revive-splash-name{font-size:1.05em;font-weight:900;color:#fff;}',
+            '.er-revive-splash-reason{font-size:0.78em;font-weight:600;color:#c9f7d8;line-height:1.4;}',
 
             /* ---- Toasts ---- */
             '#er-toast-wrap{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:100020;',
@@ -2126,6 +2192,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         _pendingTurn = { type: 'eliminate', candidates: candidates, chooser: chooser };
         renderTurnModal();
+        playTabAppearChime(false);
         startTurnTimer(function onTimeout() {
             applyEliminationTimeout(chooser);
         });
@@ -2218,6 +2285,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function openRevivalWindow(chooser, candidates, via) {
         _pendingTurn = { type: 'revive', candidates: candidates, chooser: chooser, via: via };
         renderTurnModal();
+        playTabAppearChime(true);
         startTurnTimer(function onTimeout() {
             closeTurnModal(); // timing out with no pick just forfeits the revival chance
             // Same rotation reset needed on every path that doesn't change
@@ -2278,8 +2346,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // الإقصاء") + a plain instruction line below the chooser row —
         // replaces the old single title line that mixed both together.
         el('er-select-phase-label').textContent = isRevive ? 'مرحلة الإنعاش' : 'مرحلة الإقصاء';
+        // Revive subtitle matches handoff_roulette_recent_features/
+        // PROMPT.md's exact wording for the repeat-name trigger.
         el('er-select-title').textContent = isRevive
-            ? 'اختر من الشات بكتابة الرقم، أو يدوياً بالنقر على بطاقة اللاعب'
+            ? 'تكرر اسمه مرتين متتاليتين.. اختر لاعباً مقصياً ليرجّعه'
             : 'اكتب اسم أي لاعب مشارك في شات البث لإقصائه، أو يدوياً بالنقر على بطاقته';
 
         el('er-select-chooser-slot').innerHTML = selectChooserCardHtml(_pendingTurn.chooser, roleClass);
@@ -2713,23 +2783,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         playSound('revive');
 
+        // Matches handoff_roulette_recent_features/PROMPT.md's wording
+        // exactly for the two triggers it defines (repeat-name and manual
+        // restore); the pre-existing gift-triggered revival keeps its own
+        // wording since that flow isn't part of that spec.
         var reasonHtml;
-        if (opts.reason === 'friend' && opts.chooser) {
-            reasonHtml = '💚 ' + escapeHtml(playerLabel(opts.chooser)) + ' أرجعه للعبة عن طريق إنعاش صديق!';
-        } else if (opts.reason === 'friend') {
-            reasonHtml = '💚 رجع للعبة عن طريق إنعاش صديق!';
+        if (opts.reason === 'friend') {
+            reasonHtml = 'كتب اسمه مرتين متتاليتين في التعليقات';
+        } else if (opts.reason === 'manual') {
+            reasonHtml = 'أُرجع يدوياً من الإعدادات';
         } else {
             reasonHtml = '🎁 رجع للعبة عن طريق الدعم!';
         }
 
-        // Order: heart (PNG) at the top, reason text right below it, then
-        // the player's photo, then their name under the photo — same
-        // template for both the 'gift' and 'friend' cases.
+        // Order matches the design spec exactly: icon badge (with pulsing +
+        // rotating-dashed rings) → avatar → bold headline ("X رجع للعبة")
+        // → smaller sub-line explaining why.
         box.innerHTML =
-            '<img class="er-revive-splash-heart" src="revive-heart.png" alt="">' +
-            '<div class="er-revive-splash-reason">' + reasonHtml + '</div>' +
+            '<div class="er-revive-splash-icon-wrap">' +
+                '<span class="er-revive-splash-icon-ring"></span>' +
+                '<span class="er-revive-splash-icon-dashed"></span>' +
+                '<span class="er-revive-splash-icon">♻️</span>' +
+            '</div>' +
             '<div class="er-revive-splash-avatar">' + ringAvatarHtml(player) + '</div>' +
-            '<div class="er-revive-splash-name">' + escapeHtml(playerLabel(player)) + '</div>';
+            '<div class="er-revive-splash-name">' + escapeHtml(playerLabel(player)) + ' رجع للعبة</div>' +
+            '<div class="er-revive-splash-reason">' + reasonHtml + '</div>';
 
         overlay.style.display = 'flex';
         // Restart the pop-in animation if this window shows twice in quick
@@ -2740,11 +2818,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         box.classList.add('er-revive-splash-anim');
 
         if (_reviveSplashTimer) window.clearTimeout(_reviveSplashTimer);
+        // Exactly 3s total on-screen, matching the design spec.
         _reviveSplashTimer = window.setTimeout(function () {
             overlay.style.display = 'none';
             _reviveSplashTimer = null;
             if (typeof onDone === 'function') onDone();
-        }, 2000);
+        }, 3000);
     }
 
     /* ======================================================================
@@ -2888,6 +2967,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _matchActive = false;
         stopAutoPlay();
         closeTurnModal();
+        playMatchEndSound();
         if (typeof _commentUnsub === 'function') _commentUnsub();
         if (typeof _giftUnsub === 'function') _giftUnsub();
 
@@ -3869,6 +3949,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         realignWheelAfterRosterChange();
         logEvent('gift', '↩️ ' + playerLabel(entry.player) + ' تم إرجاعه يدوياً من لوحة الإعدادات');
         renderReopenedPlayersTab();
+        // Matches handoff_roulette_recent_features/PROMPT.md: manual
+        // restores from the Players tab get the same post-revive
+        // confirmation card as the repeat-name trigger — this call was
+        // entirely missing before (the manual path only logged silently).
+        showReviveSplash(entry.player, { reason: 'manual' }, function () {});
     }
 
     // "Add new lobby" window — a centered 700x800 window, 70% transparency
