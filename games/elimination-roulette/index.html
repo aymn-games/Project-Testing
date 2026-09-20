@@ -58,6 +58,11 @@
 <!-- Settings screen + TikTok connection + lobby (shared, pre-existing) -->
 <script src="../../js/agp-game-shell.js"></script>
 
+<!-- Real TikTok gift-support icons, shared across every game — loaded
+     before this game's own file since it calls AGP.tiktokGifts when
+     building each gift's icon -->
+<script src="../../assets/tiktok-gifts/tiktok-gifts.js"></script>
+
 <!-- This game's own logic -->
 <script src="agp-elimination-roulette.js"></script>
 
