@@ -58,24 +58,45 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var C_WHEEL_TRIM = '#9c8fb0';
 
     // Coin values researched from public sources (streamwrapped.com,
-    // bettertok.app, joinotto.com). Icons are the real TikTok gift
-    // artwork files already prepared for this game (games/elimination-roulette/gift_icons/),
-    // loaded locally instead of the generic Twemoji approximations used
-    // before — no external CDN dependency, and no risk of a broken-image
-    // icon if that CDN is unreachable.
+    // bettertok.app, joinotto.com). Icons: gifts with an "iconId" use the
+    // real TikTok gift artwork shared across every game at
+    // assets/tiktok-gifts/ (loaded via that folder's tiktok-gifts.js —
+    // see index.html) — confirmed real coin cost AND real gift name, so
+    // they're a safe match. The rest still use the Twemoji approximation
+    // (MIT + CC-BY 4.0, not official TikTok assets) until real art for
+    // them is confirmed too; giftIconUrl() below falls back to it
+    // automatically whenever iconId is absent or not found.
     var COMMON_GIFTS = [
-        { label: 'وردة', value: 'Rosa', file: 'rosa.webp', coins: 10 },
-        { label: 'تيك توك', value: 'TikTok', file: 'tiktok.webp', coins: 1 },
-        { label: 'قلب الإصبع', value: 'Finger Heart', file: 'finger_heart.webp', coins: 5 },
-        { label: 'مخروط آيسكريم', value: 'Ice Cream Cone', file: 'ice_cream_cone.webp', coins: 1 },
-        { label: 'عطر', value: 'Perfume', file: 'perfume.webp', coins: 20 },
-        { label: 'دوناتس', value: 'Doughnut', file: 'doughnut.webp', coins: 30 },
-        { label: 'قلوب اليد', value: 'Hand Hearts', file: 'hand_hearts.webp', coins: 100 },
-        { label: 'كلب كورجي', value: 'Corgi', file: 'corgi.webp', coins: 299 }
+        { label: 'وردة', value: 'Rose', iconId: 'rose', codepoint: '1f339', coins: 1 },
+        { label: 'تيك توك', value: 'TikTok', iconId: 'tiktok', codepoint: '1f496', coins: 1 },
+        { label: 'قلب الإصبع', value: 'Finger Heart', iconId: 'finger-heart', codepoint: '1f90d', coins: 5 },
+        { label: 'جي جي', value: 'GG', codepoint: '1f3a4', coins: 1 },
+        { label: 'مخروط آيسكريم', value: 'Ice Cream Cone', iconId: 'ice-cream', codepoint: '1f366', coins: 1 },
+        { label: 'عطر', value: 'Perfume', codepoint: '1f9f4', coins: 20 },
+        { label: 'دوناتس', value: 'Doughnut', iconId: 'donut', codepoint: '1f369', coins: 30 },
+        { label: 'قلوب اليد', value: 'Hand Hearts', codepoint: '1f49e', coins: 100 },
+        { label: 'نظارة شمسية', value: 'Sunglasses', codepoint: '1f576', coins: 199 },
+        { label: 'تاج صغير', value: 'Little Crown', codepoint: '1f451', coins: 99 },
+        { label: 'كلب كورجي', value: 'Corgi', iconId: 'corgi', codepoint: '1f415', coins: 299 },
+        { label: 'باقة ورد', value: 'Rosa', iconId: 'rosa', codepoint: '1f490', coins: 10 },
+        { label: 'نغمة موسيقية', value: 'Music Note', codepoint: '1f3b5', coins: 169 },
+        { label: 'قصاصات احتفالية', value: 'Confetti Battle', codepoint: '1f389', coins: null },
+        { label: 'مجرة', value: 'Galaxy', iconId: 'galaxy', codepoint: '1f30c', coins: 1000 },
+        { label: 'مسدس نقود', value: 'Money Gun', codepoint: '1f4b8', coins: 500 },
+        { label: 'سيارة رياضية', value: 'Sports Car', codepoint: '1f3ce', coins: 7000 },
+        { label: 'أسد', value: 'Lion', iconId: 'lion', codepoint: '1f981', coins: 29999 },
+        { label: 'ملكة الدراما', value: 'Drama Queen', codepoint: '1f483', coins: 5 },
+        { label: 'كون تيك توك', value: 'TikTok Universe', codepoint: '1f320', coins: 44999 }
     ];
 
-    var GIFT_ICON_BASE = 'gift_icons/';
-    function giftIconUrl(g) { return GIFT_ICON_BASE + g.file; }
+    var TWEMOJI_BASE = 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/';
+    function giftIconUrl(g) {
+        if (g.iconId && AGP.tiktokGifts) {
+            var real = AGP.tiktokGifts.byId(g.iconId);
+            if (real) return AGP.tiktokGifts.iconUrl(real);
+        }
+        return TWEMOJI_BASE + g.codepoint + '.svg';
+    }
     function giftCoinsText(g) { return (g.coins != null) ? (g.coins + ' 🪙') : '؟'; }
 
     var ELIMINATION_TIMER_OPTIONS = [20, 25, 30, 40].map(function (s) {
@@ -3047,10 +3068,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var box = el('er-modal-box');
         if (!overlay || !box) return;
 
-        // Each gift's icon is a real Twemoji image (MIT + CC-BY 4.0
-        // license, not official TikTok assets) + the gift name + its real
-        // coin value (per actual research — see the note above
-        // COMMON_GIFTS).
+        // Each gift's icon is the real TikTok gift artwork when available
+        // (assets/tiktok-gifts/), otherwise a Twemoji fallback (MIT +
+        // CC-BY 4.0, not an official TikTok asset) — plus the gift name
+        // and its real coin value (per actual research — see the note
+        // above COMMON_GIFTS).
         var itemsHtml = COMMON_GIFTS.map(function (g) {
             var active = g.value === currentValue ? 'agp-pill-active' : '';
             return '<button type="button" class="agp-pill-btn er-gift-btn ' + active + '" data-gift-value="' + escapeHtml(g.value) + '">' +
