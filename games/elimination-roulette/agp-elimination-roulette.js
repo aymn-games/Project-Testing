@@ -335,6 +335,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
     function playerLabel(p) { return (p && (p.name || p.id)) || '—'; }
 
+    // Converts Arabic-Indic (٠-٩) and Persian (۰-۹) digits to plain ASCII
+    // digits so parseInt() can read them — same helper/convention already
+    // used in games/team-war/agp-team-war.js. Without this, a viewer typing
+    // a player's number in Arabic-Indic numerals (e.g. "٢" instead of "2")
+    // in chat silently failed to match (parseInt only understands ASCII
+    // digits) — see wireCommentListener() below.
+    function normalizeDigits(text) {
+        if (typeof text !== 'string') return '';
+        var arabicIndic = '٠١٢٣٤٥٦٧٨٩';
+        var persian = '۰۱۲۳۴۵۶۷۸۹';
+        return text.replace(/[٠-٩۰-۹]/g, function (ch) {
+            var i = arabicIndic.indexOf(ch);
+            if (i > -1) return String(i);
+            i = persian.indexOf(ch);
+            return i > -1 ? String(i) : ch;
+        });
+    }
+
     // Fixed bug: escapeHtml() alone isn't enough for text inserted inside a
     // single-quoted JS string that itself sits inside a double-quoted HTML
     // attribute (onerror="...this.outerHTML='...NAME...'...") — it only
@@ -2672,7 +2690,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 return;
             }
 
-            var n = parseInt(text, 10);
+            // normalizeDigits() first — a viewer typing the number in
+            // Arabic-Indic numerals (e.g. "٢") would otherwise never match,
+            // since parseInt only understands plain ASCII digits.
+            var n = parseInt(normalizeDigits(text), 10);
             if (isNaN(n)) return;
             // The number typed in chat is matched against the player's
             // fixed number (playerNumber — see its comment near the top of
