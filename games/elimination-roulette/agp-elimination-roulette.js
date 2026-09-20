@@ -58,35 +58,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var C_WHEEL_TRIM = '#9c8fb0';
 
     // Coin values researched from public sources (streamwrapped.com,
-    // bettertok.app, joinotto.com) — "Confetti Battle" had no confirmed
-    // value in any source, shown as "؟" instead. Gift icons: Twemoji
-    // (jdecked/twemoji, MIT + CC-BY 4.0 license) — not official
-    // copyrighted TikTok assets.
+    // bettertok.app, joinotto.com). Icons are the real TikTok gift
+    // artwork files already prepared for this game (games/elimination-roulette/gift_icons/),
+    // loaded locally instead of the generic Twemoji approximations used
+    // before — no external CDN dependency, and no risk of a broken-image
+    // icon if that CDN is unreachable.
     var COMMON_GIFTS = [
-        { label: 'وردة', value: 'Rose', codepoint: '1f339', coins: 1 },
-        { label: 'تيك توك', value: 'TikTok', codepoint: '1f496', coins: 1 },
-        { label: 'قلب الإصبع', value: 'Finger Heart', codepoint: '1f90d', coins: 5 },
-        { label: 'جي جي', value: 'GG', codepoint: '1f3a4', coins: 1 },
-        { label: 'مخروط آيسكريم', value: 'Ice Cream Cone', codepoint: '1f366', coins: 1 },
-        { label: 'عطر', value: 'Perfume', codepoint: '1f9f4', coins: 20 },
-        { label: 'دوناتس', value: 'Doughnut', codepoint: '1f369', coins: 30 },
-        { label: 'قلوب اليد', value: 'Hand Hearts', codepoint: '1f49e', coins: 100 },
-        { label: 'نظارة شمسية', value: 'Sunglasses', codepoint: '1f576', coins: 199 },
-        { label: 'تاج صغير', value: 'Little Crown', codepoint: '1f451', coins: 99 },
-        { label: 'كلب كورجي', value: 'Corgi', codepoint: '1f415', coins: 299 },
-        { label: 'باقة ورد', value: 'Rosa', codepoint: '1f490', coins: 10 },
-        { label: 'نغمة موسيقية', value: 'Music Note', codepoint: '1f3b5', coins: 169 },
-        { label: 'قصاصات احتفالية', value: 'Confetti Battle', codepoint: '1f389', coins: null },
-        { label: 'مجرة', value: 'Galaxy', codepoint: '1f30c', coins: 1000 },
-        { label: 'مسدس نقود', value: 'Money Gun', codepoint: '1f4b8', coins: 500 },
-        { label: 'سيارة رياضية', value: 'Sports Car', codepoint: '1f3ce', coins: 7000 },
-        { label: 'أسد', value: 'Lion', codepoint: '1f981', coins: 29999 },
-        { label: 'ملكة الدراما', value: 'Drama Queen', codepoint: '1f483', coins: 5 },
-        { label: 'كون تيك توك', value: 'TikTok Universe', codepoint: '1f320', coins: 44999 }
+        { label: 'وردة', value: 'Rosa', file: 'rosa.webp', coins: 10 },
+        { label: 'تيك توك', value: 'TikTok', file: 'tiktok.webp', coins: 1 },
+        { label: 'قلب الإصبع', value: 'Finger Heart', file: 'finger_heart.webp', coins: 5 },
+        { label: 'مخروط آيسكريم', value: 'Ice Cream Cone', file: 'ice_cream_cone.webp', coins: 1 },
+        { label: 'عطر', value: 'Perfume', file: 'perfume.webp', coins: 20 },
+        { label: 'دوناتس', value: 'Doughnut', file: 'doughnut.webp', coins: 30 },
+        { label: 'قلوب اليد', value: 'Hand Hearts', file: 'hand_hearts.webp', coins: 100 },
+        { label: 'كلب كورجي', value: 'Corgi', file: 'corgi.webp', coins: 299 }
     ];
 
-    var TWEMOJI_BASE = 'https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/';
-    function giftIconUrl(g) { return TWEMOJI_BASE + g.codepoint + '.svg'; }
+    var GIFT_ICON_BASE = 'gift_icons/';
+    function giftIconUrl(g) { return GIFT_ICON_BASE + g.file; }
     function giftCoinsText(g) { return (g.coins != null) ? (g.coins + ' 🪙') : '؟'; }
 
     var ELIMINATION_TIMER_OPTIONS = [20, 25, 30, 40].map(function (s) {
@@ -835,27 +824,41 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'border-color:var(--er-accent2);}',
 
             /* Visual contrast for the "friend revival"/"gift revival"
-             * toggle switches on the settings screen: dark gray OFF ->
-             * bright glowing green ON, instead of two near-identical
-             * shades of purple. Scoped to this game only (!important +
-             * selectors specific to these two switches), without touching
-             * the shared js/agp-game-shell.js or any other game using it.
+             * toggle switches on the mid-match settings drawer: dark gray
+             * OFF -> bright glowing green ON, instead of two
+             * near-identical shades of purple. Scoped to this game only
+             * (!important + selectors specific to these two switches),
+             * without touching the shared js/agp-game-shell.js or any
+             * other game using it.
+             *
+             * :not(.er-settings-initial-box) — the initial settings
+             * screen has its own complete toggle redesign below (plain
+             * knob, no ✓/✕ glyph, sized/positioned for its own 50x28
+             * track). Before this exclusion, this rule's :has()-based
+             * selector was more specific than that redesign's, so it won
+             * every conflicting declaration (content, size, position, the
+             * -20px travel distance) — with a track/knob sized for this
+             * rule's own layout, that pushed the knob to a negative
+             * offset that visibly spilled outside the switch on the left
+             * when checked ("the button's shape goes outside its frame").
+             * Excluding this screen here is simpler and safer than trying
+             * to out-specificity a :has() selector for every property.
              */
-            'label.agp-toggle-switch:has(input[data-key="friendRevivalEnabled"]) .agp-toggle-track,',
-            'label.agp-toggle-switch:has(input[data-key="giftRevivalEnabled"]) .agp-toggle-track{',
+            '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="friendRevivalEnabled"]) .agp-toggle-track,',
+            '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="giftRevivalEnabled"]) .agp-toggle-track{',
             'background:linear-gradient(180deg,#4a4458,#332e40) !important;',
             'box-shadow:inset 0 2px 5px rgba(0,0,0,0.5) !important;}',
-            'label.agp-toggle-switch:has(input[data-key="friendRevivalEnabled"]:checked) .agp-toggle-track,',
-            'label.agp-toggle-switch:has(input[data-key="giftRevivalEnabled"]:checked) .agp-toggle-track{',
+            '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="friendRevivalEnabled"]:checked) .agp-toggle-track,',
+            '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="giftRevivalEnabled"]:checked) .agp-toggle-track{',
             'background:linear-gradient(180deg,#4ade80,#16a34a) !important;',
             'box-shadow:inset 0 2px 5px rgba(0,0,0,0.35),0 0 12px rgba(74,222,128,0.65) !important;}',
-            'label.agp-toggle-switch:has(input[data-key="friendRevivalEnabled"]) .agp-toggle-track::before,',
-            'label.agp-toggle-switch:has(input[data-key="giftRevivalEnabled"]) .agp-toggle-track::before{',
+            '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="friendRevivalEnabled"]) .agp-toggle-track::before,',
+            '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="giftRevivalEnabled"]) .agp-toggle-track::before{',
             'width:22px !important;height:22px !important;left:2px !important;top:2px !important;',
             'display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;',
             'content:"✕" !important;color:#7a7488;line-height:22px;text-align:center;}',
-            'label.agp-toggle-switch:has(input[data-key="friendRevivalEnabled"]:checked) .agp-toggle-track::before,',
-            'label.agp-toggle-switch:has(input[data-key="giftRevivalEnabled"]:checked) .agp-toggle-track::before{',
+            '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="friendRevivalEnabled"]:checked) .agp-toggle-track::before,',
+            '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="giftRevivalEnabled"]:checked) .agp-toggle-track::before{',
             'content:"✓" !important;color:#16a34a !important;transform:translateX(-20px) !important;}',
 
             /* Fallback background for the shared #agp-shell-box (settings/
