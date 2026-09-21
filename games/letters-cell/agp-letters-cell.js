@@ -7,11 +7,12 @@
  * قواعد اللعب الفعلية (بعد تحديث المضيف على النسخة الأولى):
  * - رقعة اللعب 25 خلية (مو 23) من أصل أبجدية 28 حرفاً كاملة -- كل جولة/
  *   إعادة توزيع تسحب 25 حرفاً عشوائياً من الـ28 وتوزّعها عشوائياً على
- *   الخلايا (نفس شكل رقعة الـ23 خلية القديمة بالضبط: 5 صفوف، نفس حجم
- *   السداسي 122.7×146.67 -- فقط الصفان الطرفيان توسّعا لـ6 خلايا بدل 5
- *   [6-4-5-4-6] عشان يستوعبا الحرفين الزائدين، والصندوق الأفقي المتاح
- *   وُسّع بما يكفي لعمود سادس بدون أي تصغير لحجم الخلايا -- محسوبة هندسياً
- *   بدالة عامة buildBoardGeometry() بدل إحداثيات مثبّتة).
+ *   الخلايا. شكل الرقعة معيّن (rhombus) متناسق 5×5 -- كل الصفوف الخمسة
+ *   بنفس الطول (5 خلايا)، وكل صف يزحف أفقياً بمقدار نصف عرض خلية عن اللي
+ *   قبله بنفس الاتجاه (بخلاف نمط "الطوب" المتعرّج القديم اللي كان يبدّل
+ *   اتجاه الإزاحة كل صف) -- هذا شكل رقعة Hex الكلاسيكي بالضبط. نفس حجم
+ *   السداسي الأصلي (122.7×146.67)، محسوبة هندسياً بدالة عامة
+ *   buildRhombusGeometry() بدل إحداثيات مثبّتة.
  * - بنك الأسئلة (QUESTION_BANK) خريطة حرف -> مصفوفة أسئلة {question,
  *   answer} -- placeholder حالياً بانتظار ملف الأسئلة الحقيقي (28 حرف،
  *   كل حرف له أكثر من سؤال). لا يتكرر أي سؤال داخل نفس المباراة كاملة
@@ -91,50 +92,37 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return acc;
     }, {});
 
-    // -------- هندسة رقعة الـ25 خلية (نفس شكل رقعة الـ23 خلية السابقة: 5
-    // صفوف متعرّجة، بس الصفوف الطرفية توسّعت لـ6 خلايا بدل 5 عشان تستوعب
-    // الحرفين الزائدين -- نفس ارتفاع/عرض السداسي الأصلي بالضبط، فقط الصندوق
-    // الأفقي المتاح اتّسع شوي ليتّسع لعمود سادس بدون ما يصغّر حجم الخلايا) --
+    // -------- هندسة رقعة الـ25 خلية (معيّن Hex كلاسيكي 5×5) --------
     var VIEW_W = 1974, VIEW_H = 1128;
-    // نفس الارتفاع اللي كانت رقعة الـ23 خلية تشغله (5 صفوف)، والعرض وُسّع
-    // بما يكفي لعمود سادس بنفس حجم السداسي الأصلي (122.7×146.67) بدون تقليص.
-    var BOARD_X0 = 393.5, BOARD_X1 = 1143.5, BOARD_Y0 = 271.165, BOARD_Y1 = 857.835;
-    var ROW_PATTERN = [6, 4, 5, 4, 6];
+    // نفس الارتفاع اللي كانت رقعة الـ23 خلية تشغله (5 صفوف، نفس حجم السداسي
+    // الأصلي)، ونفس مركز الرقعة الأفقي القديم -- المعيّن يتّسع تلقائياً حول
+    // هذا المركز بقدر ما يحتاجه ميلانه القطري.
+    var BOARD_CENTER_X = 726.31, BOARD_Y0 = 271.165, BOARD_Y1 = 857.835;
+    var BOARD_ROWS = 5, BOARD_COLS = 5;
 
-    function buildBoardGeometry(rowPattern) {
-        var rows = rowPattern.length;
-        var maxCols = Math.max.apply(null, rowPattern);
+    function buildRhombusGeometry(rows, cols) {
         var boardH = BOARD_Y1 - BOARD_Y0;
-        var boardW = BOARD_X1 - BOARD_X0;
-
-        // نحسب حجم السداسي مرتين (حسب قيد الارتفاع، وحسب قيد العرض) ونأخذ
-        // الأصغر -- عشان يبقى شكل السداسي (122.7:146.67) صحيحاً دائماً، مهما
-        // كان شكل rowPattern الممرَّر مستقبلاً.
-        var hexHByHeight = boardH / (0.75 * rows + 0.25);
-        var hexWByHeight = hexHByHeight * (122.7 / 146.67);
-        var hexWByWidth = boardW / maxCols;
-        var hexHByWidth = hexWByWidth * (146.67 / 122.7);
-        var hexW, hexH;
-        if (hexWByHeight <= hexWByWidth) { hexW = hexWByHeight; hexH = hexHByHeight; }
-        else { hexW = hexWByWidth; hexH = hexHByWidth; }
-
+        var hexH = boardH / (0.75 * rows + 0.25);
+        var hexW = hexH * (122.7 / 146.67); // نفس نسبة عرض/ارتفاع السداسي الأصلي
         var spacingX = hexW; // سداسيات متلامسة بنفس الصف
         var spacingY = hexH * 0.75;
-        var boardCenterX = (BOARD_X0 + BOARD_X1) / 2;
-        var usedHeight = spacingY * (rows - 1) + hexH;
-        var yStart = BOARD_Y0 + (boardH - usedHeight) / 2; // توسيط رأسي لو الصندوق أطول من المطلوب
+        var halfStep = spacingX / 2; // إزاحة كل صف عن اللي قبله (بنفس الاتجاه، مو متبادلة)
+
+        // إجمالي عرض المعيّن = عرض صف واحد + الإزاحة القطرية التراكمية عبر كل الصفوف
+        var rowSpan = (cols - 1) * spacingX;
+        var totalDiagonalShift = (rows - 1) * halfStep;
+        var totalWidth = rowSpan + totalDiagonalShift + hexW;
+        var firstRowStartX = BOARD_CENTER_X - totalWidth / 2 + hexW / 2;
 
         var centers = [];
         var layout = [];
         var idx = 0;
         var leftEdge = [], rightEdge = [], topEdge = [], bottomEdge = [];
         for (var r = 0; r < rows; r++) {
-            var cols = rowPattern[r];
-            var cy = yStart + hexH / 2 + r * spacingY;
-            var rowWidth = (cols - 1) * spacingX;
-            var startX = boardCenterX - rowWidth / 2;
+            var cy = BOARD_Y0 + hexH / 2 + r * spacingY;
+            var rowStartX = firstRowStartX + r * halfStep;
             for (var c = 0; c < cols; c++) {
-                var cx = startX + c * spacingX;
+                var cx = rowStartX + c * spacingX;
                 centers.push({ x: cx, y: cy });
                 layout.push({
                     leftPct: ((cx - hexW / 2) / VIEW_W) * 100,
@@ -142,8 +130,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     wPct: (hexW / VIEW_W) * 100,
                     hPct: (hexH / VIEW_H) * 100
                 });
-                if (cols === maxCols && c === 0) leftEdge.push(idx);
-                if (cols === maxCols && c === cols - 1) rightEdge.push(idx);
+                if (c === 0) leftEdge.push(idx);
+                if (c === cols - 1) rightEdge.push(idx);
                 if (r === 0) topEdge.push(idx);
                 if (r === rows - 1) bottomEdge.push(idx);
                 idx++;
@@ -162,7 +150,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return { layout: layout, adjacency: adjacency, leftEdge: leftEdge, rightEdge: rightEdge, topEdge: topEdge, bottomEdge: bottomEdge };
     }
 
-    var BOARD_GEOMETRY = buildBoardGeometry(ROW_PATTERN);
+    var BOARD_GEOMETRY = buildRhombusGeometry(BOARD_ROWS, BOARD_COLS);
     var CELL_LAYOUT = BOARD_GEOMETRY.layout;
     var ADJACENCY = BOARD_GEOMETRY.adjacency;
     var LEFT_EDGE = BOARD_GEOMETRY.leftEdge;
