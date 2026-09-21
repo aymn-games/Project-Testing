@@ -4,36 +4,49 @@
  * بمنصة البث فقط -- الهوية البصرية والشاشات مستقلة تماماً حسب تصميم
  * التسليم (design handoff)، لا اعتماد على js/agp-game-shell.js).
  *
- * ملاحظات تنفيذ مهمة (قرارات اتُّخذت أثناء البناء، موثّقة هنا بدل تركها
- * ضمنية):
- * - بنك الأسئلة (QUESTION_BANK) عبارة عن نص placeholder لكل حرف، بانتظار
- *   ملف الأسئلة/الأحرف الحقيقي الذي سيُرفع لاحقاً -- استبدله بالمحتوى
- *   الحقيقي متى وصل، بنفس الشكل (خريطة حرف -> نص السؤال).
- * - نص السؤال أثناء اللعب للقراءة فقط (مو textarea قابل للتعديل مباشرة
- *   فوق اللعب المباشر) واسم الفريق في شريط الفريق أثناء اللعب للقراءة
- *   فقط أيضاً (مصدره إعدادات الفريق) -- بناءً على توصية ملف التسليم نفسه.
- * - الانضمام عبر الكلمة المفتاحية يبقى مفعّلاً طول المباراة (لوبي + لعب
- *   حي) وليس فقط أثناء اللوبي، لأن نافذة "دعوة لاعبين جدد" داخل اللعب
- *   تفترض ذلك صراحة (شاشة اللعب لا تملك نظام أدوار يتأثر بانضمام لاعب
- *   جديد أثناء الجولة).
+ * قواعد اللعب الفعلية (بعد تحديث المضيف على النسخة الأولى):
+ * - رقعة اللعب 25 خلية (مو 23) من أصل أبجدية 28 حرفاً كاملة -- كل جولة/
+ *   إعادة توزيع تسحب 25 حرفاً عشوائياً من الـ28 وتوزّعها عشوائياً على
+ *   الخلايا (شكل الرقعة نفسه: نمط "الطوب" المتعرّج القديم، بس بـ7 صفوف
+ *   متعرّجة 4-3-4-3-4-3-4 بدل 5 صفوف 5-4-5-4-5 -- محسوبة هندسياً بدالة
+ *   عامة buildBoardGeometry() بدل إحداثيات مثبّتة، لأنه ما فيه ملف تصميم
+ *   جديد لـ25 خلية بالضبط).
+ * - بنك الأسئلة (QUESTION_BANK) خريطة حرف -> مصفوفة أسئلة {question,
+ *   answer} -- placeholder حالياً بانتظار ملف الأسئلة الحقيقي (28 حرف،
+ *   كل حرف له أكثر من سؤال). لا يتكرر أي سؤال داخل نفس المباراة كاملة
+ *   (كل جولاتها + إعادة توزيعها) عبر تتبّع _usedQuestions لكل حرف.
+ * - تصحيح الإجابة تلقائي بالدرجة الأولى: يقارن أي تعليق وارد بالشات
+ *   (بعد تطبيع النص) بنص "الإجابة" المخزّن لسؤال الخلية المفتوحة حالياً؛
+ *   أول لاعب (منضم مسبقاً لأحد الفريقين) يكتب الإجابة الصحيحة حرفياً
+ *   يُعتمد تلقائياً ويلوَّن الخلية بلون فريقه. يبقى للمضيف زران يدويان
+ *   ("تصحيح لفريق 1/2") كاحتياط لو ما حد كتب الجواب حرفياً بالشات.
+ * - اللاعب الذي اعتُمدت إجابته آخر مرة (تلقائياً أو يدوياً عبر الزر
+ *   الاحتياطي) يظهر اسمه بمكان صندوق السؤال، وله وحده صلاحية اختيار
+ *   الحرف التالي بكتابته مباشرة بالشات؛ المضيف يقدر دائماً يتجاوز هذا
+ *   ويضغط أي خلية غير مفتوحة يدوياً في أي وقت.
+ * - المباراة "Best of 3": أول فريق يفوز بجولتين (خط متصل) يحسم المباراة
+ *   فوراً بدون ما تُلعب الجولة الثالثة لو صارت غير ضرورية.
+ * - لو امتلأت كل خلايا الرقعة بدون أي خط متصل لأي فريق: تُعاد نفس الجولة
+ *   تلقائياً (تصفير الرقعة + سحب 25 حرفاً وأسئلة جديدة من جديد) بدون
+ *   احتساب أي نقطة لأي فريق. المضيف يقدر يطلب نفس الإعادة يدوياً في أي
+ *   وقت من زر الشارة السداسية العلوية ("إعادة توزيع").
+ * - بهذا صار حسم الفوز بالمباراة حتمياً دائماً (2 من 3) فما عاد فيه حاجة
+ *   لحالة "تعادل النقاط" أو شاشة "ملخص الجولة" اليدوية القديمة -- أُزيلتا
+ *   بالكامل من هذا الإصدار.
+ * - "الانضمام عبر الكلمة المفتاحية" يبقى مفعّلاً طول المباراة (لوبي + لعب
+ *   حي)، ليس فقط أثناء اللوبي، لأن نافذة "دعوة لاعبين جدد" داخل اللعب
+ *   تفترض ذلك صراحة.
  * - عند "لعبة جديدة" من شاشة النتيجة النهائية: يبقى الاتصال بالبث كما هو
  *   ويُعاد ضبط اللاعبين/اللوحة والعودة مباشرة للوبي (مو لإعادة كتابة
- *   يوزر البث من الصفر) -- الاتصال الحقيقي بالبث مفهوم غير موجود أصلاً في
- *   نموذج التصميم التجريبي (Prototype state فقط)، فهذا تكييف واقعي له.
- * - زر "إنهاء المباراة" في درج الإعدادات ينهي الجلسة فعلياً (قطع الاتصال
+ *   يوزر البث من الصفر).
+ * - زر "إنهاء المباراة" بدرج الإعدادات ينهي الجلسة فعلياً (قطع الاتصال
  *   بالبث + تصفير اللاعبين عبر AGP.gameManager.resetSession() + العودة
- *   لشاشة الإعدادات)، بخلاف "إعادة ضبط اللعبة" اللي يصفّر رقعة اللعب فقط
- *   ويبقي اللاعبين والنقاط -- في تصميم المرجع الأصلي كان "إنهاء المباراة"
- *   مجرد إغلاق للدرج بلا أي أثر فعلي (فجوة واضحة بنموذج التصميم التجريبي).
- * - عند الفوز بخط متصل: نقطة واحدة تُضاف لإجمالي الفريق الفائز لكل جولة.
- *   عند إنهاء الجولة يدوياً (تعادل/بدون خط متصل) يُضاف عدد الخلايا
- *   المملوكة فعلياً لكل فريق لإجماليه -- هذا (وحدتا قياس مختلفتان تصبّان
- *   بنفس الإجمالي) موروث حرفياً من منطق ملف التصميم المرجعي نفسه ولم
- *   يُصحَّح هنا، لأنه أحد الحالات الحدّية التي ينبّه عليها ملف التسليم
- *   صراحة (README) على أنها تحتاج قراراً من المنتج قبل تغييرها.
- * - "اسم اللاعب المجيب" في نافذة تأكيد الإجابة يبقى دائماً أول لاعب في
- *   قائمة الفريق (بدل استخراج مين فعلياً أجاب من الشات) -- محدودية موثّقة
- *   وموروثة من ملف التسليم نفسه (يحتاج ربط تحليل شات حقيقي لاحقاً).
+ *   لشاشة الإعدادات)، بخلاف "إعادة ضبط اللعبة" اللي يصفّر رقعة الجولة
+ *   الحالية فقط (سحب جديد) ويبقي اللاعبين ونتيجة المباراة (عدد الجولات
+ *   المكسوبة) كما هي.
+ * - تصحيح الفريق التلقائي يشترط أن يكون كاتب التعليق منضمّاً مسبقاً
+ *   لأحد الفريقين (عبر الكلمة المفتاحية) -- تعليق صحيح من مشاهد غير
+ *   منضم يُتجاهل لأنه ما فيه فريق نلوّن الخلية بلونه.
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -56,8 +69,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var TEAM2 = 2;
     var SCORE_KEY_TEAM1 = 'letters-cell:team1';
     var SCORE_KEY_TEAM2 = 'letters-cell:team2';
+    var ROUND_WINS_TO_CLINCH = 2;
 
-    var LETTERS = ['ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل'];
+    // الأبجدية العربية الكاملة (28 حرفاً) -- كل جولة تسحب 25 منها عشوائياً.
+    var ALPHABET_28 = ['ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي'];
     var DEFAULT_BG = '#E2C8A8';
     var TEAM1_DEFAULT_COLOR = '#5B0E1A';
     var TEAM2_DEFAULT_COLOR = '#513222';
@@ -65,53 +80,81 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var TEAM2_SWATCHES = ['#513222', '#b45309', '#7a1524'];
     var CLIP_PATH = 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)';
 
-    // بنك أسئلة placeholder -- بانتظار ملف الأسئلة/الأحرف الحقيقي.
-    var QUESTION_BANK = LETTERS.reduce(function (acc, l) { acc[l] = 'سؤال حرف ' + l; return acc; }, {});
-
-    // -------- هندسة رقعة الخلايا السداسية (23 خلية) + خوارزمية الاتصال --------
-    var ROW_Y = [344.5, 454.5, 566, 673.5, 784.5];
-    var ROW_X_A = [477.81, 601.81, 725.81, 850.81, 974.81];
-    var ROW_X_B = [540.81, 663.81, 787.81, 911.81];
-    var HEX_W = 122.7, HEX_H = 146.67, VIEW_W = 1974, VIEW_H = 1128;
-
-    function buildCellLayout() {
-        var layout = [];
-        ROW_Y.forEach(function (cy, r) {
-            var xs = (r % 2 === 0) ? ROW_X_A : ROW_X_B;
-            xs.forEach(function (cx) {
-                layout.push({
-                    leftPct: ((cx - HEX_W / 2) / VIEW_W) * 100,
-                    topPct: ((cy - HEX_H / 2) / VIEW_H) * 100,
-                    wPct: (HEX_W / VIEW_W) * 100,
-                    hPct: (HEX_H / VIEW_H) * 100
-                });
-            });
+    // بنك أسئلة placeholder (عدة أسئلة/إجابات لكل حرف) -- بانتظار ملف
+    // الأسئلة الحقيقي (28 حرف). نفس الشكل بالضبط: خريطة حرف -> مصفوفة
+    // { question, answer }.
+    var QUESTION_BANK = ALPHABET_28.reduce(function (acc, letter) {
+        acc[letter] = [1, 2, 3, 4].map(function (n) {
+            return { question: 'سؤال ' + n + ' لحرف ' + letter, answer: 'اجابة حرف ' + letter };
         });
-        return layout;
-    }
-    var CELL_LAYOUT = buildCellLayout();
+        return acc;
+    }, {});
 
-    function buildAdjacency() {
+    // -------- هندسة رقعة الـ25 خلية (نفس نمط الطوب المتعرّج، 7 صفوف) --------
+    var VIEW_W = 1974, VIEW_H = 1128;
+    // نفس المساحة اللي كانت رقعة الـ23 خلية تشغلها بتصميم المرجع الأصلي
+    // (محسوبة من إحداثياته)، فقط أُعيد توزيع الخلايا الجديدة بداخلها.
+    var BOARD_X0 = 416.46, BOARD_X1 = 1036.16, BOARD_Y0 = 271.165, BOARD_Y1 = 857.835;
+    var ROW_PATTERN = [4, 3, 4, 3, 4, 3, 4];
+
+    function buildBoardGeometry(rowPattern) {
+        var rows = rowPattern.length;
+        var maxCols = Math.max.apply(null, rowPattern);
+        var boardH = BOARD_Y1 - BOARD_Y0;
+        var boardW = BOARD_X1 - BOARD_X0;
+        var hexH = boardH / (0.75 * rows + 0.25);
+        var hexW = hexH * (122.7 / 146.67); // نفس نسبة عرض/ارتفاع السداسي الأصلي
+        if (hexW * maxCols > boardW) hexW = boardW / maxCols; // احتياط لو الصفوف اتّسعت أكثر من العرض المتاح
+        var spacingX = hexW; // سداسيات متلامسة بنفس الصف
+        var spacingY = hexH * 0.75;
+        var boardCenterX = (BOARD_X0 + BOARD_X1) / 2;
+
         var centers = [];
-        ROW_Y.forEach(function (cy, r) {
-            var xs = (r % 2 === 0) ? ROW_X_A : ROW_X_B;
-            xs.forEach(function (cx) { centers.push({ x: cx, y: cy }); });
-        });
-        var adj = centers.map(function () { return []; });
+        var layout = [];
+        var idx = 0;
+        var leftEdge = [], rightEdge = [], topEdge = [], bottomEdge = [];
+        for (var r = 0; r < rows; r++) {
+            var cols = rowPattern[r];
+            var cy = BOARD_Y0 + hexH / 2 + r * spacingY;
+            var rowWidth = (cols - 1) * spacingX;
+            var startX = boardCenterX - rowWidth / 2;
+            for (var c = 0; c < cols; c++) {
+                var cx = startX + c * spacingX;
+                centers.push({ x: cx, y: cy });
+                layout.push({
+                    leftPct: ((cx - hexW / 2) / VIEW_W) * 100,
+                    topPct: ((cy - hexH / 2) / VIEW_H) * 100,
+                    wPct: (hexW / VIEW_W) * 100,
+                    hPct: (hexH / VIEW_H) * 100
+                });
+                if (cols === maxCols && c === 0) leftEdge.push(idx);
+                if (cols === maxCols && c === cols - 1) rightEdge.push(idx);
+                if (r === 0) topEdge.push(idx);
+                if (r === rows - 1) bottomEdge.push(idx);
+                idx++;
+            }
+        }
+
+        var adjacency = centers.map(function () { return []; });
+        var threshold = spacingX * 1.15;
         for (var i = 0; i < centers.length; i++) {
             for (var j = i + 1; j < centers.length; j++) {
                 var dx = centers[i].x - centers[j].x, dy = centers[i].y - centers[j].y;
-                var dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < 140) { adj[i].push(j); adj[j].push(i); }
+                if (Math.sqrt(dx * dx + dy * dy) < threshold) { adjacency[i].push(j); adjacency[j].push(i); }
             }
         }
-        return adj;
+
+        return { layout: layout, adjacency: adjacency, leftEdge: leftEdge, rightEdge: rightEdge, topEdge: topEdge, bottomEdge: bottomEdge };
     }
-    var ADJACENCY = buildAdjacency();
-    var LEFT_EDGE = [0, 9, 18];
-    var RIGHT_EDGE = [4, 13, 22];
-    var TOP_EDGE = [0, 1, 2, 3, 4];
-    var BOTTOM_EDGE = [18, 19, 20, 21, 22];
+
+    var BOARD_GEOMETRY = buildBoardGeometry(ROW_PATTERN);
+    var CELL_LAYOUT = BOARD_GEOMETRY.layout;
+    var ADJACENCY = BOARD_GEOMETRY.adjacency;
+    var LEFT_EDGE = BOARD_GEOMETRY.leftEdge;
+    var RIGHT_EDGE = BOARD_GEOMETRY.rightEdge;
+    var TOP_EDGE = BOARD_GEOMETRY.topEdge;
+    var BOTTOM_EDGE = BOARD_GEOMETRY.bottomEdge;
+    var BOARD_SIZE = CELL_LAYOUT.length; // 25
 
     function pathExists(cellStates, team, startEdge, endEdge) {
         var start = startEdge.filter(function (i) { return cellStates[i] === team; });
@@ -132,8 +175,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return pathExists(cellStates, team, LEFT_EDGE, RIGHT_EDGE) || pathExists(cellStates, team, TOP_EDGE, BOTTOM_EDGE);
     }
 
+    function shuffleArray(arr) {
+        var a = arr.slice();
+        for (var i = a.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+        }
+        return a;
+    }
+
     // -------------------------- حالة عامة --------------------------
-    var _screen = 'settings'; // settings | connecting | lobby | game | roundWinner | roundSummary | result
+    var _screen = 'settings'; // settings | connecting | lobby | game | roundWinner | result
     var _root = null;
     var _registrationOpen = false;
     var _commentUnsub = null;
@@ -150,15 +202,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     };
 
     var _round = 1;
-    var _cellStates = new Array(23).fill(0);
-    var _activeLetter = null;
+    var _roundWins1 = 0, _roundWins2 = 0; // عدد الجولات المكسوبة بكل فريق -- يحسم المباراة عند 2
+    var _cellLetters = []; // الحرف المعروض بكل خلية لهذه الجولة (25 عنصر)
+    var _cellStates = []; // 0 غير مملوكة | TEAM1 | TEAM2
+    var _cellQuestions = []; // { text, answer, questionIndex } | null -- يُملأ فقط لما تُفتح الخلية فعلياً
+    var _usedQuestions = {}; // letter -> { [questionIndex]: true } -- طول المباراة كاملة
+    var _activeIdx = null; // فهرس الخلية المفتوحة حالياً (سؤال معروض بلا اعتماد بعد)
     var _connectionWinner = null;
-    var _answerModal = null; // { letter, question, teamName, teamColor, playerName }
+    var _boardFullNoWinner = false;
+    var _answerModal = null; // { question, teamName, teamColor, playerName }
+    var _lastAnswererPlayer = null; // { id, name, team } -- له صلاحية اختيار الحرف التالي بالشات
+    var _reshuffleNotice = null;
     var _settingsOpen = false;
     var _inviteOpen = false;
     var _showIntro = false;
-    var _totalScore1 = 0, _totalScore2 = 0;
-    var _roundScore1 = 0, _roundScore2 = 0;
 
     function el(id) { return document.getElementById(id); }
     function escapeAttr(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;'); }
@@ -211,6 +268,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function playQuestionSound() { playTone(780, 0.12, 'triangle', 0.1, 0.08); }
     function playCorrectSound() { [523, 659, 784, 1046].forEach(function (f, i) { playTone(f, 0.18, 'sine', i * 0.08, 0.1); }); }
     function playRoundWinSound() { [392, 523, 659, 784, 1046, 1318].forEach(function (f, i) { playTone(f, 0.22, 'triangle', i * 0.09, 0.11); }); }
+    function playReshuffleSound() { playTone(360, 0.16, 'triangle', 0, 0.09); playTone(240, 0.2, 'triangle', 0.12, 0.09); }
 
     // -------------------------- أدوات مساعدة --------------------------
     function getTeamPlayers(team) {
@@ -241,7 +299,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             for (var c = 0; c < cols; c++) {
                 var left = c * xStep + (r % 2 === 1 ? xStep / 2 : 0) - size * 0.6;
                 var top = r * yStep - size * 0.6;
-                html += '<div class="lc-decor-hex lc-hex-clip" style="left:' + left + 'px; top:' + top + 'px; width:' + size + 'px; height:' + size + 'px;">' + escapeHtml(LETTERS[li % LETTERS.length]) + '</div>';
+                html += '<div class="lc-decor-hex lc-hex-clip" style="left:' + left + 'px; top:' + top + 'px; width:' + size + 'px; height:' + size + 'px;">' + escapeHtml(ALPHABET_28[li % ALPHABET_28.length]) + '</div>';
                 li++;
             }
         }
@@ -398,7 +456,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _screen = 'lobby';
         _registrationOpen = true;
         ensureBody();
-        wireCommentListenerForJoining();
+        wireCommentListener();
         if (AGP.lobby && typeof AGP.lobby.open === 'function') AGP.lobby.open();
 
         var root = ensureRoot();
@@ -482,45 +540,106 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         goToGame();
     }
 
-    // -------------------------- الانضمام عبر الشات (يبقى مفعّلاً طوال المباراة) --------------------------
-    function wireCommentListenerForJoining() {
+    // -------------------------- الشات: انضمام + تصحيح تلقائي + اختيار حرف --------------------------
+    // مستمع واحد موحّد على كل تعليقات البث (يبقى مفعّلاً طول المباراة)،
+    // يتحقق بالترتيب: (1) انضمام بكلمة مفتاحية، (2) تصحيح تلقائي لو فيه
+    // سؤال مفتوح ونص التعليق يطابق الإجابة المحفوظة، (3) اختيار الحرف
+    // التالي لو كاتب التعليق هو آخر لاعب اعتُمدت إجابته ولا فيه سؤال مفتوح.
+    function wireCommentListener() {
         if (_commentUnsub) return;
-        _commentUnsub = AGP.events.on('stream:commentReceived', function (payload) {
-            if (!_registrationOpen || !payload || typeof payload.text !== 'string' || !payload.id) return;
+        _commentUnsub = AGP.events.on('stream:commentReceived', handleIncomingComment);
+    }
 
-            var text = normalizeArabicText(payload.text);
-            var kw1 = normalizeArabicText(_settings.team1AccessCode);
-            var kw2 = normalizeArabicText(_settings.team2AccessCode);
-            var team = null;
-            if (text === kw1) team = TEAM1;
-            else if (text === kw2) team = TEAM2;
-            if (!team) return;
+    function handleIncomingComment(payload) {
+        if (!payload || typeof payload.text !== 'string' || !payload.id) return;
+        var norm = normalizeArabicText(payload.text);
 
-            var existing = findPlayerById(payload.id);
-            if (existing && existing.team === team) return;
-            if (existing) AGP.player.removePlayer(payload.id);
+        if (_registrationOpen && tryHandleJoin(payload, norm)) return;
+        if (_screen !== 'game') return;
+        if (_activeIdx != null) { tryHandleAutoAnswer(payload, norm); return; }
+        tryHandleLetterPick(payload, norm);
+    }
 
-            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, team: team });
-        });
+    function tryHandleJoin(payload, norm) {
+        var kw1 = normalizeArabicText(_settings.team1AccessCode);
+        var kw2 = normalizeArabicText(_settings.team2AccessCode);
+        var team = null;
+        if (norm === kw1) team = TEAM1;
+        else if (norm === kw2) team = TEAM2;
+        if (!team) return false;
+
+        var existing = findPlayerById(payload.id);
+        if (existing && existing.team === team) return true;
+        if (existing) AGP.player.removePlayer(payload.id);
+
+        AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, team: team });
+        return true;
+    }
+
+    function tryHandleAutoAnswer(payload, norm) {
+        var question = _cellQuestions[_activeIdx];
+        if (!question || !question.answer) return;
+        var answerNorm = normalizeArabicText(question.answer);
+        if (!answerNorm || norm !== answerNorm) return;
+
+        var player = findPlayerById(payload.id);
+        if (!player) return; // مو منضم لأي فريق -- ما فيه فريق نلوّن الخلية بلونه
+
+        resolveCredit(player.team, player);
+    }
+
+    function tryHandleLetterPick(payload, norm) {
+        if (!_lastAnswererPlayer || payload.id !== _lastAnswererPlayer.id) return;
+        for (var idx = 0; idx < BOARD_SIZE; idx++) {
+            if (_cellStates[idx] !== 0) continue;
+            if (normalizeArabicText(_cellLetters[idx]) === norm) { selectCell(idx); return; }
+        }
     }
 
     // ================================================================
     // 3) شاشة اللعب
     // ================================================================
     function syncScoreManagerTotals() {
-        AGP.scoreManager.setScore(SCORE_KEY_TEAM1, _totalScore1);
-        AGP.scoreManager.setScore(SCORE_KEY_TEAM2, _totalScore2);
+        AGP.scoreManager.setScore(SCORE_KEY_TEAM1, _roundWins1);
+        AGP.scoreManager.setScore(SCORE_KEY_TEAM2, _roundWins2);
+    }
+
+    function drawBoardLetters() {
+        var chosen = shuffleArray(ALPHABET_28).slice(0, BOARD_SIZE);
+        _cellLetters = shuffleArray(chosen);
+        _cellStates = new Array(BOARD_SIZE).fill(0);
+        _cellQuestions = new Array(BOARD_SIZE).fill(null);
+    }
+
+    function pickQuestionForLetter(letter) {
+        var bank = QUESTION_BANK[letter] || [];
+        if (!bank.length) return { text: 'سؤال حرف ' + letter, answer: '', questionIndex: -1 };
+        if (!_usedQuestions[letter]) _usedQuestions[letter] = {};
+        var used = _usedQuestions[letter];
+        var available = [];
+        for (var i = 0; i < bank.length; i++) { if (!used[i]) available.push(i); }
+        // لو بنك الحرف خلص كله بهذي المباراة (حالة نادرة)، نسمح بالتكرار
+        // كحل أخير بدل ما توقف اللعبة.
+        var pickIdx = available.length
+            ? available[Math.floor(Math.random() * available.length)]
+            : Math.floor(Math.random() * bank.length);
+        used[pickIdx] = true;
+        return { text: bank[pickIdx].question, answer: bank[pickIdx].answer, questionIndex: pickIdx };
     }
 
     function goToGame() {
         _round = 1;
-        _cellStates = new Array(23).fill(0);
-        _activeLetter = null;
+        _roundWins1 = 0; _roundWins2 = 0;
+        _usedQuestions = {};
+        drawBoardLetters();
+        _activeIdx = null;
         _connectionWinner = null;
+        _boardFullNoWinner = false;
         _answerModal = null;
+        _lastAnswererPlayer = null;
+        _reshuffleNotice = null;
         _settingsOpen = false;
         _inviteOpen = false;
-        _totalScore1 = 0; _totalScore2 = 0; _roundScore1 = 0; _roundScore2 = 0;
 
         AGP.scoreManager.reset();
         syncScoreManagerTotals();
@@ -541,31 +660,42 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function selectCell(idx) {
         if (_cellStates[idx] !== 0) return;
+        if (_activeIdx === idx) return;
         playSelectSound();
         setTimeout(playQuestionSound, 120);
-        _activeLetter = LETTERS[idx];
+        if (!_cellQuestions[idx]) _cellQuestions[idx] = pickQuestionForLetter(_cellLetters[idx]);
+        _activeIdx = idx;
         renderGameScreen();
     }
 
-    function creditTeam(team) {
-        if (!_activeLetter) return;
-        var idx = LETTERS.indexOf(_activeLetter);
+    /** تصحيح يدوي احتياطي من المضيف -- يُستخدم لو ما حد كتب الجواب حرفياً بالشات. */
+    function creditTeamManual(team) {
+        if (_activeIdx == null) return;
+        var players = getTeamPlayers(team);
+        resolveCredit(team, players.length ? players[0] : null);
+    }
+
+    function resolveCredit(team, answererPlayer) {
+        if (_activeIdx == null) return;
+        var idx = _activeIdx;
         var cellStates = _cellStates.slice();
         cellStates[idx] = team;
 
         var teamName = (team === TEAM1) ? _settings.team1Name : _settings.team2Name;
         var teamColor = (team === TEAM1) ? _settings.team1Color : _settings.team2Color;
-        var players = getTeamPlayers(team);
-        var playerName = players.length ? playerLabel(players[0]) : 'أحد اللاعبين';
-        var question = QUESTION_BANK[_activeLetter] || '';
+        var playerName = answererPlayer ? playerLabel(answererPlayer) : 'أحد اللاعبين';
+        var question = _cellQuestions[idx];
 
         playCorrectSound();
         var won = isConnected(cellStates, team);
+        var full = cellStates.every(function (x) { return x !== 0; });
 
         _cellStates = cellStates;
-        _activeLetter = null;
+        _activeIdx = null;
         _connectionWinner = won ? team : null;
-        _answerModal = { letter: idx, question: question, teamName: teamName, teamColor: teamColor, playerName: playerName };
+        _boardFullNoWinner = !won && full;
+        _lastAnswererPlayer = answererPlayer ? { id: answererPlayer.id, name: playerLabel(answererPlayer), team: team } : null;
+        _answerModal = { question: question ? question.text : '', teamName: teamName, teamColor: teamColor, playerName: playerName };
         renderGameScreen();
     }
 
@@ -577,59 +707,61 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             renderRoundWinnerScreen();
             return;
         }
-        renderGameScreen();
-    }
-
-    function openRoundSummary() {
-        _roundScore1 = _cellStates.filter(function (x) { return x === TEAM1; }).length;
-        _roundScore2 = _cellStates.filter(function (x) { return x === TEAM2; }).length;
-        _screen = 'roundSummary';
-        renderRoundSummaryScreen();
-    }
-
-    function advanceRoundOrFinish() {
-        if (_round >= 3) {
-            _screen = 'result';
-            renderResultScreen();
+        if (_boardFullNoWinner) {
+            _boardFullNoWinner = false;
+            reshuffleRound('full');
             return;
         }
-        _round++;
-        _cellStates = new Array(23).fill(0);
-        _activeLetter = null;
-        _answerModal = null;
-        _connectionWinner = null;
-        _screen = 'game';
         renderGameScreen();
-        playIntro();
     }
 
-    function confirmNextRound() {
-        _totalScore1 += _roundScore1;
-        _totalScore2 += _roundScore2;
-        syncScoreManagerTotals();
-        advanceRoundOrFinish();
+    /** إعادة توزيع الجولة الحالية بأحرف وأسئلة جديدة، بدون احتساب نقاط --
+     * تلقائياً لو امتلأت الرقعة بدون فوز، أو يدوياً من زر الشارة العلوية. */
+    function reshuffleRound(reason) {
+        playReshuffleSound();
+        drawBoardLetters();
+        _activeIdx = null;
+        _lastAnswererPlayer = null;
+        _reshuffleNotice = (reason === 'manual')
+            ? 'أعاد المضيف توزيع الرقعة -- أحرف وأسئلة جديدة'
+            : 'الرقعة امتلأت بدون خط متصل -- تُعاد الجولة بأحرف وأسئلة جديدة';
+        renderGameScreen();
+        setTimeout(function () { _reshuffleNotice = null; if (_screen === 'game') renderGameScreen(); }, 1800);
+    }
+
+    function handleRoundBadgeClick() {
+        if (_activeIdx != null) return;
+        var ok = window.confirm('بيُعاد توزيع الرقعة بأحرف وأسئلة جديدة بدون احتساب نقاط. تبي تكمل؟');
+        if (!ok) return;
+        reshuffleRound('manual');
     }
 
     function continueAfterRoundWin() {
         var winner = _connectionWinner;
-        _totalScore1 += (winner === TEAM1) ? 1 : 0;
-        _totalScore2 += (winner === TEAM2) ? 1 : 0;
+        if (winner === TEAM1) _roundWins1++; else if (winner === TEAM2) _roundWins2++;
         syncScoreManagerTotals();
         _connectionWinner = null;
-        advanceRoundOrFinish();
+
+        if (_roundWins1 >= ROUND_WINS_TO_CLINCH || _roundWins2 >= ROUND_WINS_TO_CLINCH) {
+            _screen = 'result';
+            renderResultScreen();
+            return;
+        }
+
+        _round++;
+        drawBoardLetters();
+        _activeIdx = null;
+        _answerModal = null;
+        _lastAnswererPlayer = null;
+        _screen = 'game';
+        renderGameScreen();
+        playIntro();
     }
 
     function openSettingsDrawer() { _settingsOpen = true; renderGameScreen(); }
     function closeSettingsDrawer() { _settingsOpen = false; renderGameScreen(); }
     function openInviteModal() { _inviteOpen = true; renderGameScreen(); }
     function closeInviteModal() { _inviteOpen = false; renderGameScreen(); }
-
-    function resetBoard() {
-        _cellStates = new Array(23).fill(0);
-        _activeLetter = null;
-        _settingsOpen = false;
-        renderGameScreen();
-    }
 
     function endMatch() {
         var ok = window.confirm('بينتهي البث الحالي وتُصفَّر كل بيانات المباراة. تبي تكمل؟');
@@ -639,8 +771,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _registrationOpen = false;
         if (_commentUnsub) { _commentUnsub(); _commentUnsub = null; }
 
-        _round = 1; _cellStates = new Array(23).fill(0); _activeLetter = null; _connectionWinner = null;
-        _answerModal = null; _settingsOpen = false; _inviteOpen = false; _totalScore1 = 0; _totalScore2 = 0; _roundScore1 = 0; _roundScore2 = 0;
+        _round = 1; _roundWins1 = 0; _roundWins2 = 0; _usedQuestions = {};
+        _cellLetters = []; _cellStates = []; _cellQuestions = [];
+        _activeIdx = null; _connectionWinner = null; _boardFullNoWinner = false;
+        _answerModal = null; _lastAnswererPlayer = null; _settingsOpen = false; _inviteOpen = false;
 
         renderSettingsScreen();
     }
@@ -649,8 +783,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // البقاء متصلاً بنفس البث (لا مبرر لإعادة كتابة يوزر البث من الصفر)
         // وتصفير اللاعبين + رقعة اللعب، ثم الرجوع مباشرة للوبي لبدء مباراة جديدة.
         AGP.player.getAllPlayers().slice().forEach(function (p) { AGP.player.removePlayer(p.id); });
-        _round = 1; _cellStates = new Array(23).fill(0); _activeLetter = null; _connectionWinner = null;
-        _answerModal = null; _settingsOpen = false; _inviteOpen = false; _totalScore1 = 0; _totalScore2 = 0; _roundScore1 = 0; _roundScore2 = 0;
+        _round = 1; _roundWins1 = 0; _roundWins2 = 0; _usedQuestions = {};
+        _cellLetters = []; _cellStates = []; _cellQuestions = [];
+        _activeIdx = null; _connectionWinner = null; _boardFullNoWinner = false;
+        _answerModal = null; _lastAnswererPlayer = null; _settingsOpen = false; _inviteOpen = false;
         AGP.scoreManager.reset();
         renderLobbyScreen();
     }
@@ -662,13 +798,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var score1 = _cellStates.filter(function (x) { return x === TEAM1; }).length;
         var score2 = _cellStates.filter(function (x) { return x === TEAM2; }).length;
 
-        var cellsHtml = LETTERS.map(function (letter, idx) {
+        var cellsHtml = _cellLetters.map(function (letter, idx) {
             var st = _cellStates[idx];
             var layout = CELL_LAYOUT[idx];
             var bg = (st === TEAM1) ? _settings.team1Color : (st === TEAM2) ? _settings.team2Color : DEFAULT_BG;
             var color = (st === 0) ? '#1b0d0d' : '#fef4f4';
             var borderColor = (st === 0) ? '#ffffff' : bg;
-            var isActive = _activeLetter === letter;
+            var isActive = _activeIdx === idx;
             var clickable = (st === 0);
             return '<div class="lc-hex-cell-wrap lc-hex-clip' + (clickable ? ' lc-hex-clickable' : '') + (isActive ? ' lc-hex-active' : '') + '" ' +
                 'data-idx="' + idx + '" ' +
@@ -677,18 +813,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</div>';
         }).join('');
 
+        var activeLetter = (_activeIdx != null) ? _cellLetters[_activeIdx] : null;
+
         var badgeHexHtml;
-        if (_activeLetter) {
-            badgeHexHtml = '<div class="lc-badge-hex-inner"><div class="lc-badge-hex-letter">' + escapeHtml(_activeLetter) + '</div><div class="lc-badge-hex-caption">الحرف</div></div>';
+        if (activeLetter) {
+            badgeHexHtml = '<div class="lc-badge-hex-inner"><div class="lc-badge-hex-letter">' + escapeHtml(activeLetter) + '</div><div class="lc-badge-hex-caption">الحرف</div></div>';
         } else {
-            badgeHexHtml = '<div class="lc-badge-hex-inner"><button type="button" id="lc-round-badge-btn" class="lc-badge-hex-btn"><div class="lc-badge-hex-round">' + _round + '</div><div class="lc-badge-hex-caption">جولة جديدة</div></button></div>';
+            badgeHexHtml = '<div class="lc-badge-hex-inner"><button type="button" id="lc-round-badge-btn" class="lc-badge-hex-btn"><div class="lc-badge-hex-round">' + _round + '</div><div class="lc-badge-hex-caption">إعادة توزيع</div></button></div>';
         }
 
-        var questionInnerHtml = _activeLetter
-            ? escapeHtml(QUESTION_BANK[_activeLetter] || '')
-            : '<span class="lc-question-placeholder">اضغط على أي خلية لعرض سؤالها</span>';
+        var questionInnerHtml;
+        if (activeLetter) {
+            questionInnerHtml = escapeHtml(_cellQuestions[_activeIdx] ? _cellQuestions[_activeIdx].text : '');
+        } else if (_lastAnswererPlayer) {
+            questionInnerHtml = '<span class="lc-question-placeholder">دور ' + escapeHtml(_lastAnswererPlayer.name) + ' -- يقدر يختار حرف بالشات، أو اضغط على أي خلية</span>';
+        } else {
+            questionInnerHtml = '<span class="lc-question-placeholder">اضغط على أي خلية لعرض سؤالها</span>';
+        }
 
-        var creditRowHtml = _activeLetter
+        var creditRowHtml = activeLetter
             ? '<div class="lc-credit-row">' +
                 '<button type="button" id="lc-credit-team1" class="lc-credit-btn" style="background:' + _settings.team1Color + ';">' + escapeHtml(_settings.team1Name) + '</button>' +
                 '<button type="button" id="lc-credit-team2" class="lc-credit-btn" style="background:' + _settings.team2Color + ';">' + escapeHtml(_settings.team2Name) + '</button>' +
@@ -697,6 +840,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var introHtml = _showIntro
             ? '<div class="lc-intro-dim"></div><div class="lc-intro-logo">' + logo3dHtml() + '</div>'
+            : '';
+
+        var reshuffleToastHtml = _reshuffleNotice
+            ? '<div class="lc-reshuffle-toast"><div class="lc-reshuffle-toast-box">' + escapeHtml(_reshuffleNotice) + '</div></div>'
             : '';
 
         var answerModalHtml = '';
@@ -726,7 +873,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         drawerRosterHtml(TEAM2) +
                     '</div>' +
                     '<button type="button" id="lc-drawer-invite" class="lc-drawer-btn lc-drawer-btn-invite">طريقة انضمام لاعبين جدد</button>' +
-                    '<button type="button" id="lc-drawer-reset" class="lc-drawer-btn-reset">إعادة ضبط اللعبة</button>' +
+                    '<button type="button" id="lc-drawer-reset" class="lc-drawer-btn-reset">إعادة توزيع الجولة</button>' +
                 '</div>';
         }
 
@@ -767,6 +914,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
                 answerModalHtml +
                 creditRowHtml +
+                reshuffleToastHtml +
 
                 '<div class="lc-team-row lc-team-row-1"><span class="lc-team-row-badge">1</span><span class="lc-team-row-name">' + escapeHtml(_settings.team1Name) + '</span><span class="lc-team-row-score">' + score1 + '</span></div>' +
                 '<div class="lc-team-row lc-team-row-2"><span class="lc-team-row-badge">2</span><span class="lc-team-row-name">' + escapeHtml(_settings.team2Name) + '</span><span class="lc-team-row-score">' + score2 + '</span></div>' +
@@ -821,13 +969,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
 
         var roundBadgeBtn = el('lc-round-badge-btn');
-        if (roundBadgeBtn) roundBadgeBtn.addEventListener('click', openRoundSummary);
+        if (roundBadgeBtn) roundBadgeBtn.addEventListener('click', handleRoundBadgeClick);
 
         el('lc-open-settings-btn').addEventListener('click', openSettingsDrawer);
 
-        if (_activeLetter) {
-            el('lc-credit-team1').addEventListener('click', function () { creditTeam(TEAM1); });
-            el('lc-credit-team2').addEventListener('click', function () { creditTeam(TEAM2); });
+        if (_activeIdx != null) {
+            el('lc-credit-team1').addEventListener('click', function () { creditTeamManual(TEAM1); });
+            el('lc-credit-team2').addEventListener('click', function () { creditTeamManual(TEAM2); });
         }
 
         if (_answerModal) {
@@ -838,7 +986,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             el('lc-drawer-close').addEventListener('click', closeSettingsDrawer);
             el('lc-drawer-end-match').addEventListener('click', endMatch);
             el('lc-drawer-invite').addEventListener('click', openInviteModal);
-            el('lc-drawer-reset').addEventListener('click', resetBoard);
+            el('lc-drawer-reset').addEventListener('click', handleRoundBadgeClick);
         }
 
         if (_inviteOpen) {
@@ -855,11 +1003,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         ensureBody();
         var root = ensureRoot();
 
-        var winner = _connectionWinner;
-        var name = (winner === TEAM1) ? _settings.team1Name : _settings.team2Name;
-        var color = (winner === TEAM1) ? _settings.team1Color : _settings.team2Color;
-        var players = getTeamPlayers(winner);
-        var ctaLabel = (_round >= 3) ? 'عرض النتيجة النهائية' : 'انتقل للجولة التالية';
+        var winningTeam = _connectionWinner;
+        var name = (winningTeam === TEAM1) ? _settings.team1Name : _settings.team2Name;
+        var color = (winningTeam === TEAM1) ? _settings.team1Color : _settings.team2Color;
+        var players = getTeamPlayers(winningTeam);
+
+        var prospective1 = _roundWins1 + (winningTeam === TEAM1 ? 1 : 0);
+        var prospective2 = _roundWins2 + (winningTeam === TEAM2 ? 1 : 0);
+        var ctaLabel = (prospective1 >= ROUND_WINS_TO_CLINCH || prospective2 >= ROUND_WINS_TO_CLINCH) ? 'عرض النتيجة النهائية' : 'انتقل للجولة التالية';
 
         var avatarsHtml = players.map(function (p) {
             var hasAvatar = !!(p && p.avatarUrl);
@@ -888,41 +1039,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     // ================================================================
-    // 5) شاشة ملخص الجولة (بدون فوز بخط متصل)
-    // ================================================================
-    function renderRoundSummaryScreen() {
-        _screen = 'roundSummary';
-        ensureBody();
-        var root = ensureRoot();
-        var ctaLabel = (_round >= 3) ? 'عرض النتيجة النهائية' : 'انتقل للجولة التالية';
-
-        root.innerHTML =
-            '<div class="lc-roundsummary-screen">' +
-                logo3dHtml('lc-logo-small') +
-                '<div class="lc-round-end-caption">انتهت الجولة ' + _round + '</div>' +
-                '<div class="lc-score-compare">' +
-                    '<div class="lc-score-compare-item"><div class="lc-score-compare-val" style="color:' + _settings.team1Color + ';">' + _roundScore1 + '</div><div class="lc-score-compare-name">' + escapeHtml(_settings.team1Name) + '</div></div>' +
-                    '<div class="lc-score-compare-divider"></div>' +
-                    '<div class="lc-score-compare-item"><div class="lc-score-compare-val" style="color:' + _settings.team2Color + ';">' + _roundScore2 + '</div><div class="lc-score-compare-name">' + escapeHtml(_settings.team2Name) + '</div></div>' +
-                '</div>' +
-                '<button type="button" id="lc-roundsummary-cta" class="lc-roundsummary-cta" style="background:linear-gradient(90deg,' + _settings.team1Color + ',' + _settings.team2Color + ');">' + ctaLabel + '</button>' +
-            '</div>';
-
-        el('lc-roundsummary-cta').addEventListener('click', confirmNextRound);
-    }
-
-    // ================================================================
-    // 6) شاشة النتيجة النهائية
+    // 5) شاشة النتيجة النهائية
     // ================================================================
     function renderResultScreen() {
         _screen = 'result';
         ensureBody();
         var root = ensureRoot();
 
-        var team1Wins = _totalScore1 >= _totalScore2;
-        var winningTeam = team1Wins ? TEAM1 : TEAM2;
-        var winningName = team1Wins ? _settings.team1Name : _settings.team2Name;
-        var winningColor = team1Wins ? _settings.team1Color : _settings.team2Color;
+        var winningTeam = (_roundWins1 >= ROUND_WINS_TO_CLINCH) ? TEAM1 : TEAM2;
+        var winningName = (winningTeam === TEAM1) ? _settings.team1Name : _settings.team2Name;
+        var winningColor = (winningTeam === TEAM1) ? _settings.team1Color : _settings.team2Color;
         var winningPlayers = getTeamPlayers(winningTeam);
 
         var winnersHtml = winningPlayers.map(function (p) {
@@ -943,9 +1069,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="lc-round-end-caption">انتهت المباراة</div>' +
                 '<div class="lc-result-headline" style="color:' + winningColor + ';">' + escapeHtml(winningName) + ' فاز! 🏆</div>' +
                 '<div class="lc-score-compare">' +
-                    '<div class="lc-score-compare-item"><div class="lc-score-compare-val lc-result-score-val" style="color:' + _settings.team1Color + ';">' + _totalScore1 + '</div><div class="lc-score-compare-name">' + escapeHtml(_settings.team1Name) + '</div></div>' +
+                    '<div class="lc-score-compare-item"><div class="lc-score-compare-val lc-result-score-val" style="color:' + _settings.team1Color + ';">' + _roundWins1 + '</div><div class="lc-score-compare-name">' + escapeHtml(_settings.team1Name) + '</div></div>' +
                     '<div class="lc-score-compare-divider"></div>' +
-                    '<div class="lc-score-compare-item"><div class="lc-score-compare-val lc-result-score-val" style="color:' + _settings.team2Color + ';">' + _totalScore2 + '</div><div class="lc-score-compare-name">' + escapeHtml(_settings.team2Name) + '</div></div>' +
+                    '<div class="lc-score-compare-item"><div class="lc-score-compare-val lc-result-score-val" style="color:' + _settings.team2Color + ';">' + _roundWins2 + '</div><div class="lc-score-compare-name">' + escapeHtml(_settings.team2Name) + '</div></div>' +
                 '</div>' +
                 '<div class="lc-result-winners-card" style="border-color:' + winningColor + ';">' +
                     '<div class="lc-result-winners-title">اللاعبون الفائزون</div>' +
