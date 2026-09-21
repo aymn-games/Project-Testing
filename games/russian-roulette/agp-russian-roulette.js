@@ -43,7 +43,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var ICON_GUN = 'icons/gun.png';
     var ICON_HEART_RED = 'icons/heart-red.png';
     var ICON_HEART_GREEN = 'icons/heart-green.png';
-    var ICON_CROWN = 'icons/crown.png';
 
     var LIVES_OPTIONS = [6, 5, 4, 3].map(function (n) { return { label: String(n), value: n }; });
     var BULLETS_OPTIONS = [4, 3, 2, 1].map(function (n) { return { label: String(n), value: n }; });
@@ -2118,10 +2117,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     // ⚠️ [تثبيت الشكل النهائي — طلب صريح 2026] عبر AGP.playerCard.
     // renderTrophyCard() المشتركة بدل تصميم .rr-trophy-* المحلي المحذوف.
-    // showCrown:true + crownIconDataUri: ICON_CROWN (أيقونة تاج اللعبة
-    // الخاصة، بدل الافتراضية المشتركة — كانت معرَّفة مسبقاً بالملف بدون
-    // استخدام فعلي). لا label/gameName/extra — نفس المعلومة صارت بسطر
-    // h2 واحد فوق صف البطاقات.
+    // البطاقة المشتركة صارت تبني تاجها الخاص (SVG موحّد يلوَّن تلقائياً
+    // بلون هذه اللعبة الذهبي — نفس الافتراضي المشترك أصلاً، فما احتجنا
+    // أي تخصيص لون هنا)، فلم يعد ICON_CROWN مستخدَماً. لا label/gameName/
+    // extra — نفس المعلومة صارت بسطر h2 واحد فوق صف البطاقات.
     function renderWinnerScreen(winner, pointsResult) {
         var overlay = el('rr-winner-overlay');
         if (!overlay) return;
@@ -2133,7 +2132,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (winner) {
             cardsHtml += AGP.playerCard.renderTrophyCard(winner, {
                 cls: 'rr-trophy-winner', kind: 'winner', cardId: 'rr-trophy-card-winner',
-                showCrown: true, crownIconDataUri: ICON_CROWN,
+                showCrown: true,
                 pointsHtml: pointsHtmlForInline(pointsResult, winner)
             });
         }

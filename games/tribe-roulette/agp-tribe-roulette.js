@@ -860,56 +860,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'padding:10px 18px;border-radius:999px;font-size:0.85em;font-weight:700;box-shadow:0 6px 16px rgba(0,0,0,0.35);}',
 
             /* ---- شاشة نهاية المباراة ----
-             * ⚠️ تصميم بطاقات جديد بالكامل (البطاقة القديمة
-             * أُلغيت كلياً) — حلقة (ring) بسيطة حول الصورة الدائرية تناسب
-             * اللعبة نفسها: حلقة "ذهبية دوّارة" للفائز (تلمّح لعجلة
-             * الفوز)، وحلقة "متقطّعة وردية" لصاحب الأكثر إقصاءً (تلمّح
-             * لعلامة استهداف/إقصاء) — بشارة أيقونة صغيرة فوق كل حلقة،
-             * بنفس ألوان صورة 4. */
+             * البطاقتان (فائز/الأكثر إقصاءً) تُبنيان الآن عبر
+             * AGP.playerCard.renderTrophyCard() المشتركة (design_handoff_winner_card)
+             * بدل تصميم .tr-trophy-x و .tr-ring-x المحلي المحذوف بالكامل —
+             * .tr-ring-avatar/.tr-ring-avatar--fallback بقيتا فقط لأنهما
+             * لا تزالان مستخدَمتين محلياً في أماكن أخرى (ringAvatarHtml:
+             * تبويب الاختيار/الإعلان/بطاقة الإنعاش). الألوان (ذهبي للفائز
+             * — نفس افتراضي الملف المشترك، ووردي للأكثر إقصاءً) مُعاد
+             * تعريفها كخصائص CSS مخصَّصة عبر .tr-trophy-winner/.tr-trophy-most
+             * (opts.cls) بدل حلقة/بشارة منفصلة. */
             '#tr-winner-box{text-align:center;}',
             '#tr-winner-box h2{font-family:Almarai,Cairo,sans-serif;font-size:1.6em;color:#fff;}',
             '.tr-trophy-cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:14px 0 18px;}',
-            /* ⚠️ حجم موحَّد 250×250 لكل بطاقة، وبدون أي خلفية أو
-             * حدود إطلاقاً (أُلغيتا بالكامل) — تأثير "تطاير" (confetti)
-             * هو البديل الاحتفالي الآن، راجع spawnConfetti().
-             * ⚠️ تأثير "إشعاع/توهّج" جديد حول كل بطاقة (نفس اللون
-             * الموحَّد للطرفين — الفائز والأكثر إقصاءً — بطلب صريح)، مع
-             * نبضة خفيفة مستمرة. overflow صار visible بدل hidden حتى لا
-             * يُقصّ التوهّج (ولا قصاصات confetti التي تتخطى حدود الصندوق
-             * أحياناً — إصلاح فني إضافي وُجد أثناء المراجعة). */
-            '.tr-trophy-card{position:relative;width:250px;height:300px;box-sizing:border-box;',
-            'border-radius:18px;padding:20px 14px;display:flex;flex-direction:column;align-items:center;',
-            'justify-content:center;overflow:visible;background:none;border:none;',
-            'box-shadow:0 0 55px 14px rgba(255,255,255,0.4),0 0 120px 35px rgba(216,120,255,0.6);',
-            'animation:tr-trophy-glow-pulse 2.6s ease-in-out infinite;}',
-            '@keyframes tr-trophy-glow-pulse{0%,100%{box-shadow:0 0 55px 14px rgba(255,255,255,0.4),',
-            '0 0 120px 35px rgba(216,120,255,0.6);}',
-            '50%{box-shadow:0 0 75px 22px rgba(255,255,255,0.6),0 0 150px 45px rgba(216,120,255,0.78);}}',
-            '.tr-trophy-card .tr-trophy-label{font-size:0.85em;font-weight:800;color:#fff;margin-bottom:10px;}',
-
-            '.tr-ring-wrap{position:relative;width:88px;height:88px;margin:0 auto 10px;border-radius:50%;',
-            'padding:5px;box-sizing:border-box;}',
-            '.tr-ring-winner{background:conic-gradient(from 0deg,#ffd400,#fff6cf,#ffd400,#c9960a,#ffd400);',
-            'box-shadow:0 0 20px rgba(255,212,0,0.55);}',
-            '.tr-ring-most{background:repeating-conic-gradient(' + C_PINK + ' 0deg 18deg,' + C_PINK_DK + ' 18deg 36deg);',
-            'box-shadow:0 0 20px rgba(255,77,255,0.4);}',
-            '.tr-ring-inner{width:100%;height:100%;border-radius:50%;background:#2D1932;overflow:hidden;}',
             '.tr-ring-avatar{width:100%;height:100%;border-radius:50%;object-fit:cover;background:#5a2585;display:block;}',
             '.tr-ring-avatar--fallback{display:flex;align-items:center;justify-content:center;',
             'color:#fff;font-weight:800;font-size:1.4em;}',
-            '.tr-ring-badge{position:absolute;bottom:-2px;right:-2px;width:28px;height:28px;border-radius:50%;',
-            'display:flex;align-items:center;justify-content:center;font-size:0.95em;border:2px solid #2D1932;}',
-            '.tr-ring-badge.tr-badge-winner{background:#ffd400;}',
-            '.tr-ring-badge.tr-badge-most{background:var(--tr-pink);}',
-
-            '.tr-trophy-name{font-size:1.15em;font-weight:900;color:#fff;}',
-            '.tr-trophy-count{color:#e9d3ff;font-size:0.85em;margin-top:4px;}',
-
-            /* ---- عرض النقاط المكتسبة ---- */
-            '.tr-trophy-points{margin-top:10px;font-size:0.85em;line-height:1.4;}',
-            '.tr-trophy-points.tr-points-earned{color:#ffd400;font-weight:800;}',
-            '.tr-trophy-points .tr-points-sub{display:block;color:#e9d3ff;font-weight:500;font-size:0.85em;margin-top:2px;}',
-            '.tr-trophy-points.tr-points-noaccount{color:#e9d3ff;font-size:0.8em;}',
+            '.tr-trophy-label{font-size:0.85em;font-weight:800;color:#fff;}', // "بدون فائز" fallback text only
+            '.tr-trophy-most{--agp-trophy-accent:' + C_PINK + ';--agp-trophy-accent-dark:' + C_PINK_DK + ';',
+            '--agp-trophy-border:rgba(255,77,255,.55);--agp-trophy-divider:rgba(255,77,255,.25);',
+            '--agp-trophy-label:rgba(255,77,255,.75);--agp-trophy-bg1:rgba(35,18,44,.72);',
+            '--agp-trophy-bg2:rgba(18,10,24,.82);}',
 
             '.tr-winner-actions{display:flex;flex-direction:column;align-items:center;gap:10px;}',
             '.tr-winner-actions-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}',
@@ -2966,16 +2936,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *  3) الحساب غير مرتبط/غير موثَّق (النتيجة نجحت لكن بدون سطر لهذا
      *     اللاعب) → "لازم يسوي حساب" تلقائياً.
      */
+    // Class names here (agp-trophy-points/agp-points-*) match the shared
+    // AGP.playerCard.renderTrophyCard()'s CSS in js/agp-player-card.js —
+    // no local .tr-trophy-points* styling needed anymore.
     function pointsHtmlFor(pointsResult, player) {
         if (!pointsResult) {
-            return '<div class="tr-trophy-points tr-points-noaccount">تعذّر جلب النقاط الآن</div>';
+            return '<div class="agp-trophy-points agp-points-noaccount">تعذّر جلب النقاط الآن</div>';
         }
         var awarded = findAwardedFor(pointsResult, player);
         if (awarded) {
-            return '<div class="tr-trophy-points tr-points-earned">+' + awarded.added + ' نقطة' +
-                '<span class="tr-points-sub">تظهر في بروفايلك</span></div>';
+            return '<div class="agp-trophy-points agp-points-earned">+' + awarded.added + ' نقطة' +
+                '<span class="agp-points-sub">تظهر في بروفايلك</span></div>';
         }
-        return '<div class="tr-trophy-points tr-points-noaccount">لازم يسوي حساب عشان تظهر نقاطك بالبروفايل</div>';
+        return '<div class="agp-trophy-points agp-points-noaccount">لازم يسوي حساب عشان تظهر نقاطك بالبروفايل</div>';
     }
 
     /**
@@ -2991,25 +2964,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return avatarUrl
             ? '<img class="tr-ring-avatar" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;tr-ring-avatar tr-ring-avatar--fallback&quot;>' + escapeHtml(initials) + '</div>\';">'
             : '<div class="tr-ring-avatar tr-ring-avatar--fallback">' + escapeHtml(initials) + '</div>';
-    }
-
-    function ringHtml(player, kind) {
-        var badgeIcon = kind === 'winner' ? '👑' : '⚔️';
-        return '<div class="tr-ring-wrap tr-ring-' + kind + '">' +
-            '<div class="tr-ring-inner">' + ringAvatarHtml(player) + '</div>' +
-            '<div class="tr-ring-badge tr-badge-' + kind + '">' + badgeIcon + '</div>' +
-            '</div>';
-    }
-
-    function trophyCardHtml(player, opts) {
-        opts = opts || {};
-        return '<div class="tr-trophy-card ' + (opts.cls || '') + '"' + (opts.cardId ? ' id="' + opts.cardId + '"' : '') + '>' +
-            '<div class="tr-trophy-label">' + opts.label + '</div>' +
-            ringHtml(player, opts.kind) +
-            '<div class="tr-trophy-name">' + escapeHtml(playerLabel(player)) + '</div>' +
-            (opts.extra || '') +
-            (opts.pointsHtml || '') +
-            '</div>';
     }
 
     function computeMostEliminations() {
@@ -3057,15 +3011,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var cardsHtml = '';
         if (winner) {
-            cardsHtml += trophyCardHtml(winner, {
+            cardsHtml += AGP.playerCard.renderTrophyCard(winner, {
                 cls: 'tr-trophy-winner', label: '🏆 الفائز', kind: 'winner', cardId: 'tr-trophy-card-winner',
+                showCrown: true,
                 pointsHtml: pointsHtmlFor(pointsResult, winner)
             });
         }
         if (mostElim) {
-            cardsHtml += trophyCardHtml(mostElim.player, {
+            cardsHtml += AGP.playerCard.renderTrophyCard(mostElim.player, {
                 cls: 'tr-trophy-most', label: '⚔️ الأكثر إقصاءً', kind: 'most', cardId: 'tr-trophy-card-most',
-                extra: '<div class="tr-trophy-count">' + mostElim.count + ' إقصاء</div>',
+                extra: '<div class="agp-trophy-extra">' + mostElim.count + ' إقصاء</div>',
                 pointsHtml: pointsHtmlFor(pointsResult, mostElim.player)
             });
         }

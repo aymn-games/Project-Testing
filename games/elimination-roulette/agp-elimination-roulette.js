@@ -917,6 +917,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-ring-avatar--fallback{display:flex;align-items:center;justify-content:center;',
             'color:#fff;font-weight:800;font-size:1.4em;}',
 
+            // Retint the shared trophy card (design_handoff_winner_card —
+            // gold by default) to this game's own violet identity, per
+            // .agp-trophy-wrap's documented CSS custom properties. Winner
+            // in the lighter brand purple, most-eliminations in pink —
+            // keeps the two cards visually distinct like the old gold/pink
+            // ring design did, without needing a ring at all anymore.
+            '.er-trophy-winner{--agp-trophy-accent:#b28cf5;--agp-trophy-accent-dark:#7c3aed;',
+            '--agp-trophy-border:rgba(178,140,245,.55);--agp-trophy-divider:rgba(178,140,245,.25);',
+            '--agp-trophy-label:rgba(178,140,245,.75);--agp-trophy-bg1:rgba(28,20,44,.72);',
+            '--agp-trophy-bg2:rgba(14,10,24,.82);}',
+            '.er-trophy-most{--agp-trophy-accent:#ff8ef5;--agp-trophy-accent-dark:#a83fa8;',
+            '--agp-trophy-border:rgba(255,142,245,.55);--agp-trophy-divider:rgba(255,142,245,.25);',
+            '--agp-trophy-label:rgba(255,142,245,.75);--agp-trophy-bg1:rgba(35,18,44,.72);',
+            '--agp-trophy-bg2:rgba(18,10,24,.82);}',
+
             '.er-winner-actions{display:flex;gap:10px;flex-wrap:wrap;}',
             '.er-btn-secondary{flex:1;min-width:180px;padding:12px;border-radius:999px;border:none;',
             'font-weight:800;cursor:pointer;font-family:inherit;font-size:0.95em;}',
