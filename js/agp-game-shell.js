@@ -73,7 +73,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-header-icon-btn{width:34px;height:34px;border-radius:50%;border:1px solid rgba(124,58,237,0.45);',
             'background:rgba(255,255,255,0.06);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;}',
             '.agp-header-icon-btn img{width:16px;height:16px;filter:invert(1);}',
-            '#agp-header-title{background:rgba(0,0,0,0.35);border-radius:999px;padding:6px 22px;color:#e9d3ff;',
+            '#agp-header-title{color:#e9d3ff;',
             'font-weight:700;font-size:0.9em;font-family:"Cairo Play",Cairo,sans-serif;}',
             '#agp-header-brand{color:#fff;font-weight:800;display:flex;align-items:center;gap:8px;}',
             '#agp-header-brand .agp-brand-badge{width:28px;height:28px;border-radius:8px;',
@@ -94,10 +94,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * المظهر الغامق تلقائياً. */
             '#agp-shell-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;',
             'padding:80px 16px 16px;background:rgba(8,4,16,0.55);font-family:Cairo,sans-serif;color:#fff;direction:rtl;}',
+            /* خلفية شاشة الإعدادات موحّدة بهوية المنصة (نفس #050508 اللي
+             * تستخدمه index.html/games.html) — مو تدرّج اللوبي/الاتصال. */
+            '#agp-shell-overlay.agp-settings-mode{background:#050508;}',
             '#agp-shell-box{width:900px;max-width:96vw;height:auto;max-height:800px;max-height:min(800px,92vh);overflow-y:auto;',
             'background:linear-gradient(180deg,#884B98,#2D1932);border:2px solid var(--agp-accent);border-radius:18px;padding:30px 34px;',
             'box-shadow:0 0 40px rgba(124,58,237,0.5);box-sizing:border-box;}',
           '#agp-shell-box h2{margin:6px 0 20px;font-size:1.15em;text-align:center;color:#fff;font-weight:900;}',
+
+            /* شاشة الإعدادات — بدون صندوق/تبويب: الخيارات مباشرة على خلفية
+             * المنصة الموحّدة (#050508، نفس خلفية index.html/games.html)
+             * بدل الصندوق البنفسجي المؤطَّر القديم. */
+            '#agp-shell-box.agp-settings-box{background:none;border:none;box-shadow:none;border-radius:0;padding:0;}',
 
 '.agp-shell-field{display:flex;align-items:center;justify-content:space-between;gap:16px;',
 'padding:17px 4px;border-bottom:1px solid rgba(255,255,255,0.09);text-align:right;}',
@@ -393,7 +401,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var fieldsHtml = (_config.settingsFields || []).map(renderField).join('');
         var box = el('agp-shell-box');
-        box.className = '';
+        box.className = 'agp-settings-box';
+        if (_overlayEl) _overlayEl.className = 'agp-settings-mode';
 
         var closeBtnHtml = isReopened ?
             '<button type="button" id="agp-settings-close-btn" style="position:absolute;top:14px;left:18px;background:none;border:none;font-size:1.3em;cursor:pointer;color:#5a2585;">✕</button>' : '';
@@ -433,7 +442,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         box.style.position = 'relative';
         box.innerHTML =
             closeBtnHtml +
-            '<h2>' + (_config.settingsTitle || 'إعدادات المبارة') + '</h2>' +
+            /* عنوان موحّد لكل الألعاب: "الإعدادات" + اسم اللعبة مباشرة
+             * بعده، بدل نص settingsTitle الحر المختلف من لعبة لأخرى. */
+            '<h2>الإعدادات ' + escapeHtml(_config.gameTitle || '') + '</h2>' +
             baseFieldsHtml +
             fieldsHtml +
             playerManagementHtml +
@@ -644,6 +655,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function renderConnectingScreen(message) {
         var box = el('agp-shell-box');
+        if (_overlayEl) _overlayEl.className = 'agp-connecting-mode';
         var isError = Boolean(message && message.indexOf('تعذّر') !== -1);
         box.className = 'agp-connecting-box' + (isError ? ' agp-conn-error' : '');
         var iconHtml = isError
@@ -656,6 +668,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function renderLobbyScreen() {
         var box = el('agp-shell-box');
+        if (_overlayEl) _overlayEl.className = 'agp-lobby-mode';
         box.className = 'agp-lobby-box';
         box.innerHTML =
             '<h2>اللوبي بانتظار اللاعبين</h2>' +

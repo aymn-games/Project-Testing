@@ -1071,10 +1071,13 @@ body.agp-shell-active{
   border-bottom: 1px solid rgba(255,166,48,0.4) !important;
 }
 
-/* الصندوق الرئيسي (الإعدادات + لوبي المباراة الأول + لوبي "إضافة لوبي
-   جديد" — الثلاثة يشتركون بنفس #agp-shell-box) */
-#agp-shell-overlay{ background: rgba(16,8,4,0.6) !important; }
-#agp-shell-box{
+/* شاشة الإعدادات نفسها استُبعِدت من هذا التلوين (صارت بدون صندوق،
+   على خلفية المنصة الموحّدة #050508 — راجع agp-game-shell.js). التلوين
+   هنا يبقى فقط لشاشة "جاري الاتصال" ولوبي المباراة (+ "إضافة لوبي
+   جديد")، اللي لسا تستخدم نفس #agp-shell-box. */
+#agp-shell-overlay.agp-connecting-mode,
+#agp-shell-overlay.agp-lobby-mode{ background: rgba(16,8,4,0.6) !important; }
+#agp-shell-box.agp-connecting-box{
   background: linear-gradient(180deg, #7a2a1f, #2b1208) !important;
   box-shadow: 0 0 40px rgba(255,166,48,0.4) !important;
 }
