@@ -74,9 +74,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wcStageIdle, wcStageCollecting, wcLetterBadge, wcTimerBarFill, wcTimerVal,
         wcInstructionsHint, wcParticipantsCount,
         wcReviewFullscreen, wcReviewRoundLabel, wcReviewSubmittedCount, wcReviewList, wcReviewEmpty, wcConfirmBtn,
-        wcToastWrap, wcLiveRegion, wcWinnerOverlay, wcWinnerAvatarWrap, wcWinnerName,
-        wcWinnerScoreText, wcWinnerPointsText, wcLastPlaceCard, wcLastPlaceAvatarWrap, wcLastPlaceName,
-        wcLastPlaceScoreText, wcWinnerHomeBtn, wcNewGameBtn, wcRematchBtn;
+        wcToastWrap, wcLiveRegion, wcWinnerOverlay, wcWinnerTrophyWrap, wcLastPlaceTrophyWrap,
+        wcWinnerHomeBtn, wcNewGameBtn, wcRematchBtn;
 
     function cacheDom() {
         wcGameRoot = document.getElementById('wcGameRoot');
@@ -105,14 +104,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wcToastWrap = document.getElementById('wcToastWrap');
         wcLiveRegion = document.getElementById('wcLiveRegion');
         wcWinnerOverlay = document.getElementById('wcWinnerOverlay');
-        wcWinnerAvatarWrap = document.getElementById('wcWinnerAvatarWrap');
-        wcWinnerName = document.getElementById('wcWinnerName');
-        wcWinnerScoreText = document.getElementById('wcWinnerScoreText');
-        wcWinnerPointsText = document.getElementById('wcWinnerPointsText');
-        wcLastPlaceCard = document.getElementById('wcLastPlaceCard');
-        wcLastPlaceAvatarWrap = document.getElementById('wcLastPlaceAvatarWrap');
-        wcLastPlaceName = document.getElementById('wcLastPlaceName');
-        wcLastPlaceScoreText = document.getElementById('wcLastPlaceScoreText');
+        wcWinnerTrophyWrap = document.getElementById('wcWinnerTrophyWrap');
+        wcLastPlaceTrophyWrap = document.getElementById('wcLastPlaceTrophyWrap');
         wcWinnerHomeBtn = document.getElementById('wcWinnerHomeBtn');
         wcNewGameBtn = document.getElementById('wcNewGameBtn');
         wcRematchBtn = document.getElementById('wcRematchBtn');
@@ -612,32 +605,39 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    function openWinnerModal(champion, winnerRow, lastPlacePlayer, lastPlaceRow, pointsResult) {
-        if (wcWinnerName) wcWinnerName.textContent = playerLabel(champion);
-        if (wcWinnerAvatarWrap) wcWinnerAvatarWrap.innerHTML = AGP.playerCard ? AGP.playerCard.renderHtml(champion, {}) : '';
-        if (wcWinnerScoreText) wcWinnerScoreText.textContent = '🏆 ' + formatScore(winnerRow.score) + ' نقطة بعد ' + _roundNumber + ' جولة';
+    // design_handoff_winner_card classes (agp-trophy-points/agp-points-*,
+    // agp-trophy-extra) match the shared AGP.playerCard.renderTrophyCard()'s
+    // CSS in js/agp-player-card.js.
+    function wcWinnerPointsHtml(pointsResult) {
+        if (pointsResult === null) {
+            return '<div class="agp-trophy-points agp-points-noaccount">تعذّر جلب نقاط المنصة الآن</div>';
+        }
+        if (pointsResult && typeof pointsResult.added === 'number') {
+            return '<div class="agp-trophy-points agp-points-earned">+' + pointsResult.added + ' نقطة' +
+                '<span class="agp-points-sub">المجموع: ' + pointsResult.totalPoints + '</span></div>';
+        }
+        return '<div class="agp-trophy-points agp-points-noaccount">لا يوجد حساب مرتبط بهذا اللاعب على المنصة بعد</div>';
+    }
 
-        if (wcWinnerPointsText) {
-            wcWinnerPointsText.className = 'wc-winner-points-text';
-            if (pointsResult === null) {
-                wcWinnerPointsText.textContent = 'تعذّر جلب نقاط المنصة الآن.';
-            } else if (pointsResult && typeof pointsResult.added === 'number') {
-                wcWinnerPointsText.classList.add('has-points');
-                wcWinnerPointsText.textContent = '⭐ +' + pointsResult.added + ' نقطة بمنصة ألعاب أيمن (المجموع: ' + pointsResult.totalPoints + ')';
-            } else {
-                wcWinnerPointsText.classList.add('no-account');
-                wcWinnerPointsText.textContent = 'لا يوجد حساب مرتبط بهذا اللاعب على المنصة بعد.';
-            }
+    function openWinnerModal(champion, winnerRow, lastPlacePlayer, lastPlaceRow, pointsResult) {
+        if (wcWinnerTrophyWrap && AGP.playerCard) {
+            wcWinnerTrophyWrap.innerHTML = AGP.playerCard.renderTrophyCard(champion, {
+                cls: 'wc-trophy-winner', kind: 'winner', showCrown: true,
+                extra: '<div class="agp-trophy-extra">🏆 ' + escapeHtml(formatScore(winnerRow.score)) + ' نقطة بعد ' + _roundNumber + ' جولة</div>',
+                pointsHtml: wcWinnerPointsHtml(pointsResult)
+            });
         }
 
-        if (wcLastPlaceCard) {
+        if (wcLastPlaceTrophyWrap && AGP.playerCard) {
             if (lastPlacePlayer && lastPlaceRow) {
-                wcLastPlaceCard.hidden = false;
-                if (wcLastPlaceAvatarWrap) wcLastPlaceAvatarWrap.innerHTML = AGP.playerCard ? AGP.playerCard.renderHtml(lastPlacePlayer, {}) : '';
-                if (wcLastPlaceName) wcLastPlaceName.textContent = playerLabel(lastPlacePlayer);
-                if (wcLastPlaceScoreText) wcLastPlaceScoreText.textContent = formatScore(lastPlaceRow.score) + ' نقطة بس 😅';
+                wcLastPlaceTrophyWrap.hidden = false;
+                wcLastPlaceTrophyWrap.innerHTML = AGP.playerCard.renderTrophyCard(lastPlacePlayer, {
+                    cls: 'wc-trophy-last', kind: 'most', label: '😂 لا سرعة ولا بديهة',
+                    extra: '<div class="agp-trophy-extra">' + escapeHtml(formatScore(lastPlaceRow.score)) + ' نقطة بس 😅</div>'
+                });
             } else {
-                wcLastPlaceCard.hidden = true;
+                wcLastPlaceTrophyWrap.hidden = true;
+                wcLastPlaceTrophyWrap.innerHTML = '';
             }
         }
 

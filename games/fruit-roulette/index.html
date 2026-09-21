@@ -215,13 +215,8 @@
     </div>
 
     <!-- ============ WINNER MODAL ============ -->
-    <div class="overlay" id="winnerOverlay" role="dialog" aria-modal="true" aria-labelledby="winnerName">
+    <div class="overlay" id="winnerOverlay" role="dialog" aria-modal="true" aria-label="نافذة الفائز">
       <div class="modal winner-modal">
-        <!-- تاج علوي — يُرفَع لاحقاً بالاسم:
-             folder_images/winner_crown.png (fallback إيموجي تلقائي) -->
-        <img class="fr-winner-crown-top" id="winnerCrownTop" src="folder_images/winner_crown.png" alt="" aria-hidden="true">
-        <span class="fr-winner-crown-fallback" id="winnerCrownFallback" hidden aria-hidden="true">👑</span>
-
         <p class="fr-winner-title">الشخص الرهيب الي فاز بلعبة روليت الفواكة!</p>
 
         <!-- صندوق فيديو احتفالي (10 ثواني) — أساس فقط، الملف يُرفَع
@@ -231,13 +226,12 @@
           <video id="winnerVideo" loop playsinline preload="none"></video>
         </div>
 
-        <p class="eyebrow">البطل</p>
-        <!-- صورة تيك توك الحقيقية للفائز (أو حروف اسمه الأولى كبديل) +
-             تاج صغير فوقها — تُبنى ديناميكياً بـwinnerAvatarHtml() -->
-        <div class="winner-avatar-wrap" id="winnerAvatarWrap"></div>
-        <h2 id="winnerName">—</h2>
-        <p class="modal-sub">نجا من كل الصناديق ليحقق الفوز.</p>
-        <p class="winner-points-text" id="winnerPointsText"></p>
+        <!-- بطاقة الفوز الموحَّدة (design_handoff_winner_card) — تُبنى
+             بالكامل عبر AGP.playerCard.renderTrophyCard() المشتركة
+             (js/agp-player-card.js)، بنفس تنسيق روليت الإقصاء/القبائل/
+             الروليت الروسي، بلون اللعبة الخاص (fr-trophy-winner). راجع
+             openWinnerModal() بـagp-fruit-roulette.js. -->
+        <div id="winnerTrophyWrap"></div>
 
         <div class="fr-winner-logo-wrap">
           <img src="../../logo.png" alt="">

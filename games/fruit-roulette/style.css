@@ -739,58 +739,26 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
 .result-actions{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
 
 /* ==========================================================================
-   بطاقة الفائز — تصميم جديد بالكامل (تاج + فيديو احتفالي + صورة اللاعب
-   + لوقو شفاف + 3 أزرار ملوّنة) — راجع index.html لبنية HTML المطابقة.
-   ========================================================================== */
+   شاشة الفائز — بلا صندوق/خلفية خاصة بها (design_handoff_winner_card):
+   العنوان + الفيديو + بطاقة الفوز + اللوقو + الأزرار تطفو مباشرة فوق
+   خلفية .overlay المعتمة/الضبابية المشتركة (نفس تصميم كل الألعاب الأخرى)،
+   بدل صندوق .modal الإضافي المستخدَم في بقية نوافذ هذه اللعبة (اختيار
+   الهدية، نتيجة الصندوق، إلخ — تلك تبقى بصندوقها كما هي). راجع
+   index.html لبنية HTML المطابقة. */
 .winner-modal{
-  background: linear-gradient(180deg, #2a1608, #120902);
-  border-color: rgba(255,166,48,0.5);
-  overflow: hidden;
-  /* توسيع بطاقة الفائز شوي عن الحد الأساسي (560px) — المحتوى صار أكثر
-     (تاج + فيديو + صورة + نقاط) ويحتاج مساحة أوسع تتنفّس فيها. */
-  max-width: 640px;
-}
-
-/* التاج الكبير أعلى البطاقة — يستبدل إيموجي 🏆 القديم. الملف يُرفَع لاحقاً
-   يدوياً بـ GitHub بالاسم: games/fruit-roulette/folder_images/winner_crown.png
-   (fallback إيموجي 👑 تلقائي لو الملف مو موجود بعد). */
-.fr-winner-crown-top{
-  width:84px; height:84px;
-  object-fit:contain;
-  margin: 0 auto 6px;
-  display:block;
-  filter: drop-shadow(0 6px 16px rgba(255,166,48,0.55));
-  animation: trophy-bounce 1.4s ease-in-out infinite;
-}
-.fr-winner-crown-top[hidden]{ display:none; }
-.fr-winner-crown-fallback{
-  font-size:3rem;
-  display:block;
-  margin: 0 auto 6px;
-  filter: drop-shadow(0 6px 14px rgba(255,166,48,0.5));
-  animation: trophy-bounce 1.4s ease-in-out infinite;
-}
-@keyframes trophy-bounce{
-  0%,100%{ transform: translateY(0) rotate(-6deg); }
-  50%{ transform: translateY(-10px) rotate(6deg); }
+  background:none; border:none; box-shadow:none; padding:0;
+  max-width: 420px;
 }
 
 /* ⚠️ خط Zain — خاص ببطاقة الفائز فقط (طلب صريح)، بقية اللعبة تحافظ على
    Cairo/Tajawal الأصليين. مستورد بـ<link> منفصل بـ<head>، راجع index.html */
-.winner-modal h2#winnerName,
 .fr-winner-title{
   font-family:'Zain', 'Cairo', sans-serif;
-}
-.fr-winner-title{
   font-weight:700;
   font-size:1.15rem;
   color: var(--banana);
   margin: 0 0 14px;
   line-height:1.4;
-}
-#winnerName{
-  font-weight:800;
-  font-size:1.7rem;
 }
 
 /* صندوق الفيديو الاحتفالي (10 ثواني) — أساس فقط، الملف مو مرفوع بعد.
@@ -812,17 +780,20 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
   display:block;
 }
 
-.winner-avatar-wrap{ display:flex; justify-content:center; margin: 4px 0 6px; position:relative; }
-.fr-winner-crown-mini{
-  position:absolute;
-  top:-22px;
-  left:50%;
-  transform: translateX(-50%) rotate(-4deg);
-  width:38px; height:38px;
-  object-fit:contain;
-  filter: drop-shadow(0 3px 8px rgba(255,166,48,0.5));
+/* بطاقة الفوز نفسها (التاج + "WINNER" + الصورة + الاسم + النقاط) تُبنى
+   بالكامل عبر AGP.playerCard.renderTrophyCard() المشتركة داخل
+   #winnerTrophyWrap — نفس تنسيق design_handoff_winner_card المستخدَم بكل
+   الألعاب، بلون اللعبة الخاص (موز/مانجو) بدل الذهبي الافتراضي. */
+#winnerTrophyWrap{ display:flex; justify-content:center; margin: 4px 0 6px; }
+.fr-trophy-winner{
+  --agp-trophy-accent:#FFD23F;
+  --agp-trophy-accent-dark:#B87A1A;
+  --agp-trophy-border:rgba(255,210,63,.55);
+  --agp-trophy-divider:rgba(255,210,63,.25);
+  --agp-trophy-label:rgba(255,210,63,.75);
+  --agp-trophy-bg1:rgba(42,22,8,.72);
+  --agp-trophy-bg2:rgba(18,9,2,.82);
 }
-.fr-winner-crown-mini[hidden]{ display:none; }
 
 .fr-ring-avatar{
   width:96px; height:96px;
@@ -841,16 +812,6 @@ button:focus-visible, textarea:focus-visible, .crate:focus-visible{
   color:#2a1600;
   background: radial-gradient(circle at 35% 30%, var(--banana), var(--mango) 85%);
 }
-.winner-points-text{
-  margin: 8px 0 4px;
-  font-size:0.9rem;
-  color: var(--text-dim);
-  min-height:1.2em;
-  font-weight:700;
-}
-.winner-points-text.has-points{ color: var(--lime); }
-.winner-points-text.no-account{ color: var(--mango); font-weight:400; }
-
 /* لوقو ألعاب أيمن شفاف بأسفل البطاقة */
 .fr-winner-logo-wrap{
   display:flex; justify-content:center;

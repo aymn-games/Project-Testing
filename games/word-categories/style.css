@@ -255,51 +255,43 @@ h1, h2, .display{ font-family:'Cairo', sans-serif; }
    نافذة الفائز
    ========================================================= */
 .wc-overlay{
-  position:fixed; inset:0; background: rgba(10,8,14,0.72); display:flex; align-items:center; justify-content:center;
-  z-index: 100010; opacity:0; pointer-events:none; transition: opacity .2s ease;
+  position:fixed; inset:0; background: rgba(10,8,14,0.72); backdrop-filter: blur(14px);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+  z-index: 100010; opacity:0; pointer-events:none; transition: opacity .2s ease; padding:16px; box-sizing:border-box;
+  overflow-y:auto;
 }
 .wc-overlay.active{ opacity:1; pointer-events:auto; }
+.wc-winner-title{ color: var(--wc-gold-2); font-weight:800; margin:0; text-align:center; }
 
-/* بطاقتان منفصلتان جنب بعض (طلب صريح): بطاقة الفائز بحجمها الأصلي +
-   بطاقة أصغر لآخر شخص بالترتيب. تلتف تحتها بشاشات ضيّقة (موبايل/آيباد
-   بالوضع الطولي) بدل ما تنضغط جنب بعض. */
+/* بطاقتا الفائز وآخر شخص بالترتيب — design_handoff_winner_card، بلا أي
+   صندوق/خلفية خاصة بهما (تطفو مباشرة فوق wc-overlay المعتمة)، تلتف تحت
+   بعض بشاشات ضيّقة بدل ما تنضغط جنب بعض. */
 .wc-winner-cards-row{
   display:flex; align-items:flex-start; justify-content:center; gap:18px; flex-wrap:wrap; max-width:96vw;
 }
-
-.wc-modal{
-  background: linear-gradient(165deg, var(--wc-indigo), var(--wc-black)); border:2px solid var(--wc-gold);
-  border-radius: 24px; padding: 30px 26px; width: min(460px, 92vw); text-align:center; max-height:92vh; overflow-y:auto;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+.wc-trophy-winner{
+  --agp-trophy-accent: var(--wc-gold-2);
+  --agp-trophy-accent-dark: var(--wc-gold);
+  --agp-trophy-border: rgba(255,217,138,.55);
+  --agp-trophy-divider: rgba(255,217,138,.25);
+  --agp-trophy-label: rgba(255,217,138,.75);
+  --agp-trophy-bg1: rgba(60,63,103,.72);
+  --agp-trophy-bg2: rgba(25,28,27,.82);
+}
+/* بطاقة "آخر شخص بالترتيب" — نفس اللغة البصرية بس بإطار فضي هادئ بدل
+   الذهبي (يبقى الذهبي مميّزاً للفائز فقط)، وبدون تاج (kind:'most'). */
+.wc-trophy-last{
+  --agp-trophy-accent:#c9ccd6;
+  --agp-trophy-accent-dark:#7d818f;
+  --agp-trophy-border:rgba(201,204,214,.55);
+  --agp-trophy-divider:rgba(201,204,214,.25);
+  --agp-trophy-label:rgba(201,204,214,.75);
+  --agp-trophy-bg1:rgba(60,63,103,.72);
+  --agp-trophy-bg2:rgba(25,28,27,.82);
 }
 
-/* بطاقة "آخر شخص بالترتيب" — نفس لغة بطاقة الفائز البصرية، بس أصغر
-   وبإطار فضي هادئ بدل الذهبي (يبقى الذهبي مميّزاً للفائز فقط)، وايموجي
-   ضاحك أعلاها بدل التاج. */
-.wc-lastplace-modal{
-  width: min(230px, 60vw); padding: 20px 16px; border-color: rgba(255,255,255,0.35);
-  align-self:center;
-}
-.wc-lastplace-emoji{ font-size:2rem; margin-bottom:2px; }
-.wc-lastplace-title{ margin:0 0 12px; font-size:0.9rem; font-weight:800; color: var(--wc-text-dim); }
-.wc-lastplace-avatar-wrap{ display:flex; justify-content:center; margin-bottom:8px; }
-.wc-lastplace-avatar-wrap .agp-pcard-avatar-basic{ width:56px; height:56px; }
-.wc-lastplace-avatar-wrap .agp-pcard-name-basic{ display:none; }
-.wc-lastplace-name{ margin:0; color:#fff; font-weight:700; font-size:1rem; }
-.wc-lastplace-score{ margin:4px 0 0; color: var(--wc-text-dim); font-size:0.82rem; }
-.wc-winner-crown{ font-size:2.6rem; margin-bottom:4px; }
-.wc-winner-title{ color: var(--wc-gold-2); font-weight:800; margin:0 0 14px; }
-.wc-winner-avatar-wrap{ display:flex; justify-content:center; margin-bottom:10px; }
-.wc-winner-avatar-wrap .agp-pcard-avatar-basic{ width:84px; height:84px; }
-.wc-winner-avatar-wrap .agp-pcard-name-basic{ display:none; }
-#wcWinnerName{ margin:6px 0; color:#fff; font-size:1.5rem; }
-.wc-winner-score-text{ color: var(--wc-gold-2); font-weight:800; margin: 4px 0; }
-.wc-winner-points-text{ font-size:0.85rem; color: var(--wc-text-dim); margin: 0 0 6px; }
-.wc-winner-points-text.has-points{ color: var(--wc-gold-2); font-weight:800; }
-.wc-winner-points-text.no-account{ color: var(--wc-text-dim); }
-
-.wc-winner-logo-wrap img{ height:34px; opacity:0.85; margin: 14px 0 16px; }
-.wc-result-actions{ display:flex; flex-direction:column; gap:8px; }
+.wc-winner-logo-wrap img{ height:34px; opacity:0.85; margin: 0; }
+.wc-result-actions{ display:flex; flex-direction:column; gap:8px; width:min(340px, 92vw); }
 .wc-btn-winner-home{ background: rgba(255,255,255,0.1); color:#fff; border:1px solid var(--wc-line); }
 .wc-btn-winner-newmatch{ background: rgba(255,255,255,0.1); color:#fff; border:1px solid var(--wc-line); }
 .wc-btn-winner-rematch{ background: linear-gradient(90deg, var(--wc-gold-2), var(--wc-gold)); color: var(--wc-black); }

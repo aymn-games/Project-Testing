@@ -119,9 +119,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var winnerStrip, winnerStripName;
     var fruitOverlay, fruitPopupPlayer, frTurnAvatarWrap, crateGrid, crateResult, resultText, continueBtn, fruitModalSub;
     var frManualActions, manualEliminateBtn, manualCloseBtn;
-    var winnerOverlay, winnerNameEl, winnerAvatarWrap, winnerPointsText, rematchBtn, newGameBtn, winnerHomeBtn;
+    var winnerOverlay, winnerTrophyWrap, rematchBtn, newGameBtn, winnerHomeBtn;
     var difficultyNoticeOverlay, difficultyNoticeText, difficultyNoticeCloseBtn;
-    var winnerCrownTop, winnerCrownFallback, winnerVideoWrap, winnerVideo;
+    var winnerVideoWrap, winnerVideo;
     var soundBtn, soundIcon, liveRegion, roundCounterVal, fruitBg, roundTimerBox, roundTimerVal;
     var frGiftPickerOverlay, frGiftGrid, frToastWrap;
 
@@ -157,17 +157,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         manualCloseBtn = el('manualCloseBtn');
 
         winnerOverlay = el('winnerOverlay');
-        winnerNameEl = el('winnerName');
-        winnerAvatarWrap = el('winnerAvatarWrap');
-        winnerPointsText = el('winnerPointsText');
+        winnerTrophyWrap = el('winnerTrophyWrap');
         rematchBtn = el('rematchBtn');
         newGameBtn = el('newGameBtn');
         winnerHomeBtn = el('winnerHomeBtn');
         difficultyNoticeOverlay = el('difficultyNoticeOverlay');
         difficultyNoticeText = el('difficultyNoticeText');
         difficultyNoticeCloseBtn = el('difficultyNoticeCloseBtn');
-        winnerCrownTop = el('winnerCrownTop');
-        winnerCrownFallback = el('winnerCrownFallback');
         winnerVideoWrap = el('winnerVideoWrap');
         winnerVideo = el('winnerVideo');
 
@@ -1021,25 +1017,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    function openWinnerModal(champion, pointsResult) {
-        winnerNameEl.textContent = champion.name || champion.id;
-        if (winnerAvatarWrap) {
-            winnerAvatarWrap.innerHTML =
-                '<img class="fr-winner-crown-mini" src="folder_images/winner_crown.png" alt="" onerror="this.hidden=true;">' +
-                ringAvatarHtml(champion);
+    // design_handoff_winner_card classes (agp-trophy-points/agp-points-*)
+    // match the shared AGP.playerCard.renderTrophyCard()'s CSS.
+    function fruitWinnerPointsHtml(pointsResult) {
+        if (pointsResult === null) {
+            return '<div class="agp-trophy-points agp-points-noaccount">تعذّر جلب النقاط الآن</div>';
         }
+        if (pointsResult && typeof pointsResult.added === 'number') {
+            return '<div class="agp-trophy-points agp-points-earned">+' + pointsResult.added + ' نقطة' +
+                '<span class="agp-points-sub">المجموع: ' + pointsResult.totalPoints + '</span></div>';
+        }
+        return '<div class="agp-trophy-points agp-points-noaccount">لا يوجد حساب مرتبط بهذا اللاعب على المنصة بعد</div>';
+    }
 
-        if (winnerPointsText) {
-            winnerPointsText.className = 'winner-points-text';
-            if (pointsResult === null) {
-                winnerPointsText.textContent = 'تعذّر جلب النقاط الآن.';
-            } else if (pointsResult && typeof pointsResult.added === 'number') {
-                winnerPointsText.classList.add('has-points');
-                winnerPointsText.textContent = '🏆 +' + pointsResult.added + ' نقطة (المجموع: ' + pointsResult.totalPoints + ')';
-            } else {
-                winnerPointsText.classList.add('no-account');
-                winnerPointsText.textContent = 'لا يوجد حساب مرتبط بهذا اللاعب على المنصة بعد.';
-            }
+    function openWinnerModal(champion, pointsResult) {
+        if (winnerTrophyWrap) {
+            winnerTrophyWrap.innerHTML = AGP.playerCard.renderTrophyCard(champion, {
+                cls: 'fr-trophy-winner', kind: 'winner', showCrown: true,
+                pointsHtml: fruitWinnerPointsHtml(pointsResult)
+            });
         }
 
         playWinnerVideo();
@@ -1447,7 +1443,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _uiInitialized = true;
         cacheDom();
         bindImageFallback(hubImg, hubFallback);
-        bindImageFallback(winnerCrownTop, winnerCrownFallback);
         setupWinnerVideo();
         buildFruitBackground();
         wireSoundButton();
