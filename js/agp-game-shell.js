@@ -124,6 +124,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'padding:6px 16px;font-family:inherit;font-size:0.82em;cursor:pointer;font-weight:700;}',
             '.agp-pill-btn.agp-pill-active{background:var(--agp-accent);color:#fff;}',
 
+            // Real ON/OFF button pair for 'toggle' fields (replaces the old
+            // small iOS-style switch) — two explicit buttons, the active one
+            // lit up green (on) or red (off) instead of the generic accent
+            // color, so the current state reads clearly at a glance.
+            '.agp-toggle-on-btn.agp-pill-active{background:linear-gradient(180deg,#3ad17e,#1f8a52) !important;',
+            'border-color:#1f8a52 !important;color:#fff !important;}',
+            '.agp-toggle-off-btn.agp-pill-active{background:linear-gradient(180deg,#ff6161,#c81452) !important;',
+            'border-color:#c81452 !important;color:#fff !important;}',
+
             '.agp-shell-counter-row{display:flex;align-items:center;gap:8px;}',
             '.agp-shell-counter-row button{width:26px;height:26px;border-radius:8px;border:1px solid var(--agp-accent);',
             'background:#fff;color:#5a2585;cursor:pointer;font-weight:800;}',
@@ -369,9 +378,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
 
         if (field.type === 'toggle') {
-            var checked = _settingsValues[field.key] ? 'checked' : '';
+            var isOn = Boolean(_settingsValues[field.key]);
             return '<div class="agp-shell-row">' +
-                '<label class="agp-toggle-switch"><input type="checkbox" id="agp-field-' + field.key + '" data-key="' + field.key + '" ' + checked + '><span class="agp-toggle-track"></span></label>' +
+                '<div class="agp-pill-group agp-toggle-btn-group">' +
+                '<button type="button" class="agp-pill-btn agp-toggle-on-btn' + (isOn ? ' agp-pill-active' : '') + '" data-key="' + field.key + '" data-value="true">تشغيل</button>' +
+                '<button type="button" class="agp-pill-btn agp-toggle-off-btn' + (isOn ? '' : ' agp-pill-active') + '" data-key="' + field.key + '" data-value="false">إيقاف</button>' +
+                '</div>' +
                 '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + '</span></div>';
         }
 
@@ -631,14 +643,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 if (valEl) valEl.textContent = input.value;
             };
             input.onchange = function () { renderSettingsScreen(_lastIsReopened); };
-        });
-        _overlayEl.querySelectorAll('#agp-shell-box input[type=checkbox]').forEach(function (chk) {
-            // Must re-render so showWhen-conditional fields tied to this
-            // toggle appear/disappear immediately.
-            chk.onchange = function () {
-                _settingsValues[chk.getAttribute('data-key')] = chk.checked;
-                renderSettingsScreen(_lastIsReopened);
-            };
         });
         _overlayEl.querySelectorAll('.agp-modal-trigger-btn').forEach(function (btn) {
             btn.onclick = function () {

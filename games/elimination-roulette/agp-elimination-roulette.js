@@ -959,39 +959,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#er-event-log-toggle.er-log-toggle-active{background:rgba(124,58,237,0.55);',
             'border-color:var(--er-accent2);}',
 
-            /* Visual contrast for the "friend revival"/"gift revival"
-             * toggle switches on the mid-match settings drawer: dark gray
-             * OFF -> bright glowing green ON, instead of two
-             * near-identical shades of purple. Scoped to this game only
-             * (!important + selectors specific to these two switches),
-             * without touching the shared js/agp-game-shell.js or any
-             * other game using it.
-             *
-             * :not(.er-settings-initial-box) — the initial settings
-             * screen has its own complete toggle redesign below (plain
-             * knob, no ✓/✕ glyph, sized/positioned for its own 50x28
-             * track), so this older mid-match-drawer styling must never
-             * apply there. The two rule sets are scoped to disjoint states
-             * of the same shared box (a plain :not() exclusion, not a
-             * specificity contest), so which one is more specific never
-             * matters — only one of them can ever match a given element.
-             */
-            '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="friendRevivalEnabled"]) .agp-toggle-track,',
-            '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="giftRevivalEnabled"]) .agp-toggle-track{',
-            'background:linear-gradient(180deg,#4a4458,#332e40) !important;',
-            'box-shadow:inset 0 2px 5px rgba(0,0,0,0.5) !important;}',
-            '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="friendRevivalEnabled"]:checked) .agp-toggle-track,',
-            '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="giftRevivalEnabled"]:checked) .agp-toggle-track{',
-            'background:linear-gradient(180deg,#4ade80,#16a34a) !important;',
-            'box-shadow:inset 0 2px 5px rgba(0,0,0,0.35),0 0 12px rgba(74,222,128,0.65) !important;}',
-            '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="friendRevivalEnabled"]) .agp-toggle-track::before,',
-            '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="giftRevivalEnabled"]) .agp-toggle-track::before{',
-            'width:22px !important;height:22px !important;left:2px !important;top:2px !important;',
-            'display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;',
-            'content:"✕" !important;color:#7a7488;line-height:22px;text-align:center;}',
-            '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="friendRevivalEnabled"]:checked) .agp-toggle-track::before,',
-            '#agp-shell-box:not(.er-settings-initial-box) label.agp-toggle-switch:has(input[data-key="giftRevivalEnabled"]:checked) .agp-toggle-track::before{',
-            'content:"✓" !important;color:#16a34a !important;transform:translateX(-20px) !important;}',
 
             /* Fallback background for the shared #agp-shell-box (settings/
              * lobby/reopened-drawer/mini-lobby) — same gradient used by
@@ -1372,23 +1339,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-settings-initial-box .agp-count-input:focus{',
             'border-color:rgba(178,140,245,.55) !important;}',
 
-            // Toggle switch — classic pill (50x28, 20px knob, 22px travel),
-            // solid purple when on. Overrides the green ✓/✕ variant defined
-            // above for this screen only (higher specificity via the ID).
-            '.er-settings-initial-box .agp-toggle-switch{width:50px !important;',
-            'height:28px !important;}',
-            '.er-settings-initial-box .agp-toggle-track{',
-            'background:rgba(255,255,255,.07) !important;border:1px solid rgba(255,255,255,.14) !important;',
-            'box-shadow:none !important;border-radius:999px !important;',
-            'transition:background .25s,border-color .25s !important;}',
-            '.er-settings-initial-box .agp-toggle-track::before{content:none !important;',
-            'background:#8f88a3 !important;box-shadow:none !important;width:20px !important;',
-            'height:20px !important;left:3px !important;top:3px !important;border-radius:50% !important;',
-            'transition:transform .25s,background .25s !important;}',
-            '.er-settings-initial-box .agp-toggle-switch input:checked + .agp-toggle-track{',
-            'background:#7a3fd4 !important;border-color:#7a3fd4 !important;}',
-            '.er-settings-initial-box .agp-toggle-switch input:checked + .agp-toggle-track::before{',
-            'background:#f3ecff !important;transform:translateX(-22px) !important;}',
 
             // "Card" sections (revive-by-gift, friend-revival) — bordered
             // rounded panel, built by wrapping the row(s) in .er-settings-card
