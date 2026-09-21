@@ -99,30 +99,52 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'box-shadow:0 0 40px rgba(124,58,237,0.5);box-sizing:border-box;}',
           '#agp-shell-box h2{margin:6px 0 20px;font-size:1.15em;text-align:center;color:#fff;font-weight:900;}',
 
-'.agp-shell-field{display:flex;align-items:center;justify-content:space-between;gap:16px;',
-'padding:17px 4px;border-bottom:1px solid rgba(255,255,255,0.09);text-align:right;}',
-'.agp-shell-field label{display:flex;align-items:center;gap:6px;font-weight:800;font-size:0.9em;',
-'color:#fff;flex-shrink:0;}',
-'.agp-shell-field label img,.agp-field-icon{width:18px;height:18px;}',
-'.agp-shell-field input[type=text]{max-width:240px;padding:12px 14px;border-radius:11px;',
-'border:1.5px solid var(--agp-accent);background:rgba(255,255,255,0.05);color:#fff;font-size:0.9em;',
-'font-weight:700;text-align:right;}',
+            // Row/field container — card style (adopted from
+            // elimination-roulette as the base format for every game using
+            // this shared field system): no divider lines, a rounded
+            // translucent "glass" card per row instead. Colors here stay
+            // neutral/accent-agnostic so each game keeps its own
+            // --agp-accent identity instead of all looking alike.
+            '.agp-shell-field,.agp-shell-row{display:flex;align-items:center;justify-content:space-between;',
+            'flex-wrap:wrap;gap:12px;width:100%;box-sizing:border-box;margin:0 0 12px;padding:14px 16px;',
+            'border-radius:16px;border:1px solid rgba(255,255,255,.09);',
+            'background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));}',
+            '.agp-shell-field:last-child,.agp-shell-row:last-child{margin-bottom:0;}',
 
-            '.agp-shell-row{display:flex;align-items:center;justify-content:space-between;gap:10px;',
-            'padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.18);}',
             // Universal layout rule (all games): row label always pinned to
             // the far right, its input/control always pinned to the far
             // left. The HTML below always emits the control markup before
             // the label span (control, then <span class="agp-shell-row-label">),
             // so with order:-1 the label — the last DOM child — becomes the
             // first flex item, landing at the RTL row's main-start (right)
-            // while the control settles at main-end (left).
-            '.agp-shell-row-label{display:flex;align-items:center;gap:6px;font-size:0.88em;color:#fff;font-weight:700;order:-1;}',
+            // while the control settles at main-end (left). Flex-column lets
+            // an optional .agp-field-desc line stack under the title instead
+            // of squeezing beside it (order:-1 is a no-op for
+            // .agp-shell-field, whose label is already first in the DOM —
+            // harmless to share the same rule).
+            '.agp-shell-field label,.agp-shell-row-label{display:flex;flex-direction:column;',
+            'align-items:flex-end;gap:3px;font-weight:700;font-size:0.92em;color:#fff;text-align:right;',
+            'flex-shrink:0;order:-1;}',
+            '.agp-shell-field label img,.agp-field-icon{width:18px;height:18px;}',
+            // Optional small gray explanation line under a field's title —
+            // opt in per field via field.description in settingsFields;
+            // renderField() appends it automatically when present.
+            '.agp-field-desc{font-size:0.72em;font-weight:400;color:rgba(255,255,255,.55);',
+            'white-space:normal;text-align:right;}',
 
-            '.agp-pill-group{display:flex;gap:6px;flex-wrap:wrap;}',
-            '.agp-pill-btn{border:1px solid var(--agp-accent);background:#fff;color:#5a2585;border-radius:999px;',
-            'padding:6px 16px;font-family:inherit;font-size:0.82em;cursor:pointer;font-weight:700;}',
-            '.agp-pill-btn.agp-pill-active{background:var(--agp-accent);color:#fff;}',
+            '.agp-shell-field input[type=text]{max-width:240px;padding:12px 16px;border-radius:999px;',
+            'border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#fff;',
+            'font-size:0.9em;font-weight:600;text-align:center;box-sizing:border-box;}',
+            '.agp-shell-field input[type=text]:focus{border-color:var(--agp-accent);outline:none;}',
+
+            '.agp-pill-group{display:flex;gap:6px;flex-wrap:wrap;padding:4px;border-radius:999px;',
+            'background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));',
+            'border:1px solid rgba(255,255,255,.12);}',
+            '.agp-pill-btn{border:none;background:transparent;color:rgba(255,255,255,.65);border-radius:999px;',
+            'padding:8px 15px;font-family:inherit;font-size:0.8em;cursor:pointer;font-weight:600;',
+            'white-space:nowrap;transition:background .2s,color .2s;}',
+            '.agp-pill-btn.agp-pill-active{background:var(--agp-accent);color:#fff;',
+            'box-shadow:0 4px 10px -4px rgba(0,0,0,.5);}',
 
             // Real ON/OFF button pair for 'toggle' fields (replaces the old
             // small iOS-style switch) — two explicit buttons, the active one
@@ -134,11 +156,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'border-color:#c81452 !important;color:#fff !important;}',
 
             '.agp-shell-counter-row{display:flex;align-items:center;gap:8px;}',
-            '.agp-shell-counter-row button{width:26px;height:26px;border-radius:8px;border:1px solid var(--agp-accent);',
-            'background:#fff;color:#5a2585;cursor:pointer;font-weight:800;}',
+            '.agp-shell-counter-row button{width:28px;height:28px;border-radius:999px;',
+            'border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#fff;',
+            'cursor:pointer;font-weight:800;font-size:1em;}',
+            '.agp-shell-counter-row button:hover{border-color:var(--agp-accent);}',
             '.agp-shell-counter-row span.agp-count-val{min-width:24px;text-align:center;font-weight:800;color:#fff;}',
-            '.agp-count-input{width:48px;text-align:center;font-weight:800;color:#3a1560;border:1px solid var(--agp-accent);',
-            'border-radius:6px;padding:3px;font-family:inherit;}',
+            '.agp-count-input{width:56px;text-align:center;font-weight:700;color:#fff;',
+            'border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);',
+            'border-radius:999px;padding:6px 4px;font-family:inherit;}',
 
             /* ⚠️ [0.45.0] شريط تمرير (slider) — يستبدل عداد +/- لمستوى الصوت. */
             '.agp-slider-wrap{display:flex;align-items:center;gap:10px;width:60%;}',
@@ -150,22 +175,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-slider-input::-moz-range-thumb{width:18px;height:18px;border-radius:50%;border:none;',
             'background:radial-gradient(circle at 35% 30%,#fff,#e5d8f5);box-shadow:0 2px 5px rgba(0,0,0,0.45);cursor:pointer;}',
             '.agp-slider-val{min-width:22px;text-align:center;font-weight:800;color:#fff;font-size:0.85em;}',
-
-            /* ⚠️ [0.45.0] مفتاح تبديل "أكثر واقعية" — تدرّج + ظل داخلي على
-             * المسار (يشبه سطح مادي محفور خفيف)، ومقبض بلمعان/ظل واضح
-             * (يشبه زر فعلي مرفوع)، بدل الشكل المسطّح السابق. لا صور —
-             * CSS فقط (gradients/box-shadow)، نفس data-key/_settingsValues. */
-            '.agp-toggle-switch{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;}',
-            '.agp-toggle-switch input{opacity:0;width:0;height:0;position:absolute;}',
-            '.agp-toggle-track{position:absolute;inset:0;background:linear-gradient(180deg,#d8c7ea,#b79bd1);',
-            'border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.3),inset 0 -1px 1px rgba(255,255,255,0.25);',
-            'transition:background 0.2s;cursor:pointer;}',
-            '.agp-toggle-track::before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;',
-            'background:radial-gradient(circle at 35% 30%,#ffffff,#d9d9d9);border-radius:50%;transition:transform 0.2s;',
-            'box-shadow:0 2px 4px rgba(0,0,0,0.45),inset 0 -1px 1px rgba(0,0,0,0.12),inset 0 1px 1px rgba(255,255,255,0.7);}',
-            '.agp-toggle-switch input:checked + .agp-toggle-track{background:linear-gradient(180deg,#9d5ff0,var(--agp-accent));',
-            'box-shadow:inset 0 2px 4px rgba(0,0,0,0.35),inset 0 -1px 1px rgba(255,255,255,0.2);}',
-            '.agp-toggle-switch input:checked + .agp-toggle-track::before{transform:translateX(-20px);}',
 
             '.agp-shell-btn-connect{width:100%;padding:13px;border:none;border-radius:999px;font-weight:800;',
             'cursor:pointer;background:linear-gradient(90deg,var(--agp-accent-2),var(--agp-accent));color:#0b0616;',
@@ -346,8 +355,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return src ? '<img class="agp-field-icon" src="' + src + '" alt="">' : '';
     }
 
+    // Optional small gray explanation line under a field's title, opt-in
+    // per field via settingsFields[].description — renders as .agp-field-desc
+    // (see its CSS) inside the row's label column.
+    function fieldDescHtml(field) {
+        return field.description ? '<span class="agp-field-desc">' + escapeHtml(field.description) + '</span>' : '';
+    }
+
     function renderField(field) {
         if (!isFieldVisible(field)) return '';
+        var descHtml = fieldDescHtml(field);
 
         if (field.type === 'pill-choice' || field.type === 'pill-group') {
             var buttons = (field.options || []).map(function (opt) {
@@ -355,7 +372,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 return '<button type="button" class="agp-pill-btn ' + active + '" data-key="' + field.key + '" data-value="' + opt.value + '">' + opt.label + '</button>';
             }).join('');
             return '<div class="agp-shell-row"><div class="agp-pill-group">' + buttons + '</div>' +
-                '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + '</span></div>';
+                '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + descHtml + '</span></div>';
         }
 
         if (field.type === 'counter') {
@@ -363,7 +380,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="agp-shell-counter-row"><button data-key="' + field.key + '" data-delta="-1">−</button>' +
                 '<input type="number" class="agp-count-input" data-key="' + field.key + '" id="agp-field-' + field.key + '" value="' + _settingsValues[field.key] + '" min="' + (field.min || 0) + '">' +
                 '<button data-key="' + field.key + '" data-delta="1">+</button></div>' +
-                '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + '</span></div>';
+                '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + descHtml + '</span></div>';
         }
 
         if (field.type === 'slider') {
@@ -374,7 +391,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="agp-slider-wrap"><input type="range" class="agp-slider-input" data-key="' + field.key + '" ' +
                 'min="' + sliderMin + '" max="' + sliderMax + '" value="' + sliderVal + '">' +
                 '<span class="agp-slider-val" id="agp-slider-val-' + field.key + '">' + sliderVal + '</span></div>' +
-                '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + '</span></div>';
+                '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + descHtml + '</span></div>';
         }
 
         if (field.type === 'toggle') {
@@ -384,7 +401,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<button type="button" class="agp-pill-btn agp-toggle-on-btn' + (isOn ? ' agp-pill-active' : '') + '" data-key="' + field.key + '" data-value="true">تشغيل</button>' +
                 '<button type="button" class="agp-pill-btn agp-toggle-off-btn' + (isOn ? '' : ' agp-pill-active') + '" data-key="' + field.key + '" data-value="false">إيقاف</button>' +
                 '</div>' +
-                '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + '</span></div>';
+                '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + descHtml + '</span></div>';
         }
 
         // Opens a game-built modal on click; this file knows nothing about
@@ -395,7 +412,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var displayVal = (typeof field.formatValue === 'function') ? field.formatValue(currentVal) : currentVal;
             return '<div class="agp-shell-row">' +
                 '<button type="button" class="agp-pill-btn agp-modal-trigger-btn" data-trigger-key="' + field.key + '">' + escapeHtml(displayVal) + '</button>' +
-                '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + '</span></div>';
+                '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + descHtml + '</span></div>';
         }
 
         return '';
