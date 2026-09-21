@@ -924,6 +924,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return match.label + ' · ' + giftCoinsText(match);
     }
 
+    // Passed as settingsFields[].formatIcon — the shared shell renders the
+    // modal-trigger as a compact 50x50 icon button using this URL instead
+    // of a text pill (see renderField() in js/agp-game-shell.js).
+    function giftIconUrlForValue(value) {
+        var match = COMMON_GIFTS.filter(function (g) { return g.value === value; })[0];
+        return match ? giftIconUrl(match) : null;
+    }
+
     // نافذة اختيار الهدية -- مبنية مسبقاً بـHTML (خارج #frGameRoot عمداً)
     // عشان تكون متاحة من شاشة الإعدادات الأولى. z-index أعلى من
     // #agp-shell-overlay بـstyle.css -- بدونه الضغط ما يشتغل من داخل
@@ -1172,6 +1180,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 key: 'giftRevivalGiftName', type: 'modal-trigger', label: 'الهدية المختارة',
                 default: COMMON_GIFTS[0].value,
                 formatValue: giftLabelFor,
+                formatIcon: giftIconUrlForValue,
                 onOpen: openGiftPickerModal,
                 showWhen: { key: 'giftRevivalEnabled', equals: true }
             },

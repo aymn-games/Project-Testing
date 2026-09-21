@@ -146,6 +146,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-pill-btn.agp-pill-active{background:var(--agp-accent);color:#fff;',
             'box-shadow:0 4px 10px -4px rgba(0,0,0,.5);}',
 
+            // Compact 50x50 icon-only variant of the modal-trigger button
+            // (field.formatIcon) — e.g. the currently-picked gift's artwork,
+            // instead of a wide text pill. Not outside the card/row: it's
+            // just this one control, sized like a small square tab.
+            '.agp-modal-trigger-icon-btn{width:50px;height:50px;flex:0 0 auto;padding:0;',
+            'border-radius:14px;display:flex;align-items:center;justify-content:center;',
+            'overflow:hidden;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);}',
+            '.agp-modal-trigger-icon-btn:hover{border-color:var(--agp-accent);}',
+            '.agp-modal-trigger-icon{width:30px;height:30px;object-fit:contain;pointer-events:none;}',
+
             // Real ON/OFF button pair for 'toggle' fields (replaces the old
             // small iOS-style switch) — two explicit buttons, the active one
             // lit up green (on) or red (off) instead of the generic accent
@@ -405,13 +415,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
 
         // Opens a game-built modal on click; this file knows nothing about
-        // its content. Game calls AGP.gameShell.setSetting(key, value) to
-        // update and trigger a re-render.
+        // its content (gift lists, icons, etc. are all game-specific). Game
+        // calls AGP.gameShell.setSetting(key, value) to update and trigger
+        // a re-render.
         if (field.type === 'modal-trigger') {
             var currentVal = _settingsValues[field.key];
             var displayVal = (typeof field.formatValue === 'function') ? field.formatValue(currentVal) : currentVal;
-            return '<div class="agp-shell-row">' +
-                '<button type="button" class="agp-pill-btn agp-modal-trigger-btn" data-trigger-key="' + field.key + '">' + escapeHtml(displayVal) + '</button>' +
+            // Optional field.formatIcon(value) → icon URL: renders a compact
+            // 50x50 icon-only button (e.g. the picked gift's artwork)
+            // instead of a text pill, while still opening the same
+            // game-built picker on click and keeping the current value as
+            // its title/tooltip.
+            var iconUrl = (typeof field.formatIcon === 'function') ? field.formatIcon(currentVal) : null;
+            var triggerHtml = iconUrl ?
+                '<button type="button" class="agp-pill-btn agp-modal-trigger-btn agp-modal-trigger-icon-btn" ' +
+                'data-trigger-key="' + field.key + '" title="' + escapeHtml(displayVal) + '">' +
+                '<img class="agp-modal-trigger-icon" src="' + iconUrl + '" alt="" loading="lazy" onerror="this.style.display=\'none\';">' +
+                '</button>' :
+                '<button type="button" class="agp-pill-btn agp-modal-trigger-btn" data-trigger-key="' + field.key + '">' + escapeHtml(displayVal) + '</button>';
+            return '<div class="agp-shell-row">' + triggerHtml +
                 '<span class="agp-shell-row-label">' + iconImg(field.icon) + field.label + descHtml + '</span></div>';
         }
 

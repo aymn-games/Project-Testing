@@ -1359,25 +1359,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'border-right:none !important;padding-right:0 !important;}',
             '.er-settings-initial-box .er-conditional-section .agp-shell-row{',
             'border-bottom:none !important;padding:0 !important;}',
-            '.er-settings-initial-box .er-gift-name-row{flex-direction:column !important;',
-            'align-items:flex-start !important;gap:8px !important;}',
-            '.er-settings-initial-box .er-gift-name-row .agp-shell-row-label{order:-1;}',
-
-            // Gift picker trigger — dashed-border button spanning the row,
-            // matching the design's "اختيار هدية من هدايا تيك توك" control.
-            // The popup itself (all real TikTok gifts) is unchanged.
-            '.er-settings-initial-box .er-gift-box-wrap{display:flex !important;',
-            'width:100% !important;background:none !important;padding:0 !important;border:none !important;',
-            'border-radius:0 !important;}',
-            '.er-settings-initial-box .er-gift-box-wrap .agp-modal-trigger-btn{',
-            'display:flex !important;width:100% !important;align-items:center !important;',
-            'justify-content:space-between !important;gap:12px !important;',
-            'background:rgba(122,63,212,.07) !important;border:1px dashed rgba(178,140,245,.4) !important;',
-            'color:#e7e9ee !important;padding:12px 16px !important;border-radius:16px !important;',
-            'font-size:13.5px !important;font-weight:400 !important;max-width:none !important;',
-            'overflow:visible !important;text-overflow:clip !important;white-space:normal !important;}',
-            '.er-settings-initial-box .er-gift-name-icon{width:16px !important;',
-            'height:16px !important;flex-shrink:0 !important;}',
 
             // Caption under the "wheel shape" pills (enhanceWheelModeField).
             '.er-settings-initial-box .er-field-note{color:#8f88a3 !important;',
@@ -3213,6 +3194,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return match.label + ' · ' + giftCoinsText(match);
     }
 
+    // Passed as settingsFields[].formatIcon — the shared shell renders the
+    // modal-trigger as a compact 50x50 icon button using this URL instead
+    // of a text pill (see renderField() in js/agp-game-shell.js).
+    function giftIconUrlForValue(value) {
+        var match = COMMON_GIFTS.filter(function (g) { return g.value === value; })[0];
+        return match ? giftIconUrl(match) : null;
+    }
+
     /**
      * Gift-picker window — a popup tab built entirely here (in response to
      * the 'modal-trigger' field type in agp-game-shell.js — the shared
@@ -3225,6 +3214,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var overlay = el('er-modal-overlay');
         var box = el('er-modal-box');
         if (!overlay || !box) return;
+
+        // This is only ever opened from within the settings screen (it's
+        // the modal-trigger field's onOpen), where #agp-shell-overlay
+        // (shared file, z-index:99999) is showing and would otherwise cover
+        // this popup (whose base z-index, 99990, is deliberately kept below
+        // the persistent header for its other, in-match uses — see the
+        // #er-modal-overlay rule above). Bumped above it here, reset back
+        // to the CSS default on close so those other uses (elimination
+        // reveal, winner screen) keep staying under the header as designed.
+        overlay.style.zIndex = '100000';
 
         // Each gift's icon is the real TikTok gift artwork when available
         // (assets/tiktok-gifts/), otherwise a Twemoji fallback (MIT +
@@ -3256,6 +3255,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 var value = btn.getAttribute('data-gift-value');
                 AGP.gameShell.setSetting('giftRevivalGiftName', value);
                 overlay.style.display = 'none';
+                overlay.style.zIndex = '';
                 box.style.textAlign = '';
             };
         });
@@ -3294,6 +3294,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 key: 'giftRevivalGiftName', type: 'modal-trigger', label: 'اختار نوع الدعم',
                 default: COMMON_GIFTS[0].value,
                 formatValue: giftLabelFor,
+                formatIcon: giftIconUrlForValue,
                 onOpen: openGiftPickerModal,
                 showWhen: { key: 'giftRevivalEnabled', equals: true }
             },
@@ -3493,16 +3494,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var timeoutRow = rowFor('[data-key="eliminationTimeoutBehavior"]');
         var wheelModeRow = rowFor('[data-key="wheelDisplayMode"]');
 
-        // Visual wrapper around the gift-picker trigger button itself — does
-        // not touch the button or its click listener, just adds a parent.
-        if (giftNameTrigger) {
-            giftNameRow.classList.add('er-gift-name-row');
-            var giftBoxWrap = document.createElement('div');
-            giftBoxWrap.className = 'er-gift-box-wrap';
-            giftNameTrigger.parentNode.insertBefore(giftBoxWrap, giftNameTrigger);
-            giftBoxWrap.appendChild(giftNameTrigger);
-        }
-
         var scroll = document.createElement('div');
         scroll.className = 'er-settings-scroll';
         var scrollInner = document.createElement('div');
@@ -3569,30 +3560,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         label.appendChild(desc);
     }
 
-    /**
-     * The shared file's gift-picker trigger button (modal-trigger)
-     * deliberately shows only escapeHtml-safe text (see renderField in
-     * js/agp-game-shell.js) — no <img> can be injected via formatValue. To
-     * show the gift's actual icon inside the button, this rebuilds the
-     * button's content locally here after every render, using the current
-     * real value (AGP.gameShell.getSettings()). Idempotent: checks the
-     * displayed icon already matches the current value before rewriting,
-     * to avoid unnecessary flicker on every mutation.
-     */
-    function enhanceGiftNameBox(box) {
-        var btn = box.querySelector('.er-gift-name-row .agp-modal-trigger-btn');
-        if (!btn || !AGP.gameShell || typeof AGP.gameShell.getSettings !== 'function') return;
-        var currentValue = AGP.gameShell.getSettings().giftRevivalGiftName;
-        var match = COMMON_GIFTS.filter(function (g) { return g.value === currentValue; })[0];
-        if (!match) return;
-        var existingIcon = btn.querySelector('.er-gift-name-icon');
-        if (existingIcon && existingIcon.getAttribute('data-gift-value') === match.value) return;
-        btn.innerHTML =
-            '<img class="er-gift-name-icon" data-gift-value="' + escapeHtml(match.value) + '" ' +
-            'src="' + giftIconUrl(match) + '" alt="" loading="lazy" onerror="this.style.display=\'none\';">' +
-            '<span class="er-gift-name-text">' + escapeHtml(giftLabelFor(match.value)) + '</span>';
-    }
-
     // "Back to platform" link on the initial settings screen (before
     // connecting to the stream) — in addition to the persistent header's
     // own 🏠 icon.
@@ -3614,7 +3581,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         box.classList.toggle('er-settings-initial-box', isInitial);
         if (isInitial) {
             layoutInitialSettingsFields(box);
-            enhanceGiftNameBox(box);
             enhanceConnectionStatusField(box);
         }
         if (box.querySelector('.er-back-to-platform-btn')) return;
