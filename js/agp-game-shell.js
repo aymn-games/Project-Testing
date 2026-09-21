@@ -110,7 +110,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
             '.agp-shell-row{display:flex;align-items:center;justify-content:space-between;gap:10px;',
             'padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.18);}',
-            '.agp-shell-row-label{display:flex;align-items:center;gap:6px;font-size:0.88em;color:#fff;font-weight:700;}',
+            // Universal layout rule (all games): row label always pinned to
+            // the far right, its input/control always pinned to the far
+            // left. The HTML below always emits the control markup before
+            // the label span (control, then <span class="agp-shell-row-label">),
+            // so with order:-1 the label — the last DOM child — becomes the
+            // first flex item, landing at the RTL row's main-start (right)
+            // while the control settles at main-end (left).
+            '.agp-shell-row-label{display:flex;align-items:center;gap:6px;font-size:0.88em;color:#fff;font-weight:700;order:-1;}',
 
             '.agp-pill-group{display:flex;gap:6px;flex-wrap:wrap;}',
             '.agp-pill-btn{border:1px solid var(--agp-accent);background:#fff;color:#5a2585;border-radius:999px;',
