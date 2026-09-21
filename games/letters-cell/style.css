@@ -1,0 +1,291 @@
+/* ==========================================================================
+   خلية الحروف (Letters Cell) — "حروف مع أيمن". لعبة أصلية داخل المنصة، بنمط
+   games/team-war من ناحية طريقة التحميل والربط الحقيقي بالبث فقط -- الهوية
+   البصرية والشاشات مستقلة تماماً حسب تصميم التسليم (design handoff)، لا
+   اعتماد على js/agp-game-shell.js.
+
+   ملاحظة امتثال لقاعدة CLAUDE.md (صفوف الإعدادات: العنوان يمين، عنصر
+   التحكم يسار): صف "اكتب اسمك" في شاشة الإعدادات يُبنى بترتيب DOM عادي
+   (تسمية ثم مُدخل) بدون أي خدعة CSS order -- عكس تصميم المرجع الأصلي الذي
+   كان يعرض المُدخل يميناً والتسمية يساراً عبر order، لأن قاعدة المنصة
+   الثابتة تُلزم بعكس ذلك لكل صف إعدادات في أي لعبة.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Baloo+Bhaijaan+2:wght@800;900&display=swap');
+
+:root {
+    --lc-bg: #0a0812;
+    --lc-panel: #15111f;
+    --lc-panel-border: rgba(255,255,255,0.06);
+    --lc-input-bg: #0f0b1a;
+    --lc-input-border: rgba(255,255,255,0.1);
+    --lc-text: #f2edff;
+    --lc-text-dim: #9d95b8;
+    --lc-text-dim2: #c9c2df;
+    --lc-text-tertiary: #c9a688;
+    --lc-accent1: #8b5cf6;
+    --lc-accent2: #a78bfa;
+    --lc-accent-pink: #e879f9;
+    --lc-success: #22c55e;
+    --lc-green: #4ade80;
+    --lc-remove: #ef4444;
+    --lc-beige: #E2C8A8;
+    --lc-offwhite: #fef4f4;
+    --lc-board-dark: #1b0d0d;
+    --lc-drawer-bg: #2a1210;
+}
+
+* { box-sizing: border-box; }
+
+body.lc-active {
+    margin: 0;
+    font-family: 'Cairo', sans-serif;
+    background: var(--lc-board-dark);
+    color: var(--lc-text);
+    direction: rtl;
+}
+body.lc-active *::-webkit-scrollbar { display: none; }
+body.lc-active { scrollbar-width: none; }
+
+.lc-hex-clip { clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
+
+/* ---------- زخرفة الأحرف السداسية (settings / lobby / result) ---------- */
+.lc-decor-wrap { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.lc-decor-wrap.lc-decor-wide { mask-image: linear-gradient(to right, black 0%, black 22%, transparent 40%); -webkit-mask-image: linear-gradient(to right, black 0%, black 22%, transparent 40%); }
+.lc-decor-wrap.lc-decor-narrow { mask-image: linear-gradient(to right, black 0%, black 8%, transparent 16%); -webkit-mask-image: linear-gradient(to right, black 0%, black 8%, transparent 16%); }
+.lc-decor-inner { position: absolute; left: -15%; top: -10%; width: 45%; height: 120%; opacity: 0.5; transform: rotate(-14deg); }
+.lc-decor-inner.lc-decor-inner-narrow { left: -20%; top: -10%; width: 24%; height: 120%; opacity: 0.4; }
+.lc-decor-inner.lc-decor-inner-result { left: -20%; top: -10%; width: 24%; height: 120%; opacity: 0.35; }
+.lc-decor-hex {
+    position: absolute; background: #1f1730; border: 1px solid rgba(167,139,250,0.25);
+    display: flex; align-items: center; justify-content: center;
+    color: #a78bfa; font-weight: 900; font-size: 22px;
+}
+
+/* ---------- شعار "حروف مع {الاسم}" (Baloo Bhaijaan 2) ---------- */
+.lc-logo { text-align: center; font-family: 'Baloo Bhaijaan 2', sans-serif; font-weight: 900; line-height: 1.15; }
+.lc-logo-word1 { color: var(--lc-accent2); }
+.lc-logo-word2 { color: var(--lc-text); font-size: 0.55em; font-weight: 800; vertical-align: middle; }
+.lc-logo-name { background: linear-gradient(90deg, var(--lc-accent1), var(--lc-accent-pink)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* شعار "حروف مع أيمن" المائل ثلاثي الأبعاد (side panel / intro) */
+.lc-logo3d { text-align: center; font-family: 'Baloo Bhaijaan 2', sans-serif; }
+.lc-logo3d-underline { height: 2px; width: 60%; margin: 0 auto 4px; background: #3ba7d9; transform: rotate(-4deg); }
+.lc-logo3d-line1 { font-size: clamp(24px,3.1vw,45px); font-weight: 900; color: #6b4530; line-height: 1; transform: skewX(-8deg); text-shadow: 1px 1px 0 #3d2618, 2px 2px 0 #3d2618, 3px 3px 0 #3d2618, 4px 4px 5px rgba(0,0,0,0.4); }
+.lc-logo3d-line2 { font-size: clamp(13px,1.2vw,18px); font-weight: 800; color: #513222; line-height: 1.3; transform: skewX(-8deg); }
+.lc-logo3d-line3 { font-size: clamp(24px,3.1vw,45px); font-weight: 900; color: #7a1524; line-height: 1; transform: skewX(-8deg); text-shadow: 1px 1px 0 #3d0a12, 2px 2px 0 #3d0a12, 3px 3px 0 #3d0a12, 4px 4px 5px rgba(0,0,0,0.4); }
+
+/* ---------- أزرار مشتركة ---------- */
+.lc-btn-outline { display: inline-block; padding: 13px 26px; border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; background: transparent; color: var(--lc-text-dim2); font-family: inherit; font-weight: 800; font-size: 15px; cursor: pointer; }
+.lc-btn-primary { display: inline-block; padding: 13px 26px; border: none; border-radius: 12px; background: linear-gradient(90deg, var(--lc-accent1), var(--lc-accent2)); color: var(--lc-bg); font-family: inherit; font-weight: 900; font-size: 15px; cursor: pointer; }
+.lc-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.lc-error-msg { color: #ffb4b4; font-size: 0.88em; margin: 4px 0; text-align: center; font-weight: 700; }
+
+/* ==========================================================================
+   1) شاشة الإعدادات
+   ========================================================================== */
+.lc-settings-screen { width: 100%; min-height: 100vh; overflow-y: auto; background: var(--lc-bg); box-sizing: border-box; position: relative; }
+.lc-settings-inner { max-width: 640px; margin: 0 auto; padding: 48px 24px 32px; display: flex; flex-direction: column; gap: 20px; position: relative; z-index: 1; }
+.lc-connected-badge-wrap { text-align: center; }
+.lc-connected-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--lc-panel); border: 1px solid var(--lc-panel-border); border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 700; color: #e6e1f5; }
+.lc-connected-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lc-success); display: inline-block; }
+.lc-logo-settings { font-size: clamp(28px,4vw,44px); }
+
+/* صف "اكتب اسمك": تسمية يمين، مُدخل يسار -- ترتيب DOM طبيعي بدون order (قاعدة CLAUDE.md) */
+.lc-row-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--lc-panel); border: 1px solid var(--lc-panel-border); border-radius: 14px; padding: 16px 20px; flex-wrap: wrap; }
+.lc-row-card-label { font-size: 15px; font-weight: 800; color: var(--lc-text); white-space: nowrap; }
+.lc-row-card-input { flex: 1; min-width: 220px; padding: 11px 14px; border-radius: 10px; border: 1px solid var(--lc-input-border); background: var(--lc-input-bg); color: var(--lc-text); font-family: inherit; font-size: 14px; outline: none; }
+
+.lc-team-card { background: var(--lc-panel); border: 1px solid var(--lc-panel-border); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+.lc-team-card-head { display: flex; align-items: center; gap: 8px; }
+.lc-team-card-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.lc-team-card-title { font-size: 14px; font-weight: 900; color: var(--lc-text); }
+.lc-field-col { display: flex; flex-direction: column; gap: 6px; }
+.lc-field-label { font-size: 12px; font-weight: 700; color: var(--lc-text-dim); }
+.lc-field-row { display: flex; align-items: center; gap: 10px; }
+.lc-field-input { flex: 1; min-width: 0; padding: 11px 14px; border-radius: 10px; border: 1px solid var(--lc-input-border); background: var(--lc-input-bg); color: var(--lc-text); font-family: inherit; font-size: 14px; outline: none; }
+.lc-field-input.lc-field-input-block { width: 100%; }
+.lc-swatch-btn { flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; padding: 0; }
+.lc-swatch-btn.lc-swatch-active { border-color: var(--lc-accent2); }
+
+.lc-settings-btn-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+
+.lc-connecting-box { text-align: center; padding: 46px 10px; color: var(--lc-text-dim2); font-weight: 700; }
+.lc-spinner { width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.2); border-top-color: var(--lc-accent1); border-radius: 50%; margin: 0 auto 18px; animation: lc-spin 0.9s linear infinite; }
+@keyframes lc-spin { to { transform: rotate(360deg); } }
+
+/* ==========================================================================
+   2) شاشة اللوبي
+   ========================================================================== */
+.lc-lobby-screen { width: 100%; min-height: 100vh; overflow-y: auto; background: var(--lc-bg); box-sizing: border-box; display: flex; flex-direction: column; align-items: center; padding: 40px 24px 32px; gap: 28px; position: relative; }
+.lc-logo-lobby { font-size: clamp(24px,3.4vw,38px); position: relative; z-index: 1; }
+.lc-lobby-panels { width: 100%; max-width: 1320px; display: flex; gap: 28px; flex-wrap: wrap; justify-content: center; position: relative; z-index: 1; }
+.lc-team-panel { flex: 1; min-width: 380px; height: 500px; overflow: hidden; background: #1b1526; border: 4px solid #ffffff; border-radius: 20px; display: flex; flex-direction: column; box-shadow: 0 24px 50px rgba(0,0,0,0.45); box-sizing: border-box; }
+.lc-team-panel-header { padding: 16px 22px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.lc-team-panel-name { font-size: clamp(18px,2vw,24px); font-weight: 900; color: #fef4f4; }
+.lc-team-panel-badges { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lc-badge-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.3); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 800; }
+.lc-badge-count { color: var(--lc-green); }
+.lc-badge-count span { color: #fef4f4; font-weight: 700; }
+.lc-badge-code { color: #fef4f4; font-weight: 900; }
+.lc-badge-code span { opacity: 0.8; font-weight: 700; }
+.lc-team-panel-body { padding: 18px 22px; overflow-y: auto; display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; flex: 1; align-content: start; }
+.lc-player-chip { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.06); border-radius: 999px; padding: 6px 10px; }
+.lc-player-chip-avatar { width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,0.15); flex-shrink: 0; object-fit: cover; }
+.lc-player-chip-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 800; color: #fef4f4; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lc-player-chip-remove { border: none; background: transparent; color: var(--lc-remove); font-weight: 900; cursor: pointer; padding: 2px 4px; font-size: 14px; }
+.lc-team-empty { font-size: 13px; color: #fef4f4; opacity: 0.6; grid-column: 1/-1; }
+.lc-lobby-btn-row { display: flex; align-items: center; justify-content: center; gap: 12px; position: relative; z-index: 1; }
+
+/* ==========================================================================
+   3) شاشة اللعب
+   ========================================================================== */
+.lc-game-screen { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+.lc-game-bg-svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+
+.lc-hex-cell-wrap { position: absolute; padding: 4px; box-sizing: border-box; }
+.lc-hex-cell-wrap.lc-hex-clickable { cursor: pointer; }
+.lc-hex-cell-wrap.lc-hex-active { filter: drop-shadow(0 0 8px rgba(254,244,244,0.9)); }
+.lc-hex-cell-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: clamp(15px,2vw,26px); font-weight: 900; transition: background 0.25s ease; }
+
+.lc-side-panel-btn-settings { position: absolute; left: 78.22%; top: 1.5%; width: 20.21%; box-sizing: border-box; padding: 6px 10px; border: none; border-radius: 10px; background: #1B0D0D; opacity: 0.55; color: #fef4f4; font-family: 'Cairo', sans-serif; font-weight: 800; font-size: clamp(11px,1vw,14px); cursor: pointer; }
+.lc-side-logo { position: absolute; left: 78.22%; top: 9%; width: 20.21%; }
+.lc-cell-question-label { position: absolute; left: 78.22%; top: 29%; width: 20.21%; display: flex; align-items: center; gap: 8px; }
+.lc-cell-question-label span { font-size: clamp(13px,1.1vw,16px); font-weight: 900; color: #E2C8A8; }
+.lc-question-box { position: absolute; left: 78.22%; top: 41.71%; width: 20.21%; height: 24%; box-sizing: border-box; padding: clamp(8px,1.4vw,20px) clamp(10px,1.8vw,26px); overflow: hidden; }
+.lc-question-text { width: 100%; height: 100%; color: #fef4f4; font-family: inherit; font-weight: 700; font-size: clamp(13px,1.2vw,18px); line-height: 1.35; overflow: hidden; }
+.lc-question-placeholder { color: #d9c9b8; opacity: 0.85; }
+
+.lc-badge-hex { position: absolute; left: 85.43%; top: 31.69%; width: 6.01%; height: 12.59%; display: flex; align-items: center; justify-content: center; color: #fef4f4; font-weight: 900; text-align: center; }
+.lc-badge-hex-inner { font-size: clamp(11px,1vw,16px); line-height: 1.3; }
+.lc-badge-hex-letter { font-size: clamp(18px,1.8vw,30px); color: #0F0E0E; }
+.lc-badge-hex-caption { font-size: clamp(9px,0.75vw,12px); opacity: 0.85; color: #121212; }
+.lc-badge-hex-btn { border: none; background: transparent; padding: 0; cursor: pointer; color: #fef4f4; font-family: inherit; }
+.lc-badge-hex-btn .lc-badge-hex-round { font-size: clamp(16px,1.6vw,26px); }
+.lc-badge-hex-btn .lc-badge-hex-caption { opacity: 0.85; }
+
+.lc-credit-row { position: absolute; left: 78.22%; top: 65%; width: 20.21%; display: flex; gap: clamp(6px,1vw,12px); box-sizing: border-box; padding: 0 clamp(10px,1.8vw,26px); }
+.lc-credit-btn { flex: 1; min-width: 0; padding: clamp(6px,0.9vw,12px) 4px; border: none; border-radius: 10px; color: #fef4f4; font-family: inherit; font-weight: 900; font-size: clamp(11px,1vw,15px); cursor: pointer; }
+
+.lc-team-row { position: absolute; left: 79.43%; width: 17.78%; height: 5.585%; display: flex; align-items: center; justify-content: space-between; gap: 6px; box-sizing: border-box; padding: 0 clamp(8px,1.3vw,18px); }
+.lc-team-row-1 { top: 78.46%; }
+.lc-team-row-2 { top: 86%; }
+.lc-team-row-badge { flex-shrink: 0; width: clamp(16px,1.4vw,20px); height: clamp(16px,1.4vw,20px); border-radius: 50%; background: rgba(254,244,244,0.2); color: #fef4f4; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: clamp(9px,0.8vw,12px); }
+.lc-team-row-name { flex: 1; min-width: 0; color: #fef4f4; font-family: inherit; font-weight: 900; font-size: clamp(10px,1vw,15px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lc-team-row-score { flex-shrink: 0; min-width: 1.4em; text-align: center; font-weight: 900; color: #fef4f4; font-size: clamp(13px,1.3vw,20px); }
+
+.lc-footer-logo { position: absolute; left: 78.22%; top: 93%; width: 20.21%; display: flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box; padding: 0 8px; }
+.lc-footer-mark { flex-shrink: 0; width: clamp(20px,1.8vw,26px); height: clamp(18px,1.6vw,23px); clip-path: polygon(50% 0%, 100% 100%, 0% 100%); background: linear-gradient(135deg,#5B0E1A,#E2C8A8); position: relative; }
+.lc-footer-mark-dot { position: absolute; width: 14%; height: 14%; border-radius: 50%; background: #fef4f4; transform: translate(-50%,-50%); }
+.lc-footer-mark-dot-1 { left: 50%; top: 20%; }
+.lc-footer-mark-dot-2 { left: 25%; top: 75%; }
+.lc-footer-mark-dot-3 { left: 75%; top: 75%; }
+.lc-footer-text { text-align: right; line-height: 1.25; }
+.lc-footer-text .lc-footer-title { font-size: clamp(10px,0.9vw,13px); font-weight: 900; color: #513222; font-family: 'Cairo', sans-serif; }
+.lc-footer-text .lc-footer-tagline { font-size: clamp(7px,0.6vw,9px); font-weight: 600; color: #513222; opacity: 0.75; font-family: 'Cairo', sans-serif; }
+
+/* شاشة تمهيدية (intro) عند دخول اللعب / بداية كل جولة */
+.lc-intro-dim { position: fixed; inset: 0; background: #1b0d0d; z-index: 200; animation: lc-intro-dim 1.6s ease forwards; }
+.lc-intro-logo { position: fixed; text-align: center; font-family: 'Baloo Bhaijaan 2', sans-serif; z-index: 201; animation: lc-intro-zoom 1.6s cubic-bezier(0.6,0,0.4,1) forwards; white-space: nowrap; }
+@keyframes lc-intro-dim { 0% { opacity: 1; } 80% { opacity: 0.5; } 100% { opacity: 0; } }
+@keyframes lc-intro-zoom {
+    0% { top: 50%; left: 50%; transform: translate(-50%,-50%) scale(2.6); opacity: 0; }
+    15% { opacity: 1; }
+    70% { top: 16%; left: 88.3%; transform: translate(-50%,-50%) scale(1); opacity: 1; }
+    100% { top: 16%; left: 88.3%; transform: translate(-50%,-50%) scale(1); opacity: 0; }
+}
+
+/* نافذة تأكيد الإجابة */
+.lc-answer-modal-overlay { position: fixed; inset: 0; background: rgba(10,5,5,0.65); display: flex; align-items: center; justify-content: center; z-index: 150; }
+.lc-answer-modal { width: 300px; height: 300px; background: #1b0d0d; border-radius: 18px; box-shadow: 0 30px 60px rgba(0,0,0,0.5); box-sizing: border-box; padding: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; font-family: 'Cairo', sans-serif; border-width: 2px; border-style: solid; }
+.lc-answer-modal-label { font-size: 12px; color: #E2C8A8; font-weight: 800; }
+.lc-answer-modal-question { font-size: 16px; font-weight: 900; color: #fef4f4; line-height: 1.4; }
+.lc-answer-modal-divider { width: 60%; height: 1px; background: rgba(255,255,255,0.15); margin: 4px 0; }
+.lc-answer-modal-player { font-size: 15px; font-weight: 900; color: #fef4f4; }
+.lc-answer-modal-team { font-size: 13px; font-weight: 800; }
+.lc-answer-modal-done { margin-top: 8px; padding: 9px 26px; border: none; border-radius: 10px; color: #fef4f4; font-family: inherit; font-weight: 900; font-size: 14px; cursor: pointer; }
+
+/* درج إعدادات داخل اللعب */
+.lc-ingame-drawer { position: absolute; left: 78.22%; top: 6%; width: 21%; max-height: 75%; overflow-y: auto; background: var(--lc-drawer-bg); border: 2px solid var(--lc-beige); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; gap: 14px; font-family: 'Cairo', sans-serif; z-index: 100; }
+.lc-drawer-head { display: flex; align-items: center; justify-content: space-between; }
+.lc-drawer-title { font-size: clamp(15px,1.3vw,19px); font-weight: 900; color: #fef4f4; }
+.lc-drawer-close { border: none; background: transparent; font-size: 18px; font-weight: 900; color: #fef4f4; cursor: pointer; line-height: 1; }
+.lc-drawer-btn { padding: 10px; border: none; border-radius: 10px; color: #fef4f4; font-family: inherit; font-weight: 800; font-size: clamp(12px,1vw,14px); cursor: pointer; }
+.lc-drawer-btn-end { background: #5B0E1A; }
+.lc-drawer-btn-invite { background: #513222; }
+.lc-drawer-btn-reset { padding: 10px; border: 1px solid rgba(254,244,244,0.4); border-radius: 10px; background: transparent; color: #fef4f4; font-family: inherit; font-weight: 700; font-size: clamp(11px,0.95vw,13px); cursor: pointer; }
+.lc-drawer-section { display: flex; flex-direction: column; gap: 8px; }
+.lc-drawer-section-title { font-size: clamp(12px,1vw,14px); font-weight: 800; color: #E2C8A8; }
+.lc-drawer-roster { background: rgba(0,0,0,0.25); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.lc-drawer-roster-team { font-size: clamp(11px,0.95vw,13px); font-weight: 800; color: #fef4f4; }
+.lc-drawer-roster-player { font-size: clamp(11px,0.9vw,13px); color: #fef4f4; opacity: 0.9; }
+.lc-drawer-roster-empty { font-size: clamp(10px,0.85vw,12px); color: #fef4f4; opacity: 0.5; }
+
+/* نافذة دعوة اللاعبين */
+.lc-invite-modal-overlay { position: absolute; inset: 0; background: rgba(10,5,5,0.55); display: flex; align-items: center; justify-content: center; z-index: 110; }
+.lc-invite-modal { width: 500px; height: 600px; max-width: 92vw; max-height: 90vh; background: var(--lc-drawer-bg); border: 2px solid var(--lc-beige); border-radius: 18px; box-shadow: 0 30px 60px rgba(0,0,0,0.5); box-sizing: border-box; padding: 26px 24px; display: flex; flex-direction: column; gap: 20px; font-family: 'Cairo', sans-serif; overflow-y: auto; }
+.lc-invite-head { display: flex; align-items: center; justify-content: space-between; }
+.lc-invite-title { font-size: 19px; font-weight: 900; color: #fef4f4; }
+.lc-invite-close { border: none; background: transparent; font-size: 20px; font-weight: 900; color: #fef4f4; cursor: pointer; line-height: 1; }
+.lc-invite-team-block { border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.lc-invite-team-name { font-size: 16px; font-weight: 900; color: #fef4f4; }
+.lc-invite-team-code { font-size: 13px; color: #E2C8A8; font-weight: 700; }
+.lc-invite-hint { font-size: 12px; color: #fef4f4; opacity: 0.7; line-height: 1.8; }
+.lc-invite-done { margin-top: auto; padding: 14px; border: none; border-radius: 12px; background: #5B0E1A; color: #fef4f4; font-family: inherit; font-weight: 900; font-size: 15px; cursor: pointer; }
+
+/* ==========================================================================
+   4/5) شاشتا الفوز بالجولة وملخص الجولة
+   ========================================================================== */
+.lc-roundwinner-screen, .lc-roundsummary-screen, .lc-result-screen {
+    width: 100%; min-height: 100vh; overflow-y: auto; box-sizing: border-box; font-family: 'Cairo', sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px; position: relative;
+}
+.lc-roundwinner-screen { gap: 26px; background: radial-gradient(ellipse at center, #3a1310 0%, #1b0d0d 65%); }
+.lc-roundsummary-screen, .lc-result-screen { background: radial-gradient(ellipse at top, #3a1310 0%, #1b0d0d 60%); }
+
+.lc-roundwinner-pulse-wrap { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; mask-image: radial-gradient(circle at center, black 0%, transparent 70%); -webkit-mask-image: radial-gradient(circle at center, black 0%, transparent 70%); }
+.lc-roundwinner-pulse { position: absolute; inset: 0; opacity: 0.25; animation: lc-intro-dim 1.4s ease-in-out infinite alternate; }
+
+.lc-hxpop { animation: lc-hx-pop 0.6s ease; }
+.lc-hxpop-delay { animation: lc-hx-pop 0.7s ease 0.1s; }
+@keyframes lc-hx-pop { 0% { transform: scale(0.8); opacity: 0.4; } 60% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
+
+.lc-roundwinner-head { text-align: center; font-family: 'Baloo Bhaijaan 2', sans-serif; position: relative; z-index: 1; }
+.lc-roundwinner-caption { font-size: 14px; font-weight: 800; color: var(--lc-text-tertiary); letter-spacing: 2px; margin-bottom: 6px; font-family: 'Cairo', sans-serif; }
+.lc-roundwinner-name { font-size: clamp(40px,7vw,76px); font-weight: 900; line-height: 1; text-shadow: 0 0 22px rgba(255,255,255,0.4), 0 6px 24px rgba(0,0,0,0.6); }
+.lc-roundwinner-sub { font-size: 16px; font-weight: 800; color: #fef4f4; margin-top: 8px; font-family: 'Cairo', sans-serif; }
+
+.lc-avatar-row { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; position: relative; z-index: 1; }
+.lc-avatar-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.lc-avatar-circle { border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fef4f4; font-weight: 900; border: 3px solid #fef4f4; box-shadow: 0 10px 24px rgba(0,0,0,0.4); }
+.lc-avatar-circle.lc-avatar-lg { width: 76px; height: 76px; font-size: 28px; }
+.lc-avatar-circle.lc-avatar-sm { width: 44px; height: 44px; font-size: 16px; border-width: 2px; }
+.lc-avatar-item.lc-avatar-item-lg { width: 96px; }
+.lc-avatar-item.lc-avatar-item-sm { width: 64px; }
+.lc-avatar-name { font-weight: 800; color: #fef4f4; text-align: center; }
+.lc-avatar-item-lg .lc-avatar-name { font-size: 15px; }
+.lc-avatar-item-sm .lc-avatar-name { font-size: 12px; }
+
+.lc-roundwinner-cta { margin-top: 6px; padding: 15px 36px; border: none; border-radius: 12px; color: #fef4f4; font-family: 'Cairo', sans-serif; font-weight: 900; font-size: 17px; cursor: pointer; position: relative; z-index: 1; }
+
+.lc-logo-small { position: relative; z-index: 1; }
+.lc-logo-small .lc-logo3d-line1, .lc-logo-small .lc-logo3d-line3 { font-size: clamp(20px,2.4vw,32px); }
+.lc-logo-small .lc-logo3d-line2 { font-size: clamp(11px,1vw,15px); }
+
+.lc-round-end-caption { font-size: 13px; font-weight: 800; color: var(--lc-text-tertiary); letter-spacing: 2px; position: relative; z-index: 1; }
+.lc-score-compare { display: flex; gap: 40px; align-items: center; position: relative; z-index: 1; }
+.lc-score-compare-item { text-align: center; }
+.lc-score-compare-val { font-weight: 900; }
+.lc-score-compare-name { font-size: 14px; color: var(--lc-beige); margin-top: 4px; font-weight: 700; }
+.lc-score-compare-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.2); }
+.lc-roundsummary-cta { margin-top: 8px; padding: 14px 34px; border: none; border-radius: 12px; color: #fef4f4; font-family: inherit; font-weight: 900; font-size: 16px; cursor: pointer; }
+
+/* ==========================================================================
+   6) شاشة النتيجة النهائية
+   ========================================================================== */
+.lc-result-headline { font-size: clamp(38px,6vw,68px); font-weight: 900; text-align: center; position: relative; z-index: 1; text-shadow: 0 0 22px rgba(255,255,255,0.4), 0 4px 20px rgba(0,0,0,0.5); }
+.lc-result-score-val { font-size: clamp(28px,4vw,44px); }
+.lc-result-winners-card { border-radius: 16px; padding: 20px 26px; display: flex; flex-direction: column; gap: 12px; min-width: 280px; position: relative; z-index: 1; box-shadow: 0 20px 40px rgba(0,0,0,0.4); background: var(--lc-drawer-bg); border-width: 2px; border-style: solid; }
+.lc-result-winners-title { font-size: 13px; font-weight: 800; color: var(--lc-beige); text-align: center; }
+.lc-result-winners-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.lc-result-cta { margin-top: 4px; padding: 14px 34px; border: none; border-radius: 12px; color: #fef4f4; font-family: inherit; font-weight: 900; font-size: 16px; cursor: pointer; position: relative; z-index: 1; }
