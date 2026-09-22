@@ -201,6 +201,16 @@ body.kz-active{
     cursor:pointer;
     box-shadow:0 10px 34px rgba(124,58,237,0.3),0 0 0 1px rgba(255,255,255,0.15) inset;
 }
+.kz-btn-connect:disabled{ opacity:0.5; cursor:not-allowed; box-shadow:none; }
+
+.kz-conn-status-wrap{ text-align:center; column-span:all; margin-bottom:14px; }
+.kz-conn-badge{ display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.16); border-radius:999px; padding:8px 16px; font-size:0.88em; font-weight:700; color:#e9e3f5; }
+.kz-conn-badge--yes{ border-color:rgba(124,58,237,0.5); }
+.kz-conn-badge--no{ border-color:rgba(220,38,38,0.5); }
+.kz-conn-dot{ width:8px; height:8px; border-radius:50%; background:var(--kz-accent2); display:inline-block; }
+.kz-conn-badge--no .kz-conn-dot{ background:#ef4444; }
+.kz-conn-link{ color:var(--kz-accent2); font-weight:800; text-decoration:none; }
+.kz-conn-link:hover{ text-decoration:underline; }
 
 .kz-back-btn{
     column-span:all;

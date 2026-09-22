@@ -1083,6 +1083,47 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     /* ======================================================================
      *  4) شاشة الإعدادات
      * ==================================================================== */
+    /**
+     * يقرأ الاتصال بالبث اللي اتحقق منه المضيف مرة وحدة بصفحة مكتبة
+     * الألعاب (games.html، ودجت "اتصل بالبث") -- عشان شاشة إعدادات هذي
+     * اللعبة ما تحتاج حقل يوزر خاص فيها. نفس المفتاح والصيغة المستخدمة
+     * بكل مكان ثاني بالمنصة (js/agp-game-shell.js، letters-cell، team-war،
+     * elimination-roulette).
+     */
+    var STREAM_CONNECTION_STORAGE_KEY = 'agp:agp-stream-connection';
+    function getSavedStreamConnection() {
+        try {
+            var raw = window.localStorage.getItem(STREAM_CONNECTION_STORAGE_KEY);
+            if (!raw) return null;
+            var data = JSON.parse(raw);
+            if (!data || typeof data.username !== 'string' || !data.username) return null;
+            return data;
+        } catch (e) { return null; }
+    }
+
+    function connectionBadgeHtml() {
+        var saved = getSavedStreamConnection();
+        if (saved) {
+            return '<div class="tt-conn-badge tt-conn-badge--yes"><span class="tt-conn-dot"></span>' +
+                'متصل بالبث <b>@' + escapeHtml(saved.username) + '</b></div>';
+        }
+        return '<div class="tt-conn-badge tt-conn-badge--no"><span class="tt-conn-dot"></span>' +
+            'لم يتم الاتصال بالبث بعد' +
+            '<a href="../../games.html" class="tt-conn-link">اتصل من مكتبة الألعاب ↗</a></div>';
+    }
+
+    function refreshConnectionBadge() {
+        var wrap = el('tt-conn-status-wrap');
+        if (!wrap) return; // مو شاشة الإعدادات حالياً
+        wrap.innerHTML = connectionBadgeHtml();
+        var connectBtn = el('tt-connect-btn');
+        if (connectBtn) connectBtn.disabled = !getSavedStreamConnection();
+    }
+
+    window.addEventListener('storage', function (e) {
+        if (e.key === STREAM_CONNECTION_STORAGE_KEY) refreshConnectionBadge();
+    });
+
     function renderSettingsScreen() {
         _screen = 'settings';
         hideGearButton();
@@ -1108,10 +1149,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<button type="button" id="tt-settings-back-btn" class="tt-back-to-platform-link">🏠 رجوع للمنصة</button>' +
             '<h2>إعدادات مباراة ' + escapeHtml(GAME_NAME) + '</h2>' +
 
-            '<div class="tt-row-field">' +
-                '<input type="text" id="tt-input-username" placeholder="" value="' + escapeAttr(_settings.tiktokUsername) + '">' +
-                '<label>اكتب يوزر بث التيك توك</label>' +
-            '</div>' +
+            '<div class="tt-conn-status-wrap" id="tt-conn-status-wrap">' + connectionBadgeHtml() + '</div>' +
 
             '<div class="tt-row-field">' +
                 '<input type="text" id="tt-input-keyword" placeholder="مثال: يلا" value="' + escapeAttr(_settings.keyword) + '">' +
@@ -1138,7 +1176,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function wireSettingsHandlers() {
-        el('tt-input-username').addEventListener('input', function (e) { _settings.tiktokUsername = e.target.value; });
         el('tt-input-keyword').addEventListener('input', function (e) { _settings.keyword = e.target.value; });
 
         el('tt-rounds-group').addEventListener('click', function (e) {
@@ -1160,6 +1197,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
 
         el('tt-connect-btn').addEventListener('click', handleConnectClick);
+        refreshConnectionBadge();
     }
 
     function showSettingsError(msg) {
@@ -1170,13 +1208,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function handleConnectClick() {
-        var username = (_settings.tiktokUsername || '').trim();
+        var saved = getSavedStreamConnection();
         var keyword = (_settings.keyword || '').trim();
 
-        if (!username) return showSettingsError('لازم تكتب يوزر البث أول.');
+        if (!saved) return showSettingsError('لازم تتصل بالبث من مكتبة الألعاب أول (زر "اتصل بالبث" بصفحة الألعاب).');
         if (!keyword) return showSettingsError('لازم تحدد كلمة مفتاحية للانضمام.');
 
-        AGP.streamConnector.connect('tiktok', { username: username });
+        _settings.tiktokUsername = saved.username;
+        AGP.streamConnector.connect('tiktok', { username: saved.username });
     }
 
     function renderConnectingScreen(message) {

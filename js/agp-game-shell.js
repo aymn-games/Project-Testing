@@ -196,6 +196,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * الكلاس (إضافة لوبي جديد، العب التلقائي...) بقيت بحجمها. */
             '#agp-connect-btn{width:auto;min-width:190px;max-width:80%;padding:9px 22px;',
             'margin:10px auto 0;display:block;font-size:0.85em;}',
+            '#agp-connect-btn:disabled{opacity:0.5;cursor:not-allowed;}',
+
+            /* شارة حالة الاتصال بالبث — تحل محل حقل كتابة اليوزر بشاشة
+             * الإعدادات الأولى لكل الألعاب المبنية على هذا الملف المشترك:
+             * الاتصال الحقيقي يصير مرة وحدة من ودجت "اتصل بالبث" بصفحة
+             * مكتبة الألعاب (games.html)، وكل لعبة تعيد استخدامه من هنا. */
+            '.agp-shell-conn-badge{display:flex;align-items:center;justify-content:center;gap:8px;',
+            'flex-wrap:wrap;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);',
+            'border-radius:999px;padding:8px 16px;margin-bottom:14px;font-size:0.85em;color:#f3eefc;',
+            'text-align:center;}',
+            '.agp-shell-conn-dot{flex-shrink:0;width:9px;height:9px;border-radius:50%;background:#ef4444;}',
+            '.agp-shell-conn-badge.agp-shell-conn-yes .agp-shell-conn-dot{background:#22c55e;}',
+            '.agp-shell-conn-badge.agp-shell-conn-yes{border-color:rgba(34,197,94,0.4);}',
+            '.agp-shell-conn-badge.agp-shell-conn-no{border-color:rgba(239,68,68,0.4);}',
+            '.agp-shell-conn-link{color:var(--agp-accent-2);font-weight:800;text-decoration:none;}',
+            '.agp-shell-conn-link:hover{text-decoration:underline;}',
 
             /* شاشة "جاري الاتصال" — ⚠️ [تحديث معايير الواجهة الموحّدة]
              * استُبدل التصميم الفاتح المتعمّد سابقاً بتصميم غامق موحّد
@@ -442,6 +458,46 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     var _lastIsReopened = false;
 
+    /**
+     * يقرأ الاتصال بالبث اللي اتحقق منه المضيف مرة وحدة بصفحة مكتبة
+     * الألعاب (games.html، ودجت "اتصل بالبث") -- عشان شاشة إعدادات أي
+     * لعبة مبنية على هذا الملف المشترك ما تحتاج حقل يوزر خاص فيها.
+     * games.html يكتب هذا المفتاح مباشرة بـlocalStorage (هو نفسه ما
+     * يحمّل سكربتات AGP.*)، بنفس بادئة 'agp:' وصيغة JSON.stringify اللي
+     * يستخدمها js/agp-storage-manager.js، فالطرفين متفقين على الصيغة
+     * بدون ما يعتمد أي وحد على الثاني.
+     */
+    var STREAM_CONNECTION_STORAGE_KEY = 'agp:agp-stream-connection';
+    function getSavedStreamConnection() {
+        try {
+            var raw = window.localStorage.getItem(STREAM_CONNECTION_STORAGE_KEY);
+            if (!raw) return null;
+            var data = JSON.parse(raw);
+            if (!data || typeof data.username !== 'string' || !data.username) return null;
+            return data;
+        } catch (e) { return null; }
+    }
+
+    function connectionBadgeHtml(savedConn) {
+        if (savedConn) {
+            return '<div class="agp-shell-conn-badge agp-shell-conn-yes"><span class="agp-shell-conn-dot"></span>' +
+                'متصل بالبث <b>@' + escapeHtml(savedConn.username) + '</b></div>';
+        }
+        return '<div class="agp-shell-conn-badge agp-shell-conn-no"><span class="agp-shell-conn-dot"></span>' +
+            'لم يتم الاتصال بالبث بعد' +
+            '<a href="../../games.html" class="agp-shell-conn-link">اتصل من مكتبة الألعاب ↗</a></div>';
+    }
+
+    // يحدّث شارة حالة الاتصال فوراً لو المضيف اتصل من تبويب مكتبة الألعاب
+    // وشاشة إعدادات اللعبة الأولى (غير المُعاد فتحها) مفتوحة أصلاً بتبويب
+    // ثاني -- بدون ما ينتظر تحديث الصفحة. #agp-connect-btn ما يُرسَم إلا
+    // بالشاشة الأولى (isReopened=false)، فوجوده كافٍ للتأكد إننا فعلاً
+    // بشاشة الإعدادات الأولى قبل إعادة الرسم.
+    window.addEventListener('storage', function (e) {
+        if (e.key !== STREAM_CONNECTION_STORAGE_KEY) return;
+        if (!_lastIsReopened && document.getElementById('agp-connect-btn')) renderSettingsScreen(false);
+    });
+
     function renderSettingsScreen(isReopened) {
         _lastIsReopened = Boolean(isReopened);
         // Preserve username/keyword field values across the full re-render
@@ -456,15 +512,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var closeBtnHtml = isReopened ?
             '<button type="button" id="agp-settings-close-btn" style="position:absolute;top:14px;left:18px;background:none;border:none;font-size:1.3em;cursor:pointer;color:#5a2585;">✕</button>' : '';
 
-        // Falls back to the last saved username (survives a page reload)
-        var savedUsername = preservedUsername || (AGP.storageManager ? AGP.storageManager.get('agp-last-username', '') : '');
+        var savedConn = getSavedStreamConnection();
+        // احتياط: يبقى يقبل يوزر قديم محفوظ محلياً (agp-last-username) لو
+        // ما فيه اتصال متحقَّق منه حالياً -- مثلاً جلسة قديمة قبل ميزة
+        // "اتصل من مكتبة الألعاب" -- بدون ما يعرض حقل كتابة فعلي إطلاقاً.
+        var savedUsername = savedConn ? savedConn.username :
+            (preservedUsername || (AGP.storageManager ? AGP.storageManager.get('agp-last-username', '') : ''));
+
+        var connBadgeHtml = isReopened ? '' : connectionBadgeHtml(savedConn);
 
         var baseFieldsHtml = isReopened ? '' :
-            '<div class="agp-shell-field"><label>' + iconImg(_config.usernameIcon) + 'اكتب يوزر البث بالتيك توك</label><input type="text" id="agp-tiktok-username" placeholder="ayman_live" value="' + escapeHtml(savedUsername) + '"></div>' +
+            '<div class="agp-shell-field" style="display:none !important;"><label>' + iconImg(_config.usernameIcon) + 'اكتب يوزر البث بالتيك توك</label><input type="text" id="agp-tiktok-username" placeholder="ayman_live" value="' + escapeHtml(savedUsername) + '"></div>' +
             '<div class="agp-shell-field"><label>' + iconImg(_config.keywordIcon) + 'الكلمه المفتاحية للدخول</label><input type="text" id="agp-keyword" placeholder="JOIN" value="' + escapeHtml(preservedKeyword) + '"></div>';
 
         var connectBtnHtml = isReopened ? '' :
-            '<button class="agp-shell-btn-connect" id="agp-connect-btn">' + (_config.connectButtonLabel || 'اتصال بالبث') + '</button>';
+            '<button class="agp-shell-btn-connect" id="agp-connect-btn"' + (savedUsername ? '' : ' disabled') + '>' + (_config.connectButtonLabel || 'اتصال بالبث') + '</button>';
 
         // Optional generic auto-play toggle button, configured by the game
         // via _config.midMatchToggleButton — this file just renders a
@@ -492,6 +554,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         box.innerHTML =
             closeBtnHtml +
             '<h2>' + (_config.settingsTitle || 'إعدادات المبارة') + '</h2>' +
+            connBadgeHtml +
             baseFieldsHtml +
             fieldsHtml +
             playerManagementHtml +

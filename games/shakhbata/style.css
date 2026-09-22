@@ -112,6 +112,16 @@ body.shk-active{
     background:linear-gradient(90deg,var(--shk-accent),var(--shk-accent2));
     color:#0a0612; font-family:inherit; font-weight:900; font-size:1.05em; cursor:pointer;
 }
+.shk-btn-connect:disabled{ opacity:0.5; cursor:not-allowed; }
+
+.shk-conn-status-wrap{ text-align:center; column-span:all; margin-bottom:14px; }
+.shk-conn-badge{ display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.16); border-radius:999px; padding:8px 16px; font-size:0.88em; font-weight:700; color:#e9e3f5; }
+.shk-conn-badge--yes{ border-color:rgba(124,58,237,0.5); }
+.shk-conn-badge--no{ border-color:rgba(220,38,38,0.5); }
+.shk-conn-dot{ width:8px; height:8px; border-radius:50%; background:var(--shk-accent2); display:inline-block; }
+.shk-conn-badge--no .shk-conn-dot{ background:#ef4444; }
+.shk-conn-link{ color:var(--shk-accent2); font-weight:800; text-decoration:none; }
+.shk-conn-link:hover{ text-decoration:underline; }
 .shk-back-btn{
     column-span:all; margin-top:12px; padding:12px 0; border:none; border-radius:999px;
     background:transparent; border:1px solid rgba(255,255,255,0.18); color:#c9bfe0;

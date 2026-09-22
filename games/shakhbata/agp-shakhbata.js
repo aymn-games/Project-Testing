@@ -130,6 +130,45 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }).join('');
     }
 
+    /**
+     * يقرأ الاتصال بالبث اللي اتحقق منه المضيف مرة وحدة بصفحة مكتبة
+     * الألعاب (games.html، ودجت "اتصل بالبث") -- عشان شاشة إعدادات هذي
+     * اللعبة ما تحتاج حقل يوزر خاص فيها.
+     */
+    var STREAM_CONNECTION_STORAGE_KEY = 'agp:agp-stream-connection';
+    function getSavedStreamConnection() {
+        try {
+            var raw = window.localStorage.getItem(STREAM_CONNECTION_STORAGE_KEY);
+            if (!raw) return null;
+            var data = JSON.parse(raw);
+            if (!data || typeof data.username !== 'string' || !data.username) return null;
+            return data;
+        } catch (e) { return null; }
+    }
+
+    function connectionBadgeHtml() {
+        var saved = getSavedStreamConnection();
+        if (saved) {
+            return '<div class="shk-conn-badge shk-conn-badge--yes"><span class="shk-conn-dot"></span>' +
+                'متصل بالبث <b>@' + escapeHtml(saved.username) + '</b></div>';
+        }
+        return '<div class="shk-conn-badge shk-conn-badge--no"><span class="shk-conn-dot"></span>' +
+            'لم يتم الاتصال بالبث بعد' +
+            '<a href="../../games.html" class="shk-conn-link">اتصل من مكتبة الألعاب ↗</a></div>';
+    }
+
+    function refreshConnectionBadge() {
+        var wrap = el('shk-conn-status-wrap');
+        if (!wrap) return;
+        wrap.innerHTML = connectionBadgeHtml();
+        var connectBtn = el('shk-connect-btn');
+        if (connectBtn) connectBtn.disabled = !getSavedStreamConnection();
+    }
+
+    window.addEventListener('storage', function (e) {
+        if (e.key === STREAM_CONNECTION_STORAGE_KEY) refreshConnectionBadge();
+    });
+
     function renderSettingsScreen() {
         _screen = 'settings';
         var root = ensureRoot();
@@ -146,10 +185,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         root.innerHTML =
             '<h2>إعدادات مباراة شخبطة</h2>' +
 
-            '<div class="shk-field">' +
-                '<label>اكتب يوزر البث بالتيك توك</label>' +
-                '<input type="text" id="shk-input-username" placeholder="ayman_live" value="' + escapeAttr(_settings.tiktokUsername) + '">' +
-            '</div>' +
+            '<div class="shk-conn-status-wrap" id="shk-conn-status-wrap">' + connectionBadgeHtml() + '</div>' +
 
             '<div class="shk-field">' +
                 '<label>الكلمة المفتاحية للدخول</label>' +
@@ -186,7 +222,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function wireSettingsHandlers() {
-        el('shk-input-username').addEventListener('input', function (e) { _settings.tiktokUsername = e.target.value; });
         el('shk-input-keyword').addEventListener('input', function (e) { _settings.joinKeyword = e.target.value; });
 
         el('shk-row-followersOnly').addEventListener('click', function (e) {
@@ -204,6 +239,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         el('shk-back-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
         el('shk-connect-btn').addEventListener('click', handleConnectClick);
+        refreshConnectionBadge();
     }
 
     function showSettingsError(msg) {
@@ -214,11 +250,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function handleConnectClick() {
-        var username = (_settings.tiktokUsername || '').trim();
+        var saved = getSavedStreamConnection();
         var keyword = normalizeArabicText(_settings.joinKeyword);
-        if (!username) return showSettingsError('لازم تكتب يوزر البث أول.');
+        if (!saved) return showSettingsError('لازم تتصل بالبث من مكتبة الألعاب أول (زر "اتصل بالبث" بصفحة الألعاب).');
         if (!keyword) return showSettingsError('لازم تكتب الكلمة المفتاحية للدخول.');
-        AGP.streamConnector.connect('tiktok', { username: username });
+        _settings.tiktokUsername = saved.username;
+        AGP.streamConnector.connect('tiktok', { username: saved.username });
     }
 
     function ensureConnectOverlay() {

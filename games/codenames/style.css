@@ -206,6 +206,16 @@ body.cn-active{
     cursor:pointer;
     box-shadow:0 10px 34px rgba(124,58,237,0.3),0 0 0 1px rgba(255,255,255,0.15) inset;
 }
+.cn-btn-connect:disabled{ opacity:0.5; cursor:not-allowed; box-shadow:none; }
+
+.cn-conn-status-wrap{ text-align:center; column-span:all; margin-bottom:14px; }
+.cn-conn-badge{ display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.16); border-radius:999px; padding:8px 16px; font-size:0.88em; font-weight:700; color:#e9e3f5; }
+.cn-conn-badge--yes{ border-color:rgba(124,58,237,0.5); }
+.cn-conn-badge--no{ border-color:rgba(179,69,63,0.5); }
+.cn-conn-dot{ width:8px; height:8px; border-radius:50%; background:var(--cn-accent2); display:inline-block; }
+.cn-conn-badge--no .cn-conn-dot{ background:var(--cn-team1); }
+.cn-conn-link{ color:var(--cn-accent2); font-weight:800; text-decoration:none; }
+.cn-conn-link:hover{ text-decoration:underline; }
 
 .cn-back-btn{
     column-span:all;
