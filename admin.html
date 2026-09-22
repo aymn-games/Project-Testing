@@ -63,7 +63,7 @@
       <thead>
         <tr>
           <th>المعرّف</th><th>اسم المستخدم</th><th>البريد الإلكتروني</th><th>تيك توك</th><th>الـID العام</th>
-          <th>ترقية لستريمر</th><th>النقاط / المستوى</th><th>الإطار الحالي</th><th>حذف</th>
+          <th>الصلاحيات</th><th>النقاط / المستوى</th><th>الإطار الحالي</th><th>حذف</th>
         </tr>
       </thead>
       <tbody id="players-table-body"><tr><td class="table-empty" colspan="9">جارٍ التحميل…</td></tr></tbody>
@@ -81,7 +81,7 @@
       <thead>
         <tr>
           <th>المعرّف</th><th>اسم المستخدم</th><th>البريد الإلكتروني</th><th>الدور</th><th>تيك توك</th>
-          <th>الـID العام</th><th>البثوث</th><th>الهدايا (القيمة)</th><th>صلاحية الألعاب</th>
+          <th>الـID العام</th><th>البثوث</th><th>الهدايا (القيمة)</th><th>الصلاحيات</th>
           <th>النقاط / المستوى</th><th>الإطار الحالي</th><th>قيد الجهاز</th><th>حذف</th>
         </tr>
       </thead>
@@ -105,7 +105,14 @@
 <script>
 'use strict';
 (function () {
-    var KNOWN_PERMISSION_KEYS = ['can_run_games'];
+    // كل مفتاح هنا يطلع كصندوق اختيار مستقل بعمود "الصلاحيات" لكل مستخدم،
+    // عبر commonPermCells أدناه -- بدون أي كود إضافي غير سطر هنا لأي
+    // صلاحية جديدة مشابهة مستقبلاً.
+    var KNOWN_PERMISSION_KEYS = ['can_run_games', 'can_manage_letters_cell'];
+    var PERMISSION_LABELS = {
+        can_run_games: 'صلاحية تشغيل الألعاب (ستريمر معتمد)',
+        can_manage_letters_cell: 'صلاحية إدارة أسئلة خلية الحروف'
+    };
     var messageEl = document.getElementById('admin-message');
 
     function showMessage(text, type) {
@@ -140,7 +147,11 @@
     function commonPermCells(u) {
         return KNOWN_PERMISSION_KEYS.map(function (key) {
             var checked = u.permissions && u.permissions[key] ? 'checked' : '';
-            return '<input type="checkbox" data-user-id="' + u.id + '" data-permission-key="' + key + '" ' + checked + '>';
+            var label = PERMISSION_LABELS[key] || key;
+            return '<label style="display:flex;align-items:center;gap:5px;font-size:11px;white-space:nowrap;margin-bottom:3px;" title="' + escapeAttr(label) + '">' +
+                '<input type="checkbox" data-user-id="' + u.id + '" data-permission-key="' + key + '" ' + checked + '>' +
+                escapeHtml(label) +
+                '</label>';
         }).join('');
     }
 

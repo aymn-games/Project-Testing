@@ -82,15 +82,32 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var TEAM2_SWATCHES = ['#513222', '#b45309', '#7a1524'];
     var CLIP_PATH = 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)';
 
-    // بنك أسئلة placeholder (عدة أسئلة/إجابات لكل حرف) -- بانتظار ملف
-    // الأسئلة الحقيقي (28 حرف). نفس الشكل بالضبط: خريطة حرف -> مصفوفة
-    // { question, answer }.
+    // بنك أسئلة placeholder (عدة أسئلة/إجابات لكل حرف) -- يُستخدم فقط لو
+    // تعذّر تحميل questions-bank.json (شبكة، أو الملف غير موجود بعد).
+    // المصدر الحقيقي هو games/letters-cell/questions-bank.json، يعدَّل عبر
+    // admin-questions.html (نفس نمط games/top-ten/questions-bank.json).
     var QUESTION_BANK = ALPHABET_28.reduce(function (acc, letter) {
         acc[letter] = [1, 2, 3, 4].map(function (n) {
             return { question: 'سؤال ' + n + ' لحرف ' + letter, answer: 'اجابة حرف ' + letter };
         });
         return acc;
     }, {});
+
+    // يستبدل QUESTION_BANK بمحتوى الملف المنشور فعلياً وقت التحميل (قبل ما
+    // تبدأ أي مباراة فعلياً -- المضيف لازم يمر بشاشتي الإعدادات واللوبي
+    // أول، فيه وقت كافٍ للتحميل قبل أول استخدام حقيقي بـpickQuestionForLetter).
+    // إعادة تعيين المتغير (لا تعديل الكائن الأصلي) تكفي: كل الدوال تقرأ
+    // QUESTION_BANK عبر الإغلاق (closure) فترى القيمة الجديدة تلقائياً.
+    (function loadQuestionBankFromServer() {
+        fetch('questions-bank.json', { cache: 'no-store' })
+            .then(function (res) { return res.ok ? res.json() : null; })
+            .then(function (data) {
+                if (!data || !data.questions || typeof data.questions !== 'object') return;
+                var hasAny = Object.keys(data.questions).some(function (k) { return (data.questions[k] || []).length > 0; });
+                if (hasAny) QUESTION_BANK = data.questions;
+            })
+            .catch(function () { /* يبقى الـ placeholder أعلاه */ });
+    }());
 
     // -------- هندسة رقعة الـ25 خلية (نمط "الطوب" المتعرّج الكلاسيكي، 5×5)
     // -- الصفوف الفردية بالترقيم من واحد (1، 3، 5 = الفهارس 0، 2، 4) متوازية

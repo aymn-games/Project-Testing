@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إدارة أسئلة خلية الحروف — أدمن</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Baloo+Bhaijaan+2:wght@800;900&display=swap" rel="stylesheet">
+
+<!-- صفحة إدارة بنك أسئلة "خلية الحروف" — محمية عبر requireLettersCellAdmin()
+     أدناه (أدمن المنصة، أو أي مستخدم مُنح صلاحية can_manage_letters_cell
+     من admin.html). المصدر الحقيقي هو games/letters-cell/questions-bank.json
+     (يقرأه agp-letters-cell.js وقت التحميل)؛ هذه الصفحة تعدّل نسخة محلية
+     بالمتصفح وتنزّل ملفاً محدّثاً يُرفع يدوياً لنفس المكان بمستودع GitHub —
+     نفس آلية games/top-ten/admin-questions.html بالضبط. -->
+
+<style>
+:root {
+    --aq-bg: #0a0812; --aq-panel: #15111f; --aq-panel-border: rgba(255,255,255,0.08);
+    --aq-panel-2: #1c1730; --aq-input-bg: #0f0b1a; --aq-input-border: rgba(255,255,255,0.12);
+    --aq-text: #f2edff; --aq-text-dim: #9d95b8; --aq-text-dim2: #c9c2df;
+    --aq-accent1: #8b5cf6; --aq-accent2: #a78bfa; --aq-accent-pink: #e879f9;
+    --aq-success: #22c55e; --aq-danger: #ef4444;
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0; font-family: 'Cairo', 'Tahoma', sans-serif; direction: rtl;
+    background: radial-gradient(circle at 15% -10%, rgba(139,92,246,0.16), transparent 45%), var(--aq-bg);
+    color: var(--aq-text); min-height: 100vh; padding: 24px 18px 70px;
+}
+body.auth-checking .aq-content { display: none; }
+.aq-checking-msg { text-align: center; padding: 70px 20px; color: var(--aq-text-dim); font-weight: 700; }
+body:not(.auth-checking) .aq-checking-msg { display: none; }
+
+.aq-wrap { max-width: 980px; margin: 0 auto; }
+.aq-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+.aq-title-block { display: flex; flex-direction: column; gap: 2px; }
+.aq-title {
+    font-family: 'Baloo Bhaijaan 2', sans-serif; font-size: 1.7em; font-weight: 900;
+    background: linear-gradient(90deg, var(--aq-accent1), var(--aq-accent-pink));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.aq-subtitle { color: var(--aq-text-dim); font-size: 0.85em; }
+.aq-back { color: var(--aq-text-dim); text-decoration: none; font-size: 0.9em; font-weight: 700; white-space: nowrap; }
+.aq-back:hover { color: var(--aq-accent2); }
+
+.aq-panel {
+    background: linear-gradient(165deg, var(--aq-panel-2), var(--aq-panel));
+    border: 1px solid var(--aq-panel-border); border-radius: 16px; padding: 18px 18px 22px; margin-bottom: 18px;
+}
+.aq-panel h2 { color: var(--aq-accent2); font-size: 1.05em; margin: 0 0 12px; }
+.aq-hint { color: var(--aq-text-dim); font-size: 0.85em; line-height: 1.75; }
+.aq-hint code { background: var(--aq-bg); padding: 2px 6px; border-radius: 4px; }
+
+.aq-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+.aq-search { flex: 1; min-width: 200px; padding: 11px 14px; border-radius: 10px; border: 1.5px solid var(--aq-input-border); background: var(--aq-input-bg); color: var(--aq-text); font-family: inherit; font-size: 0.92em; outline: none; }
+.aq-search:focus { border-color: var(--aq-accent2); }
+.aq-btn {
+    padding: 10px 18px; border-radius: 10px; font-family: inherit; font-size: 0.92em; font-weight: 800;
+    cursor: pointer; border: none; white-space: nowrap;
+}
+.aq-btn-primary { background: linear-gradient(90deg, var(--aq-accent1), var(--aq-accent2)); color: #0a0812; }
+.aq-btn-secondary { background: var(--aq-panel-2); color: var(--aq-text-dim2); border: 1.5px solid var(--aq-panel-border); }
+.aq-btn-danger { background: rgba(239,68,68,0.12); color: #ffb4a8; border: 1.5px solid rgba(239,68,68,0.5); }
+.aq-btn:hover { filter: brightness(1.1); }
+.aq-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.aq-btn-sm { padding: 6px 12px; font-size: 0.82em; border-radius: 8px; }
+
+.aq-stats-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.aq-stat-chip { background: var(--aq-panel-2); border: 1px solid var(--aq-panel-border); border-radius: 999px; padding: 7px 16px; font-size: 0.82em; color: var(--aq-text-dim2); }
+.aq-stat-chip b { color: var(--aq-accent2); }
+.aq-stat-chip.aq-stat-warn { border-color: rgba(239,68,68,0.4); color: #ffb4a8; }
+.aq-stat-chip.aq-stat-warn b { color: #ffb4a8; }
+
+.aq-letter-card { background: var(--aq-bg); border: 1px solid var(--aq-panel-border); border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
+.aq-letter-head { display: flex; align-items: center; gap: 12px; padding: 13px 16px; cursor: pointer; user-select: none; }
+.aq-letter-head:hover { background: rgba(255,255,255,0.03); }
+.aq-letter-badge {
+    flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-family: 'Baloo Bhaijaan 2', sans-serif; font-weight: 900; font-size: 1.2em;
+    background: linear-gradient(135deg, var(--aq-accent1), var(--aq-accent-pink)); color: #0a0812;
+}
+.aq-letter-name { font-weight: 800; font-size: 1.05em; flex: 1; }
+.aq-letter-count { font-size: 0.8em; color: var(--aq-text-dim); background: var(--aq-panel-2); border-radius: 999px; padding: 3px 10px; }
+.aq-letter-count.aq-count-zero { color: #ffb4a8; background: rgba(239,68,68,0.12); }
+.aq-letter-chevron { color: var(--aq-text-dim); transition: transform 0.2s; flex-shrink: 0; }
+.aq-letter-card.aq-expanded .aq-letter-chevron { transform: rotate(180deg); }
+.aq-letter-body { display: none; padding: 4px 16px 16px; }
+.aq-letter-card.aq-expanded .aq-letter-body { display: block; }
+
+.aq-q-card { background: var(--aq-panel); border: 1px solid var(--aq-panel-border); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+.aq-q-card-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.aq-q-text-block { flex: 1; min-width: 0; }
+.aq-q-text-block .aq-q-q { font-weight: 800; font-size: 0.98em; }
+.aq-q-text-block .aq-q-a { color: var(--aq-accent2); font-size: 0.88em; margin-top: 4px; }
+.aq-q-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.aq-icon-btn { background: none; border: none; cursor: pointer; font-size: 1.05em; opacity: 0.8; padding: 4px; }
+.aq-icon-btn:hover { opacity: 1; }
+.aq-add-q-row { text-align: center; padding-top: 4px; }
+
+.aq-row-field { position: relative; margin-bottom: 14px; }
+.aq-row-field input[type="text"], .aq-row-field textarea {
+    width: 100%; padding: 12px 14px; font-size: 1em; background: var(--aq-input-bg);
+    border: 1.5px solid var(--aq-input-border); border-radius: 8px; color: var(--aq-text); font-family: inherit; direction: rtl; resize: vertical;
+}
+.aq-row-field input:focus, .aq-row-field textarea:focus { outline: none; border-color: var(--aq-accent2); }
+.aq-row-field label { display: block; margin-top: 5px; font-size: 0.78em; color: var(--aq-text-dim); }
+
+.aq-error { color: #ffb4a8; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.45); border-radius: 8px; padding: 9px 12px; margin: 10px 0; font-size: 0.88em; text-align: center; display: none; }
+.aq-success { color: #bff5cf; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.4); border-radius: 8px; padding: 9px 12px; margin: 10px 0; font-size: 0.88em; text-align: center; display: none; }
+
+.aq-form-overlay { position: fixed; inset: 0; background: rgba(5,4,10,0.72); backdrop-filter: blur(3px); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 20; }
+.aq-form-overlay.aq-open { display: flex; }
+.aq-form-modal { background: linear-gradient(165deg, var(--aq-panel-2), var(--aq-panel)); border: 1px solid var(--aq-panel-border); border-radius: 16px; padding: 22px; max-width: 480px; width: 100%; max-height: 88vh; overflow-y: auto; }
+.aq-form-modal h2 { margin: 0 0 14px; color: var(--aq-accent2); }
+</style>
+</head>
+<body class="auth-checking">
+
+<div class="aq-checking-msg">جارِ التحقق من صلاحياتك…</div>
+
+<div class="aq-content">
+<div class="aq-wrap">
+
+    <div class="aq-header">
+        <div class="aq-title-block">
+            <div class="aq-title">🔡 إدارة أسئلة خلية الحروف</div>
+            <div class="aq-subtitle">حروف مع أيمن — بنك الأسئلة لكل حرف</div>
+        </div>
+        <a class="aq-back" href="../../index.html">🏠 رجوع للمنصة</a>
+    </div>
+
+    <div class="aq-panel">
+        <div class="aq-hint">
+            هذه الصفحة تعدّل نسخة محلية بالمتصفح بس — أي تعديل ما يوصل للعبة
+            الفعلية إلا بعد ما تضغط <b>"⬇️ تنزيل ملف الأسئلة"</b> تحت، وترفع
+            الملف الناتج (<code>questions-bank.json</code>) لنفس مكان ملف
+            اللعبة بمستودع GitHub (استبدال الملف الحالي)، بنفس طريقة رفعك
+            المعتادة. فتح الصفحة يجيب لك تلقائياً آخر نسخة منشورة فعلياً
+            كنقطة بداية، فتقدر تكمل عليها مباشرة بدل ما تبدأ من الصفر كل مرة.
+        </div>
+    </div>
+
+    <div class="aq-stats-row" id="aq-stats-row"></div>
+
+    <div class="aq-toolbar">
+        <input type="text" id="aq-search" class="aq-search" placeholder="🔍 دوّر بحرف، سؤال، أو إجابة...">
+        <button type="button" id="aq-expand-all-btn" class="aq-btn aq-btn-secondary">توسيع الكل</button>
+        <button type="button" id="aq-collapse-all-btn" class="aq-btn aq-btn-secondary">طي الكل</button>
+        <button type="button" id="aq-reload-btn" class="aq-btn aq-btn-secondary">🔄 إعادة تحميل من الملف المنشور</button>
+        <button type="button" id="aq-download-btn" class="aq-btn aq-btn-primary">⬇️ تنزيل ملف الأسئلة</button>
+    </div>
+
+    <div id="aq-status-error" class="aq-error"></div>
+    <div id="aq-status-success" class="aq-success"></div>
+
+    <div id="aq-letters-list"></div>
+
+</div>
+</div>
+
+<div class="aq-form-overlay" id="aq-form-overlay">
+    <div class="aq-form-modal" id="aq-form-modal"></div>
+</div>
+
+<script src="../../auth/auth-client.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    var ALPHABET_28 = ['ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي'];
+    var _bank = {}; // letter -> [{id, question, answer}]
+    var _editing = null; // { letter, id } أو null لوضع الإضافة
+    var _expanded = {}; // letter -> true/false
+
+    function el(id) { return document.getElementById(id); }
+    function escapeHtml(str) {
+        return String(str == null ? '' : str).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+    function showError(msg) {
+        var e = el('aq-status-error'); e.textContent = msg; e.style.display = 'block';
+        el('aq-status-success').style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function showSuccess(msg) {
+        var s = el('aq-status-success'); s.textContent = msg; s.style.display = 'block';
+        el('aq-status-error').style.display = 'none';
+    }
+    function clearMessages() {
+        el('aq-status-error').style.display = 'none';
+        el('aq-status-success').style.display = 'none';
+    }
+
+    function loadBankFromServer() {
+        return fetch('questions-bank.json', { cache: 'no-store' })
+            .then(function (res) { return res.ok ? res.json() : null; })
+            .then(function (data) {
+                var src = (data && data.questions && typeof data.questions === 'object') ? data.questions : {};
+                _bank = {};
+                ALPHABET_28.forEach(function (letter) { _bank[letter] = Array.isArray(src[letter]) ? src[letter] : []; });
+                renderStats();
+                renderLetters();
+            })
+            .catch(function () {
+                _bank = {};
+                ALPHABET_28.forEach(function (letter) { _bank[letter] = []; });
+                renderStats();
+                renderLetters();
+                showError('تعذّر تحميل ملف الأسئلة الحالي (شبكة أو الملف مو موجود بعد) — تقدر تبدأ بإضافة أسئلة جديدة من الصفر.');
+            });
+    }
+
+    function totalQuestions() {
+        return ALPHABET_28.reduce(function (sum, letter) { return sum + (_bank[letter] || []).length; }, 0);
+    }
+    function emptyLettersCount() {
+        return ALPHABET_28.filter(function (letter) { return !(_bank[letter] || []).length; }).length;
+    }
+
+    function renderStats() {
+        var empties = emptyLettersCount();
+        el('aq-stats-row').innerHTML =
+            '<span class="aq-stat-chip">إجمالي الأسئلة: <b>' + totalQuestions() + '</b></span>' +
+            '<span class="aq-stat-chip">عدد الأحرف: <b>' + ALPHABET_28.length + '</b></span>' +
+            (empties ? '<span class="aq-stat-chip aq-stat-warn">⚠️ أحرف بدون أي سؤال: <b>' + empties + '</b></span>'
+                     : '<span class="aq-stat-chip">✅ كل الأحرف عندها أسئلة</span>');
+    }
+
+    function questionMatchesSearch(q, term) {
+        if (!term) return true;
+        return (q.question || '').indexOf(term) !== -1 || (q.answer || '').indexOf(term) !== -1;
+    }
+
+    function renderLetters() {
+        var term = (el('aq-search').value || '').trim();
+        var listEl = el('aq-letters-list');
+
+        listEl.innerHTML = ALPHABET_28.map(function (letter) {
+            var items = _bank[letter] || [];
+            var letterMatches = !term || letter === term;
+            var filteredItems = letterMatches ? items : items.filter(function (q) { return questionMatchesSearch(q, term); });
+            if (term && !letterMatches && !filteredItems.length) return '';
+
+            var rows = filteredItems.map(function (q) {
+                return '<div class="aq-q-card">' +
+                    '<div class="aq-q-card-row">' +
+                        '<div class="aq-q-text-block">' +
+                            '<div class="aq-q-q">س: ' + escapeHtml(q.question) + '</div>' +
+                            '<div class="aq-q-a">ج: ' + escapeHtml(q.answer) + '</div>' +
+                        '</div>' +
+                        '<div class="aq-q-actions">' +
+                            '<button type="button" class="aq-icon-btn aq-edit-btn" data-letter="' + escapeHtml(letter) + '" data-id="' + escapeHtml(q.id) + '" title="تعديل">✏️</button>' +
+                            '<button type="button" class="aq-icon-btn aq-delete-btn" data-letter="' + escapeHtml(letter) + '" data-id="' + escapeHtml(q.id) + '" title="حذف">🗑️</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('') || '<div class="aq-hint">ما فيه أي سؤال لهذا الحرف بعد.</div>';
+
+            var isOpen = _expanded[letter] || (term && filteredItems.length > 0);
+            return '<div class="aq-letter-card' + (isOpen ? ' aq-expanded' : '') + '" data-letter-card="' + escapeHtml(letter) + '">' +
+                '<div class="aq-letter-head" data-letter-toggle="' + escapeHtml(letter) + '">' +
+                    '<span class="aq-letter-badge">' + escapeHtml(letter) + '</span>' +
+                    '<span class="aq-letter-name">حرف ' + escapeHtml(letter) + '</span>' +
+                    '<span class="aq-letter-count' + (!items.length ? ' aq-count-zero' : '') + '">' + items.length + ' سؤال</span>' +
+                    '<span class="aq-letter-chevron">▾</span>' +
+                '</div>' +
+                '<div class="aq-letter-body">' +
+                    rows +
+                    '<div class="aq-add-q-row"><button type="button" class="aq-btn aq-btn-secondary aq-btn-sm aq-add-q-btn" data-letter="' + escapeHtml(letter) + '">➕ سؤال جديد لحرف ' + escapeHtml(letter) + '</button></div>' +
+                '</div>' +
+            '</div>';
+        }).join('') || '<div class="aq-hint" style="text-align:center;padding:30px;">ما فيه أي نتيجة مطابقة للبحث.</div>';
+
+        Array.prototype.forEach.call(listEl.querySelectorAll('[data-letter-toggle]'), function (headEl) {
+            headEl.addEventListener('click', function () {
+                var letter = headEl.getAttribute('data-letter-toggle');
+                _expanded[letter] = !_expanded[letter];
+                renderLetters();
+            });
+        });
+        Array.prototype.forEach.call(listEl.querySelectorAll('.aq-add-q-btn'), function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                openForm(btn.getAttribute('data-letter'), null);
+            });
+        });
+        Array.prototype.forEach.call(listEl.querySelectorAll('.aq-edit-btn'), function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                openForm(btn.getAttribute('data-letter'), btn.getAttribute('data-id'));
+            });
+        });
+        Array.prototype.forEach.call(listEl.querySelectorAll('.aq-delete-btn'), function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var letter = btn.getAttribute('data-letter');
+                var id = btn.getAttribute('data-id');
+                var q = (_bank[letter] || []).filter(function (x) { return x.id === id; })[0];
+                if (!q) return;
+                if (!window.confirm('تحذف السؤال "' + q.question + '"؟')) return;
+                _bank[letter] = _bank[letter].filter(function (x) { return x.id !== id; });
+                renderStats();
+                renderLetters();
+                showSuccess('تم الحذف محلياً — لا تنسى تنزيل الملف وترفعه عشان يصير التغيير فعلي.');
+            });
+        });
+    }
+
+    function openForm(letter, editId) {
+        clearMessages();
+        _editing = { letter: letter, id: editId || null };
+        var existing = editId ? (_bank[letter] || []).filter(function (q) { return q.id === editId; })[0] : null;
+
+        var modal = el('aq-form-modal');
+        modal.innerHTML =
+            '<h2>' + (existing ? 'تعديل سؤال حرف ' + escapeHtml(letter) : 'سؤال جديد لحرف ' + escapeHtml(letter)) + '</h2>' +
+            '<div class="aq-row-field">' +
+                '<textarea id="aq-form-question" rows="2" placeholder="نص السؤال">' + escapeHtml(existing ? existing.question : '') + '</textarea>' +
+                '<label>نص السؤال</label>' +
+            '</div>' +
+            '<div class="aq-row-field">' +
+                '<input type="text" id="aq-form-answer" placeholder="الإجابة الصحيحة" value="' + escapeHtml(existing ? existing.answer : '') + '">' +
+                '<label>الإجابة (تُقارَن تلقائياً بتعليقات الشات — اكتبها بأبسط صيغة متوقعة)</label>' +
+            '</div>' +
+            '<div id="aq-form-error" class="aq-error"></div>' +
+            '<div style="display:flex; gap:10px; margin-top:6px;">' +
+                '<button type="button" id="aq-form-save-btn" class="aq-btn aq-btn-primary">💾 حفظ</button>' +
+                '<button type="button" id="aq-form-cancel-btn" class="aq-btn aq-btn-secondary">إلغاء</button>' +
+            '</div>';
+
+        el('aq-form-overlay').classList.add('aq-open');
+
+        el('aq-form-save-btn').addEventListener('click', function () {
+            var question = (el('aq-form-question').value || '').trim();
+            var answer = (el('aq-form-answer').value || '').trim();
+            var errEl = el('aq-form-error');
+            if (!question) { errEl.textContent = 'لازم تكتب نص السؤال.'; errEl.style.display = 'block'; return; }
+            if (!answer) { errEl.textContent = 'لازم تكتب الإجابة.'; errEl.style.display = 'block'; return; }
+
+            if (!_bank[letter]) _bank[letter] = [];
+            if (_editing.id) {
+                var idx = _bank[letter].findIndex(function (q) { return q.id === _editing.id; });
+                if (idx !== -1) _bank[letter][idx] = { id: _editing.id, question: question, answer: answer };
+            } else {
+                _bank[letter].push({ id: letter + '-' + Date.now(), question: question, answer: answer });
+            }
+
+            closeForm();
+            _expanded[letter] = true;
+            renderStats();
+            renderLetters();
+            showSuccess('تم الحفظ محلياً — لا تنسى تنزيل الملف وترفعه عشان يصير التغيير فعلي باللعبة.');
+        });
+        el('aq-form-cancel-btn').addEventListener('click', closeForm);
+    }
+
+    function closeForm() {
+        el('aq-form-overlay').classList.remove('aq-open');
+        el('aq-form-modal').innerHTML = '';
+        _editing = null;
+    }
+
+    function downloadBank() {
+        if (!totalQuestions()) { showError('ما فيه أي سؤال تنزّله — أضف سؤال واحد على الأقل أول.'); return; }
+        var payload = { updatedAt: new Date().toISOString(), questions: _bank };
+        var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'questions-bank.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showSuccess('تم تنزيل الملف — ارفعه الحين لمكان اللعبة بـGitHub (استبدال الملف الحالي) عشان يصير التحديث فعلي.');
+    }
+
+    el('aq-search').addEventListener('input', renderLetters);
+    el('aq-expand-all-btn').addEventListener('click', function () {
+        ALPHABET_28.forEach(function (letter) { _expanded[letter] = true; });
+        renderLetters();
+    });
+    el('aq-collapse-all-btn').addEventListener('click', function () {
+        _expanded = {};
+        renderLetters();
+    });
+    el('aq-reload-btn').addEventListener('click', function () {
+        if (!window.confirm('تفقد أي تعديل محلي غير محفوظ بملف. تبي تكمل؟')) return;
+        loadBankFromServer();
+    });
+    el('aq-download-btn').addEventListener('click', downloadBank);
+    el('aq-form-overlay').addEventListener('click', function (e) {
+        if (e.target === el('aq-form-overlay')) closeForm();
+    });
+
+    /**
+     * مثل window.AGPAuth.requireAdmin، بس تسمح كمان لأي مستخدم عنده صلاحية
+     * can_manage_letters_cell (تُمنح من admin.html) حتى لو ما كان أدمن عام
+     * بالمنصة -- المضيف يقدر يعطي هذي الصلاحية لأي شخص يثق فيه بدون ما
+     * يعطيه صلاحيات الأدمن الكاملة على باقي المنصة.
+     */
+    function requireLettersCellAdmin(redirectTo, deniedRedirectTo) {
+        return window.AGPAuth.requireAuth(redirectTo).then(function (user) {
+            if (!user) return null;
+            var allowed = user.role === 'admin' || Boolean(user.permissions && user.permissions.can_manage_letters_cell);
+            if (!allowed) {
+                window.location.href = deniedRedirectTo || '../../dashboard-core/index.html';
+                return null;
+            }
+            return user;
+        });
+    }
+
+    requireLettersCellAdmin('../../login.html', '../../dashboard-core/index.html').then(function (user) {
+        if (!user) return;
+        document.body.classList.remove('auth-checking');
+        loadBankFromServer();
+    });
+}());
+</script>
+
+</body>
+</html>
