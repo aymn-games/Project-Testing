@@ -109,6 +109,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             .catch(function () { /* يبقى الـ placeholder أعلاه */ });
     }());
 
+    /**
+     * فحص واجهة فقط (UX) — يظهر رابط "إدارة بنك الأسئلة" بشاشة الإعدادات
+     * فقط لمن مسجّل دخول بالمتصفح كأدمن أو معه صلاحية can_manage_letters_cell
+     * (نفس نمط games/top-ten's isCachedAdminUser). هذا مو الحماية الحقيقية
+     * — تلك موجودة أصلاً داخل admin-questions.html نفسها عبر
+     * requireLettersCellAdmin()، اللي يتحقق من الخادم فعلياً بغض النظر عن
+     * هذا الفحص المحلي.
+     */
+    function isCachedAllowedAdminUser() {
+        try {
+            if (!window.AGPAuth || typeof window.AGPAuth.getCachedUser !== 'function') return false;
+            var user = window.AGPAuth.getCachedUser();
+            if (!user) return false;
+            return user.role === 'admin' || Boolean(user.permissions && user.permissions.can_manage_letters_cell);
+        } catch (e) { return false; }
+    }
+
     // -------- هندسة رقعة الـ25 خلية (نمط "الطوب" المتعرّج الكلاسيكي، 5×5)
     // -- الصفوف الفردية بالترقيم من واحد (1، 3، 5 = الفهارس 0، 2، 4) متوازية
     // ببعضها بنفس حدود اليمين/اليسار (زي ROW_X_A بالتصميم الأصلي)، والصفوف
@@ -423,6 +440,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                             '</div>' +
                         '</div>' +
                     '</div>' +
+
+                    (isCachedAllowedAdminUser() ? '<a href="admin-questions.html" target="_blank" class="lc-manage-questions-link">📋 عرض/إدارة بنك الأسئلة (صفحة أدمن منفصلة)</a>' : '') +
 
                     '<div id="lc-settings-error" class="lc-error-msg" style="display:none;"></div>' +
 

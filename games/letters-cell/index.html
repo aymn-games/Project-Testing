@@ -47,6 +47,11 @@
 
 <script src="../../js/agp-player-card.js"></script>
 
+<!-- يفعّل رابط "إدارة بنك الأسئلة" بشاشة الإعدادات لأي مستخدم مسجّل دخول
+     بالمتصفح ومعه صلاحية can_manage_letters_cell أو أدمن -- نفس طريقة
+     games/top-ten (auth-client.js + isCachedAllowedAdminUser()). -->
+<script src="../../auth/auth-client.js"></script>
+
 <!-- منطق لعبة خلية الحروف نفسها (بدون agp-game-shell.js) -->
 <script src="agp-letters-cell.js"></script>
 
