@@ -51,12 +51,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // frameless card usage outside the lobby (e.g. elimination/return
     // modals keep their natural height).
     var LOBBY_CARD_HEIGHT_PX = 100;
-    var PILL_WIDTH_RATIO = 210 / 65; // name-plate width ratio per avatar size
-    var OVERLAP_RATIO = 0.22; // avatar overlaps the plate by 22% of its diameter
+
+    // بطاقة اللاعب البدون-إطار (basic) -- كبسولة واحدة بحد أبيض تحتضن
+    // الصورة والاسم معاً (بدون تراكب الصورة فوق اللوح كما كان سابقاً)،
+    // بنفس تصميم design_handoff الجديد (كبسولة كاملة 277×51 عند حجم صورة
+    // 43px). النسب أدناه محسوبة من نفس المرجع فتحافظ على تناسق الشكل مهما
+    // تغيّر حجم الصورة (opts.size) لكل لعبة على حدة؛ opts.width/opts.height
+    // يتجاوزان الحساب النسبي كلياً لو احتاجت لعبة قياساً ثابتاً بالبكسل
+    // بالضبط (هذا ما تستخدمه خلية الحروف: size:43, width:277, height:51).
+    var PILL_WIDTH_RATIO = 210 / 65; // عرض لوح الاسم نسبةً لحجم الصورة
+    var GAP_RATIO = 17 / 43; // المسافة بين الصورة واللوح
+    var PAD_H_RATIO = 7 / 43; // حشوة الكبسولة الأفقية
+    var PAD_V_RATIO = 4 / 43; // حشوة الكبسولة الرأسية
+    var NAME_FONT_RATIO = 29 / 43;
     function basicCardTotalWidth(avatarSize) {
         var pillW = Math.round(avatarSize * PILL_WIDTH_RATIO);
-        var overlap = Math.round(avatarSize * OVERLAP_RATIO);
-        return avatarSize + pillW - overlap;
+        var gap = Math.round(avatarSize * GAP_RATIO);
+        var padH = Math.round(avatarSize * PAD_H_RATIO);
+        return avatarSize + gap + pillW + padH * 2;
     }
 
     // Key = exact frame image filename (player.frame.imageFilename).
@@ -334,20 +346,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var style = document.createElement('style');
         style.id = STYLE_ID;
         style.textContent = [
-            /* ---- البطاقة الأساسية (بدون إطار) — لوبي-قياسي-v1 ---- */
-            '.agp-pcard{display:inline-flex;align-items:center;',
+            /* ---- البطاقة الأساسية (بدون إطار) — لوبي-قياسي-v2 (كبسولة
+               واحدة موحّدة، design_handoff الجديد: حد أبيض 2px، بدون
+               تراكب الصورة فوق اللوح، صورة شفافة بدون حلقة) ---- */
+            '.agp-pcard{display:inline-flex;align-items:center;box-sizing:border-box;',
+            'background:rgba(255,255,255,0.06);border:2px solid #ffffff;border-radius:999px;',
             'font-family:Cairo,sans-serif;direction:rtl;vertical-align:middle;}',
             '.agp-pcard--out{opacity:0.45;text-decoration:line-through;}',
 
-            '.agp-pcard-avatar-basic{border-radius:50%;flex-shrink:0;position:relative;z-index:2;',
-            'object-fit:cover;border:3px solid rgba(255,255,255,0.55);background:#5a2585;}',
+            '.agp-pcard-avatar-basic{border-radius:50%;flex-shrink:0;',
+            'object-fit:cover;background:rgba(255,255,255,0.15);}',
             '.agp-pcard-avatar-basic--fallback{display:flex;align-items:center;justify-content:center;',
             'color:#f3eefc;font-weight:800;}',
 
-            '.agp-pcard-name-basic{display:flex;align-items:center;justify-content:flex-start;',
-            'box-sizing:border-box;font-weight:700;color:#f3eefc;background:rgba(255,255,255,0.1);',
-            'border:1px solid rgba(216,120,255,0.32);border-radius:999px;position:relative;z-index:1;',
-            'overflow:hidden;}',
+            '.agp-pcard-name-basic{display:flex;align-items:center;justify-content:center;flex-shrink:0;',
+            'box-sizing:border-box;font-weight:800;color:#fef4f4;overflow:hidden;}',
             /* The marquee transform applies only to .agp-pcard-name-inner,
              * never to .agp-pcard-name-basic itself — overflow:hidden on a
              * transformed element doesn't clip its own transform, only its
@@ -508,28 +521,42 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     /** Frameless card (avatar + name) — used when showFrame is off or the
      * player has no equipped frame. */
+    /**
+     * @param {Object} [opts.width] - إجمالي عرض الكبسولة بالبكسل، يتجاوز
+     *   الحساب النسبي المبني على opts.size كلياً لو مُرِّر.
+     * @param {Object} [opts.height] - إجمالي ارتفاع الكبسولة، نفس فكرة width.
+     */
     function renderBasicHtml(player, opts) {
         var name = (player && player.name) || (player && player.id) || '—';
         var avatarUrl = player && player.avatarUrl;
         var h = (opts && opts.size) || AVATAR_SIZE_PX;
-        var pillW = Math.round(h * PILL_WIDTH_RATIO);
-        var overlap = Math.round(h * OVERLAP_RATIO);
-        var padStart = Math.round(h * 0.3) + overlap;
-        var padEnd = Math.round(h * 0.3);
+        var gap = Math.round(h * GAP_RATIO);
+        var padH = Math.round(h * PAD_H_RATIO);
+        var padV = Math.round(h * PAD_V_RATIO);
+        var fontSize = Math.max(11, Math.round(h * NAME_FONT_RATIO));
+
+        var totalWidth = (opts && opts.width) || basicCardTotalWidth(h);
+        // In lobby context (showFrame:true) بدون قياس صريح، نثبّت الارتفاع
+        // ليطابق البطاقات المُطارة (نفس منطق النسخة القديمة)؛ opts.height
+        // الصريح يتجاوز هذا دائماً.
+        var totalHeight = (opts && opts.height) || ((opts && opts.showFrame) ? LOBBY_CARD_HEIGHT_PX : (h + padV * 2));
+        var nameW = Math.max(0, totalWidth - h - gap - padH * 2);
+
         var avStyle = 'width:' + h + 'px;height:' + h + 'px;';
         var fbStyle = avStyle + 'font-size:' + Math.round(h * 0.32) + 'px;';
         var avatarHtml = avatarUrl
             ? '<img class="agp-pcard-avatar-basic" style="' + avStyle + '" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;agp-pcard-avatar-basic agp-pcard-avatar-basic--fallback&quot; style=&quot;' + fbStyle + '&quot;>' + escapeHtml(initials(name)) + '</div>\';">'
             : '<div class="agp-pcard-avatar-basic agp-pcard-avatar-basic--fallback" style="' + fbStyle + '">' + escapeHtml(initials(name)) + '</div>';
-        var pillStyle = 'width:' + pillW + 'px;height:' + Math.round(h * 52 / 65) + 'px;' +
-            'margin-inline-start:-' + overlap + 'px;padding-inline-start:' + padStart + 'px;' +
-            'padding-inline-end:' + padEnd + 'px;font-size:' + Math.max(11, Math.round(h * 30 / 65)) + 'px;';
-        // In lobby context (showFrame:true), fix the outer height to match
-        // framed cards, relying on .agp-pcard's align-items:center to
-        // vertically center the content within it.
-        var outerStyle = (opts && opts.showFrame) ? ' style="height:' + LOBBY_CARD_HEIGHT_PX + 'px"' : '';
+        // ارتفاع صريح للوح الاسم يطابق الصورة (كما في التصميم المرجعي: صورة
+        // ولوح بنفس الارتفاع داخل الكبسولة) — ضروري لمنع اللوح من الانهيار
+        // لارتفاع صفر حين تفرض لعبة flex-direction:column على غلاف البطاقة
+        // (انهيار ناتج عن overflow:hidden على اللوح يجعل حده الأدنى التلقائي
+        // في محور flex الرئيسي صفراً عند ضيق المساحة العمودية).
+        var pillStyle = 'width:' + nameW + 'px;height:' + h + 'px;font-size:' + fontSize + 'px;';
+        var outerStyle = 'padding:' + padV + 'px ' + padH + 'px;gap:' + gap + 'px;' +
+            'width:' + totalWidth + 'px;height:' + totalHeight + 'px;';
 
-        return '<span class="agp-pcard' + (opts && opts.outClass ? ' ' + opts.outClass : '') + '"' + outerStyle + '>' +
+        return '<span class="agp-pcard' + (opts && opts.outClass ? ' ' + opts.outClass : '') + '" style="' + outerStyle + '">' +
             avatarHtml +
             '<span class="agp-pcard-name-basic" style="' + pillStyle + '" data-agp-pcard-name="1">' +
             '<span class="agp-pcard-name-inner">' + escapeHtml(name) + '</span>' +
@@ -615,6 +642,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
          * @param {Object} [opts]
          * @param {boolean} [opts.showFrame=false]
          * @param {string}  [opts.basePath=''] - relative prefix for the frame image path
+         * @param {number}  [opts.size] - avatar diameter in px (basic card only; framed cards ignore it)
+         * @param {number}  [opts.width] - total capsule width in px, overrides the size-based ratio (basic card only)
+         * @param {number}  [opts.height] - total capsule height in px, overrides showFrame's fixed lobby height (basic card only)
          * @param {string}  [opts.outClass]
          * @returns {string} HTML for one card
          */

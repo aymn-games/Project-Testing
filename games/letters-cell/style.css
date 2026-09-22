@@ -138,12 +138,6 @@ body.lc-active { scrollbar-width: none; }
 }
 .lc-pcard-wrap { max-width: 100% !important; }
 .lc-team-empty { font-size: 13px; color: #fef4f4; opacity: 0.6; grid-column: 1/-1; }
-
-/* بطاقة اللاعب البسيطة (بدون إطار) -- كبسولة بحد أبيض */
-.lc-simple-card { display: flex; align-items: center; gap: 17px; background: rgba(255,255,255,0.06); border: 2px solid #ffffff; border-radius: 999px; padding: 4px 7px; width: 277px; height: 51px; box-sizing: border-box; }
-.lc-simple-card-avatar { width: 43px; height: 43px; border-radius: 50%; background: rgba(255,255,255,0.15); flex-shrink: 0; object-fit: cover; }
-.lc-simple-card-name { flex: 1; min-width: 0; font-size: 29px; font-weight: 800; color: #fef4f4; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lc-simple-card-remove { border: none; background: transparent; color: var(--lc-remove); font-weight: 900; cursor: pointer; padding: 4px 8px; font-size: 29px; line-height: 1; flex-shrink: 0; }
 .lc-lobby-btn-row { display: flex; align-items: center; justify-content: center; gap: 12px; position: relative; z-index: 1; }
 
 /* ==========================================================================

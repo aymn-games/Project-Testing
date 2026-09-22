@@ -205,7 +205,15 @@ body.tt-active {
 .tt-lobby-row-btn:hover { filter: brightness(1.08); }
 
 /* ---------- بطاقة اللاعب المشتركة (تنسيق إضافي فوق agp-player-card.js) ---------- */
-.tt-pcard-wrap { display: inline-flex !important; flex-direction: column; align-items: center; gap: 4px; }
+/* هذه اللعبة تكدّس الصورة فوق الاسم عمودياً (بخلاف تصميم agp-player-card.js
+   الافتراضي الجديد المبني على كبسولة أفقية واحدة) — لازم !important هنا
+   لتجاوز الـ inline style (height/gap) الذي يولّده renderBasicHtml، وإلا
+   يفرض ارتفاعاً وفجوة مصمَّمين للتخطيط الأفقي فيتسبب بتراكب/فيض بصري. */
+.tt-pcard-wrap {
+    display: inline-flex !important; flex-direction: column; align-items: center;
+    gap: 6px !important; height: auto !important;
+}
+.tt-pcard-wrap .agp-pcard-name-basic { height: auto !important; }
 
 /* ---------- شاشة المباراة ---------- */
 #tt-match-screen { max-width: 760px; margin: 0 auto; padding: 18px 14px 100px; }
