@@ -7,11 +7,12 @@
  * قواعد اللعب الفعلية (بعد تحديث المضيف على النسخة الأولى):
  * - رقعة اللعب 25 خلية (مو 23) من أصل أبجدية 28 حرفاً كاملة -- كل جولة/
  *   إعادة توزيع تسحب 25 حرفاً عشوائياً من الـ28 وتوزّعها عشوائياً على
- *   الخلايا. شكل الرقعة معيّن (rhombus) Hex كلاسيكي متناسق 5×5: كل الصفوف
- *   الخمسة بنفس الطول (5 خلايا)، وكل صف يزحف أفقياً بمقدار نصف عرض خلية
- *   عن اللي قبله بنفس الاتجاه (إزاحة قطرية متّسقة، مو متبادلة يمين/يسار
- *   كنمط "الطوب" بالتصميم الأصلي ذي الـ23 خلية) -- عشان تتلامس السداسيات
- *   قطرياً بلا فجوات، بنفس حجم السداسي الأصلي (122.7×146.67).
+ *   الخلايا. شكل الرقعة شبكة 5×5 بنمط "الطوب" المتعرّج الكلاسيكي (زي
+ *   التصميم الأصلي ذي الـ23 خلية بالضبط، فقط الصفوف الخمسة كلها بطول 5
+ *   خلايا بدل التبديل بين 5 و4): الصفوف الفردية بالترقيم من واحد (1، 3،
+ *   5) متوازية ببعضها بنفس حدود اليمين/اليسار، والصفوف الزوجية (2، 4)
+ *   تزحف عنها بمقدار نصف عرض خلية فتتداخل السداسيات بلا فجوات -- بنفس حجم
+ *   السداسي الأصلي (122.7×146.67).
  * - بنك الأسئلة (QUESTION_BANK) خريطة حرف -> مصفوفة أسئلة {question,
  *   answer} -- placeholder حالياً بانتظار ملف الأسئلة الحقيقي (28 حرف،
  *   كل حرف له أكثر من سؤال). لا يتكرر أي سؤال داخل نفس المباراة كاملة
@@ -91,29 +92,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return acc;
     }, {});
 
-    // -------- هندسة رقعة الـ25 خلية (معيّن Hex كلاسيكي 5×5) --------
+    // -------- هندسة رقعة الـ25 خلية (نمط "الطوب" المتعرّج الكلاسيكي، 5×5)
+    // -- الصفوف الفردية بالترقيم من واحد (1، 3، 5 = الفهارس 0، 2، 4) متوازية
+    // ببعضها بنفس حدود اليمين/اليسار (زي ROW_X_A بالتصميم الأصلي)، والصفوف
+    // الزوجية (2، 4 = الفهارس 1، 3) تزحف عنها بمقدار نصف عرض خلية فتتداخل
+    // بينها بدل ما تصطف بعمود واحد مستقيم.
     var VIEW_W = 1974, VIEW_H = 1128;
-    // نفس الارتفاع اللي كانت رقعة الـ23 خلية تشغله (5 صفوف، نفس حجم السداسي
-    // الأصلي)، ونفس مركز الرقعة الأفقي القديم -- المعيّن يتّسع تلقائياً حول
-    // هذا المركز بقدر ما يحتاجه ميلانه القطري، فتتلامس السداسيات قطرياً
-    // بدل ما تسيب فجوات ماسية (زي شبكة الأعمدة المستقيمة اللي جُرِّبت
-    // ورُفضت لأنها ما تحقق تراكب/تلامس صحيح بين الصفوف).
     var BOARD_CENTER_X = 726.31, BOARD_Y0 = 271.165, BOARD_Y1 = 857.835;
     var BOARD_ROWS = 5, BOARD_COLS = 5;
 
-    function buildRhombusGeometry(rows, cols) {
+    function buildBrickGeometry(rows, cols) {
         var boardH = BOARD_Y1 - BOARD_Y0;
         var hexH = boardH / (0.75 * rows + 0.25);
         var hexW = hexH * (122.7 / 146.67); // نفس نسبة عرض/ارتفاع السداسي الأصلي
         var spacingX = hexW; // سداسيات متلامسة بنفس الصف
         var spacingY = hexH * 0.75;
-        var halfStep = spacingX / 2; // إزاحة كل صف عن اللي قبله (بنفس الاتجاه، مو متبادلة)
+        var halfStep = spacingX / 2; // إزاحة الصفوف الزوجية عن الفردية فقط (تبديل، مو تراكم)
 
-        // إجمالي عرض المعيّن = عرض صف واحد + الإزاحة القطرية التراكمية عبر كل الصفوف
         var rowSpan = (cols - 1) * spacingX;
-        var totalDiagonalShift = (rows - 1) * halfStep;
-        var totalWidth = rowSpan + totalDiagonalShift + hexW;
-        var firstRowStartX = BOARD_CENTER_X - totalWidth / 2 + hexW / 2;
+        var totalWidth = rowSpan + halfStep + hexW;
+        var alignedRowStartX = BOARD_CENTER_X - totalWidth / 2 + hexW / 2; // بداية الصفوف الفردية (1،3،5)
 
         var centers = [];
         var layout = [];
@@ -121,7 +119,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var leftEdge = [], rightEdge = [], topEdge = [], bottomEdge = [];
         for (var r = 0; r < rows; r++) {
             var cy = BOARD_Y0 + hexH / 2 + r * spacingY;
-            var rowStartX = firstRowStartX + r * halfStep;
+            var isOffsetRow = (r % 2 === 1); // الصفوف الزوجية بالترقيم من واحد (2، 4)
+            var rowStartX = alignedRowStartX + (isOffsetRow ? halfStep : 0);
             for (var c = 0; c < cols; c++) {
                 var cx = rowStartX + c * spacingX;
                 centers.push({ x: cx, y: cy });
@@ -131,8 +130,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     wPct: (hexW / VIEW_W) * 100,
                     hPct: (hexH / VIEW_H) * 100
                 });
-                if (c === 0) leftEdge.push(idx);
-                if (c === cols - 1) rightEdge.push(idx);
+                // حدود اليمين/اليسار تقتصر على الصفوف المتوازية (غير المُزاحة)،
+                // لأن الصفوف المُزاحة لا تصل فعلياً للحد الخارجي الحقيقي.
+                if (!isOffsetRow && c === 0) leftEdge.push(idx);
+                if (!isOffsetRow && c === cols - 1) rightEdge.push(idx);
                 if (r === 0) topEdge.push(idx);
                 if (r === rows - 1) bottomEdge.push(idx);
                 idx++;
@@ -151,7 +152,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return { layout: layout, adjacency: adjacency, leftEdge: leftEdge, rightEdge: rightEdge, topEdge: topEdge, bottomEdge: bottomEdge };
     }
 
-    var BOARD_GEOMETRY = buildRhombusGeometry(BOARD_ROWS, BOARD_COLS);
+    var BOARD_GEOMETRY = buildBrickGeometry(BOARD_ROWS, BOARD_COLS);
     var CELL_LAYOUT = BOARD_GEOMETRY.layout;
     var ADJACENCY = BOARD_GEOMETRY.adjacency;
     var LEFT_EDGE = BOARD_GEOMETRY.leftEdge;
