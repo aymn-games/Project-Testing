@@ -491,7 +491,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (ok) window.location.reload();
         });
 
-        refreshLobbyStartButton();
+        refreshLobbyPanels();
     }
 
     function teamPanelHtml(team) {
@@ -511,17 +511,37 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         '</div>';
     }
 
+    // بطاقة اللاعب المشتركة بالمنصة (agp-player-card.js) -- تعرض الإطار
+    // المعتمد فعلياً من حسابه لو عنده واحد (نفس مكوّن اللوبي بكل الألعاب
+    // الثانية، مثل حرب الفريقين)، وإلا صورة/دائرة أساسية بالاسم.
+    function playerCardHtml(p) {
+        if (AGP.playerCard) {
+            return AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', outClass: 'lc-pcard-wrap' });
+        }
+        var avatar = p.avatarUrl ? '<img src="' + escapeAttr(p.avatarUrl) + '" alt="">' : '';
+        return '<span class="lc-pcard-wrap">' + avatar + escapeHtml(playerLabel(p)) + '</span>';
+    }
+    function fitLobbyCardNames(rootEl) {
+        if (AGP.playerCard && rootEl) AGP.playerCard.fitAllNames(rootEl);
+    }
+
     function teamPlayerChipsHtml(team, players) {
         if (!players.length) return '<div class="lc-team-empty">بانتظار انضمام اللاعبين</div>';
         return players.map(function (p) {
-            var avatar = p.avatarUrl
-                ? '<img class="lc-player-chip-avatar" src="' + escapeAttr(p.avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<span class=&quot;lc-player-chip-avatar&quot;></span>\';">'
-                : '<span class="lc-player-chip-avatar"></span>';
-            return '<div class="lc-player-chip">' + avatar +
-                '<span class="lc-player-chip-name">' + escapeHtml(playerLabel(p)) + '</span>' +
-                '<button type="button" class="lc-player-chip-remove" data-id="' + escapeAttr(p.id) + '" title="حذف اللاعب">×</button>' +
+            return '<div class="lc-lobby-card-wrap">' +
+                '<button type="button" class="lc-lobby-remove-x" data-id="' + escapeAttr(p.id) + '" title="حذف اللاعب">×</button>' +
+                playerCardHtml(p) +
             '</div>';
         }).join('');
+    }
+
+    function wireLobbyCardRemoveButtons(container) {
+        if (!container) return;
+        container.querySelectorAll('.lc-lobby-remove-x').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                AGP.player.removePlayer(btn.getAttribute('data-id'));
+            });
+        });
     }
 
     function refreshLobbyPanels() {
@@ -530,11 +550,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (!body) return;
             var players = getTeamPlayers(team);
             body.innerHTML = teamPlayerChipsHtml(team, players);
-            body.querySelectorAll('.lc-player-chip-remove').forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    AGP.player.removePlayer(btn.getAttribute('data-id'));
-                });
-            });
+            wireLobbyCardRemoveButtons(body);
+            fitLobbyCardNames(body);
             var countEl = el('lc-team-count-' + team);
             if (countEl) countEl.textContent = players.length;
         });

@@ -130,10 +130,13 @@ body.lc-active { scrollbar-width: none; }
 .lc-badge-code { color: #fef4f4; font-weight: 900; }
 .lc-badge-code span { opacity: 0.8; font-weight: 700; }
 .lc-team-panel-body { padding: 18px 22px; overflow-y: auto; display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; flex: 1; align-content: start; }
-.lc-player-chip { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.06); border-radius: 999px; padding: 6px 10px; }
-.lc-player-chip-avatar { width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,0.15); flex-shrink: 0; object-fit: cover; }
-.lc-player-chip-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 800; color: #fef4f4; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lc-player-chip-remove { border: none; background: transparent; color: var(--lc-remove); font-weight: 900; cursor: pointer; padding: 2px 4px; font-size: 14px; }
+.lc-lobby-card-wrap { position: relative; }
+.lc-lobby-remove-x {
+    position: absolute; top: -8px; right: -8px; z-index: 2; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--lc-remove); color: #fff; border: 2px solid #1b0d0d; font-size: 0.75em; font-weight: 900;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+}
+.lc-pcard-wrap { max-width: 100% !important; }
 .lc-team-empty { font-size: 13px; color: #fef4f4; opacity: 0.6; grid-column: 1/-1; }
 .lc-lobby-btn-row { display: flex; align-items: center; justify-content: center; gap: 12px; position: relative; z-index: 1; }
 
