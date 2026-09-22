@@ -511,15 +511,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         '</div>';
     }
 
-    // بطاقة اللاعب المشتركة بالمنصة (agp-player-card.js) -- تعرض الإطار
-    // المعتمد فعلياً من حسابه لو عنده واحد (نفس مكوّن اللوبي بكل الألعاب
-    // الثانية، مثل حرب الفريقين)، وإلا صورة/دائرة أساسية بالاسم.
+    // بطاقة اللاعب البسيطة (تصميم مخصّص جديد): كبسولة بحد أبيض، دائرة صورة
+    // 43px، اسم بخط 29px، وزر × أحمر بنفس الصف -- تُستخدم للاعب اللي ما
+    // عنده إطار معتمد. لو عنده إطار، تبقى بطاقة agp-player-card المشتركة
+    // (تعرض الإطار الحقيقي) لأن هذا التصميم الجديد ما فيه مكان لإطار أصلاً.
+    function simpleCardHtml(p) {
+        var avatar = p.avatarUrl
+            ? '<img class="lc-simple-card-avatar" src="' + escapeAttr(p.avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<span class=&quot;lc-simple-card-avatar&quot;></span>\';">'
+            : '<span class="lc-simple-card-avatar"></span>';
+        return '<div class="lc-simple-card">' +
+            avatar +
+            '<span class="lc-simple-card-name">' + escapeHtml(playerLabel(p)) + '</span>' +
+            '<button type="button" class="lc-simple-card-remove" data-id="' + escapeAttr(p.id) + '" title="حذف اللاعب">×</button>' +
+        '</div>';
+    }
+
+    function framedCardHtml(p) {
+        return '<div class="lc-lobby-card-wrap">' +
+            '<button type="button" class="lc-lobby-remove-x" data-id="' + escapeAttr(p.id) + '" title="حذف اللاعب">×</button>' +
+            AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', outClass: 'lc-pcard-wrap' }) +
+        '</div>';
+    }
+
     function playerCardHtml(p) {
-        if (AGP.playerCard) {
-            return AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', outClass: 'lc-pcard-wrap' });
-        }
-        var avatar = p.avatarUrl ? '<img src="' + escapeAttr(p.avatarUrl) + '" alt="">' : '';
-        return '<span class="lc-pcard-wrap">' + avatar + escapeHtml(playerLabel(p)) + '</span>';
+        var hasFrame = !!(AGP.playerCard && p && p.frame && p.frame.imageFilename);
+        return hasFrame ? framedCardHtml(p) : simpleCardHtml(p);
     }
     function fitLobbyCardNames(rootEl) {
         if (AGP.playerCard && rootEl) AGP.playerCard.fitAllNames(rootEl);
@@ -527,17 +543,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function teamPlayerChipsHtml(team, players) {
         if (!players.length) return '<div class="lc-team-empty">بانتظار انضمام اللاعبين</div>';
-        return players.map(function (p) {
-            return '<div class="lc-lobby-card-wrap">' +
-                '<button type="button" class="lc-lobby-remove-x" data-id="' + escapeAttr(p.id) + '" title="حذف اللاعب">×</button>' +
-                playerCardHtml(p) +
-            '</div>';
-        }).join('');
+        return players.map(playerCardHtml).join('');
     }
 
     function wireLobbyCardRemoveButtons(container) {
         if (!container) return;
-        container.querySelectorAll('.lc-lobby-remove-x').forEach(function (btn) {
+        container.querySelectorAll('.lc-lobby-remove-x, .lc-simple-card-remove').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 AGP.player.removePlayer(btn.getAttribute('data-id'));
             });
