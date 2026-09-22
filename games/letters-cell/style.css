@@ -136,6 +136,12 @@ body.lc-active { scrollbar-width: none; }
     background: var(--lc-remove); color: #fff; border: 2px solid #1b0d0d; font-size: 0.7em; font-weight: 900;
     display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
 }
+/* البطاقة بدون إطار: الصورة يمين ولوح الاسم يسار (اتجاه rtl) -- الإكس
+   يروح لنهاية البطاقة (يسار) جوه حدود لوح الاسم، مو فوق الصورة. البطاقة
+   المؤطَّرة عكسها (الصورة يسار) فتبقى الإكس يمين كما هي. */
+.lc-lobby-card-wrap:has(.agp-pcard-name-basic) .lc-lobby-remove-x {
+    right: auto; left: 4px;
+}
 .lc-pcard-wrap { max-width: 100% !important; }
 .lc-team-empty { font-size: 13px; color: #fef4f4; opacity: 0.6; grid-column: 1/-1; }
 .lc-lobby-btn-row { display: flex; align-items: center; justify-content: center; gap: 12px; position: relative; z-index: 1; }
