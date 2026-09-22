@@ -7,11 +7,11 @@
  * قواعد اللعب الفعلية (بعد تحديث المضيف على النسخة الأولى):
  * - رقعة اللعب 25 خلية (مو 23) من أصل أبجدية 28 حرفاً كاملة -- كل جولة/
  *   إعادة توزيع تسحب 25 حرفاً عشوائياً من الـ28 وتوزّعها عشوائياً على
- *   الخلايا. شكل الرقعة شبكة 5×5 مستقيمة الأعمدة (مطابقة لتصحيح المضيف
- *   نفسه على ملف التسليم الأصلي): نفس إحداثيات ROW_X/ROW_Y وحجم السداسي
- *   122.7×146.67 الحرفية من الملف، فقط تُستخدم نفس مصفوفة الأعمدة الخمسة
- *   لكل الصفوف الخمسة (بدون أي إزاحة أفقية بين الصفوف، ولا تبديل بين صفين
- *   مختلفي الطول كما بالتصميم الأصلي ذي الـ23 خلية).
+ *   الخلايا. شكل الرقعة معيّن (rhombus) Hex كلاسيكي متناسق 5×5: كل الصفوف
+ *   الخمسة بنفس الطول (5 خلايا)، وكل صف يزحف أفقياً بمقدار نصف عرض خلية
+ *   عن اللي قبله بنفس الاتجاه (إزاحة قطرية متّسقة، مو متبادلة يمين/يسار
+ *   كنمط "الطوب" بالتصميم الأصلي ذي الـ23 خلية) -- عشان تتلامس السداسيات
+ *   قطرياً بلا فجوات، بنفس حجم السداسي الأصلي (122.7×146.67).
  * - بنك الأسئلة (QUESTION_BANK) خريطة حرف -> مصفوفة أسئلة {question,
  *   answer} -- placeholder حالياً بانتظار ملف الأسئلة الحقيقي (28 حرف،
  *   كل حرف له أكثر من سؤال). لا يتكرر أي سؤال داخل نفس المباراة كاملة
@@ -91,54 +91,67 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return acc;
     }, {});
 
-    // -------- هندسة رقعة الـ25 خلية (شبكة 5×5 مستقيمة الأعمدة، مطابقة
-    // لتصحيح المضيف نفسه على تصميم المرجع الأصلي: نفس ROW_X/ROW_Y/HEX_W/
-    // HEX_H الحرفية بالضبط من ملف التسليم، فقط تُستخدم نفس مصفوفة الأعمدة
-    // الخمسة (ROW_X) لكل الصفوف الخمسة بدل التبديل بين صفين مختلفي الطول
-    // -- بدون أي إزاحة أفقية بين الصفوف (الأعمدة تتراصف رأسياً بالضبط،
-    // زي تصحيح المضيف على الملف). التجاور تبعاً لذلك أفقي/رأسي فقط
-    // (بدون جيران قطريين) لأن السداسيات بدون إزاحة ما تتلامس قطرياً --
-    // بعتبة 140 نفسها الحرفية من buildAdjacency() بالملف الأصلي. --
+    // -------- هندسة رقعة الـ25 خلية (معيّن Hex كلاسيكي 5×5) --------
     var VIEW_W = 1974, VIEW_H = 1128;
-    var ROW_Y = [344.5, 454.5, 566, 673.5, 784.5];
-    var ROW_X = [477.81, 601.81, 725.81, 850.81, 974.81]; // نفس ROW_X_A الأصلي -- يُستخدم لكل الصفوف
-    var HEX_W = 122.7, HEX_H = 146.67;
-    var ADJACENCY_THRESHOLD = 140; // نفس القيمة الحرفية من الملف الأصلي
+    // نفس الارتفاع اللي كانت رقعة الـ23 خلية تشغله (5 صفوف، نفس حجم السداسي
+    // الأصلي)، ونفس مركز الرقعة الأفقي القديم -- المعيّن يتّسع تلقائياً حول
+    // هذا المركز بقدر ما يحتاجه ميلانه القطري، فتتلامس السداسيات قطرياً
+    // بدل ما تسيب فجوات ماسية (زي شبكة الأعمدة المستقيمة اللي جُرِّبت
+    // ورُفضت لأنها ما تحقق تراكب/تلامس صحيح بين الصفوف).
+    var BOARD_CENTER_X = 726.31, BOARD_Y0 = 271.165, BOARD_Y1 = 857.835;
+    var BOARD_ROWS = 5, BOARD_COLS = 5;
 
-    function buildGridGeometry() {
+    function buildRhombusGeometry(rows, cols) {
+        var boardH = BOARD_Y1 - BOARD_Y0;
+        var hexH = boardH / (0.75 * rows + 0.25);
+        var hexW = hexH * (122.7 / 146.67); // نفس نسبة عرض/ارتفاع السداسي الأصلي
+        var spacingX = hexW; // سداسيات متلامسة بنفس الصف
+        var spacingY = hexH * 0.75;
+        var halfStep = spacingX / 2; // إزاحة كل صف عن اللي قبله (بنفس الاتجاه، مو متبادلة)
+
+        // إجمالي عرض المعيّن = عرض صف واحد + الإزاحة القطرية التراكمية عبر كل الصفوف
+        var rowSpan = (cols - 1) * spacingX;
+        var totalDiagonalShift = (rows - 1) * halfStep;
+        var totalWidth = rowSpan + totalDiagonalShift + hexW;
+        var firstRowStartX = BOARD_CENTER_X - totalWidth / 2 + hexW / 2;
+
         var centers = [];
         var layout = [];
         var idx = 0;
         var leftEdge = [], rightEdge = [], topEdge = [], bottomEdge = [];
-        ROW_Y.forEach(function (cy, r) {
-            ROW_X.forEach(function (cx, c) {
+        for (var r = 0; r < rows; r++) {
+            var cy = BOARD_Y0 + hexH / 2 + r * spacingY;
+            var rowStartX = firstRowStartX + r * halfStep;
+            for (var c = 0; c < cols; c++) {
+                var cx = rowStartX + c * spacingX;
                 centers.push({ x: cx, y: cy });
                 layout.push({
-                    leftPct: ((cx - HEX_W / 2) / VIEW_W) * 100,
-                    topPct: ((cy - HEX_H / 2) / VIEW_H) * 100,
-                    wPct: (HEX_W / VIEW_W) * 100,
-                    hPct: (HEX_H / VIEW_H) * 100
+                    leftPct: ((cx - hexW / 2) / VIEW_W) * 100,
+                    topPct: ((cy - hexH / 2) / VIEW_H) * 100,
+                    wPct: (hexW / VIEW_W) * 100,
+                    hPct: (hexH / VIEW_H) * 100
                 });
                 if (c === 0) leftEdge.push(idx);
-                if (c === ROW_X.length - 1) rightEdge.push(idx);
+                if (c === cols - 1) rightEdge.push(idx);
                 if (r === 0) topEdge.push(idx);
-                if (r === ROW_Y.length - 1) bottomEdge.push(idx);
+                if (r === rows - 1) bottomEdge.push(idx);
                 idx++;
-            });
-        });
+            }
+        }
 
         var adjacency = centers.map(function () { return []; });
+        var threshold = spacingX * 1.15;
         for (var i = 0; i < centers.length; i++) {
             for (var j = i + 1; j < centers.length; j++) {
                 var dx = centers[i].x - centers[j].x, dy = centers[i].y - centers[j].y;
-                if (Math.sqrt(dx * dx + dy * dy) < ADJACENCY_THRESHOLD) { adjacency[i].push(j); adjacency[j].push(i); }
+                if (Math.sqrt(dx * dx + dy * dy) < threshold) { adjacency[i].push(j); adjacency[j].push(i); }
             }
         }
 
         return { layout: layout, adjacency: adjacency, leftEdge: leftEdge, rightEdge: rightEdge, topEdge: topEdge, bottomEdge: bottomEdge };
     }
 
-    var BOARD_GEOMETRY = buildGridGeometry();
+    var BOARD_GEOMETRY = buildRhombusGeometry(BOARD_ROWS, BOARD_COLS);
     var CELL_LAYOUT = BOARD_GEOMETRY.layout;
     var ADJACENCY = BOARD_GEOMETRY.adjacency;
     var LEFT_EDGE = BOARD_GEOMETRY.leftEdge;
