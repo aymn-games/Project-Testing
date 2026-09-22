@@ -257,8 +257,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         team1Color: TEAM1_DEFAULT_COLOR,
         team2Color: TEAM2_DEFAULT_COLOR,
         team1AccessCode: '',
-        team2AccessCode: ''
+        team2AccessCode: '',
+        answerTimerSeconds: 90 // 0 = بدون مؤقت؛ خيارات: 90 (1:30) | 120 (2:00) | 180 (3:00)
     };
+    var ANSWER_TIMER_OPTIONS = [
+        { value: 90, label: '1:30' },
+        { value: 120, label: '2:00' },
+        { value: 180, label: '3:00' }
+    ];
+    var ANSWER_TIMER_NAME = 'lc-answer-timer';
+
+    /** أزرار خيار "وقت الإجابة" -- مشتركة بين شاشة الإعدادات الأولى ودرج
+     * إعدادات المباراة (تعديل مباشر بدون رجوع لشاشة منفصلة). */
+    function answerTimerPillsHtml() {
+        return ANSWER_TIMER_OPTIONS.map(function (opt) {
+            var active = (_settings.answerTimerSeconds === opt.value) ? ' lc-pill-active' : '';
+            return '<button type="button" class="lc-pill-btn lc-timer-pill' + active + '" data-value="' + opt.value + '">' + opt.label + '</button>';
+        }).join('');
+    }
 
     var _round = 1;
     var _roundWins1 = 0, _roundWins2 = 0; // عدد الجولات المكسوبة بكل فريق -- يحسم المباراة عند 2
@@ -267,6 +283,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _cellQuestions = []; // { text, answer, questionIndex } | null -- يُملأ فقط لما تُفتح الخلية فعلياً
     var _usedQuestions = {}; // letter -> { [questionIndex]: true } -- طول المباراة كاملة
     var _activeIdx = null; // فهرس الخلية المفتوحة حالياً (سؤال معروض بلا اعتماد بعد)
+    var _answerTimerExpired = false; // ينتهي وقت الإجابة على الخلية المفتوحة حالياً -- يوقف التصحيح التلقائي (الأزرار اليدوية تبقى شغالة)
     var _connectionWinner = null;
     var _boardFullNoWinner = false;
     var _answerModal = null; // { question, teamName, teamColor, playerName }
@@ -285,11 +302,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return text
             .replace(/[ً-ْٰـ]/g, '')
             .replace(/[إأآا]/g, 'ا')
-            .replace(/ى/g, 'ي')
-            .replace(/ة/g, 'ه')
+            .replace(/[ىی]/g, 'ي')
+            .replace(/[ةه]/g, 'ه')
+            .replace(/[ؤئء]/g, 'ء')
             .replace(/\s+/g, ' ')
             .trim()
-            .toLowerCase();
+            .toLowerCase()
+            // "أل" التعريف اختيارية بالمطابقة -- إجابة محفوظة "تمر" تقبل
+            // "التمر" وبالعكس (إجابة محفوظة "الحرباء" تقبل "حرباء").
+            .replace(/^ال/, '');
     }
 
     // -------------------------- أصوات (Web Audio) --------------------------
@@ -402,6 +423,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return '<button type="button" class="lc-swatch-btn lc-team2-swatch' + active + '" data-color="' + escapeAttr(c) + '" style="background:' + c + ';"></button>';
         }).join('');
 
+        var answerTimerPills = answerTimerPillsHtml();
+
         root.innerHTML =
             '<div class="lc-settings-screen">' +
                 '<div class="lc-decor-wrap lc-decor-wide"><div class="lc-decor-inner">' + decorHexesHtml() + '</div></div>' +
@@ -413,6 +436,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '<div class="lc-row-card">' +
                         '<div class="lc-row-card-label">اكتب اسمك</div>' +
                         '<input type="text" id="lc-input-hostname" class="lc-row-card-input" value="' + escapeAttr(_settings.hostName) + '" placeholder="اكتب اسمك">' +
+                    '</div>' +
+
+                    '<div class="lc-row-card">' +
+                        '<div class="lc-row-card-label">⏱️ وقت الإجابة</div>' +
+                        '<div class="lc-pill-group" id="lc-timer-group">' + answerTimerPills + '</div>' +
                     '</div>' +
 
                     '<div class="lc-teams-row">' +
@@ -510,6 +538,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             btn.addEventListener('click', function () { _settings.team2Color = btn.getAttribute('data-color'); renderSettingsScreen(); });
         });
 
+        el('lc-timer-group').addEventListener('click', function (e) {
+            var btn = e.target.closest('.lc-timer-pill'); if (!btn) return;
+            _settings.answerTimerSeconds = parseInt(btn.getAttribute('data-value'), 10);
+            renderSettingsScreen();
+        });
+
         el('lc-back-library-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         el('lc-connect-btn').addEventListener('click', handleConnectClick);
 
@@ -570,6 +604,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="lc-lobby-panels">' +
                     teamPanelHtml(TEAM1) +
                     teamPanelHtml(TEAM2) +
+                '</div>' +
+                '<div class="lc-lobby-join-hint">' +
+                    '<span class="lc-lobby-join-hint-icon">💬</span>' +
+                    '<span class="lc-lobby-join-hint-text">' +
+                        'ما زلت غير منضم لفريق؟ اكتب رقم الفريق ثم إجابتك مباشرة في نفس الرسالة داخل الدردشة أثناء اللعب: ' +
+                        '<b>1</b> أو <b>١</b> للفريق الأول، <b>2</b> أو <b>٢</b> للفريق الثاني — مثل <b>1تمر</b> أو <b>1 تمر</b> أو <b>1-تمر</b>. ' +
+                        'إذا كانت الإجابة صحيحة تنضم لفريقك تلقائيًا وتُحتسب لك النقطة.' +
+                    '</span>' +
                 '</div>' +
                 '<div class="lc-lobby-btn-row">' +
                     '<button type="button" id="lc-lobby-back-settings-btn" class="lc-btn-outline">→ العودة للإعدادات</button>' +
@@ -692,23 +734,40 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return true;
     }
 
+    // نمط "رقم فريق + إجابة مباشرة بنفس الرسالة" لمشاهد ما دخل فريق بعد
+    // -- مثلاً "1 التمر" أو "1التمر" أو "1-التمر" أو "١-التمر" (رقم عربي
+    // أو إنجليزي، بفاصل أو بدونه). يُوضَّح هذا الخيار بشاشة اللوبي فقط.
+    var UNJOINED_TEAM_ANSWER_RE = /^\s*([12١٢])[\s\-–—.,:]*([\s\S]+)$/;
+
     function tryHandleAutoAnswer(payload, norm) {
+        if (_answerTimerExpired) return; // انتهى وقت الإجابة على هذي الخلية -- التصحيح التلقائي متوقف، الأزرار اليدوية تبقى شغالة
         var question = _cellQuestions[_activeIdx];
         if (!question || !question.answer) return;
         // يقبل الإجابة الأساسية أو أي صيغة بديلة (aliases) مسجّلة لنفس
         // السؤال من شاشة الأدمن -- بعض المشاهدين يكتبون نفس الجواب بصيغة
         // مختلفة (مرادف، اختصار، مع/بدون أل التعريف...).
         var accepted = [question.answer].concat(question.aliases || []);
-        var matches = accepted.some(function (a) {
-            var n = normalizeArabicText(a);
-            return n && n === norm;
-        });
-        if (!matches) return;
+        function isAccepted(text) {
+            var n = normalizeArabicText(text);
+            return !!n && accepted.some(function (a) { return normalizeArabicText(a) === n; });
+        }
 
         var player = findPlayerById(payload.id);
-        if (!player) return; // مو منضم لأي فريق -- ما فيه فريق نلوّن الخلية بلونه
+        if (player) {
+            if (isAccepted(payload.text)) resolveCredit(player.team, player);
+            return;
+        }
 
-        resolveCredit(player.team, player);
+        // مو منضم لأي فريق بعد -- يقدر ينضم ويُحتسب جوابه بنفس الرسالة
+        // لو كتب رقم فريقه (1/2) ثم إجابته الصحيحة مباشرة.
+        var m = UNJOINED_TEAM_ANSWER_RE.exec(payload.text || '');
+        if (!m) return;
+        var team = (m[1] === '1' || m[1] === '١') ? TEAM1 : TEAM2;
+        if (!isAccepted(m[2])) return;
+
+        AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, team: team });
+        var newPlayer = findPlayerById(payload.id);
+        if (newPlayer) resolveCredit(team, newPlayer);
     }
 
     function tryHandleLetterPick(payload, norm) {
@@ -751,11 +810,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function goToGame() {
+        wireAnswerTimerListeners();
         _round = 1;
         _roundWins1 = 0; _roundWins2 = 0;
         _usedQuestions = {};
         drawBoardLetters();
         _activeIdx = null;
+        _answerTimerExpired = false;
         _connectionWinner = null;
         _boardFullNoWinner = false;
         _answerModal = null;
@@ -781,6 +842,40 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         setTimeout(function () { _showIntro = false; if (_screen === 'game') renderGameScreen(); }, 1600);
     }
 
+    /** يبدأ مؤقت الإجابة للخلية المفتوحة حالياً -- بدون أثر لو answerTimerSeconds = 0 (مؤقت مطفأ). */
+    function startAnswerTimer() {
+        _answerTimerExpired = false;
+        AGP.timerManager.stop(ANSWER_TIMER_NAME);
+        if (_settings.answerTimerSeconds) AGP.timerManager.start(ANSWER_TIMER_NAME, _settings.answerTimerSeconds);
+    }
+    function stopAnswerTimer() {
+        AGP.timerManager.stop(ANSWER_TIMER_NAME);
+    }
+
+    // مسجَّلة مرة واحدة فقط طول عمر الصفحة (وليس بكل مباراة) لتفادي
+    // تراكم مستمعين مكررين على timer:tick/timer:ended.
+    var _answerTimerListenersWired = false;
+    function wireAnswerTimerListeners() {
+        if (_answerTimerListenersWired) return;
+        _answerTimerListenersWired = true;
+        AGP.events.on('timer:tick', function (payload) {
+            if (payload.name !== ANSWER_TIMER_NAME) return;
+            var el2 = el('lc-answer-timer-val');
+            if (el2) el2.textContent = formatTimerLabel(payload.remainingSeconds);
+        });
+        AGP.events.on('timer:ended', function (payload) {
+            if (payload.name !== ANSWER_TIMER_NAME) return;
+            if (_activeIdx == null) return;
+            _answerTimerExpired = true;
+            if (_screen === 'game') renderGameScreen();
+        });
+    }
+
+    function formatTimerLabel(totalSeconds) {
+        var m = Math.floor(totalSeconds / 60), s = totalSeconds % 60;
+        return m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
     function selectCell(idx) {
         if (_cellStates[idx] !== 0) return;
         if (_activeIdx === idx) return;
@@ -788,6 +883,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         setTimeout(playQuestionSound, 120);
         if (!_cellQuestions[idx]) _cellQuestions[idx] = pickQuestionForLetter(_cellLetters[idx]);
         _activeIdx = idx;
+        startAnswerTimer();
         renderGameScreen();
     }
 
@@ -813,6 +909,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var won = isConnected(cellStates, team);
         var full = cellStates.every(function (x) { return x !== 0; });
 
+        stopAnswerTimer();
         _cellStates = cellStates;
         _activeIdx = null;
         _connectionWinner = won ? team : null;
@@ -841,9 +938,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     /** إعادة توزيع الجولة الحالية بأحرف وأسئلة جديدة، بدون احتساب نقاط --
      * تلقائياً لو امتلأت الرقعة بدون فوز، أو يدوياً من زر الشارة العلوية. */
     function reshuffleRound(reason) {
+        stopAnswerTimer();
         playReshuffleSound();
         drawBoardLetters();
         _activeIdx = null;
+        _answerTimerExpired = false;
         _lastAnswererPlayer = null;
         _reshuffleNotice = (reason === 'manual')
             ? 'أعاد المضيف توزيع الرقعة -- أحرف وأسئلة جديدة'
@@ -871,9 +970,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return;
         }
 
+        stopAnswerTimer();
         _round++;
         drawBoardLetters();
         _activeIdx = null;
+        _answerTimerExpired = false;
         _answerModal = null;
         _lastAnswererPlayer = null;
         _screen = 'game';
@@ -889,6 +990,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function endMatch() {
         var ok = window.confirm('بينتهي البث الحالي وتُصفَّر كل بيانات المباراة. تبي تكمل؟');
         if (!ok) return;
+        stopAnswerTimer();
         AGP.streamConnector.disconnect('tiktok');
         AGP.gameManager.resetSession();
         _registrationOpen = false;
@@ -896,7 +998,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         _round = 1; _roundWins1 = 0; _roundWins2 = 0; _usedQuestions = {};
         _cellLetters = []; _cellStates = []; _cellQuestions = [];
-        _activeIdx = null; _connectionWinner = null; _boardFullNoWinner = false;
+        _activeIdx = null; _answerTimerExpired = false; _connectionWinner = null; _boardFullNoWinner = false;
         _answerModal = null; _lastAnswererPlayer = null; _settingsOpen = false; _inviteOpen = false;
 
         renderSettingsScreen();
@@ -905,10 +1007,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function restartGame() {
         // البقاء متصلاً بنفس البث (لا مبرر لإعادة كتابة يوزر البث من الصفر)
         // وتصفير اللاعبين + رقعة اللعب، ثم الرجوع مباشرة للوبي لبدء مباراة جديدة.
+        stopAnswerTimer();
         AGP.player.getAllPlayers().slice().forEach(function (p) { AGP.player.removePlayer(p.id); });
         _round = 1; _roundWins1 = 0; _roundWins2 = 0; _usedQuestions = {};
         _cellLetters = []; _cellStates = []; _cellQuestions = [];
-        _activeIdx = null; _connectionWinner = null; _boardFullNoWinner = false;
+        _activeIdx = null; _answerTimerExpired = false; _connectionWinner = null; _boardFullNoWinner = false;
         _answerModal = null; _lastAnswererPlayer = null; _settingsOpen = false; _inviteOpen = false;
         AGP.scoreManager.reset();
         renderLobbyScreen();
@@ -944,6 +1047,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         } else {
             badgeHexHtml = '<div class="lc-badge-hex-inner"><button type="button" id="lc-round-badge-btn" class="lc-badge-hex-btn"><div class="lc-badge-hex-round">' + _round + '</div><div class="lc-badge-hex-caption">إعادة توزيع</div></button></div>';
         }
+
+        // فوق خلية الحرف: مؤقت الإجابة أثناء وجود سؤال مفتوح (لو مفعّل
+        // بالإعدادات)، وإلا رقم الجولة الحالية -- عنصر واحد بنفس المكان،
+        // يختفي المؤقت تلقائياً بمجرد اعتماد إجابة أو انتهاء وقتها.
+        var showAnswerTimer = activeLetter && _settings.answerTimerSeconds && !_answerTimerExpired;
+        var topBadgeLabelHtml = showAnswerTimer
+            ? '<span id="lc-answer-timer-val">' + formatTimerLabel(_settings.answerTimerSeconds) + '</span>'
+            : 'الجولة ' + _round;
 
         var questionInnerHtml;
         if (activeLetter) {
@@ -991,6 +1102,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '<div class="lc-drawer-head"><div class="lc-drawer-title">الإعدادات</div><button type="button" id="lc-drawer-close" class="lc-drawer-close">×</button></div>' +
                     '<button type="button" id="lc-drawer-end-match" class="lc-drawer-btn lc-drawer-btn-end">إنهاء المباراة</button>' +
                     '<div class="lc-drawer-section">' +
+                        '<div class="lc-drawer-section-title">⏱️ وقت الإجابة</div>' +
+                        '<div class="lc-pill-group" id="lc-drawer-timer-group">' + answerTimerPillsHtml() + '</div>' +
+                    '</div>' +
+                    '<div class="lc-drawer-section">' +
                         '<div class="lc-drawer-section-title">اللاعبون المشاركون</div>' +
                         drawerRosterHtml(TEAM1) +
                         drawerRosterHtml(TEAM2) +
@@ -1026,7 +1141,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 gameBackgroundSvg() +
                 cellsHtml +
 
-                '<div class="lc-round-label">الجولة ' + _round + '</div>' +
+                '<div class="lc-round-label' + (showAnswerTimer ? ' lc-round-label-timer' : '') + '">' + topBadgeLabelHtml + '</div>' +
                 '<div class="lc-badge-hex">' + badgeHexHtml + '</div>' +
 
                 '<button type="button" id="lc-open-settings-btn" class="lc-side-panel-btn-settings">الإعدادات</button>' +
@@ -1111,6 +1226,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             el('lc-drawer-end-match').addEventListener('click', endMatch);
             el('lc-drawer-invite').addEventListener('click', openInviteModal);
             el('lc-drawer-reset').addEventListener('click', handleRoundBadgeClick);
+            el('lc-drawer-timer-group').addEventListener('click', function (e) {
+                var btn = e.target.closest('.lc-timer-pill'); if (!btn) return;
+                _settings.answerTimerSeconds = parseInt(btn.getAttribute('data-value'), 10);
+                renderGameScreen();
+            });
         }
 
         if (_inviteOpen) {

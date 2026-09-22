@@ -110,6 +110,11 @@ body.lc-active { scrollbar-width: none; }
 .lc-row-card-label { font-size: 15px; font-weight: 800; color: var(--lc-text); white-space: nowrap; }
 .lc-row-card-input { flex: 1; min-width: 220px; padding: 11px 14px; border-radius: 10px; border: 1px solid var(--lc-input-border); background: var(--lc-input-bg); color: var(--lc-text); font-family: inherit; font-size: 14px; outline: none; }
 
+.lc-pill-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.lc-pill-btn { padding: 8px 16px; border-radius: 999px; border: 1px solid var(--lc-input-border); background: var(--lc-input-bg); color: var(--lc-text-dim2); font-family: inherit; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; transition: background .15s ease, border-color .15s ease, color .15s ease; }
+.lc-pill-btn:hover { border-color: var(--lc-accent2); }
+.lc-pill-btn.lc-pill-active { background: linear-gradient(90deg, var(--lc-accent1), var(--lc-accent2)); border-color: transparent; color: var(--lc-bg); }
+
 .lc-team-card { background: var(--lc-panel); border: 1px solid var(--lc-panel-border); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
 .lc-team-card-head { display: flex; align-items: center; gap: 8px; }
 .lc-team-card-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
@@ -164,6 +169,10 @@ body.lc-active { scrollbar-width: none; }
 }
 .lc-pcard-wrap { max-width: 100% !important; }
 .lc-team-empty { font-size: 13px; color: #fef4f4; opacity: 0.6; grid-column: 1/-1; }
+.lc-lobby-join-hint { width: 100%; max-width: 900px; display: flex; align-items: flex-start; gap: 10px; background: var(--lc-panel); border: 1px solid var(--lc-panel-border); border-radius: 14px; padding: 14px 18px; position: relative; z-index: 1; text-align: right; }
+.lc-lobby-join-hint-icon { font-size: 18px; flex-shrink: 0; }
+.lc-lobby-join-hint-text { font-size: 13px; line-height: 1.9; color: var(--lc-text-dim2); }
+.lc-lobby-join-hint-text b { color: var(--lc-accent2); }
 .lc-lobby-btn-row { display: flex; align-items: center; justify-content: center; gap: 12px; position: relative; z-index: 1; }
 
 /* ==========================================================================
@@ -211,6 +220,8 @@ body.lc-active { scrollbar-width: none; }
 .lc-question-placeholder { color: #d9c9b8; opacity: 0.85; }
 
 .lc-round-label { position: absolute; left: 85.43%; top: 29%; width: 6.01%; text-align: center; color: #1B0D0D; font-weight: 900; font-size: clamp(8px, calc(1 * var(--lc-cvw)), 15px); white-space: nowrap; }
+.lc-round-label-timer { color: var(--lc-remove); font-size: clamp(10px, calc(1.3 * var(--lc-cvw)), 19px); animation: lc-timer-pulse 1s ease-in-out infinite; }
+@keyframes lc-timer-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 .lc-badge-hex { position: absolute; left: 85.43%; top: 31.69%; width: 6.01%; height: 12.59%; display: flex; align-items: center; justify-content: center; color: #fef4f4; font-weight: 900; text-align: center; }
 .lc-badge-hex-inner { font-size: clamp(11px,1vw,16px); line-height: 1.3; }
 .lc-badge-hex-letter { font-size: clamp(18px,1.8vw,30px); color: #0F0E0E; }
