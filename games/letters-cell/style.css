@@ -85,11 +85,25 @@ body.lc-active { scrollbar-width: none; }
    1) شاشة الإعدادات
    ========================================================================== */
 .lc-settings-screen { width: 100%; min-height: 100vh; overflow-y: auto; background: var(--lc-bg); box-sizing: border-box; position: relative; }
-.lc-settings-inner { max-width: 640px; margin: 0 auto; padding: 48px 24px 32px; display: flex; flex-direction: column; gap: 20px; position: relative; z-index: 1; }
+.lc-settings-inner { max-width: 920px; margin: 0 auto; padding: 48px 24px 32px; display: flex; flex-direction: column; gap: 20px; position: relative; z-index: 1; }
 .lc-connected-badge-wrap { text-align: center; }
 .lc-connected-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--lc-panel); border: 1px solid var(--lc-panel-border); border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 700; color: #e6e1f5; }
+.lc-connected-badge--yes { border-color: rgba(34,197,94,0.35); }
+.lc-connected-badge--no { border-color: rgba(239,68,68,0.35); }
 .lc-connected-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lc-success); display: inline-block; }
+.lc-connected-badge--no .lc-connected-dot { background: var(--lc-remove); }
+.lc-connected-badge-link { color: var(--lc-accent2); font-weight: 800; text-decoration: none; }
+.lc-connected-badge-link:hover { text-decoration: underline; }
 .lc-logo-settings { font-size: clamp(28px,4vw,44px); }
+
+/* على الشاشات الواسعة (جهاز المضيف عادة تابلت/كمبيوتر) يوقفون جنب بعض
+   بدل ما ينزلوا فوق بعض -- استغلال أفضل للعرض بدل عمود ضيق بمنتصف شاشة
+   واسعة؛ يرجعون عمود واحد تلقائياً تحت 720px (جوال). */
+.lc-teams-row { display: flex; flex-direction: column; gap: 20px; }
+@media (min-width: 720px) {
+    .lc-teams-row { flex-direction: row; align-items: stretch; }
+    .lc-teams-row > .lc-team-card { flex: 1; min-width: 0; }
+}
 
 /* صف "اكتب اسمك": تسمية يمين، مُدخل يسار -- ترتيب DOM طبيعي بدون order (قاعدة CLAUDE.md) */
 .lc-row-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--lc-panel); border: 1px solid var(--lc-panel-border); border-radius: 14px; padding: 16px 20px; flex-wrap: wrap; }

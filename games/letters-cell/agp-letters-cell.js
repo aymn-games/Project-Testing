@@ -189,6 +189,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return a;
     }
 
+    /**
+     * يقرأ الاتصال بالبث اللي اتحقق منه المضيف مرة وحدة بصفحة مكتبة
+     * الألعاب (games.html، ودجت "اتصل بالبث") -- عشان شاشة إعدادات هذي
+     * اللعبة ما تحتاج حقل يوزر خاص فيها. games.html يكتب هذا المفتاح
+     * مباشرة بـ localStorage (هو نفسه ما يحمّل سكربتات AGP.*)، بنفس بادئة
+     * 'agp:' وصيغة JSON.stringify اللي يستخدمها js/agp-storage-manager.js،
+     * فالطرفين متفقين على الصيغة بدون ما يعتمد أي وحد على الثاني. نفس
+     * النمط المستخدم فعلياً بـ games/elimination-roulette (أول لعبة طبّقته).
+     */
+    var STREAM_CONNECTION_STORAGE_KEY = 'agp:agp-stream-connection';
+    function getSavedStreamConnection() {
+        try {
+            var raw = window.localStorage.getItem(STREAM_CONNECTION_STORAGE_KEY);
+            if (!raw) return null;
+            var data = JSON.parse(raw);
+            if (!data || typeof data.username !== 'string' || !data.username) return null;
+            return data;
+        } catch (e) { return null; }
+    }
+
     // -------------------------- حالة عامة --------------------------
     var _screen = 'settings'; // settings | connecting | lobby | game | roundWinner | result
     var _root = null;
@@ -352,7 +372,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div class="lc-settings-screen">' +
                 '<div class="lc-decor-wrap lc-decor-wide"><div class="lc-decor-inner">' + decorHexesHtml() + '</div></div>' +
                 '<div class="lc-settings-inner">' +
-                    '<div class="lc-connected-badge-wrap"><span class="lc-connected-badge">متصل بالبث <span class="lc-connected-dot"></span></span></div>' +
+                    '<div class="lc-connected-badge-wrap" id="lc-conn-status-wrap">' + connectionBadgeHtml() + '</div>' +
 
                     '<div class="lc-logo lc-logo-settings"><span class="lc-logo-word1">حروف</span> <span class="lc-logo-word2">مع</span> <span id="lc-logo-name-settings" class="lc-logo-name">' + escapeHtml(_settings.hostName) + '</span></div>' +
 
@@ -361,32 +381,29 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         '<input type="text" id="lc-input-hostname" class="lc-row-card-input" value="' + escapeAttr(_settings.hostName) + '" placeholder="اكتب اسمك">' +
                     '</div>' +
 
-                    '<div class="lc-row-card">' +
-                        '<div class="lc-row-card-label">يوزر بث التيك توك</div>' +
-                        '<input type="text" id="lc-input-tiktok" class="lc-row-card-input" value="' + escapeAttr(_settings.tiktokUsername) + '" placeholder="tiktok_username">' +
-                    '</div>' +
+                    '<div class="lc-teams-row">' +
+                        '<div class="lc-team-card">' +
+                            '<div class="lc-team-card-head"><span class="lc-team-card-swatch" style="background:' + _settings.team1Color + ';"></span><span class="lc-team-card-title">إعدادات الفريق الأول</span></div>' +
+                            '<div class="lc-field-col">' +
+                                '<label class="lc-field-label">اسم الفريق</label>' +
+                                '<div class="lc-field-row"><input type="text" id="lc-input-team1name" class="lc-field-input" value="' + escapeAttr(_settings.team1Name) + '">' + team1Swatches + '</div>' +
+                            '</div>' +
+                            '<div class="lc-field-col">' +
+                                '<label class="lc-field-label">الكلمة المفتاحية للدخول عبر البث</label>' +
+                                '<input type="text" id="lc-input-team1code" class="lc-field-input lc-field-input-block" value="' + escapeAttr(_settings.team1AccessCode) + '" placeholder="مثال: فوز">' +
+                            '</div>' +
+                        '</div>' +
 
-                    '<div class="lc-team-card">' +
-                        '<div class="lc-team-card-head"><span class="lc-team-card-swatch" style="background:' + _settings.team1Color + ';"></span><span class="lc-team-card-title">إعدادات الفريق الأول</span></div>' +
-                        '<div class="lc-field-col">' +
-                            '<label class="lc-field-label">اسم الفريق</label>' +
-                            '<div class="lc-field-row"><input type="text" id="lc-input-team1name" class="lc-field-input" value="' + escapeAttr(_settings.team1Name) + '">' + team1Swatches + '</div>' +
-                        '</div>' +
-                        '<div class="lc-field-col">' +
-                            '<label class="lc-field-label">الكلمة المفتاحية للدخول عبر البث</label>' +
-                            '<input type="text" id="lc-input-team1code" class="lc-field-input lc-field-input-block" value="' + escapeAttr(_settings.team1AccessCode) + '" placeholder="مثال: فوز">' +
-                        '</div>' +
-                    '</div>' +
-
-                    '<div class="lc-team-card">' +
-                        '<div class="lc-team-card-head"><span class="lc-team-card-swatch" style="background:' + _settings.team2Color + ';"></span><span class="lc-team-card-title">إعدادات الفريق الثاني</span></div>' +
-                        '<div class="lc-field-col">' +
-                            '<label class="lc-field-label">اسم الفريق</label>' +
-                            '<div class="lc-field-row"><input type="text" id="lc-input-team2name" class="lc-field-input" value="' + escapeAttr(_settings.team2Name) + '">' + team2Swatches + '</div>' +
-                        '</div>' +
-                        '<div class="lc-field-col">' +
-                            '<label class="lc-field-label">الكلمة المفتاحية للدخول عبر البث</label>' +
-                            '<input type="text" id="lc-input-team2code" class="lc-field-input lc-field-input-block" value="' + escapeAttr(_settings.team2AccessCode) + '" placeholder="مثال: خسارة">' +
+                        '<div class="lc-team-card">' +
+                            '<div class="lc-team-card-head"><span class="lc-team-card-swatch" style="background:' + _settings.team2Color + ';"></span><span class="lc-team-card-title">إعدادات الفريق الثاني</span></div>' +
+                            '<div class="lc-field-col">' +
+                                '<label class="lc-field-label">اسم الفريق</label>' +
+                                '<div class="lc-field-row"><input type="text" id="lc-input-team2name" class="lc-field-input" value="' + escapeAttr(_settings.team2Name) + '">' + team2Swatches + '</div>' +
+                            '</div>' +
+                            '<div class="lc-field-col">' +
+                                '<label class="lc-field-label">الكلمة المفتاحية للدخول عبر البث</label>' +
+                                '<input type="text" id="lc-input-team2code" class="lc-field-input lc-field-input-block" value="' + escapeAttr(_settings.team2AccessCode) + '" placeholder="مثال: خسارة">' +
+                            '</div>' +
                         '</div>' +
                     '</div>' +
 
@@ -402,13 +419,49 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wireSettingsHandlers();
     }
 
+    /**
+     * كرت حالة الاتصال بالبث بشاشة الإعدادات -- ما فيه حقل كتابة يوزر
+     * إطلاقاً؛ يقرأ الاتصال المتحقَّق منه مرة وحدة بصفحة مكتبة الألعاب عبر
+     * getSavedStreamConnection() أعلاه. نفس فكرة er-conn-status-badge
+     * بـ games/elimination-roulette، بس هذي اللعبة تبني HTML الشاشة يدوياً
+     * (بدون agp-game-shell.js) فما تحتاج نفس أسلوب "إخفاء حقل مشترك".
+     */
+    function connectionBadgeHtml() {
+        var saved = getSavedStreamConnection();
+        if (saved) {
+            return '<span class="lc-connected-badge lc-connected-badge--yes">' +
+                '<span class="lc-connected-dot"></span>' +
+                'متصل بالبث <b>@' + escapeHtml(saved.username) + '</b>' +
+                '</span>';
+        }
+        return '<span class="lc-connected-badge lc-connected-badge--no">' +
+            '<span class="lc-connected-dot"></span>' +
+            'لم يتم الاتصال بالبث بعد' +
+            '<a href="../../games.html" class="lc-connected-badge-link">اتصل من مكتبة الألعاب ↗</a>' +
+            '</span>';
+    }
+
+    function refreshConnectionBadge() {
+        var wrap = el('lc-conn-status-wrap');
+        if (!wrap) return; // مو شاشة الإعدادات حالياً
+        wrap.innerHTML = connectionBadgeHtml();
+        var connectBtn = el('lc-connect-btn');
+        if (connectBtn) connectBtn.disabled = !getSavedStreamConnection();
+    }
+
+    // يحدّث كرت حالة الاتصال فوراً لو المضيف اتصل من تبويب مكتبة الألعاب
+    // وهذي شاشة الإعدادات مفتوحة أصلاً بتبويب ثاني -- بدون ما ينتظر
+    // تحديث الصفحة.
+    window.addEventListener('storage', function (e) {
+        if (e.key === STREAM_CONNECTION_STORAGE_KEY) refreshConnectionBadge();
+    });
+
     function wireSettingsHandlers() {
         el('lc-input-hostname').addEventListener('input', function (e) {
             _settings.hostName = e.target.value;
             var logoName = el('lc-logo-name-settings');
             if (logoName) logoName.textContent = _settings.hostName;
         });
-        el('lc-input-tiktok').addEventListener('input', function (e) { _settings.tiktokUsername = e.target.value; });
         el('lc-input-team1name').addEventListener('input', function (e) { _settings.team1Name = e.target.value; });
         el('lc-input-team2name').addEventListener('input', function (e) { _settings.team2Name = e.target.value; });
         el('lc-input-team1code').addEventListener('input', function (e) { _settings.team1AccessCode = e.target.value; });
@@ -423,6 +476,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         el('lc-back-library-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         el('lc-connect-btn').addEventListener('click', handleConnectClick);
+
+        refreshConnectionBadge();
     }
 
     function showSettingsError(msg) {
@@ -433,15 +488,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function handleConnectClick() {
-        var username = (_settings.tiktokUsername || '').trim();
+        var saved = getSavedStreamConnection();
         var kw1 = normalizeArabicText(_settings.team1AccessCode);
         var kw2 = normalizeArabicText(_settings.team2AccessCode);
 
-        if (!username) return showSettingsError('لازم تكتب يوزر بث التيك توك أول.');
+        if (!saved) return showSettingsError('لازم تتصل بالبث من مكتبة الألعاب أول (زر "اتصل بالبث" بصفحة الألعاب).');
         if (!kw1 || !kw2) return showSettingsError('لازم تحدد كلمة مفتاحية لكل فريق.');
         if (kw1 === kw2) return showSettingsError('الكلمتان المفتاحيتان لازم تكونان مختلفتين عن بعض.');
 
-        AGP.streamConnector.connect('tiktok', { username: username });
+        _settings.tiktokUsername = saved.username;
+        AGP.streamConnector.connect('tiktok', { username: saved.username });
     }
 
     function renderConnectingScreen(message) {
