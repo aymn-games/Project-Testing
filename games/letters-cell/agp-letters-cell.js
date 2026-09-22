@@ -1026,6 +1026,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 gameBackgroundSvg() +
                 cellsHtml +
 
+                '<div class="lc-round-label">الجولة ' + _round + '</div>' +
                 '<div class="lc-badge-hex">' + badgeHexHtml + '</div>' +
 
                 '<button type="button" id="lc-open-settings-btn" class="lc-side-panel-btn-settings">الإعدادات</button>' +

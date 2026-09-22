@@ -182,12 +182,17 @@ body.lc-active { scrollbar-width: none; }
 
 .lc-side-panel-btn-settings { position: absolute; left: 78.22%; top: 1.5%; width: 20.21%; box-sizing: border-box; padding: 6px 10px; border: none; border-radius: 10px; background: #1B0D0D; opacity: 0.55; color: #fef4f4; font-family: 'Cairo', sans-serif; font-weight: 800; font-size: clamp(11px,1vw,14px); cursor: pointer; }
 .lc-side-logo { position: absolute; left: 78.22%; top: 9%; width: 20.21%; }
+/* تكبير ٥٠% عن الحجم الأساسي (24/13/24px) خاص بهذا الموضع فقط -- شعار
+   الشاشة التمهيدية (.lc-intro-logo) يبقى بحجمه الافتراضي. */
+.lc-side-logo .lc-logo3d-line1, .lc-side-logo .lc-logo3d-line3 { font-size: clamp(36px,4.65vw,67.5px); }
+.lc-side-logo .lc-logo3d-line2 { font-size: clamp(19.5px,1.8vw,27px); }
 .lc-cell-question-label { position: absolute; left: 78.22%; top: 29%; width: 20.21%; display: flex; align-items: center; gap: 8px; }
 .lc-cell-question-label span { font-size: clamp(13px,1.1vw,16px); font-weight: 900; color: #E2C8A8; }
 .lc-question-box { position: absolute; left: 78.22%; top: 41.71%; width: 20.21%; height: 24%; box-sizing: border-box; padding: clamp(8px,1.4vw,20px) clamp(10px,1.8vw,26px); overflow: hidden; }
 .lc-question-text { width: 100%; height: 100%; color: #fef4f4; font-family: inherit; font-weight: 700; font-size: clamp(13px,1.2vw,18px); line-height: 1.35; overflow: hidden; }
 .lc-question-placeholder { color: #d9c9b8; opacity: 0.85; }
 
+.lc-round-label { position: absolute; left: 85.43%; top: 29%; width: 6.01%; text-align: center; color: #1B0D0D; font-weight: 900; font-size: clamp(11px,1vw,15px); white-space: nowrap; }
 .lc-badge-hex { position: absolute; left: 85.43%; top: 31.69%; width: 6.01%; height: 12.59%; display: flex; align-items: center; justify-content: center; color: #fef4f4; font-weight: 900; text-align: center; }
 .lc-badge-hex-inner { font-size: clamp(11px,1vw,16px); line-height: 1.3; }
 .lc-badge-hex-letter { font-size: clamp(18px,1.8vw,30px); color: #0F0E0E; }
