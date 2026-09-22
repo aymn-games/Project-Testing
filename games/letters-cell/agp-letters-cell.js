@@ -249,29 +249,35 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (_audioCtx.state === 'suspended') _audioCtx.resume();
         return _audioCtx;
     }
-    function playTone(freq, duration, type, delay, gainVal) {
+    // attack: مدة صعود الصوت بالثواني قبل الذروة (قيمة صغيرة = دخول ناعم بلا
+    // "طقة" -- 0.001 دخول شبه فوري للأصوات القوية/الحاسمة).
+    function playTone(freq, duration, type, delay, gainVal, attack) {
         try {
             var ctx = getAudioCtx();
             if (!ctx) return;
             duration = duration || 0.15; type = type || 'sine'; delay = delay || 0; gainVal = gainVal == null ? 0.12 : gainVal;
+            attack = attack == null ? 0.004 : attack;
             var t0 = ctx.currentTime + delay;
             var osc = ctx.createOscillator();
             var gain = ctx.createGain();
             osc.type = type;
             osc.frequency.value = freq;
-            gain.gain.setValueAtTime(gainVal, t0);
-            gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+            gain.gain.setValueAtTime(0.0001, t0);
+            gain.gain.exponentialRampToValueAtTime(gainVal, t0 + attack);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
             osc.connect(gain);
             gain.connect(ctx.destination);
             osc.start(t0);
             osc.stop(t0 + duration + 0.02);
         } catch (e) {}
     }
-    function playJoinSound() { playTone(700, 0.09, 'sine'); playTone(950, 0.09, 'sine', 0.07); }
+    // نغمة واحدة هادئة وخفيفة جداً (طلب صريح: أهدأ وأخف من كل صوت ثاني
+    // باللعبة) -- تُشغَّل مع كل انضمام لاعب فردي، بصعود ناعم يمنع أي "طقة".
+    function playJoinSound() { playTone(660, 0.14, 'sine', 0, 0.035, 0.02); }
     function playMatchStartSound() { [440, 554, 660].forEach(function (f, i) { playTone(f, 0.3, 'triangle', i * 0.05, 0.1); }); }
-    function playSelectSound() { playTone(500, 0.08, 'square', 0, 0.08); }
+    function playSelectSound() { playTone(480, 0.07, 'triangle', 0, 0.07, 0.001); }
     function playQuestionSound() { playTone(780, 0.12, 'triangle', 0.1, 0.08); }
-    function playCorrectSound() { [523, 659, 784, 1046].forEach(function (f, i) { playTone(f, 0.18, 'sine', i * 0.08, 0.1); }); }
+    function playCorrectSound() { [523, 659, 784, 1046].forEach(function (f, i) { playTone(f, 0.18, 'sine', i * 0.08, 0.1, 0.002); }); }
     function playRoundWinSound() { [392, 523, 659, 784, 1046, 1318].forEach(function (f, i) { playTone(f, 0.22, 'triangle', i * 0.09, 0.11); }); }
     function playReshuffleSound() { playTone(360, 0.16, 'triangle', 0, 0.09); playTone(240, 0.2, 'triangle', 0.12, 0.09); }
 
