@@ -676,8 +676,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function tryHandleAutoAnswer(payload, norm) {
         var question = _cellQuestions[_activeIdx];
         if (!question || !question.answer) return;
-        var answerNorm = normalizeArabicText(question.answer);
-        if (!answerNorm || norm !== answerNorm) return;
+        // يقبل الإجابة الأساسية أو أي صيغة بديلة (aliases) مسجّلة لنفس
+        // السؤال من شاشة الأدمن -- بعض المشاهدين يكتبون نفس الجواب بصيغة
+        // مختلفة (مرادف، اختصار، مع/بدون أل التعريف...).
+        var accepted = [question.answer].concat(question.aliases || []);
+        var matches = accepted.some(function (a) {
+            var n = normalizeArabicText(a);
+            return n && n === norm;
+        });
+        if (!matches) return;
 
         var player = findPlayerById(payload.id);
         if (!player) return; // مو منضم لأي فريق -- ما فيه فريق نلوّن الخلية بلونه
@@ -721,7 +728,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             ? available[Math.floor(Math.random() * available.length)]
             : Math.floor(Math.random() * bank.length);
         used[pickIdx] = true;
-        return { text: bank[pickIdx].question, answer: bank[pickIdx].answer, questionIndex: pickIdx };
+        return { text: bank[pickIdx].question, answer: bank[pickIdx].answer, aliases: bank[pickIdx].aliases || [], questionIndex: pickIdx };
     }
 
     function goToGame() {

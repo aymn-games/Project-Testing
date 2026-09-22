@@ -1,620 +1,732 @@
 {
-  "updatedAt": "2026-09-22T07:35:22.221Z",
+  "updatedAt": "2026-09-22T07:43:22.898Z",
   "questions": {
     "ا": [
       {
         "id": "ا-1",
         "question": "سؤال 1 لحرف ا",
-        "answer": "اجابة حرف ا"
+        "answer": "اجابة حرف ا",
+        "aliases": []
       },
       {
         "id": "ا-2",
         "question": "سؤال 2 لحرف ا",
-        "answer": "اجابة حرف ا"
+        "answer": "اجابة حرف ا",
+        "aliases": []
       },
       {
         "id": "ا-3",
         "question": "سؤال 3 لحرف ا",
-        "answer": "اجابة حرف ا"
+        "answer": "اجابة حرف ا",
+        "aliases": []
       },
       {
         "id": "ا-4",
         "question": "سؤال 4 لحرف ا",
-        "answer": "اجابة حرف ا"
+        "answer": "اجابة حرف ا",
+        "aliases": []
       }
     ],
     "ب": [
       {
         "id": "ب-1",
         "question": "سؤال 1 لحرف ب",
-        "answer": "اجابة حرف ب"
+        "answer": "اجابة حرف ب",
+        "aliases": []
       },
       {
         "id": "ب-2",
         "question": "سؤال 2 لحرف ب",
-        "answer": "اجابة حرف ب"
+        "answer": "اجابة حرف ب",
+        "aliases": []
       },
       {
         "id": "ب-3",
         "question": "سؤال 3 لحرف ب",
-        "answer": "اجابة حرف ب"
+        "answer": "اجابة حرف ب",
+        "aliases": []
       },
       {
         "id": "ب-4",
         "question": "سؤال 4 لحرف ب",
-        "answer": "اجابة حرف ب"
+        "answer": "اجابة حرف ب",
+        "aliases": []
       }
     ],
     "ت": [
       {
         "id": "ت-1",
         "question": "سؤال 1 لحرف ت",
-        "answer": "اجابة حرف ت"
+        "answer": "اجابة حرف ت",
+        "aliases": []
       },
       {
         "id": "ت-2",
         "question": "سؤال 2 لحرف ت",
-        "answer": "اجابة حرف ت"
+        "answer": "اجابة حرف ت",
+        "aliases": []
       },
       {
         "id": "ت-3",
         "question": "سؤال 3 لحرف ت",
-        "answer": "اجابة حرف ت"
+        "answer": "اجابة حرف ت",
+        "aliases": []
       },
       {
         "id": "ت-4",
         "question": "سؤال 4 لحرف ت",
-        "answer": "اجابة حرف ت"
+        "answer": "اجابة حرف ت",
+        "aliases": []
       }
     ],
     "ث": [
       {
         "id": "ث-1",
         "question": "سؤال 1 لحرف ث",
-        "answer": "اجابة حرف ث"
+        "answer": "اجابة حرف ث",
+        "aliases": []
       },
       {
         "id": "ث-2",
         "question": "سؤال 2 لحرف ث",
-        "answer": "اجابة حرف ث"
+        "answer": "اجابة حرف ث",
+        "aliases": []
       },
       {
         "id": "ث-3",
         "question": "سؤال 3 لحرف ث",
-        "answer": "اجابة حرف ث"
+        "answer": "اجابة حرف ث",
+        "aliases": []
       },
       {
         "id": "ث-4",
         "question": "سؤال 4 لحرف ث",
-        "answer": "اجابة حرف ث"
+        "answer": "اجابة حرف ث",
+        "aliases": []
       }
     ],
     "ج": [
       {
         "id": "ج-1",
         "question": "سؤال 1 لحرف ج",
-        "answer": "اجابة حرف ج"
+        "answer": "اجابة حرف ج",
+        "aliases": []
       },
       {
         "id": "ج-2",
         "question": "سؤال 2 لحرف ج",
-        "answer": "اجابة حرف ج"
+        "answer": "اجابة حرف ج",
+        "aliases": []
       },
       {
         "id": "ج-3",
         "question": "سؤال 3 لحرف ج",
-        "answer": "اجابة حرف ج"
+        "answer": "اجابة حرف ج",
+        "aliases": []
       },
       {
         "id": "ج-4",
         "question": "سؤال 4 لحرف ج",
-        "answer": "اجابة حرف ج"
+        "answer": "اجابة حرف ج",
+        "aliases": []
       }
     ],
     "ح": [
       {
         "id": "ح-1",
         "question": "سؤال 1 لحرف ح",
-        "answer": "اجابة حرف ح"
+        "answer": "اجابة حرف ح",
+        "aliases": []
       },
       {
         "id": "ح-2",
         "question": "سؤال 2 لحرف ح",
-        "answer": "اجابة حرف ح"
+        "answer": "اجابة حرف ح",
+        "aliases": []
       },
       {
         "id": "ح-3",
         "question": "سؤال 3 لحرف ح",
-        "answer": "اجابة حرف ح"
+        "answer": "اجابة حرف ح",
+        "aliases": []
       },
       {
         "id": "ح-4",
         "question": "سؤال 4 لحرف ح",
-        "answer": "اجابة حرف ح"
+        "answer": "اجابة حرف ح",
+        "aliases": []
       }
     ],
     "خ": [
       {
         "id": "خ-1",
         "question": "سؤال 1 لحرف خ",
-        "answer": "اجابة حرف خ"
+        "answer": "اجابة حرف خ",
+        "aliases": []
       },
       {
         "id": "خ-2",
         "question": "سؤال 2 لحرف خ",
-        "answer": "اجابة حرف خ"
+        "answer": "اجابة حرف خ",
+        "aliases": []
       },
       {
         "id": "خ-3",
         "question": "سؤال 3 لحرف خ",
-        "answer": "اجابة حرف خ"
+        "answer": "اجابة حرف خ",
+        "aliases": []
       },
       {
         "id": "خ-4",
         "question": "سؤال 4 لحرف خ",
-        "answer": "اجابة حرف خ"
+        "answer": "اجابة حرف خ",
+        "aliases": []
       }
     ],
     "د": [
       {
         "id": "د-1",
         "question": "سؤال 1 لحرف د",
-        "answer": "اجابة حرف د"
+        "answer": "اجابة حرف د",
+        "aliases": []
       },
       {
         "id": "د-2",
         "question": "سؤال 2 لحرف د",
-        "answer": "اجابة حرف د"
+        "answer": "اجابة حرف د",
+        "aliases": []
       },
       {
         "id": "د-3",
         "question": "سؤال 3 لحرف د",
-        "answer": "اجابة حرف د"
+        "answer": "اجابة حرف د",
+        "aliases": []
       },
       {
         "id": "د-4",
         "question": "سؤال 4 لحرف د",
-        "answer": "اجابة حرف د"
+        "answer": "اجابة حرف د",
+        "aliases": []
       }
     ],
     "ذ": [
       {
         "id": "ذ-1",
         "question": "سؤال 1 لحرف ذ",
-        "answer": "اجابة حرف ذ"
+        "answer": "اجابة حرف ذ",
+        "aliases": []
       },
       {
         "id": "ذ-2",
         "question": "سؤال 2 لحرف ذ",
-        "answer": "اجابة حرف ذ"
+        "answer": "اجابة حرف ذ",
+        "aliases": []
       },
       {
         "id": "ذ-3",
         "question": "سؤال 3 لحرف ذ",
-        "answer": "اجابة حرف ذ"
+        "answer": "اجابة حرف ذ",
+        "aliases": []
       },
       {
         "id": "ذ-4",
         "question": "سؤال 4 لحرف ذ",
-        "answer": "اجابة حرف ذ"
+        "answer": "اجابة حرف ذ",
+        "aliases": []
       }
     ],
     "ر": [
       {
         "id": "ر-1",
         "question": "سؤال 1 لحرف ر",
-        "answer": "اجابة حرف ر"
+        "answer": "اجابة حرف ر",
+        "aliases": []
       },
       {
         "id": "ر-2",
         "question": "سؤال 2 لحرف ر",
-        "answer": "اجابة حرف ر"
+        "answer": "اجابة حرف ر",
+        "aliases": []
       },
       {
         "id": "ر-3",
         "question": "سؤال 3 لحرف ر",
-        "answer": "اجابة حرف ر"
+        "answer": "اجابة حرف ر",
+        "aliases": []
       },
       {
         "id": "ر-4",
         "question": "سؤال 4 لحرف ر",
-        "answer": "اجابة حرف ر"
+        "answer": "اجابة حرف ر",
+        "aliases": []
       }
     ],
     "ز": [
       {
         "id": "ز-1",
         "question": "سؤال 1 لحرف ز",
-        "answer": "اجابة حرف ز"
+        "answer": "اجابة حرف ز",
+        "aliases": []
       },
       {
         "id": "ز-2",
         "question": "سؤال 2 لحرف ز",
-        "answer": "اجابة حرف ز"
+        "answer": "اجابة حرف ز",
+        "aliases": []
       },
       {
         "id": "ز-3",
         "question": "سؤال 3 لحرف ز",
-        "answer": "اجابة حرف ز"
+        "answer": "اجابة حرف ز",
+        "aliases": []
       },
       {
         "id": "ز-4",
         "question": "سؤال 4 لحرف ز",
-        "answer": "اجابة حرف ز"
+        "answer": "اجابة حرف ز",
+        "aliases": []
       }
     ],
     "س": [
       {
         "id": "س-1",
         "question": "سؤال 1 لحرف س",
-        "answer": "اجابة حرف س"
+        "answer": "اجابة حرف س",
+        "aliases": []
       },
       {
         "id": "س-2",
         "question": "سؤال 2 لحرف س",
-        "answer": "اجابة حرف س"
+        "answer": "اجابة حرف س",
+        "aliases": []
       },
       {
         "id": "س-3",
         "question": "سؤال 3 لحرف س",
-        "answer": "اجابة حرف س"
+        "answer": "اجابة حرف س",
+        "aliases": []
       },
       {
         "id": "س-4",
         "question": "سؤال 4 لحرف س",
-        "answer": "اجابة حرف س"
+        "answer": "اجابة حرف س",
+        "aliases": []
       }
     ],
     "ش": [
       {
         "id": "ش-1",
         "question": "سؤال 1 لحرف ش",
-        "answer": "اجابة حرف ش"
+        "answer": "اجابة حرف ش",
+        "aliases": []
       },
       {
         "id": "ش-2",
         "question": "سؤال 2 لحرف ش",
-        "answer": "اجابة حرف ش"
+        "answer": "اجابة حرف ش",
+        "aliases": []
       },
       {
         "id": "ش-3",
         "question": "سؤال 3 لحرف ش",
-        "answer": "اجابة حرف ش"
+        "answer": "اجابة حرف ش",
+        "aliases": []
       },
       {
         "id": "ش-4",
         "question": "سؤال 4 لحرف ش",
-        "answer": "اجابة حرف ش"
+        "answer": "اجابة حرف ش",
+        "aliases": []
       }
     ],
     "ص": [
       {
         "id": "ص-1",
         "question": "سؤال 1 لحرف ص",
-        "answer": "اجابة حرف ص"
+        "answer": "اجابة حرف ص",
+        "aliases": []
       },
       {
         "id": "ص-2",
         "question": "سؤال 2 لحرف ص",
-        "answer": "اجابة حرف ص"
+        "answer": "اجابة حرف ص",
+        "aliases": []
       },
       {
         "id": "ص-3",
         "question": "سؤال 3 لحرف ص",
-        "answer": "اجابة حرف ص"
+        "answer": "اجابة حرف ص",
+        "aliases": []
       },
       {
         "id": "ص-4",
         "question": "سؤال 4 لحرف ص",
-        "answer": "اجابة حرف ص"
+        "answer": "اجابة حرف ص",
+        "aliases": []
       }
     ],
     "ض": [
       {
         "id": "ض-1",
         "question": "سؤال 1 لحرف ض",
-        "answer": "اجابة حرف ض"
+        "answer": "اجابة حرف ض",
+        "aliases": []
       },
       {
         "id": "ض-2",
         "question": "سؤال 2 لحرف ض",
-        "answer": "اجابة حرف ض"
+        "answer": "اجابة حرف ض",
+        "aliases": []
       },
       {
         "id": "ض-3",
         "question": "سؤال 3 لحرف ض",
-        "answer": "اجابة حرف ض"
+        "answer": "اجابة حرف ض",
+        "aliases": []
       },
       {
         "id": "ض-4",
         "question": "سؤال 4 لحرف ض",
-        "answer": "اجابة حرف ض"
+        "answer": "اجابة حرف ض",
+        "aliases": []
       }
     ],
     "ط": [
       {
         "id": "ط-1",
         "question": "سؤال 1 لحرف ط",
-        "answer": "اجابة حرف ط"
+        "answer": "اجابة حرف ط",
+        "aliases": []
       },
       {
         "id": "ط-2",
         "question": "سؤال 2 لحرف ط",
-        "answer": "اجابة حرف ط"
+        "answer": "اجابة حرف ط",
+        "aliases": []
       },
       {
         "id": "ط-3",
         "question": "سؤال 3 لحرف ط",
-        "answer": "اجابة حرف ط"
+        "answer": "اجابة حرف ط",
+        "aliases": []
       },
       {
         "id": "ط-4",
         "question": "سؤال 4 لحرف ط",
-        "answer": "اجابة حرف ط"
+        "answer": "اجابة حرف ط",
+        "aliases": []
       }
     ],
     "ظ": [
       {
         "id": "ظ-1",
         "question": "سؤال 1 لحرف ظ",
-        "answer": "اجابة حرف ظ"
+        "answer": "اجابة حرف ظ",
+        "aliases": []
       },
       {
         "id": "ظ-2",
         "question": "سؤال 2 لحرف ظ",
-        "answer": "اجابة حرف ظ"
+        "answer": "اجابة حرف ظ",
+        "aliases": []
       },
       {
         "id": "ظ-3",
         "question": "سؤال 3 لحرف ظ",
-        "answer": "اجابة حرف ظ"
+        "answer": "اجابة حرف ظ",
+        "aliases": []
       },
       {
         "id": "ظ-4",
         "question": "سؤال 4 لحرف ظ",
-        "answer": "اجابة حرف ظ"
+        "answer": "اجابة حرف ظ",
+        "aliases": []
       }
     ],
     "ع": [
       {
         "id": "ع-1",
         "question": "سؤال 1 لحرف ع",
-        "answer": "اجابة حرف ع"
+        "answer": "اجابة حرف ع",
+        "aliases": []
       },
       {
         "id": "ع-2",
         "question": "سؤال 2 لحرف ع",
-        "answer": "اجابة حرف ع"
+        "answer": "اجابة حرف ع",
+        "aliases": []
       },
       {
         "id": "ع-3",
         "question": "سؤال 3 لحرف ع",
-        "answer": "اجابة حرف ع"
+        "answer": "اجابة حرف ع",
+        "aliases": []
       },
       {
         "id": "ع-4",
         "question": "سؤال 4 لحرف ع",
-        "answer": "اجابة حرف ع"
+        "answer": "اجابة حرف ع",
+        "aliases": []
       }
     ],
     "غ": [
       {
         "id": "غ-1",
         "question": "سؤال 1 لحرف غ",
-        "answer": "اجابة حرف غ"
+        "answer": "اجابة حرف غ",
+        "aliases": []
       },
       {
         "id": "غ-2",
         "question": "سؤال 2 لحرف غ",
-        "answer": "اجابة حرف غ"
+        "answer": "اجابة حرف غ",
+        "aliases": []
       },
       {
         "id": "غ-3",
         "question": "سؤال 3 لحرف غ",
-        "answer": "اجابة حرف غ"
+        "answer": "اجابة حرف غ",
+        "aliases": []
       },
       {
         "id": "غ-4",
         "question": "سؤال 4 لحرف غ",
-        "answer": "اجابة حرف غ"
+        "answer": "اجابة حرف غ",
+        "aliases": []
       }
     ],
     "ف": [
       {
         "id": "ف-1",
         "question": "سؤال 1 لحرف ف",
-        "answer": "اجابة حرف ف"
+        "answer": "اجابة حرف ف",
+        "aliases": []
       },
       {
         "id": "ف-2",
         "question": "سؤال 2 لحرف ف",
-        "answer": "اجابة حرف ف"
+        "answer": "اجابة حرف ف",
+        "aliases": []
       },
       {
         "id": "ف-3",
         "question": "سؤال 3 لحرف ف",
-        "answer": "اجابة حرف ف"
+        "answer": "اجابة حرف ف",
+        "aliases": []
       },
       {
         "id": "ف-4",
         "question": "سؤال 4 لحرف ف",
-        "answer": "اجابة حرف ف"
+        "answer": "اجابة حرف ف",
+        "aliases": []
       }
     ],
     "ق": [
       {
         "id": "ق-1",
         "question": "سؤال 1 لحرف ق",
-        "answer": "اجابة حرف ق"
+        "answer": "اجابة حرف ق",
+        "aliases": []
       },
       {
         "id": "ق-2",
         "question": "سؤال 2 لحرف ق",
-        "answer": "اجابة حرف ق"
+        "answer": "اجابة حرف ق",
+        "aliases": []
       },
       {
         "id": "ق-3",
         "question": "سؤال 3 لحرف ق",
-        "answer": "اجابة حرف ق"
+        "answer": "اجابة حرف ق",
+        "aliases": []
       },
       {
         "id": "ق-4",
         "question": "سؤال 4 لحرف ق",
-        "answer": "اجابة حرف ق"
+        "answer": "اجابة حرف ق",
+        "aliases": []
       }
     ],
     "ك": [
       {
         "id": "ك-1",
         "question": "سؤال 1 لحرف ك",
-        "answer": "اجابة حرف ك"
+        "answer": "اجابة حرف ك",
+        "aliases": []
       },
       {
         "id": "ك-2",
         "question": "سؤال 2 لحرف ك",
-        "answer": "اجابة حرف ك"
+        "answer": "اجابة حرف ك",
+        "aliases": []
       },
       {
         "id": "ك-3",
         "question": "سؤال 3 لحرف ك",
-        "answer": "اجابة حرف ك"
+        "answer": "اجابة حرف ك",
+        "aliases": []
       },
       {
         "id": "ك-4",
         "question": "سؤال 4 لحرف ك",
-        "answer": "اجابة حرف ك"
+        "answer": "اجابة حرف ك",
+        "aliases": []
       }
     ],
     "ل": [
       {
         "id": "ل-1",
         "question": "سؤال 1 لحرف ل",
-        "answer": "اجابة حرف ل"
+        "answer": "اجابة حرف ل",
+        "aliases": []
       },
       {
         "id": "ل-2",
         "question": "سؤال 2 لحرف ل",
-        "answer": "اجابة حرف ل"
+        "answer": "اجابة حرف ل",
+        "aliases": []
       },
       {
         "id": "ل-3",
         "question": "سؤال 3 لحرف ل",
-        "answer": "اجابة حرف ل"
+        "answer": "اجابة حرف ل",
+        "aliases": []
       },
       {
         "id": "ل-4",
         "question": "سؤال 4 لحرف ل",
-        "answer": "اجابة حرف ل"
+        "answer": "اجابة حرف ل",
+        "aliases": []
       }
     ],
     "م": [
       {
         "id": "م-1",
         "question": "سؤال 1 لحرف م",
-        "answer": "اجابة حرف م"
+        "answer": "اجابة حرف م",
+        "aliases": []
       },
       {
         "id": "م-2",
         "question": "سؤال 2 لحرف م",
-        "answer": "اجابة حرف م"
+        "answer": "اجابة حرف م",
+        "aliases": []
       },
       {
         "id": "م-3",
         "question": "سؤال 3 لحرف م",
-        "answer": "اجابة حرف م"
+        "answer": "اجابة حرف م",
+        "aliases": []
       },
       {
         "id": "م-4",
         "question": "سؤال 4 لحرف م",
-        "answer": "اجابة حرف م"
+        "answer": "اجابة حرف م",
+        "aliases": []
       }
     ],
     "ن": [
       {
         "id": "ن-1",
         "question": "سؤال 1 لحرف ن",
-        "answer": "اجابة حرف ن"
+        "answer": "اجابة حرف ن",
+        "aliases": []
       },
       {
         "id": "ن-2",
         "question": "سؤال 2 لحرف ن",
-        "answer": "اجابة حرف ن"
+        "answer": "اجابة حرف ن",
+        "aliases": []
       },
       {
         "id": "ن-3",
         "question": "سؤال 3 لحرف ن",
-        "answer": "اجابة حرف ن"
+        "answer": "اجابة حرف ن",
+        "aliases": []
       },
       {
         "id": "ن-4",
         "question": "سؤال 4 لحرف ن",
-        "answer": "اجابة حرف ن"
+        "answer": "اجابة حرف ن",
+        "aliases": []
       }
     ],
     "ه": [
       {
         "id": "ه-1",
         "question": "سؤال 1 لحرف ه",
-        "answer": "اجابة حرف ه"
+        "answer": "اجابة حرف ه",
+        "aliases": []
       },
       {
         "id": "ه-2",
         "question": "سؤال 2 لحرف ه",
-        "answer": "اجابة حرف ه"
+        "answer": "اجابة حرف ه",
+        "aliases": []
       },
       {
         "id": "ه-3",
         "question": "سؤال 3 لحرف ه",
-        "answer": "اجابة حرف ه"
+        "answer": "اجابة حرف ه",
+        "aliases": []
       },
       {
         "id": "ه-4",
         "question": "سؤال 4 لحرف ه",
-        "answer": "اجابة حرف ه"
+        "answer": "اجابة حرف ه",
+        "aliases": []
       }
     ],
     "و": [
       {
         "id": "و-1",
         "question": "سؤال 1 لحرف و",
-        "answer": "اجابة حرف و"
+        "answer": "اجابة حرف و",
+        "aliases": []
       },
       {
         "id": "و-2",
         "question": "سؤال 2 لحرف و",
-        "answer": "اجابة حرف و"
+        "answer": "اجابة حرف و",
+        "aliases": []
       },
       {
         "id": "و-3",
         "question": "سؤال 3 لحرف و",
-        "answer": "اجابة حرف و"
+        "answer": "اجابة حرف و",
+        "aliases": []
       },
       {
         "id": "و-4",
         "question": "سؤال 4 لحرف و",
-        "answer": "اجابة حرف و"
+        "answer": "اجابة حرف و",
+        "aliases": []
       }
     ],
     "ي": [
       {
         "id": "ي-1",
         "question": "سؤال 1 لحرف ي",
-        "answer": "اجابة حرف ي"
+        "answer": "اجابة حرف ي",
+        "aliases": []
       },
       {
         "id": "ي-2",
         "question": "سؤال 2 لحرف ي",
-        "answer": "اجابة حرف ي"
+        "answer": "اجابة حرف ي",
+        "aliases": []
       },
       {
         "id": "ي-3",
         "question": "سؤال 3 لحرف ي",
-        "answer": "اجابة حرف ي"
+        "answer": "اجابة حرف ي",
+        "aliases": []
       },
       {
         "id": "ي-4",
         "question": "سؤال 4 لحرف ي",
-        "answer": "اجابة حرف ي"
+        "answer": "اجابة حرف ي",
+        "aliases": []
       }
     ]
   }
