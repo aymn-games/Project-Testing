@@ -355,6 +355,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function playCorrectSound() { [523, 659, 784, 1046].forEach(function (f, i) { playTone(f, 0.18, 'sine', i * 0.08, 0.1, 0.002); }); }
     function playRoundWinSound() { [392, 523, 659, 784, 1046, 1318].forEach(function (f, i) { playTone(f, 0.22, 'triangle', i * 0.09, 0.11); }); }
     function playReshuffleSound() { playTone(360, 0.16, 'triangle', 0, 0.09); playTone(240, 0.2, 'triangle', 0.12, 0.09); }
+    // نقرة تنبيه خفيفة لآخر ٥ ثوانٍ من مؤقت الإجابة -- تتكرر كل ثانية،
+    // بلا نغمة صاخبة (مطابقة لهدوء باقي أصوات اللعبة).
+    function playTimerTickSound() { playTone(880, 0.08, 'square', 0, 0.05, 0.002); }
 
     // -------------------------- أدوات مساعدة --------------------------
     function getTeamPlayers(team) {
@@ -862,6 +865,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (payload.name !== ANSWER_TIMER_NAME) return;
             var el2 = el('lc-answer-timer-val');
             if (el2) el2.textContent = formatTimerLabel(payload.remainingSeconds);
+            if (payload.remainingSeconds <= 5 && payload.remainingSeconds >= 1) playTimerTickSound();
         });
         AGP.events.on('timer:ended', function (payload) {
             if (payload.name !== ANSWER_TIMER_NAME) return;
@@ -915,7 +919,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _connectionWinner = won ? team : null;
         _boardFullNoWinner = !won && full;
         _lastAnswererPlayer = answererPlayer ? { id: answererPlayer.id, name: playerLabel(answererPlayer), team: team } : null;
-        _answerModal = { question: question ? question.text : '', teamName: teamName, teamColor: teamColor, playerName: playerName };
+        _answerModal = {
+            question: question ? question.text : '', teamName: teamName, teamColor: teamColor, playerName: playerName,
+            avatarUrl: answererPlayer ? answererPlayer.avatarUrl : null,
+            playerInitial: answererPlayer ? playerInitial(answererPlayer) : '؟'
+        };
         renderGameScreen();
     }
 
@@ -1041,6 +1049,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var activeLetter = (_activeIdx != null) ? _cellLetters[_activeIdx] : null;
 
+        // مؤقت الإجابة صار لوحة كبيرة وواضحة أعلى منتصف رقعة اللعب نفسها
+        // (مساحة فاضية بالتصميم فوق الخلايا مباشرة)، بدل شارة صغيرة
+        // بزاوية خلية الحرف بالشريط الجانبي.
+        var showAnswerTimer = activeLetter && _settings.answerTimerSeconds && !_answerTimerExpired;
+        var boardTimerHtml = showAnswerTimer
+            ? '<div class="lc-board-timer"><span id="lc-answer-timer-val">' + formatTimerLabel(_settings.answerTimerSeconds) + '</span></div>'
+            : '';
+
         var badgeHexHtml;
         if (activeLetter) {
             badgeHexHtml = '<div class="lc-badge-hex-inner"><div class="lc-badge-hex-letter">' + escapeHtml(activeLetter) + '</div><div class="lc-badge-hex-caption">الحرف</div></div>';
@@ -1048,13 +1064,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             badgeHexHtml = '<div class="lc-badge-hex-inner"><button type="button" id="lc-round-badge-btn" class="lc-badge-hex-btn"><div class="lc-badge-hex-round">' + _round + '</div><div class="lc-badge-hex-caption">إعادة توزيع</div></button></div>';
         }
 
-        // فوق خلية الحرف: مؤقت الإجابة أثناء وجود سؤال مفتوح (لو مفعّل
-        // بالإعدادات)، وإلا رقم الجولة الحالية -- عنصر واحد بنفس المكان،
-        // يختفي المؤقت تلقائياً بمجرد اعتماد إجابة أو انتهاء وقتها.
-        var showAnswerTimer = activeLetter && _settings.answerTimerSeconds && !_answerTimerExpired;
-        var topBadgeLabelHtml = showAnswerTimer
-            ? '<span id="lc-answer-timer-val">' + formatTimerLabel(_settings.answerTimerSeconds) + '</span>'
-            : 'الجولة ' + _round;
+        var topBadgeLabelHtml = 'الجولة ' + _round;
 
         var questionInnerHtml;
         if (activeLetter) {
@@ -1083,12 +1093,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var answerModalHtml = '';
         if (_answerModal) {
+            var modalHasAvatar = !!_answerModal.avatarUrl;
+            var modalAvatarStyle = modalHasAvatar
+                ? 'background-image:url(' + escapeAttr(_answerModal.avatarUrl) + ');background-size:cover;background-position:center;'
+                : 'background:' + _answerModal.teamColor + ';';
             answerModalHtml =
                 '<div class="lc-answer-modal-overlay">' +
                     '<div class="lc-answer-modal" style="border-color:' + _answerModal.teamColor + ';">' +
                         '<div class="lc-answer-modal-label">الإجابة الصحيحة</div>' +
                         '<div class="lc-answer-modal-question">' + escapeHtml(_answerModal.question) + '</div>' +
                         '<div class="lc-answer-modal-divider"></div>' +
+                        '<div class="lc-avatar-circle lc-avatar-xl lc-answer-modal-avatar" style="' + modalAvatarStyle + 'border-color:' + _answerModal.teamColor + ';">' + (modalHasAvatar ? '' : escapeHtml(_answerModal.playerInitial)) + '</div>' +
                         '<div class="lc-answer-modal-player">' + escapeHtml(_answerModal.playerName) + '</div>' +
                         '<div class="lc-answer-modal-team" style="color:' + _answerModal.teamColor + ';">' + escapeHtml(_answerModal.teamName) + '</div>' +
                         '<button type="button" id="lc-answer-modal-done" class="lc-answer-modal-done" style="background:' + _answerModal.teamColor + ';">إكمال</button>' +
@@ -1140,9 +1155,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div class="lc-game-screen">' +
                 introHtml +
                 gameBackgroundSvg() +
+                boardTimerHtml +
                 cellsHtml +
 
-                '<div class="lc-round-label' + (showAnswerTimer ? ' lc-round-label-timer' : '') + '">' + topBadgeLabelHtml + '</div>' +
+                '<div class="lc-round-label">' + topBadgeLabelHtml + '</div>' +
                 '<div class="lc-badge-hex">' + badgeHexHtml + '</div>' +
 
                 '<button type="button" id="lc-open-settings-btn" class="lc-side-panel-btn-settings">الإعدادات</button>' +
