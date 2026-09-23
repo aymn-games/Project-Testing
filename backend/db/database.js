@@ -35,6 +35,10 @@
  *                    بين كل من عنده صلاحية إدارتها، صف واحد ثابت يُستبدَل
  *                    بالكامل مع كل حفظ من لوحة admin-questions.html —
  *                    راجع backend/letters-cell/letters-cell-questions-service.js
+ *   platform_stats_cache — أرقام حقيقية مُجمَّعة لقسم "الأرقام" بالصفحة
+ *                    الرئيسية (حسابات مسجّلة، استريمرز نشطين، مشاهدين...)،
+ *                    محسوبة من الجداول الفعلية ومخزَّنة مؤقتاً (٣ أيام) —
+ *                    راجع backend/stats/platform-stats-service.js
  * ==========================================================================
  */
 
@@ -226,6 +230,16 @@ db.exec(`
         data TEXT NOT NULL,
         updated_by INTEGER,
         updated_at INTEGER NOT NULL
+    );
+
+    -- أرقام "المنصة/الاستريمرز/اللاعبين" الحقيقية بالصفحة الرئيسية — صف
+    -- واحد ثابت (id = 1) يخزّن آخر حساب فعلي، ويُعاد حسابه من قاعدة
+    -- البيانات مرة كل ٣ أيام كحد أقصى (راجع backend/stats/platform-
+    -- stats-service.js) بدل حساب مُكلف بكل زيارة للصفحة الرئيسية.
+    CREATE TABLE IF NOT EXISTS platform_stats_cache (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        data TEXT NOT NULL,
+        computed_at INTEGER NOT NULL
     );
 `);
 

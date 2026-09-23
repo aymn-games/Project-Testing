@@ -1150,5 +1150,127 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
   }).catch(function () {});
 })();
 </script>
+<!-- تصحيح أرقام قسم "الأرقام" (المنصة/الاستريمرز/اللاعبين) بأرقام حقيقية
+     من السيرفر (مخزَّنة مؤقتاً ٣ أيام) + عدد الألعاب حياً من games.html،
+     وتحويل باقي أرقام الصفحة الرئيسية للأرقام الإنجليزية. لا نعدّل مصدر
+     المكوّن التفاعلي نفسه (خارج نطاق تعديل آمن)، فنصحّح الناتج المعروض
+     بعد كل عرض/إعادة عرض عبر MutationObserver يبقى يقظاً حتى مع تبديل
+     التبويبات. -->
+<script>
+(function () {
+  var ARABIC_DIGIT_MAP = { '٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9','٬':',','٫':'.','٪':'%' };
+  var ARABIC_CHARS_RE = /[٠-٩٬٫٪]/;
+  var ARABIC_CHARS_RE_G = /[٠-٩٬٫٪]/g;
+
+  function toEnglishDigits(str) {
+    return String(str).replace(ARABIC_CHARS_RE_G, function (c) { return ARABIC_DIGIT_MAP[c] || c; });
+  }
+
+  function convertRemainingArabicDigits(root) {
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (node) {
+        var p = node.parentElement;
+        if (!p) return NodeFilter.FILTER_REJECT;
+        var tag = p.tagName;
+        if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT' || tag === 'TEXTAREA') return NodeFilter.FILTER_REJECT;
+        return ARABIC_CHARS_RE.test(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+      }
+    });
+    var node, touched = [];
+    while ((node = walker.nextNode())) touched.push(node);
+    touched.forEach(function (n) { n.nodeValue = toEnglishDigits(n.nodeValue); });
+  }
+
+  function findStatCard(labelText) {
+    var spans = document.querySelectorAll('span.sc-interp');
+    for (var i = 0; i < spans.length; i++) {
+      if (spans[i].textContent.trim() === labelText) {
+        var card = spans[i].parentElement ? spans[i].parentElement.parentElement : null;
+        if (!card || !card.children[0]) return null;
+        return { valueSpan: card.children[0].querySelector('.sc-interp'), labelSpan: spans[i] };
+      }
+    }
+    return null;
+  }
+
+  function fmtInt(n) { return Number(n || 0).toLocaleString('en-US'); }
+
+  var _realStats = null;
+  var _gamesCount = null;
+
+  function applyKnownCorrections() {
+    if (_realStats) {
+      [
+        ['حساب مسجّل في المنصة', fmtInt(_realStats.totalAccounts)],
+        ['استريمر نشط هالشهر', fmtInt(_realStats.activeStreamersThisMonth)],
+        ['بث مباشر كل يوم', fmtInt(_realStats.avgDailyLiveStreams)],
+        ['دقيقة متوسط الجلسة', fmtInt(_realStats.avgSessionMinutes)],
+        ['مليون مشاهد شهرياً', String(_realStats.monthlyViewersMillions)]
+      ].forEach(function (pair) {
+        var hit = findStatCard(pair[0]);
+        if (hit && hit.valueSpan) hit.valueSpan.textContent = pair[1];
+      });
+
+      // "جولة لعب أسبوعياً" -> إجمالي فعلي كلي بدل تقدير أسبوعي، لعدم
+      // وجود سجل مؤرَّخ يسمح بحساب "هالأسبوع" تحديداً حالياً.
+      var roundsHit = findStatCard('جولة لعب أسبوعياً');
+      if (roundsHit && roundsHit.valueSpan) {
+        roundsHit.valueSpan.textContent = fmtInt(_realStats.totalRoundsPlayed);
+        roundsHit.labelSpan.textContent = 'جولة لعب مكتملة';
+      }
+    }
+
+    if (_gamesCount != null) {
+      var gamesHit = findStatCard('لعبة جاهزة للبث');
+      if (gamesHit && gamesHit.valueSpan) gamesHit.valueSpan.textContent = fmtInt(_gamesCount);
+    }
+  }
+
+  var _applying = false;
+  function runAll() {
+    if (_applying) return;
+    _applying = true;
+    try {
+      applyKnownCorrections();
+      convertRemainingArabicDigits(document.body);
+    } finally {
+      setTimeout(function () { _applying = false; }, 0);
+    }
+  }
+
+  // مهم: نربط الـ observer بـ document.body فقط بعد التأكد إن المحتوى
+  // الحقيقي (بعد hydration) صار جاهزاً -- ربطه فوراً عند تحليل هذا
+  // السكربت قد يلتقط جسم الصفحة المؤقت (شاشة التحميل) قبل أن يستبدله
+  // المُشغِّل بالجسم النهائي، فيراقب عنصراً صار منفصلاً عن الصفحة ولا
+  // يلتقط أي تحديث لاحق (تبديل تبويبات وغيره).
+  var tries3 = 0;
+  var readyTimer = setInterval(function () {
+    tries3++;
+    if (document.querySelector('span.sc-interp') || tries3 > 80) {
+      clearInterval(readyTimer);
+      var observer = new MutationObserver(function () { runAll(); });
+      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+      runAll();
+    }
+  }, 250);
+
+  if (window.AGPAuth && window.AGPAuth.getPlatformStats) {
+    window.AGPAuth.getPlatformStats().then(function (result) {
+      if (result && result.success && result.stats) {
+        _realStats = result.stats;
+        runAll();
+      }
+    }).catch(function () {});
+  }
+
+  fetch('games.html', { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (html) {
+    var m = /var REAL_GAMES\s*=\s*(\[[\s\S]*?\]);/.exec(html);
+    if (!m) return;
+    var arr = JSON.parse(m[1]);
+    _gamesCount = arr.length;
+    runAll();
+  }).catch(function () {});
+})();
+</script>
 </body>
 </html>

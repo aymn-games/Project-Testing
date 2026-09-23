@@ -496,6 +496,11 @@ function adminClearSiteTheme() {
     return request('/api/admin/theme/clear', { method: 'POST' });
 }
 
+/** أرقام حقيقية لقسم "الأرقام" بالصفحة الرئيسية — عام، بلا تسجيل دخول. */
+function getPlatformStats() {
+    return request('/api/public/platform-stats', { method: 'GET' });
+}
+
 /**
  * مسودة بنك أسئلة "خلية الحروف" المشتركة (backend/letters-cell/
  * letters-cell-questions-service.js) — أي أدمن أو مستخدم عنده صلاحية
@@ -618,6 +623,7 @@ global.AGPAuth = {
     adminClearSiteTheme: adminClearSiteTheme,
     getLettersCellQuestionsDraft: getLettersCellQuestionsDraft,
     saveLettersCellQuestionsDraft: saveLettersCellQuestionsDraft,
+    getPlatformStats: getPlatformStats,
     requireAuth: requireAuth,
     requireAdmin: requireAdmin
 };

@@ -17,6 +17,7 @@ var supportersService = require('../supporters/supporters-service');
 var siteThemeService = require('../theme/site-theme-service');
 var partnersService = require('../partners/partners-service');
 var lettersCellQuestionsService = require('../letters-cell/letters-cell-questions-service');
+var platformStatsService = require('../stats/platform-stats-service');
 var logger = require('../utils/logger');
 var config = require('../config');
 var response = require('./response');
@@ -143,6 +144,9 @@ var ROUTES = [
   { method: 'GET', path: '/api/public/top-streamers', requireAuth: false, handler: handleTopStreamers },
   { method: 'GET', path: '/api/public/top-players-wins', requireAuth: false, handler: handleTopPlayersByWins },
   { method: 'GET', path: '/api/public/top-players-hours', requireAuth: false, handler: handleTopPlayersByHours },
+  // ---- أرقام حقيقية لقسم "الأرقام" بالصفحة الرئيسية — عام، مخزَّن مؤقتاً
+  // (٣ أيام) بالسيرفر — راجع backend/stats/platform-stats-service.js
+  { method: 'GET', path: '/api/public/platform-stats', requireAuth: false, handler: handleGetPlatformStats },
   // ---- إحصائيات لوحة الأدمن
   { method: 'GET', path: '/api/admin/stats/streamers', requireAuth: true, requireAdmin: true, handler: handleAdminStreamerStats },
   { method: 'GET', path: '/api/admin/stats/users', requireAuth: true, requireAdmin: true, handler: handleAdminUserStats },
@@ -612,6 +616,12 @@ function handleTopPlayersByWins(req, res) {
 function handleTopPlayersByHours(req, res) {
   var limit = Math.min(50, Math.max(1, parseInt(getQueryParam(req, 'limit'), 10) || 20));
   sendJson(res, 200, { success: true, players: pointsService.getTopPlayersByHours(limit) });
+}
+
+/** أرقام حقيقية لقسم "الأرقام" بالصفحة الرئيسية — عام، مخزَّن مؤقتاً بالسيرفر. */
+function handleGetPlatformStats(req, res) {
+  var result = platformStatsService.getCachedStats();
+  sendJson(res, 200, { success: true, stats: result.stats, computedAt: result.computedAt });
 }
 
 /** الأدمن فقط — إحصائيات الاستريمرز المجمَّعة. */
