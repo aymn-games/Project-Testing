@@ -1065,12 +1065,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             questionInnerHtml = '<span class="lc-question-placeholder">اضغط على أي خلية لعرض سؤالها</span>';
         }
 
-        var creditRowHtml = activeLetter
-            ? '<div class="lc-credit-row">' +
-                '<button type="button" id="lc-credit-team1" class="lc-credit-btn" style="background:' + _settings.team1Color + ';">' + escapeHtml(_settings.team1Name) + '</button>' +
-                '<button type="button" id="lc-credit-team2" class="lc-credit-btn" style="background:' + _settings.team2Color + ';">' + escapeHtml(_settings.team2Name) + '</button>' +
-              '</div>'
-            : '';
+        // زر التصحيح اليدوي (علامة صح) صار جنب صف كل فريق تحت، بدل صف
+        // أزرار منفصل داخل تبويب السؤال -- يظهر فقط أثناء سؤال مفتوح.
+        function creditCheckBtnHtml(team) {
+            if (!activeLetter) return '';
+            var color = (team === TEAM1) ? _settings.team1Color : _settings.team2Color;
+            return '<button type="button" id="lc-credit-team' + team + '" class="lc-team-row-credit-btn" style="background:' + color + ';" title="احتساب الإجابة لهذا الفريق">✓</button>';
+        }
 
         var introHtml = _showIntro
             ? '<div class="lc-intro-dim"></div><div class="lc-intro-logo">' + logo3dHtml() + '</div>'
@@ -1152,11 +1153,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="lc-question-box"><div class="lc-question-text">' + questionInnerHtml + '</div></div>' +
 
                 answerModalHtml +
-                creditRowHtml +
                 reshuffleToastHtml +
 
-                '<div class="lc-team-row lc-team-row-1"><span class="lc-team-row-badge">1</span><span class="lc-team-row-name">' + escapeHtml(_settings.team1Name) + '</span><span class="lc-team-row-score">' + score1 + '</span></div>' +
-                '<div class="lc-team-row lc-team-row-2"><span class="lc-team-row-badge">2</span><span class="lc-team-row-name">' + escapeHtml(_settings.team2Name) + '</span><span class="lc-team-row-score">' + score2 + '</span></div>' +
+                '<div class="lc-team-row lc-team-row-1"><span class="lc-team-row-badge">1</span><span class="lc-team-row-name">' + escapeHtml(_settings.team1Name) + '</span><span class="lc-team-row-score">' + score1 + '</span>' + creditCheckBtnHtml(TEAM1) + '</div>' +
+                '<div class="lc-team-row lc-team-row-2"><span class="lc-team-row-badge">2</span><span class="lc-team-row-name">' + escapeHtml(_settings.team2Name) + '</span><span class="lc-team-row-score">' + score2 + '</span>' + creditCheckBtnHtml(TEAM2) + '</div>' +
 
                 '<div class="lc-footer-logo">' +
                     '<div class="lc-footer-mark"><span class="lc-footer-mark-dot lc-footer-mark-dot-1"></span><span class="lc-footer-mark-dot lc-footer-mark-dot-2"></span><span class="lc-footer-mark-dot lc-footer-mark-dot-3"></span></div>' +

@@ -230,15 +230,15 @@ body.lc-active { scrollbar-width: none; }
 .lc-badge-hex-btn .lc-badge-hex-round { font-size: clamp(16px,1.6vw,26px); }
 .lc-badge-hex-btn .lc-badge-hex-caption { opacity: 0.85; }
 
-.lc-credit-row { position: absolute; left: 78.22%; top: 65%; width: 20.21%; display: flex; gap: clamp(6px,1vw,12px); box-sizing: border-box; padding: 0 clamp(10px,1.8vw,26px); }
-.lc-credit-btn { flex: 1; min-width: 0; padding: clamp(6px,0.9vw,12px) 4px; border: none; border-radius: 10px; color: #fef4f4; font-family: inherit; font-weight: 900; font-size: clamp(11px,1vw,15px); cursor: pointer; }
-
 .lc-team-row { position: absolute; left: 79.43%; width: 17.78%; height: 5.585%; display: flex; align-items: center; justify-content: space-between; gap: 6px; box-sizing: border-box; padding: 0 clamp(8px,1.3vw,18px); }
 .lc-team-row-1 { top: 78.46%; }
 .lc-team-row-2 { top: 86%; }
 .lc-team-row-badge { flex-shrink: 0; width: clamp(16px,1.4vw,20px); height: clamp(16px,1.4vw,20px); border-radius: 50%; background: rgba(254,244,244,0.2); color: #fef4f4; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: clamp(9px,0.8vw,12px); }
 .lc-team-row-name { flex: 1; min-width: 0; color: #fef4f4; font-family: inherit; font-weight: 900; font-size: clamp(10px,1vw,15px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lc-team-row-score { flex-shrink: 0; min-width: 1.4em; text-align: center; font-weight: 900; color: #fef4f4; font-size: clamp(13px,1.3vw,20px); }
+/* زر التصحيح اليدوي (✓) -- جنب كل صف فريق، يظهر فقط أثناء سؤال مفتوح
+   (بدل صف الأزرار الكبير الي كان داخل تبويب السؤال). */
+.lc-team-row-credit-btn { flex-shrink: 0; width: clamp(18px,1.6vw,24px); height: clamp(18px,1.6vw,24px); border-radius: 50%; border: none; color: #fef4f4; font-weight: 900; font-size: clamp(10px,0.9vw,13px); line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
 
 .lc-footer-logo { position: absolute; left: 78.22%; top: 93%; width: 20.21%; display: flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box; padding: 0 8px; }
 .lc-footer-mark { flex-shrink: 0; width: clamp(20px,1.8vw,26px); height: clamp(18px,1.6vw,23px); clip-path: polygon(50% 0%, 100% 100%, 0% 100%); background: linear-gradient(135deg,#5B0E1A,#E2C8A8); position: relative; }
