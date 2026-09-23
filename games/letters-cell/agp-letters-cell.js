@@ -292,6 +292,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _usedQuestions = {}; // letter -> { [questionIndex]: true } -- طول المباراة كاملة
     var _activeIdx = null; // فهرس الخلية المفتوحة حالياً (سؤال معروض بلا اعتماد بعد)
     var _answerTimerExpired = false; // ينتهي وقت الإجابة على الخلية المفتوحة حالياً -- يوقف التصحيح التلقائي (الأزرار اليدوية تبقى شغالة)
+    var _timeUpModalOpen = false; // نافذة "انتهى الوقت" -- تُغلق فقط باختيار المضيف تمديد دقيقة (بنفس السؤال أو سؤال جديد)
+    var _currentAnswerTimerSeconds = 0; // مدة العدّاد المعروضة حالياً (تختلف عن answerTimerSeconds الأساسي بعد تمديد الدقيقة الإضافية)
     var _connectionWinner = null;
     var _boardFullNoWinner = false;
     var _answerModal = null; // { question, teamName, teamColor, playerName }
@@ -859,6 +861,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         drawBoardLetters();
         _activeIdx = null;
         _answerTimerExpired = false;
+        _timeUpModalOpen = false;
         _connectionWinner = null;
         _boardFullNoWinner = false;
         _answerModal = null;
@@ -884,11 +887,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         setTimeout(function () { _showIntro = false; if (_screen === 'game') renderGameScreen(); }, 1600);
     }
 
-    /** يبدأ مؤقت الإجابة للخلية المفتوحة حالياً -- بدون أثر لو answerTimerSeconds = 0 (مؤقت مطفأ). */
-    function startAnswerTimer() {
+    /**
+     * يبدأ مؤقت الإجابة للخلية المفتوحة حالياً -- بدون أثر لو answerTimerSeconds
+     * = 0 (مؤقت مطفأ). seconds اختياري: يُمرَّر فقط عند تمديد دقيقة إضافية بعد
+     * نافذة "انتهى الوقت" (خلاف ذلك تُستخدم مدة الإعدادات answerTimerSeconds).
+     */
+    function startAnswerTimer(seconds) {
         _answerTimerExpired = false;
+        _timeUpModalOpen = false;
+        _currentAnswerTimerSeconds = seconds || _settings.answerTimerSeconds;
         AGP.timerManager.stop(ANSWER_TIMER_NAME);
-        if (_settings.answerTimerSeconds) AGP.timerManager.start(ANSWER_TIMER_NAME, _settings.answerTimerSeconds);
+        if (_currentAnswerTimerSeconds) AGP.timerManager.start(ANSWER_TIMER_NAME, _currentAnswerTimerSeconds);
     }
     function stopAnswerTimer() {
         AGP.timerManager.stop(ANSWER_TIMER_NAME);
@@ -910,8 +919,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (payload.name !== ANSWER_TIMER_NAME) return;
             if (_activeIdx == null) return;
             _answerTimerExpired = true;
+            _timeUpModalOpen = true;
             if (_screen === 'game') renderGameScreen();
         });
+    }
+
+    /** المضيف يختار إكمال بنفس السؤال والجواب بدقيقة إضافية بعد نافذة "انتهى الوقت". */
+    function handleTimeUpSameQuestion() {
+        _timeUpModalOpen = false;
+        startAnswerTimer(60);
+        renderGameScreen();
+    }
+
+    /** المضيف يختار سؤالاً جديداً لنفس الحرف -- بنفس مدة الإعدادات الأساسية (answerTimerSeconds) لا بدقيقة ثابتة. */
+    function handleTimeUpNewQuestion() {
+        _timeUpModalOpen = false;
+        if (_activeIdx != null) _cellQuestions[_activeIdx] = pickQuestionForLetter(_cellLetters[_activeIdx]);
+        startAnswerTimer(_settings.answerTimerSeconds);
+        renderGameScreen();
     }
 
     function formatTimerLabel(totalSeconds) {
@@ -920,6 +945,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function selectCell(idx) {
+        if (_timeUpModalOpen) return; // لازم يحسم اختيار نافذة "انتهى الوقت" على الخلية الحالية أول
         if (_cellStates[idx] !== 0) return;
         if (_activeIdx === idx) return;
         playSelectSound();
@@ -928,6 +954,37 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _activeIdx = idx;
         startAnswerTimer();
         renderGameScreen();
+        playLetterRevealAnimation(_cellLetters[idx]);
+    }
+
+    /**
+     * انيميشن بصري بحت (لا يمس منطق اللعبة): الحرف المختار يكبر بمنتصف
+     * الشاشة ٣ ثوانٍ ثم يطير لمكان شارة الحرف الحالي فوق صندوق السؤال
+     * (نفس موضع .lc-badge-hex نهائياً)، فيتطابق تماماً مع الشارة الحقيقية
+     * المعروضة أصلاً هناك عند وصوله. عنصر منفصل يُضاف يدوياً للـDOM (خارج
+     * قالب renderGameScreen) حتى يستمر الانيميشن حتى لو حصل rerender بسيط
+     * بينهما (نادر) دون قطعه في منتصف الحركة.
+     */
+    function playLetterRevealAnimation(letter) {
+        var screen = document.querySelector('.lc-game-screen');
+        if (!screen) return;
+
+        // خلفية معتمة ومغبشة طول مدة الانيميشن -- تختفي بالضبط لحظة وصول
+        // الحرف لمكانه النهائي فتظهر الشاشة كاملة وواضحة من جديد.
+        var backdrop = document.createElement('div');
+        backdrop.className = 'lc-letter-reveal-backdrop';
+        screen.appendChild(backdrop);
+        backdrop.addEventListener('animationend', function () {
+            if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+        });
+
+        var overlay = document.createElement('div');
+        overlay.className = 'lc-letter-reveal';
+        overlay.textContent = letter;
+        screen.appendChild(overlay);
+        overlay.addEventListener('animationend', function () {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        });
     }
 
     /** تصحيح يدوي احتياطي من المضيف -- يُستخدم لو ما حد كتب الجواب حرفياً بالشات. */
@@ -990,6 +1047,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         drawBoardLetters();
         _activeIdx = null;
         _answerTimerExpired = false;
+        _timeUpModalOpen = false;
         _lastAnswererPlayer = null;
         _reshuffleNotice = (reason === 'manual')
             ? 'أعاد المضيف توزيع الرقعة -- أحرف وأسئلة جديدة'
@@ -1045,7 +1103,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         _round = 1; _roundWins1 = 0; _roundWins2 = 0; _usedQuestions = {};
         _cellLetters = []; _cellStates = []; _cellQuestions = [];
-        _activeIdx = null; _answerTimerExpired = false; _connectionWinner = null; _boardFullNoWinner = false;
+        _activeIdx = null; _answerTimerExpired = false; _timeUpModalOpen = false; _connectionWinner = null; _boardFullNoWinner = false;
         _answerModal = null; _lastAnswererPlayer = null; _settingsOpen = false; _inviteOpen = false;
 
         renderSettingsScreen();
@@ -1058,7 +1116,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.player.getAllPlayers().slice().forEach(function (p) { AGP.player.removePlayer(p.id); });
         _round = 1; _roundWins1 = 0; _roundWins2 = 0; _usedQuestions = {};
         _cellLetters = []; _cellStates = []; _cellQuestions = [];
-        _activeIdx = null; _answerTimerExpired = false; _connectionWinner = null; _boardFullNoWinner = false;
+        _activeIdx = null; _answerTimerExpired = false; _timeUpModalOpen = false; _connectionWinner = null; _boardFullNoWinner = false;
         _answerModal = null; _lastAnswererPlayer = null; _settingsOpen = false; _inviteOpen = false;
         AGP.scoreManager.reset();
         renderLobbyScreen();
@@ -1076,8 +1134,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var layout = CELL_LAYOUT[idx];
             var bg = (st === TEAM1) ? _settings.team1Color : (st === TEAM2) ? _settings.team2Color : DEFAULT_BG;
             var color = (st === 0) ? '#1b0d0d' : '#fef4f4';
-            var borderColor = (st === 0) ? '#ffffff' : bg;
             var isActive = _activeIdx === idx;
+            var borderColor = isActive ? '#22c55e' : (st === 0) ? '#ffffff' : bg;
             var clickable = (st === 0);
             return '<div class="lc-hex-cell-wrap lc-hex-clip' + (clickable ? ' lc-hex-clickable' : '') + (isActive ? ' lc-hex-active' : '') + '" ' +
                 'data-idx="' + idx + '" ' +
@@ -1093,7 +1151,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // بزاوية خلية الحرف بالشريط الجانبي.
         var showAnswerTimer = activeLetter && _settings.answerTimerSeconds && !_answerTimerExpired;
         var boardTimerHtml = showAnswerTimer
-            ? '<div class="lc-board-timer"><span id="lc-answer-timer-val">' + formatTimerLabel(_settings.answerTimerSeconds) + '</span></div>'
+            ? '<div class="lc-board-timer"><span id="lc-answer-timer-val">' + formatTimerLabel(_currentAnswerTimerSeconds || _settings.answerTimerSeconds) + '</span></div>'
             : '';
 
         var badgeHexHtml;
@@ -1147,6 +1205,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         '<div class="lc-answer-modal-player">' + escapeHtml(_answerModal.playerName) + '</div>' +
                         '<div class="lc-answer-modal-team" style="background:' + _answerModal.teamColor + ';">' + escapeHtml(_answerModal.teamName) + '</div>' +
                         '<button type="button" id="lc-answer-modal-done" class="lc-answer-modal-done" style="background:' + _answerModal.teamColor + ';">إكمال</button>' +
+                    '</div>' +
+                '</div>';
+        }
+
+        var timeUpModalHtml = '';
+        if (_timeUpModalOpen) {
+            timeUpModalHtml =
+                '<div class="lc-timeup-modal-overlay">' +
+                    '<div class="lc-timeup-modal">' +
+                        '<div class="lc-timeup-modal-icon">⏰</div>' +
+                        '<div class="lc-timeup-modal-title">انتهى الوقت!</div>' +
+                        '<div class="lc-timeup-modal-sub">تبون تكملون دقيقة إضافية؟</div>' +
+                        '<button type="button" id="lc-timeup-same-btn" class="lc-timeup-modal-btn lc-timeup-modal-btn-primary">إكمال بنفس السؤال (+دقيقة)</button>' +
+                        '<button type="button" id="lc-timeup-new-btn" class="lc-timeup-modal-btn lc-timeup-modal-btn-secondary">سؤال جديد لنفس الحرف (' + escapeHtml(formatTimerLabel(_settings.answerTimerSeconds)) + ')</button>' +
                     '</div>' +
                 '</div>';
         }
@@ -1209,6 +1281,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="lc-question-box"><div class="lc-question-text">' + questionInnerHtml + '</div></div>' +
 
                 answerModalHtml +
+                timeUpModalHtml +
                 reshuffleToastHtml +
 
                 '<div class="lc-team-row lc-team-row-1"><span class="lc-team-row-badge">1</span><span class="lc-team-row-name">' + escapeHtml(_settings.team1Name) + '</span><span class="lc-team-row-score">' + score1 + '</span>' + creditCheckBtnHtml(TEAM1) + '</div>' +
@@ -1300,6 +1373,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         if (_answerModal) {
             el('lc-answer-modal-done').addEventListener('click', closeAnswerModal);
+        }
+
+        if (_timeUpModalOpen) {
+            el('lc-timeup-same-btn').addEventListener('click', handleTimeUpSameQuestion);
+            el('lc-timeup-new-btn').addEventListener('click', handleTimeUpNewQuestion);
         }
 
         if (_settingsOpen) {

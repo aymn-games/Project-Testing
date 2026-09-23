@@ -201,8 +201,8 @@ body.lc-active { scrollbar-width: none; }
 
 .lc-hex-cell-wrap { position: absolute; padding: 4px; box-sizing: border-box; }
 .lc-hex-cell-wrap.lc-hex-clickable { cursor: pointer; }
-.lc-hex-cell-wrap.lc-hex-active { filter: drop-shadow(0 0 8px rgba(254,244,244,0.9)); }
-.lc-hex-cell-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: clamp(15px,2vw,26px); font-weight: 900; transition: background 0.25s ease; }
+.lc-hex-cell-wrap.lc-hex-active { filter: drop-shadow(0 0 10px rgba(34,197,94,0.95)); }
+.lc-hex-cell-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: clamp(16.5px,2.2vw,28.6px); font-weight: 900; transition: background 0.25s ease; }
 
 .lc-reshuffle-toast { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 120; animation: lc-intro-dim 1.8s ease forwards; }
 .lc-reshuffle-toast-box { background: rgba(27,13,13,0.92); border: 2px solid var(--lc-beige); border-radius: 14px; padding: 14px 24px; color: #fef4f4; font-weight: 800; font-size: clamp(13px,1.3vw,17px); text-align: center; max-width: 70%; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
@@ -225,7 +225,26 @@ body.lc-active { scrollbar-width: none; }
 /* مؤقت الإجابة -- لوحة كبيرة وواضحة أعلى منتصف رقعة اللعب (فوق الخلايا
    مباشرة)، بمساحة فاضية أصلاً بالتصميم. */
 .lc-board-timer { position: absolute; left: 30%; top: 5%; width: 40%; text-align: center; z-index: 3; }
-.lc-board-timer span { display: inline-block; padding: clamp(6px, calc(0.8 * var(--lc-cvw)), 16px) clamp(20px, calc(2.4 * var(--lc-cvw)), 46px); border-radius: 999px; background: var(--lc-remove); color: #fef4f4; font-weight: 900; font-size: clamp(20px, calc(2.6 * var(--lc-cvw)), 48px); box-shadow: 0 12px 28px rgba(0,0,0,0.5); border: clamp(2px, calc(0.25 * var(--lc-cvw)), 4px) solid #fef4f4; animation: lc-timer-pulse 1s ease-in-out infinite; }
+.lc-board-timer span { display: inline-block; padding: clamp(6px, calc(0.8 * var(--lc-cvw)), 16px) clamp(20px, calc(2.4 * var(--lc-cvw)), 46px); border-radius: 999px; background: var(--lc-beige); color: #1b0d0d; font-weight: 900; font-size: clamp(20px, calc(2.6 * var(--lc-cvw)), 48px); box-shadow: 0 12px 28px rgba(0,0,0,0.5); border: clamp(2px, calc(0.25 * var(--lc-cvw)), 4px) solid #5B0E1A; animation: lc-timer-pulse 1s ease-in-out infinite; }
+/* انيميشن ظهور الحرف المختار: يكبر بمنتصف الشاشة ٣ ثوانٍ ثم يطير لمكان
+   شارة الحرف الحالي (.lc-badge-hex) فوق صندوق السؤال -- إحداثيات ووصول
+   النهاية تطابق تماماً موضع/حجم .lc-badge-hex-letter الحقيقي أدناه.
+   خلفية الرقعة تعتم وتتغبّش طول مدة الانيميشن، وتزول بالضبط لحظة وصول
+   الحرف فتظهر الشاشة كاملة وواضحة من جديد. */
+.lc-letter-reveal-backdrop { position: absolute; inset: 0; z-index: 149; background: rgba(10,5,5,0.6); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); pointer-events: none; animation: lc-letter-reveal-backdrop-fade 3.6s ease forwards; }
+@keyframes lc-letter-reveal-backdrop-fade {
+    0% { opacity: 0; }
+    10% { opacity: 1; }
+    83% { opacity: 1; }
+    100% { opacity: 0; }
+}
+.lc-letter-reveal { position: absolute; z-index: 150; pointer-events: none; color: #fef4f4; font-weight: 900; font-size: clamp(18px,1.8vw,30px); text-shadow: 0 10px 30px rgba(0,0,0,0.6); animation: lc-letter-reveal-fly 3.6s cubic-bezier(0.6,0,0.4,1) forwards; }
+@keyframes lc-letter-reveal-fly {
+    0% { top: 50%; left: 50%; transform: translate(-50%,-50%) scale(7); opacity: 0; }
+    8% { opacity: 1; }
+    83% { top: 50%; left: 50%; transform: translate(-50%,-50%) scale(7); opacity: 1; }
+    100% { top: 37.985%; left: 88.435%; transform: translate(-50%,-50%) scale(1); opacity: 1; }
+}
 .lc-badge-hex-inner { font-size: clamp(11px,1vw,16px); line-height: 1.3; }
 .lc-badge-hex-letter { font-size: clamp(18px,1.8vw,30px); color: #0F0E0E; }
 .lc-badge-hex-caption { font-size: clamp(9px,0.75vw,12px); opacity: 0.85; color: #121212; }
@@ -268,7 +287,7 @@ body.lc-active { scrollbar-width: none; }
 .lc-answer-modal-overlay { position: fixed; inset: 0; background: rgba(10,5,5,0.65); display: flex; align-items: center; justify-content: center; z-index: 150; }
 .lc-answer-modal { width: 800px; height: 800px; max-width: 94vw; max-height: 94vh; background: #1b0d0d; border-radius: 32px; box-shadow: 0 46px 100px rgba(0,0,0,0.55); box-sizing: border-box; padding: 42px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; font-family: 'Cairo', sans-serif; border-width: 3px; border-style: solid; }
 .lc-answer-modal-label { font-size: 24px; color: #E2C8A8; font-weight: 900; letter-spacing: 0.3px; }
-.lc-answer-modal-question { font-size: 32px; font-weight: 900; color: #fef4f4; line-height: 1.45; }
+.lc-answer-modal-question { font-size: 16px; font-weight: 900; color: #fef4f4; line-height: 1.45; }
 /* الإجابة نفسها -- أبرز عنصر بالنافذة (سبب وجودها أصلاً)، بلون ذهبي
    مميّز يفرّقها بصرياً عن نص السؤال. */
 .lc-answer-modal-answer { font-size: 42px; font-weight: 900; color: #f5c76a; line-height: 1.3; }
@@ -279,6 +298,17 @@ body.lc-active { scrollbar-width: none; }
    خلفية النافذة الغامقة، الذي كان يختفي مع ألوان الفرق الغامقة. */
 .lc-answer-modal-team { display: inline-block; padding: 8px 26px; border-radius: 999px; font-size: 20px; font-weight: 900; color: #fef4f4; }
 .lc-answer-modal-done { margin-top: 10px; padding: 16px 50px; border: none; border-radius: 16px; color: #fef4f4; font-family: inherit; font-weight: 900; font-size: 22px; cursor: pointer; }
+
+/* نافذة "انتهى الوقت" -- تظهر لحظة انتهاء مؤقت الإجابة، وتوقف التصحيح
+   التلقائي حتى يختار المضيف تمديد دقيقة (بنفس السؤال أو سؤال جديد). */
+.lc-timeup-modal-overlay { position: fixed; inset: 0; background: rgba(10,5,5,0.7); display: flex; align-items: center; justify-content: center; z-index: 160; }
+.lc-timeup-modal { width: 400px; height: 400px; max-width: 92vw; max-height: 92vh; background: #1b0d0d; border: 3px solid var(--lc-beige); border-radius: 28px; box-shadow: 0 40px 90px rgba(0,0,0,0.55); box-sizing: border-box; padding: 32px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; font-family: 'Cairo', sans-serif; }
+.lc-timeup-modal-icon { font-size: 54px; line-height: 1; }
+.lc-timeup-modal-title { font-size: 28px; font-weight: 900; color: #fef4f4; }
+.lc-timeup-modal-sub { font-size: 15px; font-weight: 700; color: #d9c9b8; margin-bottom: 8px; }
+.lc-timeup-modal-btn { width: 100%; padding: 14px; border: none; border-radius: 14px; font-family: inherit; font-weight: 900; font-size: 15px; cursor: pointer; }
+.lc-timeup-modal-btn-primary { background: var(--lc-beige); color: #1b0d0d; }
+.lc-timeup-modal-btn-secondary { background: rgba(254,244,244,0.12); color: #fef4f4; border: 1.5px solid rgba(254,244,244,0.3); }
 
 /* درج إعدادات داخل اللعب */
 .lc-ingame-drawer { position: absolute; left: 78.22%; top: 6%; width: 21%; max-height: 75%; overflow-y: auto; background: var(--lc-drawer-bg); border: 2px solid var(--lc-beige); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; gap: 14px; font-family: 'Cairo', sans-serif; z-index: 100; }
