@@ -274,7 +274,7 @@ body.pc-active{
    تحته شبكة لاعبيه (بطاقات AGP.playerCard القياسية، حجم 60px الافتراضي).
 --------------------------------------------------------------------- */
 #pc-lobby{
-    width:min(1100px,94vw);
+    width:min(1400px,96vw);
     margin:0 auto;
     padding:44px 24px 40px;
     box-sizing:border-box;
@@ -329,8 +329,9 @@ body.pc-active{
 
 .pc-lobby-grid{
     display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
+    grid-template-columns:repeat(2,277px);
+    gap:8px;
+    justify-content:center;
 }
 .pc-lobby-card-wrap{ position:relative; }
 .pc-lobby-remove-x{

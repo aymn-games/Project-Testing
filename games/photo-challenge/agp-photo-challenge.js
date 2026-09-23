@@ -347,11 +347,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return null;
     }
 
-    // بطاقة اللاعب المشتركة (agp-player-card.js) -- الحجم الافتراضي 60px
+    // بطاقة اللاعب المشتركة (agp-player-card.js) -- نفس حجم بطاقات خلية الحروف
     // (لوبي-قياسي-v1)، مع الإطار (showFrame:true) بنفس قاعدة المنصة باللوبي.
     function playerCardHtml(p) {
         if (AGP.playerCard) {
-            return AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', outClass: 'pc-pcard-wrap' });
+            return AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', outClass: 'pc-pcard-wrap', size: 43, width: 277, height: 51 });
         }
         var avatar = p.avatarUrl ? escapeAttr(p.avatarUrl) : '';
         return '<span class="pc-pcard-wrap">' + (avatar ? '<img src="' + avatar + '">' : '') + escapeHtml(p.name || p.id) + '</span>';
