@@ -216,7 +216,7 @@ body.lc-active { scrollbar-width: none; }
 .lc-cell-question-label { position: absolute; left: 78.22%; top: 29%; width: 20.21%; display: flex; align-items: center; gap: 8px; }
 .lc-cell-question-label span { font-size: clamp(13px,1.1vw,16px); font-weight: 900; color: #E2C8A8; }
 .lc-question-box { position: absolute; left: 78.22%; top: 41.71%; width: 20.21%; height: 24%; box-sizing: border-box; padding: clamp(8px,1.4vw,20px) clamp(10px,1.8vw,26px); overflow: hidden; }
-.lc-question-text { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; color: #fef4f4; font-family: inherit; font-weight: 800; font-size: clamp(16px,1.7vw,25px); line-height: 1.4; overflow: hidden; }
+.lc-question-text { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; color: #fef4f4; font-family: inherit; font-weight: 800; font-size: clamp(20px,2.3vw,33px); line-height: 1.4; overflow: hidden; }
 .lc-question-placeholder { color: #d9c9b8; opacity: 0.85; }
 
 .lc-round-label { position: absolute; left: 85.43%; top: 29%; width: 6.01%; text-align: center; color: #1B0D0D; font-weight: 900; font-size: clamp(8px, calc(1 * var(--lc-cvw)), 15px); white-space: nowrap; }
@@ -315,8 +315,8 @@ body.lc-active { scrollbar-width: none; }
     width: 100%; min-height: 100vh; overflow-y: auto; box-sizing: border-box; font-family: 'Cairo', sans-serif;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px; position: relative;
 }
-.lc-roundwinner-screen { gap: 26px; background: radial-gradient(ellipse at center, #3a1310 0%, #1b0d0d 65%); }
-.lc-roundsummary-screen, .lc-result-screen { background: radial-gradient(ellipse at top, #3a1310 0%, #1b0d0d 60%); }
+.lc-roundwinner-screen { gap: 26px; background: radial-gradient(ellipse at center, #2a0d0a 0%, #0f0706 60%); }
+.lc-roundsummary-screen, .lc-result-screen { background: radial-gradient(ellipse at top, #2a0d0a 0%, #0f0706 55%); }
 
 .lc-roundwinner-pulse-wrap { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; mask-image: radial-gradient(circle at center, black 0%, transparent 70%); -webkit-mask-image: radial-gradient(circle at center, black 0%, transparent 70%); }
 .lc-roundwinner-pulse { position: absolute; inset: 0; opacity: 0.25; animation: lc-intro-dim 1.4s ease-in-out infinite alternate; }
@@ -327,8 +327,12 @@ body.lc-active { scrollbar-width: none; }
 
 .lc-roundwinner-head { text-align: center; font-family: 'Baloo Bhaijaan 2', sans-serif; position: relative; z-index: 1; }
 .lc-roundwinner-caption { font-size: 14px; font-weight: 800; color: var(--lc-text-tertiary); letter-spacing: 2px; margin-bottom: 6px; font-family: 'Cairo', sans-serif; }
-.lc-roundwinner-name { font-size: clamp(40px,7vw,76px); font-weight: 900; line-height: 1; text-shadow: 0 0 22px rgba(255,255,255,0.4), 0 6px 24px rgba(0,0,0,0.6); }
-.lc-roundwinner-sub { font-size: 16px; font-weight: 800; color: #fef4f4; margin-top: 8px; font-family: 'Cairo', sans-serif; }
+/* نص أبيض ثابت دائماً (بدل لون الفريق مباشرة) لضمان الوضوح فوق الخلفية
+   الغامقة مهما كان لون الفريق نفسه غامقاً؛ هوية الفريق تظهر بشريط اللون
+   الصغير تحت الاسم بدلاً من تلوين النص الكبير نفسه. */
+.lc-roundwinner-name { font-size: clamp(80px,14vw,152px); font-weight: 900; line-height: 1; color: #fef4f4; max-width: 92%; text-shadow: 0 0 32px rgba(255,255,255,0.45), 0 8px 32px rgba(0,0,0,0.65); }
+.lc-roundwinner-accent { width: 90px; height: 6px; border-radius: 999px; margin: 12px auto 0; }
+.lc-roundwinner-sub { font-size: 16px; font-weight: 800; color: #fef4f4; margin-top: 10px; font-family: 'Cairo', sans-serif; }
 
 .lc-avatar-row { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; position: relative; z-index: 1; }
 .lc-avatar-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
@@ -350,16 +354,18 @@ body.lc-active { scrollbar-width: none; }
 .lc-round-end-caption { font-size: 13px; font-weight: 800; color: var(--lc-text-tertiary); letter-spacing: 2px; position: relative; z-index: 1; }
 .lc-score-compare { display: flex; gap: 40px; align-items: center; position: relative; z-index: 1; }
 .lc-score-compare-item { text-align: center; }
-.lc-score-compare-val { font-weight: 900; }
-.lc-score-compare-name { font-size: 14px; color: var(--lc-beige); margin-top: 4px; font-weight: 700; }
+.lc-score-compare-val { font-weight: 900; color: #fef4f4; }
+/* شارة بخلفية لون الفريق ونص أبيض ثابت -- نفس نمط شارة الفريق بتبويب
+   الإجابة الصحيحة، لضمان الوضوح مهما كان لون الفريق غامقاً. */
+.lc-score-compare-name { display: inline-block; padding: 4px 14px; border-radius: 999px; font-size: 14px; color: #fef4f4; margin-top: 8px; font-weight: 800; }
 .lc-score-compare-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.2); }
 .lc-roundsummary-cta { margin-top: 8px; padding: 14px 34px; border: none; border-radius: 12px; color: #fef4f4; font-family: inherit; font-weight: 900; font-size: 16px; cursor: pointer; }
 
 /* ==========================================================================
    6) شاشة النتيجة النهائية
    ========================================================================== */
-.lc-result-headline { font-size: clamp(38px,6vw,68px); font-weight: 900; text-align: center; position: relative; z-index: 1; text-shadow: 0 0 22px rgba(255,255,255,0.4), 0 4px 20px rgba(0,0,0,0.5); }
-.lc-result-score-val { font-size: clamp(28px,4vw,44px); }
+.lc-result-headline { font-size: clamp(76px,12vw,136px); font-weight: 900; color: #fef4f4; text-align: center; max-width: 92%; position: relative; z-index: 1; text-shadow: 0 0 32px rgba(255,255,255,0.45), 0 6px 28px rgba(0,0,0,0.55); }
+.lc-result-score-val { font-size: clamp(56px,8vw,88px); }
 .lc-result-winners-card { border-radius: 16px; padding: 20px 26px; display: flex; flex-direction: column; gap: 12px; min-width: 280px; position: relative; z-index: 1; box-shadow: 0 20px 40px rgba(0,0,0,0.4); background: var(--lc-drawer-bg); border-width: 2px; border-style: solid; }
 .lc-result-winners-title { font-size: 13px; font-weight: 800; color: var(--lc-beige); text-align: center; }
 .lc-result-winners-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }

@@ -1314,7 +1314,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="lc-roundwinner-pulse-wrap"><div class="lc-roundwinner-pulse" style="background:' + color + ';"></div></div>' +
                 '<div class="lc-roundwinner-head lc-hxpop">' +
                     '<div class="lc-roundwinner-caption">خط متصل! 🎉</div>' +
-                    '<div class="lc-roundwinner-name" style="color:' + color + ';">' + escapeHtml(name) + '</div>' +
+                    '<div class="lc-roundwinner-name">' + escapeHtml(name) + '</div>' +
+                    '<div class="lc-roundwinner-accent" style="background:' + color + ';"></div>' +
                     '<div class="lc-roundwinner-sub">يفوز بالجولة ' + _round + '</div>' +
                 '</div>' +
                 '<div class="lc-avatar-row lc-hxpop-delay">' + avatarsHtml + '</div>' +
@@ -1353,11 +1354,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="lc-decor-wrap lc-decor-narrow"><div class="lc-decor-inner lc-decor-inner-result">' + decorHexesHtml() + '</div></div>' +
                 logo3dHtml('lc-logo-small') +
                 '<div class="lc-round-end-caption">انتهت المباراة</div>' +
-                '<div class="lc-result-headline" style="color:' + winningColor + ';">' + escapeHtml(winningName) + ' فاز! 🏆</div>' +
+                '<div class="lc-result-headline">' + escapeHtml(winningName) + ' فاز! 🏆</div>' +
+                '<div class="lc-roundwinner-accent" style="background:' + winningColor + ';"></div>' +
                 '<div class="lc-score-compare">' +
-                    '<div class="lc-score-compare-item"><div class="lc-score-compare-val lc-result-score-val" style="color:' + _settings.team1Color + ';">' + _roundWins1 + '</div><div class="lc-score-compare-name">' + escapeHtml(_settings.team1Name) + '</div></div>' +
+                    '<div class="lc-score-compare-item"><div class="lc-score-compare-val lc-result-score-val">' + _roundWins1 + '</div><div class="lc-score-compare-name" style="background:' + _settings.team1Color + ';">' + escapeHtml(_settings.team1Name) + '</div></div>' +
                     '<div class="lc-score-compare-divider"></div>' +
-                    '<div class="lc-score-compare-item"><div class="lc-score-compare-val lc-result-score-val" style="color:' + _settings.team2Color + ';">' + _roundWins2 + '</div><div class="lc-score-compare-name">' + escapeHtml(_settings.team2Name) + '</div></div>' +
+                    '<div class="lc-score-compare-item"><div class="lc-score-compare-val lc-result-score-val">' + _roundWins2 + '</div><div class="lc-score-compare-name" style="background:' + _settings.team2Color + ';">' + escapeHtml(_settings.team2Name) + '</div></div>' +
                 '</div>' +
                 '<div class="lc-result-winners-card" style="border-color:' + winningColor + ';">' +
                     '<div class="lc-result-winners-title">اللاعبون الفائزون</div>' +
