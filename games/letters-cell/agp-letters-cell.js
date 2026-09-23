@@ -814,6 +814,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function goToGame() {
         wireAnswerTimerListeners();
+        // إغلاق باب الانضمام/التبديل بكلمة الدخول بمجرد بدء المباراة --
+        // يبقى مفتوحاً فقط باللوبي. لا يمس هذا مسار "رقم فريق + إجابة
+        // صحيحة بنفس الرسالة" لمشاهد لسا ما انضم أصلاً (tryHandleAutoAnswer)،
+        // ذاك يبقى شغالاً طول المباراة كما هو مطلوب.
+        _registrationOpen = false;
         _round = 1;
         _roundWins1 = 0; _roundWins2 = 0;
         _usedQuestions = {};
@@ -920,7 +925,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _boardFullNoWinner = !won && full;
         _lastAnswererPlayer = answererPlayer ? { id: answererPlayer.id, name: playerLabel(answererPlayer), team: team } : null;
         _answerModal = {
-            question: question ? question.text : '', teamName: teamName, teamColor: teamColor, playerName: playerName,
+            question: question ? question.text : '', answer: question ? question.answer : '', teamName: teamName, teamColor: teamColor, playerName: playerName,
             avatarUrl: answererPlayer ? answererPlayer.avatarUrl : null,
             playerInitial: answererPlayer ? playerInitial(answererPlayer) : '؟'
         };
@@ -1102,10 +1107,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '<div class="lc-answer-modal" style="border-color:' + _answerModal.teamColor + ';">' +
                         '<div class="lc-answer-modal-label">الإجابة الصحيحة</div>' +
                         '<div class="lc-answer-modal-question">' + escapeHtml(_answerModal.question) + '</div>' +
+                        '<div class="lc-answer-modal-answer">' + escapeHtml(_answerModal.answer) + '</div>' +
                         '<div class="lc-answer-modal-divider"></div>' +
                         '<div class="lc-avatar-circle lc-avatar-xl lc-answer-modal-avatar" style="' + modalAvatarStyle + 'border-color:' + _answerModal.teamColor + ';">' + (modalHasAvatar ? '' : escapeHtml(_answerModal.playerInitial)) + '</div>' +
                         '<div class="lc-answer-modal-player">' + escapeHtml(_answerModal.playerName) + '</div>' +
-                        '<div class="lc-answer-modal-team" style="color:' + _answerModal.teamColor + ';">' + escapeHtml(_answerModal.teamName) + '</div>' +
+                        '<div class="lc-answer-modal-team" style="background:' + _answerModal.teamColor + ';">' + escapeHtml(_answerModal.teamName) + '</div>' +
                         '<button type="button" id="lc-answer-modal-done" class="lc-answer-modal-done" style="background:' + _answerModal.teamColor + ';">إكمال</button>' +
                     '</div>' +
                 '</div>';
