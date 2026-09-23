@@ -1168,6 +1168,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</div>';
 
         wireGameScreenHandlers();
+        fitQuestionText();
+    }
+
+    /**
+     * يصغّر خط نص السؤال تدريجياً (خطوة 1px) لو تجاوز ارتفاع صندوقه —
+     * أسئلة طويلة استثنائية تبقى مقروءة بالكامل بدل أن تُقصّ، بينما تبقى
+     * أغلب الأسئلة (الأقصر) بالحجم الأكبر الافتراضي المحدَّد بـCSS.
+     */
+    function fitQuestionText() {
+        var textEl = document.querySelector('.lc-question-text');
+        if (!textEl || !textEl.textContent.trim()) return;
+        textEl.style.fontSize = '';
+        var minSize = 13;
+        var size = parseFloat(getComputedStyle(textEl).fontSize);
+        var guard = 0;
+        while (textEl.scrollHeight > textEl.clientHeight && size > minSize && guard < 20) {
+            size -= 1;
+            textEl.style.fontSize = size + 'px';
+            guard++;
+        }
     }
 
     function drawerRosterHtml(team) {

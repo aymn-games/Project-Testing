@@ -216,7 +216,7 @@ body.lc-active { scrollbar-width: none; }
 .lc-cell-question-label { position: absolute; left: 78.22%; top: 29%; width: 20.21%; display: flex; align-items: center; gap: 8px; }
 .lc-cell-question-label span { font-size: clamp(13px,1.1vw,16px); font-weight: 900; color: #E2C8A8; }
 .lc-question-box { position: absolute; left: 78.22%; top: 41.71%; width: 20.21%; height: 24%; box-sizing: border-box; padding: clamp(8px,1.4vw,20px) clamp(10px,1.8vw,26px); overflow: hidden; }
-.lc-question-text { width: 100%; height: 100%; color: #fef4f4; font-family: inherit; font-weight: 700; font-size: clamp(13px,1.2vw,18px); line-height: 1.35; overflow: hidden; }
+.lc-question-text { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; color: #fef4f4; font-family: inherit; font-weight: 800; font-size: clamp(16px,1.7vw,25px); line-height: 1.4; overflow: hidden; }
 .lc-question-placeholder { color: #d9c9b8; opacity: 0.85; }
 
 .lc-round-label { position: absolute; left: 85.43%; top: 29%; width: 6.01%; text-align: center; color: #1B0D0D; font-weight: 900; font-size: clamp(8px, calc(1 * var(--lc-cvw)), 15px); white-space: nowrap; }
