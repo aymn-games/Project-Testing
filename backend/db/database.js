@@ -31,6 +31,10 @@
  *   site_theme     — ثيم ألوان مؤقت للمناسبات (اليوم الوطني، يوم
  *                    التأسيس...)، صف واحد ثابت يُفعَّل/يُعطَّل من الأدمن
  *                    — راجع backend/theme/site-theme-service.js
+ *   letters_cell_questions_draft — مسودة بنك أسئلة "خلية الحروف" المشتركة
+ *                    بين كل من عنده صلاحية إدارتها، صف واحد ثابت يُستبدَل
+ *                    بالكامل مع كل حفظ من لوحة admin-questions.html —
+ *                    راجع backend/letters-cell/letters-cell-questions-service.js
  * ==========================================================================
  */
 
@@ -211,6 +215,17 @@ db.exec(`
         accent_2 TEXT,
         accent_pink TEXT,
         updated_at INTEGER
+    );
+
+    -- مسودة بنك أسئلة "خلية الحروف" المشتركة — صف واحد ثابت (id = 1)
+    -- يُستبدَل بالكامل مع كل حفظ. هذا هو ما تعرضه admin-questions.html
+    -- فعلياً (بدل نسخة محلية بالمتصفح فقط)، فتبقى الأسئلة المضافة محفوظة
+    -- ومرئية لأي أدمن آخر حتى قبل تنزيل questions-bank.json ورفعه لـGitHub.
+    CREATE TABLE IF NOT EXISTS letters_cell_questions_draft (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        data TEXT NOT NULL,
+        updated_by INTEGER,
+        updated_at INTEGER NOT NULL
     );
 `);
 

@@ -167,16 +167,18 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
 
     <div class="aq-panel">
         <div class="aq-hint">
-            هذه الصفحة تعدّل نسخة محلية بالمتصفح بس — أي تعديل ما يوصل للعبة
-            الفعلية إلا بعد ما تضغط <b>"⬇️ تنزيل ملف الأسئلة"</b> تحت، وترفع
-            الملف الناتج (<code>questions-bank.json</code>) لنفس مكان ملف
-            اللعبة بمستودع GitHub (استبدال الملف الحالي)، بنفس طريقة رفعك
-            المعتادة. فتح الصفحة يجيب لك تلقائياً آخر نسخة منشورة فعلياً
-            كنقطة بداية، فتقدر تكمل عليها مباشرة بدل ما تبدأ من الصفر كل مرة.
+            كل إضافة أو تعديل أو حذف يُحفظ فوراً بسيرفر المنصة (مو بمتصفحك
+            بس) — يبقى محفوظاً حتى لو حدّثت الصفحة، ويظهر مباشرة لأي أدمن
+            ثاني عنده نفس الصلاحية حتى لو دخل من جهاز مختلف. لكن هذا كله
+            يبقى "مسودة": ما توصل فعلياً للعبة الحقيقية إلا بعد ما تضغط
+            <b>"⬇️ تنزيل ملف الأسئلة"</b> تحت، وترفع الملف الناتج
+            (<code>questions-bank.json</code>) لنفس مكان ملف اللعبة
+            بمستودع GitHub (استبدال الملف الحالي)، بنفس طريقة رفعك المعتادة.
         </div>
     </div>
 
     <div class="aq-stats-row" id="aq-stats-row"></div>
+    <div class="aq-hint" id="aq-sync-status" style="margin:-8px 0 16px;"></div>
 
     <div class="aq-toolbar">
         <div class="aq-search-wrap" id="aq-search-wrap">
@@ -232,26 +234,70 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
         el('aq-status-success').style.display = 'none';
     }
 
-    function loadBankFromServer() {
+    function normalizeBankSource(src) {
+        src = (src && typeof src === 'object') ? src : {};
+        var bank = {};
+        ALPHABET_28.forEach(function (letter) {
+            var items = Array.isArray(src[letter]) ? src[letter] : [];
+            bank[letter] = items.map(function (q) {
+                return { id: q.id, question: q.question, answer: q.answer, aliases: Array.isArray(q.aliases) ? q.aliases : [] };
+            });
+        });
+        return bank;
+    }
+
+    function setSyncStatus(text) {
+        var elStatus = el('aq-sync-status');
+        if (elStatus) elStatus.textContent = text;
+    }
+
+    function formatSavedAt(ms) {
+        try { return new Date(ms).toLocaleString('ar-SA', { dateStyle: 'medium', timeStyle: 'short' }); }
+        catch (err) { return new Date(ms).toString(); }
+    }
+
+    /** يجيب آخر نسخة "منشورة فعلياً" (questions-bank.json) — مستقلة عن
+     * المسودة المشتركة بالسيرفر. تُستخدَم عند أول تحميل (لو ما فيه أي
+     * مسودة بعد) وعند الضغط على "إعادة تحميل من الملف المنشور". */
+    function loadPublishedFile() {
         return fetch('questions-bank.json', { cache: 'no-store' })
             .then(function (res) { return res.ok ? res.json() : null; })
-            .then(function (data) {
-                var src = (data && data.questions && typeof data.questions === 'object') ? data.questions : {};
-                _bank = {};
-                ALPHABET_28.forEach(function (letter) {
-                    var items = Array.isArray(src[letter]) ? src[letter] : [];
-                    _bank[letter] = items.map(function (q) {
-                        return { id: q.id, question: q.question, answer: q.answer, aliases: Array.isArray(q.aliases) ? q.aliases : [] };
-                    });
-                });
+            .then(function (data) { return normalizeBankSource(data && data.questions); })
+            .catch(function () { return null; });
+    }
+
+    /** تحميل أولي: المسودة المشتركة بالسيرفر (لو فيها أي حفظ سابق من أي
+     * أدمن) هي المصدر الأساسي، لأنها تعكس آخر تعديل فعلي حتى لو ما نزل
+     * ورفع لـGitHub بعد. غير ذلك (أول استخدام قبل أي حفظ) نرجع للملف
+     * المنشور كنقطة بداية، تماماً متل قبل. */
+    function loadBankFromServer() {
+        return window.AGPAuth.getLettersCellQuestionsDraft().then(function (result) {
+            if (result && result.success && result.draft) {
+                _bank = normalizeBankSource(result.draft.questions);
                 renderAll();
-            })
-            .catch(function () {
-                _bank = {};
-                ALPHABET_28.forEach(function (letter) { _bank[letter] = []; });
-                renderAll();
-                showError('تعذّر تحميل ملف الأسئلة الحالي (شبكة أو الملف مو موجود بعد) — تقدر تبدأ بإضافة أسئلة جديدة من الصفر.');
+                setSyncStatus('☁️ محمَّل من آخر مسودة محفوظة بالسيرفر — آخر حفظ: ' + formatSavedAt(result.draft.updatedAt));
+                return;
+            }
+            return loadPublishedFile().then(function (bank) {
+                if (bank) {
+                    _bank = bank;
+                    renderAll();
+                    setSyncStatus('📄 ما فيه أي مسودة محفوظة بعد — محمَّل من آخر نسخة منشورة فعلياً.');
+                } else {
+                    _bank = {};
+                    ALPHABET_28.forEach(function (letter) { _bank[letter] = []; });
+                    renderAll();
+                    showError('تعذّر تحميل ملف الأسئلة الحالي (شبكة أو الملف مو موجود بعد) — تقدر تبدأ بإضافة أسئلة جديدة من الصفر.');
+                }
             });
+        }).catch(function () {
+            return loadPublishedFile().then(function (bank) {
+                _bank = bank || {};
+                if (!bank) ALPHABET_28.forEach(function (letter) { _bank[letter] = []; });
+                renderAll();
+                showError('تعذّر الاتصال بسيرفر حفظ المسودات — التعديلات الحين محلية فقط بمتصفحك ولن تنحفظ لأدمن ثاني حتى يرجع الاتصال.');
+            });
+        });
     }
 
     function totalQuestions() {
@@ -311,6 +357,21 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
         '</div>';
     }
 
+    /** يحفظ _bank الحالية كمسودة مشتركة بالسيرفر — يُستدعى بعد كل إضافة/
+     * تعديل/حذف عشان تظهر فوراً لأي أدمن ثاني وتصمد أمام تحديث الصفحة. */
+    function persistDraft(onSuccessMsg) {
+        return window.AGPAuth.saveLettersCellQuestionsDraft(_bank).then(function (result) {
+            if (result && result.success) {
+                setSyncStatus('☁️ آخر حفظ بالسيرفر: ' + formatSavedAt(Date.now()));
+                showSuccess(onSuccessMsg);
+            } else {
+                showError('تم التعديل بالشاشة بس تعذّر حفظه بالسيرفر — أدمن ثاني ما بيشوفه، ولو حدّثت الصفحة بيضيع. جرّب مرة ثانية.');
+            }
+        }).catch(function () {
+            showError('تعذّر الاتصال بسيرفر حفظ المسودات — التعديل محلي فقط الحين ولو حدّثت الصفحة بيضيع.');
+        });
+    }
+
     function wireQuestionCardActions(container) {
         Array.prototype.forEach.call(container.querySelectorAll('.aq-edit-btn'), function (btn) {
             btn.addEventListener('click', function () { openForm(btn.getAttribute('data-letter'), btn.getAttribute('data-id')); });
@@ -324,7 +385,7 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
                 if (!window.confirm('تحذف السؤال "' + q.question + '"؟')) return;
                 _bank[letter] = _bank[letter].filter(function (x) { return x.id !== id; });
                 renderAll();
-                showSuccess('تم الحذف محلياً — لا تنسى تنزيل الملف وترفعه عشان يصير التغيير فعلي.');
+                persistDraft('تم الحذف وحفظه بالسيرفر — لا تنسى تنزيل الملف وترفعه عشان يصير التغيير فعلي باللعبة.');
             });
         });
     }
@@ -436,7 +497,7 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
             el('aq-search').value = '';
             el('aq-search-wrap').classList.remove('aq-has-term');
             renderAll();
-            showSuccess('تم الحفظ محلياً — لا تنسى تنزيل الملف وترفعه عشان يصير التغيير فعلي باللعبة.');
+            persistDraft('تم الحفظ وحفظه بالسيرفر — لا تنسى تنزيل الملف وترفعه عشان يصير التغيير فعلي باللعبة.');
         });
         el('aq-form-cancel-btn').addEventListener('click', closeForm);
     }
@@ -472,8 +533,13 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
         renderAll();
     });
     el('aq-reload-btn').addEventListener('click', function () {
-        if (!window.confirm('تفقد أي تعديل محلي غير محفوظ بملف. تبي تكمل؟')) return;
-        loadBankFromServer();
+        if (!window.confirm('بترجع لآخر نسخة منشورة فعلياً بـGitHub، وتفقد المسودة الحالية المحفوظة بالسيرفر (تنطبق على كل الأدمن). تبي تكمل؟')) return;
+        loadPublishedFile().then(function (bank) {
+            if (!bank) { showError('تعذّر تحميل ملف الأسئلة المنشور (شبكة أو الملف مو موجود).'); return; }
+            _bank = bank;
+            renderAll();
+            persistDraft('تم الرجوع لآخر نسخة منشورة، وحُفظت كمسودة مشتركة جديدة.');
+        });
     });
     el('aq-download-btn').addEventListener('click', downloadBank);
     el('aq-form-overlay').addEventListener('click', function (e) {

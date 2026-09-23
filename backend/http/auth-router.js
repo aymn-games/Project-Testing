@@ -16,6 +16,7 @@ var streamerLevelService = require('../points/streamer-level-service');
 var supportersService = require('../supporters/supporters-service');
 var siteThemeService = require('../theme/site-theme-service');
 var partnersService = require('../partners/partners-service');
+var lettersCellQuestionsService = require('../letters-cell/letters-cell-questions-service');
 var logger = require('../utils/logger');
 var config = require('../config');
 var response = require('./response');
@@ -147,7 +148,12 @@ var ROUTES = [
   { method: 'GET', path: '/api/admin/stats/users', requireAuth: true, requireAdmin: true, handler: handleAdminUserStats },
   // ---- تعديل بروفايل المستخدم (اسم عرض + صورة) — صاحب الجلسة فقط.
   { method: 'POST', path: '/api/profile/display-name', requireAuth: true, handler: handleUpdateDisplayName },
-  { method: 'POST', path: '/api/profile/avatar', requireAuth: true, handler: handleUpdateAvatar }
+  { method: 'POST', path: '/api/profile/avatar', requireAuth: true, handler: handleUpdateAvatar },
+  // ---- مسودة بنك أسئلة "خلية الحروف" المشتركة — أدمن المنصة أو أي
+  // مستخدم عنده can_manage_letters_cell (يُتحقَّق داخل كل handler لأنه
+  // ليس requireAdmin بالمعنى العام، بل صلاحية جزئية تُمنح لأي شخص).
+  { method: 'GET', path: '/api/letters-cell/questions-draft', requireAuth: true, handler: handleGetLettersCellQuestionsDraft },
+  { method: 'POST', path: '/api/letters-cell/questions-draft', requireAuth: true, handler: handleSaveLettersCellQuestionsDraft }
 ];
 
 /* -----------------------------------------------------------------------
@@ -627,6 +633,26 @@ function handleUpdateDisplayName(req, res, body, user) {
 /** صاحب الجلسة يعدّل صورة بروفايله — Data URL كامل (base64) من المتصفح. */
 function handleUpdateAvatar(req, res, body, user) {
   var result = authService.updateAvatarImage(user.id, body.imageDataUrl);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+/* -----------------------------------------------------------------------
+ * مسودة بنك أسئلة "خلية الحروف" — صلاحية جزئية (can_manage_letters_cell)
+ * وليست requireAdmin عام، لذا التحقق يدوي هنا بدل جدول المسارات.
+ * ----------------------------------------------------------------------- */
+
+function canManageLettersCell(user) {
+  return Boolean(user) && (user.role === 'admin' || Boolean(user.permissions && user.permissions.can_manage_letters_cell));
+}
+
+function handleGetLettersCellQuestionsDraft(req, res, body, user) {
+  if (!canManageLettersCell(user)) { sendJson(res, 403, { success: false, error: 'forbidden' }); return; }
+  sendJson(res, 200, { success: true, draft: lettersCellQuestionsService.getDraft() });
+}
+
+function handleSaveLettersCellQuestionsDraft(req, res, body, user) {
+  if (!canManageLettersCell(user)) { sendJson(res, 403, { success: false, error: 'forbidden' }); return; }
+  var result = lettersCellQuestionsService.saveDraft(body.questions, user.id);
   sendJson(res, result.success ? 200 : 400, result);
 }
 

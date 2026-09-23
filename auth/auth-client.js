@@ -496,6 +496,21 @@ function adminClearSiteTheme() {
     return request('/api/admin/theme/clear', { method: 'POST' });
 }
 
+/**
+ * مسودة بنك أسئلة "خلية الحروف" المشتركة (backend/letters-cell/
+ * letters-cell-questions-service.js) — أي أدمن أو مستخدم عنده صلاحية
+ * can_manage_letters_cell يقرأها/يكتبها. result.draft يكون null لو ما
+ * فيه أي حفظ سابق بعد (أول استخدام قبل أي تعديل).
+ */
+function getLettersCellQuestionsDraft() {
+    return request('/api/letters-cell/questions-draft', { method: 'GET' });
+}
+
+/** @param {Object} questions - { letter: [{id, question, answer, aliases}] } */
+function saveLettersCellQuestionsDraft(questions) {
+    return request('/api/letters-cell/questions-draft', { method: 'POST', body: { questions: questions } });
+}
+
 /* Page guards — called as the first line of any protected page */
 
 /** Confirms a session is actually valid (calls /api/auth/me, not just
@@ -601,6 +616,8 @@ global.AGPAuth = {
     getSiteTheme: getSiteTheme,
     adminSetSiteTheme: adminSetSiteTheme,
     adminClearSiteTheme: adminClearSiteTheme,
+    getLettersCellQuestionsDraft: getLettersCellQuestionsDraft,
+    saveLettersCellQuestionsDraft: saveLettersCellQuestionsDraft,
     requireAuth: requireAuth,
     requireAdmin: requireAdmin
 };
