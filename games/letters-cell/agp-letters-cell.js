@@ -75,6 +75,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     // الأبجدية العربية الكاملة (28 حرفاً) -- كل جولة تسحب 25 منها عشوائياً.
     var ALPHABET_28 = ['ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي'];
+    // اسم كل حرف مكتوباً بالكامل (طاء، ياء...) -- يقبله اختيار الحرف
+    // بالشات كبديل للحرف المجرد نفسه (راجع tryHandleLetterPick).
+    var LETTER_NAMES = {
+        'ا': 'الف', 'ب': 'باء', 'ت': 'تاء', 'ث': 'ثاء', 'ج': 'جيم', 'ح': 'حاء', 'خ': 'خاء',
+        'د': 'دال', 'ذ': 'ذال', 'ر': 'راء', 'ز': 'زاي', 'س': 'سين', 'ش': 'شين', 'ص': 'صاد',
+        'ض': 'ضاد', 'ط': 'طاء', 'ظ': 'ظاء', 'ع': 'عين', 'غ': 'غين', 'ف': 'فاء', 'ق': 'قاف',
+        'ك': 'كاف', 'ل': 'لام', 'م': 'ميم', 'ن': 'نون', 'ه': 'هاء', 'و': 'واو', 'ي': 'ياء'
+    };
     var DEFAULT_BG = '#E2C8A8';
     var TEAM1_DEFAULT_COLOR = '#5B0E1A';
     var TEAM2_DEFAULT_COLOR = '#513222';
@@ -311,6 +319,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // "أل" التعريف اختيارية بالمطابقة -- إجابة محفوظة "تمر" تقبل
             // "التمر" وبالعكس (إجابة محفوظة "الحرباء" تقبل "حرباء").
             .replace(/^ال/, '');
+    }
+
+    /**
+     * تطبيع مخصّص لاختيار الحرف بالشات فقط -- نفس توحيد الهمزة/التاء
+     * المربوطة/الألف المقصورة، لكن بدون حذف "أل" التعريف (لو استُخدم
+     * normalizeArabicText العادي، اسم الحرف "ألف" يتحوّل لـ"الف" ثم
+     * تُحذَف "ال" فيتطابق خطأً مع الحرف المستقل "ف"). أيضاً يحذف كل
+     * المسافات (الحرف/اسمه كلمة واحدة دائماً).
+     */
+    function normalizeLetterText(text) {
+        if (typeof text !== 'string') return '';
+        return text
+            .replace(/[ً-ْٰـ]/g, '')
+            .replace(/[إأآا]/g, 'ا')
+            .replace(/[ىی]/g, 'ي')
+            .replace(/[ةه]/g, 'ه')
+            .replace(/[ؤئء]/g, 'ء')
+            .replace(/\s+/g, '')
+            .toLowerCase();
     }
 
     // -------------------------- أصوات (Web Audio) --------------------------
@@ -775,9 +802,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function tryHandleLetterPick(payload, norm) {
         if (!_lastAnswererPlayer || payload.id !== _lastAnswererPlayer.id) return;
+        var typed = normalizeLetterText(payload.text);
+        if (!typed) return;
         for (var idx = 0; idx < BOARD_SIZE; idx++) {
             if (_cellStates[idx] !== 0) continue;
-            if (normalizeArabicText(_cellLetters[idx]) === norm) { selectCell(idx); return; }
+            var letter = _cellLetters[idx];
+            // يقبل الحرف المجرد ("ط") أو اسمه كاملاً ("طاء").
+            if (normalizeLetterText(letter) === typed || normalizeLetterText(LETTER_NAMES[letter] || '') === typed) {
+                selectCell(idx);
+                return;
+            }
         }
     }
 
@@ -1216,7 +1250,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var name = (team === TEAM1) ? _settings.team1Name : _settings.team2Name;
         var players = getTeamPlayers(team);
         var body = players.length
-            ? players.map(function (p) { return '<div class="lc-drawer-roster-player">' + escapeHtml(playerLabel(p)) + '</div>'; }).join('')
+            ? players.map(function (p) {
+                return '<div class="lc-drawer-roster-row">' +
+                    '<span class="lc-drawer-roster-player">' + escapeHtml(playerLabel(p)) + '</span>' +
+                    '<button type="button" class="lc-drawer-roster-remove" data-id="' + escapeAttr(p.id) + '" title="حذف اللاعب">×</button>' +
+                '</div>';
+            }).join('')
             : '<div class="lc-drawer-roster-empty">بانتظار انضمام اللاعبين عبر الشات</div>';
         return '<div class="lc-drawer-roster"><div class="lc-drawer-roster-team">' + escapeHtml(name) + '</div>' + body + '</div>';
     }
@@ -1272,6 +1311,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 var btn = e.target.closest('.lc-timer-pill'); if (!btn) return;
                 _settings.answerTimerSeconds = parseInt(btn.getAttribute('data-value'), 10);
                 renderGameScreen();
+            });
+            Array.prototype.forEach.call(document.querySelectorAll('.lc-drawer-roster-remove'), function (btn) {
+                btn.addEventListener('click', function () {
+                    AGP.player.removePlayer(btn.getAttribute('data-id'));
+                    renderGameScreen();
+                });
             });
         }
 

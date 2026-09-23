@@ -293,7 +293,13 @@ body.lc-active { scrollbar-width: none; }
 .lc-drawer-section-title { font-size: clamp(12px,1vw,14px); font-weight: 800; color: #E2C8A8; }
 .lc-drawer-roster { background: rgba(0,0,0,0.25); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
 .lc-drawer-roster-team { font-size: clamp(11px,0.95vw,13px); font-weight: 800; color: #fef4f4; }
+.lc-drawer-roster-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .lc-drawer-roster-player { font-size: clamp(11px,0.9vw,13px); color: #fef4f4; opacity: 0.9; }
+.lc-drawer-roster-remove {
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; border: none; background: var(--lc-remove);
+    color: #fff; font-size: 11px; font-weight: 900; line-height: 1; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; padding: 0;
+}
 .lc-drawer-roster-empty { font-size: clamp(10px,0.85vw,12px); color: #fef4f4; opacity: 0.5; }
 
 /* نافذة دعوة اللاعبين */
