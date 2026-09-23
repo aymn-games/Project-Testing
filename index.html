@@ -1114,14 +1114,16 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
 
     var box = document.createElement('div');
     box.id = 'agp-announcement-notice';
-    box.style.cssText = 'margin-top:10px;padding:clamp(10px,1.6vw,14px) clamp(12px,2vw,16px);border-radius:16px;border:1px solid rgba(178,140,245,.4);background:rgba(20,14,30,.6);backdrop-filter:blur(10px);text-align:start;box-shadow:0 18px 40px -26px rgba(0,0,0,.9);';
+    // عائم بشكل بسيط (nl-float2 المُعرَّفة أصلاً بالصفحة) + حجم أكبر ب٢٠%
+    // من التصميم الأصلي (padding/font-size/border-radius كلها *1.2).
+    box.style.cssText = 'margin-top:16px;padding:clamp(12px,1.9vw,17px) clamp(14px,2.4vw,19px);border-radius:19px;border:1px solid rgba(178,140,245,.4);background:rgba(20,14,30,.6);backdrop-filter:blur(10px);text-align:start;box-shadow:0 18px 40px -26px rgba(0,0,0,.9);animation:nl-float2 4s ease-in-out infinite;';
 
     var row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:8px;';
     var dot = document.createElement('span');
-    dot.style.cssText = 'flex:none;width:7px;height:7px;border-radius:50%;background:#b28cf5;box-shadow:0 0 10px 2px rgba(178,140,245,.7);animation:nl-pulse 1.8s ease-in-out infinite;';
+    dot.style.cssText = 'flex:none;width:8px;height:8px;border-radius:50%;background:#b28cf5;box-shadow:0 0 10px 2px rgba(178,140,245,.7);animation:nl-pulse 1.8s ease-in-out infinite;';
     var text = document.createElement('span');
-    text.style.cssText = "font-family:'Noto Kufi Arabic',sans-serif;font-size:clamp(12px,1.1vw,13.5px);font-weight:700;color:#e9def7;";
+    text.style.cssText = "font-family:'Noto Kufi Arabic',sans-serif;font-size:clamp(14px,1.32vw,16px);font-weight:700;color:#e9def7;";
     text.textContent = announcement.text || '';
     row.appendChild(dot);
     row.appendChild(text);
@@ -1131,7 +1133,7 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
       var img = document.createElement('img');
       img.src = announcement.imageFilename;
       img.alt = 'إعلان';
-      img.style.cssText = 'display:block;width:100%;height:auto;margin-top:10px;border-radius:12px;box-shadow:0 14px 30px -18px rgba(0,0,0,.85);';
+      img.style.cssText = 'display:block;width:100%;height:auto;margin-top:12px;border-radius:14px;box-shadow:0 14px 30px -18px rgba(0,0,0,.85);';
       box.appendChild(img);
     }
 
@@ -1270,6 +1272,123 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
     _gamesCount = arr.length;
     runAll();
   }).catch(function () {});
+})();
+</script>
+<!-- (1) شعار اليوم الوطني ٩٥ الجديد -- ثابت (position:fixed) أعلى يسار
+     الشاشة دائماً، تحت الهيدر مباشرة، يتكيّف حسب حجم الشاشة.
+     (2) حذف الصورة الخضراء القديمة من داخل صندوق إشعار الصيانة.
+     (3) فيديو اليوم الوطني -- بشكله الرأسي الأصلي بدون تحويله لأفقي --
+     كخلفية داخل الجزء الأسود بين نص "منصة ألعاب أيمن" (وشرائحه) وبداية
+     الشريط المتحرك (nl-marquee) أسفل قسم الهيرو. -->
+<script>
+(function () {
+  function el(tag, style) { var e = document.createElement(tag); if (style) e.style.cssText = style; return e; }
+
+  // ---------- (1) شعار اليوم الوطني الثابت أعلى يسار الشاشة ----------
+  function addFixedBadge() {
+    if (document.getElementById('agp-national-day-fixed-badge')) return true;
+    var header = document.querySelector('header');
+    // ننتظر أبعاد حقيقية للهيدر (ارتفاع > 0) قبل ما نبني عليها الموضع —
+    // العنصر قد يكون بالـDOM لكن ما تمّ تخطيطه (layout) بعد لحظة الفحص.
+    if (!header || header.getBoundingClientRect().height === 0) return false;
+    var img = new Image();
+    img.id = 'agp-national-day-fixed-badge';
+    img.src = 'national-day-95-badge.png';
+    img.alt = 'اليوم الوطني السعودي 95';
+    document.body.appendChild(img);
+    function reposition() {
+      var headerBottom = header.getBoundingClientRect().bottom;
+      img.style.cssText = 'position:fixed;z-index:55;top:' + (headerBottom + 10) + 'px;left:clamp(10px,2vw,22px);width:clamp(76px,9vw,130px);height:auto;pointer-events:none;filter:drop-shadow(0 10px 22px rgba(0,0,0,.6));transition:top .2s ease;';
+    }
+    reposition();
+    // إعادة ضبط إضافية لأي استقرار متأخر بالتخطيط (تحميل خطوط، إلخ)
+    // غير مرتبط بحدث resize/scroll مباشر.
+    [300, 1000, 2500].forEach(function (ms) { setTimeout(reposition, ms); });
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, { passive: true });
+    return true;
+  }
+  var triesBadge = 0;
+  var badgeTimer = setInterval(function () {
+    triesBadge++;
+    if (addFixedBadge() || triesBadge > 80) clearInterval(badgeTimer);
+  }, 250);
+
+  // ---------- (2) حذف الصورة الخضراء القديمة ----------
+  function removeOldGreenImage() {
+    var anchor = document.querySelector('.nl-maint-notice');
+    if (!anchor) return false;
+    var oldImg = anchor.querySelector('img');
+    if (oldImg) oldImg.remove();
+    return true;
+  }
+  var triesOld = 0;
+  var oldImgTimer = setInterval(function () {
+    triesOld++;
+    if (removeOldGreenImage() || triesOld > 80) clearInterval(oldImgTimer);
+  }, 250);
+
+  // ---------- (3) فيديو اليوم الوطني كخلفية بالجزء الأسود بالهيرو ----------
+  function findChipRow() {
+    var spans = document.querySelectorAll('span.sc-interp, span');
+    for (var i = 0; i < spans.length; i++) {
+      if (spans[i].children.length === 0 && spans[i].textContent.trim() === 'مجتمع عربي كامل') return spans[i];
+    }
+    return null;
+  }
+
+  function addHeroVideo() {
+    if (document.getElementById('agp-hero-video-wrap')) return true;
+    var chip = findChipRow();
+    // نفس مشكلة الشارة الثابتة: العنصر موجود بالـDOM لكن قد لا يملك
+    // تخطيطاً حقيقياً بعد (rect صفري) لحظة الفحص -- ننتظر أبعاداً فعلية.
+    if (!chip || chip.getBoundingClientRect().height === 0) return false;
+    var heroSection = chip.closest('section');
+    if (!heroSection || heroSection.getBoundingClientRect().height === 0) return false;
+
+    var wrap = el('div');
+    wrap.id = 'agp-hero-video-wrap';
+    wrap.style.cssText = 'position:absolute;left:0;width:100%;overflow:hidden;pointer-events:none;z-index:0;';
+
+    var video = document.createElement('video');
+    video.muted = true; video.loop = true; video.autoplay = true; video.playsInline = true;
+    video.style.cssText = 'display:block;height:100%;width:100%;margin:0 auto;object-fit:contain;opacity:.5;';
+    // MP4 (H.264) أولاً -- التوافق الأوسع بالمتصفحات الحقيقية (خصوصاً
+    // سفاري/آيفون)، وWebM كبديل احتياطي.
+    var srcMp4 = document.createElement('source');
+    srcMp4.src = 'hero-national-day-video.mp4'; srcMp4.type = 'video/mp4';
+    var srcWebm = document.createElement('source');
+    srcWebm.src = 'hero-national-day-video.webm'; srcWebm.type = 'video/webm';
+    video.appendChild(srcMp4);
+    video.appendChild(srcWebm);
+    wrap.appendChild(video);
+
+    var overlay = el('div', 'position:absolute;inset:0;background:radial-gradient(ellipse 60% 70% at 50% 50%,transparent 40%,rgba(5,5,8,.9) 92%);');
+    wrap.appendChild(overlay);
+
+    heroSection.style.position = heroSection.style.position || 'relative';
+    heroSection.appendChild(wrap);
+
+    function reposition() {
+      var heroRect = heroSection.getBoundingClientRect();
+      var chipRect = chip.getBoundingClientRect();
+      var top = (chipRect.bottom - heroRect.top) + 24;
+      var height = heroRect.height - top;
+      if (height < 60) height = 60;
+      wrap.style.top = top + 'px';
+      wrap.style.height = height + 'px';
+    }
+    reposition();
+    [300, 1000, 2500].forEach(function (ms) { setTimeout(reposition, ms); });
+    window.addEventListener('resize', reposition);
+    video.play().catch(function () {});
+    return true;
+  }
+  var triesVideo = 0;
+  var videoTimer = setInterval(function () {
+    triesVideo++;
+    if (addHeroVideo() || triesVideo > 80) clearInterval(videoTimer);
+  }, 250);
 })();
 </script>
 </body>
