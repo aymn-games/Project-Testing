@@ -1287,25 +1287,33 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
   // ---------- (1) شعار اليوم الوطني الثابت أعلى يسار الشاشة ----------
   function addFixedBadge() {
     if (document.getElementById('agp-national-day-fixed-badge')) return true;
-    var header = document.querySelector('header');
-    // ننتظر أبعاد حقيقية للهيدر (ارتفاع > 0) قبل ما نبني عليها الموضع —
-    // العنصر قد يكون بالـDOM لكن ما تمّ تخطيطه (layout) بعد لحظة الفحص.
-    if (!header || header.getBoundingClientRect().height === 0) return false;
+    // نعتمد بداية قسم الهيرو (h1) لا عنصر header -- بعض الأجهزة (الجوال)
+    // تستخدم هيدر مختلفاً بديلاً يجعل header الأصلي بلا ارتفاع (display:none)
+    // بعد استقرار التخطيط، فيرجّع bottom خاطئاً يساوي صفر. الهيرو موجود
+    // بكل الأحوال ويبدأ مباشرة بعد أي هيدر فعلي مهما اختلفت نسخته.
+    var h1 = document.querySelector('h1');
+    var heroSection = h1 ? h1.closest('section') : null;
+    if (!heroSection || heroSection.getBoundingClientRect().height === 0) return false;
     var img = new Image();
     img.id = 'agp-national-day-fixed-badge';
     img.src = 'national-day-95-badge.png';
     img.alt = 'اليوم الوطني السعودي 95';
     document.body.appendChild(img);
     function reposition() {
-      var headerBottom = header.getBoundingClientRect().bottom;
-      img.style.cssText = 'position:fixed;z-index:55;top:' + (headerBottom + 10) + 'px;left:clamp(10px,2vw,22px);width:clamp(76px,9vw,130px);height:auto;pointer-events:none;filter:drop-shadow(0 10px 22px rgba(0,0,0,.6));transition:top .2s ease;';
+      // موضع بداية الهيرو بالنسبة لأعلى المستند كاملاً (بإضافة scrollY
+      // الحالي) لا بالنسبة للنافذة المرئية الآن -- عشان القيمة تبقى
+      // ثابتة مهما نزل المستخدم بالصفحة (العنصر position:fixed أصلاً
+      // يتكفّل بالبقاء بمكانه أثناء السكرول، فلا داعي -ولا يصح- نعيد
+      // حسابها من موضع يتحرك مع كل سكرول).
+      var heroDocTop = heroSection.getBoundingClientRect().top + window.scrollY;
+      // الجهة اليمنى (right) بدل اليسرى + حجم أكبر ب٥٠% من الأصلي
+      // (76px/130px -> 114px/195px).
+      img.style.cssText = 'position:fixed;z-index:55;top:' + (heroDocTop + 10) + 'px;right:clamp(10px,2vw,22px);width:clamp(114px,13.5vw,195px);height:auto;pointer-events:none;filter:drop-shadow(0 10px 22px rgba(0,0,0,.6));transition:top .2s ease;';
     }
     reposition();
-    // إعادة ضبط إضافية لأي استقرار متأخر بالتخطيط (تحميل خطوط، إلخ)
-    // غير مرتبط بحدث resize/scroll مباشر.
+    // إعادة ضبط إضافية لأي استقرار متأخر بالتخطيط (تحميل خطوط، إلخ).
     [300, 1000, 2500].forEach(function (ms) { setTimeout(reposition, ms); });
     window.addEventListener('resize', reposition);
-    window.addEventListener('scroll', reposition, { passive: true });
     return true;
   }
   var triesBadge = 0;
@@ -1352,7 +1360,9 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
 
     var video = document.createElement('video');
     video.muted = true; video.loop = true; video.autoplay = true; video.playsInline = true;
-    video.style.cssText = 'display:block;height:100%;width:100%;margin:0 auto;object-fit:contain;opacity:.5;';
+    // object-fit:cover يملأ العرض بالكامل (شكل أفقي) بدل شريط رأسي ضيق
+    // بالمنتصف -- يقصّ أعلى/أسفل الفيديو الأصلي (رأسي)، وهذا متوقّع.
+    video.style.cssText = 'display:block;height:100%;width:100%;margin:0 auto;object-fit:cover;opacity:.6;';
     // MP4 (H.264) أولاً -- التوافق الأوسع بالمتصفحات الحقيقية (خصوصاً
     // سفاري/آيفون)، وWebM كبديل احتياطي.
     var srcMp4 = document.createElement('source');
@@ -1372,7 +1382,9 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
     function reposition() {
       var heroRect = heroSection.getBoundingClientRect();
       var chipRect = chip.getBoundingClientRect();
-      var top = (chipRect.bottom - heroRect.top) + 24;
+      // مساحة أكبر قليلاً من السابق (فجوة أصغر أعلاه) بعد التحويل لعرض
+      // كامل بشكل أفقي.
+      var top = (chipRect.bottom - heroRect.top) + 8;
       var height = heroRect.height - top;
       if (height < 60) height = 60;
       wrap.style.top = top + 'px';
