@@ -1044,8 +1044,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // the row wraps onto more lines on narrow screens. The bottom
             // padding lets the last row of cards scroll fully clear of the
             // buttons.
+            // padding-top gives the first row of framed cards (which can
+            // extend up to 9px above their 57px slot — see the framed-card
+            // rules below) room inside the scroll area's clip edge.
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list{scrollbar-width:none !important;',
-            '-ms-overflow-style:none !important;',
+            '-ms-overflow-style:none !important;padding-top:12px !important;',
             'padding-bottom:calc(var(--er-actions-h,62px) + 16px) !important;',
             'margin-bottom:calc(-1 * var(--er-actions-h,62px)) !important;}',
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list::-webkit-scrollbar{display:none !important;}',
