@@ -1493,10 +1493,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // "add new lobby" button (renamed) stays visible in its
             // original DOM position.
             '#agp-shell-box.er-inmatch-drawer .agp-settings-player-box{display:none !important;}',
-            '#agp-shell-box.er-inmatch-drawer .agp-settings-player-row{display:block !important;',
+            '#agp-shell-box.er-inmatch-drawer .agp-settings-player-row{display:block !important;width:100% !important;',
             'border:none !important;background:none !important;padding:0 !important;}',
             '#agp-shell-box.er-inmatch-drawer #agp-settings-player-count{display:none !important;}',
             '#agp-shell-box.er-inmatch-drawer .agp-shell-field:has(#agp-settings-player-count) > label{display:none !important;}',
+            // The row sits in a column with align-items:flex-start and the
+            // shared file gives the actions column a fixed 220px width —
+            // both are stretched so the button spans the card.
+            '#agp-shell-box.er-inmatch-drawer .agp-settings-player-actions{width:100% !important;',
+            'max-width:none !important;}',
             '#agp-shell-box.er-inmatch-drawer #agp-reopen-registration-btn{width:100% !important;',
             'margin:0 !important;display:flex !important;align-items:center;justify-content:center;gap:8px;',
             'padding:13px 14px !important;border-radius:14px !important;',
@@ -3520,6 +3525,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             layoutInitialSettingsFields(box);
         }
         if (box.querySelector('.er-back-to-platform-btn')) return;
+        // Not on the mid-match settings drawer (it has the player list):
+        // there the first .agp-shell-btn-connect is the "add new player"
+        // button, and the header's own 🏠 icon already covers going home.
+        if (el('agp-settings-player-list')) return;
         var connectBtn = box.querySelector('.agp-shell-btn-connect');
         if (!connectBtn) return;
         var backBtn = makeBackToPlatformBtn();
@@ -3772,7 +3781,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             }
             return null;
         }
-        var playerMgmtRow = fieldNodes.filter(function (n) { return n.classList && n.classList.contains('agp-settings-player-row'); })[0];
+        // The shared file nests .agp-settings-player-row (which holds the
+        // "add new lobby" button) inside an .agp-shell-field wrapper, so
+        // look for the top-level node that contains it — matching it
+        // directly among the top-level nodes found nothing, and the whole
+        // field (button included) was dropped from the drawer.
+        var playerMgmtRow = findFieldNode('.agp-settings-player-row');
         var wheelModeRow = findFieldNode('[data-key="wheelDisplayMode"]');
         var giftEnabledRow = findFieldNode('[data-key="giftRevivalEnabled"]');
         var giftMaxCountRow = findFieldNode('[data-key="giftRevivalMaxCount"]');
