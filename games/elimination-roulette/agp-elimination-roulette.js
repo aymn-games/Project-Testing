@@ -1839,6 +1839,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderWheelSlices();
         renderWheelLabels();
         resetWheelSpinPosition();
+        // The reel is built from _alive's order too: without rebuilding it
+        // here, after any roster change (shuffle/eliminate/revive/join) it
+        // kept the old list, so handleReelSpinClick()'s target index
+        // (computed from the current _alive) stopped the reel on a
+        // different name than the actual chooser.
+        renderReel();
         updateSpinHubLabel(false);
     }
 
