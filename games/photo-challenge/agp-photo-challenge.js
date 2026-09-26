@@ -351,7 +351,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // (لوبي-قياسي-v1)، مع الإطار (showFrame:true) بنفس قاعدة المنصة باللوبي.
     function playerCardHtml(p) {
         if (AGP.playerCard) {
-            return AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', outClass: 'pc-pcard-wrap', size: 43, width: 277, height: 51 });
+            return AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', outClass: 'pc-pcard-wrap' });
         }
         var avatar = p.avatarUrl ? escapeAttr(p.avatarUrl) : '';
         return '<span class="pc-pcard-wrap">' + (avatar ? '<img src="' + avatar + '">' : '') + escapeHtml(p.name || p.id) + '</span>';
@@ -374,6 +374,75 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    // Framed lobby cards, shown whole in the 217x57 slot (same approach as
+    // Elimination Roulette's lobby): the shared renderer crops tall frame
+    // artwork to its fixed card height, so each framed card is re-expanded
+    // to its frame image's full opaque height (measured once per image)
+    // and zoomed to fit 217px wide, at most 75px tall.
+    var _pcFrameBoundsCache = {};
+
+    function getFrameOpaqueRows(src) {
+        if (_pcFrameBoundsCache[src]) return _pcFrameBoundsCache[src];
+        _pcFrameBoundsCache[src] = new Promise(function (resolve) {
+            var img = new Image();
+            img.onload = function () {
+                try {
+                    var w = Math.min(img.naturalWidth, 300);
+                    var h = Math.max(1, Math.round(img.naturalHeight * w / img.naturalWidth));
+                    var c = document.createElement('canvas');
+                    c.width = w; c.height = h;
+                    var ctx = c.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    var data = ctx.getImageData(0, 0, w, h).data;
+                    var top = -1, bottom = -1;
+                    for (var y = 0; y < h && top < 0; y++) {
+                        for (var x = 0; x < w; x++) { if (data[(y * w + x) * 4 + 3] > 16) { top = y; break; } }
+                    }
+                    for (var y2 = h - 1; y2 >= 0 && bottom < 0; y2--) {
+                        for (var x2 = 0; x2 < w; x2++) { if (data[(y2 * w + x2) * 4 + 3] > 16) { bottom = y2 + 1; break; } }
+                    }
+                    resolve(top < 0 ? null : { top: top / h, bottom: bottom / h });
+                } catch (e) { resolve(null); }
+            };
+            img.onerror = function () { resolve(null); };
+            img.src = src;
+        });
+        return _pcFrameBoundsCache[src];
+    }
+
+    function fitLobbyFramedCards(container) {
+        if (!container) return;
+        container.querySelectorAll('.agp-pcard-tpl:not([data-pc-fit])').forEach(function (card) {
+            var frameEl = card.querySelector('.agp-pcard-tpl-frame-img');
+            var m = frameEl && /url\(["']?(.*?)["']?\)/.exec(frameEl.style.backgroundImage);
+            if (!m) return;
+            card.setAttribute('data-pc-fit', 'pending');
+            getFrameOpaqueRows(m[1]).then(function (rows) {
+                if (!rows || !card.isConnected) return;
+                var frameTop = parseFloat(frameEl.style.top) || 0;
+                var frameH = parseFloat(frameEl.style.height) || 0;
+                var bandTop = frameTop + rows.top * frameH;
+                var bandBottom = frameTop + rows.bottom * frameH;
+                var children = card.querySelectorAll('.agp-pcard-tpl-avatar,.agp-pcard-tpl-name,.agp-pcard-tpl-frame-img');
+                Array.prototype.forEach.call(children, function (child) {
+                    if (child === frameEl) return;
+                    var t = parseFloat(child.style.top) || 0;
+                    var ch = parseFloat(child.style.height) || 0;
+                    if (t < bandTop) bandTop = t;
+                    if (t + ch > bandBottom) bandBottom = t + ch;
+                });
+                Array.prototype.forEach.call(children, function (child) {
+                    child.style.top = ((parseFloat(child.style.top) || 0) - bandTop) + 'px';
+                });
+                var fullH = bandBottom - bandTop;
+                var cardW = parseFloat(card.style.width) || 298;
+                card.style.height = fullH + 'px';
+                card.style.zoom = String(Math.min(217 / cardW, 75 / fullH));
+                card.setAttribute('data-pc-fit', '1');
+            });
+        });
+    }
+
     function renderLobbyPlayerGrids() {
         var grid1 = el('pc-lobby-grid-team1');
         var grid2 = el('pc-lobby-grid-team2');
@@ -382,12 +451,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var players1 = getTeamPlayers(TEAM1);
         var players2 = getTeamPlayers(TEAM2);
 
-        el('pc-lobby-count-team1').textContent = '👥 ' + players1.length + ' لاعبين';
-        el('pc-lobby-count-team2').textContent = '👥 ' + players2.length + ' لاعبين';
+        el('pc-lobby-count-team1').textContent = String(players1.length);
+        el('pc-lobby-count-team2').textContent = String(players2.length);
 
-        grid1.innerHTML = players1.map(lobbyCardHtml).join('') || '<div class="pc-lobby-empty-slot"></div>';
-        grid2.innerHTML = players2.map(lobbyCardHtml).join('') || '<div class="pc-lobby-empty-slot"></div>';
+        grid1.innerHTML = players1.map(lobbyCardHtml).join('');
+        grid2.innerHTML = players2.map(lobbyCardHtml).join('');
         if (AGP.playerCard) { AGP.playerCard.fitAllNames(grid1); AGP.playerCard.fitAllNames(grid2); }
+        fitLobbyFramedCards(grid1);
+        fitLobbyFramedCards(grid2);
         wireLobbyRemoveButtons(grid1);
         wireLobbyRemoveButtons(grid2);
 
@@ -431,43 +502,47 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var root = ensureLobbyEl();
         root.style.display = 'block';
+        // Team-games lobby layout (design shared by the platform's
+        // two-team games): title line + divider, then one panel per team
+        // (team 1 on the right, team 2 on the left) — above each panel the
+        // team name, its join keyword in the team color and a player-count
+        // capsule; inside, two columns of the standard 217x57 lobby cards.
+        // Bottom: the green start button and a "back to games library" link.
         root.innerHTML =
-            '<h2>' + escapeHtml(GAME_NAME) + '</h2>' +
-            '<div class="pc-lobby-sub">اللوبي بانتظار اللاعبين</div>' +
+            '<h2 class="pc-lobby-title">لوبي الدخول للعبة "' + escapeHtml(GAME_NAME) + '"</h2>' +
+            '<div class="pc-lobby-divider"></div>' +
 
             '<div class="pc-lobby-panels">' +
                 '<div class="pc-lobby-team pc-team1">' +
-                    '<div class="pc-lobby-team-header pc-team1">' +
-                        '<div class="pc-lobby-team-name">' + escapeHtml(_settings.team1Name) + '</div>' +
-                        '<div class="pc-lobby-team-keyword">🔑 ' + escapeHtml(_settings.team1Keyword) + '</div>' +
+                    '<div class="pc-lobby-team-header">' +
+                        '<div class="pc-lobby-team-label">' +
+                            '<span class="pc-lobby-team-name">' + escapeHtml(_settings.team1Name) + '</span>' +
+                            '<span class="pc-lobby-team-keyword">' + escapeHtml(_settings.team1Keyword) + '</span>' +
+                        '</div>' +
+                        '<div class="pc-lobby-count" id="pc-lobby-count-team1"></div>' +
                     '</div>' +
-                    '<div class="pc-lobby-count" id="pc-lobby-count-team1"></div>' +
-                    '<div class="pc-lobby-grid" id="pc-lobby-grid-team1"></div>' +
+                    '<div class="pc-lobby-box"><div class="pc-lobby-grid" id="pc-lobby-grid-team1"></div></div>' +
                 '</div>' +
 
-                '<div class="pc-vs-label">VS</div>' +
-
                 '<div class="pc-lobby-team pc-team2">' +
-                    '<div class="pc-lobby-team-header pc-team2">' +
-                        '<div class="pc-lobby-team-name">' + escapeHtml(_settings.team2Name) + '</div>' +
-                        '<div class="pc-lobby-team-keyword">🔑 ' + escapeHtml(_settings.team2Keyword) + '</div>' +
+                    '<div class="pc-lobby-team-header">' +
+                        '<div class="pc-lobby-team-label">' +
+                            '<span class="pc-lobby-team-name">' + escapeHtml(_settings.team2Name) + '</span>' +
+                            '<span class="pc-lobby-team-keyword">' + escapeHtml(_settings.team2Keyword) + '</span>' +
+                        '</div>' +
+                        '<div class="pc-lobby-count" id="pc-lobby-count-team2"></div>' +
                     '</div>' +
-                    '<div class="pc-lobby-count" id="pc-lobby-count-team2"></div>' +
-                    '<div class="pc-lobby-grid" id="pc-lobby-grid-team2"></div>' +
+                    '<div class="pc-lobby-box"><div class="pc-lobby-grid" id="pc-lobby-grid-team2"></div></div>' +
                 '</div>' +
             '</div>' +
 
             '<div class="pc-lobby-actions">' +
-                '<button type="button" id="pc-lobby-back-settings-btn" class="pc-lobby-btn-settings">⚙️ العودة لإعدادات المباراة</button>' +
-                '<button type="button" id="pc-start-round-btn" class="pc-lobby-btn-start" disabled>بدء الجولة</button>' +
-                '<button type="button" id="pc-lobby-back-platform-btn" class="pc-lobby-btn-platform">🏠 رجوع لمنصة ألعاب أيمن</button>' +
+                '<button type="button" id="pc-start-round-btn" class="pc-lobby-btn-start" disabled>الدخول للمباراة</button>' +
+                '<button type="button" id="pc-lobby-back-library-btn" class="pc-lobby-link-library">' +
+                    '<span class="pc-lobby-link-arrow">→</span>العودة لمكتبة الالعاب</button>' +
             '</div>';
 
-        el('pc-lobby-back-settings-btn').addEventListener('click', function () {
-            var ok = window.confirm('بترجع لشاشة الإعدادات وينقطع الاتصال الحالي بالبث. تبي تكمل؟');
-            if (ok) window.location.reload();
-        });
-        el('pc-lobby-back-platform-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('pc-lobby-back-library-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         el('pc-start-round-btn').addEventListener('click', function () {
             _registrationOpen = false;
             _roundStarted = true;
