@@ -3542,8 +3542,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // box, plus the bottom action row with exactly two buttons: the
     // original start button (same element and onclick defined in the
     // shared file, just new text/color) and "back to the games library"
-    // (same homeNavigate() target as the settings screen's back button,
-    // only relabeled here).
+    // (navigates to games.html).
     function enhanceLobbyWatermarkAndActions() {
         var box = el('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
@@ -3582,10 +3581,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
 
         // "Back to the games library" joins the same row (uniform W360xH48)
-        // instead of a separate element below it.
+        // instead of a separate element below it. Same look as the
+        // settings screen's back button, but navigates to the games
+        // library page (games.html) instead of homeNavigate().
         if (!row.querySelector('.er-back-to-platform-btn')) {
-            var backBtn = makeBackToPlatformBtn();
+            var backBtn = document.createElement('button');
+            backBtn.type = 'button';
+            backBtn.className = 'er-back-to-platform-btn';
             backBtn.textContent = '🏠 العودة لمكتبة الألعاب';
+            backBtn.addEventListener('click', function () {
+                window.location.href = '../../games.html';
+            });
             row.appendChild(backBtn);
         }
     }
