@@ -1135,14 +1135,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-box.agp-lobby-box li:has(> .agp-pcard) .agp-player-remove-btn{',
             'top:50% !important;left:7px !important;right:auto !important;transform:translateY(-50%);',
             'width:16px !important;height:16px !important;font-size:9px !important;z-index:5;}',
-            // Framed cards (.agp-pcard-tpl) take the exact same 217x57
-            // footprint as the unframed cards above: the shared renderer
-            // always draws them 298x100, so they're zoomed to the 217px
-            // width (217/298) and their wrapper clips the extra height,
-            // centered, with the same 24px rounded corners. The kick button
+            // Framed cards (.agp-pcard-tpl) sit in the same 217x57 grid slot
+            // as the unframed cards above, never clipped: the shared
+            // renderer draws them 298x100 (cropping tall frames), so
+            // enhanceLobbyFramedCards() below re-expands each card to its
+            // frame artwork's full height and sets an inline zoom that fits
+            // the whole frame into the slot (up to 75px tall, spilling a few
+            // px into the row gap). zoom:0.7282 (217/298) is only the
+            // default until that measurement finishes. The kick button
             // moves to the same left-edge spot as on unframed cards.
             '#agp-shell-box.agp-lobby-box li:has(> .agp-pcard-tpl){width:217px !important;height:57px !important;',
-            'overflow:hidden !important;border-radius:24px !important;display:flex !important;',
+            'overflow:visible !important;display:flex !important;',
             'flex-direction:row !important;align-items:center !important;justify-content:center !important;}',
             '#agp-shell-box.agp-lobby-box .agp-pcard-tpl{zoom:0.7282;flex-shrink:0 !important;}',
             '#agp-shell-box.agp-lobby-box li:has(> .agp-pcard-tpl) .agp-player-remove-btn{',
@@ -3545,6 +3548,82 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
     }
 
+    // Framed lobby cards, shown whole: the shared renderer draws every
+    // framed card 298x100 and crops tall frame artwork to that height. For
+    // each framed card in the lobby this measures the frame image's
+    // opaque (alpha) rows once per image, re-expands the card to cover
+    // the full artwork plus the avatar/name (shifting every absolutely
+    // positioned child by the same amount, so their alignment is
+    // unchanged), then zooms it to fit the 217px-wide grid slot and at
+    // most 75px tall. DOM/style-only — js/agp-player-card.js untouched.
+    var FRAMED_SLOT_W = 217;
+    var FRAMED_SLOT_MAX_H = 75;
+    var _erFrameBoundsCache = {};
+
+    function getFrameOpaqueRows(src) {
+        if (_erFrameBoundsCache[src]) return _erFrameBoundsCache[src];
+        _erFrameBoundsCache[src] = new Promise(function (resolve) {
+            var img = new Image();
+            img.onload = function () {
+                try {
+                    var w = Math.min(img.naturalWidth, 300);
+                    var h = Math.max(1, Math.round(img.naturalHeight * w / img.naturalWidth));
+                    var c = document.createElement('canvas');
+                    c.width = w; c.height = h;
+                    var ctx = c.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    var data = ctx.getImageData(0, 0, w, h).data;
+                    var top = -1, bottom = -1;
+                    for (var y = 0; y < h && top < 0; y++) {
+                        for (var x = 0; x < w; x++) { if (data[(y * w + x) * 4 + 3] > 16) { top = y; break; } }
+                    }
+                    for (var y2 = h - 1; y2 >= 0 && bottom < 0; y2--) {
+                        for (var x2 = 0; x2 < w; x2++) { if (data[(y2 * w + x2) * 4 + 3] > 16) { bottom = y2 + 1; break; } }
+                    }
+                    resolve(top < 0 ? null : { top: top / h, bottom: bottom / h });
+                } catch (e) { resolve(null); }
+            };
+            img.onerror = function () { resolve(null); };
+            img.src = src;
+        });
+        return _erFrameBoundsCache[src];
+    }
+
+    function enhanceLobbyFramedCards() {
+        var box = el('agp-shell-box');
+        if (!box || !box.classList.contains('agp-lobby-box')) return;
+        var cards = box.querySelectorAll('.agp-shell-player-list .agp-pcard-tpl:not([data-er-fit])');
+        Array.prototype.forEach.call(cards, function (card) {
+            var frameEl = card.querySelector('.agp-pcard-tpl-frame-img');
+            var m = frameEl && /url\(["']?(.*?)["']?\)/.exec(frameEl.style.backgroundImage);
+            if (!m) return;
+            card.setAttribute('data-er-fit', 'pending');
+            getFrameOpaqueRows(m[1]).then(function (rows) {
+                if (!rows || !card.isConnected) return;
+                var frameTop = parseFloat(frameEl.style.top) || 0;
+                var frameH = parseFloat(frameEl.style.height) || 0;
+                var bandTop = frameTop + rows.top * frameH;
+                var bandBottom = frameTop + rows.bottom * frameH;
+                var children = card.querySelectorAll('.agp-pcard-tpl-avatar,.agp-pcard-tpl-name,.agp-pcard-tpl-frame-img');
+                Array.prototype.forEach.call(children, function (child) {
+                    if (child === frameEl) return;
+                    var t = parseFloat(child.style.top) || 0;
+                    var ch = parseFloat(child.style.height) || 0;
+                    if (t < bandTop) bandTop = t;
+                    if (t + ch > bandBottom) bandBottom = t + ch;
+                });
+                Array.prototype.forEach.call(children, function (child) {
+                    child.style.top = ((parseFloat(child.style.top) || 0) - bandTop) + 'px';
+                });
+                var fullH = bandBottom - bandTop;
+                var cardW = parseFloat(card.style.width) || 298;
+                card.style.height = fullH + 'px';
+                card.style.zoom = String(Math.min(FRAMED_SLOT_W / cardW, FRAMED_SLOT_MAX_H / fullH));
+                card.setAttribute('data-er-fit', '1');
+            });
+        });
+    }
+
     // Transparent "Ayman Games" logo watermark in the middle of the lobby
     // box, plus the bottom action row with exactly two buttons: the
     // original start button (same element and onclick defined in the
@@ -3942,6 +4021,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // marquee, and card sizes natively itself.
         enhanceLobbyHeading();
         enhanceLobbyWatermarkAndActions();
+        enhanceLobbyFramedCards();
     }
 
     /* ======================================================================
