@@ -1017,25 +1017,38 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // a tablet/laptop screen actually has leaves a visibly narrow
             // column with large empty margins on both sides. min(94vw,…)
             // already shrinks properly on small screens; raising the cap
-            // to 1120px (this screen's own value in the design spec,
-            // matching Lobby.dc.html's max-width:1120px) lets it use a
-            // tablet or laptop's width properly instead of stopping short at 900.
+            // to 1310px (wide enough for 5 lobby cards per row: 5x217px
+            // + 4x37px gaps = 1233px, plus the box's 34px side padding —
+            // see the player grid below) lets it
+            // use a tablet or laptop's width properly instead of stopping
+            // short at 900.
             // 94vh -> 94dvh override for the same reason as the settings
             // screen's 100dvh comment further down: vh alone can be taller
             // than the real visible viewport on mobile/tablet Safari while
             // the browser chrome is showing.
-            '#agp-shell-box.agp-lobby-box{width:min(94vw,1120px) !important;',
-            'max-width:min(94vw,1120px) !important;height:min(94vh,980px) !important;max-height:94vh !important;',
+            '#agp-shell-box.agp-lobby-box{width:min(94vw,1310px) !important;',
+            'max-width:min(94vw,1310px) !important;height:min(94vh,980px) !important;max-height:94vh !important;',
             'height:min(94dvh,980px) !important;max-height:94dvh !important;',
             'display:flex !important;flex-direction:column !important;overflow:hidden !important;}',
             '#agp-shell-box.agp-lobby-box > h2,',
-            '#agp-shell-box.agp-lobby-box > .er-lobby-subtitle,',
-            '#agp-shell-box.agp-lobby-box > .er-lobby-live-badge,',
             '#agp-shell-box.agp-lobby-box > .agp-join-hint,',
             '#agp-shell-box.agp-lobby-box > #agp-entrance-stage,',
             '#agp-shell-box.agp-lobby-box > #agp-entrance-settled-list{flex:0 0 auto !important;}',
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list{flex:1 1 auto !important;',
             'min-height:0 !important;overflow-y:auto !important;}',
+            // Card grid scrolls with a hidden scrollbar (wheel/touch still
+            // work), and extends underneath the bottom action row so cards
+            // pass behind the buttons while scrolling. --er-actions-h is
+            // the row's live height (+ its top margin), kept in sync by
+            // enhanceLobbyWatermarkAndActions() via a ResizeObserver since
+            // the row wraps onto more lines on narrow screens. The bottom
+            // padding lets the last row of cards scroll fully clear of the
+            // buttons.
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{scrollbar-width:none !important;',
+            '-ms-overflow-style:none !important;',
+            'padding-bottom:calc(var(--er-actions-h,62px) + 16px) !important;',
+            'margin-bottom:calc(-1 * var(--er-actions-h,62px)) !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list::-webkit-scrollbar{display:none !important;}',
 
             // "Ayman Games" logo as a transparent (25%) watermark in the
             // middle of the lobby box. Added as an img element via
@@ -1057,29 +1070,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'background-size:200% 100%;-webkit-background-clip:text;background-clip:text;',
             'color:transparent !important;animation:er-lobby-wave 9s linear infinite;}',
             '.er-lobby-title-game{color:#8f88a3 !important;font-size:0.6em;text-shadow:none !important;}',
-            '#agp-shell-box.agp-lobby-box .er-lobby-subtitle{margin:9px 0 0;font-size:14px;',
-            'line-height:1.85;color:#a79fbb;text-align:center;font-family:"IBM Plex Sans Arabic",sans-serif;}',
-            '#agp-shell-box.agp-lobby-box .er-lobby-live-badge{display:inline-flex;align-items:center;',
-            'gap:9px;margin:11px auto 0;padding:6px 15px;border-radius:999px;',
-            'border:1px solid rgba(178,140,245,.35);background:rgba(122,63,212,.1);font-size:12.5px;',
-            'color:#c6b4f2;font-family:"IBM Plex Sans Arabic",sans-serif;width:fit-content;}',
-            '.er-lobby-live-dot{width:7px;height:7px;border-radius:50%;background:#7ee0a6;',
-            'animation:er-lobby-blink 1.6s ease-in-out infinite;}',
-            '@keyframes er-lobby-blink{0%,100%{opacity:.35}50%{opacity:1}}',
 
             // Keyword/player-count row — two capsules spread across the
             // width (keyword on the right, count on the left, per the new
-            // design), built purely with CSS: the hint text forces its own
-            // full-width line (order:-1), leaving the keyword badge and the
-            // count badge as the row's only two items, spread apart via
+            // design), built purely with CSS: the shared file's hint text
+            // ("عشان تدخل المباراة اكتب بالشات:") is hidden entirely in this
+            // game's lobby, leaving the keyword badge and the count badge as
+            // the row's only two items, spread apart via
             // justify-content:space-between.
             '#agp-shell-box.agp-lobby-box .agp-join-hint{display:flex !important;flex-wrap:wrap !important;',
             'justify-content:space-between !important;align-items:center !important;gap:10px !important;',
             'width:100% !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-join-hint-text{flex:0 0 100% !important;order:-1 !important;',
-            'text-align:center !important;color:#a79fbb !important;font-weight:400 !important;',
-            'font-size:14px !important;margin-bottom:2px !important;',
-            'font-family:"IBM Plex Sans Arabic",sans-serif !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-hint-text{display:none !important;}',
             '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge{order:0;display:inline-flex !important;',
             'align-items:center !important;gap:8px !important;background:rgba(178,140,245,.16) !important;',
             'border:1px solid rgba(178,140,245,.45) !important;border-radius:999px !important;',
@@ -1103,37 +1105,40 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'font-weight:400;color:#cfc7e2;}',
 
             /* ==================================================================
-             * Player grid — 4 columns (matches the new design spec exactly:
-             * grid-template-columns:repeat(4,minmax(0,1fr))), card size stays
-             * 45px (unchanged setting, only the column count/colors move to
-             * match the new design). Local !important override on the sizes
-             * the shared AGP.playerCard component renders — its own default
-             * (60px) and js/agp-player-card.js are untouched; same math it
-             * already uses for 45px cards: pillW=145px, overlap=10px,
-             * padStart=24px, padEnd=14px, plank height=36px, font=21px.
-             * Scoped entirely to the lobby (.agp-lobby-box) — no effect on
-             * the mid-match settings player list or any other use of the
-             * card in this file.
+             * Player grid — lobby cards per the new design: every card is a
+             * single 217x57 capsule (border-radius 24px, #D9D9D9 at 30%
+             * opacity, 2px black border) with a 48px round avatar inside it
+             * on the right, the name centered in white, and the kick button
+             * (✕) small on the left. Columns are fixed at 217px with a 37px
+             * gap — 5 per row at full width, fewer on narrower screens.
+             * Local !important override on the sizes the shared
+             * AGP.playerCard component renders inline — js/agp-player-card.js
+             * itself is untouched. Scoped entirely to the lobby
+             * (.agp-lobby-box) — no effect on the mid-match settings player
+             * list or any other use of the card in this file.
              * ==================================================================== */
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list{display:grid !important;',
-            'grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:10px !important;',
+            'grid-template-columns:repeat(auto-fill,217px) !important;column-gap:37px !important;',
+            'row-gap:20px !important;justify-content:center !important;',
             'justify-items:center !important;align-items:end !important;align-content:start !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic{width:45px !important;height:45px !important;',
-            'border:1px solid rgba(255,255,255,.18) !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-pcard-name-basic{width:145px !important;height:36px !important;',
-            'margin-inline-start:-10px !important;padding-inline-start:24px !important;',
-            'padding-inline-end:14px !important;font-size:21px !important;',
-            'font-family:"Noto Kufi Arabic",sans-serif !important;font-weight:700 !important;',
-            'color:#f4f2fb !important;background:linear-gradient(180deg,rgba(255,255,255,.07),',
-            'rgba(255,255,255,.03)) !important;border:1px solid rgba(255,255,255,.12) !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic--fallback{font-size:14px !important;}',
-            // Manual-kick button (✕) on unframed cards — moved to the top
-            // corner of the avatar circle (top:0;right:0) instead of the
-            // shared file's default (top:-6px;left:-6px, outside the card
-            // entirely), and recolored to the design's elimination red.
+            '#agp-shell-box.agp-lobby-box .agp-pcard{width:217px !important;height:57px !important;',
+            'box-sizing:border-box !important;padding:0 3px 0 28px !important;gap:6px !important;',
+            'border-radius:24px !important;background:rgba(217,217,217,.3) !important;',
+            'border:2px solid #000 !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic{width:48px !important;height:48px !important;',
+            'background:#D9D9D9 !important;border:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-name-basic{flex:1 1 auto !important;width:auto !important;',
+            'min-width:0 !important;height:auto !important;margin:0 !important;padding:0 !important;',
+            'font-size:20px !important;font-family:"Noto Kufi Arabic",sans-serif !important;',
+            'font-weight:700 !important;color:#fff !important;background:none !important;border:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic--fallback{font-size:15px !important;color:#3a2f4a !important;}',
+            // Manual-kick button (✕) on unframed cards — small, inside the
+            // card on its left edge, vertically centered (the design's
+            // 10px icon spot), instead of the shared file's default
+            // (top:-6px;left:-6px, outside the card entirely).
             // Scoped to :has(> .agp-pcard) so framed cards are untouched.
             '#agp-shell-box.agp-lobby-box li:has(> .agp-pcard) .agp-player-remove-btn{',
-            'top:0 !important;left:auto !important;right:0 !important;',
+            'top:50% !important;left:7px !important;right:auto !important;transform:translateY(-50%);',
             'width:16px !important;height:16px !important;font-size:9px !important;z-index:5;}',
             '#agp-shell-box.agp-lobby-box .agp-player-remove-btn{',
             'background:rgba(224,115,111,.18) !important;border-color:rgba(224,115,111,.55) !important;',
@@ -1141,21 +1146,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-box.agp-lobby-box .agp-player-remove-btn:hover{',
             'background:rgba(224,115,111,.3) !important;color:#ff9b96 !important;}',
 
-            // Lobby bottom action row — the three buttons (back to
-            // settings, start round, back to platform) sit in one row at a
-            // fixed size (W360xH48) each, centered.
+            // Lobby bottom action row — the two buttons (start round, back
+            // to the games library) sit in one row at a fixed size
+            // (W360xH48) each, centered, above the scrolling card grid.
             '#agp-shell-box.agp-lobby-box .er-lobby-actions-row{flex:0 0 auto !important;',
             'display:flex;gap:14px;margin-top:14px;justify-content:center;',
-            'flex-wrap:wrap;}',
+            'flex-wrap:wrap;position:relative;z-index:3 !important;}',
             '.er-lobby-actions-row > *{width:360px !important;height:48px !important;',
             'max-width:360px !important;flex:0 0 360px !important;box-sizing:border-box !important;',
             'display:flex !important;align-items:center !important;justify-content:center !important;',
             'padding:0 14px !important;margin:0 !important;}',
-            '.er-lobby-back-settings-btn{border-radius:999px;',
-            'border:1px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.08);color:#fff;',
-            'font-family:"Noto Kufi Arabic",sans-serif;font-weight:700;font-size:0.9em;cursor:pointer;',
-            'transition:background 0.15s;}',
-            '.er-lobby-back-settings-btn:hover{background:rgba(255,255,255,0.18);}',
             '#agp-shell-box.agp-lobby-box .er-lobby-actions-row #agp-start-round-btn{',
             'background:#7a3fd4 !important;color:#f3ecff !important;',
             'font-family:"Noto Kufi Arabic",sans-serif !important;',
@@ -1164,7 +1164,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'background:#9a6cf0 !important;}',
 
             // "Back to platform" button — in the lobby it joins the same
-            // three-button row (sized W360xH48 above); on the initial
+            // two-button row (sized W360xH48 above); on the initial
             // settings screen it keeps its own default block layout (the
             // general rule below is the default, and .er-lobby-actions-row
             // above overrides it only inside the lobby row).
@@ -3523,12 +3523,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     // Lobby heading — replaces the shared file's default h2 text with the
     // new design's title (animated purple/gold gradient "لوبي الدخول" +
-    // gray game name), plus a subtitle line and a live player-count badge
-    // that the shared file doesn't render at all. DOM-only change (h2
-    // innerHTML + two new sibling elements) — no touch to
-    // js/agp-game-shell.js. The heading/subtitle are built once (guarded by
-    // data-er-heading); the live badge's count is refreshed on every call
-    // since applyShellEnhancements() re-runs on every player join/leave.
+    // gray game name). DOM-only change (h2 innerHTML) — no touch to
+    // js/agp-game-shell.js. Built once (guarded by data-er-heading).
     function enhanceLobbyHeading() {
         var box = el('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
@@ -3539,38 +3535,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             h2.innerHTML = '<span class="er-lobby-title-wave">لوبي الدخول</span>' +
                 '<span class="er-lobby-title-game">— ' + escapeHtml(GAME_NAME) + '</span>';
             h2.setAttribute('data-er-heading', '1');
-
-            var subtitle = document.createElement('p');
-            subtitle.className = 'er-lobby-subtitle';
-            subtitle.textContent = 'اكتب كلمة الدخول في التعليقات وتنضم على طول';
-            h2.insertAdjacentElement('afterend', subtitle);
-
-            var liveBadge = document.createElement('div');
-            liveBadge.className = 'er-lobby-live-badge';
-            liveBadge.innerHTML = '<span class="er-lobby-live-dot"></span><span id="er-lobby-live-count-text"></span>';
-            subtitle.insertAdjacentElement('afterend', liveBadge);
-        }
-
-        var countText = el('er-lobby-live-count-text');
-        if (countText) {
-            // Same infinite-loop trap as enhanceConnectionStatusField() below:
-            // .textContent replaces the text node even when the string is
-            // unchanged, which is a childList mutation the MutationObserver
-            // driving applyShellEnhancements() reacts to — an unconditional
-            // assignment here would re-trigger this function forever.
-            var newCountText = AGP.gameManager.getPlayers().length + ' لاعب في اللوبي';
-            if (countText.textContent !== newCountText) countText.textContent = newCountText;
         }
     }
 
     // Transparent "Ayman Games" logo watermark in the middle of the lobby
-    // box, plus the bottom action row: "back to match settings" (reloads
-    // the page after user confirmation — cancels the current stream
-    // connection and returns to the initial screen, since there's no
-    // clean public way to reopen the full connecting screen from outside
-    // the shared file), the original start button (same element and
-    // onclick defined in the shared file, just new text/color), and "back
-    // to the Ayman Games platform" underneath.
+    // box, plus the bottom action row with exactly two buttons: the
+    // original start button (same element and onclick defined in the
+    // shared file, just new text/color) and "back to the games library"
+    // (navigates to games.html).
     function enhanceLobbyWatermarkAndActions() {
         var box = el('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
@@ -3595,26 +3567,32 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             row = document.createElement('div');
             row.className = 'er-lobby-actions-row';
             startBtn.parentNode.insertBefore(row, startBtn);
-
-            var backSettingsBtn = document.createElement('button');
-            backSettingsBtn.type = 'button';
-            backSettingsBtn.className = 'er-lobby-back-settings-btn';
-            backSettingsBtn.textContent = '⚙️ العودة لاعدادات المباراة';
-            backSettingsBtn.addEventListener('click', function () {
-                if (window.confirm('بيرجّعك لشاشة إعدادات المباراة الأولى، ويلغي الاتصال الحالي بالبث ' +
-                    'ويقفل اللوبي — بيحتاج اتصال جديد بعدها. تكمل؟')) {
-                    window.location.reload();
-                }
-            });
-
-            row.appendChild(backSettingsBtn);
             row.appendChild(startBtn); // moves the original element (same onclick) into the new row
+
+            // Keeps --er-actions-h (used by the card grid's CSS to scroll
+            // underneath this row) equal to the row's real height + top
+            // margin, which grows when the buttons wrap on narrow screens.
+            var syncActionsHeight = function () {
+                box.style.setProperty('--er-actions-h',
+                    (row.offsetHeight + (parseFloat(getComputedStyle(row).marginTop) || 0)) + 'px');
+            };
+            syncActionsHeight();
+            if (window.ResizeObserver) new ResizeObserver(syncActionsHeight).observe(row);
         }
 
-        // "Back to platform" joins the same row (three buttons in one row,
-        // uniform W360xH48) instead of a separate element below it.
+        // "Back to the games library" joins the same row (uniform W360xH48)
+        // instead of a separate element below it. Same look as the
+        // settings screen's back button, but navigates to the games
+        // library page (games.html) instead of homeNavigate().
         if (!row.querySelector('.er-back-to-platform-btn')) {
-            row.appendChild(makeBackToPlatformBtn());
+            var backBtn = document.createElement('button');
+            backBtn.type = 'button';
+            backBtn.className = 'er-back-to-platform-btn';
+            backBtn.textContent = '🏠 العودة لمكتبة الألعاب';
+            backBtn.addEventListener('click', function () {
+                window.location.href = '../../games.html';
+            });
+            row.appendChild(backBtn);
         }
     }
 
