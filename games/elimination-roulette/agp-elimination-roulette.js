@@ -1058,51 +1058,46 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // The lobby box's real content always stays above the watermark.
             '#agp-shell-box.agp-lobby-box > *:not(#er-lobby-watermark){position:relative;z-index:1;}',
 
-            // Lobby title text/color is set by enhanceLobbyHeading() below
-            // (replacing the h2's innerHTML — no change to the shared file).
-            '#agp-shell-box.agp-lobby-box h2{text-shadow:none !important;letter-spacing:0.5px !important;',
-            'font-family:"Cairo",sans-serif !important;}',
-            // Title wave text ("لوبي الدخول") — animated purple/gold gradient,
-            // matching the new design tokens; the game-name part next to it
-            // stays plain gray. Built by enhanceLobbyHeading() below.
-            '@keyframes er-lobby-wave{0%{background-position:0% 50%}100%{background-position:200% 50%}}',
-            '.er-lobby-title-wave{background:linear-gradient(90deg,#b28cf5,#f0cd6a,#d9a0f0,#b28cf5);',
-            'background-size:200% 100%;-webkit-background-clip:text;background-clip:text;',
-            'color:transparent !important;animation:er-lobby-wave 9s linear infinite;}',
-            '.er-lobby-title-game{color:#8f88a3 !important;font-size:0.6em;text-shadow:none !important;}',
-
-            // Keyword/player-count row — two capsules spread across the
-            // width (keyword on the right, count on the left, per the new
-            // design), built purely with CSS: the shared file's hint text
-            // ("عشان تدخل المباراة اكتب بالشات:") is hidden entirely in this
-            // game's lobby, leaving the keyword badge and the count badge as
-            // the row's only two items, spread apart via
-            // justify-content:space-between.
+            // Lobby header, per the new design: line 1 is the title
+            // (لوبي الدخول للعبة "روليت الإقصاء", set by enhanceLobbyHeading()
+            // below — no change to the shared file) in large bold white;
+            // line 2 is "للدخول اكتب في شات البث" + the join keyword in
+            // large yellow on the right, and the player-count capsule on the
+            // left. Line 2 reuses the shared file's own .agp-join-hint row:
+            // its hint text is hidden, the sentence is the keyword badge's
+            // ::before, and the count badge is restyled into the capsule.
+            '#agp-shell-box.agp-lobby-box h2{text-shadow:none !important;letter-spacing:0 !important;',
+            'font-family:"Cairo",sans-serif !important;font-weight:800 !important;font-size:44px !important;',
+            'color:#fff !important;line-height:1.3 !important;margin:0 0 6px !important;}',
             '#agp-shell-box.agp-lobby-box .agp-join-hint{display:flex !important;flex-wrap:wrap !important;',
-            'justify-content:space-between !important;align-items:center !important;gap:10px !important;',
-            'width:100% !important;}',
+            'justify-content:center !important;align-items:center !important;gap:56px !important;',
+            'width:100% !important;margin-bottom:22px !important;}',
             '#agp-shell-box.agp-lobby-box .agp-join-hint-text{display:none !important;}',
             '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge{order:0;display:inline-flex !important;',
-            'align-items:center !important;gap:8px !important;background:rgba(178,140,245,.16) !important;',
-            'border:1px solid rgba(178,140,245,.45) !important;border-radius:999px !important;',
-            'padding:8px 18px !important;font-family:"Cairo",sans-serif !important;font-size:20px !important;',
-            'font-weight:900 !important;color:#f0cd6a !important;box-shadow:none !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge::before{content:"كلمة الدخول";',
-            'font-family:"IBM Plex Sans Arabic",sans-serif;font-size:12.5px;font-weight:400;color:#cfc7e2;}',
-
-            // Player-count badge — same element the shared file already
-            // fills in (playerCountBadgeHtml, "current / max"); only its
-            // position/colors change here, order:1 puts it on the left.
+            'align-items:center !important;gap:14px !important;background:none !important;',
+            'border:none !important;padding:0 !important;font-family:"Cairo",sans-serif !important;',
+            'font-size:44px !important;font-weight:800 !important;line-height:1.2 !important;',
+            'color:#E2C700 !important;box-shadow:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge::before{content:"للدخول اكتب في شات البث";',
+            'font-family:"Cairo",sans-serif;font-size:22px;font-weight:700;color:#fff;white-space:nowrap;}',
+            // Player-count capsule — same element the shared file already
+            // fills in (playerCountBadgeHtml, "current / max"); order:1 puts
+            // it on the left.
             '#agp-shell-box.agp-lobby-box #agp-lobby-count{position:static !important;order:1 !important;}',
             '#agp-shell-box.agp-lobby-box .agp-player-count-badge{display:inline-flex !important;',
-            'align-items:center !important;gap:8px !important;background:rgba(126,224,166,.12) !important;',
-            'border:1px solid rgba(126,224,166,.4) !important;border-radius:999px !important;',
-            'padding:8px 18px !important;font-family:"Cairo",sans-serif !important;direction:ltr !important;',
-            'font-size:24px !important;font-weight:900 !important;color:#7ee0a6 !important;',
+            'align-items:center !important;justify-content:center !important;width:157px !important;',
+            'height:52px !important;box-sizing:border-box !important;padding:0 !important;',
+            'background:rgba(217,217,217,.1) !important;border:4px solid #000 !important;',
+            'border-radius:26px !important;font-family:"Cairo",sans-serif !important;direction:ltr !important;',
+            'font-size:28px !important;font-weight:800 !important;color:#fff !important;',
             'box-shadow:none !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-player-count-badge::before{content:"عدد اللاعبين";',
-            'direction:rtl;font-family:"IBM Plex Sans Arabic",sans-serif;font-size:12.5px;',
-            'font-weight:400;color:#cfc7e2;}',
+            '@media (max-width:600px){',
+            '#agp-shell-box.agp-lobby-box h2{font-size:26px !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-hint{gap:12px 24px !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge{font-size:30px !important;gap:10px !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge::before{font-size:16px;}',
+            '#agp-shell-box.agp-lobby-box .agp-player-count-badge{width:120px !important;height:44px !important;',
+            'font-size:22px !important;border-width:3px !important;}}',
 
             /* ==================================================================
              * Player grid — lobby cards per the new design: every card is a
@@ -1138,6 +1133,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // (top:-6px;left:-6px, outside the card entirely).
             // Scoped to :has(> .agp-pcard) so framed cards are untouched.
             '#agp-shell-box.agp-lobby-box li:has(> .agp-pcard) .agp-player-remove-btn{',
+            'top:50% !important;left:7px !important;right:auto !important;transform:translateY(-50%);',
+            'width:16px !important;height:16px !important;font-size:9px !important;z-index:5;}',
+            // Framed cards (.agp-pcard-tpl) take the exact same 217x57
+            // footprint as the unframed cards above: the shared renderer
+            // always draws them 298x100, so they're zoomed to the 217px
+            // width (217/298) and their wrapper clips the extra height,
+            // centered, with the same 24px rounded corners. The kick button
+            // moves to the same left-edge spot as on unframed cards.
+            '#agp-shell-box.agp-lobby-box li:has(> .agp-pcard-tpl){width:217px !important;height:57px !important;',
+            'overflow:hidden !important;border-radius:24px !important;display:flex !important;',
+            'flex-direction:row !important;align-items:center !important;justify-content:center !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-tpl{zoom:0.7282;flex-shrink:0 !important;}',
+            '#agp-shell-box.agp-lobby-box li:has(> .agp-pcard-tpl) .agp-player-remove-btn{',
             'top:50% !important;left:7px !important;right:auto !important;transform:translateY(-50%);',
             'width:16px !important;height:16px !important;font-size:9px !important;z-index:5;}',
             '#agp-shell-box.agp-lobby-box .agp-player-remove-btn{',
@@ -3522,9 +3530,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // would only visually conflict with them.
 
     // Lobby heading — replaces the shared file's default h2 text with the
-    // new design's title (animated purple/gold gradient "لوبي الدخول" +
-    // gray game name). DOM-only change (h2 innerHTML) — no touch to
-    // js/agp-game-shell.js. Built once (guarded by data-er-heading).
+    // new design's title (لوبي الدخول للعبة "روليت الإقصاء"). DOM-only
+    // change (h2 text) — no touch to js/agp-game-shell.js. Set once
+    // (guarded by data-er-heading).
     function enhanceLobbyHeading() {
         var box = el('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
@@ -3532,8 +3540,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!h2) return;
 
         if (h2.getAttribute('data-er-heading') !== '1') {
-            h2.innerHTML = '<span class="er-lobby-title-wave">لوبي الدخول</span>' +
-                '<span class="er-lobby-title-game">— ' + escapeHtml(GAME_NAME) + '</span>';
+            h2.textContent = 'لوبي الدخول للعبة "' + GAME_NAME + '"';
             h2.setAttribute('data-er-heading', '1');
         }
     }
