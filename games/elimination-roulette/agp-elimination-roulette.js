@@ -1031,13 +1031,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'height:min(94dvh,980px) !important;max-height:94dvh !important;',
             'display:flex !important;flex-direction:column !important;overflow:hidden !important;}',
             '#agp-shell-box.agp-lobby-box > h2,',
-            '#agp-shell-box.agp-lobby-box > .er-lobby-subtitle,',
-            '#agp-shell-box.agp-lobby-box > .er-lobby-live-badge,',
             '#agp-shell-box.agp-lobby-box > .agp-join-hint,',
             '#agp-shell-box.agp-lobby-box > #agp-entrance-stage,',
             '#agp-shell-box.agp-lobby-box > #agp-entrance-settled-list{flex:0 0 auto !important;}',
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list{flex:1 1 auto !important;',
             'min-height:0 !important;overflow-y:auto !important;}',
+            // Card grid scrolls with a hidden scrollbar (wheel/touch still
+            // work), and extends underneath the bottom action row so cards
+            // pass behind the buttons while scrolling. --er-actions-h is
+            // the row's live height (+ its top margin), kept in sync by
+            // enhanceLobbyWatermarkAndActions() via a ResizeObserver since
+            // the row wraps onto more lines on narrow screens. The bottom
+            // padding lets the last row of cards scroll fully clear of the
+            // buttons.
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{scrollbar-width:none !important;',
+            '-ms-overflow-style:none !important;',
+            'padding-bottom:calc(var(--er-actions-h,62px) + 16px) !important;',
+            'margin-bottom:calc(-1 * var(--er-actions-h,62px)) !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list::-webkit-scrollbar{display:none !important;}',
 
             // "Ayman Games" logo as a transparent (25%) watermark in the
             // middle of the lobby box. Added as an img element via
@@ -1059,29 +1070,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'background-size:200% 100%;-webkit-background-clip:text;background-clip:text;',
             'color:transparent !important;animation:er-lobby-wave 9s linear infinite;}',
             '.er-lobby-title-game{color:#8f88a3 !important;font-size:0.6em;text-shadow:none !important;}',
-            '#agp-shell-box.agp-lobby-box .er-lobby-subtitle{margin:9px 0 0;font-size:14px;',
-            'line-height:1.85;color:#a79fbb;text-align:center;font-family:"IBM Plex Sans Arabic",sans-serif;}',
-            '#agp-shell-box.agp-lobby-box .er-lobby-live-badge{display:inline-flex;align-items:center;',
-            'gap:9px;margin:11px auto 0;padding:6px 15px;border-radius:999px;',
-            'border:1px solid rgba(178,140,245,.35);background:rgba(122,63,212,.1);font-size:12.5px;',
-            'color:#c6b4f2;font-family:"IBM Plex Sans Arabic",sans-serif;width:fit-content;}',
-            '.er-lobby-live-dot{width:7px;height:7px;border-radius:50%;background:#7ee0a6;',
-            'animation:er-lobby-blink 1.6s ease-in-out infinite;}',
-            '@keyframes er-lobby-blink{0%,100%{opacity:.35}50%{opacity:1}}',
 
             // Keyword/player-count row — two capsules spread across the
             // width (keyword on the right, count on the left, per the new
-            // design), built purely with CSS: the hint text forces its own
-            // full-width line (order:-1), leaving the keyword badge and the
-            // count badge as the row's only two items, spread apart via
+            // design), built purely with CSS: the shared file's hint text
+            // ("عشان تدخل المباراة اكتب بالشات:") is hidden entirely in this
+            // game's lobby, leaving the keyword badge and the count badge as
+            // the row's only two items, spread apart via
             // justify-content:space-between.
             '#agp-shell-box.agp-lobby-box .agp-join-hint{display:flex !important;flex-wrap:wrap !important;',
             'justify-content:space-between !important;align-items:center !important;gap:10px !important;',
             'width:100% !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-join-hint-text{flex:0 0 100% !important;order:-1 !important;',
-            'text-align:center !important;color:#a79fbb !important;font-weight:400 !important;',
-            'font-size:14px !important;margin-bottom:2px !important;',
-            'font-family:"IBM Plex Sans Arabic",sans-serif !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-hint-text{display:none !important;}',
             '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge{order:0;display:inline-flex !important;',
             'align-items:center !important;gap:8px !important;background:rgba(178,140,245,.16) !important;',
             'border:1px solid rgba(178,140,245,.45) !important;border-radius:999px !important;',
@@ -1146,21 +1146,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-box.agp-lobby-box .agp-player-remove-btn:hover{',
             'background:rgba(224,115,111,.3) !important;color:#ff9b96 !important;}',
 
-            // Lobby bottom action row — the three buttons (back to
-            // settings, start round, back to platform) sit in one row at a
-            // fixed size (W360xH48) each, centered.
+            // Lobby bottom action row — the two buttons (start round, back
+            // to the games library) sit in one row at a fixed size
+            // (W360xH48) each, centered, above the scrolling card grid.
             '#agp-shell-box.agp-lobby-box .er-lobby-actions-row{flex:0 0 auto !important;',
             'display:flex;gap:14px;margin-top:14px;justify-content:center;',
-            'flex-wrap:wrap;}',
+            'flex-wrap:wrap;position:relative;z-index:3 !important;}',
             '.er-lobby-actions-row > *{width:360px !important;height:48px !important;',
             'max-width:360px !important;flex:0 0 360px !important;box-sizing:border-box !important;',
             'display:flex !important;align-items:center !important;justify-content:center !important;',
             'padding:0 14px !important;margin:0 !important;}',
-            '.er-lobby-back-settings-btn{border-radius:999px;',
-            'border:1px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.08);color:#fff;',
-            'font-family:"Noto Kufi Arabic",sans-serif;font-weight:700;font-size:0.9em;cursor:pointer;',
-            'transition:background 0.15s;}',
-            '.er-lobby-back-settings-btn:hover{background:rgba(255,255,255,0.18);}',
             '#agp-shell-box.agp-lobby-box .er-lobby-actions-row #agp-start-round-btn{',
             'background:#7a3fd4 !important;color:#f3ecff !important;',
             'font-family:"Noto Kufi Arabic",sans-serif !important;',
@@ -1169,7 +1164,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'background:#9a6cf0 !important;}',
 
             // "Back to platform" button — in the lobby it joins the same
-            // three-button row (sized W360xH48 above); on the initial
+            // two-button row (sized W360xH48 above); on the initial
             // settings screen it keeps its own default block layout (the
             // general rule below is the default, and .er-lobby-actions-row
             // above overrides it only inside the lobby row).
@@ -3528,12 +3523,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     // Lobby heading — replaces the shared file's default h2 text with the
     // new design's title (animated purple/gold gradient "لوبي الدخول" +
-    // gray game name), plus a subtitle line and a live player-count badge
-    // that the shared file doesn't render at all. DOM-only change (h2
-    // innerHTML + two new sibling elements) — no touch to
-    // js/agp-game-shell.js. The heading/subtitle are built once (guarded by
-    // data-er-heading); the live badge's count is refreshed on every call
-    // since applyShellEnhancements() re-runs on every player join/leave.
+    // gray game name). DOM-only change (h2 innerHTML) — no touch to
+    // js/agp-game-shell.js. Built once (guarded by data-er-heading).
     function enhanceLobbyHeading() {
         var box = el('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
@@ -3544,38 +3535,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             h2.innerHTML = '<span class="er-lobby-title-wave">لوبي الدخول</span>' +
                 '<span class="er-lobby-title-game">— ' + escapeHtml(GAME_NAME) + '</span>';
             h2.setAttribute('data-er-heading', '1');
-
-            var subtitle = document.createElement('p');
-            subtitle.className = 'er-lobby-subtitle';
-            subtitle.textContent = 'اكتب كلمة الدخول في التعليقات وتنضم على طول';
-            h2.insertAdjacentElement('afterend', subtitle);
-
-            var liveBadge = document.createElement('div');
-            liveBadge.className = 'er-lobby-live-badge';
-            liveBadge.innerHTML = '<span class="er-lobby-live-dot"></span><span id="er-lobby-live-count-text"></span>';
-            subtitle.insertAdjacentElement('afterend', liveBadge);
-        }
-
-        var countText = el('er-lobby-live-count-text');
-        if (countText) {
-            // Same infinite-loop trap as enhanceConnectionStatusField() below:
-            // .textContent replaces the text node even when the string is
-            // unchanged, which is a childList mutation the MutationObserver
-            // driving applyShellEnhancements() reacts to — an unconditional
-            // assignment here would re-trigger this function forever.
-            var newCountText = AGP.gameManager.getPlayers().length + ' لاعب في اللوبي';
-            if (countText.textContent !== newCountText) countText.textContent = newCountText;
         }
     }
 
     // Transparent "Ayman Games" logo watermark in the middle of the lobby
-    // box, plus the bottom action row: "back to match settings" (reloads
-    // the page after user confirmation — cancels the current stream
-    // connection and returns to the initial screen, since there's no
-    // clean public way to reopen the full connecting screen from outside
-    // the shared file), the original start button (same element and
-    // onclick defined in the shared file, just new text/color), and "back
-    // to the Ayman Games platform" underneath.
+    // box, plus the bottom action row with exactly two buttons: the
+    // original start button (same element and onclick defined in the
+    // shared file, just new text/color) and "back to the games library"
+    // (same homeNavigate() target as the settings screen's back button,
+    // only relabeled here).
     function enhanceLobbyWatermarkAndActions() {
         var box = el('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
@@ -3600,26 +3568,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             row = document.createElement('div');
             row.className = 'er-lobby-actions-row';
             startBtn.parentNode.insertBefore(row, startBtn);
-
-            var backSettingsBtn = document.createElement('button');
-            backSettingsBtn.type = 'button';
-            backSettingsBtn.className = 'er-lobby-back-settings-btn';
-            backSettingsBtn.textContent = '⚙️ العودة لاعدادات المباراة';
-            backSettingsBtn.addEventListener('click', function () {
-                if (window.confirm('بيرجّعك لشاشة إعدادات المباراة الأولى، ويلغي الاتصال الحالي بالبث ' +
-                    'ويقفل اللوبي — بيحتاج اتصال جديد بعدها. تكمل؟')) {
-                    window.location.reload();
-                }
-            });
-
-            row.appendChild(backSettingsBtn);
             row.appendChild(startBtn); // moves the original element (same onclick) into the new row
+
+            // Keeps --er-actions-h (used by the card grid's CSS to scroll
+            // underneath this row) equal to the row's real height + top
+            // margin, which grows when the buttons wrap on narrow screens.
+            var syncActionsHeight = function () {
+                box.style.setProperty('--er-actions-h',
+                    (row.offsetHeight + (parseFloat(getComputedStyle(row).marginTop) || 0)) + 'px');
+            };
+            syncActionsHeight();
+            if (window.ResizeObserver) new ResizeObserver(syncActionsHeight).observe(row);
         }
 
-        // "Back to platform" joins the same row (three buttons in one row,
-        // uniform W360xH48) instead of a separate element below it.
+        // "Back to the games library" joins the same row (uniform W360xH48)
+        // instead of a separate element below it.
         if (!row.querySelector('.er-back-to-platform-btn')) {
-            row.appendChild(makeBackToPlatformBtn());
+            var backBtn = makeBackToPlatformBtn();
+            backBtn.textContent = '🏠 العودة لمكتبة الألعاب';
+            row.appendChild(backBtn);
         }
     }
 
