@@ -1017,15 +1017,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // a tablet/laptop screen actually has leaves a visibly narrow
             // column with large empty margins on both sides. min(94vw,…)
             // already shrinks properly on small screens; raising the cap
-            // to 1120px (this screen's own value in the design spec,
-            // matching Lobby.dc.html's max-width:1120px) lets it use a
-            // tablet or laptop's width properly instead of stopping short at 900.
+            // to 1310px (wide enough for 5 lobby cards per row: 5x217px
+            // + 4x37px gaps = 1233px, plus the box's 34px side padding —
+            // see the player grid below) lets it
+            // use a tablet or laptop's width properly instead of stopping
+            // short at 900.
             // 94vh -> 94dvh override for the same reason as the settings
             // screen's 100dvh comment further down: vh alone can be taller
             // than the real visible viewport on mobile/tablet Safari while
             // the browser chrome is showing.
-            '#agp-shell-box.agp-lobby-box{width:min(94vw,1120px) !important;',
-            'max-width:min(94vw,1120px) !important;height:min(94vh,980px) !important;max-height:94vh !important;',
+            '#agp-shell-box.agp-lobby-box{width:min(94vw,1310px) !important;',
+            'max-width:min(94vw,1310px) !important;height:min(94vh,980px) !important;max-height:94vh !important;',
             'height:min(94dvh,980px) !important;max-height:94dvh !important;',
             'display:flex !important;flex-direction:column !important;overflow:hidden !important;}',
             '#agp-shell-box.agp-lobby-box > h2,',
@@ -1103,37 +1105,40 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'font-weight:400;color:#cfc7e2;}',
 
             /* ==================================================================
-             * Player grid — 4 columns (matches the new design spec exactly:
-             * grid-template-columns:repeat(4,minmax(0,1fr))), card size stays
-             * 45px (unchanged setting, only the column count/colors move to
-             * match the new design). Local !important override on the sizes
-             * the shared AGP.playerCard component renders — its own default
-             * (60px) and js/agp-player-card.js are untouched; same math it
-             * already uses for 45px cards: pillW=145px, overlap=10px,
-             * padStart=24px, padEnd=14px, plank height=36px, font=21px.
-             * Scoped entirely to the lobby (.agp-lobby-box) — no effect on
-             * the mid-match settings player list or any other use of the
-             * card in this file.
+             * Player grid — lobby cards per the new design: every card is a
+             * single 217x57 capsule (border-radius 24px, #D9D9D9 at 30%
+             * opacity, 2px black border) with a 48px round avatar inside it
+             * on the right, the name centered in white, and the kick button
+             * (✕) small on the left. Columns are fixed at 217px with a 37px
+             * gap — 5 per row at full width, fewer on narrower screens.
+             * Local !important override on the sizes the shared
+             * AGP.playerCard component renders inline — js/agp-player-card.js
+             * itself is untouched. Scoped entirely to the lobby
+             * (.agp-lobby-box) — no effect on the mid-match settings player
+             * list or any other use of the card in this file.
              * ==================================================================== */
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list{display:grid !important;',
-            'grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:10px !important;',
+            'grid-template-columns:repeat(auto-fill,217px) !important;column-gap:37px !important;',
+            'row-gap:20px !important;justify-content:center !important;',
             'justify-items:center !important;align-items:end !important;align-content:start !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic{width:45px !important;height:45px !important;',
-            'border:1px solid rgba(255,255,255,.18) !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-pcard-name-basic{width:145px !important;height:36px !important;',
-            'margin-inline-start:-10px !important;padding-inline-start:24px !important;',
-            'padding-inline-end:14px !important;font-size:21px !important;',
-            'font-family:"Noto Kufi Arabic",sans-serif !important;font-weight:700 !important;',
-            'color:#f4f2fb !important;background:linear-gradient(180deg,rgba(255,255,255,.07),',
-            'rgba(255,255,255,.03)) !important;border:1px solid rgba(255,255,255,.12) !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic--fallback{font-size:14px !important;}',
-            // Manual-kick button (✕) on unframed cards — moved to the top
-            // corner of the avatar circle (top:0;right:0) instead of the
-            // shared file's default (top:-6px;left:-6px, outside the card
-            // entirely), and recolored to the design's elimination red.
+            '#agp-shell-box.agp-lobby-box .agp-pcard{width:217px !important;height:57px !important;',
+            'box-sizing:border-box !important;padding:0 3px 0 28px !important;gap:6px !important;',
+            'border-radius:24px !important;background:rgba(217,217,217,.3) !important;',
+            'border:2px solid #000 !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic{width:48px !important;height:48px !important;',
+            'background:#D9D9D9 !important;border:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-name-basic{flex:1 1 auto !important;width:auto !important;',
+            'min-width:0 !important;height:auto !important;margin:0 !important;padding:0 !important;',
+            'font-size:20px !important;font-family:"Noto Kufi Arabic",sans-serif !important;',
+            'font-weight:700 !important;color:#fff !important;background:none !important;border:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic--fallback{font-size:15px !important;color:#3a2f4a !important;}',
+            // Manual-kick button (✕) on unframed cards — small, inside the
+            // card on its left edge, vertically centered (the design's
+            // 10px icon spot), instead of the shared file's default
+            // (top:-6px;left:-6px, outside the card entirely).
             // Scoped to :has(> .agp-pcard) so framed cards are untouched.
             '#agp-shell-box.agp-lobby-box li:has(> .agp-pcard) .agp-player-remove-btn{',
-            'top:0 !important;left:auto !important;right:0 !important;',
+            'top:50% !important;left:7px !important;right:auto !important;transform:translateY(-50%);',
             'width:16px !important;height:16px !important;font-size:9px !important;z-index:5;}',
             '#agp-shell-box.agp-lobby-box .agp-player-remove-btn{',
             'background:rgba(224,115,111,.18) !important;border-color:rgba(224,115,111,.55) !important;',
