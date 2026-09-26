@@ -1590,23 +1590,39 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'border:1px solid rgba(240,205,106,.4);color:#f0cd6a !important;font-weight:900;',
             'font-family:"Cairo",sans-serif;padding:12px 20px;border-radius:999px;font-size:19px;}',
             '#agp-mini-lobby-count{display:block;color:#cfc7e2;font-size:0.75em;margin-top:4px;}',
-            // Player grid — 2 columns of pill chips (45px tall), matching
-            // the spec's staged-player chip layout exactly.
+            // Player grid — 2 columns of the same 217x57 cards as the main
+            // lobby (see the lobby player-grid rules above), framed cards
+            // included (enhanceLobbyFramedCards() fits them here too).
+            // Hidden scrollbar; 12px top padding so first-row frames that
+            // extend above their slot aren't clipped.
             '#agp-shell-box.er-mini-lobby-active #agp-mini-lobby-list{',
             'flex:1 1 auto !important;min-height:0 !important;overflow-y:auto !important;',
-            'display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important;',
-            'gap:8px !important;margin:0 !important;padding:4px 4px 10px !important;',
-            'list-style:none;}',
+            // auto-fill: the 600px window fits exactly 2 columns; a phone
+            // too narrow for 2 gets 1 instead of overflowing sideways.
+            'display:grid !important;grid-template-columns:repeat(auto-fill,217px) !important;',
+            'column-gap:37px !important;row-gap:20px !important;justify-content:center !important;',
+            'justify-items:center !important;align-items:center !important;align-content:start !important;',
+            'margin:0 !important;padding:12px 4px 10px !important;list-style:none;',
+            'width:100% !important;box-sizing:border-box !important;',
+            'scrollbar-width:none !important;-ms-overflow-style:none !important;}',
+            '#agp-shell-box.er-mini-lobby-active #agp-mini-lobby-list::-webkit-scrollbar{display:none !important;}',
             '#agp-shell-box.er-mini-lobby-active #agp-mini-lobby-list li{position:relative;',
-            'display:flex !important;align-items:center;justify-content:center;height:45px;',
-            'border-radius:999px;border:1px solid rgba(255,255,255,.14);',
-            'background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));}',
-            '#agp-shell-box.er-mini-lobby-active .agp-pcard-avatar-basic{width:36px !important;',
-            'height:36px !important;flex-shrink:0;position:relative;z-index:2;margin-inline-start:5px;}',
-            '#agp-shell-box.er-mini-lobby-active .agp-pcard-name-basic{width:auto !important;',
-            'flex:1 1 auto;height:auto !important;margin-inline-start:-10px !important;',
-            'padding-inline-start:20px !important;padding-inline-end:10px !important;',
-            'font-size:11.5px !important;background:none !important;border:none !important;}',
+            'display:flex !important;align-items:center;justify-content:center;min-height:57px;padding:0 !important;',
+            'border:none !important;background:none !important;}',
+            '#agp-shell-box.er-mini-lobby-active .agp-pcard{width:217px !important;height:57px !important;',
+            'box-sizing:border-box !important;padding:0 3px 0 28px !important;gap:6px !important;',
+            'border-radius:24px !important;background:rgba(217,217,217,.3) !important;',
+            'border:2px solid #000 !important;}',
+            '#agp-shell-box.er-mini-lobby-active .agp-pcard-avatar-basic{width:48px !important;height:48px !important;',
+            'background:#D9D9D9 !important;border:none !important;}',
+            '#agp-shell-box.er-mini-lobby-active .agp-pcard-name-basic{flex:1 1 auto !important;width:auto !important;',
+            'min-width:0 !important;height:auto !important;margin:0 !important;padding:0 !important;',
+            'font-size:20px !important;font-family:"Noto Kufi Arabic",sans-serif !important;',
+            'font-weight:700 !important;color:#fff !important;background:none !important;border:none !important;}',
+            '#agp-shell-box.er-mini-lobby-active .agp-pcard-avatar-basic--fallback{font-size:15px !important;color:#3a2f4a !important;}',
+            '#agp-shell-box.er-mini-lobby-active li:has(> .agp-pcard-tpl){width:217px !important;height:57px !important;',
+            'overflow:visible !important;flex-direction:row !important;}',
+            '#agp-shell-box.er-mini-lobby-active .agp-pcard-tpl{zoom:0.7282;flex-shrink:0 !important;}',
             '#agp-shell-box.er-mini-lobby-active #agp-mini-lobby-done-btn{flex:none !important;',
             'display:block !important;width:100% !important;margin:14px 0 0 !important;',
             'padding:13px 20px !important;font-size:14.5px !important;font-weight:700 !important;',
@@ -3609,7 +3625,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function enhanceLobbyFramedCards() {
         var box = el('agp-shell-box');
-        if (!box || !box.classList.contains('agp-lobby-box')) return;
+        // The main lobby and the mid-match "add new lobby" window
+        // (#agp-mini-lobby-list) both show the same 217x57 cards.
+        if (!box || !(box.classList.contains('agp-lobby-box') || el('agp-mini-lobby-list'))) return;
         var cards = box.querySelectorAll('.agp-shell-player-list .agp-pcard-tpl:not([data-er-fit])');
         Array.prototype.forEach.call(cards, function (card) {
             var frameEl = card.querySelector('.agp-pcard-tpl-frame-img');
@@ -3989,7 +4007,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     // "Add new lobby" window — a centered 700x800 window, 70% transparency
     // (same layout as Russian Roulette's rr-mini-lobby-active), single-color
-    // border, 3-column grid of tightly-packed 45px cards. The ✕ close
+    // border, 2-column grid of the main lobby's 217x57 cards. The ✕ close
     // button returns to the settings drawer without resetting it (same
     // approach as the connecting-layer recovery above: calling
     // AGP.gameShell.setSetting() with any field's own current value forces
