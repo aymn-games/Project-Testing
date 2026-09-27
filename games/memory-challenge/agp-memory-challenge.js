@@ -5,7 +5,8 @@
  * How it plays: every round a grid of emojis shows for a few seconds,
  * then every square flips over to show only its number. A question asks
  * where one of the emojis was; every still-alive player types the
- * square's number in the stream chat (the first answer counts). Wrong or
+ * square's number in the stream chat (a player can change their answer
+ * while the time runs — the last one received counts). Wrong or
  * missing answers are eliminated; if nobody answers correctly, nobody is
  * eliminated that round. Round 1 starts with 3 boxes and every round adds
  * one more box (round N has N + 2 boxes).
@@ -452,6 +453,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-elim-x{position:absolute;bottom:-2px;left:-2px;width:28px;height:28px;border-radius:50%;background:#FF4D4D;',
             'border:3px solid #130E22;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;}',
             '.mc-elim-name{max-width:100%;font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '.mc-elim-answer{display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:999px;font-size:14px;font-weight:600;',
+            'background:#2A1626;border:2px solid #4A2226;color:#FF8A8A;}',
+            '.mc-elim-answer b{font-size:17px;font-weight:700;color:#FFFFFF;font-variant-numeric:tabular-nums;}',
+            '.mc-elim-noanswer{background:#1A1430;border-color:#2E2448;color:#9A92B3;}',
 
             /* ==============================================================
              * Winner screen — Elimination Roulette's design (blurred
@@ -1452,7 +1457,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             html = '<div class="mc-q-row"><span class="mc-q-word">' + escapeHtml(_q[0]) + '</span>' +
                 '<span class="mc-q-emoji mc-emoji">' + emoji + '</span>' +
                 '<span class="mc-q-word">' + escapeHtml(_q[1]) + '</span></div>' +
-                '<div class="mc-h-sub">اكتب رقم المربع في الشات · أول إجابة هي اللي تنحسب</div>';
+                '<div class="mc-h-sub">اكتب رقم المربع في الشات · تقدر تغيّر إجابتك، وآخر إجابة هي اللي تنحسب</div>';
         } else if (_phase === 'reveal' && res) {
             html = '<div class="mc-reveal-row mc-h-mid"><span>الجواب الصحيح</span><span class="mc-correct-pill">' + res.correct + '</span></div>';
             if (res.tie) html += '<div class="mc-tie-line">ما أحد جاوب صح · الكل يكمل للمرحلة الجاية</div>';
@@ -1538,6 +1543,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '<span class="mc-elim-x">✕</span>' +
                 '</div>' +
                 '<span dir="ltr" class="mc-elim-name">' + escapeHtml(name) + '</span>' +
+                (function () {
+                    var a = _result.outAnswers ? _result.outAnswers[p.id] : null;
+                    return a != null
+                        ? '<span class="mc-elim-answer">جوابه <b>' + a + '</b></span>'
+                        : '<span class="mc-elim-answer mc-elim-noanswer">ما جاوب</span>';
+                })() +
             '</div>';
         }).join('');
         el('mc-elim-overlay').classList.add('mc-show');
@@ -1626,7 +1637,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var final = _alive.length <= 1 || _round >= MAX_ROUNDS;
         _result = {
             correct: correct, survived: survivors.length, out: tie ? 0 : outs.length,
-            tie: tie, noAns: noAns, counts: counts, final: final, outs: tie ? [] : outs
+            tie: tie, noAns: noAns, counts: counts, final: final, outs: tie ? [] : outs,
+            // Each eliminated player's final answer (null = never answered),
+            // shown on their card in the "eliminated this round" window.
+            outAnswers: outs.reduce(function (acc, p) { acc[p.id] = _answers[p.id] != null ? _answers[p.id] : null; return acc; }, {})
         };
         _phase = 'reveal';
         _t = 0; _tMax = 1;
@@ -1666,7 +1680,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         else { _t = t; renderTimer(); }
     }
 
-    /* ---- Chat answers: the square's number, first answer counts ---- */
+    /* ---- Chat answers: the square's number; a player can answer again
+     *      while the time runs and the last answer received counts ---- */
     function wireCommentListener() {
         if (typeof _commentUnsub === 'function') _commentUnsub();
         _commentUnsub = AGP.events.on('stream:commentReceived', function (payload) {
@@ -1675,10 +1690,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (!m) return;
             var player = _alive.filter(function (p) { return p.id === payload.id; })[0] ||
                 _alive.filter(function (p) { return payload.name && p.name === payload.name; })[0];
-            if (!player || _answers[player.id] != null) return;
+            if (!player) return;
             var n = +m[1];
             if (n < 1 || n > _cells.length) return;
-            _answers[player.id] = n;
+            _answers[player.id] = n; // overwrites any earlier answer — the last one counts
             var now = performance.now();
             if (!_lastBlip || now - _lastBlip > 70) { _lastBlip = now; Sfx.play('answer'); }
             renderTimer();
@@ -2699,7 +2714,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             gameTitle: GAME_NAME,
             settingsTitle: 'إعدادات لعبة تحدي الذاكرة',
             gameExplanation: 'كل جولة تظهر شبكة إيموجيز لثواني، بعدها تتغطى المربعات ويبان رقم كل مربع فقط. ' +
-                'يطلع سؤال عن مكان إيموجي معيّن، وكل لاعب يكتب رقم المربع في الشات (أول إجابة هي اللي تنحسب). ' +
+                'يطلع سؤال عن مكان إيموجي معيّن، وكل لاعب يكتب رقم المربع في الشات (يقدر يغيّر إجابته قبل ما يخلص الوقت، وآخر إجابة هي اللي تنحسب). ' +
                 'اللي يغلط أو ما يجاوب يطلع من اللعبة، ولو ما أحد جاوب صح الكل يكمل. بالمستوى السهل أول جولة 3 صناديق وكل جولة يزيد صندوق، وبالمستوى الصعب أول جولة 6 صناديق وكل جولة يزيد 3 صناديق. ' +
                 'اللعبة ' + MAX_ROUNDS + ' جولات كحد أقصى، أو تنتهي أول ما يبقى لاعب واحد — ولو بقى أكثر من لاعب بعد آخر جولة فكلهم فائزين.',
             connectButtonLabel: 'الاتصال بالبث والانتقال للوبي',
