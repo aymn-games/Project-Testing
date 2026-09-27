@@ -272,12 +272,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // nothing or a different player than intended.
     var _playerNumbers = {};       // playerId -> fixed number
     var _nextPlayerNumber = 1;
-    // selectCandidateManually/_selectedCandidateIdx were removed entirely
-    // — see the handleForceEliminateClick comment below.
 
-    // Id/object for the "default eliminator" in both cases where the turn
-    // holder eliminates themselves (the red button, and a timeout with the
-    // "eliminate chooser" behavior) — shows an actual card named "the
+    // Id/object for the "default eliminator" when the turn holder is
+    // eliminated by a timeout with the "eliminate chooser" behavior — shows an actual card named "the
     // streamer" in the announcement tab instead of no eliminator card at
     // all. Not a real player, so it isn't counted in the "most
     // eliminations" stat (see eliminatePlayer below).
@@ -676,13 +673,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-select-chooser-nm{min-width:0;font-family:"Noto Kufi Arabic",sans-serif;font-size:30px;',
             'font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
             '#er-select-title{flex:none;text-align:center;margin-top:0;padding:0 16px;font-size:20px;font-weight:700;color:#fff;}',
-            // Secondary "eliminate the turn holder" link — not part of the
-            // design spec (which has no equivalent), kept as a small text
-            // link so the feature isn't lost.
-            '#er-force-eliminate-btn{flex:none;display:block;margin:4px auto 0;padding:0;border:none;',
-            'background:none;cursor:pointer;font-family:"IBM Plex Sans Arabic",sans-serif;font-size:12px;',
-            'font-weight:600;color:#e0736f;text-decoration:underline;text-underline-offset:3px;}',
-            '#er-force-eliminate-btn:hover{color:#ff9b96;}',
             '#er-select-divider{flex:none;height:3px;margin:8px clamp(12px,7.4vw,107px) 0 clamp(12px,6vw,87px);background:#fff;}',
             /* ---- Countdown timer: small "الوقت" label over a big number,
              * top-left next to the ✕. ---- */
@@ -1659,13 +1649,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         '<div id="er-select-chooser-slot"></div>' +
                     '</div>' +
                     '<div id="er-select-title"></div>' +
-                    '<button id="er-force-eliminate-btn" type="button">إقصاء صاحب الدور مباشرة</button>' +
                     '<div id="er-select-timer"><span class="er-select-timer-lbl">الوقت</span><span class="er-select-timer-num"></span></div>' +
                     '<div id="er-select-divider"></div>' +
                     '<div id="er-select-candidates-grid"><div id="er-select-candidates-grid-inner"></div></div>' +
                 '</div>';
             document.body.appendChild(selectOverlay);
-            el('er-force-eliminate-btn').addEventListener('click', handleForceEliminateClick);
             el('er-select-close-btn').addEventListener('click', handleSelectResumeClick);
         }
         if (!el('er-toast-wrap')) {
@@ -2196,7 +2184,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (behavior === 'eliminate_chooser') {
             // Uses STREAMER_ELIMINATOR_ID (instead of chooser.id) so the
             // announcement tab shows "the streamer" as the actual
-            // eliminator — same effect as the red button.
+            // eliminator.
             eliminatePlayer(chooser, STREAMER_ELIMINATOR_ID);
         } else {
             // 'skip_turn' — no elimination; auto-play continues the spin if active.
@@ -2336,12 +2324,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // Phase label (top-right, matches the design spec's "مرحلة
         // الإقصاء") + a plain instruction line below the chooser row —
         // replaces the old single title line that mixed both together.
-        el('er-select-phase-label').textContent = isRevive ? 'مرحلة الإنعاش' : 'مرحلة الإقصاء';
+        el('er-select-phase-label').textContent = isRevive ? 'مرحلة الإنعاش' : 'مرحلة الاختيار';
         // Revive subtitle matches handoff_roulette_recent_features/
         // PROMPT.md's exact wording for the repeat-name trigger.
         el('er-select-title').textContent = isRevive
             ? 'تكرر اسمه مرتين متتاليتين.. اختر لاعباً مقصياً ليرجّعه'
-            : 'اكتب اسم أي لاعب مشارك في شات البث لإقصائه، أو يدوياً بالنقر على بطاقته';
+            : 'اكتب رقم أي لاعب بشات البث';
 
         el('er-select-chooser-slot').innerHTML = selectChooserCardHtml(_pendingTurn.chooser, roleClass);
 
@@ -2360,12 +2348,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 resolveTurnSelection(idx);
             };
         });
-
-        // The design spec has no equivalent of this button at all (see the
-        // CSS comment above #er-force-eliminate-btn) — kept as a secondary
-        // link, elimination-window only.
-        var forceBtn = el('er-force-eliminate-btn');
-        forceBtn.style.display = isRevive ? 'none' : '';
 
         if (AGP.playerCard) AGP.playerCard.fitAllNames(grid);
 
@@ -2418,20 +2400,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // candidate card now eliminates immediately (resolveTurnSelection), so
     // there's no more "selected but not confirmed" state needing visual
     // distinction or a changing button label.
-
-    // The red button (elimination window only, hidden in the revival
-    // window) — eliminates the turn holder themselves exclusively.
-    // eliminatorId is STREAMER_ELIMINATOR_ID (not chooser.id) so the
-    // announcement tab shows "the streamer" as the eliminator, with an
-    // actual card — same effect as the elimination-timeout path (see
-    // applyEliminationTimeout below).
-    function handleForceEliminateClick() {
-        if (!_pendingTurn || _pendingTurn.type !== 'eliminate') return;
-        var chooser = _pendingTurn.chooser;
-        if (!chooser) return;
-        AGP.timerManager.stop(TIMER_NAME);
-        eliminatePlayer(chooser, STREAMER_ELIMINATOR_ID);
-    }
 
     // "Resume game" — the only button in the revival window, and one of
     // two in the elimination window. Closes the turn without eliminating
