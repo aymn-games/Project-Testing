@@ -546,6 +546,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('pc-start-round-btn').addEventListener('click', function () {
             _registrationOpen = false;
             _roundStarted = true;
+            _matchStartedAt = Date.now();
             renderMatchScreen();
         });
 
@@ -978,6 +979,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     var _winnerDeclared = false;
+    var _matchStartedAt = 0; // بداية المباراة الفعلية -- لحساب مدة اللعب بنظام نقاط المنصة
     var _holdWinnerForAnswerTab = false;
     var _pendingWinnerTeam = null;
     var _winnerDim = null;
@@ -1009,9 +1011,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         '</div>';
     }
 
+    // نظام نقاط المنصة الموحّد (window.AGPAuth.reportMatchPoints): كل
+    // لاعبي الفريقين المنضمين مشاركون (ضيوف الشات بلا انضمام لا يُحتسبون)،
+    // ولاعبو الفريق الفائز فائزون (لعبة فريقين).
+    function reportPlatformPoints(winningTeam) {
+        if (!window.AGPAuth || typeof window.AGPAuth.reportMatchPoints !== 'function') return;
+        window.AGPAuth.reportMatchPoints({
+            players: getTeamPlayers(TEAM1).concat(getTeamPlayers(TEAM2)),
+            winnerIds: getTeamPlayers(winningTeam).map(function (p) { return p.id; }),
+            teamGame: true,
+            durationMs: _matchStartedAt ? (Date.now() - _matchStartedAt) : 0
+        });
+    }
+
     function renderWinnerScreen(winningTeam) {
         if (_winnerDeclared) return;
         _winnerDeclared = true;
+        reportPlatformPoints(winningTeam);
 
         stopAnswerTimer();
         var overlay = el('pc-countdown-overlay');
@@ -1048,6 +1064,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             updateSideScoreDisplay(TEAM2);
             _winnerDim.style.display = 'none';
             _winnerDeclared = false;
+            _matchStartedAt = Date.now();
             renderMatchScreen();
         });
         el('pc-winner-newmatch-btn').addEventListener('click', function () { window.location.reload(); });

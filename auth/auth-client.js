@@ -348,12 +348,45 @@ function toggleEntrance(enabled) {
     return request('/api/entrance/toggle', { method: 'POST', body: { enabled: Boolean(enabled) } });
 }
 
-/** Called by dashboard-core on round end. participants: [{tiktokUsername, won}]. */
-function reportRoundCompletion(participants, durationMs) {
+/** Called on round/match end. participants: [{tiktokUsername, won}].
+ * options.teamGame: true for two-team games (smaller per-player win bonus,
+ * see backend/points/points-service.js). */
+function reportRoundCompletion(participants, durationMs, options) {
     return request('/api/points/round-complete', {
         method: 'POST',
-        body: { participants: participants, durationMs: durationMs }
+        body: { participants: participants, durationMs: durationMs, teamGame: Boolean(options && options.teamGame) }
     });
+}
+
+/* TikTok username of an AGP player: ids from the TikTok adapter are
+ * "tiktok:<username>"; anything else falls back to the player's name. */
+function tiktokUsernameForPlayer(player) {
+    var id = (player && player.id) || '';
+    if (id.indexOf('tiktok:') === 0) return id.slice('tiktok:'.length);
+    return (player && (player.name || player.id)) || '';
+}
+
+/**
+ * Unified entry point to the platform points system — every game (current
+ * and future) reports its match end through this. See CLAUDE.md.
+ * opts.players: every player who took part ({id, name}).
+ * opts.winnerIds: ids of the winning player(s) — or, in a team game, every
+ *   player on the winning team.
+ * opts.teamGame: true for two-team games.
+ * opts.durationMs: actual match duration.
+ * Resolves to the backend result, or null (nobody to report / request failed)
+ * — never rejects, so it can't block the game's winner screen.
+ */
+function reportMatchPoints(opts) {
+    opts = opts || {};
+    var winners = {};
+    (opts.winnerIds || []).forEach(function (id) { winners[id] = true; });
+    var participants = (opts.players || []).map(function (p) {
+        return { tiktokUsername: tiktokUsernameForPlayer(p), won: Boolean(p && winners[p.id]) };
+    }).filter(function (p) { return p.tiktokUsername; });
+    if (!participants.length) return Promise.resolve(null);
+    return reportRoundCompletion(participants, opts.durationMs || 0, { teamGame: Boolean(opts.teamGame) })
+        .catch(function () { return null; });
 }
 
 /* Streamer level (SP) — see backend/points/streamer-level-service.js */
@@ -596,6 +629,7 @@ global.AGPAuth = {
     equipFrame: equipFrame,
     toggleEntrance: toggleEntrance,
     reportRoundCompletion: reportRoundCompletion,
+    reportMatchPoints: reportMatchPoints,
     getStreamerLevels: getStreamerLevels,
     adminUpdateStreamerLevel: adminUpdateStreamerLevel,
     canAccessDashboard: canAccessDashboard,

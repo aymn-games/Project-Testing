@@ -5,10 +5,9 @@
  * حقيقي وكامل (كلمات عشوائية 9/8/7/1، أوامر شات للتلميح/التأكيد/
  * التحديد/السحب/التخطي، قواعد فتح الصناديق والفوز/الخسارة).
  *
- * ⚠️ غير مكتمل: awardWinnerPoints يستخدم AGP.scoreManager المحلي فقط،
- * لا window.AGPAuth.reportRoundCompletion (نظام نقاط المنصة الحقيقي
- * المستخدَم في بقية الألعاب) -- الفائزون هنا لا يحصلون على نقاط ملف
- * شخصي دائمة. نظام QR/صفحة جوال السباي ماستر وطلباته موجودان وشغّالان
+ * النقاط: awardWinnerPoints لنقاط العرض المحلية داخل المباراة، و
+ * reportPlatformPoints لنظام نقاط المنصة الحقيقي (AGPAuth.reportMatchPoints،
+ * لعبة فريقين). نظام QR/صفحة جوال السباي ماستر وطلباته موجودان وشغّالان
  * (يتصلان بـwss://project-testing-akds.onrender.com)، لكن شاشة الفوز
  * لا تزال بانر بسيط داخل نفس الشاشة، لا شاشة مستقلة كبقية الألعاب.
  */
@@ -847,6 +846,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _match.gameOver = false;
         _match.winnerTeam = null;
         _match.loseReason = null;
+        _match.startedAt = Date.now();
         broadcastBoardToSpymasters();
     }
 
@@ -987,6 +987,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    // نظام نقاط المنصة الموحّد (window.AGPAuth.reportMatchPoints): كل
+    // لاعبي الفريقين مشاركون، ولاعبو الفريق الفائز فائزون (لعبة فريقين).
+    // منفصل عن awardWinnerPoints أعلاه (نقاط العرض المحلية داخل المباراة).
+    function reportPlatformPoints() {
+        if (!_match.winnerTeam) return;
+        if (!window.AGPAuth || typeof window.AGPAuth.reportMatchPoints !== 'function') return;
+        window.AGPAuth.reportMatchPoints({
+            players: getTeamPlayers(TEAM1).concat(getTeamPlayers(TEAM2)),
+            winnerIds: getTeamPlayers(_match.winnerTeam).map(function (p) { return p.id; }),
+            teamGame: true,
+            durationMs: _match.startedAt ? (Date.now() - _match.startedAt) : 0
+        });
+    }
+
     // ⚠️ قبل إعلان الفوز: كل الصناديق تنكشف (triggerPendingWin أعلاه) ويظهر
     // زر "🏆 إعلان الفوز" بمكان التلميح/الوقت -- الاستريمر هو من يضغطه
     // يدويًا، وهذا بالضبط ما ينقل لشاشة الفوز (مو تلقائي فور تحقق الشرط).
@@ -997,6 +1011,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _match.loseReason = _match.pendingWin.reason;
         _match.pendingWin = null;
         awardWinnerPoints();
+        reportPlatformPoints();
         renderMatchScreen();
     }
 

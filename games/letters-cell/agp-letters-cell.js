@@ -925,6 +925,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // صحيحة بنفس الرسالة" لمشاهد لسا ما انضم أصلاً (tryHandleAutoAnswer)،
         // ذاك يبقى شغالاً طول المباراة كما هو مطلوب.
         _registrationOpen = false;
+        _matchStartedAt = Date.now();
         _round = 1;
         _roundWins1 = 0; _roundWins2 = 0;
         _usedQuestions = {};
@@ -1133,6 +1134,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         reshuffleRound('manual');
     }
 
+    // بداية المباراة الفعلية -- لحساب مدة اللعب بنظام نقاط المنصة.
+    var _matchStartedAt = 0;
+
+    // نظام نقاط المنصة الموحّد (window.AGPAuth.reportMatchPoints): كل
+    // لاعبي الفريقين مشاركون، ولاعبو الفريق الفائز فائزون (لعبة فريقين).
+    function reportPlatformPoints(winningTeam) {
+        if (!window.AGPAuth || typeof window.AGPAuth.reportMatchPoints !== 'function') return;
+        window.AGPAuth.reportMatchPoints({
+            players: getTeamPlayers(TEAM1).concat(getTeamPlayers(TEAM2)),
+            winnerIds: getTeamPlayers(winningTeam).map(function (p) { return p.id; }),
+            teamGame: true,
+            durationMs: _matchStartedAt ? (Date.now() - _matchStartedAt) : 0
+        });
+    }
+
     function continueAfterRoundWin() {
         var winner = _connectionWinner;
         if (winner === TEAM1) _roundWins1++; else if (winner === TEAM2) _roundWins2++;
@@ -1140,6 +1156,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _connectionWinner = null;
 
         if (_roundWins1 >= ROUND_WINS_TO_CLINCH || _roundWins2 >= ROUND_WINS_TO_CLINCH) {
+            reportPlatformPoints(_roundWins1 >= ROUND_WINS_TO_CLINCH ? TEAM1 : TEAM2);
             _screen = 'result';
             renderResultScreen();
             return;

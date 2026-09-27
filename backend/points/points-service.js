@@ -2,7 +2,8 @@
  * AGP POINTS SERVICE — نقاط المشاركة + المستويات (تفتح إطارات تلقائياً).
  * قواعد النقاط (ثابتة بالكود، غير قابلة للتعديل من لوحة الأدمن؛ فقط عتبات
  * المستويات نفسها قابلة للتعديل، راجع collectibles-service.js):
- *   +4  نقاط لكل جولة مكتملة، +20 إضافية لو فاز، +4 لكل ساعة لعب فعلي.
+ *   +4  نقاط لكل جولة مكتملة، +10 إضافية لو فاز (+5 فقط لكل لاعب بالفريق
+ *   الفائز في ألعاب الفريقين)، +4 لكل ساعة لعب فعلي.
  *   سقف يومي: 100 نقطة — الزائد لا يُحتسب، ويُعاد العداد عند تغيّر اليوم (UTC).
  */
 
@@ -13,7 +14,8 @@ var logger = require('../utils/logger');
 var collectiblesService = require('../collectibles/collectibles-service');
 
 var POINTS_PER_COMPLETED_ROUND = 4;
-var WIN_BONUS_POINTS = 20;
+var WIN_BONUS_POINTS = 10;
+var TEAM_WIN_BONUS_POINTS = 5;
 var POINTS_PER_HOUR_PLAYED = 4;
 var DAILY_CAP = 100;
 
@@ -66,13 +68,13 @@ function awardPoints(userId, amount) {
 /**
  * نقاط مشاركة كاملة بجولة واحدة — راجع قواعد الحساب أعلى الملف.
  * @param {number} userId
- * @param {{won?: boolean, durationMs?: number}} params
+ * @param {{won?: boolean, teamGame?: boolean, durationMs?: number}} params
  * @returns {{success: boolean, added: number, totalPoints: number}}
  */
 function awardForRoundCompletion(userId, params) {
     params = params || {};
     var points = POINTS_PER_COMPLETED_ROUND;
-    if (params.won) points += WIN_BONUS_POINTS;
+    if (params.won) points += params.teamGame ? TEAM_WIN_BONUS_POINTS : WIN_BONUS_POINTS;
     var hours = Math.floor((params.durationMs || 0) / 3600000);
     points += hours * POINTS_PER_HOUR_PLAYED;
 
