@@ -56,8 +56,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var EMOJIS = ['🍕','🍔','🌮','🍩','🍉','🍓','🍌','🍇','🍒','🥑','🌶️','🥕','🌽','🍄','🧀','🥐','🍿','🧁','🍭','☕','🐶','🐱','🦊','🐼','🐸','🐵','🦁','🐯','🐨','🐰','🐙','🦋','🐢','🦄','🐝','🦀','🐧','🦉','🐳','🦈','⚽','🏀','🎾','🎱','🎲','🎯','🎸','🎧','🎮','🧩','🚗','🚀','✈️','🚲','⛵','🚁','🌙','⭐','🔥','❄️','🌈','⚡','🌵','🌻','🌴','🍁','💎','🎁','🔑','💡','📱','⌚','👑','🎩','🕶️','🧲','🎈','🔔','✂️','🧸'];
     // Difficulty (chosen on the initial settings screen, fixed for the match):
     //  - 'easy': 3 boxes in round 1, then one more box every round.
-    //  - 'hard': the original full grids — 3×3 in round 1, growing to 6×6.
-    var HARD_SIZES = [[3, 3], [4, 3], [4, 4], [5, 4], [5, 5], [6, 5], [6, 6]];
+    //  - 'hard': 6 boxes in round 1, then 3 more boxes every round (33 in
+    //    round 10). Laid out with whichever column count gives the biggest
+    //    boxes in the available space (see bestFitLayout()).
+    var HARD_START_BOXES = 6;
+    var HARD_STEP = 3;
+    function hardBoxesForRound(round) { return HARD_START_BOXES + (round - 1) * HARD_STEP; }
 
     // Easy mode — boxes per round: 3 in round 1, then one more box every round.
     var START_BOXES = 3;
@@ -198,6 +202,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _anim = 'in';         // 'enter' for the first frame of a round (no flip transition)
     var _round = 0;
     var _cols = 3, _rows = 1;
+    var _bestFit = false;     // hard mode: columns re-picked to fit the grid area
     var _cells = [];          // { n, e }
     var _target = 0;          // index into _cells asked about this round
     var _q = QS[0];
@@ -1333,6 +1338,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         layoutGrid();
     }
 
+    // Column/row count that gives the largest square boxes for n boxes in
+    // the current grid area.
+    function bestFitLayout(n) {
+        var best = [n, 1], bestSize = -1;
+        for (var c = 1; c <= n; c++) {
+            var r = Math.ceil(n / c);
+            var gap = Math.round(Math.max(6, Math.min(16, Math.min(_gridW, _gridH) * 0.022)));
+            var size = Math.min((_gridW - gap * (c - 1)) / c, (_gridH - 16 - gap * (r - 1)) / r);
+            if (size > bestSize + 0.5) { bestSize = size; best = [c, r]; }
+        }
+        return best;
+    }
+
     function gridMetrics() {
         var gap = Math.round(Math.max(6, Math.min(16, Math.min(_gridW, _gridH) * 0.022)));
         var cellSize = Math.max(30, Math.floor(Math.min((_gridW - gap * (_cols - 1)) / _cols, (_gridH - 16 - gap * (_rows - 1)) / _rows)));
@@ -1342,6 +1360,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function layoutGrid() {
         var grid = el('mc-grid');
         if (!grid) return;
+        if (_bestFit && _cells.length) {
+            var fit = bestFitLayout(_cells.length);
+            _cols = fit[0]; _rows = fit[1];
+        }
         var m = gridMetrics();
         grid.style.width = (_cols * m.cellSize + (_cols - 1) * m.gap) + 'px';
         grid.style.gap = m.gap + 'px';
@@ -1412,7 +1434,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function renderTop() {
         var rv = el('mc-round-val'); if (rv) rv.textContent = _round + ' / ' + MAX_ROUNDS;
-        var gv = el('mc-grid-val'); if (gv) gv.textContent = String(_cells.length || (_matchDifficulty === 'hard' ? 9 : boxesForRound(1)));
+        var gv = el('mc-grid-val'); if (gv) gv.textContent = String(_cells.length || (_matchDifficulty === 'hard' ? hardBoxesForRound(1) : boxesForRound(1)));
         var pb = el('mc-phase-badge'); if (pb) pb.textContent = LABELS[_phase] || '';
         var mb = el('mc-mute-btn'); if (mb) mb.textContent = Sfx.muted ? '🔇' : '🔊';
     }
@@ -1542,9 +1564,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         closeElim(false);
         _round += 1;
         var n, size;
-        if (_matchDifficulty === 'hard') {
-            size = HARD_SIZES[Math.min(_round - 1, HARD_SIZES.length - 1)];
-            n = size[0] * size[1];
+        _bestFit = _matchDifficulty === 'hard';
+        if (_bestFit) {
+            n = hardBoxesForRound(_round);
+            size = bestFitLayout(n);
         } else {
             n = boxesForRound(_round);
             size = layoutFor(n);
@@ -1881,7 +1904,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             },
             {
                 key: 'difficulty', type: 'pill-choice', label: '🎯 مستوى الصعوبة',
-                description: 'سهل: تبدأ بـ3 صناديق ويزيد صندوق كل جولة · صعب: تبدأ بشبكة 3×3 وتكبر لين 6×6',
+                description: 'سهل: تبدأ بـ3 صناديق ويزيد صندوق كل جولة · صعب: تبدأ بـ6 صناديق ويزيد 3 صناديق كل جولة',
                 options: [
                     { label: '🙂 سهل', value: 'easy' },
                     { label: '🔥 صعب', value: 'hard' }
@@ -2677,7 +2700,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             settingsTitle: 'إعدادات لعبة تحدي الذاكرة',
             gameExplanation: 'كل جولة تظهر شبكة إيموجيز لثواني، بعدها تتغطى المربعات ويبان رقم كل مربع فقط. ' +
                 'يطلع سؤال عن مكان إيموجي معيّن، وكل لاعب يكتب رقم المربع في الشات (أول إجابة هي اللي تنحسب). ' +
-                'اللي يغلط أو ما يجاوب يطلع من اللعبة، ولو ما أحد جاوب صح الكل يكمل. بالمستوى السهل أول جولة 3 صناديق وكل جولة يزيد صندوق، وبالمستوى الصعب تبدأ بشبكة 3×3 وتكبر كل جولة. ' +
+                'اللي يغلط أو ما يجاوب يطلع من اللعبة، ولو ما أحد جاوب صح الكل يكمل. بالمستوى السهل أول جولة 3 صناديق وكل جولة يزيد صندوق، وبالمستوى الصعب أول جولة 6 صناديق وكل جولة يزيد 3 صناديق. ' +
                 'اللعبة ' + MAX_ROUNDS + ' جولات كحد أقصى، أو تنتهي أول ما يبقى لاعب واحد — ولو بقى أكثر من لاعب بعد آخر جولة فكلهم فائزين.',
             connectButtonLabel: 'الاتصال بالبث والانتقال للوبي',
             minPlayersToStart: 2,
