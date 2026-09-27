@@ -25,7 +25,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var GAME_NAME = 'الخزنة';
 
     var CHOICE_SECONDS_OPTIONS = [10, 15, 20, 25];
-    var LOBBY_CARD_SIZE = 46; // معتمد بالنموذج -- يفتح 6 بطاقات بالصف براحة
 
     var _screen = 'settings'; // settings | connecting | lobby | match
     function setScreen(name) {
@@ -415,14 +414,90 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function playerCardHtml(p) {
         if (AGP.playerCard) {
-            return AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', size: LOBBY_CARD_SIZE, outClass: 'kz-pcard-wrap' });
+            // نفس بطاقة لوبي روليت الإقصاء: الحجم الافتراضي للمكوّن المشترك،
+            // وstyle.css يثبّت البطاقة العادية على 217x57، والبطاقة المُطارة
+            // تُحجَّم بـ fitFramedCards() لتظهر الإطار كاملاً.
+            return AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../' });
         }
         var avatar = p.avatarUrl ? escapeAttr(p.avatarUrl) : '';
         return '<span class="kz-pcard-wrap">' + (avatar ? '<img src="' + avatar + '">' : '') + escapeHtml(p.name || p.id) + '</span>';
     }
 
+    // البطاقات المُطارة كاملة (منقول من روليت الإقصاء): المكوّن المشترك يرسم
+    // البطاقة المُطارة 298x100 ويقص الإطارات الطويلة. هنا نقيس الصفوف غير
+    // الشفافة في صورة الإطار (مرة وحدة لكل صورة)، ونمدّ البطاقة لتغطي
+    // الإطار كاملاً مع الصورة والاسم، ثم نصغّرها (zoom) لتدخل خانة 217px
+    // وبارتفاع أقصاه 75px. تعديل DOM/ستايل فقط -- agp-player-card.js بدون تعديل.
+    var FRAMED_SLOT_W = 217;
+    var FRAMED_SLOT_MAX_H = 75;
+    var _frameBoundsCache = {};
+
+    function getFrameOpaqueRows(src) {
+        if (_frameBoundsCache[src]) return _frameBoundsCache[src];
+        _frameBoundsCache[src] = new Promise(function (resolve) {
+            var img = new Image();
+            img.onload = function () {
+                try {
+                    var w = Math.min(img.naturalWidth, 300);
+                    var h = Math.max(1, Math.round(img.naturalHeight * w / img.naturalWidth));
+                    var c = document.createElement('canvas');
+                    c.width = w; c.height = h;
+                    var ctx = c.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    var data = ctx.getImageData(0, 0, w, h).data;
+                    var top = -1, bottom = -1;
+                    for (var y = 0; y < h && top < 0; y++) {
+                        for (var x = 0; x < w; x++) { if (data[(y * w + x) * 4 + 3] > 16) { top = y; break; } }
+                    }
+                    for (var y2 = h - 1; y2 >= 0 && bottom < 0; y2--) {
+                        for (var x2 = 0; x2 < w; x2++) { if (data[(y2 * w + x2) * 4 + 3] > 16) { bottom = y2 + 1; break; } }
+                    }
+                    resolve(top < 0 ? null : { top: top / h, bottom: bottom / h });
+                } catch (e) { resolve(null); }
+            };
+            img.onerror = function () { resolve(null); };
+            img.src = src;
+        });
+        return _frameBoundsCache[src];
+    }
+
+    function fitFramedCards(container) {
+        if (!container) return;
+        var cards = container.querySelectorAll('.agp-pcard-tpl:not([data-kz-fit])');
+        Array.prototype.forEach.call(cards, function (card) {
+            var frameEl = card.querySelector('.agp-pcard-tpl-frame-img');
+            var m = frameEl && /url\(["']?(.*?)["']?\)/.exec(frameEl.style.backgroundImage);
+            if (!m) return;
+            card.setAttribute('data-kz-fit', 'pending');
+            getFrameOpaqueRows(m[1]).then(function (rows) {
+                if (!rows || !card.isConnected) return;
+                var frameTop = parseFloat(frameEl.style.top) || 0;
+                var frameH = parseFloat(frameEl.style.height) || 0;
+                var bandTop = frameTop + rows.top * frameH;
+                var bandBottom = frameTop + rows.bottom * frameH;
+                var children = card.querySelectorAll('.agp-pcard-tpl-avatar,.agp-pcard-tpl-name,.agp-pcard-tpl-frame-img');
+                Array.prototype.forEach.call(children, function (child) {
+                    if (child === frameEl) return;
+                    var t = parseFloat(child.style.top) || 0;
+                    var ch = parseFloat(child.style.height) || 0;
+                    if (t < bandTop) bandTop = t;
+                    if (t + ch > bandBottom) bandBottom = t + ch;
+                });
+                Array.prototype.forEach.call(children, function (child) {
+                    child.style.top = ((parseFloat(child.style.top) || 0) - bandTop) + 'px';
+                });
+                var fullH = bandBottom - bandTop;
+                var cardW = parseFloat(card.style.width) || 298;
+                card.style.height = fullH + 'px';
+                card.style.zoom = String(Math.min(FRAMED_SLOT_W / cardW, FRAMED_SLOT_MAX_H / fullH));
+                card.setAttribute('data-kz-fit', '1');
+            });
+        });
+    }
+
     function lobbyCardHtml(p) {
-        return '<div class="kz-lobby-card-wrap">' +
+        var framed = !!(p && p.frame && p.frame.imageFilename && AGP.playerCard);
+        return '<div class="kz-lobby-card-wrap' + (framed ? ' kz-framed' : '') + '">' +
             '<button type="button" class="kz-lobby-remove-x" data-id="' + escapeAttr(p.id) + '" title="حذف اللاعب">✕</button>' +
             playerCardHtml(p) +
         '</div>';
@@ -442,9 +517,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var grid = el('kz-lobby-grid');
         if (!grid) return;
         var players = AGP.player.getAllPlayers();
-        el('kz-lobby-count').textContent = players.length + ' لاعبين';
+        el('kz-lobby-count').textContent = String(players.length);
         grid.innerHTML = players.map(lobbyCardHtml).join('') || '<div class="kz-lobby-empty">بانتظار أول لاعب...</div>';
         if (AGP.playerCard) AGP.playerCard.fitAllNames(grid);
+        fitFramedCards(grid);
         wireLobbyRemoveButtons(grid);
         el('kz-start-round-btn').disabled = players.length === 0;
     }
@@ -484,19 +560,28 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         root.style.display = 'flex';
         root.innerHTML =
             '<img id="kz-lobby-watermark" src="../../logo.png" alt="" onerror="this.style.display=\'none\'">' +
-            '<h2><span class="kz-title-plain">لوبي دخول لعبة - </span><span class="kz-title-accent">' + escapeHtml(GAME_NAME) + '</span></h2>' +
+            '<h2>لوبي الدخول للعبة "' + escapeHtml(GAME_NAME) + '"</h2>' +
             '<div class="kz-join-hint">' +
-                '<span class="kz-badge kz-keyword-badge">' + escapeHtml(_settings.joinKeyword) + '</span>' +
-                '<span class="kz-badge kz-count-badge" id="kz-lobby-count">0 لاعبين</span>' +
+                '<span class="kz-keyword-badge">' + escapeHtml(_settings.joinKeyword) + '</span>' +
+                '<span class="kz-count-badge" id="kz-lobby-count">0</span>' +
             '</div>' +
             '<div id="kz-lobby-grid"></div>' +
             '<div id="kz-lobby-actions">' +
+                '<button type="button" id="kz-start-round-btn" class="kz-btn-start" disabled>🔒 اغلاق اللوبي وبدء المباراة</button>' +
                 '<button type="button" id="kz-lobby-back-settings-btn" class="kz-btn-settings">⚙️ العودة لإعدادات المباراة</button>' +
-                '<button type="button" id="kz-start-round-btn" class="kz-btn-start" disabled>ابدأ الجولة</button>' +
-                '<button type="button" id="kz-lobby-back-platform-btn" class="kz-btn-platform">🏠 رجوع لمنصة ألعاب أيمن</button>' +
+                '<button type="button" id="kz-lobby-back-platform-btn" class="kz-btn-platform">🏠 العودة لمكتبة الألعاب</button>' +
             '</div>';
 
         renderLobbyGrid();
+
+        // --kz-actions-h = ارتفاع صف الأزرار الفعلي (يزيد لما تنلف الأزرار
+        // بالشاشات الضيقة) -- الشبكة تسكرول تحته بنفس أسلوب روليت الإقصاء.
+        var actionsRow = el('kz-lobby-actions');
+        var syncActionsHeight = function () {
+            root.style.setProperty('--kz-actions-h', actionsRow.offsetHeight + 'px');
+        };
+        syncActionsHeight();
+        if (window.ResizeObserver) new ResizeObserver(syncActionsHeight).observe(actionsRow);
 
         el('kz-lobby-back-settings-btn').addEventListener('click', function () {
             var ok = window.confirm('بترجع لشاشة الإعدادات وينقطع الاتصال الحالي بالبث. تبي تكمل؟');
@@ -1462,6 +1547,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         } else {
             grid.innerHTML = newPlayers.map(lobbyCardHtml).join('');
             if (AGP.playerCard) AGP.playerCard.fitAllNames(grid);
+            fitFramedCards(grid);
             wireLobbyRemoveButtons(grid); // نفس زر ✕ الأصلي -- يشتغل بنفس منطق AGP.player.removePlayer
         }
         el('kz-mini-count').textContent = newPlayers.length + ' لاعبين جدد';
