@@ -632,13 +632,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         root.innerHTML =
             '<div class="lc-lobby-screen">' +
                 '<div class="lc-decor-wrap lc-decor-narrow"><div class="lc-decor-inner lc-decor-inner-narrow">' + decorHexesHtml() + '</div></div>' +
-                // Team-games lobby layout (same design as Photo Challenge /
-                // Team War): title + divider, one panel per team (team 1 on
-                // the right) in each team's chosen color, 217x57 lobby
-                // cards two per row, then the start button and a "back to
-                // games library" link. The mid-game join instructions stay.
-                '<h2 class="lc-lobby-title">لوبي الدخول للعبة "' + escapeHtml(GAME_NAME) + '"</h2>' +
-                '<div class="lc-lobby-divider"></div>' +
+                '<div class="lc-logo lc-logo-lobby">دخول لعبة <span class="lc-logo-word1">حروف</span> <span class="lc-logo-word2">مع</span> <span class="lc-logo-name">' + escapeHtml(_settings.hostName) + '</span></div>' +
                 '<div class="lc-lobby-panels">' +
                     teamPanelHtml(TEAM1) +
                     teamPanelHtml(TEAM2) +
@@ -651,15 +645,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         'إذا كانت الإجابة صحيحة تنضم لفريقك تلقائيًا وتُحتسب لك النقطة.' +
                     '</span>' +
                 '</div>' +
-                '<div class="lc-lobby-actions">' +
-                    '<button type="button" id="lc-start-game-btn" class="lc-lobby-btn-start">الدخول للمباراة</button>' +
-                    '<button type="button" id="lc-lobby-back-library-btn" class="lc-lobby-link-library">' +
-                        '<span class="lc-lobby-link-arrow">→</span>العودة لمكتبة الالعاب</button>' +
+                '<div class="lc-lobby-btn-row">' +
+                    '<button type="button" id="lc-lobby-back-settings-btn" class="lc-btn-outline">→ العودة للإعدادات</button>' +
+                    '<button type="button" id="lc-start-game-btn" class="lc-btn-primary">بدء اللعبة</button>' +
                 '</div>' +
             '</div>';
 
         el('lc-start-game-btn').addEventListener('click', handleStartGame);
-        el('lc-lobby-back-library-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
+        el('lc-lobby-back-settings-btn').addEventListener('click', function () {
+            var ok = window.confirm('بترجع لشاشة الإعدادات وينقطع الاتصال الحالي بالبث. تبي تكمل؟');
+            if (ok) window.location.reload();
+        });
 
         refreshLobbyPanels();
     }
@@ -669,18 +665,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var color = (team === TEAM1) ? _settings.team1Color : _settings.team2Color;
         var code = (team === TEAM1) ? _settings.team1AccessCode : _settings.team2AccessCode;
         var players = getTeamPlayers(team);
-        // --lc-team-color = the team's color picked on the settings screen;
-        // the CSS derives the keyword color, count-capsule border and panel
-        // glow from it.
-        return '<div class="lc-team-panel" data-team="' + team + '" style="--lc-team-color:' + escapeAttr(color) + ';">' +
-            '<div class="lc-team-panel-header">' +
-                '<div class="lc-team-panel-label">' +
-                    '<span class="lc-team-panel-name">' + escapeHtml(name) + '</span>' +
-                    '<span class="lc-team-panel-keyword">' + escapeHtml(code) + '</span>' +
+        return '<div class="lc-team-panel" data-team="' + team + '">' +
+            '<div class="lc-team-panel-header" style="background:color-mix(in srgb, ' + color + ' 70%, white 30%);">' +
+                '<div class="lc-team-panel-name">' + escapeHtml(name) + '</div>' +
+                '<div class="lc-team-panel-badges">' +
+                    '<span class="lc-badge-pill lc-badge-count"><span id="lc-team-count-' + team + '">' + players.length + '</span> <span>عدد اللاعبين</span></span>' +
+                    '<span class="lc-badge-pill lc-badge-code">' + escapeHtml(code) + ' <span>كلمة الدخول</span></span>' +
                 '</div>' +
-                '<div class="lc-team-panel-count" id="lc-team-count-' + team + '">' + players.length + '</div>' +
             '</div>' +
-            '<div class="lc-team-panel-box"><div class="lc-team-panel-body" id="lc-team-body-' + team + '">' + teamPlayerChipsHtml(team, players) + '</div></div>' +
+            '<div class="lc-team-panel-body" id="lc-team-body-' + team + '">' + teamPlayerChipsHtml(team, players) + '</div>' +
         '</div>';
     }
 
@@ -700,6 +693,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function teamPlayerChipsHtml(team, players) {
+        if (!players.length) return '<div class="lc-team-empty">بانتظار انضمام اللاعبين</div>';
         return players.map(playerCardHtml).join('');
     }
 
