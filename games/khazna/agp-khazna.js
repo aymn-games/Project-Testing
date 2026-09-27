@@ -31,6 +31,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _screen = name;
         var bannerGroup = el('kz-idea-banner-group');
         if (bannerGroup) bannerGroup.classList.toggle('kz-show', name === 'match');
+        var helpBtn = el('kz-help-btn');
+        if (helpBtn) helpBtn.style.display = name === 'match' ? 'flex' : 'none';
+        if (name !== 'match') hideAnswerHelp();
     }
     var _rootEl = null;
     var _lobbyEl = null;
@@ -127,7 +130,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div class="kz-instr-section">' +
                 '<div class="kz-instr-emoji">✍️</div>' +
                 '<div class="kz-instr-text">' +
-                    'وأنتم شايفين الساعات، اكتبوا <b>أرقام الساعات بالترتيب</b> بالشات برسالة وحدة (مثال: <b>12 9 7</b>) -- أرقام عربي أو إنجليزي، وبأي فاصل بينها.' +
+                    'وأنتم شايفين الساعات، اكتبوا <b>الساعة اللي يأشر عليها العقرب</b> في كل ساعة، <b>بالترتيب</b> بالشات برسالة وحدة (مثال: <b>12 9 7</b>) -- الرقم الصغير فوق كل ساعة <b>للترتيب بس</b> مو هو الإجابة. أرقام عربي أو إنجليزي، وبأي فاصل بينها.' +
                 '</div>' +
             '</div>' +
 
@@ -137,9 +140,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '<b>الإقصاء يدور حول اللاعب المستهدف:</b>' +
                     '<ul>' +
                         '<li>تقدر تكتب <b>إجابة جديدة</b> لو غلطت وباقي وقت — <b>آخر إجابة</b> هي اللي تنحسب</li>' +
-                        '<li>لما <b>المستهدف يجاوب صح</b>، تنتهي الجولة ويُقصى كل من آخر إجابته غلط أو ما جاوب</li>' +
+                        '<li>لما <b>المستهدف يجاوب صح</b>، تنتهي الجولة فوراً ويُقصى كل من آخر إجابته غلط أو ما جاوب</li>' +
                         '<li>لو كل الباقين كانت إجاباتهم صح لحظة ما جاوب المستهدف صح، يُقصى <b>هو بس</b></li>' +
                         '<li>لو كل الباقين جاوبوا (صح أو غلط) والمستهدف لسا ما جاوب، تنتهي الجولة على طول</li>' +
+                        '<li>أي إجابة توصل <b>بعد ما يجاوب المستهدف صح</b> ما تنحسب — تعتبر <b>ما جاوب</b> وصاحبها يُقصى</li>' +
                         '<li>لو انتهى الوقت، يُقصى <b>كل من آخر إجابته غلط أو ما جاوب</b> (بما فيهم المستهدف)</li>' +
                     '</ul>' +
                 '</div>' +
@@ -827,7 +831,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</div>' +
             // ⭐ نص إرشاد الإجابة -- يظهر طول ظهور الساعات (نفس مدة نافذة
             // استقبال الإجابات)، يوضح كتابة أرقام الساعات بالترتيب بالشات
-            '<div id="kz-answer-instruction"><div class="kz-instr-main">✍️ اكتب <b>أرقام الساعات بالترتيب</b> بالشات برسالة وحدة (مثال: <b>12 9 7</b>)</div></div>';
+            '<div id="kz-answer-instruction"><div class="kz-instr-main">✍️ اكتب <b>الساعة اللي يأشر عليها العقرب</b> في كل ساعة، <b>بالترتيب</b> برسالة وحدة (مثال: <b>12 9 7</b>)</div></div>';
     }
 
     function ensureMatchEl() {
@@ -842,7 +846,64 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</div>' +
             '<div id="kz-round">' + roundContentHtml() + '</div>';
         document.body.appendChild(_matchEl);
+        ensureAnswerHelp();
         return _matchEl;
+    }
+
+    /* ---------------- زر "طريقة الإجابة" بشاشة اللعب + تبويب الشرح ----------------
+     * يوضّح بصور (نفس رسم ساعات اللعبة) إن الرقم فوق كل ساعة للترتيب بس،
+     * والإجابة هي الساعة اللي يأشر عليها العقرب، وإن الإجابة بعد المستهدف
+     * ما تنحسب. يتقفل بعلامة ✕ أو بالضغط خارج التبويب. */
+    function helpClockHtml(order, hour) {
+        return '<div class="kz-help-clock">' +
+            '<div class="kz-help-order">' + order + '</div>' +
+            '<div class="kz-help-face">' + clockFaceSvg(hour) + '</div>' +
+            '<div class="kz-help-reads">العقرب على <b>' + hour + '</b></div>' +
+        '</div>';
+    }
+
+    function ensureAnswerHelp() {
+        if (el('kz-help-btn')) return;
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = 'kz-help-btn';
+        btn.innerHTML = '❓ طريقة الإجابة';
+        btn.style.display = _screen === 'match' ? 'flex' : 'none';
+        btn.addEventListener('click', showAnswerHelp);
+        document.body.appendChild(btn);
+
+        var dim = document.createElement('div');
+        dim.id = 'kz-help-dim';
+        dim.innerHTML =
+            '<div id="kz-help-card" role="dialog" aria-label="طريقة الإجابة">' +
+                '<button type="button" id="kz-help-close" title="إغلاق">✕</button>' +
+                '<h2>❓ طريقة الإجابة</h2>' +
+                '<div class="kz-help-step"><span class="kz-help-num">1</span>' +
+                    '<div>الرقم الصغير <span class="kz-help-chip">فوق</span> كل ساعة <b>للترتيب بس</b> — مو هو الإجابة.</div></div>' +
+                '<div class="kz-help-step"><span class="kz-help-num">2</span>' +
+                    '<div>الإجابة هي <b>الساعة اللي يأشر عليها العقرب</b> في كل ساعة.</div></div>' +
+                '<div class="kz-help-example">' +
+                    helpClockHtml(1, 12) + helpClockHtml(2, 9) + helpClockHtml(3, 7) +
+                '</div>' +
+                '<div class="kz-help-answer">تكتب بالشات: <b>12 9 7</b> <span class="kz-help-wrong">مو <s>1 2 3</s></span></div>' +
+                '<div class="kz-help-step"><span class="kz-help-num">3</span>' +
+                    '<div>تقدر تغيّر إجابتك لين يخلص الوقت — <b>آخر إجابة</b> هي اللي تنحسب.</div></div>' +
+                '<div class="kz-help-step kz-help-warn"><span class="kz-help-num">!</span>' +
+                    '<div>أول ما <b>المستهدف يجاوب صح</b> تنتهي الجولة — اللي يجاوب <b>بعده</b> يعتبر <b>ما جاوب</b> وينقصى.</div></div>' +
+            '</div>';
+        document.body.appendChild(dim);
+        dim.addEventListener('click', function (e) { if (e.target === dim) hideAnswerHelp(); });
+        el('kz-help-close').addEventListener('click', hideAnswerHelp);
+    }
+
+    function showAnswerHelp() {
+        var dim = el('kz-help-dim');
+        if (dim) dim.classList.add('kz-show');
+    }
+
+    function hideAnswerHelp() {
+        var dim = el('kz-help-dim');
+        if (dim) dim.classList.remove('kz-show');
     }
 
     /* ---------------- عجلة اختيار اللاعب صاحب الدور ---------------- */
@@ -1043,7 +1104,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      * يظهر معه آخر إجابة كتبها (أو "ما جاوب"). */
     function eliminationReasonText(reason, turnPlayer) {
         var tn = turnPlayer ? escapeHtml(turnPlayer.name || turnPlayer.id) : 'المستهدف';
-        if (reason === 'targetCorrect') return '🎯 المستهدف <b>' + tn + '</b> جاوب صح — انقصى كل من كانت آخر إجابته غلط أو ما جاوب';
+        if (reason === 'targetCorrect') return '🎯 المستهدف <b>' + tn + '</b> جاوب صح — انقصى كل من كانت آخر إجابته غلط أو ما جاوب قبله (اللي يجاوب بعد المستهدف يعتبر ما جاوب)';
         if (reason === 'targetLast') return '🎯 كل اللاعبين جاوبوا صح قبل المستهدف <b>' + tn + '</b> — انقصى المستهدف بس';
         if (reason === 'allAnswered') return '✍️ كل اللاعبين وصلت إجاباتهم قبل المستهدف <b>' + tn + '</b> — انقصى كل من آخر إجابته غلط (والمستهدف لأنه ما جاوب)';
         return '⏰ انتهى الوقت — انقصى كل من كانت آخر إجابته غلط أو ما جاوب';
