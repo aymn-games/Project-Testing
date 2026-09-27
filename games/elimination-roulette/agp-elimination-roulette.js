@@ -665,7 +665,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#er-select-phase-label{position:absolute;top:22px;right:24px;font-family:"Cairo",sans-serif;',
             'font-weight:900;font-size:clamp(20px,2.6vw,32px);line-height:1.2;z-index:2;}',
             '#er-select-box.er-role-eliminate #er-select-phase-label{color:#FD1010;}',
-            '#er-select-box.er-role-revive #er-select-phase-label{color:#22c55e;}',
+            '#er-select-box.er-role-revive #er-select-phase-label{color:#22E36B;}',
             /* ---- Chooser row: "صاحب الاختيار" label + ring avatar + name ---- */
             '#er-chooser-row{flex:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;',
             'gap:26px;padding:20px clamp(60px,8vw,120px) 0;text-align:center;}',
@@ -714,7 +714,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-select-cand-card{display:flex;align-items:center;gap:8px;box-sizing:border-box;',
             'width:260px;height:70px;padding:0 5px 0 5px;cursor:pointer;border-radius:20px;',
             'border:1px solid #F9F2F2;background:#1B1919;transition:transform .15s,box-shadow .15s;}',
-            '.er-select-cand-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.5);}',
+            // Hover glow follows the phase color (red = eliminate, green = revive).
+            '.er-select-cand-card:hover{transform:translateY(-2px);border-color:#FD1010;',
+            'box-shadow:0 0 0 1px rgba(253,16,16,.35),0 6px 20px rgba(253,16,16,.28);}',
+            '#er-select-box.er-role-revive .er-select-cand-card:hover{border-color:#22E36B;',
+            'box-shadow:0 0 0 1px rgba(34,227,107,.35),0 6px 20px rgba(34,227,107,.28);}',
             '.er-select-cand-avatar{flex:none;width:50px;height:50px;border-radius:50%;overflow:hidden;',
             'background:#D9D9D9;}',
             '.er-select-cand-avatar .er-ring-avatar,.er-select-cand-avatar .er-ring-avatar--fallback{',
@@ -722,9 +726,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-select-cand-name{flex:1;min-width:0;text-align:center;font-size:22px;font-weight:700;',
             'color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
             '.er-select-cand-num{flex:none;box-sizing:border-box;min-width:40px;height:50px;padding:0 4px;',
-            'border-radius:15px;display:flex;align-items:center;justify-content:center;background:#F50F0F;',
+            'border-radius:15px;display:flex;align-items:center;justify-content:center;',
+            'background:linear-gradient(180deg,#FF3B3B,#D90A0A);box-shadow:0 2px 8px rgba(245,15,15,.35);',
             'font-family:"Noto Kufi Arabic",sans-serif;font-size:28px;font-weight:900;color:#fff;line-height:1;}',
-            '#er-select-box.er-role-revive .er-select-cand-num{background:#16a34a;}',
+            '#er-select-box.er-role-revive .er-select-cand-num{background:linear-gradient(180deg,#2EE57A,#12A150);',
+            'box-shadow:0 2px 8px rgba(34,197,94,.35);}',
 
             /* ---- Result-announcement tab (4 seconds) ---- */
             /* Announcement colors (originally designed for a light
