@@ -221,6 +221,40 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             ':root{--sl-accent:' + C_ACCENT + ';--sl-accent2:' + C_ACCENT2 + ';--sl-pink:' + C_PINK + ';}',
             'html,body{margin:0 !important;padding:0 !important;}',
 
+            /* لوبي الدخول الإضافي داخل المباراة — نفس بطاقات اللوبي الأساسي (217×57) */
+            '#sl-join-list{list-style:none;margin:0;padding:12px 0 4px;display:grid;',
+            'grid-template-columns:repeat(auto-fill,217px);column-gap:16px;row-gap:20px;justify-content:center;',
+            'justify-items:center;align-items:end;align-content:start;}',
+            '#sl-join-list li{position:relative;display:flex;align-items:center;padding:0;}',
+            '#sl-join-list .agp-player-remove-btn{position:absolute;border:2px solid rgba(10,6,18,0.9);',
+            'border-radius:50%;cursor:pointer;font-weight:900;line-height:1;padding:0;}',
+            '#sl-join-list .sl-join-empty{grid-column:1 / -1;width:100%;box-sizing:border-box;}',
+            '#sl-join-list .agp-pcard{width:217px !important;height:57px !important;',
+            'box-sizing:border-box !important;padding:0 3px 0 28px !important;gap:6px !important;',
+            'border-radius:24px !important;background:rgba(217,217,217,.3) !important;',
+            'border:2px solid #000 !important;}',
+            '#sl-join-list .agp-pcard-avatar-basic{width:48px !important;height:48px !important;',
+            'background:#D9D9D9 !important;border:none !important;}',
+            '#sl-join-list .agp-pcard-name-basic{flex:1 1 auto !important;width:auto !important;',
+            'min-width:0 !important;height:auto !important;margin:0 !important;padding:0 !important;',
+            'font-size:20px !important;font-family:"Noto Kufi Arabic",sans-serif !important;',
+            'font-weight:700 !important;color:#fff !important;background:none !important;border:none !important;}',
+            '#sl-join-list .agp-pcard-avatar-basic--fallback{font-size:15px !important;color:#3a2f4a !important;}',
+            '#sl-join-list li:has(> .agp-pcard) .agp-player-remove-btn{',
+            'top:50% !important;left:7px !important;right:auto !important;transform:translateY(-50%);',
+            'width:16px !important;height:16px !important;font-size:9px !important;z-index:5;}',
+            '#sl-join-list li:has(> .agp-pcard-tpl){width:217px !important;height:57px !important;',
+            'overflow:visible !important;display:flex !important;',
+            'flex-direction:row !important;align-items:center !important;justify-content:center !important;}',
+            '#sl-join-list .agp-pcard-tpl{zoom:0.7282;flex-shrink:0 !important;}',
+            '#sl-join-list li:has(> .agp-pcard-tpl) .agp-player-remove-btn{',
+            'top:50% !important;left:7px !important;right:auto !important;transform:translateY(-50%);',
+            'width:16px !important;height:16px !important;font-size:9px !important;z-index:5;}',
+            '#sl-join-list .agp-player-remove-btn{',
+            'background:rgba(224,115,111,.18) !important;border-color:rgba(224,115,111,.55) !important;',
+            'color:#e0736f !important;}',
+            '#sl-join-list .agp-player-remove-btn:hover{',
+            'background:rgba(224,115,111,.3) !important;color:#ff9b96 !important;}',
             /* ---- شاشة اللعب — قيم ملف التصميم حرفياً ---- */
             'body.sl-game-on #agp-persistent-header{display:none !important;}',
             '#sl-stage{position:fixed;inset:0;z-index:10;overflow-y:auto;direction:ltr;display:flex;flex-direction:column;',
@@ -380,6 +414,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.sl-btn-gold:hover{background:linear-gradient(180deg,#ffe79a,#f7b62f);}',
             '.sl-btn-gold:active{transform:translateY(3px);box-shadow:0 2px 0 #b9760c;}',
             '#sl-help{z-index:60;background:rgba(4,10,20,0.8);}',
+            '#sl-players{z-index:55;background:rgba(4,10,20,0.8);}',
+            '.sl-dlg-players{width:440px;max-height:calc(100vh - 60px);gap:12px;padding:20px;}',
+            '.sl-pl-list{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}',
+            '.sl-pl-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;',
+            'background:#0d1428;border:1px solid rgba(255,255,255,0.08);}',
+            '.sl-pl-row.sl-pl-cur{border:2px solid rgba(255,209,102,0.55);}',
+            '.sl-av-row{width:36px;height:36px;border:2px solid rgba(255,255,255,0.6);font-size:15px;}',
+            '.sl-pl-name{flex:1;min-width:0;font-size:14px;font-weight:800;color:#ffffff;overflow:hidden;',
+            'text-overflow:ellipsis;white-space:nowrap;}',
+            '.sl-pl-tag{font-size:12px;font-weight:900;color:#ffd166;}',
             '#sl-leave{z-index:70;background:rgba(4,10,20,0.8);}',
             '.sl-dlg{max-width:100%;display:flex;flex-direction:column;border-radius:22px;',
             'background:linear-gradient(180deg,#16224a 0%,#0b1122 100%);border:1px solid rgba(255,255,255,0.12);',
@@ -976,6 +1020,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '<button type="button" class="sl-hbtn" id="sl-fs-btn"></button>' +
                     '<button type="button" class="sl-hbtn sl-hbtn-round" id="sl-sound-btn" title="الصوت"></button>' +
                     '<button type="button" class="sl-hbtn sl-hbtn-round" id="sl-help-btn" title="شرح اللعبة">؟</button>' +
+                    '<button type="button" class="sl-hbtn" id="sl-players-btn"></button>' +
                     '<div class="sl-theme-wrap">' +
                         '<button type="button" class="sl-hbtn" id="sl-theme-btn">☼ المظهر ⌄</button>' +
                         '<div class="sl-theme-menu" id="sl-theme-menu" hidden></div>' +
@@ -1037,9 +1082,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '<div class="sl-join-t2">يكتب اللاعب أمر الدخول في شات البث ليُضاف إلى القائمة أدناه. اللاعبون الموجودون مسبقاً يتم تجاهل أوامرهم.</div>' +
                     '<div class="sl-join-sep"></div>' +
                     '<div class="sl-join-count" id="sl-join-count"></div>' +
-                    '<div id="sl-join-list"></div>' +
+                    '<ul class="agp-shell-player-list" id="sl-join-list"></ul>' +
                 '</div>' +
                 '<div class="sl-join-foot"><button type="button" class="sl-btn-gold" id="sl-join-save">حفظ وإغلاق الدخول</button></div>' +
+            '</div></div>' +
+
+            '<div class="sl-modal-bg" id="sl-players" hidden><div class="sl-dlg sl-dlg-players">' +
+                '<div class="sl-dlg-head"><div class="sl-dlg-title" id="sl-players-title">اللاعبون المشاركون</div>' +
+                '<button type="button" class="sl-dlg-x" id="sl-players-close">✕</button></div>' +
+                '<div class="sl-pl-list" id="sl-players-list"></div>' +
             '</div></div>' +
 
             '<div class="sl-modal-bg" id="sl-help" hidden><div class="sl-dlg sl-dlg-help">' +
@@ -1065,6 +1116,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('sl-fs-btn').onclick = toggleFullscreen;
         el('sl-sound-btn').onclick = function () { _sound = !_sound; renderHeader(); };
         el('sl-help-btn').onclick = function () { el('sl-help').hidden = false; };
+        el('sl-players-btn').onclick = function () { el('sl-theme-menu').hidden = true; el('sl-players').hidden = false; renderPlayersPanel(); };
+        el('sl-players-close').onclick = function () { el('sl-players').hidden = true; };
         el('sl-help-close').onclick = function () { el('sl-help').hidden = true; };
         el('sl-theme-btn').onclick = function () { var m = el('sl-theme-menu'); m.hidden = !m.hidden; };
         el('sl-exit-btn').onclick = function () { el('sl-theme-menu').hidden = true; el('sl-leave').hidden = false; };
@@ -1162,6 +1215,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('sl-next-name').textContent = nxt ? playerLabel(nxt) : '—';
         el('sl-next-pos').textContent = nxt ? (_positions[nxt.id] || 1) : 0;
         renderTimer();
+        renderPlayersPanel();
         var ready = el('sl-ready');
         if (ready) ready.textContent = _rolling ? 'جاري الرمي' : 'جاهز للرمي';
     }
@@ -1334,18 +1388,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var names = ['الأول', 'الثاني', 'الثالث'];
         setStatus(playerLabel(me) + ' وصل إلى 100 وفاز! 🏆' + (requiredWinners() > 1 ? ' — المركز ' + (names[_winners.length - 1] || _winners.length) : ''));
 
-        if (_winners.length >= requiredWinners() || !_order.length || _order.length === 1) {
-            // باقي لاعب واحد فقط قبل اكتمال العدد — ياخذ المركز المتبقي تلقائياً
-            if (_order.length === 1 && _winners.length < requiredWinners()) {
-                _winners.push(_order[0]);
-                _order = [];
-            }
-            _ending = true;
-            stopTurnTimer();
-            later(endMatch, WIN_END_DELAY_MS);
-            return;
-        }
+        if (checkMatchComplete()) return;
         startTurnTimer();
+    }
+
+    // المباراة تنتهي أول ما يكتمل عدد الفائزين المحدَّد بالإعدادات (1/2/3).
+    // لو ما بقي إلا لاعب واحد قبل اكتمال العدد، ياخذ المركز المتبقي.
+    function checkMatchComplete() {
+        if (_winners.length < requiredWinners() && _order.length > 1) return false;
+        if (_order.length === 1 && _winners.length < requiredWinners()) {
+            _winners.push(_order[0]);
+            _order = [];
+        }
+        _ending = true;
+        stopTurnTimer();
+        later(endMatch, WIN_END_DELAY_MS);
+        return true;
     }
 
     // "إعادة اللعبة ↻" — كل اللاعبين يرجعون للمربع 1 بنفس الترتيب
@@ -1421,21 +1479,53 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('sl-join-count').textContent = 'اللاعبون الجدد (' + _queued.length + ')';
         var list = el('sl-join-list');
         if (!_queued.length) {
-            list.innerHTML = '<div class="sl-join-empty">بانتظار أوامر الدخول من الشات…</div>';
+            list.innerHTML = '<li class="sl-join-empty">بانتظار أوامر الدخول من الشات…</li>';
             return;
         }
-        list.style.display = 'flex';
-        list.style.flexDirection = 'column';
-        list.style.gap = '16px';
-        list.innerHTML = _queued.map(function (q, i) {
-            return '<div class="sl-q"><div class="sl-q-name">' + escapeHtml(playerLabel(q)) + '</div>' +
-                '<button type="button" class="sl-q-x" data-i="' + i + '">✕</button></div>';
+        // نفس بطاقة اللوبي الأساسي (AGP.playerCard + إطار اللاعب + زر الحذف)
+        list.innerHTML = _queued.map(function (q) {
+            var card = AGP.playerCard ? AGP.playerCard.renderHtml(q, { showFrame: true, basePath: '../../' }) : escapeHtml(playerLabel(q));
+            return '<li><button type="button" class="agp-player-remove-btn" data-q-id="' + escapeHtml(q.id) + '" title="حذف">🗑️</button>' + card + '</li>';
         }).join('');
-        Array.prototype.forEach.call(list.querySelectorAll('[data-i]'), function (b) {
-            b.onclick = function () {
-                var q = _queued.splice(Number(b.getAttribute('data-i')), 1)[0];
-                if (q && AGP.player && typeof AGP.player.removePlayer === 'function') AGP.player.removePlayer(q.id);
+        Array.prototype.forEach.call(list.querySelectorAll('[data-q-id]'), function (btn) {
+            btn.onclick = function () {
+                var id = btn.getAttribute('data-q-id');
+                _queued = _queued.filter(function (q) { return q.id !== id; });
+                if (AGP.player && typeof AGP.player.removePlayer === 'function') AGP.player.removePlayer(id);
                 renderJoinPanel();
+            };
+        });
+        if (AGP.playerCard && typeof AGP.playerCard.fitAllNames === 'function') AGP.playerCard.fitAllNames(list);
+        fitFramedCards(list);
+    }
+
+    // زر "👥 اللاعبين" بالهيدر — كل المشاركين بالمباراة مع إمكانية حذف أي لاعب
+    function renderPlayersPanel() {
+        var btn = el('sl-players-btn');
+        if (btn) btn.textContent = '👥 اللاعبين (' + _roster.length + ')';
+        var list = el('sl-players-list');
+        var panel = el('sl-players');
+        if (!list || !panel || panel.hidden) return;
+        var cur = currentPlayer();
+        var medals = ['🥇', '🥈', '🥉'];
+        el('sl-players-title').textContent = 'اللاعبون المشاركون (' + _roster.length + ')';
+        list.innerHTML = _roster.map(function (p) {
+            var w = _winners.indexOf(p);
+            var tag = w !== -1 ? (medals[w] || '🏆') : ('المربع ' + (_positions[p.id] || 1));
+            return '<div class="sl-pl-row' + (cur && cur.id === p.id ? ' sl-pl-cur' : '') + '">' +
+                '<div class="sl-av sl-av-row" data-av="' + escapeHtml(p.id) + '"></div>' +
+                '<div class="sl-pl-name">' + escapeHtml(playerLabel(p)) + '</div>' +
+                '<div class="sl-pl-tag">' + tag + '</div>' +
+                '<button type="button" class="sl-q-x" data-del="' + escapeHtml(p.id) + '" title="حذف من المباراة">✕</button></div>';
+        }).join('') || '<div class="sl-join-empty">لا يوجد لاعبون</div>';
+        _roster.forEach(function (p) {
+            var node = list.querySelector('[data-av="' + (window.CSS && CSS.escape ? CSS.escape(p.id) : p.id) + '"]');
+            fillAvatar(node, p);
+        });
+        Array.prototype.forEach.call(list.querySelectorAll('[data-del]'), function (b) {
+            b.onclick = function () {
+                var id = b.getAttribute('data-del');
+                if (AGP.player && typeof AGP.player.removePlayer === 'function') AGP.player.removePlayer(id);
             };
         });
     }
@@ -1474,16 +1564,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var idx = _order.findIndex(function (p) { return p.id === id; });
         var wasCurrent = idx !== -1 && idx === (_turnIdx % Math.max(1, _order.length));
         _roster = _roster.filter(function (p) { return p.id !== id; });
+        _winners = _winners.filter(function (p) { return p.id !== id; });
         delete _positions[id];
+        delete _knownIds[id];
         if (idx !== -1) {
             _order.splice(idx, 1);
             if (idx < _turnIdx) _turnIdx--;
             _turnIdx = _order.length ? (_turnIdx % _order.length) : 0;
         }
-        if (!_order.length) { endMatch(); return; }
-        if (wasCurrent && !_rolling) startTurnTimer();
+        setStatus('تم حذف ' + playerLabel(removedPlayer) + ' من المباراة.');
         renderTokens();
         renderTurn();
+        if (_ending) return;
+        if (checkMatchComplete()) return;
+        if (wasCurrent && !_rolling) startTurnTimer();
     }
 
     function enforceMaxPlayers() {
@@ -1814,7 +1908,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function enhanceLobbyFramedCards() {
         var box = el('agp-shell-box');
         if (!box || !(box.classList.contains('agp-lobby-box') || el('agp-mini-lobby-list'))) return;
-        var cards = box.querySelectorAll('.agp-shell-player-list .agp-pcard-tpl:not([data-sl-fit])');
+        fitFramedCards(box);
+    }
+
+    function fitFramedCards(root) {
+        var cards = root.querySelectorAll('.agp-shell-player-list .agp-pcard-tpl:not([data-sl-fit])');
         Array.prototype.forEach.call(cards, function (card) {
             var frameEl = card.querySelector('.agp-pcard-tpl-frame-img');
             var m = frameEl && /url\(["']?(.*?)["']?\)/.exec(frameEl.style.backgroundImage);
