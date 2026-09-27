@@ -2,16 +2,19 @@
  * AGP SNAKES & LADDERS — "السلم والثعبان" (لعبة أصلية داخل المنصة، ملف
  * Plugin مستقل بنفس نمط games/elimination-roulette).
  *
- * الآلية: لوحة 10×10 (1 → 100، الكأس 🏆 في المربع 100). اللاعبون بترتيب
- * دخولهم للوبي؛ لكل لاعب 15 ثانية بدوره يكتب فيها بشات البث أحد الأوامر:
- * "دور" / "دوران" / "ارم النرد" / "roll" — فيدور النرد ويمشي اللاعب بعدد
- * النقاط، يطلع مع السلم وينزل مع الثعبان. لو ما كتب خلال 15 ثانية يروح
- * عليه الدور. أول من يوصل للكأس (100) يفوز، وتستمر المباراة حتى يكتمل
- * عدد الفائزين المحدَّد بالإعدادات (1 أو 2 أو 3).
+ * شاشة اللعب مبنية حرفياً على ملف التصميم design_handoff_game_screen
+ * (Snakes and Ladders GUI.dc.html + README.md): الهيدر، الشريط الجانبي
+ * (صاحب الدور/الدور التالي/مؤقت 15 ثانية/النرد ثلاثي الأبعاد)، اللوحة
+ * 1.4:1 بترقيم متعرّج يبدأ من أسفل اليمين، السلالم والثعابين، شريط الحالة
+ * السفلي، الثيمات الثلاثة، لوحة "إدخال لاعب جديد"، شرح اللعبة، وتأكيد الخروج.
  *
- * شاشة الإعدادات، اللوبي، طبقة "جاري الاتصال"، درج الإعدادات وسط المباراة
- * وبطاقة الفوز — كلها منسوخة حرفياً من تنسيق روليت الإقصاء (نفس الـCSS
- * بنفس القيم، بادئة sl- بدل er-)، بدون أي تعديل على الملفات المشتركة.
+ * الأوامر بالشات: صاحب الدور فقط يكتب "دور" / "دوران" / "ارم النرد" /
+ * "roll" خلال 15 ثانية، وإلا يروح عليه الدور. الوصول للمربع 100 بالعدد
+ * المطابق = فوز، وتستمر المباراة حتى يكتمل عدد الفائزين (1/2/3).
+ *
+ * شاشة الإعدادات، اللوبي، طبقة "جاري الاتصال" وبطاقة الفوز — منسوخة من
+ * تنسيق روليت الإقصاء (نفس الـCSS، بادئة sl- بدل er-)، بدون أي تعديل على
+ * الملفات المشتركة.
  *
  * الاعتماديات (بنفس ترتيب index.html القياسي): js/agp-core.js …
  * js/agp-bootstrap.js، ثم js/agp-player-card.js، ثم js/agp-game-shell.js.
@@ -32,71 +35,64 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var C_ACCENT2 = '#00c2ff';
     var C_PINK = '#ff4dff';
 
-    // مدة الدور الثابتة (طلب صريح: 15 ثانية لكل لاعب)
-    var TURN_SECONDS = 15;
+    // مدة الدور (طلب صريح + TURN_TIME بملف التصميم)
+    var TURN_TIME = 15;
+    var MAX_PLAYERS = 25;
 
     // أوامر رمي النرد بالشات (بعد التطبيع — راجع normalizeCommand)
     var ROLL_COMMANDS = ['دور', 'دوران', 'ارم النرد', 'roll'];
 
-    var BOARD_SIZE = 100;
+    // من ملف التصميم حرفياً
+    var LADDERS = { 1: 38, 4: 14, 28: 84, 36: 44, 51: 67, 80: 100 };
+    var SNAKES = { 16: 6, 47: 26, 49: 13, 62: 19, 87: 24, 91: 46, 95: 75, 98: 78 };
+    var DICE_ROT = { 1: [0, 0], 2: [90, 0], 3: [0, -90], 4: [0, 90], 5: [-90, 0], 6: [0, 180] };
+    var AR = 1.4;
+    var THEMES = {
+        night: { label: 'ليلي', page: 'radial-gradient(120% 90% at 50% 0%, #101a33 0%, #0a0e1a 55%, #060811 100%)', a: '#141f3d', b: '#101830', top: '#1c2444' },
+        emerald: { label: 'زمردي', page: 'radial-gradient(120% 90% at 50% 0%, #0f2a26 0%, #0a1714 55%, #050c0a 100%)', a: '#133530', b: '#0f2a26', top: '#1a3f38' },
+        wine: { label: 'عنّابي', page: 'radial-gradient(120% 90% at 50% 0%, #2e1520 0%, #1a0c12 55%, #0d0609 100%)', a: '#351a26', b: '#2a141e', top: '#40202e' }
+    };
+    var SNAKE_COLORS = [
+        ['#3fa9e0', '#1d6fa8'], ['#4fd18a', '#1f9e5c'], ['#c968e0', '#8f2fb8'],
+        ['#ff8b4d', '#d85f1d'], ['#ff5f8f', '#d82a5c'], ['#e0c93f', '#b89317']
+    ];
+    var CLUSTER = [
+        [{ dx: 0, dy: 0 }],
+        [{ dx: -2.5, dy: 0 }, { dx: 2.5, dy: 0 }],
+        [{ dx: 0, dy: -2.1 }, { dx: -2.4, dy: 2.1 }, { dx: 2.4, dy: 2.1 }],
+        [{ dx: -2.2, dy: -2.1 }, { dx: 2.2, dy: -2.1 }, { dx: -2.2, dy: 2.1 }, { dx: 2.2, dy: 2.1 }]
+    ];
+    var PIP_MAP = {
+        1: [[2, 2]], 2: [[1, 1], [3, 3]], 3: [[1, 1], [2, 2], [3, 3]],
+        4: [[1, 1], [1, 3], [3, 1], [3, 3]], 5: [[1, 1], [1, 3], [2, 2], [3, 1], [3, 3]],
+        6: [[1, 1], [1, 3], [2, 1], [2, 3], [3, 1], [3, 3]]
+    };
+    var ROLL_APPLY_MS = 1150;
+    var WIN_END_DELAY_MS = 1800;
 
-    // خريطة السلالم (من → إلى) والثعابين (رأس → ذيل) — ثابتة لكل مباراة.
-    var LADDERS = { 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 80: 99 };
-    var SNAKES = { 17: 7, 54: 34, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 98: 79 };
-
-    // ألوان حلقات اللاعبين على اللوحة (تدور لو زاد العدد)
-    var TOKEN_COLORS = ['#ffd400', '#ff4dff', '#00c2ff', '#4ade80', '#ff7a3d', '#b28cf5',
-        '#ff6b8a', '#22d3ee', '#facc15', '#a3e635', '#f472b6', '#60a5fa'];
-
-    var STEP_MS = 260;          // مدة خطوة المربع الواحد
-    var SLIDE_MS = 900;         // مدة الطلوع مع السلم / النزول مع الثعبان
-    var DICE_ROLL_MS = 1000;    // مدة دوران النرد
-    var NEXT_TURN_DELAY_MS = 1100;
+    function ballFor(hue) {
+        return 'radial-gradient(circle at 32% 26%, oklch(0.72 0.14 ' + hue + ') 0%, oklch(0.52 0.16 ' + hue + ') 55%, oklch(0.34 0.12 ' + hue + ') 100%)';
+    }
 
     /* ======================================================================
-     *  0) الصوت — نغمات مولَّدة برمجياً (بدون ملفات صوت خارجية)
+     *  0) الصوت — نفس نغمات ملف التصميم (WebAudio)، تتوقف بزر 🔇
      * ==================================================================== */
     var _audioCtx = null;
-    function ensureAudioCtx() {
-        if (_audioCtx) return _audioCtx;
-        var Ctx = window.AudioContext || window.webkitAudioContext;
-        if (!Ctx) return null;
-        try { _audioCtx = new Ctx(); } catch (e) { _audioCtx = null; }
-        return _audioCtx;
-    }
-    function playTone(freq, startOffset, duration, gainScale) {
-        var ctx = ensureAudioCtx();
-        if (!ctx) return;
+    var _sound = true;
+    function beep(freq, dur, type) {
+        if (!_sound) return;
         try {
-            if (ctx.state === 'suspended') ctx.resume();
-            var t0 = ctx.currentTime + (startOffset || 0);
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(freq, t0);
-            gain.gain.setValueAtTime(0.0001, t0);
-            gain.gain.exponentialRampToValueAtTime(0.18 * (gainScale || 1), t0 + 0.02);
-            gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(t0);
-            osc.stop(t0 + duration + 0.05);
+            var Ctx = window.AudioContext || window.webkitAudioContext;
+            if (!Ctx) return;
+            _audioCtx = _audioCtx || new Ctx();
+            var ac = _audioCtx, o = ac.createOscillator(), g = ac.createGain();
+            o.type = type || 'sine';
+            o.frequency.value = freq;
+            g.gain.setValueAtTime(0.0001, ac.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.18, ac.currentTime + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+            o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + dur + 0.02);
         } catch (e) { /* الصوت طبقة تحسين فقط */ }
-    }
-    function playSound(name) {
-        if (name === 'dice') {
-            for (var i = 0; i < 6; i++) playTone(420 + Math.random() * 260, i * 0.12, 0.07, 0.6);
-        } else if (name === 'step') {
-            playTone(660, 0, 0.06, 0.45);
-        } else if (name === 'ladder') {
-            [523, 659, 784, 1047].forEach(function (f, i) { playTone(f, i * 0.1, 0.16); });
-        } else if (name === 'snake') {
-            [620, 480, 360, 240].forEach(function (f, i) { playTone(f, i * 0.12, 0.2); });
-        } else if (name === 'warning') {
-            playTone(880, 0, 0.08, 0.5);
-        } else if (name === 'win') {
-            [523, 659, 784, 1047, 1319].forEach(function (f, i) { playTone(f, i * 0.13, 0.3); });
-        }
     }
 
     /* ======================================================================
@@ -105,18 +101,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _settings = null;
     var _startedAt = null;
     var _matchActive = false;
-    var _roster = [];            // كل لاعبي المباراة بترتيب الدخول (لإعادة المباراة بنفس اللاعبين)
+    var _roster = [];            // كل لاعبي المباراة (للوحة ولإعادة المباراة بنفس اللاعبين)
     var _order = [];             // اللاعبون اللي لسا يلعبون (بدون الفائزين)
-    var _positions = {};         // playerId -> رقم المربع (0 = لسا ما بدأ)
-    var _colors = {};            // playerId -> لون الحلقة
+    var _positions = {};         // playerId -> رقم المربع (يبدأ من 1)
+    var _hues = {};              // playerId -> درجة لون الكرة (hue)
     var _winners = [];           // بترتيب الوصول للكأس
     var _turnIdx = 0;
-    var _awaitingRoll = false;
-    var _busy = false;           // النرد يدور / اللاعب يمشي
+    var _rolling = false;
+    var _dice = 4;
+    var _spinX = 0;
+    var _spinY = 0;
+    var _timeLeft = TURN_TIME;
     var _turnInterval = null;
-    var _turnRemaining = 0;
     var _pendingTimeouts = [];
     var _commentUnsub = null;
+    var _theme = 'night';        // يبقى بين المباريات (خارج resetMatchState)
+    var _joinOpen = false;
+    var _queued = [];            // لاعبون جدد بانتظار "حفظ وإغلاق الدخول"
+    var _knownIds = {};          // كل من دخل المباراة (لتجاهل تكرار الدخول)
 
     function resetMatchState() {
         _settings = null;
@@ -125,11 +127,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _roster = [];
         _order = [];
         _positions = {};
-        _colors = {};
+        _hues = {};
         _winners = [];
         _turnIdx = 0;
-        _awaitingRoll = false;
-        _busy = false;
+        _rolling = false;
+        _timeLeft = TURN_TIME;
+        _joinOpen = false;
+        _queued = [];
+        _knownIds = {};
         stopTurnTimer();
         clearPendingTimeouts();
         unwireCommentListener();
@@ -151,7 +156,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function liveSettings() {
         return (AGP.gameShell && typeof AGP.gameShell.getSettings === 'function') ? AGP.gameShell.getSettings() : (_settings || {});
     }
-
     /* ======================================================================
      *  2) أدوات DOM صغيرة
      * ==================================================================== */
@@ -161,12 +165,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         div.textContent = text == null ? '' : String(text);
         return div.innerHTML;
     }
-    function escapeForInlineOnerrorJs(text) {
-        return escapeHtml(text)
-            .replace(/\\/g, '\\\\')
-            .replace(/'/g, "\\'")
-            .replace(/"/g, '&quot;');
-    }
     function playerLabel(p) { return (p && (p.name || p.id)) || '—'; }
 
     // نفس دالة روليت الإقصاء — اليوزر الحقيقي (uniqueId) من player.id
@@ -175,15 +173,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var id = (player && player.id) || '';
         if (id.indexOf('tiktok:') === 0) return id.slice('tiktok:'.length);
         return (player && (player.name || player.id)) || '';
-    }
-
-    function ringAvatarHtml(player) {
-        var name = playerLabel(player);
-        var avatarUrl = player && player.avatarUrl;
-        var initials = (name || '').trim().slice(0, 2).toUpperCase() || '؟';
-        return avatarUrl
-            ? '<img class="sl-ring-avatar" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;sl-ring-avatar sl-ring-avatar--fallback&quot;>' + escapeForInlineOnerrorJs(initials) + '</div>\';">'
-            : '<div class="sl-ring-avatar sl-ring-avatar--fallback">' + escapeHtml(initials) + '</div>';
     }
 
     // تطبيع أمر الشات: حروف صغيرة، توحيد الألف، حذف التشكيل والتطويل
@@ -232,129 +221,191 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             ':root{--sl-accent:' + C_ACCENT + ';--sl-accent2:' + C_ACCENT2 + ';--sl-pink:' + C_PINK + ';}',
             'html,body{margin:0 !important;padding:0 !important;}',
 
-            /* ---- شاشة اللعب ---- */
-            '#sl-stage{position:fixed;inset:0;padding:78px 18px 20px;box-sizing:border-box;display:flex;',
-            'flex-direction:row;align-items:flex-start;justify-content:center;gap:22px;overflow-y:auto;',
-            'direction:rtl;color:#f3eefc;font-family:Cairo,sans-serif;',
-            'background:',
-            'radial-gradient(60% 45% at 18% 8%,rgba(122,63,212,.22),transparent 70%),',
-            'radial-gradient(50% 40% at 88% 40%,rgba(214,168,60,.10),transparent 72%),',
-            'radial-gradient(55% 45% at 40% 104%,rgba(48,26,104,.26),transparent 74%),',
-            'linear-gradient(180deg,#0d0a14 0%,#08060d 45%,#050508 100%);}',
+            /* ---- شاشة اللعب — قيم ملف التصميم حرفياً ---- */
+            'body.sl-game-on #agp-persistent-header{display:none !important;}',
+            '#sl-stage{position:fixed;inset:0;z-index:10;overflow-y:auto;direction:ltr;display:flex;flex-direction:column;',
+            'min-height:100vh;font-family:Cairo,system-ui,sans-serif;color:#e8edf7;}',
+            '#sl-stage *{box-sizing:border-box;}',
+            '#sl-stage button{font-family:Cairo,sans-serif;}',
+            '@keyframes sl-pop{0%{scale:0.85;}60%{scale:1.06;}100%{scale:1;}}',
+
+            /* الهيدر */
+            '.sl-header{position:relative;z-index:20;height:64px;flex:none;width:100%;background:#0d1428;',
+            'border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;',
+            'justify-content:space-between;padding:0 18px;gap:12px;direction:rtl;}',
+            '.sl-brand{display:flex;align-items:center;gap:10px;}',
+            '.sl-brand-tile{width:34px;height:34px;border-radius:10px;background:#16b3c9;display:flex;',
+            'align-items:center;justify-content:center;font-size:16px;}',
+            '.sl-brand-title{font-family:"Baloo Bhaijaan 2",Cairo,sans-serif;font-size:20px;font-weight:800;color:#ffffff;}',
+            '.sl-tools{display:flex;align-items:center;gap:8px;}',
+            '.sl-hbtn{padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,0.12);background:#131c36;',
+            'color:#cfe6f0;font-size:13px;font-weight:700;cursor:pointer;}',
+            '.sl-hbtn:hover{background:#1a2544;}',
+            '.sl-hbtn-round{width:36px;height:36px;padding:0;font-size:14px;}',
+            '.sl-hbtn-exit{border-color:rgba(230,57,70,0.45);color:#ffb3b9;}',
+            '.sl-hbtn-exit:hover{background:rgba(230,57,70,0.2);}',
+            '.sl-theme-wrap{position:relative;}',
+            '.sl-theme-menu{position:absolute;top:calc(100% + 8px);left:0;min-width:170px;display:flex;',
+            'flex-direction:column;gap:4px;padding:6px;border-radius:14px;background:#10182f;',
+            'border:1px solid rgba(255,255,255,0.12);box-shadow:0 16px 36px rgba(0,0,0,0.5);}',
+            '.sl-theme-menu[hidden]{display:none;}',
+            '.sl-theme-opt{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;',
+            'border:1px solid transparent;background:transparent;color:#e8edf7;font-size:13px;font-weight:700;',
+            'cursor:pointer;text-align:right;}',
+            '.sl-theme-opt:hover{background:rgba(255,255,255,0.06);}',
+            '.sl-theme-opt.sl-on{border-color:rgba(255,209,102,0.6);background:rgba(255,209,102,0.08);}',
+            '.sl-theme-sw{width:18px;height:18px;flex:none;border-radius:6px;border:1px solid rgba(255,255,255,0.2);}',
+
+            /* المحتوى */
+            '#sl-main{flex:1 0 auto;width:100%;display:grid;grid-template-columns:minmax(240px,280px) 1fr;gap:16px;',
+            'align-items:start;padding:14px 18px;max-width:1920px;margin:0 auto;direction:ltr;}',
+            '.sl-aside{display:flex;flex-direction:column;gap:14px;min-width:0;direction:rtl;}',
+            '.sl-card{border-radius:18px;background:#10182f;border:1px solid rgba(255,255,255,0.08);}',
+            '.sl-card-turn{padding:14px;display:flex;flex-direction:column;gap:12px;}',
+            '.sl-cur{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:#0d1428;',
+            'border:2px solid rgba(255,209,102,0.55);}',
+            '.sl-av{flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;',
+            'font-family:"Baloo Bhaijaan 2",Cairo,sans-serif;font-weight:800;color:#fff;}',
+            '.sl-av img{width:100%;height:100%;object-fit:cover;display:block;}',
+            '.sl-av-cur{width:58px;height:58px;border:2px solid rgba(255,255,255,0.85);font-size:24px;}',
+            '.sl-av-next{width:40px;height:40px;border:2px solid rgba(255,255,255,0.6);font-size:17px;}',
+            '.sl-info{flex:1;min-width:0;}',
+            '.sl-lbl-gold{font-size:11px;font-weight:800;color:#ffd166;}',
+            '.sl-lbl-dim{font-size:11px;font-weight:800;color:#7fa9bd;}',
+            '.sl-cur-name{font-size:18px;font-weight:900;color:#ffffff;line-height:1.3;overflow:hidden;',
+            'text-overflow:ellipsis;white-space:nowrap;}',
+            '.sl-next-name{font-size:15px;font-weight:900;color:#e8edf7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '.sl-sq{font-size:12px;color:#9dc6d9;}',
+            '.sl-sq b{font-weight:900;color:#ffd166;}',
+            '.sl-timer{width:58px;height:58px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;}',
+            '.sl-timer-in{width:48px;height:48px;border-radius:50%;background:#0d1428;display:flex;flex-direction:column;',
+            'align-items:center;justify-content:center;line-height:1;}',
+            '.sl-timer-num{font-family:"Baloo Bhaijaan 2",Cairo,sans-serif;font-size:20px;font-weight:800;}',
+            '.sl-timer-unit{font-size:9px;color:#7fa9bd;}',
+            '.sl-next{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#0d1428;',
+            'border:1px solid rgba(255,255,255,0.08);}',
+
+            '.sl-card-dice{padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px;}',
+            '.sl-dice-title{width:100%;font-size:15px;font-weight:900;color:#ffffff;}',
+            '.sl-ready{padding:6px 16px;border-radius:999px;background:#103622;border:1px solid rgba(79,209,138,0.4);',
+            'color:#4fd18a;font-size:13px;font-weight:800;}',
+            '.sl-dice-stage{width:110px;height:110px;display:flex;align-items:center;justify-content:center;perspective:520px;}',
+            '.sl-cube{position:relative;width:72px;height:72px;transform-style:preserve-3d;',
+            'transition:transform 1.1s cubic-bezier(.2,.9,.25,1);}',
+            '.sl-face{position:absolute;inset:0;border-radius:14px;background:linear-gradient(145deg,#1a2548,#0b1224);',
+            'border:1px solid rgba(255,209,102,0.45);box-shadow:inset 0 0 14px rgba(0,0,0,0.5);display:grid;',
+            'grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:13%;gap:7%;backface-visibility:hidden;}',
+            '.sl-pip{border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe9ac,#ffd166 55%,#c99420 100%);',
+            'box-shadow:0 0 5px rgba(255,209,102,0.55);}',
+            '.sl-btn-roll{width:100%;padding:13px;border:none;border-radius:14px;cursor:pointer;font-weight:900;font-size:16px;',
+            'color:#eaf3ff;background:linear-gradient(180deg,#3f7ee8,#1f4fb0);',
+            'box-shadow:0 5px 0 #163a80,0 10px 20px rgba(0,0,0,0.35);}',
+            '.sl-btn-roll:hover{background:linear-gradient(180deg,#4c8bf5,#2558c2);}',
+            '.sl-btn-roll:active{transform:translateY(4px);box-shadow:0 1px 0 #163a80;}',
+            '.sl-btn-reset{width:100%;padding:12px;border:1px solid rgba(255,209,102,0.35);border-radius:14px;cursor:pointer;',
+            'font-weight:800;font-size:14px;color:#ffd166;background:#1a1608;}',
+            '.sl-btn-reset:hover{background:#241d0c;}',
+            '.sl-cmd-grid{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;}',
+            '.sl-btn-cmd{padding:10px 6px;border:1px solid rgba(63,126,232,0.4);border-radius:12px;cursor:pointer;',
+            'font-size:12px;font-weight:800;color:#9dc0ff;background:#0e1730;text-align:center;line-height:1.5;}',
+            '.sl-btn-cmd:hover{background:#14204a;}',
+            '.sl-btn-cmd span{font-size:10px;opacity:0.7;}',
 
             /* اللوحة */
-            '#sl-board-col{display:flex;flex-direction:column;align-items:center;gap:12px;flex:0 0 auto;}',
-            '#sl-board-wrap{position:relative;width:min(calc(100vh - 170px),58vw,820px);min-width:300px;aspect-ratio:1;',
-            'direction:ltr;border-radius:22px;padding:10px;box-sizing:border-box;',
-            'background:linear-gradient(180deg,rgba(28,24,44,.95),rgba(14,12,22,.95));',
-            'border:1px solid rgba(178,140,245,.35);',
-            'box-shadow:0 30px 70px -30px rgba(0,0,0,.9),0 0 0 6px #12101d,0 0 0 8px rgba(178,140,245,.25);}',
-            '#sl-board{position:relative;width:100%;height:100%;display:grid;',
-            'grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);',
-            'border-radius:14px;overflow:hidden;}',
-            '.sl-cell{position:relative;display:flex;align-items:flex-start;justify-content:flex-start;',
-            'padding:4px 6px;box-sizing:border-box;font-family:"Noto Kufi Arabic",sans-serif;',
-            'font-size:clamp(9px,1.05vw,14px);font-weight:700;color:rgba(255,255,255,.7);}',
-            '.sl-cell.sl-cell-a{background:#2a1f47;}',
-            '.sl-cell.sl-cell-b{background:#3b2a63;}',
-            '.sl-cell.sl-cell-ladder{background:linear-gradient(135deg,#3b2a63,#4a3a1a);}',
-            '.sl-cell.sl-cell-snake{background:linear-gradient(135deg,#2a1f47,#4a1830);}',
-            '.sl-cell.sl-cell-goal{background:radial-gradient(circle at 50% 55%,rgba(240,205,106,.45),#5a3f10 75%);',
-            'color:#fff3c4;}',
-            '.sl-cell-trophy{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;',
-            'font-size:clamp(20px,3.4vw,46px);filter:drop-shadow(0 0 10px rgba(240,205,106,.9));',
-            'animation:sl-trophy-glow 2.2s ease-in-out infinite;}',
-            '@keyframes sl-trophy-glow{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}',
-            '#sl-board-svg{position:absolute;inset:10px;width:calc(100% - 20px);height:calc(100% - 20px);',
-            'pointer-events:none;z-index:2;overflow:visible;}',
-            '#sl-tokens{position:absolute;inset:10px;pointer-events:none;z-index:3;}',
-            '.sl-token{position:absolute;width:6.6%;aspect-ratio:1;border-radius:50%;',
-            'transform:translate(-50%,-50%);border:3px solid var(--tc,#ffd400);box-sizing:border-box;',
-            'background:#2c1240;box-shadow:0 4px 10px rgba(0,0,0,.6);overflow:hidden;',
-            'transition:left .24s ease,top .24s ease;}',
-            '.sl-token.sl-token-slide{transition:left .9s cubic-bezier(.45,.05,.3,1),top .9s cubic-bezier(.45,.05,.3,1);}',
-            '.sl-token.sl-token-active{z-index:5;width:8.2%;box-shadow:0 0 0 3px rgba(255,255,255,.85),0 0 22px var(--tc,#ffd400);}',
-            '.sl-token .sl-ring-avatar--fallback{font-size:clamp(8px,1vw,13px);}',
+            '#sl-board{display:flex;align-items:center;justify-content:center;min-width:0;}',
+            '.sl-frame{width:100%;max-width:min(calc((100vh - 128px) * 1.4),100%);aspect-ratio:1.4 / 1;position:relative;',
+            'padding:10px;border-radius:22px;background:linear-gradient(180deg,#16224a 0%,#0d152f 100%);',
+            'box-shadow:0 26px 60px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.06);border:1px solid rgba(255,209,102,0.2);}',
+            '.sl-inner{position:absolute;inset:10px;border-radius:14px;overflow:hidden;background:#0c1226;}',
+            '.sl-tiles{position:absolute;inset:0;display:grid;grid-template-columns:repeat(10,1fr);',
+            'grid-template-rows:repeat(10,1fr);direction:ltr;}',
+            '.sl-tile{position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.045);}',
+            '.sl-tile-n{position:absolute;top:6px;left:8px;font-family:"Baloo Bhaijaan 2",Cairo,sans-serif;font-weight:800;',
+            'font-size:clamp(15px,2.6vmin,32px);line-height:1;color:#e8edf7;}',
+            '.sl-tile-100 .sl-tile-n{color:#ffd166;}',
+            '.sl-crown{position:absolute;top:2px;right:4px;font-size:clamp(12px,2.2vmin,26px);}',
+            '.sl-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}',
+            '.sl-tokens{position:absolute;inset:0.7%;pointer-events:none;container-type:size;}',
+            '.sl-tok{position:absolute;aspect-ratio:1 / 1;border-radius:50%;transform:translate(-50%,-50%);',
+            'border:2px solid rgba(255,255,255,0.85);box-shadow:inset 0 -4px 8px rgba(0,0,0,0.3),0 3px 8px rgba(0,0,0,0.4);',
+            'display:flex;align-items:center;justify-content:center;overflow:hidden;',
+            'font-family:"Baloo Bhaijaan 2",Cairo,sans-serif;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.4);',
+            'direction:ltr;transition:left 380ms cubic-bezier(.34,1.4,.64,1),top 380ms cubic-bezier(.34,1.4,.64,1);',
+            'animation:sl-pop 320ms ease both;}',
+            '.sl-tok img{width:100%;height:100%;object-fit:cover;display:block;}',
 
-            /* صف البداية (لاعبين ما بدؤوا بعد — مربع 0) */
-            '#sl-start-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;',
-            'min-height:44px;padding:6px 16px;border-radius:999px;border:1px dashed rgba(178,140,245,.35);',
-            'background:rgba(255,255,255,.03);font-family:"IBM Plex Sans Arabic",sans-serif;font-size:13px;color:#a79fbb;}',
-            '#sl-start-row .sl-start-av{width:32px;height:32px;border-radius:50%;overflow:hidden;',
-            'border:2px solid var(--tc,#ffd400);box-sizing:border-box;}',
-
-            /* اللوحة الجانبية */
-            '#sl-side{flex:0 1 380px;min-width:280px;display:flex;flex-direction:column;gap:14px;}',
-            '.sl-panel{border-radius:20px;border:1px solid rgba(255,255,255,.09);',
-            'background:linear-gradient(180deg,rgba(28,24,44,.9),rgba(14,12,22,.9));padding:16px 18px;box-sizing:border-box;}',
-            '#sl-turn-card{text-align:center;border-color:rgba(178,140,245,.35);}',
-            '.sl-turn-title{font-family:"Noto Kufi Arabic",sans-serif;font-size:13px;color:#a79fbb;margin:0 0 10px;}',
-            '.sl-turn-player{display:flex;flex-direction:column;align-items:center;gap:8px;}',
-            '.sl-turn-avatar{width:84px;height:84px;border-radius:50%;overflow:hidden;',
-            'border:3px solid var(--tc,#b28cf5);box-shadow:0 0 24px var(--tc,#b28cf5);}',
-            '.sl-turn-name{font-family:"Cairo",sans-serif;font-size:22px;font-weight:800;color:#fff;',
-            'max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
-            '.sl-turn-pos{font-family:"IBM Plex Sans Arabic",sans-serif;font-size:13px;color:#cfc7e2;}',
-            '.sl-turn-hint{margin-top:12px;font-family:"IBM Plex Sans Arabic",sans-serif;font-size:13.5px;',
-            'color:#f0e9ff;line-height:1.9;}',
-            '.sl-cmd{display:inline-block;margin:2px 3px;padding:2px 12px;border-radius:999px;',
-            'background:rgba(214,168,60,.12);border:1px solid rgba(240,205,106,.4);color:#f0cd6a;',
-            'font-family:"Cairo",sans-serif;font-weight:800;font-size:14px;}',
-            '#sl-timer{margin:14px auto 0;width:74px;height:74px;border-radius:50%;display:flex;',
-            'align-items:center;justify-content:center;font-family:"Cairo",sans-serif;font-weight:900;',
-            'font-size:28px;color:#fff;background:conic-gradient(#7a3fd4 var(--p,100%),rgba(255,255,255,.08) 0);',
-            'position:relative;}',
-            '#sl-timer::before{content:"";position:absolute;inset:6px;border-radius:50%;background:#14121f;}',
-            '#sl-timer span{position:relative;}',
-            '#sl-timer.sl-timer-warn{background:conic-gradient(#e0736f var(--p,100%),rgba(255,255,255,.08) 0);}',
-            '#sl-timer.sl-timer-warn span{color:#ff9b96;}',
-            '#sl-timer.sl-timer-idle{opacity:.35;}',
-
-            /* النرد */
-            '#sl-dice-row{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:14px;}',
-            '#sl-dice{width:78px;height:78px;border-radius:18px;background:linear-gradient(145deg,#ffffff,#e4dcf5);',
-            'box-shadow:0 10px 24px -8px rgba(0,0,0,.8),inset 0 -4px 0 rgba(0,0,0,.12);display:grid;',
-            'grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:10px;box-sizing:border-box;gap:2px;}',
-            '#sl-dice.sl-dice-rolling{animation:sl-dice-shake .18s linear infinite;}',
-            '@keyframes sl-dice-shake{0%{transform:rotate(0) scale(1);}25%{transform:rotate(14deg) scale(1.06);}',
-            '50%{transform:rotate(0) scale(1);}75%{transform:rotate(-14deg) scale(1.06);}100%{transform:rotate(0) scale(1);}}',
-            '.sl-pip{width:78%;height:78%;margin:auto;border-radius:50%;background:transparent;}',
-            '.sl-pip.on{background:#2b1a4d;box-shadow:inset 0 2px 2px rgba(0,0,0,.45);}',
-            '#sl-dice-result{font-family:"Cairo",sans-serif;font-size:15px;font-weight:700;color:#cfc7e2;min-width:90px;}',
-
-            /* ترتيب اللاعبين */
-            '#sl-standings h3{margin:0 0 10px;font-family:"Noto Kufi Arabic",sans-serif;font-size:14px;',
-            'font-weight:700;color:#f4f2fb;}',
-            '#sl-standings-list{display:flex;flex-direction:column;gap:6px;max-height:min(40vh,380px);',
-            'overflow-y:auto;scrollbar-width:none;}',
-            '#sl-standings-list::-webkit-scrollbar{display:none;}',
-            '.sl-srow{display:flex;align-items:center;gap:9px;padding:7px 11px;border-radius:12px;',
-            'background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);}',
-            '.sl-srow.sl-srow-turn{border-color:rgba(178,140,245,.6);background:rgba(122,63,212,.18);}',
-            '.sl-srow.sl-srow-won{border-color:rgba(240,205,106,.45);background:rgba(214,168,60,.10);}',
-            '.sl-srow-av{width:30px;height:30px;border-radius:50%;overflow:hidden;flex:none;',
-            'border:2px solid var(--tc,#ffd400);box-sizing:border-box;}',
-            '.sl-srow-name{flex:1;min-width:0;font-family:"IBM Plex Sans Arabic",sans-serif;font-size:13px;',
-            'color:#e7e9ee;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
-            '.sl-srow-pos{flex:none;font-family:"Cairo",sans-serif;font-weight:800;font-size:13px;color:#f0cd6a;',
-            'min-width:34px;text-align:center;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.06);}',
-
-            /* إعلان سريع فوق اللوحة (سلم/ثعبان/فوز) */
-            '#sl-banner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.8);z-index:8;',
-            'padding:14px 26px;border-radius:20px;font-family:"Cairo",sans-serif;font-weight:900;font-size:clamp(18px,2.4vw,30px);',
-            'color:#fff;background:rgba(13,11,22,.92);border:2px solid rgba(178,140,245,.6);white-space:nowrap;',
-            'opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;direction:rtl;',
-            'box-shadow:0 20px 50px -20px rgba(0,0,0,1);}',
-            '#sl-banner.show{opacity:1;transform:translate(-50%,-50%) scale(1);}',
-            '#sl-banner.sl-banner-ladder{border-color:#f0cd6a;color:#fff3c4;}',
-            '#sl-banner.sl-banner-snake{border-color:#e0736f;color:#ffd1cf;}',
-            '#sl-banner.sl-banner-win{border-color:#f0cd6a;color:#f0cd6a;}',
+            /* شريط الحالة */
+            '.sl-status{flex:none;width:100%;padding:12px 18px;display:flex;align-items:center;justify-content:center;gap:8px;',
+            'background:#0d1428;border-top:1px solid rgba(255,255,255,0.06);direction:rtl;}',
+            '.sl-status-ic{font-size:15px;}',
+            '.sl-status-txt{font-size:14px;font-weight:800;color:#cfe6f0;}',
 
             '@media (max-width:900px){',
-            '#sl-stage{flex-direction:column;align-items:center;}',
-            '#sl-board-wrap{width:min(94vw,calc(100vh - 170px));}',
-            '#sl-board-col{order:-1;}',
-            '#sl-side{flex:none;width:min(94vw,520px);}}',
+            '#sl-main{grid-template-columns:1fr !important;}',
+            '#sl-board{order:-1;}}',
+
+            /* النوافذ (إدخال لاعب/شرح/خروج) */
+            '.sl-modal-bg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl;}',
+            '.sl-modal-bg[hidden]{display:none;}',
+            '#sl-join{z-index:50;background:rgba(4,10,20,0.45);}',
+            '.sl-join-box{width:500px;max-width:100%;height:600px;max-height:calc(100vh - 32px);display:flex;flex-direction:column;',
+            'border-radius:22px;background:rgba(16,24,47,0.3);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);',
+            'border:2px solid rgba(255,209,102,0.55);box-shadow:0 30px 70px rgba(0,0,0,0.45);}',
+            '.sl-join-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:18px 20px;',
+            'border-bottom:1px solid rgba(255,255,255,0.14);}',
+            '.sl-join-title{font-size:20px;font-weight:900;color:#ffffff;}',
+            '.sl-x{width:36px;height:36px;display:flex;align-items:center;justify-content:center;',
+            'border:1px solid rgba(255,255,255,0.25);border-radius:10px;background:rgba(230,57,70,0.25);color:#ffd0d4;',
+            'font-size:16px;font-weight:700;cursor:pointer;}',
+            '.sl-x:hover{background:#e63946;color:#fff;}',
+            '.sl-join-body{flex:1;min-height:0;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;}',
+            '.sl-open-pill{display:flex;align-items:center;gap:8px;align-self:flex-start;padding:6px 14px;border-radius:999px;',
+            'background:rgba(79,209,138,0.18);border:1px solid rgba(79,209,138,0.5);color:#8ff0b8;font-size:13px;font-weight:800;}',
+            '.sl-open-dot{width:8px;height:8px;border-radius:50%;background:#4fd18a;}',
+            '.sl-join-t1{font-size:15px;line-height:1.9;color:#f1f5fb;font-weight:700;}',
+            '.sl-join-t2{font-size:13px;line-height:1.8;color:#d6e4f0;}',
+            '.sl-join-sep{height:1px;background:rgba(255,255,255,0.14);}',
+            '.sl-join-count{font-size:13px;font-weight:800;color:#ffd166;}',
+            '.sl-join-empty{padding:18px;border-radius:14px;border:1px dashed rgba(255,255,255,0.25);text-align:center;',
+            'font-size:13px;color:#d6e4f0;}',
+            '.sl-q{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:12px;background:rgba(255,255,255,0.08);',
+            'border:1px solid rgba(255,255,255,0.14);}',
+            '.sl-q-name{flex:1;min-width:0;font-size:14px;font-weight:700;color:#ffffff;}',
+            '.sl-q-x{width:24px;height:24px;flex:none;border:1px solid rgba(255,255,255,0.2);border-radius:8px;',
+            'background:rgba(230,57,70,0.25);color:#ffd0d4;font-size:12px;font-weight:700;cursor:pointer;}',
+            '.sl-q-x:hover{background:#e63946;color:#fff;}',
+            '.sl-join-foot{padding:16px 20px;border-top:1px solid rgba(255,255,255,0.14);}',
+            '.sl-btn-gold{width:100%;padding:14px;border:none;border-radius:14px;cursor:pointer;font-size:16px;font-weight:900;',
+            'color:#4a2000;background:linear-gradient(180deg,#ffdd7a,#f0a91f);box-shadow:0 5px 0 #b9760c;}',
+            '.sl-btn-gold:hover{background:linear-gradient(180deg,#ffe79a,#f7b62f);}',
+            '.sl-btn-gold:active{transform:translateY(3px);box-shadow:0 2px 0 #b9760c;}',
+            '#sl-help{z-index:60;background:rgba(4,10,20,0.8);}',
+            '#sl-leave{z-index:70;background:rgba(4,10,20,0.8);}',
+            '.sl-dlg{max-width:100%;display:flex;flex-direction:column;border-radius:22px;',
+            'background:linear-gradient(180deg,#16224a 0%,#0b1122 100%);border:1px solid rgba(255,255,255,0.12);',
+            'box-shadow:0 30px 70px rgba(0,0,0,0.55);}',
+            '.sl-dlg-help{width:400px;max-height:calc(100vh - 60px);gap:12px;padding:20px;}',
+            '.sl-dlg-leave{width:360px;gap:14px;padding:22px;}',
+            '.sl-dlg-head{display:flex;align-items:center;justify-content:space-between;}',
+            '.sl-dlg-title{font-size:18px;font-weight:900;color:#ffffff;}',
+            '.sl-dlg-x{width:34px;height:34px;border:1px solid rgba(255,255,255,0.16);border-radius:10px;',
+            'background:rgba(230,57,70,0.18);color:#ffb3b9;font-size:16px;font-weight:700;cursor:pointer;}',
+            '.sl-dlg-x:hover{background:#e63946;color:#fff;}',
+            '.sl-dlg-txt{font-size:13.5px;line-height:1.9;color:#cfe6f0;}',
+            '.sl-dlg-leave .sl-dlg-txt{line-height:1.8;}',
+            '.sl-dlg-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;}',
+            '.sl-dlg-cancel{padding:12px;border:1px solid rgba(255,255,255,0.16);border-radius:12px;background:#131c36;',
+            'color:#cfe6f0;font-size:14px;font-weight:800;cursor:pointer;}',
+            '.sl-dlg-cancel:hover{background:#1a2544;}',
+            '.sl-dlg-exit{padding:12px;border:none;border-radius:12px;background:#e63946;color:#fff;font-size:14px;',
+            'font-weight:900;cursor:pointer;}',
+            '.sl-dlg-exit:hover{background:#f04a57;}',
+            '#sl-left{z-index:80;flex-direction:column;gap:16px;padding:24px;}',
+            '.sl-left-ic{font-size:44px;}',
+            '.sl-left-t{font-size:24px;font-weight:900;color:#ffffff;}',
+            '.sl-left-s{font-size:14px;color:#9dc6d9;}',
+            '.sl-left-btn{padding:13px 28px;border:none;border-radius:14px;background:linear-gradient(180deg,#ffdd7a,#f0a91f);',
+            'color:#4a2000;font-size:16px;font-weight:900;cursor:pointer;}',
 
             /* ---- نافذة بطاقة الفوز (نفس #er-modal-overlay/#er-modal-box) ---- */
             '#sl-modal-overlay{position:fixed;inset:0;z-index:99990;display:none;flex-direction:column;',
@@ -371,7 +422,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.agp-field-desc{font-size:11.5px !important;font-weight:400 !important;color:#8f88a3 !important;',
             'font-family:"IBM Plex Sans Arabic",sans-serif !important;white-space:normal !important;text-align:right;}',
 
-            '#agp-shell-overlay,#agp-shell-overlay *,#sl-stage,#sl-stage *,',
+            '#agp-shell-overlay,#agp-shell-overlay *,',
             '#sl-modal-overlay,#sl-modal-overlay *,#sl-toast-wrap,#sl-toast-wrap *,',
             '#sl-event-log,#sl-event-log *{font-family:"Zain",Cairo,sans-serif !important;}',
             '#sl-toast-wrap{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:100020;',
@@ -799,100 +850,108 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* ======================================================================
-     *  4) اللوحة
+     *  4) حسابات اللوحة (من ملف التصميم حرفياً)
+     *     الترقيم متعرّج: 1 أسفل اليمين، الصف الأول من اليمين لليسار
+     *     (1…10)، الثاني من اليسار لليمين (11…20)… و100 أعلى اليمين.
      * ==================================================================== */
-    // مركز المربع n كنسبة مئوية من اللوحة (1 أسفل يسار، الصفوف متعرّجة)
-    function cellCenter(n) {
-        var idx = n - 1;
-        var row = Math.floor(idx / 10);
-        var col = idx % 10;
-        if (row % 2 === 1) col = 9 - col;
-        return { x: (col + 0.5) * 10, y: (9 - row + 0.5) * 10 };
+    function xy(n) {
+        var i = n - 1, rb = Math.floor(i / 10), m = i % 10;
+        var c = rb % 2 === 0 ? 9 - m : m;
+        return { x: c * 10 + 5, y: (9 - rb) * 10 + 5 };
     }
+    function sxy(n) { var p = xy(n); return { x: p.x * AR, y: p.y }; }
 
-    function buildBoardHtml() {
-        var cells = [];
-        for (var r = 9; r >= 0; r--) {
+    function tilesHtml() {
+        var th = THEMES[_theme] || THEMES.night;
+        var out = [];
+        for (var r = 0; r < 10; r++) {
             for (var c = 0; c < 10; c++) {
-                var col = (r % 2 === 1) ? 9 - c : c;
-                var n = r * 10 + col + 1;
-                var cls = 'sl-cell ' + (((r + c) % 2 === 0) ? 'sl-cell-a' : 'sl-cell-b');
-                if (LADDERS[n]) cls += ' sl-cell-ladder';
-                if (SNAKES[n]) cls += ' sl-cell-snake';
-                if (n === BOARD_SIZE) cls += ' sl-cell-goal';
-                cells.push('<div class="' + cls + '" style="grid-row:' + (10 - r) + ';grid-column:' + (c + 1) + '">' +
-                    n + (n === BOARD_SIZE ? '<span class="sl-cell-trophy">🏆</span>' : '') + '</div>');
+                var rb = 9 - r;
+                var n = rb % 2 === 0 ? rb * 10 + (10 - c) : rb * 10 + (c + 1);
+                var light = (r + c) % 2 === 0;
+                var bg = n === 100 ? th.top : (light ? th.a : th.b);
+                out.push('<div class="sl-tile' + (n === 100 ? ' sl-tile-100' : '') + '" style="background:' + bg + '">' +
+                    '<span class="sl-tile-n">' + n + '</span>' +
+                    (n === 100 ? '<span class="sl-crown">👑</span>' : '') + '</div>');
             }
         }
-        return cells.join('');
+        return out.join('');
     }
 
-    function ladderSvg(from, to, i) {
-        var a = cellCenter(from), b = cellCenter(to);
-        var dx = b.x - a.x, dy = b.y - a.y;
-        var len = Math.sqrt(dx * dx + dy * dy);
-        var nx = -dy / len * 1.9, ny = dx / len * 1.9;
-        var out = '<g filter="url(#sl-shadow)">';
-        out += '<line x1="' + (a.x + nx) + '" y1="' + (a.y + ny) + '" x2="' + (b.x + nx) + '" y2="' + (b.y + ny) + '" stroke="url(#sl-ladder-grad)" stroke-width="1.1" stroke-linecap="round"/>';
-        out += '<line x1="' + (a.x - nx) + '" y1="' + (a.y - ny) + '" x2="' + (b.x - nx) + '" y2="' + (b.y - ny) + '" stroke="url(#sl-ladder-grad)" stroke-width="1.1" stroke-linecap="round"/>';
-        var rungs = Math.max(2, Math.floor(len / 3.6));
-        for (var k = 1; k < rungs; k++) {
-            var t = k / rungs;
-            var cx = a.x + dx * t, cy = a.y + dy * t;
-            out += '<line x1="' + (cx + nx) + '" y1="' + (cy + ny) + '" x2="' + (cx - nx) + '" y2="' + (cy - ny) + '" stroke="#e8c36a" stroke-width="0.7" stroke-linecap="round"/>';
-        }
-        return out + '</g>';
-    }
-
-    var SNAKE_COLORS = [['#4ade80', '#166534'], ['#f472b6', '#9d174d'], ['#22d3ee', '#0e7490'], ['#facc15', '#a16207'], ['#fb923c', '#9a3412']];
-
-    function snakeSvg(head, tail, i) {
-        var a = cellCenter(head), b = cellCenter(tail);
-        var dx = b.x - a.x, dy = b.y - a.y;
-        var len = Math.sqrt(dx * dx + dy * dy);
-        var nx = -dy / len, ny = dx / len;
-        var waves = Math.max(1.5, len / 14);
-        var amp = Math.min(3.2, 1.2 + len / 25);
-        var pts = [];
-        var steps = 40;
-        for (var k = 0; k <= steps; k++) {
-            var t = k / steps;
-            var off = Math.sin(t * Math.PI * 2 * waves) * amp * Math.sin(Math.PI * Math.min(1, t * 1.15 + 0.08));
-            pts.push([a.x + dx * t + nx * off, a.y + dy * t + ny * off]);
-        }
-        var d = 'M' + pts.map(function (p) { return p[0].toFixed(2) + ' ' + p[1].toFixed(2); }).join(' L');
-        var col = SNAKE_COLORS[i % SNAKE_COLORS.length];
-        var out = '<g filter="url(#sl-shadow)">';
-        out += '<path d="' + d + '" fill="none" stroke="' + col[1] + '" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>';
-        out += '<path d="' + d + '" fill="none" stroke="' + col[0] + '" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>';
-        out += '<path d="' + d + '" fill="none" stroke="' + col[1] + '" stroke-width="0.6" stroke-dasharray="0.8 1.6" stroke-linecap="round" opacity=".7"/>';
-        // الرأس
-        var ang = Math.atan2(pts[1][1] - pts[0][1], pts[1][0] - pts[0][0]) * 180 / Math.PI + 180;
-        out += '<g transform="translate(' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) + ') rotate(' + ang.toFixed(1) + ')">';
-        out += '<ellipse cx="0" cy="0" rx="2.5" ry="1.9" fill="' + col[0] + '" stroke="' + col[1] + '" stroke-width="0.5"/>';
-        out += '<circle cx="0.9" cy="-0.8" r="0.45" fill="#fff"/><circle cx="1.05" cy="-0.8" r="0.22" fill="#111"/>';
-        out += '<circle cx="0.9" cy="0.8" r="0.45" fill="#fff"/><circle cx="1.05" cy="0.8" r="0.22" fill="#111"/>';
-        out += '<path d="M2.4 0 L3.6 0 M3.6 0 L4.1 -0.45 M3.6 0 L4.1 0.45" stroke="#e11d48" stroke-width="0.3" stroke-linecap="round"/>';
-        out += '</g>';
-        return out + '</g>';
-    }
-
-    function buildBoardSvg() {
-        var defs = '<defs>' +
-            '<linearGradient id="sl-ladder-grad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="100" y2="100"><stop offset="0" stop-color="#f0cd6a"/><stop offset="1" stop-color="#b9821f"/></linearGradient>' +
-            '<filter id="sl-shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="0.5" stdDeviation="0.5" flood-color="#000" flood-opacity=".6"/></filter>' +
-            '</defs>';
+    function boardSvgHtml() {
         var body = '';
-        Object.keys(LADDERS).forEach(function (k, i) { body += ladderSvg(Number(k), LADDERS[k], i); });
-        Object.keys(SNAKES).forEach(function (k, i) { body += snakeSvg(Number(k), SNAKES[k], i); });
-        return '<svg id="sl-board-svg" viewBox="0 0 100 100" preserveAspectRatio="none">' + defs + body + '</svg>';
+        Object.keys(LADDERS).forEach(function (k) {
+            var a = sxy(+k), b = sxy(LADDERS[k]);
+            var dx = b.x - a.x, dy = b.y - a.y;
+            var len = Math.sqrt(dx * dx + dy * dy);
+            var deg = Math.atan2(dy, dx) * 180 / Math.PI;
+            var count = Math.max(3, Math.round(len / 7));
+            var step = (len - 4) / (count - 1);
+            var g = '<g transform="translate(' + a.x + ',' + a.y + ') rotate(' + deg + ')" opacity="0.98">' +
+                '<rect x="0" y="-1.9" width="' + len + '" height="0.8" rx="0.4" fill="url(#sl-rail-wood)"></rect>' +
+                '<rect x="0" y="1.1" width="' + len + '" height="0.8" rx="0.4" fill="url(#sl-rail-wood)"></rect>';
+            for (var i = 0; i < count; i++) {
+                g += '<rect x="' + (2 + i * step) + '" y="-1.5" width="0.65" height="3.1" rx="0.3" fill="#c98a45" stroke="#7d4d1d" stroke-width="0.12"></rect>';
+            }
+            body += g + '</g>';
+        });
+        Object.keys(SNAKES).forEach(function (k, i) {
+            var h = sxy(+k), t = sxy(SNAKES[k]);
+            var dx = t.x - h.x, dy = t.y - h.y;
+            var d = Math.sqrt(dx * dx + dy * dy) || 1;
+            var nx = -dy / d, ny = dx / d;
+            var off = Math.min(11, d * 0.32) * (i % 2 === 0 ? 1 : -1);
+            var ux = dx / d, uy = dy / d;
+            var col = SNAKE_COLORS[i % SNAKE_COLORS.length];
+            var path = 'M ' + h.x + ' ' + h.y + ' C ' + (h.x + dx * 0.3 + nx * off) + ' ' + (h.y + dy * 0.3 + ny * off) + ', ' +
+                (h.x + dx * 0.7 - nx * off) + ' ' + (h.y + dy * 0.7 - ny * off) + ', ' + t.x + ' ' + t.y;
+            var ex1 = h.x + nx * 0.7, ey1 = h.y + ny * 0.7, ex2 = h.x - nx * 0.7, ey2 = h.y - ny * 0.7;
+            body += '<g>' +
+                '<path d="' + path + '" fill="none" stroke="' + col[0] + '" stroke-width="1.4" stroke-linecap="round"></path>' +
+                '<path d="' + path + '" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="0.42" stroke-linecap="round" stroke-dasharray="0.4 1.5"></path>' +
+                '<circle cx="' + h.x + '" cy="' + h.y + '" r="1.7" fill="' + col[0] + '" stroke="' + col[1] + '" stroke-width="0.28"></circle>' +
+                '<path d="M ' + h.x + ' ' + h.y + ' l ' + (-ux * 1.1 + nx * 0.6) + ' ' + (-uy * 1.1 + ny * 0.6) +
+                ' M ' + h.x + ' ' + h.y + ' l ' + (-ux * 1.1 - nx * 0.6) + ' ' + (-uy * 1.1 - ny * 0.6) + '" stroke="' + col[1] + '" stroke-width="0.22" stroke-linecap="round"></path>' +
+                '<circle cx="' + ex1 + '" cy="' + ey1 + '" r="0.42" fill="#fff"></circle>' +
+                '<circle cx="' + ex2 + '" cy="' + ey2 + '" r="0.42" fill="#fff"></circle>' +
+                '<circle cx="' + ex1 + '" cy="' + ey1 + '" r="0.19" fill="#12212b"></circle>' +
+                '<circle cx="' + ex2 + '" cy="' + ey2 + '" r="0.19" fill="#12212b"></circle>' +
+                '</g>';
+        });
+        return '<svg class="sl-svg" viewBox="0 0 140 100" preserveAspectRatio="none">' +
+            '<defs><linearGradient id="sl-rail-wood" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0%" stop-color="#f0bd7e"></stop><stop offset="45%" stop-color="#c98a45"></stop>' +
+            '<stop offset="100%" stop-color="#7d4d1d"></stop></linearGradient></defs>' + body + '</svg>';
+    }
+
+    function diceFacesHtml() {
+        var faces = [
+            { n: 1, t: 'rotateY(0deg)' }, { n: 6, t: 'rotateY(180deg)' }, { n: 3, t: 'rotateY(90deg)' },
+            { n: 4, t: 'rotateY(-90deg)' }, { n: 5, t: 'rotateX(90deg)' }, { n: 2, t: 'rotateX(-90deg)' }
+        ];
+        return faces.map(function (f) {
+            return '<div class="sl-face" style="transform:' + f.t + ' translateZ(36px)">' +
+                PIP_MAP[f.n].map(function (rc) {
+                    return '<div class="sl-pip" style="grid-row:' + rc[0] + ';grid-column:' + rc[1] + '"></div>';
+                }).join('') + '</div>';
+        }).join('');
     }
 
     /* ======================================================================
      *  5) شاشة اللعب
      * ==================================================================== */
+    function ensureGameFonts() {
+        if (el('sl-game-fonts-link')) return;
+        var sheet = document.createElement('link');
+        sheet.id = 'sl-game-fonts-link';
+        sheet.rel = 'stylesheet';
+        sheet.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Baloo+Bhaijaan+2:wght@500;600;700;800&display=swap';
+        document.head.appendChild(sheet);
+    }
+
     function ensureScaffolding() {
         injectStageStyles();
+        ensureGameFonts();
         if (!el('sl-stage')) {
             var stage = document.createElement('div');
             stage.id = 'sl-stage';
@@ -904,305 +963,363 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             overlay.innerHTML = '<div id="sl-modal-box"></div>';
             document.body.appendChild(overlay);
         }
-        if (!el('sl-toast-wrap')) {
-            var toast = document.createElement('div');
-            toast.id = 'sl-toast-wrap';
-            document.body.appendChild(toast);
-        }
     }
 
     function renderStage() {
         ensureScaffolding();
+        document.body.classList.add('sl-game-on');
         var stage = el('sl-stage');
         stage.innerHTML =
-            '<div id="sl-side">' +
-                '<div class="sl-panel" id="sl-turn-card">' +
-                    '<p class="sl-turn-title">الدور الحالي</p>' +
-                    '<div class="sl-turn-player" id="sl-turn-player"></div>' +
-                    '<div class="sl-turn-hint">اكتب في شات البث:<br>' +
-                        ROLL_COMMANDS.map(function (c) { return '<span class="sl-cmd">' + escapeHtml(c) + '</span>'; }).join('') +
+            '<header class="sl-header">' +
+                '<div class="sl-brand"><div class="sl-brand-tile">🎲</div><div class="sl-brand-title">' + escapeHtml(GAME_NAME) + '</div></div>' +
+                '<div class="sl-tools">' +
+                    '<button type="button" class="sl-hbtn" id="sl-fs-btn"></button>' +
+                    '<button type="button" class="sl-hbtn sl-hbtn-round" id="sl-sound-btn" title="الصوت"></button>' +
+                    '<button type="button" class="sl-hbtn sl-hbtn-round" id="sl-help-btn" title="شرح اللعبة">؟</button>' +
+                    '<div class="sl-theme-wrap">' +
+                        '<button type="button" class="sl-hbtn" id="sl-theme-btn">☼ المظهر ⌄</button>' +
+                        '<div class="sl-theme-menu" id="sl-theme-menu" hidden></div>' +
                     '</div>' +
-                    '<div id="sl-timer" class="sl-timer-idle"><span id="sl-timer-num">' + TURN_SECONDS + '</span></div>' +
-                    '<div id="sl-dice-row"><div id="sl-dice"></div><div id="sl-dice-result">—</div></div>' +
+                    '<button type="button" class="sl-hbtn sl-hbtn-exit" id="sl-exit-btn">خروج ›</button>' +
                 '</div>' +
-                '<div class="sl-panel" id="sl-standings">' +
-                    '<h3>🏁 ترتيب اللاعبين</h3>' +
-                    '<div id="sl-standings-list"></div>' +
-                '</div>' +
+            '</header>' +
+            '<div id="sl-main">' +
+                '<aside class="sl-aside">' +
+                    '<div class="sl-card sl-card-turn">' +
+                        '<div class="sl-cur">' +
+                            '<div class="sl-av sl-av-cur" id="sl-cur-av"></div>' +
+                            '<div class="sl-info">' +
+                                '<div class="sl-lbl-gold">صاحب الدور</div>' +
+                                '<div class="sl-cur-name" id="sl-cur-name">—</div>' +
+                                '<div class="sl-sq">المربع <b id="sl-cur-pos">0</b></div>' +
+                            '</div>' +
+                            '<div class="sl-timer" id="sl-timer"><div class="sl-timer-in">' +
+                                '<span class="sl-timer-num" id="sl-timer-num">' + TURN_TIME + '</span><span class="sl-timer-unit">ثانية</span>' +
+                            '</div></div>' +
+                        '</div>' +
+                        '<div class="sl-next">' +
+                            '<div class="sl-av sl-av-next" id="sl-next-av"></div>' +
+                            '<div class="sl-info">' +
+                                '<div class="sl-lbl-dim">الدور التالي</div>' +
+                                '<div class="sl-next-name" id="sl-next-name">—</div>' +
+                            '</div>' +
+                            '<div class="sl-sq">المربع <b id="sl-next-pos">0</b></div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="sl-card sl-card-dice">' +
+                        '<div class="sl-dice-title">منطقة النرد والتحكم ⚂</div>' +
+                        '<div class="sl-ready" id="sl-ready">جاهز للرمي</div>' +
+                        '<div class="sl-dice-stage"><div class="sl-cube" id="sl-cube">' + diceFacesHtml() + '</div></div>' +
+                        '<button type="button" class="sl-btn-roll" id="sl-roll-btn">ارم النرد (Roll) ⚂</button>' +
+                        '<button type="button" class="sl-btn-reset" id="sl-reset-btn">إعادة اللعبة ↻</button>' +
+                        '<div class="sl-cmd-grid">' +
+                            '<button type="button" class="sl-btn-cmd" id="sl-cmd-roll">roll / ارم النرد<br><span>لرمي النرد</span></button>' +
+                            '<button type="button" class="sl-btn-cmd" id="sl-cmd-join">إدخال لاعب جديد<br><span>فتح باب الدخول</span></button>' +
+                        '</div>' +
+                    '</div>' +
+                '</aside>' +
+                '<main id="sl-board">' +
+                    '<div class="sl-frame"><div class="sl-inner">' +
+                        '<div class="sl-tiles" id="sl-tiles">' + tilesHtml() + '</div>' +
+                        boardSvgHtml() +
+                        '<div class="sl-tokens" id="sl-tokens"></div>' +
+                    '</div></div>' +
+                '</main>' +
             '</div>' +
-            '<div id="sl-board-col">' +
-                '<div id="sl-board-wrap">' +
-                    '<div id="sl-board">' + buildBoardHtml() + '</div>' +
-                    buildBoardSvg() +
-                    '<div id="sl-tokens"></div>' +
-                    '<div id="sl-banner"></div>' +
+            '<div class="sl-status"><span class="sl-status-ic">📣</span><span class="sl-status-txt" id="sl-status-txt"></span></div>' +
+
+            '<div class="sl-modal-bg" id="sl-join" hidden><div class="sl-join-box">' +
+                '<div class="sl-join-head"><div class="sl-join-title">إدخال لاعب جديد</div>' +
+                '<button type="button" class="sl-x" id="sl-join-close" title="إغلاق">✕</button></div>' +
+                '<div class="sl-join-body">' +
+                    '<div class="sl-open-pill"><span class="sl-open-dot"></span>باب الدخول مفتوح</div>' +
+                    '<div class="sl-join-t1">يُسمح بالدخول فقط للاعبين الذين لم يسبق لهم الدخول إلى هذه المباراة.</div>' +
+                    '<div class="sl-join-t2">يكتب اللاعب أمر الدخول في شات البث ليُضاف إلى القائمة أدناه. اللاعبون الموجودون مسبقاً يتم تجاهل أوامرهم.</div>' +
+                    '<div class="sl-join-sep"></div>' +
+                    '<div class="sl-join-count" id="sl-join-count"></div>' +
+                    '<div id="sl-join-list"></div>' +
                 '</div>' +
-                '<div id="sl-start-row"></div>' +
+                '<div class="sl-join-foot"><button type="button" class="sl-btn-gold" id="sl-join-save">حفظ وإغلاق الدخول</button></div>' +
+            '</div></div>' +
+
+            '<div class="sl-modal-bg" id="sl-help" hidden><div class="sl-dlg sl-dlg-help">' +
+                '<div class="sl-dlg-head"><div class="sl-dlg-title">شرح اللعبة</div>' +
+                '<button type="button" class="sl-dlg-x" id="sl-help-close">✕</button></div>' +
+                '<div class="sl-dlg-txt">يرمي كل لاعب النرد في دوره ويتحرك بعدد النقاط. من يصل إلى أسفل سلّم يصعد به إلى أعلاه، ومن يقف على رأس ثعبان ينزل إلى ذيله. أول من يصل إلى المربع 100 بالعدد المطابق يفوز بالمباراة.</div>' +
+            '</div></div>' +
+
+            '<div class="sl-modal-bg" id="sl-leave" hidden><div class="sl-dlg sl-dlg-leave">' +
+                '<div class="sl-dlg-title">الخروج من المباراة؟</div>' +
+                '<div class="sl-dlg-txt">سيتم إنهاء المباراة الحالية وفقدان تقدّم اللاعبين.</div>' +
+                '<div class="sl-dlg-btns"><button type="button" class="sl-dlg-cancel" id="sl-leave-cancel">إلغاء</button>' +
+                '<button type="button" class="sl-dlg-exit" id="sl-leave-ok">خروج</button></div>' +
+            '</div></div>' +
+
+            '<div class="sl-modal-bg" id="sl-left" hidden>' +
+                '<div class="sl-left-ic">🎲</div>' +
+                '<div class="sl-left-t">لقد خرجت من المباراة</div>' +
+                '<div class="sl-left-s">يمكنك بدء مباراة جديدة في أي وقت.</div>' +
+                '<button type="button" class="sl-left-btn" id="sl-left-new">مباراة جديدة</button>' +
             '</div>';
-        renderDiceFace(1);
+
+        el('sl-fs-btn').onclick = toggleFullscreen;
+        el('sl-sound-btn').onclick = function () { _sound = !_sound; renderHeader(); };
+        el('sl-help-btn').onclick = function () { el('sl-help').hidden = false; };
+        el('sl-help-close').onclick = function () { el('sl-help').hidden = true; };
+        el('sl-theme-btn').onclick = function () { var m = el('sl-theme-menu'); m.hidden = !m.hidden; };
+        el('sl-exit-btn').onclick = function () { el('sl-theme-menu').hidden = true; el('sl-leave').hidden = false; };
+        el('sl-leave-cancel').onclick = function () { el('sl-leave').hidden = true; };
+        el('sl-leave-ok').onclick = confirmLeave;
+        el('sl-left-new').onclick = function () { el('sl-left').hidden = true; resetGame(); };
+        el('sl-roll-btn').onclick = streamerRoll;
+        el('sl-cmd-roll').onclick = streamerRoll;
+        el('sl-reset-btn').onclick = resetGame;
+        el('sl-cmd-join').onclick = openJoin;
+        el('sl-join-close').onclick = closeJoin;
+        el('sl-join-save').onclick = saveJoin;
+
+        renderHeader();
+        applyTheme();
+        renderDice();
+        renderTurn();
         renderTokens();
-        renderTurnCard();
-        renderStandings();
+        renderJoinPanel();
     }
 
-    var PIP_MAP = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
-    function renderDiceFace(n) {
-        var dice = el('sl-dice');
-        if (!dice) return;
-        var on = PIP_MAP[n] || [];
-        var html = '';
-        for (var i = 0; i < 9; i++) html += '<span class="sl-pip' + (on.indexOf(i) !== -1 ? ' on' : '') + '"></span>';
-        dice.innerHTML = html;
+    function renderHeader() {
+        var fs = el('sl-fs-btn');
+        if (fs) fs.textContent = document.fullscreenElement ? '⛶ تصغير' : '⛶ تكبير';
+        var snd = el('sl-sound-btn');
+        if (snd) { snd.textContent = _sound ? '🔊' : '🔇'; snd.style.color = _sound ? '#cfe6f0' : '#7fa9bd'; }
+        var menu = el('sl-theme-menu');
+        if (menu) {
+            menu.innerHTML = Object.keys(THEMES).map(function (k) {
+                return '<button type="button" class="sl-theme-opt' + (k === _theme ? ' sl-on' : '') + '" data-theme="' + k + '">' +
+                    '<span class="sl-theme-sw" style="background:' + THEMES[k].a + '"></span><span>' + THEMES[k].label + '</span></button>';
+            }).join('');
+            Array.prototype.forEach.call(menu.querySelectorAll('[data-theme]'), function (b) {
+                b.onclick = function () { _theme = b.getAttribute('data-theme'); menu.hidden = true; renderHeader(); applyTheme(); };
+            });
+        }
+    }
+
+    function applyTheme() {
+        var th = THEMES[_theme] || THEMES.night;
+        var stage = el('sl-stage');
+        if (stage) stage.style.background = th.page;
+        var left = el('sl-left');
+        if (left) left.style.background = th.page;
+        var tiles = el('sl-tiles');
+        if (tiles) tiles.innerHTML = tilesHtml();
+    }
+
+    function toggleFullscreen() {
+        if (!document.fullscreenElement) { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); }
+        else if (document.exitFullscreen) document.exitFullscreen();
+    }
+    document.addEventListener('fullscreenchange', renderHeader);
+
+    function setStatus(text) {
+        var s = el('sl-status-txt');
+        if (s) s.textContent = text;
+    }
+
+    function initialOf(p) { return (playerLabel(p) || '؟').trim().charAt(0) || '؟'; }
+    function hueOf(p) { return p && _hues[p.id] != null ? _hues[p.id] : 280; }
+
+    // صورة البث لو متوفرة، وإلا كرة ملونة بالحرف الأول (حسب README التصميم)
+    function fillAvatar(node, p) {
+        if (!node) return;
+        if (!p) { node.style.background = '#16224a'; node.textContent = '—'; return; }
+        node.style.background = ballFor(hueOf(p));
+        var initial = initialOf(p);
+        if (p.avatarUrl) {
+            node.innerHTML = '<img src="' + escapeHtml(p.avatarUrl) + '" alt="" referrerpolicy="no-referrer">';
+            node.firstChild.onerror = function () { node.textContent = initial; };
+        } else {
+            node.textContent = initial;
+        }
     }
 
     function currentPlayer() { return _order.length ? _order[_turnIdx % _order.length] : null; }
+    function nextPlayer() { return _order.length > 1 ? _order[(_turnIdx + 1) % _order.length] : null; }
 
-    function tokenCoords(pid) {
-        var pos = _positions[pid] || 0;
-        var c = cellCenter(pos);
-        // أكثر من لاعب بنفس المربع — إزاحة بسيطة على شكل دائرة صغيرة
-        var same = _roster.filter(function (p) { return (_positions[p.id] || 0) === pos && isOnBoard(p.id); });
-        if (same.length > 1) {
-            var i = same.map(function (p) { return p.id; }).indexOf(pid);
-            var ang = (i / same.length) * Math.PI * 2;
-            var r = 2.4;
-            return { x: c.x + Math.cos(ang) * r, y: c.y + Math.sin(ang) * r };
+    function renderTurn() {
+        var cur = currentPlayer(), nxt = nextPlayer();
+        var curAv = el('sl-cur-av');
+        if (!curAv) return;
+        if (curAv.getAttribute('data-pid') !== (cur ? cur.id : '')) {
+            fillAvatar(curAv, cur);
+            curAv.setAttribute('data-pid', cur ? cur.id : '');
         }
-        return c;
+        el('sl-cur-name').textContent = cur ? playerLabel(cur) : '—';
+        el('sl-cur-pos').textContent = cur ? (_positions[cur.id] || 1) : 0;
+        var nextAv = el('sl-next-av');
+        if (nextAv.getAttribute('data-pid') !== (nxt ? nxt.id : '')) {
+            fillAvatar(nextAv, nxt);
+            nextAv.setAttribute('data-pid', nxt ? nxt.id : '');
+        }
+        el('sl-next-name').textContent = nxt ? playerLabel(nxt) : '—';
+        el('sl-next-pos').textContent = nxt ? (_positions[nxt.id] || 1) : 0;
+        renderTimer();
+        var ready = el('sl-ready');
+        if (ready) ready.textContent = _rolling ? 'جاري الرمي' : 'جاهز للرمي';
     }
-    function isOnBoard(pid) { return (_positions[pid] || 0) >= 1; }
+
+    function renderTimer() {
+        var ring = el('sl-timer'), num = el('sl-timer-num');
+        if (!ring || !num) return;
+        var tl = _timeLeft;
+        var color = tl <= 5 ? '#ff6b6b' : '#ffd166';
+        ring.style.background = 'conic-gradient(' + color + ' ' + (tl / TURN_TIME * 360) + 'deg, rgba(255,255,255,0.08) 0)';
+        num.textContent = tl;
+        num.style.color = color;
+    }
+
+    function renderDice() {
+        var cube = el('sl-cube');
+        if (!cube) return;
+        var rot = DICE_ROT[_dice] || [0, 0];
+        cube.style.transform = 'rotateX(' + (rot[0] + _spinX * 360) + 'deg) rotateY(' + (rot[1] + _spinY * 360) + 'deg)';
+    }
 
     function renderTokens() {
         var layer = el('sl-tokens');
-        var startRow = el('sl-start-row');
-        if (!layer || !startRow) return;
-        var cur = currentPlayer();
-        var existing = {};
-        Array.prototype.forEach.call(layer.querySelectorAll('.sl-token'), function (t) { existing[t.getAttribute('data-pid')] = t; });
-
-        var waiting = [];
+        if (!layer) return;
+        var byTile = {};
         _roster.forEach(function (p) {
-            var tok = existing[p.id];
-            delete existing[p.id];
-            if (!isOnBoard(p.id)) {
-                if (tok) tok.parentNode.removeChild(tok);
-                if (_positions[p.id] !== undefined) waiting.push(p);
-                return;
+            var pos = _positions[p.id] || 1;
+            (byTile[pos] = byTile[pos] || []).push(p);
+        });
+        var existing = {};
+        Array.prototype.forEach.call(layer.children, function (t) { existing[t.getAttribute('data-key')] = t; });
+        Object.keys(byTile).forEach(function (key) {
+            var list = byTile[key];
+            var c = xy(+key);
+            var shown = list.slice(0, list.length > 4 ? 3 : 4);
+            var hidden = list.length - shown.length;
+            var total = shown.length + (hidden > 0 ? 1 : 0);
+            var slots = CLUSTER[Math.min(total, 4) - 1];
+            var size = (total > 1 ? 5.6 : 8) / AR;
+            var half = size / 2 + 0.6;
+            var halfY = half * AR;
+            var clamp = function (v) { return Math.max(half, Math.min(v, 100 - half)); };
+            var clampY = function (v) { return Math.max(halfY, Math.min(v, 100 - halfY)); };
+            var font = 'max(11px, ' + (size * 0.46).toFixed(2) + 'cqw)';
+            function place(k, s, make) {
+                var node = existing[k];
+                delete existing[k];
+                if (!node) {
+                    node = document.createElement('div');
+                    node.className = 'sl-tok';
+                    node.setAttribute('data-key', k);
+                    make(node);
+                    layer.appendChild(node);
+                }
+                node.style.left = clamp(c.x + s.dx / AR) + '%';
+                node.style.top = clampY(c.y + s.dy) + '%';
+                node.style.width = size + '%';
+                node.style.fontSize = font;
+                return node;
             }
-            if (!tok) {
-                tok = document.createElement('div');
-                tok.className = 'sl-token';
-                tok.setAttribute('data-pid', p.id);
-                tok.style.setProperty('--tc', _colors[p.id] || '#ffd400');
-                tok.innerHTML = ringAvatarHtml(p);
-                layer.appendChild(tok);
+            shown.forEach(function (p, i) {
+                place('p:' + p.id, slots[i], function (node) { fillAvatar(node, p); });
+            });
+            if (hidden > 0) {
+                var chip = place('more:' + key, slots[total - 1], function (node) {
+                    node.style.background = 'linear-gradient(180deg, #16224a, #0b1122)';
+                });
+                chip.textContent = '+' + hidden;
             }
-            var xy = tokenCoords(p.id);
-            tok.style.left = xy.x + '%';
-            tok.style.top = xy.y + '%';
-            tok.classList.toggle('sl-token-active', !!cur && cur.id === p.id);
         });
-        Object.keys(existing).forEach(function (k) { existing[k].parentNode.removeChild(existing[k]); });
-
-        startRow.innerHTML = waiting.length
-            ? '<span>🚩 خط البداية:</span>' + waiting.map(function (p) {
-                return '<span class="sl-start-av" title="' + escapeHtml(playerLabel(p)) + '" style="--tc:' + (_colors[p.id] || '#ffd400') + '">' + ringAvatarHtml(p) + '</span>';
-            }).join('')
-            : '<span>🚩 كل اللاعبين انطلقوا على اللوحة</span>';
-    }
-
-    function renderTurnCard() {
-        var box = el('sl-turn-player');
-        if (!box) return;
-        var p = currentPlayer();
-        if (!p) { box.innerHTML = '<div class="sl-turn-name">—</div>'; return; }
-        var pos = _positions[p.id] || 0;
-        box.innerHTML =
-            '<div class="sl-turn-avatar" style="--tc:' + (_colors[p.id] || '#b28cf5') + '">' + ringAvatarHtml(p) + '</div>' +
-            '<div class="sl-turn-name">' + escapeHtml(playerLabel(p)) + '</div>' +
-            '<div class="sl-turn-pos">' + (pos ? ('📍 المربع ' + pos) : '🚩 عند خط البداية') + '</div>';
-        var card = el('sl-turn-card');
-        if (card) card.style.setProperty('--tc', _colors[p.id] || '#b28cf5');
-    }
-
-    function renderStandings() {
-        var list = el('sl-standings-list');
-        if (!list) return;
-        var cur = currentPlayer();
-        var medals = ['🥇', '🥈', '🥉'];
-        var rows = _winners.map(function (p, i) {
-            return '<div class="sl-srow sl-srow-won"><span class="sl-srow-av" style="--tc:' + (_colors[p.id] || '#ffd400') + '">' + ringAvatarHtml(p) + '</span>' +
-                '<span class="sl-srow-name">' + escapeHtml(playerLabel(p)) + '</span>' +
-                '<span class="sl-srow-pos">' + (medals[i] || '🏆') + '</span></div>';
-        });
-        var playing = _order.slice().sort(function (a, b) { return (_positions[b.id] || 0) - (_positions[a.id] || 0); });
-        playing.forEach(function (p) {
-            rows.push('<div class="sl-srow' + (cur && cur.id === p.id ? ' sl-srow-turn' : '') + '">' +
-                '<span class="sl-srow-av" style="--tc:' + (_colors[p.id] || '#ffd400') + '">' + ringAvatarHtml(p) + '</span>' +
-                '<span class="sl-srow-name">' + escapeHtml(playerLabel(p)) + '</span>' +
-                '<span class="sl-srow-pos">' + (_positions[p.id] || 0) + '</span></div>');
-        });
-        list.innerHTML = rows.join('');
-    }
-
-    function showBanner(text, kind, ms) {
-        var b = el('sl-banner');
-        if (!b) return;
-        b.className = kind ? ('sl-banner-' + kind) : '';
-        b.textContent = text;
-        // reflow ثم إظهار
-        void b.offsetWidth;
-        b.classList.add('show');
-        later(function () { b.classList.remove('show'); }, ms || 1400);
-    }
-
-    function showToast(message) {
-        ensureScaffolding();
-        var wrap = el('sl-toast-wrap');
-        var t = document.createElement('div');
-        t.className = 'sl-toast';
-        t.textContent = message;
-        wrap.appendChild(t);
-        window.setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 2600);
+        Object.keys(existing).forEach(function (k) { layer.removeChild(existing[k]); });
     }
 
     /* ======================================================================
-     *  6) الأدوار + المؤقت
+     *  6) الأدوار + المؤقت (15 ثانية — لو انتهى بدون أمر يروح عليه الدور)
      * ==================================================================== */
+    var _left = false;
+    var _ending = false;         // اكتمل عدد الفائزين — بانتظار بطاقة الفوز
+
     function stopTurnTimer() {
         if (_turnInterval) { window.clearInterval(_turnInterval); _turnInterval = null; }
     }
 
-    function updateTimerDisplay() {
-        var t = el('sl-timer');
-        var num = el('sl-timer-num');
-        if (!t || !num) return;
-        num.textContent = String(Math.max(0, _turnRemaining));
-        t.style.setProperty('--p', (Math.max(0, _turnRemaining) / TURN_SECONDS * 100) + '%');
-        t.classList.toggle('sl-timer-warn', _awaitingRoll && _turnRemaining <= 5);
-        t.classList.toggle('sl-timer-idle', !_awaitingRoll);
-    }
-
-    function startTurn() {
-        if (!_matchActive) return;
-        if (!_order.length) { endMatch(); return; }
-        _turnIdx = _turnIdx % _order.length;
-        _awaitingRoll = true;
-        _busy = false;
-        _turnRemaining = TURN_SECONDS;
-        renderTurnCard();
-        renderTokens();
-        renderStandings();
-        var dr = el('sl-dice-result');
-        if (dr) dr.textContent = '—';
-        updateTimerDisplay();
+    function startTurnTimer() {
         stopTurnTimer();
+        _timeLeft = TURN_TIME;
+        renderTimer();
         _turnInterval = window.setInterval(function () {
-            _turnRemaining--;
-            if (_turnRemaining > 0 && _turnRemaining <= 5) playSound('warning');
-            updateTimerDisplay();
-            if (_turnRemaining <= 0) {
-                stopTurnTimer();
-                handleTurnTimeout();
-            }
+            if (!_matchActive || _rolling || _left) return;
+            _timeLeft = Math.max(0, _timeLeft - 1);
+            renderTimer();
+            if (_timeLeft === 0) handleTurnTimeout();
         }, 1000);
     }
 
     function handleTurnTimeout() {
-        if (!_awaitingRoll) return;
-        _awaitingRoll = false;
-        updateTimerDisplay();
-        var p = currentPlayer();
-        showToast('⏭️ انتهى وقت ' + playerLabel(p) + ' — راح عليه الدور');
-        advanceTurn();
-    }
-
-    function advanceTurn() {
-        if (!_matchActive) return;
-        if (_order.length) _turnIdx = (_turnIdx + 1) % _order.length;
-        later(startTurn, NEXT_TURN_DELAY_MS);
+        var cur = currentPlayer();
+        if (!cur) return;
+        _turnIdx = (_turnIdx + 1) % _order.length;
+        var nxt = currentPlayer();
+        setStatus('انتهى وقت ' + playerLabel(cur) + ' — الدور الآن لـ ' + playerLabel(nxt));
+        startTurnTimer();
+        renderTurn();
     }
 
     /* ======================================================================
-     *  7) رمي النرد + الحركة
+     *  7) رمي النرد + الحركة (نفس roll() بملف التصميم)
      * ==================================================================== */
-    function rollFor(player) {
-        if (!_matchActive || !_awaitingRoll || _busy) return;
+    function streamerRoll() {
+        var cur = currentPlayer();
+        if (cur) roll(cur);
+    }
+
+    function roll(player) {
+        if (!_matchActive || _rolling || _left || _ending || !_order.length) return;
         var cur = currentPlayer();
         if (!cur || cur.id !== player.id) return;
-        _awaitingRoll = false;
-        _busy = true;
-        stopTurnTimer();
-        updateTimerDisplay();
-
-        var value = 1 + Math.floor(Math.random() * 6);
-        var dice = el('sl-dice');
-        if (dice) dice.classList.add('sl-dice-rolling');
-        playSound('dice');
-        var flick = window.setInterval(function () { renderDiceFace(1 + Math.floor(Math.random() * 6)); }, 90);
-        later(function () {
-            window.clearInterval(flick);
-            if (dice) dice.classList.remove('sl-dice-rolling');
-            renderDiceFace(value);
-            var dr = el('sl-dice-result');
-            if (dr) dr.textContent = '🎲 طلع ' + value;
-            moveSteps(cur, value);
-        }, DICE_ROLL_MS);
+        var v = 1 + Math.floor(Math.random() * 6);
+        _rolling = true;
+        _dice = v;
+        _spinX += 2 + Math.floor(Math.random() * 2);
+        _spinY += 2 + Math.floor(Math.random() * 2);
+        setStatus(playerLabel(cur) + ' يرمي…');
+        renderDice();
+        renderTurn();
+        beep(520, 0.08, 'square');
+        later(function () { beep(660, 0.08, 'square'); }, 120);
+        later(function () { beep(440, 0.08, 'square'); }, 240);
+        later(function () { applyRoll(cur, v); }, ROLL_APPLY_MS);
     }
 
-    function setTokenSlide(pid, on) {
-        var tok = el('sl-tokens') && el('sl-tokens').querySelector('.sl-token[data-pid="' + (window.CSS && CSS.escape ? CSS.escape(pid) : pid) + '"]');
-        if (tok) tok.classList.toggle('sl-token-slide', on);
-    }
+    function applyRoll(me, v) {
+        if (!_matchActive) return;
+        var from = _positions[me.id] || 1;
+        var to = from + v, note;
+        var name = playerLabel(me);
+        if (to > 100) { to = from; note = name + ' يحتاج ' + (100 - from) + ' بالضبط للفوز.'; }
+        else if (LADDERS[to]) { note = name + ' صعد السلم إلى ' + LADDERS[to] + '.'; to = LADDERS[to]; }
+        else if (SNAKES[to]) { note = name + ' انزلق مع الثعبان إلى ' + SNAKES[to] + '.'; to = SNAKES[to]; }
+        else { note = name + ' تحرك من ' + from + ' إلى ' + to + '.'; }
+        _positions[me.id] = to;
+        var won = to === 100;
+        if (won) { beep(660, 0.15); later(function () { beep(880, 0.15); }, 150); later(function () { beep(1100, 0.3); }, 300); }
+        else if (LADDERS[from + v]) { beep(520, 0.1); later(function () { beep(780, 0.18); }, 100); }
+        else if (SNAKES[from + v]) { beep(420, 0.12, 'sawtooth'); later(function () { beep(220, 0.25, 'sawtooth'); }, 110); }
+        else beep(600, 0.1, 'triangle');
 
-    function moveSteps(player, steps) {
-        var start = _positions[player.id] || 0;
-        // الوصول للكأس = المربع 100 (لو النرد تجاوزه يوقف على الكأس)
-        var target = Math.min(BOARD_SIZE, start + steps);
-        var pos = start;
-        function step() {
-            if (!_matchActive) return;
-            if (pos >= target) { afterWalk(player); return; }
-            pos++;
-            _positions[player.id] = pos;
-            playSound('step');
-            renderTokens();
-            renderTurnCard();
-            renderStandings();
-            later(step, STEP_MS);
+        _rolling = false;
+        var i = _order.findIndex(function (p) { return p.id === me.id; });
+        if (won) {
+            handleWinner(me, i);
+        } else {
+            _turnIdx = (i + 1) % _order.length;
+            setStatus(note);
+            startTurnTimer();
         }
-        step();
-    }
-
-    function afterWalk(player) {
-        var pos = _positions[player.id];
-        if (pos >= BOARD_SIZE) { handleReachedGoal(player); return; }
-        var dest = LADDERS[pos] || SNAKES[pos];
-        if (!dest) { finishMove(); return; }
-        var isLadder = !!LADDERS[pos];
-        later(function () {
-            if (!_matchActive) return;
-            playSound(isLadder ? 'ladder' : 'snake');
-            showBanner(isLadder
-                ? ('🪜 ' + playerLabel(player) + ' طلع السلم للمربع ' + dest)
-                : ('🐍 الثعبان أكل ' + playerLabel(player) + ' ونزل للمربع ' + dest), isLadder ? 'ladder' : 'snake', 1500);
-            setTokenSlide(player.id, true);
-            _positions[player.id] = dest;
-            renderTokens();
-            renderTurnCard();
-            renderStandings();
-            later(function () {
-                setTokenSlide(player.id, false);
-                if (dest >= BOARD_SIZE) handleReachedGoal(player);
-                else finishMove();
-            }, SLIDE_MS + 100);
-        }, 300);
-    }
-
-    function finishMove() {
-        _busy = false;
-        renderStandings();
-        advanceTurn();
+        renderTokens();
+        renderTurn();
     }
 
     function requiredWinners() {
@@ -1210,48 +1327,130 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return Math.max(1, Math.min(3, n));
     }
 
-    function handleReachedGoal(player) {
-        _winners.push(player);
-        var place = _winners.length;
-        var idx = _order.findIndex(function (p) { return p.id === player.id; });
-        if (idx !== -1) {
-            _order.splice(idx, 1);
-            // الدور التالي يكون للي بعده مباشرة (نفس الفهرس بعد الحذف)
-            _turnIdx = _order.length ? (idx % _order.length) : 0;
-        }
+    function handleWinner(me, idx) {
+        _winners.push(me);
+        if (idx !== -1) _order.splice(idx, 1);
+        _turnIdx = _order.length ? (idx % _order.length) : 0;
         var names = ['الأول', 'الثاني', 'الثالث'];
-        playSound('win');
-        showBanner('🏆 ' + playerLabel(player) + ' وصل للكأس — المركز ' + (names[place - 1] || place), 'win', 2200);
-        renderTokens();
-        renderStandings();
-        _busy = false;
+        setStatus(playerLabel(me) + ' وصل إلى 100 وفاز! 🏆' + (requiredWinners() > 1 ? ' — المركز ' + (names[_winners.length - 1] || _winners.length) : ''));
 
-        var need = requiredWinners();
-        later(function () {
-            if (!_matchActive) return;
-            if (_winners.length >= need || !_order.length) { endMatch(); return; }
-            // باقي لاعب واحد فقط — ياخذ المركز المتبقي تلقائياً
-            if (_order.length === 1) {
+        if (_winners.length >= requiredWinners() || !_order.length || _order.length === 1) {
+            // باقي لاعب واحد فقط قبل اكتمال العدد — ياخذ المركز المتبقي تلقائياً
+            if (_order.length === 1 && _winners.length < requiredWinners()) {
                 _winners.push(_order[0]);
                 _order = [];
-                endMatch();
-                return;
             }
-            startTurn();
-        }, 2400);
+            _ending = true;
+            stopTurnTimer();
+            later(endMatch, WIN_END_DELAY_MS);
+            return;
+        }
+        startTurnTimer();
+    }
+
+    // "إعادة اللعبة ↻" — كل اللاعبين يرجعون للمربع 1 بنفس الترتيب
+    function resetGame() {
+        if (!_roster.length) return;
+        clearPendingTimeouts();
+        _left = false;
+        _ending = false;
+        _matchActive = true;
+        _rolling = false;
+        _winners = [];
+        _order = _roster.slice();
+        _roster.forEach(function (p) { _positions[p.id] = 1; });
+        _turnIdx = 0;
+        _dice = 4;
+        setStatus('أُعيدت اللعبة! دور ' + playerLabel(currentPlayer()));
+        startTurnTimer();
+        renderDice();
+        renderTokens();
+        renderTurn();
+    }
+
+    function confirmLeave() {
+        if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
+        el('sl-leave').hidden = true;
+        _left = true;
+        stopTurnTimer();
+        el('sl-left').hidden = false;
     }
 
     /* ======================================================================
-     *  8) الاستماع لشات البث
+     *  8) لوحة "إدخال لاعب جديد" — تفتح كلمة الدخول مؤقتاً، والداخلين
+     *     الجدد (لم يسبق لهم الدخول لهذه المباراة) ينضافون للقائمة، و"حفظ
+     *     وإغلاق الدخول" يضيفهم للوحة على المربع 1 ويقفل الدخول.
+     * ==================================================================== */
+    function maxPlayersCap() {
+        var m = Number(liveSettings().maxPlayers) || MAX_PLAYERS;
+        return Math.min(MAX_PLAYERS, m);
+    }
+
+    function openJoin() {
+        _joinOpen = true;
+        if (_roster.length + _queued.length < maxPlayersCap() && AGP.keywordManager) AGP.keywordManager.activate();
+        renderJoinPanel();
+    }
+
+    function closeJoin() {
+        _joinOpen = false;
+        if (AGP.keywordManager) AGP.keywordManager.deactivate();
+        renderJoinPanel();
+    }
+
+    function saveJoin() {
+        var start = _roster.length;
+        var added = _queued.slice(0, Math.max(0, maxPlayersCap() - start));
+        added.forEach(function (p, i) {
+            _hues[p.id] = ((start + i) * 47 + 280) % 360;
+            _positions[p.id] = 1;
+            _knownIds[p.id] = true;
+            _roster.push(p);
+            _order.push(p);
+        });
+        _queued = [];
+        closeJoin();
+        renderTokens();
+        renderTurn();
+    }
+
+    function renderJoinPanel() {
+        var panel = el('sl-join');
+        if (!panel) return;
+        panel.hidden = !_joinOpen;
+        el('sl-join-count').textContent = 'اللاعبون الجدد (' + _queued.length + ')';
+        var list = el('sl-join-list');
+        if (!_queued.length) {
+            list.innerHTML = '<div class="sl-join-empty">بانتظار أوامر الدخول من الشات…</div>';
+            return;
+        }
+        list.style.display = 'flex';
+        list.style.flexDirection = 'column';
+        list.style.gap = '16px';
+        list.innerHTML = _queued.map(function (q, i) {
+            return '<div class="sl-q"><div class="sl-q-name">' + escapeHtml(playerLabel(q)) + '</div>' +
+                '<button type="button" class="sl-q-x" data-i="' + i + '">✕</button></div>';
+        }).join('');
+        Array.prototype.forEach.call(list.querySelectorAll('[data-i]'), function (b) {
+            b.onclick = function () {
+                var q = _queued.splice(Number(b.getAttribute('data-i')), 1)[0];
+                if (q && AGP.player && typeof AGP.player.removePlayer === 'function') AGP.player.removePlayer(q.id);
+                renderJoinPanel();
+            };
+        });
+    }
+
+    /* ======================================================================
+     *  9) الاستماع لشات البث + حذف/إضافة لاعب
      * ==================================================================== */
     function wireCommentListener() {
         unwireCommentListener();
         _commentUnsub = AGP.events.on('stream:commentReceived', function (payload) {
-            if (!_matchActive || !_awaitingRoll || !payload || typeof payload.text !== 'string') return;
+            if (!_matchActive || _rolling || _left || _ending || !payload || typeof payload.text !== 'string') return;
             var cur = currentPlayer();
             if (!cur || (payload.id !== cur.id && payload.name !== cur.name)) return;
             if (!isRollCommand(payload.text)) return;
-            rollFor(cur);
+            roll(cur);
         });
     }
     function unwireCommentListener() {
@@ -1259,48 +1458,32 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _commentUnsub = null;
     }
 
-    /* ======================================================================
-     *  9) حذف/إضافة لاعب وسط المباراة
-     * ==================================================================== */
-    function handlePlayerRemoved(removedPlayer) {
-        if (!removedPlayer || !removedPlayer.id || !_matchActive) return;
-        var idx = _order.findIndex(function (p) { return p.id === removedPlayer.id; });
-        var wasCurrent = idx !== -1 && idx === (_turnIdx % Math.max(1, _order.length));
-        _roster = _roster.filter(function (p) { return p.id !== removedPlayer.id; });
-        delete _positions[removedPlayer.id];
-        if (idx === -1) { renderTokens(); renderStandings(); return; }
-        _order.splice(idx, 1);
-        if (idx < _turnIdx) _turnIdx--;
-        if (_order.length) _turnIdx = _turnIdx % _order.length; else _turnIdx = 0;
-
-        renderTokens();
-        renderStandings();
-
-        if (!_order.length || (_order.length === 1 && _winners.length === 0 && _roster.length <= 1)) {
-            if (_order.length === 1 && _winners.length < requiredWinners()) _winners.push(_order[0]);
-            _order = [];
-            endMatch();
-            return;
-        }
-        if (wasCurrent && (_awaitingRoll || !_busy)) {
-            stopTurnTimer();
-            _awaitingRoll = false;
-            clearPendingTimeouts();
-            later(startTurn, 400);
-        } else {
-            renderTurnCard();
-        }
+    function handlePlayerJoinedMidMatch(newPlayer) {
+        if (!newPlayer || !newPlayer.id || !_matchActive || !_joinOpen) return;
+        if (_knownIds[newPlayer.id] || _queued.some(function (q) { return q.id === newPlayer.id; })) return;
+        if (_roster.length + _queued.length >= maxPlayersCap()) return;
+        _queued.push(newPlayer);
+        if (_roster.length + _queued.length >= maxPlayersCap() && AGP.keywordManager) AGP.keywordManager.deactivate();
+        renderJoinPanel();
     }
 
-    function handlePlayerJoinedMidMatch(newPlayer) {
-        if (!newPlayer || !newPlayer.id || !_matchActive) return;
-        if (_roster.some(function (p) { return p.id === newPlayer.id; })) return;
-        _roster.push(newPlayer);
-        _order.push(newPlayer);
-        _positions[newPlayer.id] = 0;
-        _colors[newPlayer.id] = TOKEN_COLORS[(_roster.length - 1) % TOKEN_COLORS.length];
+    function handlePlayerRemoved(removedPlayer) {
+        if (!removedPlayer || !removedPlayer.id || !_matchActive) return;
+        var id = removedPlayer.id;
+        if (!_roster.some(function (p) { return p.id === id; })) return;
+        var idx = _order.findIndex(function (p) { return p.id === id; });
+        var wasCurrent = idx !== -1 && idx === (_turnIdx % Math.max(1, _order.length));
+        _roster = _roster.filter(function (p) { return p.id !== id; });
+        delete _positions[id];
+        if (idx !== -1) {
+            _order.splice(idx, 1);
+            if (idx < _turnIdx) _turnIdx--;
+            _turnIdx = _order.length ? (_turnIdx % _order.length) : 0;
+        }
+        if (!_order.length) { endMatch(); return; }
+        if (wasCurrent && !_rolling) startTurnTimer();
         renderTokens();
-        renderStandings();
+        renderTurn();
     }
 
     function enforceMaxPlayers() {
@@ -1314,14 +1497,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             }
         }
     }
-
     /* ======================================================================
      *  10) نهاية المباراة + بطاقة الفوز (نفس بطاقة روليت الإقصاء)
      * ==================================================================== */
     function endMatch() {
         if (!_matchActive) return;
         _matchActive = false;
-        _awaitingRoll = false;
+        _rolling = false;
         stopTurnTimer();
         clearPendingTimeouts();
         unwireCommentListener();
@@ -1434,19 +1616,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function startMatchWith(players, settingsValues) {
         resetMatchState();
+        _left = false;
+        _ending = false;
         _settings = settingsValues || liveSettings();
-        _roster = players.slice();
-        _order = players.slice();
+        _roster = players.slice(0, MAX_PLAYERS);
+        _order = _roster.slice();
         _roster.forEach(function (p, i) {
-            _positions[p.id] = 0;
-            _colors[p.id] = TOKEN_COLORS[i % TOKEN_COLORS.length];
+            _positions[p.id] = 1;
+            _hues[p.id] = (i * 47 + 280) % 360;
+            _knownIds[p.id] = true;
         });
         _turnIdx = 0;
+        _dice = 4;
         _startedAt = Date.now();
         _matchActive = true;
         wireCommentListener();
         renderStage();
-        later(startTurn, 600);
+        setStatus('اللعبة بدأت! دور ' + playerLabel(currentPlayer()));
+        startTurnTimer();
     }
 
     function handleReplaySamePlayers() {
@@ -1703,93 +1890,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
     }
 
-    // درج الإعدادات وسط المباراة (زر ⚙️) — نفس شكل درج روليت الإقصاء
-    // (رأس + جسم كروت + زر إنهاء اللعب)، ويعرض فقط "إدخال لاعب جديد" لأن
-    // باقي الإعدادات خاصة بما قبل المباراة.
-    function enhanceReopenedDrawer() {
-        var box = el('agp-shell-box');
-        if (!box || !el('agp-settings-player-list')) return;
-        box.classList.remove('sl-mini-lobby-active');
-        box.classList.add('sl-inmatch-drawer');
-        if (box.firstElementChild && box.firstElementChild.classList.contains('sl-drawer-header')) return;
-
-        var originalChildren = Array.prototype.slice.call(box.children);
-        var closeBtn = el('agp-settings-close-btn');
-        var h2 = originalChildren.filter(function (n) { return n.tagName === 'H2'; })[0];
-        var fieldNodes = originalChildren.filter(function (n) { return n !== closeBtn && n !== h2; });
-        box.innerHTML = '';
-
-        var header = document.createElement('div');
-        header.className = 'sl-drawer-header';
-        if (h2) { h2.textContent = 'الإعدادات'; header.appendChild(h2); }
-        if (closeBtn) header.appendChild(closeBtn);
-        box.appendChild(header);
-
-        var playerMgmtRow = null;
-        for (var i = 0; i < fieldNodes.length; i++) {
-            if (fieldNodes[i].querySelector && fieldNodes[i].querySelector('.agp-settings-player-row')) { playerMgmtRow = fieldNodes[i]; break; }
-        }
-        var bodyWrap = document.createElement('div');
-        bodyWrap.className = 'sl-drawer-body';
-        if (playerMgmtRow) {
-            var reopenBtn = playerMgmtRow.querySelector('#agp-reopen-registration-btn');
-            if (reopenBtn) reopenBtn.innerHTML = '<span style="font-size:15px">+</span>إدخال لاعب جديد';
-            bodyWrap.appendChild(playerMgmtRow);
-        }
-        box.appendChild(bodyWrap);
-
-        var footer = document.createElement('div');
-        footer.className = 'sl-drawer-footer';
-        var endBtn = document.createElement('button');
-        endBtn.type = 'button';
-        endBtn.className = 'sl-drawer-end-btn';
-        endBtn.textContent = 'إنهاء اللعب';
-        endBtn.addEventListener('click', homeNavigate);
-        footer.appendChild(endBtn);
-        box.appendChild(footer);
-    }
-
-    function closeMiniLobbyToSettings() {
-        if (AGP.gameShell && typeof AGP.gameShell.setSetting === 'function') {
-            var s = AGP.gameShell.getSettings();
-            var firstKey = Object.keys(s)[0];
-            if (firstKey !== undefined) AGP.gameShell.setSetting(firstKey, s[firstKey]);
-        }
-    }
-
-    function enhanceMiniLobby() {
-        var box = el('agp-shell-box');
-        if (!box || !el('agp-mini-lobby-list')) return;
-        box.classList.remove('sl-inmatch-drawer');
-        box.classList.add('sl-mini-lobby-active');
-
-        var doneBtn = el('agp-mini-lobby-done-btn');
-        if (doneBtn && doneBtn.textContent.indexOf('حفظ') === -1) {
-            doneBtn.textContent = '💾 حفظ وإكمال المباراة';
-        }
-        if (!box.querySelector('.sl-mini-lobby-close-btn')) {
-            var closeBtn = document.createElement('button');
-            closeBtn.type = 'button';
-            closeBtn.className = 'sl-mini-lobby-close-btn';
-            closeBtn.textContent = '✕';
-            closeBtn.onclick = closeMiniLobbyToSettings;
-            box.insertBefore(closeBtn, box.firstChild);
-        }
-        if (!box.querySelector('.sl-mini-lobby-info')) {
-            var info = document.createElement('div');
-            info.className = 'sl-mini-lobby-info';
-            info.innerHTML =
-                '<p>هذا الباب مخصص للاعبين الجدد اللي ما دخلوا الجولة الحالية بعد</p>' +
-                '<p>اطلب منهم كتابة الكلمة المفتاحية نفسها في التعليقات، وبيظهرون هنا تلقائياً ويبدؤون من خط البداية</p>';
-            var h2 = box.querySelector('h2');
-            if (h2) h2.insertAdjacentElement('afterend', info);
-        }
-    }
-
     function applyShellEnhancements() {
         enhanceSettingsScreen();
-        enhanceReopenedDrawer();
-        enhanceMiniLobby();
         enhanceLobbyHeading();
         enhanceLobbyWatermarkAndActions();
         enhanceLobbyFramedCards();
