@@ -2,19 +2,6 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <script>
-    // Leaving a game for the home page or the games library ends the
-    // previous stream connection: clear the saved one that games read
-    // (agp-game-shell.js getSavedStreamConnection) so they don't keep
-    // treating the streamer as connected. Also on back/forward restores.
-    (function () {
-      function clearSavedStreamConnection() {
-        try { localStorage.removeItem('agp:agp-stream-connection'); } catch (e) {}
-      }
-      clearSavedStreamConnection();
-      window.addEventListener('pageshow', function (e) { if (e.persisted) clearSavedStreamConnection(); });
-    })();
-  </script>
   <title>Bundled Page</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -414,13 +401,13 @@ document.addEventListener('DOMContentLoaded', async function() {
   var CARD_INFO = {
     'letters-cell':         { name: 'خلية الحروف', cat: 'q', icon: 'hexagon', badge: 'رائج', desc: 'فريقان على خلية الحروف، جاوب سؤال كل حرف بالشات قبل خصمك.' },
     'codenames':            { name: 'كود نيمز', cat: 'q', icon: 'key', desc: 'السباي ماستر يلمّح بكلمة ورقم، وفريقه يخمّن الكلمات السرية.' },
-    'photo-challenge':      { name: 'تحدي الصور', cat: 'c', icon: 'image_search', desc: 'صورة كل جولة، وأول من يكتب الإجابة يسجّل نقطة لفريقه.' },
-    'khazna':               { name: 'الخزنة', cat: 'c', icon: 'lock', badge: 'جديد', desc: 'العجلة تختار لاعب، ويكتب أرقام ساعات الخزنة بالترتيب برسالة وحدة.' },
-    'team-war':             { name: 'حرب الفريقين', cat: 'c', icon: 'swords', badge: 'رائج', desc: 'فريق أزرق وفريق أحمر، وكل لاعب بدوره يفتح مربع برقمه من الشات.' },
+    'photo-challenge':      { name: 'تحدي الصور', cat: 'c', icon: 'image_search', badge: 'رائج', desc: 'صورة كل جولة، وأول من يكتب الإجابة يسجّل نقطة لفريقه.' },
+    'khazna':               { name: 'الخزنة', cat: 'c', icon: 'lock', badge: 'رائج', desc: 'العجلة تختار لاعب، ويكتب أرقام ساعات الخزنة بالترتيب برسالة وحدة.' },
+    'team-war':             { name: 'حرب الفريقين', cat: 'c', icon: 'swords', desc: 'فريق أزرق وفريق أحمر، وكل لاعب بدوره يفتح مربع برقمه من الشات.' },
     'elimination-roulette': { name: 'روليت الإقصاء', cat: 'r', icon: 'person_remove', badge: 'رائج', desc: 'العجلة تختار لاعب، وهو يقصي لاعب ثاني برقمه من الشات.' },
-    'tribe-roulette':       { name: 'روليت القبائل', cat: 'r', icon: 'groups', desc: 'العجلة تختار لاعب، ويختار قبيلة ليقصي اللي مختبي خلفها.' },
-    'russian-roulette':     { name: 'الروليت الروسي', cat: 'r', icon: 'casino', desc: 'عجلة أو سكرول يختار لاعب، ويستهدف لاعب ثاني برقمه من الشات.' },
-    'fruit-roulette':       { name: 'روليت الفواكه', cat: 'r', icon: 'nutrition', badge: 'جديد', desc: 'افتح صندوق من أربعة.. ثلاثة فيها فواكه وواحد يخبّي مفاجأة.' },
+    'tribe-roulette':       { name: 'روليت القبائل', cat: 'r', icon: 'groups', badge: 'رائج', desc: 'العجلة تختار لاعب، ويختار قبيلة ليقصي اللي مختبي خلفها.' },
+    'russian-roulette':     { name: 'الروليت الروسي', cat: 'r', icon: 'casino', badge: 'رائج', desc: 'عجلة أو سكرول يختار لاعب، ويستهدف لاعب ثاني برقمه من الشات.' },
+    'fruit-roulette':       { name: 'روليت الفواكه', cat: 'r', icon: 'nutrition', badge: 'رائج', desc: 'افتح صندوق من أربعة.. ثلاثة فيها فواكه وواحد يخبّي مفاجأة.' },
     'musical-chairs':       { name: 'الكراسي الموسيقية', cat: 'c', icon: 'chair', desc: 'تتوقف الموسيقى فجأة، وأول من يكتب رقم الكرسي يثبت مكانه.' },
     'word-categories':      { name: 'اسم حيوان نبات جماد بلاد', cat: 'q', icon: 'pets', desc: 'حرف عشوائي كل جولة، واكتب إجاباتك بالشات قبل انتهاء الوقت.' },
     'top-ten':              { name: 'خمّن العشرة', cat: 'q', icon: 'format_list_numbered', desc: 'سؤال وعشر إجابات مرتبة، وكل إجابة صحيحة لها نقاطها.' }
@@ -543,8 +530,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     var allDivs = Array.prototype.slice.call(document.querySelectorAll('div'));
-    var countLabel = allDivs.find(function(d){ return /لعبة معروضة/.test(d.textContent || '') && d.textContent.length < 30; });
-    if (countLabel) countLabel.textContent = 'الألعاب الـ 11 الحقيقية بالمنصة';
+    var countLabel = allDivs.find(function(d){ return /لعبة معروضة|الحقيقية بالمنصة/.test(d.textContent || '') && d.textContent.length < 40 && !d.querySelector('div'); });
+    if (countLabel) countLabel.textContent = 'الألعاب الـ ' + REAL_GAMES.length + ' الحقيقية بالمنصة'; // يتحدّث تلقائياً مع أي لعبة تنضاف لـREAL_GAMES
     var filterRows = allDivs.filter(function(d){
       return d.children.length >= 4 && Array.prototype.every.call(d.children, function(c){ return c.tagName === 'BUTTON'; });
     });
@@ -1017,6 +1004,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     renderConnectUI();
   }
 
+  // الاتصال المحفوظ يبقى مهما حدّث الصفحة أو رجع للرئيسية — ينمسح فقط
+  // لما يضغط "قطع الاتصال" أو يفشل تحقق جديد.
+  function readVerifiedStreamConnection() {
+    try {
+      var data = JSON.parse(localStorage.getItem(STREAM_CONNECTION_STORAGE_KEY) || 'null');
+      return (data && typeof data.username === 'string' && data.username) ? data : null;
+    } catch (e) { return null; }
+  }
+
   function initConnectWidget(){
     var card = document.querySelector('[data-connect-card]');
     if (!card) return;
@@ -1024,8 +1020,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (!controls || controls.dataset.wired === '1') return;
     controls.dataset.wired = '1';
     ensureConnectStyles();
+    var saved = readVerifiedStreamConnection();
+    if (saved && connectState === 'idle') {
+      connectState = 'connected';
+      connectUsername = saved.username;
+    }
     renderConnectUI();
   }
+
+  // إغلاق الصفحة (تحديث/انتقال للعبة أو للرئيسية) يسكّر سوكت التحقق —
+  // نفصل معالجاته قبلها عشان onclose ما يمسح الاتصال المحفوظ.
+  window.addEventListener('pagehide', closeConnectSocketSilently);
+  window.addEventListener('beforeunload', closeConnectSocketSilently);
   var __connectTries = 0;
   var __connectTimer = setInterval(function(){
     __connectTries++;
