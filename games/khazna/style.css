@@ -318,122 +318,210 @@ body.kz-active{
     position:absolute;
     top:50%; left:50%;
     transform:translate(-50%,-50%);
-    max-width:340px;
-    width:38%;
+    width:55%;
+    max-width:420px;
     height:auto;
-    opacity:0.4;
+    opacity:0.25;
     pointer-events:none;
     z-index:0;
-    filter:drop-shadow(0 0 30px rgba(124,58,237,0.25));
 }
 
+/* ---------------------------------------------------------------------
+   اللوبي بنفس تنسيق وأحجام لوبي روليت الإقصاء:
+   السطر 1: العنوان أبيض كبير. السطر 2: "للدخول اكتب في شات البث" +
+   الكلمة المفتاحية بالأصفر يمين، وكبسولة العدد يسار. البطاقات 217x57
+   (5 بالصف بالعرض الكامل، أقل بالشاشات الأضيق)، سكرول مخفي، والأزرار
+   بحجم ثابت 360x48 تحت.
+--------------------------------------------------------------------- */
 #kz-lobby h2{
     position:relative;
     z-index:1;
-    margin:0 0 8px;
-    font-size:1.5em;
-    font-weight:900;
+    margin:0 0 6px;
+    font-size:44px;
+    font-weight:800;
+    line-height:1.3;
+    color:#fff;
     text-align:center;
 }
-.kz-title-plain{ color:#fff; }
-.kz-title-accent{ color:#ffb648; text-shadow:0 2px 10px rgba(255,182,72,0.4); }
 
 .kz-join-hint{
     position:relative;
     z-index:1;
     display:flex;
-    align-items:center;
-    gap:10px;
-    color:#d9c8e8;
-    font-size:13px;
-    margin-bottom:14px;
     flex-wrap:wrap;
     justify-content:center;
+    align-items:center;
+    gap:56px;
+    width:100%;
+    margin-bottom:22px;
 }
-.kz-badge{
-    border-radius:999px;
-    padding:5px 14px;
+.kz-keyword-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:14px;
+    font-size:44px;
+    font-weight:800;
+    line-height:1.2;
+    color:#E2C700;
+}
+.kz-keyword-badge::before{
+    content:"للدخول اكتب في شات البث";
+    font-size:22px;
     font-weight:700;
-    font-size:12px;
+    color:#fff;
+    white-space:nowrap;
 }
-.kz-keyword-badge{ background:rgba(128,212,255,0.1); border:1px solid rgba(128,212,255,0.35); color:#cdeeff; }
-.kz-keyword-badge::before{ content:"🔑 "; }
-.kz-count-badge{ background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); color:#f3eefc; }
-.kz-count-badge::before{ content:"👥 "; }
+.kz-count-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:157px;
+    height:52px;
+    box-sizing:border-box;
+    background:rgba(217,217,217,.1);
+    border:4px solid #000;
+    border-radius:26px;
+    direction:ltr;
+    font-size:28px;
+    font-weight:800;
+    color:#fff;
+}
 
 #kz-lobby-grid{
     position:relative;
     z-index:1;
     width:100%;
-    max-width:1220px;
+    /* نفس عرض صندوق لوبي روليت الإقصاء (min(94vw,1310px) ناقص حشوته) */
+    max-width:calc(min(94vw,1310px) - 68px);
     flex:1 1 auto;
     min-height:0;
     overflow-y:auto;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
     display:grid;
-    grid-template-columns:repeat(6,184px); /* 46px أفاتار -- basicCardTotalWidth(46) */
+    grid-template-columns:repeat(auto-fill,217px);
+    column-gap:37px;
+    row-gap:20px;
     justify-content:center;
-    align-items:center;
-    gap:0.5cm;
-    padding:6px 4px 18px;
+    justify-items:center;
+    align-items:end;
     align-content:start;
+    box-sizing:border-box;
+    padding:12px 0 calc(var(--kz-actions-h,76px) + 16px);
+    margin-bottom:calc(-1 * var(--kz-actions-h,76px));
 }
+#kz-lobby-grid::-webkit-scrollbar{ display:none; }
 .kz-lobby-empty{
     grid-column:1 / -1;
     text-align:center;
     color:#8f7ba8;
-    font-size:13px;
+    font-size:15px;
     padding:40px 0;
 }
 
-.kz-lobby-card-wrap{ position:relative; }
+/* خانة البطاقة ثابتة 217x57 -- العادية والمُطارة */
+.kz-lobby-card-wrap{
+    position:relative;
+    width:217px;
+    height:57px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:visible;
+}
+.kz-lobby-card-wrap .agp-pcard{
+    width:217px !important;
+    height:57px !important;
+    box-sizing:border-box !important;
+    padding:0 3px 0 28px !important;
+    gap:6px !important;
+    border-radius:24px !important;
+    background:rgba(217,217,217,.3) !important;
+    border:2px solid #000 !important;
+}
+.kz-lobby-card-wrap .agp-pcard-avatar-basic{
+    width:48px !important;
+    height:48px !important;
+    background:#D9D9D9 !important;
+    border:none !important;
+}
+.kz-lobby-card-wrap .agp-pcard-name-basic{
+    flex:1 1 auto !important;
+    width:auto !important;
+    min-width:0 !important;
+    height:auto !important;
+    margin:0 !important;
+    padding:0 !important;
+    font-size:20px !important;
+    font-weight:700 !important;
+    color:#fff !important;
+    background:none !important;
+    border:none !important;
+}
+.kz-lobby-card-wrap .agp-pcard-avatar-basic--fallback{ font-size:15px !important; color:#3a2f4a !important; }
+/* الإطار يظهر كاملاً: zoom افتراضي (217/298) لين يخلص قياس fitFramedCards() */
+.kz-lobby-card-wrap .agp-pcard-tpl{ zoom:0.7282; flex-shrink:0; }
+
+/* زر الحذف ✕ صغير داخل البطاقة على طرفها الأيسر */
 .kz-lobby-remove-x{
     position:absolute;
-    top:-4px;
-    left:-4px;
-    width:20px;
-    height:20px;
+    top:50%;
+    left:7px;
+    transform:translateY(-50%);
+    width:16px;
+    height:16px;
+    padding:0;
     border-radius:50%;
-    background:rgba(239,68,68,0.85);
-    border:none;
-    color:#fff;
-    font-size:11px;
-    line-height:20px;
+    background:rgba(224,115,111,.18);
+    border:1px solid rgba(224,115,111,.55);
+    color:#e0736f;
+    font-size:9px;
+    line-height:14px;
     text-align:center;
     cursor:pointer;
     z-index:5;
 }
+.kz-lobby-remove-x:hover{ background:rgba(224,115,111,.3); color:#ff9b96; }
 
 #kz-lobby-actions{
     position:relative;
-    z-index:1;
+    z-index:3;
     flex:0 0 auto;
     display:flex;
+    flex-wrap:wrap;
     justify-content:center;
     gap:14px;
+    width:calc(100% + 48px);
+    margin:0 -24px;
+    box-sizing:border-box;
     padding:14px 24px 18px;
-    background:linear-gradient(0deg,rgba(5,3,10,0.85),rgba(5,3,10,0));
+    background:linear-gradient(0deg,rgba(5,3,10,0.95) 60%,rgba(5,3,10,0));
 }
 #kz-lobby-actions button{
-    width:280px;
-    height:46px;
+    width:360px;
+    max-width:100%;
+    height:48px;
+    box-sizing:border-box;
+    padding:0 14px;
     border-radius:999px;
     font-family:inherit;
     font-weight:800;
-    font-size:0.9em;
+    font-size:0.95em;
     cursor:pointer;
 }
-.kz-btn-settings{ background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.25); color:#f3eefc; }
-.kz-btn-settings:hover{ background:rgba(255,255,255,0.18); }
+.kz-btn-settings{ background:#1c1726; border:1px solid rgba(255,255,255,0.25); color:#f3eefc; }
+.kz-btn-settings:hover{ background:#2a2338; }
 .kz-btn-start{ background:linear-gradient(90deg,var(--kz-accent),var(--kz-accent2)); border:none; color:#0a0612; box-shadow:0 8px 26px rgba(124,58,237,0.35); }
 .kz-btn-start:disabled{ opacity:0.4; cursor:not-allowed; }
-.kz-btn-platform{ background:transparent; border:1px solid rgba(255,255,255,0.2); color:#c9bfe0; }
-.kz-btn-platform:hover{ background:rgba(255,255,255,0.08); }
+.kz-btn-platform{ background:#1c1726; border:1px solid rgba(255,255,255,0.25); color:#f3eefc; }
+.kz-btn-platform:hover{ background:#2a2338; }
 
-@media (max-width:1160px){
-    #kz-lobby-grid{ grid-template-columns:repeat(4,184px); }
-}
-@media (max-width:780px){
-    #kz-lobby-grid{ grid-template-columns:repeat(2,184px); }
+@media (max-width:600px){
+    #kz-lobby h2{ font-size:26px; }
+    .kz-join-hint{ gap:12px 24px; }
+    .kz-keyword-badge{ font-size:30px; gap:10px; }
+    .kz-keyword-badge::before{ font-size:16px; }
+    .kz-count-badge{ width:120px; height:44px; font-size:22px; border-width:3px; }
 }
 
 /* ---------------------------------------------------------------------
@@ -958,7 +1046,7 @@ body.kz-active{
 .kz-mini-hint{ display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:24px; flex-wrap:wrap; }
 .kz-mini-badge{ border-radius:999px; padding:6px 16px; font-weight:700; font-size:13px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); }
 .kz-mini-keyword-badge{ background:rgba(232,182,76,0.12); border:1px solid rgba(232,182,76,0.4); color:#fbe3a1; }
-#kz-mini-grid{ display:grid; grid-template-columns:repeat(2,184px); justify-content:center; gap:0.5cm; padding:6px 0 10px; min-height:120px; }
+#kz-mini-grid{ display:grid; grid-template-columns:repeat(auto-fill,217px); justify-content:center; justify-items:center; align-items:end; column-gap:37px; row-gap:20px; padding:12px 0 10px; min-height:120px; }
 .kz-mini-empty{ grid-column:1/-1; color:#8f7ba8; font-size:12.5px; padding:20px 0; }
 #kz-mini-footer{ flex:none; padding:16px 30px 26px; border-top:1px solid rgba(255,255,255,0.1); display:flex; flex-direction:column; gap:10px; }
 #kz-mini-complete-btn{ padding:12px 0; border-radius:999px; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.08); color:#f3eefc; font-family:inherit; font-weight:800; font-size:0.9em; cursor:pointer; }
