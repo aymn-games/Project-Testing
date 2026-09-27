@@ -222,13 +222,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'html,body{margin:0 !important;padding:0 !important;}',
 
             /* لوبي الدخول الإضافي داخل المباراة — نفس بطاقات اللوبي الأساسي (217×57) */
-            '#sl-join-list{list-style:none;margin:0;padding:12px 0 4px;display:grid;',
-            'grid-template-columns:repeat(auto-fill,217px);column-gap:16px;row-gap:20px;justify-content:center;',
+            // عمودين ثابتين (2×217 + 16 = 450px) داخل صندوق عرضه 540px، والقائمة
+            // وحدها تتمرّر (شريط تمرير مخفي) فما ياكل من العرض.
+            '#sl-join-list{list-style:none;margin:0;padding:12px 0 16px;display:grid;flex:1;min-height:0;overflow-y:auto;',
+            'scrollbar-width:none;',
+            'grid-template-columns:repeat(2,217px);column-gap:16px;row-gap:20px;justify-content:center;',
             'justify-items:center;align-items:end;align-content:start;}',
             '#sl-join-list li{position:relative;display:flex;align-items:center;padding:0;}',
             '#sl-join-list .agp-player-remove-btn{position:absolute;border:2px solid rgba(10,6,18,0.9);',
             'border-radius:50%;cursor:pointer;font-weight:900;line-height:1;padding:0;}',
             '#sl-join-list .sl-join-empty{grid-column:1 / -1;width:100%;box-sizing:border-box;}',
+            '#sl-join-list::-webkit-scrollbar{display:none;}',
+            '@media (max-width:560px){#sl-join-list{grid-template-columns:217px;}}',
             '#sl-join-list .agp-pcard{width:217px !important;height:57px !important;',
             'box-sizing:border-box !important;padding:0 3px 0 28px !important;gap:6px !important;',
             'border-radius:24px !important;background:rgba(217,217,217,.3) !important;',
@@ -382,7 +387,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.sl-modal-bg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl;}',
             '.sl-modal-bg[hidden]{display:none;}',
             '#sl-join{z-index:50;background:rgba(4,10,20,0.45);}',
-            '.sl-join-box{width:500px;max-width:100%;height:600px;max-height:calc(100vh - 32px);display:flex;flex-direction:column;',
+            '.sl-join-box{width:540px;max-width:100%;height:600px;max-height:calc(100vh - 32px);display:flex;flex-direction:column;',
             'border-radius:22px;background:rgba(16,24,47,0.3);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);',
             'border:2px solid rgba(255,209,102,0.55);box-shadow:0 30px 70px rgba(0,0,0,0.45);}',
             '.sl-join-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:18px 20px;',
@@ -392,13 +397,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'border:1px solid rgba(255,255,255,0.25);border-radius:10px;background:rgba(230,57,70,0.25);color:#ffd0d4;',
             'font-size:16px;font-weight:700;cursor:pointer;}',
             '.sl-x:hover{background:#e63946;color:#fff;}',
-            '.sl-join-body{flex:1;min-height:0;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;}',
+            '.sl-join-body{flex:1;min-height:0;padding:18px 20px 0;display:flex;flex-direction:column;gap:14px;}',
+            '.sl-join-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}',
+            '.sl-join-kw{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;padding:12px 16px;',
+            'border-radius:14px;background:rgba(255,209,102,0.08);border:1px solid rgba(255,209,102,0.35);}',
+            '.sl-join-kw span{font-size:15px;font-weight:800;color:#ffffff;}',
+            '.sl-join-kw b{font-size:26px;font-weight:900;color:#E2C700;line-height:1.2;}',
             '.sl-open-pill{display:flex;align-items:center;gap:8px;align-self:flex-start;padding:6px 14px;border-radius:999px;',
             'background:rgba(79,209,138,0.18);border:1px solid rgba(79,209,138,0.5);color:#8ff0b8;font-size:13px;font-weight:800;}',
             '.sl-open-dot{width:8px;height:8px;border-radius:50%;background:#4fd18a;}',
-            '.sl-join-t1{font-size:15px;line-height:1.9;color:#f1f5fb;font-weight:700;}',
-            '.sl-join-t2{font-size:13px;line-height:1.8;color:#d6e4f0;}',
-            '.sl-join-sep{height:1px;background:rgba(255,255,255,0.14);}',
             '.sl-join-count{font-size:13px;font-weight:800;color:#ffd166;}',
             '.sl-join-empty{padding:18px;border-radius:14px;border:1px dashed rgba(255,255,255,0.25);text-align:center;',
             'font-size:13px;color:#d6e4f0;}',
@@ -1071,11 +1078,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="sl-join-head"><div class="sl-join-title">إدخال لاعب جديد</div>' +
                 '<button type="button" class="sl-x" id="sl-join-close" title="إغلاق">✕</button></div>' +
                 '<div class="sl-join-body">' +
-                    '<div class="sl-open-pill"><span class="sl-open-dot"></span>باب الدخول مفتوح</div>' +
-                    '<div class="sl-join-t1">يُسمح بالدخول فقط للاعبين الذين لم يسبق لهم الدخول إلى هذه المباراة.</div>' +
-                    '<div class="sl-join-t2">يكتب اللاعب أمر الدخول في شات البث ليُضاف إلى القائمة أدناه. اللاعبون الموجودون مسبقاً يتم تجاهل أوامرهم.</div>' +
-                    '<div class="sl-join-sep"></div>' +
-                    '<div class="sl-join-count" id="sl-join-count"></div>' +
+                    '<div class="sl-join-top"><div class="sl-open-pill"><span class="sl-open-dot"></span>باب الدخول مفتوح</div>' +
+                    '<div class="sl-join-count" id="sl-join-count"></div></div>' +
+                    '<div class="sl-join-kw"><span>للدخول اكتب في شات البث</span><b id="sl-join-keyword"></b></div>' +
                     '<ul class="agp-shell-player-list" id="sl-join-list"></ul>' +
                 '</div>' +
                 '<div class="sl-join-foot"><button type="button" class="sl-btn-gold" id="sl-join-save">حفظ وإغلاق الدخول</button></div>' +
@@ -1465,6 +1470,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!panel) return;
         panel.hidden = !_joinOpen;
         el('sl-join-count').textContent = 'اللاعبون الجدد (' + _queued.length + ')';
+        var kw = el('sl-join-keyword');
+        if (kw) kw.textContent = (AGP.keywordManager && AGP.keywordManager.getKeyword && AGP.keywordManager.getKeyword()) || '';
         var list = el('sl-join-list');
         if (!_queued.length) {
             list.innerHTML = '<li class="sl-join-empty">بانتظار أوامر الدخول من الشات…</li>';
