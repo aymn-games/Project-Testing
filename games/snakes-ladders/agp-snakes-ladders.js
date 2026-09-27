@@ -732,7 +732,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#sl-conn-layer{position:fixed;inset:0;z-index:100010;display:none;',
             'align-items:center;justify-content:center;}',
             '#sl-conn-layer.show{display:flex;}',
-            '#sl-conn-layer .sl-conn-backdrop{position:absolute;inset:0;overflow:hidden;',
+            '#sl-conn-layer .sl-conn-backdrop{position:absolute;inset:0;overflow:hidden;display:flex;justify-content:center;align-items:flex-start;',
             'filter:blur(6px) brightness(0.55);pointer-events:none;}',
             '#sl-conn-layer .sl-conn-backdrop > *{pointer-events:none !important;}',
             '#sl-conn-layer .sl-conn-modal{position:relative;z-index:1;width:min(360px,90vw);',
@@ -2035,7 +2035,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var box = el('agp-shell-box');
         if (!box || !box.classList.contains('sl-settings-initial-box')) return;
         var kInput = el('agp-keyword');
-        _slConnKeywordBackup = kInput ? kInput.value : '';
+        var uInput = el('agp-tiktok-username');
+        // نفس شروط الملف المشترك (handleConnectClick): بدون يوزر أو كلمة
+        // مفتاحية ما يصير اتصال أصلاً — فلا نعرض طبقة "جاري الاتصال"
+        // (كانت تعلق على الشاشة بدون أي اتصال فعلي).
+        if (!kInput || !kInput.value.trim() || !uInput || !uInput.value.trim()) return;
+        _slConnKeywordBackup = kInput.value;
         var ghost = box.cloneNode(true);
         ghost.id = 'agp-shell-box-ghost';
         var layer = ensureConnLayer();
