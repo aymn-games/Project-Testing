@@ -342,35 +342,51 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var root = ensureLobbyEl();
         root.style.display = 'block';
+        // Team-games lobby layout (same design as Photo Challenge's lobby,
+        // in this game's own red/blue/green palette): title + divider, one
+        // panel per team (red on the right, blue on the left, same order as
+        // the settings screen) — above each panel the team name, its join
+        // keyword in the team color and a player-count capsule; inside, two
+        // columns of the standard 217x57 lobby cards. Bottom: the green
+        // start button and a "back to games library" link.
         root.innerHTML =
-            '<h2 class="tw-lobby-heading">اللوبي بانتظار اللاعبين <span class="tw-lobby-heading-accent">' + escapeHtml(GAME_NAME) + '</span></h2>' +
-            '<div class="tw-lobby-banner">عشان تدخل لعبة حرب الفريقين اكتب بشات البث كلمة الدخول</div>' +
-            '<div class="tw-lobby-headers">' +
-                '<div class="tw-team-header-box tw-team-red"><div class="tw-team-header-name" id="tw-lh-red-name"></div><div class="tw-team-header-keyword" id="tw-lh-red-kw"></div></div>' +
-                '<div class="tw-team-header-box tw-team-blue"><div class="tw-team-header-name" id="tw-lh-blue-name"></div><div class="tw-team-header-keyword" id="tw-lh-blue-kw"></div></div>' +
-            '</div>' +
+            '<h2 class="tw-lobby-title">لوبي الدخول للعبة "' + escapeHtml(GAME_NAME) + '"</h2>' +
+            '<div class="tw-lobby-divider"></div>' +
             '<div class="tw-lobby-panels">' +
-                '<div class="tw-lobby-team-panel tw-team-red"><div class="tw-lobby-count" id="tw-lobby-count-red"></div><div class="tw-player-grid" id="tw-lobby-grid-red"></div></div>' +
-                '<div class="tw-vs-label">VS</div>' +
-                '<div class="tw-lobby-team-panel tw-team-blue"><div class="tw-lobby-count" id="tw-lobby-count-blue"></div><div class="tw-player-grid" id="tw-lobby-grid-blue"></div></div>' +
+                '<div class="tw-lobby-team tw-team-red">' +
+                    '<div class="tw-lobby-team-header">' +
+                        '<div class="tw-lobby-team-label">' +
+                            '<span class="tw-lobby-team-name" id="tw-lh-red-name"></span>' +
+                            '<span class="tw-lobby-team-keyword" id="tw-lh-red-kw"></span>' +
+                        '</div>' +
+                        '<div class="tw-lobby-count" id="tw-lobby-count-red"></div>' +
+                    '</div>' +
+                    '<div class="tw-lobby-box"><div class="tw-player-grid" id="tw-lobby-grid-red"></div></div>' +
+                '</div>' +
+                '<div class="tw-lobby-team tw-team-blue">' +
+                    '<div class="tw-lobby-team-header">' +
+                        '<div class="tw-lobby-team-label">' +
+                            '<span class="tw-lobby-team-name" id="tw-lh-blue-name"></span>' +
+                            '<span class="tw-lobby-team-keyword" id="tw-lh-blue-kw"></span>' +
+                        '</div>' +
+                        '<div class="tw-lobby-count" id="tw-lobby-count-blue"></div>' +
+                    '</div>' +
+                    '<div class="tw-lobby-box"><div class="tw-player-grid" id="tw-lobby-grid-blue"></div></div>' +
+                '</div>' +
             '</div>' +
-            '<div class="tw-lobby-btn-row">' +
-                '<button type="button" id="tw-lobby-back-settings-btn" class="tw-lobby-row-btn tw-lobby-btn-settings">⚙️ العودة لإعدادات المباراة</button>' +
-                '<button type="button" id="tw-start-round-btn" class="tw-lobby-row-btn tw-lobby-btn-start">بدء الجولة</button>' +
-                '<button type="button" id="tw-lobby-back-platform-btn" class="tw-lobby-row-btn tw-lobby-btn-platform">🏠 رجوع لمنصة ألعاب أيمن</button>' +
+            '<div class="tw-lobby-actions">' +
+                '<button type="button" id="tw-start-round-btn" class="tw-lobby-btn-start">الدخول للمباراة</button>' +
+                '<button type="button" id="tw-lobby-back-library-btn" class="tw-lobby-link-library">' +
+                    '<span class="tw-lobby-link-arrow">→</span>العودة لمكتبة الالعاب</button>' +
             '</div>';
 
         el('tw-lh-red-name').textContent = _settings.teamRedName;
-        el('tw-lh-red-kw').textContent = 'الكلمة: ' + _settings.teamRedKeyword;
+        el('tw-lh-red-kw').textContent = _settings.teamRedKeyword;
         el('tw-lh-blue-name').textContent = _settings.teamBlueName;
-        el('tw-lh-blue-kw').textContent = 'الكلمة: ' + _settings.teamBlueKeyword;
+        el('tw-lh-blue-kw').textContent = _settings.teamBlueKeyword;
 
         el('tw-start-round-btn').addEventListener('click', handleStartRound);
-        el('tw-lobby-back-platform-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
-        el('tw-lobby-back-settings-btn').addEventListener('click', function () {
-            var ok = window.confirm('بترجع لشاشة الإعدادات وينقطع الاتصال الحالي بالبث. تبي تكمل؟');
-            if (ok) window.location.reload();
-        });
+        el('tw-lobby-back-library-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
 
         renderLobbyPlayerGrids();
     }
@@ -406,6 +422,75 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    // Framed lobby cards, shown whole in the 217x57 slot (same approach as
+    // Elimination Roulette's lobby): the shared renderer crops tall frame
+    // artwork to its fixed card height, so each framed card is re-expanded
+    // to its frame image's full opaque height (measured once per image)
+    // and zoomed to fit 217px wide, at most 75px tall.
+    var _twFrameBoundsCache = {};
+
+    function getFrameOpaqueRows(src) {
+        if (_twFrameBoundsCache[src]) return _twFrameBoundsCache[src];
+        _twFrameBoundsCache[src] = new Promise(function (resolve) {
+            var img = new Image();
+            img.onload = function () {
+                try {
+                    var w = Math.min(img.naturalWidth, 300);
+                    var h = Math.max(1, Math.round(img.naturalHeight * w / img.naturalWidth));
+                    var c = document.createElement('canvas');
+                    c.width = w; c.height = h;
+                    var ctx = c.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    var data = ctx.getImageData(0, 0, w, h).data;
+                    var top = -1, bottom = -1;
+                    for (var y = 0; y < h && top < 0; y++) {
+                        for (var x = 0; x < w; x++) { if (data[(y * w + x) * 4 + 3] > 16) { top = y; break; } }
+                    }
+                    for (var y2 = h - 1; y2 >= 0 && bottom < 0; y2--) {
+                        for (var x2 = 0; x2 < w; x2++) { if (data[(y2 * w + x2) * 4 + 3] > 16) { bottom = y2 + 1; break; } }
+                    }
+                    resolve(top < 0 ? null : { top: top / h, bottom: bottom / h });
+                } catch (e) { resolve(null); }
+            };
+            img.onerror = function () { resolve(null); };
+            img.src = src;
+        });
+        return _twFrameBoundsCache[src];
+    }
+
+    function fitLobbyFramedCards(container) {
+        if (!container) return;
+        container.querySelectorAll('.agp-pcard-tpl:not([data-tw-fit])').forEach(function (card) {
+            var frameEl = card.querySelector('.agp-pcard-tpl-frame-img');
+            var m = frameEl && /url\(["']?(.*?)["']?\)/.exec(frameEl.style.backgroundImage);
+            if (!m) return;
+            card.setAttribute('data-tw-fit', 'pending');
+            getFrameOpaqueRows(m[1]).then(function (rows) {
+                if (!rows || !card.isConnected) return;
+                var frameTop = parseFloat(frameEl.style.top) || 0;
+                var frameH = parseFloat(frameEl.style.height) || 0;
+                var bandTop = frameTop + rows.top * frameH;
+                var bandBottom = frameTop + rows.bottom * frameH;
+                var children = card.querySelectorAll('.agp-pcard-tpl-avatar,.agp-pcard-tpl-name,.agp-pcard-tpl-frame-img');
+                Array.prototype.forEach.call(children, function (child) {
+                    if (child === frameEl) return;
+                    var t = parseFloat(child.style.top) || 0;
+                    var ch = parseFloat(child.style.height) || 0;
+                    if (t < bandTop) bandTop = t;
+                    if (t + ch > bandBottom) bandBottom = t + ch;
+                });
+                Array.prototype.forEach.call(children, function (child) {
+                    child.style.top = ((parseFloat(child.style.top) || 0) - bandTop) + 'px';
+                });
+                var fullH = bandBottom - bandTop;
+                var cardW = parseFloat(card.style.width) || 298;
+                card.style.height = fullH + 'px';
+                card.style.zoom = String(Math.min(217 / cardW, 75 / fullH));
+                card.setAttribute('data-tw-fit', '1');
+            });
+        });
+    }
+
     function renderLobbyPlayerGrids() {
         var gridRed = el('tw-lobby-grid-red');
         var gridBlue = el('tw-lobby-grid-blue');
@@ -417,10 +502,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('tw-lobby-count-red').textContent = playersRed.length + ' / ' + _settings.maxTeamSize;
         el('tw-lobby-count-blue').textContent = playersBlue.length + ' / ' + _settings.maxTeamSize;
 
-        gridRed.innerHTML = playersRed.map(lobbyCardHtml).join('') || '<div class="tw-lobby-empty-slot"></div>';
-        gridBlue.innerHTML = playersBlue.map(lobbyCardHtml).join('') || '<div class="tw-lobby-empty-slot"></div>';
+        gridRed.innerHTML = playersRed.map(lobbyCardHtml).join('');
+        gridBlue.innerHTML = playersBlue.map(lobbyCardHtml).join('');
         fitCardNames(gridRed);
         fitCardNames(gridBlue);
+        fitLobbyFramedCards(gridRed);
+        fitLobbyFramedCards(gridBlue);
         wireLobbyRemoveButtons(gridRed);
         wireLobbyRemoveButtons(gridBlue);
 
