@@ -355,8 +355,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.sl-btn-cmd span{font-size:10px;opacity:0.7;}',
 
             /* اللوحة */
-            '#sl-board{display:flex;align-items:center;justify-content:center;min-width:0;}',
-            '.sl-frame{width:100%;max-width:min(calc((100vh - 128px) * 1.4),100%);aspect-ratio:1.4 / 1;position:relative;',
+            '#sl-board{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-width:0;}',
+            /* شريط أوامر رمي النرد تحت اللوحة (يأخذ ~62px من ارتفاع اللوحة) */
+            '.sl-cmds{width:100%;max-width:min(calc((100vh - 214px) * 1.4),100%);box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;',
+            'padding:10px 16px;border-radius:14px;background:#10182f;border:1px solid rgba(255,209,102,0.25);direction:rtl;}',
+            '.sl-cmds-lbl{font-size:14px;font-weight:800;color:#cfe6f0;}',
+            '.sl-cmd-pill{padding:5px 16px;border-radius:999px;background:rgba(255,209,102,0.1);border:1px solid rgba(255,209,102,0.5);',
+            'color:#ffd166;font-size:16px;font-weight:900;line-height:1.4;}',
+            '.sl-frame{width:100%;max-width:min(calc((100vh - 214px) * 1.4),100%);aspect-ratio:1.4 / 1;position:relative;',
             'padding:10px;border-radius:22px;background:linear-gradient(180deg,#16224a 0%,#0d152f 100%);',
             'box-shadow:0 26px 60px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.06);border:1px solid rgba(255,209,102,0.2);}',
             '.sl-inner{position:absolute;inset:10px;border-radius:14px;overflow:hidden;background:#0c1226;}',
@@ -1100,6 +1106,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         boardSvgHtml() +
                         '<div class="sl-tokens" id="sl-tokens"></div>' +
                     '</div></div>' +
+                    '<div class="sl-cmds"><span class="sl-cmds-lbl">🎲 لرمي النرد يكتب صاحب الدور في شات البث:</span>' +
+                        ROLL_COMMANDS.map(function (c) { return '<span class="sl-cmd-pill">' + escapeHtml(c) + '</span>'; }).join('') +
+                    '</div>' +
                 '</main>' +
             '</div>' +
             '<div class="sl-status"><span class="sl-status-ic">📣</span><span class="sl-status-txt" id="sl-status-txt"></span></div>' +
