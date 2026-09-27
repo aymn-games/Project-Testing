@@ -632,7 +632,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         root.innerHTML =
             '<div class="lc-lobby-screen">' +
                 '<div class="lc-decor-wrap lc-decor-narrow"><div class="lc-decor-inner lc-decor-inner-narrow">' + decorHexesHtml() + '</div></div>' +
-                '<div class="lc-logo lc-logo-lobby">دخول لعبة <span class="lc-logo-word1">حروف</span> <span class="lc-logo-word2">مع</span> <span class="lc-logo-name">' + escapeHtml(_settings.hostName) + '</span></div>' +
+                // Team-games lobby layout (same design as Photo Challenge /
+                // Team War): title + divider, one panel per team (team 1 on
+                // the right) in each team's chosen color, 217x57 lobby
+                // cards two per row, then the start button and a "back to
+                // games library" link. The mid-game join instructions stay.
+                '<h2 class="lc-lobby-title">لوبي الدخول للعبة "' + escapeHtml(GAME_NAME) + '"</h2>' +
+                '<div class="lc-lobby-divider"></div>' +
                 '<div class="lc-lobby-panels">' +
                     teamPanelHtml(TEAM1) +
                     teamPanelHtml(TEAM2) +
@@ -645,17 +651,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         'إذا كانت الإجابة صحيحة تنضم لفريقك تلقائيًا وتُحتسب لك النقطة.' +
                     '</span>' +
                 '</div>' +
-                '<div class="lc-lobby-btn-row">' +
-                    '<button type="button" id="lc-lobby-back-settings-btn" class="lc-btn-outline">→ العودة للإعدادات</button>' +
-                    '<button type="button" id="lc-start-game-btn" class="lc-btn-primary">بدء اللعبة</button>' +
+                '<div class="lc-lobby-actions">' +
+                    '<button type="button" id="lc-start-game-btn" class="lc-lobby-btn-start">الدخول للمباراة</button>' +
+                    '<button type="button" id="lc-lobby-back-library-btn" class="lc-lobby-link-library">' +
+                        '<span class="lc-lobby-link-arrow">→</span>العودة لمكتبة الالعاب</button>' +
                 '</div>' +
             '</div>';
 
         el('lc-start-game-btn').addEventListener('click', handleStartGame);
-        el('lc-lobby-back-settings-btn').addEventListener('click', function () {
-            var ok = window.confirm('بترجع لشاشة الإعدادات وينقطع الاتصال الحالي بالبث. تبي تكمل؟');
-            if (ok) window.location.reload();
-        });
+        el('lc-lobby-back-library-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
 
         refreshLobbyPanels();
     }
@@ -665,15 +669,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var color = (team === TEAM1) ? _settings.team1Color : _settings.team2Color;
         var code = (team === TEAM1) ? _settings.team1AccessCode : _settings.team2AccessCode;
         var players = getTeamPlayers(team);
-        return '<div class="lc-team-panel" data-team="' + team + '">' +
-            '<div class="lc-team-panel-header" style="background:color-mix(in srgb, ' + color + ' 70%, white 30%);">' +
-                '<div class="lc-team-panel-name">' + escapeHtml(name) + '</div>' +
-                '<div class="lc-team-panel-badges">' +
-                    '<span class="lc-badge-pill lc-badge-count"><span id="lc-team-count-' + team + '">' + players.length + '</span> <span>عدد اللاعبين</span></span>' +
-                    '<span class="lc-badge-pill lc-badge-code">' + escapeHtml(code) + ' <span>كلمة الدخول</span></span>' +
+        // --lc-team-color = the team's color picked on the settings screen;
+        // the CSS derives the keyword color, count-capsule border and panel
+        // glow from it.
+        return '<div class="lc-team-panel" data-team="' + team + '" style="--lc-team-color:' + escapeAttr(color) + ';">' +
+            '<div class="lc-team-panel-header">' +
+                '<div class="lc-team-panel-label">' +
+                    '<span class="lc-team-panel-name">' + escapeHtml(name) + '</span>' +
+                    '<span class="lc-team-panel-keyword">' + escapeHtml(code) + '</span>' +
                 '</div>' +
+                '<div class="lc-team-panel-count" id="lc-team-count-' + team + '">' + players.length + '</div>' +
             '</div>' +
-            '<div class="lc-team-panel-body" id="lc-team-body-' + team + '">' + teamPlayerChipsHtml(team, players) + '</div>' +
+            '<div class="lc-team-panel-box"><div class="lc-team-panel-body" id="lc-team-body-' + team + '">' + teamPlayerChipsHtml(team, players) + '</div></div>' +
         '</div>';
     }
 
@@ -685,7 +692,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function playerCardHtml(p) {
         return '<div class="lc-lobby-card-wrap">' +
             '<button type="button" class="lc-lobby-remove-x" data-id="' + escapeAttr(p.id) + '" title="حذف اللاعب">×</button>' +
-            AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', outClass: 'lc-pcard-wrap', size: 43, width: 277, height: 51 }) +
+            AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', outClass: 'lc-pcard-wrap' }) +
         '</div>';
     }
     function fitLobbyCardNames(rootEl) {
@@ -693,7 +700,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function teamPlayerChipsHtml(team, players) {
-        if (!players.length) return '<div class="lc-team-empty">بانتظار انضمام اللاعبين</div>';
         return players.map(playerCardHtml).join('');
     }
 
@@ -706,6 +712,75 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    // Framed lobby cards, shown whole in the 217x57 slot (same approach as
+    // Elimination Roulette's lobby): the shared renderer crops tall frame
+    // artwork to its fixed card height, so each framed card is re-expanded
+    // to its frame image's full opaque height (measured once per image)
+    // and zoomed to fit 217px wide, at most 75px tall.
+    var _lcFrameBoundsCache = {};
+
+    function getFrameOpaqueRows(src) {
+        if (_lcFrameBoundsCache[src]) return _lcFrameBoundsCache[src];
+        _lcFrameBoundsCache[src] = new Promise(function (resolve) {
+            var img = new Image();
+            img.onload = function () {
+                try {
+                    var w = Math.min(img.naturalWidth, 300);
+                    var h = Math.max(1, Math.round(img.naturalHeight * w / img.naturalWidth));
+                    var c = document.createElement('canvas');
+                    c.width = w; c.height = h;
+                    var ctx = c.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    var data = ctx.getImageData(0, 0, w, h).data;
+                    var top = -1, bottom = -1;
+                    for (var y = 0; y < h && top < 0; y++) {
+                        for (var x = 0; x < w; x++) { if (data[(y * w + x) * 4 + 3] > 16) { top = y; break; } }
+                    }
+                    for (var y2 = h - 1; y2 >= 0 && bottom < 0; y2--) {
+                        for (var x2 = 0; x2 < w; x2++) { if (data[(y2 * w + x2) * 4 + 3] > 16) { bottom = y2 + 1; break; } }
+                    }
+                    resolve(top < 0 ? null : { top: top / h, bottom: bottom / h });
+                } catch (e) { resolve(null); }
+            };
+            img.onerror = function () { resolve(null); };
+            img.src = src;
+        });
+        return _lcFrameBoundsCache[src];
+    }
+
+    function fitLobbyFramedCards(container) {
+        if (!container) return;
+        container.querySelectorAll('.agp-pcard-tpl:not([data-lc-fit])').forEach(function (card) {
+            var frameEl = card.querySelector('.agp-pcard-tpl-frame-img');
+            var m = frameEl && /url\(["']?(.*?)["']?\)/.exec(frameEl.style.backgroundImage);
+            if (!m) return;
+            card.setAttribute('data-lc-fit', 'pending');
+            getFrameOpaqueRows(m[1]).then(function (rows) {
+                if (!rows || !card.isConnected) return;
+                var frameTop = parseFloat(frameEl.style.top) || 0;
+                var frameH = parseFloat(frameEl.style.height) || 0;
+                var bandTop = frameTop + rows.top * frameH;
+                var bandBottom = frameTop + rows.bottom * frameH;
+                var children = card.querySelectorAll('.agp-pcard-tpl-avatar,.agp-pcard-tpl-name,.agp-pcard-tpl-frame-img');
+                Array.prototype.forEach.call(children, function (child) {
+                    if (child === frameEl) return;
+                    var t = parseFloat(child.style.top) || 0;
+                    var ch = parseFloat(child.style.height) || 0;
+                    if (t < bandTop) bandTop = t;
+                    if (t + ch > bandBottom) bandBottom = t + ch;
+                });
+                Array.prototype.forEach.call(children, function (child) {
+                    child.style.top = ((parseFloat(child.style.top) || 0) - bandTop) + 'px';
+                });
+                var fullH = bandBottom - bandTop;
+                var cardW = parseFloat(card.style.width) || 298;
+                card.style.height = fullH + 'px';
+                card.style.zoom = String(Math.min(217 / cardW, 75 / fullH));
+                card.setAttribute('data-lc-fit', '1');
+            });
+        });
+    }
+
     function refreshLobbyPanels() {
         [TEAM1, TEAM2].forEach(function (team) {
             var body = el('lc-team-body-' + team);
@@ -714,6 +789,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             body.innerHTML = teamPlayerChipsHtml(team, players);
             wireLobbyCardRemoveButtons(body);
             fitLobbyCardNames(body);
+            fitLobbyFramedCards(body);
             var countEl = el('lc-team-count-' + team);
             if (countEl) countEl.textContent = players.length;
         });
