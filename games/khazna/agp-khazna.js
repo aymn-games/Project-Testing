@@ -136,10 +136,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="kz-instr-text">' +
                     '<b>الإقصاء يدور حول اللاعب المستهدف:</b>' +
                     '<ul>' +
-                        '<li>لما <b>المستهدف يجاوب صح</b>، يُقصى فوراً كل من لسا ما جاوب صح</li>' +
-                        '<li>لو المستهدف كان <b>آخر واحد يجاوب صح</b> (الكل جاوب قبله)، يُقصى <b>هو بس</b></li>' +
+                        '<li>تقدر تكتب <b>إجابة جديدة</b> لو غلطت وباقي وقت — <b>آخر إجابة</b> هي اللي تنحسب</li>' +
+                        '<li>لما <b>المستهدف يجاوب صح</b>، تنتهي الجولة ويُقصى كل من آخر إجابته غلط أو ما جاوب</li>' +
+                        '<li>لو كل الباقين كانت إجاباتهم صح لحظة ما جاوب المستهدف صح، يُقصى <b>هو بس</b></li>' +
                         '<li>لو كل الباقين جاوبوا (صح أو غلط) والمستهدف لسا ما جاوب، تنتهي الجولة على طول</li>' +
-                        '<li>لو انتهى الوقت، يُقصى <b>كل من لم يجاوب صح</b> (بما فيهم المستهدف)</li>' +
+                        '<li>لو انتهى الوقت، يُقصى <b>كل من آخر إجابته غلط أو ما جاوب</b> (بما فيهم المستهدف)</li>' +
                     '</ul>' +
                 '</div>' +
             '</div>' +
@@ -1037,28 +1038,59 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    /* ---------------- تبويبي الناجين/المقصين + زر الجولة التالية اليدوي ---------------- */
-    function showResultPanel(survivors, eliminated) {
+    /* ---------------- تبويبي الناجين/المقصين + زر الجولة التالية اليدوي ----------------
+     * فوق التبويبين: سبب الإقصاء + الإجابة الصحيحة. وكل لاعب بالقائمتين
+     * يظهر معه آخر إجابة كتبها (أو "ما جاوب"). */
+    function eliminationReasonText(reason, turnPlayer) {
+        var tn = turnPlayer ? escapeHtml(turnPlayer.name || turnPlayer.id) : 'المستهدف';
+        if (reason === 'targetCorrect') return '🎯 المستهدف <b>' + tn + '</b> جاوب صح — انقصى كل من كانت آخر إجابته غلط أو ما جاوب';
+        if (reason === 'targetLast') return '🎯 كل اللاعبين جاوبوا صح قبل المستهدف <b>' + tn + '</b> — انقصى المستهدف بس';
+        if (reason === 'allAnswered') return '✍️ كل اللاعبين وصلت إجاباتهم قبل المستهدف <b>' + tn + '</b> — انقصى كل من آخر إجابته غلط (والمستهدف لأنه ما جاوب)';
+        return '⏰ انتهى الوقت — انقصى كل من كانت آخر إجابته غلط أو ما جاوب';
+    }
+
+    function resultRowHtml(p, answers, correctSeq, ok) {
+        var nm = p.name || p.id;
+        var seq = answers[p.id];
+        var right = seq && sequencesEqual(seq, correctSeq);
+        var av = p.avatarUrl
+            ? '<span class="kz-result-avatar"><img src="' + escapeAttr(p.avatarUrl) + '" alt=""></span>'
+            : '<span class="kz-result-avatar">' + escapeHtml(nm.charAt(0) || '؟') + '</span>';
+        var ans = seq
+            ? '<span class="kz-result-answer ' + (right ? 'kz-result-answer-ok' : 'kz-result-answer-bad') + '">' + escapeHtml(seq.join(' ')) + '</span>'
+            : '<span class="kz-result-answer kz-result-answer-none">ما جاوب</span>';
+        return '<div class="kz-result-name ' + (ok ? 'kz-result-name-ok' : 'kz-result-name-bad') + '">' + av +
+            '<span class="kz-result-player">' + escapeHtml(nm) + '</span>' + ans + '</div>';
+    }
+
+    function showResultPanel(survivors, eliminated, info) {
+        info = info || {};
+        var answers = info.answers || {};
+        var correctSeq = info.correctSeq || [];
         return new Promise(function (resolveNext) {
-            var survivorNames = survivors.map(function (p) { return p.name || p.id; });
-            var eliminatedNames = eliminated.map(function (p) { return p.name || p.id; });
             var html =
                 '<div id="kz-result-panel">' +
+                    '<div class="kz-result-summary">' +
+                        '<div class="kz-result-reason">' + eliminationReasonText(info.reason, info.turnPlayer) + '</div>' +
+                        '<div class="kz-result-correct">الإجابة الصحيحة: ' +
+                            correctSeq.map(function (t) { return '<span>' + escapeHtml(t) + '</span>'; }).join('') +
+                        '</div>' +
+                    '</div>' +
                     '<div class="kz-result-tabs">' +
                         '<div class="kz-result-tab kz-result-tab-survivors">' +
                             '<div class="kz-result-tab-title">✅ الناجين</div>' +
-                            (survivorNames.length
-                                ? '<div class="kz-result-list">' + survivorNames.map(function (n) { return '<div class="kz-result-name kz-result-name-ok">' + escapeHtml(n) + '</div>'; }).join('') + '</div>'
+                            (survivors.length
+                                ? '<div class="kz-result-list">' + survivors.map(function (p) { return resultRowHtml(p, answers, correctSeq, true); }).join('') + '</div>'
                                 : '<div class="kz-result-empty">محد نجا</div>') +
                         '</div>' +
                         '<div class="kz-result-tab kz-result-tab-eliminated">' +
                             '<div class="kz-result-tab-title">❌ المُقصَين</div>' +
-                            (eliminatedNames.length
-                                ? '<div class="kz-result-list">' + eliminatedNames.map(function (n) { return '<div class="kz-result-name kz-result-name-bad">' + escapeHtml(n) + '</div>'; }).join('') + '</div>'
+                            (eliminated.length
+                                ? '<div class="kz-result-list">' + eliminated.map(function (p) { return resultRowHtml(p, answers, correctSeq, false); }).join('') + '</div>'
                                 : '<div class="kz-result-empty">محد انقصى</div>') +
                         '</div>' +
                     '</div>' +
-                    '<button type="button" id="kz-next-round-btn">الجولة التالية</button>' +
+                    '<button type="button" id="kz-next-round-btn">' + (info.isFinal ? '🏆 عرض الفائز' : 'الجولة التالية') + '</button>' +
                 '</div>';
             var holder = document.createElement('div');
             holder.id = 'kz-result-holder';
@@ -1074,74 +1106,76 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    /* ---------------- نافذة استقبال الإجابات -- تشتغل طول ظهور الساعات ---------------- */
+    /* ---------------- نافذة استقبال الإجابات -- تشتغل طول ظهور الساعات ----------------
+     * اللاعب يقدر يكتب إجابة جديدة لين يخلص الوقت، و"آخر إجابة وصلت" هي
+     * اللي تنحسب (lastAnswers). الجولة تنتهي قبل الوقت فقط لو:
+     *  - المستهدف جاوب صح: يُقصى كل من إجابته الأخيرة غلط/ما جاوب، ولو كل
+     *    الباقين إجاباتهم صح يُقصى المستهدف هو بس.
+     *  - كل الباقين (غير المستهدف) وصلت إجاباتهم والمستهدف لسا ما جاوب.
+     * reason يوضّح سبب الإقصاء بتبويب النتيجة. */
     function collectAnswers(correctSeq, turnPlayer) {
         return new Promise(function (resolve) {
             var roundEnded = false;
-            var answeredIds = {};
-            var correctOrder = []; // مصفوفة player id بترتيب الإجابة الصحيحة
+            var lastAnswers = {}; // playerId -> آخر تسلسل أرقام كتبه
 
             clearAnsweredSide();
 
-            function finish(eliminatedIds, timedOut) {
+            function isCorrect(id) { return Boolean(lastAnswers[id]) && sequencesEqual(lastAnswers[id], correctSeq); }
+
+            function finish(eliminatedIds, reason) {
                 if (roundEnded) return;
                 roundEnded = true;
                 clearInterval(_answerInterval);
                 if (chatUnsub) chatUnsub();
-                resolve({ eliminatedIds: eliminatedIds, timedOut: Boolean(timedOut) });
+                resolve({ eliminatedIds: eliminatedIds, timedOut: reason === 'timeout', reason: reason, answers: lastAnswers });
             }
 
             function eliminateNotCorrect() {
                 return AGP.player.getAllPlayers()
-                    .filter(function (p) { return correctOrder.indexOf(p.id) === -1; })
+                    .filter(function (p) { return !isCorrect(p.id); })
                     .map(function (p) { return p.id; });
             }
 
-            function recordAnswer(player) {
-                answeredIds[player.id] = true;
+            function recordAnswer(player, seq) {
+                var isNew = !lastAnswers[player.id];
+                lastAnswers[player.id] = seq; // آخر إجابة تستبدل اللي قبلها
                 playTick();
+                if (!isNew) return;
                 var all = AGP.player.getAllPlayers();
                 el('kz-remaining-num').textContent = all.length;
                 el('kz-answered-total').textContent = all.length;
-                el('kz-answered-num').textContent = Object.keys(answeredIds).length;
+                el('kz-answered-num').textContent = Object.keys(lastAnswers).length;
                 addAnsweredSideChip(player);
             }
 
             function checkTargetTrigger(justAnsweredId) {
-                if (!turnPlayer || justAnsweredId !== turnPlayer.id) return;
+                if (!turnPlayer || justAnsweredId !== turnPlayer.id || !isCorrect(turnPlayer.id)) return;
                 var others = AGP.player.getAllPlayers().filter(function (p) { return p.id !== turnPlayer.id; });
-                var othersAllCorrect = others.every(function (p) { return correctOrder.indexOf(p.id) !== -1; });
+                var othersAllCorrect = others.every(function (p) { return isCorrect(p.id); });
                 if (othersAllCorrect) {
-                    finish([turnPlayer.id], false); // المستهدف آخر واحد جاوب صح -- يُقصى هو بس
+                    finish([turnPlayer.id], 'targetLast'); // كل الباقين إجاباتهم صح -- يُقصى المستهدف هو بس
                 } else {
-                    var toEliminate = others.filter(function (p) { return correctOrder.indexOf(p.id) === -1; }).map(function (p) { return p.id; });
-                    finish(toEliminate, false);
+                    var toEliminate = others.filter(function (p) { return !isCorrect(p.id); }).map(function (p) { return p.id; });
+                    finish(toEliminate, 'targetCorrect');
                 }
             }
 
-            // ⭐ لو كل اللاعبين ما عدا المستهدف خلّصوا إجاباتهم (بغض النظر
-            // عن صح أو غلط) -- تنتهي نافذة الإجابة فوراً بدون انتظار
-            // المستهدف أو الوقت
             function checkAllOthersAnswered() {
                 if (roundEnded || !turnPlayer) return;
                 var others = AGP.player.getAllPlayers().filter(function (p) { return p.id !== turnPlayer.id; });
-                if (others.length > 0 && others.every(function (p) { return answeredIds[p.id]; })) {
-                    finish(eliminateNotCorrect(), false);
+                if (others.length > 0 && others.every(function (p) { return lastAnswers[p.id]; }) && !lastAnswers[turnPlayer.id]) {
+                    finish(eliminateNotCorrect(), 'allAnswered');
                 }
             }
 
             var chatUnsub = AGP.events.on('stream:commentReceived', function (payload) {
                 if (roundEnded || !payload || !payload.id) return;
-                if (answeredIds[payload.id]) return;
                 var seq = parseAnswerSequence(payload.text);
                 if (!seq) return;
                 var player = findPlayerById(payload.id);
                 if (!player) return;
-                recordAnswer(player);
-                if (sequencesEqual(seq, correctSeq)) {
-                    correctOrder.push(payload.id);
-                    checkTargetTrigger(payload.id);
-                }
+                recordAnswer(player, seq);
+                checkTargetTrigger(payload.id);
                 if (!roundEnded) checkAllOthersAnswered();
             });
 
@@ -1154,14 +1188,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 el('kz-time-num').textContent = Math.max(secs, 0);
                 if (secs <= 0) {
                     clearInterval(_answerInterval);
-                    if (!roundEnded) finish(eliminateNotCorrect(), true);
+                    if (!roundEnded) finish(eliminateNotCorrect(), 'timeout');
                 }
             }, 1000);
         });
     }
 
     /* ---------------- إنهاء الجولة: كشف الإجابة + نتيجة الناجين/المقصين ---------------- */
-    async function concludeRound(eliminatedIds, turnPlayer, clockCount, correctSeq) {
+    async function concludeRound(eliminatedIds, turnPlayer, clockCount, correctSeq, reason, answers) {
         await showCorrectAnswerReveal(correctSeq);
 
         var allPlayers = AGP.player.getAllPlayers();
@@ -1176,12 +1210,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('kz-stat-time').classList.remove('kz-active');
 
         var remaining = AGP.player.getAllPlayers();
-        if (remaining.length <= 1) {
+        var isFinal = remaining.length <= 1;
+        // تبويب النتيجة يظهر دايماً (حتى بآخر جولة) -- بآخر جولة زره يفتح شاشة الفوز
+        await showResultPanel(survivorPlayers, eliminatedPlayers, {
+            reason: reason, answers: answers || {}, correctSeq: correctSeq, turnPlayer: turnPlayer, isFinal: isFinal
+        });
+        if (isFinal) {
             await renderWinnerScreen(remaining[0] || null);
             return;
         }
-
-        await showResultPanel(survivorPlayers, eliminatedPlayers);
 
         // ⭐ عدد الساعات ثابت طول المباراة (ما يزيد كل جولتين -- طلب صريح)
         _roundNumber += 1;
@@ -1317,7 +1354,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             flyBox.innerHTML = '';
         }
 
-        await concludeRound(result.eliminatedIds, turnPlayer, clockCount, correctSeq);
+        await concludeRound(result.eliminatedIds, turnPlayer, clockCount, correctSeq, result.reason, result.answers);
     }
 
 
