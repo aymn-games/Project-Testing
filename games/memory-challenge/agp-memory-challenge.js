@@ -54,7 +54,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var ACC_DARK = 'color-mix(in oklch, ' + ACC + ' 55%, #000)';
 
     var EMOJIS = ['🍕','🍔','🌮','🍩','🍉','🍓','🍌','🍇','🍒','🥑','🌶️','🥕','🌽','🍄','🧀','🥐','🍿','🧁','🍭','☕','🐶','🐱','🦊','🐼','🐸','🐵','🦁','🐯','🐨','🐰','🐙','🦋','🐢','🦄','🐝','🦀','🐧','🦉','🐳','🦈','⚽','🏀','🎾','🎱','🎲','🎯','🎸','🎧','🎮','🧩','🚗','🚀','✈️','🚲','⛵','🚁','🌙','⭐','🔥','❄️','🌈','⚡','🌵','🌻','🌴','🍁','💎','🎁','🔑','💡','📱','⌚','👑','🎩','🕶️','🧲','🎈','🔔','✂️','🧸'];
-    // Boxes per round: 3 in round 1, then one more box every round.
+    // Difficulty (chosen on the initial settings screen, fixed for the match):
+    //  - 'easy': 3 boxes in round 1, then one more box every round.
+    //  - 'hard': the original full grids — 3×3 in round 1, growing to 6×6.
+    var HARD_SIZES = [[3, 3], [4, 3], [4, 4], [5, 4], [5, 5], [6, 5], [6, 6]];
+
+    // Easy mode — boxes per round: 3 in round 1, then one more box every round.
     var START_BOXES = 3;
     function boxesForRound(round) { return START_BOXES + (round - 1); }
     // Columns x rows used to lay out N boxes (an incomplete last row is
@@ -68,8 +73,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var QS = [['وين كان', '؟'], ['وش رقم مربع', '؟'], ['تحت أي رقم يختبي', '؟']];
     var LABELS = { idle: 'بالانتظار', memorize: 'احفظ', question: 'جاوب الحين', reveal: 'النتيجة', over: 'انتهت' };
 
-    var MEM_TIME_OPTIONS = [5, 10, 15, 20].map(function (s) { return { label: s + 'ث', value: s }; });
-    var ANSWER_TIME_OPTIONS = [10, 15, 20, 30].map(function (s) { return { label: s + 'ث', value: s }; });
+    var TIME_OPTIONS = [15, 20, 25, 30].map(function (s) { return { label: s + 'ث', value: s }; });
 
     /* ======================================================================
      *  1) Sounds — synthesized with Web Audio (from the design handoff's Sfx)
@@ -187,6 +191,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _outLog = [];         // most recent eliminated names first (side panel)
     var _startedAt = null;
     var _matchActive = false;
+    var _matchDifficulty = 'easy';
     var _commentUnsub = null;
 
     var _phase = 'idle';      // idle | memorize | question | reveal | over
@@ -230,7 +235,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function liveSettings() {
         return (AGP.gameShell && typeof AGP.gameShell.getSettings === 'function') ? AGP.gameShell.getSettings() : {};
     }
-    function memTime() { var v = Number(liveSettings().memorizeSeconds); return v > 0 ? v : 10; }
+    function memTime() { var v = Number(liveSettings().memorizeSeconds); return v > 0 ? v : 15; }
+    function difficulty() { return liveSettings().difficulty === 'hard' ? 'hard' : 'easy'; }
     function answerTime() { var v = Number(liveSettings().answerSeconds); return v > 0 ? v : 15; }
 
     /* ======================================================================
@@ -1406,7 +1412,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function renderTop() {
         var rv = el('mc-round-val'); if (rv) rv.textContent = _round + ' / ' + MAX_ROUNDS;
-        var gv = el('mc-grid-val'); if (gv) gv.textContent = String(_cells.length || boxesForRound(Math.max(1, _round)));
+        var gv = el('mc-grid-val'); if (gv) gv.textContent = String(_cells.length || (_matchDifficulty === 'hard' ? 9 : boxesForRound(1)));
         var pb = el('mc-phase-badge'); if (pb) pb.textContent = LABELS[_phase] || '';
         var mb = el('mc-mute-btn'); if (mb) mb.textContent = Sfx.muted ? '🔇' : '🔊';
     }
@@ -1535,8 +1541,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function startRound() {
         closeElim(false);
         _round += 1;
-        var n = boxesForRound(_round);
-        var size = layoutFor(n);
+        var n, size;
+        if (_matchDifficulty === 'hard') {
+            size = HARD_SIZES[Math.min(_round - 1, HARD_SIZES.length - 1)];
+            n = size[0] * size[1];
+        } else {
+            n = boxesForRound(_round);
+            size = layoutFor(n);
+        }
         _cols = size[0]; _rows = size[1];
         _cells = shuffle(EMOJIS).slice(0, n).map(function (e, i) { return { n: i + 1, e: e }; });
         _target = Math.floor(Math.random() * n);
@@ -1837,6 +1849,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         ensureStage();
         _startedAt = Date.now();
         _matchActive = true;
+        _matchDifficulty = difficulty();
         _round = 0;
         wireCommentListener();
         if (!_tickIv) _tickIv = setInterval(tick, 100);
@@ -1867,14 +1880,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 default: false
             },
             {
+                key: 'difficulty', type: 'pill-choice', label: '🎯 مستوى الصعوبة',
+                description: 'سهل: تبدأ بـ3 صناديق ويزيد صندوق كل جولة · صعب: تبدأ بشبكة 3×3 وتكبر لين 6×6',
+                options: [
+                    { label: '🙂 سهل', value: 'easy' },
+                    { label: '🔥 صعب', value: 'hard' }
+                ],
+                default: 'easy'
+            },
+            {
                 key: 'memorizeSeconds', type: 'pill-group', label: '👀 مدة عرض الإيموجيز',
                 description: 'كم ثانية تظهر الإيموجيز قبل ما تتغطى المربعات',
-                options: MEM_TIME_OPTIONS, default: 10
+                options: TIME_OPTIONS, default: 15
             },
             {
                 key: 'answerSeconds', type: 'pill-group', label: '⏱️ وقت الإجابة',
                 description: 'الوقت المتاح لكتابة رقم المربع في الشات',
-                options: ANSWER_TIME_OPTIONS, default: 15
+                options: TIME_OPTIONS, default: 15
             },
             {
                 key: 'soundVolume', type: 'slider', label: '🔊 مستوى الصوت',
@@ -1922,6 +1944,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var maxPlayersRow = rowFor('[data-key="maxPlayers"]');
         var followersRow = rowFor('[data-key="followersOnly"]');
+        var difficultyRow = rowFor('[data-key="difficulty"]');
         var memRow = rowFor('[data-key="memorizeSeconds"]');
         var answerRow = rowFor('[data-key="answerSeconds"]');
 
@@ -1931,7 +1954,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         scrollInner.className = 'mc-settings-scroll-inner';
         scroll.appendChild(scrollInner);
 
-        [usernameField, keywordField, maxPlayersRow, followersRow]
+        [usernameField, keywordField, maxPlayersRow, followersRow, difficultyRow]
             .filter(Boolean).forEach(function (fieldEl) { scrollInner.appendChild(fieldEl); });
 
         // "Card" section — the two round-timing rows together.
@@ -2654,7 +2677,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             settingsTitle: 'إعدادات لعبة تحدي الذاكرة',
             gameExplanation: 'كل جولة تظهر شبكة إيموجيز لثواني، بعدها تتغطى المربعات ويبان رقم كل مربع فقط. ' +
                 'يطلع سؤال عن مكان إيموجي معيّن، وكل لاعب يكتب رقم المربع في الشات (أول إجابة هي اللي تنحسب). ' +
-                'اللي يغلط أو ما يجاوب يطلع من اللعبة، ولو ما أحد جاوب صح الكل يكمل. أول جولة 3 صناديق وكل جولة يزيد صندوق. ' +
+                'اللي يغلط أو ما يجاوب يطلع من اللعبة، ولو ما أحد جاوب صح الكل يكمل. بالمستوى السهل أول جولة 3 صناديق وكل جولة يزيد صندوق، وبالمستوى الصعب تبدأ بشبكة 3×3 وتكبر كل جولة. ' +
                 'اللعبة ' + MAX_ROUNDS + ' جولات كحد أقصى، أو تنتهي أول ما يبقى لاعب واحد — ولو بقى أكثر من لاعب بعد آخر جولة فكلهم فائزين.',
             connectButtonLabel: 'الاتصال بالبث والانتقال للوبي',
             minPlayersToStart: 2,
