@@ -270,139 +270,207 @@ body.pc-active{
 .pc-back-btn:hover{ background:rgba(255,255,255,0.18); }
 
 /* ---------------------------------------------------------------------
-   شاشة اللوبي -- عنوان اللعبة أعلى + الفريقين جنب بعض بفاصل VS، كل فريق
-   تحته شبكة لاعبيه (بطاقات AGP.playerCard القياسية، حجم 60px الافتراضي).
+   شاشة اللوبي -- تنسيق الألعاب ذات الفريقين: عنوان "لوبي الدخول للعبة"
+   + خط فاصل، ثم لوحة لكل فريق (الأول يمين، الثاني يسار) فوقها اسم
+   الفريق + كلمته المفتاحية بلون الفريق + كبسولة العدد، وداخلها عمودان
+   من بطاقات اللوبي القياسية 217×57 (نفس بطاقات لوبي روليت الإقصاء).
+   بالأسفل زر "الدخول للمباراة" الأخضر ورابط "العودة لمكتبة الالعاب".
 --------------------------------------------------------------------- */
 #pc-lobby{
-    width:min(1400px,96vw);
+    --pc-lobby-team1:#1C45E8;  /* أزرق -- الفريق الأول */
+    --pc-lobby-team2:#D22B2B;  /* أحمر -- الفريق الثاني */
+    width:min(1300px,96vw);
     margin:0 auto;
-    padding:44px 24px 40px;
+    padding:24px 16px 32px;
     box-sizing:border-box;
     display:none;
 }
-#pc-lobby h2{
-    margin:0 0 6px;
-    font-size:34px;
+.pc-lobby-title{
+    margin:0;
+    font-size:48px;
     font-weight:900;
+    line-height:1.25;
     text-align:center;
-    background:linear-gradient(90deg,var(--pc-accent),#d0b3ff 55%,var(--pc-accent2));
-    -webkit-background-clip:text;
-    background-clip:text;
-    -webkit-text-fill-color:transparent;
+    color:#fff;
 }
-.pc-lobby-sub{
-    text-align:center;
-    color:#9d92b3;
-    font-size:14px;
-    margin-bottom:30px;
+.pc-lobby-divider{
+    height:1px;
+    background:#fff;
+    margin:24px 0 44px;
 }
 
 .pc-lobby-panels{
     display:flex;
-    align-items:stretch;
-    gap:24px;
+    justify-content:center;
+    align-items:flex-start;
+    gap:101px;
 }
-.pc-lobby-team{ flex:1; min-width:0; }
+.pc-lobby-team{ flex:0 1 576px; min-width:0; }
 .pc-lobby-team-header{
-    border-radius:14px;
-    padding:16px;
-    text-align:center;
-    margin-bottom:12px;
-    border:1.5px solid;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    margin-bottom:18px;
 }
-.pc-lobby-team-header.pc-team1{ border-color:var(--pc-team1); background:rgba(128,212,255,0.08); }
-.pc-lobby-team-header.pc-team2{ border-color:var(--pc-team2); background:rgba(255,77,255,0.08); }
-.pc-lobby-team-name{ font-size:20px; font-weight:900; }
-.pc-team1 .pc-lobby-team-name{ color:#cdeeff; }
-.pc-team2 .pc-lobby-team-name{ color:#ffd6fb; }
-.pc-lobby-team-keyword{ font-size:13px; opacity:0.85; }
-.pc-team1 .pc-lobby-team-keyword{ color:#9dd6f5; }
-.pc-team2 .pc-lobby-team-keyword{ color:#f5a3ec; }
+.pc-lobby-team-label{ display:flex; align-items:center; gap:18px; min-width:0; }
+.pc-lobby-team-name{ font-size:24px; font-weight:800; color:#fff; white-space:nowrap; }
+.pc-lobby-team-keyword{ font-size:46px; font-weight:900; line-height:1.1; white-space:nowrap; }
+.pc-team1 .pc-lobby-team-keyword{ color:var(--pc-lobby-team1); }
+.pc-team2 .pc-lobby-team-keyword{ color:var(--pc-lobby-team2); }
 
 .pc-lobby-count{
-    text-align:center;
-    color:#fff;
-    font-weight:800;
-    font-size:14px;
-    margin-bottom:12px;
-}
-
-.pc-lobby-grid{
-    display:grid;
-    grid-template-columns:repeat(2,277px);
-    gap:8px;
-    justify-content:center;
-}
-.pc-lobby-card-wrap{ position:relative; }
-.pc-lobby-remove-x{
-    position:absolute;
-    top:-6px;
-    left:-6px;
-    width:20px;
-    height:20px;
-    border-radius:50%;
-    border:none;
-    background:#ef4444;
-    color:#fff;
-    font-size:11px;
-    line-height:20px;
-    text-align:center;
-    cursor:pointer;
-    z-index:3;
-}
-.pc-lobby-empty-slot{
-    border:2px dashed rgba(255,255,255,0.25);
-    border-radius:999px;
-    min-height:44px;
-}
-.pc-team1 .pc-lobby-empty-slot{ border-color:rgba(128,212,255,0.3); }
-.pc-team2 .pc-lobby-empty-slot{ border-color:rgba(255,77,255,0.3); }
-
-.pc-vs-label{
+    width:81px;
+    height:38px;
+    box-sizing:border-box;
+    border-radius:19px;
+    border:4px solid;
+    background:rgba(217,217,217,0.1);
     display:flex;
     align-items:center;
     justify-content:center;
-    padding:0 4px;
-    font-size:26px;
-    font-weight:900;
-    color:#d0b3ff;
-    text-shadow:0 0 14px rgba(124,58,237,0.6);
+    color:#fff;
+    font-weight:800;
+    font-size:22px;
+    direction:ltr;
+    flex:none;
 }
-@media (max-width:720px){
-    .pc-lobby-panels{ flex-direction:column; }
-    .pc-vs-label{ padding:6px 0; }
+.pc-team1 .pc-lobby-count{ border-color:rgba(28,69,232,0.25); }
+.pc-team2 .pc-lobby-count{ border-color:rgba(168,9,9,0.5); }
+
+/* 521px بالتصميم؛ تصغر مع ارتفاع الشاشة حتى يظهر الزر والرابط بدون
+   تمرير الصفحة (السكرول داخل اللوحة فقط). */
+.pc-lobby-box{
+    height:clamp(260px,calc(100vh - 470px),521px);
+    box-sizing:border-box;
+    border:3px solid #000;
+    border-radius:14px;
+    overflow-y:auto;
+    scrollbar-width:none;
+    padding:36px 20px 24px;
+}
+.pc-lobby-box::-webkit-scrollbar{ display:none; }
+.pc-team1 .pc-lobby-box{ box-shadow:0 -1px 4px 10px rgba(28,69,232,0.25); }
+.pc-team2 .pc-lobby-box{ box-shadow:0 -1px 4px 10px rgba(210,43,43,0.25); }
+
+.pc-lobby-grid{
+    display:grid;
+    grid-template-columns:repeat(2,217px);
+    column-gap:51px;
+    row-gap:46px;
+    justify-content:center;
+    align-content:start;
+}
+/* بطاقة اللاعب -- كبسولة 217×57، الصورة 48px يمين داخل البطاقة، الاسم
+   بالوسط، وزر الحذف ✕ صغير يسار البطاقة. */
+.pc-lobby-card-wrap{
+    position:relative;
+    width:217px;
+    height:57px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+#pc-lobby .agp-pcard{
+    width:217px !important;
+    height:57px !important;
+    box-sizing:border-box !important;
+    padding:0 3px 0 28px !important;
+    gap:6px !important;
+    border-radius:24px !important;
+    background:rgba(217,217,217,0.3) !important;
+    border:2px solid #000 !important;
+}
+#pc-lobby .agp-pcard-avatar-basic{
+    width:48px !important;
+    height:48px !important;
+    background:#D9D9D9 !important;
+    border:none !important;
+}
+#pc-lobby .agp-pcard-name-basic{
+    flex:1 1 auto !important;
+    width:auto !important;
+    min-width:0 !important;
+    height:auto !important;
+    margin:0 !important;
+    padding:0 !important;
+    font-size:20px !important;
+    font-weight:700 !important;
+    color:#fff !important;
+    background:none !important;
+    border:none !important;
+}
+#pc-lobby .agp-pcard-avatar-basic--fallback{ font-size:15px !important; color:#3a2f4a !important; }
+/* بطاقة بإطار -- تظهر كاملة بنفس خانة 217 (fitLobbyFramedCards بالـJS). */
+#pc-lobby .agp-pcard-tpl{ zoom:0.7282; flex-shrink:0; }
+.pc-lobby-remove-x{
+    position:absolute;
+    top:50%;
+    left:7px;
+    transform:translateY(-50%);
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    border:1px solid rgba(224,115,111,0.55);
+    background:rgba(224,115,111,0.18);
+    color:#e0736f;
+    font-size:9px;
+    line-height:14px;
+    padding:0;
+    text-align:center;
+    cursor:pointer;
+    z-index:5;
 }
 
 .pc-lobby-actions{
     display:flex;
-    gap:16px;
-    justify-content:center;
+    flex-direction:column;
     align-items:center;
-    margin-top:34px;
-    flex-wrap:wrap;
-}
-.pc-lobby-actions > button{
-    width:280px;
-    height:48px;
-    padding:0 14px;
-    border-radius:999px;
-    font-weight:800;
-    font-size:14px;
-    font-family:inherit;
-    cursor:pointer;
-}
-.pc-lobby-btn-settings,
-.pc-lobby-btn-platform{
-    border:1px solid rgba(255,255,255,0.35);
-    background:rgba(255,255,255,0.1);
-    color:#fff;
+    gap:18px;
+    margin-top:48px;
 }
 .pc-lobby-btn-start{
+    width:320px;
+    height:48px;
     border:none;
-    background:linear-gradient(90deg,#22c55e,#16a34a);
+    border-radius:20px;
+    background:#467404;
     color:#fff;
+    font-family:inherit;
+    font-size:24px;
+    font-weight:800;
+    cursor:pointer;
 }
 .pc-lobby-btn-start:disabled{ opacity:0.45; cursor:not-allowed; }
+.pc-lobby-link-library{
+    display:inline-flex;
+    align-items:center;
+    gap:12px;
+    background:none;
+    border:none;
+    color:#fff;
+    font-family:inherit;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+    padding:4px;
+}
+.pc-lobby-link-arrow{ font-size:20px; line-height:1; }
+
+@media (max-width:1300px){
+    .pc-lobby-panels{ gap:40px; }
+}
+@media (max-width:1100px){
+    .pc-lobby-panels{ flex-direction:column; align-items:center; gap:48px; }
+    .pc-lobby-team{ width:min(576px,100%); flex:none; }
+}
+@media (max-width:600px){
+    .pc-lobby-title{ font-size:28px; }
+    .pc-lobby-divider{ margin:18px 0 36px; }
+    .pc-lobby-team-name{ font-size:18px; }
+    .pc-lobby-team-keyword{ font-size:32px; }
+    .pc-lobby-grid{ grid-template-columns:repeat(auto-fill,217px); }
+}
 
 /* ---------------------------------------------------------------------
    شاشة المباراة -- تبويب العرض 600×400 بحواف متوهجة بالنص، الفريقين
