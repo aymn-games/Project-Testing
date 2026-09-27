@@ -639,80 +639,71 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
              * small secondary link under the instruction line instead of
              * removing the feature.
              * ================================================================ */
-            // padding-top clears the shared persistent header (50px,
-            // z-index above this overlay) — the design spec's own inset:24px
-            // assumes no such fixed header, since its layout starts at the
-            // real page top.
+            // Selection-tab redesign (user-supplied mockup): no framed
+            // panel anymore — a full-bleed dark screen starting directly
+            // under the shared persistent header (padding-top = header
+            // height), with a single top row (phase label right, chooser
+            // centred, timer + ✕ left), the instruction line, a 3px
+            // divider, then the candidate grid.
             '#er-select-overlay{position:fixed;inset:0;z-index:99990;display:none;',
-            'align-items:stretch;justify-content:stretch;padding:74px 24px 24px;}',
+            'align-items:stretch;justify-content:stretch;padding:67px 0 0;background:rgba(8,8,8,.97);}',
             '#er-select-box{width:100%;height:100%;box-sizing:border-box;color:#fff;',
             'font-family:"Noto Kufi Arabic",sans-serif;position:relative;overflow:hidden;',
-            'display:flex;flex-direction:column;border-radius:28px;',
-            'border:2px solid rgba(224,115,111,.4);',
-            // Dark, near-opaque panel background (selection-tab redesign).
-            'background:rgba(8,8,8,.97);',
-            'backdrop-filter:blur(6px);',
-            'box-shadow:0 0 0 6px rgba(224,115,111,.08),0 30px 70px -30px rgba(0,0,0,.8);',
+            'display:flex;flex-direction:column;padding-top:22px;',
             'animation:er-select-fadein .25s ease both;}',
-            '#er-select-box.er-role-revive{border-color:rgba(34,197,94,.4);',
-            'box-shadow:0 0 0 6px rgba(34,197,94,.08),0 30px 70px -30px rgba(0,0,0,.8);}',
             '@keyframes er-select-fadein{from{opacity:0}to{opacity:1}}',
-            '#er-select-close-btn{position:absolute;top:19px;left:12px;width:33px;height:33px;',
-            'display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:8px;',
-            'border:none;background:none;color:#fff;opacity:.5;',
-            'font-size:26px;line-height:1;z-index:2;padding:0;}',
+            '#er-select-close-btn{position:absolute;top:40px;left:clamp(12px,6.9vw,99px);width:33px;height:33px;',
+            'display:flex;align-items:center;justify-content:center;cursor:pointer;',
+            'border:none;background:none;color:#F50F0F;opacity:.5;',
+            'font-size:34px;line-height:1;z-index:2;padding:0;}',
             '#er-select-close-btn:hover{opacity:.8;}',
-            '#er-select-phase-label{position:absolute;top:22px;right:24px;font-family:"Cairo",sans-serif;',
-            'font-weight:900;font-size:clamp(20px,2.6vw,32px);line-height:1.2;z-index:2;}',
+            '#er-select-phase-label{position:absolute;top:98px;right:clamp(12px,6.9vw,100px);font-family:"Cairo",sans-serif;',
+            'font-weight:900;font-size:clamp(20px,2.4vw,34px);line-height:1;z-index:2;transform:translateY(-50%);}',
             '#er-select-box.er-role-eliminate #er-select-phase-label{color:#FD1010;}',
             '#er-select-box.er-role-revive #er-select-phase-label{color:#22E36B;}',
-            /* ---- Chooser row: "صاحب الاختيار" label + ring avatar + name ---- */
-            '#er-chooser-row{flex:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;',
-            'gap:26px;padding:20px clamp(60px,8vw,120px) 0;text-align:center;}',
-            '#er-select-chooser-slot{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:26px;}',
-            '.er-select-chooser-card{display:contents;}',
-            '@media (max-width:600px){#er-chooser-row{padding-top:64px;}}',
-            '.er-select-chooser-label{flex:none;font-family:"Cairo",sans-serif;font-weight:900;',
-            'font-size:clamp(18px,2.4vw,26px);color:#b28cf5;}',
-            '.er-select-chooser-ring{width:120px;height:120px;border-radius:50%;overflow:hidden;',
-            'box-sizing:border-box;flex:none;background:#D9D9D9;}',
+            /* ---- Chooser: green-bordered name box + 114px ringed avatar
+             * on its right, overlapping the box's edge. ---- */
+            '#er-chooser-row{flex:none;display:flex;align-items:center;justify-content:center;',
+            'padding:0 clamp(60px,8vw,120px);text-align:center;}',
+            '#er-select-chooser-slot{display:flex;align-items:center;justify-content:center;}',
+            '.er-select-chooser-card{display:flex;flex-direction:row;align-items:center;}',
+            '.er-select-chooser-ring{position:relative;z-index:1;width:120px;height:120px;border-radius:50%;overflow:hidden;',
+            'box-sizing:border-box;flex:none;background:#D9D9D9;border:6px solid #66A909;}',
             '.er-select-chooser-ring .er-ring-avatar,.er-select-chooser-ring .er-ring-avatar--fallback{width:100%;height:100%;font-size:2em;}',
-            '.er-select-chooser-nmrow{display:contents;}',
-            '.er-select-chooser-nm{flex:none;font-family:"Noto Kufi Arabic",sans-serif;font-size:33px;',
-            'font-weight:700;color:#fff;}',
-            // The fixed number badge (playerNumber) still renders next to
-            // the name — kept from the previous design (useful for the
-            // "type a number in chat" flow), just restyled to a small
-            // neutral violet pill instead of a bold role-colored circle.
-            '.er-select-chooser-num{flex:none;padding:2px 9px;border-radius:999px;color:#e9e4f5;',
-            'font-family:"Noto Kufi Arabic",sans-serif;font-size:12.5px;font-weight:900;',
-            'background:rgba(178,140,245,.18);border:1px solid rgba(178,140,245,.4);}',
-            '#er-select-title{flex:none;text-align:center;margin-top:10px;padding:0 16px;font-size:16px;color:#fff;}',
+            '.er-select-chooser-nmrow{flex:none;box-sizing:border-box;width:224px;height:64px;margin-right:-14px;',
+            'padding:0 18px 0 12px;display:flex;align-items:center;justify-content:center;',
+            'border:4px solid #66A909;border-radius:15px;}',
+            '.er-select-chooser-nm{min-width:0;font-family:"Noto Kufi Arabic",sans-serif;font-size:30px;',
+            'font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '#er-select-title{flex:none;text-align:center;margin-top:0;padding:0 16px;font-size:20px;font-weight:700;color:#fff;}',
             // Secondary "eliminate the turn holder" link — not part of the
             // design spec (which has no equivalent), kept as a small text
-            // link so the feature isn't lost, styled to stay visually
-            // secondary to the ✕/candidate-grid flow.
-            '#er-force-eliminate-btn{flex:none;display:block;margin:8px auto 0;padding:0;border:none;',
+            // link so the feature isn't lost.
+            '#er-force-eliminate-btn{flex:none;display:block;margin:4px auto 0;padding:0;border:none;',
             'background:none;cursor:pointer;font-family:"IBM Plex Sans Arabic",sans-serif;font-size:12px;',
             'font-weight:600;color:#e0736f;text-decoration:underline;text-underline-offset:3px;}',
             '#er-force-eliminate-btn:hover{color:#ff9b96;}',
-            '#er-select-divider{flex:none;height:1px;margin:10px 0 0;background:#fff;}',
-            /* ---- Countdown timer ---- */
-            '#er-select-timer{flex:none;text-align:center;font-weight:900;font-size:1.3em;color:#ffe066;',
-            'margin-top:6px;transition:color 0.2s;text-shadow:0 2px 10px rgba(0,0,0,0.8);}',
+            '#er-select-divider{flex:none;height:3px;margin:8px clamp(12px,7.4vw,107px) 0 clamp(12px,6vw,87px);background:#fff;}',
+            /* ---- Countdown timer: small "الوقت" label over a big number,
+             * top-left next to the ✕. ---- */
+            '#er-select-timer{position:absolute;top:36px;left:clamp(56px,17.4vw,250px);z-index:2;',
+            'display:flex;flex-direction:column;align-items:center;color:#fff;line-height:1;transition:color 0.2s;}',
+            '.er-select-timer-lbl{font-size:18px;font-weight:700;}',
+            '.er-select-timer-num{margin-top:10px;font-family:"Noto Kufi Arabic",sans-serif;font-size:48px;font-weight:900;}',
             '#er-select-timer.er-timer-warning{color:#ff4d6d;animation:er-pulse 1s infinite;}',
             '@keyframes er-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}',
+            '@media (max-width:760px){#er-select-box{padding-top:120px;}#er-select-phase-label{top:40px;transform:none;}}',
             /* ---- Candidate grid — fixed-size 260x70 cards. The card
              * never scales: a narrower screen only fits fewer columns
              * (auto-fill), and extra rows scroll with a hidden scrollbar. ---- */
             '#er-select-candidates-grid{flex:1;min-height:0;overflow-y:auto;',
             'scrollbar-width:none;-ms-overflow-style:none;',
-            'padding:clamp(20px,5vh,70px) 16px 24px;}',
+            'padding:70px 16px 24px;}',
             '#er-select-candidates-grid::-webkit-scrollbar{display:none;}',
             '#er-select-candidates-grid-inner{display:grid;grid-template-columns:repeat(auto-fill,260px);',
-            'gap:30px 32px;justify-content:center;}',
+            'gap:30px 18px;justify-content:center;}',
             '.er-select-cand-card{display:flex;align-items:center;gap:8px;box-sizing:border-box;',
-            'width:260px;height:70px;padding:0 5px 0 5px;cursor:pointer;border-radius:20px;',
+            'width:260px;height:70px;padding:0 4px 0 4px;cursor:pointer;border-radius:20px;',
             'border:1px solid #F9F2F2;background:#1B1919;transition:transform .15s,box-shadow .15s;}',
             // Hover glow follows the phase color (red = eliminate, green = revive).
             '.er-select-cand-card:hover{transform:translateY(-2px);border-color:#FD1010;',
@@ -726,11 +717,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-select-cand-name{flex:1;min-width:0;text-align:center;font-size:22px;font-weight:700;',
             'color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
             '.er-select-cand-num{flex:none;box-sizing:border-box;min-width:40px;height:50px;padding:0 4px;',
-            'border-radius:15px;display:flex;align-items:center;justify-content:center;',
-            'background:linear-gradient(180deg,#FF3B3B,#D90A0A);box-shadow:0 2px 8px rgba(245,15,15,.35);',
+            'border-radius:15px;display:flex;align-items:center;justify-content:center;background:#F50F0F;',
             'font-family:"Noto Kufi Arabic",sans-serif;font-size:28px;font-weight:900;color:#fff;line-height:1;}',
-            '#er-select-box.er-role-revive .er-select-cand-num{background:linear-gradient(180deg,#2EE57A,#12A150);',
-            'box-shadow:0 2px 8px rgba(34,197,94,.35);}',
+            '#er-select-box.er-role-revive .er-select-cand-num{background:#12A150;}',
 
             /* ---- Result-announcement tab (4 seconds) ---- */
             /* Announcement colors (originally designed for a light
@@ -1671,7 +1660,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '</div>' +
                     '<div id="er-select-title"></div>' +
                     '<button id="er-force-eliminate-btn" type="button">إقصاء صاحب الدور مباشرة</button>' +
-                    '<div id="er-select-timer"></div>' +
+                    '<div id="er-select-timer"><span class="er-select-timer-lbl">الوقت</span><span class="er-select-timer-num"></span></div>' +
                     '<div id="er-select-divider"></div>' +
                     '<div id="er-select-candidates-grid"><div id="er-select-candidates-grid-inner"></div></div>' +
                 '</div>';
@@ -2511,7 +2500,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function updateTimerDisplay(seconds) {
         var t = el('er-select-timer');
         if (!t) return;
-        t.textContent = '⏱️ ' + seconds + ' ث';
+        var num = t.querySelector('.er-select-timer-num');
+        if (num) num.textContent = seconds < 10 ? '0' + seconds : String(seconds);
         t.classList.toggle('er-timer-warning', seconds > 0 && seconds <= 10);
     }
 
