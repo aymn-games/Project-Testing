@@ -885,7 +885,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="kz-help-example">' +
                     helpClockHtml(1, 12) + helpClockHtml(2, 9) + helpClockHtml(3, 7) +
                 '</div>' +
-                '<div class="kz-help-answer">تكتب بالشات: <b>12 9 7</b> <span class="kz-help-wrong">مو <s>1 2 3</s></span></div>' +
+                '<div class="kz-help-answer">تكتب بالشات: <b>12 9 7</b> <span class="kz-help-wrong">مو <s dir="ltr">1 2 3</s></span></div>' +
                 '<div class="kz-help-step"><span class="kz-help-num">3</span>' +
                     '<div>تقدر تغيّر إجابتك لين يخلص الوقت — <b>آخر إجابة</b> هي اللي تنحسب.</div></div>' +
                 '<div class="kz-help-step kz-help-warn"><span class="kz-help-num">!</span>' +
