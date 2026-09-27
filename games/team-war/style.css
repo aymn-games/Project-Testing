@@ -145,47 +145,71 @@ body.tw-active {
 .tw-spinner { width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.2); border-top-color: var(--tw-blue); border-radius: 50%; margin: 0 auto 18px; animation: tw-spin 0.9s linear infinite; }
 @keyframes tw-spin { to { transform: rotate(360deg); } }
 
-/* ---------- اللوبي ---------- */
-#tw-lobby-screen { padding: 100px 24px 30px; max-width: 1700px; margin: 0 auto; }
-.tw-lobby-heading { text-align: center; font-size: 1.5em; font-weight: 800; color: #fff; margin: 0 0 16px; }
-.tw-lobby-heading-accent { color: var(--tw-gold); font-weight: 900; }
-.tw-lobby-banner {
-    width: 100%; max-width: 1015px; margin: 0 auto 22px; padding: 22px 20px; text-align: center;
-    font-size: 1.3em; font-weight: 800;
-    background: linear-gradient(135deg, var(--tw-banner-a), var(--tw-banner-b));
-    border: 3px solid; border-image: linear-gradient(135deg, var(--tw-banner-b), var(--tw-banner-a)) 1;
-}
-.tw-lobby-headers { display: flex; gap: 20px; max-width: 1650px; margin: 0 auto 6px; }
-.tw-lobby-headers > div { flex: 1; }
-.tw-team-header-box { border-radius: 10px; padding: 14px; text-align: center; border: 3px solid; }
-.tw-team-header-box.tw-team-red { border-color: var(--tw-red); background: rgba(228,37,40,0.14); }
-.tw-team-header-box.tw-team-blue { border-color: var(--tw-blue); background: rgba(19,79,190,0.14); }
-.tw-team-header-name { font-size: 1.3em; font-weight: 900; margin-bottom: 4px; }
-.tw-team-header-keyword { font-size: 0.95em; opacity: 0.85; }
+/* ---------- اللوبي ----------
+   تنسيق الألعاب ذات الفريقين (نفس تصميم لوبي تحدي الصور) بألوان حرب
+   الفريقين: عنوان "لوبي الدخول للعبة" + خط فاصل، لوحة لكل فريق (الأحمر
+   يمين والأزرق يسار، نفس ترتيب شاشة الإعدادات) فوقها اسم الفريق +
+   كلمته بلون الفريق + كبسولة العدد، وداخلها عمودان من بطاقات اللوبي
+   القياسية 217×57. بالأسفل زر "الدخول للمباراة" الأخضر ورابط "العودة
+   لمكتبة الالعاب". */
+#tw-lobby-screen { padding: 84px 16px 32px; width: min(1300px, 96vw); margin: 0 auto; }
+.tw-lobby-title { margin: 0; font-size: 48px; font-weight: 900; line-height: 1.25; text-align: center; color: #fff; }
+.tw-lobby-divider { height: 1px; background: #fff; margin: 24px 0 44px; }
 
-.tw-lobby-panels { display: flex; align-items: center; gap: 16px; max-width: 1650px; margin: 10px auto 0; }
-.tw-lobby-team-panel {
-    flex: 1 1 0; min-width: 0; min-height: 400px; border-radius: 10px; border: 3px solid;
-    padding: 20px; position: relative; box-sizing: border-box;
-}
-.tw-lobby-team-panel.tw-team-red {
-    border-color: var(--tw-red);
-    background: linear-gradient(160deg, var(--tw-red) 0%, var(--tw-red-dark) 72%, var(--tw-red-dark) 100%);
-    background-blend-mode: normal; opacity: 0.97;
-}
-.tw-lobby-team-panel.tw-team-blue {
-    border-color: var(--tw-blue);
-    background: linear-gradient(160deg, var(--tw-blue) 0%, var(--tw-blue-dark) 72%, var(--tw-blue-dark) 100%);
-    opacity: 0.97;
-}
-.tw-vs-label { font-size: 1.7em; font-weight: 900; color: var(--tw-red); text-shadow: 0 0 14px rgba(228,37,40,0.6); }
+.tw-lobby-panels { display: flex; justify-content: center; align-items: flex-start; gap: 101px; }
+.tw-lobby-team { flex: 0 1 576px; min-width: 0; }
+.tw-lobby-team-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+.tw-lobby-team-label { display: flex; align-items: center; gap: 18px; min-width: 0; }
+.tw-lobby-team-name { font-size: 24px; font-weight: 800; color: #fff; white-space: nowrap; }
+.tw-lobby-team-keyword { font-size: 46px; font-weight: 900; line-height: 1.1; white-space: nowrap; }
+.tw-team-red .tw-lobby-team-keyword { color: var(--tw-red); }
+.tw-team-blue .tw-lobby-team-keyword { color: var(--tw-blue); }
 
-.tw-player-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.tw-lobby-card-wrap { position: relative; }
+.tw-lobby-count {
+    min-width: 81px; height: 38px; padding: 0 12px; border-radius: 19px; border: 4px solid;
+    background: rgba(217,217,217,0.1); display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; font-size: 20px; direction: ltr; flex: none; white-space: nowrap;
+}
+.tw-team-red .tw-lobby-count { border-color: rgba(228,37,40,0.5); }
+.tw-team-blue .tw-lobby-count { border-color: rgba(19,79,190,0.5); }
+
+/* 521px بالتصميم؛ تصغر مع ارتفاع الشاشة حتى يظهر الزر والرابط بدون
+   تمرير الصفحة (السكرول داخل اللوحة فقط). */
+.tw-lobby-box {
+    height: clamp(260px, calc(100vh - 470px), 521px);
+    border: 3px solid #000; border-radius: 14px; overflow-y: auto; scrollbar-width: none;
+    padding: 36px 20px 24px;
+}
+.tw-lobby-box::-webkit-scrollbar { display: none; }
+.tw-team-red .tw-lobby-box { box-shadow: 0 -1px 4px 10px rgba(228,37,40,0.25); }
+.tw-team-blue .tw-lobby-box { box-shadow: 0 -1px 4px 10px rgba(19,79,190,0.25); }
+
+.tw-player-grid {
+    display: grid; grid-template-columns: repeat(2, 217px); column-gap: 51px; row-gap: 46px;
+    justify-content: center; align-content: start;
+}
+/* بطاقة اللاعب -- كبسولة 217×57، الصورة 48px يمين داخل البطاقة، الاسم
+   بالوسط، وزر الحذف ✕ صغير يسار البطاقة. */
+.tw-lobby-card-wrap { position: relative; width: 217px; height: 57px; display: flex; align-items: center; justify-content: center; }
+#tw-lobby-screen .agp-pcard {
+    width: 217px !important; height: 57px !important; box-sizing: border-box !important;
+    padding: 0 3px 0 28px !important; gap: 6px !important; border-radius: 24px !important;
+    background: rgba(217,217,217,0.3) !important; border: 2px solid #000 !important;
+}
+#tw-lobby-screen .agp-pcard-avatar-basic { width: 48px !important; height: 48px !important; background: #D9D9D9 !important; border: none !important; }
+#tw-lobby-screen .agp-pcard-name-basic {
+    flex: 1 1 auto !important; width: auto !important; min-width: 0 !important; height: auto !important;
+    margin: 0 !important; padding: 0 !important; font-size: 20px !important; font-weight: 700 !important;
+    color: #fff !important; background: none !important; border: none !important;
+}
+#tw-lobby-screen .agp-pcard-avatar-basic--fallback { font-size: 15px !important; color: #3a2f4a !important; }
+/* بطاقة بإطار -- تظهر كاملة بنفس خانة 217 (fitLobbyFramedCards بالـJS). */
+#tw-lobby-screen .agp-pcard-tpl { zoom: 0.7282; flex-shrink: 0; }
 .tw-lobby-remove-x {
-    position: absolute; top: -8px; right: -8px; z-index: 2; width: 22px; height: 22px; border-radius: 50%;
-    background: #ff2d2d; color: #fff; border: 2px solid #1a0a0a; font-size: 0.75em; font-weight: 900;
-    display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+    position: absolute; top: 50%; left: 7px; transform: translateY(-50%); z-index: 5;
+    width: 16px; height: 16px; border-radius: 50%; padding: 0;
+    border: 1px solid rgba(224,115,111,0.55); background: rgba(224,115,111,0.18); color: #e0736f;
+    font-size: 9px; line-height: 14px; text-align: center; cursor: pointer;
 }
 .tw-player-card {
     background: #e9e6e6; border-radius: 999px; display: flex; align-items: center; justify-content: space-between;
@@ -193,19 +217,33 @@ body.tw-active {
 }
 .tw-player-card .tw-player-card-name { color: #241018; font-weight: 800; font-size: 0.95em; flex: 1; padding: 0 8px; word-break: break-word; }
 .tw-player-card .tw-player-card-avatar { width: 34px; height: 34px; border-radius: 50%; background: #b7b3b3; object-fit: cover; flex-shrink: 0; }
-.tw-lobby-empty-slot { border: 2px dashed rgba(255,255,255,0.35); border-radius: 999px; min-height: 46px; }
-.tw-lobby-count { text-align: center; color: #fff; font-weight: 800; margin-bottom: 12px; font-size: 1.05em; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
 
-.tw-lobby-btn-row { display: flex; gap: 14px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 26px; }
-.tw-lobby-row-btn {
-    width: 300px; max-width: 90vw; height: 48px; border: none; border-radius: 10px;
-    font-family: inherit; font-weight: 800; font-size: 0.95em; cursor: pointer; color: #fff; transition: filter .15s;
+.tw-lobby-actions { display: flex; flex-direction: column; align-items: center; gap: 18px; margin-top: 48px; }
+.tw-lobby-btn-start {
+    width: 320px; height: 48px; border: none; border-radius: 20px;
+    background: linear-gradient(90deg, var(--tw-green), var(--tw-green-dark)); color: #fff;
+    font-family: inherit; font-size: 24px; font-weight: 800; cursor: pointer; transition: filter .15s;
 }
-.tw-lobby-row-btn:hover { filter: brightness(1.1); }
-.tw-lobby-btn-settings { background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.35); }
-.tw-lobby-btn-start { background: linear-gradient(90deg, #1DB954, #14813B); }
-.tw-lobby-btn-start:disabled { opacity: 0.45; cursor: not-allowed; }
-.tw-lobby-btn-platform { background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.35); }
+.tw-lobby-btn-start:hover { filter: brightness(1.1); }
+.tw-lobby-btn-start:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+.tw-lobby-link-library {
+    display: inline-flex; align-items: center; gap: 12px; background: none; border: none; color: #fff;
+    font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; padding: 4px;
+}
+.tw-lobby-link-arrow { font-size: 20px; line-height: 1; }
+
+@media (max-width: 1300px) { .tw-lobby-panels { gap: 40px; } }
+@media (max-width: 1100px) {
+    .tw-lobby-panels { flex-direction: column; align-items: center; gap: 48px; }
+    .tw-lobby-team { width: min(576px, 100%); flex: none; }
+}
+@media (max-width: 600px) {
+    .tw-lobby-title { font-size: 28px; }
+    .tw-lobby-divider { margin: 18px 0 36px; }
+    .tw-lobby-team-name { font-size: 18px; }
+    .tw-lobby-team-keyword { font-size: 32px; }
+    .tw-player-grid { grid-template-columns: repeat(auto-fill, 217px); }
+}
 
 /* ---------- لوحة إدارة المباراة (زر ⚙️) ---------- */
 #tw-admin-panel {
