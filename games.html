@@ -456,7 +456,17 @@ document.addEventListener('DOMContentLoaded', async function() {
       'background:linear-gradient(90deg,oklch(0.62 0.22 300),oklch(0.55 0.23 285));color:oklch(0.99 0 0);cursor:pointer;' +
       'display:flex;align-items:center;justify-content:center;gap:6px;transition:filter .15s;text-decoration:none;}' +
       '.gl-play:hover{filter:brightness(1.12);color:oklch(0.99 0 0);}' +
-      '.gl-play .gl-ms{font-size:18px;transform:translateX(calc(var(--h,0) * -4px));transition:transform .25s;}';
+      '.gl-play .gl-ms{font-size:18px;transform:translateX(calc(var(--h,0) * -4px));transition:transform .25s;}' +
+      // الشبكة تملأ عرض الشاشة بالكامل (تطلع من حد الـ1600px للحاوية)،
+      // وعدد البطاقات بكل صف ثابت حسب المقاس — الشاشة الأعرض تكبّر
+      // عرض البطاقة نفسها بدل ما تزيد عدد البطاقات.
+      '.gl-grid{display:grid !important;gap:20px !important;grid-template-columns:repeat(6,minmax(0,1fr)) !important;' +
+      'width:calc(100vw - 48px) !important;max-width:none !important;' +
+      'margin-left:calc(50% - 50vw + 24px) !important;margin-right:calc(50% - 50vw + 24px) !important;}' +
+      '@media (max-width:1199px){.gl-grid{grid-template-columns:repeat(4,minmax(0,1fr)) !important;}}' +
+      '@media (max-width:899px){.gl-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}}' +
+      '@media (max-width:599px){.gl-grid{grid-template-columns:minmax(0,1fr) !important;width:calc(100vw - 32px) !important;' +
+      'margin-left:calc(50% - 50vw + 16px) !important;margin-right:calc(50% - 50vw + 16px) !important;}}';
     document.head.appendChild(st);
   }
 
@@ -524,8 +534,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     grid.innerHTML = '';
     ensureCardStyles();
-    grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(240px,1fr))';
-    grid.style.gap = '20px';
+    grid.classList.add('gl-grid');
+    grid.style.gridTemplateColumns = '';
+    grid.style.gap = '';
     REAL_GAMES.forEach(function(g, i){
       grid.appendChild(buildCard(g, i));
     });
