@@ -444,12 +444,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.sl-dlg-exit{padding:12px;border:none;border-radius:12px;background:#e63946;color:#fff;font-size:14px;',
             'font-weight:900;cursor:pointer;}',
             '.sl-dlg-exit:hover{background:#f04a57;}',
-            '#sl-left{z-index:80;flex-direction:column;gap:16px;padding:24px;}',
-            '.sl-left-ic{font-size:44px;}',
-            '.sl-left-t{font-size:24px;font-weight:900;color:#ffffff;}',
-            '.sl-left-s{font-size:14px;color:#9dc6d9;}',
-            '.sl-left-btn{padding:13px 28px;border:none;border-radius:14px;background:linear-gradient(180deg,#ffdd7a,#f0a91f);',
-            'color:#4a2000;font-size:16px;font-weight:900;cursor:pointer;}',
 
             /* ---- نافذة بطاقة الفوز (نفس #er-modal-overlay/#er-modal-box) ---- */
             '#sl-modal-overlay{position:fixed;inset:0;z-index:99990;display:none;flex-direction:column;',
@@ -1106,12 +1100,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<button type="button" class="sl-dlg-exit" id="sl-leave-ok">خروج</button></div>' +
             '</div></div>' +
 
-            '<div class="sl-modal-bg" id="sl-left" hidden>' +
-                '<div class="sl-left-ic">🎲</div>' +
-                '<div class="sl-left-t">لقد خرجت من المباراة</div>' +
-                '<div class="sl-left-s">يمكنك بدء مباراة جديدة في أي وقت.</div>' +
-                '<button type="button" class="sl-left-btn" id="sl-left-new">مباراة جديدة</button>' +
-            '</div>';
+            '';
 
         el('sl-fs-btn').onclick = toggleFullscreen;
         el('sl-sound-btn').onclick = function () { _sound = !_sound; renderHeader(); };
@@ -1123,7 +1112,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('sl-exit-btn').onclick = function () { el('sl-theme-menu').hidden = true; el('sl-leave').hidden = false; };
         el('sl-leave-cancel').onclick = function () { el('sl-leave').hidden = true; };
         el('sl-leave-ok').onclick = confirmLeave;
-        el('sl-left-new').onclick = function () { el('sl-left').hidden = true; resetGame(); };
         el('sl-roll-btn').onclick = streamerRoll;
         el('sl-cmd-roll').onclick = streamerRoll;
         el('sl-reset-btn').onclick = resetGame;
@@ -1160,8 +1148,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var th = THEMES[_theme] || THEMES.night;
         var stage = el('sl-stage');
         if (stage) stage.style.background = th.page;
-        var left = el('sl-left');
-        if (left) left.style.background = th.page;
         var tiles = el('sl-tiles');
         if (tiles) tiles.innerHTML = tilesHtml();
     }
@@ -1426,12 +1412,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderTurn();
     }
 
+    // "خروج" (بعد التأكيد) — يوقف المباراة ويرجع لمكتبة الألعاب
     function confirmLeave() {
         if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
         el('sl-leave').hidden = true;
         _left = true;
         stopTurnTimer();
-        el('sl-left').hidden = false;
+        clearPendingTimeouts();
+        window.location.href = '../../games.html';
     }
 
     /* ======================================================================
