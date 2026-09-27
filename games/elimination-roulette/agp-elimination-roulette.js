@@ -649,34 +649,37 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'font-family:"Noto Kufi Arabic",sans-serif;position:relative;overflow:hidden;',
             'display:flex;flex-direction:column;border-radius:28px;',
             'border:2px solid rgba(224,115,111,.4);',
-            'background:radial-gradient(circle at 50% 20%,rgba(178,140,245,.12),transparent 55%),rgba(10,9,16,.9);',
+            // Dark, near-opaque panel background (selection-tab redesign).
+            'background:rgba(8,8,8,.97);',
             'backdrop-filter:blur(6px);',
             'box-shadow:0 0 0 6px rgba(224,115,111,.08),0 30px 70px -30px rgba(0,0,0,.8);',
             'animation:er-select-fadein .25s ease both;}',
             '#er-select-box.er-role-revive{border-color:rgba(34,197,94,.4);',
             'box-shadow:0 0 0 6px rgba(34,197,94,.08),0 30px 70px -30px rgba(0,0,0,.8);}',
             '@keyframes er-select-fadein{from{opacity:0}to{opacity:1}}',
-            '#er-select-close-btn{position:absolute;top:18px;left:18px;width:34px;height:34px;',
-            'display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:10px;',
-            'border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:#cfc7e2;',
-            'font-size:16px;line-height:1;z-index:2;padding:0;}',
+            '#er-select-close-btn{position:absolute;top:19px;left:12px;width:33px;height:33px;',
+            'display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:8px;',
+            'border:none;background:none;color:#fff;opacity:.5;',
+            'font-size:26px;line-height:1;z-index:2;padding:0;}',
+            '#er-select-close-btn:hover{opacity:.8;}',
             '#er-select-phase-label{position:absolute;top:22px;right:24px;font-family:"Cairo",sans-serif;',
-            'font-weight:900;font-size:clamp(16px,2vw,20px);text-shadow:2px 2px 0 #2b1a4d;z-index:2;}',
-            '#er-select-box.er-role-eliminate #er-select-phase-label{color:#e0736f;}',
+            'font-weight:900;font-size:clamp(20px,2.6vw,32px);line-height:1.2;z-index:2;}',
+            '#er-select-box.er-role-eliminate #er-select-phase-label{color:#FD1010;}',
             '#er-select-box.er-role-revive #er-select-phase-label{color:#22c55e;}',
             /* ---- Chooser row: "صاحب الاختيار" label + ring avatar + name ---- */
             '#er-chooser-row{flex:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;',
-            'gap:14px;padding:clamp(20px,3vh,32px) clamp(24px,4vw,60px);text-align:center;}',
+            'gap:26px;padding:20px clamp(60px,8vw,120px) 0;text-align:center;}',
+            '#er-select-chooser-slot{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:26px;}',
             '.er-select-chooser-card{display:contents;}',
+            '@media (max-width:600px){#er-chooser-row{padding-top:64px;}}',
             '.er-select-chooser-label{flex:none;font-family:"Cairo",sans-serif;font-weight:900;',
             'font-size:clamp(18px,2.4vw,26px);color:#b28cf5;}',
-            '.er-select-chooser-ring{width:52px;height:52px;border-radius:50%;padding:3px;box-sizing:border-box;flex:none;}',
-            '.er-select-chooser-ring.er-role-eliminate{background:#22c55e;box-shadow:0 0 22px rgba(34,197,94,0.65);}',
-            '.er-select-chooser-ring.er-role-revive{background:#ef4444;box-shadow:0 0 22px rgba(239,68,68,0.65);}',
-            '.er-select-chooser-ring .er-ring-avatar,.er-select-chooser-ring .er-ring-avatar--fallback{width:100%;height:100%;font-size:1.1em;}',
+            '.er-select-chooser-ring{width:120px;height:120px;border-radius:50%;overflow:hidden;',
+            'box-sizing:border-box;flex:none;background:#D9D9D9;}',
+            '.er-select-chooser-ring .er-ring-avatar,.er-select-chooser-ring .er-ring-avatar--fallback{width:100%;height:100%;font-size:2em;}',
             '.er-select-chooser-nmrow{display:contents;}',
-            '.er-select-chooser-nm{flex:none;font-family:"Noto Kufi Arabic",sans-serif;font-size:19px;',
-            'font-weight:700;color:#f4f2fb;}',
+            '.er-select-chooser-nm{flex:none;font-family:"Noto Kufi Arabic",sans-serif;font-size:33px;',
+            'font-weight:700;color:#fff;}',
             // The fixed number badge (playerNumber) still renders next to
             // the name — kept from the previous design (useful for the
             // "type a number in chat" flow), just restyled to a small
@@ -684,7 +687,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.er-select-chooser-num{flex:none;padding:2px 9px;border-radius:999px;color:#e9e4f5;',
             'font-family:"Noto Kufi Arabic",sans-serif;font-size:12.5px;font-weight:900;',
             'background:rgba(178,140,245,.18);border:1px solid rgba(178,140,245,.4);}',
-            '#er-select-title{flex:none;text-align:center;margin-top:-10px;font-size:13.5px;color:#a79fbb;}',
+            '#er-select-title{flex:none;text-align:center;margin-top:10px;padding:0 16px;font-size:16px;color:#fff;}',
             // Secondary "eliminate the turn holder" link — not part of the
             // design spec (which has no equivalent), kept as a small text
             // link so the feature isn't lost, styled to stay visually
@@ -693,36 +696,35 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'background:none;cursor:pointer;font-family:"IBM Plex Sans Arabic",sans-serif;font-size:12px;',
             'font-weight:600;color:#e0736f;text-decoration:underline;text-underline-offset:3px;}',
             '#er-force-eliminate-btn:hover{color:#ff9b96;}',
-            '#er-select-divider{flex:none;height:2px;margin:16px clamp(24px,4vw,60px) 0;',
-            'background:linear-gradient(90deg,transparent,rgba(178,140,245,.5),transparent);}',
+            '#er-select-divider{flex:none;height:1px;margin:10px 0 0;background:#fff;}',
             /* ---- Countdown timer ---- */
             '#er-select-timer{flex:none;text-align:center;font-weight:900;font-size:1.3em;color:#ffe066;',
-            'margin-top:14px;transition:color 0.2s;text-shadow:0 2px 10px rgba(0,0,0,0.8);}',
+            'margin-top:6px;transition:color 0.2s;text-shadow:0 2px 10px rgba(0,0,0,0.8);}',
             '#er-select-timer.er-timer-warning{color:#ff4d6d;animation:er-pulse 1s infinite;}',
             '@keyframes er-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}',
-            /* ---- Candidate grid — 6-per-row pill buttons, matching the
-             * design spec's chooserOptions grid exactly. ---- */
+            /* ---- Candidate grid — fixed-size 260x70 cards. The card
+             * never scales: a narrower screen only fits fewer columns
+             * (auto-fill), and extra rows scroll with a hidden scrollbar. ---- */
             '#er-select-candidates-grid{flex:1;min-height:0;overflow-y:auto;',
-            'padding:clamp(16px,2.6vh,26px) clamp(24px,4vw,60px);}',
-            '#er-select-candidates-grid-inner{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));',
-            'gap:9px;justify-content:center;}',
-            '.er-select-cand-card{display:flex;align-items:center;justify-content:center;gap:9px;',
-            'padding:9px 10px;cursor:pointer;border-radius:14px;border:1px solid rgba(224,115,111,.25);',
-            'background:rgba(224,115,111,.07);transition:transform .15s,border-color .15s;}',
-            '.er-select-cand-card:hover{transform:translateY(-2px);border-color:rgba(224,115,111,.55);}',
-            '#er-select-box.er-role-revive .er-select-cand-card{border-color:rgba(34,197,94,.25);',
-            'background:rgba(34,197,94,.07);}',
-            '#er-select-box.er-role-revive .er-select-cand-card:hover{border-color:rgba(34,197,94,.55);}',
-            '.er-select-cand-avatar{flex:none;width:40px;height:40px;border-radius:50%;overflow:hidden;',
-            'border:1px solid rgba(255,255,255,.18);}',
+            'scrollbar-width:none;-ms-overflow-style:none;',
+            'padding:clamp(20px,5vh,70px) 16px 24px;}',
+            '#er-select-candidates-grid::-webkit-scrollbar{display:none;}',
+            '#er-select-candidates-grid-inner{display:grid;grid-template-columns:repeat(auto-fill,260px);',
+            'gap:30px 32px;justify-content:center;}',
+            '.er-select-cand-card{display:flex;align-items:center;gap:8px;box-sizing:border-box;',
+            'width:260px;height:70px;padding:0 5px 0 5px;cursor:pointer;border-radius:20px;',
+            'border:1px solid #F9F2F2;background:#1B1919;transition:transform .15s,box-shadow .15s;}',
+            '.er-select-cand-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.5);}',
+            '.er-select-cand-avatar{flex:none;width:50px;height:50px;border-radius:50%;overflow:hidden;',
+            'background:#D9D9D9;}',
             '.er-select-cand-avatar .er-ring-avatar,.er-select-cand-avatar .er-ring-avatar--fallback{',
             'width:100%;height:100%;font-size:1em;}',
-            '.er-select-cand-name{flex:1;min-width:0;text-align:center;font-size:15.5px;font-weight:600;',
-            'color:#f4f2fb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
-            '.er-select-cand-num{flex:none;width:28px;height:28px;border-radius:50%;display:flex;',
-            'align-items:center;justify-content:center;background:rgba(178,140,245,.18);',
-            'border:1px solid rgba(178,140,245,.4);font-family:"Noto Kufi Arabic",sans-serif;',
-            'font-size:14.5px;font-weight:900;color:#e9e4f5;}',
+            '.er-select-cand-name{flex:1;min-width:0;text-align:center;font-size:22px;font-weight:700;',
+            'color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '.er-select-cand-num{flex:none;box-sizing:border-box;min-width:40px;height:50px;padding:0 4px;',
+            'border-radius:15px;display:flex;align-items:center;justify-content:center;background:#F50F0F;',
+            'font-family:"Noto Kufi Arabic",sans-serif;font-size:28px;font-weight:900;color:#fff;line-height:1;}',
+            '#er-select-box.er-role-revive .er-select-cand-num{background:#16a34a;}',
 
             /* ---- Result-announcement tab (4 seconds) ---- */
             /* Announcement colors (originally designed for a light
@@ -2395,11 +2397,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // still useful for the "type a number in chat" flow).
     function selectChooserCardHtml(chooser, roleClass) {
         return '<div class="er-select-chooser-card">' +
-            '<span class="er-select-chooser-label">صاحب الاختيار</span>' +
             '<div class="er-select-chooser-ring ' + roleClass + '">' + ringAvatarHtml(chooser) + '</div>' +
             '<div class="er-select-chooser-nmrow">' +
                 '<span class="er-select-chooser-nm" data-agp-pcard-name="1">' + escapeHtml(playerLabel(chooser)) + '</span>' +
-                '<span class="er-select-chooser-num">' + playerNumber(chooser) + '</span>' +
             '</div>' +
         '</div>';
     }
