@@ -56,20 +56,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     var EMOJIS = ['🍕','🍔','🌮','🍩','🍉','🍓','🍌','🍇','🍒','🥑','🌶️','🥕','🌽','🍄','🧀','🥐','🍿','🧁','🍭','☕','🐶','🐱','🦊','🐼','🐸','🐵','🦁','🐯','🐨','🐰','🐙','🦋','🐢','🦄','🐝','🦀','🐧','🦉','🐳','🦈','⚽','🏀','🎾','🎱','🎲','🎯','🎸','🎧','🎮','🧩','🚗','🚀','✈️','🚲','⛵','🚁','🌙','⭐','🔥','❄️','🌈','⚡','🌵','🌻','🌴','🍁','💎','🎁','🔑','💡','📱','⌚','👑','🎩','🕶️','🧲','🎈','🔔','✂️','🧸'];
     // Difficulty (chosen on the initial settings screen, fixed for the match):
-    //  - 'easy': 3 boxes in round 1, then one more box every round.
-    //  - 'hard': 6 boxes in round 1, then 3 more boxes every round (33 in
+    //  - 'easy': 6 boxes in round 1, then one more box every round (15 in
+    //    round 10).
+    //  - 'hard': 9 boxes in round 1, then 3 more boxes every round (36 in
     //    round 10). Laid out with whichever column count gives the biggest
     //    boxes in the available space (see bestFitLayout()).
-    var HARD_START_BOXES = 6;
+    var HARD_START_BOXES = 9;
     var HARD_STEP = 3;
     function hardBoxesForRound(round) { return HARD_START_BOXES + (round - 1) * HARD_STEP; }
 
-    // Easy mode — boxes per round: 3 in round 1, then one more box every round.
-    var START_BOXES = 3;
+    // Easy mode — boxes per round: 6 in round 1, then one more box every round.
+    var START_BOXES = 6;
     function boxesForRound(round) { return START_BOXES + (round - 1); }
     // Columns x rows used to lay out N boxes (an incomplete last row is
     // centered — see #mc-grid). Past the table: a near-square layout.
-    var LAYOUTS = { 3: [3, 1], 4: [2, 2], 5: [3, 2], 6: [3, 2], 7: [4, 2], 8: [4, 2], 9: [3, 3], 10: [5, 2], 11: [4, 3], 12: [4, 3] };
+    var LAYOUTS = { 3: [3, 1], 4: [2, 2], 5: [3, 2], 6: [3, 2], 7: [4, 2], 8: [4, 2], 9: [3, 3], 10: [5, 2], 11: [4, 3], 12: [4, 3], 13: [5, 3], 14: [5, 3], 15: [5, 3] };
     function layoutFor(n) {
         if (LAYOUTS[n]) return LAYOUTS[n];
         var cols = Math.ceil(Math.sqrt(n));
@@ -212,6 +213,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _result = null;       // { correct, survived, out, tie, noAns, counts, final, outs:[player] }
     var _winners = [];
     var _busyUntil = 0;
+    var _questionReady = false; // question text shown only once every box has closed
+    var _questionTimer = null;
     var _lastSec = null;
     var _lastBlip = 0;
     var _tickIv = null;
@@ -232,6 +235,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _result = null;
         _winners = [];
         _busyUntil = 0;
+        _questionReady = false;
+        clearTimeout(_questionTimer);
         _lastSec = null;
         _elimOpen = false;
         clearTimeout(_elimTimer);
@@ -1440,7 +1445,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function renderTop() {
         var rv = el('mc-round-val'); if (rv) rv.textContent = _round + ' / ' + MAX_ROUNDS;
         var gv = el('mc-grid-val'); if (gv) gv.textContent = String(_cells.length || (_matchDifficulty === 'hard' ? hardBoxesForRound(1) : boxesForRound(1)));
-        var pb = el('mc-phase-badge'); if (pb) pb.textContent = LABELS[_phase] || '';
+        var pb = el('mc-phase-badge'); if (pb) pb.textContent = (_phase === 'question' && !_questionReady) ? 'تتقفل' : (LABELS[_phase] || '');
         var mb = el('mc-mute-btn'); if (mb) mb.textContent = Sfx.muted ? '🔇' : '🔊';
     }
 
@@ -1452,6 +1457,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (_phase === 'memorize') {
             html = '<div class="mc-h-big">احفظ مكان كل إيموجي</div>' +
                 '<div class="mc-h-sub">المربعات بتتغطى بعد لحظات</div>';
+        } else if (_phase === 'question' && !_questionReady) {
+            html = '<div class="mc-h-big">الصناديق تتقفل...</div>' +
+                '<div class="mc-h-sub">السؤال بيطلع أول ما تتقفل كلها</div>';
         } else if (_phase === 'question') {
             var emoji = (_cells[_target] || {}).e || '';
             html = '<div class="mc-q-row"><span class="mc-q-word">' + escapeHtml(_q[0]) + '</span>' +
@@ -1610,12 +1618,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var a = answerTime();
         _lastSec = null;
         var n = _cells.length;
-        _busyUntil = performance.now() + (n * stepFor(n) + 0.5) * 1000;
+        // Every box flips closed one after another (stagger step per box +
+        // a 0.5s flip each). The question — and the answer timer — only
+        // start once the last box has fully closed.
+        var coverMs = ((n - 1) * stepFor(n) + 0.5) * 1000 + 250;
+        _busyUntil = performance.now() + coverMs;
+        _questionReady = false;
         _phase = 'question';
         _t = a; _tMax = a;
         _answers = {};
         renderAll();
         Sfx.play('cover', n);
+        clearTimeout(_questionTimer);
+        _questionTimer = setTimeout(function () {
+            if (_phase !== 'question') return;
+            _questionReady = true;
+            renderTop();
+            renderHead();
+        }, coverMs);
     }
 
     function resolve() {
@@ -1685,7 +1705,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function wireCommentListener() {
         if (typeof _commentUnsub === 'function') _commentUnsub();
         _commentUnsub = AGP.events.on('stream:commentReceived', function (payload) {
-            if (!_matchActive || _phase !== 'question' || !payload || typeof payload.text !== 'string') return;
+            if (!_matchActive || _phase !== 'question' || !_questionReady || !payload || typeof payload.text !== 'string') return;
             var m = normalizeDigits(payload.text.trim()).match(/^!?\s*(\d{1,2})$/);
             if (!m) return;
             var player = _alive.filter(function (p) { return p.id === payload.id; })[0] ||
@@ -1919,7 +1939,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             },
             {
                 key: 'difficulty', type: 'pill-choice', label: '🎯 مستوى الصعوبة',
-                description: 'سهل: تبدأ بـ3 صناديق ويزيد صندوق كل جولة · صعب: تبدأ بـ6 صناديق ويزيد 3 صناديق كل جولة',
+                description: 'سهل: تبدأ بـ6 صناديق ويزيد صندوق كل جولة · صعب: تبدأ بـ9 صناديق ويزيد 3 صناديق كل جولة',
                 options: [
                     { label: '🙂 سهل', value: 'easy' },
                     { label: '🔥 صعب', value: 'hard' }
@@ -2715,7 +2735,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             settingsTitle: 'إعدادات لعبة تحدي الذاكرة',
             gameExplanation: 'كل جولة تظهر شبكة إيموجيز لثواني، بعدها تتغطى المربعات ويبان رقم كل مربع فقط. ' +
                 'يطلع سؤال عن مكان إيموجي معيّن، وكل لاعب يكتب رقم المربع في الشات (يقدر يغيّر إجابته قبل ما يخلص الوقت، وآخر إجابة هي اللي تنحسب). ' +
-                'اللي يغلط أو ما يجاوب يطلع من اللعبة، ولو ما أحد جاوب صح الكل يكمل. بالمستوى السهل أول جولة 3 صناديق وكل جولة يزيد صندوق، وبالمستوى الصعب أول جولة 6 صناديق وكل جولة يزيد 3 صناديق. ' +
+                'اللي يغلط أو ما يجاوب يطلع من اللعبة، ولو ما أحد جاوب صح الكل يكمل. بالمستوى السهل أول جولة 6 صناديق وكل جولة يزيد صندوق، وبالمستوى الصعب أول جولة 9 صناديق وكل جولة يزيد 3 صناديق. السؤال يطلع بعد ما تتقفل الصناديق كلها. ' +
                 'اللعبة ' + MAX_ROUNDS + ' جولات كحد أقصى، أو تنتهي أول ما يبقى لاعب واحد — ولو بقى أكثر من لاعب بعد آخر جولة فكلهم فائزين.',
             connectButtonLabel: 'الاتصال بالبث والانتقال للوبي',
             minPlayersToStart: 2,
