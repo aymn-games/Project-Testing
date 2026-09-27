@@ -3392,7 +3392,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function homeNavigate() {
         var homeBtn = el('agp-header-home-btn');
         if (homeBtn) { homeBtn.click(); }
-        else { window.location.href = '../../index.html'; }
+        else { window.location.href = '../../games.html'; }
     }
 
     function makeBackToPlatformBtn() {
@@ -4300,7 +4300,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             connectButtonLabel: 'الاتصال بالبث والانتقال للوبي',
             minPlayersToStart: 2,
             logoImage: '../../logo.png',
-            homeUrl: '../../index.html',
+            homeUrl: '../../games.html',
             assetBasePath: '../../',
             settingsFields: buildSettingsFields(),
             onStartRound: handleStartRound

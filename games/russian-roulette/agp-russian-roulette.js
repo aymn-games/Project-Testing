@@ -2503,7 +2503,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         exitBtn.textContent = '🚪 إنهاء اللعبة والعودة لمنصة الألعاب';
         exitBtn.addEventListener('click', function () {
             if (window.confirm('هذا بينهي المباراة الحالية ويرجّعك لمنصة ألعاب أيمن. متأكد؟')) {
-                window.location.href = '../../index.html';
+                window.location.href = '../../games.html';
             }
         });
         footer.appendChild(exitBtn);
@@ -2619,7 +2619,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         homeBtn.type = 'button';
         homeBtn.className = 'rr-home-from-settings-btn';
         homeBtn.textContent = 'العودة لمنصة العاب ايمن';
-        homeBtn.addEventListener('click', function () { window.location.href = '../../index.html'; });
+        homeBtn.addEventListener('click', function () { window.location.href = '../../games.html'; });
         connectBtn.insertAdjacentElement('afterend', homeBtn);
     }
 
@@ -3028,7 +3028,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             connectButtonLabel: 'الاتصال بالبث والدخول',
             minPlayersToStart: 2,
             logoImage: '../../logo.png',
-            homeUrl: '../../index.html',
+            homeUrl: '../../games.html',
             assetBasePath: '../../',
             settingsFields: buildSettingsFields(),
             onStartRound: handleStartRound

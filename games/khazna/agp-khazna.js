@@ -75,7 +75,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div id="kz-header-brand"><img src="../../logo.png" alt="ألعاب أيمن" onerror="this.style.display=\'none\'"></div>';
         document.body.appendChild(header);
 
-        el('kz-header-home-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('kz-header-home-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         el('kz-header-info-btn').addEventListener('click', function () { showInstructions(); });
         el('kz-header-settings-btn').addEventListener('click', function () { openInMatchDrawer(); });
     }
@@ -292,7 +292,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             renderSettingsScreen();
         });
 
-        el('kz-back-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('kz-back-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         el('kz-connect-btn').addEventListener('click', handleConnectClick);
         refreshConnectionBadge();
     }
@@ -502,7 +502,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var ok = window.confirm('بترجع لشاشة الإعدادات وينقطع الاتصال الحالي بالبث. تبي تكمل؟');
             if (ok) window.location.reload();
         });
-        el('kz-lobby-back-platform-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('kz-lobby-back-platform-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         el('kz-start-round-btn').addEventListener('click', function () { startMatch(); });
     }
 
@@ -1291,7 +1291,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('kz-drawer-close-btn').addEventListener('click', closeInMatchDrawer);
         dim.addEventListener('click', closeInMatchDrawer);
         el('kz-open-mini-lobby-btn').addEventListener('click', openMiniLobby);
-        el('kz-back-platform-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('kz-back-platform-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
 
         drawer.querySelectorAll('.kz-drawer-tabs button').forEach(function (btn) {
             btn.addEventListener('click', function () {
@@ -1590,7 +1590,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             window.location.reload();
         });
         el('kz-exit-btn').addEventListener('click', function () {
-            window.location.href = '../../index.html';
+            window.location.href = '../../games.html';
         });
 
         AGP.events.emit('game:roundEnded', { id: GAME_ID });

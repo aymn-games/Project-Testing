@@ -337,7 +337,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         // homeUrl is relative, set per-game based on folder depth.
         document.getElementById('agp-header-home-btn').onclick = function () {
-            window.location.href = _config.homeUrl || '../../index.html';
+            window.location.href = _config.homeUrl || '../../games.html';
         };
 
         var banner = document.createElement('div');

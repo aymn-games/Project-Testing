@@ -2,6 +2,19 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <script>
+    // Leaving a game for the home page or the games library ends the
+    // previous stream connection: clear the saved one that games read
+    // (agp-game-shell.js getSavedStreamConnection) so they don't keep
+    // treating the streamer as connected. Also on back/forward restores.
+    (function () {
+      function clearSavedStreamConnection() {
+        try { localStorage.removeItem('agp:agp-stream-connection'); } catch (e) {}
+      }
+      clearSavedStreamConnection();
+      window.addEventListener('pageshow', function (e) { if (e.persisted) clearSavedStreamConnection(); });
+    })();
+  </script>
   <title>Bundled Page</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }

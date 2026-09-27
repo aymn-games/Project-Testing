@@ -1674,7 +1674,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             connectButtonLabel: 'اتصال بالبث وبدء الإعدادات',
             minPlayersToStart: 3,
             logoImage: '../../logo.png',
-            homeUrl: '../../index.html',
+            homeUrl: '../../games.html',
             assetBasePath: '../../',
             settingsFields: buildSettingsFields(),
             onStartRound: handleStartRound
@@ -1976,7 +1976,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (document.getElementById('mc-settings-home-btn')) return;
         var btn = document.createElement('a');
         btn.id = 'mc-settings-home-btn';
-        btn.href = '../../index.html';
+        btn.href = '../../games.html';
         btn.className = 'mc-settings-home-btn';
         btn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
         box.appendChild(btn);
@@ -1987,7 +1987,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (document.getElementById('mc-connect-home-btn')) return;
         var btn = document.createElement('a');
         btn.id = 'mc-connect-home-btn';
-        btn.href = '../../index.html';
+        btn.href = '../../games.html';
         btn.className = 'mc-settings-home-btn';
         btn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
         box.appendChild(btn);

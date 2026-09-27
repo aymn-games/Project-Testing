@@ -109,7 +109,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div id="cn-header-brand"><img src="../../logo.png" alt="ألعاب أيمن" onerror="this.style.display=\'none\'"></div>';
         document.body.appendChild(header);
 
-        el('cn-header-home-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('cn-header-home-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
     }
 
     function ensureRoot() {
@@ -260,7 +260,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             renderSettingsScreen();
         });
 
-        el('cn-back-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('cn-back-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         el('cn-connect-btn').addEventListener('click', handleConnectClick);
         refreshConnectionBadge();
     }
@@ -490,7 +490,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderLobbyPlayerGrids();
 
         el('cn-lobby-htp-btn').addEventListener('click', showHowToPlay);
-        el('cn-lobby-back-platform-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('cn-lobby-back-platform-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         el('cn-start-round-btn').addEventListener('click', function () {
             _registrationOpen = false;
             startNewMatch();
@@ -1561,7 +1561,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var exitBtn = el('cn-match-exit-btn');
         if (exitBtn) exitBtn.addEventListener('click', function () {
             var ok = window.confirm('بترجع لمنصة ألعاب أيمن. تبي تكمل؟');
-            if (ok) { stopMatchTimers(); window.location.href = '../../index.html'; }
+            if (ok) { stopMatchTimers(); window.location.href = '../../games.html'; }
         });
 
         var hintRow = el('cn-match-row-hintSeconds');
@@ -1597,7 +1597,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var replayBtn = el('cn-match-replay-btn');
         if (replayBtn) replayBtn.addEventListener('click', function () { startNewMatch(true); renderMatchScreen(); });
         var homeBtn = el('cn-match-home-btn');
-        if (homeBtn) homeBtn.addEventListener('click', function () { stopMatchTimers(); window.location.href = '../../index.html'; });
+        if (homeBtn) homeBtn.addEventListener('click', function () { stopMatchTimers(); window.location.href = '../../games.html'; });
 
         var qrBox = el('cn-match-qr-box');
         if (qrBox && window.QRCode) {

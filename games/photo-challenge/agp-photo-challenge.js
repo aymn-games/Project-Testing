@@ -132,9 +132,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</div>';
         document.body.appendChild(header);
 
-        el('pc-header-home-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('pc-header-home-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         el('pc-header-exit-btn').addEventListener('click', function () {
-            if (window.confirm('تبي تخرج من اللعبة؟ أي مباراة شغالة بتنقطع.')) window.location.href = '../../index.html';
+            if (window.confirm('تبي تخرج من اللعبة؟ أي مباراة شغالة بتنقطع.')) window.location.href = '../../games.html';
         });
         el('pc-header-info-btn').addEventListener('click', function () {
             AGP.log('Photo Challenge: زر الشرح -- الشاشة لسا ما بُنيت.');
@@ -295,7 +295,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             renderSettingsScreen();
         });
 
-        el('pc-back-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('pc-back-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         el('pc-connect-btn').addEventListener('click', handleConnectClick);
         refreshConnectionBadge();
     }
@@ -1003,7 +1003,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             renderMatchScreen();
         });
         el('pc-winner-newmatch-btn').addEventListener('click', function () { window.location.reload(); });
-        el('pc-winner-home-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('pc-winner-home-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
     }
 
     function checkForWinner() {

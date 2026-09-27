@@ -259,7 +259,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
             '<button type="button" id="tw-connect-btn" class="tw-btn-connect">اتصل بالبث و انتقل للوبي</button>';
 
-        el('tw-settings-back-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('tw-settings-back-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         wireSettingsHandlers();
     }
 
@@ -998,7 +998,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _matchActive = false;
         AGP.timerManager.stop(SELECTION_TIMER_NAME);
         if (_turnCommentUnsub) { _turnCommentUnsub(); _turnCommentUnsub = null; }
-        window.location.href = '../../index.html';
+        window.location.href = '../../games.html';
     }
 
     // اللوبي الفرعي (إضافة لاعب لمقعد فاضي وسط المباراة)
@@ -1112,7 +1112,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</div>';
 
         el('tw-winner-restart').addEventListener('click', handleRestartSamePlayers);
-        el('tw-winner-end').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('tw-winner-end').addEventListener('click', function () { window.location.href = '../../games.html'; });
         el('tw-winner-newmatch').addEventListener('click', handleNewMatchNewPlayers);
     }
 

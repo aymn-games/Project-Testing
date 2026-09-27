@@ -110,7 +110,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div id="shk-header-title">' + escapeHtml(GAME_NAME) + '</div>' +
             '<div id="shk-header-brand"><img src="../../logo.png" alt="ألعاب أيمن" onerror="this.style.display=\'none\'"></div>';
         document.body.appendChild(header);
-        el('shk-header-home-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('shk-header-home-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
     }
 
     // شاشة الإعدادات -- قالب "settings-no-box"
@@ -237,7 +237,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             });
         });
 
-        el('shk-back-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('shk-back-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         el('shk-connect-btn').addEventListener('click', handleConnectClick);
         refreshConnectionBadge();
     }
@@ -402,7 +402,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var ok = window.confirm('بترجع لشاشة الإعدادات وينقطع الاتصال الحالي بالبث. تبي تكمل؟');
             if (ok) window.location.reload();
         });
-        el('shk-lobby-back-platform-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('shk-lobby-back-platform-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         el('shk-start-round-btn').addEventListener('click', function () { startMatch(); });
     }
 
