@@ -1171,7 +1171,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div id="tt-settings-error" class="tt-error-msg" style="display:none;"></div>' +
             '<button type="button" id="tt-connect-btn" class="tt-btn-connect">اتصل بالبث وانتقل للوبي</button>';
 
-        el('tt-settings-back-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('tt-settings-back-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         wireSettingsHandlers();
     }
 
@@ -1279,7 +1279,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</details>';
 
         el('tt-start-match-btn').addEventListener('click', handleStartMatch);
-        el('tt-lobby-back-platform-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('tt-lobby-back-platform-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         el('tt-lobby-back-settings-btn').addEventListener('click', function () {
             var ok = window.confirm('بترجع لشاشة الإعدادات وينقطع الاتصال الحالي بالبث. تبي تكمل؟');
             if (ok) window.location.reload();
@@ -1695,7 +1695,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</div>';
 
         el('tt-admin-close-btn').addEventListener('click', closeAdminPanel);
-        el('tt-admin-platform-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('tt-admin-platform-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         var endBtn = el('tt-admin-end-btn');
         if (endBtn) endBtn.addEventListener('click', function () {
             closeAdminPanel();
@@ -1803,7 +1803,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</div>';
 
         fitCardNames(root);
-        el('tt-winner-platform-btn').addEventListener('click', function () { window.location.href = '../../index.html'; });
+        el('tt-winner-platform-btn').addEventListener('click', function () { window.location.href = '../../games.html'; });
         el('tt-rematch-btn').addEventListener('click', function () {
             root.style.display = 'none';
             AGP.scoreManager.reset();

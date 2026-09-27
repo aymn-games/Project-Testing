@@ -775,7 +775,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         btn.type = 'button';
         btn.className = 'wc-settings-home-btn';
         btn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
-        btn.addEventListener('click', function () { window.location.href = '../../index.html'; });
+        btn.addEventListener('click', function () { window.location.href = '../../games.html'; });
         connectBtn.insertAdjacentElement('afterend', btn);
     }
 
@@ -877,7 +877,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             homeBtn.type = 'button';
             homeBtn.className = 'wc-lobby-action-btn wc-lobby-home-btn';
             homeBtn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
-            homeBtn.addEventListener('click', function () { window.location.href = '../../index.html'; });
+            homeBtn.addEventListener('click', function () { window.location.href = '../../games.html'; });
             row.appendChild(homeBtn);
         }
     }
@@ -955,7 +955,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             connectButtonLabel: 'اتصال بالبث وبدء الإعدادات',
             minPlayersToStart: 2,
             logoImage: '../../logo.png',
-            homeUrl: '../../index.html',
+            homeUrl: '../../games.html',
             assetBasePath: '../../',
             settingsFields: buildSettingsFields(),
             onStartRound: handleStartRound
@@ -987,7 +987,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (wcRematchBtn) wcRematchBtn.addEventListener('click', rematchRound);
         if (wcWinnerHomeBtn) wcWinnerHomeBtn.addEventListener('click', function () {
             closeWinnerModal();
-            window.location.href = '../../index.html';
+            window.location.href = '../../games.html';
         });
     }
 
