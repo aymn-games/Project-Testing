@@ -559,7 +559,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         startFreshMatch();
     }
 
+    // بداية المباراة الفعلية -- لحساب مدة اللعب بنظام نقاط المنصة.
+    var _matchStartedAt = 0;
+
     function startFreshMatch() {
+        _matchStartedAt = Date.now();
         AGP.scoreManager.reset();
         AGP.scoreManager.setScore(SCORE_KEY_BLUE, _settings.startingPoints);
         AGP.scoreManager.setScore(SCORE_KEY_RED, _settings.startingPoints);
@@ -904,7 +908,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _matchActive = false;
         AGP.timerManager.stop(SELECTION_TIMER_NAME);
         var winningTeam = scoreBlue <= 0 ? TEAM_RED : TEAM_BLUE;
+        reportPlatformPoints(winningTeam);
         renderWinnerScreen(winningTeam);
+    }
+
+    // نظام نقاط المنصة الموحّد (window.AGPAuth.reportMatchPoints): كل
+    // لاعبي الفريقين مشاركون، ولاعبو الفريق الفائز فائزون (لعبة فريقين).
+    function reportPlatformPoints(winningTeam) {
+        if (!window.AGPAuth || typeof window.AGPAuth.reportMatchPoints !== 'function') return;
+        window.AGPAuth.reportMatchPoints({
+            players: getTeamPlayers(TEAM_BLUE).concat(getTeamPlayers(TEAM_RED)),
+            winnerIds: getTeamPlayers(winningTeam).map(function (p) { return p.id; }),
+            teamGame: true,
+            durationMs: _matchStartedAt ? (Date.now() - _matchStartedAt) : 0
+        });
     }
 
     // لوحة إدارة المباراة (زر ⚙️) -- صندوق عائم ينزلق من الجهة

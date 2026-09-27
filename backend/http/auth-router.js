@@ -466,17 +466,19 @@ function handleToggleEntrance(req, res, body, user) {
 
 /**
  * تُستدعى من dashboard-core عند إنهاء جولة. body.participants: مصفوفة
- * {tiktokUsername, won}. كل مشارك يُطابَق بحساب مسجَّل موثَّق تيك توك قبل
+ * {tiktokUsername, won}، وbody.teamGame = true لألعاب الفريقين (مكافأة
+ * فوز مختلفة، راجع points-service.js). كل مشارك يُطابَق بحساب مسجَّل موثَّق تيك توك قبل
  * منح أي نقاط — لا نقاط لمن لا حساب له، بصمت.
  */
 function handleRoundComplete(req, res, body) {
   var participants = Array.isArray(body.participants) ? body.participants : [];
   var durationMs = Number(body.durationMs) || 0;
+  var teamGame = Boolean(body.teamGame);
   var results = [];
   participants.forEach(function (p) {
     var matched = authService.findVerifiedUserByTikTok(p && p.tiktokUsername);
     if (!matched) return;
-    var award = pointsService.awardForRoundCompletion(matched.id, { won: Boolean(p.won), durationMs: durationMs });
+    var award = pointsService.awardForRoundCompletion(matched.id, { won: Boolean(p.won), teamGame: teamGame, durationMs: durationMs });
     results.push({ tiktokUsername: p.tiktokUsername, userId: matched.id, added: award.added, totalPoints: award.totalPoints });
   });
   sendJson(res, 200, { success: true, awarded: results });
