@@ -685,7 +685,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function playerCardHtml(p) {
         return '<div class="lc-lobby-card-wrap">' +
             '<button type="button" class="lc-lobby-remove-x" data-id="' + escapeAttr(p.id) + '" title="حذف اللاعب">×</button>' +
-            AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', outClass: 'lc-pcard-wrap', size: 43, width: 277, height: 51 }) +
+            AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../', outClass: 'lc-pcard-wrap' }) +
         '</div>';
     }
     function fitLobbyCardNames(rootEl) {
@@ -706,6 +706,75 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    // Framed lobby cards, shown whole in the 217x57 slot (same approach as
+    // Elimination Roulette's lobby): the shared renderer crops tall frame
+    // artwork to its fixed card height, so each framed card is re-expanded
+    // to its frame image's full opaque height (measured once per image)
+    // and zoomed to fit 217px wide, at most 75px tall.
+    var _lcFrameBoundsCache = {};
+
+    function getFrameOpaqueRows(src) {
+        if (_lcFrameBoundsCache[src]) return _lcFrameBoundsCache[src];
+        _lcFrameBoundsCache[src] = new Promise(function (resolve) {
+            var img = new Image();
+            img.onload = function () {
+                try {
+                    var w = Math.min(img.naturalWidth, 300);
+                    var h = Math.max(1, Math.round(img.naturalHeight * w / img.naturalWidth));
+                    var c = document.createElement('canvas');
+                    c.width = w; c.height = h;
+                    var ctx = c.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    var data = ctx.getImageData(0, 0, w, h).data;
+                    var top = -1, bottom = -1;
+                    for (var y = 0; y < h && top < 0; y++) {
+                        for (var x = 0; x < w; x++) { if (data[(y * w + x) * 4 + 3] > 16) { top = y; break; } }
+                    }
+                    for (var y2 = h - 1; y2 >= 0 && bottom < 0; y2--) {
+                        for (var x2 = 0; x2 < w; x2++) { if (data[(y2 * w + x2) * 4 + 3] > 16) { bottom = y2 + 1; break; } }
+                    }
+                    resolve(top < 0 ? null : { top: top / h, bottom: bottom / h });
+                } catch (e) { resolve(null); }
+            };
+            img.onerror = function () { resolve(null); };
+            img.src = src;
+        });
+        return _lcFrameBoundsCache[src];
+    }
+
+    function fitLobbyFramedCards(container) {
+        if (!container) return;
+        container.querySelectorAll('.agp-pcard-tpl:not([data-lc-fit])').forEach(function (card) {
+            var frameEl = card.querySelector('.agp-pcard-tpl-frame-img');
+            var m = frameEl && /url\(["']?(.*?)["']?\)/.exec(frameEl.style.backgroundImage);
+            if (!m) return;
+            card.setAttribute('data-lc-fit', 'pending');
+            getFrameOpaqueRows(m[1]).then(function (rows) {
+                if (!rows || !card.isConnected) return;
+                var frameTop = parseFloat(frameEl.style.top) || 0;
+                var frameH = parseFloat(frameEl.style.height) || 0;
+                var bandTop = frameTop + rows.top * frameH;
+                var bandBottom = frameTop + rows.bottom * frameH;
+                var children = card.querySelectorAll('.agp-pcard-tpl-avatar,.agp-pcard-tpl-name,.agp-pcard-tpl-frame-img');
+                Array.prototype.forEach.call(children, function (child) {
+                    if (child === frameEl) return;
+                    var t = parseFloat(child.style.top) || 0;
+                    var ch = parseFloat(child.style.height) || 0;
+                    if (t < bandTop) bandTop = t;
+                    if (t + ch > bandBottom) bandBottom = t + ch;
+                });
+                Array.prototype.forEach.call(children, function (child) {
+                    child.style.top = ((parseFloat(child.style.top) || 0) - bandTop) + 'px';
+                });
+                var fullH = bandBottom - bandTop;
+                var cardW = parseFloat(card.style.width) || 298;
+                card.style.height = fullH + 'px';
+                card.style.zoom = String(Math.min(217 / cardW, 75 / fullH));
+                card.setAttribute('data-lc-fit', '1');
+            });
+        });
+    }
+
     function refreshLobbyPanels() {
         [TEAM1, TEAM2].forEach(function (team) {
             var body = el('lc-team-body-' + team);
@@ -714,6 +783,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             body.innerHTML = teamPlayerChipsHtml(team, players);
             wireLobbyCardRemoveButtons(body);
             fitLobbyCardNames(body);
+            fitLobbyFramedCards(body);
             var countEl = el('lc-team-count-' + team);
             if (countEl) countEl.textContent = players.length;
         });

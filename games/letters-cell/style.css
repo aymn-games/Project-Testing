@@ -145,7 +145,7 @@ body.lc-active { scrollbar-width: none; }
 .lc-lobby-screen { width: 100%; min-height: 100vh; overflow-y: auto; background: var(--lc-bg); box-sizing: border-box; display: flex; flex-direction: column; align-items: center; padding: 40px 24px 32px; gap: 28px; position: relative; }
 .lc-logo-lobby { font-size: clamp(24px,3.4vw,38px); position: relative; z-index: 1; }
 .lc-lobby-panels { width: 100%; max-width: 1320px; display: flex; gap: 28px; flex-wrap: wrap; justify-content: center; position: relative; z-index: 1; }
-.lc-team-panel { flex: 1; min-width: 380px; height: 500px; overflow: hidden; background: #1b1526; border: 4px solid #ffffff; border-radius: 20px; display: flex; flex-direction: column; box-shadow: 0 24px 50px rgba(0,0,0,0.45); box-sizing: border-box; }
+.lc-team-panel { flex: 0 1 576px; min-width: 0; height: 521px; overflow: hidden; background: #1b1526; border: 4px solid #ffffff; border-radius: 20px; display: flex; flex-direction: column; box-shadow: 0 24px 50px rgba(0,0,0,0.45); box-sizing: border-box; }
 .lc-team-panel-header { padding: 16px 22px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .lc-team-panel-name { font-size: clamp(18px,2vw,24px); font-weight: 900; color: #fef4f4; }
 .lc-team-panel-badges { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -154,18 +154,32 @@ body.lc-active { scrollbar-width: none; }
 .lc-badge-count span { color: #fef4f4; font-weight: 700; }
 .lc-badge-code { color: #fef4f4; font-weight: 900; }
 .lc-badge-code span { opacity: 0.8; font-weight: 700; }
-.lc-team-panel-body { padding: 18px 22px; overflow-y: auto; display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; flex: 1; align-content: start; }
-.lc-lobby-card-wrap { position: relative; }
-.lc-lobby-remove-x {
-    position: absolute; top: 4px; right: 4px; z-index: 5; width: 20px; height: 20px; border-radius: 50%;
-    background: var(--lc-remove); color: #fff; border: 2px solid #1b0d0d; font-size: 0.7em; font-weight: 900;
-    display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+.lc-team-panel-body { padding: 24px 22px 18px; overflow-y: auto; scrollbar-width: none; display: grid; grid-template-columns: repeat(2,217px); column-gap: 51px; row-gap: 46px; justify-content: center; flex: 1; align-content: start; }
+.lc-team-panel-body::-webkit-scrollbar { display: none; }
+/* بطاقة اللاعب -- نفس بطاقة اللوبي القياسية 217×57 (مثل روليت الإقصاء
+   وحرب الفريقين): الصورة 48px يمين داخل البطاقة، الاسم بالوسط، وزر
+   الحذف × صغير يسار البطاقة. البطاقة بإطار تظهر كاملة بنفس الخانة
+   (fitLobbyFramedCards بالـJS). */
+.lc-lobby-card-wrap { position: relative; width: 217px; height: 57px; display: flex; align-items: center; justify-content: center; }
+.lc-lobby-screen .agp-pcard {
+    width: 217px !important; height: 57px !important; box-sizing: border-box !important;
+    padding: 0 3px 0 28px !important; gap: 6px !important; border-radius: 24px !important;
 }
-/* البطاقة بدون إطار: الصورة يمين ولوح الاسم يسار (اتجاه rtl) -- الإكس
-   يروح لنهاية البطاقة (يسار) جوه حدود لوح الاسم، مو فوق الصورة. البطاقة
-   المؤطَّرة عكسها (الصورة يسار) فتبقى الإكس يمين كما هي. */
-.lc-lobby-card-wrap:has(.agp-pcard-name-basic) .lc-lobby-remove-x {
-    right: auto; left: 4px;
+/* الألوان تبقى نفس ألوان البطاقة الأصلية باللعبة (كبسولة شفافة بحد أبيض
+   وصورة داكنة) -- المتغيّر المقاس فقط. */
+.lc-lobby-screen .agp-pcard-avatar-basic { width: 48px !important; height: 48px !important; }
+.lc-lobby-screen .agp-pcard-name-basic {
+    flex: 1 1 auto !important; width: auto !important; min-width: 0 !important; height: auto !important;
+    margin: 0 !important; padding: 0 !important; font-size: 20px !important; font-weight: 800 !important;
+    background: none !important; border: none !important;
+}
+.lc-lobby-screen .agp-pcard-avatar-basic--fallback { font-size: 15px !important; }
+.lc-lobby-screen .agp-pcard-tpl { zoom: 0.7282; flex-shrink: 0; }
+.lc-lobby-remove-x {
+    position: absolute; top: 50%; left: 7px; transform: translateY(-50%); z-index: 5;
+    width: 18px; height: 18px; border-radius: 50%; padding: 0;
+    background: var(--lc-remove); color: #fff; border: 2px solid #1b0d0d; font-weight: 900;
+    font-size: 10px; line-height: 14px; text-align: center; cursor: pointer;
 }
 .lc-pcard-wrap { max-width: 100% !important; }
 .lc-team-empty { font-size: 13px; color: #fef4f4; opacity: 0.6; grid-column: 1/-1; }
@@ -173,7 +187,14 @@ body.lc-active { scrollbar-width: none; }
 .lc-lobby-join-hint-icon { font-size: 18px; flex-shrink: 0; }
 .lc-lobby-join-hint-text { font-size: 13px; line-height: 1.9; color: var(--lc-text-dim2); }
 .lc-lobby-join-hint-text b { color: var(--lc-accent2); }
-.lc-lobby-btn-row { display: flex; align-items: center; justify-content: center; gap: 12px; position: relative; z-index: 1; }
+.lc-lobby-btn-row { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; position: relative; z-index: 1; }
+/* أزرار اللوبي بنفس مقاس زر لوبيات الفرق الجديدة (320×48). */
+.lc-lobby-btn-row > button { width: 320px; max-width: 90vw; height: 48px; padding: 0 14px; font-size: 18px; }
+@media (max-width: 1240px) {
+    .lc-lobby-panels { flex-direction: column; align-items: center; }
+    .lc-team-panel { width: min(576px, 100%); flex: none; }
+}
+@media (max-width: 600px) { .lc-team-panel-body { grid-template-columns: repeat(auto-fill,217px); } }
 
 /* ==========================================================================
    3) شاشة اللعب
