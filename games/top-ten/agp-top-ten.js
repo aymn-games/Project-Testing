@@ -1261,11 +1261,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         showGearButton();
 
         var root = ensureLobbyEl();
-        root.style.display = 'block';
+        // Lobby layout (same structure/card size as Elimination Roulette's
+        // lobby): fixed title + join line on top, a scrolling card grid in
+        // the middle, and the action buttons always visible at the bottom.
+        root.style.display = 'flex';
         root.innerHTML =
-            '<h2 class="tt-lobby-heading">اللوبي بانتظار المتسابقين <span class="tt-lobby-heading-accent">' + escapeHtml(GAME_NAME) + '</span></h2>' +
-            '<div class="tt-lobby-banner">عشان تدخل المسابقة اكتب بشات البث الكلمة: <b>' + escapeHtml(_settings.keyword) + '</b></div>' +
-            '<div class="tt-lobby-count" id="tt-lobby-count"></div>' +
+            '<div class="tt-lobby-head">' +
+                '<h2 class="tt-lobby-heading">لوبي الدخول للعبة "<span class="tt-lobby-heading-accent">' + escapeHtml(GAME_NAME) + '</span>"</h2>' +
+                '<div class="tt-lobby-joinrow">' +
+                    '<div class="tt-lobby-join"><span class="tt-lobby-join-label">للدخول اكتب في شات البث</span>' +
+                    '<span class="tt-lobby-keyword">' + escapeHtml(_settings.keyword) + '</span></div>' +
+                    '<div class="tt-lobby-count" id="tt-lobby-count"></div>' +
+                '</div>' +
+            '</div>' +
             '<div class="tt-player-grid" id="tt-lobby-grid"></div>' +
             '<div class="tt-lobby-btn-row">' +
                 '<button type="button" id="tt-lobby-back-settings-btn" class="tt-lobby-row-btn tt-lobby-btn-settings">⚙️ العودة لإعدادات المباراة</button>' +
@@ -1293,9 +1301,75 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var grid = el('tt-lobby-grid');
         if (!grid) return;
         var roster = getRoster();
-        el('tt-lobby-count').textContent = roster.length + ' متسابق منضم';
+        el('tt-lobby-count').textContent = roster.length + ' متسابق';
+        grid.classList.toggle('tt-player-grid--empty', !roster.length);
         grid.innerHTML = roster.map(function (p) { return playerCardHtml(p, true); }).join('') || '<div class="tt-lobby-empty-hint">بانتظار أول متسابق...</div>';
         fitCardNames(grid);
+        fitLobbyFramedCards(grid);
+    }
+
+    // Framed lobby cards shown whole inside the same 217x57 slot as plain
+    // cards — same technique as Elimination Roulette's
+    // enhanceLobbyFramedCards(): measure the frame artwork's opaque rows
+    // once per image, re-expand the card to cover it, then zoom it to fit
+    // the slot (at most 75px tall).
+    var LOBBY_SLOT_W = 217, LOBBY_SLOT_MAX_H = 75;
+    var _frameRowsCache = {};
+    function getFrameOpaqueRows(src) {
+        if (_frameRowsCache[src]) return _frameRowsCache[src];
+        _frameRowsCache[src] = new Promise(function (resolve) {
+            var img = new Image();
+            img.onload = function () {
+                try {
+                    var w = Math.min(img.naturalWidth, 300);
+                    var h = Math.max(1, Math.round(img.naturalHeight * w / img.naturalWidth));
+                    var c = document.createElement('canvas');
+                    c.width = w; c.height = h;
+                    var ctx = c.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    var data = ctx.getImageData(0, 0, w, h).data;
+                    var top = -1, bottom = -1, x, y;
+                    for (y = 0; y < h && top < 0; y++) { for (x = 0; x < w; x++) { if (data[(y * w + x) * 4 + 3] > 16) { top = y; break; } } }
+                    for (y = h - 1; y >= 0 && bottom < 0; y--) { for (x = 0; x < w; x++) { if (data[(y * w + x) * 4 + 3] > 16) { bottom = y + 1; break; } } }
+                    resolve(top < 0 ? null : { top: top / h, bottom: bottom / h });
+                } catch (e) { resolve(null); }
+            };
+            img.onerror = function () { resolve(null); };
+            img.src = src;
+        });
+        return _frameRowsCache[src];
+    }
+    function fitLobbyFramedCards(grid) {
+        if (!grid) return;
+        var cards = grid.querySelectorAll('.agp-pcard-tpl:not([data-tt-fit])');
+        Array.prototype.forEach.call(cards, function (card) {
+            var frameEl = card.querySelector('.agp-pcard-tpl-frame-img');
+            var m = frameEl && /url\(["']?(.*?)["']?\)/.exec(frameEl.style.backgroundImage);
+            if (!m) return;
+            card.setAttribute('data-tt-fit', 'pending');
+            getFrameOpaqueRows(m[1]).then(function (rows) {
+                if (!rows || !card.isConnected) return;
+                var frameTop = parseFloat(frameEl.style.top) || 0;
+                var frameH = parseFloat(frameEl.style.height) || 0;
+                var bandTop = frameTop + rows.top * frameH;
+                var bandBottom = frameTop + rows.bottom * frameH;
+                var children = card.querySelectorAll('.agp-pcard-tpl-avatar,.agp-pcard-tpl-name,.agp-pcard-tpl-frame-img');
+                Array.prototype.forEach.call(children, function (child) {
+                    if (child === frameEl) return;
+                    var t = parseFloat(child.style.top) || 0, ch = parseFloat(child.style.height) || 0;
+                    if (t < bandTop) bandTop = t;
+                    if (t + ch > bandBottom) bandBottom = t + ch;
+                });
+                Array.prototype.forEach.call(children, function (child) {
+                    child.style.top = ((parseFloat(child.style.top) || 0) - bandTop) + 'px';
+                });
+                var fullH = bandBottom - bandTop;
+                var cardW = parseFloat(card.style.width) || 298;
+                card.style.height = fullH + 'px';
+                card.style.zoom = String(Math.min(LOBBY_SLOT_W / cardW, LOBBY_SLOT_MAX_H / fullH));
+                card.setAttribute('data-tt-fit', '1');
+            });
+        });
     }
 
     function handleStartMatch() {

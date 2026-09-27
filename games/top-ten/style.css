@@ -175,44 +175,103 @@ body.tt-active {
 }
 @keyframes tt-spin { to { transform: rotate(360deg); } }
 
-/* ---------- اللوبي ---------- */
-#tt-lobby-screen { max-width: 760px; margin: 0 auto; padding: 20px 16px 40px; }
-.tt-lobby-heading { text-align: center; color: var(--tt-text); font-size: 1.3em; margin-bottom: 6px; }
-.tt-lobby-heading-accent { color: var(--tt-gold-400); font-weight: 900; }
-.tt-lobby-banner {
-    text-align: center; background: var(--tt-green-800); border: 1px solid var(--tt-gold-700);
-    border-radius: var(--tt-radius-md); padding: 12px; margin-bottom: 16px; font-size: 0.95em;
+/* ---------- اللوبي ----------
+   نفس هيكل وحجم بطاقات لوبي روليت الإقصاء، بألوان هذه اللعبة (أخضر/ذهبي):
+   عنوان + سطر الدخول ثابتين فوق، شبكة بطاقات 217×57 تتمرّر لحالها بالوسط،
+   وصف الأزرار ثابت تحت دايماً — بدون تمرير للصفحة كاملة. */
+#tt-lobby-screen {
+    position: fixed; top: 62px; right: 0; bottom: 0; left: 0; z-index: 5;
+    flex-direction: column; align-items: center; box-sizing: border-box;
+    padding: clamp(14px, 2.4vh, 28px) clamp(12px, 3vw, 40px) clamp(12px, 2vh, 22px);
+    overflow: hidden;
 }
-.tt-lobby-banner b { color: var(--tt-gold-400); }
-.tt-lobby-count { text-align: center; color: var(--tt-gold-300); font-weight: 800; margin-bottom: 10px; }
+.tt-lobby-head { flex: 0 0 auto; width: 100%; max-width: 1310px; text-align: center; }
+.tt-lobby-heading {
+    margin: 0 0 10px; color: var(--tt-text); font-size: clamp(26px, 3.4vw, 44px);
+    font-weight: 900; line-height: 1.3;
+}
+.tt-lobby-heading-accent { color: var(--tt-gold-400); }
+.tt-lobby-joinrow {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+    gap: 14px clamp(24px, 4vw, 56px); margin-bottom: clamp(14px, 2.4vh, 24px);
+}
+.tt-lobby-join { display: inline-flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.tt-lobby-join-label { font-size: clamp(16px, 1.6vw, 22px); font-weight: 700; color: var(--tt-text); white-space: nowrap; }
+.tt-lobby-keyword {
+    font-size: clamp(30px, 3.4vw, 44px); font-weight: 900; line-height: 1.2; color: var(--tt-gold-400);
+    text-shadow: 0 0 18px rgba(243, 195, 82, 0.35);
+}
+.tt-lobby-count {
+    display: inline-flex; align-items: center; justify-content: center; min-width: 157px; height: 52px;
+    box-sizing: border-box; padding: 0 18px; border-radius: 26px;
+    background: var(--tt-green-800); border: 2px solid var(--tt-gold-700);
+    font-size: clamp(20px, 2vw, 26px); font-weight: 900; color: var(--tt-gold-300);
+}
 
+/* شبكة البطاقات — أعمدة 217px ثابتة وفجوة 37px (نفس روليت الإقصاء)، تتمرّر
+   داخلياً بشريط تمرير مخفي. */
 .tt-player-grid {
-    display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
-    background: var(--tt-green-900); border: 1px solid var(--tt-green-line); border-radius: var(--tt-radius-lg);
-    padding: 18px; min-height: 110px; margin-bottom: 18px;
+    flex: 1 1 auto; min-height: 0; width: 100%; max-width: 1310px; box-sizing: border-box;
+    overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;
+    display: grid; grid-template-columns: repeat(auto-fill, 217px); column-gap: 37px; row-gap: 20px;
+    justify-content: center; justify-items: center; align-items: center; align-content: start;
+    padding: 14px 4px 18px; margin: 0;
+    background: rgba(3, 19, 13, 0.45); border: 1px solid var(--tt-green-line); border-radius: var(--tt-radius-lg);
 }
-.tt-lobby-empty-hint { color: var(--tt-text-dim); align-self: center; }
+.tt-player-grid::-webkit-scrollbar { display: none; }
+.tt-player-grid--empty { display: flex; align-items: center; justify-content: center; }
+.tt-lobby-empty-hint { color: var(--tt-text-dim); font-size: 1.2em; }
 
-.tt-debug-feed {
-    margin-top: 16px; background: var(--tt-green-950); border: 1px dashed var(--tt-green-line);
-    border-radius: var(--tt-radius-md); padding: 10px 14px; font-size: 0.82em;
+/* بطاقة اللاعب باللوبي: كبسولة 217×57، الصورة 48px يمين، الاسم بالوسط. */
+#tt-lobby-grid .agp-pcard {
+    display: flex !important; flex-direction: row !important; align-items: center !important;
+    width: 217px !important; height: 57px !important; box-sizing: border-box !important;
+    padding: 0 3px 0 12px !important; gap: 6px !important; border-radius: 24px !important;
+    background: rgba(217, 217, 217, 0.18) !important; border: 2px solid var(--tt-gold-700) !important;
 }
-.tt-debug-feed summary { cursor: pointer; color: var(--tt-text-dim); }
-.tt-debug-feed summary:hover { color: var(--tt-gold-400); }
-.tt-debug-feed-list { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; max-height: 160px; overflow-y: auto; }
-.tt-debug-row { color: var(--tt-text-dim); }
-.tt-debug-row b { color: var(--tt-text); }
-.tt-debug-status { color: var(--tt-gold-400); }
+#tt-lobby-grid .agp-pcard-avatar-basic {
+    width: 48px !important; height: 48px !important; flex: none !important;
+    background: #D9D9D9 !important; border: none !important;
+}
+#tt-lobby-grid .agp-pcard-avatar-basic--fallback { font-size: 15px !important; color: var(--tt-green-900) !important; }
+#tt-lobby-grid .agp-pcard-name-basic {
+    flex: 1 1 auto !important; width: auto !important; min-width: 0 !important; height: auto !important;
+    margin: 0 !important; padding: 0 !important; font-size: 20px !important; font-weight: 700 !important;
+    color: #fff !important; background: none !important; border: none !important; text-align: center !important;
+}
+#tt-lobby-grid .agp-pcard-tpl { zoom: 0.7282; flex-shrink: 0 !important; }
 
-.tt-lobby-btn-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+/* صف الأزرار — ثابت أسفل الشاشة، أزرار بعرض 300px وارتفاع 48px. */
+.tt-lobby-btn-row {
+    flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+    margin-top: clamp(12px, 2vh, 18px);
+}
 .tt-lobby-row-btn {
-    flex: 1 1 220px; max-width: 300px; height: 48px; border-radius: var(--tt-radius-sm); font-family: inherit;
-    font-size: 0.95em; font-weight: 800; cursor: pointer; border: none;
+    flex: 0 1 300px; width: 300px; max-width: 100%; height: 48px; border-radius: 999px; font-family: inherit;
+    font-size: 1em; font-weight: 800; cursor: pointer; border: none;
 }
 .tt-lobby-btn-settings { background: var(--tt-green-700); color: var(--tt-gold-300); border: 1.5px solid var(--tt-gold-700); }
 .tt-lobby-btn-start { background: linear-gradient(135deg, var(--tt-gold-400), var(--tt-gold-700)); color: var(--tt-green-950); }
 .tt-lobby-btn-platform { background: var(--tt-green-800); color: var(--tt-text); border: 1.5px solid var(--tt-green-line); }
 .tt-lobby-row-btn:hover { filter: brightness(1.08); }
+
+/* لوحة التشخيص — سطر صغير مطوي تحت الأزرار. */
+.tt-debug-feed {
+    flex: 0 0 auto; margin-top: 10px; width: 100%; max-width: 760px; box-sizing: border-box;
+    background: var(--tt-green-950); border: 1px dashed var(--tt-green-line);
+    border-radius: var(--tt-radius-md); padding: 6px 14px; font-size: 0.8em;
+}
+.tt-debug-feed summary { cursor: pointer; color: var(--tt-text-dim); }
+.tt-debug-feed summary:hover { color: var(--tt-gold-400); }
+.tt-debug-feed-list { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; max-height: 120px; overflow-y: auto; }
+.tt-debug-row { color: var(--tt-text-dim); }
+.tt-debug-row b { color: var(--tt-text); }
+.tt-debug-status { color: var(--tt-gold-400); }
+
+@media (max-width: 600px) {
+    .tt-lobby-count { min-width: 120px; height: 44px; }
+    .tt-lobby-row-btn { flex-basis: 100%; }
+}
 
 /* ---------- بطاقة اللاعب المشتركة (تنسيق إضافي فوق agp-player-card.js) ---------- */
 /* هذه اللعبة تكدّس الصورة فوق الاسم عمودياً (بخلاف تصميم agp-player-card.js
