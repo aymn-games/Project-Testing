@@ -68,6 +68,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         6: [[1, 1], [1, 3], [2, 1], [2, 3], [3, 1], [3, 3]]
     };
     var ROLL_APPLY_MS = 1150;
+    var PAUSE_ON_SQUARE_MS = 1000;   // الوقوف على رأس الثعبان / بداية السلم قبل الانتقال
+    var SLIDE_MS = 900;              // مدة الانزلاق/الصعود
+    var EVENT_SHOW_MS = 2000;        // مدة ظهور تبويب الحدث
+    var EVENT_ANIM_MS = 320;         // مدة أنيميشن الظهور/الاختفاء
     var WIN_END_DELAY_MS = 1800;
 
     function ballFor(hue) {
@@ -372,6 +376,32 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'direction:ltr;transition:left 380ms cubic-bezier(.34,1.4,.64,1),top 380ms cubic-bezier(.34,1.4,.64,1);',
             'animation:sl-pop 320ms ease both;}',
             '.sl-tok img{width:100%;height:100%;object-fit:cover;display:block;}',
+            '.sl-tok.sl-tok-slide{z-index:5;transition:left 900ms cubic-bezier(.45,.05,.35,1),top 900ms cubic-bezier(.45,.05,.35,1);',
+            'box-shadow:0 0 0 3px rgba(255,209,102,0.9),0 0 22px rgba(255,209,102,0.7);}',
+            '.sl-tok.sl-tok-snake.sl-tok-slide{box-shadow:0 0 0 3px rgba(255,107,107,0.9),0 0 22px rgba(255,107,107,0.7);}',
+
+            /* تبويب حدث السلم/الثعبان — 400×400 */
+            '#sl-event{position:fixed;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;',
+            'pointer-events:none;direction:rtl;}',
+            '#sl-event[hidden]{display:none;}',
+            '.sl-ev-card{width:400px;height:400px;max-width:92vw;max-height:92vh;box-sizing:border-box;border-radius:22px;',
+            'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:22px 24px;text-align:center;',
+            'background:linear-gradient(180deg,#16224a 0%,#0b1122 100%);border:2px solid rgba(255,209,102,0.7);',
+            'box-shadow:0 30px 70px rgba(0,0,0,0.6),0 0 40px rgba(255,209,102,0.25);',
+            'opacity:0;transform:scale(.6) translateY(24px);transition:opacity 320ms ease,transform 320ms cubic-bezier(.34,1.4,.64,1);}',
+            '#sl-event.sl-ev-in .sl-ev-card{opacity:1;transform:scale(1) translateY(0);}',
+            '#sl-event.sl-ev-out .sl-ev-card{opacity:0;transform:scale(.8) translateY(-20px);transition:opacity 320ms ease,transform 320ms ease;}',
+            '#sl-event.sl-ev-snake .sl-ev-card{border-color:rgba(255,107,107,0.75);box-shadow:0 30px 70px rgba(0,0,0,0.6),0 0 40px rgba(255,107,107,0.3);}',
+            '.sl-ev-card > *{flex-shrink:0;}',
+            '.sl-ev-icon{font-size:34px;line-height:1;}',
+            '.sl-ev-title{font-size:24px;font-weight:900;color:#ffd166;}',
+            '#sl-event.sl-ev-snake .sl-ev-title{color:#ff6b6b;}',
+            '.sl-ev-av{width:100px;height:100px;border:3px solid rgba(255,255,255,0.85);font-size:44px;',
+            'box-shadow:0 8px 24px rgba(0,0,0,0.5);}',
+            '.sl-ev-name{font-size:22px;font-weight:900;line-height:1.5;color:#ffffff;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '.sl-ev-text{font-size:16px;font-weight:700;line-height:1.7;color:#cfe6f0;}',
+            '.sl-ev-text b{font-family:"Baloo Bhaijaan 2",Cairo,sans-serif;font-size:20px;color:#ffd166;}',
+            '#sl-event.sl-ev-snake .sl-ev-text b{color:#ff6b6b;}',
 
             /* شريط الحالة */
             '.sl-status{flex:none;width:100%;padding:12px 18px;display:flex;align-items:center;justify-content:center;gap:8px;',
@@ -1074,6 +1104,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</div>' +
             '<div class="sl-status"><span class="sl-status-ic">📣</span><span class="sl-status-txt" id="sl-status-txt"></span></div>' +
 
+            '<div id="sl-event" hidden><div class="sl-ev-card">' +
+                '<div class="sl-ev-icon" id="sl-ev-icon"></div>' +
+                '<div class="sl-ev-title" id="sl-ev-title"></div>' +
+                '<div class="sl-av sl-ev-av" id="sl-ev-av"></div>' +
+                '<div class="sl-ev-name" id="sl-ev-name"></div>' +
+                '<div class="sl-ev-text" id="sl-ev-text"></div>' +
+            '</div></div>' +
+
             '<div class="sl-modal-bg" id="sl-join" hidden><div class="sl-join-box">' +
                 '<div class="sl-join-head"><div class="sl-join-title">إدخال لاعب جديد</div>' +
                 '<button type="button" class="sl-x" id="sl-join-close" title="إغلاق">✕</button></div>' +
@@ -1290,14 +1328,27 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (_turnInterval) { window.clearInterval(_turnInterval); _turnInterval = null; }
     }
 
+    // صوت بداية دور كل لاعب
+    function playTurnSound() {
+        beep(660, 0.12);
+        later(function () { beep(990, 0.2); }, 130);
+    }
+    // صوت المؤقت كل ثانية (أعلى وأوضح بآخر 5 ثوانٍ)
+    function playTickSound(t) {
+        if (t <= 5) beep(880, 0.09, 'square');
+        else beep(1250, 0.04, 'sine');
+    }
+
     function startTurnTimer() {
         stopTurnTimer();
         _timeLeft = TURN_TIME;
         renderTimer();
+        if (_matchActive && !_ending && _order.length) playTurnSound();
         _turnInterval = window.setInterval(function () {
             if (!_matchActive || _rolling || _left) return;
             _timeLeft = Math.max(0, _timeLeft - 1);
             renderTimer();
+            if (_timeLeft > 0) playTickSound(_timeLeft);
             if (_timeLeft === 0) handleTurnTimeout();
         }, 1000);
     }
@@ -1341,22 +1392,104 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function applyRoll(me, v) {
         if (!_matchActive) return;
         var from = _positions[me.id] || 1;
-        var to = from + v, note;
+        var landing = from + v;
         var name = playerLabel(me);
-        if (to > 100) { to = from; note = name + ' يحتاج ' + (100 - from) + ' بالضبط للفوز.'; }
-        else if (LADDERS[to]) { note = name + ' صعد السلم إلى ' + LADDERS[to] + '.'; to = LADDERS[to]; }
-        else if (SNAKES[to]) { note = name + ' انزلق مع الثعبان إلى ' + SNAKES[to] + '.'; to = SNAKES[to]; }
-        else { note = name + ' تحرك من ' + from + ' إلى ' + to + '.'; }
-        _positions[me.id] = to;
-        var won = to === 100;
-        if (won) { beep(660, 0.15); later(function () { beep(880, 0.15); }, 150); later(function () { beep(1100, 0.3); }, 300); }
-        else if (LADDERS[from + v]) { beep(520, 0.1); later(function () { beep(780, 0.18); }, 100); }
-        else if (SNAKES[from + v]) { beep(420, 0.12, 'sawtooth'); later(function () { beep(220, 0.25, 'sawtooth'); }, 110); }
-        else beep(600, 0.1, 'triangle');
 
+        if (landing > 100) {
+            beep(600, 0.1, 'triangle');
+            finishMove(me, name + ' يحتاج ' + (100 - from) + ' بالضبط للفوز.');
+            return;
+        }
+
+        _positions[me.id] = landing;
+        renderTokens();
+        renderTurn();
+
+        var isLadder = !!LADDERS[landing];
+        var dest = LADDERS[landing] || SNAKES[landing];
+        if (!dest) {
+            beep(600, 0.1, 'triangle');
+            finishMove(me, name + ' تحرك من ' + from + ' إلى ' + landing + '.');
+            return;
+        }
+
+        // يقف على رأس الثعبان / بداية السلم ثانية كاملة، ثم ينزل/يصعد،
+        // ثم يظهر تبويب الحدث ثانيتين — والدور ما ينتقل إلا بعد اختفائه.
+        beep(600, 0.1, 'triangle');
+        setStatus(isLadder
+            ? name + ' وصل إلى بداية السلم في المربع ' + landing + '…'
+            : name + ' وقف على رأس الثعبان في المربع ' + landing + '…');
+        later(function () {
+            if (!_matchActive) return;
+            if (isLadder) { beep(520, 0.1); later(function () { beep(780, 0.18); }, 100); }
+            else { beep(420, 0.12, 'sawtooth'); later(function () { beep(220, 0.25, 'sawtooth'); }, 110); }
+            setTokenSlide(me.id, true, isLadder);
+            _positions[me.id] = dest;
+            renderTokens();
+            renderTurn();
+            later(function () {
+                setTokenSlide(me.id, false, isLadder);
+                if (!_matchActive) return;
+                showEventCard(me, isLadder, landing, dest, function () {
+                    finishMove(me, isLadder
+                        ? name + ' صعد السلم من ' + landing + ' إلى ' + dest + '.'
+                        : name + ' أكله الثعبان في ' + landing + ' ورجع إلى ' + dest + '.');
+                });
+            }, SLIDE_MS + 60);
+        }, PAUSE_ON_SQUARE_MS);
+    }
+
+    function setTokenSlide(pid, on, isLadder) {
+        var layer = el('sl-tokens');
+        if (!layer) return;
+        var node = null;
+        Array.prototype.forEach.call(layer.children, function (t) { if (t.getAttribute('data-key') === 'p:' + pid) node = t; });
+        if (!node) return;
+        node.classList.toggle('sl-tok-slide', on);
+        node.classList.toggle('sl-tok-snake', on && !isLadder);
+    }
+
+    // تبويب 400×400 يوضح الحدث (صورة + اسم + من أي مربع لأي مربع)
+    function showEventCard(player, isLadder, from, to, onDone) {
+        var box = el('sl-event');
+        if (!box) { onDone(); return; }
+        el('sl-ev-icon').textContent = isLadder ? '🪜' : '🐍';
+        el('sl-ev-title').textContent = isLadder ? 'صعد السلم!' : 'أكله الثعبان!';
+        fillAvatar(el('sl-ev-av'), player);
+        el('sl-ev-name').textContent = playerLabel(player);
+        el('sl-ev-text').innerHTML = isLadder
+            ? 'وصل لبداية السلم في المربع <b>' + from + '</b><br>وصعد إلى المربع <b>' + to + '</b>'
+            : 'أكله الثعبان في المربع <b>' + from + '</b><br>وأعاده إلى المربع <b>' + to + '</b>';
+        box.className = isLadder ? 'sl-ev-ladder' : 'sl-ev-snake';
+        box.hidden = false;
+        void box.offsetWidth;
+        box.classList.add('sl-ev-in');
+        later(function () {
+            box.classList.remove('sl-ev-in');
+            box.classList.add('sl-ev-out');
+            later(function () {
+                box.hidden = true;
+                box.className = '';
+                onDone();
+            }, EVENT_ANIM_MS);
+        }, EVENT_ANIM_MS + EVENT_SHOW_MS);
+    }
+
+    function hideEventCard() {
+        var box = el('sl-event');
+        if (box) { box.hidden = true; box.className = ''; }
+    }
+
+    // نهاية حركة اللاعب — هنا فقط ينتقل الدور (أو يُحسب الفوز)
+    function finishMove(me, note) {
+        if (!_matchActive) return;
         _rolling = false;
         var i = _order.findIndex(function (p) { return p.id === me.id; });
-        if (won) {
+        if (i === -1) {
+            // اللاعب انحذف أثناء الحركة
+            _turnIdx = _order.length ? (_turnIdx % _order.length) : 0;
+            if (!checkMatchComplete()) startTurnTimer();
+        } else if ((_positions[me.id] || 1) === 100) {
             handleWinner(me, i);
         } else {
             _turnIdx = (i + 1) % _order.length;
@@ -1373,6 +1506,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function handleWinner(me, idx) {
+        beep(660, 0.15); later(function () { beep(880, 0.15); }, 150); later(function () { beep(1100, 0.3); }, 300);
         _winners.push(me);
         if (idx !== -1) _order.splice(idx, 1);
         _turnIdx = _order.length ? (idx % _order.length) : 0;
@@ -1401,6 +1535,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function resetGame() {
         if (!_roster.length) return;
         clearPendingTimeouts();
+        hideEventCard();
         _left = false;
         _ending = false;
         _matchActive = true;
