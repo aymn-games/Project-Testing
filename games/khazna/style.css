@@ -953,8 +953,37 @@ body.kz-active{
 .kz-result-list{ display:flex; flex-direction:column; gap:8px; }
 .kz-result-name{
     border-radius:999px;
-    padding:8px 14px;
+    padding:6px 8px 6px 14px;
     font-size:13.5px; font-weight:800; color:#f0e9fa;
+    display:flex; align-items:center; gap:8px; text-align:right;
+}
+.kz-result-avatar{
+    flex:none; width:26px; height:26px; border-radius:50%; overflow:hidden;
+    background:rgba(255,255,255,0.14); display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:900; color:#fff;
+}
+.kz-result-avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
+.kz-result-player{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.kz-result-answer{
+    flex:none; direction:ltr; border-radius:999px; padding:3px 10px; font-size:13px; font-weight:900;
+    font-variant-numeric:tabular-nums; letter-spacing:1px;
+}
+.kz-result-answer-ok{ background:rgba(34,193,160,0.22); color:#9ff5dd; }
+.kz-result-answer-bad{ background:rgba(239,68,68,0.22); color:#ffb3c0; }
+.kz-result-answer-none{ background:rgba(255,255,255,0.08); color:#b9a9cf; letter-spacing:0; font-weight:700; }
+/* سبب الإقصاء + الإجابة الصحيحة فوق التبويبين */
+.kz-result-summary{
+    width:100%; box-sizing:border-box; text-align:center;
+    background:rgba(20,12,34,0.7); backdrop-filter:blur(8px);
+    border:1.5px solid rgba(255,217,102,0.5); border-radius:18px; padding:12px 16px;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+}
+.kz-result-reason{ font-size:14px; font-weight:800; color:#f0e9fa; line-height:1.7; }
+.kz-result-reason b{ color:#ffd966; }
+.kz-result-correct{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px; font-size:13.5px; font-weight:800; color:#6fe6c9; }
+.kz-result-correct span{
+    direction:ltr; min-width:30px; padding:3px 9px; border-radius:10px; box-sizing:border-box;
+    background:rgba(34,193,160,0.18); border:1px solid rgba(34,193,160,0.5); color:#fff; font-weight:900;
 }
 .kz-result-name-ok{ background:rgba(34,193,160,0.12); border:1px solid rgba(34,193,160,0.35); }
 .kz-result-name-bad{ background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); }
@@ -1257,3 +1286,61 @@ body.kz-active{
 .kz-correct-reveal-title{ font-size:16px; font-weight:900; color:#eafff6; }
 .kz-correct-reveal-times{ display:flex; align-items:center; gap:14px; font-size:28px; font-weight:900; color:#fff; }
 .kz-correct-reveal-times span:not(:last-child)::after{ content:" - "; color:#bdf5e6; }
+
+/* ---------------------------------------------------------------------
+   زر "طريقة الإجابة" بشاشة اللعب + تبويب الشرح (يتقفل بـ✕)
+--------------------------------------------------------------------- */
+#kz-help-btn{
+    position:fixed; top:72px; left:16px; z-index:30;
+    display:none; align-items:center; gap:6px;
+    padding:9px 16px; border-radius:999px; cursor:pointer;
+    background:rgba(20,12,34,0.85); border:1.5px solid var(--gold);
+    color:var(--gold2); font-family:inherit; font-size:14px; font-weight:900;
+    box-shadow:0 6px 18px rgba(0,0,0,0.4);
+}
+#kz-help-btn:hover{ background:rgba(232,182,76,0.18); }
+#kz-help-dim{
+    position:fixed; inset:0; z-index:100050; display:none;
+    align-items:center; justify-content:center; padding:16px;
+    background:rgba(5,2,10,0.72); backdrop-filter:blur(4px);
+}
+#kz-help-dim.kz-show{ display:flex; }
+#kz-help-card{
+    position:relative; width:min(560px,100%); max-height:92vh; overflow-y:auto; box-sizing:border-box;
+    background:linear-gradient(180deg,#24153a,#120a1f); border:2px solid var(--gold);
+    border-radius:22px; padding:22px 22px 20px; color:#f0e9fa; text-align:right;
+    box-shadow:0 30px 70px rgba(0,0,0,0.6);
+}
+#kz-help-card h2{ margin:0 0 14px; text-align:center; font-size:21px; font-weight:900; color:var(--gold2); }
+#kz-help-close{
+    position:absolute; top:12px; left:12px; width:34px; height:34px; border-radius:10px;
+    border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.06); color:#fff;
+    font-size:17px; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;
+}
+#kz-help-close:hover{ background:rgba(255,255,255,0.14); }
+.kz-help-step{ display:flex; align-items:flex-start; gap:10px; margin:0 0 10px; font-size:15px; line-height:1.7; }
+.kz-help-step b{ color:var(--gold2); }
+.kz-help-num{
+    flex:none; width:26px; height:26px; border-radius:50%; margin-top:2px;
+    background:var(--gold); color:#1a0f00; font-weight:900; font-size:14px;
+    display:flex; align-items:center; justify-content:center;
+}
+.kz-help-warn{ background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.4); border-radius:14px; padding:8px 10px; }
+.kz-help-warn .kz-help-num{ background:#ef4444; color:#fff; }
+.kz-help-chip{ display:inline-block; padding:0 8px; border-radius:8px; background:#7c3aed; color:#fff; font-weight:900; }
+.kz-help-example{ display:flex; justify-content:center; gap:14px; flex-wrap:wrap; margin:6px 0 10px; }
+.kz-help-clock{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+.kz-help-order{
+    width:28px; height:28px; border-radius:50%; background:#7c3aed; color:#fff;
+    font-weight:900; font-size:14px; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 0 0 3px rgba(124,58,237,0.3);
+}
+.kz-help-face svg{ width:96px; height:96px; display:block; }
+.kz-help-reads{ font-size:13px; color:#cdbfe6; }
+.kz-help-reads b{ color:var(--gold2); font-size:15px; }
+.kz-help-answer{
+    text-align:center; margin:0 0 14px; padding:10px; border-radius:14px;
+    background:rgba(34,193,160,0.12); border:1px solid rgba(34,193,160,0.45); font-size:16px; font-weight:800;
+}
+.kz-help-answer b{ direction:ltr; display:inline-block; color:#9ff5dd; font-size:19px; letter-spacing:1px; }
+.kz-help-wrong{ font-size:13px; color:#ffb3c0; margin-inline-start:8px; }
