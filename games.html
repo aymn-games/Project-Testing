@@ -465,9 +465,60 @@ document.addEventListener('DOMContentLoaded', async function() {
       'margin-left:calc(50% - 50vw + 24px) !important;margin-right:calc(50% - 50vw + 24px) !important;}' +
       '@media (max-width:1199px){.gl-grid{grid-template-columns:repeat(4,minmax(0,1fr)) !important;}}' +
       '@media (max-width:899px){.gl-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}}' +
+      '@media (min-width:600px){' +
+      '.gl-grid[data-cols="2"]{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}' +
+      '.gl-grid[data-cols="3"]{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}' +
+      '.gl-grid[data-cols="4"]{grid-template-columns:repeat(4,minmax(0,1fr)) !important;}' +
+      '.gl-grid[data-cols="5"]{grid-template-columns:repeat(5,minmax(0,1fr)) !important;}' +
+      '.gl-grid[data-cols="6"]{grid-template-columns:repeat(6,minmax(0,1fr)) !important;}}' +
+      '.gl-cols{display:flex;align-items:center;gap:10px;font-family:"Readex Pro",system-ui,sans-serif;direction:rtl;}' +
+      '.gl-cols-lbl{font-size:13px;color:#7c7590;}' +
+      '.gl-cols-group{display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(255,255,255,.04);' +
+      'border:1px solid rgba(255,255,255,.1);}' +
+      '.gl-cols-group button{font-family:inherit;min-width:34px;height:30px;padding:0 10px;border:none;border-radius:999px;' +
+      'background:transparent;color:#a79fbb;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s,color .2s;}' +
+      '.gl-cols-group button:hover{color:#fff;}' +
+      '.gl-cols-group button.gl-on{background:linear-gradient(90deg,oklch(0.62 0.22 300),oklch(0.55 0.23 285));color:#fff;}' +
+      '@media (max-width:599px){.gl-cols{display:none;}}' +
       '@media (max-width:599px){.gl-grid{grid-template-columns:minmax(0,1fr) !important;width:calc(100vw - 32px) !important;' +
       'margin-left:calc(50% - 50vw + 16px) !important;margin-right:calc(50% - 50vw + 16px) !important;}}';
     document.head.appendChild(st);
+  }
+
+  // اختيار عدد البطاقات بالصف — "تلقائي" = حسب مقاس الشاشة، أو رقم
+  // ثابت (2–6) يختاره المستخدم ويتذكّره جهازه. الجوال دائماً بطاقة وحدة.
+  var COLS_KEY = 'agp:games-cols';
+  var COLS_OPTIONS = ['auto', '2', '3', '4', '5', '6'];
+  function getColsPref(){
+    try { var v = localStorage.getItem(COLS_KEY); return COLS_OPTIONS.indexOf(v) !== -1 ? v : 'auto'; } catch (e) { return 'auto'; }
+  }
+  function applyColsPref(grid){
+    var v = getColsPref();
+    if (v === 'auto') grid.removeAttribute('data-cols'); else grid.setAttribute('data-cols', v);
+    var ctl = document.getElementById('gl-cols');
+    if (ctl) Array.prototype.forEach.call(ctl.querySelectorAll('button'), function(b){
+      b.classList.toggle('gl-on', b.getAttribute('data-v') === v);
+    });
+  }
+  function ensureColsControl(grid, anchorRow){
+    var ctl = document.getElementById('gl-cols');
+    if (!ctl && anchorRow) {
+      ctl = document.createElement('div');
+      ctl.id = 'gl-cols';
+      ctl.className = 'gl-cols';
+      ctl.innerHTML = '<span class="gl-cols-lbl">عدد البطاقات بالصف</span><div class="gl-cols-group">' +
+        COLS_OPTIONS.map(function(v){ return '<button type="button" data-v="' + v + '">' + (v === 'auto' ? 'تلقائي' : v) + '</button>'; }).join('') +
+        '</div>';
+      anchorRow.appendChild(ctl);
+    }
+    if (ctl) Array.prototype.forEach.call(ctl.querySelectorAll('button'), function(b){
+      b.onclick = function(){
+        try { localStorage.setItem(COLS_KEY, b.getAttribute('data-v')); } catch (e) {}
+        var g = document.querySelector('.gl-grid');
+        if (g) applyColsPref(g);
+      };
+    });
+    applyColsPref(grid);
   }
 
   function buildCard(g, i){
@@ -544,6 +595,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var allDivs = Array.prototype.slice.call(document.querySelectorAll('div'));
     var countLabel = allDivs.find(function(d){ return /لعبة معروضة|الحقيقية بالمنصة/.test(d.textContent || '') && d.textContent.length < 40 && !d.querySelector('div'); });
     if (countLabel) countLabel.textContent = 'الألعاب الـ ' + REAL_GAMES.length + ' الحقيقية بالمنصة'; // يتحدّث تلقائياً مع أي لعبة تنضاف لـREAL_GAMES
+    ensureColsControl(grid, countLabel ? countLabel.parentElement : null);
     var filterRows = allDivs.filter(function(d){
       return d.children.length >= 4 && Array.prototype.every.call(d.children, function(c){ return c.tagName === 'BUTTON'; });
     });
