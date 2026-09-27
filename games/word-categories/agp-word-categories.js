@@ -779,71 +779,70 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         connectBtn.insertAdjacentElement('afterend', btn);
     }
 
-    function enhanceLobbyList() {
-        var list = document.getElementById('agp-lobby-list');
-        if (!list || !AGP.gameManager) return;
-        var players = AGP.gameManager.getPlayers();
-        var items = list.querySelectorAll('li');
-        items.forEach(function (li, i) {
-            if (li.querySelector('.wc-lobbyscreen-remove-btn')) return;
-            var player = players[i];
-            if (!player || !player.id) return;
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'wc-lobbyscreen-remove-btn';
-            btn.title = 'حذف من اللوبي';
-            btn.textContent = '✕';
-            btn.addEventListener('click', function () {
-                if (AGP.player && typeof AGP.player.removePlayer === 'function') {
-                    AGP.player.removePlayer(player.id);
-                }
-            });
-            li.appendChild(btn);
+    // Framed lobby cards shown whole inside the same 217x57 slot as plain
+    // cards — same technique as Elimination Roulette's
+    // enhanceLobbyFramedCards(): measure the frame artwork's opaque rows
+    // once per image, re-expand the card to cover it, then zoom it to fit
+    // the slot (at most 75px tall). The per-card delete button comes from
+    // the shared js/agp-game-shell.js itself (removable lobby list).
+    var LOBBY_SLOT_W = 217, LOBBY_SLOT_MAX_H = 75;
+    var _frameRowsCache = {};
+    function getFrameOpaqueRows(src) {
+        if (_frameRowsCache[src]) return _frameRowsCache[src];
+        _frameRowsCache[src] = new Promise(function (resolve) {
+            var img = new Image();
+            img.onload = function () {
+                try {
+                    var w = Math.min(img.naturalWidth, 300);
+                    var h = Math.max(1, Math.round(img.naturalHeight * w / img.naturalWidth));
+                    var c = document.createElement('canvas');
+                    c.width = w; c.height = h;
+                    var ctx = c.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    var data = ctx.getImageData(0, 0, w, h).data;
+                    var top = -1, bottom = -1, x, y;
+                    for (y = 0; y < h && top < 0; y++) { for (x = 0; x < w; x++) { if (data[(y * w + x) * 4 + 3] > 16) { top = y; break; } } }
+                    for (y = h - 1; y >= 0 && bottom < 0; y--) { for (x = 0; x < w; x++) { if (data[(y * w + x) * 4 + 3] > 16) { bottom = y + 1; break; } } }
+                    resolve(top < 0 ? null : { top: top / h, bottom: bottom / h });
+                } catch (e) { resolve(null); }
+            };
+            img.onerror = function () { resolve(null); };
+            img.src = src;
         });
+        return _frameRowsCache[src];
     }
-
-    // كل البطاقات تاخذ نفس المقاس الثابت (ما تتمدد لتملأ عرض اللوبي، فقط
-    // مسافة 1cm ثابتة بينها). لو عدد اللاعبين كبير جداً ولا يتسع رأسياً
-    // بالصندوق الثابت، الأفاتار/البطاقة/الخط يصغرون سوا بنفس النسبة.
-    function applyDynamicLobbyCardScale() {
+    function enhanceLobbyFramedCards() {
         var box = document.getElementById('agp-shell-box');
         if (!box || !box.classList.contains('agp-lobby-box')) return;
-        var list = document.getElementById('agp-lobby-list');
-        if (!list) return;
-        var n = list.querySelectorAll('li').length;
-        if (n === 0) return;
-
-        var BASE_AVATAR = 50, BASE_PILL_W = 260, BASE_PILL_H = 50, BASE_FONT = 18, BASE_ZOOM = 0.77;
-        var GAP_PX = 37.8; // 1cm -- القيمة الفعلية بالـCSS ثابتة "1cm" دائماً
-        var MIN_SCALE = 0.55;
-
-        var availableWidth = list.clientWidth || box.clientWidth || 832;
-        var availableHeight = list.clientHeight || 620;
-
-        function cardsPerRow(scale) {
-            var cardW = Math.round(BASE_AVATAR * scale) + Math.round(BASE_PILL_W * scale);
-            return Math.max(1, Math.floor((availableWidth + GAP_PX) / (cardW + GAP_PX)));
-        }
-        function neededHeight(scale) {
-            var perRow = cardsPerRow(scale);
-            var rows = Math.ceil(n / perRow);
-            var rowH = Math.round(BASE_PILL_H * scale);
-            return rows * rowH + Math.max(0, rows - 1) * GAP_PX;
-        }
-
-        var scale = 1;
-        if (neededHeight(1) > availableHeight) {
-            scale = MIN_SCALE;
-            for (var s = 1; s >= MIN_SCALE; s -= 0.02) {
-                if (neededHeight(s) <= availableHeight) { scale = s; break; }
-            }
-        }
-
-        box.style.setProperty('--wc-lobby-avatar-size', Math.round(BASE_AVATAR * scale) + 'px');
-        box.style.setProperty('--wc-lobby-pill-width', Math.round(BASE_PILL_W * scale) + 'px');
-        box.style.setProperty('--wc-lobby-pill-height', Math.round(BASE_PILL_H * scale) + 'px');
-        box.style.setProperty('--wc-lobby-font-size', Math.max(13, Math.round(BASE_FONT * scale)) + 'px');
-        box.style.setProperty('--wc-lobby-frame-zoom', (BASE_ZOOM * scale).toFixed(3));
+        var cards = box.querySelectorAll('.agp-shell-player-list .agp-pcard-tpl:not([data-wc-fit])');
+        Array.prototype.forEach.call(cards, function (card) {
+            var frameEl = card.querySelector('.agp-pcard-tpl-frame-img');
+            var m = frameEl && /url\(["']?(.*?)["']?\)/.exec(frameEl.style.backgroundImage);
+            if (!m) return;
+            card.setAttribute('data-wc-fit', 'pending');
+            getFrameOpaqueRows(m[1]).then(function (rows) {
+                if (!rows || !card.isConnected) return;
+                var frameTop = parseFloat(frameEl.style.top) || 0;
+                var frameH = parseFloat(frameEl.style.height) || 0;
+                var bandTop = frameTop + rows.top * frameH;
+                var bandBottom = frameTop + rows.bottom * frameH;
+                var children = card.querySelectorAll('.agp-pcard-tpl-avatar,.agp-pcard-tpl-name,.agp-pcard-tpl-frame-img');
+                Array.prototype.forEach.call(children, function (child) {
+                    if (child === frameEl) return;
+                    var t = parseFloat(child.style.top) || 0, ch = parseFloat(child.style.height) || 0;
+                    if (t < bandTop) bandTop = t;
+                    if (t + ch > bandBottom) bandBottom = t + ch;
+                });
+                Array.prototype.forEach.call(children, function (child) {
+                    child.style.top = ((parseFloat(child.style.top) || 0) - bandTop) + 'px';
+                });
+                var fullH = bandBottom - bandTop;
+                var cardW = parseFloat(card.style.width) || 298;
+                card.style.height = fullH + 'px';
+                card.style.zoom = String(Math.min(LOBBY_SLOT_W / cardW, LOBBY_SLOT_MAX_H / fullH));
+                card.setAttribute('data-wc-fit', '1');
+            });
+        });
     }
 
     function enhanceLobbyActions() {
@@ -887,16 +886,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (!box || !box.classList.contains('agp-lobby-box')) return;
         var h2 = box.querySelector('h2');
         if (!h2 || h2.getAttribute('data-wc-heading') === '1') return;
-        h2.innerHTML = '<span class="wc-lobby-heading-plain">اللوبي بانتظار اللاعبين</span> ' +
-            '<span class="wc-lobby-heading-accent">' + escapeHtml(GAME_NAME) + '</span>';
+        h2.innerHTML = '<span class="wc-lobby-heading-plain">لوبي الدخول للعبة "</span>' +
+            '<span class="wc-lobby-heading-accent">' + escapeHtml(GAME_NAME) + '</span>' +
+            '<span class="wc-lobby-heading-plain">"</span>';
         h2.setAttribute('data-wc-heading', '1');
     }
 
     function applyShellEnhancements() {
         enhanceSettingsScreen();
-        enhanceLobbyList();
-        applyDynamicLobbyCardScale();
         enhanceLobbyHeading();
+        enhanceLobbyFramedCards();
         enhanceLobbyActions();
     }
 
