@@ -83,6 +83,14 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
     border: 1.5px solid var(--aq-green-line); border-radius: 8px; color: var(--aq-text); font-family: inherit; direction: rtl;
 }
 .aq-row-field input:focus { outline: none; border-color: var(--aq-gold-500); }
+.aq-row-field textarea {
+    width: 100%; min-height: 70px; padding: 12px 14px; font-size: 1em; background: var(--aq-green-950); resize: vertical;
+    border: 1.5px solid var(--aq-green-line); border-radius: 8px; color: var(--aq-text); font-family: inherit; direction: rtl; line-height: 1.6;
+}
+.aq-row-field textarea:focus { outline: none; border-color: var(--aq-gold-500); }
+.aq-q-extra { margin-top: 6px; font-size: 0.8em; color: var(--aq-text-dim); line-height: 1.6; display: none; }
+.aq-q-card.aq-expanded .aq-q-extra { display: block; }
+.aq-q-extra b { color: var(--aq-gold-300); }
 .aq-row-field label { display: block; margin-top: 5px; font-size: 0.78em; color: var(--aq-text-dim); }
 
 .aq-image-picker { display:flex; align-items:center; gap:14px; margin-bottom:14px; }
@@ -193,19 +201,24 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
                     : '<span class="aq-q-answer-chip">' + escapeHtml(a) + '</span>';
             }).join('');
             var thumbStyle = c.imageFile ? ' style="background-image:url(\'challenge-images/' + escapeHtml(c.imageFile) + '\')"' : '';
-            var typeBadge = c.type === 'reveal' ? '<span class="aq-q-type-badge">🔍 تخمين شخصية</span>' : '';
+            var typeBadge = (c.type === 'reveal' ? '<span class="aq-q-type-badge">🔍 تخمين شخصية</span>' : '') +
+                (c.hint ? '<span class="aq-q-type-badge">💡 تلميح</span>' : '') +
+                (c.explanation ? '<span class="aq-q-type-badge">📝 توضيح</span>' : '');
+            var extraHtml = (c.hint ? '<div><b>💡 التلميح:</b> ' + escapeHtml(c.hint) + '</div>' : '') +
+                (c.explanation ? '<div><b>📝 توضيح الإجابة:</b> ' + escapeHtml(c.explanation) + '</div>' : '');
             return '<div class="aq-q-card" id="aq-qcard-' + escapeHtml(c.id) + '">' +
                 '<div class="aq-q-thumb"' + thumbStyle + '></div>' +
                 '<div class="aq-q-card-body">' +
                     '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">' +
                         '<span class="aq-q-file">' + escapeHtml(c.imageFile || '(بدون اسم ملف)') + typeBadge + '</span>' +
                         '<span class="aq-q-actions">' +
-                            '<button type="button" class="aq-icon-btn aq-toggle-btn" data-id="' + escapeHtml(c.id) + '" title="عرض الإجابات">👁️</button>' +
+                            '<button type="button" class="aq-icon-btn aq-toggle-btn" data-id="' + escapeHtml(c.id) + '" title="عرض الإجابات والتلميح">👁️</button>' +
                             '<button type="button" class="aq-icon-btn aq-edit-btn" data-id="' + escapeHtml(c.id) + '" title="تعديل">✏️</button>' +
                             '<button type="button" class="aq-icon-btn aq-delete-btn" data-id="' + escapeHtml(c.id) + '" title="حذف">🗑️</button>' +
                         '</span>' +
                     '</div>' +
                     '<div class="aq-q-answers">' + chips + '</div>' +
+                    (extraHtml ? '<div class="aq-q-extra">' + extraHtml + '</div>' : '') +
                 '</div>' +
             '</div>';
         }).join('') || '<div class="aq-hint">لا يوجد أي صورة بعد.</div>';
@@ -286,6 +299,14 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
             '<div class="aq-hint" style="margin-bottom:8px;">أضف أي صياغات ثانية مشابهة لنفس الإجابة الأساسية (مثال: بالإنجليزي، أو بدون "ال"، أو خطأ إملائي شائع) — تُحسب صحيحة بالضبط زي الإجابة الأساسية، بس ما تظهر بالشاشة، فقط الإجابة الأساسية فوق هي اللي تظهر.</div>' +
             '<div id="aq-answers-list">' + variantRows + '</div>' +
             '<button type="button" id="aq-add-answer-btn" class="aq-btn aq-btn-secondary" style="margin-bottom:14px;">➕ إضافة صياغة مشابهة</button>' +
+            '<div class="aq-row-field">' +
+                '<textarea id="aq-form-hint" placeholder="مثال: اسم سيارة · أو: الإجابة بالإنجليزي">' + escapeHtml(existing ? (existing.hint || '') : '') + '</textarea>' +
+                '<label>💡 تلميح (اختياري) — يظهر مع الصورة وقت اللعب: تلميح، توضيح اللغة، أو أي ملاحظة</label>' +
+            '</div>' +
+            '<div class="aq-row-field">' +
+                '<textarea id="aq-form-explanation" placeholder="مثال: الصورة فيها حرف A + كلمة سنت = اكسنت">' + escapeHtml(existing ? (existing.explanation || '') : '') + '</textarea>' +
+                '<label>📝 توضيح الإجابة (اختياري) — كيف جات الإجابة، يظهر بتبويب الإجابة الصحيحة</label>' +
+            '</div>' +
             '<div id="aq-form-error" class="aq-error"></div>' +
             '<div style="display:flex; gap:10px; margin-top:6px;">' +
                 '<button type="button" id="aq-form-save-btn" class="aq-btn aq-btn-primary">💾 حفظ</button>' +
@@ -369,8 +390,12 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
             if (type === 'reveal' && !revealImageFile) { errEl.textContent = 'لازم تكتب اسم ملف الصورة الكاملة (نوع "تخمين شخصية").'; errEl.style.display = 'block'; return; }
             if (!primaryAnswer) { errEl.textContent = 'لازم تكتب الإجابة الأساسية.'; errEl.style.display = 'block'; return; }
 
+            var hint = (el('aq-form-hint').value || '').trim();
+            var explanation = (el('aq-form-explanation').value || '').trim();
             var challenge = { id: _editingId || ('img' + Date.now()), type: type, imageFile: imageFile, answers: answers };
             if (type === 'reveal') challenge.revealImageFile = revealImageFile;
+            if (hint) challenge.hint = hint;
+            if (explanation) challenge.explanation = explanation;
 
             if (_editingId) {
                 var idx = _challenges.findIndex(function (c) { return c.id === _editingId; });

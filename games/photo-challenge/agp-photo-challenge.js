@@ -739,6 +739,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var watermarkEl = document.querySelector('#pc-stage-inner .pc-stage-watermark');
         if (watermarkEl) watermarkEl.style.display = '';
         document.querySelectorAll('.pc-side-player-chip.pc-correct').forEach(function (chip) { chip.classList.remove('pc-correct'); });
+        setChallengeHint('');
 
         _currentChallenge = pickNextChallenge();
 
@@ -756,6 +757,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 if (_currentChallenge) {
                     stageInner.classList.add('pc-has-real-image');
                     stageInner.style.backgroundImage = "url('challenge-images/" + encodeURIComponent(_currentChallenge.imageFile) + "')";
+                    // Optional per-question hint from the question bank
+                    // (admin-answers.html → "hint"), shown over its image.
+                    setChallengeHint(_currentChallenge.hint);
                 } else {
                     el('pc-stage-image-label').textContent = '⚠️ ما فيه صور مضافة ببنك التحدي بعد';
                 }
@@ -773,6 +777,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             }
             numEl.textContent = count;
         }, 800);
+    }
+
+    function setChallengeHint(text) {
+        var hintEl = el('pc-challenge-hint');
+        if (!hintEl) return;
+        var t = (text || '').trim();
+        hintEl.innerHTML = t ? '<span class="pc-challenge-hint-icon">💡</span><span>' + escapeHtml(t) + '</span>' : '';
+        hintEl.style.display = t ? 'flex' : 'none';
     }
 
     function showScoreFloat(team, amount) {
@@ -824,6 +836,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '</div>' +
             '</div>' +
             '<div class="pc-result-answer-row">الإجابة الصحيحة: <b>' + escapeHtml(answerText) + '</b></div>' +
+            // Optional "how the answer works" note from the question bank
+            // (admin-answers.html → "explanation").
+            (_currentChallenge && _currentChallenge.explanation && String(_currentChallenge.explanation).trim()
+                ? '<div class="pc-result-explanation"><span class="pc-result-explanation-title">📝 توضيح الإجابة</span>' +
+                  escapeHtml(String(_currentChallenge.explanation).trim()) + '</div>'
+                : '') +
             '<div class="pc-result-points">+' + pointsAwarded + ' نقاط</div>' +
             '<div class="pc-result-points-sub">' + timeLabel + '</div>';
         panel.style.display = 'flex';
@@ -833,15 +851,42 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (chip) chip.classList.add('pc-correct');
         }
 
+        // The winning answer keeps its answer tab on screen first: while
+        // _holdWinnerForAnswerTab is set, checkForWinner() only remembers
+        // the winning team, and the winner screen opens when the host
+        // closes the answer tab (the "عرض الفائز" button below).
+        _holdWinnerForAnswerTab = true;
         var key = (playerTeam === TEAM1) ? SCORE_KEY_TEAM1 : SCORE_KEY_TEAM2;
         AGP.scoreManager.addPoints(key, pointsAwarded);
         if (!isGuest) AGP.scoreManager.addPoints(playerId, pointsAwarded); // نقاط شخصية -- بس للاعبين المنضمين فعلاً
         updateSideScoreDisplay(playerTeam);
         showScoreFloat(playerTeam, pointsAwarded);
         checkForWinner();
+        _holdWinnerForAnswerTab = false;
+
+        if (_pendingWinnerTeam) {
+            el('pc-match-btn-row').innerHTML = '<button type="button" class="pc-btn-next-round" id="pc-show-winner-btn">🏆 إغلاق الإجابة وعرض الفائز</button>';
+            el('pc-show-winner-btn').addEventListener('click', function () {
+                var team = _pendingWinnerTeam;
+                _pendingWinnerTeam = null;
+                closeAnswerTab();
+                renderWinnerScreen(team);
+            });
+            return;
+        }
 
         el('pc-match-btn-row').innerHTML = '<button type="button" class="pc-btn-next-round" id="pc-next-round-btn">⏭ الجولة التالية</button>';
         el('pc-next-round-btn').addEventListener('click', handleShowImageAndStart);
+    }
+
+    // Hides the answer tab (result panel) and its green result styling.
+    function closeAnswerTab() {
+        var panel = el('pc-result-panel');
+        if (panel) panel.style.display = 'none';
+        var stageInner = el('pc-stage-inner');
+        var stageBox = stageInner && stageInner.closest('.pc-stage-box');
+        if (stageBox) stageBox.classList.remove('pc-result-mode');
+        el('pc-match-btn-row').innerHTML = '';
     }
 
     // محرك التحقق الفعلي من الإجابات الواردة بالشات -- أول إجابة صحيحة
@@ -912,6 +957,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '<div class="pc-stage-inner" id="pc-stage-inner">' +
                         '<div class="pc-stage-watermark"><img src="../../logo.png" alt="" onerror="this.style.display=\'none\'"></div>' +
                         '<span class="pc-stage-image-label" id="pc-stage-image-label">هنا تُعرض صورة التحدي</span>' +
+                        '<div class="pc-challenge-hint" id="pc-challenge-hint"></div>' +
                         '<div class="pc-result-panel" id="pc-result-panel"></div>' +
                     '</div>' +
                     '<div class="pc-countdown-overlay" id="pc-countdown-overlay">' +
@@ -932,6 +978,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     var _winnerDeclared = false;
+    var _holdWinnerForAnswerTab = false;
+    var _pendingWinnerTeam = null;
     var _winnerDim = null;
     var _winnerCard = null;
 
@@ -1007,11 +1055,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function checkForWinner() {
-        if (_screen !== 'match' || _winnerDeclared) return;
+        if (_screen !== 'match' || _winnerDeclared || _pendingWinnerTeam) return;
         var score1 = AGP.scoreManager.getScore(SCORE_KEY_TEAM1);
         var score2 = AGP.scoreManager.getScore(SCORE_KEY_TEAM2);
-        if (score1 >= _settings.winPoints) renderWinnerScreen(TEAM1);
-        else if (score2 >= _settings.winPoints) renderWinnerScreen(TEAM2);
+        var team = score1 >= _settings.winPoints ? TEAM1 : (score2 >= _settings.winPoints ? TEAM2 : null);
+        if (!team) return;
+        if (_holdWinnerForAnswerTab) { _pendingWinnerTeam = team; return; }
+        renderWinnerScreen(team);
     }
 
     // تبويب "الأفضلية" -- إجابتين صح متتاليتين. يعرض لاعبي الفريق الآخر
