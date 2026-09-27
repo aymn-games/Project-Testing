@@ -641,7 +641,111 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'width:100%;max-width:360px;height:44px;margin:18px auto 0;border-radius:10px;',
             'background:linear-gradient(90deg,var(--agp-accent-2),var(--agp-accent));color:#fff;',
             'font-weight:800;font-size:0.9em;text-decoration:none;font-family:Cairo,sans-serif;',
-            'box-sizing:border-box;}'
+            'box-sizing:border-box;}',
+
+            /* ==================================================================
+             * Lobby — same layout, sizes and buttons as Elimination
+             * Roulette's lobby (ported as-is; this block comes last so it
+             * overrides this file's earlier lobby rules). Colors stay this
+             * game's own where they're identity (background, start button).
+             *  - Header: title line (set by the lobby-heading code below) +
+             *    "للدخول اكتب في شات البث" + keyword in large yellow, and
+             *    the player count in a 157x52 capsule on the left.
+             *  - Cards: one 217x57 capsule each (48px avatar inside on the
+             *    right, name centered, kick button on the left), 217px
+             *    columns with a 37px gap (5 per row at full width).
+             *  - Framed cards: shown whole in the same slot (see
+             *    mcFitLobbyFramedCards()).
+             *  - Grid scrolls with a hidden scrollbar and passes under the
+             *    bottom buttons (--mc-actions-h = the button row's height).
+             *  - Bottom row: start button + "العودة لمكتبة الألعاب" only.
+             * ==================================================================== */
+            '#agp-shell-box.agp-lobby-box{width:min(94vw,1310px) !important;max-width:min(94vw,1310px) !important;}',
+            '#agp-shell-box.agp-lobby-box h2{text-shadow:none !important;letter-spacing:0 !important;',
+            'font-family:"Cairo",sans-serif !important;font-weight:800 !important;font-size:44px !important;',
+            'color:#fff !important;line-height:1.3 !important;margin:0 0 6px !important;text-align:center !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-hint{display:flex !important;flex-wrap:wrap !important;',
+            'justify-content:center !important;align-items:center !important;gap:56px !important;',
+            'width:100% !important;margin-bottom:22px !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-hint-text{display:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge{order:0;display:inline-flex !important;',
+            'align-items:center !important;gap:14px !important;background:none !important;backdrop-filter:none !important;',
+            'border:none !important;padding:0 !important;font-family:"Cairo",sans-serif !important;',
+            'font-size:44px !important;font-weight:800 !important;line-height:1.2 !important;letter-spacing:0 !important;',
+            'color:#E2C700 !important;box-shadow:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge::before{content:"للدخول اكتب في شات البث" !important;',
+            'font-family:"Cairo",sans-serif;font-size:22px;font-weight:700;color:#fff;white-space:nowrap;}',
+            '#agp-shell-box.agp-lobby-box #agp-lobby-count{position:static !important;order:1 !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-player-count-badge{display:inline-flex !important;',
+            'align-items:center !important;justify-content:center !important;width:157px !important;',
+            'height:52px !important;box-sizing:border-box !important;padding:0 !important;',
+            'background:rgba(217,217,217,.1) !important;border:4px solid #000 !important;',
+            'border-radius:26px !important;font-family:"Cairo",sans-serif !important;direction:ltr !important;',
+            'font-size:28px !important;font-weight:800 !important;color:#fff !important;',
+            'box-shadow:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-player-count-badge::before{content:none !important;}',
+            '@media (max-width:600px){',
+            '#agp-shell-box.agp-lobby-box h2{font-size:26px !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-hint{gap:12px 24px !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge{font-size:30px !important;gap:10px !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge::before{font-size:16px;}',
+            '#agp-shell-box.agp-lobby-box .agp-player-count-badge{width:120px !important;height:44px !important;',
+            'font-size:22px !important;border-width:3px !important;}}',
+
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{display:grid !important;',
+            'grid-template-columns:repeat(auto-fill,217px) !important;column-gap:37px !important;',
+            'row-gap:20px !important;justify-content:center !important;',
+            'justify-items:center !important;align-items:end !important;align-content:start !important;',
+            'flex:1 1 auto !important;min-height:0 !important;overflow-y:auto !important;margin-top:0 !important;',
+            'scrollbar-width:none !important;-ms-overflow-style:none !important;padding-top:12px !important;',
+            'padding-bottom:calc(var(--mc-actions-h,62px) + 16px) !important;',
+            'margin-bottom:calc(-1 * var(--mc-actions-h,62px)) !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list::-webkit-scrollbar{display:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{min-height:57px !important;}',
+
+            '#agp-shell-box.agp-lobby-box .agp-pcard{width:217px !important;height:57px !important;',
+            'box-sizing:border-box !important;padding:0 3px 0 28px !important;gap:6px !important;',
+            'border-radius:24px !important;background:rgba(217,217,217,.3) !important;',
+            'border:2px solid #000 !important;max-width:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic{width:48px !important;height:48px !important;',
+            'background:#D9D9D9 !important;border:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-name-basic{flex:1 1 auto !important;width:auto !important;',
+            'min-width:0 !important;height:auto !important;margin:0 !important;padding:0 !important;',
+            'font-size:20px !important;font-family:"Noto Kufi Arabic",sans-serif !important;',
+            'font-weight:700 !important;color:#fff !important;background:none !important;border:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic--fallback{font-size:15px !important;color:#3a2f4a !important;}',
+            '#agp-shell-box.agp-lobby-box li:has(> .agp-pcard) .agp-player-remove-btn{',
+            'top:50% !important;left:7px !important;right:auto !important;transform:translateY(-50%);',
+            'width:16px !important;height:16px !important;font-size:9px !important;z-index:5;}',
+            '#agp-shell-box.agp-lobby-box li:has(> .agp-pcard-tpl){width:217px !important;height:57px !important;',
+            'overflow:visible !important;display:flex !important;',
+            'flex-direction:row !important;align-items:center !important;justify-content:center !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-tpl{zoom:0.7282;flex-shrink:0 !important;}',
+            '#agp-shell-box.agp-lobby-box li:has(> .agp-pcard-tpl) .agp-player-remove-btn{',
+            'top:50% !important;left:7px !important;right:auto !important;transform:translateY(-50%);',
+            'width:16px !important;height:16px !important;font-size:9px !important;z-index:5;}',
+            '#agp-shell-box.agp-lobby-box .agp-player-remove-btn{',
+            'background:rgba(224,115,111,.18) !important;border:1px solid rgba(224,115,111,.55) !important;',
+            'color:#e0736f !important;border-radius:50% !important;}',
+
+            '#agp-shell-box.agp-lobby-box .mc-lobby-actions-row{flex:0 0 auto !important;',
+            'display:flex !important;gap:14px !important;margin-top:14px !important;padding-top:0 !important;',
+            'justify-content:center !important;flex-wrap:wrap !important;position:relative;z-index:3 !important;}',
+            '#agp-shell-box.agp-lobby-box .mc-lobby-actions-row > *{width:360px !important;height:48px !important;',
+            'max-width:360px !important;flex:0 0 360px !important;box-sizing:border-box !important;',
+            'display:flex !important;align-items:center !important;justify-content:center !important;',
+            'padding:0 14px !important;margin:0 !important;border-radius:999px !important;',
+            'font-family:"Noto Kufi Arabic",sans-serif !important;font-weight:700 !important;font-size:0.9em !important;}',
+            '#agp-shell-box.agp-lobby-box .mc-lobby-actions-row .mc-lobby-home-btn{',
+            'border:1px solid rgba(255,255,255,0.25) !important;background:rgba(255,255,255,0.08) !important;',
+            'color:#f3eefc !important;cursor:pointer;}',
+            '#agp-shell-box.agp-lobby-box .mc-lobby-actions-row .mc-lobby-home-btn:hover{background:rgba(255,255,255,0.18) !important;}',
+            // This game adds its own kick button on each name plate on top of
+            // the shared one; in the lobby only the shared one is kept (same
+            // action — AGP.player.removePlayer), placed like Elimination
+            // Roulette's. The start button uses its own green here too.
+            '#agp-shell-box.agp-lobby-box .mc-lobby-remove-btn{display:none !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-pcard-name-basic .mc-name-inner{display:inline-block;}',
         ].join('');
         document.head.appendChild(style);
     }
@@ -1617,14 +1721,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* -------- 14أ) عنوان اللوبي بلونين -------- */
+    // Same title as Elimination Roulette's lobby: لوبي الدخول للعبة "<game>".
     function injectLobbyGameNameLabel() {
-        var h2 = document.querySelector('#agp-shell-box h2');
-        if (!h2 || h2.textContent.indexOf('اللوبي') === -1) return;
-        if (h2.querySelector('.mc-lobby-game-tag')) return; // مُضافة أصلاً
-        var tag = document.createElement('span');
-        tag.className = 'mc-lobby-game-tag';
-        tag.textContent = ' — ' + GAME_NAME;
-        h2.appendChild(tag);
+        var h2 = document.querySelector('#agp-shell-box.agp-lobby-box h2');
+        if (!h2 || h2.getAttribute('data-mc-heading') === '1') return;
+        h2.textContent = 'لوبي الدخول للعبة "' + GAME_NAME + '"';
+        h2.setAttribute('data-mc-heading', '1');
     }
 
     /* -------- 14ب) قائمة اللاعبين: شبكة 3 أعمدة + حذف + بطاقة عريضة + تصغير تلقائي -------- */
@@ -1697,7 +1799,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             }
         });
 
-        normalizeFramedCardWidths(list, targetWidth);
+        // Framed cards are sized by mcFitLobbyFramedCards() now (same
+        // 217x57 slot as Elimination Roulette's lobby), so the old per-card
+        // zoom (normalizeFramedCardWidths) is no longer applied here.
     }
 
     // ⚠️ سلايد للاسم الطويل بدل القصّ — نغلّف النص مرة وحدة بـ.mc-name-inner،
@@ -1742,6 +1846,94 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    // Framed lobby cards, shown whole (same as Elimination Roulette's
+    // lobby): the shared renderer draws every framed card 298x100 and
+    // crops tall frame artwork to that height. For each framed card in
+    // the lobby this measures the frame image's opaque (alpha) rows once
+    // per image, re-expands the card to cover the full artwork plus the
+    // avatar/name (shifting every absolutely positioned child by the same
+    // amount), then zooms it to fit the 217px-wide slot, at most 75px
+    // tall. DOM/style-only — js/agp-player-card.js untouched.
+    var _mcFrameBoundsCache = {};
+
+    function mcGetFrameOpaqueRows(src) {
+        if (_mcFrameBoundsCache[src]) return _mcFrameBoundsCache[src];
+        _mcFrameBoundsCache[src] = new Promise(function (resolve) {
+            var img = new Image();
+            img.onload = function () {
+                try {
+                    var w = Math.min(img.naturalWidth, 300);
+                    var h = Math.max(1, Math.round(img.naturalHeight * w / img.naturalWidth));
+                    var c = document.createElement('canvas');
+                    c.width = w; c.height = h;
+                    var ctx = c.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    var data = ctx.getImageData(0, 0, w, h).data;
+                    var top = -1, bottom = -1;
+                    for (var y = 0; y < h && top < 0; y++) {
+                        for (var x = 0; x < w; x++) { if (data[(y * w + x) * 4 + 3] > 16) { top = y; break; } }
+                    }
+                    for (var y2 = h - 1; y2 >= 0 && bottom < 0; y2--) {
+                        for (var x2 = 0; x2 < w; x2++) { if (data[(y2 * w + x2) * 4 + 3] > 16) { bottom = y2 + 1; break; } }
+                    }
+                    resolve(top < 0 ? null : { top: top / h, bottom: bottom / h });
+                } catch (e) { resolve(null); }
+            };
+            img.onerror = function () { resolve(null); };
+            img.src = src;
+        });
+        return _mcFrameBoundsCache[src];
+    }
+
+    function mcFitLobbyFramedCards() {
+        var box = el('agp-shell-box');
+        if (!box || !box.classList.contains('agp-lobby-box')) return;
+        var cards = box.querySelectorAll('.agp-shell-player-list .agp-pcard-tpl:not([data-mc-fit])');
+        Array.prototype.forEach.call(cards, function (card) {
+            var frameEl = card.querySelector('.agp-pcard-tpl-frame-img');
+            var m = frameEl && /url\(["']?(.*?)["']?\)/.exec(frameEl.style.backgroundImage);
+            if (!m) return;
+            card.setAttribute('data-mc-fit', 'pending');
+            mcGetFrameOpaqueRows(m[1]).then(function (rows) {
+                if (!rows || !card.isConnected) return;
+                var frameTop = parseFloat(frameEl.style.top) || 0;
+                var frameH = parseFloat(frameEl.style.height) || 0;
+                var bandTop = frameTop + rows.top * frameH;
+                var bandBottom = frameTop + rows.bottom * frameH;
+                var children = card.querySelectorAll('.agp-pcard-tpl-avatar,.agp-pcard-tpl-name,.agp-pcard-tpl-frame-img');
+                Array.prototype.forEach.call(children, function (child) {
+                    if (child === frameEl) return;
+                    var t = parseFloat(child.style.top) || 0;
+                    var ch = parseFloat(child.style.height) || 0;
+                    if (t < bandTop) bandTop = t;
+                    if (t + ch > bandBottom) bandBottom = t + ch;
+                });
+                Array.prototype.forEach.call(children, function (child) {
+                    child.style.top = ((parseFloat(child.style.top) || 0) - bandTop) + 'px';
+                });
+                var fullH = bandBottom - bandTop;
+                var cardW = parseFloat(card.style.width) || 298;
+                card.style.height = fullH + 'px';
+                card.style.zoom = String(Math.min(217 / cardW, 75 / fullH));
+                card.setAttribute('data-mc-fit', '1');
+            });
+        });
+    }
+
+    // Keeps --mc-actions-h (the card grid scrolls underneath the bottom
+    // button row by this much) equal to the row's height + top margin,
+    // which grows when the buttons wrap on narrow screens.
+    function mcTrackLobbyActionsHeight(box, row) {
+        if (row.getAttribute('data-mc-h') === '1') return;
+        row.setAttribute('data-mc-h', '1');
+        var sync = function () {
+            box.style.setProperty('--mc-actions-h',
+                (row.offsetHeight + (parseFloat(getComputedStyle(row).marginTop) || 0)) + 'px');
+        };
+        sync();
+        if (window.ResizeObserver) new ResizeObserver(sync).observe(row);
+    }
+
     /* -------- 14ج) صف الأزرار السفلي (إعدادات / بدء الجولة / رجوع للمنصة) -------- */
     function ensureLobbyActionsRow(box) {
         if (document.getElementById('mc-lobby-actions-row')) return;
@@ -1752,24 +1944,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         row.id = 'mc-lobby-actions-row';
         row.className = 'mc-lobby-actions-row';
 
-        var backBtn = document.createElement('button');
-        backBtn.type = 'button';
-        backBtn.className = 'mc-lobby-back-settings-btn';
-        backBtn.textContent = '⚙️ العودة لاعدادات المباراة';
-        backBtn.onclick = function () {
-            if (window.confirm('بيلغي الاتصال الحالي بالبث ويقفل اللوبي — تبي تكمل؟')) {
-                window.location.reload();
-            }
-        };
-
+        // Same as Elimination Roulette's lobby: only two buttons — start,
+        // and "back to the games library" (games.html). The old "back to
+        // match settings" button was removed.
         var homeBtn = document.createElement('a');
-        homeBtn.href = '../../index.html';
+        homeBtn.href = '../../games.html';
         homeBtn.className = 'mc-lobby-home-btn';
-        homeBtn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
+        homeBtn.textContent = '🏠 العودة لمكتبة الألعاب';
 
-        startBtn.classList.add('mc-lobby-start-btn'); // نفس العنصر، ننقله بس (بدون أي تكرار أو تعديل نصّه)
+        startBtn.classList.add('mc-lobby-start-btn'); // نفس العنصر، ننقله بس (بدون أي تكرار)
+        if (startBtn.textContent.indexOf('اغلاق اللوبي') === -1) {
+            startBtn.textContent = '🔒 اغلاق اللوبي وبدء المباراة';
+        }
 
-        row.appendChild(backBtn);
         row.appendChild(startBtn);
         row.appendChild(homeBtn);
         box.appendChild(row);
@@ -1779,6 +1966,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         injectLobbyGameNameLabel();
         enhanceLobbyList();
         ensureLobbyActionsRow(box);
+        var actionsRow = document.getElementById('mc-lobby-actions-row');
+        if (actionsRow) mcTrackLobbyActionsHeight(box, actionsRow);
+        mcFitLobbyFramedCards();
     }
 
     /* -------- 14د) لوحة الإعدادات أثناء المباراة: زر رجوع للمنصة -------- */
