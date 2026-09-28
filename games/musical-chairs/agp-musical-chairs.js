@@ -269,8 +269,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *     المرجعية المرسلة — تُعدَّل يدوياً بسهولة لاحقاً لو الألوان ما
      *     عجبتك بالضبط.
      * ==================================================================== */
+    // خطوط شاشة الإعدادات/اللوبي — نفس خطوط السلم والثعبان
+    function ensureDesignFonts() {
+        if (el('mc-design-fonts-link')) return;
+        var sheet = document.createElement('link');
+        sheet.id = 'mc-design-fonts-link';
+        sheet.rel = 'stylesheet';
+        sheet.href = 'https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800&family=Noto+Kufi+Arabic:wght@400;500;600;700&family=Cairo:wght@600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap';
+        document.head.appendChild(sheet);
+    }
+
     function injectStageStyles() {
         if (el('mc-stage-styles')) return;
+        ensureDesignFonts();
         var style = document.createElement('style');
         style.id = 'mc-stage-styles';
         style.textContent = [
@@ -530,112 +541,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'width:38px;height:38px;border-radius:50%;display:flex !important;align-items:center;',
             'justify-content:center;box-shadow:0 0 8px rgba(0,0,0,0.55);font-size:1.5em !important;}',
 
-            /* ⚠️ اسم اللعبة بجانب عنوان اللوبي — بلون ذهبي مميّز عن باقي النص */
-            '.mc-lobby-game-tag{color:var(--mc-gold);}',
-
-            /* ⚠️ تغميق خلفية صندوق اللوبي نفسه بس (65%) — بطاقات اللاعبين
-             * ما تتأثر إطلاقاً (لها خلفيتها الخاصة المنفصلة). التدرّج
-             * الأصلي فعلياً بالملف المشترك للوبي تحديداً هو
-             * linear-gradient(170deg,#3a1560,#7a1fb8) — مو تدرّج الصندوق
-             * العام، فحسبت النسخة الأغمق منه بالضبط (65% أغمق). */
-            '#agp-shell-box.agp-lobby-box{background:linear-gradient(170deg,#140722,#2b0b40) !important;}',
-
-            /* ======================================================================
-             * ⚠️ تحسينات شاشة اللوبي (شبكة اللاعبين + صف الأزرار) — بدون
-             * أي تغيير على لون خلفية صندوق اللوبي نفسه (قرار صريح).
-             * ==================================================================== */
-            '#agp-shell-box.agp-lobby-box{height:900px !important;max-height:92vh !important;',
-            'overflow-y:auto !important;display:flex !important;flex-direction:column;}',
-
-            /* ======================================================================
-             * ⚠️ [تحديث] نظام لوبي-قياسي-v1 (docs/PLAYER-CARD-STANDARDS.md
-             * قسم 3/4/7 — دورت عليه بأحدث نسخة من المستودع وما لقيته
-             * (يبدو ما انرفع لـGitHub بعد)، فطبّقت بالحرف الأرقام اللي
-             * زوَّدتني فيها مباشرة برسالتك + معايير لوبي-قياسي-v1
-             * المحفوظة عندي من محادثات سابقة (تطابقت مع كلامك 100%):
-             * بطاقة 60px، تراكب 22%، لوح اسم عرض ثابت واحد (بدون
-             * min/max)، 3 أعمدة، فجوة 0.5سم، × فوق لوح الاسم، وسلايد
-             * للأسماء الطويلة بدل القصّ. حذفت نظام "البطاقة العريضة"
-             * والتصغير التلقائي من التحديث اللي فات (يخالف مبدأ "ثابت
-             * بدون تغيّر" بالمعيار الجديد). */
-            '#agp-lobby-list.agp-shell-player-list{',
-            '--mc-av:60px;--mc-nw:200px;--mc-nh:60px;--mc-overlap:13px;--mc-nf:18px;--mc-gap:19px;',
-            'display:grid !important;grid-template-columns:repeat(4,1fr);',
-            'gap:var(--mc-gap) !important;margin-top:34px !important;list-style:none;padding:0;',
-            'justify-items:center;}',
-            '#agp-lobby-list.agp-shell-player-list li{position:relative;display:flex;align-items:center;',
-            'justify-content:center;min-height:78px;}',
-
-            /* ⚠️ إصلاح باگ حقيقي: الغلاف .agp-pcard عنده خلفية/حدود/حشو
-             * خاصة فيه بالملف المشترك (pill شفافة تحيط بالأفاتار+الاسم
-             * سوا) — وأنا زدت خلفية ثانية منفصلة على لوح الاسم فوقها،
-             * فطلعت خلفيتين متراكبتين. الحل: نلغي خلفية الغلاف الخارجي
-             * تماماً، تبقى خلفية لوح الاسم هي الوحيدة الظاهرة. */
-            '#agp-lobby-list .agp-pcard{display:flex !important;align-items:center;gap:0 !important;',
-            'background:none !important;border:none !important;padding:0 !important;',
-            'max-width:none !important;}',
-            '#agp-lobby-list .agp-pcard-avatar-basic{width:var(--mc-av) !important;height:var(--mc-av) !important;',
-            'flex-shrink:0;position:relative;z-index:2;border-radius:50%;}',
-            '#agp-lobby-list .agp-pcard-name-basic{display:flex !important;align-items:center;',
-            'justify-content:flex-start;width:var(--mc-nw) !important;min-width:var(--mc-nw) !important;',
-            'max-width:var(--mc-nw) !important;height:var(--mc-nh);',
-            'margin-inline-start:calc(-1 * var(--mc-overlap)) !important;',
-            'padding-inline-start:calc(var(--mc-overlap) + 10px);padding-inline-end:14px;',
-            'font-size:var(--mc-nf) !important;background:rgba(255,255,255,0.08);',
-            'border:1px solid rgba(255,255,255,0.25);border-radius:999px;',
-            'white-space:nowrap;overflow:hidden;box-sizing:border-box;position:relative;z-index:1;color:#fff;}',
-            /* ⚠️ سلايد للاسم الطويل (بدل القصّ بـellipsis) — نغلّف النص
-             * بـ .mc-name-inner من JS، ونحرّكه أفقياً لو فاض عن اللوح */
-            '#agp-lobby-list .agp-pcard-name-basic .mc-name-inner{display:inline-block;white-space:nowrap;}',
-            '#agp-lobby-list .agp-pcard-name-basic.mc-name-overflow .mc-name-inner{',
-            'animation:mcNameSlide 3.2s ease-in-out infinite alternate;}',
-            '@keyframes mcNameSlide{0%,15%{transform:translateX(0);}85%,100%{transform:translateX(var(--mc-name-shift,0px));}}',
-
-            /* بطاقة مؤطَّرة (Option A) — عرض هدف ثابت = نفس عرض البطاقة
-             * العادية، الارتفاع ناتج تلقائياً حسب نسبة كل إطار (zoom لكل
-             * بطاقة على حدة، محسوب بـJS من عرضها الطبيعي الفعلي — راجع
-             * normalizeFramedCardWidths). */
-            '#agp-lobby-list .agp-pcard-tpl{transform-origin:top right;}',
-
-            /* ⚠️ الزر صار child للوح الاسم نفسه (.agp-pcard-name-basic،
-             * position:relative أصلاً بالأعلى)، بموضع نهاية اللوح (طرفه
-             * البعيد عن الأفاتار) — بدل موضعه القديم نسبة لـli اللي كان
-             * ينزاح بسبب توسيط الشبكة. */
-            '.mc-lobby-remove-btn{position:absolute;top:-9px;left:-6px;width:22px;height:22px;',
-            'border-radius:50%;background:#ff3b5c;border:2px solid #fff;color:#fff;font-size:11px;',
-            'font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;',
-            'z-index:5;padding:0;line-height:1;}',
-            '.mc-lobby-remove-btn:hover{background:#ff5c78;}',
-
-            /* ⚠️ إخفاء بادج "الدخولية" (ميزة معطوبة حالياً حسب صاحب
-             * المشروع) من شاشة اللوبي تحديداً — override محلي بملفنا،
-             * بدون أي لمس لملف js/agp-entrance.js المشترك نفسه. */
-            '#agp-entrance-settled-list{display:none !important;}',
-
-            /* ⚠️ إصلاح: 360px×3 أزرار = 1080px، أعرض من محتوى صندوق اللوبي
-             * الصافي (832px)، فكانت تنزل كل وحدة لسطر لحالها (flex-wrap
-             * يشتغل قسراً). الحل: flex-wrap:nowrap (يمنع النزول لسطر
-             * ثاني نهائياً) + عرض مرن يتقاسم المساحة المتاحة (يتساوى مع
-             * 3 أزرار براحة داخل نفس الصف).
-             * ⚠️ إصلاح إضافي: زر بدء الجولة (#agp-start-round-btn) يحمل
-             * كلاس مشترك (.agp-shell-btn-connect) فيه width:100% بنفس
-             * درجة الأولوية (specificity) تماماً — أحياناً يكسب حسب ترتيب
-             * الحقن بالصفحة. !important هنا يضمن غلبة تنسيقي دائماً
-             * بغض النظر عن الترتيب، بدون أي لمس للملف المشترك نفسه. */
-            '.mc-lobby-actions-row{display:flex !important;gap:10px !important;justify-content:center !important;',
-            'margin-top:auto !important;padding-top:18px;flex-wrap:nowrap !important;width:100% !important;',
-            'box-sizing:border-box;}',
-            '.mc-lobby-actions-row > *{flex:1 1 0 !important;width:auto !important;min-width:0 !important;',
-            'max-width:270px !important;height:48px !important;border-radius:10px;',
-            'font-weight:800;font-size:0.82em;cursor:pointer;border:none;display:flex !important;',
-            'align-items:center;justify-content:center;gap:6px;box-sizing:border-box;font-family:Cairo,sans-serif;',
-            'text-decoration:none;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;',
-            'margin:0 !important;}',
-            '.mc-lobby-back-settings-btn{background:linear-gradient(90deg,#4a1f5c,#2D1932);color:#fff;',
-            'border:1px solid rgba(255,255,255,0.3) !important;}',
-            '.mc-lobby-home-btn{background:linear-gradient(90deg,var(--agp-accent-2),var(--agp-accent));color:#fff;}',
-            '#agp-start-round-btn.mc-lobby-start-btn{background:linear-gradient(90deg,#1fbf6a,#0e8f4e) !important;}',
-
             /* لوحة الإعدادات أثناء المباراة — زر رجوع للمنصة + إكس أبرز */
             '.mc-settings-home-btn{display:flex;align-items:center;justify-content:center;gap:6px;',
             'width:100%;max-width:360px;height:44px;margin:18px auto 0;border-radius:10px;',
@@ -644,36 +549,54 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'box-sizing:border-box;}',
 
             /* ==================================================================
-             * Lobby — same layout, sizes and buttons as Elimination
-             * Roulette's lobby (ported as-is; this block comes last so it
-             * overrides this file's earlier lobby rules). Colors stay this
-             * game's own where they're identity (background, start button).
-             *  - Header: title line (set by the lobby-heading code below) +
-             *    "للدخول اكتب في شات البث" + keyword in large yellow, and
-             *    the player count in a 157x52 capsule on the left.
-             *  - Cards: one 217x57 capsule each (48px avatar inside on the
-             *    right, name centered, kick button on the left), 217px
-             *    columns with a 37px gap (5 per row at full width).
-             *  - Framed cards: shown whole in the same slot (see
-             *    mcFitLobbyFramedCards()).
-             *  - Grid scrolls with a hidden scrollbar and passes under the
-             *    bottom buttons (--mc-actions-h = the button row's height).
-             *  - Bottom row: start button + "العودة لمكتبة الألعاب" only.
+             * شاشة الإعدادات الأولى + طبقة "جاري الاتصال" + اللوبي — منسوخة
+             * من تنسيق السلم والثعبان (games/snakes-ladders) بنفس الـCSS،
+             * بادئة mc- بدل sl-، بدون أي تعديل على الملفات المشتركة.
              * ==================================================================== */
-            '#agp-shell-box.agp-lobby-box{width:min(94vw,1310px) !important;max-width:min(94vw,1310px) !important;}',
+            '#agp-shell-box.agp-lobby-box,#agp-shell-box.agp-lobby-box *,',
+            '#mc-conn-layer,#mc-conn-layer *{font-family:"Zain",Cairo,sans-serif !important;}',
+            '.agp-field-desc{font-size:11.5px !important;font-weight:400 !important;color:#8f88a3 !important;',
+            'font-family:"IBM Plex Sans Arabic",sans-serif !important;white-space:normal !important;text-align:right;}',
+            '#agp-shell-overlay:has(#agp-shell-box.agp-lobby-box){padding:0 !important;',
+            'overflow-y:auto !important;',
+            'background:',
+            'radial-gradient(60% 45% at 18% 8%,rgba(122,63,212,.22),transparent 70%),',
+            'radial-gradient(50% 40% at 88% 40%,rgba(214,168,60,.14),transparent 72%),',
+            'radial-gradient(55% 45% at 40% 104%,rgba(48,26,104,.26),transparent 74%),',
+            'linear-gradient(180deg,#0d0a14 0%,#08060d 45%,#050508 100%) !important;}',
+            '#agp-shell-box.agp-lobby-box{background:none !important;border:none !important;',
+            'box-shadow:none !important;position:relative;overflow:hidden;}',
+            '#agp-shell-box.agp-lobby-box{width:min(94vw,1310px) !important;',
+            'max-width:min(94vw,1310px) !important;height:min(94vh,980px) !important;max-height:94vh !important;',
+            'height:min(94dvh,980px) !important;max-height:94dvh !important;',
+            'display:flex !important;flex-direction:column !important;overflow:hidden !important;}',
+            '#agp-shell-box.agp-lobby-box > h2,',
+            '#agp-shell-box.agp-lobby-box > .agp-join-hint,',
+            '#agp-shell-box.agp-lobby-box > #agp-entrance-stage,',
+            '#agp-shell-box.agp-lobby-box > #agp-entrance-settled-list{flex:0 0 auto !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{flex:1 1 auto !important;',
+            'min-height:0 !important;overflow-y:auto !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list{scrollbar-width:none !important;',
+            '-ms-overflow-style:none !important;padding-top:12px !important;',
+            'padding-bottom:calc(var(--mc-actions-h,62px) + 16px) !important;',
+            'margin-bottom:calc(-1 * var(--mc-actions-h,62px)) !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-shell-player-list::-webkit-scrollbar{display:none !important;}',
+            '#mc-lobby-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);',
+            'width:55%;max-width:420px;opacity:0.25;pointer-events:none;z-index:0;}',
+            '#agp-shell-box.agp-lobby-box > *:not(#mc-lobby-watermark){position:relative;z-index:1;}',
             '#agp-shell-box.agp-lobby-box h2{text-shadow:none !important;letter-spacing:0 !important;',
             'font-family:"Cairo",sans-serif !important;font-weight:800 !important;font-size:44px !important;',
-            'color:#fff !important;line-height:1.3 !important;margin:0 0 6px !important;text-align:center !important;}',
+            'color:#fff !important;line-height:1.3 !important;margin:0 0 6px !important;}',
             '#agp-shell-box.agp-lobby-box .agp-join-hint{display:flex !important;flex-wrap:wrap !important;',
             'justify-content:center !important;align-items:center !important;gap:56px !important;',
             'width:100% !important;margin-bottom:22px !important;}',
             '#agp-shell-box.agp-lobby-box .agp-join-hint-text{display:none !important;}',
             '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge{order:0;display:inline-flex !important;',
-            'align-items:center !important;gap:14px !important;background:none !important;backdrop-filter:none !important;',
+            'align-items:center !important;gap:14px !important;background:none !important;',
             'border:none !important;padding:0 !important;font-family:"Cairo",sans-serif !important;',
-            'font-size:44px !important;font-weight:800 !important;line-height:1.2 !important;letter-spacing:0 !important;',
+            'font-size:44px !important;font-weight:800 !important;line-height:1.2 !important;',
             'color:#E2C700 !important;box-shadow:none !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge::before{content:"للدخول اكتب في شات البث" !important;',
+            '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge::before{content:"للدخول اكتب في شات البث";',
             'font-family:"Cairo",sans-serif;font-size:22px;font-weight:700;color:#fff;white-space:nowrap;}',
             '#agp-shell-box.agp-lobby-box #agp-lobby-count{position:static !important;order:1 !important;}',
             '#agp-shell-box.agp-lobby-box .agp-player-count-badge{display:inline-flex !important;',
@@ -683,7 +606,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'border-radius:26px !important;font-family:"Cairo",sans-serif !important;direction:ltr !important;',
             'font-size:28px !important;font-weight:800 !important;color:#fff !important;',
             'box-shadow:none !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-player-count-badge::before{content:none !important;}',
             '@media (max-width:600px){',
             '#agp-shell-box.agp-lobby-box h2{font-size:26px !important;}',
             '#agp-shell-box.agp-lobby-box .agp-join-hint{gap:12px 24px !important;}',
@@ -691,22 +613,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#agp-shell-box.agp-lobby-box .agp-join-keyword-badge::before{font-size:16px;}',
             '#agp-shell-box.agp-lobby-box .agp-player-count-badge{width:120px !important;height:44px !important;',
             'font-size:22px !important;border-width:3px !important;}}',
-
             '#agp-shell-box.agp-lobby-box .agp-shell-player-list{display:grid !important;',
             'grid-template-columns:repeat(auto-fill,217px) !important;column-gap:37px !important;',
             'row-gap:20px !important;justify-content:center !important;',
-            'justify-items:center !important;align-items:end !important;align-content:start !important;',
-            'flex:1 1 auto !important;min-height:0 !important;overflow-y:auto !important;margin-top:0 !important;',
-            'scrollbar-width:none !important;-ms-overflow-style:none !important;padding-top:12px !important;',
-            'padding-bottom:calc(var(--mc-actions-h,62px) + 16px) !important;',
-            'margin-bottom:calc(-1 * var(--mc-actions-h,62px)) !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list::-webkit-scrollbar{display:none !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-shell-player-list li{min-height:57px !important;}',
-
+            'justify-items:center !important;align-items:end !important;align-content:start !important;}',
             '#agp-shell-box.agp-lobby-box .agp-pcard{width:217px !important;height:57px !important;',
             'box-sizing:border-box !important;padding:0 3px 0 28px !important;gap:6px !important;',
             'border-radius:24px !important;background:rgba(217,217,217,.3) !important;',
-            'border:2px solid #000 !important;max-width:none !important;}',
+            'border:2px solid #000 !important;}',
             '#agp-shell-box.agp-lobby-box .agp-pcard-avatar-basic{width:48px !important;height:48px !important;',
             'background:#D9D9D9 !important;border:none !important;}',
             '#agp-shell-box.agp-lobby-box .agp-pcard-name-basic{flex:1 1 auto !important;width:auto !important;',
@@ -725,27 +639,179 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'top:50% !important;left:7px !important;right:auto !important;transform:translateY(-50%);',
             'width:16px !important;height:16px !important;font-size:9px !important;z-index:5;}',
             '#agp-shell-box.agp-lobby-box .agp-player-remove-btn{',
-            'background:rgba(224,115,111,.18) !important;border:1px solid rgba(224,115,111,.55) !important;',
-            'color:#e0736f !important;border-radius:50% !important;}',
-
+            'background:rgba(224,115,111,.18) !important;border-color:rgba(224,115,111,.55) !important;',
+            'color:#e0736f !important;}',
+            '#agp-shell-box.agp-lobby-box .agp-player-remove-btn:hover{',
+            'background:rgba(224,115,111,.3) !important;color:#ff9b96 !important;}',
             '#agp-shell-box.agp-lobby-box .mc-lobby-actions-row{flex:0 0 auto !important;',
-            'display:flex !important;gap:14px !important;margin-top:14px !important;padding-top:0 !important;',
-            'justify-content:center !important;flex-wrap:wrap !important;position:relative;z-index:3 !important;}',
-            '#agp-shell-box.agp-lobby-box .mc-lobby-actions-row > *{width:360px !important;height:48px !important;',
+            'display:flex;gap:14px;margin-top:14px;justify-content:center;',
+            'flex-wrap:wrap;position:relative;z-index:3 !important;}',
+            '.mc-lobby-actions-row > *{width:360px !important;height:48px !important;',
             'max-width:360px !important;flex:0 0 360px !important;box-sizing:border-box !important;',
             'display:flex !important;align-items:center !important;justify-content:center !important;',
-            'padding:0 14px !important;margin:0 !important;border-radius:999px !important;',
-            'font-family:"Noto Kufi Arabic",sans-serif !important;font-weight:700 !important;font-size:0.9em !important;}',
-            '#agp-shell-box.agp-lobby-box .mc-lobby-actions-row .mc-lobby-home-btn{',
-            'border:1px solid rgba(255,255,255,0.25) !important;background:rgba(255,255,255,0.08) !important;',
-            'color:#f3eefc !important;cursor:pointer;}',
-            '#agp-shell-box.agp-lobby-box .mc-lobby-actions-row .mc-lobby-home-btn:hover{background:rgba(255,255,255,0.18) !important;}',
-            // This game adds its own kick button on each name plate on top of
-            // the shared one; in the lobby only the shared one is kept (same
-            // action — AGP.player.removePlayer), placed like Elimination
-            // Roulette's. The start button uses its own green here too.
-            '#agp-shell-box.agp-lobby-box .mc-lobby-remove-btn{display:none !important;}',
-            '#agp-shell-box.agp-lobby-box .agp-pcard-name-basic .mc-name-inner{display:inline-block;}',
+            'padding:0 14px !important;margin:0 !important;}',
+            '#agp-shell-box.agp-lobby-box .mc-lobby-actions-row #agp-start-round-btn{',
+            'background:#7a3fd4 !important;color:#f3ecff !important;',
+            'font-family:"Noto Kufi Arabic",sans-serif !important;',
+            'box-shadow:0 22px 46px -24px rgba(122,63,212,1) !important;transition:background .25s !important;}',
+            '#agp-shell-box.agp-lobby-box .mc-lobby-actions-row #agp-start-round-btn:hover{',
+            'background:#9a6cf0 !important;}',
+            '.mc-back-to-platform-btn{display:block;margin:14px auto 0;padding:10px 22px;',
+            'border-radius:999px;border:1px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.08);',
+            'color:#f3eefc;font-family:inherit;font-weight:800;font-size:0.9em;cursor:pointer;',
+            'transition:background 0.15s;}',
+            '.mc-back-to-platform-btn:hover{background:rgba(255,255,255,0.18);}',
+            '#agp-shell-overlay:has(.mc-settings-initial-box){padding:0 !important;',
+            'align-items:flex-start !important;justify-content:center !important;overflow-y:auto !important;',
+            'background:',
+            'radial-gradient(60% 45% at 18% 8%,rgba(122,63,212,.22),transparent 70%),',
+            'radial-gradient(50% 40% at 88% 40%,rgba(70,40,150,.22),transparent 72%),',
+            'radial-gradient(55% 45% at 40% 104%,rgba(48,26,104,.26),transparent 74%),',
+            'linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),',
+            'linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px),',
+            'linear-gradient(180deg,#0d0a14 0%,#08060d 45%,#050508 100%) !important;',
+            'background-size:auto,auto,auto,88px 88px,88px 88px,auto !important;}',
+            '.mc-settings-initial-box{width:min(1040px,94vw) !important;',
+            'max-width:min(1040px,94vw) !important;height:calc(100vh - 70px) !important;',
+            'height:calc(100dvh - 70px) !important;',
+            'max-height:calc(100vh - 70px) !important;max-height:calc(100dvh - 70px) !important;',
+            'margin:70px 0 0 !important;overflow:visible !important;',
+            'display:flex !important;flex-direction:column !important;align-items:center !important;',
+            'column-count:auto !important;column-gap:0 !important;',
+            'background:none !important;border:none !important;border-radius:0 !important;',
+            'box-shadow:none !important;padding:16px 4px 0 !important;box-sizing:border-box !important;',
+            'font-family:"IBM Plex Sans Arabic",sans-serif !important;}',
+            '.mc-settings-initial-box *{font-family:"IBM Plex Sans Arabic",sans-serif !important;}',
+            '.mc-settings-initial-box > h2{flex:0 0 auto !important;margin:0 0 4px !important;',
+            'max-width:none !important;width:100% !important;font-size:clamp(24px,3.6vw,40px) !important;',
+            'font-weight:900 !important;line-height:1.4 !important;text-align:center !important;',
+            'padding:0 !important;border-bottom:none !important;position:static;',
+            'font-family:"Cairo",sans-serif !important;',
+            'background:linear-gradient(90deg,#b28cf5,#f0cd6a,#d9a0f0,#b28cf5) !important;',
+            'background-size:200% 100% !important;-webkit-background-clip:text !important;',
+            'background-clip:text !important;-webkit-text-fill-color:transparent !important;',
+            'animation:mc-settings-wave 9s linear infinite !important;}',
+            '.mc-settings-initial-box > h2::after{content:none !important;}',
+            '@keyframes mc-settings-wave{0%{background-position:0% 50%}100%{background-position:200% 50%}}',
+            '.mc-settings-initial-box .agp-shell-btn-connect:disabled{opacity:.45 !important;',
+            'cursor:not-allowed !important;transform:none !important;}',
+            '.mc-settings-initial-box .mc-settings-scroll{position:relative;',
+            'flex:1 1 auto;min-height:0;width:100%;margin-top:18px;}',
+            '.mc-settings-initial-box .mc-settings-scroll-inner{box-sizing:border-box;',
+            'height:100%;overflow-y:auto;display:flex;flex-direction:column;gap:16px;',
+            'padding:0 2px 26px;scrollbar-width:none;}',
+            '.mc-settings-initial-box .mc-settings-scroll-inner::-webkit-scrollbar{',
+            'display:none;}',
+            '.mc-settings-initial-box .mc-settings-fade{position:absolute;inset:auto 0 0;',
+            'height:44px;background:linear-gradient(transparent,#08060d);pointer-events:none;}',
+            '.mc-settings-initial-box .mc-settings-glowline{position:absolute;inset:auto 0 0;',
+            'height:1px;background:linear-gradient(90deg,transparent,rgba(178,140,245,.55),transparent);',
+            'pointer-events:none;}',
+            '.mc-settings-initial-box .agp-shell-field,',
+            '.mc-settings-initial-box .agp-shell-row{border-bottom:none !important;',
+            'padding:2px 0 !important;max-width:none !important;margin:0 !important;display:flex !important;',
+            'justify-content:space-between !important;align-items:center !important;width:100% !important;',
+            'flex-wrap:wrap !important;gap:12px !important;}',
+            '.mc-settings-initial-box .agp-shell-field{flex-direction:column !important;',
+            'align-items:flex-start !important;}',
+            '.mc-settings-initial-box .agp-shell-field label,',
+            '.mc-settings-initial-box .agp-shell-row-label{font-size:16px !important;',
+            'font-weight:600 !important;color:#f4f2fb !important;text-align:right !important;',
+            'font-family:"Noto Kufi Arabic",sans-serif !important;display:flex !important;',
+            'flex-direction:column !important;align-items:flex-end !important;gap:3px !important;}',
+            '.mc-settings-initial-box .agp-shell-field input[type=text]{',
+            'max-width:none !important;width:100% !important;background:rgba(255,255,255,.04) !important;',
+            'border:1px solid rgba(255,255,255,.14) !important;border-radius:999px !important;',
+            'padding:13px 18px !important;font-size:15px !important;font-weight:400 !important;',
+            'text-align:center !important;transition:border-color .25s !important;color:#f4f2fb !important;',
+            'box-sizing:border-box !important;}',
+            '.mc-settings-initial-box .agp-shell-field input[type=text]:focus,',
+            '.mc-settings-initial-box .agp-shell-field input[type=text]:not(:placeholder-shown){',
+            'border-color:rgba(178,140,245,.6) !important;outline:none !important;}',
+            '.mc-settings-initial-box .agp-pill-group{gap:8px !important;padding:4px !important;',
+            'border-radius:999px !important;',
+            'background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02)) !important;',
+            'border:1px solid rgba(255,255,255,.12) !important;',
+            'box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 3px 10px -6px rgba(0,0,0,.6) !important;}',
+            '.mc-settings-initial-box .agp-pill-btn{background:transparent !important;',
+            'border:none !important;color:#a79fbb !important;padding:10px 16px !important;',
+            'border-radius:999px !important;font-size:13.5px !important;font-weight:600 !important;',
+            'transition:.25s !important;white-space:nowrap;}',
+            '.mc-settings-initial-box .agp-pill-btn.agp-pill-active{',
+            'background:#7a3fd4 !important;color:#f3ecff !important;',
+            'box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 4px 10px -4px rgba(122,63,212,.7) !important;}',
+            '.mc-settings-initial-box .agp-shell-counter-row button{display:none !important;}',
+            '.mc-settings-initial-box .agp-shell-counter-row{justify-content:flex-end !important;',
+            'flex:1;max-width:220px;}',
+            '.mc-settings-initial-box .agp-count-input{',
+            'background:rgba(255,255,255,.04) !important;border:1px solid rgba(255,255,255,.14) !important;',
+            'border-radius:999px !important;padding:13px 18px !important;width:100% !important;',
+            'height:auto !important;color:#f4f2fb !important;font-size:15px !important;',
+            'font-weight:400 !important;outline:none !important;text-align:center !important;',
+            'box-sizing:border-box !important;}',
+            '.mc-settings-initial-box .agp-count-input:focus{',
+            'border-color:rgba(178,140,245,.55) !important;}',
+            '.mc-settings-initial-box .mc-settings-card{width:100%;',
+            'padding:16px 18px;border-radius:20px;border:1px solid rgba(255,255,255,.09);',
+            'background:rgba(255,255,255,.03);box-sizing:border-box;display:flex;',
+            'flex-direction:column;gap:12px;}',
+            '.mc-settings-initial-box .mc-settings-card > .agp-shell-row,',
+            '.mc-settings-initial-box .mc-settings-card > .agp-shell-field{padding:0 !important;}',
+            '.mc-settings-initial-box .mc-conditional-section{display:flex !important;',
+            'flex-direction:column !important;gap:14px !important;margin-top:4px !important;',
+            'padding-top:16px !important;border-top:1px solid rgba(255,255,255,.07) !important;',
+            'border-right:none !important;padding-right:0 !important;}',
+            '.mc-settings-initial-box .mc-conditional-section .agp-shell-row{',
+            'border-bottom:none !important;padding:0 !important;}',
+            '.mc-settings-initial-box .mc-field-note{color:#8f88a3 !important;',
+            'text-align:right !important;}',
+            '.mc-settings-initial-box .mc-settings-footer{flex:0 0 auto !important;',
+            'width:100% !important;display:flex !important;flex-wrap:wrap !important;',
+            'align-items:center !important;justify-content:center !important;',
+            'gap:clamp(16px,3vw,36px) !important;padding:20px 0 26px !important;}',
+            '.mc-settings-initial-box .agp-shell-btn-connect{',
+            'order:1;column-span:none !important;display:inline-flex !important;',
+            'align-items:center !important;justify-content:center !important;width:auto !important;',
+            'max-width:none !important;margin:0 !important;padding:16px 42px !important;',
+            'background:#7a3fd4 !important;color:#f3ecff !important;font-weight:700 !important;',
+            'font-size:clamp(15px,1.8vw,17px) !important;border-radius:999px !important;',
+            'letter-spacing:0.4px;font-family:"Noto Kufi Arabic",sans-serif !important;',
+            'box-shadow:0 1px 0 rgba(255,255,255,.25) inset,0 22px 46px -24px rgba(122,63,212,1) !important;',
+            'transition:background .25s,transform .25s !important;}',
+            '.mc-settings-initial-box .agp-shell-btn-connect:hover{',
+            'background:#9a6cf0 !important;transform:translateY(-2px);}',
+            '.mc-settings-initial-box .mc-back-to-platform-btn{',
+            'order:2;column-span:none !important;display:inline-flex !important;',
+            'align-items:center !important;width:auto !important;margin:0 !important;padding:0 !important;',
+            'border:none !important;background:transparent !important;font-size:14px !important;',
+            'font-weight:400 !important;color:#a79fbb !important;transition:color .25s !important;}',
+            '.mc-settings-initial-box .mc-back-to-platform-btn:hover{',
+            'color:#d3bcff !important;background:transparent !important;}',
+            '#agp-shell-box.agp-connecting-box,#agp-shell-box.agp-conn-error{visibility:hidden !important;}',
+            '#mc-conn-layer{position:fixed;inset:0;z-index:100010;display:none;',
+            'align-items:center;justify-content:center;}',
+            '#mc-conn-layer.show{display:flex;}',
+            '#mc-conn-layer .mc-conn-backdrop{position:absolute;inset:0;overflow:hidden;display:flex;justify-content:center;align-items:flex-start;',
+            'filter:blur(6px) brightness(0.55);pointer-events:none;}',
+            '#mc-conn-layer .mc-conn-backdrop > *{pointer-events:none !important;}',
+            '#mc-conn-layer .mc-conn-modal{position:relative;z-index:1;width:min(360px,90vw);',
+            'background:linear-gradient(180deg,rgba(30,24,52,.98),rgba(11,10,18,.99));',
+            'border:1px solid rgba(178,140,245,.32);border-radius:24px;',
+            'padding:32px 26px;text-align:center;box-shadow:0 40px 90px -46px rgba(0,0,0,1);',
+            'font-family:"Noto Kufi Arabic",sans-serif;}',
+            '#mc-conn-layer .mc-conn-modal.mc-conn-err{border-color:#ef4444;}',
+            '#mc-conn-layer::before{content:"";position:absolute;inset:0;background:rgba(5,2,8,0.45);}',
+            '#mc-conn-layer .mc-conn-spinner{width:52px;height:52px;margin:0 auto 18px;',
+            'border-radius:50%;border:4px solid rgba(178,140,245,.25);border-top-color:#b28cf5;',
+            'animation:mc-conn-spin 0.9s linear infinite;}',
+            '@keyframes mc-conn-spin{to{transform:rotate(360deg);}}',
+            '#mc-conn-layer .mc-conn-err-icon{width:42px;height:42px;margin:0 auto 18px;',
+            'border-radius:50%;background:rgba(239,68,68,0.15);color:#ef4444;font-size:22px;',
+            'font-weight:900;display:flex;align-items:center;justify-content:center;}',
+            '#mc-conn-layer .mc-conn-title{margin:0 0 6px;font-size:16.5px;font-weight:700;color:#f4f2fb;}',
+            '#mc-conn-layer .mc-conn-modal.mc-conn-err .mc-conn-title{color:#ef4444;}',
+            '#mc-conn-layer .mc-conn-sub{margin:0;font-size:13px;color:#8f88a3;',
+            'font-family:"IBM Plex Sans Arabic",sans-serif;}',
         ].join('');
         document.head.appendChild(style);
     }
@@ -1683,180 +1749,132 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         startShellOverlayWatcher();
     }
 
-    // تحسينات شاشة اللوبي + لوحة الإعدادات أثناء المباراة -- إضافي بحت،
-    // بدون تعديل على js/agp-game-shell.js. شاشات الشل تُعاد رسمها بالكامل
-    // مع أي تحديث، فنراقب DOM بـMutationObserver ونعيد تطبيق التحسينات.
-    function enhanceShellOverlay() {
-        var box = document.getElementById('agp-shell-box');
-        if (!box) return;
+    /* ======================================================================
+     *  14) شاشة الإعدادات الأولى + اللوبي + طبقة "جاري الاتصال" — نفس
+     *      تنسيق السلم والثعبان بالضبط (MutationObserver على
+     *      #agp-shell-overlay)، بدون أي تعديل على js/agp-game-shell.js.
+     * ==================================================================== */
+    function homeNavigate() {
+        var homeBtn = el('agp-header-home-btn');
+        if (homeBtn) { homeBtn.click(); }
+        else { window.location.href = '../../games.html'; }
+    }
 
-        if (box.classList.contains('agp-lobby-box')) {
-            enhanceLobbyScreen(box);
+    function makeBackToPlatformBtn() {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'mc-back-to-platform-btn';
+        btn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
+        btn.addEventListener('click', homeNavigate);
+        return btn;
+    }
+
+    function layoutInitialSettingsFields(box) {
+        var connectBtn = el('agp-connect-btn');
+        if (!connectBtn) return;
+        if (connectBtn.closest('.mc-settings-footer')) return;
+
+        function rowFor(dataKeySelector) {
+            var ctl = box.querySelector(dataKeySelector);
+            return ctl ? ctl.closest('.agp-shell-row') : null;
         }
-        if (document.getElementById('agp-settings-close-btn')) {
-            enhanceMidMatchSettingsPanel(box);
+        function cardWith(rows) {
+            var card = document.createElement('div');
+            card.className = 'mc-settings-card';
+            rows.forEach(function (r) { card.appendChild(r); });
+            return card;
         }
-        // ⚠️ جديد: شاشة الإعدادات الأولى (قبل الاتصال بالبث) — نميّزها
-        // بوجود #agp-connect-btn (ما يُرسَم إلا هنا بالضبط، راجع تعليق
-        // الملف المشترك نفسه سطر 169).
-        if (document.getElementById('agp-connect-btn')) {
-            enhanceInitialConnectScreen(box);
-        }
-    }
 
-    function startShellOverlayWatcher() {
-        enhanceShellOverlay();
-        var target = document.getElementById('agp-shell-overlay') || document.body;
-        var observer = new MutationObserver(function () { enhanceShellOverlay(); });
-        observer.observe(target, { childList: true, subtree: true });
-        window.addEventListener('resize', debounce(enhanceShellOverlay, 200));
-    }
+        var usernameInput = el('agp-tiktok-username');
+        var usernameField = usernameInput ? usernameInput.closest('.agp-shell-field') : null;
+        var keywordInput = el('agp-keyword');
+        var keywordField = keywordInput ? keywordInput.closest('.agp-shell-field') : null;
 
-    function debounce(fn, ms) {
-        var t = null;
-        return function () {
-            if (t) clearTimeout(t);
-            t = window.setTimeout(fn, ms);
-        };
-    }
+        var maxPlayersRow = rowFor('[data-key="maxPlayers"]');
+        var followersRow = rowFor('[data-key="followersOnly"]');
+        var deficitModeRow = rowFor('[data-key="chairDeficitMode"]');
+        var deficitStartRow = rowFor('[data-key="customDeficitStart"]');
+        var selectionTimerRow = rowFor('[data-key="selectionTimerSeconds"]');
+        var spinDurationRow = rowFor('[data-key="spinDurationSeconds"]');
 
-    /* -------- 14أ) عنوان اللوبي بلونين -------- */
-    // Same title as Elimination Roulette's lobby: لوبي الدخول للعبة "<game>".
-    function injectLobbyGameNameLabel() {
-        var h2 = document.querySelector('#agp-shell-box.agp-lobby-box h2');
-        if (!h2 || h2.getAttribute('data-mc-heading') === '1') return;
-        h2.textContent = 'لوبي الدخول للعبة "' + GAME_NAME + '"';
-        h2.setAttribute('data-mc-heading', '1');
-    }
+        var scroll = document.createElement('div');
+        scroll.className = 'mc-settings-scroll';
+        var scrollInner = document.createElement('div');
+        scrollInner.className = 'mc-settings-scroll-inner';
+        scroll.appendChild(scrollInner);
 
-    /* -------- 14ب) قائمة اللاعبين: شبكة 3 أعمدة + حذف + بطاقة عريضة + تصغير تلقائي -------- */
-    // ⚠️ 4 أعمدة ثابتة (بدل 3 سابقاً، بطلب صريح) — العرض المرجعي للبطاقة
-    // (247px) أعرض من عمود واحد بـ4 أعمدة (~194px)، فنفس نظام التصغير
-    // التناسقي المبني أصلاً لتوافق الآيباد (راجع التعليق تحت) يشتغل هنا
-    // تلقائياً بدون أي منطق إضافي: يصغّر كل المقاسات تناسبياً (~78%)
-    // عشان تنضبط بالضبط بـ4 أعمدة بدل 3، بنفس الشكل والنسب.
-    //
-    // ⚠️ إصلاح توافق آيباد/الشاشات الضيقة: نظام "الحجم الثابت" (60px
-    // أفاتار + 200px لوح) محسوب على عرض مرجعي 900px لصندوق اللوبي — بس
-    // صندوق اللوبي نفسه بالملف المشترك عرضه الأقصى الفعلي min(900px,
-    // 96vw)، فعلى آيباد بالوضع العمودي (~768-834px عرض شاشة) ينضغط
-    // الصندوق لعرض أضيق من 900px، فيصير عرض العمود الواحد فعلياً أضيق
-    // من مجموع (أفاتار+لوح) الثابت — تنكسر الشبكة. الحل: نقيس العرض
-    // المتاح الحقيقي فعلياً (list.clientWidth، دقيق لأي جهاز/تكبير) ولو
-    // أضيق من المرجع نصغّر كل المقاسات تناسبياً (بحد أدنى 65%) — يحافظ
-    // على نفس النسب والتناسق بدون أي كسر بالشبكة على أي مقاس شاشة.
-    function fitLobbyCardsToAvailableWidth(list) {
-        if (!list.clientWidth) return 60 + 200 - 13; // بيئة بدون تصيير حقيقي — نرجع القيمة المرجعية كما هي
-        var gap = 19;
-        var colWidth = (list.clientWidth - 3 * gap) / 4; // 4 أعمدة = 3 فجوات بينها
-        var refTotal = 60 + 200 - 13; // العرض المرجعي: أفاتار + لوح - تراكب
-        var scale = 1;
-        if (colWidth > 0 && colWidth < refTotal) {
-            scale = Math.max(0.65, colWidth / refTotal);
-        }
-        list.style.setProperty('--mc-av', (60 * scale).toFixed(1) + 'px');
-        list.style.setProperty('--mc-nw', (200 * scale).toFixed(1) + 'px');
-        list.style.setProperty('--mc-nh', (60 * scale).toFixed(1) + 'px');
-        list.style.setProperty('--mc-overlap', (13 * scale).toFixed(1) + 'px');
-        list.style.setProperty('--mc-nf', (18 * scale).toFixed(1) + 'px');
-        return refTotal * scale;
-    }
+        [usernameField, keywordField, maxPlayersRow, followersRow]
+            .filter(Boolean).forEach(function (fieldEl) { scrollInner.appendChild(fieldEl); });
 
-    function enhanceLobbyList() {
-        var list = document.getElementById('agp-lobby-list');
-        if (!list) return;
-
-        var targetWidth = fitLobbyCardsToAvailableWidth(list);
-
-        var players = AGP.gameManager.getPlayers();
-        var items = Array.prototype.slice.call(list.children);
-
-        items.forEach(function (li, idx) {
-            var player = players[idx];
-            if (!player) return;
-
-            // ⚠️ إصلاح: كنت أضيف الزر للـli نفسه، بس li عنده justify-content:
-            // center (يوسّط البطاقة داخل عمود الشبكة)، فلو البطاقة أضيق من
-            // عرض العمود يصير الزر بموضع ثابت من حافة li مو حافة اللوح
-            // الفعلية — ينزاح عن مكانه الصحيح. الحل: نلصقه بلوح الاسم نفسه
-            // (.agp-pcard-name-basic) مباشرة، بنهايته (طرفه البعيد عن
-            // الأفاتار) — يتحرك صح مع اللوح دائماً بغض النظر عن التوسيط.
-            var plateEl = li.querySelector('.agp-pcard-name-basic');
-            applyNameSlideIfOverflow(li); // ⚠️ يجب هذا قبل إضافة زر الحذف — يقرأ نص اللوح عبر
-            // textContent؛ لو الزر مضاف قبله بيتضمّن نص الزر بالغلط ويُمسح الزر لما يصفّر المحتوى.
-            if (plateEl && !plateEl.querySelector('.mc-lobby-remove-btn')) {
-                var btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'mc-lobby-remove-btn';
-                btn.textContent = '✕';
-                btn.title = 'حذف من اللوبي';
-                btn.onclick = function () {
-                    if (AGP.player && typeof AGP.player.removePlayer === 'function') {
-                        AGP.player.removePlayer(player.id);
-                    }
-                };
-                plateEl.appendChild(btn);
+        // "كروت" — نفس كرت "عدد الفائزين" بالسلم والثعبان. عدد الكراسي
+        // الناقصة (يظهر بس مع "مخصّص") داخل نفس كرت طريقة النقصان.
+        if (deficitModeRow) {
+            var deficitCard = cardWith([deficitModeRow]);
+            if (deficitStartRow) {
+                var cond = document.createElement('div');
+                cond.className = 'mc-conditional-section';
+                cond.appendChild(deficitStartRow);
+                deficitCard.appendChild(cond);
             }
+            scrollInner.appendChild(deficitCard);
+        }
+        [selectionTimerRow, spinDurationRow].filter(Boolean).forEach(function (row) {
+            scrollInner.appendChild(cardWith([row]));
         });
 
-        // Framed cards are sized by mcFitLobbyFramedCards() now (same
-        // 217x57 slot as Elimination Roulette's lobby), so the old per-card
-        // zoom (normalizeFramedCardWidths) is no longer applied here.
+        var fade = document.createElement('div');
+        fade.className = 'mc-settings-fade';
+        var glowline = document.createElement('div');
+        glowline.className = 'mc-settings-glowline';
+        scroll.appendChild(fade);
+        scroll.appendChild(glowline);
+        box.appendChild(scroll);
+
+        var footer = document.createElement('div');
+        footer.className = 'mc-settings-footer';
+        footer.appendChild(connectBtn);
+        box.appendChild(footer);
     }
 
-    // ⚠️ سلايد للاسم الطويل بدل القصّ — نغلّف النص مرة وحدة بـ.mc-name-inner،
-    // ونقيس هل فاض عن عرض اللوح الثابت؛ لو فاض نحسب مسافة الإزاحة
-    // بالضبط (Custom Property) ونفعّل أنيميشن السلايد.
-    function applyNameSlideIfOverflow(li) {
-        var nameEl = li.querySelector('.agp-pcard-name-basic');
-        if (!nameEl) return;
-        var inner = nameEl.querySelector('.mc-name-inner');
-        if (!inner) {
-            var text = nameEl.textContent;
-            nameEl.textContent = '';
-            inner = document.createElement('span');
-            inner.className = 'mc-name-inner';
-            inner.textContent = text;
-            nameEl.appendChild(inner);
+    function enhanceSettingsScreen() {
+        var box = el('agp-shell-box');
+        if (!box) return;
+        if (box.classList.contains('agp-lobby-box') || box.classList.contains('agp-connecting-box') ||
+            el('agp-mini-lobby-list')) return;
+        var isInitial = !!el('agp-tiktok-username');
+        box.classList.toggle('mc-settings-initial-box', isInitial);
+        if (!isInitial) return;
+        layoutInitialSettingsFields(box);
+        if (box.querySelector('.mc-back-to-platform-btn')) return;
+        var connectBtn = el('agp-connect-btn');
+        if (!connectBtn) return;
+        var backBtn = makeBackToPlatformBtn();
+        backBtn.textContent = 'العودة للمنصة ←';
+        connectBtn.insertAdjacentElement('afterend', backBtn);
+    }
+
+    function enhanceLobbyHeading() {
+        var box = el('agp-shell-box');
+        if (!box || !box.classList.contains('agp-lobby-box')) return;
+        var h2 = box.querySelector('h2');
+        if (!h2) return;
+        if (h2.getAttribute('data-mc-heading') !== '1') {
+            h2.textContent = 'لوبي الدخول للعبة "' + GAME_NAME + '"';
+            h2.setAttribute('data-mc-heading', '1');
         }
-        if (!nameEl.clientWidth || !inner.scrollWidth) return; // بيئة بدون تصيير حقيقي (مثل بيئة الاختبار)
-        var overflow = inner.scrollWidth - nameEl.clientWidth;
-        if (overflow > 2) {
-            nameEl.classList.add('mc-name-overflow');
-            nameEl.style.setProperty('--mc-name-shift', (-(overflow + 6)) + 'px');
-        } else {
-            nameEl.classList.remove('mc-name-overflow');
-        }
     }
 
-    // ⚠️ بطاقة مؤطَّرة (Option A) — عرض هدف ثابت = نفس عرض البطاقة العادية
-    // (avatar + لوح - تراكب، بعد أي تصغير تناسبي لآيباد/شاشة ضيقة)،
-    // الارتفاع ناتج تلقائياً حسب نسبة كل إطار. الملف المشترك يحسب عرض
-    // كل إطار بناءً على ارتفاع ثابت خاص فيه (CARD_HEIGHT_PX=72px)، فنقرأ
-    // عرضه الطبيعي الفعلي (inline style) ونطبّق zoom لكل بطاقة على حدة
-    // يوصلها بالضبط للعرض المستهدف — بدون أي لمس لملف
-    // js/agp-player-card.js المشترك.
-    function normalizeFramedCardWidths(list, targetWidth) {
-        var tplCards = list.querySelectorAll('.agp-pcard-tpl');
-        tplCards.forEach(function (card) {
-            var nativeWidth = parseFloat(card.style.width);
-            if (!nativeWidth) return;
-            var zoom = targetWidth / nativeWidth;
-            card.style.zoom = zoom;
-        });
-    }
-
-    // Framed lobby cards, shown whole (same as Elimination Roulette's
-    // lobby): the shared renderer draws every framed card 298x100 and
-    // crops tall frame artwork to that height. For each framed card in
-    // the lobby this measures the frame image's opaque (alpha) rows once
-    // per image, re-expands the card to cover the full artwork plus the
-    // avatar/name (shifting every absolutely positioned child by the same
-    // amount), then zooms it to fit the 217px-wide slot, at most 75px
-    // tall. DOM/style-only — js/agp-player-card.js untouched.
+    // Framed lobby cards, shown whole: the shared renderer draws every
+    // framed card 298x100 and crops tall frame artwork to that height.
+    // For each framed card this measures the frame image's opaque (alpha)
+    // rows once per image, re-expands the card to cover the full artwork
+    // plus the avatar/name, then zooms it to fit the 217px-wide slot, at
+    // most 75px tall. DOM/style-only — js/agp-player-card.js untouched.
+    var FRAMED_SLOT_W = 217;
+    var FRAMED_SLOT_MAX_H = 75;
     var _mcFrameBoundsCache = {};
 
-    function mcGetFrameOpaqueRows(src) {
+    function getFrameOpaqueRows(src) {
         if (_mcFrameBoundsCache[src]) return _mcFrameBoundsCache[src];
         _mcFrameBoundsCache[src] = new Promise(function (resolve) {
             var img = new Image();
@@ -1885,16 +1903,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return _mcFrameBoundsCache[src];
     }
 
-    function mcFitLobbyFramedCards() {
+    function enhanceLobbyFramedCards() {
         var box = el('agp-shell-box');
-        if (!box || !box.classList.contains('agp-lobby-box')) return;
-        var cards = box.querySelectorAll('.agp-shell-player-list .agp-pcard-tpl:not([data-mc-fit])');
+        if (!box || !(box.classList.contains('agp-lobby-box') || el('agp-mini-lobby-list'))) return;
+        fitFramedCards(box);
+    }
+
+    function fitFramedCards(root) {
+        var cards = root.querySelectorAll('.agp-shell-player-list .agp-pcard-tpl:not([data-mc-fit])');
         Array.prototype.forEach.call(cards, function (card) {
             var frameEl = card.querySelector('.agp-pcard-tpl-frame-img');
             var m = frameEl && /url\(["']?(.*?)["']?\)/.exec(frameEl.style.backgroundImage);
             if (!m) return;
             card.setAttribute('data-mc-fit', 'pending');
-            mcGetFrameOpaqueRows(m[1]).then(function (rows) {
+            getFrameOpaqueRows(m[1]).then(function (rows) {
                 if (!rows || !card.isConnected) return;
                 var frameTop = parseFloat(frameEl.style.top) || 0;
                 var frameH = parseFloat(frameEl.style.height) || 0;
@@ -1914,61 +1936,181 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 var fullH = bandBottom - bandTop;
                 var cardW = parseFloat(card.style.width) || 298;
                 card.style.height = fullH + 'px';
-                card.style.zoom = String(Math.min(217 / cardW, 75 / fullH));
+                card.style.zoom = String(Math.min(FRAMED_SLOT_W / cardW, FRAMED_SLOT_MAX_H / fullH));
                 card.setAttribute('data-mc-fit', '1');
             });
         });
     }
 
-    // Keeps --mc-actions-h (the card grid scrolls underneath the bottom
-    // button row by this much) equal to the row's height + top margin,
-    // which grows when the buttons wrap on narrow screens.
-    function mcTrackLobbyActionsHeight(box, row) {
-        if (row.getAttribute('data-mc-h') === '1') return;
-        row.setAttribute('data-mc-h', '1');
-        var sync = function () {
-            box.style.setProperty('--mc-actions-h',
-                (row.offsetHeight + (parseFloat(getComputedStyle(row).marginTop) || 0)) + 'px');
-        };
-        sync();
-        if (window.ResizeObserver) new ResizeObserver(sync).observe(row);
-    }
+    function enhanceLobbyWatermarkAndActions() {
+        var box = el('agp-shell-box');
+        if (!box || !box.classList.contains('agp-lobby-box')) return;
 
-    /* -------- 14ج) صف الأزرار السفلي (إعدادات / بدء الجولة / رجوع للمنصة) -------- */
-    function ensureLobbyActionsRow(box) {
-        if (document.getElementById('mc-lobby-actions-row')) return;
-        var startBtn = document.getElementById('agp-start-round-btn');
+        if (!box.querySelector('#mc-lobby-watermark')) {
+            var img = document.createElement('img');
+            img.id = 'mc-lobby-watermark';
+            img.src = '../../logo.png';
+            img.alt = '';
+            box.insertBefore(img, box.firstChild);
+        }
+
+        var startBtn = el('agp-start-round-btn');
         if (!startBtn) return;
-
-        var row = document.createElement('div');
-        row.id = 'mc-lobby-actions-row';
-        row.className = 'mc-lobby-actions-row';
-
-        // Same as Elimination Roulette's lobby: only two buttons — start,
-        // and "back to the games library" (games.html). The old "back to
-        // match settings" button was removed.
-        var homeBtn = document.createElement('a');
-        homeBtn.href = '../../games.html';
-        homeBtn.className = 'mc-lobby-home-btn';
-        homeBtn.textContent = '🏠 العودة لمكتبة الألعاب';
-
-        startBtn.classList.add('mc-lobby-start-btn'); // نفس العنصر، ننقله بس (بدون أي تكرار)
         if (startBtn.textContent.indexOf('اغلاق اللوبي') === -1) {
             startBtn.textContent = '🔒 اغلاق اللوبي وبدء المباراة';
         }
 
-        row.appendChild(startBtn);
-        row.appendChild(homeBtn);
-        box.appendChild(row);
+        var row = box.querySelector('.mc-lobby-actions-row');
+        if (!row) {
+            row = document.createElement('div');
+            row.className = 'mc-lobby-actions-row';
+            startBtn.parentNode.insertBefore(row, startBtn);
+            row.appendChild(startBtn);
+            var syncActionsHeight = function () {
+                box.style.setProperty('--mc-actions-h',
+                    (row.offsetHeight + (parseFloat(getComputedStyle(row).marginTop) || 0)) + 'px');
+            };
+            syncActionsHeight();
+            if (window.ResizeObserver) new ResizeObserver(syncActionsHeight).observe(row);
+        }
+
+        if (!row.querySelector('.mc-back-to-platform-btn')) {
+            var backBtn = document.createElement('button');
+            backBtn.type = 'button';
+            backBtn.className = 'mc-back-to-platform-btn';
+            backBtn.textContent = '🏠 العودة لمكتبة الألعاب';
+            backBtn.addEventListener('click', function () {
+                window.location.href = '../../games.html';
+            });
+            row.appendChild(backBtn);
+        }
     }
 
-    function enhanceLobbyScreen(box) {
-        injectLobbyGameNameLabel();
-        enhanceLobbyList();
-        ensureLobbyActionsRow(box);
-        var actionsRow = document.getElementById('mc-lobby-actions-row');
-        if (actionsRow) mcTrackLobbyActionsHeight(box, actionsRow);
-        mcFitLobbyFramedCards();
+    function applyShellEnhancements() {
+        enhanceSettingsScreen();
+        enhanceLobbyHeading();
+        enhanceLobbyWatermarkAndActions();
+        enhanceLobbyFramedCards();
+        if (document.getElementById('agp-settings-close-btn')) {
+            enhanceMidMatchSettingsPanel(el('agp-shell-box'));
+        }
+    }
+
+    /* -------- 14أ) طبقة "جاري الاتصال بالبث" — نفس السلم والثعبان -------- */
+    var _mcConnLayer = null;
+    var _mcConnKeywordBackup = '';
+    var _mcConnKeywordPending = false;
+    var _mcConnErrorShown = false;
+    var _mcConnErrorTimer = null;
+
+    function ensureConnLayer() {
+        if (_mcConnLayer) return _mcConnLayer;
+        var layer = document.createElement('div');
+        layer.id = 'mc-conn-layer';
+        layer.innerHTML =
+            '<div class="mc-conn-backdrop"></div>' +
+            '<div class="mc-conn-modal">' +
+                '<div class="mc-conn-icon"></div>' +
+                '<h3 class="mc-conn-title"></h3>' +
+                '<p class="mc-conn-sub"></p>' +
+            '</div>';
+        document.body.appendChild(layer);
+        _mcConnLayer = layer;
+        return layer;
+    }
+
+    function showConnLayer(isError, title, sub) {
+        var layer = ensureConnLayer();
+        var modal = layer.querySelector('.mc-conn-modal');
+        var icon = layer.querySelector('.mc-conn-icon');
+        modal.classList.toggle('mc-conn-err', isError);
+        icon.className = 'mc-conn-icon ' + (isError ? 'mc-conn-err-icon' : 'mc-conn-spinner');
+        icon.textContent = isError ? '✕' : '';
+        layer.querySelector('.mc-conn-title').textContent = title;
+        layer.querySelector('.mc-conn-sub').textContent = sub || '';
+        layer.classList.add('show');
+    }
+
+    // تفريغ النسخة الشبحية عند الإخفاء — عشان عناصرها (بنفس ids شاشة
+    // الإعدادات مثل #agp-tiktok-username) ما تلخبط getElementById لاحقاً.
+    function hideConnLayer() {
+        if (!_mcConnLayer) return;
+        _mcConnLayer.classList.remove('show');
+        var backdrop = _mcConnLayer.querySelector('.mc-conn-backdrop');
+        if (backdrop) backdrop.innerHTML = '';
+    }
+
+    document.addEventListener('click', function (e) {
+        if (!e.target || e.target.id !== 'agp-connect-btn') return;
+        var box = el('agp-shell-box');
+        if (!box || !box.classList.contains('mc-settings-initial-box')) return;
+        var kInput = el('agp-keyword');
+        var uInput = el('agp-tiktok-username');
+        // نفس شروط الملف المشترك (handleConnectClick): بدون يوزر أو كلمة
+        // مفتاحية ما يصير اتصال أصلاً — فلا نعرض طبقة "جاري الاتصال".
+        if (!kInput || !kInput.value.trim() || !uInput || !uInput.value.trim()) return;
+        _mcConnKeywordBackup = kInput.value;
+        var ghost = box.cloneNode(true);
+        ghost.id = 'agp-shell-box-ghost';
+        var layer = ensureConnLayer();
+        var backdrop = layer.querySelector('.mc-conn-backdrop');
+        backdrop.innerHTML = '';
+        backdrop.appendChild(ghost);
+        _mcConnErrorShown = false;
+        showConnLayer(false, 'جاري الاتصال بالبث', 'انتظر قليلاً...');
+    }, true);
+
+    function syncConnLayer() {
+        var box = el('agp-shell-box');
+        if (!box) return;
+
+        if (box.classList.contains('agp-conn-error')) {
+            if (!_mcConnErrorShown) {
+                _mcConnErrorShown = true;
+                var subEl = box.querySelector('.agp-shell-status');
+                showConnLayer(true, 'تعذّر الاتصال', subEl ? subEl.textContent : 'تحقّق من اليوزرنيم وحاول مرة أخرى.');
+                clearTimeout(_mcConnErrorTimer);
+                _mcConnErrorTimer = setTimeout(function () {
+                    hideConnLayer();
+                    if (AGP.gameShell && typeof AGP.gameShell.setSetting === 'function') {
+                        var s = AGP.gameShell.getSettings();
+                        var firstKey = Object.keys(s)[0];
+                        if (firstKey !== undefined) AGP.gameShell.setSetting(firstKey, s[firstKey]);
+                    }
+                    _mcConnKeywordPending = true;
+                }, 2400);
+            }
+            return;
+        }
+
+        if (box.classList.contains('agp-connecting-box')) {
+            clearTimeout(_mcConnErrorTimer);
+            _mcConnErrorShown = false;
+            if (!_mcConnLayer || !_mcConnLayer.classList.contains('show')) {
+                showConnLayer(false, 'جاري الاتصال بالبث', 'انتظر قليلاً...');
+            }
+            return;
+        }
+
+        clearTimeout(_mcConnErrorTimer);
+        _mcConnErrorShown = false;
+        if (box.classList.contains('agp-lobby-box')) hideConnLayer();
+        if (_mcConnKeywordPending && box.classList.contains('mc-settings-initial-box')) {
+            var kInput = el('agp-keyword');
+            if (kInput) kInput.value = _mcConnKeywordBackup;
+            _mcConnKeywordPending = false;
+        }
+    }
+
+    function startShellOverlayWatcher() {
+        applyShellEnhancements();
+        syncConnLayer();
+        var target = document.getElementById('agp-shell-overlay') || document.body;
+        var observer = new MutationObserver(function () {
+            applyShellEnhancements();
+            syncConnLayer();
+        });
+        observer.observe(target, { childList: true, subtree: true });
     }
 
     /* -------- 14د) لوحة الإعدادات أثناء المباراة: زر رجوع للمنصة -------- */
@@ -1976,17 +2118,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (document.getElementById('mc-settings-home-btn')) return;
         var btn = document.createElement('a');
         btn.id = 'mc-settings-home-btn';
-        btn.href = '../../games.html';
-        btn.className = 'mc-settings-home-btn';
-        btn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
-        box.appendChild(btn);
-    }
-
-    /* -------- 14هـ) شاشة الإعدادات الأولى (قبل الاتصال): زر رجوع للمنصة -------- */
-    function enhanceInitialConnectScreen(box) {
-        if (document.getElementById('mc-connect-home-btn')) return;
-        var btn = document.createElement('a');
-        btn.id = 'mc-connect-home-btn';
         btn.href = '../../games.html';
         btn.className = 'mc-settings-home-btn';
         btn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
