@@ -5,16 +5,21 @@
  * How it plays: every round a grid of emojis shows for a few seconds,
  * then every square flips over to show only its number. A question asks
  * where one of the emojis was; every still-alive player types the
- * square's number in the stream chat (a player can change their answer
- * while the time runs — the last one received counts). Wrong or
- * missing answers are eliminated; if nobody answers correctly, nobody is
- * eliminated that round. Round 1 starts with 3 boxes and every round adds
- * one more box (round N has N + 2 boxes).
+ * square's number in the stream chat (only a player's FIRST answer
+ * counts — it can't be changed). Nobody is eliminated for a wrong or
+ * missing answer: the first N correct answers (N = the "acceptCount"
+ * setting, 1..5) score points — the 1st and 2nd correct answer 2 points
+ * each, every one after them 1 point. After each round a results window
+ * lists the scorers (name, answer, points, and the correct answer), with
+ * a second view for every other participant's answer. Round 1 starts
+ * with 3 boxes and every round adds one more box (round N has N + 2 boxes).
  *
- * End of match: at most MAX_ROUNDS (10) rounds, or earlier the moment
- * only one player is left. If more than one player is still alive after
- * the last round, they ALL win (the winner screen shows one card per
- * winner).
+ * End of match ("winCondition" setting): after MAX_ROUNDS (10) rounds, or
+ * — in points mode — earlier the moment a player reaches the target (10
+ * or 15 points; still capped at MAX_ROUNDS). The winner screen shows the
+ * 1st and 2nd places; only the 1st place is reported as the winner to
+ * the platform points system. The stream host can still eliminate a
+ * player manually from the drawer's players tab.
  *
  * Design:
  *  - Play screen: the Memory Challenge design handoff (dark #0B0816,
@@ -27,7 +32,7 @@
  *    shared js/agp-game-shell.js or in any other game is modified.
  *
  * Points: the same shared general system (window.AGPAuth.reportRoundCompletion),
- * every winner reported with won:true.
+ * the 1st place reported with won:true.
  */
 
 window.AymanGamesPlatform = window.AymanGamesPlatform || {};
@@ -80,6 +85,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var LABELS = { idle: 'بالانتظار', memorize: 'احفظ', question: 'جاوب الحين', reveal: 'النتيجة', over: 'انتهت' };
 
     var TIME_OPTIONS = [15, 20, 25, 30].map(function (s) { return { label: s + 'ث', value: s }; });
+    // How many correct answers score each round (first come, first served).
+    var ACCEPT_OPTIONS = [1, 2, 3, 4, 5].map(function (n) { return { label: String(n), value: n }; });
+    // The 1st and 2nd correct answers score 2 points, every later one 1.
+    function pointsForRank(rank) { return rank < 2 ? 2 : 1; }
+    // How the match is won: 'p10'/'p15' = first to that many points
+    // (still capped at MAX_ROUNDS), 'rounds' = highest score after MAX_ROUNDS.
+    var WIN_TARGETS = { p10: 10, p15: 15 };
 
     /* ======================================================================
      *  1) Sounds — synthesized with Web Audio (from the design handoff's Sfx)
@@ -209,9 +221,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _target = 0;          // index into _cells asked about this round
     var _q = QS[0];
     var _t = 0, _tMax = 1;
-    var _answers = {};        // playerId -> square number
-    var _result = null;       // { correct, survived, out, tie, noAns, counts, final, outs:[player] }
+    var _answers = {};        // playerId -> square number (first answer only)
+    var _answerOrder = [];    // playerIds in the order their answer arrived
+    var _scores = {};         // playerId -> match points
+    var _scoreSeq = {};       // playerId -> when they last scored (tie-break: earlier ranks higher)
+    var _scoreCounter = 0;
+    var _matchAccept = 3;     // correct answers that score per round
+    var _matchWin = 'rounds'; // 'p10' | 'p15' | 'rounds'
+    var _resultView = 'scorers'; // results window: 'scorers' | 'others'
+    var _result = null;       // { correct, scorers:[{player, answer, points}], others:[{player, answer}], counts, final }
     var _winners = [];
+    var _podium = [];         // 1st and 2nd place shown on the winner screen
     var _busyUntil = 0;
     var _questionReady = false; // question text shown only once every box has closed
     var _questionTimer = null;
@@ -232,8 +252,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _round = 0;
         _cells = [];
         _answers = {};
+        _answerOrder = [];
+        _scores = {};
+        _scoreSeq = {};
+        _scoreCounter = 0;
         _result = null;
         _winners = [];
+        _podium = [];
         _busyUntil = 0;
         _questionReady = false;
         clearTimeout(_questionTimer);
@@ -249,6 +274,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function memTime() { var v = Number(liveSettings().memorizeSeconds); return v > 0 ? v : 15; }
     function difficulty() { return liveSettings().difficulty === 'hard' ? 'hard' : 'easy'; }
     function answerTime() { var v = Number(liveSettings().answerSeconds); return v > 0 ? v : 15; }
+    function acceptCount() { var v = Number(liveSettings().acceptCount); return v >= 1 && v <= 5 ? v : 3; }
+    function winCondition() { var v = liveSettings().winCondition; return WIN_TARGETS[v] || v === 'rounds' ? v : 'rounds'; }
+    function scoreOf(player) { return _scores[player.id] || 0; }
+    // Still-in players, highest score first (same score: whoever got
+    // there first ranks higher).
+    function standings() {
+        return _alive.slice().sort(function (a, b) {
+            var d = scoreOf(b) - scoreOf(a);
+            if (d) return d;
+            return (_scoreSeq[a.id] || 0) - (_scoreSeq[b.id] || 0);
+        });
+    }
 
     /* ======================================================================
      *  3) Small helpers
@@ -462,6 +499,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'background:#2A1626;border:2px solid #4A2226;color:#FF8A8A;}',
             '.mc-elim-answer b{font-size:17px;font-weight:700;color:#FFFFFF;font-variant-numeric:tabular-nums;}',
             '.mc-elim-noanswer{background:#1A1430;border-color:#2E2448;color:#9A92B3;}',
+            // Round results window (scorers / other participants' answers).
+            '#mc-elim-box.mc-res-box{border-color:color-mix(in oklch, ' + ACC + ' 45%, #2E2448);}',
+            '.mc-res-count{background:color-mix(in oklch, ' + ACC + ' 18%, #1A1430);border-color:color-mix(in oklch, ' + ACC + ' 40%, #2E2448);color:#E4E0F0;}',
+            '.mc-res-correct{flex:none;padding:12px 20px;border-bottom:3px solid #2E2448;display:flex;align-items:center;justify-content:center;gap:10px;font-size:18px;font-weight:600;}',
+            '.mc-res-empty{grid-column:1/-1;text-align:center;color:#9A92B3;font-size:17px;padding:24px 0;}',
+            '.mc-elim-av.mc-av-ok{border-color:#4ADE80;}',
+            '.mc-elim-answer.mc-ans-ok{background:#123A24;border-color:#1F6B3E;color:#8EF0B3;}',
+            '.mc-elim-rank{font-size:13px;font-weight:700;color:#FFD166;}',
+            '.mc-res-actions{flex:none;padding:14px 20px;border-top:3px solid #2E2448;display:flex;gap:10px;flex-wrap:wrap;}',
+            '.mc-res-btn{flex:1;min-width:160px;height:52px;border-radius:999px;border:none;font-family:inherit;font-size:17px;font-weight:700;cursor:pointer;',
+            'background:#1A1430;border:3px solid #2E2448;color:#F1EEF8;box-shadow:0 4px 0 #05030A;}',
+            '.mc-res-btn:hover{background:#231B3A;}',
+            '.mc-res-btn.mc-res-btn-main{background:' + ACC + ';border-color:' + ACC + ';color:' + INK + ';box-shadow:0 4px 0 ' + ACC_DARK + ';}',
+            '.mc-res-btn.mc-res-btn-main:hover{filter:brightness(1.08);}',
 
             /* ==============================================================
              * Winner screen — Elimination Roulette's design (blurred
@@ -1261,7 +1312,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '</div>' +
                     '<div class="mc-lists">' +
                         '<div class="mc-card mc-list-card">' +
-                            '<div class="mc-list-head"><span style="font-weight:600;color:' + ACC + '">المتأهلين</span><span style="color:#9A92B3" id="mc-alive-more">0</span></div>' +
+                            '<div class="mc-list-head"><span style="font-weight:600;color:' + ACC + '">النقاط</span><span style="color:#9A92B3" id="mc-alive-more">0</span></div>' +
                             '<div class="mc-list-body" id="mc-alive-list"></div>' +
                         '</div>' +
                         '<div class="mc-card mc-list-card">' +
@@ -1276,16 +1327,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var elimOverlay = document.createElement('div');
         elimOverlay.id = 'mc-elim-overlay';
         elimOverlay.innerHTML =
-            '<div id="mc-elim-box">' +
+            '<div id="mc-elim-box" class="mc-res-box">' +
                 '<div class="mc-elim-head">' +
-                    '<div class="mc-elim-title"><span>المقصيين بهذي الجولة</span><span class="mc-elim-count" id="mc-elim-count">0</span></div>' +
+                    '<div class="mc-elim-title"><span id="mc-elim-title-text"></span><span class="mc-elim-count mc-res-count" id="mc-elim-count">0</span></div>' +
                     '<button type="button" class="mc-x-btn" id="mc-elim-close" title="إغلاق">✕</button>' +
                 '</div>' +
+                '<div class="mc-res-correct" id="mc-res-correct"></div>' +
                 '<div id="mc-elim-grid"></div>' +
+                '<div class="mc-res-actions">' +
+                    '<button type="button" class="mc-res-btn mc-res-btn-main" id="mc-res-continue">أكمل اللعب</button>' +
+                    '<button type="button" class="mc-res-btn" id="mc-res-others">عرض إجابات باقي المشاركين</button>' +
+                '</div>' +
             '</div>';
         document.body.appendChild(elimOverlay);
         elimOverlay.addEventListener('click', function (e) { if (e.target === elimOverlay) closeElim(true); });
         el('mc-elim-close').onclick = function () { closeElim(true); };
+        el('mc-res-continue').onclick = function () { closeElim(false); primary(); };
+        el('mc-res-others').onclick = function () { Sfx.play('click'); _resultView = 'others'; renderResultWindow(); };
 
         el('mc-open-settings-btn').onclick = function () { Sfx.play('click'); openDrawer('settings'); };
         el('mc-open-players-btn').onclick = function () { Sfx.play('click'); openDrawer('players'); };
@@ -1465,17 +1523,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             html = '<div class="mc-q-row"><span class="mc-q-word">' + escapeHtml(_q[0]) + '</span>' +
                 '<span class="mc-q-emoji mc-emoji">' + emoji + '</span>' +
                 '<span class="mc-q-word">' + escapeHtml(_q[1]) + '</span></div>' +
-                '<div class="mc-h-sub">اكتب رقم المربع في الشات · تقدر تغيّر إجابتك، وآخر إجابة هي اللي تنحسب</div>';
+                '<div class="mc-h-sub">اكتب رقم المربع في الشات · أول إجابة لك هي اللي تنحسب · أول ' + _matchAccept + ' إجابات صحيحة تاخذ نقاط</div>';
         } else if (_phase === 'reveal' && res) {
             html = '<div class="mc-reveal-row mc-h-mid"><span>الجواب الصحيح</span><span class="mc-correct-pill">' + res.correct + '</span></div>';
-            if (res.tie) html += '<div class="mc-tie-line">ما أحد جاوب صح · الكل يكمل للمرحلة الجاية</div>';
-            else if (res.noAns) html += '<div class="mc-noans-line">ما فيه لاعبين أو ما وصلت أي إجابة</div>';
-            else html += '<div class="mc-res-line"><span style="color:' + ACC + '">✓ ' + res.survived + ' تأهلوا</span>' +
-                '<span style="color:#5E567A">·</span><span style="color:#FF6B6B">✗ ' + res.out + ' خرجوا</span></div>';
+            if (!res.scorers.length) html += '<div class="mc-tie-line">ما أحد جاوب صح بهذي الجولة</div>';
+            else html += '<div class="mc-res-line"><span style="color:' + ACC + '">✓ ' + res.scorers.length + ' أخذوا نقاط</span></div>';
         } else if (_phase === 'over') {
+            var top = _podium[0];
             html = '<div class="mc-h-mid">انتهت اللعبة</div>' +
-                '<div class="mc-h-sub">' + (_winners.length === 1 ? 'بقى لاعب واحد بس' :
-                    (_winners.length > 1 ? 'خلصت الجولات · ' + _winners.length + ' فائزين' : 'بدون فائز')) + '</div>';
+                '<div class="mc-h-sub">' + (top ? 'الفائز: ' + escapeHtml(playerLabel(top)) + ' · ' + scoreOf(top) + ' نقطة' : 'بدون فائز') + '</div>';
+        } else if (_matchActive) {
+            html = '<div class="mc-h-big">جاهزين؟</div>' +
+                '<div class="mc-h-sub">اضغط ابدأ عشان تبدأ الجولة الأولى</div>';
         } else {
             html = '<div class="mc-h-big">بانتظار بداية اللعبة</div>';
         }
@@ -1484,9 +1543,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var showTimer = _phase === 'memorize' || _phase === 'question';
         el('mc-timer').style.display = showTimer ? 'flex' : 'none';
         var nextBtn = el('mc-next-btn');
-        nextBtn.style.display = _phase === 'reveal' ? 'inline-block' : 'none';
+        // Before round 1: a "ابدأ" button — the match only starts once the
+        // stream host presses it.
+        var waitingStart = _matchActive && _phase === 'idle';
+        nextBtn.style.display = _phase === 'reveal' || waitingStart ? 'inline-block' : 'none';
+        if (waitingStart) nextBtn.textContent = 'ابدأ';
         if (_phase === 'reveal') {
-            nextBtn.textContent = res && res.final ? (_alive.length > 1 ? 'عرض الفائزين' : 'عرض الفائز') : 'ابدأ الجولة التالية';
+            nextBtn.textContent = res && res.final ? 'عرض الفائز' : 'ابدأ الجولة التالية';
         }
         renderTimer();
     }
@@ -1506,13 +1569,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function renderPanel() {
-        var aliveNames = _alive.map(playerLabel);
         var aliveEl = el('mc-stat-alive'); if (aliveEl) aliveEl.textContent = String(_alive.length);
         var outEl = el('mc-stat-out'); if (outEl) outEl.textContent = String(_eliminated.length);
         var more = el('mc-alive-more'); if (more) more.textContent = _alive.length > 40 ? '+' + (_alive.length - 40) : String(_alive.length);
         var list = el('mc-alive-list');
         if (list) {
-            var h = aliveNames.slice(-40).reverse().map(function (n) { return '<span dir="ltr" class="mc-name-chip">' + escapeHtml(n) + '</span>'; }).join('');
+            // Standings: highest score first.
+            var h = standings().slice(0, 40).map(function (p) {
+                return '<span dir="ltr" class="mc-name-chip">' + escapeHtml(playerLabel(p)) + ' · ' + scoreOf(p) + '</span>';
+            }).join('');
             if (list.innerHTML !== h) list.innerHTML = h;
         }
         var outList = el('mc-out-list');
@@ -1531,36 +1596,54 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderPanel();
     }
 
-    /* ---- "Eliminated this round" window ---- */
+    /* ---- Round results window: the scorers (name, answer, points), and a
+     *      second view with every other participant's answer ---- */
     function openElim() {
-        if (!_result || !_result.outs || !_result.outs.length) return;
+        if (!_result) return;
+        _resultView = 'scorers';
+        renderResultWindow();
+        el('mc-elim-overlay').classList.add('mc-show');
+        _elimOpen = true;
+    }
+
+    function renderResultWindow() {
+        if (!_result) return;
+        var scorersView = _resultView === 'scorers';
+        var entries = scorersView ? _result.scorers : _result.others;
+        el('mc-elim-title-text').textContent = scorersView ? 'اللي جاوبوا صح' : 'إجابات باقي المشاركين';
+        el('mc-elim-count').textContent = String(entries.length);
+        el('mc-res-correct').innerHTML = '<span>الجواب الصحيح</span><span class="mc-correct-pill">' + _result.correct + '</span>';
+        el('mc-res-others').style.display = scorersView ? '' : 'none';
+        el('mc-res-continue').textContent = _result.final ? 'عرض الفائز' : 'أكمل اللعب';
         var grid = el('mc-elim-grid');
-        el('mc-elim-count').textContent = String(_result.outs.length);
-        grid.innerHTML = _result.outs.map(function (p) {
+        if (!entries.length) {
+            grid.innerHTML = '<div class="mc-res-empty">' + (scorersView ? 'ما أحد جاوب صح بهذي الجولة' : 'ما فيه مشاركين آخرين') + '</div>';
+            return;
+        }
+        grid.innerHTML = entries.map(function (entry, idx) {
+            var p = entry.player;
             var name = playerLabel(p);
+            var ok = entry.answer === _result.correct;
             var hh = 0;
             for (var i = 0; i < name.length; i++) hh = (hh * 31 + name.charCodeAt(i)) | 0;
             var hue = Math.abs(hh) % 360;
             var initial = (name.replace(/[^\p{L}\p{N}]/gu, '').charAt(0) || '?').toUpperCase();
             var av = p.avatarUrl;
             var style = 'background-color:oklch(0.45 0.12 ' + hue + ');' +
-                (av ? 'background-image:url(&quot;' + escapeHtml(av) + '&quot;);filter:grayscale(.6);' : '');
+                (av ? 'background-image:url(&quot;' + escapeHtml(av) + '&quot;);' + (scorersView ? '' : 'filter:grayscale(.6);') : '');
+            var answerHtml = entry.answer != null
+                ? '<span class="mc-elim-answer' + (ok ? ' mc-ans-ok' : '') + '">جوابه <b>' + entry.answer + '</b></span>'
+                : '<span class="mc-elim-answer mc-elim-noanswer">ما جاوب</span>';
             return '<div class="mc-elim-card">' +
                 '<div class="mc-elim-av-wrap">' +
-                    '<div class="mc-elim-av" style="' + style + '">' + (av ? '' : '<span>' + escapeHtml(initial) + '</span>') + '</div>' +
-                    '<span class="mc-elim-x">✕</span>' +
+                    '<div class="mc-elim-av' + (scorersView ? ' mc-av-ok' : '') + '" style="' + style + '">' + (av ? '' : '<span>' + escapeHtml(initial) + '</span>') + '</div>' +
                 '</div>' +
+                (scorersView ? '<span class="mc-elim-rank">#' + (idx + 1) + '</span>' : '') +
                 '<span dir="ltr" class="mc-elim-name">' + escapeHtml(name) + '</span>' +
-                (function () {
-                    var a = _result.outAnswers ? _result.outAnswers[p.id] : null;
-                    return a != null
-                        ? '<span class="mc-elim-answer">جوابه <b>' + a + '</b></span>'
-                        : '<span class="mc-elim-answer mc-elim-noanswer">ما جاوب</span>';
-                })() +
+                answerHtml +
+                (scorersView ? '<span class="mc-elim-answer mc-ans-ok">+' + entry.points + ' ' + (entry.points === 1 ? 'نقطة' : 'نقطتين') + '</span>' : '') +
             '</div>';
         }).join('');
-        el('mc-elim-overlay').classList.add('mc-show');
-        _elimOpen = true;
     }
 
     function closeElim(withClick) {
@@ -1598,6 +1681,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var mem = memTime();
         _t = mem; _tMax = mem;
         _answers = {};
+        _answerOrder = [];
         _result = null;
         _lastSec = null;
         _phase = 'memorize';
@@ -1627,6 +1711,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _phase = 'question';
         _t = a; _tMax = a;
         _answers = {};
+        _answerOrder = [];
         renderAll();
         Sfx.play('cover', n);
         clearTimeout(_questionTimer);
@@ -1640,43 +1725,43 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function resolve() {
         var correct = _target + 1;
-        var survivors = _alive.filter(function (p) { return _answers[p.id] === correct; });
-        var outs = _alive.filter(function (p) { return _answers[p.id] !== correct; });
-        // Nobody answered correctly -> nobody is eliminated this round.
-        var tie = survivors.length === 0 && outs.length > 0;
-        var noAns = survivors.length === 0 && outs.length === 0;
-        if (!tie) {
-            outs.forEach(function (p) { _eliminated.push({ player: p, round: _round }); });
-            _alive = survivors;
-            _outLog = outs.map(playerLabel).concat(_outLog).slice(0, 40);
-        }
+        // Nobody is eliminated: the first _matchAccept correct answers (in
+        // the order they arrived) score — 2 points for the 1st and 2nd,
+        // 1 point for every one after them.
+        var scorerIds = _answerOrder.filter(function (id) {
+            return _answers[id] === correct && isAliveId(id);
+        }).slice(0, _matchAccept);
+        var scorers = scorerIds.map(function (id, rank) {
+            var player = _alive.filter(function (p) { return p.id === id; })[0];
+            var pts = pointsForRank(rank);
+            _scores[id] = (_scores[id] || 0) + pts;
+            _scoreSeq[id] = ++_scoreCounter;
+            return { player: player, answer: correct, points: pts };
+        });
+        var others = _alive.filter(function (p) { return scorerIds.indexOf(p.id) === -1; }).map(function (p) {
+            return { player: p, answer: _answers[p.id] != null ? _answers[p.id] : null };
+        });
+        // The match ends after the last round, or (points mode) the moment
+        // someone reaches the target — or if one player (or none) is left.
+        var target = WIN_TARGETS[_matchWin];
+        var reached = target && _alive.some(function (p) { return scoreOf(p) >= target; });
+        var final = _alive.length <= 1 || _round >= MAX_ROUNDS || Boolean(reached);
         var counts = {};
         Object.keys(_answers).forEach(function (id) { var v = _answers[id]; counts[v] = (counts[v] || 0) + 1; });
-        // The match ends when one player (or none) is left, or after the
-        // last round — whoever is still alive then wins (can be several).
-        var final = _alive.length <= 1 || _round >= MAX_ROUNDS;
-        _result = {
-            correct: correct, survived: survivors.length, out: tie ? 0 : outs.length,
-            tie: tie, noAns: noAns, counts: counts, final: final, outs: tie ? [] : outs,
-            // Each eliminated player's final answer (null = never answered),
-            // shown on their card in the "eliminated this round" window.
-            outAnswers: outs.reduce(function (acc, p) { acc[p.id] = _answers[p.id] != null ? _answers[p.id] : null; return acc; }, {})
-        };
+        _result = { correct: correct, scorers: scorers, others: others, counts: counts, final: final };
         _phase = 'reveal';
         _t = 0; _tMax = 1;
         renderAll();
         clearTimeout(_elimTimer);
-        if (!tie && outs.length) {
-            _elimTimer = setTimeout(function () { if (_phase === 'reveal') openElim(); }, 1400);
-        }
+        _elimTimer = setTimeout(function () { if (_phase === 'reveal') openElim(); }, 1400);
         Sfx.play('timeup');
         Sfx.play('correct');
-        if (tie) Sfx.play('tie');
-        else if (outs.length) Sfx.play('out');
+        if (!scorers.length) Sfx.play('tie');
     }
 
     function advance() {
         if (!_matchActive) return;
+        if (_phase === 'idle') { _startedAt = Date.now(); return startRound(); }
         if (_phase === 'memorize') return toQuestion();
         if (_phase === 'question') return resolve();
         if (_phase === 'reveal') {
@@ -1700,8 +1785,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         else { _t = t; renderTimer(); }
     }
 
-    /* ---- Chat answers: the square's number; a player can answer again
-     *      while the time runs and the last answer received counts ---- */
+    /* ---- Chat answers: the square's number; only a player's first
+     *      answer counts (later ones are ignored) ---- */
     function wireCommentListener() {
         if (typeof _commentUnsub === 'function') _commentUnsub();
         _commentUnsub = AGP.events.on('stream:commentReceived', function (payload) {
@@ -1710,10 +1795,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (!m) return;
             var player = _alive.filter(function (p) { return p.id === payload.id; })[0] ||
                 _alive.filter(function (p) { return payload.name && p.name === payload.name; })[0];
-            if (!player) return;
+            if (!player || _answers[player.id] != null) return; // first answer is locked
             var n = +m[1];
             if (n < 1 || n > _cells.length) return;
-            _answers[player.id] = n; // overwrites any earlier answer — the last one counts
+            _answers[player.id] = n;
+            _answerOrder.push(player.id);
             var now = performance.now();
             if (!_lastBlip || now - _lastBlip > 70) { _lastBlip = now; Sfx.play('answer'); }
             renderTimer();
@@ -1731,6 +1817,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (elimIdx !== -1) _eliminated.splice(elimIdx, 1);
         if (aliveIdx === -1 && elimIdx === -1) return;
         delete _answers[removedPlayer.id];
+        delete _scores[removedPlayer.id];
+        delete _scoreSeq[removedPlayer.id];
         renderPanel();
         checkEarlyEnd();
     }
@@ -1756,7 +1844,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function finishMatch() {
         if (!_matchActive) return;
         closeElim(false);
-        _winners = _alive.slice();
+        // Highest score wins; the winner screen shows the 1st and 2nd
+        // places (only players who scored at least one point).
+        _podium = standings().filter(function (p) { return scoreOf(p) > 0; }).slice(0, 2);
+        _winners = _podium.slice(0, 1);
         _phase = 'over';
         renderAll();
         endMatch(_winners);
@@ -1784,7 +1875,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         AGP.events.emit('game:roundEnded', { id: GAME_ID });
 
         pointsPromise.then(function (pointsResult) {
-            renderWinnerScreen(winners, pointsResult);
+            renderWinnerScreen(_podium, pointsResult);
         });
     }
 
@@ -1839,28 +1930,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     /**
      * Winner screen — Elimination Roulette's layout: blurred game screen
-     * behind, no panel, one shared trophy card per winner (a single winner,
-     * or everyone still alive after the last round), confetti, and the same
-     * three buttons (back to platform / new match / replay same players).
+     * behind, no panel, one shared trophy card each for the 1st and 2nd
+     * places (highest scores), confetti, and the same three buttons (back
+     * to platform / new match / replay same players).
      */
     function renderWinnerScreen(winners, pointsResult) {
         ensureModal();
         var overlay = el('mc-modal-overlay');
         var box = el('mc-modal-box');
-        var roundsText = 'صمد ' + _round + ' ' + (_round === 1 ? 'جولة' : 'جولات');
 
         var cardsHtml = winners.map(function (w, i) {
             return AGP.playerCard.renderTrophyCard(w, {
                 cls: 'mc-trophy-winner', kind: 'winner', cardId: 'mc-trophy-card-' + i,
-                showCrown: true,
-                extra: '<div class="agp-trophy-extra mc-rounds-line">' + escapeHtml(roundsText) + '</div>',
+                label: i === 0 ? '🥇 المركز الأول' : '🥈 المركز الثاني',
+                showCrown: i === 0,
+                extra: '<div class="agp-trophy-extra mc-rounds-line">' + scoreOf(w) + ' نقطة</div>',
                 pointsHtml: pointsHtmlFor(pointsResult, w)
             });
         }).join('');
 
-        var title = winners.length > 1
-            ? '🏁 انتهت المباراة .. الفائزين بلعبة "' + escapeHtml(GAME_NAME) + '" (' + winners.length + ')'
-            : '🏁 انتهت المباراة .. الشخص الرهيب الي فاز بلعبة "' + escapeHtml(GAME_NAME) + '"';
+        var title = '🏁 انتهت المباراة .. الشخص الرهيب الي فاز بلعبة "' + escapeHtml(GAME_NAME) + '"';
 
         box.className = 'mc-winner-panel';
         overlay.classList.add('mc-winner-backdrop');
@@ -1905,13 +1994,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function beginMatch() {
         ensureStage();
-        _startedAt = Date.now();
         _matchActive = true;
+        _phase = 'idle';
         _matchDifficulty = difficulty();
+        _matchAccept = acceptCount();
+        _matchWin = winCondition();
         _round = 0;
         wireCommentListener();
         if (!_tickIv) _tickIv = setInterval(tick, 100);
-        startRound();
+        // Wait on the play screen for the "ابدأ" button (see advance()).
+        _cells = [];
+        buildGrid();
+        renderAll();
     }
 
     function handleStartRound() {
@@ -1945,6 +2039,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     { label: '🔥 صعب', value: 'hard' }
                 ],
                 default: 'easy'
+            },
+            {
+                key: 'acceptCount', type: 'pill-group', label: '✅ عدد الإجابات المقبولة',
+                description: 'أول كم لاعب يجاوب صح ياخذ نقاط · الأول والثاني نقطتين، واللي بعدهم نقطة',
+                options: ACCEPT_OPTIONS, default: 3
+            },
+            {
+                key: 'winCondition', type: 'pill-group', label: '🏆 طريقة الفوز',
+                description: 'أول من يوصل للنقاط المستهدفة، أو صاحب أعلى نقاط بعد انتهاء 10 جولات',
+                options: [
+                    { label: '10 نقاط', value: 'p10' },
+                    { label: '15 نقطة', value: 'p15' },
+                    { label: '10 جولات', value: 'rounds' }
+                ],
+                default: 'p10'
             },
             {
                 key: 'memorizeSeconds', type: 'pill-group', label: '👀 مدة عرض الإيموجيز',
@@ -2003,6 +2112,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var maxPlayersRow = rowFor('[data-key="maxPlayers"]');
         var followersRow = rowFor('[data-key="followersOnly"]');
         var difficultyRow = rowFor('[data-key="difficulty"]');
+        var acceptRow = rowFor('[data-key="acceptCount"]');
+        var winRow = rowFor('[data-key="winCondition"]');
         var memRow = rowFor('[data-key="memorizeSeconds"]');
         var answerRow = rowFor('[data-key="answerSeconds"]');
 
@@ -2012,7 +2123,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         scrollInner.className = 'mc-settings-scroll-inner';
         scroll.appendChild(scrollInner);
 
-        [usernameField, keywordField, maxPlayersRow, followersRow, difficultyRow]
+        [usernameField, keywordField, maxPlayersRow, followersRow, difficultyRow, acceptRow, winRow]
             .filter(Boolean).forEach(function (fieldEl) { scrollInner.appendChild(fieldEl); });
 
         // "Card" section — the two round-timing rows together.
@@ -2734,9 +2845,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             gameTitle: GAME_NAME,
             settingsTitle: 'إعدادات لعبة تحدي الذاكرة',
             gameExplanation: 'كل جولة تظهر شبكة إيموجيز لثواني، بعدها تتغطى المربعات ويبان رقم كل مربع فقط. ' +
-                'يطلع سؤال عن مكان إيموجي معيّن، وكل لاعب يكتب رقم المربع في الشات (يقدر يغيّر إجابته قبل ما يخلص الوقت، وآخر إجابة هي اللي تنحسب). ' +
-                'اللي يغلط أو ما يجاوب يطلع من اللعبة، ولو ما أحد جاوب صح الكل يكمل. بالمستوى السهل أول جولة 6 صناديق وكل جولة يزيد صندوق، وبالمستوى الصعب أول جولة 9 صناديق وكل جولة يزيد 3 صناديق. السؤال يطلع بعد ما تتقفل الصناديق كلها. ' +
-                'اللعبة ' + MAX_ROUNDS + ' جولات كحد أقصى، أو تنتهي أول ما يبقى لاعب واحد — ولو بقى أكثر من لاعب بعد آخر جولة فكلهم فائزين.',
+                'يطلع سؤال عن مكان إيموجي معيّن، وكل لاعب يكتب رقم المربع في الشات (أول إجابة له هي اللي تنحسب وما يقدر يغيّرها). ' +
+                'ما فيه إقصاء: أول اللاعبين اللي يجاوبون صح (حسب العدد المحدد بالإعدادات) ياخذون نقاط — الأول والثاني نقطتين، واللي بعدهم نقطة. بالمستوى السهل أول جولة 6 صناديق وكل جولة يزيد صندوق، وبالمستوى الصعب أول جولة 9 صناديق وكل جولة يزيد 3 صناديق. السؤال يطلع بعد ما تتقفل الصناديق كلها. ' +
+                'الفوز لأول لاعب يوصل للنقاط المستهدفة (10 أو 15)، أو لصاحب أعلى نقاط بعد ' + MAX_ROUNDS + ' جولات.',
             connectButtonLabel: 'الاتصال بالبث والانتقال للوبي',
             minPlayersToStart: 2,
             logoImage: '../../logo.png',
