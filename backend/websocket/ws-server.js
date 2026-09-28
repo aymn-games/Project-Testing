@@ -112,23 +112,25 @@ function sendEnvelope(socket, envelope) {
  * وعند disconnect صريح، وعند إغلاق الاتصال.
  * @param {Object} entry - سجل الاتصال من connection-registry
  */
-function endActiveBroadcastIfAny(entry) {
+function endActiveBroadcastIfAny(entry, endedAt) {
   if (!entry || !entry.activeBroadcastId) return;
   // تفريغ أي عدّادات معلَّقة قبل ختم البث، وإلا تضيع آخر دفعة تجميع.
   flushPendingStats(entry);
   try {
-    authService.endBroadcast(entry.activeBroadcastId);
+    // لو انقطع اتصال تيك توك قبل (lostAt) نختم عند لحظة الانقطاع.
+    authService.endBroadcast(entry.activeBroadcastId, endedAt || entry.broadcastLostAt || undefined);
   } catch (err) {
     logger.error('WS Server: failed to end broadcast ' + entry.activeBroadcastId + ':', err);
   }
   entry.activeBroadcastId = null;
+  entry.broadcastLostAt = null;
   entry.pendingStats = null;
 }
 
 /**
  * إغلاق اتصال بأمان: إيقاف أي موصِّل نشط مرتبط به، ثم إزالته من السجل.
  */
-function cleanupConnection(connectionId) {
+function cleanupConnection(connectionId, endedAt) {
   var entry = registry.get(connectionId);
   if (!entry) return;
 
@@ -138,9 +140,61 @@ function cleanupConnection(connectionId) {
 
   // العميل قد يُغلق التبويب/يفقد الشبكة دون "disconnect" صريح — بدون هذا،
   // يبقى البث "مفتوحاً" للأبد بقاعدة البيانات (ended_at = NULL).
-  endActiveBroadcastIfAny(entry);
+  endActiveBroadcastIfAny(entry, endedAt);
 
   registry.remove(connectionId);
+}
+
+/**
+ * يربط تسجيل البث بحالة الاتصال الفعلية بتيك توك:
+ *   connected  -> يبدأ بث (لو ما فيه بث مفتوح)، أو يكمل نفس البث بعد إعادة اتصال
+ *   connecting -> (بعد ما كان متصل) نحفظ لحظة الانقطاع
+ *   error      -> يُختَم البث عند لحظة الانقطاع (أو الآن)
+ */
+function trackBroadcastStatus(entry, status) {
+  if (!entry || !entry.broadcastTracking) return;
+  try {
+    if (status === 'connected') {
+      entry.broadcastLostAt = null;
+      if (!entry.activeBroadcastId) {
+        entry.activeBroadcastId = authService.startBroadcast(entry.broadcastTracking.userId, entry.broadcastTracking.username);
+        logger.log('WS Server: broadcast tracking started (broadcastId=' + entry.activeBroadcastId + ') for user ' + entry.broadcastTracking.userId + '.');
+      }
+    } else if (status === 'connecting') {
+      if (entry.activeBroadcastId && !entry.broadcastLostAt) entry.broadcastLostAt = Date.now();
+    } else if (status === 'error') {
+      endActiveBroadcastIfAny(entry);
+    }
+  } catch (err) {
+    logger.error('WS Server: broadcast tracking failed:', err);
+  }
+}
+
+// نبض (Heartbeat): المتصفح يرد تلقائياً على Ping. أي اتصال ما وصل منه شي
+// خلال HEARTBEAT_TIMEOUT_MS (جوال نام/لابتوب تسكّر/انقطعت الشبكة بدون
+// إغلاق نظيف) يُقفَل — يوقف موصِّل تيك توك ويختم البث عند آخر لحظة ردّ فيها،
+// بدل ما يظل شغّال ويحسب ساعات لساعات.
+var HEARTBEAT_INTERVAL_MS = 30000;
+var HEARTBEAT_TIMEOUT_MS = 75000;
+var _heartbeatStarted = false;
+
+function startHeartbeat() {
+  if (_heartbeatStarted) return;
+  _heartbeatStarted = true;
+  setInterval(function () {
+    var nowMs = Date.now();
+    registry.listConnectionIds().forEach(function (connectionId) {
+      var entry = registry.get(connectionId);
+      if (!entry || !entry.socket) return;
+      if (nowMs - (entry.lastSeenAt || 0) > HEARTBEAT_TIMEOUT_MS) {
+        logger.log('WS Server: connection ' + connectionId + ' timed out (no response) — closing.');
+        cleanupConnection(connectionId, entry.lastSeenAt);
+        try { entry.socket.destroy(); } catch (e) {}
+        return;
+      }
+      try { entry.socket.write(frame.encodeControlFrame(frame.OPCODES.PING)); } catch (e) {}
+    });
+  }, HEARTBEAT_INTERVAL_MS);
 }
 
 function normalizeTikTokUsername(name) {
@@ -224,22 +278,24 @@ function handleConnectMessage(connectionId, socket, payload) {
   entry.activeConnector = connector;
   entry.activePlatform = platform;
 
-  // لو يوزرنيم تيك توك المطلوب مراقبته مرتبط بحساب موثَّق، يُسجَّل بث
-  // جديد فوراً — بصرف النظر عن نجاح الاتصال الفعلي بتيك توك لاحقاً.
-  if (platform === 'tiktok' && payload.username) {
+  // ساعات البث = فقط الوقت اللي كان فيه متصل فعلياً ببث تيك توك من داخل
+  // لعبة. التحقق من اليوزر بمكتبة الألعاب (source: 'library') لا يُحتسب،
+  // والبث يبدأ فقط لما تيك توك يؤكّد الاتصال (مو لحظة الطلب)، ويُختَم لحظة
+  // انقطاعه (راجع trackBroadcastStatus).
+  entry.broadcastTracking = null;
+  if (platform === 'tiktok' && payload.username && payload.source !== 'library') {
     try {
       var matchedUser = authService.findVerifiedUserByTikTok(payload.username);
-      if (matchedUser) {
-        entry.activeBroadcastId = authService.startBroadcast(matchedUser.id, payload.username);
-        logger.log('WS Server: [0.45.0] broadcast tracking started (broadcastId=' + entry.activeBroadcastId + ') for verified user ' + matchedUser.id + ' watching "' + payload.username + '".');
-      }
+      if (matchedUser) entry.broadcastTracking = { userId: matchedUser.id, username: payload.username };
     } catch (err) {
-      logger.error('WS Server: failed to start broadcast tracking:', err);
+      logger.error('WS Server: failed to resolve broadcast owner:', err);
     }
   }
 
   connector.connect(payload, {
     onStatus: function (status, message) {
+      // حالة متأخرة من موصِّل قديم (استُبدل بطلب اتصال جديد) ما تأثّر على التسجيل.
+      if (entry.activeConnector === connector) trackBroadcastStatus(entry, status);
       sendEnvelope(socket, builder.buildStatusMessage(platform, status, message));
     },
 
@@ -332,6 +388,8 @@ function attachDataHandler(connectionId, socket) {
   var buffer = Buffer.alloc(0);
 
   socket.on('data', function (chunk) {
+    var liveEntry = registry.get(connectionId);
+    if (liveEntry) liveEntry.lastSeenAt = Date.now();
     buffer = Buffer.concat([buffer, chunk]);
 
     var decoded;
@@ -406,7 +464,7 @@ function handleUpgrade(req, socket) {
   socket.write(responseHeaders);
 
   var connectionId = 'conn_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
-  registry.register(connectionId, { socket: socket, activeConnector: null, activePlatform: null, activeBroadcastId: null });
+  registry.register(connectionId, { socket: socket, activeConnector: null, activePlatform: null, activeBroadcastId: null, lastSeenAt: Date.now() });
 
   attachDataHandler(connectionId, socket);
 
@@ -429,6 +487,7 @@ module.exports = {
     });
 
     startStatsFlushInterval();
+    startHeartbeat();
 
     logger.log('WS Server: attached to HTTP server, listening for WebSocket upgrades.');
   }

@@ -852,8 +852,10 @@ function startBroadcast(userId, tiktokUsername) {
     return info.lastInsertRowid;
 }
 
-function endBroadcast(broadcastId) {
-    db.prepare('UPDATE broadcasts SET ended_at = ? WHERE id = ?').run(now(), broadcastId);
+/** endedAt اختياري — لحظة انقطاع البث الفعلية (مثلاً آخر مرة ردّ فيها
+ * المتصفح) بدل لحظة اكتشاف الانقطاع، عشان وقت الانتظار ما ينحسب. */
+function endBroadcast(broadcastId, endedAt) {
+    db.prepare('UPDATE broadcasts SET ended_at = MAX(started_at, ?) WHERE id = ?').run(endedAt || now(), broadcastId);
 }
 
 var STAT_COLUMNS = {
@@ -930,7 +932,21 @@ function getUserStats(userId) {
  * @param {number} [limit]
  * @returns {Array<{tiktokUsername: string, displayName: string, avatarBase64: (string|null), customId: (string|null), totalHours: number}>}
  */
+// ترتيب الاستريمرز يُطلب مع كل زيارة للرئيسية — تجميع كامل جدول broadcasts
+// كل مرة حمل بلا فايدة، فنحفظ الناتج 5 دقائق (لكل limit).
+var TOP_STREAMERS_CACHE_MS = 5 * 60 * 1000;
+var _topStreamersCache = {};
+
 function getTopStreamersByHours(limit) {
+    limit = limit || 20;
+    var cached = _topStreamersCache[limit];
+    if (cached && now() - cached.at < TOP_STREAMERS_CACHE_MS) return cached.rows;
+    var rows = computeTopStreamersByHours(limit);
+    _topStreamersCache[limit] = { at: now(), rows: rows };
+    return rows;
+}
+
+function computeTopStreamersByHours(limit) {
     var rows = db.prepare(
         `SELECT u.tiktok_username AS tiktokUsername, u.username, u.display_name AS displayName,
                 u.avatar_image_base64 AS avatarBase64, u.custom_id AS customId,
