@@ -697,6 +697,13 @@ function validateSession(token) {
     var session = db.prepare('SELECT * FROM sessions WHERE token = ?').get(token);
     if (!session || session.expires_at < now()) return null;
 
+    // تجديد تلقائي (sliding session): المستخدم النشط ما يطلع من حسابه بعد
+    // 30 يوم من أول دخول — نمدّ الجلسة 30 يوم من الآن لما يبقى أقل من
+    // نصف مدتها (كتابة واحدة للقاعدة كل ~15 يوم كحد أقصى، مو مع كل طلب).
+    if (session.expires_at - now() < SESSION_DURATION_MS / 2) {
+        db.prepare('UPDATE sessions SET expires_at = ? WHERE token = ?').run(now() + SESSION_DURATION_MS, token);
+    }
+
     var user = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, tiktok_avatar_url, tiktok_display_name, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen FROM users WHERE id = ?').get(session.user_id);
     if (!user) return null;
 

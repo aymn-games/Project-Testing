@@ -178,8 +178,58 @@ function refreshUser() {
             setSession(getToken(), result.user);
             return result.user;
         }
+        // Only a real 401 means the session is gone — a server waking up
+        // from sleep (5xx) must not log the user out (same rule as requireAuth).
+        if (result.__httpStatus === 401) clearSession();
         return null;
     }).catch(function () { return null; });
+}
+
+/* Header account button — one source of truth for every page with the
+ * shared site header (index.html, games.html). The page template rebuilds
+ * the header on its own schedule (and can finish rendering after any fixed
+ * polling window on a slow phone), so a MutationObserver keeps the button
+ * correct for the whole visit instead of patching it once. Logged in means
+ * "has a stored session token"; a missing custom_id in the cached user
+ * doesn't make someone look logged out. */
+var ACCOUNT_LINK_TEXT_IN = 'حسابي';
+var ACCOUNT_LINK_TEXT_OUT = 'إنشاء حساب أو تسجيل الدخول';
+
+function syncHeaderAccountLinks() {
+    var loggedIn = Boolean(getToken());
+    var user = loggedIn ? getCachedUser() : null;
+    var text = loggedIn ? ACCOUNT_LINK_TEXT_IN : ACCOUNT_LINK_TEXT_OUT;
+    var href = !loggedIn ? 'login.html'
+        : (user && user.custom_id ? 'profile.html?id=' + encodeURIComponent(user.custom_id) : 'profile.html');
+    var links = document.querySelectorAll('header a, [data-mobile-panel] a');
+    for (var i = 0; i < links.length; i++) {
+        var a = links[i];
+        var t = (a.textContent || '').trim();
+        if (t !== ACCOUNT_LINK_TEXT_IN && t !== ACCOUNT_LINK_TEXT_OUT) continue;
+        if (t !== text) a.textContent = text;
+        if (a.getAttribute('href') !== href) a.setAttribute('href', href);
+    }
+}
+
+function keepHeaderAccountLinkSynced() {
+    var scheduled = false;
+    function schedule() {
+        if (scheduled) return;
+        scheduled = true;
+        (global.requestAnimationFrame || setTimeout)(function () {
+            scheduled = false;
+            syncHeaderAccountLinks();
+        });
+    }
+    // Observe the document itself (not <html>/<body>): bundled pages replace
+    // the whole documentElement when they unpack.
+    new MutationObserver(schedule).observe(document, { childList: true, subtree: true, characterData: true });
+    // Another tab logging in/out changes localStorage — reflect it here too.
+    global.addEventListener('storage', function (e) {
+        if (e.key === TOKEN_KEY || e.key === USER_KEY) schedule();
+    });
+    schedule();
+    refreshUser().then(schedule);
 }
 
 function linkTikTok(tiktokUsername) {
@@ -610,6 +660,8 @@ global.AGPAuth = {
     logout: logout,
     me: me,
     refreshUser: refreshUser,
+    syncHeaderAccountLinks: syncHeaderAccountLinks,
+    keepHeaderAccountLinkSynced: keepHeaderAccountLinkSynced,
     linkTikTok: linkTikTok,
     requestTikTokVerificationCode: requestTikTokVerificationCode,
     verifyTikTok: verifyTikTok,

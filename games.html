@@ -390,6 +390,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   </script>
 <script src="auth/auth-client.js"></script>
 <script>
+  // زر الحساب بالهيدر (حسابي / تسجيل الدخول) — نفس منطق الرئيسية.
+  if (window.AGPAuth && window.AGPAuth.keepHeaderAccountLinkSynced) window.AGPAuth.keepHeaderAccountLinkSynced();
+</script>
+<script>
 (function(){
   var REAL_GAMES = [{"id": "memory-challenge", "title": "🧠 تحدي الذاكرة", "desc": "شبكة إيموجيز تظهر لثواني ثم تتغطى، ويطلع سؤال عن مكان إيموجي. اكتب رقم المربع بالشات؛ الغلط يطلع، و10 جولات كحد أقصى أو حتى يبقى لاعب واحد.", "cover": "", "href": "games/memory-challenge/index.html"}, {"id": "snakes-ladders", "title": "🐍 السلم والثعبان", "desc": "لوحة من 1 إلى 100 والكأس في المربع 100. كل لاعب بدوره يكتب دور أو roll بالشات فيرمي النرد، السلم يطلّعه والثعبان ينزّله، وأول من يوصل للكأس يفوز.", "cover": "", "href": "games/snakes-ladders/index.html"}, {"id": "letters-cell", "title": "🐝 خلية الحروف", "desc": "خلية سداسية بها 25 حرفاً من أصل 28 حرفاً عربياً موزعة على فريقين. كل حرف له سؤال وإجابة، والمتابعون يجاوبون بالشات خلال وقت محدد لكل سؤال.", "cover": "letters-cell-cover.png", "href": "games/letters-cell/index.html"}, {"id": "codenames", "title": "🕵️ كود نيمز (Codenames)", "desc": "فريقان (أحمر وأزرق) وسباي ماستر لكل فريق يشوف خريطة الكلمات السرية عبر رابط QR خاص بجواله. يعطي السباي ماستر تلميحًا بكلمة واحدة ورقم، والفريق يخمّن الكلمات.", "cover": "codenames-cover.png", "href": "games/codenames/index.html"}, {"id": "photo-challenge", "title": "🖼️ تحدي الصور (Photo Challenge)", "desc": "فريقان يتنافسان بكلمة مفتاحية منفصلة لكل فريق. كل جولة تظهر صورة تحدي، وأول لاعب يكتب الإجابة الصحيحة بالشات يسجّل نقطة لفريقه.", "cover": "photo-challenge-cover.png", "href": "games/photo-challenge/index.html"}, {"id": "khazna", "title": "🔐 الخزنة (Khazna)", "desc": "كل جولة تدور عجلة وتحدد لاعب مستهدف، وتطلع ساعات مرقّمة من الخزنة. اكتب أرقام الساعات بالترتيب بالشات برسالة وحدة.", "cover": "khazna-cover.png", "href": "games/khazna/index.html"}, {"id": "team-war", "title": "⚔️ حرب الفريقين (Team War)", "desc": "فريقان (أزرق وأحمر) يتنافسان بالنقاط. المشاهدين ينضمون بكومنت مباشر بكلمة فريقهم، وكل لاعب بدوره يكتب رقم مربع بالشات ليفتحه.", "cover": "team-war-cover.png", "href": "games/team-war/index.html"}, {"id": "elimination-roulette", "title": "🎡 روليت الإقصاء (Elimination Roulette)", "desc": "عجلة تدور وتتوقف عند أحد اللاعبين، فيختار رقم لاعب آخر يقصيه من شات البث.", "cover": "elimination-roulette-cover.png", "href": "games/elimination-roulette/index.html"}, {"id": "tribe-roulette", "title": "🏹 روليت القبائل (Tribe Roulette)", "desc": "عجلة تختار لاعباً يدوّر عليه الدور، فتظهر له قبائل تخفي خلفها بقية اللاعبين — يختار رقم قبيلة من الشات ليقصي من خلفها.", "cover": "tribe-roulette-cover.png", "href": "games/tribe-roulette/index.html"}, {"id": "russian-roulette", "title": "🔫 روليت الروسي (Russian Roulette)", "desc": "عجلة أو بكرة سكرول تختار لاعباً يدوّر عليه الدور، فيختار رقم لاعب آخر من شات البث يستهدفه.", "cover": "russian-roulette-cover.png", "href": "games/russian-roulette/index.html"}, {"id": "fruit-roulette", "title": "🍉 روليت الفواكه (Fruit Roulette)", "desc": "عجلة تدور وتتوقف عند أحد اللاعبين، فيفتح صندوقاً من أربعة بكتابة رقمه في شات البث. ثلاثة صناديق آمنة تحتوي فاكهة، وواحد أو أكثر يخفي مفاجأة.", "cover": "fruit-roulette-cover.png", "href": "games/fruit-roulette/index.html"}, {"id": "musical-chairs", "title": "🎵 الكراسي الموسيقية (Musical Chairs)", "desc": "تدور الأفاتارات حول حلقة الكراسي، وفجأة تتوقف الموسيقى وتظهر أرقام على كل كرسي. أول وحد يكتب الرقم الصحيح يفوز.", "cover": "musical-chairs-cover.png", "href": "games/musical-chairs/index.html"}, {"id": "word-categories", "title": "🔤 اسم و حيوان و نبات و جماد و بلاد", "desc": "حرف عربي عشوائي كل جولة، واللاعبون يكتبون إجاباتهم بشات البث خلال وقت محدد. بعد انتهاء الوقت يراجع المضيف كل إجابة ويقبلها.", "cover": "word-categories-cover.png", "href": "games/word-categories/index.html"}, {"id": "top-ten", "title": "🏆 خمّن العشرة", "desc": "سؤال واحد كل جولة وعشرة صناديق مرتبة من الأهم للأقل أهمية — الصندوق رقم 1 يساوي 10 نقاط وينزل تدريجياً.", "cover": "top-ten-cover.png", "href": "games/top-ten/index.html"}];
   var REAL_HREFS = REAL_GAMES.map(function(g){ return g.href; });
@@ -792,20 +796,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   // الصفحة بدون أي من هالمنطق أصلاً (زر الحساب رابطه #catalog، ولا
   // يوجد رابط شركاء الإبداع أو الإطارات إطلاقاً).
   function patchGamesLinks(){
-    var cachedUser = null;
-    try { cachedUser = window.AGPAuth && window.AGPAuth.getCachedUser ? window.AGPAuth.getCachedUser() : null; } catch (e) {}
-    var isLoggedIn = Boolean(cachedUser && cachedUser.custom_id);
-    var accountLink = Array.prototype.slice.call(document.querySelectorAll('header a'))
-      .find(function(a){ var t = (a.textContent || '').trim(); return t === 'حسابي' || t === 'إنشاء حساب أو تسجيل الدخول'; });
-    if (accountLink) {
-      if (isLoggedIn) {
-        accountLink.textContent = 'حسابي';
-        accountLink.setAttribute('href', 'profile.html?id=' + encodeURIComponent(cachedUser.custom_id));
-      } else {
-        accountLink.textContent = 'إنشاء حساب أو تسجيل الدخول';
-        accountLink.setAttribute('href', 'login.html');
-      }
-    }
+    // زر الحساب بالهيدر صار يُدار من auth-client.js (keepHeaderAccountLinkSynced)
+    // بنفس منطق الرئيسية بالضبط.
 
     var supportLink = Array.prototype.slice.call(document.querySelectorAll('nav a'))
       .find(function(a){ return a.textContent.trim() === 'دعم المنصة'; });
