@@ -111,7 +111,8 @@
     var KNOWN_PERMISSION_KEYS = ['can_run_games', 'can_manage_letters_cell'];
     var PERMISSION_LABELS = {
         // تحويل حساب لاعب لحساب ستريمر (تشغيل الألعاب يحتاج بعدها ربط تيك
-        // توك موثَّق فقط). يفعّل أيضاً قفل الجهاز الواحد + الإطار التلقائي.
+        // توك موثَّق فقط) + الإطار التلقائي. قفل الجهاز الواحد يشمل كل
+        // حسابات الستريمر (backend/auth/auth-service.js: checkDeviceLock).
         can_run_games: 'تحويل لحساب ستريمر',
         can_manage_letters_cell: 'صلاحية إدارة أسئلة خلية الحروف'
     };
