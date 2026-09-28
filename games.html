@@ -537,9 +537,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var auth = window.AGPAuth;
     if (!auth || !auth.getToken || !auth.getToken()) return 'login';
     var user = auth.getCachedUser ? auth.getCachedUser() : null;
-    if (user && user.role === 'admin') return null;
-    if (user && user.tiktok_verified) return null;
-    return 'tiktok';
+    return auth.canPlayGames && auth.canPlayGames(user) ? null : 'tiktok';
   }
   function applyGameLock(card){
     var locked = Boolean(getGameAccessBlock());

@@ -110,7 +110,9 @@
     // صلاحية جديدة مشابهة مستقبلاً.
     var KNOWN_PERMISSION_KEYS = ['can_run_games', 'can_manage_letters_cell'];
     var PERMISSION_LABELS = {
-        can_run_games: 'صلاحية تشغيل الألعاب (ستريمر معتمد)',
+        // لم تعد شرطاً لتشغيل الألعاب (الشرط الآن: ربط تيك توك موثَّق) —
+        // تبقى علامة "ستريمر معتمد" فقط (قفل جهاز واحد + إطار تلقائي).
+        can_run_games: 'ستريمر معتمد',
         can_manage_letters_cell: 'صلاحية إدارة أسئلة خلية الحروف'
     };
     var messageEl = document.getElementById('admin-message');

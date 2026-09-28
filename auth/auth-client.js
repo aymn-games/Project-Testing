@@ -459,13 +459,15 @@ function canAccessDashboard(user) {
     return Boolean(user && user.role === 'admin');
 }
 
-/** Admins can always play; otherwise requires the admin-granted
- * can_run_games permission. Checking "wants to be streamer" at signup is
- * just a request — it never grants this on its own. */
+/** Any logged-in account can play once its TikTok account is verified
+ * (admins always can). The old admin-granted can_run_games permission no
+ * longer gates playing — it only marks an "approved streamer" (single-device
+ * lock, auto-granted frame). The server enforces the same rule when
+ * connecting to a stream (backend/websocket/ws-server.js). */
 function canPlayGames(user) {
     if (!user) return false;
     if (user.role === 'admin') return true;
-    return Boolean(user.permissions && user.permissions.can_run_games);
+    return Boolean(user.tiktok_verified);
 }
 
 /** True for an approved streamer (same condition as canPlayGames, excluding
