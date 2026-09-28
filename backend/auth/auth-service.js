@@ -932,33 +932,55 @@ function getUserStats(userId) {
  * @param {number} [limit]
  * @returns {Array<{tiktokUsername: string, displayName: string, avatarBase64: (string|null), customId: (string|null), totalHours: number}>}
  */
-// ترتيب الاستريمرز يُطلب مع كل زيارة للرئيسية — تجميع كامل جدول broadcasts
-// كل مرة حمل بلا فايدة، فنحفظ الناتج 5 دقائق (لكل limit).
+// تصنيف الرئيسية أسبوعي: يبدأ من جديد كل سبت 12:00 ص بتوقيت السعودية
+// (UTC+3 ثابت، بدون توقيت صيفي). أول أسبوع يبدأ من لحظة التصفير نفسها.
+// ⚠️ هذا للتصنيف فقط — ساعات البروفايل ومستوى الستريمر (SP) تراكمية كاملة.
+var RIYADH_OFFSET_MS = 3 * 60 * 60 * 1000;
+var DAY_MS = 24 * 60 * 60 * 1000;
+var SATURDAY = 6; // getUTCDay()
+
+function getRankingPeriodStart(nowMs) {
+    nowMs = nowMs || now();
+    var riyadh = new Date(nowMs + RIYADH_OFFSET_MS);
+    var riyadhMidnight = Date.UTC(riyadh.getUTCFullYear(), riyadh.getUTCMonth(), riyadh.getUTCDate());
+    var daysSinceSaturday = (riyadh.getUTCDay() - SATURDAY + 7) % 7;
+    var weekStart = riyadhMidnight - daysSinceSaturday * DAY_MS - RIYADH_OFFSET_MS;
+    var row = db.prepare("SELECT value FROM app_settings WHERE key = 'streamer_ranking_reset_at'").get();
+    var resetAt = row ? Number(row.value) || 0 : 0;
+    return Math.max(weekStart, resetAt);
+}
+
+// ترتيب الاستريمرز يُطلب مع كل زيارة للرئيسية — تجميع جدول broadcasts كل
+// مرة حمل بلا فايدة، فنحفظ الناتج 5 دقائق (لكل limit)، ويتجدد فوراً مع
+// بداية أسبوع جديد.
 var TOP_STREAMERS_CACHE_MS = 5 * 60 * 1000;
 var _topStreamersCache = {};
 
 function getTopStreamersByHours(limit) {
     limit = limit || 20;
+    var periodStart = getRankingPeriodStart();
     var cached = _topStreamersCache[limit];
-    if (cached && now() - cached.at < TOP_STREAMERS_CACHE_MS) return cached.rows;
-    var rows = computeTopStreamersByHours(limit);
-    _topStreamersCache[limit] = { at: now(), rows: rows };
+    if (cached && cached.periodStart === periodStart && now() - cached.at < TOP_STREAMERS_CACHE_MS) return cached.rows;
+    var rows = computeTopStreamersByHours(limit, periodStart);
+    _topStreamersCache[limit] = { at: now(), periodStart: periodStart, rows: rows };
     return rows;
 }
 
-function computeTopStreamersByHours(limit) {
+function computeTopStreamersByHours(limit, periodStart) {
+    // بث بدأ قبل بداية الأسبوع وانتهى بعدها: ينحسب منه الجزء اللي بعد البداية فقط.
     var rows = db.prepare(
         `SELECT u.tiktok_username AS tiktokUsername, u.username, u.display_name AS displayName,
                 u.avatar_image_base64 AS avatarBase64, u.custom_id AS customId,
-                COALESCE(SUM(CASE WHEN b.ended_at IS NOT NULL THEN b.ended_at - b.started_at ELSE 0 END), 0) AS total_ms
+                COALESCE(SUM(b.ended_at - MAX(b.started_at, @periodStart)), 0) AS total_ms
          FROM users u
          JOIN broadcasts b ON b.user_id = u.id
          WHERE u.tiktok_verified = 1 AND u.tiktok_username IS NOT NULL
+           AND b.ended_at IS NOT NULL AND b.ended_at > @periodStart
          GROUP BY u.id
          HAVING total_ms > 0
          ORDER BY total_ms DESC
-         LIMIT ?`
-    ).all(limit || 20);
+         LIMIT @limit`
+    ).all({ periodStart: periodStart, limit: limit || 20 });
     return rows.map(function (r) {
         return {
             tiktokUsername: r.tiktokUsername,
@@ -1171,6 +1193,7 @@ module.exports = {
     generateVerificationCode: generateVerificationCode,
     verifyTikTokOwnership: verifyTikTokOwnership,
     startBroadcast: startBroadcast,
+    getRankingPeriodStart: getRankingPeriodStart,
     endBroadcast: endBroadcast,
     incrementBroadcastStat: incrementBroadcastStat,
     addGiftValue: addGiftValue,

@@ -241,7 +241,18 @@ db.exec(`
         data TEXT NOT NULL,
         computed_at INTEGER NOT NULL
     );
+
+    -- إعدادات عامة بسيطة (مفتاح/قيمة).
+    CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+    );
 `);
+
+// تصفير تصنيف ساعات البث (الرئيسية): يُسجَّل مرة وحدة أول تشغيل بعد هذا
+// التحديث — التصنيف يحسب فقط البث بعد هذه اللحظة (ثم يتجدد كل سبت، راجع
+// auth-service.js getRankingPeriodStart). بيانات البث القديمة ما تنحذف.
+db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('streamer_ranking_reset_at', ?)").run(String(Date.now()));
 
 /** ترقية آمنة: تضيف عموداً فقط إن لم يكن موجوداً، بدون فقدان بيانات. */
 function ensureColumn(table, column, definition) {
