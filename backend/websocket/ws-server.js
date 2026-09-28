@@ -156,6 +156,11 @@ function checkStreamConnectAllowed(payload) {
     return { code: 'auth_required', message: 'لازم تسجّل دخول بحسابك في الموقع وتربط حساب تيك توك عشان تتصل بالبث.' };
   }
   if (user.role === 'admin') return null;
+  // حساب ستريمر = اختار "ستريمر" بالتسجيل، أو حوّله الأدمن (can_run_games).
+  var isStreamerAccount = Boolean(user.is_streamer) || Boolean(user.permissions && user.permissions.can_run_games);
+  if (!isStreamerAccount) {
+    return { code: 'not_streamer', message: 'تشغيل الألعاب لحسابات الستريمر فقط — حسابك حساب لاعب، تواصل مع الإدارة لتحويله لحساب ستريمر.' };
+  }
   if (!user.tiktok_verified || !user.tiktok_username) {
     return { code: 'tiktok_not_linked', message: 'لازم تربط حساب تيك توك بحسابك في الموقع (من صفحة حسابي) عشان تتصل بالبث.' };
   }
@@ -189,7 +194,7 @@ function handleConnectMessage(connectionId, socket, payload) {
   entry.activeConnector = null;
   entry.activePlatform = null;
 
-  // قيد تشغيل البث: لازم حساب مسجَّل بالموقع، وحساب تيك توك موثَّق عليه،
+  // قيد تشغيل البث: لازم حساب ستريمر مسجَّل بالموقع، وحساب تيك توك موثَّق عليه،
   // ويكون هو نفسه اليوزرنيم المطلوب الاتصال ببثه (الأدمن مستثنى من شرط
   // الربط/التطابق للتجربة). الرسالة تُعرض للمستخدم كما هي بالواجهة.
   if (platform === 'tiktok') {
