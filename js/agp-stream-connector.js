@@ -51,11 +51,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return false;
     }
 
-    function setStatus(key, status) {
+    function setStatus(key, status, message) {
         var entry = getEntry(key);
         if (!entry) return false;
         entry.status = status;
-        AGP.events.emit('stream:statusChanged', { platform: key, status: status });
+        var payload = { platform: key, status: status };
+        if (message) payload.message = message;
+        AGP.events.emit('stream:statusChanged', payload);
         return true;
     }
 
@@ -101,8 +103,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         },
 
         /** Called by a real platform service to confirm connect/disconnect
-         * outcome (status must be one of AGP.streamConnector.STATUS). */
-        reportStatus: function (key, status) {
+         * outcome (status must be one of AGP.streamConnector.STATUS).
+         * message: optional user-facing reason from the backend (e.g. the
+         * TikTok account isn't the one linked to the site account). */
+        reportStatus: function (key, status, message) {
             if (!getEntry(key)) {
                 AGP.log('Stream Connector: cannot report status, unknown platform "' + key + '".');
                 return false;
@@ -111,7 +115,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 AGP.log('Stream Connector: cannot report status, invalid status "' + status + '".');
                 return false;
             }
-            return setStatus(key, status);
+            return setStatus(key, status, message);
         },
 
         getStatus: function (key) {

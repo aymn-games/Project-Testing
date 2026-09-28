@@ -1918,7 +1918,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 wireCommentListener();
                 renderLobbyScreen();
             }
-            else if (payload.status === 'error') { renderSettingsScreen(); showSettingsError('تعذّر الاتصال -- تحقّق من اليوزرنيم وحاول مرة أخرى.'); }
+            else if (payload.status === 'error') { renderSettingsScreen(); showSettingsError(payload.message || 'تعذّر الاتصال -- تحقّق من اليوزرنيم وحاول مرة أخرى.'); }
         });
 
         AGP.events.on('player:joined', function () {

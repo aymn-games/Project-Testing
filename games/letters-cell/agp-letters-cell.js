@@ -1596,7 +1596,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     renderLobbyScreen();
                 } else if (payload.status === 'error') {
                     renderSettingsScreen();
-                    showSettingsError('تعذّر الاتصال -- تحقّق من اليوزرنيم وحاول مرة أخرى.');
+                    showSettingsError(payload.message || 'تعذّر الاتصال -- تحقّق من اليوزرنيم وحاول مرة أخرى.');
                 }
             }
         });

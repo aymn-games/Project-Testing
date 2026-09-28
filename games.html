@@ -463,6 +463,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       'display:flex;align-items:center;justify-content:center;gap:6px;transition:filter .15s;text-decoration:none;}' +
       '.gl-play:hover{filter:brightness(1.12);color:oklch(0.99 0 0);}' +
       '.gl-play .gl-ms{font-size:18px;transform:translateX(calc(var(--h,0) * -4px));transition:transform .25s;}' +
+      '.gl-card.gl-locked .gl-play{background:oklch(0.32 0.02 300);color:oklch(0.72 0.02 300);filter:none;}' +
+      '.gl-card.gl-locked .gl-play .gl-ms{transform:none;}' +
       // الشبكة تملأ عرض الشاشة بالكامل (تطلع من حد الـ1600px للحاوية)،
       // وعدد البطاقات بكل صف ثابت حسب المقاس — الشاشة الأعرض تكبّر
       // عرض البطاقة نفسها بدل ما تزيد عدد البطاقات.
@@ -527,6 +529,77 @@ document.addEventListener('DOMContentLoaded', async function() {
     applyColsPref(grid);
   }
 
+  // [قيد فتح الألعاب] اللعب يحتاج: حساب مسجَّل + حساب تيك توك موثَّق
+  // عليه (الأدمن مستثنى من شرط التيك توك). زر "العب الآن" يظهر مطفي،
+  // والضغط عليه يشرح السبب مع زر للخطوة المطلوبة. (القيد الفعلي على
+  // الاتصال بالبث نفسه بالخادم: ws-server.js checkStreamConnectAllowed.)
+  function getGameAccessBlock(){
+    var auth = window.AGPAuth;
+    if (!auth || !auth.getToken || !auth.getToken()) return 'login';
+    var user = auth.getCachedUser ? auth.getCachedUser() : null;
+    if (user && user.role === 'admin') return null;
+    if (user && user.tiktok_verified) return null;
+    return 'tiktok';
+  }
+  function applyGameLock(card){
+    var locked = Boolean(getGameAccessBlock());
+    card.classList.toggle('gl-locked', locked);
+    var icon = card.querySelector('.gl-play .gl-ms');
+    if (icon) icon.textContent = locked ? 'lock' : 'arrow_back';
+  }
+  function refreshGameLocks(){
+    Array.prototype.forEach.call(document.querySelectorAll('.gl-card'), applyGameLock);
+  }
+  function closeGameLockModal(){
+    var m = document.getElementById('gl-lock-modal');
+    if (m) m.remove();
+  }
+  function showGameLockModal(reason){
+    closeGameLockModal();
+    var user = window.AGPAuth && window.AGPAuth.getCachedUser ? window.AGPAuth.getCachedUser() : null;
+    var msg = reason === 'login'
+      ? 'لازم تسجّل دخول وتربط حساب تيك توك بحسابك عشان تفتح الألعاب.'
+      : 'لازم تربط حساب تيك توك بحسابك عشان تفتح الألعاب.';
+    var btnLabel = reason === 'login' ? 'تسجيل الدخول' : 'اربط حساب تيك توك';
+    var btnHref = reason === 'login' ? 'login.html'
+      : (user && user.custom_id ? 'profile.html?id=' + encodeURIComponent(user.custom_id) : 'profile.html');
+    var m = document.createElement('div');
+    m.id = 'gl-lock-modal';
+    m.setAttribute('role', 'dialog');
+    m.setAttribute('aria-modal', 'true');
+    m.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(5,5,8,.72);direction:rtl;';
+    m.innerHTML =
+      '<div style="width:100%;max-width:380px;padding:24px 22px;border-radius:20px;border:1px solid rgba(178,140,245,.35);background:linear-gradient(180deg,#1a1526,#0d0b14);text-align:center;font-family:\'IBM Plex Sans Arabic\',system-ui,sans-serif;">' +
+        '<div style="font-size:30px;line-height:1;">🔒</div>' +
+        '<p data-gl-lock-msg style="margin:14px 0 20px;font-size:15px;line-height:1.8;color:#e7e2f5;"></p>' +
+        '<a data-gl-lock-go style="display:block;padding:12px;border-radius:12px;background:linear-gradient(90deg,#7a3fd4,#b28cf5);color:#fff;font-weight:600;font-size:14.5px;text-decoration:none;"></a>' +
+        '<button type="button" data-gl-lock-close style="margin-top:10px;width:100%;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:transparent;color:#cfc7e2;font-family:inherit;font-size:13.5px;cursor:pointer;">إغلاق</button>' +
+      '</div>';
+    m.querySelector('[data-gl-lock-msg]').textContent = msg;
+    var go = m.querySelector('[data-gl-lock-go]');
+    go.textContent = btnLabel;
+    go.setAttribute('href', btnHref);
+    m.querySelector('[data-gl-lock-close]').addEventListener('click', closeGameLockModal);
+    m.addEventListener('click', function(e){ if (e.target === m) closeGameLockModal(); });
+    document.body.appendChild(m);
+  }
+  // مستمع واحد (capture) على الصفحة: يلتقط الضغط على أي بطاقة حتى لو
+  // انعاد بناؤها، ويمنع فتح اللعبة قبل أي مستمع آخر.
+  document.addEventListener('click', function(e){
+    var card = e.target && e.target.closest ? e.target.closest('.gl-card') : null;
+    if (!card) return;
+    var block = getGameAccessBlock();
+    if (!block) return;
+    e.preventDefault();
+    e.stopPropagation();
+    showGameLockModal(block);
+  }, true);
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeGameLockModal(); });
+  // الحالة الفعلية (توثيق تيك توك) تجي من الخادم عبر refreshUser —
+  // نحدّث الأقفال لما تتغير البيانات المحفوظة (هنا أو من تبويب ثاني).
+  if (window.AGPAuth && window.AGPAuth.refreshUser) window.AGPAuth.refreshUser().then(refreshGameLocks);
+  window.addEventListener('storage', function(e){ if (e.key === 'agp_auth_token' || e.key === 'agp_auth_user') refreshGameLocks(); });
+
   function buildCard(g, i){
     var info = CARD_INFO[g.id] || { name: g.title, cat: 'c', icon: 'sports_esports', desc: g.desc };
     var cat = CARD_CATS[info.cat];
@@ -544,6 +617,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       '<a class="gl-play" href="' + g.href + '">العب الآن<span class="gl-ms">arrow_back</span></a>';
     card.querySelector('.gl-title').textContent = info.name;
     card.querySelector('.gl-desc').textContent = info.desc;
+    applyGameLock(card);
     card.addEventListener('mousemove', function(e){
       var r = card.getBoundingClientRect();
       card.style.setProperty('--x', (e.clientX - r.left) + 'px');
@@ -552,7 +626,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     card.addEventListener('mouseenter', function(){ card.style.setProperty('--h', '1'); });
     card.addEventListener('mouseleave', function(){ card.style.setProperty('--h', '0'); });
     card.addEventListener('click', function(e){
-      if (e.target.closest('a')) return;
+      if (e.target.closest('a') || getGameAccessBlock()) return;
       window.location.href = g.href;
     });
     return card;
@@ -1004,7 +1078,9 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (connectState !== 'connecting' || !connectSocket) return;
       connectSocket.send(JSON.stringify({
         type: 'connect',
-        payload: { platform: 'tiktok', username: username, followersOnly: false },
+        // authToken: الخادم يسمح بالاتصال فقط ببث حساب تيك توك الموثَّق على
+        // حساب الموقع المسجَّل (ws-server.js checkStreamConnectAllowed).
+        payload: { platform: 'tiktok', username: username, followersOnly: false, authToken: (window.AGPAuth && window.AGPAuth.getToken) ? window.AGPAuth.getToken() : null },
         timestamp: Date.now()
       }));
     };

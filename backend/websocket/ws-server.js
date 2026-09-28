@@ -143,6 +143,28 @@ function cleanupConnection(connectionId) {
   registry.remove(connectionId);
 }
 
+function normalizeTikTokUsername(name) {
+  return String(name || '').trim().replace(/^@+/, '').toLowerCase();
+}
+
+/**
+ * @returns {null|{code: string, message: string}} null = مسموح
+ */
+function checkStreamConnectAllowed(payload) {
+  var user = payload.authToken ? authService.validateSession(String(payload.authToken)) : null;
+  if (!user) {
+    return { code: 'auth_required', message: 'لازم تسجّل دخول بحسابك في الموقع وتربط حساب تيك توك عشان تتصل بالبث.' };
+  }
+  if (user.role === 'admin') return null;
+  if (!user.tiktok_verified || !user.tiktok_username) {
+    return { code: 'tiktok_not_linked', message: 'لازم تربط حساب تيك توك بحسابك في الموقع (من صفحة حسابي) عشان تتصل بالبث.' };
+  }
+  if (normalizeTikTokUsername(payload.username) !== normalizeTikTokUsername(user.tiktok_username)) {
+    return { code: 'tiktok_account_mismatch', message: 'تقدر تتصل فقط ببث حساب تيك توك المربوط بحسابك: @' + normalizeTikTokUsername(user.tiktok_username) };
+  }
+  return null;
+}
+
 /**
  * معالجة رسالة "connect" واردة من المتصفح — تفتح موصِّلاً جديداً حسب
  * platforms/connector-router.js، وتربط استدعاءاته الراجعة (Callbacks)
@@ -166,6 +188,23 @@ function handleConnectMessage(connectionId, socket, payload) {
 
   entry.activeConnector = null;
   entry.activePlatform = null;
+
+  // قيد تشغيل البث: لازم حساب مسجَّل بالموقع، وحساب تيك توك موثَّق عليه،
+  // ويكون هو نفسه اليوزرنيم المطلوب الاتصال ببثه (الأدمن مستثنى من شرط
+  // الربط/التطابق للتجربة). الرسالة تُعرض للمستخدم كما هي بالواجهة.
+  if (platform === 'tiktok') {
+    var denial = checkStreamConnectAllowed(payload);
+    if (denial) {
+      logger.log('WS Server: connect denied for connection ' + connectionId + ' (' + denial.code + ').');
+      sendEnvelope(socket, builder.buildErrorMessage(platform, denial.code, denial.message));
+      // reason يميّز رسالة المنع (عربية وموجّهة للمستخدم) عن رسائل أخطاء
+      // الموصِّل التقنية — الواجهة تعرض الرسالة فقط لما يكون فيه reason.
+      var deniedStatus = builder.buildStatusMessage(platform, 'error', denial.message);
+      deniedStatus.payload.reason = denial.code;
+      sendEnvelope(socket, deniedStatus);
+      return;
+    }
+  }
 
   // "connecting" تُرسَل هنا دائماً فوراً (موحّدة بصرف النظر عن الموصِّل)
   sendEnvelope(socket, builder.buildStatusMessage(platform, 'connecting'));

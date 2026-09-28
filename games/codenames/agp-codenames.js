@@ -299,7 +299,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return el('cn-connect-popup');
     }
 
-    function showConnectOverlay(isError) {
+    function showConnectOverlay(isError, message) {
         var popup = ensureConnectOverlay();
         el('cn-connect-dim').style.display = 'block';
         popup.style.display = 'block';
@@ -309,7 +309,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div class="' + (isError ? 'cn-connect-error-icon' : 'cn-connect-spinner') + '">' +
             (isError ? '⚠️' : '') + '</div>' +
             '<h3>' + (isError ? 'تعذّر الاتصال' : 'جاري الاتصال بالبث') + '</h3>' +
-            '<p>' + (isError ? 'تأكد من اسم المستخدم وحاول مرة ثانية' : 'انتظر قليلاً...') + '</p>';
+            '<p>' + (isError ? (message ? String(message).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }) : 'تأكد من اسم المستخدم وحاول مرة ثانية') : 'انتظر قليلاً...') + '</p>';
         if (isError) {
             el('cn-connect-close-btn').onclick = function () {
                 hideConnectOverlay();
@@ -518,7 +518,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     renderLobbyScreen();
                 } else if (status === 'error' || status === 'disconnected') {
                     setScreen('settings');
-                    showConnectOverlay(true);
+                    showConnectOverlay(true, status === 'error' ? payload.message : null);
                 }
                 return;
             }

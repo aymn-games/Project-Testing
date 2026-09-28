@@ -1157,7 +1157,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (payload.platform !== 'tiktok') return;
             if (payload.status === 'connecting') renderConnectingScreen('جارِ الاتصال بالبث...');
             else if (payload.status === 'connected' && _screen !== 'lobby' && _screen !== 'match' && _screen !== 'winner') renderLobbyScreen();
-            else if (payload.status === 'error') { renderSettingsScreen(); showSettingsError('تعذّر الاتصال -- تحقّق من اليوزرنيم وحاول مرة أخرى.'); }
+            else if (payload.status === 'error') { renderSettingsScreen(); showSettingsError(payload.message || 'تعذّر الاتصال -- تحقّق من اليوزرنيم وحاول مرة أخرى.'); }
         });
 
         AGP.events.on('player:joined', function () {

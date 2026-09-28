@@ -113,7 +113,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function handleIncomingStatus(payload) {
         if (!AGP.streamConnector || typeof AGP.streamConnector.reportStatus !== 'function') return;
-        AGP.streamConnector.reportStatus(PLATFORM_KEY, payload.status);
+        // Only access-denial messages (they carry a reason code) are meant for
+        // the user; connector errors stay behind each game's own generic text.
+        AGP.streamConnector.reportStatus(PLATFORM_KEY, payload.status, payload.reason ? payload.message : undefined);
+    }
+
+    // Same storage key as auth/auth-client.js (read directly so games that
+    // don't load auth-client still send it).
+    function getSiteAuthToken() {
+        try {
+            if (window.AGPAuth && typeof window.AGPAuth.getToken === 'function') return window.AGPAuth.getToken();
+            return localStorage.getItem('agp_auth_token') || null;
+        } catch (e) { return null; }
     }
 
     function handleIncomingError(payload) {
@@ -177,7 +188,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             sendToBackend('connect', {
                 platform: PLATFORM_KEY,
                 username: (_pendingConnectOptions && _pendingConnectOptions.username) || null,
-                followersOnly: Boolean(_pendingConnectOptions && _pendingConnectOptions.followersOnly)
+                followersOnly: Boolean(_pendingConnectOptions && _pendingConnectOptions.followersOnly),
+                // The backend only connects to the TikTok account verified on
+                // the logged-in site account (see ws-server.js
+                // checkStreamConnectAllowed) — it needs the session token.
+                authToken: getSiteAuthToken()
             });
         });
     }

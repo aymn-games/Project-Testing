@@ -764,7 +764,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             : '<div class="agp-conn-spinner"></div>';
         var title = isError ? 'تعذّر الاتصال' : 'جاري الاتصال بالبث';
         var sub = isError ? (message || 'يرجى الانتظار') : 'انتظر قليلاً...';
-        box.innerHTML = iconHtml + '<h2>' + title + '</h2><p class="agp-shell-status">' + sub + '</p>';
+        box.innerHTML = iconHtml + '<h2>' + title + '</h2><p class="agp-shell-status">' + escapeHtml(sub) + '</p>';
     }
 
     function renderLobbyScreen() {
@@ -894,7 +894,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
             if (payload.status === 'connecting') renderConnectingScreen('جارِ الاتصال بالبث...');
             else if (payload.status === 'connected') renderLobbyScreen();
-            else if (payload.status === 'error') renderConnectingScreen('تعذّر الاتصال — تحقّق من اليوزرنيم وحاول مرة أخرى.');
+            // payload.message = سبب منع من الخادم (مثلاً حساب تيك توك غير
+            // مربوط) — نفس بادئة "تعذّر" اللي تعتمد عليها الألعاب لتمييز الخطأ.
+            else if (payload.status === 'error') renderConnectingScreen('تعذّر الاتصال — ' + (payload.message || 'تحقّق من اليوزرنيم وحاول مرة أخرى.'));
         });
 
         AGP.events.on('player:joined', function () {
