@@ -272,7 +272,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return el('shk-connect-popup');
     }
 
-    function showConnectOverlay(isError) {
+    function showConnectOverlay(isError, message) {
         var popup = ensureConnectOverlay();
         el('shk-connect-dim').style.display = 'block';
         popup.style.display = 'block';
@@ -281,7 +281,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             (isError ? '<button type="button" id="shk-connect-close-btn">✕</button>' : '') +
             '<div class="' + (isError ? 'shk-connect-error-icon' : 'shk-connect-spinner') + '">' + (isError ? '⚠️' : '') + '</div>' +
             '<h3>' + (isError ? 'تعذّر الاتصال' : 'جاري الاتصال بالبث') + '</h3>' +
-            '<p>' + (isError ? 'تأكد من اسم المستخدم وحاول مرة ثانية' : 'انتظر قليلاً...') + '</p>';
+            '<p>' + (isError ? (message ? String(message).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }) : 'تأكد من اسم المستخدم وحاول مرة ثانية') : 'انتظر قليلاً...') + '</p>';
         if (isError) {
             el('shk-connect-close-btn').onclick = function () { hideConnectOverlay(); };
         }
@@ -301,7 +301,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 hideConnectOverlay();
                 renderLobbyScreen();
             } else if (payload.status === 'error') {
-                showConnectOverlay(true);
+                showConnectOverlay(true, payload.message);
             }
         });
 
