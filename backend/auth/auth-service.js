@@ -134,8 +134,9 @@ function signup(username, email, plainPassword, wantsToBeStreamer) {
 }
 
 /**
- * قيد جهاز واحد لحسابات الستريمر المعتمدين فقط (can_run_games = true).
- * لا قيد على لاعبين عاديين أو ستريمرز لم يوافق عليهم الأدمن بعد.
+ * قيد جهاز واحد لكل حسابات الستريمر: اختار "ستريمر" بالتسجيل (is_streamer)
+ * أو حوّله الأدمن (can_run_games). لا قيد على اللاعبين العاديين، ولا على
+ * حسابات الأدمن (عشان صاحب المنصة ما ينقفل خارج حسابه).
  *
  * ⚠️ قيد "ناعم" لا "صلب" — الجهاز يُعرَّف برقم عشوائي بـlocalStorage
  * بالمتصفح (auth-client.js: getDeviceId)، وليس بصمة جهاز حقيقية. أي شخص
@@ -152,8 +153,9 @@ function signup(username, email, plainPassword, wantsToBeStreamer) {
  */
 function checkDeviceLock(user, deviceId) {
     if (user.is_super_admin) return { allowed: true, bind: false };
-    var isApprovedStreamer = Boolean(JSON.parse(user.permissions || '{}').can_run_games);
-    if (!isApprovedStreamer) return { allowed: true };
+    if (user.role === 'admin') return { allowed: true, bind: false };
+    var isStreamerAccount = Boolean(user.is_streamer) || Boolean(JSON.parse(user.permissions || '{}').can_run_games);
+    if (!isStreamerAccount) return { allowed: true };
     if (!user.bound_device_id) return { allowed: true, bind: true };
     if (!deviceId || deviceId !== user.bound_device_id) {
         if (user.allow_device_change) return { allowed: true, bind: true, consumeAllowChange: true };
