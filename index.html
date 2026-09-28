@@ -624,7 +624,13 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
     if (!rows || rows.dataset.realData) return;
     window.AGPAuth.getTopStreamers(5).then(function(result){
       var streamers = (result && result.success && result.streamers) || [];
-      if (!streamers.length) return;
+      // التصنيف أسبوعي (يتجدد كل سبت) — بداية الأسبوع ممكن تكون فاضية:
+      // نعرض رسالة بدل صفوف القالب التجريبية، ونوقف إعادة الطلب.
+      if (!streamers.length) {
+        rows.innerHTML = '<div style="padding:18px 10px;text-align:center;font-size:13.5px;color:#968ea4;">ما فيه ساعات بث هالأسبوع بعد — التصنيف يتجدد كل سبت.</div>';
+        rows.dataset.realData = '1';
+        return;
+      }
       rows.innerHTML = '';
       streamers.slice(0, 5).forEach(function(s, idx){
         var row = document.createElement('div');
@@ -651,7 +657,7 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
         hoursNum.textContent = arDigits(s.totalHours || 0);
         var hoursLbl = document.createElement('span');
         hoursLbl.style.cssText = 'display:block;margin-top:2px;font-size:11px;color:#968ea4;';
-        hoursLbl.textContent = 'ساعة بث';
+        hoursLbl.textContent = 'ساعة هالأسبوع';
         hoursWrap.appendChild(hoursNum);
         hoursWrap.appendChild(hoursLbl);
         row.appendChild(rankSpan);

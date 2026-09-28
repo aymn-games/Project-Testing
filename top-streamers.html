@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>الأكثر نشاطاً — منصة ألعاب أيمن</title>
-<meta name="description" content="قائمة أكثر استريمرز منصة ألعاب أيمن نشاطاً بإجمالي ساعات البث.">
+<meta name="description" content="قائمة أكثر استريمرز منصة ألعاب أيمن نشاطاً هالأسبوع حسب ساعات البث.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -92,7 +92,7 @@
     <div class="top-header">
         <div class="top-icon">🔥</div>
         <h1>الأكثر نشاطاً</h1>
-        <p class="top-intro">أكثر استريمرز منصة ألعاب أيمن نشاطاً، مرتَّبين حسب إجمالي ساعات البث.</p>
+        <p class="top-intro">أكثر استريمرز منصة ألعاب أيمن نشاطاً هالأسبوع، مرتَّبين حسب ساعات البث داخل ألعاب المنصة. التصنيف يتجدد كل سبت.</p>
     </div>
 
     <ul class="top-list" id="top-streamers-list">
@@ -131,7 +131,7 @@
         window.AGPAuth.getTopStreamers(50).then(function (result) {
             var streamers = (result && result.success && result.streamers) || [];
             if (!streamers.length) {
-                listEl.innerHTML = '<li class="top-empty">ما فيه استريمرز نشِطون بالساعات بعد.</li>';
+                listEl.innerHTML = '<li class="top-empty">ما فيه ساعات بث هالأسبوع بعد — التصنيف يتجدد كل سبت.</li>';
                 return;
             }
             listEl.innerHTML = streamers.map(function (s, index) {

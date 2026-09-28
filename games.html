@@ -1086,7 +1086,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         type: 'connect',
         // authToken: الخادم يسمح بالاتصال فقط ببث حساب تيك توك الموثَّق على
         // حساب الموقع المسجَّل (ws-server.js checkStreamConnectAllowed).
-        payload: { platform: 'tiktok', username: username, followersOnly: false, authToken: (window.AGPAuth && window.AGPAuth.getToken) ? window.AGPAuth.getToken() : null },
+        // source: 'library' — تحقق فقط، لا يُحتسب كساعات بث (ws-server.js).
+        payload: { platform: 'tiktok', username: username, followersOnly: false, source: 'library', authToken: (window.AGPAuth && window.AGPAuth.getToken) ? window.AGPAuth.getToken() : null },
         timestamp: Date.now()
       }));
     };
@@ -1105,6 +1106,10 @@ document.addEventListener('DOMContentLoaded', async function() {
           connectState = 'connected';
           saveVerifiedStreamConnection(connectUsername);
           renderConnectUI();
+          // التحقق خلص — نقفل الاتصال فوراً عشان ما يظل موصِّل تيك توك شغّال
+          // بالخادم وهو يتصفح المكتبة بس (الحالة محفوظة بالمتصفح والألعاب
+          // تفتح اتصالها الخاص).
+          closeConnectSocketSilently();
         } else if (status === 'error') {
           connectState = 'error';
           connectErrorMsg = envelope.payload.message || 'الحساب غير موجود أو غير مباشر الآن — تأكد إنه يبث فعلاً';
