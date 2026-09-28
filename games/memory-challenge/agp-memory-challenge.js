@@ -1532,6 +1532,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var top = _podium[0];
             html = '<div class="mc-h-mid">انتهت اللعبة</div>' +
                 '<div class="mc-h-sub">' + (top ? 'الفائز: ' + escapeHtml(playerLabel(top)) + ' · ' + scoreOf(top) + ' نقطة' : 'بدون فائز') + '</div>';
+        } else if (_matchActive) {
+            html = '<div class="mc-h-big">جاهزين؟</div>' +
+                '<div class="mc-h-sub">اضغط ابدأ عشان تبدأ الجولة الأولى</div>';
         } else {
             html = '<div class="mc-h-big">بانتظار بداية اللعبة</div>';
         }
@@ -1540,7 +1543,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var showTimer = _phase === 'memorize' || _phase === 'question';
         el('mc-timer').style.display = showTimer ? 'flex' : 'none';
         var nextBtn = el('mc-next-btn');
-        nextBtn.style.display = _phase === 'reveal' ? 'inline-block' : 'none';
+        // Before round 1: a "ابدأ" button — the match only starts once the
+        // stream host presses it.
+        var waitingStart = _matchActive && _phase === 'idle';
+        nextBtn.style.display = _phase === 'reveal' || waitingStart ? 'inline-block' : 'none';
+        if (waitingStart) nextBtn.textContent = 'ابدأ';
         if (_phase === 'reveal') {
             nextBtn.textContent = res && res.final ? 'عرض الفائز' : 'ابدأ الجولة التالية';
         }
@@ -1754,6 +1761,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function advance() {
         if (!_matchActive) return;
+        if (_phase === 'idle') { _startedAt = Date.now(); return startRound(); }
         if (_phase === 'memorize') return toQuestion();
         if (_phase === 'question') return resolve();
         if (_phase === 'reveal') {
@@ -1986,15 +1994,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function beginMatch() {
         ensureStage();
-        _startedAt = Date.now();
         _matchActive = true;
+        _phase = 'idle';
         _matchDifficulty = difficulty();
         _matchAccept = acceptCount();
         _matchWin = winCondition();
         _round = 0;
         wireCommentListener();
         if (!_tickIv) _tickIv = setInterval(tick, 100);
-        startRound();
+        // Wait on the play screen for the "ابدأ" button (see advance()).
+        _cells = [];
+        buildGrid();
+        renderAll();
     }
 
     function handleStartRound() {
