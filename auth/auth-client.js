@@ -552,21 +552,33 @@ function saveLettersCellQuestionsDraft(questions) {
 /* Page guards — called as the first line of any protected page */
 
 /** Confirms a session is actually valid (calls /api/auth/me, not just
- * checking a local token exists). Clears and redirects to login on failure. */
+ * checking a local token exists). Clears and redirects to login only when
+ * the server rejects the token (401). Any other failure (server waking up
+ * from sleep, 5xx, no connection) keeps the session and falls back to the
+ * cached user — otherwise a temporary server outage logs everyone out. */
 function requireAuth(redirectTo) {
     if (!getToken()) {
         global.location.href = redirectTo || 'login.html';
         return Promise.resolve(null);
     }
+    function fallbackToCachedUser() {
+        var cached = getCachedUser();
+        if (cached && cached.id) return cached;
+        global.location.href = redirectTo || 'login.html';
+        return null;
+    }
     return me().then(function (result) {
-        if (!result.success) {
+        if (result.success) {
+            setSession(getToken(), result.user);
+            return result.user;
+        }
+        if (result.__httpStatus === 401) {
             clearSession();
             global.location.href = redirectTo || 'login.html';
             return null;
         }
-        setSession(getToken(), result.user);
-        return result.user;
-    });
+        return fallbackToCachedUser();
+    }, fallbackToCachedUser);
 }
 
 /**
