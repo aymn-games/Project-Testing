@@ -436,7 +436,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
   function roleLabel(p){
     if (p.role === 'admin') return 'أدمن';
-    return p.can_run_games ? 'ستريمر' : 'لاعب';
+    // ستريمر = اختار "ستريمر" بالتسجيل، أو حوّله الأدمن (can_run_games).
+    return (p.is_streamer || p.can_run_games) ? 'ستريمر' : 'لاعب';
   }
 
   function populate(p){
@@ -456,7 +457,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     setCardValue('اسم المستخدم', p.username || '—', 0, false);
     setCardValue('الدور', roleLabel(p), 0, false);
     setCardValue('تاريخ الانضمام', formatDate(p.joined_at), 0, false);
-    setCardValue('صلاحية تشغيل الألعاب', p.can_run_games ? 'مفعّلة ✅' : 'بانتظار موافقة الأدمن ⏳', 0, false);
+    // تشغيل الألعاب: حساب ستريمر + تيك توك موثَّق (بدون موافقة أدمن).
+    var playStatus = p.role === 'admin' ? 'مفعّلة ✅'
+      : !(p.is_streamer || p.can_run_games) ? 'لحسابات الستريمر فقط'
+      : p.tiktok_verified ? 'مفعّلة ✅' : 'تحتاج ربط حساب تيك توك 🔗';
+    setCardValue('صلاحية تشغيل الألعاب', playStatus, 0, false);
 
     if (p.points) {
       setCardValue('جولات مكتملة', String(p.points.gamesPlayed || 0), 0, true);

@@ -459,13 +459,21 @@ function canAccessDashboard(user) {
     return Boolean(user && user.role === 'admin');
 }
 
-/** Admins can always play; otherwise requires the admin-granted
- * can_run_games permission. Checking "wants to be streamer" at signup is
- * just a request — it never grants this on its own. */
+/** Streamer account = chose "streamer" at signup (is_streamer), or a
+ * player the admin converted (can_run_games). */
+function isStreamerAccount(user) {
+    if (!user) return false;
+    return user.role === 'admin' || Boolean(user.is_streamer) ||
+        Boolean(user.permissions && user.permissions.can_run_games);
+}
+
+/** Playing needs a streamer account with a verified TikTok account — no
+ * admin approval step (admins always can). The server enforces the same
+ * rule when connecting to a stream (backend/websocket/ws-server.js). */
 function canPlayGames(user) {
     if (!user) return false;
     if (user.role === 'admin') return true;
-    return Boolean(user.permissions && user.permissions.can_run_games);
+    return isStreamerAccount(user) && Boolean(user.tiktok_verified);
 }
 
 /** True for an approved streamer (same condition as canPlayGames, excluding
@@ -697,6 +705,7 @@ global.AGPAuth = {
     getStreamerLevels: getStreamerLevels,
     adminUpdateStreamerLevel: adminUpdateStreamerLevel,
     canAccessDashboard: canAccessDashboard,
+    isStreamerAccount: isStreamerAccount,
     canPlayGames: canPlayGames,
     needsWelcome: needsWelcome,
     completeWelcome: completeWelcome,

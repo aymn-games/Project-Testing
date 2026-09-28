@@ -529,16 +529,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     applyColsPref(grid);
   }
 
-  // [قيد فتح الألعاب] اللعب يحتاج: حساب مسجَّل + حساب تيك توك موثَّق
-  // عليه (الأدمن مستثنى من شرط التيك توك). زر "العب الآن" يظهر مطفي،
+  // [قيد فتح الألعاب] اللعب يحتاج: حساب ستريمر مسجَّل (اختاره بالتسجيل أو
+  // حوّله الأدمن) + حساب تيك توك موثَّق عليه (الأدمن مستثنى). زر "العب الآن" يظهر مطفي،
   // والضغط عليه يشرح السبب مع زر للخطوة المطلوبة. (القيد الفعلي على
   // الاتصال بالبث نفسه بالخادم: ws-server.js checkStreamConnectAllowed.)
   function getGameAccessBlock(){
     var auth = window.AGPAuth;
     if (!auth || !auth.getToken || !auth.getToken()) return 'login';
     var user = auth.getCachedUser ? auth.getCachedUser() : null;
-    if (user && user.role === 'admin') return null;
-    if (user && user.tiktok_verified) return null;
+    if (auth.canPlayGames && auth.canPlayGames(user)) return null;
+    if (auth.isStreamerAccount && !auth.isStreamerAccount(user)) return 'not_streamer';
     return 'tiktok';
   }
   function applyGameLock(card){
@@ -557,12 +557,18 @@ document.addEventListener('DOMContentLoaded', async function() {
   function showGameLockModal(reason){
     closeGameLockModal();
     var user = window.AGPAuth && window.AGPAuth.getCachedUser ? window.AGPAuth.getCachedUser() : null;
-    var msg = reason === 'login'
-      ? 'لازم تسجّل دخول وتربط حساب تيك توك بحسابك عشان تفتح الألعاب.'
-      : 'لازم تربط حساب تيك توك بحسابك عشان تفتح الألعاب.';
-    var btnLabel = reason === 'login' ? 'تسجيل الدخول' : 'اربط حساب تيك توك';
-    var btnHref = reason === 'login' ? 'login.html'
-      : (user && user.custom_id ? 'profile.html?id=' + encodeURIComponent(user.custom_id) : 'profile.html');
+    var profileHref = user && user.custom_id ? 'profile.html?id=' + encodeURIComponent(user.custom_id) : 'profile.html';
+    var msg, btnLabel, btnHref;
+    if (reason === 'login') {
+      msg = 'لازم تسجّل دخول وتربط حساب تيك توك بحسابك عشان تفتح الألعاب.';
+      btnLabel = 'تسجيل الدخول'; btnHref = 'login.html';
+    } else if (reason === 'not_streamer') {
+      msg = 'تشغيل الألعاب لحسابات الستريمر فقط — حسابك حساب لاعب. تواصل مع الإدارة لتحويله لحساب ستريمر.';
+      btnLabel = 'تواصل معنا'; btnHref = 'support.html';
+    } else {
+      msg = 'لازم تربط حساب تيك توك بحسابك عشان تفتح الألعاب.';
+      btnLabel = 'اربط حساب تيك توك'; btnHref = profileHref;
+    }
     var m = document.createElement('div');
     m.id = 'gl-lock-modal';
     m.setAttribute('role', 'dialog');
