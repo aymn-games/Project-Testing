@@ -171,9 +171,16 @@ function me() {
  * forcing a login.
  * @returns {Promise<Object|null>}
  */
+// Several scripts on the same page (header account button, games library
+// lock, ...) call refreshUser while the page loads — concurrent calls share
+// one in-flight /api/auth/me request. Once it settles, the next call fetches
+// fresh data again (e.g. right after choosing an account type).
+var _refreshUserPromise = null;
+
 function refreshUser() {
     if (!getToken()) return Promise.resolve(null);
-    return me().then(function (result) {
+    if (_refreshUserPromise) return _refreshUserPromise;
+    _refreshUserPromise = me().then(function (result) {
         if (result.success) {
             setSession(getToken(), result.user);
             return result.user;
@@ -182,7 +189,11 @@ function refreshUser() {
         // from sleep (5xx) must not log the user out (same rule as requireAuth).
         if (result.__httpStatus === 401) clearSession();
         return null;
-    }).catch(function () { return null; });
+    }).catch(function () { return null; }).then(function (user) {
+        _refreshUserPromise = null;
+        return user;
+    });
+    return _refreshUserPromise;
 }
 
 /* Header account button — one source of truth for every page with the
