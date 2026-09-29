@@ -100,10 +100,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _musicVolume = 0.4;      // 0..1 — المصدر الوحيد للصوت بكل اللعبة (مؤثرات + موسيقى)
     var _currentMusicAudio = null;
     var _lastMusicUrl = null;    // ⚠️ لمنع تكرار نفس المقطع بالتوالي (طلب صريح)
+    var _playedMusic = {};       // كل مقطع اشتغل بهذي الجلسة (url → true)
 
-    // ⚠️ عشوائي حقيقي بدون تكرار نفس المقطع مرتين متتاليتين (ولا بالترتيب)
-    // — يستبعد آخر مقطع اتشغّل من قائمة المرشّحين قبل الاختيار، لو
-    // القسم فيه أكثر من مقطع وحد.
+    // ⚠️ عشوائي بدون تكرار أبداً بنفس الجلسة: كل دورة تختار مقطع ما
+    // اشتغل قبل (من القسم المختار — "عشوائي" = كل الأقسام سوا). لما
+    // تخلص كل مقاطع القسم، تتصفّر قائمة المشغَّل لهذا القسم ويرجع يختار
+    // عشوائياً من البداية (بدون ما يعيد آخر مقطع اشتغل مباشرة).
     function pickMusicUrl() {
         var pool;
         if (_musicMode === 'shailat') pool = _musicTracks.shailat;
@@ -117,11 +119,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         else pool = _musicTracks.shailat.concat(_musicTracks.khaleeji).concat(_musicTracks.iraqi);
 
         if (!pool || !pool.length) return null;
-        var candidates = pool;
-        if (pool.length > 1 && _lastMusicUrl) {
-            candidates = pool.filter(function (u) { return u !== _lastMusicUrl; });
+        var candidates = pool.filter(function (u) { return !_playedMusic[u]; });
+        if (!candidates.length) {
+            pool.forEach(function (u) { delete _playedMusic[u]; });
+            candidates = pool.length > 1 ? pool.filter(function (u) { return u !== _lastMusicUrl; }) : pool;
         }
         var url = candidates[Math.floor(Math.random() * candidates.length)];
+        _playedMusic[url] = true;
         _lastMusicUrl = url;
         return url;
     }
