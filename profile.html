@@ -771,6 +771,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     setCardValue('اسم المستخدم', p.username || '—', 0, false);
     setCardValue('الدور', roleLabel(p), 0, false);
     setCardValue('تاريخ الانضمام', formatDate(p.joined_at), 0, false);
+    // [إصلاح] "انضم في" بالبطاقة الجانبية ما كانت مربوطة أبداً (تطلع "—").
+    setSiblingAfter('انضم في', formatDate(p.joined_at));
     // تشغيل الألعاب: حساب ستريمر + تيك توك موثَّق (بدون موافقة أدمن).
     var playStatus = p.role === 'admin' ? 'مفعّلة ✅'
       : !(p.is_streamer || p.can_run_games) ? 'لحسابات الستريمر فقط'
@@ -785,7 +787,11 @@ document.addEventListener('DOMContentLoaded', async function() {
       var nextTxt = p.points.nextLevel
         ? ('يحتاج ' + Math.max(0, p.points.nextLevel.pointsRequired - p.points.totalPoints) + ' نقطة للمستوى التالي')
         : (p.points.currentLevel ? 'أعلى مستوى متاح حالياً' : 'لا توجد مستويات مفعَّلة بعد');
-      setSiblingAfter('يحتاج — نقطة للمستوى التالي', nextTxt) || setCardValue('مستوى اللاعب', nextTxt, 0, false);
+      // [إصلاح] كانت setSiblingAfter تدور على عنصر بعد سطر الملاحظة (وهو
+      // آخر عنصر بالبطاقة فما فيه شي بعده)، فتفشل ويشتغل البديل اللي كان
+      // يكتب فوق عنوان "مستوى اللاعب" نفسه. نحدّث سطر الملاحظة مباشرة.
+      var xpNoteEl = findLeaf('يحتاج — نقطة للمستوى التالي');
+      if (xpNoteEl) xpNoteEl.textContent = nextTxt;
     }
 
     if (p.streamerLevel) {
