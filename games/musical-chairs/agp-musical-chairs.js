@@ -48,19 +48,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         { label: '35 ثانية', value: 35 }
     ];
 
-    // (SPIN_DURATION_MS الثابت القديم اتحذف — المدة صارت إعداد قابل للتحكم، راجع SPIN_DURATION_OPTIONS)
-    var ROTATION_DEG_PER_SEC = 22;
-    var RING_TICK_MS = 90;
-    var ELIMINATE_STAGGER_MS = 550;
-    // (ما نحتاج مدة تثبيت أو اختفاء تلقائي بعد الآن — الإغلاق يدوي بالكامل بزر ✕)
-    var NEXT_ROUND_DELAY_MS = 2200;
+    // مدة عرض البطل بمنتصف الدائرة قبل شاشة الفائز
+    var CHAMPION_HOLD_MS = 2500;
     // ⚠️ جاهزة تستقبل 10 لكل تصنيف (5 حالية + 5 إضافية قادمة) — بس خليتها
     // 5 فعلياً حالياً حتى ما تصير محاولات تشغيل ملفات غير مرفوعة بعد (صمت
     // صوتي نصف الوقت). أول ما ترفع 6.mp3...10.mp3 بنفس مسار shailat/
     // وkhaleeji/، غيّر الرقم تحت لـ10 وخلاص — بدون أي تعديل ثاني بالكود.
     var MUSIC_TRACK_COUNT = 5;
     var IRAQI_TRACK_COUNT = 10; // ⚠️ 10 مقاطع مرفوعة فعلياً بمجلد sounds/iraqi/ (5 + 5 إضافية) — شغّالة الآن
-    var SPIN_DURATION_MAX_S = 35; // ⚠️ الحد الأقصى لمدة تدوير الموسيقى (طلب صريح)
+    // مدة تشغيل الأغنية من قائمة الإجراءات: 5–60 ثانية بخطوة 5 (ملف التصميم)
+    var SPIN_DURATION_MIN_S = 5;
+    var SPIN_DURATION_MAX_S = 60;
 
     /* ======================================================================
      *  0) الصوت — مستوى صوت واحد موحَّد لكل شي (مؤثرات قصيرة + موسيقى
@@ -101,7 +99,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     var _musicMode = 'random';   // 'random' | 'shailat' | 'khaleeji' | 'iraqi' — يتحكم فيه الاستريمر حياً
     var _musicMuted = false;
-    var _musicVolume = 0.7;      // 0..1 — المصدر الوحيد للصوت بكل اللعبة (مؤثرات + موسيقى)
+    var _musicVolume = 0.4;      // 0..1 — المصدر الوحيد للصوت بكل اللعبة (مؤثرات + موسيقى)
     var _currentMusicAudio = null;
     var _lastMusicUrl = null;    // ⚠️ لمنع تكرار نفس المقطع بالتوالي (طلب صريح)
 
@@ -168,15 +166,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _roundDeficit = 1; // ⚠️ جديد: العجز المستخدَم فعلياً بالدورة الحالية (يلزم addChairsIfNeeded)
 
     var _chairs = [];
+    var _chairSize = 16;         // c — حجم الكرسي (% من عرض الدائرة)
     var _seatedThisRound = {};
-    var _playerAngle = {};
+    var _roundLosers = [];
 
-    var _ringTimer = null;
-    var _ringRotation = 0;
-    var _ringSpinning = false;   // ⚠️ جديد: هل الحلقة تدور الآن فعلياً (لحساب الزاوية بأي وقت)
+    // 'idle' | 'playing' | 'claiming' | 'out' | 'champion' | 'ended'
+    var _phase = 'idle';
+    var _angle = 0;
+    var _raf = null;
+    var _spinSpeedIdx = 1;       // سرعة دوران اللاعبين: 0 بطيء، 1 عادي، 2 سريع
     var _spinTimeoutId = null;
-    var _spinState = 'idle';     // 'idle' | 'spinning' — حالة زر التدوير اليدوي
+    var _outTimeoutId = null;
     var _selectionOpen = false;
+    var _champion = null;
+    var _pEls = {};
+    var _ac = null;
 
     var _commentUnsub = null;
     var _playerRemovedUnsub = null;
@@ -190,20 +194,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _eliminated = [];
         _roundNumber = 0;
         _customDeficitCurrent = 1;
-        _chairs = [];
         _seatedThisRound = {};
-        _playerAngle = {};
+        _roundLosers = [];
+        _champion = null;
+        _angle = 0;
         stopRingLoop();
         stopMusic();
-        _spinState = 'idle';
         if (_spinTimeoutId) { clearTimeout(_spinTimeoutId); _spinTimeoutId = null; }
+        if (_outTimeoutId) { clearTimeout(_outTimeoutId); _outTimeoutId = null; }
         AGP.timerManager.stop(TIMER_NAME);
         _selectionOpen = false;
         unwireCommentListener();
-        // ⚠️ احتياط: لو تبويب المُقصَين انفتح ولسه ما انقفل يدوياً (مباراة
-        // جديدة/إعادة مباراة قبل ما يقفله الاستريمر)، نخفيه حتى ما يعلق
-        var elimPanel = el('mc-eliminated-panel');
-        if (elimPanel) elimPanel.classList.remove('mc-eliminated-visible');
+        unwireTimerListeners();
+        closeModal('mc-out-modal');
+        clearCircle();
+        setPhase('idle');
+        renderCenter();
     }
 
     function el(id) { return document.getElementById(id); }
@@ -287,219 +293,184 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         style.textContent = [
             ':root{--mc-gold:#ffb020;--mc-gold-2:#ff7a3d;--mc-danger:#ff4d6a;--mc-badge-fill:#CAB6B6;--mc-badge-stroke:#9F5FC4;--mc-video-glow:#4d0008;}',
 
-            /* ⚠️ إصلاح: كانت الحلبة محبوسة بحجم الشاشة (fixed inset:0
-             * بدون تمرير) — لو المحتوى أطول من الشاشة (تكبير كبير، شاشة
-             * قصيرة) ما فيه طريقة توصل لباقي الدائرة. الحل: overflow-y
-             * يخلي الحلبة نفسها قابلة للتمرير عمودياً لو احتاجت، بدون ما
-             * يأثر على الهيدر الثابت فوقها.
-             * ⚠️ إصلاح إضافي (شكوى فعلية): كان شريط التمرير يظهر ويختفي
-             * بشكل متكرر ومزعج مع تغيّر نص شريط الأدوات بين المراحل
-             * (جاهز/دوران/اختيار/إقصاء)، لأن عرض السطر يتغيّر فيتسبب
-             * أحياناً بارتفاع محتوى إضافي بسيط. scrollbar-gutter:stable
-             * يحجز مساحة شريط التمرير دائماً (يظهر أو لا) فما يصير أي
-             * قفز/رجّة بالتخطيط، + min-height ثابت للشريط يقلّل تغيّر
-             * الارتفاع بين المراحل من الأساس. */
-            '#mc-stage{position:fixed;inset:0;overflow-y:auto;scrollbar-gutter:stable;',
-            'padding-top:78px;padding-bottom:24px;',
-            'display:flex;flex-direction:column;',
-            'align-items:center;z-index:10;font-family:Cairo,sans-serif;direction:rtl;}',
+            /* ==================================================================
+             * شاشة اللعب — مبنية حرفياً على ملف التصميم
+             * design_handoff_musical_chairs (musical-chairs.dc.html + README.md):
+             * هيدر (أزرار/شعار/عنوان) ← قائمة الإجراءات + دائرة اللعب، ونوافذ
+             * الإقصاء/الإعدادات/إضافة لاعب.
+             * ==================================================================== */
+            'body.mc-game-on #agp-persistent-header{display:none !important;}',
+            '#mc-stage{position:fixed;inset:0;z-index:10;height:100vh;height:100dvh;overflow:hidden;',
+            'display:flex;flex-direction:column;direction:rtl;color:#f3eefb;',
+            'font-family:"IBM Plex Sans Arabic",sans-serif;',
+            'background:radial-gradient(70% 60% at 50% 55%,rgba(124,58,237,0.28) 0%,rgba(124,58,237,0) 70%),',
+            'radial-gradient(60% 50% at 100% 100%,rgba(217,70,239,0.16) 0%,rgba(217,70,239,0) 70%),',
+            'radial-gradient(50% 45% at 0% 0%,rgba(34,195,238,0.10) 0%,rgba(34,195,238,0) 70%),',
+            'linear-gradient(180deg,#130a24 0%,#0d0719 100%);}',
+            '#mc-stage *{box-sizing:border-box;}',
+            '#mc-stage button{font-family:inherit;}',
 
-            /* ⚠️ دُمج شريط الدورة وشريط الأدوات بشريط واحد موسّع، بمكان
-             * عنوان "الدورة" السابق تماماً (فوق الحلقة مباشرة) — كل
-             * التفاصيل (عدد اللاعبين، الكراسي، رقم الدورة، نوع الموسيقى،
-             * الصوت، زر التدوير) بداخله. عرَّضته لعرض أدنى ثابت 760px
-             * على الشاشات الواسعة (يتقلّص تلقائياً بالجوال). عدّل الرقم
-             * 760 لأي رقم تبيه بالضبط. min-height ثابت (بدل ارتفاع
-             * تلقائي متغيّر) يمنع "قفزة" الحلبة تحته كل ما تغيّر نص
-             * المرحلة (سبب شريط التمرير المزعج). */
-            '#mc-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;',
-            'margin:14px auto 8px;padding:12px 20px;width:min(94vw,850px);min-height:76px;box-sizing:border-box;',
-            'border-radius:24px;',
-            'background:linear-gradient(90deg,#3a1750,#2D1932);border:2px solid var(--mc-badge-stroke);',
-            'box-shadow:0 4px 18px rgba(0,0,0,0.35);}',
+            /* 1) الهيدر */
+            '.mc-header{min-height:clamp(54px,7vh,76px);flex-shrink:0;display:grid;grid-template-columns:1fr auto 1fr;',
+            'gap:clamp(8px,1.4vw,16px);align-items:center;padding:clamp(6px,1vh,10px) clamp(10px,2vw,24px);',
+            'background:linear-gradient(180deg,rgba(26,14,46,0.95),rgba(19,10,36,0.85));',
+            'border-bottom:1px solid rgba(190,140,255,0.14);',
+            'box-shadow:0 1px 0 rgba(255,255,255,0.03),0 10px 30px rgba(0,0,0,0.35);}',
+            '.mc-header-btns{display:flex;flex-wrap:wrap;align-items:center;gap:clamp(6px,0.7vw,10px);min-width:0;}',
+            '.mc-hbtn{flex-shrink:0;display:flex;align-items:center;gap:6px;white-space:nowrap;height:clamp(34px,4.4vh,44px);',
+            'padding:0 clamp(10px,1.1vw,16px);border-radius:999px;border:1px solid rgba(190,140,255,0.3);',
+            'background:rgba(255,255,255,0.04);color:#f3eefb;cursor:pointer;font-size:clamp(12px,1.05vw,15px);',
+            'font-weight:600;transition:background .2s,border-color .2s;}',
+            '.mc-hbtn:hover{background:rgba(217,70,239,0.18);border-color:rgba(217,70,239,0.5);}',
+            '.mc-spin-btn{flex-shrink:0;display:flex;align-items:center;gap:6px;white-space:nowrap;height:clamp(34px,4.4vh,44px);',
+            'padding:0 clamp(12px,1.4vw,20px);border-radius:999px;border:none;cursor:pointer;font-size:clamp(12px,1.05vw,15px);',
+            'font-weight:700;color:#fff;background:linear-gradient(135deg,#d946ef,#7c3aed);',
+            'box-shadow:0 0 0 1px rgba(255,255,255,0.12) inset,0 6px 18px rgba(217,70,239,0.35);}',
+            '.mc-spin-btn:disabled{opacity:0.5;cursor:default;}',
+            '.mc-header-logo{justify-self:center;height:clamp(34px,5.2vh,56px);max-width:100%;width:auto;display:block;}',
+            '.mc-header-title{justify-self:end;white-space:nowrap;display:flex;align-items:center;gap:8px;font-weight:700;',
+            'font-size:clamp(13px,1.15vw,17px);padding:clamp(5px,0.8vh,8px) clamp(12px,1.4vw,22px);border-radius:999px;',
+            'background:linear-gradient(135deg,rgba(217,70,239,0.22),rgba(124,58,237,0.22));',
+            'border:1px solid rgba(217,70,239,0.35);box-shadow:0 0 24px rgba(217,70,239,0.18);}',
 
-            '#mc-round-info{font-size:0.88em;color:#e9d3ff;white-space:nowrap;font-weight:700;}',
-            '#mc-round-info .mc-round-num-inline{color:var(--mc-gold);font-weight:900;}',
+            /* 2) المحتوى */
+            '.mc-main{flex:1;display:flex;flex-direction:row;gap:clamp(14px,2vw,28px);padding:clamp(14px,2vw,28px);min-height:0;}',
+            '#mc-stage.mc-panel-closed .mc-main{gap:0;}',
 
-            '.mc-spin-btn{border:none;border-radius:999px;padding:9px 20px;font-weight:800;font-size:0.95em;',
-            'color:#fff;cursor:pointer;background:linear-gradient(90deg,var(--agp-accent-pink),var(--agp-accent));',
-            'box-shadow:0 0 10px rgba(255,77,255,0.45);transition:transform .15s;}',
-            '.mc-spin-btn:active{transform:scale(0.96);}',
-            '.mc-spin-btn.mc-spin-btn-active{background:linear-gradient(90deg,#ff6161,#c81452);}',
-            '.mc-spin-btn:disabled{opacity:0.45;cursor:not-allowed;}',
+            /* 2أ) قائمة الإجراءات */
+            '.mc-panel{flex:0 0 auto;width:clamp(280px,24vw,360px);max-height:100%;opacity:1;overflow:hidden;',
+            'transition:width .35s ease,max-height .35s ease,opacity .25s ease;display:flex;min-height:0;}',
+            '#mc-stage.mc-panel-closed .mc-panel{width:0;opacity:0;}',
+            '.mc-panel-inner{width:clamp(280px,24vw,360px);flex-shrink:0;min-height:0;overflow-y:auto;display:flex;',
+            'flex-direction:column;gap:clamp(8px,1.4vh,14px);}',
+            '.mc-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 16px;',
+            'border-radius:14px;border:1px solid rgba(190,140,255,0.25);background:rgba(20,8,36,0.6);color:#f3eefb;',
+            'cursor:pointer;font-size:15px;font-weight:600;flex-shrink:0;height:clamp(40px,5vh,48px);}',
+            '.mc-panel-head span:last-child{font-size:13px;color:#bfaedb;}',
+            '.mc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}',
+            '.mc-stat{padding:clamp(6px,1.2vh,14px) 10px;border-radius:16px;background:rgba(255,255,255,0.05);',
+            'border:1px solid rgba(190,140,255,0.2);text-align:center;}',
+            '.mc-stat-lbl{font-size:12px;color:#bfaedb;}',
+            '.mc-stat-val{font-size:clamp(20px,2.8vh,26px);font-weight:700;}',
+            '.mc-stat-val.mc-gold{color:#f5a623;}',
+            '.mc-game-settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:clamp(10px,1.8vh,18px);',
+            'padding:clamp(12px,1.8vh,18px);border-radius:20px;background:rgba(20,8,36,0.6);border:1px solid rgba(190,140,255,0.25);}',
+            '.mc-gs-title{grid-column:1/-1;font-size:13px;font-weight:600;color:#bfaedb;letter-spacing:0.02em;}',
+            '.mc-gs-row{display:flex;flex-direction:column;gap:8px;}',
+            '.mc-gs-lbl{font-size:14px;font-weight:600;}',
+            '.mc-gs-lbl-row{display:flex;justify-content:space-between;font-size:14px;font-weight:600;}',
+            '.mc-gs-lbl-row span{color:#f5a623;}',
+            '.mc-seg{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:4px;padding:4px;border-radius:12px;background:rgba(0,0,0,0.35);}',
+            '.mc-seg-4{grid-template-columns:repeat(4,1fr);}',
+            '.mc-seg button{height:36px;border-radius:9px;border:none;cursor:pointer;font-size:14px;font-weight:600;',
+            'background:transparent;color:#bfaedb;}',
+            '.mc-seg button.mc-on{background:#8b5cf6;color:#fff;}',
+            '.mc-modal .mc-seg button{height:38px;}',
+            '.mc-stepper{display:flex;align-items:center;justify-content:space-between;padding:4px;border-radius:12px;background:rgba(0,0,0,0.35);}',
+            '.mc-stepper button{width:40px;height:40px;border-radius:9px;border:none;background:rgba(255,255,255,0.08);',
+            'color:#fff;font-size:20px;cursor:pointer;}',
+            '.mc-stepper div{font-size:16px;font-weight:600;}',
+            '.mc-vol{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;background:rgba(0,0,0,0.35);}',
+            '.mc-vol input{flex:1;accent-color:#f5a623;}',
 
-            '#mc-spin-countdown{font-weight:800;font-size:0.85em;color:var(--mc-gold);min-width:34px;text-align:center;}',
+            /* 2ب) دائرة اللعب */
+            '.mc-arena{position:relative;flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px;}',
+            '.mc-cq{flex:1;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center;}',
+            '.mc-circle{position:relative;width:min(100cqw - 50px,100cqh - 50px);aspect-ratio:1;container-type:inline-size;}',
+            '.mc-ring{position:absolute;inset:0;border-radius:50%;padding:3px;',
+            'background:conic-gradient(#e040fb,#8b5cf6,#22c3ee,#8fd16a,#f5a623,#e040fb);}',
+            '.mc-ring div{width:100%;height:100%;border-radius:50%;background:#1a0c2e;box-shadow:inset 0 0 80px rgba(139,92,246,0.25);}',
+            '.mc-watermark{position:absolute;left:50%;top:50%;width:62%;height:auto;transform:translate(-50%,-50%);opacity:0.1;pointer-events:none;}',
+            '.mc-ch{position:absolute;aspect-ratio:1;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;}',
+            '.mc-ch-glyph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;line-height:1;',
+            'filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5));}',
+            '.mc-ch-num{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:0.12em 0.28em;border-radius:0.3em;',
+            'display:none;align-items:center;justify-content:center;background:#f5a623;color:#1a0c2e;font-weight:800;line-height:1;',
+            'letter-spacing:-0.03em;font-variant-numeric:tabular-nums;box-shadow:0 0 14px rgba(245,166,35,0.45);}',
+            '.mc-ch.mc-numbered .mc-ch-num{display:flex;}',
+            '.mc-ch.mc-taken .mc-ch-glyph,.mc-ch.mc-taken .mc-ch-num{display:none;}',
+            '.mc-p{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;z-index:2;}',
+            '.mc-p.mc-moving{transition:left .6s cubic-bezier(.34,1.45,.64,1),top .6s cubic-bezier(.34,1.45,.64,1);}',
+            '.mc-p.mc-seated{z-index:3;}',
+            '.mc-p-av{aspect-ratio:1;transition:width .5s ease,border-color .3s,box-shadow .3s;border-radius:50%;display:flex;',
+            'align-items:center;justify-content:center;background:#1a0c2e;border:2px solid #22c3ee;',
+            'box-shadow:0 0 12px rgba(34,195,238,0.45);font-weight:700;overflow:hidden;}',
+            '.mc-p-av img{width:100%;height:100%;object-fit:cover;display:block;}',
+            '.mc-p.mc-seated .mc-p-av{border-color:#f5a623;box-shadow:0 0 12px rgba(245,166,35,0.55);}',
+            '.mc-p.mc-out .mc-p-av{border-color:#ff5c7a;box-shadow:0 0 12px rgba(255,92,122,0.6);}',
+            '.mc-p-name{font-size:clamp(11px,2.2cqw,15px);padding:1px 8px;border-radius:999px;background:rgba(0,0,0,0.6);white-space:nowrap;}',
+            '.mc-p.mc-seated .mc-p-name,.mc-circle.mc-no-names .mc-p-name{display:none;}',
+            '.mc-center{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;',
+            'gap:10px;text-align:center;}',
+            '.mc-center.mc-show{display:flex;}',
+            '.mc-champ-cup{font-size:9cqw;line-height:1;}',
+            '.mc-champ-av{width:22cqw;height:22cqw;border-radius:50%;display:flex;align-items:center;justify-content:center;',
+            'background:#1a0c2e;border:4px solid #f5a623;box-shadow:0 0 40px rgba(245,166,35,0.55);font-weight:700;font-size:7cqw;overflow:hidden;}',
+            '.mc-champ-av img{width:100%;height:100%;object-fit:cover;display:block;}',
+            '.mc-champ-name{font-size:4cqw;font-weight:700;}',
+            '.mc-ended-title{font-size:6cqw;font-weight:700;}',
+            '.mc-ended-sub{font-size:2.6cqw;color:#bfaedb;}',
 
-            '.mc-volume-group{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.25);',
-            'border-radius:999px;padding:4px 10px;}',
-            /* ⚠️ تحسين لمس للجوال/الآيباد: زر الكتم كان بلا مساحة لمس
-             * حقيقية (بس حجم الأيقونة نفسها) — صار له مساحة لمس دنيا
-             * مريحة (44×44px تقريباً حسب توصية Apple/Google لأزرار اللمس). */
-            '.mc-icon-btn{border:none;background:none;color:#fff;font-size:1.2em;cursor:pointer;',
-            'line-height:1;min-width:38px;min-height:38px;display:flex;align-items:center;justify-content:center;',
-            'padding:4px;}',
-            '#mc-volume-slider{width:80px;height:26px;accent-color:var(--mc-gold);cursor:pointer;}',
+            /* النوافذ */
+            '.mc-modal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:20px;',
+            'background:rgba(8,4,16,0.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}',
+            '.mc-modal.mc-show{display:flex;}',
+            '.mc-card{position:relative;max-height:calc(100dvh - 40px);min-height:0;overflow-y:auto;display:flex;flex-direction:column;',
+            'gap:18px;padding:22px;border-radius:22px;background:linear-gradient(180deg,#1d1033,#150b27);',
+            'border:1px solid rgba(190,140,255,0.25);box-shadow:0 30px 80px rgba(0,0,0,0.6);}',
+            '.mc-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}',
+            '.mc-card-title{font-size:19px;font-weight:700;}',
+            '.mc-x{width:38px;height:38px;flex-shrink:0;border-radius:50%;border:1px solid rgba(190,140,255,0.25);',
+            'background:rgba(255,255,255,0.05);color:#fff;cursor:pointer;font-size:18px;line-height:1;transition:background .2s,border-color .2s;}',
+            '.mc-x:hover{background:rgba(255,92,122,0.2);border-color:rgba(255,92,122,0.5);}',
+            '.mc-btn-primary{border:none;cursor:pointer;font-weight:700;color:#fff;',
+            'background:linear-gradient(135deg,#d946ef,#7c3aed);box-shadow:0 6px 18px rgba(217,70,239,0.35);}',
+            // نافذة الإقصاء
+            '#mc-out-modal{transition:opacity .35s ease;opacity:0;}',
+            '#mc-out-modal.mc-in{opacity:1;}',
+            '#mc-out-modal .mc-card{width:min(820px,100%);transform:scale(0.85) translateY(20px);',
+            'transition:transform .55s cubic-bezier(.34,1.56,.64,1);}',
+            '#mc-out-modal.mc-in .mc-card{transform:scale(1);}',
+            '#mc-out-modal .mc-x{position:absolute;top:16px;left:16px;}',
+            '.mc-out-head{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:4px;}',
+            '.mc-out-head img{height:clamp(44px,8vh,64px);width:auto;max-width:70%;}',
+            '.mc-out-title{font-size:18px;font-weight:700;}',
+            '.mc-out-sub{font-size:13px;color:#bfaedb;}',
+            '.mc-out-list{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;}',
+            '.mc-out-item{width:clamp(104px,14vw,132px);display:flex;flex-direction:column;align-items:center;gap:8px;',
+            'padding:14px 8px;border-radius:16px;background:rgba(255,92,122,0.14);border:1px solid rgba(255,92,122,0.6);',
+            'opacity:0;transform:scale(0.6);transition:opacity .4s ease,transform .5s cubic-bezier(.34,1.56,.64,1);}',
+            '#mc-out-modal.mc-in .mc-out-item{opacity:1;transform:scale(1);}',
+            '.mc-out-av{width:clamp(68px,9vw,88px);height:clamp(68px,9vw,88px);border-radius:50%;display:flex;align-items:center;',
+            'justify-content:center;background:#1a0c2e;border:3px solid #ff5c7a;box-shadow:0 0 18px rgba(255,92,122,0.45);',
+            'font-weight:700;font-size:clamp(20px,2.6vw,26px);overflow:hidden;}',
+            '.mc-out-av img{width:100%;height:100%;object-fit:cover;display:block;}',
+            '.mc-out-name{font-size:clamp(14px,1.4vw,17px);font-weight:700;text-align:center;overflow-wrap:anywhere;}',
+            '.mc-out-tag{font-size:12px;color:#ff8da3;}',
+            '.mc-out-next{align-self:center;height:44px;padding:0 28px;border-radius:999px;font-size:15px;}',
+            // نافذة الإعدادات
+            '#mc-settings-modal .mc-card{width:min(460px,100%);}',
+            '.mc-end-btn{height:46px;border-radius:12px;border:none;background:#ff5c7a;color:#fff;cursor:pointer;',
+            'font-size:15px;font-weight:700;transition:background .2s;}',
+            '.mc-end-btn:hover{background:#e0405f;}',
+            '.mc-reset-btn{height:46px;border-radius:12px;border:1px solid rgba(255,92,122,0.45);background:transparent;',
+            'color:#ff8da3;cursor:pointer;font-size:15px;font-weight:600;transition:background .2s;}',
+            '.mc-reset-btn:hover{background:rgba(255,92,122,0.15);}',
+            // نافذة إضافة لاعب
+            '#mc-add-modal{z-index:60;background:rgba(8,4,16,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);}',
+            '#mc-add-modal .mc-card{width:500px;height:700px;max-width:100%;gap:16px;background:rgba(29,16,51,0.4);',
+            'border:2px solid rgba(217,70,239,0.55);box-shadow:0 0 30px rgba(217,70,239,0.25),0 30px 80px rgba(0,0,0,0.5);overflow:hidden;}',
+            '.mc-add-body{flex:1;min-height:0;overflow-y:auto;font-size:15px;line-height:1.8;color:#e7dcf7;}',
+            '.mc-add-done{flex-shrink:0;height:50px;border-radius:14px;font-size:16px;}',
 
-            '.mc-music-mode{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;}',
-            '.mc-music-mode-label{font-size:0.68em;color:#d9c3ef;font-weight:700;white-space:nowrap;}',
-            '.mc-music-mode-btn{border:none;border-radius:999px;padding:9px 16px;font-weight:800;font-size:0.85em;',
-            'color:#fff;background:#141018;border:1px solid #3a3040;cursor:pointer;display:flex;align-items:center;gap:6px;}',
-            /* ⚠️ تحسين لمس: عرض أدنى للقائمة نفسها (بدل تعتمد على المحتوى
-             * بس)، وسقف أقصى + حماية من الفيض خارج حدود الشاشة الضيقة
-             * (آيباد/جوال) عبر max-width محسوب من عرض الشاشة نفسها. */
-            '.mc-music-mode-options{position:absolute;top:calc(100% + 4px);right:0;background:#1c1424;border:1px solid var(--mc-badge-stroke);',
-            'border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:4px;min-width:170px;',
-            'max-width:min(240px,90vw);z-index:50;',
-            'box-shadow:0 6px 18px rgba(0,0,0,0.5);}',
-            '.mc-music-mode-options[hidden]{display:none;}',
-            '.mc-music-mode-options button{border:none;background:none;color:#f3eefc;text-align:right;padding:11px 12px;',
-            'min-height:40px;border-radius:8px;font-size:0.9em;cursor:pointer;font-family:Cairo,sans-serif;}',
-            '.mc-music-mode-options button:hover,.mc-music-mode-options button.mc-mode-active{background:var(--agp-accent);color:#fff;}',
+            /* الوضع العمودي / الشاشات الأضيق من 900px */
+            '@media (max-width:899px),(max-aspect-ratio:9/10){',
+            '.mc-header{grid-template-columns:1fr auto;}',
+            '.mc-header-btns{grid-area:2 / 1 / 3 / 3;}',
+            '.mc-main{flex-direction:column;}',
+            '.mc-panel,.mc-panel-inner{width:100%;}',
+            '#mc-stage.mc-panel-closed .mc-panel{width:100%;max-height:0;}}',
 
-            '.mc-badge{border:4px solid var(--mc-badge-stroke);background:var(--mc-badge-fill);',
-            'border-radius:35px;padding:9px 16px;font-weight:800;font-size:0.85em;color:#2b1240;',
-            'box-sizing:border-box;min-height:52px;display:flex;align-items:center;gap:6px;white-space:nowrap;}',
-
-            '#mc-countdown{margin-top:2px;font-weight:800;font-size:1.05em;color:var(--mc-gold);',
-            'min-height:1.4em;display:flex;align-items:center;justify-content:center;gap:6px;}',
-            '#mc-countdown.mc-countdown-warn{color:var(--mc-danger);}',
-
-            /* ⚠️ تبويب المُقصَين — يظهر بمنتصف الشاشة، حجمه مرن يتمدد حسب
-             * عدد اللاعبين المُقصَين (مو حجم ثابت)، حدود بنفسجية، داخله
-             * أسود شبه شفاف، شعار المنصة بالأعلى. كل الأسماء والصور تظهر
-             * دفعة وحدة وتثبت 3 ثوانٍ، وبعدين تختفي وحدة وحدة. */
-            '#mc-eliminated-panel{position:fixed;top:50%;left:50%;',
-            'transform:translate(-50%,-50%) scale(0.85);',
-            'z-index:9997;width:auto;min-width:280px;max-width:92vw;height:auto;max-height:82vh;box-sizing:border-box;',
-            'background:rgba(0,0,0,0.9);border:4px solid var(--agp-accent);border-radius:26px;',
-            'padding:28px 32px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;opacity:0;',
-            'pointer-events:none;transition:opacity .3s ease,transform .3s ease;',
-            'box-shadow:0 0 34px rgba(124,58,237,0.55);}',
-            '#mc-eliminated-panel.mc-eliminated-visible{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto;}',
-            '.mc-eliminated-logo{width:64px;height:64px;object-fit:contain;flex-shrink:0;}',
-            '.mc-eliminated-title{color:#fff;font-weight:800;font-size:1.2em;white-space:nowrap;}',
-            /* ⚠️ زر إغلاق يدوي — الطريقة الوحيدة لإخفاء التبويب الآن */
-            '.mc-eliminated-close-btn{position:absolute;top:14px;left:14px;width:42px;height:42px;',
-            'border-radius:50%;background:rgba(255,255,255,0.12);border:2px solid #fff;color:#fff;',
-            'font-size:1.2em;font-weight:900;cursor:pointer;display:flex;align-items:center;',
-            'justify-content:center;z-index:5;padding:0;line-height:1;pointer-events:auto;}',
-            '.mc-eliminated-close-btn:hover{background:rgba(255,255,255,0.28);}',
-            '.mc-eliminated-avatars{display:flex;gap:20px 24px;flex-wrap:wrap;justify-content:center;',
-            'align-items:flex-start;max-width:min(640px,88vw);max-height:56vh;overflow-y:auto;padding:6px;}',
-            '.mc-eliminated-avatar-item{position:relative;width:88px;height:88px;margin-bottom:30px;',
-            'filter:grayscale(0.5);animation:mcElimPop .3s ease;transition:opacity .3s ease,transform .3s ease;}',
-            '.mc-eliminated-avatar-item.mc-eliminated-item-out{opacity:0;transform:scale(0.4);}',
-            '@keyframes mcElimPop{0%{transform:scale(0);opacity:0;}100%{transform:scale(1);opacity:1;}}',
-            '.mc-eliminated-avatar-item .mc-avatar-img,.mc-eliminated-avatar-item .mc-avatar-fallback{',
-            'width:100%;height:100%;border-radius:50%;object-fit:cover;border:3px solid var(--mc-danger);background:#2c1240;}',
-            '.mc-eliminated-avatar-item .mc-avatar-fallback{display:flex;align-items:center;justify-content:center;',
-            'color:#fff;font-weight:800;font-size:1em;}',
-            /* ⚠️ اسم واضح كامل تحت كل صورة — بدون قصّ (مو ellipsis زي قبل)،
-             * يلف لسطرين لو طويل. خط مضاعف الحجم (0.78em → 1.56em) بطلب
-             * صريح، مع توسيع اللوح شوي عشان يفسح للخط الأكبر. */
-            '.mc-eliminated-avatar-item .mc-avatar-name{position:absolute;top:100%;left:50%;transform:translateX(-50%);',
-            'margin-top:8px;font-size:1.56em;font-weight:700;color:#fff;background:rgba(0,0,0,0.75);padding:3px 10px;',
-            'border-radius:10px;white-space:normal;max-width:160px;text-align:center;line-height:1.25;}',
-
-
-            /* ⚠️ إصلاح جذري لمشكلة تشوّه الدائرة عند تكبير المتصفح (Zoom) —
-             * بدل حساب height بمعادلة width منفصلة (كانت تنكسر مع بعض
-             * نسب التكبير)، نستخدم aspect-ratio:1/1 اللي يفرض مربّعاً
-             * مثالياً دائماً بغض النظر عن حجم الشاشة أو نسبة التكبير —
-             * الارتفاع يُشتق تلقائياً من العرض، صفر احتمال تشوّه. */
-            '#mc-circle-wrap{position:relative;width:min(62vw,600px);aspect-ratio:1/1;',
-            'min-width:320px;margin:10px auto;}',
-            '#mc-circle-glow{position:absolute;inset:8%;border-radius:50%;',
-            'background:radial-gradient(circle,rgba(124,58,237,0.28),transparent 70%);pointer-events:none;}',
-            /* ⚠️ شعار المنصة بمنتصف الحلبة، خلف الكراسي تماماً (قبلها
-             * بترتيب DOM، فيطلع تحتها تلقائياً بدون أي z-index يدوي)،
-             * شفاف بشكل خفيف حتى ما يعيق قراءة أرقام الكراسي فوقه. */
-            '#mc-circle-logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);',
-            'width:36%;height:36%;object-fit:contain;opacity:0.16;pointer-events:none;filter:grayscale(0.15);}',
-            /* ⚠️ إصلاح: التصميم الأول (conic-gradient + mask + filter) كان
-             * يسبب تشوه بصري حقيقي ببعض المتصفحات (خط ملتوي يمتد خارج
-             * الدائرة، يتضخم كل ما كبرت نافذة المتصفح) — لاحظه المستخدم
-             * فعلياً بالصورة. الحل الآمن: نفس التأثير (حلقة متدرّجة الألوان
-             * تدور ببطء) بس بتقنية "حدود متدرّجة" (background مزدوج
-             * padding-box/border-box) بدل mask — تقنية مستقرة 100% بكل
-             * المتصفحات، بدون أي فلتر متراكب معها. */
-            '#mc-circle-track{position:absolute;inset:0;border-radius:50%;pointer-events:none;',
-            'border:3px solid transparent;box-sizing:border-box;',
-            'background:linear-gradient(#1a0d2e,#1a0d2e) padding-box,',
-            'conic-gradient(from 0deg,var(--agp-accent),var(--agp-accent-2),var(--mc-gold),',
-            'var(--agp-accent-pink),var(--agp-accent)) border-box;',
-            'box-shadow:0 0 18px rgba(124,58,237,0.45);',
-            'animation:mcTrackSpin 8s linear infinite;}',
-            '@keyframes mcTrackSpin{to{transform:rotate(360deg);}}',
-            '#mc-chairs-ring{position:absolute;inset:0;}',
-            '#mc-players-ring{position:absolute;inset:0;}',
-
-            /* ⚠️ الكرسي صار صورة فوتوغرافية حقيقية (نسبة عرض:ارتفاع طبيعية
-             * ~0.67، أطول من عرضها) بدل الرسم المربّع القديم — الحاوية
-             * صارت مستطيلة تناسب شكلها الطبيعي بدل مربّع، وobject-fit:
-             * contain يحافظ على تناسق الصورة بدون أي تمديد أو تشويه. */
-            /* ⚠️ مقاس الكرسي صُغِّر شوي (كان 65×100px، صار 55×85px عند
-             * أقصى حجم للحلقة 600px) — بطلب صريح. + transition لموقعه
-             * (left/top) عشان أي إعادة توزيع لاحقة (لو انضم لاعب جديد
-             * أثناء الدورة وزاد عدد الكراسي) تصير بحركة ناعمة سلسة، مو
-             * قفزة مفاجئة. */
-            '.mc-chair{position:absolute;width:9.17%;height:14.17%;transform:translate(-50%,-50%);',
-            'display:flex;align-items:center;justify-content:center;transition:left .3s ease,top .3s ease,opacity .4s ease,transform .4s ease;}',
-            '.mc-chair-svg{width:100%;height:100%;object-fit:contain;',
-            'filter:drop-shadow(0 0 8px rgba(255,176,32,0.55));transition:filter .25s;}',
-            '.mc-chair.mc-chair-taken .mc-chair-svg{filter:drop-shadow(0 0 14px rgba(124,58,237,0.9));}',
-            /* ⚠️ جديد: الكرسي يختفي بالكامل (فيد + تصغير خفيف) بعد ما
-             * توصل صورة اللاعب فوقه — بطلب صريح. */
-            '.mc-chair.mc-chair-vanish{opacity:0;transform:translate(-50%,-50%) scale(0.7);pointer-events:none;}',
-            /* ⚠️ رقم الكرسي — صار عنصر مستقل (مو جوّا .mc-chair بعد الآن)
-             * يتموضع شعاعياً بموقعه الخاص (badgeX/badgeY محسوبة بـJS حسب
-             * زاوية كل كرسي وحلقته) بدل موضع ثابت "لفوق" — يمنع تراكب
-             * رقم كرسي داخلي وراء كرسي خارجي نهائياً. كبّرته وخشّنت حدوده
-             * أكثر عشان يبين واضح جداً بشاشات الجوال بالبث المباشر. */
-            '.mc-chair-number{position:absolute;transform:translate(-50%,-50%) scale(0);',
-            'background:#000;color:#fff;border:3px solid var(--mc-gold);',
-            'font-weight:900;font-size:1.85em;border-radius:999px;padding:4px 15px;min-width:1.6em;text-align:center;',
-            'box-shadow:0 0 14px rgba(0,0,0,0.9);transition:transform .35s cubic-bezier(.34,1.56,.64,1),left .3s ease,top .3s ease;',
-            'z-index:3;-webkit-text-stroke:0.6px #fff;}',
-            '.mc-chair-number.mc-chair-revealed{transform:translate(-50%,-50%) scale(1);}',
-            /* ⚠️ إصلاح باگ حقيقي: الرقم كان يبقى ظاهر حتى بعد ما يحجزه
-             * لاعب (بس تغيّر لون حدوده) — المفروض يختفي تماماً بمجرد ما
-             * ينحجز الكرسي. scale(0) هنا يكسب على scale(1) من حالة
-             * "مكشوف" (نفس درجة الأولوية، بس هذا القانون بعدها بالترتيب)
-             * فيرجع يصغّر لصفر بنفس أنيميشن الظهور بس بالعكس. */
-            '.mc-chair-number.mc-chair-taken{border-color:var(--agp-accent-2);',
-            'transform:translate(-50%,-50%) scale(0) !important;}',
-
-            /* ⚠️ صورة اللاعب صُغِّرت لـ8% (كانت 11%) — عشان لو قعد لاعب
-             * على كرسي، أفاتاره ما يغطي كرسي مجاور. */
-            '.mc-avatar{position:absolute;width:8%;height:8%;transform:translate(-50%,-50%);',
-            'display:flex;align-items:center;justify-content:center;transition:left .1s linear,top .1s linear;}',
-            '.mc-avatar.mc-avatar-seating{transition:left .5s cubic-bezier(.34,1.56,.64,1),top .5s cubic-bezier(.34,1.56,.64,1);}',
-            '.mc-avatar-img,.mc-avatar-fallback{width:100%;height:100%;border-radius:50%;object-fit:cover;',
-            'border:2px solid var(--agp-accent-2);box-shadow:0 0 10px rgba(0,194,255,0.55);background:#2c1240;}',
-            '.mc-avatar-fallback{display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:0.85em;}',
-            '.mc-avatar-name{position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);',
-            'font-size:0.62em;color:#f3eefc;background:rgba(8,4,16,0.65);padding:1px 6px;border-radius:999px;',
-            'white-space:nowrap;max-width:70px;overflow:hidden;text-overflow:ellipsis;}',
-            '.mc-avatar.mc-avatar-safe .mc-avatar-img,.mc-avatar.mc-avatar-safe .mc-avatar-fallback{',
-            'border-color:#2fbf71;box-shadow:0 0 12px rgba(47,191,113,0.85);}',
-            '@keyframes mcSeatPop{0%{transform:translate(-50%,-50%) scale(1);}45%{transform:translate(-50%,-50%) scale(1.28);}100%{transform:translate(-50%,-50%) scale(1);}}',
-            '.mc-avatar.mc-avatar-safe{animation:mcSeatPop .4s ease;}',
-            '@keyframes mcShakeOut{0%{transform:translate(-50%,-50%) rotate(0) scale(1);opacity:1;}',
-            '20%{transform:translate(-50%,-50%) rotate(-14deg) scale(1.05);}',
-            '40%{transform:translate(-50%,-50%) rotate(12deg) scale(1.05);}',
-            '60%{transform:translate(-50%,-50%) rotate(-10deg) scale(0.95);}',
-            '100%{transform:translate(-50%,-50%) translateY(40px) rotate(20deg) scale(0.35);opacity:0;}}',
-            '.mc-avatar.mc-avatar-out{animation:mcShakeOut .6s ease forwards;filter:grayscale(1) drop-shadow(0 0 14px rgba(255,77,106,0.9));}',
-            '@keyframes mcJoinPop{0%{transform:translate(-50%,-50%) scale(0);opacity:0;}100%{transform:translate(-50%,-50%) scale(1);opacity:1;}}',
-            '.mc-avatar.mc-avatar-joining{animation:mcJoinPop .35s ease;}',
-
-            '#mc-toast-wrap{position:fixed;top:78px;left:50%;transform:translateX(-50%);z-index:99996;',
-            'display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;}',
-            '.mc-toast{background:rgba(20,8,35,0.92);border:1px solid var(--mc-gold);color:#fff;',
-            'padding:8px 18px;border-radius:999px;font-size:0.85em;font-weight:700;',
-            'box-shadow:0 0 14px rgba(255,176,32,0.4);animation:mcToastIn .25s ease;}',
-            '@keyframes mcToastIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}',
 
             /* شاشة الفائز + فيديو الاحتفال */
             /* ⚠️ إزالة الخلفية البنفسجية/الحدود/التوهج عن صندوق الشل خاص
@@ -817,413 +788,395 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /* ======================================================================
-     *  4) بناء الحلبة (Scaffolding)
+     *  4) بناء شاشة اللعب — حرفياً من ملف التصميم
+     *     design_handoff_musical_chairs (هيدر ← قائمة الإجراءات + الدائرة،
+     *     ونوافذ الإقصاء/الإعدادات/إضافة لاعب).
      * ==================================================================== */
+    var GENRES = [
+        { label: 'عشوائي', mode: 'random' },
+        { label: 'خليجي', mode: 'khaleeji' },
+        { label: 'عراقي', mode: 'iraqi' },
+        { label: 'شيلات', mode: 'shailat' }
+    ];
+    var SPIN_SPEEDS = [{ label: 'بطيء', factor: 0.55 }, { label: 'عادي', factor: 1 }, { label: 'سريع', factor: 1.8 }];
+    var SPIN_BTN_LABELS = {
+        idle: '▶ تدوير', playing: '⏸ إيقاف', claiming: '⏳ جاري الجلوس',
+        out: '▶ الدورة التالية', champion: '↺ لعبة جديدة', ended: '↺ مباراة جديدة'
+    };
+
     function ensureScaffolding() {
         injectStageStyles();
-        if (!el('mc-toast-wrap')) {
-            var toastWrap = document.createElement('div');
-            toastWrap.id = 'mc-toast-wrap';
-            document.body.appendChild(toastWrap);
-        }
-        if (!el('mc-eliminated-panel')) {
-            var elimPanel = document.createElement('div');
-            elimPanel.id = 'mc-eliminated-panel';
-            document.body.appendChild(elimPanel);
-        }
-        if (!el('mc-stage')) {
-            var stage = document.createElement('div');
-            stage.id = 'mc-stage';
-            stage.innerHTML =
-                '<div id="mc-toolbar">' +
-                '<span class="mc-badge" id="mc-chairs-badge">🪑 <span id="mc-chairs-badge-num">0</span></span>' +
-                '<span class="mc-badge" id="mc-players-badge">👥 <span id="mc-players-badge-num">0</span></span>' +
-                '<span id="mc-round-info"><span class="mc-round-num-inline" id="mc-round-num"></span> — <span id="mc-round-sub"></span></span>' +
-                '<div class="mc-music-mode">' +
-                '<span class="mc-music-mode-label">اختار نوع الأغاني</span>' +
-                '<button type="button" id="mc-music-mode-btn" class="mc-music-mode-btn">🔀 التشغيل العشوائي</button>' +
-                '<div class="mc-music-mode-options" id="mc-music-mode-options" hidden>' +
-                '<button type="button" data-mode="random">🔀 عشوائي</button>' +
-                '<button type="button" data-mode="shailat">🎙️ شيلات</button>' +
-                '<button type="button" data-mode="khaleeji">🎵 اغاني خليجية</button>' +
-                '<button type="button" data-mode="iraqi">🎼 اغاني عراقية</button>' +
-                '</div></div>' +
-                '<div class="mc-music-mode">' +
-                '<span class="mc-music-mode-label">مدة تشغيل الأغنية</span>' +
-                '<button type="button" id="mc-spin-duration-btn" class="mc-music-mode-btn">⏱️ 15 ثانية</button>' +
-                '<div class="mc-music-mode-options" id="mc-spin-duration-options" hidden>' +
-                '<button type="button" data-secs="10">10 ثوانٍ</button>' +
-                '<button type="button" data-secs="15">15 ثانية</button>' +
-                '<button type="button" data-secs="20">20 ثانية</button>' +
-                '<button type="button" data-secs="25">25 ثانية</button>' +
-                '<button type="button" data-secs="30">30 ثانية</button>' +
-                '<button type="button" data-secs="35">35 ثانية</button>' +
-                '</div></div>' +
-                '<div class="mc-volume-group">' +
-                '<button type="button" id="mc-mute-btn" class="mc-icon-btn" title="كتم/تشغيل الصوت">🔊</button>' +
-                '<input type="range" id="mc-volume-slider" min="0" max="100" value="70" title="مستوى الصوت">' +
+        document.body.classList.add('mc-game-on');
+        if (el('mc-stage')) return;
+        var stage = document.createElement('div');
+        stage.id = 'mc-stage';
+        stage.setAttribute('dir', 'rtl');
+        stage.innerHTML =
+            '<header class="mc-header">' +
+                '<div class="mc-header-btns">' +
+                    '<button type="button" class="mc-hbtn" id="mc-add-btn" title="إضافة لاعب جديد">➕ إضافة لاعب</button>' +
+                    '<button type="button" class="mc-hbtn" id="mc-settings-btn" title="الإعدادات">⚙️ الإعدادات</button>' +
+                    '<button type="button" class="mc-hbtn" id="mc-panel-btn" title="قائمة الإجراءات">☰ الإجراءات</button>' +
+                    '<button type="button" class="mc-spin-btn" id="mc-spin-btn">▶ تدوير</button>' +
                 '</div>' +
-                '<button type="button" id="mc-spin-btn" class="mc-spin-btn">▶️ تدوير</button>' +
-                '<span id="mc-spin-countdown"></span>' +
-                '</div>' +
+                '<img class="mc-header-logo" src="../../logo.png" alt="ألعاب أيمن">' +
+                '<div class="mc-header-title">🎵 الكراسي الموسيقية</div>' +
+            '</header>' +
+            '<main class="mc-main">' +
+                '<aside class="mc-panel"><div class="mc-panel-inner">' +
+                    '<button type="button" class="mc-panel-head" id="mc-panel-head"><span>☰ قائمة الإجراءات</span><span>طي ←</span></button>' +
+                    '<section class="mc-stats">' +
+                        '<div class="mc-stat"><div class="mc-stat-lbl">الدورة</div><div class="mc-stat-val mc-gold" id="mc-stat-round">1</div></div>' +
+                        '<div class="mc-stat"><div class="mc-stat-lbl">👥 اللاعبون</div><div class="mc-stat-val" id="mc-stat-players">0</div></div>' +
+                        '<div class="mc-stat"><div class="mc-stat-lbl">🪑 الكراسي</div><div class="mc-stat-val" id="mc-stat-chairs">0</div></div>' +
+                    '</section>' +
+                    '<section class="mc-game-settings">' +
+                        '<div class="mc-gs-title">إعدادات اللعبة</div>' +
+                        '<div class="mc-gs-row"><label class="mc-gs-lbl">نوع الأغاني</label>' +
+                            '<div class="mc-seg mc-seg-4" id="mc-genres"></div></div>' +
+                        '<div class="mc-gs-row"><label class="mc-gs-lbl">مدة تشغيل الأغنية</label>' +
+                            '<div class="mc-stepper">' +
+                                '<button type="button" id="mc-dur-up">+</button>' +
+                                '<div>⏱ <span id="mc-dur-val">15</span> ثانية</div>' +
+                                '<button type="button" id="mc-dur-down">−</button>' +
+                            '</div></div>' +
+                        '<div class="mc-gs-row"><div class="mc-gs-lbl-row"><label>مستوى الصوت</label><span id="mc-vol-val">40%</span></div>' +
+                            '<div class="mc-vol"><span>🔊</span><input type="range" id="mc-volume-slider" min="0" max="100" value="40"></div></div>' +
+                    '</section>' +
+                '</div></aside>' +
+                '<section class="mc-arena"><div class="mc-cq"><div class="mc-circle" id="mc-circle">' +
+                    '<div class="mc-ring"><div></div></div>' +
+                    '<img class="mc-watermark" src="../../logo.png" alt="">' +
+                    '<div id="mc-chairs"></div>' +
+                    '<div class="mc-center" id="mc-center"></div>' +
+                    '<div id="mc-players"></div>' +
+                '</div></div></section>' +
+            '</main>' +
 
-                '<div id="mc-countdown"></div>' +
-                '<div id="mc-circle-wrap">' +
+            '<div class="mc-modal" id="mc-add-modal"><div class="mc-card">' +
+                '<div class="mc-card-head"><div class="mc-card-title">➕ إضافة لاعب جديد</div>' +
+                '<button type="button" class="mc-x" data-close="mc-add-modal" title="إغلاق">✕</button></div>' +
+                '<div class="mc-add-body"></div>' +
+                '<button type="button" class="mc-btn-primary mc-add-done" data-close="mc-add-modal">أكمل المباراة</button>' +
+            '</div></div>' +
 
-                '<div id="mc-circle-glow"></div>' +
-                '<div id="mc-circle-track"></div>' +
-                '<img id="mc-circle-logo" src="../../logo.png" alt="">' +
-                '<div id="mc-chairs-ring"></div>' +
-                '<div id="mc-players-ring"></div>' +
-                '</div>';
-            document.body.appendChild(stage);
-            wireToolbarEvents();
-        }
+            '<div class="mc-modal" id="mc-out-modal"><div class="mc-card">' +
+                '<button type="button" class="mc-x" id="mc-out-x" title="إغلاق">✕</button>' +
+                '<div class="mc-out-head"><img src="../../logo.png" alt="ألعاب أيمن">' +
+                '<div class="mc-out-title">اللاعبون المُقصَون</div><div class="mc-out-sub" id="mc-out-sub"></div></div>' +
+                '<div class="mc-out-list" id="mc-out-list"></div>' +
+                '<button type="button" class="mc-btn-primary mc-out-next" id="mc-out-next">متابعة</button>' +
+            '</div></div>' +
+
+            '<div class="mc-modal" id="mc-settings-modal"><div class="mc-card">' +
+                '<div class="mc-card-head"><div class="mc-card-title">⚙️ الإعدادات</div>' +
+                '<button type="button" class="mc-x" data-close="mc-settings-modal" title="إغلاق">✕</button></div>' +
+                '<div class="mc-gs-row"><div class="mc-gs-lbl">سرعة دوران اللاعبين</div><div class="mc-seg" id="mc-spin-speeds"></div></div>' +
+                '<button type="button" class="mc-end-btn" id="mc-end-btn">⏹ إنهاء المباراة</button>' +
+                '<button type="button" class="mc-reset-btn" id="mc-reset-btn">↺ إعادة اللعبة من البداية</button>' +
+            '</div></div>';
+        document.body.appendChild(stage);
+        wireStageEvents();
     }
 
-    function showToast(text) {
-        var wrap = el('mc-toast-wrap');
-        if (!wrap) return;
-        var t = document.createElement('div');
-        t.className = 'mc-toast';
-        t.textContent = text;
-        wrap.appendChild(t);
-        setTimeout(function () {
-            t.style.transition = 'opacity .3s';
-            t.style.opacity = '0';
-            setTimeout(function () { t.remove(); }, 320);
-        }, 2600);
+    function openModal(id) { var m = el(id); if (m) m.classList.add('mc-show'); }
+    function closeModal(id) { var m = el(id); if (m) m.classList.remove('mc-show', 'mc-in'); }
+
+    function wireStageEvents() {
+        el('mc-spin-btn').onclick = handleSpinButtonClick;
+        el('mc-add-btn').onclick = function () { openModal('mc-add-modal'); };
+        el('mc-settings-btn').onclick = function () { renderSpinSpeeds(); openModal('mc-settings-modal'); };
+        el('mc-panel-btn').onclick = togglePanel;
+        el('mc-panel-head').onclick = togglePanel;
+
+        Array.prototype.forEach.call(el('mc-stage').querySelectorAll('[data-close]'), function (b) {
+            b.onclick = function () { closeModal(b.getAttribute('data-close')); };
+        });
+        // النقر على الخلفية يقفل النافذة (نافذة الإقصاء تكمل للدورة الجاية)
+        ['mc-add-modal', 'mc-settings-modal'].forEach(function (id) {
+            el(id).addEventListener('click', function (e) { if (e.target.id === id) closeModal(id); });
+        });
+        el('mc-out-modal').addEventListener('click', function (e) { if (e.target.id === 'mc-out-modal') closeOutModal(); });
+        el('mc-out-x').onclick = closeOutModal;
+        el('mc-out-next').onclick = closeOutModal;
+
+        el('mc-end-btn').onclick = function () { closeModal('mc-settings-modal'); endMatchEarly(); };
+        el('mc-reset-btn').onclick = function () { closeModal('mc-settings-modal'); restartMatch(); };
+
+        el('mc-dur-up').onclick = function () { setSpinDuration(spinDuration() + 5); };
+        el('mc-dur-down').onclick = function () { setSpinDuration(spinDuration() - 5); };
+
+        var vol = el('mc-volume-slider');
+        vol.value = Math.round(_musicVolume * 100);
+        vol.oninput = function () {
+            _musicVolume = Number(vol.value) / 100;
+            el('mc-vol-val').textContent = vol.value + '%';
+            applyMusicVolumeLive();
+        };
+        el('mc-vol-val').textContent = vol.value + '%';
+
+        renderGenres();
+        el('mc-dur-val').textContent = spinDuration();
     }
 
-    /* ======================================================================
-     *  4ب) شريط الأدوات — تدوير يدوي + صوت الموسيقى + نوع الموسيقى + بادجات
-     * ==================================================================== */
-    function wireToolbarEvents() {
-        var spinBtn = el('mc-spin-btn');
-        if (spinBtn) spinBtn.onclick = handleSpinButtonClick;
+    function togglePanel() {
+        el('mc-stage').classList.toggle('mc-panel-closed');
+    }
 
-        var muteBtn = el('mc-mute-btn');
-        if (muteBtn) muteBtn.onclick = function () {
-            _musicMuted = !_musicMuted;
-            muteBtn.textContent = _musicMuted ? '🔇' : '🔊';
-            applyMusicVolumeLive();
-        };
-
-        var volSlider = el('mc-volume-slider');
-        if (volSlider) volSlider.oninput = function () {
-            _musicVolume = Number(volSlider.value) / 100;
-            if (_musicMuted && _musicVolume > 0) {
-                _musicMuted = false;
-                var mb = el('mc-mute-btn');
-                if (mb) mb.textContent = '🔊';
-            }
-            applyMusicVolumeLive();
-        };
-
-        var modeBtn = el('mc-music-mode-btn');
-        var modeOptions = el('mc-music-mode-options');
-        if (modeBtn && modeOptions) {
-            modeBtn.onclick = function () { modeOptions.hidden = !modeOptions.hidden; };
-            modeOptions.querySelectorAll('button').forEach(function (btn) {
-                btn.onclick = function () {
-                    _musicMode = btn.getAttribute('data-mode');
-                    var labels = { random: '🔀 التشغيل العشوائي', shailat: '🎙️ شيلات', khaleeji: '🎵 اغاني خليجية', iraqi: '🎼 اغاني عراقية' };
-                    modeBtn.textContent = labels[_musicMode] || labels.random;
-                    modeOptions.querySelectorAll('button').forEach(function (b) { b.classList.remove('mc-mode-active'); });
-                    btn.classList.add('mc-mode-active');
-                    modeOptions.hidden = true;
-                };
-            });
-        }
-
-        // ⚠️ جديد: زر "مدة تشغيل الأغنية" — نفس أسلوب زر نوع الموسيقى
-        // بالضبط (خيار يفتح قائمة). الاختيار يحدَّث حياً على نفس إعداد
-        // spinDurationSeconds (نفس مصدر الحقيقة المستخدَم بشاشة الإعدادات
-        // الأولى)، عبر AGP.gameShell.setSetting — بدون متغيّر مواز.
-        var durBtn = el('mc-spin-duration-btn');
-        var durOptions = el('mc-spin-duration-options');
-        if (durBtn && durOptions) {
-            var currentSecs = liveSettings().spinDurationSeconds || 15;
-            durBtn.textContent = '⏱️ ' + currentSecs + ' ثانية';
-            durOptions.querySelectorAll('button').forEach(function (b) {
-                if (Number(b.getAttribute('data-secs')) === currentSecs) b.classList.add('mc-mode-active');
-            });
-
-            durBtn.onclick = function () { durOptions.hidden = !durOptions.hidden; };
-            durOptions.querySelectorAll('button').forEach(function (btn) {
-                btn.onclick = function () {
-                    var secs = Number(btn.getAttribute('data-secs'));
-                    if (AGP.gameShell.setSetting) AGP.gameShell.setSetting('spinDurationSeconds', secs);
-                    durBtn.textContent = '⏱️ ' + secs + ' ثانية';
-                    durOptions.querySelectorAll('button').forEach(function (b) { b.classList.remove('mc-mode-active'); });
-                    btn.classList.add('mc-mode-active');
-                    durOptions.hidden = true;
-                };
-            });
-        }
-
-        document.addEventListener('click', function (e) {
-            if (modeOptions && !modeOptions.hidden && modeBtn && !modeBtn.contains(e.target) && !modeOptions.contains(e.target)) {
-                modeOptions.hidden = true;
-            }
-            if (durOptions && !durOptions.hidden && durBtn && !durBtn.contains(e.target) && !durOptions.contains(e.target)) {
-                durOptions.hidden = true;
-            }
+    function renderGenres() {
+        var wrap = el('mc-genres');
+        wrap.innerHTML = GENRES.map(function (g) {
+            return '<button type="button" data-mode="' + g.mode + '"' + (g.mode === _musicMode ? ' class="mc-on"' : '') + '>' + g.label + '</button>';
+        }).join('');
+        Array.prototype.forEach.call(wrap.children, function (b) {
+            b.onclick = function () { _musicMode = b.getAttribute('data-mode'); renderGenres(); };
         });
     }
 
+    function renderSpinSpeeds() {
+        var wrap = el('mc-spin-speeds');
+        wrap.innerHTML = SPIN_SPEEDS.map(function (s, i) {
+            return '<button type="button" data-i="' + i + '"' + (i === _spinSpeedIdx ? ' class="mc-on"' : '') + '>' + s.label + '</button>';
+        }).join('');
+        Array.prototype.forEach.call(wrap.children, function (b) {
+            b.onclick = function () { _spinSpeedIdx = Number(b.getAttribute('data-i')); renderSpinSpeeds(); };
+        });
+    }
+
+    // مدة تشغيل الأغنية — نفس إعداد spinDurationSeconds بشاشة الإعدادات
+    // الأولى، يُعدَّل هنا بخطوة 5 ثوانٍ بين 5 و60 (حسب ملف التصميم).
+    function spinDuration() {
+        var s = Number(liveSettings().spinDurationSeconds) || 15;
+        return Math.max(SPIN_DURATION_MIN_S, Math.min(SPIN_DURATION_MAX_S, s));
+    }
+    function setSpinDuration(secs) {
+        secs = Math.max(SPIN_DURATION_MIN_S, Math.min(SPIN_DURATION_MAX_S, secs));
+        if (AGP.gameShell.setSetting) AGP.gameShell.setSetting('spinDurationSeconds', secs);
+        el('mc-dur-val').textContent = secs;
+    }
+
+    function setPhase(phase) {
+        _phase = phase;
+        var btn = el('mc-spin-btn');
+        if (btn) {
+            btn.textContent = SPIN_BTN_LABELS[phase] || SPIN_BTN_LABELS.idle;
+            btn.disabled = phase === 'claiming';
+        }
+    }
+
     function updateBadges() {
-        var chairsNum = el('mc-chairs-badge-num');
-        var playersNum = el('mc-players-badge-num');
-        if (chairsNum) chairsNum.textContent = _chairs.length;
-        if (playersNum) playersNum.textContent = _alive.length;
+        if (!el('mc-stat-round')) return;
+        el('mc-stat-round').textContent = Math.max(1, _roundNumber);
+        el('mc-stat-players').textContent = _alive.length;
+        el('mc-stat-chairs').textContent = _chairs.length;
     }
 
     /* ======================================================================
-     *  5) رسم الكراسي واللاعبين على الحلبة
+     *  5) رسم الكراسي واللاعبين على الدائرة
      * ==================================================================== */
-    function angleToXY(angleDeg, radiusPct) {
-        var rad = (angleDeg - 90) * Math.PI / 180;
-        return { x: 50 + radiusPct * Math.cos(rad), y: 50 + radiusPct * Math.sin(rad) };
+    function initialsOf(player) {
+        var name = playerLabel(player).trim();
+        return name.replace('ال', '').slice(0, 2) || '؟';
     }
 
-    // ⚠️ نظام حلقات متعددة للكراسي — بطلب صريح: 18 كرسي كحد أقصى بالحلقة
-    // الواحدة (بالترتيب)، ولو العدد أكبر تُفتح حلقة ثانية أصغر بالداخل
-    // (وثالثة لو لزم، بدون حد أقصى نظري لعدد الحلقات). كل حلقة تالية
-    // تنزاح زاوياً نص الفجوة عن اللي قبلها، حتى ما تترص كراسي حلقتين
-    // فوق بعض بنفس الخط الشعاعي (يحافظ على وضوح رقم كل كرسي، ما يصير
-    // كرسي وراء كرسي ثاني).
-    var CHAIRS_PER_RING = 18;
-    var CHAIR_OUTER_RADIUS = 32;   // % — نفس نصف القطر القديم (الحلقة الأولى/الخارجية)
-    var CHAIR_RING_GAP = 9;        // % — المسافة بين كل حلقة والتالية لها
-
-    function chairRingRadius(ringIdx) {
-        return Math.max(11, CHAIR_OUTER_RADIUS - ringIdx * CHAIR_RING_GAP);
+    function avatarHtml(player) {
+        var initials = escapeHtml(initialsOf(player));
+        if (player && player.avatarUrl) {
+            return '<img src="' + escapeHtml(player.avatarUrl) + '" alt="" referrerpolicy="no-referrer" ' +
+                'onerror="this.parentNode.textContent=\'' + initials.replace(/'/g, '') + '\';">';
+        }
+        return initials;
     }
 
-    function chairPositionForIndex(idx, total) {
-        var ringIdx = Math.floor(idx / CHAIRS_PER_RING);
-        var idxInRing = idx % CHAIRS_PER_RING;
-        var startOfRing = ringIdx * CHAIRS_PER_RING;
-        var countInThisRing = Math.min(CHAIRS_PER_RING, total - startOfRing);
-        var angle = (360 / countInThisRing) * idxInRing;
-        angle += ringIdx * (180 / countInThisRing); // إزاحة نص الفجوة لكل حلقة تالية (تدريج/Stagger)
-        var pos = angleToXY(angle, chairRingRadius(ringIdx));
-        return { x: pos.x, y: pos.y, angle: angle, ring: ringIdx };
+    // حجم صورة اللاعب (% من عرض الدائرة) — pA = min(11, 314/N × 0.78)
+    function playerAvatarPct() {
+        return Math.min(11, 314 / Math.max(_alive.length, 1) * 0.78);
     }
 
-    // ⚠️ موقع رقم الكرسي (شعاعي حسب الحلقة) — الحلقة الخارجية (0) يطلع
-    // رقمها للخارج (بعيد عن المركز، تجاه الفراغ خارج الكراسي كلها)،
-    // والحلقات الداخلية (1+) تطلع أرقامها للداخل (تجاه الفراغ الفاضي
-    // بمنتصف الدائرة) — بطلب صريح، يمنع أي تراكب بين أرقام حلقتين
-    // مختلفتين نهائياً (كل حلقة تستخدم الفراغ اللي جنبها بس).
-    function chairBadgePosition(angleDeg, ringIdx, chairRadius) {
-        var dirSign = ringIdx === 0 ? 1 : -1;
-        var badgeRadius = Math.max(4, chairRadius + dirSign * 7);
-        return angleToXY(angleDeg, badgeRadius);
+    // الكراسي بحلقات متحدة المركز داخل الدائرة (كرسي واحد = بالمنتصف).
+    // الحلقة k تتسع حتى floor(6.28·k) كرسي، التوزيع نسبي، والحلقات
+    // الفردية تنزاح نص خطوة. c = min(18, R0 / (1.08·rings + 0.5)).
+    function layoutChairs(count) {
+        var pA = playerAvatarPct();
+        var R0 = 50 - pA / 2 - 1.5;
+        var positions = [];
+        var c = 16;
+        if (count === 1) positions.push([50, 50]);
+        else if (count > 1) {
+            var caps = [], cum = 0;
+            for (var k = 1; cum < count; k++) { var cap = Math.floor(6.28 * k); caps.push(cap); cum += cap; }
+            c = Math.min(18, R0 / (1.08 * caps.length + 0.5));
+            var counts = caps.map(function (cp) { return Math.min(cp, Math.round(count * cp / cum)); });
+            var diff = count - counts.reduce(function (a, b) { return a + b; }, 0);
+            for (var i = counts.length - 1; diff !== 0; i = (i - 1 + counts.length) % counts.length) {
+                if (diff > 0 && counts[i] < caps[i]) { counts[i]++; diff--; }
+                else if (diff < 0 && counts[i] > 0) { counts[i]--; diff++; }
+            }
+            counts.forEach(function (cnt, ri) {
+                var r = 1.08 * c * (ri + 1);
+                for (var j = 0; j < cnt; j++) {
+                    var a = (j + (ri % 2) * 0.5) / cnt * 2 * Math.PI;
+                    positions.push([50 + r * Math.sin(a), 50 - r * Math.cos(a)]);
+                }
+            });
+        }
+        _chairSize = c;
+        return positions;
     }
 
-    // ⚠️ استبدلنا رسم الـSVG المسطّح بصورة كرسي واقعية حقيقية (chair.png،
-    // زوَّدنا بها صاحب المشروع، مقصوصة الخلفية شفافة) — بطلب صريح لشكل
-    // أكثر واقعية. lazy-load + alt فاضي (زخرفي بحت، ما يحمل معنى إضافي).
-    function chairSvg() {
-        return '<img class="mc-chair-svg" src="images/chair.png" alt="" loading="lazy">';
-    }
-
-    function avatarInnerHtml(player) {
-        var name = playerLabel(player);
-        var avatarUrl = player && player.avatarUrl;
-        var initials = (name || '').trim().slice(0, 2).toUpperCase() || '؟';
-        return (avatarUrl
-            ? '<img class="mc-avatar-img" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" ' +
-              'onerror="this.outerHTML=\'<div class=&quot;mc-avatar-fallback&quot;>' + escapeHtml(initials) + '</div>\';">'
-            : '<div class="mc-avatar-fallback">' + escapeHtml(initials) + '</div>') +
-            '<span class="mc-avatar-name">' + escapeHtml(name) + '</span>';
-    }
-
-    function usedChairNumbers() {
-        var used = {};
-        _chairs.forEach(function (c) { used[c.number] = true; });
-        return used;
-    }
-
+    // أرقام فريدة عشوائية 1–99 لكل كرسي
     function randomFreeChairNumber(used) {
         var num;
-        do { num = 10 + Math.floor(Math.random() * 90); } while (used[num]);
+        do { num = 1 + Math.floor(Math.random() * 99); } while (used[num]);
         used[num] = true;
         return num;
     }
 
     function buildChairs(count) {
         var used = {};
-        var chairs = [];
-        for (var i = 0; i < count; i++) {
-            var pos = chairPositionForIndex(i, count);
-            var radius = chairRingRadius(pos.ring);
-            var badge = chairBadgePosition(pos.angle, pos.ring, radius);
-            chairs.push({
-                number: randomFreeChairNumber(used), x: pos.x, y: pos.y,
-                badgeX: badge.x, badgeY: badge.y, occupantId: null
-            });
-        }
-        return chairs;
+        return layoutChairs(count).map(function (pos) {
+            return { number: randomFreeChairNumber(used), x: pos[0], y: pos[1], occupantId: null };
+        });
     }
 
-    function renderChairsRing() {
-        var ring = el('mc-chairs-ring');
-        if (!ring) return;
-        ring.innerHTML = _chairs.map(function (chair, idx) {
-            return '<div class="mc-chair" id="mc-chair-' + idx + '" style="left:' + chair.x + '%;top:' + chair.y + '%;">' +
-                chairSvg() + '</div>' +
-                '<span class="mc-chair-number" id="mc-chair-num-' + idx + '" style="left:' + chair.badgeX + '%;top:' + chair.badgeY + '%;">' +
-                chair.number + '</span>';
+    function renderChairs() {
+        var wrap = el('mc-chairs');
+        if (!wrap) return;
+        var c = _chairSize;
+        var numbered = _phase === 'claiming' || _phase === 'out';
+        wrap.innerHTML = _chairs.map(function (chair, idx) {
+            var cls = 'mc-ch' + (numbered ? ' mc-numbered' : '') + (chair.occupantId && chair.arrived ? ' mc-taken' : '');
+            return '<div class="' + cls + '" id="mc-chair-' + idx + '" style="left:' + chair.x + '%;top:' + chair.y + '%;width:' + c + '%;">' +
+                '<div class="mc-ch-glyph" style="font-size:' + (c * 0.9) + 'cqw">🪑</div>' +
+                '<div class="mc-ch-num" style="font-size:' + (c * 0.36) + 'cqw">' + chair.number + '</div></div>';
         }).join('');
     }
 
-    // ⚠️ جديد: لاعب جديد ينضم أثناء دورة شغّالة ← يزيد عدد الكراسي تلقائياً
-    // (نفس منطق حساب عدد الكراسي بالدورة، بس مطبَّق على العدد الجديد للأحياء)
-    // بدون ما نلمس مواقع/أرقام الكراسي الموجودة أصلاً (نضيف بس الكرسي
-    // الناقص كعنصر جديد، حتى ما نحرّك كرسي لاعب قاعد عليه فعلاً).
-    // ⚠️ إصلاح باگ حقيقي: كانت الدالة تضيف الكرسي الجديد فقط بموقع
-    // محسوب على افتراض "لو التوزيع صار من جديد لكل الكراسي (القديمة
-    // + الجديدة)"، بس الكراسي القديمة فعلياً ما كانت تتحرك من مكانها —
-    // فتصادم/تراكم حقيقي بين كرسي جديد وكرسي قديم بنفس المكان تقريباً
-    // (لأن صيغة حساب الزاوية للكرسي الجديد كانت تفترض عدد إجمالي مختلف
-    // عن اللي استُخدم فعلياً وقت رسم الكراسي القديمة).
-    //
-    // الحل الصحيح: نعيد توزيع **كل** الكراسي (القديمة والجديدة سوا)
-    // بالتساوي حسب العدد الجديد، ونحرّك عناصر DOM الموجودة فعلياً
-    // لمواقعها الجديدة بسلاسة (عندها transition أصلاً) — بما فيها أي
-    // لاعب قاعد فعلاً على كرسي، نحرّك أفاتاره معه لنفس الموقع الجديد
-    // (تحريك بسيط وسلس، أفضل بكثير من تصادم الكراسي).
+    function renderPlayers() {
+        var wrap = el('mc-players');
+        if (!wrap) return;
+        _pEls = {};
+        wrap.innerHTML = '';
+        var circle = el('mc-circle');
+        if (circle) circle.classList.toggle('mc-no-names', _alive.length > 12);
+        _alive.forEach(function (p) {
+            var node = document.createElement('div');
+            node.className = 'mc-p';
+            node.title = playerLabel(p);
+            node.innerHTML = '<div class="mc-p-av">' + avatarHtml(p) + '</div>' +
+                '<div class="mc-p-name">' + escapeHtml(playerLabel(p)) + '</div>';
+            wrap.appendChild(node);
+            _pEls[p.id] = node;
+        });
+        layoutPlayers();
+    }
+
+    // مواقع اللاعبين: على حافة الدائرة (موزّعين بالتساوي + زاوية الدوران)،
+    // أو بمنتصف الكرسي للي جلس (بحجم 0.85c).
+    function layoutPlayers() {
+        var N = _alive.length;
+        var pA = playerAvatarPct();
+        var seatOf = {};
+        _chairs.forEach(function (ch, i) { if (ch.occupantId) seatOf[ch.occupantId] = i; });
+        _alive.forEach(function (p, j) {
+            var node = _pEls[p.id];
+            if (!node) return;
+            var ci = seatOf[p.id];
+            var sat = ci != null;
+            var x, y;
+            if (sat) { x = _chairs[ci].x; y = _chairs[ci].y; }
+            else {
+                var a = (j / N * 360 + _angle) * Math.PI / 180;
+                x = 50 + 50 * Math.sin(a);
+                y = 50 - 50 * Math.cos(a);
+            }
+            var sz = sat ? _chairSize * 0.85 : pA;
+            node.style.left = x + '%';
+            node.style.top = y + '%';
+            node.classList.toggle('mc-seated', sat);
+            var av = node.firstChild;
+            av.style.width = sz + 'cqw';
+            av.style.fontSize = (sz * 0.36) + 'cqw';
+        });
+    }
+
+    function renderCenter() {
+        var center = el('mc-center');
+        if (!center) return;
+        if (_phase === 'champion' && _champion) {
+            center.innerHTML = '<div class="mc-champ-cup">🏆</div>' +
+                '<div class="mc-champ-av">' + avatarHtml(_champion) + '</div>' +
+                '<div class="mc-champ-name">' + escapeHtml(playerLabel(_champion)) + '</div>';
+            center.classList.add('mc-show');
+        } else if (_phase === 'ended') {
+            center.innerHTML = '<div class="mc-ended-title">انتهت المباراة</div>' +
+                '<div class="mc-ended-sub">اضغط "مباراة جديدة" للبدء من جديد</div>';
+            center.classList.add('mc-show');
+        } else {
+            center.innerHTML = '';
+            center.classList.remove('mc-show');
+        }
+    }
+
+    function clearCircle() {
+        _chairs = [];
+        var cw = el('mc-chairs'); if (cw) cw.innerHTML = '';
+        var pw = el('mc-players'); if (pw) pw.innerHTML = '';
+        _pEls = {};
+    }
+
+    // لاعب جديد ينضم أثناء الدورة ← يعاد توزيع الكراسي حسب العدد الجديد
+    // (نفس الأرقام وحالة الإشغال للكراسي الموجودة).
     function addChairsIfNeeded() {
         if (!_matchActive || _chairs.length === 0) return;
         var mode = liveSettings().chairDeficitMode || 'auto';
         var targetCount = (mode === 'custom')
             ? Math.max(1, _alive.length - _roundDeficit)
             : Math.max(1, _alive.length - 1);
-
         if (targetCount <= _chairs.length) return;
-
-        var ring = el('mc-chairs-ring');
-        var showRevealed = _selectionOpen;
-        var used = usedChairNumbers();
-        var newTotal = targetCount;
-        var oldCount = _chairs.length;
-
-        for (var idx = 0; idx < newTotal; idx++) {
-            var pos = chairPositionForIndex(idx, newTotal);
-            var radius = chairRingRadius(pos.ring);
-            var badge = chairBadgePosition(pos.angle, pos.ring, radius);
-
-            if (idx < oldCount) {
-                // كرسي موجود أصلاً — نحدّث موقعه فقط (نفس الرقم وحالة
-                // الإشغال كما هي، ما نغيّرهم إطلاقاً).
-                var chair = _chairs[idx];
-                chair.x = pos.x; chair.y = pos.y;
-                chair.badgeX = badge.x; chair.badgeY = badge.y;
-
-                var chairEl = el('mc-chair-' + idx);
-                if (chairEl) { chairEl.style.left = chair.x + '%'; chairEl.style.top = chair.y + '%'; }
-                var badgeElExisting = el('mc-chair-num-' + idx);
-                if (badgeElExisting) { badgeElExisting.style.left = chair.badgeX + '%'; badgeElExisting.style.top = chair.badgeY + '%'; }
-
-                // لو فيه لاعب قاعد فعلاً على هذا الكرسي، نحرّك أفاتاره معه
-                if (chair.occupantId) {
-                    var occupantAvatar = el('mc-avatar-' + chair.occupantId);
-                    if (occupantAvatar) { occupantAvatar.style.left = chair.x + '%'; occupantAvatar.style.top = chair.y + '%'; }
-                }
-            } else {
-                // كرسي جديد بالكامل
-                var newChair = {
-                    number: randomFreeChairNumber(used), x: pos.x, y: pos.y,
-                    badgeX: badge.x, badgeY: badge.y, occupantId: null
-                };
-                _chairs.push(newChair);
-
-                if (ring) {
-                    var div = document.createElement('div');
-                    div.className = 'mc-chair';
-                    div.id = 'mc-chair-' + idx;
-                    div.style.left = newChair.x + '%';
-                    div.style.top = newChair.y + '%';
-                    div.innerHTML = chairSvg();
-                    ring.appendChild(div);
-
-                    var badgeEl = document.createElement('span');
-                    badgeEl.className = 'mc-chair-number' + (showRevealed ? ' mc-chair-revealed' : '');
-                    badgeEl.id = 'mc-chair-num-' + idx;
-                    badgeEl.style.left = newChair.badgeX + '%';
-                    badgeEl.style.top = newChair.badgeY + '%';
-                    badgeEl.textContent = newChair.number;
-                    ring.appendChild(badgeEl);
-                }
-            }
-        }
+        var positions = layoutChairs(targetCount);
+        var used = {};
+        _chairs.forEach(function (c) { used[c.number] = true; });
+        positions.forEach(function (pos, i) {
+            if (_chairs[i]) { _chairs[i].x = pos[0]; _chairs[i].y = pos[1]; }
+            else _chairs.push({ number: randomFreeChairNumber(used), x: pos[0], y: pos[1], occupantId: null });
+        });
+        renderChairs();
+        layoutPlayers();
         updateBadges();
     }
 
-    function playerBaseAngle(index, total) { return (360 / total) * index; }
-
-    function renderPlayersRing() {
-        var ring = el('mc-players-ring');
-        if (!ring) return;
-        ring.innerHTML = _alive.map(function (p, idx) {
-            var angle = playerBaseAngle(idx, _alive.length);
-            _playerAngle[p.id] = angle;
-            var pos = angleToXY(angle, 46);
-            return '<div class="mc-avatar" id="mc-avatar-' + escapeHtml(p.id) + '" data-player-id="' + escapeHtml(p.id) + '" ' +
-                'style="left:' + pos.x + '%;top:' + pos.y + '%;">' + avatarInnerHtml(p) + '</div>';
-        }).join('');
-    }
-
     /* ======================================================================
-     *  6) الدوران
+     *  6) الدوران — 0.03°/ms × معامل السرعة (بطيء/عادي/سريع)
      * ==================================================================== */
     function startRingLoop() {
         stopRingLoop();
-        _ringSpinning = true;
-        _ringTimer = setInterval(function () {
-            _ringRotation = (_ringRotation + ROTATION_DEG_PER_SEC * (RING_TICK_MS / 1000)) % 360;
-            _alive.forEach(function (p, idx) {
-                if (_seatedThisRound[p.id]) return;
-                var base = playerBaseAngle(idx, _alive.length);
-                var angle = (base + _ringRotation) % 360;
-                _playerAngle[p.id] = angle;
-                var pos = angleToXY(angle, 46);
-                var elAvatar = el('mc-avatar-' + p.id);
-                if (elAvatar) { elAvatar.style.left = pos.x + '%'; elAvatar.style.top = pos.y + '%'; }
-            });
-        }, RING_TICK_MS);
+        var last = performance.now();
+        var loop = function (t) {
+            var d = t - last; last = t;
+            _angle = (_angle + d * 0.03 * SPIN_SPEEDS[_spinSpeedIdx].factor) % 360;
+            layoutPlayers();
+            _raf = window.requestAnimationFrame(loop);
+        };
+        _raf = window.requestAnimationFrame(loop);
     }
 
     function stopRingLoop() {
-        _ringSpinning = false;
-        if (_ringTimer) { clearInterval(_ringTimer); _ringTimer = null; }
+        if (_raf) { window.cancelAnimationFrame(_raf); _raf = null; }
     }
 
-    /* ======================================================================
-     *  6ب) زر التدوير اليدوي — مدة طبيعية 12 ثانية + إمكانية إيقاف مبكر يدوي
-     * ==================================================================== */
     function handleSpinButtonClick() {
-        if (_spinState === 'idle') startSpinPhase();
-        else if (_spinState === 'spinning') stopSpinAndReveal(); // إيقاف مبكر يدوي
+        if (_phase === 'idle') startSpinPhase();
+        else if (_phase === 'playing') stopSpinAndReveal();
+        else if (_phase === 'out') closeOutModal();
+        else if (_phase === 'champion' || _phase === 'ended') restartMatch();
     }
 
     function startSpinPhase() {
-        _spinState = 'spinning';
-        var btn = el('mc-spin-btn');
-        if (btn) { btn.textContent = '⏸️ إيقاف'; btn.classList.add('mc-spin-btn-active'); }
-
-        renderRoundBanner('spinning');
+        setPhase('playing');
         startRingLoop();
         startMusic();
-
-        // ⚠️ مدة الدوران صارت قابلة للتحكم من إعدادات المباراة (بدل ثابت
-        // 12 ثانية) — بحد أقصى 35 ثانية مضمون (المُدخل الأقصى بالإعدادات
-        // نفسها 35 أصلاً، بس نضمنها هنا برضو احتياطاً).
-        var seconds = Math.min(SPIN_DURATION_MAX_S, liveSettings().spinDurationSeconds || 15);
-        _spinTimeoutId = window.setTimeout(stopSpinAndReveal, seconds * 1000);
+        _spinTimeoutId = window.setTimeout(stopSpinAndReveal, spinDuration() * 1000);
     }
 
     /* ======================================================================
@@ -1257,39 +1210,51 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return null;
     }
 
+    // صوت الجلوس: مذبذب مثلثي 520→140Hz خلال 0.18s
+    function audioCtx() {
+        try { return _ac || (_ac = new (window.AudioContext || window.webkitAudioContext)()); } catch (e) { return null; }
+    }
+    function playSeatSound() {
+        var ac = audioCtx(); var v = _musicVolume;
+        if (!ac || !v) return;
+        try {
+            var t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+            o.type = 'triangle';
+            o.frequency.setValueAtTime(520, t); o.frequency.exponentialRampToValueAtTime(140, t + 0.18);
+            g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5 * v, t + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+            o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.25);
+        } catch (e) {}
+    }
+    // صوت فتح نافذة الإقصاء: 4 نغمات هابطة 784/587/440/330Hz
+    function playOutSound() {
+        var ac = audioCtx(); var v = _musicVolume;
+        if (!ac || !v) return;
+        try {
+            [784, 587, 440, 330].forEach(function (f, i) {
+                var t = ac.currentTime + i * 0.11, o = ac.createOscillator(), g = ac.createGain();
+                o.type = 'sine'; o.frequency.setValueAtTime(f, t);
+                g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35 * v, t + 0.02);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+                o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.32);
+            });
+        } catch (e) {}
+    }
+
     function claimChair(player, chairIdx) {
         var chair = _chairs[chairIdx];
         chair.occupantId = player.id;
         _seatedThisRound[player.id] = true;
+        layoutPlayers();
 
-        var chairEl = el('mc-chair-' + chairIdx);
-        if (chairEl) chairEl.classList.add('mc-chair-taken');
-        var badgeElTaken = el('mc-chair-num-' + chairIdx);
-        if (badgeElTaken) badgeElTaken.classList.add('mc-chair-taken');
+        // عند وصول الصورة للكرسي يختفي الكرسي والرقم وتبقى صورة اللاعب
+        window.setTimeout(function () {
+            chair.arrived = true;
+            var chEl = el('mc-chair-' + chairIdx);
+            if (chEl && chair.occupantId === player.id) chEl.classList.add('mc-taken');
+        }, 600);
+        window.setTimeout(playSeatSound, 620);
 
-        var avatarEl = el('mc-avatar-' + player.id);
-        if (avatarEl) {
-            avatarEl.classList.add('mc-avatar-seating');
-            avatarEl.style.left = chair.x + '%';
-            avatarEl.style.top = chair.y + '%';
-            window.setTimeout(function () { avatarEl.classList.add('mc-avatar-safe'); }, 480);
-        }
-
-        // ⚠️ جديد: الكرسي نفسه يختفي بعد ما توصل صورة اللاعب فوقه (بطلب
-        // صريح) — نفس توقيت وصول الأفاتار تقريباً (480ms، بعد أنيميشن
-        // الجلوس)، عبر فيد سلس (opacity) بدل اختفاء مفاجئ.
-        if (chairEl) {
-            window.setTimeout(function () { chairEl.classList.add('mc-chair-vanish'); }, 480);
-        }
-
-        playSound('claim');
-
-        // ⚠️ إصلاح باگ حقيقي: الشرط القديم كان يتحقق فقط لو "كل اللاعبين
-        // الأحياء" لقوا كراسي — شي يكاد يستحيل يصير لأن الكراسي دايماً
-        // أقل من اللاعبين بالتصميم (فيه عجز دايماً ≥1)، فكان العدّاد
-        // يكمل لآخر وقته دايماً حتى لو خلصت كل الكراسي الفاضية من زمان.
-        // الصح: أول ما تنحجز آخر كرسي فاضي (بغض النظر عن عدد اللاعبين
-        // المتبقين بدون كرسي)، تنتهي الدورة فوراً وتبدأ الإقصاء مباشرة.
         var chairsStillEmpty = _chairs.filter(function (c) { return !c.occupantId; }).length;
         if (chairsStillEmpty === 0) {
             AGP.timerManager.stop(TIMER_NAME);
@@ -1305,7 +1270,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var aliveCount = _alive.length;
         if (mode === 'custom') {
             var deficit = _customDeficitCurrent;
-            _roundDeficit = deficit; // ⚠️ نحفظ العجز المستخدَم فعلياً بهذي الدورة (يلزم addChairsIfNeeded)
+            _roundDeficit = deficit;
             var count = Math.max(1, aliveCount - deficit);
             _customDeficitCurrent = Math.max(1, deficit - 1);
             return count;
@@ -1314,78 +1279,44 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return Math.max(1, aliveCount - 1);
     }
 
-    // ⚠️ تعديل جوهري: ما تبدأ الدوران تلقائياً بعد الآن — فقط تجهّز الحلبة
-    // (كراسي + لاعبون بوضع ثابت) وتفعّل زر "تدوير" وتنتظر ضغطة الاستريمر.
+    // تجهيز الدورة: اللاعبون على الحافة والكراسي فاضية، بانتظار "تدوير"
     function runNextRound() {
         if (!_matchActive) return;
-        if (_alive.length <= 1) { endMatch(_alive[0] || null); return; }
+        if (_alive.length <= 1) { showChampion(_alive[0] || null); return; }
 
         _roundNumber++;
         _seatedThisRound = {};
-        var chairCount = computeChairCount();
-        _chairs = buildChairs(chairCount);
-
-        renderRoundBanner('ready');
-        renderChairsRing();
-        renderPlayersRing();
+        _roundLosers = [];
+        setPhase('idle');
+        _chairs = buildChairs(computeChairCount());
+        renderCenter();
+        renderChairs();
+        renderPlayers();
         updateBadges();
-        el('mc-countdown').textContent = '';
-        el('mc-countdown').className = '';
-        el('mc-spin-countdown').textContent = '';
-
-        _spinState = 'idle';
-        var btn = el('mc-spin-btn');
-        if (btn) { btn.disabled = false; btn.textContent = '▶️ تدوير'; btn.classList.remove('mc-spin-btn-active'); }
-    }
-
-    function renderRoundBanner(phase) {
-        var numEl = el('mc-round-num');
-        var subEl = el('mc-round-sub');
-        if (!numEl || !subEl) return;
-        numEl.textContent = 'الدورة ' + _roundNumber;
-        if (phase === 'ready') subEl.textContent = '🎯 اضغط "تدوير" وقت ما تجهز';
-        else if (phase === 'spinning') subEl.textContent = '🎶 الموسيقى شغّالة... استعدوا!';
-        else if (phase === 'selecting') subEl.textContent = 'اكتبوا رقم الكرسي بالشات';
-        else if (phase === 'eliminating') subEl.textContent = 'جارِ الإقصاء...';
     }
 
     function stopSpinAndReveal() {
+        if (_phase !== 'playing') return;
         if (_spinTimeoutId) { clearTimeout(_spinTimeoutId); _spinTimeoutId = null; }
         stopRingLoop();
-        stopMusic(); // ⚠️ الصوت يتوقف فوراً لحظة توقف الكراسي — طلب صريح
+        stopMusic();
 
-        _spinState = 'idle';
-        var btn = el('mc-spin-btn');
-        if (btn) { btn.disabled = true; btn.textContent = '▶️ تدوير'; btn.classList.remove('mc-spin-btn-active'); }
-
-        _chairs.forEach(function (c, idx) {
-            var badgeEl = el('mc-chair-num-' + idx);
-            if (badgeEl) badgeEl.classList.add('mc-chair-revealed');
-        });
+        setPhase('claiming');
+        Array.prototype.forEach.call(el('mc-players').children, function (n) { n.classList.add('mc-moving'); });
+        renderChairs();
         playSound('reveal');
-
-        var settings = liveSettings();
-        var seconds = settings.selectionTimerSeconds || 15;
-        renderRoundBanner('selecting');
 
         _selectionOpen = true;
         wireCommentListener();
         wireTimerListeners();
-        AGP.timerManager.start(TIMER_NAME, seconds);
+        AGP.timerManager.start(TIMER_NAME, liveSettings().selectionTimerSeconds || 15);
     }
 
     function wireTimerListeners() {
         unwireTimerListeners();
         _timerTickUnsub = AGP.events.on('timer:tick', function (payload) {
             if (payload.name !== TIMER_NAME) return;
-            var cd = el('mc-countdown');
-            var spinCd = el('mc-spin-countdown'); // ⚠️ نفس العدّاد يظهر بجانب زر التدوير أيضاً — طلب صريح
-            if (cd) cd.textContent = '⏱️ ' + payload.remainingSeconds + ' ثانية';
-            if (spinCd) spinCd.textContent = '⏱️ ' + payload.remainingSeconds;
-            if (payload.remainingSeconds <= 5 && payload.remainingSeconds > 0) {
-                if (cd) cd.classList.add('mc-countdown-warn');
-                playSound('warning');
-            }
+            if (payload.remainingSeconds <= 5 && payload.remainingSeconds > 0) playSound('warning');
         });
         _timerEndedUnsub = AGP.events.on('timer:ended', function (payload) {
             if (payload.name !== TIMER_NAME) return;
@@ -1400,75 +1331,94 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _timerEndedUnsub = null;
     }
 
+    // انتهاء الجلوس (كل الكراسي انحجزت أو خلصت مهلة الاختيار): اللي بدون
+    // كرسي يتلوّن أحمر، وبعد ~1.1 ثانية تفتح نافذة الإقصاء تلقائياً.
     function finishSelectionWindow() {
         if (!_selectionOpen) return;
         _selectionOpen = false;
         unwireCommentListener();
         unwireTimerListeners();
-        el('mc-countdown').textContent = '';
-        el('mc-spin-countdown').textContent = '';
 
-        var losers = _alive.filter(function (p) { return !_seatedThisRound[p.id]; });
-        renderRoundBanner('eliminating');
+        _roundLosers = _alive.filter(function (p) { return !_seatedThisRound[p.id]; });
+        if (_roundLosers.length === 0) { runNextRound(); return; }
 
-        if (losers.length === 0) {
-            window.setTimeout(runNextRound, NEXT_ROUND_DELAY_MS);
-            return;
-        }
-        eliminateSequentially(losers, 0);
+        setPhase('out');
+        _roundLosers.forEach(function (p) { if (_pEls[p.id]) _pEls[p.id].classList.add('mc-out'); });
+        _outTimeoutId = window.setTimeout(showOutModal, 1100);
     }
 
-    // تبويب المُقصَين -- يظهر بكل الأسماء دفعة وحدة، ويبقى ظاهر لين
-    // الاستريمر يقفله بنفسه بزر ✕. الدورة الجاية ما تبدأ إلا بعدها.
-    function showEliminatedPanel(losers) {
-        var panel = el('mc-eliminated-panel');
-        if (!panel) return;
-        panel.innerHTML = '<button type="button" class="mc-eliminated-close-btn" id="mc-eliminated-close-btn" title="إغلاق">✕</button>' +
-            '<img class="mc-eliminated-logo" src="../../logo.png" alt="">' +
-            '<div class="mc-eliminated-title">❌ تم إقصاء هالدورة</div>' +
-            '<div class="mc-eliminated-avatars" id="mc-eliminated-avatars"></div>';
-        var wrap = el('mc-eliminated-avatars');
-        losers.forEach(function (player) {
-            var div = document.createElement('div');
-            div.className = 'mc-eliminated-avatar-item';
-            div.id = 'mc-elim-item-' + player.id;
-            div.innerHTML = avatarInnerHtml(player);
-            wrap.appendChild(div);
+    function showOutModal() {
+        _outTimeoutId = null;
+        if (_phase !== 'out') return;
+        var remaining = _alive.length - _roundLosers.length;
+        el('mc-out-sub').textContent = 'نهاية الدورة ' + _roundNumber + ' · متبقي ' + Math.max(0, remaining) + ' لاعب';
+        el('mc-out-list').innerHTML = _roundLosers.map(function (p, i) {
+            return '<div class="mc-out-item" style="transition-delay:' + (0.15 + Math.min(i, 12) * 0.05) + 's">' +
+                '<div class="mc-out-av">' + avatarHtml(p) + '</div>' +
+                '<div class="mc-out-name">' + escapeHtml(playerLabel(p)) + '</div>' +
+                '<div class="mc-out-tag">خرج الآن</div></div>';
+        }).join('');
+        var modal = el('mc-out-modal');
+        modal.classList.remove('mc-in');
+        modal.classList.add('mc-show');
+        window.requestAnimationFrame(function () {
+            window.requestAnimationFrame(function () { modal.classList.add('mc-in'); });
         });
-        panel.classList.add('mc-eliminated-visible');
-
-        document.getElementById('mc-eliminated-close-btn').onclick = function () {
-            panel.classList.remove('mc-eliminated-visible');
-            proceedAfterElimination();
-        };
+        playOutSound();
     }
 
-    function proceedAfterElimination() {
-        updateBadges();
-        if (_alive.length <= 1) endMatch(_alive[0] || null);
-        else window.setTimeout(runNextRound, NEXT_ROUND_DELAY_MS - 700);
-    }
-
-    function eliminateSequentially(losers, idx) {
-        if (idx === 0) showEliminatedPanel(losers); // ⚠️ الكل يظهر دفعة وحدة من البداية، مو تراكمياً
-
-        if (idx >= losers.length) {
-            // ⚠️ ما نكمل تلقائياً هنا إطلاقاً — ننتظر ضغطة زر ✕ اليدوية
-            // (داخل showEliminatedPanel) اللي تستدعي proceedAfterElimination.
-            return;
-        }
-        var player = losers[idx];
-        var avatarEl = el('mc-avatar-' + player.id);
-        if (avatarEl) avatarEl.classList.add('mc-avatar-out');
-        playSound('eliminate');
-
-        window.setTimeout(function () {
-            if (avatarEl) avatarEl.remove();
-            var aliveIdx = _alive.findIndex(function (p) { return p.id === player.id; });
-            if (aliveIdx !== -1) _alive.splice(aliveIdx, 1);
+    // إغلاق نافذة الإقصاء (✕ / متابعة / الخلفية) يبدأ الدورة الجاية فوراً
+    function closeOutModal() {
+        closeModal('mc-out-modal');
+        if (_phase !== 'out') return;
+        if (_outTimeoutId) { clearTimeout(_outTimeoutId); _outTimeoutId = null; }
+        _roundLosers.forEach(function (player) {
+            var idx = _alive.findIndex(function (p) { return p.id === player.id; });
+            if (idx !== -1) _alive.splice(idx, 1);
             _eliminated.push({ player: player, round: _roundNumber });
-            eliminateSequentially(losers, idx + 1);
-        }, ELIMINATE_STAGGER_MS);
+        });
+        _roundLosers = [];
+        if (_alive.length <= 1) showChampion(_alive[0] || null);
+        else runNextRound();
+    }
+
+    // البطل بمنتصف الدائرة، ثم شاشة الفائز (النقاط + الفيديو + البطاقة)
+    function showChampion(winner) {
+        _champion = winner;
+        setPhase('champion');
+        clearCircle();
+        renderCenter();
+        updateBadges();
+        endMatch(winner);
+    }
+
+    // ⏹ إنهاء المباراة من نافذة الإعدادات — بدون فائز ولا نقاط
+    function endMatchEarly() {
+        _matchActive = false;
+        if (_spinTimeoutId) { clearTimeout(_spinTimeoutId); _spinTimeoutId = null; }
+        if (_outTimeoutId) { clearTimeout(_outTimeoutId); _outTimeoutId = null; }
+        stopRingLoop();
+        stopMusic();
+        _selectionOpen = false;
+        unwireCommentListener();
+        unwireTimerListeners();
+        AGP.timerManager.stop(TIMER_NAME);
+        closeModal('mc-out-modal');
+        setPhase('ended');
+        clearCircle();
+        renderCenter();
+    }
+
+    // ↺ إعادة اللعبة من البداية / لعبة جديدة — بكل اللاعبين المسجَّلين
+    function restartMatch() {
+        var overlay = el('agp-shell-overlay');
+        var box = el('agp-shell-box');
+        if (box && box.classList.contains('mc-winner-screen')) {
+            stopWinnerVideo();
+            if (overlay) overlay.style.display = 'none';
+            box.className = '';
+        }
+        startMatch(liveSettings());
     }
 
     /* ======================================================================
@@ -1479,48 +1429,32 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var aliveIdx = _alive.findIndex(function (p) { return p.id === removedPlayer.id; });
         if (aliveIdx !== -1) {
             _alive.splice(aliveIdx, 1);
-            var avatarEl = el('mc-avatar-' + removedPlayer.id);
-            if (avatarEl) avatarEl.remove();
+            _chairs.forEach(function (c) { if (c.occupantId === removedPlayer.id) c.occupantId = null; });
+            _roundLosers = _roundLosers.filter(function (p) { return p.id !== removedPlayer.id; });
+            if (_pEls[removedPlayer.id]) { _pEls[removedPlayer.id].remove(); delete _pEls[removedPlayer.id]; }
+            layoutPlayers();
             updateBadges();
             if (_matchActive && _alive.length <= 1) {
-                window.setTimeout(function () { endMatch(_alive[0] || null); }, 400);
+                window.setTimeout(function () { showChampion(_alive[0] || null); }, 400);
             }
         }
         var elimIdx = _eliminated.findIndex(function (e) { return e.player.id === removedPlayer.id; });
         if (elimIdx !== -1) _eliminated.splice(elimIdx, 1);
     }
 
-    // ⚠️ تعديل: اللاعب الجديد يظهر بعجلة الكراسي فوراً وقت انضمامه (مو
-    // بالدورة الجاية بس) — طلب صريح. نحسب له موقعه الحالي (يراعي دوران
-    // الحلقة لو شغّالة وقتها) ونضيف عنصره للـDOM مباشرة بأنيميشن ظهور.
+    // لاعب جديد يظهر على حافة الدائرة فوراً وقت انضمامه
     function handlePlayerJoined(newPlayer) {
         if (!_matchActive || !newPlayer || !newPlayer.id) return;
         var already = _alive.some(function (p) { return p.id === newPlayer.id; }) ||
             _eliminated.some(function (e) { return e.player.id === newPlayer.id; });
         if (already) return;
-
         _alive.push(newPlayer);
+        renderPlayers();
+        if (_phase === 'claiming' || _phase === 'out') {
+            Array.prototype.forEach.call(el('mc-players').children, function (n) { n.classList.add('mc-moving'); });
+        }
+        addChairsIfNeeded();
         updateBadges();
-        showToast('➕ ' + playerLabel(newPlayer) + ' انضم للمباراة');
-
-        var ring = el('mc-players-ring');
-        if (!ring) return;
-        var idx = _alive.length - 1;
-        var base = playerBaseAngle(idx, _alive.length);
-        var angle = (base + (_ringSpinning ? _ringRotation : 0)) % 360;
-        _playerAngle[newPlayer.id] = angle;
-        var pos = angleToXY(angle, 46);
-
-        var div = document.createElement('div');
-        div.className = 'mc-avatar mc-avatar-joining';
-        div.id = 'mc-avatar-' + newPlayer.id;
-        div.setAttribute('data-player-id', newPlayer.id);
-        div.style.left = pos.x + '%';
-        div.style.top = pos.y + '%';
-        div.innerHTML = avatarInnerHtml(newPlayer);
-        ring.appendChild(div);
-
-        addChairsIfNeeded(); // ⚠️ جديد: يزيد عدد الكراسي فوراً لو انضم لاعب أثناء دورة شغّالة
     }
 
     function enforceMaxPlayers() {
@@ -1538,7 +1472,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     /* ======================================================================
      *  11) بدء المباراة (onStartRound من الشل)
      * ==================================================================== */
-    function handleStartRound(settingsValues) {
+    function startMatch(settingsValues) {
         resetMatchState();
         _settings = settingsValues;
         _alive = AGP.gameManager.getPlayers().slice();
@@ -1548,6 +1482,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         ensureScaffolding();
         runNextRound();
+    }
+
+    function handleStartRound(settingsValues) {
+        startMatch(settingsValues);
     }
 
     /* ======================================================================
@@ -1576,7 +1514,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
 
         AGP.events.emit('game:roundEnded', { id: GAME_ID });
-        pointsPromise.then(function (pointsResult) { renderWinnerScreen(winner, pointsResult); });
+        // البطل يظهر بمنتصف الدائرة أولاً، ثم شاشة الفائز
+        var hold = new Promise(function (resolve) { window.setTimeout(resolve, CHAMPION_HOLD_MS); });
+        Promise.all([pointsPromise, hold]).then(function (r) {
+            if (_phase === 'champion') renderWinnerScreen(winner, r[0]);
+        });
     }
 
     function findAwardedFor(pointsResult, player) {
@@ -1688,12 +1630,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             stopWinnerVideo(); // ⚠️ إصلاح: يمنع تراكم صوت الفيديو فوق الدورة الجديدة
             overlay.style.display = 'none';
             box.className = ''; // ⚠️ إصلاح: يمنع بقاء كلاس "mc-winner-screen" عالق لو فُتحت لوحة الإعدادات لاحقاً
-            resetMatchState();
-            _alive = AGP.gameManager.getPlayers().slice();
-            _customDeficitCurrent = (liveSettings().customDeficitStart) || 5;
-            _startedAt = Date.now();
-            _matchActive = true;
-            runNextRound();
+            startMatch(liveSettings());
         };
     }
 
