@@ -1374,15 +1374,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function showRules() {
-        var n = requiredWinners();
         el('sl-rules-list').innerHTML =
             '<li><span class="sl-rule-ic">⏱️</span><span>لكل لاعب <b>' + TURN_TIME + ' ثانية</b> في دوره يرمي فيها النرد.</span></li>' +
             '<li><span class="sl-rule-ic">💬</span><span>لرمي النرد يكتب صاحب الدور في شات البث: ' +
                 ROLL_COMMANDS.map(function (c) { return '<span class="sl-cmd-pill">' + escapeHtml(c) + '</span>'; }).join('') + '</span></li>' +
             '<li><span class="sl-rule-ic">⏭️</span><span>إذا خلص الوقت بدون أمر يروح الدور للاعب اللي بعده.</span></li>' +
             '<li><span class="sl-rule-ic">🪜</span><span>السلم يطلّعك لأعلاه، و🐍 الثعبان ينزّلك لذيله.</span></li>' +
-            '<li><span class="sl-rule-ic">🏆</span><span>كل من يوصل للمربع <b>100</b> بالعدد المطابق يفوز، وتستمر المباراة حتى يكتمل عدد الفائزين اللي حدده الاستريمر: <b>' +
-                (n === 1 ? 'فائز واحد' : (n === 2 ? 'فائزان' : 'ثلاثة فائزين')) + '</b>.</span></li>';
+            '<li><span class="sl-rule-ic">🏆</span><span>كل من يوصل للمربع <b>100</b> بالعدد المطابق يفوز، وتستمر المباراة حتى يكتمل عدد الفائزين اللي حدده الاستريمر.</span></li>';
         el('sl-rules').hidden = false;
     }
 
