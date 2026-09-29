@@ -18,6 +18,7 @@ var siteThemeService = require('../theme/site-theme-service');
 var partnersService = require('../partners/partners-service');
 var lettersCellQuestionsService = require('../letters-cell/letters-cell-questions-service');
 var platformStatsService = require('../stats/platform-stats-service');
+var supportService = require('../support/support-service');
 var logger = require('../utils/logger');
 var config = require('../config');
 var response = require('./response');
@@ -157,7 +158,18 @@ var ROUTES = [
   // مستخدم عنده can_manage_letters_cell (يُتحقَّق داخل كل handler لأنه
   // ليس requireAdmin بالمعنى العام، بل صلاحية جزئية تُمنح لأي شخص).
   { method: 'GET', path: '/api/letters-cell/questions-draft', requireAuth: true, handler: handleGetLettersCellQuestionsDraft },
-  { method: 'POST', path: '/api/letters-cell/questions-draft', requireAuth: true, handler: handleSaveLettersCellQuestionsDraft }
+  { method: 'POST', path: '/api/letters-cell/questions-draft', requireAuth: true, handler: handleSaveLettersCellQuestionsDraft },
+  // ---- الدعم والاقتراحات (تذاكر) — راجع backend/support/support-service.js.
+  // المستخدم يصل لتذاكره فقط (يُفرَض داخل الخدمة بـuser_id الجلسة).
+  { method: 'POST', path: '/api/support/upload-signature', requireAuth: true, handler: handleSupportUploadSignature },
+  { method: 'POST', path: '/api/support/tickets', requireAuth: true, handler: handleSupportCreateTicket },
+  { method: 'GET', path: '/api/support/tickets', requireAuth: true, handler: handleSupportListTickets },
+  { method: 'GET', path: '/api/support/ticket', requireAuth: true, handler: handleSupportGetTicket },
+  { method: 'POST', path: '/api/support/ticket/reply', requireAuth: true, handler: handleSupportReply },
+  { method: 'GET', path: '/api/admin/support/tickets', requireAuth: true, requireAdmin: true, handler: handleAdminSupportListTickets },
+  { method: 'GET', path: '/api/admin/support/ticket', requireAuth: true, requireAdmin: true, handler: handleAdminSupportGetTicket },
+  { method: 'POST', path: '/api/admin/support/ticket/reply', requireAuth: true, requireAdmin: true, handler: handleAdminSupportReply },
+  { method: 'POST', path: '/api/admin/support/ticket/status', requireAuth: true, requireAdmin: true, handler: handleAdminSupportSetStatus }
 ];
 
 /* -----------------------------------------------------------------------
@@ -666,6 +678,69 @@ function handleSaveLettersCellQuestionsDraft(req, res, body, user) {
   if (!canManageLettersCell(user)) { sendJson(res, 403, { success: false, error: 'forbidden' }); return; }
   var result = lettersCellQuestionsService.saveDraft(body.questions, user.id);
   sendJson(res, result.success ? 200 : 400, result);
+}
+
+/* -----------------------------------------------------------------------
+ * الدعم والاقتراحات (تذاكر)
+ * ----------------------------------------------------------------------- */
+
+/** رمز HTTP مناسب لكل خطأ من support-service (الافتراضي 400). */
+var SUPPORT_ERROR_STATUS = {
+  not_found: 404,
+  ticket_closed: 409,
+  rate_limited: 429,
+  uploads_not_configured: 503
+};
+
+function sendSupportResult(res, result) {
+  sendJson(res, result.success ? 200 : (SUPPORT_ERROR_STATUS[result.error] || 400), result);
+}
+
+function handleSupportUploadSignature(req, res, body, user) {
+  sendSupportResult(res, supportService.getUploadSignature(user.id, { fileName: body.fileName, fileSize: body.fileSize }));
+}
+
+function handleSupportCreateTicket(req, res, body, user) {
+  var result = supportService.createTicket(user.id, {
+    type: body.type, title: body.title, body: body.body, attachments: body.attachments
+  });
+  sendJson(res, result.success ? 201 : (SUPPORT_ERROR_STATUS[result.error] || 400), result);
+}
+
+function handleSupportListTickets(req, res, body, user) {
+  sendSupportResult(res, supportService.listMyTickets(user.id));
+}
+
+function handleSupportGetTicket(req, res, body, user) {
+  sendSupportResult(res, supportService.getMyTicket(user.id, getQueryParam(req, 'id')));
+}
+
+function handleSupportReply(req, res, body, user) {
+  sendSupportResult(res, supportService.replyAsUser(user.id, {
+    ticketId: body.ticketId, body: body.body, attachments: body.attachments
+  }));
+}
+
+function handleAdminSupportListTickets(req, res) {
+  sendSupportResult(res, supportService.adminListTickets({
+    type: getQueryParam(req, 'type'),
+    status: getQueryParam(req, 'status'),
+    q: getQueryParam(req, 'q'),
+    limit: getQueryParam(req, 'limit'),
+    offset: getQueryParam(req, 'offset')
+  }));
+}
+
+function handleAdminSupportGetTicket(req, res) {
+  sendSupportResult(res, supportService.adminGetTicket(getQueryParam(req, 'id')));
+}
+
+function handleAdminSupportReply(req, res, body) {
+  sendSupportResult(res, supportService.replyAsAdmin({ ticketId: body.ticketId, body: body.body }));
+}
+
+function handleAdminSupportSetStatus(req, res, body) {
+  sendSupportResult(res, supportService.adminSetStatus({ ticketId: body.ticketId, status: body.status }));
 }
 
 /* -----------------------------------------------------------------------
