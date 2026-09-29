@@ -350,7 +350,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.sl-rules{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;overflow-y:auto;}',
             '.sl-rules li{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.8;color:#cfe6f0;',
             'padding:10px 12px;border-radius:12px;background:#0d1428;border:1px solid rgba(255,255,255,0.08);}',
-            '.sl-rules li b{color:#ffd166;font-weight:900;}',
+            '.sl-rules li b{color:#ffd166;font-weight:900;white-space:nowrap;}',
             '.sl-rules .sl-rule-ic{font-size:18px;line-height:1.5;flex:none;}',
             '.sl-rules .sl-cmd-pill{font-size:13px;padding:2px 10px;margin:2px;display:inline-block;}',
             '.sl-btn-reset{width:100%;padding:12px;border:1px solid rgba(255,209,102,0.35);border-radius:14px;cursor:pointer;',
@@ -1381,7 +1381,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 ROLL_COMMANDS.map(function (c) { return '<span class="sl-cmd-pill">' + escapeHtml(c) + '</span>'; }).join('') + '</span></li>' +
             '<li><span class="sl-rule-ic">⏭️</span><span>إذا خلص الوقت بدون أمر يروح الدور للاعب اللي بعده.</span></li>' +
             '<li><span class="sl-rule-ic">🪜</span><span>السلم يطلّعك لأعلاه، و🐍 الثعبان ينزّلك لذيله.</span></li>' +
-            '<li><span class="sl-rule-ic">🏆</span><span>الفوز بالوصول للمربع <b>100</b> بالعدد المطابق، والمباراة تنتهي بعد <b>' + n + '</b> ' + (n === 1 ? 'فائز' : 'فائزين') + '.</span></li>';
+            '<li><span class="sl-rule-ic">🏆</span><span>كل من يوصل للمربع <b>100</b> بالعدد المطابق يفوز، وتستمر المباراة حتى يكتمل عدد الفائزين اللي حدده الاستريمر: <b>' +
+                (n === 1 ? 'فائز واحد' : (n === 2 ? 'فائزان' : 'ثلاثة فائزين')) + '</b>.</span></li>';
         el('sl-rules').hidden = false;
     }
 
