@@ -452,8 +452,46 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '#mc-add-modal{z-index:60;background:rgba(8,4,16,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);}',
             '#mc-add-modal .mc-card{width:500px;height:700px;max-width:100%;gap:16px;background:rgba(29,16,51,0.4);',
             'border:2px solid rgba(217,70,239,0.55);box-shadow:0 0 30px rgba(217,70,239,0.25),0 30px 80px rgba(0,0,0,0.5);overflow:hidden;}',
-            '.mc-add-body{flex:1;min-height:0;overflow-y:auto;font-size:15px;line-height:1.8;color:#e7dcf7;}',
+            '.mc-add-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;font-size:15px;line-height:1.8;color:#e7dcf7;}',
             '.mc-add-done{flex-shrink:0;height:50px;border-radius:14px;font-size:16px;}',
+            '.mc-join-status{align-self:flex-start;display:flex;align-items:center;gap:8px;padding:4px 14px;border-radius:999px;',
+            'font-size:13px;font-weight:700;background:rgba(79,209,138,0.16);border:1px solid rgba(79,209,138,0.5);color:#8ff0b8;}',
+            '.mc-join-status::before{content:"";width:8px;height:8px;border-radius:50%;background:#4fd18a;}',
+            '.mc-join-status.mc-closed{background:rgba(255,92,122,0.14);border-color:rgba(255,92,122,0.5);color:#ff8da3;}',
+            '.mc-join-status.mc-closed::before{background:#ff5c7a;}',
+            '.mc-join-kw{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 16px;border-radius:16px;',
+            'background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.4);text-align:center;}',
+            '.mc-join-kw span{font-size:14px;font-weight:600;color:#f3eefb;}',
+            '.mc-join-kw b{font-size:30px;font-weight:800;line-height:1.3;color:#f5a623;word-break:break-word;}',
+            '.mc-join-notes{margin:0;padding:0 18px 0 0;font-size:13px;line-height:1.9;color:#bfaedb;}',
+            '.mc-join-count{font-size:14px;font-weight:700;color:#f3eefb;}',
+            '.mc-join-count span{color:#f5a623;}',
+            /* بطاقات اللاعبين الجدد — نفس بطاقات اللوبي الأساسي (217×57)،
+             * لاعبين بكل صف، وتمرير مخفي للأسفل لو العدد كبير */
+            '#mc-join-list{list-style:none;margin:0;padding:10px 0 12px;flex:1;min-height:0;overflow-y:auto;',
+            'scrollbar-width:none;-ms-overflow-style:none;display:grid;grid-template-columns:repeat(2,217px);',
+            'column-gap:16px;row-gap:18px;justify-content:center;justify-items:center;align-items:end;align-content:start;}',
+            '#mc-join-list::-webkit-scrollbar{display:none;}',
+            '@media (max-width:520px){#mc-join-list{grid-template-columns:217px;}}',
+            '#mc-join-list li{position:relative;display:flex;align-items:center;padding:0;}',
+            '#mc-join-list .mc-join-empty{grid-column:1 / -1;width:100%;box-sizing:border-box;padding:18px;border-radius:14px;',
+            'border:1px dashed rgba(190,140,255,0.3);text-align:center;font-size:13px;color:#8f7fae;}',
+            '#mc-join-list .agp-pcard{width:217px !important;height:57px !important;box-sizing:border-box !important;',
+            'padding:0 3px 0 28px !important;gap:6px !important;border-radius:24px !important;',
+            'background:rgba(217,217,217,.3) !important;border:2px solid #000 !important;max-width:none !important;}',
+            '#mc-join-list .agp-pcard-avatar-basic{width:48px !important;height:48px !important;background:#D9D9D9 !important;border:none !important;}',
+            '#mc-join-list .agp-pcard-name-basic{flex:1 1 auto !important;width:auto !important;min-width:0 !important;',
+            'height:auto !important;margin:0 !important;padding:0 !important;font-size:20px !important;',
+            'font-family:"Noto Kufi Arabic",sans-serif !important;font-weight:700 !important;color:#fff !important;',
+            'background:none !important;border:none !important;}',
+            '#mc-join-list .agp-pcard-avatar-basic--fallback{font-size:15px !important;color:#3a2f4a !important;}',
+            '#mc-join-list li:has(> .agp-pcard-tpl){width:217px !important;height:57px !important;overflow:visible !important;',
+            'display:flex !important;flex-direction:row !important;align-items:center !important;justify-content:center !important;}',
+            '#mc-join-list .agp-pcard-tpl{zoom:0.7282;flex-shrink:0 !important;}',
+            '#mc-join-list .agp-player-remove-btn{position:absolute;top:50%;left:7px;right:auto;transform:translateY(-50%);',
+            'width:16px;height:16px;font-size:9px;z-index:5;padding:0;line-height:1;cursor:pointer;border-radius:50%;',
+            'border:1px solid rgba(224,115,111,.55);background:rgba(224,115,111,.18);color:#e0736f;}',
+            '#mc-join-list .agp-player-remove-btn:hover{background:rgba(224,115,111,.3);color:#ff9b96;}',
 
             /* الوضع العمودي / الشاشات الأضيق من 900px */
             '@media (max-width:899px),(max-aspect-ratio:9/10){',
@@ -833,9 +871,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
             '<div class="mc-modal" id="mc-add-modal"><div class="mc-card">' +
                 '<div class="mc-card-head"><div class="mc-card-title">➕ إضافة لاعب جديد</div>' +
-                '<button type="button" class="mc-x" data-close="mc-add-modal" title="إغلاق">✕</button></div>' +
-                '<div class="mc-add-body"></div>' +
-                '<button type="button" class="mc-btn-primary mc-add-done" data-close="mc-add-modal">أكمل المباراة</button>' +
+                '<button type="button" class="mc-x" id="mc-add-x" title="إغلاق">✕</button></div>' +
+                '<div class="mc-add-body">' +
+                    '<div class="mc-join-status" id="mc-join-status"></div>' +
+                    '<div class="mc-join-kw"><span>للدخول اكتب في شات البث</span><b id="mc-join-keyword"></b></div>' +
+                    '<ul class="mc-join-notes">' +
+                        '<li>الدخول مفتوح الآن للاعبين الجدد اللي ما سبق لهم الدخول بهذي المباراة.</li>' +
+                        '<li>الكلمة المفتاحية هي نفسها اللي حددتها قبل بداية المباراة.</li>' +
+                        '<li>كل لاعب جديد يدخل تظهر بطاقته هنا، وينضم للدائرة مباشرة.</li>' +
+                    '</ul>' +
+                    '<div class="mc-join-count">اللاعبون الجدد (<span id="mc-join-count">0</span>)</div>' +
+                    '<ul id="mc-join-list"></ul>' +
+                '</div>' +
+                '<button type="button" class="mc-btn-primary mc-add-done" id="mc-add-done">أكمل المباراة</button>' +
             '</div></div>' +
 
             '<div class="mc-modal" id="mc-out-modal"><div class="mc-card">' +
@@ -864,15 +912,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('mc-spin-btn').onclick = handleSpinButtonClick;
         // ⚙️ = تبويب الإعدادات الجديد (بدل لوحة الإعدادات القديمة المشتركة)
         el('mc-settings-btn').onclick = function () { renderSpinSpeeds(); openModal('mc-settings-modal'); };
-        // ➕ = "إضافة لوبي جديد" من الملف المشترك. يمر عبر لوحة الإعدادات
-        // القديمة (مخفية وقت اللعب) لأن الزر موجود فيها بس، واللوحة نفسها
-        // تنقفل تلقائياً أول ما ترجع (راجع closeOldMidMatchPanel).
-        el('mc-add-btn').onclick = function () {
-            var gear = el('agp-header-settings-btn');
-            if (gear) gear.click();
-            var reopen = el('agp-reopen-registration-btn');
-            if (reopen) reopen.click();
-        };
+        // ➕ = تبويب إضافة لاعب جديد (يفتح الدخول بالكلمة المفتاحية)
+        el('mc-add-btn').onclick = openJoin;
+        el('mc-add-x').onclick = closeJoin;
+        el('mc-add-done').onclick = closeJoin;
         el('mc-panel-btn').onclick = togglePanel;
         el('mc-panel-head').onclick = togglePanel;
 
@@ -880,9 +923,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             b.onclick = function () { closeModal(b.getAttribute('data-close')); };
         });
         // النقر على الخلفية يقفل النافذة (نافذة الإقصاء تكمل للدورة الجاية)
-        ['mc-add-modal', 'mc-settings-modal'].forEach(function (id) {
-            el(id).addEventListener('click', function (e) { if (e.target.id === id) closeModal(id); });
-        });
+        el('mc-settings-modal').addEventListener('click', function (e) { if (e.target.id === 'mc-settings-modal') closeModal('mc-settings-modal'); });
+        el('mc-add-modal').addEventListener('click', function (e) { if (e.target.id === 'mc-add-modal') closeJoin(); });
         el('mc-out-modal').addEventListener('click', function (e) { if (e.target.id === 'mc-out-modal') closeOutModal(); });
         el('mc-out-x').onclick = closeOutModal;
         el('mc-out-next').onclick = closeOutModal;
@@ -913,6 +955,61 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         renderGenres();
         el('mc-dur-val').textContent = spinDuration();
+    }
+
+    /* -------- تبويب إضافة لاعب جديد --------
+     * يفتح الدخول بنفس الكلمة المفتاحية المحددة قبل المباراة. اللاعب
+     * الجديد ينضم للدائرة مباشرة (handlePlayerJoined)، واللي سبق له
+     * الدخول (حتى لو انقصى) ما يقدر يدخل مرة ثانية. "أكمل المباراة"
+     * (أو ✕ أو النقر على الخلفية) يقفل الدخول. */
+    var _joinKnownIds = null;
+
+    function joinMaxReached() {
+        var max = liveSettings().maxPlayers;
+        return Boolean(max) && AGP.gameManager.getPlayers().length >= max;
+    }
+
+    function openJoin() {
+        _joinKnownIds = {};
+        AGP.gameManager.getPlayers().forEach(function (p) { _joinKnownIds[p.id] = true; });
+        if (!joinMaxReached() && AGP.keywordManager) AGP.keywordManager.activate();
+        renderJoinPanel();
+        openModal('mc-add-modal');
+    }
+
+    function closeJoin() {
+        _joinKnownIds = null;
+        if (AGP.keywordManager) AGP.keywordManager.deactivate();
+        closeModal('mc-add-modal');
+    }
+
+    function renderJoinPanel() {
+        if (!_joinKnownIds || !el('mc-join-list')) return;
+        var open = AGP.keywordManager && AGP.keywordManager.isActive();
+        var status = el('mc-join-status');
+        status.classList.toggle('mc-closed', !open);
+        status.textContent = open ? 'الدخول مفتوح الآن' :
+            'الدخول مقفل — وصلنا الحد الأقصى للاعبين (' + liveSettings().maxPlayers + ')';
+        el('mc-join-keyword').textContent = (AGP.keywordManager && AGP.keywordManager.getKeyword()) || '';
+
+        var newPlayers = AGP.gameManager.getPlayers().filter(function (p) { return !_joinKnownIds[p.id]; });
+        el('mc-join-count').textContent = newPlayers.length;
+        var list = el('mc-join-list');
+        if (!newPlayers.length) {
+            list.innerHTML = '<li class="mc-join-empty">بانتظار دخول لاعبين جدد من الشات…</li>';
+            return;
+        }
+        list.innerHTML = newPlayers.map(function (p) {
+            var card = AGP.playerCard ? AGP.playerCard.renderHtml(p, { showFrame: true, basePath: '../../' }) : escapeHtml(playerLabel(p));
+            return '<li><button type="button" class="agp-player-remove-btn" data-remove-id="' + escapeHtml(p.id) + '" title="حذف">✕</button>' + card + '</li>';
+        }).join('');
+        Array.prototype.forEach.call(list.querySelectorAll('[data-remove-id]'), function (btn) {
+            btn.onclick = function () {
+                if (AGP.player && typeof AGP.player.removePlayer === 'function') AGP.player.removePlayer(btn.getAttribute('data-remove-id'));
+            };
+        });
+        if (AGP.playerCard && typeof AGP.playerCard.fitAllNames === 'function') AGP.playerCard.fitAllNames(list);
+        fitFramedCards(list);
     }
 
     function togglePanel() {
@@ -1429,6 +1526,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
         var elimIdx = _eliminated.findIndex(function (e) { return e.player.id === removedPlayer.id; });
         if (elimIdx !== -1) _eliminated.splice(elimIdx, 1);
+        renderJoinPanel();
     }
 
     // لاعب جديد يظهر على حافة الدائرة فوراً وقت انضمامه
@@ -1444,6 +1542,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
         addChairsIfNeeded();
         updateBadges();
+        renderJoinPanel();
     }
 
     function enforceMaxPlayers() {
@@ -1456,6 +1555,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 AGP.keywordManager.deactivate();
             }
         }
+        renderJoinPanel();
     }
 
     /* ======================================================================
@@ -1834,7 +1934,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function fitFramedCards(root) {
-        var cards = root.querySelectorAll('.agp-shell-player-list .agp-pcard-tpl:not([data-mc-fit])');
+        var cards = root.querySelectorAll('.agp-shell-player-list .agp-pcard-tpl:not([data-mc-fit]),#mc-join-list .agp-pcard-tpl:not([data-mc-fit])');
         Array.prototype.forEach.call(cards, function (card) {
             var frameEl = card.querySelector('.agp-pcard-tpl-frame-img');
             var m = frameEl && /url\(["']?(.*?)["']?\)/.exec(frameEl.style.backgroundImage);
@@ -1915,7 +2015,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         enhanceLobbyHeading();
         enhanceLobbyWatermarkAndActions();
         enhanceLobbyFramedCards();
-        closeOldMidMatchPanel();
     }
 
     /* -------- 14أ) طبقة "جاري الاتصال بالبث" — نفس السلم والثعبان -------- */
@@ -2033,15 +2132,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             syncConnLayer();
         });
         observer.observe(target, { childList: true, subtree: true });
-    }
-
-    /* -------- 14د) لوحة الإعدادات القديمة أثناء المباراة: ملغاة --------
-     * استُبدلت بتبويب ⚙️ الإعدادات الجديد بشاشة اللعب. لو انرسمت (مثلاً
-     * بعد "إكمال المباراة" بلوبي إضافة اللاعبين الجدد، اللي يرجع لها
-     * بالملف المشترك) تنقفل فوراً قبل ما تظهر. */
-    function closeOldMidMatchPanel() {
-        var closeBtn = document.getElementById('agp-settings-close-btn');
-        if (closeBtn) closeBtn.click();
     }
 
     AGP.events.on('platform:ready', function () { registerGame(); });
