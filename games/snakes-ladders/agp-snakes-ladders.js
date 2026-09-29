@@ -345,6 +345,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'box-shadow:0 5px 0 #163a80,0 10px 20px rgba(0,0,0,0.35);}',
             '.sl-btn-roll:hover{background:linear-gradient(180deg,#4c8bf5,#2558c2);}',
             '.sl-btn-roll:active{transform:translateY(4px);box-shadow:0 1px 0 #163a80;}',
+            '.sl-btn-roll:disabled{cursor:default;opacity:.55;transform:none;box-shadow:0 5px 0 #163a80;filter:saturate(.6);}',
             '.sl-btn-reset{width:100%;padding:12px;border:1px solid rgba(255,209,102,0.35);border-radius:14px;cursor:pointer;',
             'font-weight:800;font-size:14px;color:#ffd166;background:#1a1608;}',
             '.sl-btn-reset:hover{background:#241d0c;}',
@@ -1092,7 +1093,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         '<div class="sl-dice-title">منطقة النرد والتحكم ⚂</div>' +
                         '<div class="sl-ready" id="sl-ready">جاهز للرمي</div>' +
                         '<div class="sl-dice-stage"><div class="sl-cube" id="sl-cube">' + diceFacesHtml() + '</div></div>' +
-                        '<button type="button" class="sl-btn-roll" id="sl-roll-btn">ارم النرد (Roll) ⚂</button>' +
+                        '<button type="button" class="sl-btn-roll" id="sl-roll-btn">▶ ابدأ</button>' +
                         '<button type="button" class="sl-btn-reset" id="sl-reset-btn">إعادة اللعبة ↻</button>' +
                         '<div class="sl-cmd-grid">' +
                             '<button type="button" class="sl-btn-cmd" id="sl-cmd-roll">roll / ارم النرد<br><span>لرمي النرد</span></button>' +
@@ -1164,7 +1165,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('sl-exit-btn').onclick = function () { el('sl-theme-menu').hidden = true; el('sl-leave').hidden = false; };
         el('sl-leave-cancel').onclick = function () { el('sl-leave').hidden = true; };
         el('sl-leave-ok').onclick = confirmLeave;
-        el('sl-roll-btn').onclick = streamerRoll;
+        el('sl-roll-btn').onclick = startGame;
         el('sl-cmd-roll').onclick = streamerRoll;
         el('sl-reset-btn').onclick = resetGame;
         el('sl-cmd-join').onclick = openJoin;
@@ -1255,7 +1256,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderTimer();
         renderPlayersPanel();
         var ready = el('sl-ready');
-        if (ready) ready.textContent = _rolling ? 'جاري الرمي' : 'جاهز للرمي';
+        if (ready) ready.textContent = !_started ? 'بانتظار البدء' : (_rolling ? 'جاري الرمي' : 'جاهز للرمي');
+        var startBtn = el('sl-roll-btn');
+        if (startBtn) {
+            startBtn.disabled = _started;
+            startBtn.textContent = _started ? 'المباراة جارية' : '▶ ابدأ';
+        }
     }
 
     function renderTimer() {
@@ -1331,6 +1337,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
      *  6) الأدوار + المؤقت (15 ثانية — لو انتهى بدون أمر يروح عليه الدور)
      * ==================================================================== */
     var _left = false;
+    // المباراة ما تبدأ (مؤقت/أدوار/أوامر الشات) إلا بعد ضغط زر "ابدأ" —
+    // بعد اللوبي، وبعد "إعادة اللعبة"، وبعد إعادة المباراة بنفس اللاعبين.
+    var _started = false;
+
+    function startGame() {
+        if (!_matchActive || _started || !_order.length) return;
+        _started = true;
+        setStatus('اللعبة بدأت! دور ' + playerLabel(currentPlayer()));
+        startTurnTimer();
+        renderTurn();
+    }
     var _ending = false;         // اكتمل عدد الفائزين — بانتظار بطاقة الفوز
 
     function stopTurnTimer() {
@@ -1381,7 +1398,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function roll(player) {
-        if (!_matchActive || _rolling || _left || _ending || !_order.length) return;
+        if (!_matchActive || !_started || _rolling || _left || _ending || !_order.length) return;
         var cur = currentPlayer();
         if (!cur || cur.id !== player.id) return;
         var v = 1 + Math.floor(Math.random() * 6);
@@ -1554,8 +1571,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _roster.forEach(function (p) { _positions[p.id] = 1; });
         _turnIdx = 0;
         _dice = 4;
-        setStatus('أُعيدت اللعبة! دور ' + playerLabel(currentPlayer()));
-        startTurnTimer();
+        _started = false;
+        stopTurnTimer();
+        _timeLeft = TURN_TIME;
+        setStatus('أُعيدت اللعبة — اضغط "ابدأ" لبدء المباراة');
         renderDice();
         renderTokens();
         renderTurn();
@@ -1716,7 +1735,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderTurn();
         if (_ending) return;
         if (checkMatchComplete()) return;
-        if (wasCurrent && !_rolling) startTurnTimer();
+        if (wasCurrent && !_rolling && _started) startTurnTimer();
     }
 
     function enforceMaxPlayers() {
@@ -1863,10 +1882,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _dice = 4;
         _startedAt = Date.now();
         _matchActive = true;
+        _started = false;
+        _timeLeft = TURN_TIME;
         wireCommentListener();
         renderStage();
-        setStatus('اللعبة بدأت! دور ' + playerLabel(currentPlayer()));
-        startTurnTimer();
+        setStatus('اضغط "ابدأ" لبدء المباراة');
     }
 
     function handleReplaySamePlayers() {
