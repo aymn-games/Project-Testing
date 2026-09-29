@@ -402,6 +402,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     el.textContent = text;
     el.style.color = ok ? '#7ee0a6' : '#e08a8a';
   }
+  // ?next= — رجوع لصفحة داخلية بعد الدخول. مسار نسبي فقط: يُرفَض أي
+  // رابط يبدأ بـ/ أو يحتوي // أو \ أو ":" (بروتوكول مثل https: أو javascript:).
+  function getSafeNextUrl(){
+    var next;
+    try { next = new URLSearchParams(window.location.search).get('next'); } catch(e) { return 'index.html'; }
+    if (!next) return 'index.html';
+    if (next.charAt(0) === '/' || next.indexOf('//') !== -1 || next.indexOf('\\') !== -1) return 'index.html';
+    if (!/^[A-Za-z0-9_\-.\/]+(\?[A-Za-z0-9_\-.=&%]*)?(#[A-Za-z0-9_\-]*)?$/.test(next)) return 'index.html';
+    return next;
+  }
   function isStreamerSelected(){
     var btns = Array.prototype.slice.call(document.querySelectorAll('button'));
     var streamerBtn = btns.find(function(b){ return b.textContent.trim() === 'استريمر'; });
@@ -420,7 +430,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     window.AGPAuth.login(email, password).then(function(result){
       if (result && result.success) {
         setNote('تم تسجيل الدخول، جاري تحويلك…', true);
-        setTimeout(function(){ window.location.href = 'index.html'; }, 500);
+        setTimeout(function(){ window.location.href = getSafeNextUrl(); }, 500);
       } else {
         setNote((result && result.message) || 'تعذّر تسجيل الدخول، تأكد من البيانات', false);
       }
@@ -443,7 +453,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           if (loginResult && loginResult.success) {
             if (displayName) { try { window.AGPAuth.updateDisplayName(displayName); } catch(e){} }
             setNote('تم إنشاء الحساب، جاري تحويلك…', true);
-            setTimeout(function(){ window.location.href = 'index.html'; }, 500);
+            setTimeout(function(){ window.location.href = getSafeNextUrl(); }, 500);
           } else {
             setNote('تم إنشاء الحساب، سجّل دخولك الآن', true);
           }
@@ -516,7 +526,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           return;
         }
         setNote('تم تسجيل الدخول، جاري تحويلك…', true);
-        setTimeout(function(){ window.location.href = 'index.html'; }, 500);
+        setTimeout(function(){ window.location.href = getSafeNextUrl(); }, 500);
       } else if (result && result.error === 'device_locked') {
         setNote('هذا الحساب مربوط بجهاز آخر مسبقاً. تواصل مع الأدمن لإعادة تعيين الجهاز المسموح.', false);
       } else {

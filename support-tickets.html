@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الدعم والاقتراحات — منصة ألعاب أيمن</title>
+<meta name="description" content="أرسل اقتراحاً أو سؤالاً أو بلّغ عن مشكلة تقنية لفريق منصة ألعاب أيمن.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@300;400;700;800;900&display=swap" rel="stylesheet">
+<!-- نظام "الدعم والاقتراحات" — صفحة المستخدم. يتصل بـ/api/support/* عبر
+     auth/auth-client.js، والمرفقات تُرفع مباشرة من المتصفح لـCloudinary
+     بتوقيع من السيرفر (backend/support/support-service.js). كل نص قادم
+     من السيرفر يُعرَض عبر textContent فقط (منع XSS). -->
+<style>
+    :root {
+        --bg: #0b0714;
+        --violet: #7c3aed;
+        --violet2: #d878ff;
+        --glass: rgba(255, 255, 255, 0.045);
+        --glass-2: rgba(255, 255, 255, 0.08);
+        --border: rgba(216, 120, 255, 0.18);
+        --border-strong: rgba(216, 120, 255, 0.4);
+        --text: #ffffff;
+        --text-muted: #b9aed1;
+        --success: #22c55e;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { margin: 0; }
+    body {
+        font-family: 'Zain', 'Cairo', sans-serif; font-size: 17px;
+        background:
+            radial-gradient(900px 500px at 85% -10%, rgba(124, 58, 237, 0.28), transparent 60%),
+            radial-gradient(700px 500px at -10% 110%, rgba(216, 120, 255, 0.14), transparent 60%),
+            var(--bg);
+        background-attachment: fixed;
+        color: var(--text); min-height: 100vh;
+    }
+    a { color: inherit; text-decoration: none; }
+    button, input, select, textarea { font-family: inherit; font-size: inherit; }
+
+    header.topbar {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        padding: 14px 24px; border-bottom: 1px solid var(--border);
+        background: rgba(11, 7, 20, 0.6); backdrop-filter: blur(12px);
+        position: sticky; top: 0; z-index: 20;
+    }
+    .brand-logo { height: 42px; display: block; }
+    .topbar-actions { display: flex; gap: 8px; align-items: center; }
+
+    main { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; }
+    h1 {
+        margin: 0 0 6px; font-size: 2.1em; font-weight: 900;
+        background: linear-gradient(90deg, var(--violet2), var(--violet));
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .intro { color: var(--text-muted); margin: 0 0 24px; line-height: 1.8; }
+
+    /* ---- Buttons: primary / secondary / danger ---- */
+    .btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        border-radius: 999px; padding: 10px 22px; font-weight: 800; cursor: pointer;
+        border: 1px solid var(--border); background: var(--glass); color: var(--text);
+        transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+        white-space: nowrap;
+    }
+    .btn:hover { border-color: var(--border-strong); }
+    .btn:active { transform: translateY(1px); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary {
+        background: linear-gradient(90deg, var(--violet), var(--violet2)); border-color: transparent; color: #fff;
+        box-shadow: 0 8px 26px rgba(124, 58, 237, 0.4);
+    }
+    .btn-primary:hover:not(:disabled) { box-shadow: 0 10px 32px rgba(216, 120, 255, 0.5); }
+    .btn-secondary { background: var(--glass); border-color: var(--border); color: var(--text); }
+    .btn-danger { background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.45); color: #fca5a5; }
+    .btn-sm { padding: 7px 16px; font-size: 0.9em; }
+
+    /* ---- Glass card ---- */
+    .card {
+        background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+        border: 1px solid var(--border); border-radius: var(--radius);
+        backdrop-filter: blur(14px); padding: 22px;
+        box-shadow: 0 20px 50px -30px rgba(124, 58, 237, 0.6);
+    }
+
+    /* ---- Tabs ---- */
+    .tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+    .tab-btn {
+        border-radius: 999px; padding: 9px 20px; font-weight: 800; cursor: pointer;
+        background: var(--glass); border: 1px solid var(--border); color: var(--text-muted);
+    }
+    .tab-btn.is-active { color: #fff; border-color: var(--violet2); box-shadow: 0 0 0 1px var(--violet2) inset, 0 0 18px rgba(216, 120, 255, 0.35); }
+    .count-badge {
+        display: inline-block; min-width: 22px; padding: 0 7px; margin-inline-start: 6px;
+        border-radius: 999px; background: var(--violet); color: #fff; font-size: 0.8em; line-height: 22px; text-align: center;
+    }
+
+    .view { display: none; }
+    .view.is-active { display: block; }
+
+    /* ---- Form ---- */
+    .field { margin-bottom: 18px; }
+    .field > label, .field-label { display: block; font-weight: 800; margin-bottom: 8px; }
+    .field-hint { color: var(--text-muted); font-size: 0.85em; margin-top: 6px; }
+    .input, .textarea {
+        width: 100%; padding: 12px 14px; border-radius: 14px;
+        background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); color: var(--text);
+        outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input:focus, .textarea:focus { border-color: var(--violet2); box-shadow: 0 0 0 3px rgba(216, 120, 255, 0.18); }
+    .textarea { resize: vertical; min-height: 140px; line-height: 1.8; }
+    .char-count { text-align: left; color: var(--text-muted); font-size: 0.8em; margin-top: 4px; direction: ltr; }
+
+    .type-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+    .type-pill {
+        flex: 1 1 140px; border-radius: 999px; padding: 10px 16px; cursor: pointer; font-weight: 800;
+        background: var(--glass); border: 1px solid var(--border); color: var(--text-muted); text-align: center;
+    }
+    .type-pill.is-active { color: #fff; background: rgba(124, 58, 237, 0.3); border-color: var(--violet2); box-shadow: 0 0 16px rgba(216, 120, 255, 0.3); }
+
+    /* ---- Dropzone + uploads ---- */
+    .dropzone {
+        display: block; width: 100%;
+        border: 2px dashed var(--border-strong); border-radius: var(--radius); padding: 22px 16px;
+        text-align: center; color: var(--text-muted); cursor: pointer; transition: background 0.2s, border-color 0.2s;
+        background: rgba(124, 58, 237, 0.05);
+    }
+    .dropzone:hover, .dropzone.is-dragover { background: rgba(124, 58, 237, 0.14); border-color: var(--violet2); color: #fff; }
+    .dropzone strong { color: var(--violet2); }
+    .dropzone input[type=file] { display: none; }
+    .upload-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-top: 12px; }
+    .upload-item {
+        position: relative; border-radius: 14px; overflow: hidden; background: var(--glass-2);
+        border: 1px solid var(--border); padding: 8px; font-size: 0.82em;
+    }
+    .upload-thumb {
+        height: 90px; border-radius: 10px; background: rgba(0, 0, 0, 0.35) center/cover no-repeat;
+        display: flex; align-items: center; justify-content: center; font-size: 2em; margin-bottom: 6px;
+    }
+    .upload-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .upload-meta { color: var(--text-muted); font-size: 0.9em; }
+    .upload-meta.is-error { color: #fca5a5; }
+    .progress { height: 5px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); margin-top: 6px; overflow: hidden; }
+    .progress > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--violet), var(--violet2)); transition: width 0.15s; }
+    .upload-remove {
+        position: absolute; top: 6px; left: 6px; width: 26px; height: 26px; border-radius: 50%;
+        border: none; background: rgba(0, 0, 0, 0.65); color: #fff; cursor: pointer; font-size: 14px; line-height: 26px;
+    }
+
+    .form-actions { display: flex; justify-content: flex-start; gap: 10px; flex-wrap: wrap; }
+
+    /* ---- Ticket list ---- */
+    .ticket-list { display: flex; flex-direction: column; gap: 10px; }
+    .ticket-row {
+        display: flex; justify-content: space-between; align-items: center; gap: 12px;
+        padding: 14px 18px; cursor: pointer;
+    }
+    .ticket-row:hover { border-color: var(--border-strong); }
+    .ticket-row-main { min-width: 0; }
+    .ticket-row-title { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ticket-row-meta { color: var(--text-muted); font-size: 0.85em; margin-top: 2px; }
+    .ticket-row-side { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .reply-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--violet2); box-shadow: 0 0 10px var(--violet2); }
+
+    .badge { display: inline-block; border-radius: 999px; padding: 3px 12px; font-size: 0.82em; font-weight: 800; border: 1px solid transparent; }
+    .badge-new { background: rgba(216, 120, 255, 0.15); color: var(--violet2); border-color: rgba(216, 120, 255, 0.4); }
+    .badge-in_progress { background: rgba(245, 158, 11, 0.14); color: #fbbf24; border-color: rgba(245, 158, 11, 0.4); }
+    .badge-closed { background: rgba(255, 255, 255, 0.06); color: var(--text-muted); border-color: rgba(255, 255, 255, 0.15); }
+    .badge-type { background: rgba(124, 58, 237, 0.18); color: #e2d4ff; border-color: rgba(124, 58, 237, 0.4); }
+
+    .empty-state { text-align: center; color: var(--text-muted); padding: 36px 16px; }
+
+    /* ---- Conversation ---- */
+    .ticket-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .ticket-head h2 { margin: 0 0 6px; font-size: 1.4em; overflow-wrap: anywhere; }
+    .ticket-head-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; color: var(--text-muted); font-size: 0.9em; }
+    .chat { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+    .msg { max-width: 82%; padding: 12px 16px; border-radius: 18px; line-height: 1.8; }
+    .msg-user { align-self: flex-start; background: linear-gradient(160deg, rgba(124, 58, 237, 0.45), rgba(124, 58, 237, 0.25)); border: 1px solid rgba(216, 120, 255, 0.35); border-top-right-radius: 6px; }
+    .msg-admin { align-self: flex-end; background: var(--glass-2); border: 1px solid var(--border); border-top-left-radius: 6px; }
+    .msg-sender { font-weight: 800; font-size: 0.85em; margin-bottom: 4px; color: var(--violet2); }
+    .msg-admin .msg-sender { color: #7ee0a6; }
+    .msg-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .msg-time { color: var(--text-muted); font-size: 0.75em; margin-top: 6px; }
+    .msg-attachments { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .att-img { display: block; width: 110px; height: 80px; border-radius: 10px; background: rgba(0,0,0,0.35) center/cover no-repeat; border: 1px solid var(--border); }
+    .att-file {
+        display: inline-flex; align-items: center; gap: 6px; max-width: 220px; padding: 6px 12px;
+        border-radius: 999px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); font-size: 0.85em;
+    }
+    .att-file span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .closed-note { text-align: center; color: var(--text-muted); padding: 14px; border: 1px dashed var(--border); border-radius: 14px; }
+
+    /* ---- Toast (نفس أسماء dashboard-core: toast / toast--visible / toast--success|error|info) ---- */
+    .toast-container { position: fixed; bottom: 24px; left: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 200; max-width: 340px; }
+    .toast {
+        background: rgba(20, 12, 34, 0.95); border: 1px solid var(--border); border-right: 4px solid var(--violet);
+        border-radius: 12px; padding: 12px 16px; color: #fff; backdrop-filter: blur(10px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5); opacity: 0; transform: translateY(8px); transition: opacity 0.2s, transform 0.2s;
+    }
+    .toast--visible { opacity: 1; transform: translateY(0); }
+    .toast--success { border-right-color: var(--success); }
+    .toast--error { border-right-color: var(--danger); }
+    .toast--info { border-right-color: var(--violet2); }
+
+    .loading { text-align: center; color: var(--text-muted); padding: 30px; }
+    body.auth-checking main { visibility: hidden; }
+
+    @media (max-width: 600px) {
+        body { font-size: 16px; }
+        header.topbar { padding: 10px 16px; }
+        main { padding: 22px 16px 48px; }
+        h1 { font-size: 1.7em; }
+        .card { padding: 16px; }
+        .msg { max-width: 94%; }
+        .ticket-row { flex-direction: column; align-items: stretch; }
+        .ticket-row-side { justify-content: space-between; }
+        .toast-container { left: 16px; right: 16px; bottom: 16px; max-width: none; }
+        .form-actions .btn { flex: 1 1 auto; }
+    }
+</style>
+</head>
+<body class="auth-checking">
+
+<header class="topbar">
+    <a href="index.html"><img src="logo.png" alt="ألعاب أيمن" class="brand-logo"></a>
+    <div class="topbar-actions">
+        <a href="index.html" class="btn btn-secondary btn-sm">الرئيسية</a>
+    </div>
+</header>
+
+<main>
+    <h1>الدعم والاقتراحات</h1>
+    <p class="intro">عندك اقتراح، سؤال، أو واجهتك مشكلة تقنية؟ افتح تذكرة وفريقنا يرد عليك هنا وبإيميلك.</p>
+
+    <div class="tabs" id="tabs">
+        <button type="button" class="tab-btn is-active" data-tab="new">＋ تذكرة جديدة</button>
+        <button type="button" class="tab-btn" data-tab="list">تذاكري<span class="count-badge" id="tickets-count" hidden>0</span></button>
+    </div>
+
+    <!-- ===== تذكرة جديدة ===== -->
+    <section class="view is-active" data-view="new">
+        <form class="card" id="new-ticket-form" novalidate>
+            <div class="field">
+                <span class="field-label">نوع التذكرة</span>
+                <div class="type-pills" id="type-pills">
+                    <button type="button" class="type-pill is-active" data-type="suggestion">💡 اقتراح</button>
+                    <button type="button" class="type-pill" data-type="question">❓ سؤال</button>
+                    <button type="button" class="type-pill" data-type="bug">🐞 مشكلة تقنية</button>
+                </div>
+            </div>
+            <div class="field">
+                <label for="ticket-title">العنوان</label>
+                <input class="input" id="ticket-title" maxlength="120" placeholder="اكتب عنواناً مختصراً وواضحاً" autocomplete="off">
+                <div class="char-count"><span id="title-count">0</span>/120</div>
+            </div>
+            <div class="field">
+                <label for="ticket-body">التفاصيل</label>
+                <textarea class="textarea" id="ticket-body" maxlength="5000" placeholder="اشرح بالتفصيل… (للمشاكل التقنية: وش سويت، وش توقعت يصير، ووش صار فعلاً)"></textarea>
+                <div class="char-count"><span id="body-count">0</span>/5000</div>
+            </div>
+            <div class="field">
+                <span class="field-label">المرفقات (اختياري)</span>
+                <div id="new-uploader"></div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="btn-submit-ticket">إرسال التذكرة</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- ===== تذاكري ===== -->
+    <section class="view" data-view="list">
+        <div class="ticket-list" id="ticket-list"><div class="loading">جارٍ التحميل…</div></div>
+    </section>
+
+    <!-- ===== محادثة تذكرة ===== -->
+    <section class="view" data-view="ticket">
+        <div class="card">
+            <div class="ticket-head">
+                <div>
+                    <h2 id="tv-title"></h2>
+                    <div class="ticket-head-meta" id="tv-meta"></div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-back">→ رجوع لتذاكري</button>
+            </div>
+            <div class="chat" id="tv-chat"></div>
+            <div id="tv-reply-wrap">
+                <form id="reply-form" novalidate>
+                    <div class="field">
+                        <label for="reply-body">ردّك</label>
+                        <textarea class="textarea" id="reply-body" maxlength="5000" placeholder="اكتب ردّك…" style="min-height:100px"></textarea>
+                        <div class="char-count"><span id="reply-count">0</span>/5000</div>
+                    </div>
+                    <div class="field"><div id="reply-uploader"></div></div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="btn-send-reply">إرسال الرد</button>
+                    </div>
+                </form>
+            </div>
+            <div class="closed-note" id="tv-closed-note" hidden>🔒 هذه التذكرة مغلقة — لا يمكن إضافة ردود. افتح تذكرة جديدة إذا احتجت شي آخر.</div>
+        </div>
+    </section>
+</main>
+
+<div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+<script src="auth/auth-client.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    var Auth = window.AGPAuth;
+
+    var TYPE_LABELS = { suggestion: '💡 اقتراح', question: '❓ سؤال', bug: '🐞 مشكلة تقنية' };
+    var STATUS_LABELS = { new: 'جديدة', in_progress: 'قيد المعالجة', closed: 'مغلقة' };
+    var ERROR_MESSAGES = {
+        empty_title: 'اكتب عنوان التذكرة.',
+        title_too_long: 'العنوان أطول من 120 حرفاً.',
+        empty_body: 'اكتب نص الرسالة.',
+        body_too_long: 'النص أطول من 5000 حرف.',
+        invalid_type: 'اختر نوع التذكرة.',
+        rate_limited: 'أرسلت طلبات كثيرة خلال ساعة — حاول بعد شوي.',
+        ticket_closed: 'التذكرة مغلقة، ما تقدر ترد عليها.',
+        not_found: 'التذكرة غير موجودة.',
+        too_many_attachments: 'الحد الأقصى 5 مرفقات لكل رسالة.',
+        file_too_large: 'حجم الملف أكبر من 10MB.',
+        file_type_not_allowed: 'نوع الملف غير مسموح.',
+        invalid_attachment_url: 'تعذّر التحقق من أحد المرفقات — احذفه وارفعه من جديد.',
+        uploads_not_configured: 'رفع المرفقات غير متاح حالياً.',
+        unauthorized: 'انتهت جلستك — سجّل دخولك من جديد.'
+    };
+
+    var ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'pdf', 'txt', 'zip'];
+    var IMAGE_EXT = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    var MAX_FILE_BYTES = 10 * 1024 * 1024;
+    var MAX_FILES = 5;
+
+    function $(id) { return document.getElementById(id); }
+
+    function el(tag, className, text) {
+        var node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text != null) node.textContent = text;
+        return node;
+    }
+
+    function errorText(result, fallback) {
+        var code = result && result.error;
+        return ERROR_MESSAGES[code] || fallback || 'حدث خطأ غير متوقع، حاول مرة ثانية.';
+    }
+
+    /* ---------------- Toast ---------------- */
+    function toast(message, kind) {
+        var node = el('div', 'toast toast--' + (kind || 'info'), message);
+        $('toast-container').appendChild(node);
+        requestAnimationFrame(function () { node.classList.add('toast--visible'); });
+        setTimeout(function () {
+            node.classList.remove('toast--visible');
+            setTimeout(function () { node.remove(); }, 250);
+        }, 3800);
+    }
+
+    function formatDate(ms) {
+        try {
+            return new Date(ms).toLocaleString('ar', { dateStyle: 'medium', timeStyle: 'short' });
+        } catch (err) { return new Date(ms).toLocaleString(); }
+    }
+
+    function formatBytes(n) {
+        if (n < 1024) return n + ' B';
+        if (n < 1024 * 1024) return (n / 1024).toFixed(0) + ' KB';
+        return (n / 1024 / 1024).toFixed(1) + ' MB';
+    }
+
+    function extOf(name) {
+        var m = /\.([A-Za-z0-9]+)$/.exec(name || '');
+        return m ? m[1].toLowerCase() : '';
+    }
+
+    function isSafeCloudinaryUrl(url) {
+        return typeof url === 'string' && url.indexOf('https://res.cloudinary.com/') === 0;
+    }
+
+    function statusBadge(status) {
+        return el('span', 'badge badge-' + status, STATUS_LABELS[status] || status);
+    }
+
+    /* ---------------- Uploader (سحب وإفلات + معاينة + تقدّم) ---------------- */
+    function createUploader(container) {
+        var items = [];
+
+        var zone = el('label', 'dropzone');
+        zone.appendChild(document.createTextNode('📎 اسحب الملفات هنا أو '));
+        zone.appendChild(el('strong', null, 'اضغط للاختيار'));
+        zone.appendChild(el('div', 'field-hint', 'صور (jpg, png, webp, gif) أو pdf أو txt أو zip — حتى 10MB للملف، و5 ملفات كحد أقصى.'));
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = true;
+        input.accept = '.jpg,.jpeg,.png,.webp,.gif,.pdf,.txt,.zip,image/jpeg,image/png,image/webp,image/gif,application/pdf,text/plain,application/zip';
+        zone.appendChild(input);
+        var list = el('div', 'upload-list');
+        container.appendChild(zone);
+        container.appendChild(list);
+
+        input.addEventListener('change', function () { addFiles(input.files); input.value = ''; });
+        ['dragenter', 'dragover'].forEach(function (evt) {
+            zone.addEventListener(evt, function (e) { e.preventDefault(); zone.classList.add('is-dragover'); });
+        });
+        ['dragleave', 'drop'].forEach(function (evt) {
+            zone.addEventListener(evt, function (e) { e.preventDefault(); zone.classList.remove('is-dragover'); });
+        });
+        zone.addEventListener('drop', function (e) { if (e.dataTransfer) addFiles(e.dataTransfer.files); });
+
+        function addFiles(fileList) {
+            Array.prototype.forEach.call(fileList || [], function (file) {
+                if (items.length >= MAX_FILES) { toast('الحد الأقصى ' + MAX_FILES + ' ملفات لكل رسالة.', 'error'); return; }
+                var ext = extOf(file.name);
+                if (ALLOWED_EXT.indexOf(ext) === -1) { toast('نوع الملف غير مسموح: ' + file.name, 'error'); return; }
+                if (file.size > MAX_FILE_BYTES) { toast('الملف أكبر من 10MB: ' + file.name, 'error'); return; }
+                if (file.size <= 0) { toast('الملف فارغ: ' + file.name, 'error'); return; }
+                var item = { file: file, ext: ext, status: 'uploading', progress: 0, result: null, xhr: null };
+                items.push(item);
+                renderItem(item);
+                upload(item);
+            });
+        }
+
+        function renderItem(item) {
+            var box = el('div', 'upload-item');
+            var thumb = el('div', 'upload-thumb');
+            if (IMAGE_EXT.indexOf(item.ext) !== -1) {
+                item.previewUrl = URL.createObjectURL(item.file);
+                thumb.style.backgroundImage = 'url("' + item.previewUrl + '")';
+            } else {
+                thumb.textContent = item.ext === 'pdf' ? '📄' : (item.ext === 'zip' ? '🗜️' : '📝');
+            }
+            var name = el('div', 'upload-name', item.file.name);
+            name.title = item.file.name;
+            var meta = el('div', 'upload-meta', formatBytes(item.file.size) + ' — جارٍ الرفع…');
+            var bar = el('div', 'progress');
+            var fill = el('span');
+            bar.appendChild(fill);
+            var remove = el('button', 'upload-remove', '✕');
+            remove.type = 'button';
+            remove.setAttribute('aria-label', 'حذف المرفق');
+            remove.addEventListener('click', function () {
+                if (item.xhr && item.status === 'uploading') item.xhr.abort();
+                if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+                items.splice(items.indexOf(item), 1);
+                box.remove();
+            });
+            box.appendChild(remove);
+            box.appendChild(thumb);
+            box.appendChild(name);
+            box.appendChild(meta);
+            box.appendChild(bar);
+            list.appendChild(box);
+            item.ui = { meta: meta, fill: fill, bar: bar };
+        }
+
+        function setState(item, status, text) {
+            item.status = status;
+            item.ui.meta.textContent = text;
+            item.ui.meta.classList.toggle('is-error', status === 'error');
+            if (status === 'done') item.ui.fill.style.width = '100%';
+        }
+
+        function upload(item) {
+            Auth.supportGetUploadSignature(item.file.name, item.file.size).then(function (sig) {
+                if (!sig || !sig.success) { setState(item, 'error', errorText(sig, 'تعذّر تجهيز الرفع')); return; }
+                if (item.status !== 'uploading') return; // حُذف أثناء الانتظار
+                var form = new FormData();
+                form.append('file', item.file);
+                form.append('api_key', sig.apiKey);
+                form.append('signature', sig.signature);
+                Object.keys(sig.params).forEach(function (k) { form.append(k, sig.params[k]); });
+
+                var xhr = new XMLHttpRequest();
+                item.xhr = xhr;
+                xhr.open('POST', sig.uploadUrl);
+                xhr.upload.onprogress = function (e) {
+                    if (!e.lengthComputable) return;
+                    var pct = Math.round((e.loaded / e.total) * 100);
+                    item.ui.fill.style.width = pct + '%';
+                    item.ui.meta.textContent = formatBytes(item.file.size) + ' — ' + pct + '%';
+                };
+                xhr.onload = function () {
+                    var data = null;
+                    try { data = JSON.parse(xhr.responseText); } catch (err) {}
+                    if (xhr.status >= 200 && xhr.status < 300 && data && data.secure_url) {
+                        item.result = { url: data.secure_url, bytes: data.bytes || item.file.size, name: item.file.name };
+                        setState(item, 'done', formatBytes(item.file.size) + ' — ✓ تم الرفع');
+                    } else {
+                        setState(item, 'error', 'فشل الرفع' + (data && data.error && data.error.message ? ': ' + data.error.message : ''));
+                    }
+                };
+                xhr.onerror = function () { setState(item, 'error', 'فشل الرفع — تحقق من الاتصال'); };
+                xhr.onabort = function () { item.status = 'aborted'; };
+                xhr.send(form);
+            }).catch(function () { setState(item, 'error', 'تعذّر الوصول للخادم'); });
+        }
+
+        return {
+            isBusy: function () { return items.some(function (i) { return i.status === 'uploading'; }); },
+            hasErrors: function () { return items.some(function (i) { return i.status === 'error'; }); },
+            getAttachments: function () {
+                return items.filter(function (i) { return i.status === 'done'; }).map(function (i) { return i.result; });
+            },
+            reset: function () {
+                items.forEach(function (i) { if (i.previewUrl) URL.revokeObjectURL(i.previewUrl); });
+                items = [];
+                list.innerHTML = '';
+            }
+        };
+    }
+
+    /* ---------------- Views / routing ---------------- */
+    var currentTicketId = null;
+
+    function showView(name) {
+        Array.prototype.forEach.call(document.querySelectorAll('.view'), function (v) {
+            v.classList.toggle('is-active', v.getAttribute('data-view') === name);
+        });
+        Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'), function (b) {
+            b.classList.toggle('is-active', b.getAttribute('data-tab') === name);
+        });
+    }
+
+    function setUrl(query) {
+        try { history.pushState(null, '', 'support-tickets.html' + (query || '')); } catch (err) {}
+    }
+
+    function route() {
+        var id = new URLSearchParams(location.search).get('id');
+        var tab = new URLSearchParams(location.search).get('tab');
+        if (id) { openTicket(id, false); return; }
+        currentTicketId = null;
+        if (tab === 'list') { showView('list'); loadList(); } else { showView('new'); }
+    }
+    window.addEventListener('popstate', route);
+
+    Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'), function (btn) {
+        btn.addEventListener('click', function () {
+            var tab = btn.getAttribute('data-tab');
+            setUrl(tab === 'list' ? '?tab=list' : '');
+            route();
+        });
+    });
+    $('btn-back').addEventListener('click', function () { setUrl('?tab=list'); route(); });
+
+    /* ---------------- New ticket ---------------- */
+    var selectedType = 'suggestion';
+    Array.prototype.forEach.call(document.querySelectorAll('.type-pill'), function (pill) {
+        pill.addEventListener('click', function () {
+            selectedType = pill.getAttribute('data-type');
+            Array.prototype.forEach.call(document.querySelectorAll('.type-pill'), function (p) {
+                p.classList.toggle('is-active', p === pill);
+            });
+        });
+    });
+
+    function bindCounter(inputId, countId) {
+        var input = $(inputId);
+        input.addEventListener('input', function () { $(countId).textContent = input.value.length; });
+    }
+    bindCounter('ticket-title', 'title-count');
+    bindCounter('ticket-body', 'body-count');
+    bindCounter('reply-body', 'reply-count');
+
+    var newUploader = createUploader($('new-uploader'));
+    var replyUploader = createUploader($('reply-uploader'));
+
+    function checkUploader(uploader) {
+        if (uploader.isBusy()) { toast('انتظر اكتمال رفع المرفقات.', 'info'); return false; }
+        if (uploader.hasErrors()) { toast('فيه مرفق فشل رفعه — احذفه أو أعد رفعه.', 'error'); return false; }
+        return true;
+    }
+
+    $('new-ticket-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var title = $('ticket-title').value.trim();
+        var body = $('ticket-body').value.trim();
+        if (!title) { toast(ERROR_MESSAGES.empty_title, 'error'); return; }
+        if (!body) { toast(ERROR_MESSAGES.empty_body, 'error'); return; }
+        if (!checkUploader(newUploader)) return;
+
+        var btn = $('btn-submit-ticket');
+        btn.disabled = true;
+        Auth.supportCreateTicket(selectedType, title, body, newUploader.getAttachments()).then(function (result) {
+            btn.disabled = false;
+            if (result && result.__httpStatus === 401) { redirectToLogin(); return; }
+            if (!result || !result.success) { toast(errorText(result), 'error'); return; }
+            toast('تم إرسال تذكرتك بنجاح ✓', 'success');
+            $('ticket-title').value = '';
+            $('ticket-body').value = '';
+            $('title-count').textContent = '0';
+            $('body-count').textContent = '0';
+            newUploader.reset();
+            setUrl('?id=' + result.ticket.id);
+            openTicket(result.ticket.id, false);
+        }).catch(function () {
+            btn.disabled = false;
+            toast('تعذّر الوصول للخادم.', 'error');
+        });
+    });
+
+    /* ---------------- List ---------------- */
+    function loadList() {
+        var listEl = $('ticket-list');
+        listEl.innerHTML = '';
+        listEl.appendChild(el('div', 'loading', 'جارٍ التحميل…'));
+        Auth.supportListTickets().then(function (result) {
+            listEl.innerHTML = '';
+            if (!result || !result.success) { listEl.appendChild(el('div', 'empty-state', errorText(result, 'تعذّر تحميل التذاكر.'))); return; }
+            updateCount(result.tickets.length);
+            if (!result.tickets.length) {
+                listEl.appendChild(el('div', 'card empty-state', 'ما عندك تذاكر بعد — افتح أول تذكرة من تبويب "تذكرة جديدة".'));
+                return;
+            }
+            result.tickets.forEach(function (t) {
+                var row = el('div', 'card ticket-row');
+                var main = el('div', 'ticket-row-main');
+                main.appendChild(el('div', 'ticket-row-title', t.title));
+                main.appendChild(el('div', 'ticket-row-meta', '#' + t.id + ' · ' + (TYPE_LABELS[t.type] || t.type) + ' · آخر تحديث ' + formatDate(t.updated_at)));
+                var side = el('div', 'ticket-row-side');
+                if (t.last_reply_by === 'admin' && t.status !== 'closed') {
+                    var dot = el('span', 'reply-dot');
+                    dot.title = 'رد جديد من فريق الدعم';
+                    side.appendChild(dot);
+                }
+                side.appendChild(statusBadge(t.status));
+                row.appendChild(main);
+                row.appendChild(side);
+                row.addEventListener('click', function () { setUrl('?id=' + t.id); openTicket(t.id, false); });
+                listEl.appendChild(row);
+            });
+        }).catch(function () {
+            listEl.innerHTML = '';
+            listEl.appendChild(el('div', 'empty-state', 'تعذّر الوصول للخادم.'));
+        });
+    }
+
+    function updateCount(n) {
+        var badge = $('tickets-count');
+        badge.textContent = n;
+        badge.hidden = !n;
+    }
+
+    /* ---------------- Ticket conversation ---------------- */
+    function renderAttachments(list) {
+        var wrap = el('div', 'msg-attachments');
+        (list || []).forEach(function (a) {
+            if (!isSafeCloudinaryUrl(a.url)) return;
+            var link = document.createElement('a');
+            link.href = a.url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.title = a.name || '';
+            if (a.resource_type === 'image' && a.format !== 'pdf') {
+                link.className = 'att-img';
+                link.style.backgroundImage = 'url("' + a.url.replace(/"/g, '') + '")';
+            } else {
+                link.className = 'att-file';
+                link.appendChild(document.createTextNode(a.format === 'pdf' ? '📄' : (a.format === 'zip' ? '🗜️' : '📝')));
+                link.appendChild(el('span', null, a.name || 'ملف'));
+                if (a.bytes) link.appendChild(el('small', 'upload-meta', formatBytes(a.bytes)));
+            }
+            wrap.appendChild(link);
+        });
+        return wrap;
+    }
+
+    function renderMessage(m) {
+        var box = el('div', 'msg msg-' + m.sender);
+        box.appendChild(el('div', 'msg-sender', m.sender === 'admin' ? '🛡️ فريق الدعم' : 'أنت'));
+        box.appendChild(el('div', 'msg-body', m.body));
+        if (m.attachments && m.attachments.length) box.appendChild(renderAttachments(m.attachments));
+        box.appendChild(el('div', 'msg-time', formatDate(m.created_at)));
+        return box;
+    }
+
+    function applyTicketStatus(status) {
+        var closed = status === 'closed';
+        $('tv-reply-wrap').hidden = closed;
+        $('tv-closed-note').hidden = !closed;
+    }
+
+    function openTicket(id, silent) {
+        currentTicketId = Number(id);
+        showView('ticket');
+        Array.prototype.forEach.call(document.querySelectorAll('.tab-btn'), function (b) { b.classList.remove('is-active'); });
+        if (!silent) {
+            $('tv-title').textContent = 'جارٍ التحميل…';
+            $('tv-meta').innerHTML = '';
+            $('tv-chat').innerHTML = '';
+        }
+        Auth.supportGetTicket(id).then(function (result) {
+            if (!result || !result.success) {
+                toast(errorText(result, 'تعذّر تحميل التذكرة.'), 'error');
+                setUrl('?tab=list');
+                route();
+                return;
+            }
+            var t = result.ticket;
+            $('tv-title').textContent = t.title;
+            var meta = $('tv-meta');
+            meta.innerHTML = '';
+            meta.appendChild(el('span', null, '#' + t.id));
+            meta.appendChild(el('span', 'badge badge-type', TYPE_LABELS[t.type] || t.type));
+            meta.appendChild(statusBadge(t.status));
+            meta.appendChild(el('span', null, 'أُنشئت ' + formatDate(t.created_at)));
+            var chat = $('tv-chat');
+            chat.innerHTML = '';
+            result.messages.forEach(function (m) { chat.appendChild(renderMessage(m)); });
+            applyTicketStatus(t.status);
+        }).catch(function () { toast('تعذّر الوصول للخادم.', 'error'); });
+    }
+
+    $('reply-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!currentTicketId) return;
+        var body = $('reply-body').value.trim();
+        if (!body) { toast(ERROR_MESSAGES.empty_body, 'error'); return; }
+        if (!checkUploader(replyUploader)) return;
+        var btn = $('btn-send-reply');
+        btn.disabled = true;
+        Auth.supportReply(currentTicketId, body, replyUploader.getAttachments()).then(function (result) {
+            btn.disabled = false;
+            if (result && result.__httpStatus === 401) { redirectToLogin(); return; }
+            if (!result || !result.success) {
+                toast(errorText(result), 'error');
+                if (result && result.error === 'ticket_closed') applyTicketStatus('closed');
+                return;
+            }
+            $('reply-body').value = '';
+            $('reply-count').textContent = '0';
+            replyUploader.reset();
+            $('tv-chat').appendChild(renderMessage(result.message));
+            toast('تم إرسال ردك ✓', 'success');
+        }).catch(function () {
+            btn.disabled = false;
+            toast('تعذّر الوصول للخادم.', 'error');
+        });
+    });
+
+    /* ---------------- Auth guard ---------------- */
+    function loginUrl() {
+        var here = 'support-tickets.html' + (location.search || '');
+        return 'login.html?next=' + encodeURIComponent(here);
+    }
+    function redirectToLogin() { location.href = loginUrl(); }
+
+    if (!Auth) {
+        document.body.classList.remove('auth-checking');
+        toast('تعذّر تحميل نظام الحسابات.', 'error');
+        return;
+    }
+    Auth.requireAuth(loginUrl()).then(function (user) {
+        if (!user) return;
+        document.body.classList.remove('auth-checking');
+        route();
+        Auth.supportListTickets().then(function (r) { if (r && r.success) updateCount(r.tickets.length); });
+    });
+}());
+</script>
+</body>
+</html>

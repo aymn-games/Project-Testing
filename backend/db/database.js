@@ -39,6 +39,8 @@
  *                    الرئيسية (حسابات مسجّلة، استريمرز نشطين، مشاهدين...)،
  *                    محسوبة من الجداول الفعلية ومخزَّنة مؤقتاً (٣ أيام) —
  *                    راجع backend/stats/platform-stats-service.js
+ *   tickets / ticket_messages — تذاكر "الدعم والاقتراحات" ورسائلها —
+ *                    راجع backend/support/support-service.js
  * ==========================================================================
  */
 
@@ -247,6 +249,33 @@ db.exec(`
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
     );
+
+    -- نظام "الدعم والاقتراحات" — تذكرة لكل طلب، ورسائلها بجدول منفصل.
+    -- راجع backend/support/support-service.js
+    CREATE TABLE IF NOT EXISTS tickets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type TEXT NOT NULL CHECK (type IN ('suggestion', 'question', 'bug')),
+        title TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'in_progress', 'closed')),
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        last_reply_by TEXT NOT NULL DEFAULT 'user' CHECK (last_reply_by IN ('user', 'admin'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_tickets_user ON tickets(user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_tickets_status_updated ON tickets(status, updated_at);
+
+    -- attachments: JSON [{url, public_id, resource_type, format, name, bytes}]
+    -- — روابط Cloudinary فقط (الملف نفسه لا يمر بالسيرفر).
+    CREATE TABLE IF NOT EXISTS ticket_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ticket_id INTEGER NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+        sender TEXT NOT NULL CHECK (sender IN ('user', 'admin')),
+        body TEXT NOT NULL,
+        attachments TEXT NOT NULL DEFAULT '[]',
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_ticket_messages_ticket ON ticket_messages(ticket_id, created_at);
 `);
 
 // تصفير تصنيف ساعات البث (الرئيسية): يُسجَّل مرة وحدة أول تشغيل بعد هذا

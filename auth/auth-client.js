@@ -618,6 +618,52 @@ function saveLettersCellQuestionsDraft(questions) {
     return request('/api/letters-cell/questions-draft', { method: 'POST', body: { questions: questions } });
 }
 
+/* Support tickets — map 1:1 to /api/support/* and /api/admin/support/*
+ * (backend/support/support-service.js). The file upload itself goes
+ * straight from the browser to Cloudinary; the server only signs it. */
+
+function supportGetUploadSignature(fileName, fileSize) {
+    return request('/api/support/upload-signature', { method: 'POST', body: { fileName: fileName, fileSize: fileSize } });
+}
+
+function supportCreateTicket(type, title, body, attachments) {
+    return request('/api/support/tickets', { method: 'POST', body: { type: type, title: title, body: body, attachments: attachments || [] } });
+}
+
+function supportListTickets() {
+    return request('/api/support/tickets');
+}
+
+function supportGetTicket(id) {
+    return request('/api/support/ticket?id=' + encodeURIComponent(id));
+}
+
+function supportReply(ticketId, body, attachments) {
+    return request('/api/support/ticket/reply', { method: 'POST', body: { ticketId: ticketId, body: body, attachments: attachments || [] } });
+}
+
+/** filters: {type, status, q, limit, offset} — empty values are omitted. */
+function adminSupportListTickets(filters) {
+    var qs = Object.keys(filters || {}).filter(function (k) {
+        return filters[k] !== undefined && filters[k] !== null && filters[k] !== '';
+    }).map(function (k) {
+        return encodeURIComponent(k) + '=' + encodeURIComponent(filters[k]);
+    }).join('&');
+    return request('/api/admin/support/tickets' + (qs ? '?' + qs : ''));
+}
+
+function adminSupportGetTicket(id) {
+    return request('/api/admin/support/ticket?id=' + encodeURIComponent(id));
+}
+
+function adminSupportReply(ticketId, body) {
+    return request('/api/admin/support/ticket/reply', { method: 'POST', body: { ticketId: ticketId, body: body } });
+}
+
+function adminSupportSetStatus(ticketId, status) {
+    return request('/api/admin/support/ticket/status', { method: 'POST', body: { ticketId: ticketId, status: status } });
+}
+
 /* Page guards — called as the first line of any protected page */
 
 /** Confirms a session is actually valid (calls /api/auth/me, not just
@@ -742,6 +788,15 @@ global.AGPAuth = {
     getLettersCellQuestionsDraft: getLettersCellQuestionsDraft,
     saveLettersCellQuestionsDraft: saveLettersCellQuestionsDraft,
     getPlatformStats: getPlatformStats,
+    supportGetUploadSignature: supportGetUploadSignature,
+    supportCreateTicket: supportCreateTicket,
+    supportListTickets: supportListTickets,
+    supportGetTicket: supportGetTicket,
+    supportReply: supportReply,
+    adminSupportListTickets: adminSupportListTickets,
+    adminSupportGetTicket: adminSupportGetTicket,
+    adminSupportReply: adminSupportReply,
+    adminSupportSetStatus: adminSupportSetStatus,
     requireAuth: requireAuth,
     requireAdmin: requireAdmin
 };

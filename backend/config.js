@@ -35,6 +35,15 @@ module.exports = {
     // للتطوير المحلي فقط — يجب ضبط TIKTOK_STATE_SECRET بالإنتاج.
     tiktokStateSecret: process.env.TIKTOK_STATE_SECRET || 'dev-only-insecure-state-secret-change-me',
 
+    // Cloudinary — توقيع الرفع المباشر من المتصفح لمرفقات تذاكر الدعم.
+    // API Secret سري تماماً، بلا قيمة افتراضية. فارغ = الرفع معطّل بأمان.
+    cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+    cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || '',
+    cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || '',
+
+    // إيميل الأدمن لإشعارات تذاكر الدعم الجديدة/ردود المستخدمين. فارغ = لا إشعار.
+    supportAdminEmail: process.env.SUPPORT_ADMIN_EMAIL || '',
+
     // قيم مبدئية فقط، لا منطق تطبيق فعلي بعد (راجع utils/rate-limiter.js).
     rateLimits: {
         maxMessagesPerSecondPerConnection: 20
