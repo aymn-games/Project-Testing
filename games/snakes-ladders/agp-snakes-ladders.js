@@ -1456,7 +1456,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         beep(520, 0.08, 'square');
         later(function () { beep(660, 0.08, 'square'); }, 120);
         later(function () { beep(440, 0.08, 'square'); }, 240);
-        later(function () { applyRoll(cur, v); }, ROLL_APPLY_MS);
+        _rollWatchdog = later(function () { recoverStuckRoll(cur); }, ROLL_WATCHDOG_MS);
+        later(function () {
+            try { applyRoll(cur, v); }
+            catch (e) { console.error('[Snakes & Ladders] applyRoll failed', e); recoverStuckRoll(cur); }
+        }, ROLL_APPLY_MS);
+    }
+
+    // حماية من تعليق اللعبة: أطول تسلسل رمية (نرد + وقوف + انزلاق + تبويب)
+    // ≈ 6 ثوانٍ؛ لو ما خلص خلال 10 ثوانٍ لأي سبب (خطأ بمتصفح معيّن مثلاً)
+    // نفك حالة "جاري الرمي" وننقل الدور، عشان أوامر الشات ترجع تنقبل.
+    var ROLL_WATCHDOG_MS = 10000;
+    var _rollWatchdog = null;
+    function recoverStuckRoll(me) {
+        if (!_matchActive || !_rolling) return;
+        console.warn('[Snakes & Ladders] roll sequence did not finish — recovering');
+        hideEventCard();
+        setTokenSlide(me.id, false, true);
+        try { renderTokens(); } catch (e) {}
+        finishMove(me, 'تم تجاوز رمية ' + playerLabel(me) + ' بسبب خلل — الدور للي بعده.');
     }
 
     function applyRoll(me, v) {
@@ -1552,7 +1570,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     // نهاية حركة اللاعب — هنا فقط ينتقل الدور (أو يُحسب الفوز)
     function finishMove(me, note) {
-        if (!_matchActive) return;
+        if (!_matchActive || !_rolling) return; // !_rolling = الرمية انتهت/انفكّت مسبقاً (ما ننقل الدور مرتين)
+        if (_rollWatchdog) { window.clearTimeout(_rollWatchdog); _rollWatchdog = null; }
         _rolling = false;
         var i = _order.findIndex(function (p) { return p.id === me.id; });
         if (i === -1) {
