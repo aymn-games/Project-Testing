@@ -359,6 +359,10 @@ ensureColumn('users', 'password_reset_expires', 'INTEGER');
 // افتراضياً. لو مربوط، تُعرَض اسم/صورة الحساب الحيّة بدل النص الثابت.
 ensureColumn('supporters', 'user_id', 'INTEGER');
 
+// آخر مرة فتح فيها صاحب التذكرة محادثتها — أي رد أدمن بعد هذا الوقت يُعَد
+// "غير مقروء" (شارة زر "تذاكري" بالبروفايل). 0 = لم يفتحها بعد.
+ensureColumn('tickets', 'user_seen_at', 'INTEGER NOT NULL DEFAULT 0');
+
 /**
  * تهيئة أولية لكتالوج الإطارات الثابت (4 خاصة + 7 مستويات) — INSERT OR
  * IGNORE بمفتاح slug، فلا خطر إعادة الكتابة فوق تعديلات الأدمن اللاحقة.

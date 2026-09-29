@@ -629,7 +629,7 @@
                 main.appendChild(el('div', 'ticket-row-title', t.title));
                 main.appendChild(el('div', 'ticket-row-meta', '#' + t.id + ' · ' + (TYPE_LABELS[t.type] || t.type) + ' · آخر تحديث ' + formatDate(t.updated_at)));
                 var side = el('div', 'ticket-row-side');
-                if (t.last_reply_by === 'admin' && t.status !== 'closed') {
+                if (t.unread) {
                     var dot = el('span', 'reply-dot');
                     dot.title = 'رد جديد من فريق الدعم';
                     side.appendChild(dot);

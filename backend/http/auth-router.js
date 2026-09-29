@@ -164,6 +164,7 @@ var ROUTES = [
   { method: 'POST', path: '/api/support/upload-signature', requireAuth: true, handler: handleSupportUploadSignature },
   { method: 'POST', path: '/api/support/tickets', requireAuth: true, handler: handleSupportCreateTicket },
   { method: 'GET', path: '/api/support/tickets', requireAuth: true, handler: handleSupportListTickets },
+  { method: 'GET', path: '/api/support/unread-count', requireAuth: true, handler: handleSupportUnreadCount },
   { method: 'GET', path: '/api/support/ticket', requireAuth: true, handler: handleSupportGetTicket },
   { method: 'POST', path: '/api/support/ticket/reply', requireAuth: true, handler: handleSupportReply },
   { method: 'GET', path: '/api/admin/support/tickets', requireAuth: true, requireAdmin: true, handler: handleAdminSupportListTickets },
@@ -709,6 +710,10 @@ function handleSupportCreateTicket(req, res, body, user) {
 
 function handleSupportListTickets(req, res, body, user) {
   sendSupportResult(res, supportService.listMyTickets(user.id));
+}
+
+function handleSupportUnreadCount(req, res, body, user) {
+  sendSupportResult(res, supportService.countMyUnread(user.id));
 }
 
 function handleSupportGetTicket(req, res, body, user) {

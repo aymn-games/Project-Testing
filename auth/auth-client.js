@@ -634,6 +634,11 @@ function supportListTickets() {
     return request('/api/support/tickets');
 }
 
+/** Number of the user's tickets with an admin reply they haven't opened yet. */
+function supportUnreadCount() {
+    return request('/api/support/unread-count');
+}
+
 function supportGetTicket(id) {
     return request('/api/support/ticket?id=' + encodeURIComponent(id));
 }
@@ -791,6 +796,7 @@ global.AGPAuth = {
     supportGetUploadSignature: supportGetUploadSignature,
     supportCreateTicket: supportCreateTicket,
     supportListTickets: supportListTickets,
+    supportUnreadCount: supportUnreadCount,
     supportGetTicket: supportGetTicket,
     supportReply: supportReply,
     adminSupportListTickets: adminSupportListTickets,
