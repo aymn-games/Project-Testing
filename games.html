@@ -1201,5 +1201,129 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (__connectTries >= 30) clearInterval(__connectTimer);
   }, 300);
 </script>
+<script>
+  // [الإطارات المتوفرة] عرض إطار واحد بكل مرة يتحرك بسكرول أفقي مخفي
+  // (بدون شريط تمرير ظاهر وبدون أي إطار/تبويب حول القسم)، ويلف تلقائياً
+  // من إطار للي بعده وبعد الأخير يرجع للأول. فوقه بالزاوية عنوان
+  // "الإطارات المتوفرة" متحرك. أي صورة تفشل بالتحميل تنشال تلقائياً.
+  // يُركَّب تحت بطاقة "اتصل بالبث".
+  var AVAILABLE_FRAMES = ['frame-al-ahli.png','frame-club-ahli-jawahara.png','frame-club-hilal-city.png','frame-club-hilal-crown.png','frame-club-hilal-flag.png','frame-club-hilal-stars.png','frame-club-hilal-trophy.png','frame-club-hilal-wolf.png','frame-club-ittihad-crown.png','frame-club-nassr-crown.png','frame-club-nassr-eagle.png','frame-club-nassr-palm.png','frame-country-ksa-dallah.png','frame-country-ksa-falcon.png','frame-distinguished.png','frame-founder.png','frame-founders-month.png','frame-general-stadium.png','frame-girls-crown-rose.png','frame-girls-kitty.png','frame-level-1.png','frame-level-2.png','frame-level-4.png','frame-level-5.png','frame-level-6.png','frame-level-7.png','frame-rare-dragon.png','frame-streamer.png','frame-supporter.png'];
+
+  function ensureFramesStripStyles(){
+    if (document.getElementById('agp-frames-strip-style')) return;
+    var st = document.createElement('style');
+    st.id = 'agp-frames-strip-style';
+    st.textContent =
+      '.agp-frames-strip{position:relative;margin:0 0 28px;padding-top:40px}' +
+      '.agp-frames-title{position:absolute;top:6px;right:0;z-index:2;display:inline-flex;align-items:center;gap:8px;font-family:"Noto Kufi Arabic",sans-serif;font-size:15px;font-weight:700;animation:agpFramesTitleFloat 3s ease-in-out infinite}' +
+      '.agp-frames-title-text{background:linear-gradient(90deg,#c6b4f2 0%,#ffffff 45%,#c6b4f2 90%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:agpFramesShine 2.8s linear infinite}' +
+      '.agp-frames-title-dot{width:7px;height:7px;border-radius:50%;background:#b28cf5;box-shadow:0 0 10px 2px rgba(178,140,245,.8);animation:agpFramesDot 1.6s ease-in-out infinite}' +
+      '.agp-frames-viewport{direction:ltr;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch}' +
+      '.agp-frames-viewport::-webkit-scrollbar{display:none}' +
+      '.agp-frames-slide{flex:0 0 100%;display:flex;align-items:center;justify-content:center;scroll-snap-align:center;padding:6px 0}' +
+      '.agp-frames-slide img{display:block;max-width:min(100%,560px);max-height:190px;width:auto;height:auto;filter:drop-shadow(0 14px 28px rgba(0,0,0,.65))}' +
+      '@keyframes agpFramesTitleFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}' +
+      '@keyframes agpFramesShine{from{background-position:120% 0}to{background-position:-120% 0}}' +
+      '@keyframes agpFramesDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.35)}}' +
+      '@media (max-width:640px){.agp-frames-title{font-size:14px}.agp-frames-slide img{max-height:130px}}' +
+      '@media (prefers-reduced-motion:reduce){.agp-frames-title,.agp-frames-title-text,.agp-frames-title-dot{animation:none}}';
+    document.head.appendChild(st);
+  }
+
+  function buildFramesStrip(){
+    var strip = document.createElement('div');
+    strip.className = 'agp-frames-strip';
+    strip.setAttribute('data-frames-strip', '1');
+
+    var title = document.createElement('div');
+    title.className = 'agp-frames-title';
+    var dot = document.createElement('span');
+    dot.className = 'agp-frames-title-dot';
+    var text = document.createElement('span');
+    text.className = 'agp-frames-title-text';
+    text.textContent = 'الإطارات المتوفرة';
+    title.appendChild(dot);
+    title.appendChild(text);
+
+    var viewport = document.createElement('div');
+    viewport.className = 'agp-frames-viewport';
+
+    function makeSlide(file, isClone){
+      var slide = document.createElement('div');
+      slide.className = 'agp-frames-slide';
+      slide.setAttribute('data-frame-file', file);
+      if (isClone) slide.setAttribute('data-frame-clone', '1');
+      var img = document.createElement('img');
+      img.src = file;
+      img.alt = isClone ? '' : 'إطار';
+      img.decoding = 'async';
+      img.onerror = function(){
+        // إطار مكسور: نشيله (ونسخته لو كان الأول) عشان ما يظهر مربع فاضي.
+        Array.prototype.slice.call(viewport.querySelectorAll('[data-frame-file="' + file + '"]'))
+          .forEach(function(el){ el.remove(); });
+      };
+      slide.appendChild(img);
+      return slide;
+    }
+
+    AVAILABLE_FRAMES.forEach(function(file){ viewport.appendChild(makeSlide(file, false)); });
+    // نسخة من أول إطار بالنهاية: نوصلها بحركة ناعمة ثم نقفز للأول
+    // بدون حركة، فيبان اللف دائري بلا رجوع ملحوظ.
+    if (AVAILABLE_FRAMES.length) viewport.appendChild(makeSlide(AVAILABLE_FRAMES[0], true));
+
+    strip.appendChild(title);
+    strip.appendChild(viewport);
+    startFramesAutoScroll(viewport);
+    return strip;
+  }
+
+  function startFramesAutoScroll(viewport){
+    var paused = false;
+    function pause(){ paused = true; }
+    function resume(){ paused = false; }
+    viewport.addEventListener('mouseenter', pause);
+    viewport.addEventListener('mouseleave', resume);
+    viewport.addEventListener('touchstart', pause, { passive: true });
+    viewport.addEventListener('touchend', function(){ setTimeout(resume, 2500); }, { passive: true });
+
+    function step(){
+      if (paused || document.hidden || !viewport.isConnected) return;
+      var slides = viewport.children;
+      var w = viewport.clientWidth;
+      if (!w || slides.length < 2) return;
+      var idx = Math.round(viewport.scrollLeft / w);
+      if (idx >= slides.length - 1) {
+        // على النسخة الأخيرة: قفزة فورية للأول ثم نكمل.
+        viewport.scrollTo({ left: 0, behavior: 'auto' });
+        idx = 0;
+      }
+      viewport.scrollTo({ left: (idx + 1) * w, behavior: 'smooth' });
+      if (idx + 1 >= slides.length - 1) {
+        setTimeout(function(){
+          if (Math.round(viewport.scrollLeft / viewport.clientWidth) >= viewport.children.length - 1) {
+            viewport.scrollTo({ left: 0, behavior: 'auto' });
+          }
+        }, 900);
+      }
+    }
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setInterval(step, reduce ? 5000 : 2600);
+  }
+
+  function mountFramesStrip(){
+    if (document.querySelector('[data-frames-strip]')) return;
+    var card = document.querySelector('[data-connect-card]');
+    if (!card || !card.parentNode) return;
+    ensureFramesStripStyles();
+    card.parentNode.insertBefore(buildFramesStrip(), card.nextSibling);
+  }
+
+  var __framesTries = 0;
+  var __framesTimer = setInterval(function(){
+    __framesTries++;
+    mountFramesStrip();
+    if (__framesTries >= 30) clearInterval(__framesTimer);
+  }, 300);
+</script>
 </body>
 </html>
