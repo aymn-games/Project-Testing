@@ -552,8 +552,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'font-size:3em;background:rgba(0,0,0,0.3);}',
 
             /* ⚠️ جديد: زرّي نهاية المباراة بجانب بعض، كل وحد عرضه 350px بالضبط — طلب صريح */
-            '.mc-winner-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;width:100%;}',
-            '.mc-winner-action-btn{width:350px;max-width:90vw;margin-top:0 !important;}',
+            /* أزرار شاشة الفوز: بحجم نصها، جنب بعض بصف واحد */
+            '.mc-winner-actions{display:flex;gap:12px;flex-wrap:nowrap;justify-content:center;width:100%;}',
+            '.mc-winner-action-btn{width:auto !important;flex:0 0 auto;white-space:nowrap;padding:13px 24px !important;margin-top:0 !important;}',
 
             /* ==================================================================
              * شاشة الإعدادات الأولى + طبقة "جاري الاتصال" + اللوبي — منسوخة
@@ -1314,7 +1315,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         else if (_phase === 'champion' || _phase === 'ended') restartMatch();
     }
 
+    function unlockAudio() {
+        var ac = audioCtx();
+        if (ac && ac.state === 'suspended' && typeof ac.resume === 'function') ac.resume().catch(function () {});
+    }
+
     function startSpinPhase() {
+        unlockAudio();
         setPhase('playing');
         startRingLoop();
         startMusic();
@@ -1508,6 +1515,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         window.requestAnimationFrame(function () {
             window.requestAnimationFrame(function () { modal.classList.add('mc-in'); });
         });
+        playSound('eliminate');
         playOutSound();
     }
 
