@@ -497,20 +497,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-winner-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;width:100%;}',
             '.mc-winner-action-btn{width:350px;max-width:90vw;margin-top:0 !important;}',
 
-            /* ⚠️ تحسين وضوح زر إغلاق (✕) لوحة الإعدادات — خاص بصفحة الكراسي
-             * الموسيقية فقط عبر override بملفنا، بدون أي لمس لملف
-             * js/agp-game-shell.js المشترك (قرار صريح من صاحب المشروع). */
-            '#agp-settings-close-btn{color:#fff !important;background:rgba(0,0,0,0.35) !important;',
-            'width:38px;height:38px;border-radius:50%;display:flex !important;align-items:center;',
-            'justify-content:center;box-shadow:0 0 8px rgba(0,0,0,0.55);font-size:1.5em !important;}',
-
-            /* لوحة الإعدادات أثناء المباراة — زر رجوع للمنصة + إكس أبرز */
-            '.mc-settings-home-btn{display:flex;align-items:center;justify-content:center;gap:6px;',
-            'width:100%;max-width:360px;height:44px;margin:18px auto 0;border-radius:10px;',
-            'background:linear-gradient(90deg,var(--agp-accent-2),var(--agp-accent));color:#fff;',
-            'font-weight:800;font-size:0.9em;text-decoration:none;font-family:Cairo,sans-serif;',
-            'box-sizing:border-box;}',
-
             /* ==================================================================
              * شاشة الإعدادات الأولى + طبقة "جاري الاتصال" + اللوبي — منسوخة
              * من تنسيق السلم والثعبان (games/snakes-ladders) بنفس الـCSS،
@@ -876,12 +862,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function wireStageEvents() {
         el('mc-spin-btn').onclick = handleSpinButtonClick;
-        // ⚙️ = زر الإعدادات القديم بالهيدر المشترك (قائمة اللاعبين + إضافة
-        // لوبي جديد + رجوع للمنصة)، و➕ = "إضافة لوبي جديد" من نفس اللوحة.
-        // الهيدر المشترك مخفي وقت اللعب، بس أزراره موجودة فنستدعيها مباشرة.
-        el('mc-settings-btn').onclick = openShellSettings;
+        // ⚙️ = تبويب الإعدادات الجديد (بدل لوحة الإعدادات القديمة المشتركة)
+        el('mc-settings-btn').onclick = function () { renderSpinSpeeds(); openModal('mc-settings-modal'); };
+        // ➕ = "إضافة لوبي جديد" من الملف المشترك. يمر عبر لوحة الإعدادات
+        // القديمة (مخفية وقت اللعب) لأن الزر موجود فيها بس، واللوحة نفسها
+        // تنقفل تلقائياً أول ما ترجع (راجع closeOldMidMatchPanel).
         el('mc-add-btn').onclick = function () {
-            openShellSettings();
+            var gear = el('agp-header-settings-btn');
+            if (gear) gear.click();
             var reopen = el('agp-reopen-registration-btn');
             if (reopen) reopen.click();
         };
@@ -925,11 +913,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         renderGenres();
         el('mc-dur-val').textContent = spinDuration();
-    }
-
-    function openShellSettings() {
-        var gear = el('agp-header-settings-btn');
-        if (gear) gear.click();
     }
 
     function togglePanel() {
@@ -1932,9 +1915,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         enhanceLobbyHeading();
         enhanceLobbyWatermarkAndActions();
         enhanceLobbyFramedCards();
-        if (document.getElementById('agp-settings-close-btn')) {
-            enhanceMidMatchSettingsPanel(el('agp-shell-box'));
-        }
+        closeOldMidMatchPanel();
     }
 
     /* -------- 14أ) طبقة "جاري الاتصال بالبث" — نفس السلم والثعبان -------- */
@@ -2054,15 +2035,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         observer.observe(target, { childList: true, subtree: true });
     }
 
-    /* -------- 14د) لوحة الإعدادات أثناء المباراة: زر رجوع للمنصة -------- */
-    function enhanceMidMatchSettingsPanel(box) {
-        if (document.getElementById('mc-settings-home-btn')) return;
-        var btn = document.createElement('a');
-        btn.id = 'mc-settings-home-btn';
-        btn.href = '../../games.html';
-        btn.className = 'mc-settings-home-btn';
-        btn.textContent = '🏠 رجوع لمنصة ألعاب أيمن';
-        box.appendChild(btn);
+    /* -------- 14د) لوحة الإعدادات القديمة أثناء المباراة: ملغاة --------
+     * استُبدلت بتبويب ⚙️ الإعدادات الجديد بشاشة اللعب. لو انرسمت (مثلاً
+     * بعد "إكمال المباراة" بلوبي إضافة اللاعبين الجدد، اللي يرجع لها
+     * بالملف المشترك) تنقفل فوراً قبل ما تظهر. */
+    function closeOldMidMatchPanel() {
+        var closeBtn = document.getElementById('agp-settings-close-btn');
+        if (closeBtn) closeBtn.click();
     }
 
     AGP.events.on('platform:ready', function () { registerGame(); });
