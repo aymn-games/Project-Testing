@@ -48,17 +48,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         { label: '35 ثانية', value: 35 }
     ];
 
-    // مدة عرض البطل بمنتصف الدائرة قبل شاشة الفائز
-    var CHAMPION_HOLD_MS = 2500;
     // ⚠️ جاهزة تستقبل 10 لكل تصنيف (5 حالية + 5 إضافية قادمة) — بس خليتها
     // 5 فعلياً حالياً حتى ما تصير محاولات تشغيل ملفات غير مرفوعة بعد (صمت
     // صوتي نصف الوقت). أول ما ترفع 6.mp3...10.mp3 بنفس مسار shailat/
     // وkhaleeji/، غيّر الرقم تحت لـ10 وخلاص — بدون أي تعديل ثاني بالكود.
     var MUSIC_TRACK_COUNT = 5;
     var IRAQI_TRACK_COUNT = 10; // ⚠️ 10 مقاطع مرفوعة فعلياً بمجلد sounds/iraqi/ (5 + 5 إضافية) — شغّالة الآن
-    // مدة تشغيل الأغنية من قائمة الإجراءات: 5–60 ثانية بخطوة 5 (ملف التصميم)
-    var SPIN_DURATION_MIN_S = 5;
-    var SPIN_DURATION_MAX_S = 60;
+    // مدة تشغيل الأغنية: نفس خيارات السابق (10–35 ثانية بخطوة 5)
+    var SPIN_DURATION_MIN_S = 10;
+    var SPIN_DURATION_MAX_S = 35; // ⚠️ الحد الأقصى لمدة تدوير الموسيقى (طلب صريح)
 
     /* ======================================================================
      *  0) الصوت — مستوى صوت واحد موحَّد لكل شي (مؤثرات قصيرة + موسيقى
@@ -178,7 +176,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _spinTimeoutId = null;
     var _outTimeoutId = null;
     var _selectionOpen = false;
-    var _champion = null;
     var _pEls = {};
     var _ac = null;
 
@@ -196,7 +193,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _customDeficitCurrent = 1;
         _seatedThisRound = {};
         _roundLosers = [];
-        _champion = null;
         _angle = 0;
         stopRingLoop();
         stopMusic();
@@ -372,6 +368,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-stepper div{font-size:16px;font-weight:600;}',
             '.mc-vol{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;background:rgba(0,0,0,0.35);}',
             '.mc-vol input{flex:1;accent-color:#f5a623;}',
+            '.mc-mute-btn{border:none;background:none;color:#fff;font-size:16px;cursor:pointer;padding:0;line-height:1;}',
 
             /* 2ب) دائرة اللعب */
             '.mc-arena{position:relative;flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px;}',
@@ -403,11 +400,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-center{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;',
             'gap:10px;text-align:center;}',
             '.mc-center.mc-show{display:flex;}',
-            '.mc-champ-cup{font-size:9cqw;line-height:1;}',
-            '.mc-champ-av{width:22cqw;height:22cqw;border-radius:50%;display:flex;align-items:center;justify-content:center;',
-            'background:#1a0c2e;border:4px solid #f5a623;box-shadow:0 0 40px rgba(245,166,35,0.55);font-weight:700;font-size:7cqw;overflow:hidden;}',
-            '.mc-champ-av img{width:100%;height:100%;object-fit:cover;display:block;}',
-            '.mc-champ-name{font-size:4cqw;font-weight:700;}',
             '.mc-ended-title{font-size:6cqw;font-weight:700;}',
             '.mc-ended-sub{font-size:2.6cqw;color:#bfaedb;}',
 
@@ -841,7 +833,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                                 '<button type="button" id="mc-dur-down">−</button>' +
                             '</div></div>' +
                         '<div class="mc-gs-row"><div class="mc-gs-lbl-row"><label>مستوى الصوت</label><span id="mc-vol-val">40%</span></div>' +
-                            '<div class="mc-vol"><span>🔊</span><input type="range" id="mc-volume-slider" min="0" max="100" value="40"></div></div>' +
+                            '<div class="mc-vol"><button type="button" class="mc-mute-btn" id="mc-mute-btn" title="كتم/تشغيل الصوت">🔊</button><input type="range" id="mc-volume-slider" min="0" max="100" value="40"></div></div>' +
                     '</section>' +
                 '</div></aside>' +
                 '<section class="mc-arena"><div class="mc-cq"><div class="mc-circle" id="mc-circle">' +
@@ -884,8 +876,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function wireStageEvents() {
         el('mc-spin-btn').onclick = handleSpinButtonClick;
-        el('mc-add-btn').onclick = function () { openModal('mc-add-modal'); };
-        el('mc-settings-btn').onclick = function () { renderSpinSpeeds(); openModal('mc-settings-modal'); };
+        // ⚙️ = زر الإعدادات القديم بالهيدر المشترك (قائمة اللاعبين + إضافة
+        // لوبي جديد + رجوع للمنصة)، و➕ = "إضافة لوبي جديد" من نفس اللوحة.
+        // الهيدر المشترك مخفي وقت اللعب، بس أزراره موجودة فنستدعيها مباشرة.
+        el('mc-settings-btn').onclick = openShellSettings;
+        el('mc-add-btn').onclick = function () {
+            openShellSettings();
+            var reopen = el('agp-reopen-registration-btn');
+            if (reopen) reopen.click();
+        };
         el('mc-panel-btn').onclick = togglePanel;
         el('mc-panel-head').onclick = togglePanel;
 
@@ -906,10 +905,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('mc-dur-up').onclick = function () { setSpinDuration(spinDuration() + 5); };
         el('mc-dur-down').onclick = function () { setSpinDuration(spinDuration() - 5); };
 
+        // 🔊 = زر الكتم القديم
+        var muteBtn = el('mc-mute-btn');
+        muteBtn.onclick = function () {
+            _musicMuted = !_musicMuted;
+            muteBtn.textContent = _musicMuted ? '🔇' : '🔊';
+            applyMusicVolumeLive();
+        };
+
         var vol = el('mc-volume-slider');
         vol.value = Math.round(_musicVolume * 100);
         vol.oninput = function () {
             _musicVolume = Number(vol.value) / 100;
+            if (_musicMuted && _musicVolume > 0) { _musicMuted = false; muteBtn.textContent = '🔊'; }
             el('mc-vol-val').textContent = vol.value + '%';
             applyMusicVolumeLive();
         };
@@ -917,6 +925,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         renderGenres();
         el('mc-dur-val').textContent = spinDuration();
+    }
+
+    function openShellSettings() {
+        var gear = el('agp-header-settings-btn');
+        if (gear) gear.click();
     }
 
     function togglePanel() {
@@ -1103,12 +1116,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function renderCenter() {
         var center = el('mc-center');
         if (!center) return;
-        if (_phase === 'champion' && _champion) {
-            center.innerHTML = '<div class="mc-champ-cup">🏆</div>' +
-                '<div class="mc-champ-av">' + avatarHtml(_champion) + '</div>' +
-                '<div class="mc-champ-name">' + escapeHtml(playerLabel(_champion)) + '</div>';
-            center.classList.add('mc-show');
-        } else if (_phase === 'ended') {
+        if (_phase === 'ended') {
             center.innerHTML = '<div class="mc-ended-title">انتهت المباراة</div>' +
                 '<div class="mc-ended-sub">اضغط "مباراة جديدة" للبدء من جديد</div>';
             center.classList.add('mc-show');
@@ -1215,7 +1223,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         try { return _ac || (_ac = new (window.AudioContext || window.webkitAudioContext)()); } catch (e) { return null; }
     }
     function playSeatSound() {
-        var ac = audioCtx(); var v = _musicVolume;
+        var ac = audioCtx(); var v = _musicMuted ? 0 : _musicVolume;
         if (!ac || !v) return;
         try {
             var t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
@@ -1228,7 +1236,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
     // صوت فتح نافذة الإقصاء: 4 نغمات هابطة 784/587/440/330Hz
     function playOutSound() {
-        var ac = audioCtx(); var v = _musicVolume;
+        var ac = audioCtx(); var v = _musicMuted ? 0 : _musicVolume;
         if (!ac || !v) return;
         try {
             [784, 587, 440, 330].forEach(function (f, i) {
@@ -1382,12 +1390,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         else runNextRound();
     }
 
-    // البطل بمنتصف الدائرة، ثم شاشة الفائز (النقاط + الفيديو + البطاقة)
+    // لما يتبقى لاعب واحد تظهر بطاقة الفائز مباشرة (النقاط + الفيديو + البطاقة)
     function showChampion(winner) {
-        _champion = winner;
         setPhase('champion');
         clearCircle();
-        renderCenter();
         updateBadges();
         endMatch(winner);
     }
@@ -1514,10 +1520,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
 
         AGP.events.emit('game:roundEnded', { id: GAME_ID });
-        // البطل يظهر بمنتصف الدائرة أولاً، ثم شاشة الفائز
-        var hold = new Promise(function (resolve) { window.setTimeout(resolve, CHAMPION_HOLD_MS); });
-        Promise.all([pointsPromise, hold]).then(function (r) {
-            if (_phase === 'champion') renderWinnerScreen(winner, r[0]);
+        pointsPromise.then(function (pointsResult) {
+            if (_phase === 'champion') renderWinnerScreen(winner, pointsResult);
         });
     }
 
