@@ -1201,5 +1201,93 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (__connectTries >= 30) clearInterval(__connectTimer);
   }, 300);
 </script>
+<script>
+  // [شريط الإطارات المتوفرة] شريط متحرك بشكل دائري (يلف بلا نهاية) يعرض
+  // إطارات المنصة الموجودة فعلياً كصور بجذر الموقع، وفوقه بالزاوية
+  // عنوان "الإطارات المتوفرة" متحرك. أي صورة تفشل بالتحميل تنشال تلقائياً
+  // عشان ما يظهر إلا اللي يشتغل. يُركَّب تحت بطاقة "اتصل بالبث".
+  var AVAILABLE_FRAMES = ['frame-al-ahli.png','frame-club-ahli-jawahara.png','frame-club-hilal-city.png','frame-club-hilal-crown.png','frame-club-hilal-flag.png','frame-club-hilal-stars.png','frame-club-hilal-trophy.png','frame-club-hilal-wolf.png','frame-club-ittihad-crown.png','frame-club-nassr-crown.png','frame-club-nassr-eagle.png','frame-club-nassr-palm.png','frame-country-ksa-dallah.png','frame-country-ksa-falcon.png','frame-distinguished.png','frame-founder.png','frame-founders-month.png','frame-general-stadium.png','frame-girls-crown-rose.png','frame-girls-kitty.png','frame-level-1.png','frame-level-2.png','frame-level-4.png','frame-level-5.png','frame-level-6.png','frame-level-7.png','frame-rare-dragon.png','frame-streamer.png','frame-supporter.png'];
+
+  function ensureFramesStripStyles(){
+    if (document.getElementById('agp-frames-strip-style')) return;
+    var st = document.createElement('style');
+    st.id = 'agp-frames-strip-style';
+    st.textContent =
+      '.agp-frames-strip{position:relative;margin:0 0 28px;padding:52px 0 18px;border-radius:999px;border:1px solid rgba(178,140,245,.28);background:linear-gradient(135deg,rgba(28,24,46,.9),rgba(11,10,18,.94));box-shadow:0 26px 55px -44px rgba(0,0,0,1),0 0 0 1px rgba(122,63,212,.10) inset;overflow:hidden}' +
+      '.agp-frames-title{position:absolute;top:14px;right:28px;z-index:2;display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:999px;border:1px solid rgba(178,140,245,.4);background:rgba(122,63,212,.16);font-family:"Noto Kufi Arabic",sans-serif;font-size:14px;font-weight:700;color:#e2d6ff;animation:agpFramesTitleFloat 3s ease-in-out infinite}' +
+      '.agp-frames-title-text{background:linear-gradient(90deg,#c6b4f2 0%,#ffffff 45%,#c6b4f2 90%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:agpFramesShine 2.8s linear infinite}' +
+      '.agp-frames-title-dot{width:7px;height:7px;border-radius:50%;background:#b28cf5;box-shadow:0 0 10px 2px rgba(178,140,245,.8);animation:agpFramesDot 1.6s ease-in-out infinite}' +
+      '.agp-frames-viewport{overflow:hidden;direction:ltr;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}' +
+      '.agp-frames-track{display:flex;width:max-content;gap:22px;direction:ltr;animation:agpFramesLoop 70s linear infinite}' +
+      '.agp-frames-strip:hover .agp-frames-track{animation-play-state:paused}' +
+      '.agp-frames-track img{display:block;height:84px;width:auto;flex:none;filter:drop-shadow(0 8px 16px rgba(0,0,0,.6));transition:transform .3s}' +
+      '.agp-frames-track img:hover{transform:scale(1.08)}' +
+      '@keyframes agpFramesLoop{from{transform:translateX(0)}to{transform:translateX(-50%)}}' +
+      '@keyframes agpFramesTitleFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}' +
+      '@keyframes agpFramesShine{from{background-position:120% 0}to{background-position:-120% 0}}' +
+      '@keyframes agpFramesDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.35)}}' +
+      '@media (max-width:640px){.agp-frames-strip{border-radius:22px;padding-top:50px}.agp-frames-title{right:16px;font-size:13px}.agp-frames-track img{height:54px}.agp-frames-track{gap:14px}}' +
+      '@media (prefers-reduced-motion:reduce){.agp-frames-track,.agp-frames-title,.agp-frames-title-text,.agp-frames-title-dot{animation:none}}';
+    document.head.appendChild(st);
+  }
+
+  function buildFramesStrip(){
+    var strip = document.createElement('div');
+    strip.className = 'agp-frames-strip';
+    strip.setAttribute('data-frames-strip', '1');
+
+    var title = document.createElement('div');
+    title.className = 'agp-frames-title';
+    var dot = document.createElement('span');
+    dot.className = 'agp-frames-title-dot';
+    var text = document.createElement('span');
+    text.className = 'agp-frames-title-text';
+    text.textContent = 'الإطارات المتوفرة';
+    title.appendChild(dot);
+    title.appendChild(text);
+
+    var viewport = document.createElement('div');
+    viewport.className = 'agp-frames-viewport';
+    var track = document.createElement('div');
+    track.className = 'agp-frames-track';
+
+    // نسختين متطابقتين من القائمة عشان الحركة تلف بلا انقطاع (0 → -50%).
+    for (var copy = 0; copy < 2; copy++){
+      AVAILABLE_FRAMES.forEach(function(file){
+        var img = document.createElement('img');
+        img.src = file;
+        img.alt = copy === 0 ? 'إطار' : '';
+        img.decoding = 'async';
+        img.setAttribute('data-frame-file', file);
+        img.onerror = function(){
+          // إطار مكسور: نشيله من النسختين عشان تبقى الحلقة متطابقة.
+          Array.prototype.slice.call(track.querySelectorAll('img[data-frame-file="' + file + '"]'))
+            .forEach(function(el){ el.remove(); });
+        };
+        track.appendChild(img);
+      });
+    }
+
+    viewport.appendChild(track);
+    strip.appendChild(title);
+    strip.appendChild(viewport);
+    return strip;
+  }
+
+  function mountFramesStrip(){
+    if (document.querySelector('[data-frames-strip]')) return;
+    var card = document.querySelector('[data-connect-card]');
+    if (!card || !card.parentNode) return;
+    ensureFramesStripStyles();
+    card.parentNode.insertBefore(buildFramesStrip(), card.nextSibling);
+  }
+
+  var __framesTries = 0;
+  var __framesTimer = setInterval(function(){
+    __framesTries++;
+    mountFramesStrip();
+    if (__framesTries >= 30) clearInterval(__framesTimer);
+  }, 300);
+</script>
 </body>
 </html>
