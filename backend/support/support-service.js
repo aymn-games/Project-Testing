@@ -335,11 +335,22 @@ function createTicket(userId, input) {
     return { success: true, ticket: ticket };
 }
 
+/** تذكرة فيها رد أدمن أحدث من آخر فتح لصاحبها (user_seen_at). */
+var UNREAD_SQL = "EXISTS (SELECT 1 FROM ticket_messages m WHERE m.ticket_id = t.id AND m.sender = 'admin' AND m.created_at > t.user_seen_at)";
+
 function listMyTickets(userId) {
     var tickets = db.prepare(
-        'SELECT id, type, title, status, created_at, updated_at, last_reply_by FROM tickets WHERE user_id = ? ORDER BY updated_at DESC, id DESC'
+        'SELECT t.id, t.type, t.title, t.status, t.created_at, t.updated_at, t.last_reply_by, ' + UNREAD_SQL + ' AS unread ' +
+        'FROM tickets t WHERE t.user_id = ? ORDER BY t.updated_at DESC, t.id DESC'
     ).all(userId);
+    tickets.forEach(function (t) { t.unread = Boolean(t.unread); });
     return { success: true, tickets: tickets };
+}
+
+/** عدد تذاكر المستخدم اللي فيها رد أدمن ما قرأه — لشارة زر "تذاكري". */
+function countMyUnread(userId) {
+    var n = db.prepare('SELECT COUNT(*) AS n FROM tickets t WHERE t.user_id = ? AND ' + UNREAD_SQL).get(userId).n;
+    return { success: true, unread: n };
 }
 
 /** المستخدم يرى تذكرته فقط — تذكرة غيره تُعامَل كغير موجودة (404). */
@@ -351,6 +362,8 @@ function getMyTicket(userId, ticketId) {
     ).get(id, userId);
     if (!ticket) return { success: false, error: 'not_found' };
     delete ticket.user_id;
+    // فتح صاحب التذكرة لمحادثتها = قراءة كل ردود الأدمن الحالية.
+    db.prepare('UPDATE tickets SET user_seen_at = ? WHERE id = ?').run(now(), id);
     return { success: true, ticket: ticket, messages: getMessages(id) };
 }
 
@@ -496,6 +509,7 @@ module.exports = {
     getUploadSignature: getUploadSignature,
     createTicket: createTicket,
     listMyTickets: listMyTickets,
+    countMyUnread: countMyUnread,
     getMyTicket: getMyTicket,
     replyAsUser: replyAsUser,
     adminListTickets: adminListTickets,
