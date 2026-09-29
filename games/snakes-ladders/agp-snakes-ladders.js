@@ -345,7 +345,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'box-shadow:0 5px 0 #163a80,0 10px 20px rgba(0,0,0,0.35);}',
             '.sl-btn-roll:hover{background:linear-gradient(180deg,#4c8bf5,#2558c2);}',
             '.sl-btn-roll:active{transform:translateY(4px);box-shadow:0 1px 0 #163a80;}',
-            '.sl-btn-roll:disabled{cursor:default;opacity:.55;transform:none;box-shadow:0 5px 0 #163a80;filter:saturate(.6);}',
+            '.sl-btn-roll.sl-btn-paused{background:linear-gradient(180deg,#3fbf7a,#1f8a52);box-shadow:0 5px 0 #166b3f,0 10px 20px rgba(0,0,0,0.35);}',
+            '.sl-dlg-rules{width:440px;max-height:calc(100vh - 60px);gap:14px;padding:22px;}',
+            '.sl-rules{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;overflow-y:auto;}',
+            '.sl-rules li{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.8;color:#cfe6f0;',
+            'padding:10px 12px;border-radius:12px;background:#0d1428;border:1px solid rgba(255,255,255,0.08);}',
+            '.sl-rules li b{color:#ffd166;font-weight:900;}',
+            '.sl-rules .sl-rule-ic{font-size:18px;line-height:1.5;flex:none;}',
+            '.sl-rules .sl-cmd-pill{font-size:13px;padding:2px 10px;margin:2px;display:inline-block;}',
             '.sl-btn-reset{width:100%;padding:12px;border:1px solid rgba(255,209,102,0.35);border-radius:14px;cursor:pointer;',
             'font-weight:800;font-size:14px;color:#ffd166;background:#1a1608;}',
             '.sl-btn-reset:hover{background:#241d0c;}',
@@ -458,6 +465,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.sl-btn-gold:hover{background:linear-gradient(180deg,#ffe79a,#f7b62f);}',
             '.sl-btn-gold:active{transform:translateY(3px);box-shadow:0 2px 0 #b9760c;}',
             '#sl-help{z-index:60;background:rgba(4,10,20,0.8);}',
+            '#sl-rules{z-index:65;background:rgba(4,10,20,0.8);}',
             '#sl-players{z-index:55;background:rgba(4,10,20,0.8);}',
             '.sl-dlg-players{width:440px;max-height:calc(100vh - 60px);gap:12px;padding:20px;}',
             '.sl-pl-list{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}',
@@ -1140,6 +1148,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="sl-pl-list" id="sl-players-list"></div>' +
             '</div></div>' +
 
+            '<div class="sl-modal-bg" id="sl-rules" hidden><div class="sl-dlg sl-dlg-rules">' +
+                '<div class="sl-dlg-title">🎲 طريقة اللعب</div>' +
+                '<ul class="sl-rules" id="sl-rules-list"></ul>' +
+                '<button type="button" class="sl-btn-gold" id="sl-rules-ok">فهمت</button>' +
+            '</div></div>' +
+
             '<div class="sl-modal-bg" id="sl-help" hidden><div class="sl-dlg sl-dlg-help">' +
                 '<div class="sl-dlg-head"><div class="sl-dlg-title">شرح اللعبة</div>' +
                 '<button type="button" class="sl-dlg-x" id="sl-help-close">✕</button></div>' +
@@ -1165,7 +1179,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('sl-exit-btn').onclick = function () { el('sl-theme-menu').hidden = true; el('sl-leave').hidden = false; };
         el('sl-leave-cancel').onclick = function () { el('sl-leave').hidden = true; };
         el('sl-leave-ok').onclick = confirmLeave;
-        el('sl-roll-btn').onclick = startGame;
+        el('sl-roll-btn').onclick = handleMainButton;
+        el('sl-rules-ok').onclick = function () { el('sl-rules').hidden = true; startGame(); };
         el('sl-cmd-roll').onclick = streamerRoll;
         el('sl-reset-btn').onclick = resetGame;
         el('sl-cmd-join').onclick = openJoin;
@@ -1256,11 +1271,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderTimer();
         renderPlayersPanel();
         var ready = el('sl-ready');
-        if (ready) ready.textContent = !_started ? 'بانتظار البدء' : (_rolling ? 'جاري الرمي' : 'جاهز للرمي');
+        if (ready) ready.textContent = !_started ? 'بانتظار البدء' : (_paused ? 'متوقفة مؤقتاً' : (_rolling ? 'جاري الرمي' : 'جاهز للرمي'));
         var startBtn = el('sl-roll-btn');
         if (startBtn) {
-            startBtn.disabled = _started;
-            startBtn.textContent = _started ? 'المباراة جارية' : '▶ ابدأ';
+            startBtn.classList.toggle('sl-btn-paused', _started && _paused);
+            startBtn.textContent = !_started ? '▶ ابدأ' : (_paused ? '▶ إكمال المباراة' : '⏸ إيقاف مؤقت');
         }
     }
 
@@ -1341,8 +1356,38 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // بعد اللوبي، وبعد "إعادة اللعبة"، وبعد إعادة المباراة بنفس اللاعبين.
     var _started = false;
 
+    var _paused = false;
+
+    // زر "ابدأ" ← نافذة التعليمات ← "فهمت" تبدأ المباراة، بعدها نفس الزر
+    // يتبدّل بين "إيقاف مؤقت" و"إكمال المباراة" (المؤقت يكمل من مكانه).
+    function handleMainButton() {
+        if (!_matchActive) return;
+        if (!_started) { showRules(); return; }
+        _paused = !_paused;
+        if (_paused) {
+            setStatus('⏸ المباراة متوقفة مؤقتاً — اضغط "إكمال المباراة" للمتابعة');
+        } else {
+            var cur = currentPlayer();
+            setStatus('▶ استُكملت المباراة' + (cur && !_rolling ? ' — دور ' + playerLabel(cur) : ''));
+        }
+        renderTurn();
+    }
+
+    function showRules() {
+        var n = requiredWinners();
+        el('sl-rules-list').innerHTML =
+            '<li><span class="sl-rule-ic">⏱️</span><span>لكل لاعب <b>' + TURN_TIME + ' ثانية</b> في دوره يرمي فيها النرد.</span></li>' +
+            '<li><span class="sl-rule-ic">💬</span><span>لرمي النرد يكتب صاحب الدور في شات البث: ' +
+                ROLL_COMMANDS.map(function (c) { return '<span class="sl-cmd-pill">' + escapeHtml(c) + '</span>'; }).join('') + '</span></li>' +
+            '<li><span class="sl-rule-ic">⏭️</span><span>إذا خلص الوقت بدون أمر يروح الدور للاعب اللي بعده.</span></li>' +
+            '<li><span class="sl-rule-ic">🪜</span><span>السلم يطلّعك لأعلاه، و🐍 الثعبان ينزّلك لذيله.</span></li>' +
+            '<li><span class="sl-rule-ic">🏆</span><span>الفوز بالوصول للمربع <b>100</b> بالعدد المطابق، والمباراة تنتهي بعد <b>' + n + '</b> ' + (n === 1 ? 'فائز' : 'فائزين') + '.</span></li>';
+        el('sl-rules').hidden = false;
+    }
+
     function startGame() {
         if (!_matchActive || _started || !_order.length) return;
+        _paused = false;
         _started = true;
         setStatus('اللعبة بدأت! دور ' + playerLabel(currentPlayer()));
         startTurnTimer();
@@ -1371,7 +1416,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         renderTimer();
         if (_matchActive && !_ending && _order.length) playTurnSound();
         _turnInterval = window.setInterval(function () {
-            if (!_matchActive || _rolling || _left) return;
+            if (!_matchActive || _rolling || _left || _paused) return;
             _timeLeft = Math.max(0, _timeLeft - 1);
             renderTimer();
             if (_timeLeft > 0) playTickSound(_timeLeft);
@@ -1398,7 +1443,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function roll(player) {
-        if (!_matchActive || !_started || _rolling || _left || _ending || !_order.length) return;
+        if (!_matchActive || !_started || _paused || _rolling || _left || _ending || !_order.length) return;
         var cur = currentPlayer();
         if (!cur || cur.id !== player.id) return;
         var v = 1 + Math.floor(Math.random() * 6);
@@ -1572,6 +1617,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _turnIdx = 0;
         _dice = 4;
         _started = false;
+        _paused = false;
         stopTurnTimer();
         _timeLeft = TURN_TIME;
         setStatus('أُعيدت اللعبة — اضغط "ابدأ" لبدء المباراة');
@@ -1883,6 +1929,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _startedAt = Date.now();
         _matchActive = true;
         _started = false;
+        _paused = false;
         _timeLeft = TURN_TIME;
         wireCommentListener();
         renderStage();
