@@ -1202,6 +1202,44 @@ document.addEventListener('DOMContentLoaded', async function() {
   }, 300);
 </script>
 <script>
+  // [زر الدعم] زر عائم ثابت بزاوية الشاشة يفتح نموذج تذاكر الدعم
+  // (support-tickets.html — تبويب "تذكرة جديدة" هو الافتراضي) لأي شكوى
+  // أو استفسار أو مشكلة. يُضاف على body مباشرة فما يتأثر بإعادة بناء
+  // القالب لمحتوى الصفحة، ونعيد التحقق لين تستقر الصفحة.
+  function ensureSupportFab(){
+    if (!document.getElementById('agp-support-fab-style')) {
+      var st = document.createElement('style');
+      st.id = 'agp-support-fab-style';
+      st.textContent =
+        '.agp-support-fab{position:fixed;left:20px;bottom:20px;z-index:80;display:inline-flex;align-items:center;gap:9px;padding:13px 20px;border-radius:999px;background:linear-gradient(180deg,#8a4fe8,#7a3fd4);border:1px solid rgba(214,194,255,.35);color:#fff !important;font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;font-size:14.5px;font-weight:700;text-decoration:none;box-shadow:0 16px 36px -12px rgba(122,63,212,.85),0 0 0 4px rgba(122,63,212,.12);transition:transform .25s,box-shadow .25s,background .25s}' +
+        '.agp-support-fab:hover{transform:translateY(-3px);background:#9a6cf0;box-shadow:0 20px 44px -12px rgba(154,108,240,.9),0 0 0 5px rgba(122,63,212,.18)}' +
+        '.agp-support-fab-icon{font-size:17px;line-height:1}' +
+        '@media (max-width:600px){.agp-support-fab{left:14px;bottom:calc(14px + env(safe-area-inset-bottom));padding:12px 16px;font-size:13.5px}}';
+      document.head.appendChild(st);
+    }
+    if (document.querySelector('.agp-support-fab')) return;
+    var a = document.createElement('a');
+    a.className = 'agp-support-fab';
+    a.href = 'support-tickets.html';
+    a.title = 'تواصل مع الدعم: شكوى، استفسار، أو مشكلة';
+    a.setAttribute('aria-label', 'واجهتك مشكلة؟ تواصل معنا');
+    var icon = document.createElement('span');
+    icon.className = 'agp-support-fab-icon';
+    icon.textContent = '💬';
+    var text = document.createElement('span');
+    text.textContent = 'واجهتك مشكلة؟ تواصل معنا';
+    a.appendChild(icon);
+    a.appendChild(text);
+    document.body.appendChild(a);
+  }
+  var __fabTries = 0;
+  var __fabTimer = setInterval(function(){
+    __fabTries++;
+    ensureSupportFab();
+    if (__fabTries >= 30) clearInterval(__fabTimer);
+  }, 300);
+</script>
+<script>
   // [الإطارات المتوفرة] عرض إطار واحد بكل مرة يتحرك بسكرول أفقي مخفي
   // (بدون شريط تمرير ظاهر وبدون أي إطار/تبويب حول القسم)، ويلف تلقائياً
   // من إطار للي بعده وبعد الأخير يرجع للأول. فوقه بالزاوية عنوان
