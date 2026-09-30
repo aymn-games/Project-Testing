@@ -447,6 +447,7 @@ function getPublicProfile(customId) {
         points: pointsService.getUserPoints(user.id),
         frames: collectiblesService.getUserFrames(user.id),
         entrance: collectiblesService.getEntrance(user.id),
+        elimCard: collectiblesService.getElimCard(user.id),
         streamerLevel: streamerLevelService.getStreamerLevelInfo(user.id)
     };
 }
@@ -766,6 +767,7 @@ function deleteUser(userId) {
     db.prepare('DELETE FROM broadcasts WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM user_frames WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM user_entrances WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM user_elim_cards WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM user_points WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM users WHERE id = ?').run(userId);
 

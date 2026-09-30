@@ -5,6 +5,8 @@
  * 2) إطارات حصرية حرة (custom_frames) — اسم ملف حر يكتبه الأدمن كل منح.
  * 3) الدخولية (user_entrances) — نموذج أنيميشن (gold/neon/fire/ice) + نص
  *    حر، مع عمود enabled (تفعيل/إيقاف ذاتي من صاحب الحساب).
+ * 4) بطاقة الإقصاء (user_elim_cards) — منح يدوي من الأدمن + تفعيل/إيقاف
+ *    ذاتي، مستقلة عن الإطارات.
  *
  * قاعدة "الحزمة التلقائية": منح أي إطار من الأربعة "الخاصة" يمنح تلقائياً
  * دخولية مطابقة (من frame_catalog.default_entrance_*، أو مخصصة). أي إطار
@@ -309,6 +311,103 @@ function setEntranceEnabled(userId, enabled) {
 }
 
 /* ----------------------------------------------------------------------
+ * بطاقة الإقصاء — منح/سحب يدوي من الأدمن فقط، مستقلة عن الإطارات. تظهر
+ * بدل بطاقة إعلان الإقصاء العادية فقط لو "المُقصي" يملكها ومفعّلها.
+ * ---------------------------------------------------------------------- */
+
+// المفاتيح المسموحة — تصميم كل بطاقة (صورة + مواضع الدوائر والنص) معرَّف
+// بنفس المفتاح في js/agp-elim-card.js.
+var ELIM_CARD_CATALOG = [
+  { key: 'ksa-green', displayNameAr: 'بطاقة الإقصاء — السعودية الخضراء' }
+];
+
+function getElimCardCatalog() {
+  return ELIM_CARD_CATALOG.slice();
+}
+
+function isValidElimCardKey(cardKey) {
+  return ELIM_CARD_CATALOG.some(function (c) { return c.key === cardKey; });
+}
+
+/**
+ * منح/استبدال بطاقة الإقصاء لمستخدم (بطاقة واحدة لكل مستخدم). كل منح
+ * جديد يعيد enabled = 1.
+ * @returns {{success: boolean, error?: string}}
+ */
+function grantElimCard(userId, cardKey, grantedBy) {
+  cardKey = String(cardKey || '');
+  if (!isValidElimCardKey(cardKey)) return { success: false, error: 'unknown_card_key' };
+
+  var userExists = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+  if (!userExists) return { success: false, error: 'unknown_user' };
+
+  db.prepare(
+    'INSERT INTO user_elim_cards (user_id, card_key, enabled, granted_by, granted_at) VALUES (?, ?, 1, ?, ?) ' +
+    'ON CONFLICT(user_id) DO UPDATE SET card_key = excluded.card_key, enabled = 1, granted_by = excluded.granted_by, granted_at = excluded.granted_at'
+  ).run(userId, cardKey, grantedBy || 'admin_manual', now());
+
+  logger.log('Collectibles: granted elimination card ' + cardKey + ' to user ' + userId);
+
+  return { success: true };
+}
+
+function revokeElimCard(userId) {
+  db.prepare('DELETE FROM user_elim_cards WHERE user_id = ?').run(userId);
+
+  return { success: true };
+}
+
+/** للبروفايل — null لو ما يملك بطاقة. */
+function getElimCard(userId) {
+  var row = db.prepare('SELECT card_key, enabled, granted_at FROM user_elim_cards WHERE user_id = ?').get(userId);
+  if (!row) return null;
+
+  var entry = ELIM_CARD_CATALOG.filter(function (c) { return c.key === row.card_key; })[0];
+
+  return {
+    cardKey: row.card_key,
+    displayNameAr: entry ? entry.displayNameAr : row.card_key,
+    enabled: Boolean(row.enabled),
+    grantedAt: row.granted_at
+  };
+}
+
+/**
+ * تفعيل/إيقاف ذاتي من صاحب الحساب — نفس نمط setEntranceEnabled.
+ * @returns {{success: boolean, error?: string}}
+ */
+function setElimCardEnabled(userId, enabled) {
+  var existing = db.prepare('SELECT user_id FROM user_elim_cards WHERE user_id = ?').get(userId);
+  if (!existing) return { success: false, error: 'no_elim_card' };
+
+  db.prepare('UPDATE user_elim_cards SET enabled = ? WHERE user_id = ?').run(enabled ? 1 : 0, userId);
+
+  return { success: true };
+}
+
+/**
+ * بطاقة الإقصاء المفعّلة لصاحب تعليق — فقط لحساب مسجَّل وثَّق نفس يوزرنيم
+ * التيك توك، ونفس نمط getEquippedFrameForVerifiedTikTok أعلاه.
+ * @param {string} tiktokUsername - يوزرنيم تيك توك خام (بدون بادئة 'tiktok:')
+ * @returns {{cardKey: string}|null}
+ */
+function getElimCardForVerifiedTikTok(tiktokUsername) {
+  tiktokUsername = (tiktokUsername || '').trim();
+  if (!tiktokUsername) return null;
+
+  var user = db.prepare(
+    'SELECT id FROM users WHERE tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE'
+  ).get(tiktokUsername);
+
+  if (!user) return null;
+
+  var row = db.prepare('SELECT card_key FROM user_elim_cards WHERE user_id = ? AND enabled = 1').get(user.id);
+  if (!row || !isValidElimCardKey(row.card_key)) return null;
+
+  return { cardKey: row.card_key };
+}
+
+/* ----------------------------------------------------------------------
  * فتح تلقائي عند بلوغ مستوى (يُستدعى من points-service.js بعد كل زيادة
  * بالنقاط — لا معرفة هنا بكيفية حساب النقاط نفسها).
  * ---------------------------------------------------------------------- */
@@ -348,5 +447,11 @@ module.exports = {
   clearEntrance: clearEntrance,
   getEntrance: getEntrance,
   setEntranceEnabled: setEntranceEnabled,
-  autoGrantOnLevelUp: autoGrantOnLevelUp
+  autoGrantOnLevelUp: autoGrantOnLevelUp,
+  getElimCardCatalog: getElimCardCatalog,
+  grantElimCard: grantElimCard,
+  revokeElimCard: revokeElimCard,
+  getElimCard: getElimCard,
+  setElimCardEnabled: setElimCardEnabled,
+  getElimCardForVerifiedTikTok: getElimCardForVerifiedTikTok
 };

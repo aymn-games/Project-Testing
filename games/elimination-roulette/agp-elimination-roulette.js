@@ -751,6 +751,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '@keyframes er-announce-vanish{0%{opacity:1;transform:scale(1);}55%{opacity:1;transform:scale(1);}',
             '100%{opacity:.1;transform:scale(.8);}}',
             '.er-announce-ring-vanish{animation:er-announce-vanish 2s ease 3s forwards;}',
+            // Owned elimination card (js/agp-elim-card.js) — same box and
+            // entry animation, sized to the card image instead of 450x250.
+            '#er-modal-box.er-announce-box.er-elimcard-box{width:760px;height:auto;max-width:94vw;padding:0;',
+            'background:none;border:none;box-shadow:none;border-radius:0;overflow:visible;display:block;}',
             '.er-announce-person-name{font-family:"Noto Kufi Arabic",sans-serif;font-size:12.5px;',
             'font-weight:700;}',
             '.er-announce-person-name-green{color:#7ee0a6;}',
@@ -2563,11 +2567,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // eliminate case only (doesn't make sense for revive, so it's
         // omitted there, same as the old 💀 emoji before it).
         var vsEmojiHtml = isEliminate ? '<span class="er-announce-vs-emoji">⚔️</span>' : '';
-        box.className = 'er-announce-box ' + (isEliminate ? 'er-announce-eliminate' : 'er-announce-revive');
-        box.innerHTML =
-            '<div class="er-announce-title">' + titleHtml + '</div>' +
-            (actorCardHtml || targetCardHtml ?
-                '<div class="er-announce-row">' + actorCardHtml + vsEmojiHtml + targetCardHtml + '</div>' : '');
+        // Eliminator owns an enabled elimination card -> show it instead of
+        // the normal card (js/agp-elim-card.js). Everyone else is unchanged.
+        if (isEliminate && data.chooser && AGP.elimCard && AGP.elimCard.canShow(data.chooser)) {
+            box.className = 'er-announce-box er-announce-eliminate er-elimcard-box';
+            box.innerHTML = AGP.elimCard.renderHtml(data.chooser, data.target);
+        } else {
+            box.className = 'er-announce-box ' + (isEliminate ? 'er-announce-eliminate' : 'er-announce-revive');
+            box.innerHTML =
+                '<div class="er-announce-title">' + titleHtml + '</div>' +
+                (actorCardHtml || targetCardHtml ?
+                    '<div class="er-announce-row">' + actorCardHtml + vsEmojiHtml + targetCardHtml + '</div>' : '');
+        }
 
         overlay.style.display = 'flex';
 

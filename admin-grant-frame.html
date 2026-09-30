@@ -123,6 +123,21 @@
 <div class="gf-tab-panel" data-gf-panel="other"><div class="gf-grid" data-gf-grid="other"></div><p class="empty-note" data-gf-empty="other" style="display:none;">لا توجد إطارات بهذا القسم بعد.</p></div>
 </div>
 
+<h3 style="margin:var(--space-4) 0 0;">بطاقات الإقصاء</h3>
+<div class="gf-grant-bar" style="position:static;">
+<div class="field" style="min-width:130px;">
+<label for="ec-user-id">معرّف المستخدم (id)</label>
+<input type="number" id="ec-user-id" placeholder="مثال: 3">
+</div>
+<div class="field" style="min-width:220px;">
+<label for="ec-card-key">بطاقة الإقصاء</label>
+<select id="ec-card-key"></select>
+</div>
+<button class="btn btn-sm btn-primary" id="btn-ec-grant">منح البطاقة</button>
+<button class="btn btn-sm btn-danger" id="btn-ec-revoke">سحب البطاقة</button>
+</div>
+<div class="auth-message" id="ec-message"></div>
+
 </div>
 </div>
 <script src="auth/auth-client.js"></script>
@@ -241,6 +256,9 @@
             });
             allItems = catalogItems.concat(customItems);
             renderGrids();
+            document.getElementById('ec-card-key').innerHTML = (result.elimCards || []).map(function (c) {
+                return '<option value="' + escapeHtml(c.key) + '">' + escapeHtml(c.displayNameAr) + '</option>';
+            }).join('');
         });
     }
 
@@ -272,6 +290,35 @@
         button.disabled = true;
         window.AGPAuth.adminRevokeFrame(userId, selected.frameType, selected.frameRef).then(function (result) {
             showGrantMessage(result.success ? 'تم سحب الإطار.' : 'تعذّر السحب.', result.success ? 'success' : 'error');
+        }).finally(function () { button.disabled = false; });
+    });
+
+    /* ---- بطاقة الإقصاء — منح/سحب مستقل عن الإطارات ---- */
+    var ecMessageEl = document.getElementById('ec-message');
+    function showEcMessage(text, type) {
+        ecMessageEl.textContent = text;
+        ecMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+
+    document.getElementById('btn-ec-grant').addEventListener('click', function () {
+        var userId = Number(document.getElementById('ec-user-id').value);
+        var cardKey = document.getElementById('ec-card-key').value;
+        if (!userId) { showEcMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
+        if (!cardKey) { showEcMessage('اختر بطاقة أولاً.', 'error'); return; }
+        var button = this;
+        button.disabled = true;
+        window.AGPAuth.adminGrantElimCard(userId, cardKey).then(function (result) {
+            showEcMessage(result.success ? 'تم منح بطاقة الإقصاء.' : ('تعذّر المنح: ' + (result.error || 'unknown')), result.success ? 'success' : 'error');
+        }).finally(function () { button.disabled = false; });
+    });
+
+    document.getElementById('btn-ec-revoke').addEventListener('click', function () {
+        var userId = Number(document.getElementById('ec-user-id').value);
+        if (!userId) { showEcMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
+        var button = this;
+        button.disabled = true;
+        window.AGPAuth.adminRevokeElimCard(userId).then(function (result) {
+            showEcMessage(result.success ? 'تم سحب بطاقة الإقصاء.' : 'تعذّر السحب.', result.success ? 'success' : 'error');
         }).finally(function () { button.disabled = false; });
     });
 
