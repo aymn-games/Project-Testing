@@ -1488,85 +1488,193 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
 </script>
 <script>
 (function(){
-  // [صنّاع النجاح] (1) البطاقات الثلاث تملى عرض الشاشة (بدون حد 1600px)
-  // وبنفس الطول، ٣ أعمدة من 1024px وفوق، وعمود واحد تحتها بدل ٢+١.
-  // (2) مؤقت تنازلي أعلى بطاقة "توب الاستريمرز" للوقت الباقي على تحديث
-  // التوب — نفس حد التصفير بالخادم (getRankingPeriodStart بـ
+  // [صنّاع النجاح] عرض احترافي بتبويبات: شريط أزرار (الداعمين/اللاعبين/
+  // الاستريمرز) يعرض توب واحد بكل مرة بعرض الشاشة كامل، والصفوف تصير
+  // بطاقات (المراكز ١–٣ بصف، و٤–٥ بصف) بألوان ذهبي/فضي/برونزي للثلاثة
+  // الأوائل. فوق توب الاستريمرز مؤقت تنازلي (أيام/ساعات/دقائق) مع شريط
+  // تقدّم الأسبوع — نفس حد التصفير بالخادم (getRankingPeriodStart بـ
   // auth-service.js): كل سبت 12:00 ص بتوقيت السعودية (UTC+3 ثابت).
+  // ملاحظة: الكود اللي يعبّي البيانات الحقيقية (loadReal*) يستبدل محتوى
+  // حاوية الصفوف فقط، فالتنسيق هنا بـCSS على الحاوية ويبقى شغّال بعده.
   var RIYADH_OFFSET_MS = 3 * 60 * 60 * 1000;
   var DAY_MS = 24 * 60 * 60 * 1000;
+  var WEEK_MS = 7 * DAY_MS;
   var SATURDAY = 6;
+  var TABS = [
+    { key: 'supporters', title: 'توب الداعمين للمنصة', label: 'الداعمين', icon: '💜', hint: 'حسب مبالغ الدعم' },
+    { key: 'players', title: 'توب اللاعبين الأكثر نشاطاً', label: 'اللاعبين', icon: '🎮', hint: 'حسب عدد مرات الفوز' },
+    { key: 'streamers', title: 'توب الاستريمرز الأكثر نشاطاً', label: 'الاستريمرز', icon: '🎥', hint: 'حسب ساعات البث هالأسبوع' }
+  ];
+  var activeKey = 'supporters';
 
   function nextRankingReset(nowMs){
     var riyadh = new Date(nowMs + RIYADH_OFFSET_MS);
     var riyadhMidnight = Date.UTC(riyadh.getUTCFullYear(), riyadh.getUTCMonth(), riyadh.getUTCDate());
     var daysSinceSaturday = (riyadh.getUTCDay() - SATURDAY + 7) % 7;
     var weekStart = riyadhMidnight - daysSinceSaturday * DAY_MS - RIYADH_OFFSET_MS;
-    return weekStart + 7 * DAY_MS;
+    return weekStart + WEEK_MS;
   }
   function ar(n){ return String(n).replace(/[0-9]/g, function(d){ return '٠١٢٣٤٥٦٧٨٩'[d]; }); }
+  function pad2(n){ return n < 10 ? '0' + n : String(n); }
 
   function ensureStyles(){
     if (document.getElementById('agp-lb-style')) return;
+    var G = '#gallery div[style*="minmax(300px, 1fr)"]';
     var st = document.createElement('style');
     st.id = 'agp-lb-style';
     st.textContent =
       '#gallery > div{max-width:none !important}' +
-      '#gallery div[style*="minmax(300px, 1fr)"]{align-items:stretch !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important}' +
-      '#gallery div[style*="minmax(300px, 1fr)"] > div{height:100%;box-sizing:border-box}' +
-      '@media (max-width:1023px){#gallery div[style*="minmax(300px, 1fr)"]{grid-template-columns:minmax(0,1fr) !important}}' +
-      '.agp-lb-timer{margin:0 0 18px;padding:14px 14px 12px;border-radius:16px;border:1px solid rgba(240,174,228,.28);background:linear-gradient(135deg,rgba(201,90,170,.16),rgba(122,63,212,.10));text-align:center}' +
-      '.agp-lb-timer-title{display:flex;align-items:center;justify-content:center;gap:8px;font-family:"Noto Kufi Arabic",sans-serif;font-size:14px;font-weight:700;color:#f7d9f0}' +
-      '.agp-lb-timer-dot{width:7px;height:7px;border-radius:50%;background:#f0aee4;box-shadow:0 0 10px 2px rgba(240,174,228,.7);animation:agpLbPulse 1.6s ease-in-out infinite}' +
-      '.agp-lb-timer-units{display:flex;justify-content:center;gap:8px;margin-top:10px}' +
-      '.agp-lb-unit{flex:1 1 0;max-width:96px;padding:8px 4px;border-radius:12px;background:rgba(10,8,16,.55);border:1px solid rgba(255,255,255,.08)}' +
-      '.agp-lb-unit b{display:block;font-family:"Noto Kufi Arabic",sans-serif;font-size:22px;line-height:1.3;color:#fff}' +
-      '.agp-lb-unit span{display:block;margin-top:2px;font-size:11.5px;color:#c9a9c2}' +
-      '.agp-lb-timer-note{margin-top:9px;font-size:11.5px;line-height:1.7;color:#a893a6}' +
-      '@keyframes agpLbPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.35)}}' +
-      '@media (prefers-reduced-motion:reduce){.agp-lb-timer-dot{animation:none}}';
+      G + '{display:block !important;margin-top:22px !important}' +
+      G + ' > [data-lb-card]{display:none !important}' +
+      G + ' > [data-lb-card].is-active{display:flex !important;animation:agpLbIn .45s cubic-bezier(.22,1,.36,1) both;padding:clamp(20px,2.4vw,32px) clamp(16px,2.4vw,32px) !important;border-radius:26px !important;transform:none !important}' +
+      '@keyframes agpLbIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}' +
+      /* شريط التبويبات */
+      '.agp-lb-tabs{display:flex;justify-content:center;margin-top:36px}' +
+      '.agp-lb-tabs-in{display:inline-flex;gap:6px;padding:6px;border-radius:20px;border:1px solid rgba(255,255,255,.09);background:rgba(14,12,22,.8);box-shadow:0 20px 50px -30px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.04);max-width:100%}' +
+      '.agp-lb-tab{display:flex;align-items:center;gap:10px;padding:11px 20px;border:0;border-radius:15px;background:transparent;color:#a79fbb;cursor:pointer;font-family:"IBM Plex Sans Arabic",sans-serif;text-align:right;transition:background .3s,color .3s,box-shadow .3s}' +
+      '.agp-lb-tab:hover{color:#f4f2fb;background:rgba(255,255,255,.04)}' +
+      '.agp-lb-tab-icon{flex:none;width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}' +
+      '.agp-lb-tab-text{display:flex;flex-direction:column;line-height:1.35}' +
+      '.agp-lb-tab-label{font-family:"Noto Kufi Arabic",sans-serif;font-size:15px;font-weight:700}' +
+      '.agp-lb-tab-hint{font-size:11.5px;color:#7c7590;transition:color .3s}' +
+      '.agp-lb-tab.is-active{color:#fff}' +
+      '.agp-lb-tab.is-active .agp-lb-tab-hint{color:rgba(255,255,255,.75)}' +
+      '.agp-lb-tab.is-active .agp-lb-tab-icon{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.2)}' +
+      '.agp-lb-tab[data-key="supporters"].is-active{background:linear-gradient(135deg,#7a3fd4,#a66cf0);box-shadow:0 12px 30px -12px rgba(122,63,212,.9)}' +
+      '.agp-lb-tab[data-key="players"].is-active{background:linear-gradient(135deg,#2f55c9,#5b86f0);box-shadow:0 12px 30px -12px rgba(63,95,212,.9)}' +
+      '.agp-lb-tab[data-key="streamers"].is-active{background:linear-gradient(135deg,#b0328f,#e070c4);box-shadow:0 12px 30px -12px rgba(201,90,170,.9)}' +
+      '@media (max-width:640px){.agp-lb-tabs-in{display:flex;width:100%}.agp-lb-tab{flex:1 1 0;flex-direction:column;gap:6px;padding:10px 4px;text-align:center}.agp-lb-tab-text{align-items:center}.agp-lb-tab-hint{display:none}.agp-lb-tab-label{font-size:13px}.agp-lb-tab-icon{width:32px;height:32px;font-size:15px}}' +
+      /* الصفوف كبطاقات */
+      '.agp-lb-rows{display:grid !important;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px !important;margin-top:20px !important}' +
+      '.agp-lb-rows > div{grid-column:span 3;box-sizing:border-box;min-width:0;padding:16px 18px !important;border-radius:18px !important;background:rgba(255,255,255,.035) !important;border:1px solid rgba(255,255,255,.07);transition:transform .25s,border-color .25s,background .25s !important}' +
+      '.agp-lb-rows > div:nth-child(-n+3){grid-column:span 2}' +
+      '.agp-lb-rows > div:hover{transform:translateY(-3px);background:rgba(255,255,255,.06) !important}' +
+      '.agp-lb-rows > div:nth-child(1){border-color:rgba(240,214,138,.45);background:linear-gradient(135deg,rgba(240,214,138,.12),rgba(255,255,255,.02)) !important}' +
+      '.agp-lb-rows > div:nth-child(2){border-color:rgba(207,212,222,.35);background:linear-gradient(135deg,rgba(207,212,222,.09),rgba(255,255,255,.02)) !important}' +
+      '.agp-lb-rows > div:nth-child(3){border-color:rgba(208,154,106,.4);background:linear-gradient(135deg,rgba(208,154,106,.11),rgba(255,255,255,.02)) !important}' +
+      '.agp-lb-rows > div:only-child{grid-column:1 / -1;background:transparent !important;border-color:transparent}' +
+      '@media (max-width:1099px){.agp-lb-rows{grid-template-columns:repeat(2,minmax(0,1fr))}.agp-lb-rows > div,.agp-lb-rows > div:nth-child(-n+3){grid-column:span 1}.agp-lb-rows > div:nth-child(1){grid-column:1 / -1}}' +
+      '@media (max-width:640px){.agp-lb-rows{grid-template-columns:minmax(0,1fr);gap:8px !important}.agp-lb-rows > div,.agp-lb-rows > div:nth-child(-n+3){grid-column:1 / -1;padding:13px 12px !important}}' +
+      /* المؤقت */
+      '.agp-lb-timer{display:flex;align-items:center;justify-content:space-between;gap:18px 28px;flex-wrap:wrap;margin:0 0 22px;padding:18px 22px;border-radius:20px;border:1px solid rgba(240,174,228,.22);background:radial-gradient(120% 140% at 100% 0%,rgba(224,112,196,.18),transparent 60%),linear-gradient(180deg,rgba(28,16,30,.9),rgba(12,9,16,.95));box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}' +
+      '.agp-lb-timer-info{display:flex;align-items:center;gap:14px;min-width:0}' +
+      '.agp-lb-timer-icon{position:relative;flex:none;width:48px;height:48px;border-radius:15px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#b0328f,#e070c4);box-shadow:0 10px 26px -10px rgba(224,112,196,.9)}' +
+      '.agp-lb-timer-icon svg{width:24px;height:24px}' +
+      '.agp-lb-timer-icon::after{content:"";position:absolute;inset:-4px;border-radius:18px;border:1px solid rgba(240,174,228,.5);animation:agpLbRing 2.2s ease-out infinite}' +
+      '@keyframes agpLbRing{from{opacity:.9;transform:scale(1)}to{opacity:0;transform:scale(1.25)}}' +
+      '.agp-lb-timer-title{font-family:"Noto Kufi Arabic",sans-serif;font-size:16px;font-weight:700;color:#fff}' +
+      '.agp-lb-timer-note{margin-top:3px;font-size:12.5px;color:#b59ab0}' +
+      '.agp-lb-clock{display:flex;align-items:flex-start;gap:8px;direction:rtl}' +
+      '.agp-lb-unit{min-width:74px;padding:10px 8px 8px;border-radius:14px;text-align:center;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 -10px 20px -14px rgba(0,0,0,.8)}' +
+      '.agp-lb-unit b{display:block;font-family:"Noto Kufi Arabic",sans-serif;font-size:28px;font-weight:700;line-height:1.15;color:#fff;font-variant-numeric:tabular-nums}' +
+      '.agp-lb-unit span{display:block;margin-top:4px;font-size:11px;letter-spacing:.3px;color:#c9a9c2}' +
+      '.agp-lb-sep{align-self:center;margin-top:-14px;font-size:22px;font-weight:700;color:rgba(240,174,228,.55)}' +
+      '.agp-lb-progress{flex:1 1 100%;display:flex;align-items:center;gap:12px;font-size:11.5px;color:#a893a6}' +
+      '.agp-lb-bar{flex:1;height:6px;border-radius:6px;background:rgba(255,255,255,.07);overflow:hidden}' +
+      '.agp-lb-bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#e070c4,#b0328f);transition:width .6s}' +
+      '@media (max-width:640px){.agp-lb-timer{padding:16px 14px;justify-content:center}.agp-lb-timer-info{width:100%}.agp-lb-clock{width:100%;justify-content:center}.agp-lb-unit{flex:1 1 0;min-width:0}.agp-lb-unit b{font-size:24px}}' +
+      '@media (prefers-reduced-motion:reduce){.agp-lb-timer-icon::after,' + G + ' > [data-lb-card].is-active{animation:none}}';
     document.head.appendChild(st);
   }
 
-  function findStreamerCard(){
-    var title = Array.prototype.slice.call(document.querySelectorAll('div'))
-      .find(function(d){ return d.children.length === 0 && d.textContent.trim() === 'توب الاستريمرز الأكثر نشاطاً'; });
-    return title ? title.parentElement.parentElement : null;
+  function findCardByTitle(title){
+    var t = Array.prototype.slice.call(document.querySelectorAll('#gallery div'))
+      .find(function(d){ return d.children.length === 0 && d.textContent.trim() === title; });
+    return t ? t.parentElement.parentElement : null;
+  }
+  function rowsOf(card){
+    var kids = Array.prototype.filter.call(card.children, function(c){ return !c.hasAttribute('data-lb-extra'); });
+    return kids[2] || null;
   }
 
-  function renderTimer(timer){
-    var left = Math.max(0, nextRankingReset(Date.now()) - Date.now());
-    var mins = Math.floor(left / 60000);
-    var d = Math.floor(mins / 1440), h = Math.floor((mins % 1440) / 60), m = mins % 60;
-    timer.querySelector('[data-u="d"]').textContent = ar(d);
-    timer.querySelector('[data-u="h"]').textContent = ar(h);
-    timer.querySelector('[data-u="m"]').textContent = ar(m);
+  function setActive(key){
+    activeKey = key;
+    Array.prototype.forEach.call(document.querySelectorAll('.agp-lb-tab'), function(b){
+      var on = b.getAttribute('data-key') === key;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#gallery [data-lb-card]'), function(c){
+      c.classList.toggle('is-active', c.getAttribute('data-lb-card') === key);
+    });
   }
 
-  function mountTimer(){
-    ensureStyles();
-    var card = findStreamerCard();
-    if (!card || card.querySelector('.agp-lb-timer')) return;
+  function buildTimer(){
     var timer = document.createElement('div');
     timer.className = 'agp-lb-timer';
     timer.setAttribute('data-lb-extra', '1');
     timer.innerHTML =
-      '<div class="agp-lb-timer-title"><span class="agp-lb-timer-dot"></span>الوقت الباقي على تحديث التوب</div>' +
-      '<div class="agp-lb-timer-units">' +
-        '<div class="agp-lb-unit"><b data-u="d">٠</b><span>يوم</span></div>' +
-        '<div class="agp-lb-unit"><b data-u="h">٠</b><span>ساعة</span></div>' +
-        '<div class="agp-lb-unit"><b data-u="m">٠</b><span>دقيقة</span></div>' +
+      '<div class="agp-lb-timer-info">' +
+        '<span class="agp-lb-timer-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M9 2h6"/></svg></span>' +
+        '<div><div class="agp-lb-timer-title">الوقت الباقي على تحديث التوب</div><div class="agp-lb-timer-note">يتصفّر التوب ويبدأ من جديد كل سبت ١٢:٠٠ ص بتوقيت السعودية</div></div>' +
       '</div>' +
-      '<div class="agp-lb-timer-note">التوب يتصفّر ويبدأ من جديد كل سبت الساعة ١٢:٠٠ ص بتوقيت السعودية</div>';
-    card.insertBefore(timer, card.firstChild);
-    renderTimer(timer);
-    setInterval(function(){ if (timer.isConnected) renderTimer(timer); }, 15000);
+      '<div class="agp-lb-clock">' +
+        '<div class="agp-lb-unit"><b data-u="d">٠</b><span>يوم</span></div><span class="agp-lb-sep">:</span>' +
+        '<div class="agp-lb-unit"><b data-u="h">٠٠</b><span>ساعة</span></div><span class="agp-lb-sep">:</span>' +
+        '<div class="agp-lb-unit"><b data-u="m">٠٠</b><span>دقيقة</span></div>' +
+      '</div>' +
+      '<div class="agp-lb-progress"><span data-u="p">مضى ٠٪ من الأسبوع</span><div class="agp-lb-bar"><i style="width:0%"></i></div></div>';
+    return timer;
+  }
+  function renderTimer(timer){
+    var now = Date.now();
+    var next = nextRankingReset(now);
+    var left = Math.max(0, next - now);
+    var mins = Math.floor(left / 60000);
+    var d = Math.floor(mins / 1440), h = Math.floor((mins % 1440) / 60), m = mins % 60;
+    timer.querySelector('[data-u="d"]').textContent = ar(d);
+    timer.querySelector('[data-u="h"]').textContent = ar(pad2(h));
+    timer.querySelector('[data-u="m"]').textContent = ar(pad2(m));
+    var pct = Math.min(100, Math.max(0, Math.round((1 - left / WEEK_MS) * 100)));
+    timer.querySelector('[data-u="p"]').textContent = 'مضى ' + ar(pct) + '٪ من الأسبوع';
+    timer.querySelector('.agp-lb-bar i').style.width = pct + '%';
+  }
+
+  function mount(){
+    var grid = document.querySelector('#gallery div[style*="minmax(300px, 1fr)"]');
+    if (!grid) return;
+    ensureStyles();
+
+    TABS.forEach(function(t){
+      var card = findCardByTitle(t.title);
+      if (!card) return;
+      if (!card.hasAttribute('data-lb-card')) card.setAttribute('data-lb-card', t.key);
+      var rows = rowsOf(card);
+      if (rows) rows.classList.add('agp-lb-rows');
+      if (t.key === 'streamers' && !card.querySelector('.agp-lb-timer')) {
+        var timer = buildTimer();
+        card.insertBefore(timer, card.firstChild);
+        renderTimer(timer);
+        setInterval(function(){ if (timer.isConnected) renderTimer(timer); }, 15000);
+      }
+    });
+
+    if (!grid.previousElementSibling || !grid.previousElementSibling.classList.contains('agp-lb-tabs')) {
+      var bar = document.createElement('div');
+      bar.className = 'agp-lb-tabs';
+      var inner = document.createElement('div');
+      inner.className = 'agp-lb-tabs-in';
+      inner.setAttribute('role', 'tablist');
+      TABS.forEach(function(t){
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'agp-lb-tab';
+        b.setAttribute('role', 'tab');
+        b.setAttribute('data-key', t.key);
+        b.innerHTML = '<span class="agp-lb-tab-icon">' + t.icon + '</span><span class="agp-lb-tab-text"><span class="agp-lb-tab-label">' + t.label + '</span><span class="agp-lb-tab-hint">' + t.hint + '</span></span>';
+        b.addEventListener('click', function(){ setActive(t.key); });
+        inner.appendChild(b);
+      });
+      bar.appendChild(inner);
+      grid.parentNode.insertBefore(bar, grid);
+    }
+    setActive(activeKey);
   }
 
   var tries = 0;
   var t = setInterval(function(){
     tries++;
-    mountTimer();
+    mount();
     if (tries >= 30) clearInterval(t);
   }, 300);
 })();
