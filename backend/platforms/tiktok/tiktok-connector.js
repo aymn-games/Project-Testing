@@ -5,7 +5,7 @@
  *   createTikTokConnector() -> { connect(options, callbacks), disconnect(), isConnected() }
  *   callbacks = {
  *     onStatus(status, message?),   // فقط 'connecting'/'connected'/'error' من هنا
- *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance }),
+ *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance, elimCard }),
  *     onGift({ id, name, giftName, giftValue, repeatCount }),
  *     onFollow({ id, name }),
  *     onViewerUpdate({ current, totalUsers })   // اختياري
@@ -178,6 +178,21 @@ function extractEquippedEntrance(uniqueId) {
 }
 
 /**
+ * بطاقة الإقصاء المفعّلة (لو وُجدت) لصاحب هذا التعليق — نفس منطق
+ * extractEquippedFrame أعلاه.
+ * @param {string} uniqueId
+ * @returns {{cardKey: string}|null}
+ */
+function extractElimCard(uniqueId) {
+    try {
+        return collectiblesService.getElimCardForVerifiedTikTok(uniqueId);
+    } catch (err) {
+        logger.error('TikTok Connector: elimination card lookup failed for "' + uniqueId + '":', err);
+        return null;
+    }
+}
+
+/**
  * استخراج "هل هذا المعلِّق متابع لصاحب البث؟" عبر
  * `data.user.followInfo.followStatus`.
  *
@@ -305,6 +320,7 @@ function createTikTokConnector() {
                 avatarUrl: extractAvatarUrl(data),
                 frame: extractEquippedFrame(user.uniqueId),
                 entrance: extractEquippedEntrance(user.uniqueId),
+                elimCard: extractElimCard(user.uniqueId),
                 _debugFollowStatus: followDebug.followStatus,
                 _debugIsFollowerOfAnchor: followDebug.isFollowerOfAnchor
             });

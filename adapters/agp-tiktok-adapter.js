@@ -91,8 +91,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
 
         // avatarUrl/frame/entrance feed the player card (agp-player-card.js)
-        // and the entrance intro animation (agp-entrance.js).
-        var playerData = { id: payload.id, name: payload.name, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, entrance: payload.entrance || null };
+        // and the entrance intro animation (agp-entrance.js); elimCard feeds
+        // the owned elimination card (agp-elim-card.js).
+        var playerData = { id: payload.id, name: payload.name, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, entrance: payload.entrance || null, elimCard: payload.elimCard || null };
         var keywordActive = AGP.keywordManager && AGP.keywordManager.isActive();
 
         if (keywordActive) {

@@ -116,6 +116,8 @@ var ROUTES = [
   { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
   // تفعيل/إيقاف الدخولية ذاتياً — نفس نمط handleEquipFrame (صاحب الجلسة فقط).
   { method: 'POST', path: '/api/entrance/toggle', requireAuth: true, handler: handleToggleEntrance },
+  { method: 'POST', path: '/api/admin/elim-card', requireAuth: true, requireAdmin: true, handler: handleAdminSetElimCard },
+  { method: 'POST', path: '/api/elim-card/toggle', requireAuth: true, handler: handleToggleElimCard },
   // ---- مستوى الستريمر (SP). القراءة العامة لعتبات المستويات مسموحة
   // بدون تسجيل دخول — لا بيانات حساسة، فقط عتبات ثابتة للعرض.
   { method: 'GET', path: '/api/streamer-levels', requireAuth: false, handler: handleGetStreamerLevels },
@@ -411,7 +413,8 @@ function handleAdminGetCatalog(req, res) {
   sendJson(res, 200, {
     success: true,
     catalog: collectiblesService.getCatalog(),
-    customFrames: collectiblesService.listCustomFrames()
+    customFrames: collectiblesService.listCustomFrames(),
+    elimCards: collectiblesService.getElimCardCatalog()
   });
 }
 
@@ -474,6 +477,25 @@ function handleEquipFrame(req, res, body, user) {
  */
 function handleToggleEntrance(req, res, body, user) {
   var result = collectiblesService.setEntranceEnabled(user.id, Boolean(body.enabled));
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+/**
+ * منح/سحب بطاقة الإقصاء يدوياً من الأدمن. body.revoke === true يسحبها،
+ * وإلا تُمنح body.cardKey لـbody.userId.
+ */
+function handleAdminSetElimCard(req, res, body) {
+  if (body.revoke) {
+    sendJson(res, 200, collectiblesService.revokeElimCard(body.userId));
+    return;
+  }
+  var result = collectiblesService.grantElimCard(body.userId, body.cardKey, 'admin_manual');
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+/** تفعيل/إيقاف ذاتي لبطاقة الإقصاء — user.id من الجلسة. body.enabled: true/false. */
+function handleToggleElimCard(req, res, body, user) {
+  var result = collectiblesService.setElimCardEnabled(user.id, Boolean(body.enabled));
   sendJson(res, result.success ? 200 : 400, result);
 }
 

@@ -19,6 +19,7 @@
  *   custom_frames  — إطارات حصرية حرة يرفعها الأدمن ويمنحها لأي مستخدم
  *   user_frames    — ملكية/تفعيل الإطارات لكل مستخدم
  *   user_entrances — الدخولية النشطة (أنيميشن + نص) لكل مستخدم
+ *   user_elim_cards — بطاقة الإقصاء المملوكة (منح يدوي من الأدمن) لكل مستخدم
  *   user_points    — نقاط اللاعب الإجمالية + سقف يومي — راجع
  *                    backend/points/points-service.js
  *   streamer_levels — كتالوج مستويات "SP" (نقاط الستريمر) القابلة
@@ -166,6 +167,18 @@ db.exec(`
         entrance_text TEXT NOT NULL DEFAULT '',
         source TEXT NOT NULL DEFAULT 'admin_manual',
         updated_at INTEGER NOT NULL
+    );
+
+    -- بطاقة الإقصاء — صف واحد لكل مستخدم (منح/سحب يدوي من الأدمن).
+    -- card_key يشير لتصميم البطاقة (الصور والمواضع بـjs/agp-elim-card.js،
+    -- المفاتيح المسموحة بـcollectibles-service.js). enabled = تفعيل/إيقاف
+    -- ذاتي من صاحب الحساب بالبروفايل.
+    CREATE TABLE IF NOT EXISTS user_elim_cards (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        card_key TEXT NOT NULL,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        granted_by TEXT NOT NULL DEFAULT 'admin_manual',
+        granted_at INTEGER NOT NULL
     );
 
     -- كتالوج مستويات "SP" (نقاط الستريمر) — عتبات قابلة للتعديل من الأدمن.

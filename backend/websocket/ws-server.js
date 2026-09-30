@@ -300,7 +300,7 @@ function handleConnectMessage(connectionId, socket, payload) {
     },
 
     onComment: function (data) {
-      sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, data.isFollower, data.avatarUrl, data.frame));
+      sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, data.isFollower, data.avatarUrl, data.frame, data.elimCard));
 
       // تجميع بالذاكرة بدل كتابة SQLite فورية — تُفرَّغ دورياً عبر flushAllPendingStats.
       if (entry.activeBroadcastId) {

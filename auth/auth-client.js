@@ -409,6 +409,21 @@ function toggleEntrance(enabled) {
     return request('/api/entrance/toggle', { method: 'POST', body: { enabled: Boolean(enabled) } });
 }
 
+/** Admin only — grants (or replaces) a user's elimination card. cardKey
+ * from adminGetCollectiblesCatalog().elimCards. */
+function adminGrantElimCard(userId, cardKey) {
+    return request('/api/admin/elim-card', { method: 'POST', body: { userId: userId, cardKey: cardKey } });
+}
+
+function adminRevokeElimCard(userId) {
+    return request('/api/admin/elim-card', { method: 'POST', body: { userId: userId, revoke: true } });
+}
+
+/** Owner toggles their elimination card on/off without losing it. */
+function toggleElimCard(enabled) {
+    return request('/api/elim-card/toggle', { method: 'POST', body: { enabled: Boolean(enabled) } });
+}
+
 /** Called on round/match end. participants: [{tiktokUsername, won}].
  * options.teamGame: true for two-team games (smaller per-player win bonus,
  * see backend/points/points-service.js). */
@@ -762,6 +777,9 @@ global.AGPAuth = {
     adminClearEntrance: adminClearEntrance,
     equipFrame: equipFrame,
     toggleEntrance: toggleEntrance,
+    adminGrantElimCard: adminGrantElimCard,
+    adminRevokeElimCard: adminRevokeElimCard,
+    toggleElimCard: toggleElimCard,
     reportRoundCompletion: reportRoundCompletion,
     reportMatchPoints: reportMatchPoints,
     getStreamerLevels: getStreamerLevels,
