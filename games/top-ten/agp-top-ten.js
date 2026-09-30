@@ -1058,7 +1058,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         header.id = 'tt-header';
         header.innerHTML =
             '<div id="tt-header-brand">' +
-                '<a href="../../index.html"><img src="../../logo.png" alt="AGP" onerror="this.style.display=\'none\'"></a>' +
+                '<a href="../../"><img src="../../logo.png" alt="AGP" onerror="this.style.display=\'none\'"></a>' +
             '</div>' +
             '<div id="tt-header-title">🏆 ' + GAME_NAME + '</div>' +
             '<button id="tt-gear-btn" class="tt-header-icon-btn" title="إدارة المباراة" style="display:none;">⚙️</button>';
