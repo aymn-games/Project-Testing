@@ -318,7 +318,7 @@ function setEntranceEnabled(userId, enabled) {
 // المفاتيح المسموحة — تصميم كل بطاقة (صورة + مواضع الدوائر والنص) معرَّف
 // بنفس المفتاح في js/agp-elim-card.js.
 var ELIM_CARD_CATALOG = [
-  { key: 'ksa-green', displayNameAr: 'بطاقة الإقصاء — السعودية الخضراء' }
+  { key: 'ksa-green', displayNameAr: 'بطاقة الإقصاء — السعودية الخضراء', imageFilename: 'assets/elim-cards/elim-card-ksa-green.png' }
 ];
 
 function getElimCardCatalog() {
@@ -367,6 +367,7 @@ function getElimCard(userId) {
   return {
     cardKey: row.card_key,
     displayNameAr: entry ? entry.displayNameAr : row.card_key,
+    imageFilename: entry ? entry.imageFilename : null,
     enabled: Boolean(row.enabled),
     grantedAt: row.granted_at
   };
