@@ -137,7 +137,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         header.id = 'tw-header';
         header.innerHTML =
             '<div id="tw-header-brand">' +
-                '<a href="../../index.html"><img src="../../logo.png" alt="AGP" onerror="this.style.display=\'none\'"></a>' +
+                '<a href="../../"><img src="../../logo.png" alt="AGP" onerror="this.style.display=\'none\'"></a>' +
             '</div>' +
             '<div id="tw-header-title">' + GAME_NAME + '</div>' +
             '<button id="tw-gear-btn" class="tw-header-icon-btn" title="إدارة المباراة" style="display:none;">⚙️</button>';
