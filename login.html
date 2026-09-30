@@ -528,7 +528,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         setNote('تم تسجيل الدخول، جاري تحويلك…', true);
         setTimeout(function(){ window.location.href = getSafeNextUrl(); }, 500);
       } else if (result && result.error === 'device_locked') {
-        setNote('هذا الحساب مربوط بجهاز آخر مسبقاً. تواصل مع الأدمن لإعادة تعيين الجهاز المسموح.', false);
+        setNote('هذا الحساب وصل للحد الأقصى من الأجهزة (3 أجهزة). تواصل مع الأدمن للسماح بجهاز جديد.', false);
       } else {
         setNote('تعذّر الدخول عبر جوجل: ' + ((result && result.error) || 'خطأ غير معروف'), false);
       }

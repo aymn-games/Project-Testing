@@ -339,6 +339,9 @@ ensureColumn('users', 'account_type_chosen', 'INTEGER NOT NULL DEFAULT 1');
 // بأول تسجيل دخول بعد اعتماد الحساب. NULL = لا قيد بعد. قيد ناعم وليس
 // صلباً (راجع checkDeviceLock بـauth-service.js)؛ لا قيد على لاعبين عاديين.
 ensureColumn('users', 'bound_device_id', 'TEXT');
+// تعدد الأجهزة (حتى 3) — مصفوفة JSON بمعرّفات الأجهزة المربوطة، من الأقدم
+// استخداماً للأحدث. NULL = يُقرأ من bound_device_id القديم إن وُجد.
+ensureColumn('users', 'bound_device_ids', 'TEXT');
 
 // عدد المشاهدين لكل بث — من حدث roomUser بمكتبة tiktok-live-connector.
 // peak_viewers = أعلى عدد متزامن (حقل `total`)، total_unique_viewers =

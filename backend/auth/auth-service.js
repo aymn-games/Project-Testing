@@ -19,6 +19,9 @@ var streamerLevelService = require('../points/streamer-level-service');
 var emailService = require('../email/email-service');
 
 var SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 يوماً
+// أقصى عدد أجهزة لحساب ستريمر معتمد (راجع checkDeviceLock).
+var MAX_STREAMER_DEVICES = 3;
+var DEVICE_LOCKED_MESSAGE = 'هذا الحساب وصل للحد الأقصى من الأجهزة (3 أجهزة). تواصل مع الأدمن للسماح بجهاز جديد.';
 var googleClient = config.googleClientId ? new OAuth2Client(config.googleClientId) : null;
 
 function now() { return Date.now(); }
@@ -134,7 +137,10 @@ function signup(username, email, plainPassword, wantsToBeStreamer) {
 }
 
 /**
- * قيد جهاز واحد لكل حسابات الستريمر: اختار "ستريمر" بالتسجيل (is_streamer)
+ * قيد الأجهزة لحسابات الستريمر (حتى MAX_STREAMER_DEVICES = 3 أجهزة):
+ * أول 3 أجهزة يدخل منها الحساب تُربط تلقائياً، والرابع يُرفض (device_locked)
+ * إلا لو الأدمن فعّل "السماح بجهاز جديد" — وقتها يحل محل الأقدم استخداماً.
+ * يشمل الحسابات اللي اختارت "ستريمر" بالتسجيل (is_streamer)
  * أو حوّله الأدمن (can_run_games). لا قيد على اللاعبين العاديين، ولا على
  * حسابات الأدمن (عشان صاحب المنصة ما ينقفل خارج حسابه).
  *
@@ -144,8 +150,8 @@ function signup(username, email, plainPassword, wantsToBeStreamer) {
  * حماية ممكنة تقنياً من صفحة ويب عادية، لا وعد بحماية أقوى.
  *
  * سوبر أدمن (is_super_admin=1) يتجاوز الفحص بالكامل، يُفعَّل يدوياً لحساب
- * محدد فقط. allow_device_change=1 يسمح بتجاوز عدم التطابق مرة واحدة —
- * يُستهلَك تلقائياً بعد أول تسجيل دخول من جهاز جديد.
+ * محدد فقط. allow_device_change=1 يسمح بجهاز إضافي مرة واحدة (يحل محل
+ * الأقدم) — يُستهلَك تلقائياً بعد أول تسجيل دخول من جهاز جديد.
  *
  * @param {Object} user - صف قاعدة بيانات كامل (permissions لسا نص JSON خام)
  * @param {string|null|undefined} deviceId
@@ -156,12 +162,49 @@ function checkDeviceLock(user, deviceId) {
     if (user.role === 'admin') return { allowed: true, bind: false };
     var isStreamerAccount = Boolean(user.is_streamer) || Boolean(JSON.parse(user.permissions || '{}').can_run_games);
     if (!isStreamerAccount) return { allowed: true };
-    if (!user.bound_device_id) return { allowed: true, bind: true };
-    if (!deviceId || deviceId !== user.bound_device_id) {
-        if (user.allow_device_change) return { allowed: true, bind: true, consumeAllowChange: true };
-        return { allowed: false };
+    var devices = getBoundDevices(user);
+    if (deviceId && devices.indexOf(deviceId) !== -1) return { allowed: true, bind: true, devices: devices };
+    if (devices.length < MAX_STREAMER_DEVICES) return { allowed: true, bind: true, devices: devices };
+    if (user.allow_device_change) return { allowed: true, bind: true, consumeAllowChange: true, devices: devices };
+    return { allowed: false };
+}
+
+/**
+ * الأجهزة المربوطة بحساب ستريمر — مصفوفة JSON بعمود bound_device_ids،
+ * مرتبة من الأقدم استخداماً للأحدث. الحسابات القديمة (قبل تعدد الأجهزة)
+ * عندها bound_device_id فقط، فنعتبره الجهاز الأول.
+ * @param {Object} user
+ * @returns {string[]}
+ */
+function getBoundDevices(user) {
+    var list = [];
+    try { list = JSON.parse(user.bound_device_ids || '[]'); } catch (err) { list = []; }
+    if (!Array.isArray(list)) list = [];
+    list = list.filter(function (d) { return typeof d === 'string' && d; });
+    if (!list.length && user.bound_device_id) list = [user.bound_device_id];
+    return list;
+}
+
+/**
+ * يحفظ نتيجة checkDeviceLock بعد نجاح الدخول: الجهاز الحالي يصير الأحدث
+ * بالقائمة. لو القائمة ممتلئة (مسموح بتغيير الجهاز لمرة واحدة) يُحذف
+ * الأقدم استخداماً. bound_device_id يبقى = أحدث جهاز للتوافق.
+ * @param {number} userId
+ * @param {{bind?: boolean, devices?: string[], consumeAllowChange?: boolean}} deviceCheck
+ * @param {string|null|undefined} deviceId
+ */
+function saveDeviceBinding(userId, deviceCheck, deviceId) {
+    if (!deviceCheck.bind || !deviceId || !deviceCheck.devices) return;
+    var list = deviceCheck.devices.filter(function (d) { return d !== deviceId; });
+    list.push(deviceId);
+    while (list.length > MAX_STREAMER_DEVICES) list.shift();
+    if (deviceCheck.consumeAllowChange) {
+        db.prepare('UPDATE users SET bound_device_ids = ?, bound_device_id = ?, allow_device_change = 0 WHERE id = ?')
+            .run(JSON.stringify(list), deviceId, userId);
+    } else {
+        db.prepare('UPDATE users SET bound_device_ids = ?, bound_device_id = ? WHERE id = ?')
+            .run(JSON.stringify(list), deviceId, userId);
     }
-    return { allowed: true };
 }
 
 /**
@@ -183,14 +226,8 @@ function login(identifier, plainPassword, deviceId) {
     }
 
     var deviceCheck = checkDeviceLock(user, deviceId);
-    if (!deviceCheck.allowed) return { success: false, error: 'device_locked' };
-    if (deviceCheck.bind && deviceId) {
-        if (deviceCheck.consumeAllowChange) {
-            db.prepare('UPDATE users SET bound_device_id = ?, allow_device_change = 0 WHERE id = ?').run(deviceId, user.id);
-        } else {
-            db.prepare('UPDATE users SET bound_device_id = ? WHERE id = ?').run(deviceId, user.id);
-        }
-    }
+    if (!deviceCheck.allowed) return { success: false, error: 'device_locked', message: DEVICE_LOCKED_MESSAGE };
+    saveDeviceBinding(user.id, deviceCheck, deviceId);
 
     var token = createSessionFor(user);
 
@@ -348,14 +385,8 @@ async function loginWithGoogle(idToken, deviceId) {
         }),
         deviceId
     );
-    if (!deviceCheck.allowed) return { success: false, error: 'device_locked' };
-    if (deviceCheck.bind && deviceId) {
-        if (deviceCheck.consumeAllowChange) {
-            db.prepare('UPDATE users SET bound_device_id = ?, allow_device_change = 0 WHERE id = ?').run(deviceId, existing.id);
-        } else {
-            db.prepare('UPDATE users SET bound_device_id = ? WHERE id = ?').run(deviceId, existing.id);
-        }
-    }
+    if (!deviceCheck.allowed) return { success: false, error: 'device_locked', message: DEVICE_LOCKED_MESSAGE };
+    saveDeviceBinding(existing.id, deviceCheck, deviceId);
 
     // "existing" قد يكون صف قاعدة بيانات فعلي أو كائناً جديداً بُني
     // يدوياً بالأعلى — توحيد الشكل هنا قبل الإرجاع.
@@ -784,7 +815,7 @@ function deleteUser(userId) {
 function adminResetDeviceLock(userId) {
     var user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
     if (!user) return { success: false, error: 'user_not_found' };
-    db.prepare('UPDATE users SET bound_device_id = NULL WHERE id = ?').run(userId);
+    db.prepare('UPDATE users SET bound_device_id = NULL, bound_device_ids = NULL WHERE id = ?').run(userId);
     return { success: true };
 }
 
@@ -1111,7 +1142,7 @@ function updateAvatarImage(userId, dataUrl) {
  * كل المستخدمين مع إحصائياتهم المجمَّعة — للوحة الأدمن فقط.
  */
 function listAllUsersWithStats() {
-    var users = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen, bound_device_id, is_super_admin, allow_device_change, created_at FROM users ORDER BY created_at ASC').all();
+    var users = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen, bound_device_id, bound_device_ids, is_super_admin, allow_device_change, created_at FROM users ORDER BY created_at ASC').all();
     return users.map(function (u) {
         // شفاء ذاتي — نفس منطق validateSession.
         if (!u.custom_id) {
@@ -1122,14 +1153,18 @@ function listAllUsersWithStats() {
         var equipped = frames.filter(function (f) { return f.equipped; })[0] || null;
         // deviceLocked: true/false فقط لعرض حالة قيد الجهاز — لا يُرسَل
         // معرّف الجهاز الفعلي (bound_device_id) للواجهة.
-        var deviceLocked = Boolean(u.bound_device_id);
+        var devicesCount = getBoundDevices(u).length;
+        var deviceLocked = devicesCount >= MAX_STREAMER_DEVICES;
         delete u.bound_device_id;
+        delete u.bound_device_ids;
         return Object.assign({}, u, {
             is_streamer: Boolean(u.is_streamer),
             permissions: JSON.parse(u.permissions || '{}'),
             welcome_completed: Boolean(u.welcome_completed),
             account_type_chosen: u.account_type_chosen === undefined ? true : Boolean(u.account_type_chosen),
             deviceLocked: deviceLocked,
+            devicesCount: devicesCount,
+            maxDevices: MAX_STREAMER_DEVICES,
             is_super_admin: Boolean(u.is_super_admin),
             allow_device_change: Boolean(u.allow_device_change),
             stats: getUserStats(u.id),

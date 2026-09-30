@@ -46,23 +46,42 @@ function getCachedUser() {
 }
 
 /**
- * Stable per-browser "device" id — random, generated once and persisted
- * forever in localStorage. Used only for the single-device lock on
- * approved streamer accounts (see auth-service.js: checkDeviceLock).
- * NOT a real device fingerprint — clearing browser data or using a
+ * Stable per-browser "device" id — random, generated once and persisted in
+ * localStorage AND mirrored to a long-lived cookie on the site's parent
+ * domain. Used only for the device limit on approved streamer accounts
+ * (see auth-service.js: checkDeviceLock, up to 3 devices).
+ * The cookie backup keeps the same id when localStorage is wiped (e.g.
+ * Safari's 7-day storage cleanup) and across www/non-www of the same site.
+ * NOT a real device fingerprint — clearing all site data or using a
  * different browser/profile yields a new id (an intentionally soft
  * constraint).
  * @returns {string|null}
  */
-function getDeviceId() {
+function readDeviceCookie() {
     try {
-        var id = localStorage.getItem(DEVICE_ID_KEY);
-        if (!id) {
-            id = 'dev_' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-            localStorage.setItem(DEVICE_ID_KEY, id);
-        }
-        return id;
+        var m = document.cookie.match(/(?:^|;\s*)agp_device_id=([^;]+)/);
+        return m ? decodeURIComponent(m[1]) : null;
     } catch (err) { return null; }
+}
+
+function writeDeviceCookie(id) {
+    try {
+        var host = location.hostname;
+        var domain = /(^|\.)aymngames\.online$/.test(host) ? '; domain=.aymngames.online' : '';
+        var secure = location.protocol === 'https:' ? '; Secure' : '';
+        document.cookie = 'agp_device_id=' + encodeURIComponent(id) + '; max-age=' + (5 * 365 * 24 * 60 * 60) +
+            '; path=/' + domain + '; SameSite=Lax' + secure;
+    } catch (err) { /* الكوكي نسخة احتياطية فقط */ }
+}
+
+function getDeviceId() {
+    var id = null;
+    try { id = localStorage.getItem(DEVICE_ID_KEY); } catch (err) { id = null; }
+    if (!id) id = readDeviceCookie();
+    if (!id) id = 'dev_' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    try { localStorage.setItem(DEVICE_ID_KEY, id); } catch (err) { /* ignore */ }
+    if (readDeviceCookie() !== id) writeDeviceCookie(id);
+    return id;
 }
 
 /**

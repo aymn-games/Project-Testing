@@ -209,10 +209,10 @@
             var welcomeResetBtn = '<br><button class="btn btn-sm" data-user-id="' + u.id + '" data-reset-welcome title="' +
                 (u.welcome_completed ? 'شافها كاملة من قبل — اضغط لإعادتها له مرة وحدة' : 'لسا ما شافها') +
                 '">🎉 إعادة الترحيب</button>';
-            var deviceLockCell = (u.is_super_admin ? '⭐ سوبر أدمن (بدون قيد)' : (u.deviceLocked ? '🔒 مربوط' : '—')) +
+            var deviceLockCell = (u.is_super_admin ? '⭐ سوبر أدمن (بدون قيد)' : (u.devicesCount ? ((u.deviceLocked ? '🔒 ' : '📱 ') + u.devicesCount + '/' + (u.maxDevices || 3) + ' أجهزة') : '—')) +
                 (u.is_super_admin ? '' :
-                    '<br><button class="btn btn-sm" data-user-id="' + u.id + '" data-reset-device-lock title="تصفير القيد — يسمح بالدخول من جهاز جديد">↺ تصفير</button>' +
-                    ' <button class="btn btn-sm" data-user-id="' + u.id + '" data-allow-device-change data-current="' + (u.allow_device_change ? '1' : '0') + '" title="سماح لمرة وحدة — أول دخول من جهاز جديد يُقبل تلقائياً ثم يرجع القيد">' +
+                    '<br><button class="btn btn-sm" data-user-id="' + u.id + '" data-reset-device-lock title="تصفير الأجهزة المربوطة — أول 3 أجهزة يدخل منها بعدها تُربط من جديد">↺ تصفير</button>' +
+                    ' <button class="btn btn-sm" data-user-id="' + u.id + '" data-allow-device-change data-current="' + (u.allow_device_change ? '1' : '0') + '" title="سماح لمرة وحدة — أول دخول من جهاز جديد يُقبل ويحل محل أقدم جهاز، ثم يرجع القيد">' +
                     (u.allow_device_change ? '✅ مفعّل (اضغط للإلغاء)' : '🔓 سماح بجهاز جديد') + '</button>');
             return '<tr>' +
                 '<td>' + u.id + '</td>' +
