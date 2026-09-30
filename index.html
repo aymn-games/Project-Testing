@@ -1711,5 +1711,50 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
   }, 300);
 })();
 </script>
+<script>
+(function(){
+  // [الإحصائيات] شكل احترافي لأزرار قسم الإحصائيات (#stats) وبطاقاته:
+  // الأزرار شريط واحد مقسّم بأيقونة لكل تبويب، والزر المفعّل (القالب يعطيه
+  // background:#7a3fd4 inline) بتدرّج وتوهج. البطاقات زجاجية بخط علوي
+  // ملوّن ورقم بتدرّج وشريط تقدّم متوهج. CSS فقط — منطق التبويبات والأرقام
+  // الحقيقية بدون أي تغيير.
+  function ensureStatsStyles(){
+    if (document.getElementById('agp-stats-style')) return;
+    var T = '#stats > div > div:first-child';
+    var B = T + ' button';
+    var ON = B + '[style*="background: rgb(122, 63, 212)"]';
+    var G = '#stats div[style*="minmax(220px, 1fr)"]';
+    var st = document.createElement('style');
+    st.id = 'agp-stats-style';
+    st.textContent =
+      T + '{display:inline-flex !important;flex-wrap:nowrap !important;gap:6px !important;margin:0 auto !important;padding:6px;border-radius:20px;border:1px solid rgba(255,255,255,.09);background:rgba(14,12,22,.8);box-shadow:0 20px 50px -30px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.04);max-width:100%}' +
+      '#stats > div{display:flex;flex-direction:column;align-items:center}' +
+      B + '{display:inline-flex !important;align-items:center;gap:9px;padding:12px 24px !important;border:0 !important;border-radius:15px !important;background:transparent !important;color:#a79fbb !important;font-family:"Noto Kufi Arabic",sans-serif !important;font-size:15px !important;font-weight:700 !important;white-space:nowrap;transition:background .3s,color .3s,box-shadow .3s !important}' +
+      B + ':hover{color:#f4f2fb !important;background:rgba(255,255,255,.05) !important}' +
+      B + '::before{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:10px;font-size:15px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}' +
+      B + ':nth-child(1)::before{content:"📊"}' +
+      B + ':nth-child(2)::before{content:"🎥"}' +
+      B + ':nth-child(3)::before{content:"🎮"}' +
+      ON + '{color:#fff !important;background:linear-gradient(135deg,#7a3fd4,#b06cf0) !important;box-shadow:0 12px 30px -12px rgba(122,63,212,.95)}' +
+      ON + '::before{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.22)}' +
+      G + '{width:100%;gap:18px !important;margin-top:34px !important}' +
+      G + ' > div{padding:30px 26px 26px !important;border-radius:22px !important;border:1px solid rgba(178,140,245,.18) !important;background:radial-gradient(120% 100% at 100% 0%,rgba(122,63,212,.18),transparent 55%),linear-gradient(180deg,rgba(26,22,42,.92),rgba(10,9,16,.95)) !important;box-shadow:0 30px 60px -40px rgba(0,0,0,1),inset 0 1px 0 rgba(255,255,255,.05) !important;transition:transform .3s,border-color .3s,box-shadow .3s}' +
+      G + ' > div::before{content:"";position:absolute;top:0;right:26px;left:26px;height:2px;border-radius:0 0 2px 2px;background:linear-gradient(90deg,transparent,#b28cf5,#e070c4,transparent);opacity:.85}' +
+      G + ' > div:hover{transform:translateY(-5px);border-color:rgba(178,140,245,.45) !important;box-shadow:0 36px 70px -36px rgba(122,63,212,.7),inset 0 1px 0 rgba(255,255,255,.06) !important}' +
+      G + ' > div > div:first-child{background:linear-gradient(100deg,#ffffff,#d9c9ff 60%,#e070c4);-webkit-background-clip:text;background-clip:text;color:transparent !important;font-size:clamp(34px,3.8vw,48px) !important;letter-spacing:-.5px;display:inline-block}' +
+      G + ' > div > div:nth-child(2){font-size:15px !important;color:#b3aac6 !important;font-weight:500}' +
+      G + ' > div > div:nth-child(3){height:6px !important;margin-top:22px !important;background:rgba(255,255,255,.06) !important}' +
+      G + ' > div > div:nth-child(3) > div{background:linear-gradient(90deg,#7a3fd4,#b28cf5,#e070c4) !important;box-shadow:0 0 14px rgba(196,106,224,.7)}' +
+      '@media (max-width:640px){' + T + '{display:flex !important;width:100%}' + B + '{flex:1 1 0;justify-content:center;flex-direction:column;gap:5px;padding:10px 4px !important;font-size:13px !important}' + G + '{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:10px !important}' + G + ' > div{padding:20px 14px 16px !important}' + G + ' > div > div:first-child{font-size:26px !important}' + G + ' > div > div:nth-child(2){font-size:13px !important}' + G + ' > div:last-child:nth-child(odd){grid-column:1 / -1}}';
+    document.head.appendChild(st);
+  }
+  var tries = 0;
+  var t = setInterval(function(){
+    tries++;
+    if (document.getElementById('stats')) ensureStatsStyles();
+    if (tries >= 30) clearInterval(t);
+  }, 300);
+})();
+</script>
 </body>
 </html>
