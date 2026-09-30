@@ -15,7 +15,10 @@
  *   - انقطاع غير متوقَّع بعد اتصال ناجح -> إعادة محاولة تلقائية بتأخير
  *     تصاعدي (Exponential Backoff + Jitter)، حتى حد أقصى من المحاولات.
  *   - فشل الاتصال الأول (يوزرنيم خاطئ/غير مباشر الآن) -> لا إعادة محاولة،
- *     يُبلَّغ كخطأ فوراً.
+ *     يُبلَّغ كخطأ فوراً — ما عدا "تعذّر جلب Room ID" (غالباً مؤقت من تيك
+ *     توك/خدمة التوقيع): يُعاد تلقائياً مرتين قبل إظهار الخطأ.
+ *   - رسائل المكتبة الإنجليزية الشائعة تُترجَم لرسائل عربية واضحة
+ *     (friendlyConnectError) بدل عرضها خام للمستخدم.
  *   - قطع متعمَّد عبر disconnect() -> لا أي محاولة إعادة اتصال.
  *
  * تطبيع الأحداث (محقَّق من الحزمة v2.4.3):
@@ -42,6 +45,41 @@ var MAX_RECONNECT_DELAY_MS = 30000;
 var SIGN_RATE_LIMIT_COOLDOWN_MS = 60000; // دقيقة واحدة قبل إعادة المحاولة
 function isSignRateLimitCrash(err) {
     return !!(err && err instanceof TypeError && typeof err.message === 'string' && err.message.indexOf('retry-after') !== -1);
+}
+
+// ⚠️ "Failed to retrieve Room ID from all sources." (InvalidResponseCompositeError
+// من fetchRoomId بالمكتبة): فشلت كل طرق جلب رقم الغرفة (HTML، API، Euler).
+// الأسباب: الحساب مو في بث، يوزر غلط، أو فشل مؤقت من تيك توك/Euler — الأخير
+// يزول غالباً بإعادة المحاولة، فنعيد تلقائياً قبل ما نبلّغ المستخدم.
+var ROOM_ID_RETRY_DELAYS_MS = [2000, 4000];
+var ROOM_ID_ERROR_MESSAGE = 'ما لقينا بث مباشر لهذا الحساب — تأكد إنك تبث الحين وإن اليوزر مكتوب صح (بدون @)، ثم جرّب مرة ثانية.';
+var USER_OFFLINE_MESSAGE = 'الحساب مو في بث مباشر الحين — ابدأ البث أولاً ثم اضغط اتصال.';
+var GENERIC_CONNECT_ERROR_MESSAGE = 'تعذّر الاتصال ببث تيك توك الحين — جرّب مرة ثانية بعد لحظات.';
+
+function errorName(err) {
+    return (err && ((err.constructor && err.constructor.name) || err.name)) || '';
+}
+function isRoomIdError(err) {
+    var msg = (err && err.message) || '';
+    return errorName(err) === 'InvalidResponseCompositeError' || msg.indexOf('Room ID') !== -1;
+}
+function isUserOfflineError(err) {
+    var msg = (err && err.message) || '';
+    return errorName(err) === 'UserOfflineError' || msg.indexOf("isn't online") !== -1;
+}
+/** رسالة عربية واضحة للمستخدم بدل نص خطأ المكتبة الإنجليزي. */
+function friendlyConnectError(err) {
+    if (isUserOfflineError(err)) return USER_OFFLINE_MESSAGE;
+    if (isRoomIdError(err)) return ROOM_ID_ERROR_MESSAGE;
+    return GENERIC_CONNECT_ERROR_MESSAGE;
+}
+/** تفاصيل كل مصدر فشل (requestErrs) بالسجل — لتشخيص السبب الحقيقي. */
+function logRoomIdSourceErrors(err) {
+    var errs = err && err.requestErrs;
+    if (!Array.isArray(errs)) return;
+    errs.forEach(function (e, i) {
+        logger.error('TikTok Connector: Room ID source #' + (i + 1) + ' failed: ' + ((e && e.message) || String(e)));
+    });
 }
 
 var TikTokLib;
@@ -189,6 +227,7 @@ function createTikTokConnector() {
     var _connected = false;
     var _intentionalDisconnect = false;
     var _reconnectAttempts = 0;
+    var _roomIdRetries = 0; // إعادة محاولات الاتصال الأول بسبب فشل جلب Room ID
     var _reconnectTimer = null;
     var _username = null;
     var _followersOnly = false; // لم تعد تُستخدَم للفلترة هنا — انتقلت للواجهة الأمامية
@@ -322,6 +361,7 @@ function createTikTokConnector() {
                 if (_intentionalDisconnect) return; // انقطاع فُصل يدوياً قبل اكتمال هذا الاتصال — تجاهل تماماً
                 _connected = true;
                 _reconnectAttempts = 0; // نجاح فعلي يعيد ضبط عدّاد المحاولات
+                _roomIdRetries = 0;
                 logger.log('TikTok Connector: connected to real TikTok LIVE for "' + _username + '".');
                 _callbacks.onStatus('connected');
             })
@@ -341,12 +381,28 @@ function createTikTokConnector() {
                     return;
                 }
 
+                if (isRoomIdError(err)) logRoomIdSourceErrors(err);
+
                 if (isReconnectAttempt) {
                     attemptReconnect();
+                } else if (isRoomIdError(err) && !isUserOfflineError(err) && _roomIdRetries < ROOM_ID_RETRY_DELAYS_MS.length) {
+                    // فشل جلب Room ID كثيراً ما يكون مؤقت — نعيد الاتصال الأول
+                    // تلقائياً (والحالة تبقى "جاري الاتصال") قبل ما نبلّغ.
+                    var retryDelay = ROOM_ID_RETRY_DELAYS_MS[_roomIdRetries];
+                    _roomIdRetries++;
+                    logger.log('TikTok Connector: Room ID fetch failed for "' + _username + '" — retry ' + _roomIdRetries + '/' + ROOM_ID_RETRY_DELAYS_MS.length + ' in ' + retryDelay + 'ms…');
+                    _callbacks.onStatus('connecting');
+                    clearReconnectTimer();
+                    _reconnectTimer = setTimeout(function () {
+                        _reconnectTimer = null;
+                        if (_intentionalDisconnect) return;
+                        startConnection(false);
+                    }, retryDelay);
                 } else {
                     // فشل الاتصال الأول (غالباً اسم مستخدم غير صحيح أو
-                    // المستخدم غير مباشر الآن) — لا إعادة محاولة تلقائية.
-                    _callbacks.onStatus('error', (err && err.message) || 'Failed to connect to TikTok LIVE.');
+                    // المستخدم غير مباشر الآن) — رسالة عربية واضحة بدل نص
+                    // المكتبة الإنجليزي.
+                    _callbacks.onStatus('error', friendlyConnectError(err));
                 }
             });
     }
@@ -362,6 +418,7 @@ function createTikTokConnector() {
             _callbacks = callbacks;
             _intentionalDisconnect = false;
             _reconnectAttempts = 0;
+            _roomIdRetries = 0;
 
             if (!TikTokLib) {
                 callbacks.onStatus('error', 'tiktok-live-connector is not installed.');
