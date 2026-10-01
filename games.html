@@ -1279,7 +1279,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     dot.className = 'agp-frames-title-dot';
     var text = document.createElement('span');
     text.className = 'agp-frames-title-text';
-    text.textContent = 'الإطارات المتوفرة';
+    text.textContent = 'الإيطارات المتوفرة';
     title.appendChild(dot);
     title.appendChild(text);
 
@@ -1361,6 +1361,83 @@ document.addEventListener('DOMContentLoaded', async function() {
     __framesTries++;
     mountFramesStrip();
     if (__framesTries >= 30) clearInterval(__framesTimer);
+  }, 300);
+</script>
+<script>
+  // [عرض مؤقت] بانر خصم الإطارات فوق عنوان "مكتبة الألعاب" — يختفي
+  // تلقائياً بعد PROMO_ENDS_AT (3 أيام). لعرض جديد: عدّل النص/الكود/
+  // التاريخ هنا، أو احذف هذا السكربت كاملاً بعد انتهاء العرض.
+  var PROMO_ENDS_AT = new Date('2026-10-04T00:00:00+03:00').getTime();
+  var PROMO_STORE_URL = 'https://aymngames.zid.store';
+
+  function mountFramesPromo(){
+    if (Date.now() >= PROMO_ENDS_AT) return true;
+    if (document.querySelector('[data-frames-promo]')) return true;
+    var heading = Array.prototype.slice.call(document.querySelectorAll('h1')).find(function(h){
+      return h.textContent.trim() === 'مكتبة الألعاب';
+    });
+    if (!heading || !heading.parentNode) return false;
+
+    if (!document.getElementById('agp-frames-promo-style')) {
+      var st = document.createElement('style');
+      st.id = 'agp-frames-promo-style';
+      st.textContent =
+        '.agp-promo{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;' +
+        'max-width:680px;margin:0 auto 22px;padding:14px 18px;border-radius:18px;direction:rtl;text-align:right;' +
+        'border:1px solid rgba(178,140,245,.22);background:rgba(122,63,212,.08)}' +
+        '.agp-promo-main{flex:1 1 280px;display:flex;flex-direction:column;gap:10px}' +
+        '.agp-promo-text{font-size:14.5px;line-height:1.8;color:#cfc7e2}' +
+        '.agp-promo-text b{color:#e2d6ff;font-weight:700}' +
+        '.agp-promo-code{display:inline-block;margin:0 4px;padding:0 9px;border-radius:7px;border:1px dashed rgba(178,140,245,.55);' +
+        'color:#d9c9ff;font-weight:700;direction:ltr;letter-spacing:1px}' +
+        '.agp-promo-timer{display:flex;gap:8px;direction:rtl}' +
+        '.agp-promo-unit{min-width:54px;padding:6px 8px;border-radius:10px;text-align:center;' +
+        'background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}' +
+        '.agp-promo-num{display:block;font-size:18px;font-weight:700;color:#f4f2fb;font-variant-numeric:tabular-nums;line-height:1.3}' +
+        '.agp-promo-lbl{display:block;font-size:11px;color:#8f88a3}' +
+        '.agp-promo-btn{flex:none;padding:10px 20px;border-radius:12px;font-size:14px;font-weight:600;color:#e2d6ff !important;' +
+        'border:1px solid rgba(178,140,245,.4);background:rgba(122,63,212,.18);text-decoration:none;white-space:nowrap;transition:background .25s}' +
+        '.agp-promo-btn:hover{background:rgba(122,63,212,.3)}' +
+        '@media (max-width:520px){.agp-promo{justify-content:center;text-align:center}.agp-promo-timer{justify-content:center}' +
+        '.agp-promo-btn{width:100%;box-sizing:border-box;text-align:center}}';
+      document.head.appendChild(st);
+    }
+
+    var box = document.createElement('div');
+    box.className = 'agp-promo';
+    box.setAttribute('data-frames-promo', '1');
+    box.innerHTML =
+      '<div class="agp-promo-main">' +
+        '<div class="agp-promo-text"><b>خصم نص السعر على الإيطارات</b> لمدة ٣ أيام باستخدام كود ' +
+        '<span class="agp-promo-code">A50</span></div>' +
+        '<div class="agp-promo-timer">' +
+          '<span class="agp-promo-unit"><span class="agp-promo-num" data-promo-days>0</span><span class="agp-promo-lbl">يوم</span></span>' +
+          '<span class="agp-promo-unit"><span class="agp-promo-num" data-promo-hours>0</span><span class="agp-promo-lbl">ساعة</span></span>' +
+          '<span class="agp-promo-unit"><span class="agp-promo-num" data-promo-mins>0</span><span class="agp-promo-lbl">دقيقة</span></span>' +
+        '</div>' +
+      '</div>' +
+      '<a class="agp-promo-btn" href="' + PROMO_STORE_URL + '" target="_blank" rel="noopener">متجر الإيطارات</a>';
+
+    // العدّاد التنازلي — يتحدّث كل 20 ثانية، ويشيل البانر لحظة انتهاء العرض.
+    function tick(){
+      var left = PROMO_ENDS_AT - Date.now();
+      if (left <= 0) { if (box.parentNode) box.parentNode.removeChild(box); clearInterval(timer); return; }
+      var mins = Math.floor(left / 60000);
+      box.querySelector('[data-promo-days]').textContent = Math.floor(mins / 1440);
+      box.querySelector('[data-promo-hours]').textContent = Math.floor(mins % 1440 / 60);
+      box.querySelector('[data-promo-mins]').textContent = mins % 60;
+    }
+    var timer = setInterval(tick, 20000);
+    tick();
+
+    heading.parentNode.insertBefore(box, heading.parentNode.firstChild);
+    return true;
+  }
+
+  var __promoTries = 0;
+  var __promoTimer = setInterval(function(){
+    __promoTries++;
+    if (mountFramesPromo() || __promoTries >= 30) clearInterval(__promoTimer);
   }, 300);
 </script>
 </body>
