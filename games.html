@@ -1363,5 +1363,56 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (__framesTries >= 30) clearInterval(__framesTimer);
   }, 300);
 </script>
+<script>
+  // [عرض مؤقت] بانر خصم الإطارات فوق عنوان "مكتبة الألعاب" — يختفي
+  // تلقائياً بعد PROMO_ENDS_AT (3 أيام). لعرض جديد: عدّل النص/الكود/
+  // التاريخ هنا، أو احذف هذا السكربت كاملاً بعد انتهاء العرض.
+  var PROMO_ENDS_AT = new Date('2026-10-04T00:00:00+03:00').getTime();
+  var PROMO_STORE_URL = 'https://aymngames.zid.store';
+
+  function mountFramesPromo(){
+    if (Date.now() >= PROMO_ENDS_AT) return true;
+    if (document.querySelector('[data-frames-promo]')) return true;
+    var heading = Array.prototype.slice.call(document.querySelectorAll('h1')).find(function(h){
+      return h.textContent.trim() === 'مكتبة الألعاب';
+    });
+    if (!heading || !heading.parentNode) return false;
+
+    if (!document.getElementById('agp-frames-promo-style')) {
+      var st = document.createElement('style');
+      st.id = 'agp-frames-promo-style';
+      st.textContent =
+        '.agp-promo{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;' +
+        'max-width:640px;margin:0 auto 22px;padding:14px 18px;border-radius:18px;direction:rtl;text-align:right;' +
+        'border:1px solid rgba(232,194,104,.45);background:linear-gradient(135deg,rgba(122,63,212,.22),rgba(232,194,104,.12));' +
+        'box-shadow:0 0 28px rgba(232,194,104,.18)}' +
+        '.agp-promo-text{flex:1 1 260px;font-size:15px;line-height:1.8;color:#f4f2fb}' +
+        '.agp-promo-text b{color:#f3d58a}' +
+        '.agp-promo-code{display:inline-block;margin:0 4px;padding:1px 10px;border-radius:8px;border:1px dashed #f3d58a;' +
+        'color:#f3d58a;font-weight:700;direction:ltr;letter-spacing:1px}' +
+        '.agp-promo-btn{flex:none;padding:10px 20px;border-radius:12px;font-size:14px;font-weight:700;color:#1b1206 !important;' +
+        'background:linear-gradient(135deg,#f3d58a,#e0a83e);text-decoration:none;white-space:nowrap}' +
+        '.agp-promo-btn:hover{filter:brightness(1.08)}' +
+        '@media (max-width:520px){.agp-promo{justify-content:center;text-align:center}.agp-promo-btn{width:100%;box-sizing:border-box;text-align:center}}';
+      document.head.appendChild(st);
+    }
+
+    var box = document.createElement('div');
+    box.className = 'agp-promo';
+    box.setAttribute('data-frames-promo', '1');
+    box.innerHTML =
+      '<div class="agp-promo-text">🎉 <b>خصم نص السعر على الإطارات</b> لمدة ٣ أيام باستخدام كود ' +
+      '<span class="agp-promo-code">A50</span></div>' +
+      '<a class="agp-promo-btn" href="' + PROMO_STORE_URL + '" target="_blank" rel="noopener">متجر الإطارات</a>';
+    heading.parentNode.insertBefore(box, heading.parentNode.firstChild);
+    return true;
+  }
+
+  var __promoTries = 0;
+  var __promoTimer = setInterval(function(){
+    __promoTries++;
+    if (mountFramesPromo() || __promoTries >= 30) clearInterval(__promoTimer);
+  }, 300);
+</script>
 </body>
 </html>
