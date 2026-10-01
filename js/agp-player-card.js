@@ -295,6 +295,27 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 12.59, avatarTopPct: 27.59, avatarWidthPct: 20.20, avatarHeightPct: 71.55,
             nameLeftPct: 38.30, nameTopPct: 56.55, nameWidthPct: 49.31, nameHeightPct: 33.45
         },
+        // إطارات "بنات" — القطة والقلوب / الهلال الوردي / الملاك والقمر.
+        // مقاسة بالبكسل: مربع الصورة = حدود الفتحة الشفافة نفسها، ولوح الاسم
+        // = داخل اللوح الفاضي. لوحا "القلوب" و"الملاك" فاتحان — لون اسم
+        // غامق بدل الأبيض؛ لوح "الهلال الوردي" سماء داكنة — أبيض افتراضي.
+        'frame-girls-kitty-hearts.png': {
+            canvasW: 2171, canvasH: 724, contentTop: 14, contentHeight: 569,
+            avatarLeftPct: 9.17, avatarTopPct: 25.66, avatarWidthPct: 19.81, avatarHeightPct: 73.11,
+            nameLeftPct: 36.39, nameTopPct: 48.51, nameWidthPct: 43.76, nameHeightPct: 34.62,
+            textColor: '#8a1f4a'
+        },
+        'frame-girls-kitty-hilal.png': {
+            canvasW: 1536, canvasH: 1024, contentTop: 296, contentHeight: 376,
+            avatarLeftPct: 11.98, avatarTopPct: 18.62, avatarWidthPct: 19.86, avatarHeightPct: 79.52,
+            nameLeftPct: 38.41, nameTopPct: 40.96, nameWidthPct: 45.57, nameHeightPct: 45.21
+        },
+        'frame-girls-angel-moon.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 7, contentHeight: 531,
+            avatarLeftPct: 11.33, avatarTopPct: 25.99, avatarWidthPct: 18.00, avatarHeightPct: 72.69,
+            nameLeftPct: 35.45, nameTopPct: 48.59, nameWidthPct: 47.19, nameHeightPct: 43.88,
+            textColor: '#6b3a5a'
+        },
         // [0.45.1] إطار "الأهلي" — مقاس فعلياً بالبكسل من الملف المرفوع (1536×1024،
         // فتحة صورة دائرية شفافة حقيقية يسار + بلاطة اسم بيضاء فاضية يمين، نفس
         // منهجية القياس المتبعة لكل الإطارات أعلاه — تحقّق بصري بصندوقين قبل الاعتماد).
