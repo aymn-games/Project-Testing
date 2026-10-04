@@ -37,12 +37,21 @@
         return data && typeof data.username === 'string' && data.username ? data : null;
     }
 
-    // تطبيع كلمة الدخول — نفس norm() في JOIN-RULES.md حرفياً.
+    // تطبيع النص قبل المقارنة — مشترك بين كلمة دخول الفريق وإجابات الأسئلة
+    // (game.html: norm() تستدعي FA.norm)، فتُقبل الكلمة حتى لو اختلفت كتابتها:
+    // التشكيل والتطويل والرموز غير المرئية والترقيم · أ إ آ ٱ ← ا · ة ← ه · ى ← ي · ؤ ← و · ئ ← ي · حذف ء
+    // الحروف الفارسية (ی ک ہ) · الأرقام العربية والفارسية · "ال" أول كل كلمة · المسافات · تكرار الحرف.
+    // (نسخة موسَّعة من norm() في JOIN-RULES.md — تشمل كل حالاتها.)
     function norm(s) {
-        return String(s == null ? '' : s).trim()
-            .replace(/[ً-ْـ]/g, '')
-            .replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
-            .toLowerCase().replace(/\s+/g, ' ');
+        return String(s == null ? '' : s).normalize('NFKC').trim()
+            .replace(/[ً-ٰٟۖ-ۭـ]/g, '').replace(/[​-‏‪-‮⁦-⁩﻿]/g, '')
+            .replace(/[أإآٱٲٳ]/g, 'ا').replace(/[ةۃہە]/g, 'ه')
+            .replace(/[ىیېۍ]/g, 'ي').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/ء/g, '').replace(/ک/g, 'ك')
+            .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
+            .replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); })
+            .toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '')
+            .split(/\s+/).map(function (w) { return w.replace(/^ال/, ''); }).join('')
+            .replace(/(\p{L})\1+/gu, '$1');
     }
 
     /**

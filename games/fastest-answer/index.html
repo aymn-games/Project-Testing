@@ -249,7 +249,7 @@ class Component extends DCLogic {
       start:()=>{
         const V=S.values; if(!V.team1.trim()||!V.team2.trim()) return this.toastMsg('اكتب اسم كل فريق');
         if(!V.keyword1.trim()||!V.keyword2.trim()) return this.toastMsg('اكتب كلمة الدخول لكل فريق');
-        if(V.keyword1.trim()===V.keyword2.trim()) return this.toastMsg('كلمة الدخول لازم تختلف بين الفريقين'); if(!S.live) return this.toastMsg('غير متصل بالبث · اتصل من مكتبة الألعاب'); this.goLobby(); },
+        if(FA.norm(V.keyword1)===FA.norm(V.keyword2)) return this.toastMsg('كلمة الدخول لازم تختلف بين الفريقين'); if(!S.live) return this.toastMsg('غير متصل بالبث · اتصل من مكتبة الألعاب'); this.goLobby(); },
       mTitle:S.live?'تم الاتصال':'جارٍ الاتصال بالبث', mSub:S.live?'جارٍ الانتقال للوبي…':'لحظات قليلة',
       mTitleC:S.live?'#34d399':'#f4f2f8', mBd:S.live?'rgba(52,211,153,.45)':'rgba(167,139,250,.45)', mRing:S.live?'rgba(52,211,153,.08)':'rgba(139,92,246,.08)',
       liveOpen:S.liveOpen, closeLive:()=>{ clearTimeout(this.ct); if(S.connecting) this.setState({connecting:false}); this.shut('liveOpen'); },
