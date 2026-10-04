@@ -53,7 +53,7 @@ input::placeholder{color:#6f6a7c}
   </header>
 
   <main style="position:fixed;top:80px;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center">
-    <div style="width:100%;height:100%;box-sizing:border-box;padding:0 clamp(12px,2.5vw,48px);display:flex;flex-direction:column">
+    <div style="width:100%;max-width:1080px;height:100%;box-sizing:border-box;padding:0 clamp(12px,2.5vw,32px);display:flex;flex-direction:column">
 
       <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:12px;padding:clamp(16px,3.2vh,34px) 0 clamp(14px,2.6vh,26px);text-align:center">
         <span style="font:700 clamp(32px,4.2vw,56px)/1.1 'IBM Plex Sans Arabic';background:linear-gradient(180deg, #f4f2f8, #c4b5fd);-webkit-background-clip:text;background-clip:text;color:transparent">{{ gameName }}</span>
@@ -66,14 +66,13 @@ input::placeholder{color:#6f6a7c}
       </div>
 
       <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding-bottom:16px">
-        <div style="display:grid;grid-template-columns:{{ gridCols }};grid-auto-rows:{{ gridRows }};min-height:{{ gridMinH }};box-sizing:border-box;gap:clamp(12px,1.4vw,24px)">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:clamp(12px,1.4vw,18px)">
           <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="3">
-            <section style="min-width:0;display:flex;flex-direction:column;padding:clamp(16px,1.6vw,28px) clamp(18px,1.8vw,32px);border-radius:24px;background:rgba(18,16,26,.72);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);box-shadow:0 20px 60px rgba(0,0,0,.3);grid-column:{{ sec.span }};animation:rise .45s ease both;animation-delay:{{ sec.delay }}">
+            <section style="display:flex;flex-direction:column;padding:clamp(16px,1.6vw,22px) clamp(18px,1.8vw,26px);border-radius:24px;background:rgba(18,16,26,.72);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);box-shadow:0 20px 60px rgba(0,0,0,.3);grid-column:{{ sec.span }};animation:rise .45s ease both;animation-delay:{{ sec.delay }}">
               <div style="display:flex;align-items:center;gap:10px;padding-bottom:10px;margin-bottom:4px;border-bottom:1px solid rgba(255,255,255,.06)">
                 <span style="width:30px;height:30px;border-radius:999px;display:grid;place-items:center;background:rgba(139,92,246,.14);color:#c4b5fd;font:700 13px 'IBM Plex Sans Arabic'">{{ sec.num }}</span>
                 <span style="font:700 clamp(15px,1.2vw,17px) 'IBM Plex Sans Arabic'">{{ sec.title }}</span>
               </div>
-              <div style="flex:1;display:flex;flex-direction:column;justify-content:{{ rowsJust }}">
               <sc-for list="{{ sec.rows }}" as="row" hint-placeholder-count="3">
                 <sc-if value="{{ row.divider }}" hint-placeholder-val="{{ false }}">
                   <span style="display:block;height:1px;background:rgba(255,255,255,.06)"></span>
@@ -159,7 +158,6 @@ input::placeholder{color:#6f6a7c}
                   </div>
                 </sc-if>
               </sc-for>
-              </div>
             </section>
           </sc-for>
         </div>
@@ -191,17 +189,17 @@ input::placeholder{color:#6f6a7c}
 
   <sc-if value="{{ supPick }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeSup }}" style="position:fixed;inset:0;z-index:75;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);display:grid;place-items:center;padding:12px;animation:{{ supOv }}">
-      <div onClick="{{ stop }}" style="width:min(600px, calc(100vw - 24px));height:min(400px, calc(100dvh - 24px));box-sizing:border-box;padding:22px 24px 24px;border-radius:28px;background:rgba(12,11,18,.96);border:1px solid rgba(167,139,250,.35);box-shadow:0 30px 90px rgba(0,0,0,.6), 0 0 60px rgba(124,58,237,.2);display:flex;flex-direction:column;gap:16px;animation:{{ supAn }}">
+      <div onClick="{{ stop }}" style="width:min(860px, calc(100vw - 24px));max-height:calc(100dvh - 24px);box-sizing:border-box;padding:20px 22px 22px;border-radius:28px;background:rgba(12,11,18,.96);border:1px solid rgba(167,139,250,.35);box-shadow:0 30px 90px rgba(0,0,0,.6), 0 0 60px rgba(124,58,237,.2);display:flex;flex-direction:column;gap:16px;animation:{{ supAn }}">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span style="font:700 20px 'IBM Plex Sans Arabic'">اختر نوع الدعم</span>
           <button onClick="{{ closeSup }}" aria-label="إغلاق" style="width:40px;height:40px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;cursor:pointer;display:grid;place-items:center" style-hover="background:rgba(255,255,255,.09)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
         </div>
-        <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:calc((100% - 12px) / 2);gap:12px">
+        <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;display:grid;grid-template-columns:repeat({{ supCols }},minmax(0,1fr));grid-auto-rows:96px;align-content:start;gap:10px">
           <sc-for list="{{ supList }}" as="g" hint-placeholder-count="6">
-            <button onClick="{{ g.pick }}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border-radius:18px;border:1.5px solid {{ g.bd }};background:{{ g.bg }};cursor:pointer;font-family:inherit;transition:all .2s" style-hover="background:rgba(139,92,246,.12)" style-active="transform:scale(.96)">
-              <img src="{{ g.img }}" alt="" style="width:60px;height:60px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,.4))">
-              <span style="max-width:92%;font:600 15px 'IBM Plex Sans Arabic';color:#e7e3ef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.name }}</span>
-              <span style="font:600 12px 'IBM Plex Sans Arabic';color:#a8a3b5">{{ g.coins }} 🪙</span>
+            <button onClick="{{ g.pick }}" style="min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 4px;box-sizing:border-box;border-radius:14px;border:1.5px solid {{ g.bd }};background:{{ g.bg }};cursor:pointer;font-family:inherit;transition:all .2s" style-hover="background:rgba(139,92,246,.12)" style-active="transform:scale(.96)">
+              <img src="{{ g.img }}" alt="" style="width:40px;height:40px;object-fit:contain;filter:drop-shadow(0 3px 8px rgba(0,0,0,.4))">
+              <span style="max-width:100%;font:600 12px 'IBM Plex Sans Arabic';color:#e7e3ef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.name }}</span>
+              <span style="font:600 11px 'IBM Plex Sans Arabic';color:#a8a3b5">{{ g.coins }} 🪙</span>
             </button>
           </sc-for>
         </div>
@@ -269,14 +267,12 @@ const SETTINGS = [
 ];
 
 class Component extends DCLogic {
-  state = { supCount:1, supPick:false, values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:!!ER.getSavedConnection(), connecting:false, narrow:innerWidth<820, vw:innerWidth, vh:innerHeight, logo:false, exitOpen:false, toast:null };
-  componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820,vw:innerWidth,vh:innerHeight}); addEventListener('resize',this.fit);
+  state = { supCount:1, supPick:false, values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:!!ER.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
+  componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
     // حالة الاتصال من مكتبة الألعاب — تتحدث فوراً لو اتصل/قطع من تبويب المكتبة
     this.onStore=e=>{ if(!e.key||e.key==='agp:agp-stream-connection') this.setState({live:!!ER.getSavedConnection()}); }; addEventListener('storage',this.onStore);
     this.onFocus=()=>this.setState({live:!!ER.getSavedConnection()}); addEventListener('focus',this.onFocus); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('storage',this.onStore); removeEventListener('focus',this.onFocus); clearTimeout(this.tt); clearTimeout(this.t1); clearTimeout(this.t2); }
-  // الأعمدة حسب عرض الشاشة: 3 أقسام جنب بعض بالشاشات الكبيرة، 2 بالمتوسطة، 1 بالجوال
-  cols(){ const w=this.state.vw||innerWidth; return w>=1280?3:w>=820?2:1; }
   set(k,v){ this.setState(s=>({values:{...s.values,[k]:v}})); }
   toastMsg(t){ this.setState({toast:t}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toast:null}),2400); }
   shut(k){ this.setState({[k+'Out']:true}); setTimeout(()=>this.setState({[k]:false,[k+'Out']:false}),260); }
@@ -315,14 +311,13 @@ class Component extends DCLogic {
     return {
       gameName:GAME.name, fx:this.buildFx(), lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(), toast:S.toast,
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
-      gridCols:this.cols()===3?'repeat(3,minmax(0,1fr))':this.cols()===2?'repeat(2,minmax(0,1fr))':'minmax(0,1fr)', gridRows:this.cols()>1?'minmax(min-content,1fr)':'auto', gridMinH:this.cols()>1?'100%':'0', rowsJust:this.cols()>1&&S.vh>=700?'space-evenly':'flex-start',
-      sections:SETTINGS.map((s,i)=>({title:s.title,num:i+1,span:s.full&&this.cols()!==3?'1 / -1':'auto',delay:(i*0.07).toFixed(2)+'s',rows:s.rows.filter(r=>!r.showIf||S.values[r.showIf]).map((r,k)=>this.buildRow(r,k))})),
+      sections:SETTINGS.map((s,i)=>({title:s.title,num:i+1,span:s.full?'1 / -1':'auto',delay:(i*0.07).toFixed(2)+'s',rows:s.rows.filter(r=>!r.showIf||S.values[r.showIf]).map((r,k)=>this.buildRow(r,k))})),
       offline:!S.live, online:S.live,
       connect:()=>{ if(S.connecting) return; this.setState({connecting:true}); setTimeout(()=>this.setState({live:true,connecting:false}),1400); },
       disconnect:()=>this.setState({live:false}), connLabel:S.connecting?'…':'اتصل بالبث', connOp:S.connecting?.7:1,
       liveColor:S.live?'#34d399':S.connecting?'#fbbf24':'#f87171', liveBg:S.live?'rgba(52,211,153,.08)':'rgba(248,113,113,.06)', liveBd:S.live?'rgba(52,211,153,.3)':'rgba(248,113,113,.28)',
       liveTitle:S.live?'متصل بالبث':'غير متصل بالبث', libraryUrl:GAME.libraryUrl, connOpen:!!S.connOpen, connBusy:!S.connStep, connDone:S.connStep===1, connMsg:S.connStep?'تم الاتصال بالبث':'جارٍ الاتصال بالبث…', connSub:S.connStep?'جارٍ الانتقال للوبي':'لحظات وتنتقل للوبي', connBd:S.connStep?'rgba(52,211,153,.45)':'rgba(167,139,250,.35)', connGlow:S.connStep?'rgba(16,185,129,.25)':'rgba(124,58,237,.2)',
-      supPick:S.supPick, closeSup:()=>this.shut('supPick'), supOv:S.supPickOut?'fadeOut .26s ease forwards':'fade .25s ease', supAn:S.supPickOut?'popOut .26s ease forwards':'popIn .4s cubic-bezier(.2,1.25,.35,1)',
+      supCols:innerWidth>=900?6:5, supPick:S.supPick, closeSup:()=>this.shut('supPick'), supOv:S.supPickOut?'fadeOut .26s ease forwards':'fade .25s ease', supAn:S.supPickOut?'popOut .26s ease forwards':'popIn .4s cubic-bezier(.2,1.25,.35,1)',
       supList:SUPPORT_TYPES.map(x=>{ const on=S.values.supType===x.id; return {name:x.name,img:x.img,coins:x.coins,bd:on?'#a78bfa':'rgba(255,255,255,.08)',bg:on?'rgba(139,92,246,.14)':'rgba(255,255,255,.03)',pick:()=>{ this.set('supType',x.id); this.shut('supPick'); }}; }),
       startOp:(!GAME.requireLive||S.live)?1:.4,
       start:()=>{ if(S.connOpen) return; const live=!!ER.getSavedConnection(); if(live!==S.live) this.setState({live});

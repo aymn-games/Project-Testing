@@ -186,16 +186,17 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
 
   <sc-if value="{{ supPick }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeSup }}" style="position:fixed;inset:0;z-index:76;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);display:grid;place-items:center;animation:{{ supOv }}">
-      <div onClick="{{ stop }}" style="width:min(400px, calc(100vw - 16px));height:300px;box-sizing:border-box;padding:18px 20px 20px;border-radius:24px;background:rgba(12,11,18,.96);border:1px solid rgba(167,139,250,.35);box-shadow:0 30px 90px rgba(0,0,0,.6), 0 0 60px rgba(124,58,237,.2);display:flex;flex-direction:column;gap:14px;animation:{{ supAn }}">
+      <div onClick="{{ stop }}" style="width:min(860px, calc(100vw - 24px));max-height:calc(100dvh - 24px);box-sizing:border-box;padding:20px 22px 22px;border-radius:28px;background:rgba(12,11,18,.96);border:1px solid rgba(167,139,250,.35);box-shadow:0 30px 90px rgba(0,0,0,.6), 0 0 60px rgba(124,58,237,.2);display:flex;flex-direction:column;gap:16px;animation:{{ supAn }}">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span style="font:700 18px 'IBM Plex Sans Arabic'">اختر نوع الدعم</span>
           <button onClick="{{ closeSup }}" aria-label="إغلاق" style="width:36px;height:36px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;cursor:pointer;display:grid;place-items:center" style-hover="background:rgba(255,255,255,.09)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
         </div>
-        <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:calc((100% - 10px) / 2);gap:10px">
+        <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;display:grid;grid-template-columns:repeat({{ supCols }},minmax(0,1fr));grid-auto-rows:96px;align-content:start;gap:10px">
           <sc-for list="{{ supList }}" as="g" hint-placeholder-count="6">
-            <button onClick="{{ g.pick }}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:16px;border:1.5px solid {{ g.bd }};background:{{ g.bg }};cursor:pointer;font-family:inherit;transition:all .2s" style-hover="background:rgba(139,92,246,.12)" style-active="transform:scale(.96)">
-              <img src="{{ g.img }}" alt="" style="width:44px;height:44px;object-fit:contain">
-              <span style="max-width:92%;font:600 14px 'IBM Plex Sans Arabic';color:#e7e3ef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.name }}</span>
+            <button onClick="{{ g.pick }}" style="min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 4px;box-sizing:border-box;border-radius:14px;border:1.5px solid {{ g.bd }};background:{{ g.bg }};cursor:pointer;font-family:inherit;transition:all .2s" style-hover="background:rgba(139,92,246,.12)" style-active="transform:scale(.96)">
+              <img src="{{ g.img }}" alt="" style="width:40px;height:40px;object-fit:contain;filter:drop-shadow(0 3px 8px rgba(0,0,0,.4))">
+              <span style="max-width:100%;font:600 12px 'IBM Plex Sans Arabic';color:#e7e3ef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ g.name }}</span>
+              <span style="font:600 11px 'IBM Plex Sans Arabic';color:#a8a3b5">{{ g.coins }} 🪙</span>
             </button>
           </sc-for>
         </div>
@@ -622,7 +623,7 @@ class Component extends DCLogic {
       supCount:s.supCount, supInc:()=>this.setState(x=>({supCount:Math.min(10,x.supCount+1)})), supDec:()=>this.setState(x=>({supCount:Math.max(1,x.supCount-1)})),
       openSup:()=>this.setState({supPick:true}), supPick:!!s.supPick, closeSup:()=>this.shut('supPick'),
       supOv:s.supPickOut?'fadeOut .26s ease forwards':'fade .25s ease', supAn:s.supPickOut?'popOut .26s ease forwards':'popIn .4s cubic-bezier(.2,1.25,.35,1)',
-      supList:GIFTS.map(x=>({name:x.name,img:x.img,bd:x.id===s.supType?'#a78bfa':'rgba(255,255,255,.08)',bg:x.id===s.supType?'rgba(139,92,246,.14)':'rgba(255,255,255,.03)',pick:()=>{ this.setState({supType:x.id}); this.shut('supPick'); }})),
+      supCols:(s.vw||innerWidth)>=900?6:5, supList:GIFTS.map(x=>({name:x.name,img:x.img,coins:x.coins,bd:x.id===s.supType?'#a78bfa':'rgba(255,255,255,.08)',bg:x.id===s.supType?'rgba(139,92,246,.14)':'rgba(255,255,255,.03)',pick:()=>{ this.setState({supType:x.id}); this.shut('supPick'); }})),
       elimOpts:[20,25,35].map(n=>opt(s.elimSec===n,n+' ثانية',()=>this.setState({elimSec:n}))),
       modes:[['roulette','روليت'],['scroll','سكرول']].map(([id,l])=>opt((s.mode||'roulette')===id,l,()=>{ if(this.busy()) return this.toastMsg('غيّرها بعد انتهاء الدور'); this.setState({mode:id}); })),
       isRoulette:s.mode!=='scroll', isScroll:s.mode==='scroll' }; }
