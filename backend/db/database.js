@@ -169,6 +169,20 @@ db.exec(`
         updated_at INTEGER NOT NULL
     );
 
+    -- أكواد استرداد الإطارات — يولّدها الأدمن (كل كود مربوط بإطار واحد)
+    -- وتُباع بمتجر خارجي، والعميل يستردها من قسم المقتنيات ببروفايله.
+    -- redeemed_at = NULL يعني الكود لم يُستخدَم بعد. redeemed_by بدون
+    -- FOREIGN KEY عمداً: حذف الحساب لا يجب أن يُرجع الكود كأنه غير مستخدَم.
+    CREATE TABLE IF NOT EXISTS frame_codes (
+        code TEXT PRIMARY KEY,
+        frame_type TEXT NOT NULL CHECK(frame_type IN ('catalog', 'custom')),
+        frame_ref TEXT NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        redeemed_by INTEGER,
+        redeemed_at INTEGER
+    );
+
     -- بطاقة الإقصاء — صف واحد لكل مستخدم (منح/سحب يدوي من الأدمن).
     -- card_key يشير لتصميم البطاقة (الصور والمواضع بـjs/agp-elim-card.js،
     -- المفاتيح المسموحة بـcollectibles-service.js). enabled = تفعيل/إيقاف

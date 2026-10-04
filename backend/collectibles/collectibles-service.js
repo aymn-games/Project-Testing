@@ -19,6 +19,7 @@
 
 'use strict';
 
+var crypto = require('crypto');
 var db = require('../db/database');
 var logger = require('../utils/logger');
 
@@ -432,6 +433,143 @@ function autoGrantOnLevelUp(userId, totalPoints) {
   });
 }
 
+/* ----------------------------------------------------------------------
+ * أكواد استرداد الإطارات (بيع عبر متجر خارجي)
+ * الأدمن يولّد دفعة أكواد لإطار معيّن ويرفعها للمتجر، والمتجر يرسل كوداً
+ * واحداً لكل مشتري. الاسترداد يمنح الإطار فقط (بدون دخولية) ويُعلِّم الكود
+ * كمستخدَم مرة واحدة فقط.
+ * ---------------------------------------------------------------------- */
+
+// بدون أحرف متشابهة (0/O، 1/I/L) لتقليل أخطاء الكتابة.
+var CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+var MAX_CODES_PER_BATCH = 500;
+
+function randomCodeChunk(length) {
+  var out = '';
+  for (var i = 0; i < length; i++) out += CODE_ALPHABET[crypto.randomInt(CODE_ALPHABET.length)];
+  return out;
+}
+
+/** "agp 7k3m-q9xd" / "AGP7K3MQ9XD" → "AGP-7K3M-Q9XD" */
+function normalizeFrameCode(raw) {
+  var compact = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (compact.indexOf('AGP') === 0) compact = compact.slice(3);
+  if (compact.length !== 8) return null;
+  return 'AGP-' + compact.slice(0, 4) + '-' + compact.slice(4);
+}
+
+function frameExists(frameType, frameRef) {
+  if (frameType === 'catalog') return Boolean(getCatalogEntry(frameRef));
+  if (frameType === 'custom') return Boolean(db.prepare('SELECT id FROM custom_frames WHERE id = ?').get(frameRef));
+  return false;
+}
+
+function frameDisplay(frameType, frameRef) {
+  if (frameType === 'catalog') {
+    var cat = getCatalogEntry(frameRef);
+    return cat ? { imageFilename: cat.image_filename, displayNameAr: cat.display_name_ar } : null;
+  }
+  var custom = db.prepare('SELECT image_filename, display_name_ar FROM custom_frames WHERE id = ?').get(frameRef);
+  return custom ? { imageFilename: custom.image_filename, displayNameAr: custom.display_name_ar } : null;
+}
+
+/**
+ * توليد دفعة أكواد لإطار واحد.
+ * @returns {{success: boolean, codes?: string[], error?: string}}
+ */
+function generateFrameCodes(frameType, frameRef, count, note) {
+  frameRef = String(frameRef);
+  count = Math.floor(Number(count));
+  if (!count || count < 1 || count > MAX_CODES_PER_BATCH) return { success: false, error: 'invalid_count' };
+  if (!frameExists(frameType, frameRef)) return { success: false, error: 'unknown_frame' };
+
+  var insert = db.prepare('INSERT OR IGNORE INTO frame_codes (code, frame_type, frame_ref, note, created_at) VALUES (?, ?, ?, ?, ?)');
+  var codes = [];
+  var createdAt = now();
+  db.transaction(function () {
+    while (codes.length < count) {
+      var code = 'AGP-' + randomCodeChunk(4) + '-' + randomCodeChunk(4);
+      if (insert.run(code, frameType, frameRef, String(note || '').slice(0, 200), createdAt).changes === 1) codes.push(code);
+    }
+  })();
+
+  logger.log('Collectibles: generated ' + codes.length + ' redeem codes for frame ' + frameType + ':' + frameRef);
+  return { success: true, codes: codes };
+}
+
+/** آخر الأكواد (الأحدث أولاً) مع اسم الإطار ومن استردها. */
+function listFrameCodes(limit) {
+  limit = Math.min(Math.max(Math.floor(Number(limit)) || 300, 1), 2000);
+  var rows = db.prepare(
+    'SELECT c.*, u.username AS redeemed_username, u.custom_id AS redeemed_custom_id ' +
+    'FROM frame_codes c LEFT JOIN users u ON u.id = c.redeemed_by ' +
+    'ORDER BY c.created_at DESC, c.code ASC LIMIT ?'
+  ).all(limit);
+  return rows.map(function (row) {
+    var display = frameDisplay(row.frame_type, row.frame_ref) || {};
+    return {
+      code: row.code,
+      frameType: row.frame_type,
+      frameRef: row.frame_ref,
+      displayNameAr: display.displayNameAr || '',
+      note: row.note,
+      createdAt: row.created_at,
+      redeemedAt: row.redeemed_at,
+      redeemedBy: row.redeemed_by,
+      redeemedUsername: row.redeemed_username || null,
+      redeemedCustomId: row.redeemed_custom_id || null
+    };
+  });
+}
+
+// حد المحاولات الفاشلة لكل مستخدم (ذاكرة فقط — يتصفّر مع إعادة تشغيل
+// الخادم، وهذا كافٍ لمنع تخمين الأكواد).
+var REDEEM_MAX_FAILS = 10;
+var REDEEM_WINDOW_MS = 15 * 60 * 1000;
+var redeemFails = {};
+
+function isRedeemRateLimited(userId) {
+  var entry = redeemFails[userId];
+  if (!entry || now() - entry.since > REDEEM_WINDOW_MS) return false;
+  return entry.count >= REDEEM_MAX_FAILS;
+}
+
+function recordRedeemFail(userId) {
+  var entry = redeemFails[userId];
+  if (!entry || now() - entry.since > REDEEM_WINDOW_MS) entry = redeemFails[userId] = { count: 0, since: now() };
+  entry.count++;
+}
+
+/**
+ * استرداد كود من صاحب الحساب. لو يملك الإطار مسبقاً يُرفض ويبقى الكود صالحاً.
+ * @returns {{success: boolean, frame?: Object, error?: string}}
+ */
+function redeemFrameCode(userId, rawCode) {
+  if (isRedeemRateLimited(userId)) return { success: false, error: 'rate_limited' };
+
+  var code = normalizeFrameCode(rawCode);
+  var row = code ? db.prepare('SELECT * FROM frame_codes WHERE code = ?').get(code) : null;
+  if (!row) { recordRedeemFail(userId); return { success: false, error: 'invalid_code' }; }
+  if (row.redeemed_at) return { success: false, error: 'code_used' };
+
+  var owned = db.prepare('SELECT id FROM user_frames WHERE user_id = ? AND frame_type = ? AND frame_ref = ?')
+    .get(userId, row.frame_type, row.frame_ref);
+  if (owned) return { success: false, error: 'already_owned' };
+
+  var result = db.transaction(function () {
+    var claimed = db.prepare('UPDATE frame_codes SET redeemed_by = ?, redeemed_at = ? WHERE code = ? AND redeemed_at IS NULL')
+      .run(userId, now(), code);
+    if (claimed.changes !== 1) return { success: false, error: 'code_used' };
+    var granted = grantFrame(userId, row.frame_type, row.frame_ref, { grantedBy: 'redeem_code', skipEntranceBundle: true });
+    if (!granted.success) throw new Error('grant_failed:' + granted.error); // يلغي تعليم الكود
+    return { success: true };
+  })();
+  if (!result.success) return result;
+
+  logger.log('Collectibles: user ' + userId + ' redeemed code ' + code);
+  return { success: true, frame: Object.assign({ frameType: row.frame_type, frameRef: row.frame_ref }, frameDisplay(row.frame_type, row.frame_ref)) };
+}
+
 module.exports = {
   getCatalog: getCatalog,
   getCatalogEntry: getCatalogEntry,
@@ -454,5 +592,8 @@ module.exports = {
   revokeElimCard: revokeElimCard,
   getElimCard: getElimCard,
   setElimCardEnabled: setElimCardEnabled,
-  getElimCardForVerifiedTikTok: getElimCardForVerifiedTikTok
+  getElimCardForVerifiedTikTok: getElimCardForVerifiedTikTok,
+  generateFrameCodes: generateFrameCodes,
+  listFrameCodes: listFrameCodes,
+  redeemFrameCode: redeemFrameCode
 };
