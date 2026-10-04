@@ -14,6 +14,7 @@
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-player-card.js"></script>
 <script src="xo-platform.js"></script>
 <script src="./support.js"></script>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#7c3aed"/><text x="50" y="64" font-size="40" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">S</text></svg></template>
@@ -77,16 +78,11 @@ input::placeholder{color:#6f6a7c}
             <sc-if value="{{ t.empty }}" hint-placeholder-val="{{ true }}">
               <div style="height:100%;min-height:140px;display:grid;place-items:center;border-radius:18px;border:1.5px dashed rgba(255,255,255,.1);color:#8a8596;font:500 14px 'IBM Plex Sans Arabic';text-align:center;padding:20px">بانتظار انضمام اللاعبين…</div>
             </sc-if>
-            <div style="display:grid;grid-template-columns:{{ t.cols }};gap:8px 12px">
+            <div style="display:grid;grid-template-columns:{{ t.cols }};align-items:center;gap:8px 12px">
               <sc-for list="{{ t.players }}" as="p" hint-placeholder-count="0">
-                <div style="container-type:inline-size;aspect-ratio:3 / 1;position:relative;animation:rise .4s cubic-bezier(.2,1.3,.4,1) both">
+                <div style="container-type:inline-size;aspect-ratio:{{ p.ar }};position:relative;animation:rise .4s cubic-bezier(.2,1.3,.4,1) both">
                   <sc-if value="{{ p.framed }}" hint-placeholder-val="{{ false }}">
-                    <div dir="ltr" style="position:absolute;inset:0">
-                      <span style="position:absolute;left:{{ p.av.l }}%;top:{{ p.av.t }}%;width:{{ p.av.w }}%;height:{{ p.av.h }}%;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:{{ t.avBg }};font:700 8cqw 'IBM Plex Sans Arabic';color:#fff">{{ p.initial }}<img src="{{ p.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
-                      <img src="{{ p.frameSrc }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;filter:drop-shadow(0 6px 14px rgba(0,0,0,.45))">
-                      <span dir="rtl" style="position:absolute;left:{{ p.nm.l }}%;top:{{ p.nm.t }}%;width:{{ p.nm.w }}%;height:{{ p.nm.h }}%;display:grid;place-items:center;padding:0 2cqw;box-sizing:border-box;font:700 5.6cqw/1.1 'IBM Plex Sans Arabic';color:{{ p.ink }};text-shadow:0 1px 3px rgba(0,0,0,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
-                      <button onClick="{{ p.kick }}" aria-label="إقصاء {{ p.name }}" style="position:absolute;left:{{ p.xb.l }}%;top:{{ p.xb.t }}%;transform:translate(-50%,-50%);width:max(24px,8cqw);height:max(24px,8cqw);border:none;background:transparent;padding:0;color:#fca5a5;cursor:pointer;display:grid;place-items:center;opacity:.85;filter:drop-shadow(0 1px 2px rgba(0,0,0,.9));transition:opacity .2s, transform .2s" style-hover="opacity:1;transform:translate(-50%,-50%) scale(1.15)"><svg width="60%" height="60%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
-                    </div>
+                    <div style="display:flex;align-items:center;min-width:0">{{ p.frameEl }}</div>
                   </sc-if>
                   <sc-if value="{{ p.plain }}" hint-placeholder-val="{{ true }}">
                     <div style="position:absolute;inset:0;display:flex;align-items:center">
@@ -156,17 +152,7 @@ const SETTINGS = [];
 // إعدادات المباراة من شاشة الإعدادات (xo-setup)
 const SETUP = XO.readJSON(GAME.setupKey, null);
 if(!SETUP) location.replace('index.html');
-// Player name frames. Each PNG is a transparent 3:1 image. All positions are % of the frame box.
-//  av = avatar hole (photo is drawn UNDER the frame), nm = name plate, xb = center of the remove ×, ink = name color.
-//  Unknown frame ids fall back to DEFAULT_FRAME_LAYOUT (the 2172×724 spec).
-const DEFAULT_FRAME_LAYOUT = { av:{l:9.7,t:22,w:18.9,h:56.6}, nm:{l:35.9,t:38.7,w:53.9,h:30.4}, xb:{l:86,t:53.9}, ink:'#f4f2f8' };
-const FRAMES = {
-  kitty: { src:'assets/frames/kitty-n.png', av:{l:10.4,t:17.6,w:21,h:61}, nm:{l:41,t:38,w:34,h:33}, xb:{l:79,t:50}, ink:'#f4f2f8' },
-  ahli:  { src:'assets/frames/ahli-n.png',  av:{l:8.8,t:20.7,w:20.8,h:59.3}, nm:{l:38.5,t:40,w:38,h:30}, xb:{l:78,t:55}, ink:'#f4f2f8' },
-  hilal: { src:'assets/frames/hilal-n.png', av:{l:9.4,t:21.1,w:22.5,h:64.3}, nm:{l:37,t:44,w:45,h:30}, xb:{l:84,t:60}, ink:'#f4f2f8' }
-};
-// Demo: which player owns which frame (comes from the platform/profile in production).
-const PLAYER_FRAMES = {};
+// إطارات اللاعبين: من المنصة (الإطار المفعّل بحساب اللاعب) عبر XO.frameCard / AGP.playerCard.
 let TEAMS = [
   { name:'الفريق 1', keyword:'صقر', color:'#a78bfa', max:20 },
   { name:'الفريق 2', keyword:'نمر', color:'#38bdf8', max:20 }
@@ -189,8 +175,6 @@ class Component extends DCLogic {
     const r=XO.join(TEAMS.map((t,i)=>({...t,members:S.roster[i]||[]})),user,text,{followersOnly,isFollower:follower}); if(!r) return;
     if(r.toast) this.toastMsg(r.toast); if(!r.ok) return;
     this.setState(st=>({roster:st.roster.map((l,i)=>i===r.k?[...l,user]:l.filter(x=>x!==user))})); }
-  frameOf(name){ const id=PLAYER_FRAMES[name], fr=id&&FRAMES[id]; if(!fr) return {framed:false,plain:true};
-    const L={...DEFAULT_FRAME_LAYOUT,...fr}; return {framed:true,plain:false,frameSrc:L.src,av:L.av,nm:L.nm,xb:L.xb,ink:L.ink}; }
   set(k,v){ this.setState(s=>({values:{...s.values,[k]:v}})); }
   toastMsg(t){ this.setState({toast:t}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toast:null}),2400); }
   shut(k){ this.setState({[k+'Out']:true}); setTimeout(()=>this.setState({[k]:false,[k+'Out']:false}),260); }
@@ -229,8 +213,8 @@ class Component extends DCLogic {
       gameName:GAME.name, lobbyTeams:(S.solo?[{name:'اللاعبون',keyword:S.kwSolo,color:'#a78bfa',max:S.maxSolo}]:TEAMS).map((t,i)=>{ const pl=S.roster[i]||[], c=t.color, on=S.lobbyTab===i; return {name:t.name,keyword:t.keyword,color:c,max:t.max,count:pl.length,empty:!pl.length,
         pick:()=>this.setState({lobbyTab:i}), tabBg:on?'rgba(255,255,255,.07)':'transparent', tabBd:on?c+'66':'transparent', tabFg:on?'#f4f2f8':'#8a8596', tabSh:on?'0 6px 20px rgba(0,0,0,.3)':'none',
         cols:S.solo&&!S.narrow?'repeat(5,minmax(0,1fr))':'repeat(2,minmax(0,1fr))', bd:c+'40',bdStrong:c+'80',soft:c+'14',halo:c+'2e',avBg:`linear-gradient(135deg, ${c}, ${c}66)`,delay:(i*0.08).toFixed(2)+'s',
-        players:pl.map(n=>({name:n,initial:[...n].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:this.reg.avatar(n)||'',imgOp:this.reg.avatar(n)?1:0,...this.frameOf(n),
-          kick:()=>this.setState(st=>({roster:st.roster.map((list,k)=>k===i?list.filter(x=>x!==n):list)}))}))}; }), fx:this.buildFx(), lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(), toast:S.toast,
+        players:pl.map(n=>{ const fr=this.reg.framed(n), kick=()=>this.setState(st=>({roster:st.roster.map((list,k)=>k===i?list.filter(x=>x!==n):list)})); return {name:n,initial:[...n].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:this.reg.avatar(n)||'',imgOp:this.reg.avatar(n)?1:0,
+          framed:!!fr, plain:!fr, ar:fr?'auto':'3 / 1', frameEl:fr?XO.frameCard(fr,kick):null, kick}; })}; }), fx:this.buildFx(), lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(), toast:S.toast,
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
       sections:SETTINGS.map((s,i)=>({title:s.title,num:i+1,span:s.full?'1 / -1':'auto',delay:(i*0.07).toFixed(2)+'s',rows:s.rows.map((r,k)=>this.buildRow(r,k))})),
       offline:!S.live, online:S.live,

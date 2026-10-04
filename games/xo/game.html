@@ -14,6 +14,7 @@
 <script src="../../js/agp-queue-manager.js"></script>
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-player-card.js"></script>
 <script src="xo-platform.js"></script>
 <script src="./support.js"></script>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#7c3aed"/><text x="50" y="66" font-size="44" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">?</text></svg></template>
@@ -402,8 +403,17 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
             <sc-if value="{{ joinEmpty }}" hint-placeholder-val="{{ true }}">
               <div style="height:100%;min-height:120px;display:grid;place-items:center;border-radius:18px;border:1.5px dashed rgba(167,139,250,.25);color:#8a8596;font:500 14px 'IBM Plex Sans Arabic'">بانتظار انضمام اللاعبين…</div>
             </sc-if>
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));align-items:center;gap:8px">
               <sc-for list="{{ newJoins }}" as="p" hint-placeholder-count="0">
+                <sc-if value="{{ p.framed }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:center;min-width:0;animation:rise .4s cubic-bezier(.2,1.3,.4,1) both">
+                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:stretch">
+                      {{ p.frameEl }}
+                      <span style="text-align:center;font:500 11px 'IBM Plex Sans Arabic';color:{{ p.color }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.team }}</span>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ p.plain }}" hint-placeholder-val="{{ true }}">
                 <div style="display:flex;align-items:center;gap:8px;height:50px;padding:0 6px 0 5px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid {{ p.bd }};animation:rise .4s cubic-bezier(.2,1.3,.4,1) both">
                   <span style="width:38px;height:38px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ p.avBg }};border:1.5px solid {{ p.color }};font:700 14px 'IBM Plex Sans Arabic';color:#fff">{{ p.initial }}<img src="{{ p.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
                   <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
@@ -412,6 +422,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
                   </div>
                   <button onClick="{{ p.kick }}" aria-label="إقصاء {{ p.name }}" style="width:30px;height:30px;flex-shrink:0;border:none;background:transparent;padding:0;color:#fca5a5;cursor:pointer;display:grid;place-items:center;opacity:.75;transition:opacity .2s, transform .2s" style-hover="opacity:1;transform:scale(1.15)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
                 </div>
+                </sc-if>
               </sc-for>
             </div>
           </div>
@@ -647,8 +658,11 @@ class Component extends DCLogic {
     const statusMap={spinning:'اختيار اللاعبين…',draw:'القرعة…',celebrate:s.result&&s.result.w!=null?'فاز '+s.result.name+'!':'تعادل'};
     const wc=s.result&&s.result.w!=null?col(s.result.w):null;
     const h=React.createElement;
-    const newJoins=s.pendingJoins.map(pj=>{ const c=s.mode==='solo'?'#a78bfa':col(pj.team), av=this.avatar(pj.name); return {name:pj.name,team:s.mode==='solo'?'لاعب جديد':s.teams[pj.team].name,color:c,bd:c+'55',avBg:`linear-gradient(135deg, ${c}, ${c}66)`,
-        initial:[...pj.name].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:av||'',imgOp:av?1:0, kick:()=>{ this.snd('wrong'); this.addLog('kick',`تم إقصاء ${pj.name}`); this.setState(st=>({pendingJoins:st.pendingJoins.filter(x=>x.name!==pj.name)})); }}; });
+    const newJoins=s.pendingJoins.map(pj=>{ const c=s.mode==='solo'?'#a78bfa':col(pj.team), av=this.avatar(pj.name), fr=this.reg.framed(pj.name),
+        kick=()=>{ this.snd('wrong'); this.addLog('kick',`تم إقصاء ${pj.name}`); this.setState(st=>({pendingJoins:st.pendingJoins.filter(x=>x.name!==pj.name)})); };
+      return {name:pj.name,team:s.mode==='solo'?'لاعب جديد':s.teams[pj.team].name,color:c,bd:c+'55',avBg:`linear-gradient(135deg, ${c}, ${c}66)`,
+        framed:!!fr, plain:!fr, frameEl:fr?XO.frameCard(fr,kick):null,
+        initial:[...pj.name].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:av||'',imgOp:av?1:0, kick}; });
     const eg=this.eventGroups();
     return { ...this.anims(), scale:s.scale, round:s.round, target:s.target, teams,
       cardA:[mkCard(0)], cardB:[mkCard(1)], cells, res, showResult:P==='over'&&!!s.result, resBtn:!(s.progress==='elim'&&s.result&&s.result.w!=null),
