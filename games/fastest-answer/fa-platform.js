@@ -69,11 +69,14 @@
      * بطاقة لاعب بإطاره من المنصة (عنصر React يُمرَّر للقالب) — تُرسم عبر
      * AGP.playerCard.renderHtml(showFrame) المشترك مع باقي الألعاب، ويُحسب
      * حجمها من عرض الخانة الفعلي حتى تتوافق مع شبكة بطاقات اللعبة.
+     * onKick (اختياري): زر الإقصاء × داخل حدود الإطار نفسه، بنفس مواصفات
+     * × في JOIN-RULES.md §4، أعلى البطاقة فوق لوح الاسم (مساحة فاضية بأغلب
+     * الإطارات) حتى يبان بوضوح ولا يغطي الصورة أو زخرفة الإطار.
      */
     var FRAME_CARD_HEIGHT = 100; // نفس LOBBY_CARD_HEIGHT_PX في js/agp-player-card.js
     var FRAME_CARD_WIDTH_RATIO = 4.96; // عرض البطاقة ≈ 4.95 × حجم الصورة (basicCardTotalWidth)
     var _FrameCard = null;
-    function frameCard(player) {
+    function frameCard(player, onKick) {
         var React = window.React;
         if (!React || !AGP.playerCard) return null;
         if (!_FrameCard) {
@@ -96,14 +99,26 @@
                     { id: p.id, name: p.name, avatarUrl: p.avatar || null, frame: p.frame },
                     { showFrame: true, basePath: '../../', size: Math.max(20, Math.floor(w / FRAME_CARD_WIDTH_RATIO)) }
                 ) : '';
-                return React.createElement('div', {
+                var h = React.createElement;
+                var hov = React.useState(false), hover = hov[0], setHover = hov[1];
+                var kick = props.onKick ? h('button', {
+                    key: 'x', type: 'button', 'aria-label': 'إقصاء ' + p.name, onClick: props.onKick,
+                    onMouseEnter: function () { setHover(true); }, onMouseLeave: function () { setHover(false); },
+                    style: { position: 'absolute', top: 0, right: '10%', zIndex: 10, width: 30, height: 30, border: 'none', background: 'transparent', padding: 0,
+                        color: '#fca5a5', cursor: 'pointer', display: 'grid', placeItems: 'center', opacity: hover ? 1 : 0.75,
+                        transform: hover ? 'scale(1.15)' : 'none', transition: 'opacity .2s, transform .2s', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,.9))' }
+                }, h('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round', 'aria-hidden': true },
+                    h('line', { x1: 6, y1: 6, x2: 18, y2: 18 }), h('line', { x1: 18, y1: 6, x2: 6, y2: 18 }))) : null;
+                return h('div', {
                     ref: ref,
-                    style: { flex: 1, minWidth: 0, height: FRAME_CARD_HEIGHT, display: 'flex', justifyContent: 'center', alignItems: 'center', direction: 'ltr' },
-                    dangerouslySetInnerHTML: { __html: html }
-                });
+                    style: { flex: 1, minWidth: 0, height: FRAME_CARD_HEIGHT, display: 'flex', justifyContent: 'center', alignItems: 'center', direction: 'ltr' }
+                }, h('div', { style: { position: 'relative', lineHeight: 0 } }, [
+                    h('div', { key: 'card', dangerouslySetInnerHTML: { __html: html } }),
+                    kick
+                ]));
             };
         }
-        return React.createElement(_FrameCard, { key: 'fc-' + player.name, player: player });
+        return React.createElement(_FrameCard, { key: 'fc-' + player.name, player: player, onKick: onKick });
     }
 
     var _connected = false;

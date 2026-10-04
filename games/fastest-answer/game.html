@@ -355,7 +355,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
                       {{ p.frameEl }}
                       <span style="text-align:center;font:500 11px 'IBM Plex Sans Arabic';color:{{ p.color }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.team }}</span>
                     </div>
-                    <button onClick="{{ p.kick }}" aria-label="إقصاء {{ p.name }}" style="width:30px;height:30px;flex-shrink:0;border:none;background:transparent;padding:0;color:#fca5a5;cursor:pointer;display:grid;place-items:center;opacity:.75;transition:opacity .2s, transform .2s" style-hover="opacity:1;transform:scale(1.15)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
                   </div>
                 </sc-if>
                 <sc-if value="{{ p.plain }}" hint-placeholder-val="{{ true }}">
@@ -556,9 +555,10 @@ class Component extends DCLogic {
     const P=s.phase, catName=cs.idx!=null?this.CATS[cs.idx].name:'';
     const titles={ready:['فئة الجولة','اضغط تحريك لاختيار لاعب من كل فريق'],spinning:['اختيار اللاعبين…',''],category:['اختيار الفئة…',''],countdown:[catName,'استعدوا'],question:[catName,'الإجابة في الشات'],results:[catName,'انتهت الجولة']};
     const h=React.createElement;
-    const newJoins=s.pendingJoins.map(pj=>{ const c=col(pj.team), av=this.avatar(pj.name), fr=this.reg.framed(pj.name); return {name:pj.name,team:s.teams[pj.team].name,color:c,bd:c+'55',avBg:`linear-gradient(135deg, ${c}, ${c}66)`,
-        framed:!!fr, plain:!fr, frameEl:fr?FA.frameCard(fr):null,
-        initial:[...pj.name].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:av||'',imgOp:av?1:0, kick:()=>{ this.snd('wrong'); this.addLog('kick',`تم إقصاء ${pj.name} من ${s.teams[pj.team].name}`); this.setState(st=>({pendingJoins:st.pendingJoins.filter(x=>x.name!==pj.name)})); }}; });
+    const newJoins=s.pendingJoins.map(pj=>{ const c=col(pj.team), av=this.avatar(pj.name), fr=this.reg.framed(pj.name),
+      kick=()=>{ this.snd('wrong'); this.addLog('kick',`تم إقصاء ${pj.name} من ${s.teams[pj.team].name}`); this.setState(st=>({pendingJoins:st.pendingJoins.filter(x=>x.name!==pj.name)})); }; return {name:pj.name,team:s.teams[pj.team].name,color:c,bd:c+'55',avBg:`linear-gradient(135deg, ${c}, ${c}66)`,
+        framed:!!fr, plain:!fr, frameEl:fr?FA.frameCard(fr,kick):null,
+        initial:[...pj.name].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:av||'',imgOp:av?1:0, kick}; });
     const eg=this.eventGroups();
     return { ...this.anims(), scale:s.scale, round:s.round, target:s.target, teams, catItems, catOffset:cspun?cs.offset:0, catTrans:cspun?cs.trans:'none',
       catBand:cs.stopped&&cspun?'rgba(139,92,246,.16)':'rgba(255,255,255,.03)', statusTitle:titles[P][0], statusText:titles[P][1],
