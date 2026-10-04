@@ -60,7 +60,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             textBox: { x: 560, y: 498, w: 416, h: 74 },      // under the lower divider, above the bunny
             textColor: 'linear-gradient(180deg,#6f9be0 0%,#3d68b8 55%,#2a4c8f 100%)',
             textFilter: 'drop-shadow(0 .1cqw .12cqw rgba(255,255,255,.9))',
-            fontScale: 0.66
+            fontScale: 0.66,
+            sound: 'elim-card-blue-bunny.wav'                  // "poof" ناعم + أجراس سحرية
         }
     };
 
@@ -126,9 +127,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return (key && CARD_TEMPLATES[key]) || null;
     }
 
+    // صوت خاص لكل بطاقة (اختياري: tpl.sound) — نسخة Audio وحدة لكل ملف.
+    var _audio = {};
+    function audioFor(tpl) {
+        if (!tpl.sound || typeof Audio === 'undefined') return null;
+        if (!_audio[tpl.sound]) {
+            _audio[tpl.sound] = new Audio(ASSETS_BASE + tpl.sound);
+            _audio[tpl.sound].preload = 'auto';
+        }
+        return _audio[tpl.sound];
+    }
+
     function preload(tpl) {
         var img = new Image();
         img.src = ASSETS_BASE + tpl.image;
+        audioFor(tpl);
     }
 
     AGP.elimCard = {
@@ -160,6 +173,32 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<img class="agp-elimcard-frame" src="' + escapeHtml(ASSETS_BASE + tpl.image) + '" alt="">' +
                 '<div class="agp-elimcard-text" style="' + textStyle + '">' + escapeHtml(text) + '</div>' +
                 '</div>';
+        },
+
+        /** True when the eliminating player's card has its own sound. */
+        hasSound: function (actor) {
+            var tpl = templateFor(actor);
+            return Boolean(tpl && tpl.sound);
+        },
+
+        /**
+         * Plays the card's own sound once — call when the card appears (not
+         * on every re-render). volume 0..1 (default 1); 0 skips play()
+         * entirely (iOS takes over the audio session on any play() call).
+         * @returns {boolean} true if a card sound was started
+         */
+        playSound: function (actor, volume) {
+            var tpl = templateFor(actor);
+            var a = tpl && audioFor(tpl);
+            var v = typeof volume === 'number' ? Math.max(0, Math.min(1, volume)) : 1;
+            if (!a || v <= 0) return false;
+            try {
+                a.volume = v;
+                a.currentTime = 0;
+                var p = a.play();
+                if (p && typeof p.catch === 'function') p.catch(function () {});
+            } catch (e) { return false; }
+            return true;
         },
 
         /** Warm the image cache so the card shows without a load flash. */
