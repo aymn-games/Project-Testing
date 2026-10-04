@@ -102,7 +102,18 @@
                     ro.observe(node);
                     return function () { ro.disconnect(); };
                 }, []);
-                React.useEffect(function () { if (w && ref.current) AGP.playerCard.fitAllNames(ref.current); });
+                // حجم خط الاسم يتبع ارتفاع لوح الاسم بكل إطار (بطاقات إكس أو أصغر من
+                // باقي الألعاب، فالخط الموروث يطلع أكبر من اللوح وينقص/يرتفع الاسم)،
+                // ثم الأسماء الطويلة تتحرك داخل اللوح (fitAllNames).
+                React.useEffect(function () {
+                    if (!w || !ref.current) return;
+                    var plates = ref.current.querySelectorAll('[data-agp-pcard-name="1"]');
+                    for (var i = 0; i < plates.length; i++) {
+                        var ph = plates[i].clientHeight;
+                        if (ph) { plates[i].style.fontSize = Math.max(8, Math.min(15, Math.round(ph * 0.45))) + 'px'; plates[i].style.lineHeight = '1.2'; }
+                    }
+                    AGP.playerCard.fitAllNames(ref.current);
+                });
                 var p = props.player;
                 var html = w ? AGP.playerCard.renderHtml(
                     { id: p.id, name: p.name, avatarUrl: p.avatar || null, frame: p.frame },
