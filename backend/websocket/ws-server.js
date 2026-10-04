@@ -294,6 +294,20 @@ function handleConnectMessage(connectionId, socket, payload) {
 
   connector.connect(payload, {
     onStatus: function (status, message) {
+      // البث انتهى فعلياً في تيك توك (الموصِّل أوقف نفسه بدون إعادة اتصال):
+      // يُختَم البث، ويوصل للواجهة كـ 'disconnected' مع reason 'stream_ended'
+      // عشان تمسح الاتصال المحفوظ بمكتبة الألعاب وتعرض الرسالة.
+      if (status === 'ended') {
+        if (entry.activeConnector === connector) {
+          trackBroadcastStatus(entry, 'error');
+          entry.activeConnector = null;
+          entry.activePlatform = null;
+        }
+        var endedStatus = builder.buildStatusMessage(platform, 'disconnected', message);
+        endedStatus.payload.reason = 'stream_ended';
+        sendEnvelope(socket, endedStatus);
+        return;
+      }
       // حالة متأخرة من موصِّل قديم (استُبدل بطلب اتصال جديد) ما تأثّر على التسجيل.
       if (entry.activeConnector === connector) trackBroadcastStatus(entry, status);
       sendEnvelope(socket, builder.buildStatusMessage(platform, status, message));
