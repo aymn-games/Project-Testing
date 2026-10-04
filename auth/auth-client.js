@@ -344,6 +344,13 @@ function getPublicProfile(customId) {
     return request('/api/profile?id=' + encodeURIComponent(customId), { method: 'GET' });
 }
 
+/** Admin only — find an account by internal id or profile id (custom_id).
+ * @param {string} query
+ * @param {'internal'|'profile'} idType */
+function adminLookupUser(query, idType) {
+    return request('/api/admin/users/lookup?q=' + encodeURIComponent(query) + '&type=' + encodeURIComponent(idType), { method: 'GET' });
+}
+
 /** Current active announcement, if any — no login required.
  * result.announcement is null when nothing is active. */
 function getAnnouncement() {
@@ -784,6 +791,7 @@ global.AGPAuth = {
     adminResetDeviceLock: adminResetDeviceLock,
     adminAllowDeviceChange: adminAllowDeviceChange,
     getPublicProfile: getPublicProfile,
+    adminLookupUser: adminLookupUser,
     getAnnouncement: getAnnouncement,
     adminSetAnnouncement: adminSetAnnouncement,
     adminClearAnnouncement: adminClearAnnouncement,

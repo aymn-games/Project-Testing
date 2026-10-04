@@ -94,6 +94,7 @@ var ROUTES = [
   { method: 'POST', path: '/api/auth/forgot-password', requireAuth: false, handler: handleForgotPassword },
   { method: 'POST', path: '/api/auth/reset-password', requireAuth: false, handler: handleResetPassword },
   { method: 'GET', path: '/api/admin/users', requireAuth: true, requireAdmin: true, handler: handleAdminListUsers },
+  { method: 'GET', path: '/api/admin/users/lookup', requireAuth: true, requireAdmin: true, handler: handleAdminLookupUser },
   { method: 'POST', path: '/api/admin/permissions', requireAuth: true, requireAdmin: true, handler: handleAdminSetPermission },
   { method: 'POST', path: '/api/admin/custom-id', requireAuth: true, requireAdmin: true, handler: handleAdminSetCustomId },
   { method: 'POST', path: '/api/admin/users/delete', requireAuth: true, requireAdmin: true, handler: handleAdminDeleteUser },
@@ -359,6 +360,16 @@ function handleAdminAllowDeviceChange(req, res, body) {
 function handleAdminSetSuperAdmin(req, res, body) {
   var result = authService.adminSetSuperAdmin(body.userId, Boolean(body.isSuperAdmin));
   sendJson(res, result.success ? 200 : 400, result);
+}
+
+/** الأدمن فقط — ?q=<id>&type=internal|profile → اسم صاحب الحساب وآيديّاته. */
+function handleAdminLookupUser(req, res) {
+  var user = authService.adminLookupUser(getQueryParam(req, 'q'), getQueryParam(req, 'type'));
+  if (!user) {
+    sendJson(res, 404, { success: false, error: 'not_found' });
+    return;
+  }
+  sendJson(res, 200, { success: true, user: user });
 }
 
 /**
