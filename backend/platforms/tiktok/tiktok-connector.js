@@ -208,6 +208,19 @@ function extractIsFollower(data) {
     return status === '1' || status === '2'; // تخميني — بانتظار القيم الحقيقية من _debugFollowStatus
 }
 
+/**
+ * هل التعليق من صاحب البث نفسه (الحساب المتصَّل ببثه)؟ صاحب البث ما يقدر
+ * "يتابع" نفسه، فبدون هذا يُرفض دخوله بأي لعبة مفعَّل فيها "المتابعين فقط"
+ * رغم إنه أرسل الكلمة المفتاحية. نعامله كمتابع حتى يقدر يشارك بكل الألعاب.
+ * @param {{uniqueId: string}} user - ناتج extractUser()
+ * @param {string} streamUsername - يوزر البث المتصَّل به
+ */
+function isStreamOwner(user, streamUsername) {
+    if (!user || !user.uniqueId || !streamUsername) return false;
+    var norm = function (v) { return String(v).trim().replace(/^@+/, '').toLowerCase(); };
+    return norm(user.uniqueId) === norm(streamUsername);
+}
+
 function extractFollowDebugInfo(data) {
     var followInfo = data && data.user && data.user.followInfo;
     var userIdentity = data && data.user && data.user.userIdentity;
@@ -316,7 +329,7 @@ function createTikTokConnector() {
                 id: user.id,
                 name: user.name,
                 text: commentText,
-                isFollower: extractIsFollower(data),
+                isFollower: isStreamOwner(user, _username) || extractIsFollower(data),
                 avatarUrl: extractAvatarUrl(data),
                 frame: extractEquippedFrame(user.uniqueId),
                 entrance: extractEquippedEntrance(user.uniqueId),
