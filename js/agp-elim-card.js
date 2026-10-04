@@ -46,6 +46,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             holeBleed: 8,
             textBox: { x: 490, y: 700, w: 682, h: 95 },      // safe area inside the bottom banner
             textColor: 'linear-gradient(180deg,#fff3c4 0%,#e9c77b 45%,#b8863b 100%)'
+        },
+        // بطاقة الأرنب الأزرق — 1536×896. "عملية إقصاء" مطبوعة بالصورة نفسها،
+        // فالجملة "X أقصى Y" تنكتب بالمساحة الكريمية تحت الخط الفاصل السفلي
+        // (أضيق من لوح السعودية → fontScale)، بلون أزرق يناسب الخلفية الفاتحة.
+        'blue-bunny': {
+            image: 'elim-card-blue-bunny.png',
+            width: 1536,
+            height: 896,
+            actorHole: { x: 1036, y: 249, w: 240, h: 240 },  // right circle
+            targetHole: { x: 259, y: 250, w: 241, h: 240 },  // left circle
+            holeBleed: 6,
+            textBox: { x: 560, y: 498, w: 416, h: 74 },      // under the lower divider, above the bunny
+            textColor: 'linear-gradient(180deg,#6f9be0 0%,#3d68b8 55%,#2a4c8f 100%)',
+            textFilter: 'drop-shadow(0 .1cqw .12cqw rgba(255,255,255,.9))',
+            fontScale: 0.66
         }
     };
 
@@ -100,9 +115,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     // Font shrinks for long names so the sentence always fits the banner
     // (3.4cqw fits ~20 characters across textBox.w).
-    function fontSizeFor(text) {
+    function fontSizeFor(text, scale) {
         var len = Array.from(text).length;
-        return Math.max(1.2, Math.min(3.4, 64 / Math.max(len, 1))).toFixed(2) + 'cqw';
+        var k = scale || 1;
+        return (Math.max(1.2, Math.min(3.4, 64 / Math.max(len, 1))) * k).toFixed(2) + 'cqw';
     }
 
     function templateFor(player) {
@@ -135,7 +151,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var tb = tpl.textBox;
             var textStyle = 'left:' + pct(tb.x, tpl.width) + ';top:' + pct(tb.y, tpl.height) +
                 ';width:' + pct(tb.w, tpl.width) + ';height:' + pct(tb.h, tpl.height) +
-                ';font-size:' + fontSizeFor(text) + ';background-image:' + tpl.textColor + ';';
+                ';font-size:' + fontSizeFor(text, tpl.fontScale) + ';background-image:' + tpl.textColor + ';' +
+                (tpl.textFilter ? 'filter:' + tpl.textFilter + ';' : '');
 
             return '<div class="agp-elimcard" style="aspect-ratio:' + tpl.width + '/' + tpl.height + ';">' +
                 avatarHtml(actor, tpl.actorHole, tpl) +
