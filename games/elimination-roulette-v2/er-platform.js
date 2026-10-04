@@ -187,8 +187,15 @@
         'ice-cream': ['Ice Cream Cone', 'Ice Cream'],
         'donut': ['Doughnut', 'Donut'],
         'finger-heart': ['Finger Heart'],
-        'heart-in-your-hands-a': ['Heart In Your Hands', 'Heart in Your Hands', 'Hand Hearts'],
-        'heart-in-your-hands-b': ['Heart In Your Hands', 'Heart in Your Hands', 'Hand Hearts'],
+        'heart-in-your-hands-a': ['Heart In Your Hands', 'Heart in Your Hands'],
+        'heart-in-your-hands-b': ['Heart In Your Hands', 'Heart in Your Hands'],
+        'hand-hearts': ['Hand Hearts'],
+        'drama-queen': ['Drama Queen'],
+        'little-crown': ['Little Crown'],
+        'music-note': ['Music Note'],
+        'money-gun': ['Money Gun'],
+        'sports-car': ['Sports Car'],
+        'tiktok-universe': ['TikTok Universe', 'Universe'],
         'kings-scepter': ["King's Scepter", 'Kings Scepter', 'Scepter'],
         'hat-and-mustache': ['Hat and Mustache', 'Hat & Mustache'],
         'love-saudi': ['Love Saudi', 'I Love KSA', 'Love KSA'],
@@ -203,11 +210,36 @@
         if (got === giftKey(giftId)) return true;
         return (GIFT_NAMES[giftId] || []).some(function (n) { return giftKey(n) === got; });
     }
-    /** قائمة أنواع الدعم: [{id, name, coins, img}] مرتبة تصاعدياً بالكوينز. */
+    // هدايا معتمدة سابقاً بالمستودع وغير موجودة بالقائمة المشتركة (assets/tiktok-gifts):
+    // العطر وقلوب اليد بصورها الحقيقية (من gift_icons بروليت الإقصاء القديمة)،
+    // والباقي بنفس أيقونات الإيموجي اللي كانت تستخدمها الألعاب السابقة (Twemoji، محفوظة محلياً).
+    var GAME_DIR = (function () {
+        var sc = document.currentScript;
+        return sc && sc.src ? sc.src.replace(/er-platform\.js(\?.*)?$/, '') : '';
+    }());
+    var EXTRA_GIFTS = [
+        { id: 'gg', name: 'جي جي', coins: 1, file: 'gift_icons/gg.svg' },
+        { id: 'drama-queen', name: 'ملكة الدراما', coins: 5, file: 'gift_icons/drama-queen.svg' },
+        { id: 'perfume', name: 'عطر', coins: 20, file: 'gift_icons/perfume.webp' },
+        { id: 'little-crown', name: 'تاج صغير', coins: 99, file: 'gift_icons/little-crown.svg' },
+        { id: 'hand-hearts', name: 'قلوب اليد', coins: 100, file: 'gift_icons/hand_hearts.webp' },
+        { id: 'music-note', name: 'نغمة موسيقية', coins: 169, file: 'gift_icons/music-note.svg' },
+        { id: 'sunglasses', name: 'نظارة شمسية', coins: 199, file: 'gift_icons/sunglasses.svg' },
+        { id: 'money-gun', name: 'مسدس نقود', coins: 500, file: 'gift_icons/money-gun.svg' },
+        { id: 'sports-car', name: 'سيارة رياضية', coins: 7000, file: 'gift_icons/sports-car.svg' },
+        { id: 'tiktok-universe', name: 'كون تيك توك', coins: 44999, file: 'gift_icons/tiktok-universe.svg' }
+    ];
+    /** قائمة أنواع الدعم: [{id, name, coins, img}] — كل الهدايا المعتمدة، مرتبة تصاعدياً بالكوينز. */
+    var _gifts = null;
     function gifts() {
-        var G = AGP.tiktokGifts;
-        if (!G || !G.list) return [];
-        return G.list.map(function (g) { return { id: g.id, name: g.label, coins: g.coins, img: G.iconUrl(g) }; });
+        if (_gifts) return _gifts;
+        var G = AGP.tiktokGifts, out = [];
+        if (G && G.list) G.list.forEach(function (g) { out.push({ id: g.id, name: g.label, coins: g.coins, img: G.iconUrl(g) }); });
+        EXTRA_GIFTS.forEach(function (g) {
+            if (!out.some(function (x) { return x.id === g.id; })) out.push({ id: g.id, name: g.name, coins: g.coins, img: GAME_DIR + g.file });
+        });
+        out.sort(function (a, b) { return a.coins - b.coins; });
+        return (_gifts = out);
     }
     function giftById(id) {
         var all = gifts();
