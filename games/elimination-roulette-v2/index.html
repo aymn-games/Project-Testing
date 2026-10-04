@@ -15,6 +15,7 @@
 <script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
+<script src="../../js/agp-live-watch.js"></script>
 <script src="../../assets/tiktok-gifts/tiktok-gifts.js"></script>
 <script src="er-platform.js"></script>
 <script src="./support.js"></script>
@@ -271,7 +272,9 @@ class Component extends DCLogic {
   componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
     // حالة الاتصال من مكتبة الألعاب — تتحدث فوراً لو اتصل/قطع من تبويب المكتبة
     this.onStore=e=>{ if(!e.key||e.key==='agp:agp-stream-connection') this.setState({live:!!ER.getSavedConnection()}); }; addEventListener('storage',this.onStore);
-    this.onFocus=()=>this.setState({live:!!ER.getSavedConnection()}); addEventListener('focus',this.onFocus); }
+    this.onFocus=()=>this.setState({live:!!ER.getSavedConnection()}); addEventListener('focus',this.onFocus);
+    // البث انتهى (js/agp-live-watch.js) → حالة الاتصال تتحدث فوراً
+    addEventListener('agp:stream-ended',this.onFocus); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('storage',this.onStore); removeEventListener('focus',this.onFocus); clearTimeout(this.tt); clearTimeout(this.t1); clearTimeout(this.t2); }
   set(k,v){ this.setState(s=>({values:{...s.values,[k]:v}})); }
   toastMsg(t){ this.setState({toast:t}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toast:null}),2400); }

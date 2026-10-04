@@ -19,6 +19,7 @@ var partnersService = require('../partners/partners-service');
 var lettersCellQuestionsService = require('../letters-cell/letters-cell-questions-service');
 var platformStatsService = require('../stats/platform-stats-service');
 var supportService = require('../support/support-service');
+var tiktokLiveCheck = require('../platforms/tiktok/tiktok-live-check');
 var logger = require('../utils/logger');
 var config = require('../config');
 var response = require('./response');
@@ -119,6 +120,9 @@ var ROUTES = [
   { method: 'GET', path: '/api/admin/frame-codes', requireAuth: true, requireAdmin: true, handler: handleAdminListFrameCodes },
   { method: 'POST', path: '/api/collectibles/redeem', requireAuth: true, handler: handleRedeemFrameCode },
   { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
+  // ---- هل البث شغّال الحين؟ — مكتبة الألعاب والألعاب تقطع الاتصال المحفوظ
+  // لما يرجع live:false (راجع backend/platforms/tiktok/tiktok-live-check.js).
+  { method: 'GET', path: '/api/stream/is-live', requireAuth: true, handler: handleStreamIsLive },
   // تفعيل/إيقاف الدخولية ذاتياً — نفس نمط handleEquipFrame (صاحب الجلسة فقط).
   { method: 'POST', path: '/api/entrance/toggle', requireAuth: true, handler: handleToggleEntrance },
   { method: 'POST', path: '/api/admin/elim-card', requireAuth: true, requireAdmin: true, handler: handleAdminSetElimCard },
@@ -528,6 +532,21 @@ function handleAdminSetElimCard(req, res, body) {
 function handleToggleElimCard(req, res, body, user) {
   var result = collectiblesService.setElimCardEnabled(user.id, Boolean(body.enabled));
   sendJson(res, result.success ? 200 : 400, result);
+}
+
+/**
+ * GET /api/stream/is-live?username=X → { success, live: true|false|null }
+ * null = تعذّر التأكد مؤقتاً (الواجهة ما تقطع الاتصال عليها).
+ */
+function handleStreamIsLive(req, res) {
+  var username = tiktokLiveCheck.normalize(getQueryParam(req, 'username'));
+  if (!username) {
+    sendJson(res, 400, { success: false, error: 'invalid_username' });
+    return;
+  }
+  return tiktokLiveCheck.isLive(username).then(function (live) {
+    sendJson(res, 200, { success: true, username: username, live: live });
+  });
 }
 
 /**

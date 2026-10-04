@@ -117,6 +117,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // Only access-denial messages (they carry a reason code) are meant for
         // the user; connector errors stay behind each game's own generic text.
         AGP.streamConnector.reportStatus(PLATFORM_KEY, payload.status, payload.reason ? payload.message : undefined);
+        // البث انتهى فعلياً في تيك توك (الخادم أوقف الموصِّل) — js/agp-live-watch.js
+        // يمسح الاتصال المحفوظ ويعرض الرسالة.
+        if (payload.reason === 'stream_ended') AGP.events.emit('stream:liveEnded', { platform: PLATFORM_KEY, message: payload.message || null });
     }
 
     // Same storage key as auth/auth-client.js (read directly so games that

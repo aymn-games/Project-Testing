@@ -4,7 +4,7 @@
  *
  *   createTikTokConnector() -> { connect(options, callbacks), disconnect(), isConnected() }
  *   callbacks = {
- *     onStatus(status, message?),   // فقط 'connecting'/'connected'/'error' من هنا
+ *     onStatus(status, message?),   // 'connecting'/'connected'/'error'، و'ended' لما ينتهي البث فعلياً في تيك توك
  *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance, elimCard }),
  *     onGift({ id, name, giftName, giftValue, repeatCount }),
  *     onFollow({ id, name }),
@@ -20,6 +20,9 @@
  *   - رسائل المكتبة الإنجليزية الشائعة تُترجَم لرسائل عربية واضحة
  *     (friendlyConnectError) بدل عرضها خام للمستخدم.
  *   - قطع متعمَّد عبر disconnect() -> لا أي محاولة إعادة اتصال.
+ *   - انتهاء البث فعلياً في تيك توك (حدث streamEnd، أو انقطاع والحساب ما عاد
+ *     يبث حسب fetchIsLive) -> لا إعادة اتصال، ويُبلَّغ onStatus('ended') عشان
+ *     الواجهة تقطع الاتصال المحفوظ بمكتبة الألعاب والألعاب.
  *
  * تطبيع الأحداث (محقَّق من الحزمة v2.4.3):
  *   chat   -> data.user.displayId، data.user.nickname، data.content (وليس data.comment)
@@ -55,6 +58,7 @@ var ROOM_ID_RETRY_DELAYS_MS = [2000, 4000];
 var ROOM_ID_ERROR_MESSAGE = 'ما لقينا بث مباشر لهذا الحساب — تأكد إنك تبث الحين وإن اليوزر مكتوب صح (بدون @)، ثم جرّب مرة ثانية.';
 var USER_OFFLINE_MESSAGE = 'الحساب مو في بث مباشر الحين — ابدأ البث أولاً ثم اضغط اتصال.';
 var GENERIC_CONNECT_ERROR_MESSAGE = 'تعذّر الاتصال ببث تيك توك الحين — جرّب مرة ثانية بعد لحظات.';
+var STREAM_ENDED_MESSAGE = 'انتهى البث المباشر في تيك توك — تم قطع الاتصال.';
 
 function errorName(err) {
     return (err && ((err.constructor && err.constructor.name) || err.name)) || '';
@@ -261,6 +265,20 @@ function createTikTokConnector() {
     var _followersOnly = false; // لم تعد تُستخدَم للفلترة هنا — انتقلت للواجهة الأمامية
     var _callbacks = null;
 
+    /** البث انتهى فعلياً: إيقاف نهائي بدون إعادة اتصال + إبلاغ 'ended' مرة وحدة. */
+    function endBecauseStreamEnded(reason) {
+        if (_intentionalDisconnect) return;
+        _intentionalDisconnect = true;
+        clearReconnectTimer();
+        _connected = false;
+        logger.log('TikTok Connector: stream ended for "' + _username + '" (' + reason + ') — stopping, no reconnect.');
+        if (_connection) {
+            try { _connection.disconnect(); } catch (err) {}
+            _connection = null;
+        }
+        _callbacks.onStatus('ended', STREAM_ENDED_MESSAGE);
+    }
+
     function clearReconnectTimer() {
         if (_reconnectTimer !== null) {
             clearTimeout(_reconnectTimer);
@@ -371,11 +389,31 @@ function createTikTokConnector() {
             });
         }
 
+        // الاستريمر أنهى البث في تيك توك
+        if (TikTokLib.WebcastEvent.STREAM_END) {
+            _connection.on(TikTokLib.WebcastEvent.STREAM_END, function () {
+                endBecauseStreamEnded('streamEnd event');
+            });
+        }
+
+        var thisConnection = _connection;
         _connection.on(TikTokLib.ControlEvent.DISCONNECTED, function (info) {
             _connected = false;
             if (_intentionalDisconnect) return; // متوقَّع، لا شيء إضافي مطلوب هنا
             logger.log('TikTok Connector: disconnected unexpectedly.', info);
-            attemptReconnect();
+            // قبل إعادة الاتصال: هل الحساب لسا يبث؟ لو لا → البث انتهى، نوقف.
+            // تعذّر التأكد (خطأ مؤقت) → إعادة اتصال عادية كما كان.
+            var check;
+            try { check = thisConnection.fetchIsLive(); } catch (err) { check = Promise.reject(err); }
+            Promise.resolve(check).then(function (live) {
+                if (_intentionalDisconnect) return;
+                if (live === false) endBecauseStreamEnded('not live after disconnect');
+                else attemptReconnect();
+            }, function (err) {
+                if (_intentionalDisconnect) return;
+                if (isUserOfflineError(err)) endBecauseStreamEnded('offline after disconnect');
+                else attemptReconnect();
+            });
         });
 
         _connection.on(TikTokLib.ControlEvent.ERROR, function (err) {
@@ -412,7 +450,10 @@ function createTikTokConnector() {
 
                 if (isRoomIdError(err)) logRoomIdSourceErrors(err);
 
-                if (isReconnectAttempt) {
+                if (isReconnectAttempt && isUserOfflineError(err)) {
+                    // إعادة اتصال بعد انقطاع والحساب ما عاد يبث — البث انتهى
+                    endBecauseStreamEnded('offline on reconnect');
+                } else if (isReconnectAttempt) {
                     attemptReconnect();
                 } else if (isRoomIdError(err) && !isUserOfflineError(err) && _roomIdRetries < ROOM_ID_RETRY_DELAYS_MS.length) {
                     // فشل جلب Room ID كثيراً ما يكون مؤقت — نعيد الاتصال الأول
