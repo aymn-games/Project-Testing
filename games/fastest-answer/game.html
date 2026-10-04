@@ -422,8 +422,17 @@ class Component extends DCLogic {
 
   r(n){return Math.floor(Math.random()*n);}
   pick(a){return a[this.r(a.length)];}
-  norm(s){ return String(s).trim().replace(/[\u064B-\u0652\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).toLowerCase().split(/\s+/).map(w=>w.replace(/^ال/,'')).join(''); }
-  check(t,q){ const n=this.norm(t); return n&&q.accept.some(a=>this.norm(a)===n); }
+  // تطبيع الإجابة قبل المقارنة (على الإجابة الصحيحة وعلى رسالة الشات معاً)، فتُقبل حتى لو اختلفت الكتابة:
+  // التشكيل والتطويل والرموز غير المرئية والترقيم · أ إ آ ٱ ← ا · ة ← ه · ى ← ي · ؤ ← و · ئ ← ي · حذف ء
+  // الحروف الفارسية (ی ک ہ) · الأرقام العربية والفارسية · "ال" أول كل كلمة · المسافات · تكرار الحرف (قهوووة).
+  norm(s){ return String(s).normalize('NFKC').trim()
+    .replace(/[ً-ٰٟۖ-ۭـ]/g,'').replace(/[​-‏‪-‮⁦-⁩﻿]/g,'')
+    .replace(/[أإآٱٲٳ]/g,'ا').replace(/[ةۃ]/g,'ه').replace(/[ہە]/g,'ه').replace(/[ىیېۍ]/g,'ي').replace(/ؤ/g,'و').replace(/ئ/g,'ي').replace(/ء/g,'').replace(/ک/g,'ك')
+    .replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+    .toLowerCase().replace(/[^\p{L}\p{N}\s]/gu,'')
+    .split(/\s+/).map(w=>w.replace(/^ال/,'')).join('').replace(/(\p{L})\1+/gu,'$1'); }
+  // يُقبل أيضاً لو "ال" ملتصقة بكلمة قبلها بدون مسافة (كورياالجنوبية = كوريا الجنوبية).
+  check(t,q){ const v=[this.norm(t),this.norm(String(t).replace(/(\S)(ال)/g,'$1 $2'))].filter(Boolean); return v.length>0&&q.accept.some(a=>v.includes(this.norm(a))); }
   toastMsg(t){ this.setState({toast:t}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toast:null}),2600); }
   addLog(k,text){ const d=new Date(), time=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
     this.setState(s=>({log:[{k,text,time,round:s.round,between:s.phase==='ready'&&s.round>0,id:Math.random()},...s.log].slice(0,200)})); }
