@@ -16,6 +16,7 @@
 <script src="../../auth/auth-client.js"></script>
 <script src="../../js/agp-player-card.js"></script>
 <script src="fa-platform.js"></script>
+<script src="fa-questions.js"></script>
 <script src="./support.js"></script>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#7c3aed"/><text x="50" y="66" font-size="44" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">?</text></svg></template>
 </head>
@@ -390,15 +391,7 @@ class Component extends DCLogic {
   KW = [SETUP?.keyword1||'', SETUP?.keyword2||'']; MAX = +SETUP?.maxPlayers||20; followersOnly = SETUP?.who==='المتابعين فقط'; muted = SETUP?.sound===false;
   ALL_CATS = [{id:'math',name:'مسألة رياضية'},{id:'image',name:'صورة واكتب الاسم'},{id:'reverse',name:'اعكس الكلمة'},{id:'number',name:'اكتب الرقم'},{id:'capital',name:'عاصمة الدولة'},{id:'proverb',name:'أكمل المثل'},{id:'scramble',name:'ترتيب الحروف'},{id:'flag',name:'علم الدولة'}];
   CATS = (c=>c.length?c:this.ALL_CATS)(this.ALL_CATS.filter(c=>(SETUP?.cats||[]).includes(c.name)));
-  DATA = {
-    image:[['🍎','تفاحة',['تفاح']],['🐘','فيل'],['🚗','سيارة'],['🌙','قمر',['هلال']],['🐪','جمل',['ناقة']],['⚽','كرة',['كورة']],['🍌','موز',['موزة']],['🦁','أسد'],['✈️','طائرة',['طيارة']],['🌴','نخلة',['نخل']],['🐟','سمكة',['سمك']],['☕','قهوة',['كوب']]],
-    reverse:['سيارة','مدرسة','برتقال','حديقة','طاولة','مستشفى','قلم','شباك'],
-    number:[['خمسمئة وأربعة',504],['ألف ومئتان',1200],['سبعة وثمانون',87],['ثلاثمئة وخمسة وعشرون',325],['تسعة آلاف',9000],['مئة وواحد',101],['ستمئة وستون',660]],
-    capital:[['السعودية','الرياض'],['مصر','القاهرة'],['اليابان','طوكيو'],['فرنسا','باريس'],['المغرب','الرباط'],['تركيا','أنقرة'],['كندا','أوتاوا'],['أستراليا','كانبرا'],['البرازيل','برازيليا'],['الأردن','عمان']],
-    proverb:[['الصبر مفتاح ...','الفرج'],['من جدّ ...','وجد'],['العلم في الصغر كالنقش على ...','الحجر'],['في العجلة ...','الندامة'],['الجار قبل ...','الدار'],['الوقت كالسيف إن لم تقطعه ...','قطعك']],
-    scramble:['مكتبة','شمس','قهوة','بحر','صحراء','طائرة','جبل','وردة'],
-    flag:[['sa','السعودية'],['eg','مصر'],['jp','اليابان'],['br','البرازيل'],['de','ألمانيا'],['it','إيطاليا'],['kw','الكويت'],['ae','الإمارات'],['ca','كندا'],['kr','كوريا الجنوبية',['كوريا']]]
-  };
+  DATA = window.FA_QUESTIONS; // بنك الأسئلة لكل الفئات — fa-questions.js
   reg = FA.createRegistry(PLAYERS);
   avatar(name){ return this.reg.avatar(name); }
   blankReel(){ return {items:[],offset:0,trans:'none',stopped:false,chosen:null,ci:-1}; }
@@ -440,8 +433,8 @@ class Component extends DCLogic {
     if(id==='image'){ const [e,a,alt=[]]=this.pick(D.image); return {...base,sub:'ما اسم الصورة؟',emoji:e,answer:a,accept:[a,...alt]}; }
     if(id==='reverse'){ const w=this.pick(D.reverse),rv=[...w].reverse().join(''); return {...base,sub:'اكتب الكلمة معكوسة',prompt:w,answer:rv,accept:[rv]}; }
     if(id==='number'){ const [w,n]=this.pick(D.number); return {...base,sub:'اكتب الرقم بالأرقام',prompt:w,answer:String(n),accept:[String(n)]}; }
-    if(id==='capital'){ const [c,a]=this.pick(D.capital); return {...base,sub:'ما عاصمة هذه الدولة؟',prompt:c,answer:a,accept:[a]}; }
-    if(id==='proverb'){ const [p,a]=this.pick(D.proverb); return {...base,sub:'أكمل المثل',prompt:p,answer:a,accept:[a]}; }
+    if(id==='capital'){ const [c,a,alt=[]]=this.pick(D.capital); return {...base,sub:'ما عاصمة هذه الدولة؟',prompt:c,answer:a,accept:[a,...alt]}; }
+    if(id==='proverb'){ const [p,a,alt=[]]=this.pick(D.proverb); return {...base,sub:'أكمل المثل',prompt:p,answer:a,accept:[a,...alt]}; }
     if(id==='scramble'){ const w=this.pick(D.scramble); let s; do{s=[...w].sort(()=>Math.random()-.5).join('');}while(s===w); return {...base,sub:'رتّب الحروف لتكوين كلمة',prompt:[...s].join(' '),ls:'8px',answer:w,accept:[w]}; }
     const [code,a,alt=[]]=this.pick(D.flag); return {...base,sub:'لمن هذا العلم؟',img:`https://flagcdn.com/w640/${code}.png`,answer:a,accept:[a,...alt]};
   }
