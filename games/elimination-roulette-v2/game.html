@@ -581,7 +581,10 @@ class Component extends DCLogic {
   endRes=()=>{ clearInterval(this._ti); this.setState({landedIdx:null}); this.shut('resOpen'); setTimeout(()=>this.next(),280); }
   eliminate(n,by){ const s0=this.state; if(!n||!s0.players.includes(n)) return; clearInterval(this._ti);
     if(by&&by!=='الوقت'&&by!=='الاستريمر'&&by!==n) this.setState(s=>({kills:{...s.kills,[by]:(s.kills[by]||0)+1}}));
-    this.setState({kickTimeout:by==='الوقت'}); this.logEv('kick',by||'الاستريمر',n); clearTimeout(this._kt); this.tone(220,.45,'sawtooth',.07); this.shut('resOpen');
+    this.setState({kickTimeout:by==='الوقت'}); this.logEv('kick',by||'الاستريمر',n); clearTimeout(this._kt);
+    // المُقصي يملك بطاقة إقصاء لها صوت خاص → صوت البطاقة بدل نغمة الإقصاء العادية
+    const actor=by&&by!=='الوقت'&&by!=='الاستريمر'&&by!==n?this.reg.player(by):null, EC=window.AymanGamesPlatform&&window.AymanGamesPlatform.elimCard;
+    if(!(this.state.sound&&actor&&ER.hasElimCard(actor)&&EC&&EC.playSound(actor,.9))) this.tone(220,.45,'sawtooth',.07); this.shut('resOpen');
     this.setState(s=>({out:[...s.out.filter(x=>x!==n),n],players:s.players.filter(x=>x!==n),landedIdx:null,sIdx:null,sLanded:false,kicked:n,kickBy:n===s.landed?'الاستريمر':s.landed,kickByStreamer:n===s.landed,kickOpen:true,kickRun:(s.kickRun||0)+1}));
     this._kt=setTimeout(()=>{ this.shut('kickOpen'); setTimeout(()=>this.next(),280); },3000); }
   // الإقصاء/الرجوع برقم اللاعب من صاحب الاختيار — نفس ترتيب البطاقات المعروضة

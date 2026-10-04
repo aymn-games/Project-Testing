@@ -2522,7 +2522,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         hideChooserCard();
 
         var isEliminate = type === 'eliminate';
-        playSound(isEliminate ? 'eliminate' : 'revive');
+        // بطاقة إقصاء لها صوت خاص تشغّل صوتها بدل صوت الإقصاء العادي (تحت)
+        var cardSound = isEliminate && data.chooser && AGP.elimCard && AGP.elimCard.canShow(data.chooser) &&
+            AGP.elimCard.hasSound && AGP.elimCard.hasSound(data.chooser);
+        if (!cardSound) playSound(isEliminate ? 'eliminate' : 'revive');
 
         // Only the winner screen removes this class; the announcement tab
         // keeps its old solid look.
@@ -2572,6 +2575,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (isEliminate && data.chooser && AGP.elimCard && AGP.elimCard.canShow(data.chooser)) {
             box.className = 'er-announce-box er-announce-eliminate er-elimcard-box';
             box.innerHTML = AGP.elimCard.renderHtml(data.chooser, data.target);
+            if (AGP.elimCard.playSound) AGP.elimCard.playSound(data.chooser, currentVolume());
         } else {
             box.className = 'er-announce-box ' + (isEliminate ? 'er-announce-eliminate' : 'er-announce-revive');
             box.innerHTML =
