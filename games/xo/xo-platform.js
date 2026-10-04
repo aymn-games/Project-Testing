@@ -79,19 +79,21 @@
      * AGP.playerCard.renderHtml(showFrame) المشترك مع باقي الألعاب، ويُحسب
      * حجمها من عرض الخانة الفعلي حتى تتوافق مع شبكة بطاقات اللعبة.
      * onKick (اختياري): زر الإقصاء × داخل حدود الإطار نفسه، بنفس مواصفات
-     * × في JOIN-RULES.md §4، أعلى البطاقة فوق لوح الاسم (مساحة فاضية بأغلب
-     * الإطارات) حتى يبان بوضوح ولا يغطي الصورة أو زخرفة الإطار.
+     * × في JOIN-RULES.md §4، على الطرف الداخلي للوح الاسم (يُقاس موضع اللوح
+     * بعد الرسم بكل إطار) مع مسافة للاسم حتى ما يتداخل معه.
      */
     var FRAME_CARD_HEIGHT = 100; // نفس LOBBY_CARD_HEIGHT_PX في js/agp-player-card.js
     var FRAME_CARD_WIDTH_RATIO = 4.96; // عرض البطاقة ≈ 4.95 × حجم الصورة (basicCardTotalWidth)
+    var X_SIZE = 24; // مساحة زر × داخل لوح الاسم
     var _FrameCard = null;
     function frameCard(player, onKick) {
         var React = window.React;
         if (!React || !AGP.playerCard) return null;
         if (!_FrameCard) {
             _FrameCard = function (props) {
-                var ref = React.useRef(null);
+                var ref = React.useRef(null), boxRef = React.useRef(null);
                 var st = React.useState(0), w = st[0], setW = st[1];
+                var xs = React.useState(null), xPos = xs[0], setXPos = xs[1];
                 React.useLayoutEffect(function () {
                     var node = ref.current;
                     if (!node) return;
@@ -110,9 +112,17 @@
                     var plates = ref.current.querySelectorAll('[data-agp-pcard-name="1"]');
                     for (var i = 0; i < plates.length; i++) {
                         var ph = plates[i].clientHeight;
-                        if (ph) { plates[i].style.fontSize = Math.max(8, Math.min(15, Math.round(ph * 0.45))) + 'px'; plates[i].style.lineHeight = '1.2'; }
+                        if (ph) { plates[i].style.fontSize = Math.max(9, Math.min(13, Math.round(ph * 0.65))) + 'px'; plates[i].style.lineHeight = '1.2'; }
+                        // مساحة × تُقتطع من عرض اللوح نفسه (مو padding) حتى الاسم وحركته ما يدخلون تحت ×
+                        if (props.onKick) { var pl = plates[i]; if (!pl.dataset.w) pl.dataset.w = pl.style.width; pl.style.width = 'calc(' + pl.dataset.w + ' - ' + X_SIZE + 'px)'; }
                     }
                     AGP.playerCard.fitAllNames(ref.current);
+                    // × على الطرف الداخلي (يمين، داخل صندوق LTR) للوح الاسم، بمنتصفه عمودياً
+                    if (props.onKick && plates[0] && boxRef.current) {
+                        var b = boxRef.current.getBoundingClientRect(), r = plates[0].getBoundingClientRect();
+                        var next = { left: Math.round(r.right - b.left), top: Math.round(r.top - b.top + r.height / 2 - X_SIZE / 2) };
+                        if (!xPos || xPos.left !== next.left || xPos.top !== next.top) setXPos(next);
+                    }
                 });
                 var p = props.player;
                 var html = w ? AGP.playerCard.renderHtml(
@@ -121,10 +131,10 @@
                 ) : '';
                 var h = React.createElement;
                 var hov = React.useState(false), hover = hov[0], setHover = hov[1];
-                var kick = props.onKick ? h('button', {
+                var kick = props.onKick && xPos ? h('button', {
                     key: 'x', type: 'button', 'aria-label': 'إقصاء ' + p.name, onClick: props.onKick,
                     onMouseEnter: function () { setHover(true); }, onMouseLeave: function () { setHover(false); },
-                    style: { position: 'absolute', top: 0, right: '10%', zIndex: 10, width: 30, height: 30, border: 'none', background: 'transparent', padding: 0,
+                    style: { position: 'absolute', top: xPos.top, left: xPos.left, zIndex: 10, width: X_SIZE, height: X_SIZE, border: 'none', background: 'transparent', padding: 0,
                         color: '#fca5a5', cursor: 'pointer', display: 'grid', placeItems: 'center', opacity: hover ? 1 : 0.75,
                         transform: hover ? 'scale(1.15)' : 'none', transition: 'opacity .2s, transform .2s', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,.9))' }
                 }, h('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round', 'aria-hidden': true },
@@ -132,7 +142,7 @@
                 return h('div', {
                     ref: ref,
                     style: { flex: 1, minWidth: 0, height: FRAME_CARD_HEIGHT, display: 'flex', justifyContent: 'center', alignItems: 'center', direction: 'ltr' }
-                }, h('div', { style: { position: 'relative', lineHeight: 0 } }, [
+                }, h('div', { ref: boxRef, style: { position: 'relative', lineHeight: 0 } }, [
                     h('div', { key: 'card', dangerouslySetInnerHTML: { __html: html } }),
                     kick
                 ]));

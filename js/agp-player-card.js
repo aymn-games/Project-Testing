@@ -145,18 +145,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         // قناة الألفا). لوحة الاسم خلفيتها صورة استاد داكنة عموماً — الأبيض
         // الافتراضي مقروء بدون حاجة textColor (بطلب صريح: كل إطارات الهلال
         // تستخدم الأبيض).
+        // نافذة المحتوى (contentTop/contentHeight) لهذا الإطار و"أفق الرياض"
+        // أُعيد قياسها من أعلى/أسفل بكسل فعلي غير شفاف (كانت تبدأ من حافة دائرة
+        // الصورة فينقص التاج من فوق)، بنفس مواضع الصورة والاسم الفعلية.
         'frame-club-hilal-crown.png': {
-            canvasW: 2172, canvasH: 724, contentTop: 183, contentHeight: 416,
-            avatarLeftPct: 10.54, avatarTopPct: 2.40, avatarWidthPct: 18.46, avatarHeightPct: 95.19,
-            nameLeftPct: 36.83, nameTopPct: 25.72, nameWidthPct: 55.71, nameHeightPct: 66.11
+            canvasW: 2172, canvasH: 724, contentTop: 11, contentHeight: 700,
+            avatarLeftPct: 10.54, avatarTopPct: 26.00, avatarWidthPct: 18.46, avatarHeightPct: 56.57,
+            nameLeftPct: 36.83, nameTopPct: 39.86, nameWidthPct: 55.71, nameHeightPct: 39.29
         },
         // [0.66.1] إطار نادي الهلال "أفق الرياض" (وشاح ونخلة وبرج المملكة) —
         // نفس مجموعة إطارات الأندية أعلاه، نفس منهجية القياس ولون النص
         // الأبيض الافتراضي.
         'frame-club-hilal-city.png': {
-            canvasW: 2172, canvasH: 724, contentTop: 184, contentHeight: 422,
-            avatarLeftPct: 11.00, avatarTopPct: 2.37, avatarWidthPct: 19.06, avatarHeightPct: 95.26,
-            nameLeftPct: 34.30, nameTopPct: 39.34, nameWidthPct: 49.95, nameHeightPct: 55.69
+            canvasW: 2172, canvasH: 724, contentTop: 4, contentHeight: 718,
+            avatarLeftPct: 11.00, avatarTopPct: 26.46, avatarWidthPct: 19.06, avatarHeightPct: 55.99,
+            nameLeftPct: 34.30, nameTopPct: 48.19, nameWidthPct: 49.95, nameHeightPct: 32.73
         },
         // [0.66.2] إطار نادي الهلال "الكأس والملعب" — نفس مجموعة إطارات
         // الأندية، قياس من أعلى بكسل فعلي غير شفاف (مو حافة دائرة الصورة)
@@ -174,18 +177,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         },
         // [0.66.2] إطار نادي النصر "التاج الملكي" — خلفية اللوح صفراء/ذهبية،
         // الاسم أزرق (مو أبيض) بطلب صريح — نفس كل إطارات النصر.
+        // لوح الاسم بإطارات النصر الثلاثة أُعيد قياسه: الجزء الأصفر السادة من
+        // اللوح فقط، بين الشعار والسهم/العلم وفوق رسمة الجمهور (كان يبدأ
+        // ملاصق للشعار وينزل فوق الجمهور فيضيع الاسم).
         'frame-club-nassr-crown.png': {
             canvasW: 2172, canvasH: 724, contentTop: 6, contentHeight: 594,
             avatarLeftPct: 9.21, avatarTopPct: 33.50, avatarWidthPct: 18.55, avatarHeightPct: 65.15,
-            nameLeftPct: 40.06, nameTopPct: 46.97, nameWidthPct: 51.33, nameHeightPct: 49.66,
-            textColor: '#0a1a5c'
+            nameLeftPct: 42.00, nameTopPct: 55.06, nameWidthPct: 42.00, nameHeightPct: 21.94,
+            textColor: '#0a1a5c',
+            fitFont: true
         },
         // [0.66.2] إطار نادي النصر "النسر الملكي" — نفس ملاحظة اللون أعلاه.
         'frame-club-nassr-eagle.png': {
             canvasW: 2172, canvasH: 724, contentTop: 5, contentHeight: 585,
             avatarLeftPct: 10.31, avatarTopPct: 34.53, avatarWidthPct: 17.86, avatarHeightPct: 64.10,
-            nameLeftPct: 40.52, nameTopPct: 57.26, nameWidthPct: 47.88, nameHeightPct: 41.88,
-            textColor: '#0a1a5c'
+            nameLeftPct: 47.00, nameTopPct: 64.74, nameWidthPct: 39.00, nameHeightPct: 18.56,
+            textColor: '#0a1a5c',
+            fitFont: true
         },
         // [0.66.2] إطار نادي النصر "أفق الرياض" — ⚠️ مقاس الكانفاس مختلف
         // شوي (2156×729 بدل 2172×724) عن باقي دفعة النصر/الهلال، بيّنت
@@ -193,17 +201,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         'frame-club-nassr-palm.png': {
             canvasW: 2156, canvasH: 729, contentTop: 12, contentHeight: 578,
             avatarLeftPct: 8.91, avatarTopPct: 29.41, avatarWidthPct: 18.55, avatarHeightPct: 66.27,
-            nameLeftPct: 38.50, nameTopPct: 47.23, nameWidthPct: 52.18, nameHeightPct: 51.90,
-            textColor: '#0a1a5c'
+            nameLeftPct: 40.00, nameTopPct: 59.72, nameWidthPct: 46.00, nameHeightPct: 15.13,
+            textColor: '#0a1a5c',
+            fitFont: true
         },
         // [0.66.3] إطار نادي الاتحاد "التاج والنمر" — قياس من أعلى بكسل
         // فعلي غير شفاف. خلفية اللوح ذهبية/صفراء — الاسم أسود (هوية النادي
         // أسود+ذهبي) بطلب صريح، مو أبيض ولا أزرق.
+        // تحديث: لوح الاسم أُعيد قياسه (بين الشعار والنمر، فوق رسمة الجمهور)،
+        // والاسم صار أبيض لأن خلفية اللوح فعلياً داكنة (جمهور وأضواء) والأسود
+        // ما كان يُقرأ عليها.
         'frame-club-ittihad-crown.png': {
             canvasW: 2157, canvasH: 729, contentTop: 12, contentHeight: 601,
             avatarLeftPct: 6.54, avatarTopPct: 32.11, avatarWidthPct: 19.75, avatarHeightPct: 65.72,
-            nameLeftPct: 37.55, nameTopPct: 45.42, nameWidthPct: 54.24, nameHeightPct: 53.74,
-            textColor: '#161208'
+            nameLeftPct: 38.00, nameTopPct: 53.80, nameWidthPct: 46.00, nameHeightPct: 19.41,
+            fitFont: true
         },
         // [0.66.3] إطار نادي الاتحاد "النمر" — ⚠️ اللوح فيه كلمة "ITTIHAD"
         // مرسومة ثابتة داخل نفس منطقة الاسم (مو زخرفة منفصلة) — بموافقة
@@ -522,6 +534,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var cropTop = contentCenterY - targetHeightPx / 2;
         if (cropTop < 0) cropTop = 0;
         if (cropTop > maxCropTop) cropTop = maxCropTop;
+        // إطار أقصر من ارتفاع البطاقة: يتوسّط عمودياً بدل ما يلتصق بأعلاها،
+        // فيصطف مع البطاقات اللي جنبه في نفس الصف.
+        if (naturalContentHeightPx < targetHeightPx) cropTop = (naturalContentHeightPx - targetHeightPx) / 2;
 
         var frameTopOffsetPx = Math.round((-(tpl.contentTop * scale) - cropTop) * 100) / 100;
 
@@ -615,7 +630,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'background-image:url(' + escapeHtml(frameSrc) + ')';
         var nameStyle = 'left:' + tpl.nameLeftPct + '%;top:' + layout.nameTopPx + 'px;' +
             'width:' + tpl.nameWidthPct + '%;height:' + layout.nameHeightPx + 'px;' +
-            (tpl.textColor ? 'color:' + tpl.textColor + ';' : '');
+            (tpl.textColor ? 'color:' + tpl.textColor + ';' : '') +
+            // fitFont: لوح اسم ضيّق (النصر/الاتحاد) — حجم الخط يتبع ارتفاع اللوح بدل الموروث
+            (tpl.fitFont ? 'font-size:' + Math.max(9, Math.round(layout.nameHeightPx * 0.65)) + 'px;' : '');
 
         var avatarHtml = avatarUrl
             ? '<img class="agp-pcard-tpl-avatar" style="' + avatarStyle + '" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;agp-pcard-tpl-avatar agp-pcard-tpl-avatar--fallback&quot; style=&quot;' + avatarStyle + '&quot;>' + escapeHtml(initials(name)) + '</div>\';">'
