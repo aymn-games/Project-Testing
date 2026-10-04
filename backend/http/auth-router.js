@@ -114,6 +114,10 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/collectibles/revoke', requireAuth: true, requireAdmin: true, handler: handleAdminRevokeFrame },
   { method: 'POST', path: '/api/admin/entrance', requireAuth: true, requireAdmin: true, handler: handleAdminSetEntrance },
   { method: 'POST', path: '/api/collectibles/equip', requireAuth: true, handler: handleEquipFrame },
+  // أكواد استرداد الإطارات — توليد/عرض للأدمن، واسترداد لصاحب الحساب.
+  { method: 'POST', path: '/api/admin/frame-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateFrameCodes },
+  { method: 'GET', path: '/api/admin/frame-codes', requireAuth: true, requireAdmin: true, handler: handleAdminListFrameCodes },
+  { method: 'POST', path: '/api/collectibles/redeem', requireAuth: true, handler: handleRedeemFrameCode },
   { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
   // تفعيل/إيقاف الدخولية ذاتياً — نفس نمط handleEquipFrame (صاحب الجلسة فقط).
   { method: 'POST', path: '/api/entrance/toggle', requireAuth: true, handler: handleToggleEntrance },
@@ -474,6 +478,22 @@ function handleAdminSetEntrance(req, res, body) {
   }
   var result = collectiblesService.setEntrance(body.userId, body.templateKey, body.entranceText, 'admin_manual');
   sendJson(res, 200, result);
+}
+
+function handleAdminGenerateFrameCodes(req, res, body) {
+  var result = collectiblesService.generateFrameCodes(body.frameType, body.frameRef, body.count, body.note);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleAdminListFrameCodes(req, res) {
+  sendJson(res, 200, { success: true, codes: collectiblesService.listFrameCodes(getQueryParam(req, 'limit')) });
+}
+
+var REDEEM_ERROR_STATUS = { invalid_code: 404, code_used: 409, already_owned: 409, rate_limited: 429 };
+
+function handleRedeemFrameCode(req, res, body, user) {
+  var result = collectiblesService.redeemFrameCode(user.id, body.code);
+  sendJson(res, result.success ? 200 : (REDEEM_ERROR_STATUS[result.error] || 400), result);
 }
 
 /** صاحب الحساب نفسه يفعّل أحد إطاراته المملوكة كإطاره الظاهر الوحيد. */

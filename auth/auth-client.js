@@ -429,6 +429,25 @@ function equipFrame(frameType, frameRef) {
     return request('/api/collectibles/equip', { method: 'POST', body: { frameType: frameType, frameRef: frameRef } });
 }
 
+/** Owner redeems a purchased frame code (e.g. "AGP-7K3M-Q9XD").
+ * result.error: invalid_code | code_used | already_owned | rate_limited */
+function redeemFrameCode(code) {
+    return request('/api/collectibles/redeem', { method: 'POST', body: { code: code } });
+}
+
+/** Admin only — generates `count` one-time codes for a single frame. */
+function adminGenerateFrameCodes(frameType, frameRef, count, note) {
+    return request('/api/admin/frame-codes/generate', {
+        method: 'POST',
+        body: { frameType: frameType, frameRef: frameRef, count: count, note: note || '' }
+    });
+}
+
+/** Admin only — latest codes with redemption status. */
+function adminListFrameCodes() {
+    return request('/api/admin/frame-codes', { method: 'GET' });
+}
+
 /** Owner toggles their entrance on/off without deleting it (template/text
  * stay saved for one-click re-enable). */
 function toggleEntrance(enabled) {
@@ -803,6 +822,9 @@ global.AGPAuth = {
     adminSetEntrance: adminSetEntrance,
     adminClearEntrance: adminClearEntrance,
     equipFrame: equipFrame,
+    redeemFrameCode: redeemFrameCode,
+    adminGenerateFrameCodes: adminGenerateFrameCodes,
+    adminListFrameCodes: adminListFrameCodes,
     toggleEntrance: toggleEntrance,
     adminGrantElimCard: adminGrantElimCard,
     adminRevokeElimCard: adminRevokeElimCard,

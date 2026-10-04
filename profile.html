@@ -1067,6 +1067,65 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
     }
 
+    /* ---- استرداد كود إطار (مشترى من المتجر) — لصاحب الحساب فقط، قبل
+     *      قسم "إطاراتي" مباشرة وبنفس شكل إطاره ---- */
+    var framesTitleEl = findLeaf('إطاراتي');
+    if (isOwner && framesTitleEl && !document.querySelector('[data-redeem-panel]')) {
+      wiredSomething = true;
+      var fPanel = framesTitleEl.parentElement.parentElement;
+      var rPanel = fPanel.cloneNode(false);
+      rPanel.setAttribute('data-redeem-panel', '1');
+      var rHeader = fPanel.children[0].cloneNode(true);
+      rHeader.children[0].textContent = 'استرداد كود';
+      if (rHeader.children[1]) rHeader.children[1].textContent = '';
+      var rRow = document.createElement('div');
+      rRow.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;';
+      var rInput = document.createElement('input');
+      rInput.type = 'text';
+      rInput.placeholder = 'AGP-XXXX-XXXX';
+      rInput.autocomplete = 'off';
+      rInput.style.cssText = 'flex:1;min-width:180px;padding:10px 12px;border-radius:11px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#f4f2fb;font-family:monospace;font-size:14px;direction:ltr;text-align:left;letter-spacing:1px;';
+      var rBtn = document.createElement('button');
+      rBtn.textContent = 'استرداد';
+      rBtn.style.cssText = 'padding:10px 18px;border-radius:11px;cursor:pointer;font-family:\'IBM Plex Sans Arabic\',sans-serif;font-size:13px;border:1px solid rgba(178,140,245,.45);background:rgba(178,140,245,.14);color:#e6dcff;';
+      var rMsg = document.createElement('div');
+      rMsg.style.cssText = 'margin-top:10px;font-size:12.5px;min-height:18px;';
+      var REDEEM_ERRORS = {
+        invalid_code: 'الكود غير صحيح، تأكد منه وحاول مرة ثانية.',
+        code_used: 'هذا الكود مستخدم من قبل.',
+        already_owned: 'عندك هذا الإطار من قبل — الكود ما انستخدم ويقدر تعطيه لغيرك.',
+        rate_limited: 'محاولات كثيرة، حاول بعد ربع ساعة.'
+      };
+      function setRedeemMsg(text, ok){ rMsg.textContent = text; rMsg.style.color = ok ? '#7ee0a6' : '#e08a8a'; }
+      function doRedeem(){
+        var code = rInput.value.trim();
+        if (!code) { setRedeemMsg('اكتب الكود أولاً.', false); return; }
+        rBtn.disabled = true;
+        rBtn.textContent = 'جارٍ...';
+        window.AGPAuth.redeemFrameCode(code).then(function(result){
+          if (result && result.success) {
+            var name = (result.frame && result.frame.displayNameAr) || '';
+            setRedeemMsg('🎉 تم! انضاف إطار ' + (name ? '"' + name + '" ' : '') + 'لمقتنياتك.', true);
+            setTimeout(function(){ window.location.reload(); }, 1500);
+            return;
+          }
+          setRedeemMsg(REDEEM_ERRORS[result && result.error] || 'تعذّر الاسترداد، حاول مرة ثانية.', false);
+          rBtn.disabled = false; rBtn.textContent = 'استرداد';
+        }).catch(function(){
+          setRedeemMsg('تعذّر الاتصال، حاول مرة ثانية.', false);
+          rBtn.disabled = false; rBtn.textContent = 'استرداد';
+        });
+      }
+      rBtn.addEventListener('click', doRedeem);
+      rInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') doRedeem(); });
+      rRow.appendChild(rInput);
+      rRow.appendChild(rBtn);
+      rPanel.appendChild(rHeader);
+      rPanel.appendChild(rRow);
+      rPanel.appendChild(rMsg);
+      fPanel.parentNode.insertBefore(rPanel, fPanel);
+    }
+
     /* ---- دخولياتي الحالية ---- */
     var entranceTitle = findLeaf('دخولياتي الحالية');
     if (entranceTitle && !entranceTitle.dataset.wired) {

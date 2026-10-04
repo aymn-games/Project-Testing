@@ -134,6 +134,31 @@
 <div class="gf-tab-panel" data-gf-panel="other"><div class="gf-grid" data-gf-grid="other"></div><p class="empty-note" data-gf-empty="other" style="display:none;">لا توجد إطارات بهذا القسم بعد.</p></div>
 </div>
 
+<h3 style="margin:var(--space-4) 0 0;">أكواد الاسترداد (للبيع بالمتجر)</h3>
+<p style="margin:0;font-size:13px;color:var(--text-dim, #9aa);">اختر الإطار من القائمة فوق، وحدد العدد، ثم انسخ الأكواد وارفعها في المتجر. كل كود يُستخدم مرة وحدة فقط ويمنح الإطار بدون دخولية.</p>
+<div class="gf-grant-bar" style="position:static;">
+<div class="field" style="min-width:110px;">
+<label for="rc-count">عدد الأكواد</label>
+<input type="number" id="rc-count" min="1" max="500" value="10">
+</div>
+<div class="field gf-search">
+<label for="rc-note">ملاحظة (اختياري)</label>
+<input type="text" id="rc-note" placeholder="مثال: دفعة متجر زد — أكتوبر">
+</div>
+<button class="btn btn-sm btn-primary" id="btn-rc-generate">توليد الأكواد</button>
+</div>
+<div class="auth-message" id="rc-message"></div>
+<div id="rc-output" style="display:none;">
+<textarea id="rc-output-text" readonly rows="8" style="width:100%;direction:ltr;font-family:monospace;font-size:13px;"></textarea>
+<button class="btn btn-sm" id="btn-rc-copy" style="margin-top:6px;">نسخ الأكواد</button>
+</div>
+<div style="overflow-x:auto;">
+<table class="table" id="rc-table" style="width:100%;font-size:13px;">
+<thead><tr><th>الكود</th><th>الإطار</th><th>الملاحظة</th><th>الحالة</th></tr></thead>
+<tbody id="rc-tbody"><tr><td colspan="4">جارِ التحميل…</td></tr></tbody>
+</table>
+</div>
+
 <h3 style="margin:var(--space-4) 0 0;">بطاقات الإقصاء</h3>
 <div class="gf-grant-bar" style="position:static;">
 <div class="field" style="min-width:130px;">
@@ -352,6 +377,59 @@
         }).finally(function () { button.disabled = false; });
     });
 
+    /* ---- أكواد الاسترداد — توليد لإطار مختار + سجل الحالة ---- */
+    var rcMessageEl = document.getElementById('rc-message');
+    function showRcMessage(text, type) {
+        rcMessageEl.textContent = text;
+        rcMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
+    }
+
+    function formatDate(ms) {
+        return ms ? new Date(ms).toLocaleString('ar') : '';
+    }
+
+    function loadCodes() {
+        window.AGPAuth.adminListFrameCodes().then(function (result) {
+            var tbody = document.getElementById('rc-tbody');
+            var codes = (result && result.codes) || [];
+            if (!codes.length) { tbody.innerHTML = '<tr><td colspan="4">لا توجد أكواد بعد.</td></tr>'; return; }
+            tbody.innerHTML = codes.map(function (c) {
+                var status = c.redeemedAt
+                    ? '✅ مستخدم — ' + escapeHtml(c.redeemedUsername || ('#' + c.redeemedBy)) +
+                      (c.redeemedCustomId ? ' (' + escapeHtml(c.redeemedCustomId) + ')' : '') + ' · ' + escapeHtml(formatDate(c.redeemedAt))
+                    : '🟡 غير مستخدم';
+                return '<tr><td style="direction:ltr;font-family:monospace;">' + escapeHtml(c.code) + '</td>' +
+                    '<td>' + escapeHtml(c.displayNameAr || c.frameRef) + '</td>' +
+                    '<td>' + escapeHtml(c.note) + '</td>' +
+                    '<td>' + status + '</td></tr>';
+            }).join('');
+        });
+    }
+
+    document.getElementById('btn-rc-generate').addEventListener('click', function () {
+        if (!selected) { showRcMessage('اختر إطاراً من القائمة فوق أولاً.', 'error'); return; }
+        var count = Number(document.getElementById('rc-count').value);
+        if (!count || count < 1 || count > 500) { showRcMessage('العدد لازم يكون بين 1 و 500.', 'error'); return; }
+        var button = this;
+        button.disabled = true;
+        window.AGPAuth.adminGenerateFrameCodes(selected.frameType, selected.frameRef, count, document.getElementById('rc-note').value)
+            .then(function (result) {
+                if (!result.success) { showRcMessage('تعذّر التوليد: ' + (result.error || 'unknown'), 'error'); return; }
+                document.getElementById('rc-output').style.display = 'block';
+                document.getElementById('rc-output-text').value = result.codes.join('\n');
+                showRcMessage('تم توليد ' + result.codes.length + ' كود لإطار "' + (selected.displayName || selected.imageFilename) + '".', 'success');
+                loadCodes();
+            }).finally(function () { button.disabled = false; });
+    });
+
+    document.getElementById('btn-rc-copy').addEventListener('click', function () {
+        var textEl = document.getElementById('rc-output-text');
+        textEl.select();
+        var done = function () { showRcMessage('تم نسخ الأكواد.', 'success'); };
+        if (navigator.clipboard) navigator.clipboard.writeText(textEl.value).then(done, function () { document.execCommand('copy'); done(); });
+        else { document.execCommand('copy'); done(); }
+    });
+
     /* ---- بطاقة الإقصاء — منح/سحب مستقل عن الإطارات ---- */
     var ecMessageEl = document.getElementById('ec-message');
     function showEcMessage(text, type) {
@@ -391,6 +469,7 @@
         document.getElementById('account-username').textContent = user.username;
         document.getElementById('account-role').textContent = user.role;
         loadCatalog();
+        loadCodes();
     });
 }());
 </script>
