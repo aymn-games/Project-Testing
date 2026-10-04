@@ -71,9 +71,20 @@
 <div class="gf-layout">
 
 <div class="gf-grant-bar">
+<div class="field" style="min-width:150px;">
+<label for="gf-id-type">نوع الآيدي</label>
+<select id="gf-id-type">
+<option value="internal">الآيدي الداخلي</option>
+<option value="profile">آيدي البروفايل</option>
+</select>
+</div>
 <div class="field" style="min-width:130px;">
-<label for="gf-user-id">معرّف المستخدم (id)</label>
-<input type="number" id="gf-user-id" placeholder="مثال: 3">
+<label for="gf-user-id">الآيدي</label>
+<input type="text" id="gf-user-id" placeholder="مثال: 3">
+</div>
+<div class="field" style="min-width:200px;">
+<label>صاحب الحساب</label>
+<div class="gf-selected-chip is-empty" id="gf-user-chip">اكتب الآيدي للتأكد من الحساب</div>
 </div>
 <div class="field" style="min-width:220px;">
 <label>الإطار المختار</label>
@@ -268,9 +279,57 @@
         grantMessageEl.className = 'auth-message auth-message--visible auth-message--' + type;
     }
 
+    /* ---- تحديد المستخدم بالآيدي الداخلي أو آيدي البروفايل + عرض اسمه للتأكد ---- */
+    var userIdInput = document.getElementById('gf-user-id');
+    var idTypeSelect = document.getElementById('gf-id-type');
+    var userChipEl = document.getElementById('gf-user-chip');
+    var resolvedUser = null; // { id, username, display_name, custom_id, ... }
+    var lookupTimer = null;
+    var lookupSeq = 0;
+
+    function setUserChip(text, isEmpty) {
+        userChipEl.className = 'gf-selected-chip' + (isEmpty ? ' is-empty' : '');
+        userChipEl.innerHTML = text;
+    }
+
+    function lookupUser() {
+        var query = userIdInput.value.trim();
+        var seq = ++lookupSeq;
+        resolvedUser = null;
+        if (!query) { setUserChip('اكتب الآيدي للتأكد من الحساب', true); return; }
+        setUserChip('جارِ البحث…', true);
+        window.AGPAuth.adminLookupUser(query, idTypeSelect.value).then(function (result) {
+            if (seq !== lookupSeq) return;
+            if (!result.success || !result.user) { setUserChip('❌ لا يوجد حساب بهذا الآيدي', true); return; }
+            resolvedUser = result.user;
+            var u = result.user;
+            var name = u.display_name || u.tiktok_display_name || u.username;
+            setUserChip('✅ <strong>' + escapeHtml(name) + '</strong>' +
+                (name !== u.username ? ' <span>(@' + escapeHtml(u.username) + ')</span>' : '') +
+                ' <span style="opacity:.7">— داخلي: ' + escapeHtml(u.id) + ' · بروفايل: ' + escapeHtml(u.custom_id || '—') + '</span>', false);
+        });
+    }
+
+    function scheduleLookup() {
+        clearTimeout(lookupTimer);
+        resolvedUser = null;
+        lookupTimer = setTimeout(lookupUser, 350);
+    }
+    userIdInput.addEventListener('input', scheduleLookup);
+    idTypeSelect.addEventListener('change', function () {
+        userIdInput.placeholder = idTypeSelect.value === 'profile' ? 'مثال: 12345678' : 'مثال: 3';
+        scheduleLookup();
+    });
+
+    function requireResolvedUser() {
+        if (!userIdInput.value.trim()) { showGrantMessage('اكتب آيدي المستخدم أولاً.', 'error'); return null; }
+        if (!resolvedUser) { showGrantMessage('لم يتم التأكد من الحساب بعد — تأكد من الآيدي ونوعه.', 'error'); return null; }
+        return resolvedUser.id;
+    }
+
     document.getElementById('btn-gf-grant').addEventListener('click', function () {
-        var userId = Number(document.getElementById('gf-user-id').value);
-        if (!userId) { showGrantMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
+        var userId = requireResolvedUser();
+        if (!userId) return;
         if (!selected) { showGrantMessage('اختر إطاراً من القائمة أولاً.', 'error'); return; }
         var button = this;
         button.disabled = true;
@@ -283,8 +342,8 @@
     });
 
     document.getElementById('btn-gf-revoke').addEventListener('click', function () {
-        var userId = Number(document.getElementById('gf-user-id').value);
-        if (!userId) { showGrantMessage('اكتب معرّف المستخدم أولاً.', 'error'); return; }
+        var userId = requireResolvedUser();
+        if (!userId) return;
         if (!selected) { showGrantMessage('اختر إطاراً من القائمة أولاً.', 'error'); return; }
         var button = this;
         button.disabled = true;

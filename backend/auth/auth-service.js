@@ -431,6 +431,31 @@ function setCustomId(userId, customId) {
 }
 
 /**
+ * الأدمن فقط — إيجاد حساب عبر الآيدي الداخلي (users.id) أو آيدي البروفايل
+ * (custom_id)، لعرض اسم صاحب الحساب للتأكد قبل المنح/السحب.
+ * @param {string} query
+ * @param {'internal'|'profile'} idType
+ * @returns {Object|null}
+ */
+function adminLookupUser(query, idType) {
+    query = String(query || '').trim();
+    if (!query) return null;
+    var cols = 'id, username, display_name, custom_id, tiktok_username, tiktok_verified, tiktok_display_name';
+    var user = idType === 'profile'
+        ? db.prepare('SELECT ' + cols + ' FROM users WHERE custom_id = ?').get(query)
+        : (/^\d+$/.test(query) ? db.prepare('SELECT ' + cols + ' FROM users WHERE id = ?').get(Number(query)) : null);
+    if (!user) return null;
+    return {
+        id: user.id,
+        username: user.username,
+        display_name: user.display_name || null,
+        custom_id: user.custom_id || null,
+        tiktok_username: user.tiktok_verified ? user.tiktok_username : null,
+        tiktok_display_name: user.tiktok_verified ? (user.tiktok_display_name || null) : null
+    };
+}
+
+/**
  * بروفايل مستخدم عبر الـID العام (custom_id) — مسار عام، لكن الراوتر
  * (handlePublicProfile بـauth-router.js) هو من يقرّر أي جزء من هذا
  * الكائن يُرسَل فعلياً: صاحب الحساب أو الأدمن يشوفون كل شيء، غيرهم فقط
@@ -1226,6 +1251,7 @@ module.exports = {
     completeWelcome: completeWelcome,
     resetWelcome: resetWelcome,
     getPublicProfile: getPublicProfile,
+    adminLookupUser: adminLookupUser,
     findVerifiedUserByTikTok: findVerifiedUserByTikTok,
     generateVerificationCode: generateVerificationCode,
     verifyTikTokOwnership: verifyTikTokOwnership,
