@@ -1,389 +1,1121 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>لوحة الأدمن — AGP</title>
-<link rel="stylesheet" href="dashboard-core/css/style.css">
-<link rel="stylesheet" href="auth/auth.css">
-<!-- Users management, split into player/streamer tabs with per-tab search.
-     Everything else (announcement, supporters, theme, frame catalog,
-     entrances, SP levels) lives in admin-settings.html. -->
-<style>
-  .adm-tabs { display: flex; gap: 8px; margin-bottom: var(--space-4); flex-wrap: wrap; }
-  .adm-tab-btn {
-    background: transparent; border: 1px solid var(--border-light); color: var(--text-dim, #9aa);
-    border-radius: 10px; padding: 8px 18px; font-family: inherit; font-size: 14px; font-weight: 600;
-    cursor: pointer;
-  }
-  .adm-tab-btn.is-active { background: var(--accent, #7c3aed); color: #fff; border-color: transparent; }
-  .adm-tab-panel { display: none; }
-  .adm-tab-panel.is-active { display: block; }
-</style>
-</head>
-<body class="auth-checking">
-<header class="topbar">
-<div class="topbar-brand">
-<span class="topbar-logo topbar-logo--img"><img src="logo.png" alt="ألعاب أيمن"></span>
-<span class="topbar-title">لوحة الأدمن — المستخدمون</span>
-</div>
-<div class="auth-topbar-account">
-<a class="btn btn-sm" href="admin-settings.html">الإعدادات</a>
-<a class="btn btn-sm" href="admin-stats.html">الإحصائيات</a>
-<a class="btn btn-sm" href="dashboard-core/index.html">لوحة التحكم</a>
-<span class="badge" id="account-role">—</span>
-<span class="stat-value" id="account-username">—</span>
-<button class="btn btn-sm" id="btn-account-logout">تسجيل خروج</button>
-</div>
-</header>
-<div class="main" style="padding: var(--space-5);">
-<div class="auth-message" id="admin-message"></div>
-
-<section class="panel panel-wide">
-<div class="panel-head">
-<h2><svg class="icon-sm" aria-hidden="true"><use href="#icon-users"/></svg>المستخدمون</h2>
-<button class="btn btn-sm" id="btn-refresh-users"><svg class="icon-sm" aria-hidden="true"><use href="#icon-refresh"/></svg>تحديث</button>
-</div>
-
-<!-- "Streamers" tab = admin, or can_run_games enabled, or requested
-     is_streamer at signup; everything else is "Players". Classified
-     client-side from adminListUsers' existing data. -->
-<div class="adm-tabs" id="user-tabs">
-  <button type="button" class="adm-tab-btn is-active" data-user-tab="players">اللاعبون</button>
-  <button type="button" class="adm-tab-btn" data-user-tab="streamers">الستريمرز</button>
-</div>
-
-<div class="adm-tab-panel is-active" data-user-panel="players">
-  <div class="field" style="max-width:420px; margin-bottom: var(--space-3);">
-    <label for="user-search-players">بحث بين اللاعبين (اسم المستخدم / الإيميل / الـID العام / المعرّف الداخلي)</label>
-    <input type="text" id="user-search-players" placeholder="اكتب للبحث…">
-  </div>
-  <div class="table-wrap">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>المعرّف</th><th>اسم المستخدم</th><th>البريد الإلكتروني</th><th>تيك توك</th><th>الـID العام</th>
-          <th>الصلاحيات</th><th>النقاط / المستوى</th><th>الإطار الحالي</th><th>حذف</th>
-        </tr>
-      </thead>
-      <tbody id="players-table-body"><tr><td class="table-empty" colspan="9">جارٍ التحميل…</td></tr></tbody>
-    </table>
-  </div>
-</div>
-
-<div class="adm-tab-panel" data-user-panel="streamers">
-  <div class="field" style="max-width:420px; margin-bottom: var(--space-3);">
-    <label for="user-search-streamers">بحث بين الستريمرز (اسم المستخدم / الإيميل / الـID العام / تيك توك / المعرّف الداخلي)</label>
-    <input type="text" id="user-search-streamers" placeholder="اكتب للبحث…">
-  </div>
-  <div class="table-wrap">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>المعرّف</th><th>اسم المستخدم</th><th>البريد الإلكتروني</th><th>الدور</th><th>تيك توك</th>
-          <th>الـID العام</th><th>البثوث</th><th>الهدايا (القيمة)</th><th>الصلاحيات</th>
-          <th>النقاط / المستوى</th><th>الإطار الحالي</th><th>قيد الجهاز</th><th>حذف</th>
-        </tr>
-      </thead>
-      <tbody id="streamers-table-body"><tr><td class="table-empty" colspan="13">جارٍ التحميل…</td></tr></tbody>
-    </table>
-  </div>
-</div>
-
-</section>
-</div>
-<svg style="display:none" aria-hidden="true">
-<symbol id="icon-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-<circle cx="8" cy="9" r="3"/><circle cx="16.5" cy="9.5" r="2.5"/>
-<path d="M2 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M14.5 20c.2-2.8 2.2-5 4.8-5.3"/>
-</symbol>
-<symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-<path d="M4 12a8 8 0 018-8 8 8 0 017.4 5"/><polyline points="19 3 19 9 13 9"/>
-</symbol>
-</svg>
+<link rel="icon" href="favicon.ico">
+<!-- لوحة الأدمن الموحّدة: كل أقسام الأدمن بصفحة وحدة بشريط جانبي (design_handoff_admin_panel).
+     الصفحات القديمة (admin-settings / admin-grant-frame / admin-stats / admin-support)
+     صارت تحويلات لأقسامها هنا (#settings… إلخ). كل البيانات من auth/auth-client.js. -->
+<script>document.documentElement.style.visibility='hidden';</script>
 <script src="auth/auth-client.js"></script>
-<script>
-'use strict';
-(function () {
-    // كل مفتاح هنا يطلع كصندوق اختيار مستقل بعمود "الصلاحيات" لكل مستخدم،
-    // عبر commonPermCells أدناه -- بدون أي كود إضافي غير سطر هنا لأي
-    // صلاحية جديدة مشابهة مستقبلاً.
-    var KNOWN_PERMISSION_KEYS = ['can_run_games', 'can_manage_letters_cell'];
-    var PERMISSION_LABELS = {
-        // تحويل حساب لاعب لحساب ستريمر (تشغيل الألعاب يحتاج بعدها ربط تيك
-        // توك موثَّق فقط) + الإطار التلقائي. قفل الجهاز الواحد يشمل كل
-        // حسابات الستريمر (backend/auth/auth-service.js: checkDeviceLock).
-        can_run_games: 'تحويل لحساب ستريمر',
-        can_manage_letters_cell: 'صلاحية إدارة أسئلة خلية الحروف'
+<script src="js/dc-support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;background:#0b0d12;color:#e7e9ee;font-family:'IBM Plex Sans Arabic',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#a78bfa;text-decoration:none}a:hover{color:#c4b5fd}
+input,select,textarea,button{font-family:inherit}
+input::placeholder,textarea::placeholder{color:#5b6274}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#262a37;border-radius:10px;border:2px solid #0b0d12}::-webkit-scrollbar-track{background:transparent}
+</style>
+</helmet>
+<div dir="rtl" style="display:flex;height:100vh;overflow:hidden;background:#0b0d12;color:#e7e9ee;font-size:14px">
+
+  <aside style="width:{{ sideW }};flex-shrink:0;background:#0f1117;border-left:1px solid #1d2029;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;gap:10px;padding:18px 18px 16px">
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#a855f7);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;font-family:'IBM Plex Mono',monospace">AGP</div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <div style="font-weight:600;font-size:14px">منصة ألعاب أيمن</div>
+        <div style="font-size:12px;color:#5b6274">لوحة الأدمن</div>
+      </div>
+    </div>
+    <nav style="flex:1;overflow-y:auto;padding:6px 10px 16px;display:flex;flex-direction:column;gap:18px">
+      <sc-for list="{{ nav }}" as="g" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div style="font-size:11px;font-weight:600;color:#5b6274;padding:0 10px 6px;letter-spacing:.02em">{{ g.group }}</div>
+          <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="2">
+            <button onClick="{{ it.go }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;height:36px;padding:0 10px;border:none;border-radius:8px;cursor:pointer;text-align:right;font-size:13.5px;background:{{ it.bg }};color:{{ it.color }};font-weight:{{ it.weight }}" style-hover="background:#1a1d26">
+              <span style="display:flex;align-items:center;gap:10px"><span style="width:6px;height:6px;border-radius:2px;background:{{ it.dot }}"></span>{{ it.label }}</span>
+              <sc-if value="{{ it.badge }}" hint-placeholder-val="{{ false }}"><span style="min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#7c3aed;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ it.badge }}</span></sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </sc-for>
+    </nav>
+  </aside>
+
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <header style="height:60px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 28px;border-bottom:1px solid #1d2029;background:#0b0d12">
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#5b6274">
+        <span>{{ crumbGroup }}</span><span>/</span><span style="color:#e7e9ee;font-weight:500">{{ crumbPage }}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;padding:3px 8px;border-radius:6px;background:#241a3d;color:#c4b5fd">{{ meRole }}</span>
+        <span style="font-size:13px">{{ meName }}</span>
+        <button onClick="{{ logout }}" style="height:32px;padding:0 12px;border-radius:8px;background:transparent;color:#9199ab;border:1px solid #262a37;font-size:12.5px;cursor:pointer" style-hover="color:#e7e9ee;border-color:#2f3342">تسجيل خروج</button>
+      </div>
+    </header>
+
+    <div style="flex:1;overflow-y:auto">
+      <div style="max-width:1240px;margin:0 auto;padding:28px 28px 64px;display:flex;flex-direction:column;gap:20px">
+
+        <!-- ============ USERS ============ -->
+        <sc-if value="{{ is.users }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <h1 style="margin:0;font-size:22px;font-weight:600">المستخدمون</h1>
+              <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:640px;text-wrap:pretty">ستريمر = أدمن، أو صلاحية «تحويل لحساب ستريمر» مفعّلة، أو طلب يكون ستريمر وقت التسجيل. الباقي لاعب. اضغط على أي صف لعرض التفاصيل والإجراءات.</p></sc-if>
+            </div>
+            <button onClick="{{ refresh }}" style="height:36px;padding:0 14px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:13px;cursor:pointer" style-hover="background:#21242f">تحديث</button>
+          </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid #262a37;flex-wrap:wrap">
+              <div style="display:inline-flex;gap:2px;padding:3px;background:#0b0d12;border:1px solid #262a37;border-radius:10px">
+                <sc-for list="{{ usersTabs }}" as="t" hint-placeholder-count="2">
+                  <button onClick="{{ t.go }}" style="height:30px;padding:0 14px;border:none;border-radius:7px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;background:{{ t.bg }};color:{{ t.color }}">{{ t.label }}<span style="font-family:'IBM Plex Mono',monospace;font-size:11px;opacity:.75">{{ t.count }}</span></button>
+                </sc-for>
+              </div>
+              <input value="{{ q }}" onChange="{{ onQ }}" placeholder="{{ searchPh }}" style="width:100%;max-width:420px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none">
+            </div>
+            <div style="overflow-x:auto">
+              <sc-if value="{{ isPlayersTab }}" hint-placeholder-val="{{ true }}">
+                <table style="width:100%;border-collapse:collapse;min-width:860px">
+                  <thead><tr>
+                    <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 16px;border-bottom:1px solid #262a37">المعرّف</th>
+                    <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 16px;border-bottom:1px solid #262a37">المستخدم</th>
+                    <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 16px;border-bottom:1px solid #262a37">تيك توك</th>
+                    <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 16px;border-bottom:1px solid #262a37">الـID العام</th>
+                    <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 16px;border-bottom:1px solid #262a37">الصلاحيات</th>
+                    <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 16px;border-bottom:1px solid #262a37">النقاط / المستوى</th>
+                    <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 16px;border-bottom:1px solid #262a37">الإطار الحالي</th>
+                    <th style="border-bottom:1px solid #262a37"></th>
+                  </tr></thead>
+                  <tbody>
+                    <sc-for list="{{ rows }}" as="u" hint-placeholder-count="5">
+                      <tr onClick="{{ u.open }}" style="cursor:pointer" style-hover="background:#181b23">
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9199ab">{{ u.id }}</td>
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:500">{{ u.name }}</span><span style="font-size:12px;color:#9199ab">{{ u.email }}</span></div></td>
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029;font-size:13px;color:#c7cbd6">{{ u.tiktokLabel }}</td>
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12px">{{ u.publicId }}</td>
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029"><div style="display:flex;gap:4px;flex-wrap:wrap"><sc-for list="{{ u.perms }}" as="p"><span style="font-size:11px;padding:2px 8px;border-radius:6px;background:#1d2130;color:#c4b5fd">{{ p }}</span></sc-for><sc-if value="{{ u.noPerms }}"><span style="color:#5b6274">—</span></sc-if></div></td>
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029;font-size:13px">{{ u.levelLabel }}</td>
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029;font-size:13px;color:#c7cbd6">{{ u.frameLabel }}</td>
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029;text-align:left;color:#5b6274;font-size:12px">تفاصيل ←</td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </sc-if>
+              <sc-if value="{{ isStreamersTab }}" hint-placeholder-val="{{ false }}">
+                <table style="width:100%;border-collapse:collapse;min-width:960px">
+                  <thead><tr>
+                    <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 16px;border-bottom:1px solid #262a37">المعرّف</th>
+                    <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 16px;border-bottom:1px solid #262a37">المستخدم</th>
+                    <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 16px;border-bottom:1px solid #262a37">الدور</th>
+                    <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 16px;border-bottom:1px solid #262a37">تيك توك</th>
+                    <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 16px;border-bottom:1px solid #262a37">البثوث</th>
+                    <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 16px;border-bottom:1px solid #262a37">الهدايا (القيمة)</th>
+                    <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 16px;border-bottom:1px solid #262a37">النقاط / المستوى</th>
+                    <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 16px;border-bottom:1px solid #262a37">قيد الجهاز</th>
+                    <th style="border-bottom:1px solid #262a37"></th>
+                  </tr></thead>
+                  <tbody>
+                    <sc-for list="{{ rows }}" as="u" hint-placeholder-count="4">
+                      <tr onClick="{{ u.open }}" style="cursor:pointer" style-hover="background:#181b23">
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9199ab">{{ u.id }}</td>
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:500">{{ u.name }}</span><span style="font-size:12px;color:#9199ab">{{ u.email }}</span></div></td>
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029"><div style="display:flex;align-items:center;gap:6px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;padding:2px 8px;border-radius:6px;background:{{ u.roleBg }};color:{{ u.roleColor }}">{{ u.role }}</span><sc-if value="{{ u.requested }}"><span title="طلب يكون ستريمر بالتسجيل" style="font-size:11px;color:#9199ab">طلب بالتسجيل</span></sc-if></div></td>
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029;font-size:13px;color:#c7cbd6">{{ u.tiktokLabel }}</td>
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ u.streams }}</td>
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ u.giftsLabel }}</td>
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029;font-size:13px">{{ u.levelLabel }}</td>
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px"><span style="width:7px;height:7px;border-radius:50%;background:{{ u.devColor }}"></span>{{ u.devLabel }}</span></td>
+                        <td style="padding:12px 16px;border-bottom:1px solid #1d2029;text-align:left;color:#5b6274;font-size:12px">تفاصيل ←</td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </sc-if>
+              <sc-if value="{{ rowsEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:40px;text-align:center;color:#5b6274;font-size:13px">{{ rowsEmptyText }}</div></sc-if>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ SUPPORT ============ -->
+        <sc-if value="{{ is.support }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <h1 style="margin:0;font-size:22px;font-weight:600">تذاكر الدعم</h1>
+          </div>
+          <div style="display:grid;grid-template-columns:{{ tCols }};grid-template-rows:{{ tRows }};gap:16px;height:{{ tHeight }};min-height:560px">
+            <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;display:flex;flex-direction:column;overflow:hidden">
+              <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #262a37">
+                <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-weight:600">التذاكر</span><span style="font-size:12px;padding:2px 8px;border-radius:6px;background:#172a45;color:#93c5fd">{{ newCount }} جديدة</span></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                  <select value="{{ tType }}" onChange="{{ onTType }}" style="height:34px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="">كل الأنواع</option><option value="suggestion">اقتراح</option><option value="question">سؤال</option><option value="bug">مشكلة تقنية</option></select>
+                  <select value="{{ tStatus }}" onChange="{{ onTStatus }}" style="height:34px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="">كل الحالات</option><option value="new">جديدة</option><option value="in_progress">قيد المعالجة</option><option value="closed">مغلقة</option></select>
+                </div>
+                <input value="{{ tQ }}" onChange="{{ onTQ }}" maxLength="100" placeholder="بحث: عنوان، نص، اسم، إيميل، تيك توك، أو #رقم" style="height:34px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none">
+              </div>
+              <div style="flex:1;overflow-y:auto">
+                <sc-for list="{{ ticketRows }}" as="t" hint-placeholder-count="5">
+                  <button onClick="{{ t.open }}" style="width:100%;text-align:right;border:none;border-bottom:1px solid #1d2029;padding:12px 16px;cursor:pointer;display:flex;flex-direction:column;gap:6px;color:#e7e9ee;background:{{ t.bg }};box-shadow:{{ t.shadow }}" style-hover="background:#1a1d26">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%"><span style="font-weight:500;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.title }}</span><span style="flex-shrink:0;font-size:11px;padding:2px 8px;border-radius:6px;background:{{ t.stBg }};color:{{ t.stColor }}">{{ t.status }}</span></div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:#9199ab"><span style="font-family:'IBM Plex Mono',monospace">#{{ t.id }}</span><span>{{ t.type }}</span><span>{{ t.user }}</span><sc-if value="{{ t.tiktok }}"><span dir="ltr">@{{ t.tiktok }}</span></sc-if><span>{{ t.updated }}</span><sc-if value="{{ t.waiting }}"><span style="color:#fbbf24">● بانتظار رد</span></sc-if></div>
+                  </button>
+                </sc-for>
+                <sc-if value="{{ ticketsNote }}"><div style="padding:40px 16px;text-align:center;color:#5b6274;font-size:13px">{{ ticketsNote }}</div></sc-if>
+                <sc-if value="{{ hasMoreTickets }}"><div style="padding:14px;display:flex;justify-content:center"><button onClick="{{ loadMore }}" style="height:32px;padding:0 14px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12.5px;cursor:pointer">تحميل المزيد</button></div></sc-if>
+              </div>
+            </div>
+            <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;display:flex;flex-direction:column;overflow:hidden;min-width:0">
+              <sc-if value="{{ noTicket }}" hint-placeholder-val="{{ false }}"><div style="flex:1;display:flex;align-items:center;justify-content:center;color:#5b6274">اختر تذكرة من القائمة لعرضها.</div></sc-if>
+              <sc-if value="{{ hasTicket }}" hint-placeholder-val="{{ true }}">
+                <div style="padding:16px 20px;border-bottom:1px solid #262a37;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+                  <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+                    <div style="font-size:16px;font-weight:600">{{ tk.title }}</div>
+                    <div style="font-size:12px;color:#9199ab">#{{ tk.id }} · {{ tk.type }} · فُتحت {{ tk.created }}</div>
+                  </div>
+                  <div style="display:flex;gap:8px;align-items:center">
+                    <select value="{{ statusDraft }}" onChange="{{ onStatusDraft }}" style="height:34px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="new">جديدة</option><option value="in_progress">قيد المعالجة</option><option value="closed">مغلقة</option></select>
+                    <button onClick="{{ changeStatus }}" style="height:34px;padding:0 12px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12.5px;cursor:pointer">تغيير الحالة</button>
+                  </div>
+                </div>
+                <div style="flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:16px">
+                  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;padding:14px;border:1px solid #262a37;border-radius:10px;background:#11131a">
+                    <sc-for list="{{ tk.userFields }}" as="f" hint-placeholder-count="7">
+                      <div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:11px;color:#5b6274">{{ f.k }}</span><span style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.v }}</span></div>
+                    </sc-for>
+                  </div>
+                  <sc-for list="{{ tk.msgs }}" as="m" hint-placeholder-count="3">
+                    <div style="display:flex;justify-content:{{ m.align }}">
+                      <div style="max-width:78%;padding:10px 14px;border-radius:12px;display:flex;flex-direction:column;gap:6px;background:{{ m.bg }};border:1px solid {{ m.border }}">
+                        <span style="font-size:12px;font-weight:600;color:{{ m.nameColor }}">{{ m.from }}</span>
+                        <span style="font-size:13.5px;line-height:1.7;text-wrap:pretty;white-space:pre-wrap">{{ m.text }}</span>
+                        <sc-for list="{{ m.files }}" as="f"><a href="{{ f.url }}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;background:#0b0d12;border:1px solid #262a37;font-size:12px;width:fit-content;color:#e7e9ee"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;padding:1px 5px;border-radius:4px;background:#262a37">{{ f.ext }}</span>{{ f.name }}<span style="color:#5b6274">{{ f.size }}</span></a></sc-for>
+                        <span style="font-size:11px;color:#5b6274">{{ m.time }}</span>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="padding:14px 20px;border-top:1px solid #262a37;display:flex;flex-direction:column;gap:10px">
+                  <textarea value="{{ reply }}" onChange="{{ onReply }}" rows="3" placeholder="اكتب ردك للمستخدم… (يوصله إشعار بالإيميل)" style="resize:vertical;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:10px 12px;font-size:13.5px;outline:none;line-height:1.6"></textarea>
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:{{ replyCountColor }}">{{ replyCount }}/5000</span>
+                    <div style="display:flex;gap:8px">
+                      <button onClick="{{ sendClose }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">إرسال وإغلاق التذكرة</button>
+                      <button onClick="{{ sendReply }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">إرسال الرد</button>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ TARGET USER (collectibles) ============ -->
+        <sc-if value="{{ is.needsPicker }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <h1 style="margin:0;font-size:22px;font-weight:600">{{ crumbPage }}</h1>
+            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:720px;text-wrap:pretty">{{ pageDesc }}</p></sc-if>
+          </div>
+          <div style="position:sticky;top:-28px;z-index:5;background:#14161d;border:1px solid #262a37;border-radius:14px;box-shadow:0 10px 30px -12px rgba(0,0,0,.6)">
+            <div style="display:flex;align-items:flex-end;gap:12px;padding:14px 16px;flex-wrap:wrap">
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">نوع الآيدي</span>
+                <select value="{{ pickType }}" onChange="{{ onPickType }}" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="internal">الآيدي الداخلي</option><option value="profile">آيدي البروفايل</option></select>
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">الآيدي</span>
+                <input value="{{ pickId }}" onChange="{{ onPickId }}" placeholder="{{ pickPh }}" style="width:150px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace">
+              </label>
+              <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:220px"><span style="font-size:12px;color:#9199ab">صاحب الحساب</span>
+                <div style="height:36px;display:flex;align-items:center;gap:8px;padding:0 12px;border-radius:8px;border:1px dashed {{ pick.border }};background:{{ pick.bg }};font-size:13px;color:{{ pick.color }}">
+                  <sc-if value="{{ pick.ok }}"><span style="width:22px;height:22px;border-radius:50%;background:#2a2f40;display:flex;align-items:center;justify-content:center;font-size:11px;color:#c4b5fd">{{ pick.initial }}</span></sc-if>
+                  <span>{{ pick.label }}</span>
+                </div>
+              </div>
+            </div>
+            <sc-if value="{{ is.grant }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:flex-end;gap:12px;padding:14px 16px;border-top:1px solid #1f222c;flex-wrap:wrap">
+                <div style="display:flex;flex-direction:column;gap:6px;min-width:220px"><span style="font-size:12px;color:#9199ab">الإطار المختار</span>
+                  <div style="height:36px;display:flex;align-items:center;gap:8px;padding:0 10px;border-radius:8px;border:1px dashed {{ selFrame.border }};font-size:13px;color:{{ selFrame.color }}">
+                    <sc-if value="{{ selFrame.ok }}"><img src="{{ selFrame.img }}" alt="" style="width:26px;height:26px;border-radius:6px;object-fit:contain"></sc-if>
+                    <span>{{ selFrame.label }}</span>
+                  </div>
+                </div>
+                <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">نموذج الدخولية (اختياري)</span>
+                  <select value="{{ grantTpl }}" onChange="{{ onGrantTpl }}" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="">افتراضي الكتالوج</option><option value="gold">الذهبي الفخم</option><option value="neon">النيون المستقبلي</option><option value="fire">الناري القوي</option><option value="ice">الجليدي الملكي</option></select>
+                </label>
+                <label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px"><span style="font-size:12px;color:#9199ab">نص الدخولية (اختياري)</span>
+                  <input value="{{ grantText }}" onChange="{{ onGrantText }}" placeholder="اتركه فاضي لاستخدام النص الافتراضي" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none">
+                </label>
+                <div style="display:flex;gap:8px">
+                  <button onClick="{{ revokeFrame }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">سحب الإطار</button>
+                  <button onClick="{{ grantFrame }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">منح الإطار</button>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- GRANT: library -->
+        <sc-if value="{{ is.grant }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid #262a37;flex-wrap:wrap">
+              <span style="font-weight:600">مكتبة الإطارات</span>
+              <input value="{{ libQ }}" onChange="{{ onLibQ }}" placeholder="اكتب اسم الإطار أو النادي…" style="width:100%;max-width:300px;height:34px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none">
+            </div>
+            <div style="display:flex;gap:4px;padding:10px 12px;border-bottom:1px solid #262a37;overflow-x:auto">
+              <sc-for list="{{ libTabs }}" as="t" hint-placeholder-count="7">
+                <button onClick="{{ t.go }}" style="flex-shrink:0;height:30px;padding:0 12px;border-radius:7px;cursor:pointer;font-size:12.5px;display:flex;align-items:center;gap:6px;border:1px solid {{ t.border }};background:{{ t.bg }};color:{{ t.color }}">{{ t.label }}<span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;opacity:.7">{{ t.count }}</span></button>
+              </sc-for>
+            </div>
+            <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">
+              <sc-for list="{{ libFrames }}" as="f" hint-placeholder-count="8">
+                <button onClick="{{ f.pick }}" style="display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:10px;cursor:pointer;text-align:right;color:#e7e9ee;border:2px solid {{ f.border }};background:{{ f.bg }}" style-hover="border-color:#7c3aed">
+                  <div style="height:70px;border-radius:6px;background:#0b0d12;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="{{ f.file }}" alt="" loading="lazy" style="max-width:100%;max-height:70px;object-fit:contain"></div>
+                  <span style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.name }}</span>
+                  <span style="font-size:11px;color:#4ade80">جاهز</span>
+                </button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ libEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:0 16px 32px;text-align:center;color:#5b6274;font-size:13px">لا توجد إطارات بهذا القسم بعد.</div></sc-if>
+          </div>
+        </sc-if>
+
+        <!-- ENTRANCES -->
+        <sc-if value="{{ is.entrances }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+              <span style="font-size:12px;color:#9199ab">النموذج</span>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px">
+                <sc-for list="{{ entranceModels }}" as="m" hint-placeholder-count="4">
+                  <button onClick="{{ m.pick }}" style="display:flex;flex-direction:column;gap:10px;padding:10px;border-radius:10px;cursor:pointer;text-align:right;color:#e7e9ee;border:2px solid {{ m.border }};background:{{ m.bg }}">
+                    <div style="height:56px;border-radius:6px;background:{{ m.swatch }}"></div>
+                    <span style="font-size:13px;font-weight:500">{{ m.label }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px;border-top:1px solid #1f222c">
+              <span style="font-size:13.5px">النص</span>
+              <input value="{{ entranceText }}" onChange="{{ onEntranceText }}" placeholder="نص الدخولية" style="width:100%;max-width:420px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none">
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px;border-top:1px solid #1f222c;flex-wrap:wrap">
+              <span style="font-size:12.5px;color:#9199ab;max-width:520px;text-wrap:pretty">لو مستخدم أوقف دخوليته بنفسه من بروفايله، تعيين دخولية جديدة هنا يعيد تفعيلها تلقائياً.</span>
+              <div style="display:flex;gap:8px">
+                <button onClick="{{ removeEntrance }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">إزالة الدخولية</button>
+                <button onClick="{{ saveEntrance }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">حفظ الدخولية</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ELIMINATION CARDS -->
+        <sc-if value="{{ is.elim }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+              <span style="font-size:12px;color:#9199ab">بطاقة الإقصاء</span>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+                <sc-for list="{{ elimCards }}" as="c" hint-placeholder-count="2">
+                  <button onClick="{{ c.pick }}" style="display:flex;flex-direction:column;gap:10px;padding:10px;border-radius:10px;cursor:pointer;text-align:right;color:#e7e9ee;border:2px solid {{ c.border }};background:{{ c.bg }}" style-hover="border-color:#7c3aed">
+                    <div style="aspect-ratio:16/10;border-radius:8px;background:#0b0d12;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="{{ c.img }}" alt="" loading="lazy" style="max-width:100%;max-height:100%;object-fit:contain"></div>
+                    <span style="font-size:13px;font-weight:500">{{ c.label }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid #1f222c">
+              <button onClick="{{ revokeCard }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">سحب البطاقة</button>
+              <button onClick="{{ grantCard }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">منح البطاقة</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- CODES -->
+        <sc-if value="{{ is.codes }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <h1 style="margin:0;font-size:22px;font-weight:600">أكواد الاسترداد</h1>
+            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:720px;text-wrap:pretty">اختر الإطار، وحدد العدد، ثم انسخ الأكواد وارفعها في المتجر. كل كود يُستخدم مرة وحدة فقط ويمنح الإطار بدون دخولية.</p></sc-if>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start">
+            <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+              <div style="padding:14px 18px;font-weight:600;border-bottom:1px solid #262a37">توليد دفعة جديدة</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px">
+                <span style="font-size:13.5px">الإطار</span>
+                <select value="{{ codesFrame }}" onChange="{{ onCodesFrame }}" style="width:100%;max-width:240px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px">
+                  <sc-for list="{{ allFrames }}" as="f"><option value="{{ f.key }}">{{ f.name }}</option></sc-for>
+                </select>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px;border-top:1px solid #1f222c">
+                <span style="font-size:13.5px">عدد الأكواد</span>
+                <input type="number" min="1" max="500" value="{{ codesCount }}" onChange="{{ onCodesCount }}" style="width:110px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace">
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px;border-top:1px solid #1f222c">
+                <span style="font-size:13.5px">ملاحظة (اختياري)</span>
+                <input value="{{ codesNote }}" onChange="{{ onCodesNote }}" placeholder="دفعة متجر زد — أكتوبر" style="width:100%;max-width:240px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none">
+              </div>
+              <div style="display:flex;justify-content:flex-end;padding:14px 18px;border-top:1px solid #1f222c">
+                <button onClick="{{ genCodes }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">توليد الأكواد</button>
+              </div>
+            </div>
+            <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden;display:flex;flex-direction:column">
+              <div style="padding:10px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #262a37"><span style="font-weight:600">ناتج التوليد</span><button onClick="{{ copyCodes }}" style="height:32px;padding:0 12px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12.5px;cursor:pointer">نسخ الأكواد</button></div>
+              <textarea readOnly="{{ true }}" rows="8" dir="ltr" value="{{ codesOut }}" placeholder="الأكواد تظهر هنا بعد التوليد" style="border:none;resize:none;background:#0b0d12;color:#c4b5fd;padding:14px 18px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.8;outline:none"></textarea>
+            </div>
+          </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="padding:14px 18px;font-weight:600;border-bottom:1px solid #262a37">كل الأكواد</div>
+            <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:720px">
+              <thead><tr>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الكود</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الإطار</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الملاحظة</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الحالة</th>
+              </tr></thead>
+              <tbody><sc-for list="{{ codeRows }}" as="c" hint-placeholder-count="4"><tr>
+                <td dir="ltr" style="text-align:right;padding:11px 18px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ c.code }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ c.frame }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;color:#9199ab">{{ c.note }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:12.5px;color:{{ c.color }}">{{ c.status }}</td>
+              </tr></sc-for></tbody>
+            </table></div>
+          </div>
+        </sc-if>
+
+        <!-- CATALOG -->
+        <sc-if value="{{ is.catalog }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <h1 style="margin:0;font-size:22px;font-weight:600">كتالوج الإطارات</h1>
+              <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:720px;text-wrap:pretty">11 إطار ثابت: 4 "خاصة" (تأتي مع دخولية + توهج تلقائياً عند منحها) و7 "مستوى" (تُفتح تلقائياً عند بلوغ اللاعب عدد النقاط المطلوب).</p></sc-if>
+            </div>
+            <button onClick="{{ refresh }}" style="height:36px;padding:0 14px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:13px;cursor:pointer">تحديث</button>
+          </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;min-width:1000px">
+              <thead><tr>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 14px;border-bottom:1px solid #262a37">النوع</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 14px;border-bottom:1px solid #262a37">اسم الملف</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 14px;border-bottom:1px solid #262a37">الاسم المعروض (عربي)</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 14px;border-bottom:1px solid #262a37">نقاط المستوى المطلوبة</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 14px;border-bottom:1px solid #262a37">نموذج الدخولية الافتراضي</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 14px;border-bottom:1px solid #262a37">نص الدخولية الافتراضي</th>
+                <th style="border-bottom:1px solid #262a37"></th>
+              </tr></thead>
+              <tbody><sc-for list="{{ catalog }}" as="c" hint-placeholder-count="11"><tr>
+                <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><span style="font-size:11px;padding:2px 8px;border-radius:6px;background:{{ c.typeBg }};color:{{ c.typeColor }}">{{ c.type }}</span></td>
+                <td dir="ltr" style="text-align:right;padding:10px 14px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9199ab">{{ c.file }}</td>
+                <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><input value="{{ c.name }}" onChange="{{ c.onName }}" style="width:150px;height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none"></td>
+                <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><sc-if value="{{ c.isLevel }}"><input type="number" value="{{ c.points }}" onChange="{{ c.onPoints }}" placeholder="غير مفعّل" style="width:110px;height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></sc-if><sc-if value="{{ c.isSpecial }}"><span style="color:#5b6274">—</span></sc-if></td>
+                <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><sc-if value="{{ c.isSpecial }}"><select value="{{ c.model }}" onChange="{{ c.onModel }}" style="height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 8px;font-size:13px"><option value="">—</option><option value="gold">الذهبي الفخم</option><option value="neon">النيون المستقبلي</option><option value="fire">الناري القوي</option><option value="ice">الجليدي الملكي</option></select></sc-if><sc-if value="{{ c.isLevel }}"><span style="color:#5b6274">—</span></sc-if></td>
+                <td style="padding:10px 14px;border-bottom:1px solid #1d2029"><sc-if value="{{ c.isSpecial }}"><input value="{{ c.text }}" onChange="{{ c.onText }}" style="width:170px;height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none"></sc-if><sc-if value="{{ c.isLevel }}"><span style="color:#5b6274">—</span></sc-if></td>
+                <td style="padding:10px 14px;border-bottom:1px solid #1d2029;text-align:left"><button onClick="{{ c.save }}" style="height:30px;padding:0 12px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12.5px;cursor:pointer" style-hover="background:#7c3aed;border-color:#7c3aed">حفظ</button></td>
+              </tr></sc-for></tbody>
+            </table>
+          </div>
+        </sc-if>
+
+        <!-- EXCLUSIVE -->
+        <sc-if value="{{ is.exclusive }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <h1 style="margin:0;font-size:22px;font-weight:600">إطارات حصرية</h1>
+            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab">إطارات إضافية بأسماء ملفات حرة… تسجّلها هنا لتصبح متاحة للمنح.</p></sc-if>
+          </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="display:flex;align-items:flex-end;gap:12px;padding:16px 18px;flex-wrap:wrap;border-bottom:1px solid #262a37">
+              <label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px"><span style="font-size:12px;color:#9199ab">اسم الملف</span><input dir="ltr" value="{{ exFile }}" onChange="{{ onExFile }}" placeholder="frame-exclusive-1.png" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace;text-align:right"></label>
+              <label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px"><span style="font-size:12px;color:#9199ab">الاسم المعروض (عربي)</span><input value="{{ exName }}" onChange="{{ onExName }}" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none"></label>
+              <button onClick="{{ addExclusive }}" style="height:36px;padding:0 18px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer">إضافة</button>
+            </div>
+            <table style="width:100%;border-collapse:collapse">
+              <thead><tr>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37;width:60px">#</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">اسم الملف</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الاسم المعروض</th>
+              </tr></thead>
+              <tbody><sc-for list="{{ exclusives }}" as="e" hint-placeholder-count="2"><tr>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#9199ab">{{ e.n }}</td>
+                <td dir="ltr" style="text-align:right;padding:11px 18px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ e.file }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ e.name }}</td>
+              </tr></sc-for></tbody>
+            </table>
+          </div>
+        </sc-if>
+
+        <!-- ANNOUNCEMENT -->
+        <sc-if value="{{ is.announce }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <h1 style="margin:0;font-size:22px;font-weight:600">الإعلان للزوار</h1>
+            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:720px">يظهر كنافذة منبثقة لكل زائر يفتح الصفحة الرئيسية، في كل مرة يدخل فيها، لحد ما تزيله يدوياً.</p></sc-if>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:10px;border:1px solid {{ ann.border }};background:{{ ann.bg }};font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:{{ ann.dot }}"></span>{{ ann.label }}</div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:13.5px">نص الإعلان</span>
+              <textarea value="{{ annText }}" onChange="{{ onAnnText }}" rows="3" placeholder="اكتب النص اللي تبي المستخدمين يشوفونه…" style="resize:vertical;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:10px 12px;font-size:13.5px;outline:none;line-height:1.6"></textarea>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px;border-top:1px solid #1f222c;flex-wrap:wrap">
+              <div style="display:flex;flex-direction:column;gap:4px;max-width:440px"><span style="font-size:13.5px">اسم ملف الصورة (اختياري)</span><span style="font-size:12px;color:#5b6274;text-wrap:pretty">ارفع الصورة على GitHub بجذر المستودع (بجانب logo.png). اتركه فاضي لو الإعلان نص فقط.</span></div>
+              <input dir="ltr" value="{{ annImage }}" onChange="{{ onAnnImage }}" placeholder="announcement.png" style="width:100%;max-width:300px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace;text-align:right">
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid #1f222c">
+              <button onClick="{{ removeAnn }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">إزالة الإعلان الحالي</button>
+              <button onClick="{{ publishAnn }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">نشر / تحديث</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- SUPPORTERS -->
+        <sc-if value="{{ is.supporters }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <h1 style="margin:0;font-size:22px;font-weight:600">داعمو المنصة</h1>
+            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:720px;text-wrap:pretty">إدخال يدوي حالياً — أضف كل دعم تشوفه بلوحة تحكم كريترز… يظهر فوراً بالشريط المتحرك بالصفحة الرئيسية وبصفحة "توب الداعمين".</p></sc-if>
+          </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="display:flex;align-items:flex-end;gap:12px;padding:16px 18px;flex-wrap:wrap;border-bottom:1px solid #262a37">
+              <label style="display:flex;flex-direction:column;gap:6px;min-width:160px"><span style="font-size:12px;color:#9199ab">اسم الداعم</span><input value="{{ supName }}" onChange="{{ onSupName }}" placeholder="أحمد" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none"></label>
+              <label style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px"><span style="font-size:12px;color:#9199ab">رسالة الداعم (اختياري)</span><input value="{{ supMsg }}" onChange="{{ onSupMsg }}" placeholder="بالتوفيق للمنصة!" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none"></label>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">المبلغ (دولار)</span><input type="number" min="0" step="0.01" value="{{ supAmount }}" onChange="{{ onSupAmount }}" placeholder="0" style="width:140px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></label>
+              <button onClick="{{ addSupporter }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer">إضافة دعم</button>
+            </div>
+            <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:620px">
+              <thead><tr>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الاسم</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الرسالة</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">المبلغ</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">التاريخ</th>
+                <th style="border-bottom:1px solid #262a37"></th>
+              </tr></thead>
+              <tbody><sc-for list="{{ supporters }}" as="s" hint-placeholder-count="4"><tr>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-weight:500">{{ s.name }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;color:#9199ab;font-size:13px">{{ s.msg }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12.5px">${{ s.amount }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:12.5px;color:#9199ab">{{ s.date }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;text-align:left"><button onClick="{{ s.del }}" style="height:28px;padding:0 10px;border-radius:7px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:12px;cursor:pointer">حذف</button></td>
+              </tr></sc-for></tbody>
+            </table></div>
+            <sc-if value="{{ supportersEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:32px;text-align:center;color:#5b6274;font-size:13px">لا يوجد داعمون بعد.</div></sc-if>
+          </div>
+        </sc-if>
+
+        <!-- PARTNERS -->
+        <sc-if value="{{ is.partners }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <h1 style="margin:0;font-size:22px;font-weight:600">شركاء الإبداع</h1>
+            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:720px;text-wrap:pretty">اكتب معرّف الحساب (ID) وتأكد من الاسم والصورة قبل الإضافة، ثم اختر الفئة… البيانات تُسحب حيّة من حسابه.</p></sc-if>
+          </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="display:flex;align-items:flex-end;gap:12px;padding:16px 18px;flex-wrap:wrap;border-bottom:1px solid #262a37">
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">معرّف الحساب (ID)</span>
+                <div style="display:flex;gap:6px"><input value="{{ partnerQ }}" onChange="{{ onPartnerQ }}" placeholder="AY-0001" style="width:150px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"><button onClick="{{ searchPartner }}" style="height:36px;padding:0 14px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:13px;cursor:pointer">بحث</button></div>
+              </label>
+              <div style="display:flex;flex-direction:column;gap:6px;min-width:200px;flex:1"><span style="font-size:12px;color:#9199ab">معاينة الحساب</span>
+                <div style="height:36px;display:flex;align-items:center;gap:10px;padding:0 10px;border-radius:8px;border:1px dashed #2f3342;font-size:13px;color:{{ partnerPreview.color }}">
+                  <sc-if value="{{ partnerPreview.ok }}"><span style="position:relative;overflow:hidden;width:28px;height:28px;border-radius:50%;background:#2a2f40;display:flex;align-items:center;justify-content:center;font-size:12px;color:#c4b5fd">{{ partnerPreview.initial }}<sc-if value="{{ partnerPreview.avatar }}"><img src="{{ partnerPreview.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span></sc-if>
+                  <span>{{ partnerPreview.label }}</span>
+                </div>
+              </div>
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">الفئة</span><select value="{{ partnerCat }}" onChange="{{ onPartnerCat }}" style="height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="idea">أصحاب الأفكار</option><option value="dev">فريق التطوير</option></select></label>
+              <button onClick="{{ addPartner }}" disabled="{{ partnerAddDisabled }}" style="height:36px;padding:0 18px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer;opacity:{{ partnerAddOpacity }}">إضافة</button>
+            </div>
+            <table style="width:100%;border-collapse:collapse">
+              <thead><tr>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الاسم</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">ID</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الفئة</th>
+                <th style="border-bottom:1px solid #262a37"></th>
+              </tr></thead>
+              <tbody><sc-for list="{{ partners }}" as="p" hint-placeholder-count="3"><tr>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-weight:500">{{ p.name }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ p.pid }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ p.cat }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029;text-align:left"><button onClick="{{ p.del }}" style="height:28px;padding:0 10px;border-radius:7px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:12px;cursor:pointer">حذف</button></td>
+              </tr></sc-for></tbody>
+            </table>
+            <sc-if value="{{ partnersEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:32px;text-align:center;color:#5b6274;font-size:13px">لا يوجد شركاء إبداع بعد.</div></sc-if>
+          </div>
+        </sc-if>
+
+        <!-- THEME -->
+        <sc-if value="{{ is.theme }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <h1 style="margin:0;font-size:22px;font-weight:600">ثيم المناسبات</h1>
+            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:720px;text-wrap:pretty">يبدّل ألوان الصفحة الرئيسية مؤقتاً لمناسبة معيّنة… "إلغاء التفعيل" يرجّع الموقع لألوانه الافتراضية فوراً لكل زائر.</p></sc-if>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:10px;border:1px solid {{ themeStatus.border }};background:{{ themeStatus.bg }};font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:{{ themeStatus.dot }}"></span>{{ themeStatus.label }}</div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px;flex-wrap:wrap">
+              <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:13.5px">ثيم جاهز</span><span style="font-size:12px;color:#5b6274">الأكواد بالثيمات الجاهزة تقريبية…</span></div>
+              <select value="{{ themePreset }}" onChange="{{ onThemePreset }}" style="width:100%;max-width:300px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px"><option value="">— اختر ثيماً جاهزاً (اختياري) —</option><option value="national-day">🇸🇦 اليوم الوطني السعودي</option><option value="founding-day">🏛️ يوم التأسيس</option><option value="custom">🎨 مخصّص (عدّل الألوان يدوياً)</option></select>
+            </div>
+            <sc-for list="{{ themeColors }}" as="c" hint-placeholder-count="3">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px;border-top:1px solid #1f222c">
+                <span style="font-size:13.5px">{{ c.label }}</span>
+                <label style="display:flex;align-items:center;gap:10px;height:36px;padding:0 6px 0 12px;border:1px solid #2f3342;border-radius:8px;background:#0b0d12;cursor:pointer">
+                  <span dir="ltr" style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#9199ab">{{ c.value }}</span>
+                  <input type="color" value="{{ c.value }}" onChange="{{ c.onChange }}" style="width:26px;height:26px;border:none;padding:0;background:none;cursor:pointer">
+                </label>
+              </div>
+            </sc-for>
+            <div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid #1f222c">
+              <button onClick="{{ disableTheme }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">إلغاء التفعيل (رجوع للوضع الطبيعي)</button>
+              <button onClick="{{ enableTheme }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">تفعيل الثيم</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- LEVELS -->
+        <sc-if value="{{ is.levels }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <h1 style="margin:0;font-size:22px;font-weight:600">مستويات الستريمر (SP)</h1>
+              <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:720px;text-wrap:pretty">7 مستويات ثابتة العدد… تقدر تعدّل اسم كل مستوى وعتبة SP المطلوبة له فقط… SP تُحسب تلقائياً من (دقائق البث + قيمة الهدايا).</p></sc-if>
+            </div>
+            <button onClick="{{ refresh }}" style="height:36px;padding:0 14px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:13px;cursor:pointer">تحديث</button>
+          </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <table style="width:100%;border-collapse:collapse">
+              <thead><tr>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37;width:90px">الترتيب</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الاسم المعروض</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">عتبة SP المطلوبة</th>
+                <th style="border-bottom:1px solid #262a37"></th>
+              </tr></thead>
+              <tbody><sc-for list="{{ levels }}" as="l" hint-placeholder-count="7"><tr>
+                <td style="padding:10px 18px;border-bottom:1px solid #1d2029"><span style="display:inline-flex;width:26px;height:26px;border-radius:7px;background:#1d2130;color:#c4b5fd;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:12px">{{ l.n }}</span></td>
+                <td style="padding:10px 18px;border-bottom:1px solid #1d2029"><input value="{{ l.name }}" onChange="{{ l.onName }}" style="width:220px;height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none"></td>
+                <td style="padding:10px 18px;border-bottom:1px solid #1d2029"><input type="number" value="{{ l.sp }}" onChange="{{ l.onSp }}" style="width:130px;height:32px;background:#0b0d12;border:1px solid #2f3342;border-radius:7px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></td>
+                <td style="padding:10px 18px;border-bottom:1px solid #1d2029;text-align:left"><button onClick="{{ l.save }}" style="height:30px;padding:0 12px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12.5px;cursor:pointer" style-hover="background:#7c3aed;border-color:#7c3aed">حفظ</button></td>
+              </tr></sc-for></tbody>
+            </table>
+          </div>
+        </sc-if>
+
+        <!-- STATS -->
+        <sc-if value="{{ is.stats }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+            <h1 style="margin:0;font-size:22px;font-weight:600">الإحصائيات</h1>
+            <div style="display:flex;gap:10px;align-items:center">
+              <div style="display:inline-flex;gap:2px;padding:3px;background:#0b0d12;border:1px solid #262a37;border-radius:10px">
+                <sc-for list="{{ statsTabs }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.go }}" style="height:30px;padding:0 14px;border:none;border-radius:7px;cursor:pointer;font-size:13px;background:{{ t.bg }};color:{{ t.color }}">{{ t.label }}</button></sc-for>
+              </div>
+              <button onClick="{{ refresh }}" style="height:36px;padding:0 14px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:13px;cursor:pointer">تحديث</button>
+            </div>
+          </div>
+          <div style="padding:10px 14px;border-radius:10px;background:#2a2110;border:1px solid #4a3815;color:#fcd34d;font-size:12.5px;text-wrap:pretty">{{ stats.warn }}</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+            <sc-for list="{{ stats.cards }}" as="c" hint-placeholder-count="3">
+              <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:8px">
+                <span style="font-size:12.5px;color:#9199ab">{{ c.k }}</span>
+                <span style="font-size:28px;font-weight:600;font-family:'IBM Plex Mono',monospace;letter-spacing:-.02em">{{ c.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid #262a37"><span style="font-weight:600">{{ stats.title }}</span><button onClick="{{ csv }}" style="height:32px;padding:0 12px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12.5px;cursor:pointer">تحميل CSV</button></div>
+            <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:640px">
+              <thead><tr><sc-for list="{{ stats.cols }}" as="h"><th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">{{ h }}</th></sc-for></tr></thead>
+              <tbody><sc-if value="{{ stats.empty }}"><tr><td colspan="6" style="padding:32px;text-align:center;color:#5b6274;font-size:13px">{{ stats.empty }}</td></tr></sc-if><sc-for list="{{ stats.rows }}" as="r" hint-placeholder-count="6"><tr><sc-for list="{{ r }}" as="cell"><td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ cell }}</td></sc-for></tr></sc-for></tbody>
+            </table></div>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- USER DRAWER -->
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDrawer }}" style="position:fixed;inset:0;background:rgba(5,6,10,.6);z-index:20"></div>
+    <div style="position:fixed;top:0;bottom:0;left:0;width:460px;max-width:100vw;background:#11131a;border-right:1px solid #262a37;z-index:21;display:flex;flex-direction:column;box-shadow:20px 0 60px -20px rgba(0,0,0,.7)">
+      <div style="padding:18px 20px;border-bottom:1px solid #262a37;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px;min-width:0">
+          <div style="flex-shrink:0;width:42px;height:42px;border-radius:50%;background:#2a2f40;display:flex;align-items:center;justify-content:center;font-weight:600;color:#c4b5fd">{{ du.initial }}</div>
+          <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:15px">{{ du.name }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;padding:2px 7px;border-radius:6px;background:{{ du.roleBg }};color:{{ du.roleColor }}">{{ du.role }}</span></div>
+            <span style="font-size:12px;color:#9199ab;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">#{{ du.id }} · {{ du.email }}</span>
+          </div>
+        </div>
+        <button onClick="{{ closeDrawer }}" style="width:32px;height:32px;border-radius:8px;background:transparent;border:1px solid #262a37;color:#9199ab;cursor:pointer;font-size:16px">×</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:16px 20px 24px;display:grid;align-content:start;gap:18px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="padding:12px;border:1px solid #262a37;border-radius:10px;display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;color:#5b6274">النقاط / المستوى</span><span style="font-size:13px">{{ du.levelLabel }}</span></div>
+          <div style="padding:12px;border:1px solid #262a37;border-radius:10px;display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;color:#5b6274">الإطار الحالي</span><span style="font-size:13px">{{ du.frameLabel }}</span></div>
+          <div style="padding:12px;border:1px solid #262a37;border-radius:10px;display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;color:#5b6274">تيك توك</span><span style="font-size:13px">{{ du.tiktokLabel }}</span></div>
+          <sc-if value="{{ du.streamer }}"><div style="padding:12px;border:1px solid #262a37;border-radius:10px;display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;color:#5b6274">البثوث · الهدايا (القيمة)</span><span style="font-size:13px;font-family:'IBM Plex Mono',monospace">{{ du.streams }} · {{ du.giftsLabel }}</span></div></sc-if>
+        </div>
+
+        <div style="display:flex;flex-direction:column;border:1px solid #262a37;border-radius:12px;overflow:hidden">
+          <div style="padding:10px 14px;font-size:12px;font-weight:600;color:#9199ab;background:#14161d">الـID العام</div>
+          <div style="display:flex;gap:6px;padding:12px 14px;border-top:1px solid #1f222c">
+            <input value="{{ du.pidDraft }}" onChange="{{ du.onPid }}" style="flex:1;min-width:0;height:34px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace">
+            <button onClick="{{ du.savePid }}" style="height:34px;padding:0 12px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:12.5px;cursor:pointer">حفظ</button>
+            <button onClick="{{ du.viewProfile }}" style="height:34px;padding:0 12px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12.5px;cursor:pointer">عرض</button>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;border:1px solid #262a37;border-radius:12px;overflow:hidden">
+          <div style="padding:10px 14px;font-size:12px;font-weight:600;color:#9199ab;background:#14161d">الصلاحيات</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
+            <span style="font-size:13.5px">تحويل لحساب ستريمر</span>
+            <button onClick="{{ du.toggleStreamer }}" style="flex-shrink:0;width:40px;height:22px;border-radius:11px;border:none;padding:0;cursor:pointer;position:relative;background:{{ du.tS.bg }}"><span style="position:absolute;top:3px;right:{{ du.tS.knob }};width:16px;height:16px;border-radius:50%;background:#fff;transition:right .15s"></span></button>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
+            <span style="font-size:13.5px">صلاحية إدارة أسئلة خلية الحروف</span>
+            <button onClick="{{ du.toggleLetters }}" style="flex-shrink:0;width:40px;height:22px;border-radius:11px;border:none;padding:0;cursor:pointer;position:relative;background:{{ du.tL.bg }}"><span style="position:absolute;top:3px;right:{{ du.tL.knob }};width:16px;height:16px;border-radius:50%;background:#fff;transition:right .15s"></span></button>
+          </div>
+        </div>
+
+        <sc-if value="{{ du.streamer }}">
+          <div style="display:flex;flex-direction:column;border:1px solid #262a37;border-radius:12px;overflow:hidden">
+            <div style="padding:10px 14px;font-size:12px;font-weight:600;color:#9199ab;background:#14161d">الترحيب</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
+              <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:13.5px">إعادة الترحيب</span><span style="font-size:12px;color:#5b6274">{{ du.welcomeHint }}</span></div>
+              <button onClick="{{ du.rewelcome }}" style="flex-shrink:0;height:32px;padding:0 12px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12.5px;cursor:pointer">إعادة الترحيب</button>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;border:1px solid #262a37;border-radius:12px;overflow:hidden">
+            <div style="padding:10px 14px;font-size:12px;font-weight:600;color:#9199ab;background:#14161d;display:flex;justify-content:space-between"><span>قيد الجهاز</span><span style="display:inline-flex;align-items:center;gap:6px;color:#e7e9ee;font-weight:500"><span style="width:7px;height:7px;border-radius:50%;background:{{ du.devColor }}"></span>{{ du.devLabel }}</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
+              <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:13.5px">تصفير الأجهزة</span><span style="font-size:12px;color:#5b6274;text-wrap:pretty">تصفير الأجهزة المربوطة — أول 3 أجهزة يدخل منها بعدها تُربط من جديد</span></div>
+              <button onClick="{{ du.resetDevices }}" style="flex-shrink:0;height:32px;padding:0 12px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12.5px;cursor:pointer">تصفير</button>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
+              <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:13.5px">سماح بجهاز جديد</span><span style="font-size:12px;color:#5b6274">سماح لمرة وحدة — بعدها يرجع القيد وحده</span></div>
+              <button onClick="{{ du.toggleAllow }}" style="flex-shrink:0;width:40px;height:22px;border-radius:11px;border:none;padding:0;cursor:pointer;position:relative;background:{{ du.tA.bg }}"><span style="position:absolute;top:3px;right:{{ du.tA.knob }};width:16px;height:16px;border-radius:50%;background:#fff;transition:right .15s"></span></button>
+            </div>
+          </div>
+        </sc-if>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border:1px solid #4a2427;border-radius:12px;background:#1a0f12">
+          <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:13.5px;color:#fca5a5">حذف الحساب</span><span style="font-size:12px;color:#9199ab">نهائي — يحذف كل البيانات المرتبطة</span></div>
+          <button onClick="{{ du.del }}" style="flex-shrink:0;height:32px;padding:0 12px;border-radius:8px;background:#ef4444;color:#fff;border:none;font-size:12.5px;cursor:pointer">حذف</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- CONFIRM -->
+  <sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(5,6,10,.7);z-index:40;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div style="width:100%;max-width:420px;background:#14161d;border:1px solid #2f3342;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div style="font-size:16px;font-weight:600">{{ confirm.title }}</div>
+        <div style="font-size:13.5px;color:#9199ab;line-height:1.7;text-wrap:pretty">{{ confirm.body }}</div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+          <button onClick="{{ cancelConfirm }}" style="height:36px;padding:0 14px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:13px;cursor:pointer">إلغاء</button>
+          <button onClick="{{ doConfirm }}" style="height:36px;padding:0 16px;border-radius:8px;background:#ef4444;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer">{{ confirm.label }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- TOAST -->
+  <sc-if value="{{ toastOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:50;display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:10px;background:#1b1e27;border:1px solid {{ toast.border }};box-shadow:0 12px 30px -10px rgba(0,0,0,.7);font-size:13px;max-width:min(560px,90vw)">
+      <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:{{ toast.dot }}"></span>{{ toast.msg }}
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+// ============================================================
+//  لوحة الأدمن — منطق الشاشة (design_handoff_admin_panel)
+//  كل البيانات والإجراءات عبر window.AGPAuth (auth/auth-client.js)
+//  بنفس الـ API اللي كانت تستخدمه صفحات الأدمن القديمة بالضبط.
+//  التنقل بالـ hash: #users · #support · #support/41 · #grant ... إلخ.
+// ============================================================
+const A = window.AGPAuth;
+const PAGES = ['users','support','grant','codes','entrances','elim','catalog','exclusive','announce','supporters','partners','theme','levels','stats'];
+const TEMPLATE_LABELS = { gold:'الذهبي الفخم', neon:'النيون المستقبلي', fire:'الناري القوي', ice:'الجليدي الملكي' };
+const THEME_PRESETS = { 'national-day': { accent:'#006c35', accentPink:'#c9a24b', accent2:'#ffffff' }, 'founding-day': { accent:'#2c3e2d', accentPink:'#a85c32', accent2:'#d8c79d' } };
+const CATEGORY_LABELS = { idea:'أصحاب الأفكار', dev:'فريق التطوير' };
+const TYPE_LABELS = { suggestion:'اقتراح', question:'سؤال', bug:'مشكلة تقنية' };
+const STATUS_LABELS = { new:'جديدة', in_progress:'قيد المعالجة', closed:'مغلقة' };
+const ST_COLORS = { new:['#172a45','#93c5fd'], in_progress:['#2a2110','#fcd34d'], closed:['#1d2029','#9199ab'] };
+const TICKET_ERRORS = { empty_body:'اكتب نص الرد.', body_too_long:'النص أطول من 5000 حرف.', not_found:'التذكرة غير موجودة.', invalid_status:'حالة غير صالحة.', forbidden:'هذه الصفحة للأدمن فقط.' };
+const CAT_PATTERNS = [['club',/^frame-club-/],['country',/^frame-country-/],['general',/^frame-general-/],['girls',/^frame-girls-/],['boys',/^frame-boys-/],['rare',/^frame-rare-/]];
+const PAGE_SIZE = 50;
+
+function categorize(f){ for(const [k,re] of CAT_PATTERNS) if(re.test(f||'')) return k; return 'other'; }
+function fmtDate(ms){ if(!ms) return '—'; try{ return new Date(ms).toLocaleString('ar',{dateStyle:'medium',timeStyle:'short'}); }catch(e){ return new Date(ms).toLocaleString(); } }
+function fmtDay(ms){ try{ return new Date(ms).toLocaleDateString('ar-SA',{year:'numeric',month:'short',day:'numeric'}); }catch(e){ return '—'; } }
+function fmtBytes(n){ if(!n) return ''; if(n<1024) return n+' B'; if(n<1048576) return (n/1024).toFixed(0)+' KB'; return (n/1048576).toFixed(1)+' MB'; }
+function initialOf(s){ return ([...String(s||'')].find(c=>/[^\s_\d@.]/.test(c))||'؟').toUpperCase(); }
+function isStreamerLike(u){ return u.role==='admin' || !!u.is_streamer || !!(u.permissions && u.permissions.can_run_games); }
+function readHash(){ const h=(location.hash||'').replace(/^#\/?/,''); const [page,arg]=h.split('/'); return { page: PAGES.includes(page)?page:'users', arg: arg||null }; }
+function downloadCsv(filename, rows){
+  const csv='﻿'+rows.map(r=>r.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'})); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+class Component extends DCLogic {
+  state = (() => { const h=readHash(); return {
+    me:null, page:h.page, usersTab:'players', q:'', drawerId:null, pidDraft:'', confirm:null, toast:null,
+    users:null, catalog:null, customFrames:[], elimCardList:[], codes:null,
+    pickType:'internal', pickId:'', pickUser:null, pickState:'empty',
+    frameKey:null, libTab:'club', libQ:'', grantTpl:'', grantText:'', entranceModel:'gold', entranceText:'', cardKey:null,
+    codesFrame:'', codesCount:10, codesNote:'', codesOut:'',
+    catEdits:{}, exFile:'', exName:'',
+    annText:'', annImage:'', annActive:false,
+    supporters:null, supName:'', supMsg:'', supAmount:'',
+    partners:null, partnerQ:'', partnerFound:undefined, partnerCat:'idea',
+    theme:null, themePreset:'', themeColors:{ accent:'#7c3aed', accentPink:'#ff4dff', accent2:'#00c2ff' },
+    levels:null, lvEdits:{},
+    statsTab:'streamers', streamerStats:null, userStats:null,
+    tickets:null, ticketsTotal:0, newCount:0, ticketId: h.page==='support'&&/^\d+$/.test(h.arg||'')?Number(h.arg):null, ticket:null, statusDraft:'new',
+    tType:'', tStatus:'', tQ:'', reply:'', busy:{}
+  }; })();
+
+  componentDidMount(){
+    this.onHash=()=>{ const h=readHash(); const patch={ page:h.page, drawerId:null }; if(h.page==='support'&&/^\d+$/.test(h.arg||'')&&Number(h.arg)!==this.state.ticketId){ patch.ticketId=Number(h.arg); this.setState(patch,()=>this.openTicket(Number(h.arg),false)); } else this.setState(patch,()=>this.loadPage(h.page)); };
+    addEventListener('hashchange',this.onHash);
+    this.fit=()=>this.setState({ vw:innerWidth }); addEventListener('resize',this.fit);
+    A.requireAdmin('login.html?next='+encodeURIComponent('admin.html'+location.hash)).then(user=>{
+      if(!user) return;
+      document.documentElement.style.visibility='';
+      this.setState({ me:user });
+      this.loadPage(this.state.page);
+      this.loadTickets(false); // عدّاد "جديدة" بالشريط الجانبي
+      if(this.state.ticketId) this.openTicket(this.state.ticketId,false);
+    });
+  }
+  componentWillUnmount(){ removeEventListener('hashchange',this.onHash); removeEventListener('resize',this.fit); clearTimeout(this._t); clearTimeout(this._lk); clearTimeout(this._tq); }
+
+  // ---------- عام ----------
+  go = (page) => { if(location.hash!=='#'+page) location.hash=page; else this.setState({ page, drawerId:null }); };
+  flash = (msg, kind='ok') => { clearTimeout(this._t); this.setState({ toast:{ msg, kind } }); this._t=setTimeout(()=>this.setState({ toast:null }),3500); };
+  ask = (title, body, label, fn) => { if(this.props.confirmDestructive===false) return fn(); this.setState({ confirm:{ title, body, label, fn } }); };
+  busy(key, promise){ if(this.state.busy[key]) return Promise.resolve(null); this.setState(s=>({ busy:{ ...s.busy, [key]:true } }));
+    const done=()=>this.setState(s=>({ busy:{ ...s.busy, [key]:false } }));
+    return Promise.resolve(promise()).then(r=>{ done(); return r; },e=>{ done(); this.flash('تعذّر الوصول للخادم.','err'); return null; }); }
+  err(result, fallback){ return fallback+(result&&result.error?': '+result.error:''); }
+  tog = (on) => ({ bg: on?'#7c3aed':'#2f3342', knob: on?'21px':'3px' });
+
+  loadPage(page){
+    if(page==='users' && !this.state.users) this.loadUsers();
+    if(['grant','codes','elim','catalog','exclusive'].includes(page) && !this.state.catalog) this.loadCatalog();
+    if(page==='codes' && !this.state.codes) this.loadCodes();
+    if(page==='announce') this.loadAnnouncement();
+    if(page==='supporters' && !this.state.supporters) this.loadSupporters();
+    if(page==='partners' && !this.state.partners) this.loadPartners();
+    if(page==='theme' && !this.state.theme) this.loadTheme();
+    if(page==='levels' && !this.state.levels) this.loadLevels();
+    if(page==='stats' && !this.state.streamerStats) this.loadStats();
+    if(page==='support' && !this.state.tickets) this.loadTickets(false);
+  }
+  refresh = () => { const p=this.state.page;
+    if(p==='users') this.loadUsers(); else if(p==='catalog') this.loadCatalog(); else if(p==='levels') this.loadLevels(); else if(p==='stats') this.loadStats();
+    this.flash('تم التحديث.'); };
+
+  // ---------- المستخدمون ----------
+  loadUsers(){ return A.adminListUsers().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل قائمة المستخدمين.','err'); this.setState({ users:r.users||[] }); }); }
+  devInfo(u){
+    if(u.is_super_admin) return { label:'سوبر أدمن (بدون قيد)', color:'#a78bfa' };
+    if(!u.devicesCount) return { label:'لا توجد أجهزة'+(u.allow_device_change?' · سماح مفعّل':''), color:'#5b6274' };
+    return { label:`${u.devicesCount}/${u.maxDevices||3} أجهزة${u.allow_device_change?' · سماح مفعّل':''}`, color: u.deviceLocked?'#f59e0b':'#22c55e' };
+  }
+  decorate(u){
+    const dv=this.devInfo(u), perms=[];
+    if(u.permissions&&u.permissions.can_run_games&&u.role!=='admin') perms.push('ستريمر');
+    if(u.permissions&&u.permissions.can_manage_letters_cell) perms.push('أسئلة خلية الحروف');
+    const pts=u.points?u.points.totalPoints:0, lvl=u.points&&u.points.currentLevel?(u.points.currentLevel.displayNameAr||u.points.currentLevel.slug):null;
+    const st=u.stats||{};
+    return { ...u, name:u.username, publicId:u.custom_id||'—', requested:!!u.is_streamer, streams:st.total_broadcasts||0,
+      tiktokLabel: u.tiktok_username?`\u2066@${u.tiktok_username}\u2069${u.tiktok_verified?' ✓':''}`:'—', perms, noPerms:!perms.length,
+      levelLabel: lvl?`${pts} — ${lvl}`:(pts?`${pts} — بلا مستوى`:'بلا مستوى'), frameLabel: u.equippedFrame?(u.equippedFrame.displayNameAr||u.equippedFrame.frameRef):'—',
+      giftsLabel:`${st.total_gifts||0} (${st.total_gifts_value||0})`,
+      roleBg: u.role==='admin'?'#241a3d':'#1d2130', roleColor: u.role==='admin'?'#c4b5fd':'#9199ab',
+      devLabel:dv.label, devColor:dv.color, initial:initialOf(u.username), open:()=>this.setState({ drawerId:u.id, pidDraft:u.custom_id||'' }) };
+  }
+  userAction(key, call, ok, fail){ return this.busy(key, call).then(r=>{ if(!r) return; if(r.success){ if(ok) this.flash(ok); this.loadUsers(); } else this.flash(fail(r),'err'); return r; }); }
+
+  // ---------- اختيار المستخدم (المقتنيات) ----------
+  setPick(patch){ this.setState(patch,()=>{ clearTimeout(this._lk); const v=this.state.pickId.trim(); if(!v){ this.setState({ pickUser:null, pickState:'empty' }); return; }
+    this.setState({ pickUser:null, pickState:'loading' }); const seq=this._seq=(this._seq||0)+1;
+    this._lk=setTimeout(()=>A.adminLookupUser(v,this.state.pickType).then(r=>{ if(seq!==this._seq) return; this.setState(r&&r.success&&r.user?{ pickUser:r.user, pickState:'ok' }:{ pickUser:null, pickState:'missing' }); },()=>{ if(seq===this._seq) this.setState({ pickState:'missing' }); }),350); }); }
+  needUser(fn){ const s=this.state; if(!s.pickId.trim()) return this.flash('اكتب آيدي المستخدم أولاً.','err'); if(!s.pickUser) return this.flash('لم يتم التأكد من الحساب بعد — تأكد من الآيدي ونوعه.','err'); fn(s.pickUser); }
+  pickName(u){ return u.display_name||u.tiktok_display_name||u.username; }
+
+  // ---------- الكتالوج / الإطارات ----------
+  loadCatalog(){ return A.adminGetCollectiblesCatalog().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل الكتالوج.','err');
+    this.setState(s=>({ catalog:r.catalog||[], customFrames:r.customFrames||[], elimCardList:r.elimCards||[], catEdits:{}, codesFrame: s.codesFrame || ((r.catalog||[])[0]?'catalog:'+r.catalog[0].slug:'') })); }); }
+  allFrames(){ const s=this.state; return [ ...(s.catalog||[]).map(c=>({ key:'catalog:'+c.slug, type:'catalog', ref:c.slug, file:c.image_filename, name:c.display_name_ar||c.slug })),
+    ...(s.customFrames||[]).map(c=>({ key:'custom:'+c.id, type:'custom', ref:c.id, file:c.image_filename, name:c.display_name_ar||c.image_filename })) ]; }
+  catEdit(slug, field, value){ this.setState(s=>({ catEdits:{ ...s.catEdits, [slug]:{ ...(s.catEdits[slug]||{}), [field]:value } } })); }
+  loadCodes(){ return A.adminListFrameCodes().then(r=>this.setState({ codes:(r&&r.codes)||[] })); }
+
+  // ---------- واجهة الموقع ----------
+  loadAnnouncement(){ return A.getAnnouncement().then(r=>{ const a=r&&r.success?r.announcement:null; this.setState({ annActive:!!a, annText:a?(a.text||''):this.state.annText, annImage:a?(a.imageFilename||''):this.state.annImage }); }); }
+  loadSupporters(){ return A.adminListSupporters().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل قائمة الداعمين.','err'); this.setState({ supporters:r.supporters||[] }); }); }
+  loadPartners(){ return A.adminListPartners().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل القائمة.','err'); this.setState({ partners:r.partners||[] }); }); }
+  loadTheme(){ return A.getSiteTheme().then(r=>{ const t=r&&r.success?r.theme:null; this.setState(s=>({ theme:{ active:!!t, data:t }, themePreset:t&&t.presetKey?t.presetKey:s.themePreset,
+    themeColors: t?{ accent:t.accent||'#7c3aed', accentPink:t.accentPink||'#ff4dff', accent2:t.accent2||'#00c2ff' }:s.themeColors })); }); }
+
+  // ---------- المستويات / الإحصائيات ----------
+  loadLevels(){ return A.getStreamerLevels().then(r=>{ if(!r||!r.success) return this.flash('تعذّر التحميل.','err'); this.setState({ levels:r.levels||[], lvEdits:{} }); }); }
+  lvEdit(slug, field, value){ this.setState(s=>({ lvEdits:{ ...s.lvEdits, [slug]:{ ...(s.lvEdits[slug]||{}), [field]:value } } })); }
+  loadStats(){
+    A.getAdminStreamerStats().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل إحصائيات الستريمرز.','err'); this.setState({ streamerStats:r.stats }); });
+    A.getAdminUserStats().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل إحصائيات المستخدمين.','err'); this.setState({ userStats:r.stats }); });
+  }
+
+  // ---------- تذاكر الدعم ----------
+  loadTickets(append){ const s=this.state, offset=append?(s.tickets||[]).length:0;
+    if(!append) this.setState({ ticketsLoading:true });
+    return A.adminSupportListTickets({ type:s.tType, status:s.tStatus, q:s.tQ.trim(), limit:PAGE_SIZE, offset }).then(r=>{
+      if(!r||!r.success){ this.setState({ ticketsLoading:false, tickets:append?s.tickets:[] }); return this.flash(TICKET_ERRORS[r&&r.error]||'تعذّر تحميل التذاكر.','err'); }
+      this.setState(st=>({ ticketsLoading:false, tickets: append?[...(st.tickets||[]),...r.tickets]:r.tickets, ticketsTotal:r.total, newCount:r.newCount||0 }));
+    },()=>{ this.setState({ ticketsLoading:false, tickets:[] }); this.flash('تعذّر الوصول للخادم.','err'); }); }
+  openTicket(id, updateHash){ this.setState({ ticketId:id, ticket:null, reply:'' });
+    if(updateHash){ try{ history.replaceState(null,'','#support/'+id); }catch(e){} }
+    return A.adminSupportGetTicket(id).then(r=>{ if(this.state.ticketId!==id) return;
+      if(!r||!r.success){ this.setState({ ticketId:null }); return this.flash(TICKET_ERRORS[r&&r.error]||'تعذّر تحميل التذكرة.','err'); }
+      this.setState({ ticket:r, statusDraft:r.ticket.status }); },()=>this.flash('تعذّر الوصول للخادم.','err')); }
+  setTicketStatus(status){ return A.adminSupportSetStatus(this.state.ticketId,status).then(r=>{ if(!r||!r.success){ this.flash(TICKET_ERRORS[r&&r.error]||'تعذّر تغيير الحالة.','err'); return false; } return true; }); }
+  sendReply(close){ const s=this.state, body=s.reply.trim(), id=s.ticketId; if(!id) return;
+    if(!body) return this.flash('اكتب نص الرد.','err'); if(body.length>5000) return this.flash('النص أطول من 5000 حرف.','err');
+    this.busy('reply',()=>A.adminSupportReply(id,body).then(r=>{ if(!r||!r.success){ this.flash(TICKET_ERRORS[r&&r.error]||'تعذّر إرسال الرد.','err'); return null; }
+      this.setState({ reply:'' }); return close?this.setTicketStatus('closed'):true; }).then(ok=>{
+      if(ok===null) return; this.openTicket(id,false); this.loadTickets(false);
+      if(ok) this.flash(close?'تم إرسال الرد وإغلاق التذكرة.':'تم إرسال الرد.'); })); }
+
+  renderVals(){
+    const s=this.state;
+    const showHelp=this.props.showHelpText ?? true;
+    const navDef=[
+      ['الحسابات',[['users','المستخدمون']]],
+      ['الدعم',[['support','تذاكر الدعم']]],
+      ['المقتنيات',[['grant','منح الإطارات'],['codes','أكواد الاسترداد'],['entrances','الدخوليات'],['elim','بطاقات الإقصاء'],['catalog','كتالوج الإطارات'],['exclusive','إطارات حصرية']]],
+      ['واجهة الموقع',[['announce','الإعلان'],['supporters','الداعمون'],['partners','شركاء الإبداع'],['theme','ثيم المناسبات']]],
+      ['المستويات والتقارير',[['levels','مستويات الستريمر (SP)'],['stats','الإحصائيات']]]
+    ];
+    let crumbGroup='', crumbPage='';
+    const nav=navDef.map(([group,items])=>({ group, items:items.map(([key,label])=>{ const a=s.page===key; if(a){ crumbGroup=group; crumbPage=label; }
+      return { label, go:()=>this.go(key), bg:a?'#1d1830':'transparent', color:a?'#e7e9ee':'#9199ab', weight:a?600:400, dot:a?'#a855f7':'#2f3342', badge:key==='support'&&s.newCount?s.newCount:null }; }) }));
+    const is={}; PAGES.forEach(k=>is[k]=s.page===k); is.needsPicker=is.grant||is.entrances||is.elim;
+    const pageDesc=is.grant?'يمنح أي إطار — حتى المقفول بمستوى — لأي مستخدم فوراً. منح أحد الإطارات الأربعة "الخاصة" يمنح تلقائياً دخولية + توهج معه.'
+      :is.entrances?'إعطاء دخولية لأي مستخدم بشكل منفصل تماماً عن الإطارات.':'منح أو سحب بطاقة إقصاء لمستخدم.';
+
+    // ---- users
+    const all=s.users||[], ql=s.q.trim().toLowerCase();
+    const list=all.filter(u=>(s.usersTab==='streamers')===isStreamerLike(u))
+      .filter(u=>!ql||String(u.id)===ql||[u.username,u.email,u.custom_id,s.usersTab==='streamers'?u.tiktok_username:''].some(x=>x&&String(x).toLowerCase().includes(ql)));
+    const rows=list.map(u=>this.decorate(u));
+    const counts={ players:all.filter(u=>!isStreamerLike(u)).length, streamers:all.filter(isStreamerLike).length };
+    const usersTabs=[['players','اللاعبون'],['streamers','الستريمرز']].map(([k,l])=>({ label:l, count:s.users?counts[k]:'…', go:()=>this.setState({ usersTab:k, q:'' }), bg:s.usersTab===k?'#7c3aed':'transparent', color:s.usersTab===k?'#fff':'#9199ab' }));
+
+    // ---- drawer
+    const dRaw=all.find(u=>u.id===s.drawerId);
+    let du={};
+    if(dRaw){
+      const d=this.decorate(dRaw), perm=k=>!!(dRaw.permissions&&dRaw.permissions[k]);
+      const setPerm=(k)=>{ if(k==='can_run_games'&&dRaw.role==='admin') return this.flash('تعذّر تحديث الصلاحية: الأدمن ستريمر دائماً','err');
+        this.userAction('perm'+k,()=>A.adminSetPermission(dRaw.id,k,!perm(k)), k==='can_run_games'?'تم تحديث الصلاحية — الحساب انتقل للتبويب الآخر.':'تم تحديث الصلاحية.', r=>'تعذّر تحديث الصلاحية: '+(r.error||'unknown')); };
+      du={ ...d, streamer:isStreamerLike(dRaw), tS:this.tog(perm('can_run_games')||dRaw.role==='admin'), tL:this.tog(perm('can_manage_letters_cell')), tA:this.tog(!!dRaw.allow_device_change),
+        welcomeHint: dRaw.welcome_completed?'شافها كاملة من قبل — اضغط لإعادتها له مرة وحدة':'لسا ما شافها',
+        pidDraft:s.pidDraft, onPid:e=>this.setState({ pidDraft:e.target.value }),
+        toggleStreamer:()=>setPerm('can_run_games'), toggleLetters:()=>setPerm('can_manage_letters_cell'),
+        savePid:()=>{ const v=s.pidDraft.trim(); if(!v) return this.flash('اكتب ID قبل الحفظ.','err');
+          this.userAction('pid',()=>A.adminSetCustomId(dRaw.id,v),'تم تحديث الـID.',r=>'تعذّر الحفظ: '+(r.error||'unknown')+(r.error==='custom_id_taken'?' (هذا الـID مستخدَم لحساب آخر)':'')); },
+        viewProfile:()=>window.open('profile.html?id='+encodeURIComponent(dRaw.custom_id||''),'_blank'),
+        rewelcome:()=>this.userAction('welcome',()=>A.adminResetWelcome(dRaw.id),'تم — الحفلة رح تطلع له مرة ثانية أول ما يزور الصفحة الرئيسية.',r=>'تعذّر: '+(r.error||'unknown')),
+        resetDevices:()=>{ if(dRaw.is_super_admin) return this.flash('سوبر أدمن — بدون قيد أجهزة.','err');
+          this.userAction('dev',()=>A.adminResetDeviceLock(dRaw.id),'تم تصفير قيد الجهاز — أول دخول جاي يصير هو الجهاز الجديد المسموح.',r=>'تعذّر التصفير: '+(r.error||'unknown')); },
+        toggleAllow:()=>{ if(dRaw.is_super_admin) return this.flash('سوبر أدمن — بدون قيد أجهزة.','err'); const on=!!dRaw.allow_device_change;
+          this.userAction('allow',()=>A.adminAllowDeviceChange(dRaw.id,!on),on?'تم إلغاء السماح.':'تم — أول تسجيل دخول جاي من أي جهاز رح يُقبل تلقائياً، وبعدها يرجع القيد وحده.',r=>'تعذّر: '+(r.error||'unknown')); },
+        del:()=>this.ask('حذف هذا الحساب نهائياً؟','هذا الإجراء لا رجعة فيه — يحذف حسابه وكل بياناته المرتبطة (جلسات، إحصائيات بث، إطارات، نقاط).','حذف نهائياً',()=>
+          this.busy('del',()=>A.adminDeleteUser(dRaw.id)).then(r=>{ if(!r) return; if(r.success){ this.setState({ drawerId:null }); this.flash('تم حذف الحساب.'); this.loadUsers(); }
+            else this.flash(r.error==='cannot_delete_last_admin'?'لا يمكن حذف آخر حساب أدمن بالمنصة.':'تعذّر الحذف: '+(r.error||'unknown'),'err'); })) };
+    }
+
+    // ---- picker
+    const pu=s.pickUser;
+    const pick= s.pickState==='ok'&&pu ? { label:`${this.pickName(pu)}${this.pickName(pu)!==pu.username?' (@'+pu.username+')':''} · #${pu.id} · ${pu.custom_id||'—'}`, color:'#e7e9ee', border:'#14532d', bg:'#0f1d15', ok:true, initial:initialOf(this.pickName(pu)) }
+      : s.pickState==='missing' ? { label:'ما فيه حساب بهذا المعرّف', color:'#fca5a5', border:'#4a2427', bg:'#1a0f12', ok:false }
+      : s.pickState==='loading' ? { label:'جارٍ البحث…', color:'#9199ab', border:'#2f3342', bg:'transparent', ok:false }
+      : { label:'اكتب الآيدي للتأكد من الحساب', color:'#5b6274', border:'#2f3342', bg:'transparent', ok:false };
+
+    // ---- frames
+    const frames=this.allFrames().map(f=>({ ...f, cat:categorize(f.file) }));
+    const sf=frames.find(f=>f.key===s.frameKey);
+    const selFrame=sf?{ ok:true, label:sf.name, img:sf.file, color:'#e7e9ee', border:'#7c3aed' }:{ ok:false, label:'اختر إطاراً من القائمة بالأسفل', img:'', color:'#5b6274', border:'#2f3342' };
+    const lq=s.libQ.trim().toLowerCase();
+    const libFrames=frames.filter(f=>f.cat===s.libTab&&(!lq||f.name.toLowerCase().includes(lq)||f.file.toLowerCase().includes(lq)))
+      .map(f=>({ ...f, pick:()=>this.setState({ frameKey:f.key }), border:f.key===s.frameKey?'#7c3aed':'#262a37', bg:f.key===s.frameKey?'rgba(124,58,237,.12)':'#11131a' }));
+    const libTabs=[['club','نوادي'],['country','دول خليجية والسعودية'],['general','عام'],['girls','بنات'],['boys','عيال'],['rare','نادرة'],['other','أخرى (كتالوج أساسي)']].map(([k,l])=>({ label:l,
+      count:frames.filter(f=>f.cat===k&&(!lq||f.name.toLowerCase().includes(lq)||f.file.toLowerCase().includes(lq))).length, go:()=>this.setState({ libTab:k }),
+      bg:s.libTab===k?'#7c3aed':'transparent', color:s.libTab===k?'#fff':'#9199ab', border:s.libTab===k?'#7c3aed':'#262a37' }));
+    const entranceModels=[['gold','linear-gradient(135deg,#78350f,#f59e0b 60%,#fde68a)'],['neon','linear-gradient(135deg,#1e1b4b,#7c3aed 55%,#22d3ee)'],['fire','linear-gradient(135deg,#450a0a,#dc2626 55%,#fb923c)'],['ice','linear-gradient(135deg,#0c4a6e,#38bdf8 60%,#e0f2fe)']]
+      .map(([k,sw])=>({ label:TEMPLATE_LABELS[k], swatch:sw, pick:()=>this.setState({ entranceModel:k }), border:s.entranceModel===k?'#7c3aed':'#262a37', bg:s.entranceModel===k?'rgba(124,58,237,.12)':'#11131a' }));
+    const elimCards=(s.elimCardList||[]).map(c=>({ label:c.displayNameAr, img:c.imageFilename, pick:()=>this.setState({ cardKey:c.key }), border:s.cardKey===c.key?'#7c3aed':'#262a37', bg:s.cardKey===c.key?'rgba(124,58,237,.12)':'#11131a' }));
+    const selCard=(s.elimCardList||[]).find(c=>c.key===s.cardKey);
+
+    // ---- catalog / levels rows
+    const catalog=(s.catalog||[]).map(c=>{ const e=s.catEdits[c.slug]||{}, sp=c.kind==='special';
+      const val=(f,orig)=>e[f]!==undefined?e[f]:(orig==null?'':orig);
+      return { file:c.image_filename, type:sp?'خاص':'مستوى', isSpecial:sp, isLevel:!sp, typeBg:sp?'#241a3d':'#1d2130', typeColor:sp?'#c4b5fd':'#9199ab',
+        name:val('displayNameAr',c.display_name_ar), points:val('levelPointsRequired',c.level_points_required), model:val('defaultEntranceTemplate',c.default_entrance_template), text:val('defaultEntranceText',c.default_entrance_text),
+        onName:ev=>this.catEdit(c.slug,'displayNameAr',ev.target.value), onPoints:ev=>this.catEdit(c.slug,'levelPointsRequired',ev.target.value),
+        onModel:ev=>this.catEdit(c.slug,'defaultEntranceTemplate',ev.target.value), onText:ev=>this.catEdit(c.slug,'defaultEntranceText',ev.target.value),
+        save:()=>{ const fields={ displayNameAr:val('displayNameAr',c.display_name_ar) };
+          if(sp){ fields.defaultEntranceTemplate=val('defaultEntranceTemplate',c.default_entrance_template); fields.defaultEntranceText=val('defaultEntranceText',c.default_entrance_text); }
+          else fields.levelPointsRequired=val('levelPointsRequired',c.level_points_required);
+          this.busy('cat'+c.slug,()=>A.adminUpdateCatalogEntry(c.slug,fields)).then(r=>{ if(!r) return; if(r.success){ this.flash('تم الحفظ.'); this.loadCatalog(); } else this.flash('تعذّر الحفظ: '+(r.error||'unknown'),'err'); }); } }; });
+    const levels=(s.levels||[]).map(l=>{ const e=s.lvEdits[l.slug]||{};
+      const name=e.displayNameAr!==undefined?e.displayNameAr:l.display_name_ar, sp=e.minSp!==undefined?e.minSp:l.min_sp;
+      return { n:l.sort_order, name, sp, onName:ev=>this.lvEdit(l.slug,'displayNameAr',ev.target.value), onSp:ev=>this.lvEdit(l.slug,'minSp',ev.target.value),
+        save:()=>this.busy('lv'+l.slug,()=>A.adminUpdateStreamerLevel(l.slug,{ displayNameAr:name, minSp:Number(sp) })).then(r=>{ if(!r) return; if(r.success){ this.flash('تم الحفظ.'); this.loadLevels(); } else this.flash('تعذّر الحفظ: '+(r.error||'unknown'),'err'); }) }; });
+
+    // ---- supporters / partners
+    const supporters=(s.supporters||[]).map(x=>({ ...x, msg:x.message||'—', date:fmtDay(x.created_at),
+      del:()=>this.ask('حذف هذا الدعم؟',`سيُحذف دعم «${x.name}» من الشريط المتحرك وصفحة توب الداعمين.`,'حذف',()=>A.adminDeleteSupporter(x.id).then(r=>{ if(r&&r.success===false) return this.flash('تعذّر الحذف: '+(r.error||'unknown'),'err'); this.flash('تم الحذف.'); this.loadSupporters(); })) }));
+    const partners=(s.partners||[]).map(x=>({ ...x, pid:x.customId, cat:CATEGORY_LABELS[x.category]||x.category,
+      del:()=>this.ask('حذف هذا الشريك؟',`سيُزال «${x.name}» من شركاء الإبداع بالصفحة الرئيسية.`,'حذف',()=>A.adminDeletePartner(x.id).then(r=>{ if(r&&r.success===false) return this.flash('تعذّر الحذف: '+(r.error||'unknown'),'err'); this.flash('تم الحذف.'); this.loadPartners(); })) }));
+    const pf=s.partnerFound;
+    const partnerPreview=pf?{ ok:true, label:pf.name, initial:initialOf(pf.name), avatar:pf.avatarBase64||'', color:'#e7e9ee' }:pf===null?{ ok:false, label:'ما فيه حساب بهذا المعرّف.', color:'#fca5a5' }:{ ok:false, label:'ابحث بالمعرّف لعرض الحساب', color:'#5b6274' };
+
+    // ---- tickets
+    const ticketRows=(s.tickets||[]).map(t=>{ const c=ST_COLORS[t.status]||ST_COLORS.closed; return { id:t.id, title:t.title, type:TYPE_LABELS[t.type]||t.type, status:STATUS_LABELS[t.status]||t.status,
+      user:(t.user&&t.user.name)||'—', tiktok:t.user&&t.user.tiktok_username, updated:fmtDate(t.updated_at), waiting:t.last_reply_by==='user'&&t.status!=='closed',
+      stBg:c[0], stColor:c[1], bg:t.id===s.ticketId?'#1b1e2a':'transparent', shadow:t.id===s.ticketId?'inset -3px 0 0 #7c3aed':'none', open:()=>this.openTicket(t.id,true) }; });
+    let tk={};
+    const T=s.ticket;
+    if(T){ const t=T.ticket, u=T.user||{}, uname=u.name||'المستخدم';
+      tk={ id:t.id, title:t.title, type:TYPE_LABELS[t.type]||t.type, created:fmtDate(t.created_at),
+        userFields:(u.deleted?[['الاسم',u.name],['الحساب','محذوف']]:[['ID',u.custom_id],['اسم المستخدم',u.username?'\u2066@'+u.username+'\u2069':null],['الاسم',u.name],['الإيميل',u.email],
+          ['تيك توك',u.tiktok_username?'\u2066@'+u.tiktok_username+'\u2069'+(u.tiktok_verified?' ✓ موثّق':' (غير موثّق)'):'غير مرتبط'],['الحساب','نشط'],['تاريخ التسجيل',fmtDate(u.created_at)]]).map(([k,v])=>({ k, v:v==null||v===''?'—':v })),
+        msgs:(T.messages||[]).map(m=>{ const admin=m.sender==='admin'; return { from:admin?'فريق الدعم':uname, text:m.body, time:fmtDate(m.created_at),
+          files:(m.attachments||[]).filter(a=>typeof a.url==='string'&&a.url.indexOf('https://res.cloudinary.com/')===0).map(a=>({ url:a.url, name:a.name||'ملف', size:fmtBytes(a.bytes), ext:String(a.format||(a.resource_type==='image'?'img':'file')).toUpperCase() })),
+          align:admin?'flex-end':'flex-start', bg:admin?'#1d1830':'#191c25', border:admin?'#33285a':'#262a37', nameColor:admin?'#c4b5fd':'#e7e9ee' }; }) };
+    }
+    const ticketsNote = s.ticketsLoading&&!(s.tickets||[]).length ? 'جارٍ التحميل…' : (s.tickets&&!s.tickets.length?'لا توجد تذاكر مطابقة.':'');
+
+    // ---- stats
+    const SS=s.streamerStats, US=s.userStats;
+    const stats = s.statsTab==='streamers' ? {
+      warn:'"إجمالي المشاهدات" مبني على بيانات لم تُختبَر فعلياً ضد بث حقيقي.',
+      cards:[{ k:'عدد الستريمرز المسجَّلين', v:SS?SS.totalStreamers:'—' },{ k:'إجمالي ساعات البث', v:SS?SS.totalHours:'—' },{ k:'إجمالي المشاهدات', v:SS?SS.totalViews:'—' }],
+      title:'أعلى 10 ستريمرز (بالساعات)', cols:['#','اسم المستخدم','تيك توك','عدد البثوث','الساعات','المشاهدات'],
+      rows:SS?(SS.topStreamers||[]).map((r,i)=>[i+1,r.username,r.tiktokUsername?'\u2066@'+r.tiktokUsername+'\u2069':'—',r.totalBroadcasts,r.totalHours,r.totalViews]):[],
+      empty:!SS?'جارٍ التحميل…':(!(SS.topStreamers||[]).length?'لا توجد بيانات بث كافية بعد.':'')
+    } : {
+      warn:'لا يوجد تتبّع جلسات/دخول للاعبين العاديين حالياً، فـ"الأكثر نشاطاً" هنا معروض فقط لمن لعب جولات فعلية.',
+      cards:[{ k:'إجمالي المستخدمين المسجَّلين', v:US?US.totalUsers:'—' },{ k:'عدد الستريمرز', v:US?US.totalStreamers:'—' },{ k:'موثَّقون بتيك توك', v:US?US.totalVerifiedTikTok:'—' }],
+      title:'أعلى 10 لاعبين (بعدد الجولات المكتملة)', cols:['#','اسم المستخدم','تيك توك','جولات مكتملة','جولات مربوحة'],
+      rows:US?(US.topPlayersByGamesPlayed||[]).map((r,i)=>[i+1,r.username,r.tiktokUsername?'\u2066@'+r.tiktokUsername+'\u2069':'—',r.gamesPlayed,r.gamesWon]):[],
+      empty:!US?'جارٍ التحميل…':(!(US.topPlayersByGamesPlayed||[]).length?'لا توجد بيانات جولات كافية بعد.':'')
     };
-    var messageEl = document.getElementById('admin-message');
 
-    function showMessage(text, type) {
-        messageEl.textContent = text;
-        messageEl.className = 'auth-message auth-message--visible auth-message--' + type;
-    }
+    const toastErr=s.toast&&s.toast.kind==='err';
+    const me=s.me||{};
 
-    function escapeHtml(value) {
-        var div = document.createElement('div');
-        div.textContent = value === null || value === undefined ? '' : String(value);
-        return div.innerHTML;
-    }
-    function escapeAttr(value) {
-        return escapeHtml(value).replace(/"/g, '&quot;');
-    }
-
-    Array.prototype.forEach.call(document.querySelectorAll('[data-user-tab]'), function (btn) {
-        btn.addEventListener('click', function () {
-            Array.prototype.forEach.call(document.querySelectorAll('[data-user-tab]'), function (b) { b.classList.remove('is-active'); });
-            btn.classList.add('is-active');
-            var tab = btn.getAttribute('data-user-tab');
-            Array.prototype.forEach.call(document.querySelectorAll('[data-user-panel]'), function (panel) {
-                panel.classList.toggle('is-active', panel.getAttribute('data-user-panel') === tab);
-            });
-        });
-    });
-
-    function isStreamerLike(u) {
-        return u.role === 'admin' || Boolean(u.is_streamer) || Boolean(u.permissions && u.permissions.can_run_games);
-    }
-
-    function commonPermCells(u) {
-        return KNOWN_PERMISSION_KEYS.map(function (key) {
-            var checked = u.permissions && u.permissions[key] ? 'checked' : '';
-            var label = PERMISSION_LABELS[key] || key;
-            return '<label style="display:flex;align-items:center;gap:5px;font-size:11px;white-space:nowrap;margin-bottom:3px;" title="' + escapeAttr(label) + '">' +
-                '<input type="checkbox" data-user-id="' + u.id + '" data-permission-key="' + key + '" ' + checked + '>' +
-                escapeHtml(label) +
-                '</label>';
-        }).join('');
-    }
-
-    function customIdCell(u) {
-        var inputStyle = 'width:110px;padding:5px 7px;background:var(--bg);border:1px solid var(--border-light);' +
-            'border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit;';
-        return '<input type="text" style="' + inputStyle + '" value="' + escapeAttr(u.custom_id) + '" data-user-id="' + u.id + '" data-custom-id-input>' +
-            ' <button class="btn btn-sm" data-user-id="' + u.id + '" data-save-custom-id>حفظ</button>' +
-            ' <a class="btn btn-sm" href="profile.html?id=' + encodeURIComponent(u.custom_id || '') + '" target="_blank">عرض</a>';
-    }
-
-    function levelCell(u) {
-        return (u.points ? u.points.totalPoints : 0) + ' — ' +
-            escapeHtml(u.points && u.points.currentLevel ? (u.points.currentLevel.displayNameAr || u.points.currentLevel.slug) : 'بلا مستوى');
-    }
-
-    function deleteUserCell(u) {
-        return '<button class="btn btn-sm" data-user-id="' + u.id + '" data-delete-user title="حذف الحساب نهائياً — لا تراجع">🗑️ حذف</button>';
-    }
-
-    function renderPlayers(users) {
-        var tbody = document.getElementById('players-table-body');
-        if (!users.length) {
-            tbody.innerHTML = '<tr><td class="table-empty" colspan="9">لا يوجد لاعبون بعد.</td></tr>';
-            return;
-        }
-        tbody.innerHTML = users.map(function (u) {
-            return '<tr>' +
-                '<td>' + u.id + '</td>' +
-                '<td>' + escapeHtml(u.username) + '</td>' +
-                '<td>' + escapeHtml(u.email) + '</td>' +
-                '<td>' + (u.tiktok_username ? (escapeHtml(u.tiktok_username) + (u.tiktok_verified ? ' ✅' : '')) : '—') + '</td>' +
-                '<td class="mono">' + customIdCell(u) + '</td>' +
-                // Toggling this reloads the list, moving the account to
-                // the Streamers tab immediately (see isStreamerLike).
-                '<td>' + commonPermCells(u) + '</td>' +
-                '<td>' + levelCell(u) + '</td>' +
-                '<td>' + (u.equippedFrame ? escapeHtml(u.equippedFrame.displayNameAr || u.equippedFrame.frameRef) : '—') + '</td>' +
-                '<td>' + deleteUserCell(u) + '</td>' +
-                '</tr>';
-        }).join('');
-        wireRowActions(tbody);
-    }
-
-    function renderStreamers(users) {
-        var tbody = document.getElementById('streamers-table-body');
-        if (!users.length) {
-            tbody.innerHTML = '<tr><td class="table-empty" colspan="13">لا يوجد ستريمرز بعد.</td></tr>';
-            return;
-        }
-        tbody.innerHTML = users.map(function (u) {
-            var welcomeResetBtn = '<br><button class="btn btn-sm" data-user-id="' + u.id + '" data-reset-welcome title="' +
-                (u.welcome_completed ? 'شافها كاملة من قبل — اضغط لإعادتها له مرة وحدة' : 'لسا ما شافها') +
-                '">🎉 إعادة الترحيب</button>';
-            var deviceLockCell = (u.is_super_admin ? '⭐ سوبر أدمن (بدون قيد)' : (u.devicesCount ? ((u.deviceLocked ? '🔒 ' : '📱 ') + u.devicesCount + '/' + (u.maxDevices || 3) + ' أجهزة') : '—')) +
-                (u.is_super_admin ? '' :
-                    '<br><button class="btn btn-sm" data-user-id="' + u.id + '" data-reset-device-lock title="تصفير الأجهزة المربوطة — أول 3 أجهزة يدخل منها بعدها تُربط من جديد">↺ تصفير</button>' +
-                    ' <button class="btn btn-sm" data-user-id="' + u.id + '" data-allow-device-change data-current="' + (u.allow_device_change ? '1' : '0') + '" title="سماح لمرة وحدة — أول دخول من جهاز جديد يُقبل ويحل محل أقدم جهاز، ثم يرجع القيد">' +
-                    (u.allow_device_change ? '✅ مفعّل (اضغط للإلغاء)' : '🔓 سماح بجهاز جديد') + '</button>');
-            return '<tr>' +
-                '<td>' + u.id + '</td>' +
-                '<td>' + escapeHtml(u.username) + '</td>' +
-                '<td>' + escapeHtml(u.email) + '</td>' +
-                '<td><span class="badge">' + escapeHtml(u.role) + '</span>' +
-                (u.is_streamer ? ' <span title="طلب أن يكون ستريمر وقت التسجيل">🎙️</span>' : '') +
-                '</td>' +
-                '<td>' + (u.tiktok_username ? (escapeHtml(u.tiktok_username) + (u.tiktok_verified ? ' ✅' : '')) : '—') + '</td>' +
-                '<td class="mono">' + customIdCell(u) + '</td>' +
-                '<td>' + u.stats.total_broadcasts + '</td>' +
-                '<td>' + u.stats.total_gifts + ' (' + u.stats.total_gifts_value + ')</td>' +
-                '<td>' + commonPermCells(u) + welcomeResetBtn + '</td>' +
-                '<td>' + levelCell(u) + '</td>' +
-                '<td>' + (u.equippedFrame ? escapeHtml(u.equippedFrame.displayNameAr || u.equippedFrame.frameRef) : '—') + '</td>' +
-                '<td>' + deviceLockCell + '</td>' +
-                '<td>' + deleteUserCell(u) + '</td>' +
-                '</tr>';
-        }).join('');
-        wireRowActions(tbody);
-    }
-
-    function wireRowActions(tbody) {
-        Array.prototype.forEach.call(tbody.querySelectorAll('input[type=checkbox]'), function (checkbox) {
-            checkbox.addEventListener('change', function () {
-                var userId = Number(checkbox.getAttribute('data-user-id'));
-                var permissionKey = checkbox.getAttribute('data-permission-key');
-                checkbox.disabled = true;
-                window.AGPAuth.adminSetPermission(userId, permissionKey, checkbox.checked)
-                    .then(function (result) {
-                        if (!result.success) {
-                            showMessage('تعذّر تحديث الصلاحية: ' + (result.error || 'unknown'), 'error');
-                            checkbox.checked = !checkbox.checked;
-                        } else {
-                            loadUsers();
-                        }
-                    })
-                    .finally(function () { checkbox.disabled = false; });
-            });
-        });
-
-        Array.prototype.forEach.call(tbody.querySelectorAll('[data-reset-welcome]'), function (button) {
-            button.addEventListener('click', function () {
-                var userId = Number(button.getAttribute('data-user-id'));
-                button.disabled = true;
-                window.AGPAuth.adminResetWelcome(userId).then(function (result) {
-                    if (result.success) {
-                        showMessage('تم — الحفلة رح تطلع له مرة ثانية أول ما يزور الصفحة الرئيسية.', 'success');
-                    } else {
-                        showMessage('تعذّر: ' + (result.error || 'unknown'), 'error');
-                    }
-                }).finally(function () { button.disabled = false; });
-            });
-        });
-
-        Array.prototype.forEach.call(tbody.querySelectorAll('[data-delete-user]'), function (button) {
-            button.addEventListener('click', function () {
-                var userId = Number(button.getAttribute('data-user-id'));
-                if (!window.confirm('حذف هذا الحساب نهائياً؟ هذا الإجراء لا رجعة فيه — يحذف حسابه وكل بياناته المرتبطة (جلسات، إحصائيات بث، إطارات، نقاط).')) return;
-                button.disabled = true;
-                window.AGPAuth.adminDeleteUser(userId).then(function (result) {
-                    if (result.success) {
-                        showMessage('تم حذف الحساب.', 'success');
-                        loadUsers();
-                    } else {
-                        showMessage('تعذّر الحذف: ' + (result.error === 'cannot_delete_last_admin' ? 'لا يمكن حذف آخر حساب أدمن بالمنصة.' : (result.error || 'unknown')), 'error');
-                        button.disabled = false;
-                    }
-                });
-            });
-        });
-
-        Array.prototype.forEach.call(tbody.querySelectorAll('[data-reset-device-lock]'), function (button) {
-            button.addEventListener('click', function () {
-                var userId = Number(button.getAttribute('data-user-id'));
-                button.disabled = true;
-                window.AGPAuth.adminResetDeviceLock(userId).then(function (result) {
-                    if (result.success) {
-                        showMessage('تم تصفير قيد الجهاز — أول دخول جاي يصير هو الجهاز الجديد المسموح.', 'success');
-                        loadUsers();
-                    } else {
-                        showMessage('تعذّر التصفير: ' + (result.error || 'unknown'), 'error');
-                    }
-                }).finally(function () { button.disabled = false; });
-            });
-        });
-
-        Array.prototype.forEach.call(tbody.querySelectorAll('[data-allow-device-change]'), function (button) {
-            button.addEventListener('click', function () {
-                var userId = Number(button.getAttribute('data-user-id'));
-                var currentlyOn = button.getAttribute('data-current') === '1';
-                button.disabled = true;
-                window.AGPAuth.adminAllowDeviceChange(userId, !currentlyOn).then(function (result) {
-                    if (result.success) {
-                        showMessage(currentlyOn ? 'تم إلغاء السماح.' : 'تم — أول تسجيل دخول جاي من أي جهاز رح يُقبل تلقائياً، وبعدها يرجع القيد وحده.', 'success');
-                        loadUsers();
-                    } else {
-                        showMessage('تعذّر: ' + (result.error || 'unknown'), 'error');
-                    }
-                }).finally(function () { button.disabled = false; });
-            });
-        });
-
-        Array.prototype.forEach.call(tbody.querySelectorAll('[data-save-custom-id]'), function (button) {
-            button.addEventListener('click', function () {
-                var userId = Number(button.getAttribute('data-user-id'));
-                var input = tbody.querySelector('input[data-custom-id-input][data-user-id="' + userId + '"]');
-                var newId = (input.value || '').trim();
-                if (!newId) { showMessage('اكتب ID قبل الحفظ.', 'error'); return; }
-                button.disabled = true;
-                window.AGPAuth.adminSetCustomId(userId, newId).then(function (result) {
-                    if (result.success) {
-                        showMessage('تم تحديث الـID.', 'success');
-                        loadUsers();
-                    } else {
-                        showMessage('تعذّر الحفظ: ' + (result.error || 'unknown') + (result.error === 'custom_id_taken' ? ' (هذا الـID مستخدَم لحساب آخر)' : ''), 'error');
-                    }
-                }).finally(function () { button.disabled = false; });
-            });
-        });
-    }
-
-    var allUsersCache = [];
-    var playersSearchInput = document.getElementById('user-search-players');
-    var streamersSearchInput = document.getElementById('user-search-streamers');
-
-    function matchesQuery(u, q) {
-        return String(u.id) === q ||
-            (u.username && u.username.toLowerCase().indexOf(q) !== -1) ||
-            (u.email && u.email.toLowerCase().indexOf(q) !== -1) ||
-            (u.custom_id && String(u.custom_id).toLowerCase().indexOf(q) !== -1) ||
-            (u.tiktok_username && u.tiktok_username.toLowerCase().indexOf(q) !== -1);
-    }
-
-    function applyFilters() {
-        var players = allUsersCache.filter(function (u) { return !isStreamerLike(u); });
-        var streamers = allUsersCache.filter(isStreamerLike);
-
-        var pq = (playersSearchInput.value || '').trim().toLowerCase();
-        var sq = (streamersSearchInput.value || '').trim().toLowerCase();
-
-        renderPlayers(pq ? players.filter(function (u) { return matchesQuery(u, pq); }) : players);
-        renderStreamers(sq ? streamers.filter(function (u) { return matchesQuery(u, sq); }) : streamers);
-    }
-    playersSearchInput.addEventListener('input', applyFilters);
-    streamersSearchInput.addEventListener('input', applyFilters);
-
-    function loadUsers() {
-        window.AGPAuth.adminListUsers().then(function (result) {
-            if (!result.success) {
-                showMessage('تعذّر تحميل قائمة المستخدمين.', 'error');
-                return;
-            }
-            allUsersCache = result.users;
-            applyFilters();
-        });
-    }
-    document.getElementById('btn-refresh-users').addEventListener('click', loadUsers);
-
-    document.getElementById('btn-account-logout').addEventListener('click', function () {
-        window.AGPAuth.logout().then(function () { window.location.href = 'login.html'; });
-    });
-
-    window.AGPAuth.requireAdmin('login.html').then(function (user) {
-        if (!user) return;
-        document.body.classList.remove('auth-checking');
-        document.getElementById('account-username').textContent = user.username;
-        document.getElementById('account-role').textContent = user.role;
-        loadUsers();
-    });
-}());
+    return {
+      // الشاشات الأضيق (آيباد عمودي): القائمة والتذكرة فوق بعض، والشريط الجانبي أضيق
+      tCols:(s.vw||innerWidth)<1100?'minmax(0,1fr)':'minmax(300px,380px) minmax(0,1fr)', tRows:(s.vw||innerWidth)<1100?'340px minmax(560px,auto)':'none', tHeight:(s.vw||innerWidth)<1100?'auto':'calc(100vh - 190px)',
+      sideW:(s.vw||innerWidth)<900?'208px':'248px',
+      nav, is, crumbGroup, crumbPage, pageDesc, showHelp, newCount:s.newCount, meName:me.username||'—', meRole:me.role||'—',
+      logout:()=>A.logout().then(()=>{ location.href='login.html'; }),
+      refresh:this.refresh,
+      // users
+      usersTabs, rows, q:s.q, onQ:e=>this.setState({ q:e.target.value }),
+      isPlayersTab:s.usersTab==='players', isStreamersTab:s.usersTab==='streamers',
+      searchPh:s.usersTab==='players'?'بحث بين اللاعبين (اسم المستخدم / الإيميل / الـID العام / المعرّف الداخلي)':'بحث بين الستريمرز (اسم المستخدم / الإيميل / الـID العام / تيك توك / المعرّف الداخلي)',
+      rowsEmpty:!rows.length, rowsEmptyText:!s.users?'جارٍ التحميل…':ql?'لا توجد نتائج مطابقة.':(s.usersTab==='players'?'لا يوجد لاعبون بعد.':'لا يوجد ستريمرز بعد.'),
+      drawerOpen:!!dRaw, du, closeDrawer:()=>this.setState({ drawerId:null }),
+      // picker
+      pickType:s.pickType, pickId:s.pickId, pick, pickPh:s.pickType==='internal'?'3':'12345678',
+      onPickType:e=>this.setPick({ pickType:e.target.value }), onPickId:e=>this.setPick({ pickId:e.target.value }),
+      // grant
+      selFrame, libFrames, libTabs, libQ:s.libQ, onLibQ:e=>this.setState({ libQ:e.target.value }), libEmpty:!libFrames.length,
+      grantTpl:s.grantTpl, onGrantTpl:e=>this.setState({ grantTpl:e.target.value }), grantText:s.grantText, onGrantText:e=>this.setState({ grantText:e.target.value }),
+      grantFrame:()=>this.needUser(u=>{ if(!sf) return this.flash('اختر إطاراً من القائمة أولاً.','err');
+        this.busy('grant',()=>A.adminGrantFrame(u.id,sf.type,sf.ref,{ entranceTemplate:s.grantTpl, entranceText:s.grantText })).then(r=>{ if(r) this.flash(r.success?'تم منح الإطار.':'تعذّر المنح: '+(r.error||'unknown'),r.success?'ok':'err'); }); }),
+      revokeFrame:()=>this.needUser(u=>{ if(!sf) return this.flash('اختر إطاراً من القائمة أولاً.','err');
+        this.ask('سحب الإطار؟',`سيُسحب إطار «${sf.name}» من ${this.pickName(u)}.`,'سحب الإطار',()=>this.busy('revoke',()=>A.adminRevokeFrame(u.id,sf.type,sf.ref)).then(r=>{ if(r) this.flash(r.success?'تم سحب الإطار.':'تعذّر السحب.',r.success?'ok':'err'); })); }),
+      // entrances
+      entranceModels, entranceText:s.entranceText, onEntranceText:e=>this.setState({ entranceText:e.target.value }),
+      saveEntrance:()=>this.needUser(u=>{ const text=s.entranceText.trim(); if(!text) return this.flash('اكتب نص الدخولية أولاً.','err');
+        this.busy('ent',()=>A.adminSetEntrance(u.id,s.entranceModel,text)).then(r=>{ if(r) this.flash(r.success?'تم حفظ الدخولية.':'تعذّر الحفظ.',r.success?'ok':'err'); }); }),
+      removeEntrance:()=>this.needUser(u=>this.ask('إزالة الدخولية؟',`ستُزال دخولية ${this.pickName(u)}.`,'إزالة',()=>this.busy('entx',()=>A.adminClearEntrance(u.id)).then(r=>{ if(r) this.flash(r.success?'تمت إزالة الدخولية.':'تعذّرت الإزالة.',r.success?'ok':'err'); }))),
+      // elim
+      elimCards,
+      grantCard:()=>this.needUser(u=>{ if(!s.cardKey) return this.flash('اختر بطاقة أولاً.','err');
+        this.busy('card',()=>A.adminGrantElimCard(u.id,s.cardKey)).then(r=>{ if(r) this.flash(r.success?'تم منح بطاقة الإقصاء.':'تعذّر المنح: '+(r.error||'unknown'),r.success?'ok':'err'); }); }),
+      revokeCard:()=>this.needUser(u=>{ if(!s.cardKey) return this.flash('اختر بطاقة أولاً.','err');
+        this.ask('سحب البطاقة؟',`ستُسحب بطاقة الإقصاء${selCard?' «'+selCard.displayNameAr+'»':''} من ${this.pickName(u)}.`,'سحب البطاقة',()=>this.busy('cardx',()=>A.adminRevokeElimCard(u.id)).then(r=>{ if(r) this.flash(r.success?'تم سحب بطاقة الإقصاء.':'تعذّر السحب.',r.success?'ok':'err'); })); }),
+      // codes
+      allFrames:frames, codesFrame:s.codesFrame, onCodesFrame:e=>this.setState({ codesFrame:e.target.value }),
+      codesCount:s.codesCount, onCodesCount:e=>this.setState({ codesCount:e.target.value }), codesNote:s.codesNote, onCodesNote:e=>this.setState({ codesNote:e.target.value }), codesOut:s.codesOut,
+      genCodes:()=>{ const f=frames.find(x=>x.key===s.codesFrame); if(!f) return this.flash('اختر الإطار أولاً.','err');
+        const n=Number(s.codesCount); if(!(n>=1&&n<=500)) return this.flash('العدد لازم يكون بين 1 و 500.','err');
+        this.busy('codes',()=>A.adminGenerateFrameCodes(f.type,f.ref,n,s.codesNote)).then(r=>{ if(!r) return; if(!r.success) return this.flash('تعذّر التوليد: '+(r.error||'unknown'),'err');
+          this.setState({ codesOut:(r.codes||[]).join('\n') }); this.flash(`تم توليد ${(r.codes||[]).length} كود لإطار "${f.name}".`); this.loadCodes(); }); },
+      copyCodes:()=>{ if(!s.codesOut) return this.flash('ولّد الأكواد أولاً.','err'); const done=()=>this.flash('تم نسخ الأكواد.');
+        const fallback=()=>{ const ta=document.createElement('textarea'); ta.value=s.codesOut; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(e){} ta.remove(); done(); };
+        if(navigator.clipboard) navigator.clipboard.writeText(s.codesOut).then(done,fallback); else fallback(); },
+      codeRows:(s.codes||[]).map(c=>({ code:c.code, frame:c.displayNameAr||c.frameRef, note:c.note||'—',
+        status:c.redeemedAt?`مستخدم — \u2068${c.redeemedUsername||('#'+c.redeemedBy)}\u2069${c.redeemedCustomId?' (\u2066'+c.redeemedCustomId+'\u2069)':''} · \u2068${fmtDate(c.redeemedAt)}\u2069`:'غير مستخدم', color:c.redeemedAt?'#4ade80':'#fcd34d' })),
+      // catalog / exclusive / levels
+      catalog,
+      exclusives:(s.customFrames||[]).map(e=>({ n:e.id, file:e.image_filename, name:e.display_name_ar||'—' })),
+      exFile:s.exFile, exName:s.exName, onExFile:e=>this.setState({ exFile:e.target.value }), onExName:e=>this.setState({ exName:e.target.value }),
+      addExclusive:()=>{ const file=s.exFile.trim(); if(!file) return this.flash('اكتب اسم ملف الإطار الحصري أولاً.','err');
+        this.busy('ex',()=>A.adminCreateCustomFrame(file,s.exName)).then(r=>{ if(!r) return; if(r.success){ this.setState({ exFile:'', exName:'' }); this.flash('تمت الإضافة — ارفع الصورة بنفس اسم الملف لجذر المستودع.'); this.loadCatalog(); } else this.flash('تعذّرت الإضافة: '+(r.error||'unknown'),'err'); }); },
+      levels,
+      // announce
+      ann:s.annActive?{ label:'يوجد إعلان منشور حالياً ويظهر لكل زائر.', dot:'#22c55e', border:'#14532d', bg:'#0f1d15' }:{ label:'لا يوجد إعلان منشور.', dot:'#5b6274', border:'#262a37', bg:'#14161d' },
+      annText:s.annText, annImage:s.annImage, onAnnText:e=>this.setState({ annText:e.target.value }), onAnnImage:e=>this.setState({ annImage:e.target.value }),
+      publishAnn:()=>{ const text=s.annText.trim(); if(!text) return this.flash('اكتب نص الإعلان قبل النشر.','err');
+        this.busy('ann',()=>A.adminSetAnnouncement(text,s.annImage.trim())).then(r=>{ if(!r) return; if(r.success){ this.setState({ annActive:true }); this.flash('تم نشر الإعلان — يظهر الآن لكل زائر جديد للصفحة الرئيسية.'); } else this.flash('تعذّر النشر: '+(r.error||'unknown'),'err'); }); },
+      removeAnn:()=>this.ask('إزالة الإعلان الحالي؟','ما راح يظهر لأي زائر بعد الآن.','إزالة',()=>this.busy('annx',()=>A.adminClearAnnouncement()).then(r=>{ if(!r) return; if(r.success){ this.setState({ annActive:false }); this.flash('تمت إزالة الإعلان — ما راح يظهر لأي زائر بعد الآن.'); } else this.flash('تعذّرت الإزالة.','err'); })),
+      // supporters / partners
+      supporters, supportersEmpty:!supporters.length, supName:s.supName, supMsg:s.supMsg, supAmount:s.supAmount,
+      onSupName:e=>this.setState({ supName:e.target.value }), onSupMsg:e=>this.setState({ supMsg:e.target.value }), onSupAmount:e=>this.setState({ supAmount:e.target.value }),
+      addSupporter:()=>{ const name=s.supName.trim(); if(!name) return this.flash('اكتب اسم الداعم أولاً.','err');
+        this.busy('sup',()=>A.adminAddSupporter(name,s.supMsg,s.supAmount)).then(r=>{ if(!r) return; if(r.success){ this.setState({ supName:'', supMsg:'', supAmount:'' }); this.flash('تمت الإضافة — يظهر الآن بالصفحة الرئيسية.'); this.loadSupporters(); } else this.flash('تعذّرت الإضافة: '+(r.error||'unknown'),'err'); }); },
+      partners, partnersEmpty:!partners.length, partnerQ:s.partnerQ, partnerPreview, partnerCat:s.partnerCat, onPartnerCat:e=>this.setState({ partnerCat:e.target.value }),
+      onPartnerQ:e=>this.setState({ partnerQ:e.target.value, partnerFound:undefined }),
+      searchPartner:()=>{ const v=s.partnerQ.trim(); if(!v) return this.flash('اكتب معرّف الحساب أولاً.','err');
+        this.busy('psearch',()=>A.adminFindSupporterUser(v)).then(r=>{ if(!r) return; if(r.success&&r.user) this.setState({ partnerFound:r.user }); else { this.setState({ partnerFound:null }); this.flash('ما فيه حساب بهذا المعرّف.','err'); } }); },
+      partnerAddDisabled:!pf, partnerAddOpacity:pf?1:0.4,
+      addPartner:()=>{ if(!pf) return; const v=s.partnerQ.trim();
+        this.busy('padd',()=>A.adminAddPartner(v,s.partnerCat)).then(r=>{ if(!r) return; if(r.success){ this.setState({ partnerQ:'', partnerFound:undefined }); this.flash('تمت الإضافة — يظهر الآن بالصفحة الرئيسية.'); this.loadPartners(); } else this.flash('تعذّرت الإضافة: '+(r.error||'unknown'),'err'); }); },
+      // theme
+      themeStatus:s.theme&&s.theme.active?{ label:'ثيم مناسبة مفعّل حالياً على الصفحة الرئيسية'+(s.theme.data&&s.theme.data.presetKey&&THEME_PRESETS[s.theme.data.presetKey]?' ('+(s.theme.data.presetKey==='national-day'?'اليوم الوطني السعودي':'يوم التأسيس')+')':'')+'.', dot:'#a855f7', border:'#33285a', bg:'#1d1830' }
+        :{ label:s.theme?'الموقع على ألوانه الافتراضية — لا يوجد ثيم مفعّل.':'جارٍ التحميل…', dot:'#5b6274', border:'#262a37', bg:'#14161d' },
+      themePreset:s.themePreset, onThemePreset:e=>{ const v=e.target.value, p=THEME_PRESETS[v]; this.setState(st=>({ themePreset:v, themeColors:p?{ ...p }:st.themeColors })); },
+      themeColors:[['accent','اللون الأساسي'],['accentPink','لون التدرّج الثاني'],['accent2','لون إضافي (لمسات خفيفة)']].map(([k,l])=>({ label:l, value:s.themeColors[k], onChange:e=>{ const v=e.target.value; this.setState(st=>({ themeColors:{ ...st.themeColors, [k]:v } })); } })),
+      enableTheme:()=>this.busy('theme',()=>A.adminSetSiteTheme(s.themePreset||null,s.themeColors.accent,s.themeColors.accent2,s.themeColors.accentPink)).then(r=>{ if(!r) return; if(r.success){ this.flash('تم التفعيل — الألوان صارت تظهر الآن لكل زائر للصفحة الرئيسية.'); this.loadTheme(); } else this.flash('تعذّر التفعيل: '+(r.error||'unknown'),'err'); }),
+      disableTheme:()=>this.ask('إلغاء تفعيل الثيم؟','الموقع يرجع لألوانه الافتراضية فوراً لكل زائر.','إلغاء التفعيل',()=>this.busy('themex',()=>A.adminClearSiteTheme()).then(r=>{ if(!r) return; if(r.success){ this.flash('تم إلغاء التفعيل — الموقع رجع لألوانه الافتراضية.'); this.loadTheme(); } else this.flash('تعذّر الإلغاء.','err'); })),
+      // stats
+      stats, statsTabs:[['streamers','إحصائيات الستريمرز'],['users','إحصائيات المستخدمين']].map(([k,l])=>({ label:l, go:()=>this.setState({ statsTab:k }), bg:s.statsTab===k?'#7c3aed':'transparent', color:s.statsTab===k?'#fff':'#9199ab' })),
+      csv:()=>{ if(s.statsTab==='streamers'){ if(!SS) return; const rows=[stats.cols,...(SS.topStreamers||[]).map((r,i)=>[i+1,r.username,r.tiktokUsername||'',r.totalBroadcasts,r.totalHours,r.totalViews]),[],['إجمالي الستريمرز',SS.totalStreamers],['إجمالي الساعات',SS.totalHours],['إجمالي المشاهدات',SS.totalViews]]; downloadCsv('agp-streamer-stats.csv',rows); }
+        else { if(!US) return; const rows=[stats.cols,...(US.topPlayersByGamesPlayed||[]).map((r,i)=>[i+1,r.username,r.tiktokUsername||'',r.gamesPlayed,r.gamesWon]),[],['إجمالي المستخدمين',US.totalUsers],['عدد الستريمرز',US.totalStreamers],['موثَّقون بتيك توك',US.totalVerifiedTikTok]]; downloadCsv('agp-user-stats.csv',rows); } },
+      // tickets
+      ticketRows, ticketsNote, hasMoreTickets:!!s.tickets&&s.tickets.length<s.ticketsTotal, tType:s.tType, tStatus:s.tStatus, tQ:s.tQ,
+      onTType:e=>this.setState({ tType:e.target.value },()=>this.loadTickets(false)), onTStatus:e=>this.setState({ tStatus:e.target.value },()=>this.loadTickets(false)),
+      onTQ:e=>{ this.setState({ tQ:e.target.value }); clearTimeout(this._tq); this._tq=setTimeout(()=>this.loadTickets(false),350); },
+      loadMore:()=>this.loadTickets(true),
+      hasTicket:!!T, noTicket:!T, tk, statusDraft:s.statusDraft, onStatusDraft:e=>this.setState({ statusDraft:e.target.value }),
+      changeStatus:()=>{ if(!s.ticketId) return; const st=s.statusDraft; this.busy('status',()=>this.setTicketStatus(st)).then(ok=>{ if(!ok) return; this.flash('تم تغيير الحالة إلى "'+STATUS_LABELS[st]+'".'); this.openTicket(s.ticketId,false); this.loadTickets(false); }); },
+      reply:s.reply, onReply:e=>this.setState({ reply:e.target.value }), replyCount:s.reply.length, replyCountColor:s.reply.length>5000?'#f87171':'#5b6274',
+      sendReply:()=>this.sendReply(false), sendClose:()=>this.sendReply(true),
+      // overlays
+      confirmOpen:!!s.confirm, confirm:s.confirm||{},
+      cancelConfirm:()=>this.setState({ confirm:null }),
+      doConfirm:()=>{ const fn=s.confirm&&s.confirm.fn; this.setState({ confirm:null }); fn&&fn(); },
+      toastOpen:!!s.toast, toast:s.toast?{ msg:s.toast.msg, dot:toastErr?'#ef4444':'#22c55e', border:toastErr?'#4a2427':'#14532d' }:{}
+    };
+  }
+}
 </script>
+
 </body>
 </html>
