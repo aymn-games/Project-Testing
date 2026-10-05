@@ -1877,6 +1877,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         pointsPromise.then(function (pointsResult) {
             renderWinnerScreen(_podium, pointsResult);
         });
+
+        // بطاقة الفوز (js/agp-win-card.js) -- تغطي شاشة الفوز لو الفائز يملك بطاقة مفعّلة.
+        if (AGP.winCard) {
+            AGP.winCard.announce(winners, function (p) {
+                return ['المركز الأول', scoreOf(p) + ' نقطة', GAME_NAME];
+            });
+        }
     }
 
     function findAwardedFor(pointsResult, player) {

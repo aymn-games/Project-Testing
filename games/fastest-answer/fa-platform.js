@@ -163,17 +163,23 @@
                     var known = byId[payload.id];
                     if (payload.avatarUrl && !byName[known].avatar) byName[known].avatar = payload.avatarUrl;
                     if (payload.frame) byName[known].frame = payload.frame;
+                    if (payload.winCard !== undefined) byName[known].winCard = payload.winCard || null;
                     return known;
                 }
                 var base = String(payload.name || payload.id).trim() || String(payload.id);
                 var name = base, k = 2;
                 while (byName[name]) name = base + ' ' + (k++);
-                byName[name] = { id: payload.id, avatar: payload.avatarUrl || null, frame: payload.frame || null };
+                byName[name] = { id: payload.id, avatar: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null };
                 byId[payload.id] = name;
                 return name;
             },
             avatar: function (name) { return (byName[name] && byName[name].avatar) || null; },
             id: function (name) { return (byName[name] && byName[name].id) || null; },
+            // اللاعب بصيغة AGP ({id, name, avatarUrl, winCard}) — لبطاقة الفوز (js/agp-win-card.js)
+            player: function (name) {
+                var p = byName[name] || {};
+                return { id: p.id || name, name: name, avatarUrl: p.avatar || null, winCard: p.winCard || null };
+            },
             // لاعب عنده إطار مفعّل من المنصة → بيانات بطاقته، وإلا null
             framed: function (name) {
                 var p = byName[name];

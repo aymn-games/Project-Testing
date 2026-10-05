@@ -17,6 +17,7 @@
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-win-card.js"></script>
 <script src="xo-platform.js"></script>
 <script src="./support.js"></script>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#7c3aed"/><text x="50" y="66" font-size="44" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">?</text></svg></template>
@@ -466,7 +467,12 @@ class Component extends DCLogic {
     const players=[...new Set([...s.teams.flatMap(t=>t.players),...Object.keys(s.out)])].map(n=>({id:this.reg.id(n),name:n})).filter(p=>p.id);
     const winnerIds=(w.solo?[w.name]:s.teams[w.i].players).map(n=>this.reg.id(n)).filter(Boolean);
     if(window.AGPAuth&&typeof window.AGPAuth.reportMatchPoints==='function')
-      window.AGPAuth.reportMatchPoints({players,winnerIds,teamGame:!w.solo,durationMs:Date.now()-(this.matchStartedAt||Date.now())}); }
+      window.AGPAuth.reportMatchPoints({players,winnerIds,teamGame:!w.solo,durationMs:Date.now()-(this.matchStartedAt||Date.now())});
+    this.showWinCard(w); }
+  // بطاقة الفوز (js/agp-win-card.js) — تغطي شاشة الفوز لو الفائز (أو لاعب بالفريق الفائز) يملك بطاقة مفعّلة
+  showWinCard(w){ const WC=window.AymanGamesPlatform&&window.AymanGamesPlatform.winCard; if(!WC) return;
+    if(w.solo) WC.announce(this.reg.player(w.name),['المركز الأول',w.score+' فوز','إكس أو']);
+    else WC.announce((this.state.teams[w.i].players||[]).map(n=>this.reg.player(n)),['فوز '+w.name,w.score+' فوز','إكس أو']); }
 
   ac(){ if(!this._ac) this._ac=new (window.AudioContext||window.webkitAudioContext)(); if(this._ac.state==='suspended') this._ac.resume(); return this._ac; }
   tone(f,d,type='sine',v=.12,f2,delay=0){ try{const a=this.ac(),t=a.currentTime+delay,o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(a.destination);o.start(t);o.stop(t+d+.02);}catch(e){} }
@@ -574,7 +580,7 @@ class Component extends DCLogic {
         teams:st.teams.map((t,i)=>i===Math.max(0,left.team)?{...t,players:[...t.players,user]}:t)}; });
     this.toastMsg('رجع '+user+' للمباراة'); }
   closeResults=()=>{ if(this.state.phase==='over'){ this.snd('close'); this.setState({phase:'ready',result:null,board:Array(9).fill(null),winLine:null,syms:[null,null],lastCell:null}); } };
-  newGame=()=>{ clearInterval(this.ti); clearInterval(this.sim); this.matchStartedAt=null; this.reported=false; this.setState(s=>({teams:s.teams.map(t=>({...t,score:0})),solo:{},winner:null,phase:'ready',round:0,board:Array(9).fill(null),syms:[null,null],winLine:null,result:null,drawHi:null,log:[],reels:[0,1].map(()=>this.blankReel())})); };
+  newGame=()=>{ window.AymanGamesPlatform.winCard?.dismiss(); clearInterval(this.ti); clearInterval(this.sim); this.matchStartedAt=null; this.reported=false; this.setState(s=>({teams:s.teams.map(t=>({...t,score:0})),solo:{},winner:null,phase:'ready',round:0,board:Array(9).fill(null),syms:[null,null],winLine:null,result:null,drawHi:null,log:[],reels:[0,1].map(()=>this.blankReel())})); };
   endMatch=()=>{};
 
   // الانضمام وتبديل الفريق: نفس قواعد اللوبي عبر XO.join (xo-platform.js · JOIN-RULES.md).

@@ -832,7 +832,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (existing && existing.team === team) return true;
         if (existing) AGP.player.removePlayer(payload.id);
 
-        AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, team: team });
+        AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null, team: team });
         return true;
     }
 
@@ -867,7 +867,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var team = (m[1] === '1' || m[1] === '١') ? TEAM1 : TEAM2;
         if (!isAccepted(m[2])) return;
 
-        AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, team: team });
+        AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null, team: team });
         var newPlayer = findPlayerById(payload.id);
         if (newPlayer) resolveCredit(team, newPlayer);
     }
@@ -1149,6 +1149,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    // بطاقة الفوز (js/agp-win-card.js) -- تغطي شاشة النتيجة لكل لاعب بالفريق
+    // الفائز يملك بطاقة مفعّلة؛ الباقي يشوفون شاشة النتيجة العادية.
+    function announceWinCards(winningTeam) {
+        if (!AGP.winCard) return;
+        var name = (winningTeam === TEAM1) ? _settings.team1Name : _settings.team2Name;
+        AGP.winCard.announce(getTeamPlayers(winningTeam), [
+            'فوز ' + name,
+            _roundWins1 + ' - ' + _roundWins2 + ' جولات',
+            'خلية الحروف'
+        ]);
+    }
+
     function continueAfterRoundWin() {
         var winner = _connectionWinner;
         if (winner === TEAM1) _roundWins1++; else if (winner === TEAM2) _roundWins2++;
@@ -1156,9 +1168,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _connectionWinner = null;
 
         if (_roundWins1 >= ROUND_WINS_TO_CLINCH || _roundWins2 >= ROUND_WINS_TO_CLINCH) {
-            reportPlatformPoints(_roundWins1 >= ROUND_WINS_TO_CLINCH ? TEAM1 : TEAM2);
+            var clinchTeam = _roundWins1 >= ROUND_WINS_TO_CLINCH ? TEAM1 : TEAM2;
+            reportPlatformPoints(clinchTeam);
             _screen = 'result';
             renderResultScreen();
+            announceWinCards(clinchTeam);
             return;
         }
 

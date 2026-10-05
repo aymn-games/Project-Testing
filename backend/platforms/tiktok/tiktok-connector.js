@@ -5,7 +5,7 @@
  *   createTikTokConnector() -> { connect(options, callbacks), disconnect(), isConnected() }
  *   callbacks = {
  *     onStatus(status, message?),   // 'connecting'/'connected'/'error'، و'ended' لما ينتهي البث فعلياً في تيك توك
- *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance, elimCard }),
+ *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance, elimCard, winCard }),
  *     onGift({ id, name, giftName, giftValue, repeatCount }),
  *     onFollow({ id, name }),
  *     onViewerUpdate({ current, totalUsers })   // اختياري
@@ -197,6 +197,20 @@ function extractElimCard(uniqueId) {
 }
 
 /**
+ * بطاقة الفوز المفعّلة (لو وُجدت) لصاحب هذا التعليق — نفس extractElimCard.
+ * @param {string} uniqueId
+ * @returns {{cardKey: string}|null}
+ */
+function extractWinCard(uniqueId) {
+    try {
+        return collectiblesService.getWinCardForVerifiedTikTok(uniqueId);
+    } catch (err) {
+        logger.error('TikTok Connector: win card lookup failed for "' + uniqueId + '":', err);
+        return null;
+    }
+}
+
+/**
  * استخراج "هل هذا المعلِّق متابع لصاحب البث؟" عبر
  * `data.user.followInfo.followStatus`.
  *
@@ -352,6 +366,7 @@ function createTikTokConnector() {
                 frame: extractEquippedFrame(user.uniqueId),
                 entrance: extractEquippedEntrance(user.uniqueId),
                 elimCard: extractElimCard(user.uniqueId),
+                winCard: extractWinCard(user.uniqueId),
                 _debugFollowStatus: followDebug.followStatus,
                 _debugIsFollowerOfAnchor: followDebug.isFollowerOfAnchor
             });

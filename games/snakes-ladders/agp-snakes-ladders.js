@@ -1840,6 +1840,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         AGP.events.emit('game:roundEnded', { id: GAME_ID });
         pointsPromise.then(function (pointsResult) { renderWinnerScreen(winners, pointsResult); });
+
+        // بطاقة الفوز (js/agp-win-card.js) -- تغطي شاشة الفوز لكل فائز يملك بطاقة مفعّلة (بترتيبه).
+        if (AGP.winCard) {
+            var RANKS = ['المركز الأول', 'المركز الثاني', 'المركز الثالث'];
+            AGP.winCard.announce(winners, function (p, i) {
+                return [RANKS[i] || ('المركز ' + (i + 1)), 'من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'السلم والثعبان'];
+            });
+        }
     }
 
     function findAwardedFor(pointsResult, player) {

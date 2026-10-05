@@ -16,6 +16,7 @@
 <script src="../../auth/auth-client.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
+<script src="../../js/agp-win-card.js"></script>
 <script src="tw-platform.js"></script>
 <script src="./support.js"></script>
 </head>
@@ -400,7 +401,10 @@ class Component extends DCLogic {
     for(let g=0;g<O.length*2;g++){ p=(p+1)%O.length; const o=O[p]; if(skips[o.k]>0&&O.some(x=>x.k!==o.k)){ skips[o.k]--; continue; } if(skips[o.k]>0){ skips[o.k]--; continue; } break; }
     const o=O[p]; return {turn:o.k,ptr:{...st.ptr,[o.k]:o.i},skips,left:st.timer}; }); }
   toggleRun=()=>{ const s=this.state; if(s.winner) return; if(!s.started){ this.matchStartedAt=Date.now(); this.setState({started:true,running:true,left:s.timer}); this.tone(523,.15,'triangle'); setTimeout(()=>this.tone(784,.25,'triangle'),140); } else { this.setState({running:!s.running}); this.tone(s.running?330:660,.15,'triangle'); } };
-  win(k){ if(this.state.winner) return; this.setState({winner:k}); this.reportPoints(k); [523,659,784,1047].forEach((f,i)=>setTimeout(()=>this.tone(f,i===3?.6:.22,'sine',.09),i*160)); }
+  // بطاقة الفوز (js/agp-win-card.js) — تغطي شاشة الفوز لكل لاعب بالفريق الفائز يملك بطاقة مفعّلة
+  showWinCard(k){ const WC=window.AymanGamesPlatform&&window.AymanGamesPlatform.winCard, t=this.state.teams[k]; if(!WC||!t) return;
+    WC.announce(t.players.map(n=>this.reg.player(n)),['فوز '+t.name,t.pts+' نقطة','حرب الفريقين']); }
+  win(k){ if(this.state.winner) return; this.setState({winner:k}); this.reportPoints(k); this.showWinCard(k); [523,659,784,1047].forEach((f,i)=>setTimeout(()=>this.tone(f,i===3?.6:.22,'sine',.09),i*160)); }
 
   kick(k,n){ const t=this.state.teams[k]; if(t.players.length<=1) return this.toastMsg('لازم يبقى لاعب واحد على الأقل بالفريق');
     this.setState(st=>{ const L=st.teams[k].players, idx=L.indexOf(n), cur=st.ptr[k]%L.length, ptr={...st.ptr,[k]:idx<cur?cur-1:cur};
@@ -453,7 +457,7 @@ class Component extends DCLogic {
       ...(()=>{ const j=s.join, k=j?j.team:'red', m=T[k]; return {jTeam:s.teams[k].name, jKw:s.teams[k].kw, jLight:m.l, jSoft:m.c+'14', jBd:m.c+'66', jGlow:m.c+'2e', jWaiting:!(j&&j.cand), jFound:!!(j&&j.cand), jName:j&&j.cand||'', jIni:ini(j&&j.cand), jImg:(j&&j.cand&&this.reg.avatar(j.cand))||'', jImgOp:j&&j.cand&&this.reg.avatar(j.cand)?1:0, jAv:av(k)}; })(),
       winOpen:!!W, winName:W?W.name:'', winLight:W?T[s.winner].l:'#fff', winGap:wn>4?16:24,
       winPlayers:W?W.players.map((n,i)=>({name:n,ini:ini(n),...this.avOf(n),pts:Math.max(0,W.pts),avBg:av(s.winner),light:T[s.winner].l,bd:T[s.winner].c+'88',soft:T[s.winner].c+'26',glow:T[s.winner].c+'33',delay:(0.3+i*0.08).toFixed(2)+'s',...sz})):[],
-      replaySame:()=>{ this.setState({...this.fresh(this.state.teams),scale:this.state.scale,logo:this.state.logo},()=>this.resetMatch()); },
+      replaySame:()=>{ window.AymanGamesPlatform.winCard?.dismiss(); this.setState({...this.fresh(this.state.teams),scale:this.state.scale,logo:this.state.logo},()=>this.resetMatch()); },
       newMatch:()=>{ location.href='index.html'; },
       endMatch:()=>{ location.href=TW.libraryUrl; }
     }; }

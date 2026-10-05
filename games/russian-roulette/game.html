@@ -17,6 +17,7 @@
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-win-card.js"></script>
 <script src="rr-platform.js"></script>
 <script src="./support.js"></script>
 </head>
@@ -602,7 +603,11 @@ class Component extends DCLogic {
     else { this.toastMsg('انتهى الوقت — تم إغلاق الاختيار'); this.endTurn(); } }
   win(){ if(this.state.phase==='win') return; const a=this.alive(), w=a.length?a[0]:null; this.clearT(); cancelAnimationFrame(this._raf);
     this.setState({phase:'win',winner:w?w.id:null,auto:false,toast:null,spinning:false,awaiting:false,chooser:null,target:null,clash:null,elim:null,warn:null,joinOpen:false,winRun:(this.state.winRun||0)+1,pts:w?'pending':null}); [523.25,659.25,783.99].forEach((f,i)=>setTimeout(()=>this.tone(f,i===2?.5:.22,'sine',.16),i*160));
-    if(w) this.reportPoints(w.name); }
+    if(w){ this.reportPoints(w.name); this.showWinCard(w); } }
+  // بطاقة الفوز (js/agp-win-card.js) — تغطي شاشة الفوز لو الفائز يملك بطاقة مفعّلة
+  showWinCard(w){ const WC=window.AymanGamesPlatform&&window.AymanGamesPlatform.winCard; if(!WC) return;
+    const k=(this.state.log||[]).filter(e=>e.type==='kill'&&e.a===w.name).length, n=this.participants.size;
+    WC.announce(this.reg.player(w.name),['المركز الأول من '+n+' لاعب',k?'أقصى '+k+(k===1?' لاعب':' لاعبين'):'آخر الصامدين','الروليت الروسي']); }
   // نظام نقاط المنصة — مرة واحدة لكل مباراة (CLAUDE.md)
   reportPoints(winner){ if(this.reported) return; this.reported=true;
     const players=[...this.participants].map(n=>({id:this.reg.player(n).id,name:n})), wid=this.reg.player(winner).id, run=this.state.winRun;
@@ -610,7 +615,7 @@ class Component extends DCLogic {
     A.reportMatchPoints({players,winnerIds:[wid],teamGame:false,durationMs:Date.now()-(this.matchStartedAt||Date.now())}).then(res=>{
       if(this.state.winRun!==run) return; const uname=String(wid).indexOf('tiktok:')===0?String(wid).slice(7):winner;
       const aw=res&&res.success&&Array.isArray(res.awarded)?res.awarded.find(a=>a.tiktokUsername===uname):null; this.setState({pts:aw?aw.added:null}); }); }
-  stopVid(){ const v=this._wv; if(v){ try{ v.pause(); }catch(e){} } }
+  stopVid(){ window.AymanGamesPlatform.winCard?.dismiss(); const v=this._wv; if(v){ try{ v.pause(); }catch(e){} } }
 
   manualKick(id){ const s=this.state; if(this.busy()) return this.toastMsg('انتظر انتهاء الدور الحالي'); const t=this.P(id);
     this.setState(st=>({players:st.players.map(p=>p.id===id?{...p,alive:false,hearts:0}:p)})); this.addLog({type:'manual',a:'المذيع',v:'أقصى',b:t.name});

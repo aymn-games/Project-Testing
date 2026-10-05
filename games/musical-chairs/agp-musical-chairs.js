@@ -1670,6 +1670,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         pointsPromise.then(function (pointsResult) {
             if (_phase === 'champion') renderWinnerScreen(winner, pointsResult);
         });
+
+        // بطاقة الفوز (js/agp-win-card.js) -- تغطي شاشة الفوز لو الفائز يملك بطاقة مفعّلة.
+        if (winner && AGP.winCard) {
+            AGP.winCard.announce(winner, ['المركز الأول من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'صاحب آخر كرسي', 'الكراسي الموسيقية']);
+        }
     }
 
     function findAwardedFor(pointsResult, player) {

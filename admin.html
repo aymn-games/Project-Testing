@@ -337,6 +337,27 @@ input::placeholder,textarea::placeholder{color:#5b6274}
           </div>
         </sc-if>
 
+        <!-- WIN CARDS -->
+        <sc-if value="{{ is.win }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+              <span style="font-size:12px;color:#9199ab">بطاقة الفوز</span>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
+                <sc-for list="{{ winCards }}" as="c" hint-placeholder-count="1">
+                  <button onClick="{{ c.pick }}" style="display:flex;flex-direction:column;gap:10px;padding:10px;border-radius:10px;cursor:pointer;text-align:right;color:#e7e9ee;border:2px solid {{ c.border }};background:{{ c.bg }}" style-hover="border-color:#7c3aed">
+                    <div style="aspect-ratio:2/3;border-radius:8px;background:#0b0d12;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="{{ c.img }}" alt="" loading="lazy" style="max-width:100%;max-height:100%;object-fit:contain"></div>
+                    <span style="font-size:13px;font-weight:500">{{ c.label }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid #1f222c">
+              <button onClick="{{ revokeWinCard }}" style="height:36px;padding:0 14px;border-radius:8px;background:transparent;color:#f87171;border:1px solid #4a2427;font-size:13px;cursor:pointer" style-hover="background:#2a1416">سحب البطاقة</button>
+              <button onClick="{{ grantWinCard }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">منح البطاقة</button>
+            </div>
+          </div>
+        </sc-if>
+
         <!-- CODES -->
         <sc-if value="{{ is.codes }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;gap:6px">
@@ -732,7 +753,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
 //  التنقل بالـ hash: #users · #support · #support/41 · #grant ... إلخ.
 // ============================================================
 const A = window.AGPAuth;
-const PAGES = ['users','support','grant','codes','entrances','elim','catalog','exclusive','announce','supporters','partners','theme','levels','stats'];
+const PAGES = ['users','support','grant','codes','entrances','elim','win','catalog','exclusive','announce','supporters','partners','theme','levels','stats'];
 const TEMPLATE_LABELS = { gold:'الذهبي الفخم', neon:'النيون المستقبلي', fire:'الناري القوي', ice:'الجليدي الملكي' };
 const THEME_PRESETS = { 'national-day': { accent:'#006c35', accentPink:'#c9a24b', accent2:'#ffffff' }, 'founding-day': { accent:'#2c3e2d', accentPink:'#a85c32', accent2:'#d8c79d' } };
 const CATEGORY_LABELS = { idea:'أصحاب الأفكار', dev:'فريق التطوير' };
@@ -758,7 +779,7 @@ function downloadCsv(filename, rows){
 class Component extends DCLogic {
   state = (() => { const h=readHash(); return {
     me:null, page:h.page, usersTab:'players', q:'', drawerId:null, pidDraft:'', confirm:null, toast:null,
-    users:null, catalog:null, customFrames:[], elimCardList:[], codes:null,
+    users:null, catalog:null, customFrames:[], elimCardList:[], winCardList:[], codes:null,
     pickType:'internal', pickId:'', pickUser:null, pickState:'empty',
     frameKey:null, libTab:'club', libQ:'', grantTpl:'', grantText:'', entranceModel:'gold', entranceText:'', cardKey:null,
     codesFrame:'', codesCount:10, codesNote:'', codesOut:'',
@@ -800,7 +821,7 @@ class Component extends DCLogic {
 
   loadPage(page){
     if(page==='users' && !this.state.users) this.loadUsers();
-    if(['grant','codes','elim','catalog','exclusive'].includes(page) && !this.state.catalog) this.loadCatalog();
+    if(['grant','codes','elim','win','catalog','exclusive'].includes(page) && !this.state.catalog) this.loadCatalog();
     if(page==='codes' && !this.state.codes) this.loadCodes();
     if(page==='announce') this.loadAnnouncement();
     if(page==='supporters' && !this.state.supporters) this.loadSupporters();
@@ -845,7 +866,7 @@ class Component extends DCLogic {
 
   // ---------- الكتالوج / الإطارات ----------
   loadCatalog(){ return A.adminGetCollectiblesCatalog().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل الكتالوج.','err');
-    this.setState(s=>({ catalog:r.catalog||[], customFrames:r.customFrames||[], elimCardList:r.elimCards||[], catEdits:{}, codesFrame: s.codesFrame || ((r.catalog||[])[0]?'catalog:'+r.catalog[0].slug:'') })); }); }
+    this.setState(s=>({ catalog:r.catalog||[], customFrames:r.customFrames||[], elimCardList:r.elimCards||[], winCardList:r.winCards||[], catEdits:{}, codesFrame: s.codesFrame || ((r.catalog||[])[0]?'catalog:'+r.catalog[0].slug:'') })); }); }
   allFrames(){ const s=this.state; return [ ...(s.catalog||[]).map(c=>({ key:'catalog:'+c.slug, type:'catalog', ref:c.slug, file:c.image_filename, name:c.display_name_ar||c.slug })),
     ...(s.customFrames||[]).map(c=>({ key:'custom:'+c.id, type:'custom', ref:c.id, file:c.image_filename, name:c.display_name_ar||c.image_filename })) ]; }
   catEdit(slug, field, value){ this.setState(s=>({ catEdits:{ ...s.catEdits, [slug]:{ ...(s.catEdits[slug]||{}), [field]:value } } })); }
@@ -892,14 +913,14 @@ class Component extends DCLogic {
     const navDef=[
       ['الحسابات',[['users','المستخدمون']]],
       ['الدعم',[['support','تذاكر الدعم']]],
-      ['المقتنيات',[['grant','منح الإطارات'],['codes','أكواد الاسترداد'],['entrances','الدخوليات'],['elim','بطاقات الإقصاء'],['catalog','كتالوج الإطارات'],['exclusive','إطارات حصرية']]],
+      ['المقتنيات',[['grant','منح الإطارات'],['codes','أكواد الاسترداد'],['entrances','الدخوليات'],['elim','بطاقات الإقصاء'],['win','بطاقات الفوز'],['catalog','كتالوج الإطارات'],['exclusive','إطارات حصرية']]],
       ['واجهة الموقع',[['announce','الإعلان'],['supporters','الداعمون'],['partners','شركاء الإبداع'],['theme','ثيم المناسبات']]],
       ['المستويات والتقارير',[['levels','مستويات الستريمر (SP)'],['stats','الإحصائيات']]]
     ];
     let crumbGroup='', crumbPage='';
     const nav=navDef.map(([group,items])=>({ group, items:items.map(([key,label])=>{ const a=s.page===key; if(a){ crumbGroup=group; crumbPage=label; }
       return { label, go:()=>this.go(key), bg:a?'#1d1830':'transparent', color:a?'#e7e9ee':'#9199ab', weight:a?600:400, dot:a?'#a855f7':'#2f3342', badge:key==='support'&&s.newCount?s.newCount:null }; }) }));
-    const is={}; PAGES.forEach(k=>is[k]=s.page===k); is.needsPicker=is.grant||is.entrances||is.elim;
+    const is={}; PAGES.forEach(k=>is[k]=s.page===k); is.needsPicker=is.grant||is.entrances||is.elim||is.win;
     const pageDesc=is.grant?'يمنح أي إطار — حتى المقفول بمستوى — لأي مستخدم فوراً. منح أحد الإطارات الأربعة "الخاصة" يمنح تلقائياً دخولية + توهج معه.'
       :is.entrances?'إعطاء دخولية لأي مستخدم بشكل منفصل تماماً عن الإطارات.':'منح أو سحب بطاقة إقصاء لمستخدم.';
 
@@ -956,6 +977,8 @@ class Component extends DCLogic {
       .map(([k,sw])=>({ label:TEMPLATE_LABELS[k], swatch:sw, pick:()=>this.setState({ entranceModel:k }), border:s.entranceModel===k?'#7c3aed':'#262a37', bg:s.entranceModel===k?'rgba(124,58,237,.12)':'#11131a' }));
     const elimCards=(s.elimCardList||[]).map(c=>({ label:c.displayNameAr, img:c.imageFilename, pick:()=>this.setState({ cardKey:c.key }), border:s.cardKey===c.key?'#7c3aed':'#262a37', bg:s.cardKey===c.key?'rgba(124,58,237,.12)':'#11131a' }));
     const selCard=(s.elimCardList||[]).find(c=>c.key===s.cardKey);
+    const winCards=(s.winCardList||[]).map(c=>({ label:c.displayNameAr, img:c.imageFilename, pick:()=>this.setState({ winCardKey:c.key }), border:s.winCardKey===c.key?'#7c3aed':'#262a37', bg:s.winCardKey===c.key?'rgba(124,58,237,.12)':'#11131a' }));
+    const selWinCard=(s.winCardList||[]).find(c=>c.key===s.winCardKey);
 
     // ---- catalog / levels rows
     const catalog=(s.catalog||[]).map(c=>{ const e=s.catEdits[c.slug]||{}, sp=c.kind==='special';
@@ -1050,6 +1073,12 @@ class Component extends DCLogic {
         this.busy('card',()=>A.adminGrantElimCard(u.id,s.cardKey)).then(r=>{ if(r) this.flash(r.success?'تم منح بطاقة الإقصاء.':'تعذّر المنح: '+(r.error||'unknown'),r.success?'ok':'err'); }); }),
       revokeCard:()=>this.needUser(u=>{ if(!s.cardKey) return this.flash('اختر بطاقة أولاً.','err');
         this.ask('سحب البطاقة؟',`ستُسحب بطاقة الإقصاء${selCard?' «'+selCard.displayNameAr+'»':''} من ${this.pickName(u)}.`,'سحب البطاقة',()=>this.busy('cardx',()=>A.adminRevokeElimCard(u.id)).then(r=>{ if(r) this.flash(r.success?'تم سحب بطاقة الإقصاء.':'تعذّر السحب.',r.success?'ok':'err'); })); }),
+      // win
+      winCards,
+      grantWinCard:()=>this.needUser(u=>{ if(!s.winCardKey) return this.flash('اختر بطاقة أولاً.','err');
+        this.busy('wcard',()=>A.adminGrantWinCard(u.id,s.winCardKey)).then(r=>{ if(r) this.flash(r.success?'تم منح بطاقة الفوز.':'تعذّر المنح: '+(r.error||'unknown'),r.success?'ok':'err'); }); }),
+      revokeWinCard:()=>this.needUser(u=>{ if(!s.winCardKey) return this.flash('اختر بطاقة أولاً.','err');
+        this.ask('سحب البطاقة؟',`ستُسحب بطاقة الفوز${selWinCard?' «'+selWinCard.displayNameAr+'»':''} من ${this.pickName(u)}.`,'سحب البطاقة',()=>this.busy('wcardx',()=>A.adminRevokeWinCard(u.id)).then(r=>{ if(r) this.flash(r.success?'تم سحب بطاقة الفوز.':'تعذّر السحب.',r.success?'ok':'err'); })); }),
       // codes
       allFrames:frames, codesFrame:s.codesFrame, onCodesFrame:e=>this.setState({ codesFrame:e.target.value }),
       codesCount:s.codesCount, onCodesCount:e=>this.setState({ codesCount:e.target.value }), codesNote:s.codesNote, onCodesNote:e=>this.setState({ codesNote:e.target.value }), codesOut:s.codesOut,

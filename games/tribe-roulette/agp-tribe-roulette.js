@@ -3002,6 +3002,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         pointsPromise.then(function (pointsResult) {
             renderWinnerScreen(winner, pointsResult);
         });
+
+        // بطاقة الفوز (js/agp-win-card.js) -- تغطي شاشة الفوز لو الفائز يملك بطاقة مفعّلة.
+        if (winner && AGP.winCard) {
+            AGP.winCard.announce(winner, ['المركز الأول من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'آخر الصامدين', 'روليت القبائل']);
+        }
     }
 
     /**

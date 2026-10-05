@@ -183,12 +183,13 @@
                     var known = byName[byId[payload.id]];
                     if (payload.avatarUrl) known.avatar = payload.avatarUrl;
                     if (payload.frame !== undefined) known.frame = payload.frame || null;
+                    if (payload.winCard !== undefined) known.winCard = payload.winCard || null;
                     return byId[payload.id];
                 }
                 var base = String(payload.name || payload.id).trim() || String(payload.id);
                 var name = base, k = 2;
                 while (byName[name]) name = base + ' ' + (k++);
-                byName[name] = { id: payload.id, avatar: payload.avatarUrl || null, frame: payload.frame || null };
+                byName[name] = { id: payload.id, avatar: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null };
                 byId[payload.id] = name;
                 return name;
             },
@@ -197,6 +198,11 @@
             nameOf: function (id) { return byId[id] || null; },
             avatar: function (name) { return (byName[name] && byName[name].avatar) || null; },
             id: function (name) { return (byName[name] && byName[name].id) || null; },
+            // اللاعب بصيغة AGP ({id, name, avatarUrl, winCard}) — لبطاقة الفوز (js/agp-win-card.js)
+            player: function (name) {
+                var p = byName[name] || {};
+                return { id: p.id || name, name: name, avatarUrl: p.avatar || null, winCard: p.winCard || null };
+            },
             // اللاعب بصيغة AGP ({id, name, avatarUrl}) — لنقاط المنصة
             player: function (name) {
                 var p = byName[name] || {};

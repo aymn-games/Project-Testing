@@ -18,6 +18,7 @@
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-player-card.js"></script>
 <script src="../../js/agp-elim-card.js"></script>
+<script src="../../js/agp-win-card.js"></script>
 <script src="../../assets/tiktok-gifts/tiktok-gifts.js"></script>
 <script src="er-platform.js"></script>
 <script src="./support.js"></script>
@@ -511,7 +512,7 @@ class Component extends DCLogic {
     this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820,vw:innerWidth}); this.fit(); addEventListener('resize',this.fit);
     this.q=[]; this.everIn=new Set(this.state.players); this.startMatch();
     // بطاقات الإقصاء المملوكة تُحمَّل مسبقاً حتى تظهر بدون تأخير
-    this.state.players.forEach(n=>{ try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(n)); }catch(e){} });
+    this.state.players.forEach(n=>{ try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(n)); window.AymanGamesPlatform.winCard?.preloadFor(this.reg.player(n)); }catch(e){} });
     ER.connect(); this.unsub=ER.onComment(p=>this.onChat(p)); this.unsubGift=ER.onGift(p=>this.onGift(p)); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); cancelAnimationFrame(this._raf); clearTimeout(this._at); clearInterval(this._ti); clearTimeout(this._kt); clearTimeout(this._rt); clearTimeout(this._lt); clearTimeout(this.tt); this.unsub?.(); this.unsubGift?.(); }
   startMatch(){ this.matchStartedAt=Date.now(); this.reported=false; this.participants=new Set(this.state.players); }
@@ -549,7 +550,11 @@ class Component extends DCLogic {
     if(s0.resOpen) this.shut('resOpen'); this._rt=setTimeout(()=>{ this.shut('revOpen'); setTimeout(()=>this.next(),280); },3000); }
   showWin(name){ clearTimeout(this._at); clearInterval(this._ti); const s=this.state, w=name||s.players[0]||''; if(!w||s.winOpen) return;
     this.setState({auto:false,winOpen:true,winner:w,winRun:(s.winRun||0)+1,pts:'pending'}); this.tone(523.25,.22,'sine'); setTimeout(()=>this.tone(659.25,.22,'sine'),160); setTimeout(()=>this.tone(783.99,.5,'sine',.165),320);
-    this.reportPoints(w); }
+    this.reportPoints(w); this.showWinCard(w); }
+  // بطاقة الفوز (js/agp-win-card.js) — تغطي شاشة الفوز لو الفائز يملك بطاقة مفعّلة
+  showWinCard(w){ const WC=window.AymanGamesPlatform&&window.AymanGamesPlatform.winCard; if(!WC) return;
+    const k=this.state.kills[w]||0, n=this.participants.size;
+    WC.announce(this.reg.player(w),['المركز الأول من '+n+' لاعب',k?'أقصى '+k+(k===1?' لاعب':' لاعبين'):'آخر الصامدين','روليت الإقصاء']); }
   // نظام نقاط المنصة — مرة واحدة لكل مباراة (CLAUDE.md)
   reportPoints(winner){ if(this.reported) return; this.reported=true;
     const players=[...this.participants].map(n=>{ const p=this.reg.player(n); return {id:p.id,name:n}; }), wid=this.reg.player(winner).id;
@@ -557,8 +562,8 @@ class Component extends DCLogic {
     A.reportMatchPoints({players,winnerIds:[wid],teamGame:false,durationMs:Date.now()-(this.matchStartedAt||Date.now())}).then(res=>{
       if(this.state.winner!==winner) return; const uname=String(wid).indexOf('tiktok:')===0?String(wid).slice(7):winner;
       const aw=res&&res.success&&Array.isArray(res.awarded)?res.awarded.find(a=>a.tiktokUsername===uname):null; this.setState({pts:aw?aw.added:null}); }); }
-  newMatch=()=>{ this.shut('winOpen'); try{ localStorage.removeItem(ER.keys.roster); localStorage.removeItem(ER.keys.players); }catch(e){} location.href='lobby.html'; }
-  replaySame=()=>{ this.shut('winOpen'); clearTimeout(this._at); this.q=[];
+  newMatch=()=>{ window.AymanGamesPlatform.winCard?.dismiss(); this.shut('winOpen'); try{ localStorage.removeItem(ER.keys.roster); localStorage.removeItem(ER.keys.players); }catch(e){} location.href='lobby.html'; }
+  replaySame=()=>{ window.AymanGamesPlatform.winCard?.dismiss(); this.shut('winOpen'); clearTimeout(this._at); this.q=[];
     this.setState(s=>{ const all=[...s.players,...s.out]; this.participants=new Set(all); this.matchStartedAt=Date.now(); this.reported=false;
       return {players:all,out:[],revived:[],supUsed:{},kills:{},log:[],pending:[],landed:null,prevLanded:null,landedIdx:null,sIdx:null,sLanded:false,auto:false}; }); }
   winVals(){ const s=this.state, rnd=(a,b)=>a+Math.random()*(b-a), h=React.createElement;

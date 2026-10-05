@@ -542,7 +542,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
             if (findPlayerById(payload.id)) return; // منضم أصلاً
 
-            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null });
+            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null });
         });
     }
 
@@ -1663,7 +1663,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // ⭐ اللاعب المُقصى ما يرجع تلقائياً بكتابة الكلمة المفتاحية --
             // بس عبر زر "↩" اليدوي بتبويب المشاركين (طلب صريح)
             if (_eliminatedPlayers.some(function (p) { return p.id === payload.id; })) return;
-            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null });
+            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null });
             _miniJoinedIds.push(payload.id);
             renderMiniGrid();
         });
@@ -1742,6 +1742,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var pointsResult = await pointsPromise;
         if (winner) playWinnerFanfare();
+
+        // بطاقة الفوز (js/agp-win-card.js) -- تغطي شاشة الفوز لو الفائز يملك بطاقة مفعّلة.
+        if (winner && AGP.winCard) {
+            var awardedForCard = findAwardedFor(pointsResult, winner);
+            AGP.winCard.announce(winner, [
+                'المركز الأول من ' + (_eliminatedPlayers.length + 1) + ' لاعب',
+                awardedForCard && typeof awardedForCard.added === 'number' ? '+' + awardedForCard.added + ' نقطة' : 'آخر الصامدين',
+                'الخزنة'
+            ]);
+        }
 
         el('kz-round').innerHTML =
             '<div id="kz-winner-wrap">' +

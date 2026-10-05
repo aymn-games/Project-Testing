@@ -127,6 +127,8 @@ var ROUTES = [
   { method: 'POST', path: '/api/entrance/toggle', requireAuth: true, handler: handleToggleEntrance },
   { method: 'POST', path: '/api/admin/elim-card', requireAuth: true, requireAdmin: true, handler: handleAdminSetElimCard },
   { method: 'POST', path: '/api/elim-card/toggle', requireAuth: true, handler: handleToggleElimCard },
+  { method: 'POST', path: '/api/admin/win-card', requireAuth: true, requireAdmin: true, handler: handleAdminSetWinCard },
+  { method: 'POST', path: '/api/win-card/toggle', requireAuth: true, handler: handleToggleWinCard },
   // ---- مستوى الستريمر (SP). القراءة العامة لعتبات المستويات مسموحة
   // بدون تسجيل دخول — لا بيانات حساسة، فقط عتبات ثابتة للعرض.
   { method: 'GET', path: '/api/streamer-levels', requireAuth: false, handler: handleGetStreamerLevels },
@@ -433,7 +435,8 @@ function handleAdminGetCatalog(req, res) {
     success: true,
     catalog: collectiblesService.getCatalog(),
     customFrames: collectiblesService.listCustomFrames(),
-    elimCards: collectiblesService.getElimCardCatalog()
+    elimCards: collectiblesService.getElimCardCatalog(),
+    winCards: collectiblesService.getWinCardCatalog()
   });
 }
 
@@ -531,6 +534,22 @@ function handleAdminSetElimCard(req, res, body) {
 /** تفعيل/إيقاف ذاتي لبطاقة الإقصاء — user.id من الجلسة. body.enabled: true/false. */
 function handleToggleElimCard(req, res, body, user) {
   var result = collectiblesService.setElimCardEnabled(user.id, Boolean(body.enabled));
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+/** منح/سحب بطاقة الفوز يدوياً من الأدمن — نفس شكل handleAdminSetElimCard. */
+function handleAdminSetWinCard(req, res, body) {
+  if (body.revoke) {
+    sendJson(res, 200, collectiblesService.revokeWinCard(body.userId));
+    return;
+  }
+  var result = collectiblesService.grantWinCard(body.userId, body.cardKey, 'admin_manual');
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+/** تفعيل/إيقاف ذاتي لبطاقة الفوز — user.id من الجلسة. body.enabled: true/false. */
+function handleToggleWinCard(req, res, body, user) {
+  var result = collectiblesService.setWinCardEnabled(user.id, Boolean(body.enabled));
   sendJson(res, result.success ? 200 : 400, result);
 }
 

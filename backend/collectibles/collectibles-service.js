@@ -7,6 +7,8 @@
  *    حر، مع عمود enabled (تفعيل/إيقاف ذاتي من صاحب الحساب).
  * 4) بطاقة الإقصاء (user_elim_cards) — منح يدوي من الأدمن + تفعيل/إيقاف
  *    ذاتي، مستقلة عن الإطارات.
+ * 5) بطاقة الفوز (user_win_cards) — نفس نمط بطاقة الإقصاء بالضبط، تظهر
+ *    بدل شاشة الفوز العادية لو الفائز يملكها ومفعّلها.
  *
  * قاعدة "الحزمة التلقائية": منح أي إطار من الأربعة "الخاصة" يمنح تلقائياً
  * دخولية مطابقة (من frame_catalog.default_entrance_*، أو مخصصة). أي إطار
@@ -411,6 +413,104 @@ function getElimCardForVerifiedTikTok(tiktokUsername) {
 }
 
 /* ----------------------------------------------------------------------
+ * بطاقة الفوز — منح/سحب يدوي من الأدمن فقط، نفس نمط بطاقة الإقصاء. تظهر
+ * بدل شاشة الفوز العادية فقط لو "الفائز" يملكها ومفعّلها.
+ * ---------------------------------------------------------------------- */
+
+// المفاتيح المسموحة — تصميم كل بطاقة (صورة + موضع الدائرة والنصوص) معرَّف
+// بنفس المفتاح في js/agp-win-card.js.
+var WIN_CARD_CATALOG = [
+  { key: 'rais-blue', displayNameAr: 'بطاقة الفوز — فوز الريس (أزرق)', imageFilename: 'assets/win-cards/win-card-rais-blue.png' }
+];
+
+function getWinCardCatalog() {
+  return WIN_CARD_CATALOG.slice();
+}
+
+function isValidWinCardKey(cardKey) {
+  return WIN_CARD_CATALOG.some(function (c) { return c.key === cardKey; });
+}
+
+/**
+ * منح/استبدال بطاقة الفوز لمستخدم (بطاقة واحدة لكل مستخدم). كل منح جديد
+ * يعيد enabled = 1.
+ * @returns {{success: boolean, error?: string}}
+ */
+function grantWinCard(userId, cardKey, grantedBy) {
+  cardKey = String(cardKey || '');
+  if (!isValidWinCardKey(cardKey)) return { success: false, error: 'unknown_card_key' };
+
+  var userExists = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+  if (!userExists) return { success: false, error: 'unknown_user' };
+
+  db.prepare(
+    'INSERT INTO user_win_cards (user_id, card_key, enabled, granted_by, granted_at) VALUES (?, ?, 1, ?, ?) ' +
+    'ON CONFLICT(user_id) DO UPDATE SET card_key = excluded.card_key, enabled = 1, granted_by = excluded.granted_by, granted_at = excluded.granted_at'
+  ).run(userId, cardKey, grantedBy || 'admin_manual', now());
+
+  logger.log('Collectibles: granted win card ' + cardKey + ' to user ' + userId);
+
+  return { success: true };
+}
+
+function revokeWinCard(userId) {
+  db.prepare('DELETE FROM user_win_cards WHERE user_id = ?').run(userId);
+
+  return { success: true };
+}
+
+/** للبروفايل — null لو ما يملك بطاقة. */
+function getWinCard(userId) {
+  var row = db.prepare('SELECT card_key, enabled, granted_at FROM user_win_cards WHERE user_id = ?').get(userId);
+  if (!row) return null;
+
+  var entry = WIN_CARD_CATALOG.filter(function (c) { return c.key === row.card_key; })[0];
+
+  return {
+    cardKey: row.card_key,
+    displayNameAr: entry ? entry.displayNameAr : row.card_key,
+    imageFilename: entry ? entry.imageFilename : null,
+    enabled: Boolean(row.enabled),
+    grantedAt: row.granted_at
+  };
+}
+
+/**
+ * تفعيل/إيقاف ذاتي من صاحب الحساب — نفس نمط setElimCardEnabled.
+ * @returns {{success: boolean, error?: string}}
+ */
+function setWinCardEnabled(userId, enabled) {
+  var existing = db.prepare('SELECT user_id FROM user_win_cards WHERE user_id = ?').get(userId);
+  if (!existing) return { success: false, error: 'no_win_card' };
+
+  db.prepare('UPDATE user_win_cards SET enabled = ? WHERE user_id = ?').run(enabled ? 1 : 0, userId);
+
+  return { success: true };
+}
+
+/**
+ * بطاقة الفوز المفعّلة لصاحب تعليق — فقط لحساب مسجَّل وثَّق نفس يوزرنيم
+ * التيك توك (نفس نمط getElimCardForVerifiedTikTok).
+ * @param {string} tiktokUsername - يوزرنيم تيك توك خام (بدون بادئة 'tiktok:')
+ * @returns {{cardKey: string}|null}
+ */
+function getWinCardForVerifiedTikTok(tiktokUsername) {
+  tiktokUsername = (tiktokUsername || '').trim();
+  if (!tiktokUsername) return null;
+
+  var user = db.prepare(
+    'SELECT id FROM users WHERE tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE'
+  ).get(tiktokUsername);
+
+  if (!user) return null;
+
+  var row = db.prepare('SELECT card_key FROM user_win_cards WHERE user_id = ? AND enabled = 1').get(user.id);
+  if (!row || !isValidWinCardKey(row.card_key)) return null;
+
+  return { cardKey: row.card_key };
+}
+
+/* ----------------------------------------------------------------------
  * فتح تلقائي عند بلوغ مستوى (يُستدعى من points-service.js بعد كل زيادة
  * بالنقاط — لا معرفة هنا بكيفية حساب النقاط نفسها).
  * ---------------------------------------------------------------------- */
@@ -594,6 +694,12 @@ module.exports = {
   getElimCard: getElimCard,
   setElimCardEnabled: setElimCardEnabled,
   getElimCardForVerifiedTikTok: getElimCardForVerifiedTikTok,
+  getWinCardCatalog: getWinCardCatalog,
+  grantWinCard: grantWinCard,
+  revokeWinCard: revokeWinCard,
+  getWinCard: getWinCard,
+  setWinCardEnabled: setWinCardEnabled,
+  getWinCardForVerifiedTikTok: getWinCardForVerifiedTikTok,
   generateFrameCodes: generateFrameCodes,
   listFrameCodes: listFrameCodes,
   redeemFrameCode: redeemFrameCode

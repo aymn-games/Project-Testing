@@ -1413,7 +1413,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     return;
                 }
                 if (!AGP.player.hasPlayer(payload.id)) {
-                    AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null });
+                    AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null });
                     trackRecentComment(payload, 'انضم ✅');
                 } else {
                     trackRecentComment(payload, 'منضم مسبقاً');
@@ -1827,6 +1827,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _screen = 'winner';
         if (_matchEl) _matchEl.style.display = 'none';
         hideGearButton();
+
+        // بطاقة الفوز (js/agp-win-card.js) -- تغطي شاشة الفوز لو البطل يملك بطاقة مفعّلة.
+        if (AGP.winCard) {
+            AGP.winCard.announce(champion, ['المركز الأول', winnerRow.score + ' نقطة', 'خمّن العشرة']);
+        }
 
         pointsPromise.then(function (pointsResult) {
             openWinnerScreen(champion, winnerRow, lb, roster, pointsResult);

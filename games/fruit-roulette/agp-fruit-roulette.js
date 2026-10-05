@@ -1015,6 +1015,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         pointsPromise.then(function (pointsResult) {
             openWinnerModal(champion, pointsResult);
         });
+
+        // بطاقة الفوز (js/agp-win-card.js) -- تغطي شاشة الفوز لو البطل يملك بطاقة مفعّلة.
+        if (AGP.winCard) {
+            AGP.winCard.announce(champion, ['المركز الأول من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'آخر الصامدين', 'روليت الفواكه']);
+        }
     }
 
     // design_handoff_winner_card classes (agp-trophy-points/agp-points-*)
