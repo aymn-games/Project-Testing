@@ -560,8 +560,10 @@ class Component extends DCLogic {
   // أسطر الكرت السفلي ببطاقة الفوز (js/agp-win-card.js)
   winCardView(s){ const el=s.winOpen&&s.winner?ER.winCard(this.reg.player(s.winner),this.winCardLines(s.winner),'wc'+(s.winRun||0)):null;
     return { winCardOn:!!el, winStd:!el, winCardEl:el }; }
-  winCardLines(w){ const k=this.state.kills[w]||0, n=this.participants?this.participants.size:this.state.players.length+this.state.out.length;
-    return ['المركز الأول من '+n+' لاعب',k?'أقصى '+k+(k===1?' لاعب':' لاعبين'):'آخر الصامدين','روليت الإقصاء']; }
+  winCardLines(w){ const n=this.participants?this.participants.size:this.state.players.length+this.state.out.length;
+    return [this.ptsLine(),'المركز الأول من '+n+' لاعب','روليت الإقصاء']; }
+  // نقاط المنصة المكتسبة — نفس نص بطاقة الفائز العادية
+  ptsLine(){ const pts=this.state.pts; return pts==='pending'?'جارٍ احتساب النقاط':typeof pts==='number'?`+${pts} نقطة`:'النقاط للحسابات الموثّقة في الموقع'; }
   // نظام نقاط المنصة — مرة واحدة لكل مباراة (CLAUDE.md)
   reportPoints(winner){ if(this.reported) return; this.reported=true;
     const players=[...this.participants].map(n=>{ const p=this.reg.player(n); return {id:p.id,name:n}; }), wid=this.reg.player(winner).id;

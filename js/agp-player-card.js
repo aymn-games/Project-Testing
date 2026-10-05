@@ -659,6 +659,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             : '<div class="agp-trophy-ring-avatar agp-trophy-ring-avatar--fallback">' + escapeHtml(initialsText) + '</div>';
     }
 
+    // أسطر الكرت السفلي ببطاقة الفوز: [نقاط المنصة المكتسبة (السطر الأكبر،
+    // بنفس نص البطاقة العادية من opts.pointsHtml)، الترتيب، اسم اللعبة].
+    // opts.winCardLines = [الترتيب، سطر بديل لو ما فيه نقاط، اسم اللعبة].
+    function trophyWinCardLines(opts) {
+        var lines = (opts.winCardLines || ['الفائز']).slice();
+        var pts = opts.pointsHtml ? AGP.winCard.pointsLineFromHtml(opts.pointsHtml) : '';
+        if (!pts) return lines;
+        return [pts, lines[0], lines[lines.length >= 3 ? 2 : 1]].filter(Boolean);
+    }
+
     // Inline crown SVG for renderTrophyCard's opts.showCrown — fill/stroke
     // reference the CSS custom properties set on .agp-trophy-wrap, so a
     // game retheming --agp-trophy-accent (via opts.cls) recolors this too
@@ -760,7 +770,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (kind === 'winner' && AGP.winCard && AGP.winCard.canShow(player)) {
                 return '<div class="agp-trophy-wrap agp-trophy-wincard' + (opts.cls ? ' ' + opts.cls : '') + '" style="width:240px;">' +
                     '<div' + (opts.cardId ? ' id="' + opts.cardId + '"' : '') + ' style="width:240px;">' +
-                    AGP.winCard.renderHtml(player, opts.winCardLines || ['الفائز']) +
+                    AGP.winCard.renderHtml(player, trophyWinCardLines(opts)) +
                     '</div></div>';
             }
             var defaultLabel = kind === 'winner' ? 'WINNER' : (kind === 'most' ? 'الأكثر إقصاءً' : '');

@@ -128,8 +128,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function lineFontSize(text, index, count) {
         var len = Array.from(text).length;
         var max = index === 0 ? (count > 2 ? 6 : 7) : (count > 2 ? 4.4 : 5);
+        // One line each — long text (e.g. "لا يوجد حساب مرتبط…") shrinks to fit.
         var fit = (index === 0 ? 112 : 84) / Math.max(len, 1);
-        return Math.max(2.4, Math.min(max, fit)).toFixed(2) + 'cqw';
+        return Math.max(2.2, Math.min(max, fit)).toFixed(2) + 'cqw';
     }
 
     function templateFor(player) {
@@ -149,7 +150,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             .slice(0, 3);
     }
 
+    // نص نقاط المنصة المكتسبة من pointsHtml الخاص باللعبة (نفس نص البطاقة
+    // العادية: "+14 نقطة" / "تعذّر جلب النقاط الآن" / ...) بدون السطر الفرعي.
+    function pointsLineFromHtml(html) {
+        if (!html) return '';
+        var box = document.createElement('div');
+        box.innerHTML = html;
+        var sub = box.querySelectorAll('.agp-points-sub');
+        for (var i = 0; i < sub.length; i++) sub[i].parentNode.removeChild(sub[i]);
+        return (box.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
     AGP.winCard = {
+        pointsLineFromHtml: pointsLineFromHtml,
+
         /** True only when the winning player owns a known, enabled card. */
         canShow: function (player) {
             return Boolean(templateFor(player));
@@ -158,10 +172,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         /**
          * @param {Object} player - the winning player (must own a card)
          * @param {Array<string>|string} [lines] - up to 3 detail lines for
-         *   the bottom panel (points, rank, team...). First line is largest.
+         *   the bottom panel (rank, earned points, game...). First line is largest.
+         * @param {Object} [opts]
+         * @param {boolean} [opts.pop=true] - false skips the pop-in animation (for
+         *   re-renders, e.g. when the earned points arrive after the card is shown)
          * @returns {string} HTML for the card; fills its container's width
          */
-        renderHtml: function (player, lines) {
+        renderHtml: function (player, lines, opts) {
             var tpl = templateFor(player);
             if (!tpl) return '';
             injectStyles();
@@ -176,7 +193,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     ';background-image:' + tpl.detailColor + ';">' + escapeHtml(line) + '</div>';
             }).join('');
 
-            return '<div class="agp-wincard agp-wincard-pop" style="aspect-ratio:' + tpl.width + '/' + tpl.height + ';">' +
+            var pop = !(opts && opts.pop === false);
+            return '<div class="agp-wincard' + (pop ? ' agp-wincard-pop' : '') + '" style="aspect-ratio:' + tpl.width + '/' + tpl.height + ';">' +
                 avatarHtml(player, tpl) +
                 '<img class="agp-wincard-frame" src="' + escapeHtml(ASSETS_BASE + tpl.image) + '" alt="">' +
                 '<div class="agp-wincard-text" style="' + nameStyle + '">' + escapeHtml(name) + '</div>' +

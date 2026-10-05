@@ -147,7 +147,8 @@
     function winCard(player, lines, key, width) {
         var React = window.React;
         if (!React || !AGP.winCard || !player || !AGP.winCard.canShow(player)) return null;
-        return React.createElement('div', { key: key || 'wc', style: { width: width || 240, maxWidth: '100%', lineHeight: 0 }, dangerouslySetInnerHTML: { __html: AGP.winCard.renderHtml(player, lines) } });
+        // الحركة على الغلاف (مرة وحدة عند الظهور) — المحتوى يتحدّث بدونها لما توصل النقاط.
+        return React.createElement('div', { key: key || 'wc', style: { width: width || 240, maxWidth: '100%', lineHeight: 0, animation: 'agpWinCardPop .55s cubic-bezier(.2,1.3,.4,1) both' }, dangerouslySetInnerHTML: { __html: AGP.winCard.renderHtml(player, lines, { pop: false }) } });
     }
     function hasWinCard(player) {
         return !!(player && AGP.winCard && AGP.winCard.canShow(player));

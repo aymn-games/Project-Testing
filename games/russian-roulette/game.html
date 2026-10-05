@@ -610,8 +610,10 @@ class Component extends DCLogic {
     if(w) this.reportPoints(w.name); }
   // بطاقة الفوز (js/agp-win-card.js) — تحل محل بطاقة الفائز العادية لو الفائز يملك بطاقة مفعّلة
   winCardView(w){ const el=w?RR.winCard(this.reg.player(w.name),this.winCardLines(w),'wc'+(this.state.winRun||0),284):null; return { winCardOn:!!el, winStd:!el, winCardEl:el }; }
-  winCardLines(w){ const k=(this.state.log||[]).filter(e=>e.type==='kill'&&e.a===w.name).length, n=this.participants?this.participants.size:this.state.players.length;
-    return ['المركز الأول من '+n+' لاعب',k?'أقصى '+k+(k===1?' لاعب':' لاعبين'):'آخر الصامدين','الروليت الروسي']; }
+  winCardLines(w){ const n=this.participants?this.participants.size:this.state.players.length;
+    return [this.ptsLine(),'المركز الأول من '+n+' لاعب','الروليت الروسي']; }
+  // نقاط المنصة المكتسبة — نفس نص بطاقة الفائز العادية
+  ptsLine(){ const pts=this.state.pts; return pts==='pending'?'جارٍ احتساب النقاط':typeof pts==='number'?`+${pts} نقطة`:'النقاط للحسابات الموثّقة في الموقع'; }
   // نظام نقاط المنصة — مرة واحدة لكل مباراة (CLAUDE.md)
   reportPoints(winner){ if(this.reported) return; this.reported=true;
     const players=[...this.participants].map(n=>({id:this.reg.player(n).id,name:n})), wid=this.reg.player(winner).id, run=this.state.winRun;
