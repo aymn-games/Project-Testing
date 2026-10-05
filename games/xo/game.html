@@ -17,6 +17,7 @@
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-elim-card.js"></script>
 <script src="../../js/agp-win-card.js"></script>
 <script src="xo-platform.js"></script>
 <script src="./support.js"></script>
@@ -200,6 +201,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
     </div>
     <sc-if value="{{ showElim }}" hint-placeholder-val="{{ false }}">
       <div style="position:absolute;inset:0;z-index:6;background:rgba(0,0,0,.55);backdrop-filter:blur(12px);display:grid;place-items:center;animation:fade .3s ease">
+        <sc-if value="{{ elCard }}" hint-placeholder-val="{{ false }}">
+        <div style="width:min(900px,100%);animation:popIn .45s cubic-bezier(.2,1.25,.35,1);filter:drop-shadow(0 40px 80px rgba(0,0,0,.6))">{{ elCardEl }}</div>
+        </sc-if>
+        <sc-if value="{{ elStd }}" hint-placeholder-val="{{ true }}">
         <div style="width:800px;height:500px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:32px 56px;border-radius:32px;background:rgba(12,11,18,.94);border:1px solid rgba(255,255,255,.1);box-shadow:0 40px 120px rgba(0,0,0,.6);animation:popIn .45s cubic-bezier(.2,1.25,.35,1)">
           <span style="padding:6px 18px;border-radius:999px;border:1px solid rgba(248,113,113,.35);background:rgba(248,113,113,.08);font:600 20px 'IBM Plex Sans Arabic';color:#fca5a5">عملية إقصاء</span>
           <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;width:100%">
@@ -216,6 +221,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
             </div>
           </div>
         </div>
+        </sc-if>
       </div>
     </sc-if>
 
@@ -464,6 +470,8 @@ class Component extends DCLogic {
       patch.kw=[cfg.keyword1||'انضمام فريق 1',cfg.keyword2||'انضمام فريق 2']; patch.kwSolo=cfg.keywordSolo||'انضمام';
       if(cfg.team1||cfg.team2) patch.teams=this.state.teams.map((t,i)=>({...t,name:(i?cfg.team2:cfg.team1)||t.name})); this.setState(patch); } }catch(e){}
     this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}); this.fit(); addEventListener('resize',this.fit);
+    // بطاقات الإقصاء المملوكة تُحمَّل مسبقاً حتى تظهر بدون تأخير
+    this.state.teams.forEach(t=>t.players.forEach(n=>this.preloadElimCard(n)));
     XO.connect(); this.unsub=XO.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); this.unsubGift=XO.onGift(p=>this.onGift(this.reg.nameFor(p),p.giftName)); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this.ti); clearInterval(this.sim); clearTimeout(this.cel); clearTimeout(this.drawT); this.unsub?.(); this.unsubGift?.(); }
   // نظام نقاط المنصة: مرة واحدة لكل مباراة عند إعلان الفائز
@@ -473,6 +481,9 @@ class Component extends DCLogic {
     if(window.AGPAuth&&typeof window.AGPAuth.reportMatchPoints==='function')
       window.AGPAuth.reportMatchPoints({players,winnerIds,teamGame:!w.solo,durationMs:Date.now()-(this.matchStartedAt||Date.now())}); }
   // بطاقة الفوز (js/agp-win-card.js) — تحل محل بطاقة اللاعب العادية بشاشة الفوز لو يملك بطاقة مفعّلة
+  // بطاقة الإقصاء (js/agp-elim-card.js) — تحل محل نافذة الإقصاء العادية لو فائز الجولة يملك بطاقة مفعّلة
+  elimCardView(e){ const actor=e&&e.win&&e.lose?this.reg.player(e.win):null, el=actor&&XO.hasElimCard(actor)?XO.elimCard(actor,this.reg.player(e.lose),'ec'+e.lose):null; return { elCard:!!el, elStd:!el, elCardEl:el }; }
+  preloadElimCard(n){ try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(n)); }catch(e){} }
   winCardItem(n,j,lines){ const el=XO.winCard(this.reg.player(n),lines,'wc'+j,200); return { wcOn:!!el, wcStd:!el, wcEl:el }; }
 
   ac(){ if(!this._ac) this._ac=new (window.AudioContext||window.webkitAudioContext)(); if(this._ac.state==='suspended') this._ac.resume(); return this._ac; }
@@ -561,7 +572,9 @@ class Component extends DCLogic {
       this.cel=setTimeout(()=>this.finish(i%2,true),1500); };
     this.cel=setTimeout(next,300); }
   runElim(w){ const s=this.state, win=s.reels[w].chosen, lose=s.reels[1-w].chosen;
-    this.snd('wrong'); this.setState({phase:'elim',elim:{w,win,lose}});
+    // فائز الجولة يملك بطاقة إقصاء لها صوت خاص → صوت البطاقة بدل صوت الإقصاء العادي
+    const actor=this.reg.player(win), EC=window.AymanGamesPlatform&&window.AymanGamesPlatform.elimCard;
+    if(!(!this.muted&&XO.hasElimCard(actor)&&EC&&EC.playSound(actor,.9))) this.snd('wrong'); this.setState({phase:'elim',elim:{w,win,lose}});
     this.cel=setTimeout(()=>{ const st=this.state;
       const fromTeam=st.teams.findIndex(t=>t.players.includes(lose));
       const teams=st.teams.map(t=>({...t,players:t.players.filter(p=>p!==lose)}));
@@ -614,7 +627,7 @@ class Component extends DCLogic {
       :XO.join(s.teams.map((t,i)=>({name:t.name,keyword:s.kw[i],max:this.MAX,members:members(i)})),user,text,opts);
     if(r){ if(s.out[user]) return; const busy=s.phase!=='ready'&&s.reels.some(x=>x.chosen===user); // اللاعب المختار بالجولة الجارية ما ينتقل قبل نهايتها
       if(r.toast&&(!r.ok||!busy)) this.toastMsg(r.toast);
-      if(r.ok&&!busy){ this.snd('join');
+      if(r.ok&&!busy){ this.snd('join'); this.preloadElimCard(user);
         if(s.pendingJoins.some(p=>p.name===user)) patch.pendingJoins=s.pendingJoins.map(p=>p.name===user?{...p,team:r.k}:p);
         else if(r.cur<0&&s.joinOpen) patch.pendingJoins=[...s.pendingJoins,{name:user,team:r.k}];
         else { patch.teams=s.teams.map((t,i)=>({...t,players:i===r.k?[...t.players,user]:t.players.filter(x=>x!==user)}));
@@ -695,7 +708,7 @@ class Component extends DCLogic {
     const eg=this.eventGroups();
     return { ...this.anims(), scale:s.scale, round:s.round, target:s.target, teams,
       cardA:[mkCard(0)], cardB:[mkCard(1)], cells, res, showResult:P==='over'&&!!s.result, resBtn:!(s.progress==='elim'&&s.result&&s.result.w!=null),
-      showElim:P==='elim'&&!!s.elim, el:s.elim?(()=>{ const mk=(n,c)=>{ const a=this.avatar(n); return {name:n,initial:[...n].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:a||'',imgOp:a?1:0,avBg:'linear-gradient(135deg, '+c+', '+c+'66)'}; };
+      showElim:P==='elim'&&!!s.elim, ...this.elimCardView(s.elim), el:s.elim?(()=>{ const mk=(n,c)=>{ const a=this.avatar(n); return {name:n,initial:[...n].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:a||'',imgOp:a?1:0,avBg:'linear-gradient(135deg, '+c+', '+c+'66)'}; };
         return {win:mk(s.elim.win,col(s.elim.w)),lose:mk(s.elim.lose,col(1-s.elim.w))}; })():{win:{},lose:{}},
       progOpts:[['wins','عدد الفوز'],['elim','الإقصاء']].map(([k,l])=>{ const on=s.progress===k; return {label:l,pick:()=>{ if(this.state.phase!=='ready') return this.toastMsg('غيّرها بين الجولات'); this.setState({progress:k}); },bg:on?'linear-gradient(90deg, #7c3aed, #a855f7)':'transparent',fg:on?'#fff':'#a8a3b5'}; }),
       progressLabel:s.progress==='elim'?'بالإقصاء':'الفوز عند '+s.target, winFx:this.winFx(), boardGlow:P==='celebrate'&&wc?wc+'55':'rgba(124,58,237,.12)',
