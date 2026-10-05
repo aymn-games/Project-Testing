@@ -154,12 +154,12 @@ button{font-family:inherit}
             </sc-if>
           </div>
           <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="48">
-            <div aria-label="المربع {{ t.n }}" style="position:relative;width:90px;height:90px;padding:0;box-sizing:border-box;border-radius:16px;border:{{ t.border }};background:{{ t.bg }};box-shadow:{{ t.sh }};transition:transform .2s, border-color .2s">
+            <button onClick="{{ t.pick }}" aria-label="المربع {{ t.n }}" style="position:relative;width:90px;height:90px;padding:0;box-sizing:border-box;border-radius:16px;cursor:{{ t.cursor }};border:{{ t.border }};background:{{ t.bg }};box-shadow:{{ t.sh }};transition:transform .2s, border-color .2s" style-hover="transform:translateY(-3px)">
               <sc-if value="{{ t.closed }}" hint-placeholder-val="{{ true }}">
                 <span style="position:absolute;top:6px;right:9px;font:900 31px/1 'Zain';color:#f4f2f8;font-variant-numeric:tabular-nums">{{ t.n }}</span>
                 <img src="{{ t.icon }}" alt="" draggable="false" style="position:absolute;bottom:7px;left:8px;width:30px;height:30px">
               </sc-if>
-            </div>
+            </button>
           </sc-for>
         </div>
       </div>
@@ -307,7 +307,8 @@ button{font-family:inherit}
 // ============================================================
 //  حرب الفريقين — شاشة المباراة
 //  الشات: TW.onComment (tw-platform.js ← AGP.streamConnector)
-//   - اللاعب صاحب الدور يكتب رقم المربع (يقبل ٠-٩ و 0-9)
+//   - اللاعب صاحب الدور يكتب رقم المربع (أرقام عربية ٠-٩ أو إنجليزية 0-9 أو فارسية ۰-۹)
+//   - أو الستريمر يضغط المربع يدوياً (نفس الشروط: المباراة شغّالة وما فيه بطاقة مفتوحة)
 //   - أثناء «إدخال لاعب جديد»: أول من يكتب الكلمة المفتاحية للفريق يظهر كمرشح
 //  الإعدادات: 'tw2-settings' · اللاعبين: 'tw2-roster' {red:[],blue:[]} + 'tw2-players' (id/صورة)
 //  النقاط: AGPAuth.reportMatchPoints مرة واحدة عند إعلان الفريق الفائز (teamGame)
@@ -430,7 +431,7 @@ class Component extends DCLogic {
       hasTimer:s.timer>0, noTimer:!s.timer, left:s.left, ringOff:(188.5*(1-s.left/(s.timer||1))).toFixed(1), ringCol:s.left<=5?'#f87171':tc.l,
       cols:['red','blue'].map(k=>{ const t=s.teams[k], m=T[k]; return {col:k==='red'?1:3,name:t.name,light:m.l,bd:m.c+'55',soft:m.c+'14',count:t.players.length,
         players:t.players.map(n=>{ const on=s.turn===k&&n===cur&&!s.winner; return {name:n,ini:ini(n),...this.avOf(n),isTurn:on,bg:on?m.c+'2b':'rgba(255,255,255,.03)',bd:on?m.c:'rgba(255,255,255,.06)',avBg:av(k),ring:on?m.l:'transparent',c:m.c,glow:m.c+'66'}; })}; }),
-      tiles:s.tiles.map(t=>({n:t.n,icon:t.icon,closed:!t.open,
+      tiles:s.tiles.map(t=>({n:t.n,icon:t.icon,closed:!t.open,pick:()=>this.openTile(t.n),cursor:!t.open&&s.running&&!r&&!s.winner?'pointer':'default',
         border:t.open?'1.5px dashed rgba(255,255,255,.07)':'1px solid rgba(255,255,255,.11)',bg:t.open?'transparent':'linear-gradient(160deg, #241d3c, #140f22)',sh:t.open?'none':'0 6px 16px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.07)'})),
       hasLast:!!s.last, noLast:!s.last, lastAn:(s.lastRun||0)%2?'popIn .45s cubic-bezier(.2,1.25,.35,1)':'cardIn .45s cubic-bezier(.2,1.25,.35,1)',
       lastC:L.c, lastGlow:L.glow, lastBg:L.bg, lastLabel:L.label, lastEmo:L.emo, lastEmoSize:L.sp?92:56, lastEmoPad:L.sp?7:4, lastNormal:!L.sp, lastVal:L.val, lastText:L.text, lastTextSize:L.sp?26:22, lastCap:L.cap, lastTeamL:L.teamL,
