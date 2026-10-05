@@ -748,12 +748,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
          * @param {string} [opts.pointsHtml] - game-built points HTML (use .agp-trophy-points/.agp-points-earned/.agp-points-sub/.agp-points-noaccount)
          * @param {string} [opts.cls] - extra class on the wrap element (crown + card), for per-game retheming/positioning
          * @param {string} [opts.cardId] - id on the card element (e.g. for confetti targeting)
+         * @param {Array<string>} [opts.winCardLines] - detail lines (points/rank) for the owned
+         *   win card (js/agp-win-card.js): when kind is 'winner' and the player owns an enabled
+         *   win card, that card replaces this one in the same spot (240px wide).
          * @returns {string} HTML for one card (crown + card, wrapped together)
          */
         renderTrophyCard: function (player, opts) {
             injectStyles();
             opts = opts || {};
             var kind = opts.kind || 'winner';
+            if (kind === 'winner' && AGP.winCard && AGP.winCard.canShow(player)) {
+                return '<div class="agp-trophy-wrap agp-trophy-wincard' + (opts.cls ? ' ' + opts.cls : '') + '" style="width:240px;">' +
+                    '<div' + (opts.cardId ? ' id="' + opts.cardId + '"' : '') + ' style="width:240px;">' +
+                    AGP.winCard.renderHtml(player, opts.winCardLines || ['الفائز']) +
+                    '</div></div>';
+            }
             var defaultLabel = kind === 'winner' ? 'WINNER' : (kind === 'most' ? 'الأكثر إقصاءً' : '');
             var label = opts.label != null ? opts.label : defaultLabel;
             var crownHtml = opts.showCrown ? '<div class="agp-trophy-crown">' + TROPHY_CROWN_SVG + '</div>' : '';

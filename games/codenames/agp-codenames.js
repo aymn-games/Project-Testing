@@ -367,6 +367,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function winnerCardHtml(p) {
+        // بطاقة الفوز المملوكة (js/agp-win-card.js) تحل محل بطاقة اللاعب العادية بنفس المكان
+        if (AGP.winCard && AGP.winCard.canShow(p)) {
+            var teamName = (_match.winnerTeam === TEAM1) ? _settings.team1Name : _settings.team2Name;
+            return '<div class="cn-winner-card" style="width:150px">' +
+                AGP.winCard.renderHtml(p, ['فوز ' + teamName, '+' + WINNER_POINTS_PER_PLAYER + ' نقاط', 'كود نيمز']) +
+            '</div>';
+        }
         var avatarInner = p.avatarUrl
             ? '<img src="' + escapeAttr(p.avatarUrl) + '" alt="">'
             : escapeHtml(playerInitial(p));
@@ -1013,17 +1020,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         awardWinnerPoints();
         reportPlatformPoints();
         renderMatchScreen();
-        announceWinCards();
-    }
-
-    // بطاقة الفوز (js/agp-win-card.js) — تغطي شاشة الفوز لكل لاعب بالفريق
-    // الفائز يملك بطاقة مفعّلة؛ الباقي يشوفون شاشة الفوز العادية.
-    function announceWinCards() {
-        if (!AGP.winCard || !_match.winnerTeam) return;
-        var teamName = (_match.winnerTeam === TEAM1) ? _settings.team1Name : _settings.team2Name;
-        AGP.winCard.announce(getTeamPlayers(_match.winnerTeam), function () {
-            return ['فوز ' + teamName, '+' + WINNER_POINTS_PER_PLAYER + ' نقاط'];
-        });
     }
 
     function switchTurnIfNotOver() {

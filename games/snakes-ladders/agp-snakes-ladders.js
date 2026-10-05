@@ -1840,14 +1840,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         AGP.events.emit('game:roundEnded', { id: GAME_ID });
         pointsPromise.then(function (pointsResult) { renderWinnerScreen(winners, pointsResult); });
-
-        // بطاقة الفوز (js/agp-win-card.js) -- تغطي شاشة الفوز لكل فائز يملك بطاقة مفعّلة (بترتيبه).
-        if (AGP.winCard) {
-            var RANKS = ['المركز الأول', 'المركز الثاني', 'المركز الثالث'];
-            AGP.winCard.announce(winners, function (p, i) {
-                return [RANKS[i] || ('المركز ' + (i + 1)), 'من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'السلم والثعبان'];
-            });
-        }
     }
 
     function findAwardedFor(pointsResult, player) {
@@ -1904,7 +1896,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 cls: PLACE_CLASSES[i], kind: 'winner', cardId: 'sl-trophy-card-' + i,
                 label: single ? undefined : PLACE_LABELS[i],
                 showCrown: i === 0,
-                pointsHtml: pointsHtmlFor(pointsResult, w)
+                pointsHtml: pointsHtmlFor(pointsResult, w),
+                // بطاقة الفوز (js/agp-win-card.js) -- تحل محل هذي البطاقة لو الفائز يملكها
+                winCardLines: [['المركز الأول', 'المركز الثاني', 'المركز الثالث'][i] || ('المركز ' + (i + 1)),
+                    'من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'السلم والثعبان']
             });
         }).join('');
 

@@ -603,11 +603,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         pointsPromise.then(function (pointsResult) {
             openWinnerModal(champion, winnerRow, lastPlacePlayer, lastPlaceRow, pointsResult);
         });
-
-        // بطاقة الفوز (js/agp-win-card.js) -- تغطي شاشة الفوز لو البطل يملك بطاقة مفعّلة.
-        if (AGP.winCard) {
-            AGP.winCard.announce(champion, ['المركز الأول', formatScore(winnerRow.score) + ' نقطة', 'اسم حيوان نبات جماد بلاد']);
-        }
     }
 
     // design_handoff_winner_card classes (agp-trophy-points/agp-points-*,
@@ -629,7 +624,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             wcWinnerTrophyWrap.innerHTML = AGP.playerCard.renderTrophyCard(champion, {
                 cls: 'wc-trophy-winner', kind: 'winner', showCrown: true,
                 extra: '<div class="agp-trophy-extra">🏆 ' + escapeHtml(formatScore(winnerRow.score)) + ' نقطة بعد ' + _roundNumber + ' جولة</div>',
-                pointsHtml: wcWinnerPointsHtml(pointsResult)
+                pointsHtml: wcWinnerPointsHtml(pointsResult),
+                // بطاقة الفوز (js/agp-win-card.js) -- تحل محل هذي البطاقة لو البطل يملكها
+                winCardLines: ['المركز الأول', formatScore(winnerRow.score) + ' نقطة بعد ' + _roundNumber + ' جولة', 'اسم حيوان نبات جماد بلاد']
             });
         }
 

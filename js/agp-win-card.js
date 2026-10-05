@@ -2,24 +2,22 @@
  * AGP WIN CARD — owned "win card" (backend/collectibles: user_win_cards).
  * Shown only when the winning player owns an enabled card
  * (player.winCard = {cardKey}, attached per comment by the TikTok
- * connector); everyone else keeps the game's normal win screen.
+ * connector); everyone else keeps the game's normal winner card.
  *
- * Shared by every game at its winner moment:
- *   if (AGP.winCard) AGP.winCard.announce(winners, function (p) {
- *       return [p.score + ' نقطة', 'المركز الأول'];   // bottom-panel lines
- *   });
- * announce() takes over the whole screen with the card (it replaces the
- * win screen visually) for each winner who owns a card, one after another;
- * "متابعة" closes it and reveals the game's own win screen underneath so
- * its buttons (play again, back) stay reachable. Winners without a card are
- * skipped, so calling it for every game end is always safe.
+ * The game keeps its own win screen — only the winner's card inside it is
+ * swapped. Games using the shared AGP.playerCard.renderTrophyCard() get this
+ * automatically (kind 'winner', detail lines via opts.winCardLines). Games
+ * with their own winner card do:
+ *   if (AGP.winCard && AGP.winCard.canShow(winner)) {
+ *       box.innerHTML = AGP.winCard.renderHtml(winner, ['المركز الأول', '12 نقطة']);
+ *   }
  *
  * Layout: the winner's photo inside the circle, the name in the middle
- * banner, detail lines (points/rank) in the large bottom panel. Every
- * position is a percentage of the card image's own pixel size
- * (CARD_TEMPLATES), so the card scales to any width. The photo sits behind
- * the frame, slightly larger than the circular hole so its edge hides under
- * the rim.
+ * banner, up to 3 detail lines (points/rank) in the large bottom panel.
+ * Every position is a percentage of the card image's own pixel size
+ * (CARD_TEMPLATES), so the card fills any container width. The photo sits
+ * behind the frame, slightly larger than the circular hole so its edge
+ * hides under the rim.
  *
  * Requires js/agp-core.js (and js/agp-events.js for join-time preloading).
  */
@@ -30,7 +28,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     'use strict';
 
     var STYLE_ID = 'agp-win-card-styles';
-    var OVERLAY_ID = 'agp-wincard-overlay';
 
     // Resolved from this script's own URL so games at any depth load the
     // image without passing a basePath.
@@ -99,19 +96,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'justify-content:center;gap:1.2cqw;text-align:center;font-family:"Cairo","Noto Kufi Arabic",sans-serif;}',
             '.agp-wincard-line{max-width:100%;font-weight:800;line-height:1.15;white-space:nowrap;overflow:hidden;',
             '-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 .3cqw .35cqw rgba(0,0,0,.75));}',
-            // Full-screen takeover — replaces the game's win screen until "متابعة".
-            '#' + OVERLAY_ID + '{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;',
-            'justify-content:center;gap:14px;padding:16px;box-sizing:border-box;direction:rtl;',
-            'background:radial-gradient(ellipse at center,rgba(10,30,70,.96) 0%,rgba(3,8,20,.98) 70%);',
-            'animation:agpWinCardFade .35s ease-out;}',
-            '#' + OVERLAY_ID + ' .agp-wincard-stage{width:min(92vw,calc((100vh - 110px) * 2 / 3),620px);',
-            'animation:agpWinCardPop .55s cubic-bezier(.2,1.3,.4,1);}',
-            '#' + OVERLAY_ID + ' .agp-wincard-next{min-width:160px;height:46px;padding:0 26px;border-radius:999px;cursor:pointer;',
-            'font-family:"Cairo","Noto Kufi Arabic",sans-serif;font-size:17px;font-weight:800;color:#0b2350;',
-            'border:1px solid rgba(255,255,255,.7);background:linear-gradient(180deg,#ffffff 0%,#cfdcef 100%);',
-            'box-shadow:0 6px 22px rgba(80,140,255,.35);}',
-            '@keyframes agpWinCardFade{from{opacity:0}to{opacity:1}}',
-            '@keyframes agpWinCardPop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}'
+            '.agp-wincard-pop{animation:agpWinCardPop .55s cubic-bezier(.2,1.3,.4,1) both;}',
+            '@keyframes agpWinCardPop{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}'
         ].join('');
         document.head.appendChild(style);
     }
@@ -163,36 +149,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             .slice(0, 3);
     }
 
-    var _queue = [];
-    var _showing = false;
-
-    function closeOverlay() {
-        var el = document.getElementById(OVERLAY_ID);
-        if (el && el.parentNode) el.parentNode.removeChild(el);
-    }
-
-    function showNext() {
-        var item = _queue.shift();
-        if (!item) {
-            _showing = false;
-            closeOverlay();
-            return;
-        }
-        _showing = true;
-        injectStyles();
-        closeOverlay();
-
-        var overlay = document.createElement('div');
-        overlay.id = OVERLAY_ID;
-        overlay.innerHTML = '<div class="agp-wincard-stage">' + AGP.winCard.renderHtml(item.player, item.lines) + '</div>' +
-            '<button type="button" class="agp-wincard-next">' + (_queue.length ? 'التالي' : 'متابعة') + '</button>';
-        overlay.querySelector('.agp-wincard-next').addEventListener('click', function (e) {
-            e.stopPropagation();
-            showNext();
-        });
-        document.body.appendChild(overlay);
-    }
-
     AGP.winCard = {
         /** True only when the winning player owns a known, enabled card. */
         canShow: function (player) {
@@ -220,45 +176,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     ';background-image:' + tpl.detailColor + ';">' + escapeHtml(line) + '</div>';
             }).join('');
 
-            return '<div class="agp-wincard" style="aspect-ratio:' + tpl.width + '/' + tpl.height + ';">' +
+            return '<div class="agp-wincard agp-wincard-pop" style="aspect-ratio:' + tpl.width + '/' + tpl.height + ';">' +
                 avatarHtml(player, tpl) +
                 '<img class="agp-wincard-frame" src="' + escapeHtml(ASSETS_BASE + tpl.image) + '" alt="">' +
                 '<div class="agp-wincard-text" style="' + nameStyle + '">' + escapeHtml(name) + '</div>' +
                 (detailHtml ? '<div class="agp-wincard-detail" style="' + boxStyle(tpl.detailBox, tpl) + '">' + detailHtml + '</div>' : '') +
                 '</div>';
-        },
-
-        /**
-         * Shows the card full-screen for every winner who owns one (in
-         * order), replacing the win screen until "متابعة". Safe to call at
-         * every game end: winners without a card are skipped.
-         * @param {Object|Array<Object>} winners - winning player(s)
-         * @param {Function|Array<string>} [linesFor] - (player, index) =>
-         *   detail lines, or a fixed array used for every winner
-         * @returns {number} how many cards were queued
-         */
-        announce: function (winners, linesFor) {
-            var list = (Array.isArray(winners) ? winners : [winners]).filter(Boolean);
-            var seen = {};
-            var added = 0;
-            list.forEach(function (player, i) {
-                if (!templateFor(player)) return;
-                var key = player.id || player.name;
-                if (key && seen[key]) return;
-                if (key) seen[key] = true;
-                var lines = typeof linesFor === 'function' ? linesFor(player, i) : linesFor;
-                _queue.push({ player: player, lines: lines });
-                added++;
-            });
-            if (added && !_showing) showNext();
-            return added;
-        },
-
-        /** Removes any visible card (e.g. when the game resets mid-display). */
-        dismiss: function () {
-            _queue = [];
-            _showing = false;
-            closeOverlay();
         },
 
         /** Warm the image cache so the card shows without a load flash. */

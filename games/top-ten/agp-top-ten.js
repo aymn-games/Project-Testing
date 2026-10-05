@@ -1828,11 +1828,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (_matchEl) _matchEl.style.display = 'none';
         hideGearButton();
 
-        // بطاقة الفوز (js/agp-win-card.js) -- تغطي شاشة الفوز لو البطل يملك بطاقة مفعّلة.
-        if (AGP.winCard) {
-            AGP.winCard.announce(champion, ['المركز الأول', winnerRow.score + ' نقطة', 'خمّن العشرة']);
-        }
-
         pointsPromise.then(function (pointsResult) {
             openWinnerScreen(champion, winnerRow, lb, roster, pointsResult);
         });
@@ -1867,12 +1862,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return '<div class="tt-lb-row"><span class="tt-lb-rank">' + (i + 2) + '</span>' + playerCardHtml(p, false) + '<span class="tt-lb-score">' + row.score + '</span></div>';
         }).join('');
 
+        // بطاقة الفوز المملوكة (js/agp-win-card.js) تحل محل صورة واسم الفائز العاديين بنفس المكان
+        var winnerCardHtml = (AGP.winCard && AGP.winCard.canShow(champion))
+            ? '<div style="width:240px;max-width:70vw;margin:6px auto 10px">' +
+                AGP.winCard.renderHtml(champion, ['المركز الأول', winnerRow.score + ' نقطة بعد ' + _settings.roundsTarget + ' جولة', GAME_NAME]) +
+              '</div>'
+            : '<div class="tt-winner-avatar-wrap">' + playerCardHtml(champion, true) + '</div>' +
+              '<div class="tt-winner-name">' + escapeHtml(champion.name || champion.id) + '</div>' +
+              '<div class="tt-winner-score">' + winnerRow.score + ' نقطة بعد ' + _settings.roundsTarget + ' جولة</div>';
+
         root.innerHTML =
             '<div class="tt-winner-box">' +
                 '<div class="tt-winner-title">🏆 الفائز بمباراة ' + escapeHtml(GAME_NAME) + '</div>' +
-                '<div class="tt-winner-avatar-wrap">' + playerCardHtml(champion, true) + '</div>' +
-                '<div class="tt-winner-name">' + escapeHtml(champion.name || champion.id) + '</div>' +
-                '<div class="tt-winner-score">' + winnerRow.score + ' نقطة بعد ' + _settings.roundsTarget + ' جولة</div>' +
+                winnerCardHtml +
                 '<div class="tt-winner-points-text' + pointsClass + '">' + pointsText + '</div>' +
                 (others ? '<div class="tt-panel-title">باقي المتصدرين</div><div class="tt-leaderboard-list">' + others + '</div>' : '') +
                 '<div class="tt-winner-btn-row">' +

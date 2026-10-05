@@ -1149,18 +1149,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    // بطاقة الفوز (js/agp-win-card.js) -- تغطي شاشة النتيجة لكل لاعب بالفريق
-    // الفائز يملك بطاقة مفعّلة؛ الباقي يشوفون شاشة النتيجة العادية.
-    function announceWinCards(winningTeam) {
-        if (!AGP.winCard) return;
-        var name = (winningTeam === TEAM1) ? _settings.team1Name : _settings.team2Name;
-        AGP.winCard.announce(getTeamPlayers(winningTeam), [
-            'فوز ' + name,
-            _roundWins1 + ' - ' + _roundWins2 + ' جولات',
-            'خلية الحروف'
-        ]);
-    }
-
     function continueAfterRoundWin() {
         var winner = _connectionWinner;
         if (winner === TEAM1) _roundWins1++; else if (winner === TEAM2) _roundWins2++;
@@ -1168,11 +1156,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _connectionWinner = null;
 
         if (_roundWins1 >= ROUND_WINS_TO_CLINCH || _roundWins2 >= ROUND_WINS_TO_CLINCH) {
-            var clinchTeam = _roundWins1 >= ROUND_WINS_TO_CLINCH ? TEAM1 : TEAM2;
-            reportPlatformPoints(clinchTeam);
+            reportPlatformPoints(_roundWins1 >= ROUND_WINS_TO_CLINCH ? TEAM1 : TEAM2);
             _screen = 'result';
             renderResultScreen();
-            announceWinCards(clinchTeam);
             return;
         }
 
@@ -1563,6 +1549,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var winningPlayers = getTeamPlayers(winningTeam);
 
         var winnersHtml = winningPlayers.map(function (p) {
+            // بطاقة الفوز المملوكة (js/agp-win-card.js) تحل محل بطاقة اللاعب العادية بنفس المكان
+            if (AGP.winCard && AGP.winCard.canShow(p)) {
+                return '<div class="lc-avatar-item" style="width:170px">' +
+                    AGP.winCard.renderHtml(p, ['فوز ' + winningName, _roundWins1 + ' - ' + _roundWins2 + ' جولات', 'خلية الحروف']) +
+                '</div>';
+            }
             var hasAvatar = !!(p && p.avatarUrl);
             var circleStyle = hasAvatar
                 ? 'background-image:url(' + escapeAttr(p.avatarUrl) + ');background-size:cover;background-position:center;'

@@ -195,12 +195,16 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
         </div>
         <div style="position:relative;display:flex;flex-wrap:wrap;justify-content:center;gap:24px;max-width:1560px">
           <sc-for list="{{ winner.players }}" as="p" hint-placeholder-count="6">
+            <!-- بطاقة الفوز المملوكة (js/agp-win-card.js) تحل محل بطاقة اللاعب العادية بنفس المكان -->
+            <sc-if value="{{ p.wcOn }}" hint-placeholder-val="{{ false }}">{{ p.wcEl }}</sc-if>
+            <sc-if value="{{ p.wcStd }}" hint-placeholder-val="{{ true }}">
             <div style="display:flex;flex-direction:column;align-items:center;gap:14px;width:190px;box-sizing:border-box;padding:26px 16px 22px;border-radius:26px;background:rgba(18,16,26,.75);backdrop-filter:blur(14px);border:1px solid {{ p.cardBd }};box-shadow:0 20px 50px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);position:relative;overflow:hidden;animation:rise .6s cubic-bezier(.2,1.3,.4,1) both;animation-delay:{{ p.delay }}">
               <span style="position:absolute;top:-60px;left:50%;width:200px;height:120px;margin-left:-100px;border-radius:50%;background:{{ p.glow }};filter:blur(30px);pointer-events:none"></span>
               <span style="width:110px;height:110px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ p.avBg }};border:3px solid {{ p.color }};box-shadow:0 0 30px {{ p.glow }};font:700 48px 'IBM Plex Sans Arabic';color:#fff">{{ p.initial }}<img src="{{ p.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
               <span style="position:relative;max-width:100%;font:600 24px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
               <span style="position:relative;padding:4px 14px;border-radius:999px;background:{{ p.soft }};border:1px solid {{ p.cardBd }};font:600 14px 'IBM Plex Sans Arabic';color:{{ p.color }}">فائز</span>
             </div>
+            </sc-if>
           </sc-for>
         </div>
         <div style="position:relative;display:flex;gap:18px">
@@ -411,11 +415,9 @@ class Component extends DCLogic {
     const players=s.teams.flatMap(t=>t.players).map(n=>({id:this.reg.id(n),name:n})).filter(p=>p.id);
     const winnerIds=s.teams[wi].players.map(n=>this.reg.id(n)).filter(Boolean);
     if(window.AGPAuth&&typeof window.AGPAuth.reportMatchPoints==='function')
-      window.AGPAuth.reportMatchPoints({players,winnerIds,teamGame:true,durationMs:Date.now()-(this.matchStartedAt||Date.now())});
-    this.showWinCard(wi); }
-  // بطاقة الفوز (js/agp-win-card.js) — تغطي شاشة الفوز لكل لاعب بالفريق الفائز يملك بطاقة مفعّلة
-  showWinCard(wi){ const WC=window.AymanGamesPlatform&&window.AymanGamesPlatform.winCard, t=this.state.teams[wi]; if(!WC||!t) return;
-    WC.announce(t.players.map(n=>this.reg.player(n)),['فوز '+t.name,t.score+' نقطة','أسرع إجابة']); }
+      window.AGPAuth.reportMatchPoints({players,winnerIds,teamGame:true,durationMs:Date.now()-(this.matchStartedAt||Date.now())}); }
+  // بطاقة الفوز (js/agp-win-card.js) — تحل محل بطاقة اللاعب العادية بشاشة الفوز لو يملك بطاقة مفعّلة
+  winCardItem(n,j,lines){ const el=FA.winCard(this.reg.player(n),lines,'wc'+j,200); return { wcOn:!!el, wcStd:!el, wcEl:el }; }
 
   ac(){ if(!this._ac) this._ac=new (window.AudioContext||window.webkitAudioContext)(); if(this._ac.state==='suspended') this._ac.resume(); return this._ac; }
   tone(f,d,type='sine',v=.12,f2,delay=0){ try{const a=this.ac(),t=a.currentTime+delay,o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(a.destination);o.start(t);o.stop(t+d+.02);}catch(e){} }
@@ -479,7 +481,7 @@ class Component extends DCLogic {
     if(lead) setTimeout(()=>{this.snd('win');this.addLog('points',`فوز ${lead.name} بـ ${lead.score} نقطة`);this.setState({winner:lead});this.reportPoints(lead.i);},1400);
   }
   closeResults=()=>{ if(this.state.phase==='results'){ this.snd('close'); this.setState({phase:'ready',q:null}); } };
-  newGame=()=>{ window.AymanGamesPlatform.winCard?.dismiss(); clearInterval(this.ti); this.matchStartedAt=null; this.reported=false; this.setState(s=>({teams:s.teams.map(t=>({...t,score:0})),winner:null,phase:'ready',round:0,q:null,answers:[],received:0,countdown:null,log:[],reels:[0,1].map(()=>this.blankReel()),cat:{items:[],offset:0,trans:'none',stopped:false,idx:null,ci:-1}})); };
+  newGame=()=>{ clearInterval(this.ti); this.matchStartedAt=null; this.reported=false; this.setState(s=>({teams:s.teams.map(t=>({...t,score:0})),winner:null,phase:'ready',round:0,q:null,answers:[],received:0,countdown:null,log:[],reels:[0,1].map(()=>this.blankReel()),cat:{items:[],offset:0,trans:'none',stopped:false,idx:null,ci:-1}})); };
   endMatch=()=>{ clearInterval(this.ti); const s=this.state, ts=s.teams.map((t,i)=>({...t,i})).sort((a,b)=>b.score-a.score);
     this.shut('settingsOpen');
     if(ts[0].score===ts[1].score) return this.toastMsg('تعادل! لا يوجد فائز');
@@ -576,7 +578,7 @@ class Component extends DCLogic {
       closeResults:this.closeResults, newGame:this.newGame, goLibrary:()=>{ this.snd('close'); location.href=FA.libraryUrl; },
       winner:s.winner?(()=>{ const w=s.winner, c=col(w.i), pl=s.teams[w.i].players;
         return {name:w.name,score:fmt(w.score),color:c,ring:c+'40',bd:c+'66',soft:c+'1a',
-          players:pl.map((n,j)=>{ const av=this.avatar(n); return {name:n,initial:[...n].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:av||'',imgOp:av?1:0,color:c,glow:c+'55',cardBd:c+'55',soft:c+'1a',avBg:`linear-gradient(135deg, ${c}, ${c}66)`,delay:(0.5+j*0.08).toFixed(2)+'s'}; })}; })():null, toast:s.toast,
+          players:pl.map((n,j)=>{ const av=this.avatar(n); return {name:n,initial:[...n].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:av||'',imgOp:av?1:0,color:c,glow:c+'55',cardBd:c+'55',soft:c+'1a',avBg:`linear-gradient(135deg, ${c}, ${c}66)`,delay:(0.5+j*0.08).toFixed(2)+'s',...this.winCardItem(n,j,['فوز '+w.name,fmt(w.score)+' نقطة','أسرع إجابة'])}; })}; })():null, toast:s.toast,
       lblDisp:s.narrow?'none':'inline', stop:e=>e.stopPropagation(),
       logoOp:s.logo?1:0, phOp:s.logo?0:1, phBorder:s.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}), fx:this.buildFx(),
       onExit:()=>this.open('exitOpen'), closeExit:()=>this.shut('exitOpen'), confirmExit:()=>{ this.shut('exitOpen'); this.newGame(); location.href=FA.libraryUrl; }, exitOpen:s.exitOpen,

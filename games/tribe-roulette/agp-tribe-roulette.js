@@ -3002,11 +3002,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         pointsPromise.then(function (pointsResult) {
             renderWinnerScreen(winner, pointsResult);
         });
-
-        // بطاقة الفوز (js/agp-win-card.js) -- تغطي شاشة الفوز لو الفائز يملك بطاقة مفعّلة.
-        if (winner && AGP.winCard) {
-            AGP.winCard.announce(winner, ['المركز الأول من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'آخر الصامدين', 'روليت القبائل']);
-        }
     }
 
     /**
@@ -3110,7 +3105,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             cardsHtml += AGP.playerCard.renderTrophyCard(winner, {
                 cls: 'tr-trophy-winner', label: '🏆 الفائز', kind: 'winner', cardId: 'tr-trophy-card-winner',
                 showCrown: true,
-                pointsHtml: pointsHtmlFor(pointsResult, winner)
+                pointsHtml: pointsHtmlFor(pointsResult, winner),
+                // بطاقة الفوز (js/agp-win-card.js) -- تحل محل هذي البطاقة لو الفائز يملكها
+                winCardLines: ['المركز الأول من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'آخر الصامدين', 'روليت القبائل']
             });
         }
         if (mostElim) {

@@ -1877,13 +1877,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         pointsPromise.then(function (pointsResult) {
             renderWinnerScreen(_podium, pointsResult);
         });
-
-        // بطاقة الفوز (js/agp-win-card.js) -- تغطي شاشة الفوز لو الفائز يملك بطاقة مفعّلة.
-        if (AGP.winCard) {
-            AGP.winCard.announce(winners, function (p) {
-                return ['المركز الأول', scoreOf(p) + ' نقطة', GAME_NAME];
-            });
-        }
     }
 
     function findAwardedFor(pointsResult, player) {
@@ -1952,7 +1945,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 label: i === 0 ? '🥇 المركز الأول' : '🥈 المركز الثاني',
                 showCrown: i === 0,
                 extra: '<div class="agp-trophy-extra mc-rounds-line">' + scoreOf(w) + ' نقطة</div>',
-                pointsHtml: pointsHtmlFor(pointsResult, w)
+                pointsHtml: pointsHtmlFor(pointsResult, w),
+                // بطاقة الفوز (js/agp-win-card.js) -- تحل محل هذي البطاقة لو اللاعب يملكها
+                winCardLines: [i === 0 ? 'المركز الأول' : 'المركز الثاني', scoreOf(w) + ' نقطة', GAME_NAME]
             });
         }).join('');
 

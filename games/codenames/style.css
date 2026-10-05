@@ -783,7 +783,7 @@ body.cn-active{
 
 .cn-winner-cards{
     width:100%; display:flex; flex-direction:row; flex-wrap:nowrap;
-    justify-content:center; gap:14px; margin-top:8px;
+    justify-content:center; align-items:flex-end; gap:14px; margin-top:8px;
     overflow-x:auto; padding-bottom:2px;
 }
 .cn-winner-card{

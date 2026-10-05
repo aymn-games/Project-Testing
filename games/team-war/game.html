@@ -266,6 +266,9 @@ button{font-family:inherit}
         <h1 style="margin:0;max-width:1500px;text-align:center;font:900 60px/1.25 'Zain';color:#fff;text-wrap:balance;animation:rise .5s ease .2s both"><span style="color:{{ winLight }}">{{ winName }}</span>، الفريق الأسطوري اللي فاز في المباراة هذي</h1>
         <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:{{ winGap }}px;max-width:1800px;padding-top:24px">
           <sc-for list="{{ winPlayers }}" as="p" hint-placeholder-count="4">
+            <!-- بطاقة الفوز المملوكة (js/agp-win-card.js) تحل محل بطاقة اللاعب العادية بنفس المكان -->
+            <sc-if value="{{ p.wcOn }}" hint-placeholder-val="{{ false }}">{{ p.wcEl }}</sc-if>
+            <sc-if value="{{ p.wcStd }}" hint-placeholder-val="{{ true }}">
             <div style="position:relative;width:{{ p.w }}px;box-sizing:border-box;padding:{{ p.pad }}px 16px 20px;border-radius:28px;background:linear-gradient(180deg, {{ p.soft }}, rgba(14,12,22,.92) 60%);border:2px solid {{ p.bd }};box-shadow:0 24px 60px rgba(0,0,0,.45), 0 0 40px {{ p.glow }};display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;animation:rise .5s cubic-bezier(.2,1.2,.35,1) both;animation-delay:{{ p.delay }}">
               <span aria-hidden="true" style="position:absolute;top:0;left:50%;transform:translate(-50%,-55%);font-size:{{ p.crown }}px;line-height:1;filter:drop-shadow(0 6px 14px rgba(251,191,36,.5))">👑</span>
               <span style="position:relative;overflow:hidden;width:{{ p.a }}px;height:{{ p.a }}px;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;background:{{ p.avBg }};border:4px solid {{ p.light }};box-shadow:0 0 0 6px {{ p.soft }};font:800 {{ p.af }}px 'Zain';color:#fff">{{ p.ini }}<img src="{{ p.avatar }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;opacity:{{ p.imgOp }}"></span>
@@ -274,6 +277,7 @@ button{font-family:inherit}
               <span style="font:700 16px 'Zain';color:#a8a3b5">نقاط الفريق</span>
               <span style="font:900 {{ p.pf }}px/1 'Zain';color:{{ p.light }};font-variant-numeric:tabular-nums">{{ p.pts }}</span>
             </div>
+            </sc-if>
           </sc-for>
         </div>
         <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-top:8px">
@@ -401,10 +405,9 @@ class Component extends DCLogic {
     for(let g=0;g<O.length*2;g++){ p=(p+1)%O.length; const o=O[p]; if(skips[o.k]>0&&O.some(x=>x.k!==o.k)){ skips[o.k]--; continue; } if(skips[o.k]>0){ skips[o.k]--; continue; } break; }
     const o=O[p]; return {turn:o.k,ptr:{...st.ptr,[o.k]:o.i},skips,left:st.timer}; }); }
   toggleRun=()=>{ const s=this.state; if(s.winner) return; if(!s.started){ this.matchStartedAt=Date.now(); this.setState({started:true,running:true,left:s.timer}); this.tone(523,.15,'triangle'); setTimeout(()=>this.tone(784,.25,'triangle'),140); } else { this.setState({running:!s.running}); this.tone(s.running?330:660,.15,'triangle'); } };
-  // بطاقة الفوز (js/agp-win-card.js) — تغطي شاشة الفوز لكل لاعب بالفريق الفائز يملك بطاقة مفعّلة
-  showWinCard(k){ const WC=window.AymanGamesPlatform&&window.AymanGamesPlatform.winCard, t=this.state.teams[k]; if(!WC||!t) return;
-    WC.announce(t.players.map(n=>this.reg.player(n)),['فوز '+t.name,t.pts+' نقطة','حرب الفريقين']); }
-  win(k){ if(this.state.winner) return; this.setState({winner:k}); this.reportPoints(k); this.showWinCard(k); [523,659,784,1047].forEach((f,i)=>setTimeout(()=>this.tone(f,i===3?.6:.22,'sine',.09),i*160)); }
+  // بطاقة الفوز (js/agp-win-card.js) — تحل محل بطاقة اللاعب العادية بشاشة الفوز لو يملك بطاقة مفعّلة
+  winCardItem(n,j,lines,w){ const el=TW.winCard(this.reg.player(n),lines,'wc'+j,w); return { wcOn:!!el, wcStd:!el, wcEl:el }; }
+  win(k){ if(this.state.winner) return; this.setState({winner:k}); this.reportPoints(k); [523,659,784,1047].forEach((f,i)=>setTimeout(()=>this.tone(f,i===3?.6:.22,'sine',.09),i*160)); }
 
   kick(k,n){ const t=this.state.teams[k]; if(t.players.length<=1) return this.toastMsg('لازم يبقى لاعب واحد على الأقل بالفريق');
     this.setState(st=>{ const L=st.teams[k].players, idx=L.indexOf(n), cur=st.ptr[k]%L.length, ptr={...st.ptr,[k]:idx<cur?cur-1:cur};
@@ -456,8 +459,8 @@ class Component extends DCLogic {
       joinOv:s.joinOut?'fadeOut .26s ease forwards':'fade .25s ease', joinAn:s.joinOut?'popOut .26s ease forwards':'popIn .4s cubic-bezier(.2,1.25,.35,1)',
       ...(()=>{ const j=s.join, k=j?j.team:'red', m=T[k]; return {jTeam:s.teams[k].name, jKw:s.teams[k].kw, jLight:m.l, jSoft:m.c+'14', jBd:m.c+'66', jGlow:m.c+'2e', jWaiting:!(j&&j.cand), jFound:!!(j&&j.cand), jName:j&&j.cand||'', jIni:ini(j&&j.cand), jImg:(j&&j.cand&&this.reg.avatar(j.cand))||'', jImgOp:j&&j.cand&&this.reg.avatar(j.cand)?1:0, jAv:av(k)}; })(),
       winOpen:!!W, winName:W?W.name:'', winLight:W?T[s.winner].l:'#fff', winGap:wn>4?16:24,
-      winPlayers:W?W.players.map((n,i)=>({name:n,ini:ini(n),...this.avOf(n),pts:Math.max(0,W.pts),avBg:av(s.winner),light:T[s.winner].l,bd:T[s.winner].c+'88',soft:T[s.winner].c+'26',glow:T[s.winner].c+'33',delay:(0.3+i*0.08).toFixed(2)+'s',...sz})):[],
-      replaySame:()=>{ window.AymanGamesPlatform.winCard?.dismiss(); this.setState({...this.fresh(this.state.teams),scale:this.state.scale,logo:this.state.logo},()=>this.resetMatch()); },
+      winPlayers:W?W.players.map((n,i)=>({name:n,ini:ini(n),...this.avOf(n),pts:Math.max(0,W.pts),avBg:av(s.winner),light:T[s.winner].l,bd:T[s.winner].c+'88',soft:T[s.winner].c+'26',glow:T[s.winner].c+'33',delay:(0.3+i*0.08).toFixed(2)+'s',...sz,...this.winCardItem(n,i,['فوز '+W.name,Math.max(0,W.pts)+' نقطة','حرب الفريقين'],sz.w)})):[],
+      replaySame:()=>{ this.setState({...this.fresh(this.state.teams),scale:this.state.scale,logo:this.state.logo},()=>this.resetMatch()); },
       newMatch:()=>{ location.href='index.html'; },
       endMatch:()=>{ location.href=TW.libraryUrl; }
     }; }

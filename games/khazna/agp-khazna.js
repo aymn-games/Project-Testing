@@ -1713,6 +1713,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return pointsResult.awarded.filter(function (a) { return a.tiktokUsername === uname; })[0] || null;
     }
 
+    // أسطر الكرت السفلي ببطاقة الفوز: الترتيب، نقاط المنصة المكتسبة (لو وصلت)، اسم اللعبة.
+    function winCardLinesFor(pointsResult, player, rankLine, gameLine) {
+        var awarded = findAwardedFor(pointsResult, player);
+        return [rankLine, awarded ? '+' + awarded.added + ' نقطة' : 'آخر الصامدين', gameLine];
+    }
+
     function pointsHtmlFor(pointsResult, player) {
         if (!pointsResult) {
             return '<div class="agp-trophy-points agp-points-noaccount">تعذّر جلب النقاط الآن</div>';
@@ -1743,21 +1749,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var pointsResult = await pointsPromise;
         if (winner) playWinnerFanfare();
 
-        // بطاقة الفوز (js/agp-win-card.js) -- تغطي شاشة الفوز لو الفائز يملك بطاقة مفعّلة.
-        if (winner && AGP.winCard) {
-            var awardedForCard = findAwardedFor(pointsResult, winner);
-            AGP.winCard.announce(winner, [
-                'المركز الأول من ' + (_eliminatedPlayers.length + 1) + ' لاعب',
-                awardedForCard && typeof awardedForCard.added === 'number' ? '+' + awardedForCard.added + ' نقطة' : 'آخر الصامدين',
-                'الخزنة'
-            ]);
-        }
-
         el('kz-round').innerHTML =
             '<div id="kz-winner-wrap">' +
                 '<div id="kz-winner-label">🏁 انتهت المباراة .. الشخص الرهيب الي فاز بلعبة "الخزنة"</div>' +
                 (winner
-                    ? AGP.playerCard.renderTrophyCard(winner, { kind: 'winner', showCrown: true, pointsHtml: pointsHtmlFor(pointsResult, winner) })
+                    ? AGP.playerCard.renderTrophyCard(winner, { kind: 'winner', showCrown: true, pointsHtml: pointsHtmlFor(pointsResult, winner),
+                        // بطاقة الفوز (js/agp-win-card.js) -- تحل محل هذي البطاقة لو الفائز يملكها
+                        winCardLines: winCardLinesFor(pointsResult, winner, 'المركز الأول من ' + (_eliminatedPlayers.length + 1) + ' لاعب', 'الخزنة') })
                     : '<div id="kz-no-winner">ما فيه فائز -- كل اللاعبين انقصوا</div>') +
                 '<div id="kz-end-actions">' +
                     '<button type="button" id="kz-replay-btn">🔁 إعادة المباراة بنفس اللاعبين</button>' +

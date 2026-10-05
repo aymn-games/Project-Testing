@@ -141,6 +141,21 @@
         return React.createElement(_FrameCard, { key: 'fc-' + player.name, player: player, onKick: onKick });
     }
 
+    /**
+     * بطاقة الفوز المملوكة (js/agp-win-card.js) كعنصر React بعرض 240px —
+     * تحل محل بطاقة الفائز العادية بنفس مكانها بشاشة الفوز، فقط لو الفائز
+     * يملك بطاقة مفعّلة. player: {name, avatarUrl, winCard}. lines: أسطر
+     * الكرت السفلي (الترتيب/النقاط). ترجع null لو ما يملك بطاقة.
+     */
+    function winCard(player, lines, key, width) {
+        var React = window.React;
+        if (!React || !AGP.winCard || !player || !AGP.winCard.canShow(player)) return null;
+        return React.createElement('div', { key: key || 'wc', style: { width: width || 240, maxWidth: '100%', lineHeight: 0 }, dangerouslySetInnerHTML: { __html: AGP.winCard.renderHtml(player, lines) } });
+    }
+    function hasWinCard(player) {
+        return !!(player && AGP.winCard && AGP.winCard.canShow(player));
+    }
+
     var _connected = false;
     function connect() {
         var saved = getSavedConnection();
@@ -234,6 +249,8 @@
         norm: norm,
         chatNumber: chatNumber,
         frameCard: frameCard,
+        winCard: winCard,
+        hasWinCard: hasWinCard,
         connect: connect,
         onComment: onComment,
         streamerAvatar: streamerAvatar,

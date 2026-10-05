@@ -1670,11 +1670,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         pointsPromise.then(function (pointsResult) {
             if (_phase === 'champion') renderWinnerScreen(winner, pointsResult);
         });
-
-        // بطاقة الفوز (js/agp-win-card.js) -- تغطي شاشة الفوز لو الفائز يملك بطاقة مفعّلة.
-        if (winner && AGP.winCard) {
-            AGP.winCard.announce(winner, ['المركز الأول من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'صاحب آخر كرسي', 'الكراسي الموسيقية']);
-        }
     }
 
     function findAwardedFor(pointsResult, player) {
@@ -1756,7 +1751,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             trophyHtml = AGP.playerCard.renderTrophyCard(winner, {
                 kind: 'winner',
                 showCrown: true,
-                pointsHtml: pointsHtml
+                pointsHtml: pointsHtml,
+                // بطاقة الفوز (js/agp-win-card.js) -- تحل محل هذي البطاقة لو الفائز يملكها
+                winCardLines: ['المركز الأول من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'صاحب آخر كرسي', 'الكراسي الموسيقية']
             });
         }
 
