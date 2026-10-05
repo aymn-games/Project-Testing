@@ -20,6 +20,7 @@
  *   user_frames    — ملكية/تفعيل الإطارات لكل مستخدم
  *   user_entrances — الدخولية النشطة (أنيميشن + نص) لكل مستخدم
  *   user_elim_cards — بطاقة الإقصاء المملوكة (منح يدوي من الأدمن) لكل مستخدم
+ *   user_win_cards — بطاقة الفوز المملوكة (منح يدوي من الأدمن) لكل مستخدم
  *   user_points    — نقاط اللاعب الإجمالية + سقف يومي — راجع
  *                    backend/points/points-service.js
  *   streamer_levels — كتالوج مستويات "SP" (نقاط الستريمر) القابلة
@@ -188,6 +189,16 @@ db.exec(`
     -- المفاتيح المسموحة بـcollectibles-service.js). enabled = تفعيل/إيقاف
     -- ذاتي من صاحب الحساب بالبروفايل.
     CREATE TABLE IF NOT EXISTS user_elim_cards (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        card_key TEXT NOT NULL,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        granted_by TEXT NOT NULL DEFAULT 'admin_manual',
+        granted_at INTEGER NOT NULL
+    );
+
+    -- بطاقة الفوز — نفس شكل user_elim_cards (التصميم بـjs/agp-win-card.js،
+    -- المفاتيح المسموحة بـcollectibles-service.js).
+    CREATE TABLE IF NOT EXISTS user_win_cards (
         user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
         card_key TEXT NOT NULL,
         enabled INTEGER NOT NULL DEFAULT 1,

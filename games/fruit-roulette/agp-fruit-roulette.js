@@ -1034,7 +1034,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (winnerTrophyWrap) {
             winnerTrophyWrap.innerHTML = AGP.playerCard.renderTrophyCard(champion, {
                 cls: 'fr-trophy-winner', kind: 'winner', showCrown: true,
-                pointsHtml: fruitWinnerPointsHtml(pointsResult)
+                pointsHtml: fruitWinnerPointsHtml(pointsResult),
+                // بطاقة الفوز (js/agp-win-card.js) -- تحل محل هذي البطاقة لو البطل يملكها
+                winCardLines: [
+                    'المركز الأول من ' + AGP.gameManager.getPlayers().length + ' لاعب',
+                    pointsResult && typeof pointsResult.added === 'number' ? '+' + pointsResult.added + ' نقطة' : 'آخر الصامدين',
+                    'روليت الفواكه'
+                ]
             });
         }
 

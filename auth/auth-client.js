@@ -469,6 +469,21 @@ function toggleElimCard(enabled) {
     return request('/api/elim-card/toggle', { method: 'POST', body: { enabled: Boolean(enabled) } });
 }
 
+/** Admin only — grants (or replaces) a user's win card. cardKey from
+ * adminGetCollectiblesCatalog().winCards. */
+function adminGrantWinCard(userId, cardKey) {
+    return request('/api/admin/win-card', { method: 'POST', body: { userId: userId, cardKey: cardKey } });
+}
+
+function adminRevokeWinCard(userId) {
+    return request('/api/admin/win-card', { method: 'POST', body: { userId: userId, revoke: true } });
+}
+
+/** Owner toggles their win card on/off without losing it. */
+function toggleWinCard(enabled) {
+    return request('/api/win-card/toggle', { method: 'POST', body: { enabled: Boolean(enabled) } });
+}
+
 /** Called on round/match end. participants: [{tiktokUsername, won}].
  * options.teamGame: true for two-team games (smaller per-player win bonus,
  * see backend/points/points-service.js). */
@@ -829,6 +844,9 @@ global.AGPAuth = {
     adminGrantElimCard: adminGrantElimCard,
     adminRevokeElimCard: adminRevokeElimCard,
     toggleElimCard: toggleElimCard,
+    adminGrantWinCard: adminGrantWinCard,
+    adminRevokeWinCard: adminRevokeWinCard,
+    toggleWinCard: toggleWinCard,
     reportRoundCompletion: reportRoundCompletion,
     reportMatchPoints: reportMatchPoints,
     getStreamerLevels: getStreamerLevels,

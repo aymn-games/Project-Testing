@@ -1227,6 +1227,67 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
     }
 
+    /* ---- بطاقات الفوز — نفس شكل قسم بطاقات الإقصاء، ويُضاف بعده مباشرة ---- */
+    var elimPanelEl = document.querySelector('[data-elim-cards-panel]');
+    if (elimPanelEl && !document.querySelector('[data-win-cards-panel]')) {
+      wiredSomething = true;
+      var wcPanel = elimPanelEl.cloneNode(false);
+      wcPanel.removeAttribute('data-elim-cards-panel');
+      wcPanel.setAttribute('data-win-cards-panel', '1');
+      var wcHeader = elimPanelEl.children[0].cloneNode(true);
+      wcHeader.children[0].textContent = 'بطاقات الفوز';
+      var wcGrid = document.createElement('div');
+      wcGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:18px;';
+      wcPanel.appendChild(wcHeader);
+      wcPanel.appendChild(wcGrid);
+      elimPanelEl.parentNode.insertBefore(wcPanel, elimPanelEl.nextSibling);
+
+      if (!p.winCard) {
+        var wcEmpty = document.createElement('div');
+        wcEmpty.style.cssText = 'grid-column:1/-1;font-size:13px;color:#8f8ea3;padding:6px 0;';
+        wcEmpty.textContent = 'ما عندك بطاقات فوز بعد.';
+        wcGrid.appendChild(wcEmpty);
+      } else {
+        var wc = p.winCard;
+        var wcCard = document.createElement('div');
+        wcCard.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03);';
+        var wcImgBox = document.createElement('div');
+        wcImgBox.style.cssText = 'height:160px;border-radius:11px;background:repeating-linear-gradient(135deg,#221d33 0 8px,#171326 8px 16px);border:1px solid rgba(255,255,255,.08);overflow:hidden;display:flex;align-items:center;justify-content:center;';
+        if (wc.imageFilename) {
+          var wcImg = document.createElement('img');
+          wcImg.src = wc.imageFilename;
+          wcImg.style.cssText = 'max-height:100%;max-width:100%;object-fit:contain;';
+          wcImg.onerror = function(){ wcImg.style.display = 'none'; };
+          wcImgBox.appendChild(wcImg);
+        }
+        var wcName = document.createElement('div');
+        wcName.style.cssText = 'font-size:12.5px;line-height:1.6;color:#f4f2fb;';
+        wcName.textContent = wc.displayNameAr || wc.cardKey;
+        var wcStatus = document.createElement('div');
+        wcStatus.style.cssText = 'font-size:11px;color:' + (wc.enabled ? '#7ee0a6' : '#e08a8a') + ';';
+        wcStatus.textContent = wc.enabled ? 'مفعّلة ✅' : 'موقوفة ⏸️';
+        wcCard.appendChild(wcImgBox);
+        wcCard.appendChild(wcName);
+        wcCard.appendChild(wcStatus);
+        if (isOwner) {
+          var wcBtn = document.createElement('button');
+          var wcLabel = wc.enabled ? 'إيقاف' : 'تفعيل';
+          wcBtn.style.cssText = 'padding:8px 10px;border-radius:10px;cursor:pointer;font-family:\'IBM Plex Sans Arabic\',sans-serif;font-size:11.5px;border:1px solid rgba(178,140,245,.35);background:transparent;color:#c6b4f2;';
+          wcBtn.textContent = wcLabel;
+          wcBtn.addEventListener('click', function(){
+            wcBtn.disabled = true;
+            wcBtn.textContent = 'جارٍ...';
+            window.AGPAuth.toggleWinCard(!wc.enabled).then(function(result){
+              if (result && result.success) window.location.reload();
+              else { wcBtn.disabled = false; wcBtn.textContent = wcLabel; }
+            }).catch(function(){ wcBtn.disabled = false; wcBtn.textContent = wcLabel; });
+          });
+          wcCard.appendChild(wcBtn);
+        }
+        wcGrid.appendChild(wcCard);
+      }
+    }
+
     /* ---- زر لوحة التحكم (للأدمن فقط، بحساب نفسه) ---- */
     return wiredSomething;
   }

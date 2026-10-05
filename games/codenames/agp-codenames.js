@@ -367,6 +367,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function winnerCardHtml(p) {
+        // بطاقة الفوز المملوكة (js/agp-win-card.js) تحل محل بطاقة اللاعب العادية بنفس المكان
+        if (AGP.winCard && AGP.winCard.canShow(p)) {
+            var teamName = (_match.winnerTeam === TEAM1) ? _settings.team1Name : _settings.team2Name;
+            return '<div class="cn-winner-card" style="width:150px">' +
+                AGP.winCard.renderHtml(p, ['فوز ' + teamName, '+' + WINNER_POINTS_PER_PLAYER + ' نقاط', 'كود نيمز']) +
+            '</div>';
+        }
         var avatarInner = p.avatarUrl
             ? '<img src="' + escapeAttr(p.avatarUrl) + '" alt="">'
             : escapeHtml(playerInitial(p));
@@ -426,7 +433,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // لو منضم بفريق ثاني، ينتقل بحرية للفريق الجديد بمجرد كتابة كلمته
             if (existing) AGP.player.removePlayer(payload.id);
 
-            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, team: team });
+            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null, team: team });
             renderLobbyPlayerGrids();
         });
     }

@@ -489,7 +489,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // لو منضم بفريق ثاني، يتحوّل بحرية للفريق الجديد (قبل بدء الجولة فقط)
             if (existing) AGP.player.removePlayer(payload.id);
 
-            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, team: team });
+            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null, team: team });
         });
     }
 
@@ -998,6 +998,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function winnerCardHtml(p) {
+        // بطاقة الفوز المملوكة (js/agp-win-card.js) تحل محل بطاقة اللاعب العادية بنفس المكان
+        if (AGP.winCard && AGP.winCard.canShow(p)) {
+            var teamName = (p.team === TEAM2) ? _settings.team2Name : _settings.team1Name;
+            return '<div class="pc-winner-card-item" style="width:190px">' +
+                AGP.winCard.renderHtml(p, ['فوز ' + teamName, AGP.scoreManager.getScore(p.id) + ' نقطة', 'تحدي الصور']) +
+            '</div>';
+        }
         var avatarStyle = p.avatarUrl ? ' style="background-image:url(\'' + escapeAttr(p.avatarUrl) + '\')"' : '';
         var personalPoints = AGP.scoreManager.getScore(p.id);
         return '<div class="pc-winner-card-item">' +

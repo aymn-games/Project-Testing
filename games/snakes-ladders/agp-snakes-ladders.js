@@ -1896,7 +1896,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 cls: PLACE_CLASSES[i], kind: 'winner', cardId: 'sl-trophy-card-' + i,
                 label: single ? undefined : PLACE_LABELS[i],
                 showCrown: i === 0,
-                pointsHtml: pointsHtmlFor(pointsResult, w)
+                pointsHtml: pointsHtmlFor(pointsResult, w),
+                // بطاقة الفوز (js/agp-win-card.js) -- تحل محل هذي البطاقة لو الفائز يملكها
+                winCardLines: [['المركز الأول', 'المركز الثاني', 'المركز الثالث'][i] || ('المركز ' + (i + 1)),
+                    'من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'السلم والثعبان']
             });
         }).join('');
 

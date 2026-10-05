@@ -18,6 +18,7 @@
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-player-card.js"></script>
 <script src="../../js/agp-elim-card.js"></script>
+<script src="../../js/agp-win-card.js"></script>
 <script src="../../assets/tiktok-gifts/tiktok-gifts.js"></script>
 <script src="er-platform.js"></script>
 <script src="./support.js"></script>
@@ -271,6 +272,11 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
         </sc-if>
         <h2 style="margin:0 0 6px;font-size:1.6em;font-weight:800;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.65);text-wrap:balance">🏆 الفائز في لعبة "{{ gameName }}"</h2>
         <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:40px 0 34px">
+          <!-- بطاقة الفوز المملوكة (js/agp-win-card.js) تحل محل بطاقة الفائز العادية بنفس المكان -->
+          <sc-if value="{{ winCardOn }}" hint-placeholder-val="{{ false }}">
+          {{ winCardEl }}
+          </sc-if>
+          <sc-if value="{{ winStd }}" hint-placeholder-val="{{ true }}">
           <div style="position:relative;width:200px;display:flex;flex-direction:column;align-items:center">
             <div style="position:absolute;top:4px;left:50%;z-index:3;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35));animation:agpCrown .6s cubic-bezier(.2,1.4,.4,1) .15s both"><svg width="60" height="40" viewBox="0 0 60 40" style="display:block;fill:#a78bfa;stroke:#6d28d9;stroke-linejoin:round"><polygon points="6,36 4,15 15,25 30,5 45,25 56,15 54,36" stroke-width="1.5"></polygon><circle cx="6" cy="13" r="4" stroke-width="1.5"></circle><circle cx="30" cy="4" r="4.5" stroke-width="1.5"></circle><circle cx="54" cy="13" r="4" stroke-width="1.5"></circle><rect x="6" y="32" width="48" height="6" rx="1.5" stroke-width="1.5"></rect></svg></div>
             <div style="position:relative;width:200px;height:300px;margin-top:36px;box-sizing:border-box;border-radius:22px;overflow:hidden;background:linear-gradient(165deg, rgba(30,20,52,.74) 0%, rgba(13,10,24,.84) 100%);border:1.5px solid #a78bfa8c;box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.04), 0 0 40px #a78bfa26;backdrop-filter:blur(2px);animation:agpPop .45s cubic-bezier(.2,1,.3,1) both">
@@ -283,6 +289,7 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
               </div>
             </div>
           </div>
+          </sc-if>
           
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:520px;margin:0 auto">
@@ -511,7 +518,7 @@ class Component extends DCLogic {
     this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820,vw:innerWidth}); this.fit(); addEventListener('resize',this.fit);
     this.q=[]; this.everIn=new Set(this.state.players); this.startMatch();
     // بطاقات الإقصاء المملوكة تُحمَّل مسبقاً حتى تظهر بدون تأخير
-    this.state.players.forEach(n=>{ try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(n)); }catch(e){} });
+    this.state.players.forEach(n=>{ try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(n)); window.AymanGamesPlatform.winCard?.preloadFor(this.reg.player(n)); }catch(e){} });
     ER.connect(); this.unsub=ER.onComment(p=>this.onChat(p)); this.unsubGift=ER.onGift(p=>this.onGift(p)); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); cancelAnimationFrame(this._raf); clearTimeout(this._at); clearInterval(this._ti); clearTimeout(this._kt); clearTimeout(this._rt); clearTimeout(this._lt); clearTimeout(this.tt); this.unsub?.(); this.unsubGift?.(); }
   startMatch(){ this.matchStartedAt=Date.now(); this.reported=false; this.participants=new Set(this.state.players); }
@@ -550,6 +557,13 @@ class Component extends DCLogic {
   showWin(name){ clearTimeout(this._at); clearInterval(this._ti); const s=this.state, w=name||s.players[0]||''; if(!w||s.winOpen) return;
     this.setState({auto:false,winOpen:true,winner:w,winRun:(s.winRun||0)+1,pts:'pending'}); this.tone(523.25,.22,'sine'); setTimeout(()=>this.tone(659.25,.22,'sine'),160); setTimeout(()=>this.tone(783.99,.5,'sine',.165),320);
     this.reportPoints(w); }
+  // أسطر الكرت السفلي ببطاقة الفوز (js/agp-win-card.js)
+  winCardView(s){ const el=s.winOpen&&s.winner?ER.winCard(this.reg.player(s.winner),this.winCardLines(s.winner),'wc'+(s.winRun||0)):null;
+    return { winCardOn:!!el, winStd:!el, winCardEl:el }; }
+  winCardLines(w){ const n=this.participants?this.participants.size:this.state.players.length+this.state.out.length;
+    return [this.ptsLine(),'المركز الأول من '+n+' لاعب','روليت الإقصاء']; }
+  // نقاط المنصة المكتسبة — نفس نص بطاقة الفائز العادية
+  ptsLine(){ const pts=this.state.pts; return pts==='pending'?'جارٍ احتساب النقاط':typeof pts==='number'?`+${pts} نقطة`:'النقاط للحسابات الموثّقة في الموقع'; }
   // نظام نقاط المنصة — مرة واحدة لكل مباراة (CLAUDE.md)
   reportPoints(winner){ if(this.reported) return; this.reported=true;
     const players=[...this.participants].map(n=>{ const p=this.reg.player(n); return {id:p.id,name:n}; }), wid=this.reg.player(winner).id;
@@ -573,7 +587,7 @@ class Component extends DCLogic {
     const pts=s.pts, ptsMain=pts==='pending'?'…':typeof pts==='number'?`+${pts} نقطة`:'—', ptsSub=pts==='pending'?'جارٍ احتساب النقاط':typeof pts==='number'?'تظهر في بروفايلك':'النقاط للحسابات الموثّقة في الموقع';
     return { winOpen:!!s.winOpen, winnerName:s.winner||'', winnerIni:[...(s.winner||'')].filter(c=>/[^\s_\d]/.test(c)).slice(0,2).join(''), winnerAv:w.av, winnerOp:w.op,
       ptsMain, ptsSub, ptsSize:typeof pts==='number'?'2em':'1.4em', ptsSubSize:typeof pts==='number'?'.4em':'.5em',
-      hasWinVideo:!!vid, winVideoEl, gameName:'روليت الإقصاء', replaySame:this.replaySame, newMatch:this.newMatch, confetti,
+      hasWinVideo:!!vid, winVideoEl, ...this.winCardView(s), gameName:'روليت الإقصاء', replaySame:this.replaySame, newMatch:this.newMatch, confetti,
       winOv:s.winOpenOut?'fadeOut .26s ease forwards':'fade .3s ease', winAn:s.winOpenOut?'popOut .26s ease forwards':'popIn .55s cubic-bezier(.2,1.25,.35,1)' }; }
   landResult(){ const s=this.state, n=s.landed; if(!n||!s.players.includes(n)) return this.next(); const twice=!!s.friendOn&&s.prevLanded===n, elig=s.out.filter(x=>!s.revived.includes(x)); this.setState({prevLanded:twice?null:n}); this.openRes(twice&&elig.length>0); }
   next(){ clearTimeout(this._at); this.flush(); const s=this.state; if(this.busy()) return;

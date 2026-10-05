@@ -22,17 +22,19 @@ module.exports = {
         return buildEnvelope(MESSAGE_TYPES.STATUS, payload);
     },
 
-    buildCommentMessage: function (platform, id, name, text, isFollower, avatarUrl, frame, elimCard) {
+    buildCommentMessage: function (platform, id, name, text, isFollower, avatarUrl, frame, elimCard, winCard) {
         // avatarUrl: رابط صورة بروفايل تيك توك أو null. frame: الإطار المفعَّل
         // لصاحب التعليق إن كان موثَّقاً، أو null. تُستخدَم لبطاقة اللاعب بالواجهة
         // الأمامية (راجع js/agp-player-card.js). elimCard: بطاقة الإقصاء
-        // المفعّلة {cardKey} أو null (راجع js/agp-elim-card.js).
+        // المفعّلة {cardKey} أو null (راجع js/agp-elim-card.js). winCard: بطاقة
+        // الفوز المفعّلة {cardKey} أو null (راجع js/agp-win-card.js).
         return buildEnvelope(MESSAGE_TYPES.COMMENT, {
             platform: platform, id: id, name: name, text: text,
             isFollower: Boolean(isFollower),
             avatarUrl: avatarUrl || null,
             frame: frame || null,
-            elimCard: elimCard || null
+            elimCard: elimCard || null,
+            winCard: winCard || null
         });
     },
 

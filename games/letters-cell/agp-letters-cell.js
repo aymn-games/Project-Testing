@@ -832,7 +832,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (existing && existing.team === team) return true;
         if (existing) AGP.player.removePlayer(payload.id);
 
-        AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, team: team });
+        AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null, team: team });
         return true;
     }
 
@@ -867,7 +867,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var team = (m[1] === '1' || m[1] === '١') ? TEAM1 : TEAM2;
         if (!isAccepted(m[2])) return;
 
-        AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, team: team });
+        AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null, team: team });
         var newPlayer = findPlayerById(payload.id);
         if (newPlayer) resolveCredit(team, newPlayer);
     }
@@ -1549,6 +1549,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var winningPlayers = getTeamPlayers(winningTeam);
 
         var winnersHtml = winningPlayers.map(function (p) {
+            // بطاقة الفوز المملوكة (js/agp-win-card.js) تحل محل بطاقة اللاعب العادية بنفس المكان
+            if (AGP.winCard && AGP.winCard.canShow(p)) {
+                return '<div class="lc-avatar-item" style="width:170px">' +
+                    AGP.winCard.renderHtml(p, ['فوز ' + winningName, _roundWins1 + ' - ' + _roundWins2 + ' جولات', 'خلية الحروف']) +
+                '</div>';
+            }
             var hasAvatar = !!(p && p.avatarUrl);
             var circleStyle = hasAvatar
                 ? 'background-image:url(' + escapeAttr(p.avatarUrl) + ');background-size:cover;background-position:center;'

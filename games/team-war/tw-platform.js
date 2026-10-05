@@ -141,6 +141,22 @@
         return React.createElement(_FrameCard, { key: 'fc-' + player.name, player: player, onKick: onKick });
     }
 
+    /**
+     * بطاقة الفوز المملوكة (js/agp-win-card.js) كعنصر React بعرض 240px —
+     * تحل محل بطاقة الفائز العادية بنفس مكانها بشاشة الفوز، فقط لو الفائز
+     * يملك بطاقة مفعّلة. player: {name, avatarUrl, winCard}. lines: أسطر
+     * الكرت السفلي (الترتيب/النقاط). ترجع null لو ما يملك بطاقة.
+     */
+    function winCard(player, lines, key, width) {
+        var React = window.React;
+        if (!React || !AGP.winCard || !player || !AGP.winCard.canShow(player)) return null;
+        // الحركة على الغلاف (مرة وحدة عند الظهور) — المحتوى يتحدّث بدونها لما توصل النقاط.
+        return React.createElement('div', { key: key || 'wc', style: { width: width || 240, maxWidth: '100%', lineHeight: 0, animation: 'agpWinCardPop .55s cubic-bezier(.2,1.3,.4,1) both' }, dangerouslySetInnerHTML: { __html: AGP.winCard.renderHtml(player, lines, { pop: false }) } });
+    }
+    function hasWinCard(player) {
+        return !!(player && AGP.winCard && AGP.winCard.canShow(player));
+    }
+
     var _connected = false;
     function connect() {
         var saved = getSavedConnection();
@@ -183,12 +199,13 @@
                     var known = byName[byId[payload.id]];
                     if (payload.avatarUrl) known.avatar = payload.avatarUrl;
                     if (payload.frame !== undefined) known.frame = payload.frame || null;
+                    if (payload.winCard !== undefined) known.winCard = payload.winCard || null;
                     return byId[payload.id];
                 }
                 var base = String(payload.name || payload.id).trim() || String(payload.id);
                 var name = base, k = 2;
                 while (byName[name]) name = base + ' ' + (k++);
-                byName[name] = { id: payload.id, avatar: payload.avatarUrl || null, frame: payload.frame || null };
+                byName[name] = { id: payload.id, avatar: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null };
                 byId[payload.id] = name;
                 return name;
             },
@@ -197,6 +214,11 @@
             nameOf: function (id) { return byId[id] || null; },
             avatar: function (name) { return (byName[name] && byName[name].avatar) || null; },
             id: function (name) { return (byName[name] && byName[name].id) || null; },
+            // اللاعب بصيغة AGP ({id, name, avatarUrl, winCard}) — لبطاقة الفوز (js/agp-win-card.js)
+            player: function (name) {
+                var p = byName[name] || {};
+                return { id: p.id || name, name: name, avatarUrl: p.avatar || null, winCard: p.winCard || null };
+            },
             // اللاعب بصيغة AGP ({id, name, avatarUrl}) — لنقاط المنصة
             player: function (name) {
                 var p = byName[name] || {};
@@ -228,6 +250,8 @@
         norm: norm,
         chatNumber: chatNumber,
         frameCard: frameCard,
+        winCard: winCard,
+        hasWinCard: hasWinCard,
         connect: connect,
         onComment: onComment,
         streamerAvatar: streamerAvatar,

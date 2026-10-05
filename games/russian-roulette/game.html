@@ -17,6 +17,7 @@
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-win-card.js"></script>
 <script src="rr-platform.js"></script>
 <script src="./support.js"></script>
 </head>
@@ -300,6 +301,9 @@ input::placeholder{color:#6f6a7c}
           </div>
           </sc-if>
           <h2 style="position:relative;margin:0;max-width:1300px;text-align:center;font:800 52px/1.3 'Zain';color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.65);text-wrap:balance">🏆 الفائز بالروليت الروسي</h2>
+          <!-- بطاقة الفوز المملوكة (js/agp-win-card.js) تحل محل بطاقة الفائز العادية بنفس المكان -->
+          <sc-if value="{{ winCardOn }}" hint-placeholder-val="{{ false }}">{{ winCardEl }}</sc-if>
+          <sc-if value="{{ winStd }}" hint-placeholder-val="{{ true }}">
           <div style="position:relative;width:260px;display:flex;flex-direction:column;align-items:center">
             <div style="position:absolute;top:4px;left:50%;z-index:3;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35));animation:agpCrown .6s cubic-bezier(.2,1.4,.4,1) .15s both"><svg width="78" height="52" viewBox="0 0 60 40" style="display:block;fill:#fbbf24;stroke:#b45309;stroke-linejoin:round"><polygon points="6,36 4,15 15,25 30,5 45,25 56,15 54,36" stroke-width="1.5"></polygon><circle cx="6" cy="13" r="4" stroke-width="1.5"></circle><circle cx="30" cy="4" r="4.5" stroke-width="1.5"></circle><circle cx="54" cy="13" r="4" stroke-width="1.5"></circle><rect x="6" y="32" width="48" height="6" rx="1.5" stroke-width="1.5"></rect></svg></div>
             <div style="position:relative;width:260px;height:380px;margin-top:46px;box-sizing:border-box;border-radius:28px;overflow:hidden;background:linear-gradient(165deg, rgba(30,20,52,.8) 0%, rgba(13,10,24,.9) 100%);border:1.5px solid rgba(167,139,250,.6);box-shadow:0 10px 30px rgba(0,0,0,.35), 0 0 50px rgba(167,139,250,.2);animation:agpPop .45s cubic-bezier(.2,1,.3,1) both">
@@ -312,6 +316,7 @@ input::placeholder{color:#6f6a7c}
               </div>
             </div>
           </div>
+          </sc-if>
         </sc-if>
         <sc-if value="{{ noWinner }}" hint-placeholder-val="{{ false }}">
           <span style="font:800 48px 'Zain';color:#fff">ما بقي أحد بالمباراة</span>
@@ -603,6 +608,12 @@ class Component extends DCLogic {
   win(){ if(this.state.phase==='win') return; const a=this.alive(), w=a.length?a[0]:null; this.clearT(); cancelAnimationFrame(this._raf);
     this.setState({phase:'win',winner:w?w.id:null,auto:false,toast:null,spinning:false,awaiting:false,chooser:null,target:null,clash:null,elim:null,warn:null,joinOpen:false,winRun:(this.state.winRun||0)+1,pts:w?'pending':null}); [523.25,659.25,783.99].forEach((f,i)=>setTimeout(()=>this.tone(f,i===2?.5:.22,'sine',.16),i*160));
     if(w) this.reportPoints(w.name); }
+  // بطاقة الفوز (js/agp-win-card.js) — تحل محل بطاقة الفائز العادية لو الفائز يملك بطاقة مفعّلة
+  winCardView(w){ const el=w?RR.winCard(this.reg.player(w.name),this.winCardLines(w),'wc'+(this.state.winRun||0),284):null; return { winCardOn:!!el, winStd:!el, winCardEl:el }; }
+  winCardLines(w){ const n=this.participants?this.participants.size:this.state.players.length;
+    return [this.ptsLine(),'المركز الأول من '+n+' لاعب','الروليت الروسي']; }
+  // نقاط المنصة المكتسبة — نفس نص بطاقة الفائز العادية
+  ptsLine(){ const pts=this.state.pts; return pts==='pending'?'جارٍ احتساب النقاط':typeof pts==='number'?`+${pts} نقطة`:'النقاط للحسابات الموثّقة في الموقع'; }
   // نظام نقاط المنصة — مرة واحدة لكل مباراة (CLAUDE.md)
   reportPoints(winner){ if(this.reported) return; this.reported=true;
     const players=[...this.participants].map(n=>({id:this.reg.player(n).id,name:n})), wid=this.reg.player(winner).id, run=this.state.winRun;
@@ -697,7 +708,7 @@ class Component extends DCLogic {
       tgHearts:tg?this.hearts(tg.hearts,c.chambers,s.clash&&s.clash.stage==='miss'?s.clash.lost:-1):[],
       clashSub:!s.clash?'':s.clash.sure?'باقي له قلب واحد — الطلقة مضمونة':s.clash.stage==='miss'?`${tg?tg.name:''} خسر قلب واحد ونجا`:`نسبة الإصابة ${Math.round(c.bullets/c.chambers*100)}%`,
       elimOpen:s.phase==='elim'&&!!s.elim, elTitle:s.elim?`${s.elim.byName} أقصى ${s.elim.tgName}!`:'', elByName:s.elim?s.elim.byName:'', elByIni:s.elim&&!s.elim.host?ini(s.elim.byName):'', elByHost:!!(s.elim&&s.elim.host), elByTag:s.elim?s.elim.tag:'', elTgName:s.elim?s.elim.tgName:'', elTgIni:ini(s.elim&&s.elim.tgName), elByAv:s.elim&&!s.elim.host?A(s.elim.byName).av:'', elByOp:s.elim&&!s.elim.host?A(s.elim.byName).op:0, elTgAv:A(s.elim&&s.elim.tgName).av, elTgOp:A(s.elim&&s.elim.tgName).op,
-      winOpen:s.phase==='win', hasWinner:!!win, noWinner:!win, winName:win?win.name:'', winIni:ini(win&&win.name), winAv:A(win&&win.name).av, winOp:A(win&&win.name).op, ptsMain, ptsSub, ptsSize:typeof pts==='number'?'44px':'30px', hasWinVideo:!!vid, winVideoEl,
+      winOpen:s.phase==='win', hasWinner:!!win, noWinner:!win, winName:win?win.name:'', winIni:ini(win&&win.name), winAv:A(win&&win.name).av, winOp:A(win&&win.name).op, ptsMain, ptsSub, ptsSize:typeof pts==='number'?'44px':'30px', hasWinVideo:!!vid, winVideoEl, ...this.winCardView(s.phase==='win'?win:null),
       tabs:[tabBtn(s.tab==='settings','الإعدادات',()=>this.setState({tab:'settings'})),tabBtn(s.tab==='players','اللاعبين',()=>this.setState({tab:'players'}))],
       tabSettings:s.tab==='settings', tabPlayers:s.tab==='players', saveSettings:this.saveSettings, saveOp:JSON.stringify(d)===JSON.stringify(c)?.5:1,
       setRows:[

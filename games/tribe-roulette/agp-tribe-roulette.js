@@ -3105,7 +3105,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             cardsHtml += AGP.playerCard.renderTrophyCard(winner, {
                 cls: 'tr-trophy-winner', label: '🏆 الفائز', kind: 'winner', cardId: 'tr-trophy-card-winner',
                 showCrown: true,
-                pointsHtml: pointsHtmlFor(pointsResult, winner)
+                pointsHtml: pointsHtmlFor(pointsResult, winner),
+                // بطاقة الفوز (js/agp-win-card.js) -- تحل محل هذي البطاقة لو الفائز يملكها
+                winCardLines: ['المركز الأول من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'آخر الصامدين', 'روليت القبائل']
             });
         }
         if (mostElim) {

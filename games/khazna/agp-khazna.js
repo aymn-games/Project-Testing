@@ -542,7 +542,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
             if (findPlayerById(payload.id)) return; // منضم أصلاً
 
-            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null });
+            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null });
         });
     }
 
@@ -1663,7 +1663,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // ⭐ اللاعب المُقصى ما يرجع تلقائياً بكتابة الكلمة المفتاحية --
             // بس عبر زر "↩" اليدوي بتبويب المشاركين (طلب صريح)
             if (_eliminatedPlayers.some(function (p) { return p.id === payload.id; })) return;
-            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null });
+            AGP.player.addPlayer({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null });
             _miniJoinedIds.push(payload.id);
             renderMiniGrid();
         });
@@ -1713,6 +1713,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return pointsResult.awarded.filter(function (a) { return a.tiktokUsername === uname; })[0] || null;
     }
 
+    // أسطر الكرت السفلي ببطاقة الفوز: الترتيب، نقاط المنصة المكتسبة (لو وصلت)، اسم اللعبة.
+    function winCardLinesFor(pointsResult, player, rankLine, gameLine) {
+        var awarded = findAwardedFor(pointsResult, player);
+        return [rankLine, awarded ? '+' + awarded.added + ' نقطة' : 'آخر الصامدين', gameLine];
+    }
+
     function pointsHtmlFor(pointsResult, player) {
         if (!pointsResult) {
             return '<div class="agp-trophy-points agp-points-noaccount">تعذّر جلب النقاط الآن</div>';
@@ -1747,7 +1753,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '<div id="kz-winner-wrap">' +
                 '<div id="kz-winner-label">🏁 انتهت المباراة .. الشخص الرهيب الي فاز بلعبة "الخزنة"</div>' +
                 (winner
-                    ? AGP.playerCard.renderTrophyCard(winner, { kind: 'winner', showCrown: true, pointsHtml: pointsHtmlFor(pointsResult, winner) })
+                    ? AGP.playerCard.renderTrophyCard(winner, { kind: 'winner', showCrown: true, pointsHtml: pointsHtmlFor(pointsResult, winner),
+                        // بطاقة الفوز (js/agp-win-card.js) -- تحل محل هذي البطاقة لو الفائز يملكها
+                        winCardLines: winCardLinesFor(pointsResult, winner, 'المركز الأول من ' + (_eliminatedPlayers.length + 1) + ' لاعب', 'الخزنة') })
                     : '<div id="kz-no-winner">ما فيه فائز -- كل اللاعبين انقصوا</div>') +
                 '<div id="kz-end-actions">' +
                     '<button type="button" id="kz-replay-btn">🔁 إعادة المباراة بنفس اللاعبين</button>' +

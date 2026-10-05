@@ -1751,7 +1751,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             trophyHtml = AGP.playerCard.renderTrophyCard(winner, {
                 kind: 'winner',
                 showCrown: true,
-                pointsHtml: pointsHtml
+                pointsHtml: pointsHtml,
+                // بطاقة الفوز (js/agp-win-card.js) -- تحل محل هذي البطاقة لو الفائز يملكها
+                winCardLines: ['المركز الأول من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'صاحب آخر كرسي', 'الكراسي الموسيقية']
             });
         }
 
