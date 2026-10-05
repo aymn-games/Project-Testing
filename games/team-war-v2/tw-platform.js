@@ -54,11 +54,13 @@
 
     /** رقم لاعب مكتوب بالشات (أرقام عربية/فارسية/إنجليزية، مع مسافات أو رموز حوله) أو null. */
     function chatNumber(text) {
-        var t = String(text == null ? '' : text).normalize('NFKC').trim()
+        // كل أشكال الأرقام: إنجليزية 0-9، عربية ٠-٩، فارسية ۰-۹، وعريضة ０-９ (عبر NFKC)
+        var s = String(text == null ? '' : text).normalize('NFKC').trim()
             .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
-            .replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); })
-            .replace(/[^\d]/g, '');
-        if (!t || t.length > 4 || String(text).replace(/[\s\d٠-٩۰-۹#.\-]/g, '').length) return null;
+            .replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); });
+        if (s.replace(/[\s0-9#.\-]/g, '').length) return null;
+        var t = s.replace(/[^0-9]/g, '');
+        if (!t || t.length > 4) return null;
         var n = parseInt(t, 10);
         return n > 0 ? n : null;
     }
