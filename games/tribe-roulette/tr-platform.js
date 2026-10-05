@@ -143,6 +143,20 @@
     }
 
     /**
+     * بطاقة الإقصاء المملوكة (js/agp-elim-card.js) كعنصر React — تظهر بدل
+     * تبويب الإقصاء العادي فقط لو المُقصي يملك بطاقة مفعّلة.
+     * actor/target: {name, avatarUrl, elimCard}. ترجع null لو ما يملك بطاقة.
+     */
+    function elimCard(actor, target, key) {
+        var React = window.React;
+        if (!React || !AGP.elimCard || !actor || !AGP.elimCard.canShow(actor)) return null;
+        return React.createElement('div', { key: key || 'ec', style: { width: '100%', lineHeight: 0 }, dangerouslySetInnerHTML: { __html: AGP.elimCard.renderHtml(actor, target) } });
+    }
+    function hasElimCard(actor) {
+        return !!(actor && AGP.elimCard && AGP.elimCard.canShow(actor));
+    }
+
+    /**
      * بطاقة الفوز المملوكة (js/agp-win-card.js) كعنصر React بعرض 240px —
      * تحل محل بطاقة الفائز العادية بنفس مكانها بشاشة الفوز، فقط لو الفائز
      * يملك بطاقة مفعّلة. player: {name, avatarUrl, winCard}. lines: أسطر
@@ -258,6 +272,7 @@
                     var known = byName[byId[payload.id]];
                     if (payload.avatarUrl) known.avatar = payload.avatarUrl;
                     if (payload.frame !== undefined) known.frame = payload.frame || null;
+                    if (payload.elimCard !== undefined) known.elimCard = payload.elimCard || null;
                     if (payload.winCard !== undefined) known.winCard = payload.winCard || null;
                     var wv = winVideoOf(payload); if (wv) known.winVideo = wv;
                     return byId[payload.id];
@@ -265,7 +280,7 @@
                 var base = String(payload.name || payload.id).trim() || String(payload.id);
                 var name = base, k = 2;
                 while (byName[name]) name = base + ' ' + (k++);
-                byName[name] = { id: payload.id, avatar: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null, winVideo: winVideoOf(payload) };
+                byName[name] = { id: payload.id, avatar: payload.avatarUrl || null, frame: payload.frame || null, elimCard: payload.elimCard || null, winCard: payload.winCard || null, winVideo: winVideoOf(payload) };
                 byId[payload.id] = name;
                 return name;
             },
@@ -273,10 +288,10 @@
             avatar: function (name) { return (byName[name] && byName[name].avatar) || null; },
             id: function (name) { return (byName[name] && byName[name].id) || null; },
             winVideo: function (name) { return (byName[name] && byName[name].winVideo) || null; },
-            // اللاعب بصيغة AGP ({id, name, avatarUrl, winCard}) — لبطاقة الفوز ونقاط المنصة
+            // اللاعب بصيغة AGP ({id, name, avatarUrl, elimCard, winCard}) — لبطاقتي الإقصاء والفوز ونقاط المنصة
             player: function (name) {
                 var p = byName[name] || {};
-                return { id: p.id || name, name: name, avatarUrl: p.avatar || null, winCard: p.winCard || null };
+                return { id: p.id || name, name: name, avatarUrl: p.avatar || null, elimCard: p.elimCard || null, winCard: p.winCard || null };
             },
             // لاعب عنده إطار مفعّل من المنصة → بيانات بطاقته، وإلا null
             framed: function (name) {
@@ -296,6 +311,8 @@
         norm: norm,
         chatNumber: chatNumber,
         frameCard: frameCard,
+        elimCard: elimCard,
+        hasElimCard: hasElimCard,
         winCard: winCard,
         hasWinCard: hasWinCard,
         connect: connect,

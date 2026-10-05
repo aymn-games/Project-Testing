@@ -62,6 +62,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             textFilter: 'drop-shadow(0 .1cqw .12cqw rgba(255,255,255,.9))',
             fontScale: 0.66,
             sound: 'elim-card-blue-bunny.wav'                  // "poof" ناعم + أجراس سحرية
+        },
+        // بطاقة الريس الكريستالية — 1672×941. "الريس" و"عملية إقصاء" مطبوعة
+        // بالصورة، فالجملة "X أقصى Y" تنكتب تحت الخط الفاصل فوق الجوهرة السفلية.
+        'crystal-crown': {
+            image: 'elim-card-crystal-crown.png',
+            width: 1672,
+            height: 941,
+            actorHole: { x: 1090, y: 218, w: 381, h: 364 },  // right circle
+            targetHole: { x: 199, y: 219, w: 381, h: 363 },  // left circle
+            holeBleed: 8,
+            textBox: { x: 600, y: 596, w: 472, h: 60 },      // under the divider, above the lower gem
+            textColor: 'linear-gradient(180deg,#2c5aa8 0%,#163a7a 55%,#0b2457 100%)',
+            textFilter: 'drop-shadow(0 0 .25cqw rgba(255,255,255,.95)) drop-shadow(0 0 .12cqw #fff)',
+            fontScale: 0.72,
+            avatarBg: '#0f2a5c',
+            sound: 'elim-card-crystal-crown.mp3'
         }
     };
 
@@ -111,7 +127,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             ? '<img src="' + escapeHtml(player.avatarUrl) + '" alt="" referrerpolicy="no-referrer" ' +
               'onerror="this.parentNode.innerHTML=this.parentNode.getAttribute(\'data-fallback\');">'
             : fallback;
-        return '<div class="agp-elimcard-avatar" style="' + holeStyle(hole, tpl.holeBleed, tpl) + '" data-fallback="' + escapeHtml(fallback) + '">' + inner + '</div>';
+        return '<div class="agp-elimcard-avatar" style="' + holeStyle(hole, tpl.holeBleed, tpl) +
+            (tpl.avatarBg ? 'background:' + tpl.avatarBg + ';' : '') + '" data-fallback="' + escapeHtml(fallback) + '">' + inner + '</div>';
     }
 
     // Font shrinks for long names so the sentence always fits the banner

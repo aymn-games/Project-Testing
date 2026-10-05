@@ -17,6 +17,7 @@
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-elim-card.js"></script>
 <script src="../../js/agp-win-card.js"></script>
 <script src="../../assets/tiktok-gifts/tiktok-gifts.js"></script>
 <script src="tr-platform.js"></script>
@@ -225,6 +226,10 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
   </sc-if>
   <sc-if value="{{ kickOpen }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:80px 0 0 0;z-index:80;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;animation:{{ kickOv }}">
+      <sc-if value="{{ kickCard }}" hint-placeholder-val="{{ false }}">
+      <div style="width:min(760px, calc(100vw - 24px), calc((100dvh - 120px) * 1.777));animation:{{ kickAn }};filter:drop-shadow(0 40px 80px rgba(0,0,0,.6))">{{ kickCardEl }}</div>
+      </sc-if>
+      <sc-if value="{{ kickStd }}" hint-placeholder-val="{{ true }}">
       <div style="width:min(600px, calc(100vw - 24px));min-height:min(400px, calc(100dvh - 104px));box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(14px,3vw,22px);padding:clamp(20px,4vw,28px) clamp(14px,4vw,36px);border-radius:32px;background:rgba(12,11,18,.94);border:1px solid rgba(255,255,255,.1);box-shadow:0 40px 120px rgba(0,0,0,.6);animation:{{ kickAn }}">
         <span style="padding:6px 20px;border-radius:999px;border:1px solid rgba(248,113,113,.35);background:rgba(248,113,113,.08);font:600 20px 'IBM Plex Sans Arabic';color:#fca5a5">عملية إقصاء</span>
         <span style="max-width:100%;text-align:center;font:700 clamp(19px,2.2vw,26px)/1.45 'IBM Plex Sans Arabic';color:#f4f2f8;text-wrap:balance">{{ kickLine }}</span>
@@ -251,6 +256,7 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
             </div>
         </sc-if>
       </div>
+      </sc-if>
     </div>
   </sc-if>
 
@@ -530,6 +536,8 @@ class Component extends DCLogic {
   componentDidMount(){
     this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820,vw:innerWidth}); this.fit(); addEventListener('resize',this.fit);
     this.q=[]; this.everIn=new Set(this.state.players); this.startMatch();
+    // بطاقات الإقصاء المملوكة تُحمَّل مسبقاً حتى تظهر بدون تأخير
+    this.state.players.forEach(n=>{ try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(n)); }catch(e){} });
     TR.connect(); this.unsub=TR.onComment(p=>this.onComment(p)); this.unsubGift=TR.onGift(p=>this.onGift(p)); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); cancelAnimationFrame(this._raf); clearTimeout(this._at); clearInterval(this._ti); clearTimeout(this._kt); clearTimeout(this._rt); clearTimeout(this._lt); clearTimeout(this._tt); this.unsub?.(); this.unsubGift?.(); }
   startMatch(){ this.matchStartedAt=Date.now(); this.reported=false; this.participants=new Set(this.state.players); }
@@ -617,7 +625,9 @@ class Component extends DCLogic {
     const sys=by==='المذيع'||by==='الوقت', self=!sys&&by===n;
     if(!sys&&!self) this.setState(x=>({kills:{...x.kills,[by]:(x.kills[by]||0)+1}}));
     const trb=!sys&&s.resOpen?((s.tribes||[]).find(x=>x.p===n)||{}).tribe:null; this.logEv('kick',sys?(by==='الوقت'?'انتهاء الوقت':'المذيع'):by,n,trb);
-    this.tone(220,.45,'sawtooth',.07); if(s.resOpen) this.shut('resOpen');
+    // المُقصي يملك بطاقة إقصاء لها صوت خاص → صوت البطاقة بدل نغمة الإقصاء العادية
+    const actor=!sys&&!self?this.reg.player(by):null, EC=window.AymanGamesPlatform&&window.AymanGamesPlatform.elimCard, vol=this.state.vol??7;
+    if(!(this.props.sound!==false&&vol&&actor&&TR.hasElimCard(actor)&&EC&&EC.playSound(actor,Math.min(1,.9*vol/7)))) this.tone(220,.45,'sawtooth',.07); if(s.resOpen) this.shut('resOpen');
     this.setState(x=>({out:[...x.out.filter(y=>y!==n),n],players:x.players.filter(y=>y!==n),landedIdx:null,sIdx:null,sLanded:false,kicked:n,kickBy:sys?'المذيع':by,kickByStreamer:sys,kickTimeout:by==='الوقت',kickSelf:self,kickOpen:true,kickOpenOut:false,kickRun:(x.kickRun||0)+1}));
     this._kt=setTimeout(()=>{ this.shut('kickOpen'); setTimeout(()=>this.next(),280); },3000); }
   resLayout(){ const w=this.state.vw||innerWidth, stack=w<820; return { resCols:stack?'minmax(0,1fr)':'minmax(240px,22%) minmax(0,1fr)', resRows:stack?'auto minmax(360px,1fr)':'minmax(0,1fr)', resScroll:stack?'auto':'hidden', cardCols:4 }; }
@@ -652,6 +662,7 @@ class Component extends DCLogic {
   wheelVals(){ const s=this.state, P=this.wheelPlayers(), N=P.length, a=360/N;
     const fs=N>36?Math.max(8,Math.min(20,Math.floor(2*Math.PI*330/N*.8))):N>18?20:N>12?25:30;
     const L=this.av(s.landed), kd=this.av(s.kicked), kb=s.kickByStreamer?{av:'',op:0}:this.av(s.kickBy), rv=this.av(s.revName);
+    const actor=!s.kickByStreamer&&!s.kickSelf&&s.kickBy?this.reg.player(s.kickBy):null, card=s.kickOpen&&actor&&TR.hasElimCard(actor);
     return { count:s.players.length, wheelBg:'conic-gradient('+P.map((n,i)=>`${this.segCol(i,N)} ${i*a}deg ${(i+1)*a}deg`).join(',')+')',
       rot:s.rot, wheelTr:s.spinning?`transform ${s.dur}ms cubic-bezier(0.215,0.61,0.355,1)`:'none',
       seps:P.map((n,i)=>({ang:i*a})), labels:P.map((n,i)=>({name:n,ini:n[0],ang:i*a+a/2-90,fs})),
@@ -665,7 +676,7 @@ class Component extends DCLogic {
       revOv:s.revOpenOut?'fadeOut .26s ease forwards':'fade .25s ease', revAn:s.revOpenOut?'popOut .26s ease forwards':'popIn .45s cubic-bezier(.2,1.25,.35,1)',
       revHeart:React.createElement('span',{key:'hb'+(s.revRun||0),'aria-hidden':true,style:{position:'absolute',bottom:-2,left:-2,width:42,height:42,borderRadius:'50%',display:'grid',placeItems:'center',background:'#08140f',border:'2px solid rgba(52,211,153,.6)',fontSize:22,lineHeight:1,animation:'heartBeat 1s cubic-bezier(.2,1.3,.4,1) .7s both'}},'💚'),
       revHearts:React.createElement('div',{key:'hf'+(s.revRun||0),'aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none'}},[[18,.6,'-12deg',14],[72,.9,'10deg',18],[40,1.2,'-6deg',12],[85,1.4,'14deg',14],[8,1.1,'8deg',16],[58,.75,'-14deg',12]].map(([x,d,r,fs],i)=>React.createElement('span',{key:i,style:{position:'absolute',left:x+'%',bottom:20,fontSize:fs,'--r':r,animation:`heartFloat 1.6s ease-out ${d}s both`}},'💚'))),
-      kickOpen:!!s.kickOpen, kickedName:s.kicked||'', kickedIni:ini(s.kicked), kickedAv:kd.av, kickedOp:kd.op, winName:s.kickBy||'', winIni:s.kickByStreamer?'':ini(s.kickBy), winAv:kb.av, winOp:kb.op,
+      kickOpen:!!s.kickOpen, kickCard:!!card, kickStd:!card, kickCardEl:card?TR.elimCard(actor,this.reg.player(s.kicked),'ec'+(s.kickRun||0)):null, kickedName:s.kicked||'', kickedIni:ini(s.kicked), kickedAv:kd.av, kickedOp:kd.op, winName:s.kickBy||'', winIni:s.kickByStreamer?'':ini(s.kickBy), winAv:kb.av, winOp:kb.op,
       streamerAv:TR.streamerAvatar()||'', kickByStreamer:!!s.kickByStreamer, hideImg:e=>{e.currentTarget.style.display='none';}, hasWinner:!!s.kickBy, winLabel:s.kickTimeout?'انتهى الوقت':'أقصى', noWinner:!s.kickBy,
       kickLine:s.kickSelf?'قام '+s.kicked+' بإقصاء نفسه!':s.kickTimeout?'انتهى الوقت وتم إقصاء '+(s.kicked||''):'قام '+(s.kickBy||'')+' بإقصاء '+(s.kicked||'')+' بنجاح', elimAn:'elimOut 1s cubic-bezier(.5,0,.75,0) 1.6s both',
       zapEl:React.createElement('span',{key:'z'+(s.kickRun||0),'aria-hidden':true,style:{fontSize:'clamp(36px,7vw,56px)',lineHeight:1,animation:'zap 1.1s cubic-bezier(.2,1.3,.4,1) .25s both, zapFlicker 1.6s linear 1.4s infinite'}},'⚡️'), kickOv:s.kickOpenOut?'fadeOut .26s ease forwards':'fade .25s ease', kickAn:s.kickOpenOut?'popOut .26s ease forwards':'popIn .45s cubic-bezier(.2,1.25,.35,1)', landedName:s.landed||'',
@@ -717,6 +728,7 @@ class Component extends DCLogic {
       if(CFG.who==='المتابعون فقط'&&!p.isFollower) return;
       if(this.everIn.has(user)||s.players.includes(user)||s.out.includes(user)||s.joinNew.includes(user)) return;
       if(s.players.length+s.joinNew.length>=this.maxPlayers()) return this.toastMsg('اكتمل العدد');
+      try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(user)); }catch(e){}
       this.tone(880,.08,'triangle'); return this.setState(st=>({joinNew:[...st.joinNew,user]})); }
     if(!s.resOpen||s.resOpenOut||user!==s.landed) return;
     if(s.revive&&TR.norm(text)===TR.norm('تخطي')) return this.endRes();

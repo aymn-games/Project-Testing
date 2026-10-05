@@ -322,7 +322,8 @@ function setEntranceEnabled(userId, enabled) {
 // بنفس المفتاح في js/agp-elim-card.js.
 var ELIM_CARD_CATALOG = [
   { key: 'ksa-green', displayNameAr: 'بطاقة الإقصاء — السعودية الخضراء', imageFilename: 'assets/elim-cards/elim-card-ksa-green.png' },
-  { key: 'blue-bunny', displayNameAr: 'بطاقة الإقصاء — الأرنب الأزرق', imageFilename: 'assets/elim-cards/elim-card-blue-bunny.png' }
+  { key: 'blue-bunny', displayNameAr: 'بطاقة الإقصاء — الأرنب الأزرق', imageFilename: 'assets/elim-cards/elim-card-blue-bunny.png' },
+  { key: 'crystal-crown', displayNameAr: 'بطاقة الإقصاء — الريس الكريستالي', imageFilename: 'assets/elim-cards/elim-card-crystal-crown.png' }
 ];
 
 function getElimCardCatalog() {
