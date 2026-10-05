@@ -1012,7 +1012,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       disconnectBtn.type = 'button';
       disconnectBtn.textContent = 'قطع الاتصال';
       disconnectBtn.style.cssText = 'padding:9px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#e7e9ee;font-size:13.5px;font-weight:600;cursor:pointer;';
-      disconnectBtn.addEventListener('click', disconnectFromBackend);
+      disconnectBtn.setAttribute('data-connect-action', 'disconnect');
       controls.appendChild(badge);
       controls.appendChild(disconnectBtn);
       return;
@@ -1028,11 +1028,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       cancelBtn.type = 'button';
       cancelBtn.textContent = 'إلغاء';
       cancelBtn.style.cssText = 'padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:transparent;color:#968ea4;font-size:13px;cursor:pointer;';
-      cancelBtn.addEventListener('click', function(){
-        closeConnectSocketSilently();
-        connectState = 'idle';
-        renderConnectUI();
-      });
+      cancelBtn.setAttribute('data-connect-action', 'cancel');
       controls.appendChild(connectingBtn);
       controls.appendChild(cancelBtn);
       return;
@@ -1043,6 +1039,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     input.placeholder = 'يوزر التيك توك (بدون @)';
     input.setAttribute('dir', 'ltr');
     input.setAttribute('autocomplete', 'off');
+    // كيبورد الآيباد/الآيفون يكبّر أول حرف ويصحّح الكلمة تلقائياً فيغيّر اليوزر.
+    input.setAttribute('autocapitalize', 'none');
+    input.setAttribute('autocorrect', 'off');
+    input.setAttribute('spellcheck', 'false');
+    input.setAttribute('data-connect-input', '1');
     input.style.cssText = 'flex:1 1 160px;min-width:140px;padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#f4f2fb;font-size:13.5px;outline:none;';
 
     var submitBtn = document.createElement('button');
@@ -1050,15 +1051,45 @@ document.addEventListener('DOMContentLoaded', async function() {
     submitBtn.className = 'nl-btn-glossy';
     submitBtn.textContent = 'اتصال';
     submitBtn.style.cssText = 'padding:9px 20px;border-radius:999px;border:none;background:linear-gradient(135deg,#7a3fd4,#b28cf5);color:#f3ecff;font-size:13.5px;font-weight:700;cursor:pointer;';
-    submitBtn.addEventListener('click', function(){ handleConnectSubmit(input.value); });
-    input.addEventListener('keydown', function(e){
-      if (e.key === 'Enter') { e.preventDefault(); handleConnectSubmit(input.value); }
-    });
+    submitBtn.setAttribute('data-connect-action', 'submit');
 
     controls.appendChild(input);
     controls.appendChild(submitBtn);
     input.focus();
   }
+
+  // [إصلاح زر "اتصال" الميت — خصوصاً بالآيباد] محرك القالب يعيد بناء محتوى
+  // الصفحة بعد التحميل وينسخ الخانة والأزرار اللي ركّبناها كنسخ بدون
+  // مستمعات الضغط (تطلع عليها data-dc-tpl)، والنسخة الجديدة من الحاوية
+  // تحمل data-wired فما نعيد الربط — فيظهر الزر طبيعي وهو ميت. بالأجهزة
+  // الأبطأ (آيباد/Safari) هذا يصير تقريباً كل مرة. نفس حل زر القائمة:
+  // مستمع واحد على document يلتقط أي نسخة عبر data-connect-* ويقرأ قيمة
+  // الخانة وقت الضغط بدل الاعتماد على مراجع قديمة.
+  function getConnectInputValue(){
+    var input = document.querySelector('[data-connect-controls] [data-connect-input]');
+    return input ? input.value : '';
+  }
+  document.addEventListener('click', function(ev){
+    var btn = ev.target && ev.target.closest ? ev.target.closest('[data-connect-controls] [data-connect-action]') : null;
+    if (!btn || btn.disabled) return;
+    var action = btn.getAttribute('data-connect-action');
+    if (action === 'submit') {
+      handleConnectSubmit(getConnectInputValue());
+    } else if (action === 'disconnect') {
+      disconnectFromBackend();
+    } else if (action === 'cancel') {
+      closeConnectSocketSilently();
+      connectState = 'idle';
+      renderConnectUI();
+    }
+  });
+  document.addEventListener('keydown', function(ev){
+    if (ev.key !== 'Enter' || ev.isComposing) return;
+    var input = ev.target && ev.target.closest ? ev.target.closest('[data-connect-controls] [data-connect-input]') : null;
+    if (!input) return;
+    ev.preventDefault();
+    handleConnectSubmit(input.value);
+  });
 
   function handleConnectSubmit(rawValue){
     var username = (rawValue || '').trim().replace(/^@+/, '');
