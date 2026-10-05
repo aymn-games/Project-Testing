@@ -588,6 +588,10 @@ class Component extends DCLogic {
   // داخل نافذة "دخول لاعبين جدد" يبقى الجديد معلّقاً حتى تُغلق، والتبديل يحدّث فريقه المعلّق.
   // اللاعب المُقصى ما يرجع بكلمة الدخول — يرجع فقط بالدعم (onGift).
   onChat(user,text,follower){ const s=this.state, patch={}, opts={followersOnly:this.followersOnly,isFollower:follower};
+    // رقم المربع من اللاعبَين المختارَين بالجولة يُفحص أولاً — قبل كلمات الدخول، حتى لو كلمة الدخول
+    // نفسها رقم (مثل 1 و 2 للفريقين) ما تنحسب انضمام/تبديل فريق بدل الحركة.
+    if(s.phase==='play'){ const pi=s.reels.findIndex(r=>r.chosen===user), d=this.norm(text);
+      if(pi>=0&&/^[1-9]$/.test(d)){ if(pi!==s.turn) return; if(s.board[+d-1]!=null){ this.toastMsg('المربع '+d+' محجوز'); return; } this.move(pi,+d-1); return; } }
     const members=i=>[...s.teams[i].players,...s.pendingJoins.filter(p=>p.team===i).map(p=>p.name)];
     const r=s.mode==='solo'
       ?(j=>j&&{...j,k:members(0).length<=members(1).length?0:1,toast:j.toast&&'اكتمل العدد'})(XO.join([{name:'اللاعبون',keyword:s.kwSolo,max:this.MAX,members:[...members(0),...members(1)]}],user,text,opts))
@@ -599,8 +603,6 @@ class Component extends DCLogic {
         else if(r.cur<0&&s.joinOpen) patch.pendingJoins=[...s.pendingJoins,{name:user,team:r.k}];
         else { patch.teams=s.teams.map((t,i)=>({...t,players:i===r.k?[...t.players,user]:t.players.filter(x=>x!==user)}));
           this.addLog('join',r.cur<0?`${user} انضم لـ ${s.teams[r.k].name}`:`${user} انتقل إلى ${s.teams[r.k].name}`); } } }
-    else if(s.phase==='play'){ const pi=s.reels.findIndex(r=>r.chosen===user); const d=this.norm(text);
-      if(pi>=0&&/^[1-9]$/.test(d)){ if(pi!==s.turn) return; if(s.board[+d-1]!=null){ this.toastMsg('المربع '+d+' محجوز'); return; } this.move(pi,+d-1); return; } }
     this.setState(patch);
   }
   buildFx(){
