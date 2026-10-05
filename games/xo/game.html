@@ -133,9 +133,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
           {{ winFx }}
           <sc-if value="{{ drawing }}" hint-placeholder-val="{{ false }}">
             <div style="position:absolute;inset:0;border-radius:36px;background:rgba(7,6,11,.82);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;animation:fade .3s ease">
-              <span style="padding:8px 20px;border-radius:999px;border:1px solid rgba(167,139,250,.35);background:rgba(139,92,246,.1);font:600 22px 'IBM Plex Sans Arabic';color:#c4b5fd">القرعة · من يبدأ؟</span>
+              <span style="padding:8px 20px;border-radius:999px;border:1px solid rgba(167,139,250,.35);background:rgba(139,92,246,.1);font:600 22px 'IBM Plex Sans Arabic';color:#c4b5fd">{{ drawTitle }}</span>
               <span style="font:700 64px/1.2 'IBM Plex Sans Arabic';color:{{ drawColor }};text-shadow:0 0 40px {{ drawColor }};white-space:nowrap">{{ drawName }}</span>
-              <span style="font:600 26px 'IBM Plex Sans Arabic';color:#e7e3ef;opacity:{{ drawDoneOp }};transition:opacity .3s">يبدأ بـ X</span>
+              <span style="font:600 26px 'IBM Plex Sans Arabic';color:#e7e3ef;opacity:{{ drawDoneOp }};transition:opacity .3s">{{ drawDoneText }}</span>
             </div>
           </sc-if>
         </div>
@@ -538,18 +538,12 @@ class Component extends DCLogic {
     else if(board.every(v=>v!=null)){ this.setState({board}); this.finish(null); }
     else { this.setState({board,turn:1-pi}); this.startTimer(); }
     return true; }
-  finish(w){ clearInterval(this.ti); clearInterval(this.sim); const s=this.state;
-    if(w==null){ this.snd('timeup'); this.addLog('round','تعادل');
-      // فردي + إقصاء: أي لاعب يتعادل مرتين (متتالية أو لا) يُقصى مباشرة، والثاني يكمل.
-      // لو آخر لاعبين وصلوا تعادلهم الثاني مع بعض: ما ينقصى أحد ويكملون لين يفوز واحد.
-      let outIdx=[], draws=s.draws||{};
-      if(s.mode==='solo'&&s.progress==='elim'){ draws={...draws};
-        [0,1].forEach(i=>{ const n=s.reels[i].chosen; draws[n]=(draws[n]||0)+1; this.addLog('round',n+' تعادل '+draws[n]+' من 2'); if(draws[n]>=2) outIdx.push(i); });
-        if(outIdx.length===2&&[...new Set(s.teams.flatMap(t=>t.players))].length<=2) outIdx=[]; }
-      const outNames=outIdx.map(i=>s.reels[i].chosen);
-      this.setState({phase:'celebrate',result:{w:null,out:outNames},draws}); clearTimeout(this.cel);
-      this.cel=setTimeout(()=>{ this.setState({phase:'over'}); if(outIdx.length) this.cel=setTimeout(()=>this.runElim(outIdx.length===1?1-outIdx[0]:null,outIdx,true),2000); },1200); return; }
-    this.snd('win'); const name=s.reels[w].chosen; const patch={phase:'over',result:{w,name}}; let lead=null;
+  finish(w,lot){ clearInterval(this.ti); clearInterval(this.sim); const s=this.state;
+    if(w==null){ this.snd('timeup'); this.addLog('round','تعادل · قرعة بين '+s.reels[0].chosen+' و '+s.reels[1].chosen);
+      // أي تعادل (كل الأنماط): قرعة بين اسمي اللاعبين — اللي يطلع اسمه ياخذ الجولة كأنه فاز
+      // (نقطة الفوز لفريقه/له، أو بنمط الإقصاء يُقصى اللاعب الثاني مباشرة).
+      this.setState({phase:'celebrate',result:{w:null}}); clearTimeout(this.cel); this.cel=setTimeout(()=>this.runTiebreak(),1500); return; }
+    this.snd('win'); const name=s.reels[w].chosen; const patch={phase:'over',result:{w,name,lot:!!lot}}; let lead=null;
     if(s.mode==='teams'){ const teams=s.teams.map((t,i)=>i===w?{...t,score:t.score+1}:t); patch.teams=teams; this.addLog('points',teams[w].name+' +1 · فاز '+name);
       if(s.progress==='wins'&&teams[w].score>=s.target) lead={...teams[w],i:w}; }
     else { const solo={...s.solo,[name]:(s.solo[name]||0)+1}; patch.solo=solo; this.addLog('points',name+' +1');
@@ -557,7 +551,15 @@ class Component extends DCLogic {
     patch.phase='celebrate'; this.setState(patch);
     clearTimeout(this.cel); this.cel=setTimeout(()=>{ if(lead){ this.snd('win'); this.setState({winner:lead,phase:'ready',result:null}); this.reportPoints(lead); return; }
       this.setState({phase:'over'});
-      if(this.state.progress==='elim') this.cel=setTimeout(()=>this.runElim(w),2000); },3000); }
+      if(this.state.progress==='elim') this.cel=setTimeout(()=>this.runElim(w),2000); },lot?1200:3000); }
+  // قرعة التعادل: نفس حركة قرعة البداية بين اسمي اللاعبين، ثم الجولة تنحسب لصاحب الاسم (finish بعلامة lot)
+  runTiebreak(){ const pick=this.r(2); this.setState({phase:'tiebreak',result:null,drawHi:0,drawDone:false}); this.snd('open');
+    let i=0; const steps=16+pick;
+    const next=()=>{ i++; this.setState({drawHi:i%2}); this.snd('tick');
+      if(i<steps){ this.cel=setTimeout(next,60+i*i*1.6); return; }
+      this.snd('reveal'); this.setState({drawDone:true}); this.addLog('round','القرعة: '+this.state.reels[i%2].chosen+' ياخذ الجولة');
+      this.cel=setTimeout(()=>this.finish(i%2,true),1500); };
+    this.cel=setTimeout(next,300); }
   // w = اللاعب اللي يكمل (null لو انقصى الاثنين بالتعادل) · loseIdx = المُقصَون · byDraw = إقصاء بالتعادل مرتين
   runElim(w,loseIdx,byDraw){ const s=this.state; loseIdx=loseIdx||[1-w]; const win=w!=null?s.reels[w].chosen:null, loses=loseIdx.map(i=>s.reels[i].chosen);
     this.snd('wrong'); this.setState({phase:'elim',elim:{w,win,lose:loses[0],lose2:loses[1]||null,loseI:loseIdx,byDraw:!!byDraw}});
@@ -590,11 +592,11 @@ class Component extends DCLogic {
     this.snd('join'); this.addLog('join',user+' رجع للمباراة بدعم '+r.gift.name);
     this.setState(st=>{ const out={...st.out}; const left=st.out[user]; delete out[user];
       out.__used=out.__used||{}; const usedMap={...(st.usedMap||{}),[user]:left.used+1};
-      return {out:Object.fromEntries(Object.entries(out).filter(([k])=>k!=='__used')),usedMap,draws:{...(st.draws||{}),[user]:0},
+      return {out:Object.fromEntries(Object.entries(out).filter(([k])=>k!=='__used')),usedMap,
         teams:st.teams.map((t,i)=>i===Math.max(0,left.team)?{...t,players:[...t.players,user]}:t)}; });
     this.toastMsg('رجع '+user+' للمباراة'); }
   closeResults=()=>{ if(this.state.phase==='over'){ this.snd('close'); this.setState({phase:'ready',result:null,board:Array(9).fill(null),winLine:null,syms:[null,null],lastCell:null}); } };
-  newGame=()=>{ clearInterval(this.ti); clearInterval(this.sim); this.matchStartedAt=null; this.reported=false; this.setState(s=>({teams:s.teams.map(t=>({...t,score:0})),solo:{},draws:{},winner:null,phase:'ready',round:0,board:Array(9).fill(null),syms:[null,null],winLine:null,result:null,drawHi:null,log:[],reels:[0,1].map(()=>this.blankReel())})); };
+  newGame=()=>{ clearInterval(this.ti); clearInterval(this.sim); this.matchStartedAt=null; this.reported=false; this.setState(s=>({teams:s.teams.map(t=>({...t,score:0})),solo:{},winner:null,phase:'ready',round:0,board:Array(9).fill(null),syms:[null,null],winLine:null,result:null,drawHi:null,log:[],reels:[0,1].map(()=>this.blankReel())})); };
   endMatch=()=>{};
 
   // الانضمام وتبديل الفريق: نفس قواعد اللوبي عبر XO.join (xo-platform.js · JOIN-RULES.md).
@@ -667,7 +669,7 @@ class Component extends DCLogic {
       const items=(spun?r.items:['',...idle].slice(0,30)).map((p,j)=>{ const win=spun&&r.stopped&&j===r.ci, av=this.avatar(p);
         return {name:p,color:win?c:'#e7e3ef',op:spun&&r.stopped&&!win?.28:1,sc:win?1.12:1,initial:[...(p||'')].find(ch=>/[^\s_\d]/.test(ch))||'',
           avatar:av||'',imgOp:av?1:0,avBg:'linear-gradient(135deg, '+c+', '+c+'66)',avBd:win?c:'rgba(255,255,255,.15)',avSh:win?'0 0 22px '+c:'none'}; });
-      const active=(P==='play'&&s.turn===i)||(P==='draw'&&s.drawHi===i);
+      const active=(P==='play'&&s.turn===i)||((P==='draw'||P==='tiebreak')&&s.drawHi===i);
       const sc=solo?(r.chosen?(s.solo[r.chosen]||0):0):s.teams[i].score;
       return {label:this.label(i),color:c,halo:c+'33',bd:active?c:c+'40',sh:active?'0 0 0 4px '+c+'33, 0 0 60px '+c+'55, 0 30px 80px rgba(0,0,0,.4)':'0 30px 80px rgba(0,0,0,.35)',
         score:String(sc),items,offset:spun?r.offset:0,trans:spun?r.trans:'none',empty:!pool.length,
@@ -682,9 +684,9 @@ class Component extends DCLogic {
         anim:inLine&&P==='celebrate'?'cellPulse .7s ease-in-out infinite':'none'}; });
     const tc=col(s.turn);
     let res={};
-    if(s.result){ if(s.result.w==null) res={tag:'انتهت الجولة',title:'تعادل',sub:(s.result.out||[]).length?'تعادل للمرة الثانية · يُقصى '+s.result.out.join(' و '):'ما أحد فاز بهالجولة',color:'#e7e3ef',bd:'rgba(255,255,255,.15)',ring:'rgba(255,255,255,.06)'};
-      else { const c=col(s.result.w); res={tag:solo?'فوز':this.label(s.result.w)+' +1',title:'فاز '+s.result.name,sub:'بـ '+s.syms[s.result.w]+' · الجولة '+s.round,color:c,bd:c+'80',ring:c+'1f'}; } }
-    const statusMap={spinning:'اختيار اللاعبين…',draw:'القرعة…',celebrate:s.result&&s.result.w!=null?'فاز '+s.result.name+'!':'تعادل'};
+    if(s.result){ if(s.result.w==null) res={tag:'انتهت الجولة',title:'تعادل',sub:'ما أحد فاز بهالجولة',color:'#e7e3ef',bd:'rgba(255,255,255,.15)',ring:'rgba(255,255,255,.06)'};
+      else { const c=col(s.result.w); res={tag:solo?'فوز':this.label(s.result.w)+' +1',title:'فاز '+s.result.name,sub:s.result.lot?'بالقرعة بعد التعادل · الجولة '+s.round:'بـ '+s.syms[s.result.w]+' · الجولة '+s.round,color:c,bd:c+'80',ring:c+'1f'}; } }
+    const statusMap={spinning:'اختيار اللاعبين…',draw:'القرعة…',tiebreak:'تعادل · القرعة تحدد صاحب الجولة…',celebrate:s.result&&s.result.w!=null?'فاز '+s.result.name+'!':'تعادل'};
     const wc=s.result&&s.result.w!=null?col(s.result.w):null;
     const h=React.createElement;
     const newJoins=s.pendingJoins.map(pj=>{ const c=s.mode==='solo'?'#a78bfa':col(pj.team), av=this.avatar(pj.name), fr=this.reg.framed(pj.name),
@@ -694,7 +696,7 @@ class Component extends DCLogic {
         initial:[...pj.name].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:av||'',imgOp:av?1:0, kick}; });
     const eg=this.eventGroups();
     return { ...this.anims(), scale:s.scale, round:s.round, target:s.target, teams,
-      cardA:[mkCard(0)], cardB:[mkCard(1)], cells, res, showResult:P==='over'&&!!s.result, resBtn:!(s.progress==='elim'&&s.result&&(s.result.w!=null||(s.result.out||[]).length)),
+      cardA:[mkCard(0)], cardB:[mkCard(1)], cells, res, showResult:P==='over'&&!!s.result, resBtn:!(s.progress==='elim'&&s.result&&s.result.w!=null),
       showElim:P==='elim'&&!!s.elim, el:s.elim?(()=>{ const mk=(n,c)=>{ const a=this.avatar(n); return {name:n,initial:[...n].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:a||'',imgOp:a?1:0,avBg:'linear-gradient(135deg, '+c+', '+c+'66)'}; };
         const both=!s.elim.win, li=s.elim.loseI||[1-s.elim.w];
         const left=both?mk(s.elim.lose2,col(li[1])):mk(s.elim.win,col(s.elim.w));
@@ -708,7 +710,7 @@ class Component extends DCLogic {
       showSpin:P==='ready', spin:this.spin, showTurn:P==='play', showStatus:!!statusMap[P], statusText:statusMap[P]||'',
       turnName:s.reels[s.turn].chosen||'', turnColor:tc, turnSym:s.syms[s.turn]||'', turnBd:tc+'80', turnGlow:tc+'33',
       timeLeft:s.timeLeft, timerDeg:s.timeLeft/this.DUR*360, timerColor:s.timeLeft<=5?'#f87171':tc,
-      drawing:P==='draw', drawName:s.drawHi!=null?(s.reels[s.drawHi].chosen||''):'', drawColor:s.drawHi!=null?col(s.drawHi):'#ffffff', drawDoneOp:s.drawDone?1:0,
+      drawing:P==='draw'||P==='tiebreak', drawTitle:P==='tiebreak'?'تعادل · قرعة بين اللاعبين':'القرعة · من يبدأ؟', drawDoneText:P==='tiebreak'?'ياخذ الجولة':'يبدأ بـ X', drawName:s.drawHi!=null?(s.reels[s.drawHi].chosen||''):'', drawColor:s.drawHi!=null?col(s.drawHi):'#ffffff', drawDoneOp:s.drawDone?1:0,
       closeResults:this.closeResults, newGame:this.newGame, goLibrary:()=>{ this.snd('close'); location.href=XO.libraryUrl; },
       winner:s.winner?(()=>{ const w=s.winner, c=col(w.i), pl=w.solo?[w.name]:s.teams[w.i].players;
         return {name:w.name,score:fmt(w.score),color:c,ring:c+'40',bd:c+'66',soft:c+'1a',
