@@ -465,7 +465,7 @@ class Component extends DCLogic {
       if(cfg.team1||cfg.team2) patch.teams=this.state.teams.map((t,i)=>({...t,name:(i?cfg.team2:cfg.team1)||t.name})); this.setState(patch); } }catch(e){}
     this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}); this.fit(); addEventListener('resize',this.fit);
     XO.connect(); this.unsub=XO.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); this.unsubGift=XO.onGift(p=>this.onGift(this.reg.nameFor(p),p.giftName)); }
-  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this.ti); clearInterval(this.sim); clearTimeout(this.cel); this.unsub?.(); this.unsubGift?.(); }
+  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this.ti); clearInterval(this.sim); clearTimeout(this.cel); clearTimeout(this.drawT); this.unsub?.(); this.unsubGift?.(); }
   // نظام نقاط المنصة: مرة واحدة لكل مباراة عند إعلان الفائز
   reportPoints(w){ if(this.reported) return; this.reported=true; const s=this.state;
     const players=[...new Set([...s.teams.flatMap(t=>t.players),...Object.keys(s.out)])].map(n=>({id:this.reg.id(n),name:n})).filter(p=>p.id);
@@ -524,12 +524,14 @@ class Component extends DCLogic {
   endDraw(st){ this.snd('reveal'); const syms=[null,null]; syms[st]='X'; syms[1-st]='O';
     this.setState({drawDone:true,syms,turn:st});
     const s=this.state; this.addLog('round',s.reels[0].chosen+' ضد '+s.reels[1].chosen+' · يبدأ '+s.reels[st].chosen);
-    setTimeout(()=>{ this.setState({phase:'play'}); this.startTimer(); },1500); }
+    this.drawT=setTimeout(()=>this.beginPlay(),1500); }
+  // بداية اللعب بعد عرض القرعة — أو فوراً لو اللاعب اللي يبدأ كتب رقم المربع وقت عرض النتيجة
+  beginPlay(){ clearTimeout(this.drawT); if(this.state.phase!=='draw') return; this.setState({phase:'play'}); this.startTimer(); }
   startTimer(){ clearInterval(this.ti); this.setState({timeLeft:this.DUR});
     this.ti=setInterval(()=>{ const t=this.state.timeLeft-1; if(t>0&&t<=5) this.snd('beep'); this.setState({timeLeft:Math.max(0,t)});
       if(t<=0){ const s=this.state, who=s.reels[s.turn].chosen; this.snd('wrong'); this.addLog('wrong','انتهى وقت '+who+' · انتقل الدور'); this.toastMsg('انتهى وقت '+who); this.setState({turn:1-s.turn}); this.startTimer(); } },1000); }
-  move(pi,cell){ const s=this.state; if(s.phase!=='play'||pi!==s.turn||cell<0||cell>8||s.board[cell]!=null) return false;
-    const board=s.board.slice(); board[cell]=pi; this.snd('correct'); this.setState({lastCell:cell});
+  move(pi,cell,early){ const s=this.state; if((s.phase!=='play'&&!early)||pi!==s.turn||cell<0||cell>8||s.board[cell]!=null) return false;
+    const board=s.board.slice(); board[cell]=pi; this.snd('correct'); this.setState(early?{lastCell:cell,phase:'play'}:{lastCell:cell});
     this.addLog('correct',s.reels[pi].chosen+' وضع '+s.syms[pi]+' في '+(cell+1));
     const line=this.LINES.find(L=>L.every(k=>board[k]===pi));
     if(line){ this.setState({board,winLine:line}); this.finish(pi); }
@@ -590,8 +592,11 @@ class Component extends DCLogic {
   onChat(user,text,follower){ const s=this.state, patch={}, opts={followersOnly:this.followersOnly,isFollower:follower};
     // رقم المربع من اللاعبَين المختارَين بالجولة يُفحص أولاً — قبل كلمات الدخول، حتى لو كلمة الدخول
     // نفسها رقم (مثل 1 و 2 للفريقين) ما تنحسب انضمام/تبديل فريق بدل الحركة.
-    if(s.phase==='play'){ const pi=s.reels.findIndex(r=>r.chosen===user), d=this.norm(text);
-      if(pi>=0&&/^[1-9]$/.test(d)){ if(pi!==s.turn) return; if(s.board[+d-1]!=null){ this.toastMsg('المربع '+d+' محجوز'); return; } this.move(pi,+d-1); return; } }
+    // وقت عرض نتيجة القرعة (drawDone) اللاعب اللي يبدأ يقدر يكتب رقمه مباشرة — ما ننتظر نهاية العرض.
+    const early=s.phase==='draw'&&s.drawDone;
+    if(s.phase==='play'||early){ const pi=s.reels.findIndex(r=>r.chosen===user), d=this.norm(text);
+      if(pi>=0&&/^[1-9]$/.test(d)){ if(pi!==s.turn) return; if(s.board[+d-1]!=null){ this.toastMsg('المربع '+d+' محجوز'); return; }
+        if(early) clearTimeout(this.drawT); this.move(pi,+d-1,early); return; } }
     const members=i=>[...s.teams[i].players,...s.pendingJoins.filter(p=>p.team===i).map(p=>p.name)];
     const r=s.mode==='solo'
       ?(j=>j&&{...j,k:members(0).length<=members(1).length?0:1,toast:j.toast&&'اكتمل العدد'})(XO.join([{name:'اللاعبون',keyword:s.kwSolo,max:this.MAX,members:[...members(0),...members(1)]}],user,text,opts))
