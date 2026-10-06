@@ -509,6 +509,9 @@ const ini = n=>[...String(n||'')].find(ch=>/[^\s_\d]/.test(ch))||'';
 
 class Component extends DCLogic {
   reg = ER.createRegistry(PLAYERS);
+  // رقم ثابت لكل لاعب طول المباراة حسب ترتيب دخوله باللوبي — اللاعب الجديد ياخذ الرقم التالي
+  nums = new Map(); nextNum = 1;
+  numOf(n){ if(!this.nums.has(n)) this.nums.set(n,this.nextNum++); return this.nums.get(n); }
   state = { kills:{}, winOpen:false, out:[], revived:[], supUsed:{}, revive:false,
     mode:SETUP&&SETUP.mode==='سكرول'?'scroll':'roulette', supOn:!!(SETUP&&SETUP.supOn&&SETUP.supType), supType:(SETUP&&SETUP.supType&&SETUP.supType.id)||null,
     supCount:Math.max(1,Math.min(10,+(SETUP&&SETUP.supCount)||1)), friendOn:!!(SETUP&&SETUP.friendOn), elimSec:+(SETUP&&SETUP.elimSec)||25, sound:!(SETUP&&SETUP.sound===false),
@@ -516,7 +519,7 @@ class Component extends DCLogic {
     scale:1, logo:false, settingsOpen:false, setTab:0, pending:[], log:[], toast:null, players:Array.isArray(ROSTER)?[...ROSTER]:[] };
   componentDidMount(){
     this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820,vw:innerWidth}); this.fit(); addEventListener('resize',this.fit);
-    this.q=[]; this.everIn=new Set(this.state.players); this.startMatch();
+    this.q=[]; this.everIn=new Set(this.state.players); this.state.players.forEach(n=>this.numOf(n)); this.startMatch();
     // بطاقات الإقصاء المملوكة تُحمَّل مسبقاً حتى تظهر بدون تأخير
     this.state.players.forEach(n=>{ try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(n)); window.AymanGamesPlatform.winCard?.preloadFor(this.reg.player(n)); }catch(e){} });
     ER.connect(); this.unsub=ER.onComment(p=>this.onChat(p)); this.unsubGift=ER.onGift(p=>this.onGift(p)); }
@@ -603,10 +606,10 @@ class Component extends DCLogic {
     this.setState(s=>({out:[...s.out.filter(x=>x!==n),n],players:s.players.filter(x=>x!==n),landedIdx:null,sIdx:null,sLanded:false,kicked:n,kickBy:n===s.landed?'الاستريمر':s.landed,kickByStreamer:n===s.landed,kickOpen:true,kickRun:(s.kickRun||0)+1}));
     this._kt=setTimeout(()=>{ this.shut('kickOpen'); setTimeout(()=>this.next(),280); },3000); }
   // الإقصاء/الرجوع برقم اللاعب من صاحب الاختيار — نفس ترتيب البطاقات المعروضة
-  resList(){ const s=this.state; return s.revive?s.out.filter(n=>!s.revived.includes(n)):s.players.filter(n=>n!==s.landed); }
+  resList(){ const s=this.state; return (s.revive?s.out.filter(n=>!s.revived.includes(n)):s.players.filter(n=>n!==s.landed)).sort((a,b)=>this.numOf(a)-this.numOf(b)); }
   pick(n){ const s=this.state; if(!s.resOpen||s.resOpenOut) return; if(s.revive) this.revive(n,'friend'); else this.eliminate(n,s.landed); }
   onChat(p){ const user=this.reg.nameFor(p), text=p.text, s=this.state;
-    if(s.resOpen&&!s.resOpenOut&&user===s.landed){ const k=ER.chatNumber(text), L=this.resList(); if(k&&k<=L.length) return this.pick(L[k-1]); }
+    if(s.resOpen&&!s.resOpenOut&&user===s.landed){ const k=ER.chatNumber(text), t=k&&this.resList().find(n=>this.numOf(n)===k); if(t) return this.pick(t); }
     if(s.joinOpen&&!s.joinOpenOut&&SETUP&&ER.norm(text)===ER.norm(SETUP.keyword)){
       if(SETUP.who==='المتابعين فقط'&&!p.isFollower) return;
       if(this.everIn.has(user)||s.joined.includes(user)) return;
@@ -667,7 +670,7 @@ class Component extends DCLogic {
       streamerAv:ER.streamerAvatar()||'', kickByStreamer:!!s.kickByStreamer, hideImg:e=>{e.currentTarget.style.display='none';}, hasWinner:!!s.kickBy, winLabel:s.kickByStreamer?(s.kickTimeout?'انتهى الوقت':'إقصاء يدوي'):'صاحب الدور', noWinner:!s.kickBy, elimAn:'elimOut 1s cubic-bezier(.5,0,.75,0) 1.6s both',
       kickCard:!!card, kickStd:!card, kickCardEl:card?ER.elimCard(actor,this.reg.player(s.kicked),'ec'+(s.kickRun||0)):null,
       zapEl:React.createElement('span',{key:'z'+(s.kickRun||0),'aria-hidden':true,style:{fontSize:'clamp(36px,7vw,56px)',lineHeight:1,animation:'zap 1.1s cubic-bezier(.2,1.3,.4,1) .25s both, zapFlicker 1.6s linear 1.4s infinite'}},'⚡️'), kickOv:s.kickOpenOut?'fadeOut .26s ease forwards':'fade .25s ease', kickAn:s.kickOpenOut?'popOut .26s ease forwards':'popIn .45s cubic-bezier(.2,1.25,.35,1)', landedName:s.landed||'',
-      ...(()=>{ const rv2=!!s.revive, Ls=this.resList(); return { others:Ls.map((n,i)=>({name:n,ini:ini(n),...this.av(n),num:i+1,kick:()=>this.pick(n)})), othersCount:Ls.length, othersEmpty:!Ls.length, emptyTxt:rv2?'لا يوجد لاعبين مُقصين متاحين للرجوع':'لا يوجد لاعبين', notRevive:!rv2, listTitle:rv2?'اللاعبين المُقصين':'باقي اللاعبين', listHint:rv2?'يكتب صاحب الاختيار رقم اللاعب بالشات، أو اضغط على اللاعب لإرجاعه':'يكتب صاحب الاختيار رقم اللاعب بالشات، أو اضغط على اللاعب لإقصائه', numBg:rv2?'#10b981':'#7c3aed', numSh:rv2?'0 0 0 1px rgba(110,231,183,.55), 0 4px 12px rgba(16,185,129,.45)':'0 0 0 1px rgba(196,181,253,.5), 0 4px 12px rgba(124,58,237,.45)' }; })(), landedInitial:ini(s.landed),
+      ...(()=>{ const rv2=!!s.revive, Ls=this.resList(); return { others:Ls.map(n=>({name:n,ini:ini(n),...this.av(n),num:this.numOf(n),kick:()=>this.pick(n)})), othersCount:Ls.length, othersEmpty:!Ls.length, emptyTxt:rv2?'لا يوجد لاعبين مُقصين متاحين للرجوع':'لا يوجد لاعبين', notRevive:!rv2, listTitle:rv2?'اللاعبين المُقصين':'باقي اللاعبين', listHint:rv2?'يكتب صاحب الاختيار رقم اللاعب بالشات، أو اضغط على اللاعب لإرجاعه':'يكتب صاحب الاختيار رقم اللاعب بالشات، أو اضغط على اللاعب لإقصائه', numBg:rv2?'#10b981':'#7c3aed', numSh:rv2?'0 0 0 1px rgba(110,231,183,.55), 0 4px 12px rgba(16,185,129,.45)':'0 0 0 1px rgba(196,181,253,.5), 0 4px 12px rgba(124,58,237,.45)' }; })(), landedInitial:ini(s.landed),
       resOv:s.resOpenOut?'fadeOut .26s ease forwards':'fade .25s ease', resAn:s.resOpenOut?'popOut .26s ease forwards':'popIn .45s cubic-bezier(.2,1.25,.35,1)' }; }
   buildFx(){
     if(this._fx) return this._fx;
@@ -698,7 +701,7 @@ class Component extends DCLogic {
       gone.forEach(n=>this.logEv('kick','الاستريمر',n));
       this.setState(st=>({players:st.players.filter(x=>!gone.includes(x)),out:[...st.out.filter(x=>!gone.includes(x)),...gone],landed:gone.includes(st.landed)?null:st.landed,prevLanded:gone.includes(st.prevLanded)?null:st.prevLanded,sIdx:null,sLanded:false}),()=>this.next()); }); }
   closeJoin=()=>{ const J=this.state.joined; this.shut('joinOpen'); if(!J.length) return; this.setState({joined:[]});
-    J.forEach(n=>this.everIn.add(n));
+    J.forEach(n=>{ this.everIn.add(n); this.numOf(n); });
     this.later(()=>{ J.forEach(n=>this.participants.add(n)); this.setState(st=>({players:[...st.players,...J.filter(n=>!st.players.includes(n))],sIdx:null,sLanded:false}),()=>this.next()); }); }
   renderVals(){ const S=this.state; return { lblDisp:S.narrow?'none':'inline', onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'), confirmExit:()=>{ this.shut('exitOpen'); location.href=ER.libraryUrl; }, ...this.anims(), exitOpen:S.exitOpen, toast:S.toast,
       eventsOpen:S.eventsOpen, closeEvents:()=>this.shut('eventsOpen'), ...this.events(), onSettings:()=>this.setState({settingsOpen:true}), settingsOpen:S.settingsOpen, tabSettings:S.setTab===0,
