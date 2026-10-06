@@ -1,61 +1,317 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>خمّن العشرة — ألعاب أيمن</title>
-
-<!-- خط Zain (Google Fonts) -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Zain:ital,wght@0,200;0,300;0,400;0,700;0,800;0,900;1,300;1,400&display=swap" rel="stylesheet">
-
-<link rel="stylesheet" href="style.css">
-<!--
-    ==========================================================================
-     خمّن العشرة (Guess the Ten) — لعبة أصلية (Native) داخل مستودع Project-Testing.
-     هوية بصرية مستقلة بالكامل (خط Zain + لونين فقط: أخضر زمردي + ذهبي) —
-     لا اعتماد على أي لعبة ثانية بالمنصة ولا على js/agp-game-shell.js
-     المشترك. لا تعديل على أي ملف موجود بالمشروع.
-    ==========================================================================
--->
-</head>
-<body>
-
 <script src="../../js/agp-core.js"></script>
 <script src="../../js/agp-events.js"></script>
 <script src="../../js/agp-timer-manager.js"></script>
 <script src="../../js/agp-storage-manager.js"></script>
 <script src="../../js/agp-services.js"></script>
 <script src="../../js/agp-stream-connector.js"></script>
-<script src="../../adapters/agp-tiktok-adapter.js"></script>
-<script src="../../js/agp-registry.js"></script>
-<script src="../../js/agp-session.js"></script>
-<script src="../../js/agp-rooms-manager.js"></script>
-<script src="../../js/agp-player-manager.js"></script>
-<script src="../../js/agp-player-source.js"></script>
 <script src="../../js/agp-keyword-manager.js"></script>
 <script src="../../js/agp-queue-manager.js"></script>
-<script src="../../js/agp-score-manager.js"></script>
-<script src="../../js/agp-lobby.js"></script>
-<script src="../../js/agp-game-api.js"></script>
-<script src="../../js/agp-game-engine.js"></script>
-<script src="../../js/agp-game-manager.js"></script>
-<script src="../../js/agp-game-bridge.js"></script>
-<script src="../../js/agp-round-manager.js"></script>
-<script src="../../js/agp-bootstrap.js"></script>
-
-<!-- طبقة الحسابات — تُستخدَم فعلياً هنا لمنح نقاط منصة ألعاب أيمن الحقيقية للفائز فقط -->
+<script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../auth/auth-client.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
+<script src="tt-platform.js"></script>
+<script src="./support.js"></script>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#7c3aed"/><text x="50" y="64" font-size="40" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">S</text></svg></template>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;height:100%;background:#07060b;overflow:hidden}
+a{color:#a78bfa}a:hover{color:#c4b5fd}
+input:focus{outline:none;border-color:rgba(167,139,250,.5)}
+input::placeholder{color:#6f6a7c}
+[data-noscroll]::-webkit-scrollbar{display:none}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes fadeOut{from{opacity:1}to{opacity:0}}
+@keyframes popIn{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:none}}
+@keyframes popOut{from{opacity:1;transform:none}to{opacity:0;transform:scale(.9)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+<div dir="rtl" style="position:fixed;inset:0;overflow:hidden;background:#07060b;font-family:'Zain',sans-serif;color:#f4f2f8">
+  {{ fx }}
 
-<!-- بطاقة اللاعب المشتركة (صورة + اسم) -->
-<script src="../../js/agp-player-card.js"></script>
-<script src="../../js/agp-win-card.js"></script>
+  <header style="position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:clamp(10px,1.2vw,24px);padding:0 clamp(12px,1.25vw,24px);box-sizing:border-box;background:rgba(10,9,15,.72);border-bottom:1px solid rgba(255,255,255,.07);backdrop-filter:blur(16px)">
+    <div style="display:flex;justify-content:flex-start">
+      <button onClick="{{ onExit }}" style="height:clamp(34px,2.4vw,44px);padding:0 clamp(12px,1vw,18px);border-radius:999px;display:flex;align-items:center;gap:8px;font:700 clamp(14px,0.95vw,18px) 'Zain';white-space:nowrap;cursor:pointer;transition:all .2s;border:1px solid rgba(248,113,113,.25);background:rgba(255,255,255,.03);color:#fca5a5" style-hover="background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.45)" style-active="transform:scale(.97)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span style="display:{{ lblDisp }}">خروج</span></button>
+    </div>
+    <div style="height:60px;min-width:clamp(96px,14vw,280px);position:relative;display:grid;place-items:center;border-radius:14px;border:1px dashed rgba(167,139,250,{{ phBorder }})">
+      <span style="font:400 clamp(11px,0.75vw,14px) 'Zain';color:#8a8596;opacity:{{ phOp }}">مكان اللوقو · logo.png</span>
+      <img src="../../logo.png" alt="" onLoad="{{ logoOk }}" onError="{{ logoErr }}" style="position:absolute;inset:0;margin:auto;height:60px;max-width:none;object-fit:contain;opacity:{{ logoOp }};filter:drop-shadow(0 0 14px rgba(139,92,246,.45))">
+    </div>
+    <div></div>
+  </header>
 
-<!-- منطق لعبة خمّن العشرة نفسها (بدون agp-game-shell.js) -->
-<script src="agp-top-ten.js"></script>
+  <main style="position:fixed;top:80px;left:0;right:0;bottom:0;display:grid;place-items:center;overflow:hidden">
+    <div style="position:relative;width:{{ stageW }}px;height:{{ stageH }}px">
+    <div style="position:absolute;top:0;left:0;width:1320px;height:730px;transform:scale({{ scale }});transform-origin:top left;display:flex;justify-content:center">
+    <div style="width:1080px;max-width:100%;height:100%;box-sizing:border-box;padding:0 24px;display:flex;flex-direction:column">
 
+      <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:12px;padding:32px 0 26px;text-align:center">
+        <span style="font:900 56px/1.1 'Zain';background:linear-gradient(180deg, #f4f2f8, #c4b5fd);-webkit-background-clip:text;background-clip:text;color:transparent">{{ gameName }}</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center">
+          <span style="display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;background:{{ liveBg }};border:1px solid {{ liveBd }};font:700 12px 'Zain';color:{{ liveColor }};transition:all .3s"><span style="width:7px;height:7px;border-radius:50%;background:{{ liveColor }};box-shadow:0 0 8px {{ liveColor }}"></span>{{ liveTitle }}</span>
+          <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+            <a href="{{ libraryUrl }}" style="height:30px;padding:0 14px;display:flex;align-items:center;gap:6px;border-radius:999px;text-decoration:none;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 14px 'Zain';box-shadow:0 4px 14px rgba(139,92,246,.35)" style-hover="filter:brightness(1.1)">اتصل من مكتبة الألعاب</a>
+          </sc-if>
+        </div>
+      </div>
+
+      <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding-bottom:16px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:18px">
+          <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="3">
+            <section style="display:flex;flex-direction:column;padding:22px 26px;border-radius:24px;background:rgba(18,16,26,.72);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);box-shadow:0 20px 60px rgba(0,0,0,.3);grid-column:{{ sec.span }};animation:rise .45s ease both;animation-delay:{{ sec.delay }}">
+              <div style="display:flex;align-items:center;gap:10px;padding-bottom:10px;margin-bottom:4px;border-bottom:1px solid rgba(255,255,255,.06)">
+                <span style="width:30px;height:30px;border-radius:999px;display:grid;place-items:center;background:rgba(139,92,246,.14);color:#c4b5fd;font:700 13px 'Zain'">{{ sec.num }}</span>
+                <span style="font:700 17px 'Zain'">{{ sec.title }}</span>
+              </div>
+              <sc-for list="{{ sec.rows }}" as="row" hint-placeholder-count="3">
+                <sc-if value="{{ row.divider }}" hint-placeholder-val="{{ false }}">
+                  <span style="display:block;height:1px;background:rgba(255,255,255,.06)"></span>
+                </sc-if>
+
+                <sc-if value="{{ row.isMulti }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;padding:10px 0 6px">
+                    <sc-if value="{{ row.label }}" hint-placeholder-val="{{ false }}">
+                      <span style="font:700 16px 'Zain';color:#e7e3ef">{{ row.label }}</span>
+                    </sc-if>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px">
+                      <sc-for list="{{ row.opts }}" as="o" hint-placeholder-count="6">
+                        <button onClick="{{ o.pick }}" style="height:36px;padding:0 16px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:6px;font:700 13px 'Zain';border:1px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};transition:all .2s"><span style="width:6px;height:6px;border-radius:50%;background:{{ o.dot }}"></span>{{ o.label }}</button>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ row.isSupport }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:center;gap:16px;padding:12px 0 8px;animation:fade .25s ease">
+                    <button onClick="{{ row.open }}" aria-label="اختيار نوع الدعم" style="flex-shrink:0;width:100px;height:100px;border-radius:20px;box-sizing:border-box;border:1.5px dashed {{ row.boxBd }};background:{{ row.boxBg }};cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-family:inherit;transition:transform .2s" style-hover="transform:scale(1.04)" style-active="transform:scale(.97)">
+                      <span style="position:relative;width:52px;height:52px;border-radius:12px;overflow:hidden;display:grid;place-items:center;font:700 34px/1 'Zain';color:#fff">{{ row.boxIni }}</span>
+                      <span style="font:700 12px 'Zain';color:#fff;opacity:.9">{{ row.boxName }}</span>
+                    </button>
+                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+                      <div style="display:flex;flex-direction:column;gap:2px">
+                        <span style="font:700 15px 'Zain';color:#f4f2f8">{{ row.title }}</span>
+                        <span style="font:400 13px 'Zain';color:#8a8596">{{ row.sub }}</span>
+                      </div>
+                      <sc-if value="{{ row.chosen }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                          <span style="font:700 14px 'Zain';color:#e7e3ef">كم مرة يقدر ينعش نفسه</span>
+                          <div style="display:flex;align-items:center;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)">
+                            <button onClick="{{ row.dec }}" aria-label="إنقاص" style="width:34px;height:34px;border-radius:999px;border:none;background:transparent;color:#a8a3b5;font:400 20px/1 'Zain';cursor:pointer" style-hover="background:rgba(255,255,255,.08);color:#fff">−</button>
+                            <span style="width:44px;text-align:center;font:700 16px 'Zain';color:#ddd6fe;font-variant-numeric:tabular-nums">{{ row.count }}</span>
+                            <button onClick="{{ row.inc }}" aria-label="زيادة" style="width:34px;height:34px;border-radius:999px;border:none;background:transparent;color:#a8a3b5;font:400 20px/1 'Zain';cursor:pointer" style-hover="background:rgba(255,255,255,.08);color:#fff">+</button>
+                          </div>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ row.isInline }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:6px 0">
+                    <div style="display:flex;align-items:center;gap:8px;min-width:0">
+                      <sc-if value="{{ row.dot }}" hint-placeholder-val="{{ false }}">
+                        <span style="width:8px;height:8px;flex-shrink:0;border-radius:50%;background:{{ row.dot }};box-shadow:0 0 8px {{ row.dot }}"></span>
+                      </sc-if>
+                      <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                        <span style="font:700 16px 'Zain';color:#e7e3ef">{{ row.label }}</span>
+                        <sc-if value="{{ row.hint }}" hint-placeholder-val="{{ false }}">
+                          <span style="font:400 13px/1.55 'Zain';color:#8a8596;text-wrap:pretty">{{ row.hint }}</span>
+                        </sc-if>
+                      </div>
+                    </div>
+
+                    <sc-if value="{{ row.isText }}" hint-placeholder-val="{{ false }}">
+                      <input value="{{ row.value }}" onChange="{{ row.onInput }}" placeholder="{{ row.placeholder }}" style="width:min(190px,48%);height:40px;box-sizing:border-box;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);color:#f4f2f8;font:700 14px 'Zain';padding:0 16px;text-align:center">
+                    </sc-if>
+
+                    <sc-if value="{{ row.isNumber }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex;align-items:center;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)">
+                        <button onClick="{{ row.dec }}" aria-label="إنقاص" style="width:34px;height:34px;border-radius:999px;border:none;background:transparent;color:#a8a3b5;font:400 20px/1 'Zain';cursor:pointer" style-hover="background:rgba(255,255,255,.08);color:#fff">−</button>
+                        <input type="text" inputmode="numeric" value="{{ row.value }}" onChange="{{ row.onInput }}" aria-label="{{ row.label }}" style="width:52px;height:34px;box-sizing:border-box;border:none;border-radius:999px;background:transparent;text-align:center;font:700 16px 'Zain';color:#ddd6fe;font-variant-numeric:tabular-nums">
+                        <button onClick="{{ row.inc }}" aria-label="زيادة" style="width:34px;height:34px;border-radius:999px;border:none;background:transparent;color:#a8a3b5;font:400 20px/1 'Zain';cursor:pointer" style-hover="background:rgba(255,255,255,.08);color:#fff">+</button>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ row.isChoice }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex;gap:3px;padding:3px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)">
+                        <sc-for list="{{ row.opts }}" as="o" hint-placeholder-count="2">
+                          <button onClick="{{ o.pick }}" style="height:34px;padding:0 14px;border:none;border-radius:999px;cursor:pointer;white-space:nowrap;font:700 13px 'Zain';background:{{ o.bg }};color:{{ o.fg }};box-shadow:{{ o.sh }};transition:all .25s">{{ o.label }}</button>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ row.isToggle }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ row.flip }}" role="switch" aria-checked="{{ row.on }}" aria-label="{{ row.label }}" style="width:52px;height:30px;flex-shrink:0;border-radius:999px;border:none;cursor:pointer;padding:3px;display:flex;justify-content:{{ row.knobSide }};background:{{ row.trackBg }};transition:all .25s">
+                        <span style="width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>
+                      </button>
+                    </sc-if>
+                  </div>
+                </sc-if>
+              </sc-for>
+            </section>
+          </sc-for>
+        </div>
+        <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;justify-content:center;padding-top:14px">
+            <a href="{{ bankUrl }}" style="font:700 16px 'Zain';color:#a78bfa;text-decoration:none;padding:6px 12px;border-radius:999px" style-hover="background:rgba(139,92,246,.1);color:#c4b5fd">📋 عرض/إدارة بنك الأسئلة</a>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 0 28px">
+        <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+          <span role="alert" style="padding:8px 18px;border-radius:999px;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.4);color:#fca5a5;font:700 16px 'Zain';animation:rise .3s ease">{{ toast }}</span>
+        </sc-if>
+        <button onClick="{{ start }}" style="width:100%;max-width:400px;height:62px;border:none;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 20px 'Zain';box-shadow:0 10px 34px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.2);opacity:{{ startOp }}" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">اتصل بالبث وانتقل للوبي<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+      </div>
+    </div>
+    </div>
+    </div>
+  </main>
+
+  <sc-if value="{{ connOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);display:grid;place-items:center;animation:fade .25s ease">
+      <div style="width:min(360px, calc(100vw - 24px));box-sizing:border-box;padding:32px 28px;border-radius:26px;background:rgba(12,11,18,.96);border:1px solid {{ connBd }};box-shadow:0 30px 90px rgba(0,0,0,.6), 0 0 60px {{ connGlow }};display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;animation:popIn .4s cubic-bezier(.2,1.25,.35,1);transition:border-color .3s, box-shadow .3s">
+        <div style="position:relative;width:64px;height:64px;display:grid;place-items:center">
+          <sc-if value="{{ connBusy }}" hint-placeholder-val="{{ true }}">
+            <span style="position:absolute;inset:0;border-radius:50%;border:4px solid rgba(167,139,250,.18);border-top-color:#a78bfa;animation:spin .9s linear infinite"></span>
+            <span style="width:12px;height:12px;border-radius:50%;background:#a78bfa;box-shadow:0 0 14px #a78bfa"></span>
+          </sc-if>
+          <sc-if value="{{ connDone }}" hint-placeholder-val="{{ false }}">
+            <span style="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:rgba(52,211,153,.14);border:2px solid #34d399;color:#34d399;animation:popIn .35s cubic-bezier(.2,1.4,.35,1)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+          </sc-if>
+        </div>
+        <span style="font:700 20px 'Zain'">{{ connMsg }}</span>
+        <span style="font:400 14px 'Zain';color:#a8a3b5">{{ connSub }}</span>
+      </div>
+    </div>
+  </sc-if>
+
+
+
+  <sc-if value="{{ exitOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeExit }}" style="position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;animation:{{ exitOv }}">
+      <div onClick="{{ stop }}" style="width:min(420px, calc(100vw - 16px));box-sizing:border-box;padding:clamp(18px,5vw,28px);border-radius:24px;background:rgba(12,11,18,.96);border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 90px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;animation:{{ exitAn }}">
+        <span style="width:60px;height:60px;border-radius:999px;display:grid;place-items:center;background:rgba(248,113,113,.1);color:#fca5a5"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></span>
+        <span style="font:700 22px 'Zain'">الخروج؟</span>
+        <span style="font:400 15px/1.6 'Zain';color:#a8a3b5">بترجع لمكتبة الألعاب وما راح تنحفظ الإعدادات</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:6px">
+          <button onClick="{{ closeExit }}" style="height:48px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;font:700 15px 'Zain';cursor:pointer" style-hover="background:rgba(255,255,255,.09)">إلغاء</button>
+          <button onClick="{{ confirmExit }}" style="height:48px;border-radius:999px;border:none;background:linear-gradient(90deg, #dc2626, #ef4444);color:#fff;font:700 15px 'Zain';cursor:pointer;box-shadow:0 8px 22px rgba(239,68,68,.3)" style-hover="filter:brightness(1.1)">خروج</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+// ============================================================
+//  قالب شاشة إعدادات المباراة
+//  لتخصيصه للعبة جديدة: عدّل GAME و SETTINGS فقط.
+//
+//  أنواع الإعدادات (type):
+//   text   : خانة نص           { key, label, placeholder, default }
+//   number : رقم مع − و +       { key, label, min, max, step, default }
+//   choice : اختيار واحد        { key, label, options:[...], default:رقم_الخيار }
+//   multi  : اختيار متعدد       { key, label, options:[...], default:[أرقام], minPick }
+//   toggle : تشغيل / إيقاف      { key, label, default:true|false }
+//  خيارات إضافية: dot:'#لون' نقطة ملونة بجانب الاسم
+//  القسم: { title, full:true (بعرض الشاشة), rows:[...] }
+// ============================================================
+const GAME = {
+  name: 'خمّن العشرة',
+  libraryUrl: TT.libraryUrl,
+  lobbyUrl: 'lobby.html',
+  requireLive: true
+};
+const SUPPORT_TYPES = [];
+const SETTINGS = [
+  { title:'الدخول', rows:[
+    { type:'text',   key:'keyword', label:'الكلمة المفتاحية للانضمام كمتسابق', placeholder:'مثال: يلا', default:'' },
+    { type:'choice', key:'who',     label:'مين مسموح له ينضم؟', options:['الجميع','المتابعون فقط'], default:0 }
+  ]},
+  { title:'المباراة', rows:[
+    { type:'choice', key:'guessTime', label:'⏱️ وقت التخمين لكل سؤال', options:['1 د','1:30','2 د','2:30'], default:1 },
+    { type:'choice', key:'rounds',    label:'عدد الجولات', hint:'تخطي أي سؤال ما يُحتسب من هذا العدد', options:['3','5','7','10'], default:1 }
+  ]}
+];
+
+class Component extends DCLogic {
+  state = { supCount:1, supPick:false, values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:!!TT.getSavedConnection(), liveUser:(TT.getSavedConnection()||{}).username||'', isAdmin:TT.isAdmin(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
+  componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820,scale:Math.min(innerWidth/1320,(innerHeight-80)/730)}); this.fit(); addEventListener('resize',this.fit);
+    // حالة الاتصال من مكتبة الألعاب — تتحدث فوراً لو اتصل/قطع من تبويب المكتبة، أو انتهى البث (js/agp-live-watch.js)
+    this.onLive=()=>{ const c=TT.getSavedConnection(); this.setState({live:!!c,liveUser:(c||{}).username||'',isAdmin:TT.isAdmin()}); };
+    this.onStore=e=>{ if(!e.key||e.key==='agp:agp-stream-connection') this.onLive(); }; addEventListener('storage',this.onStore); addEventListener('focus',this.onLive); addEventListener('agp:stream-ended',this.onLive); }
+  componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('storage',this.onStore); removeEventListener('focus',this.onLive); removeEventListener('agp:stream-ended',this.onLive); clearTimeout(this.tt); clearTimeout(this.t1); clearTimeout(this.t2); }
+  set(k,v){ this.setState(s=>({values:{...s.values,[k]:v}})); }
+  toastMsg(t){ this.setState({toast:t}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toast:null}),2400); }
+  shut(k){ this.setState({[k+'Out']:true}); setTimeout(()=>this.setState({[k]:false,[k+'Out']:false}),260); }
+  seg(on){ return {bg:on?'linear-gradient(90deg, #7c3aed, #a855f7)':'transparent',fg:on?'#fff':'#a8a3b5',sh:on?'0 6px 20px rgba(139,92,246,.4)':'none'}; }
+
+  buildRow(r,idx){ const v=this.state.values[r.key], t=r.type;
+    const row={hint:r.hint||null,isSupport:t==='support',label:r.label,dot:r.dot||null,divider:idx>0,isText:t==='text',isNumber:t==='number',isChoice:t==='choice',isToggle:t==='toggle',isMulti:t==='multi',isInline:t!=='multi'&&t!=='support',value:v,placeholder:r.placeholder||''};
+    if(t==='text') row.onInput=e=>this.set(r.key,e.target.value);
+    if(t==='number'){ const mn=r.min??0, mx=r.max??999, st=r.step??1, clamp=n=>Math.min(mx,Math.max(mn,n));
+      row.dec=()=>this.set(r.key,clamp((+v||mn)-st)); row.inc=()=>this.set(r.key,clamp((+v||0)+st));
+      row.onInput=e=>{ const d=e.target.value.replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/\D/g,''); this.set(r.key,d===''?'':Math.min(mx,+d)); }; }
+    if(t==='choice') row.opts=r.options.map((l,k)=>({label:l,pick:()=>this.set(r.key,k),...this.seg(v===k)}));
+    if(t==='toggle'){ row.on=!!v; row.flip=()=>this.set(r.key,!v); row.knobSide=v?'flex-start':'flex-end'; row.trackBg=v?'linear-gradient(90deg, #7c3aed, #a855f7)':'rgba(255,255,255,.12)'; }
+    if(t==='multi') row.opts=r.options.map((l,k)=>{ const on=v.includes(k); return {label:l,
+      pick:()=>this.set(r.key,on?(v.length>(r.minPick??0)?v.filter(x=>x!==k):v):[...v,k]),
+      bd:on?'rgba(167,139,250,.55)':'rgba(255,255,255,.1)',bg:on?'rgba(139,92,246,.16)':'rgba(255,255,255,.02)',fg:on?'#ddd6fe':'#8a8596',dot:on?'#a78bfa':'rgba(255,255,255,.2)'}; });
+    if(t==='support'){ const st=SUPPORT_TYPES.find(x=>x.id===v); Object.assign(row,{giftId:v,hideImg:e=>{e.currentTarget.style.display='none';},chosen:!!st,boxBg:st?st.c:'rgba(255,255,255,.03)',boxBd:st?'transparent':'rgba(167,139,250,.55)',boxIni:st?st.name.replace(/^ال/,'')[0]:'+',boxName:st?st.name:'اختيار',title:st?st.name:'اختر الهدية',sub:st?st.coins.toLocaleString('en')+' عملة · اضغط على المربع للتغيير':'اضغط على المربع لاختيار الدعم',open:()=>this.setState({supPick:true}),count:this.state.supCount,dec:()=>this.setState(s=>({supCount:Math.max(1,s.supCount-1)})),inc:()=>this.setState(s=>({supCount:Math.min(10,s.supCount+1)}))}); }
+    return row; }
+
+  readValues(){ const out={}; for(const r of SETTINGS.flatMap(s=>s.rows)){ const v=this.state.values[r.key];
+    out[r.key]=r.type==='choice'?r.options[v]:r.type==='multi'?v.map(k=>r.options[k]):r.type==='support'?(SUPPORT_TYPES.find(x=>x.id===v)||{}).name||null:v; } out.supCount=this.state.supCount; out.supId=this.state.values.supType; return out; }
+
+  buildFx(){
+    if(this._fx) return this._fx;
+    const h=React.createElement, rnd=(a,b)=>a+Math.random()*(b-a);
+    const glow=(k,css)=>h('div',{key:k,style:{position:'absolute',borderRadius:'50%',filter:'blur(40px)',...css}});
+    const glows=[glow('g1',{top:'-20%',right:'-10%',width:900,height:900,background:'radial-gradient(circle, rgba(124,58,237,.22), transparent 65%)'}),
+      glow('g2',{top:'30%',left:'-15%',width:800,height:800,background:'radial-gradient(circle, rgba(139,92,246,.12), transparent 65%)'}),
+      glow('g3',{bottom:'-30%',left:'35%',width:1000,height:700,background:'radial-gradient(circle, rgba(168,85,247,.1), transparent 65%)'})];
+    const stars=Array.from({length:90},(_,i)=>h('span',{key:'s'+i,style:{position:'absolute',left:rnd(0,100)+'%',top:rnd(0,100)+'%',width:i%9?1.5:3,height:i%9?1.5:3,borderRadius:'50%',background:`rgba(255,255,255,${rnd(.12,.35).toFixed(2)})`}}));
+    const sq=[[88,14,14,1],[73,82,18,0],[16,66,10,1],[42,8,12,0]].map(([x,y,s,fill],i)=>h('span',{key:'q'+i,style:{position:'absolute',left:x+'%',top:y+'%',width:s,height:s,background:fill?'rgba(139,92,246,.45)':'transparent',border:fill?'none':'1.5px solid rgba(139,92,246,.35)'}}));
+    return this._fx=h('div',{key:'fx','aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none',overflow:'hidden'}},[...glows,...stars,...sq]);
+  }
+
+  renderVals(){ const S=this.state, o=(i,out)=>S.exitOpenOut?out:i;
+    return {
+      hideImg:e=>{e.currentTarget.style.display='none';}, gameName:'إعدادات مباراة '+GAME.name, fx:this.buildFx(), scale:S.scale||1, stageW:Math.round(1320*(S.scale||1)), stageH:Math.round(730*(S.scale||1)), lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(), toast:S.toast,
+      logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
+      sections:SETTINGS.map((s,i)=>({title:s.title,num:i+1,span:s.full?'1 / -1':'auto',delay:(i*0.07).toFixed(2)+'s',rows:s.rows.filter(r=>!r.showIf||S.values[r.showIf]).map((r,k)=>this.buildRow(r,k))})),
+      offline:!S.live, online:S.live,
+      connect:()=>{ if(S.connecting) return; this.setState({connecting:true}); setTimeout(()=>this.setState({live:true,connecting:false}),1400); },
+      disconnect:()=>this.setState({live:false}), connLabel:S.connecting?'…':'اتصل بالبث', connOp:S.connecting?.7:1,
+      liveColor:S.live?'#34d399':S.connecting?'#fbbf24':'#f87171', liveBg:S.live?'rgba(52,211,153,.08)':'rgba(248,113,113,.06)', liveBd:S.live?'rgba(52,211,153,.3)':'rgba(248,113,113,.28)',
+      liveTitle:S.live?'متصل @'+S.liveUser:'غير متصل بالبث', isAdmin:!!S.isAdmin, bankUrl:'admin-questions.html', libraryUrl:GAME.libraryUrl, connOpen:!!S.connOpen, connBusy:!S.connStep, connDone:S.connStep===1, connMsg:S.connStep?'تم الاتصال بالبث':'جارِ الاتصال بالبث...', connSub:S.connStep?'جارٍ الانتقال للوبي':'لحظات وتنتقل للوبي', connBd:S.connStep?'rgba(52,211,153,.45)':'rgba(167,139,250,.35)', connGlow:S.connStep?'rgba(16,185,129,.25)':'rgba(124,58,237,.2)',
+      supPick:S.supPick, closeSup:()=>this.shut('supPick'), supOv:S.supPickOut?'fadeOut .26s ease forwards':'fade .25s ease', supAn:S.supPickOut?'popOut .26s ease forwards':'popIn .4s cubic-bezier(.2,1.25,.35,1)',
+      supList:SUPPORT_TYPES.map(x=>{ const on=S.values.supType===x.id; return {id:x.id,name:x.name,coins:x.coins.toLocaleString('en'),ini:x.name.replace(/^ال/,'')[0],c:x.c,bd:on?'#a78bfa':'rgba(255,255,255,.08)',bg:on?'rgba(139,92,246,.14)':'rgba(255,255,255,.03)',pick:()=>{ this.set('supType',x.id); this.shut('supPick'); }}; }),
+      startOp:(!GAME.requireLive||S.live)?1:.4,
+      start:()=>{ if(S.connOpen) return; const live=!!TT.getSavedConnection(); if(live!==S.live) this.onLive();
+        if(GAME.requireLive&&!live) return this.toastMsg('ارجع لمكتبة الألعاب واتصل بالبث أولاً'); if(!String(S.values.keyword||'').trim()) return this.toastMsg('اكتب الكلمة المفتاحية للانضمام');
+        const values=this.readValues(); values.keyword=String(values.keyword).trim(); TT.writeJSON(TT.keys.setup,values); try{ localStorage.removeItem(TT.keys.roster); localStorage.removeItem(TT.keys.players); }catch(e){} this.props.onStart?.(values);
+        this.setState({connOpen:true,connStep:0}); this.t1=setTimeout(()=>this.setState({connStep:1}),1600); this.t2=setTimeout(()=>{ location.href=GAME.lobbyUrl; },2400); },
+      exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'),
+      confirmExit:()=>{ location.href=GAME.libraryUrl; },
+      exitOv:o('fade .25s ease','fadeOut .26s ease forwards'), exitAn:o('popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards')
+    };
+  }
+}
+</script>
 </body>
 </html>
