@@ -55,6 +55,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             detailColor: 'linear-gradient(180deg,#ffffff 0%,#cfe0f7 50%,#8fb2e6 100%)',
             fallbackBg: '#0b2350',
             fallbackColor: '#cfe0f7'
+        },
+        // فوز بنات (أزرق) — 1024×1536. الدائرة شفافة (الصورة خلفها)، الاسم
+        // باللوح الكريمي الأوسط، والنقاط/الترتيب بالكرت السفلي الأزرق الفاتح.
+        // اللوحان فاتحان — نص أزرق غامق بدل الأبيض.
+        'girls-blue': {
+            image: 'win-card-girls-blue.png',
+            width: 1024,
+            height: 1536,
+            photoHole: { x: 270, y: 340, w: 484, h: 484 },
+            holeBleed: 8,
+            nameBox: { x: 225, y: 990, w: 574, h: 95 },
+            detailBox: { x: 175, y: 1185, w: 674, h: 200 },
+            textColor: 'linear-gradient(180deg,#3a5fa8 0%,#2b4a86 50%,#16306a 100%)',
+            detailColor: 'linear-gradient(180deg,#3a5fa8 0%,#2b4a86 50%,#16306a 100%)',
+            fallbackBg: '#dce7f7',
+            fallbackColor: '#2b4a86'
         }
     };
 

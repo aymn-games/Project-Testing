@@ -421,7 +421,8 @@ function getElimCardForVerifiedTikTok(tiktokUsername) {
 // المفاتيح المسموحة — تصميم كل بطاقة (صورة + موضع الدائرة والنصوص) معرَّف
 // بنفس المفتاح في js/agp-win-card.js.
 var WIN_CARD_CATALOG = [
-  { key: 'rais-blue', displayNameAr: 'بطاقة الفوز — فوز الريس (أزرق)', imageFilename: 'assets/win-cards/win-card-rais-blue.png' }
+  { key: 'rais-blue', displayNameAr: 'بطاقة الفوز — فوز الريس (أزرق)', imageFilename: 'assets/win-cards/win-card-rais-blue.png' },
+  { key: 'girls-blue', displayNameAr: 'بطاقة الفوز — بنات (أزرق)', imageFilename: 'assets/win-cards/win-card-girls-blue.png' }
 ];
 
 function getWinCardCatalog() {
