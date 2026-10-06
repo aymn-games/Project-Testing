@@ -328,6 +328,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             nameLeftPct: 35.45, nameTopPct: 48.59, nameWidthPct: 47.19, nameHeightPct: 43.88,
             textColor: '#6b3a5a'
         },
+        // إطار "الريس" (الياقوت الأزرق) وإطار بنات "الأرنب الأزرق" — مقاسان
+        // بالبكسل بنفس المنهجية: مربع الصورة = حدود الفتحة الشفافة، ولوح
+        // الاسم = داخل اللوح الفاضي. لوح "الأرنب" فاتح — لون اسم أزرق غامق.
+        'frame-rais-sapphire.png': {
+            canvasW: 2137, canvasH: 736, contentTop: 0, contentHeight: 575,
+            avatarLeftPct: 11.46, avatarTopPct: 29.74, avatarWidthPct: 21.90, avatarHeightPct: 68.70,
+            nameLeftPct: 44.92, nameTopPct: 50.43, nameWidthPct: 45.39, nameHeightPct: 34.43
+        },
+        'frame-girls-bunny-blue.png': {
+            canvasW: 2158, canvasH: 729, contentTop: 29, contentHeight: 511,
+            avatarLeftPct: 12.23, avatarTopPct: 29.55, avatarWidthPct: 17.15, avatarHeightPct: 68.88,
+            nameLeftPct: 36.89, nameTopPct: 57.34, nameWidthPct: 43.47, nameHeightPct: 36.59,
+            textColor: '#2b4a86'
+        },
         // [0.45.1] إطار "الأهلي" — مقاس فعلياً بالبكسل من الملف المرفوع (1536×1024،
         // فتحة صورة دائرية شفافة حقيقية يسار + بلاطة اسم بيضاء فاضية يمين، نفس
         // منهجية القياس المتبعة لكل الإطارات أعلاه — تحقّق بصري بصندوقين قبل الاعتماد).
