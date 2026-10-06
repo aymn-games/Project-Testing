@@ -734,7 +734,7 @@ class Component extends DCLogic {
     if(s.revive&&TR.norm(text)===TR.norm('تخطي')) return this.endRes();
     const k=TR.chatNumber(text); if(k) this.pick(k-1); }
   // هدايا البث: لازم تكون من اللاعب المُقصى نفسه، وبحد مرات الإنعاش المختار
-  onGift(p){ const s=this.state; if(!s.supOn||!s.supType||s.winOpen) return; if(!TR.giftMatches(s.supType,p.giftName)) return;
+  onGift(p){ const s=this.state; if(!s.supOn||!s.supType||s.winOpen) return; if(!TR.giftMatches(s.supType,p.giftName,p.giftValue)) return;
     const n=this.reg.nameFor(p); if(!s.out.includes(n)) return;
     if((s.supUsed[n]||0)>=s.supCount) return this.toastMsg(n+' استخدم كل مرات الإنعاش بالدعم المسموحة');
     if(this.q.some(j=>j.reviveName===n)) return; const job=()=>{ const t=this.state; if(t.out.includes(n)&&(t.supUsed[n]||0)<t.supCount&&t.supOn) this.revive(n,'support'); }; job.reviveName=n; this.later(job); }

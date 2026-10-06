@@ -208,12 +208,17 @@
         car: ['Sports Car'], lion: ['Lion'], universe: ['TikTok Universe', 'Universe']
     };
     function giftKey(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, ''); }
-    /** هل اسم الهدية القادمة من البث يطابق هدية الإعدادات (id)؟ */
-    function giftMatches(giftId, giftName) {
+    /**
+     * هل الهدية القادمة من البث تطابق هدية الإعدادات (id)؟ بالاسم، أو بقيمة
+     * العملات (giftValue من تيك توك = coins هدية الإعدادات) لأن أسماء تيك توك
+     * الإنجليزية ما تطابق دائماً الأسماء المحفوظة هنا.
+     */
+    function giftMatches(giftId, giftName, giftValue, coins) {
         var got = giftKey(giftName);
-        if (!got) return false;
-        if (got === giftKey(giftId)) return true;
-        return (GIFT_NAMES[giftId] || []).some(function (n) { return giftKey(n) === got; });
+        if (got && got === giftKey(giftId)) return true;
+        if (got && (GIFT_NAMES[giftId] || []).some(function (n) { return giftKey(n) === got; })) return true;
+        var c = Number(coins), v = Number(giftValue);
+        return c > 0 && v > 0 && c === v;
     }
 
     /** cb(payload) لكل هدية من البث ({id, name, giftName, ...}). ترجع دالة لإلغاء الاستماع. */

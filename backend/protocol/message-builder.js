@@ -38,10 +38,10 @@ module.exports = {
         });
     },
 
-    buildGiftMessage: function (platform, id, name, giftName, giftValue, repeatCount) {
+    buildGiftMessage: function (platform, id, name, giftName, giftValue, repeatCount, giftId) {
         return buildEnvelope(MESSAGE_TYPES.GIFT, {
             platform: platform, id: id, name: name,
-            giftName: giftName, giftValue: giftValue, repeatCount: repeatCount || 1
+            giftName: giftName, giftId: giftId || null, giftValue: giftValue, repeatCount: repeatCount || 1
         });
     },
 
