@@ -408,14 +408,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
             '.agp-pcard-name-basic{display:flex;align-items:center;justify-content:center;flex-shrink:0;',
             'box-sizing:border-box;font-weight:800;color:#fef4f4;overflow:hidden;}',
-            /* The marquee transform applies only to .agp-pcard-name-inner,
-             * never to .agp-pcard-name-basic itself — overflow:hidden on a
-             * transformed element doesn't clip its own transform, only its
-             * children's, so transforming the plate would move the whole
-             * card visually and overlap its neighbors. See fitAllNames(). */
-            '.agp-pcard-name-inner{display:inline-block;white-space:nowrap;}',
-            '@keyframes agpPcardSlide{0%,15%{transform:translateX(0);}45%,55%{transform:translateX(var(--pcard-slide-dist));}85%,100%{transform:translateX(0);}}',
-            '.agp-pcard-name-inner.agp-pcard-marquee{animation:agpPcardSlide 4.5s ease-in-out infinite;}',
+            /* Names stay static: a name that overflows its fixed-width plate
+             * is truncated with an ellipsis instead of sliding left/right. */
+            '.agp-pcard-name-inner{display:inline-block;white-space:nowrap;max-width:100%;',
+            'overflow:hidden;text-overflow:ellipsis;vertical-align:middle;}',
 
             /* Framed card: height is fixed (matches the frameless card's
              * height), width varies per frame's design — see
@@ -720,28 +716,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         },
 
         /**
-         * Marquee-scrolls any name that overflows its fixed-width plate.
-         * Must be called after the HTML is actually in the DOM (needs
-         * layout to measure overflow). The transform is applied only to
-         * the inner text span (.agp-pcard-name-inner), never to the
-         * plate itself (data-agp-pcard-name="1", which stays fixed and
-         * clips via overflow:hidden) — applying it to the plate would
-         * visually shift the whole card and overlap its neighbors.
+         * Keeps every name static inside its fixed-width plate. Long names
+         * are truncated with an ellipsis via CSS (.agp-pcard-name-inner);
+         * this only sets a title tooltip with the full name. Kept as a
+         * public no-op-ish hook because games still call it after render.
          * @param {HTMLElement} rootEl - container holding the cards
          */
         fitAllNames: function (rootEl) {
             if (!rootEl || typeof rootEl.querySelectorAll !== 'function') return;
             var nodes = rootEl.querySelectorAll('[data-agp-pcard-name="1"]');
             for (var i = 0; i < nodes.length; i++) {
-                var node = nodes[i];
-                var inner = node.querySelector('.agp-pcard-name-inner');
+                var inner = nodes[i].querySelector('.agp-pcard-name-inner');
                 if (!inner) continue;
-                inner.classList.remove('agp-pcard-marquee');
-                inner.style.removeProperty('--pcard-slide-dist');
-                var overflow = inner.scrollWidth - node.clientWidth;
-                if (overflow > 2) {
-                    inner.style.setProperty('--pcard-slide-dist', '-' + overflow + 'px');
-                    inner.classList.add('agp-pcard-marquee');
+                if (inner.scrollWidth - inner.clientWidth > 2) {
+                    inner.setAttribute('title', inner.textContent);
+                } else {
+                    inner.removeAttribute('title');
                 }
             }
         },
