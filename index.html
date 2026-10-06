@@ -1375,7 +1375,7 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
     if (removeOldGreenImage() || triesOld > 80) clearInterval(oldImgTimer);
   }, 250);
 
-  // ---------- (3) فيديو اليوم الوطني كخلفية بالجزء الأسود بالهيرو ----------
+  // ---------- (3) بانر خليجي 27 بالجزء الأسود بالهيرو (بدل فيديو اليوم الوطني) ----------
   function findChipRow() {
     var spans = document.querySelectorAll('span.sc-interp, span');
     for (var i = 0; i < spans.length; i++) {
@@ -1395,25 +1395,32 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
 
     var wrap = el('div');
     wrap.id = 'agp-hero-video-wrap';
-    wrap.style.cssText = 'position:absolute;left:0;width:100%;overflow:hidden;pointer-events:none;z-index:0;';
+    wrap.style.cssText = 'position:absolute;left:0;width:100%;overflow:hidden;pointer-events:none;z-index:6;background:#000;';
 
-    var video = document.createElement('video');
-    video.muted = true; video.loop = true; video.autoplay = true; video.playsInline = true;
-    // object-fit:cover يملأ العرض بالكامل (شكل أفقي) بدل شريط رأسي ضيق
-    // بالمنتصف -- يقصّ أعلى/أسفل الفيديو الأصلي (رأسي)، وهذا متوقّع.
-    video.style.cssText = 'display:block;height:100%;width:100%;margin:0 auto;object-fit:cover;opacity:.6;';
-    // MP4 (H.264) أولاً -- التوافق الأوسع بالمتصفحات الحقيقية (خصوصاً
-    // سفاري/آيفون)، وWebM كبديل احتياطي.
-    var srcMp4 = document.createElement('source');
-    srcMp4.src = 'hero-national-day-video.mp4'; srcMp4.type = 'video/mp4';
-    var srcWebm = document.createElement('source');
-    srcWebm.src = 'hero-national-day-video.webm'; srcWebm.type = 'video/webm';
-    video.appendChild(srcMp4);
-    video.appendChild(srcWebm);
-    wrap.appendChild(video);
-
-    var overlay = el('div', 'position:absolute;inset:0;background:radial-gradient(ellipse 60% 70% at 50% 50%,transparent 40%,rgba(5,5,8,.9) 92%);');
-    wrap.appendChild(overlay);
+    // بانر خليجي 27: عبارة "الكأس أخضر والهمّة سعودية" بخط الديواني الثلث
+    // + شعار البطولة (بخلفية شفافة) بجانبها، على خلفية سوداء.
+    if (!document.getElementById('agp-khaleeji-style')) {
+      var st = document.createElement('style');
+      st.id = 'agp-khaleeji-style';
+      st.textContent =
+        "@font-face{font-family:'Diwany Thuluth';src:url('assets/fonts/diwany-thuluth.ttf') format('truetype');font-display:swap;}" +
+        "#agp-khaleeji-banner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:clamp(18px,4vw,64px);direction:rtl;padding:0 16px;" +
+        "background:radial-gradient(ellipse 40% 60% at 32% 50%,rgba(31,174,106,.14),transparent 70%),#000;}" +
+        "#agp-khaleeji-banner .kh-text{font-family:'Diwany Thuluth',serif;color:#fff;text-align:center;line-height:1.35;font-size:clamp(30px,5.4vw,78px);" +
+        "text-shadow:0 0 18px rgba(255,255,255,.18),0 6px 24px rgba(0,0,0,.9);}" +
+        "#agp-khaleeji-banner .kh-text span{display:block;white-space:nowrap;}" +
+        "#agp-khaleeji-banner .kh-sep{width:1px;height:62%;background:linear-gradient(transparent,rgba(255,255,255,.55),transparent);}" +
+        "#agp-khaleeji-banner img{height:84%;max-height:300px;width:auto;filter:drop-shadow(0 10px 28px rgba(0,0,0,.7));}" +
+        "@media (max-width:640px){#agp-khaleeji-banner{gap:14px}#agp-khaleeji-banner .kh-text{font-size:clamp(24px,8vw,40px)}#agp-khaleeji-banner img{height:78%}}";
+      document.head.appendChild(st);
+    }
+    var banner = el('div');
+    banner.id = 'agp-khaleeji-banner';
+    banner.innerHTML =
+      '<div class="kh-text"><span>الكأس أخضر</span><span>والهمّة سعودية</span></div>' +
+      '<div class="kh-sep"></div>' +
+      '<img src="assets/khaleeji/khaleeji-27-logo.png" alt="خليجي 27 - السعودية 2026">';
+    wrap.appendChild(banner);
 
     heroSection.style.position = heroSection.style.position || 'relative';
     heroSection.appendChild(wrap);
@@ -1432,7 +1439,6 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
     reposition();
     [300, 1000, 2500].forEach(function (ms) { setTimeout(reposition, ms); });
     window.addEventListener('resize', reposition);
-    video.play().catch(function () {});
     return true;
   }
   // الفيديو (~425KB) يبدأ بعد تحميل الصفحة — عشان ما ينافس المحتوى
