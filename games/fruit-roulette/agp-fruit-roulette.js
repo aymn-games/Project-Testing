@@ -887,8 +887,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _giftUnsub = AGP.events.on('stream:giftReceived', function (payload) {
             var settings = liveSettings();
             if (!settings.giftRevivalEnabled) return;
-            if (!payload || !payload.giftName) return;
-            if (payload.giftName !== settings.giftRevivalGiftName) return;
+            if (!payload) return;
+            if (!giftMatchesSetting(payload, settings.giftRevivalGiftName)) return;
 
             var entry = _eliminated.filter(function (e) {
                 return e.player.id === payload.id || e.player.name === payload.name;
@@ -912,6 +912,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             _giftReviveCounts[entry.player.id] = usedCount + 1;
             revivePlayerByEntry(entry);
         });
+    }
+
+    // مطابقة هدية البث مع هدية الإعدادات: بالاسم (بدون حساسية لحالة الأحرف
+    // والمسافات)، أو بقيمة العملات (giftValue من تيك توك) لأن أسماء تيك توك
+    // الإنجليزية ما تطابق دائماً الأسماء المحفوظة في COMMON_GIFTS.
+    function giftMatchesSetting(payload, selectedValue) {
+        if (!selectedValue) return false;
+        var key = function (s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, ''); };
+        var got = key(payload.giftName);
+        if (got && got === key(selectedValue)) return true;
+        var match = COMMON_GIFTS.filter(function (g) { return g.value === selectedValue; })[0];
+        var v = Number(payload.giftValue);
+        return !!(match && match.coins > 0 && v > 0 && match.coins === v);
     }
 
     function giftLabelFor(value) {

@@ -617,7 +617,7 @@ class Component extends DCLogic {
       try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(user)); }catch(e){}
       this.setState(st=>({joined:[...st.joined,user]})); } }
   maxPlayers(){ return Math.max(2,Math.min(200,+(SETUP&&SETUP.maxPlayers)||50)); }
-  onGift(p){ const s=this.state; if(!s.supOn||!s.supType||s.winOpen) return; if(!ER.giftMatches(s.supType,p.giftName)) return;
+  onGift(p){ const s=this.state; if(!s.supOn||!s.supType||s.winOpen) return; if(!ER.giftMatches(s.supType,p.giftName,p.giftValue)) return;
     const n=this.reg.nameFor(p); if(!s.out.includes(n)||(s.supUsed[n]||0)>=s.supCount) return;
     if(this.q.some(j=>j.reviveName===n)) return; const job=()=>{ const t=this.state; if(t.out.includes(n)&&(t.supUsed[n]||0)<t.supCount&&t.supOn) this.revive(n,'support'); }; job.reviveName=n; this.later(job); }
   resLayout(){ const w=this.state.vw||innerWidth, stack=w<820; return { resCols:stack?'minmax(0,1fr)':'minmax(240px,22%) minmax(0,1fr)', resRows:stack?'auto minmax(360px,1fr)':'minmax(0,1fr)', resScroll:stack?'auto':'hidden', cardCols:4 }; }

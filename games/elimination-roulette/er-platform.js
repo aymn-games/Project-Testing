@@ -219,12 +219,18 @@
         'diving-with-whales': ['Diving with Whales', 'Whale diving']
     };
     function giftKey(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, ''); }
-    /** هل اسم الهدية القادمة من البث يطابق نوع الدعم (id)؟ */
-    function giftMatches(giftId, giftName) {
+    /**
+     * هل الهدية القادمة من البث تطابق نوع الدعم (id)؟ بالاسم، أو بقيمة العملات
+     * (giftValue = عملات الوحدة من تيك توك) لأن أسماء تيك توك الإنجليزية
+     * ما تطابق دائماً الأسماء المحفوظة هنا.
+     */
+    function giftMatches(giftId, giftName, giftValue) {
+        if (!giftId) return false;
         var got = giftKey(giftName);
-        if (!got || !giftId) return false;
-        if (got === giftKey(giftId)) return true;
-        return (GIFT_NAMES[giftId] || []).some(function (n) { return giftKey(n) === got; });
+        if (got && got === giftKey(giftId)) return true;
+        if (got && (GIFT_NAMES[giftId] || []).some(function (n) { return giftKey(n) === got; })) return true;
+        var g = giftById(giftId), v = Number(giftValue);
+        return !!(g && g.coins > 0 && v > 0 && g.coins === v);
     }
     // هدايا معتمدة سابقاً بالمستودع وغير موجودة بالقائمة المشتركة (assets/tiktok-gifts):
     // العطر وقلوب اليد بصورها الحقيقية (من gift_icons بروليت الإقصاء القديمة)،

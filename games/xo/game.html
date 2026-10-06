@@ -472,7 +472,7 @@ class Component extends DCLogic {
     this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}); this.fit(); addEventListener('resize',this.fit);
     // بطاقات الإقصاء المملوكة تُحمَّل مسبقاً حتى تظهر بدون تأخير
     this.state.teams.forEach(t=>t.players.forEach(n=>this.preloadElimCard(n)));
-    XO.connect(); this.unsub=XO.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); this.unsubGift=XO.onGift(p=>this.onGift(this.reg.nameFor(p),p.giftName)); }
+    XO.connect(); this.unsub=XO.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); this.unsubGift=XO.onGift(p=>this.onGift(this.reg.nameFor(p),p.giftName,p.giftValue)); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this.ti); clearInterval(this.sim); clearTimeout(this.cel); clearTimeout(this.drawT); this.unsub?.(); this.unsubGift?.(); }
   // نظام نقاط المنصة: مرة واحدة لكل مباراة عند إعلان الفائز
   reportPoints(w){ if(this.reported) return; this.reported=true; const s=this.state;
@@ -596,8 +596,8 @@ class Component extends DCLogic {
     const sparks=this._sparks.map((p,i)=>h('span',{key:'s'+i,style:{position:'absolute',left:'50%',top:'50%',width:p.sz,height:p.sz,margin:-p.sz/2,borderRadius:p.sq?2:'50%',background:i%4===0?'#fff':c,boxShadow:'0 0 10px '+c,'--dx':p.dx+'px','--dy':p.dy+'px',opacity:0,animation:'spark 1.3s cubic-bezier(.2,.8,.3,1) '+p.dl+'s both'}}));
     const banner=h('div',{key:'bn',style:{position:'absolute',left:'50%',top:'50%',padding:'16px 40px',borderRadius:999,background:'rgba(12,11,18,.9)',border:'2px solid '+c,boxShadow:'0 0 60px '+c+'88',font:"700 46px 'IBM Plex Sans Arabic'",color:c,whiteSpace:'nowrap',opacity:0,animation:'banner 2.3s ease .7s both'}},s.syms[s.result.w]+' يفوز');
     return h('div',{key:'wfx:'+s.round,'aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none',zIndex:3}},[line,...rings,...sparks,banner]); }
-  // Called for every TikTok gift event: onGift(username, giftName). Revives an eliminated player if the gift matches.
-  onGift(user,giftName){ const s=this.state, r=s.revive, o=s.out[user]; if(!r||!o||!XO.giftMatches(r.gift.id,giftName)) return;
+  // Called for every TikTok gift event: onGift(username, giftName, giftValue). Revives an eliminated player if the gift matches.
+  onGift(user,giftName,giftValue){ const s=this.state, r=s.revive, o=s.out[user]; if(!r||!o||!XO.giftMatches(r.gift.id,giftName,giftValue,r.gift.coins)) return;
     if(o.used>=r.times) return this.toastMsg(user+' استنفد مرات الرجوع');
     if(s.winner) return;
     this.snd('join'); this.addLog('join',user+' رجع للمباراة بدعم '+r.gift.name);

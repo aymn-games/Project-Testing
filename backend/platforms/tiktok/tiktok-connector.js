@@ -6,7 +6,7 @@
  *   callbacks = {
  *     onStatus(status, message?),   // 'connecting'/'connected'/'error'، و'ended' لما ينتهي البث فعلياً في تيك توك
  *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance, elimCard, winCard }),
- *     onGift({ id, name, giftName, giftValue, repeatCount }),
+ *     onGift({ id, name, giftName, giftId, giftValue, repeatCount }),
  *     onFollow({ id, name }),
  *     onViewerUpdate({ current, totalUsers })   // اختياري
  *   }
@@ -385,6 +385,7 @@ function createTikTokConnector() {
                 id: user.id,
                 name: user.name,
                 giftName: giftInfo.name,
+                giftId: (data && data.giftId) || null,
                 giftValue: giftInfo.value,
                 repeatCount: (data && data.repeatCount) || 1
             });
