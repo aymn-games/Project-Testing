@@ -5,8 +5,8 @@
  * 2) إطارات حصرية حرة (custom_frames) — اسم ملف حر يكتبه الأدمن كل منح.
  * 3) الدخولية (user_entrances) — نموذج أنيميشن (gold/neon/fire/ice) + نص
  *    حر، مع عمود enabled (تفعيل/إيقاف ذاتي من صاحب الحساب).
- * 4) بطاقة الإقصاء (user_elim_cards) — منح يدوي من الأدمن + تفعيل/إيقاف
- *    ذاتي، مستقلة عن الإطارات.
+ * 4) بطاقات الإقصاء (user_elim_cards) — منح يدوي من الأدمن، المستخدم يقدر
+ *    يملك أكثر من بطاقة ويفعّل وحدة منها (أو يوقفها)، مستقلة عن الإطارات.
  * 5) بطاقة الفوز (user_win_cards) — نفس نمط بطاقة الإقصاء بالضبط، تظهر
  *    بدل شاشة الفوز العادية لو الفائز يملكها ومفعّلها.
  *
@@ -335,8 +335,8 @@ function isValidElimCardKey(cardKey) {
 }
 
 /**
- * منح/استبدال بطاقة الإقصاء لمستخدم (بطاقة واحدة لكل مستخدم). كل منح
- * جديد يعيد enabled = 1.
+ * منح بطاقة الإقصاء لمستخدم — يقدر يملك أكثر من بطاقة (نفس نمط الإطارات).
+ * البطاقة الجديدة تصير المفعّلة فقط لو ما عنده بطاقة مفعّلة حالياً.
  * @returns {{success: boolean, error?: string}}
  */
 function grantElimCard(userId, cardKey, grantedBy) {
@@ -346,47 +346,65 @@ function grantElimCard(userId, cardKey, grantedBy) {
   var userExists = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
   if (!userExists) return { success: false, error: 'unknown_user' };
 
-  db.prepare(
-    'INSERT INTO user_elim_cards (user_id, card_key, enabled, granted_by, granted_at) VALUES (?, ?, 1, ?, ?) ' +
-    'ON CONFLICT(user_id) DO UPDATE SET card_key = excluded.card_key, enabled = 1, granted_by = excluded.granted_by, granted_at = excluded.granted_at'
-  ).run(userId, cardKey, grantedBy || 'admin_manual', now());
+  var hasActive = db.prepare('SELECT id FROM user_elim_cards WHERE user_id = ? AND enabled = 1').get(userId);
+
+  var info = db.prepare(
+    'INSERT OR IGNORE INTO user_elim_cards (user_id, card_key, enabled, granted_by, granted_at) VALUES (?, ?, ?, ?, ?)'
+  ).run(userId, cardKey, hasActive ? 0 : 1, grantedBy || 'admin_manual', now());
+
+  if (info.changes === 0) return { success: false, error: 'already_owned' };
 
   logger.log('Collectibles: granted elimination card ' + cardKey + ' to user ' + userId);
 
   return { success: true };
 }
 
-function revokeElimCard(userId) {
-  db.prepare('DELETE FROM user_elim_cards WHERE user_id = ?').run(userId);
+/** سحب بطاقة محددة (cardKey)، أو كل بطاقات المستخدم لو ما انمرَّر cardKey. */
+function revokeElimCard(userId, cardKey) {
+  if (cardKey) {
+    db.prepare('DELETE FROM user_elim_cards WHERE user_id = ? AND card_key = ?').run(userId, String(cardKey));
+  } else {
+    db.prepare('DELETE FROM user_elim_cards WHERE user_id = ?').run(userId);
+  }
 
   return { success: true };
 }
 
-/** للبروفايل — null لو ما يملك بطاقة. */
-function getElimCard(userId) {
-  var row = db.prepare('SELECT card_key, enabled, granted_at FROM user_elim_cards WHERE user_id = ?').get(userId);
-  if (!row) return null;
+/** للبروفايل — كل البطاقات المملوكة (مصفوفة فاضية لو ما يملك شي). */
+function getElimCards(userId) {
+  var rows = db.prepare('SELECT card_key, enabled, granted_at FROM user_elim_cards WHERE user_id = ? ORDER BY granted_at DESC').all(userId);
 
-  var entry = ELIM_CARD_CATALOG.filter(function (c) { return c.key === row.card_key; })[0];
+  return rows.map(function (row) {
+    var entry = ELIM_CARD_CATALOG.filter(function (c) { return c.key === row.card_key; })[0];
 
-  return {
-    cardKey: row.card_key,
-    displayNameAr: entry ? entry.displayNameAr : row.card_key,
-    imageFilename: entry ? entry.imageFilename : null,
-    enabled: Boolean(row.enabled),
-    grantedAt: row.granted_at
-  };
+    return {
+      cardKey: row.card_key,
+      displayNameAr: entry ? entry.displayNameAr : row.card_key,
+      imageFilename: entry ? entry.imageFilename : null,
+      enabled: Boolean(row.enabled),
+      grantedAt: row.granted_at
+    };
+  });
 }
 
 /**
- * تفعيل/إيقاف ذاتي من صاحب الحساب — نفس نمط setEntranceEnabled.
+ * تفعيل بطاقة مملوكة كالبطاقة المفعّلة الوحيدة (يلغي تفعيل الباقي) أو
+ * إيقافها — من صاحب الحساب بالبروفايل، نفس نمط setEquipped للإطارات.
  * @returns {{success: boolean, error?: string}}
  */
-function setElimCardEnabled(userId, enabled) {
-  var existing = db.prepare('SELECT user_id FROM user_elim_cards WHERE user_id = ?').get(userId);
-  if (!existing) return { success: false, error: 'no_elim_card' };
+function setElimCardEnabled(userId, cardKey, enabled) {
+  var owned = db.prepare('SELECT id FROM user_elim_cards WHERE user_id = ? AND card_key = ?').get(userId, String(cardKey || ''));
+  if (!owned) return { success: false, error: 'no_elim_card' };
 
-  db.prepare('UPDATE user_elim_cards SET enabled = ? WHERE user_id = ?').run(enabled ? 1 : 0, userId);
+  if (!enabled) {
+    db.prepare('UPDATE user_elim_cards SET enabled = 0 WHERE id = ?').run(owned.id);
+    return { success: true };
+  }
+
+  db.transaction(function () {
+    db.prepare('UPDATE user_elim_cards SET enabled = 0 WHERE user_id = ?').run(userId);
+    db.prepare('UPDATE user_elim_cards SET enabled = 1 WHERE id = ?').run(owned.id);
+  })();
 
   return { success: true };
 }
@@ -434,8 +452,8 @@ function isValidWinCardKey(cardKey) {
 }
 
 /**
- * منح/استبدال بطاقة الفوز لمستخدم (بطاقة واحدة لكل مستخدم). كل منح جديد
- * يعيد enabled = 1.
+ * منح بطاقة الفوز لمستخدم — يقدر يملك أكثر من بطاقة (نفس نمط الإطارات).
+ * البطاقة الجديدة تصير المفعّلة فقط لو ما عنده بطاقة مفعّلة حالياً.
  * @returns {{success: boolean, error?: string}}
  */
 function grantWinCard(userId, cardKey, grantedBy) {
@@ -445,47 +463,65 @@ function grantWinCard(userId, cardKey, grantedBy) {
   var userExists = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
   if (!userExists) return { success: false, error: 'unknown_user' };
 
-  db.prepare(
-    'INSERT INTO user_win_cards (user_id, card_key, enabled, granted_by, granted_at) VALUES (?, ?, 1, ?, ?) ' +
-    'ON CONFLICT(user_id) DO UPDATE SET card_key = excluded.card_key, enabled = 1, granted_by = excluded.granted_by, granted_at = excluded.granted_at'
-  ).run(userId, cardKey, grantedBy || 'admin_manual', now());
+  var hasActive = db.prepare('SELECT id FROM user_win_cards WHERE user_id = ? AND enabled = 1').get(userId);
+
+  var info = db.prepare(
+    'INSERT OR IGNORE INTO user_win_cards (user_id, card_key, enabled, granted_by, granted_at) VALUES (?, ?, ?, ?, ?)'
+  ).run(userId, cardKey, hasActive ? 0 : 1, grantedBy || 'admin_manual', now());
+
+  if (info.changes === 0) return { success: false, error: 'already_owned' };
 
   logger.log('Collectibles: granted win card ' + cardKey + ' to user ' + userId);
 
   return { success: true };
 }
 
-function revokeWinCard(userId) {
-  db.prepare('DELETE FROM user_win_cards WHERE user_id = ?').run(userId);
+/** سحب بطاقة محددة (cardKey)، أو كل بطاقات المستخدم لو ما انمرَّر cardKey. */
+function revokeWinCard(userId, cardKey) {
+  if (cardKey) {
+    db.prepare('DELETE FROM user_win_cards WHERE user_id = ? AND card_key = ?').run(userId, String(cardKey));
+  } else {
+    db.prepare('DELETE FROM user_win_cards WHERE user_id = ?').run(userId);
+  }
 
   return { success: true };
 }
 
-/** للبروفايل — null لو ما يملك بطاقة. */
-function getWinCard(userId) {
-  var row = db.prepare('SELECT card_key, enabled, granted_at FROM user_win_cards WHERE user_id = ?').get(userId);
-  if (!row) return null;
+/** للبروفايل — كل البطاقات المملوكة (مصفوفة فاضية لو ما يملك شي). */
+function getWinCards(userId) {
+  var rows = db.prepare('SELECT card_key, enabled, granted_at FROM user_win_cards WHERE user_id = ? ORDER BY granted_at DESC').all(userId);
 
-  var entry = WIN_CARD_CATALOG.filter(function (c) { return c.key === row.card_key; })[0];
+  return rows.map(function (row) {
+    var entry = WIN_CARD_CATALOG.filter(function (c) { return c.key === row.card_key; })[0];
 
-  return {
-    cardKey: row.card_key,
-    displayNameAr: entry ? entry.displayNameAr : row.card_key,
-    imageFilename: entry ? entry.imageFilename : null,
-    enabled: Boolean(row.enabled),
-    grantedAt: row.granted_at
-  };
+    return {
+      cardKey: row.card_key,
+      displayNameAr: entry ? entry.displayNameAr : row.card_key,
+      imageFilename: entry ? entry.imageFilename : null,
+      enabled: Boolean(row.enabled),
+      grantedAt: row.granted_at
+    };
+  });
 }
 
 /**
- * تفعيل/إيقاف ذاتي من صاحب الحساب — نفس نمط setElimCardEnabled.
+ * تفعيل بطاقة مملوكة كالبطاقة المفعّلة الوحيدة (يلغي تفعيل الباقي) أو
+ * إيقافها — من صاحب الحساب بالبروفايل، نفس نمط setEquipped للإطارات.
  * @returns {{success: boolean, error?: string}}
  */
-function setWinCardEnabled(userId, enabled) {
-  var existing = db.prepare('SELECT user_id FROM user_win_cards WHERE user_id = ?').get(userId);
-  if (!existing) return { success: false, error: 'no_win_card' };
+function setWinCardEnabled(userId, cardKey, enabled) {
+  var owned = db.prepare('SELECT id FROM user_win_cards WHERE user_id = ? AND card_key = ?').get(userId, String(cardKey || ''));
+  if (!owned) return { success: false, error: 'no_win_card' };
 
-  db.prepare('UPDATE user_win_cards SET enabled = ? WHERE user_id = ?').run(enabled ? 1 : 0, userId);
+  if (!enabled) {
+    db.prepare('UPDATE user_win_cards SET enabled = 0 WHERE id = ?').run(owned.id);
+    return { success: true };
+  }
+
+  db.transaction(function () {
+    db.prepare('UPDATE user_win_cards SET enabled = 0 WHERE user_id = ?').run(userId);
+    db.prepare('UPDATE user_win_cards SET enabled = 1 WHERE id = ?').run(owned.id);
+  })();
 
   return { success: true };
 }
@@ -693,13 +729,13 @@ module.exports = {
   getElimCardCatalog: getElimCardCatalog,
   grantElimCard: grantElimCard,
   revokeElimCard: revokeElimCard,
-  getElimCard: getElimCard,
+  getElimCards: getElimCards,
   setElimCardEnabled: setElimCardEnabled,
   getElimCardForVerifiedTikTok: getElimCardForVerifiedTikTok,
   getWinCardCatalog: getWinCardCatalog,
   grantWinCard: grantWinCard,
   revokeWinCard: revokeWinCard,
-  getWinCard: getWinCard,
+  getWinCards: getWinCards,
   setWinCardEnabled: setWinCardEnabled,
   getWinCardForVerifiedTikTok: getWinCardForVerifiedTikTok,
   generateFrameCodes: generateFrameCodes,

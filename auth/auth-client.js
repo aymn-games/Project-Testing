@@ -454,34 +454,36 @@ function toggleEntrance(enabled) {
     return request('/api/entrance/toggle', { method: 'POST', body: { enabled: Boolean(enabled) } });
 }
 
-/** Admin only — grants (or replaces) a user's elimination card. cardKey
- * from adminGetCollectiblesCatalog().elimCards. */
+/** Admin only — adds an elimination card to a user's collection (a user can
+ * own several). cardKey from adminGetCollectiblesCatalog().elimCards. */
 function adminGrantElimCard(userId, cardKey) {
     return request('/api/admin/elim-card', { method: 'POST', body: { userId: userId, cardKey: cardKey } });
 }
 
-function adminRevokeElimCard(userId) {
-    return request('/api/admin/elim-card', { method: 'POST', body: { userId: userId, revoke: true } });
+function adminRevokeElimCard(userId, cardKey) {
+    return request('/api/admin/elim-card', { method: 'POST', body: { userId: userId, cardKey: cardKey, revoke: true } });
 }
 
-/** Owner toggles their elimination card on/off without losing it. */
-function toggleElimCard(enabled) {
-    return request('/api/elim-card/toggle', { method: 'POST', body: { enabled: Boolean(enabled) } });
+/** Owner activates one of their elimination cards (deactivating the rest),
+ * or turns it off, without losing it. */
+function toggleElimCard(cardKey, enabled) {
+    return request('/api/elim-card/toggle', { method: 'POST', body: { cardKey: cardKey, enabled: Boolean(enabled) } });
 }
 
-/** Admin only — grants (or replaces) a user's win card. cardKey from
- * adminGetCollectiblesCatalog().winCards. */
+/** Admin only — adds a win card to a user's collection (a user can own
+ * several). cardKey from adminGetCollectiblesCatalog().winCards. */
 function adminGrantWinCard(userId, cardKey) {
     return request('/api/admin/win-card', { method: 'POST', body: { userId: userId, cardKey: cardKey } });
 }
 
-function adminRevokeWinCard(userId) {
-    return request('/api/admin/win-card', { method: 'POST', body: { userId: userId, revoke: true } });
+function adminRevokeWinCard(userId, cardKey) {
+    return request('/api/admin/win-card', { method: 'POST', body: { userId: userId, cardKey: cardKey, revoke: true } });
 }
 
-/** Owner toggles their win card on/off without losing it. */
-function toggleWinCard(enabled) {
-    return request('/api/win-card/toggle', { method: 'POST', body: { enabled: Boolean(enabled) } });
+/** Owner activates one of their win cards (deactivating the rest), or turns
+ * it off, without losing it. */
+function toggleWinCard(cardKey, enabled) {
+    return request('/api/win-card/toggle', { method: 'POST', body: { cardKey: cardKey, enabled: Boolean(enabled) } });
 }
 
 /** Called on round/match end. participants: [{tiktokUsername, won}].

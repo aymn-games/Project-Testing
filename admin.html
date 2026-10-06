@@ -1070,15 +1070,15 @@ class Component extends DCLogic {
       // elim
       elimCards,
       grantCard:()=>this.needUser(u=>{ if(!s.cardKey) return this.flash('اختر بطاقة أولاً.','err');
-        this.busy('card',()=>A.adminGrantElimCard(u.id,s.cardKey)).then(r=>{ if(r) this.flash(r.success?'تم منح بطاقة الإقصاء.':'تعذّر المنح: '+(r.error||'unknown'),r.success?'ok':'err'); }); }),
+        this.busy('card',()=>A.adminGrantElimCard(u.id,s.cardKey)).then(r=>{ if(r) this.flash(r.success?'تم منح بطاقة الإقصاء.':(r.error==='already_owned'?'المستخدم يملك هذي البطاقة أصلاً.':'تعذّر المنح: '+(r.error||'unknown')),r.success?'ok':'err'); }); }),
       revokeCard:()=>this.needUser(u=>{ if(!s.cardKey) return this.flash('اختر بطاقة أولاً.','err');
-        this.ask('سحب البطاقة؟',`ستُسحب بطاقة الإقصاء${selCard?' «'+selCard.displayNameAr+'»':''} من ${this.pickName(u)}.`,'سحب البطاقة',()=>this.busy('cardx',()=>A.adminRevokeElimCard(u.id)).then(r=>{ if(r) this.flash(r.success?'تم سحب بطاقة الإقصاء.':'تعذّر السحب.',r.success?'ok':'err'); })); }),
+        this.ask('سحب البطاقة؟',`ستُسحب بطاقة الإقصاء${selCard?' «'+selCard.displayNameAr+'»':''} من ${this.pickName(u)}.`,'سحب البطاقة',()=>this.busy('cardx',()=>A.adminRevokeElimCard(u.id,s.cardKey)).then(r=>{ if(r) this.flash(r.success?'تم سحب بطاقة الإقصاء.':'تعذّر السحب.',r.success?'ok':'err'); })); }),
       // win
       winCards,
       grantWinCard:()=>this.needUser(u=>{ if(!s.winCardKey) return this.flash('اختر بطاقة أولاً.','err');
-        this.busy('wcard',()=>A.adminGrantWinCard(u.id,s.winCardKey)).then(r=>{ if(r) this.flash(r.success?'تم منح بطاقة الفوز.':'تعذّر المنح: '+(r.error||'unknown'),r.success?'ok':'err'); }); }),
+        this.busy('wcard',()=>A.adminGrantWinCard(u.id,s.winCardKey)).then(r=>{ if(r) this.flash(r.success?'تم منح بطاقة الفوز.':(r.error==='already_owned'?'المستخدم يملك هذي البطاقة أصلاً.':'تعذّر المنح: '+(r.error||'unknown')),r.success?'ok':'err'); }); }),
       revokeWinCard:()=>this.needUser(u=>{ if(!s.winCardKey) return this.flash('اختر بطاقة أولاً.','err');
-        this.ask('سحب البطاقة؟',`ستُسحب بطاقة الفوز${selWinCard?' «'+selWinCard.displayNameAr+'»':''} من ${this.pickName(u)}.`,'سحب البطاقة',()=>this.busy('wcardx',()=>A.adminRevokeWinCard(u.id)).then(r=>{ if(r) this.flash(r.success?'تم سحب بطاقة الفوز.':'تعذّر السحب.',r.success?'ok':'err'); })); }),
+        this.ask('سحب البطاقة؟',`ستُسحب بطاقة الفوز${selWinCard?' «'+selWinCard.displayNameAr+'»':''} من ${this.pickName(u)}.`,'سحب البطاقة',()=>this.busy('wcardx',()=>A.adminRevokeWinCard(u.id,s.winCardKey)).then(r=>{ if(r) this.flash(r.success?'تم سحب بطاقة الفوز.':'تعذّر السحب.',r.success?'ok':'err'); })); }),
       // codes
       allFrames:frames, codesFrame:s.codesFrame, onCodesFrame:e=>this.setState({ codesFrame:e.target.value }),
       codesCount:s.codesCount, onCodesCount:e=>this.setState({ codesCount:e.target.value }), codesNote:s.codesNote, onCodesNote:e=>this.setState({ codesNote:e.target.value }), codesOut:s.codesOut,

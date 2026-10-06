@@ -1181,13 +1181,13 @@ document.addEventListener('DOMContentLoaded', async function() {
       ecPanel.appendChild(ecGrid);
       basePanel.parentNode.insertBefore(ecPanel, basePanel.nextSibling);
 
-      if (!p.elimCard) {
+      var ecList = p.elimCards || [];
+      if (!ecList.length) {
         var ecEmpty = document.createElement('div');
         ecEmpty.style.cssText = 'grid-column:1/-1;font-size:13px;color:#8f8ea3;padding:6px 0;';
         ecEmpty.textContent = 'ما عندك بطاقات إقصاء بعد.';
         ecGrid.appendChild(ecEmpty);
-      } else {
-        var ec = p.elimCard;
+      } else ecList.forEach(function(ec){
         var ecCard = document.createElement('div');
         ecCard.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03);';
         var ecImgBox = document.createElement('div');
@@ -1216,7 +1216,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           ecBtn.addEventListener('click', function(){
             ecBtn.disabled = true;
             ecBtn.textContent = 'جارٍ...';
-            window.AGPAuth.toggleElimCard(!ec.enabled).then(function(result){
+            window.AGPAuth.toggleElimCard(ec.cardKey, !ec.enabled).then(function(result){
               if (result && result.success) window.location.reload();
               else { ecBtn.disabled = false; ecBtn.textContent = ecLabel; }
             }).catch(function(){ ecBtn.disabled = false; ecBtn.textContent = ecLabel; });
@@ -1224,7 +1224,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           ecCard.appendChild(ecBtn);
         }
         ecGrid.appendChild(ecCard);
-      }
+      });
     }
 
     /* ---- بطاقات الفوز — نفس شكل قسم بطاقات الإقصاء، ويُضاف بعده مباشرة ---- */
@@ -1242,13 +1242,13 @@ document.addEventListener('DOMContentLoaded', async function() {
       wcPanel.appendChild(wcGrid);
       elimPanelEl.parentNode.insertBefore(wcPanel, elimPanelEl.nextSibling);
 
-      if (!p.winCard) {
+      var wcList = p.winCards || [];
+      if (!wcList.length) {
         var wcEmpty = document.createElement('div');
         wcEmpty.style.cssText = 'grid-column:1/-1;font-size:13px;color:#8f8ea3;padding:6px 0;';
         wcEmpty.textContent = 'ما عندك بطاقات فوز بعد.';
         wcGrid.appendChild(wcEmpty);
-      } else {
-        var wc = p.winCard;
+      } else wcList.forEach(function(wc){
         var wcCard = document.createElement('div');
         wcCard.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03);';
         var wcImgBox = document.createElement('div');
@@ -1277,7 +1277,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           wcBtn.addEventListener('click', function(){
             wcBtn.disabled = true;
             wcBtn.textContent = 'جارٍ...';
-            window.AGPAuth.toggleWinCard(!wc.enabled).then(function(result){
+            window.AGPAuth.toggleWinCard(wc.cardKey, !wc.enabled).then(function(result){
               if (result && result.success) window.location.reload();
               else { wcBtn.disabled = false; wcBtn.textContent = wcLabel; }
             }).catch(function(){ wcBtn.disabled = false; wcBtn.textContent = wcLabel; });
@@ -1285,7 +1285,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           wcCard.appendChild(wcBtn);
         }
         wcGrid.appendChild(wcCard);
-      }
+      });
     }
 
     /* ---- زر لوحة التحكم (للأدمن فقط، بحساب نفسه) ---- */

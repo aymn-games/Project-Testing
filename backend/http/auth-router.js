@@ -519,37 +519,37 @@ function handleToggleEntrance(req, res, body, user) {
 }
 
 /**
- * منح/سحب بطاقة الإقصاء يدوياً من الأدمن. body.revoke === true يسحبها،
- * وإلا تُمنح body.cardKey لـbody.userId.
+ * منح/سحب بطاقة الإقصاء يدوياً من الأدمن. body.revoke === true يسحب
+ * body.cardKey (أو كل بطاقاته لو ما انمرَّر)، وإلا تُمنح body.cardKey لـbody.userId.
  */
 function handleAdminSetElimCard(req, res, body) {
   if (body.revoke) {
-    sendJson(res, 200, collectiblesService.revokeElimCard(body.userId));
+    sendJson(res, 200, collectiblesService.revokeElimCard(body.userId, body.cardKey));
     return;
   }
   var result = collectiblesService.grantElimCard(body.userId, body.cardKey, 'admin_manual');
   sendJson(res, result.success ? 200 : 400, result);
 }
 
-/** تفعيل/إيقاف ذاتي لبطاقة الإقصاء — user.id من الجلسة. body.enabled: true/false. */
+/** تفعيل/إيقاف ذاتي لبطاقة إقصاء مملوكة — user.id من الجلسة. body: {cardKey, enabled}. */
 function handleToggleElimCard(req, res, body, user) {
-  var result = collectiblesService.setElimCardEnabled(user.id, Boolean(body.enabled));
+  var result = collectiblesService.setElimCardEnabled(user.id, body.cardKey, Boolean(body.enabled));
   sendJson(res, result.success ? 200 : 400, result);
 }
 
 /** منح/سحب بطاقة الفوز يدوياً من الأدمن — نفس شكل handleAdminSetElimCard. */
 function handleAdminSetWinCard(req, res, body) {
   if (body.revoke) {
-    sendJson(res, 200, collectiblesService.revokeWinCard(body.userId));
+    sendJson(res, 200, collectiblesService.revokeWinCard(body.userId, body.cardKey));
     return;
   }
   var result = collectiblesService.grantWinCard(body.userId, body.cardKey, 'admin_manual');
   sendJson(res, result.success ? 200 : 400, result);
 }
 
-/** تفعيل/إيقاف ذاتي لبطاقة الفوز — user.id من الجلسة. body.enabled: true/false. */
+/** تفعيل/إيقاف ذاتي لبطاقة فوز مملوكة — user.id من الجلسة. body: {cardKey, enabled}. */
 function handleToggleWinCard(req, res, body, user) {
-  var result = collectiblesService.setWinCardEnabled(user.id, Boolean(body.enabled));
+  var result = collectiblesService.setWinCardEnabled(user.id, body.cardKey, Boolean(body.enabled));
   sendJson(res, result.success ? 200 : 400, result);
 }
 
