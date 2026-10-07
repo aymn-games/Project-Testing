@@ -628,7 +628,7 @@ function generateFrameCodes(frameType, frameRef, count, note) {
   db.transaction(function () {
     while (codes.length < count) {
       var code = 'AGP-' + randomCodeChunk(4) + '-' + randomCodeChunk(4);
-      if (codeTakenByCard(code)) continue;
+      if (codeTakenElsewhere(code, 'frame_codes')) continue;
       if (insert.run(code, frameType, frameRef, String(note || '').slice(0, 200), createdAt).changes === 1) codes.push(code);
     }
   })();
@@ -651,11 +651,12 @@ function cardCatalogEntry(kind, cardKey) {
   return spec ? spec.catalog().filter(function (c) { return c.key === cardKey; })[0] || null : null;
 }
 
-function codeTakenByCard(code) {
-  return Boolean(db.prepare('SELECT code FROM card_codes WHERE code = ?').get(code));
-}
-function codeTakenByFrame(code) {
-  return Boolean(db.prepare('SELECT code FROM frame_codes WHERE code = ?').get(code));
+// كل الأكواد (إطارات/بطاقات/باكجات) بنفس الصيغة — الكود لازم يكون فريد عبر الجداول كلها.
+var CODE_TABLES = ['frame_codes', 'card_codes', 'bundle_codes'];
+function codeTakenElsewhere(code, ownTable) {
+  return CODE_TABLES.some(function (t) {
+    return t !== ownTable && Boolean(db.prepare('SELECT code FROM ' + t + ' WHERE code = ?').get(code));
+  });
 }
 
 /**
@@ -676,7 +677,7 @@ function generateCardCodes(kind, cardKey, count, note) {
   db.transaction(function () {
     while (codes.length < count) {
       var code = 'AGP-' + randomCodeChunk(4) + '-' + randomCodeChunk(4);
-      if (codeTakenByFrame(code)) continue;
+      if (codeTakenElsewhere(code, 'card_codes')) continue;
       if (insert.run(code, kind, cardKey, String(note || '').slice(0, 200), createdAt).changes === 1) codes.push(code);
     }
   })();
@@ -706,7 +707,8 @@ function listFrameCodes(limit) {
       redeemedAt: row.redeemed_at,
       redeemedBy: row.redeemed_by,
       redeemedUsername: row.redeemed_username || null,
-      redeemedCustomId: row.redeemed_custom_id || null
+      redeemedCustomId: row.redeemed_custom_id || null,
+      burnedAt: row.burned_at || null
     };
   });
   var cardRows = db.prepare(
@@ -725,16 +727,38 @@ function listFrameCodes(limit) {
       redeemedAt: row.redeemed_at,
       redeemedBy: row.redeemed_by,
       redeemedUsername: row.redeemed_username || null,
-      redeemedCustomId: row.redeemed_custom_id || null
+      redeemedCustomId: row.redeemed_custom_id || null,
+      burnedAt: row.burned_at || null
     };
   });
-  return frameRows.concat(cardRows).sort(function (a, b) {
+  var bundleRows = db.prepare(
+    'SELECT c.*, u.username AS redeemed_username, u.custom_id AS redeemed_custom_id ' +
+    'FROM bundle_codes c LEFT JOIN users u ON u.id = c.redeemed_by ' +
+    'ORDER BY c.created_at DESC, c.code ASC LIMIT ?'
+  ).all(limit).map(function (row) {
+    var bundle = getBundle(row.bundle_id);
+    return {
+      code: row.code,
+      kind: 'bundle',
+      bundleId: row.bundle_id,
+      displayNameAr: bundle ? 'باكج — ' + bundle.name : 'باكج #' + row.bundle_id,
+      note: row.note,
+      createdAt: row.created_at,
+      redeemedAt: row.redeemed_at,
+      redeemedBy: row.redeemed_by,
+      redeemedUsername: row.redeemed_username || null,
+      redeemedCustomId: row.redeemed_custom_id || null,
+      burnedAt: row.burned_at || null
+    };
+  });
+  return frameRows.concat(cardRows, bundleRows).sort(function (a, b) {
     return (b.createdAt - a.createdAt) || (a.code < b.code ? -1 : a.code > b.code ? 1 : 0);
   }).slice(0, limit);
 }
 
 /** استرداد كود بطاقة (من داخل redeemFrameCode بعد ما ما يلقاه بأكواد الإطارات). */
 function redeemCardCode(userId, code, row) {
+  if (row.burned_at) return { success: false, error: 'code_burned' };
   if (row.redeemed_at) return { success: false, error: 'code_used' };
   var spec = CARD_KINDS[row.card_kind];
   if (!spec) return { success: false, error: 'invalid_code' };
@@ -743,7 +767,7 @@ function redeemCardCode(userId, code, row) {
   if (owned) return { success: false, error: 'already_owned' };
 
   var result = db.transaction(function () {
-    var claimed = db.prepare('UPDATE card_codes SET redeemed_by = ?, redeemed_at = ? WHERE code = ? AND redeemed_at IS NULL')
+    var claimed = db.prepare('UPDATE card_codes SET redeemed_by = ?, redeemed_at = ? WHERE code = ? AND redeemed_at IS NULL AND burned_at IS NULL')
       .run(userId, now(), code);
     if (claimed.changes !== 1) return { success: false, error: 'code_used' };
     var granted = spec.grant(userId, row.card_key, 'redeem_code');
@@ -787,9 +811,12 @@ function redeemFrameCode(userId, rawCode) {
   if (!row) {
     var cardRow = code ? db.prepare('SELECT * FROM card_codes WHERE code = ?').get(code) : null;
     if (cardRow) return redeemCardCode(userId, code, cardRow);
+    var bundleRow = code ? db.prepare('SELECT * FROM bundle_codes WHERE code = ?').get(code) : null;
+    if (bundleRow) return redeemBundleCode(userId, code, bundleRow);
     recordRedeemFail(userId);
     return { success: false, error: 'invalid_code' };
   }
+  if (row.burned_at) return { success: false, error: 'code_burned' };
   if (row.redeemed_at) return { success: false, error: 'code_used' };
 
   var owned = db.prepare('SELECT id FROM user_frames WHERE user_id = ? AND frame_type = ? AND frame_ref = ?')
@@ -797,7 +824,7 @@ function redeemFrameCode(userId, rawCode) {
   if (owned) return { success: false, error: 'already_owned' };
 
   var result = db.transaction(function () {
-    var claimed = db.prepare('UPDATE frame_codes SET redeemed_by = ?, redeemed_at = ? WHERE code = ? AND redeemed_at IS NULL')
+    var claimed = db.prepare('UPDATE frame_codes SET redeemed_by = ?, redeemed_at = ? WHERE code = ? AND redeemed_at IS NULL AND burned_at IS NULL')
       .run(userId, now(), code);
     if (claimed.changes !== 1) return { success: false, error: 'code_used' };
     var granted = grantFrame(userId, row.frame_type, row.frame_ref, { grantedBy: 'redeem_code', skipEntranceBundle: true });
@@ -808,6 +835,163 @@ function redeemFrameCode(userId, rawCode) {
 
   logger.log('Collectibles: user ' + userId + ' redeemed code ' + code);
   return { success: true, kind: 'frame', frame: Object.assign({ frameType: row.frame_type, frameRef: row.frame_ref }, frameDisplay(row.frame_type, row.frame_ref)) };
+}
+
+/* ----------------------------------------------------------------------
+ * الباكجات — كود واحد يمنح أكثر من عنصر (إطارات + بطاقات إقصاء + بطاقات فوز).
+ * لو العميل يملك بعض العناصر مسبقاً: ياخذ الباقي والكود ينحسب مستخدم؛ لو
+ * يملكها كلها يُرفض الكود ويبقى صالحاً (already_owned).
+ * ---------------------------------------------------------------------- */
+function normalizeBundleItem(item) {
+  item = item || {};
+  if (item.kind === 'frame') {
+    var frameType = String(item.frameType || ''), frameRef = String(item.frameRef || '');
+    return frameExists(frameType, frameRef) ? { kind: 'frame', frameType: frameType, frameRef: frameRef } : null;
+  }
+  if (item.kind === 'elim' || item.kind === 'win') {
+    var cardKey = String(item.cardKey || '');
+    return cardCatalogEntry(item.kind, cardKey) ? { kind: item.kind, cardKey: cardKey } : null;
+  }
+  return null;
+}
+
+function bundleItemKey(item) {
+  return item.kind === 'frame' ? 'frame:' + item.frameType + ':' + item.frameRef : item.kind + ':' + item.cardKey;
+}
+
+function bundleItemDisplay(item) {
+  if (item.kind === 'frame') {
+    var d = frameDisplay(item.frameType, item.frameRef) || {};
+    return { kind: 'frame', displayNameAr: 'إطار ' + (d.displayNameAr || item.frameRef), imageFilename: d.imageFilename || '' };
+  }
+  var entry = cardCatalogEntry(item.kind, item.cardKey) || {};
+  return { kind: item.kind, displayNameAr: entry.displayNameAr || item.cardKey, imageFilename: entry.imageFilename || '' };
+}
+
+function getBundle(id) {
+  var row = db.prepare('SELECT * FROM bundles WHERE id = ?').get(id);
+  if (!row) return null;
+  var items = [];
+  try { items = JSON.parse(row.items) || []; } catch (e) { items = []; }
+  return { id: row.id, name: row.name, items: items, createdAt: row.created_at };
+}
+
+/** كل الباكجات مع أسماء عناصرها (للأدمن). */
+function listBundles() {
+  return db.prepare('SELECT id FROM bundles ORDER BY created_at DESC, id DESC').all().map(function (r) {
+    var b = getBundle(r.id);
+    b.itemsDisplay = b.items.map(bundleItemDisplay);
+    return b;
+  });
+}
+
+/**
+ * إنشاء باكج. items: مصفوفة عناصر (تُتجاهل المكررة)، لازم عنصرين على الأقل.
+ * @returns {{success: boolean, bundle?: Object, error?: string}}
+ */
+function createBundle(name, items) {
+  name = String(name || '').trim().slice(0, 100);
+  if (!name) return { success: false, error: 'missing_name' };
+  if (!Array.isArray(items)) return { success: false, error: 'invalid_items' };
+  var seen = {}, clean = [];
+  for (var i = 0; i < items.length; i++) {
+    var it = normalizeBundleItem(items[i]);
+    if (!it) return { success: false, error: 'unknown_item' };
+    var key = bundleItemKey(it);
+    if (!seen[key]) { seen[key] = true; clean.push(it); }
+  }
+  if (clean.length < 2) return { success: false, error: 'too_few_items' };
+  var info = db.prepare('INSERT INTO bundles (name, items, created_at) VALUES (?, ?, ?)').run(name, JSON.stringify(clean), now());
+  logger.log('Collectibles: created bundle #' + info.lastInsertRowid + ' (' + clean.length + ' items)');
+  return { success: true, bundle: getBundle(info.lastInsertRowid) };
+}
+
+/** توليد دفعة أكواد لباكج. */
+function generateBundleCodes(bundleId, count, note) {
+  count = Math.floor(Number(count));
+  if (!count || count < 1 || count > MAX_CODES_PER_BATCH) return { success: false, error: 'invalid_count' };
+  if (!getBundle(bundleId)) return { success: false, error: 'unknown_bundle' };
+
+  var insert = db.prepare('INSERT OR IGNORE INTO bundle_codes (code, bundle_id, note, created_at) VALUES (?, ?, ?, ?)');
+  var codes = [];
+  var createdAt = now();
+  db.transaction(function () {
+    while (codes.length < count) {
+      var code = 'AGP-' + randomCodeChunk(4) + '-' + randomCodeChunk(4);
+      if (codeTakenElsewhere(code, 'bundle_codes')) continue;
+      if (insert.run(code, Number(bundleId), String(note || '').slice(0, 200), createdAt).changes === 1) codes.push(code);
+    }
+  })();
+
+  logger.log('Collectibles: generated ' + codes.length + ' redeem codes for bundle #' + bundleId);
+  return { success: true, codes: codes };
+}
+
+function userOwnsItem(userId, item) {
+  if (item.kind === 'frame') {
+    return Boolean(db.prepare('SELECT id FROM user_frames WHERE user_id = ? AND frame_type = ? AND frame_ref = ?').get(userId, item.frameType, item.frameRef));
+  }
+  return Boolean(db.prepare('SELECT id FROM ' + CARD_KINDS[item.kind].table + ' WHERE user_id = ? AND card_key = ?').get(userId, item.cardKey));
+}
+
+function grantItem(userId, item) {
+  if (item.kind === 'frame') return grantFrame(userId, item.frameType, item.frameRef, { grantedBy: 'redeem_code', skipEntranceBundle: true });
+  return CARD_KINDS[item.kind].grant(userId, item.cardKey, 'redeem_code');
+}
+
+function redeemBundleCode(userId, code, row) {
+  if (row.burned_at) return { success: false, error: 'code_burned' };
+  if (row.redeemed_at) return { success: false, error: 'code_used' };
+  var bundle = getBundle(row.bundle_id);
+  if (!bundle || !bundle.items.length) return { success: false, error: 'invalid_code' };
+
+  var granted = [], alreadyOwned = [];
+  var result = db.transaction(function () {
+    bundle.items.forEach(function (item) {
+      if (userOwnsItem(userId, item)) alreadyOwned.push(item); else granted.push(item);
+    });
+    if (!granted.length) return { success: false, error: 'already_owned' }; // يملك كل شي — الكود يبقى صالح
+    var claimed = db.prepare('UPDATE bundle_codes SET redeemed_by = ?, redeemed_at = ? WHERE code = ? AND redeemed_at IS NULL AND burned_at IS NULL')
+      .run(userId, now(), code);
+    if (claimed.changes !== 1) return { success: false, error: 'code_used' };
+    granted.forEach(function (item) {
+      var g = grantItem(userId, item);
+      if (!g.success) throw new Error('grant_failed:' + g.error); // يلغي كل شي ويرجع الكود غير مستخدم
+    });
+    return { success: true };
+  })();
+  if (!result.success) return result;
+
+  logger.log('Collectibles: user ' + userId + ' redeemed bundle #' + bundle.id + ' code ' + code + ' (' + granted.length + ' granted, ' + alreadyOwned.length + ' already owned)');
+  return {
+    success: true,
+    kind: 'bundle',
+    bundle: { id: bundle.id, name: bundle.name },
+    granted: granted.map(bundleItemDisplay),
+    alreadyOwned: alreadyOwned.map(bundleItemDisplay)
+  };
+}
+
+/**
+ * حرق كود (إلغاؤه نهائياً — استرجاع مبلغ مثلاً). يشتغل على كل أنواع الأكواد.
+ * الكود المستخدم ما ينحرق (العناصر صارت عند العميل — تُسحب يدوياً لو لزم).
+ * @returns {{success: boolean, code?: string, error?: string}}
+ */
+function burnCode(rawCode) {
+  var code = normalizeFrameCode(rawCode);
+  if (!code) return { success: false, error: 'invalid_code' };
+  for (var i = 0; i < CODE_TABLES.length; i++) {
+    var table = CODE_TABLES[i];
+    var row = db.prepare('SELECT * FROM ' + table + ' WHERE code = ?').get(code);
+    if (!row) continue;
+    if (row.burned_at) return { success: false, error: 'already_burned' };
+    if (row.redeemed_at) return { success: false, error: 'code_used' };
+    var res = db.prepare('UPDATE ' + table + ' SET burned_at = ? WHERE code = ? AND redeemed_at IS NULL AND burned_at IS NULL').run(now(), code);
+    if (res.changes !== 1) return { success: false, error: 'code_used' };
+    logger.log('Collectibles: burned code ' + code);
+    return { success: true, code: code };
+  }
+  return { success: false, error: 'invalid_code' };
 }
 
 module.exports = {
@@ -841,6 +1025,10 @@ module.exports = {
   getWinCardForVerifiedTikTok: getWinCardForVerifiedTikTok,
   generateFrameCodes: generateFrameCodes,
   generateCardCodes: generateCardCodes,
+  createBundle: createBundle,
+  listBundles: listBundles,
+  generateBundleCodes: generateBundleCodes,
+  burnCode: burnCode,
   listFrameCodes: listFrameCodes,
   redeemFrameCode: redeemFrameCode
 };

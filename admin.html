@@ -362,7 +362,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
         <sc-if value="{{ is.codes }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;gap:6px">
             <h1 style="margin:0;font-size:22px;font-weight:600">أكواد الاسترداد</h1>
-            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:1100px;text-wrap:pretty">اختر الإطار أو بطاقة الإقصاء/الفوز، وحدد العدد، ثم انسخ الأكواد وارفعها في المتجر. كل كود يُستخدم مرة وحدة فقط من خانة الاسترداد بالبروفايل (الإطار يُمنح بدون دخولية).</p></sc-if>
+            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:1100px;text-wrap:pretty">اختر الإطار أو بطاقة الإقصاء/الفوز أو باكج (تسويه من «إنشاء باكج» تحت)، وحدد العدد، ثم انسخ الأكواد وارفعها في المتجر. كل كود يُستخدم مرة وحدة فقط من خانة الاسترداد بالبروفايل (الإطار يُمنح بدون دخولية).</p></sc-if>
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start">
             <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
@@ -390,6 +390,40 @@ input::placeholder,textarea::placeholder{color:#5b6274}
               <textarea readOnly="{{ true }}" rows="8" dir="ltr" value="{{ codesOut }}" placeholder="الأكواد تظهر هنا بعد التوليد" style="border:none;resize:none;background:#0b0d12;color:#c4b5fd;padding:14px 18px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.8;outline:none"></textarea>
             </div>
           </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start">
+            <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+              <div style="padding:14px 18px;font-weight:600;border-bottom:1px solid #262a37">إنشاء باكج</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px">
+                <span style="font-size:13.5px">اسم الباكج</span>
+                <input value="{{ bundleName }}" onChange="{{ onBundleName }}" placeholder="باكج الريس" style="width:100%;max-width:560px;height:40px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px;padding:14px 18px;border-top:1px solid #1f222c">
+                <span style="font-size:13.5px">عناصر الباكج <span style="color:#9199ab;font-size:12px">(اختر عنصرين أو أكثر — المختار: {{ bundlePickCount }})</span></span>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow-y:auto">
+                  <sc-for list="{{ bundleChoices }}" as="b"><button onClick="{{ b.toggle }}" style="padding:6px 12px;border-radius:999px;font-size:12.5px;cursor:pointer;border:1px solid {{ b.bd }};background:{{ b.bg }};color:{{ b.fg }}">{{ b.name }}</button></sc-for>
+                </div>
+              </div>
+              <div style="display:flex;justify-content:flex-end;padding:14px 18px;border-top:1px solid #1f222c">
+                <button onClick="{{ createBundle }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">حفظ الباكج</button>
+              </div>
+              <div style="padding:10px 18px 14px;border-top:1px solid #1f222c;display:flex;flex-direction:column;gap:6px">
+                <span style="font-size:12px;color:#9199ab">الباكجات المحفوظة (تظهر بقائمة «العنصر» فوق لتوليد أكوادها)</span>
+                <sc-for list="{{ bundleRows }}" as="b"><div style="font-size:12.5px"><b>{{ b.name }}</b> <span style="color:#9199ab">— {{ b.items }}</span></div></sc-for>
+                <sc-if value="{{ bundlesEmpty }}"><span style="font-size:12.5px;color:#5b6274">ما فيه باكجات بعد.</span></sc-if>
+              </div>
+            </div>
+            <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+              <div style="padding:14px 18px;font-weight:600;border-bottom:1px solid #262a37">حرق كود (استرجاع)</div>
+              <p style="margin:0;padding:12px 18px 0;font-size:12.5px;color:#9199ab;line-height:1.8">يلغي الكود نهائياً فما يقدر أحد يسترده — لأي نوع (إطار، بطاقة، باكج). الكود المستخدم ما ينحرق (اسحب العناصر يدوياً من صفحاتها لو لزم).</p>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px">
+                <span style="font-size:13.5px">الكود</span>
+                <input dir="ltr" value="{{ burnInput }}" onChange="{{ onBurnInput }}" placeholder="AGP-XXXX-XXXX" style="width:100%;max-width:560px;height:40px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none">
+              </div>
+              <div style="display:flex;justify-content:flex-end;padding:14px 18px;border-top:1px solid #1f222c">
+                <button onClick="{{ burnTyped }}" style="height:36px;padding:0 16px;border-radius:8px;background:#b91c1c;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#991b1b">حرق الكود</button>
+              </div>
+            </div>
+          </div>
           <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
             <div style="padding:14px 18px;font-weight:600;border-bottom:1px solid #262a37">كل الأكواد</div>
             <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:720px">
@@ -398,12 +432,14 @@ input::placeholder,textarea::placeholder{color:#5b6274}
                 <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">العنصر</th>
                 <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الملاحظة</th>
                 <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الحالة</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37"></th>
               </tr></thead>
               <tbody><sc-for list="{{ codeRows }}" as="c" hint-placeholder-count="4"><tr>
                 <td dir="ltr" style="text-align:right;padding:11px 18px;border-bottom:1px solid #1d2029;font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ c.code }}</td>
                 <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ c.frame }}</td>
                 <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:13px;color:#9199ab">{{ c.note }}</td>
                 <td style="padding:11px 18px;border-bottom:1px solid #1d2029;font-size:12.5px;color:{{ c.color }}">{{ c.status }}</td>
+                <td style="padding:11px 18px;border-bottom:1px solid #1d2029"><sc-if value="{{ c.canBurn }}"><button onClick="{{ c.burn }}" style="height:28px;padding:0 10px;border-radius:7px;background:transparent;color:#f87171;border:1px solid #7f1d1d;font-size:12px;cursor:pointer" style-hover="background:#2a1214">حرق</button></sc-if></td>
               </tr></sc-for></tbody>
             </table></div>
           </div>
@@ -782,7 +818,7 @@ class Component extends DCLogic {
     users:null, catalog:null, customFrames:[], elimCardList:[], winCardList:[], codes:null,
     pickType:'internal', pickId:'', pickUser:null, pickState:'empty',
     frameKey:null, libTab:'club', libQ:'', grantTpl:'', grantText:'', entranceModel:'gold', entranceText:'', cardKey:null,
-    codesFrame:'', codesCount:10, codesNote:'', codesOut:'',
+    codesFrame:'', codesCount:10, codesNote:'', codesOut:'', bundles:null, bundleName:'', bundlePick:[], burnInput:'',
     catEdits:{}, exFile:'', exName:'',
     annText:'', annImage:'', annActive:false,
     supporters:null, supName:'', supMsg:'', supAmount:'',
@@ -870,7 +906,10 @@ class Component extends DCLogic {
   allFrames(){ const s=this.state; return [ ...(s.catalog||[]).map(c=>({ key:'catalog:'+c.slug, type:'catalog', ref:c.slug, file:c.image_filename, name:c.display_name_ar||c.slug })),
     ...(s.customFrames||[]).map(c=>({ key:'custom:'+c.id, type:'custom', ref:c.id, file:c.image_filename, name:c.display_name_ar||c.image_filename })) ]; }
   catEdit(slug, field, value){ this.setState(s=>({ catEdits:{ ...s.catEdits, [slug]:{ ...(s.catEdits[slug]||{}), [field]:value } } })); }
-  loadCodes(){ return A.adminListFrameCodes().then(r=>this.setState({ codes:(r&&r.codes)||[] })); }
+  loadCodes(){ A.adminListBundles().then(r=>this.setState({ bundles:(r&&r.bundles)||[] })); return A.adminListFrameCodes().then(r=>this.setState({ codes:(r&&r.codes)||[] })); }
+  burnCode(code){ this.ask('حرق الكود؟',`الكود ${code} بيتلغى نهائياً وما يقدر أحد يسترده. هذا الإجراء ما يتراجع عنه.`,'حرق الكود',()=>this.busy('burn',()=>A.adminBurnCode(code)).then(r=>{ if(!r) return;
+    const E={ invalid_code:'الكود غير موجود.', code_used:'الكود مستخدم — ما ينحرق.', already_burned:'الكود محروق من قبل.' };
+    if(!r.success) return this.flash(E[r.error]||('تعذّر الحرق: '+(r.error||'unknown')),'err'); this.setState({ burnInput:'' }); this.flash(`تم حرق الكود ${r.code}.`); this.loadCodes(); })); }
 
   // ---------- واجهة الموقع ----------
   loadAnnouncement(){ return A.getAnnouncement().then(r=>{ const a=r&&r.success?r.announcement:null; this.setState({ annActive:!!a, annText:a?(a.text||''):this.state.annText, annImage:a?(a.imageFilename||''):this.state.annImage }); }); }
@@ -966,9 +1005,10 @@ class Component extends DCLogic {
     // ---- frames
     const frames=this.allFrames().map(f=>({ ...f, cat:categorize(f.file) }));
     // عناصر أكواد الاسترداد: الإطارات + بطاقات الإقصاء + بطاقات الفوز (نفس صيغة الكود ونفس خانة الاسترداد بالبروفايل)
-    const codeItems=[ ...frames.map(f=>({ key:f.key, type:f.type, ref:f.ref, name:'إطار — '+f.name, label:'إطار '+f.name })),
-      ...(s.elimCardList||[]).map(c=>({ key:'elim:'+c.key, card:'elim', ref:c.key, name:c.displayNameAr, label:c.displayNameAr })),
-      ...(s.winCardList||[]).map(c=>({ key:'win:'+c.key, card:'win', ref:c.key, name:c.displayNameAr, label:c.displayNameAr })) ];
+    const baseItems=[ ...frames.map(f=>({ key:f.key, type:f.type, ref:f.ref, name:'إطار — '+f.name, label:'إطار '+f.name, item:{ kind:'frame', frameType:f.type, frameRef:f.ref } })),
+      ...(s.elimCardList||[]).map(c=>({ key:'elim:'+c.key, card:'elim', ref:c.key, name:c.displayNameAr, label:c.displayNameAr, item:{ kind:'elim', cardKey:c.key } })),
+      ...(s.winCardList||[]).map(c=>({ key:'win:'+c.key, card:'win', ref:c.key, name:c.displayNameAr, label:c.displayNameAr, item:{ kind:'win', cardKey:c.key } })) ];
+    const codeItems=[ ...(s.bundles||[]).map(b=>({ key:'bundle:'+b.id, bundle:b.id, name:`باكج — ${b.name} (${b.items.length} عناصر)`, label:'باكج '+b.name })), ...baseItems ];
     const sf=frames.find(f=>f.key===s.frameKey);
     const selFrame=sf?{ ok:true, label:sf.name, img:sf.file, color:'#e7e9ee', border:'#7c3aed' }:{ ok:false, label:'اختر إطاراً من القائمة بالأسفل', img:'', color:'#5b6274', border:'#2f3342' };
     const lq=s.libQ.trim().toLowerCase();
@@ -1087,16 +1127,27 @@ class Component extends DCLogic {
       allFrames:frames, codesFrame:s.codesFrame, onCodesFrame:e=>this.setState({ codesFrame:e.target.value }),
       codesCount:s.codesCount, onCodesCount:e=>this.setState({ codesCount:e.target.value }), codesNote:s.codesNote, onCodesNote:e=>this.setState({ codesNote:e.target.value }), codesOut:s.codesOut,
       codeItems,
+      bundleName:s.bundleName, onBundleName:e=>this.setState({ bundleName:e.target.value }), bundlePickCount:s.bundlePick.length,
+      bundleChoices:baseItems.map(x=>{ const on=s.bundlePick.includes(x.key); return { name:x.name, bd:on?'#7c3aed':'#2f3342', bg:on?'rgba(124,58,237,.18)':'#0b0d12', fg:on?'#e9d5ff':'#c3c8d4',
+        toggle:()=>this.setState(st=>({ bundlePick:st.bundlePick.includes(x.key)?st.bundlePick.filter(k=>k!==x.key):[...st.bundlePick,x.key] })) }; }),
+      bundleRows:(s.bundles||[]).map(b=>({ name:b.name, items:(b.itemsDisplay||[]).map(i=>i.displayNameAr).join('، ') })), bundlesEmpty:!(s.bundles||[]).length,
+      createBundle:()=>{ const name=s.bundleName.trim(); if(!name) return this.flash('اكتب اسم الباكج أولاً.','err');
+        const items=baseItems.filter(x=>s.bundlePick.includes(x.key)).map(x=>x.item); if(items.length<2) return this.flash('اختر عنصرين على الأقل.','err');
+        this.busy('bundle',()=>A.adminCreateBundle(name,items)).then(r=>{ if(!r) return; if(!r.success) return this.flash('تعذّر الحفظ: '+(r.error||'unknown'),'err');
+          this.setState({ bundleName:'', bundlePick:[], codesFrame:'bundle:'+r.bundle.id }); this.flash(`تم حفظ باكج "${name}" — تقدر تولّد أكواده الحين.`); this.loadCodes(); }); },
+      burnInput:s.burnInput, onBurnInput:e=>this.setState({ burnInput:e.target.value }),
+      burnTyped:()=>{ const c=s.burnInput.trim(); if(!c) return this.flash('اكتب الكود أولاً.','err'); this.burnCode(c); },
       genCodes:()=>{ const f=codeItems.find(x=>x.key===s.codesFrame); if(!f) return this.flash('اختر الإطار أو البطاقة أولاً.','err');
         const n=Number(s.codesCount); if(!(n>=1&&n<=500)) return this.flash('العدد لازم يكون بين 1 و 500.','err');
-        const gen=f.card?()=>A.adminGenerateCardCodes(f.card,f.ref,n,s.codesNote):()=>A.adminGenerateFrameCodes(f.type,f.ref,n,s.codesNote);
+        const gen=f.bundle?()=>A.adminGenerateBundleCodes(f.bundle,n,s.codesNote):f.card?()=>A.adminGenerateCardCodes(f.card,f.ref,n,s.codesNote):()=>A.adminGenerateFrameCodes(f.type,f.ref,n,s.codesNote);
         this.busy('codes',gen).then(r=>{ if(!r) return; if(!r.success) return this.flash('تعذّر التوليد: '+(r.error||'unknown'),'err');
           this.setState({ codesOut:(r.codes||[]).join('\n') }); this.flash(`تم توليد ${(r.codes||[]).length} كود لـ"${f.label}".`); this.loadCodes(); }); },
       copyCodes:()=>{ if(!s.codesOut) return this.flash('ولّد الأكواد أولاً.','err'); const done=()=>this.flash('تم نسخ الأكواد.');
         const fallback=()=>{ const ta=document.createElement('textarea'); ta.value=s.codesOut; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(e){} ta.remove(); done(); };
         if(navigator.clipboard) navigator.clipboard.writeText(s.codesOut).then(done,fallback); else fallback(); },
       codeRows:(s.codes||[]).map(c=>({ code:c.code, frame:c.displayNameAr||c.cardKey||c.frameRef, note:c.note||'—',
-        status:c.redeemedAt?`مستخدم — \u2068${c.redeemedUsername||('#'+c.redeemedBy)}\u2069${c.redeemedCustomId?' (\u2066'+c.redeemedCustomId+'\u2069)':''} · \u2068${fmtDate(c.redeemedAt)}\u2069`:'غير مستخدم', color:c.redeemedAt?'#4ade80':'#fcd34d' })),
+        canBurn:!c.redeemedAt&&!c.burnedAt, burn:()=>this.burnCode(c.code),
+        status:c.burnedAt?`محروق · \u2068${fmtDate(c.burnedAt)}\u2069`:c.redeemedAt?`مستخدم — \u2068${c.redeemedUsername||('#'+c.redeemedBy)}\u2069${c.redeemedCustomId?' (\u2066'+c.redeemedCustomId+'\u2069)':''} · \u2068${fmtDate(c.redeemedAt)}\u2069`:'غير مستخدم', color:c.burnedAt?'#f87171':c.redeemedAt?'#4ade80':'#fcd34d' })),
       // catalog / exclusive / levels
       catalog,
       exclusives:(s.customFrames||[]).map(e=>({ n:e.id, file:e.image_filename, name:e.display_name_ar||'—' })),

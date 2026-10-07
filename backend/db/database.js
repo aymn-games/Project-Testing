@@ -225,6 +225,27 @@ db.exec(`
         redeemed_at INTEGER
     );
 
+    -- الباكجات: مجموعة عناصر (إطارات/بطاقات إقصاء/بطاقات فوز) تُمنح كلها بكود
+    -- واحد. items = JSON مصفوفة {kind:'frame',frameType,frameRef} أو
+    -- {kind:'elim'|'win',cardKey}.
+    CREATE TABLE IF NOT EXISTS bundles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        items TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+    );
+
+    -- أكواد الباكجات — نفس صيغة الأكواد الثانية (فريدة عبر الجداول الثلاثة).
+    CREATE TABLE IF NOT EXISTS bundle_codes (
+        code TEXT PRIMARY KEY,
+        bundle_id INTEGER NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        redeemed_by INTEGER,
+        redeemed_at INTEGER,
+        burned_at INTEGER
+    );
+
     -- كتالوج مستويات "SP" (نقاط الستريمر) — عتبات قابلة للتعديل من الأدمن.
     -- جدول منفصل عن frame_catalog بدل تعديل قيد CHECK(kind IN (...))
     -- الحالي (يتطلب إعادة بناء الجدول بالكامل بـSQLite).
@@ -350,6 +371,9 @@ function ensureColumn(table, column, definition) {
     }
 }
 ensureColumn('users', 'google_id', 'TEXT');
+// حرق كود استرداد (استرجاع مبلغ مثلاً) — burned_at ليس NULL = الكود ملغي وما يُسترد.
+ensureColumn('frame_codes', 'burned_at', 'INTEGER');
+ensureColumn('card_codes', 'burned_at', 'INTEGER');
 ensureColumn('users', 'tiktok_username', 'TEXT');
 ensureColumn('users', 'tiktok_verified', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'tiktok_verification_code', 'TEXT');

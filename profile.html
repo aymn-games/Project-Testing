@@ -1093,6 +1093,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       var REDEEM_ERRORS = {
         invalid_code: 'الكود غير صحيح، تأكد منه وحاول مرة ثانية.',
         code_used: 'هذا الكود مستخدم من قبل.',
+        code_burned: 'هذا الكود ملغي ولا يمكن استخدامه.',
         already_owned: 'عندك هذا العنصر من قبل — الكود ما انستخدم ويقدر تعطيه لغيرك.',
         rate_limited: 'محاولات كثيرة، حاول بعد ربع ساعة.'
       };
@@ -1104,6 +1105,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         rBtn.textContent = 'جارٍ...';
         window.AGPAuth.redeemFrameCode(code).then(function(result){
           if (result && result.success) {
+            if (result.kind === 'bundle') {
+              var names = function(list){ return (list || []).map(function(i){ return i.displayNameAr; }).filter(Boolean).join('، '); };
+              var msg = '🎉 تم! انضاف لك باكج "' + ((result.bundle && result.bundle.name) || '') + '": ' + names(result.granted) + '.';
+              if (result.alreadyOwned && result.alreadyOwned.length) msg += ' (كان عندك من قبل: ' + names(result.alreadyOwned) + ')';
+              setRedeemMsg(msg, true);
+              setTimeout(function(){ window.location.reload(); }, 2500);
+              return;
+            }
             var isCard = result.kind === 'elim' || result.kind === 'win';
             var name = ((isCard ? result.card : result.frame) || {}).displayNameAr || '';
             setRedeemMsg(isCard

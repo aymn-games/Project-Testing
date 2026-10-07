@@ -430,8 +430,9 @@ function equipFrame(frameType, frameRef) {
 }
 
 /** Owner redeems a purchased code (e.g. "AGP-7K3M-Q9XD") — a frame, an
- * elimination card or a win card. result.kind: frame | elim | win
- * (result.frame / result.card). result.error: invalid_code | code_used |
+ * elimination card, a win card or a bundle. result.kind: frame | elim | win |
+ * bundle (result.frame / result.card / result.bundle + result.granted +
+ * result.alreadyOwned). result.error: invalid_code | code_used | code_burned |
  * already_owned | rate_limited */
 function redeemFrameCode(code) {
     return request('/api/collectibles/redeem', { method: 'POST', body: { code: code } });
@@ -454,7 +455,27 @@ function adminGenerateCardCodes(kind, cardKey, count, note) {
     });
 }
 
-/** Admin only — latest codes (frames and cards) with redemption status. */
+/** Admin only — bundles (several items granted by one code). */
+function adminListBundles() {
+    return request('/api/admin/bundles', { method: 'GET' });
+}
+/** items: [{kind:'frame',frameType,frameRef} | {kind:'elim'|'win',cardKey}] (2+). */
+function adminCreateBundle(name, items) {
+    return request('/api/admin/bundles', { method: 'POST', body: { name: name, items: items } });
+}
+function adminGenerateBundleCodes(bundleId, count, note) {
+    return request('/api/admin/bundle-codes/generate', {
+        method: 'POST',
+        body: { bundleId: bundleId, count: count, note: note || '' }
+    });
+}
+/** Admin only — burns (cancels) an unused code of any kind, e.g. after a refund.
+ * result.error: invalid_code | code_used | already_burned */
+function adminBurnCode(code) {
+    return request('/api/admin/codes/burn', { method: 'POST', body: { code: code } });
+}
+
+/** Admin only — latest codes (frames, cards and bundles) with redemption status. */
 function adminListFrameCodes() {
     return request('/api/admin/frame-codes', { method: 'GET' });
 }
@@ -853,6 +874,10 @@ global.AGPAuth = {
     redeemFrameCode: redeemFrameCode,
     adminGenerateFrameCodes: adminGenerateFrameCodes,
     adminGenerateCardCodes: adminGenerateCardCodes,
+    adminListBundles: adminListBundles,
+    adminCreateBundle: adminCreateBundle,
+    adminGenerateBundleCodes: adminGenerateBundleCodes,
+    adminBurnCode: adminBurnCode,
     adminListFrameCodes: adminListFrameCodes,
     toggleEntrance: toggleEntrance,
     adminGrantElimCard: adminGrantElimCard,
