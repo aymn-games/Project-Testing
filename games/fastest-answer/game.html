@@ -430,6 +430,13 @@ class Component extends DCLogic {
     })[k]?.(); }
 
   r(n){return Math.floor(Math.random()*n);}
+  // تدوير الأدوار: كل لاعب بالفريق يجيه الدور مرة وحدة (بترتيب عشوائي) قبل ما يتكرر أي أحد،
+  // ولما يخلص الكل تبدأ دورة جديدة. المنضم الجديد يدخل الدورة الحالية، والمُقصى يطلع منها تلقائياً.
+  played=[new Set(),new Set()];
+  nextPlayer(i,P){ const done=this.played[i]; let left=P.filter(n=>!done.has(n));
+    // بداية دورة جديدة: آخر من لعب ما يجيه الدور مرتين ورا بعض (لو بالفريق أكثر من لاعب)
+    if(!left.length){ done.clear(); left=P.length>1?P.filter(n=>n!==this.lastPick?.[i]):P.slice(); }
+    const c=this.pick(left); done.add(c); (this.lastPick=this.lastPick||[])[i]=c; return c; }
   pick(a){return a[this.r(a.length)];}
   // تطبيع الإجابة قبل المقارنة — نفس قواعد كلمة الدخول (FA.norm في fa-platform.js).
   norm(s){ return FA.norm(s); }
@@ -453,7 +460,7 @@ class Component extends DCLogic {
   spin=()=>{ const s=this.state,n=2; if(s.phase!=='ready'||s.winner) return;
     if(s.teams.some(t=>!t.players.length)) return this.toastMsg('كل فريق يحتاج لاعب واحد على الأقل');
     clearInterval(this.ti); this.ac(); this.snd('start'); if(!this.matchStartedAt) this.matchStartedAt=Date.now();
-    const reels=s.reels.map((r,i)=>{ const P=s.teams[i].players,L=26+i*5,items=Array.from({length:L},()=>this.pick(P)),chosen=this.pick(P); items[L-2]=chosen; return {items,offset:0,trans:'none',stopped:false,chosen,ci:L-2}; });
+    const reels=s.reels.map((r,i)=>{ const P=s.teams[i].players,L=26+i*5,items=Array.from({length:L},()=>this.pick(P)),chosen=this.nextPlayer(i,P); items[L-2]=chosen; return {items,offset:0,trans:'none',stopped:false,chosen,ci:L-2}; });
     const C=this.CATS,CL=34,idx=this.r(C.length),st0=this.r(C.length),citems=Array.from({length:CL},(_,j)=>C[(j+st0)%C.length].name); citems[CL-2]=C[idx].name;
     this.setState({phase:'spinning',reels,cat:{items:citems,offset:0,trans:'none',stopped:false,idx,ci:CL-2},q:null,answers:[],received:0,answered:{},round:s.round+1});
     const ease='cubic-bezier(.12,.86,.2,1)', teamEnd=(2.6+(n-1)*.55)*1000, catStart=teamEnd+500, catDur=2600;
@@ -481,7 +488,7 @@ class Component extends DCLogic {
     if(lead) setTimeout(()=>{this.snd('win');this.addLog('points',`فوز ${lead.name} بـ ${lead.score} نقطة`);this.setState({winner:lead});this.reportPoints(lead.i);},1400);
   }
   closeResults=()=>{ if(this.state.phase==='results'){ this.snd('close'); this.setState({phase:'ready',q:null}); } };
-  newGame=()=>{ clearInterval(this.ti); this.matchStartedAt=null; this.reported=false; this.setState(s=>({teams:s.teams.map(t=>({...t,score:0})),winner:null,phase:'ready',round:0,q:null,answers:[],received:0,countdown:null,log:[],reels:[0,1].map(()=>this.blankReel()),cat:{items:[],offset:0,trans:'none',stopped:false,idx:null,ci:-1}})); };
+  newGame=()=>{ clearInterval(this.ti); this.matchStartedAt=null; this.reported=false; this.played=[new Set(),new Set()]; this.setState(s=>({teams:s.teams.map(t=>({...t,score:0})),winner:null,phase:'ready',round:0,q:null,answers:[],received:0,countdown:null,log:[],reels:[0,1].map(()=>this.blankReel()),cat:{items:[],offset:0,trans:'none',stopped:false,idx:null,ci:-1}})); };
   endMatch=()=>{ clearInterval(this.ti); const s=this.state, ts=s.teams.map((t,i)=>({...t,i})).sort((a,b)=>b.score-a.score);
     this.shut('settingsOpen');
     if(ts[0].score===ts[1].score) return this.toastMsg('تعادل! لا يوجد فائز');
