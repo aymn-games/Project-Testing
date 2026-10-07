@@ -429,8 +429,10 @@ function equipFrame(frameType, frameRef) {
     return request('/api/collectibles/equip', { method: 'POST', body: { frameType: frameType, frameRef: frameRef } });
 }
 
-/** Owner redeems a purchased frame code (e.g. "AGP-7K3M-Q9XD").
- * result.error: invalid_code | code_used | already_owned | rate_limited */
+/** Owner redeems a purchased code (e.g. "AGP-7K3M-Q9XD") — a frame, an
+ * elimination card or a win card. result.kind: frame | elim | win
+ * (result.frame / result.card). result.error: invalid_code | code_used |
+ * already_owned | rate_limited */
 function redeemFrameCode(code) {
     return request('/api/collectibles/redeem', { method: 'POST', body: { code: code } });
 }
@@ -443,7 +445,16 @@ function adminGenerateFrameCodes(frameType, frameRef, count, note) {
     });
 }
 
-/** Admin only — latest codes with redemption status. */
+/** Admin only — generates `count` one-time codes for an elimination
+ * (kind 'elim') or win (kind 'win') card. */
+function adminGenerateCardCodes(kind, cardKey, count, note) {
+    return request('/api/admin/card-codes/generate', {
+        method: 'POST',
+        body: { kind: kind, cardKey: cardKey, count: count, note: note || '' }
+    });
+}
+
+/** Admin only — latest codes (frames and cards) with redemption status. */
 function adminListFrameCodes() {
     return request('/api/admin/frame-codes', { method: 'GET' });
 }
@@ -841,6 +852,7 @@ global.AGPAuth = {
     equipFrame: equipFrame,
     redeemFrameCode: redeemFrameCode,
     adminGenerateFrameCodes: adminGenerateFrameCodes,
+    adminGenerateCardCodes: adminGenerateCardCodes,
     adminListFrameCodes: adminListFrameCodes,
     toggleEntrance: toggleEntrance,
     adminGrantElimCard: adminGrantElimCard,

@@ -118,6 +118,7 @@ var ROUTES = [
   // أكواد استرداد الإطارات — توليد/عرض للأدمن، واسترداد لصاحب الحساب.
   { method: 'POST', path: '/api/admin/frame-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateFrameCodes },
   { method: 'GET', path: '/api/admin/frame-codes', requireAuth: true, requireAdmin: true, handler: handleAdminListFrameCodes },
+  { method: 'POST', path: '/api/admin/card-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateCardCodes },
   { method: 'POST', path: '/api/collectibles/redeem', requireAuth: true, handler: handleRedeemFrameCode },
   { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
   // ---- هل البث شغّال الحين؟ — مكتبة الألعاب والألعاب تقطع الاتصال المحفوظ
@@ -489,6 +490,11 @@ function handleAdminSetEntrance(req, res, body) {
 
 function handleAdminGenerateFrameCodes(req, res, body) {
   var result = collectiblesService.generateFrameCodes(body.frameType, body.frameRef, body.count, body.note);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleAdminGenerateCardCodes(req, res, body) {
+  var result = collectiblesService.generateCardCodes(body.kind, body.cardKey, body.count, body.note);
   sendJson(res, result.success ? 200 : 400, result);
 }
 

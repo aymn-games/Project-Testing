@@ -628,6 +628,7 @@ function generateFrameCodes(frameType, frameRef, count, note) {
   db.transaction(function () {
     while (codes.length < count) {
       var code = 'AGP-' + randomCodeChunk(4) + '-' + randomCodeChunk(4);
+      if (codeTakenByCard(code)) continue;
       if (insert.run(code, frameType, frameRef, String(note || '').slice(0, 200), createdAt).changes === 1) codes.push(code);
     }
   })();
@@ -636,7 +637,55 @@ function generateFrameCodes(frameType, frameRef, count, note) {
   return { success: true, codes: codes };
 }
 
-/** آخر الأكواد (الأحدث أولاً) مع اسم الإطار ومن استردها. */
+/* ----------------------------------------------------------------------
+ * أكواد بطاقات الإقصاء والفوز (card_codes) — نفس صيغة أكواد الإطارات
+ * ونفس خانة الاسترداد بالبروفايل (redeemFrameCode يبحث بالجدولين).
+ * ---------------------------------------------------------------------- */
+var CARD_KINDS = {
+  elim: { table: 'user_elim_cards', catalog: function () { return ELIM_CARD_CATALOG; }, grant: function (u, k, by) { return grantElimCard(u, k, by); } },
+  win: { table: 'user_win_cards', catalog: function () { return WIN_CARD_CATALOG; }, grant: function (u, k, by) { return grantWinCard(u, k, by); } }
+};
+
+function cardCatalogEntry(kind, cardKey) {
+  var spec = CARD_KINDS[kind];
+  return spec ? spec.catalog().filter(function (c) { return c.key === cardKey; })[0] || null : null;
+}
+
+function codeTakenByCard(code) {
+  return Boolean(db.prepare('SELECT code FROM card_codes WHERE code = ?').get(code));
+}
+function codeTakenByFrame(code) {
+  return Boolean(db.prepare('SELECT code FROM frame_codes WHERE code = ?').get(code));
+}
+
+/**
+ * توليد دفعة أكواد لبطاقة إقصاء أو فوز واحدة.
+ * @returns {{success: boolean, codes?: string[], error?: string}}
+ */
+function generateCardCodes(kind, cardKey, count, note) {
+  kind = String(kind || '');
+  cardKey = String(cardKey || '');
+  count = Math.floor(Number(count));
+  if (!CARD_KINDS[kind]) return { success: false, error: 'unknown_card_kind' };
+  if (!count || count < 1 || count > MAX_CODES_PER_BATCH) return { success: false, error: 'invalid_count' };
+  if (!cardCatalogEntry(kind, cardKey)) return { success: false, error: 'unknown_card_key' };
+
+  var insert = db.prepare('INSERT OR IGNORE INTO card_codes (code, card_kind, card_key, note, created_at) VALUES (?, ?, ?, ?, ?)');
+  var codes = [];
+  var createdAt = now();
+  db.transaction(function () {
+    while (codes.length < count) {
+      var code = 'AGP-' + randomCodeChunk(4) + '-' + randomCodeChunk(4);
+      if (codeTakenByFrame(code)) continue;
+      if (insert.run(code, kind, cardKey, String(note || '').slice(0, 200), createdAt).changes === 1) codes.push(code);
+    }
+  })();
+
+  logger.log('Collectibles: generated ' + codes.length + ' redeem codes for ' + kind + ' card ' + cardKey);
+  return { success: true, codes: codes };
+}
+
+/** آخر الأكواد (الأحدث أولاً) مع اسم الإطار/البطاقة ومن استردها — إطارات وبطاقات معاً. */
 function listFrameCodes(limit) {
   limit = Math.min(Math.max(Math.floor(Number(limit)) || 300, 1), 2000);
   var rows = db.prepare(
@@ -644,10 +693,11 @@ function listFrameCodes(limit) {
     'FROM frame_codes c LEFT JOIN users u ON u.id = c.redeemed_by ' +
     'ORDER BY c.created_at DESC, c.code ASC LIMIT ?'
   ).all(limit);
-  return rows.map(function (row) {
+  var frameRows = rows.map(function (row) {
     var display = frameDisplay(row.frame_type, row.frame_ref) || {};
     return {
       code: row.code,
+      kind: 'frame',
       frameType: row.frame_type,
       frameRef: row.frame_ref,
       displayNameAr: display.displayNameAr || '',
@@ -659,6 +709,52 @@ function listFrameCodes(limit) {
       redeemedCustomId: row.redeemed_custom_id || null
     };
   });
+  var cardRows = db.prepare(
+    'SELECT c.*, u.username AS redeemed_username, u.custom_id AS redeemed_custom_id ' +
+    'FROM card_codes c LEFT JOIN users u ON u.id = c.redeemed_by ' +
+    'ORDER BY c.created_at DESC, c.code ASC LIMIT ?'
+  ).all(limit).map(function (row) {
+    var entry = cardCatalogEntry(row.card_kind, row.card_key) || {};
+    return {
+      code: row.code,
+      kind: row.card_kind,
+      cardKey: row.card_key,
+      displayNameAr: entry.displayNameAr || '',
+      note: row.note,
+      createdAt: row.created_at,
+      redeemedAt: row.redeemed_at,
+      redeemedBy: row.redeemed_by,
+      redeemedUsername: row.redeemed_username || null,
+      redeemedCustomId: row.redeemed_custom_id || null
+    };
+  });
+  return frameRows.concat(cardRows).sort(function (a, b) {
+    return (b.createdAt - a.createdAt) || (a.code < b.code ? -1 : a.code > b.code ? 1 : 0);
+  }).slice(0, limit);
+}
+
+/** استرداد كود بطاقة (من داخل redeemFrameCode بعد ما ما يلقاه بأكواد الإطارات). */
+function redeemCardCode(userId, code, row) {
+  if (row.redeemed_at) return { success: false, error: 'code_used' };
+  var spec = CARD_KINDS[row.card_kind];
+  if (!spec) return { success: false, error: 'invalid_code' };
+
+  var owned = db.prepare('SELECT id FROM ' + spec.table + ' WHERE user_id = ? AND card_key = ?').get(userId, row.card_key);
+  if (owned) return { success: false, error: 'already_owned' };
+
+  var result = db.transaction(function () {
+    var claimed = db.prepare('UPDATE card_codes SET redeemed_by = ?, redeemed_at = ? WHERE code = ? AND redeemed_at IS NULL')
+      .run(userId, now(), code);
+    if (claimed.changes !== 1) return { success: false, error: 'code_used' };
+    var granted = spec.grant(userId, row.card_key, 'redeem_code');
+    if (!granted.success) throw new Error('grant_failed:' + granted.error); // يلغي تعليم الكود
+    return { success: true };
+  })();
+  if (!result.success) return result;
+
+  logger.log('Collectibles: user ' + userId + ' redeemed ' + row.card_kind + ' card code ' + code);
+  var entry = cardCatalogEntry(row.card_kind, row.card_key) || {};
+  return { success: true, kind: row.card_kind, card: { kind: row.card_kind, cardKey: row.card_key, displayNameAr: entry.displayNameAr || '', imageFilename: entry.imageFilename || '' } };
 }
 
 // حد المحاولات الفاشلة لكل مستخدم (ذاكرة فقط — يتصفّر مع إعادة تشغيل
@@ -688,7 +784,12 @@ function redeemFrameCode(userId, rawCode) {
 
   var code = normalizeFrameCode(rawCode);
   var row = code ? db.prepare('SELECT * FROM frame_codes WHERE code = ?').get(code) : null;
-  if (!row) { recordRedeemFail(userId); return { success: false, error: 'invalid_code' }; }
+  if (!row) {
+    var cardRow = code ? db.prepare('SELECT * FROM card_codes WHERE code = ?').get(code) : null;
+    if (cardRow) return redeemCardCode(userId, code, cardRow);
+    recordRedeemFail(userId);
+    return { success: false, error: 'invalid_code' };
+  }
   if (row.redeemed_at) return { success: false, error: 'code_used' };
 
   var owned = db.prepare('SELECT id FROM user_frames WHERE user_id = ? AND frame_type = ? AND frame_ref = ?')
@@ -706,7 +807,7 @@ function redeemFrameCode(userId, rawCode) {
   if (!result.success) return result;
 
   logger.log('Collectibles: user ' + userId + ' redeemed code ' + code);
-  return { success: true, frame: Object.assign({ frameType: row.frame_type, frameRef: row.frame_ref }, frameDisplay(row.frame_type, row.frame_ref)) };
+  return { success: true, kind: 'frame', frame: Object.assign({ frameType: row.frame_type, frameRef: row.frame_ref }, frameDisplay(row.frame_type, row.frame_ref)) };
 }
 
 module.exports = {
@@ -739,6 +840,7 @@ module.exports = {
   setWinCardEnabled: setWinCardEnabled,
   getWinCardForVerifiedTikTok: getWinCardForVerifiedTikTok,
   generateFrameCodes: generateFrameCodes,
+  generateCardCodes: generateCardCodes,
   listFrameCodes: listFrameCodes,
   redeemFrameCode: redeemFrameCode
 };

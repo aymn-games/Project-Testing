@@ -211,6 +211,20 @@ db.exec(`
         UNIQUE(user_id, card_key)
     );
 
+    -- أكواد استرداد بطاقات الإقصاء والفوز — نفس فكرة frame_codes (وبنفس صيغة
+    -- الكود AGP-XXXX-XXXX، والكود فريد عبر الجدولين)، بجدول منفصل بدل تعديل
+    -- قيد CHECK(frame_type ...) بـframe_codes (يتطلب إعادة بناء الجدول بـSQLite).
+    -- card_kind: 'elim' (user_elim_cards) أو 'win' (user_win_cards).
+    CREATE TABLE IF NOT EXISTS card_codes (
+        code TEXT PRIMARY KEY,
+        card_kind TEXT NOT NULL CHECK(card_kind IN ('elim', 'win')),
+        card_key TEXT NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        redeemed_by INTEGER,
+        redeemed_at INTEGER
+    );
+
     -- كتالوج مستويات "SP" (نقاط الستريمر) — عتبات قابلة للتعديل من الأدمن.
     -- جدول منفصل عن frame_catalog بدل تعديل قيد CHECK(kind IN (...))
     -- الحالي (يتطلب إعادة بناء الجدول بالكامل بـSQLite).

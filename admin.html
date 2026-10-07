@@ -362,15 +362,15 @@ input::placeholder,textarea::placeholder{color:#5b6274}
         <sc-if value="{{ is.codes }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;gap:6px">
             <h1 style="margin:0;font-size:22px;font-weight:600">أكواد الاسترداد</h1>
-            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:1100px;text-wrap:pretty">اختر الإطار، وحدد العدد، ثم انسخ الأكواد وارفعها في المتجر. كل كود يُستخدم مرة وحدة فقط ويمنح الإطار بدون دخولية.</p></sc-if>
+            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:1100px;text-wrap:pretty">اختر الإطار أو بطاقة الإقصاء/الفوز، وحدد العدد، ثم انسخ الأكواد وارفعها في المتجر. كل كود يُستخدم مرة وحدة فقط من خانة الاسترداد بالبروفايل (الإطار يُمنح بدون دخولية).</p></sc-if>
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start">
             <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
               <div style="padding:14px 18px;font-weight:600;border-bottom:1px solid #262a37">توليد دفعة جديدة</div>
               <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px">
-                <span style="font-size:13.5px">الإطار</span>
+                <span style="font-size:13.5px">العنصر</span>
                 <select value="{{ codesFrame }}" onChange="{{ onCodesFrame }}" style="width:100%;max-width:560px;height:40px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px">
-                  <sc-for list="{{ allFrames }}" as="f"><option value="{{ f.key }}">{{ f.name }}</option></sc-for>
+                  <sc-for list="{{ codeItems }}" as="f"><option value="{{ f.key }}">{{ f.name }}</option></sc-for>
                 </select>
               </div>
               <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px;border-top:1px solid #1f222c">
@@ -395,7 +395,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
             <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:720px">
               <thead><tr>
                 <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الكود</th>
-                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الإطار</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">العنصر</th>
                 <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الملاحظة</th>
                 <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الحالة</th>
               </tr></thead>
@@ -965,6 +965,10 @@ class Component extends DCLogic {
 
     // ---- frames
     const frames=this.allFrames().map(f=>({ ...f, cat:categorize(f.file) }));
+    // عناصر أكواد الاسترداد: الإطارات + بطاقات الإقصاء + بطاقات الفوز (نفس صيغة الكود ونفس خانة الاسترداد بالبروفايل)
+    const codeItems=[ ...frames.map(f=>({ key:f.key, type:f.type, ref:f.ref, name:'إطار — '+f.name, label:'إطار '+f.name })),
+      ...(s.elimCardList||[]).map(c=>({ key:'elim:'+c.key, card:'elim', ref:c.key, name:c.displayNameAr, label:c.displayNameAr })),
+      ...(s.winCardList||[]).map(c=>({ key:'win:'+c.key, card:'win', ref:c.key, name:c.displayNameAr, label:c.displayNameAr })) ];
     const sf=frames.find(f=>f.key===s.frameKey);
     const selFrame=sf?{ ok:true, label:sf.name, img:sf.file, color:'#e7e9ee', border:'#7c3aed' }:{ ok:false, label:'اختر إطاراً من القائمة بالأسفل', img:'', color:'#5b6274', border:'#2f3342' };
     const lq=s.libQ.trim().toLowerCase();
@@ -1082,14 +1086,16 @@ class Component extends DCLogic {
       // codes
       allFrames:frames, codesFrame:s.codesFrame, onCodesFrame:e=>this.setState({ codesFrame:e.target.value }),
       codesCount:s.codesCount, onCodesCount:e=>this.setState({ codesCount:e.target.value }), codesNote:s.codesNote, onCodesNote:e=>this.setState({ codesNote:e.target.value }), codesOut:s.codesOut,
-      genCodes:()=>{ const f=frames.find(x=>x.key===s.codesFrame); if(!f) return this.flash('اختر الإطار أولاً.','err');
+      codeItems,
+      genCodes:()=>{ const f=codeItems.find(x=>x.key===s.codesFrame); if(!f) return this.flash('اختر الإطار أو البطاقة أولاً.','err');
         const n=Number(s.codesCount); if(!(n>=1&&n<=500)) return this.flash('العدد لازم يكون بين 1 و 500.','err');
-        this.busy('codes',()=>A.adminGenerateFrameCodes(f.type,f.ref,n,s.codesNote)).then(r=>{ if(!r) return; if(!r.success) return this.flash('تعذّر التوليد: '+(r.error||'unknown'),'err');
-          this.setState({ codesOut:(r.codes||[]).join('\n') }); this.flash(`تم توليد ${(r.codes||[]).length} كود لإطار "${f.name}".`); this.loadCodes(); }); },
+        const gen=f.card?()=>A.adminGenerateCardCodes(f.card,f.ref,n,s.codesNote):()=>A.adminGenerateFrameCodes(f.type,f.ref,n,s.codesNote);
+        this.busy('codes',gen).then(r=>{ if(!r) return; if(!r.success) return this.flash('تعذّر التوليد: '+(r.error||'unknown'),'err');
+          this.setState({ codesOut:(r.codes||[]).join('\n') }); this.flash(`تم توليد ${(r.codes||[]).length} كود لـ"${f.label}".`); this.loadCodes(); }); },
       copyCodes:()=>{ if(!s.codesOut) return this.flash('ولّد الأكواد أولاً.','err'); const done=()=>this.flash('تم نسخ الأكواد.');
         const fallback=()=>{ const ta=document.createElement('textarea'); ta.value=s.codesOut; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); }catch(e){} ta.remove(); done(); };
         if(navigator.clipboard) navigator.clipboard.writeText(s.codesOut).then(done,fallback); else fallback(); },
-      codeRows:(s.codes||[]).map(c=>({ code:c.code, frame:c.displayNameAr||c.frameRef, note:c.note||'—',
+      codeRows:(s.codes||[]).map(c=>({ code:c.code, frame:c.displayNameAr||c.cardKey||c.frameRef, note:c.note||'—',
         status:c.redeemedAt?`مستخدم — \u2068${c.redeemedUsername||('#'+c.redeemedBy)}\u2069${c.redeemedCustomId?' (\u2066'+c.redeemedCustomId+'\u2069)':''} · \u2068${fmtDate(c.redeemedAt)}\u2069`:'غير مستخدم', color:c.redeemedAt?'#4ade80':'#fcd34d' })),
       // catalog / exclusive / levels
       catalog,
