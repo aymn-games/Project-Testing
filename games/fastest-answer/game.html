@@ -499,9 +499,10 @@ class Component extends DCLogic {
         else { patch.teams=s.teams.map((t,i)=>({...t,players:i===r.k?[...t.players,user]:t.players.filter(x=>x!==user)}));
           this.addLog('join',r.cur<0?`${user} انضم لـ ${s.teams[r.k].name}`:`${user} انتقل إلى ${s.teams[r.k].name}`); } } }
     else if(s.phase==='question'&&s.q){ const ti=s.reels.findIndex(r=>r.chosen===user);
+      // صاحب الدور يقدر يرسل أكثر من محاولة: الغلط ما يقفل عليه، وأول إجابة صحيحة منه تُعتمد وتقفل دوره.
       if(ti<0||s.answered[user]) return;
-      patch.received=s.received+1; patch.answered={...s.answered,[user]:true};
-      if(this.check(text,s.q)){ const rank=s.answers.length, pts=rank===0?2:0;
+      patch.received=s.received+1;
+      if(this.check(text,s.q)){ const rank=s.answers.length, pts=rank===0?2:0; patch.answered={...s.answered,[user]:true};
         patch.answers=[...s.answers,{user,team:ti,pts,rank:rank+1}]; patch.teams=s.teams.map((t,i)=>i===ti?{...t,score:t.score+pts}:t); this.snd('correct');
         this.addLog('correct',`${user} أجاب ${rank===0?'أولاً':'ثانياً'} · ${s.teams[ti].name}`); if(pts) this.addLog('points',`${s.teams[ti].name} +${pts} نقطة`);
       } else { this.snd('wrong'); this.addLog('wrong',`${user} أجاب خطأ`); } }
