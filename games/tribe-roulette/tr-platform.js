@@ -309,7 +309,7 @@
     }
 
     window.TR = {
-        libraryUrl: 'https://aymngames.online/',
+        libraryUrl: 'https://aymngames.online/games.html',
         keys: { setup: 'tribe2-settings', roster: 'tribe2-roster', players: 'tribe2-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,

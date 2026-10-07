@@ -1470,5 +1470,32 @@ document.addEventListener('DOMContentLoaded', async function() {
   }, 300);
 </script>
 <script src="js/agp-home-fx.js"></script>
+<!-- سلوقن المكتبة — زاوية يسار فوق (تحت الهيدر)، بخط Mmtsdr La Tkelmeni.
+     القالب يعيد بناء محتوى الصفحة بعد التحميل ويمسح أي عنصر ثابت بالـbody —
+     فالتنسيق يُضاف للـhead والسلوقن يُضاف بالسكربت ويرجع لو انمسح. -->
+<script>
+  (function(){
+    var css = "@font-face{font-family:'Mmtsdr La Tkelmeni';src:url('assets/fonts/mmtsdr-la-tkelmeni.ttf') format('truetype');font-display:swap;}" +
+      ".gl-slogan{position:absolute;top:108px;left:clamp(16px,3vw,40px);z-index:5;direction:rtl;pointer-events:none;" +
+      "font-family:'Mmtsdr La Tkelmeni','IBM Plex Sans Arabic',sans-serif;font-size:clamp(17px,1.5vw,24px);line-height:1.3;white-space:nowrap;" +
+      "color:#c6b4f2;text-shadow:0 2px 14px rgba(122,63,212,.55);}" +
+      "@media (max-width:599px){.gl-slogan{top:96px;font-size:15px;}}";
+    function ensureSlogan(){
+      if (!document.getElementById('gl-slogan-style')) {
+        var st = document.createElement('style');
+        st.id = 'gl-slogan-style';
+        st.textContent = css;
+        document.head.appendChild(st);
+      }
+      if (document.querySelector('.gl-slogan')) return;
+      var s = document.createElement('div');
+      s.className = 'gl-slogan';
+      s.textContent = 'ألعاب أيمن لك كاستريمر مو عليك';
+      document.body.appendChild(s);
+    }
+    ensureSlogan();
+    var tries = 0, timer = setInterval(function(){ ensureSlogan(); if (++tries >= 30) clearInterval(timer); }, 300);
+  })();
+</script>
 </body>
 </html>

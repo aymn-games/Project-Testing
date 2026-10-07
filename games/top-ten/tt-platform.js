@@ -210,7 +210,7 @@
     }
 
     window.TT = {
-        libraryUrl: 'https://aymngames.online/',
+        libraryUrl: 'https://aymngames.online/games.html',
         keys: { setup: 'topten-settings', roster: 'topten-roster', players: 'topten-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,

@@ -246,7 +246,7 @@
     }
 
     window.RR = {
-        libraryUrl: 'https://aymngames.online/',
+        libraryUrl: 'https://aymngames.online/games.html',
         keys: { setup: 'rr-settings', roster: 'rr-roster', players: 'rr-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,

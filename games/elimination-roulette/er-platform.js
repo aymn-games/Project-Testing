@@ -329,7 +329,7 @@
     }
 
     window.ER = {
-        libraryUrl: 'https://aymngames.online/',
+        libraryUrl: 'https://aymngames.online/games.html',
         keys: { setup: 'er2-settings', roster: 'er2-roster', players: 'er2-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,

@@ -242,7 +242,7 @@
     }
 
     window.TW = {
-        libraryUrl: 'https://aymngames.online/',
+        libraryUrl: 'https://aymngames.online/games.html',
         keys: { setup: 'tw2-settings', roster: 'tw2-roster', players: 'tw2-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,
