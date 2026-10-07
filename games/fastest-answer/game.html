@@ -554,7 +554,8 @@ class Component extends DCLogic {
         band:r.stopped&&spun?c+'22':'rgba(255,255,255,.03)',bandLine:r.stopped&&spun?c:'rgba(255,255,255,.08)',
         players:t.players.map((n,j)=>{ const key=i+'|'+n, pd=s.pending.includes(key); return {name:n,num:j+1,pending:pd,active:!pd,op:pd?.55:1,deco:pd?'line-through':'none',
           bg:pd?'rgba(248,113,113,.06)':'rgba(255,255,255,.025)',bd:pd?'rgba(248,113,113,.25)':'rgba(255,255,255,.07)',
-          kick:()=>this.setState(st=>({pending:[...st.pending,key]})), undo:()=>this.setState(st=>({pending:st.pending.filter(x=>x!==key)}))}; })}; });
+          // الإقصاء من الإعدادات فوري: يطلع من الفريق مباشرة (بدون انتظار إغلاق الإعدادات)
+          kick:()=>{ this.snd('wrong'); this.addLog('kick',`تم إقصاء ${n} من ${t.name}`); this.setState(st=>({teams:st.teams.map((tt,k)=>k===i?{...tt,players:tt.players.filter(p=>p!==n)}:tt),pending:st.pending.filter(x=>x!==key)})); }, undo:()=>this.setState(st=>({pending:st.pending.filter(x=>x!==key)}))}; })}; });
     const cs=s.cat, cspun=cs.items.length>0;
     const catItems=(cspun?cs.items:this.CATS.map(c=>c.name)).map((nm,j)=>{ const win=cspun&&cs.stopped&&j===cs.ci; return {name:nm,color:win?'#ddd6fe':'#e7e3ef',op:cspun&&cs.stopped&&!win?.22:1,sc:win?1.1:1}; });
     const P=s.phase, catName=cs.idx!=null?this.CATS[cs.idx].name:'';
