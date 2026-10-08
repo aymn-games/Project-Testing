@@ -52,6 +52,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 @keyframes popOut{from{opacity:1;transform:none}to{opacity:0;transform:scale(.9)}}
 @keyframes pop{0%{opacity:0;transform:translateY(30px) scale(.86);filter:blur(8px)}60%{opacity:1;filter:blur(0)}100%{transform:none}}
 @keyframes rise{from{opacity:0;transform:translateY(16px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes reviveIn{0%{opacity:0;transform:scale(.55) translateY(30px);filter:grayscale(1) blur(6px)}60%{opacity:1;transform:scale(1.08);filter:none}100%{opacity:1;transform:none;filter:none}}
+@keyframes ringPulse{0%,100%{box-shadow:0 0 0 6px rgba(52,211,153,.16), 0 0 30px rgba(52,211,153,.45)}50%{box-shadow:0 0 0 14px rgba(52,211,153,.08), 0 0 70px rgba(52,211,153,.75)}}
+@keyframes glowSweep{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
+@keyframes heartBeat{0%{opacity:0;transform:scale(.2)}30%{opacity:1;transform:scale(1.3)}45%{transform:scale(.95)}60%{transform:scale(1.15)}75%,100%{opacity:1;transform:scale(1)}}
+@keyframes heartFloat{0%{opacity:0;transform:translateY(0) scale(.6)}15%{opacity:.9}100%{opacity:0;transform:translateY(-260px) scale(1.1) rotate(var(--r))}}
 @keyframes glow{0%,100%{box-shadow:0 10px 30px rgba(139,92,246,.4), 0 0 0 0 rgba(139,92,246,0)}50%{box-shadow:0 10px 30px rgba(139,92,246,.4), 0 0 0 12px rgba(139,92,246,.16)}}
 </style>
 </helmet>
@@ -269,6 +274,28 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
     </sc-if>
   </div>
 
+  <!-- إشعار الرجوع بالدعم — نفس بطاقة روليت الإقصاء (games/elimination-roulette/game.html) -->
+  <sc-if value="{{ revOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:80px 0 0 0;z-index:80;pointer-events:none;background:radial-gradient(circle at 50% 50%, rgba(16,185,129,.18), rgba(0,0,0,.6) 55%);backdrop-filter:blur(8px);display:grid;place-items:center;animation:{{ revOv }}">
+      <div style="position:relative;overflow:hidden;width:250px;height:350px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;padding:22px 18px 20px;border-radius:30px;background:linear-gradient(180deg, #0b2a21 0%, #08140f 70%);border:1px solid rgba(52,211,153,.45);box-shadow:0 30px 80px rgba(0,0,0,.6), 0 0 70px rgba(16,185,129,.28), inset 0 1px 0 rgba(255,255,255,.08);text-align:center;animation:{{ revAn }}">
+        <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 38%, rgba(52,211,153,.28), transparent 55%);pointer-events:none"></div>
+        <div style="position:absolute;left:-30%;right:-30%;bottom:-45%;height:70%;background:radial-gradient(ellipse at 50% 100%, rgba(52,211,153,.3), transparent 65%);pointer-events:none;animation:glowSweep 1s ease both"></div>
+        {{ revHearts }}
+        <span style="position:relative;display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.4);font:700 12px 'IBM Plex Sans Arabic';color:#6ee7b7;letter-spacing:.3px;animation:glowSweep .4s ease both">عودة للمباراة</span>
+        <div style="position:relative;flex:1;display:grid;place-items:center">
+          <div style="position:relative;width:128px;height:128px;display:grid;place-items:center;animation:reviveIn .8s cubic-bezier(.2,1.2,.35,1) .15s both">
+            <span style="position:absolute;inset:0;border-radius:50%;border:1.5px dashed rgba(110,231,183,.45)"></span>
+            <span style="width:108px;height:108px;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;background:linear-gradient(135deg,#10b981,#065f46);border:3px solid #34d399;font:700 44px 'IBM Plex Sans Arabic';color:#fff;animation:ringPulse 1.4s ease-in-out 1s infinite;position:relative;overflow:hidden">{{ revIni }}<img src="{{ revAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;opacity:{{ revOp }}"></span>
+            {{ revHeart }}
+          </div>
+        </div>
+        <span style="position:relative;max-width:100%;font:700 24px/1.3 'IBM Plex Sans Arabic';color:#ecfdf5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:glowSweep .5s ease .45s both">{{ revName }}</span>
+        <span style="position:relative;width:40px;height:2px;margin:10px 0;border-radius:2px;background:linear-gradient(90deg,transparent,#34d399,transparent);animation:glowSweep .5s ease .55s both"></span>
+        <span style="position:relative;font:600 14px 'IBM Plex Sans Arabic';color:#6ee7b7;animation:glowSweep .5s ease .65s both">{{ revBadge }}</span>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;top:100px;left:50%;transform:translateX(-50%);z-index:90;padding:12px 24px;border-radius:999px;background:rgba(12,11,18,.94);border:1px solid rgba(248,113,113,.4);color:#fca5a5;font:600 16px 'IBM Plex Sans Arabic';box-shadow:0 20px 50px rgba(0,0,0,.5);animation:rise .35s ease">{{ toast }}</div>
   </sc-if>
@@ -477,7 +504,7 @@ class Component extends DCLogic {
     // بطاقات الإقصاء المملوكة تُحمَّل مسبقاً حتى تظهر بدون تأخير
     this.state.teams.forEach(t=>t.players.forEach(n=>this.preloadElimCard(n)));
     XO.connect(); this.unsub=XO.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); this.unsubGift=XO.onGift(p=>this.onGift(this.reg.nameFor(p),p.giftName,p.giftValue)); }
-  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this.ti); clearInterval(this.sim); clearTimeout(this.cel); clearTimeout(this.drawT); this.unsub?.(); this.unsubGift?.(); }
+  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this.ti); clearInterval(this.sim); clearTimeout(this.cel); clearTimeout(this.drawT); clearTimeout(this.revT); this.unsub?.(); this.unsubGift?.(); }
   // نظام نقاط المنصة: مرة واحدة لكل مباراة عند إعلان الفائز
   reportPoints(w){ if(this.reported) return; this.reported=true; const s=this.state;
     const players=[...new Set([...s.teams.flatMap(t=>t.players),...Object.keys(s.out),...Object.keys(s.gone||{})])].map(n=>({id:this.reg.id(n),name:n})).filter(p=>p.id);
@@ -606,11 +633,11 @@ class Component extends DCLogic {
     if(o.used>=r.times) return this.toastMsg(user+' استنفد مرات الرجوع');
     if(s.winner) return;
     this.snd('join'); this.addLog('join',user+' رجع للمباراة بدعم '+r.gift.name);
-    this.setState(st=>{ const out={...st.out}; const left=st.out[user]; delete out[user];
-      out.__used=out.__used||{}; const usedMap={...(st.usedMap||{}),[user]:left.used+1};
-      return {out:Object.fromEntries(Object.entries(out).filter(([k])=>k!=='__used')),usedMap,
-        teams:st.teams.map((t,i)=>i===Math.max(0,left.team)?{...t,players:[...t.players,user]}:t)}; });
-    this.toastMsg('رجع '+user+' للمباراة'); }
+    this.setState(st=>{ const left=st.out[user]; if(!left) return null; // هدية مكررة بنفس اللحظة — رجع خلاص
+      const out={...st.out}; delete out[user]; const usedMap={...(st.usedMap||{}),[user]:left.used+1};
+      return {out,usedMap,revOpen:true,revOpenOut:false,revName:user,revGift:r.gift.name,revRun:(st.revRun||0)+1,
+        teams:st.teams.map((t,i)=>i===Math.max(0,left.team)&&!t.players.includes(user)?{...t,players:[...t.players,user]}:t)}; });
+    clearTimeout(this.revT); this.revT=setTimeout(()=>this.shut('revOpen'),3000); }
   // إنهاء الجولة الجارية بدون نتيجة (زر "إنهاء الجولة" — مثلاً لاعب مختار غايب عن البث) — بعدها يقدر المضيف يحذف اللاعب من الإعدادات
   endRound(msg){ const s=this.state; if(s.winner||!['spinning','draw','play','tiebreak'].includes(s.phase)) return;
     this.rid=(this.rid||0)+1; clearInterval(this.ti); clearTimeout(this.cel); clearTimeout(this.drawT); this.snd('close');
@@ -639,17 +666,21 @@ class Component extends DCLogic {
     // رقم المربع من اللاعبَين المختارَين بالجولة يُفحص أولاً — قبل كلمات الدخول، حتى لو كلمة الدخول
     // نفسها رقم (مثل 1 و 2 للفريقين) ما تنحسب انضمام/تبديل فريق بدل الحركة.
     // وقت عرض نتيجة القرعة (drawDone) اللاعب اللي يبدأ يقدر يكتب رقمه مباشرة — ما ننتظر نهاية العرض.
-    const early=s.phase==='draw'&&s.drawDone;
-    if(s.phase==='play'||early){ const pi=s.reels.findIndex(r=>r.chosen===user), d=this.norm(text);
+    const early=s.phase==='draw'&&s.drawDone, d=this.norm(text);
+    if(s.phase==='play'||early){ const pi=s.reels.findIndex(r=>r.chosen===user);
       if(pi>=0&&/^[1-9]$/.test(d)){ if(pi!==s.turn) return; if(s.board[+d-1]!=null){ this.toastMsg('المربع '+d+' محجوز'); return; }
         if(early) clearTimeout(this.drawT); this.move(pi,+d-1,early); return; } }
+    // الأرقام داخل المباراة لاختيار المربع فقط — ما تنحسب أبداً كلمة دخول أو تبديل فريق
+    if(/^\d+$/.test(d)) return;
     const members=i=>[...s.teams[i].players,...s.pendingJoins.filter(p=>p.team===i).map(p=>p.name)];
     const r=s.mode==='solo'
       ?(j=>j&&{...j,k:members(0).length<=members(1).length?0:1,toast:j.toast&&'اكتمل العدد'})(XO.join([{name:'اللاعبون',keyword:s.kwSolo,max:this.MAX,members:[...members(0),...members(1)]}],user,text,opts))
       :XO.join(s.teams.map((t,i)=>({name:t.name,keyword:s.kw[i],max:this.MAX,members:members(i)})),user,text,opts);
-    if(r){ if(s.out[user]) return; const busy=s.phase!=='ready'&&s.reels.some(x=>x.chosen===user); // اللاعب المختار بالجولة الجارية ما ينتقل قبل نهايتها
-      if(r.toast&&(!r.ok||!busy)) this.toastMsg(r.toast);
-      if(r.ok&&!busy){ this.snd('join'); this.preloadElimCard(user);
+    if(r){ if(s.out[user]) return;
+      // داخل المباراة ما فيه تبديل فريق: اللاعب الموجود بفريق يبقى فيه (المعلّق بنافذة الدخول فقط يقدر يغيّر فريقه)
+      const pendingJoin=s.pendingJoins.some(p=>p.name===user); if(r.cur>=0&&!pendingJoin) return;
+      if(r.toast) this.toastMsg(r.toast);
+      if(r.ok){ this.snd('join'); this.preloadElimCard(user);
         if(s.pendingJoins.some(p=>p.name===user)) patch.pendingJoins=s.pendingJoins.map(p=>p.name===user?{...p,team:r.k}:p);
         else if(r.cur<0&&s.joinOpen) patch.pendingJoins=[...s.pendingJoins,{name:user,team:r.k}];
         else { patch.teams=s.teams.map((t,i)=>({...t,players:i===r.k?[...t.players,user]:t.players.filter(x=>x!==user)}));
@@ -682,6 +713,7 @@ class Component extends DCLogic {
     return { settOv:o('settingsOpen','fade .25s ease','fadeOut .26s ease forwards'), settAn:o('settingsOpen','slideIn .45s cubic-bezier(.2,1,.3,1)','slideOut .26s ease forwards'),
       evOv:o('eventsOpen','fade .2s ease','fadeOut .26s ease forwards'), evAn:o('eventsOpen','slideDown .4s cubic-bezier(.2,1,.3,1)','slideUp .26s ease forwards'),
       exitOv:o('exitOpen','fade .25s ease','fadeOut .26s ease forwards'), exitAn:o('exitOpen','popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards'),
+      revOv:o('revOpen','fade .25s ease','fadeOut .26s ease forwards'), revAn:o('revOpen','popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards'),
       joinOv:o('joinOpen','fade .25s ease','fadeOut .26s ease forwards'), joinAn:o('joinOpen','popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards') }; }
   closeJoin=()=>{ this.shut('joinOpen'); setTimeout(()=>{ const pj=this.state.pendingJoins; if(!pj.length) return;
     pj.forEach(p=>this.addLog('join',`${p.name} انضم لـ ${this.state.teams[p.team].name}`));
@@ -731,8 +763,12 @@ class Component extends DCLogic {
       return {name:pj.name,team:s.mode==='solo'?'لاعب جديد':s.teams[pj.team].name,color:c,bd:c+'55',avBg:`linear-gradient(135deg, ${c}, ${c}66)`,
         framed:!!fr, plain:!fr, frameEl:fr?XO.frameCard(fr,kick):null,
         initial:[...pj.name].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:av||'',imgOp:av?1:0, kick}; });
-    const eg=this.eventGroups();
-    return { ...this.anims(), scale:s.scale, round:s.round, target:s.target, teams,
+    const eg=this.eventGroups(), rvAv=this.avatar(s.revName||''), hE=React.createElement;
+    const rev={ revOpen:!!s.revOpen, revName:s.revName||'', revIni:[...(s.revName||'')].find(ch=>/[^\s_\d]/.test(ch))||'', revAv:rvAv||'', revOp:rvAv?1:0,
+      revBadge:'رجع عن طريق الدعم'+(s.revGift?' · '+s.revGift:''),
+      revHeart:hE('span',{key:'hb'+(s.revRun||0),'aria-hidden':true,style:{position:'absolute',bottom:-2,left:-2,width:42,height:42,borderRadius:'50%',display:'grid',placeItems:'center',background:'#08140f',border:'2px solid rgba(52,211,153,.6)',fontSize:22,lineHeight:1,animation:'heartBeat 1s cubic-bezier(.2,1.3,.4,1) .7s both'}},'💚'),
+      revHearts:hE('div',{key:'hf'+(s.revRun||0),'aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none'}},[[18,.6,'-12deg',14],[72,.9,'10deg',18],[40,1.2,'-6deg',12],[85,1.4,'14deg',14],[8,1.1,'8deg',16],[58,.75,'-14deg',12]].map(([x,d,r,fs],i)=>hE('span',{key:i,style:{position:'absolute',left:x+'%',bottom:20,fontSize:fs,'--r':r,animation:`heartFloat 1.6s ease-out ${d}s both`}},'💚'))) };
+    return { ...this.anims(), ...rev, scale:s.scale, round:s.round, target:s.target, teams,
       cardA:[mkCard(0)], cardB:[mkCard(1)], cells, res, showResult:P==='over'&&!!s.result, resBtn:!(s.progress==='elim'&&s.result&&s.result.w!=null),
       showElim:P==='elim'&&!!s.elim, ...this.elimCardView(s.elim), el:s.elim?(()=>{ const mk=(n,c)=>{ const a=this.avatar(n); return {name:n,initial:[...n].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:a||'',imgOp:a?1:0,avBg:'linear-gradient(135deg, '+c+', '+c+'66)'}; };
         return {win:mk(s.elim.win,col(s.elim.w)),lose:mk(s.elim.lose,col(1-s.elim.w))}; })():{win:{},lose:{}},
