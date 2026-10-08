@@ -162,6 +162,7 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
     var _revealPreviewObjectUrl = null; // معاينة محلية للصورة الكاملة (نوع "تخمين شخصية") -- ما تُرفع ولا تُحفظ
 
     function el(id) { return document.getElementById(id); }
+    var _formPanelHome = el('aq-form-panel').parentNode;
     function escapeHtml(str) {
         return String(str == null ? '' : str).replace(/[&<>"']/g, function (c) {
             return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -192,9 +193,20 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
             });
     }
 
+    // يقفل نموذج الإضافة/التعديل ويرجّعه لمكانه الأصلي أسفل الصفحة
+    // (نموذج التعديل يُنقل مؤقتاً تحت كرت الصورة نفسها داخل القائمة).
+    function closeForm() {
+        var panel = el('aq-form-panel');
+        panel.style.display = 'none';
+        panel.innerHTML = '';
+        _editingId = null;
+        _formPanelHome.appendChild(panel);
+    }
+
     function renderList() {
         el('aq-count').textContent = _challenges.length;
         var listEl = el('aq-list');
+        if (listEl.contains(el('aq-form-panel'))) closeForm();
         listEl.innerHTML = _challenges.map(function (c) {
             var chips = (c.answers || []).map(function (a, i) {
                 return i === 0
@@ -335,6 +347,11 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
         _editingId = editId || null;
         var existing = _editingId ? _challenges.filter(function (c) { return c.id === _editingId; })[0] : null;
         var panel = el('aq-form-panel');
+        // التعديل يفتح تحت كرت الصورة مباشرة (بدون نزول لآخر الصفحة)؛
+        // الإضافة تبقى بمكانها الأصلي أسفل القائمة.
+        var card = existing ? el('aq-qcard-' + existing.id) : null;
+        if (card) card.parentNode.insertBefore(panel, card.nextSibling);
+        else _formPanelHome.appendChild(panel);
         panel.style.display = 'block';
         panel.innerHTML = buildFormHtml(existing);
 
@@ -405,21 +422,15 @@ body:not(.auth-checking) .aq-checking-msg { display: none; }
                 _challenges.push(challenge);
             }
 
-            panel.style.display = 'none';
-            panel.innerHTML = '';
-            _editingId = null;
+            closeForm();
             renderList();
             showSuccess('تم الحفظ محلياً — لا تنسى تنزيل الملف وترفع ملف' + (type === 'reveal' ? 'ات الصور' : ' الصورة') + ' أيضاً عشان يصير التغيير فعلي باللعبة.');
         });
 
-        el('aq-form-cancel-btn').addEventListener('click', function () {
-            panel.style.display = 'none';
-            panel.innerHTML = '';
-            _editingId = null;
-        });
+        el('aq-form-cancel-btn').addEventListener('click', closeForm);
 
         if (typeof panel.scrollIntoView === 'function') {
-            panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            panel.scrollIntoView({ behavior: 'smooth', block: card ? 'nearest' : 'center' });
         }
     }
 
