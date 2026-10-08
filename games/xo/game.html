@@ -61,13 +61,16 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
     <div style="display:flex;gap:clamp(6px,0.5vw,10px);justify-content:flex-start">
       <button onClick="{{ onExit }}" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.45vw,8px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;cursor:pointer;transition:all .2s;backdrop-filter:blur(10px);border:1px solid rgba(248,113,113,.25);background:rgba(255,255,255,.03);color:#fca5a5" style-hover="background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.45)" style-active="transform:scale(.97)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span style="display:{{ lblDisp }}">خروج من المباراة</span></button>
       <button onClick="{{ onSettings }}" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.45vw,8px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;cursor:pointer;transition:all .2s;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#e7e3ef" style-hover="background:rgba(255,255,255,.07);border-color:rgba(167,139,250,.4)" style-active="transform:scale(.97)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.830 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.650 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span style="display:{{ lblDisp }}">إعدادات المباراة</span></button>
+      <sc-if value="{{ showEndRound }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ onEndRound }}" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.45vw,8px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;cursor:pointer;transition:all .2s;backdrop-filter:blur(10px);border:1px solid rgba(251,191,36,.3);background:rgba(255,255,255,.03);color:#fcd34d" style-hover="background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.5)" style-active="transform:scale(.97)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><rect x="9" y="9" width="6" height="6" rx="1"></rect></svg><span style="display:{{ lblDisp }}">إنهاء الجولة</span></button>
+      </sc-if>
     </div>
     <div style="height:60px;min-width:clamp(96px,14vw,280px);position:relative;display:grid;place-items:center;border-radius:14px;border:1px dashed rgba(167,139,250,{{ phBorder }})">
       <span style="font:500 clamp(11px,0.75vw,14px) 'IBM Plex Sans Arabic';color:#8a8596;opacity:{{ phOp }}">مكان اللوقو · logo.png</span>
       <img src="../../logo.png" alt="" onLoad="{{ logoOk }}" onError="{{ logoErr }}" style="position:absolute;inset:0;margin:auto;height:60px;max-width:none;object-fit:contain;opacity:{{ logoOp }};filter:drop-shadow(0 0 14px rgba(139,92,246,.45))">
     </div>
     <div style="display:flex;gap:clamp(6px,0.5vw,10px);justify-content:flex-end">
-      
+      <button onClick="{{ onEvents }}" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.45vw,8px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;cursor:pointer;transition:all .2s;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#e7e3ef" style-hover="background:rgba(255,255,255,.07);border-color:rgba(167,139,250,.4)" style-active="transform:scale(.97)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><circle cx="4" cy="6" r="1"></circle><circle cx="4" cy="12" r="1"></circle><circle cx="4" cy="18" r="1"></circle></svg><span style="display:{{ lblDisp }}">أحداث المباراة</span></button>
     </div>
   </header>
 
@@ -285,8 +288,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
           </div>
         </div>
         <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:clamp(14px,3.5vw,20px) clamp(14px,3.5vw,22px);display:flex;flex-direction:column;gap:10px">
-          <sc-if value="{{ tabSettings }}" hint-placeholder-val="{{ true }}">
-            
+          <sc-if value="{{ tabTarget }}" hint-placeholder-val="{{ true }}">
+
             <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)">
               <div style="display:flex;flex-direction:column;gap:2px">
                 <span style="font:600 16px 'IBM Plex Sans Arabic'">الفوز عند (جولات)</span>
@@ -477,7 +480,7 @@ class Component extends DCLogic {
   componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this.ti); clearInterval(this.sim); clearTimeout(this.cel); clearTimeout(this.drawT); this.unsub?.(); this.unsubGift?.(); }
   // نظام نقاط المنصة: مرة واحدة لكل مباراة عند إعلان الفائز
   reportPoints(w){ if(this.reported) return; this.reported=true; const s=this.state;
-    const players=[...new Set([...s.teams.flatMap(t=>t.players),...Object.keys(s.out)])].map(n=>({id:this.reg.id(n),name:n})).filter(p=>p.id);
+    const players=[...new Set([...s.teams.flatMap(t=>t.players),...Object.keys(s.out),...Object.keys(s.gone||{})])].map(n=>({id:this.reg.id(n),name:n})).filter(p=>p.id);
     const winnerIds=(w.solo?[w.name]:s.teams[w.i].players).map(n=>this.reg.id(n)).filter(Boolean);
     if(window.AGPAuth&&typeof window.AGPAuth.reportMatchPoints==='function')
       window.AGPAuth.reportMatchPoints({players,winnerIds,teamGame:!w.solo,durationMs:Date.now()-(this.matchStartedAt||Date.now())}); }
@@ -514,6 +517,7 @@ class Component extends DCLogic {
     if(s.mode==='teams'&&P.some(p=>!p.length)) return this.toastMsg('كل فريق يحتاج لاعب واحد على الأقل');
     if(s.mode==='solo'&&P[0].length<2) return this.toastMsg('نحتاج لاعبين اثنين على الأقل');
     clearInterval(this.ti); this.ac(); this.snd('start'); if(!this.matchStartedAt) this.matchStartedAt=Date.now();
+    const rid=this.rid=(this.rid||0)+1, ok=()=>this.rid===rid; // إنهاء الجولة يغيّر rid فتتوقف المؤقتات المعلّقة لهالجولة
     const a=this.pick(P[0]); let b=this.pick(P[1]); let g=0; if(s.mode==='solo') while(b===a&&g++<50) b=this.pick(P[1]);
     const chosen=[a,b];
     const reels=[0,1].map(i=>{ const L=26+i*5, items=Array.from({length:L},()=>this.pick(P[i])); items[L-2]=chosen[i]; return {items,offset:0,trans:'none',stopped:false,chosen:chosen[i],ci:L-2}; });
@@ -522,16 +526,16 @@ class Component extends DCLogic {
       for(const k of [-1,1]){ let n=0; while((A.items[A.ci+k]===b)&&n++<60) A.items[A.ci+k]=this.pick(P[0].filter(x=>x!==a)); } }
     this.setState({phase:'spinning',reels,board:Array(9).fill(null),syms:[null,null],winLine:null,result:null,drawHi:null,drawDone:false,round:s.round+1});
     const ease='cubic-bezier(.12,.86,.2,1)', durs=[2.6,3.15];
-    for(let t=0;t<durs[1]*1000-200;){ setTimeout(()=>this.snd('tick'),t); const p=t/(durs[1]*1000); t+=40+p*p*360; }
-    setTimeout(()=>{
+    for(let t=0;t<durs[1]*1000-200;){ setTimeout(()=>ok()&&this.snd('tick'),t); const p=t/(durs[1]*1000); t+=40+p*p*360; }
+    setTimeout(()=>{ if(!ok()) return;
       this.setState(st=>({reels:st.reels.map((r,i)=>({...r,offset:-(r.ci-1)*this.IT,trans:'transform '+durs[i]+'s '+ease}))}));
-      durs.forEach((d,i)=>setTimeout(()=>{ this.snd('stop'); this.setState(st=>({reels:st.reels.map((r,j)=>j===i?{...r,stopped:true}:r)})); },d*1000));
-      setTimeout(()=>this.runDraw(),durs[1]*1000+600);
+      durs.forEach((d,i)=>setTimeout(()=>{ if(!ok()) return; this.snd('stop'); this.setState(st=>({reels:st.reels.map((r,j)=>j===i?{...r,stopped:true}:r)})); },d*1000));
+      setTimeout(()=>ok()&&this.runDraw(),durs[1]*1000+600);
     },50);
   };
-  runDraw(){ const starter=this.r(2); this.setState({phase:'draw',drawHi:0,drawDone:false}); this.snd('open');
+  runDraw(){ const starter=this.r(2), rid=this.rid; this.setState({phase:'draw',drawHi:0,drawDone:false}); this.snd('open');
     let i=0; const steps=16+starter;
-    const next=()=>{ i++; this.setState({drawHi:i%2}); this.snd('tick'); if(i<steps) setTimeout(next,60+i*i*1.6); else this.endDraw(i%2); };
+    const next=()=>{ if(this.rid!==rid) return; i++; this.setState({drawHi:i%2}); this.snd('tick'); if(i<steps) setTimeout(next,60+i*i*1.6); else this.endDraw(i%2); };
     setTimeout(next,300); }
   endDraw(st){ this.snd('reveal'); const syms=[null,null]; syms[st]='X'; syms[1-st]='O';
     this.setState({drawDone:true,syms,turn:st});
@@ -607,8 +611,25 @@ class Component extends DCLogic {
       return {out:Object.fromEntries(Object.entries(out).filter(([k])=>k!=='__used')),usedMap,
         teams:st.teams.map((t,i)=>i===Math.max(0,left.team)?{...t,players:[...t.players,user]}:t)}; });
     this.toastMsg('رجع '+user+' للمباراة'); }
+  // إنهاء الجولة الجارية بدون نتيجة (زر "إنهاء الجولة" — مثلاً لاعب مختار غايب عن البث) — بعدها يقدر المضيف يحذف اللاعب من الإعدادات
+  endRound(msg){ const s=this.state; if(s.winner||!['spinning','draw','play','tiebreak'].includes(s.phase)) return;
+    this.rid=(this.rid||0)+1; clearInterval(this.ti); clearTimeout(this.cel); clearTimeout(this.drawT); this.snd('close');
+    this.addLog('round',msg||'تم إنهاء الجولة بدون نتيجة');
+    this.setState({phase:'ready',result:null,board:Array(9).fill(null),winLine:null,syms:[null,null],lastCell:null,drawHi:null,drawDone:false,reels:[0,1].map(()=>this.blankReel())}); }
+  // فحص الفائز بعد تعديلات الإعدادات (إقصاء لاعبين أو تغيير "الفوز عند") — بين الجولات فقط
+  checkWin(){ const s=this.state; if(s.winner||s.phase!=='ready'||!this.matchStartedAt) return; let lead=null;
+    if(s.progress==='elim'){
+      if(s.mode==='teams'){ const e=s.teams.findIndex(t=>!t.players.length); if(e>=0&&s.teams[1-e].players.length) lead={...s.teams[1-e],i:1-e}; }
+      else { const left=[...new Set(s.teams.flatMap(t=>t.players))]; if(left.length===1) lead={name:left[0],score:s.solo[left[0]]||0,i:0,solo:true}; } }
+    else if(s.mode==='teams'){ const i=[0,1].filter(k=>s.teams[k].score>=s.target).sort((a,b)=>s.teams[b].score-s.teams[a].score)[0]; if(i!=null) lead={...s.teams[i],i}; }
+    else { const top=Object.entries(s.solo).filter(([,v])=>v>=s.target).sort((a,b)=>b[1]-a[1])[0]; if(top) lead={name:top[0],score:top[1],i:0,solo:true}; }
+    if(lead){ this.snd('win'); this.setState({winner:lead}); this.reportPoints(lead); } }
   closeResults=()=>{ if(this.state.phase==='over'){ this.snd('close'); this.setState({phase:'ready',result:null,board:Array(9).fill(null),winLine:null,syms:[null,null],lastCell:null}); } };
-  newGame=()=>{ clearInterval(this.ti); clearInterval(this.sim); this.matchStartedAt=null; this.reported=false; this.setState(s=>({teams:s.teams.map(t=>({...t,score:0})),solo:{},winner:null,phase:'ready',round:0,board:Array(9).fill(null),syms:[null,null],winLine:null,result:null,drawHi:null,log:[],reels:[0,1].map(()=>this.blankReel())})); };
+  newGame=()=>{ clearInterval(this.ti); clearInterval(this.sim); clearTimeout(this.cel); clearTimeout(this.drawT); this.rid=(this.rid||0)+1; this.matchStartedAt=null; this.reported=false;
+    this.setState(s=>({teams:(()=>{ // المُقصين بنمط الإقصاء يرجعون لفرقهم بالمباراة الجديدة
+        const teams=s.teams.map(t=>({...t,score:0,players:[...t.players]}));
+        Object.keys(s.out).forEach(n=>{ if(!teams.some(t=>t.players.includes(n))) teams[Math.max(0,s.out[n].team)].players.push(n); });
+        return teams; })(),out:{},usedMap:{},gone:{},elim:null,lastCell:null,drawDone:false,solo:{},winner:null,phase:'ready',round:0,board:Array(9).fill(null),syms:[null,null],winLine:null,result:null,drawHi:null,log:[],reels:[0,1].map(()=>this.blankReel())})); };
   endMatch=()=>{};
 
   // الانضمام وتبديل الفريق: نفس قواعد اللوبي عبر XO.join (xo-platform.js · JOIN-RULES.md).
@@ -665,9 +686,13 @@ class Component extends DCLogic {
   closeJoin=()=>{ this.shut('joinOpen'); setTimeout(()=>{ const pj=this.state.pendingJoins; if(!pj.length) return;
     pj.forEach(p=>this.addLog('join',`${p.name} انضم لـ ${this.state.teams[p.team].name}`));
     this.setState(s=>({teams:s.teams.map((t,i)=>({...t,players:[...t.players,...s.pendingJoins.filter(p=>p.team===i).map(p=>p.name)]})),pendingJoins:[]})); },260); };
-  closeSettings=()=>{ this.shut('settingsOpen'); setTimeout(()=>{ const pend=this.state.pending; if(!pend.length) return;
+  closeSettings=()=>{ this.shut('settingsOpen'); setTimeout(()=>{ const pend=this.state.pending; if(!pend.length) return this.checkWin();
+    const names=pend.map(k=>k.split('|')[1]), hit=names.find(n=>this.state.reels.some(r=>r.chosen===n));
+    if(hit) this.endRound('تم إنهاء الجولة · إقصاء '+hit);
     pend.forEach(k=>{ const [ti,n]=k.split('|'); this.addLog('kick',`تم إقصاء ${n} من ${this.state.teams[+ti].name}`); });
-    this.setState(s=>({teams:s.teams.map((t,i)=>({...t,players:t.players.filter(p=>!s.pending.includes(i+'|'+p))})),pending:[]})); },260); };
+    const started=!!this.matchStartedAt;
+    this.setState(s=>({teams:s.teams.map((t,i)=>({...t,players:t.players.filter(p=>!s.pending.includes(i+'|'+p))})),pending:[],
+      gone:started?{...(s.gone||{}),...Object.fromEntries(names.map(n=>[n,1]))}:s.gone}),()=>this.checkWin()); },260); };
 
   renderVals(){ const s=this.state, col=i=>this.TC[i], fmt=x=>String(+x.toFixed(2));
     const teams=s.teams.map((t,i)=>{ const c=col(i);
@@ -727,7 +752,8 @@ class Component extends DCLogic {
       logoOp:s.logo?1:0, phOp:s.logo?0:1, phBorder:s.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}), fx:this.buildFx(),
       onExit:()=>this.open('exitOpen'), closeExit:()=>this.shut('exitOpen'), confirmExit:()=>{ this.shut('exitOpen'); this.newGame(); location.href=XO.libraryUrl; }, exitOpen:s.exitOpen,
       onEvents:()=>s.eventsOpen?this.shut('eventsOpen'):this.open('eventsOpen'), closeEvents:()=>this.shut('eventsOpen'), eventsOpen:s.eventsOpen, eventGroups:eg, noEvents:!eg.length,
-      onSettings:()=>this.open('settingsOpen'), closeSettings:this.closeSettings, settingsOpen:s.settingsOpen, tabSettings:s.setTab===0, tabPlayers:s.setTab===1,
+      onSettings:()=>this.open('settingsOpen'), closeSettings:this.closeSettings, settingsOpen:s.settingsOpen, tabSettings:s.setTab===0, tabTarget:s.setTab===0&&s.progress!=='elim',
+      showEndRound:P==='play'&&!s.winner, onEndRound:()=>this.endRound(), tabPlayers:s.setTab===1,
       setTabs:['الإعدادات','اللاعبين'].map((l,i)=>{const on=s.setTab===i;return {label:l,pick:()=>{this.snd('tick');this.setState({setTab:i});},bg:on?'linear-gradient(90deg, #7c3aed, #a855f7)':'transparent',fg:on?'#fff':'#a8a3b5',sh:on?'0 6px 20px rgba(139,92,246,.4)':'none'};}),
       setTarget:e=>this.setState({target:Math.max(1,+e.target.value||1)}), endMatch:this.endMatch,
       openJoin:()=>{ this.shut('settingsOpen'); setTimeout(()=>this.open('joinOpen',{joinBase:this.state.teams.map(t=>t.players.length)}),200); },
