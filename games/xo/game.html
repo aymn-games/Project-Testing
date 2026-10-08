@@ -537,6 +537,12 @@ class Component extends DCLogic {
   addLog(k,text){ const d=new Date(), time=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
     this.setState(s=>({log:[{k,text,time,round:s.round,between:s.phase==='ready'&&s.round>0,id:Math.random()},...s.log].slice(0,200)})); }
 
+  played = {}; lastRound = {};
+  pickFair(key,pool,avoid){ const played=this.played[key]||(this.played[key]=new Set()), last=this.lastRound[key]||[];
+    const base=pool.filter(n=>!avoid.includes(n)); if(!base.length) return null;
+    let c=base.filter(n=>!played.has(n)&&!last.includes(n));
+    if(!c.length){ played.clear(); c=base.filter(n=>!last.includes(n)); if(!c.length) c=base; } // دورة جديدة
+    const n=this.pick(c); played.add(n); return n; }
   pool(){ const s=this.state; if(s.mode==='teams') return s.teams.map(t=>t.players); const all=[...new Set(s.teams.flatMap(t=>t.players))]; return [all,all]; }
   label(i){ return this.state.mode==='teams'?this.state.teams[i].name:'اللاعب '+(i+1); }
   spin=()=>{ const s=this.state; if(s.phase!=='ready'||s.winner) return;
@@ -545,7 +551,9 @@ class Component extends DCLogic {
     if(s.mode==='solo'&&P[0].length<2) return this.toastMsg('نحتاج لاعبين اثنين على الأقل');
     clearInterval(this.ti); this.ac(); this.snd('start'); if(!this.matchStartedAt) this.matchStartedAt=Date.now();
     const rid=this.rid=(this.rid||0)+1, ok=()=>this.rid===rid; // إنهاء الجولة يغيّر rid فتتوقف المؤقتات المعلّقة لهالجولة
-    const a=this.pick(P[0]); let b=this.pick(P[1]); let g=0; if(s.mode==='solo') while(b===a&&g++<50) b=this.pick(P[1]);
+    // دور عادل: كل لاعب ياخذ دوره قبل ما يتكرر أحد، وما يجي نفس اللاعب جولتين ورا بعض إلا لو بقى لحاله
+    let a,b; if(s.mode==='solo'){ a=this.pickFair('s',P[0],[]); b=this.pickFair('s',P[1],[a]); this.lastRound.s=[a,b]; }
+    else { a=this.pickFair(0,P[0],[]); b=this.pickFair(1,P[1],[]); this.lastRound[0]=[a]; this.lastRound[1]=[b]; }
     const chosen=[a,b];
     const reels=[0,1].map(i=>{ const L=26+i*5, items=Array.from({length:L},()=>this.pick(P[i])); items[L-2]=chosen[i]; return {items,offset:0,trans:'none',stopped:false,chosen:chosen[i],ci:L-2}; });
     if(s.mode==='solo'&&P[0].length>=4){ const A=reels[0], B=reels[1], seenA=new Set([A.items[A.ci-1],A.items[A.ci],A.items[A.ci+1]]);
@@ -571,7 +579,8 @@ class Component extends DCLogic {
   // بداية اللعب بعد عرض القرعة — أو فوراً لو اللاعب اللي يبدأ كتب رقم المربع وقت عرض النتيجة
   beginPlay(){ clearTimeout(this.drawT); if(this.state.phase!=='draw') return; this.setState({phase:'play'}); this.startTimer(); }
   startTimer(){ clearInterval(this.ti); this.setState({timeLeft:this.DUR});
-    this.ti=setInterval(()=>{ const t=this.state.timeLeft-1; if(t>0&&t<=5) this.snd('beep'); this.setState({timeLeft:Math.max(0,t)});
+    this.ti=setInterval(()=>{ if(this.state.revOpen) return; // الوقت يتوقف وقت إشعار الرجوع بالدعم
+      const t=this.state.timeLeft-1; if(t>0&&t<=5) this.snd('beep'); this.setState({timeLeft:Math.max(0,t)});
       if(t<=0){ const s=this.state, who=s.reels[s.turn].chosen; this.snd('wrong'); this.addLog('wrong','انتهى وقت '+who+' · انتقل الدور'); this.toastMsg('انتهى وقت '+who); this.setState({turn:1-s.turn}); this.startTimer(); } },1000); }
   move(pi,cell,early){ const s=this.state; if((s.phase!=='play'&&!early)||pi!==s.turn||cell<0||cell>8||s.board[cell]!=null) return false;
     const board=s.board.slice(); board[cell]=pi; this.snd('correct'); this.setState(early?{lastCell:cell,phase:'play'}:{lastCell:cell});
@@ -652,7 +661,7 @@ class Component extends DCLogic {
     else { const top=Object.entries(s.solo).filter(([,v])=>v>=s.target).sort((a,b)=>b[1]-a[1])[0]; if(top) lead={name:top[0],score:top[1],i:0,solo:true}; }
     if(lead){ this.snd('win'); this.setState({winner:lead}); this.reportPoints(lead); } }
   closeResults=()=>{ if(this.state.phase==='over'){ this.snd('close'); this.setState({phase:'ready',result:null,board:Array(9).fill(null),winLine:null,syms:[null,null],lastCell:null}); } };
-  newGame=()=>{ clearInterval(this.ti); clearInterval(this.sim); clearTimeout(this.cel); clearTimeout(this.drawT); this.rid=(this.rid||0)+1; this.matchStartedAt=null; this.reported=false;
+  newGame=()=>{ clearInterval(this.ti); clearInterval(this.sim); clearTimeout(this.cel); clearTimeout(this.drawT); this.rid=(this.rid||0)+1; this.played={}; this.lastRound={}; this.matchStartedAt=null; this.reported=false;
     this.setState(s=>({teams:(()=>{ // المُقصين بنمط الإقصاء يرجعون لفرقهم بالمباراة الجديدة
         const teams=s.teams.map(t=>({...t,score:0,players:[...t.players]}));
         Object.keys(s.out).forEach(n=>{ if(!teams.some(t=>t.players.includes(n))) teams[Math.max(0,s.out[n].team)].players.push(n); });
