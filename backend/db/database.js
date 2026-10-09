@@ -478,6 +478,19 @@ function migrateSingleCardTable(table) {
 migrateSingleCardTable('user_elim_cards');
 migrateSingleCardTable('user_win_cards');
 
+// إطارات حصرية جاهزة (ملفها مرفوع بالمستودع ومقاسها مسجَّل بـ
+// js/agp-player-card.js) — تُضاف لـcustom_frames مرة وحدة (بحث بـ
+// image_filename) فتظهر مباشرة بقائمة الإطارات الحصرية بلوحة الأدمن للمنح.
+[
+    { image_filename: 'frame-ghamid-alhayla.png', display_name_ar: 'غامد الهيلا' }
+].forEach(function (frame) {
+    var exists = db.prepare('SELECT id FROM custom_frames WHERE image_filename = ?').get(frame.image_filename);
+    if (!exists) {
+        db.prepare('INSERT INTO custom_frames (image_filename, display_name_ar, created_at) VALUES (?, ?, ?)')
+            .run(frame.image_filename, frame.display_name_ar, Date.now());
+    }
+});
+
 /**
  * تهيئة أولية لكتالوج الإطارات الثابت (4 خاصة + 7 مستويات) — INSERT OR
  * IGNORE بمفتاح slug، فلا خطر إعادة الكتابة فوق تعديلات الأدمن اللاحقة.
