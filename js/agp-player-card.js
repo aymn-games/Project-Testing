@@ -336,6 +336,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 11.46, avatarTopPct: 29.74, avatarWidthPct: 21.90, avatarHeightPct: 68.70,
             nameLeftPct: 44.92, nameTopPct: 50.43, nameWidthPct: 45.39, nameHeightPct: 34.43
         },
+        // إطار "غامد الهيلا" (القراصنة) — مقاس بالبكسل بنفس المنهجية: مربع
+        // الصورة = حدود الفتحة الشفافة (161→528 × 152→520)، ولوح الاسم = داخل
+        // اللوح بين الحدود الذهبية (692→1742 × 265→492). اللوح غامق — اسم أبيض.
+        'frame-ghamid-alhayla.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 0, contentHeight: 530,
+            avatarLeftPct: 7.41, avatarTopPct: 28.68, avatarWidthPct: 16.94, avatarHeightPct: 69.62,
+            nameLeftPct: 31.86, nameTopPct: 50.00, nameWidthPct: 48.34, nameHeightPct: 42.83
+        },
         'frame-girls-bunny-blue.png': {
             canvasW: 2158, canvasH: 729, contentTop: 29, contentHeight: 511,
             avatarLeftPct: 12.23, avatarTopPct: 29.55, avatarWidthPct: 17.15, avatarHeightPct: 68.88,
