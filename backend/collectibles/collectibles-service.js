@@ -5,8 +5,8 @@
  * 2) إطارات حصرية حرة (custom_frames) — اسم ملف حر يكتبه الأدمن كل منح.
  * 3) الدخولية (user_entrances) — نموذج أنيميشن (gold/neon/fire/ice) + نص
  *    حر، مع عمود enabled (تفعيل/إيقاف ذاتي من صاحب الحساب).
- * 4) بطاقة الإقصاء (user_elim_cards) — منح يدوي من الأدمن + تفعيل/إيقاف
- *    ذاتي، مستقلة عن الإطارات.
+ * 4) بطاقات الإقصاء (user_elim_cards) — منح يدوي من الأدمن، المستخدم يقدر
+ *    يملك أكثر من بطاقة ويفعّل وحدة منها (أو يوقفها)، مستقلة عن الإطارات.
  * 5) بطاقة الفوز (user_win_cards) — نفس نمط بطاقة الإقصاء بالضبط، تظهر
  *    بدل شاشة الفوز العادية لو الفائز يملكها ومفعّلها.
  *
@@ -322,7 +322,8 @@ function setEntranceEnabled(userId, enabled) {
 // بنفس المفتاح في js/agp-elim-card.js.
 var ELIM_CARD_CATALOG = [
   { key: 'ksa-green', displayNameAr: 'بطاقة الإقصاء — السعودية الخضراء', imageFilename: 'assets/elim-cards/elim-card-ksa-green.png' },
-  { key: 'blue-bunny', displayNameAr: 'بطاقة الإقصاء — الأرنب الأزرق', imageFilename: 'assets/elim-cards/elim-card-blue-bunny.png' }
+  { key: 'blue-bunny', displayNameAr: 'بطاقة الإقصاء — الأرنب الأزرق', imageFilename: 'assets/elim-cards/elim-card-blue-bunny.png' },
+  { key: 'crystal-crown', displayNameAr: 'بطاقة الإقصاء — الريس الكريستالي', imageFilename: 'assets/elim-cards/elim-card-crystal-crown.png' }
 ];
 
 function getElimCardCatalog() {
@@ -334,8 +335,8 @@ function isValidElimCardKey(cardKey) {
 }
 
 /**
- * منح/استبدال بطاقة الإقصاء لمستخدم (بطاقة واحدة لكل مستخدم). كل منح
- * جديد يعيد enabled = 1.
+ * منح بطاقة الإقصاء لمستخدم — يقدر يملك أكثر من بطاقة (نفس نمط الإطارات).
+ * البطاقة الجديدة تصير المفعّلة فقط لو ما عنده بطاقة مفعّلة حالياً.
  * @returns {{success: boolean, error?: string}}
  */
 function grantElimCard(userId, cardKey, grantedBy) {
@@ -345,47 +346,65 @@ function grantElimCard(userId, cardKey, grantedBy) {
   var userExists = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
   if (!userExists) return { success: false, error: 'unknown_user' };
 
-  db.prepare(
-    'INSERT INTO user_elim_cards (user_id, card_key, enabled, granted_by, granted_at) VALUES (?, ?, 1, ?, ?) ' +
-    'ON CONFLICT(user_id) DO UPDATE SET card_key = excluded.card_key, enabled = 1, granted_by = excluded.granted_by, granted_at = excluded.granted_at'
-  ).run(userId, cardKey, grantedBy || 'admin_manual', now());
+  var hasActive = db.prepare('SELECT id FROM user_elim_cards WHERE user_id = ? AND enabled = 1').get(userId);
+
+  var info = db.prepare(
+    'INSERT OR IGNORE INTO user_elim_cards (user_id, card_key, enabled, granted_by, granted_at) VALUES (?, ?, ?, ?, ?)'
+  ).run(userId, cardKey, hasActive ? 0 : 1, grantedBy || 'admin_manual', now());
+
+  if (info.changes === 0) return { success: false, error: 'already_owned' };
 
   logger.log('Collectibles: granted elimination card ' + cardKey + ' to user ' + userId);
 
   return { success: true };
 }
 
-function revokeElimCard(userId) {
-  db.prepare('DELETE FROM user_elim_cards WHERE user_id = ?').run(userId);
+/** سحب بطاقة محددة (cardKey)، أو كل بطاقات المستخدم لو ما انمرَّر cardKey. */
+function revokeElimCard(userId, cardKey) {
+  if (cardKey) {
+    db.prepare('DELETE FROM user_elim_cards WHERE user_id = ? AND card_key = ?').run(userId, String(cardKey));
+  } else {
+    db.prepare('DELETE FROM user_elim_cards WHERE user_id = ?').run(userId);
+  }
 
   return { success: true };
 }
 
-/** للبروفايل — null لو ما يملك بطاقة. */
-function getElimCard(userId) {
-  var row = db.prepare('SELECT card_key, enabled, granted_at FROM user_elim_cards WHERE user_id = ?').get(userId);
-  if (!row) return null;
+/** للبروفايل — كل البطاقات المملوكة (مصفوفة فاضية لو ما يملك شي). */
+function getElimCards(userId) {
+  var rows = db.prepare('SELECT card_key, enabled, granted_at FROM user_elim_cards WHERE user_id = ? ORDER BY granted_at DESC').all(userId);
 
-  var entry = ELIM_CARD_CATALOG.filter(function (c) { return c.key === row.card_key; })[0];
+  return rows.map(function (row) {
+    var entry = ELIM_CARD_CATALOG.filter(function (c) { return c.key === row.card_key; })[0];
 
-  return {
-    cardKey: row.card_key,
-    displayNameAr: entry ? entry.displayNameAr : row.card_key,
-    imageFilename: entry ? entry.imageFilename : null,
-    enabled: Boolean(row.enabled),
-    grantedAt: row.granted_at
-  };
+    return {
+      cardKey: row.card_key,
+      displayNameAr: entry ? entry.displayNameAr : row.card_key,
+      imageFilename: entry ? entry.imageFilename : null,
+      enabled: Boolean(row.enabled),
+      grantedAt: row.granted_at
+    };
+  });
 }
 
 /**
- * تفعيل/إيقاف ذاتي من صاحب الحساب — نفس نمط setEntranceEnabled.
+ * تفعيل بطاقة مملوكة كالبطاقة المفعّلة الوحيدة (يلغي تفعيل الباقي) أو
+ * إيقافها — من صاحب الحساب بالبروفايل، نفس نمط setEquipped للإطارات.
  * @returns {{success: boolean, error?: string}}
  */
-function setElimCardEnabled(userId, enabled) {
-  var existing = db.prepare('SELECT user_id FROM user_elim_cards WHERE user_id = ?').get(userId);
-  if (!existing) return { success: false, error: 'no_elim_card' };
+function setElimCardEnabled(userId, cardKey, enabled) {
+  var owned = db.prepare('SELECT id FROM user_elim_cards WHERE user_id = ? AND card_key = ?').get(userId, String(cardKey || ''));
+  if (!owned) return { success: false, error: 'no_elim_card' };
 
-  db.prepare('UPDATE user_elim_cards SET enabled = ? WHERE user_id = ?').run(enabled ? 1 : 0, userId);
+  if (!enabled) {
+    db.prepare('UPDATE user_elim_cards SET enabled = 0 WHERE id = ?').run(owned.id);
+    return { success: true };
+  }
+
+  db.transaction(function () {
+    db.prepare('UPDATE user_elim_cards SET enabled = 0 WHERE user_id = ?').run(userId);
+    db.prepare('UPDATE user_elim_cards SET enabled = 1 WHERE id = ?').run(owned.id);
+  })();
 
   return { success: true };
 }
@@ -420,7 +439,8 @@ function getElimCardForVerifiedTikTok(tiktokUsername) {
 // المفاتيح المسموحة — تصميم كل بطاقة (صورة + موضع الدائرة والنصوص) معرَّف
 // بنفس المفتاح في js/agp-win-card.js.
 var WIN_CARD_CATALOG = [
-  { key: 'rais-blue', displayNameAr: 'بطاقة الفوز — فوز الريس (أزرق)', imageFilename: 'assets/win-cards/win-card-rais-blue.png' }
+  { key: 'rais-blue', displayNameAr: 'بطاقة الفوز — فوز الريس (أزرق)', imageFilename: 'assets/win-cards/win-card-rais-blue.png' },
+  { key: 'girls-blue', displayNameAr: 'بطاقة الفوز — بنات (أزرق)', imageFilename: 'assets/win-cards/win-card-girls-blue.png' }
 ];
 
 function getWinCardCatalog() {
@@ -432,8 +452,8 @@ function isValidWinCardKey(cardKey) {
 }
 
 /**
- * منح/استبدال بطاقة الفوز لمستخدم (بطاقة واحدة لكل مستخدم). كل منح جديد
- * يعيد enabled = 1.
+ * منح بطاقة الفوز لمستخدم — يقدر يملك أكثر من بطاقة (نفس نمط الإطارات).
+ * البطاقة الجديدة تصير المفعّلة فقط لو ما عنده بطاقة مفعّلة حالياً.
  * @returns {{success: boolean, error?: string}}
  */
 function grantWinCard(userId, cardKey, grantedBy) {
@@ -443,47 +463,65 @@ function grantWinCard(userId, cardKey, grantedBy) {
   var userExists = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
   if (!userExists) return { success: false, error: 'unknown_user' };
 
-  db.prepare(
-    'INSERT INTO user_win_cards (user_id, card_key, enabled, granted_by, granted_at) VALUES (?, ?, 1, ?, ?) ' +
-    'ON CONFLICT(user_id) DO UPDATE SET card_key = excluded.card_key, enabled = 1, granted_by = excluded.granted_by, granted_at = excluded.granted_at'
-  ).run(userId, cardKey, grantedBy || 'admin_manual', now());
+  var hasActive = db.prepare('SELECT id FROM user_win_cards WHERE user_id = ? AND enabled = 1').get(userId);
+
+  var info = db.prepare(
+    'INSERT OR IGNORE INTO user_win_cards (user_id, card_key, enabled, granted_by, granted_at) VALUES (?, ?, ?, ?, ?)'
+  ).run(userId, cardKey, hasActive ? 0 : 1, grantedBy || 'admin_manual', now());
+
+  if (info.changes === 0) return { success: false, error: 'already_owned' };
 
   logger.log('Collectibles: granted win card ' + cardKey + ' to user ' + userId);
 
   return { success: true };
 }
 
-function revokeWinCard(userId) {
-  db.prepare('DELETE FROM user_win_cards WHERE user_id = ?').run(userId);
+/** سحب بطاقة محددة (cardKey)، أو كل بطاقات المستخدم لو ما انمرَّر cardKey. */
+function revokeWinCard(userId, cardKey) {
+  if (cardKey) {
+    db.prepare('DELETE FROM user_win_cards WHERE user_id = ? AND card_key = ?').run(userId, String(cardKey));
+  } else {
+    db.prepare('DELETE FROM user_win_cards WHERE user_id = ?').run(userId);
+  }
 
   return { success: true };
 }
 
-/** للبروفايل — null لو ما يملك بطاقة. */
-function getWinCard(userId) {
-  var row = db.prepare('SELECT card_key, enabled, granted_at FROM user_win_cards WHERE user_id = ?').get(userId);
-  if (!row) return null;
+/** للبروفايل — كل البطاقات المملوكة (مصفوفة فاضية لو ما يملك شي). */
+function getWinCards(userId) {
+  var rows = db.prepare('SELECT card_key, enabled, granted_at FROM user_win_cards WHERE user_id = ? ORDER BY granted_at DESC').all(userId);
 
-  var entry = WIN_CARD_CATALOG.filter(function (c) { return c.key === row.card_key; })[0];
+  return rows.map(function (row) {
+    var entry = WIN_CARD_CATALOG.filter(function (c) { return c.key === row.card_key; })[0];
 
-  return {
-    cardKey: row.card_key,
-    displayNameAr: entry ? entry.displayNameAr : row.card_key,
-    imageFilename: entry ? entry.imageFilename : null,
-    enabled: Boolean(row.enabled),
-    grantedAt: row.granted_at
-  };
+    return {
+      cardKey: row.card_key,
+      displayNameAr: entry ? entry.displayNameAr : row.card_key,
+      imageFilename: entry ? entry.imageFilename : null,
+      enabled: Boolean(row.enabled),
+      grantedAt: row.granted_at
+    };
+  });
 }
 
 /**
- * تفعيل/إيقاف ذاتي من صاحب الحساب — نفس نمط setElimCardEnabled.
+ * تفعيل بطاقة مملوكة كالبطاقة المفعّلة الوحيدة (يلغي تفعيل الباقي) أو
+ * إيقافها — من صاحب الحساب بالبروفايل، نفس نمط setEquipped للإطارات.
  * @returns {{success: boolean, error?: string}}
  */
-function setWinCardEnabled(userId, enabled) {
-  var existing = db.prepare('SELECT user_id FROM user_win_cards WHERE user_id = ?').get(userId);
-  if (!existing) return { success: false, error: 'no_win_card' };
+function setWinCardEnabled(userId, cardKey, enabled) {
+  var owned = db.prepare('SELECT id FROM user_win_cards WHERE user_id = ? AND card_key = ?').get(userId, String(cardKey || ''));
+  if (!owned) return { success: false, error: 'no_win_card' };
 
-  db.prepare('UPDATE user_win_cards SET enabled = ? WHERE user_id = ?').run(enabled ? 1 : 0, userId);
+  if (!enabled) {
+    db.prepare('UPDATE user_win_cards SET enabled = 0 WHERE id = ?').run(owned.id);
+    return { success: true };
+  }
+
+  db.transaction(function () {
+    db.prepare('UPDATE user_win_cards SET enabled = 0 WHERE user_id = ?').run(userId);
+    db.prepare('UPDATE user_win_cards SET enabled = 1 WHERE id = ?').run(owned.id);
+  })();
 
   return { success: true };
 }
@@ -590,6 +628,7 @@ function generateFrameCodes(frameType, frameRef, count, note) {
   db.transaction(function () {
     while (codes.length < count) {
       var code = 'AGP-' + randomCodeChunk(4) + '-' + randomCodeChunk(4);
+      if (codeTakenElsewhere(code, 'frame_codes')) continue;
       if (insert.run(code, frameType, frameRef, String(note || '').slice(0, 200), createdAt).changes === 1) codes.push(code);
     }
   })();
@@ -598,7 +637,56 @@ function generateFrameCodes(frameType, frameRef, count, note) {
   return { success: true, codes: codes };
 }
 
-/** آخر الأكواد (الأحدث أولاً) مع اسم الإطار ومن استردها. */
+/* ----------------------------------------------------------------------
+ * أكواد بطاقات الإقصاء والفوز (card_codes) — نفس صيغة أكواد الإطارات
+ * ونفس خانة الاسترداد بالبروفايل (redeemFrameCode يبحث بالجدولين).
+ * ---------------------------------------------------------------------- */
+var CARD_KINDS = {
+  elim: { table: 'user_elim_cards', catalog: function () { return ELIM_CARD_CATALOG; }, grant: function (u, k, by) { return grantElimCard(u, k, by); } },
+  win: { table: 'user_win_cards', catalog: function () { return WIN_CARD_CATALOG; }, grant: function (u, k, by) { return grantWinCard(u, k, by); } }
+};
+
+function cardCatalogEntry(kind, cardKey) {
+  var spec = CARD_KINDS[kind];
+  return spec ? spec.catalog().filter(function (c) { return c.key === cardKey; })[0] || null : null;
+}
+
+// كل الأكواد (إطارات/بطاقات/باكجات) بنفس الصيغة — الكود لازم يكون فريد عبر الجداول كلها.
+var CODE_TABLES = ['frame_codes', 'card_codes', 'bundle_codes'];
+function codeTakenElsewhere(code, ownTable) {
+  return CODE_TABLES.some(function (t) {
+    return t !== ownTable && Boolean(db.prepare('SELECT code FROM ' + t + ' WHERE code = ?').get(code));
+  });
+}
+
+/**
+ * توليد دفعة أكواد لبطاقة إقصاء أو فوز واحدة.
+ * @returns {{success: boolean, codes?: string[], error?: string}}
+ */
+function generateCardCodes(kind, cardKey, count, note) {
+  kind = String(kind || '');
+  cardKey = String(cardKey || '');
+  count = Math.floor(Number(count));
+  if (!CARD_KINDS[kind]) return { success: false, error: 'unknown_card_kind' };
+  if (!count || count < 1 || count > MAX_CODES_PER_BATCH) return { success: false, error: 'invalid_count' };
+  if (!cardCatalogEntry(kind, cardKey)) return { success: false, error: 'unknown_card_key' };
+
+  var insert = db.prepare('INSERT OR IGNORE INTO card_codes (code, card_kind, card_key, note, created_at) VALUES (?, ?, ?, ?, ?)');
+  var codes = [];
+  var createdAt = now();
+  db.transaction(function () {
+    while (codes.length < count) {
+      var code = 'AGP-' + randomCodeChunk(4) + '-' + randomCodeChunk(4);
+      if (codeTakenElsewhere(code, 'card_codes')) continue;
+      if (insert.run(code, kind, cardKey, String(note || '').slice(0, 200), createdAt).changes === 1) codes.push(code);
+    }
+  })();
+
+  logger.log('Collectibles: generated ' + codes.length + ' redeem codes for ' + kind + ' card ' + cardKey);
+  return { success: true, codes: codes };
+}
+
+/** آخر الأكواد (الأحدث أولاً) مع اسم الإطار/البطاقة ومن استردها — إطارات وبطاقات معاً. */
 function listFrameCodes(limit) {
   limit = Math.min(Math.max(Math.floor(Number(limit)) || 300, 1), 2000);
   var rows = db.prepare(
@@ -606,10 +694,11 @@ function listFrameCodes(limit) {
     'FROM frame_codes c LEFT JOIN users u ON u.id = c.redeemed_by ' +
     'ORDER BY c.created_at DESC, c.code ASC LIMIT ?'
   ).all(limit);
-  return rows.map(function (row) {
+  var frameRows = rows.map(function (row) {
     var display = frameDisplay(row.frame_type, row.frame_ref) || {};
     return {
       code: row.code,
+      kind: 'frame',
       frameType: row.frame_type,
       frameRef: row.frame_ref,
       displayNameAr: display.displayNameAr || '',
@@ -618,9 +707,78 @@ function listFrameCodes(limit) {
       redeemedAt: row.redeemed_at,
       redeemedBy: row.redeemed_by,
       redeemedUsername: row.redeemed_username || null,
-      redeemedCustomId: row.redeemed_custom_id || null
+      redeemedCustomId: row.redeemed_custom_id || null,
+      burnedAt: row.burned_at || null
     };
   });
+  var cardRows = db.prepare(
+    'SELECT c.*, u.username AS redeemed_username, u.custom_id AS redeemed_custom_id ' +
+    'FROM card_codes c LEFT JOIN users u ON u.id = c.redeemed_by ' +
+    'ORDER BY c.created_at DESC, c.code ASC LIMIT ?'
+  ).all(limit).map(function (row) {
+    var entry = cardCatalogEntry(row.card_kind, row.card_key) || {};
+    return {
+      code: row.code,
+      kind: row.card_kind,
+      cardKey: row.card_key,
+      displayNameAr: entry.displayNameAr || '',
+      note: row.note,
+      createdAt: row.created_at,
+      redeemedAt: row.redeemed_at,
+      redeemedBy: row.redeemed_by,
+      redeemedUsername: row.redeemed_username || null,
+      redeemedCustomId: row.redeemed_custom_id || null,
+      burnedAt: row.burned_at || null
+    };
+  });
+  var bundleRows = db.prepare(
+    'SELECT c.*, u.username AS redeemed_username, u.custom_id AS redeemed_custom_id ' +
+    'FROM bundle_codes c LEFT JOIN users u ON u.id = c.redeemed_by ' +
+    'ORDER BY c.created_at DESC, c.code ASC LIMIT ?'
+  ).all(limit).map(function (row) {
+    var bundle = getBundle(row.bundle_id);
+    return {
+      code: row.code,
+      kind: 'bundle',
+      bundleId: row.bundle_id,
+      displayNameAr: bundle ? 'باكج — ' + bundle.name : 'باكج #' + row.bundle_id,
+      note: row.note,
+      createdAt: row.created_at,
+      redeemedAt: row.redeemed_at,
+      redeemedBy: row.redeemed_by,
+      redeemedUsername: row.redeemed_username || null,
+      redeemedCustomId: row.redeemed_custom_id || null,
+      burnedAt: row.burned_at || null
+    };
+  });
+  return frameRows.concat(cardRows, bundleRows).sort(function (a, b) {
+    return (b.createdAt - a.createdAt) || (a.code < b.code ? -1 : a.code > b.code ? 1 : 0);
+  }).slice(0, limit);
+}
+
+/** استرداد كود بطاقة (من داخل redeemFrameCode بعد ما ما يلقاه بأكواد الإطارات). */
+function redeemCardCode(userId, code, row) {
+  if (row.burned_at) return { success: false, error: 'code_burned' };
+  if (row.redeemed_at) return { success: false, error: 'code_used' };
+  var spec = CARD_KINDS[row.card_kind];
+  if (!spec) return { success: false, error: 'invalid_code' };
+
+  var owned = db.prepare('SELECT id FROM ' + spec.table + ' WHERE user_id = ? AND card_key = ?').get(userId, row.card_key);
+  if (owned) return { success: false, error: 'already_owned' };
+
+  var result = db.transaction(function () {
+    var claimed = db.prepare('UPDATE card_codes SET redeemed_by = ?, redeemed_at = ? WHERE code = ? AND redeemed_at IS NULL AND burned_at IS NULL')
+      .run(userId, now(), code);
+    if (claimed.changes !== 1) return { success: false, error: 'code_used' };
+    var granted = spec.grant(userId, row.card_key, 'redeem_code');
+    if (!granted.success) throw new Error('grant_failed:' + granted.error); // يلغي تعليم الكود
+    return { success: true };
+  })();
+  if (!result.success) return result;
+
+  logger.log('Collectibles: user ' + userId + ' redeemed ' + row.card_kind + ' card code ' + code);
+  var entry = cardCatalogEntry(row.card_kind, row.card_key) || {};
+  return { success: true, kind: row.card_kind, card: { kind: row.card_kind, cardKey: row.card_key, displayNameAr: entry.displayNameAr || '', imageFilename: entry.imageFilename || '' } };
 }
 
 // حد المحاولات الفاشلة لكل مستخدم (ذاكرة فقط — يتصفّر مع إعادة تشغيل
@@ -650,7 +808,15 @@ function redeemFrameCode(userId, rawCode) {
 
   var code = normalizeFrameCode(rawCode);
   var row = code ? db.prepare('SELECT * FROM frame_codes WHERE code = ?').get(code) : null;
-  if (!row) { recordRedeemFail(userId); return { success: false, error: 'invalid_code' }; }
+  if (!row) {
+    var cardRow = code ? db.prepare('SELECT * FROM card_codes WHERE code = ?').get(code) : null;
+    if (cardRow) return redeemCardCode(userId, code, cardRow);
+    var bundleRow = code ? db.prepare('SELECT * FROM bundle_codes WHERE code = ?').get(code) : null;
+    if (bundleRow) return redeemBundleCode(userId, code, bundleRow);
+    recordRedeemFail(userId);
+    return { success: false, error: 'invalid_code' };
+  }
+  if (row.burned_at) return { success: false, error: 'code_burned' };
   if (row.redeemed_at) return { success: false, error: 'code_used' };
 
   var owned = db.prepare('SELECT id FROM user_frames WHERE user_id = ? AND frame_type = ? AND frame_ref = ?')
@@ -658,7 +824,7 @@ function redeemFrameCode(userId, rawCode) {
   if (owned) return { success: false, error: 'already_owned' };
 
   var result = db.transaction(function () {
-    var claimed = db.prepare('UPDATE frame_codes SET redeemed_by = ?, redeemed_at = ? WHERE code = ? AND redeemed_at IS NULL')
+    var claimed = db.prepare('UPDATE frame_codes SET redeemed_by = ?, redeemed_at = ? WHERE code = ? AND redeemed_at IS NULL AND burned_at IS NULL')
       .run(userId, now(), code);
     if (claimed.changes !== 1) return { success: false, error: 'code_used' };
     var granted = grantFrame(userId, row.frame_type, row.frame_ref, { grantedBy: 'redeem_code', skipEntranceBundle: true });
@@ -668,7 +834,164 @@ function redeemFrameCode(userId, rawCode) {
   if (!result.success) return result;
 
   logger.log('Collectibles: user ' + userId + ' redeemed code ' + code);
-  return { success: true, frame: Object.assign({ frameType: row.frame_type, frameRef: row.frame_ref }, frameDisplay(row.frame_type, row.frame_ref)) };
+  return { success: true, kind: 'frame', frame: Object.assign({ frameType: row.frame_type, frameRef: row.frame_ref }, frameDisplay(row.frame_type, row.frame_ref)) };
+}
+
+/* ----------------------------------------------------------------------
+ * الباكجات — كود واحد يمنح أكثر من عنصر (إطارات + بطاقات إقصاء + بطاقات فوز).
+ * لو العميل يملك بعض العناصر مسبقاً: ياخذ الباقي والكود ينحسب مستخدم؛ لو
+ * يملكها كلها يُرفض الكود ويبقى صالحاً (already_owned).
+ * ---------------------------------------------------------------------- */
+function normalizeBundleItem(item) {
+  item = item || {};
+  if (item.kind === 'frame') {
+    var frameType = String(item.frameType || ''), frameRef = String(item.frameRef || '');
+    return frameExists(frameType, frameRef) ? { kind: 'frame', frameType: frameType, frameRef: frameRef } : null;
+  }
+  if (item.kind === 'elim' || item.kind === 'win') {
+    var cardKey = String(item.cardKey || '');
+    return cardCatalogEntry(item.kind, cardKey) ? { kind: item.kind, cardKey: cardKey } : null;
+  }
+  return null;
+}
+
+function bundleItemKey(item) {
+  return item.kind === 'frame' ? 'frame:' + item.frameType + ':' + item.frameRef : item.kind + ':' + item.cardKey;
+}
+
+function bundleItemDisplay(item) {
+  if (item.kind === 'frame') {
+    var d = frameDisplay(item.frameType, item.frameRef) || {};
+    return { kind: 'frame', displayNameAr: 'إطار ' + (d.displayNameAr || item.frameRef), imageFilename: d.imageFilename || '' };
+  }
+  var entry = cardCatalogEntry(item.kind, item.cardKey) || {};
+  return { kind: item.kind, displayNameAr: entry.displayNameAr || item.cardKey, imageFilename: entry.imageFilename || '' };
+}
+
+function getBundle(id) {
+  var row = db.prepare('SELECT * FROM bundles WHERE id = ?').get(id);
+  if (!row) return null;
+  var items = [];
+  try { items = JSON.parse(row.items) || []; } catch (e) { items = []; }
+  return { id: row.id, name: row.name, items: items, createdAt: row.created_at };
+}
+
+/** كل الباكجات مع أسماء عناصرها (للأدمن). */
+function listBundles() {
+  return db.prepare('SELECT id FROM bundles ORDER BY created_at DESC, id DESC').all().map(function (r) {
+    var b = getBundle(r.id);
+    b.itemsDisplay = b.items.map(bundleItemDisplay);
+    return b;
+  });
+}
+
+/**
+ * إنشاء باكج. items: مصفوفة عناصر (تُتجاهل المكررة)، لازم عنصرين على الأقل.
+ * @returns {{success: boolean, bundle?: Object, error?: string}}
+ */
+function createBundle(name, items) {
+  name = String(name || '').trim().slice(0, 100);
+  if (!name) return { success: false, error: 'missing_name' };
+  if (!Array.isArray(items)) return { success: false, error: 'invalid_items' };
+  var seen = {}, clean = [];
+  for (var i = 0; i < items.length; i++) {
+    var it = normalizeBundleItem(items[i]);
+    if (!it) return { success: false, error: 'unknown_item' };
+    var key = bundleItemKey(it);
+    if (!seen[key]) { seen[key] = true; clean.push(it); }
+  }
+  if (clean.length < 2) return { success: false, error: 'too_few_items' };
+  var info = db.prepare('INSERT INTO bundles (name, items, created_at) VALUES (?, ?, ?)').run(name, JSON.stringify(clean), now());
+  logger.log('Collectibles: created bundle #' + info.lastInsertRowid + ' (' + clean.length + ' items)');
+  return { success: true, bundle: getBundle(info.lastInsertRowid) };
+}
+
+/** توليد دفعة أكواد لباكج. */
+function generateBundleCodes(bundleId, count, note) {
+  count = Math.floor(Number(count));
+  if (!count || count < 1 || count > MAX_CODES_PER_BATCH) return { success: false, error: 'invalid_count' };
+  if (!getBundle(bundleId)) return { success: false, error: 'unknown_bundle' };
+
+  var insert = db.prepare('INSERT OR IGNORE INTO bundle_codes (code, bundle_id, note, created_at) VALUES (?, ?, ?, ?)');
+  var codes = [];
+  var createdAt = now();
+  db.transaction(function () {
+    while (codes.length < count) {
+      var code = 'AGP-' + randomCodeChunk(4) + '-' + randomCodeChunk(4);
+      if (codeTakenElsewhere(code, 'bundle_codes')) continue;
+      if (insert.run(code, Number(bundleId), String(note || '').slice(0, 200), createdAt).changes === 1) codes.push(code);
+    }
+  })();
+
+  logger.log('Collectibles: generated ' + codes.length + ' redeem codes for bundle #' + bundleId);
+  return { success: true, codes: codes };
+}
+
+function userOwnsItem(userId, item) {
+  if (item.kind === 'frame') {
+    return Boolean(db.prepare('SELECT id FROM user_frames WHERE user_id = ? AND frame_type = ? AND frame_ref = ?').get(userId, item.frameType, item.frameRef));
+  }
+  return Boolean(db.prepare('SELECT id FROM ' + CARD_KINDS[item.kind].table + ' WHERE user_id = ? AND card_key = ?').get(userId, item.cardKey));
+}
+
+function grantItem(userId, item) {
+  if (item.kind === 'frame') return grantFrame(userId, item.frameType, item.frameRef, { grantedBy: 'redeem_code', skipEntranceBundle: true });
+  return CARD_KINDS[item.kind].grant(userId, item.cardKey, 'redeem_code');
+}
+
+function redeemBundleCode(userId, code, row) {
+  if (row.burned_at) return { success: false, error: 'code_burned' };
+  if (row.redeemed_at) return { success: false, error: 'code_used' };
+  var bundle = getBundle(row.bundle_id);
+  if (!bundle || !bundle.items.length) return { success: false, error: 'invalid_code' };
+
+  var granted = [], alreadyOwned = [];
+  var result = db.transaction(function () {
+    bundle.items.forEach(function (item) {
+      if (userOwnsItem(userId, item)) alreadyOwned.push(item); else granted.push(item);
+    });
+    if (!granted.length) return { success: false, error: 'already_owned' }; // يملك كل شي — الكود يبقى صالح
+    var claimed = db.prepare('UPDATE bundle_codes SET redeemed_by = ?, redeemed_at = ? WHERE code = ? AND redeemed_at IS NULL AND burned_at IS NULL')
+      .run(userId, now(), code);
+    if (claimed.changes !== 1) return { success: false, error: 'code_used' };
+    granted.forEach(function (item) {
+      var g = grantItem(userId, item);
+      if (!g.success) throw new Error('grant_failed:' + g.error); // يلغي كل شي ويرجع الكود غير مستخدم
+    });
+    return { success: true };
+  })();
+  if (!result.success) return result;
+
+  logger.log('Collectibles: user ' + userId + ' redeemed bundle #' + bundle.id + ' code ' + code + ' (' + granted.length + ' granted, ' + alreadyOwned.length + ' already owned)');
+  return {
+    success: true,
+    kind: 'bundle',
+    bundle: { id: bundle.id, name: bundle.name },
+    granted: granted.map(bundleItemDisplay),
+    alreadyOwned: alreadyOwned.map(bundleItemDisplay)
+  };
+}
+
+/**
+ * حرق كود (إلغاؤه نهائياً — استرجاع مبلغ مثلاً). يشتغل على كل أنواع الأكواد.
+ * الكود المستخدم ما ينحرق (العناصر صارت عند العميل — تُسحب يدوياً لو لزم).
+ * @returns {{success: boolean, code?: string, error?: string}}
+ */
+function burnCode(rawCode) {
+  var code = normalizeFrameCode(rawCode);
+  if (!code) return { success: false, error: 'invalid_code' };
+  for (var i = 0; i < CODE_TABLES.length; i++) {
+    var table = CODE_TABLES[i];
+    var row = db.prepare('SELECT * FROM ' + table + ' WHERE code = ?').get(code);
+    if (!row) continue;
+    if (row.burned_at) return { success: false, error: 'already_burned' };
+    if (row.redeemed_at) return { success: false, error: 'code_used' };
+    var res = db.prepare('UPDATE ' + table + ' SET burned_at = ? WHERE code = ? AND redeemed_at IS NULL AND burned_at IS NULL').run(now(), code);
+    if (res.changes !== 1) return { success: false, error: 'code_used' };
+    logger.log('Collectibles: burned code ' + code);
+    return { success: true, code: code };
+  }
+  return { success: false, error: 'invalid_code' };
 }
 
 module.exports = {
@@ -691,16 +1014,21 @@ module.exports = {
   getElimCardCatalog: getElimCardCatalog,
   grantElimCard: grantElimCard,
   revokeElimCard: revokeElimCard,
-  getElimCard: getElimCard,
+  getElimCards: getElimCards,
   setElimCardEnabled: setElimCardEnabled,
   getElimCardForVerifiedTikTok: getElimCardForVerifiedTikTok,
   getWinCardCatalog: getWinCardCatalog,
   grantWinCard: grantWinCard,
   revokeWinCard: revokeWinCard,
-  getWinCard: getWinCard,
+  getWinCards: getWinCards,
   setWinCardEnabled: setWinCardEnabled,
   getWinCardForVerifiedTikTok: getWinCardForVerifiedTikTok,
   generateFrameCodes: generateFrameCodes,
+  generateCardCodes: generateCardCodes,
+  createBundle: createBundle,
+  listBundles: listBundles,
+  generateBundleCodes: generateBundleCodes,
+  burnCode: burnCode,
   listFrameCodes: listFrameCodes,
   redeemFrameCode: redeemFrameCode
 };

@@ -17,9 +17,11 @@
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-elim-card.js"></script>
 <script src="../../js/agp-win-card.js"></script>
 <script src="rr-platform.js"></script>
 <script src="./support.js"></script>
+    <script src="../../js/agp-apple-emoji.js"></script>
 </head>
 <body>
 <x-dc>
@@ -268,6 +270,10 @@ input::placeholder{color:#6f6a7c}
 
     <sc-if value="{{ elimOpen }}" hint-placeholder-val="{{ false }}">
       <div style="position:absolute;inset:0;z-index:46;padding-top:80px;box-sizing:border-box;background:rgba(5,4,10,.7);backdrop-filter:blur(12px);display:grid;place-items:center;animation:fade .25s ease">
+        <sc-if value="{{ elCard }}" hint-placeholder-val="{{ false }}">
+        <div style="width:1100px;animation:popIn .45s cubic-bezier(.2,1.25,.35,1);filter:drop-shadow(0 40px 80px rgba(0,0,0,.6))">{{ elCardEl }}</div>
+        </sc-if>
+        <sc-if value="{{ elStd }}" hint-placeholder-val="{{ true }}">
         <div style="width:960px;box-sizing:border-box;padding:44px 56px 40px;border-radius:40px;background:rgba(12,11,18,.95);border:1px solid rgba(248,113,113,.35);box-shadow:0 40px 120px rgba(0,0,0,.6), 0 0 80px rgba(239,68,68,.18);display:flex;flex-direction:column;align-items:center;gap:30px;animation:popIn .45s cubic-bezier(.2,1.25,.35,1)">
           <span style="padding:8px 22px;border-radius:999px;border:1px solid rgba(248,113,113,.4);background:rgba(248,113,113,.1);font:700 20px 'IBM Plex Sans Arabic';color:#fca5a5">تم الإقصاء</span>
           <span style="font:800 52px/1.2 'IBM Plex Sans Arabic';text-align:center;text-wrap:balance">{{ elTitle }}</span>
@@ -288,6 +294,7 @@ input::placeholder{color:#6f6a7c}
           </div>
           <span style="font:500 18px 'IBM Plex Sans Arabic';color:#8a8596">اللعبة مستمرة تلقائياً بعد ٣ ثوانٍ...</span>
         </div>
+        </sc-if>
       </div>
     </sc-if>
 
@@ -532,7 +539,10 @@ class Component extends DCLogic {
       exitOpen:false,exitOpenOut:false,toast:null,hold:false,logo:false,scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}; }
 
   componentDidMount(){ this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}); addEventListener('resize',this.fit);
-    this.startMatch(); this._iv=setInterval(()=>this.tick(),1000); this._av=setInterval(()=>{ if(this.canAuto()) this.spin(); },250);
+    this.startMatch();
+    // بطاقات الإقصاء المملوكة تُحمَّل مسبقاً حتى تظهر بدون تأخير
+    this.state.players.forEach(p=>{ try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(p.name)); }catch(e){} });
+    this._iv=setInterval(()=>this.tick(),1000); this._av=setInterval(()=>{ if(this.canAuto()) this.spin(); },250);
     RR.connect(); this.unsub=RR.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this._iv); clearInterval(this._av); this.clearT(); cancelAnimationFrame(this._raf); this.unsub?.(); }
   // بداية المباراة الفعلية (للنقاط) + كل من شارك فيها
@@ -558,7 +568,7 @@ class Component extends DCLogic {
     if(s.joinOpen&&!s.joinOpenOut&&s.cfg.keyword&&norm(text)===norm(s.cfg.keyword)){ if(s.cfg.who==='المتابعين فقط'&&!follower) return; this.join(u); } }
   openJoin=()=>{ this.setState({joinOpen:true,joinOpenOut:false,jList:[]}); };
   join(u){ const s=this.state; if(!u||s.players.some(p=>p.name===u)) return; if(this.alive().length>=s.cfg.maxPlayers) return this.toastMsg('اكتمل العدد');
-    const p={id:Date.now()+Math.random(),num:s.nextNum,name:u,hearts:s.cfg.chambers,alive:true}; this.participants.add(u);
+    const p={id:Date.now()+Math.random(),num:s.nextNum,name:u,hearts:s.cfg.chambers,alive:true}; this.participants.add(u); try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(u)); }catch(e){}
     this.setState(st=>({players:[...st.players,p],order:[...st.order,p.id],nextNum:st.nextNum+1,jList:st.joinOpen?[...(st.jList||[]),p.id]:st.jList})); this.addLog({type:'join',a:u,v:'انضم للعبة'}); this.toastMsg(`${u} انضم للعبة · رقم ${p.num}`); }
 
   tick(){ const s=this.state; if(s.hold) return;
@@ -599,7 +609,9 @@ class Component extends DCLogic {
   eliminate(id,{by,type,host,tag}){ const t=this.P(id); if(!t) return;
     this.setState(st=>({players:st.players.map(p=>p.id===id?{...p,alive:false,hearts:0}:p),phase:'elim',clash:null,elim:{byName:by,host:!!host,tag:tag||'أقصى',tgName:t.name}}));
     if(type==='kill') this.addLog({type:'kill',a:by,v:'أقصى',b:t.name}); else if(type==='manual') this.addLog({type:'manual',a:'المذيع',v:'أقصى',b:t.name}); else if(type==='timeout') this.addLog({type:'timeout',a:t.name,v:'أُقصي لانتهاء وقت الاختيار'});
-    this.tone(196,.5,'sawtooth',.08); if(this.state.hold) return;
+    // المُقصي يملك بطاقة إقصاء لها صوت خاص → صوت البطاقة بدل نغمة الإقصاء العادية
+    const actor=type==='kill'&&!host&&by?this.reg.player(by):null, EC=window.AymanGamesPlatform&&window.AymanGamesPlatform.elimCard;
+    if(!(this.props.sound!==false&&actor&&RR.hasElimCard(actor)&&EC&&EC.playSound(actor,.9))) this.tone(196,.5,'sawtooth',.08); if(this.state.hold) return;
     this.later(()=>{ if(this.alive().length<=1) this.win(); else this.endTurn(); },3000); }
   endTurn(){ this.setState({awaiting:false,phase:null,chooser:null,target:null,clash:null,elim:null,landedId:null,idleAt:Date.now()}); }
   timeout(){ const s=this.state, ch=this.P(s.chooser); if(!ch) return this.endTurn();
@@ -608,6 +620,8 @@ class Component extends DCLogic {
   win(){ if(this.state.phase==='win') return; const a=this.alive(), w=a.length?a[0]:null; this.clearT(); cancelAnimationFrame(this._raf);
     this.setState({phase:'win',winner:w?w.id:null,auto:false,toast:null,spinning:false,awaiting:false,chooser:null,target:null,clash:null,elim:null,warn:null,joinOpen:false,winRun:(this.state.winRun||0)+1,pts:w?'pending':null}); [523.25,659.25,783.99].forEach((f,i)=>setTimeout(()=>this.tone(f,i===2?.5:.22,'sine',.16),i*160));
     if(w) this.reportPoints(w.name); }
+  // بطاقة الإقصاء (js/agp-elim-card.js) — تحل محل نافذة الإقصاء العادية لو المُقصي يملك بطاقة مفعّلة
+  elimCardView(e){ const actor=e&&!e.host&&e.byName?this.reg.player(e.byName):null, el=actor&&RR.hasElimCard(actor)?RR.elimCard(actor,this.reg.player(e.tgName),'ec'+e.tgName):null; return { elCard:!!el, elStd:!el, elCardEl:el }; }
   // بطاقة الفوز (js/agp-win-card.js) — تحل محل بطاقة الفائز العادية لو الفائز يملك بطاقة مفعّلة
   winCardView(w){ const el=w?RR.winCard(this.reg.player(w.name),this.winCardLines(w),'wc'+(this.state.winRun||0),284):null; return { winCardOn:!!el, winStd:!el, winCardEl:el }; }
   winCardLines(w){ const n=this.participants?this.participants.size:this.state.players.length;
@@ -707,7 +721,7 @@ class Component extends DCLogic {
       tgtAn:s.clash&&s.clash.stage==='hit'?'hitFlash 1s ease forwards':s.clash&&s.clash.stage==='miss'?'missFlash .6s ease':'none',
       tgHearts:tg?this.hearts(tg.hearts,c.chambers,s.clash&&s.clash.stage==='miss'?s.clash.lost:-1):[],
       clashSub:!s.clash?'':s.clash.sure?'باقي له قلب واحد — الطلقة مضمونة':s.clash.stage==='miss'?`${tg?tg.name:''} خسر قلب واحد ونجا`:`نسبة الإصابة ${Math.round(c.bullets/c.chambers*100)}%`,
-      elimOpen:s.phase==='elim'&&!!s.elim, elTitle:s.elim?`${s.elim.byName} أقصى ${s.elim.tgName}!`:'', elByName:s.elim?s.elim.byName:'', elByIni:s.elim&&!s.elim.host?ini(s.elim.byName):'', elByHost:!!(s.elim&&s.elim.host), elByTag:s.elim?s.elim.tag:'', elTgName:s.elim?s.elim.tgName:'', elTgIni:ini(s.elim&&s.elim.tgName), elByAv:s.elim&&!s.elim.host?A(s.elim.byName).av:'', elByOp:s.elim&&!s.elim.host?A(s.elim.byName).op:0, elTgAv:A(s.elim&&s.elim.tgName).av, elTgOp:A(s.elim&&s.elim.tgName).op,
+      elimOpen:s.phase==='elim'&&!!s.elim, ...this.elimCardView(s.elim), elTitle:s.elim?`${s.elim.byName} أقصى ${s.elim.tgName}!`:'', elByName:s.elim?s.elim.byName:'', elByIni:s.elim&&!s.elim.host?ini(s.elim.byName):'', elByHost:!!(s.elim&&s.elim.host), elByTag:s.elim?s.elim.tag:'', elTgName:s.elim?s.elim.tgName:'', elTgIni:ini(s.elim&&s.elim.tgName), elByAv:s.elim&&!s.elim.host?A(s.elim.byName).av:'', elByOp:s.elim&&!s.elim.host?A(s.elim.byName).op:0, elTgAv:A(s.elim&&s.elim.tgName).av, elTgOp:A(s.elim&&s.elim.tgName).op,
       winOpen:s.phase==='win', hasWinner:!!win, noWinner:!win, winName:win?win.name:'', winIni:ini(win&&win.name), winAv:A(win&&win.name).av, winOp:A(win&&win.name).op, ptsMain, ptsSub, ptsSize:typeof pts==='number'?'44px':'30px', hasWinVideo:!!vid, winVideoEl, ...this.winCardView(s.phase==='win'?win:null),
       tabs:[tabBtn(s.tab==='settings','الإعدادات',()=>this.setState({tab:'settings'})),tabBtn(s.tab==='players','اللاعبين',()=>this.setState({tab:'players'}))],
       tabSettings:s.tab==='settings', tabPlayers:s.tab==='players', saveSettings:this.saveSettings, saveOp:JSON.stringify(d)===JSON.stringify(c)?.5:1,

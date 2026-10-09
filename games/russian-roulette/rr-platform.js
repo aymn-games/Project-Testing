@@ -139,6 +139,20 @@
     }
 
     /**
+     * بطاقة الإقصاء المملوكة (js/agp-elim-card.js) كعنصر React — تظهر بدل
+     * تبويب الإقصاء العادي فقط لو المُقصي يملك بطاقة مفعّلة.
+     * actor/target: {name, avatarUrl, elimCard}. ترجع null لو ما يملك بطاقة.
+     */
+    function elimCard(actor, target, key) {
+        var React = window.React;
+        if (!React || !AGP.elimCard || !actor || !AGP.elimCard.canShow(actor)) return null;
+        return React.createElement('div', { key: key || 'ec', style: { width: '100%', lineHeight: 0 }, dangerouslySetInnerHTML: { __html: AGP.elimCard.renderHtml(actor, target) } });
+    }
+    function hasElimCard(actor) {
+        return !!(actor && AGP.elimCard && AGP.elimCard.canShow(actor));
+    }
+
+    /**
      * بطاقة الفوز المملوكة (js/agp-win-card.js) كعنصر React بعرض 240px —
      * تحل محل بطاقة الفائز العادية بنفس مكانها بشاشة الفوز، فقط لو الفائز
      * يملك بطاقة مفعّلة. player: {name, avatarUrl, winCard}. lines: أسطر
@@ -232,7 +246,7 @@
     }
 
     window.RR = {
-        libraryUrl: 'https://aymngames.online/',
+        libraryUrl: 'https://aymngames.online/games.html',
         keys: { setup: 'rr-settings', roster: 'rr-roster', players: 'rr-players' },
         readJSON: readJSON,
         writeJSON: writeJSON,
@@ -240,6 +254,8 @@
         norm: norm,
         chatNumber: chatNumber,
         frameCard: frameCard,
+        elimCard: elimCard,
+        hasElimCard: hasElimCard,
         winCard: winCard,
         hasWinCard: hasWinCard,
         connect: connect,

@@ -17,6 +17,7 @@
       This page requires JavaScript to display.
     </div>
   </noscript>
+    <script src="js/agp-apple-emoji.js"></script>
 </head>
 <body>
   <div id="__bundler_thumbnail">
@@ -408,18 +409,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     'xo':                   { name: 'إكس أو', cat: 'c', icon: 'grid_3x3', badge: 'جديد', desc: 'لاعبين بالقرعة، X ضد O، وكل واحد بدوره يكتب رقم المربع بالشات.. أول من يكمّل خط يفوز.' },
     'memory-challenge':     { name: 'تحدي الذاكرة', cat: 'c', icon: 'psychology', badge: 'جديد', desc: 'احفظ مكان الإيموجيز، وبعد ما تتغطى اكتب رقم المربع الصحيح بالشات.. الغلط يطلع من اللعبة.' },
     'snakes-ladders':       { name: 'السلم والثعبان', cat: 'c', icon: 'stairs', badge: 'جديد', desc: 'ارمِ النرد بأمر من الشات، اطلع مع السلالم وانتبه للثعابين، وأول من يوصل للكأس يفوز.' },
-    'letters-cell':         { name: 'خلية الحروف', cat: 'q', icon: 'hexagon', badge: 'رائج', desc: 'فريقان على خلية الحروف، جاوب سؤال كل حرف بالشات قبل خصمك.' },
+    'letters-cell':         { name: 'خلية الحروف', cat: 'q', icon: 'hexagon', badge: 'صيانة', maintenance: true, desc: 'فريقان على خلية الحروف، جاوب سؤال كل حرف بالشات قبل خصمك.' },
     'codenames':            { name: 'كود نيمز', cat: 'q', icon: 'key', desc: 'السباي ماستر يلمّح بكلمة ورقم، وفريقه يخمّن الكلمات السرية.' },
     'photo-challenge':      { name: 'تحدي الصور', cat: 'c', icon: 'image_search', badge: 'رائج', desc: 'صورة كل جولة، وأول من يكتب الإجابة يسجّل نقطة لفريقه.' },
     'khazna':               { name: 'الخزنة', cat: 'c', icon: 'lock', badge: 'رائج', desc: 'العجلة تختار لاعب، ويكتب أرقام ساعات الخزنة بالترتيب برسالة وحدة.' },
     'team-war':             { name: 'حرب الفريقين', cat: 'c', icon: 'swords', badge: 'تم التحديث', desc: 'فريق أزرق وفريق أحمر، وكل لاعب بدوره يفتح مربع برقمه من الشات.' },
     'elimination-roulette': { name: 'روليت الإقصاء', cat: 'r', icon: 'person_remove', badge: 'تم التحديث', desc: 'العجلة تختار لاعب، وهو يقصي لاعب ثاني برقمه من الشات.' },
-    'tribe-roulette':       { name: 'روليت القبائل', cat: 'r', icon: 'groups', badge: 'رائج', desc: 'العجلة تختار لاعب، ويختار قبيلة ليقصي اللي مختبي خلفها.' },
+    'tribe-roulette':       { name: 'روليت القبائل', cat: 'r', icon: 'groups', badge: 'تم التحديث', desc: 'العجلة تختار لاعب، ويختار قبيلة ليقصي اللي مختبي خلفها.' },
     'russian-roulette':     { name: 'الروليت الروسي', cat: 'r', icon: 'casino', badge: 'تم التحديث', desc: 'عجلة أو سكرول يختار لاعب، ويستهدف لاعب ثاني برقمه من الشات.' },
     'fruit-roulette':       { name: 'روليت الفواكه', cat: 'r', icon: 'nutrition', badge: 'رائج', desc: 'افتح صندوق من أربعة.. ثلاثة فيها فواكه وواحد يخبّي مفاجأة.' },
     'musical-chairs':       { name: 'الكراسي الموسيقية', cat: 'c', icon: 'chair', badge: 'تم التحديث', desc: 'تتوقف الموسيقى فجأة، وأول من يكتب رقم الكرسي يثبت مكانه.' },
     'word-categories':      { name: 'اسم حيوان نبات جماد بلاد', cat: 'q', icon: 'pets', desc: 'حرف عشوائي كل جولة، واكتب إجاباتك بالشات قبل انتهاء الوقت.' },
-    'top-ten':              { name: 'خمّن العشرة', cat: 'q', icon: 'format_list_numbered', desc: 'سؤال وعشر إجابات مرتبة، وكل إجابة صحيحة لها نقاطها.' },
+    'top-ten':              { name: 'خمّن العشرة', cat: 'q', icon: 'format_list_numbered', badge: 'تم التحديث', desc: 'سؤال وعشر إجابات مرتبة، وكل إجابة صحيحة لها نقاطها.' },
     'fastest-answer':       { name: 'أسرع إجابة', cat: 'q', icon: 'bolt', badge: 'جديد', desc: 'لاعب من كل فريق وسؤال سريع، وأول إجابة صحيحة بالشات تكسب فريقها النقاط.' }
   };
   var CARD_CATS = {
@@ -468,6 +469,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       '.gl-play .gl-ms{font-size:18px;transform:translateX(calc(var(--h,0) * -4px));transition:transform .25s;}' +
       '.gl-card.gl-locked .gl-play{background:oklch(0.32 0.02 300);color:oklch(0.72 0.02 300);filter:none;}' +
       '.gl-card.gl-locked .gl-play .gl-ms{transform:none;}' +
+      '.gl-card.gl-maint .gl-badge{background:rgba(251,191,36,.14);color:#fcd34d;border-color:rgba(251,191,36,.5);}' +
       // الشبكة تملأ عرض الشاشة بالكامل (تطلع من حد الـ1600px للحاوية)،
       // وعدد البطاقات بكل صف ثابت حسب المقاس — الشاشة الأعرض تكبّر
       // عرض البطاقة نفسها بدل ما تزيد عدد البطاقات.
@@ -545,7 +547,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     return 'tiktok';
   }
   function applyGameLock(card){
-    var locked = Boolean(getGameAccessBlock());
+    var locked = card.classList.contains('gl-maint') || Boolean(getGameAccessBlock());
     card.classList.toggle('gl-locked', locked);
     var icon = card.querySelector('.gl-play .gl-ms');
     if (icon) icon.textContent = locked ? 'lock' : 'arrow_back';
@@ -562,7 +564,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     var user = window.AGPAuth && window.AGPAuth.getCachedUser ? window.AGPAuth.getCachedUser() : null;
     var profileHref = user && user.custom_id ? 'profile.html?id=' + encodeURIComponent(user.custom_id) : 'profile.html';
     var msg, btnLabel, btnHref;
-    if (reason === 'login') {
+    if (reason === 'maintenance') {
+      msg = 'هذي اللعبة تحت الصيانة حالياً، وبترجع قريب إن شاء الله.';
+    } else if (reason === 'login') {
       msg = 'لازم تسجّل دخول وتربط حساب تيك توك بحسابك عشان تفتح الألعاب.';
       btnLabel = 'تسجيل الدخول'; btnHref = 'login.html';
     } else if (reason === 'not_streamer') {
@@ -586,8 +590,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       '</div>';
     m.querySelector('[data-gl-lock-msg]').textContent = msg;
     var go = m.querySelector('[data-gl-lock-go]');
-    go.textContent = btnLabel;
-    go.setAttribute('href', btnHref);
+    if (btnHref) { go.textContent = btnLabel; go.setAttribute('href', btnHref); } else go.remove();
     m.querySelector('[data-gl-lock-close]').addEventListener('click', closeGameLockModal);
     m.addEventListener('click', function(e){ if (e.target === m) closeGameLockModal(); });
     document.body.appendChild(m);
@@ -597,7 +600,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.addEventListener('click', function(e){
     var card = e.target && e.target.closest ? e.target.closest('.gl-card') : null;
     if (!card) return;
-    var block = getGameAccessBlock();
+    var block = card.classList.contains('gl-maint') ? 'maintenance' : getGameAccessBlock();
     if (!block) return;
     e.preventDefault();
     e.stopPropagation();
@@ -623,7 +626,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var info = CARD_INFO[g.id] || { name: g.title, cat: 'c', icon: 'sports_esports', desc: g.desc };
     var cat = CARD_CATS[info.cat];
     var card = document.createElement('article');
-    card.className = 'gl-card';
+    card.className = 'gl-card' + (info.maintenance ? ' gl-maint' : '');
     card.style.setProperty('--hue', cat.hue);
     card.innerHTML =
       '<span class="gl-glow"></span>' +
@@ -636,6 +639,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       '<a class="gl-play" href="' + g.href + '">العب الآن<span class="gl-ms">arrow_back</span></a>';
     card.querySelector('.gl-title').textContent = info.name;
     card.querySelector('.gl-desc').textContent = info.desc;
+    // لعبة تحت الصيانة: الزر مقفول دائماً، والضغط يعرض نافذة الصيانة (مستمع الـcapture أعلاه)
+    if (info.maintenance) card.querySelector('.gl-play').firstChild.textContent = 'تحت الصيانة';
     applyGameLock(card);
     card.addEventListener('mousemove', function(e){
       var r = card.getBoundingClientRect();
@@ -645,7 +650,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     card.addEventListener('mouseenter', function(){ card.style.setProperty('--h', '1'); });
     card.addEventListener('mouseleave', function(){ card.style.setProperty('--h', '0'); });
     card.addEventListener('click', function(e){
-      if (e.target.closest('a') || getGameAccessBlock()) return;
+      if (e.target.closest('a') || card.classList.contains('gl-maint') || getGameAccessBlock()) return;
       window.location.href = g.href;
     });
     return card;
@@ -1495,6 +1500,34 @@ document.addEventListener('DOMContentLoaded', async function() {
     __promoTries++;
     if (mountFramesPromo() || __promoTries >= 30) clearInterval(__promoTimer);
   }, 300);
+</script>
+<script src="js/agp-home-fx.js"></script>
+<!-- سلوقن المكتبة — زاوية يسار فوق (تحت الهيدر)، بخط Mmtsdr La Tkelmeni.
+     القالب يعيد بناء محتوى الصفحة بعد التحميل ويمسح أي عنصر ثابت بالـbody —
+     فالتنسيق يُضاف للـhead والسلوقن يُضاف بالسكربت ويرجع لو انمسح. -->
+<script>
+  (function(){
+    var css = "@font-face{font-family:'Mmtsdr La Tkelmeni';src:url('assets/fonts/mmtsdr-la-tkelmeni.ttf') format('truetype');font-display:swap;}" +
+      ".gl-slogan{position:absolute;top:108px;left:clamp(16px,3vw,40px);z-index:5;direction:rtl;pointer-events:none;" +
+      "font-family:'Mmtsdr La Tkelmeni','IBM Plex Sans Arabic',sans-serif;font-size:clamp(17px,1.5vw,24px);line-height:1.3;white-space:nowrap;" +
+      "color:#c6b4f2;text-shadow:0 2px 14px rgba(122,63,212,.55);}" +
+      "@media (max-width:599px){.gl-slogan{top:96px;font-size:15px;}}";
+    function ensureSlogan(){
+      if (!document.getElementById('gl-slogan-style')) {
+        var st = document.createElement('style');
+        st.id = 'gl-slogan-style';
+        st.textContent = css;
+        document.head.appendChild(st);
+      }
+      if (document.querySelector('.gl-slogan')) return;
+      var s = document.createElement('div');
+      s.className = 'gl-slogan';
+      s.textContent = 'ألعاب أيمن لك كاستريمر مو عليك';
+      document.body.appendChild(s);
+    }
+    ensureSlogan();
+    var tries = 0, timer = setInterval(function(){ ensureSlogan(); if (++tries >= 30) clearInterval(timer); }, 300);
+  })();
 </script>
 </body>
 </html>

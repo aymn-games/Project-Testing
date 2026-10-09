@@ -19,8 +19,8 @@
  *   custom_frames  — إطارات حصرية حرة يرفعها الأدمن ويمنحها لأي مستخدم
  *   user_frames    — ملكية/تفعيل الإطارات لكل مستخدم
  *   user_entrances — الدخولية النشطة (أنيميشن + نص) لكل مستخدم
- *   user_elim_cards — بطاقة الإقصاء المملوكة (منح يدوي من الأدمن) لكل مستخدم
- *   user_win_cards — بطاقة الفوز المملوكة (منح يدوي من الأدمن) لكل مستخدم
+ *   user_elim_cards — بطاقات الإقصاء المملوكة (منح يدوي من الأدمن)، وحدة مفعّلة كحد أقصى
+ *   user_win_cards — بطاقات الفوز المملوكة (منح يدوي من الأدمن)، وحدة مفعّلة كحد أقصى
  *   user_points    — نقاط اللاعب الإجمالية + سقف يومي — راجع
  *                    backend/points/points-service.js
  *   streamer_levels — كتالوج مستويات "SP" (نقاط الستريمر) القابلة
@@ -184,26 +184,66 @@ db.exec(`
         redeemed_at INTEGER
     );
 
-    -- بطاقة الإقصاء — صف واحد لكل مستخدم (منح/سحب يدوي من الأدمن).
-    -- card_key يشير لتصميم البطاقة (الصور والمواضع بـjs/agp-elim-card.js،
-    -- المفاتيح المسموحة بـcollectibles-service.js). enabled = تفعيل/إيقاف
-    -- ذاتي من صاحب الحساب بالبروفايل.
+    -- بطاقات الإقصاء المملوكة — صف لكل (مستخدم، بطاقة)، نفس نمط user_frames:
+    -- المستخدم يقدر يملك أكثر من بطاقة (منح/سحب يدوي من الأدمن). card_key
+    -- يشير لتصميم البطاقة (الصور والمواضع بـjs/agp-elim-card.js، المفاتيح
+    -- المسموحة بـcollectibles-service.js). enabled = البطاقة المفعّلة حالياً
+    -- (واحدة فقط لكل مستخدم أو ولا وحدة — يُطبَّق بمنطق التطبيق).
     CREATE TABLE IF NOT EXISTS user_elim_cards (
-        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         card_key TEXT NOT NULL,
-        enabled INTEGER NOT NULL DEFAULT 1,
+        enabled INTEGER NOT NULL DEFAULT 0,
         granted_by TEXT NOT NULL DEFAULT 'admin_manual',
-        granted_at INTEGER NOT NULL
+        granted_at INTEGER NOT NULL,
+        UNIQUE(user_id, card_key)
     );
 
-    -- بطاقة الفوز — نفس شكل user_elim_cards (التصميم بـjs/agp-win-card.js،
+    -- بطاقات الفوز — نفس شكل user_elim_cards (التصميم بـjs/agp-win-card.js،
     -- المفاتيح المسموحة بـcollectibles-service.js).
     CREATE TABLE IF NOT EXISTS user_win_cards (
-        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         card_key TEXT NOT NULL,
-        enabled INTEGER NOT NULL DEFAULT 1,
+        enabled INTEGER NOT NULL DEFAULT 0,
         granted_by TEXT NOT NULL DEFAULT 'admin_manual',
-        granted_at INTEGER NOT NULL
+        granted_at INTEGER NOT NULL,
+        UNIQUE(user_id, card_key)
+    );
+
+    -- أكواد استرداد بطاقات الإقصاء والفوز — نفس فكرة frame_codes (وبنفس صيغة
+    -- الكود AGP-XXXX-XXXX، والكود فريد عبر الجدولين)، بجدول منفصل بدل تعديل
+    -- قيد CHECK(frame_type ...) بـframe_codes (يتطلب إعادة بناء الجدول بـSQLite).
+    -- card_kind: 'elim' (user_elim_cards) أو 'win' (user_win_cards).
+    CREATE TABLE IF NOT EXISTS card_codes (
+        code TEXT PRIMARY KEY,
+        card_kind TEXT NOT NULL CHECK(card_kind IN ('elim', 'win')),
+        card_key TEXT NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        redeemed_by INTEGER,
+        redeemed_at INTEGER
+    );
+
+    -- الباكجات: مجموعة عناصر (إطارات/بطاقات إقصاء/بطاقات فوز) تُمنح كلها بكود
+    -- واحد. items = JSON مصفوفة {kind:'frame',frameType,frameRef} أو
+    -- {kind:'elim'|'win',cardKey}.
+    CREATE TABLE IF NOT EXISTS bundles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        items TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+    );
+
+    -- أكواد الباكجات — نفس صيغة الأكواد الثانية (فريدة عبر الجداول الثلاثة).
+    CREATE TABLE IF NOT EXISTS bundle_codes (
+        code TEXT PRIMARY KEY,
+        bundle_id INTEGER NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        redeemed_by INTEGER,
+        redeemed_at INTEGER,
+        burned_at INTEGER
     );
 
     -- كتالوج مستويات "SP" (نقاط الستريمر) — عتبات قابلة للتعديل من الأدمن.
@@ -331,6 +371,9 @@ function ensureColumn(table, column, definition) {
     }
 }
 ensureColumn('users', 'google_id', 'TEXT');
+// حرق كود استرداد (استرجاع مبلغ مثلاً) — burned_at ليس NULL = الكود ملغي وما يُسترد.
+ensureColumn('frame_codes', 'burned_at', 'INTEGER');
+ensureColumn('card_codes', 'burned_at', 'INTEGER');
 ensureColumn('users', 'tiktok_username', 'TEXT');
 ensureColumn('users', 'tiktok_verified', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'tiktok_verification_code', 'TEXT');
@@ -403,6 +446,37 @@ ensureColumn('supporters', 'user_id', 'INTEGER');
 // آخر مرة فتح فيها صاحب التذكرة محادثتها — أي رد أدمن بعد هذا الوقت يُعَد
 // "غير مقروء" (شارة زر "تذاكري" بالبروفايل). 0 = لم يفتحها بعد.
 ensureColumn('tickets', 'user_seen_at', 'INTEGER NOT NULL DEFAULT 0');
+
+// تعدد بطاقات الإقصاء/الفوز: الشكل القديم كان صف واحد لكل مستخدم (user_id
+// = PRIMARY KEY). SQLite ما يسمح بتغيير المفتاح الأساسي بـALTER، فيُعاد
+// بناء الجدول مرة واحدة (لو ما فيه عمود id بعد) مع نقل كل البطاقات
+// الموجودة كما هي (نفس البطاقة ونفس حالة التفعيل). صفوف يتيمة لحساب
+// محذوف تُتجاهَل، وإلا قيد FOREIGN KEY يفشّل الترحيل كله.
+function migrateSingleCardTable(table) {
+    var cols = db.prepare('PRAGMA table_info(' + table + ')').all();
+    if (cols.some(function (col) { return col.name === 'id'; })) return;
+    db.transaction(function () {
+        db.exec(
+            'CREATE TABLE ' + table + '_new (' +
+            '    id INTEGER PRIMARY KEY AUTOINCREMENT,' +
+            '    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,' +
+            '    card_key TEXT NOT NULL,' +
+            '    enabled INTEGER NOT NULL DEFAULT 0,' +
+            "    granted_by TEXT NOT NULL DEFAULT 'admin_manual'," +
+            '    granted_at INTEGER NOT NULL,' +
+            '    UNIQUE(user_id, card_key)' +
+            ');' +
+            'INSERT INTO ' + table + '_new (user_id, card_key, enabled, granted_by, granted_at) ' +
+            '    SELECT user_id, card_key, enabled, granted_by, granted_at FROM ' + table +
+            '    WHERE user_id IN (SELECT id FROM users);' +
+            'DROP TABLE ' + table + ';' +
+            'ALTER TABLE ' + table + '_new RENAME TO ' + table + ';'
+        );
+    })();
+    logger.log('Database: migrated — ' + table + ' now supports multiple cards per user');
+}
+migrateSingleCardTable('user_elim_cards');
+migrateSingleCardTable('user_win_cards');
 
 /**
  * تهيئة أولية لكتالوج الإطارات الثابت (4 خاصة + 7 مستويات) — INSERT OR

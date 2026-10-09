@@ -324,7 +324,7 @@ function handleConnectMessage(connectionId, socket, payload) {
     },
 
     onGift: function (data) {
-      sendEnvelope(socket, builder.buildGiftMessage(platform, data.id, data.name, data.giftName, data.giftValue, data.repeatCount));
+      sendEnvelope(socket, builder.buildGiftMessage(platform, data.id, data.name, data.giftName, data.giftValue, data.repeatCount, data.giftId));
 
       // قيمة الهدية الفعلية = قيمة الوحدة × عدد التكرار. تجميع بالذاكرة
       // بدل كتابتين SQLite فوريتين لكل هدية.

@@ -503,8 +503,8 @@ function getPublicProfile(customId) {
         points: pointsService.getUserPoints(user.id),
         frames: collectiblesService.getUserFrames(user.id),
         entrance: collectiblesService.getEntrance(user.id),
-        elimCard: collectiblesService.getElimCard(user.id),
-        winCard: collectiblesService.getWinCard(user.id),
+        elimCards: collectiblesService.getElimCards(user.id),
+        winCards: collectiblesService.getWinCards(user.id),
         streamerLevel: streamerLevelService.getStreamerLevelInfo(user.id)
     };
 }

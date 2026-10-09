@@ -429,8 +429,11 @@ function equipFrame(frameType, frameRef) {
     return request('/api/collectibles/equip', { method: 'POST', body: { frameType: frameType, frameRef: frameRef } });
 }
 
-/** Owner redeems a purchased frame code (e.g. "AGP-7K3M-Q9XD").
- * result.error: invalid_code | code_used | already_owned | rate_limited */
+/** Owner redeems a purchased code (e.g. "AGP-7K3M-Q9XD") — a frame, an
+ * elimination card, a win card or a bundle. result.kind: frame | elim | win |
+ * bundle (result.frame / result.card / result.bundle + result.granted +
+ * result.alreadyOwned). result.error: invalid_code | code_used | code_burned |
+ * already_owned | rate_limited */
 function redeemFrameCode(code) {
     return request('/api/collectibles/redeem', { method: 'POST', body: { code: code } });
 }
@@ -443,7 +446,36 @@ function adminGenerateFrameCodes(frameType, frameRef, count, note) {
     });
 }
 
-/** Admin only — latest codes with redemption status. */
+/** Admin only — generates `count` one-time codes for an elimination
+ * (kind 'elim') or win (kind 'win') card. */
+function adminGenerateCardCodes(kind, cardKey, count, note) {
+    return request('/api/admin/card-codes/generate', {
+        method: 'POST',
+        body: { kind: kind, cardKey: cardKey, count: count, note: note || '' }
+    });
+}
+
+/** Admin only — bundles (several items granted by one code). */
+function adminListBundles() {
+    return request('/api/admin/bundles', { method: 'GET' });
+}
+/** items: [{kind:'frame',frameType,frameRef} | {kind:'elim'|'win',cardKey}] (2+). */
+function adminCreateBundle(name, items) {
+    return request('/api/admin/bundles', { method: 'POST', body: { name: name, items: items } });
+}
+function adminGenerateBundleCodes(bundleId, count, note) {
+    return request('/api/admin/bundle-codes/generate', {
+        method: 'POST',
+        body: { bundleId: bundleId, count: count, note: note || '' }
+    });
+}
+/** Admin only — burns (cancels) an unused code of any kind, e.g. after a refund.
+ * result.error: invalid_code | code_used | already_burned */
+function adminBurnCode(code) {
+    return request('/api/admin/codes/burn', { method: 'POST', body: { code: code } });
+}
+
+/** Admin only — latest codes (frames, cards and bundles) with redemption status. */
 function adminListFrameCodes() {
     return request('/api/admin/frame-codes', { method: 'GET' });
 }
@@ -454,34 +486,36 @@ function toggleEntrance(enabled) {
     return request('/api/entrance/toggle', { method: 'POST', body: { enabled: Boolean(enabled) } });
 }
 
-/** Admin only — grants (or replaces) a user's elimination card. cardKey
- * from adminGetCollectiblesCatalog().elimCards. */
+/** Admin only — adds an elimination card to a user's collection (a user can
+ * own several). cardKey from adminGetCollectiblesCatalog().elimCards. */
 function adminGrantElimCard(userId, cardKey) {
     return request('/api/admin/elim-card', { method: 'POST', body: { userId: userId, cardKey: cardKey } });
 }
 
-function adminRevokeElimCard(userId) {
-    return request('/api/admin/elim-card', { method: 'POST', body: { userId: userId, revoke: true } });
+function adminRevokeElimCard(userId, cardKey) {
+    return request('/api/admin/elim-card', { method: 'POST', body: { userId: userId, cardKey: cardKey, revoke: true } });
 }
 
-/** Owner toggles their elimination card on/off without losing it. */
-function toggleElimCard(enabled) {
-    return request('/api/elim-card/toggle', { method: 'POST', body: { enabled: Boolean(enabled) } });
+/** Owner activates one of their elimination cards (deactivating the rest),
+ * or turns it off, without losing it. */
+function toggleElimCard(cardKey, enabled) {
+    return request('/api/elim-card/toggle', { method: 'POST', body: { cardKey: cardKey, enabled: Boolean(enabled) } });
 }
 
-/** Admin only — grants (or replaces) a user's win card. cardKey from
- * adminGetCollectiblesCatalog().winCards. */
+/** Admin only — adds a win card to a user's collection (a user can own
+ * several). cardKey from adminGetCollectiblesCatalog().winCards. */
 function adminGrantWinCard(userId, cardKey) {
     return request('/api/admin/win-card', { method: 'POST', body: { userId: userId, cardKey: cardKey } });
 }
 
-function adminRevokeWinCard(userId) {
-    return request('/api/admin/win-card', { method: 'POST', body: { userId: userId, revoke: true } });
+function adminRevokeWinCard(userId, cardKey) {
+    return request('/api/admin/win-card', { method: 'POST', body: { userId: userId, cardKey: cardKey, revoke: true } });
 }
 
-/** Owner toggles their win card on/off without losing it. */
-function toggleWinCard(enabled) {
-    return request('/api/win-card/toggle', { method: 'POST', body: { enabled: Boolean(enabled) } });
+/** Owner activates one of their win cards (deactivating the rest), or turns
+ * it off, without losing it. */
+function toggleWinCard(cardKey, enabled) {
+    return request('/api/win-card/toggle', { method: 'POST', body: { cardKey: cardKey, enabled: Boolean(enabled) } });
 }
 
 /** Called on round/match end. participants: [{tiktokUsername, won}].
@@ -839,6 +873,11 @@ global.AGPAuth = {
     equipFrame: equipFrame,
     redeemFrameCode: redeemFrameCode,
     adminGenerateFrameCodes: adminGenerateFrameCodes,
+    adminGenerateCardCodes: adminGenerateCardCodes,
+    adminListBundles: adminListBundles,
+    adminCreateBundle: adminCreateBundle,
+    adminGenerateBundleCodes: adminGenerateBundleCodes,
+    adminBurnCode: adminBurnCode,
     adminListFrameCodes: adminListFrameCodes,
     toggleEntrance: toggleEntrance,
     adminGrantElimCard: adminGrantElimCard,

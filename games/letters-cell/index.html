@@ -19,8 +19,23 @@
      ملف موجود بالمشروع غير games.html (لإضافة اللعبة لمكتبة الألعاب).
     ==========================================================================
 -->
+    <script src="../../js/agp-apple-emoji.js"></script>
 </head>
 <body>
+<!-- 🔧 وضع الصيانة: اللعبة مقفولة مؤقتاً. سكربتات اللعبة محفوظة كما هي داخل
+     <template id="lc-game-scripts"> (لا تُنفَّذ). لإعادة فتح اللعبة: احذف قسم
+     #lc-maintenance ووسوم <template> المحيطة بالسكربتات، وشيل
+     maintenance: true وشارة 'صيانة' من بطاقة letters-cell في games.html. -->
+<div id="lc-maintenance" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:#0a0812;font-family:'Cairo',sans-serif;direction:rtl;">
+    <div style="width:100%;max-width:420px;padding:32px 26px;border-radius:20px;border:1px solid rgba(251,191,36,.4);background:linear-gradient(180deg,#1a1526,#0d0b14);text-align:center;color:#f2edff;">
+        <div style="font-size:44px;line-height:1;">🔧</div>
+        <h1 style="margin:16px 0 8px;font-size:26px;font-weight:900;">خلية الحروف تحت الصيانة</h1>
+        <p style="margin:0 0 22px;font-size:15px;line-height:1.8;color:#c9c2df;">اللعبة مقفولة مؤقتاً للصيانة، وبترجع قريب إن شاء الله.</p>
+        <a href="../../games.html" style="display:block;padding:12px;border-radius:12px;background:linear-gradient(90deg,#8b5cf6,#a78bfa);color:#0a0812;font-weight:900;font-size:15px;text-decoration:none;">العودة لمكتبة الألعاب</a>
+    </div>
+</div>
+
+<template id="lc-game-scripts">
 
 <script src="../../js/agp-core.js"></script>
 <script src="../../js/agp-events.js"></script>
@@ -58,5 +73,6 @@
 <!-- منطق لعبة خلية الحروف نفسها (بدون agp-game-shell.js) -->
 <script src="agp-letters-cell.js"></script>
 
+</template>
 </body>
 </html>

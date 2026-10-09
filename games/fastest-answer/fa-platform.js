@@ -206,7 +206,7 @@
     }
 
     window.FA = {
-        libraryUrl: 'https://aymngames.online/',
+        libraryUrl: 'https://aymngames.online/games.html',
         readJSON: readJSON,
         writeJSON: writeJSON,
         getSavedConnection: getSavedConnection,

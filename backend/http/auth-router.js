@@ -118,6 +118,11 @@ var ROUTES = [
   // أكواد استرداد الإطارات — توليد/عرض للأدمن، واسترداد لصاحب الحساب.
   { method: 'POST', path: '/api/admin/frame-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateFrameCodes },
   { method: 'GET', path: '/api/admin/frame-codes', requireAuth: true, requireAdmin: true, handler: handleAdminListFrameCodes },
+  { method: 'POST', path: '/api/admin/card-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateCardCodes },
+  { method: 'GET', path: '/api/admin/bundles', requireAuth: true, requireAdmin: true, handler: handleAdminListBundles },
+  { method: 'POST', path: '/api/admin/bundles', requireAuth: true, requireAdmin: true, handler: handleAdminCreateBundle },
+  { method: 'POST', path: '/api/admin/bundle-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateBundleCodes },
+  { method: 'POST', path: '/api/admin/codes/burn', requireAuth: true, requireAdmin: true, handler: handleAdminBurnCode },
   { method: 'POST', path: '/api/collectibles/redeem', requireAuth: true, handler: handleRedeemFrameCode },
   { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
   // ---- هل البث شغّال الحين؟ — مكتبة الألعاب والألعاب تقطع الاتصال المحفوظ
@@ -492,11 +497,36 @@ function handleAdminGenerateFrameCodes(req, res, body) {
   sendJson(res, result.success ? 200 : 400, result);
 }
 
+function handleAdminGenerateCardCodes(req, res, body) {
+  var result = collectiblesService.generateCardCodes(body.kind, body.cardKey, body.count, body.note);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleAdminListBundles(req, res) {
+  sendJson(res, 200, { success: true, bundles: collectiblesService.listBundles() });
+}
+
+function handleAdminCreateBundle(req, res, body) {
+  var result = collectiblesService.createBundle(body.name, body.items);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleAdminGenerateBundleCodes(req, res, body) {
+  var result = collectiblesService.generateBundleCodes(body.bundleId, body.count, body.note);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+var BURN_ERROR_STATUS = { invalid_code: 404, code_used: 409, already_burned: 409 };
+function handleAdminBurnCode(req, res, body) {
+  var result = collectiblesService.burnCode(body.code);
+  sendJson(res, result.success ? 200 : (BURN_ERROR_STATUS[result.error] || 400), result);
+}
+
 function handleAdminListFrameCodes(req, res) {
   sendJson(res, 200, { success: true, codes: collectiblesService.listFrameCodes(getQueryParam(req, 'limit')) });
 }
 
-var REDEEM_ERROR_STATUS = { invalid_code: 404, code_used: 409, already_owned: 409, rate_limited: 429 };
+var REDEEM_ERROR_STATUS = { invalid_code: 404, code_used: 409, code_burned: 410, already_owned: 409, rate_limited: 429 };
 
 function handleRedeemFrameCode(req, res, body, user) {
   var result = collectiblesService.redeemFrameCode(user.id, body.code);
@@ -519,37 +549,37 @@ function handleToggleEntrance(req, res, body, user) {
 }
 
 /**
- * منح/سحب بطاقة الإقصاء يدوياً من الأدمن. body.revoke === true يسحبها،
- * وإلا تُمنح body.cardKey لـbody.userId.
+ * منح/سحب بطاقة الإقصاء يدوياً من الأدمن. body.revoke === true يسحب
+ * body.cardKey (أو كل بطاقاته لو ما انمرَّر)، وإلا تُمنح body.cardKey لـbody.userId.
  */
 function handleAdminSetElimCard(req, res, body) {
   if (body.revoke) {
-    sendJson(res, 200, collectiblesService.revokeElimCard(body.userId));
+    sendJson(res, 200, collectiblesService.revokeElimCard(body.userId, body.cardKey));
     return;
   }
   var result = collectiblesService.grantElimCard(body.userId, body.cardKey, 'admin_manual');
   sendJson(res, result.success ? 200 : 400, result);
 }
 
-/** تفعيل/إيقاف ذاتي لبطاقة الإقصاء — user.id من الجلسة. body.enabled: true/false. */
+/** تفعيل/إيقاف ذاتي لبطاقة إقصاء مملوكة — user.id من الجلسة. body: {cardKey, enabled}. */
 function handleToggleElimCard(req, res, body, user) {
-  var result = collectiblesService.setElimCardEnabled(user.id, Boolean(body.enabled));
+  var result = collectiblesService.setElimCardEnabled(user.id, body.cardKey, Boolean(body.enabled));
   sendJson(res, result.success ? 200 : 400, result);
 }
 
 /** منح/سحب بطاقة الفوز يدوياً من الأدمن — نفس شكل handleAdminSetElimCard. */
 function handleAdminSetWinCard(req, res, body) {
   if (body.revoke) {
-    sendJson(res, 200, collectiblesService.revokeWinCard(body.userId));
+    sendJson(res, 200, collectiblesService.revokeWinCard(body.userId, body.cardKey));
     return;
   }
   var result = collectiblesService.grantWinCard(body.userId, body.cardKey, 'admin_manual');
   sendJson(res, result.success ? 200 : 400, result);
 }
 
-/** تفعيل/إيقاف ذاتي لبطاقة الفوز — user.id من الجلسة. body.enabled: true/false. */
+/** تفعيل/إيقاف ذاتي لبطاقة فوز مملوكة — user.id من الجلسة. body: {cardKey, enabled}. */
 function handleToggleWinCard(req, res, body, user) {
-  var result = collectiblesService.setWinCardEnabled(user.id, Boolean(body.enabled));
+  var result = collectiblesService.setWinCardEnabled(user.id, body.cardKey, Boolean(body.enabled));
   sendJson(res, result.success ? 200 : 400, result);
 }
 

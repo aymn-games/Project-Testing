@@ -157,6 +157,20 @@
      * يملك بطاقة مفعّلة. player: {name, avatarUrl, winCard}. lines: أسطر
      * الكرت السفلي (الترتيب/النقاط). ترجع null لو ما يملك بطاقة.
      */
+    /**
+     * بطاقة الإقصاء المملوكة (js/agp-elim-card.js) كعنصر React — تظهر بدل
+     * نافذة الإقصاء العادية فقط لو المُقصي (فائز الجولة) يملك بطاقة مفعّلة.
+     * actor/target: {name, avatarUrl, elimCard}. ترجع null لو ما يملك بطاقة.
+     */
+    function elimCard(actor, target, key) {
+        var React = window.React;
+        if (!React || !AGP.elimCard || !actor || !AGP.elimCard.canShow(actor)) return null;
+        return React.createElement('div', { key: key || 'ec', style: { width: '100%', lineHeight: 0 }, dangerouslySetInnerHTML: { __html: AGP.elimCard.renderHtml(actor, target) } });
+    }
+    function hasElimCard(actor) {
+        return !!(actor && AGP.elimCard && AGP.elimCard.canShow(actor));
+    }
+
     function winCard(player, lines, key, width) {
         var React = window.React;
         if (!React || !AGP.winCard || !player || !AGP.winCard.canShow(player)) return null;
@@ -194,12 +208,17 @@
         car: ['Sports Car'], lion: ['Lion'], universe: ['TikTok Universe', 'Universe']
     };
     function giftKey(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, ''); }
-    /** هل اسم الهدية القادمة من البث يطابق هدية الإعدادات (id)؟ */
-    function giftMatches(giftId, giftName) {
+    /**
+     * هل الهدية القادمة من البث تطابق هدية الإعدادات (id)؟ بالاسم، أو بقيمة
+     * العملات (giftValue من تيك توك = coins هدية الإعدادات) لأن أسماء تيك توك
+     * الإنجليزية ما تطابق دائماً الأسماء المحفوظة هنا.
+     */
+    function giftMatches(giftId, giftName, giftValue, coins) {
         var got = giftKey(giftName);
-        if (!got) return false;
-        if (got === giftKey(giftId)) return true;
-        return (GIFT_NAMES[giftId] || []).some(function (n) { return giftKey(n) === got; });
+        if (got && got === giftKey(giftId)) return true;
+        if (got && (GIFT_NAMES[giftId] || []).some(function (n) { return giftKey(n) === got; })) return true;
+        var c = Number(coins), v = Number(giftValue);
+        return c > 0 && v > 0 && c === v;
     }
 
     /** cb(payload) لكل هدية من البث ({id, name, giftName, ...}). ترجع دالة لإلغاء الاستماع. */
@@ -226,22 +245,23 @@
                     var known = byId[payload.id];
                     if (payload.avatarUrl && !byName[known].avatar) byName[known].avatar = payload.avatarUrl;
                     if (payload.frame) byName[known].frame = payload.frame;
+                    if (payload.elimCard !== undefined) byName[known].elimCard = payload.elimCard || null;
                     if (payload.winCard !== undefined) byName[known].winCard = payload.winCard || null;
                     return known;
                 }
                 var base = String(payload.name || payload.id).trim() || String(payload.id);
                 var name = base, k = 2;
                 while (byName[name]) name = base + ' ' + (k++);
-                byName[name] = { id: payload.id, avatar: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null };
+                byName[name] = { id: payload.id, avatar: payload.avatarUrl || null, frame: payload.frame || null, elimCard: payload.elimCard || null, winCard: payload.winCard || null };
                 byId[payload.id] = name;
                 return name;
             },
             avatar: function (name) { return (byName[name] && byName[name].avatar) || null; },
             id: function (name) { return (byName[name] && byName[name].id) || null; },
-            // اللاعب بصيغة AGP ({id, name, avatarUrl, winCard}) — لبطاقة الفوز (js/agp-win-card.js)
+            // اللاعب بصيغة AGP ({id, name, avatarUrl, elimCard, winCard}) — لبطاقتي الإقصاء والفوز
             player: function (name) {
                 var p = byName[name] || {};
-                return { id: p.id || name, name: name, avatarUrl: p.avatar || null, winCard: p.winCard || null };
+                return { id: p.id || name, name: name, avatarUrl: p.avatar || null, elimCard: p.elimCard || null, winCard: p.winCard || null };
             },
             // لاعب عنده إطار مفعّل من المنصة → بيانات بطاقته، وإلا null
             framed: function (name) {
@@ -253,13 +273,15 @@
     }
 
     window.XO = {
-        libraryUrl: 'https://aymngames.online/',
+        libraryUrl: 'https://aymngames.online/games.html',
         readJSON: readJSON,
         writeJSON: writeJSON,
         getSavedConnection: getSavedConnection,
         norm: norm,
         join: join,
         frameCard: frameCard,
+        elimCard: elimCard,
+        hasElimCard: hasElimCard,
         winCard: winCard,
         hasWinCard: hasWinCard,
         connect: connect,

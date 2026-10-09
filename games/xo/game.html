@@ -17,10 +17,12 @@
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-elim-card.js"></script>
 <script src="../../js/agp-win-card.js"></script>
 <script src="xo-platform.js"></script>
 <script src="./support.js"></script>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#7c3aed"/><text x="50" y="66" font-size="44" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">?</text></svg></template>
+    <script src="../../js/agp-apple-emoji.js"></script>
 </head>
 <body>
 <x-dc>
@@ -50,6 +52,11 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
 @keyframes popOut{from{opacity:1;transform:none}to{opacity:0;transform:scale(.9)}}
 @keyframes pop{0%{opacity:0;transform:translateY(30px) scale(.86);filter:blur(8px)}60%{opacity:1;filter:blur(0)}100%{transform:none}}
 @keyframes rise{from{opacity:0;transform:translateY(16px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes reviveIn{0%{opacity:0;transform:scale(.55) translateY(30px);filter:grayscale(1) blur(6px)}60%{opacity:1;transform:scale(1.08);filter:none}100%{opacity:1;transform:none;filter:none}}
+@keyframes ringPulse{0%,100%{box-shadow:0 0 0 6px rgba(52,211,153,.16), 0 0 30px rgba(52,211,153,.45)}50%{box-shadow:0 0 0 14px rgba(52,211,153,.08), 0 0 70px rgba(52,211,153,.75)}}
+@keyframes glowSweep{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
+@keyframes heartBeat{0%{opacity:0;transform:scale(.2)}30%{opacity:1;transform:scale(1.3)}45%{transform:scale(.95)}60%{transform:scale(1.15)}75%,100%{opacity:1;transform:scale(1)}}
+@keyframes heartFloat{0%{opacity:0;transform:translateY(0) scale(.6)}15%{opacity:.9}100%{opacity:0;transform:translateY(-260px) scale(1.1) rotate(var(--r))}}
 @keyframes glow{0%,100%{box-shadow:0 10px 30px rgba(139,92,246,.4), 0 0 0 0 rgba(139,92,246,0)}50%{box-shadow:0 10px 30px rgba(139,92,246,.4), 0 0 0 12px rgba(139,92,246,.16)}}
 </style>
 </helmet>
@@ -59,13 +66,16 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
     <div style="display:flex;gap:clamp(6px,0.5vw,10px);justify-content:flex-start">
       <button onClick="{{ onExit }}" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.45vw,8px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;cursor:pointer;transition:all .2s;backdrop-filter:blur(10px);border:1px solid rgba(248,113,113,.25);background:rgba(255,255,255,.03);color:#fca5a5" style-hover="background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.45)" style-active="transform:scale(.97)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span style="display:{{ lblDisp }}">خروج من المباراة</span></button>
       <button onClick="{{ onSettings }}" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.45vw,8px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;cursor:pointer;transition:all .2s;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#e7e3ef" style-hover="background:rgba(255,255,255,.07);border-color:rgba(167,139,250,.4)" style-active="transform:scale(.97)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.830 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.650 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span style="display:{{ lblDisp }}">إعدادات المباراة</span></button>
+      <sc-if value="{{ showEndRound }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ onEndRound }}" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.45vw,8px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;cursor:pointer;transition:all .2s;backdrop-filter:blur(10px);border:1px solid rgba(251,191,36,.3);background:rgba(255,255,255,.03);color:#fcd34d" style-hover="background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.5)" style-active="transform:scale(.97)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><rect x="9" y="9" width="6" height="6" rx="1"></rect></svg><span style="display:{{ lblDisp }}">إنهاء الجولة</span></button>
+      </sc-if>
     </div>
     <div style="height:60px;min-width:clamp(96px,14vw,280px);position:relative;display:grid;place-items:center;border-radius:14px;border:1px dashed rgba(167,139,250,{{ phBorder }})">
       <span style="font:500 clamp(11px,0.75vw,14px) 'IBM Plex Sans Arabic';color:#8a8596;opacity:{{ phOp }}">مكان اللوقو · logo.png</span>
       <img src="../../logo.png" alt="" onLoad="{{ logoOk }}" onError="{{ logoErr }}" style="position:absolute;inset:0;margin:auto;height:60px;max-width:none;object-fit:contain;opacity:{{ logoOp }};filter:drop-shadow(0 0 14px rgba(139,92,246,.45))">
     </div>
     <div style="display:flex;gap:clamp(6px,0.5vw,10px);justify-content:flex-end">
-      
+      <button onClick="{{ onEvents }}" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.45vw,8px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;cursor:pointer;transition:all .2s;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#e7e3ef" style-hover="background:rgba(255,255,255,.07);border-color:rgba(167,139,250,.4)" style-active="transform:scale(.97)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><circle cx="4" cy="6" r="1"></circle><circle cx="4" cy="12" r="1"></circle><circle cx="4" cy="18" r="1"></circle></svg><span style="display:{{ lblDisp }}">أحداث المباراة</span></button>
     </div>
   </header>
 
@@ -133,9 +143,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
           {{ winFx }}
           <sc-if value="{{ drawing }}" hint-placeholder-val="{{ false }}">
             <div style="position:absolute;inset:0;border-radius:36px;background:rgba(7,6,11,.82);backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;animation:fade .3s ease">
-              <span style="padding:8px 20px;border-radius:999px;border:1px solid rgba(167,139,250,.35);background:rgba(139,92,246,.1);font:600 22px 'IBM Plex Sans Arabic';color:#c4b5fd">القرعة · من يبدأ؟</span>
+              <span style="padding:8px 20px;border-radius:999px;border:1px solid rgba(167,139,250,.35);background:rgba(139,92,246,.1);font:600 22px 'IBM Plex Sans Arabic';color:#c4b5fd">{{ drawTitle }}</span>
               <span style="font:700 64px/1.2 'IBM Plex Sans Arabic';color:{{ drawColor }};text-shadow:0 0 40px {{ drawColor }};white-space:nowrap">{{ drawName }}</span>
-              <span style="font:600 26px 'IBM Plex Sans Arabic';color:#e7e3ef;opacity:{{ drawDoneOp }};transition:opacity .3s">يبدأ بـ X</span>
+              <span style="font:600 26px 'IBM Plex Sans Arabic';color:#e7e3ef;opacity:{{ drawDoneOp }};transition:opacity .3s">{{ drawDoneText }}</span>
             </div>
           </sc-if>
         </div>
@@ -200,6 +210,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
     </div>
     <sc-if value="{{ showElim }}" hint-placeholder-val="{{ false }}">
       <div style="position:absolute;inset:0;z-index:6;background:rgba(0,0,0,.55);backdrop-filter:blur(12px);display:grid;place-items:center;animation:fade .3s ease">
+        <sc-if value="{{ elCard }}" hint-placeholder-val="{{ false }}">
+        <div style="width:min(900px,100%);animation:popIn .45s cubic-bezier(.2,1.25,.35,1);filter:drop-shadow(0 40px 80px rgba(0,0,0,.6))">{{ elCardEl }}</div>
+        </sc-if>
+        <sc-if value="{{ elStd }}" hint-placeholder-val="{{ true }}">
         <div style="width:800px;height:500px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:32px 56px;border-radius:32px;background:rgba(12,11,18,.94);border:1px solid rgba(255,255,255,.1);box-shadow:0 40px 120px rgba(0,0,0,.6);animation:popIn .45s cubic-bezier(.2,1.25,.35,1)">
           <span style="padding:6px 18px;border-radius:999px;border:1px solid rgba(248,113,113,.35);background:rgba(248,113,113,.08);font:600 20px 'IBM Plex Sans Arabic';color:#fca5a5">عملية إقصاء</span>
           <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;width:100%">
@@ -216,6 +230,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
             </div>
           </div>
         </div>
+        </sc-if>
       </div>
     </sc-if>
 
@@ -259,6 +274,28 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
     </sc-if>
   </div>
 
+  <!-- إشعار الرجوع بالدعم — نفس بطاقة روليت الإقصاء (games/elimination-roulette/game.html) -->
+  <sc-if value="{{ revOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:80px 0 0 0;z-index:80;pointer-events:none;background:radial-gradient(circle at 50% 50%, rgba(16,185,129,.18), rgba(0,0,0,.6) 55%);backdrop-filter:blur(8px);display:grid;place-items:center;animation:{{ revOv }}">
+      <div style="position:relative;overflow:hidden;width:250px;height:350px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;padding:22px 18px 20px;border-radius:30px;background:linear-gradient(180deg, #0b2a21 0%, #08140f 70%);border:1px solid rgba(52,211,153,.45);box-shadow:0 30px 80px rgba(0,0,0,.6), 0 0 70px rgba(16,185,129,.28), inset 0 1px 0 rgba(255,255,255,.08);text-align:center;animation:{{ revAn }}">
+        <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 38%, rgba(52,211,153,.28), transparent 55%);pointer-events:none"></div>
+        <div style="position:absolute;left:-30%;right:-30%;bottom:-45%;height:70%;background:radial-gradient(ellipse at 50% 100%, rgba(52,211,153,.3), transparent 65%);pointer-events:none;animation:glowSweep 1s ease both"></div>
+        {{ revHearts }}
+        <span style="position:relative;display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.4);font:700 12px 'IBM Plex Sans Arabic';color:#6ee7b7;letter-spacing:.3px;animation:glowSweep .4s ease both">عودة للمباراة</span>
+        <div style="position:relative;flex:1;display:grid;place-items:center">
+          <div style="position:relative;width:128px;height:128px;display:grid;place-items:center;animation:reviveIn .8s cubic-bezier(.2,1.2,.35,1) .15s both">
+            <span style="position:absolute;inset:0;border-radius:50%;border:1.5px dashed rgba(110,231,183,.45)"></span>
+            <span style="width:108px;height:108px;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;background:linear-gradient(135deg,#10b981,#065f46);border:3px solid #34d399;font:700 44px 'IBM Plex Sans Arabic';color:#fff;animation:ringPulse 1.4s ease-in-out 1s infinite;position:relative;overflow:hidden">{{ revIni }}<img src="{{ revAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;opacity:{{ revOp }}"></span>
+            {{ revHeart }}
+          </div>
+        </div>
+        <span style="position:relative;max-width:100%;font:700 24px/1.3 'IBM Plex Sans Arabic';color:#ecfdf5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:glowSweep .5s ease .45s both">{{ revName }}</span>
+        <span style="position:relative;width:40px;height:2px;margin:10px 0;border-radius:2px;background:linear-gradient(90deg,transparent,#34d399,transparent);animation:glowSweep .5s ease .55s both"></span>
+        <span style="position:relative;font:600 14px 'IBM Plex Sans Arabic';color:#6ee7b7;animation:glowSweep .5s ease .65s both">{{ revBadge }}</span>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;top:100px;left:50%;transform:translateX(-50%);z-index:90;padding:12px 24px;border-radius:999px;background:rgba(12,11,18,.94);border:1px solid rgba(248,113,113,.4);color:#fca5a5;font:600 16px 'IBM Plex Sans Arabic';box-shadow:0 20px 50px rgba(0,0,0,.5);animation:rise .35s ease">{{ toast }}</div>
   </sc-if>
@@ -278,8 +315,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
           </div>
         </div>
         <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:clamp(14px,3.5vw,20px) clamp(14px,3.5vw,22px);display:flex;flex-direction:column;gap:10px">
-          <sc-if value="{{ tabSettings }}" hint-placeholder-val="{{ true }}">
-            
+          <sc-if value="{{ tabTarget }}" hint-placeholder-val="{{ true }}">
+
             <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)">
               <div style="display:flex;flex-direction:column;gap:2px">
                 <span style="font:600 16px 'IBM Plex Sans Arabic'">الفوز عند (جولات)</span>
@@ -464,15 +501,20 @@ class Component extends DCLogic {
       patch.kw=[cfg.keyword1||'انضمام فريق 1',cfg.keyword2||'انضمام فريق 2']; patch.kwSolo=cfg.keywordSolo||'انضمام';
       if(cfg.team1||cfg.team2) patch.teams=this.state.teams.map((t,i)=>({...t,name:(i?cfg.team2:cfg.team1)||t.name})); this.setState(patch); } }catch(e){}
     this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}); this.fit(); addEventListener('resize',this.fit);
-    XO.connect(); this.unsub=XO.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); this.unsubGift=XO.onGift(p=>this.onGift(this.reg.nameFor(p),p.giftName)); }
-  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this.ti); clearInterval(this.sim); clearTimeout(this.cel); this.unsub?.(); this.unsubGift?.(); }
+    // بطاقات الإقصاء المملوكة تُحمَّل مسبقاً حتى تظهر بدون تأخير
+    this.state.teams.forEach(t=>t.players.forEach(n=>this.preloadElimCard(n)));
+    XO.connect(); this.unsub=XO.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); this.unsubGift=XO.onGift(p=>this.onGift(this.reg.nameFor(p),p.giftName,p.giftValue)); }
+  componentWillUnmount(){ removeEventListener('resize',this.fit); clearInterval(this.ti); clearInterval(this.sim); clearTimeout(this.cel); clearTimeout(this.drawT); clearTimeout(this.revT); this.unsub?.(); this.unsubGift?.(); }
   // نظام نقاط المنصة: مرة واحدة لكل مباراة عند إعلان الفائز
   reportPoints(w){ if(this.reported) return; this.reported=true; const s=this.state;
-    const players=[...new Set([...s.teams.flatMap(t=>t.players),...Object.keys(s.out)])].map(n=>({id:this.reg.id(n),name:n})).filter(p=>p.id);
+    const players=[...new Set([...s.teams.flatMap(t=>t.players),...Object.keys(s.out),...Object.keys(s.gone||{})])].map(n=>({id:this.reg.id(n),name:n})).filter(p=>p.id);
     const winnerIds=(w.solo?[w.name]:s.teams[w.i].players).map(n=>this.reg.id(n)).filter(Boolean);
     if(window.AGPAuth&&typeof window.AGPAuth.reportMatchPoints==='function')
       window.AGPAuth.reportMatchPoints({players,winnerIds,teamGame:!w.solo,durationMs:Date.now()-(this.matchStartedAt||Date.now())}); }
   // بطاقة الفوز (js/agp-win-card.js) — تحل محل بطاقة اللاعب العادية بشاشة الفوز لو يملك بطاقة مفعّلة
+  // بطاقة الإقصاء (js/agp-elim-card.js) — تحل محل نافذة الإقصاء العادية لو فائز الجولة يملك بطاقة مفعّلة
+  elimCardView(e){ const actor=e&&e.win&&e.lose?this.reg.player(e.win):null, el=actor&&XO.hasElimCard(actor)?XO.elimCard(actor,this.reg.player(e.lose),'ec'+e.lose):null; return { elCard:!!el, elStd:!el, elCardEl:el }; }
+  preloadElimCard(n){ try{ window.AymanGamesPlatform.elimCard?.preloadFor(this.reg.player(n)); }catch(e){} }
   winCardItem(n,j,lines){ const el=XO.winCard(this.reg.player(n),lines,'wc'+j,200); return { wcOn:!!el, wcStd:!el, wcEl:el }; }
 
   ac(){ if(!this._ac) this._ac=new (window.AudioContext||window.webkitAudioContext)(); if(this._ac.state==='suspended') this._ac.resume(); return this._ac; }
@@ -495,6 +537,12 @@ class Component extends DCLogic {
   addLog(k,text){ const d=new Date(), time=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
     this.setState(s=>({log:[{k,text,time,round:s.round,between:s.phase==='ready'&&s.round>0,id:Math.random()},...s.log].slice(0,200)})); }
 
+  played = {}; lastRound = {};
+  pickFair(key,pool,avoid){ const played=this.played[key]||(this.played[key]=new Set()), last=this.lastRound[key]||[];
+    const base=pool.filter(n=>!avoid.includes(n)); if(!base.length) return null;
+    let c=base.filter(n=>!played.has(n)&&!last.includes(n));
+    if(!c.length){ played.clear(); c=base.filter(n=>!last.includes(n)); if(!c.length) c=base; } // دورة جديدة
+    const n=this.pick(c); played.add(n); return n; }
   pool(){ const s=this.state; if(s.mode==='teams') return s.teams.map(t=>t.players); const all=[...new Set(s.teams.flatMap(t=>t.players))]; return [all,all]; }
   label(i){ return this.state.mode==='teams'?this.state.teams[i].name:'اللاعب '+(i+1); }
   spin=()=>{ const s=this.state; if(s.phase!=='ready'||s.winner) return;
@@ -502,7 +550,10 @@ class Component extends DCLogic {
     if(s.mode==='teams'&&P.some(p=>!p.length)) return this.toastMsg('كل فريق يحتاج لاعب واحد على الأقل');
     if(s.mode==='solo'&&P[0].length<2) return this.toastMsg('نحتاج لاعبين اثنين على الأقل');
     clearInterval(this.ti); this.ac(); this.snd('start'); if(!this.matchStartedAt) this.matchStartedAt=Date.now();
-    const a=this.pick(P[0]); let b=this.pick(P[1]); let g=0; if(s.mode==='solo') while(b===a&&g++<50) b=this.pick(P[1]);
+    const rid=this.rid=(this.rid||0)+1, ok=()=>this.rid===rid; // إنهاء الجولة يغيّر rid فتتوقف المؤقتات المعلّقة لهالجولة
+    // دور عادل: كل لاعب ياخذ دوره قبل ما يتكرر أحد، وما يجي نفس اللاعب جولتين ورا بعض إلا لو بقى لحاله
+    let a,b; if(s.mode==='solo'){ a=this.pickFair('s',P[0],[]); b=this.pickFair('s',P[1],[a]); this.lastRound.s=[a,b]; }
+    else { a=this.pickFair(0,P[0],[]); b=this.pickFair(1,P[1],[]); this.lastRound[0]=[a]; this.lastRound[1]=[b]; }
     const chosen=[a,b];
     const reels=[0,1].map(i=>{ const L=26+i*5, items=Array.from({length:L},()=>this.pick(P[i])); items[L-2]=chosen[i]; return {items,offset:0,trans:'none',stopped:false,chosen:chosen[i],ci:L-2}; });
     if(s.mode==='solo'&&P[0].length>=4){ const A=reels[0], B=reels[1], seenA=new Set([A.items[A.ci-1],A.items[A.ci],A.items[A.ci+1]]);
@@ -510,35 +561,41 @@ class Component extends DCLogic {
       for(const k of [-1,1]){ let n=0; while((A.items[A.ci+k]===b)&&n++<60) A.items[A.ci+k]=this.pick(P[0].filter(x=>x!==a)); } }
     this.setState({phase:'spinning',reels,board:Array(9).fill(null),syms:[null,null],winLine:null,result:null,drawHi:null,drawDone:false,round:s.round+1});
     const ease='cubic-bezier(.12,.86,.2,1)', durs=[2.6,3.15];
-    for(let t=0;t<durs[1]*1000-200;){ setTimeout(()=>this.snd('tick'),t); const p=t/(durs[1]*1000); t+=40+p*p*360; }
-    setTimeout(()=>{
+    for(let t=0;t<durs[1]*1000-200;){ setTimeout(()=>ok()&&this.snd('tick'),t); const p=t/(durs[1]*1000); t+=40+p*p*360; }
+    setTimeout(()=>{ if(!ok()) return;
       this.setState(st=>({reels:st.reels.map((r,i)=>({...r,offset:-(r.ci-1)*this.IT,trans:'transform '+durs[i]+'s '+ease}))}));
-      durs.forEach((d,i)=>setTimeout(()=>{ this.snd('stop'); this.setState(st=>({reels:st.reels.map((r,j)=>j===i?{...r,stopped:true}:r)})); },d*1000));
-      setTimeout(()=>this.runDraw(),durs[1]*1000+600);
+      durs.forEach((d,i)=>setTimeout(()=>{ if(!ok()) return; this.snd('stop'); this.setState(st=>({reels:st.reels.map((r,j)=>j===i?{...r,stopped:true}:r)})); },d*1000));
+      setTimeout(()=>ok()&&this.runDraw(),durs[1]*1000+600);
     },50);
   };
-  runDraw(){ const starter=this.r(2); this.setState({phase:'draw',drawHi:0,drawDone:false}); this.snd('open');
+  runDraw(){ const starter=this.r(2), rid=this.rid; this.setState({phase:'draw',drawHi:0,drawDone:false}); this.snd('open');
     let i=0; const steps=16+starter;
-    const next=()=>{ i++; this.setState({drawHi:i%2}); this.snd('tick'); if(i<steps) setTimeout(next,60+i*i*1.6); else this.endDraw(i%2); };
+    const next=()=>{ if(this.rid!==rid) return; i++; this.setState({drawHi:i%2}); this.snd('tick'); if(i<steps) setTimeout(next,60+i*i*1.6); else this.endDraw(i%2); };
     setTimeout(next,300); }
   endDraw(st){ this.snd('reveal'); const syms=[null,null]; syms[st]='X'; syms[1-st]='O';
     this.setState({drawDone:true,syms,turn:st});
     const s=this.state; this.addLog('round',s.reels[0].chosen+' ضد '+s.reels[1].chosen+' · يبدأ '+s.reels[st].chosen);
-    setTimeout(()=>{ this.setState({phase:'play'}); this.startTimer(); },1500); }
+    this.drawT=setTimeout(()=>this.beginPlay(),1500); }
+  // بداية اللعب بعد عرض القرعة — أو فوراً لو اللاعب اللي يبدأ كتب رقم المربع وقت عرض النتيجة
+  beginPlay(){ clearTimeout(this.drawT); if(this.state.phase!=='draw') return; this.setState({phase:'play'}); this.startTimer(); }
   startTimer(){ clearInterval(this.ti); this.setState({timeLeft:this.DUR});
-    this.ti=setInterval(()=>{ const t=this.state.timeLeft-1; if(t>0&&t<=5) this.snd('beep'); this.setState({timeLeft:Math.max(0,t)});
+    this.ti=setInterval(()=>{ if(this.state.revOpen) return; // الوقت يتوقف وقت إشعار الرجوع بالدعم
+      const t=this.state.timeLeft-1; if(t>0&&t<=5) this.snd('beep'); this.setState({timeLeft:Math.max(0,t)});
       if(t<=0){ const s=this.state, who=s.reels[s.turn].chosen; this.snd('wrong'); this.addLog('wrong','انتهى وقت '+who+' · انتقل الدور'); this.toastMsg('انتهى وقت '+who); this.setState({turn:1-s.turn}); this.startTimer(); } },1000); }
-  move(pi,cell){ const s=this.state; if(s.phase!=='play'||pi!==s.turn||cell<0||cell>8||s.board[cell]!=null) return false;
-    const board=s.board.slice(); board[cell]=pi; this.snd('correct'); this.setState({lastCell:cell});
+  move(pi,cell,early){ const s=this.state; if((s.phase!=='play'&&!early)||pi!==s.turn||cell<0||cell>8||s.board[cell]!=null) return false;
+    const board=s.board.slice(); board[cell]=pi; this.snd('correct'); this.setState(early?{lastCell:cell,phase:'play'}:{lastCell:cell});
     this.addLog('correct',s.reels[pi].chosen+' وضع '+s.syms[pi]+' في '+(cell+1));
     const line=this.LINES.find(L=>L.every(k=>board[k]===pi));
     if(line){ this.setState({board,winLine:line}); this.finish(pi); }
     else if(board.every(v=>v!=null)){ this.setState({board}); this.finish(null); }
     else { this.setState({board,turn:1-pi}); this.startTimer(); }
     return true; }
-  finish(w){ clearInterval(this.ti); clearInterval(this.sim); const s=this.state;
-    if(w==null){ this.snd('timeup'); this.addLog('round','تعادل'); this.setState({phase:'celebrate',result:{w:null}}); clearTimeout(this.cel); this.cel=setTimeout(()=>this.setState({phase:'over'}),1200); return; }
-    this.snd('win'); const name=s.reels[w].chosen; const patch={phase:'over',result:{w,name}}; let lead=null;
+  finish(w,lot){ clearInterval(this.ti); clearInterval(this.sim); const s=this.state;
+    if(w==null){ this.snd('timeup'); this.addLog('round','تعادل · قرعة بين '+s.reels[0].chosen+' و '+s.reels[1].chosen);
+      // أي تعادل (كل الأنماط): قرعة بين اسمي اللاعبين — اللي يطلع اسمه ياخذ الجولة كأنه فاز
+      // (نقطة الفوز لفريقه/له، أو بنمط الإقصاء يُقصى اللاعب الثاني مباشرة).
+      this.setState({phase:'celebrate',result:{w:null}}); clearTimeout(this.cel); this.cel=setTimeout(()=>this.runTiebreak(),1500); return; }
+    this.snd('win'); const name=s.reels[w].chosen; const patch={phase:'over',result:{w,name,lot:!!lot}}; let lead=null;
     if(s.mode==='teams'){ const teams=s.teams.map((t,i)=>i===w?{...t,score:t.score+1}:t); patch.teams=teams; this.addLog('points',teams[w].name+' +1 · فاز '+name);
       if(s.progress==='wins'&&teams[w].score>=s.target) lead={...teams[w],i:w}; }
     else { const solo={...s.solo,[name]:(s.solo[name]||0)+1}; patch.solo=solo; this.addLog('points',name+' +1');
@@ -546,9 +603,19 @@ class Component extends DCLogic {
     patch.phase='celebrate'; this.setState(patch);
     clearTimeout(this.cel); this.cel=setTimeout(()=>{ if(lead){ this.snd('win'); this.setState({winner:lead,phase:'ready',result:null}); this.reportPoints(lead); return; }
       this.setState({phase:'over'});
-      if(this.state.progress==='elim') this.cel=setTimeout(()=>this.runElim(w),2000); },3000); }
+      if(this.state.progress==='elim') this.cel=setTimeout(()=>this.runElim(w),2000); },lot?1200:3000); }
+  // قرعة التعادل: نفس حركة قرعة البداية بين اسمي اللاعبين، ثم الجولة تنحسب لصاحب الاسم (finish بعلامة lot)
+  runTiebreak(){ const pick=this.r(2); this.setState({phase:'tiebreak',result:null,drawHi:0,drawDone:false}); this.snd('open');
+    let i=0; const steps=16+pick;
+    const next=()=>{ i++; this.setState({drawHi:i%2}); this.snd('tick');
+      if(i<steps){ this.cel=setTimeout(next,60+i*i*1.6); return; }
+      this.snd('reveal'); this.setState({drawDone:true}); this.addLog('round','القرعة: '+this.state.reels[i%2].chosen+' ياخذ الجولة');
+      this.cel=setTimeout(()=>this.finish(i%2,true),1500); };
+    this.cel=setTimeout(next,300); }
   runElim(w){ const s=this.state, win=s.reels[w].chosen, lose=s.reels[1-w].chosen;
-    this.snd('wrong'); this.setState({phase:'elim',elim:{w,win,lose}});
+    // فائز الجولة يملك بطاقة إقصاء لها صوت خاص → صوت البطاقة بدل صوت الإقصاء العادي
+    const actor=this.reg.player(win), EC=window.AymanGamesPlatform&&window.AymanGamesPlatform.elimCard;
+    if(!(!this.muted&&XO.hasElimCard(actor)&&EC&&EC.playSound(actor,.9))) this.snd('wrong'); this.setState({phase:'elim',elim:{w,win,lose}});
     this.cel=setTimeout(()=>{ const st=this.state;
       const fromTeam=st.teams.findIndex(t=>t.players.includes(lose));
       const teams=st.teams.map(t=>({...t,players:t.players.filter(p=>p!==lose)}));
@@ -570,37 +637,63 @@ class Component extends DCLogic {
     const sparks=this._sparks.map((p,i)=>h('span',{key:'s'+i,style:{position:'absolute',left:'50%',top:'50%',width:p.sz,height:p.sz,margin:-p.sz/2,borderRadius:p.sq?2:'50%',background:i%4===0?'#fff':c,boxShadow:'0 0 10px '+c,'--dx':p.dx+'px','--dy':p.dy+'px',opacity:0,animation:'spark 1.3s cubic-bezier(.2,.8,.3,1) '+p.dl+'s both'}}));
     const banner=h('div',{key:'bn',style:{position:'absolute',left:'50%',top:'50%',padding:'16px 40px',borderRadius:999,background:'rgba(12,11,18,.9)',border:'2px solid '+c,boxShadow:'0 0 60px '+c+'88',font:"700 46px 'IBM Plex Sans Arabic'",color:c,whiteSpace:'nowrap',opacity:0,animation:'banner 2.3s ease .7s both'}},s.syms[s.result.w]+' يفوز');
     return h('div',{key:'wfx:'+s.round,'aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none',zIndex:3}},[line,...rings,...sparks,banner]); }
-  // Called for every TikTok gift event: onGift(username, giftName). Revives an eliminated player if the gift matches.
-  onGift(user,giftName){ const s=this.state, r=s.revive, o=s.out[user]; if(!r||!o||!XO.giftMatches(r.gift.id,giftName)) return;
+  // Called for every TikTok gift event: onGift(username, giftName, giftValue). Revives an eliminated player if the gift matches.
+  onGift(user,giftName,giftValue){ const s=this.state, r=s.revive, o=s.out[user]; if(!r||!o||!XO.giftMatches(r.gift.id,giftName,giftValue,r.gift.coins)) return;
     if(o.used>=r.times) return this.toastMsg(user+' استنفد مرات الرجوع');
     if(s.winner) return;
     this.snd('join'); this.addLog('join',user+' رجع للمباراة بدعم '+r.gift.name);
-    this.setState(st=>{ const out={...st.out}; const left=st.out[user]; delete out[user];
-      out.__used=out.__used||{}; const usedMap={...(st.usedMap||{}),[user]:left.used+1};
-      return {out:Object.fromEntries(Object.entries(out).filter(([k])=>k!=='__used')),usedMap,
-        teams:st.teams.map((t,i)=>i===Math.max(0,left.team)?{...t,players:[...t.players,user]}:t)}; });
-    this.toastMsg('رجع '+user+' للمباراة'); }
+    this.setState(st=>{ const left=st.out[user]; if(!left) return null; // هدية مكررة بنفس اللحظة — رجع خلاص
+      const out={...st.out}; delete out[user]; const usedMap={...(st.usedMap||{}),[user]:left.used+1};
+      return {out,usedMap,revOpen:true,revOpenOut:false,revName:user,revGift:r.gift.name,revRun:(st.revRun||0)+1,
+        teams:st.teams.map((t,i)=>i===Math.max(0,left.team)&&!t.players.includes(user)?{...t,players:[...t.players,user]}:t)}; });
+    clearTimeout(this.revT); this.revT=setTimeout(()=>this.shut('revOpen'),3000); }
+  // إنهاء الجولة الجارية بدون نتيجة (زر "إنهاء الجولة" — مثلاً لاعب مختار غايب عن البث) — بعدها يقدر المضيف يحذف اللاعب من الإعدادات
+  endRound(msg){ const s=this.state; if(s.winner||!['spinning','draw','play','tiebreak'].includes(s.phase)) return;
+    this.rid=(this.rid||0)+1; clearInterval(this.ti); clearTimeout(this.cel); clearTimeout(this.drawT); this.snd('close');
+    this.addLog('round',msg||'تم إنهاء الجولة بدون نتيجة');
+    this.setState({phase:'ready',result:null,board:Array(9).fill(null),winLine:null,syms:[null,null],lastCell:null,drawHi:null,drawDone:false,reels:[0,1].map(()=>this.blankReel())}); }
+  // فحص الفائز بعد تعديلات الإعدادات (إقصاء لاعبين أو تغيير "الفوز عند") — بين الجولات فقط
+  checkWin(){ const s=this.state; if(s.winner||s.phase!=='ready'||!this.matchStartedAt) return; let lead=null;
+    if(s.progress==='elim'){
+      if(s.mode==='teams'){ const e=s.teams.findIndex(t=>!t.players.length); if(e>=0&&s.teams[1-e].players.length) lead={...s.teams[1-e],i:1-e}; }
+      else { const left=[...new Set(s.teams.flatMap(t=>t.players))]; if(left.length===1) lead={name:left[0],score:s.solo[left[0]]||0,i:0,solo:true}; } }
+    else if(s.mode==='teams'){ const i=[0,1].filter(k=>s.teams[k].score>=s.target).sort((a,b)=>s.teams[b].score-s.teams[a].score)[0]; if(i!=null) lead={...s.teams[i],i}; }
+    else { const top=Object.entries(s.solo).filter(([,v])=>v>=s.target).sort((a,b)=>b[1]-a[1])[0]; if(top) lead={name:top[0],score:top[1],i:0,solo:true}; }
+    if(lead){ this.snd('win'); this.setState({winner:lead}); this.reportPoints(lead); } }
   closeResults=()=>{ if(this.state.phase==='over'){ this.snd('close'); this.setState({phase:'ready',result:null,board:Array(9).fill(null),winLine:null,syms:[null,null],lastCell:null}); } };
-  newGame=()=>{ clearInterval(this.ti); clearInterval(this.sim); this.matchStartedAt=null; this.reported=false; this.setState(s=>({teams:s.teams.map(t=>({...t,score:0})),solo:{},winner:null,phase:'ready',round:0,board:Array(9).fill(null),syms:[null,null],winLine:null,result:null,drawHi:null,log:[],reels:[0,1].map(()=>this.blankReel())})); };
+  newGame=()=>{ clearInterval(this.ti); clearInterval(this.sim); clearTimeout(this.cel); clearTimeout(this.drawT); this.rid=(this.rid||0)+1; this.played={}; this.lastRound={}; this.matchStartedAt=null; this.reported=false;
+    this.setState(s=>({teams:(()=>{ // المُقصين بنمط الإقصاء يرجعون لفرقهم بالمباراة الجديدة
+        const teams=s.teams.map(t=>({...t,score:0,players:[...t.players]}));
+        Object.keys(s.out).forEach(n=>{ if(!teams.some(t=>t.players.includes(n))) teams[Math.max(0,s.out[n].team)].players.push(n); });
+        return teams; })(),out:{},usedMap:{},gone:{},elim:null,lastCell:null,drawDone:false,solo:{},winner:null,phase:'ready',round:0,board:Array(9).fill(null),syms:[null,null],winLine:null,result:null,drawHi:null,log:[],reels:[0,1].map(()=>this.blankReel())})); };
   endMatch=()=>{};
 
   // الانضمام وتبديل الفريق: نفس قواعد اللوبي عبر XO.join (xo-platform.js · JOIN-RULES.md).
   // داخل نافذة "دخول لاعبين جدد" يبقى الجديد معلّقاً حتى تُغلق، والتبديل يحدّث فريقه المعلّق.
   // اللاعب المُقصى ما يرجع بكلمة الدخول — يرجع فقط بالدعم (onGift).
   onChat(user,text,follower){ const s=this.state, patch={}, opts={followersOnly:this.followersOnly,isFollower:follower};
+    // رقم المربع من اللاعبَين المختارَين بالجولة يُفحص أولاً — قبل كلمات الدخول، حتى لو كلمة الدخول
+    // نفسها رقم (مثل 1 و 2 للفريقين) ما تنحسب انضمام/تبديل فريق بدل الحركة.
+    // وقت عرض نتيجة القرعة (drawDone) اللاعب اللي يبدأ يقدر يكتب رقمه مباشرة — ما ننتظر نهاية العرض.
+    const early=s.phase==='draw'&&s.drawDone, d=this.norm(text);
+    if(s.phase==='play'||early){ const pi=s.reels.findIndex(r=>r.chosen===user);
+      if(pi>=0&&/^[1-9]$/.test(d)){ if(pi!==s.turn) return; if(s.board[+d-1]!=null){ this.toastMsg('المربع '+d+' محجوز'); return; }
+        if(early) clearTimeout(this.drawT); this.move(pi,+d-1,early); return; } }
+    // الأرقام داخل المباراة لاختيار المربع فقط — ما تنحسب أبداً كلمة دخول أو تبديل فريق
+    if(/^\d+$/.test(d)) return;
     const members=i=>[...s.teams[i].players,...s.pendingJoins.filter(p=>p.team===i).map(p=>p.name)];
     const r=s.mode==='solo'
       ?(j=>j&&{...j,k:members(0).length<=members(1).length?0:1,toast:j.toast&&'اكتمل العدد'})(XO.join([{name:'اللاعبون',keyword:s.kwSolo,max:this.MAX,members:[...members(0),...members(1)]}],user,text,opts))
       :XO.join(s.teams.map((t,i)=>({name:t.name,keyword:s.kw[i],max:this.MAX,members:members(i)})),user,text,opts);
-    if(r){ if(s.out[user]) return; const busy=s.phase!=='ready'&&s.reels.some(x=>x.chosen===user); // اللاعب المختار بالجولة الجارية ما ينتقل قبل نهايتها
-      if(r.toast&&(!r.ok||!busy)) this.toastMsg(r.toast);
-      if(r.ok&&!busy){ this.snd('join');
+    if(r){ if(s.out[user]) return;
+      // داخل المباراة ما فيه تبديل فريق: اللاعب الموجود بفريق يبقى فيه (المعلّق بنافذة الدخول فقط يقدر يغيّر فريقه)
+      const pendingJoin=s.pendingJoins.some(p=>p.name===user); if(r.cur>=0&&!pendingJoin) return;
+      if(r.toast) this.toastMsg(r.toast);
+      if(r.ok){ this.snd('join'); this.preloadElimCard(user);
         if(s.pendingJoins.some(p=>p.name===user)) patch.pendingJoins=s.pendingJoins.map(p=>p.name===user?{...p,team:r.k}:p);
         else if(r.cur<0&&s.joinOpen) patch.pendingJoins=[...s.pendingJoins,{name:user,team:r.k}];
         else { patch.teams=s.teams.map((t,i)=>({...t,players:i===r.k?[...t.players,user]:t.players.filter(x=>x!==user)}));
           this.addLog('join',r.cur<0?`${user} انضم لـ ${s.teams[r.k].name}`:`${user} انتقل إلى ${s.teams[r.k].name}`); } } }
-    else if(s.phase==='play'){ const pi=s.reels.findIndex(r=>r.chosen===user); const d=this.norm(text);
-      if(pi>=0&&/^[1-9]$/.test(d)){ if(pi!==s.turn) return; if(s.board[+d-1]!=null){ this.toastMsg('المربع '+d+' محجوز'); return; } this.move(pi,+d-1); return; } }
     this.setState(patch);
   }
   buildFx(){
@@ -629,13 +722,18 @@ class Component extends DCLogic {
     return { settOv:o('settingsOpen','fade .25s ease','fadeOut .26s ease forwards'), settAn:o('settingsOpen','slideIn .45s cubic-bezier(.2,1,.3,1)','slideOut .26s ease forwards'),
       evOv:o('eventsOpen','fade .2s ease','fadeOut .26s ease forwards'), evAn:o('eventsOpen','slideDown .4s cubic-bezier(.2,1,.3,1)','slideUp .26s ease forwards'),
       exitOv:o('exitOpen','fade .25s ease','fadeOut .26s ease forwards'), exitAn:o('exitOpen','popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards'),
+      revOv:o('revOpen','fade .25s ease','fadeOut .26s ease forwards'), revAn:o('revOpen','popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards'),
       joinOv:o('joinOpen','fade .25s ease','fadeOut .26s ease forwards'), joinAn:o('joinOpen','popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards') }; }
   closeJoin=()=>{ this.shut('joinOpen'); setTimeout(()=>{ const pj=this.state.pendingJoins; if(!pj.length) return;
     pj.forEach(p=>this.addLog('join',`${p.name} انضم لـ ${this.state.teams[p.team].name}`));
     this.setState(s=>({teams:s.teams.map((t,i)=>({...t,players:[...t.players,...s.pendingJoins.filter(p=>p.team===i).map(p=>p.name)]})),pendingJoins:[]})); },260); };
-  closeSettings=()=>{ this.shut('settingsOpen'); setTimeout(()=>{ const pend=this.state.pending; if(!pend.length) return;
+  closeSettings=()=>{ this.shut('settingsOpen'); setTimeout(()=>{ const pend=this.state.pending; if(!pend.length) return this.checkWin();
+    const names=pend.map(k=>k.split('|')[1]), hit=names.find(n=>this.state.reels.some(r=>r.chosen===n));
+    if(hit) this.endRound('تم إنهاء الجولة · إقصاء '+hit);
     pend.forEach(k=>{ const [ti,n]=k.split('|'); this.addLog('kick',`تم إقصاء ${n} من ${this.state.teams[+ti].name}`); });
-    this.setState(s=>({teams:s.teams.map((t,i)=>({...t,players:t.players.filter(p=>!s.pending.includes(i+'|'+p))})),pending:[]})); },260); };
+    const started=!!this.matchStartedAt;
+    this.setState(s=>({teams:s.teams.map((t,i)=>({...t,players:t.players.filter(p=>!s.pending.includes(i+'|'+p))})),pending:[],
+      gone:started?{...(s.gone||{}),...Object.fromEntries(names.map(n=>[n,1]))}:s.gone}),()=>this.checkWin()); },260); };
 
   renderVals(){ const s=this.state, col=i=>this.TC[i], fmt=x=>String(+x.toFixed(2));
     const teams=s.teams.map((t,i)=>{ const c=col(i);
@@ -649,7 +747,7 @@ class Component extends DCLogic {
       const items=(spun?r.items:['',...idle].slice(0,30)).map((p,j)=>{ const win=spun&&r.stopped&&j===r.ci, av=this.avatar(p);
         return {name:p,color:win?c:'#e7e3ef',op:spun&&r.stopped&&!win?.28:1,sc:win?1.12:1,initial:[...(p||'')].find(ch=>/[^\s_\d]/.test(ch))||'',
           avatar:av||'',imgOp:av?1:0,avBg:'linear-gradient(135deg, '+c+', '+c+'66)',avBd:win?c:'rgba(255,255,255,.15)',avSh:win?'0 0 22px '+c:'none'}; });
-      const active=(P==='play'&&s.turn===i)||(P==='draw'&&s.drawHi===i);
+      const active=(P==='play'&&s.turn===i)||((P==='draw'||P==='tiebreak')&&s.drawHi===i);
       const sc=solo?(r.chosen?(s.solo[r.chosen]||0):0):s.teams[i].score;
       return {label:this.label(i),color:c,halo:c+'33',bd:active?c:c+'40',sh:active?'0 0 0 4px '+c+'33, 0 0 60px '+c+'55, 0 30px 80px rgba(0,0,0,.4)':'0 30px 80px rgba(0,0,0,.35)',
         score:String(sc),items,offset:spun?r.offset:0,trans:spun?r.trans:'none',empty:!pool.length,
@@ -665,8 +763,8 @@ class Component extends DCLogic {
     const tc=col(s.turn);
     let res={};
     if(s.result){ if(s.result.w==null) res={tag:'انتهت الجولة',title:'تعادل',sub:'ما أحد فاز بهالجولة',color:'#e7e3ef',bd:'rgba(255,255,255,.15)',ring:'rgba(255,255,255,.06)'};
-      else { const c=col(s.result.w); res={tag:solo?'فوز':this.label(s.result.w)+' +1',title:'فاز '+s.result.name,sub:'بـ '+s.syms[s.result.w]+' · الجولة '+s.round,color:c,bd:c+'80',ring:c+'1f'}; } }
-    const statusMap={spinning:'اختيار اللاعبين…',draw:'القرعة…',celebrate:s.result&&s.result.w!=null?'فاز '+s.result.name+'!':'تعادل'};
+      else { const c=col(s.result.w); res={tag:solo?'فوز':this.label(s.result.w)+' +1',title:'فاز '+s.result.name,sub:s.result.lot?'بالقرعة بعد التعادل · الجولة '+s.round:'بـ '+s.syms[s.result.w]+' · الجولة '+s.round,color:c,bd:c+'80',ring:c+'1f'}; } }
+    const statusMap={spinning:'اختيار اللاعبين…',draw:'القرعة…',tiebreak:'تعادل · القرعة تحدد صاحب الجولة…',celebrate:s.result&&s.result.w!=null?'فاز '+s.result.name+'!':'تعادل'};
     const wc=s.result&&s.result.w!=null?col(s.result.w):null;
     const h=React.createElement;
     const newJoins=s.pendingJoins.map(pj=>{ const c=s.mode==='solo'?'#a78bfa':col(pj.team), av=this.avatar(pj.name), fr=this.reg.framed(pj.name),
@@ -674,10 +772,14 @@ class Component extends DCLogic {
       return {name:pj.name,team:s.mode==='solo'?'لاعب جديد':s.teams[pj.team].name,color:c,bd:c+'55',avBg:`linear-gradient(135deg, ${c}, ${c}66)`,
         framed:!!fr, plain:!fr, frameEl:fr?XO.frameCard(fr,kick):null,
         initial:[...pj.name].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:av||'',imgOp:av?1:0, kick}; });
-    const eg=this.eventGroups();
-    return { ...this.anims(), scale:s.scale, round:s.round, target:s.target, teams,
+    const eg=this.eventGroups(), rvAv=this.avatar(s.revName||''), hE=React.createElement;
+    const rev={ revOpen:!!s.revOpen, revName:s.revName||'', revIni:[...(s.revName||'')].find(ch=>/[^\s_\d]/.test(ch))||'', revAv:rvAv||'', revOp:rvAv?1:0,
+      revBadge:'رجع عن طريق الدعم'+(s.revGift?' · '+s.revGift:''),
+      revHeart:hE('span',{key:'hb'+(s.revRun||0),'aria-hidden':true,style:{position:'absolute',bottom:-2,left:-2,width:42,height:42,borderRadius:'50%',display:'grid',placeItems:'center',background:'#08140f',border:'2px solid rgba(52,211,153,.6)',fontSize:22,lineHeight:1,animation:'heartBeat 1s cubic-bezier(.2,1.3,.4,1) .7s both'}},'💚'),
+      revHearts:hE('div',{key:'hf'+(s.revRun||0),'aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none'}},[[18,.6,'-12deg',14],[72,.9,'10deg',18],[40,1.2,'-6deg',12],[85,1.4,'14deg',14],[8,1.1,'8deg',16],[58,.75,'-14deg',12]].map(([x,d,r,fs],i)=>hE('span',{key:i,style:{position:'absolute',left:x+'%',bottom:20,fontSize:fs,'--r':r,animation:`heartFloat 1.6s ease-out ${d}s both`}},'💚'))) };
+    return { ...this.anims(), ...rev, scale:s.scale, round:s.round, target:s.target, teams,
       cardA:[mkCard(0)], cardB:[mkCard(1)], cells, res, showResult:P==='over'&&!!s.result, resBtn:!(s.progress==='elim'&&s.result&&s.result.w!=null),
-      showElim:P==='elim'&&!!s.elim, el:s.elim?(()=>{ const mk=(n,c)=>{ const a=this.avatar(n); return {name:n,initial:[...n].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:a||'',imgOp:a?1:0,avBg:'linear-gradient(135deg, '+c+', '+c+'66)'}; };
+      showElim:P==='elim'&&!!s.elim, ...this.elimCardView(s.elim), el:s.elim?(()=>{ const mk=(n,c)=>{ const a=this.avatar(n); return {name:n,initial:[...n].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:a||'',imgOp:a?1:0,avBg:'linear-gradient(135deg, '+c+', '+c+'66)'}; };
         return {win:mk(s.elim.win,col(s.elim.w)),lose:mk(s.elim.lose,col(1-s.elim.w))}; })():{win:{},lose:{}},
       progOpts:[['wins','عدد الفوز'],['elim','الإقصاء']].map(([k,l])=>{ const on=s.progress===k; return {label:l,pick:()=>{ if(this.state.phase!=='ready') return this.toastMsg('غيّرها بين الجولات'); this.setState({progress:k}); },bg:on?'linear-gradient(90deg, #7c3aed, #a855f7)':'transparent',fg:on?'#fff':'#a8a3b5'}; }),
       progressLabel:s.progress==='elim'?'بالإقصاء':'الفوز عند '+s.target, winFx:this.winFx(), boardGlow:P==='celebrate'&&wc?wc+'55':'rgba(124,58,237,.12)',
@@ -686,7 +788,7 @@ class Component extends DCLogic {
       showSpin:P==='ready', spin:this.spin, showTurn:P==='play', showStatus:!!statusMap[P], statusText:statusMap[P]||'',
       turnName:s.reels[s.turn].chosen||'', turnColor:tc, turnSym:s.syms[s.turn]||'', turnBd:tc+'80', turnGlow:tc+'33',
       timeLeft:s.timeLeft, timerDeg:s.timeLeft/this.DUR*360, timerColor:s.timeLeft<=5?'#f87171':tc,
-      drawing:P==='draw', drawName:s.drawHi!=null?(s.reels[s.drawHi].chosen||''):'', drawColor:s.drawHi!=null?col(s.drawHi):'#ffffff', drawDoneOp:s.drawDone?1:0,
+      drawing:P==='draw'||P==='tiebreak', drawTitle:P==='tiebreak'?'تعادل · قرعة بين اللاعبين':'القرعة · من يبدأ؟', drawDoneText:P==='tiebreak'?'ياخذ الجولة':'يبدأ بـ X', drawName:s.drawHi!=null?(s.reels[s.drawHi].chosen||''):'', drawColor:s.drawHi!=null?col(s.drawHi):'#ffffff', drawDoneOp:s.drawDone?1:0,
       closeResults:this.closeResults, newGame:this.newGame, goLibrary:()=>{ this.snd('close'); location.href=XO.libraryUrl; },
       winner:s.winner?(()=>{ const w=s.winner, c=col(w.i), pl=w.solo?[w.name]:s.teams[w.i].players;
         return {name:w.name,score:fmt(w.score),color:c,ring:c+'40',bd:c+'66',soft:c+'1a',
@@ -695,7 +797,8 @@ class Component extends DCLogic {
       logoOp:s.logo?1:0, phOp:s.logo?0:1, phBorder:s.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}), fx:this.buildFx(),
       onExit:()=>this.open('exitOpen'), closeExit:()=>this.shut('exitOpen'), confirmExit:()=>{ this.shut('exitOpen'); this.newGame(); location.href=XO.libraryUrl; }, exitOpen:s.exitOpen,
       onEvents:()=>s.eventsOpen?this.shut('eventsOpen'):this.open('eventsOpen'), closeEvents:()=>this.shut('eventsOpen'), eventsOpen:s.eventsOpen, eventGroups:eg, noEvents:!eg.length,
-      onSettings:()=>this.open('settingsOpen'), closeSettings:this.closeSettings, settingsOpen:s.settingsOpen, tabSettings:s.setTab===0, tabPlayers:s.setTab===1,
+      onSettings:()=>this.open('settingsOpen'), closeSettings:this.closeSettings, settingsOpen:s.settingsOpen, tabSettings:s.setTab===0, tabTarget:s.setTab===0&&s.progress!=='elim',
+      showEndRound:P==='play'&&!s.winner, onEndRound:()=>this.endRound(), tabPlayers:s.setTab===1,
       setTabs:['الإعدادات','اللاعبين'].map((l,i)=>{const on=s.setTab===i;return {label:l,pick:()=>{this.snd('tick');this.setState({setTab:i});},bg:on?'linear-gradient(90deg, #7c3aed, #a855f7)':'transparent',fg:on?'#fff':'#a8a3b5',sh:on?'0 6px 20px rgba(139,92,246,.4)':'none'};}),
       setTarget:e=>this.setState({target:Math.max(1,+e.target.value||1)}), endMatch:this.endMatch,
       openJoin:()=>{ this.shut('settingsOpen'); setTimeout(()=>this.open('joinOpen',{joinBase:this.state.teams.map(t=>t.players.length)}),200); },
