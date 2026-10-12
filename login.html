@@ -470,7 +470,102 @@ document.addEventListener('DOMContentLoaded', async function() {
     var t = (el.textContent || '').trim();
     if (t === 'دخول') { e.preventDefault(); e.stopImmediatePropagation(); doLogin(); }
     else if (t === 'أنشئ الحساب') { e.preventDefault(); e.stopImmediatePropagation(); doSignup(); }
+    else if (t === 'نسيت كلمة المرور؟') { e.preventDefault(); e.stopImmediatePropagation(); openForgot(); }
   }, true);
+
+  // نسيت كلمة المرور — خطوتين عبر AGPAuth: forgotPassword(email) يرسل رمز
+  // 6 أرقام للإيميل (backend/auth/auth-service.js requestPasswordReset)،
+  // ثم resetPasswordWithCode(email, code, newPassword). النافذة تُبنى هنا
+  // بنفس ألوان بطاقة الدخول لأن القالب نفسه ما فيه شاشة استرجاع.
+  var FONT = "'IBM Plex Sans Arabic',sans-serif";
+  var INPUT_CSS = 'width:100%;box-sizing:border-box;padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);outline:none;color:#f4f2fb;font-family:' + FONT + ';font-size:14.5px;direction:ltr;text-align:start';
+  var BTN_CSS = 'width:100%;padding:15px 20px;border:0;cursor:pointer;border-radius:16px;background:linear-gradient(180deg,#8a4fe8,#7a3fd4);color:#f3ecff;font-family:' + FONT + ';font-size:15.5px;font-weight:600;box-shadow:0 20px 44px -24px rgba(122,63,212,1)';
+  var LABEL_CSS = 'display:block;margin-bottom:8px;font-size:13.5px;color:#a79fbb';
+  function field(label, type, placeholder){
+    var wrap = document.createElement('label'); wrap.style.cssText = 'display:block';
+    var span = document.createElement('span'); span.style.cssText = LABEL_CSS; span.textContent = label;
+    var input = document.createElement('input'); input.type = type; input.placeholder = placeholder; input.style.cssText = INPUT_CSS;
+    wrap.appendChild(span); wrap.appendChild(input);
+    return { wrap: wrap, input: input };
+  }
+  function openForgot(){
+    if (document.getElementById('agp-forgot')) return;
+    var overlay = document.createElement('div');
+    overlay.id = 'agp-forgot';
+    overlay.setAttribute('dir', 'rtl');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:16px;background:rgba(5,5,8,.72);backdrop-filter:blur(8px);font-family:' + FONT;
+    var card = document.createElement('div');
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-modal', 'true');
+    card.style.cssText = 'width:100%;max-width:420px;box-sizing:border-box;padding:clamp(22px,3vw,32px);border-radius:26px;border:1px solid rgba(255,255,255,.10);background:linear-gradient(180deg,rgba(28,24,46,.98),rgba(11,10,18,.98));box-shadow:0 40px 90px -40px rgba(0,0,0,1),0 0 0 1px rgba(122,63,212,.12) inset;display:flex;flex-direction:column;gap:14px';
+    var head = document.createElement('div'); head.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px';
+    var title = document.createElement('div'); title.style.cssText = "font-family:'Noto Kufi Arabic',sans-serif;font-size:19px;font-weight:700;color:#f4f2fb"; title.textContent = 'استعادة كلمة المرور';
+    var close = document.createElement('button'); close.type = 'button'; close.setAttribute('aria-label', 'إغلاق'); close.textContent = '×';
+    close.style.cssText = 'width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#e7e9ee;font-size:20px;line-height:1;cursor:pointer';
+    head.appendChild(title); head.appendChild(close);
+    var sub = document.createElement('div'); sub.style.cssText = 'font-size:13.5px;line-height:1.8;color:#968ea4';
+    var emailF = field('البريد الإلكتروني', 'email', 'name@mail.com');
+    var codeF = field('الرمز اللي وصلك بالإيميل', 'text', '123456');
+    codeF.input.inputMode = 'numeric'; codeF.input.maxLength = 6; codeF.input.autocomplete = 'one-time-code';
+    var passF = field('كلمة المرور الجديدة', 'password', '••••••••');
+    passF.input.autocomplete = 'new-password';
+    var btn = document.createElement('button'); btn.type = 'button'; btn.style.cssText = BTN_CSS;
+    var note = document.createElement('div'); note.style.cssText = 'min-height:20px;font-size:13px;text-align:center';
+    var back = document.createElement('button'); back.type = 'button'; back.textContent = 'ما وصلك الرمز؟ أرسله مرة ثانية';
+    back.style.cssText = 'padding:0;border:0;background:transparent;cursor:pointer;color:#b28cf5;font-family:' + FONT + ';font-size:13px';
+    [head, sub, emailF.wrap, codeF.wrap, passF.wrap, btn, note, back].forEach(function(n){ card.appendChild(n); });
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    var busy = false;
+    function say(text, ok){ note.textContent = text; note.style.color = ok ? '#7ee0a6' : '#e08a8a'; }
+    function step(n){
+      var two = n === 2;
+      sub.textContent = two ? 'لو الإيميل مسجّل عندنا بيوصلك رمز من 6 أرقام صالح لمدة 15 دقيقة. اكتبه هنا مع كلمة المرور الجديدة.'
+        : 'اكتب البريد الإلكتروني المسجّل في حسابك، ونرسل لك رمز لتعيين كلمة مرور جديدة.';
+      emailF.input.disabled = two; emailF.input.style.opacity = two ? '.6' : '1';
+      codeF.wrap.style.display = two ? 'block' : 'none';
+      passF.wrap.style.display = two ? 'block' : 'none';
+      back.style.display = two ? 'block' : 'none';
+      btn.textContent = two ? 'تعيين كلمة المرور' : 'أرسل الرمز';
+      btn.dataset.step = String(n);
+      (two ? codeF.input : emailF.input).focus();
+    }
+    function shut(){ document.removeEventListener('keydown', onKey, true); overlay.remove(); }
+    function onKey(e){ if (e.key === 'Escape') shut(); else if (e.key === 'Enter') { e.preventDefault(); btn.click(); } }
+    document.addEventListener('keydown', onKey, true);
+    close.addEventListener('click', shut);
+    overlay.addEventListener('click', function(e){ if (e.target === overlay) shut(); });
+    back.addEventListener('click', function(){ codeF.input.value = ''; passF.input.value = ''; say('', true); step(1); });
+    btn.addEventListener('click', function(){
+      if (busy) return;
+      if (!window.AGPAuth) { say('تعذّر تحميل نظام الحسابات', false); return; }
+      var email = emailF.input.value.trim();
+      if (btn.dataset.step === '1') {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { say('اكتب بريد إلكتروني صحيح', false); return; }
+        busy = true; say('جارٍ الإرسال…', true);
+        window.AGPAuth.forgotPassword(email).then(function(r){
+          if (r && r.success) { say('', true); step(2); } else { say('تعذّر إرسال الرمز، حاول مرة ثانية', false); }
+        }).catch(function(){ say('تعذّر الوصول للخادم', false); }).then(function(){ busy = false; });
+        return;
+      }
+      var code = codeF.input.value.replace(/[٠-٩]/g, function(d){ return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)); }).replace(/\D/g, '');
+      var pass = passF.input.value;
+      if (code.length !== 6) { say('الرمز 6 أرقام', false); return; }
+      if (pass.length < 6) { say('كلمة المرور لازم ٦ خانات على الأقل', false); return; }
+      busy = true; say('جارٍ تعيين كلمة المرور…', true);
+      window.AGPAuth.resetPasswordWithCode(email, code, pass).then(function(r){
+        if (r && r.success) { shut(); setNote('تم تغيير كلمة المرور، سجّل دخولك بكلمة المرور الجديدة', true); return; }
+        var err = r && r.error;
+        say(err === 'invalid_or_expired_code' ? 'الرمز غلط أو انتهت صلاحيته' : err === 'weak_password' ? 'كلمة المرور لازم ٦ خانات على الأقل' : 'تعذّر تعيين كلمة المرور', false);
+      }).catch(function(){ say('تعذّر الوصول للخادم', false); }).then(function(){ busy = false; });
+    });
+
+    // لو كتب إيميله بخانة الدخول نعبّيه تلقائياً
+    var loginId = document.querySelector('input');
+    if (loginId && loginId.value.indexOf('@') !== -1) emailF.input.value = loginId.value.trim();
+    step(1);
+  }
 
   // [إزالة حل مؤقت] الدالة اللي كانت هنا (relabelLoginField) كانت تفرض
   // type=email على حقل الدخول وتُعيد تسمية أي عنصر نصّه "اسم المستخدم"
