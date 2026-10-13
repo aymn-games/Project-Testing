@@ -144,7 +144,8 @@ input:focus{outline:none}
               <span style="height:46px;padding:0 22px;border-radius:999px;display:flex;align-items:center;background:rgba(139,92,246,.14);border:1px solid rgba(167,139,250,.35);font:800 20px 'Zain';color:#ddd6fe">الجولة {{ round }}</span>
             </div>
             <span style="font:900 28px 'Zain'">{{ headline }}</span>
-            <div style="display:flex;justify-content:flex-end">
+            <div style="display:flex;justify-content:flex-end;gap:10px">
+              <button onClick="{{ openWord }}" style="height:46px;padding:0 18px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:8px;border:1px solid rgba(251,191,36,.45);background:rgba(251,191,36,.1);color:#fde68a;font:800 17px 'Zain';transition:all .2s" style-hover="background:rgba(251,191,36,.2);border-color:#fbbf24" style-active="transform:scale(.97)">🔄 تغيير الكلمة</button>
               <span style="height:46px;padding:0 20px;border-radius:999px;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);font:700 17px 'Zain';color:#a8a3b5">كلمات مقبولة <b style="font:900 22px 'Zain';color:#f4f2f8">{{ acceptedN }}</b></span>
             </div>
           </div>
@@ -162,9 +163,9 @@ input:focus{outline:none}
 
             <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:12px">
               <span style="font:700 17px 'Zain';color:#a8a3b5">الكلمة الحالية</span>
-              <div style="display:flex;gap:18px;animation:{{ wordAn }}">
+              <div style="display:flex;gap:{{ tGap }}px;animation:{{ wordAn }}">
                 <sc-for list="{{ wordTiles }}" as="w" hint-placeholder-count="4">
-                  <span style="position:relative;width:150px;height:150px;border-radius:28px;display:grid;place-items:center;background:linear-gradient(180deg, #fffaf0, #efe3cb);box-shadow:0 10px 0 #b9a27a, 0 24px 50px rgba(0,0,0,.5), {{ w.ring }};font:900 104px/1 'Zain';color:#1c1530;animation:{{ w.an }}">{{ w.ch }}<span style="position:absolute;bottom:12px;right:16px;font:800 16px 'Zain';color:#b9a27a">{{ w.n }}</span></span>
+                  <span style="position:relative;width:{{ tS }}px;height:{{ tS }}px;border-radius:28px;display:grid;place-items:center;background:linear-gradient(180deg, #fffaf0, #efe3cb);box-shadow:0 10px 0 #b9a27a, 0 24px 50px rgba(0,0,0,.5), {{ w.ring }};font:900 {{ tF }}px/1 'Zain';color:#1c1530;animation:{{ w.an }}">{{ w.ch }}<span style="position:absolute;bottom:12px;right:16px;font:800 16px 'Zain';color:#b9a27a">{{ w.n }}</span></span>
                 </sc-for>
               </div>
             </div>
@@ -227,7 +228,7 @@ input:focus{outline:none}
                   </sc-if>
                   <div style="display:flex;gap:14px">
                     <sc-for list="{{ pendTiles }}" as="w" hint-placeholder-count="4">
-                      <span style="width:108px;height:108px;border-radius:22px;display:grid;place-items:center;background:{{ w.bg }};box-shadow:0 7px 0 {{ w.sh }}, 0 18px 40px rgba(0,0,0,.45);font:900 76px/1 'Zain';color:{{ w.fg }};animation:tileDrop .5s ease both;animation-delay:{{ w.delay }}">{{ w.ch }}</span>
+                      <span style="width:{{ pS }}px;height:{{ pS }}px;border-radius:22px;display:grid;place-items:center;background:{{ w.bg }};box-shadow:0 7px 0 {{ w.sh }}, 0 18px 40px rgba(0,0,0,.45);font:900 {{ pF }}px/1 'Zain';color:{{ w.fg }};animation:tileDrop .5s ease both;animation-delay:{{ w.delay }}">{{ w.ch }}</span>
                     </sc-for>
                   </div>
                   <sc-if value="{{ notDup }}" hint-placeholder-val="{{ true }}">
@@ -301,6 +302,37 @@ input:focus{outline:none}
           <button onClick="{{ restart }}" style="height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;flex:1;min-width:150px;border:none;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 8px 22px rgba(124,58,237,.4)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">مباراة جديدة</button>
           <button onClick="{{ restart }}" style="height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;flex:1;min-width:150px;border:1px solid rgba(167,139,250,.55);background:rgba(139,92,246,.16);color:#ddd6fe" style-hover="filter:brightness(1.2)" style-active="transform:scale(.97)">إعادة بنفس اللاعبين</button>
         </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ wordOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeWord }}" style="position:fixed;inset:0;z-index:78;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;padding:12px;animation:{{ wordOv }}">
+      <div onClick="{{ stop }}" style="width:min(480px, calc(100vw - 24px));box-sizing:border-box;padding:22px 24px 24px;border-radius:28px;background:rgba(12,11,18,.96);border:1px solid rgba(251,191,36,.45);box-shadow:0 30px 90px rgba(0,0,0,.6), 0 0 60px rgba(251,191,36,.15);display:flex;flex-direction:column;gap:16px;animation:{{ wordAnim }}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font:900 26px 'Zain'">🔄 تغيير الكلمة</span>
+            <span style="font:400 15px/1.5 'Zain';color:#a8a3b5">الحروف والوقت والأخطاء تبقى مثل ما هي، تتغير الكلمة بس</span>
+          </div>
+          <button onClick="{{ closeWord }}" aria-label="إغلاق" style="width:42px;height:42px;flex-shrink:0;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;cursor:pointer;display:grid;place-items:center" style-hover="background:rgba(255,255,255,.09)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)">
+          <span style="font:700 16px 'Zain';text-align:right">عدد حروف الكلمة</span>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)">
+            <sc-for list="{{ lenOpts }}" as="v" hint-placeholder-count="3">
+              <button onClick="{{ v.set }}" style="height:36px;border:none;border-radius:999px;cursor:pointer;font:700 15px 'Zain';background:{{ v.bg }};color:{{ v.c }};box-shadow:{{ v.sh }};transition:all .25s">{{ v.lbl }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)">
+          <span style="font:700 16px 'Zain';text-align:right">الكلمة</span>
+          <div style="display:flex;gap:8px">
+            <input value="{{ wDraft }}" onChange="{{ wType }}" onKeyDown="{{ wKey }}" maxLength="{{ wLen }}" placeholder="{{ wPh }}" style="flex:1;min-width:0;height:48px;box-sizing:border-box;border-radius:999px;border:1.5px solid {{ wBd }};background:rgba(255,255,255,.035);color:#f4f2f8;font:800 22px 'Zain';padding:0 18px;text-align:center;transition:border-color .2s">
+            <button onClick="{{ wRandom }}" style="height:48px;padding:0 16px;flex-shrink:0;border-radius:999px;cursor:pointer;border:1px solid rgba(167,139,250,.4);background:rgba(139,92,246,.12);color:#ddd6fe;font:800 15px 'Zain';white-space:nowrap" style-hover="background:rgba(139,92,246,.22)" style-active="transform:scale(.97)">🎲 عشوائية</button>
+          </div>
+          <span style="font:700 14px 'Zain';color:{{ wMsgC }};text-align:center">{{ wMsg }}</span>
+        </div>
+        <button onClick="{{ applyWord }}" style="width:100%;height:54px;border:none;border-radius:999px;cursor:pointer;background:{{ wBtnBg }};color:#fff;font:800 18px 'Zain';box-shadow:{{ wBtnSh }};opacity:{{ wBtnOp }};transition:all .25s" style-hover="filter:brightness(1.1)" style-active="transform:scale(.98)">✓ اعتماد الكلمة الجديدة</button>
       </div>
     </div>
   </sc-if>
@@ -503,7 +535,13 @@ const LIBRARY_URL = VC.libraryUrl;
 const norm = s => String(s).trim().replace(/[ً-ْـ]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[^ء-ي]/g,'');
 const POOL = 'ابتجحدرزسشصعفقكلمنهوي';
 const EXTRA = 'خثذضطظغ';
-const WORDS = ['كتاب','قلوب','بحار','جبال','نجوم','سماء','ورود','شمس','ريال','طريق','بيوت','سلام','كلام','رمال','حمام','جمال'].map(w=>norm(w)).filter(w=>[...w].length===4);
+const WORDS_BY = {
+  3:['باب','قلم','نور','بحر','ورد','سمك','جمل','قمر','بيت','رمل','دار','حبل','شمس','كلب','عسل','ثوب'],
+  4:['كتاب','قلوب','بحار','جبال','نجوم','سماء','ورود','ريال','طريق','بيوت','سلام','كلام','رمال','حمام','جمال','شجرة'],
+  5:['مدرسه','مكتبه','سيارة','طاولة','شبابيك','عصفور','برتقال','مفتاح','حديقة','ملعب','قهوة','مسجد','سحاب','نافذة','كرسي','مطبخ']
+};
+Object.keys(WORDS_BY).forEach(k=>{ WORDS_BY[k]=[...new Set(WORDS_BY[k].map(w=>norm(w)).filter(w=>[...w].length===+k))]; });
+const pickWord = (n,not) => { const L=WORDS_BY[n].filter(w=>w!==not); return L[Math.floor(Math.random()*L.length)]; };
 const TEAMS = [{c:'#38bdf8',dk:'#0369a1'},{c:'#ef4444',dk:'#991b1b'}];
 const rndL = () => Math.random()<.85 ? POOL[Math.floor(Math.random()*POOL.length)] : EXTRA[Math.floor(Math.random()*EXTRA.length)];
 const ini = n => n.replace(/^ال/,'')[0]||'؟';
@@ -514,7 +552,7 @@ const ROSTER_TEAMS = rosterOk(ROSTER) ? ROSTER.slice(0,2).map((t,i)=>({name:Stri
 class Component extends DCLogic {
   reg = VC.createRegistry(PLAYERS);
   followersOnly = !!SETUP&&SETUP.who==='المتابعون فقط';
-  constructor(p){ super(p); this.timers=new Set(); this.state={...this.fresh(), scale:1, narrow:innerWidth<820, logo:false, exitOpen:false, paused:false, settingsOpen:false, setTab:0, kick:[], draft:null, joinOpen:false, joiners:[], keyword:this.kw(), maxS:this.cfg().strikes ?? this.props.maxStrikes ?? 3, teamT:this.cfg().time ?? this.props.teamSeconds ?? 300, helpOpen:!this.hideHelp(), never:this.hideHelp(), pts:{}};
+  constructor(p){ super(p); this.timers=new Set(); this.state={...this.fresh(), scale:1, narrow:innerWidth<820, logo:false, exitOpen:false, wordOpen:false, wLen:4, wDraft:'', paused:false, settingsOpen:false, setTab:0, kick:[], draft:null, joinOpen:false, joiners:[], keyword:this.kw(), maxS:this.cfg().strikes ?? this.props.maxStrikes ?? 3, teamT:this.cfg().time ?? this.props.teamSeconds ?? 300, helpOpen:!this.hideHelp(), never:this.hideHelp(), pts:{}};
     // أي لاعب دخل المباراة مرة ما يقدر يرجع يدخل من «دخول لاعبين جدد»
     this.ever=new Set(this.state.teams.flatMap(t=>t.players)); }
   hideHelp(){ try{ return localStorage.getItem(VC.keys.hideHelp)==='1'; }catch(e){ return false; } }
@@ -532,10 +570,15 @@ class Component extends DCLogic {
       teams=teams.map(t=>t.strikes>=D.maxS?{...t,strikes:D.maxS-1}:t);
       return {...k,teams,maxS:D.maxS,teamT:D.teamT||st.teamT,draft:null}; });
     this.note('💾 تم حفظ الإعدادات وتطبيقها','#34d399',1800); this.shut('settingsOpen'); }
+  // «🔄 تغيير الكلمة»: تتغير الكلمة بس (الحروف والوقت والأخطاء والدور تبقى) · لو فيه إجابة معلّقة تنلغى ويرجع نفس اللاعب لدوره بدون خطأ
+  changeWord(w){ w=norm(w); if(!w) return; const back=this.ph==='pending';
+    if(back) this.ph='turn';
+    this.setState(st=>({word:w,chain:[...st.chain,w],changed:-1,wordOpen:false,wordOpenOut:false,wDraft:'',pending:back?null:st.pending,phase:back?'turn':st.phase}));
+    this.note(`🔄 كلمة جديدة: «${w}» (${[...w].length} حروف)`,'#fbbf24',2200); [440,660,880].forEach((f,i)=>this.later(()=>this.tone(f,.18,'triangle',.07),i*90)); }
   opt(v,lbl,on,set){ return {lbl,set,bg:on?'linear-gradient(90deg, #7c3aed, #a855f7)':'transparent',c:on?'#fff':'#a8a3b5',sh:on?'0 6px 18px rgba(139,92,246,.35)':'none'}; }
   // keep: «إعادة بنفس اللاعبين / مباراة جديدة» تبدأ بنفس الفريقين الحاليين (مع المنضمين الجدد وبدون المقصيين)
   fresh(keep){
-    const n=this.cfg().letters ?? this.props.lettersPerTeam ?? 15, T=(this.state&&this.state.teamT) ?? this.cfg().time ?? this.props.teamSeconds ?? 300, w=WORDS[Math.floor(Math.random()*WORDS.length)];
+    const n=this.cfg().letters ?? this.props.lettersPerTeam ?? 15, T=(this.state&&this.state.teamT) ?? this.cfg().time ?? this.props.teamSeconds ?? 300, w=pickWord(4);
     const base=keep&&this.state?this.state.teams:ROSTER_TEAMS;
     this.ph='ready';
     return { teams:base.slice(0,2).map(t=>({name:t.name,players:[...t.players],idx:0,letters:Array.from({length:n},rndL),time:T,strikes:0,penalty:0})),
@@ -577,6 +620,8 @@ class Component extends DCLogic {
     const S0=this.state;
     // «دخول لاعبين جدد»: كلمة فريق = انضمام له (نفس تطبيع اللوبي VC.norm) · المتابعين فقط لو محدد
     const kn=VC.norm(text), kti=kn?S0.keyword.findIndex(k=>VC.norm(k)===kn):-1;
+    // مشارك سابق (حالي أو مقصى) يكتب كلمة فريق ثاني: ما ينتقل ولا تنحسب رسالته (الانتقال بين الفريقين باللوبي بس)
+    if(kti>=0&&this.ever.has(user)&&!S0.teams[kti].players.includes(user)&&S0.phase!=='ready'){ if(S0.joinOpen) this.note(`🚫 ${user} مشارك سابقاً · ما يقدر ينتقل لفريق ثاني`,'#f87171',2200); return; }
     if(S0.joinOpen&&kti>=0){ if(this.followersOnly&&!isFollower) return; if(this.ever.has(user)) return;
       const ti=kti; this.ever.add(user);
       this.setState(s=>({joiners:[...s.joiners,{name:user,team:ti}],teams:s.teams.map((t,j)=>j===ti?{...t,players:[...t.players,user]}:t)})); this.tone(880,.12,'triangle'); return; }
@@ -689,6 +734,19 @@ class Component extends DCLogic {
       cW, cH, cTop:Math.round(cW*.18), crW:Math.round(cW*.3), crH:Math.round(cW*.2), avW:Math.round(cW*.42), wGap, wMax:perRow*(cW+wGap), winScale,
       // مباراة جديدة / إعادة بنفس اللاعبين: كلمة وحروف جديدة والوقت يرجع من البداية بنفس الفريقين، ونقاط المنصة تُحسب من جديد
       restart:()=>{ this.clearTimers(); this.stopVid(); clearTimeout(this.nt); this.reported=false; this.matchStartedAt=null; this.run=(this.run||0)+1; this.setState({...this.fresh(true),paused:false,pts:{}}); },
+      tS:[...S.word].length>=5?132:[...S.word].length===3?168:150, tF:[...S.word].length>=5?92:[...S.word].length===3?118:104, tGap:[...S.word].length>=5?14:18,
+      pS:S.pending&&[...S.pending.word].length>=5?94:108, pF:S.pending&&[...S.pending.word].length>=5?66:76,
+      wordOpen:S.wordOpen, openWord:()=>this.setState({wordOpen:true,wLen:[...S.word].length,wDraft:''}), closeWord:()=>this.shut('wordOpen'),
+      wordOv:o('wordOpen','fade .25s ease','fadeOut .26s ease forwards'), wordAnim:o('wordOpen','popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards'),
+      lenOpts:[3,4,5].map(n=>this.opt(n,n+' حروف',S.wLen===n,()=>this.setState({wLen:n,wDraft:''}))),
+      wLen:S.wLen, wDraft:S.wDraft, wType:e=>this.setState({wDraft:e.target.value}), wPh:'اكتب كلمة من '+S.wLen+' حروف',
+      wRandom:()=>this.setState({wDraft:pickWord(S.wLen,S.word)}),
+      ...(()=>{ const n=[...norm(S.wDraft)].length, ok=n===S.wLen, dup=ok&&S.chain.includes(norm(S.wDraft));
+        return { wBd:!S.wDraft?'rgba(255,255,255,.12)':ok?'rgba(52,211,153,.55)':'rgba(248,113,113,.5)',
+          wMsg:!S.wDraft?'اكتب كلمة أو اختار عشوائية':!ok?`لازم ${S.wLen} حروف (كتبت ${n})`:dup?'⚠️ الكلمة انكتبت قبل بهالمباراة، تقدر تعتمدها':'✓ جاهزة',
+          wMsgC:!S.wDraft?'#8a8596':!ok?'#fca5a5':dup?'#fdba74':'#6ee7b7',
+          wBtnBg:ok?'linear-gradient(90deg, #d97706, #f59e0b)':'rgba(255,255,255,.08)', wBtnSh:ok?'0 8px 24px rgba(245,158,11,.35)':'none', wBtnOp:ok?1:.55,
+          applyWord:()=>{ if(ok) this.changeWord(S.wDraft); }, wKey:e=>{ if(e.key==='Enter'&&ok) this.changeWord(S.wDraft); } }; })(),
       helpOpen:S.helpOpen, openHelp:()=>this.setState({helpOpen:true}), closeHelp:()=>this.shut('helpOpen'),
       helpOv:o('helpOpen','fade .25s ease','fadeOut .26s ease forwards'), helpAn:o('helpOpen','popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards'),
       never:S.never, neverMark:S.never?'✓':'', neverBd:S.never?'#a855f7':'rgba(255,255,255,.25)', neverBg:S.never?'linear-gradient(135deg, #7c3aed, #a855f7)':'transparent',
