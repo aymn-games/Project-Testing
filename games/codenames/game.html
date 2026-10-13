@@ -492,7 +492,11 @@ class Component extends DCLogic {
     const c=this.cfg(), r=this.roster();
     this.reg=CN.createRegistry(CN.readJSON('codenames-players',{}));
     this.used=new Set(); this.words=Array.isArray(window.CODENAMES_WORDS)&&window.CODENAMES_WORDS.length>=50?window.CODENAMES_WORDS:FALLBACK_WORDS;
-    let room; try{ room=localStorage.getItem('codenames-room'); if(!room){ room=Math.random().toString(36).slice(2,8); localStorage.setItem('codenames-room',room); } }catch(e){ room='demo'; }
+    // رقم جلسة جديد (= باركود جديد) كل ما تنفتح صفحة اللعبة — جوالات الجلسات القديمة ما توصلها هذي الجلسة.
+    // «مباراة جديدة» و«إعادة المباراة» داخل نفس الصفحة تبقى على نفس الرقم.
+    const rnd=new Uint32Array(2); try{ crypto.getRandomValues(rnd); }catch(e){ rnd[0]=Math.random()*4294967295; rnd[1]=Date.now(); }
+    const room=(rnd[0].toString(36)+rnd[1].toString(36)).slice(0,10);
+    try{ Object.keys(localStorage).filter(k=>k.indexOf('codenames-board-')===0).forEach(k=>localStorage.removeItem(k)); localStorage.removeItem('codenames-room'); }catch(e){}
     this.room=room;
     this.state={ teams:{1:{name:c.name1,kw:c.kw1},2:{name:c.name2,kw:c.kw2}}, followers:c.followers, hintT:c.hintT, guessT:c.guessT,
       players:{1:r.t1,2:r.t2}, roles:{1:{spy:null,conf:null},2:{spy:null,conf:null}}, logs:{1:[],2:[]},
