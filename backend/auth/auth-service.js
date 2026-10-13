@@ -110,7 +110,7 @@ function generatePublicId() {
  * @param {boolean} [wantsToBeStreamer] - زر التفعيل بصفحة إنشاء الحساب
  * @returns {{success: boolean, user?: Object, error?: string}}
  */
-function signup(username, email, plainPassword, wantsToBeStreamer) {
+function signup(username, email, plainPassword, wantsToBeStreamer, emailCode) {
     username = (username || '').trim();
     email = (email || '').trim().toLowerCase();
 
@@ -121,6 +121,10 @@ function signup(username, email, plainPassword, wantsToBeStreamer) {
     var existing = db.prepare('SELECT id FROM users WHERE email = ? OR username = ?').get(email, username);
     if (existing) return { success: false, error: 'already_exists' };
 
+    // الحساب ما ينشأ إلا بعد تأكيد الإيميل بالرمز (sendSignupCode)
+    var codeCheck = checkPendingSignupCode(email, emailCode);
+    if (!codeCheck.success) return codeCheck;
+
     var userCount = db.prepare('SELECT COUNT(*) AS c FROM users').get().c;
     var role = userCount === 0 ? 'admin' : 'streamer'; // أول حساب = الأدمن (صاحب المنصة)
     var isStreamer = wantsToBeStreamer ? 1 : 0;
@@ -128,12 +132,165 @@ function signup(username, email, plainPassword, wantsToBeStreamer) {
     var hash = password.hashPassword(plainPassword);
     var publicId = generatePublicId();
     var info = db.prepare(
-        'INSERT INTO users (username, email, password_hash, role, is_streamer, custom_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO users (username, email, password_hash, role, is_streamer, custom_id, created_at, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, 1)'
     ).run(username, email, hash, role, isStreamer, publicId, now());
+    db.prepare('DELETE FROM pending_signups WHERE email = ?').run(email);
 
     logger.log('Auth: new user signed up: ' + username + ' (role: ' + role + ', streamer: ' + Boolean(isStreamer) + ', id: ' + publicId + ')');
 
-    return { success: true, user: { id: info.lastInsertRowid, username: username, email: email, role: role, is_streamer: Boolean(isStreamer), custom_id: publicId, permissions: {} } };
+    return { success: true, user: { id: info.lastInsertRowid, username: username, email: email, role: role, is_streamer: Boolean(isStreamer), custom_id: publicId, permissions: {}, email_verified: true } };
+}
+
+/* ----------------------------------------------------------------------
+ * تأكيد الإيميل واستعادة الحساب. كل الرموز 6 أرقام صالحة 15 دقيقة،
+ * 5 محاولات خاطئة كحد أقصى للرمز الواحد، ودقيقة بين كل إرسال وإرسال.
+ * ---------------------------------------------------------------------- */
+var EMAIL_CODE_TTL_MS = 15 * 60 * 1000;
+var EMAIL_CODE_RESEND_MS = 60 * 1000;
+var EMAIL_CODE_MAX_ATTEMPTS = 5;
+
+function newEmailCode() { return String(crypto.randomInt(100000, 1000000)); }
+function cleanCode(code) { return String(code || '').replace(/\D/g, ''); }
+function resendWaitFrom(sentAt) {
+    var wait = sentAt ? sentAt + EMAIL_CODE_RESEND_MS - now() : 0;
+    return wait > 0 ? Math.ceil(wait / 1000) : 0;
+}
+
+/**
+ * الخطوة ١ لإنشاء حساب: يتحقق من البيانات ويرسل رمز للإيميل. الحساب
+ * نفسه ما ينشأ إلا بـsignup(..., emailCode) بعد الرمز الصحيح.
+ */
+async function sendSignupCode(username, email) {
+    username = (username || '').trim();
+    email = (email || '').trim().toLowerCase();
+    if (username.length < 3) return { success: false, error: 'username_too_short' };
+    if (!isValidEmail(email)) return { success: false, error: 'invalid_email' };
+    if (db.prepare('SELECT id FROM users WHERE email = ? OR username = ?').get(email, username)) {
+        return { success: false, error: 'already_exists' };
+    }
+    var pending = db.prepare('SELECT sent_at FROM pending_signups WHERE email = ?').get(email);
+    var wait = resendWaitFrom(pending && pending.sent_at);
+    if (wait) return { success: false, error: 'code_resend_wait', retryAfter: wait };
+
+    var code = newEmailCode(), at = now();
+    db.prepare('INSERT INTO pending_signups (email, code, expires_at, sent_at, attempts) VALUES (?, ?, ?, ?, 0) ' +
+        'ON CONFLICT(email) DO UPDATE SET code = excluded.code, expires_at = excluded.expires_at, sent_at = excluded.sent_at, attempts = 0')
+        .run(email, code, at + EMAIL_CODE_TTL_MS, at);
+    var sent = await emailService.sendSignupCodeEmail(email, code);
+    if (!sent.success) {
+        db.prepare('DELETE FROM pending_signups WHERE email = ?').run(email);
+        return { success: false, error: 'email_send_failed' };
+    }
+    return { success: true };
+}
+
+function checkPendingSignupCode(email, code) {
+    code = cleanCode(code);
+    if (!code) return { success: false, error: 'email_code_required' };
+    var row = db.prepare('SELECT code, expires_at, attempts FROM pending_signups WHERE email = ?').get(email);
+    if (!row || now() > row.expires_at || row.attempts >= EMAIL_CODE_MAX_ATTEMPTS) {
+        return { success: false, error: 'invalid_or_expired_code' };
+    }
+    if (row.code !== code) {
+        db.prepare('UPDATE pending_signups SET attempts = attempts + 1 WHERE email = ?').run(email);
+        return { success: false, error: 'invalid_or_expired_code' };
+    }
+    return { success: true };
+}
+
+/**
+ * تأكيد الإيميل من البروفايل (حسابات قديمة سجّلت قبل التحقق). newEmail
+ * اختياري: لو مختلف عن الحالي يتأكّد الجديد، ويصير هو إيميل الحساب بعد
+ * الرمز الصحيح فقط (verifyEmail).
+ */
+async function sendEmailVerification(userId, newEmail) {
+    var user = db.prepare('SELECT id, email, email_verified, email_code_sent_at FROM users WHERE id = ?').get(userId);
+    if (!user) return { success: false, error: 'not_found' };
+    var target = (newEmail || user.email || '').trim().toLowerCase();
+    if (!isValidEmail(target)) return { success: false, error: 'invalid_email' };
+    if (target === user.email && user.email_verified) return { success: false, error: 'already_verified' };
+    if (target !== user.email && db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(target, userId)) {
+        return { success: false, error: 'email_taken' };
+    }
+    var wait = resendWaitFrom(user.email_code_sent_at);
+    if (wait) return { success: false, error: 'code_resend_wait', retryAfter: wait };
+
+    var code = newEmailCode(), at = now();
+    db.prepare('UPDATE users SET email_verify_code = ?, email_verify_target = ?, email_verify_expires = ?, email_verify_attempts = 0, email_code_sent_at = ? WHERE id = ?')
+        .run(code, target, at + EMAIL_CODE_TTL_MS, at, userId);
+    var sent = await emailService.sendEmailVerifyCodeEmail(target, code);
+    if (!sent.success) {
+        db.prepare('UPDATE users SET email_verify_code = NULL, email_verify_target = NULL, email_verify_expires = NULL, email_code_sent_at = NULL WHERE id = ?').run(userId);
+        return { success: false, error: 'email_send_failed' };
+    }
+    return { success: true, email: target };
+}
+
+function verifyEmail(userId, code) {
+    code = cleanCode(code);
+    var user = db.prepare('SELECT id, email_verify_code, email_verify_target, email_verify_expires, email_verify_attempts FROM users WHERE id = ?').get(userId);
+    if (!user || !user.email_verify_code || !code || now() > (user.email_verify_expires || 0) || user.email_verify_attempts >= EMAIL_CODE_MAX_ATTEMPTS) {
+        return { success: false, error: 'invalid_or_expired_code' };
+    }
+    if (user.email_verify_code !== code) {
+        db.prepare('UPDATE users SET email_verify_attempts = email_verify_attempts + 1 WHERE id = ?').run(userId);
+        return { success: false, error: 'invalid_or_expired_code' };
+    }
+    // الإيميل الجديد ممكن أحد ثاني سجّل فيه بعد ما انرسل الرمز
+    if (db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(user.email_verify_target, userId)) {
+        return { success: false, error: 'email_taken' };
+    }
+    db.prepare('UPDATE users SET email = ?, email_verified = 1, email_verify_code = NULL, email_verify_target = NULL, email_verify_expires = NULL, email_verify_attempts = 0 WHERE id = ?')
+        .run(user.email_verify_target, userId);
+    return { success: true, email: user.email_verify_target };
+}
+
+/**
+ * يلقى الحساب من أي معلومة تخصه: الإيميل، آيدي البروفايل (#1234)، اسم
+ * المستخدم، أو يوزر تيك توك الموثّق (@user). بدون حساسية لحالة الأحرف.
+ */
+function findUserByIdentifier(identifier) {
+    var raw = String(identifier || '').trim();
+    if (!raw) return null;
+    var cols = 'SELECT id, username, email, custom_id, recovery_sent_at FROM users WHERE ';
+    if (raw.indexOf('@') > 0) return db.prepare(cols + 'email = ?').get(raw.toLowerCase()) || null;
+    var bare = raw.replace(/^[@#]+/, '').trim();
+    if (!bare) return null;
+    return db.prepare(cols + 'custom_id = ?').get(bare) ||
+        db.prepare(cols + 'username = ? COLLATE NOCASE').get(bare) ||
+        db.prepare(cols + 'tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE').get(bare) || null;
+}
+
+/** a***n@gmail.com — يعرف المستخدم وين يدوّر بدون ما ينكشف الإيميل كامل. */
+function maskEmail(email) {
+    var parts = String(email || '').split('@');
+    if (parts.length !== 2) return '';
+    var name = parts[0];
+    var shown = name.length <= 2 ? name.charAt(0) + '*' : name.charAt(0) + '***' + name.charAt(name.length - 1);
+    return shown + '@' + parts[1];
+}
+
+/**
+ * نسيت اليوزر أو الإيميل: يلقى الحساب من أي معلومة تخصه، ويرسل لإيميله
+ * اسم المستخدم وآيدي البروفايل + رمز تعيين كلمة مرور جديدة (نفس رمز
+ * resetPasswordWithCode). يرجع الإيميل مخفي جزئياً (قرار المنتج).
+ */
+async function recoverAccount(identifier) {
+    var user = findUserByIdentifier(identifier);
+    if (!user) return { success: false, error: 'account_not_found' };
+    if (!isValidEmail(user.email)) return { success: false, error: 'no_email_on_account' };
+    var wait = resendWaitFrom(user.recovery_sent_at);
+    if (wait) return { success: false, error: 'code_resend_wait', retryAfter: wait, maskedEmail: maskEmail(user.email) };
+
+    var code = newEmailCode(), at = now();
+    db.prepare('UPDATE users SET password_reset_code = ?, password_reset_expires = ?, recovery_sent_at = ? WHERE id = ?')
+        .run(code, at + PASSWORD_RESET_CODE_TTL_MS, at, user.id);
+    var sent = await emailService.sendAccountRecoveryEmail(user.email, { username: user.username, customId: user.custom_id }, code);
+    if (!sent.success) {
+        db.prepare('UPDATE users SET password_reset_code = NULL, password_reset_expires = NULL, recovery_sent_at = NULL WHERE id = ?').run(user.id);
+        return { success: false, error: 'email_send_failed' };
+    }
+    return { success: true, maskedEmail: maskEmail(user.email) };
 }
 
 /**
@@ -237,7 +394,8 @@ function login(identifier, plainPassword, deviceId) {
         user: {
             id: user.id, username: user.username, email: user.email, role: user.role, custom_id: user.custom_id,
             is_streamer: Boolean(user.is_streamer), permissions: JSON.parse(user.permissions || '{}'),
-            account_type_chosen: user.account_type_chosen === undefined ? true : Boolean(user.account_type_chosen)
+            account_type_chosen: user.account_type_chosen === undefined ? true : Boolean(user.account_type_chosen),
+            email_verified: Boolean(user.email_verified)
         }
     };
 }
@@ -302,7 +460,12 @@ function resetPasswordWithCode(email, code, newPassword) {
     if (!code) return { success: false, error: 'missing_code' };
     if (!newPassword || newPassword.length < 6) return { success: false, error: 'weak_password' };
 
-    var user = db.prepare('SELECT id, password_reset_code, password_reset_expires FROM users WHERE email = ?').get(email);
+    var user = email.indexOf('@') > 0
+        ? db.prepare('SELECT id, password_reset_code, password_reset_expires FROM users WHERE email = ?').get(email)
+        : findUserByIdentifier(email);
+    if (user && user.password_reset_code === undefined) {
+        user = db.prepare('SELECT id, password_reset_code, password_reset_expires FROM users WHERE id = ?').get(user.id);
+    }
     // رسالة خطأ عامة موحّدة لكل حالات الفشل — لا كشف تفاصيل داخلية.
     if (!user || !user.password_reset_code || user.password_reset_code !== code) {
         return { success: false, error: 'invalid_or_expired_code' };
@@ -354,7 +517,8 @@ async function loginWithGoogle(idToken, deviceId) {
         var byEmail = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
         if (byEmail) {
             // بريد مسجَّل مسبقاً بكلمة مرور عادية — نربط جوجل بنفس الحساب بدل تكراره.
-            db.prepare('UPDATE users SET google_id = ? WHERE id = ?').run(googleId, byEmail.id);
+            // الدخول بـGoogle بنفس الإيميل يثبت إن الإيميل يخص صاحب الحساب
+            db.prepare('UPDATE users SET google_id = ?, email_verified = 1 WHERE id = ?').run(googleId, byEmail.id);
             existing = byEmail;
         } else {
             var userCount = db.prepare('SELECT COUNT(*) AS c FROM users').get().c;
@@ -370,7 +534,7 @@ async function loginWithGoogle(idToken, deviceId) {
             // بقاعدة البيانات) — حساب جوجل جديد كلياً لازم يختار لاعب/
             // استريمر بخطوة إجبارية بعد الدخول (choose-account-type.html).
             var info = db.prepare(
-                'INSERT INTO users (username, email, google_id, role, custom_id, created_at, account_type_chosen) VALUES (?, ?, ?, ?, ?, ?, ?)'
+                'INSERT INTO users (username, email, google_id, role, custom_id, created_at, account_type_chosen, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, 1)'
             ).run(username, email, googleId, role, publicId, now(), 0);
             existing = { id: info.lastInsertRowid, username: username, email: email, role: role, custom_id: publicId, account_type_chosen: 0 };
             logger.log('Auth: new user signed up via Google: ' + username + ' (role: ' + role + ', id: ' + publicId + ') — account type choice pending');
@@ -398,7 +562,8 @@ async function loginWithGoogle(idToken, deviceId) {
             id: existing.id, username: existing.username, email: existing.email, role: existing.role, custom_id: existing.custom_id,
             is_streamer: Boolean(existing.is_streamer),
             permissions: typeof existing.permissions === 'string' ? JSON.parse(existing.permissions || '{}') : (existing.permissions || {}),
-            account_type_chosen: existing.account_type_chosen === undefined ? true : Boolean(existing.account_type_chosen)
+            account_type_chosen: existing.account_type_chosen === undefined ? true : Boolean(existing.account_type_chosen),
+            email_verified: true
         }
     };
 }
@@ -764,7 +929,7 @@ function validateSession(token) {
         db.prepare('UPDATE sessions SET expires_at = ? WHERE token = ?').run(now() + SESSION_DURATION_MS, token);
     }
 
-    var user = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, tiktok_avatar_url, tiktok_display_name, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen FROM users WHERE id = ?').get(session.user_id);
+    var user = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, tiktok_avatar_url, tiktok_display_name, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen, email_verified FROM users WHERE id = ?').get(session.user_id);
     if (!user) return null;
 
     // شفاء ذاتي: حسابات أُنشئت قبل ميزة الـID العام (custom_id) قد لا
@@ -778,6 +943,7 @@ function validateSession(token) {
     user.tiktok_verified = Boolean(user.tiktok_verified);
     user.permissions = JSON.parse(user.permissions || '{}');
     user.welcome_completed = Boolean(user.welcome_completed);
+    user.email_verified = Boolean(user.email_verified);
     user.account_type_chosen = user.account_type_chosen === undefined ? true : Boolean(user.account_type_chosen);
 
     return user;
@@ -1299,6 +1465,10 @@ module.exports = {
     adminSetAllowDeviceChange: adminSetAllowDeviceChange,
     adminSetSuperAdmin: adminSetSuperAdmin,
     requestPasswordReset: requestPasswordReset,
+    sendSignupCode: sendSignupCode,
+    sendEmailVerification: sendEmailVerification,
+    verifyEmail: verifyEmail,
+    recoverAccount: recoverAccount,
     resetPasswordWithCode: resetPasswordWithCode,
     updateBroadcastViewerStats: updateBroadcastViewerStats,
     getTopStreamersByHours: getTopStreamersByHours,

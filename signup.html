@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<!-- إنشاء الحساب صار يتطلب تأكيد الإيميل برمز (login.html → «إنشاء حساب»)،
+     وهذي الصفحة القديمة ما فيها خطوة الرمز — نحوّل لصفحة الدخول. -->
+<script>location.replace('login.html' + location.search);</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إنشاء حساب — AGP</title>

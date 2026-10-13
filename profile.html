@@ -763,6 +763,118 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (focus === 'photo') setTimeout(function(){ fileInput.click(); }, 60);
   }
 
+  /* =====================================================================
+   * [تأكيد الإيميل] الحسابات اللي سجّلت قبل التحقق بالرمز: تنبيه بالبروفايل
+   * (لصاحب الحساب فقط) مع نافذة تأكيد — الإيميل الحالي أو إيميل جديد
+   * صحيح، رمز 6 أرقام (AGPAuth.sendEmailVerification / verifyEmail).
+   * الإيميل المؤكد هو اللي توصله رسائل «نسيت كلمة المرور/الحساب».
+   * ===================================================================== */
+  function emailErrorText(r){
+    var err = r && r.error;
+    var map = {
+      invalid_email: 'تأكد من البريد الإلكتروني.',
+      email_taken: 'هذا الإيميل مستخدم بحساب ثاني.',
+      already_verified: 'إيميلك مؤكد من قبل ✅',
+      invalid_or_expired_code: 'الرمز غلط أو انتهت صلاحيته.',
+      email_send_failed: 'تعذّر إرسال الإيميل، حاول بعد شوي.'
+    };
+    if (err === 'code_resend_wait') return 'انتظر ' + ((r && r.retryAfter) || 60) + ' ثانية قبل ما تطلب رمز جديد.';
+    return map[err] || 'حصل خطأ، جرّب مرة ثانية.';
+  }
+
+  function openEmailVerifyModal(currentEmail, onDone){
+    if (document.querySelector('.agp-ed-overlay')) return;
+    ensureEditStyles();
+    var ov = document.createElement('div');
+    ov.className = 'agp-ed-overlay';
+    ov.innerHTML =
+      '<div class="agp-ed-sheet" role="dialog" aria-modal="true" aria-label="تأكيد الإيميل">' +
+        '<div class="agp-ed-head"><span class="agp-ed-title">تأكيد البريد الإلكتروني</span><button type="button" class="agp-ed-x" aria-label="إغلاق">×</button></div>' +
+        '<div class="agp-ed-hint" style="text-align:start;line-height:1.8;margin-top:6px" data-sub></div>' +
+        '<div class="agp-ed-field" data-email-f><label class="agp-ed-label" for="agp-ev-email"><span>البريد الإلكتروني</span></label>' +
+          '<input id="agp-ev-email" class="agp-ed-input" type="email" dir="ltr" autocomplete="email"></div>' +
+        '<div class="agp-ed-field" data-code-f style="display:none"><label class="agp-ed-label" for="agp-ev-code"><span>الرمز اللي وصلك بالإيميل</span></label>' +
+          '<input id="agp-ev-code" class="agp-ed-input" type="text" dir="ltr" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="123456"></div>' +
+        '<div class="agp-ed-msg" aria-live="polite"></div>' +
+        '<div class="agp-ed-actions"><button type="button" class="agp-ed-btn primary" data-go></button><button type="button" class="agp-ed-btn ghost" data-back style="display:none">تغيير الإيميل</button></div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    document.body.style.overflow = 'hidden';
+    var sub = ov.querySelector('[data-sub]'), emailF = ov.querySelector('[data-email-f]'), codeF = ov.querySelector('[data-code-f]');
+    var emailIn = ov.querySelector('#agp-ev-email'), codeIn = ov.querySelector('#agp-ev-code');
+    var msg = ov.querySelector('.agp-ed-msg'), go = ov.querySelector('[data-go]'), back = ov.querySelector('[data-back]');
+    var busy = false, step = 1, sentTo = '';
+    function setMsg(t, kind){ msg.textContent = t || ''; msg.className = 'agp-ed-msg' + (kind ? ' ' + kind : ''); }
+    function show(n){
+      step = n;
+      emailF.style.display = n === 1 ? '' : 'none';
+      codeF.style.display = n === 2 ? '' : 'none';
+      back.style.display = n === 2 ? '' : 'none';
+      go.textContent = n === 1 ? 'أرسل رمز التأكيد' : 'تأكيد';
+      sub.textContent = n === 1
+        ? 'تأكد إن هذا إيميلك الصحيح (تقدر تغيّره)، ونرسل له رمز من 6 أرقام. بعد التأكيد تقدر تستعيد حسابك عليه لو نسيت بياناته.'
+        : 'أرسلنا الرمز إلى ' + sentTo + ' — صالح 15 دقيقة. (لو ما لقيته شوف مجلد الرسائل المزعجة)';
+      (n === 1 ? emailIn : codeIn).focus();
+    }
+    function close(){ if (busy) return; document.removeEventListener('keydown', onKey); ov.classList.remove('open'); setTimeout(function(){ ov.remove(); }, 200); document.body.style.overflow = ''; }
+    function onKey(e){ if (e.key === 'Escape') close(); else if (e.key === 'Enter') go.click(); }
+    document.addEventListener('keydown', onKey);
+    ov.querySelector('.agp-ed-x').addEventListener('click', close);
+    ov.addEventListener('click', function(e){ if (e.target === ov) close(); });
+    back.addEventListener('click', function(){ setMsg(''); codeIn.value = ''; show(1); });
+    go.addEventListener('click', function(){
+      if (busy) return;
+      var p;
+      if (step === 1) {
+        var em = emailIn.value.trim().toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { setMsg('تأكد من البريد الإلكتروني.', 'err'); return; }
+        busy = true; go.disabled = true; setMsg('جارٍ الإرسال...');
+        p = window.AGPAuth.sendEmailVerification(em).then(function(r){
+          if (r && r.success) { sentTo = r.email || em; setMsg(''); show(2); }
+          else setMsg(emailErrorText(r), 'err');
+        });
+      } else {
+        var code = codeIn.value.replace(/[٠-٩]/g, function(d){ return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)); }).replace(/\D/g, '');
+        if (code.length !== 6) { setMsg('الرمز 6 أرقام.', 'err'); return; }
+        busy = true; go.disabled = true; setMsg('جارٍ التأكيد...');
+        p = window.AGPAuth.verifyEmail(code).then(function(r){
+          if (r && r.success) { busy = false; close(); showToast('تم تأكيد إيميلك ✅'); if (onDone) onDone(r.email); }
+          else setMsg(emailErrorText(r), 'err');
+        });
+      }
+      p.catch(function(){ setMsg('تعذّر الوصول للخادم.', 'err'); }).then(function(){ busy = false; go.disabled = false; });
+    });
+    emailIn.value = currentEmail || '';
+    show(1);
+    requestAnimationFrame(function(){ ov.classList.add('open'); });
+  }
+
+  // التنبيه نفسه — يتحقق من الحالة الحقيقية من الخادم (refreshUser) لأن
+  // نسخة الحساب المحفوظة بالمتصفح ممكن تكون قديمة قبل حقل email_verified.
+  function setupEmailVerifyBanner(){
+    if (!window.AGPAuth || !window.AGPAuth.refreshUser || document.querySelector('.agp-ev-banner')) return;
+    window.AGPAuth.refreshUser().then(function(u){
+      if (!u || u.email_verified !== false || document.querySelector('.agp-ev-banner')) return;
+      var editBtn = Array.prototype.slice.call(document.querySelectorAll('button'))
+        .find(function(e){ return e.textContent.trim() === 'تعديل الملف'; });
+      var anchor = editBtn && editBtn.parentElement;
+      if (!anchor) return;
+      var bn = document.createElement('div');
+      bn.className = 'agp-ev-banner';
+      bn.setAttribute('dir', 'rtl');
+      bn.style.cssText = 'margin-top:14px;padding:12px 14px;border-radius:14px;border:1px solid rgba(251,191,36,.45);background:rgba(251,191,36,.08);display:flex;flex-direction:column;gap:10px;font-size:13.5px;line-height:1.7;color:#fde68a';
+      var txt = document.createElement('div');
+      txt.textContent = '⚠️ إيميلك غير مؤكد — أكّده عشان تقدر تستعيد حسابك لو نسيت كلمة المرور أو اسم المستخدم.';
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = 'أكّد الإيميل';
+      b.style.cssText = 'align-self:flex-start;padding:8px 16px;border-radius:999px;border:1px solid rgba(251,191,36,.6);background:rgba(251,191,36,.16);color:#fde68a;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer';
+      b.addEventListener('click', function(){ openEmailVerifyModal(u.email, function(){ bn.remove(); }); });
+      bn.appendChild(txt); bn.appendChild(b);
+      anchor.parentNode.insertBefore(bn, anchor.nextSibling);
+    });
+  }
+
   function setupProfileEditing(p){
     editState.profile = p;
     ensureEditStyles();
@@ -875,6 +987,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     try { cachedUserForEdit = window.AGPAuth && window.AGPAuth.getCachedUser ? window.AGPAuth.getCachedUser() : null; } catch (e) {}
     var isOwnerForEdit = Boolean(cachedUserForEdit && cachedUserForEdit.custom_id && cachedUserForEdit.custom_id === p.custom_id);
     if (isOwnerForEdit) {
+      setupEmailVerifyBanner();
       var linkBtn = Array.prototype.slice.call(document.querySelectorAll('button'))
         .find(function(e){ var t = e.textContent.trim(); return t === 'ربط الحساب' || t === 'إلغاء الربط'; });
       // [إصلاح] الزر كان يعرض دايماً "ربط الحساب" (حالة محلية وهمية

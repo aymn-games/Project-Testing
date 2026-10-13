@@ -94,6 +94,10 @@ var ROUTES = [
   // استرجاع كلمة المرور — خطوتين، بدون Auth (المستخدم أصلاً خارج جلسته).
   { method: 'POST', path: '/api/auth/forgot-password', requireAuth: false, handler: handleForgotPassword },
   { method: 'POST', path: '/api/auth/reset-password', requireAuth: false, handler: handleResetPassword },
+  { method: 'POST', path: '/api/auth/signup/send-code', requireAuth: false, handler: handleSignupSendCode },
+  { method: 'POST', path: '/api/auth/recover-account', requireAuth: false, handler: handleRecoverAccount },
+  { method: 'POST', path: '/api/auth/email/send-code', requireAuth: true, handler: handleEmailSendCode },
+  { method: 'POST', path: '/api/auth/email/verify', requireAuth: true, handler: handleEmailVerify },
   { method: 'GET', path: '/api/admin/users', requireAuth: true, requireAdmin: true, handler: handleAdminListUsers },
   { method: 'GET', path: '/api/admin/users/lookup', requireAuth: true, requireAdmin: true, handler: handleAdminLookupUser },
   { method: 'POST', path: '/api/admin/permissions', requireAuth: true, requireAdmin: true, handler: handleAdminSetPermission },
@@ -197,7 +201,7 @@ var ROUTES = [
  * ----------------------------------------------------------------------- */
 
 function handleSignup(req, res, body) {
-  var result = authService.signup(body.username, body.email, body.password, Boolean(body.wantsToBeStreamer));
+  var result = authService.signup(body.username, body.email, body.password, Boolean(body.wantsToBeStreamer), body.emailCode);
   sendJson(res, result.success ? 201 : 400, result);
 }
 
@@ -225,7 +229,38 @@ function handleForgotPassword(req, res, body) {
 
 /** خطوة ٢ — يتحقق من الرمز ويحدّث كلمة المرور. body: {email, code, newPassword} */
 function handleResetPassword(req, res, body) {
-  var result = authService.resetPasswordWithCode(body.email, body.code, body.newPassword);
+  // body.identifier بدل email من «نسيت اليوزر أو الإيميل» (المستخدم ما يعرف إيميله)
+  var result = authService.resetPasswordWithCode(body.email || body.identifier, body.code, body.newPassword);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function codeResultStatus(result) {
+  return result.success ? 200 : (result.error === 'code_resend_wait' ? 429 : 400);
+}
+
+/** خطوة ١ لإنشاء حساب — رمز تأكيد للإيميل. body: {username, email} */
+function handleSignupSendCode(req, res, body) {
+  return authService.sendSignupCode(body.username, body.email).then(function (result) {
+    sendJson(res, codeResultStatus(result), result);
+  });
+}
+
+/** نسيت اليوزر أو الإيميل. body: {identifier} — إيميل/آيدي/يوزر/يوزر تيك توك */
+function handleRecoverAccount(req, res, body) {
+  return authService.recoverAccount(body.identifier).then(function (result) {
+    sendJson(res, result.success ? 200 : (result.error === 'code_resend_wait' ? 429 : result.error === 'account_not_found' ? 404 : 400), result);
+  });
+}
+
+/** تأكيد/تغيير إيميل صاحب الجلسة. body: {email?} */
+function handleEmailSendCode(req, res, body, user) {
+  return authService.sendEmailVerification(user.id, body.email).then(function (result) {
+    sendJson(res, codeResultStatus(result), result);
+  });
+}
+
+function handleEmailVerify(req, res, body, user) {
+  var result = authService.verifyEmail(user.id, body.code);
   sendJson(res, result.success ? 200 : 400, result);
 }
 
