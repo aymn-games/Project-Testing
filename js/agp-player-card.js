@@ -626,7 +626,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var avatarUrl = player && player.avatarUrl;
         var basePath = (opts && opts.basePath) || '';
         var imageFilename = player.frame.imageFilename;
-        var frameSrc = basePath + imageFilename;
+        // رابط مطلق (صورة إطار مرفوعة من لوحة المتجر) ما يحتاج basePath.
+        var frameSrc = /^https?:\/\//i.test(imageFilename) ? imageFilename : basePath + imageFilename;
 
         var tpl = getTemplate(imageFilename);
         var h = (opts && opts.size) || AVATAR_SIZE_PX;

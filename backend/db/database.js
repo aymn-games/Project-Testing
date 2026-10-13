@@ -43,6 +43,8 @@
  *                    راجع backend/stats/platform-stats-service.js
  *   tickets / ticket_messages — تذاكر "الدعم والاقتراحات" ورسائلها —
  *                    راجع backend/support/support-service.js
+ *   store_*        — المتجر: تصنيفات/استريمرز/منتجات/أكواد خصم/طلبات/
+ *                    مقتنيات المشتري/المفضلة — راجع backend/store/store-service.js
  * ==========================================================================
  */
 
@@ -354,6 +356,107 @@ db.exec(`
         created_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_ticket_messages_ticket ON ticket_messages(ticket_id, created_at);
+
+    -- المتجر (store.html / admin-store.html / streamer-stats.html) — راجع
+    -- backend/store/store-service.js. كل الأسعار بالريال السعودي.
+    -- kind: normal = تصنيف عادي، streamers = تصنيف "إطارات الاستريمرز"
+    -- (منتجاته مربوطة باستريمر)، bundles = تصنيف الباكجات.
+    CREATE TABLE IF NOT EXISTS store_categories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        kind TEXT NOT NULL DEFAULT 'normal' CHECK (kind IN ('normal', 'streamers', 'bundles')),
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS store_streamers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        tiktok_user TEXT NOT NULL DEFAULT '',
+        avatar_url TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL
+    );
+
+    -- تصنيفات داخل صفحة كل استريمر (مثل: إطارات البث / إطارات المعارك).
+    CREATE TABLE IF NOT EXISTS store_streamer_subcats (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        streamer_id INTEGER NOT NULL REFERENCES store_streamers(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+    );
+
+    -- old_price/off_pct = عرض فعّال على المنتج. bundle_items = JSON [productId]
+    -- للباكجات فقط. plan = باقات برنامج الاستريمرز (basic/mid/full) — hidden=1
+    -- ما تظهر بشبكة المتجر. delivery = وش ينضاف لمقتنيات المشتري بعد الدفع:
+    -- '' بدون، 'frame' إطار بروفايل بصورة المنتج، 'catalog:<slug>' إطار من
+    -- الكتالوج، 'elim:<key>' بطاقة إقصاء، 'win:<key>' بطاقة فوز. custom_frame_id
+    -- = صف custom_frames المستخدم لتسليم 'frame' (يُنشأ تلقائياً أول شراء).
+    CREATE TABLE IF NOT EXISTS store_products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category_id INTEGER,
+        name TEXT NOT NULL,
+        price REAL NOT NULL DEFAULT 0,
+        old_price REAL,
+        off_pct INTEGER,
+        badge TEXT NOT NULL DEFAULT '',
+        image_url TEXT NOT NULL DEFAULT '',
+        streamer_id INTEGER,
+        streamer_subcat_id INTEGER,
+        bundle_items TEXT,
+        plan TEXT,
+        hidden INTEGER NOT NULL DEFAULT 0,
+        delivery TEXT NOT NULL DEFAULT '',
+        custom_frame_id INTEGER,
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_store_products_category ON store_products(category_id);
+    CREATE INDEX IF NOT EXISTS idx_store_products_streamer ON store_products(streamer_id);
+
+    CREATE TABLE IF NOT EXISTS store_coupons (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        pct INTEGER NOT NULL CHECK (pct BETWEEN 1 AND 90),
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at INTEGER NOT NULL
+    );
+
+    -- رقم الطلب تسلسلي يبدأ من 482100 (يُحدَّد بمنطق التطبيق). items = JSON
+    -- نسخة ثابتة من المنتجات وقت الشراء [{productId, name, price, categoryName,
+    -- streamerId, parts?}] — parts للباكجات: توزيع سعرها على منتجاتها
+    -- (لإحصائيات الاستريمرز). user_id بدون FOREIGN KEY عمداً: حذف الحساب لا
+    -- يمسح سجل المبيعات.
+    CREATE TABLE IF NOT EXISTS store_orders (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER,
+        created_at INTEGER NOT NULL,
+        subtotal REAL NOT NULL,
+        discount REAL NOT NULL DEFAULT 0,
+        total REAL NOT NULL,
+        coupon_code TEXT,
+        payment_method TEXT NOT NULL DEFAULT '',
+        payment_ref TEXT,
+        status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('pending', 'completed', 'failed')),
+        items TEXT NOT NULL DEFAULT '[]'
+    );
+    CREATE INDEX IF NOT EXISTS idx_store_orders_user ON store_orders(user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_store_orders_created ON store_orders(created_at);
+
+    -- "وصلت منتجاتك إلى بروفايلك" — صف لكل منتج (ولكل منتج داخل باكج) اشتراه المستخدم.
+    CREATE TABLE IF NOT EXISTS store_inventory (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        product_id INTEGER NOT NULL,
+        order_id INTEGER NOT NULL,
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_store_inventory_user ON store_inventory(user_id);
+
+    CREATE TABLE IF NOT EXISTS store_favorites (
+        user_id INTEGER NOT NULL,
+        product_id INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY (user_id, product_id)
+    );
 `);
 
 // تصفير تصنيف ساعات البث (الرئيسية): يُسجَّل مرة وحدة أول تشغيل بعد هذا
