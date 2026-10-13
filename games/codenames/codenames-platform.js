@@ -217,8 +217,71 @@
         open();
         return {
             send: send,
+            isOpen: function () { return !!(ws && ws.readyState === 1); },
+            // إعادة اتصال فورية (مثلاً لما يرجع الجوال من تطبيق تيك توك والاتصال القديم ميت)
+            reconnect: function () {
+                if (closed) return;
+                clearTimeout(retry);
+                var old = ws; ws = null;
+                if (old) { old.onclose = null; old.onmessage = null; try { old.close(); } catch (e) {} }
+                open();
+            },
             close: function () { closed = true; clearTimeout(retry); try { ws && ws.close(); } catch (e) {} }
         };
+    }
+
+    /**
+     * تشفير لوحة الألوان لكل جوال سباي ماستر مقبول (README §6: الكلمات
+     * الملونة توصل للمقبول فقط). القناة تبث كل رسالة لكل من بالغرفة، فكل
+     * جوال يولّد مفتاح ECDH ويرسل الجزء العام مع طلبه، واللعبة تشفّر اللوحة
+     * لكل جوال مقبول بمفتاح AES-GCM مشترك بينهما فقط — أي أحد ثاني بالغرفة
+     * يستلم بيانات مشفّرة ما يقدر يفتحها. يحتاج صفحة https (crypto.subtle).
+     */
+    var ECDH = { name: 'ECDH', namedCurve: 'P-256' };
+    function b64(buf) { var s = '', a = new Uint8Array(buf); for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s); }
+    function unb64(str) { var s = atob(str), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
+    var secure = {
+        supported: function () { return !!(window.crypto && window.crypto.subtle); },
+        /** زوج مفاتيح جديد → {priv, pub} بصيغة JWK (يُحفظ بالجوال). */
+        newPair: function () {
+            var subtle = window.crypto.subtle;
+            return subtle.generateKey(ECDH, true, ['deriveKey']).then(function (kp) {
+                return Promise.all([subtle.exportKey('jwk', kp.privateKey), subtle.exportKey('jwk', kp.publicKey)]);
+            }).then(function (r) { return { priv: r[0], pub: { kty: r[1].kty, crv: r[1].crv, x: r[1].x, y: r[1].y } }; });
+        },
+        /** مفتاح AES مشترك من مفتاحي الخاص (JWK) والمفتاح العام للطرف الثاني (JWK). */
+        shared: function (privJwk, peerPubJwk) {
+            var subtle = window.crypto.subtle;
+            return Promise.all([
+                subtle.importKey('jwk', privJwk, ECDH, false, ['deriveKey']),
+                subtle.importKey('jwk', { kty: peerPubJwk.kty, crv: peerPubJwk.crv, x: peerPubJwk.x, y: peerPubJwk.y }, ECDH, false, [])
+            ]).then(function (k) {
+                return subtle.deriveKey({ name: 'ECDH', public: k[1] }, k[0], { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+            });
+        },
+        encrypt: function (aesKey, obj) {
+            var iv = window.crypto.getRandomValues(new Uint8Array(12));
+            return window.crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, aesKey, new TextEncoder().encode(JSON.stringify(obj)))
+                .then(function (ct) { return { iv: b64(iv), ct: b64(ct) }; });
+        },
+        decrypt: function (aesKey, iv, ct) {
+            return window.crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, aesKey, unb64(ct))
+                .then(function (pt) { return JSON.parse(new TextDecoder().decode(pt)); });
+        }
+    };
+
+    /** باركود (نفس طريقة اللعبة السابقة: مكتبة qrcodejs) كـ data URL لعنصر img. */
+    var _qrCache = {};
+    function qrDataUrl(text, size) {
+        var k = size + '|' + text;
+        if (_qrCache[k]) return _qrCache[k];
+        if (!window.QRCode) return '';
+        var box = document.createElement('div');
+        try { new window.QRCode(box, { text: text, width: size, height: size, colorDark: '#0F1117', colorLight: '#ffffff' }); } catch (e) { return ''; }
+        var c = box.querySelector('canvas');
+        var url = c && c.toDataURL ? c.toDataURL('image/png') : ((box.querySelector('img') || {}).src || '');
+        if (url) _qrCache[k] = url;
+        return url;
     }
 
     /**
@@ -277,6 +340,8 @@
         onComment: onComment,
         onStatus: onStatus,
         relay: relay,
+        secure: secure,
+        qrDataUrl: qrDataUrl,
         createRegistry: createRegistry
     };
 }());

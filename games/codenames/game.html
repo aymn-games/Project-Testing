@@ -19,6 +19,8 @@
 <script src="../../js/agp-player-card.js"></script>
 <script src="../../js/agp-win-card.js"></script>
 <script src="codenames-words.js"></script>
+<!-- مكتبة توليد QR (نفس طريقة اللعبة السابقة) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="codenames-platform.js"></script>
 <script src="./support.js"></script>
     <script src="../../js/agp-apple-emoji.js"></script>
@@ -520,6 +522,8 @@ class Component extends DCLogic {
     this.unsubSt=CN.onStatus(st=>this.setState({reconnecting:st==='connecting'||st==='disconnected'||st==='error'}));
     this.closeMenuOut=e=>{ if(this.state.menuOpen&&!e.target.closest('header')) this.setState({menuOpen:false}); }; addEventListener('pointerdown',this.closeMenuOut);
     window.chat=(u,t,f=true)=>this.onChat(this.reg.nameFor({id:'dev:'+u,name:u}),t,f);
+    // جوالات السباي ماستر: المقبول فقط يستلم اللوحة (مشفّرة له وحده — CN.secure)
+    this.approved={}; this.rejected=new Set(); this.seq=0; this.gk=CN.secure.supported()?CN.secure.newPair().catch(()=>null):Promise.resolve(null);
     this.rl=CN.relay(this.room,m=>this.onRelay(m));
     this.sync();
   }
@@ -531,13 +535,25 @@ class Component extends DCLogic {
 
   // ---- spymaster relay — WebSocket عبر CN.relay (backend/websocket/room-relay-server.js) ----
   send(msg){ try{ this.rl&&this.rl.send(msg); }catch(e){} }
-  sync(){ this._syncedBoard=this.state.board; const b=this.state.board.map(x=>({w:x.w,t:x.t,open:x.open||x.auto})); try{ localStorage.setItem('codenames-board-'+this.room,JSON.stringify(b)); }catch(e){} this.send({type:'board_update',board:b,approved:this.approved||{},teams:{1:this.state.teams[1].name,2:this.state.teams[2].name}}); }
+  sync(){ this._syncedBoard=this.state.board; const b=this.boardPayload(); try{ localStorage.setItem('codenames-board-'+this.room,JSON.stringify(b)); }catch(e){} Object.keys(this.approved||{}).forEach(id=>this.sendBoardTo(id)); }
+  boardPayload(){ return this.state.board.map(x=>({w:x.w,t:x.t,open:x.open||x.auto})); }
+  teamNames(){ return {1:this.state.teams[1].name,2:this.state.teams[2].name}; }
+  // اللوحة الملونة لجوال مقبول واحد: مشفّرة بمفتاح مشترك بين اللعبة وهذا الجوال فقط
+  sendBoardTo(id){ const a=this.approved[id]; if(!a||!a.pub) return; const board=this.boardPayload(), seq=++this.seq;
+    if(!a.key) a.key=this.gk.then(k=>k?CN.secure.shared(k.priv,a.pub):null);
+    Promise.all([this.gk,a.key]).then(([k,key])=>{ if(!k||!key) return; return CN.secure.encrypt(key,{board,teams:this.teamNames()}).then(e=>this.send({type:'board_update',id,seq,gpub:k.pub,...e})); }).catch(()=>{}); }
   onRelay(m){ if(!m||m.room!==this.room) return;
-    if(m.type==='join'||m.type==='sync_request') this.sync();
-    if(m.type==='spymaster_request'&&m.id&&!this.state.spyReqs.some(r=>r.id===m.id)) this.setState(s=>({spyReqs:[...s.spyReqs,{id:m.id,name:String(m.name||'').slice(0,30),team:+m.team===2?2:1}]})); }
+    if(m.type==='join'||m.type==='sync_request') this.send({type:'room_info',teams:this.teamNames()});
+    if(m.type==='spymaster_request'&&m.id){ const id=String(m.id).slice(0,40);
+      // جوال رجع (أعاد فتح الصفحة / رجع من تيك توك) بنفس الطلب: نرد بحالته الحالية بدون طلب جديد
+      if(this.approved[id]){ this.send({type:'spymaster_approve',id,team:this.approved[id].team}); return this.sendBoardTo(id); }
+      if(this.rejected.has(id)) return this.send({type:'spymaster_reject',id});
+      this.send({type:'spymaster_pending',id});
+      const pub=m.pub&&typeof m.pub.x==='string'&&typeof m.pub.y==='string'?{kty:'EC',crv:'P-256',x:m.pub.x,y:m.pub.y}:null;
+      if(!this.state.spyReqs.some(r=>r.id===id)) this.setState(s=>({spyReqs:[...s.spyReqs,{id,name:String(m.name||'').slice(0,30),team:+m.team===2?2:1,pub}]})); } }
   approve(r,ok){ this.setState(s=>({spyReqs:s.spyReqs.filter(x=>x.id!==r.id)}));
-    if(ok){ (this.approved||(this.approved={}))[r.id]=r.team; this.send({type:'spymaster_approve',id:r.id,team:r.team}); this.sync(); this.log(r.team,`${r.name} وافق الاستريمر على طلبه سباي ماستر (جوال)`,'info'); }
-    else this.send({type:'spymaster_reject',id:r.id}); }
+    if(ok){ this.approved[r.id]={team:r.team,name:r.name,pub:r.pub}; this.send({type:'spymaster_approve',id:r.id,team:r.team}); this.sendBoardTo(r.id); this.log(r.team,`${r.name} وافق الاستريمر على طلبه سباي ماستر (جوال)`,'info'); }
+    else { this.rejected.add(r.id); this.send({type:'spymaster_reject',id:r.id}); } }
 
   // ---- sounds ----
   tone(f,d=.15,type='sine',v=.08){ const vol=.7; if(!vol) return; try{ const a=this.ac||(this.ac=new (window.AudioContext||window.webkitAudioContext)()); const o=a.createOscillator(), g=a.createGain(); o.type=type; o.frequency.value=f; g.gain.setValueAtTime(v*vol,a.currentTime); g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+d); o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime+d); }catch(e){} }
@@ -588,8 +604,8 @@ class Component extends DCLogic {
     if(P.kind==='error') return {msg:'تعذّر جلب نقاط المنصة الآن',c:'#fca5a5'};
     const a=P.kind==='ok'&&u?P.aw[u]:null; if(!a) return {msg:'لا يوجد حساب مرتبط بهذا اللاعب على المنصة بعد',c:'#a8a3b5'};
     return {pts:'+'+a.added+' نقطة',total:'المجموع: '+a.totalPoints}; }
-  resetBoard(keepRoles){ clearInterval(this.iv); const st=this.state.starter===1?2:1; try{ localStorage.setItem('codenames-last-starter',st); }catch(e){}
-    this.setState({...this.newBoard(st),phase:'ready',hint:null,hintGiven:false,win:null,banner:null,plat:null,logs:{1:[],2:[]},...(keepRoles?{}:{roles:{1:{spy:null,conf:null},2:{spy:null,conf:null}}})}); }
+  resetBoard(keepRoles){ clearInterval(this.iv); clearTimeout(this.bt); (this.ts||[]).forEach(clearTimeout); this.ts=[]; const st=this.state.starter===1?2:1; try{ localStorage.setItem('codenames-last-starter',st); }catch(e){}
+    this.setState({...this.newBoard(st),phase:'ready',hint:null,hintGiven:false,win:null,banner:null,plat:null,picks:[],bump:null,logs:{1:[],2:[]},...(keepRoles?{}:{roles:{1:{spy:null,conf:null},2:{spy:null,conf:null}}})}); }
 
   onChat(user,text,isFollower=true){
     const S=this.state; if(!user) return; const t=AR(text), tm=this.teamOf(user);
@@ -687,7 +703,7 @@ class Component extends DCLogic {
       mJoin:S.modal==='join', mQr:S.modal==='qr', mReqs:S.modal==='reqs', mTime:S.modal==='time', mHow:S.modal==='how', mExit:S.modal==='exit',
       noJoinReqs:!S.joinReqs.length, joinReqs:S.joinReqs.map(j=>({name:j.name,...avOf(j.name),team:S.teams[j.team].name,c:TC[j.team].c2,soft:TC[j.team].soft,remove:()=>this.setState(s=>({joinReqs:s.joinReqs.filter(x=>x.name!==j.name)}))})),
       saveJoin:()=>{ this.setState(s=>{ const P={1:s.players[1].slice(),2:s.players[2].slice()}; s.joinReqs.forEach(j=>{ if(!P[1].includes(j.name)&&!P[2].includes(j.name)) P[j.team].push(j.name); }); return {players:P,joinReqs:[]}; }); this.shut('modal'); },
-      qrSrc:'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data='+encodeURIComponent(spyUrl), spyUrl,
+      qrSrc:S.modal==='qr'?CN.qrDataUrl(spyUrl,300):'', spyUrl,
       noSpyReqs:!S.spyReqs.length, spyReqs:S.spyReqs.map(r=>({name:r.name,team:S.teams[r.team].name,c:TC[r.team].c2,ok:()=>this.approve(r,true),no:()=>this.approve(r,false)})),
       timeRows:[['⏳ وقت إرسال التلميح من السباي ماستر','hintT',HINT_T,'hint'],['⏳ وقت اختيار اللاعبين وتأكيد الإجابة','guessT',GUESS_T,'guess']].map(([label,k,opts,phase])=>({label,opts:opts.map(v=>({label:mmss(v),...seg(S[k]===v),pick:()=>{ this.setState({[k]:v}); if(this.state.phase===phase) this.runTimer(v); }}))})),
       howRoles:[['🕵','السباي ماستر','يشوف الألوان بجواله ويعطي فريقه تلميح','linear-gradient(135deg, #7c3aed, #a855f7)'],['✓','المؤكّد','الوحيد اللي يفتح الصناديق أو يتخطى','linear-gradient(135deg, #059669, #10b981)'],['👥','باقي الفريق','يصوتون على الصناديق برقمها','rgba(255,255,255,.12)']].map(([icon,t,d,ib])=>({icon,t,d,ib})),

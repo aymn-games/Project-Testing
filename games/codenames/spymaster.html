@@ -31,6 +31,10 @@ input:focus{outline:none;border-color:rgba(167,139,250,.6)}
     </div>
   </div>
 
+  <sc-if value="{{ isLost }}" hint-placeholder-val="{{ false }}">
+    <div style="width:100%;max-width:420px;box-sizing:border-box;padding:22px 20px;border-radius:22px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35);text-align:center;font:700 16px 'Zain';color:#fde68a">انقطع الاتصال -- يعيد الاتصال تلقائياً...</div>
+  </sc-if>
+
   <sc-if value="{{ isBad }}" hint-placeholder-val="{{ false }}">
     <div style="width:100%;max-width:420px;box-sizing:border-box;padding:26px 20px;border-radius:22px;background:rgba(239,68,68,.08);border:1px solid rgba(248,113,113,.35);text-align:center;font:700 17px/1.6 'Zain';color:#fca5a5">{{ badMsg }}</div>
   </sc-if>
@@ -104,9 +108,6 @@ input:focus{outline:none;border-color:rgba(167,139,250,.6)}
     </div>
   </sc-if>
 
-  <sc-if value="{{ isLost }}" hint-placeholder-val="{{ false }}">
-    <div style="width:100%;max-width:420px;box-sizing:border-box;padding:22px 20px;border-radius:22px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35);text-align:center;font:700 16px 'Zain';color:#fde68a">انقطع الاتصال -- أعد فتح الصفحة من جديد.</div>
-  </sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:420,&quot;height&quot;:860}}">
@@ -118,31 +119,60 @@ const TILE = { 1:['linear-gradient(160deg, #f87171, #dc2626 55%, #991b1b)','#7f1
   2:['linear-gradient(160deg, #60a5fa, #2563eb 55%, #1e3a8a)','#1e3a8a','🕵️','rgba(0,0,0,.28)','#fff','rgba(0,0,0,.4)'],
   0:['linear-gradient(160deg, #f1e4c6, #d9c7a0)','#a8916a','🧍','rgba(255,255,255,.75)','#3b2a12','#3b2a12'],
   '-1':['linear-gradient(160deg, #3a3346, #0d0a14)','#000','💀','rgba(255,255,255,.1)','#fff','#ef4444'] };
+// حالة الجوال تُحفظ لكل غرفة (codenames-spy-<room>): الطلب والمفتاح والخريطة الأخيرة —
+// لو السباي ماستر طلع لتيك توك ورجع، أو المتصفح أعاد تحميل الصفحة، يكمل من نفس المكان بدون طلب جديد.
+const ROOM = new URLSearchParams(location.search).get('room');
+const SAVE_KEY = 'codenames-spy-' + ROOM;
+const loadSaved = () => { try{ return JSON.parse(localStorage.getItem(SAVE_KEY)||'null')||{}; }catch(e){ return {}; } };
 class Component extends DCLogic {
-  state = { room:new URLSearchParams(location.search).get('room'), stage:'form', myTeam:0, name:'', team:0, err:null, board:null, lost:false, teams:{1:'الفريق الأحمر',2:'الفريق الأزرق'} };
+  saved = ROOM ? loadSaved() : {};
+  state = { room:ROOM, stage:['wait','map','rejected'].includes(this.saved.stage)&&this.saved.id?this.saved.stage:'form', myTeam:this.saved.myTeam||0, name:this.saved.name||'', team:this.saved.team||0, err:null,
+    board:this.saved.stage==='map'?(this.saved.board||null):null, lost:false, noCrypto:!!ROOM&&!CN.secure.supported(), teams:this.saved.teams||{1:'الفريق الأحمر',2:'الفريق الأزرق'} };
   componentDidMount(){
-    if(!this.state.room) return;
-    try{ const s=JSON.parse(localStorage.getItem('codenames-settings')||'{}'); this.setState({teams:{1:s.name1||'الفريق الأحمر',2:s.name2||'الفريق الأزرق'}}); }catch(e){}
-    // أول ما تتصل القناة نطلب اللوحة (رسالة join تستهلكها القناة نفسها للانضمام للغرفة)
-    this.rl=CN.relay(this.state.room,m=>this.onMsg(m),ok=>{ this.setState({lost:!ok}); if(ok) this.rl&&this.rl.send({type:'sync_request'}); });
+    if(!this.state.room||this.state.noCrypto) return;
+    this.id=this.saved.id||null; this.keys=this.saved.keys||null; this.lastSeq=0;
+    // أول ما تتصل القناة: نطلب أسماء الفرق، ولو عندنا طلب سابق نرسله من جديد بنفس الرقم (اللعبة ترد بحالته)
+    this.rl=CN.relay(this.state.room,m=>this.onMsg(m),ok=>this.onConn(ok));
+    // الرجوع للصفحة (من تيك توك/تطبيق ثاني، أو المتصفح رجّعها من الذاكرة) → اتصال جديد فوراً بدل انتظار الاتصال القديم الميت
+    this.hiddenAt=0;
+    this.onVis=()=>{ if(document.visibilityState==='hidden'){ this.hiddenAt=Date.now(); return; } if(!this.rl.isOpen()||Date.now()-this.hiddenAt>3000) this.rl.reconnect(); else this.resume(); };
+    this.onShow=e=>{ if(e.persisted) this.rl.reconnect(); }; this.onOnline=()=>this.rl.reconnect();
+    document.addEventListener('visibilitychange',this.onVis); addEventListener('pageshow',this.onShow); addEventListener('online',this.onOnline);
   }
-  componentWillUnmount(){ this.rl&&this.rl.close(); }
+  componentWillUnmount(){ this.rl&&this.rl.close(); clearTimeout(this.lostT); document.removeEventListener('visibilitychange',this.onVis); removeEventListener('pageshow',this.onShow); removeEventListener('online',this.onOnline); }
+  save(patch){ this.saved={...this.saved,...patch}; try{ localStorage.setItem(SAVE_KEY,JSON.stringify(this.saved)); }catch(e){} }
+  // انقطاع قصير (تبديل التطبيقات) ما يطلّع تنبيه — بس لو طال أكثر من 4 ثواني
+  onConn(ok){ clearTimeout(this.lostT); if(ok){ this.setState({lost:false}); this.resume(); } else this.lostT=setTimeout(()=>this.setState({lost:true}),4000); }
+  resume(){ if(!this.rl) return; this.rl.send({type:'sync_request'}); const S=this.state;
+    if(this.id&&this.keys&&(S.stage==='wait'||S.stage==='map')) this.rl.send({type:'spymaster_request',id:this.id,name:S.name.trim(),team:S.team,pub:this.keys.pub}); }
+  setTeams(t){ if(t&&t[1]&&t[2]){ const teams={1:String(t[1]),2:String(t[2])}; this.setState({teams}); this.save({teams}); } }
   onMsg(m){ if(!m||m.room!==this.state.room) return;
-    if(m.type==='board_update'){ this.board=m.board; if(m.teams&&m.teams[1]&&m.teams[2]) this.setState({teams:{1:m.teams[1],2:m.teams[2]}}); if(this.state.stage==='map') this.setState({board:m.board}); }
-    if(m.type==='spymaster_approve'&&m.id===this.id) this.setState({stage:'map',myTeam:m.team,board:this.board});
-    if(m.type==='spymaster_reject'&&m.id===this.id) this.setState({stage:'rejected'}); }
-  submit(){ const S=this.state; if(!S.name.trim()) return this.setState({err:'اكتب اسمك أول.'}); if(!S.team) return this.setState({err:'اختر فريقك.'});
-    this.id='sp'+Math.random().toString(36).slice(2,9);
-    try{ this.rl.send({type:'spymaster_request',id:this.id,name:S.name.trim(),team:S.team}); this.setState({stage:'wait',err:null}); }catch(e){ this.setState({lost:true}); } }
-  renderVals(){ const S=this.state, bad=!S.room, b=S.board||[];
+    if(m.type==='room_info') this.setTeams(m.teams);
+    if(!this.id||m.id!==this.id) return;
+    if(m.type==='spymaster_approve'){ const myTeam=+m.team===2?2:1; this.setState({stage:'map',myTeam}); this.save({stage:'map',myTeam}); }
+    if(m.type==='spymaster_reject'){ this.setState({stage:'rejected',board:null}); this.save({stage:'rejected',board:null}); }
+    // اللعبة ما تعرف الطلب كمقبول (مثلاً الاستريمر فتح مباراة جديدة) → يرجع بانتظار الموافقة
+    if(m.type==='spymaster_pending'&&this.state.stage!=='wait'){ this.setState({stage:'wait',board:null}); this.save({stage:'wait',board:null}); }
+    // اللوحة الملونة توصل مشفّرة لهذا الجوال فقط
+    if(m.type==='board_update'&&m.gpub&&m.iv&&m.ct&&this.keys){ const seq=+m.seq||0;
+      if(m.gpub.x!==this.lastG){ this.lastG=m.gpub.x; this.lastSeq=0; } // صفحة لعبة جديدة = ترقيم جديد
+      CN.secure.shared(this.keys.priv,m.gpub).then(k=>CN.secure.decrypt(k,m.iv,m.ct)).then(d=>{
+        if(!d||!Array.isArray(d.board)||seq<this.lastSeq) return; this.lastSeq=seq; this.setTeams(d.teams);
+        const myTeam=this.state.myTeam||this.saved.myTeam; this.setState({board:d.board,stage:'map',myTeam}); this.save({board:d.board,stage:'map',myTeam}); }).catch(()=>{}); } }
+  async submit(){ const S=this.state; if(!S.name.trim()) return this.setState({err:'اكتب اسمك أول.'}); if(!S.team) return this.setState({err:'اختر فريقك.'});
+    try{ if(!this.keys) this.keys=await CN.secure.newPair(); }catch(e){ return this.setState({err:'المتصفح ما يدعم الاتصال الآمن — افتح الرابط في Safari أو Chrome.'}); }
+    const r=crypto.getRandomValues(new Uint32Array(2)); this.id='sp'+r[0].toString(36)+r[1].toString(36); this.lastSeq=0;
+    this.save({id:this.id,keys:this.keys,name:S.name.trim(),team:S.team,stage:'wait',board:null});
+    this.rl.send({type:'spymaster_request',id:this.id,name:S.name.trim(),team:S.team,pub:this.keys.pub}); this.setState({stage:'wait',err:null,board:null}); }
+  renderVals(){ const S=this.state, bad=!S.room||S.noCrypto, b=S.board||[];
     const left=t=>b.filter(c=>c.t===t&&!c.open).length;
     return {
       title:S.stage==='map'?'خريطة الألوان السرية':'طلب سباي ماستر',
-      isBad:bad, badMsg:'رابط غير صالح -- امسح الـQR من شاشة اللعب مباشرة.',
-      isForm:!bad&&!S.lost&&S.stage==='form', isWait:!bad&&!S.lost&&S.stage==='wait', isRejected:!bad&&!S.lost&&S.stage==='rejected', isMap:!bad&&!S.lost&&S.stage==='map', isLost:!bad&&S.lost,
+      isBad:bad, badMsg:S.noCrypto?'المتصفح ما يدعم الاتصال الآمن -- افتح الرابط في Safari أو Chrome.':'رابط غير صالح -- امسح الـQR من شاشة اللعب مباشرة.',
+      isForm:!bad&&S.stage==='form', isWait:!bad&&S.stage==='wait', isRejected:!bad&&S.stage==='rejected', isMap:!bad&&S.stage==='map', isLost:!bad&&S.lost,
       name:S.name, setName:e=>this.setState({name:e.target.value,err:null}), err:S.err,
       teams:[1,2].map(t=>({label:S.teams[t],pick:()=>this.setState({team:t,err:null}),bg:S.team===t?COLORS[t]:'rgba(255,255,255,.04)',bd:S.team===t?'#fff':COLORS[t]})),
-      submit:()=>this.submit(), retry:()=>this.setState({stage:'form'}),
+      submit:()=>this.submit(), retry:()=>{ this.id=null; this.save({id:null,stage:'form',board:null}); this.setState({stage:'form'}); },
       myTeam:S.teams[S.myTeam]||'', myBg:COLORS[S.myTeam]||'#7c3aed',
       counts:[[S.teams[1],1],[S.teams[2],2],['💀 الأسود',-1]].map(([t,k])=>({t,n:k===-1?(left(-1)?'⚠️':'—'):left(k),c:k===-1?'#fca5a5':COLORS[k],bg:k===S.myTeam?COLORS[k]+'26':'rgba(255,255,255,.04)',bd:k===S.myTeam?COLORS[k]:'rgba(255,255,255,.08)'})),
       cells:b.map((c,i)=>{ const T=TILE[c.t]; return {n:i+1,w:c.w,open:!!c.open,bg:T[0],sh:T[1],icon:T[2],strip:T[3],fg:T[4],numBg:T[5],ring:c.t===S.myTeam&&!c.open?'#fff':'rgba(255,255,255,.12)',op:c.open?.45:1,fl:c.open?'saturate(.4)':'none'}; }),
