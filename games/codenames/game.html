@@ -478,6 +478,8 @@ const AR = s => String(s||'').replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.index
 const hashC = n => { let h=0; for(const c of n) h=(h*31+c.charCodeAt(0))>>>0; return AVC[h%AVC.length]; };
 const avOf = n => ({av:`linear-gradient(135deg, ${hashC(n)}, ${hashC(n)}88)`, ini:[...n].find(c=>/[^\s_\d]/.test(c))||'؟'});
 const shuffle = a => { a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+// صورة البطاقة بعد الكشف: صورتين لكل فريق (img 1|2)، وصورة للمحايد وللأسود
+const tileImg = b => b.t===-1?'images/tile-assassin.png':b.t===0?'images/tile-neutral.png':`images/tile-${b.t===1?'red':'blue'}-${b.img===2?2:1}.png`;
 const mmss = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
 const HOW = [
   ['🎮 تقدر تسوي ريست للكلمات بس قبل تبدا — تأكد من كل السباي ماستر كلماتهم مرتبة، ويفضّل لكل سباي مرة وحدة ريست.','p'],
@@ -529,6 +531,8 @@ class Component extends DCLogic {
     // جوالات السباي ماستر: المقبول فقط يستلم اللوحة (مشفّرة له وحده — CN.secure)
     this.approved={}; this.rejected=new Set(); this.seq=0; this.gk=CN.secure.supported()?CN.secure.newPair().catch(()=>null):Promise.resolve(null);
     this.rl=CN.relay(this.room,m=>this.onRelay(m));
+    // تحميل صور البطاقات مسبقاً حتى تطلع فوراً لحظة الكشف
+    ['red-1','red-2','blue-1','blue-2','neutral','assassin'].forEach(n=>{ const im=new Image(); im.src='images/tile-'+n+'.png'; });
     this.sync();
   }
   // support.js يمرّر prevProps فقط — نتابع آخر لوحة أرسلناها بأنفسنا
@@ -658,14 +662,14 @@ class Component extends DCLogic {
             showConf:!R.conf||isConf, conf:()=>setRole(team,'conf',n), confBg:isConf?'#10b981':'rgba(255,255,255,.04)', confBd:isConf?'#fff':'rgba(255,255,255,.1)', confC:isConf?'#fff':'#a8a3b5'}; }),
         noLog:!S.logs[team].length,
         log:S.logs[team].slice(0,6).map(e=>({t:e.t,c:e.kind==='good'?'#6ee7b7':e.kind==='bad'?'#fca5a5':'#e7e3ef',bg:e.kind==='good'?'rgba(16,185,129,.08)':e.kind==='bad'?'rgba(239,68,68,.08)':'rgba(255,255,255,.04)'}))}; });
-    const PAT={1:'repeating-linear-gradient(135deg, rgba(255,255,255,.12) 0 10px, transparent 10px 22px)',2:'radial-gradient(rgba(255,255,255,.18) 1.6px, transparent 2px) 0 0/16px 16px'};
     const SPARKS=Array.from({length:10},(_,k)=>{ const a=k/10*Math.PI*2, r=110+(k%3)*25; return {dx:Math.round(Math.cos(a)*r)+'px',dy:Math.round(Math.sin(a)*r*.7)+'px'}; });
     const bumpAn=i=>S.bump&&S.bump.i===i?(S.bump.k?'bounceA':'bounceB')+' .5s cubic-bezier(.3,1.4,.5,1)':null;
     const tiles=S.board.map((b,i)=>{ const rev=b.open||b.auto, bump=bumpAn(i), base={n:i+1,w:b.w,votes:b.votes.slice(0,5).map(v=>({name:v,...avOf(v)})),icon:null,pat:null,op:1,an:bump||'none',z:bump||b.fresh?3:1,burst:false,sparks:[],burstC:'#fff',tap:()=>this.setState(s=>{ const can=s.phase==='guess'&&!b.open&&!b.auto, p=s.picks||[]; return {bump:{i,k:!(s.bump&&s.bump.k)},...(can?{picks:p.includes(i)?p.filter(x=>x!==i):[...p,i]}:{})}; }),picked:(S.picks||[]).includes(i),pickN:(S.picks||[]).indexOf(i)+1};
       if(!rev) return {...base,bg:'#fcd5b5',sh:'0 6px 0 #d9a47c, 0 14px 26px rgba(0,0,0,.35)',frame:'rgba(255,255,255,.55)',stripBg:'#fff',stripSh:'inset 0 -3px 0 rgba(0,0,0,.08)',wordC:'#2a1a10',numBg:'#2a1a10',numBd:'#fff',numC:'#fff'};
       const col=b.t===-1?{bg:'#17131f',sh:'0 6px 0 #000, 0 0 30px rgba(239,68,68,.35)',icon:'💀'}:b.t===0?{bg:'#e6d6b4',sh:'0 6px 0 #b9a47c, 0 14px 26px rgba(0,0,0,.35)',icon:'🧍'}:{bg:`linear-gradient(160deg, ${TC[b.t].c}, ${TC[b.t].dk})`,sh:`0 6px 0 ${TC[b.t].dk}, 0 14px 26px rgba(0,0,0,.35)`,icon:'🕵️'};
       const dark=b.t!==0;
-      return {...base,bg:col.bg,sh:col.sh,frame:dark?'rgba(255,255,255,.3)':'rgba(255,255,255,.5)',icon:b.auto?null:col.icon,pat:!b.auto&&b.t>0?PAT[b.img]:null,
+      // صور البطاقات (نفس صور اللعبة السابقة — images/) بدل الأيقونة والنقش، واللون احتياط لين تتحمّل الصورة
+      return {...base,bg:`url(${tileImg(b)}) center/cover no-repeat, ${col.bg}`,sh:col.sh,frame:dark?'rgba(255,255,255,.3)':'rgba(255,255,255,.5)',icon:null,pat:null,
         op:b.auto?.8:1,an:bump||(b.fresh&&!b.auto?'popBurst .65s cubic-bezier(.2,1.3,.35,1)':'none'),burst:b.fresh&&!b.auto,sparks:b.fresh&&!b.auto?SPARKS:[],burstC:b.t===-1?'#ef4444':b.t===0?'#fde68a':TC[b.t].c2,
         stripBg:dark?'rgba(0,0,0,.28)':'rgba(255,255,255,.75)',stripSh:'none',wordC:dark?'#fff':'#3b2a12',numBg:dark?'rgba(0,0,0,.45)':'#3b2a12',numBd:'rgba(255,255,255,.75)',numC:'#fff'}; });
     const urgent=(ph==='hint'||ph==='guess')&&S.left<=10, picks=ph==='guess'?(S.picks||[]).filter(i=>S.board[i]&&!S.board[i].open):[];
