@@ -448,9 +448,13 @@ document.addEventListener('DOMContentLoaded', async function() {
    * - معاينة فورية للصورة (اختيار ملف أو سحب وإفلات)، قص مربع من المنتصف
    *   وضغط تلقائي لين تصير تحت حد الخادم (MAX_AVATAR_BASE64_LENGTH ~85KB).
    * - عدّاد أحرف للاسم (الحد 40 مثل auth-service.updateDisplayName).
+   * - اسم المستخدم (يوزر الدخول): 3–30 حرف/رقم/_/. بدون مسافات أو @،
+   *   وفريد (auth-service.updateUsername يتحقق بالخادم).
    * - الحفظ يرسل بس اللي تغيّر، ويحدّث الصفحة مباشرة بدون إعادة تحميل.
    * ===================================================================== */
   var EDIT_NAME_MAX = 40;
+  var EDIT_USER_MIN = 3, EDIT_USER_MAX = 30;
+  var EDIT_USER_RE = /^[\p{L}\p{N}_.]+$/u;
   var AVATAR_MAX_LEN = 80 * 1024; // هامش أمان تحت 85KB بالخادم
   var editState = { profile: null, pendingAvatar: null, busy: false };
 
@@ -460,7 +464,11 @@ document.addEventListener('DOMContentLoaded', async function() {
       display_name_too_long: 'الاسم أطول من ' + EDIT_NAME_MAX + ' حرف.',
       image_too_large: 'الصورة كبيرة جداً، جرّب صورة ثانية.',
       invalid_image_format: 'نوع الصورة غير مدعوم (PNG أو JPG أو WEBP).',
-      empty_image: 'اختر صورة أولاً.'
+      empty_image: 'اختر صورة أولاً.',
+      username_too_short: 'اسم المستخدم لازم ' + EDIT_USER_MIN + ' خانات على الأقل.',
+      username_too_long: 'اسم المستخدم أطول من ' + EDIT_USER_MAX + ' خانة.',
+      username_invalid_chars: 'اسم المستخدم: حروف وأرقام و _ و . فقط، بدون مسافات أو @.',
+      username_taken: 'اسم المستخدم هذا مأخوذ، جرّب اسم ثاني.'
     };
     return map[code] || 'حصل خطأ، جرّب مرة ثانية.';
   }
@@ -587,6 +595,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     editState.pendingAvatar = null;
     var currentName = p.display_name || p.username || '';
     var currentAvatar = p.avatar_image_base64 || '';
+    var currentUser = p.username || '';
 
     var ov = document.createElement('div');
     ov.className = 'agp-ed-overlay';
@@ -602,6 +611,11 @@ document.addEventListener('DOMContentLoaded', async function() {
           '<label class="agp-ed-label" for="agp-ed-name"><span>اسم العرض</span><span class="agp-ed-count"></span></label>' +
           '<input id="agp-ed-name" class="agp-ed-input" type="text" autocomplete="off" maxlength="' + (EDIT_NAME_MAX + 20) + '">' +
         '</div>' +
+        '<div class="agp-ed-field">' +
+          '<label class="agp-ed-label" for="agp-ed-user"><span>اسم المستخدم (للدخول)</span><span class="agp-ed-count" data-user-count></span></label>' +
+          '<input id="agp-ed-user" class="agp-ed-input" type="text" dir="ltr" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="' + (EDIT_USER_MAX + 10) + '">' +
+          '<div class="agp-ed-hint" style="margin-top:6px;text-align:start">حروف وأرقام و _ و . فقط · تسجّل دخولك فيه بعد التغيير</div>' +
+        '</div>' +
         '<div class="agp-ed-msg" aria-live="polite"></div>' +
         '<div class="agp-ed-actions"><button type="button" class="agp-ed-btn primary" data-save>حفظ التغييرات</button><button type="button" class="agp-ed-btn ghost" data-cancel>إلغاء</button></div>' +
         '<input type="file" accept="image/png,image/jpeg,image/webp" style="display:none" data-file>' +
@@ -616,6 +630,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     var undoBtn = ov.querySelector('[data-undo]');
     var nameInput = ov.querySelector('#agp-ed-name');
     var countEl = ov.querySelector('.agp-ed-count');
+    var userInput = ov.querySelector('#agp-ed-user');
+    var userCountEl = ov.querySelector('[data-user-count]');
     var msgEl = ov.querySelector('.agp-ed-msg');
     var saveBtn = ov.querySelector('[data-save]');
 
@@ -630,7 +646,12 @@ document.addEventListener('DOMContentLoaded', async function() {
       countEl.classList.toggle('over', len > EDIT_NAME_MAX);
       var nameChanged = nameInput.value.trim() !== currentName;
       var valid = len > 0 && len <= EDIT_NAME_MAX;
-      saveBtn.disabled = editState.busy || !(editState.pendingAvatar || (nameChanged && valid)) || (nameChanged && !valid);
+      var u = userInput.value.trim().replace(/^@+/, '');
+      userCountEl.textContent = u.length + ' / ' + EDIT_USER_MAX;
+      var userChanged = u !== currentUser;
+      var userValid = u.length >= EDIT_USER_MIN && u.length <= EDIT_USER_MAX && EDIT_USER_RE.test(u);
+      userCountEl.classList.toggle('over', userChanged && !userValid);
+      saveBtn.disabled = editState.busy || !(editState.pendingAvatar || (nameChanged && valid) || (userChanged && userValid)) || (nameChanged && !valid) || (userChanged && !userValid);
     }
     function handleFile(file){
       if (!file) return;
@@ -646,6 +667,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     renderPreview(currentAvatar);
     nameInput.value = currentName;
+    userInput.value = currentUser;
     refresh();
 
     avatarWrap.addEventListener('click', function(){ fileInput.click(); });
@@ -657,6 +679,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     undoBtn.addEventListener('click', function(){ editState.pendingAvatar = null; renderPreview(currentAvatar); undoBtn.style.display = 'none'; refresh(); });
     nameInput.addEventListener('input', function(){ setMsg(''); refresh(); });
     nameInput.addEventListener('keydown', function(e){ if (e.key === 'Enter' && !saveBtn.disabled) saveBtn.click(); });
+    userInput.addEventListener('input', function(){ setMsg(''); refresh(); });
+    userInput.addEventListener('keydown', function(e){ if (e.key === 'Enter' && !saveBtn.disabled) saveBtn.click(); });
     ov.querySelector('.agp-ed-x').addEventListener('click', closeEditModal);
     ov.querySelector('[data-cancel]').addEventListener('click', closeEditModal);
     ov.addEventListener('click', function(e){ if (e.target === ov) closeEditModal(); });
@@ -666,6 +690,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     saveBtn.addEventListener('click', function(){
       var newName = nameInput.value.trim();
       var nameChanged = newName !== currentName;
+      var newUser = userInput.value.trim().replace(/^@+/, '');
+      var userChanged = newUser !== currentUser;
       var avatar = editState.pendingAvatar;
       editState.busy = true;
       saveBtn.textContent = 'جارٍ الحفظ...';
@@ -692,6 +718,17 @@ document.addEventListener('DOMContentLoaded', async function() {
             currentName = p.display_name;
             var h = findProfileHeading();
             if (h) h.textContent = p.display_name;
+          });
+        });
+      }
+      if (userChanged) {
+        chain = chain.then(function(){
+          return window.AGPAuth.updateUsername(newUser).then(function(r){
+            if (!(r && r.success)) throw (r && r.error) || 'unknown';
+            p.username = r.username || newUser;
+            currentUser = p.username;
+            setCardValue('اسم المستخدم', p.username, 0, false);
+            if (!p.display_name) { var h2 = findProfileHeading(); if (h2) h2.textContent = p.username; }
           });
         });
       }

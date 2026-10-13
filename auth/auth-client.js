@@ -296,6 +296,19 @@ function updateDisplayName(displayName) {
     return request('/api/profile/display-name', { method: 'POST', body: { displayName: displayName } });
 }
 
+/** Changes the login username (unique, 3–30 letters/digits/_/.). Updates
+ * the cached user on success so other pages see the new name. */
+function updateUsername(username) {
+    return request('/api/profile/username', { method: 'POST', body: { username: username } })
+        .then(function (result) {
+            if (result && result.success) {
+                var cached = getCachedUser();
+                if (cached) { cached.username = result.username; setSession(getToken(), cached); }
+            }
+            return result;
+        });
+}
+
 /** imageDataUrl is a ready Data URL (e.g. "data:image/png;base64,...").
  * Max ~85KB after encoding (MAX_AVATAR_BASE64_LENGTH in auth-service.js) —
  * resize/compress client-side before calling. */
@@ -848,6 +861,7 @@ global.AGPAuth = {
     deleteMyAccount: deleteMyAccount,
     setCustomId: setCustomId,
     updateDisplayName: updateDisplayName,
+    updateUsername: updateUsername,
     updateAvatarImage: updateAvatarImage,
     getDeviceId: getDeviceId,
     chooseAccountType: chooseAccountType,

@@ -1147,6 +1147,24 @@ function updateDisplayName(userId, displayName) {
     return { success: true, displayName: trimmed };
 }
 
+/**
+ * تغيير اسم المستخدم (username) من البروفايل — نفس المعرّف اللي يدخل فيه
+ * المستخدم بشاشة تسجيل الدخول، فلازم يبقى فريداً. 3–30 خانة: حروف (أي
+ * لغة) وأرقام و _ و . فقط — بدون مسافات وبدون @ (تسجيل الدخول يعامل أي
+ * معرّف فيه @ كبريد إلكتروني، راجع login). الفريد بدون حساسية لحالة
+ * الأحرف حتى ما يتشابه حسابين (Ali / ali).
+ */
+function updateUsername(userId, username) {
+    var trimmed = (username || '').trim().replace(/^@+/, '');
+    if (trimmed.length < 3) return { success: false, error: 'username_too_short' };
+    if (trimmed.length > 30) return { success: false, error: 'username_too_long' };
+    if (!/^[\p{L}\p{N}_.]+$/u.test(trimmed)) return { success: false, error: 'username_invalid_chars' };
+    var taken = db.prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE AND id != ?').get(trimmed, userId);
+    if (taken) return { success: false, error: 'username_taken' };
+    db.prepare('UPDATE users SET username = ? WHERE id = ?').run(trimmed, userId);
+    return { success: true, username: trimmed };
+}
+
 // ⚠️ يجب أن يبقى دون حد body-parser.js (MAX_BODY_BYTES = 100KB لكل جسم
 // طلب HTTP) بهامش أمان لغلاف JSON — وإلا تُسقَط الاتصالات خام (ECONNRESET)
 // بدل رسالة خطأ 400 واضحة. ~85KB للصورة بعد Base64 يفرض صوراً صغيرة/مضغوطة.
@@ -1280,5 +1298,6 @@ module.exports = {
     getAdminUserStats: getAdminUserStats,
     getPublicPlatformStats: getPublicPlatformStats,
     updateDisplayName: updateDisplayName,
+    updateUsername: updateUsername,
     updateAvatarImage: updateAvatarImage
 };

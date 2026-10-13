@@ -171,6 +171,7 @@ var ROUTES = [
   { method: 'GET', path: '/api/admin/stats/users', requireAuth: true, requireAdmin: true, handler: handleAdminUserStats },
   // ---- تعديل بروفايل المستخدم (اسم عرض + صورة) — صاحب الجلسة فقط.
   { method: 'POST', path: '/api/profile/display-name', requireAuth: true, handler: handleUpdateDisplayName },
+  { method: 'POST', path: '/api/profile/username', requireAuth: true, handler: handleUpdateUsername },
   { method: 'POST', path: '/api/profile/avatar', requireAuth: true, handler: handleUpdateAvatar },
   // ---- مسودة بنك أسئلة "خلية الحروف" المشتركة — أدمن المنصة أو أي
   // مستخدم عنده can_manage_letters_cell (يُتحقَّق داخل كل handler لأنه
@@ -773,6 +774,12 @@ function handleAdminUserStats(req, res) {
 /** صاحب الجلسة يعدّل اسم العرض الخاص به — user.id من الجلسة حصراً. */
 function handleUpdateDisplayName(req, res, body, user) {
   var result = authService.updateDisplayName(user.id, body.displayName);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+/** صاحب الجلسة يغيّر اسم المستخدم الخاص فيه — user.id من الجلسة حصراً. */
+function handleUpdateUsername(req, res, body, user) {
+  var result = authService.updateUsername(user.id, body.username);
   sendJson(res, result.success ? 200 : 400, result);
 }
 
