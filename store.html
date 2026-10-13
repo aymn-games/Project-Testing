@@ -12,12 +12,41 @@
 <link rel="stylesheet" href="store/store.css">
 <!-- المتجر — راجع store/store-app.js و backend/store/store-service.js. -->
 </head>
-<body>
+<body class="st-has-site-header">
+<!-- نفس هيدر المنصة (index.html) — للرجوع للمنصة بسهولة. القائمة على الجوال
+     عبر زر ☰ (store/site-header.js). زر الحساب يتزامن عبر AGPAuth.keepHeaderAccountLinkSynced. -->
+<div class="site-header-wrap">
+  <header class="site-header">
+    <a href="./" class="site-logo"><img src="logo.png" alt="ألعاب أيمن"></a>
+    <nav class="site-nav">
+      <a href="./">الرئيسية</a>
+      <a href="games.html">الألعاب</a>
+      <a href="./#gallery">التصنيف</a>
+      <a href="./#ops">شركاء الإبداع</a>
+      <a href="./#community">التواصل</a>
+      <a href="https://creators.sa/aymngame" class="site-pill" target="_blank" rel="noopener">دعم المنصة</a>
+      <a href="https://aymngames.zid.store/" class="site-pill" target="_blank" rel="noopener">الإطارات</a>
+    </nav>
+    <a href="login.html" class="site-account">إنشاء حساب أو تسجيل الدخول</a>
+    <button type="button" class="site-burger" aria-label="القائمة" aria-expanded="false" aria-controls="site-mobile-panel"><span></span><span></span><span></span></button>
+  </header>
+  <div class="site-mobile-panel" id="site-mobile-panel" data-mobile-panel="1" hidden>
+    <a href="./">الرئيسية</a>
+    <a href="games.html">الألعاب</a>
+    <a href="./#gallery">التصنيف</a>
+    <a href="./#ops">شركاء الإبداع</a>
+    <a href="./#community">التواصل</a>
+    <a href="https://creators.sa/aymngame" target="_blank" rel="noopener">دعم المنصة</a>
+    <a href="https://aymngames.zid.store/" target="_blank" rel="noopener">الإطارات</a>
+    <div class="site-mobile-cta"><a href="login.html">إنشاء حساب أو تسجيل الدخول</a></div>
+  </div>
+</div>
 <main class="st-page">
   <div class="st-wrap" id="store-app"></div>
 </main>
 <script src="auth/auth-client.js"></script>
 <script src="store/store-common.js"></script>
+<script src="store/site-header.js"></script>
 <script src="store/store-app.js"></script>
 </body>
 </html>

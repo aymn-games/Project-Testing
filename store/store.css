@@ -94,7 +94,7 @@ option{background:#161124;color:#ece9f5;}
 .cat-bar h2{margin:0;font-size:clamp(20px,2.6vw,28px);font-weight:700;color:#fff;}
 .cat-bar .muted{font-size:13px;color:#8f89a3;}
 
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(150px,42vw,260px),1fr));gap:clamp(12px,1.8vw,20px);}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(160px,44vw,300px),1fr));gap:clamp(12px,1.8vw,20px);}
 .pcard .gcard-in{display:flex;flex-direction:column;overflow:hidden;}
 .media{position:relative;aspect-ratio:1/1;margin:10px 10px 0;border-radius:15px;overflow:hidden;background:radial-gradient(55% 45% at 50% 42%,rgba(96,140,255,0.32),transparent 75%),radial-gradient(50% 10% at 50% 92%,rgba(0,0,0,0.55),transparent 80%),linear-gradient(180deg,#1a1430,#0d0a18);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06),inset 0 -40px 60px -30px rgba(124,77,255,0.25);}
 .media-img{position:absolute;inset:clamp(10px,1.6vw,18px);transition:transform .35s;display:flex;align-items:center;justify-content:center;}
@@ -109,13 +109,13 @@ option{background:#161124;color:#ece9f5;}
 .pbody{display:flex;flex-direction:column;gap:6px;padding:16px clamp(12px,1.6vw,18px) 0;}
 .pcat{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#a78bfa;}
 .pcat .dot{width:5px;height:5px;border-radius:50%;background:#a78bfa;box-shadow:0 0 8px #a78bfa;}
-.pname{margin:0;font-size:clamp(15px,1.5vw,18px);font-weight:700;line-height:1.4;color:#fff;text-wrap:balance;}
+.pname{margin:0;font-size:clamp(15px,1.6vw,20px);font-weight:700;line-height:1.4;color:#fff;text-wrap:balance;}
 .pbundle{align-self:flex-start;display:flex;align-items:center;gap:6px;padding:3px 10px;border-radius:8px;font-size:12px;font-weight:600;background:rgba(124,77,255,0.12);color:#c4b5fd;}
 .pspacer{flex:1;}
 .pprice{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:14px clamp(12px,1.6vw,18px) 0;padding-top:14px;border-top:1px dashed rgba(255,255,255,0.09);}
 .pprice-col{display:flex;flex-direction:column;gap:2px;}
 .old{font-size:13px;color:#6f6984;text-decoration:line-through;}
-.price-big{display:flex;align-items:center;gap:6px;font-size:clamp(22px,2.2vw,26px);font-weight:700;line-height:1.1;color:#fff;}
+.price-big{display:flex;align-items:center;gap:6px;font-size:clamp(22px,2.3vw,28px);font-weight:700;line-height:1.1;color:#fff;}
 .pactions{display:flex;gap:8px;padding:14px clamp(10px,1.4vw,16px) clamp(10px,1.4vw,16px);}
 .buy{flex:1;min-width:0;white-space:nowrap;font-size:clamp(13px,3.6vw,15px);font-weight:700;min-height:48px;border-radius:14px;border:1px solid transparent;cursor:pointer;background:linear-gradient(135deg,#a47bff,#6d5cf0);box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),0 10px 24px -10px rgba(124,77,255,0.8);color:#fff;display:flex;align-items:center;justify-content:center;gap:clamp(4px,1vw,8px);padding:0 6px;transition:filter .15s,transform .1s;}
 .buy:hover{filter:brightness(1.1);}
@@ -422,3 +422,34 @@ option{background:#161124;color:#ece9f5;}
 .pstat-t .u{font-size:12px;color:#8f89a3;}
 .gate{max-width:480px;margin:60px auto;text-align:center;display:flex;flex-direction:column;gap:16px;align-items:center;color:#a29cb6;font-size:15px;}
 .st-embed .st-page--admin{min-height:100vh;padding:20px clamp(12px,2vw,24px) 40px;background:#0a0811;}
+
+/* ---------- هيدر المنصة (نفس index.html) ---------- */
+.site-header-wrap{position:sticky;top:0;z-index:60;padding:14px clamp(12px,3vw,36px);pointer-events:none;}
+.site-header{display:flex;align-items:center;justify-content:space-between;gap:12px 20px;max-width:1600px;margin:0 auto;padding:14px 16px;background:rgba(10,9,16,0.92);border:1px solid rgba(255,255,255,0.09);border-radius:26px;box-shadow:0 18px 50px -20px rgba(0,0,0,0.9),inset 0 0 0 1px rgba(122,63,212,0.1);pointer-events:auto;}
+.site-logo{display:flex;align-items:center;flex:0 0 auto;transition:transform .25s,filter .25s;filter:drop-shadow(0 6px 18px rgba(122,63,212,0.45));}
+.site-logo:hover{transform:scale(1.03);}
+.site-logo img{display:block;height:50px;width:auto;}
+.site-nav{display:flex;align-items:center;flex-wrap:wrap;justify-content:center;gap:10px 35px;font-size:14px;}
+.site-nav a{color:#a79fbb;font-size:16px;transition:color .25s;}
+.site-nav a:hover{color:#fff;}
+.site-nav a.site-pill{padding:8px 16px;border-radius:999px;border:1px solid rgba(178,140,245,0.4);background:rgba(122,63,212,0.12);color:#c6b4f2;font-size:15px;transition:background .25s,color .25s,transform .25s;}
+.site-nav a.site-pill:hover{background:rgba(122,63,212,0.25);color:#fff;}
+.site-account{display:flex;align-items:center;gap:8px;padding:10px 20px;color:#f3ecff;font-weight:600;font-size:14px;border-radius:999px;background:linear-gradient(180deg,#7c56ad,#644b8a);box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);flex:0 0 auto;white-space:nowrap;}
+.site-account:hover{color:#fff;filter:brightness(1.1);}
+.site-burger{display:none;flex:0 0 auto;width:42px;height:42px;border-radius:12px;border:1px solid rgba(178,140,245,0.35);background:rgba(122,63,212,0.12);flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;padding:0;}
+.site-burger span{display:block;width:18px;height:2px;background:#c6b4f2;border-radius:2px;transition:transform .25s,opacity .25s;}
+.site-burger.open span:nth-child(1){transform:translateY(6px) rotate(45deg);}
+.site-burger.open span:nth-child(2){opacity:0;}
+.site-burger.open span:nth-child(3){transform:translateY(-6px) rotate(-45deg);}
+.site-mobile-panel{margin:10px auto 0;max-width:1600px;border-radius:20px;border:1px solid rgba(178,140,245,0.25);background:linear-gradient(180deg,#1a1526,#0d0b14);box-shadow:0 24px 60px -30px rgba(122,63,212,0.6);overflow:hidden;pointer-events:auto;}
+.site-mobile-panel>a{display:flex;align-items:center;padding:15px 20px;color:#e7e9ee;font-size:15px;border-bottom:1px solid rgba(255,255,255,0.06);}
+.site-mobile-panel>a:hover{background:rgba(122,63,212,0.1);color:#fff;}
+.site-mobile-cta{padding:14px;}
+.site-mobile-cta a{display:block;text-align:center;padding:13px;border-radius:999px;background:linear-gradient(135deg,#7a3fd4,#b28cf5);color:#f3ecff;font-weight:600;font-size:14.5px;}
+@media (max-width:900px){
+  .site-header{justify-content:center;}
+  .site-nav,.site-account{display:none;}
+  .site-burger{display:flex;}
+}
+@media (min-width:901px){ .site-mobile-panel{display:none !important;} }
+.st-has-site-header .st-page{padding-top:clamp(12px,3vw,36px);}
