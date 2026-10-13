@@ -210,6 +210,9 @@ function checkStreamConnectAllowed(payload) {
     return { code: 'auth_required', message: 'لازم تسجّل دخول بحسابك في الموقع وتربط حساب تيك توك عشان تتصل بالبث.' };
   }
   if (user.role === 'admin') return null;
+  // صلاحية «تشغيل كامل» يمنحها الأدمن (admin.html → منح الصلاحيات): كل
+  // الألعاب على أي بث، بدون شرط حساب ستريمر أو ربط تيك توك أو تطابق اليوزر.
+  if (user.permissions && user.permissions.full_game_access) return null;
   // حساب ستريمر = اختار "ستريمر" بالتسجيل، أو حوّله الأدمن (can_run_games).
   var isStreamerAccount = Boolean(user.is_streamer) || Boolean(user.permissions && user.permissions.can_run_games);
   if (!isStreamerAccount) {

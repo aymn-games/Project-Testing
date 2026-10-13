@@ -641,6 +641,9 @@ function isStreamerAccount(user) {
 function canPlayGames(user) {
     if (!user) return false;
     if (user.role === 'admin') return true;
+    // Admin-granted full access: every game on any stream, no streamer
+    // account or TikTok link needed (see admin.html → منح الصلاحيات).
+    if (user.permissions && user.permissions.full_game_access) return true;
     return isStreamerAccount(user) && Boolean(user.tiktok_verified);
 }
 
