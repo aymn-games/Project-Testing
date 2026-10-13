@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>كود نيمز — المباراة</title>
+<script src="../../js/agp-core.js"></script>
+<script src="../../js/agp-events.js"></script>
+<script src="../../js/agp-timer-manager.js"></script>
+<script src="../../js/agp-storage-manager.js"></script>
+<script src="../../js/agp-services.js"></script>
+<script src="../../js/agp-stream-connector.js"></script>
+<script src="../../js/agp-keyword-manager.js"></script>
+<script src="../../js/agp-queue-manager.js"></script>
+<script src="../../adapters/agp-tiktok-adapter.js"></script>
+<script src="../../auth/auth-client.js"></script>
+<script src="../../auth/game-access-guard.js"></script>
+<script src="../../js/agp-live-watch.js"></script>
+<script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-win-card.js"></script>
+<script src="codenames-words.js"></script>
+<script src="codenames-platform.js"></script>
+<script src="./support.js"></script>
+    <script src="../../js/agp-apple-emoji.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;height:100%;background:#07060b;overflow:hidden}
+a{color:#a78bfa}a:hover{color:#c4b5fd}
+input:focus{outline:none}
+[data-noscroll]::-webkit-scrollbar{display:none}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes fadeOut{from{opacity:1}to{opacity:0}}
+@keyframes popIn{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:none}}
+@keyframes popOut{from{opacity:1;transform:none}to{opacity:0;transform:scale(.9)}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes popBurst{0%{transform:scale(.55);filter:brightness(2)}45%{transform:scale(1.16);filter:brightness(1.4)}70%{transform:scale(.96)}100%{transform:none;filter:none}}
+@keyframes ringOut{0%{opacity:.95;transform:scale(.7)}100%{opacity:0;transform:scale(1.55)}}
+@keyframes sparkOut{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3)}}
+@keyframes bounceA{0%{transform:none}35%{transform:translateY(-18px) scale(1.04)}65%{transform:translateY(3px) scale(.99)}100%{transform:none}}
+@keyframes bounceB{0%{transform:none}35%{transform:translateY(-18px) scale(1.04)}65%{transform:translateY(3px) scale(.99)}100%{transform:none}}
+@keyframes flipIn{0%{transform:perspective(800px) rotateX(90deg);opacity:.2}60%{transform:perspective(800px) rotateX(-12deg);opacity:1}100%{transform:none}}
+@keyframes bannerIn{0%{opacity:0;transform:scale(.7)}60%{opacity:1;transform:scale(1.06)}100%{transform:none}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes voteIn{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:none}}
+@keyframes skullFlash{0%,100%{background:rgba(0,0,0,0)}20%,60%{background:rgba(239,68,68,.25)}40%,80%{background:rgba(0,0,0,.4)}}
+@keyframes agpPop{0%{opacity:0;transform:scale(.85) translateY(10px)}100%{opacity:1;transform:none}}
+@keyframes agpShine{0%{transform:translateX(-140%) rotate(20deg)}100%{transform:translateX(240%) rotate(20deg)}}
+</style>
+</helmet>
+<div dir="rtl" style="position:fixed;inset:0;overflow:hidden;background:#07060b;font-family:'Zain',sans-serif;color:#f4f2f8">
+  {{ fx }}
+
+  <header style="position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:clamp(10px,1.2vw,24px);padding:0 clamp(12px,1.25vw,24px);box-sizing:border-box;background:rgba(10,9,15,.72);border-bottom:1px solid rgba(255,255,255,.07);backdrop-filter:blur(16px)">
+    <div style="position:relative;display:flex;gap:clamp(6px,0.5vw,10px);justify-content:flex-start">
+      <button onClick="{{ toggleMenu }}" style="height:clamp(34px,2.4vw,44px);padding:0 clamp(12px,1vw,18px);border-radius:999px;display:flex;align-items:center;gap:8px;font:700 clamp(14px,0.95vw,18px) 'Zain';white-space:nowrap;cursor:pointer;transition:all .2s;border:1px solid {{ menuBd }};background:{{ menuBg }};color:#ddd6fe" style-hover="background:rgba(139,92,246,.16)" style-active="transform:scale(.97)"><span aria-hidden="true">⚙</span><span style="display:{{ lblDisp }}">الإعدادات</span></button>
+      <button onClick="{{ openIntro }}" style="height:clamp(34px,2.4vw,44px);padding:0 clamp(12px,1vw,18px);border-radius:999px;display:flex;align-items:center;gap:8px;font:700 clamp(14px,0.95vw,18px) 'Zain';white-space:nowrap;cursor:pointer;transition:all .2s;border:1px solid rgba(251,191,36,.35);background:rgba(251,191,36,.08);color:#fde68a" style-hover="background:rgba(251,191,36,.16)" style-active="transform:scale(.97)"><span aria-hidden="true">💡</span><span style="display:{{ lblDisp }}">قبل ما تبدأ</span></button>
+      <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;top:calc(100% + 10px);right:0;z-index:5;width:340px;padding:12px;border-radius:22px;background:rgba(14,12,20,.98);border:1px solid rgba(167,139,250,.35);box-shadow:0 24px 70px rgba(0,0,0,.65);display:flex;flex-direction:column;gap:6px;animation:popIn .25s cubic-bezier(.2,1.25,.35,1)">
+          <span style="padding:4px 8px 6px;font:800 13px 'Zain';color:#8a8596;letter-spacing:.02em">أدوات الجلسة</span>
+          <sc-for list="{{ menuItems }}" as="m" hint-placeholder-count="7">
+            <sc-if value="{{ m.sep }}" hint-placeholder-val="{{ false }}"><span style="height:1px;margin:4px 6px;background:rgba(255,255,255,.07)"></span></sc-if>
+            <button onClick="{{ m.go }}" style="min-height:58px;padding:8px 10px;border-radius:14px;border:1px solid transparent;background:transparent;color:{{ m.c }};text-align:right;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .15s" style-hover="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.08)">
+              <span style="width:40px;height:40px;flex-shrink:0;border-radius:12px;display:grid;place-items:center;background:{{ m.ib }};font:400 19px/1 'Zain'">{{ m.icon }}</span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font:800 17px/1.2 'Zain'">{{ m.label }}</span><span style="font:500 12px/1.3 'Zain';color:#8a8596">{{ m.desc }}</span></span>
+              <sc-if value="{{ m.badge }}" hint-placeholder-val="{{ false }}"><span style="min-width:24px;height:24px;padding:0 7px;box-sizing:border-box;border-radius:999px;background:#ef4444;color:#fff;font:800 13px/24px 'Zain';text-align:center">{{ m.badge }}</span></sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+    <div style="height:60px;min-width:clamp(96px,14vw,280px);position:relative;display:grid;place-items:center;border-radius:14px;border:1px dashed rgba(167,139,250,{{ phBorder }})">
+      <span style="font:400 clamp(11px,0.75vw,14px) 'Zain';color:#8a8596;opacity:{{ phOp }}">مكان اللوقو · logo.png</span>
+      <img src="../../logo.png" alt="" onLoad="{{ logoOk }}" onError="{{ logoErr }}" style="position:absolute;inset:0;margin:auto;height:60px;max-width:none;object-fit:contain;opacity:{{ logoOp }};filter:drop-shadow(0 0 14px rgba(139,92,246,.45))">
+    </div>
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+      <span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:rgba(239,68,68,.14);border:1px solid rgba(248,113,113,.45);font:800 13px 'Zain';color:#fca5a5"><span style="width:7px;height:7px;border-radius:50%;background:#ef4444;box-shadow:0 0 8px #ef4444;animation:pulse 1.4s ease-in-out infinite"></span>LIVE</span>
+      <span style="font:800 clamp(16px,1.15vw,22px) 'Zain';color:#ddd6fe;white-space:nowrap">🕵️ كود نيمز</span>
+    </div>
+  </header>
+
+  <main data-screen-label="Game" style="position:fixed;top:80px;left:0;right:0;bottom:0;display:grid;place-items:center;overflow:hidden">
+    <div style="position:relative;width:{{ stageW }}px;height:{{ stageH }}px">
+      <div style="position:absolute;top:0;left:0;width:1920px;height:1000px;transform:scale({{ scale }});transform-origin:top left;box-sizing:border-box;padding:18px 24px 20px;display:grid;grid-template-columns:270px minmax(0,1fr) 270px;gap:16px">
+
+        <sc-for list="{{ panels }}" as="P" hint-placeholder-count="2">
+          <aside style="grid-column:{{ P.col }};grid-row:1;min-height:0;display:flex;flex-direction:column;gap:12px">
+            <div style="position:relative;overflow:hidden;flex-shrink:0;height:96px;padding:0 16px;box-sizing:border-box;border-radius:24px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:{{ P.headBg }};border:2px solid {{ P.headBd }};box-shadow:{{ P.headSh }};transition:all .4s">
+              <span aria-hidden="true" style="position:absolute;inset:0;background:repeating-linear-gradient(135deg, rgba(255,255,255,.06) 0 14px, transparent 14px 28px);pointer-events:none"></span>
+              <div style="position:relative;display:flex;flex-direction:column;gap:4px;min-width:0">
+                <span style="font:900 22px/1.15 'Zain';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ P.name }}</span>
+                <span style="font:700 14px 'Zain';color:rgba(255,255,255,.8)">{{ P.sub }}</span>
+              </div>
+              <div style="position:relative;display:flex;flex-direction:column;align-items:center">
+                <span style="font:900 60px/1 'Zain';color:#fff;text-shadow:0 4px 0 rgba(0,0,0,.25), 0 0 24px rgba(255,255,255,.25);font-variant-numeric:tabular-nums">{{ P.left }}</span>
+                <span style="font:700 12px 'Zain';color:rgba(255,255,255,.8)">متبقي</span>
+              </div>
+            </div>
+
+            <div style="flex-shrink:0;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <sc-for list="{{ P.roleCards }}" as="rc" hint-placeholder-count="2">
+                <div style="position:relative;min-width:0;height:80px;padding:9px 10px;box-sizing:border-box;border-radius:16px;display:flex;flex-direction:column;justify-content:space-between;background:{{ rc.bg }};border:1.5px {{ rc.bdS }} {{ rc.bd }}">
+                  <span style="font:800 13px 'Zain';color:{{ rc.lc }}">{{ rc.icon }} {{ rc.label }}</span>
+                  <div style="display:flex;align-items:center;gap:6px;min-width:0">
+                    <span style="flex:1;min-width:0;font:800 15px 'Zain';color:{{ rc.nc }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ rc.who }}</span>
+                    <sc-if value="{{ rc.set }}" hint-placeholder-val="{{ false }}">
+                      <button onClick="{{ rc.clear }}" aria-label="إلغاء الدور" style="width:26px;height:26px;flex-shrink:0;border-radius:50%;border:none;background:rgba(0,0,0,.25);color:#fff;cursor:pointer;font:700 13px/1 'Zain'" style-hover="background:rgba(239,68,68,.6)">✕</button>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="flex:1;min-height:0;padding:12px;border-radius:22px;background:rgba(18,16,26,.72);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:8px;box-sizing:border-box">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px">
+                <span style="font:800 16px 'Zain'">اللاعبون</span>
+                <span style="font:800 14px 'Zain';color:{{ P.c2 }}">{{ P.count }}</span>
+              </div>
+              <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;overscroll-behavior:contain;display:flex;flex-direction:column;gap:6px">
+                <sc-for list="{{ P.players }}" as="p" hint-placeholder-count="4">
+                  <div style="flex-shrink:0;height:50px;padding:0 6px 0 8px;border-radius:14px;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)">
+                    <span style="width:36px;height:36px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font:800 16px 'Zain';color:#fff;background:{{ p.av }};box-shadow:0 0 0 2px {{ p.ring }}">{{ p.ini }}</span>
+                    <span style="flex:1;min-width:0;font:700 15px 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+                    <sc-if value="{{ p.showSpy }}" hint-placeholder-val="{{ true }}">
+                      <button onClick="{{ p.spy }}" aria-label="سباي ماستر" title="سباي ماستر" style="width:32px;height:32px;flex-shrink:0;border-radius:9px;cursor:pointer;border:1px solid {{ p.spyBd }};background:{{ p.spyBg }};font:400 17px/1 'Zain';transition:all .2s" style-hover="filter:brightness(1.3)">🕵</button>
+                    </sc-if>
+                    <sc-if value="{{ p.showConf }}" hint-placeholder-val="{{ true }}">
+                      <button onClick="{{ p.conf }}" aria-label="تأكيد الأجوبة" title="تأكيد الأجوبة" style="width:32px;height:32px;flex-shrink:0;border-radius:9px;cursor:pointer;border:1px solid {{ p.confBd }};background:{{ p.confBg }};color:{{ p.confC }};font:900 17px/1 'Zain';transition:all .2s" style-hover="filter:brightness(1.3)">✓</button>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="flex-shrink:0;height:270px;padding:12px 14px;border-radius:22px;background:rgba(18,16,26,.72);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:8px;box-sizing:border-box;overflow:hidden">
+              <span style="font:800 15px 'Zain';color:#c9c4d6">📜 الأحداث الخاصة بالفريق</span>
+              <sc-if value="{{ P.noLog }}" hint-placeholder-val="{{ true }}">
+                <span style="margin:auto;font:400 15px 'Zain';color:#6f6a7c">لا أحداث بعد</span>
+              </sc-if>
+              <sc-for list="{{ P.log }}" as="e" hint-placeholder-count="0">
+                <span style="flex-shrink:0;padding:6px 10px;border-radius:10px;background:{{ e.bg }};font:600 13px/1.45 'Zain';color:{{ e.c }};animation:rise .3s ease both">{{ e.t }}</span>
+              </sc-for>
+            </div>
+          </aside>
+        </sc-for>
+
+        <section style="grid-column:2;grid-row:1;display:flex;flex-direction:column;gap:16px;min-width:0;min-height:0">
+          <div style="flex-shrink:0;height:96px;padding:0 18px;box-sizing:border-box;border-radius:24px;background:rgba(18,16,26,.72);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);display:grid;grid-template-columns:auto 1fr;align-items:center;gap:18px">
+            <span style="height:56px;padding:0 22px;border-radius:999px;display:flex;align-items:center;gap:10px;background:{{ turnBg }};border:2px solid {{ turnBd }};font:900 22px 'Zain';color:#fff;white-space:nowrap;box-shadow:0 8px 24px {{ turnGlow }};transition:all .4s"><span style="width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 0 10px #fff"></span>دور {{ turnName }}</span>
+
+            <sc-if value="{{ isReady }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:16px">
+                <span style="font:600 17px 'Zain';color:#a8a3b5">تأكد إن الكل متفق على كلماته قبل الضغط</span>
+                <button onClick="{{ start }}" style="height:60px;padding:0 40px;border:none;border-radius:999px;cursor:pointer;background:linear-gradient(90deg, #059669, #10b981);color:#fff;font:900 24px 'Zain';box-shadow:0 10px 30px rgba(16,185,129,.4), inset 0 1px 0 rgba(255,255,255,.25)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">▶ ابدأ</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isHintWait }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+                <span style="display:flex;align-items:center;gap:14px"><span style="width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:rgba(255,255,255,.06);border:1.5px dashed rgba(255,255,255,.25);font:400 26px/1 'Zain';animation:pulse 1.6s ease-in-out infinite">🕵</span><span style="display:flex;flex-direction:column;gap:2px"><span style="font:800 24px/1.1 'Zain';color:#e7e3ef">بانتظار التلميح...</span><span style="font:600 14px 'Zain';color:#8a8596">{{ spyWait }}</span></span></span>
+                <div style="display:flex;align-items:center;gap:12px;height:68px;padding:0 8px 0 18px;box-sizing:border-box;border-radius:999px;background:{{ tBg }};border:1.5px solid {{ tBd }};box-shadow:{{ tSh }};transition:all .3s;animation:{{ tAn }}">
+                    <span style="display:flex;flex-direction:column;align-items:flex-start;gap:0"><span style="font:800 14px/1.2 'Zain';color:{{ tLbl }}">وقت التلميح</span><span style="font:600 12px 'Zain';color:#8a8596">بانتظار السباي ماستر</span></span>
+                    <span style="font:900 34px/1 'Zain';color:{{ tC }};font-variant-numeric:tabular-nums;min-width:78px;text-align:center">{{ timeTxt }}</span>
+                    <span style="position:relative;width:52px;height:52px;flex-shrink:0;display:grid;place-items:center">
+                      <svg width="52" height="52" viewBox="0 0 52 52" style="position:absolute;inset:0;transform:rotate(-90deg)" aria-hidden="true"><circle cx="26" cy="26" r="22" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="5"></circle><circle cx="26" cy="26" r="22" fill="none" stroke="{{ tRing }}" stroke-width="5" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="{{ tOff }}" style="transition:stroke-dashoffset 1s linear, stroke .3s"></circle></svg>
+                      <span style="font:400 20px/1 'Zain'">{{ tIcon }}</span>
+                    </span>
+                  </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isGuess }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+                <div style="position:relative;display:flex;align-items:center;height:68px;border-radius:20px;overflow:hidden;background:linear-gradient(180deg, #ffffff, #f3ede6);box-shadow:0 0 0 3px {{ turnRing }}, 0 12px 30px rgba(0,0,0,.4);animation:bannerIn .45s cubic-bezier(.2,1.25,.35,1)">
+                  <span style="height:100%;padding:0 16px;display:flex;flex-direction:column;justify-content:center;gap:1px;background:{{ turnBg }};color:#fff">
+                    <span style="font:700 12px 'Zain';opacity:.85">التلميح</span>
+                    <span style="font:900 15px 'Zain'">🕵 {{ spyName }}</span>
+                  </span>
+                  <span style="padding:0 26px;font:900 38px/1 'Zain';color:#2a1a10;white-space:nowrap">{{ hintW }}</span>
+                  <sc-if value="{{ hasOld }}" hint-placeholder-val="{{ false }}">
+                    <span style="height:100%;min-width:84px;padding:0 10px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fef3c7;border-inline-start:2px dashed rgba(42,26,16,.15)">
+                      <span style="font:900 24px/1 'Zain';color:#92400e">{{ hintOld }}<span style="font:700 14px 'Zain';color:#b45309"> من {{ hintN }}</span></span>
+                      <span style="font:700 11px 'Zain';color:#92400e">القديم</span>
+                    </span>
+                  </sc-if>
+                  <span style="height:100%;min-width:76px;padding:0 10px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;border-inline-start:2px dashed rgba(42,26,16,.15)">
+                    <span style="font:900 36px/1 'Zain';color:{{ turnC }}">{{ hintN }}</span>
+                    <span style="font:700 11px 'Zain';color:#7a5a40">كلمات</span>
+                  </span>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;height:68px;padding:0 8px 0 18px;box-sizing:border-box;border-radius:999px;background:{{ tBg }};border:1.5px solid {{ tBd }};box-shadow:{{ tSh }};transition:all .3s;animation:{{ tAn }}">
+                    <span style="display:flex;flex-direction:column;align-items:flex-start;gap:0"><span style="font:800 14px/1.2 'Zain';color:{{ tLbl }}">وقت الاختيار</span><span style="font:600 12px 'Zain';color:#8a8596">صوّتوا · المؤكّد يكتب تأكيد + الرقم</span></span>
+                    <span style="font:900 34px/1 'Zain';color:{{ tC }};font-variant-numeric:tabular-nums;min-width:78px;text-align:center">{{ timeTxt }}</span>
+                    <span style="position:relative;width:52px;height:52px;flex-shrink:0;display:grid;place-items:center">
+                      <svg width="52" height="52" viewBox="0 0 52 52" style="position:absolute;inset:0;transform:rotate(-90deg)" aria-hidden="true"><circle cx="26" cy="26" r="22" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="5"></circle><circle cx="26" cy="26" r="22" fill="none" stroke="{{ tRing }}" stroke-width="5" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="{{ tOff }}" style="transition:stroke-dashoffset 1s linear, stroke .3s"></circle></svg>
+                      <span style="font:400 20px/1 'Zain'">{{ tIcon }}</span>
+                    </span>
+                  </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ isPending }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;justify-content:flex-end;gap:16px">
+                <span style="font:700 17px 'Zain';color:#fde68a">{{ pendingTxt }}</span>
+                <button onClick="{{ announce }}" style="height:60px;padding:0 38px;border:none;border-radius:999px;cursor:pointer;background:linear-gradient(90deg, #f59e0b, #fbbf24);color:#2a1a00;font:900 24px 'Zain';box-shadow:0 10px 30px rgba(251,191,36,.45);animation:pulse 1.6s ease-in-out infinite" style-hover="filter:brightness(1.08)" style-active="transform:scale(.97)">🏆 إعلان الفوز</button>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="position:relative;flex:1;min-height:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(5,minmax(0,1fr));gap:12px">
+            <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="25">
+              <div onClick="{{ t.tap }}" style="position:relative;min-width:0;min-height:0;border-radius:16px;padding:7px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;cursor:pointer;background:{{ t.bg }};box-shadow:{{ t.sh }};opacity:{{ t.op }};z-index:{{ t.z }};animation:{{ t.an }};transition:background .3s, opacity .3s">
+                <sc-if value="{{ t.picked }}" hint-placeholder-val="{{ false }}">
+                  <span aria-hidden="true" style="position:absolute;inset:-5px;border-radius:20px;border:4px solid #fbbf24;box-shadow:0 0 0 3px rgba(251,191,36,.25), 0 0 26px rgba(251,191,36,.55);pointer-events:none;animation:pulse 1.4s ease-in-out infinite"></span>
+                  <span style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);z-index:4;height:26px;padding:0 10px;border-radius:999px;display:flex;align-items:center;gap:5px;background:linear-gradient(90deg, #f59e0b, #fbbf24);color:#2a1a10;font:900 14px 'Zain';white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.35)">✋ {{ t.pickN }}</span>
+                </sc-if>
+                <sc-if value="{{ t.burst }}" hint-placeholder-val="{{ false }}">
+                  <span aria-hidden="true" style="position:absolute;inset:-6px;border-radius:20px;border:4px solid {{ t.burstC }};box-shadow:0 0 30px {{ t.burstC }};pointer-events:none;animation:ringOut .8s ease-out forwards"></span>
+                  <sc-for list="{{ t.sparks }}" as="sp" hint-placeholder-count="0">
+                    <span aria-hidden="true" style="position:absolute;top:50%;left:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:{{ t.burstC }};box-shadow:0 0 10px {{ t.burstC }};pointer-events:none;--dx:{{ sp.dx }};--dy:{{ sp.dy }};animation:sparkOut .75s ease-out forwards"></span>
+                  </sc-for>
+                </sc-if>
+                <span aria-hidden="true" style="position:absolute;inset:7px;border-radius:11px;border:2px solid {{ t.frame }};pointer-events:none"></span>
+                <sc-if value="{{ t.pat }}" hint-placeholder-val="{{ false }}">
+                  <span aria-hidden="true" style="position:absolute;inset:0;border-radius:16px;background:{{ t.pat }};pointer-events:none"></span>
+                </sc-if>
+                <div style="position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;gap:4px">
+                  <span style="position:absolute;top:2px;right:2px;min-width:46px;height:40px;padding:0 8px;box-sizing:border-box;border-radius:12px;display:grid;place-items:center;background:{{ t.numBg }};border:2px solid {{ t.numBd }};box-shadow:0 3px 0 rgba(0,0,0,.18);font:900 26px/1 'Zain';color:{{ t.numC }};font-variant-numeric:tabular-nums">{{ t.n }}</span>
+                  <sc-if value="{{ t.icon }}" hint-placeholder-val="{{ false }}">
+                    <span style="font:400 46px/1 'Zain';filter:drop-shadow(0 3px 6px rgba(0,0,0,.35))">{{ t.icon }}</span>
+                  </sc-if>
+                  <sc-for list="{{ t.votes }}" as="v" hint-placeholder-count="0">
+                    <span title="{{ v.name }}" style="width:34px;height:34px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font:800 15px 'Zain';color:#fff;background:{{ v.av }};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);margin-inline-start:-8px;animation:voteIn .25s cubic-bezier(.2,1.4,.4,1)">{{ v.ini }}</span>
+                  </sc-for>
+                </div>
+                <div style="position:relative;flex-shrink:0;height:58px;border-radius:10px;display:grid;place-items:center;padding:0 8px;background:{{ t.stripBg }};box-shadow:{{ t.stripSh }}">
+                  <span style="max-width:100%;font:900 32px/1 'Zain';color:{{ t.wordC }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.w }}</span>
+                </div>
+              </div>
+            </sc-for>
+
+            <sc-if value="{{ hasPicks }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);z-index:8;display:flex;align-items:center;gap:10px;padding:8px 8px 8px 18px;border-radius:999px;background:rgba(14,12,20,.96);border:1.5px solid rgba(251,191,36,.6);box-shadow:0 18px 50px rgba(0,0,0,.6), 0 0 30px rgba(251,191,36,.25);animation:popIn .3s cubic-bezier(.2,1.25,.35,1);white-space:nowrap">
+                <span style="font:800 17px 'Zain';color:#fde68a">✋ اختيار الاستريمر: {{ picksTxt }}</span>
+                <button onClick="{{ clearPicks }}" style="height:44px;padding:0 16px;border-radius:999px;cursor:pointer;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#e7e3ef;font:700 15px 'Zain'" style-hover="background:rgba(255,255,255,.1)">إلغاء</button>
+                <button onClick="{{ openPicks }}" style="height:44px;padding:0 20px;border:none;border-radius:999px;cursor:pointer;background:linear-gradient(90deg, #059669, #10b981);color:#fff;font:900 16px 'Zain';box-shadow:0 8px 22px rgba(16,185,129,.4)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">✓ تأكيد الفتح ({{ picksN }})</button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ bannerOn }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:0;z-index:4;display:grid;place-items:center;pointer-events:none">
+                <div style="max-width:80%;padding:26px 46px;border-radius:30px;background:{{ bn.bg }};border:2px solid {{ bn.bd }};box-shadow:0 30px 90px rgba(0,0,0,.6), 0 0 80px {{ bn.glow }};text-align:center;animation:bannerIn .45s cubic-bezier(.2,1.25,.35,1)">
+                  <sc-if value="{{ bn.sub }}" hint-placeholder-val="{{ false }}"><span style="display:block;font:700 22px 'Zain';color:rgba(255,255,255,.8);margin-bottom:4px">{{ bn.sub }}</span></sc-if>
+                  <span style="font:900 56px/1.2 'Zain';color:#fff;text-wrap:balance">{{ bn.text }}</span>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <sc-if value="{{ reconnecting }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;top:96px;left:50%;transform:translateX(-50%);z-index:60;padding:10px 22px;border-radius:999px;background:rgba(12,11,18,.95);border:1px solid rgba(251,191,36,.45);color:#fde68a;font:800 16px 'Zain';box-shadow:0 14px 40px rgba(0,0,0,.5)">🔄 يعيد الاتصال بالبث...</div>
+  </sc-if>
+
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;padding:12px;animation:{{ mOv }}">
+      <div onClick="{{ stop }}" style="width:min({{ mW }}px, calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow-y:auto;box-sizing:border-box;padding:24px 26px;border-radius:28px;background:#110e19;border:1px solid rgba(167,139,250,.35);box-shadow:0 30px 90px rgba(0,0,0,.6), 0 0 60px rgba(124,58,237,.18);display:flex;flex-direction:column;gap:16px;animation:{{ mAn }}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <span style="font:900 24px 'Zain'">{{ mTitle }}</span>
+          <button onClick="{{ closeModal }}" aria-label="إغلاق" style="width:40px;height:40px;flex-shrink:0;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;cursor:pointer;font:400 22px/1 'Zain'" style-hover="background:rgba(255,255,255,.1)">×</button>
+        </div>
+
+        <sc-if value="{{ mJoin }}" hint-placeholder-val="{{ false }}">
+          <span style="font:500 15px/1.6 'Zain';color:#a8a3b5">اللي كتبوا كلمة فريق أثناء المباراة</span>
+          <sc-if value="{{ noJoinReqs }}" hint-placeholder-val="{{ true }}">
+            <div style="padding:34px 0;text-align:center;border-radius:18px;border:1.5px dashed rgba(255,255,255,.12);color:#8a8596;font:500 16px 'Zain'">ما فيه طلبات دخول حالياً</div>
+          </sc-if>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ joinReqs }}" as="j" hint-placeholder-count="0">
+              <div style="height:54px;padding:0 10px 0 12px;border-radius:14px;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
+                <span style="width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font:800 16px 'Zain';color:#fff;background:{{ j.av }}">{{ j.ini }}</span>
+                <span style="flex:1;min-width:0;font:700 17px 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ j.name }}</span>
+                <span style="padding:4px 12px;border-radius:999px;background:{{ j.soft }};border:1px solid {{ j.c }};font:800 13px 'Zain';color:{{ j.c }}">{{ j.team }}</span>
+                <button onClick="{{ j.remove }}" aria-label="رفض" style="width:30px;height:30px;border:none;background:transparent;color:#fca5a5;cursor:pointer;font:700 16px 'Zain'">✕</button>
+              </div>
+            </sc-for>
+          </div>
+          <button onClick="{{ saveJoin }}" style="height:56px;border:none;border-radius:999px;cursor:pointer;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:800 19px 'Zain';box-shadow:0 8px 26px rgba(139,92,246,.4)" style-hover="filter:brightness(1.1)">حفظ وإكمال المباراة</button>
+        </sc-if>
+
+        <sc-if value="{{ mQr }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+            <div style="padding:16px;border-radius:22px;background:#fff"><img src="{{ qrSrc }}" alt="باركود السباي ماستر" width="300" height="300" style="display:block;width:300px;height:300px"></div>
+            <a href="{{ spyUrl }}" target="_blank" style="font:600 13px 'Zain';color:#8a8596;word-break:break-all;text-align:center">فتح الصفحة في تبويب جديد (للتجربة)</a>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ mReqs }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ noSpyReqs }}" hint-placeholder-val="{{ true }}">
+            <div style="padding:34px 0;text-align:center;border-radius:18px;border:1.5px dashed rgba(255,255,255,.12);color:#8a8596;font:500 16px 'Zain'">ما فيه طلبات حالياً</div>
+          </sc-if>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ spyReqs }}" as="q" hint-placeholder-count="0">
+              <div style="height:58px;padding:0 10px 0 14px;border-radius:14px;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
+                <span style="font:400 20px/1 'Zain'">📱</span>
+                <span style="flex:1;min-width:0;font:700 17px 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ q.name }} — <span style="color:{{ q.c }}">{{ q.team }}</span></span>
+                <button onClick="{{ q.ok }}" aria-label="قبول" style="width:40px;height:40px;border-radius:12px;cursor:pointer;border:1px solid rgba(52,211,153,.45);background:rgba(16,185,129,.14);color:#6ee7b7;font:900 18px 'Zain'" style-hover="background:rgba(16,185,129,.26)">✓</button>
+                <button onClick="{{ q.no }}" aria-label="رفض" style="width:40px;height:40px;border-radius:12px;cursor:pointer;border:1px solid rgba(248,113,113,.4);background:rgba(239,68,68,.1);color:#fca5a5;font:900 16px 'Zain'" style-hover="background:rgba(239,68,68,.2)">✕</button>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ mTime }}" hint-placeholder-val="{{ false }}">
+          <sc-for list="{{ timeRows }}" as="r" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+              <span style="font:800 16px 'Zain'">{{ r.label }}</span>
+              <div style="display:flex;gap:3px;padding:3px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)">
+                <sc-for list="{{ r.opts }}" as="o" hint-placeholder-count="3">
+                  <button onClick="{{ o.pick }}" style="height:34px;padding:0 14px;border:none;border-radius:999px;cursor:pointer;font:700 14px 'Zain';background:{{ o.bg }};color:{{ o.fg }};box-shadow:{{ o.sh }};transition:all .25s">{{ o.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+          <span style="font:500 14px/1.6 'Zain';color:#8a8596">التعديل يطبَّق فورًا على الوقت الحالي إذا كان من نفس نوع المرحلة الشغّالة الآن</span>
+        </sc-if>
+
+        <sc-if value="{{ mHow }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:18px;background:linear-gradient(90deg, rgba(239,68,68,.16), rgba(59,130,246,.16));border:1px solid rgba(255,255,255,.1)">
+            <span style="font:400 30px/1 'Zain'">🎯</span>
+            <span style="font:800 18px/1.5 'Zain';text-wrap:pretty">اكشفوا كل صناديق فريقكم قبل الخصم… وابعدوا عن الصندوق الأسود 💀</span>
+          </div>
+
+          <span style="font:800 14px 'Zain';color:#8a8596;margin-top:4px">الأدوار</span>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+            <sc-for list="{{ howRoles }}" as="r" hint-placeholder-count="3">
+              <div style="padding:14px 12px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center">
+                <span style="width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:{{ r.ib }};font:900 22px/1 'Zain';color:#fff">{{ r.icon }}</span>
+                <span style="font:800 16px 'Zain'">{{ r.t }}</span>
+                <span style="font:500 13px/1.5 'Zain';color:#a8a3b5;text-wrap:pretty">{{ r.d }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px">
+            <span style="font:800 14px 'Zain';color:#8a8596">طريقة الإجابة بالشات · 3 خطوات</span>
+            <span style="padding:3px 10px;border-radius:999px;background:rgba(139,92,246,.14);border:1px solid rgba(167,139,250,.35);font:700 12px 'Zain';color:#ddd6fe">📌 الكلمة أول ثم الرقم</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ howSteps }}" as="st" hint-placeholder-count="3">
+              <div style="position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.035);border:1px solid {{ st.bd }}">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                  <span style="width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:{{ st.ib }};font:900 22px/1 'Zain';color:#fff">{{ st.icon }}</span>
+                  <span style="width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.08);font:900 13px 'Zain';color:#c9c4d6">{{ st.n }}</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+                  <span style="font:800 17px/1.3 'Zain'">{{ st.t }}</span>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px">
+                    <sc-for list="{{ st.cmds }}" as="c" hint-placeholder-count="2">
+                      <span style="display:flex;align-items:center;gap:8px;padding:5px 6px 5px 12px;border-radius:14px 14px 14px 4px;background:#fff;box-shadow:0 2px 0 rgba(0,0,0,.2)"><b style="font:900 17px 'Zain';color:#2a1a10;white-space:nowrap">{{ c.cmd }}</b><span style="padding:2px 8px;border-radius:8px;background:{{ st.chip }};font:700 12px 'Zain';color:#fff;white-space:nowrap">{{ c.d }}</span></span>
+                    </sc-for>
+                  </div>
+                  <sc-for list="{{ st.notes }}" as="nt" hint-placeholder-count="2">
+                    <span style="display:flex;align-items:flex-start;gap:6px;font:500 14px/1.5 'Zain';color:#a8a3b5"><span style="color:{{ st.dot }}">•</span>{{ nt }}</span>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <span style="font:800 14px 'Zain';color:#8a8596;margin-top:4px">لما ينفتح صندوق</span>
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+            <sc-for list="{{ howTiles }}" as="t" hint-placeholder-count="4">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center">
+                <span style="width:100%;height:64px;border-radius:12px;display:grid;place-items:center;background:{{ t.bg }};box-shadow:0 4px 0 {{ t.sh }};font:400 28px/1 'Zain'">{{ t.icon }}</span>
+                <span style="font:800 14px 'Zain';color:{{ t.c }}">{{ t.t }}</span>
+                <span style="font:500 12px/1.4 'Zain';color:#a8a3b5">{{ t.d }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <span style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:14px;background:rgba(139,92,246,.1);border:1px solid rgba(167,139,250,.35);font:700 15px/1.5 'Zain';color:#ddd6fe">📌 كل الأوامر بنفس الترتيب: <b style="color:#fff">الكلمة أول ثم الرقم</b></span>
+          <span style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:14px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);font:600 14px/1.5 'Zain';color:#fde68a">🔄 ريست الكلمات متاح قبل أول تلميح بس · 🔢 الدور ينتهي لما يفتحون عدد صناديق التلميح</span>
+        </sc-if>
+
+        <sc-if value="{{ mExit }}" hint-placeholder-val="{{ false }}">
+          <span style="font:500 17px/1.6 'Zain';color:#c9c4d6">بترجع لمنصة ألعاب أيمن. تبي تكمل؟</span>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <button onClick="{{ closeModal }}" style="height:50px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;font:700 16px 'Zain';cursor:pointer" style-hover="background:rgba(255,255,255,.09)">إلغاء</button>
+            <button onClick="{{ confirmExit }}" style="height:50px;border-radius:999px;border:none;background:linear-gradient(90deg, #dc2626, #ef4444);color:#fff;font:700 16px 'Zain';cursor:pointer" style-hover="filter:brightness(1.1)">خروج</button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ introOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;padding:12px;animation:{{ introOv }}">
+      <div style="width:min(720px, calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow-y:auto;box-sizing:border-box;border-radius:30px;background:#110e19;border:1px solid rgba(167,139,250,.35);box-shadow:0 40px 110px rgba(0,0,0,.65), 0 0 80px rgba(124,58,237,.18);display:flex;flex-direction:column;animation:{{ introAn }}">
+        <div style="position:relative;overflow:hidden;padding:24px 28px 20px;background:linear-gradient(135deg, rgba(239,68,68,.28), rgba(59,130,246,.28));border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:16px">
+          <span style="width:60px;height:60px;flex-shrink:0;border-radius:18px;display:grid;place-items:center;font:400 30px 'Zain';background:linear-gradient(135deg, #7c3aed, #a855f7);box-shadow:0 10px 26px rgba(139,92,246,.45)">🕵️</span>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <span style="font:900 clamp(22px,2vw,28px)/1.2 'Zain'">قبل ما تضغط «▶ ابدأ»</span>
+            <span style="font:500 15px 'Zain';color:#e7e3ef">جهّز هالخطوات أول عشان تمشي المباراة صح</span>
+          </div>
+        </div>
+        <div style="padding:20px 28px;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ introSteps }}" as="h" hint-placeholder-count="4">
+            <div style="display:flex;align-items:flex-start;gap:14px;padding:14px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
+              <span style="width:44px;height:44px;flex-shrink:0;border-radius:14px;display:grid;place-items:center;font:400 22px/1 'Zain';background:{{ h.ib }}">{{ h.icon }}</span>
+              <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                <span style="font:800 18px/1.3 'Zain'">{{ h.t }}</span>
+                <span style="font:500 15px/1.55 'Zain';color:#a8a3b5;text-wrap:pretty">{{ h.d }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="padding:14px 28px 22px;border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font:600 15px 'Zain';color:#a8a3b5;user-select:none">
+            <input type="checkbox" checked="{{ introHide }}" onChange="{{ toggleIntroHide }}" style="width:19px;height:19px;accent-color:#a855f7;cursor:pointer;margin:0">
+            لا تظهر مرة ثانية
+          </label>
+          <button onClick="{{ closeIntro }}" style="height:54px;min-width:200px;padding:0 34px;border:none;border-radius:999px;cursor:pointer;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:900 20px 'Zain';box-shadow:0 10px 30px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.25)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.98)">فهمت</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isOver }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="Winner" style="position:fixed;inset:0;z-index:85;display:flex;flex-direction:column;align-items:center;padding:16px;overflow-y:auto;box-sizing:border-box;background:rgba(8,4,16,.5);backdrop-filter:blur(14px);font-family:'Zain',sans-serif;animation:fade .3s ease">
+      <sc-if value="{{ winAssassin }}" hint-placeholder-val="{{ false }}">
+        <span aria-hidden="true" style="position:fixed;inset:0;pointer-events:none;animation:skullFlash 1.6s ease 1"></span>
+      </sc-if>
+      <div style="margin:auto 0;text-align:center;max-width:100%;display:flex;flex-direction:column;align-items:center;gap:8px">
+        <span style="font:400 72px/1 'Zain';animation:agpPop .5s cubic-bezier(.2,1.2,.35,1) both">🏆</span>
+        <span style="font:900 clamp(34px,3.4vw,56px)/1.2 'Zain';color:{{ winC }};text-shadow:0 0 40px {{ winGlow }}">فاز {{ winName }}</span>
+        <span style="padding:6px 18px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);font:800 clamp(16px,1.3vw,22px) 'Zain';color:#e7e3ef">{{ winReason }}</span>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;max-width:1100px;margin:34px 0 30px">
+          <sc-for list="{{ winCards }}" as="w" hint-placeholder-count="3">
+            <sc-if value="{{ w.wcOn }}" hint-placeholder-val="{{ false }}">{{ w.wcEl }}</sc-if>
+            <sc-if value="{{ w.wcStd }}" hint-placeholder-val="{{ true }}">
+            <div style="position:relative;width:170px;height:230px;box-sizing:border-box;border-radius:20px;overflow:hidden;background:linear-gradient(165deg, {{ w.top }}, rgba(13,10,24,.9) 75%);border:1.5px solid {{ w.bd }};box-shadow:0 10px 30px rgba(0,0,0,.35), 0 0 30px {{ w.glow }};animation:agpPop .45s cubic-bezier(.2,1,.3,1) both;animation-delay:{{ w.delay }}">
+              <div style="position:absolute;top:0;left:0;width:60%;height:100%;background:linear-gradient(75deg,transparent 40%,rgba(255,255,255,.12) 50%,transparent 60%);animation:agpShine 2.6s ease-in-out .6s infinite;pointer-events:none"></div>
+              <div style="position:relative;display:flex;flex-direction:column;align-items:center;height:100%;padding:16px 12px 14px;box-sizing:border-box">
+                <span style="font-size:13px;letter-spacing:3px;font-weight:800;color:{{ w.c }};margin-bottom:10px">WINNER</span>
+                <span style="position:relative;overflow:hidden;width:76px;height:76px;border-radius:50%;box-sizing:border-box;border:2.5px solid {{ w.c }};background:{{ w.av }};display:grid;place-items:center;color:#fff;font-weight:800;font-size:28px">{{ w.ini }}<sc-if value="{{ w.photo }}" hint-placeholder-val="{{ false }}"><img src="{{ w.photo }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
+                <span style="margin-top:10px;font-size:17px;font-weight:800;color:#FBF6EC;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ w.name }}</span>
+                <sc-if value="{{ w.ptsOk }}" hint-placeholder-val="{{ false }}"><span style="margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font:900 30px/1.1 'Zain';color:{{ w.c }}">{{ w.pts }}</span><span style="font:700 13px 'Zain';color:#c9c4d6">{{ w.total }}</span></span></sc-if>
+                <sc-if value="{{ w.ptsMsg }}" hint-placeholder-val="{{ false }}"><span style="margin-top:auto;font:700 12px/1.45 'Zain';color:{{ w.msgC }};text-wrap:balance">{{ w.ptsMsg }}</span></sc-if>
+              </div>
+            </div>
+            </sc-if>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:640px">
+          <button onClick="{{ newMatch }}" style="height:48px;padding:0 22px;border-radius:999px;font:700 16px 'Zain';cursor:pointer;flex:1;min-width:170px;border:none;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 8px 22px rgba(124,58,237,.4)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">مباراة جديدة</button>
+          <button onClick="{{ rematch }}" style="height:48px;padding:0 22px;border-radius:999px;font:700 16px 'Zain';cursor:pointer;flex:1;min-width:170px;border:1px solid rgba(167,139,250,.55);background:rgba(139,92,246,.16);color:#ddd6fe" style-hover="filter:brightness(1.2)" style-active="transform:scale(.97)">إعادة المباراة بنفس اللاعبين</button>
+          <button onClick="{{ confirmExit }}" style="height:48px;padding:0 22px;border-radius:999px;font:700 16px 'Zain';cursor:pointer;flex:1;min-width:170px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#f4f2f8" style-hover="filter:brightness(1.25)" style-active="transform:scale(.97)">🏠 العودة للرئيسية</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const LIBRARY_URL = CN.libraryUrl;
+const AVC = ['#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#14b8a6','#a855f7','#f97316','#06b6d4'];
+const TC = { 1:{c:'#ef4444',c2:'#fca5a5',dk:'#b91c1c',soft:'rgba(239,68,68,.14)'}, 2:{c:'#3b82f6',c2:'#93c5fd',dk:'#1d4ed8',soft:'rgba(59,130,246,.14)'} };
+const HINT_T = [120,150,180], GUESS_T = [90,120,150];
+// بنك الكلمات: codenames-words.js (window.CODENAMES_WORDS) — FALLBACK_WORDS احتياط فقط
+const FALLBACK_WORDS = 'أسد نمر فيل زرافة حصان جمل قرد دب ذئب ثعلب تفاح موز عنب بطيخ خبز أرز طبيب مهندس معلم طيار مدرسة مستشفى مطار سوق قلم كتاب ساعة مفتاح باب شمس قمر نجم مطر بحر نهر جبل سيارة قطار طائرة كرة ملك قلب'.split(' ');
+const AR = s => String(s||'').replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/[\u064B-\u0652\u0640]/g,'').replace(/[إأآا]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim().toLowerCase();
+const hashC = n => { let h=0; for(const c of n) h=(h*31+c.charCodeAt(0))>>>0; return AVC[h%AVC.length]; };
+const avOf = n => ({av:`linear-gradient(135deg, ${hashC(n)}, ${hashC(n)}88)`, ini:[...n].find(c=>/[^\s_\d]/.test(c))||'؟'});
+const shuffle = a => { a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const mmss = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+const HOW = [
+  ['🎮 تقدر تسوي ريست للكلمات بس قبل تبدا — تأكد من كل السباي ماستر كلماتهم مرتبة، ويفضّل لكل سباي مرة وحدة ريست.','p'],
+  ['🚨 تنبيه: لا تضغط على شاشة اللعبة حتى يكتمل الإعداد!','w'],
+  ['1. إعداد الأدوار','h'],['من أسماء اللاعبين، اضغط علامة (السباي ماستر) لتحديد الملمّح، وعلامة (الصح) لتحديد مؤكّد الإجابات للفريقين.','p'],
+  ['2. ربط السباي ماستر','h'],['افتح الباركود من الإعدادات ⬅️ يمسحه السباي ماستر للفريقين بالهاتف ⬅️ يختارون ألوانهم ويرسلون طلبًا ⬅️ من الإعدادات اقبل الطلبين فقط لتظهر لهم الكلمات الملونة في هواتفهم.','p'],
+  ['3. أوامر الشات','h'],['السباي ماستر: يكتب التلميح (الكلمة ثم الرقم) ⬅️ مثال: مدن 3. وإذا فيه صناديق من تلميح قديم يكتب عددها قبل الكلمة ⬅️ 1 مدن 3.','p'],['اللاعبون: يكتبون (الرقم فقط) لتحديد الصندوق، وللتراجع: سحب [الرقم].','p'],['المؤكّد: يفتح الصناديق بكتابة (تأكيد ثم الرقم) ⬅️ مثال: تأكيد 12 أو عدة أرقام: تأكيد 15 7 8.','p'],['📌 كل الأوامر بنفس الترتيب: الكلمة أول ثم الرقم.','h']
+];
+
+class Component extends DCLogic {
+  constructor(p){ super(p);
+    const c=this.cfg(), r=this.roster();
+    this.reg=CN.createRegistry(CN.readJSON('codenames-players',{}));
+    this.used=new Set(); this.words=Array.isArray(window.CODENAMES_WORDS)&&window.CODENAMES_WORDS.length>=50?window.CODENAMES_WORDS:FALLBACK_WORDS;
+    let room; try{ room=localStorage.getItem('codenames-room'); if(!room){ room=Math.random().toString(36).slice(2,8); localStorage.setItem('codenames-room',room); } }catch(e){ room='demo'; }
+    this.room=room;
+    this.state={ teams:{1:{name:c.name1,kw:c.kw1},2:{name:c.name2,kw:c.kw2}}, followers:c.followers, hintT:c.hintT, guessT:c.guessT,
+      players:{1:r.t1,2:r.t2}, roles:{1:{spy:null,conf:null},2:{spy:null,conf:null}}, logs:{1:[],2:[]},
+      ...this.newBoard(this.nextStarter()), phase:'ready', hint:null, hintGiven:false, left:0, banner:null, win:null,
+      introOpen:(()=>{ try{ return localStorage.getItem('codenames-intro-hide')!=='1'; }catch(e){ return true; } })(), introHide:false, joinReqs:[], spyReqs:[], menuOpen:false, modal:null, reconnecting:false,
+      plat:null, scale:1, narrow:innerWidth<820, logo:false };
+  }
+  cfg(){ let c={}; try{ c=JSON.parse(localStorage.getItem('codenames-settings')||'{}')||{}; }catch(e){}
+    const tH={'2:00':120,'2:30':150,'3:00':180}, tG={'1:30':90,'2:00':120,'2:30':150};
+    return { name1:String(c.name1||'').trim()||'الفريق الأحمر', name2:String(c.name2||'').trim()||'الفريق الأزرق', kw1:String(c.kw1||'').trim()||'أحمر', kw2:String(c.kw2||'').trim()||'أزرق',
+      followers:c.who==='المتابعون فقط', hintT:tH[c.hintTime]||150, guessT:tG[c.guessTime]||120 }; }
+  // الفرق من اللوبي (codenames-roster) — بدونها نرجع لشاشة الإعدادات
+  roster(){ const r=CN.readJSON('codenames-roster',null); if(r&&Array.isArray(r.t1)&&Array.isArray(r.t2)&&(r.t1.length||r.t2.length)) return r; location.replace('index.html'); return {t1:[],t2:[]}; }
+  nextStarter(){ let last=null; try{ last=+localStorage.getItem('codenames-last-starter')||null; }catch(e){} const s=last?(last===1?2:1):(Math.random()<.5?1:2); try{ localStorage.setItem('codenames-last-starter',s); }catch(e){} return s; }
+  newBoard(starter){
+    let pool=this.words.filter(w=>!this.used.has(w)); if(pool.length<25){ this.used=new Set(); pool=this.words.slice(); }
+    const words=shuffle(pool).slice(0,25); this.used=new Set(words);
+    const other=starter===1?2:1, types=shuffle([...Array(9).fill(starter),...Array(8).fill(other),...Array(7).fill(0),-1]);
+    const imgs={1:shuffle(types.filter(t=>t===1).map((_,i)=>i%2+1)),2:shuffle(types.filter(t=>t===2).map((_,i)=>i%2+1))};
+    const board=words.map((w,i)=>({w,t:types[i],img:types[i]>0?imgs[types[i]].pop():0,open:false,auto:false,votes:[],fresh:false}));
+    this.matchStartedAt=null; this.reported=false;
+    return {board,starter,turn:starter};
+  }
+  componentDidMount(){
+    this.fit=()=>this.setState({narrow:innerWidth<820,scale:Math.min(innerWidth/1920,(innerHeight-80)/1000)}); this.fit(); addEventListener('resize',this.fit);
+    CN.connect(); this.unsub=CN.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower));
+    this.unsubSt=CN.onStatus(st=>this.setState({reconnecting:st==='connecting'||st==='disconnected'||st==='error'}));
+    this.closeMenuOut=e=>{ if(this.state.menuOpen&&!e.target.closest('header')) this.setState({menuOpen:false}); }; addEventListener('pointerdown',this.closeMenuOut);
+    window.chat=(u,t,f=true)=>this.onChat(this.reg.nameFor({id:'dev:'+u,name:u}),t,f);
+    this.rl=CN.relay(this.room,m=>this.onRelay(m));
+    this.sync();
+  }
+  // support.js يمرّر prevProps فقط — نتابع آخر لوحة أرسلناها بأنفسنا
+  componentDidUpdate(){ if(this._syncedBoard!==this.state.board) this.sync(); }
+  componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('pointerdown',this.closeMenuOut); this.unsub?.(); this.unsubSt?.(); clearInterval(this.iv); clearTimeout(this.bt); (this.ts||[]).forEach(clearTimeout); this.rl&&this.rl.close(); }
+  after(ms,fn){ (this.ts||(this.ts=[])).push(setTimeout(fn,ms)); }
+  shut(k){ this.setState({[k+'Out']:true}); setTimeout(()=>this.setState({[k]:null,[k+'Out']:false}),260); }
+
+  // ---- spymaster relay — WebSocket عبر CN.relay (backend/websocket/room-relay-server.js) ----
+  send(msg){ try{ this.rl&&this.rl.send(msg); }catch(e){} }
+  sync(){ this._syncedBoard=this.state.board; const b=this.state.board.map(x=>({w:x.w,t:x.t,open:x.open||x.auto})); try{ localStorage.setItem('codenames-board-'+this.room,JSON.stringify(b)); }catch(e){} this.send({type:'board_update',board:b,approved:this.approved||{},teams:{1:this.state.teams[1].name,2:this.state.teams[2].name}}); }
+  onRelay(m){ if(!m||m.room!==this.room) return;
+    if(m.type==='join'||m.type==='sync_request') this.sync();
+    if(m.type==='spymaster_request'&&m.id&&!this.state.spyReqs.some(r=>r.id===m.id)) this.setState(s=>({spyReqs:[...s.spyReqs,{id:m.id,name:String(m.name||'').slice(0,30),team:+m.team===2?2:1}]})); }
+  approve(r,ok){ this.setState(s=>({spyReqs:s.spyReqs.filter(x=>x.id!==r.id)}));
+    if(ok){ (this.approved||(this.approved={}))[r.id]=r.team; this.send({type:'spymaster_approve',id:r.id,team:r.team}); this.sync(); this.log(r.team,`${r.name} وافق الاستريمر على طلبه سباي ماستر (جوال)`,'info'); }
+    else this.send({type:'spymaster_reject',id:r.id}); }
+
+  // ---- sounds ----
+  tone(f,d=.15,type='sine',v=.08){ const vol=.7; if(!vol) return; try{ const a=this.ac||(this.ac=new (window.AudioContext||window.webkitAudioContext)()); const o=a.createOscillator(), g=a.createGain(); o.type=type; o.frequency.value=f; g.gain.setValueAtTime(v*vol,a.currentTime); g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+d); o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime+d); }catch(e){} }
+  sfx(k){ if(k==='correct') [660,880].forEach((f,i)=>this.after(i*90,()=>this.tone(f,.18,'triangle',.1)));
+    if(k==='wrong') [300,220].forEach((f,i)=>this.after(i*130,()=>this.tone(f,.25,'sawtooth',.06)));
+    if(k==='assassin') [220,165,110].forEach((f,i)=>this.after(i*220,()=>this.tone(f,.5,'sawtooth',.09))); }
+
+  banner(text,ms=2000,kind='turn',sub=null){ clearTimeout(this.bt); this.setState({banner:{text,kind,sub,team:this.state.turn}}); this.bt=setTimeout(()=>this.setState({banner:null}),ms); }
+  log(team,t,kind='info'){ this.setState(s=>({logs:{...s.logs,[team]:[{t,kind,key:Math.random()},...s.logs[team]].slice(0,20)}})); }
+  teamOf(name){ const P=this.state.players; return P[1].includes(name)?1:P[2].includes(name)?2:0; }
+  remaining(board,team){ return board.filter(b=>b.t===team&&!b.open).length; }
+
+  runTimer(sec){ clearInterval(this.iv); this.setState({left:sec}); this.iv=setInterval(()=>{ const l=this.state.left-1;
+    if(l>0){ this.setState({left:l}); if(l<=10) this.tone(880,.06,'square',.03); return; }
+    clearInterval(this.iv); this.setState({left:0}); const ph=this.state.phase, tm=this.state.turn;
+    if(ph==='hint'){ this.log(tm,'ما أرسل السباي ماستر التلميح بالوقت المحدد -- انتقل الدور','bad'); this.endTurn(); }
+    if(ph==='guess'){ this.log(tm,'انتهى وقت الاختيار قبل التأكيد الكامل -- انتقل الدور','bad'); this.endTurn(); } },1000); }
+  start(){ if(this.state.phase!=='ready') return; this.matchStartedAt=Date.now(); this.beginTurn(this.state.turn); }
+  beginTurn(team){ this.opened=0; this.setState(s=>({turn:team,phase:'hint',hint:null,picks:[],board:s.board.map(b=>b.votes.length?{...b,votes:[]}:b)})); this.banner(`الآن دور ${this.state.teams[team].name}`,2000,'turn'); this.after(10,()=>this.runTimer(this.state.hintT)); }
+  endTurn(){ if(this.state.phase==='pending'||this.state.phase==='over') return; this.beginTurn(this.state.turn===1?2:1); }
+  giveHint(n,w,old=0){ const tm=this.state.turn; this.setState({hint:{n,w,old},hintGiven:true,phase:'guess'}); this.log(tm,`أعطى التلميح «${w} ${n}»${old?` (منها ${old} قديم)`:''}`,'info'); this.banner(w,2000,'hint',`التلميح · ${n}${old?` · منها ${old} قديم`:''}`); this.runTimer(this.state.guessT); }
+  vote(name,i,add){ this.setState(s=>({board:s.board.map((b,k)=>{ if(k!==i||b.open) return b; const has=b.votes.includes(name);
+    if(add&&!has) return {...b,votes:[...b.votes,name]}; if(!add&&has) return {...b,votes:b.votes.filter(x=>x!==name)}; return b; })})); }
+  confirm(nums){ const go=(j)=>{ if(j>=nums.length) return; const S=this.state; if(S.phase!=='guess') return; const i=nums[j]-1, b=S.board[i]; if(!b||b.open) return go(j+1);
+      const tm=S.turn, opp=tm===1?2:1, board=S.board.map((x,k)=>k===i?{...x,open:true,fresh:true,votes:[]}:x); this.setState({board}); this.after(1000,()=>this.setState(s=>({board:s.board.map((x,k)=>k===i?{...x,fresh:false}:x)})));
+      if(b.t===tm){ this.sfx('correct'); this.log(tm,`كشف «${b.w}» ✓`,'good'); if(!this.remaining(board,tm)) return this.pendingWin(tm,'boxes',board);
+        this.opened=(this.opened||0)+1; const n=S.hint?S.hint.n:99; if(this.opened>=n){ this.log(tm,`فتحوا ${n} صناديق حسب التلميح -- انتهى الدور`,'info'); return this.after(900,()=>this.endTurn()); }
+        this.after(550,()=>go(j+1)); }
+      else if(b.t===0){ this.sfx('wrong'); this.log(tm,`كشف «${b.w}» -- صندوق محايد، انتهى الدور`,'bad'); this.after(900,()=>this.endTurn()); }
+      else if(b.t===opp){ this.sfx('wrong'); this.log(tm,`كشف «${b.w}» -- صندوق ${S.teams[opp].name}، انتهى الدور`,'bad'); if(!this.remaining(board,opp)) return this.pendingWin(opp,'boxes',board); this.after(900,()=>this.endTurn()); }
+      else { this.sfx('assassin'); this.log(tm,'فتح فريقهم الصندوق الأسود -- خسارة فورية 💀','bad'); this.pendingWin(opp,'assassin',board); } };
+    go(0); }
+  pendingWin(team,reason,board){ clearInterval(this.iv); this.setState({phase:'pending',win:{team,reason},hint:null,board:board.map(b=>b.open?b:{...b,auto:true,votes:[]})}); }
+  announce(){ const S=this.state; if(S.phase!=='pending') return; this.setState({phase:'over'});
+    [[523.25,0,.22],[659.25,160,.22],[783.99,320,.5]].forEach(([f,t,d])=>this.after(t,()=>this.tone(f,d,'sine',.15)));
+    this.reportPoints(S.players[S.win.team],[...S.players[1],...S.players[2]]); }
+  // نظام نقاط المنصة — مرة واحدة لكل مباراة عند إعلان الفائز (CLAUDE.md)
+  reportPoints(winners,all){ if(this.reported) return; this.reported=true; const run=this.matchStartedAt||Date.now();
+    const players=all.map(n=>({id:this.reg.id(n)||n,name:n})), winnerIds=winners.map(n=>this.reg.id(n)||n), A=window.AGPAuth;
+    if(!A||typeof A.reportMatchPoints!=='function') return this.setState({plat:{kind:'none'}});
+    this.setState({plat:{kind:'pending'}});
+    A.reportMatchPoints({players,winnerIds,teamGame:true,durationMs:Date.now()-run}).then(res=>{
+      if(this.reported!==true||(this.matchStartedAt||Date.now())!==run) return;
+      if(!res||!res.success) return this.setState({plat:{kind:players.some(p=>String(p.id).indexOf('tiktok:')===0)?'error':'none'}});
+      const aw={}; (Array.isArray(res.awarded)?res.awarded:[]).forEach(a=>{ aw[a.tiktokUsername]=a; }); this.setState({plat:{kind:'ok',aw}}); }); }
+  platOf(n){ const P=this.state.plat||{kind:'pending'}, id=String(this.reg.id(n)||''), u=id.indexOf('tiktok:')===0?id.slice(7):null;
+    if(P.kind==='pending') return {msg:'جارٍ احتساب نقاط المنصة…',c:'#a8a3b5'};
+    if(P.kind==='error') return {msg:'تعذّر جلب نقاط المنصة الآن',c:'#fca5a5'};
+    const a=P.kind==='ok'&&u?P.aw[u]:null; if(!a) return {msg:'لا يوجد حساب مرتبط بهذا اللاعب على المنصة بعد',c:'#a8a3b5'};
+    return {pts:'+'+a.added+' نقطة',total:'المجموع: '+a.totalPoints}; }
+  resetBoard(keepRoles){ clearInterval(this.iv); const st=this.state.starter===1?2:1; try{ localStorage.setItem('codenames-last-starter',st); }catch(e){}
+    this.setState({...this.newBoard(st),phase:'ready',hint:null,hintGiven:false,win:null,banner:null,plat:null,logs:{1:[],2:[]},...(keepRoles?{}:{roles:{1:{spy:null,conf:null},2:{spy:null,conf:null}}})}); }
+
+  onChat(user,text,isFollower=true){
+    const S=this.state; if(!user) return; const t=AR(text), tm=this.teamOf(user);
+    // كلمة فريق من شخص مو بالمباراة → طلب دخول (القواعد المشتركة CN.join — JOIN-RULES.md)
+    const jr=!tm&&CN.join([1,2].map(k=>({keyword:S.teams[k].kw,members:S.joinReqs.filter(j=>j.team===k).map(j=>j.name)})),user,text,{followersOnly:S.followers,isFollower});
+    if(jr){ if(jr.ok) this.setState(s=>({joinReqs:[...s.joinReqs.filter(j=>j.name!==user),{name:user,team:jr.k+1}]})); return; }
+    if((S.phase!=='hint'&&S.phase!=='guess')||tm!==S.turn) return;
+    const R=S.roles[tm];
+    // الصيغة الموحّدة لكل الأوامر: [الكلمة] ثم [الرقم] — مثل: مدن 3 · تأكيد 12 · سحب 12
+    if(S.phase==='hint'){ if(user!==R.spy) return; const raw=String(text).trim().replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c));
+      let m=raw.match(/^(\d{1,2})\s+(.+?)\s+(\d{1,2})$/), w, n, old=0; if(m){ old=+m[1]; w=m[2]; n=+m[3]; if(old>n) old=n; } else if((m=raw.match(/^(.+?)\s+(\d{1,2})$/))){ w=m[1]; n=+m[2]; } else if((m=raw.match(/^(\d{1,2})\s+(.+)$/))){ w=m[2]; n=+m[1]; } else return;
+      w=w.trim(); if(/\s/.test(w)) return this.banner('تسولف؟ 😅 اكتب كلمة وحدة بس بالتلميح!',3000,'warn');
+      return this.giveHint(n,w,old); }
+    let m;
+    if((m=t.match(/^(\d{1,2})$/))){ const n=+m[1]; if(n>=1&&n<=25) this.vote(user,n-1,true); return; }
+    if((m=t.match(/^سحب\s+(\d{1,2})$/))){ const n=+m[1]; if(n>=1&&n<=25) this.vote(user,n-1,false); return; }
+    if(user!==R.conf) return;
+    if((m=t.match(/^تاكيد((?:\s+\d{1,2})+)$/))){ const nums=m[1].trim().split(/\s+/).map(Number).filter(n=>n>=1&&n<=25); if(nums.length) this.confirm(nums); return; }
+    if(t==='تخطي'){ this.log(tm,'تخطى بقية التخمين','info'); this.endTurn(); }
+  }
+
+  buildFx(){
+    if(this._fx) return this._fx;
+    const h=React.createElement, r=(a,b)=>a+Math.random()*(b-a);
+    const glow=(k,css)=>h('div',{key:k,style:{position:'absolute',borderRadius:'50%',filter:'blur(40px)',...css}});
+    const glows=[glow('g1',{top:'-20%',right:'-10%',width:900,height:900,background:'radial-gradient(circle, rgba(124,58,237,.22), transparent 65%)'}),
+      glow('g2',{top:'30%',left:'-15%',width:800,height:800,background:'radial-gradient(circle, rgba(139,92,246,.12), transparent 65%)'}),
+      glow('g3',{bottom:'-30%',left:'35%',width:1000,height:700,background:'radial-gradient(circle, rgba(168,85,247,.1), transparent 65%)'})];
+    const stars=Array.from({length:90},(_,i)=>h('span',{key:'s'+i,style:{position:'absolute',left:r(0,100)+'%',top:r(0,100)+'%',width:i%9?1.5:3,height:i%9?1.5:3,borderRadius:'50%',background:`rgba(255,255,255,${r(.12,.35).toFixed(2)})`}}));
+    const sq=[[88,14,14,1],[73,82,18,0],[16,66,10,1],[42,8,12,0]].map(([x,y,s,fill],i)=>h('span',{key:'q'+i,style:{position:'absolute',left:x+'%',top:y+'%',width:s,height:s,background:fill?'rgba(139,92,246,.45)':'transparent',border:fill?'none':'1.5px solid rgba(139,92,246,.35)'}}));
+    return this._fx=h('div',{key:'fx','aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none',overflow:'hidden'}},[...glows,...stars,...sq]);
+  }
+
+  renderVals(){
+    const S=this.state, ph=S.phase, T=TC[S.turn], o=(i,out)=>S.modalOut?out:i;
+    const seg=on=>({bg:on?'linear-gradient(90deg, #7c3aed, #a855f7)':'transparent',fg:on?'#fff':'#a8a3b5',sh:on?'0 6px 20px rgba(139,92,246,.4)':'none'});
+    const setRole=(team,role,name)=>this.setState(s=>({roles:{...s.roles,[team]:{...s.roles[team],[role]:s.roles[team][role]===name?null:name}}}));
+    const panels=[1,2].map(team=>{ const C=TC[team], R=S.roles[team], active=S.turn===team&&ph!=='ready';
+      return { col:team===1?1:3, name:S.teams[team].name, sub:S.starter===team?'يبدأ · 9 صناديق':'8 صناديق', left:this.remaining(S.board,team), c2:C.c2, count:S.players[team].length,
+        headBg:`linear-gradient(135deg, ${C.c}, ${C.dk})`, headBd:active?'#fff':'transparent', headSh:active?`0 0 0 4px ${C.c}55, 0 16px 40px ${C.c}55`:'0 10px 30px rgba(0,0,0,.3)',
+        roleCards:[['spy','🕵','سباي ماستر'],['conf','✓','تأكيد الأجوبة']].map(([k,icon,label])=>{ const who=R[k];
+          return {icon,label,who:who||'-- غير معيّن --',set:!!who,clear:()=>setRole(team,k,who),bg:who?C.soft:'rgba(255,255,255,.025)',bd:who?C.c:'rgba(255,255,255,.12)',bdS:who?'solid':'dashed',lc:who?C.c2:'#8a8596',nc:who?'#fff':'#6f6a7c'}; }),
+        players:S.players[team].map(n=>{ const isSpy=R.spy===n, isConf=R.conf===n;
+          return {name:n,...avOf(n),ring:isSpy||isConf?C.c:'transparent',
+            showSpy:!R.spy||isSpy, spy:()=>setRole(team,'spy',n), spyBg:isSpy?C.c:'rgba(255,255,255,.04)', spyBd:isSpy?'#fff':'rgba(255,255,255,.1)',
+            showConf:!R.conf||isConf, conf:()=>setRole(team,'conf',n), confBg:isConf?'#10b981':'rgba(255,255,255,.04)', confBd:isConf?'#fff':'rgba(255,255,255,.1)', confC:isConf?'#fff':'#a8a3b5'}; }),
+        noLog:!S.logs[team].length,
+        log:S.logs[team].slice(0,6).map(e=>({t:e.t,c:e.kind==='good'?'#6ee7b7':e.kind==='bad'?'#fca5a5':'#e7e3ef',bg:e.kind==='good'?'rgba(16,185,129,.08)':e.kind==='bad'?'rgba(239,68,68,.08)':'rgba(255,255,255,.04)'}))}; });
+    const PAT={1:'repeating-linear-gradient(135deg, rgba(255,255,255,.12) 0 10px, transparent 10px 22px)',2:'radial-gradient(rgba(255,255,255,.18) 1.6px, transparent 2px) 0 0/16px 16px'};
+    const SPARKS=Array.from({length:10},(_,k)=>{ const a=k/10*Math.PI*2, r=110+(k%3)*25; return {dx:Math.round(Math.cos(a)*r)+'px',dy:Math.round(Math.sin(a)*r*.7)+'px'}; });
+    const bumpAn=i=>S.bump&&S.bump.i===i?(S.bump.k?'bounceA':'bounceB')+' .5s cubic-bezier(.3,1.4,.5,1)':null;
+    const tiles=S.board.map((b,i)=>{ const rev=b.open||b.auto, bump=bumpAn(i), base={n:i+1,w:b.w,votes:b.votes.slice(0,5).map(v=>({name:v,...avOf(v)})),icon:null,pat:null,op:1,an:bump||'none',z:bump||b.fresh?3:1,burst:false,sparks:[],burstC:'#fff',tap:()=>this.setState(s=>{ const can=s.phase==='guess'&&!b.open&&!b.auto, p=s.picks||[]; return {bump:{i,k:!(s.bump&&s.bump.k)},...(can?{picks:p.includes(i)?p.filter(x=>x!==i):[...p,i]}:{})}; }),picked:(S.picks||[]).includes(i),pickN:(S.picks||[]).indexOf(i)+1};
+      if(!rev) return {...base,bg:'#fcd5b5',sh:'0 6px 0 #d9a47c, 0 14px 26px rgba(0,0,0,.35)',frame:'rgba(255,255,255,.55)',stripBg:'#fff',stripSh:'inset 0 -3px 0 rgba(0,0,0,.08)',wordC:'#2a1a10',numBg:'#2a1a10',numBd:'#fff',numC:'#fff'};
+      const col=b.t===-1?{bg:'#17131f',sh:'0 6px 0 #000, 0 0 30px rgba(239,68,68,.35)',icon:'💀'}:b.t===0?{bg:'#e6d6b4',sh:'0 6px 0 #b9a47c, 0 14px 26px rgba(0,0,0,.35)',icon:'🧍'}:{bg:`linear-gradient(160deg, ${TC[b.t].c}, ${TC[b.t].dk})`,sh:`0 6px 0 ${TC[b.t].dk}, 0 14px 26px rgba(0,0,0,.35)`,icon:'🕵️'};
+      const dark=b.t!==0;
+      return {...base,bg:col.bg,sh:col.sh,frame:dark?'rgba(255,255,255,.3)':'rgba(255,255,255,.5)',icon:b.auto?null:col.icon,pat:!b.auto&&b.t>0?PAT[b.img]:null,
+        op:b.auto?.8:1,an:bump||(b.fresh&&!b.auto?'popBurst .65s cubic-bezier(.2,1.3,.35,1)':'none'),burst:b.fresh&&!b.auto,sparks:b.fresh&&!b.auto?SPARKS:[],burstC:b.t===-1?'#ef4444':b.t===0?'#fde68a':TC[b.t].c2,
+        stripBg:dark?'rgba(0,0,0,.28)':'rgba(255,255,255,.75)',stripSh:'none',wordC:dark?'#fff':'#3b2a12',numBg:dark?'rgba(0,0,0,.45)':'#3b2a12',numBd:'rgba(255,255,255,.75)',numC:'#fff'}; });
+    const urgent=(ph==='hint'||ph==='guess')&&S.left<=10, picks=ph==='guess'?(S.picks||[]).filter(i=>S.board[i]&&!S.board[i].open):[];
+    const bn=S.banner, bnT=bn&&TC[bn.team];
+    const W=S.win, WC=W&&TC[W.team];
+    const modals={join:'＋ دخول اللاعبين الجدد للمباراة',qr:'▦ باركود السباي ماستر',reqs:'✉ طلبات السباي ماستر',time:'⏳ تعديل الوقت',how:'📖 طريقة اللعب',exit:'⏻ خروج'};
+    const openM=k=>this.setState({modal:k,menuOpen:false});
+    const spyUrl=new URL('spymaster.html?room='+this.room,location.href).href;
+    return {
+      fx:this.buildFx(), scale:S.scale, stageW:Math.round(1920*S.scale), stageH:Math.round(1000*S.scale),
+      lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(),
+      logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
+      menuOpen:S.menuOpen, toggleMenu:()=>this.setState({menuOpen:!S.menuOpen}), menuBg:S.menuOpen?'rgba(139,92,246,.2)':'rgba(139,92,246,.08)', menuBd:S.menuOpen?'#a78bfa':'rgba(167,139,250,.3)',
+      menuItems:[['➕','إدخال لاعب جديد','طلبات الدخول وسط المباراة','join','rgba(139,92,246,.18)',S.joinReqs.length],['📱','باركود السباي ماستر','يمسحه السباي بجواله','qr','rgba(59,130,246,.18)'],['✉️','طلبات السباي ماستر','قبول أو رفض الطلبات','reqs','rgba(16,185,129,.16)',S.spyReqs.length],['⏳','تعديل الوقت','وقت التلميح ووقت الاختيار','time','rgba(251,191,36,.16)'],['📖','طريقة اللعب','الأدوار وأوامر الشات','how','rgba(255,255,255,.08)'],
+        ...(!S.hintGiven&&ph==='ready'?[['🔄','ريست الكلمات','لوحة جديدة · قبل أول تلميح بس','reset','rgba(236,72,153,.16)']]:[]),['⏻','خروج','الرجوع لمنصة ألعاب أيمن','exit','rgba(239,68,68,.16)',0,true]]
+        .map(([icon,label,desc,k,ib,badge,sep])=>({icon,label,desc,ib,sep:!!sep,badge:badge||null,c:k==='exit'?'#fca5a5':'#f4f2f8',go:()=>{ if(k==='reset'){ this.setState({menuOpen:false}); return this.resetBoard(true); } openM(k); }})),
+      turnRing:T.c, turnC:T.dk, spyName:S.roles[S.turn].spy||'السباي ماستر', spyWait:S.roles[S.turn].spy?`🕵 ${S.roles[S.turn].spy} يكتب: الكلمة ثم الرقم`:'⚠️ ما تعيّن سباي ماستر لهالفريق',
+      introOpen:S.introOpen, openIntro:()=>this.setState({introOpen:true,introOut:false,menuOpen:false}), introHide:S.introHide, toggleIntroHide:e=>this.setState({introHide:e.target.checked}),
+      closeIntro:()=>{ if(S.introHide){ try{ localStorage.setItem('codenames-intro-hide','1'); }catch(e){} } this.setState({introOut:true}); setTimeout(()=>this.setState({introOpen:false,introOut:false}),260); },
+      introOv:S.introOut?'fadeOut .26s ease forwards':'fade .25s ease', introAn:S.introOut?'popOut .26s ease forwards':'popIn .45s cubic-bezier(.2,1.25,.35,1)',
+      introSteps:[
+        ['🕵','عيّن الأدوار لكل فريق','من قائمة اللاعبين اضغط 🕵 للسباي ماستر و ✓ للمؤكّد. لازم كل فريق يكون عنده سباي ماستر.','rgba(139,92,246,.2)'],
+        ['📱','افتح باركود السباي ماستر','من زر ⚙ الإعدادات ← «باركود السباي ماستر». السباي ماستر للفريقين يمسحونه بجوالهم ويرسلون طلب.','rgba(59,130,246,.2)'],
+        ['✉️','لا تخاف لو الكل مسح الباركود','ما أحد يشوف الكلمات الملونة إلا اللي تقبله أنت. من ⚙ الإعدادات ← «طلبات السباي ماستر» اقبل الطلبين الصح وارفض الباقي.','rgba(16,185,129,.18)'],
+        ['⚙','اطّلع على خيارات الإعدادات','فيها: إدخال لاعب جديد، تعديل الوقت، طريقة اللعب، وريست الكلمات قبل أول تلميح.','rgba(251,191,36,.18)']
+      ].map(([icon,t,d,ib])=>({icon,t,d,ib})),
+      panels, tiles,
+      turnName:S.teams[S.turn].name, turnBg:`linear-gradient(90deg, ${T.c}, ${T.dk})`, turnBd:'rgba(255,255,255,.35)', turnGlow:T.c+'55',
+      hasPicks:picks.length>0, picksN:picks.length, picksTxt:picks.map(i=>i+1).join(' ← '), clearPicks:()=>this.setState({picks:[]}),
+      openPicks:()=>{ const nums=picks.map(i=>i+1); this.setState({picks:[]}); this.log(S.turn,`الاستريمر أكّد يدوياً: ${nums.join(' ')}`,'info'); this.confirm(nums); },
+      isReady:ph==='ready', isHintWait:ph==='hint', isGuess:ph==='guess', isPending:ph==='pending', start:()=>this.start(),
+      hintW:S.hint&&S.hint.w, hintN:S.hint&&S.hint.n, hasOld:!!(S.hint&&S.hint.old), hintOld:S.hint&&S.hint.old, timeTxt:mmss(S.left),
+      tC:urgent?'#fecaca':'#fff', tLbl:urgent?'#fca5a5':'#e7e3ef', tIcon:urgent?'⏰':'⏳', tBg:urgent?'linear-gradient(90deg, rgba(239,68,68,.28), rgba(127,29,29,.35))':'linear-gradient(90deg, rgba(255,255,255,.07), rgba(255,255,255,.03))', tBd:urgent?'rgba(248,113,113,.7)':'rgba(255,255,255,.14)', tSh:urgent?'0 0 30px rgba(239,68,68,.35)':'0 10px 26px rgba(0,0,0,.3)', tRing:urgent?'#f87171':(S.left/((ph==='hint'?S.hintT:S.guessT)||1)>.5?'#34d399':'#fbbf24'), tOff:(138.2*(1-Math.max(0,Math.min(1,S.left/((ph==='hint'?S.hintT:S.guessT)||1))))).toFixed(1), tAn:urgent?'pulse 1s ease-in-out infinite':'none',
+      pendingTxt:W?(W.reason==='assassin'?`💀 الصندوق الأسود — ${S.teams[W.team].name} يفوز`:`✅ ${S.teams[W.team].name} كشف كل صناديقه`):'', announce:()=>this.announce(),
+      bannerOn:!!bn, bn:bn?{text:bn.text,sub:bn.sub,bg:bn.kind==='warn'?'linear-gradient(135deg, #b45309, #78350f)':`linear-gradient(135deg, ${bnT.c}, ${bnT.dk})`,bd:'rgba(255,255,255,.4)',glow:bn.kind==='warn'?'rgba(245,158,11,.4)':bnT.c+'66'}:{},
+      reconnecting:S.reconnecting,
+      modalOpen:!!S.modal, closeModal:()=>this.shut('modal'), mOv:o('fade .25s ease','fadeOut .26s ease forwards'), mAn:o('popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards'),
+      mTitle:modals[S.modal]||'', mW:S.modal==='how'?760:S.modal==='qr'?420:520,
+      mJoin:S.modal==='join', mQr:S.modal==='qr', mReqs:S.modal==='reqs', mTime:S.modal==='time', mHow:S.modal==='how', mExit:S.modal==='exit',
+      noJoinReqs:!S.joinReqs.length, joinReqs:S.joinReqs.map(j=>({name:j.name,...avOf(j.name),team:S.teams[j.team].name,c:TC[j.team].c2,soft:TC[j.team].soft,remove:()=>this.setState(s=>({joinReqs:s.joinReqs.filter(x=>x.name!==j.name)}))})),
+      saveJoin:()=>{ this.setState(s=>{ const P={1:s.players[1].slice(),2:s.players[2].slice()}; s.joinReqs.forEach(j=>{ if(!P[1].includes(j.name)&&!P[2].includes(j.name)) P[j.team].push(j.name); }); return {players:P,joinReqs:[]}; }); this.shut('modal'); },
+      qrSrc:'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data='+encodeURIComponent(spyUrl), spyUrl,
+      noSpyReqs:!S.spyReqs.length, spyReqs:S.spyReqs.map(r=>({name:r.name,team:S.teams[r.team].name,c:TC[r.team].c2,ok:()=>this.approve(r,true),no:()=>this.approve(r,false)})),
+      timeRows:[['⏳ وقت إرسال التلميح من السباي ماستر','hintT',HINT_T,'hint'],['⏳ وقت اختيار اللاعبين وتأكيد الإجابة','guessT',GUESS_T,'guess']].map(([label,k,opts,phase])=>({label,opts:opts.map(v=>({label:mmss(v),...seg(S[k]===v),pick:()=>{ this.setState({[k]:v}); if(this.state.phase===phase) this.runTimer(v); }}))})),
+      howRoles:[['🕵','السباي ماستر','يشوف الألوان بجواله ويعطي فريقه تلميح','linear-gradient(135deg, #7c3aed, #a855f7)'],['✓','المؤكّد','الوحيد اللي يفتح الصناديق أو يتخطى','linear-gradient(135deg, #059669, #10b981)'],['👥','باقي الفريق','يصوتون على الصناديق برقمها','rgba(255,255,255,.12)']].map(([icon,t,d,ib])=>({icon,t,d,ib})),
+      howSteps:[
+        ['🕵','السباي ماستر يعطي التلميح','linear-gradient(135deg, #7c3aed, #a855f7)','rgba(167,139,250,.35)','#7c3aed','#c4b5fd',[['مدن 3','تلميح'],['1 مدن 3','تلميح + قديم']],['«مدن» كلمة وحدة تربط صناديق فريقه، و«3» عدد الصناديق اللي يقصدها','باقي صندوق من تلميح قديم؟ اكتب عدده قبل الكلمة: «1 مدن 3» = 3 صناديق منها 1 قديم']],
+        ['👥','الفريق يصوّت على الصناديق','linear-gradient(135deg, #475569, #64748b)','rgba(255,255,255,.12)','#475569','#cbd5e1',[['12','تصويت'],['سحب 12','تراجع']],['اكتب رقم الصندوق اللي تشوفه صح، وصورتك تطلع عليه','تقدر تصوّت على أكثر من صندوق']],
+        ['✓','المؤكّد يفتح الصناديق','linear-gradient(135deg, #059669, #10b981)','rgba(52,211,153,.35)','#059669','#6ee7b7',[['تأكيد 12','صندوق'],['تأكيد 12 7 3','أكثر من صندوق'],['تخطي','إنهاء الدور']],['تنفتح بالترتيب، وإذا طلع صندوق غلط يوقف وينتقل الدور','أول ما يفتحون عدد صناديق التلميح ينتهي الدور مباشرة','✋ الاستريمر يقدر يضغط على الصناديق بالشاشة ويأكدها يدوياً بدل المؤكّد']]
+      ].map(([icon,t,ib,bd,chip,dot,cmds,notes],i)=>({n:i+1,icon,t,ib,bd,chip,dot,cmds:cmds.map(([cmd,d])=>({cmd,d})),notes})),
+      howCmds:[['🕵 السباي','مدن 3','الكلمة ثم عدد الكلمات','#c4b5fd'],['🕵 السباي','1 مدن 3','القديم ثم الكلمة ثم العدد','#c4b5fd'],['👥 أي لاعب','12','تصويت على صندوق 12','#e7e3ef'],['👥 أي لاعب','سحب 12','يلغي تصويته','#e7e3ef'],['✓ المؤكّد','تأكيد 12 7','يفتح الصناديق بالترتيب','#6ee7b7'],['✓ المؤكّد','تخطي','ينهي دور فريقه','#6ee7b7']].map(([who,cmd,d,wc])=>({who,cmd,d,wc})),
+      howTiles:[['🕵️','لون فريقك','✓ كمّلوا','linear-gradient(160deg, #ef4444, #b91c1c)','#7f1d1d','#6ee7b7'],['🧍','محايد','ينتهي الدور','#e6d6b4','#b9a47c','#fde68a'],['🕵️','لون الخصم','صندوق له وينتهي الدور','linear-gradient(160deg, #3b82f6, #1d4ed8)','#1e3a8a','#fca5a5'],['💀','الأسود','خسارة فورية','#17131f','#000','#fca5a5']].map(([icon,t,d,bg,sh,c])=>({icon,t,d,bg,sh,c})),
+      howLines:HOW.map(([t,k])=>({t,f:k==='h'?"800 18px/1.5 'Zain'":k==='w'?"800 16px/1.5 'Zain'":"500 16px/1.6 'Zain'",c:k==='w'?'#fca5a5':k==='h'?'#f4f2f8':'#c9c4d6'})),
+      confirmExit:()=>{ location.href=LIBRARY_URL; },
+      isOver:ph==='over', winAssassin:!!(W&&W.reason==='assassin'), winName:W?S.teams[W.team].name:'', winC:WC?WC.c2:'#fff', winGlow:WC?WC.c+'88':'transparent',
+      winReason:W?(W.reason==='assassin'?'الفريق الخصم فتح الصندوق الأسود 💀':'كشف كل صناديقه ✅'):'',
+      winCards:W?S.players[W.team].map((n,i)=>{ const pp=this.platOf(n), wc=CN.winCard(this.reg.player(n),[`فاز ${S.teams[W.team].name}`,...(pp.pts?[pp.pts,pp.total]:[pp.msg])],'wc'+i,170);
+        return {name:n,...avOf(n),photo:this.reg.avatar(n)||null,c:WC.c2,bd:WC.c+'aa',glow:WC.c+'33',top:WC.c+'55',delay:(i*.08).toFixed(2)+'s',ptsOk:!!pp.pts,pts:pp.pts,total:pp.total,ptsMsg:pp.msg||null,msgC:pp.c,wcOn:!!wc,wcStd:!wc,wcEl:wc}; }):[],
+      newMatch:()=>this.resetBoard(false), rematch:()=>this.resetBoard(true)
+    };
+  }
+}
+</script>
+</body>
+</html>
