@@ -67,6 +67,71 @@ async function sendPasswordResetEmail(toEmail, code) {
 }
 
 /* -----------------------------------------------------------------------
+ * رموز التحقق: تأكيد الإيميل عند إنشاء الحساب، تأكيد/تغيير الإيميل من
+ * البروفايل، واستعادة الحساب (نسيت اليوزر أو الإيميل). نفس شكل إيميل
+ * استرجاع كلمة المرور أعلاه.
+ * ----------------------------------------------------------------------- */
+
+function codeEmailHtml(heading, intro, code, extraHtml) {
+    return '<div dir="rtl" style="font-family: Tahoma, Arial, sans-serif; text-align: right; ' +
+        'background:#1A0F1F; color:#FFFFFF; padding:32px; border-radius:12px; max-width:480px; margin:0 auto;">' +
+        '<h2 style="color:#FF6EC7; margin-top:0;">' + heading + '</h2>' +
+        '<p style="color:#B38BC7;">' + intro + '</p>' +
+        (extraHtml || '') +
+        '<p style="font-size:32px; font-weight:bold; letter-spacing:6px; text-align:center; ' +
+        'background:#3A1A4D; padding:16px; border-radius:8px; margin:20px 0;">' + escapeHtml(code) + '</p>' +
+        '<p style="color:#B38BC7; font-size:13px;">الرمز صالح لمدة 15 دقيقة فقط. ' +
+        'لو ما طلبت هذا الرمز، تجاهل الرسالة — حسابك بأمان.</p>' +
+        '</div>';
+}
+
+async function sendCodeEmail(toEmail, subject, html, label) {
+    var client = getClient();
+    if (!client) {
+        logger.error('Email: RESEND_API_KEY غير مضبوط — تعذّر إرسال ' + label + '.');
+        return { success: false, error: 'email_not_configured' };
+    }
+    try {
+        var result = await client.emails.send({ from: FROM_ADDRESS, to: toEmail, subject: subject, html: html });
+        if (result && result.error) {
+            logger.error('Email: خطأ من Resend API (' + label + '):', result.error.message || result.error);
+            return { success: false, error: 'send_failed' };
+        }
+        return { success: true };
+    } catch (err) {
+        logger.error('Email: فشل إرسال ' + label + ':', err.message);
+        return { success: false, error: 'send_failed' };
+    }
+}
+
+/** رمز تأكيد الإيميل قبل إنشاء حساب جديد. */
+function sendSignupCodeEmail(toEmail, code) {
+    return sendCodeEmail(toEmail, 'رمز تأكيد الإيميل — ألعاب أيمن',
+        codeEmailHtml('تأكيد البريد الإلكتروني', 'أهلاً فيك بمنصة ألعاب أيمن! استخدم الرمز التالي لتأكيد إيميلك وإكمال إنشاء حسابك:', code),
+        'إيميل تأكيد التسجيل');
+}
+
+/** رمز تأكيد الإيميل من البروفايل (حساب قديم أو تغيير الإيميل). */
+function sendEmailVerifyCodeEmail(toEmail, code) {
+    return sendCodeEmail(toEmail, 'رمز تأكيد الإيميل — ألعاب أيمن',
+        codeEmailHtml('تأكيد البريد الإلكتروني', 'استخدم الرمز التالي لتأكيد هذا الإيميل لحسابك بمنصة ألعاب أيمن:', code),
+        'إيميل تأكيد البريد');
+}
+
+/** استعادة الحساب: اليوزر + آيدي البروفايل + رمز لتعيين كلمة مرور جديدة. */
+function sendAccountRecoveryEmail(toEmail, info, code) {
+    var rows = '<p style="background:#241438; padding:14px; border-radius:8px; margin:16px 0; line-height:2;">' +
+        'اسم المستخدم: <strong style="color:#fff;">' + escapeHtml(info.username) + '</strong><br>' +
+        'البريد الإلكتروني: <strong style="color:#fff;">' + escapeHtml(toEmail) + '</strong>' +
+        (info.customId ? '<br>آيدي البروفايل: <strong style="color:#fff;">#' + escapeHtml(info.customId) + '</strong>' : '') +
+        '</p>' +
+        '<p style="color:#B38BC7;">تقدر تسجّل دخولك باسم المستخدم أو الإيميل. ولو نسيت كلمة المرور، هذا رمز لتعيين كلمة مرور جديدة:</p>';
+    return sendCodeEmail(toEmail, 'معلومات حسابك — ألعاب أيمن',
+        codeEmailHtml('استعادة معلومات الحساب', 'استلمنا طلب استعادة معلومات حسابك بمنصة ألعاب أيمن. هذي بيانات الدخول:', code, rows),
+        'إيميل استعادة الحساب');
+}
+
+/* -----------------------------------------------------------------------
  * إشعارات "الدعم والاقتراحات" — نفس العميل والمرسِل أعلاه. كل النصوص
  * القادمة من المستخدم تُهرَّب (escapeHtml) قبل إدراجها بالـHTML.
  * ----------------------------------------------------------------------- */
@@ -167,6 +232,9 @@ function sendSupportUserNotification(p) {
 
 module.exports = {
     sendPasswordResetEmail: sendPasswordResetEmail,
+    sendSignupCodeEmail: sendSignupCodeEmail,
+    sendEmailVerifyCodeEmail: sendEmailVerifyCodeEmail,
+    sendAccountRecoveryEmail: sendAccountRecoveryEmail,
     sendSupportAdminNotification: sendSupportAdminNotification,
     sendSupportUserNotification: sendSupportUserNotification
 };

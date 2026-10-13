@@ -118,11 +118,40 @@ function request(path, options) {
 
 /* Auth functions — map 1:1 to http/auth-router.js routes */
 
-function signup(username, email, password, wantsToBeStreamer) {
+function signup(username, email, password, wantsToBeStreamer, emailCode) {
     return request('/api/auth/signup', {
         method: 'POST',
-        body: { username: username, email: email, password: password, wantsToBeStreamer: Boolean(wantsToBeStreamer) }
+        body: { username: username, email: email, password: password, wantsToBeStreamer: Boolean(wantsToBeStreamer), emailCode: emailCode }
     });
+}
+
+/** Signup step 1: email a 6-digit code; the account is only created by
+ * signup(..., emailCode) with the right code. */
+function sendSignupCode(username, email) {
+    return request('/api/auth/signup/send-code', { method: 'POST', body: { username: username, email: email } });
+}
+
+/** Forgot username/email: identifier = email, profile ID, username or
+ * verified TikTok username. Emails the account's details + a reset code;
+ * returns {success, maskedEmail}. */
+function recoverAccount(identifier) {
+    return request('/api/auth/recover-account', { method: 'POST', body: { identifier: identifier } });
+}
+
+/** Profile: send a code to confirm the current email, or a new one. */
+function sendEmailVerification(email) {
+    return request('/api/auth/email/send-code', { method: 'POST', body: { email: email || undefined } });
+}
+
+function verifyEmail(code) {
+    return request('/api/auth/email/verify', { method: 'POST', body: { code: code } })
+        .then(function (result) {
+            if (result && result.success) {
+                var cached = getCachedUser();
+                if (cached) { cached.email = result.email; cached.email_verified = true; setSession(getToken(), cached); }
+            }
+            return result;
+        });
 }
 
 function login(email, password) {
@@ -157,6 +186,12 @@ function forgotPassword(email) {
  */
 function resetPasswordWithCode(email, code, newPassword) {
     return request('/api/auth/reset-password', { method: 'POST', body: { email: email, code: code, newPassword: newPassword } });
+}
+
+/** Same as resetPasswordWithCode but for the account-recovery flow, where
+ * the user identified the account by something other than the email. */
+function resetPasswordWithIdentifier(identifier, code, newPassword) {
+    return request('/api/auth/reset-password', { method: 'POST', body: { identifier: identifier, code: code, newPassword: newPassword } });
 }
 
 /** Mandatory account-type choice (player/streamer) after first Google
@@ -849,6 +884,11 @@ global.AGPAuth = {
     loginWithGoogle: loginWithGoogle,
     forgotPassword: forgotPassword,
     resetPasswordWithCode: resetPasswordWithCode,
+    resetPasswordWithIdentifier: resetPasswordWithIdentifier,
+    sendSignupCode: sendSignupCode,
+    recoverAccount: recoverAccount,
+    sendEmailVerification: sendEmailVerification,
+    verifyEmail: verifyEmail,
     logout: logout,
     me: me,
     refreshUser: refreshUser,

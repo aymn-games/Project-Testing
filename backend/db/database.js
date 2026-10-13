@@ -442,6 +442,30 @@ ensureColumn('users', 'password_reset_expires', 'INTEGER');
 // (auth-service.updateUsername). NULL = ما غيّره أبداً.
 ensureColumn('users', 'username_changed_at', 'INTEGER');
 
+// تأكيد الإيميل (auth-service: sendSignupCode / sendEmailVerification /
+// verifyEmail). email_verified = 1 لما يأكّد صاحب الحساب الإيميل برمز.
+// email_verify_target = الإيميل اللي يتأكَّد (نفس الحالي، أو جديد لو يغيّره).
+ensureColumn('users', 'email_verified', 'INTEGER NOT NULL DEFAULT 0');
+ensureColumn('users', 'email_verify_code', 'TEXT');
+ensureColumn('users', 'email_verify_target', 'TEXT');
+ensureColumn('users', 'email_verify_expires', 'INTEGER');
+ensureColumn('users', 'email_verify_attempts', 'INTEGER NOT NULL DEFAULT 0');
+ensureColumn('users', 'email_code_sent_at', 'INTEGER');
+// آخر إرسال لإيميل استعادة الحساب (حد دقيقة بين كل طلب لنفس الحساب).
+ensureColumn('users', 'recovery_sent_at', 'INTEGER');
+// حسابات Google: الإيميل موثّق من Google نفسها.
+db.prepare('UPDATE users SET email_verified = 1 WHERE google_id IS NOT NULL AND email_verified = 0').run();
+// رموز تأكيد الإيميل قبل إنشاء الحساب (الحساب ما ينشأ إلا بعد الرمز الصحيح).
+db.exec(`
+    CREATE TABLE IF NOT EXISTS pending_signups (
+        email TEXT PRIMARY KEY,
+        code TEXT NOT NULL,
+        expires_at INTEGER NOT NULL,
+        sent_at INTEGER NOT NULL,
+        attempts INTEGER NOT NULL DEFAULT 0
+    )
+`);
+
 // ربط اختياري بين صف دعم (supporters) وحساب مسجَّل (users.id) — NULL
 // افتراضياً. لو مربوط، تُعرَض اسم/صورة الحساب الحيّة بدل النص الثابت.
 ensureColumn('supporters', 'user_id', 'INTEGER');
