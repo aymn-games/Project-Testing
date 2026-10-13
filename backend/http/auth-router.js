@@ -102,6 +102,7 @@ var ROUTES = [
   { method: 'GET', path: '/api/admin/users/lookup', requireAuth: true, requireAdmin: true, handler: handleAdminLookupUser },
   { method: 'POST', path: '/api/admin/permissions', requireAuth: true, requireAdmin: true, handler: handleAdminSetPermission },
   { method: 'POST', path: '/api/admin/custom-id', requireAuth: true, requireAdmin: true, handler: handleAdminSetCustomId },
+  { method: 'POST', path: '/api/admin/email', requireAuth: true, requireAdmin: true, handler: handleAdminSetEmail },
   { method: 'POST', path: '/api/admin/users/delete', requireAuth: true, requireAdmin: true, handler: handleAdminDeleteUser },
   // حذف ذاتي — requireAdmin غير موجود عمداً، requireAuth فقط.
   { method: 'POST', path: '/api/profile/delete-account', requireAuth: true, handler: handleDeleteMyAccount },
@@ -380,6 +381,12 @@ function handleAdminSetPermission(req, res, body) {
  */
 function handleAdminSetCustomId(req, res, body) {
   var result = authService.setCustomId(body.userId, body.customId);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+/** الأدمن فقط — يغيّر إيميل أي حساب. body: {userId, email} */
+function handleAdminSetEmail(req, res, body) {
+  var result = authService.adminSetEmail(body.userId, body.email);
   sendJson(res, result.success ? 200 : 400, result);
 }
 

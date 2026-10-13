@@ -760,6 +760,15 @@ input::placeholder,textarea::placeholder{color:#5b6274}
         </div>
 
         <div style="display:flex;flex-direction:column;border:1px solid #262a37;border-radius:12px;overflow:hidden">
+          <div style="padding:10px 14px;font-size:12px;font-weight:600;color:#9199ab;background:#14161d;display:flex;align-items:center;justify-content:space-between;gap:8px"><span>الإيميل</span><span style="font-weight:500;color:{{ du.emailStateColor }}">{{ du.emailState }}</span></div>
+          <div style="display:flex;gap:6px;padding:12px 14px;border-top:1px solid #1f222c">
+            <input type="email" dir="ltr" value="{{ du.emailDraft }}" onChange="{{ du.onEmail }}" placeholder="name@mail.com" style="flex:1;min-width:0;height:34px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 10px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace">
+            <button onClick="{{ du.saveEmail }}" style="height:34px;padding:0 12px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:12.5px;cursor:pointer">حفظ</button>
+          </div>
+          <div style="padding:0 14px 12px;font-size:11.5px;color:#5b6274;line-height:1.7">ينحفظ غير مؤكد، ويطلع لصاحب الحساب تنبيه يأكّده. رسائل «نسيت كلمة المرور» تروح للإيميل الجديد على طول.</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;border:1px solid #262a37;border-radius:12px;overflow:hidden">
           <div style="padding:10px 14px;font-size:12px;font-weight:600;color:#9199ab;background:#14161d">الصلاحيات</div>
           <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
             <span style="font-size:13.5px">تحويل لحساب ستريمر</span>
@@ -855,7 +864,7 @@ function downloadCsv(filename, rows){
 
 class Component extends DCLogic {
   state = (() => { const h=readHash(); return {
-    me:null, page:h.page, usersTab:'players', q:'', drawerId:null, pidDraft:'', confirm:null, toast:null,
+    me:null, page:h.page, usersTab:'players', q:'', drawerId:null, pidDraft:'', emailDraft:'', confirm:null, toast:null,
     users:null, catalog:null, customFrames:[], elimCardList:[], winCardList:[], codes:null,
     pickType:'internal', pickId:'', pickUser:null, pickState:'empty',
     frameKey:null, libTab:'club', libQ:'', grantTpl:'', grantText:'', entranceModel:'gold', entranceText:'', cardKey:null,
@@ -930,7 +939,7 @@ class Component extends DCLogic {
       levelLabel: lvl?`${pts} — ${lvl}`:(pts?`${pts} — بلا مستوى`:'بلا مستوى'), frameLabel: u.equippedFrame?(u.equippedFrame.displayNameAr||u.equippedFrame.frameRef):'—',
       giftsLabel:`${st.total_gifts||0} (${st.total_gifts_value||0})`,
       roleBg: u.role==='admin'?'#241a3d':'#1d2130', roleColor: u.role==='admin'?'#c4b5fd':'#9199ab',
-      devLabel:dv.label, devColor:dv.color, initial:initialOf(u.username), open:()=>this.setState({ drawerId:u.id, pidDraft:u.custom_id||'' }) };
+      devLabel:dv.label, devColor:dv.color, initial:initialOf(u.username), open:()=>this.setState({ drawerId:u.id, pidDraft:u.custom_id||'', emailDraft:u.email||'' }) };
   }
   userAction(key, call, ok, fail){ return this.busy(key, call).then(r=>{ if(!r) return; if(r.success){ if(ok) this.flash(ok); this.loadUsers(); } else this.flash(fail(r),'err'); return r; }); }
 
@@ -1023,6 +1032,12 @@ class Component extends DCLogic {
       du={ ...d, streamer:isStreamerLike(dRaw), tS:this.tog(perm('can_run_games')||dRaw.role==='admin'), tL:this.tog(perm('can_manage_letters_cell')), tA:this.tog(!!dRaw.allow_device_change),
         welcomeHint: dRaw.welcome_completed?'شافها كاملة من قبل — اضغط لإعادتها له مرة وحدة':'لسا ما شافها',
         pidDraft:s.pidDraft, onPid:e=>this.setState({ pidDraft:e.target.value }),
+        emailDraft:s.emailDraft, onEmail:e=>this.setState({ emailDraft:e.target.value }),
+        emailState:dRaw.email_verified?'مؤكد ✓':'غير مؤكد', emailStateColor:dRaw.email_verified?'#6ee7b7':'#fbbf24',
+        saveEmail:()=>{ const v=s.emailDraft.trim().toLowerCase(); if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return this.flash('اكتب إيميل صحيح.','err');
+          if(v===String(dRaw.email||'').toLowerCase()) return this.flash('هذا نفس الإيميل الحالي.','err');
+          this.ask('تغيير الإيميل؟',`إيميل ${dRaw.username} بيتغيّر من ${dRaw.email} إلى ${v}، وينحفظ غير مؤكد.`,'تغيير الإيميل',()=>
+            this.userAction('email',()=>A.adminSetEmail(dRaw.id,v),'تم تغيير الإيميل.',r=>r.error==='email_taken'?'هذا الإيميل مستخدم بحساب ثاني.':r.error==='invalid_email'?'الإيميل غير صحيح.':'تعذّر الحفظ: '+(r.error||'unknown'))); },
         toggleStreamer:()=>setPerm('can_run_games'), toggleLetters:()=>setPerm('can_manage_letters_cell'),
         savePid:()=>{ const v=s.pidDraft.trim(); if(!v) return this.flash('اكتب ID قبل الحفظ.','err');
           this.userAction('pid',()=>A.adminSetCustomId(dRaw.id,v),'تم تحديث الـID.',r=>'تعذّر الحفظ: '+(r.error||'unknown')+(r.error==='custom_id_taken'?' (هذا الـID مستخدَم لحساب آخر)':'')); },

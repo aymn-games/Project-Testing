@@ -1363,8 +1363,27 @@ function updateAvatarImage(userId, dataUrl) {
 /**
  * كل المستخدمين مع إحصائياتهم المجمَّعة — للوحة الأدمن فقط.
  */
+/**
+ * الأدمن يغيّر إيميل أي حساب (مثلاً لاعب سجّل بإيميل وهمي ونسي كلمة
+ * المرور). الإيميل الجديد لازم صحيح وغير مستخدم. يُحفظ "غير مؤكد" —
+ * صاحب الحساب يطلع له تنبيه «أكّد إيميلك» بالبروفايل، وأي رمز تأكيد
+ * معلّق للإيميل القديم يُلغى. رسائل «نسيت كلمة المرور» تروح للجديد فوراً.
+ */
+function adminSetEmail(userId, email) {
+    email = (email || '').trim().toLowerCase();
+    if (!isValidEmail(email)) return { success: false, error: 'invalid_email' };
+    var user = db.prepare('SELECT id, email FROM users WHERE id = ?').get(userId);
+    if (!user) return { success: false, error: 'user_not_found' };
+    if (user.email === email) return { success: true, email: email };
+    if (db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(email, userId)) return { success: false, error: 'email_taken' };
+    db.prepare('UPDATE users SET email = ?, email_verified = 0, email_verify_code = NULL, email_verify_target = NULL, email_verify_expires = NULL, email_verify_attempts = 0 WHERE id = ?')
+        .run(email, userId);
+    logger.log('Auth: admin changed email of user id=' + userId);
+    return { success: true, email: email };
+}
+
 function listAllUsersWithStats() {
-    var users = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen, bound_device_id, bound_device_ids, is_super_admin, allow_device_change, created_at FROM users ORDER BY created_at ASC').all();
+    var users = db.prepare('SELECT id, username, email, role, tiktok_username, tiktok_verified, custom_id, is_streamer, permissions, welcome_completed, account_type_chosen, bound_device_id, bound_device_ids, is_super_admin, allow_device_change, created_at, email_verified FROM users ORDER BY created_at ASC').all();
     return users.map(function (u) {
         // شفاء ذاتي — نفس منطق validateSession.
         if (!u.custom_id) {
@@ -1389,6 +1408,7 @@ function listAllUsersWithStats() {
             maxDevices: MAX_STREAMER_DEVICES,
             is_super_admin: Boolean(u.is_super_admin),
             allow_device_change: Boolean(u.allow_device_change),
+            email_verified: Boolean(u.email_verified),
             stats: getUserStats(u.id),
             points: pointsService.getUserPoints(u.id),
             framesCount: frames.length,
@@ -1472,6 +1492,7 @@ module.exports = {
     sendEmailVerification: sendEmailVerification,
     verifyEmail: verifyEmail,
     recoverAccount: recoverAccount,
+    adminSetEmail: adminSetEmail,
     resetPasswordWithCode: resetPasswordWithCode,
     updateBroadcastViewerStats: updateBroadcastViewerStats,
     getTopStreamersByHours: getTopStreamersByHours,
