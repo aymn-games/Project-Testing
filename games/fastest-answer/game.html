@@ -495,10 +495,12 @@ class Component extends DCLogic {
     if(ts[0].score===ts[1].score) return this.toastMsg('تعادل! لا يوجد فائز');
     this.snd('win'); this.addLog('points',`إنهاء يدوي · فوز ${ts[0].name}`); this.setState({phase:'results',q:null,winner:ts[0]}); this.reportPoints(ts[0].i); };
 
-  // الانضمام وتبديل الفريق: نفس قواعد اللوبي عبر FA.join (fa-platform.js · JOIN-RULES.md).
+  // الانضمام: نفس قواعد اللوبي عبر FA.join (fa-platform.js · JOIN-RULES.md).
   // داخل نافذة "دخول لاعبين جدد" يبقى الجديد معلّقاً حتى تُغلق، والتبديل يحدّث فريقه المعلّق.
+  // اللاعب اللي صار بفريق داخل المباراة ما يقدر ينتقل للفريق الثاني بكتابة كلمته.
   onChat(user,text,follower){ const s=this.state, patch={};
-    const r=FA.join(s.teams.map((t,i)=>({name:t.name,keyword:this.KW[i],max:this.MAX,members:[...t.players,...s.pendingJoins.filter(p=>p.team===i).map(p=>p.name)]})),user,text,{followersOnly:this.followersOnly,isFollower:follower});
+    const inTeam=s.teams.some(t=>t.players.includes(user));
+    const r=inTeam?null:FA.join(s.teams.map((t,i)=>({name:t.name,keyword:this.KW[i],max:this.MAX,members:[...t.players,...s.pendingJoins.filter(p=>p.team===i).map(p=>p.name)]})),user,text,{followersOnly:this.followersOnly,isFollower:follower});
     if(r){ const busy=s.phase!=='ready'&&s.reels.some(x=>x.chosen===user); // اللاعب المختار بالجولة الجارية ما ينتقل قبل نهايتها
       if(r.toast&&(!r.ok||!busy)) this.toastMsg(r.toast);
       if(r.ok&&!busy){ this.snd('join');
