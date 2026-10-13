@@ -19,6 +19,7 @@ var partnersService = require('../partners/partners-service');
 var lettersCellQuestionsService = require('../letters-cell/letters-cell-questions-service');
 var platformStatsService = require('../stats/platform-stats-service');
 var supportService = require('../support/support-service');
+var storeRouter = require('./store-router');
 var tiktokLiveCheck = require('../platforms/tiktok/tiktok-live-check');
 var logger = require('../utils/logger');
 var config = require('../config');
@@ -195,7 +196,7 @@ var ROUTES = [
   { method: 'GET', path: '/api/admin/support/ticket', requireAuth: true, requireAdmin: true, handler: handleAdminSupportGetTicket },
   { method: 'POST', path: '/api/admin/support/ticket/reply', requireAuth: true, requireAdmin: true, handler: handleAdminSupportReply },
   { method: 'POST', path: '/api/admin/support/ticket/status', requireAuth: true, requireAdmin: true, handler: handleAdminSupportSetStatus }
-];
+].concat(storeRouter.routes); // المتجر — راجع http/store-router.js
 
 /* -----------------------------------------------------------------------
  * Handlers — كل واحد يستدعي دالة واحدة موجودة أصلاً في auth-service.js

@@ -884,6 +884,8 @@ function requireAdmin(redirectTo, nonAdminRedirectTo) {
 
 global.AGPAuth = {
     API_BASE: API_BASE,
+    // طلب عام لأي مسار API (يرفق Token الجلسة تلقائياً) — يستخدمه المتجر (store/store-common.js).
+    request: request,
     getToken: getToken,
     getCachedUser: getCachedUser,
     clearSession: clearSession,

@@ -41,6 +41,15 @@ module.exports = {
     cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || '',
     cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || '',
 
+    // المتجر — الدفع حالياً تجريبي (بدون بوابة دفع حقيقية بعد). مقفول
+    // افتراضياً للجميع ما عدا الأدمن (عشان ما ينصرف أي منتج مجاناً)؛
+    // STORE_MOCK_PAYMENTS=true يفتحه للكل مؤقتاً للتجربة.
+    storeMockPayments: process.env.STORE_MOCK_PAYMENTS === 'true',
+
+    // مفتاح توقيع روابط "إحصائيات مبيعات الاستريمر" (streamer-stats.html?s=..&t=..).
+    // اختياري: فارغ = مفتاح عشوائي يُولَّد مرة وحدة ويُحفظ بقاعدة البيانات.
+    storeStatsSecret: process.env.STORE_STATS_SECRET || '',
+
     // إيميل الأدمن لإشعارات تذاكر الدعم الجديدة/ردود المستخدمين. فارغ = لا إشعار.
     supportAdminEmail: process.env.SUPPORT_ADMIN_EMAIL || '',
 
