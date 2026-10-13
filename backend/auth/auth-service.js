@@ -317,7 +317,10 @@ async function recoverAccount(identifier) {
 function checkDeviceLock(user, deviceId) {
     if (user.is_super_admin) return { allowed: true, bind: false };
     if (user.role === 'admin') return { allowed: true, bind: false };
-    var isStreamerAccount = Boolean(user.is_streamer) || Boolean(JSON.parse(user.permissions || '{}').can_run_games);
+    var perms = JSON.parse(user.permissions || '{}');
+    // صلاحية «تشغيل كامل» (full_game_access) — بدون أي قيود، ومنها قيد الأجهزة
+    if (perms.full_game_access) return { allowed: true, bind: false };
+    var isStreamerAccount = Boolean(user.is_streamer) || Boolean(perms.can_run_games);
     if (!isStreamerAccount) return { allowed: true };
     var devices = getBoundDevices(user);
     if (deviceId && devices.indexOf(deviceId) !== -1) return { allowed: true, bind: true, devices: devices };
