@@ -10,6 +10,10 @@
 var S = window.AGPStore;
 var h = S.h;
 
+// ?embed=1 = داخل قسم "المتجر" بلوحة الأدمن (admin.html)
+var EMBED = new URLSearchParams(location.search).get('embed') === '1';
+if (EMBED) document.documentElement.classList.add('st-embed');
+
 var TABS = [['stats', 'الإحصائيات'], ['products', 'المنتجات'], ['bundles', 'الباكجات'], ['cats', 'التصنيفات'], ['streamers', 'الاستريمرز'], ['offers', 'العروض'], ['coupons', 'أكواد الخصم']];
 
 var state = {
@@ -557,7 +561,7 @@ function renderInto(root) {
     if (state.gate === 'loading') { root.replaceChildren(h('div', { 'class': 'st-loading' }, 'جاري التحميل…')); return; }
     if (state.gate === 'login') {
         root.replaceChildren(h('div', { 'class': 'gate' }, h('span', null, 'سجّل دخول بحساب الأدمن.'),
-            h('a', { 'class': 'btn btn-primary', href: 'login.html?next=' + encodeURIComponent('admin-store.html') }, 'تسجيل الدخول')));
+            h('a', { 'class': 'btn btn-primary', href: 'login.html?next=' + encodeURIComponent('admin-store.html'), target: EMBED ? '_top' : null }, 'تسجيل الدخول')));
         return;
     }
     if (state.gate === 'forbidden') { root.replaceChildren(h('div', { 'class': 'gate' }, 'هذه الصفحة للأدمن فقط.')); return; }
@@ -585,7 +589,7 @@ function renderInto(root) {
                 h('h1', null, 'إدارة المتجر'),
                 h('p', null, 'كل تعديل يُحفظ تلقائياً ويظهر في المتجر مباشرة.')),
             h('div', { 'class': 'st-row', style: 'gap:8px;' },
-                h('a', { 'class': 'btn btn-primary', href: 'store.html' }, h('span', null, 'عرض المتجر'), h('span', null, '←')))),
+                h('a', { 'class': 'btn btn-primary', href: 'store.html', target: EMBED ? '_blank' : null, rel: EMBED ? 'noopener' : null }, h('span', null, 'عرض المتجر'), h('span', null, '←')))),
         h('nav', { 'class': 'adm-nav', role: 'tablist' }, TABS.map(function (t) {
             var on = state.tab === t[0];
             return h('button', { type: 'button', role: 'tab', 'aria-selected': on ? 'true' : 'false', 'class': 'adm-tab' + (on ? ' on' : ''), onclick: function () { state.tab = t[0]; render(); } },
