@@ -364,6 +364,11 @@ function adminSetPermission(userId, permissionKey, value) {
 
 /** Admin only — sets a user's public custom_id by internal userId,
  * unlike setCustomId above which always targets the current session. */
+/** Admin: change any account's email (saved as unverified). */
+function adminSetEmail(userId, email) {
+    return request('/api/admin/email', { method: 'POST', body: { userId: userId, email: email } });
+}
+
 function adminSetCustomId(userId, customId) {
     return request('/api/admin/custom-id', {
         method: 'POST',
@@ -912,6 +917,7 @@ global.AGPAuth = {
     adminListUsers: adminListUsers,
     adminSetPermission: adminSetPermission,
     adminSetCustomId: adminSetCustomId,
+    adminSetEmail: adminSetEmail,
     adminDeleteUser: adminDeleteUser,
     adminResetDeviceLock: adminResetDeviceLock,
     adminAllowDeviceChange: adminAllowDeviceChange,
