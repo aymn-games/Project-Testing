@@ -1152,17 +1152,25 @@ function updateDisplayName(userId, displayName) {
  * المستخدم بشاشة تسجيل الدخول، فلازم يبقى فريداً. 3–30 خانة: حروف (أي
  * لغة) وأرقام و _ و . فقط — بدون مسافات وبدون @ (تسجيل الدخول يعامل أي
  * معرّف فيه @ كبريد إلكتروني، راجع login). الفريد بدون حساسية لحالة
- * الأحرف حتى ما يتشابه حسابين (Ali / ali).
+ * الأحرف حتى ما يتشابه حسابين (Ali / ali). مرة وحدة كل 7 أيام.
  */
+var USERNAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 function updateUsername(userId, username) {
     var trimmed = (username || '').trim().replace(/^@+/, '');
     if (trimmed.length < 3) return { success: false, error: 'username_too_short' };
     if (trimmed.length > 30) return { success: false, error: 'username_too_long' };
     if (!/^[\p{L}\p{N}_.]+$/u.test(trimmed)) return { success: false, error: 'username_invalid_chars' };
+    var row = db.prepare('SELECT username, username_changed_at FROM users WHERE id = ?').get(userId);
+    if (!row) return { success: false, error: 'not_found' };
+    if (row.username === trimmed) return { success: true, username: trimmed, nextChangeAt: row.username_changed_at ? row.username_changed_at + USERNAME_CHANGE_COOLDOWN_MS : null };
+    if (row.username_changed_at && now() - row.username_changed_at < USERNAME_CHANGE_COOLDOWN_MS) {
+        return { success: false, error: 'username_change_cooldown', nextChangeAt: row.username_changed_at + USERNAME_CHANGE_COOLDOWN_MS };
+    }
     var taken = db.prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE AND id != ?').get(trimmed, userId);
     if (taken) return { success: false, error: 'username_taken' };
-    db.prepare('UPDATE users SET username = ? WHERE id = ?').run(trimmed, userId);
-    return { success: true, username: trimmed };
+    var at = now();
+    db.prepare('UPDATE users SET username = ?, username_changed_at = ? WHERE id = ?').run(trimmed, at, userId);
+    return { success: true, username: trimmed, nextChangeAt: at + USERNAME_CHANGE_COOLDOWN_MS };
 }
 
 // ⚠️ يجب أن يبقى دون حد body-parser.js (MAX_BODY_BYTES = 100KB لكل جسم

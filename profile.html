@@ -470,7 +470,20 @@ document.addEventListener('DOMContentLoaded', async function() {
       username_invalid_chars: 'اسم المستخدم: حروف وأرقام و _ و . فقط، بدون مسافات أو @.',
       username_taken: 'اسم المستخدم هذا مأخوذ، جرّب اسم ثاني.'
     };
+    if (code && code.error === 'username_change_cooldown') return cooldownText(code.nextChangeAt);
     return map[code] || 'حصل خطأ، جرّب مرة ثانية.';
+  }
+
+  // تغيير اسم المستخدم مسموح مرة كل 7 أيام (auth-service.updateUsername)
+  function cooldownText(nextAt){
+    var ms = (Number(nextAt) || 0) - Date.now();
+    if (ms <= 0) return 'تقدر تغيّر اسم المستخدم الحين.';
+    var days = Math.floor(ms / 86400000), hours = Math.ceil((ms % 86400000) / 3600000);
+    if (hours === 24) { days += 1; hours = 0; }
+    var parts = [];
+    if (days) parts.push(days === 1 ? 'يوم' : days === 2 ? 'يومين' : days + ' أيام');
+    if (hours) parts.push(hours === 1 ? 'ساعة' : hours === 2 ? 'ساعتين' : hours + ' ساعات');
+    return 'تقدر تغيّر اسم المستخدم مرة كل 7 أيام — باقي ' + (parts.join(' و ') || 'أقل من ساعة') + '.';
   }
 
   function ensureEditStyles(){
@@ -614,7 +627,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         '<div class="agp-ed-field">' +
           '<label class="agp-ed-label" for="agp-ed-user"><span>اسم المستخدم (للدخول)</span><span class="agp-ed-count" data-user-count></span></label>' +
           '<input id="agp-ed-user" class="agp-ed-input" type="text" dir="ltr" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="' + (EDIT_USER_MAX + 10) + '">' +
-          '<div class="agp-ed-hint" style="margin-top:6px;text-align:start">حروف وأرقام و _ و . فقط · تسجّل دخولك فيه بعد التغيير</div>' +
+          '<div class="agp-ed-hint" style="margin-top:6px;text-align:start">حروف وأرقام و _ و . فقط · مرة كل 7 أيام · تسجّل دخولك فيه بعد التغيير</div>' +
         '</div>' +
         '<div class="agp-ed-msg" aria-live="polite"></div>' +
         '<div class="agp-ed-actions"><button type="button" class="agp-ed-btn primary" data-save>حفظ التغييرات</button><button type="button" class="agp-ed-btn ghost" data-cancel>إلغاء</button></div>' +
@@ -724,6 +737,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (userChanged) {
         chain = chain.then(function(){
           return window.AGPAuth.updateUsername(newUser).then(function(r){
+            if (r && r.error === 'username_change_cooldown') throw r;
             if (!(r && r.success)) throw (r && r.error) || 'unknown';
             p.username = r.username || newUser;
             currentUser = p.username;

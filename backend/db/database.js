@@ -438,6 +438,9 @@ db.prepare("UPDATE users SET is_super_admin = 1 WHERE email = 'aymanff66@gmail.c
 // استرجاع كلمة المرور — كود مؤقت + وقت انتهاء صلاحية. NULL = لا طلب معلّق.
 ensureColumn('users', 'password_reset_code', 'TEXT');
 ensureColumn('users', 'password_reset_expires', 'INTEGER');
+// آخر مرة غيّر فيها المستخدم اسم المستخدم من البروفايل (ms) — مرة كل 7 أيام
+// (auth-service.updateUsername). NULL = ما غيّره أبداً.
+ensureColumn('users', 'username_changed_at', 'INTEGER');
 
 // ربط اختياري بين صف دعم (supporters) وحساب مسجَّل (users.id) — NULL
 // افتراضياً. لو مربوط، تُعرَض اسم/صورة الحساب الحيّة بدل النص الثابت.
