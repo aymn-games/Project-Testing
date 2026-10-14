@@ -232,7 +232,7 @@ input:focus{outline:none}
                     <span style="font:400 46px/1 'Zain';filter:drop-shadow(0 3px 6px rgba(0,0,0,.35))">{{ t.icon }}</span>
                   </sc-if>
                   <sc-for list="{{ t.votes }}" as="v" hint-placeholder-count="0">
-                    <span title="{{ v.name }}" style="width:34px;height:34px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font:800 15px 'Zain';color:#fff;background:{{ v.av }};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);margin-inline-start:-8px;animation:voteIn .25s cubic-bezier(.2,1.4,.4,1)">{{ v.ini }}</span>
+                    <span title="{{ v.name }}" style="position:relative;overflow:hidden;width:34px;height:34px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font:800 15px 'Zain';color:#fff;background:{{ v.av }};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);margin-inline-start:-8px;animation:voteIn .25s cubic-bezier(.2,1.4,.4,1)">{{ v.ini }}<sc-if value="{{ v.photo }}" hint-placeholder-val="{{ false }}"><img src="{{ v.photo }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
                   </sc-for>
                 </div>
                 <div style="position:relative;flex-shrink:0;height:58px;border-radius:10px;display:grid;place-items:center;padding:0 8px;background:{{ t.stripBg }};box-shadow:{{ t.stripSh }}">
@@ -480,6 +480,12 @@ const avOf = n => ({av:`linear-gradient(135deg, ${hashC(n)}, ${hashC(n)}88)`, in
 const shuffle = a => { a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
 // صورة البطاقة بعد الكشف: صورتين لكل فريق (img 1|2)، وصورة للمحايد وللأسود
 const tileImg = b => b.t===-1?'images/tile-assassin.png':b.t===0?'images/tile-neutral.png':`images/tile-${b.t===1?'red':'blue'}-${b.img===2?2:1}.png`;
+// أوامر الشات: أي أرقام (عربية ٠-٩ / فارسية ۰-۹ / إنجليزية)، الرقم لازق بالكلمة أو مفصول، وفواصل (، , - و) بين الأرقام.
+// DIGITS: يحوّل الأرقام ويفصل الرقم عن الكلمة («تأكيد12» ← «تأكيد 12»، «1مدن3» ← «1 مدن 3») مع إبقاء الكلمة كما كُتبت (للتلميح).
+const DIGITS = s => String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660).replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0)
+  .replace(/(\d)(?=[^\d\s])/g,'$1 ').replace(/([^\d\s])(?=\d)/g,'$1 ').replace(/\s+/g,' ').trim();
+// CMD: نفس DIGITS + تطبيع الحروف (تأكيد = تاكيد، تخطى = تخطي) وحذف الرموز والفواصل → كلمات مفصولة بمسافة
+const CMD = s => AR(DIGITS(s).replace(/[^\p{L}\p{N}\s]/gu,' ')).split(' ').filter(w=>w&&w!=='و').join(' ');
 const mmss = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
 const HOW = [
   ['🎮 تقدر تسوي ريست للكلمات بس قبل تبدا — تأكد من كل السباي ماستر كلماتهم مرتبة، ويفضّل لكل سباي مرة وحدة ريست.','p'],
@@ -616,22 +622,22 @@ class Component extends DCLogic {
     this.setState({...this.newBoard(st),phase:'ready',hint:null,hintGiven:false,win:null,banner:null,plat:null,picks:[],bump:null,logs:{1:[],2:[]},...(keepRoles?{}:{roles:{1:{spy:null,conf:null},2:{spy:null,conf:null}}})}); }
 
   onChat(user,text,isFollower=true){
-    const S=this.state; if(!user) return; const t=AR(text), tm=this.teamOf(user);
+    const S=this.state; if(!user) return; const t=CMD(text), tm=this.teamOf(user);
     // كلمة فريق من شخص مو بالمباراة → طلب دخول (القواعد المشتركة CN.join — JOIN-RULES.md)
     const jr=!tm&&CN.join([1,2].map(k=>({keyword:S.teams[k].kw,members:S.joinReqs.filter(j=>j.team===k).map(j=>j.name)})),user,text,{followersOnly:S.followers,isFollower});
     if(jr){ if(jr.ok) this.setState(s=>({joinReqs:[...s.joinReqs.filter(j=>j.name!==user),{name:user,team:jr.k+1}]})); return; }
     if((S.phase!=='hint'&&S.phase!=='guess')||tm!==S.turn) return;
     const R=S.roles[tm];
     // الصيغة الموحّدة لكل الأوامر: [الكلمة] ثم [الرقم] — مثل: مدن 3 · تأكيد 12 · سحب 12
-    if(S.phase==='hint'){ if(user!==R.spy) return; const raw=String(text).trim().replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c));
+    if(S.phase==='hint'){ if(user!==R.spy) return; const raw=DIGITS(text);
       let m=raw.match(/^(\d{1,2})\s+(.+?)\s+(\d{1,2})$/), w, n, old=0; if(m){ old=+m[1]; w=m[2]; n=+m[3]; if(old>n) old=n; } else if((m=raw.match(/^(.+?)\s+(\d{1,2})$/))){ w=m[1]; n=+m[2]; } else if((m=raw.match(/^(\d{1,2})\s+(.+)$/))){ w=m[2]; n=+m[1]; } else return;
       w=w.trim(); if(/\s/.test(w)) return this.banner('تسولف؟ 😅 اكتب كلمة وحدة بس بالتلميح!',3000,'warn');
       return this.giveHint(n,w,old); }
     let m;
     if((m=t.match(/^(\d{1,2})$/))){ const n=+m[1]; if(n>=1&&n<=25) this.vote(user,n-1,true); return; }
-    if((m=t.match(/^سحب\s+(\d{1,2})$/))){ const n=+m[1]; if(n>=1&&n<=25) this.vote(user,n-1,false); return; }
+    if((m=t.match(/^سحب (\d{1,2})$/))){ const n=+m[1]; if(n>=1&&n<=25) this.vote(user,n-1,false); return; }
     if(user!==R.conf) return;
-    if((m=t.match(/^تاكيد((?:\s+\d{1,2})+)$/))){ const nums=m[1].trim().split(/\s+/).map(Number).filter(n=>n>=1&&n<=25); if(nums.length) this.confirm(nums); return; }
+    if((m=t.match(/^تاكيد((?: \d{1,2})+)$/))){ const nums=[...new Set(m[1].trim().split(' ').map(Number))].filter(n=>n>=1&&n<=25); if(nums.length) this.confirm(nums); return; }
     if(t==='تخطي'){ this.log(tm,'تخطى بقية التخمين','info'); this.endTurn(); }
   }
 
@@ -664,7 +670,7 @@ class Component extends DCLogic {
         log:S.logs[team].slice(0,6).map(e=>({t:e.t,c:e.kind==='good'?'#6ee7b7':e.kind==='bad'?'#fca5a5':'#e7e3ef',bg:e.kind==='good'?'rgba(16,185,129,.08)':e.kind==='bad'?'rgba(239,68,68,.08)':'rgba(255,255,255,.04)'}))}; });
     const SPARKS=Array.from({length:10},(_,k)=>{ const a=k/10*Math.PI*2, r=110+(k%3)*25; return {dx:Math.round(Math.cos(a)*r)+'px',dy:Math.round(Math.sin(a)*r*.7)+'px'}; });
     const bumpAn=i=>S.bump&&S.bump.i===i?(S.bump.k?'bounceA':'bounceB')+' .5s cubic-bezier(.3,1.4,.5,1)':null;
-    const tiles=S.board.map((b,i)=>{ const rev=b.open||b.auto, bump=bumpAn(i), base={n:i+1,w:b.w,votes:b.votes.slice(0,5).map(v=>({name:v,...avOf(v)})),icon:null,pat:null,op:1,an:bump||'none',z:bump||b.fresh?3:1,burst:false,sparks:[],burstC:'#fff',tap:()=>this.setState(s=>{ const can=s.phase==='guess'&&!b.open&&!b.auto, p=s.picks||[]; return {bump:{i,k:!(s.bump&&s.bump.k)},...(can?{picks:p.includes(i)?p.filter(x=>x!==i):[...p,i]}:{})}; }),picked:(S.picks||[]).includes(i),pickN:(S.picks||[]).indexOf(i)+1};
+    const tiles=S.board.map((b,i)=>{ const rev=b.open||b.auto, bump=bumpAn(i), base={n:i+1,w:b.w,votes:b.votes.slice(0,5).map(v=>({name:v,...avOf(v),photo:this.reg.avatar(v)||null})),icon:null,pat:null,op:1,an:bump||'none',z:bump||b.fresh?3:1,burst:false,sparks:[],burstC:'#fff',tap:()=>this.setState(s=>{ const can=s.phase==='guess'&&!b.open&&!b.auto, p=s.picks||[]; return {bump:{i,k:!(s.bump&&s.bump.k)},...(can?{picks:p.includes(i)?p.filter(x=>x!==i):[...p,i]}:{})}; }),picked:(S.picks||[]).includes(i),pickN:(S.picks||[]).indexOf(i)+1};
       if(!rev) return {...base,bg:'#fcd5b5',sh:'0 6px 0 #d9a47c, 0 14px 26px rgba(0,0,0,.35)',frame:'rgba(255,255,255,.55)',stripBg:'#fff',stripSh:'inset 0 -3px 0 rgba(0,0,0,.08)',wordC:'#2a1a10',numBg:'#2a1a10',numBd:'#fff',numC:'#fff'};
       const col=b.t===-1?{bg:'#17131f',sh:'0 6px 0 #000, 0 0 30px rgba(239,68,68,.35)',icon:'💀'}:b.t===0?{bg:'#e6d6b4',sh:'0 6px 0 #b9a47c, 0 14px 26px rgba(0,0,0,.35)',icon:'🧍'}:{bg:`linear-gradient(160deg, ${TC[b.t].c}, ${TC[b.t].dk})`,sh:`0 6px 0 ${TC[b.t].dk}, 0 14px 26px rgba(0,0,0,.35)`,icon:'🕵️'};
       const dark=b.t!==0;
