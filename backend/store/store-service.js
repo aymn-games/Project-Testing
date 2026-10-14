@@ -989,6 +989,76 @@ function getUploadSignature(input) {
     logger.log('Store: seeded default categories, streamer, plans and coupons');
 }());
 
+// تحديث الكتالوج (مرة وحدة لكل قاعدة بيانات): حذف منتجات الريس الثلاثة،
+// إضافة إطارات التصميم الموجودة صورها بالمستودع في «إطارات الأندية» و«إطارات
+// عامة»، وتوحيد سعر كل المنتجات القابلة للبيع على 17.95 (الباقات والباكجات
+// ما تتغير).
+var CATALOG_V2_PRICE = 17.95;
+var CATALOG_V2_FRAMES = [
+    ['إطارات الأندية', 'إطار الأهلي', 'frame-al-ahli.png'],
+    ['إطارات الأندية', 'إطار الأهلي الجوهرة', 'frame-club-ahli-jawahara.png'],
+    ['إطارات الأندية', 'إطار الهلال المدينة', 'frame-club-hilal-city.png'],
+    ['إطارات الأندية', 'إطار الهلال التاج', 'frame-club-hilal-crown.png'],
+    ['إطارات الأندية', 'إطار الهلال الراية', 'frame-club-hilal-flag.png'],
+    ['إطارات الأندية', 'إطار الهلال النجوم', 'frame-club-hilal-stars.png'],
+    ['إطارات الأندية', 'إطار الهلال الكأس', 'frame-club-hilal-trophy.png'],
+    ['إطارات الأندية', 'إطار الهلال الذيب', 'frame-club-hilal-wolf.png'],
+    ['إطارات الأندية', 'إطار الاتحاد التاج', 'frame-club-ittihad-crown.png'],
+    ['إطارات الأندية', 'إطار النصر التاج', 'frame-club-nassr-crown.png'],
+    ['إطارات الأندية', 'إطار النصر النسر', 'frame-club-nassr-eagle.png'],
+    ['إطارات الأندية', 'إطار النصر النخلة', 'frame-club-nassr-palm.png'],
+    ['إطارات عامة', 'إطار السعودية الدلة', 'frame-country-ksa-dallah.png'],
+    ['إطارات عامة', 'إطار السعودية الصقر', 'frame-country-ksa-falcon.png'],
+    ['إطارات عامة', 'إطار الملعب', 'frame-general-stadium.png'],
+    ['إطارات عامة', 'إطار ملاك القمر', 'frame-girls-angel-moon.png'],
+    ['إطارات عامة', 'إطار الأرنب الأزرق', 'frame-girls-bunny-blue.png'],
+    ['إطارات عامة', 'إطار تاج الورد', 'frame-girls-crown-rose.png'],
+    ['إطارات عامة', 'إطار كيتي القلوب', 'frame-girls-kitty-hearts.png'],
+    ['إطارات عامة', 'إطار كيتي الهلال', 'frame-girls-kitty-hilal.png'],
+    ['إطارات عامة', 'إطار كيتي', 'frame-girls-kitty.png'],
+    ['إطارات عامة', 'إطار التنين', 'frame-rare-dragon.png']
+];
+var CATALOG_V2_REMOVED_IMAGES = ['assets/win-cards/win-card-rais-blue.png', 'assets/elim-cards/elim-card-crystal-crown.png', 'frame-rais-sapphire.png'];
+var CATALOG_V2_REMOVED_NAMES = ['إطار فوز الريس', 'إطار عملية إقصاء', 'إطار الريس الكريستالي'];
+
+(function ensureCatalogV2() {
+    if (db.prepare("SELECT 1 FROM app_settings WHERE key = 'store_catalog_v2'").get()) return;
+    var t = now();
+    db.transaction(function () {
+        db.prepare('SELECT id, name, image_url FROM store_products').all().forEach(function (r) {
+            if (CATALOG_V2_REMOVED_IMAGES.indexOf(r.image_url) === -1 && CATALOG_V2_REMOVED_NAMES.indexOf(r.name) === -1) return;
+            db.prepare('DELETE FROM store_products WHERE id = ?').run(r.id);
+            db.prepare('DELETE FROM store_favorites WHERE product_id = ?').run(r.id);
+        });
+
+        var catIds = {};
+        function categoryId(name) {
+            if (catIds[name]) return catIds[name];
+            var row = db.prepare("SELECT id FROM store_categories WHERE name = ? AND kind = 'normal'").get(name);
+            if (!row) {
+                var order = db.prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM store_categories').get().n;
+                row = { id: Number(db.prepare("INSERT INTO store_categories (name, kind, sort_order, created_at) VALUES (?, 'normal', ?, ?)").run(name, order, t).lastInsertRowid) };
+            }
+            return (catIds[name] = row.id);
+        }
+        var insert = db.prepare(
+            "INSERT INTO store_products (category_id, name, price, badge, image_url, hidden, delivery, created_at) VALUES (?, ?, ?, '', ?, 0, 'frame', ?)"
+        );
+        // created_at تنازلي عشان يطلع أول إطار بالقائمة أول واحد بالمتجر.
+        CATALOG_V2_FRAMES.forEach(function (f, i) {
+            if (db.prepare('SELECT 1 FROM store_products WHERE image_url = ?').get(f[2])) return;
+            insert.run(categoryId(f[0]), f[1], CATALOG_V2_PRICE, f[2], t + CATALOG_V2_FRAMES.length - i);
+        });
+
+        var bundlesCat = getCategoryByKind('bundles');
+        db.prepare('UPDATE store_products SET price = ?, old_price = NULL, off_pct = NULL WHERE plan IS NULL AND bundle_items IS NULL' +
+            (bundlesCat ? ' AND (category_id IS NULL OR category_id != ' + Number(bundlesCat.id) + ')' : '')).run(CATALOG_V2_PRICE);
+
+        db.prepare("INSERT INTO app_settings (key, value) VALUES ('store_catalog_v2', ?)").run(String(t));
+    })();
+    logger.log('Store: catalog v2 applied (design frames at ' + CATALOG_V2_PRICE + ')');
+}());
+
 module.exports = {
     PLAN_KEYS: PLAN_KEYS,
     getPublicStore: getPublicStore,
