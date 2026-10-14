@@ -53,7 +53,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function normalizeArabicText(text) {
         if (typeof text !== 'string') return '';
-        return text
+        return normalizeDigits(text)
             .replace(/[\u064B-\u0652\u0670\u0640]/g, '')
             .replace(/[إأآا]/g, 'ا')
             .replace(/ى/g, 'ي')
@@ -1119,7 +1119,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (!_advantageAdvantagedPlayerId || !payload || typeof payload.text !== 'string' || !payload.id) return;
             if (payload.id !== _advantageAdvantagedPlayerId) return; // غير صاحب الأفضلية -- تجاهل
 
-            var num = parseInt(normalizeArabicText(payload.text), 10);
+            var num = parseInt(normalizeDigits(normalizeArabicText(payload.text)), 10);
             var row = el('pc-advantage-popup') && el('pc-advantage-popup').querySelector('.pc-adv-numbered-row[data-num="' + num + '"]');
             if (!row) return;
 

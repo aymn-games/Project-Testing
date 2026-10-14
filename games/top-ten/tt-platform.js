@@ -39,7 +39,10 @@
 
     // تطبيع النص (JOIN-RULES §1) — نفسه لكلمة الدخول ومطابقة الإجابات.
     function norm(s) {
+        // الأرقام العربية/الفارسية = نفس الإنجليزية
         return String(s == null ? '' : s).trim()
+            .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
+            .replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); })
             .replace(/[ً-ْـ]/g, '')
             .replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
             .toLowerCase().replace(/\s+/g, ' ');

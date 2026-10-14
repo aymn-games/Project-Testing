@@ -53,7 +53,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function normalizeArabicText(text) {
         if (typeof text !== 'string') return '';
-        return text
+        return normalizeDigits(text)
             .replace(/[\u064B-\u0652\u0670\u0640]/g, '')
             .replace(/[إأآا]/g, 'ا')
             .replace(/ى/g, 'ي')
