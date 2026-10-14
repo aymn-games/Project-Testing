@@ -5,10 +5,10 @@
  * كل الحسابات المالية هنا بالسيرفر (الأسعار، الخصومات، أكواد الخصم،
  * الإجمالي، إنشاء الطلب، توزيع سعر الباكج على منتجاته) — الواجهة تعرض فقط.
  *
- * الدفع: لا توجد بوابة دفع حقيقية بعد. checkout() يكمّل الطلب فوراً
- * (دفع تجريبي) ومقفول افتراضياً لغير الأدمن — راجع config.storeMockPayments.
- * عند ربط بوابة حقيقية (Moyasar/Tap/HyperPay): checkout ينشئ طلباً
- * 'pending' ويرجّع رابط الدفع، و webhook البوابة يستدعي completeOrder().
+ * الدفع: ميسّر أو بيلينك (activeGateway). checkout ينشئ طلباً 'pending'
+ * ويرجّع رابط صفحة الدفع، والطلب ما يكتمل إلا بعد التحقق من البوابة نفسها
+ * (verifyOrder). بدون بوابة مفعّلة: دفع تجريبي مقفول لغير الأدمن
+ * (راجع config.storeMockPayments).
  *
  * التسليم: بعد اكتمال الطلب كل منتج (وكل منتج داخل باكج) ينضاف لجدول
  * store_inventory، وحسب delivery المنتج ينضاف لمقتنيات المستخدم الفعلية
@@ -23,6 +23,7 @@ var config = require('../config');
 var logger = require('../utils/logger');
 var collectiblesService = require('../collectibles/collectibles-service');
 var paylink = require('./paylink-client');
+var moyasar = require('./moyasar-client');
 
 var FIRST_ORDER_ID = 482100;
 var MAX_NAME_LENGTH = 80;
@@ -151,24 +152,44 @@ function getPublicStore(user) {
         products: listProductRows().map(mapProduct),
         favorites: favorites,
         paymentsEnabled: canPay(user),
-        // بيلينك مفعّل = الدفع يتحوّل لصفحة بيلينك ويحتاج رقم جوال
-        gateway: usePaylinkFor(user) ? 'paylink' : 'mock'
+        // بوابة مفعّلة = الدفع يتحوّل لصفحة البوابة ويحتاج رقم جوال
+        gateway: useGatewayFor(user) ? activeGateway() : 'mock'
     };
 }
 
 function isAdmin(user) { return !!(user && user.role === 'admin'); }
 
+var GATEWAYS = { moyasar: moyasar, paylink: paylink };
+
+/** البوابة المستخدمة: PAYMENT_GATEWAY لو محددة ومفعّلة، وإلا ميسّر ثم بيلينك. */
+function activeGateway() {
+    var wanted = String(config.paymentGateway || '').toLowerCase();
+    if (GATEWAYS[wanted]) return GATEWAYS[wanted].isEnabled() ? wanted : null;
+    if (moyasar.isEnabled()) return 'moyasar';
+    if (paylink.isEnabled()) return 'paylink';
+    return null;
+}
+
+function gatewayEnv() {
+    var g = activeGateway();
+    return g ? GATEWAYS[g].env() : null;
+}
+
 /**
- * بيلينك لهذا المستخدم؟ بيئة التجربة (test) للأدمن فقط — بطاقات بيلينك
+ * البوابة لهذا المستخدم؟ بيئة التجربة (test) للأدمن فقط — البطاقات
  * التجريبية تنجح بدون فلوس حقيقية، فلو انفتحت للكل ياخذون منتجات مجاناً.
  */
-function usePaylinkFor(user) {
-    if (paylink.env() === 'production') return true;
-    return paylink.env() === 'test' && (isAdmin(user) || config.storeMockPayments);
+function useGatewayFor(user) {
+    var e = gatewayEnv();
+    if (e === 'production') return true;
+    if (e === 'live-admin') return isAdmin(user); // دفع حقيقي — للأدمن فقط
+    return e === 'test' && (isAdmin(user) || config.storeMockPayments);
 }
 
 function canPay(user) {
-    return !!(paylink.env() === 'production' || config.storeMockPayments || isAdmin(user));
+    var e = gatewayEnv();
+    if (e === 'live-admin') return isAdmin(user); // ولا حتى الدفع التجريبي لغير الأدمن
+    return !!(e === 'production' || config.storeMockPayments || isAdmin(user));
 }
 
 /* ----------------------------------------------------------------------
@@ -368,7 +389,7 @@ function checkout(user, input) {
     var method = PAY_METHODS.indexOf(input.method) !== -1 ? input.method : PAY_METHODS[0];
 
     if (!canPay(user)) return Promise.resolve(fail('payments_not_configured'));
-    if (!usePaylinkFor(user)) {
+    if (!useGatewayFor(user)) {
         var mockPriced = priceCart(input.items, input.coupon ? cleanText(input.coupon, 40) : '');
         if (!mockPriced.success) return Promise.resolve(mockPriced);
         var mockId = db.transaction(function () {
@@ -388,6 +409,38 @@ function checkout(user, input) {
 
     var orderId = insertOrder(user.id, priced, method, 'pending', { mobile: mobile });
     var names = priced.rows.map(function (r) { return r.name; }).join('، ');
+    var gateway = activeGateway();
+    db.prepare('UPDATE store_orders SET payment_gateway = ? WHERE id = ?').run(gateway, orderId);
+    var created = gateway === 'moyasar' ? createMoyasarInvoice(user, orderId, priced, names, mobile)
+        : createPaylinkInvoice(user, orderId, priced, names, mobile);
+    return created.then(function (redirectUrl) {
+        return { success: true, orderId: orderId, redirectUrl: redirectUrl };
+    }, function (err) {
+        db.prepare("UPDATE store_orders SET status = 'failed' WHERE id = ? AND status = 'pending'").run(orderId);
+        logger.error('Store: ' + gateway + ' invoice failed for order #' + orderId + ':', err && err.message, err && err.detail);
+        var out = fail('payment_gateway_error');
+        // سبب رفض البوابة بالضبط — للأدمن فقط (للتشخيص)، العميل يشوف الرسالة العامة.
+        if (isAdmin(user)) out.detail = (err && (err.detail || err.message)) || 'unknown';
+        return out;
+    });
+}
+
+function createMoyasarInvoice(user, orderId, priced, names, mobile) {
+    return moyasar.createInvoice({
+        amount: priced.total,
+        description: ('طلب متجر ألعاب أيمن #' + orderId + ' — ' + names).slice(0, 250),
+        callbackUrl: String(config.publicApiBaseUrl || '').replace(/\/+$/, '') + '/api/store/moyasar/webhook',
+        successUrl: storeUrl('?order=' + orderId),
+        backUrl: storeUrl('?order=' + orderId),
+        metadata: { order_id: String(orderId), user_id: String(user.id), mobile: mobile }
+    }).then(function (inv) {
+        db.prepare('UPDATE store_orders SET moyasar_invoice_id = ?, payment_ref = ? WHERE id = ?').run(inv.id, inv.id, orderId);
+        logger.log('Store: order #' + orderId + ' pending Moyasar payment (' + priced.total + ' SAR, ' + moyasar.env() + ')');
+        return inv.url;
+    });
+}
+
+function createPaylinkInvoice(user, orderId, priced, names, mobile) {
     return paylink.addInvoice({
         amount: priced.total,
         orderNumber: String(orderId),
@@ -402,11 +455,7 @@ function checkout(user, input) {
     }).then(function (inv) {
         db.prepare('UPDATE store_orders SET paylink_transaction_no = ?, payment_ref = ? WHERE id = ?').run(inv.transactionNo, inv.transactionNo, orderId);
         logger.log('Store: order #' + orderId + ' pending Paylink payment (' + priced.total + ' SAR, ' + paylink.env() + ')');
-        return { success: true, orderId: orderId, redirectUrl: inv.url };
-    }, function (err) {
-        db.prepare("UPDATE store_orders SET status = 'failed' WHERE id = ? AND status = 'pending'").run(orderId);
-        logger.error('Store: Paylink invoice failed for order #' + orderId + ':', err && err.message);
-        return fail('payment_gateway_error');
+        return inv.url;
     });
 }
 
@@ -418,6 +467,7 @@ function checkout(user, input) {
 function verifyOrder(orderId) {
     var order = db.prepare('SELECT * FROM store_orders WHERE id = ?').get(orderId);
     if (!order) return Promise.resolve('not_found');
+    if (order.moyasar_invoice_id) return verifyMoyasarOrder(order);
     if (order.status !== 'pending' || !order.paylink_transaction_no || !paylink.isEnabled()) return Promise.resolve(order.status);
     return paylink.getInvoice(order.paylink_transaction_no).then(function (inv) {
         var status = inv.orderStatus.toLowerCase();
@@ -436,6 +486,30 @@ function verifyOrder(orderId) {
         return 'pending';
     }, function (err) {
         logger.error('Store: Paylink verify failed for order #' + orderId + ':', err && err.message);
+        return 'pending';
+    });
+}
+
+/** نفس verifyOrder لكن من ميسّر: الفاتورة 'paid' وبنفس المبلغ والعملة. */
+function verifyMoyasarOrder(order) {
+    var orderId = order.id;
+    if (order.status !== 'pending' || !moyasar.isEnabled()) return Promise.resolve(order.status);
+    return moyasar.getInvoice(order.moyasar_invoice_id).then(function (inv) {
+        if (inv.status === 'paid') {
+            if (Math.abs(inv.amount - order.total) > 0.01 || inv.currency !== 'SAR') {
+                logger.error('Store: Moyasar amount mismatch for order #' + orderId + ' (paid ' + inv.amount + ' ' + inv.currency + ', expected ' + order.total + ')');
+                return 'pending';
+            }
+            if (finalizeOrder(orderId)) logger.log('Store: order #' + orderId + ' paid via Moyasar and delivered');
+            return 'completed';
+        }
+        if (inv.status === 'canceled' || inv.status === 'cancelled' || inv.status === 'expired' || inv.status === 'failed') {
+            db.prepare("UPDATE store_orders SET status = 'failed' WHERE id = ? AND status = 'pending'").run(orderId);
+            return 'failed';
+        }
+        return 'pending';
+    }, function (err) {
+        logger.error('Store: Moyasar verify failed for order #' + orderId + ':', err && err.message);
         return 'pending';
     });
 }
@@ -464,6 +538,22 @@ function handlePaylinkWebhook(body) {
     var tx = cleanText(body.transactionNo || body.transaction_no || '', 60);
     var row = orderId ? db.prepare('SELECT id FROM store_orders WHERE id = ?').get(orderId)
         : (tx ? db.prepare('SELECT id FROM store_orders WHERE paylink_transaction_no = ?').get(tx) : null);
+    if (!row) return Promise.resolve({ success: true, ignored: true });
+    return verifyOrder(row.id).then(function (status) { return { success: true, status: status }; });
+}
+
+/**
+ * إشعار ميسّر (callback_url للفاتورة أو Webhook من لوحة ميسّر). نفس الفكرة:
+ * نستخرج رقم الفاتورة/الطلب فقط ونتحقق من ميسّر مباشرة.
+ */
+function handleMoyasarWebhook(body) {
+    body = body || {};
+    var data = body.data && typeof body.data === 'object' ? body.data : body;
+    var meta = data.metadata || {};
+    var invoiceId = cleanText(data.invoice_id || (body.type ? '' : data.id) || '', 80);
+    var orderId = toId(meta.order_id);
+    var row = invoiceId ? db.prepare('SELECT id FROM store_orders WHERE moyasar_invoice_id = ?').get(invoiceId) : null;
+    if (!row && orderId) row = db.prepare('SELECT id FROM store_orders WHERE id = ? AND moyasar_invoice_id IS NOT NULL').get(orderId);
     if (!row) return Promise.resolve({ success: true, ignored: true });
     return verifyOrder(row.id).then(function (status) { return { success: true, status: status }; });
 }
@@ -984,6 +1074,85 @@ function getUploadSignature(input) {
     logger.log('Store: seeded default categories, streamer, plans and coupons');
 }());
 
+// تحديث الكتالوج (مرة وحدة لكل قاعدة بيانات): حذف منتجات الريس الثلاثة،
+// إضافة إطارات التصميم الموجودة صورها بالمستودع في «إطارات الأندية» و«إطارات
+// عامة»، وتوحيد سعر كل المنتجات القابلة للبيع على 17.95 (الباقات والباكجات
+// ما تتغير).
+var CATALOG_V2_PRICE = 17.95;
+var CATALOG_V2_FRAMES = [
+    ['إطارات الأندية', 'إطار الأهلي', 'frame-al-ahli.png'],
+    ['إطارات الأندية', 'إطار الأهلي الجوهرة', 'frame-club-ahli-jawahara.png'],
+    ['إطارات الأندية', 'إطار الهلال المدينة', 'frame-club-hilal-city.png'],
+    ['إطارات الأندية', 'إطار الهلال التاج', 'frame-club-hilal-crown.png'],
+    ['إطارات الأندية', 'إطار الهلال الراية', 'frame-club-hilal-flag.png'],
+    ['إطارات الأندية', 'إطار الهلال النجوم', 'frame-club-hilal-stars.png'],
+    ['إطارات الأندية', 'إطار الهلال الكأس', 'frame-club-hilal-trophy.png'],
+    ['إطارات الأندية', 'إطار الهلال الذيب', 'frame-club-hilal-wolf.png'],
+    ['إطارات الأندية', 'إطار الاتحاد التاج', 'frame-club-ittihad-crown.png'],
+    ['إطارات الأندية', 'إطار النصر التاج', 'frame-club-nassr-crown.png'],
+    ['إطارات الأندية', 'إطار النصر النسر', 'frame-club-nassr-eagle.png'],
+    ['إطارات الأندية', 'إطار النصر النخلة', 'frame-club-nassr-palm.png'],
+    ['إطارات عامة', 'إطار السعودية الدلة', 'frame-country-ksa-dallah.png'],
+    ['إطارات عامة', 'إطار السعودية الصقر', 'frame-country-ksa-falcon.png'],
+    ['إطارات عامة', 'إطار الملعب', 'frame-general-stadium.png'],
+    ['إطارات عامة', 'إطار ملاك القمر', 'frame-girls-angel-moon.png'],
+    ['إطارات عامة', 'إطار الأرنب الأزرق', 'frame-girls-bunny-blue.png'],
+    ['إطارات عامة', 'إطار تاج الورد', 'frame-girls-crown-rose.png'],
+    ['إطارات عامة', 'إطار كيتي القلوب', 'frame-girls-kitty-hearts.png'],
+    ['إطارات عامة', 'إطار كيتي الهلال', 'frame-girls-kitty-hilal.png'],
+    ['إطارات عامة', 'إطار كيتي', 'frame-girls-kitty.png'],
+    ['إطارات عامة', 'إطار التنين', 'frame-rare-dragon.png']
+];
+var CATALOG_V2_REMOVED_IMAGES = ['assets/win-cards/win-card-rais-blue.png', 'assets/elim-cards/elim-card-crystal-crown.png', 'frame-rais-sapphire.png'];
+var CATALOG_V2_REMOVED_NAMES = ['إطار فوز الريس', 'إطار عملية إقصاء', 'إطار الريس الكريستالي'];
+
+(function ensureCatalogV2() {
+    if (db.prepare("SELECT 1 FROM app_settings WHERE key = 'store_catalog_v2'").get()) return;
+    var t = now();
+    db.transaction(function () {
+        db.prepare('SELECT id, name, image_url FROM store_products').all().forEach(function (r) {
+            if (CATALOG_V2_REMOVED_IMAGES.indexOf(r.image_url) === -1 && CATALOG_V2_REMOVED_NAMES.indexOf(r.name) === -1) return;
+            db.prepare('DELETE FROM store_products WHERE id = ?').run(r.id);
+            db.prepare('DELETE FROM store_favorites WHERE product_id = ?').run(r.id);
+        });
+
+        var catIds = {};
+        function categoryId(name) {
+            if (catIds[name]) return catIds[name];
+            var row = db.prepare("SELECT id FROM store_categories WHERE name = ? AND kind = 'normal'").get(name);
+            if (!row) {
+                var order = db.prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM store_categories').get().n;
+                row = { id: Number(db.prepare("INSERT INTO store_categories (name, kind, sort_order, created_at) VALUES (?, 'normal', ?, ?)").run(name, order, t).lastInsertRowid) };
+            }
+            return (catIds[name] = row.id);
+        }
+        var insert = db.prepare(
+            "INSERT INTO store_products (category_id, name, price, badge, image_url, hidden, delivery, created_at) VALUES (?, ?, ?, '', ?, 0, 'frame', ?)"
+        );
+        // created_at تنازلي عشان يطلع أول إطار بالقائمة أول واحد بالمتجر.
+        CATALOG_V2_FRAMES.forEach(function (f, i) {
+            if (db.prepare('SELECT 1 FROM store_products WHERE image_url = ?').get(f[2])) return;
+            insert.run(categoryId(f[0]), f[1], CATALOG_V2_PRICE, f[2], t + CATALOG_V2_FRAMES.length - i);
+        });
+
+        var bundlesCat = getCategoryByKind('bundles');
+        db.prepare('UPDATE store_products SET price = ?, old_price = NULL, off_pct = NULL WHERE plan IS NULL AND bundle_items IS NULL' +
+            (bundlesCat ? ' AND (category_id IS NULL OR category_id != ' + Number(bundlesCat.id) + ')' : '')).run(CATALOG_V2_PRICE);
+
+        db.prepare("INSERT INTO app_settings (key, value) VALUES ('store_catalog_v2', ?)").run(String(t));
+    })();
+    logger.log('Store: catalog v2 applied (design frames at ' + CATALOG_V2_PRICE + ')');
+}());
+
+// حذف الاستريمر «الريس» من المتجر (مرة وحدة) — نفس حذفه من لوحة الإدارة.
+(function removeRayesStreamer() {
+    if (db.prepare("SELECT 1 FROM app_settings WHERE key = 'store_rayes_removed'").get()) return;
+    db.prepare("SELECT id FROM store_streamers WHERE tiktok_user = 'alrayes' OR name = 'الريس'").all().forEach(function (s) {
+        deleteStreamer({ id: s.id });
+    });
+    db.prepare("INSERT INTO app_settings (key, value) VALUES ('store_rayes_removed', ?)").run(String(now()));
+}());
+
 module.exports = {
     PLAN_KEYS: PLAN_KEYS,
     getPublicStore: getPublicStore,
@@ -992,6 +1161,7 @@ module.exports = {
     checkout: checkout,
     getOrderStatus: getOrderStatus,
     handlePaylinkWebhook: handlePaylinkWebhook,
+    handleMoyasarWebhook: handleMoyasarWebhook,
     listMyOrders: listMyOrders,
     setFavorite: setFavorite,
     getStreamerStats: getStreamerStats,

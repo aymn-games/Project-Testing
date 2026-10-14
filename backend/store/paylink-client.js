@@ -6,6 +6,7 @@
  *                     التجريبية العامة (مفاتيح الحساب الحقيقية ما تشتغل فيها).
  * PAYLINK_ENV=production → restapi.paylink.sa بمفاتيح الحساب
  *                     (PAYLINK_API_ID / PAYLINK_SECRET_KEY).
+ * PAYLINK_ENV=live-admin → نفس production (دفع حقيقي) لكن للأدمن فقط.
  * غير ذلك (فارغ) → بيلينك غير مفعّل والمتجر يرجع للدفع التجريبي القديم.
  */
 
@@ -14,7 +15,7 @@
 var config = require('../config');
 var logger = require('../utils/logger');
 
-var URLS = { test: 'https://restpilot.paylink.sa', production: 'https://restapi.paylink.sa' };
+var URLS = { test: 'https://restpilot.paylink.sa', production: 'https://restapi.paylink.sa', 'live-admin': 'https://restapi.paylink.sa' };
 // مفاتيح بيئة التجربة العامة المنشورة من بيلينك نفسها.
 var TEST_API_ID = 'APP_ID_1123453311';
 var TEST_SECRET_KEY = '0662abb5-13c7-38ab-cd12-236e58f43766';
@@ -23,7 +24,11 @@ var TIMEOUT_MS = 20000;
 function env() {
     var e = String(config.paylinkEnv || '').toLowerCase();
     if (e === 'test') return 'test';
-    if ((e === 'production' || e === 'prod' || e === 'live') && config.paylinkApiId && config.paylinkSecretKey) return 'production';
+    var hasKeys = !!(config.paylinkApiId && config.paylinkSecretKey);
+    if ((e === 'production' || e === 'prod' || e === 'live') && hasKeys) return 'production';
+    // live-admin: سيرفر بيلينك الحقيقي بمفاتيح الحساب، بس الدفع للأدمن فقط
+    // (تجربة دفع حقيقية قبل فتح المتجر للكل).
+    if (e === 'live-admin' && hasKeys) return 'live-admin';
     return null;
 }
 
@@ -51,7 +56,10 @@ function call(method, path, body, token) {
             try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
             if (!res.ok) {
                 logger.error('Paylink: ' + method + ' ' + path + ' failed with HTTP ' + res.status + ': ' + String(text).slice(0, 300));
-                throw new Error('paylink_http_' + res.status);
+                var err = new Error('paylink_http_' + res.status);
+                // نص رد بيلينك (للتشخيص — يُعرض للأدمن فقط)
+                err.detail = path + ' → HTTP ' + res.status + ': ' + String(text).slice(0, 300);
+                throw err;
             }
             return data;
         });
@@ -82,7 +90,12 @@ function addInvoice(invoice) {
     return authenticate().then(function (token) {
         return call('POST', '/api/addInvoice', Object.assign({ currency: 'SAR', displayPending: true }, invoice), token);
     }).then(function (data) {
-        if (!data || !data.url || !data.transactionNo) throw new Error('paylink_invoice_failed');
+        if (!data || !data.url || !data.transactionNo) {
+            var err = new Error('paylink_invoice_failed');
+            err.detail = '/api/addInvoice → ' + JSON.stringify(data).slice(0, 300);
+            logger.error('Paylink: unexpected addInvoice response: ' + err.detail);
+            throw err;
+        }
         return { url: data.url, transactionNo: String(data.transactionNo) };
     });
 }
