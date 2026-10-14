@@ -51,7 +51,10 @@ function call(method, path, body, token) {
             try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
             if (!res.ok) {
                 logger.error('Paylink: ' + method + ' ' + path + ' failed with HTTP ' + res.status + ': ' + String(text).slice(0, 300));
-                throw new Error('paylink_http_' + res.status);
+                var err = new Error('paylink_http_' + res.status);
+                // نص رد بيلينك (للتشخيص — يُعرض للأدمن فقط)
+                err.detail = path + ' → HTTP ' + res.status + ': ' + String(text).slice(0, 300);
+                throw err;
             }
             return data;
         });
@@ -82,7 +85,12 @@ function addInvoice(invoice) {
     return authenticate().then(function (token) {
         return call('POST', '/api/addInvoice', Object.assign({ currency: 'SAR', displayPending: true }, invoice), token);
     }).then(function (data) {
-        if (!data || !data.url || !data.transactionNo) throw new Error('paylink_invoice_failed');
+        if (!data || !data.url || !data.transactionNo) {
+            var err = new Error('paylink_invoice_failed');
+            err.detail = '/api/addInvoice → ' + JSON.stringify(data).slice(0, 300);
+            logger.error('Paylink: unexpected addInvoice response: ' + err.detail);
+            throw err;
+        }
         return { url: data.url, transactionNo: String(data.transactionNo) };
     });
 }
