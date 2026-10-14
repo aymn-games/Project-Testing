@@ -552,33 +552,19 @@ const fmt = n => String(Math.round(n*10)/10);
 const nw = s => String(s).trim().replace(/\s+/g,' ').toLowerCase();
 const rand = a => a[Math.floor(Math.random()*a.length)];
 const AR = s => String(s).replace(/[\u064B-\u0652\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').toLowerCase().trim();
-const STOP = new Set(['و','يا','هلا','هلا والله','والله','ههه','هههه','ههههه','لول','شو','وش','ايش','كيف','ليش','متى','وين','مين','الحين','تم','اوك','اوكي','لا','نعم','ايوه','اي','لا لا','حلو','زين','تمام','يلا','يالله','سلام','السلام','عليكم','مرحبا','هاي','باي','شكرا','الله','ماشاء','ابي','ابغى','انا','انت','هو','هي','احنا','صح','غلط','بس','مره','مرة','جد','طيب','خلاص','كذا','هذا','هذي','الحرف','حرف','وقت','دقيقة','بسرعة','ياخي','ياشباب','حبيبي']);
-// يقرأ رسالة الشات: هل هي إجابة؟ وإذا نعم يحط كل كلمة بفئتها حتى لو الترتيب مخربط.
-function classify(text, L, rc, dict){
-  const raw=String(text||'').trim(); if(!raw) return null;
-  const forced=/^[-–—]/.test(raw), l=AR(L);
-  const toks=raw.replace(/^[\s\-–—]+/,'').split(/[\s،,\-–—.!؟?:;]+/).filter(t=>t&&t!=='و');
-  if(!toks.length||toks.length>rc.length*3+2) return null;
-  const starts=w=>{ const n=AR(w); return n.startsWith(l)||(n.startsWith('ال')&&n.slice(2).startsWith(l)); };
-  const look=w=>{ const n=AR(w), keys=[n, n.replace(/^ال/,''), n.replace(/^و/,''), n.replace(/^وال/,'')]; for(const k of keys){ const c=dict.get(k); if(c) return {c,k}; } return null; };
-  const items=[]; let i=0;
-  while(i<toks.length){ let hit=null, len=1;
-    for(let n=Math.min(3,toks.length-i);n>=1;n--){ const ph=toks.slice(i,i+n).join(' '), f=look(ph); if(f){ hit={w:ph,cats:[...f.c].filter(c=>rc.includes(c))}; len=n; break; } }
-    if(!hit){ let w=toks[i]; if(AR(w).startsWith('و')&&l!=='و'&&starts(w.slice(1))) w=w.slice(1); hit={w,cats:[]}; }
-    items.push(hit); i+=len; }
-  const good=items.filter(x=>!STOP.has(AR(x.w))&&!/(.)\1\1/.test(AR(x.w))&&(starts(x.w)||x.cats.length));
-  const known=good.filter(x=>x.cats.length&&starts(x.w)).length, ratio=good.length/Math.max(1,items.length);
-  if(!forced&&!known&&!(good.length&&ratio>=.6)) return null;
-  if(!good.length) return null;
-  const n=rc.length, slots=Array(n).fill(null), K=good.filter(x=>x.cats.length&&starts(x.w));
-  let best=[], cur=[];
-  (function rec(j,used){ if(j===K.length){ if(cur.filter(x=>x!=null).length>best.filter(x=>x!=null).length) best=cur.slice(); return; }
-    for(const c of K[j].cats){ const k=rc.indexOf(c); if(!used.has(k)){ used.add(k); cur[j]=k; rec(j+1,used); used.delete(k); } }
-    cur[j]=null; rec(j+1,used); })(0,new Set());
-  const un=[];
-  K.forEach((x,j)=>{ if(best[j]!=null) slots[best[j]]={w:x.w,alt:x.cats.filter(c=>c!==rc[best[j]]).length>0}; else un.push(x.w); });
-  good.filter(x=>!K.includes(x)).forEach(x=>un.push(x.w));
-  return {slots,un,strong:forced||known>0};
+// رسالة الإجابة لازم تبدأ بـ «-» (أي رسالة بدونها سوالف وتنتجاهل). الكلمات
+// تنحط بالفئات بنفس ترتيب كتابتها: الأولى للفئة الأولى المفعّلة، والثانية
+// للثانية… «؟» أو «0» مكان فئة = تخطّيها. الكلمات الزايدة عن عدد الفئات
+// تروح لـ«كلمات ما عرفنا فئتها» والمضيف يحطها بالمراجعة.
+const SKIP = new Set(['؟','?','0','٠','x','×']);
+function parseAnswer(text, n){
+  const raw=String(text||'').trim(); if(!/^[-–—]/.test(raw)) return null;
+  const toks=raw.replace(/^[\s\-–—]+/,'').split(/[\s،,\-–—.!:;]+/).filter(t=>t&&t!=='و');
+  if(!toks.length) return null;
+  const a=Array(n).fill(''), un=[];
+  toks.forEach((t,k)=>{ if(k<n){ if(!SKIP.has(t)) a[k]=t; } else if(!SKIP.has(t)) un.push(t); });
+  if(!a.some(Boolean)&&!un.length) return null;
+  return {a,un:un.slice(0,6)};
 }
 
 class Component extends DCLogic {
@@ -596,7 +582,6 @@ class Component extends DCLogic {
     this.fit=()=>this.setState({narrow:innerWidth<820,scale:Math.min(innerWidth/1920,(innerHeight-80)/1000)}); this.fit(); addEventListener('resize',this.fit);
     // الشات من البث المتصل بمكتبة الألعاب (adapters/agp-tiktok-adapter.js)
     WC.connect(); this.unsub=WC.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower));
-    this.dict=new Map(); import(new URL('letters-dict.js',location.href).href).then(m=>{ const d=new Map(); m.DICT.forEach((block,ci)=>{ const words=[...block.split(/\s+/), ...m.MULTI.filter(p=>block.includes(p))]; words.forEach(w=>w.split('|').forEach(v=>{ const k=AR(v.replace(/_/g,' ')); if(!k) return; if(!d.has(k)) d.set(k,new Set()); d.get(k).add(ci); if(k.includes(' ')){ const k3=k.replace(/\s+/g,''); if(!d.has(k3)) d.set(k3,new Set()); d.get(k3).add(ci); } const k2=k.replace(/^ال/,''); if(k2!==k){ if(!d.has(k2)) d.set(k2,new Set()); d.get(k2).add(ci); } })); }); this.dict=d; this.wordsByCat=m.DICT.map(b=>b.split(/\s+/).filter(Boolean)); }).catch(()=>{});
   }
   componentWillUnmount(){ removeEventListener('resize',this.fit); this.unsub?.(); this.stopVid(); clearInterval(this.iv); clearInterval(this.rv); clearTimeout(this.tt); }
   stopVid(){ const v=this._wv; if(v){ try{ v.pause(); }catch(e){} } }
@@ -625,27 +610,15 @@ class Component extends DCLogic {
     },60);
   }
   endRound(){ if(this.state.phase!=='play') return; clearInterval(this.iv); this.setState({phase:'review',helpOpen:false}); [330,262].forEach((f,i)=>setTimeout(()=>this.tone(f,.3,'sawtooth',.05),i*160)); }
-  // strong = فيها كلمة معروفة من القاموس (أو تبدأ بـ "-")، weak = كلمات تبدأ بالحرف بس ما نعرفها
-  //  • بعد إجابة strong: أي رسالة weak (سوالف) تنتجاهل، ورسالة strong جديدة تحدّث الفئات اللي فيها بس
-  //  • إذا المسجّل weak (سالفة انحسبت غلط) وجات رسالة strong: تنمسح وتنحط الإجابة الحقيقية مكانها
+  // كل رسالة إجابة جديدة (تبدأ بـ «-») تستبدل إجابة اللاعب السابقة كاملة،
+  // وترتيبه بالمراجعة يبقى حسب وصول أول إجابة منه.
   onChat(user,text,isFollower=true){
     const S=this.state;
     if(S.joinOpen&&user&&WC.norm(text)===WC.norm(S.keyword)){ if(!S.ever.includes(user)&&S.players.length<S.maxP&&(!this.cfg().followers||isFollower)){ this.setState(s=>({players:[...s.players,user],ever:[...s.ever,user],joiners:[...s.joiners,user]})); this.tone(880,.12,'triangle'); } return; }
     if(S.phase!=='play'||!user||!S.players.includes(user)) return;
-    const r=classify(text,S.letter,S.roundCats,this.dict||new Map()); if(!r||(r.slots.every(x=>!x)&&!r.un.length)) return;
-    this.setState(s=>{ const n=s.roundCats.length, prev=s.answers[user];
-      const fresh=()=>({a:Array(n).fill(''),alt:Array(n).fill(false),un:[]});
-      const size=e=>e.a.filter(Boolean).length+e.un.length;
-      let base, order=prev?prev.order:s.seq, seq=prev?s.seq:s.seq+1;
-      if(!prev) base=fresh();
-      else if(prev.strong&&!r.strong) return null;
-      else if(!prev.strong&&r.strong){ base=fresh(); order=s.seq; seq=s.seq+1; }
-      else if(!prev.strong&&!r.strong){ if(r.slots.filter(Boolean).length+r.un.length<=size(prev)) return null; base=fresh(); }
-      else base={a:prev.a.slice(),alt:prev.alt.slice(),un:prev.un.slice()};
-      r.slots.forEach((x,k)=>{ if(x){ base.a[k]=x.w; base.alt[k]=x.alt; base.un=base.un.filter(w=>AR(w)!==AR(x.w)); } });
-      r.un.forEach(w=>{ if(!base.a.some(v=>AR(v)===AR(w))&&!base.un.some(v=>AR(v)===AR(w))) base.un.push(w); });
-      const acc=prev&&prev.strong&&r.strong?s.acc:{...s.acc,[user]:[]};
-      return {answers:{...s.answers,[user]:{order,...base,un:base.un.slice(-6),strong:r.strong||(prev&&prev.strong)}},seq,acc}; });
+    const r=parseAnswer(text,S.roundCats.length); if(!r) return;
+    this.setState(s=>{ const prev=s.answers[user], n=s.roundCats.length;
+      return {answers:{...s.answers,[user]:{order:prev?prev.order:s.seq,a:r.a,alt:Array(n).fill(false),un:r.un,strong:true}},seq:prev?s.seq:s.seq+1,acc:{...s.acc,[user]:[]}}; });
   }
   editAns(name,fn){ this.setState(s=>{ const e=s.answers[name]; if(!e) return null; const x={...e,a:e.a.slice(),alt:e.alt.slice(),un:e.un.slice()}, acc=(s.acc[name]||[]).slice(); fn(x,acc); return {answers:{...s.answers,[name]:x},acc:{...s.acc,[name]:acc},mv:null}; }); }
   moveCell(name,k,k2){ this.editAns(name,(x,acc)=>{ [x.a[k],x.a[k2]]=[x.a[k2],x.a[k]]; x.alt[k]=x.alt[k2]=false; acc[k]=acc[k2]=false; }); }
@@ -709,8 +682,8 @@ class Component extends DCLogic {
     const board=ranked.map(([name,pts],i)=>({name,pts:fmt(pts),rank:i+1,...this.av(name),accent:accents[i]||'#a78bfa',ptsC:i===0?'#fde68a':'#f4f2f8',
       bg:i===0?'linear-gradient(90deg, rgba(251,191,36,.18), rgba(251,191,36,.04))':'rgba(255,255,255,.03)',bd:i===0?'rgba(251,191,36,.4)':'rgba(255,255,255,.06)'}));
     const rcNames=S.roundCats.map(i=>CATS[i][0]), L=S.letter;
-    const hint=rcNames.length===1?`اكتبوا بالشات كلمة "${rcNames[0]}" تبدأ بحرف "${L}"`
-      :`اكتبوا بالشات إجاباتكم (${rcNames.join('، ')}) بأي ترتيب — كلها تبدأ بحرف "${L}"`;
+    const hint=rcNames.length===1?`اكتبوا بالشات «-» ثم كلمة "${rcNames[0]}" تبدأ بحرف "${L}"`
+      :`اكتبوا بالشات «-» ثم إجاباتكم بهذا الترتيب: ${rcNames.join('، ')} — كلها تبدأ بحرف "${L}"`;
     const nAns=Object.keys(S.answers).filter(n=>S.players.includes(n)).length, urgent=isPlay&&S.left<=10;
     const curSel=S.cats.map((on,i)=>on?i:-1).filter(i=>i>=0).join(), rows=isReview?this.review():[];
     const pl=S.plat||{}, platMsg=pl.st==='nolink'?'لا يوجد حساب مرتبط بهذا اللاعب على المنصة بعد':pl.st==='error'?'تعذّر جلب نقاط المنصة الآن':pl.st==='wait'?'جارٍ جلب نقاط المنصة…':null;
@@ -741,9 +714,9 @@ class Component extends DCLogic {
       board, noScores:!board.length,
       roundTxt:S.round||ph!=='idle'?String(S.round+(ph==='idle'?0:1)):'—', roundOf:S.winMode===1?`من ${S.rounds}`:'',
       helpOpen:S.helpOpen, toggleHelp:()=>this.setState({helpOpen:!S.helpOpen}), helpBg:S.helpOpen?'rgba(139,92,246,.24)':'rgba(255,255,255,.04)', helpBd:S.helpOpen?'#a78bfa':'rgba(255,255,255,.12)',
-      helpRules:[['💬','اكتب بالشات مباشرة','بدون أي علامة قبل الإجابة'],['🔤','كل الكلمات بحرف الجولة','وبأي ترتيب تبيه'],['✂️','افصل بمسافة أو فاصلة','إجابة من كلمتين؟ اكتبها متصلة'],['🔁','تبي تصحح؟','أرسل الكلمة الجديدة بس']].map(([icon,t,d])=>({icon,t,d})),
-      helpNotes:['بعد إجابتك سولف براحتك، كلامك ما يغيّرها','لو انحطت كلمة بفئة غلط، المضيف يعدّلها بالمراجعة'],
-      helpEx:['أحمد أسد أرز إبريق الأردن','الأردن، أرز، أحمد','عبدالله أسد'],
+      helpRules:[['➖','ابدأ رسالتك بـ «-»','بدونها ما تنحسب إجابة'],['🔢','بنفس ترتيب الفئات','اسم، حيوان، نبات، جماد، بلاد (المفعّلة بس)'],['✂️','افصل بمسافة أو فاصلة','إجابة من كلمتين؟ اكتبها متصلة'],['🔁','تبي تصحح؟','أرسل إجابتك كاملة من جديد بـ «-»']].map(([icon,t,d])=>({icon,t,d})),
+      helpNotes:['ما تعرف فئة؟ اكتب «؟» مكانها عشان يبقى الترتيب صح','أي رسالة بدون «-» سوالف عادية وما تغيّر إجابتك'],
+      helpEx:['- أحمد أسد أرز إبريق الأردن','- أحمد، أسد، أرز، إبريق، الأردن','- أحمد ؟ أرز إبريق الأردن'],
       tileBg:tile.bg, tileBd:tile.bd, tileSh:tile.sh,
       letterTxt:isReveal||isPlay||isReview?S.shown:(S.letter||'؟'), letterOp:ph==='idle'&&!S.letter?.35:ph==='idle'?.55:1,
       letterAn:isReveal?'flick .06s ease':isPlay&&S.left===S.total?'land .5s cubic-bezier(.2,1.4,.4,1)':'none',
