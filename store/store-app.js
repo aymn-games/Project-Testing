@@ -71,7 +71,7 @@ function normalizeMobile(raw) {
     else if (/^5\d{8}$/.test(d)) d = '0' + d;
     return /^05\d{8}$/.test(d) ? d : null;
 }
-function usesPaylink() { return !!(state.data && state.data.gateway === 'paylink'); }
+function usesGateway() { return !!(state.data && state.data.gateway && state.data.gateway !== 'mock'); }
 
 function me() { return window.AGPAuth && window.AGPAuth.getToken() ? window.AGPAuth.getCachedUser() : null; }
 function meName(u) { return (u && (u.tiktok_display_name || u.username)) || ''; }
@@ -201,7 +201,7 @@ function pay() {
     var items = cartIds();
     if (!items.length) return;
     var mobile = '';
-    if (usesPaylink()) {
+    if (usesGateway()) {
         mobile = normalizeMobile(state.mobile);
         if (!mobile) { state.mobileErr = true; state.payError = S.errorText('invalid_mobile'); render(); return; }
         writeText(MOBILE_KEY, mobile);
@@ -211,7 +211,7 @@ function pay() {
     render();
     S.api('/api/store/checkout', { method: 'POST', body: { items: items, coupon: state.couponCode || '', method: PAY_METHODS[state.pay][0], mobile: mobile } }).then(function (r) {
         if (r && r.success && r.redirectUrl) {
-            // بيلينك: التحويل لصفحة الدفع. السلة تبقى لين يتأكد الدفع (لو لغى يرجع يلقاها).
+            // البوابة: التحويل لصفحة الدفع. السلة تبقى لين يتأكد الدفع (لو لغى يرجع يلقاها).
             location.href = r.redirectUrl;
             return;
         }
@@ -234,7 +234,7 @@ function pay() {
     });
 }
 
-/** بعد الرجوع من بيلينك (store.html?order=ID): السيرفر يتحقق من بيلينك ويكمل الطلب. */
+/** بعد الرجوع من بوابة الدفع (store.html?order=ID): السيرفر يتحقق من البوابة ويكمل الطلب. */
 function verifyReturn() {
     var v = state.verify;
     v.status = 'checking';
@@ -256,7 +256,7 @@ function verifyReturn() {
         if (o && o.status === 'failed') { v.status = 'failed'; render(); return; }
         if (r && r.error === 'unauthorized') { location.href = loginUrl('?order=' + v.orderId); return; }
         if (!o && r && r.error === 'not_found') { v.status = 'error'; render(); return; }
-        // ما زال معلّق: نعيد المحاولة كم مرة (إشعار بيلينك أحياناً يتأخر ثواني)
+        // ما زال معلّق: نعيد المحاولة كم مرة (إشعار البوابة أحياناً يتأخر ثواني)
         v.tries = (v.tries || 0) + 1;
         v.status = 'pending';
         render();
@@ -497,7 +497,7 @@ function viewCart() {
                 t.savings + t.disc > 0 ? h('div', { 'class': 'line' }, h('span', null, 'التوفير'), S.money(S.price(t.savings + t.disc) + '-', 'green')) : null,
                 h('div', { 'class': 'line' }, h('span', null, 'ضريبة القيمة المضافة (15٪)'), S.money(t.vat))),
             h('div', { 'class': 'grand' }, h('span', null, 'الإجمالي'), S.money(S.price(t.grand))),
-            usesPaylink() ? mobileField() : null,
+            usesGateway() ? mobileField() : null,
             h('div', { style: 'display:flex;flex-direction:column;gap:10px;' },
                 h('span', { 'class': 'pay-title' }, 'طريقة الدفع'),
                 h('div', { 'class': 'pay-grid', role: 'radiogroup', 'aria-label': 'طريقة الدفع' }, PAY_METHODS.map(function (m, i) {
@@ -506,7 +506,7 @@ function viewCart() {
                         h('span', { 'class': 'radio' }), h('span', null, m[1]));
                 }))),
             h('button', { type: 'button', 'class': 'btn btn-primary btn-primary--lg pay-btn', disabled: state.paying || paymentsOff, onclick: pay },
-                h('span', null, !u ? 'سجّل دخول لإتمام الدفع' : state.paying ? (usesPaylink() ? 'جاري التحويل لصفحة الدفع…' : 'جاري الدفع…') : 'ادفع ' + S.price(t.grand) + ' ر.س')),
+                h('span', null, !u ? 'سجّل دخول لإتمام الدفع' : state.paying ? (usesGateway() ? 'جاري التحويل لصفحة الدفع…' : 'جاري الدفع…') : 'ادفع ' + S.price(t.grand) + ' ر.س')),
             paymentsOff ? h('span', { 'class': 'pay-note' }, S.errorText('payments_not_configured')) : null,
             state.payError ? h('span', { 'class': 'pay-note' }, state.payError) : null,
             h('span', { 'class': 'pay-consent' }, 'بإتمام الدفع أنت توافق على ', h('a', { href: 'terms.html', target: '_blank', rel: 'noopener' }, 'الشروط والأحكام'), ' و', h('a', { href: 'refund-policy.html', target: '_blank', rel: 'noopener' }, 'سياسة الاسترجاع'), '.'),
@@ -658,7 +658,7 @@ window.addEventListener('storage', function (e) {
     if (e.key === CART_KEY) { state.cart = readJson(CART_KEY, {}); render(); }
 });
 
-// رجوع من صفحة دفع بيلينك: store.html?order=<رقم الطلب>
+// رجوع من صفحة الدفع: store.html?order=<رقم الطلب>
 (function () {
     var q = new URLSearchParams(location.search);
     var id = Number(q.get('order') || q.get('orderNumber'));

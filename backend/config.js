@@ -53,6 +53,16 @@ module.exports = {
     paylinkApiId: process.env.PAYLINK_API_ID || '',
     paylinkSecretKey: process.env.PAYLINK_SECRET_KEY || '',
 
+    // بوابة الدفع ميسّر (backend/store/moyasar-client.js). MOYASAR_SECRET_KEY
+    // سري تماماً، بلا قيمة افتراضية (sk_test_ = تجربة للأدمن، sk_live_ = حقيقي).
+    // MOYASAR_MODE=production يفتح الدفع الحقيقي للكل (غير ذلك للأدمن فقط).
+    moyasarSecretKey: process.env.MOYASAR_SECRET_KEY || '',
+    moyasarMode: process.env.MOYASAR_MODE || '',
+    // أي بوابة يستخدمها المتجر: moyasar | paylink. فارغ = ميسّر لو مفعّل، وإلا بيلينك.
+    paymentGateway: process.env.PAYMENT_GATEWAY || '',
+    // رابط هذا السيرفر نفسه (لإشعارات بوابة الدفع).
+    publicApiBaseUrl: process.env.PUBLIC_API_BASE_URL || 'https://project-testing-akds.onrender.com',
+
     // مفتاح توقيع روابط "إحصائيات مبيعات الاستريمر" (streamer-stats.html?s=..&t=..).
     // اختياري: فارغ = مفتاح عشوائي يُولَّد مرة وحدة ويُحفظ بقاعدة البيانات.
     storeStatsSecret: process.env.STORE_STATS_SECRET || '',
