@@ -53,11 +53,14 @@ var routes = [
   { method: 'POST', path: '/api/store/checkout', requireAuth: true, handler: function (req, res, body, user) {
     return send(res, storeService.checkout(user, { items: body.items, coupon: body.coupon, method: body.method, mobile: body.mobile }));
   } },
-  // صفحة المتجر بعد الرجوع من بيلينك: تتحقق من حالة الطلب (والسيرفر يسأل بيلينك مباشرة)
+  // صفحة المتجر بعد الرجوع من بوابة الدفع: تتحقق من حالة الطلب (والسيرفر يسأل بيلينك مباشرة)
   { method: 'GET', path: '/api/store/order', requireAuth: true, handler: function (req, res, body, user) {
     return send(res, storeService.getOrderStatus(user, getQueryParam(req, 'id')));
   } },
-  // إشعار بيلينك (Webhook) — يُضبط بلوحة بيلينك. دائماً 200 عشان ما يعيد المحاولة بلا داعي.
+  // إشعارات البوابات (Webhook). دائماً 200 عشان ما تعيد المحاولة بلا داعي.
+  { method: 'POST', path: '/api/store/moyasar/webhook', requireAuth: false, handler: function (req, res, body) {
+    return storeService.handleMoyasarWebhook(body).then(function (r) { sendJson(res, 200, r); }, function () { sendJson(res, 200, { success: true }); });
+  } },
   { method: 'POST', path: '/api/store/paylink/webhook', requireAuth: false, handler: function (req, res, body) {
     return storeService.handlePaylinkWebhook(body).then(function (r) { sendJson(res, 200, r); }, function () { sendJson(res, 200, { success: true }); });
   } },
