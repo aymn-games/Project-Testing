@@ -460,3 +460,6 @@ option{background:#161124;color:#ece9f5;}
 .verify-spin{animation:st-pulse 1.4s ease-in-out infinite;}
 @keyframes st-pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(.94);}}
 @media (prefers-reduced-motion:reduce){.verify-spin{animation:none;}}
+
+/* store-scale.js يكبّر الصفحة على الشاشات العريضة (zoom) — vh يتكبّر معه، فنقسمه */
+.st-page{min-height:calc(100vh / var(--st-zoom, 1));}
