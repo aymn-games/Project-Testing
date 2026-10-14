@@ -80,7 +80,7 @@ input::placeholder{color:#6f6a7c}
           </div>
           <div data-noscroll="" style="position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:clamp(12px,1.6vw,20px)">
             <sc-if value="{{ t.empty }}" hint-placeholder-val="{{ true }}">
-              <div style="height:100%;min-height:140px;display:grid;place-items:center;border-radius:18px;border:1.5px dashed rgba(255,255,255,.1);color:#8a8596;font:500 14px 'IBM Plex Sans Arabic';text-align:center;padding:20px">بانتظار انضمام اللاعبين…</div>
+              <div style="height:100%;min-height:140px;box-sizing:border-box;display:grid;place-items:center;border-radius:18px;border:1.5px dashed rgba(255,255,255,.1);color:#8a8596;font:500 14px 'IBM Plex Sans Arabic';text-align:center;padding:20px">بانتظار انضمام اللاعبين…</div>
             </sc-if>
             <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:center;gap:10px">
               <sc-for list="{{ t.players }}" as="p" hint-placeholder-count="0">
