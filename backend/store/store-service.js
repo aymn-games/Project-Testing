@@ -405,8 +405,11 @@ function checkout(user, input) {
         return { success: true, orderId: orderId, redirectUrl: inv.url };
     }, function (err) {
         db.prepare("UPDATE store_orders SET status = 'failed' WHERE id = ? AND status = 'pending'").run(orderId);
-        logger.error('Store: Paylink invoice failed for order #' + orderId + ':', err && err.message);
-        return fail('payment_gateway_error');
+        logger.error('Store: Paylink invoice failed for order #' + orderId + ':', err && err.message, err && err.detail);
+        var out = fail('payment_gateway_error');
+        // سبب رفض بيلينك بالضبط — للأدمن فقط (للتشخيص)، العميل يشوف الرسالة العامة.
+        if (isAdmin(user)) out.detail = (err && (err.detail || err.message)) || 'unknown';
+        return out;
     });
 }
 

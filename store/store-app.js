@@ -228,7 +228,7 @@ function pay() {
         }
         if (r && r.error === 'unauthorized') { location.href = loginUrl('#cart'); return; }
         if (r && r.error === 'invalid_coupon') { resetCoupon(); state.couponErr = true; state.couponMsg = S.errorText('invalid_coupon'); }
-        state.payError = S.errorText(r && r.error);
+        state.payError = S.errorText(r && r.error) + (r && r.detail ? ' — ' + r.detail : '');
         if (r && r.error === 'product_unavailable') loadStore();
         render();
     });
