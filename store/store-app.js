@@ -509,6 +509,7 @@ function viewCart() {
                 h('span', null, !u ? 'سجّل دخول لإتمام الدفع' : state.paying ? (usesPaylink() ? 'جاري التحويل لصفحة الدفع…' : 'جاري الدفع…') : 'ادفع ' + S.price(t.grand) + ' ر.س')),
             paymentsOff ? h('span', { 'class': 'pay-note' }, S.errorText('payments_not_configured')) : null,
             state.payError ? h('span', { 'class': 'pay-note' }, state.payError) : null,
+            h('span', { 'class': 'pay-consent' }, 'بإتمام الدفع أنت توافق على ', h('a', { href: 'terms.html', target: '_blank', rel: 'noopener' }, 'الشروط والأحكام'), ' و', h('a', { href: 'refund-policy.html', target: '_blank', rel: 'noopener' }, 'سياسة الاسترجاع'), '.'),
             h('span', { 'class': 'secure' }, S.lockIcon(), h('span', null, 'دفع آمن ومشفّر'))
         ])));
     return out;
