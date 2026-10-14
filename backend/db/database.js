@@ -474,6 +474,9 @@ function ensureColumn(table, column, definition) {
     }
 }
 ensureColumn('users', 'google_id', 'TEXT');
+// المتجر + بيلينك: جوال المشتري (يُطلب عند الدفع) ورقم فاتورة بيلينك للطلب المعلّق.
+ensureColumn('store_orders', 'customer_mobile', 'TEXT');
+ensureColumn('store_orders', 'paylink_transaction_no', 'TEXT');
 // حرق كود استرداد (استرجاع مبلغ مثلاً) — burned_at ليس NULL = الكود ملغي وما يُسترد.
 ensureColumn('frame_codes', 'burned_at', 'INTEGER');
 ensureColumn('card_codes', 'burned_at', 'INTEGER');

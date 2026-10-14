@@ -16,11 +16,15 @@ var ERROR_STATUS = {
   forbidden: 403,
   rate_limited: 429,
   payments_not_configured: 503,
+  payment_gateway_error: 502,
   uploads_not_configured: 503
 };
 
 function send(res, result) {
-  sendJson(res, result.success ? 200 : (ERROR_STATUS[result.error] || 400), result);
+  // بعض العمليات (الدفع عبر بيلينك) ترجّع Promise
+  return Promise.resolve(result).then(function (r) {
+    sendJson(res, r.success ? 200 : (ERROR_STATUS[r.error] || 400), r);
+  });
 }
 
 function getQueryParam(req, key) {
@@ -47,7 +51,15 @@ var routes = [
     send(res, storeService.checkCoupon(body.code, clientKey(req, user)));
   } },
   { method: 'POST', path: '/api/store/checkout', requireAuth: true, handler: function (req, res, body, user) {
-    send(res, storeService.checkout(user, { items: body.items, coupon: body.coupon, method: body.method }));
+    return send(res, storeService.checkout(user, { items: body.items, coupon: body.coupon, method: body.method, mobile: body.mobile }));
+  } },
+  // صفحة المتجر بعد الرجوع من بيلينك: تتحقق من حالة الطلب (والسيرفر يسأل بيلينك مباشرة)
+  { method: 'GET', path: '/api/store/order', requireAuth: true, handler: function (req, res, body, user) {
+    return send(res, storeService.getOrderStatus(user, getQueryParam(req, 'id')));
+  } },
+  // إشعار بيلينك (Webhook) — يُضبط بلوحة بيلينك. دائماً 200 عشان ما يعيد المحاولة بلا داعي.
+  { method: 'POST', path: '/api/store/paylink/webhook', requireAuth: false, handler: function (req, res, body) {
+    return storeService.handlePaylinkWebhook(body).then(function (r) { sendJson(res, 200, r); }, function () { sendJson(res, 200, { success: true }); });
   } },
   { method: 'GET', path: '/api/store/orders', requireAuth: true, handler: function (req, res, body, user) {
     send(res, storeService.listMyOrders(user));
