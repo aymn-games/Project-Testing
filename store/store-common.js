@@ -97,10 +97,23 @@ function initial(name) {
     return s ? s.charAt(0) : '؟';
 }
 
+/**
+ * صور الإطارات الأصلية بالمستودع (frame-*.png) حجمها كبير (1.5–2.3MB)،
+ * فالمتجر يعرض نسختها المضغوطة store/thumbs/*.webp. الأصلية تبقى للتسليم.
+ */
+function displayUrl(url) {
+    var m = /^frame-[\w-]+(?=\.png$)/.exec(String(url || ''));
+    return m ? 'store/thumbs/' + m[0] + '.webp' : url;
+}
+
 /** صورة منتج (contain) أو مكان فاضي. */
 function productImg(url) {
     if (!url) return null;
-    return h('img', { src: url, alt: '', loading: 'lazy', decoding: 'async' });
+    var src = displayUrl(url);
+    var img = h('img', { src: src, alt: '', loading: 'lazy', decoding: 'async' });
+    // لو النسخة المضغوطة مو موجودة نرجع للأصلية.
+    if (src !== url) img.addEventListener('error', function onErr() { img.removeEventListener('error', onErr); img.src = url; });
+    return img;
 }
 
 function fmt(v) {
