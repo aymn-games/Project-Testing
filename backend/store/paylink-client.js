@@ -6,6 +6,7 @@
  *                     التجريبية العامة (مفاتيح الحساب الحقيقية ما تشتغل فيها).
  * PAYLINK_ENV=production → restapi.paylink.sa بمفاتيح الحساب
  *                     (PAYLINK_API_ID / PAYLINK_SECRET_KEY).
+ * PAYLINK_ENV=live-admin → نفس production (دفع حقيقي) لكن للأدمن فقط.
  * غير ذلك (فارغ) → بيلينك غير مفعّل والمتجر يرجع للدفع التجريبي القديم.
  */
 
@@ -14,7 +15,7 @@
 var config = require('../config');
 var logger = require('../utils/logger');
 
-var URLS = { test: 'https://restpilot.paylink.sa', production: 'https://restapi.paylink.sa' };
+var URLS = { test: 'https://restpilot.paylink.sa', production: 'https://restapi.paylink.sa', 'live-admin': 'https://restapi.paylink.sa' };
 // مفاتيح بيئة التجربة العامة المنشورة من بيلينك نفسها.
 var TEST_API_ID = 'APP_ID_1123453311';
 var TEST_SECRET_KEY = '0662abb5-13c7-38ab-cd12-236e58f43766';
@@ -23,7 +24,11 @@ var TIMEOUT_MS = 20000;
 function env() {
     var e = String(config.paylinkEnv || '').toLowerCase();
     if (e === 'test') return 'test';
-    if ((e === 'production' || e === 'prod' || e === 'live') && config.paylinkApiId && config.paylinkSecretKey) return 'production';
+    var hasKeys = !!(config.paylinkApiId && config.paylinkSecretKey);
+    if ((e === 'production' || e === 'prod' || e === 'live') && hasKeys) return 'production';
+    // live-admin: سيرفر بيلينك الحقيقي بمفاتيح الحساب، بس الدفع للأدمن فقط
+    // (تجربة دفع حقيقية قبل فتح المتجر للكل).
+    if (e === 'live-admin' && hasKeys) return 'live-admin';
     return null;
 }
 

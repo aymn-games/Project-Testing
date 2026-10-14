@@ -164,10 +164,12 @@ function isAdmin(user) { return !!(user && user.role === 'admin'); }
  */
 function usePaylinkFor(user) {
     if (paylink.env() === 'production') return true;
+    if (paylink.env() === 'live-admin') return isAdmin(user); // دفع حقيقي — للأدمن فقط
     return paylink.env() === 'test' && (isAdmin(user) || config.storeMockPayments);
 }
 
 function canPay(user) {
+    if (paylink.env() === 'live-admin') return isAdmin(user); // ولا حتى الدفع التجريبي لغير الأدمن
     return !!(paylink.env() === 'production' || config.storeMockPayments || isAdmin(user));
 }
 
