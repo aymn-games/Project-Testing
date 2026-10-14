@@ -1144,6 +1144,15 @@ var CATALOG_V2_REMOVED_NAMES = ['إطار فوز الريس', 'إطار عملي
     logger.log('Store: catalog v2 applied (design frames at ' + CATALOG_V2_PRICE + ')');
 }());
 
+// حذف الاستريمر «الريس» من المتجر (مرة وحدة) — نفس حذفه من لوحة الإدارة.
+(function removeRayesStreamer() {
+    if (db.prepare("SELECT 1 FROM app_settings WHERE key = 'store_rayes_removed'").get()) return;
+    db.prepare("SELECT id FROM store_streamers WHERE tiktok_user = 'alrayes' OR name = 'الريس'").all().forEach(function (s) {
+        deleteStreamer({ id: s.id });
+    });
+    db.prepare("INSERT INTO app_settings (key, value) VALUES ('store_rayes_removed', ?)").run(String(now()));
+}());
+
 module.exports = {
     PLAN_KEYS: PLAN_KEYS,
     getPublicStore: getPublicStore,
