@@ -42,7 +42,10 @@ input:focus{outline:none;border-color:rgba(167,139,250,.6)}
 
   <sc-if value="{{ notice }}" hint-placeholder-val="{{ false }}">
     <div style="width:100%;max-width:420px;box-sizing:border-box;padding:16px 18px;border-radius:20px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.4);display:flex;flex-direction:column;gap:10px;animation:rise .35s ease">
-      <span style="font:800 16px/1.6 'Zain';color:#fde68a;text-wrap:pretty">{{ notice }}</span>
+      <span style="font:900 17px/1.4 'Zain';color:#fde68a">{{ notice }}</span>
+      <sc-for list="{{ noticePts }}" as="pt" hint-placeholder-count="2">
+        <span style="display:flex;align-items:center;gap:8px;font:700 15px/1.4 'Zain';color:#f4f2f8"><span style="width:6px;height:6px;flex-shrink:0;border-radius:50%;background:#fbbf24"></span>{{ pt }}</span>
+      </sc-for>
       <sc-if value="{{ loginUrl }}" hint-placeholder-val="{{ false }}">
         <a href="{{ loginUrl }}" style="align-self:flex-start;height:42px;padding:0 20px;border-radius:999px;display:flex;align-items:center;text-decoration:none;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:800 15px 'Zain'">تسجيل الدخول بحسابي</a>
       </sc-if>
@@ -215,7 +218,12 @@ class Component extends DCLogic {
       title:S.expired?'انتهت الجلسة':S.stage==='map'?'خريطة الألوان السرية':'طلب سباي ماستر',
       isBad:bad, badMsg:S.expired?'انتهت هذي الجلسة -- امسح الباركود الجديد من شاشة اللعب.':S.noCrypto?'المتصفح ما يدعم الاتصال الآمن -- افتح الرابط في Safari أو Chrome.':'رابط غير صالح -- امسح الـQR من شاشة اللعب مباشرة.',
       isCheck:!bad&&S.stage==='check', checkTxt:S.claim==='ok'||this.slotMode?'جارٍ فتح الخريطة...':'جارٍ التحقق من حسابك...',
-      notice:bad||S.stage!=='form'?null:S.claim==='mismatch'?`⚠️ هذا الباركود خاص بـ ${S.claimName}. إذا أنت مو هو، تقدر ترسل طلب عادي والمذيع يقرر.`:S.claim==='login'?`🔐 هذا الباركود خاص بـ ${S.claimName}. لو عندك حساب بالموقع مربوط بتيك توك سجّل دخول وتنفتح لك الخريطة مباشرة. ومو لازم حساب: تقدر ترسل طلب عادي من تحت والمذيع يقبله.`:S.claim==='gone'?'هذا الباركود انتهى أو المذيع غيّر السباي ماستر — امسح الباركود الجديد أو أرسل طلب عادي.':S.claim==='fail'?'تعذّر التحقق من حسابك الآن — تقدر ترسل طلب عادي والمذيع يقبله.':null,
+      ...(()=>{ const N=bad||S.stage!=='form'?null:{
+          mismatch:[`⚠️ الباركود خاص بـ ${S.claimName}`,['مو أنت؟ أرسل طلب من تحت ← المذيع يقرر']],
+          login:[`🔐 الباركود خاص بـ ${S.claimName}`,['عندك حساب؟ سجّل دخول ← تنفتح الخريطة','ما عندك؟ أرسل طلب من تحت ← المذيع يقبل']],
+          gone:['⏳ الباركود انتهى',['امسح الباركود الجديد','أو أرسل طلب من تحت']],
+          fail:['تعذّر التحقق من حسابك',['أرسل طلب من تحت ← المذيع يقبل']]}[S.claim];
+        return {notice:N?N[0]:null,noticePts:N?N[1]:[]}; })(),
       loginUrl:S.claim==='login'?'../../login.html?next='+encodeURIComponent(`games/codenames/spymaster.html?room=${ROOM}&s=${SLOT}&t=${SLOT_TEAM}&n=${encodeURIComponent(SLOT_NAME)}`):null,
       isForm:!bad&&S.stage==='form', isWait:!bad&&S.stage==='wait', isRejected:!bad&&S.stage==='rejected', isMap:!bad&&S.stage==='map', isLost:!bad&&S.lost,
       name:S.name, setName:e=>this.setState({name:e.target.value,err:null}), err:S.err,

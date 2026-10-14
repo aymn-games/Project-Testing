@@ -747,7 +747,7 @@ class Component extends DCLogic {
       // باركود لكل فريق: خاص بالسباي ماستر المعيّن (يفتح له مباشرة لو مسجّل دخول بحسابه)، أو باركود الطلب العام لو ما تعيّن أحد
       qrCards:S.modal!=='qr'?[]:[1,2].map(team=>{ const sl=this.slots[team], url=sl?new URL(`spymaster.html?room=${this.room}&s=${sl.id}&t=${team}&n=${encodeURIComponent(sl.name)}`,location.href).href:spyUrl;
         return {title:S.teams[team].name,c:TC[team].c2,bd:TC[team].c,sub:sl?`🕵 خاص بـ ${sl.name}`:'ما تعيّن سباي ماستر · باركود الطلبات',subC:sl?'#e7e3ef':'#8a8596',src:CN.qrDataUrl(url,240),url}; }),
-      slotNote:S.slotSync==='fail'?'⚠️ تعذّر ربط الباركود بحسابات المنصة الآن — يشتغل بطلب عادي تقبله أنت':S.slotSync==='pending'?'جارٍ ربط الباركود بحسابات المنصة…':'السباي ماستر المسجّل دخول بحسابه بالمنصة تنفتح له الخريطة مباشرة · غيره يرسل طلب تقبله أنت',
+      slotNote:S.slotSync==='fail'?'⚠️ تعذّر الربط بالحسابات · يشتغل بطلب تقبله أنت':S.slotSync==='pending'?'جارٍ ربط الباركود بحسابات المنصة…':'مسجّل دخول بحسابه ← تنفتح له مباشرة · غيره ← طلب تقبله أنت',
       slotNoteC:S.slotSync==='fail'?'#fca5a5':'#8a8596',
       noSpyReqs:!S.spyReqs.length, spyReqs:S.spyReqs.map(r=>({name:r.name,team:S.teams[r.team].name,c:TC[r.team].c2,ok:()=>this.approve(r,true),no:()=>this.approve(r,false)})),
       timeRows:[['⏳ وقت إرسال التلميح من السباي ماستر','hintT',HINT_T,'hint'],['⏳ وقت اختيار اللاعبين وتأكيد الإجابة','guessT',GUESS_T,'guess']].map(([label,k,opts,phase])=>({label,opts:opts.map(v=>({label:mmss(v),...seg(S[k]===v),pick:()=>{ this.setState({[k]:v}); if(this.state.phase===phase) this.runTimer(v); }}))})),
