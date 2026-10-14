@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>كود نيمز — السباي ماستر</title>
 <!-- صفحة جوال السباي ماستر (تُفتح من QR): بدون auth/game-access-guard.js لأنها للاعبين وليست للاستريمر -->
+<script src="../../auth/auth-client.js"></script>
 <script src="codenames-platform.js"></script>
 <script src="./support.js"></script>
     <script src="../../js/agp-apple-emoji.js"></script>
@@ -37,6 +38,22 @@ input:focus{outline:none;border-color:rgba(167,139,250,.6)}
 
   <sc-if value="{{ isBad }}" hint-placeholder-val="{{ false }}">
     <div style="width:100%;max-width:420px;box-sizing:border-box;padding:26px 20px;border-radius:22px;background:rgba(239,68,68,.08);border:1px solid rgba(248,113,113,.35);text-align:center;font:700 17px/1.6 'Zain';color:#fca5a5">{{ badMsg }}</div>
+  </sc-if>
+
+  <sc-if value="{{ notice }}" hint-placeholder-val="{{ false }}">
+    <div style="width:100%;max-width:420px;box-sizing:border-box;padding:16px 18px;border-radius:20px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.4);display:flex;flex-direction:column;gap:10px;animation:rise .35s ease">
+      <span style="font:800 16px/1.6 'Zain';color:#fde68a;text-wrap:pretty">{{ notice }}</span>
+      <sc-if value="{{ loginUrl }}" hint-placeholder-val="{{ false }}">
+        <a href="{{ loginUrl }}" style="align-self:flex-start;height:42px;padding:0 20px;border-radius:999px;display:flex;align-items:center;text-decoration:none;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:800 15px 'Zain'">تسجيل الدخول بحسابي</a>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isCheck }}" hint-placeholder-val="{{ false }}">
+    <div style="width:100%;max-width:420px;box-sizing:border-box;padding:30px 20px;border-radius:24px;background:rgba(18,16,26,.85);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
+      <span style="width:44px;height:44px;border-radius:50%;border:4px solid rgba(167,139,250,.2);border-top-color:#a78bfa;animation:spin .9s linear infinite"></span>
+      <span style="font:800 18px 'Zain'">{{ checkTxt }}</span>
+    </div>
   </sc-if>
 
   <sc-if value="{{ isForm }}" hint-placeholder-val="{{ true }}">
@@ -125,14 +142,19 @@ const ROOM = new URLSearchParams(location.search).get('room');
 const SAVE_KEY = 'codenames-spy-' + ROOM;
 // حالات الجلسات القديمة بهالجوال ما لها داعي — كل جلسة لعب لها رقم (باركود) جديد
 try{ Object.keys(localStorage).filter(k=>k.indexOf('codenames-spy-')===0&&k!==SAVE_KEY).forEach(k=>localStorage.removeItem(k)); }catch(e){}
+// باركود خاص بسباي ماستر (s=رقم الخانة، t=الفريق، n=اسمه): لو الجوال مسجّل دخول بنفس حساب تيك توك تنفتح الخريطة مباشرة
+const QS = new URLSearchParams(location.search), SLOT = QS.get('s')||null, SLOT_TEAM = +QS.get('t')===2?2:(+QS.get('t')===1?1:0), SLOT_NAME = (QS.get('n')||'').slice(0,40);
 const loadSaved = () => { try{ return JSON.parse(localStorage.getItem(SAVE_KEY)||'null')||{}; }catch(e){ return {}; } };
 class Component extends DCLogic {
   saved = ROOM ? loadSaved() : {};
-  state = { room:ROOM, stage:['wait','map','rejected'].includes(this.saved.stage)&&this.saved.id?this.saved.stage:'form', myTeam:this.saved.myTeam||0, name:this.saved.name||'', team:this.saved.team||0, err:null,
+  slotMode = !!(SLOT&&this.saved.slot===SLOT&&this.saved.slotKey);
+  state = { room:ROOM, stage:this.slotMode?(this.saved.board?'map':'check'):['wait','map','rejected'].includes(this.saved.stage)&&this.saved.id?this.saved.stage:(SLOT?'check':'form'), myTeam:this.saved.myTeam||0, name:this.saved.name||'', team:this.saved.team||SLOT_TEAM||0, err:null, claim:null, claimName:SLOT_NAME,
     board:this.saved.stage==='map'?(this.saved.board||null):null, lost:false, expired:false, noCrypto:!!ROOM&&!CN.secure.supported(), teams:this.saved.teams||{1:'الفريق الأحمر',2:'الفريق الأزرق'} };
   componentDidMount(){
     if(!this.state.room||this.state.noCrypto) return;
     this.id=this.saved.id||null; this.keys=this.saved.keys||null; this.lastSeq=0;
+    if(this.slotMode){ this.slot=SLOT; this.slotKey=this.saved.slotKey; }
+    else if(SLOT&&this.state.stage==='check') this.claimSlot();
     // أول ما تتصل القناة: نطلب أسماء الفرق، ولو عندنا طلب سابق نرسله من جديد بنفس الرقم (اللعبة ترد بحالته)
     this.rl=CN.relay(this.state.room,m=>this.onMsg(m),ok=>this.onConn(ok));
     // الرجوع للصفحة (من تيك توك/تطبيق ثاني، أو المتصفح رجّعها من الذاكرة) → اتصال جديد فوراً بدل انتظار الاتصال القديم الميت
@@ -142,6 +164,15 @@ class Component extends DCLogic {
     document.addEventListener('visibilitychange',this.onVis); addEventListener('pageshow',this.onShow); addEventListener('online',this.onOnline);
   }
   componentWillUnmount(){ this.rl&&this.rl.close(); clearTimeout(this.lostT); clearTimeout(this.expT); document.removeEventListener('visibilitychange',this.onVis); removeEventListener('pageshow',this.onShow); removeEventListener('online',this.onOnline); }
+  // الباركود الخاص: نطلب مفتاح الخانة بجلسة الموقع — الخادم يعطيه لصاحب حساب تيك توك فقط
+  claimSlot(){
+    if(!CN.spySlots.loggedIn()) return this.setState({stage:'form',claim:'login'});
+    this.setState({stage:'check',claim:'checking'});
+    CN.spySlots.claim(ROOM,SLOT).then(r=>{
+      if(r&&r.success&&r.key){ this.slot=SLOT; this.slotKey=r.key; this.lastSeq=0; const myTeam=+r.team===2?2:1;
+        this.save({slot:SLOT,slotKey:r.key,myTeam,stage:'map',board:null}); this.setState({claim:'ok',myTeam,stage:'check'}); this.rl&&this.rl.send({type:'slot_hello',slot:SLOT}); return; }
+      const st=r&&r.error==='not_owner'?'mismatch':r&&r.__httpStatus===404?'gone':r&&r.__httpStatus===401?'login':'fail';
+      this.setState({stage:'form',claim:st,claimName:(r&&r.name)||SLOT_NAME}); }); }
   save(patch){ this.saved={...this.saved,...patch}; try{ localStorage.setItem(SAVE_KEY,JSON.stringify(this.saved)); }catch(e){} }
   // انقطاع قصير (تبديل التطبيقات) ما يطلّع تنبيه — بس لو طال أكثر من 4 ثواني
   onConn(ok){ clearTimeout(this.lostT); if(ok){ this.setState({lost:false}); this.resume(); } else this.lostT=setTimeout(()=>this.setState({lost:true}),4000); }
@@ -149,10 +180,19 @@ class Component extends DCLogic {
   // ما نمسح شي: لو ردّت بعدين (انقطاع مؤقت عند الاستريمر) ترجع الصفحة طبيعية
   armExpiry(){ clearTimeout(this.expT); this.expT=setTimeout(()=>{ if(!this.state.lost) this.setState({expired:true}); },8000); }
   resume(){ if(!this.rl) return; this.rl.send({type:'sync_request'}); this.armExpiry(); const S=this.state;
+    if(this.slot) this.rl.send({type:'slot_hello',slot:this.slot});
     if(this.id&&this.keys&&(S.stage==='wait'||S.stage==='map')) this.rl.send({type:'spymaster_request',id:this.id,name:S.name.trim(),team:S.team,pub:this.keys.pub}); }
   setTeams(t){ if(t&&t[1]&&t[2]){ const teams={1:String(t[1]),2:String(t[2])}; this.setState({teams}); this.save({teams}); } }
   onMsg(m){ if(!m||m.room!==this.state.room) return;
     if(m.type==='room_info'){ clearTimeout(this.expT); if(this.state.expired) this.setState({expired:false}); this.setTeams(m.teams); }
+    // الخانة الخاصة: لوحة مشفّرة بمفتاح الخانة، أو المذيع غيّر السباي ماستر (الخانة بطلت)
+    if(this.slot&&m.slot===this.slot){
+      if(m.type==='slot_revoked'){ this.slot=null; this.slotKey=null; this.save({slot:null,slotKey:null,stage:'form',board:null}); this.setState({stage:'form',board:null,claim:'gone'}); return; }
+      if(m.type==='board_update'&&m.iv&&m.ct){ const seq=+m.seq||0;
+        CN.secure.aesFromB64(this.slotKey).then(k=>CN.secure.decrypt(k,m.iv,m.ct)).then(d=>{
+          if(!d||!Array.isArray(d.board)||seq<this.lastSeq) return; this.lastSeq=seq; this.setTeams(d.teams);
+          const myTeam=+d.team===2?2:1; this.setState({board:d.board,stage:'map',myTeam}); this.save({board:d.board,stage:'map',myTeam}); }).catch(()=>{}); }
+      return; }
     if(!this.id||m.id!==this.id) return;
     if(m.type==='spymaster_approve'){ const myTeam=+m.team===2?2:1; this.setState({stage:'map',myTeam}); this.save({stage:'map',myTeam}); }
     if(m.type==='spymaster_reject'){ this.setState({stage:'rejected',board:null}); this.save({stage:'rejected',board:null}); }
@@ -174,6 +214,9 @@ class Component extends DCLogic {
     return {
       title:S.expired?'انتهت الجلسة':S.stage==='map'?'خريطة الألوان السرية':'طلب سباي ماستر',
       isBad:bad, badMsg:S.expired?'انتهت هذي الجلسة -- امسح الباركود الجديد من شاشة اللعب.':S.noCrypto?'المتصفح ما يدعم الاتصال الآمن -- افتح الرابط في Safari أو Chrome.':'رابط غير صالح -- امسح الـQR من شاشة اللعب مباشرة.',
+      isCheck:!bad&&S.stage==='check', checkTxt:S.claim==='ok'||this.slotMode?'جارٍ فتح الخريطة...':'جارٍ التحقق من حسابك...',
+      notice:bad||S.stage!=='form'?null:S.claim==='mismatch'?`⚠️ هذا الباركود خاص بـ ${S.claimName}. إذا أنت مو هو، تقدر ترسل طلب عادي والمذيع يقرر.`:S.claim==='login'?`🔐 هذا الباركود خاص بـ ${S.claimName}. لو أنت هو، سجّل دخول بحسابك بالموقع (المربوط بتيك توك) وتنفتح لك الخريطة مباشرة — أو أرسل طلب عادي.`:S.claim==='gone'?'هذا الباركود انتهى أو المذيع غيّر السباي ماستر — امسح الباركود الجديد أو أرسل طلب عادي.':S.claim==='fail'?'تعذّر التحقق من حسابك الآن — تقدر ترسل طلب عادي والمذيع يقبله.':null,
+      loginUrl:S.claim==='login'?'../../login.html?next='+encodeURIComponent(`games/codenames/spymaster.html?room=${ROOM}&s=${SLOT}&t=${SLOT_TEAM}&n=${encodeURIComponent(SLOT_NAME)}`):null,
       isForm:!bad&&S.stage==='form', isWait:!bad&&S.stage==='wait', isRejected:!bad&&S.stage==='rejected', isMap:!bad&&S.stage==='map', isLost:!bad&&S.lost,
       name:S.name, setName:e=>this.setState({name:e.target.value,err:null}), err:S.err,
       teams:[1,2].map(t=>({label:S.teams[t],pick:()=>this.setState({team:t,err:null}),bg:S.team===t?COLORS[t]:'rgba(255,255,255,.04)',bd:S.team===t?'#fff':COLORS[t]})),

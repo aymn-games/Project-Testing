@@ -294,10 +294,17 @@ input:focus{outline:none}
         </sc-if>
 
         <sc-if value="{{ mQr }}" hint-placeholder-val="{{ false }}">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
-            <div style="padding:16px;border-radius:22px;background:#fff"><img src="{{ qrSrc }}" alt="باركود السباي ماستر" width="300" height="300" style="display:block;width:300px;height:300px"></div>
-            <a href="{{ spyUrl }}" target="_blank" style="font:600 13px 'Zain';color:#8a8596;word-break:break-all;text-align:center">فتح الصفحة في تبويب جديد (للتجربة)</a>
+          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px">
+            <sc-for list="{{ qrCards }}" as="q" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px;border-radius:22px;background:rgba(255,255,255,.035);border:1.5px solid {{ q.bd }}">
+                <span style="font:900 18px 'Zain';color:{{ q.c }}">{{ q.title }}</span>
+                <span style="font:700 14px 'Zain';color:{{ q.subC }};text-align:center">{{ q.sub }}</span>
+                <div style="padding:12px;border-radius:18px;background:#fff"><img src="{{ q.src }}" alt="باركود السباي ماستر" width="240" height="240" style="display:block;width:240px;height:240px;max-width:100%"></div>
+                <a href="{{ q.url }}" target="_blank" style="font:600 12px 'Zain';color:#8a8596">فتح الصفحة في تبويب جديد (للتجربة)</a>
+              </div>
+            </sc-for>
           </div>
+          <span style="font:600 14px/1.6 'Zain';color:{{ slotNoteC }};text-align:center">{{ slotNote }}</span>
         </sc-if>
 
         <sc-if value="{{ mReqs }}" hint-placeholder-val="{{ false }}">
@@ -535,28 +542,47 @@ class Component extends DCLogic {
     this.closeMenuOut=e=>{ if(this.state.menuOpen&&!e.target.closest('header')) this.setState({menuOpen:false}); }; addEventListener('pointerdown',this.closeMenuOut);
     window.chat=(u,t,f=true)=>this.onChat(this.reg.nameFor({id:'dev:'+u,name:u}),t,f);
     // جوالات السباي ماستر: المقبول فقط يستلم اللوحة (مشفّرة له وحده — CN.secure)
-    this.approved={}; this.rejected=new Set(); this.seq=0; this.gk=CN.secure.supported()?CN.secure.newPair().catch(()=>null):Promise.resolve(null);
+    this.approved={}; this.rejected=new Set(); this.seq=0; this.slots={1:null,2:null}; this.slotHello={}; this._slotRun=0; this.gk=CN.secure.supported()?CN.secure.newPair().catch(()=>null):Promise.resolve(null);
     this.rl=CN.relay(this.room,m=>this.onRelay(m));
     // تحميل صور البطاقات مسبقاً حتى تطلع فوراً لحظة الكشف
     ['red-1','red-2','blue-1','blue-2','neutral','assassin'].forEach(n=>{ const im=new Image(); im.src='images/tile-'+n+'.png'; });
     this.sync();
   }
   // support.js يمرّر prevProps فقط — نتابع آخر لوحة أرسلناها بأنفسنا
-  componentDidUpdate(){ if(this._syncedBoard!==this.state.board) this.sync(); }
+  componentDidUpdate(){ if(this._syncedBoard!==this.state.board) this.sync();
+    const sig=JSON.stringify([this.state.roles[1].spy,this.state.roles[2].spy]); if(sig!==this._spySig){ this._spySig=sig; this.updateSlots(); } }
   componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('pointerdown',this.closeMenuOut); this.unsub?.(); this.unsubSt?.(); clearInterval(this.iv); clearTimeout(this.bt); (this.ts||[]).forEach(clearTimeout); this.rl&&this.rl.close(); }
   after(ms,fn){ (this.ts||(this.ts=[])).push(setTimeout(fn,ms)); }
   shut(k){ this.setState({[k+'Out']:true}); setTimeout(()=>this.setState({[k]:null,[k+'Out']:false}),260); }
 
   // ---- spymaster relay — WebSocket عبر CN.relay (backend/websocket/room-relay-server.js) ----
   send(msg){ try{ this.rl&&this.rl.send(msg); }catch(e){} }
-  sync(){ this._syncedBoard=this.state.board; const b=this.boardPayload(); try{ localStorage.setItem('codenames-board-'+this.room,JSON.stringify(b)); }catch(e){} Object.keys(this.approved||{}).forEach(id=>this.sendBoardTo(id)); }
+  sync(){ this._syncedBoard=this.state.board; const b=this.boardPayload(); try{ localStorage.setItem('codenames-board-'+this.room,JSON.stringify(b)); }catch(e){} Object.keys(this.approved||{}).forEach(id=>this.sendBoardTo(id)); [1,2].forEach(t=>this.sendBoardToSlot(this.slots&&this.slots[t])); }
   boardPayload(){ return this.state.board.map(x=>({w:x.w,t:x.t,open:x.open||x.auto})); }
   teamNames(){ return {1:this.state.teams[1].name,2:this.state.teams[2].name}; }
   // اللوحة الملونة لجوال مقبول واحد: مشفّرة بمفتاح مشترك بين اللعبة وهذا الجوال فقط
   sendBoardTo(id){ const a=this.approved[id]; if(!a||!a.pub) return; const board=this.boardPayload(), seq=++this.seq;
     if(!a.key) a.key=this.gk.then(k=>k?CN.secure.shared(k.priv,a.pub):null);
     Promise.all([this.gk,a.key]).then(([k,key])=>{ if(!k||!key) return; return CN.secure.encrypt(key,{board,teams:this.teamNames()}).then(e=>this.send({type:'board_update',id,seq,gpub:k.pub,...e})); }).catch(()=>{}); }
+  // ---- باركود خاص لكل سباي ماستر مرتبط بحسابه بالمنصة (backend/codenames/spy-slots-service.js) ----
+  // لكل فريق «خانة»: رقم عشوائي + يوزر تيك توك السباي ماستر المعيّن + مفتاح تشفير. الخادم يعطي المفتاح
+  // فقط لجوال مسجّل دخول بنفس حساب تيك توك؛ غيره يرسل طلب عادي. تغيير السباي ماستر = خانة جديدة والقديمة تبطل.
+  updateSlots(){ if(!CN.secure.supported()) return; let changed=false;
+    [1,2].forEach(team=>{ const spy=this.state.roles[team].spy, id=String((spy&&this.reg.id(spy))||''), tt=id.indexOf('tiktok:')===0?id.slice(7):'', old=this.slots[team];
+      if(old&&old.tiktok===tt.toLowerCase()&&old.name===spy) return;
+      if(old){ this.send({type:'slot_revoked',slot:old.id}); this.slots[team]=null; changed=true; }
+      if(spy&&tt){ const r=crypto.getRandomValues(new Uint32Array(3)); this.slots[team]={id:'s'+[...r].map(x=>x.toString(36)).join(''),team,tiktok:tt.toLowerCase(),name:spy,key:CN.secure.randomKey()}; changed=true; } });
+    if(!changed) return; const list=[1,2].map(t=>this.slots[t]).filter(Boolean);
+    this.setState({slotSync:list.length?'pending':null});
+    const run=++this._slotRun; CN.spySlots.register(this.room,list.map(x=>({id:x.id,team:x.team,tiktok:x.tiktok,name:x.name,key:x.key}))).then(r=>{ if(run!==this._slotRun) return; this.setState({slotSync:list.length?(r&&r.success?'ok':'fail'):null}); }); }
+  sendBoardToSlot(sl){ if(!sl) return; const board=this.boardPayload(), seq=++this.seq;
+    if(!sl.aes) sl.aes=CN.secure.aesFromB64(sl.key);
+    sl.aes.then(key=>CN.secure.encrypt(key,{board,teams:this.teamNames(),team:sl.team})).then(e=>this.send({type:'board_update',slot:sl.id,seq,...e})).catch(()=>{}); }
   onRelay(m){ if(!m||m.room!==this.room) return;
+    if(m.type==='slot_hello'&&m.slot){ const sl=[1,2].map(t=>this.slots[t]).find(x=>x&&x.id===m.slot);
+      if(!sl) return this.send({type:'slot_revoked',slot:String(m.slot).slice(0,40)});
+      if(!this.slotHello[sl.id]){ this.slotHello[sl.id]=1; this.log(sl.team,`${sl.name} فتح خريطة السباي ماستر بحسابه (جوال)`,'info'); }
+      return this.sendBoardToSlot(sl); }
     if(m.type==='join'||m.type==='sync_request') this.send({type:'room_info',teams:this.teamNames()});
     if(m.type==='spymaster_request'&&m.id){ const id=String(m.id).slice(0,40);
       // جوال رجع (أعاد فتح الصفحة / رجع من تيك توك) بنفس الطلب: نرد بحالته الحالية بدون طلب جديد
@@ -713,11 +739,16 @@ class Component extends DCLogic {
       bannerOn:!!bn, bn:bn?{text:bn.text,sub:bn.sub,bg:bn.kind==='warn'?'linear-gradient(135deg, #b45309, #78350f)':`linear-gradient(135deg, ${bnT.c}, ${bnT.dk})`,bd:'rgba(255,255,255,.4)',glow:bn.kind==='warn'?'rgba(245,158,11,.4)':bnT.c+'66'}:{},
       reconnecting:S.reconnecting,
       modalOpen:!!S.modal, closeModal:()=>this.shut('modal'), mOv:o('fade .25s ease','fadeOut .26s ease forwards'), mAn:o('popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards'),
-      mTitle:modals[S.modal]||'', mW:S.modal==='how'?760:S.modal==='qr'?420:520,
+      mTitle:modals[S.modal]||'', mW:S.modal==='how'?760:S.modal==='qr'?680:520,
       mJoin:S.modal==='join', mQr:S.modal==='qr', mReqs:S.modal==='reqs', mTime:S.modal==='time', mHow:S.modal==='how', mExit:S.modal==='exit',
       noJoinReqs:!S.joinReqs.length, joinReqs:S.joinReqs.map(j=>({name:j.name,...avOf(j.name),team:S.teams[j.team].name,c:TC[j.team].c2,soft:TC[j.team].soft,remove:()=>this.setState(s=>({joinReqs:s.joinReqs.filter(x=>x.name!==j.name)}))})),
       saveJoin:()=>{ this.setState(s=>{ const P={1:s.players[1].slice(),2:s.players[2].slice()}; s.joinReqs.forEach(j=>{ if(!P[1].includes(j.name)&&!P[2].includes(j.name)) P[j.team].push(j.name); }); return {players:P,joinReqs:[]}; }); this.shut('modal'); },
       qrSrc:S.modal==='qr'?CN.qrDataUrl(spyUrl,300):'', spyUrl,
+      // باركود لكل فريق: خاص بالسباي ماستر المعيّن (يفتح له مباشرة لو مسجّل دخول بحسابه)، أو باركود الطلب العام لو ما تعيّن أحد
+      qrCards:S.modal!=='qr'?[]:[1,2].map(team=>{ const sl=this.slots[team], url=sl?new URL(`spymaster.html?room=${this.room}&s=${sl.id}&t=${team}&n=${encodeURIComponent(sl.name)}`,location.href).href:spyUrl;
+        return {title:S.teams[team].name,c:TC[team].c2,bd:TC[team].c,sub:sl?`🕵 خاص بـ ${sl.name}`:'ما تعيّن سباي ماستر · باركود الطلبات',subC:sl?'#e7e3ef':'#8a8596',src:CN.qrDataUrl(url,240),url}; }),
+      slotNote:S.slotSync==='fail'?'⚠️ تعذّر ربط الباركود بحسابات المنصة الآن — يشتغل بطلب عادي تقبله أنت':S.slotSync==='pending'?'جارٍ ربط الباركود بحسابات المنصة…':'السباي ماستر المسجّل دخول بحسابه بالمنصة تنفتح له الخريطة مباشرة · غيره يرسل طلب تقبله أنت',
+      slotNoteC:S.slotSync==='fail'?'#fca5a5':'#8a8596',
       noSpyReqs:!S.spyReqs.length, spyReqs:S.spyReqs.map(r=>({name:r.name,team:S.teams[r.team].name,c:TC[r.team].c2,ok:()=>this.approve(r,true),no:()=>this.approve(r,false)})),
       timeRows:[['⏳ وقت إرسال التلميح من السباي ماستر','hintT',HINT_T,'hint'],['⏳ وقت اختيار اللاعبين وتأكيد الإجابة','guessT',GUESS_T,'guess']].map(([label,k,opts,phase])=>({label,opts:opts.map(v=>({label:mmss(v),...seg(S[k]===v),pick:()=>{ this.setState({[k]:v}); if(this.state.phase===phase) this.runTimer(v); }}))})),
       howRoles:[['🕵','السباي ماستر','يشوف الألوان بجواله ويعطي فريقه تلميح','linear-gradient(135deg, #7c3aed, #a855f7)'],['✓','المؤكّد','الوحيد اللي يفتح الصناديق أو يتخطى','linear-gradient(135deg, #059669, #10b981)'],['👥','باقي الفريق','يصوتون على الصناديق برقمها','rgba(255,255,255,.12)']].map(([icon,t,d,ib])=>({icon,t,d,ib})),

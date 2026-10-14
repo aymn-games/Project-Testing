@@ -259,6 +259,11 @@
                 return subtle.deriveKey({ name: 'ECDH', public: k[1] }, k[0], { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
             });
         },
+        /** مفتاح AES عشوائي (base64) — مفتاح خانة سباي ماستر مرتبطة بحسابه (يُحفظ بالخادم لصاحب الخانة فقط). */
+        randomKey: function () { return b64(window.crypto.getRandomValues(new Uint8Array(32))); },
+        aesFromB64: function (keyB64) {
+            return window.crypto.subtle.importKey('raw', unb64(keyB64), { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+        },
         encrypt: function (aesKey, obj) {
             var iv = window.crypto.getRandomValues(new Uint8Array(12));
             return window.crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, aesKey, new TextEncoder().encode(JSON.stringify(obj)))
@@ -268,6 +273,23 @@
             return window.crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, aesKey, unb64(ct))
                 .then(function (pt) { return JSON.parse(new TextDecoder().decode(pt)); });
         }
+    };
+
+    /**
+     * باركود خاص لكل سباي ماستر مرتبط بحسابه (backend/codenames/spy-slots-service.js).
+     * يحتاج auth/auth-client.js (AGPAuth). ترجع Promise بالرد أو null لو ما فيه جلسة/اتصال.
+     */
+    function api(path, body) {
+        var A = window.AGPAuth;
+        if (!A || typeof A.request !== 'function' || !A.getToken || !A.getToken()) return Promise.resolve(null);
+        return A.request(path, { method: 'POST', body: body }).catch(function () { return null; });
+    }
+    var spySlots = {
+        /** شاشة اللعب: تسجيل خانات الغرفة [{id, team, tiktok, name, key}]. */
+        register: function (room, slots) { return api('/api/codenames/spy-slots', { room: room, slots: slots }); },
+        /** الجوال: طلب مفتاح خانته — {success, team, name, key} أو {success:false, error:'not_owner'|'slot_not_found', name}. */
+        claim: function (room, slot) { return api('/api/codenames/spy-claim', { room: room, slot: slot }); },
+        loggedIn: function () { var A = window.AGPAuth; return !!(A && A.getToken && A.getToken()); }
     };
 
     /** باركود (نفس طريقة اللعبة السابقة: مكتبة qrcodejs) كـ data URL لعنصر img. */
@@ -341,6 +363,7 @@
         onStatus: onStatus,
         relay: relay,
         secure: secure,
+        spySlots: spySlots,
         qrDataUrl: qrDataUrl,
         createRegistry: createRegistry
     };
