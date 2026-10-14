@@ -12,6 +12,7 @@ var S = window.AGPStore;
 var h = S.h;
 var CART_KEY = 'agp-store-cart';
 var FAV_KEY = 'agp-store-favs';
+var MOBILE_KEY = 'agp-store-mobile';
 var PLAN_ORDER = ['basic', 'mid', 'full'];
 var PLAN_FEATURES = { basic: ['إطاران'], mid: ['إطاران', 'بطاقة إقصاء'], full: ['إطاران', 'بطاقة إقصاء', 'بطاقة فوز'] };
 var PLAN_CATEGORY = 'اشتراك متجر الاستريمر';
@@ -47,6 +48,9 @@ var state = {
     pay: 0,
     paying: false,
     payError: '',
+    mobile: readText(MOBILE_KEY),
+    mobileErr: false,
+    verify: null, // {orderId, status: 'checking'|'pending'|'failed'|'error', tries}
     lastOrder: null,
     orders: null,
     ordersError: '',
@@ -57,6 +61,17 @@ function readJson(key, fallback) {
     try { var v = JSON.parse(localStorage.getItem(key)); return v && typeof v === 'object' ? v : fallback; } catch (e) { return fallback; }
 }
 function writeJson(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} }
+function readText(key) { try { return localStorage.getItem(key) || ''; } catch (e) { return ''; } }
+function writeText(key, v) { try { localStorage.setItem(key, v); } catch (e) {} }
+
+/** نفس تحقق السيرفر: جوال سعودي يبدأ بـ05 (يقبل 5xxxxxxxx و9665xxxxxxxx والأرقام العربية). */
+function normalizeMobile(raw) {
+    var d = String(raw || '').replace(/[\u0660-\u0669]/g, function (c) { return String(c.charCodeAt(0) - 0x0660); }).replace(/[^\d]/g, '');
+    if (/^9665\d{8}$/.test(d)) d = '0' + d.slice(3);
+    else if (/^5\d{8}$/.test(d)) d = '0' + d;
+    return /^05\d{8}$/.test(d) ? d : null;
+}
+function usesPaylink() { return !!(state.data && state.data.gateway === 'paylink'); }
 
 function me() { return window.AGPAuth && window.AGPAuth.getToken() ? window.AGPAuth.getCachedUser() : null; }
 function meName(u) { return (u && (u.tiktok_display_name || u.username)) || ''; }
@@ -185,10 +200,21 @@ function pay() {
     if (!me()) { location.href = loginUrl('#cart'); return; }
     var items = cartIds();
     if (!items.length) return;
+    var mobile = '';
+    if (usesPaylink()) {
+        mobile = normalizeMobile(state.mobile);
+        if (!mobile) { state.mobileErr = true; state.payError = S.errorText('invalid_mobile'); render(); return; }
+        writeText(MOBILE_KEY, mobile);
+    }
     state.paying = true;
     state.payError = '';
     render();
-    S.api('/api/store/checkout', { method: 'POST', body: { items: items, coupon: state.couponCode || '', method: PAY_METHODS[state.pay][0] } }).then(function (r) {
+    S.api('/api/store/checkout', { method: 'POST', body: { items: items, coupon: state.couponCode || '', method: PAY_METHODS[state.pay][0], mobile: mobile } }).then(function (r) {
+        if (r && r.success && r.redirectUrl) {
+            // بيلينك: التحويل لصفحة الدفع. السلة تبقى لين يتأكد الدفع (لو لغى يرجع يلقاها).
+            location.href = r.redirectUrl;
+            return;
+        }
         state.paying = false;
         if (r && r.success && r.order) {
             state.lastOrder = r.order;
@@ -206,6 +232,66 @@ function pay() {
         if (r && r.error === 'product_unavailable') loadStore();
         render();
     });
+}
+
+/** بعد الرجوع من بيلينك (store.html?order=ID): السيرفر يتحقق من بيلينك ويكمل الطلب. */
+function verifyReturn() {
+    var v = state.verify;
+    v.status = 'checking';
+    render();
+    S.api('/api/store/order?id=' + encodeURIComponent(v.orderId)).then(function (r) {
+        var o = r && r.success ? r.order : null;
+        if (o && o.status === 'completed') {
+            state.lastOrder = o;
+            state.verify = null;
+            state.cart = {};
+            writeJson(CART_KEY, state.cart);
+            state.coupon = '';
+            resetCoupon();
+            state.orders = null;
+            history.replaceState(null, '', location.pathname + '#success');
+            applyHash();
+            return;
+        }
+        if (o && o.status === 'failed') { v.status = 'failed'; render(); return; }
+        if (r && r.error === 'unauthorized') { location.href = loginUrl('?order=' + v.orderId); return; }
+        if (!o && r && r.error === 'not_found') { v.status = 'error'; render(); return; }
+        // ما زال معلّق: نعيد المحاولة كم مرة (إشعار بيلينك أحياناً يتأخر ثواني)
+        v.tries = (v.tries || 0) + 1;
+        v.status = 'pending';
+        render();
+        if (v.tries < 6) setTimeout(function () { if (state.verify === v) verifyReturn(); }, 3000);
+    });
+}
+
+function viewVerify() {
+    var v = state.verify;
+    var title, text, ico, actions;
+    if (v.status === 'checking' || (v.status === 'pending' && v.tries < 6)) {
+        title = 'جاري التأكد من الدفع…';
+        text = 'لحظات ونتأكد من عملية الدفع ونضيف منتجاتك لبروفايلك.';
+    } else if (v.status === 'pending') {
+        title = 'الدفع قيد المعالجة';
+        text = 'ما وصلنا تأكيد الدفع للحين. لو انخصم المبلغ، بتوصلك منتجاتك تلقائياً أول ما يتأكد — تقدر تتابع من «طلباتي».';
+        actions = [h('button', { type: 'button', 'class': 'btn btn-primary btn-primary--lg', onclick: function () { v.tries = 0; verifyReturn(); } }, 'تحقق مرة ثانية'),
+            h('button', { type: 'button', 'class': 'btn btn-secondary', onclick: function () { state.verify = null; history.replaceState(null, '', location.pathname); go('#orders'); } }, 'طلباتي')];
+    } else if (v.status === 'failed') {
+        title = 'ما تمت عملية الدفع';
+        text = 'تم إلغاء الدفع أو رفضه، وما انخصم شي. منتجاتك باقية في السلة وتقدر تحاول مرة ثانية.';
+        ico = '!';
+        actions = [h('button', { type: 'button', 'class': 'btn btn-primary btn-primary--lg', onclick: function () { state.verify = null; history.replaceState(null, '', location.pathname); go('#cart'); } }, 'الرجوع للسلة')];
+    } else {
+        title = 'ما لقينا الطلب';
+        text = 'تأكد إنك مسجّل دخول بنفس الحساب اللي سويت فيه الطلب.';
+        ico = '!';
+        actions = [h('button', { type: 'button', 'class': 'btn btn-secondary', onclick: function () { state.verify = null; history.replaceState(null, '', location.pathname); go(''); } }, 'العودة للمتجر')];
+    }
+    return [h('div', { 'class': 'success' }, gcard('gcard--soft', h('div', { 'class': 'success-in' },
+        ico ? h('div', { 'class': 'ok-ico', style: 'color:#fca5a5;background:radial-gradient(circle,rgba(248,113,113,0.22),rgba(248,113,113,0.05));box-shadow:0 0 0 1px rgba(248,113,113,0.4);font-size:40px;font-weight:700;' }, ico)
+            : h('div', { 'class': 'ok-ico verify-spin' }, S.checkIcon(40)),
+        h('div', { style: 'display:flex;flex-direction:column;gap:8px;' }, h('h1', null, title), h('p', null, text)),
+        h('div', { 'class': 'receipt' }, h('div', { 'class': 'r-no' }, h('span', null, 'رقم الطلب'), h('span', { 'class': 'mono', dir: 'ltr' }, '#' + v.orderId))),
+        actions ? h('div', { 'class': 'success-actions' }, actions) : null)))];
 }
 
 function loadOrders() {
@@ -411,6 +497,7 @@ function viewCart() {
                 t.savings + t.disc > 0 ? h('div', { 'class': 'line' }, h('span', null, 'التوفير'), S.money(S.price(t.savings + t.disc) + '-', 'green')) : null,
                 h('div', { 'class': 'line' }, h('span', null, 'ضريبة القيمة المضافة (15٪)'), S.money(t.vat))),
             h('div', { 'class': 'grand' }, h('span', null, 'الإجمالي'), S.money(S.price(t.grand))),
+            usesPaylink() ? mobileField() : null,
             h('div', { style: 'display:flex;flex-direction:column;gap:10px;' },
                 h('span', { 'class': 'pay-title' }, 'طريقة الدفع'),
                 h('div', { 'class': 'pay-grid', role: 'radiogroup', 'aria-label': 'طريقة الدفع' }, PAY_METHODS.map(function (m, i) {
@@ -419,12 +506,31 @@ function viewCart() {
                         h('span', { 'class': 'radio' }), h('span', null, m[1]));
                 }))),
             h('button', { type: 'button', 'class': 'btn btn-primary btn-primary--lg pay-btn', disabled: state.paying || paymentsOff, onclick: pay },
-                h('span', null, !u ? 'سجّل دخول لإتمام الدفع' : state.paying ? 'جاري الدفع…' : 'ادفع ' + S.price(t.grand) + ' ر.س')),
+                h('span', null, !u ? 'سجّل دخول لإتمام الدفع' : state.paying ? (usesPaylink() ? 'جاري التحويل لصفحة الدفع…' : 'جاري الدفع…') : 'ادفع ' + S.price(t.grand) + ' ر.س')),
             paymentsOff ? h('span', { 'class': 'pay-note' }, S.errorText('payments_not_configured')) : null,
             state.payError ? h('span', { 'class': 'pay-note' }, state.payError) : null,
             h('span', { 'class': 'secure' }, S.lockIcon(), h('span', null, 'دفع آمن ومشفّر'))
         ])));
     return out;
+}
+
+function mobileField() {
+    var input = h('input', { 'class': 'in', type: 'tel', inputmode: 'tel', autocomplete: 'tel', dir: 'ltr', value: state.mobile, placeholder: '05xxxxxxxx', 'aria-label': 'رقم الجوال', maxlength: '16', style: 'text-align:right;' + (state.mobileErr ? 'border-color:rgba(248,113,113,0.7);' : '') });
+    input.addEventListener('input', function () {
+        state.mobile = input.value;
+        if (state.mobileErr && normalizeMobile(input.value)) {
+            state.mobileErr = false;
+            input.style.borderColor = '';
+            if (state.payError === S.errorText('invalid_mobile')) {
+                state.payError = '';
+                Array.prototype.forEach.call(document.querySelectorAll('.pay-note'), function (n) { if (n.textContent === S.errorText('invalid_mobile')) n.remove(); });
+            }
+        }
+    });
+    return h('label', { 'class': 'mobile-box' },
+        h('span', { 'class': 'pay-title' }, 'رقم الجوال'),
+        input,
+        h('span', { 'class': 'mobile-hint' }, 'يُستخدم لفاتورة الدفع فقط.'));
 }
 
 function viewSuccess() {
@@ -535,7 +641,8 @@ function render() {
     } else if (!state.data) {
         content = h('div', { 'class': 'st-loading' }, 'جاري تحميل المتجر…');
     } else {
-        content = state.view === 'cart' ? viewCart()
+        content = state.verify ? viewVerify()
+            : state.view === 'cart' ? viewCart()
             : state.view === 'success' ? viewSuccess()
                 : state.view === 'orders' ? viewOrders()
                     : state.view === 'sell' ? viewSell()
@@ -549,6 +656,17 @@ window.addEventListener('popstate', applyHash);
 window.addEventListener('storage', function (e) {
     if (e.key === CART_KEY) { state.cart = readJson(CART_KEY, {}); render(); }
 });
+
+// رجوع من صفحة دفع بيلينك: store.html?order=<رقم الطلب>
+(function () {
+    var q = new URLSearchParams(location.search);
+    var id = Number(q.get('order') || q.get('orderNumber'));
+    if (Number.isInteger(id) && id > 0) {
+        state.verify = { orderId: id, status: 'checking', tries: 0 };
+        if (me()) verifyReturn();
+        else location.href = loginUrl('?order=' + id);
+    }
+})();
 
 render();
 loadStore();

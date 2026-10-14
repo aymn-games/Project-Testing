@@ -22,6 +22,7 @@ var db = require('../db/database');
 var config = require('../config');
 var logger = require('../utils/logger');
 var collectiblesService = require('../collectibles/collectibles-service');
+var paylink = require('./paylink-client');
 
 var FIRST_ORDER_ID = 482100;
 var MAX_NAME_LENGTH = 80;
@@ -149,12 +150,25 @@ function getPublicStore(user) {
         streamers: listStreamers(),
         products: listProductRows().map(mapProduct),
         favorites: favorites,
-        paymentsEnabled: canPay(user)
+        paymentsEnabled: canPay(user),
+        // بيلينك مفعّل = الدفع يتحوّل لصفحة بيلينك ويحتاج رقم جوال
+        gateway: usePaylinkFor(user) ? 'paylink' : 'mock'
     };
 }
 
+function isAdmin(user) { return !!(user && user.role === 'admin'); }
+
+/**
+ * بيلينك لهذا المستخدم؟ بيئة التجربة (test) للأدمن فقط — بطاقات بيلينك
+ * التجريبية تنجح بدون فلوس حقيقية، فلو انفتحت للكل ياخذون منتجات مجاناً.
+ */
+function usePaylinkFor(user) {
+    if (paylink.env() === 'production') return true;
+    return paylink.env() === 'test' && (isAdmin(user) || config.storeMockPayments);
+}
+
 function canPay(user) {
-    return !!(config.storeMockPayments || (user && user.role === 'admin'));
+    return !!(paylink.env() === 'production' || config.storeMockPayments || isAdmin(user));
 }
 
 /* ----------------------------------------------------------------------
@@ -285,7 +299,8 @@ function deliverToCollectibles(userId, row) {
  * يكمّل طلباً: ينشئه + يسلّم المنتجات. معاملة واحدة.
  * @returns {Object} الطلب بعد الإنشاء
  */
-var completeOrder = db.transaction(function (userId, priced, paymentMethod, paymentRef) {
+/** ينشئ الطلب بنسخة ثابتة من المنتجات وأسعارها وقت الشراء. */
+function insertOrder(userId, priced, paymentMethod, status, extra) {
     var categoriesById = {};
     listCategories().forEach(function (c) { categoriesById[c.id] = c; });
     var rowsById = {};
@@ -293,46 +308,164 @@ var completeOrder = db.transaction(function (userId, priced, paymentMethod, paym
 
     var items = priced.rows.map(function (r) { return buildOrderItem(r, rowsById, categoriesById); });
     var id = nextOrderId();
-    var createdAt = now();
-
+    extra = extra || {};
     db.prepare(
-        'INSERT INTO store_orders (id, user_id, created_at, subtotal, discount, total, coupon_code, payment_method, payment_ref, status, items) ' +
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?)"
-    ).run(id, userId, createdAt, priced.subtotal, priced.discount, priced.total,
-        priced.coupon ? priced.coupon.code : null, paymentMethod, paymentRef || null, JSON.stringify(items));
-
-    var addInventory = db.prepare('INSERT INTO store_inventory (user_id, product_id, order_id, created_at) VALUES (?, ?, ?, ?)');
-    priced.rows.forEach(function (r) {
-        addInventory.run(userId, r.id, id, createdAt);
-        deliverToCollectibles(userId, r);
-        if (r.bundle_items) {
-            parseJsonArray(r.bundle_items).forEach(function (pid) {
-                var part = rowsById[pid];
-                if (!part) return;
-                addInventory.run(userId, part.id, id, createdAt);
-                deliverToCollectibles(userId, part);
-            });
-        }
-    });
-
-    return mapOrder(db.prepare('SELECT * FROM store_orders WHERE id = ?').get(id));
-});
+        'INSERT INTO store_orders (id, user_id, created_at, subtotal, discount, total, coupon_code, payment_method, payment_ref, status, items, customer_mobile) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(id, userId, now(), priced.subtotal, priced.discount, priced.total,
+        priced.coupon ? priced.coupon.code : null, paymentMethod, extra.paymentRef || null, status, JSON.stringify(items), extra.mobile || null);
+    return id;
+}
 
 /**
- * الدفع (تجريبي حالياً) + إنشاء الطلب.
+ * يحوّل طلباً من 'pending' إلى 'completed' ويسلّم منتجاته — مرة وحدة فقط
+ * (لو وصل تأكيد الدفع أكثر من مرة، الثانية ما تسوي شي).
+ * @returns {boolean} true لو هذا الاستدعاء هو اللي أكمل الطلب
+ */
+var finalizeOrder = db.transaction(function (orderId) {
+    var info = db.prepare("UPDATE store_orders SET status = 'completed' WHERE id = ? AND status = 'pending'").run(orderId);
+    if (info.changes === 0) return false;
+    var order = db.prepare('SELECT * FROM store_orders WHERE id = ?').get(orderId);
+    var createdAt = now();
+    var addInventory = db.prepare('INSERT INTO store_inventory (user_id, product_id, order_id, created_at) VALUES (?, ?, ?, ?)');
+    parseJsonArray(order.items).forEach(function (item) {
+        // المنتج نفسه من قاعدة البيانات (لنوع التسليم)؛ لو انحذف بعد الطلب يُسجَّل بالمقتنيات بدون تسليم.
+        var row = getProductRow(item.productId);
+        addInventory.run(order.user_id, item.productId, orderId, createdAt);
+        if (row) deliverToCollectibles(order.user_id, row);
+        (item.parts || []).forEach(function (pt) {
+            var part = getProductRow(pt.productId);
+            addInventory.run(order.user_id, pt.productId, orderId, createdAt);
+            if (part) deliverToCollectibles(order.user_id, part);
+        });
+    });
+    return true;
+});
+
+/** رقم جوال سعودي → بصيغة 05xxxxxxxx، أو null لو غير صالح. */
+function normalizeMobile(raw) {
+    var digits = String(raw || '').replace(/[\u0660-\u0669]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); }).replace(/[^\d]/g, '');
+    if (/^9665\d{8}$/.test(digits)) digits = '0' + digits.slice(3);
+    else if (/^5\d{8}$/.test(digits)) digits = '0' + digits;
+    return /^05\d{8}$/.test(digits) ? digits : null;
+}
+
+function storeUrl(query) {
+    return String(config.frontendBaseUrl || '').replace(/\/+$/, '') + '/store.html' + query;
+}
+
+/**
+ * الدفع + إنشاء الطلب.
+ * - بيلينك مفعّل: طلب معلّق + فاتورة بيلينك، ويرجّع رابط الدفع (redirectUrl).
+ *   الطلب ما يكتمل إلا بعد التحقق من بيلينك نفسه (verifyOrder).
+ * - بيلينك غير مفعّل: الدفع التجريبي القديم (للأدمن أو STORE_MOCK_PAYMENTS).
  * @param {Object} user - من الجلسة
- * @param {{items: number[], coupon?: string, method?: string}} input
+ * @param {{items: number[], coupon?: string, method?: string, mobile?: string}} input
+ * @returns {Promise<Object>}
  */
 function checkout(user, input) {
     input = input || {};
-    if (!canPay(user)) return { success: false, error: 'payments_not_configured' };
     var method = PAY_METHODS.indexOf(input.method) !== -1 ? input.method : PAY_METHODS[0];
-    var priced = priceCart(input.items, input.coupon ? cleanText(input.coupon, 40) : '');
-    if (!priced.success) return priced;
 
-    var order = completeOrder(user.id, priced, method, 'mock-' + crypto.randomBytes(6).toString('hex'));
-    logger.log('Store: order #' + order.id + ' completed for user ' + user.id + ' (' + order.total + ' SAR, mock payment)');
-    return { success: true, order: order };
+    if (!canPay(user)) return Promise.resolve(fail('payments_not_configured'));
+    if (!usePaylinkFor(user)) {
+        var mockPriced = priceCart(input.items, input.coupon ? cleanText(input.coupon, 40) : '');
+        if (!mockPriced.success) return Promise.resolve(mockPriced);
+        var mockId = db.transaction(function () {
+            var id = insertOrder(user.id, mockPriced, method, 'pending', { paymentRef: 'mock-' + crypto.randomBytes(6).toString('hex') });
+            finalizeOrder(id);
+            return id;
+        })();
+        logger.log('Store: order #' + mockId + ' completed for user ' + user.id + ' (' + mockPriced.total + ' SAR, mock payment)');
+        return Promise.resolve({ success: true, order: getOrderForUser(user, mockId) });
+    }
+
+    var mobile = normalizeMobile(input.mobile);
+    if (!mobile) return Promise.resolve(fail('invalid_mobile'));
+    var priced = priceCart(input.items, input.coupon ? cleanText(input.coupon, 40) : '');
+    if (!priced.success) return Promise.resolve(priced);
+    if (!(priced.total > 0)) return Promise.resolve(fail('invalid_total'));
+
+    var orderId = insertOrder(user.id, priced, method, 'pending', { mobile: mobile });
+    var names = priced.rows.map(function (r) { return r.name; }).join('، ');
+    return paylink.addInvoice({
+        amount: priced.total,
+        orderNumber: String(orderId),
+        clientName: cleanText(user.tiktok_display_name || user.username || 'عميل', 60),
+        clientMobile: mobile,
+        clientEmail: user.email || undefined,
+        callBackUrl: storeUrl('?order=' + orderId),
+        cancelUrl: storeUrl('?order=' + orderId),
+        note: 'طلب متجر ألعاب أيمن #' + orderId,
+        // سطر واحد بالمبلغ النهائي (بعد كود الخصم) عشان مجموع المنتجات = مبلغ الفاتورة.
+        products: [{ title: 'طلب #' + orderId, price: priced.total, qty: 1, description: names.slice(0, 250), isDigital: true }]
+    }).then(function (inv) {
+        db.prepare('UPDATE store_orders SET paylink_transaction_no = ?, payment_ref = ? WHERE id = ?').run(inv.transactionNo, inv.transactionNo, orderId);
+        logger.log('Store: order #' + orderId + ' pending Paylink payment (' + priced.total + ' SAR, ' + paylink.env() + ')');
+        return { success: true, orderId: orderId, redirectUrl: inv.url };
+    }, function (err) {
+        db.prepare("UPDATE store_orders SET status = 'failed' WHERE id = ? AND status = 'pending'").run(orderId);
+        logger.error('Store: Paylink invoice failed for order #' + orderId + ':', err && err.message);
+        return fail('payment_gateway_error');
+    });
+}
+
+/**
+ * يتأكد من بيلينك مباشرة (ما نثق بأي بيانات جاية من المتصفح أو الإشعار):
+ * الفاتورة مدفوعة وبنفس مبلغ الطلب → نكمل الطلب ونسلّم المنتجات.
+ * @returns {Promise<string>} حالة الطلب بعد التحقق
+ */
+function verifyOrder(orderId) {
+    var order = db.prepare('SELECT * FROM store_orders WHERE id = ?').get(orderId);
+    if (!order) return Promise.resolve('not_found');
+    if (order.status !== 'pending' || !order.paylink_transaction_no || !paylink.isEnabled()) return Promise.resolve(order.status);
+    return paylink.getInvoice(order.paylink_transaction_no).then(function (inv) {
+        var status = inv.orderStatus.toLowerCase();
+        if (status === 'paid') {
+            if (Math.abs(inv.amount - order.total) > 0.01) {
+                logger.error('Store: Paylink amount mismatch for order #' + orderId + ' (paid ' + inv.amount + ', expected ' + order.total + ')');
+                return 'pending';
+            }
+            if (finalizeOrder(orderId)) logger.log('Store: order #' + orderId + ' paid via Paylink and delivered');
+            return 'completed';
+        }
+        if (status === 'cancelled' || status === 'canceled' || status === 'declined') {
+            db.prepare("UPDATE store_orders SET status = 'failed' WHERE id = ? AND status = 'pending'").run(orderId);
+            return 'failed';
+        }
+        return 'pending';
+    }, function (err) {
+        logger.error('Store: Paylink verify failed for order #' + orderId + ':', err && err.message);
+        return 'pending';
+    });
+}
+
+function getOrderForUser(user, orderId) {
+    var row = db.prepare('SELECT * FROM store_orders WHERE id = ? AND user_id = ?').get(orderId, user.id);
+    return row ? mapOrder(row) : null;
+}
+
+/** صفحة المتجر بعد الرجوع من بيلينك تسأل عن طلبها. */
+function getOrderStatus(user, orderId) {
+    var id = toId(orderId);
+    if (!id || !getOrderForUser(user, id)) return Promise.resolve(fail('not_found'));
+    return verifyOrder(id).then(function () {
+        return { success: true, order: getOrderForUser(user, id) };
+    });
+}
+
+/**
+ * إشعار بيلينك (Webhook). محتواه نفسه ما يُعتمد عليه — نستخرج منه رقم
+ * الطلب أو رقم الفاتورة بس، ونتحقق من بيلينك مباشرة.
+ */
+function handlePaylinkWebhook(body) {
+    body = body || {};
+    var orderId = toId(body.merchantOrderNumber || body.orderNumber || body.order_number);
+    var tx = cleanText(body.transactionNo || body.transaction_no || '', 60);
+    var row = orderId ? db.prepare('SELECT id FROM store_orders WHERE id = ?').get(orderId)
+        : (tx ? db.prepare('SELECT id FROM store_orders WHERE paylink_transaction_no = ?').get(tx) : null);
+    if (!row) return Promise.resolve({ success: true, ignored: true });
+    return verifyOrder(row.id).then(function (status) { return { success: true, status: status }; });
 }
 
 function mapOrder(row) {
@@ -857,6 +990,8 @@ module.exports = {
     checkCoupon: checkCoupon,
     priceCart: priceCart,
     checkout: checkout,
+    getOrderStatus: getOrderStatus,
+    handlePaylinkWebhook: handlePaylinkWebhook,
     listMyOrders: listMyOrders,
     setFavorite: setFavorite,
     getStreamerStats: getStreamerStats,

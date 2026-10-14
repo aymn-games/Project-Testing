@@ -203,7 +203,10 @@ var ERRORS = {
     invalid_code: 'الكود حروف إنجليزية وأرقام فقط',
     min_two_items: 'اختر منتجين على الأقل',
     missing_fields: 'اكتب الاسم واليوزر',
-    offer_exists: 'المنتج عليه عرض فعّال'
+    offer_exists: 'المنتج عليه عرض فعّال',
+    invalid_mobile: 'اكتب رقم جوال صحيح يبدأ بـ 05',
+    payment_gateway_error: 'تعذّر فتح صفحة الدفع، حاول مرة ثانية بعد شوي.',
+    invalid_total: 'مبلغ الطلب غير صحيح'
 };
 
 function errorText(err) {

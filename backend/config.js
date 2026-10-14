@@ -46,6 +46,13 @@ module.exports = {
     // STORE_MOCK_PAYMENTS=true يفتحه للكل مؤقتاً للتجربة.
     storeMockPayments: process.env.STORE_MOCK_PAYMENTS === 'true',
 
+    // بوابة الدفع بيلينك (backend/store/paylink-client.js). PAYLINK_ENV:
+    // test = بيئة التجربة بمفاتيح بيلينك التجريبية، production = الدفع
+    // الحقيقي بمفاتيح الحساب. فارغ = بيلينك معطّل (يرجع للدفع التجريبي القديم).
+    paylinkEnv: process.env.PAYLINK_ENV || '',
+    paylinkApiId: process.env.PAYLINK_API_ID || '',
+    paylinkSecretKey: process.env.PAYLINK_SECRET_KEY || '',
+
     // مفتاح توقيع روابط "إحصائيات مبيعات الاستريمر" (streamer-stats.html?s=..&t=..).
     // اختياري: فارغ = مفتاح عشوائي يُولَّد مرة وحدة ويُحفظ بقاعدة البيانات.
     storeStatsSecret: process.env.STORE_STATS_SECRET || '',
