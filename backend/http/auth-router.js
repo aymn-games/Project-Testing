@@ -19,6 +19,7 @@ var partnersService = require('../partners/partners-service');
 var lettersCellQuestionsService = require('../letters-cell/letters-cell-questions-service');
 var platformStatsService = require('../stats/platform-stats-service');
 var supportService = require('../support/support-service');
+var codenamesSpySlots = require('../codenames/spy-slots-service');
 var storeRouter = require('./store-router');
 var tiktokLiveCheck = require('../platforms/tiktok/tiktok-live-check');
 var logger = require('../utils/logger');
@@ -79,6 +80,9 @@ var ROUTES = [
   { method: 'POST', path: '/api/auth/google', requireAuth: false, handler: handleGoogleLogin },
   { method: 'POST', path: '/api/auth/logout', requireAuth: true, handler: handleLogout },
   { method: 'GET', path: '/api/auth/me', requireAuth: true, handler: handleMe },
+  // كود نيمز: باركود خاص لكل سباي ماستر مرتبط بحسابه (codenames/spy-slots-service.js)
+  { method: 'POST', path: '/api/codenames/spy-slots', requireAuth: true, handler: handleCodenamesSpySlots },
+  { method: 'POST', path: '/api/codenames/spy-claim', requireAuth: true, handler: handleCodenamesSpyClaim },
   { method: 'POST', path: '/api/auth/tiktok/link', requireAuth: true, handler: handleTikTokLink },
   { method: 'POST', path: '/api/auth/tiktok/verification-code', requireAuth: true, handler: handleTikTokVerificationCode },
   // ---- تسجيل دخول تيك توك الرسمي (OAuth Login Kit) — البديل الموصى به
@@ -273,6 +277,24 @@ function handleLogout(req, res, body, user, token) {
 
 function handleMe(req, res, body, user) {
   sendJson(res, 200, { success: true, user: user });
+}
+
+/** شاشة لعب كود نيمز (حساب ستريمر) تسجّل خانات السباي ماستر لغرفتها. */
+function handleCodenamesSpySlots(req, res, body, user) {
+  var r = codenamesSpySlots.setSlots(user, String(body.room || ''), body.slots);
+  if (!r.ok) {
+    sendJson(res, r.error === 'forbidden' ? 403 : r.error === 'busy' ? 503 : 400, { success: false, error: r.error });
+    return;
+  }
+  sendJson(res, 200, { success: true });
+}
+
+/** جوال سباي ماستر يطلب مفتاح خانته — يُعطى فقط لصاحب يوزر تيك توك الموثَّق. */
+function handleCodenamesSpyClaim(req, res, body, user) {
+  var r = codenamesSpySlots.claimSlot(user, String(body.room || ''), String(body.slot || ''));
+  if (r.ok) { sendJson(res, 200, { success: true, team: r.team, name: r.name, key: r.key }); return; }
+  if (r.error === 'not_owner') { sendJson(res, 200, { success: false, error: 'not_owner', name: r.name, team: r.team }); return; }
+  sendJson(res, 404, { success: false, error: r.error });
 }
 
 function handleTikTokLink(req, res, body, user) {
