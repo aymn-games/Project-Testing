@@ -3,6 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+// القالب الخام (عنصر x-dc) ينقرأ كـ HTML قبل ما يرسمه support.js، فصور القالب
+// اللي فيها onError / onLoad بقيم القالب {{ ... }} تشغّل نص القالب كـ JS
+// وتطلع أخطاء بالكونسول (row/hideImg/logoOk is not defined). نلغي معالجات الصور
+// في القالب الخام أول ما تنقرأ (img.onload/onerror = null) — السمة نفسها تبقى
+// بالقالب فـ support.js يقرأه عادي، والصور المرسومة الحقيقية ما تتأثر.
+(function () {
+    function clear(n) {
+        if (n.nodeType !== 1) return;
+        var imgs = n.tagName === 'IMG' ? [n] : n.getElementsByTagName('img');
+        for (var i = 0; i < imgs.length; i++) if (imgs[i].closest('x-dc')) { imgs[i].onload = null; imgs[i].onerror = null; }
+    }
+    var mo = new MutationObserver(function (list) {
+        for (var i = 0; i < list.length; i++) for (var j = 0; j < list[i].addedNodes.length; j++) clear(list[i].addedNodes[j]);
+    });
+    mo.observe(document.documentElement, { childList: true, subtree: true });
+    document.addEventListener('DOMContentLoaded', function () { var x = document.querySelector('x-dc'); if (x) clear(x); mo.disconnect(); });
+}());
+</script>
 <script src="../../js/agp-wide-scale.js" data-min-height="900"></script>
 <title>روليت القبائل — ألعاب أيمن</title>
 <script src="../../js/agp-core.js"></script>
