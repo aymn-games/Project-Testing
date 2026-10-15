@@ -309,7 +309,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function normalizeArabicText(text) {
         if (typeof text !== 'string') return '';
+        // الأرقام العربية/الفارسية = نفس الإنجليزية
         return text
+            .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
+            .replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); })
             .replace(/[ً-ْٰـ]/g, '')
             .replace(/[إأآا]/g, 'ا')
             .replace(/[ىی]/g, 'ي')

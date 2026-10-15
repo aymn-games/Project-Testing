@@ -17,8 +17,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _keyword = null;
     var _active = false;
 
+    // الأرقام العربية (١٢٣) والفارسية (۱۲۳) والعريضة (１２３) تُعامل مثل الإنجليزية (123)
     function normalize(text) {
-        return (typeof text === 'string') ? text.trim().toLowerCase() : '';
+        if (typeof text !== 'string') return '';
+        return text.normalize('NFKC')
+            .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
+            .replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); })
+            .trim().toLowerCase();
     }
 
     AGP.keywordManager = {

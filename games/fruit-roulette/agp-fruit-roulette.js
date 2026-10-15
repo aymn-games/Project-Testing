@@ -23,6 +23,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 (function (AGP) {
     'use strict';
 
+    // الأرقام العربية (١٢٣) والفارسية (۱۲۳) والعريضة (１２３) ← إنجليزية (123)
+    function toLatinDigits(text) {
+        return String(text == null ? '' : text).normalize('NFKC')
+            .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
+            .replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); });
+    }
+
     if (!AGP.log) { AGP.log = function () {}; }
     if (!AGP.events) { AGP.events = { emit: function () {}, on: function () { return function () {}; } }; }
 
@@ -875,7 +882,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             // تحقّق صريح: نفس صاحب الدور فقط (id أو name)، لا أي شخص آخر.
             if (payload.id !== _activeWinner.id && payload.name !== _activeWinner.name) return;
 
-            var n = parseInt(payload.text.trim(), 10);
+            var n = parseInt(toLatinDigits(payload.text.trim()), 10);
             if (isNaN(n) || n < 1 || n > CRATE_COUNT) return;
 
             resolveCrateSelection(n - 1);
