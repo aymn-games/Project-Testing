@@ -327,7 +327,7 @@ class Component extends DCLogic {
   followersOnly = !!SETUP&&SETUP.who==='المتابعون فقط';
   constructor(p){ super(p); this.state={...this.fresh(), scale:1, narrow:innerWidth<820, logo:false, exitOpen:false, settingsOpen:false, setTab:0, draft:null, kick:[], joinOpen:false, joiners:[], ever:[], keyword:this.kw(), minS:[20,25,30,35].includes(this.cfg().min)?this.cfg().min:20, maxS:[20,25,30,35].includes(this.cfg().min)?this.cfg().min:20, tMode:this.cfg().mode ?? this.props.timerMode ?? 'ظاهر', shake:0, pts:null}; }
   cfg(){ if(this._cfg) return this._cfg; let c={}; try{ c=JSON.parse(localStorage.getItem('bomb-settings')||'{}')||{}; }catch(e){}
-    const n=v=>v?parseInt(v,10):undefined; const b=n(c.bombSec); return this._cfg={min:b, max:b, mode:c.timerMode}; }
+    const n=v=>v?parseInt(v,10):undefined; const b=n(c.bombSec); return this._cfg={min:b, max:b, mode:c.timerMode, shuffle:c.shuffleNums===true}; }
   kw(){ try{ const k=JSON.parse(localStorage.getItem('bomb-settings')||'{}').keyword; if(k) return k; }catch(e){} return 'دخول'; }
   d(){ const S=this.state; return S.draft||{minS:S.minS,maxS:S.maxS,tMode:S.tMode}; }
   setD(p){ this.setState(s=>({draft:{...(s.draft||{minS:s.minS,maxS:s.maxS,tMode:s.tMode}),...p}})); }
@@ -337,10 +337,17 @@ class Component extends DCLogic {
   // إعادة بنفس اللاعبين: الكل يرجع بنفس الأرقام، ونقاط المنصة تُحسب من جديد للمباراة الجديدة
   replay(){ cancelAnimationFrame(this.raf); clearTimeout(this.bt); this.stopVid(); this.reported=false; this.matchStartedAt=null; this.run=(this.run||0)+1;
     const S=this.state, f=this.fresh();
-    this.setState({...f, players:S.players.map(p=>({...p,out:false})), ever:S.ever, minS:S.minS, maxS:S.maxS, tMode:S.tMode, keyword:S.keyword,
+    this.setState({...f, players:(back=>this.cfg().shuffle?this.renumber(back).players:back)(S.players.map(p=>({...p,out:false}))), ever:S.ever, minS:S.minS, maxS:S.maxS, tMode:S.tMode, keyword:S.keyword,
       settingsOpen:false, joinOpen:false, exitOpen:false, joiners:[], kick:[], draft:null, boomOut:false, pts:null}); }
   roster(){ return (Array.isArray(ROSTER)?ROSTER:[]).map(n=>typeof n==='string'?n:n&&n.name).filter(Boolean); }
-  fresh(){ return { players:this.roster().map((n,i)=>({id:i+1,name:n,img:this.reg.avatar(n),out:false})), phase:'idle', round:1, holder:null, holderKey:0, endAt:0, total:1, now:0, log:[], victim:null, winner:null, lastSec:-1 }; }
+  // «تغيير أرقام اللاعبين كل جولة»: الباقين ياخذون 1..N بترتيب عشوائي، والمقصيين بعدهم (ما يتكرر رقم).
+  // ترجع اللاعبين بأرقامهم الجديدة + خريطة القديم ← الجديد (للقوائم اللي تحفظ أرقام).
+  renumber(players){ const alive=players.filter(p=>!p.out).map(p=>p.id), nums=alive.map((_,i)=>i+1);
+    for(let i=nums.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [nums[i],nums[j]]=[nums[j],nums[i]]; }
+    const map={}; alive.forEach((id,i)=>{ map[id]=nums[i]; }); let next=alive.length; players.forEach(p=>{ if(p.out) map[p.id]=++next; });
+    return {players:players.map(p=>({...p,id:map[p.id]})).sort((a,b)=>a.id-b.id), map}; }
+  fresh(){ const pl=this.roster().map((n,i)=>({id:i+1,ci:i,name:n,img:this.reg.avatar(n),out:false}));
+    return { players:this.cfg().shuffle?this.renumber(pl).players:pl, phase:'idle', round:1, holder:null, holderKey:0, endAt:0, total:1, now:0, log:[], victim:null, winner:null, lastSec:-1 }; }
   componentDidMount(){ this.setState(s=>({ever:s.players.map(p=>p.name)}));
     this.fit=()=>{ let sc=(innerHeight-80)/1000, dw=innerWidth/sc; if(dw<1920){ sc=Math.min(innerWidth/1920,sc); dw=1920; } dw=Math.min(dw,2600); this.setState({narrow:innerWidth<820,scale:sc,dW:Math.round(dw)}); }; this.fit(); addEventListener('resize',this.fit);
     // الشات من البث المتصل بمكتبة الألعاب (adapters/agp-tiktok-adapter.js)
@@ -366,7 +373,7 @@ class Component extends DCLogic {
     cancelAnimationFrame(this.raf); this.raf=requestAnimationFrame(loop);
   }
   pass(to){
-    const S=this.state; if(S.phase!=='live') return; const tgt=S.players.find(p=>p.id===to);
+    const S=this.state; if(S.phase!=='live') return; const tgt=S.players.find(p=>p.id===to&&!p.out);
     if(!tgt||tgt.out||to===S.holder) return;
     const from=S.players.find(p=>p.id===S.holder), left=Math.max(0,S.endAt-performance.now());
     this.setState(s=>({holder:to,holderKey:s.holderKey+1,log:[{key:Math.random(),from:from.name,to:tgt.name,t:(left/1000).toFixed(2)},...s.log].slice(0,5)}));
@@ -379,13 +386,14 @@ class Component extends DCLogic {
     clearTimeout(this.bt); this.bt=setTimeout(()=>{ this.setState({boomOut:true}); this.bt=setTimeout(()=>{ this.setState({boomOut:false}); this.afterBoom(); },300); },3000);
   }
   afterBoom(){ const A=this.alive(); if(A.length<=1){ this.setState({phase:'over',winner:A[0]?A[0].id:null}); this.reportPoints(A[0]); [[523.25,0,.22],[659.25,160,.22],[783.99,320,.5]].forEach(([f,t,d])=>setTimeout(()=>this.tone(f,d,'sine',.15),t)); }
-    else this.setState(s=>({phase:'idle',holder:null,round:s.round+1})); }
+    else this.setState(s=>{ const nx={phase:'idle',holder:null,round:s.round+1}; if(!this.cfg().shuffle) return nx;
+      const r=this.renumber(s.players), m=id=>r.map[id]??id; return {...nx,players:r.players,joiners:s.joiners.map(m),victim:s.victim==null?null:m(s.victim)}; }); }
   onChat(user,text,isFollower=true){ const S=this.state; const h=S.players.find(p=>p.id===S.holder);
     if(S.joinOpen&&!(S.phase==='live'&&h&&h.name===user)&&this.norm(text)===this.norm(S.keyword)){
       if(this.followersOnly&&!isFollower) return;
       if(S.ever.includes(user)) return;
       this.setState(st=>{ if(st.ever.includes(user)) return null; const id=Math.max(0,...st.players.map(p=>p.id))+1;
-        return {players:[...st.players,{id,name:user,img:this.reg.avatar(user),out:false}],ever:[...st.ever,user],joiners:[...st.joiners,id]}; }); this.tone(880,.12,'triangle'); return; }
+        return {players:[...st.players,{id,ci:st.players.length,name:user,img:this.reg.avatar(user),out:false}],ever:[...st.ever,user],joiners:[...st.joiners,id]}; }); this.tone(880,.12,'triangle'); return; }
     if(S.phase!=='live') return; if(!h||h.name!==user) return; const n=toNum(text); if(n) this.pass(n); }
 
   // نظام نقاط المنصة (backend/points/points-service.js) — مرة واحدة لكل مباراة عند إعلان الفائز
@@ -416,7 +424,7 @@ class Component extends DCLogic {
     const S=this.state, o=(k,i,out)=>S[k+'Out']?out:i, live=S.phase==='live';
     const left=live?Math.max(0,S.endAt-S.now):S.phase==='boom'?0:S.total, pct=live?left/S.total:S.phase==='boom'?0:1;
     const hot=live?1-pct:0, tC=!live?(S.phase==='boom'?'#f87171':'#a8a3b5'):left<3000?'#f87171':left<6000?'#fb923c':'#fde68a';
-    const avOf=p=>{ const c=AVC[(p.id-1)%AVC.length]; return `linear-gradient(135deg, ${c}cc, ${c}55)`; };
+    const avOf=p=>{ const c=AVC[(p.ci??(p.id-1))%AVC.length]; return `linear-gradient(135deg, ${c}cc, ${c}55)`; };
     const N=S.players.filter(p=>!p.out).length, base=N<=2?2:N<=6?3:N<=12?4:N<=20?5:N<=36?6:N<=56?7:8, cols=Math.max(1,Math.min(N||1,Math.round(base*(S.dW||1920)/1920))), rows=Math.ceil(N/cols), cardH=Math.round(Math.max(46,Math.min(140,(690-(rows-1)*12)/rows))), avS=Math.round(Math.min(86,cardH*.62));
     const cards=S.players.filter(p=>!p.out).map(p=>{ const isH=S.holder===p.id&&(live||S.phase==='boom');
       return {...p,ini:ini(p.name),av:avOf(p),isHolder:isH&&live,isOut:p.out,
