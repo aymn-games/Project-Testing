@@ -498,7 +498,7 @@ const mmss = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
 const HOW = [
   ['🎯 اكشفوا صناديق فريقكم قبل الخصم · ابعدوا عن 💀','h'],
   ['الأدوار','h'],['• 🕵 السباي ماستر: يشوف الألوان بجواله ويلمّح','p'],['• ✓ المؤكّد: يفتح الصناديق','p'],['• 👥 الباقي: يصوّتون بالرقم','p'],
-  ['أوامر الشات · الكلمة أول ثم الرقم','h'],['• التلميح: مدن 3','p'],['• تصويت: 12 · تراجع: سحب 12','p'],['• فتح: تأكيد 12 · إنهاء الدور: تخطي','p'],
+  ['أوامر الشات · الكلمة أول ثم الرقم','h'],['• التلميح: من جوال السباي ماستر (الكلمة + العدد) · أو بالشات: مدن 3','p'],['• تصويت: 12 · تراجع: سحب 12','p'],['• فتح: تأكيد 12 · إنهاء الدور: تخطي','p'],
   ['جوال السباي ماستر','h'],['• ⚙ الإعدادات ← باركود السباي ماستر','p'],['• مسجّل بحسابه ← تنفتح مباشرة · غيره ← طلب تقبله','p'],
   ['🚨 جهّز الأدوار قبل «ابدأ» · الريست قبل أول تلميح بس','w']
 ];
@@ -550,7 +550,8 @@ class Component extends DCLogic {
     this.sync();
   }
   // support.js يمرّر prevProps فقط — نتابع آخر لوحة أرسلناها بأنفسنا
-  componentDidUpdate(){ if(this._syncedBoard!==this.state.board) this.sync();
+  componentDidUpdate(){ const S=this.state, st=JSON.stringify([S.turn,S.phase,S.hint,this.turnId||0]);
+    if(this._syncedBoard!==S.board||this._syncedSt!==st){ this._syncedSt=st; this.sync(); }
     const sig=JSON.stringify([this.state.roles[1].spy,this.state.roles[2].spy]); if(sig!==this._spySig){ this._spySig=sig; this.updateSlots(); } }
   componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('pointerdown',this.closeMenuOut); this.unsub?.(); this.unsubSt?.(); clearInterval(this.iv); clearTimeout(this.bt); (this.ts||[]).forEach(clearTimeout); this.rl&&this.rl.close(); }
   after(ms,fn){ (this.ts||(this.ts=[])).push(setTimeout(fn,ms)); }
@@ -564,7 +565,7 @@ class Component extends DCLogic {
   // اللوحة الملونة لجوال مقبول واحد: مشفّرة بمفتاح مشترك بين اللعبة وهذا الجوال فقط
   sendBoardTo(id){ const a=this.approved[id]; if(!a||!a.pub) return; const board=this.boardPayload(), seq=++this.seq;
     if(!a.key) a.key=this.gk.then(k=>k?CN.secure.shared(k.priv,a.pub):null);
-    Promise.all([this.gk,a.key]).then(([k,key])=>{ if(!k||!key) return; return CN.secure.encrypt(key,{board,teams:this.teamNames()}).then(e=>this.send({type:'board_update',id,seq,gpub:k.pub,...e})); }).catch(()=>{}); }
+    Promise.all([this.gk,a.key]).then(([k,key])=>{ if(!k||!key) return; return CN.secure.encrypt(key,{board,teams:this.teamNames(),team:a.team,...this.statusPayload()}).then(e=>this.send({type:'board_update',id,seq,gpub:k.pub,...e})); }).catch(()=>{}); }
   // ---- باركود خاص لكل سباي ماستر مرتبط بحسابه بالمنصة (backend/codenames/spy-slots-service.js) ----
   // لكل فريق «خانة»: رقم عشوائي + يوزر تيك توك السباي ماستر المعيّن + مفتاح تشفير. الخادم يعطي المفتاح
   // فقط لجوال مسجّل دخول بنفس حساب تيك توك؛ غيره يرسل طلب عادي. تغيير السباي ماستر = خانة جديدة والقديمة تبطل.
@@ -576,10 +577,23 @@ class Component extends DCLogic {
     if(!changed) return; const list=[1,2].map(t=>this.slots[t]).filter(Boolean);
     this.setState({slotSync:list.length?'pending':null});
     const run=++this._slotRun; CN.spySlots.register(this.room,list.map(x=>({id:x.id,team:x.team,tiktok:x.tiktok,name:x.name,key:x.key}))).then(r=>{ if(run!==this._slotRun) return; this.setState({slotSync:list.length?(r&&r.success?'ok':'fail'):null}); }); }
+  // حالة الدور لجوالات السباي ماستر: مين دوره، المرحلة، التلميح الحالي، ورقم الدور (يمنع إعادة إرسال تلميح قديم)
+  statusPayload(){ const S=this.state; return {turn:S.turn,phase:S.phase,hint:S.hint?{w:S.hint.w,n:S.hint.n}:null,turnId:this.turnId||0}; }
+  // تلميح من جوال السباي ماستر (مربع النص + عدد الكلمات 1–7): مشفّر بمفتاح الجوال نفسه، فما أحد غيره يقدر يرسله
+  onPhoneHint(m){ let team, name, keyP, to;
+    if(m.slot){ const sl=[1,2].map(t=>this.slots[t]).find(x=>x&&x.id===m.slot); if(!sl) return; team=sl.team; name=sl.name; to={slot:sl.id}; if(!sl.aes) sl.aes=CN.secure.aesFromB64(sl.key); keyP=sl.aes; }
+    else { const a=this.approved[m.id]; if(!a||!a.pub) return; team=a.team; name=a.name; to={id:m.id}; if(!a.key) a.key=this.gk.then(k=>k?CN.secure.shared(k.priv,a.pub):null); keyP=a.key; }
+    const ack=(ok,reason)=>this.send({type:'hint_ack',...to,ok,reason:reason||null});
+    keyP.then(k=>k?CN.secure.decrypt(k,m.iv,m.ct):null).then(d=>{ if(!d) return; const S=this.state;
+      if(S.phase!=='hint'||S.turn!==team||+d.turnId!==(this.turnId||0)) return ack(false,'not_turn');
+      const w=String(d.w||'').trim().replace(/\s+/g,' '), n=Math.round(+d.n);
+      if(!w||w.length>30) return ack(false,'empty'); if(/\s/.test(w)) return ack(false,'one_word'); if(!(n>=1&&n<=7)) return ack(false,'count');
+      this.log(team,`🕵 ${name} أرسل التلميح من الجوال`,'info'); this.giveHint(n,w,0); ack(true); }).catch(()=>{}); }
   sendBoardToSlot(sl){ if(!sl) return; const board=this.boardPayload(), seq=++this.seq;
     if(!sl.aes) sl.aes=CN.secure.aesFromB64(sl.key);
-    sl.aes.then(key=>CN.secure.encrypt(key,{board,teams:this.teamNames(),team:sl.team})).then(e=>this.send({type:'board_update',slot:sl.id,seq,...e})).catch(()=>{}); }
+    sl.aes.then(key=>CN.secure.encrypt(key,{board,teams:this.teamNames(),team:sl.team,...this.statusPayload()})).then(e=>this.send({type:'board_update',slot:sl.id,seq,...e})).catch(()=>{}); }
   onRelay(m){ if(!m||m.room!==this.room) return;
+    if(m.type==='spy_hint'&&m.iv&&m.ct) return this.onPhoneHint(m);
     if(m.type==='slot_hello'&&m.slot){ const sl=[1,2].map(t=>this.slots[t]).find(x=>x&&x.id===m.slot);
       if(!sl) return this.send({type:'slot_revoked',slot:String(m.slot).slice(0,40)});
       if(!this.slotHello[sl.id]){ this.slotHello[sl.id]=1; this.log(sl.team,`${sl.name} فتح خريطة السباي ماستر بحسابه (جوال)`,'info'); }
@@ -613,7 +627,7 @@ class Component extends DCLogic {
     if(ph==='hint'){ this.log(tm,'ما أرسل السباي ماستر التلميح بالوقت المحدد -- انتقل الدور','bad'); this.endTurn(); }
     if(ph==='guess'){ this.log(tm,'انتهى وقت الاختيار قبل التأكيد الكامل -- انتقل الدور','bad'); this.endTurn(); } },1000); }
   start(){ if(this.state.phase!=='ready') return; this.matchStartedAt=Date.now(); this.beginTurn(this.state.turn); }
-  beginTurn(team){ this.opened=0; this.setState(s=>({turn:team,phase:'hint',hint:null,picks:[],board:s.board.map(b=>b.votes.length?{...b,votes:[]}:b)})); this.banner(`الآن دور ${this.state.teams[team].name}`,2000,'turn'); this.after(10,()=>this.runTimer(this.state.hintT)); }
+  beginTurn(team){ this.opened=0; this.turnId=(this.turnId||0)+1; this.setState(s=>({turn:team,phase:'hint',hint:null,picks:[],board:s.board.map(b=>b.votes.length?{...b,votes:[]}:b)})); this.banner(`الآن دور ${this.state.teams[team].name}`,2000,'turn'); this.after(10,()=>this.runTimer(this.state.hintT)); }
   endTurn(){ if(this.state.phase==='pending'||this.state.phase==='over') return; this.beginTurn(this.state.turn===1?2:1); }
   giveHint(n,w,old=0){ const tm=this.state.turn; this.setState({hint:{n,w,old},hintGiven:true,phase:'guess'}); this.log(tm,`أعطى التلميح «${w} ${n}»${old?` (منها ${old} قديم)`:''}`,'info'); this.banner(w,2000,'hint',`التلميح · ${n}${old?` · منها ${old} قديم`:''}`); this.runTimer(this.state.guessT); }
   vote(name,i,add){ this.setState(s=>({board:s.board.map((b,k)=>{ if(k!==i||b.open) return b; const has=b.votes.includes(name);
@@ -754,7 +768,7 @@ class Component extends DCLogic {
       timeRows:[['⏳ وقت إرسال التلميح من السباي ماستر','hintT',HINT_T,'hint'],['⏳ وقت اختيار اللاعبين وتأكيد الإجابة','guessT',GUESS_T,'guess']].map(([label,k,opts,phase])=>({label,opts:opts.map(v=>({label:mmss(v),...seg(S[k]===v),pick:()=>{ this.setState({[k]:v}); if(this.state.phase===phase) this.runTimer(v); }}))})),
       howRoles:[['🕵','السباي ماستر','يشوف الألوان بجواله ويلمّح','linear-gradient(135deg, #7c3aed, #a855f7)'],['✓','المؤكّد','يفتح الصناديق','linear-gradient(135deg, #059669, #10b981)'],['👥','باقي الفريق','يصوّتون بالرقم','rgba(255,255,255,.12)']].map(([icon,t,d,ib])=>({icon,t,d,ib})),
       howSteps:[
-        ['🕵','السباي ماستر يعطي التلميح','linear-gradient(135deg, #7c3aed, #a855f7)','rgba(167,139,250,.35)','#7c3aed','#c4b5fd',[['مدن 3','تلميح'],['1 مدن 3','تلميح + قديم']],['كلمة وحدة + عدد الصناديق','«1 مدن 3» = 3 صناديق منها 1 قديم']],
+        ['🕵','السباي ماستر يعطي التلميح','linear-gradient(135deg, #7c3aed, #a855f7)','rgba(167,139,250,.35)','#7c3aed','#c4b5fd',[['مدن 3','تلميح'],['1 مدن 3','تلميح + قديم']],['📱 من جواله: يكتب الكلمة ويختار العدد ويرسل','أو بالشات: كلمة وحدة + عدد الصناديق','«1 مدن 3» = 3 صناديق منها 1 قديم']],
         ['👥','الفريق يصوّت على الصناديق','linear-gradient(135deg, #475569, #64748b)','rgba(255,255,255,.12)','#475569','#cbd5e1',[['12','تصويت'],['سحب 12','تراجع']],['رقم الصندوق = صوتك وصورتك عليه']],
         ['✓','المؤكّد يفتح الصناديق','linear-gradient(135deg, #059669, #10b981)','rgba(52,211,153,.35)','#059669','#6ee7b7',[['تأكيد 12','صندوق'],['تأكيد 12 7 3','أكثر من صندوق'],['تخطي','إنهاء الدور']],['صندوق غلط ← ينتهي الدور','فتحوا عدد التلميح ← ينتهي الدور','✋ تقدر تفتحها بنفسك بالضغط على الصناديق']]
       ].map(([icon,t,ib,bd,chip,dot,cmds,notes],i)=>({n:i+1,icon,t,ib,bd,chip,dot,cmds:cmds.map(([cmd,d])=>({cmd,d})),notes})),
