@@ -918,6 +918,36 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   }
 
+  // [إصلاح] محتوى تبويب "معلومات اللاعب" ينبني من جديد (يرجع "—" و0)
+  // كل ما المستخدم يتنقل بين التبويبات ويرجع له، فكانت الإحصائيات ونسبة
+  // الفوز ومعلومات الحساب تختفي. نعبّيها هنا ونعيد استدعاءها عند الرجوع
+  // للتبويب (راجع مستمع الضغط تحت).
+  function fillPlayerTab(p){
+    if (!p) return;
+    setCardValue('اسم المستخدم', p.username || '—', 0, false);
+    setCardValue('الدور', roleLabel(p), 0, false);
+    setCardValue('تاريخ الانضمام', formatDate(p.joined_at), 0, false);
+    // تشغيل الألعاب: حساب ستريمر + تيك توك موثَّق (بدون موافقة أدمن).
+    var playStatus = p.role === 'admin' ? 'مفعّلة ✅'
+      : !(p.is_streamer || p.can_run_games) ? 'لحسابات الستريمر فقط'
+      : p.tiktok_verified ? 'مفعّلة ✅' : 'تحتاج ربط حساب تيك توك 🔗';
+    setCardValue('صلاحية تشغيل الألعاب', playStatus, 0, false);
+
+    if (p.points) {
+      setCardValue('جولات مكتملة', String(p.points.gamesPlayed || 0), 0, true);
+      setCardValue('فوز', String(p.points.gamesWon || 0), 0, true);
+      setCardValue('نسبة الفوز', (p.points.winRatePct || 0) + '%', 0, true);
+      // قسم "كيف تكسب نقاط الخبرة" — القيم من points-service.js نفسه.
+      var r = p.points.rules;
+      if (r) {
+        setCardValue('إكمال جولة كامل', r.perCompletedRound + ' نقاط', 0, false);
+        setCardValue('الفوز بالجولة', r.winBonus + ' فردي · ' + r.teamWinBonus + ' فريق', 0, false);
+        setCardValue('كل ساعة لعب فعلية', r.perHourPlayed + ' نقاط', 0, false);
+        setCardValue('الحد الأقصى باليوم', r.dailyCap + ' نقطة', 0, false);
+      }
+    }
+  }
+
   function populate(p){
     var name = p.display_name || p.username || 'اسم المستخدم';
     var heading = Array.prototype.slice.call(document.querySelectorAll('*'))
@@ -932,21 +962,11 @@ document.addEventListener('DOMContentLoaded', async function() {
       .find(function(e){ return e.children.length <= 1 && e.textContent.trim() === 'الدور' && e.parentElement && e.parentElement.children[0] === e; });
     if (rolePill) rolePill.textContent = roleLabel(p);
 
-    setCardValue('اسم المستخدم', p.username || '—', 0, false);
-    setCardValue('الدور', roleLabel(p), 0, false);
-    setCardValue('تاريخ الانضمام', formatDate(p.joined_at), 0, false);
     // [إصلاح] "انضم في" بالبطاقة الجانبية ما كانت مربوطة أبداً (تطلع "—").
     setSiblingAfter('انضم في', formatDate(p.joined_at));
-    // تشغيل الألعاب: حساب ستريمر + تيك توك موثَّق (بدون موافقة أدمن).
-    var playStatus = p.role === 'admin' ? 'مفعّلة ✅'
-      : !(p.is_streamer || p.can_run_games) ? 'لحسابات الستريمر فقط'
-      : p.tiktok_verified ? 'مفعّلة ✅' : 'تحتاج ربط حساب تيك توك 🔗';
-    setCardValue('صلاحية تشغيل الألعاب', playStatus, 0, false);
+    fillPlayerTab(p);
 
     if (p.points) {
-      setCardValue('جولات مكتملة', String(p.points.gamesPlayed || 0), 0, true);
-      setCardValue('فوز', String(p.points.gamesWon || 0), 0, true);
-      setCardValue('نسبة الفوز', (p.points.winRatePct || 0) + '%', 0, true);
       setSiblingBefore('نقطة', String(p.points.totalPoints || 0));
       var nextTxt = p.points.nextLevel
         ? ('يحتاج ' + Math.max(0, p.points.nextLevel.pointsRequired - p.points.totalPoints) + ' نقطة للمستوى التالي')
@@ -1503,6 +1523,10 @@ document.addEventListener('DOMContentLoaded', async function() {
       } else {
         window.location.href = './';
       }
+    }
+    if (t === 'معلومات اللاعب') {
+      setTimeout(function(){ fillPlayerTab(window.__profileData); }, 60);
+      setTimeout(function(){ fillPlayerTab(window.__profileData); }, 300);
     }
     if (t === 'المقتنيات') {
       setTimeout(wireCollectibles, 60);
