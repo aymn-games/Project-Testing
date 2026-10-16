@@ -48,7 +48,10 @@ input:focus{outline:none;border-color:rgba(167,139,250,.6)}
         <span style="display:flex;align-items:center;gap:8px;font:700 15px/1.4 'Zain';color:#f4f2f8"><span style="width:6px;height:6px;flex-shrink:0;border-radius:50%;background:#fbbf24"></span>{{ pt }}</span>
       </sc-for>
       <sc-if value="{{ loginUrl }}" hint-placeholder-val="{{ false }}">
-        <a href="{{ loginUrl }}" style="align-self:flex-start;height:42px;padding:0 20px;border-radius:999px;display:flex;align-items:center;text-decoration:none;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:800 15px 'Zain'">تسجيل الدخول بحسابي</a>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <a href="{{ loginUrl }}" style="height:46px;border-radius:999px;display:grid;place-items:center;text-decoration:none;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:800 15px 'Zain'">تسجيل الدخول</a>
+          <button onClick="{{ showReq }}" style="height:46px;border-radius:999px;cursor:pointer;border:1px solid rgba(255,255,255,.18);background:{{ reqBtnBg }};color:#f4f2f8;font:800 15px 'Zain'">ما عندي حساب</button>
+        </div>
       </sc-if>
     </div>
   </sc-if>
@@ -112,13 +115,28 @@ input:focus{outline:none;border-color:rgba(167,139,250,.6)}
             <span style="position:absolute;top:3px;right:3px;min-width:16px;height:16px;padding:0 3px;box-sizing:border-box;border-radius:999px;display:grid;place-items:center;background:{{ c.numBg }};font:800 10px/1 'Zain';color:#fff">{{ c.n }}</span>
             <span style="flex:1;display:grid;place-items:center;font:400 clamp(14px,4.6vw,22px)/1 'Zain'">{{ c.icon }}</span>
             <span style="margin:0 3px 3px;height:clamp(20px,6vw,28px);border-radius:6px;display:grid;place-items:center;padding:0 2px;background:{{ c.strip }}">
-              <span style="max-width:100%;font:900 clamp(9px,2.9vw,14px)/1 'Zain';color:{{ c.fg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.w }}</span>
+              <span style="max-width:100%;font:900 clamp(9px,2.9vw,14px)/1 'Zain';color:{{ c.fg }};text-decoration:{{ c.deco }};text-decoration-thickness:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.w }}</span>
             </span>
             <sc-if value="{{ c.open }}" hint-placeholder-val="{{ false }}">
-              <span style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.35)"><span style="width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.9);font:900 13px/1 'Zain';color:#16a34a">✓</span></span>
+              <span style="position:absolute;inset:0 0 calc(clamp(20px,6vw,28px) + 3px);display:grid;place-items:center;pointer-events:none"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,.7))"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
             </sc-if>
           </div>
         </sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:20px;background:rgba(18,16,26,.85);border:1.5px solid {{ hintBd }}">
+        <span style="font:900 16px 'Zain';color:{{ hintTitleC }}">{{ hintTitle }}</span>
+        <sc-if value="{{ canHint }}" hint-placeholder-val="{{ false }}">
+          <input value="{{ hintW }}" onChange="{{ setHintW }}" placeholder="اكتب التلميح (كلمة وحدة)" maxlength="30" style="height:50px;box-sizing:border-box;padding:0 16px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#f4f2f8;font:800 18px 'Zain'">
+          <span style="font:700 13px 'Zain';color:#a8a3b5">كم كلمة تلمّح لها؟</span>
+          <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">
+            <sc-for list="{{ hintNums }}" as="hn" hint-placeholder-count="7">
+              <button onClick="{{ hn.pick }}" style="height:44px;border-radius:12px;cursor:pointer;font:900 18px 'Zain';border:1.5px solid {{ hn.bd }};background:{{ hn.bg }};color:{{ hn.fg }};transition:all .15s">{{ hn.n }}</button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ hintErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="font:700 14px 'Zain';color:#fca5a5">{{ hintErr }}</span></sc-if>
+          <button onClick="{{ sendHint }}" style="height:52px;border:none;border-radius:999px;cursor:pointer;background:{{ sendBg }};color:#fff;font:900 18px 'Zain';box-shadow:0 8px 22px rgba(139,92,246,.35);opacity:{{ sendOp }}">{{ sendTxt }}</button>
+        </sc-if>
+        <sc-if value="{{ hintInfo }}" hint-placeholder-val="{{ false }}"><span style="font:700 15px 'Zain';color:#e7e3ef">{{ hintInfo }}</span></sc-if>
       </div>
       <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;font:700 13px 'Zain';color:#c9c4d6">
         <sc-for list="{{ legend }}" as="l" hint-placeholder-count="4">
@@ -136,6 +154,10 @@ input:focus{outline:none;border-color:rgba(167,139,250,.6)}
 // الاتصال عبر WebSocket: CN.relay → wss://project-testing-akds.onrender.com/ws/room-relay
 // الرسائل: join (للقناة) · sync_request · spymaster_request · spymaster_approve · spymaster_reject · board_update
 const COLORS = { 1:'#ef4444', 2:'#3b82f6', 0:'#d9c7a0', '-1':'#17131f' };
+// صور البطاقات (نفس صور شاشة اللعب images/) — اللون تحتها احتياط لين تتحمّل
+const TILE_IMG = c => c.t===-1?'images/tile-assassin.png':c.t===0?'images/tile-neutral.png':`images/tile-${c.t===1?'red':'blue'}-${c.img===2?2:1}.png`;
+// قبل الفتح: لون واحد لكل نوع · بعد الفتح: صورة الصندوق (نفس شاشة اللعب)
+const FLAT = { 1:'linear-gradient(160deg, #b91c1c, #7f1d1d)', 2:'linear-gradient(160deg, #1d4ed8, #172554)', 0:'linear-gradient(160deg, #b8a27a, #8a7553)', '-1':'linear-gradient(160deg, #1c1726, #08060c)' };
 const TILE = { 1:['linear-gradient(160deg, #f87171, #dc2626 55%, #991b1b)','#7f1d1d','🕵️','rgba(0,0,0,.28)','#fff','rgba(0,0,0,.4)'],
   2:['linear-gradient(160deg, #60a5fa, #2563eb 55%, #1e3a8a)','#1e3a8a','🕵️','rgba(0,0,0,.28)','#fff','rgba(0,0,0,.4)'],
   0:['linear-gradient(160deg, #f1e4c6, #d9c7a0)','#a8916a','🧍','rgba(255,255,255,.75)','#3b2a12','#3b2a12'],
@@ -153,7 +175,7 @@ class Component extends DCLogic {
   saved = ROOM ? loadSaved() : {};
   slotMode = !!(SLOT&&this.saved.slot===SLOT&&this.saved.slotKey);
   state = { room:ROOM, stage:this.slotMode?(this.saved.board?'map':'check'):['wait','map','rejected'].includes(this.saved.stage)&&this.saved.id?this.saved.stage:(SLOT?'check':'form'), myTeam:this.saved.myTeam||0, name:this.saved.name||'', team:this.saved.team||SLOT_TEAM||0, err:null, claim:null, claimName:SLOT_NAME,
-    board:this.saved.stage==='map'?(this.saved.board||null):null, lost:false, expired:false, noCrypto:!!ROOM&&!CN.secure.supported(), teams:this.saved.teams||{1:'الفريق الأحمر',2:'الفريق الأزرق'} };
+    board:this.saved.stage==='map'?(this.saved.board||null):null, lost:false, expired:false, st:this.saved.st||null, reqOpen:false, hintW:'', hintN:0, hintErr:null, hintSending:false, hintOk:null, noCrypto:!!ROOM&&!CN.secure.supported(), teams:this.saved.teams||{1:'الفريق الأحمر',2:'الفريق الأزرق'} };
   componentDidMount(){
     if(!this.state.room||this.state.noCrypto) return;
     this.id=this.saved.id||null; this.keys=this.saved.keys||null; this.lastSeq=0;
@@ -169,12 +191,13 @@ class Component extends DCLogic {
   }
   componentWillUnmount(){ this.rl&&this.rl.close(); clearTimeout(this.lostT); clearTimeout(this.expT); document.removeEventListener('visibilitychange',this.onVis); removeEventListener('pageshow',this.onShow); removeEventListener('online',this.onOnline); }
   // الباركود الخاص: نطلب مفتاح الخانة بجلسة الموقع — الخادم يعطيه لصاحب حساب تيك توك فقط
-  claimSlot(){
+  claimSlot(try_=0){
     if(!CN.spySlots.loggedIn()) return this.setState({stage:'form',claim:'login'});
     this.setState({stage:'check',claim:'checking'});
     CN.spySlots.claim(ROOM,SLOT).then(r=>{
       if(r&&r.success&&r.key){ this.slot=SLOT; this.slotKey=r.key; this.lastSeq=0; const myTeam=+r.team===2?2:1;
         this.save({slot:SLOT,slotKey:r.key,myTeam,stage:'map',board:null}); this.setState({claim:'ok',myTeam,stage:'check'}); this.rl&&this.rl.send({type:'slot_hello',slot:SLOT}); return; }
+      if(r&&r.__httpStatus===404&&try_<2) return setTimeout(()=>this.claimSlot(try_+1),1500); // الشاشة لسا تسجّل الخانة
       const st=r&&r.error==='not_owner'?'mismatch':r&&r.__httpStatus===404?'gone':r&&r.__httpStatus===401?'login':'fail';
       this.setState({stage:'form',claim:st,claimName:(r&&r.name)||SLOT_NAME}); }); }
   save(patch){ this.saved={...this.saved,...patch}; try{ localStorage.setItem(SAVE_KEY,JSON.stringify(this.saved)); }catch(e){} }
@@ -189,25 +212,41 @@ class Component extends DCLogic {
   setTeams(t){ if(t&&t[1]&&t[2]){ const teams={1:String(t[1]),2:String(t[2])}; this.setState({teams}); this.save({teams}); } }
   onMsg(m){ if(!m||m.room!==this.state.room) return;
     if(m.type==='room_info'){ clearTimeout(this.expT); if(this.state.expired) this.setState({expired:false}); this.setTeams(m.teams); }
+    if(m.type==='hint_ack'&&((this.slot&&m.slot===this.slot)||(this.id&&m.id===this.id))){
+      const R={not_turn:'مو وقت التلميح الحين',one_word:'كلمة وحدة بس بالتلميح',empty:'اكتب التلميح أول',count:'اختر عدد الكلمات'};
+      this.setState(m.ok?{hintSending:false,hintW:'',hintN:0,hintErr:null}:{hintSending:false,hintErr:R[m.reason]||'ما وصل التلميح، جرّب مرة ثانية'}); return; }
     // الخانة الخاصة: لوحة مشفّرة بمفتاح الخانة، أو المذيع غيّر السباي ماستر (الخانة بطلت)
     if(this.slot&&m.slot===this.slot){
       if(m.type==='slot_revoked'){ this.slot=null; this.slotKey=null; this.save({slot:null,slotKey:null,stage:'form',board:null}); this.setState({stage:'form',board:null,claim:'gone'}); return; }
       if(m.type==='board_update'&&m.iv&&m.ct){ const seq=+m.seq||0;
         CN.secure.aesFromB64(this.slotKey).then(k=>CN.secure.decrypt(k,m.iv,m.ct)).then(d=>{
           if(!d||!Array.isArray(d.board)||seq<this.lastSeq) return; this.lastSeq=seq; this.setTeams(d.teams);
-          const myTeam=+d.team===2?2:1; this.setState({board:d.board,stage:'map',myTeam}); this.save({board:d.board,stage:'map',myTeam}); }).catch(()=>{}); }
+          const myTeam=+d.team===2?2:1; this.applyStatus(d); this.setState({board:d.board,stage:'map',myTeam}); this.save({board:d.board,stage:'map',myTeam}); }).catch(()=>{}); }
       return; }
     if(!this.id||m.id!==this.id) return;
     if(m.type==='spymaster_approve'){ const myTeam=+m.team===2?2:1; this.setState({stage:'map',myTeam}); this.save({stage:'map',myTeam}); }
+    if(m.type==='spymaster_revoke'){ this.id=null; this.save({id:null,stage:'form',board:null}); this.setState({stage:'form',board:null,claim:'gone'}); return; }
     if(m.type==='spymaster_reject'){ this.setState({stage:'rejected',board:null}); this.save({stage:'rejected',board:null}); }
     // اللعبة ما تعرف الطلب كمقبول (مثلاً الاستريمر فتح مباراة جديدة) → يرجع بانتظار الموافقة
     if(m.type==='spymaster_pending'&&this.state.stage!=='wait'){ this.setState({stage:'wait',board:null}); this.save({stage:'wait',board:null}); }
     // اللوحة الملونة توصل مشفّرة لهذا الجوال فقط
     if(m.type==='board_update'&&m.gpub&&m.iv&&m.ct&&this.keys){ const seq=+m.seq||0;
       if(m.gpub.x!==this.lastG){ this.lastG=m.gpub.x; this.lastSeq=0; } // صفحة لعبة جديدة = ترقيم جديد
+      this.gpub=m.gpub;
       CN.secure.shared(this.keys.priv,m.gpub).then(k=>CN.secure.decrypt(k,m.iv,m.ct)).then(d=>{
         if(!d||!Array.isArray(d.board)||seq<this.lastSeq) return; this.lastSeq=seq; this.setTeams(d.teams);
-        const myTeam=this.state.myTeam||this.saved.myTeam; this.setState({board:d.board,stage:'map',myTeam}); this.save({board:d.board,stage:'map',myTeam}); }).catch(()=>{}); } }
+        const myTeam=this.state.myTeam||this.saved.myTeam; this.applyStatus(d); this.setState({board:d.board,stage:'map',myTeam}); this.save({board:d.board,stage:'map',myTeam}); }).catch(()=>{}); } }
+  // حالة الدور من شاشة اللعب (مين دوره، المرحلة، التلميح) — تحديث حي مع كل تغيير
+  applyStatus(d){ if(!d||!d.turn) return; const st={turn:+d.turn,phase:d.phase,hint:d.hint||null,turnId:+d.turnId||0};
+    this.setState({st,...(this.state.hintSending&&st.phase!=='hint'?{hintSending:false,hintW:'',hintN:0}:{})}); this.save({st}); }
+  // إرسال التلميح للشاشة: مشفّر بمفتاح هذا الجوال (مفتاح الخانة الخاصة، أو المفتاح المشترك مع اللعبة)
+  sendHint(){ const S=this.state, w=S.hintW.trim().replace(/\s+/g,' ');
+    if(!w) return this.setState({hintErr:'اكتب التلميح أول'}); if(/\s/.test(w)) return this.setState({hintErr:'كلمة وحدة بس بالتلميح'});
+    if(!S.hintN) return this.setState({hintErr:'اختر كم كلمة تلمّح لها'}); if(S.hintSending) return;
+    const keyP=this.slot&&this.slotKey?CN.secure.aesFromB64(this.slotKey):this.keys&&this.gpub?CN.secure.shared(this.keys.priv,this.gpub):null;
+    if(!keyP) return this.setState({hintErr:'ما وصل التلميح، جرّب مرة ثانية'});
+    this.setState({hintSending:true,hintErr:null}); clearTimeout(this.hintT); this.hintT=setTimeout(()=>{ if(this.state.hintSending) this.setState({hintSending:false,hintErr:'ما وصل التلميح، جرّب مرة ثانية'}); },6000);
+    keyP.then(k=>CN.secure.encrypt(k,{w,n:S.hintN,turnId:(S.st&&S.st.turnId)||0})).then(e=>this.rl.send({type:'spy_hint',...(this.slot?{slot:this.slot}:{id:this.id}),...e})).catch(()=>this.setState({hintSending:false,hintErr:'ما وصل التلميح، جرّب مرة ثانية'})); }
   async submit(){ const S=this.state; if(!S.name.trim()) return this.setState({err:'اكتب اسمك أول.'}); if(!S.team) return this.setState({err:'اختر فريقك.'});
     try{ if(!this.keys) this.keys=await CN.secure.newPair(); }catch(e){ return this.setState({err:'المتصفح ما يدعم الاتصال الآمن — افتح الرابط في Safari أو Chrome.'}); }
     const r=crypto.getRandomValues(new Uint32Array(2)); this.id='sp'+r[0].toString(36)+r[1].toString(36); this.lastSeq=0;
@@ -221,19 +260,28 @@ class Component extends DCLogic {
       isCheck:!bad&&S.stage==='check', checkTxt:S.claim==='ok'||this.slotMode?'جارٍ فتح الخريطة...':'جارٍ التحقق من حسابك...',
       ...(()=>{ const N=bad||S.stage!=='form'?null:{
           mismatch:[`⚠️ الباركود خاص بـ ${S.claimName}`,['مو أنت؟ أرسل طلب من تحت ← المذيع يقرر']],
-          login:[`🔐 الباركود خاص بـ ${S.claimName}`,['عندك حساب؟ سجّل دخول ← تنفتح الخريطة','ما عندك؟ أرسل طلب من تحت ← المذيع يقبل']],
+          login:[`🔐 الباركود خاص بـ ${S.claimName}`,['عندك حساب؟ سجّل دخول ← تنفتح الخريطة','ما عندك؟ أرسل طلب ← المذيع يقبل']],
           gone:['⏳ الباركود انتهى',['امسح الباركود الجديد','أو أرسل طلب من تحت']],
           fail:['تعذّر التحقق من حسابك',['أرسل طلب من تحت ← المذيع يقبل']]}[S.claim];
         return {notice:N?N[0]:null,noticePts:N?N[1]:[]}; })(),
       loginUrl:S.claim==='login'?'../../login.html?next='+encodeURIComponent(`games/codenames/spymaster.html?room=${ROOM}&s=${SLOT}&t=${SLOT_TEAM}&n=${encodeURIComponent(SLOT_NAME)}`):null,
-      isForm:!bad&&S.stage==='form', isWait:!bad&&S.stage==='wait', isRejected:!bad&&S.stage==='rejected', isMap:!bad&&S.stage==='map', isLost:!bad&&S.lost,
+      showReq:()=>this.setState({reqOpen:true}), reqBtnBg:S.reqOpen?'rgba(139,92,246,.2)':'rgba(255,255,255,.05)',
+      isForm:!bad&&S.stage==='form'&&(S.claim!=='login'||S.reqOpen), isWait:!bad&&S.stage==='wait', isRejected:!bad&&S.stage==='rejected', isMap:!bad&&S.stage==='map', isLost:!bad&&S.lost,
       name:S.name, setName:e=>this.setState({name:e.target.value,err:null}), err:S.err,
       teams:[1,2].map(t=>({label:S.teams[t],pick:()=>this.setState({team:t,err:null}),bg:S.team===t?COLORS[t]:'rgba(255,255,255,.04)',bd:S.team===t?'#fff':COLORS[t]})),
       submit:()=>this.submit(), retry:()=>{ this.id=null; this.save({id:null,stage:'form',board:null}); this.setState({stage:'form'}); },
       myTeam:S.teams[S.myTeam]||'', myBg:COLORS[S.myTeam]||'#7c3aed',
       counts:[[S.teams[1],1],[S.teams[2],2],['💀 الأسود',-1]].map(([t,k])=>({t,n:k===-1?(left(-1)?'⚠️':'—'):left(k),c:k===-1?'#fca5a5':COLORS[k],bg:k===S.myTeam?COLORS[k]+'26':'rgba(255,255,255,.04)',bd:k===S.myTeam?COLORS[k]:'rgba(255,255,255,.08)'})),
-      cells:b.map((c,i)=>{ const T=TILE[c.t]; return {n:i+1,w:c.w,open:!!c.open,bg:T[0],sh:T[1],icon:T[2],strip:T[3],fg:T[4],numBg:T[5],ring:c.t===S.myTeam&&!c.open?'#fff':'rgba(255,255,255,.12)',op:c.open?.45:1,fl:c.open?'saturate(.4)':'none'}; }),
-      legend:[[S.teams[1],COLORS[1]],[S.teams[2],COLORS[2]],['محايد',COLORS[0]],['القاتل 💀',COLORS[-1]]].map(([t,c])=>({t,c}))
+      cells:b.map((c,i)=>{ const T=TILE[c.t]; return {n:i+1,w:c.w,open:!!c.open,bg:c.open?`url(${TILE_IMG(c)}) center/cover no-repeat, ${FLAT[c.t]}`:FLAT[c.t],sh:T[1],icon:'',strip:T[3],fg:T[4],numBg:T[5],ring:c.t===S.myTeam&&!c.open?'#fff':'rgba(255,255,255,.12)',op:1,fl:'none',deco:'none'}; }),
+      ...(()=>{ const st=S.st, mine=st&&st.turn===S.myTeam, tn=st?S.teams[st.turn]:'';
+        const canHint=!!(st&&mine&&st.phase==='hint');
+        const title=!st||st.phase==='ready'?'⏳ المباراة ما بدأت':canHint?'🕵 دورك — أرسل التلميح':st.phase==='guess'?(mine?'⏳ فريقك يخمّن الحين':`⏳ دور ${tn}`):st.phase==='hint'?`⏳ دور ${tn} — بانتظار تلميحهم`:'🏁 انتهت الجولة';
+        return { canHint, hintTitle:title, hintTitleC:canHint?'#fde68a':'#e7e3ef', hintBd:canHint?'#fbbf24':'rgba(255,255,255,.08)',
+          hintInfo:st&&st.phase==='guess'&&st.hint?`التلميح الحالي: «${st.hint.w}» · ${st.hint.n}`:null,
+          hintW:S.hintW, setHintW:e=>this.setState({hintW:e.target.value,hintErr:null}), hintErr:S.hintErr,
+          hintNums:[1,2,3,4,5,6,7].map(n=>({n,pick:()=>this.setState({hintN:n,hintErr:null}),bg:S.hintN===n?'linear-gradient(135deg, #7c3aed, #a855f7)':'rgba(255,255,255,.04)',bd:S.hintN===n?'#c4b5fd':'rgba(255,255,255,.12)',fg:S.hintN===n?'#fff':'#c9c4d6'})),
+          sendHint:()=>this.sendHint(), sendTxt:S.hintSending?'جارٍ الإرسال…':'إرسال التلميح', sendOp:S.hintSending?.6:1, sendBg:'linear-gradient(90deg, #7c3aed, #a855f7)' }; })(),
+      legend:[[S.teams[1],FLAT[1]],[S.teams[2],FLAT[2]],['محايد',FLAT[0]],['القاتل 💀',FLAT[-1]]].map(([t,c])=>({t,c}))
     };
   }
 }
