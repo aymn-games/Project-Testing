@@ -360,6 +360,9 @@ async function handleTikTokOAuthCallback(req, res) {
   var linkResult = tiktokOAuthService.linkVerifiedAccount(userId, infoResult.user);
   if (!linkResult.success) return redirectToProfile(linkResult.error === 'tiktok_account_already_linked_elsewhere' ? 'already_linked' : 'link_failed');
 
+  // صورة تيك توك تصير صورة البروفايل تلقائياً لو ما عنده صورة خاصة.
+  await tiktokOAuthService.saveTikTokAvatarIfMissing(userId, infoResult.user);
+
   return redirectToProfile('success');
 }
 

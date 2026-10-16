@@ -106,7 +106,7 @@ async function exchangeCodeForToken(code) {
  */
 async function fetchTikTokUserInfo(accessToken) {
     try {
-        var fields = 'open_id,display_name,avatar_url,username';
+        var fields = 'open_id,display_name,avatar_url,avatar_url_100,username';
         var res = await fetch(USER_INFO_URL + '?fields=' + fields, {
             headers: { 'Authorization': 'Bearer ' + accessToken }
         });
@@ -138,7 +138,49 @@ function linkVerifiedAccount(userId, tiktokUser) {
     return { success: true };
 }
 
+// نفس حد updateAvatarImage بـ auth-service.js.
+var MAX_AVATAR_BASE64_LENGTH = 85 * 1024;
+var AVATAR_FETCH_TIMEOUT_MS = 8000;
+
+/**
+ * يحفظ صورة تيك توك كصورة بروفايل — فقط لو المستخدم ما عنده صورة خاصة
+ * فيه. نحمّل الصورة ونخزّنها Base64 بدل الرابط لأن روابط صور تيك توك
+ * موقّعة وتنتهي صلاحيتها بعد أيام. أي فشل هنا يُتجاهَل بهدوء ولا يأثر
+ * على نجاح الربط نفسه.
+ * @returns {Promise<boolean>} true لو انحفظت الصورة
+ */
+async function saveTikTokAvatarIfMissing(userId, tiktokUser) {
+    try {
+        var url = tiktokUser && (tiktokUser.avatar_url_100 || tiktokUser.avatar_url);
+        if (!url) return false;
+        var row = db.prepare('SELECT avatar_image_base64 FROM users WHERE id = ?').get(userId);
+        if (!row || row.avatar_image_base64) return false;
+
+        var controller = new AbortController();
+        var timer = setTimeout(function () { controller.abort(); }, AVATAR_FETCH_TIMEOUT_MS);
+        var res;
+        try { res = await fetch(url, { signal: controller.signal }); } finally { clearTimeout(timer); }
+        if (!res.ok) return false;
+
+        var mime = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+        if (mime === 'image/jpg') mime = 'image/jpeg';
+        if (!/^image\/(png|jpeg|webp)$/.test(mime)) return false;
+
+        var buf = Buffer.from(await res.arrayBuffer());
+        var dataUrl = 'data:' + mime + ';base64,' + buf.toString('base64');
+        if (dataUrl.length > MAX_AVATAR_BASE64_LENGTH) return false;
+
+        // الشرط "IS NULL" يحمي من الكتابة فوق صورة رفعها المستخدم بنفس اللحظة.
+        var result = db.prepare('UPDATE users SET avatar_image_base64 = ? WHERE id = ? AND avatar_image_base64 IS NULL').run(dataUrl, userId);
+        return result.changes > 0;
+    } catch (err) {
+        logger.error('TikTok OAuth: avatar save failed:', err.message);
+        return false;
+    }
+}
+
 module.exports = {
+    saveTikTokAvatarIfMissing: saveTikTokAvatarIfMissing,
     buildAuthorizeUrl: buildAuthorizeUrl,
     verifyState: verifyState,
     exchangeCodeForToken: exchangeCodeForToken,
