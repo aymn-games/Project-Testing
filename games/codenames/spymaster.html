@@ -191,12 +191,13 @@ class Component extends DCLogic {
   }
   componentWillUnmount(){ this.rl&&this.rl.close(); clearTimeout(this.lostT); clearTimeout(this.expT); document.removeEventListener('visibilitychange',this.onVis); removeEventListener('pageshow',this.onShow); removeEventListener('online',this.onOnline); }
   // الباركود الخاص: نطلب مفتاح الخانة بجلسة الموقع — الخادم يعطيه لصاحب حساب تيك توك فقط
-  claimSlot(){
+  claimSlot(try_=0){
     if(!CN.spySlots.loggedIn()) return this.setState({stage:'form',claim:'login'});
     this.setState({stage:'check',claim:'checking'});
     CN.spySlots.claim(ROOM,SLOT).then(r=>{
       if(r&&r.success&&r.key){ this.slot=SLOT; this.slotKey=r.key; this.lastSeq=0; const myTeam=+r.team===2?2:1;
         this.save({slot:SLOT,slotKey:r.key,myTeam,stage:'map',board:null}); this.setState({claim:'ok',myTeam,stage:'check'}); this.rl&&this.rl.send({type:'slot_hello',slot:SLOT}); return; }
+      if(r&&r.__httpStatus===404&&try_<2) return setTimeout(()=>this.claimSlot(try_+1),1500); // الشاشة لسا تسجّل الخانة
       const st=r&&r.error==='not_owner'?'mismatch':r&&r.__httpStatus===404?'gone':r&&r.__httpStatus===401?'login':'fail';
       this.setState({stage:'form',claim:st,claimName:(r&&r.name)||SLOT_NAME}); }); }
   save(patch){ this.saved={...this.saved,...patch}; try{ localStorage.setItem(SAVE_KEY,JSON.stringify(this.saved)); }catch(e){} }
@@ -224,6 +225,7 @@ class Component extends DCLogic {
       return; }
     if(!this.id||m.id!==this.id) return;
     if(m.type==='spymaster_approve'){ const myTeam=+m.team===2?2:1; this.setState({stage:'map',myTeam}); this.save({stage:'map',myTeam}); }
+    if(m.type==='spymaster_revoke'){ this.id=null; this.save({id:null,stage:'form',board:null}); this.setState({stage:'form',board:null,claim:'gone'}); return; }
     if(m.type==='spymaster_reject'){ this.setState({stage:'rejected',board:null}); this.save({stage:'rejected',board:null}); }
     // اللعبة ما تعرف الطلب كمقبول (مثلاً الاستريمر فتح مباراة جديدة) → يرجع بانتظار الموافقة
     if(m.type==='spymaster_pending'&&this.state.stage!=='wait'){ this.setState({stage:'wait',board:null}); this.save({stage:'wait',board:null}); }
