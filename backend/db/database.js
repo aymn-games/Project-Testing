@@ -696,6 +696,12 @@ db.exec(
     '    frame_ref TEXT,' +
     '    detected_at INTEGER NOT NULL,' +
     '    claimed_at INTEGER' +
+    ');' +
+    // إطارات يستثنيها الأدمن من قائمة اختيار مكافأة المتابعة.
+    'CREATE TABLE IF NOT EXISTS follow_reward_excluded_frames (' +
+    "    frame_type TEXT NOT NULL CHECK(frame_type IN ('catalog', 'custom'))," +
+    '    frame_ref TEXT NOT NULL,' +
+    '    PRIMARY KEY (frame_type, frame_ref)' +
     ');'
 );
 

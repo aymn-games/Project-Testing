@@ -489,6 +489,17 @@ function claimFollowReward(frameType, frameRef) {
     return request('/api/follow-reward/claim', { method: 'POST', body: { frameType: frameType, frameRef: frameRef } });
 }
 
+/** Admin only — follow reward overview: {platformTikTok, counts:{pending,claimed,revoked},
+ * frames:[{frameType, frameRef, imageFilename, displayNameAr, excluded}]}. */
+function adminGetFollowReward() {
+    return request('/api/admin/follow-reward', { method: 'GET' });
+}
+
+/** Admin only — hide (excluded=true) or show a frame in the follow reward picker. */
+function adminSetFollowRewardExcluded(frameType, frameRef, excluded) {
+    return request('/api/admin/follow-reward/exclude', { method: 'POST', body: { frameType: frameType, frameRef: frameRef, excluded: Boolean(excluded) } });
+}
+
 /** Owner equips one of their owned frames (own profile page only). */
 function equipFrame(frameType, frameRef) {
     return request('/api/collectibles/equip', { method: 'POST', body: { frameType: frameType, frameRef: frameRef } });
@@ -950,6 +961,8 @@ global.AGPAuth = {
     equipFrame: equipFrame,
     getFollowReward: getFollowReward,
     claimFollowReward: claimFollowReward,
+    adminGetFollowReward: adminGetFollowReward,
+    adminSetFollowRewardExcluded: adminSetFollowRewardExcluded,
     redeemFrameCode: redeemFrameCode,
     adminGenerateFrameCodes: adminGenerateFrameCodes,
     adminGenerateCardCodes: adminGenerateCardCodes,

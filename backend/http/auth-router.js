@@ -138,6 +138,8 @@ var ROUTES = [
   // مكافأة متابعة حساب تيك توك المنصة — إطار واحد يختاره المستخدم.
   { method: 'GET', path: '/api/follow-reward', requireAuth: true, handler: handleGetFollowReward },
   { method: 'POST', path: '/api/follow-reward/claim', requireAuth: true, handler: handleClaimFollowReward },
+  { method: 'GET', path: '/api/admin/follow-reward', requireAuth: true, requireAdmin: true, handler: handleAdminGetFollowReward },
+  { method: 'POST', path: '/api/admin/follow-reward/exclude', requireAuth: true, requireAdmin: true, handler: handleAdminSetFollowRewardExcluded },
   { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
   // ---- هل البث شغّال الحين؟ — مكتبة الألعاب والألعاب تقطع الاتصال المحفوظ
   // لما يرجع live:false (راجع backend/platforms/tiktok/tiktok-live-check.js).
@@ -613,6 +615,15 @@ function handleGetFollowReward(req, res, body, user) {
 
 function handleClaimFollowReward(req, res, body, user) {
   var result = followRewardService.claimReward(user.id, body.frameType, body.frameRef);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleAdminGetFollowReward(req, res) {
+  sendJson(res, 200, Object.assign({ success: true }, followRewardService.getAdminOverview()));
+}
+
+function handleAdminSetFollowRewardExcluded(req, res, body) {
+  var result = followRewardService.setFrameExcluded(body.frameType, body.frameRef, Boolean(body.excluded));
   sendJson(res, result.success ? 200 : 400, result);
 }
 

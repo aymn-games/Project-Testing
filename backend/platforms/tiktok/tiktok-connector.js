@@ -242,7 +242,7 @@ function isStreamOwner(user, streamUsername) {
 }
 
 /**
- * إشارة المتابعة لمكافأة حساب المنصة — أحفظ من extractIsFollower لأن
+ * إشارة المتابعة لمكافأة حساب المنصة — أحوط من extractIsFollower لأن
  * السحب يعتمد عليها: true = متابع أكيد، false = غير متابع أكيد (الإشارتين
  * صريحتين بالنفي)، null = غير مؤكد (ما نسوي شي).
  */

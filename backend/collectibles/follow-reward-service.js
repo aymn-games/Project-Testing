@@ -92,22 +92,58 @@ function noteNonFollower(tiktokUsername) {
   }
 }
 
-/** كل الإطارات (الكتالوج + الحصرية) اللي ما يملكها المستخدم. */
+/** كل الإطارات (الكتالوج + الحصرية) مع حالة الاستثناء من المكافأة. */
+function listAllFrames() {
+  var excluded = {};
+  db.prepare('SELECT frame_type, frame_ref FROM follow_reward_excluded_frames').all()
+    .forEach(function (r) { excluded[r.frame_type + ':' + r.frame_ref] = true; });
+
+  var frames = [];
+  collectiblesService.getCatalog().forEach(function (c) {
+    frames.push({ frameType: 'catalog', frameRef: c.slug, imageFilename: c.image_filename, displayNameAr: c.display_name_ar || '', excluded: Boolean(excluded['catalog:' + c.slug]) });
+  });
+  collectiblesService.listCustomFrames().forEach(function (c) {
+    var ref = String(c.id);
+    frames.push({ frameType: 'custom', frameRef: ref, imageFilename: c.image_filename, displayNameAr: c.display_name_ar || '', excluded: Boolean(excluded['custom:' + ref]) });
+  });
+  return frames;
+}
+
+/** الإطارات المتاحة للاختيار: غير مستثناة من الأدمن، وما يملكها المستخدم. */
 function listChoices(userId) {
   var owned = {};
   db.prepare('SELECT frame_type, frame_ref FROM user_frames WHERE user_id = ?').all(userId)
     .forEach(function (r) { owned[r.frame_type + ':' + r.frame_ref] = true; });
 
-  var choices = [];
-  collectiblesService.getCatalog().forEach(function (c) {
-    if (owned['catalog:' + c.slug]) return;
-    choices.push({ frameType: 'catalog', frameRef: c.slug, imageFilename: c.image_filename, displayNameAr: c.display_name_ar || '' });
-  });
-  collectiblesService.listCustomFrames().forEach(function (c) {
-    if (owned['custom:' + c.id]) return;
-    choices.push({ frameType: 'custom', frameRef: String(c.id), imageFilename: c.image_filename, displayNameAr: c.display_name_ar || '' });
-  });
-  return choices;
+  return listAllFrames()
+    .filter(function (f) { return !f.excluded && !owned[f.frameType + ':' + f.frameRef]; })
+    .map(function (f) { return { frameType: f.frameType, frameRef: f.frameRef, imageFilename: f.imageFilename, displayNameAr: f.displayNameAr }; });
+}
+
+/* ---- الأدمن ---- */
+
+/** كل الإطارات مع حالة الاستثناء + أعداد المكافآت حسب الحالة. */
+function getAdminOverview() {
+  var counts = { pending: 0, claimed: 0, revoked: 0 };
+  db.prepare('SELECT status, COUNT(*) AS n FROM follow_rewards GROUP BY status').all()
+    .forEach(function (r) { counts[r.status] = r.n; });
+  return { platformTikTok: PLATFORM_TIKTOK_USERNAME, counts: counts, frames: listAllFrames() };
+}
+
+/**
+ * استثناء إطار من قائمة الاختيار أو إرجاعه. ما يأثر على من اختاره من قبل.
+ * @returns {{success: boolean, error?: string}}
+ */
+function setFrameExcluded(frameType, frameRef, excluded) {
+  frameRef = String(frameRef == null ? '' : frameRef);
+  var exists = listAllFrames().some(function (f) { return f.frameType === frameType && f.frameRef === frameRef; });
+  if (!exists) return { success: false, error: 'unknown_frame' };
+  if (excluded) {
+    db.prepare('INSERT OR IGNORE INTO follow_reward_excluded_frames (frame_type, frame_ref) VALUES (?, ?)').run(frameType, frameRef);
+  } else {
+    db.prepare('DELETE FROM follow_reward_excluded_frames WHERE frame_type = ? AND frame_ref = ?').run(frameType, frameRef);
+  }
+  return { success: true };
 }
 
 /**
@@ -154,5 +190,7 @@ module.exports = {
   noteFollower: noteFollower,
   noteNonFollower: noteNonFollower,
   getRewardForUser: getRewardForUser,
-  claimReward: claimReward
+  claimReward: claimReward,
+  getAdminOverview: getAdminOverview,
+  setFrameExcluded: setFrameExcluded
 };
