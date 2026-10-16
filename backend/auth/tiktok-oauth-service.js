@@ -18,6 +18,7 @@ var crypto = require('crypto');
 var db = require('../db/database');
 var config = require('../config');
 var logger = require('../utils/logger');
+var tiktokAvatarSync = require('./tiktok-avatar-sync');
 
 var AUTHORIZE_URL = 'https://www.tiktok.com/v2/auth/authorize/';
 var TOKEN_URL = 'https://open.tiktokapis.com/v2/oauth/token/';
@@ -138,45 +139,14 @@ function linkVerifiedAccount(userId, tiktokUser) {
     return { success: true };
 }
 
-// نفس حد updateAvatarImage بـ auth-service.js.
-var MAX_AVATAR_BASE64_LENGTH = 85 * 1024;
-var AVATAR_FETCH_TIMEOUT_MS = 8000;
-
 /**
- * يحفظ صورة تيك توك كصورة بروفايل — فقط لو المستخدم ما عنده صورة خاصة
- * فيه. نحمّل الصورة ونخزّنها Base64 بدل الرابط لأن روابط صور تيك توك
- * موقّعة وتنتهي صلاحيتها بعد أيام. أي فشل هنا يُتجاهَل بهدوء ولا يأثر
- * على نجاح الربط نفسه.
- * @returns {Promise<boolean>} true لو انحفظت الصورة
+ * صورة تيك توك كصورة بروفايل لحظة الربط — فقط لو ما عنده صورة خاصة
+ * (راجع tiktok-avatar-sync.js). أي فشل يُتجاهَل ولا يأثر على الربط.
+ * @returns {Promise<boolean>}
  */
-async function saveTikTokAvatarIfMissing(userId, tiktokUser) {
-    try {
-        var url = tiktokUser && (tiktokUser.avatar_url_100 || tiktokUser.avatar_url);
-        if (!url) return false;
-        var row = db.prepare('SELECT avatar_image_base64 FROM users WHERE id = ?').get(userId);
-        if (!row || row.avatar_image_base64) return false;
-
-        var controller = new AbortController();
-        var timer = setTimeout(function () { controller.abort(); }, AVATAR_FETCH_TIMEOUT_MS);
-        var res;
-        try { res = await fetch(url, { signal: controller.signal }); } finally { clearTimeout(timer); }
-        if (!res.ok) return false;
-
-        var mime = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-        if (mime === 'image/jpg') mime = 'image/jpeg';
-        if (!/^image\/(png|jpeg|webp)$/.test(mime)) return false;
-
-        var buf = Buffer.from(await res.arrayBuffer());
-        var dataUrl = 'data:' + mime + ';base64,' + buf.toString('base64');
-        if (dataUrl.length > MAX_AVATAR_BASE64_LENGTH) return false;
-
-        // الشرط "IS NULL" يحمي من الكتابة فوق صورة رفعها المستخدم بنفس اللحظة.
-        var result = db.prepare('UPDATE users SET avatar_image_base64 = ? WHERE id = ? AND avatar_image_base64 IS NULL').run(dataUrl, userId);
-        return result.changes > 0;
-    } catch (err) {
-        logger.error('TikTok OAuth: avatar save failed:', err.message);
-        return false;
-    }
+function saveTikTokAvatarIfMissing(userId, tiktokUser) {
+    var url = tiktokUser && (tiktokUser.avatar_url_100 || tiktokUser.avatar_url);
+    return tiktokAvatarSync.saveAvatarIfMissing(userId, url);
 }
 
 module.exports = {
