@@ -1470,6 +1470,8 @@ module.exports = {
     getPublicProfile: getPublicProfile,
     adminLookupUser: adminLookupUser,
     findVerifiedUserByTikTok: findVerifiedUserByTikTok,
+    fetchPublicProfileHtml: fetchPublicProfileHtml,
+    extractProfileAvatarFromHtml: extractProfileAvatarFromHtml,
     generateVerificationCode: generateVerificationCode,
     verifyTikTokOwnership: verifyTikTokOwnership,
     startBroadcast: startBroadcast,
