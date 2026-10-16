@@ -553,6 +553,36 @@ input::placeholder,textarea::placeholder{color:#5b6274}
           </div>
         </sc-if>
 
+        <!-- FOLLOW REWARD -->
+        <sc-if value="{{ is.followreward }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <h1 style="margin:0;font-size:22px;font-weight:600">مكافأة متابعة تيك توك</h1>
+            <sc-if value="{{ showHelp }}"><p style="margin:0;font-size:13px;color:#9199ab;max-width:1100px;text-wrap:pretty">كل من يتابع حساب المنصة على تيك توك (ويكون حسابه بالموقع موثّق) يختار إطار واحد هدية من القائمة هذي. اضغط «استثناء» على أي إطار ما تبيه يظهر بالقائمة — الاستثناء ما يسحب الإطار ممن اختاره من قبل.</p></sc-if>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <sc-for list="{{ frCounts }}" as="c" hint-placeholder-count="3"><div style="flex:1;min-width:160px;background:#14161d;border:1px solid #262a37;border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;color:#9199ab">{{ c.label }}</span><span style="font-size:20px;font-weight:600;font-family:'IBM Plex Mono',monospace">{{ c.value }}</span></div></sc-for>
+          </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid #262a37;flex-wrap:wrap">
+              <span style="font-weight:600">الإطارات بقائمة الاختيار</span>
+              <span style="font-size:12.5px;color:#9199ab">{{ frSummary }}</span>
+            </div>
+            <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px">
+              <sc-for list="{{ frFrames }}" as="f" hint-placeholder-count="8">
+                <div style="display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:10px;color:#e7e9ee;border:1px solid {{ f.border }};background:#11131a">
+                  <div style="height:86px;border-radius:6px;background:#0b0d12;display:flex;align-items:center;justify-content:center;overflow:hidden;opacity:{{ f.opacity }}"><img src="{{ f.file }}" alt="" loading="lazy" style="max-width:100%;max-height:86px;object-fit:contain"></div>
+                  <span style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.name }}</span>
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                    <span style="font-size:11px;color:{{ f.statusColor }}">{{ f.status }}</span>
+                    <button onClick="{{ f.toggle }}" style="height:28px;padding:0 12px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer" style-hover="background:#7c3aed;border-color:#7c3aed">{{ f.btn }}</button>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ frEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:0 16px 32px;text-align:center;color:#5b6274;font-size:13px">جارٍ التحميل…</div></sc-if>
+          </div>
+        </sc-if>
+
         <!-- ANNOUNCEMENT -->
         <sc-if value="{{ is.announce }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-direction:column;gap:6px">
@@ -846,7 +876,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
 //  التنقل بالـ hash: #users · #support · #support/41 · #grant ... إلخ.
 // ============================================================
 const A = window.AGPAuth;
-const PAGES = ['users','support','grant','codes','entrances','elim','win','perms','catalog','exclusive','announce','supporters','partners','theme','levels','stats','store'];
+const PAGES = ['users','support','grant','codes','entrances','elim','win','perms','catalog','exclusive','followreward','announce','supporters','partners','theme','levels','stats','store'];
 const TEMPLATE_LABELS = { gold:'الذهبي الفخم', neon:'النيون المستقبلي', fire:'الناري القوي', ice:'الجليدي الملكي' };
 const THEME_PRESETS = { 'national-day': { accent:'#006c35', accentPink:'#c9a24b', accent2:'#ffffff' }, 'founding-day': { accent:'#2c3e2d', accentPink:'#a85c32', accent2:'#d8c79d' } };
 const CATEGORY_LABELS = { idea:'أصحاب الأفكار', dev:'فريق التطوير' };
@@ -884,7 +914,7 @@ class Component extends DCLogic {
     levels:null, lvEdits:{},
     statsTab:'streamers', streamerStats:null, userStats:null,
     tickets:null, ticketsTotal:0, newCount:0, ticketId: h.page==='support'&&/^\d+$/.test(h.arg||'')?Number(h.arg):null, ticket:null, statusDraft:'new',
-    tType:'', tStatus:'', tQ:'', reply:'', busy:{}
+    tType:'', tStatus:'', tQ:'', reply:'', busy:{}, followReward:null
   }; })();
 
   componentDidMount(){
@@ -917,6 +947,7 @@ class Component extends DCLogic {
     if(['grant','codes','elim','win','catalog','exclusive'].includes(page) && !this.state.catalog) this.loadCatalog();
     if(page==='codes' && !this.state.codes) this.loadCodes();
     if(page==='announce') this.loadAnnouncement();
+    if(page==='followreward') this.loadFollowReward();
     if(page==='supporters' && !this.state.supporters) this.loadSupporters();
     if(page==='partners' && !this.state.partners) this.loadPartners();
     if(page==='theme' && !this.state.theme) this.loadTheme();
@@ -968,6 +999,13 @@ class Component extends DCLogic {
     const E={ invalid_code:'الكود غير موجود.', code_used:'الكود مستخدم — ما ينحرق.', already_burned:'الكود محروق من قبل.' };
     if(!r.success) return this.flash(E[r.error]||('تعذّر الحرق: '+(r.error||'unknown')),'err'); this.setState({ burnInput:'' }); this.flash(`تم حرق الكود ${r.code}.`); this.loadCodes(); })); }
 
+  // ---------- مكافأة المتابعة ----------
+  loadFollowReward(){ return A.adminGetFollowReward().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل مكافأة المتابعة.','err'); this.setState({ followReward:r }); }); }
+  toggleFollowRewardFrame(f){ this.busy('fr:'+f.frameType+':'+f.frameRef,()=>A.adminSetFollowRewardExcluded(f.frameType,f.frameRef,!f.excluded)).then(r=>{ if(!r) return;
+    if(!r.success) return this.flash('تعذّر الحفظ: '+(r.error||'unknown'),'err');
+    this.setState(s=>({ followReward:{ ...s.followReward, frames:s.followReward.frames.map(x=>x.frameType===f.frameType&&x.frameRef===f.frameRef?{ ...x, excluded:!f.excluded }:x) } }));
+    this.flash(f.excluded?'رجع الإطار لقائمة الاختيار.':'تم استثناء الإطار — ما راح يظهر بقائمة الاختيار.'); }); }
+
   // ---------- واجهة الموقع ----------
   loadAnnouncement(){ return A.getAnnouncement().then(r=>{ const a=r&&r.success?r.announcement:null; this.setState({ annActive:!!a, annText:a?(a.text||''):this.state.annText, annImage:a?(a.imageFilename||''):this.state.annImage }); }); }
   loadSupporters(){ return A.adminListSupporters().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل قائمة الداعمين.','err'); this.setState({ supporters:r.supporters||[] }); }); }
@@ -1009,7 +1047,7 @@ class Component extends DCLogic {
     const navDef=[
       ['الحسابات',[['users','المستخدمون']]],
       ['الدعم',[['support','تذاكر الدعم']]],
-      ['المقتنيات',[['grant','منح الإطارات'],['codes','أكواد الاسترداد'],['entrances','الدخوليات'],['elim','بطاقات الإقصاء'],['win','بطاقات الفوز'],['perms','منح الصلاحيات'],['catalog','كتالوج الإطارات'],['exclusive','إطارات حصرية']]],
+      ['المقتنيات',[['grant','منح الإطارات'],['codes','أكواد الاسترداد'],['entrances','الدخوليات'],['elim','بطاقات الإقصاء'],['win','بطاقات الفوز'],['perms','منح الصلاحيات'],['catalog','كتالوج الإطارات'],['exclusive','إطارات حصرية'],['followreward','مكافأة المتابعة']]],
       ['واجهة الموقع',[['announce','الإعلان'],['supporters','الداعمون'],['partners','شركاء الإبداع'],['theme','ثيم المناسبات']]],
       ['المستويات والتقارير',[['levels','مستويات الستريمر (SP)'],['stats','الإحصائيات']]],
       ['المتجر',[['store','إدارة المتجر']]]
@@ -1228,6 +1266,16 @@ class Component extends DCLogic {
       codeRows:(s.codes||[]).map(c=>({ code:c.code, frame:c.displayNameAr||c.cardKey||c.frameRef, note:c.note||'—',
         canBurn:!c.redeemedAt&&!c.burnedAt, burn:()=>this.burnCode(c.code),
         status:c.burnedAt?`محروق · \u2068${fmtDate(c.burnedAt)}\u2069`:c.redeemedAt?`مستخدم — \u2068${c.redeemedUsername||('#'+c.redeemedBy)}\u2069${c.redeemedCustomId?' (\u2066'+c.redeemedCustomId+'\u2069)':''} · \u2068${fmtDate(c.redeemedAt)}\u2069`:'غير مستخدم', color:c.burnedAt?'#f87171':c.redeemedAt?'#4ade80':'#fcd34d' })),
+      // follow reward
+      ...(()=>{ const fr=s.followReward, frames=(fr&&fr.frames)||[], shown=frames.filter(f=>!f.excluded).length;
+        const NAMES={ founder:'المؤسس', streamer:'الاستريمر', supporter:'الداعم', distinguished:'المميز' };
+        return {
+          frCounts:[['بانتظار الاختيار','pending'],['اختاروا إطارهم','claimed'],['انسحبت (ألغوا المتابعة)','revoked']].map(([l,k])=>({ label:l, value:fr?fr.counts[k]||0:'—' })),
+          frSummary:fr?`يظهر ${shown} من ${frames.length} إطار · الحساب: \u2066@${fr.platformTikTok}\u2069`:'',
+          frEmpty:!fr,
+          frFrames:frames.map(f=>({ file:f.imageFilename, name:f.displayNameAr||NAMES[f.frameRef]||(/^level-(\d)$/.test(f.frameRef)?'المستوى '+f.frameRef.slice(6):f.imageFilename),
+            status:f.excluded?'مستثنى':'يظهر', statusColor:f.excluded?'#f87171':'#4ade80', border:f.excluded?'#4a2427':'#262a37', opacity:f.excluded?0.4:1,
+            btn:f.excluded?'إرجاع':'استثناء', toggle:()=>this.toggleFollowRewardFrame(f) })) }; })(),
       // catalog / exclusive / levels
       catalog,
       exclusives:(s.customFrames||[]).map(e=>({ n:e.id, file:e.image_filename, name:e.display_name_ar||'—' })),
