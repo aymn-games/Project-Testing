@@ -391,6 +391,23 @@ document.addEventListener('DOMContentLoaded', async function() {
   </script>
 <script src="auth/auth-client.js"></script>
 <script src="js/agp-live-watch.js" data-manual></script>
+<script src="js/agp-tiktok-follow.js"></script>
+<script>
+  // بطاقة حساب تيك توك المنصة (@aymngame) — فوق بطاقة "عندك فكرة لعبة؟".
+  (function(){
+    var tries = 0;
+    var timer = setInterval(function(){
+      tries++;
+      var t = Array.prototype.slice.call(document.querySelectorAll('div'))
+        .find(function(e){ return e.children.length === 0 && e.textContent.trim() === 'عندك فكرة لعبة؟'; });
+      var ideaCard = t && t.parentElement && t.parentElement.parentElement;
+      if (ideaCard && window.AGPTikTokFollow) {
+        clearInterval(timer);
+        window.AGPTikTokFollow.insertBefore(ideaCard, { flush: true });
+      } else if (tries > 60) clearInterval(timer);
+    }, 250);
+  })();
+</script>
 <script>
   // زر الحساب بالهيدر (حسابي / تسجيل الدخول) — نفس منطق الرئيسية.
   if (window.AGPAuth && window.AGPAuth.keepHeaderAccountLinkSynced) window.AGPAuth.keepHeaderAccountLinkSynced();
