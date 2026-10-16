@@ -781,8 +781,9 @@ class Component extends DCLogic {
     if(P.kind==='error') return {msg:'تعذّر جلب نقاط المنصة الآن',c:'#fca5a5'};
     const a=P.kind==='ok'&&u?P.aw[u]:null; if(!a) return {msg:'لا يوجد حساب مرتبط بهذا اللاعب على المنصة بعد',c:'#a8a3b5'};
     return {pts:'+'+a.added+' نقطة',total:'المجموع: '+a.totalPoints}; }
-  resetBoard(keepRoles){ if(!keepRoles) this.revokeApproved(); clearInterval(this.iv); clearTimeout(this.bt); (this.ts||[]).forEach(clearTimeout); this.ts=[]; const st=this.state.starter===1?2:1; try{ localStorage.setItem('codenames-last-starter',st); }catch(e){}
-    this.setState({...this.newBoard(st),phase:'ready',hint:null,hintGiven:false,win:null,banner:null,plat:null,picks:[],bump:null,flow:keepRoles?'qr':'roles',rolesStep:1,logs:{1:[],2:[]},...(keepRoles?{}:{roles:{1:{spy:null,conf:null},2:{spy:null,conf:null}}})}); }
+  // «إعادة المباراة» و«مباراة جديدة»: لوحة جديدة ويرجع لتحديد الأدوار من البداية (الإعادة تبقي اختيارات الأدوار السابقة محددة)
+  resetBoard(keepRoles){ if(!keepRoles) this.revokeApproved(); clearInterval(this.iv); clearTimeout(this.bt); clearTimeout(this._autoT); this._autoT=null; (this.ts||[]).forEach(clearTimeout); this.ts=[]; const st=this.state.starter===1?2:1; try{ localStorage.setItem('codenames-last-starter',st); }catch(e){}
+    this.setState({...this.newBoard(st),phase:'ready',hint:null,hintGiven:false,win:null,banner:null,plat:null,picks:[],bump:null,flow:'roles',rolesStep:1,modal:null,menuOpen:false,guideOpen:false,left:0,logs:{1:[],2:[]},...(keepRoles?{}:{roles:{1:{spy:null,conf:null},2:{spy:null,conf:null}}})}); }
 
   onChat(user,text,isFollower=true){
     const S=this.state; if(!user) return; const t=CMD(text), tm=this.teamOf(user);
