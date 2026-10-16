@@ -36,6 +36,7 @@
 var logger = require('../../utils/logger');
 var collectiblesService = require('../../collectibles/collectibles-service');
 var tiktokAvatarSync = require('../../auth/tiktok-avatar-sync');
+var followRewardService = require('../../collectibles/follow-reward-service');
 
 var MAX_RECONNECT_ATTEMPTS = 5;
 var BASE_RECONNECT_DELAY_MS = 1000;
@@ -240,6 +241,32 @@ function isStreamOwner(user, streamUsername) {
     return norm(user.uniqueId) === norm(streamUsername);
 }
 
+/**
+ * إشارة المتابعة لمكافأة حساب المنصة — أحفظ من extractIsFollower لأن
+ * السحب يعتمد عليها: true = متابع أكيد، false = غير متابع أكيد (الإشارتين
+ * صريحتين بالنفي)، null = غير مؤكد (ما نسوي شي).
+ */
+function extractFollowSignal(data) {
+    var followInfo = data && data.user && data.user.followInfo;
+    var userIdentity = data && data.user && data.user.userIdentity;
+    var status = followInfo && followInfo.followStatus != null ? String(followInfo.followStatus) : null;
+    var ofAnchor = userIdentity ? userIdentity.isFollowerOfAnchor : undefined;
+    if (ofAnchor === true || status === '1' || status === '2') return true;
+    if (ofAnchor === false && status === '0') return false;
+    return null;
+}
+
+/** مكافأة متابعة حساب المنصة — تشتغل فقط لما البث المتصل هو بث المنصة نفسه. */
+function trackPlatformFollow(user, streamUsername, signal) {
+    try {
+        if (!followRewardService.isPlatformStream(streamUsername) || isStreamOwner(user, streamUsername)) return;
+        if (signal === true) followRewardService.noteFollower(user.uniqueId);
+        else if (signal === false) followRewardService.noteNonFollower(user.uniqueId);
+    } catch (err) {
+        logger.error('TikTok Connector: follow reward tracking failed:', err);
+    }
+}
+
 function extractFollowDebugInfo(data) {
     var followInfo = data && data.user && data.user.followInfo;
     var userIdentity = data && data.user && data.user.userIdentity;
@@ -361,6 +388,7 @@ function createTikTokConnector() {
             var avatarUrl = extractAvatarUrl(data);
             // حساب موثَّق بدون صورة بروفايل؟ نحفظ صورة تيك توك الحالية (بالخلفية).
             tiktokAvatarSync.noteCommentAvatar(user.uniqueId, avatarUrl);
+            trackPlatformFollow(user, _username, extractFollowSignal(data));
             _callbacks.onComment({
                 id: user.id,
                 name: user.name,
@@ -397,6 +425,7 @@ function createTikTokConnector() {
 
         _connection.on(TikTokLib.WebcastEvent.FOLLOW, function (data) {
             var user = extractUser(data);
+            trackPlatformFollow(user, _username, true);
             _callbacks.onFollow({ id: user.id, name: user.name });
         });
 

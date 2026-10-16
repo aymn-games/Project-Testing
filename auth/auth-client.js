@@ -477,6 +477,18 @@ function adminClearEntrance(userId) {
     return request('/api/admin/entrance', { method: 'POST', body: { userId: userId, clear: true } });
 }
 
+/** Platform TikTok follow reward. result.status: null | 'pending' | 'claimed' |
+ * 'revoked'; result.choices (only when pending): [{frameType, frameRef,
+ * imageFilename, displayNameAr}]. */
+function getFollowReward() {
+    return request('/api/follow-reward', { method: 'GET' });
+}
+
+/** Claims the follow reward as the chosen frame. result.error: no_pending_reward | invalid_frame */
+function claimFollowReward(frameType, frameRef) {
+    return request('/api/follow-reward/claim', { method: 'POST', body: { frameType: frameType, frameRef: frameRef } });
+}
+
 /** Owner equips one of their owned frames (own profile page only). */
 function equipFrame(frameType, frameRef) {
     return request('/api/collectibles/equip', { method: 'POST', body: { frameType: frameType, frameRef: frameRef } });
@@ -936,6 +948,8 @@ global.AGPAuth = {
     adminSetEntrance: adminSetEntrance,
     adminClearEntrance: adminClearEntrance,
     equipFrame: equipFrame,
+    getFollowReward: getFollowReward,
+    claimFollowReward: claimFollowReward,
     redeemFrameCode: redeemFrameCode,
     adminGenerateFrameCodes: adminGenerateFrameCodes,
     adminGenerateCardCodes: adminGenerateCardCodes,

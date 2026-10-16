@@ -684,6 +684,21 @@ var DEFAULT_STREAMER_LEVELS = [
     DEFAULT_STREAMER_LEVELS.forEach(function (row) { insert.run(row); });
 }());
 
+// مكافأة متابعة حساب تيك توك المنصة: صف لكل مستخدم. status:
+// 'pending' (تأكدنا من المتابعة وبانتظار اختياره للإطار) / 'claimed'
+// (اختار إطاره: frame_type/frame_ref) / 'revoked' (ألغى المتابعة فانسحب).
+// راجع collectibles/follow-reward-service.js.
+db.exec(
+    'CREATE TABLE IF NOT EXISTS follow_rewards (' +
+    '    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,' +
+    "    status TEXT NOT NULL CHECK(status IN ('pending', 'claimed', 'revoked'))," +
+    '    frame_type TEXT,' +
+    '    frame_ref TEXT,' +
+    '    detected_at INTEGER NOT NULL,' +
+    '    claimed_at INTEGER' +
+    ');'
+);
+
 logger.log('Database: ready at ' + DB_PATH);
 
 module.exports = db;

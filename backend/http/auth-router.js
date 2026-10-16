@@ -11,6 +11,7 @@ var authService = require('../auth/auth-service');
 var tiktokOAuthService = require('../auth/tiktok-oauth-service');
 var announcementService = require('../announcements/announcement-service');
 var collectiblesService = require('../collectibles/collectibles-service');
+var followRewardService = require('../collectibles/follow-reward-service');
 var pointsService = require('../points/points-service');
 var streamerLevelService = require('../points/streamer-level-service');
 var supportersService = require('../supporters/supporters-service');
@@ -134,6 +135,9 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/bundle-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateBundleCodes },
   { method: 'POST', path: '/api/admin/codes/burn', requireAuth: true, requireAdmin: true, handler: handleAdminBurnCode },
   { method: 'POST', path: '/api/collectibles/redeem', requireAuth: true, handler: handleRedeemFrameCode },
+  // مكافأة متابعة حساب تيك توك المنصة — إطار واحد يختاره المستخدم.
+  { method: 'GET', path: '/api/follow-reward', requireAuth: true, handler: handleGetFollowReward },
+  { method: 'POST', path: '/api/follow-reward/claim', requireAuth: true, handler: handleClaimFollowReward },
   { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
   // ---- هل البث شغّال الحين؟ — مكتبة الألعاب والألعاب تقطع الاتصال المحفوظ
   // لما يرجع live:false (راجع backend/platforms/tiktok/tiktok-live-check.js).
@@ -603,6 +607,15 @@ function handleRedeemFrameCode(req, res, body, user) {
 }
 
 /** صاحب الحساب نفسه يفعّل أحد إطاراته المملوكة كإطاره الظاهر الوحيد. */
+function handleGetFollowReward(req, res, body, user) {
+  sendJson(res, 200, Object.assign({ success: true }, followRewardService.getRewardForUser(user.id)));
+}
+
+function handleClaimFollowReward(req, res, body, user) {
+  var result = followRewardService.claimReward(user.id, body.frameType, body.frameRef);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
 function handleEquipFrame(req, res, body, user) {
   var result = collectiblesService.setEquipped(user.id, body.frameType, body.frameRef);
   sendJson(res, result.success ? 200 : 400, result);
