@@ -134,6 +134,10 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/bundle-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateBundleCodes },
   { method: 'POST', path: '/api/admin/codes/burn', requireAuth: true, requireAdmin: true, handler: handleAdminBurnCode },
   { method: 'POST', path: '/api/collectibles/redeem', requireAuth: true, handler: handleRedeemFrameCode },
+  // أكواد "اختيار إطار" — توليد/عرض للأدمن، واستلام الإطار المختار للاعب.
+  { method: 'POST', path: '/api/admin/choice-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateChoiceCode },
+  { method: 'GET', path: '/api/admin/choice-codes', requireAuth: true, requireAdmin: true, handler: handleAdminListChoiceCodes },
+  { method: 'POST', path: '/api/collectibles/redeem-choice', requireAuth: true, handler: handleRedeemChoiceCode },
   { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
   // ---- هل البث شغّال الحين؟ — مكتبة الألعاب والألعاب تقطع الاتصال المحفوظ
   // لما يرجع live:false (راجع backend/platforms/tiktok/tiktok-live-check.js).
@@ -595,11 +599,25 @@ function handleAdminListFrameCodes(req, res) {
   sendJson(res, 200, { success: true, codes: collectiblesService.listFrameCodes(getQueryParam(req, 'limit')) });
 }
 
-var REDEEM_ERROR_STATUS = { invalid_code: 404, code_used: 409, code_burned: 410, already_owned: 409, rate_limited: 429 };
+var REDEEM_ERROR_STATUS = { invalid_code: 404, code_used: 409, code_burned: 410, already_owned: 409, rate_limited: 429, code_full: 409, already_redeemed: 409 };
 
 function handleRedeemFrameCode(req, res, body, user) {
   var result = collectiblesService.redeemFrameCode(user.id, body.code);
   sendJson(res, result.success ? 200 : (REDEEM_ERROR_STATUS[result.error] || 400), result);
+}
+
+function handleRedeemChoiceCode(req, res, body, user) {
+  var result = collectiblesService.claimChoiceCode(user.id, body.code, body.frameType, body.frameRef);
+  sendJson(res, result.success ? 200 : (REDEEM_ERROR_STATUS[result.error] || 400), result);
+}
+
+function handleAdminGenerateChoiceCode(req, res, body) {
+  var result = collectiblesService.generateChoiceCode(body.maxUses, body.excluded, body.note);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleAdminListChoiceCodes(req, res) {
+  sendJson(res, 200, { success: true, codes: collectiblesService.listChoiceCodes() });
 }
 
 /** صاحب الحساب نفسه يفعّل أحد إطاراته المملوكة كإطاره الظاهر الوحيد. */

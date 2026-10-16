@@ -477,6 +477,22 @@ function adminClearEntrance(userId) {
     return request('/api/admin/entrance', { method: 'POST', body: { userId: userId, clear: true } });
 }
 
+/** After redeemFrameCode returns kind 'choice': claims the chosen frame.
+ * result.error: invalid_code | code_burned | code_full | already_redeemed | invalid_frame */
+function redeemChoiceCode(code, frameType, frameRef) {
+    return request('/api/collectibles/redeem-choice', { method: 'POST', body: { code: code, frameType: frameType, frameRef: frameRef } });
+}
+
+/** Admin only — one multi-use "choose your frame" code. excluded: ["catalog:<slug>", "custom:<id>"] */
+function adminGenerateChoiceCode(maxUses, excluded, note) {
+    return request('/api/admin/choice-codes/generate', { method: 'POST', body: { maxUses: maxUses, excluded: excluded || [], note: note || '' } });
+}
+
+/** Admin only — list "choose your frame" codes with their usage. */
+function adminListChoiceCodes() {
+    return request('/api/admin/choice-codes', { method: 'GET' });
+}
+
 /** Owner equips one of their owned frames (own profile page only). */
 function equipFrame(frameType, frameRef) {
     return request('/api/collectibles/equip', { method: 'POST', body: { frameType: frameType, frameRef: frameRef } });
@@ -936,6 +952,9 @@ global.AGPAuth = {
     adminSetEntrance: adminSetEntrance,
     adminClearEntrance: adminClearEntrance,
     equipFrame: equipFrame,
+    redeemChoiceCode: redeemChoiceCode,
+    adminGenerateChoiceCode: adminGenerateChoiceCode,
+    adminListChoiceCodes: adminListChoiceCodes,
     redeemFrameCode: redeemFrameCode,
     adminGenerateFrameCodes: adminGenerateFrameCodes,
     adminGenerateCardCodes: adminGenerateCardCodes,

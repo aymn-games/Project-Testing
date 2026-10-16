@@ -248,6 +248,28 @@ db.exec(`
         burned_at INTEGER
     );
 
+    -- أكواد "اختيار إطار": كود واحد يستخدمه أكثر من شخص (حتى max_uses)، وكل
+    -- واحد يختار إطار بنفسه من كل الإطارات عدا المستثناة (excluded = JSON
+    -- مصفوفة مفاتيح "catalog:<slug>" / "custom:<id>"). نفس صيغة الأكواد
+    -- الثانية وفريد عبرها. كل مستخدم يستخدم الكود مرة وحدة.
+    CREATE TABLE IF NOT EXISTS choice_codes (
+        code TEXT PRIMARY KEY,
+        max_uses INTEGER NOT NULL,
+        uses INTEGER NOT NULL DEFAULT 0,
+        excluded TEXT NOT NULL DEFAULT '[]',
+        note TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        burned_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS choice_code_redemptions (
+        code TEXT NOT NULL,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        frame_type TEXT NOT NULL,
+        frame_ref TEXT NOT NULL,
+        redeemed_at INTEGER NOT NULL,
+        PRIMARY KEY (code, user_id)
+    );
+
     -- كتالوج مستويات "SP" (نقاط الستريمر) — عتبات قابلة للتعديل من الأدمن.
     -- جدول منفصل عن frame_catalog بدل تعديل قيد CHECK(kind IN (...))
     -- الحالي (يتطلب إعادة بناء الجدول بالكامل بـSQLite).
