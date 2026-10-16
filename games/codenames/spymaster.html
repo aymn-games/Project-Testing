@@ -48,7 +48,10 @@ input:focus{outline:none;border-color:rgba(167,139,250,.6)}
         <span style="display:flex;align-items:center;gap:8px;font:700 15px/1.4 'Zain';color:#f4f2f8"><span style="width:6px;height:6px;flex-shrink:0;border-radius:50%;background:#fbbf24"></span>{{ pt }}</span>
       </sc-for>
       <sc-if value="{{ loginUrl }}" hint-placeholder-val="{{ false }}">
-        <a href="{{ loginUrl }}" style="align-self:flex-start;height:42px;padding:0 20px;border-radius:999px;display:flex;align-items:center;text-decoration:none;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:800 15px 'Zain'">تسجيل الدخول بحسابي</a>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <a href="{{ loginUrl }}" style="height:46px;border-radius:999px;display:grid;place-items:center;text-decoration:none;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:800 15px 'Zain'">تسجيل الدخول</a>
+          <button onClick="{{ showReq }}" style="height:46px;border-radius:999px;cursor:pointer;border:1px solid rgba(255,255,255,.18);background:{{ reqBtnBg }};color:#f4f2f8;font:800 15px 'Zain'">ما عندي حساب</button>
+        </div>
       </sc-if>
     </div>
   </sc-if>
@@ -151,6 +154,8 @@ input:focus{outline:none;border-color:rgba(167,139,250,.6)}
 // الاتصال عبر WebSocket: CN.relay → wss://project-testing-akds.onrender.com/ws/room-relay
 // الرسائل: join (للقناة) · sync_request · spymaster_request · spymaster_approve · spymaster_reject · board_update
 const COLORS = { 1:'#ef4444', 2:'#3b82f6', 0:'#d9c7a0', '-1':'#17131f' };
+// صور البطاقات (نفس صور شاشة اللعب images/) — اللون تحتها احتياط لين تتحمّل
+const TILE_IMG = c => c.t===-1?'images/tile-assassin.png':c.t===0?'images/tile-neutral.png':`images/tile-${c.t===1?'red':'blue'}-${c.img===2?2:1}.png`;
 const TILE = { 1:['linear-gradient(160deg, #f87171, #dc2626 55%, #991b1b)','#7f1d1d','🕵️','rgba(0,0,0,.28)','#fff','rgba(0,0,0,.4)'],
   2:['linear-gradient(160deg, #60a5fa, #2563eb 55%, #1e3a8a)','#1e3a8a','🕵️','rgba(0,0,0,.28)','#fff','rgba(0,0,0,.4)'],
   0:['linear-gradient(160deg, #f1e4c6, #d9c7a0)','#a8916a','🧍','rgba(255,255,255,.75)','#3b2a12','#3b2a12'],
@@ -168,7 +173,7 @@ class Component extends DCLogic {
   saved = ROOM ? loadSaved() : {};
   slotMode = !!(SLOT&&this.saved.slot===SLOT&&this.saved.slotKey);
   state = { room:ROOM, stage:this.slotMode?(this.saved.board?'map':'check'):['wait','map','rejected'].includes(this.saved.stage)&&this.saved.id?this.saved.stage:(SLOT?'check':'form'), myTeam:this.saved.myTeam||0, name:this.saved.name||'', team:this.saved.team||SLOT_TEAM||0, err:null, claim:null, claimName:SLOT_NAME,
-    board:this.saved.stage==='map'?(this.saved.board||null):null, lost:false, expired:false, st:this.saved.st||null, hintW:'', hintN:0, hintErr:null, hintSending:false, hintOk:null, noCrypto:!!ROOM&&!CN.secure.supported(), teams:this.saved.teams||{1:'الفريق الأحمر',2:'الفريق الأزرق'} };
+    board:this.saved.stage==='map'?(this.saved.board||null):null, lost:false, expired:false, st:this.saved.st||null, reqOpen:false, hintW:'', hintN:0, hintErr:null, hintSending:false, hintOk:null, noCrypto:!!ROOM&&!CN.secure.supported(), teams:this.saved.teams||{1:'الفريق الأحمر',2:'الفريق الأزرق'} };
   componentDidMount(){
     if(!this.state.room||this.state.noCrypto) return;
     this.id=this.saved.id||null; this.keys=this.saved.keys||null; this.lastSeq=0;
@@ -251,18 +256,19 @@ class Component extends DCLogic {
       isCheck:!bad&&S.stage==='check', checkTxt:S.claim==='ok'||this.slotMode?'جارٍ فتح الخريطة...':'جارٍ التحقق من حسابك...',
       ...(()=>{ const N=bad||S.stage!=='form'?null:{
           mismatch:[`⚠️ الباركود خاص بـ ${S.claimName}`,['مو أنت؟ أرسل طلب من تحت ← المذيع يقرر']],
-          login:[`🔐 الباركود خاص بـ ${S.claimName}`,['عندك حساب؟ سجّل دخول ← تنفتح الخريطة','ما عندك؟ أرسل طلب من تحت ← المذيع يقبل']],
+          login:[`🔐 الباركود خاص بـ ${S.claimName}`,['عندك حساب؟ سجّل دخول ← تنفتح الخريطة','ما عندك؟ أرسل طلب ← المذيع يقبل']],
           gone:['⏳ الباركود انتهى',['امسح الباركود الجديد','أو أرسل طلب من تحت']],
           fail:['تعذّر التحقق من حسابك',['أرسل طلب من تحت ← المذيع يقبل']]}[S.claim];
         return {notice:N?N[0]:null,noticePts:N?N[1]:[]}; })(),
       loginUrl:S.claim==='login'?'../../login.html?next='+encodeURIComponent(`games/codenames/spymaster.html?room=${ROOM}&s=${SLOT}&t=${SLOT_TEAM}&n=${encodeURIComponent(SLOT_NAME)}`):null,
-      isForm:!bad&&S.stage==='form', isWait:!bad&&S.stage==='wait', isRejected:!bad&&S.stage==='rejected', isMap:!bad&&S.stage==='map', isLost:!bad&&S.lost,
+      showReq:()=>this.setState({reqOpen:true}), reqBtnBg:S.reqOpen?'rgba(139,92,246,.2)':'rgba(255,255,255,.05)',
+      isForm:!bad&&S.stage==='form'&&(S.claim!=='login'||S.reqOpen), isWait:!bad&&S.stage==='wait', isRejected:!bad&&S.stage==='rejected', isMap:!bad&&S.stage==='map', isLost:!bad&&S.lost,
       name:S.name, setName:e=>this.setState({name:e.target.value,err:null}), err:S.err,
       teams:[1,2].map(t=>({label:S.teams[t],pick:()=>this.setState({team:t,err:null}),bg:S.team===t?COLORS[t]:'rgba(255,255,255,.04)',bd:S.team===t?'#fff':COLORS[t]})),
       submit:()=>this.submit(), retry:()=>{ this.id=null; this.save({id:null,stage:'form',board:null}); this.setState({stage:'form'}); },
       myTeam:S.teams[S.myTeam]||'', myBg:COLORS[S.myTeam]||'#7c3aed',
       counts:[[S.teams[1],1],[S.teams[2],2],['💀 الأسود',-1]].map(([t,k])=>({t,n:k===-1?(left(-1)?'⚠️':'—'):left(k),c:k===-1?'#fca5a5':COLORS[k],bg:k===S.myTeam?COLORS[k]+'26':'rgba(255,255,255,.04)',bd:k===S.myTeam?COLORS[k]:'rgba(255,255,255,.08)'})),
-      cells:b.map((c,i)=>{ const T=TILE[c.t]; return {n:i+1,w:c.w,open:!!c.open,bg:T[0],sh:T[1],icon:T[2],strip:T[3],fg:T[4],numBg:T[5],ring:c.t===S.myTeam&&!c.open?'#fff':'rgba(255,255,255,.12)',op:c.open?.45:1,fl:c.open?'saturate(.4)':'none'}; }),
+      cells:b.map((c,i)=>{ const T=TILE[c.t]; return {n:i+1,w:c.w,open:!!c.open,bg:`url(${TILE_IMG(c)}) center/cover no-repeat, ${T[0]}`,sh:T[1],icon:'',strip:T[3],fg:T[4],numBg:T[5],ring:c.t===S.myTeam&&!c.open?'#fff':'rgba(255,255,255,.12)',op:c.open?.45:1,fl:c.open?'saturate(.4)':'none'}; }),
       ...(()=>{ const st=S.st, mine=st&&st.turn===S.myTeam, tn=st?S.teams[st.turn]:'';
         const canHint=!!(st&&mine&&st.phase==='hint');
         const title=!st||st.phase==='ready'?'⏳ المباراة ما بدأت':canHint?'🕵 دورك — أرسل التلميح':st.phase==='guess'?(mine?'⏳ فريقك يخمّن الحين':`⏳ دور ${tn}`):st.phase==='hint'?`⏳ دور ${tn} — بانتظار تلميحهم`:'🏁 انتهت الجولة';

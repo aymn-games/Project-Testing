@@ -560,7 +560,8 @@ class Component extends DCLogic {
   // ---- spymaster relay — WebSocket عبر CN.relay (backend/websocket/room-relay-server.js) ----
   send(msg){ try{ this.rl&&this.rl.send(msg); }catch(e){} }
   sync(){ this._syncedBoard=this.state.board; const b=this.boardPayload(); try{ localStorage.setItem('codenames-board-'+this.room,JSON.stringify(b)); }catch(e){} Object.keys(this.approved||{}).forEach(id=>this.sendBoardTo(id)); [1,2].forEach(t=>this.sendBoardToSlot(this.slots&&this.slots[t])); }
-  boardPayload(){ return this.state.board.map(x=>({w:x.w,t:x.t,open:x.open||x.auto})); }
+  // img: أي صورة من صورتي الفريق (1|2) — نفس صورة الصندوق بشاشة اللعب، لجوال السباي ماستر
+  boardPayload(){ return this.state.board.map(x=>({w:x.w,t:x.t,img:x.img||0,open:x.open||x.auto})); }
   teamNames(){ return {1:this.state.teams[1].name,2:this.state.teams[2].name}; }
   // اللوحة الملونة لجوال مقبول واحد: مشفّرة بمفتاح مشترك بين اللعبة وهذا الجوال فقط
   sendBoardTo(id){ const a=this.approved[id]; if(!a||!a.pub) return; const board=this.boardPayload(), seq=++this.seq;
