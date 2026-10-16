@@ -483,6 +483,35 @@ input:focus{outline:none}
     </div>
   </sc-if>
 
+  <sc-if value="{{ guideOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:87;background:rgba(5,4,10,.82);backdrop-filter:blur(12px);display:grid;place-items:center;padding:16px;animation:fade .25s ease">
+      <div style="width:min(760px, calc(100vw - 32px));box-sizing:border-box;padding:26px 28px;border-radius:30px;background:#110e19;border:1px solid rgba(167,139,250,.35);box-shadow:0 40px 110px rgba(0,0,0,.65);display:flex;flex-direction:column;gap:16px;animation:popIn .4s cubic-bezier(.2,1.25,.35,1)">
+        <span style="font:900 30px 'Zain';text-align:center">🎮 كيف تلعبون؟</span>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+          <sc-for list="{{ guideCards }}" as="gc" hint-placeholder-count="2">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px 14px;border-radius:22px;background:rgba(255,255,255,.035);border:1.5px solid {{ gc.bd }};text-align:center">
+              <span style="width:58px;height:58px;border-radius:18px;display:grid;place-items:center;background:{{ gc.ib }};font:900 28px/1 'Zain';color:#fff">{{ gc.icon }}</span>
+              <span style="font:900 21px 'Zain'">{{ gc.t }}</span>
+              <div style="display:flex;flex-direction:column;gap:8px;width:100%">
+                <sc-for list="{{ gc.cmds }}" as="cm" hint-placeholder-count="2">
+                  <span style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px 8px 14px;border-radius:14px;background:#fff"><b style="font:900 20px 'Zain';color:#2a1a10;white-space:nowrap">{{ cm.cmd }}</b><span style="padding:3px 10px;border-radius:8px;background:{{ gc.chip }};font:800 13px 'Zain';color:#fff;white-space:nowrap">{{ cm.d }}</span></span>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <span style="font:700 15px 'Zain';color:#fde68a;text-align:center">صندوق غلط أو فتحوا عدد التلميح ← ينتهي الدور</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font:700 15px 'Zain';color:#a8a3b5;user-select:none">
+            <input type="checkbox" checked="{{ guideHide }}" onChange="{{ toggleGuideHide }}" style="width:19px;height:19px;accent-color:#a855f7;cursor:pointer;margin:0">
+            لا تظهر مرة ثانية
+          </label>
+          <button onClick="{{ closeGuide }}" style="height:56px;min-width:220px;padding:0 30px;border:none;border-radius:999px;cursor:pointer;background:linear-gradient(90deg, #059669, #10b981);color:#fff;font:900 21px 'Zain';box-shadow:0 10px 30px rgba(16,185,129,.4)">فهمت · ابدأ</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ introOpen }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;padding:12px;animation:{{ introOv }}">
       <div style="width:min(720px, calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow-y:auto;box-sizing:border-box;border-radius:30px;background:#110e19;border:1px solid rgba(167,139,250,.35);box-shadow:0 40px 110px rgba(0,0,0,.65), 0 0 80px rgba(124,58,237,.18);display:flex;flex-direction:column;animation:{{ introAn }}">
@@ -593,7 +622,7 @@ class Component extends DCLogic {
     this.state={ teams:{1:{name:c.name1,kw:c.kw1},2:{name:c.name2,kw:c.kw2}}, followers:c.followers, hintT:c.hintT, guessT:c.guessT,
       players:{1:r.t1,2:r.t2}, roles:{1:{spy:null,conf:null},2:{spy:null,conf:null}}, logs:{1:[],2:[]},
       ...this.newBoard(this.nextStarter()), phase:'ready', hint:null, hintGiven:false, left:0, banner:null, win:null,
-      introOpen:(()=>{ try{ return localStorage.getItem('codenames-intro-hide')!=='1'; }catch(e){ return true; } })(), introHide:false, flow:'roles', rolesStep:1, joinTick:0, joinReqs:[], spyReqs:[], menuOpen:false, modal:null, reconnecting:false,
+      introOpen:(()=>{ try{ return localStorage.getItem('codenames-intro-hide')!=='1'; }catch(e){ return true; } })(), introHide:false, guideOpen:false, guideHide:false, flow:'roles', rolesStep:1, joinTick:0, joinReqs:[], spyReqs:[], menuOpen:false, modal:null, reconnecting:false,
       plat:null, scale:1, narrow:innerWidth<820, logo:false };
   }
   cfg(){ let c={}; try{ c=JSON.parse(localStorage.getItem('codenames-settings')||'{}')||{}; }catch(e){}
@@ -634,7 +663,7 @@ class Component extends DCLogic {
       this._prevSpies={1:S.roles[1].spy,2:S.roles[2].spy}; this.updateSlots(); }
     // شاشة الباركود: أول ما يدخل السباي ماستر للفريقين تنقفل وتبدأ المباراة تلقائياً
     const allIn=S.flow==='qr'&&S.phase==='ready'&&!!this.enteredOf(1)&&!!this.enteredOf(2);
-    if(allIn&&!this._autoT){ this._autoT=setTimeout(()=>{ this._autoT=null; if(this.state.phase==='ready'&&this.state.flow==='qr'&&this.enteredOf(1)&&this.enteredOf(2)){ this.setState({flow:null}); this.start(); } },1800); }
+    if(allIn&&!this._autoT){ this._autoT=setTimeout(()=>{ this._autoT=null; if(this.state.phase==='ready'&&this.state.flow==='qr'&&this.enteredOf(1)&&this.enteredOf(2)) this.startOrGuide(); },1800); }
     if(!allIn&&this._autoT){ clearTimeout(this._autoT); this._autoT=null; } }
   componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('pointerdown',this.closeMenuOut); this.unsub?.(); this.unsubSt?.(); clearInterval(this.iv); clearTimeout(this.bt); (this.ts||[]).forEach(clearTimeout); this.rl&&this.rl.close(); }
   after(ms,fn){ (this.ts||(this.ts=[])).push(setTimeout(fn,ms)); }
@@ -661,6 +690,9 @@ class Component extends DCLogic {
     if(!changed) return; const list=[1,2].map(t=>this.slots[t]).filter(Boolean);
     this.setState({slotSync:list.length?'pending':null});
     const run=++this._slotRun; CN.spySlots.register(this.room,list.map(x=>({id:x.id,team:x.team,tiktok:x.tiktok,name:x.name,key:x.key}))).then(r=>{ if(run!==this._slotRun) return; this.setState({slotSync:list.length?(r&&r.success?'ok':'fail'):null}); }); }
+  // تبويب «كيف تلعبون؟» للاعبين قبل أول دور (يتخفى بـ«لا تظهر مرة ثانية») — المباراة تبدأ بعد «فهمت»
+  startOrGuide(){ let hide=false; try{ hide=localStorage.getItem('codenames-play-guide-hide')==='1'; }catch(e){}
+    if(hide){ this.setState({flow:null}); this.start(); } else this.setState({flow:null,guideOpen:true,guideHide:false}); }
   // دخول السباي ماستر لفريق: فتح باركوده الخاص بحسابه، أو طلب مقبول لهالفريق
   enteredOf(team){ const sl=this.slots&&this.slots[team]; if(sl&&this.slotHello&&this.slotHello[sl.id]) return sl.name;
     const a=Object.values(this.approved||{}).find(x=>x.team===team); return a?a.name:null; }
@@ -800,7 +832,7 @@ class Component extends DCLogic {
       qrPts:S.phase!=='ready'?['انقطع جواله؟ يمسح باركود فريقه ويرجع','الطلبات الجديدة تطلع تحت باركود فريقها']:allIn?['المباراة تبدأ الحين…']:['مسجّل دخول بحسابه ← يدخل مباشرة','بدون حساب ← يرسل طلب وتقبله هنا'],
       qrProg:`دخل ${inN} من 2`, qrProgBg:allIn?'rgba(16,185,129,.18)':'rgba(255,255,255,.05)', qrProgC:allIn?'#6ee7b7':'#e7e3ef', qrProgBd:allIn?'rgba(52,211,153,.5)':'rgba(255,255,255,.12)', qrProgAn:allIn&&S.phase==='ready'?'pulse 1s ease-in-out infinite':'none',
       qrRoles:()=>this.setState({flow:'roles',rolesStep:1}),
-      qrSkipTxt:S.phase==='ready'?'ابدأ بدون انتظار':'إغلاق', qrSkip:()=>{ if(S.phase==='ready') this.start(); else this.setState({flow:null}); },
+      qrSkipTxt:S.phase==='ready'?'ابدأ بدون انتظار':'إغلاق', qrSkip:()=>{ if(S.phase==='ready') this.startOrGuide(); else this.setState({flow:null}); },
       readyTxt:S.roles[1].spy&&S.roles[2].spy?'⏳ بانتظار دخول السباي ماستر':'⏳ حدّد السباي ماستر والمؤكّد',
       readyBtn:S.roles[1].spy&&S.roles[2].spy?'📱 شاشة الباركود':'🕵 تحديد الأدوار',
       openFlow:()=>this.setState({flow:S.roles[1].spy&&S.roles[2].spy?'qr':'roles',rolesStep:1})
@@ -869,6 +901,11 @@ class Component extends DCLogic {
       ].map(([icon,t,d,ib])=>({icon,t,d,ib})),
       panels, tiles,
       ...this.flowVals(),
+      guideOpen:S.guideOpen, guideHide:S.guideHide, toggleGuideHide:e=>this.setState({guideHide:e.target.checked}),
+      closeGuide:()=>{ if(S.guideHide){ try{ localStorage.setItem('codenames-play-guide-hide','1'); }catch(e){} } this.setState({guideOpen:false}); this.start(); },
+      guideCards:[['👥','اللاعبين','#475569','rgba(255,255,255,.14)','linear-gradient(135deg, #475569, #64748b)',[['12','اختيار الصندوق'],['سحب 12','تراجع']]],
+        ['✓','المؤكّد','#059669','rgba(52,211,153,.4)','linear-gradient(135deg, #059669, #10b981)',[['تأكيد 12','فتح صندوق'],['تأكيد 12 و 7','أكثر من صندوق'],['تخطي','إنهاء الدور']]]]
+        .map(([icon,t,chip,bd,ib,cmds])=>({icon,t,chip,bd,ib,cmds:cmds.map(([cmd,d])=>({cmd,d}))})),
       turnName:S.teams[S.turn].name, turnBg:`linear-gradient(90deg, ${T.c}, ${T.dk})`, turnBd:'rgba(255,255,255,.35)', turnGlow:T.c+'55',
       hasPicks:picks.length>0, picksN:picks.length, picksTxt:picks.map(i=>i+1).join(' ← '), clearPicks:()=>this.setState({picks:[]}),
       openPicks:()=>{ const nums=picks.map(i=>i+1); this.setState({picks:[]}); this.log(S.turn,`الاستريمر أكّد يدوياً: ${nums.join(' ')}`,'info'); this.confirm(nums); },
