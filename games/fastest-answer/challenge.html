@@ -86,6 +86,44 @@
     .winner{ font-family:'Noto Kufi Arabic'; font-weight:800; font-size:clamp(30px,5vw,54px); color:#fde68a; text-shadow:0 0 30px rgba(250,204,21,.45); }
     .controls{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
 
+    /* ===== لوبي الدخول (نفس تصميم lobby.html بالألعاب العادية) ===== */
+    .lobby{ flex:1; width:100%; max-width:1080px; margin:0 auto; padding:0 clamp(12px,2.5vw,32px) 22px; display:flex; flex-direction:column; align-items:center; }
+    .lb-game{ font-size:clamp(14px,1.2vw,17px); font-weight:600; color:#a8a3b5; margin-top:4px; }
+    .lb-title{ margin:2px 0 clamp(14px,2vw,24px); font-family:'Noto Kufi Arabic',sans-serif; font-weight:800; font-size:clamp(36px,5vw,64px); line-height:1.3;
+        background:linear-gradient(180deg,#ede9fe,#a78bfa); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .lb-teams{ width:100%; display:grid; grid-template-columns:1fr 1fr; gap:clamp(12px,1.6vw,20px); }
+    @media (max-width:760px){ .lb-teams{ grid-template-columns:1fr; } }
+    .lb-team{ --c:#a78bfa; --c2:rgba(167,139,250,.12); position:relative; display:flex; flex-direction:column; min-height:min(56vh,580px); border-radius:24px; overflow:hidden;
+        border:1px solid color-mix(in srgb, var(--c) 55%, transparent); background:linear-gradient(180deg,var(--c2),rgba(255,255,255,.015) 40%); box-shadow:0 0 60px -30px var(--c); }
+    .lb-team.theirs{ --c:#38bdf8; --c2:rgba(56,189,248,.12); }
+    .lb-head{ padding:clamp(16px,1.8vw,24px); border-bottom:1px solid rgba(255,255,255,.07); display:flex; flex-direction:column; gap:12px; }
+    .lb-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .lb-name{ display:flex; align-items:center; gap:10px; min-width:0; font-family:'Noto Kufi Arabic',sans-serif; font-weight:800; font-size:clamp(18px,1.8vw,24px); color:var(--c); }
+    .lb-name i{ width:10px; height:10px; border-radius:50%; background:var(--c); box-shadow:0 0 10px var(--c); flex:0 0 auto; }
+    .lb-name span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .lb-count{ flex:0 0 auto; padding:6px 14px; border-radius:999px; border:1px solid rgba(255,255,255,.12); font-size:13px; color:#a8a3b5; }
+    .lb-count b{ color:var(--c); font-size:18px; margin-left:4px; }
+    .lb-owner{ font-size:12.5px; color:#8f88a0; }
+    .lb-owner bdi{ direction:ltr; }
+    .lb-kw-label{ font-size:13px; color:#a8a3b5; }
+    .lb-kw{ height:clamp(52px,6vh,64px); display:grid; place-items:center; border-radius:999px; border:1px dashed color-mix(in srgb, var(--c) 70%, transparent);
+        background:color-mix(in srgb, var(--c) 8%, transparent); font-family:'Noto Kufi Arabic',sans-serif; font-weight:800; font-size:clamp(26px,2.6vw,34px); color:var(--c); }
+    .lb-players{ flex:1; overflow-y:auto; padding:clamp(12px,1.4vw,20px); }
+    .lb-empty{ height:100%; min-height:120px; display:grid; place-items:center; color:#6f6a7c; font-size:14px; }
+    .lb-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 10px; align-items:center; }
+    .lb-card{ position:relative; display:flex; justify-content:center; align-items:center; min-height:64px; direction:ltr; line-height:0; }
+    .lb-plain{ direction:rtl; line-height:normal; width:100%; display:flex; align-items:center; gap:10px; padding:6px 8px 6px 12px; border-radius:999px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+    .lb-plain .av{ width:44px; height:44px; border-radius:50%; flex:0 0 auto; display:grid; place-items:center; overflow:hidden; color:#fff; font-weight:700; background:linear-gradient(135deg,var(--c),#7c3aed); }
+    .lb-plain .av img{ width:100%; height:100%; object-fit:cover; }
+    .lb-plain .nm{ flex:1; min-width:0; font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .lb-kick{ position:absolute; top:-4px; right:10%; z-index:5; width:28px; height:28px; border:0; padding:0; background:transparent; color:#fca5a5; cursor:pointer; opacity:.8; font-size:16px; line-height:1; filter:drop-shadow(0 1px 2px rgba(0,0,0,.9)); }
+    .lb-plain .lb-kick{ position:static; flex:0 0 auto; }
+    .lb-kick:hover{ opacity:1; transform:scale(1.15); }
+    .lb-foot{ margin-top:clamp(16px,2.4vh,26px); display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .lb-start{ width:min(400px,90vw); height:58px; border-radius:999px; border:0; cursor:pointer; color:#fff; font-weight:700; font-size:20px; background:linear-gradient(90deg,#7c3aed,#a855f7); box-shadow:0 18px 40px -18px rgba(124,58,237,.9); }
+    .lb-start:hover{ filter:brightness(1.1); }
+    .lb-wait{ color:#a8a3b5; font-size:15px; }
+
     .log{ margin:0 clamp(14px,3vw,32px) 22px; padding:12px 16px; border-radius:18px; background:rgba(255,255,255,.03); border:1px solid var(--line); max-height:140px; overflow-y:auto; font-size:13px; color:var(--muted); line-height:1.9; }
     .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%); padding:12px 20px; border-radius:999px; background:#16121f; border:1px solid rgba(248,113,113,.4); font-size:14px; z-index:50; }
 
@@ -106,6 +144,8 @@
     </div>
 </div>
 
+<div class="lobby hidden" id="lobby"></div>
+
 <div class="arena">
     <section class="team mine" id="team-mine"></section>
     <section class="stage" id="stage"><p class="s-sub">جاري الاتصال بالمباراة...</p></section>
@@ -116,6 +156,8 @@
 <div class="toast hidden" id="toast"></div>
 <div class="overlay hidden" id="overlay"><div class="box" id="overlay-box"></div></div>
 
+<script src="../../js/agp-core.js"></script>
+<script src="../../js/agp-player-card.js"></script>
 <script src="../../auth/auth-client.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script>
@@ -132,7 +174,7 @@
     var ERR = {
         auth_required: 'لازم تسجّل دخول.', match_not_found: 'المباراة غير موجودة أو انتهت.', not_in_match: 'هذي المباراة مو لك.',
         need_players: 'كل فريق يحتاج لاعب واحد على الأقل — خلّ الجمهور يكتب كلمة الدخول.', busy: 'الجولة شغّالة.', match_over: 'المباراة انتهت — ابدأ مباراة جديدة.',
-        host_only: 'التحكم لمنشئ المباراة.', ended: 'المباراة انتهت.'
+        host_only: 'التحكم لمنشئ المباراة.', ended: 'المباراة انتهت.', in_lobby: 'ابدأ المباراة من لوبي الدخول أول.'
     };
 
     function $(id) { return document.getElementById(id); }
@@ -155,7 +197,7 @@
             '<div class="t-name"><b>' + esc(t.name) + '</b><span><bdi dir="ltr">@' + esc(s.tiktok) + '</bdi></span>' +
             '<span><i class="dot ' + (s.present ? s.stream : 'error') + '"></i>' + esc(status) + '</span></div></div>' +
             '<div class="score">' + t.score + '<small>من ' + st.settings.target + ' نقطة</small></div>' +
-            '<div class="join-hint">جمهور <bdi>@' + esc(s.tiktok) + '</bdi> يكتب <b>«' + esc(st.settings.keywords[side]) + '»</b> في الشات للانضمام · ' + t.players.length + '/' + st.settings.maxPlayers + '</div>' +
+            '<div class="join-hint">' + t.players.length + ' لاعب بالفريق</div>' +
             '<div class="players">' + t.players.map(function (n) {
                 var turn = st.chosen[side] === n && st.phase !== 'ready';
                 return '<span class="chip' + (turn ? ' turn' : '') + '">' + img(info[n] && info[n].avatar) + '<span>' + esc(n) + '</span></span>';
@@ -180,8 +222,8 @@
                 '<p class="s-sub">' + esc(st.teams[0].name) + ' ' + st.teams[0].score + ' — ' + st.teams[1].score + ' ' + esc(st.teams[1].name) + '</p>' +
                 (host ? '<div class="controls"><button class="btn btn-big" data-a="newGame">مباراة جديدة</button></div>' : '<p class="s-sub">بانتظار ' + esc(hostName) + ' يبدأ مباراة جديدة</p>');
         } else if (st.phase === 'ready') {
-            html = '<p class="s-title">' + (st.round ? 'جاهزين للجولة ' + (st.round + 1) : 'خلّ جمهورك يدخل الفريق!') + '</p>' +
-                '<p class="s-sub">جمهور ' + esc(st.teams[0].name) + ' يكتب <b>«' + esc(st.settings.keywords[0]) + '»</b> وجمهور ' + esc(st.teams[1].name) + ' يكتب <b>«' + esc(st.settings.keywords[1]) + '»</b> — كل واحد في شات بثه. كل جولة يُختار لاعب من كل فريق، وأول إجابة صحيحة = نقطتين.</p>' +
+            html = '<p class="s-title">' + (st.round ? 'جاهزين للجولة ' + (st.round + 1) : 'جاهزين للجولة الأولى!') + '</p>' +
+                '<p class="s-sub">كل جولة يُختار لاعب من كل فريق، وبس هو يجاوب من شات بثه. أول إجابة صحيحة = نقطتين.</p>' +
                 (host ? '<button class="btn btn-big" data-a="spin">ابدأ الجولة</button>' : '<p class="s-sub">بانتظار ' + esc(hostName) + ' يبدأ الجولة</p>');
         } else if (st.phase === 'spinning') {
             html = '<p class="s-sub">اختيار اللاعبين والفئة...</p><div id="spin-names">' + vsHtml(st) + '</div><span class="cat" id="spin-cat">' + esc(st.catName) + '</span>';
@@ -223,8 +265,53 @@
         $('overlay').classList.remove('hidden');
     }
 
+    /* ---- لوبي الدخول ---- */
+    function cardHtml(name, side, canKick) {
+        var info = (M.state.playerInfo || {})[name] || {};
+        var kick = canKick ? '<button type="button" class="lb-kick" data-kick="' + esc(name) + '" aria-label="إخراج ' + esc(name) + '">✕</button>' : '';
+        var PC = window.AymanGamesPlatform && window.AymanGamesPlatform.playerCard;
+        if (info.frame && info.frame.imageFilename && PC) {
+            var html = PC.renderHtml({ id: info.id || name, name: name, avatarUrl: info.avatar || null, frame: info.frame }, { showFrame: true, basePath: '../../', size: 42 });
+            return '<div class="lb-card">' + html + kick + '</div>';
+        }
+        var initial = (Array.from(String(name).replace(/[\s_.@\d]/g, ''))[0] || '؟').toUpperCase();
+        return '<div class="lb-card"><div class="lb-plain"><span class="av">' + (info.avatar ? '<img src="' + esc(info.avatar) + '" alt="">' : esc(initial)) + '</span><span class="nm">' + esc(name) + '</span>' + kick + '</div></div>';
+    }
+    function lobbyTeamHtml(side) {
+        var st = M.state, t = st.teams[side], s = M.sides[side], mine = side === M.you;
+        return '<section class="lb-team ' + (mine ? 'mine' : 'theirs') + '">' +
+            '<div class="lb-head">' +
+                '<div class="lb-row"><span class="lb-name"><i></i><span>' + esc(t.name) + '</span></span><span class="lb-count"><b>' + t.players.length + '</b>/ ' + st.settings.maxPlayers + ' لاعب</span></div>' +
+                '<div class="lb-owner">' + (mine ? 'فريقك' : 'الخصم') + ' · بث <bdi>@' + esc(s.tiktok) + '</bdi> · <i class="dot ' + (s.present ? s.stream : 'error') + '" style="display:inline-block;vertical-align:middle"></i> ' + esc(s.present ? (STREAM_TEXT[s.stream] || '') : 'الستريمر مو موجود بالشاشة') + '</div>' +
+                '<div class="lb-kw-label">كلمة الدخول · اكتبها في شات <bdi>@' + esc(s.tiktok) + '</bdi></div>' +
+                '<div class="lb-kw">' + esc(st.settings.keywords[side]) + '</div>' +
+            '</div>' +
+            '<div class="lb-players">' + (t.players.length
+                ? '<div class="lb-grid">' + t.players.map(function (n) { return cardHtml(n, side, mine); }).join('') + '</div>'
+                : '<div class="lb-empty">بانتظار انضمام اللاعبين…</div>') + '</div>' +
+        '</section>';
+    }
+    function renderLobby() {
+        var host = M.you === M.host;
+        $('lobby').innerHTML =
+            '<div class="lb-game">أسرع إجابة · تحدي البثوث</div><h2 class="lb-title">لوبي الدخول</h2>' +
+            '<div class="lb-teams">' + lobbyTeamHtml(M.you) + lobbyTeamHtml(1 - M.you) + '</div>' +
+            '<div class="lb-foot">' + (host
+                ? '<button type="button" class="lb-start" data-a="start">ابدأ المباراة ‹</button>'
+                : '<span class="lb-wait">بانتظار ' + esc(M.sides[M.host].name) + ' يبدأ المباراة</span>') + '</div>';
+        var PC = window.AymanGamesPlatform && window.AymanGamesPlatform.playerCard;
+        if (PC && PC.fitAllNames) PC.fitAllNames($('lobby'));
+    }
+
     function render() {
         if (!M) return;
+        // بعد بدء المباراة: نفس شاشة اللعب الأصلية (game.html) بوضع تحدي البثوث.
+        if (M.state.phase !== 'lobby' && !M.ended) { closedForGood = true; try { ws && ws.close(); } catch (e) {} location.replace('game.html?match=' + encodeURIComponent(matchId)); return; }
+        var inLobby = M.state.phase === 'lobby' && !M.ended;
+        $('lobby').classList.toggle('hidden', !inLobby);
+        document.querySelector('.arena').classList.toggle('hidden', inLobby);
+        $('log').classList.toggle('hidden', inLobby);
+        if (inLobby) renderLobby();
         renderTeam($('team-mine'), M.you, true);
         renderTeam($('team-theirs'), 1 - M.you, false);
         renderStage();
@@ -279,6 +366,8 @@
     }
 
     document.addEventListener('click', function (e) {
+        var k = e.target.closest('[data-kick]');
+        if (k) { send({ type: 'action', action: 'kick', name: k.getAttribute('data-kick') }); return; }
         var b = e.target.closest('[data-a]');
         if (b) action(b.getAttribute('data-a'));
     });

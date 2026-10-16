@@ -34,8 +34,9 @@ var KEYWORDS = ['1', '2'];
 var DURATION_SEC = 20;
 var MAX_PLAYERS = 20;
 var CATS_PER_STREAMER = 3;
-var SPIN_MS = 4500;      // اختيار اللاعبين والفئة (حركة على الشاشات)
-var COUNTDOWN_MS = 3000; // 3، 2، 1
+// نفس توقيت حركة game.html الأصلية: بكرات اللاعبين ثم بكرة الفئة (6.25 ث)، ثم 3، 2، 1 (3.9 ث).
+var SPIN_MS = 6250;
+var COUNTDOWN_MS = 3900;
 var MAX_LOG = 60;
 
 // مثل FA.norm في games/fastest-answer/fa-platform.js، مع قبول الأرقام العربية (١ = 1).
@@ -146,7 +147,7 @@ function createFastestAnswer(settings, hooks) {
             { name: settings.team1, players: [], score: 0 },
             { name: settings.team2, players: [], score: 0 }
         ],
-        phase: 'ready',   // ready | spinning | countdown | question | results
+        phase: 'lobby',   // lobby (لوبي الدخول) | ready | spinning | countdown | question | results
         round: 0,
         chosen: [null, null],
         catName: null,
@@ -228,7 +229,7 @@ function createFastestAnswer(settings, hooks) {
             var view = JSON.parse(JSON.stringify(S));
             view.playerInfo = {};
             S.teams.forEach(function (t) {
-                t.players.forEach(function (n) { var p = players[n]; view.playerInfo[n] = { avatar: p.avatar, frame: p.frame }; });
+                t.players.forEach(function (n) { var p = players[n]; view.playerInfo[n] = { id: p.id, avatar: p.avatar, frame: p.frame }; });
             });
             view.settings = { keywords: settings.keywords, target: settings.target, dur: settings.dur, maxPlayers: settings.maxPlayers, followersOnly: settings.followersOnly };
             return view;
@@ -242,8 +243,8 @@ function createFastestAnswer(settings, hooks) {
             var team = S.teams[side];
             var inTeam = team.players.indexOf(user) >= 0;
 
-            // الانضمام: كلمة دخول هذا البث (1 للمنشئ، 2 للخصم) من شاته هو.
-            if (!inTeam && norm(text) === norm(settings.keywords[side])) {
+            // الانضمام بلوبي الدخول بس: كلمة دخول هذا البث (1 للمنشئ، 2 للخصم) من شاته هو.
+            if (!inTeam && S.phase === 'lobby' && norm(text) === norm(settings.keywords[side])) {
                 if (settings.followersOnly && !p.isFollower) return false;
                 if (team.players.length >= settings.maxPlayers) return false;
                 team.players.push(user);
@@ -271,9 +272,29 @@ function createFastestAnswer(settings, hooks) {
             return true;
         },
 
+        /** إنهاء لوبي الدخول وبدء المباراة (المنشئ). */
+        startMatch: function () {
+            if (S.phase !== 'lobby') return { ok: false, error: 'busy' };
+            if (S.teams.some(function (t) { return !t.players.length; })) return { ok: false, error: 'need_players' };
+            S.phase = 'ready';
+            log('round', 'بدأت المباراة: ' + S.teams[0].name + ' (' + S.teams[0].players.length + ') ضد ' + S.teams[1].name + ' (' + S.teams[1].players.length + ')');
+            return { ok: true };
+        },
+
+        /** إخراج لاعب من فريق بثه (بلوبي الدخول بس). */
+        kick: function (side, name) {
+            if (S.phase !== 'lobby') return { ok: false, error: 'busy' };
+            var team = S.teams[side], i = team.players.indexOf(name);
+            if (i < 0) return { ok: false, error: 'not_found' };
+            team.players.splice(i, 1);
+            log('kick', name + ' طلع من ' + team.name);
+            return { ok: true };
+        },
+
         /** بدء جولة (المنشئ). */
         spin: function () {
             if (S.winner !== null) return { ok: false, error: 'match_over' };
+            if (S.phase === 'lobby') return { ok: false, error: 'in_lobby' };
             if (S.phase !== 'ready' && S.phase !== 'results') return { ok: false, error: 'busy' };
             if (S.teams.some(function (t) { return !t.players.length; })) return { ok: false, error: 'need_players' };
             if (!matchStartedAt) matchStartedAt = Date.now();
