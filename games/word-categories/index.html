@@ -17,6 +17,7 @@
 <script src="../../auth/auth-client.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
+<script src="../../js/agp-auto-connect.js"></script>
 <script src="wc-platform.js"></script>
 <script src="./support.js"></script>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#7c3aed"/><text x="50" y="64" font-size="40" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">S</text></svg></template>
@@ -64,7 +65,7 @@ input::placeholder{color:#6f6a7c}
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center">
           <span style="display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;background:{{ liveBg }};border:1px solid {{ liveBd }};font:700 12px 'Zain';color:{{ liveColor }};transition:all .3s"><span style="width:7px;height:7px;border-radius:50%;background:{{ liveColor }};box-shadow:0 0 8px {{ liveColor }}"></span>{{ liveTitle }}</span>
           <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
-            <a href="{{ libraryUrl }}" style="height:30px;padding:0 14px;display:flex;align-items:center;gap:6px;border-radius:999px;text-decoration:none;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 14px 'Zain';box-shadow:0 4px 14px rgba(139,92,246,.35)" style-hover="filter:brightness(1.1)">اتصل من مكتبة الألعاب</a>
+            <a href="{{ libraryUrl }}" style="height:30px;padding:0 14px;display:flex;align-items:center;gap:6px;border-radius:999px;text-decoration:none;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 14px 'Zain';box-shadow:0 4px 14px rgba(139,92,246,.35)" style-hover="filter:brightness(1.1)">ابدأ البث ونتصل تلقائياً</a>
           </sc-if>
         </div>
       </div>
@@ -235,7 +236,7 @@ class Component extends DCLogic {
   state = { supCount:1, supPick:false, values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:!!WC.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
   componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820,scale:Math.min(innerWidth/1120,(innerHeight-80)/680)}); this.fit(); addEventListener('resize',this.fit);
     // البث انتهى (js/agp-live-watch.js) → حالة الاتصال تتحدث فوراً
-    this.onEnded=()=>this.setState({live:!!WC.getSavedConnection()}); addEventListener('agp:stream-ended',this.onEnded); }
+    this.onEnded=()=>this.setState({live:!!WC.getSavedConnection()}); addEventListener('agp:stream-ended',this.onEnded); addEventListener('agp:stream-connected',this.onEnded); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('agp:stream-ended',this.onEnded); clearTimeout(this.tt); (this.nav||[]).forEach(clearTimeout); }
   set(k,v){ this.setState(s=>({values:{...s.values,[k]:v}})); }
   toastMsg(t){ this.setState({toast:t}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toast:null}),2400); }
@@ -285,7 +286,7 @@ class Component extends DCLogic {
       supList:SUPPORT_TYPES.map(x=>{ const on=S.values.supType===x.id; return {id:x.id,name:x.name,coins:x.coins.toLocaleString('en'),ini:x.name.replace(/^ال/,'')[0],c:x.c,bd:on?'#a78bfa':'rgba(255,255,255,.08)',bg:on?'rgba(139,92,246,.14)':'rgba(255,255,255,.03)',pick:()=>{ this.set('supType',x.id); this.shut('supPick'); }}; }),
       startOp:(!GAME.requireLive||S.live)?1:.4,
       start:()=>{ if(S.connOpen) return; const live=!!WC.getSavedConnection(); if(live!==S.live) this.setState({live});
-        if(GAME.requireLive&&!live) return this.toastMsg('ارجع لمكتبة الألعاب واتصل بالبث أولاً'); if(!WC.norm(S.values.keyword)) return this.toastMsg('اكتب الكلمة المفتاحية للانضمام');
+        if(GAME.requireLive&&!live) return this.toastMsg('ابدأ البث على حساب تيك توك المربوط بحسابك — نتصل تلقائياً'); if(!WC.norm(S.values.keyword)) return this.toastMsg('اكتب الكلمة المفتاحية للانضمام');
         const values=this.readValues(); WC.writeJSON(WC.keys.setup,values); this.props.onStart?.(values); this.setState({connOpen:true,connStep:0});
         this.nav=[setTimeout(()=>this.setState({connStep:1}),1600), setTimeout(()=>{ location.href=GAME.lobbyUrl; },2400)]; },
       exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'),

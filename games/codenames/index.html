@@ -17,6 +17,7 @@
 <script src="../../auth/auth-client.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
+<script src="../../js/agp-auto-connect.js"></script>
 <script src="codenames-platform.js"></script>
 <script src="./support.js"></script>
     <script src="../../js/agp-apple-emoji.js"></script>
@@ -63,7 +64,7 @@ input::placeholder{color:#6f6a7c}
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center">
           <span style="display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;background:{{ liveBg }};border:1px solid {{ liveBd }};font:700 12px 'Zain';color:{{ liveColor }};transition:all .3s"><span style="width:7px;height:7px;border-radius:50%;background:{{ liveColor }};box-shadow:0 0 8px {{ liveColor }}"></span>{{ liveTitle }}</span>
           <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
-            <a href="{{ libraryUrl }}" style="height:30px;padding:0 14px;display:flex;align-items:center;gap:6px;border-radius:999px;text-decoration:none;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 14px 'Zain';box-shadow:0 4px 14px rgba(139,92,246,.35)" style-hover="filter:brightness(1.1)">اتصل من مكتبة الألعاب ↗</a>
+            <a href="{{ libraryUrl }}" style="height:30px;padding:0 14px;display:flex;align-items:center;gap:6px;border-radius:999px;text-decoration:none;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 14px 'Zain';box-shadow:0 4px 14px rgba(139,92,246,.35)" style-hover="filter:brightness(1.1)">ابدأ البث ونتصل تلقائياً ↗</a>
           </sc-if>
         </div>
       </div>
@@ -237,7 +238,7 @@ class Component extends DCLogic {
   state = { supCount:1, supPick:false, values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:!!CN.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
   componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820,scale:Math.min(innerWidth/1120,(innerHeight-80)/790)}); this.fit(); addEventListener('resize',this.fit);
     // البث انتهى (js/agp-live-watch.js) → حالة الاتصال تتحدث فوراً
-    this.onEnded=()=>this.setState({live:!!CN.getSavedConnection()}); addEventListener('agp:stream-ended',this.onEnded); }
+    this.onEnded=()=>this.setState({live:!!CN.getSavedConnection()}); addEventListener('agp:stream-ended',this.onEnded); addEventListener('agp:stream-connected',this.onEnded); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('agp:stream-ended',this.onEnded); }
   set(k,v){ this.setState(s=>({values:{...s.values,[k]:v}})); }
   toastMsg(t){ this.setState({toast:t}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toast:null}),2400); }
@@ -286,7 +287,7 @@ class Component extends DCLogic {
       supPick:S.supPick, closeSup:()=>this.shut('supPick'), supOv:S.supPickOut?'fadeOut .26s ease forwards':'fade .25s ease', supAn:S.supPickOut?'popOut .26s ease forwards':'popIn .4s cubic-bezier(.2,1.25,.35,1)',
       supList:SUPPORT_TYPES.map(x=>{ const on=S.values.supType===x.id; return {id:x.id,name:x.name,coins:x.coins.toLocaleString('en'),ini:x.name.replace(/^ال/,'')[0],c:x.c,bd:on?'#a78bfa':'rgba(255,255,255,.08)',bg:on?'rgba(139,92,246,.14)':'rgba(255,255,255,.03)',pick:()=>{ this.set('supType',x.id); this.shut('supPick'); }}; }),
       startOp:(!GAME.requireLive||S.live)?1:.4,
-      start:()=>{ const V=S.values; if(GAME.requireLive&&!S.live) return this.toastMsg('لازم تتصل بالبث من مكتبة الألعاب أول (زر "اتصل بالبث" بصفحة الألعاب).');
+      start:()=>{ const V=S.values; if(GAME.requireLive&&!S.live) return this.toastMsg('لازم تكون في بث مباشر على حساب تيك توك المربوط بحسابك — نتصل تلقائياً أول ما تبدأ البث.');
         if(!AR(V.kw1)) return this.toastMsg('لازم تكتب الكلمة المفتاحية للفريق الأحمر.');
         if(!AR(V.kw2)) return this.toastMsg('لازم تكتب الكلمة المفتاحية للفريق الأزرق.');
         if(AR(V.kw1)===AR(V.kw2)) return this.toastMsg('لازم الكلمتين المفتاحيتين تكونان مختلفتين.'); const values=this.readValues(); try{ localStorage.setItem('codenames-settings',JSON.stringify(values)); }catch(e){} this.props.onStart?.(values); this.setState({connOpen:true,connStep:0}); setTimeout(()=>this.setState({connStep:1}),1600); setTimeout(()=>{ location.href=GAME.lobbyUrl; },2400); },

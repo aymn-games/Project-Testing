@@ -218,7 +218,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
         return '<div class="kz-conn-badge kz-conn-badge--no"><span class="kz-conn-dot"></span>' +
             'لم يتم الاتصال بالبث بعد' +
-            '<a href="../../games.html" class="kz-conn-link">اتصل من مكتبة الألعاب ↗</a></div>';
+            '<a href="../../games.html" class="kz-conn-link">ابدأ البث ونتصل تلقائياً ↗</a></div>';
     }
 
     function refreshConnectionBadge() {
@@ -312,7 +312,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var saved = getSavedStreamConnection();
         var keyword = normalizeArabicText(_settings.joinKeyword);
 
-        if (!saved) return showSettingsError('لازم تتصل بالبث من مكتبة الألعاب أول (زر "اتصل بالبث" بصفحة الألعاب).');
+        if (!saved) return showSettingsError('لازم تكون في بث مباشر على حساب تيك توك المربوط بحسابك — نتصل تلقائياً أول ما تبدأ البث.');
         if (!keyword) return showSettingsError('لازم تكتب الكلمة المفتاحية للدخول.');
 
         _settings.tiktokUsername = saved.username;
