@@ -118,7 +118,7 @@ input:focus{outline:none;border-color:rgba(167,139,250,.6)}
               <span style="max-width:100%;font:900 clamp(9px,2.9vw,14px)/1 'Zain';color:{{ c.fg }};text-decoration:{{ c.deco }};text-decoration-thickness:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.w }}</span>
             </span>
             <sc-if value="{{ c.open }}" hint-placeholder-val="{{ false }}">
-              <span style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.55)"><span style="width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#16a34a;border:2.5px solid #fff;box-shadow:0 0 12px rgba(22,163,74,.8);font:900 19px/1 'Zain';color:#fff">✓</span></span>
+              <span style="position:absolute;inset:0 0 calc(clamp(20px,6vw,28px) + 3px);display:grid;place-items:center;pointer-events:none"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,.7))"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
             </sc-if>
           </div>
         </sc-for>
@@ -156,6 +156,8 @@ input:focus{outline:none;border-color:rgba(167,139,250,.6)}
 const COLORS = { 1:'#ef4444', 2:'#3b82f6', 0:'#d9c7a0', '-1':'#17131f' };
 // صور البطاقات (نفس صور شاشة اللعب images/) — اللون تحتها احتياط لين تتحمّل
 const TILE_IMG = c => c.t===-1?'images/tile-assassin.png':c.t===0?'images/tile-neutral.png':`images/tile-${c.t===1?'red':'blue'}-${c.img===2?2:1}.png`;
+// قبل الفتح: لون واحد لكل نوع · بعد الفتح: صورة الصندوق (نفس شاشة اللعب)
+const FLAT = { 1:'#dc2626', 2:'#2563eb', 0:'#d9c7a0', '-1':'#17131f' };
 const TILE = { 1:['linear-gradient(160deg, #f87171, #dc2626 55%, #991b1b)','#7f1d1d','🕵️','rgba(0,0,0,.28)','#fff','rgba(0,0,0,.4)'],
   2:['linear-gradient(160deg, #60a5fa, #2563eb 55%, #1e3a8a)','#1e3a8a','🕵️','rgba(0,0,0,.28)','#fff','rgba(0,0,0,.4)'],
   0:['linear-gradient(160deg, #f1e4c6, #d9c7a0)','#a8916a','🧍','rgba(255,255,255,.75)','#3b2a12','#3b2a12'],
@@ -268,7 +270,7 @@ class Component extends DCLogic {
       submit:()=>this.submit(), retry:()=>{ this.id=null; this.save({id:null,stage:'form',board:null}); this.setState({stage:'form'}); },
       myTeam:S.teams[S.myTeam]||'', myBg:COLORS[S.myTeam]||'#7c3aed',
       counts:[[S.teams[1],1],[S.teams[2],2],['💀 الأسود',-1]].map(([t,k])=>({t,n:k===-1?(left(-1)?'⚠️':'—'):left(k),c:k===-1?'#fca5a5':COLORS[k],bg:k===S.myTeam?COLORS[k]+'26':'rgba(255,255,255,.04)',bd:k===S.myTeam?COLORS[k]:'rgba(255,255,255,.08)'})),
-      cells:b.map((c,i)=>{ const T=TILE[c.t]; return {n:i+1,w:c.w,open:!!c.open,bg:`url(${TILE_IMG(c)}) center/cover no-repeat, ${T[0]}`,sh:T[1],icon:'',strip:T[3],fg:T[4],numBg:T[5],ring:c.t===S.myTeam&&!c.open?'#fff':'rgba(255,255,255,.12)',op:1,fl:'none',deco:c.open?'line-through':'none'}; }),
+      cells:b.map((c,i)=>{ const T=TILE[c.t]; return {n:i+1,w:c.w,open:!!c.open,bg:c.open?`url(${TILE_IMG(c)}) center/cover no-repeat, ${FLAT[c.t]}`:FLAT[c.t],sh:T[1],icon:'',strip:T[3],fg:T[4],numBg:T[5],ring:c.t===S.myTeam&&!c.open?'#fff':'rgba(255,255,255,.12)',op:1,fl:'none',deco:'none'}; }),
       ...(()=>{ const st=S.st, mine=st&&st.turn===S.myTeam, tn=st?S.teams[st.turn]:'';
         const canHint=!!(st&&mine&&st.phase==='hint');
         const title=!st||st.phase==='ready'?'⏳ المباراة ما بدأت':canHint?'🕵 دورك — أرسل التلميح':st.phase==='guess'?(mine?'⏳ فريقك يخمّن الحين':`⏳ دور ${tn}`):st.phase==='hint'?`⏳ دور ${tn} — بانتظار تلميحهم`:'🏁 انتهت الجولة';
