@@ -628,7 +628,10 @@ class Component extends DCLogic {
   // support.js يمرّر prevProps فقط — نتابع آخر لوحة أرسلناها بأنفسنا
   componentDidUpdate(){ const S=this.state, st=JSON.stringify([S.turn,S.phase,S.hint,this.turnId||0]);
     if(this._syncedBoard!==S.board||this._syncedSt!==st){ this._syncedSt=st; this.sync(); }
-    const sig=JSON.stringify([this.state.roles[1].spy,this.state.roles[2].spy]); if(sig!==this._spySig){ this._spySig=sig; this.updateSlots(); }
+    const sig=JSON.stringify([this.state.roles[1].spy,this.state.roles[2].spy]); if(sig!==this._spySig){ this._spySig=sig;
+      // تغيّر السباي ماستر لفريق: الجوالات اللي دخلت بطلب مقبول لهالفريق تنقفل فوراً (الباركود الخاص يبطل في updateSlots)
+      const prev=this._prevSpies||{}; [1,2].forEach(t=>{ if(prev[t]&&prev[t]!==S.roles[t].spy) this.revokeApproved(t); });
+      this._prevSpies={1:S.roles[1].spy,2:S.roles[2].spy}; this.updateSlots(); }
     // شاشة الباركود: أول ما يدخل السباي ماستر للفريقين تنقفل وتبدأ المباراة تلقائياً
     const allIn=S.flow==='qr'&&S.phase==='ready'&&!!this.enteredOf(1)&&!!this.enteredOf(2);
     if(allIn&&!this._autoT){ this._autoT=setTimeout(()=>{ this._autoT=null; if(this.state.phase==='ready'&&this.state.flow==='qr'&&this.enteredOf(1)&&this.enteredOf(2)){ this.setState({flow:null}); this.start(); } },1800); }
@@ -662,7 +665,8 @@ class Component extends DCLogic {
   enteredOf(team){ const sl=this.slots&&this.slots[team]; if(sl&&this.slotHello&&this.slotHello[sl.id]) return sl.name;
     const a=Object.values(this.approved||{}).find(x=>x.team===team); return a?a.name:null; }
   // مباراة جديدة بأدوار جديدة: الجوالات المقبولة بالطلب ترجع للبداية (ما تشوف ألوان المباراة الجديدة)
-  revokeApproved(){ Object.keys(this.approved||{}).forEach(id=>this.send({type:'spymaster_revoke',id})); this.approved={}; }
+  revokeApproved(team){ let n=0; Object.keys(this.approved||{}).forEach(id=>{ if(team&&this.approved[id].team!==team) return; this.send({type:'spymaster_revoke',id}); delete this.approved[id]; n++; });
+    if(n) this.setState(s=>({joinTick:s.joinTick+1})); }
   // حالة الدور لجوالات السباي ماستر: مين دوره، المرحلة، التلميح الحالي، ورقم الدور (يمنع إعادة إرسال تلميح قديم)
   statusPayload(){ const S=this.state; return {turn:S.turn,phase:S.phase,hint:S.hint?{w:S.hint.w,n:S.hint.n}:null,turnId:this.turnId||0}; }
   // تلميح من جوال السباي ماستر (مربع النص + عدد الكلمات 1–7): مشفّر بمفتاح الجوال نفسه، فما أحد غيره يقدر يرسله
@@ -791,9 +795,10 @@ class Component extends DCLogic {
           src:S.flow==='qr'?CN.qrDataUrl(url,260):'', qrOp:inName?.35:1,
           st:inName?`✓ ${inName} دخل`:'⏳ بانتظار الدخول', stBg:inName?'rgba(16,185,129,.16)':'rgba(255,255,255,.05)', stC:inName?'#6ee7b7':'#c9c4d6', stBd:inName?'rgba(52,211,153,.5)':'rgba(255,255,255,.12)',
           reqs:S.spyReqs.filter(r=>r.team===team).map(r=>({name:r.name,ok:()=>this.approve(r,true),no:()=>this.approve(r,false)}))}; }),
-      qrTitle:allIn?'✓ الكل دخل':'السباي ماستر: امسح باركود فريقك',
-      qrPts:allIn?['المباراة تبدأ الحين…']:['مسجّل دخول بحسابه ← يدخل مباشرة','بدون حساب ← يرسل طلب وتقبله هنا'],
-      qrProg:`دخل ${inN} من 2`, qrProgBg:allIn?'rgba(16,185,129,.18)':'rgba(255,255,255,.05)', qrProgC:allIn?'#6ee7b7':'#e7e3ef', qrProgBd:allIn?'rgba(52,211,153,.5)':'rgba(255,255,255,.12)', qrProgAn:allIn?'pulse 1s ease-in-out infinite':'none',
+      // وسط المباراة (من ⚙ الإعدادات): نفس الشاشة لرجوع جوال انقطع أو سباي ماستر جديد — بدون «تبدأ الحين»
+      qrTitle:S.phase!=='ready'?'باركود السباي ماستر':allIn?'✓ الكل دخل':'السباي ماستر: امسح باركود فريقك',
+      qrPts:S.phase!=='ready'?['انقطع جواله؟ يمسح باركود فريقه ويرجع','الطلبات الجديدة تطلع تحت باركود فريقها']:allIn?['المباراة تبدأ الحين…']:['مسجّل دخول بحسابه ← يدخل مباشرة','بدون حساب ← يرسل طلب وتقبله هنا'],
+      qrProg:`دخل ${inN} من 2`, qrProgBg:allIn?'rgba(16,185,129,.18)':'rgba(255,255,255,.05)', qrProgC:allIn?'#6ee7b7':'#e7e3ef', qrProgBd:allIn?'rgba(52,211,153,.5)':'rgba(255,255,255,.12)', qrProgAn:allIn&&S.phase==='ready'?'pulse 1s ease-in-out infinite':'none',
       qrRoles:()=>this.setState({flow:'roles',rolesStep:1}),
       qrSkipTxt:S.phase==='ready'?'ابدأ بدون انتظار':'إغلاق', qrSkip:()=>{ if(S.phase==='ready') this.start(); else this.setState({flow:null}); },
       readyTxt:S.roles[1].spy&&S.roles[2].spy?'⏳ بانتظار دخول السباي ماستر':'⏳ حدّد السباي ماستر والمؤكّد',
