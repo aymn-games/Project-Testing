@@ -155,7 +155,7 @@
             '<div class="t-name"><b>' + esc(t.name) + '</b><span><bdi dir="ltr">@' + esc(s.tiktok) + '</bdi></span>' +
             '<span><i class="dot ' + (s.present ? s.stream : 'error') + '"></i>' + esc(status) + '</span></div></div>' +
             '<div class="score">' + t.score + '<small>من ' + st.settings.target + ' نقطة</small></div>' +
-            '<div class="join-hint">جمهور <bdi>@' + esc(s.tiktok) + '</bdi> يكتب <b>«' + esc(st.settings.keyword) + '»</b> في الشات للانضمام · ' + t.players.length + '/' + st.settings.maxPlayers + '</div>' +
+            '<div class="join-hint">جمهور <bdi>@' + esc(s.tiktok) + '</bdi> يكتب <b>«' + esc(st.settings.keywords[side]) + '»</b> في الشات للانضمام · ' + t.players.length + '/' + st.settings.maxPlayers + '</div>' +
             '<div class="players">' + t.players.map(function (n) {
                 var turn = st.chosen[side] === n && st.phase !== 'ready';
                 return '<span class="chip' + (turn ? ' turn' : '') + '">' + img(info[n] && info[n].avatar) + '<span>' + esc(n) + '</span></span>';
@@ -181,7 +181,7 @@
                 (host ? '<div class="controls"><button class="btn btn-big" data-a="newGame">مباراة جديدة</button></div>' : '<p class="s-sub">بانتظار ' + esc(hostName) + ' يبدأ مباراة جديدة</p>');
         } else if (st.phase === 'ready') {
             html = '<p class="s-title">' + (st.round ? 'جاهزين للجولة ' + (st.round + 1) : 'خلّ جمهورك يدخل الفريق!') + '</p>' +
-                '<p class="s-sub">كل بث يكتب <b>«' + esc(st.settings.keyword) + '»</b> في شاته. كل جولة يُختار لاعب من كل فريق، وأول إجابة صحيحة = نقطتين.</p>' +
+                '<p class="s-sub">جمهور ' + esc(st.teams[0].name) + ' يكتب <b>«' + esc(st.settings.keywords[0]) + '»</b> وجمهور ' + esc(st.teams[1].name) + ' يكتب <b>«' + esc(st.settings.keywords[1]) + '»</b> — كل واحد في شات بثه. كل جولة يُختار لاعب من كل فريق، وأول إجابة صحيحة = نقطتين.</p>' +
                 (host ? '<button class="btn btn-big" data-a="spin">ابدأ الجولة</button>' : '<p class="s-sub">بانتظار ' + esc(hostName) + ' يبدأ الجولة</p>');
         } else if (st.phase === 'spinning') {
             html = '<p class="s-sub">اختيار اللاعبين والفئة...</p><div id="spin-names">' + vsHtml(st) + '</div><span class="cat" id="spin-cat">' + esc(st.catName) + '</span>';

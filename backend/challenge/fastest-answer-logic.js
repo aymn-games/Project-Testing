@@ -3,7 +3,8 @@
  *
  * نفس قواعد games/fastest-answer/game.html، بفرق واحد: الفريق = البث.
  * الفريق 0 = جمهور بث منشئ التحدي، الفريق 1 = جمهور بث الخصم. اللاعب
- * ينضم بكتابة كلمة الدخول في شات بثه هو، فما يقدر ينضم لفريق البث الثاني.
+ * ينضم بكتابة رقم فريقه (1 لبث المنشئ، 2 لبث الخصم) في شات بثه هو، فما
+ * يقدر ينضم لفريق البث الثاني.
  * كل جولة يُختار لاعب واحد من كل فريق (تدوير: كل لاعب يجيه الدور مرة قبل
  * ما يتكرر)، وفئة عشوائية من الفئات المختارة. بس اللاعبين المختارين
  * يقدرون يجاوبون، وكل واحد من شات بثه فقط. أول إجابة صحيحة = نقطتين.
@@ -26,15 +27,22 @@ var ALL_CATS = [
     { id: 'capital', name: 'عاصمة الدولة' }, { id: 'proverb', name: 'أكمل المثل' },
     { id: 'scramble', name: 'ترتيب الحروف' }, { id: 'flag', name: 'علم الدولة' }
 ];
-var DURATIONS = [10, 15, 20, 30];
+// إعدادات ثابتة لتحدي البثوث (بسيطة عمداً): كلمة الدخول 1 لفريق المنشئ و2
+// لفريق الخصم، 20 ثانية للإجابة، 20 لاعب كحد أقصى لكل فريق، وكل ستريمر
+// يختار 3 فئات (المنشئ بالدعوة والخصم عند القبول).
+var KEYWORDS = ['1', '2'];
+var DURATION_SEC = 20;
+var MAX_PLAYERS = 20;
+var CATS_PER_STREAMER = 3;
 var SPIN_MS = 4500;      // اختيار اللاعبين والفئة (حركة على الشاشات)
 var COUNTDOWN_MS = 3000; // 3، 2، 1
 var MAX_LOG = 60;
 
-// نفس FA.norm في games/fastest-answer/fa-platform.js.
+// مثل FA.norm في games/fastest-answer/fa-platform.js، مع قبول الأرقام العربية (١ = 1).
 function norm(s) {
     return String(s == null ? '' : s).normalize('NFKC').trim()
-        .replace(/[ً-ٰٟۖ-ۭـ]/g, '').replace(/[​-‏‪-‮⁦-⁩﻿]/g, '')
+        // التشكيل (بدون الأرقام العربية ٠-٩ اللي بين U+065F وU+0670 — تتحوّل تحت لأرقام عادية)
+        .replace(/[ً-ٰٟۖ-ۭـ]/g, '').replace(/[​-‏‪-‮⁦-⁩﻿]/g, '')
         .replace(/[أإآٱٲٳ]/g, 'ا').replace(/[ةۃہە]/g, 'ه')
         .replace(/[ىیېۍ]/g, 'ي').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/ء/g, '').replace(/ک/g, 'ك')
         .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
@@ -52,20 +60,47 @@ function clampInt(v, min, max, def) {
     return isNaN(n) ? def : Math.min(max, Math.max(min, n));
 }
 
-/** تنظيف إعدادات المنشئ (تجي من المتصفح). */
+function cleanCats(list) {
+    var out = [];
+    (Array.isArray(list) ? list : []).forEach(function (id) {
+        if (out.indexOf(id) < 0 && ALL_CATS.some(function (c) { return c.id === id; })) out.push(id);
+    });
+    return out;
+}
+
+function cleanTeamName(v) { return String(v || '').trim().slice(0, 24); }
+
+/** جزء المنشئ (مع الدعوة): اسم فريقه + 3 فئات + نقاط الفوز + المتابعين فقط. */
+function sanitizeHostSettings(raw) {
+    raw = raw || {};
+    var cats = cleanCats(raw.cats);
+    if (cats.length !== CATS_PER_STREAMER) return { error: 'pick_3_cats' };
+    return { team1: cleanTeamName(raw.team1), hostCats: cats, target: clampInt(raw.target, 1, 99, 15), followersOnly: Boolean(raw.followersOnly) };
+}
+
+/** جزء الخصم (عند القبول): اسم فريقه + 3 فئات. */
+function sanitizeGuestSettings(raw) {
+    raw = raw || {};
+    var cats = cleanCats(raw.cats);
+    if (cats.length !== CATS_PER_STREAMER) return { error: 'pick_3_cats' };
+    return { team2: cleanTeamName(raw.team2), guestCats: cats };
+}
+
+/** إعدادات المباراة النهائية (المنشئ + الخصم + الثوابت). اسم الفريق الفاضي = اسم حساب الستريمر. */
 function sanitizeSettings(raw, sideNames) {
     raw = raw || {};
-    var cats = Array.isArray(raw.cats) ? raw.cats.filter(function (id) { return ALL_CATS.some(function (c) { return c.id === id; }); }) : [];
-    var dur = clampInt(raw.dur, 5, 60, 15);
-    if (DURATIONS.indexOf(dur) < 0) dur = 15;
+    var hostCats = cleanCats(raw.hostCats), guestCats = cleanCats(raw.guestCats);
+    var cats = cleanCats(hostCats.concat(guestCats));
     return {
-        team1: String(raw.team1 || '').trim().slice(0, 24) || (sideNames && sideNames[0]) || 'الفريق 1',
-        team2: String(raw.team2 || '').trim().slice(0, 24) || (sideNames && sideNames[1]) || 'الفريق 2',
-        keyword: String(raw.keyword || '').trim().slice(0, 20) || 'دخول',
-        maxPlayers: clampInt(raw.maxPlayers, 1, 200, 20),
-        followersOnly: Boolean(raw.followersOnly),
+        team1: cleanTeamName(raw.team1) || (sideNames && sideNames[0]) || 'الفريق 1',
+        team2: cleanTeamName(raw.team2) || (sideNames && sideNames[1]) || 'الفريق 2',
+        keywords: KEYWORDS.slice(),
+        maxPlayers: MAX_PLAYERS,
+        dur: DURATION_SEC,
         target: clampInt(raw.target, 1, 99, 15),
-        dur: dur,
+        followersOnly: Boolean(raw.followersOnly),
+        hostCats: hostCats,
+        guestCats: guestCats,
         cats: cats.length ? cats : ALL_CATS.map(function (c) { return c.id; })
     };
 }
@@ -195,7 +230,7 @@ function createFastestAnswer(settings, hooks) {
             S.teams.forEach(function (t) {
                 t.players.forEach(function (n) { var p = players[n]; view.playerInfo[n] = { avatar: p.avatar, frame: p.frame }; });
             });
-            view.settings = { keyword: settings.keyword, target: settings.target, dur: settings.dur, maxPlayers: settings.maxPlayers, followersOnly: settings.followersOnly };
+            view.settings = { keywords: settings.keywords, target: settings.target, dur: settings.dur, maxPlayers: settings.maxPlayers, followersOnly: settings.followersOnly };
             return view;
         },
 
@@ -207,8 +242,8 @@ function createFastestAnswer(settings, hooks) {
             var team = S.teams[side];
             var inTeam = team.players.indexOf(user) >= 0;
 
-            // الانضمام: كلمة الدخول من شات البث نفسه → فريق هذا البث.
-            if (!inTeam && norm(text) === norm(settings.keyword)) {
+            // الانضمام: كلمة دخول هذا البث (1 للمنشئ، 2 للخصم) من شاته هو.
+            if (!inTeam && norm(text) === norm(settings.keywords[side])) {
                 if (settings.followersOnly && !p.isFollower) return false;
                 if (team.players.length >= settings.maxPlayers) return false;
                 team.players.push(user);
@@ -317,6 +352,9 @@ function createFastestAnswer(settings, hooks) {
 
 module.exports = {
     ALL_CATS: ALL_CATS,
+    CATS_PER_STREAMER: CATS_PER_STREAMER,
+    sanitizeHostSettings: sanitizeHostSettings,
+    sanitizeGuestSettings: sanitizeGuestSettings,
     sanitizeSettings: sanitizeSettings,
     createFastestAnswer: createFastestAnswer,
     _norm: norm,

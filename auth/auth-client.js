@@ -504,8 +504,9 @@ function challengeInbox(have) {
 function challengeInvite(toCustomId, game, settings) {
     return request('/api/challenge/invite', { method: 'POST', body: { toCustomId: toCustomId, game: game, settings: settings || {} } });
 }
-function challengeRespond(inviteId, accept) {
-    return request('/api/challenge/respond', { method: 'POST', body: { inviteId: inviteId, accept: Boolean(accept) } });
+/** settings (on accept): {team2, cats:[3 category ids]} */
+function challengeRespond(inviteId, accept, settings) {
+    return request('/api/challenge/respond', { method: 'POST', body: { inviteId: inviteId, accept: Boolean(accept), settings: settings || {} } });
 }
 function challengeCancel(inviteId) {
     return request('/api/challenge/cancel', { method: 'POST', body: { inviteId: inviteId } });

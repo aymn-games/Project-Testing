@@ -121,6 +121,9 @@ function createInvite(me, toCustomId, game, settings) {
         if (inv.fromId === me.id && inv.status === 'pending') inv.status = 'cancelled';
     });
 
+    var hostSettings = challengeMatch.GAMES[game].sanitizeHost(settings);
+    if (hostSettings.error) return { success: false, error: hostSettings.error };
+
     var fromRow = loadUser(me.id);
     var inv = {
         id: crypto.randomBytes(6).toString('hex'),
@@ -130,7 +133,7 @@ function createInvite(me, toCustomId, game, settings) {
         to: profile(to),
         game: game,
         gameName: challengeMatch.GAMES[game].name,
-        settings: challengeMatch.GAMES[game].sanitize(settings, [profile(fromRow, false).name, profile(to, false).name]),
+        settings: hostSettings,
         status: 'pending',
         matchId: null,
         createdAt: now(),
@@ -185,8 +188,8 @@ function inbox(me, have) {
     };
 }
 
-/** قبول/رفض دعوة واردة. */
-function respond(me, inviteId, accept) {
+/** قبول/رفض دعوة واردة. guestSettings: اسم فريق الخصم + فئاته الثلاث. */
+function respond(me, inviteId, accept, guestSettings) {
     expireInvites();
     var inv = _invites[String(inviteId || '')];
     if (!inv || inv.toId !== me.id) return { success: false, error: 'invite_not_found' };
@@ -194,6 +197,8 @@ function respond(me, inviteId, accept) {
     if (!accept) { inv.status = 'declined'; return { success: true }; }
 
     if (!isEligible(me)) return { success: false, error: 'not_eligible' };
+    var guest = challengeMatch.GAMES[inv.game].sanitizeGuest(guestSettings);
+    if (guest.error) return { success: false, error: guest.error };
     var fromRow = loadUser(inv.fromId), toRow = loadUser(inv.toId);
     if (!fromRow || !isEligible(fromRow)) { inv.status = 'cancelled'; return { success: false, error: 'opponent_not_eligible' }; }
     if (activeMatchFor(inv.fromId)) { inv.status = 'cancelled'; return { success: false, error: 'opponent_in_match' }; }
@@ -201,7 +206,7 @@ function respond(me, inviteId, accept) {
 
     var m = challengeMatch.createMatch({
         game: inv.game,
-        settings: inv.settings,
+        settings: Object.assign({}, inv.settings, guest),
         sides: [profile(fromRow), profile(toRow)],
         onEnd: function (match) {
             match.sides.forEach(function (s) { if (_activeMatch[s.userId] === match.id) delete _activeMatch[s.userId]; });

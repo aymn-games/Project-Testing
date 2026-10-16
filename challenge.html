@@ -104,6 +104,10 @@
     .switch input:checked + span{ background:var(--accent); }
     .switch input:checked + span::after{ right:23px; }
     .row.col{ flex-direction:column; align-items:stretch; }
+    .fixed{ margin:-4px 0 14px; padding:10px 14px; border-radius:14px; background:rgba(255,255,255,.04); border:1px dashed rgba(255,255,255,.14); font-size:13px; color:#cfc8de; }
+    .count-tag{ font-size:12px; font-weight:500; color:var(--muted); }
+    .count-tag.full{ color:var(--ok); }
+    .accept-form{ width:100%; display:flex; flex-direction:column; gap:10px; margin-top:6px; padding-top:12px; border-top:1px solid rgba(255,255,255,.08); }
     .row.col .pills{ justify-content:flex-start; }
     @media (max-width:560px){ .row{ flex-wrap:wrap; } .row.wrap-ok .pills{ justify-content:flex-start; } }
 
@@ -171,7 +175,8 @@
 
     <section class="panel hidden" id="settings-panel">
         <h2>إعدادات المباراة</h2>
-        <p class="sub">جمهور كل بث يدخل فريق بثه بكتابة كلمة الدخول في شاته. كل جولة يُختار لاعب من كل فريق، وبس هو يجاوب من شات بثه.</p>
+        <p class="sub">جمهورك يكتب <b>1</b> في شاتك وجمهور الخصم يكتب <b>2</b> في شاته للانضمام. كل جولة يُختار لاعب من كل فريق، وبس هو يجاوب من شات بثه.</p>
+        <div class="fixed">⏱️ وقت الإجابة 20 ثانية · 👥 حتى 20 لاعب لكل فريق · 🎯 كل ستريمر يختار 3 فئات</div>
         <div class="rows" id="settings"></div>
     </section>
 
@@ -207,6 +212,7 @@
     ];
     var ERRORS = {
         not_eligible: 'حسابك لازم يكون ستريمر مربوط بتيك توك.',
+        pick_3_cats: 'اختر 3 فئات بالضبط.',
         opponent_not_eligible: 'هذا الحساب مو ستريمر مربوط بتيك توك.',
         self: 'ما تقدر تتحدى نفسك 🙂',
         you_in_match: 'عندك مباراة جارية — خلّصها أول.',
@@ -221,7 +227,9 @@
 
     var state = {
         game: null,
-        settings: { team1: '', team2: '', keyword: 'دخول', maxPlayers: 20, followersOnly: false, target: 15, dur: 15, cats: CATS.map(function (c) { return c[0]; }) },
+        settings: { team1: '', cats: [], target: 15, followersOnly: false },
+        acceptOpen: null,  // دعوة واردة مفتوح نموذج قبولها
+        accept: { team2: '', cats: [] },
         opponent: null,
         avatars: {},      // inviteId -> صورة الطرف الثاني
         handled: {},      // دعوات صادرة عرضنا نتيجتها
@@ -234,12 +242,25 @@
     function matchUrl(game, matchId) { var g = gameById(game); return (g && g.screen ? g.screen : 'games.html') + '?match=' + encodeURIComponent(matchId); }
     function avatarImg(src, cls) { return src ? '<img class="avatar ' + (cls || '') + '" src="' + esc(src) + '" alt="">' : '<span class="avatar ' + (cls || '') + '"></span>'; }
     function secs(ms) { return Math.ceil(ms / 1000); }
+    var MAX_CATS = 3;
+    function catName(id) { var c = CATS.filter(function (x) { return x[0] === id; })[0]; return c ? c[1] : id; }
     function settingsSummary(g, s) {
         if (!s) return '';
-        var parts = ['نقاط الفوز ' + s.target, 'وقت الإجابة ' + s.dur + ' ث', 'كلمة الدخول «' + s.keyword + '»'];
+        var parts = ['نقاط الفوز ' + s.target, 'فئاته: ' + (s.hostCats || []).map(catName).join('، ')];
         if (s.followersOnly) parts.push('المتابعين فقط');
         return parts.join(' · ');
     }
+    function catPillsHtml(selected, attr) {
+        return CATS.map(function (c) {
+            var on = selected.indexOf(c[0]) >= 0, full = !on && selected.length >= MAX_CATS;
+            return '<button type="button" class="pill' + (on ? ' on' : '') + '" ' + attr + '="' + c[0] + '"' + (full ? ' disabled style="opacity:.4;cursor:default"' : '') + '>' + c[1] + '</button>';
+        }).join('');
+    }
+    function toggleCat(list, id) {
+        var i = list.indexOf(id);
+        if (i >= 0) list.splice(i, 1); else if (list.length < MAX_CATS) list.push(id);
+    }
+    function countTag(n) { return '<span class="count-tag' + (n === MAX_CATS ? ' full' : '') + '">' + n + ' من ' + MAX_CATS + '</span>'; }
 
     /* ---- الدخول والصلاحية ---- */
     function gate(html) { var g = $('gate'); g.innerHTML = html; g.classList.remove('hidden'); ['create-panel', 'settings-panel', 'opponent-panel'].forEach(function (id) { $(id).classList.add('hidden'); }); }
@@ -267,17 +288,12 @@
     /* ---- الإعدادات ---- */
     function renderSettings() {
         var s = state.settings;
-        var durPills = [10, 15, 20, 30].map(function (d) { return '<button type="button" class="pill' + (s.dur === d ? ' on' : '') + '" data-dur="' + d + '">' + d + ' ث</button>'; }).join('');
-        var catPills = CATS.map(function (c) { return '<button type="button" class="pill' + (s.cats.indexOf(c[0]) >= 0 ? ' on' : '') + '" data-cat="' + c[0] + '">' + c[1] + '</button>'; }).join('');
+        var myName = state.me ? state.me.name : 'اسم حسابك';
         $('settings').innerHTML =
-            '<label class="row"><input type="text" data-k="team1" maxlength="24" placeholder="اسمك" value="' + esc(s.team1) + '"><span class="row-label">اسم فريقك<small>يظهر على الشاشتين — فاضي = اسمك</small></span></label>' +
-            '<label class="row"><input type="text" data-k="team2" maxlength="24" placeholder="اسم الخصم" value="' + esc(s.team2) + '"><span class="row-label">اسم فريق الخصم<small>فاضي = اسم الخصم</small></span></label>' +
-            '<label class="row"><input type="text" data-k="keyword" maxlength="20" value="' + esc(s.keyword) + '"><span class="row-label">كلمة الدخول<small>نفس الكلمة بالشاتين — الفريق يتحدد من البث</small></span></label>' +
-            '<label class="row"><input type="number" data-k="maxPlayers" min="1" max="200" value="' + s.maxPlayers + '"><span class="row-label">عدد اللاعبين لكل فريق</span></label>' +
+            '<label class="row"><input type="text" data-k="team1" maxlength="24" placeholder="' + esc(myName) + '" value="' + esc(s.team1) + '"><span class="row-label">اسم فريقك<small>فاضي = اسم حسابك — الخصم يكتب اسم فريقه لما يقبل</small></span></label>' +
+            '<div class="row col"><span class="row-label">اختر 3 فئات ' + countTag(s.cats.length) + '<small>الخصم يختار 3 فئات ثانية لما يقبل، والأسئلة تجي من الفئات الست</small></span><div class="pills">' + catPillsHtml(s.cats, 'data-cat') + '</div></div>' +
             '<label class="row"><input type="number" data-k="target" min="1" max="99" value="' + s.target + '"><span class="row-label">نقاط الفوز<small>كل إجابة أولى صحيحة = نقطتين</small></span></label>' +
-            '<div class="row wrap-ok"><div class="pills">' + durPills + '</div><span class="row-label">وقت الإجابة</span></div>' +
-            '<label class="row"><span class="switch"><input type="checkbox" data-k="followersOnly"' + (s.followersOnly ? ' checked' : '') + '><span></span></span><span class="row-label">المتابعين فقط<small>كل بث: بس متابعين صاحب البث يدخلون</small></span></label>' +
-            '<div class="row col"><span class="row-label">الفئات</span><div class="pills">' + catPills + '</div></div>';
+            '<label class="row"><span class="switch"><input type="checkbox" data-k="followersOnly"' + (s.followersOnly ? ' checked' : '') + '><span></span></span><span class="row-label">المتابعين فقط<small>كل بث: بس متابعين صاحب البث يدخلون</small></span></label>';
     }
     $('settings').addEventListener('input', function (e) {
         var k = e.target.getAttribute('data-k');
@@ -288,14 +304,9 @@
         else s[k] = e.target.value;
     });
     $('settings').addEventListener('click', function (e) {
-        var p = e.target.closest('.pill');
-        if (!p) return;
-        var s = state.settings;
-        if (p.hasAttribute('data-dur')) s.dur = Number(p.getAttribute('data-dur'));
-        if (p.hasAttribute('data-cat')) {
-            var c = p.getAttribute('data-cat'), i = s.cats.indexOf(c);
-            if (i >= 0) { if (s.cats.length > 1) s.cats.splice(i, 1); } else s.cats.push(c);
-        }
+        var p = e.target.closest('[data-cat]');
+        if (!p || p.disabled) return;
+        toggleCat(state.settings.cats, p.getAttribute('data-cat'));
         renderSettings();
     });
 
@@ -338,6 +349,7 @@
 
     $('send').addEventListener('click', function () {
         if (!state.game || !state.opponent) return;
+        if (state.settings.cats.length !== MAX_CATS) { setMsg('اختر 3 فئات من إعدادات المباراة أول.', 'bad'); return; }
         $('send').disabled = true;
         A.challengeInvite(state.opponent.customId, state.game, state.settings).then(function (r) {
             $('send').disabled = false;
@@ -347,25 +359,52 @@
     });
 
     /* ---- صندوق الدعوات ---- */
+    function acceptFormHtml(inv) {
+        var a = state.accept;
+        return '<div class="accept-form">' +
+            '<label class="row"><input type="text" data-acc="team2" maxlength="24" placeholder="' + esc(state.me ? state.me.name : 'اسم حسابك') + '" value="' + esc(a.team2) + '"><span class="row-label">اسم فريقك<small>فاضي = اسم حسابك</small></span></label>' +
+            '<div class="row col"><span class="row-label">اختر 3 فئات ' + countTag(a.cats.length) + '<small>فئات ' + esc(inv.other.name) + ': ' + esc((inv.settings.hostCats || []).map(catName).join('، ')) + '</small></span><div class="pills">' + catPillsHtml(a.cats, 'data-acc-cat') + '</div></div>' +
+            '<div class="actions"><button class="btn btn-ok" data-act="confirm"' + (a.cats.length === MAX_CATS ? '' : ' disabled') + '>تأكيد القبول وبدء المباراة</button><button class="btn btn-ghost" data-act="back">رجوع</button></div></div>';
+    }
     function renderIncoming(list) {
         list.forEach(function (inv) { if (inv.other.avatar) state.avatars[inv.id] = inv.other.avatar; });
+        state.incoming = list;
+        if (state.acceptOpen && !list.some(function (inv) { return inv.id === state.acceptOpen; })) state.acceptOpen = null;
         $('incoming-panel').classList.toggle('hidden', !list.length);
-        $('incoming').innerHTML = list.map(function (inv) {
-            var g = gameById(inv.game) || { icon: '🎮' };
+        var html = list.map(function (inv) {
+            var g = gameById(inv.game) || { icon: '🎮' }, open = state.acceptOpen === inv.id;
             return '<div class="invite" data-id="' + inv.id + '">' + avatarImg(state.avatars[inv.id]) +
-                '<div class="who"><b>' + esc(inv.other.name) + ' يتحداك!</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · ' + g.icon + ' ' + esc(inv.gameName) + '</span>' +
-                '<span>' + esc(settingsSummary(inv.game, inv.settings)) + ' · تنتهي خلال ' + secs(inv.expiresIn) + ' ث</span></div>' +
-                '<div class="actions"><button class="btn btn-ok" data-act="accept">قبول</button><button class="btn btn-ghost" data-act="decline">رفض</button></div></div>';
+                '<div class="who"><b>' + esc(inv.other.name) + ' يتحداك!</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · ' + g.icon + ' ' + esc(inv.gameName) + ' · فريقه «' + esc(inv.settings.team1 || inv.other.name) + '»</span>' +
+                '<span>' + esc(settingsSummary(inv.game, inv.settings)) + ' · تنتهي خلال <bdi data-exp>' + secs(inv.expiresIn) + '</bdi> ث</span></div>' +
+                (open ? acceptFormHtml(inv) : '<div class="actions"><button class="btn btn-ok" data-act="accept">قبول</button><button class="btn btn-ghost" data-act="decline">رفض</button></div>') + '</div>';
         }).join('');
+        // نموذج القبول مفتوح: ما نعيد رسمه كل سحب (يضيع اللي يكتبه) — بس نحدّث العدّاد.
+        if (state.acceptOpen && $('incoming').querySelector('.invite[data-id="' + state.acceptOpen + '"] .accept-form')) {
+            list.forEach(function (inv) { var el = $('incoming').querySelector('.invite[data-id="' + inv.id + '"] [data-exp]'); if (el) el.textContent = secs(inv.expiresIn); });
+            return;
+        }
+        $('incoming').innerHTML = html;
     }
+    function redrawIncoming() { $('incoming').innerHTML = ''; renderIncoming(state.incoming || []); }
+    $('incoming').addEventListener('input', function (e) {
+        if (e.target.getAttribute('data-acc') === 'team2') state.accept.team2 = e.target.value;
+    });
     $('incoming').addEventListener('click', function (e) {
+        var cat = e.target.closest('[data-acc-cat]');
+        if (cat) { if (!cat.disabled) { toggleCat(state.accept.cats, cat.getAttribute('data-acc-cat')); redrawIncoming(); } return; }
         var b = e.target.closest('[data-act]');
         if (!b) return;
-        var card = b.closest('.invite'), id = card.getAttribute('data-id'), accept = b.getAttribute('data-act') === 'accept';
+        var card = b.closest('.invite'), id = card.getAttribute('data-id'), act = b.getAttribute('data-act');
+        if (act === 'accept') { state.acceptOpen = id; state.accept = { team2: '', cats: [] }; redrawIncoming(); return; }
+        if (act === 'back') { state.acceptOpen = null; redrawIncoming(); return; }
+        var accept = act === 'confirm';
+        if (accept && state.accept.cats.length !== MAX_CATS) return;
         Array.prototype.forEach.call(card.querySelectorAll('button'), function (x) { x.disabled = true; });
-        A.challengeRespond(id, accept).then(function (r) {
+        A.challengeRespond(id, accept, accept ? { team2: state.accept.team2, cats: state.accept.cats } : null).then(function (r) {
             if (r && r.success && accept) { location.href = matchUrl(r.game, r.matchId); return; }
             if (!(r && r.success)) alert(ERRORS[r && r.error] || 'تعذّر الرد على الدعوة.');
+            state.acceptOpen = null;
+            redrawIncoming();
             poll();
         });
     });
@@ -422,6 +461,10 @@
         $('top-account').href = 'login.html';
         return;
     }
+    try {
+        var cu = A.getCachedUser ? A.getCachedUser() : null;
+        if (cu) state.me = { name: cu.display_name || cu.tiktok_display_name || cu.tiktok_username || cu.username || '' };
+    } catch (e) {}
     renderGames();
     poll();
     setInterval(function () { if (!document.hidden) poll(); }, POLL_MS);

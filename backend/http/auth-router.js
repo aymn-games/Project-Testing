@@ -641,7 +641,7 @@ function handleChallengeInvite(req, res, body, user) {
 }
 
 function handleChallengeRespond(req, res, body, user) {
-  var result = challengeService.respond(user, body.inviteId, Boolean(body.accept));
+  var result = challengeService.respond(user, body.inviteId, Boolean(body.accept), body.settings);
   sendJson(res, result.success ? 200 : 400, result);
 }
 

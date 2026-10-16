@@ -28,7 +28,13 @@ var logger = require('../utils/logger');
 var fastestAnswer = require('./fastest-answer-logic');
 
 var GAMES = {
-    'fastest-answer': { name: 'أسرع إجابة', create: fastestAnswer.createFastestAnswer, sanitize: fastestAnswer.sanitizeSettings }
+    'fastest-answer': {
+        name: 'أسرع إجابة',
+        create: fastestAnswer.createFastestAnswer,
+        sanitize: fastestAnswer.sanitizeSettings,
+        sanitizeHost: fastestAnswer.sanitizeHostSettings,
+        sanitizeGuest: fastestAnswer.sanitizeGuestSettings
+    }
 };
 
 var ABSENT_GRACE_MS = 2 * 60 * 1000;   // شاشة طرف مسكّرة أكثر من كذا → تنتهي المباراة
