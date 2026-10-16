@@ -1019,7 +1019,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     card.style.borderColor = p.border;
 
     var noteText = {
-      idle: linkedUsername
+      idle: accountMode === 'loading' ? 'جاري التحقق من حسابك...'
+        : accountMode === 'guest' ? 'سجّل دخول بحساب ستريمر مربوط بتيك توك عشان تتصل بالبث'
+        : accountMode === 'player' ? 'تشغيل الألعاب لحسابات الستريمر فقط — تواصل مع الإدارة لتحويل حسابك'
+        : accountMode === 'unlinked' ? 'اربط حساب تيك توك بحسابك في الموقع، وبعدها نتصل ببثك تلقائياً'
+        : linkedUsername
         ? (isAutoConnectOff()
           ? 'حسابك المربوط \u2066@' + linkedUsername + '\u2069 — اضغط اتصال لما تبي تربط الألعاب ببثك'
           : 'حسابك المربوط \u2066@' + linkedUsername + '\u2069 — نتصل تلقائياً أول ما تبدأ البث في تيك توك')
@@ -1063,6 +1067,28 @@ document.addEventListener('DOMContentLoaded', async function() {
       return;
     }
 
+    // خانة اليوزر للأدمن وأصحاب صلاحية «تشغيل كامل» بس (يتصلون ببث أي
+    // حساب). الستريمر العادي يتصل فقط ببث حسابه المربوط — بدون خانة.
+    if (accountMode !== 'free') {
+      var link = null;
+      if (accountMode === 'linked') {
+        link = document.createElement('button');
+        link.type = 'button';
+        link.textContent = 'تحقق الآن';
+        link.setAttribute('data-connect-action', 'check');
+      } else if (accountMode === 'guest' || accountMode === 'unlinked') {
+        link = document.createElement('a');
+        link.href = accountMode === 'guest' ? 'login.html' : 'profile.html';
+        link.textContent = accountMode === 'guest' ? 'تسجيل الدخول' : 'ربط حساب تيك توك';
+      }
+      if (link) {
+        link.className = 'nl-btn-glossy';
+        link.style.cssText = 'display:inline-block;padding:9px 20px;border-radius:999px;border:none;background:linear-gradient(135deg,#7a3fd4,#b28cf5);color:#f3ecff;font-size:13.5px;font-weight:700;cursor:pointer;text-decoration:none;';
+        controls.appendChild(link);
+      }
+      return;
+    }
+
     var input = document.createElement('input');
     input.type = 'text';
     input.placeholder = 'يوزر التيك توك (بدون @)';
@@ -1085,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     controls.appendChild(input);
     controls.appendChild(submitBtn);
-    input.focus();
+    if (!linkedUsername) input.focus();
   }
 
   // [إصلاح زر "اتصال" الميت — خصوصاً بالآيباد] محرك القالب يعيد بناء محتوى
@@ -1105,6 +1131,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     var action = btn.getAttribute('data-connect-action');
     if (action === 'submit') {
       handleConnectSubmit(getConnectInputValue());
+    } else if (action === 'check') {
+      if (linkedUsername) { setAutoConnectOff(false); connectToBackend(linkedUsername); }
     } else if (action === 'disconnect') {
       disconnectFromBackend();
     } else if (action === 'cancel') {
@@ -1291,6 +1319,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   // نفس فحص js/agp-live-watch.js)، وأول ما يكون يبث نتصل مباشرة. القطع
   // اليدوي يوقف الاتصال التلقائي لين يضغط "اتصال" بنفسه (sessionStorage).
   var linkedUsername = null;
+  // loading | guest | player | unlinked | linked | free (أدمن/تشغيل كامل: خانة اليوزر)
+  var accountMode = 'loading';
   var AUTO_POLL_MS = 45000;
   var AUTO_MAX_FAILED_ATTEMPTS = 3;
   var autoFailedAttempts = 0;
@@ -1335,19 +1365,29 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
   }
 
+  function setAccountMode(mode){
+    accountMode = mode;
+    if (connectState === 'idle' || connectState === 'error') renderConnectUI();
+  }
+
   function initAutoConnect(){
-    if (!window.AGPAuth || !window.AGPAuth.getToken || !window.AGPAuth.getToken()) return;
+    if (!window.AGPAuth || !window.AGPAuth.getToken) { setAccountMode('free'); return; }
+    if (!window.AGPAuth.getToken()) { setAccountMode('guest'); return; }
     window.AGPAuth.me().then(function(r){
       var u = r && r.success ? r.user : null;
-      if (!u || !u.tiktok_verified || !u.tiktok_username || !canRunGames(u)) return;
-      linkedUsername = String(u.tiktok_username).replace(/^@+/, '');
+      if (!u) { setAccountMode(r && r.__httpStatus === 401 ? 'guest' : 'free'); return; }
+      var perms = u.permissions || {};
+      var free = u.role === 'admin' || Boolean(perms.full_game_access);
+      var linked = Boolean(u.tiktok_verified && u.tiktok_username);
+      if (linked) linkedUsername = String(u.tiktok_username).replace(/^@+/, '');
+      setAccountMode(free ? 'free' : !canRunGames(u) ? 'player' : linked ? 'linked' : 'unlinked');
+      if (!linked || !canRunGames(u)) return;
       if (connectState === 'connected') autoFailedAttempts = 0;
       // لو متصل محفوظ ببث حساب ثاني (أدمن مثلاً) نخليه — نتصل تلقائياً بس لما ما فيه اتصال.
-      if (connectState === 'idle') renderConnectUI();
       tryAutoConnect();
       setInterval(tryAutoConnect, AUTO_POLL_MS);
       document.addEventListener('visibilitychange', function(){ if (!document.hidden) tryAutoConnect(); });
-    }).catch(function(){});
+    }).catch(function(){ setAccountMode('free'); }); // تعذّر التحقق من الحساب — نرجع للخانة اليدوية
   }
 
   // إغلاق الصفحة (تحديث/انتقال للعبة أو للرئيسية) يسكّر سوكت التحقق —
