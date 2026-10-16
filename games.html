@@ -1019,9 +1019,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     card.style.borderColor = p.border;
 
     var noteText = {
-      idle: 'اكتب يوزر البث عشان نتحقق منه ونربط الألعاب فيه',
+      idle: linkedUsername
+        ? (isAutoConnectOff()
+          ? 'حسابك المربوط \u2066@' + linkedUsername + '\u2069 — اضغط اتصال لما تبي تربط الألعاب ببثك'
+          : 'حسابك المربوط \u2066@' + linkedUsername + '\u2069 — نتصل تلقائياً أول ما تبدأ البث في تيك توك')
+        : 'اكتب يوزر البث عشان نتحقق منه ونربط الألعاب فيه',
       connecting: 'جاري التحقق من إن الحساب يبث الآن...',
-      connected: 'متصل الآن ببث @' + connectUsername + ' ✓',
+      connected: 'متصل الآن ببث \u2066@' + connectUsername + '\u2069 ✓',
       error: connectErrorMsg || 'تعذر التحقق من البث'
     };
     note.textContent = noteText[connectState] || noteText.idle;
@@ -1069,6 +1073,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     input.setAttribute('autocorrect', 'off');
     input.setAttribute('spellcheck', 'false');
     input.setAttribute('data-connect-input', '1');
+    if (linkedUsername) input.value = linkedUsername;
     input.style.cssText = 'flex:1 1 160px;min-width:140px;padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#f4f2fb;font-size:13.5px;outline:none;';
 
     var submitBtn = document.createElement('button');
@@ -1117,6 +1122,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   });
 
   function handleConnectSubmit(rawValue){
+    setAutoConnectOff(false);
     var username = (rawValue || '').trim().replace(/^@+/, '');
     if (!username) {
       connectState = 'error';
@@ -1173,6 +1179,7 @@ document.addEventListener('DOMContentLoaded', async function() {
           renderConnectUI();
         } else if (status === 'connected') {
           connectState = 'connected';
+          autoFailedAttempts = 0;
           saveVerifiedStreamConnection(connectUsername);
           if (window.AGPLiveWatch) window.AGPLiveWatch.reset();
           renderConnectUI();
@@ -1223,6 +1230,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   function disconnectFromBackend(){
+    // قطع يدوي: ما نرجع نتصل تلقائياً بنفس الجلسة لين يضغط "اتصال" بنفسه.
+    setAutoConnectOff(true);
     if (connectSocket && connectSocket.readyState === 1) {
       try {
         connectSocket.send(JSON.stringify({ type: 'disconnect', payload: { platform: 'tiktok' }, timestamp: Date.now() }));
@@ -1265,10 +1274,80 @@ document.addEventListener('DOMContentLoaded', async function() {
         closeConnectSocketSilently();
         connectState = 'error';
         connectUsername = '';
-        connectErrorMsg = 'البث في تيك توك انتهى أو صار غير نشط — تم قطع الاتصال. ابدأ البث ثم اتصل من جديد.';
+        connectErrorMsg = linkedUsername
+          ? 'البث في تيك توك انتهى أو صار غير نشط — تم قطع الاتصال. نرجع نتصل تلقائياً أول ما تبدأ البث.'
+          : 'البث في تيك توك انتهى أو صار غير نشط — تم قطع الاتصال. ابدأ البث ثم اتصل من جديد.';
+        autoFailedAttempts = 0;
         renderConnectUI();
       } });
     }
+    if (!autoConnectStarted) { autoConnectStarted = true; initAutoConnect(); }
+  }
+  var autoConnectStarted = false;
+
+  // [اتصال تلقائي بالحساب المربوط] لو حساب الموقع مربوط بتيك توك موثَّق
+  // (والحساب ستريمر/أدمن/صلاحية تشغيل)، ما يحتاج يكتب اليوزر: نعبّيه من
+  // حسابه، ونفحص كل AUTO_POLL_MS هل يبث الحين (GET /api/stream/is-live —
+  // نفس فحص js/agp-live-watch.js)، وأول ما يكون يبث نتصل مباشرة. القطع
+  // اليدوي يوقف الاتصال التلقائي لين يضغط "اتصال" بنفسه (sessionStorage).
+  var linkedUsername = null;
+  var AUTO_POLL_MS = 45000;
+  var AUTO_MAX_FAILED_ATTEMPTS = 3;
+  var autoFailedAttempts = 0;
+  var autoAttemptInFlight = false;
+  var AUTO_OFF_KEY = 'agp-auto-connect-off';
+
+  function isAutoConnectOff(){
+    try { return sessionStorage.getItem(AUTO_OFF_KEY) === '1'; } catch (e) { return false; }
+  }
+  function setAutoConnectOff(off){
+    try { if (off) sessionStorage.setItem(AUTO_OFF_KEY, '1'); else sessionStorage.removeItem(AUTO_OFF_KEY); } catch (e) {}
+    if (!off) autoFailedAttempts = 0;
+  }
+
+  function canRunGames(u){
+    var perms = (u && u.permissions) || {};
+    return Boolean(u && (u.role === 'admin' || u.is_streamer || perms.can_run_games || perms.full_game_access));
+  }
+
+  function fetchIsLive(username){
+    var token = window.AGPAuth && window.AGPAuth.getToken ? window.AGPAuth.getToken() : null;
+    var base = (window.AGPAuth && window.AGPAuth.API_BASE) || 'https://project-testing-akds.onrender.com';
+    if (!token || !window.fetch) return Promise.resolve(null);
+    return fetch(base + '/api/stream/is-live?username=' + encodeURIComponent(username), {
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(function(res){ return res.json(); }).then(function(d){
+      return d && d.success && (d.live === true || d.live === false) ? d.live : null;
+    }).catch(function(){ return null; });
+  }
+
+  function tryAutoConnect(){
+    if (!linkedUsername || autoAttemptInFlight || isAutoConnectOff() || document.hidden) return;
+    if (connectState === 'connected' || connectState === 'connecting') return;
+    if (connectState === 'error' && autoFailedAttempts >= AUTO_MAX_FAILED_ATTEMPTS) return;
+    autoAttemptInFlight = true;
+    fetchIsLive(linkedUsername).then(function(live){
+      autoAttemptInFlight = false;
+      if (live !== true || isAutoConnectOff()) return;
+      if (connectState === 'connected' || connectState === 'connecting') return;
+      if (connectState === 'error') autoFailedAttempts++;
+      connectToBackend(linkedUsername);
+    });
+  }
+
+  function initAutoConnect(){
+    if (!window.AGPAuth || !window.AGPAuth.getToken || !window.AGPAuth.getToken()) return;
+    window.AGPAuth.me().then(function(r){
+      var u = r && r.success ? r.user : null;
+      if (!u || !u.tiktok_verified || !u.tiktok_username || !canRunGames(u)) return;
+      linkedUsername = String(u.tiktok_username).replace(/^@+/, '');
+      if (connectState === 'connected') autoFailedAttempts = 0;
+      // لو متصل محفوظ ببث حساب ثاني (أدمن مثلاً) نخليه — نتصل تلقائياً بس لما ما فيه اتصال.
+      if (connectState === 'idle') renderConnectUI();
+      tryAutoConnect();
+      setInterval(tryAutoConnect, AUTO_POLL_MS);
+      document.addEventListener('visibilitychange', function(){ if (!document.hidden) tryAutoConnect(); });
+    }).catch(function(){});
   }
 
   // إغلاق الصفحة (تحديث/انتقال للعبة أو للرئيسية) يسكّر سوكت التحقق —
