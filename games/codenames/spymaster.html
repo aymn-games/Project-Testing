@@ -115,10 +115,10 @@ input:focus{outline:none;border-color:rgba(167,139,250,.6)}
             <span style="position:absolute;top:3px;right:3px;min-width:16px;height:16px;padding:0 3px;box-sizing:border-box;border-radius:999px;display:grid;place-items:center;background:{{ c.numBg }};font:800 10px/1 'Zain';color:#fff">{{ c.n }}</span>
             <span style="flex:1;display:grid;place-items:center;font:400 clamp(14px,4.6vw,22px)/1 'Zain'">{{ c.icon }}</span>
             <span style="margin:0 3px 3px;height:clamp(20px,6vw,28px);border-radius:6px;display:grid;place-items:center;padding:0 2px;background:{{ c.strip }}">
-              <span style="max-width:100%;font:900 clamp(9px,2.9vw,14px)/1 'Zain';color:{{ c.fg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.w }}</span>
+              <span style="max-width:100%;font:900 clamp(9px,2.9vw,14px)/1 'Zain';color:{{ c.fg }};text-decoration:{{ c.deco }};text-decoration-thickness:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.w }}</span>
             </span>
             <sc-if value="{{ c.open }}" hint-placeholder-val="{{ false }}">
-              <span style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.35)"><span style="width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.9);font:900 13px/1 'Zain';color:#16a34a">✓</span></span>
+              <span style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.55)"><span style="width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#16a34a;border:2.5px solid #fff;box-shadow:0 0 12px rgba(22,163,74,.8);font:900 19px/1 'Zain';color:#fff">✓</span></span>
             </sc-if>
           </div>
         </sc-for>
@@ -268,7 +268,7 @@ class Component extends DCLogic {
       submit:()=>this.submit(), retry:()=>{ this.id=null; this.save({id:null,stage:'form',board:null}); this.setState({stage:'form'}); },
       myTeam:S.teams[S.myTeam]||'', myBg:COLORS[S.myTeam]||'#7c3aed',
       counts:[[S.teams[1],1],[S.teams[2],2],['💀 الأسود',-1]].map(([t,k])=>({t,n:k===-1?(left(-1)?'⚠️':'—'):left(k),c:k===-1?'#fca5a5':COLORS[k],bg:k===S.myTeam?COLORS[k]+'26':'rgba(255,255,255,.04)',bd:k===S.myTeam?COLORS[k]:'rgba(255,255,255,.08)'})),
-      cells:b.map((c,i)=>{ const T=TILE[c.t]; return {n:i+1,w:c.w,open:!!c.open,bg:`url(${TILE_IMG(c)}) center/cover no-repeat, ${T[0]}`,sh:T[1],icon:'',strip:T[3],fg:T[4],numBg:T[5],ring:c.t===S.myTeam&&!c.open?'#fff':'rgba(255,255,255,.12)',op:c.open?.45:1,fl:c.open?'saturate(.4)':'none'}; }),
+      cells:b.map((c,i)=>{ const T=TILE[c.t]; return {n:i+1,w:c.w,open:!!c.open,bg:`url(${TILE_IMG(c)}) center/cover no-repeat, ${T[0]}`,sh:T[1],icon:'',strip:T[3],fg:T[4],numBg:T[5],ring:c.t===S.myTeam&&!c.open?'#fff':'rgba(255,255,255,.12)',op:1,fl:'none',deco:c.open?'line-through':'none'}; }),
       ...(()=>{ const st=S.st, mine=st&&st.turn===S.myTeam, tn=st?S.teams[st.turn]:'';
         const canHint=!!(st&&mine&&st.phase==='hint');
         const title=!st||st.phase==='ready'?'⏳ المباراة ما بدأت':canHint?'🕵 دورك — أرسل التلميح':st.phase==='guess'?(mine?'⏳ فريقك يخمّن الحين':`⏳ دور ${tn}`):st.phase==='hint'?`⏳ دور ${tn} — بانتظار تلميحهم`:'🏁 انتهت الجولة';
