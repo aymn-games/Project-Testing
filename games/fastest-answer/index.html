@@ -18,6 +18,7 @@
 <script src="../../auth/auth-client.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
+<script src="../../js/agp-auto-connect.js"></script>
 <script src="fa-platform.js"></script>
 <script src="./support.js"></script>
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#7c3aed"/><text x="50" y="64" font-size="40" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700">S</text></svg></template>
@@ -206,7 +207,7 @@ class Component extends DCLogic {
   state = { liveOpen:false, plat:0, handle:'', values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:!!FA.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
   componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
     // البث انتهى (js/agp-live-watch.js) → حالة الاتصال تتحدث فوراً
-    addEventListener('agp:stream-ended',()=>this.setState({live:!!FA.getSavedConnection()})); }
+    this.onLiveChange=()=>this.setState({live:!!FA.getSavedConnection()}); addEventListener('agp:stream-ended',this.onLiveChange); addEventListener('agp:stream-connected',this.onLiveChange); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); }
   set(k,v){ this.setState(s=>({values:{...s.values,[k]:v}})); }
   toastMsg(t){ this.setState({toast:t}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toast:null}),2400); }
@@ -256,7 +257,7 @@ class Component extends DCLogic {
       start:()=>{
         const V=S.values; if(!V.team1.trim()||!V.team2.trim()) return this.toastMsg('اكتب اسم كل فريق');
         if(!V.keyword1.trim()||!V.keyword2.trim()) return this.toastMsg('اكتب كلمة الدخول لكل فريق');
-        if(FA.norm(V.keyword1)===FA.norm(V.keyword2)) return this.toastMsg('كلمة الدخول لازم تختلف بين الفريقين'); if(!S.live) return this.toastMsg('غير متصل بالبث · اتصل من مكتبة الألعاب'); this.goLobby(); },
+        if(FA.norm(V.keyword1)===FA.norm(V.keyword2)) return this.toastMsg('كلمة الدخول لازم تختلف بين الفريقين'); if(!S.live) return this.toastMsg('غير متصل بالبث · ابدأ البث على حسابك المربوط ونتصل تلقائياً'); this.goLobby(); },
       mTitle:S.live?'تم الاتصال':'جارٍ الاتصال بالبث', mSub:S.live?'جارٍ الانتقال للوبي…':'لحظات قليلة',
       mTitleC:S.live?'#34d399':'#f4f2f8', mBd:S.live?'rgba(52,211,153,.45)':'rgba(167,139,250,.45)', mRing:S.live?'rgba(52,211,153,.08)':'rgba(139,92,246,.08)',
       liveOpen:S.liveOpen, closeLive:()=>{ clearTimeout(this.ct); if(S.connecting) this.setState({connecting:false}); this.shut('liveOpen'); },
