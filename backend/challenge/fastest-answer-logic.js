@@ -34,8 +34,9 @@ var KEYWORDS = ['1', '2'];
 var DURATION_SEC = 20;
 var MAX_PLAYERS = 20;
 var CATS_PER_STREAMER = 3;
-var SPIN_MS = 4500;      // اختيار اللاعبين والفئة (حركة على الشاشات)
-var COUNTDOWN_MS = 3000; // 3، 2، 1
+// نفس توقيت حركة game.html الأصلية: بكرات اللاعبين ثم بكرة الفئة (6.25 ث)، ثم 3، 2، 1 (3.9 ث).
+var SPIN_MS = 6250;
+var COUNTDOWN_MS = 3900;
 var MAX_LOG = 60;
 
 // مثل FA.norm في games/fastest-answer/fa-platform.js، مع قبول الأرقام العربية (١ = 1).

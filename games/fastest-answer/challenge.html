@@ -305,6 +305,8 @@
 
     function render() {
         if (!M) return;
+        // بعد بدء المباراة: نفس شاشة اللعب الأصلية (game.html) بوضع تحدي البثوث.
+        if (M.state.phase !== 'lobby' && !M.ended) { closedForGood = true; try { ws && ws.close(); } catch (e) {} location.replace('game.html?match=' + encodeURIComponent(matchId)); return; }
         var inLobby = M.state.phase === 'lobby' && !M.ended;
         $('lobby').classList.toggle('hidden', !inLobby);
         document.querySelector('.arena').classList.toggle('hidden', inLobby);
