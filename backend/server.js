@@ -39,8 +39,6 @@ function start() {
     server.listen(config.port, function () {
         // تعبئة صور تيك توك للحسابات الموثَّقة القديمة اللي ما عندها صورة.
         require('./auth/tiktok-avatar-sync').startBackfill();
-        // يراقب بث حساب المنصة ويقرأ المتابعين لمكافأة الإطار.
-        require('./platforms/tiktok/platform-follow-watcher').start();
         logger.log('AGP Backend listening on port ' + config.port + ' (WebSocket implemented; TikTok connector: ' + connectorRouter.getActiveConnectorName('tiktok') + ').');
     });
 
