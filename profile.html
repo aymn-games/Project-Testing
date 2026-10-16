@@ -948,6 +948,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   }
 
+  // [إصلاح] أرقام "إحصائيات البث" بتبويب "معلومات الستريمر" ما كانت
+  // مربوطة أبداً (تطلع 0 دائماً) رغم إن السيرفر يرسلها بـ p.stats. التبويب
+  // ما ينبني إلا لما ينفتح، فنعبّيها عند الضغط عليه (راجع مستمع الضغط تحت).
+  function fillStreamerTab(p){
+    if (!p || !p.stats) return;
+    var s = p.stats;
+    function num(v){ return Number(v || 0).toLocaleString('en-US'); }
+    var hours = Math.round(((s.total_live_ms || 0) / 3600000) * 10) / 10;
+    setCardValue('عدد البثوث', num(s.total_broadcasts), 0, true);
+    setCardValue('ساعات البث', String(hours), 0, true);
+    setCardValue('التعليقات', num(s.total_comments), 0, true);
+    setCardValue('متابعين جدد', num(s.total_follows), 0, true);
+    setCardValue('لاعبون انضموا', num(s.total_players), 0, true);
+    setCardValue('عدد الهدايا', num(s.total_gifts), 0, true);
+    setCardValue('قيمة الهدايا (ألماس)', num(s.total_gifts_value), 0, true);
+  }
+
   function populate(p){
     var name = p.display_name || p.username || 'اسم المستخدم';
     var heading = Array.prototype.slice.call(document.querySelectorAll('*'))
@@ -1527,6 +1544,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (t === 'معلومات اللاعب') {
       setTimeout(function(){ fillPlayerTab(window.__profileData); }, 60);
       setTimeout(function(){ fillPlayerTab(window.__profileData); }, 300);
+    }
+    if (t === 'معلومات الستريمر') {
+      setTimeout(function(){ fillStreamerTab(window.__profileData); }, 60);
+      setTimeout(function(){ fillStreamerTab(window.__profileData); }, 300);
     }
     if (t === 'المقتنيات') {
       setTimeout(wireCollectibles, 60);
