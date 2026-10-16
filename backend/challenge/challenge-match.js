@@ -8,7 +8,7 @@
  *
  * بروتوكول WebSocket:
  *   متصفح → { type:'join', matchId, token }   (أول رسالة إلزامية)
- *   متصفح → { type:'action', action:'spin'|'newGame'|'finish'|'leave' }
+ *   متصفح → { type:'action', action:'start'|'spin'|'newGame'|'finish'|'leave'|'kick', name? }
  *   خادم  → { type:'state', match:{...} }      (بعد كل تغيير)
  *   خادم  → { type:'error', error }
  *
@@ -259,12 +259,15 @@ function startWatchdog() {
 }
 
 /* ---- أوامر الشاشات ---- */
-function handleAction(m, side, action) {
+function handleAction(m, side, action, msg) {
     if (m.ended) return { ok: false, error: 'ended' };
     if (action === 'leave') { endMatch(m, 'left', side); return { ok: true }; }
+    // كل ستريمر يقدر يطلّع لاعبين من فريقه هو بس.
+    if (action === 'kick') { var k = m.logic.kick(side, String((msg && msg.name) || '')); scheduleSend(m); return k; }
     if (side !== 0) return { ok: false, error: 'host_only' };
     var r;
-    if (action === 'spin') r = m.logic.spin();
+    if (action === 'start') r = m.logic.startMatch();
+    else if (action === 'spin') r = m.logic.spin();
     else if (action === 'newGame') r = m.logic.newGame();
     else if (action === 'finish') r = m.logic.finish();
     else return { ok: false, error: 'unknown_action' };
@@ -290,7 +293,7 @@ function onClientMessage(client, msg) {
         return;
     }
     if (msg.type === 'action' && client.match) {
-        var res = handleAction(client.match, client.side, String(msg.action || ''));
+        var res = handleAction(client.match, client.side, String(msg.action || ''), msg);
         if (res && !res.ok) sendTo(client, { type: 'error', error: res.error });
     }
 }
