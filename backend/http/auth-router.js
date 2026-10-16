@@ -11,6 +11,7 @@ var authService = require('../auth/auth-service');
 var tiktokOAuthService = require('../auth/tiktok-oauth-service');
 var announcementService = require('../announcements/announcement-service');
 var collectiblesService = require('../collectibles/collectibles-service');
+var challengeService = require('../challenge/challenge-service');
 var pointsService = require('../points/points-service');
 var streamerLevelService = require('../points/streamer-level-service');
 var supportersService = require('../supporters/supporters-service');
@@ -134,6 +135,12 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/bundle-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateBundleCodes },
   { method: 'POST', path: '/api/admin/codes/burn', requireAuth: true, requireAdmin: true, handler: handleAdminBurnCode },
   { method: 'POST', path: '/api/collectibles/redeem', requireAuth: true, handler: handleRedeemFrameCode },
+  // تحدي البثوث — بحث عن خصم، دعوات، وقبول (المباراة نفسها عبر /ws/challenge).
+  { method: 'GET', path: '/api/challenge/search', requireAuth: true, handler: handleChallengeSearch },
+  { method: 'GET', path: '/api/challenge/inbox', requireAuth: true, handler: handleChallengeInbox },
+  { method: 'POST', path: '/api/challenge/invite', requireAuth: true, handler: handleChallengeInvite },
+  { method: 'POST', path: '/api/challenge/respond', requireAuth: true, handler: handleChallengeRespond },
+  { method: 'POST', path: '/api/challenge/cancel', requireAuth: true, handler: handleChallengeCancel },
   // أكواد "اختيار إطار" — توليد/عرض للأدمن، واستلام الإطار المختار للاعب.
   { method: 'POST', path: '/api/admin/choice-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateChoiceCode },
   { method: 'GET', path: '/api/admin/choice-codes', requireAuth: true, requireAdmin: true, handler: handleAdminListChoiceCodes },
@@ -618,6 +625,29 @@ function handleAdminGenerateChoiceCode(req, res, body) {
 
 function handleAdminListChoiceCodes(req, res) {
   sendJson(res, 200, { success: true, codes: collectiblesService.listChoiceCodes() });
+}
+
+function handleChallengeSearch(req, res, body, user) {
+  sendJson(res, 200, challengeService.search(user, getQueryParam(req, 'q')));
+}
+
+function handleChallengeInbox(req, res, body, user) {
+  sendJson(res, 200, challengeService.inbox(user, getQueryParam(req, 'have')));
+}
+
+function handleChallengeInvite(req, res, body, user) {
+  var result = challengeService.createInvite(user, body.toCustomId, body.game, body.settings);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleChallengeRespond(req, res, body, user) {
+  var result = challengeService.respond(user, body.inviteId, Boolean(body.accept));
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleChallengeCancel(req, res, body, user) {
+  var result = challengeService.cancel(user, body.inviteId);
+  sendJson(res, result.success ? 200 : 400, result);
 }
 
 /** صاحب الحساب نفسه يفعّل أحد إطاراته المملوكة كإطاره الظاهر الوحيد. */

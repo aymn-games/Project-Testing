@@ -314,7 +314,7 @@
     var NUMBER = [];
     for (var n = 11; n <= 9999; n++) NUMBER.push([numberWords(n), n]);
 
-    window.FA_QUESTIONS = {
+    var FA_QUESTIONS = {
         image: IMAGE,
         reverse: REVERSE,
         number: NUMBER,
@@ -323,4 +323,7 @@
         scramble: SCRAMBLE,
         flag: COUNTRIES.map(function (c) { return [c[0], c[1], c[3] || []]; })
     };
+    // نفس البنك يستخدمه الخادم لتحدي البثوث (backend/challenge/fastest-answer-logic.js).
+    if (typeof module === 'object' && module.exports) module.exports = FA_QUESTIONS;
+    if (typeof window !== 'undefined') window.FA_QUESTIONS = FA_QUESTIONS;
 }());

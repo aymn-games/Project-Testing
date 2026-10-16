@@ -493,6 +493,24 @@ function adminListChoiceCodes() {
     return request('/api/admin/choice-codes', { method: 'GET' });
 }
 
+/* Stream challenge (two streams play one game) — backend/challenge/. */
+function challengeSearch(query) {
+    return request('/api/challenge/search?q=' + encodeURIComponent(query || ''), { method: 'GET' });
+}
+/** have: invite ids whose avatar the page already has (comma-separated). */
+function challengeInbox(have) {
+    return request('/api/challenge/inbox' + (have ? '?have=' + encodeURIComponent(have) : ''), { method: 'GET' });
+}
+function challengeInvite(toCustomId, game, settings) {
+    return request('/api/challenge/invite', { method: 'POST', body: { toCustomId: toCustomId, game: game, settings: settings || {} } });
+}
+function challengeRespond(inviteId, accept) {
+    return request('/api/challenge/respond', { method: 'POST', body: { inviteId: inviteId, accept: Boolean(accept) } });
+}
+function challengeCancel(inviteId) {
+    return request('/api/challenge/cancel', { method: 'POST', body: { inviteId: inviteId } });
+}
+
 /** Owner equips one of their owned frames (own profile page only). */
 function equipFrame(frameType, frameRef) {
     return request('/api/collectibles/equip', { method: 'POST', body: { frameType: frameType, frameRef: frameRef } });
@@ -952,6 +970,11 @@ global.AGPAuth = {
     adminSetEntrance: adminSetEntrance,
     adminClearEntrance: adminClearEntrance,
     equipFrame: equipFrame,
+    challengeSearch: challengeSearch,
+    challengeInbox: challengeInbox,
+    challengeInvite: challengeInvite,
+    challengeRespond: challengeRespond,
+    challengeCancel: challengeCancel,
     redeemChoiceCode: redeemChoiceCode,
     adminGenerateChoiceCode: adminGenerateChoiceCode,
     adminListChoiceCodes: adminListChoiceCodes,

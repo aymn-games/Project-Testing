@@ -1,0 +1,325 @@
+/**
+ * منطق "أسرع إجابة" لتحدي البثوث — على الخادم (الخادم هو الحكم).
+ *
+ * نفس قواعد games/fastest-answer/game.html، بفرق واحد: الفريق = البث.
+ * الفريق 0 = جمهور بث منشئ التحدي، الفريق 1 = جمهور بث الخصم. اللاعب
+ * ينضم بكتابة كلمة الدخول في شات بثه هو، فما يقدر ينضم لفريق البث الثاني.
+ * كل جولة يُختار لاعب واحد من كل فريق (تدوير: كل لاعب يجيه الدور مرة قبل
+ * ما يتكرر)، وفئة عشوائية من الفئات المختارة. بس اللاعبين المختارين
+ * يقدرون يجاوبون، وكل واحد من شات بثه فقط. أول إجابة صحيحة = نقطتين.
+ * أول فريق يوصل نقاط الفوز يكسب.
+ *
+ * هذا الملف منطق خالص: ما يعرف شي عن تيك توك أو WebSocket. الأوقات
+ * والمؤقتات يديرها challenge-match.js عبر hooks.schedule/onChange/onWin.
+ */
+'use strict';
+
+var path = require('path');
+
+var QUESTIONS = (function () {
+    try { return require(path.join(__dirname, '..', '..', 'games', 'fastest-answer', 'fa-questions.js')); } catch (e) { return null; }
+}());
+
+var ALL_CATS = [
+    { id: 'math', name: 'مسألة رياضية' }, { id: 'image', name: 'صورة واكتب الاسم' },
+    { id: 'reverse', name: 'اعكس الكلمة' }, { id: 'number', name: 'اكتب الرقم' },
+    { id: 'capital', name: 'عاصمة الدولة' }, { id: 'proverb', name: 'أكمل المثل' },
+    { id: 'scramble', name: 'ترتيب الحروف' }, { id: 'flag', name: 'علم الدولة' }
+];
+var DURATIONS = [10, 15, 20, 30];
+var SPIN_MS = 4500;      // اختيار اللاعبين والفئة (حركة على الشاشات)
+var COUNTDOWN_MS = 3000; // 3، 2، 1
+var MAX_LOG = 60;
+
+// نفس FA.norm في games/fastest-answer/fa-platform.js.
+function norm(s) {
+    return String(s == null ? '' : s).normalize('NFKC').trim()
+        .replace(/[ً-ٰٟۖ-ۭـ]/g, '').replace(/[​-‏‪-‮⁦-⁩﻿]/g, '')
+        .replace(/[أإآٱٲٳ]/g, 'ا').replace(/[ةۃہە]/g, 'ه')
+        .replace(/[ىیېۍ]/g, 'ي').replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/ء/g, '').replace(/ک/g, 'ك')
+        .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
+        .replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); })
+        .toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '')
+        .split(/\s+/).map(function (w) { return w.replace(/^ال/, ''); }).join('')
+        .replace(/(\p{L})\1+/gu, '$1');
+}
+
+function rand(n) { return Math.floor(Math.random() * n); }
+function pick(a) { return a[rand(a.length)]; }
+
+function clampInt(v, min, max, def) {
+    var n = Math.floor(Number(v));
+    return isNaN(n) ? def : Math.min(max, Math.max(min, n));
+}
+
+/** تنظيف إعدادات المنشئ (تجي من المتصفح). */
+function sanitizeSettings(raw, sideNames) {
+    raw = raw || {};
+    var cats = Array.isArray(raw.cats) ? raw.cats.filter(function (id) { return ALL_CATS.some(function (c) { return c.id === id; }); }) : [];
+    var dur = clampInt(raw.dur, 5, 60, 15);
+    if (DURATIONS.indexOf(dur) < 0) dur = 15;
+    return {
+        team1: String(raw.team1 || '').trim().slice(0, 24) || (sideNames && sideNames[0]) || 'الفريق 1',
+        team2: String(raw.team2 || '').trim().slice(0, 24) || (sideNames && sideNames[1]) || 'الفريق 2',
+        keyword: String(raw.keyword || '').trim().slice(0, 20) || 'دخول',
+        maxPlayers: clampInt(raw.maxPlayers, 1, 200, 20),
+        followersOnly: Boolean(raw.followersOnly),
+        target: clampInt(raw.target, 1, 99, 15),
+        dur: dur,
+        cats: cats.length ? cats : ALL_CATS.map(function (c) { return c.id; })
+    };
+}
+
+function genQuestion(catId) {
+    var D = QUESTIONS || {};
+    var cat = ALL_CATS.filter(function (c) { return c.id === catId; })[0] || ALL_CATS[0];
+    var base = { catName: cat.name, dir: 'rtl', ls: '0' };
+    function q(extra) { var o = {}; Object.keys(base).forEach(function (k) { o[k] = base[k]; }); Object.keys(extra).forEach(function (k) { o[k] = extra[k]; }); return o; }
+    if (cat.id === 'math' || !QUESTIONS) {
+        var op = pick(['+', '−', '×']), a, b, res;
+        if (op === '×') { a = 2 + rand(14); b = 2 + rand(11); res = a * b; }
+        else { a = 12 + rand(88); b = 2 + rand(60); if (op === '−' && b > a) { var t = a; a = b; b = t; } res = op === '+' ? a + b : a - b; }
+        return q({ catName: ALL_CATS[0].name, sub: 'احسب الناتج', prompt: a + ' ' + op + ' ' + b, dir: 'ltr', answer: String(res), accept: [String(res)] });
+    }
+    var x;
+    if (cat.id === 'image') { x = pick(D.image); return q({ sub: 'ما اسم الصورة؟', emoji: x[0], answer: x[1], accept: [x[1]].concat(x[2] || []) }); }
+    if (cat.id === 'reverse') { x = pick(D.reverse); var rv = Array.from(x).reverse().join(''); return q({ sub: 'اكتب الكلمة معكوسة', prompt: x, answer: rv, accept: [rv] }); }
+    if (cat.id === 'number') { x = pick(D.number); return q({ sub: 'اكتب الرقم بالأرقام', prompt: x[0], answer: String(x[1]), accept: [String(x[1])] }); }
+    if (cat.id === 'capital') { x = pick(D.capital); return q({ sub: 'ما عاصمة هذه الدولة؟', prompt: x[0], answer: x[1], accept: [x[1]].concat(x[2] || []) }); }
+    if (cat.id === 'proverb') { x = pick(D.proverb); return q({ sub: 'أكمل المثل', prompt: x[0], answer: x[1], accept: [x[1]].concat(x[2] || []) }); }
+    if (cat.id === 'scramble') {
+        x = pick(D.scramble); var s, tries = 0;
+        do { s = Array.from(x).sort(function () { return Math.random() - 0.5; }).join(''); } while (s === x && ++tries < 20);
+        return q({ sub: 'رتّب الحروف لتكوين كلمة', prompt: Array.from(s).join(' '), ls: '8px', answer: x, accept: [x] });
+    }
+    x = pick(D.flag);
+    return q({ sub: 'لمن هذا العلم؟', img: 'https://flagcdn.com/w640/' + x[0] + '.png', answer: x[1], accept: [x[1]].concat(x[2] || []) });
+}
+
+function checkAnswer(text, question) {
+    var v = [norm(text), norm(String(text).replace(/(\S)(ال)/g, '$1 $2'))].filter(Boolean);
+    return v.length > 0 && question.accept.some(function (a) { return v.indexOf(norm(a)) >= 0; });
+}
+
+/**
+ * @param {Object} settings - ناتج sanitizeSettings
+ * @param {{schedule: function(fn, ms), onChange: function(), onWin: function(winnerIdx, teams), onRoundStart: function()}} hooks
+ */
+function createFastestAnswer(settings, hooks) {
+    var S = {
+        teams: [
+            { name: settings.team1, players: [], score: 0 },
+            { name: settings.team2, players: [], score: 0 }
+        ],
+        phase: 'ready',   // ready | spinning | countdown | question | results
+        round: 0,
+        chosen: [null, null],
+        catName: null,
+        question: null,   // للعرض (بدون الإجابات المقبولة)
+        answer: null,     // يظهر بعد نهاية الجولة
+        phaseEndsAt: null,
+        answers: [],      // [{user, team, pts, rank}]
+        received: 0,
+        winner: null,     // رقم الفريق الفائز
+        log: []
+    };
+    var players = {};           // name -> {id, side, avatar, frame}
+    var nameById = {};          // 'side:id' -> name
+    var played = [{}, {}];      // تدوير الأدوار
+    var lastPick = [null, null];
+    var currentQ = null;        // السؤال الكامل (مع accept)
+    var answered = {};
+    var roundToken = 0;
+    var matchStartedAt = null;
+    var catIds = settings.cats;
+
+    function log(kind, text) {
+        S.log.unshift({ kind: kind, text: text, at: Date.now() });
+        if (S.log.length > MAX_LOG) S.log.length = MAX_LOG;
+    }
+
+    function nameFor(side, p) {
+        var key = side + ':' + p.id;
+        if (nameById[key]) {
+            var known = players[nameById[key]];
+            if (p.avatarUrl && !known.avatar) known.avatar = p.avatarUrl;
+            if (p.frame) known.frame = p.frame;
+            return nameById[key];
+        }
+        var base = String(p.name || p.id).trim() || String(p.id), name = base, k = 2;
+        while (players[name]) name = base + ' ' + (k++);
+        players[name] = { id: p.id, side: side, avatar: p.avatarUrl || null, frame: p.frame || null };
+        nameById[key] = name;
+        return name;
+    }
+
+    function nextPlayer(i) {
+        var P = S.teams[i].players, done = played[i];
+        var left = P.filter(function (n) { return !done[n]; });
+        if (!left.length) {
+            played[i] = done = {};
+            left = P.length > 1 ? P.filter(function (n) { return n !== lastPick[i]; }) : P.slice();
+        }
+        var c = pick(left);
+        done[c] = true;
+        lastPick[i] = c;
+        return c;
+    }
+
+    function publicQuestion(q) {
+        return { catName: q.catName, sub: q.sub, prompt: q.prompt || null, emoji: q.emoji || null, img: q.img || null, dir: q.dir, ls: q.ls };
+    }
+
+    function endRound(token) {
+        if (token !== roundToken || S.phase !== 'question') return;
+        S.phase = 'results';
+        S.phaseEndsAt = null;
+        S.answer = currentQ ? currentQ.answer : null;
+        var lead = S.teams.map(function (t, i) { return { score: t.score, i: i }; })
+            .filter(function (t) { return t.score >= settings.target; })
+            .sort(function (a, b) { return b.score - a.score; })[0];
+        if (lead) {
+            S.winner = lead.i;
+            log('win', 'فوز ' + S.teams[lead.i].name + ' بـ ' + S.teams[lead.i].score + ' نقطة');
+            hooks.onWin(lead.i, durationMs());
+        }
+        hooks.onChange();
+    }
+
+    function durationMs() { return matchStartedAt ? Date.now() - matchStartedAt : 0; }
+
+    var api = {
+        state: function () {
+            var view = JSON.parse(JSON.stringify(S));
+            view.playerInfo = {};
+            S.teams.forEach(function (t) {
+                t.players.forEach(function (n) { var p = players[n]; view.playerInfo[n] = { avatar: p.avatar, frame: p.frame }; });
+            });
+            view.settings = { keyword: settings.keyword, target: settings.target, dur: settings.dur, maxPlayers: settings.maxPlayers, followersOnly: settings.followersOnly };
+            return view;
+        },
+
+        /** تعليق من شات البث رقم side (0 أو 1). */
+        onChat: function (side, p) {
+            if (!p || typeof p.text !== 'string' || !p.id) return false;
+            var text = p.text;
+            var user = nameFor(side, p);
+            var team = S.teams[side];
+            var inTeam = team.players.indexOf(user) >= 0;
+
+            // الانضمام: كلمة الدخول من شات البث نفسه → فريق هذا البث.
+            if (!inTeam && norm(text) === norm(settings.keyword)) {
+                if (settings.followersOnly && !p.isFollower) return false;
+                if (team.players.length >= settings.maxPlayers) return false;
+                team.players.push(user);
+                log('join', user + ' انضم لـ ' + team.name);
+                return true;
+            }
+
+            // الإجابة: بس اللاعب صاحب الدور، ومن شات بثه.
+            if (S.phase !== 'question' || !currentQ) return false;
+            if (S.chosen[side] !== user || answered[user]) return false;
+            S.received++;
+            if (checkAnswer(text, currentQ)) {
+                var rank = S.answers.length, pts = rank === 0 ? 2 : 0;
+                answered[user] = true;
+                S.answers.push({ user: user, team: side, pts: pts, rank: rank + 1 });
+                team.score += pts;
+                log('correct', user + ' أجاب ' + (rank === 0 ? 'أولاً' : 'ثانياً') + ' · ' + team.name + (pts ? ' +' + pts : ''));
+                if (Object.keys(answered).length >= 2) {
+                    var tk = roundToken;
+                    hooks.schedule(function () { endRound(tk); }, 600);
+                }
+            } else {
+                log('wrong', user + ' أجاب خطأ');
+            }
+            return true;
+        },
+
+        /** بدء جولة (المنشئ). */
+        spin: function () {
+            if (S.winner !== null) return { ok: false, error: 'match_over' };
+            if (S.phase !== 'ready' && S.phase !== 'results') return { ok: false, error: 'busy' };
+            if (S.teams.some(function (t) { return !t.players.length; })) return { ok: false, error: 'need_players' };
+            if (!matchStartedAt) matchStartedAt = Date.now();
+            hooks.onRoundStart();
+            var token = ++roundToken;
+            S.round++;
+            S.chosen = [nextPlayer(0), nextPlayer(1)];
+            currentQ = genQuestion(pick(catIds));
+            S.catName = currentQ.catName;
+            S.question = null;
+            S.answer = null;
+            S.answers = [];
+            S.received = 0;
+            answered = {};
+            S.phase = 'spinning';
+            S.phaseEndsAt = Date.now() + SPIN_MS;
+            log('round', 'الجولة ' + S.round + ': ' + S.chosen.join(' ضد ') + ' · ' + S.catName);
+            hooks.schedule(function () {
+                if (token !== roundToken) return;
+                S.phase = 'countdown';
+                S.phaseEndsAt = Date.now() + COUNTDOWN_MS;
+                hooks.onChange();
+                hooks.schedule(function () {
+                    if (token !== roundToken) return;
+                    S.phase = 'question';
+                    S.question = publicQuestion(currentQ);
+                    S.phaseEndsAt = Date.now() + settings.dur * 1000;
+                    hooks.onChange();
+                    hooks.schedule(function () { endRound(token); }, settings.dur * 1000);
+                }, COUNTDOWN_MS);
+            }, SPIN_MS);
+            return { ok: true };
+        },
+
+        /** مباراة جديدة بنفس الفرق واللاعبين. */
+        newGame: function () {
+            roundToken++;
+            matchStartedAt = null;
+            played = [{}, {}];
+            S.teams.forEach(function (t) { t.score = 0; });
+            S.phase = 'ready'; S.round = 0; S.chosen = [null, null]; S.catName = null;
+            S.question = null; S.answer = null; S.phaseEndsAt = null; S.answers = []; S.received = 0; S.winner = null;
+            currentQ = null; answered = {};
+            log('round', 'مباراة جديدة');
+            return { ok: true };
+        },
+
+        /** إنهاء يدوي: الأعلى نقاطاً يفوز (والتعادل بدون فائز). */
+        finish: function () {
+            roundToken++;
+            S.phaseEndsAt = null;
+            var t = S.teams;
+            if (t[0].score === t[1].score) { S.phase = 'results'; S.winner = null; log('round', 'تعادل! لا يوجد فائز'); return { ok: true, draw: true }; }
+            var wi = t[0].score > t[1].score ? 0 : 1;
+            S.phase = 'results'; S.winner = wi;
+            log('win', 'إنهاء يدوي · فوز ' + t[wi].name);
+            hooks.onWin(wi, durationMs());
+            return { ok: true };
+        },
+
+        /** كل اللاعبين للنقاط: [{tiktokUsername, team}] */
+        participants: function () {
+            var out = [];
+            S.teams.forEach(function (t, i) {
+                t.players.forEach(function (n) {
+                    var id = players[n] && players[n].id;
+                    var u = id ? String(id).replace(/^tiktok:/, '') : '';
+                    if (u) out.push({ tiktokUsername: u, team: i });
+                });
+            });
+            return out;
+        }
+    };
+    return api;
+}
+
+module.exports = {
+    ALL_CATS: ALL_CATS,
+    sanitizeSettings: sanitizeSettings,
+    createFastestAnswer: createFastestAnswer,
+    _norm: norm,
+    _checkAnswer: checkAnswer,
+    _genQuestion: genQuestion
+};

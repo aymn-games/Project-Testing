@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>تحدي البثوث — منصة ألعاب أيمن</title>
+<meta name="description" content="العب ضد بث ستريمر ثاني: كل جمهور فريق، والفائز بثّ واحد.">
+<link rel="icon" href="favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- تحدي البثوث: ستريمر يسوي مباراة (لعبة + إعدادات)، يبحث عن خصمه بيوزر
+     تيك توك أو ID البروفايل ويرسل له دعوة. الدعوات توصل هنا (تُسحب كل 3
+     ثواني)، والمباراة نفسها تشتغل على الخادم (backend/challenge/) وتنفتح
+     بشاشة اللعبة الخاصة بالتحدي. -->
+<style>
+    :root{ --bg:#050508; --text:#f4f2fb; --muted:#968ea4; --line:rgba(255,255,255,.09); --card:#100d18; --accent:#8a4fe8; --accent2:#b28cf5; --ok:#4ade80; --bad:#f87171; }
+    *{ box-sizing:border-box; }
+    body{
+        margin:0; min-height:100dvh; display:flex; flex-direction:column;
+        font-family:'IBM Plex Sans Arabic', system-ui, sans-serif; color:var(--text);
+        background:
+            radial-gradient(circle at 80% -10%, rgba(122,63,212,.22), transparent 45%),
+            radial-gradient(circle at 10% 110%, rgba(254,44,85,.10), transparent 45%),
+            var(--bg);
+    }
+    a{ color:inherit; text-decoration:none; }
+    button{ font:inherit; }
+    :focus-visible{ outline:2px solid var(--accent2); outline-offset:3px; }
+
+    /* ===== الترويسة (نفس مكتبة الألعاب) ===== */
+    .top-wrap{ padding:14px clamp(12px,3vw,36px) 0; }
+    header.top{
+        display:flex; align-items:center; justify-content:space-between; column-gap:20px;
+        max-width:1600px; margin:0 auto; padding:12px 20px 12px 14px;
+        background:rgba(10,9,16,.92); border:1px solid var(--line); border-radius:999px;
+        box-shadow:rgba(0,0,0,.9) 0 18px 50px -20px, rgba(122,63,212,.1) 0 0 0 1px inset;
+    }
+    .top-logo img{ display:block; height:50px; width:auto; }
+    .top-nav{ display:flex; align-items:center; gap:clamp(16px,2.4vw,35px); font-size:16px; color:#a79fbb; }
+    .top-nav a{ white-space:nowrap; transition:color .25s; }
+    .top-nav a:hover, .top-nav a.is-on{ color:var(--text); }
+    .top-cta{ display:inline-flex; align-items:center; padding:10px 20px; border-radius:999px; white-space:nowrap; background:linear-gradient(rgb(138,79,232), rgb(122,63,212)); color:#f3ecff; font-weight:600; font-size:14px; }
+    @media (max-width:900px){ .top-nav a.nav-extra{ display:none; } }
+    @media (max-width:600px){ .top-cta{ display:none; } .top-logo img{ height:42px; } header.top{ padding:10px 18px 10px 12px; } }
+
+    .hero{ padding:clamp(40px,5vw,72px) 16px clamp(16px,2vw,24px); text-align:center; }
+    .hero-tag{ display:inline-flex; align-items:center; gap:9px; padding:7px 16px; border-radius:999px; border:1px solid rgba(254,44,85,.35); background:rgba(254,44,85,.08); font-size:13px; color:#ffb3c1; }
+    .hero-dot{ width:6px; height:6px; border-radius:50%; background:#fe2c55; box-shadow:rgba(254,44,85,.8) 0 0 10px 2px; }
+    .hero h1{ margin:20px 0 0; font-family:'Noto Kufi Arabic', sans-serif; font-weight:700; font-size:clamp(30px,5vw,56px); line-height:1.3; }
+    .hero p{ margin:14px auto 0; max-width:620px; font-size:16px; line-height:1.9; color:var(--muted); }
+
+    main{ flex:1; width:100%; max-width:1100px; margin:0 auto; padding:8px 16px 80px; display:flex; flex-direction:column; gap:20px; }
+    .panel{ background:var(--card); border:1px solid var(--line); border-radius:22px; padding:clamp(16px,2.4vw,24px); }
+    .panel h2{ margin:0 0 4px; font-size:19px; font-weight:700; }
+    .panel .sub{ margin:0 0 14px; font-size:13.5px; color:var(--muted); line-height:1.8; }
+    .hidden{ display:none !important; }
+
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 20px; border-radius:999px; border:0; cursor:pointer; font-weight:700; font-size:14px; color:#fff; background:linear-gradient(135deg,#7a3fd4,#b28cf5); white-space:nowrap; }
+    .btn:disabled{ opacity:.5; cursor:default; }
+    .btn-ghost{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#e7e3ef; }
+    .btn-red{ background:linear-gradient(135deg,#fe2c55,#ff5a7a); }
+    .btn-ok{ background:linear-gradient(135deg,#16a34a,#4ade80); color:#04140a; }
+
+    .notice{ display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; padding:16px 20px; border-radius:18px; border:1px solid rgba(251,191,36,.35); background:rgba(251,191,36,.07); color:#fde68a; font-size:14.5px; line-height:1.8; }
+    .notice.live{ border-color:rgba(74,222,128,.4); background:rgba(74,222,128,.08); color:#bbf7d0; }
+
+    /* ===== الدعوات ===== */
+    .invite{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 16px; border-radius:18px; background:rgba(254,44,85,.06); border:1px solid rgba(254,44,85,.3); }
+    .invite + .invite{ margin-top:10px; }
+    .avatar{ width:52px; height:52px; border-radius:50%; object-fit:cover; background:#241c33; flex:0 0 auto; border:2px solid rgba(255,255,255,.12); }
+    .avatar.sm{ width:42px; height:42px; }
+    .who{ flex:1 1 200px; min-width:0; }
+    .who b{ display:block; font-size:15.5px; }
+    .who span{ display:block; font-size:13px; color:var(--muted); line-height:1.7; }
+    .who bdi{ direction:ltr; unicode-bidi:isolate; }
+    .actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+    /* ===== الألعاب ===== */
+    .games{ display:grid; gap:14px; grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr)); }
+    .game{ position:relative; text-align:right; padding:18px; border-radius:18px; cursor:pointer; color:var(--text); background:rgba(255,255,255,.03); border:2px solid var(--line); transition:border-color .2s, transform .2s; }
+    .game:hover{ transform:translateY(-2px); }
+    .game.on{ border-color:var(--accent2); background:rgba(138,79,232,.12); }
+    .game .ic{ font-size:30px; }
+    .game b{ display:block; margin-top:8px; font-size:17px; }
+    .game span{ display:block; margin-top:4px; font-size:13px; color:var(--muted); line-height:1.7; }
+    .game .soon{ position:absolute; top:12px; left:12px; font-size:11px; padding:3px 9px; border-radius:999px; background:rgba(255,255,255,.07); color:var(--muted); }
+    .game.disabled{ opacity:.45; cursor:default; transform:none; }
+
+    /* ===== صفوف الإعدادات: العنوان يمين، العنصر يسار (CLAUDE.md) ===== */
+    .rows{ display:flex; flex-direction:column; gap:10px; }
+    .row{ display:flex; justify-content:space-between; align-items:center; gap:14px; padding:12px 16px; border-radius:16px; border:1px solid rgba(255,255,255,.07); background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015)); }
+    .row-label{ order:-1; text-align:right; font-size:14.5px; font-weight:600; }
+    .row-label small{ display:block; font-weight:400; font-size:12px; color:var(--muted); margin-top:2px; }
+    .row input[type=text], .row input[type=number]{ width:min(220px,48vw); padding:9px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(0,0,0,.25); color:var(--text); font:inherit; font-size:14px; outline:none; }
+    .row input[type=number]{ width:110px; text-align:center; }
+    .pills{ display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+    .pill{ padding:7px 13px; border-radius:999px; cursor:pointer; font-size:13px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.04); color:#d8d2e6; }
+    .pill.on{ border-color:var(--accent2); background:rgba(138,79,232,.25); color:#fff; }
+    .switch{ position:relative; width:46px; height:26px; flex:0 0 auto; }
+    .switch input{ opacity:0; width:0; height:0; }
+    .switch span{ position:absolute; inset:0; border-radius:999px; background:#2f2a3d; transition:.2s; cursor:pointer; }
+    .switch span::after{ content:""; position:absolute; top:3px; right:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:.2s; }
+    .switch input:checked + span{ background:var(--accent); }
+    .switch input:checked + span::after{ right:23px; }
+    .row.col{ flex-direction:column; align-items:stretch; }
+    .row.col .pills{ justify-content:flex-start; }
+    @media (max-width:560px){ .row{ flex-wrap:wrap; } .row.wrap-ok .pills{ justify-content:flex-start; } }
+
+    /* ===== البحث عن خصم ===== */
+    .search{ display:flex; gap:10px; flex-wrap:wrap; }
+    .search input{ flex:1 1 220px; padding:12px 16px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background:rgba(0,0,0,.25); color:var(--text); font:inherit; font-size:14.5px; outline:none; }
+    .results{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+    .result{ display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:16px; cursor:pointer; border:2px solid var(--line); background:rgba(255,255,255,.03); text-align:right; color:var(--text); width:100%; }
+    .result.on{ border-color:var(--accent2); background:rgba(138,79,232,.12); }
+    .result:disabled{ opacity:.5; cursor:default; }
+    .tag{ font-size:11.5px; padding:3px 9px; border-radius:999px; background:rgba(248,113,113,.12); color:#fca5a5; white-space:nowrap; }
+    .empty{ font-size:13.5px; color:var(--muted); padding:8px 2px; }
+    .send{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
+    .msg{ font-size:13.5px; min-height:20px; }
+    .msg.bad{ color:#fca5a5; } .msg.good{ color:#86efac; }
+    footer{ border-top:1px solid var(--line); padding:20px; text-align:center; color:var(--muted); font-size:13px; }
+</style>
+<script src="js/agp-apple-emoji.js"></script>
+</head>
+<body>
+
+<div class="top-wrap">
+    <header class="top">
+        <a href="./" class="top-logo" aria-label="الرئيسية"><img src="logo.png" alt="ألعاب أيمن"></a>
+        <nav class="top-nav" aria-label="التنقل">
+            <a href="./">الرئيسية</a>
+            <a href="games.html">ألعاب التيك توك</a>
+            <a href="challenge.html" class="is-on" aria-current="page">تحدي البثوث</a>
+            <a href="discord-games.html" class="nav-extra">ألعاب الدسكورد</a>
+        </nav>
+        <a href="profile.html" class="top-cta" id="top-account">حسابي</a>
+    </header>
+</div>
+
+<section class="hero">
+    <div class="hero-tag"><span class="hero-dot"></span>جديد · بث ضد بث</div>
+    <h1>تحدي البثوث</h1>
+    <p>تحدّى ستريمر ثاني: جمهورك فريق وجمهوره فريق، ونفس اللعبة تظهر على البثين. سوِّ المباراة، أرسل الدعوة، والأسرع يفوز.</p>
+</section>
+
+<main>
+    <div id="gate" class="notice hidden"></div>
+
+    <div id="active" class="notice live hidden">
+        <span>عندك مباراة تحدي جارية الحين.</span>
+        <a class="btn btn-ok" id="active-go" href="#">ادخل المباراة</a>
+    </div>
+
+    <section class="panel hidden" id="incoming-panel">
+        <h2>دعوات وصلتك</h2>
+        <p class="sub">ستريمر يتحداك — اقبل وتنتقلون الاثنين للمباراة مباشرة.</p>
+        <div id="incoming"></div>
+    </section>
+
+    <section class="panel hidden" id="outgoing-panel">
+        <h2>دعوتك</h2>
+        <div id="outgoing"></div>
+    </section>
+
+    <section class="panel" id="create-panel">
+        <h2>سوِّ مباراة</h2>
+        <p class="sub">اختر اللعبة، اضبط إعداداتها، ثم ادعُ خصمك.</p>
+        <div class="games" id="games"></div>
+    </section>
+
+    <section class="panel hidden" id="settings-panel">
+        <h2>إعدادات المباراة</h2>
+        <p class="sub">جمهور كل بث يدخل فريق بثه بكتابة كلمة الدخول في شاته. كل جولة يُختار لاعب من كل فريق، وبس هو يجاوب من شات بثه.</p>
+        <div class="rows" id="settings"></div>
+    </section>
+
+    <section class="panel hidden" id="opponent-panel">
+        <h2>ادعُ خصمك</h2>
+        <p class="sub">ابحث بيوزر تيك توك أو بالـID حق البروفايل. الخصم لازم يكون ستريمر مربوط بتيك توك.</p>
+        <div class="search">
+            <input id="q" type="search" dir="auto" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="يوزر تيك توك أو ID البروفايل">
+        </div>
+        <div class="results" id="results"></div>
+        <div class="send">
+            <div class="msg" id="send-msg"></div>
+            <button class="btn btn-red" id="send" disabled>إرسال الدعوة</button>
+        </div>
+    </section>
+</main>
+
+<footer>© منصة ألعاب أيمن — جميع الحقوق محفوظة</footer>
+
+<script src="auth/auth-client.js"></script>
+<script>
+(function () {
+    'use strict';
+    var A = window.AGPAuth;
+    var POLL_MS = 3000;
+
+    // الألعاب المتاحة للتحدي — كل لعبة: إعداداتها وشاشة مباراتها.
+    var CATS = [['math','مسألة رياضية'],['image','صورة واكتب الاسم'],['reverse','اعكس الكلمة'],['number','اكتب الرقم'],['capital','عاصمة الدولة'],['proverb','أكمل المثل'],['scramble','ترتيب الحروف'],['flag','علم الدولة']];
+    var GAMES = [
+        { id: 'fastest-answer', icon: '⚡', name: 'أسرع إجابة', desc: 'نفس السؤال للبثين، ولاعب من كل فريق يتسابقون على الإجابة.', screen: 'games/fastest-answer/challenge.html' },
+        { id: 'xo', icon: '❌', name: 'إكس أو', desc: 'قريباً', soon: true },
+        { id: 'team-war', icon: '⚔️', name: 'حرب الفريقين', desc: 'قريباً', soon: true }
+    ];
+    var ERRORS = {
+        not_eligible: 'حسابك لازم يكون ستريمر مربوط بتيك توك.',
+        opponent_not_eligible: 'هذا الحساب مو ستريمر مربوط بتيك توك.',
+        self: 'ما تقدر تتحدى نفسك 🙂',
+        you_in_match: 'عندك مباراة جارية — خلّصها أول.',
+        opponent_in_match: 'الخصم في مباراة ثانية الحين.',
+        unknown_game: 'اللعبة غير متاحة للتحدي.',
+        invite_not_found: 'الدعوة ما عادت موجودة.',
+        invite_expired: 'انتهت مدة الدعوة.',
+        invite_cancelled: 'الدعوة انلغت.',
+        invite_declined: 'الدعوة مرفوضة.',
+        invite_accepted: 'الدعوة مقبولة من قبل.'
+    };
+
+    var state = {
+        game: null,
+        settings: { team1: '', team2: '', keyword: 'دخول', maxPlayers: 20, followersOnly: false, target: 15, dur: 15, cats: CATS.map(function (c) { return c[0]; }) },
+        opponent: null,
+        avatars: {},      // inviteId -> صورة الطرف الثاني
+        handled: {},      // دعوات صادرة عرضنا نتيجتها
+        me: null
+    };
+
+    function $(id) { return document.getElementById(id); }
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function gameById(id) { return GAMES.filter(function (g) { return g.id === id; })[0]; }
+    function matchUrl(game, matchId) { var g = gameById(game); return (g && g.screen ? g.screen : 'games.html') + '?match=' + encodeURIComponent(matchId); }
+    function avatarImg(src, cls) { return src ? '<img class="avatar ' + (cls || '') + '" src="' + esc(src) + '" alt="">' : '<span class="avatar ' + (cls || '') + '"></span>'; }
+    function secs(ms) { return Math.ceil(ms / 1000); }
+    function settingsSummary(g, s) {
+        if (!s) return '';
+        var parts = ['نقاط الفوز ' + s.target, 'وقت الإجابة ' + s.dur + ' ث', 'كلمة الدخول «' + s.keyword + '»'];
+        if (s.followersOnly) parts.push('المتابعين فقط');
+        return parts.join(' · ');
+    }
+
+    /* ---- الدخول والصلاحية ---- */
+    function gate(html) { var g = $('gate'); g.innerHTML = html; g.classList.remove('hidden'); ['create-panel', 'settings-panel', 'opponent-panel'].forEach(function (id) { $(id).classList.add('hidden'); }); }
+
+    /* ---- الألعاب ---- */
+    function renderGames() {
+        $('games').innerHTML = GAMES.map(function (g) {
+            return '<button type="button" class="game' + (g.soon ? ' disabled' : '') + (state.game === g.id ? ' on' : '') + '" data-game="' + g.id + '"' + (g.soon ? ' disabled' : '') + '>' +
+                (g.soon ? '<span class="soon">قريباً</span>' : '') +
+                '<span class="ic">' + g.icon + '</span><b>' + esc(g.name) + '</b><span>' + esc(g.desc) + '</span></button>';
+        }).join('');
+    }
+    $('games').addEventListener('click', function (e) {
+        var b = e.target.closest('[data-game]');
+        if (!b || b.disabled) return;
+        state.game = b.getAttribute('data-game');
+        renderGames();
+        renderSettings();
+        $('settings-panel').classList.remove('hidden');
+        $('opponent-panel').classList.remove('hidden');
+        updateSend();
+        $('settings-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    /* ---- الإعدادات ---- */
+    function renderSettings() {
+        var s = state.settings;
+        var durPills = [10, 15, 20, 30].map(function (d) { return '<button type="button" class="pill' + (s.dur === d ? ' on' : '') + '" data-dur="' + d + '">' + d + ' ث</button>'; }).join('');
+        var catPills = CATS.map(function (c) { return '<button type="button" class="pill' + (s.cats.indexOf(c[0]) >= 0 ? ' on' : '') + '" data-cat="' + c[0] + '">' + c[1] + '</button>'; }).join('');
+        $('settings').innerHTML =
+            '<label class="row"><input type="text" data-k="team1" maxlength="24" placeholder="اسمك" value="' + esc(s.team1) + '"><span class="row-label">اسم فريقك<small>يظهر على الشاشتين — فاضي = اسمك</small></span></label>' +
+            '<label class="row"><input type="text" data-k="team2" maxlength="24" placeholder="اسم الخصم" value="' + esc(s.team2) + '"><span class="row-label">اسم فريق الخصم<small>فاضي = اسم الخصم</small></span></label>' +
+            '<label class="row"><input type="text" data-k="keyword" maxlength="20" value="' + esc(s.keyword) + '"><span class="row-label">كلمة الدخول<small>نفس الكلمة بالشاتين — الفريق يتحدد من البث</small></span></label>' +
+            '<label class="row"><input type="number" data-k="maxPlayers" min="1" max="200" value="' + s.maxPlayers + '"><span class="row-label">عدد اللاعبين لكل فريق</span></label>' +
+            '<label class="row"><input type="number" data-k="target" min="1" max="99" value="' + s.target + '"><span class="row-label">نقاط الفوز<small>كل إجابة أولى صحيحة = نقطتين</small></span></label>' +
+            '<div class="row wrap-ok"><div class="pills">' + durPills + '</div><span class="row-label">وقت الإجابة</span></div>' +
+            '<label class="row"><span class="switch"><input type="checkbox" data-k="followersOnly"' + (s.followersOnly ? ' checked' : '') + '><span></span></span><span class="row-label">المتابعين فقط<small>كل بث: بس متابعين صاحب البث يدخلون</small></span></label>' +
+            '<div class="row col"><span class="row-label">الفئات</span><div class="pills">' + catPills + '</div></div>';
+    }
+    $('settings').addEventListener('input', function (e) {
+        var k = e.target.getAttribute('data-k');
+        if (!k) return;
+        var s = state.settings;
+        if (e.target.type === 'checkbox') s[k] = e.target.checked;
+        else if (e.target.type === 'number') s[k] = Number(e.target.value);
+        else s[k] = e.target.value;
+    });
+    $('settings').addEventListener('click', function (e) {
+        var p = e.target.closest('.pill');
+        if (!p) return;
+        var s = state.settings;
+        if (p.hasAttribute('data-dur')) s.dur = Number(p.getAttribute('data-dur'));
+        if (p.hasAttribute('data-cat')) {
+            var c = p.getAttribute('data-cat'), i = s.cats.indexOf(c);
+            if (i >= 0) { if (s.cats.length > 1) s.cats.splice(i, 1); } else s.cats.push(c);
+        }
+        renderSettings();
+    });
+
+    /* ---- البحث عن خصم ---- */
+    var searchTimer = null, searchSeq = 0;
+    $('q').addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        var q = $('q').value.trim();
+        if (q.length < 2) { $('results').innerHTML = ''; return; }
+        searchTimer = setTimeout(function () {
+            var seq = ++searchSeq;
+            A.challengeSearch(q).then(function (r) {
+                if (seq !== searchSeq) return;
+                var list = (r && r.results) || [];
+                if (!list.length) { $('results').innerHTML = '<div class="empty">ما لقينا ستريمر مربوط بهذا اليوزر أو الـID.</div>'; return; }
+                $('results').innerHTML = list.map(function (u, i) {
+                    var on = state.opponent && state.opponent.customId === u.customId;
+                    return '<button type="button" class="result' + (on ? ' on' : '') + '" data-i="' + i + '"' + (u.busy ? ' disabled' : '') + '>' +
+                        avatarImg(u.avatar, 'sm') +
+                        '<span class="who"><b>' + esc(u.name) + '</b><span><bdi>@' + esc(u.tiktok) + '</bdi> · ID <bdi>' + esc(u.customId) + '</bdi></span></span>' +
+                        (u.busy ? '<span class="tag">في مباراة</span>' : '') + '</button>';
+                }).join('');
+                $('results').__list = list;
+            });
+        }, 300);
+    });
+    $('results').addEventListener('click', function (e) {
+        var b = e.target.closest('.result');
+        if (!b || b.disabled) return;
+        state.opponent = $('results').__list[Number(b.getAttribute('data-i'))];
+        Array.prototype.forEach.call($('results').querySelectorAll('.result'), function (x) { x.classList.toggle('on', x === b); });
+        updateSend();
+    });
+
+    function updateSend() {
+        $('send').disabled = !(state.game && state.opponent);
+        if (state.opponent) setMsg('الخصم: ' + state.opponent.name + ' (@' + state.opponent.tiktok + ')', '');
+    }
+    function setMsg(t, kind) { var m = $('send-msg'); m.textContent = t; m.className = 'msg' + (kind ? ' ' + kind : ''); }
+
+    $('send').addEventListener('click', function () {
+        if (!state.game || !state.opponent) return;
+        $('send').disabled = true;
+        A.challengeInvite(state.opponent.customId, state.game, state.settings).then(function (r) {
+            $('send').disabled = false;
+            if (r && r.success) { setMsg('تم إرسال الدعوة ✓ بانتظار رد ' + state.opponent.name, 'good'); poll(); return; }
+            setMsg(ERRORS[r && r.error] || 'تعذّر إرسال الدعوة، حاول مرة ثانية.', 'bad');
+        }).catch(function () { $('send').disabled = false; setMsg('تعذّر الاتصال، حاول مرة ثانية.', 'bad'); });
+    });
+
+    /* ---- صندوق الدعوات ---- */
+    function renderIncoming(list) {
+        list.forEach(function (inv) { if (inv.other.avatar) state.avatars[inv.id] = inv.other.avatar; });
+        $('incoming-panel').classList.toggle('hidden', !list.length);
+        $('incoming').innerHTML = list.map(function (inv) {
+            var g = gameById(inv.game) || { icon: '🎮' };
+            return '<div class="invite" data-id="' + inv.id + '">' + avatarImg(state.avatars[inv.id]) +
+                '<div class="who"><b>' + esc(inv.other.name) + ' يتحداك!</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · ' + g.icon + ' ' + esc(inv.gameName) + '</span>' +
+                '<span>' + esc(settingsSummary(inv.game, inv.settings)) + ' · تنتهي خلال ' + secs(inv.expiresIn) + ' ث</span></div>' +
+                '<div class="actions"><button class="btn btn-ok" data-act="accept">قبول</button><button class="btn btn-ghost" data-act="decline">رفض</button></div></div>';
+        }).join('');
+    }
+    $('incoming').addEventListener('click', function (e) {
+        var b = e.target.closest('[data-act]');
+        if (!b) return;
+        var card = b.closest('.invite'), id = card.getAttribute('data-id'), accept = b.getAttribute('data-act') === 'accept';
+        Array.prototype.forEach.call(card.querySelectorAll('button'), function (x) { x.disabled = true; });
+        A.challengeRespond(id, accept).then(function (r) {
+            if (r && r.success && accept) { location.href = matchUrl(r.game, r.matchId); return; }
+            if (!(r && r.success)) alert(ERRORS[r && r.error] || 'تعذّر الرد على الدعوة.');
+            poll();
+        });
+    });
+
+    function renderOutgoing(inv, activeMatch) {
+        // دعوة مقبولة ومباراتها خلصت (أو مو جارية): ما نعرضها ولا ننتقل لها.
+        if (inv && inv.status === 'accepted' && !(activeMatch && activeMatch.id === inv.matchId)) state.handled[inv.id] = true;
+        var show = inv && (inv.status === 'pending' || !state.handled[inv.id]);
+        $('outgoing-panel').classList.toggle('hidden', !show);
+        if (!show) return;
+        if (inv.other.avatar) state.avatars[inv.id] = inv.other.avatar;
+        var text = {
+            pending: 'بانتظار رد ' + inv.other.name + ' · تنتهي خلال ' + secs(inv.expiresIn) + ' ث',
+            accepted: 'قبل التحدي! جاري الانتقال للمباراة...',
+            declined: inv.other.name + ' رفض الدعوة.',
+            expired: 'انتهت مدة الدعوة بدون رد.',
+            cancelled: 'ألغيت الدعوة.'
+        }[inv.status] || '';
+        $('outgoing').innerHTML = '<div class="invite">' + avatarImg(state.avatars[inv.id]) +
+            '<div class="who"><b>' + esc(inv.other.name) + '</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · ' + esc(inv.gameName) + '</span><span>' + esc(text) + '</span></div>' +
+            '<div class="actions">' + (inv.status === 'pending' ? '<button class="btn btn-ghost" data-cancel="' + inv.id + '">إلغاء الدعوة</button>'
+                : '<button class="btn btn-ghost" data-dismiss="' + inv.id + '">إخفاء</button>') + '</div></div>';
+        if (inv.status === 'accepted' && inv.matchId) { state.handled[inv.id] = true; location.href = matchUrl(inv.game, inv.matchId); }
+    }
+    $('outgoing').addEventListener('click', function (e) {
+        var c = e.target.closest('[data-cancel]'), d = e.target.closest('[data-dismiss]');
+        if (c) A.challengeCancel(c.getAttribute('data-cancel')).then(poll);
+        if (d) { state.handled[d.getAttribute('data-dismiss')] = true; $('outgoing-panel').classList.add('hidden'); }
+    });
+
+    var polling = false;
+    function poll() {
+        if (polling) return;
+        polling = true;
+        A.challengeInbox(Object.keys(state.avatars).join(',')).then(function (r) {
+            polling = false;
+            if (!r || !r.success) {
+                if (r && r.__httpStatus === 401) gate('<span>سجّل دخول بحساب ستريمر مربوط بتيك توك عشان تتحدى.</span><a class="btn" href="login.html">تسجيل الدخول</a>');
+                return;
+            }
+            if (!r.eligible) {
+                gate('<span>تحدي البثوث لحسابات الستريمر المربوطة بتيك توك. اربط حسابك من صفحة حسابي.</span><a class="btn" href="profile.html">ربط حساب تيك توك</a>');
+            }
+            $('active').classList.toggle('hidden', !r.activeMatch);
+            if (r.activeMatch) $('active-go').href = matchUrl(r.activeMatch.game, r.activeMatch.id);
+            renderIncoming(r.incoming || []);
+            renderOutgoing(r.outgoing, r.activeMatch);
+        }).catch(function () { polling = false; });
+    }
+
+    if (!A || !A.getToken || !A.getToken()) {
+        gate('<span>سجّل دخول بحساب ستريمر مربوط بتيك توك عشان تتحدى.</span><a class="btn" href="login.html">تسجيل الدخول</a>');
+        $('top-account').textContent = 'تسجيل الدخول';
+        $('top-account').href = 'login.html';
+        return;
+    }
+    renderGames();
+    poll();
+    setInterval(function () { if (!document.hidden) poll(); }, POLL_MS);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
+})();
+</script>
+</body>
+</html>

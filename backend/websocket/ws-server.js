@@ -500,6 +500,10 @@ module.exports = {
         roomRelay.handleUpgrade(req, socket);
         return;
       }
+      if (pathname === '/ws/challenge') {
+        require('../challenge/challenge-match').handleUpgrade(req, socket);
+        return;
+      }
       handleUpgrade(req, socket);
     });
 
