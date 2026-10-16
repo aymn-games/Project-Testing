@@ -157,7 +157,7 @@ const COLORS = { 1:'#ef4444', 2:'#3b82f6', 0:'#d9c7a0', '-1':'#17131f' };
 // صور البطاقات (نفس صور شاشة اللعب images/) — اللون تحتها احتياط لين تتحمّل
 const TILE_IMG = c => c.t===-1?'images/tile-assassin.png':c.t===0?'images/tile-neutral.png':`images/tile-${c.t===1?'red':'blue'}-${c.img===2?2:1}.png`;
 // قبل الفتح: لون واحد لكل نوع · بعد الفتح: صورة الصندوق (نفس شاشة اللعب)
-const FLAT = { 1:'#dc2626', 2:'#2563eb', 0:'#d9c7a0', '-1':'#17131f' };
+const FLAT = { 1:'linear-gradient(160deg, #b91c1c, #7f1d1d)', 2:'linear-gradient(160deg, #1d4ed8, #172554)', 0:'linear-gradient(160deg, #b8a27a, #8a7553)', '-1':'linear-gradient(160deg, #1c1726, #08060c)' };
 const TILE = { 1:['linear-gradient(160deg, #f87171, #dc2626 55%, #991b1b)','#7f1d1d','🕵️','rgba(0,0,0,.28)','#fff','rgba(0,0,0,.4)'],
   2:['linear-gradient(160deg, #60a5fa, #2563eb 55%, #1e3a8a)','#1e3a8a','🕵️','rgba(0,0,0,.28)','#fff','rgba(0,0,0,.4)'],
   0:['linear-gradient(160deg, #f1e4c6, #d9c7a0)','#a8916a','🧍','rgba(255,255,255,.75)','#3b2a12','#3b2a12'],
@@ -281,7 +281,7 @@ class Component extends DCLogic {
           hintW:S.hintW, setHintW:e=>this.setState({hintW:e.target.value,hintErr:null}), hintErr:S.hintErr,
           hintNums:[1,2,3,4,5,6,7].map(n=>({n,pick:()=>this.setState({hintN:n,hintErr:null}),bg:S.hintN===n?'linear-gradient(135deg, #7c3aed, #a855f7)':'rgba(255,255,255,.04)',bd:S.hintN===n?'#c4b5fd':'rgba(255,255,255,.12)',fg:S.hintN===n?'#fff':'#c9c4d6'})),
           sendHint:()=>this.sendHint(), sendTxt:S.hintSending?'جارٍ الإرسال…':'إرسال التلميح', sendOp:S.hintSending?.6:1, sendBg:'linear-gradient(90deg, #7c3aed, #a855f7)' }; })(),
-      legend:[[S.teams[1],COLORS[1]],[S.teams[2],COLORS[2]],['محايد',COLORS[0]],['القاتل 💀',COLORS[-1]]].map(([t,c])=>({t,c}))
+      legend:[[S.teams[1],FLAT[1]],[S.teams[2],FLAT[2]],['محايد',FLAT[0]],['القاتل 💀',FLAT[-1]]].map(([t,c])=>({t,c}))
     };
   }
 }
