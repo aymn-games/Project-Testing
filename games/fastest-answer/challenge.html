@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>أسرع إجابة — تحدي البثوث</title>
+<link rel="icon" href="../../favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@500;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- شاشة مباراة "أسرع إجابة" بين بثين (تحدي البثوث). المنطق كله على
+     الخادم (backend/challenge/fastest-answer-logic.js): الشاشة تعرض الحالة
+     اللي توصلها عبر /ws/challenge وترسل أوامر التحكم بس. الفريق اللي على
+     اليمين دايماً فريقك، والخصم على اليسار. -->
+<style>
+    :root{ --bg:#06050a; --text:#f4f2fb; --muted:#9a93ab; --line:rgba(255,255,255,.09); --mine:#a78bfa; --theirs:#38bdf8; --ok:#4ade80; --bad:#f87171; }
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; min-height:100%; }
+    body{ min-height:100dvh; display:flex; flex-direction:column; font-family:'IBM Plex Sans Arabic',system-ui,sans-serif; color:var(--text);
+        background:radial-gradient(circle at 85% 0%, rgba(124,58,237,.25), transparent 45%), radial-gradient(circle at 10% 100%, rgba(56,189,248,.14), transparent 45%), var(--bg); }
+    button{ font:inherit; }
+    bdi{ unicode-bidi:isolate; }
+    .hidden{ display:none !important; }
+
+    .bar{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px clamp(14px,3vw,32px); }
+    .bar h1{ margin:0; font-family:'Noto Kufi Arabic',sans-serif; font-size:clamp(18px,2.4vw,24px); font-weight:800; }
+    .bar h1 small{ font-family:'IBM Plex Sans Arabic'; font-weight:500; font-size:13px; color:var(--muted); margin-inline-start:8px; }
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:11px 22px; border-radius:999px; border:0; cursor:pointer; font-weight:700; font-size:15px; color:#fff; background:linear-gradient(135deg,#7c3aed,#a855f7); white-space:nowrap; }
+    .btn:disabled{ opacity:.45; cursor:default; }
+    .btn-ghost{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#e7e3ef; font-weight:600; }
+    .btn-big{ padding:16px 38px; font-size:19px; }
+    .btn-red{ background:linear-gradient(135deg,#dc2626,#f87171); }
+
+    .arena{ flex:1; display:grid; grid-template-columns:minmax(220px,1fr) minmax(0,2.2fr) minmax(220px,1fr); gap:clamp(12px,2vw,24px); padding:0 clamp(14px,3vw,32px) 20px; align-items:start; }
+    @media (max-width:980px){ .arena{ grid-template-columns:1fr 1fr; } .stage{ grid-column:1 / -1; order:-1; } }
+    @media (max-width:560px){ .arena{ grid-template-columns:1fr; } }
+
+    .team{ border-radius:24px; padding:18px; background:rgba(255,255,255,.035); border:2px solid var(--line); display:flex; flex-direction:column; gap:12px; }
+    .team.mine{ border-color:rgba(167,139,250,.45); box-shadow:0 0 40px -18px rgba(167,139,250,.7); }
+    .team.theirs{ border-color:rgba(56,189,248,.35); }
+    .t-head{ display:flex; align-items:center; gap:12px; }
+    .t-avatar{ width:58px; height:58px; border-radius:50%; object-fit:cover; background:#241c33; border:2px solid rgba(255,255,255,.15); flex:0 0 auto; }
+    .t-name{ min-width:0; }
+    .t-name b{ display:block; font-size:17px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .t-name span{ display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted); }
+    .dot{ width:8px; height:8px; border-radius:50%; background:#6b6480; flex:0 0 auto; }
+    .dot.connected{ background:var(--ok); box-shadow:0 0 8px var(--ok); }
+    .dot.connecting{ background:#fbbf24; animation:pulse 1s infinite; }
+    .dot.error,.dot.ended{ background:var(--bad); }
+    @keyframes pulse{ 50%{ opacity:.35; } }
+    .badge{ align-self:flex-start; font-size:11.5px; padding:3px 10px; border-radius:999px; background:rgba(167,139,250,.18); color:#ddd6fe; }
+    .team.theirs .badge{ background:rgba(56,189,248,.15); color:#bae6fd; }
+    .score{ font-family:'Noto Kufi Arabic',sans-serif; font-weight:800; font-size:clamp(46px,6vw,74px); line-height:1; text-align:center; }
+    .team.mine .score{ color:var(--mine); } .team.theirs .score{ color:var(--theirs); }
+    .score small{ display:block; font-family:'IBM Plex Sans Arabic'; font-size:13px; font-weight:500; color:var(--muted); margin-top:6px; }
+    .players{ display:flex; flex-wrap:wrap; gap:6px; max-height:260px; overflow-y:auto; }
+    .chip{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px 4px 4px; border-radius:999px; background:rgba(255,255,255,.06); font-size:13px; max-width:100%; }
+    .chip img,.chip i{ width:22px; height:22px; border-radius:50%; object-fit:cover; background:#2c2440; flex:0 0 auto; }
+    .chip span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .chip.turn{ background:rgba(250,204,21,.18); outline:1px solid rgba(250,204,21,.55); }
+    .join-hint{ font-size:13px; color:var(--muted); line-height:1.7; }
+    .join-hint b{ color:#fff; }
+
+    .stage{ border-radius:28px; padding:clamp(18px,3vw,34px); min-height:420px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; text-align:center;
+        background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015)); border:1px solid var(--line); }
+    .s-title{ font-family:'Noto Kufi Arabic',sans-serif; font-weight:800; font-size:clamp(22px,3vw,34px); margin:0; line-height:1.5; }
+    .s-sub{ color:var(--muted); font-size:15px; margin:0; line-height:1.8; }
+    .vs{ display:flex; align-items:center; justify-content:center; gap:clamp(12px,3vw,34px); flex-wrap:wrap; }
+    .vs .p{ display:flex; flex-direction:column; align-items:center; gap:8px; min-width:120px; }
+    .vs .p img,.vs .p i{ width:76px; height:76px; border-radius:50%; object-fit:cover; background:#2c2440; border:3px solid var(--mine); }
+    .vs .p.theirs img,.vs .p.theirs i{ border-color:var(--theirs); }
+    .vs .p b{ font-size:16px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .vs .p small{ font-size:12px; color:var(--muted); }
+    .vs .x{ font-family:'Noto Kufi Arabic'; font-weight:800; font-size:26px; color:#fbbf24; }
+    .vs .p.done b::after{ content:' ✓'; color:var(--ok); }
+    .cat{ display:inline-block; padding:7px 18px; border-radius:999px; background:rgba(250,204,21,.12); border:1px solid rgba(250,204,21,.4); color:#fde68a; font-weight:700; }
+    .count{ font-family:'Noto Kufi Arabic'; font-weight:800; font-size:clamp(90px,14vw,160px); line-height:1; color:#fbbf24; }
+    .q-prompt{ font-family:'Noto Kufi Arabic',sans-serif; font-weight:800; font-size:clamp(30px,5vw,58px); line-height:1.4; word-break:break-word; }
+    .q-emoji{ font-size:clamp(80px,12vw,140px); line-height:1.1; }
+    .q-img{ max-width:min(360px,80%); max-height:220px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.5); }
+    .timer{ width:min(520px,100%); height:10px; border-radius:999px; background:rgba(255,255,255,.08); overflow:hidden; }
+    .timer i{ display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#f87171,#fbbf24,#4ade80); transition:width .25s linear; }
+    .timer-n{ font-family:'Noto Kufi Arabic'; font-weight:800; font-size:22px; }
+    .answer{ font-size:clamp(22px,3vw,30px); font-weight:800; color:var(--ok); }
+    .results{ display:flex; flex-direction:column; gap:6px; font-size:15px; }
+    .winner{ font-family:'Noto Kufi Arabic'; font-weight:800; font-size:clamp(30px,5vw,54px); color:#fde68a; text-shadow:0 0 30px rgba(250,204,21,.45); }
+    .controls{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+
+    .log{ margin:0 clamp(14px,3vw,32px) 22px; padding:12px 16px; border-radius:18px; background:rgba(255,255,255,.03); border:1px solid var(--line); max-height:140px; overflow-y:auto; font-size:13px; color:var(--muted); line-height:1.9; }
+    .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%); padding:12px 20px; border-radius:999px; background:#16121f; border:1px solid rgba(248,113,113,.4); font-size:14px; z-index:50; }
+
+    .overlay{ position:fixed; inset:0; z-index:60; display:grid; place-items:center; padding:16px; background:rgba(0,0,0,.7); backdrop-filter:blur(8px); }
+    .overlay .box{ width:min(440px,100%); padding:28px 24px; border-radius:24px; background:#0f0c17; border:1px solid rgba(255,255,255,.12); text-align:center; display:flex; flex-direction:column; gap:14px; }
+    .overlay h2{ margin:0; font-size:22px; }
+    .overlay p{ margin:0; color:var(--muted); line-height:1.8; }
+</style>
+<script src="../../js/agp-apple-emoji.js"></script>
+</head>
+<body>
+
+<div class="bar">
+    <h1>⚡ أسرع إجابة <small>تحدي البثوث</small></h1>
+    <div class="controls">
+        <button class="btn btn-ghost hidden" id="finish">إنهاء المباراة</button>
+        <button class="btn btn-ghost" id="leave">انسحاب</button>
+    </div>
+</div>
+
+<div class="arena">
+    <section class="team mine" id="team-mine"></section>
+    <section class="stage" id="stage"><p class="s-sub">جاري الاتصال بالمباراة...</p></section>
+    <section class="team theirs" id="team-theirs"></section>
+</div>
+
+<div class="log" id="log"></div>
+<div class="toast hidden" id="toast"></div>
+<div class="overlay hidden" id="overlay"><div class="box" id="overlay-box"></div></div>
+
+<script src="../../auth/auth-client.js"></script>
+<script src="../../auth/game-access-guard.js"></script>
+<script>
+(function () {
+    'use strict';
+    var A = window.AGPAuth;
+    var matchId = new URLSearchParams(location.search).get('match') || '';
+    var wsUrl = String((A && A.API_BASE) || 'https://project-testing-akds.onrender.com').replace(/^http/, 'ws') + '/ws/challenge';
+    var HUB = '../../challenge.html';
+
+    var M = null;            // آخر حالة من الخادم
+    var clockOffset = 0;     // وقت الخادم - وقت الجهاز
+    var ws = null, closedForGood = false, tick = null;
+    var ERR = {
+        auth_required: 'لازم تسجّل دخول.', match_not_found: 'المباراة غير موجودة أو انتهت.', not_in_match: 'هذي المباراة مو لك.',
+        need_players: 'كل فريق يحتاج لاعب واحد على الأقل — خلّ الجمهور يكتب كلمة الدخول.', busy: 'الجولة شغّالة.', match_over: 'المباراة انتهت — ابدأ مباراة جديدة.',
+        host_only: 'التحكم لمنشئ المباراة.', ended: 'المباراة انتهت.'
+    };
+
+    function $(id) { return document.getElementById(id); }
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function img(src) { return src ? '<img src="' + esc(src) + '" alt="">' : '<i></i>'; }
+    function serverNow() { return Date.now() + clockOffset; }
+    function left(endsAt) { return Math.max(0, (endsAt || 0) - serverNow()); }
+    function toast(t) { var el = $('toast'); el.textContent = t; el.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.add('hidden'); }, 3000); }
+    function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+    function action(a) { send({ type: 'action', action: a }); }
+
+    var STREAM_TEXT = { connected: 'متصل بالبث', connecting: 'جاري الاتصال بالبث...', error: 'البث غير متصل', ended: 'البث انتهى', idle: 'بانتظار دخول الستريمر' };
+
+    function renderTeam(el, side, isMine) {
+        var s = M.sides[side], t = M.state.teams[side], st = M.state, info = st.playerInfo || {};
+        var status = s.present ? (STREAM_TEXT[s.stream] || '') : 'الستريمر مو موجود بالشاشة';
+        el.innerHTML =
+            '<span class="badge">' + (isMine ? 'فريقك' : 'الخصم') + '</span>' +
+            '<div class="t-head"><img class="t-avatar" src="' + esc(s.avatar || '') + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
+            '<div class="t-name"><b>' + esc(t.name) + '</b><span><bdi dir="ltr">@' + esc(s.tiktok) + '</bdi></span>' +
+            '<span><i class="dot ' + (s.present ? s.stream : 'error') + '"></i>' + esc(status) + '</span></div></div>' +
+            '<div class="score">' + t.score + '<small>من ' + st.settings.target + ' نقطة</small></div>' +
+            '<div class="join-hint">جمهور <bdi>@' + esc(s.tiktok) + '</bdi> يكتب <b>«' + esc(st.settings.keywords[side]) + '»</b> في الشات للانضمام · ' + t.players.length + '/' + st.settings.maxPlayers + '</div>' +
+            '<div class="players">' + t.players.map(function (n) {
+                var turn = st.chosen[side] === n && st.phase !== 'ready';
+                return '<span class="chip' + (turn ? ' turn' : '') + '">' + img(info[n] && info[n].avatar) + '<span>' + esc(n) + '</span></span>';
+            }).join('') + '</div>';
+    }
+
+    function vsHtml(st, answeredSet) {
+        var info = st.playerInfo || {};
+        var mine = M.you, theirs = 1 - M.you;
+        function p(side, cls) {
+            var n = st.chosen[side];
+            return '<div class="p ' + cls + (answeredSet && answeredSet[n] ? ' done' : '') + '">' + img(info[n] && info[n].avatar) + '<b>' + esc(n || '—') + '</b><small>' + esc(st.teams[side].name) + '</small></div>';
+        }
+        return '<div class="vs">' + p(mine, 'mine') + '<span class="x">ضد</span>' + p(theirs, 'theirs') + '</div>';
+    }
+
+    function renderStage() {
+        var st = M.state, el = $('stage'), host = M.you === M.host, hostName = M.sides[M.host].name;
+        var html = '';
+        if (st.winner !== null && st.winner !== undefined && st.phase === 'results') {
+            html = '<div class="winner">🏆 فوز ' + esc(st.teams[st.winner].name) + '</div>' +
+                '<p class="s-sub">' + esc(st.teams[0].name) + ' ' + st.teams[0].score + ' — ' + st.teams[1].score + ' ' + esc(st.teams[1].name) + '</p>' +
+                (host ? '<div class="controls"><button class="btn btn-big" data-a="newGame">مباراة جديدة</button></div>' : '<p class="s-sub">بانتظار ' + esc(hostName) + ' يبدأ مباراة جديدة</p>');
+        } else if (st.phase === 'ready') {
+            html = '<p class="s-title">' + (st.round ? 'جاهزين للجولة ' + (st.round + 1) : 'خلّ جمهورك يدخل الفريق!') + '</p>' +
+                '<p class="s-sub">جمهور ' + esc(st.teams[0].name) + ' يكتب <b>«' + esc(st.settings.keywords[0]) + '»</b> وجمهور ' + esc(st.teams[1].name) + ' يكتب <b>«' + esc(st.settings.keywords[1]) + '»</b> — كل واحد في شات بثه. كل جولة يُختار لاعب من كل فريق، وأول إجابة صحيحة = نقطتين.</p>' +
+                (host ? '<button class="btn btn-big" data-a="spin">ابدأ الجولة</button>' : '<p class="s-sub">بانتظار ' + esc(hostName) + ' يبدأ الجولة</p>');
+        } else if (st.phase === 'spinning') {
+            html = '<p class="s-sub">اختيار اللاعبين والفئة...</p><div id="spin-names">' + vsHtml(st) + '</div><span class="cat" id="spin-cat">' + esc(st.catName) + '</span>';
+        } else if (st.phase === 'countdown') {
+            html = vsHtml(st) + '<span class="cat">' + esc(st.catName) + '</span><div class="count" id="count">' + Math.max(1, Math.ceil(left(st.phaseEndsAt) / 1000)) + '</div>';
+        } else if (st.phase === 'question' && st.question) {
+            var q = st.question, total = st.settings.dur * 1000;
+            var answered = {}; (st.answers || []).forEach(function (a) { answered[a.user] = true; });
+            html = '<span class="cat">' + esc(q.catName) + ' · ' + esc(q.sub) + '</span>' +
+                (q.emoji ? '<div class="q-emoji">' + esc(q.emoji) + '</div>' : '') +
+                (q.img ? '<img class="q-img" src="' + esc(q.img) + '" alt="">' : '') +
+                (q.prompt ? '<div class="q-prompt" dir="' + (q.dir || 'rtl') + '" style="letter-spacing:' + esc(q.ls || '0') + '">' + esc(q.prompt) + '</div>' : '') +
+                '<div class="timer"><i id="timer-bar" style="width:' + (left(st.phaseEndsAt) / total * 100) + '%"></i></div><div class="timer-n" id="timer-n">' + Math.ceil(left(st.phaseEndsAt) / 1000) + '</div>' +
+                vsHtml(st, answered) + '<p class="s-sub">بس اللاعبين المختارين يجاوبون — كل واحد من شات بثه</p>';
+        } else if (st.phase === 'results') {
+            html = '<p class="s-sub">الإجابة الصحيحة</p><div class="answer">' + esc(st.answer || '') + '</div>' +
+                '<div class="results">' + ((st.answers && st.answers.length) ? st.answers.map(function (a) {
+                    return '<span>' + (a.rank === 1 ? '🥇 ' : '✓ ') + esc(a.user) + ' · ' + esc(st.teams[a.team].name) + (a.pts ? ' · +' + a.pts : '') + '</span>';
+                }).join('') : '<span>محد جاوب صح هالجولة</span>') + '</div>' +
+                (host ? '<button class="btn btn-big" data-a="spin">الجولة التالية</button>' : '<p class="s-sub">بانتظار ' + esc(hostName) + ' يبدأ الجولة التالية</p>');
+        }
+        el.innerHTML = html;
+    }
+
+    function renderLog() {
+        $('log').innerHTML = (M.state.log || []).slice(0, 30).map(function (l) { return '<div>' + esc(l.text) + '</div>'; }).join('') || 'سجل المباراة يظهر هنا';
+    }
+
+    var END_TEXT = { left: 'انسحب', stream_lost: 'انقطع بثه' };
+    function renderEnded() {
+        if (!M.ended) { $('overlay').classList.add('hidden'); return; }
+        var who = M.endedBy != null ? M.sides[M.endedBy].name : '';
+        var mine = M.endedBy === M.you;
+        var text = M.endReason === 'left'
+            ? (mine ? 'انسحبت من المباراة.' : who + ' انسحب من المباراة أو قفل الشاشة.')
+            : M.endReason === 'stream_lost' ? (mine ? 'انقطع بثك لفترة طويلة فانتهت المباراة.' : 'انقطع بث ' + who + ' لفترة طويلة فانتهت المباراة.')
+            : 'انتهت المباراة.';
+        $('overlay-box').innerHTML = '<h2>انتهت المباراة</h2><p>' + esc(text) + '</p><a class="btn" href="' + HUB + '">الرجوع لتحدي البثوث</a>';
+        $('overlay').classList.remove('hidden');
+    }
+
+    function render() {
+        if (!M) return;
+        renderTeam($('team-mine'), M.you, true);
+        renderTeam($('team-theirs'), 1 - M.you, false);
+        renderStage();
+        renderLog();
+        $('finish').classList.toggle('hidden', M.you !== M.host || M.ended);
+        $('leave').classList.toggle('hidden', M.ended);
+        renderEnded();
+    }
+
+    // تحديث العدّادات والحركة بين رسائل الخادم.
+    function animate() {
+        if (!M || M.ended) return;
+        var st = M.state;
+        if (st.phase === 'countdown') { var c = $('count'); if (c) c.textContent = Math.max(1, Math.ceil(left(st.phaseEndsAt) / 1000)); }
+        if (st.phase === 'question') {
+            var ms = left(st.phaseEndsAt), b = $('timer-bar'), n = $('timer-n');
+            if (b) b.style.width = (ms / (st.settings.dur * 1000) * 100) + '%';
+            if (n) n.textContent = Math.ceil(ms / 1000);
+        }
+        if (st.phase === 'spinning') {
+            var box = $('spin-names');
+            if (box && left(st.phaseEndsAt) > 600) {
+                var info = st.playerInfo || {};
+                var bs = box.querySelectorAll('.p');
+                [M.you, 1 - M.you].forEach(function (side, k) {
+                    var P = st.teams[side].players, n2 = P[Math.floor(Math.random() * P.length)];
+                    if (bs[k]) { bs[k].querySelector('b').textContent = n2; var im = info[n2] && info[n2].avatar; var e = bs[k].firstElementChild; if (e && e.tagName === 'IMG' && im) e.src = im; }
+                });
+            } else if (box && !box.dataset.final) { box.dataset.final = '1'; box.innerHTML = vsHtml(st); }
+        }
+    }
+
+    function connect() {
+        try { ws = new WebSocket(wsUrl); } catch (e) { setTimeout(connect, 2000); return; }
+        ws.onopen = function () { send({ type: 'join', matchId: matchId, token: A && A.getToken ? A.getToken() : '' }); };
+        ws.onmessage = function (ev) {
+            var msg; try { msg = JSON.parse(ev.data); } catch (e) { return; }
+            if (msg.type === 'state' && msg.match) {
+                M = msg.match;
+                clockOffset = M.serverNow - Date.now();
+                render();
+                if (M.ended) closedForGood = true;
+            } else if (msg.type === 'error') {
+                if (msg.error === 'match_not_found' || msg.error === 'not_in_match' || msg.error === 'auth_required') {
+                    closedForGood = true;
+                    $('stage').innerHTML = '<p class="s-title">' + esc(ERR[msg.error]) + '</p><a class="btn" href="' + HUB + '">الرجوع لتحدي البثوث</a>';
+                } else toast(ERR[msg.error] || 'تعذّر تنفيذ الأمر.');
+            }
+        };
+        ws.onclose = function () { ws = null; if (!closedForGood) setTimeout(connect, 2000); };
+        ws.onerror = function () {};
+    }
+
+    document.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-a]');
+        if (b) action(b.getAttribute('data-a'));
+    });
+    $('finish').addEventListener('click', function () { if (confirm('إنهاء المباراة الحين؟ الفريق الأعلى نقاطاً يفوز.')) action('finish'); });
+    $('leave').addEventListener('click', function () { if (confirm('تنسحب من المباراة؟ المباراة بتنتهي للطرفين.')) action('leave'); });
+
+    if (!matchId) { $('stage').innerHTML = '<p class="s-title">ما فيه مباراة.</p><a class="btn" href="' + HUB + '">الرجوع لتحدي البثوث</a>'; return; }
+    connect();
+    tick = setInterval(animate, 200);
+})();
+</script>
+</body>
+</html>
