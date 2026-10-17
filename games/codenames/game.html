@@ -19,6 +19,7 @@
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-player-card.js"></script>
 <script src="../../js/agp-win-card.js"></script>
+<script src="codenames-easy-words.js"></script>
 <script src="codenames-words.js"></script>
 <!-- مكتبة توليد QR (نفس طريقة اللعبة السابقة) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -599,6 +600,9 @@ const DIGITS = s => String(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660).
   .replace(/(\d)(?=[^\d\s])/g,'$1 ').replace(/([^\d\s])(?=\d)/g,'$1 ').replace(/\s+/g,' ').trim();
 // CMD: نفس DIGITS + تطبيع الحروف (تأكيد = تاكيد، تخطى = تخطي) وحذف الرموز والفواصل → كلمات مفصولة بمسافة
 const CMD = s => AR(DIGITS(s).replace(/[^\p{L}\p{N}\s]/gu,' ')).split(' ').filter(w=>w&&w!=='و').join(' ');
+// هيكل الكلمة بدون نقاط وهمزات — كلمتين بنفس الهيكل (ذبابة/دبابة، حبل/جبل) شكلهم متشابه فما ينحطون بنفس اللوحة
+const SKEL = w => String(w||'').replace(/[\u064B-\u0652\u0640]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ؤ/g,'و').replace(/[ئى]/g,'ي').replace(/ة/g,'ه').replace(/ء/g,'')
+  .replace(/[بتثني]/g,'ب').replace(/[جحخ]/g,'ح').replace(/[دذ]/g,'د').replace(/[رز]/g,'ر').replace(/[سش]/g,'س').replace(/[صض]/g,'ص').replace(/[طظ]/g,'ط').replace(/[عغ]/g,'ع').replace(/[فق]/g,'ف');
 const mmss = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
 const HOW = [
   ['🎯 اكشفوا صناديق فريقكم قبل الخصم · ابعدوا عن 💀','h'],
@@ -612,7 +616,7 @@ class Component extends DCLogic {
   constructor(p){ super(p);
     const c=this.cfg(), r=this.roster();
     this.reg=CN.createRegistry(CN.readJSON('codenames-players',{}));
-    this.used=new Set(); this.words=Array.isArray(window.CODENAMES_WORDS)&&window.CODENAMES_WORDS.length>=50?window.CODENAMES_WORDS:FALLBACK_WORDS;
+    this.easy=!!c.easy; this.used=new Set(); this.words=Array.isArray(window.CODENAMES_WORDS)&&window.CODENAMES_WORDS.length>=50?window.CODENAMES_WORDS:FALLBACK_WORDS;
     // رقم جلسة جديد (= باركود جديد) كل ما تنفتح صفحة اللعبة — جوالات الجلسات القديمة ما توصلها هذي الجلسة.
     // «مباراة جديدة» و«إعادة المباراة» داخل نفس الصفحة تبقى على نفس الرقم.
     const rnd=new Uint32Array(2); try{ crypto.getRandomValues(rnd); }catch(e){ rnd[0]=Math.random()*4294967295; rnd[1]=Date.now(); }
@@ -628,14 +632,29 @@ class Component extends DCLogic {
   cfg(){ let c={}; try{ c=JSON.parse(localStorage.getItem('codenames-settings')||'{}')||{}; }catch(e){}
     const tH={'2:00':120,'2:30':150,'3:00':180}, tG={'1:30':90,'2:00':120,'2:30':150};
     return { name1:String(c.name1||'').trim()||'الفريق الأحمر', name2:String(c.name2||'').trim()||'الفريق الأزرق', kw1:String(c.kw1||'').trim()||'أحمر', kw2:String(c.kw2||'').trim()||'أزرق',
-      followers:c.who==='المتابعون فقط', hintT:tH[c.hintTime]||150, guessT:tG[c.guessTime]||120 }; }
+      followers:c.who==='المتابعون فقط', hintT:tH[c.hintTime]||150, guessT:tG[c.guessTime]||120, easy:c.wordMode==='السهل' }; }
   // الفرق من اللوبي (codenames-roster) — بدونها نرجع لشاشة الإعدادات
   roster(){ const r=CN.readJSON('codenames-roster',null); if(r&&Array.isArray(r.t1)&&Array.isArray(r.t2)&&(r.t1.length||r.t2.length)) return r; location.replace('index.html'); return {t1:[],t2:[]}; }
   nextStarter(){ let last=null; try{ last=+localStorage.getItem('codenames-last-starter')||null; }catch(e){} const s=last?(last===1?2:1):(Math.random()<.5?1:2); try{ localStorage.setItem('codenames-last-starter',s); }catch(e){} return s; }
+  // النمط السهل (الإعدادات ← نمط الكلمات): كلمات كل فريق من موضوعين من مجموعتين مختلفتين، والمحايد والأسود
+  // من مواضيع مجموعاتها بعيدة عن مواضيع الفريقين. بالنمطين: ما تنحط كلمتين شكلهم متشابه (مثل ذبابة/دبابة).
+  easyBoard(starter){ const C=(window.CODENAMES_EASY||[]).filter(c=>c.words.length>=8); if(C.length<6) return null;
+    const other=starter===1?2:1, cats=shuffle(C), used=new Set(), pick=[];
+    for(const c of cats){ if(pick.length===4) break; if(used.has(c.group)) continue; used.add(c.group); pick.push(c); }
+    const far=cats.filter(c=>!used.has(c.group)); if(pick.length<4||!far.length) return null;
+    const sk=new Set(), take=(list,n)=>{ const out=[]; for(const pass of [0,1]) for(const w of shuffle(list)){ if(out.length===n) break; const k=SKEL(w); if(sk.has(k)||out.includes(w)||(pass===0&&this.used.has(w))) continue; sk.add(k); out.push(w); } return out; };
+    const cells=[...take(pick[0].words,5).map(w=>[w,starter]),...take(pick[1].words,4).map(w=>[w,starter]),
+      ...take(pick[2].words,4).map(w=>[w,other]),...take(pick[3].words,4).map(w=>[w,other])];
+    const rest=far.flatMap(c=>c.words); cells.push(...take(rest,7).map(w=>[w,0]),...take(rest,1).map(w=>[w,-1]));
+    return cells.length===25?shuffle(cells):null; }
+  // النمط المعروف: 25 كلمة عشوائية من البنك بدون كلمتين متشابهتين بالشكل
+  pickClassic(){ let pool=this.words.filter(w=>!this.used.has(w)); if(pool.length<40){ this.used=new Set(); pool=this.words.slice(); }
+    const sk=new Set(), out=[]; for(const w of shuffle(pool)){ if(out.length===25) break; const k=SKEL(w); if(sk.has(k)) continue; sk.add(k); out.push(w); } return out; }
   newBoard(starter){
-    let pool=this.words.filter(w=>!this.used.has(w)); if(pool.length<25){ this.used=new Set(); pool=this.words.slice(); }
-    const words=shuffle(pool).slice(0,25); this.used=new Set(words);
-    const other=starter===1?2:1, types=shuffle([...Array(9).fill(starter),...Array(8).fill(other),...Array(7).fill(0),-1]);
+    const easy=this.easy&&this.easyBoard(starter); let words, types; const other=starter===1?2:1;
+    if(easy){ words=easy.map(x=>x[0]); types=easy.map(x=>x[1]); this.used=new Set(words); }
+    else { words=this.pickClassic(); this.used=new Set(words);
+      types=shuffle([...Array(9).fill(starter),...Array(8).fill(other),...Array(7).fill(0),-1]); }
     const imgs={1:shuffle(types.filter(t=>t===1).map((_,i)=>i%2+1)),2:shuffle(types.filter(t=>t===2).map((_,i)=>i%2+1))};
     const board=words.map((w,i)=>({w,t:types[i],img:types[i]>0?imgs[types[i]].pop():0,open:false,auto:false,votes:[],fresh:false}));
     this.matchStartedAt=null; this.reported=false;
