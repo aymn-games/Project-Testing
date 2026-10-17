@@ -393,28 +393,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 <script src="js/agp-live-watch.js" data-manual></script>
 <script src="js/agp-tiktok-follow.js"></script>
 <script>
-  // رابط "تحدي البثوث" (challenge.html) — بطاقة صغيرة فوق بطاقة "اتصل بالبث".
-  (function(){
-    var tries = 0;
-    var timer = setInterval(function(){
-      tries++;
-      var card = document.querySelector('[data-connect-card]');
-      if (card && !document.querySelector('[data-challenge-link]')) {
-        clearInterval(timer);
-        var a = document.createElement('a');
-        a.href = 'challenge.html';
-        a.setAttribute('data-challenge-link', '1');
-        a.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 0 14px;padding:14px 20px;border-radius:20px;text-decoration:none;color:#f4f2fb;direction:rtl;' +
-          'background:linear-gradient(120deg,rgba(254,44,85,.14),rgba(18,14,28,.9) 45%,rgba(122,63,212,.18));border:1px solid rgba(254,44,85,.35);';
-        a.innerHTML = '<span style="display:flex;flex-direction:column;gap:2px;text-align:right"><b style="font-size:16px">⚔️ تحدي البثوث <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:rgba(254,44,85,.2);color:#ffb3c1;margin-inline-start:6px">جديد</span></b>' +
-          '<span style="font-size:13px;color:#b9b2c8">العب ضد بث ستريمر ثاني — جمهورك فريق وجمهوره فريق</span></span>' +
-          '<span style="padding:9px 20px;border-radius:999px;background:linear-gradient(135deg,#fe2c55,#ff5a7a);font-weight:700;font-size:13.5px;white-space:nowrap">ابدأ تحدي</span>';
-        card.parentNode.insertBefore(a, card);
-      } else if (tries > 60) clearInterval(timer);
-    }, 250);
-  })();
-</script>
-<script>
   // بطاقة حساب تيك توك المنصة (@aymngame) — فوق بطاقة "عندك فكرة لعبة؟".
   (function(){
     var tries = 0;
