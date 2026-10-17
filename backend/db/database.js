@@ -520,6 +520,11 @@ ensureColumn('users', 'tiktok_display_name', 'TEXT');
 // معرّف تيك توك الثابت (open_id) — يوصل من تسجيل الدخول الرسمي (OAuth)
 // فقط، يمنع نفس حساب التيك توك من الارتباط بأكثر من حساب AGP بالغلط.
 ensureColumn('users', 'tiktok_open_id', 'TEXT');
+// refresh token من تسجيل الدخول الرسمي (OAuth) — يخلّينا نجيب اليوزر
+// الحالي من تيك توك لو غيّره الستريمر بعد الربط (refreshTikTokUsername
+// بـtiktok-oauth-service.js). سيرفر فقط، ما يطلع لأي واجهة.
+ensureColumn('users', 'tiktok_refresh_token', 'TEXT');
+ensureColumn('users', 'tiktok_refresh_expires_at', 'INTEGER');
 // عدّادات جولات مكتملة/فوز — لبطاقة "إحصائيات اللاعب" بالبروفايل، تُحدَّث
 // من awardForRoundCompletion بـpoints-service.js.
 ensureColumn('user_points', 'games_played', 'INTEGER NOT NULL DEFAULT 0');

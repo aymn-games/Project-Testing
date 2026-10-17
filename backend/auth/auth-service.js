@@ -829,7 +829,8 @@ async function verifyTikTokOwnership(userId, tiktokUsername) {
     var displayName = extractProfileDisplayNameFromHtml(html);
 
     db.prepare(
-        'UPDATE users SET tiktok_verified = 1, tiktok_username = ?, tiktok_avatar_url = ?, tiktok_display_name = ? WHERE id = ?'
+        // تصفير refresh token أي ربط OAuth سابق — قد يكون لحساب تيك توك ثاني.
+        'UPDATE users SET tiktok_verified = 1, tiktok_username = ?, tiktok_avatar_url = ?, tiktok_display_name = ?, tiktok_refresh_token = NULL, tiktok_refresh_expires_at = NULL WHERE id = ?'
     ).run(tiktokUsername, avatarUrl, displayName, userId);
 
     grantFoundersMonthFrameIfEligible(userId);
@@ -912,7 +913,7 @@ function extractProfileDisplayNameFromHtml(html) {
 function unlinkTikTok(userId) {
     // تصفير tiktok_avatar_url/tiktok_display_name أيضاً — وإلا تبقى صورة/
     // اسم الحساب القديم عالقة لو ربط لاحقاً حساب تيك توك مختلف.
-    db.prepare('UPDATE users SET tiktok_username = NULL, tiktok_verified = 0, tiktok_verification_code = NULL, tiktok_avatar_url = NULL, tiktok_display_name = NULL WHERE id = ?').run(userId);
+    db.prepare('UPDATE users SET tiktok_username = NULL, tiktok_verified = 0, tiktok_verification_code = NULL, tiktok_avatar_url = NULL, tiktok_display_name = NULL, tiktok_refresh_token = NULL, tiktok_refresh_expires_at = NULL WHERE id = ?').run(userId);
     return { success: true };
 }
 

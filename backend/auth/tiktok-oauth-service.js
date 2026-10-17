@@ -92,7 +92,12 @@ async function exchangeCodeForToken(code) {
             logger.error('TikTok OAuth: token exchange failed. status=' + res.status + ' body=' + JSON.stringify(data));
             return { success: false, error: (data && (data.error_description || data.error)) || 'token_exchange_failed' };
         }
-        return { success: true, accessToken: data.access_token };
+        return {
+            success: true,
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token || null,
+            refreshExpiresAt: data.refresh_expires_in ? Date.now() + Number(data.refresh_expires_in) * 1000 : null
+        };
     } catch (err) {
         logger.error('TikTok OAuth: token exchange network error:', err.message);
         return { success: false, error: 'token_exchange_network_error' };
@@ -127,16 +132,97 @@ async function fetchTikTokUserInfo(accessToken) {
  * يحفظ الربط الموثَّق بقاعدة البيانات. يمنع نفس حساب تيك توك (نفس
  * open_id) من الارتباط بأكثر من حساب AGP — لو مرتبط بحساب AGP ثاني
  * فعلاً، يرجع خطأ واضح بدل ما يسرق الربط بصمت.
+ * @param {{refreshToken?:string, refreshExpiresAt?:number}} [tokens] - من exchangeCodeForToken
  * @returns {{success:boolean, error?:string}}
  */
-function linkVerifiedAccount(userId, tiktokUser) {
+function linkVerifiedAccount(userId, tiktokUser, tokens) {
     var existing = db.prepare('SELECT id FROM users WHERE tiktok_open_id = ? AND id != ?').get(tiktokUser.open_id, userId);
     if (existing) return { success: false, error: 'tiktok_account_already_linked_elsewhere' };
 
     db.prepare(
-        'UPDATE users SET tiktok_open_id = ?, tiktok_username = ?, tiktok_display_name = ?, tiktok_avatar_url = ?, tiktok_verified = 1, tiktok_verification_code = NULL WHERE id = ?'
-    ).run(tiktokUser.open_id, tiktokUser.username || null, tiktokUser.display_name || null, tiktokUser.avatar_url || null, userId);
+        'UPDATE users SET tiktok_open_id = ?, tiktok_username = ?, tiktok_display_name = ?, tiktok_avatar_url = ?, tiktok_verified = 1, tiktok_verification_code = NULL, tiktok_refresh_token = ?, tiktok_refresh_expires_at = ? WHERE id = ?'
+    ).run(tiktokUser.open_id, tiktokUser.username || null, tiktokUser.display_name || null, tiktokUser.avatar_url || null,
+        (tokens && tokens.refreshToken) || null, (tokens && tokens.refreshExpiresAt) || null, userId);
     return { success: true };
+}
+
+/**
+ * تجديد access token بالـrefresh token المحفوظ (تيك توك قد يرجع refresh
+ * token جديد — نحفظه بدل القديم).
+ * @returns {Promise<string|null>} access token أو null لو تعذّر
+ */
+async function refreshAccessToken(userId, refreshToken) {
+    try {
+        var res = await fetch(TOKEN_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Cache-Control': 'no-cache' },
+            body: new URLSearchParams({
+                client_key: config.tiktokClientKey,
+                client_secret: config.tiktokClientSecret,
+                grant_type: 'refresh_token',
+                refresh_token: refreshToken
+            }).toString()
+        });
+        var data = await res.json();
+        if (!res.ok || !data.access_token) {
+            logger.error('TikTok OAuth: token refresh failed for user ' + userId + '. status=' + res.status + ' error=' + (data && (data.error_description || data.error)));
+            return null;
+        }
+        if (data.refresh_token) {
+            var expiresAt = data.refresh_expires_in ? Date.now() + Number(data.refresh_expires_in) * 1000 : null;
+            db.prepare('UPDATE users SET tiktok_refresh_token = ?, tiktok_refresh_expires_at = ? WHERE id = ?').run(data.refresh_token, expiresAt, userId);
+        }
+        return data.access_token;
+    } catch (err) {
+        logger.error('TikTok OAuth: token refresh network error:', err.message);
+        return null;
+    }
+}
+
+// محاولة وحدة لكل مستخدم كل REFRESH_USERNAME_COOLDOWN_MS — الفحص يُستدعى
+// من استطلاع is-live (كل ~45 ثانية) فلازم ما نضغط على API تيك توك.
+var REFRESH_USERNAME_COOLDOWN_MS = 10 * 60 * 1000;
+var _lastUsernameRefreshAt = {}; // userId -> وقت آخر محاولة
+
+/**
+ * الستريمر غيّر يوزره في تيك توك بعد الربط؟ نجيب اليوزر الحالي من تيك
+ * توك (عبر refresh token المحفوظ وقت الربط بـOAuth) ونحدّث tiktok_username.
+ * بدونه يدوّر الموقع على بث اليوزر القديم ويطلع "ما لقينا بث".
+ * يشتغل فقط للحسابات المربوطة بـOAuth بعد إضافة هذه الميزة.
+ * @returns {Promise<string|null>} اليوزر الجديد لو تغيّر، وإلا null
+ */
+async function refreshTikTokUsername(userId) {
+    var now = Date.now();
+    if (_lastUsernameRefreshAt[userId] && now - _lastUsernameRefreshAt[userId] < REFRESH_USERNAME_COOLDOWN_MS) return null;
+    _lastUsernameRefreshAt[userId] = now;
+
+    var row = db.prepare('SELECT tiktok_username, tiktok_open_id, tiktok_refresh_token, tiktok_refresh_expires_at FROM users WHERE id = ? AND tiktok_verified = 1').get(userId);
+    if (!row || !row.tiktok_refresh_token) return null;
+    if (row.tiktok_refresh_expires_at && row.tiktok_refresh_expires_at < now) return null;
+
+    var accessToken = await refreshAccessToken(userId, row.tiktok_refresh_token);
+    if (!accessToken) return null;
+
+    var info = await fetchTikTokUserInfo(accessToken);
+    if (!info.success) return null;
+    var tiktokUser = info.user;
+    // أمان: نفس حساب تيك توك المربوط فعلاً (open_id ثابت لا يتغيّر مع اليوزر).
+    if (!tiktokUser.username || (row.tiktok_open_id && tiktokUser.open_id !== row.tiktok_open_id)) return null;
+
+    var newUsername = String(tiktokUser.username).trim().replace(/^@+/, '');
+    if (newUsername.toLowerCase() === String(row.tiktok_username || '').toLowerCase()) return null;
+
+    // اليوزر الجديد مربوط موثَّق بحساب AGP ثاني (حالة نادرة: أخذه بعد ما تُرك) — ما نسرقه.
+    var taken = db.prepare('SELECT id FROM users WHERE tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE AND id != ?').get(newUsername, userId);
+    if (taken) {
+        logger.error('TikTok OAuth: new username "' + newUsername + '" for user ' + userId + ' is already linked to user ' + taken.id + ' — not updating.');
+        return null;
+    }
+
+    db.prepare('UPDATE users SET tiktok_username = ?, tiktok_display_name = COALESCE(?, tiktok_display_name) WHERE id = ?')
+        .run(newUsername, tiktokUser.display_name || null, userId);
+    logger.log('TikTok OAuth: user ' + userId + ' TikTok username changed "' + row.tiktok_username + '" -> "' + newUsername + '" — updated.');
+    return newUsername;
 }
 
 /**
@@ -155,5 +241,6 @@ module.exports = {
     verifyState: verifyState,
     exchangeCodeForToken: exchangeCodeForToken,
     fetchTikTokUserInfo: fetchTikTokUserInfo,
-    linkVerifiedAccount: linkVerifiedAccount
+    linkVerifiedAccount: linkVerifiedAccount,
+    refreshTikTokUsername: refreshTikTokUsername
 };

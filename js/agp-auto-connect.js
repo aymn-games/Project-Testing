@@ -71,6 +71,8 @@
         return fetch(apiBase() + '/api/stream/is-live?username=' + encodeURIComponent(username), {
             headers: { 'Authorization': 'Bearer ' + t }
         }).then(function (res) { return res.json(); }).then(function (d) {
+            // الستريمر غيّر يوزره في تيك توك — الخادم حدّثه، نكمل على الجديد.
+            if (d && d.success && d.renamed && d.username) linkedUsername = d.username;
             return d && d.success && (d.live === true || d.live === false) ? d.live : null;
         }).catch(function () { return null; });
     }
