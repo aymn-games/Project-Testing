@@ -781,6 +781,94 @@ input::placeholder,textarea::placeholder{color:#5b6274}
           </div>
         </sc-if>
 
+        <sc-if value="{{ is.live }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <h1 style="margin:0;font-size:22px;font-weight:600">البثوث الشغّالة الآن</h1>
+              <span style="font-size:12.5px;color:#9199ab">كل ستريمر متصل ببثه من داخل لعبة على المنصة الحين — تتحدّث تلقائياً كل 10 ثواني. آخر تحديث: <span style="font-family:'IBM Plex Mono',monospace">{{ live.updated }}</span></span>
+            </div>
+            <button onClick="{{ refresh }}" style="height:36px;padding:0 14px;border-radius:8px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:13px;cursor:pointer">تحديث</button>
+          </div>
+          <sc-if value="{{ live.err }}"><div style="padding:10px 14px;border-radius:10px;background:#2a1215;border:1px solid #4a1d22;color:#fca5a5;font-size:12.5px">تعذّر جلب البثوث من الخادم — بنحاول مرة ثانية تلقائياً.</div></sc-if>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+            <sc-for list="{{ live.cards }}" as="c" hint-placeholder-count="4">
+              <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:8px">
+                <span style="font-size:12.5px;color:#9199ab">{{ c.k }}</span>
+                <span style="font-size:28px;font-weight:600;font-family:'IBM Plex Mono',monospace;letter-spacing:-.02em">{{ c.v }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ live.hasGames }}">
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <sc-for list="{{ live.games }}" as="g"><span style="display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:#1d1830;border:1px solid #3b2a63;font-size:12.5px;color:#e7e9ee">{{ g.name }}<span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:1px 7px;border-radius:999px;background:#7c3aed;color:#fff">{{ g.n }}</span></span></sc-for>
+            </div>
+          </sc-if>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="padding:12px 18px;border-bottom:1px solid #262a37;font-weight:600">البثوث المتصلة</div>
+            <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:860px">
+              <thead><tr>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">البث</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">اللعبة</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الحالة</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">المدة</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">المشاهدين</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">التعليقات</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">الهدايا</th>
+                <th style="text-align:right;font-weight:500;color:#9199ab;font-size:12px;padding:10px 18px;border-bottom:1px solid #262a37">ساعات البث</th>
+              </tr></thead>
+              <tbody>
+                <sc-if value="{{ live.empty }}"><tr><td colspan="8" style="padding:32px;text-align:center;color:#5b6274;font-size:13px">{{ live.empty }}</td></tr></sc-if>
+                <sc-for list="{{ live.rows }}" as="r" hint-placeholder-count="3"><tr>
+                  <td style="padding:10px 18px;border-bottom:1px solid #1d2029">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:#2a2f40;display:flex;align-items:center;justify-content:center;font-weight:600;color:#c4b5fd;overflow:hidden">
+                        <sc-if value="{{ r.hasAvatar }}"><img src="{{ r.avatar }}" alt="" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover"></sc-if>
+                        <sc-if value="{{ !r.hasAvatar }}">{{ r.initial }}</sc-if>
+                      </div>
+                      <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                        <sc-if value="{{ r.hasLink }}"><a href="{{ r.liveUrl }}" target="_blank" rel="noopener noreferrer" style="color:#e7e9ee;font-weight:600;font-size:13.5px;direction:ltr;text-align:right;text-decoration:none">{{ r.handle }} ↗</a></sc-if>
+                        <sc-if value="{{ !r.hasLink }}"><span style="font-weight:600;font-size:13.5px">{{ r.handle }}</span></sc-if>
+                        <span style="font-size:11.5px;color:#9199ab">{{ r.account }}<sc-if value="{{ r.isAdmin }}"> · أدمن</sc-if></span>
+                      </div>
+                    </div>
+                  </td>
+                  <td style="padding:10px 18px;border-bottom:1px solid #1d2029;font-size:13px">{{ r.game }}</td>
+                  <td style="padding:10px 18px;border-bottom:1px solid #1d2029"><span style="font-size:12px;padding:3px 9px;border-radius:999px;background:{{ r.stBg }};color:{{ r.stColor }}">{{ r.stLabel }}</span></td>
+                  <td style="padding:10px 18px;border-bottom:1px solid #1d2029;font-size:13px;white-space:nowrap">{{ r.since }}</td>
+                  <td style="padding:10px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ r.viewers }}</td>
+                  <td style="padding:10px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ r.comments }}</td>
+                  <td style="padding:10px 18px;border-bottom:1px solid #1d2029;font-size:13px;font-family:'IBM Plex Mono',monospace">{{ r.gifts }}</td>
+                  <td style="padding:10px 18px;border-bottom:1px solid #1d2029;font-size:12px;color:#9199ab">{{ r.tracked }}</td>
+                </tr></sc-for>
+              </tbody>
+            </table></div>
+          </div>
+          <sc-if value="{{ live.hasMatches }}">
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="font-weight:600">مباريات التحدي بين بثين</div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:12px">
+                <sc-for list="{{ live.matches }}" as="m">
+                  <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+                      <span style="font-weight:600">{{ m.game }}</span>
+                      <span style="font-size:12px;color:#9199ab">{{ m.phase }} · الجولة {{ m.round }} · {{ m.since }}</span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:stretch">
+                      <sc-for list="{{ m.sides }}" as="sd">
+                        <div style="background:#0b0d12;border:1px solid #262a37;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;min-width:0">
+                          <a href="{{ sd.liveUrl }}" target="_blank" rel="noopener noreferrer" style="color:#e7e9ee;font-weight:600;font-size:13px;direction:ltr;text-align:right;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ sd.handle }} ↗</a>
+                          <span style="font-size:12px;color:#c4b5fd">{{ sd.team }} — <span style="font-family:'IBM Plex Mono',monospace">{{ sd.score }}</span> نقطة · {{ sd.players }} لاعب</span>
+                          <span style="font-size:11.5px;color:{{ sd.streamColor }}">البث: {{ sd.stream }} · <span style="color:#9199ab">{{ sd.screen }}</span></span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+        </sc-if>
+
       </div>
     </div>
   </main>
@@ -896,7 +984,7 @@ input::placeholder,textarea::placeholder{color:#5b6274}
 //  التنقل بالـ hash: #users · #support · #support/41 · #grant ... إلخ.
 // ============================================================
 const A = window.AGPAuth;
-const PAGES = ['users','support','grant','codes','entrances','elim','win','perms','catalog','exclusive','announce','supporters','partners','theme','levels','stats','store'];
+const PAGES = ['users','support','grant','codes','entrances','elim','win','perms','catalog','exclusive','announce','supporters','partners','theme','levels','stats','live','store'];
 const TEMPLATE_LABELS = { gold:'الذهبي الفخم', neon:'النيون المستقبلي', fire:'الناري القوي', ice:'الجليدي الملكي' };
 const THEME_PRESETS = { 'national-day': { accent:'#006c35', accentPink:'#c9a24b', accent2:'#ffffff' }, 'founding-day': { accent:'#2c3e2d', accentPink:'#a85c32', accent2:'#d8c79d' } };
 const CATEGORY_LABELS = { idea:'أصحاب الأفكار', dev:'فريق التطوير' };
@@ -932,7 +1020,7 @@ class Component extends DCLogic {
     partners:null, partnerQ:'', partnerFound:undefined, partnerCat:'idea',
     theme:null, themePreset:'', themeColors:{ accent:'#7c3aed', accentPink:'#ff4dff', accent2:'#00c2ff' },
     levels:null, lvEdits:{},
-    statsTab:'streamers', streamerStats:null, userStats:null,
+    statsTab:'streamers', streamerStats:null, userStats:null, live:null, liveErr:false,
     tickets:null, ticketsTotal:0, newCount:0, ticketId: h.page==='support'&&/^\d+$/.test(h.arg||'')?Number(h.arg):null, ticket:null, statusDraft:'new',
     tType:'', tStatus:'', tQ:'', reply:'', busy:{}
   }; })();
@@ -950,7 +1038,7 @@ class Component extends DCLogic {
       if(this.state.ticketId) this.openTicket(this.state.ticketId,false);
     });
   }
-  componentWillUnmount(){ removeEventListener('hashchange',this.onHash); removeEventListener('resize',this.fit); clearTimeout(this._t); clearTimeout(this._lk); clearTimeout(this._tq); }
+  componentWillUnmount(){ removeEventListener('hashchange',this.onHash); removeEventListener('resize',this.fit); clearTimeout(this._t); clearTimeout(this._lk); clearTimeout(this._tq); clearInterval(this._live); }
 
   // ---------- عام ----------
   go = (page) => { if(location.hash!=='#'+page) location.hash=page; else this.setState({ page, drawerId:null }); };
@@ -973,9 +1061,12 @@ class Component extends DCLogic {
     if(page==='levels' && !this.state.levels) this.loadLevels();
     if(page==='stats' && !this.state.streamerStats) this.loadStats();
     if(page==='support' && !this.state.tickets) this.loadTickets(false);
+    // البثوث الشغّالة: تحديث تلقائي كل 10 ثواني طول ما الصفحة مفتوحة فقط.
+    clearInterval(this._live);
+    if(page==='live'){ this.loadLive(); this._live=setInterval(()=>{ if(!document.hidden) this.loadLive(); },10000); }
   }
   refresh = () => { const p=this.state.page;
-    if(p==='users') this.loadUsers(); else if(p==='catalog') this.loadCatalog(); else if(p==='levels') this.loadLevels(); else if(p==='stats') this.loadStats();
+    if(p==='users') this.loadUsers(); else if(p==='catalog') this.loadCatalog(); else if(p==='levels') this.loadLevels(); else if(p==='stats') this.loadStats(); else if(p==='live') this.loadLive();
     this.flash('تم التحديث.'); };
 
   // ---------- المستخدمون ----------
@@ -1033,6 +1124,13 @@ class Component extends DCLogic {
     A.getAdminUserStats().then(r=>{ if(!r||!r.success) return this.flash('تعذّر تحميل إحصائيات المستخدمين.','err'); this.setState({ userStats:r.stats }); });
   }
 
+  // ---------- البثوث الشغّالة الآن ----------
+  loadLive(){ return A.getAdminLiveStreams().then(r=>{
+    if(!r||!r.success) return this.setState({ liveErr:true });
+    // فرق ساعة الجهاز عن الخادم — عشان مدة البث تطلع صحيحة.
+    this.setState({ liveErr:false, live:{ ...r, skew:Date.now()-(r.now||Date.now()), at:Date.now() } });
+  },()=>this.setState({ liveErr:true })); }
+
   // ---------- تذاكر الدعم ----------
   loadTickets(append){ const s=this.state, offset=append?(s.tickets||[]).length:0;
     if(!append) this.setState({ ticketsLoading:true });
@@ -1061,7 +1159,7 @@ class Component extends DCLogic {
       ['الدعم',[['support','تذاكر الدعم']]],
       ['المقتنيات',[['grant','منح الإطارات'],['codes','أكواد الاسترداد'],['entrances','الدخوليات'],['elim','بطاقات الإقصاء'],['win','بطاقات الفوز'],['perms','منح الصلاحيات'],['catalog','كتالوج الإطارات'],['exclusive','إطارات حصرية']]],
       ['واجهة الموقع',[['announce','الإعلان'],['supporters','الداعمون'],['partners','شركاء الإبداع'],['theme','ثيم المناسبات']]],
-      ['المستويات والتقارير',[['levels','مستويات الستريمر (SP)'],['stats','الإحصائيات']]],
+      ['المستويات والتقارير',[['levels','مستويات الستريمر (SP)'],['stats','الإحصائيات'],['live','البثوث الشغّالة الآن']]],
       ['المتجر',[['store','إدارة المتجر']]]
     ];
     let crumbGroup='', crumbPage='';
@@ -1198,7 +1296,42 @@ class Component extends DCLogic {
     const toastErr=s.toast&&s.toast.kind==='err';
     const me=s.me||{};
 
+    // ---- live streams
+    const lv=s.live, lvNow=Date.now()-(lv?lv.skew:0);
+    const dur=(t)=>{ if(!t) return '—'; const m=Math.max(0,Math.floor((lvNow-t)/60000)); return m<1?'أقل من دقيقة':m<60?m+' د':Math.floor(m/60)+' س '+(m%60)+' د'; };
+    const LV_STATUS={ connected:['متصل','#34d399','#0f2a20'], connecting:['يتصل…','#fcd34d','#2a2110'], error:['منقطع','#f87171','#2a1215'], disconnected:['منقطع','#f87171','#2a1215'] };
+    const PHASES={ lobby:'لوبي الدخول', ready:'جاهزة', spinning:'تدوير', countdown:'عدّ تنازلي', question:'سؤال', results:'نتيجة الجولة' };
+    const lvConns=(lv&&lv.connections||[]).slice().sort((a,b)=>(a.status==='connected'?0:1)-(b.status==='connected'?0:1)||(a.connectedAt||a.requestedAt)-(b.connectedAt||b.requestedAt));
+    const liveRows=lvConns.map(c=>{ const st=LV_STATUS[c.status]||[c.status||'—','#9199ab','#1b1e27']; const u=c.user||{};
+      const who=c.username||u.tiktok||'';
+      return { initial:(who||u.name||'?').charAt(0).toUpperCase(), avatar:u.avatar||'', hasAvatar:!!u.avatar,
+        handle:who?'@'+who:'—', liveUrl:who?'https://www.tiktok.com/@'+encodeURIComponent(who)+'/live':'#', hasLink:!!who,
+        account:u.name?(u.name+(u.customId?' · '+u.customId:'')):'غير مسجّل', isAdmin:u.role==='admin',
+        game:c.gameName||'—', since:dur(c.connectedAt||c.requestedAt), viewers:c.viewers==null?'—':Number(c.viewers).toLocaleString('en'),
+        comments:Number(c.comments||0).toLocaleString('en'), gifts:Number(c.gifts||0).toLocaleString('en'),
+        stLabel:st[0], stColor:st[1], stBg:st[2], tracked:c.tracked?'تُحتسب':'لا تُحتسب' }; });
+    const liveMatches=(lv&&lv.matches||[]).map(m=>({ game:m.gameName||m.game, phase:PHASES[m.phase]||m.phase||'—', round:m.round||0, since:dur(m.createdAt),
+      sides:(m.sides||[]).map(sd=>({ handle:sd.tiktok?'@'+sd.tiktok:'—', liveUrl:sd.tiktok?'https://www.tiktok.com/@'+encodeURIComponent(sd.tiktok)+'/live':'#',
+        team:sd.teamName||sd.name||'—', score:sd.score||0, players:sd.players||0,
+        stream:(LV_STATUS[sd.stream]||['غير متصل'])[0], streamColor:(LV_STATUS[sd.stream]||['','#9199ab'])[1], screen:sd.screenOpen?'الشاشة مفتوحة':'الشاشة مسكّرة' })) }));
+    const games={}; lvConns.forEach(c=>{ if(c.status==='connected'&&c.gameName) games[c.gameName]=(games[c.gameName]||0)+1; });
+    const liveView={
+      loaded:!!lv, err:s.liveErr,
+      cards:[
+        { k:'بثوث متصلة الآن', v:lvConns.filter(c=>c.status==='connected').length },
+        { k:'مباريات تحدي شغّالة', v:liveMatches.length },
+        { k:'مجموع المشاهدين', v:lvConns.reduce((t,c)=>t+(c.status==='connected'&&c.viewers?Number(c.viewers):0),0).toLocaleString('en') },
+        { k:'ألعاب مختلفة', v:Object.keys(games).length }
+      ],
+      games:Object.keys(games).sort((a,b)=>games[b]-games[a]).map(g=>({ name:g, n:games[g] })),
+      hasGames:Object.keys(games).length>0,
+      rows:liveRows, empty:lv&&!liveRows.length?'ما فيه أحد يبث ويلعب الحين.':'',
+      matches:liveMatches, hasMatches:liveMatches.length>0,
+      updated:lv?new Date(lv.at).toLocaleTimeString('en-GB'):'…'
+    };
+
     return {
+      live:liveView,
       // الشاشات الأضيق (آيباد عمودي): القائمة والتذكرة فوق بعض، والشريط الجانبي أضيق
       tCols:(s.vw||innerWidth)<1100?'minmax(0,1fr)':'minmax(340px,1fr) minmax(0,2fr)', tRows:(s.vw||innerWidth)<1100?'340px minmax(560px,auto)':'none', tHeight:(s.vw||innerWidth)<1100?'auto':'calc(100vh - 190px)',
       sideW:(s.vw||innerWidth)<900?'220px':(s.vw||innerWidth)>=1600?'290px':'264px',

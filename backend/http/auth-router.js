@@ -190,6 +190,7 @@ var ROUTES = [
   // ---- إحصائيات لوحة الأدمن
   { method: 'GET', path: '/api/admin/stats/streamers', requireAuth: true, requireAdmin: true, handler: handleAdminStreamerStats },
   { method: 'GET', path: '/api/admin/stats/users', requireAuth: true, requireAdmin: true, handler: handleAdminUserStats },
+  { method: 'GET', path: '/api/admin/live-streams', requireAuth: true, requireAdmin: true, handler: handleAdminLiveStreams },
   // ---- تعديل بروفايل المستخدم (اسم عرض + صورة) — صاحب الجلسة فقط.
   { method: 'POST', path: '/api/profile/display-name', requireAuth: true, handler: handleUpdateDisplayName },
   { method: 'POST', path: '/api/profile/username', requireAuth: true, handler: handleUpdateUsername },
@@ -885,6 +886,18 @@ function handleAdminStreamerStats(req, res) {
 /** الأدمن فقط — إحصائيات المستخدمين المجمَّعة. */
 function handleAdminUserStats(req, res) {
   sendJson(res, 200, { success: true, stats: authService.getAdminUserStats() });
+}
+
+/**
+ * الأدمن فقط — البثوث المتصلة الآن من داخل الألعاب + مباريات التحدي الشغّالة.
+ * من الذاكرة مباشرة (بدون قاعدة البيانات). require متأخر لتفادي حلقة استيراد.
+ */
+function handleAdminLiveStreams(req, res) {
+  var connections = [];
+  var matches = [];
+  try { connections = require('../websocket/ws-server').listLiveConnections(); } catch (err) { logger.error('Admin live streams: connections failed:', err); }
+  try { matches = require('../challenge/challenge-match').listActiveMatches(); } catch (err) { logger.error('Admin live streams: matches failed:', err); }
+  sendJson(res, 200, { success: true, now: Date.now(), connections: connections, matches: matches });
 }
 
 /** صاحب الجلسة يعدّل اسم العرض الخاص به — user.id من الجلسة حصراً. */

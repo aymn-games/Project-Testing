@@ -335,8 +335,39 @@ function handleUpgrade(req, socket) {
     socket.on('error', function () { removeClient(client); });
 }
 
+/** المباريات الشغّالة الآن (غير المنتهية) — لصفحة «البثوث الشغّالة» بلوحة الأدمن. */
+function listActiveMatches() {
+    return Object.keys(_matches).map(function (id) { return _matches[id]; })
+        .filter(function (m) { return !m.ended; })
+        .map(function (m) {
+            var st = null;
+            try { st = m.logic.state(); } catch (e) {}
+            return {
+                id: m.id,
+                game: m.game,
+                gameName: m.gameName,
+                createdAt: m.createdAt,
+                phase: st ? st.phase : null,
+                round: st ? st.round : null,
+                sides: m.sides.map(function (s, i) {
+                    var team = st && st.teams ? st.teams[i] : null;
+                    return {
+                        userId: s.userId, customId: s.customId, name: s.name, tiktok: s.tiktok,
+                        avatar: /^https?:/.test(s.avatar || '') ? s.avatar : null, // بدون base64 — الصفحة تتحدّث كل ثواني
+                        stream: m.stream[i],
+                        screenOpen: m.clients[i].length > 0,
+                        teamName: team ? team.name : null,
+                        players: team ? team.players.length : 0,
+                        score: team ? team.score : 0
+                    };
+                })
+            };
+        });
+}
+
 module.exports = {
     GAMES: GAMES,
+    listActiveMatches: listActiveMatches,
     createMatch: createMatch,
     getMatch: getMatch,
     endMatch: endMatch,
