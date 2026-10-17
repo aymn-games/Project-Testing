@@ -738,6 +738,11 @@ function getAdminUserStats() {
     return request('/api/admin/stats/users', { method: 'GET' });
 }
 
+/** Admin only — streams connected right now from inside games + live challenge matches. */
+function getAdminLiveStreams() {
+    return request('/api/admin/live-streams', { method: 'GET' });
+}
+
 function getTopSupporters() {
     return request('/api/supporters/top', { method: 'GET' });
 }
@@ -1009,6 +1014,7 @@ global.AGPAuth = {
     getTopPlayersByHours: getTopPlayersByHours,
     getAdminStreamerStats: getAdminStreamerStats,
     getAdminUserStats: getAdminUserStats,
+    getAdminLiveStreams: getAdminLiveStreams,
     getRecentSupporters: getRecentSupporters,
     getTopSupporters: getTopSupporters,
     adminListSupporters: adminListSupporters,
