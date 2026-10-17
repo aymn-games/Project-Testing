@@ -369,7 +369,7 @@ async function handleTikTokOAuthCallback(req, res) {
   var infoResult = await tiktokOAuthService.fetchTikTokUserInfo(tokenResult.accessToken);
   if (!infoResult.success) return redirectToProfile('user_info_failed');
 
-  var linkResult = tiktokOAuthService.linkVerifiedAccount(userId, infoResult.user);
+  var linkResult = tiktokOAuthService.linkVerifiedAccount(userId, infoResult.user, tokenResult);
   if (!linkResult.success) return redirectToProfile(linkResult.error === 'tiktok_account_already_linked_elsewhere' ? 'already_linked' : 'link_failed');
 
   // صورة تيك توك تصير صورة البروفايل تلقائياً لو ما عنده صورة خاصة.
@@ -704,15 +704,33 @@ function handleToggleWinCard(req, res, body, user) {
 /**
  * GET /api/stream/is-live?username=X → { success, live: true|false|null }
  * null = تعذّر التأكد مؤقتاً (الواجهة ما تقطع الاتصال عليها).
+ *
+ * لو اليوزر المطلوب هو اليوزر المربوط بحساب الطالب وما فيه بث، نتأكد من
+ * تيك توك إن الستريمر ما غيّر يوزره (refreshTikTokUsername). لو تغيّر،
+ * نفحص اليوزر الجديد ونرجعه بـusername مع renamed: true عشان الواجهة
+ * تتصل عليه بدل القديم.
  */
-function handleStreamIsLive(req, res) {
+function handleStreamIsLive(req, res, body, user) {
   var username = tiktokLiveCheck.normalize(getQueryParam(req, 'username'));
   if (!username) {
     sendJson(res, 400, { success: false, error: 'invalid_username' });
     return;
   }
   return tiktokLiveCheck.isLive(username).then(function (live) {
-    sendJson(res, 200, { success: true, username: username, live: live });
+    var isOwnLinked = user && user.tiktok_verified && tiktokLiveCheck.normalize(user.tiktok_username) === username;
+    if (live === true || !isOwnLinked) return { username: username, live: live };
+    return tiktokOAuthService.refreshTikTokUsername(user.id).then(function (newUsername) {
+      var normalized = tiktokLiveCheck.normalize(newUsername);
+      if (!normalized) return { username: username, live: live };
+      return tiktokLiveCheck.isLive(normalized).then(function (newLive) {
+        return { username: normalized, live: newLive, renamed: true };
+      });
+    }, function (err) {
+      logger.error('Stream is-live: username refresh failed:', err && err.message);
+      return { username: username, live: live };
+    });
+  }).then(function (r) {
+    sendJson(res, 200, Object.assign({ success: true }, r));
   });
 }
 

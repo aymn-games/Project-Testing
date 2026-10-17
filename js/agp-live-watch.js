@@ -60,6 +60,8 @@
             headers: { 'Authorization': 'Bearer ' + t }
         }).then(function (res) {
             return res.json().then(function (d) {
+                // اليوزر المحفوظ قديم (الستريمر غيّره بتيك توك) — ما عليه بث، والاتصال التلقائي يرجع على الجديد.
+                if (d && d.success && d.renamed) return false;
                 return d && d.success && (d.live === true || d.live === false) ? d.live : null;
             });
         }).catch(function () { return null; });
