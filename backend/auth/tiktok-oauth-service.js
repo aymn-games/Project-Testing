@@ -18,6 +18,7 @@ var crypto = require('crypto');
 var db = require('../db/database');
 var config = require('../config');
 var logger = require('../utils/logger');
+var tiktokAvatarSync = require('./tiktok-avatar-sync');
 
 var AUTHORIZE_URL = 'https://www.tiktok.com/v2/auth/authorize/';
 var TOKEN_URL = 'https://open.tiktokapis.com/v2/oauth/token/';
@@ -106,7 +107,7 @@ async function exchangeCodeForToken(code) {
  */
 async function fetchTikTokUserInfo(accessToken) {
     try {
-        var fields = 'open_id,display_name,avatar_url,username';
+        var fields = 'open_id,display_name,avatar_url,avatar_url_100,username';
         var res = await fetch(USER_INFO_URL + '?fields=' + fields, {
             headers: { 'Authorization': 'Bearer ' + accessToken }
         });
@@ -138,7 +139,18 @@ function linkVerifiedAccount(userId, tiktokUser) {
     return { success: true };
 }
 
+/**
+ * صورة تيك توك كصورة بروفايل لحظة الربط — فقط لو ما عنده صورة خاصة
+ * (راجع tiktok-avatar-sync.js). أي فشل يُتجاهَل ولا يأثر على الربط.
+ * @returns {Promise<boolean>}
+ */
+function saveTikTokAvatarIfMissing(userId, tiktokUser) {
+    var url = tiktokUser && (tiktokUser.avatar_url_100 || tiktokUser.avatar_url);
+    return tiktokAvatarSync.saveAvatarIfMissing(userId, url);
+}
+
 module.exports = {
+    saveTikTokAvatarIfMissing: saveTikTokAvatarIfMissing,
     buildAuthorizeUrl: buildAuthorizeUrl,
     verifyState: verifyState,
     exchangeCodeForToken: exchangeCodeForToken,

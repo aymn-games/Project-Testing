@@ -126,7 +126,16 @@ function getUserPoints(userId) {
         nextLevel: nextLevel ? { slug: nextLevel.slug, displayNameAr: nextLevel.display_name_ar, pointsRequired: nextLevel.level_points_required } : null,
         gamesPlayed: gamesPlayed,
         gamesWon: gamesWon,
-        winRatePct: winRatePct
+        winRatePct: winRatePct,
+        // قواعد الحساب نفسها — تعرضها صفحة البروفايل بقسم "كيف تكسب نقاط
+        // الخبرة" بدل ما تنكتب القيم يدوياً بالواجهة.
+        rules: {
+            perCompletedRound: POINTS_PER_COMPLETED_ROUND,
+            winBonus: WIN_BONUS_POINTS,
+            teamWinBonus: TEAM_WIN_BONUS_POINTS,
+            perHourPlayed: POINTS_PER_HOUR_PLAYED,
+            dailyCap: DAILY_CAP
+        }
     };
 }
 

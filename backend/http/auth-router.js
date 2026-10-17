@@ -11,6 +11,7 @@ var authService = require('../auth/auth-service');
 var tiktokOAuthService = require('../auth/tiktok-oauth-service');
 var announcementService = require('../announcements/announcement-service');
 var collectiblesService = require('../collectibles/collectibles-service');
+var challengeService = require('../challenge/challenge-service');
 var pointsService = require('../points/points-service');
 var streamerLevelService = require('../points/streamer-level-service');
 var supportersService = require('../supporters/supporters-service');
@@ -134,6 +135,16 @@ var ROUTES = [
   { method: 'POST', path: '/api/admin/bundle-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateBundleCodes },
   { method: 'POST', path: '/api/admin/codes/burn', requireAuth: true, requireAdmin: true, handler: handleAdminBurnCode },
   { method: 'POST', path: '/api/collectibles/redeem', requireAuth: true, handler: handleRedeemFrameCode },
+  // تحدي البثوث — بحث عن خصم، دعوات، وقبول (المباراة نفسها عبر /ws/challenge).
+  { method: 'GET', path: '/api/challenge/search', requireAuth: true, handler: handleChallengeSearch },
+  { method: 'GET', path: '/api/challenge/inbox', requireAuth: true, handler: handleChallengeInbox },
+  { method: 'POST', path: '/api/challenge/invite', requireAuth: true, handler: handleChallengeInvite },
+  { method: 'POST', path: '/api/challenge/respond', requireAuth: true, handler: handleChallengeRespond },
+  { method: 'POST', path: '/api/challenge/cancel', requireAuth: true, handler: handleChallengeCancel },
+  // أكواد "اختيار إطار" — توليد/عرض للأدمن، واستلام الإطار المختار للاعب.
+  { method: 'POST', path: '/api/admin/choice-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateChoiceCode },
+  { method: 'GET', path: '/api/admin/choice-codes', requireAuth: true, requireAdmin: true, handler: handleAdminListChoiceCodes },
+  { method: 'POST', path: '/api/collectibles/redeem-choice', requireAuth: true, handler: handleRedeemChoiceCode },
   { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
   // ---- هل البث شغّال الحين؟ — مكتبة الألعاب والألعاب تقطع الاتصال المحفوظ
   // لما يرجع live:false (راجع backend/platforms/tiktok/tiktok-live-check.js).
@@ -179,6 +190,7 @@ var ROUTES = [
   // ---- إحصائيات لوحة الأدمن
   { method: 'GET', path: '/api/admin/stats/streamers', requireAuth: true, requireAdmin: true, handler: handleAdminStreamerStats },
   { method: 'GET', path: '/api/admin/stats/users', requireAuth: true, requireAdmin: true, handler: handleAdminUserStats },
+  { method: 'GET', path: '/api/admin/live-streams', requireAuth: true, requireAdmin: true, handler: handleAdminLiveStreams },
   // ---- تعديل بروفايل المستخدم (اسم عرض + صورة) — صاحب الجلسة فقط.
   { method: 'POST', path: '/api/profile/display-name', requireAuth: true, handler: handleUpdateDisplayName },
   { method: 'POST', path: '/api/profile/username', requireAuth: true, handler: handleUpdateUsername },
@@ -359,6 +371,9 @@ async function handleTikTokOAuthCallback(req, res) {
 
   var linkResult = tiktokOAuthService.linkVerifiedAccount(userId, infoResult.user);
   if (!linkResult.success) return redirectToProfile(linkResult.error === 'tiktok_account_already_linked_elsewhere' ? 'already_linked' : 'link_failed');
+
+  // صورة تيك توك تصير صورة البروفايل تلقائياً لو ما عنده صورة خاصة.
+  await tiktokOAuthService.saveTikTokAvatarIfMissing(userId, infoResult.user);
 
   return redirectToProfile('success');
 }
@@ -592,11 +607,48 @@ function handleAdminListFrameCodes(req, res) {
   sendJson(res, 200, { success: true, codes: collectiblesService.listFrameCodes(getQueryParam(req, 'limit')) });
 }
 
-var REDEEM_ERROR_STATUS = { invalid_code: 404, code_used: 409, code_burned: 410, already_owned: 409, rate_limited: 429 };
+var REDEEM_ERROR_STATUS = { invalid_code: 404, code_used: 409, code_burned: 410, already_owned: 409, rate_limited: 429, code_full: 409, already_redeemed: 409 };
 
 function handleRedeemFrameCode(req, res, body, user) {
   var result = collectiblesService.redeemFrameCode(user.id, body.code);
   sendJson(res, result.success ? 200 : (REDEEM_ERROR_STATUS[result.error] || 400), result);
+}
+
+function handleRedeemChoiceCode(req, res, body, user) {
+  var result = collectiblesService.claimChoiceCode(user.id, body.code, body.frameType, body.frameRef);
+  sendJson(res, result.success ? 200 : (REDEEM_ERROR_STATUS[result.error] || 400), result);
+}
+
+function handleAdminGenerateChoiceCode(req, res, body) {
+  var result = collectiblesService.generateChoiceCode(body.maxUses, body.excluded, body.note);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleAdminListChoiceCodes(req, res) {
+  sendJson(res, 200, { success: true, codes: collectiblesService.listChoiceCodes() });
+}
+
+function handleChallengeSearch(req, res, body, user) {
+  sendJson(res, 200, challengeService.search(user, getQueryParam(req, 'q')));
+}
+
+function handleChallengeInbox(req, res, body, user) {
+  sendJson(res, 200, challengeService.inbox(user, getQueryParam(req, 'have')));
+}
+
+function handleChallengeInvite(req, res, body, user) {
+  var result = challengeService.createInvite(user, body.toCustomId, body.game, body.settings);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleChallengeRespond(req, res, body, user) {
+  var result = challengeService.respond(user, body.inviteId, Boolean(body.accept), body.settings);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleChallengeCancel(req, res, body, user) {
+  var result = challengeService.cancel(user, body.inviteId);
+  sendJson(res, result.success ? 200 : 400, result);
 }
 
 /** صاحب الحساب نفسه يفعّل أحد إطاراته المملوكة كإطاره الظاهر الوحيد. */
@@ -834,6 +886,18 @@ function handleAdminStreamerStats(req, res) {
 /** الأدمن فقط — إحصائيات المستخدمين المجمَّعة. */
 function handleAdminUserStats(req, res) {
   sendJson(res, 200, { success: true, stats: authService.getAdminUserStats() });
+}
+
+/**
+ * الأدمن فقط — البثوث المتصلة الآن من داخل الألعاب + مباريات التحدي الشغّالة.
+ * من الذاكرة مباشرة (بدون قاعدة البيانات). require متأخر لتفادي حلقة استيراد.
+ */
+function handleAdminLiveStreams(req, res) {
+  var connections = [];
+  var matches = [];
+  try { connections = require('../websocket/ws-server').listLiveConnections(); } catch (err) { logger.error('Admin live streams: connections failed:', err); }
+  try { matches = require('../challenge/challenge-match').listActiveMatches(); } catch (err) { logger.error('Admin live streams: matches failed:', err); }
+  sendJson(res, 200, { success: true, now: Date.now(), connections: connections, matches: matches });
 }
 
 /** صاحب الجلسة يعدّل اسم العرض الخاص به — user.id من الجلسة حصراً. */

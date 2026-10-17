@@ -654,7 +654,7 @@ function cardCatalogEntry(kind, cardKey) {
 // كل الأكواد (إطارات/بطاقات/باكجات) بنفس الصيغة — الكود لازم يكون فريد عبر الجداول كلها.
 var CODE_TABLES = ['frame_codes', 'card_codes', 'bundle_codes'];
 function codeTakenElsewhere(code, ownTable) {
-  return CODE_TABLES.some(function (t) {
+  return CODE_TABLES.concat(['choice_codes']).some(function (t) {
     return t !== ownTable && Boolean(db.prepare('SELECT code FROM ' + t + ' WHERE code = ?').get(code));
   });
 }
@@ -813,6 +813,8 @@ function redeemFrameCode(userId, rawCode) {
     if (cardRow) return redeemCardCode(userId, code, cardRow);
     var bundleRow = code ? db.prepare('SELECT * FROM bundle_codes WHERE code = ?').get(code) : null;
     if (bundleRow) return redeemBundleCode(userId, code, bundleRow);
+    var choiceRow = code ? db.prepare('SELECT * FROM choice_codes WHERE code = ?').get(code) : null;
+    if (choiceRow) return previewChoiceCode(userId, code, choiceRow);
     recordRedeemFail(userId);
     return { success: false, error: 'invalid_code' };
   }
@@ -972,6 +974,125 @@ function redeemBundleCode(userId, code, row) {
   };
 }
 
+/* ----------------------------------------------------------------------
+ * أكواد "اختيار إطار" (choice_codes) — كود واحد لعدد محدد من المستخدمين،
+ * وكل واحد يختار إطاره بنفسه. الاسترداد على خطوتين: redeemFrameCode يرجع
+ * قائمة الاختيار (kind: 'choice') بدون ما يستهلك الكود، وclaimChoiceCode
+ * يمنح الإطار المختار ويحسب الاستخدام.
+ * ---------------------------------------------------------------------- */
+var MAX_CHOICE_CODE_USES = 100000;
+
+function frameKey(frameType, frameRef) { return frameType + ':' + frameRef; }
+
+/** كل الإطارات (الكتالوج + الحصرية) بصيغة موحّدة. */
+function listAllFramesForChoice() {
+  return getCatalog().map(function (c) {
+    return { frameType: 'catalog', frameRef: c.slug, imageFilename: c.image_filename, displayNameAr: c.display_name_ar || '' };
+  }).concat(listCustomFrames().map(function (c) {
+    return { frameType: 'custom', frameRef: String(c.id), imageFilename: c.image_filename, displayNameAr: c.display_name_ar || '' };
+  }));
+}
+
+function parseExcluded(row) {
+  try { var list = JSON.parse(row.excluded || '[]'); return Array.isArray(list) ? list : []; } catch (e) { return []; }
+}
+
+/** الإطارات المتاحة لهذا المستخدم بهذا الكود: غير مستثناة وما يملكها. */
+function choiceCodeOptions(userId, row) {
+  var excluded = {};
+  parseExcluded(row).forEach(function (k) { excluded[k] = true; });
+  var owned = {};
+  db.prepare('SELECT frame_type, frame_ref FROM user_frames WHERE user_id = ?').all(userId)
+    .forEach(function (r) { owned[frameKey(r.frame_type, r.frame_ref)] = true; });
+  return listAllFramesForChoice().filter(function (f) {
+    var k = frameKey(f.frameType, f.frameRef);
+    return !excluded[k] && !owned[k];
+  });
+}
+
+/** فحوصات مشتركة بين العرض والاستلام — يرجع خطأ أو null. */
+function choiceCodeBlocker(userId, code, row) {
+  if (row.burned_at) return 'code_burned';
+  if (db.prepare('SELECT 1 FROM choice_code_redemptions WHERE code = ? AND user_id = ?').get(code, userId)) return 'already_redeemed';
+  if (row.uses >= row.max_uses) return 'code_full';
+  return null;
+}
+
+function previewChoiceCode(userId, code, row) {
+  var blocker = choiceCodeBlocker(userId, code, row);
+  if (blocker) return { success: false, error: blocker };
+  var choices = choiceCodeOptions(userId, row);
+  if (!choices.length) return { success: false, error: 'already_owned' };
+  return { success: true, kind: 'choice', code: code, choices: choices };
+}
+
+/**
+ * المستخدم اختار إطاره من كود الاختيار.
+ * @returns {{success: boolean, frame?: Object, error?: string}}
+ */
+function claimChoiceCode(userId, rawCode, frameType, frameRef) {
+  var code = normalizeFrameCode(rawCode);
+  frameRef = String(frameRef == null ? '' : frameRef);
+  if (!code) return { success: false, error: 'invalid_code' };
+
+  var result = db.transaction(function () {
+    // كل الفحوصات داخل المعاملة — آخر استخدام ما يروح لشخصين بنفس اللحظة.
+    var row = db.prepare('SELECT * FROM choice_codes WHERE code = ?').get(code);
+    if (!row) return { success: false, error: 'invalid_code' };
+    var blocker = choiceCodeBlocker(userId, code, row);
+    if (blocker) return { success: false, error: blocker };
+    var allowed = choiceCodeOptions(userId, row).some(function (f) { return f.frameType === frameType && f.frameRef === frameRef; });
+    if (!allowed) return { success: false, error: 'invalid_frame' };
+
+    var used = db.prepare('UPDATE choice_codes SET uses = uses + 1 WHERE code = ? AND uses < max_uses AND burned_at IS NULL').run(code);
+    if (used.changes !== 1) return { success: false, error: 'code_full' };
+    db.prepare('INSERT INTO choice_code_redemptions (code, user_id, frame_type, frame_ref, redeemed_at) VALUES (?, ?, ?, ?, ?)')
+      .run(code, userId, frameType, frameRef, now());
+    var granted = grantFrame(userId, frameType, frameRef, { grantedBy: 'redeem_code', skipEntranceBundle: true });
+    if (!granted.success) throw new Error('grant_failed:' + granted.error); // يلغي الاستخدام
+    return { success: true };
+  })();
+  if (!result.success) return result;
+
+  logger.log('Collectibles: user ' + userId + ' redeemed choice code ' + code + ' for frame ' + frameType + ':' + frameRef);
+  return { success: true, kind: 'frame', frame: Object.assign({ frameType: frameType, frameRef: frameRef }, frameDisplay(frameType, frameRef)) };
+}
+
+/**
+ * توليد كود اختيار واحد (أدمن).
+ * @param {number} maxUses - كم شخص يقدر يستخدمه
+ * @param {string[]} excluded - مفاتيح "catalog:<slug>" / "custom:<id>"
+ * @returns {{success: boolean, code?: string, error?: string}}
+ */
+function generateChoiceCode(maxUses, excluded, note) {
+  maxUses = Math.floor(Number(maxUses));
+  if (!maxUses || maxUses < 1 || maxUses > MAX_CHOICE_CODE_USES) return { success: false, error: 'invalid_max_uses' };
+  var known = {};
+  listAllFramesForChoice().forEach(function (f) { known[frameKey(f.frameType, f.frameRef)] = true; });
+  var cleanExcluded = (Array.isArray(excluded) ? excluded : []).map(String).filter(function (k, i, arr) { return known[k] && arr.indexOf(k) === i; });
+  if (cleanExcluded.length >= Object.keys(known).length) return { success: false, error: 'all_excluded' };
+
+  var insert = db.prepare('INSERT OR IGNORE INTO choice_codes (code, max_uses, uses, excluded, note, created_at) VALUES (?, ?, 0, ?, ?, ?)');
+  var code = null;
+  db.transaction(function () {
+    while (!code) {
+      var candidate = 'AGP-' + randomCodeChunk(4) + '-' + randomCodeChunk(4);
+      if (codeTakenElsewhere(candidate, 'choice_codes')) continue;
+      if (insert.run(candidate, maxUses, JSON.stringify(cleanExcluded), String(note || '').slice(0, 200), now()).changes === 1) code = candidate;
+    }
+  })();
+
+  logger.log('Collectibles: generated choice code ' + code + ' (max ' + maxUses + ' uses, ' + cleanExcluded.length + ' excluded)');
+  return { success: true, code: code };
+}
+
+/** قائمة أكواد الاختيار للأدمن، الأحدث أولاً. */
+function listChoiceCodes() {
+  return db.prepare('SELECT * FROM choice_codes ORDER BY created_at DESC LIMIT 500').all().map(function (r) {
+    return { code: r.code, maxUses: r.max_uses, uses: r.uses, excluded: parseExcluded(r), note: r.note, createdAt: r.created_at, burnedAt: r.burned_at || null };
+  });
+}
+
 /**
  * حرق كود (إلغاؤه نهائياً — استرجاع مبلغ مثلاً). يشتغل على كل أنواع الأكواد.
  * الكود المستخدم ما ينحرق (العناصر صارت عند العميل — تُسحب يدوياً لو لزم).
@@ -980,6 +1101,14 @@ function redeemBundleCode(userId, code, row) {
 function burnCode(rawCode) {
   var code = normalizeFrameCode(rawCode);
   if (!code) return { success: false, error: 'invalid_code' };
+  // كود الاختيار متعدد الاستخدام: الحرق يوقف أي استخدام جاي، واللي استخدموه يبقى لهم إطارهم.
+  var choiceRow = db.prepare('SELECT burned_at FROM choice_codes WHERE code = ?').get(code);
+  if (choiceRow) {
+    if (choiceRow.burned_at) return { success: false, error: 'already_burned' };
+    db.prepare('UPDATE choice_codes SET burned_at = ? WHERE code = ?').run(now(), code);
+    logger.log('Collectibles: burned choice code ' + code);
+    return { success: true, code: code };
+  }
   for (var i = 0; i < CODE_TABLES.length; i++) {
     var table = CODE_TABLES[i];
     var row = db.prepare('SELECT * FROM ' + table + ' WHERE code = ?').get(code);
@@ -1029,6 +1158,9 @@ module.exports = {
   listBundles: listBundles,
   generateBundleCodes: generateBundleCodes,
   burnCode: burnCode,
+  claimChoiceCode: claimChoiceCode,
+  generateChoiceCode: generateChoiceCode,
+  listChoiceCodes: listChoiceCodes,
   listFrameCodes: listFrameCodes,
   redeemFrameCode: redeemFrameCode
 };

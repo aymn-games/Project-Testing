@@ -536,7 +536,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return '<span class="lc-connected-badge lc-connected-badge--no">' +
             '<span class="lc-connected-dot"></span>' +
             'لم يتم الاتصال بالبث بعد' +
-            '<a href="../../games.html" class="lc-connected-badge-link">اتصل من مكتبة الألعاب ↗</a>' +
+            '<a href="../../games.html" class="lc-connected-badge-link">ابدأ البث ونتصل تلقائياً ↗</a>' +
             '</span>';
     }
 
@@ -597,7 +597,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var kw1 = normalizeArabicText(_settings.team1AccessCode);
         var kw2 = normalizeArabicText(_settings.team2AccessCode);
 
-        if (!saved) return showSettingsError('لازم تتصل بالبث من مكتبة الألعاب أول (زر "اتصل بالبث" بصفحة الألعاب).');
+        if (!saved) return showSettingsError('لازم تكون في بث مباشر على حساب تيك توك المربوط بحسابك — نتصل تلقائياً أول ما تبدأ البث.');
         if (!kw1 || !kw2) return showSettingsError('لازم تحدد كلمة مفتاحية لكل فريق.');
         if (kw1 === kw2) return showSettingsError('الكلمتان المفتاحيتان لازم تكونان مختلفتين عن بعض.');
 

@@ -477,6 +477,41 @@ function adminClearEntrance(userId) {
     return request('/api/admin/entrance', { method: 'POST', body: { userId: userId, clear: true } });
 }
 
+/** After redeemFrameCode returns kind 'choice': claims the chosen frame.
+ * result.error: invalid_code | code_burned | code_full | already_redeemed | invalid_frame */
+function redeemChoiceCode(code, frameType, frameRef) {
+    return request('/api/collectibles/redeem-choice', { method: 'POST', body: { code: code, frameType: frameType, frameRef: frameRef } });
+}
+
+/** Admin only — one multi-use "choose your frame" code. excluded: ["catalog:<slug>", "custom:<id>"] */
+function adminGenerateChoiceCode(maxUses, excluded, note) {
+    return request('/api/admin/choice-codes/generate', { method: 'POST', body: { maxUses: maxUses, excluded: excluded || [], note: note || '' } });
+}
+
+/** Admin only — list "choose your frame" codes with their usage. */
+function adminListChoiceCodes() {
+    return request('/api/admin/choice-codes', { method: 'GET' });
+}
+
+/* Stream challenge (two streams play one game) — backend/challenge/. */
+function challengeSearch(query) {
+    return request('/api/challenge/search?q=' + encodeURIComponent(query || ''), { method: 'GET' });
+}
+/** have: invite ids whose avatar the page already has (comma-separated). */
+function challengeInbox(have) {
+    return request('/api/challenge/inbox' + (have ? '?have=' + encodeURIComponent(have) : ''), { method: 'GET' });
+}
+function challengeInvite(toCustomId, game, settings) {
+    return request('/api/challenge/invite', { method: 'POST', body: { toCustomId: toCustomId, game: game, settings: settings || {} } });
+}
+/** settings (on accept): {team2, cats:[3 category ids]} */
+function challengeRespond(inviteId, accept, settings) {
+    return request('/api/challenge/respond', { method: 'POST', body: { inviteId: inviteId, accept: Boolean(accept), settings: settings || {} } });
+}
+function challengeCancel(inviteId) {
+    return request('/api/challenge/cancel', { method: 'POST', body: { inviteId: inviteId } });
+}
+
 /** Owner equips one of their owned frames (own profile page only). */
 function equipFrame(frameType, frameRef) {
     return request('/api/collectibles/equip', { method: 'POST', body: { frameType: frameType, frameRef: frameRef } });
@@ -701,6 +736,11 @@ function getAdminStreamerStats() {
 
 function getAdminUserStats() {
     return request('/api/admin/stats/users', { method: 'GET' });
+}
+
+/** Admin only — streams connected right now from inside games + live challenge matches. */
+function getAdminLiveStreams() {
+    return request('/api/admin/live-streams', { method: 'GET' });
 }
 
 function getTopSupporters() {
@@ -936,6 +976,14 @@ global.AGPAuth = {
     adminSetEntrance: adminSetEntrance,
     adminClearEntrance: adminClearEntrance,
     equipFrame: equipFrame,
+    challengeSearch: challengeSearch,
+    challengeInbox: challengeInbox,
+    challengeInvite: challengeInvite,
+    challengeRespond: challengeRespond,
+    challengeCancel: challengeCancel,
+    redeemChoiceCode: redeemChoiceCode,
+    adminGenerateChoiceCode: adminGenerateChoiceCode,
+    adminListChoiceCodes: adminListChoiceCodes,
     redeemFrameCode: redeemFrameCode,
     adminGenerateFrameCodes: adminGenerateFrameCodes,
     adminGenerateCardCodes: adminGenerateCardCodes,
@@ -966,6 +1014,7 @@ global.AGPAuth = {
     getTopPlayersByHours: getTopPlayersByHours,
     getAdminStreamerStats: getAdminStreamerStats,
     getAdminUserStats: getAdminUserStats,
+    getAdminLiveStreams: getAdminLiveStreams,
     getRecentSupporters: getRecentSupporters,
     getTopSupporters: getTopSupporters,
     adminListSupporters: adminListSupporters,

@@ -191,8 +191,8 @@ class Component extends DCLogic {
   componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820,scale:Math.min(innerWidth/1320,(innerHeight-80)/730)}); this.fit(); addEventListener('resize',this.fit);
     // الشات من البث المتصل بمكتبة الألعاب: كتابة كلمة فريق = انضمام له
     VC.connect(); this.unsub=VC.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower));
-    if(!VC.getSavedConnection()) this.toastMsg('غير متصل بالبث · اتصل من مكتبة الألعاب');
-    this.onEnded=()=>this.toastMsg('انتهى البث · اتصل من مكتبة الألعاب'); addEventListener('agp:stream-ended',this.onEnded); }
+    if(!VC.getSavedConnection()) this.toastMsg('غير متصل بالبث · ابدأ البث على حسابك المربوط ونتصل تلقائياً');
+    this.onEnded=()=>this.toastMsg('انتهى البث · نتصل تلقائياً أول ما تبدأ البث من جديد'); addEventListener('agp:stream-ended',this.onEnded); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('agp:stream-ended',this.onEnded); this.unsub?.(); clearTimeout(this.tt); }
   // كل تعليق من الشات: كلمة فريق = انضمام له، وكلمة الفريق الثاني تنقله (نفس تطبيع VC.norm)
   // المتابعين فقط لو محدد · لو هو أصلاً بنفس الفريق يُتجاهل

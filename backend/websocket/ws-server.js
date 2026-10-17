@@ -227,6 +227,82 @@ function checkStreamConnectAllowed(payload) {
   return null;
 }
 
+// اسم اللعبة من مسار الصفحة (/games/<slug>/...) — للعرض بلوحة الأدمن فقط.
+var GAME_NAMES = {
+  'bomb': 'القنبلة', 'codenames': 'كود نيمز', 'draw': 'شخبليطة', 'elimination-roulette': 'روليت الإقصاء',
+  'fastest-answer': 'أسرع إجابة', 'fruit-roulette': 'روليت الفواكه', 'khazna': 'الخزنة', 'letters-cell': 'خلية الحروف',
+  'memory-challenge': 'تحدي الذاكرة', 'musical-chairs': 'الكراسي الموسيقية', 'photo-challenge': 'تحدي الصور',
+  'russian-roulette': 'الروليت الروسي', 'snakes-ladders': 'السلم والثعبان', 'team-war': 'حرب الفريقين',
+  'top-ten': 'خمّن العشرة', 'tribe-roulette': 'روليت القبائل', 'vocab': 'تحدي المفردات',
+  'word-categories': 'اسم و حيوان و نبات و جماد و بلاد', 'xo': 'إكس أو'
+};
+
+function gameFromPage(page) {
+  var m = /\/games\/([a-z0-9-]+)\//i.exec(String(page || ''));
+  if (!m) return { slug: null, name: null };
+  var slug = m[1].toLowerCase();
+  return { slug: slug, name: GAME_NAMES[slug] || slug };
+}
+
+/** لقطة الاتصال اللي تُعرض للأدمن — صاحب الجلسة من التوكن، واللعبة من مسار الصفحة. */
+function buildLiveInfo(platform, payload) {
+  var siteUser = null;
+  try {
+    var u = payload.authToken ? authService.validateSession(String(payload.authToken)) : null;
+    if (u) siteUser = { id: u.id, name: u.username || null, customId: u.custom_id || null, role: u.role, tiktok: u.tiktok_verified ? (u.tiktok_username || null) : null, avatar: u.tiktok_verified ? (u.tiktok_avatar_url || null) : null };
+  } catch (err) { logger.error('WS Server: live info user lookup failed:', err); }
+  var page = typeof payload.page === 'string' ? payload.page.slice(0, 200) : null;
+  var game = gameFromPage(page);
+  return {
+    platform: platform,
+    username: payload.username ? normalizeTikTokUsername(payload.username) : null,
+    page: page,
+    gameSlug: game.slug,
+    gameName: game.name,
+    user: siteUser,
+    status: 'connecting',
+    requestedAt: Date.now(),
+    connectedAt: null,
+    comments: 0,
+    gifts: 0,
+    viewers: null
+  };
+}
+
+function updateLiveStatus(entry, status) {
+  if (!entry.live) return;
+  entry.live.status = status;
+  if (status === 'connected' && !entry.live.connectedAt) entry.live.connectedAt = Date.now();
+}
+
+/** كل الاتصالات المفتوحة الآن من داخل الألعاب (بدون تحقق مكتبة الألعاب). */
+function listLiveConnections() {
+  var out = [];
+  registry.listConnectionIds().forEach(function (connectionId) {
+    var entry = registry.get(connectionId);
+    if (!entry || !entry.live || !entry.activeConnector) return;
+    var l = entry.live;
+    out.push({
+      connectionId: connectionId,
+      platform: l.platform,
+      username: l.username,
+      gameSlug: l.gameSlug,
+      gameName: l.gameName,
+      page: l.page,
+      user: l.user,
+      status: l.status,
+      requestedAt: l.requestedAt,
+      connectedAt: l.connectedAt,
+      comments: l.comments,
+      gifts: l.gifts,
+      viewers: l.viewers,
+      tracked: Boolean(entry.broadcastTracking),
+      lastSeenAt: entry.lastSeenAt || null
+    });
+  });
+  return out;
+}
+
 /**
  * معالجة رسالة "connect" واردة من المتصفح — تفتح موصِّلاً جديداً حسب
  * platforms/connector-router.js، وتربط استدعاءاته الراجعة (Callbacks)
@@ -295,8 +371,16 @@ function handleConnectMessage(connectionId, socket, payload) {
     }
   }
 
+  // معلومات العرض بصفحة «البثوث الشغّالة الآن» بلوحة الأدمن (بالذاكرة فقط).
+  // التحقق من اليوزر بمكتبة الألعاب ما يُعرض — المكتبة مو لعبة.
+  entry.live = null;
+  if (payload.source !== 'library') {
+    entry.live = buildLiveInfo(platform, payload);
+  }
+
   connector.connect(payload, {
     onStatus: function (status, message) {
+      if (entry.activeConnector === connector) updateLiveStatus(entry, status);
       // البث انتهى فعلياً في تيك توك (الموصِّل أوقف نفسه بدون إعادة اتصال):
       // يُختَم البث، ويوصل للواجهة كـ 'disconnected' مع reason 'stream_ended'
       // عشان تمسح الاتصال المحفوظ بمكتبة الألعاب وتعرض الرسالة.
@@ -305,6 +389,7 @@ function handleConnectMessage(connectionId, socket, payload) {
           trackBroadcastStatus(entry, 'error');
           entry.activeConnector = null;
           entry.activePlatform = null;
+          entry.live = null;
         }
         var endedStatus = builder.buildStatusMessage(platform, 'disconnected', message);
         endedStatus.payload.reason = 'stream_ended';
@@ -319,6 +404,8 @@ function handleConnectMessage(connectionId, socket, payload) {
     onComment: function (data) {
       sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, data.isFollower, data.avatarUrl, data.frame, data.elimCard, data.winCard));
 
+      if (entry.live && entry.activeConnector === connector) entry.live.comments++;
+
       // تجميع بالذاكرة بدل كتابة SQLite فورية — تُفرَّغ دورياً عبر flushAllPendingStats.
       if (entry.activeBroadcastId) {
         ensurePendingStats(entry);
@@ -328,6 +415,7 @@ function handleConnectMessage(connectionId, socket, payload) {
 
     onGift: function (data) {
       sendEnvelope(socket, builder.buildGiftMessage(platform, data.id, data.name, data.giftName, data.giftValue, data.repeatCount, data.giftId));
+      if (entry.live && entry.activeConnector === connector) entry.live.gifts++;
 
       // قيمة الهدية الفعلية = قيمة الوحدة × عدد التكرار. تجميع بالذاكرة
       // بدل كتابتين SQLite فوريتين لكل هدية.
@@ -352,6 +440,7 @@ function handleConnectMessage(connectionId, socket, payload) {
     // أعلى معدل أحداث قبل الإصلاح؛ يُخزَّن آخر قيمة بالذاكرة فقط (بدون
     // تراكم) وتُكتب دفعة كل STATS_FLUSH_INTERVAL_MS بدل كل حدث فردي.
     onViewerUpdate: function (data) {
+      if (entry.live && entry.activeConnector === connector) entry.live.viewers = Number(data.current) || 0;
       if (entry.activeBroadcastId) {
         ensurePendingStats(entry);
         entry.pendingStats.viewerCurrent = Number(data.current) || 0;
@@ -375,6 +464,7 @@ function handleDisconnectMessage(connectionId, socket, payload) {
 
   entry.activeConnector = null;
   entry.activePlatform = null;
+  entry.live = null;
 
   sendEnvelope(socket, builder.buildStatusMessage(payload.platform, 'disconnected'));
 }
@@ -489,6 +579,8 @@ function handleUpgrade(req, socket) {
 }
 
 module.exports = {
+  listLiveConnections: listLiveConnections,
+
   /**
    * ربط خادم WebSocket بخادم HTTP موجود فعلياً.
    * @param {http.Server} httpServer
@@ -498,6 +590,10 @@ module.exports = {
       var pathname = (req.url || '').split('?')[0];
       if (pathname === '/ws/room-relay') {
         roomRelay.handleUpgrade(req, socket);
+        return;
+      }
+      if (pathname === '/ws/challenge') {
+        require('../challenge/challenge-match').handleUpgrade(req, socket);
         return;
       }
       handleUpgrade(req, socket);

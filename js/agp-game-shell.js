@@ -485,7 +485,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
         return '<div class="agp-shell-conn-badge agp-shell-conn-no"><span class="agp-shell-conn-dot"></span>' +
             'لم يتم الاتصال بالبث بعد' +
-            '<a href="../../games.html" class="agp-shell-conn-link">اتصل من مكتبة الألعاب ↗</a></div>';
+            '<a href="../../games.html" class="agp-shell-conn-link">ابدأ البث ونتصل تلقائياً ↗</a></div>';
     }
 
     // يحدّث شارة حالة الاتصال فوراً لو المضيف اتصل من تبويب مكتبة الألعاب

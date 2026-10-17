@@ -35,6 +35,7 @@
 
 var logger = require('../../utils/logger');
 var collectiblesService = require('../../collectibles/collectibles-service');
+var tiktokAvatarSync = require('../../auth/tiktok-avatar-sync');
 
 var MAX_RECONNECT_ATTEMPTS = 5;
 var BASE_RECONNECT_DELAY_MS = 1000;
@@ -357,12 +358,15 @@ function createTikTokConnector() {
             // كما أوحى مثال README (مضلِّل). نُبقي data.comment كاحتياط دفاعي.
             var commentText = (data && (data.content || data.comment)) || '';
             var followDebug = extractFollowDebugInfo(data);
+            var avatarUrl = extractAvatarUrl(data);
+            // حساب موثَّق بدون صورة بروفايل؟ نحفظ صورة تيك توك الحالية (بالخلفية).
+            tiktokAvatarSync.noteCommentAvatar(user.uniqueId, avatarUrl);
             _callbacks.onComment({
                 id: user.id,
                 name: user.name,
                 text: commentText,
                 isFollower: isStreamOwner(user, _username) || extractIsFollower(data),
-                avatarUrl: extractAvatarUrl(data),
+                avatarUrl: avatarUrl,
                 frame: extractEquippedFrame(user.uniqueId),
                 entrance: extractEquippedEntrance(user.uniqueId),
                 elimCard: extractElimCard(user.uniqueId),

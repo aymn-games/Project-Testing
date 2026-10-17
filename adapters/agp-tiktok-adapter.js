@@ -194,6 +194,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 platform: PLATFORM_KEY,
                 username: (_pendingConnectOptions && _pendingConnectOptions.username) || null,
                 followersOnly: Boolean(_pendingConnectOptions && _pendingConnectOptions.followersOnly),
+                // مسار صفحة اللعبة — يظهر بصفحة «البثوث الشغّالة» بلوحة الأدمن.
+                page: (typeof location !== 'undefined' && location.pathname) || null,
                 // The backend only connects to the TikTok account verified on
                 // the logged-in site account (see ws-server.js
                 // checkStreamConnectAllowed) — it needs the session token.
