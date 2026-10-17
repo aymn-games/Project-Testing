@@ -700,7 +700,7 @@ class Component extends DCLogic {
   revokeApproved(team){ let n=0; Object.keys(this.approved||{}).forEach(id=>{ if(team&&this.approved[id].team!==team) return; this.send({type:'spymaster_revoke',id}); delete this.approved[id]; n++; });
     if(n) this.setState(s=>({joinTick:s.joinTick+1})); }
   // حالة الدور لجوالات السباي ماستر: مين دوره، المرحلة، التلميح الحالي، ورقم الدور (يمنع إعادة إرسال تلميح قديم)
-  statusPayload(){ const S=this.state; return {turn:S.turn,phase:S.phase,hint:S.hint?{w:S.hint.w,n:S.hint.n}:null,turnId:this.turnId||0}; }
+  statusPayload(){ const S=this.state; return {turn:S.turn,phase:S.phase,hint:S.hint?{w:S.hint.w,n:S.hint.n,old:S.hint.old||0}:null,turnId:this.turnId||0}; }
   // تلميح من جوال السباي ماستر (مربع النص + عدد الكلمات 1–7): مشفّر بمفتاح الجوال نفسه، فما أحد غيره يقدر يرسله
   onPhoneHint(m){ let team, name, keyP, to;
     if(m.slot){ const sl=[1,2].map(t=>this.slots[t]).find(x=>x&&x.id===m.slot); if(!sl) return; team=sl.team; name=sl.name; to={slot:sl.id}; if(!sl.aes) sl.aes=CN.secure.aesFromB64(sl.key); keyP=sl.aes; }
@@ -708,9 +708,9 @@ class Component extends DCLogic {
     const ack=(ok,reason)=>this.send({type:'hint_ack',...to,ok,reason:reason||null});
     keyP.then(k=>k?CN.secure.decrypt(k,m.iv,m.ct):null).then(d=>{ if(!d) return; const S=this.state;
       if(S.phase!=='hint'||S.turn!==team||+d.turnId!==(this.turnId||0)) return ack(false,'not_turn');
-      const w=String(d.w||'').trim().replace(/\s+/g,' '), n=Math.round(+d.n);
+      const w=String(d.w||'').trim().replace(/\s+/g,' '), n=Math.round(+d.n), old=Math.max(0,Math.min(n,Math.round(+d.old||0)));
       if(!w||w.length>30) return ack(false,'empty'); if(/\s/.test(w)) return ack(false,'one_word'); if(!(n>=1&&n<=7)) return ack(false,'count');
-      this.log(team,`🕵 ${name} أرسل التلميح من الجوال`,'info'); this.giveHint(n,w,0); ack(true); }).catch(()=>{}); }
+      this.log(team,`🕵 ${name} أرسل التلميح من الجوال`,'info'); this.giveHint(n,w,old); ack(true); }).catch(()=>{}); }
   sendBoardToSlot(sl){ if(!sl) return; const board=this.boardPayload(), seq=++this.seq;
     if(!sl.aes) sl.aes=CN.secure.aesFromB64(sl.key);
     sl.aes.then(key=>CN.secure.encrypt(key,{board,teams:this.teamNames(),team:sl.team,...this.statusPayload()})).then(e=>this.send({type:'board_update',slot:sl.id,seq,...e})).catch(()=>{}); }
@@ -781,16 +781,21 @@ class Component extends DCLogic {
     if(P.kind==='error') return {msg:'تعذّر جلب نقاط المنصة الآن',c:'#fca5a5'};
     const a=P.kind==='ok'&&u?P.aw[u]:null; if(!a) return {msg:'لا يوجد حساب مرتبط بهذا اللاعب على المنصة بعد',c:'#a8a3b5'};
     return {pts:'+'+a.added+' نقطة',total:'المجموع: '+a.totalPoints}; }
-  resetBoard(keepRoles){ if(!keepRoles) this.revokeApproved(); clearInterval(this.iv); clearTimeout(this.bt); (this.ts||[]).forEach(clearTimeout); this.ts=[]; const st=this.state.starter===1?2:1; try{ localStorage.setItem('codenames-last-starter',st); }catch(e){}
-    this.setState({...this.newBoard(st),phase:'ready',hint:null,hintGiven:false,win:null,banner:null,plat:null,picks:[],bump:null,flow:keepRoles?'qr':'roles',rolesStep:1,logs:{1:[],2:[]},...(keepRoles?{}:{roles:{1:{spy:null,conf:null},2:{spy:null,conf:null}}})}); }
+  // «إعادة المباراة» و«مباراة جديدة»: لوحة جديدة ويرجع لتحديد الأدوار من البداية (الإعادة تبقي اختيارات الأدوار السابقة محددة)
+  resetBoard(keepRoles){ if(!keepRoles) this.revokeApproved(); clearInterval(this.iv); clearTimeout(this.bt); clearTimeout(this._autoT); this._autoT=null; (this.ts||[]).forEach(clearTimeout); this.ts=[]; const st=this.state.starter===1?2:1; try{ localStorage.setItem('codenames-last-starter',st); }catch(e){}
+    this.setState({...this.newBoard(st),phase:'ready',hint:null,hintGiven:false,win:null,banner:null,plat:null,picks:[],bump:null,flow:'roles',rolesStep:1,modal:null,menuOpen:false,guideOpen:false,left:0,logs:{1:[],2:[]},...(keepRoles?{}:{roles:{1:{spy:null,conf:null},2:{spy:null,conf:null}}})}); }
 
   onChat(user,text,isFollower=true){
     const S=this.state; if(!user) return; const t=CMD(text), tm=this.teamOf(user);
     // كلمة فريق من شخص مو بالمباراة → طلب دخول (القواعد المشتركة CN.join — JOIN-RULES.md)
     const jr=!tm&&CN.join([1,2].map(k=>({keyword:S.teams[k].kw,members:S.joinReqs.filter(j=>j.team===k).map(j=>j.name)})),user,text,{followersOnly:S.followers,isFollower});
     if(jr){ if(jr.ok) this.setState(s=>({joinReqs:[...s.joinReqs.filter(j=>j.name!==user),{name:user,team:jr.k+1}]})); return; }
-    if((S.phase!=='hint'&&S.phase!=='guess')||tm!==S.turn) return;
+    // أمر تأكيد/تخطي جا بوقت غلط أو من غير المؤكّد: ما ينفّذ — بس ينكتب سببه بأحداث الفريق (مرة وحدة لكل شخص بالدور)
+    const isConfirmCmd=/^تاكيد( \d{1,2})+$/.test(t)||t==='تخطي';
+    const why=reason=>{ const k=(this.turnId||0)+'|'+user+'|'+reason; if((this._why||(this._why=new Set())).has(k)) return; this._why.add(k); this.log(tm,reason,'bad'); };
+    if((S.phase!=='hint'&&S.phase!=='guess')||tm!==S.turn){ if(isConfirmCmd&&tm&&(S.phase==='hint'||S.phase==='guess')&&S.roles[tm].conf===user) why(`⏳ ${user} حاول يأكد وهو مو دور فريقه`); return; }
     const R=S.roles[tm];
+    if(isConfirmCmd&&S.phase==='hint'){ if(user===R.conf) why(`⏳ ${user} حاول يأكد قبل التلميح — انتظروا التلميح أول`); return; }
     // الصيغة الموحّدة لكل الأوامر: [الكلمة] ثم [الرقم] — مثل: مدن 3 · تأكيد 12 · سحب 12
     if(S.phase==='hint'){ if(user!==R.spy) return; const raw=DIGITS(text);
       let m=raw.match(/^(\d{1,2})\s+(.+?)\s+(\d{1,2})$/), w, n, old=0; if(m){ old=+m[1]; w=m[2]; n=+m[3]; if(old>n) old=n; } else if((m=raw.match(/^(.+?)\s+(\d{1,2})$/))){ w=m[1]; n=+m[2]; } else if((m=raw.match(/^(\d{1,2})\s+(.+)$/))){ w=m[2]; n=+m[1]; } else return;
@@ -799,7 +804,7 @@ class Component extends DCLogic {
     let m;
     if((m=t.match(/^(\d{1,2})$/))){ const n=+m[1]; if(n>=1&&n<=25) this.vote(user,n-1,true); return; }
     if((m=t.match(/^سحب (\d{1,2})$/))){ const n=+m[1]; if(n>=1&&n<=25) this.vote(user,n-1,false); return; }
-    if(user!==R.conf) return;
+    if(user!==R.conf){ if(isConfirmCmd) why(`${user} كتب تأكيد وهو مو المؤكّد (المؤكّد: ${R.conf||'— غير معيّن —'})`); return; }
     if((m=t.match(/^تاكيد((?: \d{1,2})+)$/))){ const nums=[...new Set(m[1].trim().split(' ').map(Number))].filter(n=>n>=1&&n<=25); if(nums.length) this.confirm(nums); return; }
     if(t==='تخطي'){ this.log(tm,'تخطى بقية التخمين','info'); this.endTurn(); }
   }
