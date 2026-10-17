@@ -56,7 +56,7 @@ input::placeholder{color:#6f6a7c}
 
   <main style="position:fixed;top:80px;left:0;right:0;bottom:0;display:grid;place-items:center;overflow:hidden">
     <div style="position:relative;width:{{ stageW }}px;height:{{ stageH }}px">
-    <div style="position:absolute;top:0;left:0;width:1120px;height:790px;transform:scale({{ scale }});transform-origin:top left;display:flex;justify-content:center">
+    <div style="position:absolute;top:0;left:0;width:1120px;height:850px;transform:scale({{ scale }});transform-origin:top left;display:flex;justify-content:center">
     <div style="width:100%;height:100%;box-sizing:border-box;padding:0 24px;display:flex;flex-direction:column">
 
       <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:12px;padding:26px 0 22px;text-align:center">
@@ -229,14 +229,15 @@ const SETTINGS = [
   { title:'المباراة', full:true, rows:[
     { type:'choice', key:'who',      label:'🔑 مين يقدر يدخل؟', options:['الجميع','المتابعون فقط'], default:0 },
     { type:'choice', key:'hintTime', label:'⏳ وقت إرسال التلميح من السباي ماستر', options:['2:00','2:30','3:00'], default:1 },
-    { type:'choice', key:'guessTime',label:'⏳ وقت اختيار اللاعبين وتأكيد الإجابة', options:['1:30','2:00','2:30'], default:1 }
+    { type:'choice', key:'guessTime',label:'⏳ وقت اختيار اللاعبين وتأكيد الإجابة', options:['1:30','2:00','2:30'], default:1 },
+    { type:'choice', key:'wordMode', label:'🧩 نمط الكلمات', hint:'السهل: كلمات كل فريق من مواضيع قريبة (مثل حيوانات وفواكه)', options:['المعروف','السهل'], default:0 }
   ]}
 ];
 const AR = CN.norm;
 
 class Component extends DCLogic {
   state = { supCount:1, supPick:false, values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:!!CN.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
-  componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820,scale:Math.min(innerWidth/1120,(innerHeight-80)/790)}); this.fit(); addEventListener('resize',this.fit);
+  componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820,scale:Math.min(innerWidth/1120,(innerHeight-80)/850)}); this.fit(); addEventListener('resize',this.fit);
     // البث انتهى (js/agp-live-watch.js) → حالة الاتصال تتحدث فوراً
     this.onEnded=()=>this.setState({live:!!CN.getSavedConnection()}); addEventListener('agp:stream-ended',this.onEnded); addEventListener('agp:stream-connected',this.onEnded); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('agp:stream-ended',this.onEnded); }
@@ -276,7 +277,7 @@ class Component extends DCLogic {
 
   renderVals(){ const S=this.state, o=(i,out)=>S.exitOpenOut?out:i;
     return {
-      hideImg:e=>{e.currentTarget.style.display='none';}, gameName:'إعدادات مباراة '+GAME.name, fx:this.buildFx(), scale:S.scale||1, stageW:Math.round(1120*(S.scale||1)), stageH:Math.round(790*(S.scale||1)), lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(), toast:S.toast,
+      hideImg:e=>{e.currentTarget.style.display='none';}, gameName:'إعدادات مباراة '+GAME.name, fx:this.buildFx(), scale:S.scale||1, stageW:Math.round(1120*(S.scale||1)), stageH:Math.round(850*(S.scale||1)), lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(), toast:S.toast,
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
       sections:SETTINGS.map((s,i)=>({title:s.title,num:i+1,span:s.full?'1 / -1':'auto',delay:(i*0.07).toFixed(2)+'s',rows:s.rows.filter(r=>!r.showIf||S.values[r.showIf]).map((r,k)=>this.buildRow(r,k))})),
       offline:!S.live, online:S.live,
