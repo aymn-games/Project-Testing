@@ -133,6 +133,14 @@ input:focus{outline:none;border-color:rgba(167,139,250,.6)}
               <button onClick="{{ hn.pick }}" style="height:44px;border-radius:12px;cursor:pointer;font:900 18px 'Zain';border:1.5px solid {{ hn.bd }};background:{{ hn.bg }};color:{{ hn.fg }};transition:all .15s">{{ hn.n }}</button>
             </sc-for>
           </div>
+          <sc-if value="{{ showOld }}" hint-placeholder-val="{{ false }}">
+            <span style="font:700 13px 'Zain';color:#a8a3b5">منها قديم؟ (صناديق من تلميح سابق)</span>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <sc-for list="{{ oldNums }}" as="on" hint-placeholder-count="3">
+                <button onClick="{{ on.pick }}" style="min-width:44px;height:40px;padding:0 10px;border-radius:12px;cursor:pointer;font:900 16px 'Zain';border:1.5px solid {{ on.bd }};background:{{ on.bg }};color:{{ on.fg }}">{{ on.n }}</button>
+              </sc-for>
+            </div>
+          </sc-if>
           <sc-if value="{{ hintErr }}" hint-placeholder-val="{{ false }}"><span role="alert" style="font:700 14px 'Zain';color:#fca5a5">{{ hintErr }}</span></sc-if>
           <button onClick="{{ sendHint }}" style="height:52px;border:none;border-radius:999px;cursor:pointer;background:{{ sendBg }};color:#fff;font:900 18px 'Zain';box-shadow:0 8px 22px rgba(139,92,246,.35);opacity:{{ sendOp }}">{{ sendTxt }}</button>
         </sc-if>
@@ -175,7 +183,7 @@ class Component extends DCLogic {
   saved = ROOM ? loadSaved() : {};
   slotMode = !!(SLOT&&this.saved.slot===SLOT&&this.saved.slotKey);
   state = { room:ROOM, stage:this.slotMode?(this.saved.board?'map':'check'):['wait','map','rejected'].includes(this.saved.stage)&&this.saved.id?this.saved.stage:(SLOT?'check':'form'), myTeam:this.saved.myTeam||0, name:this.saved.name||'', team:this.saved.team||SLOT_TEAM||0, err:null, claim:null, claimName:SLOT_NAME,
-    board:this.saved.stage==='map'?(this.saved.board||null):null, lost:false, expired:false, st:this.saved.st||null, reqOpen:false, hintW:'', hintN:0, hintErr:null, hintSending:false, hintOk:null, noCrypto:!!ROOM&&!CN.secure.supported(), teams:this.saved.teams||{1:'الفريق الأحمر',2:'الفريق الأزرق'} };
+    board:this.saved.stage==='map'?(this.saved.board||null):null, lost:false, expired:false, st:this.saved.st||null, reqOpen:false, hintW:'', hintN:0, hintOld:0, hintErr:null, hintSending:false, hintOk:null, noCrypto:!!ROOM&&!CN.secure.supported(), teams:this.saved.teams||{1:'الفريق الأحمر',2:'الفريق الأزرق'} };
   componentDidMount(){
     if(!this.state.room||this.state.noCrypto) return;
     this.id=this.saved.id||null; this.keys=this.saved.keys||null; this.lastSeq=0;
@@ -214,7 +222,7 @@ class Component extends DCLogic {
     if(m.type==='room_info'){ clearTimeout(this.expT); if(this.state.expired) this.setState({expired:false}); this.setTeams(m.teams); }
     if(m.type==='hint_ack'&&((this.slot&&m.slot===this.slot)||(this.id&&m.id===this.id))){
       const R={not_turn:'مو وقت التلميح الحين',one_word:'كلمة وحدة بس بالتلميح',empty:'اكتب التلميح أول',count:'اختر عدد الكلمات'};
-      this.setState(m.ok?{hintSending:false,hintW:'',hintN:0,hintErr:null}:{hintSending:false,hintErr:R[m.reason]||'ما وصل التلميح، جرّب مرة ثانية'}); return; }
+      this.setState(m.ok?{hintSending:false,hintW:'',hintN:0,hintOld:0,hintErr:null}:{hintSending:false,hintErr:R[m.reason]||'ما وصل التلميح، جرّب مرة ثانية'}); return; }
     // الخانة الخاصة: لوحة مشفّرة بمفتاح الخانة، أو المذيع غيّر السباي ماستر (الخانة بطلت)
     if(this.slot&&m.slot===this.slot){
       if(m.type==='slot_revoked'){ this.slot=null; this.slotKey=null; this.save({slot:null,slotKey:null,stage:'form',board:null}); this.setState({stage:'form',board:null,claim:'gone'}); return; }
@@ -246,7 +254,7 @@ class Component extends DCLogic {
     const keyP=this.slot&&this.slotKey?CN.secure.aesFromB64(this.slotKey):this.keys&&this.gpub?CN.secure.shared(this.keys.priv,this.gpub):null;
     if(!keyP) return this.setState({hintErr:'ما وصل التلميح، جرّب مرة ثانية'});
     this.setState({hintSending:true,hintErr:null}); clearTimeout(this.hintT); this.hintT=setTimeout(()=>{ if(this.state.hintSending) this.setState({hintSending:false,hintErr:'ما وصل التلميح، جرّب مرة ثانية'}); },6000);
-    keyP.then(k=>CN.secure.encrypt(k,{w,n:S.hintN,turnId:(S.st&&S.st.turnId)||0})).then(e=>this.rl.send({type:'spy_hint',...(this.slot?{slot:this.slot}:{id:this.id}),...e})).catch(()=>this.setState({hintSending:false,hintErr:'ما وصل التلميح، جرّب مرة ثانية'})); }
+    keyP.then(k=>CN.secure.encrypt(k,{w,n:S.hintN,old:Math.min(S.hintOld||0,S.hintN),turnId:(S.st&&S.st.turnId)||0})).then(e=>this.rl.send({type:'spy_hint',...(this.slot?{slot:this.slot}:{id:this.id}),...e})).catch(()=>this.setState({hintSending:false,hintErr:'ما وصل التلميح، جرّب مرة ثانية'})); }
   async submit(){ const S=this.state; if(!S.name.trim()) return this.setState({err:'اكتب اسمك أول.'}); if(!S.team) return this.setState({err:'اختر فريقك.'});
     try{ if(!this.keys) this.keys=await CN.secure.newPair(); }catch(e){ return this.setState({err:'المتصفح ما يدعم الاتصال الآمن — افتح الرابط في Safari أو Chrome.'}); }
     const r=crypto.getRandomValues(new Uint32Array(2)); this.id='sp'+r[0].toString(36)+r[1].toString(36); this.lastSeq=0;
@@ -277,9 +285,10 @@ class Component extends DCLogic {
         const canHint=!!(st&&mine&&st.phase==='hint');
         const title=!st||st.phase==='ready'?'⏳ المباراة ما بدأت':canHint?'🕵 دورك — أرسل التلميح':st.phase==='guess'?(mine?'⏳ فريقك يخمّن الحين':`⏳ دور ${tn}`):st.phase==='hint'?`⏳ دور ${tn} — بانتظار تلميحهم`:'🏁 انتهت الجولة';
         return { canHint, hintTitle:title, hintTitleC:canHint?'#fde68a':'#e7e3ef', hintBd:canHint?'#fbbf24':'rgba(255,255,255,.08)',
-          hintInfo:st&&st.phase==='guess'&&st.hint?`التلميح الحالي: «${st.hint.w}» · ${st.hint.n}`:null,
+          hintInfo:st&&st.phase==='guess'&&st.hint?`التلميح الحالي: «${st.hint.w}» · ${st.hint.n}${st.hint.old?` (منها ${st.hint.old} قديم)`:''}`:null,
           hintW:S.hintW, setHintW:e=>this.setState({hintW:e.target.value,hintErr:null}), hintErr:S.hintErr,
-          hintNums:[1,2,3,4,5,6,7].map(n=>({n,pick:()=>this.setState({hintN:n,hintErr:null}),bg:S.hintN===n?'linear-gradient(135deg, #7c3aed, #a855f7)':'rgba(255,255,255,.04)',bd:S.hintN===n?'#c4b5fd':'rgba(255,255,255,.12)',fg:S.hintN===n?'#fff':'#c9c4d6'})),
+          hintNums:[1,2,3,4,5,6,7].map(n=>({n,pick:()=>this.setState(s=>({hintN:n,hintOld:Math.min(s.hintOld,n),hintErr:null})),bg:S.hintN===n?'linear-gradient(135deg, #7c3aed, #a855f7)':'rgba(255,255,255,.04)',bd:S.hintN===n?'#c4b5fd':'rgba(255,255,255,.12)',fg:S.hintN===n?'#fff':'#c9c4d6'})),
+          showOld:!!S.hintN, oldNums:Array.from({length:(S.hintN||0)+1},(_,k)=>k).map(k=>({n:k===0?'بدون':k,pick:()=>this.setState({hintOld:k}),bg:S.hintOld===k?'linear-gradient(135deg, #b45309, #f59e0b)':'rgba(255,255,255,.04)',bd:S.hintOld===k?'#fde68a':'rgba(255,255,255,.12)',fg:S.hintOld===k?'#fff':'#c9c4d6'})),
           sendHint:()=>this.sendHint(), sendTxt:S.hintSending?'جارٍ الإرسال…':'إرسال التلميح', sendOp:S.hintSending?.6:1, sendBg:'linear-gradient(90deg, #7c3aed, #a855f7)' }; })(),
       legend:[[S.teams[1],FLAT[1]],[S.teams[2],FLAT[2]],['محايد',FLAT[0]],['القاتل 💀',FLAT[-1]]].map(([t,c])=>({t,c}))
     };
