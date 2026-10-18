@@ -5,7 +5,8 @@
  * Deliberately separate from window.AymanGamesPlatform (AGP), hence its
  * own namespace: window.AGPAuth.
  *
- * Session is stored in localStorage and attached to every protected
+ * Session is stored in localStorage (mirrored to a parent-domain cookie,
+ * see getToken) and attached to every protected
  * request via an Authorization: Bearer <token> header.
  */
 
@@ -20,8 +21,42 @@ var DEVICE_ID_KEY = 'agp_device_id';
 /* Local storage — token + last-known user, used for instant display
  * before /api/auth/me confirms; not treated as the source of truth. */
 
+/* Token is mirrored to a cookie on the site's parent domain so the same
+ * login works on www and non-www (they have separate localStorage) — e.g.
+ * a game QR built from www.aymngames.online opened on a phone logged in at
+ * aymngames.online. Also survives a localStorage wipe while the cookie lives. */
+var TOKEN_COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // = SESSION_DURATION_MS بالخادم
+
+function cookieDomain() {
+    try { return /(^|\.)aymngames\.online$/.test(location.hostname) ? '; domain=.aymngames.online' : ''; } catch (err) { return ''; }
+}
+
+function readTokenCookie() {
+    try {
+        var m = document.cookie.match(/(?:^|;\s*)agp_auth_token=([^;]+)/);
+        return m ? decodeURIComponent(m[1]) : null;
+    } catch (err) { return null; }
+}
+
+function writeTokenCookie(token, maxAge) {
+    try {
+        var secure = location.protocol === 'https:' ? '; Secure' : '';
+        document.cookie = 'agp_auth_token=' + encodeURIComponent(token || '') + '; max-age=' + maxAge +
+            '; path=/' + cookieDomain() + '; SameSite=Lax' + secure;
+    } catch (err) { /* الكوكي نسخة احتياطية فقط */ }
+}
+
 function getToken() {
-    try { return localStorage.getItem(TOKEN_KEY) || null; } catch (err) { return null; }
+    var token = null;
+    try { token = localStorage.getItem(TOKEN_KEY) || null; } catch (err) { token = null; }
+    if (token) {
+        // حسابات مسجّلة قبل النسخة الاحتياطية: ننسخ التوكن للكوكي أول ما ينقرأ
+        if (readTokenCookie() !== token) writeTokenCookie(token, TOKEN_COOKIE_MAX_AGE);
+        return token;
+    }
+    token = readTokenCookie();
+    if (token) { try { localStorage.setItem(TOKEN_KEY, token); } catch (err) { /* ignore */ } }
+    return token || null;
 }
 
 function setSession(token, user) {
@@ -29,6 +64,7 @@ function setSession(token, user) {
         localStorage.setItem(TOKEN_KEY, token);
         localStorage.setItem(USER_KEY, JSON.stringify(user || {}));
     } catch (err) { /* localStorage unavailable — don't break the page */ }
+    if (token && readTokenCookie() !== token) writeTokenCookie(token, TOKEN_COOKIE_MAX_AGE);
 }
 
 function clearSession() {
@@ -36,6 +72,7 @@ function clearSession() {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
     } catch (err) {}
+    writeTokenCookie('', 0);
 }
 
 function getCachedUser() {
