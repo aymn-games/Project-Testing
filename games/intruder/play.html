@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>محطة سهيل — المباراة</title>
 <script src="../../js/agp-dc-raw-guard.js"></script>
 <script src="../../auth/auth-client.js"></script>
@@ -164,7 +167,11 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
 
   <sc-if value="{{ taskOpen }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);display:grid;place-items:center;padding:12px;overflow:auto;animation:fade .2s ease">
-      <dc-import name="Task Panel" kind="{{ tk.kind }}" difficulty="{{ tk.diff }}" task-id="{{ tk.id }}" title="{{ tk.name }}" on-done="{{ tk.onDone }}" on-close="{{ tk.close }}" hint-size="460px,560px"></dc-import>
+      <div style="position:relative;width:{{ tkBoxW }};height:{{ tkBoxH }};opacity:{{ tkOp }}">
+        <div ref="{{ tkRef }}" style="position:absolute;top:0;left:0;transform:scale({{ tkS }});transform-origin:0 0">
+          <dc-import name="Task Panel" kind="{{ tk.kind }}" difficulty="{{ tk.diff }}" task-id="{{ tk.id }}" title="{{ tk.name }}" on-done="{{ tk.onDone }}" on-close="{{ tk.close }}" hint-size="460px,560px"></dc-import>
+        </div>
+      </div>
     </div>
   </sc-if>
 
@@ -405,6 +412,12 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
   </sc-if>
 
   <div style="position:fixed;top:{{ volTop }}px;right:12px;z-index:58;display:flex;flex-direction:row-reverse;align-items:center;gap:8px">
+    <sc-if value="{{ fsShow }}" hint-placeholder-val="{{ false }}">
+      <button data-fs-btn="1" onClick="{{ fsToggle }}" aria-label="{{ fsLbl }}" title="{{ fsLbl }}" style="width:44px;height:44px;border-radius:12px;cursor:pointer;border:3px solid #06080d;background:#2a3446;color:#fff;display:grid;place-items:center;box-shadow:0 3px 0 #06080d" style-active="transform:translateY(2px)">
+        <sc-if value="{{ fsOn }}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></sc-if>
+        <sc-if value="{{ fsOff }}" hint-placeholder-val="{{ true }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></sc-if>
+      </button>
+    </sc-if>
     <button onClick="{{ volToggle }}" aria-label="الصوت" style="width:44px;height:44px;border-radius:12px;cursor:pointer;border:3px solid #06080d;background:#2a3446;color:#fff;font:400 20px/1 'Zain';display:grid;place-items:center;box-shadow:0 3px 0 #06080d" style-active="transform:translateY(2px)">{{ volIcon }}</button>
     <sc-if value="{{ volOpen }}" hint-placeholder-val="{{ false }}">
       <div dir="ltr" style="display:flex;align-items:center;gap:10px;height:44px;padding:0 12px;box-sizing:border-box;border-radius:12px;background:#1b2230;border:3px solid #06080d;box-shadow:0 3px 0 #06080d;animation:popIn .25s ease">
@@ -496,7 +509,7 @@ const STARS=Array.from({length:520},()=>[rand(-900,4100),rand(-800,3000),Math.ra
 
 class Component extends DCLogic {
   state={ ui:0, narrow:innerWidth<820, logo:false, exitOpen:false, jx:0, jy:0, task:null, sab:false, overview:null };
-  cv=React.createRef(); mm=React.createRef(); chatRef=React.createRef();
+  cv=React.createRef(); mm=React.createRef(); chatRef=React.createRef(); tkRef=React.createRef();
   cfg(){ let c=this.G&&this.G.cfg; if(!c) c={};
     const T=window.StationSettings, d=T?T.DEFAULTS:{}; c={...d,...c}; return {...c,kill:c.killCd??25,vote:c.voteSec??30,talk:c.talkSec??15}; }
   taskTotals(G){ if(G.tt) return G.tt; const C=this.cfg(), crew=G.players.filter(p=>!p.imp); let tot=0,dn=0; crew.forEach(p=>{ if(p.alive||C.ghostTasks){ tot+=p.tasks.length; dn+=p.done.length; } else { tot+=p.done.length; dn+=p.done.length; } }); return {tot,dn}; }
@@ -514,6 +527,7 @@ class Component extends DCLogic {
       if(e.repeat||this.state.task) return; if(k==='e') this.pressUse(); if(k==='r') this.pressReport(); if(k==='q') this.pressKill(); if(k==='v') this.pressVent(); };
     this.ku=e=>{ const k=({'ص':'w','ش':'s','س':'a','ي':'d'})[e.key]||e.key.toLowerCase(); this.keys[k]=false; }; this.blur=()=>{ this.keys={}; this.joyReset(); }; document.addEventListener('visibilitychange',this.blur); addEventListener('blur',this.blur);
     addEventListener('keydown',this.kd); addEventListener('keyup',this.ku);
+    if(!this.isHost) window.StationNet.fs.init(()=>this.forceUpdate());
     this.unlock=()=>this.ambStart(); addEventListener('pointerdown',this.unlock); addEventListener('keydown',this.unlock); this.ambStart();
     this.rs=()=>{ this.setState({narrowP:innerWidth<500,portrait:innerHeight>innerWidth}); this.joyH=Math.round(innerHeight*.62)-100; this.setState({narrow:innerWidth<820}); }; this.joyH=Math.round(innerHeight*.62)-100; this.setState({narrowP:innerWidth<500,portrait:innerHeight>innerWidth}); addEventListener('resize',this.rs);
     this.last=performance.now(); this.lastSend=0; this.lastUi=0; this.lastB=0; this.t0=Date.now();
@@ -569,6 +583,7 @@ class Component extends DCLogic {
       G.players.forEach(p=>{ if(p.id===this.myId) return; let d=this.disp[p.id]; if(!d||dist(d,p)>320){ d=this.disp[p.id]={x:p.x,y:p.y,mv:false}; }
         const ox=d.x, oy=d.y, k=Math.min(1,dt*12); d.x+=(p.x-d.x)*k; d.y+=(p.y-d.y)*k; d.mv=Math.hypot(d.x-ox,d.y-oy)>.4; });
       if(this.state.task&&this.joyOn) this.joyReset();
+      if(this.state.task) this.fitTask(); else if(this.state.tkFit) this.setState({tkFit:null});
       if(this.state.task&&G.phase!=='play') this.setState({task:null}); if(this.state.sab&&G.phase!=='play') this.setState({sab:false});
       if(this.state.task&&this.state.task.k==='timing'&&!this.state.task.done) this.setState({ui:t});
       if(G.phase==='eject'&&t-(this._ejUi||0)>30){ this._ejUi=t; this.setState({ui:t}); }
@@ -738,6 +753,10 @@ class Component extends DCLogic {
   pressVent(){ if(this.inVent) return this.ventExit(); const N=this.near(); if(!N.vent) return; this.sfx('vent'); this.inVent=N.vent.id; this.ventT=Date.now(); this.me={x:N.vent.x,y:N.vent.y}; this.tone(260,.14,'triangle',.05); this.forceUpdate(); }
   ventGo(id){ const v=VENTS.find(x=>x.id===id); if(!v||!this.inVent) return; this.inVent=id; this.ventT=Date.now(); this.me={x:v.x,y:v.y}; this.tone(380,.1,'triangle',.05); this.forceUpdate(); }
   ventExit(){ if(!this.inVent) return; this.inVent=null; this.sfx('vent'); this.tone(330,.12,'triangle',.05); this.forceUpdate(); }
+  // نافذة المهام: تصغر لتناسب الشاشة (الجوال بالعرض ارتفاعه ~390px) بدون ما تكبر عن حجمها الأصلي.
+  // offsetWidth/Height ما يتأثر بالـtransform فنقيس الحجم الأصلي كل فريم (يتغيّر حسب نوع المهمة).
+  fitTask(){ const el=this.tkRef.current; if(!el||!el.offsetWidth) return; const w=el.offsetWidth, h=el.offsetHeight, s=Math.min(1,(innerWidth-16)/w,(innerHeight-16)/h), f=this.state.tkFit;
+    if(!f||Math.abs(f.s-s)>.005||f.w!==w||f.h!==h) this.setState({tkFit:{w,h,s}}); }
   openTask(t){ this.holding=false; this.joyReset(); this.keys={}; this.setState({task:{id:t.id,n:t.n,k:t.k}}); }
   finishTask(){ const tk=this.state.task; if(!tk) return; this.doAct('task',tk.id); this.sfx('task'); this.joyReset(); this.setState({task:null}); }
   tone(f,d,type,vol){ try{ const A=this.ac||(this.ac=new (window.AudioContext||window.webkitAudioContext)()); const o=A.createOscillator(), g=A.createGain(); o.type=type; o.frequency.value=f; g.gain.setValueAtTime(vol,A.currentTime); g.gain.exponentialRampToValueAtTime(.0001,A.currentTime+d); o.connect(g); g.connect(this.mOut(A)); o.start(); o.stop(A.currentTime+d); }catch(e){} }
@@ -812,7 +831,7 @@ class Component extends DCLogic {
   renderVals(){
     const S=this.state, G=this.G, me=this.meP(), now=Date.now(), o=(i,out)=>S.exitOpenOut?out:i, isHost=!!this.isHost;
     const vv=S.vol??(()=>{ const x=parseInt(localStorage.getItem('station-vol'),10); return isNaN(x)?100:x; })(), mutedV=!!S.muted||vv===0;
-    const asP=false; const base={ rotOn:!!S.portrait&&!isHost&&!asP, goFull:()=>{ try{ const d=document.documentElement; (d.requestFullscreen?d.requestFullscreen():Promise.reject()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{}); }catch(e){} }, hostBar:isHost&&!asP, volTop:isHost&&!asP?104:12, volOpen:!!S.volOpen, volVal:vv, volIcon:mutedV?'🔇':vv<50?'🔉':'🔊', muteIcon:mutedV?'🔇':'🔊', muteBg:mutedV?'#dc2626':'#334155', volToggle:()=>this.setState({volOpen:!S.volOpen}), muteToggle:()=>this.setVol(null,!S.muted), volChange:e=>this.setVol(+e.target.value,false), isHost, notHost:!isHost, topPx:0, hudTop:isHost?104:54, cvRef:this.cv, chatRef:this.chatRef, room:this.room||'', stop:e=>e.stopPropagation(), lblDisp:S.narrow?'none':'inline',
+    const asP=false; const base={ rotOn:!!S.portrait&&!isHost&&!asP, goFull:()=>{ try{ const d=document.documentElement; (d.requestFullscreen?d.requestFullscreen():Promise.reject()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{}); }catch(e){} }, hostBar:isHost&&!asP, volTop:isHost&&!asP?104:12, volOpen:!!S.volOpen, volVal:vv, fsShow:!isHost&&window.StationNet.fs.show(), fsOn:window.StationNet.fs.active(), fsOff:!window.StationNet.fs.active(), fsLbl:window.StationNet.fs.active()?'إلغاء ملء الشاشة':'ملء الشاشة', fsToggle:()=>{ window.StationNet.fs.toggle(); this.forceUpdate(); }, volIcon:mutedV?'🔇':vv<50?'🔉':'🔊', muteIcon:mutedV?'🔇':'🔊', muteBg:mutedV?'#dc2626':'#334155', volToggle:()=>this.setState({volOpen:!S.volOpen}), muteToggle:()=>this.setVol(null,!S.muted), volChange:e=>this.setVol(+e.target.value,false), isHost, notHost:!isHost, topPx:0, hudTop:isHost?104:54, cvRef:this.cv, chatRef:this.chatRef, room:this.room||'', stop:e=>e.stopPropagation(), lblDisp:S.narrow?'none':'inline',
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
       viewLbl:this.overview()?'👤 منظوري':'🗺️ الخريطة كاملة', toggleView:()=>this.setState({overview:!this.overview()}),
       exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>{ this.setState({exitOpenOut:true}); setTimeout(()=>this.setState({exitOpen:false,exitOpenOut:false}),260); },
@@ -851,7 +870,8 @@ class Component extends DCLogic {
       out.revLine=line.map((q,i)=>{ const k=Math.abs(i-ci), w=Math.round(base*(1-Math.min(.45,k*.07))); return {img:this.img(q,w),w,h:Math.round(w*1.5),m:-Math.round(w*.16),y:-k*6,z:100-k,b:(1-Math.min(.5,k*.06)).toFixed(2),d:(.45+k*.08)+'s'}; });
       out.revOut=left<650; out.revTitle=me.imp?'دخيل':'طاقم'; out.revTc=me.imp?'#ff3b3b':'#7ef9ff'; out.revTs=me.imp?'rgba(255,59,59,.55)':'rgba(126,249,255,.5)'; out.revGlow=me.imp?'rgba(255,59,59,.32)':'rgba(45,212,191,.38)';
       if(me.imp){ out.revSubA=''; out.revSubB=''; out.revSubC=nImp>1?'أنتم الدخلاء… اقتلوا الطاقم بدون ما تنكشفون':'اقتل الطاقم بدون ما تنكشف'; } else { out.revSubA='بينكم '; out.revSubB=nImp===1?'دخيل واحد':nImp+' دخلاء'; out.revSubC=''; } }
-    const tk=S.task; if(tk&&play){ out.taskOpen=true; out.tk={ id:tk.id, kind:tk.k, diff:C.difficulty, name:tk.n, onDone:()=>this.finishTask(), close:()=>{ this.joyReset(); this.setState({task:null}); } }; }
+    const tk=S.task, tf=S.tkFit; out.tkRef=this.tkRef; out.tkS=tf?tf.s:1; out.tkBoxW=tf?Math.round(tf.w*tf.s)+'px':'auto'; out.tkBoxH=tf?Math.round(tf.h*tf.s)+'px':'auto'; out.tkOp=tf?1:0;
+    if(tk&&play){ out.taskOpen=true; out.tk={ id:tk.id, kind:tk.k, diff:C.difficulty, name:tk.n, onDone:()=>this.finishTask(), close:()=>{ this.joyReset(); this.setState({task:null}); } }; }
     if(S.sab&&play&&me.imp){ out.sabOpen=true; out.sabClose=()=>this.setState({sab:false});
       const crit=!!(G.reactor||G.o2||G.lights||G.comms), CR={bg:'rgba(220,38,38,.2)',bd:'rgba(248,113,113,.5)'};
       out.sabItems=[['☢️ المفاعل','reactor',C.reactorSab],['🫁 الأكسجين','o2',C.o2Sab],['💡 الكهرباء','lights',C.lightsSab],['📡 الاتصالات','comms',C.commsSab]].filter(x=>x[2]).map(([n,k])=>({n:n+(crit?' · ⛔':''),k,...CR,bg:crit?'rgba(255,255,255,.02)':CR.bg}))
