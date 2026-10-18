@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
+<script src="skins.js"></script>
+</helmet>
+<div dir="rtl" style="width:100%;max-width:{{ maxW }};box-sizing:border-box;display:flex;flex-direction:{{ dir }};gap:14px;font-family:'Zain',sans-serif;color:#f4f2f8">
+  <div style="flex:none;display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px;border-radius:20px;background:#1b2230;border:3px solid #06080d;min-width:{{ prevW }}">
+    <img src="{{ big }}" alt="" style="display:block;width:{{ bigW }}px;height:{{ bigH }}px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
+      <button onClick="{{ rand }}" style="height:40px;padding:0 14px;border-radius:10px;cursor:pointer;border:3px solid #06080d;background:#334155;color:#e2e8f0;font:800 14px 'Zain';box-shadow:0 3px 0 #06080d" style-active="transform:translateY(2px)">🎲 عشوائي</button>
+      <button onClick="{{ clear }}" style="height:40px;padding:0 14px;border-radius:10px;cursor:pointer;border:3px solid #06080d;background:#334155;color:#e2e8f0;font:800 14px 'Zain';box-shadow:0 3px 0 #06080d" style-active="transform:translateY(2px)">↺ شيل الكل</button>
+    </div>
+    <span style="font:700 13px 'Zain';color:#94a3b8;text-align:center">{{ worn }}</span>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+    <div data-noscroll style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+        <button onClick="{{ t.press }}" style="flex:none;height:44px;padding:0 14px;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:6px;border:3px solid #06080d;background:{{ t.bg }};color:{{ t.c }};font:800 15px 'Zain';box-shadow:0 3px 0 #06080d;white-space:nowrap">{{ t.icon }} {{ t.n }}</button>
+      </sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax({{ cell }}px,1fr));gap:8px;max-height:{{ gridH }};overflow-y:auto;padding:2px">
+      <sc-for list="{{ items }}" as="o" hint-placeholder-count="10">
+        <button onClick="{{ o.pick }}" aria-label="{{ o.n }}" style="padding:6px 2px 6px;border-radius:14px;cursor:pointer;border:3px solid {{ o.bd }};background:{{ o.bg }};display:flex;flex-direction:column;align-items:center;gap:2px;color:#e2e8f0;box-shadow:0 3px 0 #06080d">
+          <img src="{{ o.img }}" alt="" style="display:block;width:46px;height:69px">
+          <span style="font:700 12px 'Zain';white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">{{ o.n }}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:900,&quot;height&quot;:520},&quot;color&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#a855f7&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;compact&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;skin&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;object&quot;},&quot;onChange&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(skin) =&gt; void&quot;}}">
+class Component extends DCLogic {
+  state={tab:'hat',ready:!!window.StationSkins};
+  componentDidMount(){ if(!this.state.ready) this.t=setInterval(()=>{ if(window.StationSkins){ clearInterval(this.t); this.setState({ready:true}); } },80); }
+  componentWillUnmount(){ clearInterval(this.t); }
+  renderVals(){
+    const SK=window.StationSkins, P=this.props, c=P.color||'#a855f7', compact=!!P.compact;
+    const base={maxW:compact?'440px':'900px',dir:compact?'column':'row',prevW:compact?'0':'200px',bigW:compact?100:150,bigH:compact?150:225,cell:compact?72:82,gridH:compact?'280px':'420px',big:'',tabs:[],items:[],worn:'',rand:()=>{},clear:()=>{}};
+    if(!SK) return base;
+    const sk=SK.clean((P.onChange?P.skin:this.state.local)||{}), set=v=>{ const c2=SK.clean(v); if(P.onChange) P.onChange(c2); else this.setState({local:c2}); };
+    const slot=SK.SLOTS.find(s=>s.k===this.state.tab)||SK.SLOTS[0];
+    const worn=SK.SLOTS.filter(s=>sk[s.k]!=='none').map(s=>s.items.find(i=>i.id===sk[s.k]).n);
+    return {...base, big:SK.thumb(c,sk,base.bigW),
+      worn:worn.length?worn.join(' · '):'ما تلبس شي',
+      rand:()=>set(SK.randomSkin()), clear:()=>set({}),
+      tabs:SK.SLOTS.map(s=>({icon:s.icon,n:s.n,bg:s.k===slot.k?'#14b8a6':'#2a3446',c:s.k===slot.k?'#06080d':'#e2e8f0',press:()=>this.setState({tab:s.k})})),
+      items:slot.items.map(i=>{ const on=sk[slot.k]===i.id; return {n:i.n,img:SK.thumb(c,{...sk,[slot.k]:i.id},46),bd:on?'#14b8a6':'#06080d',bg:on?'#134e4a':'#232c3d',pick:()=>set({...sk,[slot.k]:i.id})}; }) };
+  }
+}
+</script>
+</body>
+</html>

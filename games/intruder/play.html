@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>محطة سهيل — المباراة</title>
+<script src="../../js/agp-dc-raw-guard.js"></script>
+<script src="../../auth/auth-client.js"></script>
+<script src="station-net.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="skins.js"></script>
+<script src="station-settings.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<style>
+html,body{margin:0;height:100%;background:#05040a;overflow:hidden;overscroll-behavior:none}
+a{color:#a78bfa}a:hover{color:#c4b5fd}
+*{-webkit-tap-highlight-color:transparent}
+@keyframes driftRL{0%{transform:translateX(0) rotate(0deg)}100%{transform:translateX(calc(-100vw - 220px)) rotate(-540deg)}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes fadeOut{from{opacity:1}to{opacity:0}}
+@keyframes popIn{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:none}}
+@keyframes popOut{from{opacity:1;transform:none}to{opacity:0;transform:scale(.9)}}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes alarmBg{0%,100%{background-color:rgba(127,29,29,.92)}50%{background-color:rgba(185,28,28,.96)}}
+@keyframes stripes{from{background-position:0 0}to{background-position:120px 0}}
+@keyframes slamIn{0%{opacity:0;transform:scale(2.4) rotate(-6deg)}60%{opacity:1;transform:scale(.94) rotate(-3deg)}100%{opacity:1;transform:scale(1) rotate(-3deg)}}
+@keyframes bodyIn{0%{opacity:0;transform:translateY(30px) scale(.8)}100%{opacity:1;transform:none}}
+@keyframes ringOut{0%{transform:scale(.6);opacity:.8}100%{transform:scale(2.2);opacity:0}}
+@keyframes kBand{0%{transform:scaleY(0)}12%,85%{transform:scaleY(1)}100%{transform:scaleY(0)}}
+@keyframes kLunge{0%{transform:translateX(-60px)}30%{transform:translateX(-60px)}45%{transform:translateX(40px)}60%,100%{transform:translateX(20px)}}
+@keyframes kFall{0%,40%{transform:none;opacity:1}55%{transform:translateX(30px) rotate(12deg)}100%{transform:translate(60px,40px) rotate(90deg);opacity:.85}}
+@keyframes kSlash{0%,38%{opacity:0;transform:scaleX(0) rotate(-18deg)}46%{opacity:1;transform:scaleX(1) rotate(-18deg)}70%,100%{opacity:0;transform:scaleX(1.1) rotate(-18deg)}}
+@keyframes kBg{0%{opacity:0}10%,82%{opacity:1}100%{opacity:0}}
+@keyframes tumble{0%{transform:translateX(70vw) rotate(0deg)}100%{transform:translateX(-70vw) rotate(-720deg)}}
+@keyframes revealIn{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:none}}
+@keyframes shake{0%,100%{transform:none}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+</style>
+</helmet>
+<div dir="rtl" style="position:fixed;inset:0;overflow:hidden;background:#05040a;font-family:'Zain',sans-serif;color:#f4f2f8;touch-action:none;user-select:none;-webkit-user-select:none">
+
+  <sc-if value="{{ hostBar }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;top:54px;right:12px;z-index:50;display:flex;align-items:center;gap:6px;padding:5px;border-radius:999px;background:rgba(10,9,15,.55);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(10px)">
+      <button onClick="{{ onExit }}" aria-label="خروج" style="height:36px;padding:0 14px;border-radius:999px;display:flex;align-items:center;gap:6px;font:700 15px 'Zain';white-space:nowrap;cursor:pointer;background:rgba(10,9,15,.8);backdrop-filter:blur(10px);border:1px solid rgba(248,113,113,.3);color:#fca5a5" style-hover="background:rgba(248,113,113,.14)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span style="display:{{ lblDisp }}">خروج</span></button>
+      <button onClick="{{ toggleView }}" style="height:36px;padding:0 14px;border-radius:999px;display:flex;align-items:center;gap:6px;font:700 15px 'Zain';white-space:nowrap;cursor:pointer;background:rgba(10,9,15,.8);backdrop-filter:blur(10px);border:1px solid rgba(167,139,250,.3);color:#ddd6fe" style-hover="background:rgba(139,92,246,.16)">{{ viewLbl }}</button>
+    </div>
+  </sc-if>
+
+
+  <div style="position:absolute;left:0;right:0;bottom:0;top:{{ topPx }}px">
+    <sc-if value="{{ inVent }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:6;pointer-events:none;background:radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 90px, rgba(0,0,0,.55) 260px)">
+        <span style="position:absolute;left:50%;top:calc(50% + 70px);transform:translateX(-50%);padding:4px 12px;border-radius:999px;background:rgba(6,8,13,.85);border:2px solid #06080d;font:800 14px 'Zain';color:#fca5a5;white-space:nowrap">🕳️ داخل الفتحة · تطلع تلقائياً بعد {{ ventSec }} ث</span>
+        <sc-for list="{{ ventArrows }}" as="v" hint-placeholder-count="2">
+          <button onClick="{{ v.go }}" aria-label="{{ v.n }}" style="position:absolute;left:{{ v.l }};top:{{ v.t }};transform:translate(-50%,-50%);pointer-events:auto;width:72px;height:72px;border-radius:50%;cursor:pointer;border:3px solid #06080d;background:#dc2626;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;box-shadow:0 4px 0 #06080d" style-active="transform:translate(-50%,-48%)">
+            <span style="display:block;font:900 26px/1 'Zain';transform:{{ v.rot }}">➜</span>
+            <span style="font:800 11px 'Zain';white-space:nowrap">{{ v.n }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+    <canvas ref="{{ cvRef }}" style="width:100%;height:100%;display:block"></canvas>
+    <div style="position:absolute;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:5;pointer-events:none;height:clamp(34px,6vh,58px);min-width:clamp(80px,12vw,200px);display:grid;place-items:center;border-radius:12px;border:1px dashed rgba(167,139,250,{{ phBorder }})">
+      <span style="font:400 12px 'Zain';color:#8a8596;opacity:{{ phOp }};white-space:nowrap">مكان اللوقو · logo.png</span>
+      <img src="../../logo.png" alt="" onLoad="{{ logoOk }}" onError="{{ logoErr }}" style="position:absolute;inset:0;margin:auto;height:100%;max-width:none;object-fit:contain;opacity:{{ logoOp }};filter:drop-shadow(0 2px 10px rgba(0,0,0,.6)) drop-shadow(0 0 12px rgba(139,92,246,.4))">
+    </div>
+
+    <sc-if value="{{ hud }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;top:{{ barTop }}px;left:50%;transform:translateX(-50%);width:{{ barW }};display:flex;align-items:center;gap:10px;padding:7px 14px;border-radius:999px;background:rgba(10,9,15,.82);border:1px solid rgba(255,255,255,.1);box-sizing:border-box;pointer-events:none;z-index:4">
+        <div style="flex:1;height:10px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden"><div style="height:100%;width:{{ taskPct }}%;background:linear-gradient(90deg, #22c55e, #6ee7b7);border-radius:999px;transition:width .4s"></div></div>
+        <span style="font:900 14px 'Zain';color:#6ee7b7;font-variant-numeric:tabular-nums;white-space:nowrap">{{ taskPct }}%</span>
+        <sc-if value="{{ hasTimer }}" hint-placeholder-val="{{ false }}">
+          <span style="padding:2px 10px;border-radius:999px;background:rgba(255,255,255,.08);font:900 14px 'Zain';color:#fde68a;font-variant-numeric:tabular-nums;white-space:nowrap" dir="ltr">⏱ {{ timeLeft }}</span>
+        </sc-if>
+      </div>
+      <div style="position:absolute;top:{{ hudTop }}px;right:12px;left:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;pointer-events:none">
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:min(300px,46vw)">
+          <sc-if value="{{ hasMates }}" hint-placeholder-val="{{ false }}">
+            <span style="padding:6px 12px;border-radius:12px;background:rgba(10,9,15,.8);font:700 14px 'Zain';color:#fca5a5">معك: {{ mates }}</span>
+          </sc-if>
+          <sc-if value="{{ showTasks }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:10px 12px;border-radius:14px;background:rgba(10,9,15,.8);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:4px">
+              <sc-for list="{{ myTasks }}" as="t" hint-placeholder-count="4">
+                <span style="font:700 14px/1.4 'Zain';color:{{ t.c }};text-decoration:{{ t.dec }}">{{ t.txt }}</span>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex:1;max-width:{{ colW }}px">
+
+          <sc-if value="{{ showMiniBtn }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ toggleMini }}" style="pointer-events:auto;height:32px;padding:0 12px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.12);background:rgba(10,9,15,.82);color:#ddd6fe;font:700 13px 'Zain'">🗺️ {{ miniLbl }}</button>
+          </sc-if>
+          <sc-if value="{{ showMini }}" hint-placeholder-val="{{ true }}">
+            <div style="width:{{ miniW }}px;height:{{ miniH }}px;max-width:100%;border-radius:14px;background:rgba(10,9,15,.78);border:1px solid rgba(255,255,255,.1);overflow:hidden;box-sizing:border-box;padding:6px">
+              <canvas ref="{{ mmRef }}" style="width:100%;height:100%;display:block"></canvas>
+            </div>
+          </sc-if>
+          <sc-if value="{{ reactorOn }}" hint-placeholder-val="{{ false }}">
+            <span style="padding:8px 14px;border-radius:12px;background:rgba(127,29,29,.85);border:1px solid #f87171;font:800 16px 'Zain';color:#fecaca;animation:pulse 1s ease-in-out infinite">☢️ أصلحوا المفاعل وإلا يفوز الدخيل · {{ reactorSec }} ث</span>
+          </sc-if>
+          <sc-if value="{{ lockOn }}" hint-placeholder-val="{{ false }}">
+            <span style="padding:6px 12px;border-radius:12px;background:rgba(10,9,15,.85);border:1px solid rgba(248,113,113,.5);font:700 14px 'Zain';color:#fca5a5">🚪 أبواب مقفلة: {{ lockTxt }}</span>
+          </sc-if>
+          <sc-if value="{{ isGhost }}" hint-placeholder-val="{{ false }}">
+            <span style="padding:6px 12px;border-radius:12px;background:rgba(10,9,15,.8);font:700 14px 'Zain';color:#c4b5fd">👻 أنت شبح… كمّل مهامك</span>
+          </sc-if>
+        </div>
+      </div>
+
+      <sc-if value="{{ showJoy }}" hint-placeholder-val="{{ true }}">
+        <div onPointerDown="{{ joyDown }}" onPointerMove="{{ joyMove }}" onPointerUp="{{ joyUp }}" onPointerCancel="{{ joyUp }}" onLostPointerCapture="{{ joyUp }}" style="position:absolute;left:0;bottom:0;width:min(55%, calc(100% - {{ actW }}px));height:62%;touch-action:none;z-index:3">
+          <div style="position:absolute;left:{{ jbx }}px;top:{{ jby }}px;width:140px;height:140px;margin:-70px 0 0 -70px;border-radius:50%;background:rgba(255,255,255,{{ jbA }});border:2px solid rgba(255,255,255,{{ jbB }});display:grid;place-items:center;pointer-events:none;transition:opacity .2s">
+            <div style="width:60px;height:60px;border-radius:50%;background:rgba(167,139,250,{{ jkA }});border:2px solid rgba(221,214,254,.75);box-shadow:0 6px 18px rgba(0,0,0,.45);transform:translate({{ jx }}px,{{ jy }}px);pointer-events:none"></div>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ showKeys }}" hint-placeholder-val="{{ false }}">
+        <span style="position:absolute;left:20px;bottom:20px;padding:8px 14px;border-radius:12px;background:rgba(10,9,15,.75);font:700 14px 'Zain';color:#8a8596">الحركة: الأسهم أو WASD · E استخدم · R بلّغ · Q اقتل · V فتحة</span>
+      </sc-if>
+
+      <div style="position:absolute;right:calc(16px + env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));display:flex;flex-wrap:wrap-reverse;justify-content:flex-end;gap:10px;max-width:{{ actMax }}px">
+        <sc-for list="{{ actions }}" as="a" hint-placeholder-count="2">
+          <button onClick="{{ a.press }}" style="position:relative;width:{{ actSz }}px;height:{{ actSz }}px;border-radius:50%;cursor:pointer;opacity:{{ a.op }};border:2px solid {{ a.bd }};background:{{ a.bg }};color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;box-shadow:0 8px 22px rgba(0,0,0,.45)" style-active="transform:scale(.94)">
+            <span style="font:400 28px/1 'Zain'">{{ a.icon }}</span>
+            <span style="font:800 13px 'Zain'">{{ a.lbl }}</span>
+            <sc-if value="{{ a.hasCd }}" hint-placeholder-val="{{ false }}">
+              <span style="position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;background:rgba(5,4,10,.6);font:900 28px 'Zain'">{{ a.cd }}</span>
+            </sc-if>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ waiting }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;display:grid;place-items:center;background:#05040a;z-index:40">
+      <span style="font:800 22px 'Zain';color:#a8a3b5;animation:pulse 1.6s ease-in-out infinite">{{ waitTxt }}</span>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ reveal }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:60;background:#000;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(6px,1.5vh,16px);padding:16px;box-sizing:border-box">
+      <div style="position:absolute;left:50%;top:68%;width:min(1100px,120vw);height:46vh;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(ellipse at center, {{ revGlow }} 0%, rgba(0,0,0,0) 68%);animation:fade 1s ease .3s both;pointer-events:none"></div>
+      <span style="position:relative;font:900 clamp(56px,13vw,150px)/1 'Zain';letter-spacing:.06em;color:{{ revTc }};text-shadow:0 0 34px {{ revTs }};animation:revealIn .6s cubic-bezier(.2,1.25,.35,1) .9s both">{{ revTitle }}</span>
+      <span style="position:relative;font:800 clamp(17px,3vw,28px) 'Zain';color:#f1f5f9;animation:revealIn .5s ease 1.2s both">{{ revSubA }}<span style="color:#ff3b3b">{{ revSubB }}</span>{{ revSubC }}</span>
+      <div dir="ltr" style="position:relative;display:flex;justify-content:center;align-items:flex-end;margin-top:clamp(8px,3vh,30px);max-width:100%">
+        <sc-for list="{{ revLine }}" as="r" hint-placeholder-count="7">
+          <img src="{{ r.img }}" alt="" style="display:block;width:{{ r.w }}px;height:{{ r.h }}px;margin:0 {{ r.m }}px;transform:translateY({{ r.y }}px);z-index:{{ r.z }};filter:brightness({{ r.b }});animation:revealIn .55s ease {{ r.d }} both">
+        </sc-for>
+      </div>
+      <sc-if value="{{ revOut }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;background:#000;animation:fade .6s ease both;z-index:5"></div>
+      </sc-if>
+    </div>
+  </sc-if>
+  <sc-if value="{{ inFade }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:59;background:#000;pointer-events:none;animation:fadeOut .8s ease forwards"></div>
+  </sc-if>
+
+  <sc-if value="{{ taskOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);display:grid;place-items:center;padding:12px;overflow:auto;animation:fade .2s ease">
+      <dc-import name="Task Panel" kind="{{ tk.kind }}" difficulty="{{ tk.diff }}" task-id="{{ tk.id }}" title="{{ tk.name }}" on-done="{{ tk.onDone }}" on-close="{{ tk.close }}" hint-size="460px,560px"></dc-import>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sabOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ sabClose }}" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);display:grid;place-items:center;padding:16px;animation:fade .2s ease">
+      <div onClick="{{ stop }}" style="width:min(520px,100%);box-sizing:border-box;padding:20px;border-radius:24px;background:rgba(16,14,24,.97);border:1px solid rgba(248,113,113,.3);display:flex;flex-direction:column;gap:14px;animation:popIn .35s cubic-bezier(.2,1.25,.35,1)">
+        <span style="font:900 24px 'Zain';color:#fca5a5">💥 تخريب</span>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">
+          <sc-for list="{{ sabItems }}" as="s" hint-placeholder-count="6">
+            <button onClick="{{ s.press }}" style="min-height:52px;padding:8px 10px;border-radius:14px;cursor:pointer;border:1px solid {{ s.bd }};background:{{ s.bg }};color:#f4f2f8;font:800 16px 'Zain'">{{ s.n }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ meetOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:65;background:radial-gradient(ellipse at 50% 0%, rgba(20,184,166,.10), transparent 60%), rgba(3,5,10,.9);backdrop-filter:blur(10px);display:flex;justify-content:center;overflow:auto;padding:14px;box-sizing:border-box;animation:fade .3s ease">
+      <div style="width:min(1120px,100%);margin:auto 0;display:flex;flex-direction:column;border-radius:26px;background:#1b2230;border:5px solid #06080d;box-shadow:inset 0 3px 0 rgba(255,255,255,.07),0 10px 0 #06080d,0 30px 90px rgba(0,0,0,.6);overflow:hidden;animation:popIn .45s cubic-bezier(.2,1.25,.35,1)">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;padding:14px 18px;background:#232c3d;border-bottom:4px solid #06080d">
+          <span style="flex:none;width:52px;height:52px;border-radius:14px;display:grid;place-items:center;background:{{ mt.iconBg }};border:3px solid #06080d;box-shadow:0 4px 0 #06080d;font:400 26px/1 'Zain'">{{ mt.icon }}</span>
+          <div style="flex:1 1 220px;min-width:0;display:flex;flex-direction:column;gap:2px">
+            <span style="font:900 clamp(24px,4vw,34px)/1.1 'Zain';color:{{ mt.c }};text-shadow:0 2px 0 #06080d">{{ mt.title }}</span>
+            <span style="font:600 16px 'Zain';color:#94a3b8">{{ mt.sub }}</span>
+          </div>
+          <div style="flex:0 1 300px;min-width:200px;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <span style="padding:3px 12px;border-radius:8px;background:{{ mt.stageBg }};border:2px solid #06080d;font:900 15px 'Zain';color:#06080d">{{ mt.stage }}</span>
+              <span style="font:900 26px/1 'Zain';color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 2px 0 #06080d">{{ mt.sec }}<span style="font:800 15px 'Zain';color:#94a3b8"> ث</span></span>
+            </div>
+            <div style="height:12px;border-radius:999px;background:#0f141d;border:2px solid #06080d;overflow:hidden"><div style="height:100%;width:{{ mt.pct }}%;background:{{ mt.barC }};border-radius:999px;transition:width .9s linear"></div></div>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:14px;padding:14px;align-items:stretch">
+          <div style="flex:1 1 520px;min-width:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;align-content:start">
+            <sc-for list="{{ mt.cards }}" as="p" hint-placeholder-count="10">
+              <button onClick="{{ p.press }}" style="position:relative;min-height:74px;padding:7px 12px 7px 8px;border-radius:16px;cursor:pointer;display:flex;align-items:center;gap:10px;text-align:start;border:3px solid {{ p.bd }};background:{{ p.bg }};color:#f4f2f8;opacity:{{ p.op }};box-shadow:0 4px 0 #06080d;transition:transform .12s" style-active="transform:translateY(2px)">
+                <span style="flex:none;width:56px;height:56px;border-radius:14px;background:radial-gradient(circle at 50% 35%, #2d3a52, #0f141d);border:2px solid #06080d;overflow:hidden;display:flex;align-items:flex-end;justify-content:center"><img src="{{ p.img }}" alt="" width="40" height="60" style="flex:none;display:block;width:40px;height:60px;margin-bottom:-6px"></span>
+                <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                  <span style="font:800 18px/1.15 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+                  <span style="align-self:flex-start;padding:1px 8px;border-radius:6px;background:rgba(6,8,13,.55);font:800 12px 'Zain';color:{{ p.tagC }}">{{ p.tag }}</span>
+                </span>
+              </button>
+            </sc-for>
+          </div>
+          <div style="flex:1 1 300px;max-width:100%;min-height:280px;max-height:min(54vh,480px);display:flex;flex-direction:column;border-radius:18px;background:#0f141d;border:3px solid #06080d;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#151b26;border-bottom:3px solid #06080d">
+              <span style="font:900 17px 'Zain';color:#e2e8f0">💬 النقاش</span>
+              <sc-if value="{{ mt.hasTalkers }}" hint-placeholder-val="{{ false }}">
+                <span style="margin-inline-start:auto;padding:2px 10px;border-radius:999px;background:rgba(20,184,166,.15);font:700 13px 'Zain';color:#5eead4;animation:pulse 1.2s ease-in-out infinite">🎙️ {{ mt.talkers }}</span>
+              </sc-if>
+            </div>
+            <div ref="{{ chatRef }}" style="flex:1;min-height:0;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ mt.chat }}" as="c" hint-placeholder-count="0">
+                <div style="display:flex;align-items:flex-start;gap:8px;flex-direction:{{ c.dir }}">
+                  <span style="flex:none;width:26px;height:26px;border-radius:8px;background:{{ c.c }};border:2px solid #06080d"></span>
+                  <div style="max-width:78%;padding:6px 11px;border-radius:12px;background:{{ c.bg }};border:2px solid #06080d;display:flex;flex-direction:column">
+                    <span style="font:800 12px 'Zain';color:{{ c.c }}">{{ c.name }}</span>
+                    <span style="font:500 15px/1.45 'Zain';color:#ece9f3;word-break:break-word">{{ c.t }}</span>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ mt.chatEmpty }}" hint-placeholder-val="{{ true }}">
+                <span style="margin:auto;font:500 14px 'Zain';color:#475569">ما أحد كتب شي للحين</span>
+              </sc-if>
+            </div>
+            <sc-if value="{{ mt.canChat }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:8px;padding:10px;background:#151b26;border-top:3px solid #06080d">
+                <button onClick="{{ mt.micToggle }}" aria-label="المايك" style="flex:none;width:46px;height:46px;border-radius:12px;cursor:pointer;border:3px solid #06080d;background:{{ mt.micBg }};color:#fff;font:400 20px 'Zain';display:grid;place-items:center;box-shadow:0 3px 0 #06080d,0 0 0 {{ mt.micRing }}px rgba(94,234,212,.3)">{{ mt.micIcon }}</button>
+                <input value="{{ mt.draft }}" onChange="{{ mt.onDraft }}" onKeyDown="{{ mt.onKey }}" maxLength="120" placeholder="اكتب رسالة…" style="flex:1;min-width:0;height:46px;box-sizing:border-box;padding:0 14px;border-radius:12px;border:3px solid #06080d;background:#0b0f17;color:#f4f2f8;font:600 16px 'Zain';outline:none">
+                <button onClick="{{ mt.sendChat }}" style="flex:none;height:46px;padding:0 16px;border-radius:12px;cursor:pointer;border:3px solid #06080d;background:#14b8a6;color:#06080d;font:900 15px 'Zain';box-shadow:0 3px 0 #06080d" style-active="transform:translateY(2px)">إرسال</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ mt.chatGhost }}" hint-placeholder-val="{{ false }}">
+              <span style="padding:12px;text-align:center;font:700 14px 'Zain';color:#64748b;background:#151b26;border-top:3px solid #06080d">👻 الأشباح ما تتكلم</span>
+            </sc-if>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 18px;background:#232c3d;border-top:4px solid #06080d">
+          <span style="flex:1 1 200px;font:800 16px 'Zain';color:{{ mt.noteC }}">{{ mt.note }}</span>
+          <sc-if value="{{ mt.hasSel }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ mt.cancel }}" style="height:52px;padding:0 18px;border-radius:12px;cursor:pointer;border:3px solid #06080d;background:#475569;color:#fff;font:800 16px 'Zain';box-shadow:0 4px 0 #06080d" style-active="transform:translateY(2px)">إلغاء</button>
+            <button onClick="{{ mt.confirm }}" style="height:52px;padding:0 24px;border-radius:12px;cursor:pointer;border:3px solid #06080d;background:#16a34a;color:#fff;font:900 18px 'Zain';text-shadow:0 2px 0 #06080d;box-shadow:0 4px 0 #06080d;animation:popIn .3s ease" style-active="transform:translateY(2px)">✓ صوّت على {{ mt.selName }}</button>
+          </sc-if>
+          <sc-if value="{{ mt.canSkip }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ mt.skip }}" style="height:52px;padding:0 22px;border-radius:12px;cursor:pointer;border:3px solid {{ mt.skipBd }};background:#334155;color:#e2e8f0;font:800 17px 'Zain';box-shadow:0 4px 0 #06080d" style-active="transform:translateY(2px)">⏭️ تخطّي</button>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ejOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:66;background:#05040a;overflow:hidden;animation:fade .4s ease">
+      {{ ejStars }}
+      <sc-if value="{{ ej.has }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;top:34%;left:50%;margin-left:-45px;animation:tumble 3s linear forwards"><img src="{{ ej.img }}" alt="" width="90" height="135" style="flex:none;display:block;width:90px;height:135px"></div>
+      </sc-if>
+      <sc-if value="{{ ej.drift }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;top:34%;left:calc(100% + 40px);animation:driftRL 6s linear forwards;opacity:.9"><img src="{{ ej.dImg }}" alt="" width="90" height="135" style="flex:none;display:block;width:90px;height:135px"></div>
+      </sc-if>
+      <div style="position:absolute;left:0;right:0;bottom:22%;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:0 20px">
+        <span style="min-height:1.2em;font:900 clamp(26px,5.5vw,48px)/1.2 'Zain';color:#fff;text-shadow:0 3px 0 #06080d">{{ ej.tA }}<span style="opacity:{{ ej.cA }};color:#5eead4">▌</span></span>
+        <span style="min-height:1.3em;font:800 clamp(20px,4.5vw,32px)/1.3 'Zain';color:{{ ej.subC }}">{{ ej.tB }}<span style="opacity:{{ ej.cB }};color:#5eead4">▌</span></span>
+        <sc-if value="{{ ej.hasVotes }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:760px;animation:revealIn .5s ease 3.4s both">
+            <sc-for list="{{ ej.votes }}" as="v" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)">
+                <span style="font:800 14px 'Zain';color:#e7e3ef">{{ v.name }}</span>
+                <sc-for list="{{ v.voters }}" as="c" hint-placeholder-count="2"><span style="width:14px;height:14px;border-radius:50%;background:{{ c.c }};border:1.5px solid #05040a"></span></sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ overOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:70;background:radial-gradient(ellipse at 50% 55%, {{ ov.glow }}, transparent 62%), #05040a;display:grid;place-items:center;padding:{{ ov.pad }};overflow:auto;animation:fade .4s ease">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:{{ ov.gap }};text-align:center;animation:popIn .6s cubic-bezier(.2,1.25,.35,1)">
+        <span style="font:400 {{ ov.icS }}/1 'Zain'">{{ ov.icon }}</span>
+        <span style="font:900 {{ ov.tS }}/1.1 'Zain';color:{{ ov.c }}">{{ ov.title }}</span>
+        <span style="font:700 clamp(17px,3.5vw,24px) 'Zain';color:#c9c4d6">{{ ov.reason }}</span>
+        <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:18px 14px;max-width:min(980px,92vw);margin-top:6px">
+          <sc-for list="{{ ov.team }}" as="p" hint-placeholder-count="5">
+            <div style="width:{{ ov.cw }}px;display:flex;flex-direction:column;align-items:center;gap:6px;opacity:{{ p.op }};animation:revealIn .5s ease {{ p.d }} both">
+              <img src="{{ p.img }}" alt="" style="flex:none;display:block;width:{{ ov.iw }}px;height:{{ ov.ih }}px">
+              <span style="max-width:{{ ov.cw }}px;font:800 {{ ov.fs }}px 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+              <span style="font:700 12px 'Zain';color:{{ p.tagC }}">{{ p.tag }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ ov.hasLosers }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;max-width:min(900px,92vw)">
+            <span style="font:700 14px 'Zain';color:#8a8596">{{ ov.loseLbl }}</span>
+            <sc-for list="{{ ov.losers }}" as="p" hint-placeholder-count="5">
+              <span style="display:flex;align-items:center;gap:6px;padding:4px 10px 4px 6px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);font:700 13px 'Zain';color:#a8a3b5"><span style="width:14px;height:14px;border-radius:50%;background:{{ p.c }}"></span>{{ p.name }}</span>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isHost }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:{{ ov.bM }}">
+            <button onClick="{{ ov.again }}" style="height:{{ ov.bH }};padding:0 30px;border:none;border-radius:999px;cursor:pointer;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:800 {{ ov.bF }} 'Zain';box-shadow:0 10px 30px rgba(124,58,237,.4)">🔁 جولة جديدة</button>
+            <button onClick="{{ ov.lobby }}" style="height:{{ ov.bH }};padding:0 30px;border-radius:999px;cursor:pointer;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#e7e3ef;font:800 20px 'Zain'">↩️ اللوبي</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ notHost }}" hint-placeholder-val="{{ true }}">
+          <span style="font:400 17px 'Zain';color:#8a8596;animation:pulse 1.6s ease-in-out infinite">بانتظار المذيع…</span>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ raOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;left:0;right:0;top:58px;z-index:57;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 14px;pointer-events:none;text-align:center">
+      <sc-for list="{{ alerts }}" as="al" hint-placeholder-count="1">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+          <span style="font:900 clamp(17px,3.2vw,23px)/1.2 'Zain';color:{{ al.c }};text-shadow:0 2px 0 #06080d,0 0 12px rgba(0,0,0,.6);animation:pulse .9s ease-in-out infinite">{{ al.t }}</span>
+          <span style="font:700 clamp(12px,2.4vw,15px)/1.35 'Zain';color:#f1f5f9;text-shadow:0 2px 0 #06080d">{{ al.s }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ fixOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:61;background:rgba(3,5,10,.65);backdrop-filter:blur(6px);display:grid;place-items:center;padding:12px;animation:fade .2s ease">
+      <div dir="rtl" style="width:min(440px,100%);box-sizing:border-box;display:flex;flex-direction:column;border-radius:22px;background:#1b2230;border:5px solid #06080d;box-shadow:0 8px 0 #06080d,0 24px 70px rgba(0,0,0,.6);overflow:hidden;animation:popIn .35s cubic-bezier(.2,1.25,.35,1)">
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#232c3d;border-bottom:4px solid #06080d">
+          <span style="width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:{{ fx.c }};border:3px solid #06080d;font:400 22px/1 'Zain'">{{ fx.icon }}</span>
+          <span style="flex:1;font:900 21px 'Zain';color:#fff;text-shadow:0 2px 0 #06080d">{{ fx.name }}</span>
+          <button onClick="{{ fx.close }}" aria-label="إغلاق" style="width:42px;height:42px;border-radius:10px;cursor:pointer;border:3px solid #06080d;background:#dc2626;color:#fff;font:900 17px 'Zain';box-shadow:0 3px 0 #06080d">✕</button>
+        </div>
+        <div style="padding:18px;display:flex;flex-direction:column;align-items:center;gap:14px">
+          <sc-if value="{{ fx.isL }}" hint-placeholder-val="{{ false }}">
+            <span style="font:700 15px 'Zain';color:#94a3b8">شغّل كل المفاتيح لين تولع اللمبات</span>
+            <div style="display:flex;gap:10px;padding:12px;border-radius:14px;background:#0f141d;border:3px solid #06080d">
+              <sc-for list="{{ fx.sw }}" as="w" hint-placeholder-count="5">
+                <button onClick="{{ w.press }}" style="width:52px;height:120px;border-radius:12px;cursor:pointer;border:3px solid #06080d;background:#151b26;display:flex;flex-direction:column;justify-content:{{ w.jc }};padding:6px;box-sizing:border-box">
+                  <span style="height:46px;border-radius:8px;background:{{ w.c }};box-shadow:0 0 16px {{ w.glow }}"></span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ fx.isO }}" hint-placeholder-val="{{ false }}">
+            <div style="align-self:stretch;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:12px;background:#fef3c7;border:3px solid #06080d;transform:rotate(-1.5deg)">
+              <span style="font:700 14px 'Zain';color:#78350f">📝 الرمز</span>
+              <span dir="ltr" style="font:900 26px 'Zain';color:#1c1917;letter-spacing:.2em">{{ fx.code }}</span>
+            </div>
+            <span dir="ltr" style="align-self:stretch;height:56px;border-radius:12px;display:grid;place-items:center;background:#0f141d;border:3px solid #06080d;font:900 30px 'Zain';color:#5eead4;letter-spacing:.3em;animation:{{ fx.shake }}">{{ fx.entry }}</span>
+            <div dir="ltr" style="display:grid;grid-template-columns:repeat(3,72px);gap:8px">
+              <sc-for list="{{ fx.keys }}" as="k" hint-placeholder-count="12">
+                <button onPointerDown="{{ k.press }}" style="height:58px;border-radius:12px;cursor:pointer;border:3px solid #06080d;background:{{ k.bg }};color:#fff;font:900 24px 'Zain';box-shadow:0 3px 0 #06080d" style-active="transform:translateY(2px)">{{ k.k }}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ fx.isC }}" hint-placeholder-val="{{ false }}">
+            <span style="font:700 15px 'Zain';color:#94a3b8">حرّك المؤشر لين تصير الموجة خضراء وثابتة</span>
+            <div style="align-self:stretch;height:90px;display:flex;align-items:center;justify-content:space-between;gap:3px;padding:0 10px;border-radius:14px;background:#0f141d;border:3px solid #06080d">
+              <sc-for list="{{ fx.bars }}" as="b" hint-placeholder-count="24">
+                <span style="flex:1;height:{{ b.h }}px;border-radius:3px;background:{{ b.c }}"></span>
+              </sc-for>
+            </div>
+            <input type="range" min="0" max="100" value="{{ fx.cv }}" onChange="{{ fx.onC }}" aria-label="التردد" style="width:100%;accent-color:#a78bfa;cursor:pointer" dir="ltr">
+            <div style="align-self:stretch;height:12px;border-radius:999px;background:#0f141d;border:2px solid #06080d;overflow:hidden"><div style="height:100%;width:{{ fx.lockPct }}%;background:#4ade80"></div></div>
+          </sc-if>
+          <sc-if value="{{ fx.isR }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:10px;align-items:center">
+              <span style="padding:4px 12px;border-radius:8px;background:{{ fx.rMe }};border:2px solid #06080d;font:800 13px 'Zain';color:#fff">أنت</span>
+              <span style="font:800 13px 'Zain';color:#94a3b8">+</span>
+              <span style="padding:4px 12px;border-radius:8px;background:{{ fx.rOther }};border:2px solid #06080d;font:800 13px 'Zain';color:#fff">الجهاز الثاني</span>
+            </div>
+            <button onPointerDown="{{ fx.rDown }}" onPointerUp="{{ fx.rUp }}" onPointerLeave="{{ fx.rUp }}" onPointerCancel="{{ fx.rUp }}" style="width:170px;height:170px;border-radius:24px;cursor:pointer;border:3px solid #06080d;background:radial-gradient(circle, #164e63, #0f141d);box-shadow:0 5px 0 #06080d, inset 0 0 0 3px {{ fx.rMe }};font:400 76px/1 'Zain';touch-action:none">🖐️</button>
+            <span style="font:800 15px 'Zain';color:#e2e8f0;text-align:center">{{ fx.rTxt }}</span>
+          </sc-if>
+          <sc-if value="{{ fx.ok }}" hint-placeholder-val="{{ false }}">
+            <span style="font:900 26px 'Zain';color:#4ade80;text-shadow:0 2px 0 #06080d;animation:popIn .3s ease">✓ تم الإصلاح</span>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ repOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:70;display:grid;place-items:center;overflow:hidden;animation:alarmBg .6s ease-in-out infinite">
+      <div style="position:absolute;left:0;right:0;top:0;height:46px;background:repeating-linear-gradient(135deg, #fbbf24 0 30px, #06080d 30px 60px);animation:stripes .8s linear infinite;border-bottom:4px solid #06080d"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;height:46px;background:repeating-linear-gradient(135deg, #fbbf24 0 30px, #06080d 30px 60px);animation:stripes .8s linear infinite reverse;border-top:4px solid #06080d"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;padding:0 20px">
+        <div style="position:relative;width:180px;height:180px;display:grid;place-items:center">
+          <span style="position:absolute;inset:0;border-radius:50%;border:6px solid rgba(254,202,202,.7);animation:ringOut 1s ease-out infinite"></span>
+          <span style="position:absolute;inset:0;border-radius:50%;border:6px solid rgba(254,202,202,.7);animation:ringOut 1s ease-out .5s infinite"></span>
+          <span style="width:150px;height:150px;border-radius:50%;background:#1b2230;border:6px solid #06080d;box-shadow:0 6px 0 #06080d;display:grid;place-items:center;overflow:hidden;animation:bodyIn .5s ease .2s both"><img src="{{ rep.img }}" alt="" width="90" height="135" style="display:block;width:90px;height:135px;transform:rotate({{ rep.rot }}deg);margin-top:14px"></span>
+        </div>
+        <span style="font:900 clamp(48px,11vw,110px)/1 'Zain';color:#fff;text-shadow:0 6px 0 #06080d,0 0 30px rgba(254,202,202,.6);animation:slamIn .5s cubic-bezier(.2,1.3,.4,1) both">{{ rep.title }}</span>
+        <span style="padding:8px 22px;border-radius:12px;background:#06080d;font:800 clamp(18px,3.6vw,28px) 'Zain';color:#fecaca;animation:revealIn .4s ease .5s both">{{ rep.sub }}</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="position:fixed;top:{{ volTop }}px;right:12px;z-index:58;display:flex;flex-direction:row-reverse;align-items:center;gap:8px">
+    <button onClick="{{ volToggle }}" aria-label="الصوت" style="width:44px;height:44px;border-radius:12px;cursor:pointer;border:3px solid #06080d;background:#2a3446;color:#fff;font:400 20px/1 'Zain';display:grid;place-items:center;box-shadow:0 3px 0 #06080d" style-active="transform:translateY(2px)">{{ volIcon }}</button>
+    <sc-if value="{{ volOpen }}" hint-placeholder-val="{{ false }}">
+      <div dir="ltr" style="display:flex;align-items:center;gap:10px;height:44px;padding:0 12px;box-sizing:border-box;border-radius:12px;background:#1b2230;border:3px solid #06080d;box-shadow:0 3px 0 #06080d;animation:popIn .25s ease">
+        <button onClick="{{ muteToggle }}" aria-label="كتم" style="width:30px;height:30px;border-radius:8px;cursor:pointer;border:2px solid #06080d;background:{{ muteBg }};color:#fff;font:400 15px/1 'Zain';display:grid;place-items:center">{{ muteIcon }}</button>
+        <input type="range" min="0" max="100" step="5" value="{{ volVal }}" onChange="{{ volChange }}" aria-label="مستوى الصوت" style="width:clamp(110px,28vw,180px);accent-color:#14b8a6;cursor:pointer">
+        <span style="min-width:40px;text-align:right;font:900 15px 'Zain';color:#e2e8f0;font-variant-numeric:tabular-nums">{{ volVal }}%</span>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ killOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:72;pointer-events:none;display:grid;place-items:center;background:radial-gradient(ellipse at center, rgba(127,29,29,.9), rgba(5,4,10,.97) 70%);animation:kBg 2.4s ease forwards">
+      <div style="position:relative;width:100%;height:300px;display:flex;align-items:flex-end;justify-content:center;gap:50px;border-top:6px solid #06080d;border-bottom:6px solid #06080d;background:repeating-linear-gradient(115deg, #3b0a0a 0 40px, #4c0d0d 40px 80px);animation:kBand 2.4s cubic-bezier(.2,1,.3,1) forwards, stripes 1.2s linear infinite;box-shadow:inset 0 0 80px rgba(0,0,0,.7)">
+        <div style="animation:kLunge 2.4s cubic-bezier(.3,1.4,.5,1) forwards"><img src="{{ kill.kImg }}" alt="" width="110" height="165" style="display:block;width:110px;height:165px;transform:scaleX(-1)"></div>
+        <div style="animation:kFall 2.4s ease-in forwards;transform-origin:50% 90%"><img src="{{ kill.vImg }}" alt="" width="110" height="165" style="display:block;width:110px;height:165px"></div>
+        <span style="position:absolute;left:50%;top:44%;width:240px;height:8px;margin-left:-120px;border-radius:4px;background:linear-gradient(90deg, transparent, #fff, transparent);box-shadow:0 0 18px #fca5a5;animation:kSlash 2.4s ease forwards"></span>
+      </div>
+      <span style="position:absolute;bottom:18%;font:900 clamp(30px,6vw,52px) 'Zain';color:#fecaca;text-shadow:0 3px 0 #06080d;animation:revealIn .4s ease 1.1s both">{{ kill.txt }}</span>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ rotOn }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ goFull }}" style="position:fixed;inset:0;z-index:95;background:rgba(5,7,13,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px">
+      <span style="font:400 64px/1 'Zain';display:inline-block;transform:rotate(90deg)">📱</span>
+      <span style="font:900 26px 'Zain';color:#fff">لف جوالك بالعرض</span>
+      <span style="font:600 16px/1.6 'Zain';color:#94a3b8">اضغط هنا لملء الشاشة</span>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ exitOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeExit }}" style="position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;animation:{{ exitOv }}">
+      <div onClick="{{ stop }}" style="width:min(420px, calc(100vw - 16px));box-sizing:border-box;padding:clamp(18px,5vw,28px);border-radius:24px;background:rgba(12,11,18,.96);border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 90px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;animation:{{ exitAn }}">
+        <span style="font:700 22px 'Zain'">الخروج؟</span>
+        <span style="font:400 15px/1.6 'Zain';color:#a8a3b5">بترجع لمكتبة الألعاب وتنتهي المباراة</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:6px">
+          <button onClick="{{ closeExit }}" style="height:48px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;font:700 15px 'Zain';cursor:pointer" style-hover="background:rgba(255,255,255,.09)">إلغاء</button>
+          <button onClick="{{ confirmExit }}" style="height:48px;border-radius:999px;border:none;background:linear-gradient(90deg, #dc2626, #ef4444);color:#fff;font:700 15px 'Zain';cursor:pointer;box-shadow:0 8px 22px rgba(239,68,68,.3)" style-hover="filter:brightness(1.1)">خروج</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;hostView&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;منظور المذيع&quot;,&quot;الخريطة كاملة&quot;],&quot;default&quot;:&quot;منظور المذيع&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;العرض&quot;},&quot;ambVol&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:20,&quot;min&quot;:0,&quot;max&quot;:100,&quot;step&quot;:5,&quot;unit&quot;:&quot;%&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;الصوت&quot;}}">
+// الخادم هو الحكم (backend/station/station-game.js): هذه الشاشة ترسل pos/act وتعرض الحالة المفلترة اللي تجيها.
+const LIB='https://aymngames.online/';
+const RAD=22, SPEED=270, LONG_K=['samples','upload','reactor'];
+const COLORS=['#ef4444','#3b82f6','#22c55e','#eab308','#f97316','#a855f7','#ec4899','#14b8a6','#f4f2f8','#64748b','#84cc16','#06b6d4','#b45309','#f43f5e','#6366f1','#10b981','#facc15','#c084fc','#0ea5e9','#78350f'];
+const ROOMS=[
+ {id:'lounge',n:'الاستراحة',x:1000,y:600,w:500,h:380,f:'#1d1a2b'},
+ {id:'command',n:'القيادة',x:1050,y:120,w:400,h:260,f:'#1a2033'},
+ {id:'lab',n:'المختبر',x:1750,y:200,w:420,h:320,f:'#17262a'},
+ {id:'comms',n:'الاتصالات',x:1800,y:750,w:360,h:280,f:'#211c33'},
+ {id:'clinic',n:'العيادة',x:1600,y:1200,w:380,h:300,f:'#1a2a24'},
+ {id:'storage',n:'المخزن',x:1000,y:1250,w:480,h:320,f:'#2a2218'},
+ {id:'hydro',n:'الحديقة المائية',x:380,y:1200,w:420,h:300,f:'#16281f'},
+ {id:'reactor',n:'المفاعل',x:100,y:600,w:420,h:380,f:'#2b1a1f'},
+ {id:'engines',n:'المحركات',x:380,y:150,w:420,h:300,f:'#26201a'}];
+const CORR=[[1190,370,120,240],[510,730,500,120],[1490,780,320,120],[1190,970,120,290],[1440,230,320,120],[790,230,270,120],[400,440,100,170],[400,970,100,240],[790,1340,220,120],[1470,1340,140,120],[1850,1020,120,190],[1900,510,120,250]].map(([x,y,w,h],i)=>({i,x,y,w,h,v:h>w}));
+const TASKS=[
+ {id:'t1',n:'ضبط المحرك',r:'engines',x:700,y:230,k:'calibrate'},
+ {id:'t2',n:'ضبط المسار',r:'command',x:1250,y:180,k:'route'},
+ {id:'t3',n:'فحص العينات',r:'lab',x:2080,y:290,k:'samples'},
+ {id:'t4',n:'توصيل أسلاك الإرسال',r:'comms',x:2080,y:960,k:'wires'},
+ {id:'t5',n:'تمرير بطاقة الدخول',r:'clinic',x:1720,y:1290,k:'swipe'},
+ {id:'t6',n:'فتح قفل المخزن',r:'storage',x:1120,y:1480,k:'lock'},
+ {id:'t7',n:'تنظيف الأحواض',r:'hydro',x:560,y:1290,k:'trash'},
+ {id:'t8',n:'إصلاح المفاعل',r:'reactor',x:200,y:680,k:'reactor'},
+ {id:'t9',n:'تنظيف النفايات',r:'lounge',x:1430,y:660,k:'trash'},
+ {id:'t10',n:'تصويب النيازك',r:'lab',x:1820,y:440,k:'aim'},
+ {id:'t11',n:'رفع البيانات',r:'command',x:1110,y:330,k:'upload'}];
+const TK_ICON={wires:'🔌',swipe:'💳',calibrate:'🎯',lock:'🔐',samples:'🧪',reactor:'☢️',upload:'📡',trash:'🗑️',route:'🧭',aim:'☄️'};
+const WIRE_C=['#ef4444','#3b82f6','#facc15','#22c55e'];
+const VENTS=[{id:'v1',x:180,y:910,to:['v2','v5']},{id:'v2',x:460,y:220,to:['v1','v6']},{id:'v3',x:2100,y:440,to:['v4','v6']},{id:'v4',x:1900,y:1440,to:['v3','v5']},{id:'v5',x:450,y:1440,to:['v4','v1']},{id:'v6',x:1380,y:320,to:['v2','v3']}];
+const VENT_STAY=8000;
+const BTN={x:1250,y:790}, FIX={x:260,y:950};
+const DEV=[{id:'r1',k:'reactor',x:260,y:950,n:'جهاز المفاعل ١'},{id:'r2',k:'reactor',x:440,y:690,n:'جهاز المفاعل ٢'},{id:'lights',k:'lights',x:430,y:400,n:'لوحة الكهرباء'},{id:'o2a',k:'o2',x:760,y:1420,n:'أكسجين · الحديقة'},{id:'o2b',k:'o2',x:1400,y:320,n:'أكسجين · القيادة'},{id:'comms',k:'comms',x:2100,y:800,n:'جهاز الاتصالات'}];
+const DEV_IC={reactor:'☢️',lights:'💡',o2:'🫁',comms:'📡'}, DEV_C={reactor:'#ef4444',lights:'#facc15',o2:'#38bdf8',comms:'#a78bfa'};
+const MS=1.45, BTN0={x:BTN.x,y:BTN.y};
+ROOMS.forEach(r=>{ r.x*=MS; r.y*=MS; r.w*=MS; r.h*=MS; }); CORR.forEach(c=>{ c.x*=MS; c.y*=MS; c.w*=MS; c.h*=MS; }); [...TASKS,...VENTS,BTN,FIX,...DEV].forEach(o=>{ o.x*=MS; o.y*=MS; });
+const inR=(x,y,a,sx,sy)=>x>=a.x+sx&&x<=a.x+a.w-sx&&y>=a.y+sy&&y<=a.y+a.h-sy;
+const roomAt=(x,y)=>{ const r=ROOMS.find(r=>inR(x,y,r,0,0)); return r?r.id:null; };
+const RN=id=>(ROOMS.find(r=>r.id===id)||{}).n||'';
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const rand=(a,b)=>a+Math.random()*(b-a);
+const shuffle=a=>{ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+CORR.forEach(c=>{ const cx=c.x+c.w/2, cy=c.y+c.h/2; c.e1=c.v?{x:cx,y:c.y-45}:{x:c.x-45,y:cy}; c.e2=c.v?{x:cx,y:c.y+c.h+45}:{x:c.x+c.w+45,y:cy}; c.a=roomAt(c.e1.x,c.e1.y); c.b=roomAt(c.e2.x,c.e2.y); });
+const STARS=Array.from({length:520},()=>[rand(-900,4100),rand(-800,3000),Math.random()<.1?3.4:1.8]);
+
+class Component extends DCLogic {
+  state={ ui:0, narrow:innerWidth<820, logo:false, exitOpen:false, jx:0, jy:0, task:null, sab:false, overview:null };
+  cv=React.createRef(); mm=React.createRef(); chatRef=React.createRef();
+  cfg(){ let c=this.G&&this.G.cfg; if(!c) c={};
+    const T=window.StationSettings, d=T?T.DEFAULTS:{}; c={...d,...c}; return {...c,kill:c.killCd??25,vote:c.voteSec??30,talk:c.talkSec??15}; }
+  taskTotals(G){ if(G.tt) return G.tt; const C=this.cfg(), crew=G.players.filter(p=>!p.imp); let tot=0,dn=0; crew.forEach(p=>{ if(p.alive||C.ghostTasks){ tot+=p.tasks.length; dn+=p.done.length; } else { tot+=p.done.length; dn+=p.done.length; } }); return {tot,dn}; }
+  applySpots(sp){ if(!this._base) this._base=TASKS.map(t=>({x:t.x,y:t.y,r:t.r})); TASKS.forEach((t,i)=>{ const b=(sp&&sp[t.id])||this._base[i]; t.x=b.x; t.y=b.y; t.r=b.r; }); }
+  componentDidMount(){
+    const q=new URLSearchParams(location.search);
+    this.isHost=!q.get('id'); this.myId=this.isHost?'host':String(q.get('id'));
+    const hs=window.StationNet.hostSession()||{}, mm=window.StationNet.me()||{};
+    this.room=q.get('room')||(this.isHost?hs.code:mm.room)||'';
+    this.me={x:BTN.x,y:BTN.y+120}; this.face=1; this.joy={x:0,y:0}; this.keys={}; this.disp={};
+    this.isTouch=matchMedia('(pointer: coarse)').matches;
+    window.StationNet.patchClock(); this.subs={}; this.pubs={}; this.auds={};
+    this.net=window.StationNet.connect(d=>this.onMsg(d),()=>{ if(this.isHost){ const h=window.StationNet.hostSession()||{}; this.send({t:'host',code:h.code,token:h.token,auth:window.StationNet.authToken()}); } else { const m=window.StationNet.me()||{}; if(m.id!==this.myId){ location.href='join.html'+(this.room?'?room='+this.room:''); return; } this.send({t:'resume',code:m.room,id:m.id,key:m.key}); } });
+    this.kd=e=>{ if(e.target&&e.target.tagName==='INPUT') return; const k=({'ص':'w','ش':'s','س':'a','ي':'d','ث':'e','ق':'r','ض':'q','ر':'v'})[e.key]||e.key.toLowerCase(); this.keys[k]=true; if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
+      if(e.repeat||this.state.task) return; if(k==='e') this.pressUse(); if(k==='r') this.pressReport(); if(k==='q') this.pressKill(); if(k==='v') this.pressVent(); };
+    this.ku=e=>{ const k=({'ص':'w','ش':'s','س':'a','ي':'d'})[e.key]||e.key.toLowerCase(); this.keys[k]=false; }; this.blur=()=>{ this.keys={}; this.joyReset(); }; document.addEventListener('visibilitychange',this.blur); addEventListener('blur',this.blur);
+    addEventListener('keydown',this.kd); addEventListener('keyup',this.ku);
+    this.unlock=()=>this.ambStart(); addEventListener('pointerdown',this.unlock); addEventListener('keydown',this.unlock); this.ambStart();
+    this.rs=()=>{ this.setState({narrowP:innerWidth<500,portrait:innerHeight>innerWidth}); this.joyH=Math.round(innerHeight*.62)-100; this.setState({narrow:innerWidth<820}); }; this.joyH=Math.round(innerHeight*.62)-100; this.setState({narrowP:innerWidth<500,portrait:innerHeight>innerWidth}); addEventListener('resize',this.rs);
+    this.last=performance.now(); this.lastSend=0; this.lastUi=0; this.lastB=0; this.t0=Date.now();
+    this.loop=t=>{ this.raf=requestAnimationFrame(this.loop); try{ this.frame(t); }catch(err){ console.error(err); } };
+    this.raf=requestAnimationFrame(this.loop);
+  }
+  componentWillUnmount(){ clearInterval(this.ambBeep); removeEventListener('pointerdown',this.unlock); removeEventListener('keydown',this.unlock); try{ this.amb&&this.amb.out.disconnect(); }catch(e){} this.stopMic&&this.micStream&&this.micStream.getTracks().forEach(t=>t.stop()); cancelAnimationFrame(this.raf); removeEventListener('keydown',this.kd); removeEventListener('keyup',this.ku); removeEventListener('resize',this.rs); this.rtcStopAll(); if(this.net) this.net.close(); }
+  send(m){ if(this.net) this.net.send(m); }
+  onMsg(d){
+    if(!d) return;
+    if(d.t==='state'){ const prevSeq=this.G&&this.G.seq, prevPhase=this.G&&this.G.phase; this.G=d.G; if(prevSeq!==d.G.seq) this.applySpots(d.G.spots);
+      if(prevSeq!==d.G.seq||(prevPhase==='play'&&d.G.phase!=='play')) this.setState({task:null,sab:false});
+      if(prevPhase!==d.G.phase) this.phaseSfx(d.G.phase,prevPhase);
+      if(d.G.phase!=='meeting'&&Object.keys(this.subs).length) this.rtcStopAll(); }
+    else if(d.t==='err'&&d.code==='admin_only'){ this.net.close(); location.replace('../../games.html?locked=testing'); }
+    else if(d.t==='fx') this.sfx(d.k);
+    else if(d.t==='rtc') this.onRtc(d.from,d.data);
+    else if(d.t==='welcome'){ this.room=d.code; if(this.isHost) window.StationNet.hostSession({code:d.code,token:d.token}); }
+    else if(d.t==='room'){ if(!d.room.started){ if(this.isHost){ if(!this.G||this.G.phase!=='over') location.href='index.html'; } else location.href='join.html?room='+this.room; } }
+    else if(d.t==='lobby') location.href='join.html?room='+this.room;
+    else if(d.t==='kicked'||d.t==='closed'||(d.t==='gone'&&!this.isHost)){ window.StationNet.me(null); location.href='join.html'; }
+  }
+  P(id){ return this.G&&this.G.players.find(p=>p.id===String(id)); }
+  meP(){ return this.P(this.myId); }
+  doAct(a,arg){ this.send({t:'act',a,arg}); }
+  lockedSet(){ const G=this.G, now=Date.now(), s=new Set(); if(!G) return s; CORR.forEach(c=>{ if((G.locks[c.a]||0)>now||(G.locks[c.b]||0)>now) s.add(c.i); }); return s; }
+  walk(x,y,lk){ for(const r of ROOMS) if(inR(x,y,r,RAD,RAD)) return true; for(const c of CORR){ if(lk.has(c.i)) continue; if(inR(x,y,c,c.v?RAD:-RAD-14,c.v?-RAD-14:RAD)) return true; } return false; }
+  move(dt){
+    const G=this.G; this.moving=false; if(this.inVent) return; if(!(G.phase==='play'||G.phase==='reveal')||this.state.task) return;
+    const K=this.keys; let vx=this.joy.x+((K.arrowright||K.d)?1:0)-((K.arrowleft||K.a)?1:0), vy=this.joy.y+((K.arrowdown||K.s)?1:0)-((K.arrowup||K.w)?1:0);
+    const l=Math.hypot(vx,vy); if(l<.12) return; if(l>1){ vx/=l; vy/=l; }
+    const lk=this.lockedSet(), {x,y}=this.me, none=new Set(), free=!this.walk(x,y,lk);
+    const ok=(a,b)=>this.walk(a,b,free?none:lk);
+    let X=x, Y=y; const steps=3; for(let i=0;i<steps;i++){ const sp=SPEED*(this.cfg().speed||1), nx=X+vx*sp*dt/steps, ny=Y+vy*sp*dt/steps; if(ok(nx,Y)) X=nx; if(ok(X,ny)) Y=ny; }
+    this.me={x:X,y:Y}; this.moving=X!==x||Y!==y; if(Math.abs(vx)>.15) this.face=vx<0?-1:1;
+  }
+  frame(t){
+    const dt=Math.min(.05,(t-this.last)/1000); this.last=t; const G=this.G, now=Date.now();
+    if(G&&!(G.phase==='play'||G.phase==='reveal')){ if(this.joyOn||this.joy.x||this.joy.y||this.state.joyAct){ this.joyOn=false; this.joyPid=null; this.joy={x:0,y:0}; this.setState({jx:0,jy:0,joyAct:false}); } this.inVent=null; }
+    if(G){ const mp=this.meP(); if(mp){ if(this._wasAlive&&!mp.alive&&G.phase==='play'){ const b=G.bodies.find(x=>x.id===mp.id), k=b&&this.P(b.by); this.joyReset(); this.setState({task:null,kill:{k:k||null,until:now+2400}}); this.sfx('stab'); } this._wasAlive=mp.alive; } }
+    if(this.state.kill&&now>this.state.kill.until) this.setState({kill:null});
+    if(G&&this.state.fix){ const fx=this.state.fix, act=this.activeDev(G).some(d=>d.id===fx.id); if(G.phase!=='play'||!act){ if(act===false&&G.phase==='play'&&!fx.ok) this.setState({fix:{...fx,ok:1}}); if(G.phase!=='play'||(fx.okT&&now>fx.okT)) this.closeFix(); else if(!fx.okT) this.setState({fix:{...this.state.fix,ok:1,okT:now+900}}); }
+      else { if(fx.k==='reactor'&&this.rHolding&&now-(this._rhT||0)>200){ this._rhT=now; this.doAct('rhold',fx.id); }
+        if(fx.k==='comms'&&!fx.done){ const tgt=G.commsF||50, ok=Math.abs(fx.v-tgt)<=4, l=ok?Math.min(1,fx.lock+.016):Math.max(0,fx.lock-.03); if(l>=1){ this.doAct('fix',fx.id); this.setState({fix:{...fx,lock:1,done:1}}); } else if(l!==fx.lock) this.setState({fix:{...fx,lock:l}}); } } }
+    if(G){ const key=[G.reactor?'r'+G.rT0:'',G.o2?'o'+G.oT0:'',G.lights?'l'+G.lights:'',G.comms?'c'+G.comms:''].join('|'); if(key!==this._sk){ if(this._sk!=null&&key.replace(/\|/g,'').length>(this._sk||'').replace(/\|/g,'').length&&G.phase==='play') this.sfx(G.lights&&!(this._sk||'').includes('l')?'lightsOff':'reactor'); this._sk=key; } }
+    if(G){ const base=(this.props.ambVol??20)/100; this.ambSet(G.phase==='play'||G.phase==='reveal'?base:G.phase==='meeting'||G.phase==='eject'?base*.35:0); }
+    if(this.inVent&&now-this.ventT>VENT_STAY) this.ventExit();
+    { const mp=this.meP(); if(this.inVent&&(!mp||!mp.alive||!mp.imp)) this.inVent=null; }
+    if(G){
+      const me=this.meP();
+      if(me){ if(this.myTp!==me.tp){ this.myTp=me.tp; this.me={x:me.x,y:me.y}; } this.move(dt); }
+      if(me&&t-this.lastSend>66&&(G.phase==='play'||G.phase==='reveal')){ this.lastSend=t; this.send({t:'pos',x:this.me.x,y:this.me.y,f:this.face,v:this.inVent?1:0}); }
+      G.players.forEach(p=>{ if(p.id===this.myId) return; let d=this.disp[p.id]; if(!d||dist(d,p)>320){ d=this.disp[p.id]={x:p.x,y:p.y,mv:false}; }
+        const ox=d.x, oy=d.y, k=Math.min(1,dt*12); d.x+=(p.x-d.x)*k; d.y+=(p.y-d.y)*k; d.mv=Math.hypot(d.x-ox,d.y-oy)>.4; });
+      if(this.state.task&&this.joyOn) this.joyReset();
+      if(this.state.task&&G.phase!=='play') this.setState({task:null}); if(this.state.sab&&G.phase!=='play') this.setState({sab:false});
+      if(this.state.task&&this.state.task.k==='timing'&&!this.state.task.done) this.setState({ui:t});
+      if(G.phase==='eject'&&t-(this._ejUi||0)>30){ this._ejUi=t; this.setState({ui:t}); }
+      const tk=this.state.task; if(tk&&tk.k==='hold'&&this.holding&&!tk.done){ const h=Math.min(1,tk.hold+dt/2.2); if(h>=1) this.finishTask(); else this.setState({task:{...tk,hold:h}}); }
+    }
+    if(this.micAn){ this.micAn.getByteFrequencyData(this.micBuf); let v=0; for(const b of this.micBuf) v+=b; this.micLvlV=Math.min(1,v/this.micBuf.length/60); }
+    if(G&&G.phase!=='meeting'&&this.state.micOn) this.stopMic();
+    const cr=this.chatRef.current, cn=G&&G.meeting&&G.meeting.chat?G.meeting.chat.length:0; if(cr&&cn!==this._cn){ this._cn=cn; cr.scrollTop=cr.scrollHeight; }
+    this.draw(t); if(!this.overview()&&!this.state.miniOff) this.drawMini();
+    if(t-this.lastUi>120){ this.lastUi=t; this.setState({ui:t,micLvl:this.micLvlV||0}); }
+  }
+  overview(){ return this.isHost&&(this.state.overview??((this.props.hostView??'منظور المذيع')==='الخريطة كاملة')); }
+  draw(t){
+    const cv=this.cv.current; if(!cv) return; const dpr=Math.min(2,devicePixelRatio||1), W=cv.clientWidth, H=cv.clientHeight; if(!W||!H) return;
+    if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
+    const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.fillStyle='#05040a'; ctx.fillRect(0,0,W,H);
+    const G=this.G; if(!G) return; const me=this.meP(), ov=this.overview(), now=Date.now();
+    let s,cx,cy; if(ov){ s=Math.min(W/(2250*MS),H/(1600*MS)); cx=1135*MS; cy=845*MS; } else { s=this.isHost?H/900:Math.min(W,H)/560; cx=this.me.x; cy=this.me.y; }
+    ctx.setTransform(dpr*s,0,0,dpr*s,dpr*(W/2-cx*s),dpr*(H/2-cy*s));
+    ctx.fillStyle='rgba(255,255,255,.22)'; STARS.forEach(([x,y,r])=>ctx.fillRect(x,y,r,r));
+    this.drawMap(ctx,t);
+    this.props_(ctx,t);
+    ctx.textAlign='center'; ctx.font="800 30px Zain"; ROOMS.forEach(r=>{ const w=ctx.measureText(r.n).width+40, x=r.x+r.w/2, y=r.y+62; ctx.fillStyle='rgba(6,8,13,.55)'; ctx.beginPath(); ctx.roundRect?ctx.roundRect(x-w/2,y-26,w,40,20):ctx.rect(x-w/2,y-26,w,40); ctx.fill(); ctx.fillStyle='rgba(221,214,254,.8)'; ctx.fillText(r.n,x,y+4); });
+    const lk=this.lockedSet(); ctx.fillStyle='#ef4444';
+    CORR.forEach(c=>{ if(!lk.has(c.i)) return; if(c.v){ ctx.fillRect(c.x,c.y+4,c.w,12); ctx.fillRect(c.x,c.y+c.h-16,c.w,12); } else { ctx.fillRect(c.x+4,c.y,12,c.h); ctx.fillRect(c.x+c.w-16,c.y,12,c.h); } });
+    ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(BTN.x,BTN.y+12,96,40,0,0,7); ctx.fill();
+    ctx.fillStyle='#3a3256'; ctx.beginPath(); ctx.ellipse(BTN.x,BTN.y+8,90,56,0,0,7); ctx.fill(); ctx.fillStyle='#4a4170'; ctx.beginPath(); ctx.ellipse(BTN.x,BTN.y,90,56,0,0,7); ctx.fill(); ctx.strokeStyle='#0b0c14'; ctx.lineWidth=4; ctx.stroke();
+    ctx.fillStyle='rgba(148,163,184,.35)'; ctx.beginPath(); ctx.ellipse(BTN.x,BTN.y-4,30,20,0,0,7); ctx.fill(); ctx.fillStyle='#b91c1c'; ctx.beginPath(); ctx.ellipse(BTN.x,BTN.y-2,20,13,0,0,7); ctx.fill(); ctx.fillStyle='#ef4444'; ctx.beginPath(); ctx.ellipse(BTN.x,BTN.y-6,20,13,0,0,7); ctx.fill(); ctx.strokeStyle='#0b0c14'; ctx.lineWidth=3; ctx.stroke(); ctx.fillStyle='rgba(255,255,255,.5)'; ctx.beginPath(); ctx.ellipse(BTN.x-6,BTN.y-10,6,3,0,0,7); ctx.fill();
+    const pulse=.5+.5*Math.sin(t/180);
+    const actD=this.activeDev(G).map(d=>d.id); DEV.forEach(d=>{ const on=actD.includes(d.id), c=DEV_C[d.k]; ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(d.x,d.y+30,36,8,0,0,7); ctx.fill();
+      if(on){ ctx.strokeStyle=c; ctx.globalAlpha=.35+.5*pulse; ctx.lineWidth=5; ctx.beginPath(); ctx.arc(d.x,d.y,48+8*pulse,0,7); ctx.stroke(); ctx.globalAlpha=1; }
+      ctx.fillStyle='#2a2f45'; ctx.beginPath(); ctx.roundRect?ctx.roundRect(d.x-30,d.y-34,60,64,10):ctx.rect(d.x-30,d.y-34,60,64); ctx.fill(); ctx.lineWidth=3; ctx.strokeStyle=on?c:'#0b0c14'; ctx.stroke();
+      ctx.fillStyle=on?(pulse>.5?c:'#3b0d0d'):'#0f2a3a'; ctx.fillRect(d.x-22,d.y-26,44,30); ctx.font="400 20px Zain"; ctx.textAlign='center'; ctx.fillText(DEV_IC[d.k],d.x,d.y-4); ctx.fillStyle=on?'#ef4444':'#22c55e'; ctx.beginPath(); ctx.arc(d.x,d.y+16,4,0,7); ctx.fill(); });
+    VENTS.forEach(v=>{ ctx.fillStyle='#4a4170'; ctx.beginPath(); ctx.roundRect?ctx.roundRect(v.x-36,v.y-24,72,48,8):ctx.rect(v.x-36,v.y-24,72,48); ctx.fill(); ctx.fillStyle='#07060c'; ctx.fillRect(v.x-28,v.y-17,56,34); ctx.strokeStyle='#5b5185'; ctx.lineWidth=4; ctx.beginPath(); for(let i=-2;i<=2;i++){ ctx.moveTo(v.x-24,v.y+i*7); ctx.lineTo(v.x+24,v.y+i*7); } ctx.stroke(); ctx.fillStyle='#6b6099'; [[-31,-19],[31,-19],[-31,19],[31,19]].forEach(([a,b])=>{ ctx.beginPath(); ctx.arc(v.x+a,v.y+b,2.5,0,7); ctx.fill(); }); });
+    const mineT=me&&!me.imp&&!G.comms?me.tasks.filter(id=>!me.done.includes(id)):[];
+    TASKS.forEach(tk=>{ const on=mineT.includes(tk.id), done=!!(me&&!me.imp&&me.done.includes(tk.id)); this.taskStation(ctx,tk,on,done,t); });
+    const C=this.cfg(), ghost=me&&!me.alive, gAll=ghost&&C.ghostSeeAll, vis=me&&me.imp?280*C.impVision:300*C.crewVision*(G.lights&&me&&me.alive?.38:1), see=(x,y)=>!ov&&(gAll||!me||Math.hypot(x-this.me.x,y-this.me.y)<vis+30);
+    G.bodies.forEach(b=>{ if(see(b.x,b.y)) this.corpse(ctx,b); });
+    const list=G.players.map(p=>{ const self=p.id===this.myId, d=self?this.me:(this.disp[p.id]||p); return {p,self,x:d.x,y:d.y,mv:self?this.moving:d.mv}; }).sort((a,b)=>a.y-b.y);
+    list.forEach(o=>{ const p=o.p; if(p.vent&&!o.self&&!ov) return; if(o.self&&this.inVent) return; if(!p.alive&&!ghost&&!o.self) return; if(!o.self&&!see(o.x,o.y)) return;
+      this.bean(ctx,o.x,o.y,p.c,o.self?this.face:(p.f||1),t,o.mv,p.alive?1:.4,p);
+      if(C.showNames||o.self){ ctx.font="800 16px Zain"; ctx.lineWidth=4; ctx.strokeStyle='rgba(0,0,0,.75)'; ctx.strokeText(p.name,o.x,o.y-64);
+      ctx.fillStyle=me&&me.imp&&p.imp?'#fca5a5':'#f4f2f8'; ctx.fillText(p.name,o.x,o.y-64); } });
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    if(!ov&&me&&(me.alive||!C.ghostSeeAll)){ const rad=vis*s, sx=W/2, sy=H/2, g=ctx.createRadialGradient(sx,sy,rad*.55,sx,sy,rad); g.addColorStop(0,'rgba(5,4,10,0)'); g.addColorStop(1,'rgba(5,4,10,.93)'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H); }
+    if(G.reactor||G.o2){ ctx.fillStyle=`rgba(220,38,38,${.05+.05*pulse})`; ctx.fillRect(0,0,W,H); }
+    if(!ov&&me&&me.alive&&G.phase==='play'){ this.activeDev(G).forEach(d=>{ const sx=W/2+(d.x-this.me.x)*s, sy=H/2+(d.y-this.me.y)*s, m=46; if(sx>m&&sx<W-m&&sy>m+40&&sy<H-m) return;
+      const ang=Math.atan2(sy-H/2,sx-W/2), k=Math.min((W/2-m)/Math.abs(Math.cos(ang)||1e-6),(H/2-m)/Math.abs(Math.sin(ang)||1e-6)), ax=W/2+Math.cos(ang)*k, ay=H/2+Math.sin(ang)*k;
+      ctx.save(); ctx.translate(ax,ay); ctx.rotate(ang); ctx.fillStyle=DEV_C[d.k]; ctx.strokeStyle='#06080d'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(18,0); ctx.lineTo(-10,-13); ctx.lineTo(-4,0); ctx.lineTo(-10,13); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+      ctx.font="400 18px Zain"; ctx.textAlign='center'; ctx.fillText(DEV_IC[d.k],ax-Math.cos(ang)*26,ay-Math.sin(ang)*26+6); }); }
+  }
+  drawMap(ctx,t){
+    const W=26, sh=(h,k)=>{ const n=parseInt(h.slice(1),16), r=n>>16, g=n>>8&255, b=n&255, f=v=>Math.max(0,Math.min(255,Math.round(v*(1+k)))); return 'rgb('+f(r)+','+f(g)+','+f(b)+')'; };
+    // hull
+    ctx.fillStyle='#0d0b16'; [...CORR,...ROOMS].forEach(r=>ctx.fillRect(r.x-W-8,r.y-W-8,r.w+(W+8)*2,r.h+(W+8)*2));
+    ctx.fillStyle='#2a2440'; [...CORR,...ROOMS].forEach(r=>ctx.fillRect(r.x-W,r.y-W,r.w+W*2,r.h+W*2));
+    ctx.fillStyle='#3a3256'; [...CORR,...ROOMS].forEach(r=>ctx.fillRect(r.x-W,r.y-W,r.w+W*2,6));
+    // hull windows on outer rooms
+    ROOMS.forEach((r,i)=>{ for(let x=r.x+70;x<r.x+r.w-60;x+=150){ ctx.fillStyle='#05040a'; ctx.beginPath(); ctx.roundRect?ctx.roundRect(x,r.y-W+4,64,W-8,6):ctx.rect(x,r.y-W+4,64,W-8); ctx.fill(); ctx.fillStyle='rgba(125,211,252,.35)'; ctx.fillRect(x+6,r.y-W+7,20,3); } });
+    // corridors
+    CORR.forEach(c=>{ ctx.fillStyle='#17142a'; ctx.fillRect(c.x,c.y,c.w,c.h); ctx.save(); ctx.beginPath(); ctx.rect(c.x,c.y,c.w,c.h); ctx.clip();
+      ctx.strokeStyle='rgba(255,255,255,.035)'; ctx.lineWidth=2; ctx.beginPath(); if(c.v){ for(let y=c.y;y<c.y+c.h;y+=40){ ctx.moveTo(c.x,y); ctx.lineTo(c.x+c.w,y); } } else { for(let x=c.x;x<c.x+c.w;x+=40){ ctx.moveTo(x,c.y); ctx.lineTo(x,c.y+c.h); } } ctx.stroke();
+      ctx.fillStyle='rgba(94,234,212,.18)'; if(c.v){ ctx.fillRect(c.x+8,c.y,5,c.h); ctx.fillRect(c.x+c.w-13,c.y,5,c.h); } else { ctx.fillRect(c.x,c.y+8,c.w,5); ctx.fillRect(c.x,c.y+c.h-13,c.w,5); }
+      const ph=(t/40)%60; ctx.fillStyle='rgba(94,234,212,.5)'; if(c.v){ for(let y=c.y-60+ph;y<c.y+c.h;y+=60){ ctx.fillRect(c.x+c.w/2-3,y,6,14); } } else { for(let x=c.x-60+ph;x<c.x+c.w;x+=60){ ctx.fillRect(x,c.y+c.h/2-3,14,6); } }
+      ctx.restore(); });
+    // rooms
+    ROOMS.forEach(r=>{ ctx.fillStyle=r.f; ctx.fillRect(r.x,r.y,r.w,r.h); ctx.save(); ctx.beginPath(); ctx.rect(r.x,r.y,r.w,r.h); ctx.clip();
+      const T=72; for(let x=r.x,i=0;x<r.x+r.w;x+=T,i++) for(let y=r.y,j=0;y<r.y+r.h;y+=T,j++){ if((i+j)%2){ ctx.fillStyle='rgba(255,255,255,.028)'; ctx.fillRect(x,y,T,T); } }
+      ctx.strokeStyle='rgba(0,0,0,.22)'; ctx.lineWidth=2; ctx.beginPath(); for(let x=r.x+T;x<r.x+r.w;x+=T){ ctx.moveTo(x,r.y); ctx.lineTo(x,r.y+r.h); } for(let y=r.y+T;y<r.y+r.h;y+=T){ ctx.moveTo(r.x,y); ctx.lineTo(r.x+r.w,y); } ctx.stroke();
+      const g=ctx.createRadialGradient(r.x+r.w/2,r.y+r.h/2,20,r.x+r.w/2,r.y+r.h/2,Math.max(r.w,r.h)*.7); g.addColorStop(0,'rgba(255,255,255,.05)'); g.addColorStop(1,'rgba(0,0,0,.28)'); ctx.fillStyle=g; ctx.fillRect(r.x,r.y,r.w,r.h);
+      ctx.fillStyle=sh(r.f,-.35); ctx.fillRect(r.x,r.y,r.w,40); ctx.fillStyle=sh(r.f,.25); ctx.fillRect(r.x,r.y+40,r.w,4);
+      for(let x=r.x+40;x<r.x+r.w-20;x+=120){ ctx.fillStyle='rgba(0,0,0,.25)'; ctx.fillRect(x,r.y+6,80,28); ctx.fillStyle=(Math.sin(t/500+x)>0)?'rgba(94,234,212,.7)':'rgba(94,234,212,.25)'; ctx.beginPath(); ctx.arc(x+70,r.y+20,3,0,7); ctx.fill(); }
+      ctx.fillStyle='rgba(250,204,21,.35)'; for(let x=r.x;x<r.x+r.w;x+=36){ ctx.beginPath(); ctx.moveTo(x,r.y+r.h); ctx.lineTo(x+16,r.y+r.h); ctx.lineTo(x+26,r.y+r.h-10); ctx.lineTo(x+10,r.y+r.h-10); ctx.fill(); }
+      ctx.restore();
+      ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.lineWidth=3; ctx.strokeRect(r.x+1.5,r.y+1.5,r.w-3,r.h-3); });
+    // door frames
+    CORR.forEach(c=>{ ctx.fillStyle='#4a4170'; const d=10; if(c.v){ [c.y-d,c.y+c.h].forEach(y=>{ ctx.fillRect(c.x-14,y,14,d); ctx.fillRect(c.x+c.w,y,14,d); ctx.fillStyle='rgba(94,234,212,.55)'; ctx.fillRect(c.x,y+3,c.w,4); ctx.fillStyle='#4a4170'; }); } else { [c.x-d,c.x+c.w].forEach(x=>{ ctx.fillRect(x,c.y-14,d,14); ctx.fillRect(x,c.y+c.h,d,14); ctx.fillStyle='rgba(94,234,212,.55)'; ctx.fillRect(x+3,c.y,4,c.h); ctx.fillStyle='#4a4170'; }); } });
+  }
+  taskStation(ctx,tk,on,done,t){
+    const x=tk.x, y=tk.y, p=.5+.5*Math.sin(t/220), rr=(a,b,w,h,r)=>{ ctx.beginPath(); ctx.roundRect?ctx.roundRect(a,b,w,h,r):ctx.rect(a,b,w,h); };
+    if(on){ const g=ctx.createRadialGradient(x,y+20,4,x,y+20,70); g.addColorStop(0,'rgba(250,204,21,'+(.28+.18*p)+')'); g.addColorStop(1,'rgba(250,204,21,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(x,y+22,70,28,0,0,7); ctx.fill(); }
+    ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(x,y+30,40,9,0,0,7); ctx.fill();
+    rr(x-34,y-6,68,36,8); ctx.fillStyle='#2a2f45'; ctx.fill(); ctx.lineWidth=3; ctx.strokeStyle='#0b0c14'; ctx.stroke();
+    ctx.fillStyle='#3b4262'; ctx.fillRect(x-30,y-2,60,6);
+    ctx.fillStyle='#1b1f30'; ctx.fillRect(x-26,y+10,52,14); [0,1,2].forEach(i=>{ ctx.fillStyle=['#ef4444','#facc15','#22c55e'][i]; ctx.beginPath(); ctx.arc(x-14+i*14,y+17,3.2,0,7); ctx.fill(); });
+    rr(x-30,y-46,60,42,8); ctx.fillStyle='#3b4262'; ctx.fill(); ctx.lineWidth=3; ctx.strokeStyle=on?'rgba(250,204,21,'+(.65+.35*p)+')':'#0b0c14'; ctx.stroke();
+    rr(x-24,y-40,48,30,5); const sg=ctx.createLinearGradient(0,y-40,0,y-10); sg.addColorStop(0,done?'#14532d':on?'#3b2f0b':'#0f2a3a'); sg.addColorStop(1,done?'#166534':on?'#5a4710':'#123a4e'); ctx.fillStyle=sg; ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.12)'; ctx.fillRect(x-22,y-38,44,4);
+    ctx.textAlign='center'; ctx.font="400 20px Zain"; ctx.fillText(done?'✅':TK_ICON[tk.k],x,y-17);
+    if(on){ const by=y-70-6*Math.abs(Math.sin(t/260)); ctx.fillStyle='#facc15'; ctx.strokeStyle='#0b0c14'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x-11,by-14); ctx.lineTo(x+11,by-14); ctx.lineTo(x,by); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+  }
+  bean(ctx,x,y,c,face,t,mv,alpha,sk){ if(window.StationSkins) window.StationSkins.bean(ctx,x,y,c,face,t,mv,alpha,sk); }
+  corpse(ctx,b){
+    ctx.save(); ctx.translate(b.x,b.y); ctx.lineCap='round';
+    ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(4,14,36,7,0,0,7); ctx.fill();
+    ctx.strokeStyle=b.c; ctx.lineWidth=7; ctx.beginPath(); ctx.moveTo(14,6); ctx.lineTo(36,0); ctx.moveTo(14,10); ctx.lineTo(36,14); ctx.stroke();
+    ctx.fillStyle=b.c; ctx.beginPath(); ctx.ellipse(-4,6,24,14,0,0,7); ctx.fill();
+    ctx.strokeStyle='#15121d'; ctx.lineWidth=3.5; ctx.beginPath(); ctx.moveTo(-16,0); ctx.lineTo(-8,8); ctx.moveTo(-8,0); ctx.lineTo(-16,8); ctx.stroke();
+    ctx.restore();
+  }
+  props_(ctx,t){ ctx.save(); ctx.scale(MS,MS); this.props0(ctx,t); ctx.restore(); }
+  props0(ctx,t){ const BTN=BTN0;
+    const rr=(x,y,w,h,r,fill,stroke)=>{ ctx.beginPath(); ctx.roundRect?ctx.roundRect(x,y,w,h,r):ctx.rect(x,y,w,h); if(fill){ ctx.fillStyle=fill; ctx.fill(); } if(stroke){ ctx.strokeStyle=stroke; ctx.lineWidth=3; ctx.stroke(); } };
+    const circ=(x,y,r,fill,stroke,lw)=>{ ctx.beginPath(); ctx.arc(x,y,r,0,7); if(fill){ ctx.fillStyle=fill; ctx.fill(); } if(stroke){ ctx.strokeStyle=stroke; ctx.lineWidth=lw||3; ctx.stroke(); } };
+    const blink=k=>(Math.sin(t/300+k)>0);
+    // lounge: chairs ring + two vending machines
+    for(let i=0;i<10;i++){ const a=i/10*Math.PI*2; rr(BTN.x+Math.cos(a)*92-10,BTN.y+Math.sin(a)*92-10,20,20,6,'#2f2846'); }
+    rr(1030,880,48,80,8,'#2b2540','#3d3560'); rr(1036,890,36,36,4,'rgba(125,211,252,.25)'); rr(1088,880,48,80,8,'#2b2540','#3d3560'); rr(1094,890,36,36,4,'rgba(252,165,165,.22)');
+    // command: big curved console with screens + captain chair
+    rr(1100,145,300,40,14,'#232a44','#34406a'); for(let i=0;i<5;i++) rr(1112+i*58,152,46,24,4,blink(i)?'rgba(56,189,248,.45)':'rgba(56,189,248,.2)');
+    circ(1250,250,18,'#2c3554','#3d4a75'); rr(1060,200,24,120,8,'#232a44'); rr(1416,200,24,120,8,'#232a44');
+    // lab: benches, flasks, microscope
+    rr(1780,330,170,44,8,'#1f3437','#2f4b50'); rr(1980,330,170,44,8,'#1f3437','#2f4b50');
+    [[1800,'#a78bfa'],[1830,'#6ee7b7'],[1860,'#f9a8d4'],[2000,'#fde68a'],[2030,'#7dd3fc']].forEach(([x,c])=>{ circ(x,342,9,c); rr(x-3,322,6,14,2,c); });
+    rr(2090,322,26,30,6,'#3a5a5f'); circ(2103,318,7,'#4f7a80');
+    // comms: satellite dish + server racks
+    circ(1960,860,46,'#2a2440','#4a4170',4); circ(1960,860,10,'#7dd3fc'); ctx.strokeStyle='#4a4170'; ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(1960,860); ctx.lineTo(1995,825); ctx.stroke();
+    for(let i=0;i<3;i++){ rr(1830+i*0,790+i*70,60,56,6,'#1b1729','#3d3560'); for(let j=0;j<3;j++) circ(1845+j*14,818+i*70,3.5,blink(i+j)?'#6ee7b7':'#14532d'); }
+    // clinic: beds + scanner
+    rr(1630,1380,110,50,10,'#e7e3ef'); rr(1630,1380,30,50,8,'#bfdbfe'); rr(1780,1380,110,50,10,'#e7e3ef'); rr(1780,1380,30,50,8,'#bfdbfe');
+    circ(1880,1280,40,'rgba(110,231,183,.08)','rgba(110,231,183,'+(.3+.3*Math.sin(t/250))+')',4); ctx.fillStyle='#ef4444'; ctx.fillRect(1932,1235,24,8); ctx.fillRect(1940,1227,8,24);
+    // storage: crates stacks
+    [[1030,1280],[1090,1280],[1030,1340],[1380,1290],[1420,1350],[1340,1480],[1400,1500]].forEach(([x,y],i)=>{ rr(x,y,52,52,4,i%2?'#5b4325':'#6b4f2b','#3b2a16'); ctx.strokeStyle='#3b2a16'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+52,y+52); ctx.moveTo(x+52,y); ctx.lineTo(x,y+52); ctx.stroke(); });
+    // hydro: planters + water tank
+    for(let i=0;i<4;i++){ rr(420+i*90,1400,70,40,8,'#3b2a1a'); for(let j=0;j<3;j++) circ(436+i*90+j*19,1396,11,j%2?'#16a34a':'#22c55e'); }
+    circ(720,1250,34,'rgba(56,189,248,.25)','#38bdf8',3);
+    // reactor: core with pulsing glow + pipes
+    const g=.35+.25*Math.sin(t/220); circ(330,800,70,'rgba(250,204,21,'+(g*.35)+')'); circ(330,800,46,'#2b2118','#facc15',5); circ(330,800,20,'rgba(253,230,138,'+(.6+g*.4)+')');
+    ctx.strokeStyle='#4b3a2a'; ctx.lineWidth=12; ctx.beginPath(); ctx.moveTo(330,754); ctx.lineTo(330,630); ctx.moveTo(376,800); ctx.lineTo(500,800); ctx.stroke();
+    // engines: two turbines with spinning blades
+    [[520,330],[680,360]].forEach(([x,y],k)=>{ circ(x,y,46,'#1f1a14','#4b3d2a',5); ctx.save(); ctx.translate(x,y); ctx.rotate(t/200*(k?1:-1)); ctx.fillStyle='#6b5a3e'; for(let i=0;i<4;i++){ ctx.rotate(Math.PI/2); ctx.fillRect(-5,-38,10,34); } ctx.restore(); circ(x,y,8,'#f97316'); });
+  }
+  drawMini(){
+    const cv=this.mm.current, G=this.G; if(!cv||!G) return; const dpr=Math.min(2,devicePixelRatio||1), W=cv.clientWidth, H=cv.clientHeight; if(!W) return;
+    if(cv.width!==Math.round(W*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
+    const ctx=cv.getContext('2d'), s=Math.min(W/(2150*MS),H/(1530*MS)), ox=(W-2150*MS*s)/2-90*MS*s, oy=(H-1530*MS*s)/2-100*MS*s, me=this.meP(), now=Date.now(), pulse=.5+.5*Math.sin(now/180);
+    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H); ctx.setTransform(dpr*s,0,0,dpr*s,dpr*ox,dpr*oy);
+    ctx.fillStyle='rgba(167,139,250,.28)'; [...CORR,...ROOMS].forEach(r=>ctx.fillRect(r.x-12,r.y-12,r.w+24,r.h+24));
+    ctx.fillStyle='rgba(30,26,46,.95)'; [...CORR,...ROOMS].forEach(r=>ctx.fillRect(r.x,r.y,r.w,r.h));
+    const lk=this.lockedSet(); ctx.fillStyle='#ef4444'; CORR.forEach(c=>{ if(lk.has(c.i)) ctx.fillRect(c.x,c.y,c.w,c.h); });
+    ctx.fillStyle='#ef4444'; ctx.beginPath(); ctx.arc(BTN.x,BTN.y,34,0,7); ctx.fill();
+    this.activeDev(G).forEach(d=>{ ctx.fillStyle=DEV_C[d.k]; ctx.globalAlpha=.4+.6*pulse; ctx.beginPath(); ctx.arc(d.x,d.y,58,0,7); ctx.fill(); ctx.globalAlpha=1; });
+    if(me&&!me.imp&&!G.comms){ ctx.fillStyle='#facc15'; TASKS.forEach(t=>{ if(me.tasks.includes(t.id)&&!me.done.includes(t.id)){ ctx.beginPath(); ctx.arc(t.x,t.y,36,0,7); ctx.fill(); } }); }
+    if(me){ ctx.fillStyle=me.c; ctx.strokeStyle='#fff'; ctx.lineWidth=16; ctx.beginPath(); ctx.arc(this.me.x,this.me.y,60,0,7); ctx.fill(); ctx.stroke(); }
+  }
+  near(){
+    const G=this.G, me=this.meP(); if(!G||!me||G.phase!=='play') return {};
+    const m=this.me, now=Date.now(), pos=p=>this.disp[p.id]||p;
+    const C=this.cfg(); const task=!me.imp&&(me.alive||C.ghostTasks)?TASKS.find(t=>me.tasks.includes(t.id)&&(t.rep||!me.done.includes(t.id))&&dist(m,t)<85):null;
+    const emerg=me.alive&&me.btn>0&&!G.reactor&&!G.o2&&now>=(G.emCd||0)&&dist(m,BTN)<105;
+    const fix=me.alive&&!me.imp?this.activeDev(G).find(d=>dist(m,d)<100):null;
+    const body=me.alive?G.bodies.find(b=>dist(m,b)<115):null;
+    let victim=null; if(me.imp&&me.alive){ let bd=95; G.players.forEach(p=>{ if(!p.alive||p.imp) return; const d=dist(m,pos(p)); if(d<bd){ bd=d; victim=p; } }); }
+    const vent=me.imp&&me.alive&&C.vents&&!this.inVent?VENTS.find(v=>dist(m,v)<75):null;
+    return {me,task,emerg,fix,body,victim,vent,kcd:me.imp?Math.max(0,Math.ceil((me.kcd-now)/1000)):0,scd:Math.max(0,Math.ceil((G.sabCd-now)/1000))};
+  }
+  pressUse(){ const N=this.near(); if(N.fix) return this.openFix(N.fix); if(N.task) return this.openTask(N.task); if(N.emerg) return this.doAct('emerg'); }
+  activeDev(G){ const f=G.fixed||{}; return DEV.filter(d=>(d.k==='reactor'&&G.reactor)||(d.k==='lights'&&G.lights)||(d.k==='comms'&&G.comms)||(d.k==='o2'&&G.o2&&!f[d.id])); }
+  openFix(d){ this.joyReset(); this.keys={}; const st={id:d.id,k:d.k,n:d.n};
+    if(d.k==='lights'){ let sw=Array.from({length:5},()=>Math.random()<.5); if(sw.every(Boolean)) sw[2]=false; st.sw=sw; }
+    if(d.k==='o2'){ st.code=this.G.o2code||'00000'; st.entry=''; st.bad=0; }
+    if(d.k==='comms'){ st.v=Math.round(rand(0,100)); st.lock=0; }
+    this.setState({fix:st}); }
+  closeFix(){ this.rHolding=false; this.setState({fix:null}); }
+  pressReport(){ const N=this.near(); if(N.body) this.doAct('report'); }
+  pressKill(){ const N=this.near(); if(N.victim&&!N.kcd) this.doAct('kill',N.victim.id); }
+  pressVent(){ if(this.inVent) return this.ventExit(); const N=this.near(); if(!N.vent) return; this.sfx('vent'); this.inVent=N.vent.id; this.ventT=Date.now(); this.me={x:N.vent.x,y:N.vent.y}; this.tone(260,.14,'triangle',.05); this.forceUpdate(); }
+  ventGo(id){ const v=VENTS.find(x=>x.id===id); if(!v||!this.inVent) return; this.inVent=id; this.ventT=Date.now(); this.me={x:v.x,y:v.y}; this.tone(380,.1,'triangle',.05); this.forceUpdate(); }
+  ventExit(){ if(!this.inVent) return; this.inVent=null; this.sfx('vent'); this.tone(330,.12,'triangle',.05); this.forceUpdate(); }
+  openTask(t){ this.holding=false; this.joyReset(); this.keys={}; this.setState({task:{id:t.id,n:t.n,k:t.k}}); }
+  finishTask(){ const tk=this.state.task; if(!tk) return; this.doAct('task',tk.id); this.sfx('task'); this.joyReset(); this.setState({task:null}); }
+  tone(f,d,type,vol){ try{ const A=this.ac||(this.ac=new (window.AudioContext||window.webkitAudioContext)()); const o=A.createOscillator(), g=A.createGain(); o.type=type; o.frequency.value=f; g.gain.setValueAtTime(vol,A.currentTime); g.gain.exponentialRampToValueAtTime(.0001,A.currentTime+d); o.connect(g); g.connect(this.mOut(A)); o.start(); o.stop(A.currentTime+d); }catch(e){} }
+  noise(d,vol,f0,f1,type){ try{ const A=this.ac||(this.ac=new (window.AudioContext||window.webkitAudioContext)()), n=A.currentTime, len=Math.floor(A.sampleRate*d), buf=A.createBuffer(1,len,A.sampleRate), ch=buf.getChannelData(0); for(let i=0;i<len;i++) ch[i]=(Math.random()*2-1)*(1-i/len);
+    const src=A.createBufferSource(), fl=A.createBiquadFilter(), g=A.createGain(); src.buffer=buf; fl.type=type||'bandpass'; fl.frequency.setValueAtTime(f0,n); fl.frequency.exponentialRampToValueAtTime(f1||f0,n+d); g.gain.setValueAtTime(vol,n); g.gain.exponentialRampToValueAtTime(.0001,n+d); src.connect(fl); fl.connect(g); g.connect(this.mOut(A)); src.start(n); }catch(e){} }
+  sweep(f0,f1,d,type,vol,delay){ setTimeout(()=>{ try{ const A=this.ac||(this.ac=new (window.AudioContext||window.webkitAudioContext)()), n=A.currentTime, o=A.createOscillator(), g=A.createGain(); o.type=type; o.frequency.setValueAtTime(f0,n); o.frequency.exponentialRampToValueAtTime(f1,n+d); g.gain.setValueAtTime(vol,n); g.gain.exponentialRampToValueAtTime(.0001,n+d); o.connect(g); g.connect(this.mOut(A)); o.start(n); o.stop(n+d+.02); }catch(e){} },delay||0); }
+  mOut(A){ if(!this.master||this.master.context!==A){ this.master=A.createGain(); this.master.gain.value=this.volV(); this.master.connect(A.destination); } return this.master; }
+  volV(){ const v=this.state.vol??(()=>{ const x=parseInt(localStorage.getItem('station-vol'),10); return isNaN(x)?100:x; })(); return this.state.muted?0:Math.pow(v/100,1.6); }
+  setVol(v,m){ const st={}; if(v!=null){ st.vol=v; localStorage.setItem('station-vol',String(v)); } if(m!=null) st.muted=m; this.setState(st,()=>{ if(this.master&&this.ac) this.master.gain.setTargetAtTime(this.volV(),this.ac.currentTime,.05); Object.values(this.auds||{}).forEach(a=>{ a.volume=Math.min(1,this.volV()); }); }); }
+  ambStart(){ try{ const A=this.ac||(this.ac=new (window.AudioContext||window.webkitAudioContext)()); if(A.state==='suspended') A.resume(); if(this.amb) return; const n=A.currentTime;
+    const out=A.createGain(); out.gain.value=0; out.connect(this.mOut(A));
+    const lp=A.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=220; lp.Q.value=4; lp.connect(out);
+    [55,55.4,82.5].forEach((f,i)=>{ const o=A.createOscillator(), g=A.createGain(); o.type=i<2?'sawtooth':'sine'; o.frequency.value=f; g.gain.value=i<2?.22:.18; o.connect(g); g.connect(lp); o.start(n); });
+    const lfo=A.createOscillator(), lg=A.createGain(); lfo.frequency.value=.07; lg.gain.value=90; lfo.connect(lg); lg.connect(lp.frequency); lfo.start(n);
+    const len=A.sampleRate*3, buf=A.createBuffer(1,len,A.sampleRate), ch=buf.getChannelData(0); let last=0; for(let i=0;i<len;i++){ last=(last+.02*(Math.random()*2-1))/1.02; ch[i]=last*3.5; }
+    const ns=A.createBufferSource(), nf=A.createBiquadFilter(), ng=A.createGain(); ns.buffer=buf; ns.loop=true; nf.type='lowpass'; nf.frequency.value=500; ng.gain.value=.35; ns.connect(nf); nf.connect(ng); ng.connect(out); ns.start(n);
+    this.amb={out}; this.ambBeep=setInterval(()=>{ if(!this.amb||this.ambLvl<.01) return; const o=A.createOscillator(), g=A.createGain(), t=A.currentTime, f=[1320,1568,1760][Math.floor(Math.random()*3)]; o.type='sine'; o.frequency.value=f; g.gain.setValueAtTime(.0001,t); g.gain.linearRampToValueAtTime(.05*this.ambLvl/.2,t+.02); g.gain.exponentialRampToValueAtTime(.0001,t+.4); o.connect(g); g.connect(this.mOut(A)); o.start(t); o.stop(t+.45); },7000+Math.random()*4000);
+  }catch(e){} }
+  ambSet(v){ if(!this.amb||!this.ac) return; if(Math.abs((this.ambLvl||0)-v)<.005) return; this.ambLvl=v; this.amb.out.gain.setTargetAtTime(v,this.ac.currentTime,.6); }
+  sfx(k){
+    if(k==='kill'){ this.noise(.18,.35,3000,800); this.sweep(140,45,.35,'sine',.35,60); this.noise(.3,.18,400,120,'lowpass'); }
+    else if(k==='stab'){ this.noise(.12,.3,4000,1200); this.sweep(900,200,.12,'sawtooth',.06); this.sweep(120,40,.4,'sine',.32,90); }
+    else if(k==='sting'){ this.sweep(70,40,1.2,'sawtooth',.16); this.noise(.5,.3,2200,300); [0,1].forEach(i=>this.sweep(880,440,.35,'square',.07,120+i*380)); }
+    else if(k==='reactor'){ [0,1,2,3,4,5].forEach(i=>this.sweep(i%2?520:780,i%2?780:520,.3,'sawtooth',.07,i*300)); this.sweep(60,40,1.4,'sine',.2); }
+    else if(k==='fixed'){ [523,784,1046].forEach((f,i)=>this.sweep(f,f,.2,'triangle',.07,i*90)); }
+    else if(k==='lightsOff'){ this.sweep(300,40,.6,'sawtooth',.12); this.noise(.25,.25,800,200); }
+    else if(k==='body'){ [0,1,2].forEach(i=>{ this.sweep(520,1040,.28,'sawtooth',.07,i*320); this.sweep(1040,520,.28,'sawtooth',.07,i*320+160); }); }
+    else if(k==='emerg'){ [0,1,2,3].forEach(i=>this.sweep(i%2?440:660,i%2?440:660,.22,'square',.07,i*240)); }
+    else if(k==='vent'){ this.noise(.16,.25,1800,600); this.sweep(220,90,.18,'square',.05,30); }
+    else if(k==='task'){ [784,988,1175,1568].forEach((f,i)=>this.sweep(f,f,.16,'triangle',.07,i*70)); }
+    else if(k==='eject'){ [0,1,2].forEach(i=>this.sweep(1200,1200,.08,'square',.05,i*160)); this.noise(.5,.35,6000,2500,'highpass'); setTimeout(()=>this.noise(2.2,.3,250,2600,'bandpass'),480); this.sweep(90,32,2.4,'sine',.22,480); this.sweep(55,30,3,'triangle',.12,700); }
+    else if(k==='win'){ [523,659,784,1046].forEach((f,i)=>this.sweep(f,f,.35,'triangle',.08,i*140)); }
+    else if(k==='lose'){ [392,330,262,196].forEach((f,i)=>this.sweep(f,f*.97,.4,'sawtooth',.05,i*170)); }
+  }
+  phaseSfx(ph){ if(ph==='eject'){ this.sfx('eject'); return; } if(ph==='over'){ const me=this.meP(), G=this.G; this.sfx(me&&G&&((G.winner==='imp')===!!me.imp)?'win':'lose'); return; } if(ph==='meeting'){ const m=this.G&&this.G.meeting; this.sfx('sting'); setTimeout(()=>this.sfx(m&&m.body?'body':'emerg'),250); return; } if(ph==='meeting') [660,520,660,520].forEach((f,i)=>setTimeout(()=>this.tone(f,.18,'square',.05),i*200)); if(ph==='over') [523,659,784,1046].forEach((f,i)=>setTimeout(()=>this.tone(f,.25,'triangle',.07),i*130)); if(ph==='reveal') this.tone(392,.5,'sine',.07); }
+  joyCalcOld(e){ const r=e.currentTarget.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2; let dx=e.clientX-cx, dy=e.clientY-cy; const l=Math.hypot(dx,dy), mx=r.width/2-20; if(l>mx){ dx=dx/l*mx; dy=dy/l*mx; } this.joy={x:dx/mx,y:dy/mx}; this.setState({jx:dx,jy:dy}); }
+  joyCalc(e){ const b=this.jb; if(!b) return; let dx=e.clientX-b.cx, dy=e.clientY-b.cy; const l=Math.hypot(dx,dy), mx=50;
+    if(l>mx){ dx=dx/l*mx; dy=dy/l*mx; }
+    const m=Math.hypot(dx,dy)/mx; this.joy=m<.15?{x:0,y:0}:{x:dx/mx,y:dy/mx}; this.setState({jx:dx,jy:dy}); }
+  joyReset(){ this.joyOn=false; this.joyPid=null; this.jb=null; this.joy={x:0,y:0}; if(this.state.jx||this.state.jy||this.state.joyAct) this.setState({jx:0,jy:0,joyAct:false}); }
+  ejStars(){ if(this._ejs) return this._ejs; const h=React.createElement; return this._ejs=h('div',{key:'ejs','aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none'}},Array.from({length:120},(_,i)=>h('span',{key:i,style:{position:'absolute',left:Math.random()*100+'%',top:Math.random()*100+'%',width:i%11?2:3,height:i%11?2:3,borderRadius:'50%',background:'rgba(255,255,255,'+(.15+Math.random()*.45).toFixed(2)+')'}}))); }
+  tkPos(tk){ const ph=((performance.now()-tk.t0)/1000)*(0.9+tk.hits*.25); const x=ph%2; return Math.round((x<1?x:2-x)*1000)/10; }
+  sendChat(){ const t=(this.state.draft||'').trim(); if(!t) return; this.doAct('chat',t); this.setState({draft:''}); }
+  async toggleMic(){
+    if(this.state.micOn){ this.stopMic(); return; }
+    try{ const st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); this.micStream=st;
+      const A=this.ac||(this.ac=new (window.AudioContext||window.webkitAudioContext)()); const src=A.createMediaStreamSource(st), an=A.createAnalyser(); an.fftSize=256; src.connect(an); this.micAn=an; this.micBuf=new Uint8Array(an.frequencyBinCount);
+      this.setState({micOn:true}); this.doAct('mic',1); this.rtcPublish(st);
+    }catch(e){ this.setState({micErr:true}); }
+  }
+  stopMic(){ this.rtcUnpublish(); if(this.micStream) this.micStream.getTracks().forEach(t=>t.stop()); this.micStream=null; this.micAn=null; if(this.state.micOn){ this.setState({micOn:false,micLvl:0}); this.doAct('mic',0); } }
+  // ---- صوت الاجتماع (WebRTC mesh): المتكلم يفتح اتصال إرسال لكل لاعب، والإشارات تمر عبر الخادم (rtc) ----
+  rtcPc(){ return new RTCPeerConnection({iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}]}); }
+  rtcPublish(st){ this.rtcUnpublish(); const G=this.G; if(!G||!window.RTCPeerConnection) return;
+    G.players.forEach(p=>{ if(p.id===this.myId) return; const pc=this.rtcPc(), to=p.id; let ok; pc._ans=new Promise(r=>ok=r); pc._ok=ok;
+      st.getTracks().forEach(tr=>pc.addTrack(tr,st));
+      pc.onicecandidate=e=>{ if(e.candidate) this.send({t:'rtc',to,data:{k:'ice',d:'pub',c:e.candidate}}); };
+      pc.createOffer().then(o=>pc.setLocalDescription(o)).then(()=>this.send({t:'rtc',to,data:{k:'offer',sdp:pc.localDescription}})).catch(()=>{});
+      this.pubs[to]=pc; }); }
+  rtcUnpublish(){ Object.keys(this.pubs||{}).forEach(id=>{ try{ this.pubs[id].close(); }catch(e){} this.send({t:'rtc',to:id,data:{k:'bye'}}); }); this.pubs={}; }
+  rtcDropSub(id){ const pc=this.subs[id]; if(pc){ try{ pc.close(); }catch(e){} delete this.subs[id]; } const a=this.auds[id]; if(a){ a.srcObject=null; a.remove(); delete this.auds[id]; } }
+  rtcStopAll(){ Object.keys(this.subs||{}).forEach(id=>this.rtcDropSub(id)); }
+  onRtc(from,d){ if(!d||!from||!window.RTCPeerConnection) return;
+    if(d.k==='offer'){ this.rtcDropSub(from); const pc=this.rtcPc(); this.subs[from]=pc;
+      pc.ontrack=e=>{ let a=this.auds[from]; if(!a){ a=this.auds[from]=document.createElement('audio'); a.autoplay=true; a.setAttribute('playsinline',''); a.style.display='none'; document.body.appendChild(a); } a.srcObject=e.streams[0]; a.volume=Math.min(1,this.volV()); const pl=a.play(); if(pl&&pl.catch) pl.catch(()=>{}); };
+      pc.onicecandidate=e=>{ if(e.candidate) this.send({t:'rtc',to:from,data:{k:'ice',d:'sub',c:e.candidate}}); };
+      pc._ans=pc.setRemoteDescription(d.sdp).then(()=>pc.createAnswer()).then(a=>pc.setLocalDescription(a)).then(()=>this.send({t:'rtc',to:from,data:{k:'answer',sdp:pc.localDescription}})).catch(()=>{}); }
+    else if(d.k==='answer'){ const pc=this.pubs[from]; if(pc) pc.setRemoteDescription(d.sdp).then(()=>pc._ok()).catch(()=>{}); }
+    else if(d.k==='ice'){ const pc=d.d==='pub'?this.subs[from]:this.pubs[from]; if(pc&&pc._ans) pc._ans.then(()=>pc.addIceCandidate(d.c)).catch(()=>{}); }
+    else if(d.k==='bye') this.rtcDropSub(from); }
+  img(p,w){ return window.StationSkins&&p?window.StationSkins.thumb(p.c,p,w||64):''; }
+  renderVals(){
+    const S=this.state, G=this.G, me=this.meP(), now=Date.now(), o=(i,out)=>S.exitOpenOut?out:i, isHost=!!this.isHost;
+    const vv=S.vol??(()=>{ const x=parseInt(localStorage.getItem('station-vol'),10); return isNaN(x)?100:x; })(), mutedV=!!S.muted||vv===0;
+    const asP=false; const base={ rotOn:!!S.portrait&&!isHost&&!asP, goFull:()=>{ try{ const d=document.documentElement; (d.requestFullscreen?d.requestFullscreen():Promise.reject()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{}); }catch(e){} }, hostBar:isHost&&!asP, volTop:isHost&&!asP?104:12, volOpen:!!S.volOpen, volVal:vv, volIcon:mutedV?'🔇':vv<50?'🔉':'🔊', muteIcon:mutedV?'🔇':'🔊', muteBg:mutedV?'#dc2626':'#334155', volToggle:()=>this.setState({volOpen:!S.volOpen}), muteToggle:()=>this.setVol(null,!S.muted), volChange:e=>this.setVol(+e.target.value,false), isHost, notHost:!isHost, topPx:0, hudTop:isHost?104:54, cvRef:this.cv, chatRef:this.chatRef, room:this.room||'', stop:e=>e.stopPropagation(), lblDisp:S.narrow?'none':'inline',
+      logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
+      viewLbl:this.overview()?'👤 منظوري':'🗺️ الخريطة كاملة', toggleView:()=>this.setState({overview:!this.overview()}),
+      exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>{ this.setState({exitOpenOut:true}); setTimeout(()=>this.setState({exitOpen:false,exitOpenOut:false}),260); },
+      confirmExit:()=>{ if(isHost){ this.send({t:'close'}); window.StationNet.hostSession(null); } else { this.send({t:'leave'}); window.StationNet.me(null); } try{ if(window.top!==window){ window.top.location.href=LIB; return; } }catch(e){} location.href=LIB; },
+      exitOv:o('fade .25s ease','fadeOut .26s ease forwards'), exitAn:o('popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards'),
+      mmRef:this.mm, showMiniBtn:!this.overview(), showMini:!this.overview()&&!S.miniOff, miniLbl:S.miniOff?'افتح الخريطة':'اطوِ', toggleMini:()=>this.setState({miniOff:!S.miniOff}), colW:isHost?240:150, miniH:isHost?130:84, miniW:isHost?190:120, barTop:10, barW:'min(460px, calc(100vw - 24px))', hud:false, waiting:false, reveal:false, taskOpen:false, sabOpen:false, meetOpen:false, ejOpen:false, ejStars:null, overOpen:false, tk:{}, mt:{}, ej:{}, ov:{}, actions:[], myTasks:[], sabItems:[] };
+    if(!G||!me) return {...base, waiting:true, waitTxt:G?'المباراة شغالة… انتظر الجولة الجاية':'جاري الاتصال بالمذيع…'};
+    const C=this.cfg(), {tot,dn}=this.taskTotals(G), asPl=false;
+    const roleC=me.imp?'#f87171':'#7dd3fc', roleTxt=!me.alive?(me.imp?'👻 دخيل (شبح)':'👻 شبح'):me.imp?'🔪 دخيل':'🧑‍🚀 طاقم';
+    const mates=me.imp?G.players.filter(p=>p.imp&&p.id!==me.id).map(p=>p.name).join('، '):'';
+    const N=this.near(), play=G.phase==='play';
+    const A=(icon,lbl,on,press,col,cd)=>({icon,lbl,op:on&&!cd?1:.35,press:()=>{ if(on&&!cd) press(); },bg:col[0],bd:col[1],hasCd:!!cd,cd:cd||''});
+    const VIO=['rgba(124,58,237,.55)','rgba(196,181,253,.6)'], RED=['rgba(220,38,38,.6)','rgba(252,165,165,.6)'], AMB=['rgba(180,83,9,.6)','rgba(253,230,138,.55)'], GRY=['rgba(51,65,85,.7)','rgba(203,213,225,.4)'];
+    const useLbl=N.fix?'أصلح':N.task?'مهمة':N.emerg?'طوارئ':'استخدم', useIco=N.fix?'🔧':N.emerg&&!N.task?'🚨':'✋';
+    let actions=[];
+    if(play){
+      if(!me.alive) actions=[A('✋','مهمة',!!N.task,()=>this.pressUse(),VIO)];
+      else if(me.imp) actions=[A(useIco,useLbl,!!(N.fix||N.emerg),()=>this.pressUse(),VIO),A('📢','بلّغ',!!N.body,()=>this.pressReport(),AMB),A('🔪','اقتل',!!N.victim,()=>this.pressKill(),RED,N.kcd),A('🕳️','فتحة',!!N.vent,()=>this.pressVent(),GRY),A('💥','تخريب',true,()=>this.setState({sab:true}),RED,N.scd)];
+      else actions=[A(useIco,useLbl,!!(N.task||N.fix||N.emerg),()=>this.pressUse(),VIO),A('📢','بلّغ',!!N.body,()=>this.pressReport(),AMB)];
+    }
+    actions=actions.filter(a=>!((a.lbl==='فتحة'&&!C.vents)||(a.lbl==='تخريب'&&!C.reactorSab&&!C.doorSab&&!C.o2Sab&&!C.lightsSab&&!C.commsSab)));
+    if(play&&this.inVent){ actions=[A('⬆️','اطلع',true,()=>this.ventExit(),GRY)]; }
+    const lockNames=Object.keys(G.locks).filter(k=>G.locks[k]>now).map(RN);
+    const out={...base, hud:G.phase==='play'||G.phase==='reveal', roleC, roleTxt, hasMates:!!mates, mates, showTasks:!me.imp&&(!!G.comms||me.tasks.some(id=>!me.done.includes(id))), isGhost:!me.alive&&play,
+      myTasks:me.imp?[]:G.comms?[{txt:'📡 الاتصالات معطلة… أصلحوها عشان تشوفون مهامكم',c:'#fca5a5',dec:'none'}]:me.tasks.filter(id=>!me.done.includes(id)).map(id=>{ const t=TASKS.find(x=>x.id===id), d=me.done.includes(id); return {txt:TK_ICON[t.k]+' '+t.n+' · '+RN(t.r),c:d?'#6ee7b7':'#e7e3ef',dec:d?'line-through':'none'}; }),
+      taskPct:G.comms&&!me.imp?0:tot?Math.round(dn/tot*100):0, reactorOn:false, reactorSec:G.reactor?Math.max(0,Math.ceil((G.reactor-now)/1000)):0, lockOn:lockNames.length>0, lockTxt:lockNames.join('، '),
+      actSz:S.narrowP?64:80, actMax:S.narrowP?140:270, actW:S.narrowP?170:290, showJoy:asPl||!isHost||this.isTouch, showKeys:!asPl&&isHost&&!this.isTouch, jx:S.jx, jy:S.jy, jbx:100, jby:(this.joyH||300), jbA:S.joyAct?.07:.035, jbB:S.joyAct?.18:.08, jkA:S.joyAct?.6:.3, actions,
+      joyDown:e=>{ if(this.state.task) return; try{ e.currentTarget.setPointerCapture(e.pointerId); }catch(_){} this.joyOn=true; this.joyPid=e.pointerId; const r=e.currentTarget.getBoundingClientRect(), bx=100, by=this.joyH||300; this.jb={cx:r.left+bx,cy:r.top+by,x:bx,y:by}; this.setState({joyAct:true}); this.joyCalc(e); }, joyMove:e=>{ if(this.joyOn&&e.pointerId===this.joyPid) this.joyCalc(e); }, joyUp:e=>{ if(e&&this.joyPid!=null&&e.pointerId!==this.joyPid) return; this.joyReset(); } };
+    out.inVent=!!(play&&this.inVent); out.ventArrows=[]; out.ventSec='';
+    if(out.inVent){ const cur=VENTS.find(v=>v.id===this.inVent); out.ventSec=Math.max(0,Math.ceil((VENT_STAY-(now-this.ventT))/1000));
+      out.ventArrows=cur.to.map(id=>{ const v=VENTS.find(x=>x.id===id), ang=Math.atan2(v.y-cur.y,v.x-cur.x), deg=Math.round(ang*180/Math.PI); return {l:'calc(50% + '+Math.round(Math.cos(ang)*120)+'px)',t:'calc(50% + '+Math.round(Math.sin(ang)*120)+'px)',rot:'rotate('+deg+'deg)',n:RN(roomAt(v.x,v.y)),go:()=>this.ventGo(id)}; }); }
+    if(this._lph==='reveal'&&G.phase==='play') this.playAt=now; this._lph=G.phase; out.inFade=G.phase==='play'&&this.playAt&&now-this.playAt<850;
+    if(G.phase==='reveal'){ out.reveal=true; const left=G.until-now, nImp=G.players.filter(q=>q.imp).length;
+      const grp=(me.imp?G.players.filter(q=>q.imp):G.players).filter(q=>q.id!==me.id).slice(0,14), ord=[]; grp.forEach((q,i)=>{ if(i%2) ord.push(q); else ord.unshift(q); });
+      const mid=Math.floor(ord.length/2), line=[...ord.slice(0,mid),me,...ord.slice(mid)], ci=mid, base=Math.round(Math.min(innerWidth/(Math.max(line.length,3)*0.62),innerHeight*.26,170));
+      out.revLine=line.map((q,i)=>{ const k=Math.abs(i-ci), w=Math.round(base*(1-Math.min(.45,k*.07))); return {img:this.img(q,w),w,h:Math.round(w*1.5),m:-Math.round(w*.16),y:-k*6,z:100-k,b:(1-Math.min(.5,k*.06)).toFixed(2),d:(.45+k*.08)+'s'}; });
+      out.revOut=left<650; out.revTitle=me.imp?'دخيل':'طاقم'; out.revTc=me.imp?'#ff3b3b':'#7ef9ff'; out.revTs=me.imp?'rgba(255,59,59,.55)':'rgba(126,249,255,.5)'; out.revGlow=me.imp?'rgba(255,59,59,.32)':'rgba(45,212,191,.38)';
+      if(me.imp){ out.revSubA=''; out.revSubB=''; out.revSubC=nImp>1?'أنتم الدخلاء… اقتلوا الطاقم بدون ما تنكشفون':'اقتل الطاقم بدون ما تنكشف'; } else { out.revSubA='بينكم '; out.revSubB=nImp===1?'دخيل واحد':nImp+' دخلاء'; out.revSubC=''; } }
+    const tk=S.task; if(tk&&play){ out.taskOpen=true; out.tk={ id:tk.id, kind:tk.k, diff:C.difficulty, name:tk.n, onDone:()=>this.finishTask(), close:()=>{ this.joyReset(); this.setState({task:null}); } }; }
+    if(S.sab&&play&&me.imp){ out.sabOpen=true; out.sabClose=()=>this.setState({sab:false});
+      const crit=!!(G.reactor||G.o2||G.lights||G.comms), CR={bg:'rgba(220,38,38,.2)',bd:'rgba(248,113,113,.5)'};
+      out.sabItems=[['☢️ المفاعل','reactor',C.reactorSab],['🫁 الأكسجين','o2',C.o2Sab],['💡 الكهرباء','lights',C.lightsSab],['📡 الاتصالات','comms',C.commsSab]].filter(x=>x[2]).map(([n,k])=>({n:n+(crit?' · ⛔':''),k,...CR,bg:crit?'rgba(255,255,255,.02)':CR.bg}))
+        .concat(C.doorSab?ROOMS.map(r=>({n:'🚪 أبواب '+r.n+(G.locks[r.id]>now?' · مقفلة':''),k:'door:'+r.id,bg:'rgba(255,255,255,.04)',bd:'rgba(255,255,255,.12)'})):[]).map(x=>({...x,press:()=>{ this.doAct('sab',x.k); this.setState({sab:false}); }})); }
+    out.hasTimer=!!G.endAt&&(G.phase==='play'||G.phase==='reveal'); out.timeLeft=G.endAt?(()=>{ const t=Math.max(0,Math.ceil((G.endAt-now)/1000)); return Math.floor(t/60)+':'+String(t%60).padStart(2,'0'); })():'';
+    if(G.phase==='meeting'&&G.meeting){ const m=G.meeting, by=this.P(m.by)||{}, body=m.body?this.P(m.body):null, vote=m.stage==='vote', my=m.votes[me.id], canVote=vote&&me.alive&&!my, sel=canVote?S.voteSel:null, selP=sel&&sel!=='skip'?this.P(sel):null;
+      out.meetOpen=true;
+      out.mt={ title:body?'🚨 تم العثور على جثة':'📢 اجتماع طارئ', c:body?'#fca5a5':'#fde68a', sub:body?(by.name+' لقى '+body.name):('دعا له '+by.name),
+        stage:vote?'🗳️ التصويت':'💬 النقاش', stageBg:vote?'#fbbf24':'#5eead4', barC:vote?'#fbbf24':'#14b8a6', pct:Math.max(0,Math.min(100,Math.round((m.end-now)/((vote?C.voteSec:C.talkSec)*1000)*100))), icon:body?'🚨':'📢', iconBg:body?'#dc2626':'#f59e0b', sec:Math.max(0,Math.ceil((m.end-now)/1000)), canVote, canSkip:canVote&&C.allowSkip, skip:()=>this.setState({voteSel:'skip'}),
+        chat:(m.chat||[]).map(c=>{ const q=this.P(c.id)||{}, mine=c.id===me.id; return {name:q.name||'',c:q.c||'#888',t:c.t,dir:mine?'row-reverse':'row',bg:mine?'rgba(139,92,246,.22)':'rgba(255,255,255,.05)'}; }),
+        chatEmpty:!(m.chat||[]).length, canChat:me.alive, chatGhost:!me.alive,
+        draft:S.draft||'', onDraft:e=>this.setState({draft:e.target.value}), onKey:e=>{ if(e.key==='Enter') this.sendChat(); }, sendChat:()=>this.sendChat(),
+        micIcon:S.micOn?'🎙️':'🔇', micBg:S.micOn?'rgba(16,185,129,.35)':'rgba(255,255,255,.06)', micBd:S.micOn?'#6ee7b7':'rgba(255,255,255,.18)', micRing:S.micOn?Math.round(2+(S.micLvl||0)*10):0, micToggle:()=>this.toggleMic(),
+        hasTalkers:Object.keys(m.mic||{}).length>0, talkers:Object.keys(m.mic||{}).map(id=>(this.P(id)||{}).name).filter(Boolean).join('، '), skipBd:sel==='skip'?'#a78bfa':'rgba(255,255,255,.18)', hasSel:!!sel, selName:sel==='skip'?'التخطّي':(selP||{}).name, confirm:()=>{ this.doAct('vote',sel); this.setState({voteSel:null}); }, cancel:()=>this.setState({voteSel:null}),
+        note:!me.alive?'👻 الأشباح ما تصوّت':my?'✓ صوّتت · '+(my==='skip'?'تخطّي':(this.P(my)||{}).name):sel?'اضغط تأكيد عشان ينحسب صوتك':vote?'اختر اللاعب اللي تشك فيه ثم أكّد · الأغلبية تطرد مباشرة':'تناقشوا… التصويت يبدأ بعد شوي', noteC:my?'#6ee7b7':'#a8a3b5',
+        cards:G.players.map(p=>{ const voted=!!m.votes[p.id], self=p.id===me.id, can=canVote&&p.alive;
+          return {name:p.name+(self?' (أنت)':''),c:p.c,img:this.img(p,40),op:p.alive?1:.4,bd:(my===p.id||sel===p.id)?'#5eead4':m.by===p.id?'#f59e0b':'#06080d',bg:sel===p.id?'#164e4a':my===p.id?'#1f3b3a':!p.alive?'#151b26':can?'#2a3446':'#232c3d',
+            tag:!p.alive?'☠️ ميت':(m.mic&&m.mic[p.id])?'🎙️ يتكلم':(me.imp&&p.imp&&!self)?'🔪 دخيل معك':m.by===p.id?'📢 بلّغ':voted?'✓ صوّت':'⏳ ينتظر', tagC:!p.alive?'#64748b':(m.mic&&m.mic[p.id])?'#5eead4':(me.imp&&p.imp)?'#fca5a5':m.by===p.id?'#fbbf24':voted?'#4ade80':'#94a3b8',
+            press:()=>{ if(can&&p.id!==me.id) this.setState({voteSel:p.id}); }}; }) }; }
+    if(G.phase!=='meeting'&&S.voteSel) this.state.voteSel=null;
+    if(G.phase==='meeting'&&G.meeting&&now-(G.meeting.t0||0)<2600){ const m=G.meeting, by=this.P(m.by)||{}, bd=m.body?this.P(m.body):null; out.meetOpen=false; out.repOn=true;
+      out.rep={ title:bd?'جثة!':'اجتماع طارئ!', sub:bd?(by.name+' لقى جثة '+bd.name):('دعا له '+by.name), img:this.img(bd||by,90), rot:bd?90:0 }; }
+    const sec=t=>Math.max(0,Math.ceil((t-now)/1000)), al=[];
+    if(play){ if(G.reactor) al.push(me.imp?{t:'☢️ خرّبت المفاعل · '+sec(G.reactor)+' ث',s:'إذا ما أصلحوه قبل ما يخلص الوقت تفوزون',c:'#fca5a5'}:{t:'☢️ المفاعل بينفجر · '+sec(G.reactor)+' ث',s:'لازم لاعبين اثنين يحطون أيديهم على جهازي المفاعل بنفس الوقت',c:'#fca5a5'});
+      if(G.o2){ const f=G.fixed||{}; al.push({t:'🫁 الأكسجين ينفد · '+sec(G.o2)+' ث',s:me.imp?'إذا ما أصلحوه تفوزون':'أدخلوا الرمز في جهازين: الحديقة '+(f.o2a?'✓':'✗')+' · القيادة '+(f.o2b?'✓':'✗'),c:'#7dd3fc'}); }
+      if(G.lights) al.push({t:'💡 الكهرباء طافية',s:me.imp?'الطاقم ما يشوف زين… استغل الفرصة':'روحوا للوحة الكهرباء في المحركات وشغّلوا المفاتيح',c:'#fde68a'});
+      if(G.comms) al.push({t:'📡 الاتصالات معطلة',s:me.imp?'الطاقم ما يشوف مهامه':'اضبطوا التردد في جهاز الاتصالات',c:'#c4b5fd'}); }
+    out.alerts=al; out.raOn=al.length>0;
+    const fx=S.fix; out.fixOpen=!!(fx&&play); if(out.fixOpen){ const tgt=G.commsF||50, rh=G.rhold||{}, other=fx.id==='r1'?'r2':'r1';
+      out.fx={ name:fx.n, icon:DEV_IC[fx.k], c:DEV_C[fx.k], ok:!!fx.ok, close:()=>this.closeFix(), isL:fx.k==='lights'&&!fx.ok, isO:fx.k==='o2'&&!fx.ok, isC:fx.k==='comms'&&!fx.ok, isR:fx.k==='reactor'&&!fx.ok,
+        sw:(fx.sw||[]).map((on,i)=>({c:on?'#22c55e':'#3f3a4d',glow:on?'rgba(34,197,94,.6)':'transparent',jc:on?'flex-start':'flex-end',press:()=>{ const f2=this.state.fix; if(!f2||f2.ok) return; const sw=f2.sw.slice(); sw[i]=!sw[i]; this.sweep(sw[i]?620:380,sw[i]?620:380,.06,'square',.04); this.setState({fix:{...f2,sw}}); if(sw.every(Boolean)) this.doAct('fix',f2.id); }})),
+        code:fx.code||'', entry:(fx.entry||'').padEnd(5,'·'), shake:fx.bad?'shake .3s':'none',
+        keys:['1','2','3','4','5','6','7','8','9','⌫','0','✓'].map(k=>({k,bg:k==='✓'?'#16a34a':k==='⌫'?'#475569':'#2a3446',press:()=>{ const f2=this.state.fix; if(!f2||f2.ok) return; let e=f2.entry||'';
+          if(k==='⌫') e=e.slice(0,-1); else if(k==='✓'){ if(e===f2.code){ this.doAct('fix',f2.id); this.sweep(880,880,.1,'triangle',.06); } else { this.sweep(160,160,.2,'sawtooth',.05); this.setState({fix:{...f2,entry:'',bad:Date.now()}}); return; } } else if(e.length<5) e+=k; this.sweep(1100,1100,.03,'square',.03); this.setState({fix:{...f2,entry:e}}); }})),
+        cv:fx.v||0, onC:e=>{ const f2=this.state.fix; if(f2) this.setState({fix:{...f2,v:+e.target.value}}); }, lockPct:Math.round((fx.lock||0)*100),
+        bars:Array.from({length:24},(_,i)=>{ const d=Math.abs((fx.v||0)-tgt)/100, n=Math.sin(i*1.7+now/(90+d*400))*d*44, h=Math.max(6,Math.round(26+Math.sin(i*.55)*16+n)); return {h,c:d<.05?'#4ade80':d<.2?'#facc15':'#f87171'}; }),
+        rDown:e=>{ e.preventDefault(); this.rHolding=true; this._rhT=0; }, rUp:()=>{ this.rHolding=false; }, rMe:this.rHolding?'#22c55e':'#334155', rOther:now-(rh[other]||0)<500?'#22c55e':'#334155',
+        rTxt:this.rHolding?(now-(rh[other]||0)<500?'تم!':'ثبّت يدك… بانتظار لاعب على الجهاز الثاني'):'اضغط مطوّلاً على الكف' }; } out.ra=me.imp?{title:'خرّبت المفاعل',sub:'إذا ما أصلحوه قبل ما يخلص الوقت تفوزون'}:{title:'المفاعل بينفجر',sub:'روحوا للمفاعل واضغطوا على جهاز ☢ وإلا يفوز الدخيل'};
+    out.killOn=!!S.kill; out.kill=S.kill?{kImg:S.kill.k?this.img(S.kill.k,110):'',vImg:this.img(me,110),txt:'تم قتلك'}:{};
+    if(G.phase==='eject'&&G.eject){ const e=G.eject; out.ejOpen=true;
+      const lineA=e.id?(e.show===false?e.name+' انطرد من المحطة.':e.name+(e.wasImp?' كان الدخيل.':' ما كان الدخيل.')):(e.tie?'تعادل… ما أحد انطرد.':'ما أحد انطرد.'), lineB=e.show===false?'':(e.left===1?'باقي دخيل واحد.':e.left===0?'':'باقي '+e.left+' دخلاء.');
+      const el=now-(e.t0||now)-(e.id?1200:400), sp=65, nA=Math.max(0,Math.min(lineA.length,Math.floor(el/sp))), nB=Math.max(0,Math.min(lineB.length,Math.floor((el-lineA.length*sp-500)/sp))), blink=Math.floor(now/400)%2;
+      const typed=nA+nB; if(typed>(this._ejT||0)&&typed<=lineA.length+lineB.length){ this.sweep(1800+Math.random()*400,900,.03,'square',.025); } this._ejT=e.t0===this._ejK?typed:0; this._ejK=e.t0;
+      const ejTyped={ tA:lineA.slice(0,nA), tB:lineB.slice(0,nB), cA:nA<lineA.length||(!lineB&&blink)?(nA<lineA.length?1:blink):0, cB:lineB&&nA>=lineA.length?(nB<lineB.length?1:blink):0 };
+      out.ejStars=this.ejStars(); const ejp=e.id?this.P(e.id):null; const alv=G.players.filter(p=>p.alive), dp=e.id?null:(alv[(G.seq*7+alv.length)%Math.max(1,alv.length)]||G.players[0]); out.ej={ img:this.img(ejp,90), has:!!e.id, drift:!e.id&&!!dp, dImg:dp?this.img(dp,90):'', d1:e.id?'1.2s':'0s', c:e.c, op:e.id?1:.3, title:e.id?e.name+' انطرد من المحطة':(e.tie?'تعادل… ما أحد انطرد':'ما أحد انطرد'), sub:e.id?(e.show===false?'':(e.wasImp?'🔪 كان دخيل':'🧑‍🚀 ما كان دخيل… كان من الطاقم')):'', hasVotes:!!e.votes, votes:e.votes?Object.entries(e.votes).reduce((acc,[v,t])=>{ const tp=t==='skip'?{name:'تخطّي'}:this.P(t)||{}; let row=acc.find(r=>r.t===t); if(!row){ row={t,name:tp.name||'',voters:[]}; acc.push(row); } const vp=this.P(v); if(vp) row.voters.push({c:vp.c}); return acc; },[]):[], subC:e.wasImp?'#fca5a5':'#a8a3b5' };
+      Object.assign(out.ej,ejTyped, e.id?{subC:e.wasImp?'#fca5a5':'#cbd5e1'}:{subC:'#cbd5e1'}); }
+    if(G.phase==='over'){ const ci=G.winner==='crew'; out.overOpen=true;
+      const nT=G.players.filter(q=>ci?!q.imp:q.imp).length, iw0=nT<=2?150:nT<=4?120:nT<=8?92:72, sh=innerHeight<640, iw=Math.round(Math.min(iw0,Math.max(52,(innerHeight-(sh?400:420))/1.5)));
+      out.ov={ pad:sh?'8px':'20px', bH:sh?'46px':'60px', bF:sh?'17px':'22px', bM:sh?'0':'10px', gap:sh?'6px':'16px', icS:sh?'44px':'76px', tS:sh?'clamp(26px,5vw,40px)':'clamp(34px,7vw,64px)', glow:ci?'rgba(56,189,248,.22)':'rgba(239,68,68,.25)', iw, ih:Math.round(iw*1.5), cw:iw+34, fs:iw>=120?22:16, icon:ci?'🧑‍🚀':'🔪', title:ci?'فاز الطاقم':'فاز الدخلاء', c:ci?'#7dd3fc':'#f87171', reason:G.reason,
+        team:G.players.filter(p=>ci?!p.imp:p.imp).map((p,i)=>({name:p.name+(p.id===me.id?' (أنت)':''),c:p.c,img:this.img(p,iw),op:p.alive?1:.55,d:(.15+i*.08)+'s',tag:p.alive?(ci?'🧑‍🚀 طاقم':'🔪 دخيل'):'☠️ '+(ci?'طاقم':'دخيل'),tagC:p.alive?(ci?'#7dd3fc':'#fca5a5'):'#8a8596'})),
+        losers:G.players.filter(p=>ci?p.imp:!p.imp).map(p=>({name:p.name,c:p.c})), hasLosers:true, loseLbl:ci?'🔪 الدخلاء:':'🧑‍🚀 الطاقم:',
+        again:()=>this.send({t:'again'}), lobby:()=>{ this.send({t:'lobby'}); setTimeout(()=>{ location.href='index.html'; },150); } }; }
+    return out;
+  }
+}
+</script>
+</body>
+</html>

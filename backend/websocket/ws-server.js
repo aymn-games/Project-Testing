@@ -4,8 +4,8 @@
  * هنا بتيك توك تحديداً؛ التوجيه لأي منصة يمر عبر platforms/connector-router.js.
  *
  * طلبات الترقية على المسار '/ws/room-relay' تُوجَّه لقناة
- * websocket/room-relay-server.js المنفصلة (Relay عام حسب room). أي طلب
- * ترقية آخر يسلك مسار بروتوكول التيك توك المعتاد.
+ * websocket/room-relay-server.js المنفصلة (Relay عام حسب room)، و'/ws/station'
+ * لخادم لعبة «الدخيل» (station/station-server.js). أي طلب ترقية آخر يسلك مسار بروتوكول التيك توك المعتاد.
  *
  * تتبّع إحصائيات البث: عند "connect" لمنصة 'tiktok' بيوزرنيم مطابق لحساب
  * موثَّق (authService.findVerifiedUserByTikTok)، يُسجَّل صف broadcasts
@@ -594,6 +594,10 @@ module.exports = {
       }
       if (pathname === '/ws/challenge') {
         require('../challenge/challenge-match').handleUpgrade(req, socket);
+        return;
+      }
+      if (pathname === '/ws/station') {
+        require('../station/station-server').handleUpgrade(req, socket);
         return;
       }
       handleUpgrade(req, socket);

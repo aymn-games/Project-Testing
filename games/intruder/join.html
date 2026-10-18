@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>محطة سهيل — دخول اللاعبين</title>
+<script src="../../js/agp-dc-raw-guard.js"></script>
+<script src="station-net.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="skins.js"></script>
+<script src="station-settings.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<style>
+html,body{margin:0;min-height:100%;background:#07060b}
+a{color:#a78bfa}a:hover{color:#c4b5fd}
+input::placeholder{color:#5d5869}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+</style>
+</helmet>
+<div dir="rtl" style="min-height:100dvh;box-sizing:border-box;padding:24px 20px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:22px;background:radial-gradient(circle at 80% -10%, rgba(124,58,237,.28), transparent 55%), #07060b;font-family:'Zain',sans-serif;color:#f4f2f8">
+  <div style="width:100%;max-width:420px;display:flex;align-items:center;justify-content:space-between">
+    <span style="font:900 26px 'Zain'">🛰️ محطة سهيل</span>
+    <sc-if value="{{ hasRoom }}" hint-placeholder-val="{{ false }}">
+      <span dir="ltr" style="padding:6px 14px;border-radius:999px;background:rgba(139,92,246,.14);border:1px solid rgba(167,139,250,.35);font:800 16px 'Zain';color:#c4b5fd">روم {{ room }}</span>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ stepCode }}" hint-placeholder-val="{{ true }}">
+    <div style="width:100%;max-width:420px;display:flex;flex-direction:column;gap:16px;animation:rise .4s ease">
+      <span style="font:900 34px/1.2 'Zain'">اكتب رقم الروم</span>
+      <span style="font:400 17px/1.6 'Zain';color:#a8a3b5">الرقم ظاهر على شاشة البث تحت الباركود</span>
+      <input value="{{ codeVal }}" onChange="{{ onCode }}" inputMode="numeric" maxLength="4" placeholder="0000" autocomplete="off" dir="ltr" style="height:84px;border-radius:22px;border:1.5px solid rgba(167,139,250,.4);background:rgba(0,0,0,.35);color:#f4f2f8;font:900 48px 'Zain';text-align:center;letter-spacing:.35em;outline:none;box-sizing:border-box;width:100%">
+      <span style="min-height:22px;font:700 16px 'Zain';color:#fca5a5">{{ err }}</span>
+      <button onClick="{{ goCode }}" style="height:60px;border:none;border-radius:999px;cursor:pointer;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:800 22px 'Zain';box-shadow:0 10px 30px rgba(124,58,237,.4)" style-active="transform:scale(.97)">التالي</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ stepProfile }}" hint-placeholder-val="{{ false }}">
+    <div style="width:100%;max-width:420px;display:flex;flex-direction:column;gap:16px;animation:rise .4s ease">
+      <div style="display:grid;place-items:center;padding:8px 0">
+        <div style="animation:bob 2.6s ease-in-out infinite">
+          <img src="{{ myImg }}" alt="" style="display:block;width:110px;height:165px">
+        </div>
+      </div>
+      <span style="font:800 18px 'Zain';color:#a8a3b5">اسمك</span>
+      <input value="{{ nameVal }}" onChange="{{ onName }}" maxLength="14" placeholder="اكتب اسمك" autocomplete="off" style="height:60px;border-radius:18px;border:1.5px solid rgba(167,139,250,.35);background:rgba(0,0,0,.35);color:#f4f2f8;font:800 22px 'Zain';padding:0 18px;outline:none;box-sizing:border-box;width:100%">
+      <div style="display:flex;gap:6px;padding:4px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+          <button onClick="{{ t.press }}" style="flex:1;height:44px;border-radius:999px;cursor:pointer;border:none;background:{{ t.bg }};color:{{ t.c }};font:800 16px 'Zain'">{{ t.n }}</button>
+        </sc-for>
+      </div>
+      <sc-if value="{{ tabSkin }}" hint-placeholder-val="{{ false }}">
+        <dc-import name="Wardrobe" compact="{{ true }}" color="{{ myC }}" skin="{{ sk }}" on-change="{{ setSkin }}" hint-size="100%,460px"></dc-import>
+      </sc-if>
+      <sc-if value="{{ tabColor }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px">
+        <sc-for list="{{ colors }}" as="c" hint-placeholder-count="20">
+          <button onClick="{{ c.pick }}" aria-label="{{ c.lbl }}" aria-disabled="{{ c.dis }}" style="position:relative;aspect-ratio:1;min-height:44px;border-radius:16px;cursor:{{ c.cur }};background:{{ c.c }};opacity:{{ c.op }};border:3px solid {{ c.bd }};box-shadow:{{ c.sh }};display:grid;place-items:center;padding:0;overflow:hidden">
+            <sc-if value="{{ c.t }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;inset:0;background:repeating-linear-gradient(135deg, rgba(0,0,0,.45) 0 5px, transparent 5px 10px)"></span><span style="position:relative;font:400 18px/1 'Zain'">🔒</span></sc-if>
+          </button>
+        </sc-for>
+      </div>
+      </sc-if>
+      <span style="min-height:22px;font:700 16px 'Zain';color:#fca5a5">{{ err }}</span>
+      <button onClick="{{ join }}" style="height:60px;border:none;border-radius:999px;cursor:pointer;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:800 22px 'Zain';box-shadow:0 10px 30px rgba(124,58,237,.4)" style-active="transform:scale(.97)">🚀 ادخل المحطة</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ wardOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:50;background:rgba(3,5,10,.85);overflow:auto;padding:16px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:12px">
+      <div style="width:100%;max-width:440px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font:900 24px 'Zain'">👕 خزانتك</span>
+        <button onClick="{{ closeWard }}" style="height:44px;padding:0 18px;border-radius:12px;cursor:pointer;border:3px solid #06080d;background:#16a34a;color:#fff;font:900 16px 'Zain';box-shadow:0 3px 0 #06080d">✓ تم</button>
+      </div>
+      <dc-import name="Wardrobe" compact="{{ true }}" color="{{ myC }}" skin="{{ sk }}" on-change="{{ setSkin }}" hint-size="100%,520px"></dc-import>
+    </div>
+  </sc-if>
+  <sc-if value="{{ stepWait }}" hint-placeholder-val="{{ false }}">
+    <div style="width:100%;max-width:420px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;animation:rise .4s ease">
+      <div style="animation:bob 2.6s ease-in-out infinite">
+        <img src="{{ myImgL }}" alt="" style="display:block;width:140px;height:210px">
+      </div>
+      <span style="font:900 34px 'Zain'">{{ myName }}</span>
+      <span style="font:700 20px 'Zain';color:#6ee7b7">✓ دخلت المحطة</span>
+      <span style="font:400 18px 'Zain';color:#a8a3b5;animation:pulse 1.6s ease-in-out infinite">بانتظار الهوست يبدأ المهمة…</span>
+      <sc-if value="{{ hasCfg }}" hint-placeholder-val="{{ false }}">
+        <div style="width:100%;display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+          <sc-for list="{{ cfgRows }}" as="r" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:7px 10px;border-radius:10px;background:#1b2230;border:2px solid #06080d">
+              <span style="font:700 13px 'Zain';color:#94a3b8">{{ r.n }}</span><span style="font:900 13px 'Zain';color:#fff;white-space:nowrap">{{ r.v }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <button onClick="{{ openWard }}" style="margin-top:10px;height:50px;padding:0 24px;border-radius:12px;cursor:pointer;border:3px solid #06080d;background:#14b8a6;color:#06080d;font:900 17px 'Zain';box-shadow:0 4px 0 #06080d">👕 غيّر لبسك</button>
+      <button onClick="{{ leave }}" style="margin-top:18px;height:48px;padding:0 24px;border-radius:999px;border:1px solid rgba(248,113,113,.3);background:transparent;color:#fca5a5;font:700 17px 'Zain';cursor:pointer">خروج من الروم</button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+// الروم والتحقق من الاسم/اللون على الخادم (station-net.js ← /ws/station) بدل localStorage بالنموذج.
+const MAX=20;
+const COLORS = ['#ef4444','#3b82f6','#22c55e','#eab308','#f97316','#a855f7','#ec4899','#14b8a6','#f4f2f8','#64748b','#84cc16','#06b6d4','#b45309','#f43f5e','#6366f1','#10b981','#facc15','#c084fc','#0ea5e9','#78350f'];
+const norm=s=>String(s).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\D/g,'');
+class Component extends DCLogic {
+  state={ step:'code', code:'', room:'', name:'', c:null, err:'', taken:[], meId:null, tab:'color', skin:{}, skReady:false, ward:false, r:null };
+  componentDidMount(){
+    this.skt=setInterval(()=>{ if(window.StationSkins){ clearInterval(this.skt); this.setState({skReady:true}); } },100);
+    const qp=new URLSearchParams(location.search), q=norm(qp.get('room')||'');
+    this.edit=!!qp.get('edit'); let me=window.StationNet.me(); if(qp.get('preview')) me=null;
+    this.net=window.StationNet.connect(m=>this.onMsg(m),()=>{
+      const S=this.state, mm=window.StationNet.me();
+      if(S.meId&&mm) this.net.send({t:'resume',code:mm.room,id:mm.id,key:mm.key});
+      else if(S.step==='code'&&me&&mm){ this.resuming=true; this.net.send({t:'resume',code:mm.room,id:mm.id,key:mm.key}); }
+      else if(S.room) this.net.send({t:'peek',code:S.room});
+      else if(q.length===4){ this.setState({code:q},()=>this.goCode()); } });
+  }
+  componentWillUnmount(){ clearInterval(this.skt); this.net&&this.net.close(); }
+  onMsg(m){ const S=this.state;
+    if(m.t==='welcome'){ window.StationNet.me({room:m.code,id:m.id,key:m.key}); this.resuming=false; this.setState({meId:m.id,room:m.code}); this.joining=false; if(this.pendingLobby){ this.pendingLobby=false; this.toLobby(m.code,m.id); } return; }
+    if(m.t==='room'){ const r=m.room; this.setState({r}); const me=(r.players||[]).find(p=>p.id===S.meId);
+      if(S.meId&&me&&!this.edit) return this.go(r)||this.toLobby(r.code,S.meId);
+      if(S.meId&&me&&this.edit&&S.step!=='wait'){ this.setState({step:'wait',name:me.name,c:me.c,skin:{hat:me.hat,acc:me.acc,top:me.top,pants:me.pants,back:me.back}}); }
+      if(S.step==='wait'&&this.go(r)) return;
+      return this.sync(r); }
+    if(m.t==='peek'){ if(!m.ok) return this.setState({step:'code',err:m.err||'ما لقينا روم بهالرقم'}); const r=m.room;
+      if(S.step==='code'){ if((r.players||[]).length+1>=(r.max||MAX)) return this.setState({err:'الروم ممتلئ'}); const taken=(r.players||[]).map(p=>p.c); return this.setState({r,step:'profile',room:r.code,err:'',taken,c:COLORS.find(x=>!taken.includes(x))}); }
+      return this.sync(r); }
+    if(m.t==='err'){ this.joining=false; this.pendingLobby=false; if(m.room) this.sync(m.room); return this.setState(m.step==='code'?{step:'code',err:m.err}:{err:m.err}); }
+    if(m.t==='gone'){ window.StationNet.me(null); if(this.resuming){ this.resuming=false; const q=norm(new URLSearchParams(location.search).get('room')||''); if(q.length===4) this.setState({code:q},()=>this.goCode()); return; } return this.setState({step:'code',meId:null,err:m.reason==='kicked'?'الهوست أخرجك من الروم':'الروم انقفل أو تغيّر'}); }
+    if(m.t==='kicked'){ window.StationNet.me(null); return this.setState({step:'code',meId:null,err:'الهوست أخرجك من الروم'}); }
+    if(m.t==='closed'){ window.StationNet.me(null); return this.setState({step:'code',meId:null,err:'الروم انقفل أو تغيّر'}); }
+  }
+  toLobby(code,id){ location.href='index.html?view=player&room='+code+'&id='+id; return true; }
+  go(r){ const S=this.state; if(r&&r.started&&S.meId&&(r.players||[]).some(p=>String(p.id)===String(S.meId))){ location.href='play.html?room='+r.code+'&id='+S.meId; return true; } return false; }
+  sync(r){ const S=this.state; if(!r||(S.room&&r.code!==S.room)) return;
+    const taken=(r.players||[]).filter(p=>p.id!==S.meId).map(p=>p.c);
+    if(S.step==='wait'&&S.meId&&!(r.players||[]).some(p=>p.id===S.meId)) return this.setState({step:'code',err:'الهوست أخرجك من الروم',taken});
+    this.setState({r,taken, c:S.step==='profile'&&taken.includes(S.c)?COLORS.find(x=>!taken.includes(x)):S.c}); }
+  goCode(){ const c=norm(this.state.code); if(c.length!==4) return this.setState({err:'رقم الروم 4 أرقام'}); this.net.send({t:'peek',code:c}); }
+  join(){ const S=this.state, name=S.name.trim(); if(!name) return this.setState({err:'اكتب اسمك'});
+    const r=S.r, pl=(r&&r.players)||[]; if(pl.length+1>=((r&&r.max)||MAX)) return this.setState({err:'الروم ممتلئ'});
+    if(pl.some(p=>p.name===name)) return this.setState({err:'الاسم مستخدم، اختر اسم ثاني'});
+    if(pl.some(p=>p.c===S.c)) return this.setState({err:'اللون انأخذ، اختر لون ثاني',taken:pl.map(p=>p.c)});
+    if(this.joining) return; this.joining=true; this.pendingLobby=true; this.setState({err:'',name});
+    this.net.send({t:'join',code:S.room,name,c:S.c,skin:S.skin||{}}); }
+  leave(){ this.net.send({t:'leave'}); window.StationNet.me(null); this.setState({step:'code',meId:null,code:'',err:'',room:''}); }
+  setSkin(v){ this.setState({skin:v}); const S=this.state; if(S.step!=='wait') return; this.net.send({t:'skin',skin:v}); }
+  renderVals(){ const S=this.state, myC=S.c||'#a855f7', SK=window.StationSkins, sk=S.skin||{}, th=(c,k,w)=>SK?SK.thumb(c,k,w):'';
+    const r=S.r, T=window.StationSettings, C=r&&r.settings&&T?T.validate(r.settings):null;
+    return { hasCfg:!!C&&S.step==='wait', cfgRows:C?[['الدخلاء',String(C.impostors)],['المهام',(C.shortTasks+C.longTasks)+' · '+C.difficulty],['انتظار القتل',C.killCd+' ث'],['التصويت',C.voteSec+' ث'],['الطوارئ',String(C.emergencies)],['السرعة',C.speed+'×']].map(([n,v])=>({n,v})):[], myImg:th(myC,sk,110), myImgL:th(myC,sk,140), tabSkin:S.tab!=='color', tabColor:S.tab==='color',
+      sk, setSkin:v=>this.setSkin(v), wardOpen:S.ward&&S.step==='wait', openWard:()=>this.setState({ward:true}), closeWard:()=>this.setState({ward:false}),
+      tabs:[['color','🎨 اللون'],['skin','👕 اللبس']].map(([k,n])=>({n,bg:S.tab===k?'rgba(139,92,246,.35)':'transparent',c:S.tab===k?'#fff':'#a8a3b5',press:()=>this.setState({tab:k})})),
+      stepCode:S.step==='code', stepProfile:S.step==='profile', stepWait:S.step==='wait', hasRoom:S.step!=='code', room:S.room, err:S.err,
+      codeVal:S.code, onCode:e=>this.setState({code:norm(e.target.value).slice(0,4),err:''}), goCode:()=>this.goCode(),
+      nameVal:S.name, onName:e=>this.setState({name:e.target.value,err:''}), myC, myName:S.name,
+      colors:COLORS.map(c=>{ const t=S.taken.includes(c), on=c===S.c, own=t?((r&&r.players||[]).find(p=>p.c===c&&p.id!==S.meId)||{}).name:''; return {c,t,op:t?.45:1,dis:t?'true':'false',cur:t?'not-allowed':'pointer',lbl:t?'مأخوذ'+(own?' من '+own:''):'لون',bd:on?'#fff':'transparent',sh:on?'0 0 0 3px rgba(167,139,250,.6)':'none',pick:()=>{ if(t) return this.setState({err:'اللون مأخوذ'+(own?' من '+own:'')+'، اختر لون ثاني'}); this.setState({c,err:''}); }}; }),
+      join:()=>this.join(), leave:()=>this.leave() };
+  }
+}
+</script>
+</body>
+</html>
