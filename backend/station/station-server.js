@@ -6,7 +6,8 @@
  * والمباراة (station-game.js) ويرسل لكل لاعب نسخته المفلترة.
  *
  * بروتوكول (JSON، كل رسالة فيها t):
- *   عميل → host {code?,token?}           إنشاء روم جديد أو رجوع المذيع لرومه
+ *   عميل → host {code?,token?,auth}      إنشاء روم جديد أو رجوع المذيع لرومه
+ *                                        (auth = توكن حساب الموقع — مرحلة الاختبار: أدمن فقط)
  *   عميل → peek {code}                   شاشة الدخول: معلومات الروم + تحديثات حية
  *   عميل → join {code,name,c,skin}       دخول لاعب جديد ← welcome {id,key}
  *   عميل → resume {code,id,key}          رجوع لاعب (تحديث الصفحة/انقطاع)
@@ -31,6 +32,13 @@ var SKIN_KEYS = ['hat', 'acc', 'top', 'pants', 'back'];
 var HOST_GRACE_MS = 30 * 60 * 1000;  // روم بدون مذيع متصل أكثر من كذا ← ينقفل
 var TICK_MS = 50, PLAY_SEND_MS = 100, IDLE_SEND_MS = 1000;
 var MAX_MSG = 16 * 1024;
+// مرحلة اختبار: إنشاء الروم (شاشة المذيع) لحساب الأدمن فقط. الجوالات تدخل بدون حساب.
+// عند الإطلاق للكل: ADMIN_ONLY = false (مع إزالة adminOnly من بطاقة games.html).
+var ADMIN_ONLY = true;
+var _isAdmin = function (token) {
+    var u = require('../auth/auth-service').validateSession(String(token || ''));
+    return !!(u && u.role === 'admin');
+};
 
 var _rooms = {};   // code -> room
 var _clients = {}; // connectionId -> client
@@ -119,6 +127,8 @@ function onMessage(client, msg) {
     if (t === 'ping') return send(client, { t: 'pong', k: msg.k, now: Date.now() });
 
     if (t === 'host') {
+        var allowed = false; try { allowed = !ADMIN_ONLY || _isAdmin(msg.auth); } catch (err) { logger.error('Station: auth check failed:', err); }
+        if (!allowed) return send(client, { t: 'err', code: 'admin_only', err: 'اللعبة بمرحلة اختبار ومتاحة للأدمن فقط' });
         var r = msg.code && _rooms[msg.code];
         if (!(r && msg.token && r.token === msg.token)) r = createRoom(client);
         attach(client, r, 'host', 'host');
@@ -240,4 +250,4 @@ function handleUpgrade(req, socket) {
     socket.on('error', function () { removeClient(id); });
 }
 
-module.exports = { handleUpgrade: handleUpgrade, _rooms: _rooms };
+module.exports = { handleUpgrade: handleUpgrade, _rooms: _rooms, _setAdminCheck: function (fn) { _isAdmin = fn; } };

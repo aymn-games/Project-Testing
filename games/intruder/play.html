@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>الدخيل — المباراة</title>
 <script src="../../js/agp-dc-raw-guard.js"></script>
+<script src="../../auth/auth-client.js"></script>
 <script src="station-net.js"></script>
 <script src="./support.js"></script>
 </head>
@@ -508,7 +509,7 @@ class Component extends DCLogic {
     this.me={x:BTN.x,y:BTN.y+120}; this.face=1; this.joy={x:0,y:0}; this.keys={}; this.disp={};
     this.isTouch=matchMedia('(pointer: coarse)').matches;
     window.StationNet.patchClock(); this.subs={}; this.pubs={}; this.auds={};
-    this.net=window.StationNet.connect(d=>this.onMsg(d),()=>{ if(this.isHost){ const h=window.StationNet.hostSession()||{}; this.send({t:'host',code:h.code,token:h.token}); } else { const m=window.StationNet.me()||{}; if(m.id!==this.myId){ location.href='join.html'+(this.room?'?room='+this.room:''); return; } this.send({t:'resume',code:m.room,id:m.id,key:m.key}); } });
+    this.net=window.StationNet.connect(d=>this.onMsg(d),()=>{ if(this.isHost){ const h=window.StationNet.hostSession()||{}; this.send({t:'host',code:h.code,token:h.token,auth:window.StationNet.authToken()}); } else { const m=window.StationNet.me()||{}; if(m.id!==this.myId){ location.href='join.html'+(this.room?'?room='+this.room:''); return; } this.send({t:'resume',code:m.room,id:m.id,key:m.key}); } });
     this.kd=e=>{ if(e.target&&e.target.tagName==='INPUT') return; const k=({'ص':'w','ش':'s','س':'a','ي':'d','ث':'e','ق':'r','ض':'q','ر':'v'})[e.key]||e.key.toLowerCase(); this.keys[k]=true; if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
       if(e.repeat||this.state.task) return; if(k==='e') this.pressUse(); if(k==='r') this.pressReport(); if(k==='q') this.pressKill(); if(k==='v') this.pressVent(); };
     this.ku=e=>{ const k=({'ص':'w','ش':'s','س':'a','ي':'d'})[e.key]||e.key.toLowerCase(); this.keys[k]=false; }; this.blur=()=>{ this.keys={}; this.joyReset(); }; document.addEventListener('visibilitychange',this.blur); addEventListener('blur',this.blur);
@@ -527,6 +528,7 @@ class Component extends DCLogic {
       if(prevSeq!==d.G.seq||(prevPhase==='play'&&d.G.phase!=='play')) this.setState({task:null,sab:false});
       if(prevPhase!==d.G.phase) this.phaseSfx(d.G.phase,prevPhase);
       if(d.G.phase!=='meeting'&&Object.keys(this.subs).length) this.rtcStopAll(); }
+    else if(d.t==='err'&&d.code==='admin_only'){ this.net.close(); location.replace('../../games.html?locked=testing'); }
     else if(d.t==='fx') this.sfx(d.k);
     else if(d.t==='rtc') this.onRtc(d.from,d.data);
     else if(d.t==='welcome'){ this.room=d.code; if(this.isHost) window.StationNet.hostSession({code:d.code,token:d.token}); }

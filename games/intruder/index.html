@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>الدخيل — ألعاب أيمن</title>
 <script src="../../js/agp-dc-raw-guard.js"></script>
+<script src="../../auth/auth-client.js"></script>
 <script src="station-net.js"></script>
 <script src="./support.js"></script>
 </head>
@@ -253,7 +254,7 @@ class Component extends DCLogic {
     if(this.pv){ this.rot=()=>this.setState({rotate:innerHeight>innerWidth}); this.rot(); addEventListener('resize',this.rot);
       const me=NET().me(); if(!me||String(me.id)!==this.pv){ location.href='join.html'; return; }
       this.net=NET().connect(m=>this.onPvMsg(m),()=>this.net.send({t:'resume',code:me.room,id:me.id,key:me.key})); }
-    else this.net=NET().connect(m=>this.onHostMsg(m),()=>{ const hs=NET().hostSession()||{}; this.net.send({t:'host',code:this.state.code||hs.code,token:this.state.token||hs.token}); });
+    else this.net=NET().connect(m=>this.onHostMsg(m),()=>{ const hs=NET().hostSession()||{}; this.net.send({t:'host',code:this.state.code||hs.code,token:this.state.token||hs.token,auth:NET().authToken()}); });
     this.actors={}; this.t0=performance.now(); const loop=t=>{ this.raf=requestAnimationFrame(loop); try{ this.room(t); }catch(e){} }; this.raf=requestAnimationFrame(loop);
     this.qrTry=setInterval(()=>{ if(window.qrcode){ clearInterval(this.qrTry); this.makeQr(); } },200);
   }
@@ -263,6 +264,7 @@ class Component extends DCLogic {
       if(fresh){ let s0=null; try{ s0=JSON.parse(localStorage.getItem(SET_KEY)); }catch(e){} if(s0) this.net.send({t:'settings',settings:s0}); } this.net.send({t:'skin',skin:this.state.hostSkin||{}}); return; }
     if(m.t==='room'){ const r=m.room; if(r.code!==this.state.code) return; this.setState({players:r.players||[],settings:ST()?ST().validate(r.settings,(r.players||[]).length+1):r.settings});
       if(r.started&&this.launching){ this.launching=false; location.href='play.html'; } return; }
+    if(m.t==='err'&&m.code==='admin_only'){ this.net.close(); location.replace('../../games.html?locked=testing'); return; }
     if(m.t==='err') return this.say(m.err);
     if(m.t==='gone') return this.say('الروم مفتوح بشاشة ثانية');
   }

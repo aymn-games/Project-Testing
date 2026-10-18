@@ -423,7 +423,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   // تتبع الماوس. لون كل بطاقة حسب تصنيفها (hue بنظام oklch).
   // الترتيب نفسه ترتيب REAL_GAMES الحالي بالمنصة.
   var CARD_INFO = {
-    'intruder':             { name: 'الدخيل', cat: 'c', icon: 'rocket_launch', badge: 'جديد', desc: 'العب من جوالك على محطة فضائية: خلّص مهامك واكشف الدخيل قبل ما يقضي على الطاقم.' },
+    'intruder':             { name: 'الدخيل', cat: 'c', icon: 'rocket_launch', badge: 'مرحلة اختبار', adminOnly: true, desc: 'العب من جوالك على محطة فضائية: خلّص مهامك واكشف الدخيل قبل ما يقضي على الطاقم.' },
     'bomb':                 { name: 'القنبلة', cat: 'c', icon: 'local_fire_department', badge: 'جديد', desc: 'القنبلة عند لاعب والوقت يخلص، يرميها على غيره بكتابة رقمه بالشات.. واللي تنفجر عنده يطلع.' },
     'vocab':                { name: 'تحدي المفردات', cat: 'q', icon: 'spellcheck', badge: 'جديد', desc: 'بدّل حرف واحد من الكلمة بحرف من حروف فريقك، وأول فريق يخلّص حروفه يفوز.' },
     'draw':                 { name: 'شخبليطة', cat: 'q', icon: 'brush', badge: 'جديد', desc: 'اكتب كلمة سرية وارسمها، وأول لاعب يخمّنها صح بالشات ياخذ النقاط.' },
@@ -567,8 +567,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (auth.isStreamerAccount && !auth.isStreamerAccount(user)) return 'not_streamer';
     return 'tiktok';
   }
+  // لعبة بمرحلة اختبار (adminOnly بـCARD_INFO): تفتح لحساب الأدمن فقط.
+  // (القيد الفعلي بالخادم: backend/station/station-server.js ADMIN_ONLY.)
+  function isAdminUser(){
+    var auth = window.AGPAuth, u = auth && auth.getCachedUser ? auth.getCachedUser() : null;
+    return Boolean(u && u.role === 'admin');
+  }
   function applyGameLock(card){
-    var locked = card.classList.contains('gl-maint') || Boolean(getGameAccessBlock());
+    var testing = card.classList.contains('gl-admin') && !isAdminUser();
+    var play = card.querySelector('.gl-play');
+    if (play && card.classList.contains('gl-admin')) play.firstChild.textContent = testing ? 'مرحلة اختبار' : 'العب الآن';
+    var locked = testing || card.classList.contains('gl-maint') || Boolean(getGameAccessBlock());
     card.classList.toggle('gl-locked', locked);
     var icon = card.querySelector('.gl-play .gl-ms');
     if (icon) icon.textContent = locked ? 'lock' : 'arrow_back';
@@ -587,6 +596,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     var msg, btnLabel, btnHref;
     if (reason === 'maintenance') {
       msg = 'هذي اللعبة تحت الصيانة حالياً، وبترجع قريب إن شاء الله.';
+    } else if (reason === 'testing') {
+      msg = 'هذي اللعبة بمرحلة اختبار ومتاحة حالياً لحساب الأدمن فقط، وبتنفتح للكل قريب إن شاء الله.';
     } else if (reason === 'login') {
       msg = 'لازم تسجّل دخول وتربط حساب تيك توك بحسابك عشان تفتح الألعاب.';
       btnLabel = 'تسجيل الدخول'; btnHref = 'login.html';
@@ -621,7 +632,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.addEventListener('click', function(e){
     var card = e.target && e.target.closest ? e.target.closest('.gl-card') : null;
     if (!card) return;
-    var block = card.classList.contains('gl-maint') ? 'maintenance' : getGameAccessBlock();
+    var block = card.classList.contains('gl-maint') ? 'maintenance' : (card.classList.contains('gl-admin') && !isAdminUser()) ? 'testing' : getGameAccessBlock();
     if (!block) return;
     e.preventDefault();
     e.stopPropagation();
@@ -630,7 +641,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeGameLockModal(); });
   // صفحة لعبة رجّعت المستخدم هنا لأنه غير مسموح له (auth/game-access-guard.js) — نعرض سبب القفل
   (function(){
-    var m = /[?&]locked=(login|not_streamer|tiktok)\b/.exec(window.location.search);
+    var m = /[?&]locked=(login|not_streamer|tiktok|testing)\b/.exec(window.location.search);
     if (!m) return;
     // بعد ما يكتمل بناء الصفحة (القالب يعيد رسم المحتوى) — ننتظر ظهور بطاقات الألعاب
     var tries = 0;
@@ -647,7 +658,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var info = CARD_INFO[g.id] || { name: g.title, cat: 'c', icon: 'sports_esports', desc: g.desc };
     var cat = CARD_CATS[info.cat];
     var card = document.createElement('article');
-    card.className = 'gl-card' + (info.maintenance ? ' gl-maint' : '');
+    card.className = 'gl-card' + (info.maintenance ? ' gl-maint' : '') + (info.adminOnly ? ' gl-admin' : '');
     card.style.setProperty('--hue', cat.hue);
     card.innerHTML =
       '<span class="gl-glow"></span>' +
@@ -671,7 +682,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     card.addEventListener('mouseenter', function(){ card.style.setProperty('--h', '1'); });
     card.addEventListener('mouseleave', function(){ card.style.setProperty('--h', '0'); });
     card.addEventListener('click', function(e){
-      if (e.target.closest('a') || card.classList.contains('gl-maint') || getGameAccessBlock()) return;
+      if (e.target.closest('a') || card.classList.contains('gl-maint') || (card.classList.contains('gl-admin') && !isAdminUser()) || getGameAccessBlock()) return;
       window.location.href = g.href;
     });
     return card;

@@ -73,6 +73,8 @@
     window.StationNet = {
         connect: connect, patchClock: patchClock, wsUrl: wsUrl,
         hostSession: function (v) { if (arguments.length) writeJSON('station-host', v); else return readJSON('station-host'); },
-        me: function (v) { if (arguments.length) writeJSON('station-me', v); else return readJSON('station-me'); }
+        me: function (v) { if (arguments.length) writeJSON('station-me', v); else return readJSON('station-me'); },
+        // توكن حساب الموقع (auth/auth-client.js) — الخادم يسمح بإنشاء الروم للأدمن فقط بمرحلة الاختبار
+        authToken: function () { try { return window.AGPAuth && window.AGPAuth.getToken ? window.AGPAuth.getToken() : null; } catch (e) { return null; } }
     };
 })();
