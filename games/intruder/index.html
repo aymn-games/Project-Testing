@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>الدخيل — ألعاب أيمن</title>
+<title>محطة سهيل — ألعاب أيمن</title>
 <script src="../../js/agp-dc-raw-guard.js"></script>
 <script src="../../auth/auth-client.js"></script>
 <script src="station-net.js"></script>
@@ -60,7 +60,7 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
       <img src="../../logo.png" alt="" onLoad="{{ logoOk }}" onError="{{ logoErr }}" style="position:absolute;inset:0;margin:auto;height:60px;max-width:none;object-fit:contain;opacity:{{ logoOp }};filter:drop-shadow(0 0 14px rgba(139,92,246,.45))">
     </div>
     <div style="display:flex;justify-content:flex-end">
-      <span style="font:800 clamp(16px,1.15vw,22px) 'Zain';color:#ddd6fe;white-space:nowrap">🛰️ الدخيل</span>
+      <span style="font:800 clamp(16px,1.15vw,22px) 'Zain';color:#ddd6fe;white-space:nowrap">🛰️ محطة سهيل</span>
     </div>
   </header>
 
@@ -370,7 +370,7 @@ class Component extends DCLogic {
       fx:this.buildFx(), scale:S.scale, stageW:Math.round((S.dW||1920)*S.scale), dW:S.dW||1920, stageH:Math.round(1000*S.scale),
       lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(),
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
-      qr:S.qr, qrOp:S.qr?1:0, codeChars:(S.code||'----').split(''), joinHost:location.host+' · الدخيل', joinUrl:S.code?this.joinUrl():'#',
+      qr:S.qr, qrOp:S.qr?1:0, codeChars:(S.code||'----').split(''), joinHost:location.host+' · محطة سهيل', joinUrl:S.code?this.joinUrl():'#',
       wardOpen:S.ward, openWard:()=>this.setState({ward:true}), closeWard:()=>this.setState({ward:false}), hostSkin:S.hostSkin, hostC:COLORS.find(x=>!S.players.map(p=>p.c).includes(x))||'#f4f2f8', setHostSkin:v=>{ this.setState({hostSkin:v}); localStorage.setItem('station-host-skin',JSON.stringify(v)); this.net&&this.net.send({t:'skin',skin:v}); },
       code:S.code, pvOn:!!this.pv, roomRef2:this.roomRef2, pvRotate:!!(this.pv&&S.rotate),
       pvFull:()=>{ try{ const d=document.documentElement; (d.requestFullscreen?d.requestFullscreen():Promise.reject()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{}); }catch(e){} },

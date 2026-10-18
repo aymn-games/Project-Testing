@@ -1,5 +1,5 @@
 /**
- * «الدخيل» — اتصال الشاشات بخادم اللعبة (backend/station/station-server.js).
+ * «محطة سهيل» — اتصال الشاشات بخادم اللعبة (backend/station/station-server.js).
  *
  * يحل محل BroadcastChannel + localStorage('station-room') بالنموذج. كل شاشة
  * تفتح اتصال WebSocket واحد عبر StationNet.connect، وعند كل (إعادة) اتصال
