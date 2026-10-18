@@ -32,9 +32,9 @@ var SKIN_KEYS = ['hat', 'acc', 'top', 'pants', 'back'];
 var HOST_GRACE_MS = 30 * 60 * 1000;  // روم بدون مذيع متصل أكثر من كذا ← ينقفل
 var TICK_MS = 50, PLAY_SEND_MS = 100, IDLE_SEND_MS = 1000;
 var MAX_MSG = 16 * 1024;
-// مرحلة اختبار: إنشاء الروم (شاشة المذيع) لحساب الأدمن فقط. الجوالات تدخل بدون حساب.
-// عند الإطلاق للكل: ADMIN_ONLY = false (مع إزالة adminOnly من بطاقة games.html).
-var ADMIN_ONLY = true;
+// ADMIN_ONLY = true يقصر إنشاء الروم (شاشة المذيع) على حساب الأدمن (استُخدم بمرحلة الاختبار،
+// مع adminOnly ببطاقة games.html). اللعبة الآن مفتوحة للكل كنسخة تجريبية. الجوالات تدخل دائماً بدون حساب.
+var ADMIN_ONLY = false;
 var _isAdmin = function (token) {
     var u = require('../auth/auth-service').validateSession(String(token || ''));
     return !!(u && u.role === 'admin');
