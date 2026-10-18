@@ -625,10 +625,10 @@ input:focus,select:focus{outline:none;border-color:rgba(167,139,250,.5)}
         </div>
         <div style="position:relative;flex-shrink:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:12px">
           <sc-for list="{{ podium }}" as="p" hint-placeholder-count="3">
-            <div style="height:{{ p.h }}px;box-sizing:border-box;padding:14px 10px;border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;background:{{ p.bg }};border:1.5px solid {{ p.c }}">
+            <div style="min-height:{{ p.h }}px;box-sizing:border-box;padding:14px 10px;border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;background:{{ p.bg }};border:1.5px solid {{ p.c }}">
               <span style="font:400 30px/1 'Zain'">{{ p.medal }}</span>
-              <span style="position:relative;width:{{ p.avS }}px;height:{{ p.avS }}px;border-radius:50%;display:grid;place-items:center;font:800 24px 'Zain';color:#fff;background:{{ p.av }};box-shadow:0 0 0 3px {{ p.c }}">{{ p.ini }}<img src="{{ p.img }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
-              <span style="max-width:100%;font:800 19px 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+              <span style="position:relative;flex-shrink:0;width:{{ p.avS }}px;height:{{ p.avS }}px;border-radius:50%;display:grid;place-items:center;font:800 24px 'Zain';color:#fff;background:{{ p.av }};box-shadow:0 0 0 3px {{ p.c }}">{{ p.ini }}<img src="{{ p.img }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
+              <span style="flex-shrink:0;max-width:100%;font:800 19px/1.3 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
               <span style="font:900 28px/1 'Zain';color:{{ p.c }};font-variant-numeric:tabular-nums">{{ p.pts }}</span>
               <span style="font:700 12px 'Zain';color:#8a8596">#{{ p.id }} {{ p.icons }}</span>
             </div>
@@ -695,12 +695,46 @@ input:focus,select:focus{outline:none;border-color:rgba(167,139,250,.5)}
           </div>
         </sc-if>
       </div>
+      <sc-if value="{{ tabPl }}" hint-placeholder-val="{{ false }}">
+        <div style="flex-shrink:0;padding:16px 22px 22px;border-top:1px solid rgba(255,255,255,.07)">
+          <button onClick="{{ openJoin }}" style="width:100%;height:54px;border-radius:999px;cursor:pointer;border:1px solid rgba(167,139,250,.45);background:rgba(139,92,246,.12);color:#ddd6fe;font:800 19px 'Zain'" style-hover="background:rgba(139,92,246,.22)">➕ إدخال لاعب جديد</button>
+        </div>
+      </sc-if>
       <sc-if value="{{ tabCfg }}" hint-placeholder-val="{{ true }}">
         <div style="flex-shrink:0;padding:16px 22px 22px;border-top:1px solid rgba(255,255,255,.07)">
           <button onClick="{{ saveSet }}" style="width:100%;height:54px;border-radius:999px;border:none;cursor:pointer;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:800 19px 'Zain';box-shadow:0 10px 30px rgba(139,92,246,.35)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.98)">💾 حفظ وتطبيق</button>
         </div>
       </sc-if>
     </aside>
+  </sc-if>
+  <sc-if value="{{ joinOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeJoin }}" style="position:fixed;inset:0;z-index:96;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);display:grid;place-items:center;animation:{{ joinOv }}">
+      <div onClick="{{ stop }}" style="width:min(500px, calc(100vw - 16px));height:min(700px, calc(100dvh - 16px));box-sizing:border-box;background:rgba(12,11,18,.4);backdrop-filter:blur(22px);border:2px solid rgba(167,139,250,.7);border-radius:28px;box-shadow:0 0 0 6px rgba(139,92,246,.12), 0 0 60px rgba(139,92,246,.3), 0 40px 120px rgba(0,0,0,.6);display:flex;flex-direction:column;overflow:hidden;animation:{{ joinAn }}">
+        <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:26px 28px 20px">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="align-self:flex-start;display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;border:1px solid rgba(167,139,250,.35);background:rgba(139,92,246,.1);font:700 14px 'Zain';color:#c4b5fd"><span style="width:6px;height:6px;border-radius:50%;background:#a78bfa"></span>لاعبين جدد</span>
+            <span style="font:900 27px/1.3 'Zain'">دخول لاعبين جدد لم يسبق لهم الدخول</span>
+            <span style="font:400 17px/1.6 'Zain';color:#cfcad9">اكتب كلمة الدخول بشات البث</span>
+          </div>
+          <button onClick="{{ closeJoin }}" aria-label="إغلاق" style="flex-shrink:0;width:44px;height:44px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#e7e3ef;cursor:pointer;display:grid;place-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
+        </div>
+        <div style="flex-shrink:0;padding:0 28px 20px;border-bottom:1px solid rgba(167,139,250,.25)"><div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 12px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)"><span style="font:700 14px 'Zain';color:#a8a3b5">كلمة الدخول</span><span style="font:900 28px 'Zain';color:#c4b5fd">{{ keyword }}</span></div></div>
+        <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:18px 28px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;justify-content:space-between"><span style="font:700 16px 'Zain';color:#cfcad9">اللاعبون المنضمون</span><span style="font:800 16px 'Zain';color:#a78bfa">{{ joinCount }}</span></div>
+          <sc-if value="{{ noJoiners }}" hint-placeholder-val="{{ true }}"><div style="flex:1;min-height:120px;display:grid;place-items:center;border-radius:20px;border:1.5px dashed rgba(167,139,250,.3);color:#8a8596;font:400 17px 'Zain'">بانتظار انضمام اللاعبين…</div></sc-if>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <sc-for list="{{ joiners }}" as="j" hint-placeholder-count="0">
+              <div style="height:54px;padding:0 6px 0 8px;border-radius:999px;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);animation:popIn .35s ease">
+                <span style="width:40px;height:40px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;font:800 17px 'Zain';color:#fff;background:{{ j.av }};border:1.5px solid #a78bfa;box-sizing:border-box">{{ j.ini }}<sc-if value="{{ j.img }}" hint-placeholder-val="{{ false }}"><img src="{{ j.img }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
+                <span style="flex:1;min-width:0;font:700 14px 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ j.name }} <span style="color:#a78bfa">#{{ j.id }}</span></span>
+                <button onClick="{{ j.remove }}" aria-label="إقصاء {{ j.name }}" style="width:30px;height:30px;flex-shrink:0;border:none;background:transparent;padding:0;cursor:pointer;display:grid;place-items:center;opacity:.75;transition:opacity .2s, transform .2s" style-hover="opacity:1;transform:scale(1.15)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="flex-shrink:0;padding:18px 28px 26px"><button onClick="{{ closeJoin }}" style="width:100%;height:58px;border:none;border-radius:999px;cursor:pointer;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:800 20px 'Zain';box-shadow:0 8px 26px rgba(139,92,246,.4)" style-hover="filter:brightness(1.1)">إكمال المباراة</button></div>
+      </div>
+    </div>
   </sc-if>
   <sc-if value="{{ exitOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeExit }}" style="position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;animation:{{ exitOv }}">
@@ -780,7 +814,7 @@ class Component extends DCLogic {
     this.state = { players:roster.map((n,i)=>({id:i+1,name:n,pts:start,cards:{},ku:{},frozen:false,kSkip:false,ban:false,dbl:false,neg:false})),
       phase:'pick', round:0, since:0, played:[], out:[], win:null, anim:false, current:null, chosen:null, colorMap:[], res:null,
       sold:{}, shopLeft:0, notice:null, an:null, coup:null, zoot:null, myPts:[], rankOpen:false, exitOpen:false,
-      over:false, pts:null, scale:1, ovScale:1, narrow:innerWidth<820, logo:false, lbOpen:true, sideOpen:true, dW:1920, cfg:{every:this.setup.every, shop:this.setup.shop, sound:true}, draft:null, setOpen:false, setTab:0, setSaved:false };
+      over:false, pts:null, joinOpen:false, joiners:[], ever:roster.slice(), scale:1, ovScale:1, narrow:innerWidth<820, logo:false, lbOpen:true, sideOpen:true, dW:1920, cfg:{every:this.setup.every, shop:this.setup.shop, sound:true}, draft:null, setOpen:false, setTab:0, setSaved:false };
   }
   componentDidMount(){ this.fit=()=>{ let sc=(innerHeight-80)/1000, dw=innerWidth/sc; if(dw<1920){ sc=Math.min(innerWidth/1920,sc); dw=1920; } dw=Math.min(dw,2800); this.setState({narrow:innerWidth<820,scale:sc,dW:Math.round(dw),ovScale:Math.min(innerWidth/1400,innerHeight/940,1)}); }; this.fit(); addEventListener('resize',this.fit); this.matchStartedAt=Date.now();
     // الشات من البث المتصل بمكتبة الألعاب (adapters/agp-tiktok-adapter.js)
@@ -1018,7 +1052,14 @@ class Component extends DCLogic {
   }
 
   onChat(name,text){
-    const S=this.state, p=S.players.find(x=>x.name===name); if(!p||S.over) return;
+    const S=this.state, p=S.players.find(x=>x.name===name); if(S.over) return;
+    // نافذة «إدخال لاعب جديد»: كلمة الدخول تضيف لاعب ما سبق له الدخول بهالمباراة — رقمه = أكبر رقم + 1
+    if(S.joinOpen&&!p&&this.setup.keyword&&LC.norm(text)===LC.norm(this.setup.keyword)){
+      if(S.ever.includes(name)) return;
+      this.setState(st=>{ if(st.ever.includes(name)) return null; const id=Math.max(0,...st.players.map(x=>x.id))+1;
+        return {players:[...st.players,{id,name,pts:this.setup.startPoints,cards:{},ku:{},frozen:false,kSkip:false,ban:false,dbl:false,neg:false}],ever:[...st.ever,name],joiners:[...st.joiners,id]}; });
+      this.tone(880,.12,'triangle'); return; }
+    if(!p) return;
     const t=norm(text), w=t.split(' ');
     if(t==='نقاطي'){ const key=Math.random(); this.setState(s=>({myPts:[...s.myPts.slice(-2),{key,id:p.id}]})); this.tone(660,.1,'triangle',.05); return this.after(3000,()=>this.setState(s=>({myPts:s.myPts.filter(m=>m.key!==key)}))); }
     if(S.zoot){ if(S.zoot.id===p.id&&(t==='1'||t==='2')) this.zootPick(+t); return; }
@@ -1071,6 +1112,13 @@ class Component extends DCLogic {
     const overCard=ws.length===1&&w?LC.winCard(this.reg.player(w.name),['الفائز',ptsTxt||`${w.pts} نقطة`,'حظ و لون'],'wc',220):null;
     return {overCard, overMsg:ws.length>1?'🤝 تعادل: '+ws.map(p=>p.name).join('، ')+' · '+w.pts+' نقطة':w?'👑 الفائز: '+w.name+' · '+w.pts+' نقطة'+(ptsTxt?' · '+ptsTxt+' بالمنصة':''):'',
       again:()=>{ location.href='lobby.html'; }}; }
+  joinVals(){ const S=this.state, o=(k,i,out)=>S[k+'Out']?out:i;
+    return { joinOpen:S.joinOpen, openJoin:()=>{ this.shut('setOpen'); setTimeout(()=>this.setState({joinOpen:true,joiners:[]}),260); }, closeJoin:()=>this.shut('joinOpen'),
+      keyword:this.setup.keyword, joinCount:S.joiners.length, noJoiners:!S.joiners.length,
+      // حذف لاعب انضم الحين — ما يُحذف لو عليه الدور
+      joiners:S.joiners.map(id=>this.P(id)).filter(Boolean).map(p=>{ const v=this.view(p); return {id:p.id,name:p.name,ini:v.ini,av:v.av,img:v.img||null,
+        remove:()=>this.setState(st=>st.current===p.id?null:{joiners:st.joiners.filter(x=>x!==p.id),players:st.players.filter(x=>x.id!==p.id),played:st.played.filter(x=>x!==p.id),out:st.out.filter(x=>x!==p.id)})}; }),
+      joinOv:o('joinOpen','fade .25s ease','fadeOut .26s ease forwards'), joinAn:o('joinOpen','popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards') }; }
   renderVals(){
     const S=this.state, E=this.every(), o=(k,i,out)=>S[k+'Out']?out:i;
     const ranked=[...S.players].sort((a,b)=>b.pts-a.pts||a.id-b.id).map((p,i)=>{ const top=i<3;
@@ -1115,12 +1163,12 @@ class Component extends DCLogic {
       fx:this.buildFx(), scale:S.scale, stageW:Math.round(S.dW*S.scale), dW:S.dW, lbOpen:S.lbOpen, lbRot:S.lbOpen?0:-90, toggleLb:()=>this.setState(s=>({lbOpen:!s.lbOpen})), sideOpen:S.sideOpen, sideClosed:!S.sideOpen, sideCols:S.sideOpen?'420px':'64px', sideGap:S.sideOpen?28:18, toggleSide:()=>this.setState(s=>({sideOpen:!s.sideOpen})), stageH:Math.round(1000*S.scale),
       ovScale:S.ovScale, ovW:Math.round(1400*S.ovScale), ovH:Math.round(940*S.ovScale),
       lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(),
-      ...this.setVals(), logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
+      ...this.setVals(), ...this.joinVals(), logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
       top5:ranked.slice(0,5), ranked, shopWhen, total:S.players.length, leader:ranked[0]||{},
       restTop:ranked.slice(1,5).map((r,i)=>({...r,accent:['#cbd5e1','#fb923c','#a78bfa','#a78bfa'][i],bar:Math.round(r.pts/Math.max(1,ranked[0].pts)*100)})),
       ringDeg:inShop?360:Math.round(S.since/E*360), ringC:inShop?'#fbbf24':'#a855f7', ringGlow:inShop?'rgba(251,191,36,.35)':'rgba(168,85,247,.2)',
       shopLeftN:inShop?'🛒':left, shopLeftU:inShop?'الآن':(left<=1||left>10)?'جولة':left===2?'جولتين':'جولات',
-      podium:[1,0,2].map(i=>ranked[i]).filter(Boolean).map(r=>{ const k=r.rank-1; return {...r,medal:['👑','🥈','🥉'][k],c:['#fbbf24','#cbd5e1','#fb923c'][k],h:[210,180,165][k],avS:[64,54,50][k],bg:['linear-gradient(180deg, rgba(251,191,36,.22), rgba(251,191,36,.04))','linear-gradient(180deg, rgba(203,213,225,.16), rgba(203,213,225,.03))','linear-gradient(180deg, rgba(251,146,60,.16), rgba(251,146,60,.03))'][k]}; }),
+      podium:[1,0,2].map(i=>ranked[i]).filter(Boolean).map(r=>{ const k=r.rank-1; return {...r,medal:['👑','🥈','🥉'][k],c:['#fbbf24','#cbd5e1','#fb923c'][k],h:[250,222,206][k],avS:[64,54,50][k],bg:['linear-gradient(180deg, rgba(251,191,36,.22), rgba(251,191,36,.04))','linear-gradient(180deg, rgba(203,213,225,.16), rgba(203,213,225,.03))','linear-gradient(180deg, rgba(251,146,60,.16), rgba(251,146,60,.03))'][k]}; }),
       rankRest:ranked.slice(3).map(r=>({...r,bar:Math.round(r.pts/Math.max(1,ranked[0].pts)*100)})),
       pips:Array.from({length:E},(_,i)=>({bg:inShop?'linear-gradient(90deg, #fbbf24, #f59e0b)':i<S.since?'linear-gradient(90deg, #7c3aed, #a855f7)':'rgba(255,255,255,.08)'})),
       myPts:S.myPts.map(m=>({...this.view(this.P(m.id))})),
