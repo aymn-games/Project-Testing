@@ -70,6 +70,10 @@ module.exports = {
     // إيميل الأدمن لإشعارات تذاكر الدعم الجديدة/ردود المستخدمين. فارغ = لا إشعار.
     supportAdminEmail: process.env.SUPPORT_ADMIN_EMAIL || '',
 
+    // رابط خادم «بلياردو ٨» (مستودع ونطاق منفصل) — زر «دخول غرفة» يسأله
+    // هل الروم موجود (rooms/room-lookup-service.js). فارغ = الفحص معطّل.
+    billiardsApiBaseUrl: process.env.BILLIARDS_API_BASE_URL || '',
+
     // قيم مبدئية فقط، لا منطق تطبيق فعلي بعد (راجع utils/rate-limiter.js).
     rateLimits: {
         maxMessagesPerSecondPerConnection: 20
