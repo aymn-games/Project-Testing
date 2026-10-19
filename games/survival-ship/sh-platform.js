@@ -167,13 +167,6 @@
         location.href = url;
     }
 
-    // مرحلة اختبار: اللعبة تفتح لحساب الأدمن فقط (نفس adminOnly ببطاقتها في games.html).
-    // غير الأدمن يرجع لمكتبة الألعاب مع رسالة «مرحلة اختبار». بدون جلسة أصلاً يتكفّل بها game-access-guard.js.
-    (function adminOnly() {
-        var auth = window.AGPAuth, u = auth && auth.getCachedUser ? auth.getCachedUser() : null;
-        if (u && u.role !== 'admin') go(new URL('../../games.html?locked=testing', location.href).href);
-    }());
-
     window.SHIP = {
         libraryUrl: 'https://aymngames.online/',
         keys: { setup: 'ship-settings', join: 'ship-join', roster: 'ship-roster', players: 'ship-players', guideHide: 'ship-guide-hide' },
