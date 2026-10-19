@@ -7,7 +7,7 @@
  *
  * الأصوات اللي كان المضيف يشغّلها داخل act (kill / fixed) تطلع هنا كأحداث
  * onSfx(k, ids) يرسلها الخادم للعملاء المعنيين.
- * view(G, id) تفلتر الحالة لكل لاعب: الطاقم ما يستلم هوية الدخلاء ولا
+ * view(G, id) تفلتر الحالة لكل لاعب: المواطن ما يستلم هوية الدخلاء ولا
  * القاتل ولا رمز الأكسجين ولا مواقع اللي داخل الفتحات ولا أصوات الآخرين.
  */
 'use strict';
@@ -110,7 +110,7 @@ function createGame(roster, settings, hooks, old) {
 
     function meeting(p, b) {
         var G = g.G, now = Date.now(), st = seats(G.players.length);
-        G.phase = 'meeting'; G.meeting = { by: p.id, body: b ? b.id : null, t0: now, stage: 'talk', end: now + 2600 + cfg().talk * 1000, votes: {}, chat: [], mic: {} };
+        G.phase = 'meeting'; G.meeting = { by: p.id, body: b ? b.id : null, bodyAt: b ? { x: b.x, y: b.y } : null, t0: now, stage: 'talk', end: now + 2600 + cfg().talk * 1000, votes: {}, chat: [], mic: {} };
         G.bodies = []; G.reactor = 0; G.o2 = 0; G.fixed = {}; G.rhold = {}; G.locks = {};
         G.players.forEach(function (q, i) { q.x = st[i].x; q.y = st[i].y; q.tp++; q.vent = false; });
     }
@@ -129,9 +129,9 @@ function createGame(roster, settings, hooks, old) {
         var G = g.G; if (G.phase === 'over') return;
         var crew = G.players.filter(function (p) { return !p.imp; }), ca = crew.filter(function (p) { return p.alive; }).length, ia = G.players.filter(function (p) { return p.imp && p.alive; }).length;
         var tt = taskTotals(G), C = cfg();
-        if (ia === 0) return win('crew', 'كل الدخلاء انكشفوا');
-        if (ia >= ca) return win('imp', 'الدخلاء صاروا بعدد الطاقم');
-        if (C.crewWinTasks && tt.tot && tt.dn >= tt.tot) return win('crew', 'الطاقم خلّص كل المهام');
+        if (ia === 0) return win('crew', 'كل الامبوسترز انكشفوا');
+        if (ia >= ca) return win('imp', 'الامبوسترز صاروا بعدد المواطنين');
+        if (C.crewWinTasks && tt.tot && tt.dn >= tt.tot) return win('crew', 'المواطنين خلّص كل المهام');
     }
 
     function win(team, reason) {
@@ -147,7 +147,7 @@ function createGame(roster, settings, hooks, old) {
             if (G.reactor && now > G.reactor) { if (cfg().impWinReactor) return win('imp', 'انفجر المفاعل'); G.reactor = 0; changed(); }
             if (G.o2 && now > G.o2) { if (cfg().impWinReactor) return win('imp', 'نفد الأكسجين'); G.o2 = 0; changed(); }
             if (G.reactor) { G.rhold = G.rhold || {}; var h = G.rhold; if (now - (h.r1 || 0) < 500 && now - (h.r2 || 0) < 500) { G.reactor = 0; G.rhold = {}; sfx('fixed'); changed(); } }
-            if (G.endAt && now > G.endAt) return win(cfg().timeoutWinner === 'الطاقم' ? 'crew' : 'imp', 'خلص وقت الجولة');
+            if (G.endAt && now > G.endAt) return win(cfg().timeoutWinner === 'المواطنين' ? 'crew' : 'imp', 'خلص وقت الجولة');
             Object.keys(G.locks).forEach(function (k) { if (G.locks[k] < now) { delete G.locks[k]; changed(); } });
         }
         if (G.phase === 'meeting') {
@@ -178,7 +178,8 @@ function createGame(roster, settings, hooks, old) {
     function view(id) {
         var G = g.G; if (!G) return null;
         var me = P(id), over = G.phase === 'over', seeImp = over || (me && me.imp), tt = taskTotals(G);
-        var out = Object.assign({}, G, { tt: tt });
+        // impN: عدد الامبوسترز (معلومة عامة تظهر بشاشة الدور) — بدونه المواطن يشوف 0 لأن هوياتهم مخفية
+        var out = Object.assign({}, G, { tt: tt, impN: G.players.filter(function (p) { return p.imp; }).length });
         out.players = G.players.map(function (p) {
             var self = p.id === String(id), q = { id: p.id, name: p.name, c: p.c, hat: p.hat, acc: p.acc, top: p.top, pants: p.pants, back: p.back, x: p.x, y: p.y, f: p.f, alive: p.alive, btn: p.btn, tp: p.tp, vent: p.vent, imp: self || seeImp ? p.imp : false, tasks: [], done: [] };
             if (self || over) { q.tasks = p.tasks; q.done = p.done; }

@@ -159,7 +159,7 @@ class Component extends DCLogic {
   setSkin(v){ this.setState({skin:v}); const S=this.state; if(S.step!=='wait') return; this.net.send({t:'skin',skin:v}); }
   renderVals(){ const S=this.state, myC=S.c||'#a855f7', SK=window.StationSkins, sk=S.skin||{}, th=(c,k,w)=>SK?SK.thumb(c,k,w):'';
     const r=S.r, T=window.StationSettings, C=r&&r.settings&&T?T.validate(r.settings):null;
-    return { hasCfg:!!C&&S.step==='wait', cfgRows:C?[['الدخلاء',String(C.impostors)],['المهام',(C.shortTasks+C.longTasks)+' · '+C.difficulty],['انتظار القتل',C.killCd+' ث'],['التصويت',C.voteSec+' ث'],['الطوارئ',String(C.emergencies)],['السرعة',C.speed+'×']].map(([n,v])=>({n,v})):[], myImg:th(myC,sk,110), myImgL:th(myC,sk,140), tabSkin:S.tab!=='color', tabColor:S.tab==='color',
+    return { hasCfg:!!C&&S.step==='wait', cfgRows:C?[['الامبوسترز',String(C.impostors)],['المهام',(C.shortTasks+C.longTasks)+' · '+C.difficulty],['انتظار القتل',C.killCd+' ث'],['التصويت',C.voteSec+' ث'],['الطوارئ',String(C.emergencies)],['السرعة',C.speed+'×']].map(([n,v])=>({n,v})):[], myImg:th(myC,sk,110), myImgL:th(myC,sk,140), tabSkin:S.tab!=='color', tabColor:S.tab==='color',
       sk, setSkin:v=>this.setSkin(v), wardOpen:S.ward&&S.step==='wait', openWard:()=>this.setState({ward:true}), closeWard:()=>this.setState({ward:false}),
       tabs:[['color','🎨 اللون'],['skin','👕 اللبس']].map(([k,n])=>({n,bg:S.tab===k?'rgba(139,92,246,.35)':'transparent',c:S.tab===k?'#fff':'#a8a3b5',press:()=>this.setState({tab:k})})),
       stepCode:S.step==='code', stepProfile:S.step==='profile', stepWait:S.step==='wait', hasRoom:S.step!=='code', room:S.room, err:S.err,

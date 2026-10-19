@@ -15,17 +15,17 @@
       {k:'ghostTasks',n:'الميت يكمّل مهامه',t:'bool',d:true}]},
     {id:'round',n:'الجولة',icon:'⏱️',f:[
       {k:'roundMin',n:'مدة الجولة',t:'num',min:0,max:20,step:1,d:0,u:'د',zero:'بدون حد'},
-      {k:'timeoutWinner',n:'عند انتهاء الوقت يفوز',t:'opt',o:['الدخلاء','الطاقم'],d:'الدخلاء'},
+      {k:'timeoutWinner',n:'عند انتهاء الوقت يفوز',t:'opt',o:['الامبوسترز','المواطنين'],d:'الامبوسترز'},
       {k:'talkSec',n:'مدة النقاش',t:'num',min:0,max:120,step:5,d:15,u:'ث'},
       {k:'voteSec',n:'مدة التصويت',t:'num',min:10,max:180,step:5,d:30,u:'ث'},
       {k:'resultSec',n:'مدة عرض النتيجة',t:'num',min:3,max:10,step:1,d:6,u:'ث'},
       {k:'emergencies',n:'اجتماعات الطوارئ لكل لاعب',t:'num',min:0,max:5,step:1,d:1},
       {k:'emergencyCd',n:'انتظار زر الطوارئ',t:'num',min:0,max:60,step:5,d:15,u:'ث'}]},
-    {id:'imp',n:'الدخيل',icon:'🔪',f:[
-      {k:'impostors',n:'عدد الدخلاء',t:'num',min:1,max:3,step:1,d:1},
+    {id:'imp',n:'الامبوستر',icon:'🔪',f:[
+      {k:'impostors',n:'عدد الامبوسترز',t:'num',min:1,max:3,step:1,d:1},
       {k:'killCd',n:'انتظار بين القتل',t:'num',min:10,max:60,step:2.5,d:25,u:'ث'},
       {k:'sabCd',n:'انتظار بين التخريب',t:'num',min:10,max:60,step:5,d:25,u:'ث'},
-      {k:'impVision',n:'رؤية الدخيل',t:'num',min:.5,max:3,step:.25,d:1.5,u:'×'},
+      {k:'impVision',n:'رؤية الامبوستر',t:'num',min:.5,max:3,step:.25,d:1.5,u:'×'},
       {k:'reactorSab',n:'تخريب المفاعل',t:'bool',d:true},
       {k:'o2Sab',n:'تخريب الأكسجين',t:'bool',d:true},
       {k:'lightsSab',n:'تخريب الكهرباء',t:'bool',d:true},
@@ -36,8 +36,8 @@
       {k:'vents',n:'الفتحات',t:'bool',d:true},
       {k:'reactorSec',n:'وقت إصلاح المفاعل',t:'num',min:20,max:90,step:5,d:45,u:'ث'},
       {k:'impWinReactor',n:'يفوز إذا انفجر المفاعل أو نفد الأكسجين',t:'bool',d:true}]},
-    {id:'crew',n:'الطاقم',icon:'🧑‍🚀',f:[
-      {k:'crewVision',n:'رؤية الطاقم',t:'num',min:.5,max:3,step:.25,d:1,u:'×'},
+    {id:'crew',n:'المواطنين',icon:'🧑‍🚀',f:[
+      {k:'crewVision',n:'رؤية المواطنين',t:'num',min:.5,max:3,step:.25,d:1,u:'×'},
       {k:'showNames',n:'أسماء اللاعبين فوق الشخصيات',t:'bool',d:true},
       {k:'crewWinTasks',n:'يفوز إذا خلّص كل المهام',t:'bool',d:true},
       {k:'ghostSeeAll',n:'الميت يشوف الماب كامل',t:'bool',d:true}]},
