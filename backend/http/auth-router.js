@@ -23,6 +23,7 @@ var supportService = require('../support/support-service');
 var codenamesSpySlots = require('../codenames/spy-slots-service');
 var storeRouter = require('./store-router');
 var tiktokLiveCheck = require('../platforms/tiktok/tiktok-live-check');
+var roomLookupService = require('../rooms/room-lookup-service');
 var logger = require('../utils/logger');
 var config = require('../config');
 var response = require('./response');
@@ -149,6 +150,8 @@ var ROUTES = [
   // ---- هل البث شغّال الحين؟ — مكتبة الألعاب والألعاب تقطع الاتصال المحفوظ
   // لما يرجع live:false (راجع backend/platforms/tiktok/tiktok-live-check.js).
   { method: 'GET', path: '/api/stream/is-live', requireAuth: true, handler: handleStreamIsLive },
+  // زر «دخول غرفة» بالهيدر: أي لعبة فيها روم بهذا الرقم؟ (بدون حساب — الجوالات تدخل بدون تسجيل)
+  { method: 'GET', path: '/api/rooms/lookup', requireAuth: false, handler: handleRoomLookup },
   // تفعيل/إيقاف الدخولية ذاتياً — نفس نمط handleEquipFrame (صاحب الجلسة فقط).
   { method: 'POST', path: '/api/entrance/toggle', requireAuth: true, handler: handleToggleEntrance },
   { method: 'POST', path: '/api/admin/elim-card', requireAuth: true, requireAdmin: true, handler: handleAdminSetElimCard },
@@ -710,6 +713,16 @@ function handleToggleWinCard(req, res, body, user) {
  * نفحص اليوزر الجديد ونرجعه بـusername مع renamed: true عشان الواجهة
  * تتصل عليه بدل القديم.
  */
+function handleRoomLookup(req, res) {
+  return roomLookupService.lookup(getQueryParam(req, 'code')).then(function (games) {
+    if (!games) {
+      sendJson(res, 400, { success: false, error: 'invalid_code' });
+      return;
+    }
+    sendJson(res, 200, { success: true, games: games });
+  });
+}
+
 function handleStreamIsLive(req, res, body, user) {
   var username = tiktokLiveCheck.normalize(getQueryParam(req, 'username'));
   if (!username) {
