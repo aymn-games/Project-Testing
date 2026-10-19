@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>من الأمبوستر؟</title>
+<link rel="icon" type="image/png" href="aymn-mark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="bg-fx" aria-hidden="true"></div>
+<canvas id="space-canvas" aria-hidden="true"></canvas>
+
+<!-- ===================== شاشة الدخول السينمائية (تغبيش + عنوان) =====================
+     تظهر لثوانٍ معدودة عند فتح التطبيق لأول مرة: تغبيش كامل للواجهة
+     خلفها عبر backdrop-filter، مع عنوان اللعبة يتلاشى للداخل ثم للخارج.
+     يُزال هذا العنصر تلقائيًا من DOM عبر script.js بعد انتهاء الحركة،
+     ولا يؤثر إطلاقًا على منطق اللعبة أو المزامنة. -->
+<div class="intro-splash" id="intro-splash" aria-hidden="true">
+  <h1 class="intro-title">من الأمبوستر؟</h1>
+</div>
+
+<!-- ===================== الترويسة العلوية =====================
+     الشعار (يمين) يعيد لمكتبة ألعاب الدسكورد والجمعات في منصة ألعاب أيمن، وفي اليسار: زر "قوانين اللعبة"
+     + شارة الحساب + شارة رمز الغرفة (تظهر فقط داخل غرفة). -->
+<header class="top-bar">
+  <a class="top-bar-logo" href="/discord-games.html" aria-label="مكتبة ألعاب الدسكورد والجمعات">
+    <img src="aymn-logo.png" alt="ألعاب أيمن">
+  </a>
+  <nav class="top-bar-nav">
+    <div class="room-code-chip hidden" id="global-room-chip">
+      <span class="chip-label">رمز الغرفة</span>
+      <span class="chip-value" id="global-room-chip-value">-----</span>
+    </div>
+    <button id="btn-rules" class="top-pill" type="button" aria-haspopup="dialog" aria-controls="rules-modal">قوانين اللعبة</button>
+    <div class="user-chip">
+      <span class="user-chip-avatar" aria-hidden="true">E</span>
+      <span class="user-chip-name">em70_q</span>
+    </div>
+  </nav>
+</header>
+
+<main id="app">
+
+  <!-- ===================== شاشة البداية: إنشاء / انضمام ===================== -->
+  <section class="screen screen-home-wide active" id="screen-home">
+    <div class="home-grid">
+
+      <section class="home-hero">
+        <span class="home-tag">لعبة الخداع الاجتماعي</span>
+        <h1 class="home-h1">من الأمبوستر؟</h1>
+        <p class="home-lead">من يخفي الحقيقة بينكم؟ أنشئ غرفة وشارك الرمز مع أصدقائك، أو انضم لغرفة قائمة.</p>
+
+        <div class="setup-banner hidden" id="setup-banner">
+          <strong>⚠️ وضع تجريبي محلي</strong>
+          <span>لم يتم ربط Firebase بعد، لذا لن يتمكن أصدقاؤك من الانضمام من أجهزتهم. افتح التفاصيل أدناه لإعداد ذلك خلال دقائق.</span>
+        </div>
+
+        <details class="setup-guide home-howto" id="setup-guide">
+          <summary><span>كيف ألعب مع أصدقائي من أجهزة مختلفة؟</span><span class="home-howto-arrow" aria-hidden="true">←</span></summary>
+          <div class="setup-guide-body">
+          <p><strong>الخطوة 1 — أنشئ قاعدة بيانات مجانية (Firebase):</strong></p>
+          <ol>
+            <li>ادخل إلى <span class="code-inline">console.firebase.google.com</span> وسجّل الدخول بحساب Google.</li>
+            <li>أنشئ مشروعًا جديدًا (Add project) بأي اسم.</li>
+            <li>من القائمة الجانبية اختر <span class="code-inline">Build → Realtime Database</span> ثم اضغط Create database (اختر أقرب موقع خادم).</li>
+            <li>عند اختيار قواعد الأمان، اختر Start in <span class="code-inline">test mode</span> مؤقتًا للتجربة.</li>
+            <li>اذهب إلى ⚙️ Project settings → لسان "General" → قسم "Your apps" → اضغط أيقونة الويب (&lt;/&gt;) لتسجيل تطبيق ويب جديد.</li>
+            <li>انسخ كائن <span class="code-inline">firebaseConfig</span> الذي يظهر لك.</li>
+            <li>افتح ملف <span class="code-inline">script.js</span> والصق قيمك مكان الحقول <span class="code-inline">"YOUR_..."</span> في أعلى الملف بالضبط.</li>
+          </ol>
+          <p><strong>الخطوة 2 — انشر الملفات حتى يفتحها الجميع (وليس فقط جهازك):</strong></p>
+          <p>فتح الملف مباشرة (<span class="code-inline">file://</span>) يعمل فقط على جهازك، حتى مع Firebase. اختر أحد الحلول التالية:</p>
+          <ul>
+            <li>ارفع مجلد المشروع مجانًا على <span class="code-inline">Netlify Drop</span> أو <span class="code-inline">GitHub Pages</span> واحصل على رابط تشاركه مع الجميع.</li>
+            <li>أو شغّل خادمًا محليًا على جهازك (مثل <span class="code-inline">python -m http.server</span>) وشارك رابط شبكتك المحلية (<span class="code-inline">http://[عنوان-IP-الخاص-بك]:8000</span>) مع من هم على نفس شبكة الواي فاي.</li>
+          </ul>
+          <p class="setup-note">بعد ضبط Firebase بشكل صحيح، ستختفي هذه الرسالة تلقائيًا وسيعمل الانضمام من أي جهاز وأي مكان.</p>
+        </div>
+        </details>
+      </section>
+
+      <section class="home-card-new">
+        <label class="home-field">
+          <span class="home-field-label">اسمك</span>
+          <input id="home-name" class="home-input" type="text" maxlength="16" placeholder="اكتب اسمك هنا" autocomplete="nickname">
+        </label>
+        <p class="error-msg home-error" id="home-error" role="alert"></p>
+
+        <div class="home-tiles">
+          <div class="home-tile">
+            <span class="home-tile-cap">غرفة جديدة</span>
+            <div class="home-tile-text">ابدأ غرفة وادعُ أصدقاءك برمزها</div>
+            <button type="button" id="btn-create-room" class="hb hb-primary">إنشاء غرفة</button>
+          </div>
+          <div class="home-tile">
+            <label class="home-tile-cap" for="join-code">رمز الغرفة</label>
+            <input id="join-code" class="home-input home-code-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="12345" autocomplete="off">
+            <button type="button" id="btn-join-room" class="hb hb-outline">الانضمام لغرفة</button>
+          </div>
+        </div>
+
+        <div class="home-or" role="separator"><span>أو</span></div>
+
+        <div class="home-tiles">
+          <div class="home-secondary">
+            <button type="button" id="btn-share-player" class="hb hb-yellow hb-tall">شارك كلاعب</button>
+            <span class="home-help" id="share-hint">اختصار سريع: يُنشئ غرفة جديدة إن تُرك رمز الغرفة فارغًا، أو ينضم مباشرة إن كُتب رمز غرفة قائمة</span>
+          </div>
+          <div class="home-secondary">
+            <button type="button" id="btn-broadcast-view" class="hb hb-ghost hb-tall">شاشة عرض للبث</button>
+            <span class="home-help">للمتابعة كمشاهد فقط (بدون تصويت أو لعب) – يتطلب رمز غرفة قائمة</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ===================== شاشة الانتظار (اللوبي) ===================== -->
+  <section class="screen screen-wide" id="screen-lobby">
+    <div class="wr">
+
+      <div class="wr-title-row">
+        <div class="wr-title">
+          <span class="wr-eyebrow">غرفة الانتظار</span>
+          <h1 class="wr-h1">ادعُ أصدقاءك للغرفة</h1>
+        </div>
+        <div class="wr-chips">
+          <span class="wr-chip" id="wr-chip-rounds">5 جولات</span>
+          <span class="wr-chip" id="wr-chip-hints">3 تلميحات لكل لاعب</span>
+          <span class="wr-chip" id="wr-chip-time">15 ثانية للتلميح</span>
+        </div>
+      </div>
+
+      <div class="wr-grid">
+        <section class="wr-card wr-room-card">
+          <div class="wr-code-wrap">
+            <span class="wr-code-label">رقم الغرفة</span>
+            <span class="wr-code" id="lobby-room-code">-----</span>
+          </div>
+          <!-- رمز QR: رابط انضمام مباشر (?room=CODE) يملأ رمز الغرفة تلقائيًا -->
+          <div class="wr-qr" id="qr-box">
+            <div id="qr-canvas"></div>
+          </div>
+          <span class="wr-qr-caption">امسح الباركود بكاميرا الجوال للدخول مباشرة إلى الغرفة</span>
+          <div class="wr-copy-row">
+            <button type="button" class="wr-btn-ghost" id="btn-copy-code">نسخ الرقم</button>
+            <button type="button" class="wr-btn-ghost" id="btn-copy-link">نسخ الرابط</button>
+          </div>
+        </section>
+
+        <section class="wr-card wr-players-card">
+          <div class="wr-players-head">
+            <h2 class="wr-h2">اللاعبون</h2>
+            <span class="wr-count" id="lobby-player-count">0</span>
+          </div>
+          <ul class="wr-players" id="lobby-player-list"></ul>
+        </section>
+      </div>
+
+      <div class="wr-actions">
+        <button type="button" class="wr-btn-back hidden" id="btn-back-settings">→ رجوع للإعدادات</button>
+        <div class="wr-start-wrap">
+          <button type="button" id="btn-start-game" class="wr-btn-start hidden">الدخول وبدء المباراة</button>
+          <span class="wr-start-hint" id="lobby-hint">بانتظار المضيف لبدء اللعبة...</span>
+        </div>
+      </div>
+      <p class="error-msg" id="lobby-error"></p>
+    </div>
+  </section>
+
+  <!-- ===================== شاشة المباراة =====================
+       كل المراحل (التلميحات، المراجعة، التصويت، الكشف، النقاط، النتيجة
+       النهائية) تُعرض هنا حسب حالة الغرفة في Firebase. -->
+  <section class="screen screen-game" id="screen-game">
+    <div class="gm" id="gm">
+
+      <div class="gm-bar">
+        <span class="chip chip-teal" id="gm-round">الجولة 1 من 5</span>
+        <span class="chip chip-yellow" id="gm-phase">التلميح 1 من 3</span>
+        <div class="gm-bar-spacer"></div>
+        <button type="button" class="pill-exit" id="btn-exit" aria-haspopup="dialog">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></svg>
+          <span>خروج</span>
+        </button>
+        <button type="button" class="pill-word" id="btn-word" title="اضغط للإظهار / الإخفاء" aria-pressed="false">
+          <span class="pill-word-label">كلمتك:</span>
+          <span class="pill-word-value" id="gm-word">—</span>
+        </button>
+        <button type="button" class="btn-icon" id="btn-mute" aria-label="كتم الصوت" title="كتم الصوت">
+          <svg class="ic-sound-on" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5z"></path><path d="M15.5 8.5a5 5 0 0 1 0 7"></path><path d="M18.5 5.5a9 9 0 0 1 0 13"></path></svg>
+          <svg class="ic-sound-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5z"></path><path d="m22 9-6 6"></path><path d="m16 9 6 6"></path></svg>
+        </button>
+      </div>
+
+      <!-- ===== مرحلة التلميحات ===== -->
+      <div class="gv" id="gv-hints">
+        <div class="order-strip" id="order-strip"></div>
+        <div class="hints-grid">
+          <section class="turn-panel" id="turn-panel">
+            <div class="turn-glow" aria-hidden="true"></div>
+            <span class="turn-eyebrow" id="turn-eyebrow">استعدوا…</span>
+            <div class="turn-ring">
+              <svg viewBox="0 0 120 120" aria-hidden="true">
+                <circle cx="60" cy="60" r="54" class="ring-bg"></circle>
+                <circle cx="60" cy="60" r="54" class="ring-fg" id="ring-fg"></circle>
+              </svg>
+              <div class="turn-avatar" id="turn-avatar"></div>
+              <div class="turn-secs" id="turn-secs">—</div>
+            </div>
+            <div class="turn-text">
+              <h2 class="turn-title" id="turn-title">التلميحات تبدأ</h2>
+              <p class="turn-sub" id="turn-sub"></p>
+            </div>
+            <div class="turn-input hidden" id="turn-input">
+              <input id="hint-input" type="text" maxlength="30" placeholder="اكتب تلميحك هنا" autocomplete="off" aria-label="تلميحك">
+              <button type="button" id="btn-send-hint" disabled>إرسال</button>
+            </div>
+          </section>
+
+          <section class="card feed-card">
+            <div class="card-head">
+              <h2 class="h2-sm">التلميحات</h2>
+              <span class="count-pill" id="feed-count">0</span>
+            </div>
+            <div class="feed-empty" id="feed-empty">ستظهر تلميحات اللاعبين هنا فور إرسالها</div>
+            <ul class="feed hide-scroll" id="feed"></ul>
+          </section>
+        </div>
+      </div>
+
+      <!-- ===== مراجعة التلميحات ===== -->
+      <section class="gv gv-anim" id="gv-review">
+        <div class="gv-head">
+          <div class="gv-title">
+            <span class="eyebrow eyebrow-lg">انتهت جولات التلميحات</span>
+            <h2 class="h2-lg">تلميحات اللاعبين</h2>
+          </div>
+          <div class="seg-tabs hide-scroll" role="tablist" id="review-tabs"></div>
+        </div>
+        <div class="review-grid" id="review-grid"></div>
+        <div class="gv-cta">
+          <button type="button" class="btn-cta btn-cta-y" id="btn-go-vote">روح للتصويت</button>
+        </div>
+      </section>
+
+      <!-- ===== التصويت ===== -->
+      <section class="gv gv-anim" id="gv-vote">
+        <div class="gv-head">
+          <div class="gv-title">
+            <span class="eyebrow eyebrow-lg c-yellow">التصويت</span>
+            <h2 class="h2-lg">من الأمبوستر برأيك؟</h2>
+            <p class="gv-sub">اختر لاعبًا واحدًا ثم اضغط «تصويت»</p>
+          </div>
+          <div class="vote-progress">
+            <div class="vote-progress-row"><span class="c-text3">صوّت</span><span class="fw7" id="vote-progress-text">0 من 0</span></div>
+            <div class="bar"><div class="bar-fill bar-y" id="vote-progress-bar"></div></div>
+          </div>
+        </div>
+        <div class="vote-grid" role="radiogroup" aria-label="اختر الأمبوستر" id="vote-grid"></div>
+        <div class="gv-cta gv-cta-col">
+          <button type="button" class="btn-cta" id="btn-cast-vote" disabled>تصويت</button>
+          <span class="cta-hint" id="vote-hint">لا يمكنك التصويت على نفسك</span>
+        </div>
+      </section>
+
+      <!-- ===== نتيجة التصويت + تخمين الأمبوستر ===== -->
+      <section class="gv gv-anim" id="gv-reveal">
+        <div class="reveal-grid">
+          <div class="card">
+            <div class="card-head card-head-wrap">
+              <h2 class="h2-sm">نتيجة التصويت</h2>
+              <span class="verdict-pill" id="verdict-pill"></span>
+            </div>
+            <ul class="tally hide-scroll" id="tally"></ul>
+          </div>
+          <div class="card guess-card" id="guess-card">
+            <span class="eyebrow eyebrow-lg c-yellow">تخمين الأمبوستر</span>
+            <h2 class="h2-md" id="guess-title"></h2>
+            <p class="guess-sub" id="guess-sub"></p>
+            <div class="guess-form hidden" id="guess-form">
+              <input id="guess-input" type="text" maxlength="30" placeholder="اكتب الكلمة هنا" autocomplete="off" aria-label="تخمينك">
+              <button type="button" id="btn-guess" disabled>تأكيد التخمين</button>
+            </div>
+            <div class="dots hidden" id="guess-wait" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="guess-done hidden" id="guess-done">
+              <div class="guess-word" id="guess-word"></div>
+              <span class="guess-verdict" id="guess-verdict"></span>
+              <span class="guess-line" id="guess-line"></span>
+              <button type="button" class="btn-p btn-lg" id="btn-show-score">عرض النقاط</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== لوحة النقاط ===== -->
+      <section class="gv gv-anim gv-narrow" id="gv-score">
+        <div class="gv-title">
+          <span class="eyebrow eyebrow-lg" id="score-eyebrow">نقاط الجولة 1 من 5</span>
+          <h2 class="h2-lg">لوحة النقاط</h2>
+          <p class="gv-sub hidden" id="score-note"></p>
+        </div>
+        <ol class="score-list" id="score-list"></ol>
+        <div class="gv-actions" id="score-actions">
+          <button type="button" class="btn-g btn-lg" id="btn-score-room">رجوع للغرفة</button>
+          <button type="button" class="btn-p btn-lg btn-grow" id="btn-next-round">الجولة التالية</button>
+        </div>
+        <span class="cta-hint hidden" id="score-wait">بانتظار المضيف لمتابعة المباراة…</span>
+      </section>
+
+      <!-- ===== النتيجة النهائية ===== -->
+      <section class="gv gv-final" id="gv-final">
+        <div class="final-title">
+          <span class="eyebrow eyebrow-lg c-yellow">انتهت المباراة</span>
+          <h2 class="final-h" id="final-title"></h2>
+          <span class="final-line" id="final-line"></span>
+        </div>
+        <div class="podium" id="podium"></div>
+        <ol class="final-rest" id="final-rest"></ol>
+        <div class="final-actions" id="final-actions">
+          <button type="button" class="btn-g btn-lg" id="btn-final-room">رجوع للغرفة</button>
+          <button type="button" class="btn-p btn-lg btn-grow" id="btn-new-match">مباراة جديدة</button>
+        </div>
+        <span class="cta-hint hidden" id="final-wait">بانتظار المضيف لبدء مباراة جديدة…</span>
+      </section>
+
+    </div>
+  </section>
+
+  <!-- ===================== شاشة عرض للبث (وضع المشاهد فقط) ===================== -->
+  <section class="screen" id="screen-spectator">
+    <div class="spectator-dashboard">
+
+      <div class="spec-panel spec-players" id="spec-players-panel">
+        <h3 class="spec-panel-title">👥 اللاعبون</h3>
+        <div class="spec-players-grid" id="spec-players-grid"></div>
+      </div>
+
+      <div class="spec-panel spec-hints" id="spec-hints-panel">
+        <h3 class="spec-panel-title">💡 شات التلميحات</h3>
+        <ul class="spec-hints-log" id="spec-hints-log"></ul>
+      </div>
+
+      <div class="spec-panel spec-voting" id="spec-voting-panel">
+        <h3 class="spec-panel-title">🗳️ التصويت</h3>
+        <ul class="spec-vote-list" id="spec-vote-list"></ul>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<!-- ===================== مقدمة المباراة (عدّ تنازلي) ===================== -->
+<div class="ov ov-intro hidden" id="ov-intro" aria-live="polite">
+  <img src="aymn-mark.png" alt="" class="intro-mark" id="intro-mark">
+  <div class="intro-text" id="intro-text">
+    <span class="intro-eyebrow">المباراة تبدأ</span>
+    <span class="intro-round" id="intro-round">الجولة 1 من 5</span>
+  </div>
+  <div class="intro-count" id="intro-count"></div>
+</div>
+
+<!-- ===================== بطاقة الدور ===================== -->
+<div class="ov ov-card hidden" id="ov-card">
+  <div class="card-stage">
+    <span class="card-caption">لا تُظهر شاشتك لأحد</span>
+    <div class="role-card-outer" id="role-card-outer">
+      <div class="role-card" id="role-card">
+        <div class="role-face role-back">
+          <div class="role-back-border" aria-hidden="true"></div>
+          <img src="aymn-mark.png" alt="" class="role-back-mark">
+          <span class="role-back-name">ألعاب أيمن</span>
+        </div>
+        <div class="role-face role-front" id="role-front">
+          <div class="role-shimmer" aria-hidden="true"></div>
+          <span class="role-cap">دورك في هذه الجولة</span>
+          <span class="role-label" id="role-label">مواطن</span>
+          <div class="role-divider"></div>
+          <div class="role-word-wrap">
+            <span class="role-cap">كلمتك</span>
+            <span class="role-word" id="role-word">—</span>
+          </div>
+          <p class="role-desc" id="role-desc"></p>
+          <div class="bar role-bar"><div class="bar-fill" id="role-bar"></div></div>
+          <span class="role-secs" id="role-secs"></span>
+        </div>
+      </div>
+    </div>
+    <div class="card-actions">
+      <button type="button" class="pill-reroll hidden" id="btn-reroll">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg>
+        <span>كلمة جديدة</span>
+      </button>
+      <span class="reroll-note hidden" id="reroll-note"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== كشف الأمبوستر ===================== -->
+<div class="ov ov-reveal hidden" id="ov-reveal" aria-live="polite">
+  <div class="rv-suspense" id="rv-suspense">
+    <span class="rv-cap">انتهى التصويت</span>
+    <span class="rv-pulse">الأمبوستر هو…</span>
+  </div>
+  <div class="rv-name hidden" id="rv-name">
+    <div class="rv-avatar" id="rv-avatar"></div>
+    <span class="badge-imp badge-imp-lg">الأمبوستر</span>
+    <span class="rv-imp-name" id="rv-imp-name"></span>
+    <span class="rv-verdict" id="rv-verdict"></span>
+  </div>
+</div>
+
+<!-- قصاصات الاحتفال في النتيجة النهائية -->
+<div class="confetti hidden" id="confetti" aria-hidden="true"></div>
+
+<!-- ===================== نافذة الخروج / إيقاف المباراة ===================== -->
+<div class="ov-modal ov-modal-top hidden" id="exit-modal">
+  <div class="dlg dlg-exit" role="dialog" aria-modal="true" aria-labelledby="exit-title">
+    <div class="exit-head">
+      <h2 id="exit-title" class="exit-h">إيقاف المباراة؟</h2>
+      <p class="exit-sub" id="exit-sub">اختر ما تريد فعله. هذا الإجراء يطبّق على جميع اللاعبين في الغرفة.</p>
+    </div>
+    <div class="exit-actions">
+      <button type="button" class="btn-p btn-lg" data-close>متابعة اللعب</button>
+      <button type="button" class="btn-g btn-lg host-only" id="btn-exit-room">رجوع لغرفة الانتظار</button>
+      <button type="button" class="btn-danger btn-lg host-only" id="btn-exit-end">إنهاء المباراة وعرض النتيجة</button>
+      <button type="button" class="btn-danger btn-lg guest-only" id="btn-exit-leave">مغادرة المباراة</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== نافذة قوانين اللعبة ===================== -->
+<div class="ov-modal hidden" id="rules-modal">
+  <div class="dlg dlg-rules" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+    <div class="dlg-head">
+      <div class="dlg-head-text">
+        <span class="eyebrow">من الأمبوستر؟</span>
+        <h2 id="rules-title" class="dlg-h2">قوانين اللعبة</h2>
+      </div>
+      <button type="button" class="dlg-close" data-close aria-label="إغلاق">×</button>
+    </div>
+
+    <div class="rules-chips">
+      <div class="chip chip-teal">وقت محدد لكل تلميح</div>
+      <div class="chip chip-teal"><span class="chip-num">2–3</span> جولات تلميحات</div>
+      <div class="chip chip-yellow">تصويت ثم تخمين الكلمة</div>
+    </div>
+
+    <ol class="rules-list">
+      <li><span class="rule-n">1</span><p>كل لاعب يحصل على كلمة سرية واحدة، باستثناء <strong class="c-yellow">الأمبوستر</strong> الذي يحصل على كلمة مختلفة جذريًا.</p></li>
+      <li><span class="rule-n">2</span><p>بالتناوب، يعطي كل لاعب تلميحًا قصيرًا (كلمة أو عبارة) يتعلق بكلمته دون كشفها مباشرة — أمامه <strong class="c-teal">الوقت المحدد لكتابة التلميح</strong> (15 أو 20 أو 25 ثانية حسب إعداد الغرفة) لكل دور.</p></li>
+      <li><span class="rule-n">3</span><p>إن انتهى الوقت دون إرسال تلميح، يُسجَّل دوره كـ<strong class="c-white">"تخطّى"</strong> تلقائيًا وينتقل الدور للاعب التالي.</p></li>
+      <li><span class="rule-n">4</span><p>تتكرر جولات التلميحات <strong class="c-teal">مرتين أو 3 مرات</strong> لكل اللاعبين حسب إعداد الغرفة، ثم تبدأ مرحلة التصويت.</p></li>
+      <li><span class="rule-n rule-n-y">5</span><p>في التصويت يختار كل لاعب من يظن أنه الأمبوستر؛ صاحب أعلى الأصوات يُكشف.</p></li>
+      <li class="rule-y"><span class="rule-n rule-n-y">6</span><p><strong class="c-teal">الأبرياء</strong> : كل لاعب صوّت على الأمبوستر الصحيح يأخذ <strong class="c-teal">نقطة</strong>، ومن صوّت خطأ يأخذ صفرًا. و<strong class="c-yellow">الأمبوستر</strong> يأخذ <strong class="c-yellow">نصف نقطة</strong> عن كل لاعب لم يصوّت عليه.</p></li>
+      <li class="rule-y"><span class="rule-n rule-n-y">7</span>
+        <div class="rule-body">
+          <p>بعد انتهاء التصويت وكشف <strong class="c-yellow">الأمبوستر</strong>، يظهر له مربع نص ليخمّن الكلمة التي حصل عليها باقي اللاعبين.</p>
+          <div class="rule-cards">
+            <div class="rule-card rule-card-y"><strong>خمّنها صح:</strong> يكسب الأمبوستر نقطتين إضافيتين</div>
+            <div class="rule-card rule-card-t"><strong>أخطأ:</strong> كل لاعب آخر يأخذ نقطة</div>
+          </div>
+        </div>
+      </li>
+      <li><span class="rule-n rule-n-w">8</span><p>تُلعب المباراة على عدد جولات يحدده منشئ الغرفة (<strong class="c-white">3 أو 5 أو 7</strong>)، والفائز صاحب أعلى مجموع نقاط.</p></li>
+    </ol>
+
+    <div class="dlg-foot">
+      <button type="button" class="btn-p btn-block" data-close>فهمت، لنبدأ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== نافذة كشف الأدوار (خاصة بالمشاهد فقط) ===================== -->
+<div class="modal-overlay hidden" id="spectator-results-modal" role="dialog" aria-modal="true" aria-labelledby="spectator-results-title">
+  <div class="modal-box">
+    <button class="modal-close" id="spectator-results-close" type="button" aria-label="إغلاق">✕</button>
+    <h2 id="spectator-results-title" class="modal-title">🎬 كشف الأدوار</h2>
+    <ul class="spec-reveal-list" id="spec-reveal-list"></ul>
+  </div>
+</div>
+
+<!-- ===================== نافذة إعدادات الغرفة =====================
+     تُفتح عند "إنشاء غرفة" (قبل إنشائها)، ومن زر "رجوع للإعدادات" في
+     غرفة الانتظار (للمضيف فقط) لتعديل إعدادات نفس الغرفة. -->
+<div class="rs-overlay hidden" id="room-settings-modal">
+  <div class="rs-panel" role="dialog" aria-modal="true" aria-labelledby="rs-title">
+    <div class="rs-head">
+      <div class="rs-head-text">
+        <span class="rs-eyebrow" id="rs-eyebrow">غرفة جديدة</span>
+        <h2 id="rs-title" class="rs-h2">إعدادات الغرفة</h2>
+      </div>
+      <button type="button" class="rs-close" id="rs-close" aria-label="إغلاق">×</button>
+    </div>
+
+    <div class="rs-body">
+      <div class="rs-field">
+        <div class="rs-field-text">
+          <span class="rs-label" id="rs-hint-rounds-label">عدد مرات كتابة التلميح</span>
+          <span class="rs-sub">كم مرة يكتب كل لاعب تلميحًا قبل التصويت</span>
+        </div>
+        <div class="rs-seg rs-seg-2" role="radiogroup" aria-labelledby="rs-hint-rounds-label" data-setting="hintRounds">
+          <button type="button" role="radio" data-value="2">مرتين</button>
+          <button type="button" role="radio" data-value="3">3 مرات</button>
+        </div>
+      </div>
+
+      <div class="rs-field">
+        <div class="rs-field-text">
+          <span class="rs-label" id="rs-hint-time-label">وقت كتابة التلميح</span>
+          <span class="rs-sub">المدة المتاحة لكل لاعب في دوره</span>
+        </div>
+        <div class="rs-seg rs-seg-3" role="radiogroup" aria-labelledby="rs-hint-time-label" data-setting="hintTime">
+          <button type="button" role="radio" data-value="15">15 ثانية</button>
+          <button type="button" role="radio" data-value="20">20 ثانية</button>
+          <button type="button" role="radio" data-value="25">25 ثانية</button>
+        </div>
+      </div>
+
+      <div class="rs-field">
+        <div class="rs-field-text">
+          <span class="rs-label" id="rs-game-rounds-label">عدد الجولات</span>
+          <span class="rs-sub">الفائز صاحب أعلى نقاط بعد آخر جولة</span>
+        </div>
+        <div class="rs-seg rs-seg-3" role="radiogroup" aria-labelledby="rs-game-rounds-label" data-setting="gameRounds">
+          <button type="button" role="radio" data-value="3">3 جولات</button>
+          <button type="button" role="radio" data-value="5">5 جولات</button>
+          <button type="button" role="radio" data-value="7">7 جولات</button>
+        </div>
+      </div>
+
+      <div class="rs-summary">
+        <span id="rs-summary">5 جولات · 3 تلميحات لكل لاعب · 15 ثانية للتلميح</span>
+        <span class="rs-bank" id="rs-bank"></span>
+      </div>
+    </div>
+
+    <div class="rs-foot">
+      <button type="button" class="rs-btn-ghost" id="rs-cancel">إلغاء</button>
+      <button type="button" class="rs-btn-primary" id="rs-confirm">إنشاء الغرفة</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- ===================== توقيع المطوّر ===================== -->
+<footer class="dev-credit">تم تطوير اللعبة من قِبل أيمن</footer>
+
+<!-- مكتبة QR (توليد الباركود على الجهاز) + بنك الكلمات، ثم منطق اللعبة.
+     Firebase يُستورد داخل script.js كوحدة ES (type="module"). -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="words.js"></script>
+<script type="module" src="script.js"></script>
+</body>
+</html>
