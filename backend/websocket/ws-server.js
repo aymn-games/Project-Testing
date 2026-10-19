@@ -230,7 +230,7 @@ function checkStreamConnectAllowed(payload) {
 // اسم اللعبة من مسار الصفحة (/games/<slug>/...) — للعرض بلوحة الأدمن فقط.
 var GAME_NAMES = {
   'bomb': 'القنبلة', 'codenames': 'كود نيمز', 'draw': 'شخبليطة', 'elimination-roulette': 'روليت الإقصاء',
-  'fastest-answer': 'أسرع إجابة', 'fruit-roulette': 'روليت الفواكه', 'khazna': 'الخزنة', 'letters-cell': 'خلية الحروف', 'luck-color': 'حظ و لون',
+  'fastest-answer': 'أسرع إجابة', 'fruit-roulette': 'روليت الفواكه', 'khazna': 'الخزنة', 'letters-cell': 'خلية الحروف', 'luck-color': 'حظ و لون', 'survival-ship': 'سفينة النجاة',
   'memory-challenge': 'تحدي الذاكرة', 'musical-chairs': 'الكراسي الموسيقية', 'photo-challenge': 'تحدي الصور',
   'russian-roulette': 'الروليت الروسي', 'snakes-ladders': 'السلم والثعبان', 'team-war': 'حرب الفريقين',
   'top-ten': 'خمّن العشرة', 'tribe-roulette': 'روليت القبائل', 'vocab': 'تحدي المفردات',
