@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../../js/agp-dc-raw-guard.js"></script>
+<title>سفينة النجاة — ألعاب أيمن</title>
+<script src="../../js/agp-core.js"></script>
+<script src="../../js/agp-events.js"></script>
+<script src="../../js/agp-timer-manager.js"></script>
+<script src="../../js/agp-storage-manager.js"></script>
+<script src="../../js/agp-services.js"></script>
+<script src="../../js/agp-stream-connector.js"></script>
+<script src="../../js/agp-keyword-manager.js"></script>
+<script src="../../js/agp-queue-manager.js"></script>
+<script src="../../adapters/agp-tiktok-adapter.js"></script>
+<script src="../../auth/auth-client.js"></script>
+<script src="../../auth/game-access-guard.js"></script>
+<script src="../../js/agp-live-watch.js"></script>
+<script src="sh-platform.js"></script>
+<script src="./support.js"></script>
+    <script src="../../js/agp-apple-emoji.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;height:100%;background:#070b24;overflow:hidden}
+a{color:#7dd3fc}a:hover{color:#bae6fd}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes fadeOut{from{opacity:1}to{opacity:0}}
+@keyframes popIn{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:none}}
+@keyframes popOut{from{opacity:1;transform:none}to{opacity:0;transform:scale(.9)}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes chipIn{0%{opacity:0;transform:scale(.6)}70%{transform:scale(1.08)}100%{opacity:1;transform:none}}
+@keyframes kwGlow{0%,100%{box-shadow:0 0 0 0 rgba(125,211,252,.0), 0 14px 40px rgba(2,4,20,.45)}50%{box-shadow:0 0 0 8px rgba(125,211,252,.12), 0 14px 40px rgba(2,4,20,.45)}}
+@keyframes dotP{0%,100%{opacity:1}50%{opacity:.35}}
+</style>
+</helmet>
+<div dir="rtl" style="position:fixed;inset:0;overflow:hidden;background:#070b24;font-family:'Zain',sans-serif;color:#f4f2f8">
+  <header style="position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:clamp(10px,1.2vw,24px);padding:0 clamp(12px,1.25vw,24px);box-sizing:border-box;background:rgba(10,9,15,.72);border-bottom:1px solid rgba(255,255,255,.07);backdrop-filter:blur(16px)">
+    <div style="display:flex;justify-content:flex-start">
+      <button onClick="{{ onExit }}" style="height:clamp(34px,2.4vw,44px);padding:0 clamp(12px,1vw,18px);border-radius:999px;display:flex;align-items:center;gap:8px;font:700 clamp(14px,0.95vw,18px) 'Zain';white-space:nowrap;cursor:pointer;transition:all .2s;border:1px solid rgba(248,113,113,.25);background:rgba(255,255,255,.03);color:#fca5a5" style-hover="background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.45)" style-active="transform:scale(.97)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span style="display:{{ lblDisp }}">خروج</span></button>
+    </div>
+    <div style="height:60px;min-width:clamp(96px,14vw,280px);position:relative;display:grid;place-items:center;border-radius:14px;border:1px dashed rgba(167,139,250,{{ phBorder }})">
+      <span style="font:400 clamp(11px,0.75vw,14px) 'Zain';color:#8a8596;opacity:{{ phOp }}">مكان اللوقو · logo.png</span>
+      <img src="../../logo.png" alt="" onLoad="{{ logoOk }}" onError="{{ logoErr }}" style="position:absolute;inset:0;margin:auto;height:60px;max-width:none;object-fit:contain;opacity:{{ logoOp }};filter:drop-shadow(0 0 14px rgba(139,92,246,.45))">
+    </div>
+    <div style="display:flex;justify-content:flex-end">
+      <span style="font:800 clamp(16px,1.3vw,24px) 'Zain';color:#ddd6fe;white-space:nowrap">🚢 سفينة النجاة</span>
+    </div>
+  </header>
+
+  <main data-screen-label="Lobby" style="position:fixed;top:80px;left:0;right:0;bottom:0;overflow:hidden;background:linear-gradient(180deg, #7fd3e6 0%, #9fe1ee 40%, #c9f0f4 100%)">
+    <div style="position:absolute;inset:0">
+      <x-import component-from-global-scope="ship-3d" from="./ship3d.js" scene="{{ sceneJson }}" style="position:absolute;inset:0" hint-size="100%,100%"></x-import>
+    </div>
+    <div style="position:absolute;top:0;left:0;width:{{ logW }}px;height:{{ logH }}px;transform:scale({{ scale }});transform-origin:top left;overflow:hidden">
+      <div onPointerDown="{{ dragStart }}" onPointerMove="{{ dragMove }}" onPointerUp="{{ dragEnd }}" onPointerLeave="{{ dragEnd }}" onWheel="{{ onWheel }}" style="position:absolute;inset:0;cursor:{{ cursor }};touch-action:none"></div>
+      <div style="position:absolute;inset:0;pointer-events:none;transform-origin:50% 60%;transform:translate({{ camX }}px, {{ camY }}px) scale({{ camZ }});transition:transform {{ camDur }} ease-out">
+      <div aria-hidden="true" style="display:none;position:absolute;left:-3000px;right:-3000px;top:{{ groundTop }}px;bottom:-1500px;pointer-events:none">
+        <div style="position:absolute;left:0;right:0;top:-150px;height:170px;background:linear-gradient(180deg, #8193b9, #9aaecb);clip-path:polygon(0 70%, 6% 42%, 12% 58%, 19% 22%, 27% 50%, 33% 30%, 41% 62%, 48% 18%, 56% 46%, 63% 28%, 70% 55%, 78% 14%, 86% 48%, 93% 30%, 100% 52%, 100% 100%, 0 100%);opacity:.9"></div>
+        <div style="position:absolute;left:0;right:0;top:-70px;height:100px;background:linear-gradient(180deg, #6c8a68, #567a4c);clip-path:polygon(0 60%, 10% 30%, 22% 52%, 35% 20%, 47% 46%, 60% 24%, 72% 50%, 84% 26%, 100% 44%, 100% 100%, 0 100%)"></div>
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg, #6f9c48 0%, #5a8a37 14%, #477a2c 40%, #366424 70%, #26491a 100%)"></div>
+        <div style="position:absolute;inset:0;background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22260%22 height=%22260%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%22.85%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3CfeColorMatrix values=%220 0 0 0 .12 0 0 0 0 .2 0 0 0 0 .05 0 0 0 1.4 -.3%22/%3E%3C/filter%3E%3Crect width=%22260%22 height=%22260%22 filter=%22url(%23n)%22/%3E%3C/svg%3E');background-size:260px 260px;mix-blend-mode:multiply;opacity:.75"></div>
+        <div style="position:absolute;left:0;right:0;top:-20px;height:50px;background:linear-gradient(180deg, rgba(190,205,225,.6), rgba(190,205,225,0))"></div>
+        <div style="position:absolute;left:8%;right:8%;top:70px;height:90px;border-radius:50%;background:radial-gradient(ellipse, rgba(255,240,200,.18), transparent 70%)"></div>
+      </div>
+
+      
+      </div>
+
+      <div style="position:absolute;z-index:80;top:30px;left:0;right:400px;display:flex;flex-direction:column;align-items:center;gap:16px;padding:0 40px;pointer-events:none">
+        <span style="font:900 64px/1.1 'Zain';color:#0c4a6e;text-shadow:0 6px 30px rgba(10,14,44,.3)">لوبي الدخول</span>
+        <div style="display:flex;align-items:center;gap:18px;height:86px;padding:0 30px 0 14px;border-radius:999px;background:rgba(10,14,44,.72);backdrop-filter:blur(14px);border:1.5px solid rgba(125,211,252,.45);animation:kwGlow 2.4s ease-in-out infinite">
+          <span style="width:60px;height:60px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(180deg, #38bdf8, #6366f1);font:400 30px/1 'Zain'">💬</span>
+          <span style="font:700 28px 'Zain';color:#c7d2fe">اكتب بالشات</span>
+          <span style="height:58px;padding:0 26px;border-radius:18px;display:flex;align-items:center;background:#fff;color:#1e1b4b;font:900 38px/1 'Zain';box-shadow:0 6px 18px rgba(0,0,0,.25)">{{ keyword }}</span>
+          <span style="font:700 28px 'Zain';color:#c7d2fe">وادخل اللعبة</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="height:40px;padding:0 18px;border-radius:999px;display:flex;align-items:center;gap:8px;background:rgba(10,14,44,.6);border:1px solid rgba(255,255,255,.14);font:800 19px 'Zain';color:#e0e7ff"><span style="width:9px;height:9px;border-radius:50%;background:#34d399;box-shadow:0 0 10px #34d399;animation:dotP 1.3s ease-in-out infinite"></span>{{ countTxt }}</span>
+          <sc-if value="{{ followers }}" hint-placeholder-val="{{ false }}">
+            <span style="height:40px;padding:0 16px;border-radius:999px;display:flex;align-items:center;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);font:700 17px 'Zain';color:#fde68a">⭐ المتابعون فقط</span>
+          </sc-if>
+        </div>
+        
+      </div>
+
+      <sc-if value="{{ empty }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;z-index:5;left:0;right:0;top:{{ emptyTop }}px;display:flex;justify-content:center">
+          <span style="height:60px;padding:0 30px;border-radius:999px;display:flex;align-items:center;gap:12px;background:rgba(10,14,44,.55);border:1px dashed rgba(255,255,255,.3);font:800 24px 'Zain';color:#e0e7ff;animation:dotP 2s ease-in-out infinite">🎈 بانتظار أول لاعب…</span>
+        </div>
+      </sc-if>
+
+      <aside style="position:absolute;z-index:85;top:30px;right:30px;bottom:30px;width:350px;border-radius:28px;background:rgba(10,14,44,.74);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 50px rgba(2,4,20,.45);display:flex;flex-direction:column;overflow:hidden">
+        <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.08)">
+          <span style="font:900 24px 'Zain';color:#fff">👥 اللاعبين</span>
+          <span style="min-width:44px;height:36px;padding:0 12px;box-sizing:border-box;border-radius:999px;display:grid;place-items:center;background:linear-gradient(90deg, #0ea5e9, #6366f1);font:900 19px 'Zain';color:#fff">{{ liveN }}</span>
+        </div>
+        <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:10px;display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ chips }}" as="h" hint-placeholder-count="0">
+            <div onClick="{{ h.focus }}" style="flex-shrink:0;height:54px;padding:0 8px 0 10px;border-radius:16px;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);cursor:pointer;animation:chipIn .35s ease both" style-hover="background:rgba(125,211,252,.1);border-color:rgba(125,211,252,.35)">
+              <span style="width:32px;height:32px;flex-shrink:0;border-radius:10px;display:grid;place-items:center;background:rgba(255,255,255,.07);font:900 16px 'Zain';color:#c7d2fe;font-variant-numeric:tabular-nums">{{ h.n }}</span>
+              <span style="width:12px;height:12px;flex-shrink:0;border-radius:50%;background:{{ h.dot }};box-shadow:0 0 8px {{ h.dot }}"></span>
+              <span style="flex:1;min-width:0;font:800 19px 'Zain';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ h.name }}</span>
+              <button onClick="{{ h.remove }}" aria-label="إخراج اللاعب" style="width:34px;height:34px;flex-shrink:0;border:none;border-radius:10px;cursor:pointer;background:rgba(255,255,255,.06);color:#fca5a5;font:700 18px/1 'Zain'" style-hover="background:rgba(248,113,113,.25);color:#fff">×</button>
+            </div>
+          </sc-for>
+          <sc-if value="{{ empty }}" hint-placeholder-val="{{ true }}">
+            <span style="padding:30px 10px;text-align:center;font:700 17px 'Zain';color:#8a90b5">أول ما يكتب أحد الكلمة بالشات يظهر اسمه هنا</span>
+          </sc-if>
+        </div>
+      </aside>
+      <div style="position:absolute;z-index:85;left:30px;bottom:30px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px;border-radius:24px;background:rgba(10,14,44,.72);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12)">
+        <span style="font:800 15px 'Zain';color:#a5b4fc">🎥 الكاميرا</span>
+        <div style="display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,52px);gap:6px">
+          <span></span>
+          <button onClick="{{ camUp }}" aria-label="فوق" style="border:none;border-radius:14px;cursor:pointer;background:rgba(255,255,255,.08);color:#fff;font:900 22px/1 'Zain'" style-hover="background:rgba(125,211,252,.25)">▲</button>
+          <button onClick="{{ zoomIn }}" aria-label="تقريب" style="border:none;border-radius:14px;cursor:pointer;background:rgba(255,255,255,.08);color:#fff;font:900 24px/1 'Zain'" style-hover="background:rgba(125,211,252,.25)">＋</button>
+          <button onClick="{{ camRight }}" aria-label="يمين" style="border:none;border-radius:14px;cursor:pointer;background:rgba(255,255,255,.08);color:#fff;font:900 22px/1 'Zain'" style-hover="background:rgba(125,211,252,.25)">▶</button>
+          <button onClick="{{ camReset }}" aria-label="إرجاع" style="border:none;border-radius:14px;cursor:pointer;background:linear-gradient(180deg, #38bdf8, #6366f1);color:#fff;font:900 22px/1 'Zain'" style-hover="filter:brightness(1.1)">⟲</button>
+          <button onClick="{{ camLeft }}" aria-label="يسار" style="border:none;border-radius:14px;cursor:pointer;background:rgba(255,255,255,.08);color:#fff;font:900 22px/1 'Zain'" style-hover="background:rgba(125,211,252,.25)">◀</button>
+          <span></span>
+          <button onClick="{{ camDown }}" aria-label="تحت" style="border:none;border-radius:14px;cursor:pointer;background:rgba(255,255,255,.08);color:#fff;font:900 22px/1 'Zain'" style-hover="background:rgba(125,211,252,.25)">▼</button>
+          <button onClick="{{ zoomOut }}" aria-label="تبعيد" style="border:none;border-radius:14px;cursor:pointer;background:rgba(255,255,255,.08);color:#fff;font:900 24px/1 'Zain'" style-hover="background:rgba(125,211,252,.25)">−</button>
+        </div>
+        <span style="font:500 13px 'Zain';color:#8a90b5">أو اسحب بالماوس</span>
+      </div>
+      <div style="position:absolute;z-index:90;left:0;right:400px;bottom:30px;display:flex;flex-direction:column;align-items:center;gap:12px;pointer-events:none">
+        <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+          <span role="alert" style="padding:10px 22px;border-radius:999px;background:rgba(10,14,44,.85);border:1px solid rgba(248,113,113,.5);color:#fca5a5;font:800 19px 'Zain';animation:rise .3s ease">{{ toast }}</span>
+        </sc-if>
+        <div style="display:flex;gap:14px;pointer-events:auto">
+          <button onClick="{{ start }}" style="height:70px;min-width:320px;padding:0 44px;border:none;border-radius:999px;cursor:pointer;background:linear-gradient(90deg, #0ea5e9, #6366f1, #8b5cf6);color:#fff;font:900 26px 'Zain';box-shadow:0 12px 34px rgba(99,102,241,.5);opacity:{{ startOp }}" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">▶ ابدأ المباراة</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <sc-if value="{{ exitOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeExit }}" style="position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;animation:{{ exitOv }}">
+      <div onClick="{{ stop }}" style="width:min(420px, calc(100vw - 16px));box-sizing:border-box;padding:clamp(18px,5vw,28px);border-radius:24px;background:rgba(12,11,18,.96);border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 90px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;animation:{{ exitAn }}">
+        <span style="width:60px;height:60px;border-radius:999px;display:grid;place-items:center;background:rgba(248,113,113,.1);color:#fca5a5"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></span>
+        <span style="font:700 22px 'Zain'">الخروج من اللوبي؟</span>
+        <span style="font:400 15px/1.6 'Zain';color:#a8a3b5">بترجع لمكتبة الألعاب وتنمسح قائمة اللاعبين</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:6px">
+          <button onClick="{{ closeExit }}" style="height:48px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;font:700 15px 'Zain';cursor:pointer" style-hover="background:rgba(255,255,255,.09)">إلغاء</button>
+          <button onClick="{{ confirmExit }}" style="height:48px;border-radius:999px;border:none;background:linear-gradient(90deg, #dc2626, #ef4444);color:#fff;font:700 15px 'Zain';cursor:pointer;box-shadow:0 8px 22px rgba(239,68,68,.3)" style-hover="filter:brightness(1.1)">خروج</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const LIBRARY_URL=SHIP.libraryUrl, GAME_URL='game.html';
+// إعدادات الدخول من شاشة الإعدادات (ship-join) — بدونها نرجع للإعدادات
+const JOIN=SHIP.readJSON(SHIP.keys.join,null);
+if(!JOIN||!SHIP.norm(JOIN.keyword)) location.replace('index.html');
+const COLORS=[['#38bdf8','#e0f7ff','#0369a1'],['#f472b6','#ffe4f1','#9d174d'],['#a78bfa','#f1ebff','#5b21b6'],['#34d399','#dcfce7','#047857'],['#fb923c','#ffedd5','#c2410c'],['#f87171','#fee2e2','#b91c1c'],['#2dd4bf','#ccfbf1','#0f766e'],['#818cf8','#e0e7ff','#3730a3']];
+const GOLD=['#fbbf24','#fff7d1','#b45309'];
+const LOOKS=[
+ {skin:'#f6cfa6',hair:'#3b2414',girl:0,hat:'cap',hatC:'#ef4444',outfit:'#3b82f6',pants:'#1e3a8a'},
+ {skin:'#f2c49b',hair:'#5b3a1e',girl:1,hat:'bow',hatC:'#ec4899',outfit:'#a855f7',pants:'#4c1d95'},
+ {skin:'#d9a273',hair:'#1f1410',girl:0,hat:'phones',hatC:'#22d3ee',outfit:'#10b981',pants:'#064e3b'},
+ {skin:'#f8d9bd',hair:'#7c4a1e',girl:1,hat:'beanie',hatC:'#f59e0b',outfit:'#f43f5e',pants:'#881337'},
+ {skin:'#c68a5c',hair:'#120c09',girl:0,hat:'beanie',hatC:'#6366f1',outfit:'#f97316',pants:'#7c2d12'},
+ {skin:'#f6cfa6',hair:'#2a1a10',girl:1,hat:'none',hatC:'#fff',outfit:'#14b8a6',pants:'#134e4a'},
+ {skin:'#e3ae80',hair:'#3b2414',girl:0,hat:'none',hatC:'#fff',outfit:'#8b5cf6',pants:'#312e81'},
+ {skin:'#f2c49b',hair:'#4a2c17',girl:1,hat:'phones',hatC:'#f472b6',outfit:'#0ea5e9',pants:'#0c4a6e'}];
+const SYS=[
+ {name:'الإقصاء الفوري',icon:'⚡',stages:['pop']},
+ {name:'النظام السريع',icon:'🔥',stages:['leak','pop']},
+ {name:'النظام الكلاسيكي',icon:'🎯',stages:['leak','drop','pop']},
+ {name:'تحدي النجاة',icon:'🛡️',stages:['leak','drop','sway','pop']}];
+const STG={ok:{label:'سليم',sc:1,rot:0,y:0},leak:{label:'تسريب',sc:.84,rot:0,y:0},drop:{label:'هبوط',sc:.72,rot:0,y:6},sway:{label:'ترنّح',sc:.66,rot:-18,y:6},pop:{label:'انفجار',sc:0,rot:0,y:0}};
+const BODY={ok:{bs:1,y:0},leak:{bs:.84,y:12},drop:{bs:.72,y:72},sway:{bs:.66,y:72}};
+const EXPR={
+ normal:{eyeH:15,eyeT:47,browD:'block',bL:-4,bR:4,browT:38,mw:18,mh:9,mr:'0 0 18px 18px',mbg:'transparent',mbb:'3px solid #9f3a2a',sweatD:'none'},
+ happy:{eyeH:8,eyeT:52,browD:'block',bL:-7,bR:7,browT:38,mw:26,mh:14,mr:'0 0 16px 16px',mbg:'linear-gradient(#7c2d12 0 60%,#fb7185 60%)',mbb:'none',sweatD:'none'},
+ tense:{eyeH:15,eyeT:47,browD:'block',bL:12,bR:-12,browT:38,mw:16,mh:4,mr:'3px',mbg:'#7c2d12',mbb:'none',sweatD:'block'},
+ scared:{eyeH:20,eyeT:44,browD:'block',bL:-16,bR:16,browT:35,mw:12,mh:14,mr:'50%',mbg:'#7c2d12',mbb:'none',sweatD:'block'},
+ sad1:{eyeH:18,eyeT:46,browD:'block',bL:-14,bR:14,browT:36,mw:18,mh:6,mr:'9px 9px 2px 2px',mbg:'#7c2d12',mbb:'none',sweatD:'none',glossD:'block',wetM:14,mAn:'none'},
+ sad2:{eyeH:21,eyeT:44,browD:'block',bL:-20,bR:20,browT:33,mw:16,mh:7,mr:'9px 9px 3px 3px',mbg:'#7c2d12',mbb:'none',sweatD:'none',glossD:'block',wetM:17,tearD:'block',mAn:'quiver .35s ease-in-out infinite'},
+ sad3:{eyeH:24,eyeT:42,browD:'block',bL:-26,bR:26,browT:30,mw:14,mh:8,mr:'8px 8px 4px 4px',mbg:'#7c2d12',mbb:'none',sweatD:'none',glossD:'block',wetM:20,tearD:'block',tear2D:'block',mAn:'quiver .22s ease-in-out infinite'},
+ shocked:{eyeH:22,eyeT:43,browD:'block',bL:-6,bR:6,browT:31,mw:17,mh:20,mr:'50%',mbg:'#7c2d12',mbb:'none',sweatD:'none'}};
+
+const bgOf=c=>`radial-gradient(circle at 34% 26%, ${c[1]} 0%, ${c[0]} 36%, ${c[2]} 100%)`;
+
+const PER_ROW=8, SPEED=320, GAPX=230, ROWY=95;
+class Component extends DCLogic {
+  reg=SHIP.createRegistry();
+  state={cam:{x:0,y:0,z:1},camDur:'.45s',chars:[],keyword:(JOIN&&JOIN.keyword)||'',followers:!!JOIN&&JOIN.who==='المتابعون فقط',scale:1,vw:innerWidth,vh:innerHeight-80,narrow:innerWidth<820,logo:false,exitOpen:false,toast:null};
+  componentDidMount(){
+    this.fit=()=>this.setState({narrow:innerWidth<820,vw:innerWidth,vh:innerHeight-80,scale:Math.min(innerWidth/1920,(innerHeight-80)/1000)},()=>this.relayout()); this.fit(); addEventListener('resize',this.fit);
+    // كل تعليق من الشات: الكلمة المفتاحية = انضمام (نفس تطبيع SHIP.norm) · المتابعين فقط لو محدد · المكرر يُتجاهل
+    window.lobbyChat=(u,t,isFollower=true)=>{ if(!SHIP.norm(this.state.keyword)||SHIP.norm(t)!==SHIP.norm(this.state.keyword)) return; if(this.state.followers&&!isFollower) return; this.join(u); };
+    // الشات من البث المتصل بمكتبة الألعاب
+    SHIP.connect(); this.unsub=SHIP.onComment(p=>window.lobbyChat(this.reg.nameFor(p),p.text,!!p.isFollower));
+    if(!SHIP.getSavedConnection()) this.toastMsg('غير متصل بالبث · ابدأ البث على حسابك المربوط ونتصل تلقائياً');
+    this.onEnded=()=>this.toastMsg('انتهى البث · نتصل تلقائياً أول ما تبدأ البث من جديد'); addEventListener('agp:stream-ended',this.onEnded);
+  }
+  componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('agp:stream-ended',this.onEnded); this.unsub?.(); (this.tm||[]).forEach(clearTimeout); clearTimeout(this.tt); delete window.lobbyChat; }
+  dims(){ const S=this.state, W=Math.ceil(S.vw/S.scale), H=Math.ceil(S.vh/S.scale); return {W,H,G:H-300}; }
+  slots(n){ const {W,G}=this.dims(), cx=(W-400)/2, out=[];
+    for(let i=0;i<n;i++){ const r=Math.floor(i/PER_ROW), inRow=Math.min(PER_ROW,n-r*PER_ROW), k=i%PER_ROW, k2=(Math.max(.55,1-r*.09)), sc=.72*k2, gap=GAPX*k2;
+      const x=Math.round(cx+(k-(inRow-1)/2)*gap-90*sc), y=Math.round(G+110-r*ROWY-450*sc);
+      out.push({x,y,z:40-r,k:+sc.toFixed(3)}); } return out; }
+  relayout(){ const now=Date.now(); this.setState(s=>{ const live=s.chars.filter(c=>!c.leaving), sl=this.slots(live.length); let li=0;
+      return {chars:s.chars.map(c=>{ if(c.leaving) return c; const t=sl[li++]; if(t.x===c.x&&t.y===c.y) return {...c,z:t.z,k:t.k}; const d=Math.hypot(t.x-c.x,t.y-c.y)/SPEED;
+        this.later(()=>this.forceUpdate(),d*1000+30); this.later(()=>this.forceUpdate(),d*1000+1700);
+        return {...c,x:t.x,y:t.y,z:t.z,k:t.k,dur:+d.toFixed(2),walkUntil:now+d*1000}; })}; }); }
+  later(f,ms){ (this.tm=this.tm||[]).push(setTimeout(f,ms)); }
+  join(name){ const S=this.state; name=String(name||'').trim(); if(!name||S.chars.some(c=>c.name===name&&!c.leaving)) return;
+    const {W}=this.dims(), id=(this.nid=(this.nid||0)+1);
+    this.setState(s=>({chars:[...s.chars,{id,name,look:LOOKS[(id-1)%LOOKS.length],col:COLORS[(id-1)%COLORS.length],x:W+80,y:this.dims().G+110-324,z:40,k:.72,dur:0,walkUntil:0}]}),()=>this.later(()=>this.relayout(),40)); }
+  remove(id){ const c=this.state.chars.find(x=>x.id===id); if(!c) return; const d=(c.x+300)/SPEED;
+    this.setState(s=>({chars:s.chars.map(x=>x.id===id?{...x,leaving:true,x:-300,dur:+d.toFixed(2),walkUntil:Date.now()+d*1000}:x)}),()=>this.relayout());
+    this.later(()=>this.setState(s=>({chars:s.chars.filter(x=>x.id!==id)})),d*1000+50); }
+  setCam(c,dur='.45s',keepFocus){ this.setState(s=>({focusName:keepFocus?s.focusName:null,camDur:dur,cam:{...s.cam,...c,z:Math.min(2.6,Math.max(.6,(c.z??s.cam.z)))}})); }
+  camVals(W,H){ const S=this.state, C=S.cam, step=220;
+    return { camX:Math.round(C.x), camY:Math.round(C.y), camZ:C.z.toFixed(3), camDur:S.camDur, cursor:this.drag?'grabbing':'grab',
+      skyFx:(((.5-C.x/(W*1.6))%1+1)%1).toFixed(3), skyFy:Math.min(.9,Math.max(.1,.5-C.y/(H*2))).toFixed(3),
+      camUp:()=>this.setCam({y:C.y+step}), camDown:()=>this.setCam({y:C.y-step}), camLeft:()=>this.setCam({x:C.x+step}), camRight:()=>this.setCam({x:C.x-step}),
+      zoomIn:()=>this.setCam({z:C.z*1.2}), zoomOut:()=>this.setCam({z:C.z/1.2}), camReset:()=>this.setCam({x:0,y:0,z:1},'.8s'),
+      dragStart:e=>{ this.drag={x:e.clientX,y:e.clientY,cx:C.x,cy:C.y}; e.currentTarget.setPointerCapture&&e.currentTarget.setPointerCapture(e.pointerId); this.setState({camDur:'0s'}); },
+      dragMove:e=>{ const d=this.drag; if(!d) return; const k=1/S.scale; this.setState(s=>({cam:{...s.cam,x:d.cx+(e.clientX-d.x)*k,y:d.cy+(e.clientY-d.y)*k}})); },
+      dragEnd:()=>{ if(this.drag){ this.drag=null; this.setState({camDur:'.45s'}); } },
+      onWheel:e=>this.setCam({z:C.z*(e.deltaY<0?1.1:1/1.1)},'.2s') }; }
+  toastMsg(t){ this.setState({toast:t}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toast:null}),2400); }
+  shut(k){ this.setState({[k+'Out']:true}); setTimeout(()=>this.setState({[k]:false,[k+'Out']:false}),260); }
+  pv(c,i){ const now=Date.now(), walking=c.walkUntil>now, waving=!walking&&now-c.walkUntil<1600&&c.walkUntil>0, L=c.look, col=c.col;
+    const E={glossD:'none',tearD:'none',tear2D:'none',wetM:0,mAn:'none',...EXPR[waving||walking?'happy':'normal']};
+    const sh3=(x,l=72,dk=62)=>`radial-gradient(circle at 34% 26%, color-mix(in oklab, ${x} ${l}%, white) 0%, ${x} 46%, color-mix(in oklab, ${x} ${dk}%, black) 100%)`;
+    const ph=(i%5)*.37;
+    const mv=walking?{armAn:'armIdle .8s ease-in-out infinite',arm2An:'arm2Tug .8s ease-in-out infinite',legLAn:'legA .5s ease-in-out infinite',legRAn:'legB .5s ease-in-out infinite',floatAn:'bob .5s ease-in-out infinite'}
+      :waving?{armAn:'armCheer 1.1s ease-out forwards',arm2An:'arm2Tug .5s ease-in-out 3',legLAn:'legKickA .45s ease-in-out 3',legRAn:'legKickB .45s ease-in-out 3',floatAn:'none'}
+      :{armAn:`armIdle 2.8s ease-in-out ${-ph}s infinite`,arm2An:'none',legLAn:`legA 2.4s ease-in-out ${-ph}s infinite`,legRAn:`legB 2.4s ease-in-out ${-ph}s infinite`,floatAn:`bob ${(3.2+(i%4)*.3).toFixed(1)}s ease-in-out ${(-i*.7).toFixed(1)}s infinite`};
+    return {name:c.name,nk:'1.35',k:1,skinG:sh3(L.skin,60,80),outfitG:sh3(L.outfit),hairG:sh3(L.hair,80,55),hatG:sh3(L.hatC),gold:false,ok:false,y:0,bs:1,bBg:bgOf(col),knot:col[2],shardC:col[0],shards:false,
+      balloonAn:'none',hitFx:false,okFx:false,popFx:false,fallAn:'none',fallD:0,swayAn:'none',jitAn:'none',leak:false,wrOp:0,haloD:'none',spotOp:0,headSh:'inset -6px -8px 0 rgba(0,0,0,.08)',
+      skin:L.skin,hair:L.hair,outfit:L.outfit,pants:L.pants,hatC:L.hatC,girlD:L.girl?'block':'none',capD:L.hat==='cap'?'block':'none',beanieD:L.hat==='beanie'?'block':'none',bowD:L.hat==='bow'?'block':'none',phonesD:L.hat==='phones'?'block':'none',
+      ...E,...mv,balD:'block',cardOp:1,dot:col[0],nBg:'rgba(10,14,44,.82)',nBd:'rgba(255,255,255,.18)',nSh:'0 6px 16px rgba(0,0,0,.3)',pips:[]}; }
+  renderVals(){ const S=this.state, {W,H,G}=this.dims(), live=S.chars.filter(c=>!c.leaving), o=(i,out)=>S.exitOpenOut?out:i;
+    return { scale:S.scale, logW:W, logH:H, groundTop:G, emptyTop:G+40, keyword:S.keyword, followers:S.followers,
+      chars:S.chars.map((c,i)=>({x:c.x,y:c.y,z:c.z,k:c.k||.72,dur:c.dur,p:this.pv(c,i)})),
+      ...this.camVals(W,H), liveN:live.length,
+      chips:live.map((c,i)=>({n:i+1,name:c.name,dot:c.col[0],remove:e=>{ e.stopPropagation(); this.remove(c.id); },focus:()=>{ this.setState(s=>({focusName:s.focusName===c.name?null:c.name})); return; const {W:w,H:h}=this.dims(); const z=1.6; this.setCam({x:((w-400)/2-(c.x+90*(c.k||.72)))*z*0+((w)/2-(c.x+90*(c.k||.72)))*z-(w/2-w/2), y:(h*.6-(c.y+220*(c.k||.72)))*z-(h*.6-h*.6)*z, z},'.8s'); }})), countTxt:live.length?`${live.length} ${live.length===1?'لاعب':live.length<=10?'لاعبين':'لاعب'} داخل اللوبي`:'ما فيه لاعبين للحين', empty:!live.length,
+      sceneJson:JSON.stringify({focus:live.some(c=>c.name===S.focusName)?S.focusName:null,yaw:+(S.cam.x*.004).toFixed(3),lift:+(S.cam.y*.03).toFixed(2),zoom:+S.cam.z.toFixed(3),players:live.map((c,i)=>{ const L=c.look||{}; return {id:c.name,name:c.name,skin:L.skin||'#f6cfa6',hair:L.hair||'#3b2414',girl:L.girl||0,outfit:L.outfit||'#3b82f6',pants:L.pants||'#1e3a8a',out:false,fall:false}; })}),
+      startOp:live.length>=2?1:.45, toast:S.toast,
+      start:()=>{ if(live.length<2) return this.toastMsg('لازم لاعبين اثنين على الأقل عشان تبدأ'); const list=live.map(c=>c.name), all=this.reg.all(); SHIP.writeJSON(SHIP.keys.roster,list); SHIP.writeJSON(SHIP.keys.players,Object.fromEntries(list.filter(n=>all[n]).map(n=>[n,all[n]]))); location.href=GAME_URL; },
+      lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(),
+      logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
+      exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'), confirmExit:()=>SHIP.go(LIBRARY_URL),
+      exitOv:o('fade .25s ease','fadeOut .26s ease forwards'), exitAn:o('popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards') };
+  }
+}
+</script>
+</body>
+</html>
