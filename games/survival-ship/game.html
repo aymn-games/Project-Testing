@@ -378,6 +378,12 @@ const GIFTS=[['🌹','وردة'],['💖','قلب'],['🍩','دونات'],['🎈'
 const TIMES=[10,15,20,25,30];
 const bgOf=c=>`radial-gradient(circle at 34% 26%, ${c[1]} 0%, ${c[0]} 36%, ${c[2]} 100%)`;
 const rand=a=>a[Math.floor(Math.random()*a.length)];
+// هل الإجابة تبدأ بحرف الجولة؟ بعد توحيد الهمزات (أ إ آ ٱ ← ا) والتاء المربوطة (ة ← ه) والألف المقصورة (ى ← ي)
+// وحذف التشكيل والتطويل والرموز. "ال" التعريف في أول الإجابة ما تُحسب (البرازيل تُقبل لحرف ب)، وتُقبل الإجابة لحرف ا أيضاً.
+const AR_LETTER=s=>String(s==null?'':s).normalize('NFKC').replace(/[\u064B-\u065F\u0670\u0640]/g,'').replace(/[^\p{L}\s]/gu,'').trim()
+  .replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه').replace(/[ىی]/g,'ي').replace(/ک/g,'ك');
+const startsWithLetter=(text,letter)=>{ const L=AR_LETTER(letter)[0], w=AR_LETTER(text); if(!L||!w) return false;
+  return w[0]===L||(w.startsWith('ال')&&w[2]===L); };
 
 class Component extends DCLogic {
   constructor(p){ super(p); this.reg=SHIP.createRegistry(PLAYERS); const st=this.cfg=this.loadCfg();
@@ -461,9 +467,11 @@ class Component extends DCLogic {
     clearInterval(this.iv);
     this.iv=setInterval(()=>{ const l=this.state.left-1; if(l<=0){ this.setState({left:0}); this.resolve('timeout'); } else { this.setState({left:l}); if(l<=5) this.sfx('tick'); } },1000);
   }
-  // كل تعليق من الشات: تُقبل فقط رسالة صاحب الدور أثناء السؤال، وأول رسالة توقف الوقت وتفتح تبويب الإجابة
+  // كل تعليق من الشات: تُقبل فقط رسالة صاحب الدور أثناء السؤال اللي تبدأ بحرف الجولة (باقي السوالف تنتجاهل)،
+  // وأول رسالة مطابقة توقف الوقت وتفتح تبويب الإجابة
   onChat(name,text){ const S=this.state, cur=S.players.find(p=>p.id===S.cur); text=String(text||'').trim();
     if(S.phase!=='ask'||!cur||cur.name!==name||!text||S.paused) return;
+    if(!startsWithLetter(text,S.q&&S.q.letter)) return;
     this.pushMsg({name,text,ans:true}); }
   // هدية من البث: هدية طوق النجاة المحددة بالإعدادات من لاعب باقي على السفينة = طوق نجاة (حد ringUses لكل لاعب)
   onGift(name,giftName,giftValue){ const C=this.cfg; if(!C.ring||!C.ringUses||this.state.phase==='over') return;
