@@ -99,7 +99,7 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
           <div style="display:flex;align-items:center;gap:16px">
             <div style="display:flex;flex-direction:column;gap:4px">
               <span style="font:900 46px/1.1 'Zain'">محطة سُهيل · غرفة الانتظار</span>
-              <span style="font:400 20px 'Zain';color:#a8a3b5">بين الطاقم يختبي دخيل… أنجزوا المهام واكشفوه قبل ما يخرّب المحطة</span>
+              <span style="font:400 20px 'Zain';color:#a8a3b5">بين المواطنين يختبي امبوستر… أنجزوا المهام واكشفوه قبل ما يخرّب المحطة</span>
             </div>
             <span style="margin-inline-start:auto;padding:10px 22px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);font:900 30px 'Zain';font-variant-numeric:tabular-nums">{{ count }} <span style="font:700 20px 'Zain';color:#8a8596">/ {{ max }}</span></span>
           </div>
@@ -111,7 +111,7 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
 
           <div style="display:flex;align-items:center;gap:16px">
             <div style="display:flex;align-items:center;gap:10px;padding:8px 10px 8px 18px;border-radius:999px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)">
-              <span style="font:700 18px 'Zain';color:#a8a3b5">عدد الدخلاء</span>
+              <span style="font:700 18px 'Zain';color:#a8a3b5">عدد الامبوسترز</span>
               <sc-for list="{{ impOpts }}" as="o" hint-placeholder-count="3">
                 <button onClick="{{ o.pick }}" style="width:48px;height:42px;border-radius:999px;cursor:pointer;font:900 20px 'Zain';border:1px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.c }}">{{ o.n }}</button>
               </sc-for>
@@ -351,7 +351,7 @@ class Component extends DCLogic {
     const D=S.draft||C, sec=T.SECTIONS.find(s=>s.id===S.tab)||T.SECTIONS[0], upd=(k,v)=>this.setState({draft:T.validate({...(this.state.draft||C),[k]:v},this.state.players.length+1)});
     const dirty=S.draft&&JSON.stringify(S.draft)!==JSON.stringify(C);
     const dep={timeoutWinner:D.roundMin>0,reactorSec:D.reactorSab,impWinReactor:D.reactorSab,emergencyCd:D.emergencies>0};
-    const notes={impostors:'دخيلين من 7 لاعبين، و3 من 13 لاعب',taskSpots:'عشوائية = المهام تتوزع على غرف مختلفة كل جولة',ghostTasks:'إذا مقفل، مهام الميت تنشال من المجموع',anonVotes:'إذا مقفل، تطلع ألوان المصوّتين جنب كل لاعب بعد التصويت',map:'الخريطة المتوفرة حالياً'};
+    const notes={impostors:'امبوسترين من 7 لاعبين، و3 من 13 لاعب',taskSpots:'عشوائية = المهام تتوزع على غرف مختلفة كل جولة',ghostTasks:'إذا مقفل، مهام الميت تنشال من المجموع',anonVotes:'إذا مقفل، تطلع ألوان المصوّتين جنب كل لاعب بعد التصويت',map:'الخريطة المتوفرة حالياً'};
     return {
       openSet:()=>this.setState({setOpen:true,draft:{...C}}), closeSet:()=>this.setState({setOpen:false,draft:null}),
       saveSet:()=>{ const settings=T.validate(this.state.draft||C,this.state.players.length+1); this.setState({settings,setOpen:false,draft:null}); this.save({settings}); this.say('✓ انحفظت الإعدادات'); },
@@ -363,10 +363,10 @@ class Component extends DCLogic {
           dec:()=>upd(f.k,v-f.step), inc:()=>upd(f.k,v+f.step), toggle:()=>upd(f.k,!v), boolBg:v?'#16a34a':'#475569', mark:v?'✓':'',
           opts:(f.o||[]).map(o=>({n:o,bg:o===v?'#14b8a6':'#2a3446',c:o===v?'#06080d':'#e2e8f0',press:()=>upd(f.k,o)}))}; }),
       sumOpen:S.sumOpen, closeSum:()=>this.setState({sumOpen:false}), sumEdit:()=>this.setState({sumOpen:false,setOpen:true,draft:{...C}}), sumGo:()=>this.launch(),
-      summary:[['👥','اللاعبين',(S.players.length+1)+' / '+C.maxPlayers],['🔪','الدخلاء',String(Math.min(C.impostors,T.impCap(S.players.length+1)))],['🏃','السرعة',T.fmt(T.FIELDS.speed,C.speed)],
+      summary:[['👥','اللاعبين',(S.players.length+1)+' / '+C.maxPlayers],['🔪','الامبوسترز',String(Math.min(C.impostors,T.impCap(S.players.length+1)))],['🏃','السرعة',T.fmt(T.FIELDS.speed,C.speed)],
         ['🛠️','المهام',C.shortTasks+' قصيرة · '+C.longTasks+' طويلة'],['📈','الصعوبة',C.difficulty],['⏱️','مدة الجولة',T.fmt(T.FIELDS.roundMin,C.roundMin)],
         ['💬','النقاش / التصويت',C.talkSec+' / '+C.voteSec+' ث'],['🚨','الطوارئ',C.emergencies+' لكل لاعب'],['🗡️','انتظار القتل',C.killCd+' ث'],
-        ['👁️','الرؤية','طاقم '+C.crewVision+'× · دخيل '+C.impVision+'×'],['💥','التخريب',[C.reactorSab&&'مفاعل',C.doorSab&&'أبواب',C.vents&&'فتحات'].filter(Boolean).join('، ')||'مقفل'],
+        ['👁️','الرؤية','مواطن '+C.crewVision+'× · امبوستر '+C.impVision+'×'],['💥','التخريب',[C.reactorSab&&'مفاعل',C.doorSab&&'أبواب',C.vents&&'فتحات'].filter(Boolean).join('، ')||'مقفل'],
         ['🗳️','التصويت',(C.anonVotes?'مجهول':'مكشوف')+(C.allowSkip?' · تخطي':'')],['🗺️','الخريطة',C.map]].map(([icon,n,v])=>({icon,n,v})),
       cdOn:S.cd!=null, cdNum:S.cd, cdCancel:()=>{ clearInterval(this.cdT); this.setState({cd:null}); }, setOpen:S.setOpen };
   }
@@ -387,7 +387,7 @@ class Component extends DCLogic {
       pvFsShow:NET().fs.show(), pvFsOn:NET().fs.active(), pvFsOff:!NET().fs.active(), pvFsLbl:NET().fs.active()?'إلغاء ملء الشاشة':'ملء الشاشة', pvFsToggle:()=>{ NET().fs.toggle(); this.forceUpdate(); }, pvLeaveMs:NET().fs.show()?'0':'auto',
       pvLeave:()=>{ this.net&&this.net.send({t:'leave'}); NET().me(null); setTimeout(()=>{ location.href='join.html'; },150); },
       newRoom:()=>this.newRoom(), count:total, max:MAX, ...this.setVals(C), slots, toast:S.toast,
-      impOpts:[1,2,3].map(k=>{ const on=k===imp, dis=k>maxImp; return {n:k,bd:on?'rgba(167,139,250,.7)':'rgba(255,255,255,.1)',bg:on?'rgba(139,92,246,.25)':'transparent',c:dis?'#4b4757':on?'#ede9fe':'#a8a3b5',pick:()=>{ if(dis) return this.say('تحتاج '+(k===2?7:13)+' لاعبين على الأقل لـ '+k+' دخلاء'); const settings={...C,impostors:k}; this.setState({settings}); this.save({settings}); }}; }),
+      impOpts:[1,2,3].map(k=>{ const on=k===imp, dis=k>maxImp; return {n:k,bd:on?'rgba(167,139,250,.7)':'rgba(255,255,255,.1)',bg:on?'rgba(139,92,246,.25)':'transparent',c:dis?'#4b4757':on?'#ede9fe':'#a8a3b5',pick:()=>{ if(dis) return this.say('تحتاج '+(k===2?7:13)+' لاعبين على الأقل لـ '+k+' امبوسترز'); const settings={...C,impostors:k}; this.setState({settings}); this.save({settings}); }}; }),
       hint:ok?'جاهزين للانطلاق · المذيع يلعب معكم':C.startRule==='الروم ممتلئ'?'لازم الروم يمتلئ ('+total+' / '+MAX+')':'تحتاج '+(MIN-total)+' لاعبين بعد للبدء', hintC:ok?'#6ee7b7':'#8a8596', startOp:ok?1:.45,
       start:()=>{ if(!ok) return this.say(C.startRule==='الروم ممتلئ'?'لازم الروم يمتلئ قبل البدء':'لازم '+MIN+' لاعبين على الأقل (مع المذيع)'); this.setState({sumOpen:true}); },
       roomRef, roomTap, exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'), confirmExit:()=>{ this.net&&this.net.send({t:'close'}); NET().hostSession(null); try{ if(window.top!==window){ window.top.location.href=LIBRARY_URL; return; } }catch(e){} location.href=LIBRARY_URL; },
