@@ -301,9 +301,15 @@ function escapeHtml(str){
     .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
 }
 
-/** يولّد رمز غرفة عشوائيًا من 5 أرقام، مثل 57392 */
+/** يولّد رمز غرفة عشوائيًا من 4 أرقام، مثل 5739 (موحّد مع زر «دخول غرفة» بهيدر الموقع) */
 function randomRoomCode(){
-  return String(Math.floor(10000 + Math.random() * 90000));
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+/** الغرفة شغّالة لو فيها لاعب واحد على الأقل متصل الآن. الغرف ما تنحذف من
+   Firebase بعد انتهائها، فالغرفة المهجورة يُعاد استخدام رمزها. */
+function isRoomActive(room){
+  return !!(room && room.players && Object.values(room.players).some(p => p && p.connected === true));
 }
 
 /* إعدادات الغرفة (تُحفظ في room.settings) */
@@ -513,7 +519,7 @@ $("#btn-rules").addEventListener("click", (e) => Modal.open(rulesModal, e.curren
   const roomParam = new URLSearchParams(location.search).get("room");
   if(!roomParam) return;
   const joinCodeInput = $("#join-code");
-  if(joinCodeInput) joinCodeInput.value = roomParam.replace(/\D/g, "").slice(0, 5);
+  if(joinCodeInput) joinCodeInput.value = roomParam.replace(/\D/g, "").slice(0, 4);
 })();
 
 function updateShareHint(){
@@ -523,7 +529,7 @@ function updateShareHint(){
     : "اختصار سريع: يُنشئ غرفة جديدة إن تُرك رمز الغرفة فارغًا، أو ينضم مباشرة إن كُتب رمز غرفة قائمة";
 }
 $("#join-code").addEventListener("input", (e) => {
-  const clean = e.target.value.replace(/\D/g, "").slice(0, 5);
+  const clean = e.target.value.replace(/\D/g, "").slice(0, 4);
   if(e.target.value !== clean) e.target.value = clean;
   updateShareHint();
 });
@@ -546,7 +552,7 @@ async function createRoomAsPlayer(name, settings = DEFAULT_SETTINGS){
     code = randomRoomCode();
     existing = await Backend.getRoom(code);
     attempts++;
-  } while(existing && attempts < 20);
+  } while(isRoomActive(existing) && attempts < 20);
 
   ensurePlayerId();
   state.playerName = name;
@@ -650,7 +656,7 @@ $("#btn-join-room").addEventListener("click", () => {
   const name = requireHomeName();
   if(!name) return;
   const code = readJoinCode();
-  if(code.length !== 5){ $("#home-error").textContent = "الرجاء إدخال رمز الغرفة المكوّن من 5 أرقام"; $("#join-code").focus(); return; }
+  if(code.length !== 4){ $("#home-error").textContent = "الرجاء إدخال رمز الغرفة المكوّن من 4 أرقام"; $("#join-code").focus(); return; }
   withBusy($("#btn-join-room"), () => joinRoomAsPlayer(name, code), "تعذّر الانضمام إلى الغرفة");
 });
 
