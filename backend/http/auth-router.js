@@ -26,6 +26,7 @@ var storeRouter = require('./store-router');
 var tiktokLiveCheck = require('../platforms/tiktok/tiktok-live-check');
 var roomLookupService = require('../rooms/room-lookup-service');
 var logger = require('../utils/logger');
+var chatLatency = require('../utils/chat-latency');
 var config = require('../config');
 var response = require('./response');
 var bodyParser = require('./body-parser');
@@ -931,7 +932,7 @@ function handleAdminLiveStreams(req, res) {
   var matches = [];
   try { connections = require('../websocket/ws-server').listLiveConnections(); } catch (err) { logger.error('Admin live streams: connections failed:', err); }
   try { matches = require('../challenge/challenge-match').listActiveMatches(); } catch (err) { logger.error('Admin live streams: matches failed:', err); }
-  sendJson(res, 200, { success: true, now: Date.now(), connections: connections, matches: matches });
+  sendJson(res, 200, { success: true, now: Date.now(), connections: connections, matches: matches, chatLatency: chatLatency.getStats() });
 }
 
 /** صاحب الجلسة يعدّل اسم العرض الخاص به — user.id من الجلسة حصراً. */

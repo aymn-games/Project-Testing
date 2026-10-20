@@ -1315,13 +1315,18 @@ class Component extends DCLogic {
         team:sd.teamName||sd.name||'—', score:sd.score||0, players:sd.players||0,
         stream:(LV_STATUS[sd.stream]||['غير متصل'])[0], streamColor:(LV_STATUS[sd.stream]||['','#9199ab'])[1], screen:sd.screenOpen?'الشاشة مفتوحة':'الشاشة مسكّرة' })) }));
     const games={}; lvConns.forEach(c=>{ if(c.status==='connected'&&c.gameName) games[c.gameName]=(games[c.gameName]||0)+1; });
+    const lat=lv&&lv.chatLatency;
     const liveView={
       loaded:!!lv, err:s.liveErr,
       cards:[
         { k:'بثوث متصلة الآن', v:lvConns.filter(c=>c.status==='connected').length },
         { k:'مباريات تحدي شغّالة', v:liveMatches.length },
         { k:'مجموع المشاهدين', v:lvConns.reduce((t,c)=>t+(c.status==='connected'&&c.viewers?Number(c.viewers):0),0).toLocaleString('en') },
-        { k:'ألعاب مختلفة', v:Object.keys(games).length }
+        { k:'ألعاب مختلفة', v:Object.keys(games).length },
+        // تأخير الشات (آخر 500 تعليق): متوسط / 90% من التعليقات أسرع من — بالثواني.
+        { k:'تأخير تيك توك ← خادمنا'+(lat&&!lat.signKey?' (بدون مفتاح EulerStream)':''), v:lat&&lat.tiktok?(lat.tiktok.avg/1000).toFixed(1)+' ث (90%: '+(lat.tiktok.p90/1000).toFixed(1)+')':'—' },
+        { k:'معالجة خادمنا للتعليق', v:lat&&lat.server?lat.server.avg+' ms (أقصى: '+lat.server.max+')':'—' },
+        { k:'تعليقات بالقياس', v:lat?lat.count:'—' }
       ],
       games:Object.keys(games).sort((a,b)=>games[b]-games[a]).map(g=>({ name:g, n:games[g] })),
       hasGames:Object.keys(games).length>0,

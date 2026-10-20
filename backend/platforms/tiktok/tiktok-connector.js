@@ -34,6 +34,7 @@
 'use strict';
 
 var logger = require('../../utils/logger');
+var chatLatency = require('../../utils/chat-latency');
 var collectiblesService = require('../../collectibles/collectibles-service');
 var tiktokAvatarSync = require('../../auth/tiktok-avatar-sync');
 
@@ -352,6 +353,7 @@ function createTikTokConnector() {
         }
 
         _connection.on(TikTokLib.WebcastEvent.CHAT, function (data) {
+            var receivedAt = Date.now();
             var user = extractUser(data);
 
             // الحقل الفعلي بالرسالة المفكوكة هو "content"، وليس "comment"
@@ -374,6 +376,8 @@ function createTikTokConnector() {
                 _debugFollowStatus: followDebug.followStatus,
                 _debugIsFollowerOfAnchor: followDebug.isFollowerOfAnchor
             });
+            // قياس التأخير (لوحة الأدمن) — onComment أعلاه يكتب على المقبس متزامناً.
+            chatLatency.record(chatLatency.parseCreateTime(data), receivedAt, Date.now());
         });
 
         _connection.on(TikTokLib.WebcastEvent.GIFT, function (data) {
