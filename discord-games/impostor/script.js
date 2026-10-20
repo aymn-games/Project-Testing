@@ -515,12 +515,35 @@ $("#btn-rules").addEventListener("click", (e) => Modal.open(rulesModal, e.curren
 /* ---------------------------------------------------------------------
    6) الشاشة الرئيسية: إنشاء / انضمام / شارك كلاعب / شاشة عرض للبث
 --------------------------------------------------------------------- */
-(function prefillJoinFromURL(){
+function prefillJoinFromURL(){
   const roomParam = new URLSearchParams(location.search).get("room");
   if(!roomParam) return;
   const joinCodeInput = $("#join-code");
   if(joinCodeInput) joinCodeInput.value = roomParam.replace(/\D/g, "").slice(0, 4);
-})();
+}
+prefillJoinFromURL();
+
+/* حساب الموقع: لو اللاعب مسجّل دخول بـ aymngames.online (مثلاً دخل بالباركود
+   من جواله) نعرض اسم العرض من حسابه بدل ما يكتب اسم، ونقاط المنصة تروح
+   لحسابه هو (reportOwnPoints). بدون تسجيل دخول يلعب عادي ويكتب أي اسم. */
+function siteAccount(){
+  const A = window.AGPAuth;
+  const u = A && A.getToken() && A.getCachedUser();
+  return u && u.id ? u : null;
+}
+
+function prefillNameFromAccount(){
+  const u = siteAccount();
+  const name = u && String(u.display_name || u.tiktok_display_name || u.tiktok_username || u.username || "").trim().slice(0, 16);
+  if(!name) return;
+  const input = $("#home-name");
+  input.value = name;
+  input.readOnly = true;
+  input.title = "اسم العرض من حسابك بالموقع";
+}
+prefillNameFromAccount();
+// الاسم المحفوظ بالجهاز قد يكون قديم — نحدّثه من السيرفر بدون ما نوقف الصفحة
+if(window.AGPAuth) window.AGPAuth.refreshUser().then(prefillNameFromAccount, () => {});
 
 function updateShareHint(){
   const code = $("#join-code").value;
@@ -980,7 +1003,7 @@ async function kickPlayer(id){
    =====================================================================
    بيانات الغرفة أثناء المباراة:
      status: "game" | "final" | "lobby"
-     match:  { round, totals{id:pts}, impHist[], lastImp, done }
+     match:  { round, totals{id:pts}, impHist[], lastImp, done, startedAt }
      usedWords: [] كلمات استُخدمت في هذه الغرفة (لا تتكرر حتى ينفد البنك)
      g (الجولة الحالية):
        phase: "pre" (مقدمة + بطاقة الدور) → "hints" → "voting" → "reveal"
@@ -1047,8 +1070,8 @@ function buildRound(room, newMatch){
   const ids = sortedPlayerIds(room);
   const prev = room.match || {};
   const match = newMatch
-    ? { round: 1, totals: {}, impHist: [], lastImp: null, done: 0 }
-    : { round: (prev.round || 0) + 1, totals: prev.totals || {}, impHist: prev.impHist || [], lastImp: prev.lastImp || null, done: prev.done || 0 };
+    ? { round: 1, totals: {}, impHist: [], lastImp: null, done: 0, startedAt: now() }
+    : { round: (prev.round || 0) + 1, totals: prev.totals || {}, impHist: prev.impHist || [], lastImp: prev.lastImp || null, done: prev.done || 0, startedAt: prev.startedAt || now() };
   const { impId, impHist } = pickImpostor(ids, match);
   match.impHist = impHist;
   match.lastImp = impId;
@@ -1723,6 +1746,34 @@ $("#btn-next-round").addEventListener("click", () => {
 $("#btn-score-room").addEventListener("click", backToRoom);
 
 /* ----- النتيجة النهائية ----- */
+/* نقاط المنصة (CLAUDE.md): كل جهاز يرسل نقاط صاحبه فقط، ولو حسابه موثّق تيك توك.
+   الأسماء باللعبة مكتوبة يدوياً، فما نرسل نقاط أي لاعب ثاني باسمه.
+   الفائز = صاحب أعلى مجموع (المتعادلين بالصدارة كلهم فائزين)، مثل renderFinal.
+   مرة وحدة لكل مباراة على هذا الجهاز حتى لو انعادت تحميل الصفحة. */
+function reportOwnPoints(room){
+  const A = window.AGPAuth, u = siteAccount(), match = room.match || {};
+  if(!A || typeof A.reportMatchPoints !== "function") return;
+  if(state.isSpectator || !room.finalAt || !match.done) return;
+  if(!u || !u.tiktok_verified || !u.tiktok_username) return;
+  const ids = sortedPlayerIds(room);
+  if(!ids.includes(state.playerId)) return;
+  const key = `imp_points:${state.roomCode}:${room.finalAt}`;
+  try{
+    if(localStorage.getItem(key)) return;
+    localStorage.setItem(key, "1");
+  }catch(e){}
+  const totals = match.totals || {};
+  const topPts = Math.max(0, ...ids.map(id => totals[id] || 0));
+  const won = topPts > 0 && (totals[state.playerId] || 0) === topPts;
+  const me = { id: "tiktok:" + u.tiktok_username, name: u.tiktok_username };
+  A.reportMatchPoints({
+    players: [me],
+    winnerIds: won ? [me.id] : [],
+    teamGame: false,
+    durationMs: Math.max(0, room.finalAt - (match.startedAt || room.finalAt))
+  });
+}
+
 function renderFinal(room, t){
   const match = room.match || {}, totals = match.totals || {};
   const rows = sortedPlayerIds(room).sort((a, b) => (totals[b] || 0) - (totals[a] || 0));
@@ -1757,6 +1808,7 @@ function renderFinal(room, t){
     ui.finalKey = key;
     ui.sig.podium = null; ui.sig.rest = null;
     buildConfetti();
+    reportOwnPoints(room);
   }
   setHtml($("#podium"), "podium", podium);
   setHtml($("#final-rest"), "rest", rows.slice(3).map((id, i) => `<li style="animation-delay:${1.5 + i * .08}s">
@@ -2078,6 +2130,9 @@ function closeSpectatorResultsModal(){
     } catch(e){ /* نبدأ من الشاشة الرئيسية */ }
   }
   resetToHome();
+  // resetToHome يمسح رمز الغرفة، فنرجّع الرمز اللي جا من الرابط/الباركود
+  prefillJoinFromURL();
+  updateShareHint();
 })();
 
 /* =====================================================================
