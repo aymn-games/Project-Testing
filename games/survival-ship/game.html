@@ -110,7 +110,7 @@ a{color:#7dd3fc}a:hover{color:#bae6fd}
             <sc-if value="{{ qShow }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;flex-direction:column;gap:12px;animation:qIn .45s cubic-bezier(.2,1.2,.4,1)">
                 <div style="display:flex;align-items:center;gap:14px;min-width:0">
-                  <span style="width:96px;height:96px;flex-shrink:0;border-radius:24px;background:{{ turnBg }};box-shadow:0 0 0 5px #38bdf8, 0 0 30px rgba(56,189,248,.45)"></span>
+                  <span style="position:relative;width:96px;height:96px;flex-shrink:0;border-radius:24px;overflow:hidden;background:{{ turnBg }};box-shadow:0 0 0 5px #38bdf8, 0 0 30px rgba(56,189,248,.45)"><sc-if value="{{ turnAv }}" hint-placeholder-val="{{ false }}"><img src="{{ turnAv }}" alt="" referrerpolicy="no-referrer" onLoad="{{ showImg }}" onError="{{ hideImg }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
                   <div style="min-width:0;display:flex;flex-direction:column;gap:2px">
                     <span style="font:700 20px 'Zain';color:#94a3d8">الدور الآن على</span>
                     <span style="font:900 46px/1.1 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ turnName }}</span>
@@ -601,7 +601,7 @@ class Component extends DCLogic {
       sceneJson:JSON.stringify({focus:S.phase==='over'?S.winner:S.cam,cheer:S.phase==='over'?S.winner:S.okId,win:S.phase==='over',far:S.phase==='shuffle',players:S.players.map(p=>({id:p.id,name:p.name,skin:p.look.skin,hair:p.look.hair,girl:p.look.girl,outfit:p.look.outfit,pants:p.look.pants,out:p.out,fall:p.popping}))}),
       tOffB:(527.8*(1-(S.total?S.left/S.total:1))).toFixed(1),
       ...(()=>{ const n=(S.queue||[]).map(id=>S.players.find(p=>p.id===id)).find(p=>p&&!p.out&&!p.popping); return {nextOn:!!n&&ph!=='ready'&&ph!=='over', nextName:n?n.name:'', nextBg:n?bgOf(n.gold?GOLD:n.col):'transparent'}; })(), totalN:S.players.length,
-      turnName:curP&&ph!=='ready'?curP.name:'—', turnBg:curP&&ph!=='ready'?bgOf(curP.gold?GOLD:curP.col):'rgba(255,255,255,.08)', turnGlow:curP&&ph!=='ready'?(curP.gold?GOLD:curP.col)[0]+'88':'transparent',
+      turnName:curP&&ph!=='ready'?curP.name:'—', turnAv:curP&&ph!=='ready'?this.reg.avatar(curP.name)||'':'', hideImg:e=>{ e.currentTarget.style.display='none'; }, showImg:e=>{ e.currentTarget.style.display=''; }, turnBg:curP&&ph!=='ready'?bgOf(curP.gold?GOLD:curP.col):'rgba(255,255,255,.08)', turnGlow:curP&&ph!=='ready'?(curP.gold?GOLD:curP.col)[0]+'88':'transparent',
       qShow:!!q&&(ph==='ask'||ph==='result'), q:q||{segs:[],tiles:[]}, qIdle:!(q&&(ph==='ask'||ph==='result')),
       idleTitle:ph==='turn'&&curP?`استعد يا ${curP.name}…`:ph==='over'?'انتهت المباراة':'جاهزين للمباراة؟',
       idleSub:ph==='turn'?'السؤال جاي بعد لحظة':ph==='over'?'':'كل لاعب يجاوب بدوره قبل ما يخلص الوقت',

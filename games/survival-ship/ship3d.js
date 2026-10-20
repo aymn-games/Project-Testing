@@ -136,6 +136,9 @@ class Ship3D extends HTMLElement {
     else if(focusF){ const w=new T.Vector3(); focusF.g.getWorldPosition(w); P.set(w.x+Math.sin(t*.25)*.6,w.y+6.4,w.z+6.8); L.set(w.x,w.y+1.5,w.z); rate=2; this.ang=Math.atan2(P.x,P.z); }
     else { const far=d.far, zm=d.zoom||1, R0=(far?88:54)/zm*(this.sk/1.5), A=this.ang+(d.yaw||0); this.ang+=dt*(far?.22:.13); P.set(Math.sin(A)*R0,Math.max(6,((far?44:26)*(this.sk/1.5)+(d.lift||0))/zm)+Math.sin(t*.2)*2,Math.cos(A)*R0); L.set(0,2,0); rate=far?1.6:1.2; }
     const k=1-Math.exp(-dt*rate); cam.position.lerp(P,k); this.camLook.lerp(L,k); cam.lookAt(this.camLook);
+    // صاحب الدور (قبل الفوز) ينزل لأسفل الكادر عشان بطاقة السؤال فوق ما تغطي اسمه وشخصيته
+    const vt=focusF&&!d.win&&!fallF?.2:0; this.vo=(this.vo||0)+(vt-(this.vo||0))*k; const vw=this.clientWidth||1, vh=this.clientHeight||1;
+    if(this.vo>.001) cam.setViewOffset(vw,vh,0,-vh*this.vo,vw,vh); else if(cam.view&&cam.view.enabled) cam.clearViewOffset();
     this.r.render(this.sc,cam); }
 }
 if(!customElements.get('ship-3d')) customElements.define('ship-3d',Ship3D);
