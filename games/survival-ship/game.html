@@ -186,6 +186,7 @@ a{color:#7dd3fc}a:hover{color:#bae6fd}
               </div>
               <div style="display:flex;flex-direction:column;align-items:center;gap:22px">
                 <div style="min-width:420px;box-sizing:border-box;padding:20px 40px;border-radius:30px;background:rgba(255,255,255,.82);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.95);box-shadow:0 20px 50px rgba(14,116,144,.18);display:flex;flex-direction:column;align-items:center;gap:4px;animation:popIn .7s cubic-bezier(.2,1.2,.4,1) .9s both">
+                  <span style="position:relative;width:110px;height:110px;margin-top:-74px;margin-bottom:6px;border-radius:50%;overflow:hidden;background:{{ winBg }};border:5px solid #fff;box-shadow:0 0 0 4px #fbbf24, 0 14px 34px rgba(14,116,144,.25)"><sc-if value="{{ winAv }}" hint-placeholder-val="{{ false }}"><img src="{{ winAv }}" alt="" referrerpolicy="no-referrer" onLoad="{{ showImg }}" onError="{{ hideImg }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
                   <span style="height:34px;padding:0 16px;border-radius:999px;display:flex;align-items:center;gap:6px;background:linear-gradient(180deg, #fef3c7, #fde68a);font:800 17px 'Zain';color:#92400e">👑 بطل الرحلة</span>
                   <span style="max-width:520px;font:900 48px/1.15 'Zain';color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ winName }}</span>
                   <span style="font:700 18px 'Zain';color:#64748b">نجا من أصل {{ totalN }} لاعب</span>
@@ -632,7 +633,7 @@ class Component extends DCLogic {
           const dx=bx-ax, dy=by-ay, len=Math.round(Math.hypot(dx,dy)), ang=Math.atan2(dx,-dy)*180/Math.PI;
           const w=Math.round(78+Math.random()*34), h=Math.round(w*1.18), c=C[i%C.length];
           out.push({ax,ay,len,ang:ang.toFixed(1),nang:(-ang).toFixed(1),w,h,hw:Math.round(w/2),top:len+h-4,c1:c[0],c2:c[1],c3:c[2],dl:(2.3+i*.06).toFixed(2),sd:(2.2+Math.random()*1.4).toFixed(1),sdl:(-Math.random()*2).toFixed(1)}); }
-        return out; })()), winP:winPl?{...this.pv(winPl,0),spotOp:0,y:0,balD:'none',cardOp:0,haloD:'none',armAn:'armIdle .45s ease-in-out infinite',arm2An:'arm2Tug .45s ease-in-out infinite',legLAn:'legA .45s ease-in-out infinite',legRAn:'legB .45s ease-in-out infinite'}:{pips:[]}, winName:winPl?winPl.name:'',
+        return out; })()), winP:winPl?{...this.pv(winPl,0),spotOp:0,y:0,balD:'none',cardOp:0,haloD:'none',armAn:'armIdle .45s ease-in-out infinite',arm2An:'arm2Tug .45s ease-in-out infinite',legLAn:'legA .45s ease-in-out infinite',legRAn:'legB .45s ease-in-out infinite'}:{pips:[]}, winName:winPl?winPl.name:'', winAv:winPl?this.reg.avatar(winPl.name)||'':'', winBg:winPl?bgOf(winPl.col):'transparent',
       replay:()=>this.replay(), toLobby:()=>{ location.href=LOBBY_URL; },
       toastOn:!!S.toast, toastTxt:S.toast,
       settingsOpen:S.settingsOpen, openSettings:()=>this.setState({settingsOpen:true}), closeSettings:()=>this.shut('settingsOpen'),
