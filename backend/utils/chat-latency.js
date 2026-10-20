@@ -12,7 +12,11 @@
 'use strict';
 
 var MAX_SAMPLES = 500;
+// عند الاتصال تعيد المكتبة إرسال دفعة تعليقات قديمة (processInitialData)
+// — أقدم من هذا ما تُعتبر تأخيراً حقيقياً فتُستبعد من القياس.
+var STALE_MS = 30000;
 var _samples = [];
+var _staleCount = 0;
 
 /** createTime من تيك توك نص بالملّي ثانية (أحياناً ثواني) — غير صالح = null. */
 function parseCreateTime(data) {
@@ -23,6 +27,7 @@ function parseCreateTime(data) {
 }
 
 function record(tiktokCreatedAt, receivedAt, sentAt) {
+    if (tiktokCreatedAt && receivedAt - tiktokCreatedAt > STALE_MS) { _staleCount++; return; }
     _samples.push({
         at: sentAt,
         tiktokMs: tiktokCreatedAt ? Math.max(0, receivedAt - tiktokCreatedAt) : null,
@@ -45,6 +50,7 @@ function getStats() {
         since: _samples.length ? _samples[0].at : null,
         tiktok: summarize(_samples.map(function (s) { return s.tiktokMs; }).filter(function (v) { return v !== null; })),
         server: summarize(_samples.map(function (s) { return s.serverMs; })),
+        stale: _staleCount,
         signKey: Boolean(process.env.EULERSTREAM_API_KEY)
     };
 }
