@@ -135,7 +135,7 @@ class Ship3D extends HTMLElement {
     const cam=this.cam, P=new T.Vector3(), L=new T.Vector3(); let rate=1.6;
     if(fallF){ const w=new T.Vector3(); fallF.g.getWorldPosition(w); w.y=Math.max(w.y,.5); P.set(w.x+7,w.y+3.5,w.z+9); L.copy(w); rate=2.4; }
     else if(focusF&&d.win){ const w=new T.Vector3(); focusF.g.getWorldPosition(w); const an=t*.18; P.set(w.x+Math.sin(an)*7.5,w.y+3.2,w.z+Math.cos(an)*7.5); L.set(w.x,w.y+1.6,w.z); rate=1.4; }
-    else if(focusF){ const w=new T.Vector3(); focusF.g.getWorldPosition(w); P.set(w.x+Math.sin(t*.25)*.6,w.y+6.4,w.z+6.8); L.set(w.x,w.y+1.5,w.z); rate=2; this.ang=Math.atan2(P.x,P.z); }
+    else if(focusF){ const w=new T.Vector3(); focusF.g.getWorldPosition(w); P.set(w.x+Math.sin(t*.25)*.4,w.y+4.2,w.z+5.6); L.set(w.x,w.y+1.3,w.z); rate=2; this.ang=Math.atan2(P.x,P.z); }
     else { const far=d.far, zm=d.zoom||1, R0=(far?88:54)/zm*(this.sk/1.5), A=this.ang+(d.yaw||0); this.ang+=dt*(far?.22:.13); P.set(Math.sin(A)*R0,Math.max(6,((far?44:26)*(this.sk/1.5)+(d.lift||0))/zm)+Math.sin(t*.2)*2,Math.cos(A)*R0); L.set(0,2,0); rate=far?1.6:1.2; }
     const k=1-Math.exp(-dt*rate); cam.position.lerp(P,k); this.camLook.lerp(L,k); cam.lookAt(this.camLook);
     // صاحب الدور (قبل الفوز) ينزل لأسفل الكادر عشان بطاقة السؤال فوق ما تغطي اسمه وشخصيته
