@@ -14,6 +14,7 @@ var collectiblesService = require('../collectibles/collectibles-service');
 var challengeService = require('../challenge/challenge-service');
 var pointsService = require('../points/points-service');
 var streamerLevelService = require('../points/streamer-level-service');
+var streamerHours = require('../points/streamer-hours');
 var supportersService = require('../supporters/supporters-service');
 var siteThemeService = require('../theme/site-theme-service');
 var partnersService = require('../partners/partners-service');
@@ -753,9 +754,11 @@ function handleStreamIsLive(req, res, body, user) {
  * فوز مختلفة، راجع points-service.js). كل مشارك يُطابَق بحساب مسجَّل موثَّق تيك توك قبل
  * منح أي نقاط — لا نقاط لمن لا حساب له، بصمت.
  */
-function handleRoundComplete(req, res, body) {
+function handleRoundComplete(req, res, body, user) {
   var participants = Array.isArray(body.participants) ? body.participants : [];
   var durationMs = Number(body.durationMs) || 0;
+  // ساعات البث للاستريمر = وقت المباريات المكتملة فقط (لا وقت فتح الصفحة).
+  try { streamerHours.recordMatchTime(user && user.id, durationMs); } catch (err) { logger.error('Round complete: match time record failed:', err); }
   var teamGame = Boolean(body.teamGame);
   var results = [];
   participants.forEach(function (p) {

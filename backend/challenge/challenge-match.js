@@ -24,6 +24,7 @@ var handshake = require('../websocket/ws-handshake');
 var connectorRouter = require('../platforms/connector-router');
 var authService = require('../auth/auth-service');
 var pointsService = require('../points/points-service');
+var streamerHours = require('../points/streamer-hours');
 var logger = require('../utils/logger');
 var fastestAnswer = require('./fastest-answer-logic');
 
@@ -108,6 +109,10 @@ function sideOf(m, userId) {
 function reportPoints(m, winnerIdx, durationMs) {
     if (m.pointsReported) return;
     m.pointsReported = true;
+    // ساعات البث لكل طرف = وقت المباراة فقط (راجع streamer-hours.js).
+    [0, 1].forEach(function (i) {
+        try { streamerHours.recordMatchTime(m.sides[i].userId, durationMs); } catch (err) { logger.error('Challenge: match time record failed:', err); }
+    });
     try {
         var seen = {};
         m.logic.participants().forEach(function (p) {

@@ -346,6 +346,16 @@ db.exec(`
         computed_at INTEGER NOT NULL
     );
 
+    -- ساعات البث الفعلية = وقت المباريات المكتملة فقط (من بدايتها لإعلان
+    -- الفائز) أثناء بث مباشر. راجع backend/points/streamer-hours.js
+    CREATE TABLE IF NOT EXISTS streamer_match_time (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        started_at INTEGER NOT NULL,
+        ended_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_streamer_match_time_user ON streamer_match_time(user_id);
+
     -- إعدادات عامة بسيطة (مفتاح/قيمة).
     CREATE TABLE IF NOT EXISTS app_settings (
         key TEXT PRIMARY KEY,

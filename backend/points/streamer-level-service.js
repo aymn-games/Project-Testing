@@ -15,6 +15,7 @@
 'use strict';
 
 var db = require('../db/database');
+var streamerHours = require('./streamer-hours');
 
 // ⚠️ استعلام إحصائيات البث هنا مكرَّر عمداً بدل استدعاء
 // authService.getUserStats — auth-service.js سيستورد هذا الملف نفسه
@@ -22,12 +23,11 @@ var db = require('../db/database');
 // من هنا يُنشئ اعتمادية دائرية. نفس السبب/الحل المُوثَّق أصلاً بـ
 // collectibles-service.js (getEquippedFrameForVerifiedTikTok).
 function getBroadcastTotals(userId) {
-    return db.prepare(
-        `SELECT
-            COALESCE(SUM(gifts_value_total), 0) AS total_gifts_value,
-            COALESCE(SUM(CASE WHEN ended_at IS NOT NULL THEN ended_at - started_at ELSE 0 END), 0) AS total_live_ms
-         FROM broadcasts WHERE user_id = ?`
+    var row = db.prepare(
+        'SELECT COALESCE(SUM(gifts_value_total), 0) AS total_gifts_value FROM broadcasts WHERE user_id = ?'
     ).get(userId);
+    // دقائق البث المحتسبة = وقت المباريات فقط بعد التحويل (راجع streamer-hours.js).
+    return { total_gifts_value: row ? row.total_gifts_value : 0, total_live_ms: streamerHours.getTotalLiveMs(userId) };
 }
 
 // SP لكل دقيقة بث فعلية مكتملة (60 دقيقة = 60 SP بالساعة). وزن الوقت

@@ -16,6 +16,7 @@ var OAuth2Client = require('google-auth-library').OAuth2Client;
 var collectiblesService = require('../collectibles/collectibles-service');
 var pointsService = require('../points/points-service');
 var streamerLevelService = require('../points/streamer-level-service');
+var streamerHours = require('../points/streamer-hours');
 var emailService = require('../email/email-service');
 
 var SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 يوماً
@@ -1139,7 +1140,7 @@ function updateBroadcastViewerStats(broadcastId, currentViewers, totalUsers) {
  * إحصائيات مجمَّعة لمستخدم واحد عبر كل بثوثه (لعرضها له أو للأدمن).
  */
 function getUserStats(userId) {
-    return db.prepare(
+    var stats = db.prepare(
         `SELECT
             COUNT(*) AS total_broadcasts,
             COALESCE(SUM(comments_count), 0) AS total_comments,
@@ -1147,11 +1148,13 @@ function getUserStats(userId) {
             COALESCE(SUM(gifts_value_total), 0) AS total_gifts_value,
             COALESCE(SUM(follows_count), 0) AS total_follows,
             COALESCE(SUM(players_joined_count), 0) AS total_players,
-            COALESCE(SUM(CASE WHEN ended_at IS NOT NULL THEN ended_at - started_at ELSE 0 END), 0) AS total_live_ms,
             COALESCE(SUM(total_unique_viewers), 0) AS total_views,
             COALESCE(MAX(peak_viewers), 0) AS peak_viewers
          FROM broadcasts WHERE user_id = ?`
     ).get(userId);
+    // ساعات البث = وقت المباريات الفعلي فقط بعد التحويل (راجع streamer-hours.js).
+    stats.total_live_ms = streamerHours.getTotalLiveMs(userId);
+    return stats;
 }
 
 /**
@@ -1197,20 +1200,19 @@ function getTopStreamersByHours(limit) {
 }
 
 function computeTopStreamersByHours(limit, periodStart) {
-    // بث بدأ قبل بداية الأسبوع وانتهى بعدها: ينحسب منه الجزء اللي بعد البداية فقط.
+    // بث/مباراة بدأت قبل بداية الأسبوع وانتهت بعدها: ينحسب منها الجزء اللي
+    // بعد البداية فقط. بعد التحويل: وقت المباريات فقط (راجع streamer-hours.js).
     var rows = db.prepare(
         `SELECT u.tiktok_username AS tiktokUsername, u.username, u.display_name AS displayName,
                 u.avatar_image_base64 AS avatarBase64, u.custom_id AS customId,
-                COALESCE(SUM(b.ended_at - MAX(b.started_at, @periodStart)), 0) AS total_ms
+                h.total_ms AS total_ms
          FROM users u
-         JOIN broadcasts b ON b.user_id = u.id
+         JOIN (${streamerHours.HOURS_BY_USER_SQL}) h ON h.user_id = u.id
          WHERE u.tiktok_verified = 1 AND u.tiktok_username IS NOT NULL
-           AND b.ended_at IS NOT NULL AND b.ended_at > @periodStart
-         GROUP BY u.id
-         HAVING total_ms > 0
+           AND h.total_ms > 0
          ORDER BY total_ms DESC
          LIMIT @limit`
-    ).all({ periodStart: periodStart, limit: limit || 20 });
+    ).all(Object.assign({ limit: limit || 20 }, streamerHours.hoursParams(periodStart)));
     return rows.map(function (r) {
         return {
             tiktokUsername: r.tiktokUsername,
@@ -1227,28 +1229,29 @@ function computeTopStreamersByHours(limit, periodStart) {
  * الأدمن فقط. total_views مبنية على حقل totalUser من مكتبة tiktok-live-connector.
  */
 function getAdminStreamerStats() {
+    // الساعات من streamer-hours.js (وقت المباريات فقط بعد التحويل).
+    var hp = streamerHours.hoursParams(0);
     var totals = db.prepare(
         `SELECT
             COUNT(DISTINCT u.id) AS total_streamers,
-            COALESCE(SUM(CASE WHEN b.ended_at IS NOT NULL THEN b.ended_at - b.started_at ELSE 0 END), 0) AS total_live_ms,
+            COALESCE((SELECT SUM(h.total_ms) FROM (${streamerHours.HOURS_BY_USER_SQL}) h
+                      JOIN users s ON s.id = h.user_id WHERE s.is_streamer = 1), 0) AS total_live_ms,
             COALESCE(SUM(b.total_unique_viewers), 0) AS total_views
          FROM users u LEFT JOIN broadcasts b ON b.user_id = u.id
          WHERE u.is_streamer = 1`
-    ).get();
+    ).get(hp);
 
     var top = db.prepare(
         `SELECT u.id, u.username, u.tiktok_username AS tiktokUsername,
-                COUNT(b.id) AS total_broadcasts,
-                COALESCE(SUM(CASE WHEN b.ended_at IS NOT NULL THEN b.ended_at - b.started_at ELSE 0 END), 0) AS total_ms,
-                COALESCE(SUM(b.total_unique_viewers), 0) AS total_views
+                (SELECT COUNT(*) FROM broadcasts b WHERE b.user_id = u.id) AS total_broadcasts,
+                h.total_ms AS total_ms,
+                (SELECT COALESCE(SUM(b.total_unique_viewers), 0) FROM broadcasts b WHERE b.user_id = u.id) AS total_views
          FROM users u
-         JOIN broadcasts b ON b.user_id = u.id
-         WHERE u.is_streamer = 1
-         GROUP BY u.id
-         HAVING total_ms > 0
+         JOIN (${streamerHours.HOURS_BY_USER_SQL}) h ON h.user_id = u.id
+         WHERE u.is_streamer = 1 AND h.total_ms > 0
          ORDER BY total_ms DESC
          LIMIT 10`
-    ).all();
+    ).all(hp);
 
     return {
         totalStreamers: totals.total_streamers,
