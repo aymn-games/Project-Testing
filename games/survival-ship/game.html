@@ -110,7 +110,7 @@ a{color:#7dd3fc}a:hover{color:#bae6fd}
             <sc-if value="{{ qShow }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;flex-direction:column;gap:12px;animation:qIn .45s cubic-bezier(.2,1.2,.4,1)">
                 <div style="display:flex;align-items:center;gap:14px;min-width:0">
-                  <span style="width:96px;height:96px;flex-shrink:0;border-radius:24px;background:{{ turnBg }};box-shadow:0 0 0 5px #38bdf8, 0 0 30px rgba(56,189,248,.45)"></span>
+                  <span style="position:relative;width:96px;height:96px;flex-shrink:0;border-radius:24px;overflow:hidden;background:{{ turnBg }};box-shadow:0 0 0 5px #38bdf8, 0 0 30px rgba(56,189,248,.45)"><sc-if value="{{ turnAv }}" hint-placeholder-val="{{ false }}"><img src="{{ turnAv }}" alt="" referrerpolicy="no-referrer" onLoad="{{ showImg }}" onError="{{ hideImg }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
                   <div style="min-width:0;display:flex;flex-direction:column;gap:2px">
                     <span style="font:700 20px 'Zain';color:#94a3d8">الدور الآن على</span>
                     <span style="font:900 46px/1.1 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ turnName }}</span>
@@ -137,7 +137,7 @@ a{color:#7dd3fc}a:hover{color:#bae6fd}
         </div>
         <sc-if value="{{ nextOn }}" hint-placeholder-val="{{ false }}">
           <div style="position:absolute;z-index:5;top:300px;left:56px;height:96px;padding:0 30px 0 16px;box-sizing:border-box;border-radius:28px;display:flex;align-items:center;gap:16px;background:rgba(8,14,46,.94);border:2px solid rgba(125,211,252,.22);box-shadow:0 18px 40px rgba(4,20,50,.35);animation:fade .4s ease">
-            <span style="width:64px;height:64px;flex-shrink:0;border-radius:18px;background:{{ nextBg }};box-shadow:0 0 0 4px #38bdf8"></span>
+            <span style="position:relative;width:64px;height:64px;flex-shrink:0;border-radius:18px;overflow:hidden;background:{{ nextBg }};box-shadow:0 0 0 4px #38bdf8"><sc-if value="{{ nextAv }}" hint-placeholder-val="{{ false }}"><img src="{{ nextAv }}" alt="" referrerpolicy="no-referrer" onLoad="{{ showImg }}" onError="{{ hideImg }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
             <span style="font:700 22px 'Zain';color:#94a3d8">اللاعب التالي</span>
             <span style="font:900 30px 'Zain';color:#fff;white-space:nowrap;max-width:300px;overflow:hidden;text-overflow:ellipsis">{{ nextName }}</span>
           </div>
@@ -291,7 +291,7 @@ a{color:#7dd3fc}a:hover{color:#bae6fd}
   <sc-if value="{{ shufOn }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:80px 0 0 0;z-index:70;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(10px,2vh,24px);background:rgba(4,40,70,.35);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);pointer-events:none;animation:fade .5s ease">
       <span style="font:800 clamp(26px,2.6vw,48px) 'Zain';color:#e0f7ff;text-shadow:0 4px 20px rgba(0,30,60,.5)">{{ shTitle }}</span>
-      <span key="{{ shLetter }}" style="font:900 clamp(200px,24vw,420px)/1 'Zain';color:#fcd34d;text-shadow:0 10px 0 #b7791f, 0 24px 60px rgba(0,30,60,.45);animation:{{ shLAn }}">{{ shLetter }}</span>
+      <span key="{{ shLetter }}" style="font:900 clamp(200px,min(24vw,42vh),420px)/1.4 'Zain';padding-bottom:clamp(10px,2vh,30px);color:#fcd34d;text-shadow:0 10px 0 #b7791f, 0 24px 60px rgba(0,30,60,.45);animation:{{ shLAn }}">{{ shLetter }}</span>
       <span style="font:800 clamp(22px,2vw,36px) 'Zain';color:#e0f7ff;opacity:{{ shSubOp }};transition:opacity .4s">الدور على {{ shName }} · {{ shType }}</span>
     </div>
   </sc-if>
@@ -501,7 +501,9 @@ class Component extends DCLogic {
       }
       this.upd(p.id,()=>({dmg}));
       const landX=p.pos.cx<960?40:1880;
-      const useFile=this.fallOk; this.later(()=>{ this.upd(p.id,()=>({popping:true,landX})); this.setState({popShake:true}); if(useFile){ try{ const A=this.fallAud; A.currentTime=0; A.play().catch(()=>{}); }catch(e){} } else { this.sfx('heave'); this.sfx('fall'); } },800);
+      const useFile=this.fallOk!==false; this.later(()=>{ this.upd(p.id,()=>({popping:true,landX})); this.setState({popShake:true}); if(!useFile){ this.sfx('heave'); this.sfx('fall'); } },800);
+      // fall.mp3 (2.6 ث، أعلى صوت = الارتطام عند 1.5 ث) يبدأ بعد 0.6 ث من بداية السقوط بالمشهد عشان يطابق نزول اللاعب ووصوله للماء (2.1 ث)
+      if(useFile) this.later(()=>{ try{ const A=this.fallAud; A.currentTime=0; A.play().catch(()=>{}); }catch(e){} },1400);
       this.later(()=>this.setState({camFall:{x:landX,y:LAND_Y-140},popShake:false}),1100);
       this.later(()=>{ this.setState({fallFx:{x:landX},landShake:true}); if(!useFile) this.sfx('splash'); },2700);
       this.later(()=>this.banner('out','🌊',`انرمى ${p.name} في البحر وخرج من المباراة`,2000),3000);
@@ -598,10 +600,10 @@ class Component extends DCLogic {
       roundTxt:S.round||'—', aliveN,
       hudLetter:S.q&&S.q.letter||(S.shuf&&S.shuf.lock?S.shuf.letter:'؟'),
       ansCat:S.q?TYPES[S.q.ti].label:'', ansCatC:S.q?TYPES[S.q.ti].c:'#fff', ansLetter:S.q?S.q.letter:'',
-      sceneJson:JSON.stringify({focus:S.phase==='over'?S.winner:S.cam,cheer:S.phase==='over'?S.winner:S.okId,win:S.phase==='over',far:S.phase==='shuffle',players:S.players.map(p=>({id:p.id,name:p.name,skin:p.look.skin,hair:p.look.hair,girl:p.look.girl,outfit:p.look.outfit,pants:p.look.pants,out:p.out,fall:p.popping}))}),
+      sceneJson:JSON.stringify({names:false,focus:S.phase==='over'?S.winner:S.cam,cheer:S.phase==='over'?S.winner:S.okId,win:S.phase==='over',far:S.phase==='shuffle',players:S.players.map(p=>({id:p.id,name:p.name,skin:p.look.skin,hair:p.look.hair,girl:p.look.girl,outfit:p.look.outfit,pants:p.look.pants,out:p.out,fall:p.popping}))}),
       tOffB:(527.8*(1-(S.total?S.left/S.total:1))).toFixed(1),
-      ...(()=>{ const n=(S.queue||[]).map(id=>S.players.find(p=>p.id===id)).find(p=>p&&!p.out&&!p.popping); return {nextOn:!!n&&ph!=='ready'&&ph!=='over', nextName:n?n.name:'', nextBg:n?bgOf(n.gold?GOLD:n.col):'transparent'}; })(), totalN:S.players.length,
-      turnName:curP&&ph!=='ready'?curP.name:'—', turnBg:curP&&ph!=='ready'?bgOf(curP.gold?GOLD:curP.col):'rgba(255,255,255,.08)', turnGlow:curP&&ph!=='ready'?(curP.gold?GOLD:curP.col)[0]+'88':'transparent',
+      ...(()=>{ const n=(S.queue||[]).map(id=>S.players.find(p=>p.id===id)).find(p=>p&&!p.out&&!p.popping); return {nextOn:!!n&&ph!=='ready'&&ph!=='over', nextName:n?n.name:'', nextAv:n?this.reg.avatar(n.name)||'':'', nextBg:n?bgOf(n.gold?GOLD:n.col):'transparent'}; })(), totalN:S.players.length,
+      turnName:curP&&ph!=='ready'?curP.name:'—', turnAv:curP&&ph!=='ready'?this.reg.avatar(curP.name)||'':'', hideImg:e=>{ e.currentTarget.style.display='none'; }, showImg:e=>{ e.currentTarget.style.display=''; }, turnBg:curP&&ph!=='ready'?bgOf(curP.gold?GOLD:curP.col):'rgba(255,255,255,.08)', turnGlow:curP&&ph!=='ready'?(curP.gold?GOLD:curP.col)[0]+'88':'transparent',
       qShow:!!q&&(ph==='ask'||ph==='result'), q:q||{segs:[],tiles:[]}, qIdle:!(q&&(ph==='ask'||ph==='result')),
       idleTitle:ph==='turn'&&curP?`استعد يا ${curP.name}…`:ph==='over'?'انتهت المباراة':'جاهزين للمباراة؟',
       idleSub:ph==='turn'?'السؤال جاي بعد لحظة':ph==='over'?'':'كل لاعب يجاوب بدوره قبل ما يخلص الوقت',
