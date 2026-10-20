@@ -501,7 +501,9 @@ class Component extends DCLogic {
       }
       this.upd(p.id,()=>({dmg}));
       const landX=p.pos.cx<960?40:1880;
-      const useFile=this.fallOk; this.later(()=>{ this.upd(p.id,()=>({popping:true,landX})); this.setState({popShake:true}); if(useFile){ try{ const A=this.fallAud; A.currentTime=0; A.play().catch(()=>{}); }catch(e){} } else { this.sfx('heave'); this.sfx('fall'); } },800);
+      const useFile=this.fallOk!==false; this.later(()=>{ this.upd(p.id,()=>({popping:true,landX})); this.setState({popShake:true}); if(!useFile){ this.sfx('heave'); this.sfx('fall'); } },800);
+      // fall.mp3 (2.6 ث، أعلى صوت = الارتطام عند 1.5 ث) يبدأ بعد 0.6 ث من بداية السقوط بالمشهد عشان يطابق نزول اللاعب ووصوله للماء (2.1 ث)
+      if(useFile) this.later(()=>{ try{ const A=this.fallAud; A.currentTime=0; A.play().catch(()=>{}); }catch(e){} },1400);
       this.later(()=>this.setState({camFall:{x:landX,y:LAND_Y-140},popShake:false}),1100);
       this.later(()=>{ this.setState({fallFx:{x:landX},landShake:true}); if(!useFile) this.sfx('splash'); },2700);
       this.later(()=>this.banner('out','🌊',`انرمى ${p.name} في البحر وخرج من المباراة`,2000),3000);
@@ -598,7 +600,7 @@ class Component extends DCLogic {
       roundTxt:S.round||'—', aliveN,
       hudLetter:S.q&&S.q.letter||(S.shuf&&S.shuf.lock?S.shuf.letter:'؟'),
       ansCat:S.q?TYPES[S.q.ti].label:'', ansCatC:S.q?TYPES[S.q.ti].c:'#fff', ansLetter:S.q?S.q.letter:'',
-      sceneJson:JSON.stringify({focus:S.phase==='over'?S.winner:S.cam,cheer:S.phase==='over'?S.winner:S.okId,win:S.phase==='over',far:S.phase==='shuffle',players:S.players.map(p=>({id:p.id,name:p.name,skin:p.look.skin,hair:p.look.hair,girl:p.look.girl,outfit:p.look.outfit,pants:p.look.pants,out:p.out,fall:p.popping}))}),
+      sceneJson:JSON.stringify({names:false,focus:S.phase==='over'?S.winner:S.cam,cheer:S.phase==='over'?S.winner:S.okId,win:S.phase==='over',far:S.phase==='shuffle',players:S.players.map(p=>({id:p.id,name:p.name,skin:p.look.skin,hair:p.look.hair,girl:p.look.girl,outfit:p.look.outfit,pants:p.look.pants,out:p.out,fall:p.popping}))}),
       tOffB:(527.8*(1-(S.total?S.left/S.total:1))).toFixed(1),
       ...(()=>{ const n=(S.queue||[]).map(id=>S.players.find(p=>p.id===id)).find(p=>p&&!p.out&&!p.popping); return {nextOn:!!n&&ph!=='ready'&&ph!=='over', nextName:n?n.name:'', nextBg:n?bgOf(n.gold?GOLD:n.col):'transparent'}; })(), totalN:S.players.length,
       turnName:curP&&ph!=='ready'?curP.name:'—', turnAv:curP&&ph!=='ready'?this.reg.avatar(curP.name)||'':'', hideImg:e=>{ e.currentTarget.style.display='none'; }, showImg:e=>{ e.currentTarget.style.display=''; }, turnBg:curP&&ph!=='ready'?bgOf(curP.gold?GOLD:curP.col):'rgba(255,255,255,.08)', turnGlow:curP&&ph!=='ready'?(curP.gold?GOLD:curP.col)[0]+'88':'transparent',

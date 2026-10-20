@@ -109,6 +109,8 @@ class Ship3D extends HTMLElement {
     const a=this.seaG.attributes.position.array, b=this.seaBase; for(let i=0;i<a.length;i+=3){ const x=b[i], z=b[i+2]; a[i+1]=Math.sin(x*.07+t*1.3)*.75+Math.cos(z*.09+t*1.05)*.55+Math.sin((x-z)*.16+t*2.1)*.25+Math.sin((x+z)*.33+t*2.9)*.1; } this.seaG.attributes.position.needsUpdate=true; this.seaG.computeVertexNormals();
     this.spark.material.map.offset.set(t*.012+Math.sin(t*.5)*.01,t*.018); this.spark.position.y=.55+Math.sin(t*1.2)*.12;
     this.ship.position.y=Math.sin(t*1.05)*.32; this.ship.rotation.z=Math.sin(t*.8)*.022; this.ship.rotation.x=Math.cos(t*.62)*.028; this.flag.rotation.y=Math.sin(t*3)*.3;
+    // names:false (شاشة المباراة) = بدون أسماء فوق اللاعبين
+    for(const [,f] of this.figs) if(f.g.userData.sp) f.g.userData.sp.visible=d.names!==false;
     let fallF=null, focusF=d.focus!=null?this.figs.get(d.focus):null;
     for(const [id,f] of this.figs){ const U=f.g.userData, ph=t*2+f.ph;
       if(f.fallT!=null){ f.fallT+=dt; const k=f.fallT, s=new T.Vector3(4*this.sk,1.5*this.sk,4.3*this.sk), e=this.plankEnd; if(k<3.4) fallF=f;
