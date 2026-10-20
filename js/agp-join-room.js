@@ -1,9 +1,12 @@
 /**
- * زر «دخول غرفة» بهيدر الرئيسية (index.html) ومكتبة الألعاب (games.html).
+ * زر «دخول غرفة» بهيدر الرئيسية (index.html) ومكتبة الألعاب (games.html)
+ * ومكتبة ألعاب الدسكورد (discord-games.html — الزر مكتوب بهيدرها مباشرة).
  *
  * اللاعب يضغط الزر، يكتب رقم الغرفة (4 أرقام)، ونسأل الباك اند
  * (/api/rooms/lookup ← backend/rooms/room-lookup-service.js) أي لعبة فيها
- * روم بهذا الرقم، وننقله لصفحة دخولها — بدون حساب بالموقع. لو الرقم موجود
+ * روم بهذا الرقم، وننقله لصفحة دخولها — بدون حساب بالموقع. «من الأمبوستر؟»
+ * غرفها بـ Firebase مو بالباك اند، فنسألها من المتصفح مباشرة (lookupImpostor)
+ * بنفس الوقت وندمج النتيجتين. لو الرقم موجود
  * بأكثر من لعبة يختار اللاعب. لو الباك اند ما رد نرجع للسلوك القديم
  * («محطة سهيل») عشان الزر ما يتعطل.
  *
@@ -18,8 +21,11 @@
     // المفاتيح تطابق CHECKS بـ backend/rooms/room-lookup-service.js
     var GAMES = {
         intruder: { name: 'محطة سهيل', url: 'games/intruder/join.html?room=' },
-        billiards: { name: 'بلياردو ٨', url: 'https://billiards.aymngames.online/?room=' }
+        billiards: { name: 'بلياردو ٨', url: 'https://billiards.aymngames.online/?room=' },
+        impostor: { name: 'من الأمبوستر؟', url: 'discord-games/impostor/?room=' }
     };
+    // نفس databaseURL بـ discord-games/impostor/script.js
+    var IMPOSTOR_DB = 'https://who-is-the-impostor-816c8-default-rtdb.firebaseio.com';
     var FALLBACK_GAME = 'intruder';
 
     function apiBase() {
@@ -40,6 +46,19 @@
                     : null;
             })
             .catch(function () { return null; });
+    }
+
+    /** يرجع Promise بـ true لو فيه غرفة أمبوستر شغّالة (لاعب متصل) بهذا الرقم.
+     *  الغرف ما تنحذف بعد انتهائها، فوجود الرقم وحده ما يكفي — نفس isRoomActive باللعبة. */
+    function lookupImpostor(code) {
+        return fetch(IMPOSTOR_DB + '/rooms/' + code + '/players.json')
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (players) {
+                return !!players && Object.keys(players).some(function (id) {
+                    return players[id] && players[id].connected === true;
+                });
+            })
+            .catch(function () { return false; });
     }
 
     function setLabel(a, text) {
@@ -155,7 +174,9 @@
             submit.disabled = true;
             submit.textContent = 'جاري البحث…';
             err.textContent = '';
-            lookupRoom(code).then(function (games) {
+            Promise.all([lookupRoom(code), lookupImpostor(code)]).then(function (res) {
+                var games = res[0];
+                if (res[1]) games = (games || []).concat('impostor');
                 busy = false;
                 submit.disabled = false;
                 submit.textContent = 'دخول';
