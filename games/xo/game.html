@@ -689,6 +689,8 @@ class Component extends DCLogic {
     if(r){ if(s.out[user]) return;
       // داخل المباراة ما فيه تبديل فريق: اللاعب الموجود بفريق يبقى فيه (المعلّق بنافذة الدخول فقط يقدر يغيّر فريقه)
       const pendingJoin=s.pendingJoins.some(p=>p.name===user); if(r.cur>=0&&!pendingJoin) return;
+      // اللاعب الجديد ما يدخل أثناء المباراة إلا ونافذة "إدخال لاعب جديد" مفتوحة — غير كذا تُتجاهل كلمة الدخول بصمت
+      if(r.cur<0&&!s.joinOpen) return;
       if(r.toast) this.toastMsg(r.toast);
       if(r.ok){ this.snd('join'); this.preloadElimCard(user);
         if(s.pendingJoins.some(p=>p.name===user)) patch.pendingJoins=s.pendingJoins.map(p=>p.name===user?{...p,team:r.k}:p);
