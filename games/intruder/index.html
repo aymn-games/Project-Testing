@@ -39,15 +39,36 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
         <span style="padding:5px 12px;border-radius:10px;background:rgba(6,8,13,.75);border:2px solid #06080d;font:900 clamp(14px,2.2vw,18px) 'Zain';color:#e2e8f0;white-space:nowrap">🛰️ محطة سُهيل</span>
         <span dir="ltr" style="padding:5px 12px;border-radius:10px;background:rgba(6,8,13,.75);border:2px solid #06080d;font:800 clamp(13px,2vw,16px) 'Zain';color:#5eead4;white-space:nowrap">روم {{ code }}</span>
         <span style="padding:5px 12px;border-radius:10px;background:rgba(6,8,13,.75);border:2px solid #06080d;font:800 clamp(13px,2vw,16px) 'Zain';color:#cbd5e1;white-space:nowrap">👥 {{ count }} / {{ max }}</span>
+        <button onClick="{{ pvOpenWard }}" style="margin-inline-start:auto;pointer-events:auto;height:38px;padding:0 12px;border-radius:10px;cursor:pointer;border:2px solid #06080d;background:#0f766e;color:#ecfeff;font:800 15px 'Zain';box-shadow:0 3px 0 #06080d;white-space:nowrap">👕 مظهري</button>
         <sc-if value="{{ pvFsShow }}" hint-placeholder-val="{{ false }}">
-          <button data-fs-btn="1" onClick="{{ pvFsToggle }}" aria-label="{{ pvFsLbl }}" title="{{ pvFsLbl }}" style="margin-inline-start:auto;pointer-events:auto;width:38px;height:38px;border-radius:10px;cursor:pointer;border:2px solid #06080d;background:#2a3446;color:#fff;display:grid;place-items:center;box-shadow:0 3px 0 #06080d">
+          <button data-fs-btn="1" onClick="{{ pvFsToggle }}" aria-label="{{ pvFsLbl }}" title="{{ pvFsLbl }}" style="pointer-events:auto;width:38px;height:38px;border-radius:10px;cursor:pointer;border:2px solid #06080d;background:#2a3446;color:#fff;display:grid;place-items:center;box-shadow:0 3px 0 #06080d">
             <sc-if value="{{ pvFsOn }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></sc-if>
             <sc-if value="{{ pvFsOff }}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></sc-if>
           </button>
         </sc-if>
-        <button onClick="{{ pvLeave }}" style="margin-inline-start:{{ pvLeaveMs }};pointer-events:auto;height:38px;padding:0 14px;border-radius:10px;cursor:pointer;border:2px solid #06080d;background:#7f1d1d;color:#fecaca;font:800 15px 'Zain';box-shadow:0 3px 0 #06080d">خروج</button>
+        <button onClick="{{ pvLeave }}" style="pointer-events:auto;height:38px;padding:0 14px;border-radius:10px;cursor:pointer;border:2px solid #06080d;background:#7f1d1d;color:#fecaca;font:800 15px 'Zain';box-shadow:0 3px 0 #06080d">خروج</button>
       </div>
       <span style="position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));text-align:center;font:800 clamp(15px,2.6vw,20px) 'Zain';color:#e2e8f0;text-shadow:0 2px 0 #06080d;animation:pulse 1.6s ease-in-out infinite;pointer-events:none">بانتظار المذيع يبدأ المهمة…</span>
+      <sc-if value="{{ pvWardOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ pvCloseWard }}" style="position:absolute;inset:0;z-index:4;background:rgba(3,5,10,.78);backdrop-filter:blur(6px);display:grid;place-items:center;padding:10px;animation:fade .2s ease">
+          <div onClick="{{ stop }}" dir="rtl" style="width:min(960px,100%);max-height:calc(100dvh - 20px);overflow:auto;touch-action:pan-y;box-sizing:border-box;padding:14px;border-radius:20px;background:#151b26;border:5px solid #06080d;box-shadow:0 8px 0 #06080d,0 24px 70px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:12px;animation:popIn .35s cubic-bezier(.2,1.25,.35,1)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font:900 24px 'Zain';color:#fff;text-shadow:0 2px 0 #06080d">👕 مظهري</span>
+              <span style="font:700 14px 'Zain';color:#94a3b8">يتغيّر عند الكل مباشرة</span>
+              <button onClick="{{ pvCloseWard }}" style="margin-inline-start:auto;height:42px;padding:0 20px;border-radius:12px;cursor:pointer;border:3px solid #06080d;background:#16a34a;color:#fff;font:900 16px 'Zain';box-shadow:0 4px 0 #06080d">✓ تم</button>
+            </div>
+            <span style="min-height:20px;font:700 15px 'Zain';color:#fca5a5">{{ pvWardErr }}</span>
+            <div style="display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px">
+              <sc-for list="{{ pvColors }}" as="c" hint-placeholder-count="20">
+                <button onClick="{{ c.pick }}" aria-label="{{ c.lbl }}" aria-disabled="{{ c.dis }}" title="{{ c.lbl }}" style="position:relative;aspect-ratio:1;min-height:34px;border-radius:12px;cursor:{{ c.cur }};background:{{ c.c }};opacity:{{ c.op }};border:3px solid {{ c.bd }};box-shadow:{{ c.sh }};display:grid;place-items:center;padding:0;overflow:hidden">
+                  <sc-if value="{{ c.t }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;inset:0;background:repeating-linear-gradient(135deg, rgba(0,0,0,.45) 0 5px, transparent 5px 10px)"></span><span style="position:relative;font:400 15px/1 'Zain'">🔒</span></sc-if>
+                </button>
+              </sc-for>
+            </div>
+            <dc-import name="Wardrobe" color="{{ pvMyC }}" skin="{{ pvMySkin }}" on-change="{{ pvSetSkin }}" hint-size="100%,420px"></dc-import>
+          </div>
+        </div>
+      </sc-if>
       <sc-if value="{{ pvRotate }}" hint-placeholder-val="{{ false }}">
         <div onClick="{{ pvFull }}" style="position:absolute;inset:0;z-index:5;background:rgba(5,7,13,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px">
           <span style="font:400 64px/1 'Zain';display:inline-block;transform:rotate(90deg)">📱</span>
@@ -279,9 +300,20 @@ class Component extends DCLogic {
     if(m.t==='gone') return this.say('الروم مفتوح بشاشة ثانية');
   }
   onPvMsg(m){
+    if(m.t==='err'){ this.setState({pvWardErr:m.err||''}); if(m.room) this.setState({players:m.room.players||[]}); return; }
     if(m.t==='room'){ const r=m.room; if(!(r.players||[]).some(p=>String(p.id)===this.pv)){ location.href='join.html'; return; } if(r.started){ location.href='play.html?room='+r.code+'&id='+this.pv; return; } this.setState({code:r.code,players:r.players||[],pvHostSkin:r.hostSkin||{}}); return; }
     if(m.t==='kicked'||m.t==='gone'||m.t==='closed'){ NET().me(null); location.href='join.html'; }
   }
+  // مظهر اللاعب من لوبي الانتظار: اللون (نفس قاعدة الدخول — المأخوذ مقفل باسم صاحبه) واللبس.
+  // نحدّث الشخصية محلياً فوراً، والخادم يرسل الروم للكل (ويرفض اللون لو أحد سبقه عليه).
+  pvWardVals(){ const S=this.state, me=S.players.find(p=>String(p.id)===this.pv)||{}, myC=me.c||'#a855f7', mine=p=>String(p.id)===this.pv;
+    const patchMe=v=>this.setState({players:this.state.players.map(p=>mine(p)?{...p,...v}:p)});
+    return { pvWardOpen:!!S.pvWard, pvOpenWard:()=>this.setState({pvWard:true,pvWardErr:''}), pvCloseWard:()=>this.setState({pvWard:false,pvWardErr:''}), pvWardErr:S.pvWardErr||'',
+      pvMyC:myC, pvMySkin:{hat:me.hat||'none',acc:me.acc||'none',top:me.top||'none',pants:me.pants||'none',back:me.back||'none'},
+      pvSetSkin:v=>{ patchMe(v); this.net&&this.net.send({t:'skin',skin:v}); },
+      pvColors:COLORS.map(c=>{ const owner=S.players.find(p=>p.c===c&&!mine(p)), t=!!owner, on=c===myC;
+        return {c,t,op:t?.45:1,dis:t?'true':'false',cur:t?'not-allowed':'pointer',lbl:t?'مأخوذ من '+owner.name:'لون',bd:on?'#fff':'transparent',sh:on?'0 0 0 3px rgba(94,234,212,.7)':'none',
+          pick:()=>{ if(t) return this.setState({pvWardErr:'اللون مأخوذ من '+owner.name+'، اختر لون ثاني'}); if(on) return; this.setState({pvWardErr:''}); patchMe({c}); this.net&&this.net.send({t:'color',c}); }}; }) }; }
   cfg(){ return this.state.settings||(ST()?ST().validate({}):{minPlayers:4,maxPlayers:15,impostors:1,startRule:'الحد الأدنى',startDelay:3}); }
   save(extra){ const S={...this.state,...extra}, c=S.settings||this.cfg(); if(extra&&extra.settings){ try{ localStorage.setItem(SET_KEY,JSON.stringify(c)); }catch(e){} this.net&&this.net.send({t:'settings',settings:c}); } }
   joinUrl(){ return new URL('join.html?room='+this.state.code, location.href).href; }
@@ -384,7 +416,8 @@ class Component extends DCLogic {
       wardOpen:S.ward, openWard:()=>this.setState({ward:true}), closeWard:()=>this.setState({ward:false}), hostSkin:S.hostSkin, hostC:COLORS.find(x=>!S.players.map(p=>p.c).includes(x))||'#f4f2f8', setHostSkin:v=>{ this.setState({hostSkin:v}); localStorage.setItem('station-host-skin',JSON.stringify(v)); this.net&&this.net.send({t:'skin',skin:v}); },
       code:S.code, pvOn:!!this.pv, roomRef2:this.roomRef2, pvRotate:!!(this.pv&&S.rotate),
       pvFull:()=>{ try{ const d=document.documentElement; (d.requestFullscreen?d.requestFullscreen():Promise.reject()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{}); }catch(e){} },
-      pvFsShow:NET().fs.show(), pvFsOn:NET().fs.active(), pvFsOff:!NET().fs.active(), pvFsLbl:NET().fs.active()?'إلغاء ملء الشاشة':'ملء الشاشة', pvFsToggle:()=>{ NET().fs.toggle(); this.forceUpdate(); }, pvLeaveMs:NET().fs.show()?'0':'auto',
+      pvFsShow:NET().fs.show(), pvFsOn:NET().fs.active(), pvFsOff:!NET().fs.active(), pvFsLbl:NET().fs.active()?'إلغاء ملء الشاشة':'ملء الشاشة', pvFsToggle:()=>{ NET().fs.toggle(); this.forceUpdate(); },
+      ...this.pvWardVals(),
       pvLeave:()=>{ this.net&&this.net.send({t:'leave'}); NET().me(null); setTimeout(()=>{ location.href='join.html'; },150); },
       newRoom:()=>this.newRoom(), count:total, max:MAX, ...this.setVals(C), slots, toast:S.toast,
       impOpts:[1,2,3].map(k=>{ const on=k===imp, dis=k>maxImp; return {n:k,bd:on?'rgba(167,139,250,.7)':'rgba(255,255,255,.1)',bg:on?'rgba(139,92,246,.25)':'transparent',c:dis?'#4b4757':on?'#ede9fe':'#a8a3b5',pick:()=>{ if(dis) return this.say('تحتاج '+(k===2?7:13)+' لاعبين على الأقل لـ '+k+' امبوسترز'); const settings={...C,impostors:k}; this.setState({settings}); this.save({settings}); }}; }),

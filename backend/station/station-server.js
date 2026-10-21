@@ -11,7 +11,7 @@
  *   عميل → peek {code}                   شاشة الدخول: معلومات الروم + تحديثات حية
  *   عميل → join {code,name,c,skin}       دخول لاعب جديد ← welcome {id,key}
  *   عميل → resume {code,id,key}          رجوع لاعب (تحديث الصفحة/انقطاع)
- *   عميل → leave · skin {skin} · ping {k}
+ *   عميل → leave · skin {skin} · color {c} (لاعب باللوبي) · ping {k}
  *   المذيع → settings {settings} · kick {id} · start · again · lobby · close
  *   المباراة → pos {x,y,f,v} · act {a,arg}
  *   الصوت → rtc {to,data}  (تمرير إشارات WebRTC بين اللاعبين فقط)
@@ -174,6 +174,15 @@ function onMessage(client, msg) {
     if (t === 'skin') {
         var sk = cleanSkin(msg.skin);
         if (isHost) room.hostSkin = sk; else { var me = room.players.find(function (q) { return q.id === client.id; }); if (me) me.skin = sk; }
+        return broadcastRoom(room);
+    }
+    if (t === 'color') {
+        // تغيير اللون من لوبي الانتظار: قبل بداية الجولة فقط، ونفس قاعدة الدخول (لون غير مأخوذ)
+        var mine = room.players.find(function (q) { return q.id === client.id; }), nc = String(msg.c || '');
+        if (!mine || client.role !== 'player') return;
+        if (room.started) return send(client, { t: 'err', err: 'ما تقدر تغيّر لونك والجولة شغالة' });
+        if (COLORS.indexOf(nc) < 0 || room.players.some(function (q) { return q !== mine && q.c === nc; })) return send(client, { t: 'err', err: 'اللون انأخذ، اختر لون ثاني', room: publicRoom(room) });
+        mine.c = nc;
         return broadcastRoom(room);
     }
     if (t === 'pos') { if (room.game) room.game.pos(client.id, msg.x, msg.y, msg.f, msg.v); return; }
