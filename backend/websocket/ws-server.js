@@ -233,7 +233,7 @@ var GAME_NAMES = {
   'fastest-answer': 'أسرع إجابة', 'fruit-roulette': 'روليت الفواكه', 'khazna': 'الخزنة', 'letters-cell': 'خلية الحروف', 'luck-color': 'حظ و لون', 'survival-ship': 'سفينة النجاة',
   'memory-challenge': 'تحدي الذاكرة', 'musical-chairs': 'الكراسي الموسيقية', 'photo-challenge': 'تحدي الصور',
   'russian-roulette': 'الروليت الروسي', 'snakes-ladders': 'السلم والثعبان', 'team-war': 'حرب الفريقين',
-  'top-ten': 'خمّن العشرة', 'tribe-roulette': 'روليت القبائل', 'vocab': 'تحدي المفردات',
+  'top-ten': 'خمّن العشرة', 'tribe-roulette': 'روليت مخفي', 'vocab': 'تحدي المفردات',
   'word-categories': 'اسم و حيوان و نبات و جماد و بلاد', 'xo': 'إكس أو'
 };
 

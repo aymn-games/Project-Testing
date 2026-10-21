@@ -70,7 +70,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var registered = AGP.gameManager.registerGame({
             id: GAME_ID,
-            name: registryEntry ? registryEntry.title : 'روليت القبائل',
+            name: registryEntry ? registryEntry.title : 'روليت مخفي',
             url: registryEntry ? registryEntry.url : 'https://aymn-games.github.io/roulette-game/',
             category: 'roulette-games',
 
