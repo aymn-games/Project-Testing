@@ -3,7 +3,7 @@
  *
  * خطوتين بنفس النافذة:
  *  1. الإعدادات: الاستريمر يختار الأقسام اللي يبيها (المكبّسين، الداعمين،
- *     الشير، المتفاعلين، الحاضرين)، وعدد التوب لكل قسم، والخلفية (خلفيات
+ *     الشير، المتفاعلين، المشاهدين)، وعدد التوب لكل قسم، والخلفية (خلفيات
  *     جاهزة مرسومة بالكود، أو صورة يرفعها من جهازه) — تنحفظ بـlocalStorage.
  *  2. الصورة: بمقاس ستوري تيك توك 1080×1920. يجيب الملخص من
  *     GET /api/stream/session-stats?sections=... (backend/stats/live-session-stats.js
@@ -27,8 +27,14 @@
 
     function fmt(n) { return (Number(n) || 0).toLocaleString('en-US'); }
 
-    function fmtTime(ts) {
-        try { return new Date(ts).toLocaleTimeString('ar-SA-u-nu-latn', { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; }
+    /** مدة بالدقايق/الساعات بدون أي ص/م. */
+    function fmtDuration(ms) {
+        var mins = Math.round((Number(ms) || 0) / 60000);
+        if (mins < 1) return 'أقل من دقيقة';
+        var h = Math.floor(mins / 60), m = mins % 60;
+        if (h && m) return h + ' ساعة و ' + m + ' دقيقة';
+        if (h) return h + ' ساعة';
+        return m + ' دقيقة';
     }
 
     // ترتيب الأقسام هنا = ترتيبها بالصورة وبالإعدادات
@@ -45,9 +51,9 @@
         { key: 'commenters', title: 'المتفاعلين', desc: 'أكثر من كتب تعليقات', def: false,
           value: function (r) { return fmt(r.count) + ' تعليق'; },
           total: function (s) { return fmt(s.counts.commenters) + ' متفاعل · ' + fmt(s.totals.comments) + ' تعليق'; } },
-        { key: 'viewers', title: 'الحاضرين', desc: 'اللي دخلوا البث (حسب وقت الدخول)', def: false,
-          value: function (r) { return fmtTime(r.joinedAt); },
-          total: function (s) { return fmt(s.counts.viewers) + ' حاضر · أعلى مشاهدة ' + fmt(s.totals.peakViewers); } }
+        { key: 'viewers', title: 'المشاهدين', desc: 'أطول من جلس في البث', def: false,
+          value: function (r) { return fmtDuration(r.watchMs); },
+          total: function (s) { return fmt(s.counts.viewers) + ' مشاهد · أعلى مشاهدة ' + fmt(s.totals.peakViewers); } }
     ];
 
     /* ---------------- الخلفيات الجاهزة (مرسومة بالكود — بدون ملفات صور) ---------------- */
@@ -282,20 +288,6 @@
 
     /* ---------------- الرسم ---------------- */
 
-    function fmtDuration(ms) {
-        var mins = Math.round((Number(ms) || 0) / 60000);
-        var h = Math.floor(mins / 60), m = mins % 60;
-        if (h && m) return h + ' ساعة و ' + m + ' دقيقة';
-        if (h) return h + ' ساعة';
-        return m + ' دقيقة';
-    }
-
-    function fmtDate(ts) {
-        try {
-            return new Date(ts).toLocaleDateString('ar-SA-u-nu-latn', { year: 'numeric', month: 'long', day: 'numeric' });
-        } catch (e) { return new Date(ts).toLocaleDateString(); }
-    }
-
     function fitText(ctx, text, maxW) {
         text = String(text || '');
         if (ctx.measureText(text).width <= maxW) return text;
@@ -344,8 +336,8 @@
     var SIDE = 70;               // الهامش الجانبي
     // رأس الصورة (صاحب البث): كامل، أو مصغّر لما الأقسام كثيرة. top = بداية الأقسام
     var HEADS = {
-        full: { caption: 110, avY: 270, avR: 110, name: 460, nameSize: 60, handle: 504, thanks: 550, date: 588, top: 630 },
-        compact: { caption: 80, avY: 180, avR: 72, name: 312, nameSize: 48, handle: 352, thanks: 392, date: 426, top: 460 }
+        full: { caption: 110, avY: 270, avR: 110, name: 460, nameSize: 60, handle: 504, thanks: 570, thanksSize: 44, duration: 616, top: 660 },
+        compact: { caption: 80, avY: 180, avR: 72, name: 312, nameSize: 48, handle: 352, thanks: 408, thanksSize: 38, duration: 450, top: 490 }
     };
     var BOTTOM = 1840;           // نهاية مساحة الأقسام (تحتها التوقيع)
 
@@ -499,12 +491,13 @@
             ctx.font = '600 28px ' + FONT;
             ctx.fillText('@' + stats.username, W / 2, head.handle);
             ctx.direction = 'rtl';
-            ctx.fillStyle = 'rgba(255,255,255,0.82)';
-            ctx.font = '500 26px ' + FONT;
+            // نفس خط عناوين الأقسام
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '700 ' + head.thanksSize + 'px ' + FONT;
             ctx.fillText('أنتم أجمل ما في البث، شكراً لكم', W / 2, head.thanks);
             ctx.fillStyle = 'rgba(255,255,255,0.6)';
-            ctx.font = '500 22px ' + FONT;
-            ctx.fillText(fmtDate(stats.startedAt) + '  ·  المدة: ' + fmtDuration(stats.durationMs), W / 2, head.date);
+            ctx.font = '500 24px ' + FONT;
+            ctx.fillText('مدة البث: ' + fmtDuration(stats.durationMs), W / 2, head.duration);
 
             L.secs.forEach(function (block) {
                 var sec = block.sec, ty = y0 + block.top + 44 * s;

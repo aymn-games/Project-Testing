@@ -1,7 +1,7 @@
 /**
  * AGP LIVE SESSION STATS — إحصائيات بث تيك توك الواحد (زر «عرض إحصائيات
  * البث» بمكتبة الألعاب). الأقسام (SECTIONS): المكبّسين، الداعمين، اللي
- * سوّوا شير، المتفاعلين (التعليقات)، والحاضرين (دخول البث).
+ * سوّوا شير، المتفاعلين (التعليقات)، والمشاهدين (مدة التواجد).
  *
  * كل شي بالذاكرة فقط — بدون أي كتابة SQLite لكل حدث (نفس سبب التجميع في
  * ws-server.js: Render محدود بـ0.5 CPU). كل حدث = تحديث رقم في Map.
@@ -37,13 +37,15 @@ var DEFAULT_TOP = 10;
 var AVATAR_CACHE_MAX = 500;
 var AVATAR_CONCURRENCY = 8;
 
-// القسم -> الحقل اللي نرتّب عليه ('joinedAt' تصاعدي = أول من دخل أولاً)
+// القسم -> الحقل اللي نرتّب عليه (تنازلي). المشاهدين: مدة التواجد (watchMs)
+// = من أول ما شفناه بالبث (دخول/تعليق/لايك/هدية/شير) لآخر مرة شفناه —
+// تقريبية لأن تيك توك ما يبلّغ بخروج المشاهد.
 var SECTIONS = {
   likers: 'count',
   gifters: 'diamonds',
   sharers: 'count',
   commenters: 'count',
-  viewers: 'joinedAt'
+  viewers: 'watchMs'
 };
 
 var _sessions = new Map(); // username -> session
@@ -63,7 +65,8 @@ function newSession(username, roomId, connectionId) {
     lastActivityAt: Date.now(),
     endedAt: null,
     totals: { likes: 0, diamonds: 0, gifts: 0, shares: 0, comments: 0, follows: 0, joins: 0, peakViewers: 0, totalViewers: 0 },
-    lists: {}
+    lists: {},
+    avatars: new Map() // id -> روابط الصورة (مشتركة بين كل الأقسام)
   };
   Object.keys(SECTIONS).forEach(function (k) { s.lists[k] = new Map(); });
   return s;
@@ -112,53 +115,67 @@ function owned(username, connectionId) {
 }
 
 /** سجل المستخدم بالقائمة (ينشئه لو جديد)، أو null لو القائمة وصلت السقف. */
-function rec(map, data) {
+function rec(s, map, data) {
   if (!data || !data.id) return null;
   var r = map.get(data.id);
   if (!r) {
     if (map.size >= MAX_USERS_PER_LIST) return null;
-    r = { id: data.id, name: data.name || data.id, avatarUrl: null, count: 0, diamonds: 0, joinedAt: Date.now() };
+    r = { id: data.id, name: data.name || data.id, count: 0, diamonds: 0, joinedAt: Date.now(), lastSeenAt: Date.now() };
     map.set(data.id, r);
   } else if (data.name) {
     r.name = data.name;
   }
-  if (data.avatarUrl) r.avatarUrl = data.avatarUrl;
+  // كل روابط الصورة المتاحة (لو فشل الأول نجرب اللي بعده) — بمستوى البث،
+  // عشان صورة شفناها بحدث ثاني (دخول/تعليق) تطلع بكل الأقسام
+  var urls = Array.isArray(data.avatarUrls) && data.avatarUrls.length ? data.avatarUrls : (data.avatarUrl ? [data.avatarUrl] : null);
+  if (urls && (s.avatars.has(data.id) || s.avatars.size < MAX_USERS_PER_LIST * 2)) s.avatars.set(data.id, urls.slice(0, 3));
   return r;
+}
+
+/** أي حدث من مستخدم = موجود بالبث الحين (لقائمة المشاهدين ومدة تواجدهم). */
+function seen(s, data) {
+  if (!data || normalize(data.id) === s.username) return; // صاحب البث نفسه مو مشاهد
+  var r = rec(s, s.lists.viewers, data);
+  if (r) r.lastSeenAt = Date.now();
 }
 
 function recordLike(username, connectionId, data) {
   var s = owned(username, connectionId);
   if (!s) return;
+  seen(s, data);
   var n = Number(data.count) || 1;
   s.totals.likes += n;
-  var r = rec(s.lists.likers, data);
+  var r = rec(s, s.lists.likers, data);
   if (r) r.count += n;
 }
 
 function recordShare(username, connectionId, data) {
   var s = owned(username, connectionId);
   if (!s) return;
+  seen(s, data);
   s.totals.shares++;
-  var r = rec(s.lists.sharers, data);
+  var r = rec(s, s.lists.sharers, data);
   if (r) r.count++;
 }
 
 function recordGift(username, connectionId, data) {
   var s = owned(username, connectionId);
   if (!s) return;
+  seen(s, data);
   var repeat = Number(data.repeatCount) || 1;
   var diamonds = (Number(data.giftValue) || 0) * repeat;
   s.totals.gifts += repeat;
   s.totals.diamonds += diamonds;
-  var r = rec(s.lists.gifters, data);
+  var r = rec(s, s.lists.gifters, data);
   if (r) { r.count += repeat; r.diamonds += diamonds; }
 }
 
 function recordComment(username, connectionId, data) {
   var s = owned(username, connectionId);
   if (!s) return;
+  seen(s, data);
   s.totals.comments++;
-  var r = rec(s.lists.commenters, data);
+  var r = rec(s, s.lists.commenters, data);
   if (r) r.count++;
 }
 
@@ -166,7 +183,8 @@ function recordMember(username, connectionId, data) {
   var s = owned(username, connectionId);
   if (!s) return;
   s.totals.joins++;
-  var r = rec(s.lists.viewers, data);
+  seen(s, data);
+  var r = s.lists.viewers.get(data.id);
   if (r) r.count++;
 }
 
@@ -189,13 +207,13 @@ function markEnded(username, connectionId) {
   s.endedAt = Date.now();
 }
 
-function top(map, field, n) {
+function top(s, map, field, n) {
   var list = [];
   map.forEach(function (r) { list.push(r); });
-  if (field === 'joinedAt') list.sort(function (a, b) { return a.joinedAt - b.joinedAt; });
-  else list.sort(function (a, b) { return b[field] - a[field]; });
+  list.forEach(function (r) { r.watchMs = Math.max(0, r.lastSeenAt - r.joinedAt); });
+  list.sort(function (a, b) { return b[field] - a[field]; });
   return list.slice(0, n).map(function (r) {
-    return { name: r.name, username: r.id, count: r.count, diamonds: r.diamonds, joinedAt: r.joinedAt, avatarUrl: r.avatarUrl };
+    return { name: r.name, username: r.id, count: r.count, diamonds: r.diamonds, watchMs: r.watchMs, avatarUrls: s.avatars.get(r.id) || null };
   });
 }
 
@@ -209,15 +227,22 @@ function cachedAvatar(url) {
   }, function () { return null; });
 }
 
-/** يستبدل avatarUrl بـ avatar (Data URL) لكل عنصر، بحد أقصى AVATAR_CONCURRENCY بنفس اللحظة. */
+/** أول رابط من القائمة ينجح تحميله، أو null. */
+function avatarFromList(urls, i) {
+  i = i || 0;
+  if (!urls || i >= urls.length) return Promise.resolve(null);
+  return cachedAvatar(urls[i]).then(function (a) { return a || avatarFromList(urls, i + 1); });
+}
+
+/** يستبدل avatarUrls بـ avatar (Data URL) لكل عنصر، بحد أقصى AVATAR_CONCURRENCY بنفس اللحظة. */
 function attachAvatars(items) {
   var i = 0;
   function worker() {
     if (i >= items.length) return Promise.resolve();
     var item = items[i++];
-    return cachedAvatar(item.avatarUrl).then(function (a) {
+    return avatarFromList(item.avatarUrls).then(function (a) {
       item.avatar = a;
-      delete item.avatarUrl;
+      delete item.avatarUrls;
       return worker();
     });
   }
@@ -242,7 +267,7 @@ function getSummary(username, tops, withAvatars) {
     counts[k] = s.lists[k].size;
     var n = tops ? Math.min(MAX_TOP, Math.max(0, Math.floor(Number(tops[k]) || 0))) : DEFAULT_TOP;
     if (!n) return;
-    sections[k] = top(s.lists[k], SECTIONS[k], n);
+    sections[k] = top(s, s.lists[k], SECTIONS[k], n);
     all = all.concat(sections[k]);
   });
   var summary = {
@@ -256,7 +281,7 @@ function getSummary(username, tops, withAvatars) {
     sections: sections
   };
   if (!withAvatars) {
-    all.forEach(function (it) { delete it.avatarUrl; });
+    all.forEach(function (it) { delete it.avatarUrls; });
     return Promise.resolve(summary);
   }
   return attachAvatars(all).then(function () { return summary; });

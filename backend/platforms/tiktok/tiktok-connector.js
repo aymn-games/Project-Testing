@@ -9,9 +9,9 @@
  *     onGift({ id, name, giftName, giftId, giftValue, repeatCount }),
  *     onFollow({ id, name }),
  *     onViewerUpdate({ current, totalUsers }),  // اختياري
- *     onLike({ id, name, count, avatarUrl }),   // اختياري — count = عدد التكبيسات بهذه الدفعة
- *     onShare({ id, name, avatarUrl }),         // اختياري
- *     onMember({ id, name, avatarUrl })         // اختياري — دخول مشاهد للبث
+ *     onLike({ id, name, count, avatarUrls }),  // اختياري — count = عدد التكبيسات بهذه الدفعة
+ *     onShare({ id, name, avatarUrls }),        // اختياري
+ *     onMember({ id, name, avatarUrls })        // اختياري — دخول مشاهد للبث
  *   }
  *
  * إعادة الاتصال (Reconnect):
@@ -154,6 +154,24 @@ function extractAvatarUrl(data) {
     if (Array.isArray(pic.urlListList) && pic.urlListList.length) return pic.urlListList[0];
     if (Array.isArray(pic.urlList) && pic.urlList.length) return pic.urlList[0];
     return null;
+}
+
+/**
+ * كل روابط الصورة المصغّرة المتاحة (حتى 3) لإحصائيات البث — لو فشل تحميل
+ * رابط نجرّب اللي بعده. صيغ jpeg/webp/png أولاً لأنها اللي ينقبل تحميلها
+ * (tiktok-avatar-sync.js)، والصغيرة (avatarThumb) قبل الأكبر.
+ */
+function extractAvatarUrls(data) {
+    var user = (data && data.user) || {};
+    var out = [];
+    [user.avatarThumb, user.avatarMedium, user.profilePicture].forEach(function (pic) {
+        if (!pic) return;
+        var list = typeof pic === 'string' ? [pic] : (pic.urlList || pic.urls || (pic.url ? [pic.url] : []));
+        (list || []).forEach(function (u) { if (typeof u === 'string' && u && out.indexOf(u) === -1) out.push(u); });
+    });
+    var ok = /\.(jpe?g|webp|png)(\?|$)/i;
+    out.sort(function (a, b) { return (ok.test(b) ? 1 : 0) - (ok.test(a) ? 1 : 0); });
+    return out.slice(0, 3);
 }
 
 /**
@@ -372,6 +390,7 @@ function createTikTokConnector() {
                 text: commentText,
                 isFollower: isStreamOwner(user, _username) || extractIsFollower(data),
                 avatarUrl: avatarUrl,
+                avatarUrls: extractAvatarUrls(data),
                 frame: extractEquippedFrame(user.uniqueId),
                 entrance: extractEquippedEntrance(user.uniqueId),
                 elimCard: extractElimCard(user.uniqueId),
@@ -399,7 +418,8 @@ function createTikTokConnector() {
                 giftId: (data && data.giftId) || null,
                 giftValue: giftInfo.value,
                 repeatCount: (data && data.repeatCount) || 1,
-                avatarUrl: extractAvatarUrl(data)
+                avatarUrl: extractAvatarUrl(data),
+                avatarUrls: extractAvatarUrls(data)
             });
         });
 
@@ -413,19 +433,19 @@ function createTikTokConnector() {
         if (_callbacks.onLike) {
             _connection.on(TikTokLib.WebcastEvent.LIKE, function (data) {
                 var user = extractUser(data);
-                _callbacks.onLike({ id: user.id, name: user.name, count: Number(data && data.likeCount) || 1, avatarUrl: extractAvatarUrl(data) });
+                _callbacks.onLike({ id: user.id, name: user.name, count: Number(data && data.likeCount) || 1, avatarUrls: extractAvatarUrls(data) });
             });
         }
         if (_callbacks.onShare) {
             _connection.on(TikTokLib.WebcastEvent.SHARE, function (data) {
                 var user = extractUser(data);
-                _callbacks.onShare({ id: user.id, name: user.name, avatarUrl: extractAvatarUrl(data) });
+                _callbacks.onShare({ id: user.id, name: user.name, avatarUrls: extractAvatarUrls(data) });
             });
         }
         if (_callbacks.onMember) {
             _connection.on(TikTokLib.WebcastEvent.MEMBER, function (data) {
                 var user = extractUser(data);
-                _callbacks.onMember({ id: user.id, name: user.name, avatarUrl: extractAvatarUrl(data) });
+                _callbacks.onMember({ id: user.id, name: user.name, avatarUrls: extractAvatarUrls(data) });
             });
         }
 
