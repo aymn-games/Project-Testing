@@ -9,8 +9,9 @@
  *     onGift({ id, name, giftName, giftId, giftValue, repeatCount }),
  *     onFollow({ id, name }),
  *     onViewerUpdate({ current, totalUsers }),  // اختياري
- *     onLike({ id, name, count }),              // اختياري — count = عدد التكبيسات بهذه الدفعة
- *     onShare({ id, name })                     // اختياري
+ *     onLike({ id, name, count, avatarUrl }),   // اختياري — count = عدد التكبيسات بهذه الدفعة
+ *     onShare({ id, name, avatarUrl }),         // اختياري
+ *     onMember({ id, name, avatarUrl })         // اختياري — دخول مشاهد للبث
  *   }
  *
  * إعادة الاتصال (Reconnect):
@@ -397,7 +398,8 @@ function createTikTokConnector() {
                 giftName: giftInfo.name,
                 giftId: (data && data.giftId) || null,
                 giftValue: giftInfo.value,
-                repeatCount: (data && data.repeatCount) || 1
+                repeatCount: (data && data.repeatCount) || 1,
+                avatarUrl: extractAvatarUrl(data)
             });
         });
 
@@ -406,18 +408,24 @@ function createTikTokConnector() {
             _callbacks.onFollow({ id: user.id, name: user.name });
         });
 
-        // like/share — لإحصائيات البث فقط (stats/live-session-stats.js).
+        // like/share/member — لإحصائيات البث فقط (stats/live-session-stats.js).
         // تيك توك يجمّع التكبيسات بدفعات (likeCount) بدل حدث لكل ضغطة.
         if (_callbacks.onLike) {
             _connection.on(TikTokLib.WebcastEvent.LIKE, function (data) {
                 var user = extractUser(data);
-                _callbacks.onLike({ id: user.id, name: user.name, count: Number(data && data.likeCount) || 1 });
+                _callbacks.onLike({ id: user.id, name: user.name, count: Number(data && data.likeCount) || 1, avatarUrl: extractAvatarUrl(data) });
             });
         }
         if (_callbacks.onShare) {
             _connection.on(TikTokLib.WebcastEvent.SHARE, function (data) {
                 var user = extractUser(data);
-                _callbacks.onShare({ id: user.id, name: user.name });
+                _callbacks.onShare({ id: user.id, name: user.name, avatarUrl: extractAvatarUrl(data) });
+            });
+        }
+        if (_callbacks.onMember) {
+            _connection.on(TikTokLib.WebcastEvent.MEMBER, function (data) {
+                var user = extractUser(data);
+                _callbacks.onMember({ id: user.id, name: user.name, avatarUrl: extractAvatarUrl(data) });
             });
         }
 

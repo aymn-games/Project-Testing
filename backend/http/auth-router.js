@@ -753,8 +753,9 @@ function handleStreamIsLive(req, res, body, user) {
 }
 
 /**
- * GET /api/stream/session-stats → { success, stats: {...} | null }
+ * GET /api/stream/session-stats?sections=likers:3,gifters:5 → { success, stats: {...} | null, streamer }
  * إحصائيات بث حساب تيك توك المربوط بحساب الطالب (stats/live-session-stats.js).
+ * sections = الأقسام المطلوبة وعدد التوب لكل قسم (بدونها: كل الأقسام بدون صور).
  * الأدمن وأصحاب «تشغيل كامل» يقدرون يطلبون أي يوزر عبر ?username=.
  */
 function handleStreamSessionStats(req, res, body, user) {
@@ -765,7 +766,23 @@ function handleStreamSessionStats(req, res, body, user) {
     sendJson(res, 400, { success: false, error: 'tiktok_not_linked' });
     return;
   }
-  sendJson(res, 200, { success: true, stats: liveSessionStats.getSummary(username) });
+  var tops = null;
+  var rawSections = getQueryParam(req, 'sections');
+  if (rawSections) {
+    tops = {};
+    String(rawSections).split(',').forEach(function (part) {
+      var kv = part.split(':');
+      if (liveSessionStats.SECTIONS.indexOf(kv[0]) !== -1) tops[kv[0]] = Number(kv[1]) || 0;
+    });
+  }
+  return liveSessionStats.getSummary(username, tops, Boolean(tops)).then(function (stats) {
+    if (!stats || !tops) return { stats: stats, streamer: null };
+    return liveSessionStats.getStreamerProfile(username).then(function (streamer) {
+      return { stats: stats, streamer: streamer };
+    });
+  }).then(function (r) {
+    sendJson(res, 200, { success: true, stats: r.stats, streamer: r.streamer });
+  });
 }
 
 /**

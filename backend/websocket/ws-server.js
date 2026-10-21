@@ -413,7 +413,7 @@ function handleConnectMessage(connectionId, socket, payload) {
       sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, data.isFollower, data.avatarUrl, data.frame, data.elimCard, data.winCard));
 
       if (entry.live && entry.activeConnector === connector) entry.live.comments++;
-      if (entry.broadcastTracking) liveSessionStats.recordComment(entry.broadcastTracking.username, connectionId);
+      if (entry.broadcastTracking) liveSessionStats.recordComment(entry.broadcastTracking.username, connectionId, data);
 
       // تجميع بالذاكرة بدل كتابة SQLite فورية — تُفرَّغ دورياً عبر flushAllPendingStats.
       if (entry.activeBroadcastId) {
@@ -460,13 +460,17 @@ function handleConnectMessage(connectionId, socket, payload) {
       }
     },
 
-    // لايكات وشير — لإحصائيات البث بالذاكرة فقط، بدون رسالة للمتصفح.
+    // لايكات وشير ودخول المشاهدين — لإحصائيات البث بالذاكرة فقط، بدون رسالة للمتصفح.
     onLike: function (data) {
       if (entry.broadcastTracking) liveSessionStats.recordLike(entry.broadcastTracking.username, connectionId, data);
     },
 
     onShare: function (data) {
       if (entry.broadcastTracking) liveSessionStats.recordShare(entry.broadcastTracking.username, connectionId, data);
+    },
+
+    onMember: function (data) {
+      if (entry.broadcastTracking) liveSessionStats.recordMember(entry.broadcastTracking.username, connectionId, data);
     }
   });
 }

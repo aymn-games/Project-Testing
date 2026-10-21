@@ -1,10 +1,13 @@
 /**
  * AGP STREAM STATS — زر «عرض إحصائيات البث» بمكتبة الألعاب (games.html).
  *
- * يجيب ملخص البث الحالي/الأخير من GET /api/stream/session-stats
- * (backend/stats/live-session-stats.js)، ويرسمه صورة PNG بـCanvas داخل
- * متصفح الاستريمر نفسه (بدون أي معالجة صور بالسيرفر)، ويعرضها بنافذة مع
- * زر «حفظ الصورة».
+ * خطوتين بنفس النافذة:
+ *  1. الإعدادات: الاستريمر يختار الأقسام اللي يبيها (المكبّسين، الداعمين،
+ *     الشير، المتفاعلين، الحاضرين) وعدد التوب لكل قسم — تنحفظ بـlocalStorage.
+ *  2. الصورة: يجيب الملخص من GET /api/stream/session-stats?sections=...
+ *     (backend/stats/live-session-stats.js — الصور تجي Data URL جاهزة)،
+ *     ويرسمها بـCanvas داخل المتصفح: صورة واسم صاحب البث فوق، وتحتها كل
+ *     قسم بترتيبه مع صورة واسم كل مستخدم. زر «حفظ الصورة» يحمّلها PNG.
  *
  * AGPStreamStats.open()
  */
@@ -13,12 +16,58 @@
 
     var W = 1080;
     var PAD = 56;
+    var MAX_TOP = 20;
+    var PREFS_KEY = 'agp:stream-stats-prefs';
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,sans-serif';
     var COLORS = {
         bg1: '#120d22', bg2: '#050508', card: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.10)',
-        text: '#f4f2fb', muted: '#968ea4', accent: '#b28cf5',
-        likes: '#f472b6', gifts: '#facc15', shares: '#38bdf8'
+        text: '#f4f2fb', muted: '#968ea4', accent: '#b28cf5'
     };
+
+    function fmt(n) { return (Number(n) || 0).toLocaleString('en-US'); }
+
+    function fmtTime(ts) {
+        try { return new Date(ts).toLocaleTimeString('ar-SA-u-nu-latn', { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; }
+    }
+
+    // ترتيب الأقسام هنا = ترتيبها بالصورة وبالإعدادات
+    var SECTIONS = [
+        { key: 'likers', title: 'المكبّسين', desc: 'أكثر من كبّس على البث', color: '#f472b6', def: true,
+          value: function (r) { return fmt(r.count) + ' تكبيسة'; },
+          total: function (s) { return fmt(s.counts.likers) + ' مكبّس · ' + fmt(s.totals.likes) + ' تكبيسة'; } },
+        { key: 'gifters', title: 'الداعمين', desc: 'أكثر من دعم بالهدايا (بالماس)', color: '#facc15', def: true,
+          value: function (r) { return fmt(r.diamonds) + ' 💎'; },
+          total: function (s) { return fmt(s.counts.gifters) + ' داعم · ' + fmt(s.totals.diamonds) + ' 💎'; } },
+        { key: 'sharers', title: 'سوّوا شير', desc: 'اللي نشروا البث', color: '#38bdf8', def: true,
+          value: function (r) { return fmt(r.count) + ' شير'; },
+          total: function (s) { return fmt(s.counts.sharers) + ' شخص · ' + fmt(s.totals.shares) + ' شير'; } },
+        { key: 'commenters', title: 'المتفاعلين', desc: 'أكثر من كتب تعليقات', color: '#34d399', def: false,
+          value: function (r) { return fmt(r.count) + ' تعليق'; },
+          total: function (s) { return fmt(s.counts.commenters) + ' متفاعل · ' + fmt(s.totals.comments) + ' تعليق'; } },
+        { key: 'viewers', title: 'الحاضرين', desc: 'اللي دخلوا البث (حسب وقت الدخول)', color: '#a78bfa', def: false,
+          value: function (r) { return fmtTime(r.joinedAt); },
+          total: function (s) { return fmt(s.counts.viewers) + ' حاضر · أعلى مشاهدة ' + fmt(s.totals.peakViewers); } }
+    ];
+
+    /* ---------------- الإعدادات ---------------- */
+
+    function loadPrefs() {
+        var p = null;
+        try { p = JSON.parse(localStorage.getItem(PREFS_KEY) || 'null'); } catch (e) {}
+        var out = {};
+        SECTIONS.forEach(function (sec) {
+            var v = p && p[sec.key];
+            out[sec.key] = {
+                on: v ? Boolean(v.on) : sec.def,
+                top: v ? clampTop(v.top) : (sec.key === 'viewers' ? 10 : 3)
+            };
+        });
+        return out;
+    }
+    function savePrefs(p) { try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch (e) {} }
+    function clampTop(n) { return Math.min(MAX_TOP, Math.max(1, Math.floor(Number(n) || 1))); }
+
+    /* ---------------- الشبكة ---------------- */
 
     function apiBase() {
         return (window.AGPAuth && window.AGPAuth.API_BASE) || 'https://project-testing-akds.onrender.com';
@@ -27,10 +76,12 @@
         try { return (window.AGPAuth && window.AGPAuth.getToken && window.AGPAuth.getToken()) || localStorage.getItem('agp_auth_token'); } catch (e) { return null; }
     }
 
-    function fetchStats() {
+    function fetchStats(prefs) {
         var t = token();
         if (!t) return Promise.reject(new Error('سجّل دخول بحسابك عشان تشوف إحصائيات البث'));
-        return fetch(apiBase() + '/api/stream/session-stats', { headers: { 'Authorization': 'Bearer ' + t } })
+        var q = SECTIONS.filter(function (s) { return prefs[s.key].on; })
+            .map(function (s) { return s.key + ':' + prefs[s.key].top; }).join(',');
+        return fetch(apiBase() + '/api/stream/session-stats?sections=' + encodeURIComponent(q), { headers: { 'Authorization': 'Bearer ' + t } })
             .then(function (res) { return res.json(); }, function () { return null; })
             .then(function (d) {
                 if (!d || !d.success) {
@@ -38,11 +89,22 @@
                         ? 'اربط حساب تيك توك بحسابك في الموقع أولاً'
                         : 'تعذّر جلب إحصائيات البث — جرّب مرة ثانية');
                 }
-                return d.stats;
+                return d;
             });
     }
 
-    function fmt(n) { return (Number(n) || 0).toLocaleString('en-US'); }
+    /** يحوّل Data URL لصورة جاهزة للرسم (أو null). */
+    function loadImg(src) {
+        return new Promise(function (resolve) {
+            if (!src) { resolve(null); return; }
+            var img = new Image();
+            img.onload = function () { resolve(img); };
+            img.onerror = function () { resolve(null); };
+            img.src = src;
+        });
+    }
+
+    /* ---------------- الرسم ---------------- */
 
     function fmtDuration(ms) {
         var mins = Math.round((Number(ms) || 0) / 60000);
@@ -54,8 +116,8 @@
 
     function fmtDate(ts) {
         try {
-            return new Date(ts).toLocaleString('ar-SA-u-nu-latn', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-        } catch (e) { return new Date(ts).toLocaleString(); }
+            return new Date(ts).toLocaleDateString('ar-SA-u-nu-latn', { year: 'numeric', month: 'long', day: 'numeric' });
+        } catch (e) { return new Date(ts).toLocaleDateString(); }
     }
 
     function roundRect(ctx, x, y, w, h, r) {
@@ -75,149 +137,178 @@
         return text + '…';
     }
 
-    // كل قائمة: عنوان + صفوف (أو سطر "لا يوجد")
-    var ROW_H = 58, LIST_HEAD = 76, LIST_GAP = 28;
-    function listHeight(rows) { return LIST_HEAD + Math.max(rows.length, 1) * ROW_H + 24; }
+    /** صورة دائرية، وإلا أول حرف من الاسم بدائرة ملوّنة. */
+    function drawAvatar(ctx, img, name, cx, cy, r, color) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.closePath();
+        if (img) {
+            ctx.clip();
+            ctx.drawImage(img, cx - r, cy - r, r * 2, r * 2);
+        } else {
+            ctx.fillStyle = 'rgba(255,255,255,0.08)';
+            ctx.fill();
+            ctx.fillStyle = color;
+            ctx.font = '700 ' + Math.round(r * 0.9) + 'px ' + FONT;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(name || '?').trim().charAt(0) || '?', cx, cy + 2);
+        }
+        ctx.restore();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+    }
 
-    function drawList(ctx, y, title, color, rows, valueOf, total) {
-        var x = PAD, w = W - PAD * 2, h = listHeight(rows);
+    var HEADER_H = 470, ROW_H = 78, SEC_HEAD = 96, SEC_GAP = 30;
+    function sectionHeight(rows) { return SEC_HEAD + Math.max(rows.length, 1) * ROW_H + 24; }
+
+    function drawSection(ctx, y, sec, stats, rows, imgs) {
+        var x = PAD, w = W - PAD * 2, h = sectionHeight(rows);
         roundRect(ctx, x, y, w, h, 28);
         ctx.fillStyle = COLORS.card; ctx.fill();
         ctx.strokeStyle = COLORS.border; ctx.lineWidth = 2; ctx.stroke();
+        // شريط لون القسم أعلى البطاقة
+        roundRect(ctx, x + w - 140, y, 140, 6, 3);
+        ctx.fillStyle = sec.color; ctx.fill();
 
+        ctx.textBaseline = 'alphabetic';
         ctx.textAlign = 'right';
-        ctx.fillStyle = color;
-        ctx.font = '700 34px ' + FONT;
-        ctx.fillText(title, x + w - 32, y + 50);
+        ctx.fillStyle = sec.color;
+        ctx.font = '700 38px ' + FONT;
+        ctx.fillText(sec.title, x + w - 32, y + 60);
         ctx.textAlign = 'left';
         ctx.fillStyle = COLORS.muted;
-        ctx.font = '500 24px ' + FONT;
-        ctx.fillText(total, x + 32, y + 50);
+        ctx.font = '500 23px ' + FONT;
+        ctx.fillText(sec.total(stats), x + 32, y + 58);
 
-        var ry = y + LIST_HEAD;
+        var ry = y + SEC_HEAD;
         if (!rows.length) {
             ctx.textAlign = 'center';
             ctx.fillStyle = COLORS.muted;
             ctx.font = '500 26px ' + FONT;
-            ctx.fillText('لا يوجد', x + w / 2, ry + 38);
+            ctx.fillText('لا يوجد', x + w / 2, ry + 46);
             return h;
         }
         rows.forEach(function (r, i) {
             if (i % 2 === 0) {
-                roundRect(ctx, x + 16, ry + 4, w - 32, ROW_H - 8, 14);
+                roundRect(ctx, x + 16, ry + 4, w - 32, ROW_H - 8, 16);
                 ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fill();
             }
-            var mid = ry + ROW_H / 2 + 10;
-            // الترتيب يمين، الاسم بعده، القيمة يسار
+            var mid = ry + ROW_H / 2;
+            ctx.textBaseline = 'middle';
+            // الترتيب ← الصورة ← الاسم (يمين)، القيمة يسار
+            ctx.textAlign = 'center';
+            ctx.fillStyle = i < 3 ? sec.color : COLORS.muted;
+            ctx.font = '700 28px ' + FONT;
+            ctx.fillText(String(i + 1), x + w - 52, mid);
+            drawAvatar(ctx, imgs[i], r.name, x + w - 112, mid, 26, i < 3 ? sec.color : 'rgba(255,255,255,0.25)');
+
+            var nameRight = x + w - 154;
+            var nameMax = w - 154 - 300;
             ctx.textAlign = 'right';
-            ctx.fillStyle = i < 3 ? color : COLORS.muted;
-            ctx.font = '700 26px ' + FONT;
-            ctx.fillText(String(i + 1), x + w - 36, mid);
             ctx.fillStyle = COLORS.text;
-            ctx.font = '600 27px ' + FONT;
-            var nameMax = w - 380;
+            ctx.font = '600 28px ' + FONT;
             var name = fitText(ctx, r.name, nameMax);
-            ctx.fillText(name, x + w - 84, mid);
+            ctx.fillText(name, nameRight, mid - (r.username && r.username !== r.name ? 12 : 0));
             if (r.username && r.username !== r.name) {
-                var nameW = ctx.measureText(name).width;
                 ctx.fillStyle = COLORS.muted;
-                ctx.font = '400 21px ' + FONT;
-                var handleMax = nameMax - nameW - 16;
-                if (handleMax > 60) {
-                    ctx.direction = 'ltr'; ctx.textAlign = 'right';
-                    ctx.fillText(fitText(ctx, '@' + r.username, handleMax), x + w - 84 - nameW - 14, mid);
-                    ctx.direction = 'rtl';
-                }
+                ctx.font = '400 20px ' + FONT;
+                ctx.direction = 'ltr';
+                ctx.textAlign = 'right';
+                ctx.fillText(fitText(ctx, '@' + r.username, nameMax), nameRight, mid + 20);
+                ctx.direction = 'rtl';
             }
             ctx.textAlign = 'left';
-            ctx.fillStyle = color;
-            ctx.font = '700 27px ' + FONT;
-            ctx.fillText(valueOf(r), x + 36, mid);
+            ctx.fillStyle = sec.color;
+            ctx.font = '700 28px ' + FONT;
+            ctx.fillText(sec.value(r), x + 36, mid);
             ry += ROW_H;
         });
+        ctx.textBaseline = 'alphabetic';
         return h;
     }
 
-    function draw(stats) {
-        var lists = [
-            { title: 'أكثر المكبّسين', color: COLORS.likes, rows: stats.topLikers, value: function (r) { return fmt(r.count) + ' تكبيسة'; }, total: fmt(stats.counts.likers) + ' مكبّس' },
-            { title: 'الداعمين', color: COLORS.gifts, rows: stats.topGifters, value: function (r) { return fmt(r.diamonds) + ' 💎'; }, total: fmt(stats.counts.gifters) + ' داعم' },
-            { title: 'سوّوا شير للبث', color: COLORS.shares, rows: stats.topSharers, value: function (r) { return fmt(r.count) + ' شير'; }, total: fmt(stats.counts.sharers) + ' شخص' }
-        ];
-        var HEADER_H = 230, TILES_H = 2 * 150 + 20;
-        var H = PAD + HEADER_H + TILES_H + 40 + lists.reduce(function (s, l) { return s + listHeight(l.rows) + LIST_GAP; }, 0) + 70;
+    /**
+     * @returns {Promise<HTMLCanvasElement>}
+     */
+    function draw(data, prefs) {
+        var stats = data.stats;
+        var streamer = data.streamer || { name: stats.username, avatar: null };
+        var chosen = SECTIONS.filter(function (s) { return prefs[s.key].on; });
 
-        var canvas = document.createElement('canvas');
-        canvas.width = W; canvas.height = H;
-        var ctx = canvas.getContext('2d');
-        ctx.direction = 'rtl';
+        // تحميل كل الصور قبل الرسم
+        var jobs = [loadImg(streamer.avatar)];
+        chosen.forEach(function (sec) {
+            (stats.sections[sec.key] || []).forEach(function (r) { jobs.push(loadImg(r.avatar)); });
+        });
+        return Promise.all(jobs).then(function (loaded) {
+            var streamerImg = loaded[0];
+            var k = 1;
+            var imgsBySec = {};
+            chosen.forEach(function (sec) {
+                imgsBySec[sec.key] = (stats.sections[sec.key] || []).map(function () { return loaded[k++]; });
+            });
 
-        var g = ctx.createLinearGradient(0, 0, 0, H);
-        g.addColorStop(0, COLORS.bg1); g.addColorStop(1, COLORS.bg2);
-        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-        var glow = ctx.createRadialGradient(W * 0.8, 0, 0, W * 0.8, 0, 700);
-        glow.addColorStop(0, 'rgba(122,63,212,0.35)'); glow.addColorStop(1, 'rgba(122,63,212,0)');
-        ctx.fillStyle = glow; ctx.fillRect(0, 0, W, 700);
+            var H = PAD + HEADER_H + chosen.reduce(function (s, sec) {
+                return s + sectionHeight(stats.sections[sec.key] || []) + SEC_GAP;
+            }, 0) + 70;
 
-        // العنوان
-        var y = PAD;
-        ctx.textAlign = 'right';
-        ctx.fillStyle = COLORS.accent;
-        ctx.font = '600 26px ' + FONT;
-        ctx.fillText(stats.live ? 'البث شغّال الآن' : 'ملخص البث', W - PAD, y + 30);
-        ctx.fillStyle = COLORS.text;
-        ctx.font = '700 64px ' + FONT;
-        ctx.fillText('إحصائيات البث', W - PAD, y + 110);
-        ctx.direction = 'ltr';
-        ctx.font = '600 32px ' + FONT;
-        ctx.fillStyle = COLORS.accent;
-        ctx.fillText('@' + stats.username, W - PAD, y + 160);
-        ctx.direction = 'rtl';
-        ctx.fillStyle = COLORS.muted;
-        ctx.font = '500 24px ' + FONT;
-        ctx.fillText(fmtDate(stats.startedAt) + '  ·  المدة: ' + fmtDuration(stats.durationMs), W - PAD, y + 205);
-        y += HEADER_H;
+            var canvas = document.createElement('canvas');
+            canvas.width = W; canvas.height = H;
+            var ctx = canvas.getContext('2d');
+            ctx.direction = 'rtl';
 
-        // البطاقات (٣ × ٢)
-        var tiles = [
-            ['التكبيسات', fmt(stats.totals.likes), COLORS.likes],
-            ['الدعم (ماس)', fmt(stats.totals.diamonds), COLORS.gifts],
-            ['الشير', fmt(stats.totals.shares), COLORS.shares],
-            ['التعليقات', fmt(stats.totals.comments), COLORS.text],
-            ['متابعين جدد', fmt(stats.totals.follows), COLORS.text],
-            ['أعلى مشاهدة', fmt(stats.totals.peakViewers), COLORS.text]
-        ];
-        var gap = 20, tw = (W - PAD * 2 - gap * 2) / 3, th = 150;
-        tiles.forEach(function (t, i) {
-            var col = i % 3, row = Math.floor(i / 3);
-            var tx = W - PAD - (col + 1) * tw - col * gap, ty = y + row * (th + gap);
-            roundRect(ctx, tx, ty, tw, th, 24);
-            ctx.fillStyle = COLORS.card; ctx.fill();
-            ctx.strokeStyle = COLORS.border; ctx.lineWidth = 2; ctx.stroke();
+            var g = ctx.createLinearGradient(0, 0, 0, H);
+            g.addColorStop(0, COLORS.bg1); g.addColorStop(1, COLORS.bg2);
+            ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+            var glow = ctx.createRadialGradient(W / 2, 120, 0, W / 2, 120, 600);
+            glow.addColorStop(0, 'rgba(122,63,212,0.38)'); glow.addColorStop(1, 'rgba(122,63,212,0)');
+            ctx.fillStyle = glow; ctx.fillRect(0, 0, W, 800);
+
+            // أعلى الصورة: صورة واسم صاحب البث
+            var y = PAD;
             ctx.textAlign = 'center';
-            ctx.fillStyle = t[2];
-            ctx.font = '700 46px ' + FONT;
-            ctx.fillText(fitText(ctx, t[1], tw - 24), tx + tw / 2, ty + 72);
+            ctx.fillStyle = COLORS.accent;
+            ctx.font = '600 26px ' + FONT;
+            ctx.fillText(stats.live ? 'إحصائيات البث · شغّال الآن' : 'إحصائيات البث', W / 2, y + 26);
+            drawAvatar(ctx, streamerImg, streamer.name, W / 2, y + 150, 92, COLORS.accent);
+            ctx.textBaseline = 'alphabetic';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = COLORS.text;
+            ctx.font = '700 52px ' + FONT;
+            ctx.fillText(fitText(ctx, streamer.name, W - PAD * 2), W / 2, y + 310);
+            ctx.direction = 'ltr';
+            ctx.fillStyle = COLORS.accent;
+            ctx.font = '600 28px ' + FONT;
+            ctx.fillText('@' + stats.username, W / 2, y + 354);
+            ctx.direction = 'rtl';
             ctx.fillStyle = COLORS.muted;
             ctx.font = '500 24px ' + FONT;
-            ctx.fillText(t[0], tx + tw / 2, ty + 118);
-        });
-        y += TILES_H + 40;
+            ctx.fillText(fmtDate(stats.startedAt) + '  ·  المدة: ' + fmtDuration(stats.durationMs), W / 2, y + 398);
+            y += HEADER_H;
 
-        lists.forEach(function (l) {
-            y += drawList(ctx, y, l.title, l.color, l.rows || [], l.value, l.total) + LIST_GAP;
-        });
+            // تحت: الأقسام المختارة بترتيبها
+            chosen.forEach(function (sec) {
+                y += drawSection(ctx, y, sec, stats, stats.sections[sec.key] || [], imgsBySec[sec.key]) + SEC_GAP;
+            });
 
-        ctx.textAlign = 'center';
-        ctx.fillStyle = COLORS.muted;
-        ctx.font = '500 22px ' + FONT;
-        ctx.fillText('منصة ألعاب أيمن', W / 2, H - 36);
-        return canvas;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = COLORS.muted;
+            ctx.font = '500 22px ' + FONT;
+            ctx.fillText('منصة ألعاب أيمن', W / 2, H - 36);
+            return canvas;
+        });
     }
 
     /* ---------------- النافذة ---------------- */
 
     var BTN = 'height:46px;padding:0 22px;border-radius:999px;font:inherit;font-weight:700;font-size:15px;cursor:pointer;';
+    var BTN_PRIMARY = BTN + 'flex:1;border:none;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;';
+    var BTN_GHOST = BTN + 'border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#e7e3ef;';
 
     function modal() {
         var old = document.getElementById('agp-stream-stats');
@@ -229,12 +320,12 @@
         wrap.setAttribute('aria-label', 'إحصائيات البث');
         wrap.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-family:' + FONT + ';color:#f4f2fb;';
         wrap.innerHTML =
-            '<div data-box style="width:min(520px,100%);max-height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:24px;background:rgba(12,11,18,.97);border:1px solid rgba(178,140,245,.3);box-shadow:0 30px 90px rgba(0,0,0,.6)">' +
+            '<div style="width:min(520px,100%);max-height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:24px;background:rgba(12,11,18,.97);border:1px solid rgba(178,140,245,.3);box-shadow:0 30px 90px rgba(0,0,0,.6)">' +
               '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">' +
                 '<span style="font-weight:700;font-size:19px">إحصائيات البث</span>' +
                 '<button type="button" data-close aria-label="إغلاق" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#e7e3ef;font-size:18px;cursor:pointer">✕</button>' +
               '</div>' +
-              '<div data-body style="flex:1;min-height:120px;overflow:auto;border-radius:16px;display:flex;align-items:flex-start;justify-content:center"></div>' +
+              '<div data-body style="flex:1;min-height:120px;overflow:auto;border-radius:16px;display:flex;flex-direction:column;align-items:stretch"></div>' +
               '<div data-actions style="display:flex;gap:10px;flex-wrap:wrap"></div>' +
             '</div>';
         wrap.addEventListener('click', function (e) { if (e.target === wrap) wrap.remove(); });
@@ -243,19 +334,119 @@
         return wrap;
     }
 
-    function message(wrap, text) {
+    function setActions(wrap, buttons) {
+        var actions = wrap.querySelector('[data-actions]');
+        actions.innerHTML = '';
+        buttons.forEach(function (b) {
+            var el = document.createElement('button');
+            el.type = 'button';
+            el.textContent = b.label;
+            el.style.cssText = b.style;
+            el.addEventListener('click', b.onClick);
+            actions.appendChild(el);
+        });
+    }
+
+    function message(wrap, text, back) {
         var body = wrap.querySelector('[data-body]');
-        body.style.alignItems = 'center';
+        body.style.justifyContent = 'center';
         body.innerHTML = '';
         var p = document.createElement('p');
         p.style.cssText = 'margin:0;padding:24px 8px;text-align:center;line-height:1.8;color:#a8a3b5;font-size:15px';
         p.textContent = text;
         body.appendChild(p);
+        setActions(wrap, back ? [{ label: 'رجوع للإعدادات', style: BTN_GHOST + 'flex:1;', onClick: function () { showSettings(wrap); } }] : []);
     }
 
-    function show(wrap, canvas, stats) {
+    var ROW = 'display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(135deg,rgba(255,255,255,.05),rgba(255,255,255,.02));';
+    var STEP = 'width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#e7e3ef;font:inherit;font-size:18px;line-height:1;cursor:pointer;';
+
+    /** شاشة الاختيار: كل قسم صف (العنوان يمين، التحكم يسار). */
+    function showSettings(wrap) {
+        var prefs = loadPrefs();
         var body = wrap.querySelector('[data-body]');
-        body.style.alignItems = 'flex-start';
+        body.style.justifyContent = 'flex-start';
+        body.innerHTML = '';
+
+        var intro = document.createElement('p');
+        intro.style.cssText = 'margin:0 0 10px;font-size:14px;line-height:1.7;color:#a8a3b5';
+        intro.textContent = 'اختر الأقسام اللي تبيها بالصورة، وكم توب تبي بكل قسم (حتى ' + MAX_TOP + ').';
+        body.appendChild(intro);
+
+        var list = document.createElement('div');
+        list.style.cssText = 'display:flex;flex-direction:column;gap:10px';
+        body.appendChild(list);
+
+        SECTIONS.forEach(function (sec) {
+            var st = prefs[sec.key];
+            var row = document.createElement('div');
+            row.style.cssText = ROW;
+
+            var label = document.createElement('div');
+            label.style.cssText = 'display:flex;flex-direction:column;gap:2px;text-align:right;min-width:0';
+            label.innerHTML = '<span style="font-weight:700;font-size:15px"></span><span style="font-size:12.5px;color:#968ea4"></span>';
+            label.children[0].textContent = sec.title;
+            label.children[0].style.color = sec.color;
+            label.children[1].textContent = sec.desc;
+
+            var ctl = document.createElement('div');
+            ctl.style.cssText = 'display:flex;align-items:center;gap:8px;flex:none';
+
+            var counter = document.createElement('div');
+            counter.style.cssText = 'display:flex;align-items:center;gap:6px';
+            var minus = document.createElement('button');
+            minus.type = 'button'; minus.textContent = '−'; minus.style.cssText = STEP;
+            minus.setAttribute('aria-label', 'أقل');
+            var num = document.createElement('span');
+            num.style.cssText = 'min-width:56px;text-align:center;font-weight:700;font-size:14px;white-space:nowrap';
+            var plus = document.createElement('button');
+            plus.type = 'button'; plus.textContent = '+'; plus.style.cssText = STEP;
+            plus.setAttribute('aria-label', 'أكثر');
+            // ترتيب DOM بالـrtl: + يمين، − يسار
+            counter.appendChild(plus); counter.appendChild(num); counter.appendChild(minus);
+
+            var toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.setAttribute('role', 'switch');
+            toggle.style.cssText = 'position:relative;width:50px;height:28px;border-radius:999px;border:none;cursor:pointer;flex:none;transition:background .2s';
+            var knob = document.createElement('span');
+            knob.style.cssText = 'position:absolute;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .2s,right .2s';
+            toggle.appendChild(knob);
+
+            function paint() {
+                num.textContent = 'توب ' + st.top;
+                toggle.setAttribute('aria-checked', String(st.on));
+                toggle.setAttribute('aria-label', sec.title);
+                toggle.style.background = st.on ? sec.color : 'rgba(255,255,255,.15)';
+                knob.style.right = st.on ? '3px' : '25px';
+                counter.style.opacity = st.on ? '1' : '.35';
+                minus.disabled = plus.disabled = !st.on;
+            }
+            minus.addEventListener('click', function () { st.top = clampTop(st.top - 1); paint(); savePrefs(prefs); });
+            plus.addEventListener('click', function () { st.top = clampTop(st.top + 1); paint(); savePrefs(prefs); });
+            toggle.addEventListener('click', function () { st.on = !st.on; paint(); savePrefs(prefs); });
+            paint();
+
+            ctl.appendChild(counter);
+            ctl.appendChild(toggle);
+            row.appendChild(label);
+            row.appendChild(ctl);
+            list.appendChild(row);
+        });
+
+        setActions(wrap, [{ label: 'إنشاء الصورة', style: BTN_PRIMARY, onClick: function () {
+            if (!SECTIONS.some(function (s) { return prefs[s.key].on; })) {
+                intro.textContent = 'اختر قسم واحد على الأقل.';
+                intro.style.color = '#f5a3a3';
+                return;
+            }
+            generate(wrap, prefs);
+        } }]);
+    }
+
+    function showImage(wrap, canvas, stats, prefs) {
+        var body = wrap.querySelector('[data-body]');
+        body.style.justifyContent = 'flex-start';
         body.innerHTML = '';
         var img = new Image();
         img.alt = 'إحصائيات البث';
@@ -263,50 +454,46 @@
         img.src = canvas.toDataURL('image/png');
         body.appendChild(img);
 
-        var actions = wrap.querySelector('[data-actions]');
-        actions.innerHTML = '';
-        var save = document.createElement('button');
-        save.type = 'button';
-        save.textContent = 'حفظ الصورة';
-        save.style.cssText = BTN + 'flex:1;border:none;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;';
-        save.addEventListener('click', function () {
-            var d = new Date(stats.startedAt);
-            var name = 'stream-stats-' + stats.username + '-' + d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate() + '.png';
-            canvas.toBlob(function (blob) {
-                if (!blob) return;
-                var url = URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url; a.download = name;
-                document.body.appendChild(a); a.click(); a.remove();
-                setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
-            }, 'image/png');
-        });
-        var refresh = document.createElement('button');
-        refresh.type = 'button';
-        refresh.textContent = 'تحديث';
-        refresh.style.cssText = BTN + 'border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#e7e3ef;';
-        refresh.addEventListener('click', open);
-        actions.appendChild(save);
-        actions.appendChild(refresh);
+        setActions(wrap, [
+            { label: 'حفظ الصورة', style: BTN_PRIMARY, onClick: function () {
+                var d = new Date(stats.startedAt);
+                var name = 'stream-stats-' + stats.username + '-' + d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate() + '.png';
+                canvas.toBlob(function (blob) {
+                    if (!blob) return;
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url; a.download = name;
+                    document.body.appendChild(a); a.click(); a.remove();
+                    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+                }, 'image/png');
+            } },
+            { label: 'تعديل', style: BTN_GHOST, onClick: function () { showSettings(wrap); } },
+            { label: 'تحديث', style: BTN_GHOST, onClick: function () { generate(wrap, prefs); } }
+        ]);
     }
 
-    function open() {
-        var wrap = modal();
-        message(wrap, 'جاري تجهيز الإحصائيات…');
+    function generate(wrap, prefs) {
+        message(wrap, 'جاري تجهيز الصورة…');
         var fontsReady = (document.fonts && document.fonts.load)
             ? Promise.all([document.fonts.load('700 40px "IBM Plex Sans Arabic"'), document.fonts.load('500 24px "IBM Plex Sans Arabic"')]).catch(function () {})
             : Promise.resolve();
-        Promise.all([fetchStats(), fontsReady]).then(function (r) {
-            var stats = r[0];
-            if (!document.body.contains(wrap)) return;
-            if (!stats) {
-                message(wrap, 'ما فيه إحصائيات بث حتى الآن. الإحصائيات تنحسب لما تكون متصل بالبث من داخل لعبة، وتبقى متاحة ٢٤ ساعة بعد آخر بث.');
-                return;
+        Promise.all([fetchStats(prefs), fontsReady]).then(function (r) {
+            var data = r[0];
+            if (!document.body.contains(wrap)) return null;
+            if (!data.stats) {
+                message(wrap, 'ما فيه إحصائيات بث حتى الآن. الإحصائيات تنحسب لما تكون متصل بالبث من داخل لعبة، وتبقى متاحة ٢٤ ساعة بعد آخر بث.', true);
+                return null;
             }
-            show(wrap, draw(stats), stats);
+            return draw(data, prefs).then(function (canvas) {
+                if (document.body.contains(wrap)) showImage(wrap, canvas, data.stats, prefs);
+            });
         }).catch(function (err) {
-            if (document.body.contains(wrap)) message(wrap, (err && err.message) || 'تعذّر جلب إحصائيات البث — جرّب مرة ثانية');
+            if (document.body.contains(wrap)) message(wrap, (err && err.message) || 'تعذّر تجهيز الصورة — جرّب مرة ثانية', true);
         });
+    }
+
+    function open() {
+        showSettings(modal());
     }
 
     window.AGPStreamStats = { open: open };
