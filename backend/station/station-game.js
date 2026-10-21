@@ -17,6 +17,10 @@ var Settings = require('./station-settings');
 
 var ROOMS = M.ROOMS, TASKS = M.TASKS, DEV = M.DEV, BTN = M.BTN, VENTS = M.VENTS, dist = M.dist, rand = M.rand, shuffle = M.shuffle;
 
+// مدة شاشة كشف الدور (مواطن/امبوستر) قبل ما تبدأ الجولة تلقائياً. مؤقتات أول قتل وتخريب
+// وزر الطوارئ ومدة الجولة تبدأ من بعدها بثانية ونص (نفس الفارق اللي بالتصميم).
+var REVEAL_MS = 5000;
+
 function cfgOf(settings) {
     var c = Object.assign({}, Settings.DEFAULTS, Settings.validate(settings || {}));
     return Object.assign({}, c, { kill: c.killCd, vote: c.voteSec, talk: c.talkSec });
@@ -60,10 +64,10 @@ function createGame(roster, settings, hooks, old) {
         var shortIds = TASKS.filter(function (t) { return M.LONG_K.indexOf(t.k) < 0; }).map(function (t) { return t.id; }), longIds = TASKS.filter(function (t) { return M.LONG_K.indexOf(t.k) >= 0; }).map(function (t) { return t.id; });
         var pickT = function () { return shuffle(shortIds).slice(0, C.shortTasks).concat(shuffle(longIds).slice(0, C.longTasks)); }, common = C.commonTasks ? pickT() : null;
         g.G = {
-            cfg: C, spots: spots, emCd: now + 5500 + C.emergencyCd * 1000, endAt: C.roundMin ? now + 5500 + C.roundMin * 60000 : 0, phase: 'reveal', until: now + 4000, seq: (old ? old.seq : 0) + 1, bodies: [], locks: {}, reactor: 0, sabCd: now + 5500 + C.sabCd * 1000, meeting: null, eject: null, winner: null, reason: '', startedAt: now,
+            cfg: C, spots: spots, emCd: now + REVEAL_MS + 1500 + C.emergencyCd * 1000, endAt: C.roundMin ? now + REVEAL_MS + 1500 + C.roundMin * 60000 : 0, phase: 'reveal', until: now + REVEAL_MS, seq: (old ? old.seq : 0) + 1, bodies: [], locks: {}, reactor: 0, sabCd: now + REVEAL_MS + 1500 + C.sabCd * 1000, meeting: null, eject: null, winner: null, reason: '', startedAt: now,
             players: roster.map(function (p, i) {
                 var op = old && old.players.find(function (x) { return x.id === p.id; });
-                return Object.assign({}, p, { x: st[i].x, y: st[i].y, f: 1, alive: true, imp: imps.indexOf(p.id) >= 0, tasks: common ? common.slice() : pickT(), done: [], btn: C.emergencies, kcd: now + 5500 + C.kill * 1000, tp: (op ? op.tp : 0) + 1, lastPos: now });
+                return Object.assign({}, p, { x: st[i].x, y: st[i].y, f: 1, alive: true, imp: imps.indexOf(p.id) >= 0, tasks: common ? common.slice() : pickT(), done: [], btn: C.emergencies, kcd: now + REVEAL_MS + 1500 + C.kill * 1000, tp: (op ? op.tp : 0) + 1, lastPos: now });
             })
         };
         changed();
