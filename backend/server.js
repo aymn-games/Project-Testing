@@ -39,6 +39,8 @@ function start() {
     server.listen(config.port, function () {
         // تعبئة صور تيك توك للحسابات الموثَّقة القديمة اللي ما عندها صورة.
         require('./auth/tiktok-avatar-sync').startBackfill();
+        // مراقبة إحصائيات البث للستريمرز المفعّلين من الأدمن (بدون فتح الموقع).
+        require('./stats/stream-stats-watcher').startWatcher();
         logger.log('AGP Backend listening on port ' + config.port + ' (WebSocket implemented; TikTok connector: ' + connectorRouter.getActiveConnectorName('tiktok') + ').');
     });
 

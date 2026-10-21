@@ -49,6 +49,10 @@ var SECTIONS = {
 };
 
 var _sessions = new Map(); // username -> session
+// يوزرات عليها مراقب سيرفر شغّال (stats/stream-stats-watcher.js). اتصالاته
+// تبدأ بـ WATCH_PREFIX، ولها الأولوية على اتصالات الألعاب لنفس البث.
+var WATCH_PREFIX = 'watch:';
+var _watching = new Set();
 var _avatarCache = new Map(); // url -> dataUrl|null
 var _cleanupStarted = false;
 
@@ -100,6 +104,9 @@ function attach(username, roomId, connectionId) {
     _sessions.set(key, newSession(key, roomId, connectionId));
     return;
   }
+  // المراقب شغّال ويحسب هذا البث → اتصال اللعبة ما ياخذ الملكية (ما تنحسب مرتين)
+  var fromWatcher = String(connectionId).indexOf(WATCH_PREFIX) === 0;
+  if (!fromWatcher && _watching.has(key) && String(s.ownerConnectionId).indexOf(WATCH_PREFIX) === 0 && !s.endedAt) return;
   s.ownerConnectionId = connectionId;
   s.endedAt = null;
   if (roomId && !s.roomId) s.roomId = roomId;
@@ -306,7 +313,22 @@ function getStreamerProfile(username) {
   return cachedAvatar(row && row.tiktok_avatar_url).then(function (a) { return { name: name, avatar: a }; });
 }
 
+/** إجماليات البث الحالي/الأخير (بدون قوائم) — للعرض السريع بلوحة الأدمن. */
+function getTotals(username) {
+  var s = _sessions.get(normalize(username));
+  return s ? Object.assign({}, s.totals) : null;
+}
+
+/** المراقب بدأ/وقف لهذا اليوزر. */
+function setWatching(username, on) {
+  var key = normalize(username);
+  if (on) _watching.add(key); else _watching.delete(key);
+}
+
 module.exports = {
+  WATCH_PREFIX: WATCH_PREFIX,
+  setWatching: setWatching,
+  getTotals: getTotals,
   getStreamerProfile: getStreamerProfile,
   SECTIONS: Object.keys(SECTIONS),
   MAX_TOP: MAX_TOP,

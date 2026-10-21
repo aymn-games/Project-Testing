@@ -927,6 +927,13 @@ input::placeholder,textarea::placeholder{color:#5b6274}
 
         <sc-if value="{{ du.streamer }}">
           <div style="display:flex;flex-direction:column;border:1px solid #262a37;border-radius:12px;overflow:hidden">
+            <div style="padding:10px 14px;font-size:12px;font-weight:600;color:#9199ab;background:#14161d">إحصائيات البث</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
+              <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:13.5px">مراقبة البث تلقائياً</span><span style="font-size:12px;color:{{ du.watchHintColor }};text-wrap:pretty">{{ du.watchHint }}</span></div>
+              <button onClick="{{ du.toggleWatch }}" style="flex-shrink:0;width:40px;height:22px;border-radius:11px;border:none;padding:0;cursor:pointer;position:relative;background:{{ du.tW.bg }}"><span style="position:absolute;top:3px;right:{{ du.tW.knob }};width:16px;height:16px;border-radius:50%;background:#fff;transition:right .15s"></span></button>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;border:1px solid #262a37;border-radius:12px;overflow:hidden">
             <div style="padding:10px 14px;font-size:12px;font-weight:600;color:#9199ab;background:#14161d">الترحيب</div>
             <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid #1f222c">
               <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:13.5px">إعادة الترحيب</span><span style="font-size:12px;color:#5b6274">{{ du.welcomeHint }}</span></div>
@@ -1080,6 +1087,7 @@ class Component extends DCLogic {
     const dv=this.devInfo(u), perms=[];
     if(u.permissions&&u.permissions.can_run_games&&u.role!=='admin') perms.push('ستريمر');
     if(u.permissions&&u.permissions.can_manage_letters_cell) perms.push('أسئلة خلية الحروف');
+    if(u.permissions&&u.permissions.stream_stats_watch) perms.push('مراقبة إحصائيات البث');
     const pts=u.points?u.points.totalPoints:0, lvl=u.points&&u.points.currentLevel?(u.points.currentLevel.displayNameAr||u.points.currentLevel.slug):null;
     const st=u.stats||{};
     return { ...u, name:u.username, publicId:u.custom_id||'—', requested:!!u.is_streamer, streams:st.total_broadcasts||0,
@@ -1186,6 +1194,12 @@ class Component extends DCLogic {
       const setPerm=(k)=>{ if(k==='can_run_games'&&dRaw.role==='admin') return this.flash('تعذّر تحديث الصلاحية: الأدمن ستريمر دائماً','err');
         this.userAction('perm'+k,()=>A.adminSetPermission(dRaw.id,k,!perm(k)), k==='can_run_games'?'تم تحديث الصلاحية — الحساب انتقل للتبويب الآخر.':'تم تحديث الصلاحية.', r=>'تعذّر تحديث الصلاحية: '+(r.error||'unknown')); };
       du={ ...d, streamer:isStreamerLike(dRaw), tS:this.tog(perm('can_run_games')||dRaw.role==='admin'), tL:this.tog(perm('can_manage_letters_cell')), tA:this.tog(!!dRaw.allow_device_change),
+        // مراقبة إحصائيات البث من السيرفر (backend/stats/stream-stats-watcher.js)
+        tW:this.tog(perm('stream_stats_watch')), toggleWatch:()=>setPerm('stream_stats_watch'),
+        watchHint: dRaw.tiktok_verified
+          ? 'السيرفر يتصل ببثه لحاله ويحسب الإحصائيات بدون ما يفتح الموقع'
+          : 'حسابه غير مربوط بتيك توك — المراقبة ما تشتغل لين يربطه',
+        watchHintColor: dRaw.tiktok_verified?'#5b6274':'#fbbf24',
         welcomeHint: dRaw.welcome_completed?'شافها كاملة من قبل — اضغط لإعادتها له مرة وحدة':'لسا ما شافها',
         pidDraft:s.pidDraft, onPid:e=>this.setState({ pidDraft:e.target.value }),
         emailDraft:s.emailDraft, onEmail:e=>this.setState({ emailDraft:e.target.value }),
