@@ -506,8 +506,9 @@ class Component extends DCLogic {
       this.upd(p.id,()=>({dmg}));
       const landX=p.pos.cx<960?40:1880;
       const useFile=this.fallOk!==false; this.later(()=>{ this.upd(p.id,()=>({popping:true,landX})); this.setState({popShake:true}); if(!useFile){ this.sfx('heave'); this.sfx('fall'); } },800);
-      // fall.mp3 (2.6 ث، أعلى صوت = الارتطام عند 1.5 ث) يبدأ بعد 0.6 ث من بداية السقوط بالمشهد عشان يطابق نزول اللاعب ووصوله للماء (2.1 ث)
-      if(useFile) this.later(()=>{ try{ const A=this.fallAud; A.currentTime=0; A.play().catch(()=>{}); }catch(e){} },1400);
+      // fall.mp3 (1.8 ث مقصوص من بداية السقوط، أعلى صوت = الارتطام عند 0.7 ث) يبدأ لحظة ما يطيح اللاعب من آخر اللوح بالمشهد
+      // (1.4 ث من بداية حركته، اللي تبدأ عند 0.8 ث) فيوافق الارتطام وصوله للماء (2.1 ث من بداية الحركة) — ما يشتغل وقت المشي
+      if(useFile) this.later(()=>{ try{ const A=this.fallAud; A.currentTime=0; A.play().catch(()=>{}); }catch(e){} },2200);
       this.later(()=>this.setState({camFall:{x:landX,y:LAND_Y-140},popShake:false}),1100);
       this.later(()=>{ this.setState({fallFx:{x:landX},landShake:true}); if(!useFile) this.sfx('splash'); },2700);
       this.later(()=>this.banner('out','🌊',`انرمى ${p.name} في البحر وخرج من المباراة`,2000),3000);
