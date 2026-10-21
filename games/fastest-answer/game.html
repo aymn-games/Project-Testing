@@ -157,7 +157,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
             <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
               <span style="font:500 18px 'IBM Plex Sans Arabic';color:#8a8596">يجاوب:</span>
               <sc-for list="{{ chosen }}" as="c" hint-placeholder-count="2">
-                <span style="display:flex;align-items:center;gap:8px;padding:8px 18px;border-radius:999px;font:600 20px 'IBM Plex Sans Arabic';background:{{ c.bg }};border:1px solid {{ c.bd }};color:{{ c.color }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ c.color }}"></span>{{ c.name }}</span>
+                <span style="display:flex;align-items:center;gap:10px;padding:6px 20px 6px 6px;border-radius:999px;font:600 20px 'IBM Plex Sans Arabic';background:{{ c.bg }};border:1px solid {{ c.bd }};color:{{ c.color }}"><span style="width:44px;height:44px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ c.avBg }};border:2px solid {{ c.color }};font:700 19px 'IBM Plex Sans Arabic';color:#fff">{{ c.initial }}<img src="{{ c.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ c.imgOp }}"></span>{{ c.name }}</span>
               </sc-for>
             </div>
             <div style="display:flex;align-items:baseline;gap:10px;padding:10px 22px;border-radius:999px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)">
@@ -168,7 +168,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
           <div style="display:flex;gap:16px;flex-wrap:wrap;min-height:92px">
             <sc-for list="{{ answers }}" as="a" hint-placeholder-count="0">
               <div style="display:flex;align-items:center;gap:16px;padding:12px 28px 12px 14px;border-radius:999px;background:{{ a.bg }};border:1.5px solid {{ a.color }};box-shadow:0 10px 30px rgba(0,0,0,.35), 0 0 30px {{ a.glow }};animation:rise .5s cubic-bezier(.2,1.3,.4,1)">
-                <span style="width:60px;height:60px;border-radius:50%;background:{{ a.color }};color:#0c0b12;display:grid;place-items:center;font:700 28px 'IBM Plex Sans Arabic'">{{ a.rank }}</span>
+                <span style="width:64px;height:64px;flex-shrink:0;position:relative">
+                  <span style="position:absolute;inset:0;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:{{ a.avBg }};border:2.5px solid {{ a.color }};box-sizing:border-box;font:700 28px 'IBM Plex Sans Arabic';color:#fff">{{ a.initial }}<img src="{{ a.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ a.imgOp }}"></span>
+                  <span style="position:absolute;bottom:-4px;left:-4px;width:28px;height:28px;border-radius:50%;background:{{ a.color }};color:#0c0b12;display:grid;place-items:center;font:700 15px 'IBM Plex Sans Arabic';border:2px solid #0c0b12">{{ a.rank }}</span>
+                </span>
                 <span style="font:700 34px 'IBM Plex Sans Arabic';color:#f4f2f8">{{ a.user }}</span>
                 <span style="font:700 34px 'IBM Plex Sans Arabic';color:{{ a.color }}">+{{ a.pts }}</span>
               </div>
@@ -408,6 +411,8 @@ class Component extends DCLogic {
   DATA = window.FA_QUESTIONS; // بنك الأسئلة لكل الفئات — fa-questions.js
   reg = FA.createRegistry(PLAYERS);
   avatar(name){ if(CHALLENGE) return (this.chInfo&&this.chInfo[name]&&this.chInfo[name].avatar)||null; return this.reg.avatar(name); }
+  // صورة اللاعب (أو أول حرف من اسمه لو ما عنده صورة) — لشاشة السؤال.
+  avItem(n,c){ const av=n?this.avatar(n):null; return {avatar:av||'',imgOp:av?1:0,initial:[...(n||'')].find(ch=>/[^\s_\d]/.test(ch))||'',avBg:`linear-gradient(135deg, ${c}, ${c}66)`}; }
   blankReel(){ return {items:[],offset:0,trans:'none',stopped:false,chosen:null,ci:-1}; }
   state = { narrow:innerWidth<820, scale:1, logo:false, settingsOpen:false, eventsOpen:false, exitOpen:false, joinOpen:false, setTab:0, pending:[],
     teams:[0,1].map(i=>({name:[SETUP?.team1,SETUP?.team2][i]||'الفريق '+(i+1),players:[...(ROSTER[i]||[])],score:0})), phase:'ready', round:0,
@@ -645,8 +650,8 @@ class Component extends DCLogic {
           h('span',{style:{font:"700 300px/1 'IBM Plex Sans Arabic'",background:'linear-gradient(180deg, #ddd6fe, #8b5cf6)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent',filter:'drop-shadow(0 0 40px rgba(139,92,246,.5))'}},String(s.countdown)))):null,
       showModal:(P==='question'||P==='results')&&!!s.q, isResults:P==='results', resultLabel:s.answers.length?(s.timeLeft>0?'وصلت كل الإجابات':'انتهى الوقت'):'لا توجد إجابة صحيحة',
       q:s.q||{}, timeLeft:s.timeLeft, timerDeg:s.timeLeft/this.DUR*360, timerColor:s.timeLeft<=5?'#f87171':'#a78bfa',
-      chosen:s.reels.map((r,i)=>({name:r.chosen||'—',color:col(i),bg:col(i)+'1a',bd:col(i)+'55'})), received:s.received,
-      answers:s.answers.map(a=>({...a,pts:fmt(a.pts),color:col(a.team),bg:col(a.team)+'26',glow:col(a.team)+'40'})),
+      chosen:s.reels.map((r,i)=>({name:r.chosen||'—',color:col(i),bg:col(i)+'1a',bd:col(i)+'55',...this.avItem(r.chosen,col(i))})), received:s.received,
+      answers:s.answers.map(a=>({...a,pts:fmt(a.pts),color:col(a.team),bg:col(a.team)+'26',glow:col(a.team)+'40',...this.avItem(a.user,col(a.team))})),
       closeResults:this.closeResults, newGame:this.newGame, goLibrary:()=>{ this.snd('close'); if(CHALLENGE){ this.chSend('leave'); location.href='../../challenge.html'; return; } location.href=FA.libraryUrl; },
       winner:s.winner?(()=>{ const w=s.winner, c=col(w.i), pl=s.teams[w.i].players;
         return {name:w.name,score:fmt(w.score),color:c,ring:c+'40',bd:c+'66',soft:c+'1a',
