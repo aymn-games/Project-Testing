@@ -67,6 +67,7 @@ input::placeholder{color:#6f6a7c}
         </div>
       </div>
 
+      <sc-if value="{{ onSettings }}" hint-placeholder-val="{{ true }}">
       <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding-bottom:16px">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:clamp(12px,1.4vw,18px)">
           <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="3">
@@ -136,8 +137,31 @@ input::placeholder{color:#6f6a7c}
       </div>
 
       <div style="flex-shrink:0;display:flex;justify-content:center;padding:clamp(10px,2vh,18px) 0 clamp(16px,3vh,28px)">
-        <button onClick="{{ start }}" style="width:100%;max-width:440px;height:clamp(52px,6.5vh,62px);border:none;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 clamp(17px,1.6vw,20px) 'IBM Plex Sans Arabic';box-shadow:0 10px 34px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.2);opacity:{{ startOp }}" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">الدخول للوبي<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+        <button onClick="{{ start }}" style="width:100%;max-width:440px;height:clamp(52px,6.5vh,62px);border:none;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 clamp(17px,1.6vw,20px) 'IBM Plex Sans Arabic';box-shadow:0 10px 34px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.2);opacity:{{ startOp }}" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">التالي: اختيار الفئات<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
       </div>
+      </sc-if>
+
+      <sc-if value="{{ onCats }}" hint-placeholder-val="{{ false }}">
+      <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding-bottom:16px;display:flex;flex-direction:column;align-items:center;gap:clamp(14px,2vh,22px)">
+        <div style="flex-shrink:0;display:flex;align-items:center;gap:10px;animation:rise .4s ease both">
+          <span style="font:700 clamp(18px,1.5vw,22px) 'IBM Plex Sans Arabic'">اختر الفئات</span>
+          <span style="height:28px;padding:0 12px;border-radius:999px;display:flex;align-items:center;gap:4px;white-space:nowrap;background:rgba(139,92,246,.14);color:#c4b5fd;font:700 13px 'IBM Plex Sans Arabic'">{{ catCount }} مختارة</span>
+        </div>
+        <div style="flex-shrink:0;width:100%;display:grid;grid-template-columns:repeat(auto-fill,{{ catW }});grid-auto-rows:{{ catW }};justify-content:center;gap:clamp(10px,1.2vw,16px)">
+          <sc-for list="{{ catItems }}" as="c" hint-placeholder-count="10">
+            <button onClick="{{ c.pick }}" style="position:relative;width:100%;height:100%;box-sizing:border-box;padding:0 12px;border-radius:22px;cursor:pointer;display:grid;place-items:center;text-align:center;white-space:nowrap;font:700 17px 'IBM Plex Sans Arabic';border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};box-shadow:{{ c.sh }};backdrop-filter:blur(14px);transition:all .2s;animation:rise .4s ease both;animation-delay:{{ c.delay }}" style-hover="border-color:rgba(167,139,250,.5)" style-active="transform:scale(.96)">
+              <span style="position:absolute;top:12px;left:12px;width:22px;height:22px;box-sizing:border-box;border-radius:50%;display:grid;place-items:center;border:1.5px solid {{ c.chkBd }};background:{{ c.chkBg }};transition:all .2s"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity:{{ c.chkOp }}"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+              {{ c.label }}
+            </button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="flex-shrink:0;display:flex;justify-content:center;gap:10px;padding:clamp(10px,2vh,18px) 0 clamp(16px,3vh,28px)">
+        <button onClick="{{ backToSettings }}" style="height:clamp(52px,6.5vh,62px);padding:0 26px;border-radius:999px;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;font:700 clamp(15px,1.3vw,17px) 'IBM Plex Sans Arabic'" style-hover="background:rgba(255,255,255,.09)" style-active="transform:scale(.97)">رجوع</button>
+        <button onClick="{{ enterLobby }}" style="width:100%;max-width:440px;height:clamp(52px,6.5vh,62px);border:none;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 clamp(17px,1.6vw,20px) 'IBM Plex Sans Arabic';box-shadow:0 10px 34px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.2)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">الدخول للوبي<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+      </div>
+      </sc-if>
     </div>
   </main>
 
@@ -197,15 +221,15 @@ const SETTINGS = [
     { type:'number', key:'target', label:'نقاط الفوز', min:1, max:99, step:1, default:15 },
     { type:'choice', key:'dur',    label:'وقت الإجابة (ثانية)', options:['10','15','20','30'], default:1 },
     { type:'toggle', key:'sound',  label:'الأصوات', default:true }
-  ]},
-  { title:'الفئات', full:true, rows:[
-    { type:'multi', key:'cats', label:'', minPick:1, options:['مسألة رياضية','صورة واكتب الاسم','اعكس الكلمة','اكتب الرقم','عاصمة الدولة','أكمل المثل','ترتيب الحروف','علم الدولة','أكمل الكلمة','اكتشف المختلف'], default:[0,1,2,3,4,5,6,7,8,9] }
   ]}
 ];
+// الفئات لها شاشة خاصة بعد الإعدادات (قبل اللوبي) — الأسماء نفسها اللي يقرأها game.html.
+const CATS = ['مسألة رياضية','صورة واكتب الاسم','اعكس الكلمة','اكتب الرقم','عاصمة الدولة','أكمل المثل','ترتيب الحروف','علم الدولة','أكمل الكلمة','اكتشف المختلف'];
 
 class Component extends DCLogic {
-  state = { liveOpen:false, plat:0, handle:'', values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:!!FA.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
+  state = { liveOpen:false, plat:0, handle:'', values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:!!FA.getSavedConnection(), connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null, step:'settings', cats:CATS.map((_,k)=>k), fontTick:0 };
   componentDidMount(){ this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
+    document.fonts?.ready?.then(()=>{ this._catW=null; this.setState(s=>({fontTick:s.fontTick+1})); });
     // البث انتهى (js/agp-live-watch.js) → حالة الاتصال تتحدث فوراً
     this.onLiveChange=()=>this.setState({live:!!FA.getSavedConnection()}); addEventListener('agp:stream-ended',this.onLiveChange); addEventListener('agp:stream-connected',this.onLiveChange); }
   componentWillUnmount(){ removeEventListener('resize',this.fit); }
@@ -227,9 +251,15 @@ class Component extends DCLogic {
       bd:on?'rgba(167,139,250,.55)':'rgba(255,255,255,.1)',bg:on?'rgba(139,92,246,.16)':'rgba(255,255,255,.02)',fg:on?'#ddd6fe':'#8a8596',dot:on?'#a78bfa':'rgba(255,255,255,.2)'}; });
     return row; }
 
+  // عرض المربع = عرض أطول اسم فئة + هوامش، فكل المربعات بنفس الحجم.
+  catSize(){ if(this._catW) return this._catW; let w=0;
+    try{ const c=document.createElement('canvas').getContext('2d'); c.font="700 17px 'IBM Plex Sans Arabic'"; w=Math.max(...CATS.map(l=>c.measureText(l).width)); }catch(e){ w=130; }
+    return this._catW=Math.ceil(Math.max(w+32,120)); }
+  toggleCat(k){ const v=this.state.cats; if(v.includes(k)){ if(v.length<=1) return this.toastMsg('اختر فئة وحدة على الأقل'); this.setState({cats:v.filter(x=>x!==k)}); } else this.setState({cats:[...v,k].sort((a,b)=>a-b)}); }
+
   goLobby(){ const values=this.readValues(); try{ localStorage.setItem('fa-setup',JSON.stringify(values)); }catch(e){} this.props.onStart?.(values); location.href=GAME.lobbyUrl; }
   readValues(){ const out={}; for(const r of SETTINGS.flatMap(s=>s.rows)){ const v=this.state.values[r.key];
-    out[r.key]=r.type==='choice'?r.options[v]:r.type==='multi'?v.map(k=>r.options[k]):v; } return out; }
+    out[r.key]=r.type==='choice'?r.options[v]:r.type==='multi'?v.map(k=>r.options[k]):v; } out.cats=this.state.cats.map(k=>CATS[k]); return out; }
 
   buildFx(){
     if(this._fx) return this._fx;
@@ -257,7 +287,13 @@ class Component extends DCLogic {
       start:()=>{
         const V=S.values; if(!V.team1.trim()||!V.team2.trim()) return this.toastMsg('اكتب اسم كل فريق');
         if(!V.keyword1.trim()||!V.keyword2.trim()) return this.toastMsg('اكتب كلمة الدخول لكل فريق');
-        if(FA.norm(V.keyword1)===FA.norm(V.keyword2)) return this.toastMsg('كلمة الدخول لازم تختلف بين الفريقين'); if(!S.live) return this.toastMsg('غير متصل بالبث · ابدأ البث على حسابك المربوط ونتصل تلقائياً'); this.goLobby(); },
+        if(FA.norm(V.keyword1)===FA.norm(V.keyword2)) return this.toastMsg('كلمة الدخول لازم تختلف بين الفريقين'); if(!S.live) return this.toastMsg('غير متصل بالبث · ابدأ البث على حسابك المربوط ونتصل تلقائياً'); this.setState({step:'cats'}); },
+      onSettings:S.step==='settings', onCats:S.step==='cats', catW:this.catSize()+'px', catCount:S.cats.length,
+      catItems:CATS.map((l,k)=>{ const on=S.cats.includes(k); return {label:l,pick:()=>this.toggleCat(k),delay:(k*0.04).toFixed(2)+'s',
+        bd:on?'rgba(167,139,250,.6)':'rgba(255,255,255,.08)',bg:on?'linear-gradient(160deg, rgba(139,92,246,.24), rgba(124,58,237,.08))':'rgba(18,16,26,.72)',fg:on?'#f4f2f8':'#8a8596',
+        sh:on?'0 12px 34px rgba(139,92,246,.28)':'0 12px 30px rgba(0,0,0,.25)',chkBg:on?'#8b5cf6':'transparent',chkBd:on?'#a78bfa':'rgba(255,255,255,.2)',chkOp:on?1:0}; }),
+      backToSettings:()=>this.setState({step:'settings'}),
+      enterLobby:()=>{ if(!S.cats.length) return this.toastMsg('اختر فئة وحدة على الأقل'); if(!S.live) return this.toastMsg('غير متصل بالبث · ابدأ البث على حسابك المربوط ونتصل تلقائياً'); this.goLobby(); },
       mTitle:S.live?'تم الاتصال':'جارٍ الاتصال بالبث', mSub:S.live?'جارٍ الانتقال للوبي…':'لحظات قليلة',
       mTitleC:S.live?'#34d399':'#f4f2f8', mBd:S.live?'rgba(52,211,153,.45)':'rgba(167,139,250,.45)', mRing:S.live?'rgba(52,211,153,.08)':'rgba(139,92,246,.08)',
       liveOpen:S.liveOpen, closeLive:()=>{ clearTimeout(this.ct); if(S.connecting) this.setState({connecting:false}); this.shut('liveOpen'); },
