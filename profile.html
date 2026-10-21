@@ -393,6 +393,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   </script>
 <script src="auth/auth-client.js"></script>
 <script src="js/agp-frame-picker.js"></script>
+<script src="js/agp-stream-stats.js"></script>
 <script>
 (function(){
   function findLeaf(text){
@@ -952,7 +953,37 @@ document.addEventListener('DOMContentLoaded', async function() {
   // [إصلاح] أرقام "إحصائيات البث" بتبويب "معلومات الستريمر" ما كانت
   // مربوطة أبداً (تطلع 0 دائماً) رغم إن السيرفر يرسلها بـ p.stats. التبويب
   // ما ينبني إلا لما ينفتح، فنعبّيها عند الضغط عليه (راجع مستمع الضغط تحت).
+  // زر «عرض إحصائيات البث» (js/agp-stream-stats.js — نفس زر مكتبة الألعاب):
+  // صف تحت عنوان "إحصائيات البث" — الوصف يمين والزر يسار. لصاحب الحساب
+  // الستريمر فقط. التبويب ينبني من جديد كل ما ينفتح، فنضيفه مع كل تعبئة.
+  function addStreamStatsButton(p){
+    if (!p || !window.AGPStreamStats) return;
+    var me = null;
+    try { me = window.AGPAuth && window.AGPAuth.getCachedUser ? window.AGPAuth.getCachedUser() : null; } catch (e) {}
+    if (!me || !me.custom_id || me.custom_id !== p.custom_id) return;
+    if (!(p.is_streamer || p.can_run_games || p.role === 'admin')) return;
+    var title = findLeaf('إحصائيات البث');
+    var head = title && title.parentElement;
+    if (!head || !head.parentElement || head.parentElement.querySelector('[data-agp-stream-stats-row]')) return;
+    var row = document.createElement('div');
+    row.setAttribute('data-agp-stream-stats-row', '1');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:16px;padding:14px 16px;border-radius:16px;border:1px solid rgba(178,140,245,.25);background:rgba(122,63,212,.08);';
+    var txt = document.createElement('span');
+    txt.style.cssText = 'flex:1 1 220px;min-width:0;text-align:right;font-size:13px;line-height:1.8;color:#c3bad6;';
+    txt.textContent = 'صورة ستوري لآخر بث: المكبّسين، الداعمين، الشير، المتفاعلين، والمشاهدين — تختار الأقسام والخلفية وتحفظها بجهازك.';
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'nl-btn-glossy';
+    btn.setAttribute('data-agp-stream-stats-btn', '1');
+    btn.textContent = 'عرض إحصائيات البث';
+    btn.style.cssText = 'flex:none;padding:10px 18px;border-radius:12px;border:none;cursor:pointer;background:linear-gradient(135deg,#7a3fd4,#c46ae0);color:#fdf7ff;font-family:inherit;font-size:13.5px;font-weight:700;';
+    row.appendChild(txt);
+    row.appendChild(btn);
+    head.parentNode.insertBefore(row, head.nextSibling);
+  }
+
   function fillStreamerTab(p){
+    addStreamStatsButton(p);
     if (!p || !p.stats) return;
     var s = p.stats;
     function num(v){ return Number(v || 0).toLocaleString('en-US'); }
@@ -1569,6 +1600,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (t === 'معلومات اللاعب') {
       setTimeout(function(){ fillPlayerTab(window.__profileData); }, 60);
       setTimeout(function(){ fillPlayerTab(window.__profileData); }, 300);
+    }
+    if (el.hasAttribute('data-agp-stream-stats-btn')) {
+      if (window.AGPStreamStats) window.AGPStreamStats.open();
+      return;
     }
     if (t === 'معلومات الستريمر') {
       setTimeout(function(){ fillStreamerTab(window.__profileData); }, 60);
