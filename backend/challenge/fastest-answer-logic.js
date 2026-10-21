@@ -25,7 +25,8 @@ var ALL_CATS = [
     { id: 'math', name: 'مسألة رياضية' }, { id: 'image', name: 'صورة واكتب الاسم' },
     { id: 'reverse', name: 'اعكس الكلمة' }, { id: 'number', name: 'اكتب الرقم' },
     { id: 'capital', name: 'عاصمة الدولة' }, { id: 'proverb', name: 'أكمل المثل' },
-    { id: 'scramble', name: 'ترتيب الحروف' }, { id: 'flag', name: 'علم الدولة' }
+    { id: 'scramble', name: 'ترتيب الحروف' }, { id: 'flag', name: 'علم الدولة' },
+    { id: 'complete', name: 'أكمل الكلمة' }, { id: 'odd', name: 'اكتشف المختلف' }
 ];
 // إعدادات ثابتة لتحدي البثوث (بسيطة عمداً): كلمة الدخول 1 لفريق المنشئ و2
 // لفريق الخصم، 20 ثانية للإجابة، 20 لاعب كحد أقصى لكل فريق، وكل ستريمر
@@ -55,6 +56,9 @@ function norm(s) {
 
 function rand(n) { return Math.floor(Math.random() * n); }
 function pick(a) { return a[rand(a.length)]; }
+// نفس pick بس ما يعيد آخر سؤال طلع من نفس الفئة مباشرةً.
+var lastQ = {};
+function pickNew(k, a) { var x; do { x = pick(a); } while (a.length > 1 && x === lastQ[k]); lastQ[k] = x; return x; }
 
 function clampInt(v, min, max, def) {
     var n = Math.floor(Number(v));
@@ -127,6 +131,11 @@ function genQuestion(catId) {
         x = pick(D.scramble); var s, tries = 0;
         do { s = Array.from(x).sort(function () { return Math.random() - 0.5; }).join(''); } while (s === x && ++tries < 20);
         return q({ sub: 'رتّب الحروف لتكوين كلمة', prompt: Array.from(s).join(' '), ls: '8px', answer: x, accept: [x] });
+    }
+    if (cat.id === 'complete') { x = pickNew(cat.id, D.complete); return q({ sub: 'أكمل الكلمة', prompt: x[0], answer: x[1], accept: [x[1]] }); }
+    if (cat.id === 'odd') {
+        x = pickNew(cat.id, D.odd);
+        return q({ sub: 'اكتب اسم الشيء المختلف', prompt: x[0].slice().sort(function () { return Math.random() - 0.5; }).join(' '), answer: x[1] + ' ' + x[2], accept: [x[2]].concat(x[3] || []) });
     }
     x = pick(D.flag);
     return q({ sub: 'لمن هذا العلم؟', img: 'https://flagcdn.com/w640/' + x[0] + '.png', answer: x[1], accept: [x[1]].concat(x[2] || []) });

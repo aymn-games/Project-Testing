@@ -403,7 +403,7 @@ const PLAYERS = CHALLENGE ? {} : FA.readJSON('fa-players', {});
 class Component extends DCLogic {
   IT = 84; CI = 76; DUR = +SETUP?.dur||15; TC = ['#a78bfa','#38bdf8'];
   KW = [SETUP?.keyword1||'', SETUP?.keyword2||'']; MAX = +SETUP?.maxPlayers||20; followersOnly = SETUP?.who==='المتابعين فقط'; muted = SETUP?.sound===false;
-  ALL_CATS = [{id:'math',name:'مسألة رياضية'},{id:'image',name:'صورة واكتب الاسم'},{id:'reverse',name:'اعكس الكلمة'},{id:'number',name:'اكتب الرقم'},{id:'capital',name:'عاصمة الدولة'},{id:'proverb',name:'أكمل المثل'},{id:'scramble',name:'ترتيب الحروف'},{id:'flag',name:'علم الدولة'}];
+  ALL_CATS = [{id:'math',name:'مسألة رياضية'},{id:'image',name:'صورة واكتب الاسم'},{id:'reverse',name:'اعكس الكلمة'},{id:'number',name:'اكتب الرقم'},{id:'capital',name:'عاصمة الدولة'},{id:'proverb',name:'أكمل المثل'},{id:'scramble',name:'ترتيب الحروف'},{id:'flag',name:'علم الدولة'},{id:'complete',name:'أكمل الكلمة'},{id:'odd',name:'اكتشف المختلف'}];
   CATS = (c=>c.length?c:this.ALL_CATS)(this.ALL_CATS.filter(c=>(SETUP?.cats||[]).includes(c.name)));
   DATA = window.FA_QUESTIONS; // بنك الأسئلة لكل الفئات — fa-questions.js
   reg = FA.createRegistry(PLAYERS);
@@ -490,6 +490,8 @@ class Component extends DCLogic {
     if(!left.length){ done.clear(); left=P.length>1?P.filter(n=>n!==this.lastPick?.[i]):P.slice(); }
     const c=this.pick(left); done.add(c); (this.lastPick=this.lastPick||[])[i]=c; return c; }
   pick(a){return a[this.r(a.length)];}
+  // نفس pick بس ما يعيد آخر سؤال طلع من نفس الفئة مباشرةً.
+  pickNew(k,a){ const L=(this.lastQ=this.lastQ||{}); let x; do{x=this.pick(a);}while(a.length>1&&x===L[k]); L[k]=x; return x; }
   // تطبيع الإجابة قبل المقارنة — نفس قواعد كلمة الدخول (FA.norm في fa-platform.js).
   norm(s){ return FA.norm(s); }
   // يُقبل أيضاً لو "ال" ملتصقة بكلمة قبلها بدون مسافة (كورياالجنوبية = كوريا الجنوبية).
@@ -506,6 +508,8 @@ class Component extends DCLogic {
     if(id==='capital'){ const [c,a,alt=[]]=this.pick(D.capital); return {...base,sub:'ما عاصمة هذه الدولة؟',prompt:c,answer:a,accept:[a,...alt]}; }
     if(id==='proverb'){ const [p,a,alt=[]]=this.pick(D.proverb); return {...base,sub:'أكمل المثل',prompt:p,answer:a,accept:[a,...alt]}; }
     if(id==='scramble'){ const w=this.pick(D.scramble); let s; do{s=[...w].sort(()=>Math.random()-.5).join('');}while(s===w); return {...base,sub:'رتّب الحروف لتكوين كلمة',prompt:[...s].join(' '),ls:'8px',answer:w,accept:[w]}; }
+    if(id==='complete'){ const [p,a]=this.pickNew(id,D.complete); return {...base,sub:'أكمل الكلمة',prompt:p,answer:a,accept:[a]}; }
+    if(id==='odd'){ const [items,e,a,alt=[]]=this.pickNew(id,D.odd); return {...base,sub:'اكتب اسم الشيء المختلف',prompt:[...items].sort(()=>Math.random()-.5).join(' '),answer:e+' '+a,accept:[a,...alt]}; }
     const [code,a,alt=[]]=this.pick(D.flag); return {...base,sub:'لمن هذا العلم؟',img:`https://flagcdn.com/w640/${code}.png`,answer:a,accept:[a,...alt]};
   }
 
