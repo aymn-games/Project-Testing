@@ -300,6 +300,7 @@ function createTikTokConnector() {
     var _reconnectTimer = null;
     var _username = null;
     var _followersOnly = false; // لم تعد تُستخدَم للفلترة هنا — انتقلت للواجهة الأمامية
+    var _statsOnly = false; // options.statsOnly — اتصال مراقب الإحصائيات (بدون بيانات العرض باللعبة)
     var _callbacks = null;
 
     /** البث انتهى فعلياً: إيقاف نهائي بدون إعادة اتصال + إبلاغ 'ended' مرة وحدة. */
@@ -376,6 +377,13 @@ function createTikTokConnector() {
         _connection.on(TikTokLib.WebcastEvent.CHAT, function (data) {
             var receivedAt = Date.now();
             var user = extractUser(data);
+
+            // وضع الإحصائيات فقط (stats/stream-stats-watcher.js): بدون إطارات
+            // ودخوليات وبطاقات — ما فيه لعبة تعرضها، فنوفّر استعلامات القاعدة.
+            if (_statsOnly) {
+                _callbacks.onComment({ id: user.id, name: user.name, avatarUrls: extractAvatarUrls(data) });
+                return;
+            }
 
             // الحقل الفعلي بالرسالة المفكوكة هو "content"، وليس "comment"
             // كما أوحى مثال README (مضلِّل). نُبقي data.comment كاحتياط دفاعي.
@@ -548,12 +556,13 @@ function createTikTokConnector() {
 
     return {
         /**
-         * @param {{username: string}} options
+         * @param {{username: string, followersOnly?: boolean, statsOnly?: boolean}} options
          * @param {Object} callbacks
          */
         connect: function (options, callbacks) {
             _username = options && options.username;
             _followersOnly = Boolean(options && options.followersOnly);
+            _statsOnly = Boolean(options && options.statsOnly);
             _callbacks = callbacks;
             _intentionalDisconnect = false;
             _reconnectAttempts = 0;

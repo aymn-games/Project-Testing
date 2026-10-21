@@ -968,7 +968,29 @@ function handleAdminLiveStreams(req, res) {
   var matches = [];
   try { connections = require('../websocket/ws-server').listLiveConnections(); } catch (err) { logger.error('Admin live streams: connections failed:', err); }
   try { matches = require('../challenge/challenge-match').listActiveMatches(); } catch (err) { logger.error('Admin live streams: matches failed:', err); }
+  // مراقبات إحصائيات البث (stats/stream-stats-watcher.js) — بنفس شكل صفوف الاتصالات
+  try { connections = connections.concat(listStatsWatchers()); } catch (err) { logger.error('Admin live streams: watchers failed:', err); }
   sendJson(res, 200, { success: true, now: Date.now(), connections: connections, matches: matches, chatLatency: chatLatency.getStats() });
+}
+
+function listStatsWatchers() {
+  return require('../stats/stream-stats-watcher').listWatchers().map(function (w) {
+    var u = w.user;
+    var totals = liveSessionStats.getTotals(w.username) || {};
+    return {
+      platform: 'tiktok',
+      username: w.username,
+      gameName: 'مراقبة إحصائيات البث',
+      user: u ? { id: u.id, name: u.username || null, customId: u.custom_id || null, role: u.role, tiktok: w.username, avatar: u.tiktok_avatar_url || null } : null,
+      status: w.status,
+      requestedAt: w.startedAt,
+      connectedAt: w.connectedAt,
+      comments: totals.comments || 0,
+      gifts: totals.gifts || 0,
+      viewers: null,
+      tracked: false
+    };
+  });
 }
 
 /** صاحب الجلسة يعدّل اسم العرض الخاص به — user.id من الجلسة حصراً. */
