@@ -3,11 +3,15 @@
  *
  * خطوتين بنفس النافذة:
  *  1. الإعدادات: الاستريمر يختار الأقسام اللي يبيها (المكبّسين، الداعمين،
- *     الشير، المتفاعلين، الحاضرين) وعدد التوب لكل قسم — تنحفظ بـlocalStorage.
- *  2. الصورة: يجيب الملخص من GET /api/stream/session-stats?sections=...
- *     (backend/stats/live-session-stats.js — الصور تجي Data URL جاهزة)،
- *     ويرسمها بـCanvas داخل المتصفح: صورة واسم صاحب البث فوق، وتحتها كل
- *     قسم بترتيبه مع صورة واسم كل مستخدم. زر «حفظ الصورة» يحمّلها PNG.
+ *     الشير، المتفاعلين، الحاضرين)، وعدد التوب لكل قسم، والخلفية (خلفيات
+ *     جاهزة مرسومة بالكود، أو صورة يرفعها من جهازه) — تنحفظ بـlocalStorage.
+ *  2. الصورة: بمقاس ستوري تيك توك 1080×1920. يجيب الملخص من
+ *     GET /api/stream/session-stats?sections=... (backend/stats/live-session-stats.js
+ *     — الصور تجي Data URL جاهزة)، ويرسمها بـCanvas داخل المتصفح: صورة واسم
+ *     صاحب البث فوق، وتحتها الأقسام وكل قسم فيه أصحاب التوب بصورهم وأسمائهم.
+ *     المحتوى يتصغّر تلقائياً عشان يدخل كامل بالمقاس. زر «حفظ الصورة» يحمّلها PNG.
+ *
+ * الخلفية المرفوعة ما تطلع من جهاز الاستريمر (ما ترتفع للسيرفر).
  *
  * AGPStreamStats.open()
  */
@@ -15,14 +19,11 @@
     'use strict';
 
     var W = 1080;
-    var PAD = 56;
+    var H = 1920;
     var MAX_TOP = 20;
     var PREFS_KEY = 'agp:stream-stats-prefs';
+    var CUSTOM_BG_KEY = 'agp:stream-stats-bg';
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,sans-serif';
-    var COLORS = {
-        bg1: '#120d22', bg2: '#050508', card: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.10)',
-        text: '#f4f2fb', muted: '#968ea4', accent: '#b28cf5'
-    };
 
     function fmt(n) { return (Number(n) || 0).toLocaleString('en-US'); }
 
@@ -32,29 +33,171 @@
 
     // ترتيب الأقسام هنا = ترتيبها بالصورة وبالإعدادات
     var SECTIONS = [
-        { key: 'likers', title: 'المكبّسين', desc: 'أكثر من كبّس على البث', color: '#f472b6', def: true,
+        { key: 'likers', title: 'المكبّسين', desc: 'أكثر من كبّس على البث', def: true,
           value: function (r) { return fmt(r.count) + ' تكبيسة'; },
           total: function (s) { return fmt(s.counts.likers) + ' مكبّس · ' + fmt(s.totals.likes) + ' تكبيسة'; } },
-        { key: 'gifters', title: 'الداعمين', desc: 'أكثر من دعم بالهدايا (بالماس)', color: '#facc15', def: true,
+        { key: 'gifters', title: 'الداعمين', desc: 'أكثر من دعم بالهدايا (بالماس)', def: true,
           value: function (r) { return fmt(r.diamonds) + ' 💎'; },
           total: function (s) { return fmt(s.counts.gifters) + ' داعم · ' + fmt(s.totals.diamonds) + ' 💎'; } },
-        { key: 'sharers', title: 'سوّوا شير', desc: 'اللي نشروا البث', color: '#38bdf8', def: true,
+        { key: 'sharers', title: 'سوّوا شير', desc: 'اللي نشروا البث', def: true,
           value: function (r) { return fmt(r.count) + ' شير'; },
           total: function (s) { return fmt(s.counts.sharers) + ' شخص · ' + fmt(s.totals.shares) + ' شير'; } },
-        { key: 'commenters', title: 'المتفاعلين', desc: 'أكثر من كتب تعليقات', color: '#34d399', def: false,
+        { key: 'commenters', title: 'المتفاعلين', desc: 'أكثر من كتب تعليقات', def: false,
           value: function (r) { return fmt(r.count) + ' تعليق'; },
           total: function (s) { return fmt(s.counts.commenters) + ' متفاعل · ' + fmt(s.totals.comments) + ' تعليق'; } },
-        { key: 'viewers', title: 'الحاضرين', desc: 'اللي دخلوا البث (حسب وقت الدخول)', color: '#a78bfa', def: false,
+        { key: 'viewers', title: 'الحاضرين', desc: 'اللي دخلوا البث (حسب وقت الدخول)', def: false,
           value: function (r) { return fmtTime(r.joinedAt); },
           total: function (s) { return fmt(s.counts.viewers) + ' حاضر · أعلى مشاهدة ' + fmt(s.totals.peakViewers); } }
     ];
+
+    /* ---------------- الخلفيات الجاهزة (مرسومة بالكود — بدون ملفات صور) ---------------- */
+
+    /** عشوائي ثابت (نفس النجوم كل مرة). */
+    function seeded(seed) {
+        var s = seed;
+        return function () { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+    }
+
+    function stars(ctx, w, h, count, seed, maxR, alpha) {
+        var rnd = seeded(seed);
+        for (var i = 0; i < count; i++) {
+            var r = rnd() * maxR * (w / W) + 0.4;
+            ctx.globalAlpha = (0.25 + rnd() * 0.75) * alpha;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(rnd() * w, rnd() * h, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    function linear(ctx, w, h, stops) {
+        var g = ctx.createLinearGradient(0, 0, 0, h);
+        stops.forEach(function (s) { g.addColorStop(s[0], s[1]); });
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+    }
+
+    function blob(ctx, x, y, r, color) {
+        var g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, color);
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+
+    var BACKGROUNDS = [
+        { key: 'galaxy', name: 'المجرّة', accent: '#c4b5fd', paint: function (ctx, w, h) {
+            linear(ctx, w, h, [[0, '#0b0620'], [0.5, '#1a0b33'], [1, '#05030c']]);
+            blob(ctx, w * 0.2, h * 0.25, w * 0.9, 'rgba(147,51,234,0.45)');
+            blob(ctx, w * 0.85, h * 0.55, w * 0.8, 'rgba(236,72,153,0.28)');
+            blob(ctx, w * 0.4, h * 0.85, w * 0.7, 'rgba(59,130,246,0.25)');
+            stars(ctx, w, h, 260, 7, 2.2, 1);
+        } },
+        { key: 'night', name: 'نجوم الليل', accent: '#7dd3fc', paint: function (ctx, w, h) {
+            linear(ctx, w, h, [[0, '#020617'], [0.6, '#0b1a3a'], [1, '#0f2a52']]);
+            ctx.save();
+            ctx.translate(w / 2, h / 2);
+            ctx.rotate(-0.5);
+            var band = ctx.createLinearGradient(-w, 0, w, 0);
+            band.addColorStop(0, 'rgba(255,255,255,0)');
+            band.addColorStop(0.5, 'rgba(186,230,253,0.10)');
+            band.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = band;
+            ctx.fillRect(-w, -h * 0.12, w * 2, h * 0.24);
+            ctx.restore();
+            stars(ctx, w, h, 420, 11, 2, 1);
+        } },
+        { key: 'moon', name: 'ليلة القمر', accent: '#e0f2fe', paint: function (ctx, w, h) {
+            linear(ctx, w, h, [[0, '#0a1024'], [1, '#03050d']]);
+            stars(ctx, w, h, 160, 23, 1.8, 0.8);
+            var mx = w * 0.72, my = h * 0.16, mr = w * 0.2;
+            blob(ctx, mx, my, mr * 3.2, 'rgba(191,219,254,0.22)');
+            var m = ctx.createRadialGradient(mx - mr * 0.3, my - mr * 0.3, mr * 0.1, mx, my, mr);
+            m.addColorStop(0, '#f8fafc');
+            m.addColorStop(1, '#cbd5e1');
+            ctx.fillStyle = m;
+            ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'rgba(148,163,184,0.35)';
+            [[-0.3, -0.1, 0.18], [0.25, 0.2, 0.12], [-0.05, 0.35, 0.09]].forEach(function (c) {
+                ctx.beginPath(); ctx.arc(mx + c[0] * mr, my + c[1] * mr, c[2] * mr, 0, Math.PI * 2); ctx.fill();
+            });
+        } },
+        { key: 'desert', name: 'غروب الصحراء', accent: '#fde68a', paint: function (ctx, w, h) {
+            linear(ctx, w, h, [[0, '#1e1b4b'], [0.45, '#7c2d12'], [0.7, '#c2410c'], [1, '#431407']]);
+            blob(ctx, w * 0.5, h * 0.62, w * 0.6, 'rgba(253,186,116,0.55)');
+            stars(ctx, w, h * 0.35, 90, 31, 1.6, 0.7);
+            [['#5a1d0c', 0.70, 0.06], ['#3d1408', 0.78, 0.05], ['#240b04', 0.87, 0.04]].forEach(function (d, i) {
+                ctx.fillStyle = d[0];
+                ctx.beginPath();
+                ctx.moveTo(0, h);
+                ctx.lineTo(0, h * d[1]);
+                ctx.bezierCurveTo(w * (0.25 + i * 0.1), h * (d[1] - d[2]), w * (0.55 - i * 0.05), h * (d[1] + d[2]), w, h * (d[1] - d[2] / 2));
+                ctx.lineTo(w, h);
+                ctx.closePath();
+                ctx.fill();
+            });
+        } },
+        { key: 'ocean', name: 'أعماق البحر', accent: '#5eead4', paint: function (ctx, w, h) {
+            linear(ctx, w, h, [[0, '#0c4a6e'], [0.5, '#082f49'], [1, '#020617']]);
+            ctx.save();
+            for (var i = 0; i < 6; i++) {
+                ctx.globalAlpha = 0.07;
+                ctx.fillStyle = '#e0f2fe';
+                ctx.beginPath();
+                var x = w * (0.1 + i * 0.16);
+                ctx.moveTo(x - w * 0.02, 0);
+                ctx.lineTo(x + w * 0.04, 0);
+                ctx.lineTo(x + w * 0.22, h * 0.8);
+                ctx.lineTo(x + w * 0.08, h * 0.8);
+                ctx.closePath();
+                ctx.fill();
+            }
+            ctx.restore();
+            var rnd = seeded(41);
+            for (var b = 0; b < 40; b++) {
+                ctx.strokeStyle = 'rgba(186,230,253,' + (0.15 + rnd() * 0.3) + ')';
+                ctx.lineWidth = 2 * (w / W);
+                ctx.beginPath();
+                ctx.arc(rnd() * w, h * 0.3 + rnd() * h * 0.7, (3 + rnd() * 9) * (w / W), 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        } },
+        { key: 'aurora', name: 'الشفق', accent: '#86efac', paint: function (ctx, w, h) {
+            linear(ctx, w, h, [[0, '#020617'], [1, '#04121c']]);
+            stars(ctx, w, h, 200, 53, 1.8, 0.9);
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            [['rgba(34,197,94,0.30)', 0.22], ['rgba(20,184,166,0.25)', 0.30], ['rgba(168,85,247,0.18)', 0.38]].forEach(function (a, i) {
+                ctx.fillStyle = a[0];
+                ctx.beginPath();
+                ctx.moveTo(0, h * a[1]);
+                ctx.bezierCurveTo(w * 0.3, h * (a[1] - 0.12), w * 0.6, h * (a[1] + 0.1), w, h * (a[1] - 0.05 + i * 0.02));
+                ctx.lineTo(w, h * (a[1] + 0.12));
+                ctx.bezierCurveTo(w * 0.6, h * (a[1] + 0.22), w * 0.3, h * a[1], 0, h * (a[1] + 0.14));
+                ctx.closePath();
+                ctx.fill();
+            });
+            ctx.restore();
+        } },
+        { key: 'classic', name: 'كلاسيكي', accent: '#b28cf5', paint: function (ctx, w, h) {
+            linear(ctx, w, h, [[0, '#120d22'], [1, '#050508']]);
+            blob(ctx, w / 2, h * 0.08, w * 0.75, 'rgba(122,63,212,0.40)');
+        } }
+    ];
+    var CUSTOM_ACCENT = '#38bdf8';
+
+    function findBg(key) {
+        for (var i = 0; i < BACKGROUNDS.length; i++) if (BACKGROUNDS[i].key === key) return BACKGROUNDS[i];
+        return BACKGROUNDS[0];
+    }
 
     /* ---------------- الإعدادات ---------------- */
 
     function loadPrefs() {
         var p = null;
         try { p = JSON.parse(localStorage.getItem(PREFS_KEY) || 'null'); } catch (e) {}
-        var out = {};
+        var out = { bg: (p && typeof p.bg === 'string') ? p.bg : BACKGROUNDS[0].key };
         SECTIONS.forEach(function (sec) {
             var v = p && p[sec.key];
             out[sec.key] = {
@@ -62,10 +205,43 @@
                 top: v ? clampTop(v.top) : (sec.key === 'viewers' ? 10 : 3)
             };
         });
+        if (out.bg === 'custom' && !loadCustomBg()) out.bg = BACKGROUNDS[0].key;
         return out;
     }
     function savePrefs(p) { try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch (e) {} }
     function clampTop(n) { return Math.min(MAX_TOP, Math.max(1, Math.floor(Number(n) || 1))); }
+
+    function loadCustomBg() { try { return localStorage.getItem(CUSTOM_BG_KEY) || null; } catch (e) { return null; } }
+    function saveCustomBg(dataUrl) {
+        try { localStorage.setItem(CUSTOM_BG_KEY, dataUrl); return true; } catch (e) { return false; }
+    }
+
+    /**
+     * صورة من جهاز الاستريمر → مقاس الستوري (قص وسطي) كـJPEG خفيف.
+     * @returns {Promise<string>} Data URL
+     */
+    function prepareUpload(file) {
+        return new Promise(function (resolve, reject) {
+            if (!file || !/^image\//.test(file.type)) { reject(new Error('اختر ملف صورة')); return; }
+            var url = URL.createObjectURL(file);
+            var img = new Image();
+            img.onload = function () {
+                var c = document.createElement('canvas');
+                c.width = W; c.height = H;
+                drawCover(c.getContext('2d'), img, W, H);
+                URL.revokeObjectURL(url);
+                resolve(c.toDataURL('image/jpeg', 0.85));
+            };
+            img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('تعذّر فتح الصورة')); };
+            img.src = url;
+        });
+    }
+
+    function drawCover(ctx, img, w, h) {
+        var s = Math.max(w / img.width, h / img.height);
+        var dw = img.width * s, dh = img.height * s;
+        ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+    }
 
     /* ---------------- الشبكة ---------------- */
 
@@ -137,8 +313,8 @@
         return text + '…';
     }
 
-    /** صورة دائرية، وإلا أول حرف من الاسم بدائرة ملوّنة. */
-    function drawAvatar(ctx, img, name, cx, cy, r, color) {
+    /** صورة دائرية، وإلا أول حرف من الاسم. */
+    function drawAvatar(ctx, img, name, cx, cy, r, ring, ringW) {
         ctx.save();
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
@@ -147,89 +323,110 @@
             ctx.clip();
             ctx.drawImage(img, cx - r, cy - r, r * 2, r * 2);
         } else {
-            ctx.fillStyle = 'rgba(255,255,255,0.08)';
+            ctx.fillStyle = 'rgba(8,10,20,0.75)';
             ctx.fill();
-            ctx.fillStyle = color;
-            ctx.font = '700 ' + Math.round(r * 0.9) + 'px ' + FONT;
+            ctx.fillStyle = ring;
+            ctx.font = '700 ' + Math.round(r * 0.95) + 'px ' + FONT;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(String(name || '?').trim().charAt(0) || '?', cx, cy + 2);
+            ctx.fillText(String(name || '?').trim().charAt(0) || '?', cx, cy + r * 0.06);
         }
         ctx.restore();
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = ring;
+        ctx.lineWidth = ringW;
         ctx.stroke();
     }
 
-    var HEADER_H = 470, ROW_H = 78, SEC_HEAD = 96, SEC_GAP = 30;
-    function sectionHeight(rows) { return SEC_HEAD + Math.max(rows.length, 1) * ROW_H + 24; }
+    /** نجمة رباعية (✦) مرسومة — شكل ثابت بكل الأجهزة بدل خط الإيموجي. */
+    function sparkle(ctx, cx, cy, r, color) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - r);
+        ctx.quadraticCurveTo(cx, cy, cx + r, cy);
+        ctx.quadraticCurveTo(cx, cy, cx, cy + r);
+        ctx.quadraticCurveTo(cx, cy, cx - r, cy);
+        ctx.quadraticCurveTo(cx, cy, cx, cy - r);
+        ctx.fill();
+    }
 
-    function drawSection(ctx, y, sec, stats, rows, imgs) {
-        var x = PAD, w = W - PAD * 2, h = sectionHeight(rows);
-        roundRect(ctx, x, y, w, h, 28);
-        ctx.fillStyle = COLORS.card; ctx.fill();
-        ctx.strokeStyle = COLORS.border; ctx.lineWidth = 2; ctx.stroke();
-        // شريط لون القسم أعلى البطاقة
-        roundRect(ctx, x + w - 140, y, 140, 6, 3);
-        ctx.fillStyle = sec.color; ctx.fill();
+    var SIDE = 70;               // الهامش الجانبي
+    var TOP_H = 630;             // مساحة رأس الصورة (صاحب البث)
+    var BOTTOM = 1840;           // نهاية مساحة الأقسام (تحتها التوقيع)
 
-        ctx.textBaseline = 'alphabetic';
-        ctx.textAlign = 'right';
-        ctx.fillStyle = sec.color;
-        ctx.font = '700 38px ' + FONT;
-        ctx.fillText(sec.title, x + w - 32, y + 60);
-        ctx.textAlign = 'left';
-        ctx.fillStyle = COLORS.muted;
-        ctx.font = '500 23px ' + FONT;
-        ctx.fillText(sec.total(stats), x + 32, y + 58);
+    /**
+     * أبعاد بطاقة مستخدم واحد (صورة + اسم + قيمة) بمقياس s.
+     */
+    function chipMetrics(ctx, r, sec, s) {
+        var av = 34 * s;
+        ctx.font = '700 ' + (26 * s) + 'px ' + FONT;
+        var nameW = Math.min(ctx.measureText(r.name).width, 300 * s);
+        ctx.font = '500 ' + (21 * s) + 'px ' + FONT;
+        var valW = ctx.measureText(sec.value(r)).width;
+        var w = av * 2 + 14 * s + Math.max(nameW, valW) + 28 * s + 18 * s;
+        w = Math.min(w, W - SIDE * 2);
+        return { w: w, h: av * 2 + 18 * s, av: av, textW: Math.max(nameW, valW) };
+    }
 
-        var ry = y + SEC_HEAD;
-        if (!rows.length) {
-            ctx.textAlign = 'center';
-            ctx.fillStyle = COLORS.muted;
-            ctx.font = '500 26px ' + FONT;
-            ctx.fillText('لا يوجد', x + w / 2, ry + 46);
-            return h;
-        }
-        rows.forEach(function (r, i) {
-            if (i % 2 === 0) {
-                roundRect(ctx, x + 16, ry + 4, w - 32, ROW_H - 8, 16);
-                ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fill();
-            }
-            var mid = ry + ROW_H / 2;
-            ctx.textBaseline = 'middle';
-            // الترتيب ← الصورة ← الاسم (يمين)، القيمة يسار
-            ctx.textAlign = 'center';
-            ctx.fillStyle = i < 3 ? sec.color : COLORS.muted;
-            ctx.font = '700 28px ' + FONT;
-            ctx.fillText(String(i + 1), x + w - 52, mid);
-            drawAvatar(ctx, imgs[i], r.name, x + w - 112, mid, 26, i < 3 ? sec.color : 'rgba(255,255,255,0.25)');
-
-            var nameRight = x + w - 154;
-            var nameMax = w - 154 - 300;
-            ctx.textAlign = 'right';
-            ctx.fillStyle = COLORS.text;
-            ctx.font = '600 28px ' + FONT;
-            var name = fitText(ctx, r.name, nameMax);
-            ctx.fillText(name, nameRight, mid - (r.username && r.username !== r.name ? 12 : 0));
-            if (r.username && r.username !== r.name) {
-                ctx.fillStyle = COLORS.muted;
-                ctx.font = '400 20px ' + FONT;
-                ctx.direction = 'ltr';
-                ctx.textAlign = 'right';
-                ctx.fillText(fitText(ctx, '@' + r.username, nameMax), nameRight, mid + 20);
-                ctx.direction = 'rtl';
-            }
-            ctx.textAlign = 'left';
-            ctx.fillStyle = sec.color;
-            ctx.font = '700 28px ' + FONT;
-            ctx.fillText(sec.value(r), x + 36, mid);
-            ry += ROW_H;
+    /**
+     * تخطيط الأقسام بمقياس s: يرجّع الصفوف ومواقعها، والارتفاع الكلي.
+     */
+    function layout(ctx, chosen, stats, s) {
+        var maxW = W - SIDE * 2;
+        var gapX = 14 * s, gapY = 14 * s;
+        var titleH = 122 * s, secGap = 46 * s, emptyH = 44 * s;
+        var y = 0, secs = [];
+        chosen.forEach(function (sec) {
+            var rows = stats.sections[sec.key] || [];
+            var lines = [], line = [], lineW = 0;
+            rows.forEach(function (r, i) {
+                var m = chipMetrics(ctx, r, sec, s);
+                if (line.length && lineW + gapX + m.w > maxW) { lines.push({ items: line, w: lineW }); line = []; lineW = 0; }
+                lineW += (line.length ? gapX : 0) + m.w;
+                line.push({ r: r, m: m, rank: i + 1 });
+            });
+            if (line.length) lines.push({ items: line, w: lineW });
+            var top = y;
+            y += titleH;
+            if (!lines.length) y += emptyH;
+            lines.forEach(function (l, i) { l.y = y; y += l.items[0].m.h + (i < lines.length - 1 ? gapY : 0); });
+            secs.push({ sec: sec, top: top, lines: lines });
+            y += secGap;
         });
+        return { height: y - 40 * s, secs: secs, gapX: gapX, titleH: titleH };
+    }
+
+    function drawChip(ctx, x, y, item, sec, s, accent, img) {
+        var m = item.m;
+        roundRect(ctx, x, y, m.w, m.h, m.h / 2);
+        ctx.fillStyle = 'rgba(6,8,18,0.55)';
+        ctx.fill();
+        ctx.strokeStyle = item.rank === 1 ? accent : 'rgba(255,255,255,0.14)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // الصورة يمين البطاقة (rtl)، والنص يسارها
+        var cx = x + m.w - 9 * s - m.av, cy = y + m.h / 2;
+        drawAvatar(ctx, img, item.r.name, cx, cy, m.av, item.rank <= 3 ? accent : 'rgba(255,255,255,0.35)', 3 * s);
+        // رقم الترتيب على طرف الصورة
+        var br = 13 * s, bx = cx - m.av * 0.72, by = cy + m.av * 0.72;
+        ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2);
+        ctx.fillStyle = item.rank <= 3 ? accent : '#1f2333'; ctx.fill();
+        ctx.fillStyle = item.rank <= 3 ? '#0b0b12' : '#ffffff';
+        ctx.font = '700 ' + (16 * s) + 'px ' + FONT;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(String(item.rank), bx, by + 1);
+
+        var tr = cx - m.av - 14 * s;
+        ctx.textAlign = 'right';
         ctx.textBaseline = 'alphabetic';
-        return h;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '700 ' + (26 * s) + 'px ' + FONT;
+        ctx.fillText(fitText(ctx, item.r.name, m.textW + 2), tr, cy - 2 * s);
+        ctx.fillStyle = accent;
+        ctx.font = '500 ' + (21 * s) + 'px ' + FONT;
+        ctx.fillText(sec.value(item.r), tr, cy + 25 * s);
     }
 
     /**
@@ -239,67 +436,113 @@
         var stats = data.stats;
         var streamer = data.streamer || { name: stats.username, avatar: null };
         var chosen = SECTIONS.filter(function (s) { return prefs[s.key].on; });
+        var custom = prefs.bg === 'custom' ? loadCustomBg() : null;
+        var bg = custom ? null : findBg(prefs.bg);
+        var accent = bg ? bg.accent : CUSTOM_ACCENT;
 
-        // تحميل كل الصور قبل الرسم
-        var jobs = [loadImg(streamer.avatar)];
+        var jobs = [loadImg(streamer.avatar), loadImg(custom)];
         chosen.forEach(function (sec) {
             (stats.sections[sec.key] || []).forEach(function (r) { jobs.push(loadImg(r.avatar)); });
         });
         return Promise.all(jobs).then(function (loaded) {
-            var streamerImg = loaded[0];
-            var k = 1;
-            var imgsBySec = {};
+            var streamerImg = loaded[0], customImg = loaded[1];
+            var imgs = new Map(), k = 2;
             chosen.forEach(function (sec) {
-                imgsBySec[sec.key] = (stats.sections[sec.key] || []).map(function () { return loaded[k++]; });
+                (stats.sections[sec.key] || []).forEach(function (r) { imgs.set(r, loaded[k++]); });
             });
-
-            var H = PAD + HEADER_H + chosen.reduce(function (s, sec) {
-                return s + sectionHeight(stats.sections[sec.key] || []) + SEC_GAP;
-            }, 0) + 70;
 
             var canvas = document.createElement('canvas');
             canvas.width = W; canvas.height = H;
             var ctx = canvas.getContext('2d');
             ctx.direction = 'rtl';
 
-            var g = ctx.createLinearGradient(0, 0, 0, H);
-            g.addColorStop(0, COLORS.bg1); g.addColorStop(1, COLORS.bg2);
-            ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-            var glow = ctx.createRadialGradient(W / 2, 120, 0, W / 2, 120, 600);
-            glow.addColorStop(0, 'rgba(122,63,212,0.38)'); glow.addColorStop(1, 'rgba(122,63,212,0)');
-            ctx.fillStyle = glow; ctx.fillRect(0, 0, W, 800);
+            // الخلفية + تظليل خفيف للقراءة
+            if (customImg) drawCover(ctx, customImg, W, H);
+            else bg.paint(ctx, W, H);
+            var shade = ctx.createLinearGradient(0, 0, 0, H);
+            // الصور المرفوعة تفاصيلها كثيرة — تظليل أقوى عشان النص يبان
+            var k0 = customImg ? 1.6 : 1;
+            shade.addColorStop(0, 'rgba(0,0,0,' + (0.30 * k0) + ')');
+            shade.addColorStop(0.35, 'rgba(0,0,0,' + (0.42 * k0) + ')');
+            shade.addColorStop(1, 'rgba(0,0,0,' + Math.min(0.85, 0.62 * k0) + ')');
+            ctx.fillStyle = shade;
+            ctx.fillRect(0, 0, W, H);
 
-            // أعلى الصورة: صورة واسم صاحب البث
-            var y = PAD;
+            // الرأس: صورة واسم صاحب البث
             ctx.textAlign = 'center';
-            ctx.fillStyle = COLORS.accent;
-            ctx.font = '600 26px ' + FONT;
-            ctx.fillText(stats.live ? 'إحصائيات البث · شغّال الآن' : 'إحصائيات البث', W / 2, y + 26);
-            drawAvatar(ctx, streamerImg, streamer.name, W / 2, y + 150, 92, COLORS.accent);
             ctx.textBaseline = 'alphabetic';
+            ctx.fillStyle = accent;
+            ctx.font = '700 26px ' + FONT;
+            ctx.fillText(stats.live ? 'إحصائيات البث · شغّال الآن' : 'إحصائيات البث', W / 2, 110);
+            drawAvatar(ctx, streamerImg, streamer.name, W / 2, 270, 110, accent, 7);
             ctx.textAlign = 'center';
-            ctx.fillStyle = COLORS.text;
-            ctx.font = '700 52px ' + FONT;
-            ctx.fillText(fitText(ctx, streamer.name, W - PAD * 2), W / 2, y + 310);
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '700 60px ' + FONT;
+            ctx.fillText(fitText(ctx, streamer.name, W - SIDE * 2), W / 2, 460);
             ctx.direction = 'ltr';
-            ctx.fillStyle = COLORS.accent;
+            ctx.fillStyle = accent;
             ctx.font = '600 28px ' + FONT;
-            ctx.fillText('@' + stats.username, W / 2, y + 354);
+            ctx.fillText('@' + stats.username, W / 2, 504);
             ctx.direction = 'rtl';
-            ctx.fillStyle = COLORS.muted;
-            ctx.font = '500 24px ' + FONT;
-            ctx.fillText(fmtDate(stats.startedAt) + '  ·  المدة: ' + fmtDuration(stats.durationMs), W / 2, y + 398);
-            y += HEADER_H;
+            ctx.fillStyle = 'rgba(255,255,255,0.82)';
+            ctx.font = '500 26px ' + FONT;
+            ctx.fillText('أنتم أجمل ما في البث، شكراً لكم', W / 2, 550);
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.font = '500 22px ' + FONT;
+            ctx.fillText(fmtDate(stats.startedAt) + '  ·  المدة: ' + fmtDuration(stats.durationMs), W / 2, 588);
 
-            // تحت: الأقسام المختارة بترتيبها
-            chosen.forEach(function (sec) {
-                y += drawSection(ctx, y, sec, stats, stats.sections[sec.key] || [], imgsBySec[sec.key]) + SEC_GAP;
+            // الأقسام: أكبر مقياس يدخل كامل بالمساحة
+            var avail = BOTTOM - TOP_H - 20;
+            // محتوى قليل يكبر لين 1.3، والكثير يصغر لين يدخل
+            var s = 1.3, L = layout(ctx, chosen, stats, s);
+            while (L.height > avail && s > 0.45) { s -= 0.05; L = layout(ctx, chosen, stats, s); }
+            var y0 = TOP_H + Math.max(0, (avail - L.height) / 2);
+
+            L.secs.forEach(function (block) {
+                var sec = block.sec, ty = y0 + block.top + 44 * s;
+                ctx.font = '700 ' + (40 * s) + 'px ' + FONT;
+                var tw = ctx.measureText(sec.title).width;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(sec.title, W / 2, ty);
+                sparkle(ctx, W / 2 + tw / 2 + 26 * s, ty, 11 * s, accent);
+                sparkle(ctx, W / 2 - tw / 2 - 26 * s, ty, 11 * s, accent);
+                // خطوط رفيعة على الجانبين
+                [[SIDE, W / 2 - tw / 2 - 50 * s, 0], [W / 2 + tw / 2 + 50 * s, W - SIDE, 1]].forEach(function (seg) {
+                    var g = ctx.createLinearGradient(seg[0], 0, seg[1], 0);
+                    g.addColorStop(seg[2] ? 0 : 1, accent);
+                    g.addColorStop(seg[2] ? 1 : 0, 'rgba(255,255,255,0)');
+                    ctx.strokeStyle = g;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(seg[0], ty); ctx.lineTo(seg[1], ty); ctx.stroke();
+                });
+                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                ctx.font = '500 ' + (20 * s) + 'px ' + FONT;
+                ctx.fillText(sec.total(stats), W / 2, ty + 38 * s);
+
+                if (!block.lines.length) {
+                    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+                    ctx.font = '500 ' + (22 * s) + 'px ' + FONT;
+                    ctx.fillText('لا يوجد', W / 2, y0 + block.top + L.titleH + 20 * s);
+                }
+                // كل سطر بطاقات بالوسط، الترتيب من اليمين
+                block.lines.forEach(function (line) {
+                    var x = W / 2 + line.w / 2;
+                    line.items.forEach(function (item) {
+                        x -= item.m.w;
+                        drawChip(ctx, x, y0 + line.y, item, sec, s, accent, imgs.get(item.r));
+                        x -= L.gapX;
+                    });
+                });
             });
 
             ctx.textAlign = 'center';
-            ctx.fillStyle = COLORS.muted;
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillStyle = 'rgba(255,255,255,0.55)';
             ctx.font = '500 22px ' + FONT;
-            ctx.fillText('منصة ألعاب أيمن', W / 2, H - 36);
+            ctx.fillText('منصة ألعاب أيمن', W / 2, H - 40);
             return canvas;
         });
     }
@@ -360,8 +603,29 @@
 
     var ROW = 'display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(135deg,rgba(255,255,255,.05),rgba(255,255,255,.02));';
     var STEP = 'width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#e7e3ef;font:inherit;font-size:18px;line-height:1;cursor:pointer;';
+    var HEADING = 'margin:16px 0 10px;font-size:15px;font-weight:700;color:#f4f2fb';
 
-    /** شاشة الاختيار: كل قسم صف (العنوان يمين، التحكم يسار). */
+    /** بلاطة خلفية واحدة (معاينة مصغّرة + الاسم). */
+    function bgTile(label, selected, paintPreview, onPick) {
+        var tile = document.createElement('button');
+        tile.type = 'button';
+        tile.setAttribute('aria-pressed', String(selected));
+        tile.style.cssText = 'position:relative;display:flex;flex-direction:column;gap:6px;padding:6px;border-radius:14px;cursor:pointer;font:inherit;color:#e7e3ef;text-align:center;background:rgba(255,255,255,.03);border:2px solid ' + (selected ? '#a855f7' : 'rgba(255,255,255,.08)') + ';';
+        var c = document.createElement('canvas');
+        c.width = 108; c.height = 192;
+        c.style.cssText = 'display:block;width:100%;aspect-ratio:9/16;border-radius:9px;background:#0b0b12';
+        paintPreview(c.getContext('2d'), c.width, c.height);
+        var dot = document.createElement('span');
+        dot.style.cssText = 'position:absolute;top:12px;left:12px;width:16px;height:16px;border-radius:50%;border:2px solid #fff;background:' + (selected ? '#a855f7' : 'rgba(0,0,0,.5)');
+        var name = document.createElement('span');
+        name.style.cssText = 'font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+        name.textContent = label;
+        tile.appendChild(c); tile.appendChild(dot); tile.appendChild(name);
+        tile.addEventListener('click', onPick);
+        return tile;
+    }
+
+    /** شاشة الاختيار: الأقسام (العنوان يمين، التحكم يسار) ثم الخلفيات. */
     function showSettings(wrap) {
         var prefs = loadPrefs();
         var body = wrap.querySelector('[data-body]');
@@ -370,7 +634,7 @@
 
         var intro = document.createElement('p');
         intro.style.cssText = 'margin:0 0 10px;font-size:14px;line-height:1.7;color:#a8a3b5';
-        intro.textContent = 'اختر الأقسام اللي تبيها بالصورة، وكم توب تبي بكل قسم (حتى ' + MAX_TOP + ').';
+        intro.textContent = 'اختر الأقسام اللي تبيها بالصورة، وكم توب تبي بكل قسم (حتى ' + MAX_TOP + ')، والخلفية. الصورة بمقاس ستوري تيك توك.';
         body.appendChild(intro);
 
         var list = document.createElement('div');
@@ -386,7 +650,6 @@
             label.style.cssText = 'display:flex;flex-direction:column;gap:2px;text-align:right;min-width:0';
             label.innerHTML = '<span style="font-weight:700;font-size:15px"></span><span style="font-size:12.5px;color:#968ea4"></span>';
             label.children[0].textContent = sec.title;
-            label.children[0].style.color = sec.color;
             label.children[1].textContent = sec.desc;
 
             var ctl = document.createElement('div');
@@ -417,7 +680,7 @@
                 num.textContent = 'توب ' + st.top;
                 toggle.setAttribute('aria-checked', String(st.on));
                 toggle.setAttribute('aria-label', sec.title);
-                toggle.style.background = st.on ? sec.color : 'rgba(255,255,255,.15)';
+                toggle.style.background = st.on ? '#a855f7' : 'rgba(255,255,255,.15)';
                 knob.style.right = st.on ? '3px' : '25px';
                 counter.style.opacity = st.on ? '1' : '.35';
                 minus.disabled = plus.disabled = !st.on;
@@ -434,10 +697,69 @@
             list.appendChild(row);
         });
 
+        // الخلفيات
+        var bgHead = document.createElement('div');
+        bgHead.style.cssText = HEADING;
+        bgHead.textContent = 'الخلفية';
+        body.appendChild(bgHead);
+        var grid = document.createElement('div');
+        grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px';
+        body.appendChild(grid);
+        var uploadNote = document.createElement('p');
+        uploadNote.style.cssText = 'margin:8px 0 0;font-size:12.5px;color:#968ea4;line-height:1.6';
+        uploadNote.textContent = 'الخلفية المرفوعة تبقى في جهازك فقط.';
+        body.appendChild(uploadNote);
+
+        var fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.style.display = 'none';
+        body.appendChild(fileInput);
+
+        function renderGrid() {
+            grid.innerHTML = '';
+            BACKGROUNDS.forEach(function (bg) {
+                grid.appendChild(bgTile(bg.name, prefs.bg === bg.key, bg.paint, function () {
+                    prefs.bg = bg.key; savePrefs(prefs); renderGrid();
+                }));
+            });
+            var custom = loadCustomBg();
+            if (custom) {
+                grid.appendChild(bgTile('خلفيتك', prefs.bg === 'custom', function (ctx, w, h) {
+                    var img = new Image();
+                    img.onload = function () { drawCover(ctx, img, w, h); };
+                    img.src = custom;
+                }, function () { prefs.bg = 'custom'; savePrefs(prefs); renderGrid(); }));
+            }
+            var up = document.createElement('button');
+            up.type = 'button';
+            up.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:120px;padding:8px;border-radius:14px;cursor:pointer;font:inherit;font-size:12px;font-weight:600;color:#c6b4f2;background:rgba(122,63,212,.08);border:2px dashed rgba(178,140,245,.4)';
+            up.innerHTML = '<span style="font-size:22px;line-height:1">+</span><span></span>';
+            up.children[1].textContent = custom ? 'تغيير خلفيتك' : 'رفع خلفية من جهازك';
+            up.addEventListener('click', function () { fileInput.click(); });
+            grid.appendChild(up);
+        }
+        fileInput.addEventListener('change', function () {
+            var f = fileInput.files && fileInput.files[0];
+            fileInput.value = '';
+            if (!f) return;
+            uploadNote.textContent = 'جاري تجهيز الخلفية…';
+            prepareUpload(f).then(function (dataUrl) {
+                if (!saveCustomBg(dataUrl)) throw new Error('الصورة كبيرة على ذاكرة المتصفح — جرّب صورة أصغر');
+                prefs.bg = 'custom'; savePrefs(prefs);
+                uploadNote.textContent = 'الخلفية المرفوعة تبقى في جهازك فقط.';
+                renderGrid();
+            }).catch(function (err) {
+                uploadNote.textContent = (err && err.message) || 'تعذّر رفع الخلفية';
+            });
+        });
+        renderGrid();
+
         setActions(wrap, [{ label: 'إنشاء الصورة', style: BTN_PRIMARY, onClick: function () {
             if (!SECTIONS.some(function (s) { return prefs[s.key].on; })) {
                 intro.textContent = 'اختر قسم واحد على الأقل.';
                 intro.style.color = '#f5a3a3';
+                body.scrollTop = 0;
                 return;
             }
             generate(wrap, prefs);
