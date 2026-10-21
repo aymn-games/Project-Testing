@@ -38,6 +38,9 @@ a{color:#7dd3fc}a:hover{color:#bae6fd}
 @keyframes flagW{0%,100%{transform:skewY(0) scaleX(1)}50%{transform:skewY(-4deg) scaleX(.92)}}
 @keyframes shipThrow{0%{transform:translate(0,0) rotate(0)}14%{transform:translate(calc(var(--tx)*.04),-40px) rotate(-8deg)}55%{transform:translate(calc(var(--tx)*.62),-230px) rotate(190deg)}100%{transform:translate(var(--tx),var(--ty)) rotate(400deg)}}
 @keyframes sinkDown{0%{transform:translate(var(--tx),var(--ty)) rotate(400deg)}100%{transform:translate(var(--tx),calc(var(--ty) + 300px)) rotate(430deg)}}
+/* وضع الأداء (ship3d.js → html.ship-lite): بدون تغبيش فوق المشهد على الأجهزة الضعيفة */
+html.ship-lite *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.ship-lite [data-lite-bg]{background:rgba(4,40,70,.78)!important}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 @keyframes fadeOut{from{opacity:1}to{opacity:0}}
 @keyframes popIn{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:none}}
@@ -290,7 +293,7 @@ a{color:#7dd3fc}a:hover{color:#bae6fd}
           </div></div>
   </sc-if>
   <sc-if value="{{ shufOn }}" hint-placeholder-val="{{ false }}">
-    <div style="position:fixed;inset:80px 0 0 0;z-index:70;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(10px,2vh,24px);background:rgba(4,40,70,.35);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);pointer-events:none;animation:fade .5s ease">
+    <div data-lite-bg="" style="position:fixed;inset:80px 0 0 0;z-index:70;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(10px,2vh,24px);background:rgba(4,40,70,.35);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);pointer-events:none;animation:fade .5s ease">
       <span style="font:800 clamp(26px,2.6vw,48px) 'Zain';color:#e0f7ff;text-shadow:0 4px 20px rgba(0,30,60,.5)">{{ shTitle }}</span>
       <span key="{{ shLetter }}" style="font:900 clamp(200px,min(24vw,42vh),420px)/1.4 'Zain';padding-bottom:clamp(10px,2vh,30px);color:#fcd34d;text-shadow:0 10px 0 #b7791f, 0 24px 60px rgba(0,30,60,.45);animation:{{ shLAn }}">{{ shLetter }}</span>
       <span style="font:800 clamp(22px,2vw,36px) 'Zain';color:#e0f7ff;opacity:{{ shSubOp }};transition:opacity .4s">الدور على {{ shName }} · {{ shType }}</span>

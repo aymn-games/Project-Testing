@@ -11,16 +11,16 @@ class Ship3D extends HTMLElement {
   disconnectedCallback(){ cancelAnimationFrame(this.raf); this.ro&&this.ro.disconnect(); this.r&&this.r.dispose(); }
   tex(w,h,draw){ const c=document.createElement('canvas'); c.width=w; c.height=h; draw(c.getContext('2d'),w,h); const t=new this.T.CanvasTexture(c); t.colorSpace=this.T.SRGBColorSpace; t.anisotropy=4; return t; }
   init(){
-    const T=this.T, r=this.r=new T.WebGLRenderer({antialias:true}); r.setPixelRatio(Math.min(devicePixelRatio,1.5)); r.shadowMap.enabled=true; r.shadowMap.type=T.PCFSoftShadowMap;
+    const T=this.T, r=this.r=new T.WebGLRenderer({antialias:true}); r.setPixelRatio(Math.min(devicePixelRatio,1)); r.shadowMap.enabled=true; r.shadowMap.type=T.PCFSoftShadowMap;
     r.toneMapping=T.ACESFilmicToneMapping; r.toneMappingExposure=1.05; this.appendChild(r.domElement); r.domElement.style.cssText='display:block;width:100%;height:100%';
     const sc=this.sc=new T.Scene(); sc.background=this.tex(4,256,(g,w,h)=>{ const gr=g.createLinearGradient(0,0,0,h); gr.addColorStop(0,'#5fc4e0'); gr.addColorStop(.55,'#a8e6f0'); gr.addColorStop(1,'#d9f6f7'); g.fillStyle=gr; g.fillRect(0,0,w,h); });
     sc.fog=new T.Fog('#bdeef3',70,230);
     const cam=this.cam=new T.PerspectiveCamera(42,1,.1,600); cam.position.set(0,20,36);
     sc.add(new T.HemisphereLight('#e8fbff','#0a7fa0',1.1));
-    const sun=new T.DirectionalLight('#fff6e0',2.2); sun.position.set(-20,40,25); sun.castShadow=true; sun.shadow.mapSize.set(1536,1536);
+    const sun=this.sun=new T.DirectionalLight('#fff6e0',2.2); sun.position.set(-20,40,25); sun.castShadow=true; sun.shadow.mapSize.set(1024,1024);
     Object.assign(sun.shadow.camera,{left:-70,right:70,top:70,bottom:-70,near:1,far:120}); sc.add(sun);
     // sea
-    const sg=this.seaG=new T.PlaneGeometry(420,420,110,110); sg.rotateX(-Math.PI/2); this.seaBase=sg.attributes.position.array.slice();
+    const sg=this.seaG=new T.PlaneGeometry(420,420,55,55); sg.rotateX(-Math.PI/2); this.seaBase=sg.attributes.position.array.slice();
     const sea=new T.Mesh(sg,new T.MeshStandardMaterial({color:'#14b4cc',roughness:.35,metalness:.05,flatShading:true})); sea.receiveShadow=true; sc.add(sea);
     const spark=new T.Mesh(new T.PlaneGeometry(420,420),new T.MeshBasicMaterial({map:this.tex(512,512,(g,w,h)=>{ g.fillStyle='rgba(255,255,255,.55)'; for(let i=0;i<260;i++){ g.beginPath(); g.ellipse(Math.random()*w,Math.random()*h,3+Math.random()*7,1+Math.random()*1.5,0,0,7); g.fill(); } }),transparent:true,depthWrite:false}));
     spark.material.map.wrapS=spark.material.map.wrapT=T.RepeatWrapping; spark.material.map.repeat.set(14,14); spark.rotation.x=-Math.PI/2; spark.position.y=.35; sc.add(spark); this.spark=spark;
@@ -105,8 +105,13 @@ class Ship3D extends HTMLElement {
     ps.forEach((p,i)=>{ let f=this.figs.get(p.id); if(!f||f.name!==p.name){ if(f) this.crew.remove(f.g); f={g:this.figure(p),name:p.name,ph:Math.random()*6}; this.crew.add(f.g); this.figs.set(p.id,f); }
       f.home=sl[i]; if(!f.fallT&&!p.fall) f.g.position.copy(sl[i]); if(p.fall&&f.fallT==null){ f.fallT=0; f.from=f.g.position.clone(); f.splashed=false; } if(!p.fall&&!p.out){ f.fallT=null; f.g.visible=true; f.g.rotation.set(0,0,0); } if(p.out&&!p.fall){ f.fallT=null; f.g.visible=false; }
       f.out=p.out; if(p.out&&!p.fall) f.g.visible=false; }); }
-  tick(){ const T=this.T, dt=Math.min(this.clock.getDelta(),.05), t=this.clock.elapsedTime, d=this.data;
-    const a=this.seaG.attributes.position.array, b=this.seaBase; for(let i=0;i<a.length;i+=3){ const x=b[i], z=b[i+2]; a[i+1]=Math.sin(x*.07+t*1.3)*.75+Math.cos(z*.09+t*1.05)*.55+Math.sin((x-z)*.16+t*2.1)*.25+Math.sin((x+z)*.33+t*2.9)*.1; } this.seaG.attributes.position.needsUpdate=true; this.seaG.computeVertexNormals();
+  // وضع الأداء: لو متوسط الإطارات نزل تحت 40/ث (بعد أول 3 ث) تنطفي الظلال، وتنضاف ship-lite للصفحة (تشيل التغبيش بالـ CSS)
+  perf(raw){ if(this.lite||raw>.5) return; const p=this.pf||(this.pf={n:0,s:0,w:0}); p.w+=raw; if(p.w<3) return; p.n++; p.s+=raw;
+    if(p.s>=2){ const fps=p.n/p.s; p.n=0; p.s=0; if(fps<40) this.goLite(); } }
+  goLite(){ this.lite=true; this.sun.castShadow=false; this.r.shadowMap.enabled=false; this.sc.traverse(o=>{ if(o.material) (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{ m.needsUpdate=true; }); });
+    try{ document.documentElement.classList.add('ship-lite'); }catch(e){} }
+  tick(){ const T=this.T, raw=this.clock.getDelta(), dt=Math.min(raw,.05), t=this.clock.elapsedTime, d=this.data;
+    const a=this.seaG.attributes.position.array, b=this.seaBase; for(let i=0;i<a.length;i+=3){ const x=b[i], z=b[i+2]; a[i+1]=Math.sin(x*.07+t*1.3)*.75+Math.cos(z*.09+t*1.05)*.55+Math.sin((x-z)*.16+t*2.1)*.25+Math.sin((x+z)*.33+t*2.9)*.1; } this.seaG.attributes.position.needsUpdate=true; this.perf(raw);
     this.spark.material.map.offset.set(t*.012+Math.sin(t*.5)*.01,t*.018); this.spark.position.y=.55+Math.sin(t*1.2)*.12;
     this.ship.position.y=Math.sin(t*1.05)*.32; this.ship.rotation.z=Math.sin(t*.8)*.022; this.ship.rotation.x=Math.cos(t*.62)*.028; this.flag.rotation.y=Math.sin(t*3)*.3;
     // names:false (شاشة المباراة) = بدون أسماء فوق اللاعبين
