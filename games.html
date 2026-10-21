@@ -392,6 +392,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 <script src="auth/auth-client.js"></script>
 <script src="js/agp-join-room.js"></script>
 <script src="js/agp-live-watch.js" data-manual></script>
+<script src="js/agp-stream-stats.js"></script>
 <script src="js/agp-tiktok-follow.js"></script>
 <script>
   // بطاقة حساب تيك توك المنصة (@aymngame) — فوق بطاقة "عندك فكرة لعبة؟".
@@ -1014,6 +1015,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   }
 
+  // زر «عرض إحصائيات البث» (js/agp-stream-stats.js) — لحسابات الستريمر المربوطة فقط.
+  function appendStatsButton(controls){
+    if (accountMode !== 'linked' && accountMode !== 'free') return;
+    var statsBtn = document.createElement('button');
+    statsBtn.type = 'button';
+    statsBtn.textContent = 'عرض إحصائيات البث';
+    statsBtn.style.cssText = 'padding:9px 18px;border-radius:999px;border:1px solid rgba(178,140,245,.4);background:rgba(122,63,212,.12);color:#c6b4f2;font-size:13.5px;font-weight:600;cursor:pointer;';
+    statsBtn.setAttribute('data-connect-action', 'stats');
+    controls.appendChild(statsBtn);
+  }
+
   function renderConnectUI(){
     var card = document.querySelector('[data-connect-card]');
     if (!card) return;
@@ -1064,6 +1076,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       disconnectBtn.setAttribute('data-connect-action', 'disconnect');
       controls.appendChild(badge);
       controls.appendChild(disconnectBtn);
+      appendStatsButton(controls);
       return;
     }
 
@@ -1102,6 +1115,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         link.style.cssText = 'display:inline-block;padding:9px 20px;border-radius:999px;border:none;background:linear-gradient(135deg,#7a3fd4,#b28cf5);color:#f3ecff;font-size:13.5px;font-weight:700;cursor:pointer;text-decoration:none;';
         controls.appendChild(link);
       }
+      appendStatsButton(controls);
       return;
     }
 
@@ -1127,6 +1141,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     controls.appendChild(input);
     controls.appendChild(submitBtn);
+    appendStatsButton(controls);
     if (!linkedUsername) input.focus();
   }
 
@@ -1151,6 +1166,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (linkedUsername) { setAutoConnectOff(false); connectToBackend(linkedUsername); }
     } else if (action === 'disconnect') {
       disconnectFromBackend();
+    } else if (action === 'stats') {
+      if (window.AGPStreamStats) window.AGPStreamStats.open();
     } else if (action === 'cancel') {
       closeConnectSocketSilently();
       connectState = 'idle';

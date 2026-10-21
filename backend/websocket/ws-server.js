@@ -31,6 +31,7 @@ var connectorRouter = require('../platforms/connector-router');
 var registry = require('./connection-registry');
 var logger = require('../utils/logger');
 var authService = require('../auth/auth-service');
+var liveSessionStats = require('../stats/live-session-stats');
 
 var STATS_FLUSH_INTERVAL_MS = 5000;
 var _statsFlushIntervalStarted = false;
@@ -386,6 +387,7 @@ function handleConnectMessage(connectionId, socket, payload) {
       // عشان تمسح الاتصال المحفوظ بمكتبة الألعاب وتعرض الرسالة.
       if (status === 'ended') {
         if (entry.activeConnector === connector) {
+          if (entry.broadcastTracking) liveSessionStats.markEnded(entry.broadcastTracking.username, connectionId);
           trackBroadcastStatus(entry, 'error');
           entry.activeConnector = null;
           entry.activePlatform = null;
@@ -397,7 +399,13 @@ function handleConnectMessage(connectionId, socket, payload) {
         return;
       }
       // حالة متأخرة من موصِّل قديم (استُبدل بطلب اتصال جديد) ما تأثّر على التسجيل.
-      if (entry.activeConnector === connector) trackBroadcastStatus(entry, status);
+      if (entry.activeConnector === connector) {
+        trackBroadcastStatus(entry, status);
+        // إحصائيات البث (زر «عرض إحصائيات البث»): نفس Room ID = نفس البث.
+        if (status === 'connected' && entry.broadcastTracking) {
+          liveSessionStats.attach(entry.broadcastTracking.username, connector.getRoomId ? connector.getRoomId() : null, connectionId);
+        }
+      }
       sendEnvelope(socket, builder.buildStatusMessage(platform, status, message));
     },
 
@@ -405,6 +413,7 @@ function handleConnectMessage(connectionId, socket, payload) {
       sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, data.isFollower, data.avatarUrl, data.frame, data.elimCard, data.winCard));
 
       if (entry.live && entry.activeConnector === connector) entry.live.comments++;
+      if (entry.broadcastTracking) liveSessionStats.recordComment(entry.broadcastTracking.username, connectionId);
 
       // تجميع بالذاكرة بدل كتابة SQLite فورية — تُفرَّغ دورياً عبر flushAllPendingStats.
       if (entry.activeBroadcastId) {
@@ -416,6 +425,7 @@ function handleConnectMessage(connectionId, socket, payload) {
     onGift: function (data) {
       sendEnvelope(socket, builder.buildGiftMessage(platform, data.id, data.name, data.giftName, data.giftValue, data.repeatCount, data.giftId));
       if (entry.live && entry.activeConnector === connector) entry.live.gifts++;
+      if (entry.broadcastTracking) liveSessionStats.recordGift(entry.broadcastTracking.username, connectionId, data);
 
       // قيمة الهدية الفعلية = قيمة الوحدة × عدد التكرار. تجميع بالذاكرة
       // بدل كتابتين SQLite فوريتين لكل هدية.
@@ -429,6 +439,7 @@ function handleConnectMessage(connectionId, socket, payload) {
 
     onFollow: function (data) {
       sendEnvelope(socket, builder.buildFollowMessage(platform, data.id, data.name));
+      if (entry.broadcastTracking) liveSessionStats.recordFollow(entry.broadcastTracking.username, connectionId);
 
       if (entry.activeBroadcastId) {
         ensurePendingStats(entry);
@@ -441,11 +452,21 @@ function handleConnectMessage(connectionId, socket, payload) {
     // تراكم) وتُكتب دفعة كل STATS_FLUSH_INTERVAL_MS بدل كل حدث فردي.
     onViewerUpdate: function (data) {
       if (entry.live && entry.activeConnector === connector) entry.live.viewers = Number(data.current) || 0;
+      if (entry.broadcastTracking) liveSessionStats.recordViewers(entry.broadcastTracking.username, connectionId, data.current, data.totalUsers);
       if (entry.activeBroadcastId) {
         ensurePendingStats(entry);
         entry.pendingStats.viewerCurrent = Number(data.current) || 0;
         entry.pendingStats.viewerTotal = Number(data.totalUsers) || 0;
       }
+    },
+
+    // لايكات وشير — لإحصائيات البث بالذاكرة فقط، بدون رسالة للمتصفح.
+    onLike: function (data) {
+      if (entry.broadcastTracking) liveSessionStats.recordLike(entry.broadcastTracking.username, connectionId, data);
+    },
+
+    onShare: function (data) {
+      if (entry.broadcastTracking) liveSessionStats.recordShare(entry.broadcastTracking.username, connectionId, data);
     }
   });
 }

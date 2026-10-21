@@ -8,7 +8,9 @@
  *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance, elimCard, winCard }),
  *     onGift({ id, name, giftName, giftId, giftValue, repeatCount }),
  *     onFollow({ id, name }),
- *     onViewerUpdate({ current, totalUsers })   // اختياري
+ *     onViewerUpdate({ current, totalUsers }),  // اختياري
+ *     onLike({ id, name, count }),              // اختياري — count = عدد التكبيسات بهذه الدفعة
+ *     onShare({ id, name })                     // اختياري
  *   }
  *
  * إعادة الاتصال (Reconnect):
@@ -404,6 +406,21 @@ function createTikTokConnector() {
             _callbacks.onFollow({ id: user.id, name: user.name });
         });
 
+        // like/share — لإحصائيات البث فقط (stats/live-session-stats.js).
+        // تيك توك يجمّع التكبيسات بدفعات (likeCount) بدل حدث لكل ضغطة.
+        if (_callbacks.onLike) {
+            _connection.on(TikTokLib.WebcastEvent.LIKE, function (data) {
+                var user = extractUser(data);
+                _callbacks.onLike({ id: user.id, name: user.name, count: Number(data && data.likeCount) || 1 });
+            });
+        }
+        if (_callbacks.onShare) {
+            _connection.on(TikTokLib.WebcastEvent.SHARE, function (data) {
+                var user = extractUser(data);
+                _callbacks.onShare({ id: user.id, name: user.name });
+            });
+        }
+
         // roomUser -> عدد المشاهدين. فحص وجود onViewerUpdate دفاعياً.
         if (_callbacks.onViewerUpdate) {
             _connection.on(TikTokLib.WebcastEvent.ROOM_USER, function (data) {
@@ -545,6 +562,11 @@ function createTikTokConnector() {
 
         isConnected: function () {
             return _connected;
+        },
+
+        /** رقم غرفة البث الحالي (يتغيّر مع كل بث جديد) أو null. */
+        getRoomId: function () {
+            return (_connection && _connection.roomId) || null;
         }
     };
 }

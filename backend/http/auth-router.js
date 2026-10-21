@@ -24,6 +24,7 @@ var supportService = require('../support/support-service');
 var codenamesSpySlots = require('../codenames/spy-slots-service');
 var storeRouter = require('./store-router');
 var tiktokLiveCheck = require('../platforms/tiktok/tiktok-live-check');
+var liveSessionStats = require('../stats/live-session-stats');
 var roomLookupService = require('../rooms/room-lookup-service');
 var logger = require('../utils/logger');
 var chatLatency = require('../utils/chat-latency');
@@ -152,6 +153,8 @@ var ROUTES = [
   // ---- هل البث شغّال الحين؟ — مكتبة الألعاب والألعاب تقطع الاتصال المحفوظ
   // لما يرجع live:false (راجع backend/platforms/tiktok/tiktok-live-check.js).
   { method: 'GET', path: '/api/stream/is-live', requireAuth: true, handler: handleStreamIsLive },
+  // زر «عرض إحصائيات البث» بمكتبة الألعاب — ملخص البث الحالي/الأخير (بالذاكرة).
+  { method: 'GET', path: '/api/stream/session-stats', requireAuth: true, handler: handleStreamSessionStats },
   // زر «دخول غرفة» بالهيدر: أي لعبة فيها روم بهذا الرقم؟ (بدون حساب — الجوالات تدخل بدون تسجيل)
   { method: 'GET', path: '/api/rooms/lookup', requireAuth: false, handler: handleRoomLookup },
   // تفعيل/إيقاف الدخولية ذاتياً — نفس نمط handleEquipFrame (صاحب الجلسة فقط).
@@ -747,6 +750,22 @@ function handleStreamIsLive(req, res, body, user) {
   }).then(function (r) {
     sendJson(res, 200, Object.assign({ success: true }, r));
   });
+}
+
+/**
+ * GET /api/stream/session-stats → { success, stats: {...} | null }
+ * إحصائيات بث حساب تيك توك المربوط بحساب الطالب (stats/live-session-stats.js).
+ * الأدمن وأصحاب «تشغيل كامل» يقدرون يطلبون أي يوزر عبر ?username=.
+ */
+function handleStreamSessionStats(req, res, body, user) {
+  var canAny = user.role === 'admin' || Boolean(user.permissions && user.permissions.full_game_access);
+  var requested = canAny ? tiktokLiveCheck.normalize(getQueryParam(req, 'username')) : null;
+  var username = requested || (user.tiktok_verified ? tiktokLiveCheck.normalize(user.tiktok_username) : null);
+  if (!username) {
+    sendJson(res, 400, { success: false, error: 'tiktok_not_linked' });
+    return;
+  }
+  sendJson(res, 200, { success: true, stats: liveSessionStats.getSummary(username) });
 }
 
 /**
