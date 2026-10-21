@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="../../js/agp-dc-raw-guard.js"></script>
-<title>روليت القبائل — ألعاب أيمن</title>
+<title>روليت مخفي — ألعاب أيمن</title>
 <script src="../../js/agp-core.js"></script>
 <script src="../../js/agp-events.js"></script>
 <script src="../../js/agp-timer-manager.js"></script>
@@ -272,7 +272,7 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
           {{ winVideoEl }}
         </div>
         </sc-if>
-        <h2 style="margin:0;font-size:2.2em;line-height:1.2;font-weight:900;color:#fff;text-shadow:0 2px 16px rgba(124,58,237,.55);text-wrap:balance">🏆 الفائز في روليت القبائل</h2>
+        <h2 style="margin:0;font-size:2.2em;line-height:1.2;font-weight:900;color:#fff;text-shadow:0 2px 16px rgba(124,58,237,.55);text-wrap:balance">🏆 الفائز في روليت مخفي</h2>
         <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:28px 0 30px">
           <!-- بطاقة الفوز المملوكة (js/agp-win-card.js) تحل محل بطاقة الفائز العادية بنفس المكان -->
           <sc-if value="{{ winCardOn }}" hint-placeholder-val="{{ false }}">
@@ -590,7 +590,7 @@ class Component extends DCLogic {
   winCardView(s){ const el=s.winOpen&&s.winner?TR.winCard(this.reg.player(s.winner),this.winCardLines(),'wc'+(s.winRun||0)):null;
     return { winCardOn:!!el, winStd:!el, winCardEl:el }; }
   winCardLines(){ const n=this.participants?this.participants.size:this.state.players.length+this.state.out.length;
-    return [this.ptsLine(),'المركز الأول من '+n+' لاعب','روليت القبائل']; }
+    return [this.ptsLine(),'المركز الأول من '+n+' لاعب','روليت مخفي']; }
   ptsLine(){ const pts=this.state.pts; return pts==='pending'?'جارٍ احتساب النقاط':typeof pts==='number'?`+${pts} نقطة`:'النقاط للحسابات الموثّقة في الموقع'; }
   // نظام نقاط المنصة — مرة واحدة لكل مباراة (CLAUDE.md)
   reportPoints(winner){ if(this.reported) return; this.reported=true;
