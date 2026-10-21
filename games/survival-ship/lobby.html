@@ -28,6 +28,9 @@
 <style>
 html,body{margin:0;height:100%;background:#070b24;overflow:hidden}
 a{color:#7dd3fc}a:hover{color:#bae6fd}
+/* وضع الأداء (ship3d.js → html.ship-lite): بدون تغبيش فوق المشهد على الأجهزة الضعيفة */
+html.ship-lite *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.ship-lite [data-lite-bg]{background:rgba(4,40,70,.78)!important}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 @keyframes fadeOut{from{opacity:1}to{opacity:0}}
 @keyframes popIn{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:none}}
