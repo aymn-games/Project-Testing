@@ -20,7 +20,7 @@
 
     var W = 1080;
     var H = 1920;
-    var MAX_TOP = 20;
+    var MAX_TOP = 10;           // أكثر من كذا ما يدخل مقروء بمقاس الستوري
     var PREFS_KEY = 'agp:stream-stats-prefs';
     var CUSTOM_BG_KEY = 'agp:stream-stats-bg';
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,sans-serif';
@@ -296,16 +296,6 @@
         } catch (e) { return new Date(ts).toLocaleDateString(); }
     }
 
-    function roundRect(ctx, x, y, w, h, r) {
-        ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.arcTo(x + w, y, x + w, y + h, r);
-        ctx.arcTo(x + w, y + h, x, y + h, r);
-        ctx.arcTo(x, y + h, x, y, r);
-        ctx.arcTo(x, y, x + w, y, r);
-        ctx.closePath();
-    }
-
     function fitText(ctx, text, maxW) {
         text = String(text || '');
         if (ctx.measureText(text).width <= maxW) return text;
@@ -352,81 +342,82 @@
     }
 
     var SIDE = 70;               // الهامش الجانبي
-    var TOP_H = 630;             // مساحة رأس الصورة (صاحب البث)
+    // رأس الصورة (صاحب البث): كامل، أو مصغّر لما الأقسام كثيرة. top = بداية الأقسام
+    var HEADS = {
+        full: { caption: 110, avY: 270, avR: 110, name: 460, nameSize: 60, handle: 504, thanks: 550, date: 588, top: 630 },
+        compact: { caption: 80, avY: 180, avR: 72, name: 312, nameSize: 48, handle: 352, thanks: 392, date: 426, top: 460 }
+    };
     var BOTTOM = 1840;           // نهاية مساحة الأقسام (تحتها التوقيع)
 
     /**
-     * أبعاد بطاقة مستخدم واحد (صورة + اسم + قيمة) بمقياس s.
+     * تخطيط الأقسام بمقياس s: كل مستخدم في صف لحاله. لو cols = 2، الأقسام
+     * الطويلة (MIN_SPLIT صف أو أكثر) تنقسم عمودين — اليمين فيه المراكز
+     * الأولى — والقصيرة تبقى عمود واحد. يرجّع المواقع والارتفاع الكلي.
      */
-    function chipMetrics(ctx, r, sec, s) {
-        var av = 34 * s;
-        ctx.font = '700 ' + (26 * s) + 'px ' + FONT;
-        var nameW = Math.min(ctx.measureText(r.name).width, 300 * s);
-        ctx.font = '500 ' + (21 * s) + 'px ' + FONT;
-        var valW = ctx.measureText(sec.value(r)).width;
-        var w = av * 2 + 14 * s + Math.max(nameW, valW) + 28 * s + 18 * s;
-        w = Math.min(w, W - SIDE * 2);
-        return { w: w, h: av * 2 + 18 * s, av: av, textW: Math.max(nameW, valW) };
-    }
-
-    /**
-     * تخطيط الأقسام بمقياس s: يرجّع الصفوف ومواقعها، والارتفاع الكلي.
-     */
-    function layout(ctx, chosen, stats, s) {
-        var maxW = W - SIDE * 2;
-        var gapX = 14 * s, gapY = 14 * s;
-        var titleH = 122 * s, secGap = 46 * s, emptyH = 44 * s;
+    var MIN_SPLIT = 5;
+    function layout(chosen, stats, s, cols) {
+        var rowH = 70 * s, titleH = 122 * s, secGap = 46 * s, emptyH = 44 * s, colGap = 44 * s;
         var y = 0, secs = [];
         chosen.forEach(function (sec) {
             var rows = stats.sections[sec.key] || [];
-            var lines = [], line = [], lineW = 0;
-            rows.forEach(function (r, i) {
-                var m = chipMetrics(ctx, r, sec, s);
-                if (line.length && lineW + gapX + m.w > maxW) { lines.push({ items: line, w: lineW }); line = []; lineW = 0; }
-                lineW += (line.length ? gapX : 0) + m.w;
-                line.push({ r: r, m: m, rank: i + 1 });
-            });
-            if (line.length) lines.push({ items: line, w: lineW });
+            var c2 = cols === 2 && rows.length >= MIN_SPLIT ? 2 : 1;
+            var listW = c2 === 1 ? Math.min(820, W - SIDE * 2) : W - SIDE * 2;
+            var colW = (listW - (c2 - 1) * colGap) / c2;
+            var perCol = Math.ceil(rows.length / c2);
             var top = y;
             y += titleH;
-            if (!lines.length) y += emptyH;
-            lines.forEach(function (l, i) { l.y = y; y += l.items[0].m.h + (i < lines.length - 1 ? gapY : 0); });
-            secs.push({ sec: sec, top: top, lines: lines });
+            var items = rows.map(function (r, i) {
+                var c = Math.floor(i / perCol), ri = i % perCol;
+                return {
+                    r: r, rank: i + 1, colW: colW,
+                    xRight: W / 2 + listW / 2 - c * (colW + colGap),
+                    y: y + ri * rowH,
+                    last: ri === perCol - 1 || i === rows.length - 1
+                };
+            });
+            y += rows.length ? perCol * rowH : emptyH;
+            secs.push({ sec: sec, top: top, items: items });
             y += secGap;
         });
-        return { height: y - 40 * s, secs: secs, gapX: gapX, titleH: titleH };
+        return { height: y - secGap, secs: secs, titleH: titleH, rowH: rowH };
     }
 
-    function drawChip(ctx, x, y, item, sec, s, accent, img) {
-        var m = item.m;
-        roundRect(ctx, x, y, m.w, m.h, m.h / 2);
-        ctx.fillStyle = 'rgba(6,8,18,0.55)';
-        ctx.fill();
-        ctx.strokeStyle = item.rank === 1 ? accent : 'rgba(255,255,255,0.14)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+    /** صف مستخدم واحد: الترتيب ← الصورة ← الاسم (يمين)، والقيمة يسار. */
+    function drawRow(ctx, item, L, sec, s, accent, img) {
+        var xr = item.xRight, w = item.colW, cy = item.y + L.rowH / 2, top3 = item.rank <= 3;
+        if (!item.last) {
+            var g = ctx.createLinearGradient(xr - w, 0, xr, 0);
+            g.addColorStop(0, 'rgba(255,255,255,0)');
+            g.addColorStop(0.5, 'rgba(255,255,255,0.14)');
+            g.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.strokeStyle = g;
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(xr - w, item.y + L.rowH); ctx.lineTo(xr, item.y + L.rowH); ctx.stroke();
+        }
 
-        // الصورة يمين البطاقة (rtl)، والنص يسارها
-        var cx = x + m.w - 9 * s - m.av, cy = y + m.h / 2;
-        drawAvatar(ctx, img, item.r.name, cx, cy, m.av, item.rank <= 3 ? accent : 'rgba(255,255,255,0.35)', 3 * s);
-        // رقم الترتيب على طرف الصورة
-        var br = 13 * s, bx = cx - m.av * 0.72, by = cy + m.av * 0.72;
-        ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2);
-        ctx.fillStyle = item.rank <= 3 ? accent : '#1f2333'; ctx.fill();
-        ctx.fillStyle = item.rank <= 3 ? '#0b0b12' : '#ffffff';
-        ctx.font = '700 ' + (16 * s) + 'px ' + FONT;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(String(item.rank), bx, by + 1);
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = top3 ? accent : 'rgba(255,255,255,0.55)';
+        ctx.font = '700 ' + (28 * s) + 'px ' + FONT;
+        ctx.fillText(String(item.rank), xr - 20 * s, cy);
 
-        var tr = cx - m.av - 14 * s;
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'alphabetic';
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '700 ' + (26 * s) + 'px ' + FONT;
-        ctx.fillText(fitText(ctx, item.r.name, m.textW + 2), tr, cy - 2 * s);
+        var av = 25 * s, ax = xr - 48 * s - av;
+        drawAvatar(ctx, img, item.r.name, ax, cy, av, top3 ? accent : 'rgba(255,255,255,0.3)', 2.5 * s);
+
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'left';
         ctx.fillStyle = accent;
-        ctx.font = '500 ' + (21 * s) + 'px ' + FONT;
-        ctx.fillText(sec.value(item.r), tr, cy + 25 * s);
+        ctx.font = '600 ' + (25 * s) + 'px ' + FONT;
+        var val = sec.value(item.r);
+        var valW = ctx.measureText(val).width;
+        ctx.fillText(val, xr - w, cy);
+
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = (top3 ? '700 ' : '600 ') + (29 * s) + 'px ' + FONT;
+        var nameRight = ax - av - 16 * s;
+        ctx.fillText(fitText(ctx, item.r.name, nameRight - (xr - w) - valW - 24 * s), nameRight, cy);
+        ctx.textBaseline = 'alphabetic';
     }
 
     /**
@@ -468,36 +459,52 @@
             ctx.fillStyle = shade;
             ctx.fillRect(0, 0, W, H);
 
+            // أكبر مقياس يدخل بعمود واحد وبعمودين؛ عمود واحد إلا لو الخط صار صغير
+            // وعمودين يعطي خط أكبر
+            function fit(avail, cols, start, min) {
+                var sc = start, lay = layout(chosen, stats, sc, cols);
+                while (lay.height > avail && sc > min) { sc -= 0.05; lay = layout(chosen, stats, sc, cols); }
+                return { s: sc, L: lay, avail: avail };
+            }
+            function best(topH) {
+                var avail = BOTTOM - topH - 20;
+                var one = fit(avail, 1, 1.3, 0.35);
+                if (one.s >= 0.85 && one.L.height <= avail) return one;
+                var two = fit(avail, 2, 1, 0.35);
+                return two.s > one.s + 0.05 ? two : one;
+            }
+            // محتوى كثير → رأس مصغّر عشان الأسماء تاخذ مساحة أكبر
+            var head = HEADS.full, pick = best(head.top);
+            if (pick.s < 0.7) {
+                var compact = best(HEADS.compact.top);
+                if (compact.s > pick.s) { head = HEADS.compact; pick = compact; }
+            }
+            var s = pick.s, L = pick.L;
+            var y0 = head.top + Math.max(0, (pick.avail - L.height) / 2);
+
             // الرأس: صورة واسم صاحب البث
             ctx.textAlign = 'center';
             ctx.textBaseline = 'alphabetic';
             ctx.fillStyle = accent;
             ctx.font = '700 26px ' + FONT;
-            ctx.fillText(stats.live ? 'إحصائيات البث · شغّال الآن' : 'إحصائيات البث', W / 2, 110);
-            drawAvatar(ctx, streamerImg, streamer.name, W / 2, 270, 110, accent, 7);
+            ctx.fillText(stats.live ? 'إحصائيات البث · شغّال الآن' : 'إحصائيات البث', W / 2, head.caption);
+            drawAvatar(ctx, streamerImg, streamer.name, W / 2, head.avY, head.avR, accent, 7);
             ctx.textAlign = 'center';
             ctx.textBaseline = 'alphabetic';
             ctx.fillStyle = '#ffffff';
-            ctx.font = '700 60px ' + FONT;
-            ctx.fillText(fitText(ctx, streamer.name, W - SIDE * 2), W / 2, 460);
+            ctx.font = '700 ' + head.nameSize + 'px ' + FONT;
+            ctx.fillText(fitText(ctx, streamer.name, W - SIDE * 2), W / 2, head.name);
             ctx.direction = 'ltr';
             ctx.fillStyle = accent;
             ctx.font = '600 28px ' + FONT;
-            ctx.fillText('@' + stats.username, W / 2, 504);
+            ctx.fillText('@' + stats.username, W / 2, head.handle);
             ctx.direction = 'rtl';
             ctx.fillStyle = 'rgba(255,255,255,0.82)';
             ctx.font = '500 26px ' + FONT;
-            ctx.fillText('أنتم أجمل ما في البث، شكراً لكم', W / 2, 550);
+            ctx.fillText('أنتم أجمل ما في البث، شكراً لكم', W / 2, head.thanks);
             ctx.fillStyle = 'rgba(255,255,255,0.6)';
             ctx.font = '500 22px ' + FONT;
-            ctx.fillText(fmtDate(stats.startedAt) + '  ·  المدة: ' + fmtDuration(stats.durationMs), W / 2, 588);
-
-            // الأقسام: أكبر مقياس يدخل كامل بالمساحة
-            var avail = BOTTOM - TOP_H - 20;
-            // محتوى قليل يكبر لين 1.3، والكثير يصغر لين يدخل
-            var s = 1.3, L = layout(ctx, chosen, stats, s);
-            while (L.height > avail && s > 0.45) { s -= 0.05; L = layout(ctx, chosen, stats, s); }
-            var y0 = TOP_H + Math.max(0, (avail - L.height) / 2);
+            ctx.fillText(fmtDate(stats.startedAt) + '  ·  المدة: ' + fmtDuration(stats.durationMs), W / 2, head.date);
 
             L.secs.forEach(function (block) {
                 var sec = block.sec, ty = y0 + block.top + 44 * s;
@@ -522,19 +529,13 @@
                 ctx.font = '500 ' + (20 * s) + 'px ' + FONT;
                 ctx.fillText(sec.total(stats), W / 2, ty + 38 * s);
 
-                if (!block.lines.length) {
+                if (!block.items.length) {
                     ctx.fillStyle = 'rgba(255,255,255,0.55)';
                     ctx.font = '500 ' + (22 * s) + 'px ' + FONT;
                     ctx.fillText('لا يوجد', W / 2, y0 + block.top + L.titleH + 20 * s);
                 }
-                // كل سطر بطاقات بالوسط، الترتيب من اليمين
-                block.lines.forEach(function (line) {
-                    var x = W / 2 + line.w / 2;
-                    line.items.forEach(function (item) {
-                        x -= item.m.w;
-                        drawChip(ctx, x, y0 + line.y, item, sec, s, accent, imgs.get(item.r));
-                        x -= L.gapX;
-                    });
+                block.items.forEach(function (item) {
+                    drawRow(ctx, { r: item.r, rank: item.rank, colW: item.colW, xRight: item.xRight, y: y0 + item.y, last: item.last }, L, sec, s, accent, imgs.get(item.r));
                 });
             });
 
