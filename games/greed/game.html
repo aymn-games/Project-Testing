@@ -16,6 +16,7 @@
 <script src="../../auth/auth-client.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
+<script src="../../js/agp-player-card.js"></script>
 <script src="../../js/agp-win-card.js"></script>
 <script src="greed-platform.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@500;600;700&display=swap" rel="stylesheet">
@@ -176,6 +177,9 @@ button{font-family:inherit;cursor:pointer}
 .jl{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:clamp(14px,4vw,20px) clamp(16px,5vw,28px);display:flex;flex-direction:column;gap:12px;border-top:1px solid rgba(167,139,250,.25)}
 .jg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .jp{min-width:0;display:flex;align-items:center;gap:10px;height:54px;padding:0 8px 0 7px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+.jf{position:relative;min-width:0;height:100px;display:flex;align-items:center;justify-content:center;direction:ltr;grid-column:1/-1}
+.jf .jfc{line-height:0}
+.jf .jx{position:absolute;top:4px;left:4px;width:28px;height:28px;border-radius:999px;border:1px solid rgba(248,113,113,.35);background:rgba(12,11,18,.8);color:#fca5a5;display:grid;place-items:center;z-index:2}
 .jp .av{font-size:14px}.jp span.n{flex:1;min-width:0;font:600 14px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 @keyframes slideIn{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:none}}
@@ -493,9 +497,17 @@ function closeDrawer(){ $('setD').style.display='none'; S.menu=false; if(S.pendi
 $('setD').onclick=e=>{ if(e.target===$('setD')) closeDrawer(); }; $('setD').querySelector('[data-dclose]').onclick=closeDrawer;
 $('skipBtn').onclick=()=>{ if(S.phase!=='play') return toast('ما فيه أدوار حالية'); closeDrawer(); S.slots.forEach((s,i)=>{ if(s.p&&!s.busy){ s.busy=true; endTurn(i,s.rolled&&s.turnPts>0); } }); };
 // إدخال لاعب جديد: نافذة تجمع المنضمين بكلمة الدخول، وينضافون للعبة عند «إكمال المباراة»
+const XSVG='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+// اللاعب صاحب الإطار المفعّل يظهر ببطاقة إطاره من المنصة (AGP.playerCard — نفس بطاقات اللوبي)
 function renderJoin(){ $('jKey').textContent=cfg.keyword||'—'; $('jCount').textContent=S.joined.length; $('jEmpty').style.display=S.joined.length?'none':'grid';
-  $('jList').innerHTML=S.joined.map(n=>`<div class="jp"><span class="av">${avHtml(n)}</span><span class="n">${esc(n)}</span><button class="kick" data-jx="${esc(n)}" style="border:none;background:transparent" aria-label="إزالة"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>`).join('');
-  $('jList').querySelectorAll('[data-jx]').forEach(b=>b.onclick=()=>{ S.joined=S.joined.filter(n=>n!==b.dataset.jx); renderJoin(); }); }
+  const PC=window.AymanGamesPlatform&&window.AymanGamesPlatform.playerCard, L=$('jList');
+  L.innerHTML=S.joined.map(n=>PC&&reg.framed(n)?`<div class="jf" data-fn="${esc(n)}"><div class="jfc"></div><button class="jx" data-jx="${esc(n)}" aria-label="إزالة">${XSVG}</button></div>`
+    :`<div class="jp"><span class="av">${avHtml(n)}</span><span class="n">${esc(n)}</span><button class="kick" data-jx="${esc(n)}" style="border:none;background:transparent" aria-label="إزالة">${XSVG}</button></div>`).join('');
+  L.querySelectorAll('.jf').forEach(el=>{ const fr=reg.framed(el.dataset.fn), c=el.querySelector('.jfc');
+    c.innerHTML=PC.renderHtml({id:fr.id,name:fr.name,avatarUrl:fr.avatar||null,frame:fr.frame},{showFrame:true,basePath:'../../',size:Math.max(20,Math.floor(el.clientWidth/4.96))});
+    c.querySelectorAll('[data-agp-pcard-name="1"]').forEach(pl=>{ const ph=pl.clientHeight; if(ph){ pl.style.fontSize=Math.max(9,Math.min(14,Math.round(ph*.65)))+'px'; pl.style.lineHeight='1.2'; } }); });
+  if(PC) PC.fitAllNames(L);
+  L.querySelectorAll('[data-jx]').forEach(b=>b.onclick=()=>{ S.joined=S.joined.filter(n=>n!==b.dataset.jx); renderJoin(); }); }
 $('joinBtn').onclick=()=>{ if(!cfg.keyword) return toast('ما فيه كلمة دخول بالإعدادات'); closeDrawer(); S.menu=true; S.joinOpen=true; S.joined=[]; renderJoin(); open('joinM',true); };
 function closeJoin(){ open('joinM',false); S.joinOpen=false; S.menu=false; S.joined.forEach(n=>{ if(!pl(n)){ addPlayer(n); if(S.order.length) S.order.push(n); } }); S.joined=[]; layoutWaiting(); renderUI(); }
 $('joinDone').onclick=closeJoin; $('joinX').onclick=closeJoin; $('joinM').onclick=e=>{ if(e.target===$('joinM')) closeJoin(); };
