@@ -654,7 +654,9 @@ migrateSingleCardTable('user_win_cards');
 // js/agp-player-card.js) — تُضاف لـcustom_frames مرة وحدة (بحث بـ
 // image_filename) فتظهر مباشرة بقائمة الإطارات الحصرية بلوحة الأدمن للمنح.
 [
-    { image_filename: 'frame-ghamid-alhayla.png', display_name_ar: 'غامد الهيلا' }
+    { image_filename: 'frame-ghamid-alhayla.png', display_name_ar: 'غامد الهيلا' },
+    // منح محدود — حصري لشخص واحد، خارج المتجر وعرض الإطارات.
+    { image_filename: 'frame-sakura-pink.png', display_name_ar: 'ساكورا الوردي (منح محدود)' }
 ].forEach(function (frame) {
     var exists = db.prepare('SELECT id FROM custom_frames WHERE image_filename = ?').get(frame.image_filename);
     if (!exists) {

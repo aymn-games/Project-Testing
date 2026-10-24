@@ -440,7 +440,9 @@ function getElimCardForVerifiedTikTok(tiktokUsername) {
 // بنفس المفتاح في js/agp-win-card.js.
 var WIN_CARD_CATALOG = [
   { key: 'rais-blue', displayNameAr: 'بطاقة الفوز — فوز الريس (أزرق)', imageFilename: 'assets/win-cards/win-card-rais-blue.png' },
-  { key: 'girls-blue', displayNameAr: 'بطاقة الفوز — بنات (أزرق)', imageFilename: 'assets/win-cards/win-card-girls-blue.png' }
+  { key: 'girls-blue', displayNameAr: 'بطاقة الفوز — بنات (أزرق)', imageFilename: 'assets/win-cards/win-card-girls-blue.png' },
+  // limited = منح محدود: تُمنح يدوياً من الأدمن فقط، ولا تظهر كخيار تسليم بالمتجر.
+  { key: 'sakura-pink', displayNameAr: 'بطاقة الفوز — ساكورا الوردي (منح محدود)', imageFilename: 'assets/win-cards/win-card-sakura-pink.png', limited: true }
 ];
 
 function getWinCardCatalog() {
