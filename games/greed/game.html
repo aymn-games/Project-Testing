@@ -63,17 +63,19 @@ button{font-family:inherit;cursor:pointer}
 .row.hl .sc{background:var(--acc);color:#fff}
 .more{text-align:center;color:var(--muted);font:600 1em 'IBM Plex Sans Arabic'}
 /* بطاقات أصحاب الأدوار تحت كل منصة */
-.slot{position:fixed;z-index:15;transform:translateX(-50%);width:300px;padding:12px 14px 12px;border-radius:20px;background:rgba(12,11,18,.92);border:1.5px solid rgba(167,139,250,.6);box-shadow:0 14px 40px rgba(0,0,0,.45);display:none}
-.slot .badge{position:absolute;top:-16px;left:50%;transform:translateX(-50%);padding:3px 16px;border-radius:999px;background:var(--acc);color:#fff;box-shadow:0 6px 18px rgba(139,92,246,.4);font:700 15px 'IBM Plex Sans Arabic';white-space:nowrap}
-.slot .ln{display:flex;align-items:center;gap:10px}
-.slot .av{font-size:15px}
-.slot .nm{font:700 15px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
-.slot .st{display:flex;gap:8px;flex:1}
-.slot .st div{flex:1;display:flex;flex-direction:column;align-items:center;padding:4px 0;border-radius:12px;background:rgba(255,255,255,.05)}
-.slot .st small{font:600 12px 'IBM Plex Sans Arabic';color:var(--muted)}
-.slot .st b{font:700 24px/1.1 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums}
-.slot .st .tp b{color:var(--gold)}
-.slot .bar{height:6px;margin-top:10px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+.slot{position:fixed;z-index:15;transform:translateX(-50%);width:var(--w,420px);padding:14px 14px 12px;border-radius:22px;background:rgba(12,11,18,.94);border:2px solid rgba(167,139,250,.75);box-shadow:0 16px 44px rgba(0,0,0,.5),0 0 40px rgba(139,92,246,.25);display:none}
+.slot .badge{position:absolute;top:-18px;left:50%;transform:translateX(-50%);padding:4px 18px;border-radius:999px;background:var(--acc);color:#fff;box-shadow:0 6px 18px rgba(139,92,246,.45);font:700 17px 'IBM Plex Sans Arabic';white-space:nowrap}
+.slot .srow{display:flex;align-items:center;gap:12px;margin-top:4px}
+.slot .ln{flex:1;min-width:0;display:flex;align-items:center;gap:10px}
+.slot .av{font-size:19px;border-width:2px}
+.slot .nm{flex:1;min-width:0;font:700 25px/1.25 'IBM Plex Sans Arabic';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 10px rgba(139,92,246,.5)}
+.slot .st{display:flex;gap:8px;flex-shrink:0}
+.slot .st div{width:78px;display:flex;flex-direction:column;align-items:center;padding:4px 0 2px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.07)}
+.slot .st small{font:600 13px 'IBM Plex Sans Arabic';color:#cfcad9}
+.slot .st b{font:700 30px/1.1 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:#fff}
+.slot .st .tp{background:rgba(139,92,246,.16);border-color:rgba(167,139,250,.4)}
+.slot .st .tp b{color:#ddd6fe}
+.slot .bar{height:8px;margin-top:10px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
 .slot .bar i{display:block;height:100%;background:var(--acc);border-radius:999px}
 .slot .fx{position:absolute;left:50%;top:-64px;transform:translateX(-50%);padding:2px 18px;border-radius:999px;background:rgba(12,11,18,.9);border:1px solid currentColor;font:700 28px 'IBM Plex Sans Arabic';white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.5);animation:fxUp 1.4s ease forwards}
 @keyframes fxUp{0%{opacity:0;transform:translate(-50%,16px) scale(.7)}20%{opacity:1;transform:translate(-50%,0) scale(1.1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-26px)}}
@@ -177,7 +179,7 @@ button{font-family:inherit;cursor:pointer}
 #heads{position:fixed;inset:0;z-index:9;pointer-events:none}
 .hd{position:absolute;transform:translate(-50%,-100%);display:none}
 .hd .av{font-size:var(--s,14px);width:2.6em;height:2.6em;box-shadow:0 4px 14px rgba(0,0,0,.5)}
-@media (max-width:900px){.tb span{display:none}.info{gap:16px;padding:6px 18px}.hint{font-size:13px;white-space:normal;width:calc(100vw - 32px);text-align:center}.slot{width:230px}}
+@media (max-width:900px){.slot .st div{width:60px}.slot .st b{font-size:22px}.slot .nm{font-size:18px}.tb span{display:none}.info{gap:16px;padding:6px 18px}.hint{font-size:13px;white-space:normal;width:calc(100vw - 32px);text-align:center}.slot{width:230px}}
 </style>
 </head>
 <body>
@@ -372,7 +374,7 @@ for(let i=0;i<3;i++) pods.push(buildPod());
 function placePods(){ const n=slotCount(), xs=PODX[n]||PODX[1]; pods.forEach((p,i)=>{ p.g.visible=i<n&&S.phase==='play'||S.phase==='over'&&i<n; if(xs[i]!=null) p.g.position.set(xs[i],0,1.6); p.m.visible=S.phase==='play'; }); }
 
 // ---------- الواجهة ----------
-const slotEls=[0,1,2].map(i=>{ const d=document.createElement('div'); d.className='slot'; d.innerHTML=`<span class="badge"></span><div class="ln"><span class="av"></span><div class="st"><div><small>الرصيد</small><b class="tt">0</b></div><div class="tp"><small>نقاط الدور</small><b class="tpv">0</b></div></div></div><div class="nm"></div><div class="bar"><i></i></div>`; $('slots').appendChild(d); return d; });
+const slotEls=[0,1,2].map(i=>{ const d=document.createElement('div'); d.className='slot'; d.innerHTML=`<span class="badge"></span><div class="srow"><div class="ln"><span class="av"></span><span class="nm"></span></div><div class="st"><div><small>الرصيد</small><b class="tt">0</b></div><div class="tp"><small>نقاط الدور</small><b class="tpv">0</b></div></div></div><div class="bar"><i></i></div>`; $('slots').appendChild(d); return d; });
 function toast(t){ const e=$('toast'); e.textContent=t; e.style.display='block'; clearTimeout(toast.t); toast.t=setTimeout(()=>e.style.display='none',2400); }
 function open(id,on){ $(id).style.display=on?'grid':'none'; }
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').style.display='none');
@@ -518,7 +520,7 @@ function tick(){ requestAnimationFrame(tick); const raw=Math.min(clock.getDelta(
     U.head.rotation.z=Math.sin(q*.5)*.06; U.legs[0].rotation.x=U.legs[1].rotation.x=0; f.g.rotation.y=cur?Math.sin(t)*.12:Math.sin(q*.3)*.2; });
   // الكاميرا
   const P=new T.Vector3(), L=new T.Vector3();
-  if(ph==='play'){ P.set(0,5.4,cam.aspect<1.3?26:17.5); L.set(0,2.6,-1); }
+  if(ph==='play'){ const n=slotCount(), V=n===1?[3.9,13.8,3.3,1.4]:n===2?[4.2,14.6,3,1.1]:[4.6,17,2.8,.8]; P.set(0,V[0],V[1]*(cam.aspect<1.3?1.5:1)); L.set(0,V[2],V[3]); }
   else if(ph==='over'&&S.winner){ const f=figs.get(S.winner.name), w=f?f.g.position:new T.Vector3(); const a=Math.sin(t*.3)*.6; P.set(w.x+Math.sin(a)*12,5.2,w.z+Math.cos(a)*12); L.set(w.x,2.6,w.z); }
   else { P.set(0,4.4,cam.aspect<1.3?24:16.5); L.set(0,3.9,-6); }
   const k=1-Math.exp(-dt*2); cam.position.lerp(P,k); camLook.lerp(L,k); cam.lookAt(camLook);
@@ -536,7 +538,7 @@ function tick(){ requestAnimationFrame(tick); const raw=Math.min(clock.getDelta(
   [...AR.children].forEach((A,k)=>{ const f=first[k]&&figs.get(first[k]); if(!f){ A.style.display='none'; return; } const s=project(f.g.position.clone().add(new T.Vector3(0,3.1,0))); A.style.display='block'; A.style.left=s.x+'px'; A.style.top=(s.y-50)+'px'; });
   // بطاقات أصحاب الأدوار
   slotEls.forEach((el,i)=>{ const s=S.slots[i]; if(ph!=='play'||!s||!s.p){ el.style.display='none'; el.dataset.n=''; return; }
-    el.style.display='block'; const s2=project(pods[i].g.position.clone().add(new T.Vector3(0,0,2.3))); el.style.left=s2.x+'px'; el.style.top=Math.min(innerHeight-150,s2.y)+'px';
+    el.style.display='block'; const s2=project(pods[i].g.position.clone().add(new T.Vector3(0,0,2.3))); el.style.setProperty('--w',(slotCount()===3?Math.min(440,innerWidth/3.3):Math.min(460,innerWidth/2.3))+'px'); el.style.left=s2.x+'px'; el.style.top=Math.min(innerHeight-130,s2.y)+'px';
     if(el.dataset.n!==s.p.name){ el.dataset.n=s.p.name; el.querySelector('.av').innerHTML=avHtml(s.p.name); el.querySelector('.nm').textContent=s.p.name; }
     el.querySelector('.tt').textContent=s.p.total; el.querySelector('.tpv').textContent=s.turnPts;
     el.querySelector('.badge').textContent=s.rolling>0?'يلف…':s.busy?'…':`اكتب ${s.rolled?'لف أو توقف':'لف'} · ${Math.ceil(s.left)}`;
