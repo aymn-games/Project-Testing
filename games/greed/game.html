@@ -443,7 +443,7 @@ const SND={
 function burst(i){ const f=S.slots[i]&&S.slots[i].p&&figs.get(S.slots[i].p.name); if(!f) return; const q=project(f.g.position.clone().add(new T.Vector3(0,2.6,0)));
   const b=document.createElement('div'); b.className='burst'; b.style.left=q.x+'px'; b.style.top=q.y+'px';
   const cols=['#c4b5fd','#a855f7','#f472b6','#fde68a','#34d399','#ffffff'], r=(a,z)=>a+Math.random()*(z-a);
-  b.innerHTML=Array.from({length:26},(_,k)=>{ const a=r(0,Math.PI*2), d=r(70,170); return `<i style="width:${r(6,11)}px;height:${r(9,15)}px;background:${cols[k%cols.length]};--dx:${Math.cos(a)*d}px;--dy:${Math.sin(a)*d*.8+40}px;--r:${r(-360,360)}deg;animation-delay:${r(0,.08).toFixed(2)}s"></i>`; }).join('');
+  b.innerHTML=Array.from({length:18},(_,k)=>{ const a=r(0,Math.PI*2), d=r(70,170); return `<i style="width:${r(6,11)}px;height:${r(9,15)}px;background:${cols[k%cols.length]};--dx:${Math.cos(a)*d}px;--dy:${Math.sin(a)*d*.8+40}px;--r:${r(-360,360)}deg;animation-delay:${r(0,.08).toFixed(2)}s"></i>`; }).join('');
   document.body.appendChild(b); setTimeout(()=>b.remove(),1300); }
 const react=(p,type,dur)=>{ const f=figs.get(p.name); if(f) f.react={type,t:0,dur}; };
 function landRoll(i){ const s=S.slots[i], r=1+Math.floor(Math.random()*6); s.res=r;
@@ -560,8 +560,9 @@ function tick(){ requestAnimationFrame(tick); const raw=Math.min(clock.getDelta(
       if(k>=1){ f.to=null; f.g.rotation.y=0; if(sad) f.react=null; } return; }
     const baseY=f.home&&!focus.has(n)?0:(focus.has(n)?.24:0);
     if(ph==='over'&&S.winner&&S.winner.name===n){ const c=t*7; f.g.position.y=baseY+Math.abs(Math.sin(c*.5))*1.1; U.arms[0].rotation.z=-2.7+Math.sin(c)*.35; U.arms[1].rotation.z=2.7-Math.sin(c)*.35; U.arms[0].rotation.x=U.arms[1].rotation.x=0; f.g.rotation.y+=dt*4; U.head.rotation.z=Math.sin(c)*.15; return; }
-    if(f.react&&f.react.type==='cheer'){ const c=f.react.t*9; f.g.position.y=baseY+Math.abs(Math.sin(c*.5))*.8; U.arms[0].rotation.z=-2.6+Math.sin(c)*.3; U.arms[1].rotation.z=2.6-Math.sin(c)*.3; U.arms[0].rotation.x=U.arms[1].rotation.x=0;
-      U.legs[0].rotation.x=Math.sin(c*.5)*.35; U.legs[1].rotation.x=-Math.sin(c*.5)*.35; U.head.rotation.x=-.15; U.head.rotation.z=Math.sin(c)*.12; f.g.rotation.y=Math.sin(c*.5)*.25; return; }
+    // الاحتفال: الشخصية ثابتة مكانها وترفع يديها فقط (بدون نط أو لف)
+    if(f.react&&f.react.type==='cheer'){ const R=f.react, up=Math.min(1,R.t/.25)*Math.min(1,(R.dur-R.t)/.3), w=Math.sin(R.t*10)*.12*up; f.g.position.y=baseY; f.g.rotation.y=0;
+      U.arms[0].rotation.z=-.18-2.45*up+w; U.arms[1].rotation.z=.18+2.45*up-w; U.arms[0].rotation.x=U.arms[1].rotation.x=0; U.legs[0].rotation.x=U.legs[1].rotation.x=0; U.head.rotation.x=-.12*up; U.head.rotation.z=0; return; }
     if(sad){ const c=f.react.t; f.g.position.y=baseY-Math.min(.12,c*.3); U.head.rotation.x=.45; U.head.rotation.z=Math.sin(c*10)*.08*Math.max(0,1-c); U.arms[0].rotation.z=-.05; U.arms[1].rotation.z=.05;
       U.arms[0].rotation.x=U.arms[1].rotation.x=.15; U.legs[0].rotation.x=U.legs[1].rotation.x=0; f.g.rotation.y=0; return; }
     U.head.rotation.x=0;
