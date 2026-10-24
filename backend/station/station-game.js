@@ -199,7 +199,26 @@ function createGame(roster, settings, hooks, old) {
         return out;
     }
 
-    g.newGame = newGame; g.act = act; g.tick = tick; g.pos = pos; g.view = view; g.P = P;
+    /** المذيع طرد لاعب وسط الجولة: يطلع من المباراة وأصواته تنلغى، ثم نفحص الفوز. */
+    function remove(id) {
+        var G = g.G; id = String(id); if (!G || !P(id)) return;
+        G.players = G.players.filter(function (p) { return p.id !== id; });
+        G.bodies = G.bodies.filter(function (b) { return b.id !== id; });
+        var m = G.meeting;
+        if (m) { delete m.mic[id]; delete m.votes[id]; Object.keys(m.votes).forEach(function (k) { if (m.votes[k] === id) delete m.votes[k]; }); }
+        if (G.phase !== 'over') checkWin();
+        changed();
+    }
+
+    /** المذيع ينهي مرحلة الاجتماع الحالية: النقاش ← يبدأ التصويت، التصويت ← يُحسب فوراً. */
+    function endStage() {
+        var G = g.G, m = G && G.meeting, now = Date.now(); if (!G || G.phase !== 'meeting' || !m) return;
+        if (now - m.t0 < 2600) return; // شاشة «جثة!» الافتتاحية
+        if (m.stage === 'talk') { m.stage = 'vote'; m.votes = {}; m.end = now + cfg().vote * 1000; changed(); }
+        else if (m.stage === 'vote') tally(now);
+    }
+
+    g.newGame = newGame; g.act = act; g.tick = tick; g.pos = pos; g.view = view; g.P = P; g.remove = remove; g.endStage = endStage;
     newGame();
     return g;
 }

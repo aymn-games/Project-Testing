@@ -49,6 +49,7 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
   <sc-if value="{{ hostBar }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;top:54px;right:12px;z-index:50;display:flex;align-items:center;gap:6px;padding:5px;border-radius:999px;background:rgba(10,9,15,.55);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(10px)">
       <button onClick="{{ onExit }}" aria-label="خروج" style="height:36px;padding:0 14px;border-radius:999px;display:flex;align-items:center;gap:6px;font:700 15px 'Zain';white-space:nowrap;cursor:pointer;background:rgba(10,9,15,.8);backdrop-filter:blur(10px);border:1px solid rgba(248,113,113,.3);color:#fca5a5" style-hover="background:rgba(248,113,113,.14)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span style="display:{{ lblDisp }}">خروج</span></button>
+      <button onClick="{{ hpOpenBtn }}" style="height:36px;padding:0 14px;border-radius:999px;display:flex;align-items:center;gap:6px;font:700 15px 'Zain';white-space:nowrap;cursor:pointer;background:rgba(10,9,15,.8);border:1px solid rgba(94,234,212,.35);color:#99f6e4">👥 اللاعبين</button>
       <button onClick="{{ toggleView }}" style="height:36px;padding:0 14px;border-radius:999px;display:flex;align-items:center;gap:6px;font:700 15px 'Zain';white-space:nowrap;cursor:pointer;background:rgba(10,9,15,.8);backdrop-filter:blur(10px);border:1px solid rgba(167,139,250,.3);color:#ddd6fe" style-hover="background:rgba(139,92,246,.16)">{{ viewLbl }}</button>
     </div>
   </sc-if>
@@ -123,7 +124,7 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
         </div>
       </sc-if>
       <sc-if value="{{ showKeys }}" hint-placeholder-val="{{ false }}">
-        <span style="position:absolute;left:20px;bottom:20px;padding:8px 14px;border-radius:12px;background:rgba(10,9,15,.75);font:700 14px 'Zain';color:#8a8596">الحركة: الأسهم أو WASD · E استخدم · R بلّغ · Q اقتل · V فتحة</span>
+        <span style="position:absolute;left:20px;bottom:20px;z-index:4;padding:8px 14px;border-radius:12px;background:rgba(10,9,15,.82);border:1px solid rgba(167,139,250,.3);font:700 14px 'Zain';color:#c4b5fd;pointer-events:none">⌨️ الحركة بالأسهم ← ↑ → ↓ (أو WASD) · E استخدم · R بلّغ · Q اقتل · V فتحة</span>
       </sc-if>
 
       <div style="position:absolute;right:calc(16px + env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));display:flex;flex-wrap:wrap-reverse;justify-content:flex-end;gap:10px;max-width:{{ actMax }}px">
@@ -252,6 +253,10 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
         </div>
         <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 18px;background:#232c3d;border-top:4px solid #06080d">
           <span style="flex:1 1 200px;font:800 16px 'Zain';color:{{ mt.noteC }}">{{ mt.note }}</span>
+          <sc-if value="{{ mt.hostCtl }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ hpOpenBtn }}" style="height:52px;padding:0 16px;border-radius:12px;cursor:pointer;border:3px solid #06080d;background:#1f2937;color:#99f6e4;font:800 16px 'Zain';box-shadow:0 4px 0 #06080d" style-active="transform:translateY(2px)">👥 اللاعبين</button>
+            <button onClick="{{ mt.endStage }}" style="height:52px;padding:0 18px;border-radius:12px;cursor:pointer;border:3px solid #06080d;background:#b45309;color:#fff;font:900 16px 'Zain';box-shadow:0 4px 0 #06080d" style-active="transform:translateY(2px)">{{ mt.endLbl }}</button>
+          </sc-if>
           <sc-if value="{{ mt.hasSel }}" hint-placeholder-val="{{ false }}">
             <button onClick="{{ mt.cancel }}" style="height:52px;padding:0 18px;border-radius:12px;cursor:pointer;border:3px solid #06080d;background:#475569;color:#fff;font:800 16px 'Zain';box-shadow:0 4px 0 #06080d" style-active="transform:translateY(2px)">إلغاء</button>
             <button onClick="{{ mt.confirm }}" style="height:52px;padding:0 24px;border-radius:12px;cursor:pointer;border:3px solid #06080d;background:#16a34a;color:#fff;font:900 18px 'Zain';text-shadow:0 2px 0 #06080d;box-shadow:0 4px 0 #06080d;animation:popIn .3s ease" style-active="transform:translateY(2px)">✓ صوّت على {{ mt.selName }}</button>
@@ -460,6 +465,35 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
     </div>
   </sc-if>
 
+  <sc-if value="{{ hpOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ hpClose }}" style="position:fixed;inset:0;z-index:78;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);display:grid;place-items:center;padding:12px;box-sizing:border-box">
+      <div onClick="{{ stop }}" style="width:min(460px,100%);max-height:calc(100vh - 24px);display:flex;flex-direction:column;border-radius:22px;background:#1b2230;border:4px solid #06080d;box-shadow:0 8px 0 #06080d,0 30px 90px rgba(0,0,0,.6);overflow:hidden;direction:rtl">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;background:#232c3d;border-bottom:3px solid #06080d">
+          <span style="font:900 20px 'Zain';text-align:right">👥 اللاعبين · طرد</span>
+          <button onClick="{{ hpClose }}" aria-label="إغلاق" style="width:38px;height:38px;border-radius:10px;cursor:pointer;border:3px solid #06080d;background:#dc2626;color:#fff;font:900 16px 'Zain'">✕</button>
+        </div>
+        <span style="padding:8px 16px 0;font:600 13px/1.5 'Zain';color:#94a3b8;text-align:right">تقدر تطرد أي لاعب حتى وسط الجولة (مثلاً لو فصل). اضغط «طرد» ثم «تأكيد».</span>
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:10px 12px 14px;display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ hpList }}" as="h" hint-placeholder-count="6">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border-radius:14px;background:#232c3d;border:2px solid #06080d">
+              <span style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;text-align:right">
+                <span style="flex:none;width:30px;height:30px;border-radius:9px;background:{{ h.c }};border:2px solid #06080d"></span>
+                <span style="min-width:0;display:flex;flex-direction:column">
+                  <span style="font:800 17px 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ h.name }}</span>
+                  <span style="font:700 12px 'Zain';color:{{ h.stC }}">{{ h.st }}</span>
+                </span>
+              </span>
+              <button onClick="{{ h.press }}" style="flex:none;height:40px;padding:0 16px;border-radius:10px;cursor:pointer;border:3px solid #06080d;background:{{ h.bg }};color:#fff;font:900 15px 'Zain';box-shadow:0 3px 0 #06080d">{{ h.lbl }}</button>
+            </div>
+          </sc-for>
+          <sc-if value="{{ hpEmpty }}" hint-placeholder-val="{{ false }}">
+            <span style="padding:18px;text-align:center;font:600 15px 'Zain';color:#64748b">ما فيه لاعبين غيرك</span>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ exitOpen }}" hint-placeholder-val="{{ false }}">
     <div onClick="{{ closeExit }}" style="position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;animation:{{ exitOv }}">
       <div onClick="{{ stop }}" style="width:min(420px, calc(100vw - 16px));box-sizing:border-box;padding:clamp(18px,5vw,28px);border-radius:24px;background:rgba(12,11,18,.96);border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 90px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;animation:{{ exitAn }}">
@@ -552,7 +586,7 @@ class Component extends DCLogic {
     addEventListener('keydown',this.kd); addEventListener('keyup',this.ku);
     if(!this.isHost) window.StationNet.fs.init(()=>this.forceUpdate());
     this.unlock=()=>this.ambStart(); addEventListener('pointerdown',this.unlock); addEventListener('keydown',this.unlock); this.ambStart();
-    this.rs=()=>{ this.setState({narrowP:innerWidth<500,portrait:innerHeight>innerWidth}); this.joyH=Math.round(innerHeight*.62)-100; this.setState({narrow:innerWidth<820}); }; this.joyH=Math.round(innerHeight*.62)-100; this.setState({narrowP:innerWidth<500,portrait:innerHeight>innerWidth}); addEventListener('resize',this.rs);
+    this.rs=()=>{ this.setState({narrowP:innerWidth<500,portrait:innerHeight>innerWidth}); this.joyH=Math.round(innerHeight*.62)-150; this.setState({narrow:innerWidth<820}); }; this.joyH=Math.round(innerHeight*.62)-150; this.setState({narrowP:innerWidth<500,portrait:innerHeight>innerWidth}); addEventListener('resize',this.rs);
     this.last=performance.now(); this.lastSend=0; this.lastUi=0; this.lastB=0; this.t0=Date.now();
     this.loop=t=>{ this.raf=requestAnimationFrame(this.loop); try{ this.frame(t); }catch(err){ console.error(err); } };
     this.raf=requestAnimationFrame(this.loop);
@@ -569,7 +603,7 @@ class Component extends DCLogic {
     else if(d.t==='fx') this.sfx(d.k);
     else if(d.t==='rtc') this.onRtc(d.from,d.data);
     else if(d.t==='welcome'){ this.room=d.code; if(this.isHost) window.StationNet.hostSession({code:d.code,token:d.token}); }
-    else if(d.t==='room'){ if(!d.room.started){ if(this.isHost){ if(!this.G||this.G.phase!=='over') location.href='index.html'; } else location.href='join.html?room='+this.room; } }
+    else if(d.t==='room'){ this.roomInfo=d.room; if(this.isHost&&this.state.hpOpen) this.forceUpdate(); if(!d.room.started){ if(this.isHost){ if(!this.G||this.G.phase!=='over') location.href='index.html'; } else location.href='join.html?room='+this.room; } }
     else if(d.t==='lobby') location.href='join.html?room='+this.room;
     else if(d.t==='kicked'||d.t==='closed'||(d.t==='gone'&&!this.isHost)){ window.StationNet.me(null); location.href='join.html'; }
   }
@@ -876,10 +910,16 @@ class Component extends DCLogic {
     const asP=false; const base={ mm2Ref:this.mm2, meetMapOn:!!(S.meetMap&&this.G&&this.G.phase==='meeting'), mapHasBody:!!(this.G&&this.G.meeting&&this.G.meeting.bodyAt), mapOpen:()=>this.setState({meetMap:true}), mapClose:()=>this.setState({meetMap:false}), rotOn:!!S.portrait&&!isHost&&!asP, goFull:()=>{ try{ const d=document.documentElement; (d.requestFullscreen?d.requestFullscreen():Promise.reject()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{}); }catch(e){} }, hostBar:isHost&&!asP, volTop:isHost&&!asP?104:12, volOpen:!!S.volOpen, volVal:vv, fsShow:!isHost&&window.StationNet.fs.show(), fsOn:window.StationNet.fs.active(), fsOff:!window.StationNet.fs.active(), fsLbl:window.StationNet.fs.active()?'إلغاء ملء الشاشة':'ملء الشاشة', fsToggle:()=>{ window.StationNet.fs.toggle(); this.forceUpdate(); }, volIcon:mutedV?'🔇':vv<50?'🔉':'🔊', muteIcon:mutedV?'🔇':'🔊', muteBg:mutedV?'#dc2626':'#334155', volToggle:()=>this.setState({volOpen:!S.volOpen}), muteToggle:()=>this.setVol(null,!S.muted), volChange:e=>this.setVol(+e.target.value,false), isHost, notHost:!isHost, topPx:0, hudTop:isHost?104:54, cvRef:this.cv, chatRef:this.chatRef, room:this.room||'', stop:e=>e.stopPropagation(), lblDisp:S.narrow?'none':'inline',
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
       viewLbl:this.overview()?'👤 منظوري':'🗺️ الخريطة كاملة', toggleView:()=>this.setState({overview:!this.overview()}),
-      exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>{ this.setState({exitOpenOut:true}); setTimeout(()=>this.setState({exitOpen:false,exitOpenOut:false}),260); },
+      exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}),
+      hpOpenBtn:()=>this.setState({hpOpen:true,hpSure:null}), hpClose:()=>this.setState({hpOpen:false,hpSure:null}), hpOpen:isHost&&!!S.hpOpen, hpEmpty:false, hpList:[], closeExit:()=>{ this.setState({exitOpenOut:true}); setTimeout(()=>this.setState({exitOpen:false,exitOpenOut:false}),260); },
       confirmExit:()=>{ if(isHost){ this.send({t:'close'}); window.StationNet.hostSession(null); } else { this.send({t:'leave'}); window.StationNet.me(null); } try{ if(window.top!==window){ window.top.location.href=LIB; return; } }catch(e){} location.href=LIB; },
       exitOv:o('fade .25s ease','fadeOut .26s ease forwards'), exitAn:o('popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards'),
       mmRef:this.mm, showMiniBtn:!this.overview(), showMini:!this.overview()&&!S.miniOff, miniLbl:S.miniOff?'افتح الخريطة':'اطوِ', toggleMini:()=>this.setState({miniOff:!S.miniOff}), colW:isHost?240:150, miniH:isHost?130:84, miniW:isHost?190:120, barTop:10, barW:'min(460px, calc(100vw - 24px))', hud:false, waiting:false, reveal:false, taskOpen:false, sabOpen:false, meetOpen:false, ejOpen:false, ejStars:null, overOpen:false, tk:{}, mt:{}, ej:{}, ov:{}, actions:[], myTasks:[], sabItems:[] };
+    if(isHost&&S.hpOpen){ const on={}; ((this.roomInfo||{}).players||[]).forEach(p=>{ on[p.id]=p.online!==false; });
+      base.hpList=((G&&G.players)||[]).filter(p=>p.id!=='host').map(p=>{ const sure=S.hpSure===p.id, off=on[p.id]===false;
+        return {name:p.name,c:p.c,st:(off?'📴 فاصل':'🟢 متصل')+(p.alive?'':' · ☠️ ميت'),stC:off?'#fca5a5':'#86efac',lbl:sure?'تأكيد الطرد':'طرد',bg:sure?'#dc2626':'#475569',
+          press:()=>{ if(!sure) return this.setState({hpSure:p.id}); this.send({t:'kick',id:p.id}); this.setState({hpSure:null}); }}; });
+      base.hpEmpty=!base.hpList.length; }
     if(!G||!me) return {...base, waiting:true, waitTxt:G?'المباراة شغالة… انتظر الجولة الجاية':'جاري الاتصال بالمذيع…'};
     const C=this.cfg(), {tot,dn}=this.taskTotals(G), asPl=false;
     const roleC=me.imp?'#f87171':'#7dd3fc', roleTxt=!me.alive?(me.imp?'👻 امبوستر (شبح)':'👻 شبح'):me.imp?'🔪 امبوستر':'🧑‍🚀 مواطن';
@@ -900,8 +940,8 @@ class Component extends DCLogic {
     const out={...base, hud:G.phase==='play'||G.phase==='reveal', roleC, roleTxt, hasMates:!!mates, mates, showTasks:!me.imp&&(!!G.comms||me.tasks.some(id=>!me.done.includes(id))), isGhost:!me.alive&&play,
       myTasks:me.imp?[]:G.comms?[{txt:'📡 الاتصالات معطلة… أصلحوها عشان تشوفون مهامكم',c:'#fca5a5',dec:'none'}]:me.tasks.filter(id=>!me.done.includes(id)).map(id=>{ const t=TASKS.find(x=>x.id===id), d=me.done.includes(id); return {txt:TK_ICON[t.k]+' '+t.n+' · '+RN(t.r),c:d?'#6ee7b7':'#e7e3ef',dec:d?'line-through':'none'}; }),
       taskPct:G.comms&&!me.imp?0:tot?Math.round(dn/tot*100):0, reactorOn:false, reactorSec:G.reactor?Math.max(0,Math.ceil((G.reactor-now)/1000)):0, lockOn:lockNames.length>0, lockTxt:lockNames.join('، '),
-      actSz:S.narrowP?64:80, actMax:S.narrowP?140:270, actW:S.narrowP?170:290, showJoy:asPl||!isHost||this.isTouch, showKeys:!asPl&&isHost&&!this.isTouch, jx:S.jx, jy:S.jy, jbx:100, jby:(this.joyH||300), jbA:S.joyAct?.07:.035, jbB:S.joyAct?.18:.08, jkA:S.joyAct?.6:.3, actions,
-      joyDown:e=>{ if(this.state.task) return; try{ e.currentTarget.setPointerCapture(e.pointerId); }catch(_){} this.joyOn=true; this.joyPid=e.pointerId; const r=e.currentTarget.getBoundingClientRect(), bx=100, by=this.joyH||300; this.jb={cx:r.left+bx,cy:r.top+by,x:bx,y:by}; this.setState({joyAct:true}); this.joyCalc(e); }, joyMove:e=>{ if(this.joyOn&&e.pointerId===this.joyPid) this.joyCalc(e); }, joyUp:e=>{ if(e&&this.joyPid!=null&&e.pointerId!==this.joyPid) return; this.joyReset(); } };
+      actSz:S.narrowP?64:80, actMax:S.narrowP?140:270, actW:S.narrowP?170:290, showJoy:asPl||!isHost||this.isTouch, showKeys:!asPl&&!this.isTouch, jx:S.jx, jy:S.jy, jbx:150, jby:(this.joyH||300), jbA:S.joyAct?.07:.035, jbB:S.joyAct?.18:.08, jkA:S.joyAct?.6:.3, actions,
+      joyDown:e=>{ if(this.state.task) return; try{ e.currentTarget.setPointerCapture(e.pointerId); }catch(_){} this.joyOn=true; this.joyPid=e.pointerId; const r=e.currentTarget.getBoundingClientRect(), bx=150, by=this.joyH||300; this.jb={cx:r.left+bx,cy:r.top+by,x:bx,y:by}; this.setState({joyAct:true}); this.joyCalc(e); }, joyMove:e=>{ if(this.joyOn&&e.pointerId===this.joyPid) this.joyCalc(e); }, joyUp:e=>{ if(e&&this.joyPid!=null&&e.pointerId!==this.joyPid) return; this.joyReset(); } };
     out.inVent=!!(play&&this.inVent); out.ventArrows=[]; out.ventSec='';
     if(out.inVent){ const cur=VENTS.find(v=>v.id===this.inVent); out.ventSec=Math.max(0,Math.ceil((VENT_STAY-(now-this.ventT))/1000));
       out.ventArrows=cur.to.map(id=>{ const v=VENTS.find(x=>x.id===id), ang=Math.atan2(v.y-cur.y,v.x-cur.x), deg=Math.round(ang*180/Math.PI); return {l:'calc(50% + '+Math.round(Math.cos(ang)*120)+'px)',t:'calc(50% + '+Math.round(Math.sin(ang)*120)+'px)',rot:'rotate('+deg+'deg)',n:RN(roomAt(v.x,v.y)),go:()=>this.ventGo(id)}; }); }
@@ -921,7 +961,8 @@ class Component extends DCLogic {
     out.hasTimer=!!G.endAt&&(G.phase==='play'||G.phase==='reveal'); out.timeLeft=G.endAt?(()=>{ const t=Math.max(0,Math.ceil((G.endAt-now)/1000)); return Math.floor(t/60)+':'+String(t%60).padStart(2,'0'); })():'';
     if(G.phase==='meeting'&&G.meeting){ const m=G.meeting, by=this.P(m.by)||{}, body=m.body?this.P(m.body):null, vote=m.stage==='vote', my=m.votes[me.id], canVote=vote&&me.alive&&!my, sel=canVote?S.voteSel:null, selP=sel&&sel!=='skip'?this.P(sel):null;
       out.meetOpen=true;
-      out.mt={ title:body?'🚨 تم العثور على جثة':'📢 اجتماع طارئ', c:body?'#fca5a5':'#fde68a', sub:body?(by.name+' لقى '+body.name):('دعا له '+by.name),
+      out.mt={ title:body?'🚨 تم العثور على جثة':'📢 اجتماع طارئ', c:body?'#fca5a5':'#fde68a', sub:body?((by.name||'لاعب')+' لقى '+body.name):('دعا له '+(by.name||'لاعب')),
+        hostCtl:isHost, endLbl:vote?'⏹️ أنهِ التصويت':'⏭️ أنهِ النقاش', endStage:()=>this.send({t:'endStage'}),
         stage:vote?'🗳️ التصويت':'💬 النقاش', stageBg:vote?'#fbbf24':'#5eead4', barC:vote?'#fbbf24':'#14b8a6', pct:Math.max(0,Math.min(100,Math.round((m.end-now)/((vote?C.voteSec:C.talkSec)*1000)*100))), icon:body?'🚨':'📢', iconBg:body?'#dc2626':'#f59e0b', sec:Math.max(0,Math.ceil((m.end-now)/1000)), canVote, canSkip:canVote&&C.allowSkip, skip:()=>this.setState({voteSel:'skip'}),
         chat:(m.chat||[]).map(c=>{ const q=this.P(c.id)||{}, mine=c.id===me.id; return {name:q.name||'',c:q.c||'#888',t:c.t,dir:mine?'row-reverse':'row',bg:mine?'rgba(139,92,246,.22)':'rgba(255,255,255,.05)'}; }),
         chatEmpty:!(m.chat||[]).length, canChat:me.alive, chatGhost:!me.alive,
