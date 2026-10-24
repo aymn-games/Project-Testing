@@ -27,8 +27,14 @@ var googleClient = config.googleClientId ? new OAuth2Client(config.googleClientI
 
 function now() { return Date.now(); }
 
+// حساب أُنشئ بالدخول بتيك توك (loginWithTikTok) — تيك توك ما يعطينا
+// إيميل، وعمود email إلزامي وفريد، فنحفظ إيميل بديل بنطاق .invalid
+// (محجوز، لا يستقبل بريد). يُعامَل كأن الحساب بلا إيميل حتى يضيف إيميله.
+var TIKTOK_PLACEHOLDER_EMAIL_DOMAIN = '@tiktok.invalid';
+
 function isValidEmail(email) {
-    return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
+        email.slice(-TIKTOK_PLACEHOLDER_EMAIL_DOMAIN.length).toLowerCase() !== TIKTOK_PLACEHOLDER_EMAIL_DOMAIN;
 }
 
 /* ----------------------------------------------------------------------
@@ -570,6 +576,63 @@ async function loginWithGoogle(idToken, deviceId) {
             email_verified: true
         }
     };
+}
+
+/**
+ * الدخول/إنشاء حساب بتيك توك (زي جوجل). tiktokUser من
+ * tiktokOAuthService.fetchTikTokUserInfo بعد OAuth ناجح، فالملكية مثبتة.
+ * الحساب يُلقى بـopen_id (ثابت لا يتغيّر مع اليوزر)؛ لو ما فيه حساب يُنشأ
+ * حساب جديد موثَّق تيك توك مباشرة، بإيميل بديل (راجع
+ * TIKTOK_PLACEHOLDER_EMAIL_DOMAIN) واختيار لاعب/استريمر إجباري بعده.
+ * @param {{open_id:string, username?:string, display_name?:string, avatar_url?:string}} tiktokUser
+ * @param {{refreshToken?:string, refreshExpiresAt?:number}} [tokens]
+ * @param {string} [deviceId]
+ * @returns {{success: boolean, token?: string, user?: Object, isNew?: boolean, error?: string}}
+ */
+function loginWithTikTok(tiktokUser, tokens, deviceId) {
+    if (!tiktokUser || !tiktokUser.open_id) return { success: false, error: 'missing_tiktok_user' };
+    var tiktokUsername = String(tiktokUser.username || '').trim().replace(/^@+/, '') || null;
+    var refreshToken = (tokens && tokens.refreshToken) || null;
+    var refreshExpiresAt = (tokens && tokens.refreshExpiresAt) || null;
+    var isNew = false;
+
+    var existing = db.prepare('SELECT * FROM users WHERE tiktok_open_id = ?').get(tiktokUser.open_id);
+    if (existing) {
+        // تحديث بيانات تيك توك (اليوزر ممكن تغيّر) + refresh token الجديد.
+        db.prepare(
+            'UPDATE users SET tiktok_username = COALESCE(?, tiktok_username), tiktok_display_name = COALESCE(?, tiktok_display_name), tiktok_avatar_url = COALESCE(?, tiktok_avatar_url), tiktok_verified = 1, tiktok_refresh_token = COALESCE(?, tiktok_refresh_token), tiktok_refresh_expires_at = COALESCE(?, tiktok_refresh_expires_at) WHERE id = ?'
+        ).run(tiktokUsername, tiktokUser.display_name || null, tiktokUser.avatar_url || null, refreshToken, refreshExpiresAt, existing.id);
+    } else {
+        // نفس اليوزر موثَّق بحساب ثاني بطريقة كود البايو القديمة (بدون open_id)
+        // — ما ننشئ حساب مكرر لنفس يوزر تيك توك؛ صاحبه يدخل بحسابه ويربط من البروفايل.
+        if (tiktokUsername && db.prepare('SELECT id FROM users WHERE tiktok_verified = 1 AND tiktok_username = ? COLLATE NOCASE').get(tiktokUsername)) {
+            return { success: false, error: 'tiktok_linked_to_other_account' };
+        }
+        var userCount = db.prepare('SELECT COUNT(*) AS c FROM users').get().c;
+        var role = userCount === 0 ? 'admin' : 'streamer';
+        var baseUsername = (tiktokUsername || 'tiktok_user').replace(/\s+/g, '_').slice(0, 30);
+        var username = baseUsername;
+        var suffix = 1;
+        while (db.prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE').get(username)) {
+            username = baseUsername + suffix++;
+        }
+        var placeholderEmail = 'tt_' + crypto.createHash('sha256').update(tiktokUser.open_id).digest('hex').slice(0, 24) + TIKTOK_PLACEHOLDER_EMAIL_DOMAIN;
+        var publicId = generatePublicId();
+        // account_type_chosen = 0 — نفس حساب جوجل الجديد (choose-account-type.html).
+        var info = db.prepare(
+            'INSERT INTO users (username, email, role, custom_id, created_at, account_type_chosen, email_verified, display_name, tiktok_open_id, tiktok_username, tiktok_display_name, tiktok_avatar_url, tiktok_verified, tiktok_refresh_token, tiktok_refresh_expires_at) VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, 1, ?, ?)'
+        ).run(username, placeholderEmail, role, publicId, now(), tiktokUser.display_name || null, tiktokUser.open_id, tiktokUsername,
+            tiktokUser.display_name || null, tiktokUser.avatar_url || null, refreshToken, refreshExpiresAt);
+        isNew = true;
+        logger.log('Auth: new user signed up via TikTok: ' + username + ' (role: ' + role + ', id: ' + publicId + ') — account type choice pending');
+        existing = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+    }
+
+    var deviceCheck = checkDeviceLock(existing, deviceId);
+    if (!deviceCheck.allowed) return { success: false, error: 'device_locked', message: DEVICE_LOCKED_MESSAGE };
+    saveDeviceBinding(existing.id, deviceCheck, deviceId);
+
+    return { success: true, token: createSessionFor(existing), userId: existing.id, isNew: isNew };
 }
 
 /**
@@ -1464,6 +1527,7 @@ module.exports = {
     signup: signup,
     login: login,
     loginWithGoogle: loginWithGoogle,
+    loginWithTikTok: loginWithTikTok,
     validateSession: validateSession,
     logout: logout,
     linkTikTokUsername: linkTikTokUsername,

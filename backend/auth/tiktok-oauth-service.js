@@ -25,15 +25,18 @@ var TOKEN_URL = 'https://open.tiktokapis.com/v2/oauth/token/';
 var USER_INFO_URL = 'https://open.tiktokapis.com/v2/user/info/';
 var STATE_TTL_MS = 10 * 60 * 1000; // ١٠ دقايق كافية لإكمال تسجيل الدخول بتيك توك
 
-/** توقيع state بـHMAC-SHA256 — يحمل هوية المستخدم + وقت الانتهاء، بدون أي تخزين مؤقت بقاعدة البيانات. */
-function signState(userId) {
-    var payload = JSON.stringify({ uid: userId, exp: Date.now() + STATE_TTL_MS, nonce: crypto.randomBytes(8).toString('hex') });
+/** توقيع state بـHMAC-SHA256 — يحمل بيانات الطلب + وقت الانتهاء، بدون أي تخزين مؤقت بقاعدة البيانات. */
+function signState(data) {
+    var payload = JSON.stringify(Object.assign({}, data, { exp: Date.now() + STATE_TTL_MS, nonce: crypto.randomBytes(8).toString('hex') }));
     var payloadB64 = Buffer.from(payload, 'utf8').toString('base64url');
     var sig = crypto.createHmac('sha256', config.tiktokStateSecret).update(payloadB64).digest('base64url');
     return payloadB64 + '.' + sig;
 }
 
-/** التحقق من state ورجوع userId منه — null لو موقّع بشكل خاطئ أو منتهي. */
+/**
+ * التحقق من state ورجوع محتواه — null لو موقّع بشكل خاطئ أو منتهي.
+ * ربط حساب: {uid}. دخول/تسجيل بتيك توك: {mode:'login', did, next}.
+ */
 function verifyState(state) {
     if (!state || state.indexOf('.') === -1) return null;
     var parts = state.split('.');
@@ -46,20 +49,15 @@ function verifyState(state) {
     if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) return null;
     try {
         var payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
-        if (!payload.uid || !payload.exp || payload.exp < Date.now()) return null;
-        return payload.uid;
+        if (!payload.exp || payload.exp < Date.now()) return null;
+        if (!payload.uid && payload.mode !== 'login') return null;
+        return payload;
     } catch (e) {
         return null;
     }
 }
 
-/**
- * رابط "تسجيل الدخول بتيك توك" اللي نوجّه له المستخدم.
- * @param {number} userId
- * @returns {string}
- */
-function buildAuthorizeUrl(userId) {
-    var state = signState(userId);
+function authorizeUrlWithState(state) {
     var params = new URLSearchParams({
         client_key: config.tiktokClientKey,
         scope: 'user.info.basic,user.info.profile',
@@ -68,6 +66,26 @@ function buildAuthorizeUrl(userId) {
         state: state
     });
     return AUTHORIZE_URL + '?' + params.toString();
+}
+
+/**
+ * رابط "تسجيل الدخول بتيك توك" اللي نوجّه له المستخدم.
+ * @param {number} userId
+ * @returns {string}
+ */
+function buildAuthorizeUrl(userId) {
+    return authorizeUrlWithState(signState({ uid: userId }));
+}
+
+/**
+ * رابط "الدخول/إنشاء حساب بتيك توك" من صفحة الدخول (بدون جلسة سابقة).
+ * نفس redirect_uri — الـcallback يميّز الحالتين من mode داخل state.
+ * @param {string} [deviceId] - لقيد الأجهزة (auth-client.js: getDeviceId)
+ * @param {string} [next] - صفحة الرجوع بعد الدخول (يُتحقَّق منها بالواجهة)
+ * @returns {string}
+ */
+function buildLoginAuthorizeUrl(deviceId, next) {
+    return authorizeUrlWithState(signState({ mode: 'login', did: String(deviceId || '').slice(0, 100), next: String(next || '').slice(0, 300) }));
 }
 
 /**
@@ -238,6 +256,7 @@ function saveTikTokAvatarIfMissing(userId, tiktokUser) {
 module.exports = {
     saveTikTokAvatarIfMissing: saveTikTokAvatarIfMissing,
     buildAuthorizeUrl: buildAuthorizeUrl,
+    buildLoginAuthorizeUrl: buildLoginAuthorizeUrl,
     verifyState: verifyState,
     exchangeCodeForToken: exchangeCodeForToken,
     fetchTikTokUserInfo: fetchTikTokUserInfo,

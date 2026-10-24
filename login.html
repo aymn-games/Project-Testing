@@ -742,6 +742,83 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (__perfTries >= 30) clearInterval(__perfTimer);
   }, 300);
 
+  // ---- الدخول / إنشاء حساب بتيك توك (زي جوجل) — AGPAuth.tiktokLoginUrl
+  // يحوّل لصفحة موافقة تيك توك، والخادم يرجّع هنا بـ#tiktok_token=
+  // (نجاح) أو ?tiktok_login=<خطأ>. الزر يُضاف تحت زر جوجل لأن القالب ما فيه
+  // زر تيك توك، وMutationObserver يرجّعه لو القالب أعاد رسم البطاقة.
+  var TIKTOK_LOGIN_ERRORS = {
+    cancelled: 'تم إلغاء الدخول بتيك توك',
+    device_locked: 'هذا الحساب وصل للحد الأقصى من الأجهزة (3 أجهزة). تواصل مع الأدمن للسماح بجهاز جديد.',
+    tiktok_linked_to_other_account: 'يوزر تيك توك هذا مربوط بحساب ثاني عندنا — سجّل دخولك بحسابك واربط تيك توك من البروفايل',
+    missing_code: 'تعذّر الدخول بتيك توك، حاول مرة ثانية',
+    token_exchange_failed: 'تعذّر الدخول بتيك توك، حاول مرة ثانية',
+    user_info_failed: 'تعذّر جلب بيانات حسابك من تيك توك، حاول مرة ثانية'
+  };
+  function isSignupMode(){
+    return Array.prototype.some.call(document.querySelectorAll('button'), function(b){ return b.textContent.trim() === 'أنشئ الحساب'; });
+  }
+  function ensureTikTokButton(){
+    var googleReal = document.querySelector('[data-google-real-btn]');
+    if (!googleReal || !googleReal.parentElement) return;
+    var googleBox = googleReal.parentElement;
+    var btn = document.getElementById('agp-tiktok-login');
+    if (!btn) {
+      btn = document.createElement('a');
+      btn.id = 'agp-tiktok-login';
+      btn.href = '#';
+      btn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:11px;padding:14px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#f4f2fb;font-size:14.5px;font-weight:500;transition:transform .25s,border-color .25s,background .25s';
+      var icon = document.createElement('img');
+      icon.src = 'tiktok-logo.png'; icon.alt = ''; icon.style.cssText = 'width:22px;height:22px;border-radius:50%;object-fit:cover';
+      var label = document.createElement('span');
+      btn.appendChild(icon); btn.appendChild(label);
+      btn.addEventListener('mouseenter', function(){ btn.style.transform = 'translateY(-2px)'; btn.style.borderColor = 'rgba(178,140,245,.5)'; btn.style.background = 'rgba(255,255,255,.08)'; });
+      btn.addEventListener('mouseleave', function(){ btn.style.transform = ''; btn.style.borderColor = 'rgba(255,255,255,.14)'; btn.style.background = 'rgba(255,255,255,.05)'; });
+      btn.addEventListener('click', function(e){
+        e.preventDefault();
+        if (!window.AGPAuth || !window.AGPAuth.tiktokLoginUrl) { setNote('تعذّر تحميل نظام الحسابات', false); return; }
+        var next = getSafeNextUrl();
+        setNote('جارٍ تحويلك لتيك توك…', true);
+        window.location.href = window.AGPAuth.tiktokLoginUrl(next === './' ? '' : next);
+      });
+    }
+    if (btn.previousElementSibling !== googleBox) googleBox.insertAdjacentElement('afterend', btn);
+    var text = isSignupMode() ? 'أنشئ حساب بتيك توك' : 'سجّل دخولك بتيك توك';
+    if (btn.lastChild.textContent !== text) btn.lastChild.textContent = text;
+  }
+  new MutationObserver(ensureTikTokButton).observe(document, { childList: true, subtree: true, characterData: true });
+  ensureTikTokButton();
+
+  // رجوع من تيك توك: نحفظ الجلسة ونكمل مثل دخول جوجل
+  function whenNoteReady(fn){
+    var tries = 0;
+    (function wait(){ if (getNoteEl() || ++tries > 50) fn(); else setTimeout(wait, 100); })();
+  }
+  (function handleTikTokReturn(){
+    var hash = window.location.hash || '';
+    var token = null;
+    try { token = new URLSearchParams(hash.replace(/^#/, '')).get('tiktok_token'); } catch(e) {}
+    var status = null;
+    try { status = new URLSearchParams(window.location.search).get('tiktok_login'); } catch(e) {}
+    if (!token && !status) return;
+    // التوكن ما يبقى بالرابط (السجل/المشاركة)
+    try {
+      var params = new URLSearchParams(window.location.search); params.delete('tiktok_login');
+      var qs = params.toString();
+      history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
+    } catch(e) {}
+    whenNoteReady(function(){
+      if (!token) { setNote(TIKTOK_LOGIN_ERRORS[status] || 'تعذّر الدخول بتيك توك، حاول مرة ثانية', false); return; }
+      if (!window.AGPAuth || !window.AGPAuth.completeTikTokLogin) { setNote('تعذّر تحميل نظام الحسابات', false); return; }
+      setNote('جارٍ الدخول بحساب تيك توك…', true);
+      window.AGPAuth.completeTikTokLogin(token).then(function(user){
+        if (!user) { setNote('تعذّر إكمال الدخول بتيك توك، حاول مرة ثانية', false); return; }
+        if (window.AGPAuth.needsAccountTypeChoice(user)) { window.location.href = 'choose-account-type.html'; return; }
+        setNote('تم تسجيل الدخول، جاري تحويلك…', true);
+        setTimeout(function(){ window.location.href = getSafeNextUrl(); }, 500);
+      });
+    });
+  })();
+
   var GOOGLE_CLIENT_ID = '777683353907-hkemaaft5t7mktgtjvlf47ptuqk93qbg.apps.googleusercontent.com';
   var __googleScriptRequested = false;
 

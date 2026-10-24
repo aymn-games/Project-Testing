@@ -207,6 +207,22 @@ function loginWithGoogle(idToken) {
         });
 }
 
+/** "Continue with TikTok" on login.html: a full-page redirect to the
+ * backend, which sends the user to TikTok's consent page. The backend
+ * returns to login.html#tiktok_token=... (see completeTikTokLogin). */
+function tiktokLoginUrl(next) {
+    return API_BASE + '/api/auth/tiktok/oauth/login-start?device=' + encodeURIComponent(getDeviceId()) +
+        (next ? '&next=' + encodeURIComponent(next) : '');
+}
+
+/** Stores the session token from the TikTok login redirect, then loads
+ * the user from /api/auth/me. Resolves the user, or null. */
+function completeTikTokLogin(token) {
+    if (!token) return Promise.resolve(null);
+    setSession(token, {});
+    return refreshUser();
+}
+
 /**
  * Password reset step 1: request a code by email. Always resolves
  * {success:true}, even for an unregistered email — prevents email
@@ -969,6 +985,8 @@ global.AGPAuth = {
     signup: signup,
     login: login,
     loginWithGoogle: loginWithGoogle,
+    tiktokLoginUrl: tiktokLoginUrl,
+    completeTikTokLogin: completeTikTokLogin,
     forgotPassword: forgotPassword,
     resetPasswordWithCode: resetPasswordWithCode,
     resetPasswordWithIdentifier: resetPasswordWithIdentifier,
