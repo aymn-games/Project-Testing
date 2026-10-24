@@ -95,6 +95,8 @@ var ROUTES = [
   // تنقّل متصفح خام — لا يقدران يرفقان ترويسة Authorization، لذا نتحقق
   // من الجلسة يدوياً داخل handleTikTokOAuthStart عبر ?token=.
   { method: 'GET', path: '/api/auth/tiktok/oauth/start', requireAuth: false, handler: handleTikTokOAuthStart },
+  // الدخول/إنشاء حساب بتيك توك من login.html (بدون جلسة) — نفس الـcallback أعلاه.
+  { method: 'GET', path: '/api/auth/tiktok/oauth/login-start', requireAuth: false, handler: handleTikTokLoginStart },
   { method: 'GET', path: '/api/auth/tiktok/oauth/callback', requireAuth: false, handler: handleTikTokOAuthCallback },
   { method: 'POST', path: '/api/auth/tiktok/verify', requireAuth: true, handler: handleTikTokVerify },
   { method: 'POST', path: '/api/auth/tiktok/unlink', requireAuth: true, handler: handleTikTokUnlink },
@@ -352,6 +354,41 @@ function handleTikTokOAuthStart(req, res) {
   res.end();
 }
 
+/** زر "الدخول بتيك توك" بـlogin.html — ?device=&next= ويحوّل لصفحة موافقة تيك توك. */
+function handleTikTokLoginStart(req, res) {
+  var queryString = (req.url || '').split('?')[1] || '';
+  var params = new URLSearchParams(queryString);
+  var authorizeUrl = tiktokOAuthService.buildLoginAuthorizeUrl(params.get('device'), params.get('next'));
+  res.writeHead(302, { Location: authorizeUrl });
+  res.end();
+}
+
+/**
+ * دخول بتيك توك: يرجّع لـlogin.html — التوكن بالـhash (#) عشان ما يوصل
+ * لأي سيرفر أو سجلات، والواجهة تحفظه (AGPAuth.completeTikTokLogin).
+ */
+async function finishTikTokLogin(res, statePayload, code) {
+  function redirectToLogin(query, hash) {
+    res.writeHead(302, { Location: config.frontendBaseUrl + '/login.html' + query + (hash || '') });
+    res.end();
+  }
+  var next = statePayload.next ? '&next=' + encodeURIComponent(statePayload.next) : '';
+  if (!code) return redirectToLogin('?tiktok_login=missing_code' + next);
+
+  var tokenResult = await tiktokOAuthService.exchangeCodeForToken(code);
+  if (!tokenResult.success) return redirectToLogin('?tiktok_login=token_exchange_failed' + next);
+
+  var infoResult = await tiktokOAuthService.fetchTikTokUserInfo(tokenResult.accessToken);
+  if (!infoResult.success) return redirectToLogin('?tiktok_login=user_info_failed' + next);
+
+  var result = authService.loginWithTikTok(infoResult.user, tokenResult, statePayload.did);
+  if (!result.success) return redirectToLogin('?tiktok_login=' + encodeURIComponent(result.error || 'login_failed') + next);
+
+  await tiktokOAuthService.saveTikTokAvatarIfMissing(result.userId, infoResult.user);
+
+  return redirectToLogin('?tiktok_login=success' + next, '#tiktok_token=' + encodeURIComponent(result.token));
+}
+
 /** يستقبل رد تيك توك (code+state)، يربط الحساب فعلياً، ويرجّع المستخدم لبروفايله. */
 async function handleTikTokOAuthCallback(req, res) {
   var queryString = (req.url || '').split('?')[1] || '';
@@ -365,9 +402,18 @@ async function handleTikTokOAuthCallback(req, res) {
     res.end();
   }
 
+  var statePayload = tiktokOAuthService.verifyState(state);
+  if (statePayload && statePayload.mode === 'login') {
+    if (deniedByUser) {
+      res.writeHead(302, { Location: config.frontendBaseUrl + '/login.html?tiktok_login=cancelled' });
+      return res.end();
+    }
+    return finishTikTokLogin(res, statePayload, code);
+  }
+
   if (deniedByUser) return redirectToProfile('cancelled');
 
-  var userId = tiktokOAuthService.verifyState(state);
+  var userId = statePayload && statePayload.uid;
   if (!userId) return redirectToProfile('invalid_state');
   if (!code) return redirectToProfile('missing_code');
 
