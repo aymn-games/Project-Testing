@@ -22,7 +22,7 @@
 <style>
 :root{--panel:rgba(18,16,26,.82);--line:rgba(255,255,255,.08);--cyan:#a78bfa;--gold:#c4b5fd;--acc:linear-gradient(90deg,#7c3aed,#a855f7);--text:#f4f2f8;--muted:#a8a3b5;--red:#f87171}
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;overflow:hidden;background:#07060b;color:var(--text);font-family:'IBM Plex Sans Arabic',sans-serif}
+html,body{margin:0;height:100%;overflow:hidden;background:#241640;color:var(--text);font-family:'IBM Plex Sans Arabic',sans-serif}
 button{font-family:inherit;cursor:pointer}
 #stage{position:fixed;inset:0;width:100%;height:100%;display:block}
 .top{position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:clamp(10px,1.2vw,24px);padding:0 clamp(12px,1.25vw,24px);background:rgba(10,9,15,.72);border-bottom:1px solid rgba(255,255,255,.07);backdrop-filter:blur(16px)}
@@ -63,19 +63,19 @@ button{font-family:inherit;cursor:pointer}
 .row.hl .sc{background:var(--acc);color:#fff}
 .more{text-align:center;color:var(--muted);font:600 1em 'IBM Plex Sans Arabic'}
 /* بطاقات أصحاب الأدوار تحت كل منصة */
-.slot{position:fixed;z-index:15;transform:translateX(-50%);width:var(--w,420px);padding:14px 14px 12px;border-radius:22px;background:rgba(12,11,18,.94);border:2px solid rgba(167,139,250,.75);box-shadow:0 16px 44px rgba(0,0,0,.5),0 0 40px rgba(139,92,246,.25);display:none}
+.slot{position:fixed;z-index:15;transform:translateX(-50%);width:var(--w,420px);padding:14px 14px 12px;border-radius:22px;background:linear-gradient(160deg,rgba(76,52,140,.95),rgba(46,30,92,.95));border:2px solid rgba(196,181,253,.85);box-shadow:0 16px 44px rgba(0,0,0,.5),0 0 40px rgba(139,92,246,.25);display:none}
 .slot .badge{position:absolute;top:-18px;left:50%;transform:translateX(-50%);padding:4px 18px;border-radius:999px;background:var(--acc);color:#fff;box-shadow:0 6px 18px rgba(139,92,246,.45);font:700 17px 'IBM Plex Sans Arabic';white-space:nowrap}
 .slot .srow{display:flex;align-items:center;gap:12px;margin-top:4px}
 .slot .ln{flex:1;min-width:0;display:flex;align-items:center;gap:10px}
 .slot .av{font-size:19px;border-width:2px}
 .slot .nm{flex:1;min-width:0;font:700 25px/1.25 'IBM Plex Sans Arabic';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 10px rgba(139,92,246,.5)}
 .slot .st{display:flex;gap:8px;flex-shrink:0}
-.slot .st div{width:78px;display:flex;flex-direction:column;align-items:center;padding:4px 0 2px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.07)}
-.slot .st small{font:600 13px 'IBM Plex Sans Arabic';color:#cfcad9}
+.slot .st div{width:78px;display:flex;flex-direction:column;align-items:center;padding:4px 0 2px;border-radius:14px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2)}
+.slot .st small{font:600 13px 'IBM Plex Sans Arabic';color:#f1edff}
 .slot .st b{font:700 30px/1.1 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:#fff}
-.slot .st .tp{background:rgba(139,92,246,.16);border-color:rgba(167,139,250,.4)}
+.slot .st .tp{background:rgba(167,139,250,.35);border-color:rgba(221,214,254,.55)}
 .slot .st .tp b{color:#ddd6fe}
-.slot .bar{height:8px;margin-top:10px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+.slot .bar{height:8px;margin-top:10px;border-radius:999px;background:rgba(255,255,255,.2);overflow:hidden}
 .slot .bar i{display:block;height:100%;background:var(--acc);border-radius:999px}
 .slot .fx{position:absolute;left:50%;top:-64px;transform:translateX(-50%);padding:2px 18px;border-radius:999px;background:rgba(12,11,18,.9);border:1px solid currentColor;font:700 28px 'IBM Plex Sans Arabic';white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.5);animation:fxUp 1.4s ease forwards}
 @keyframes fxUp{0%{opacity:0;transform:translate(-50%,16px) scale(.7)}20%{opacity:1;transform:translate(-50%,0) scale(1.1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-26px)}}
@@ -287,27 +287,27 @@ const round=()=>S.turns?Math.floor((S.turns-1)/Math.max(1,S.players.length))+1:0
 // ---------- المشهد ----------
 const T=await import('https://unpkg.com/three@0.160.0/build/three.module.js');
 const canvas=$('stage'), R=new T.WebGLRenderer({canvas,antialias:true});
-R.setPixelRatio(Math.min(devicePixelRatio,1.5)); R.shadowMap.enabled=true; R.shadowMap.type=T.PCFSoftShadowMap; R.toneMapping=T.ACESFilmicToneMapping; R.toneMappingExposure=1.1;
-const scene=new T.Scene(); scene.background=new T.Color('#07060b'); scene.fog=new T.Fog('#07060b',30,70);
+R.setPixelRatio(Math.min(devicePixelRatio,1.5)); R.shadowMap.enabled=true; R.shadowMap.type=T.PCFSoftShadowMap; R.toneMapping=T.ACESFilmicToneMapping; R.toneMappingExposure=1.45;
+const scene=new T.Scene(); scene.background=new T.Color('#241640'); scene.fog=new T.Fog('#241640',34,80);
 const cam=new T.PerspectiveCamera(46,1,.1,200); cam.position.set(0,4.6,15.5); const camLook=new T.Vector3(0,3.6,-6);
-scene.add(new T.HemisphereLight('#c4b5fd','#130c26',.9));
-const key=new T.DirectionalLight('#dbe4ff',.8); key.position.set(-6,14,10); key.castShadow=true; key.shadow.mapSize.set(1024,1024); Object.assign(key.shadow.camera,{left:-16,right:16,top:14,bottom:-6}); scene.add(key);
+scene.add(new T.HemisphereLight('#e9e3ff','#3b2a66',1.6));
+const key=new T.DirectionalLight('#f3efff',1.3); key.position.set(-6,14,10); key.castShadow=true; key.shadow.mapSize.set(1024,1024); Object.assign(key.shadow.camera,{left:-16,right:16,top:14,bottom:-6}); scene.add(key);
 const M=(c,o={})=>new T.MeshStandardMaterial({color:c,roughness:.6,...o});
 const glow=c=>new T.MeshBasicMaterial({color:c});
 const mesh=(g,m,x,y,z,p=scene)=>{ const o=new T.Mesh(g,m); o.position.set(x,y,z); o.castShadow=o.receiveShadow=true; p.add(o); return o; };
 const tex=(w,h,draw)=>{ const c=document.createElement('canvas'); c.width=w; c.height=h; draw(c.getContext('2d'),w,h); const t=new T.CanvasTexture(c); t.colorSpace=T.SRGBColorSpace; return t; };
 
 // الأرضية + خطوط دائرية
-const floor=mesh(new T.PlaneGeometry(80,40),M('#140f26',{roughness:.85}),0,0,0); floor.rotation.x=-Math.PI/2; floor.castShadow=false;
-for(let r=6;r<=26;r+=4){ const ring=new T.Mesh(new T.RingGeometry(r,r+.06,96),new T.MeshBasicMaterial({color:'#6d28d9',transparent:true,opacity:.35})); ring.rotation.x=-Math.PI/2; ring.position.set(0,.01,6); scene.add(ring); }
+const floor=mesh(new T.PlaneGeometry(80,40),M('#2d1f52',{roughness:.85}),0,0,0); floor.rotation.x=-Math.PI/2; floor.castShadow=false;
+for(let r=6;r<=26;r+=4){ const ring=new T.Mesh(new T.RingGeometry(r,r+.06,96),new T.MeshBasicMaterial({color:'#8b5cf6',transparent:true,opacity:.45})); ring.rotation.x=-Math.PI/2; ring.position.set(0,.01,6); scene.add(ring); }
 mesh(new T.BoxGeometry(80,.06,.12),glow('#a78bfa'),0,.03,-3.2).castShadow=false;
 mesh(new T.BoxGeometry(80,.06,.12),glow('#7c3aed'),0,.03,-2.7).castShadow=false;
 // الجدار الخلفي + الشاشة
-mesh(new T.BoxGeometry(60,16,.4),M('#0e0a1c'),0,8,-8.4);
+mesh(new T.BoxGeometry(60,16,.4),M('#2a1c4c'),0,8,-8.4);
 const SCR={w:15,h:6.4,y:5,z:-8.05};
 mesh(new T.BoxGeometry(SCR.w+.5,SCR.h+.5,.12),glow('#a78bfa'),0,SCR.y,-8.18);
-mesh(new T.PlaneGeometry(SCR.w,SCR.h),new T.MeshBasicMaterial({color:'#1a1035'}),0,SCR.y,SCR.z);
-for(const s of [-1,1]){ mesh(new T.BoxGeometry(.9,14,.9),M('#120c24'),s*10.4,7,-7.6); mesh(new T.BoxGeometry(.16,10,.16),glow(s<0?'#a78bfa':'#c084fc'),s*10.4+(s*-.5),5,-7.1); }
+mesh(new T.PlaneGeometry(SCR.w,SCR.h),new T.MeshBasicMaterial({color:'#33235e'}),0,SCR.y,SCR.z);
+for(const s of [-1,1]){ mesh(new T.BoxGeometry(.9,14,.9),M('#30205a'),s*10.4,7,-7.6); mesh(new T.BoxGeometry(.16,10,.16),glow(s<0?'#a78bfa':'#c084fc'),s*10.4+(s*-.5),5,-7.1); }
 // إضاءات السقف
 for(let i=-3;i<=3;i++) mesh(new T.SphereGeometry(.32,14,10),new T.MeshStandardMaterial({color:'#e2e8f0',emissive:'#94a3b8',emissiveIntensity:.6}),i*3.4,10.6,-6.8);
 
@@ -354,7 +354,7 @@ function layoutWaiting(instant){ const act=new Set(activeNames()), wait=S.order.
 const PODX={1:[0],2:[-3.6,3.6],3:[-6,0,6]};
 const pods=[];
 function buildPod(){ const g=new T.Group(); scene.add(g);
-  mesh(new T.CylinderGeometry(2.1,2.25,.22,48),M('#1c1236'),0,.11,0,g);
+  mesh(new T.CylinderGeometry(2.1,2.25,.22,48),M('#3a2870'),0,.11,0,g);
   const r1=new T.Mesh(new T.TorusGeometry(2.05,.1,10,64),glow('#a855f7')); r1.rotation.x=Math.PI/2; r1.position.y=.24; g.add(r1);
   const r2=new T.Mesh(new T.TorusGeometry(1.25,.04,8,48),glow('#c4b5fd')); r2.rotation.x=Math.PI/2; r2.position.y=.24; g.add(r2);
   const cone=new T.Mesh(new T.ConeGeometry(2.3,10,40,1,true),new T.MeshBasicMaterial({color:'#ddd6fe',transparent:true,opacity:.07,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending})); cone.position.y=5; g.add(cone);
