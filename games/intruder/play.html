@@ -611,6 +611,19 @@ class Component extends DCLogic {
   meP(){ return this.P(this.myId); }
   doAct(a,arg){ this.send({t:'act',a,arg}); }
   lockedSet(){ const G=this.G, now=Date.now(), s=new Set(); if(!G) return s; CORR.forEach(c=>{ if((G.locks[c.a]||0)>now||(G.locks[c.b]||0)>now) s.add(c.i); }); return s; }
+  // مسار اللاعب لأقرب مهمة باقية: BFS على شبكة 24px داخل الأماكن اللي يقدر يمشي فيها (يتجنب الأبواب المقفلة)
+  taskRoute(ids){ const now=Date.now(), m=this.me, key=ids.join(','), R0=this._route;
+    if(R0&&R0.key===key&&now-R0.t<350&&Math.hypot(R0.x-m.x,R0.y-m.y)<40) return R0.pts;
+    const S=24, W=Math.ceil(2400*MS/S), H=Math.ceil(1700*MS/S), lk=this.lockedSet(), memo=new Int8Array(W*H);
+    const ok=(i,j)=>{ if(i<0||j<0||i>=W||j>=H) return false; const k=i+j*W; if(!memo[k]) memo[k]=this.walk(i*S,j*S,lk)?1:-1; return memo[k]===1; };
+    const snap=(x,y)=>{ const bi=Math.round(x/S), bj=Math.round(y/S); for(let r=0;r<6;r++) for(let a=-r;a<=r;a++) for(let b=-r;b<=r;b++) if(ok(bi+a,bj+b)) return (bi+a)+(bj+b)*W; return -1; };
+    const st=snap(m.x,m.y), goal=new Set(); ids.forEach(id=>{ const t=TASKS.find(x=>x.id===id); if(t){ const g=snap(t.x,t.y); if(g>=0) goal.add(g); } });
+    let pts=null;
+    if(st>=0&&goal.size){ const prev=new Int32Array(W*H).fill(-1), q=[st]; prev[st]=st; let hit=-1;
+      for(let h=0;h<q.length;h++){ const c=q[h]; if(goal.has(c)){ hit=c; break; } const i=c%W, j=(c/W)|0;
+        for(const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){ const a=i+di, b=j+dj; if(!ok(a,b)) continue; const n=a+b*W; if(prev[n]!==-1) continue; if(di&&dj&&!(ok(i+di,j)&&ok(i,j+dj))) continue; prev[n]=c; q.push(n); } }
+      if(hit>=0){ pts=[]; for(let c=hit;c!==st;c=prev[c]) pts.push([(c%W)*S,((c/W)|0)*S]); pts.reverse(); pts=pts.filter((p,i)=>i%2===1||i===pts.length-1); } }
+    this._route={key,t:now,x:m.x,y:m.y,pts}; return pts; }
   walk(x,y,lk){ for(const r of ROOMS) if(inRoom(x,y,r,RAD)) return true; for(const c of CORR){ if(lk.has(c.i)) continue; if(inR(x,y,c,c.v?RAD:-RAD-14,c.v?-RAD-14:RAD)) return true; } return false; }
   move(dt){
     const G=this.G; this.moving=false; if(this.inVent) return; if(!(G.phase==='play'||G.phase==='reveal')||this.state.task) return;
@@ -677,6 +690,9 @@ class Component extends DCLogic {
     VENTS.forEach(v=>{ ctx.fillStyle='#4a4170'; ctx.beginPath(); ctx.roundRect?ctx.roundRect(v.x-36,v.y-24,72,48,8):ctx.rect(v.x-36,v.y-24,72,48); ctx.fill(); ctx.fillStyle='#07060c'; ctx.fillRect(v.x-28,v.y-17,56,34); ctx.strokeStyle='#5b5185'; ctx.lineWidth=4; ctx.beginPath(); for(let i=-2;i<=2;i++){ ctx.moveTo(v.x-24,v.y+i*7); ctx.lineTo(v.x+24,v.y+i*7); } ctx.stroke(); ctx.fillStyle='#6b6099'; [[-31,-19],[31,-19],[-31,19],[31,19]].forEach(([a,b])=>{ ctx.beginPath(); ctx.arc(v.x+a,v.y+b,2.5,0,7); ctx.fill(); }); });
     const mineT=me&&!me.imp&&!G.comms?me.tasks.filter(id=>!me.done.includes(id)):[];
     TASKS.forEach(tk=>{ const on=mineT.includes(tk.id), done=!!(me&&!me.imp&&me.done.includes(tk.id)); this.taskStation(ctx,tk,on,done,t); });
+    const rt=(G.phase==='play'||G.phase==='reveal')&&!ov&&mineT.length&&me&&(me.alive||this.cfg().ghostTasks)&&!this.state.task&&!this.inVent?this.taskRoute(mineT):null;
+    if(rt&&rt.length){ ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.beginPath(); ctx.moveTo(this.me.x,this.me.y+20); rt.forEach(([x,y])=>ctx.lineTo(x,y)); // مسار المهمة
+      ctx.strokeStyle='rgba(250,204,21,.16)'; ctx.lineWidth=26; ctx.stroke(); ctx.setLineDash([3,30]); ctx.lineDashOffset=-t/22; ctx.strokeStyle='rgba(253,224,71,.95)'; ctx.lineWidth=12; ctx.stroke(); ctx.restore(); }
     const C=this.cfg(), ghost=me&&!me.alive, gAll=ghost&&C.ghostSeeAll, vis=me&&me.imp?280*C.impVision:300*C.crewVision*(G.lights&&me&&me.alive?.38:1), see=(x,y)=>!ov&&(gAll||!me||Math.hypot(x-this.me.x,y-this.me.y)<vis+30);
     G.bodies.forEach(b=>{ if(see(b.x,b.y)) this.corpse(ctx,b); });
     const list=G.players.map(p=>{ const self=p.id===this.myId, d=self?this.me:(this.disp[p.id]||p); return {p,self,x:d.x,y:d.y,mv:self?this.moving:d.mv}; }).sort((a,b)=>a.y-b.y);
