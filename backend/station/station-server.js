@@ -12,7 +12,8 @@
  *   عميل → join {code,name,c,skin}       دخول لاعب جديد ← welcome {id,key}
  *   عميل → resume {code,id,key}          رجوع لاعب (تحديث الصفحة/انقطاع)
  *   عميل → leave · skin {skin} · color {c} (لاعب باللوبي) · ping {k}
- *   المذيع → settings {settings} · kick {id} · start · again · lobby · close
+ *   المذيع → settings {settings} · kick {id} (باللوبي أو وسط الجولة) · endStage (ينهي النقاش/التصويت)
+ *            · start · again · lobby · close
  *   المباراة → pos {x,y,f,v} · act {a,arg}
  *   الصوت → rtc {to,data}  (تمرير إشارات WebRTC بين اللاعبين فقط)
  *   خادم → welcome · room {room} · state {G,now} · fx {k} · err {err}
@@ -56,7 +57,7 @@ function publicRoom(room) {
     return {
         code: room.code, started: room.started, max: room.settings.maxPlayers, settings: room.settings,
         hostC: hostColor(room), hostSkin: room.hostSkin, hostOnline: !!room.hostConn,
-        players: room.players.map(function (p) { return Object.assign({ id: p.id, name: p.name, c: p.c }, p.skin); })
+        players: room.players.map(function (p) { return Object.assign({ id: p.id, name: p.name, c: p.c, online: isOnline(room, p.id) }, p.skin); })
     };
 }
 
@@ -65,6 +66,7 @@ function send(client, obj) {
     try { client.socket.write(frame.encodeTextFrame(JSON.stringify(obj))); } catch (err) { logger.error('Station: write failed:', err); }
 }
 function roomClients(room) { return Object.keys(_clients).map(function (k) { return _clients[k]; }).filter(function (c) { return c.code === room.code; }); }
+function isOnline(room, id) { return roomClients(room).some(function (c) { return c.id === id && !c.closed; }); }
 function broadcastRoom(room) { var msg = { t: 'room', room: publicRoom(room) }; roomClients(room).forEach(function (c) { send(c, msg); }); }
 function sendToIds(room, ids, obj) { roomClients(room).forEach(function (c) { if (c.id && (!ids || ids.indexOf(c.id) >= 0)) send(c, obj); }); }
 
@@ -160,7 +162,7 @@ function onMessage(client, msg) {
         if (!rp) return send(client, { t: 'gone', reason: rr ? 'kicked' : 'closed' });
         attach(client, rr, 'player', rp.id);
         send(client, { t: 'welcome', role: 'player', id: rp.id, key: rp.key, code: rr.code });
-        send(client, { t: 'room', room: publicRoom(rr) }); if (rr.game) sendStates(rr);
+        broadcastRoom(rr); if (rr.game) sendStates(rr);
         return;
     }
 
@@ -198,7 +200,10 @@ function onMessage(client, msg) {
         var kid = String(msg.id || ''); if (kid === 'host') return;
         room.players = room.players.filter(function (q) { return q.id !== kid; });
         roomClients(room).forEach(function (c) { if (c.id === kid) { send(c, { t: 'kicked' }); c.code = null; c.id = null; } });
+        if (room.game) room.game.remove(kid);   // وسط الجولة: يطلع من المباراة نفسها (مفيد للي فصل وما رجع)
         return broadcastRoom(room);
+    }
+    if (t === 'endStage') { if (room.game) room.game.endStage(); return;
     }
     if (t === 'start' || t === 'again') {
         var C = room.settings, total = room.players.length + 1;
@@ -214,6 +219,7 @@ function removeClient(id) {
     c.closed = true; delete _clients[id];
     var room = c.code && _rooms[c.code];
     if (room && room.hostConn === c) { room.hostConn = null; room.hostGoneAt = Date.now(); broadcastRoom(room); }
+    else if (room && c.role === 'player' && c.id) broadcastRoom(room);   // المذيع يشوف مين فاصل
 }
 
 function tickAll() {
