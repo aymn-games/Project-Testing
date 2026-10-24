@@ -656,7 +656,8 @@ migrateSingleCardTable('user_win_cards');
 [
     { image_filename: 'frame-ghamid-alhayla.png', display_name_ar: 'غامد الهيلا' },
     // منح محدود — حصري لشخص واحد، خارج المتجر وعرض الإطارات.
-    { image_filename: 'frame-sakura-pink.png', display_name_ar: 'ساكورا الوردي (منح محدود)' }
+    { image_filename: 'frame-sakura-pink.png', display_name_ar: 'ساكورا الوردي (منح محدود)' },
+    { image_filename: 'frame-pink-swan.png', display_name_ar: 'البجعة الوردية (منح محدود)' }
 ].forEach(function (frame) {
     var exists = db.prepare('SELECT id FROM custom_frames WHERE image_filename = ?').get(frame.image_filename);
     if (!exists) {
