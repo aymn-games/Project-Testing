@@ -344,6 +344,92 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 7.41, avatarTopPct: 28.68, avatarWidthPct: 16.94, avatarHeightPct: 69.62,
             nameLeftPct: 31.86, nameTopPct: 50.00, nameWidthPct: 48.34, nameHeightPct: 42.83
         },
+        // إطار "ساكورا الوردي" — منح محدود (حصري لشخص واحد، خارج المتجر
+        // وعرض الإطارات). مقاس بالبكسل: نافذة المحتوى = أعلى/أسفل بكسل غير
+        // شفاف (9→705)، مربع الصورة = حدود الفتحة الشفافة (212→663 × 131→569)،
+        // ولوح الاسم = داخل اللوح بين الحدود قبل الوردة (770→1820 × 270→490).
+        // اللوح زهري فاتح — اسم وردي غامق.
+        'frame-sakura-pink.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 9, contentHeight: 697,
+            avatarLeftPct: 9.76, avatarTopPct: 17.50, avatarWidthPct: 20.81, avatarHeightPct: 62.98,
+            nameLeftPct: 35.45, nameTopPct: 37.45, nameWidthPct: 48.34, nameHeightPct: 31.56,
+            textColor: '#5a1e3a'
+        },
+        // إطار "البجعة الوردية" — منح محدود (حصري لشخص واحد، خارج المتجر
+        // وعرض الإطارات). مقاس بالبكسل: نافذة المحتوى 6→706، مربع الصورة =
+        // حدود الفتحة الشفافة (245→691 × 116→570)، ولوح الاسم = داخل الكبسولة
+        // بعيداً عن أطرافها المدوّرة والوردة (820→1790 × 305→495). اللوح
+        // زهري فاتح — اسم وردي غامق.
+        'frame-pink-swan.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 6, contentHeight: 700,
+            avatarLeftPct: 11.28, avatarTopPct: 15.71, avatarWidthPct: 20.58, avatarHeightPct: 65.00,
+            nameLeftPct: 37.75, nameTopPct: 42.71, nameWidthPct: 44.66, nameHeightPct: 27.14,
+            textColor: '#5a1e3a'
+        },
+        // إطار "عزوز" — منح محدود (حصري لشخص واحد). الاسم "عزوز" مطبوع بالصورة
+        // نفسها مع توهج خفيف مدمج حوله، فـprintedName يخفي اسم تيك توك فوق
+        // الإطار (يبقى كـtitle عند التمرير). اسم اللاعب يظهر عادي بباقي اللعبة
+        // (البطاقات بدون إطار). مقاس بالبكسل: نافذة المحتوى 14→711، الفتحة
+        // 185→663 × 142→572، ومربع الاسم = حدود الكلمة المطبوعة 940→1640 ×
+        // 285→520 (يُستخدم فقط لتوسيط القص).
+        'frame-azooz.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 14, contentHeight: 697,
+            avatarLeftPct: 8.52, avatarTopPct: 18.36, avatarWidthPct: 22.05, avatarHeightPct: 61.84,
+            nameLeftPct: 43.28, nameTopPct: 38.88, nameWidthPct: 32.23, nameHeightPct: 33.72,
+            printedName: true
+        },
+        // [دفعة إطارات المتجر] 7 إطارات 2172×724 — مقاسة بالبكسل: مربع الصورة =
+        // حدود الفتحة الشفافة، لوح الاسم = داخل اللوح بعيداً عن الزخارف والشخصيات
+        // المتداخلة، نافذة المحتوى = أعلى/أسفل بكسل غير شفاف. ألواح فاتحة = نص
+        // غامق بلون الإطار، لوح النار والماء داكن = أبيض افتراضي.
+        // [الثلج الكريستالي] hole 230→666 × 139→542, name 860→1780 × 240→480, content 18→681
+        'frame-ice-crystal.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 18, contentHeight: 663,
+            avatarLeftPct: 10.59, avatarTopPct: 18.25, avatarWidthPct: 20.12, avatarHeightPct: 60.94,
+            nameLeftPct: 39.59, nameTopPct: 33.48, nameWidthPct: 42.36, nameHeightPct: 36.20,
+            textColor: '#1c3a5e'
+        },
+        // [الدبدوب] hole 189→672 × 156→619, name 800→1960 × 355→580, content 4→689
+        'frame-cute-bear.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 4, contentHeight: 685,
+            avatarLeftPct: 8.70, avatarTopPct: 22.19, avatarWidthPct: 22.28, avatarHeightPct: 67.74,
+            nameLeftPct: 36.83, nameTopPct: 51.24, nameWidthPct: 53.41, nameHeightPct: 32.85,
+            textColor: '#7a2d3a'
+        },
+        // [القط الخفاش] hole 138→621 × 106→577, name 1130→2070 × 285→545, content 34→657
+        'frame-bat-cat.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 34, contentHeight: 623,
+            avatarLeftPct: 6.35, avatarTopPct: 11.56, avatarWidthPct: 22.28, avatarHeightPct: 75.76,
+            nameLeftPct: 52.03, nameTopPct: 40.29, nameWidthPct: 43.28, nameHeightPct: 41.73,
+            textColor: '#2a1a12'
+        },
+        // [البطة الوردية] hole 178→674 × 162→619, name 820→1990 × 440→620, content 10→712
+        'frame-pink-duck.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 10, contentHeight: 702,
+            avatarLeftPct: 8.20, avatarTopPct: 21.65, avatarWidthPct: 22.88, avatarHeightPct: 65.24,
+            nameLeftPct: 37.75, nameTopPct: 61.25, nameWidthPct: 53.87, nameHeightPct: 25.64,
+            textColor: '#8a1f4a'
+        },
+        // [الولد الكول] hole 179→615 × 149→574, name 1000→2000 × 225→515, content 7→690
+        'frame-cool-boy.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 7, contentHeight: 683,
+            avatarLeftPct: 8.24, avatarTopPct: 20.79, avatarWidthPct: 20.12, avatarHeightPct: 62.37,
+            nameLeftPct: 46.04, nameTopPct: 31.92, nameWidthPct: 46.04, nameHeightPct: 42.46,
+            textColor: '#2a2622'
+        },
+        // [الكاوبوي] hole 182→641 × 147→598, name 760→1900 × 280→525, content 10→712
+        'frame-cowboy.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 10, contentHeight: 702,
+            avatarLeftPct: 8.38, avatarTopPct: 19.52, avatarWidthPct: 21.18, avatarHeightPct: 64.39,
+            nameLeftPct: 34.99, nameTopPct: 38.46, nameWidthPct: 52.49, nameHeightPct: 34.90,
+            textColor: '#3e2410'
+        },
+        // [النار والماء] hole 196→638 × 145→583, name 960→1960 × 280→550, content 10→705
+        'frame-fire-water.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 10, contentHeight: 695,
+            avatarLeftPct: 9.02, avatarTopPct: 19.42, avatarWidthPct: 20.40, avatarHeightPct: 63.17,
+            nameLeftPct: 44.20, nameTopPct: 38.85, nameWidthPct: 46.04, nameHeightPct: 38.85
+        },
         'frame-girls-bunny-blue.png': {
             canvasW: 2158, canvasH: 729, contentTop: 29, contentHeight: 511,
             avatarLeftPct: 12.23, avatarTopPct: 29.55, avatarWidthPct: 17.15, avatarHeightPct: 68.88,
@@ -657,12 +743,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             ? '<img class="agp-pcard-tpl-avatar" style="' + avatarStyle + '" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;agp-pcard-tpl-avatar agp-pcard-tpl-avatar--fallback&quot; style=&quot;' + avatarStyle + '&quot;>' + escapeHtml(initials(name)) + '</div>\';">'
             : '<div class="agp-pcard-tpl-avatar agp-pcard-tpl-avatar--fallback" style="' + avatarStyle + '">' + escapeHtml(initials(name)) + '</div>';
 
-        return '<span class="agp-pcard-tpl' + (opts && opts.outClass ? ' ' + opts.outClass : '') + '" style="' + wrapStyle + '">' +
-            avatarHtml +
-            '<span class="agp-pcard-tpl-frame-img" style="' + frameImgStyle + '"></span>' +
+        // printedName: الاسم مطبوع بصورة الإطار نفسها — لا نكتب اسم اللاعب فوقه.
+        var nameHtml = tpl.printedName ? '' :
             '<span class="agp-pcard-tpl-name" data-agp-pcard-name="1" style="' + nameStyle + '">' +
             '<span class="agp-pcard-name-inner">' + escapeHtml(name) + '</span>' +
-            '</span>' +
+            '</span>';
+
+        return '<span class="agp-pcard-tpl' + (opts && opts.outClass ? ' ' + opts.outClass : '') + '" style="' + wrapStyle + '"' +
+            (tpl.printedName ? ' title="' + escapeHtml(name) + '"' : '') + '>' +
+            avatarHtml +
+            '<span class="agp-pcard-tpl-frame-img" style="' + frameImgStyle + '"></span>' +
+            nameHtml +
             '</span>';
     }
 

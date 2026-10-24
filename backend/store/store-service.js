@@ -684,8 +684,8 @@ function deliveryOptions() {
     var frames = collectiblesService.getCatalog().map(function (c) {
         return { value: 'catalog:' + c.slug, label: 'إطار: ' + (c.display_name_ar || c.slug) };
     });
-    var elims = collectiblesService.getElimCardCatalog().map(function (c) { return { value: 'elim:' + c.key, label: c.displayNameAr }; });
-    var wins = collectiblesService.getWinCardCatalog().map(function (c) { return { value: 'win:' + c.key, label: c.displayNameAr }; });
+    var elims = collectiblesService.getElimCardCatalog().filter(function (c) { return !c.limited; }).map(function (c) { return { value: 'elim:' + c.key, label: c.displayNameAr }; });
+    var wins = collectiblesService.getWinCardCatalog().filter(function (c) { return !c.limited; }).map(function (c) { return { value: 'win:' + c.key, label: c.displayNameAr }; });
     return [{ value: '', label: 'بدون تسليم تلقائي' }, { value: 'frame', label: 'إطار بروفايل (صورة المنتج)' }]
         .concat(frames, elims, wins);
 }
@@ -1142,6 +1142,40 @@ var CATALOG_V2_REMOVED_NAMES = ['إطار فوز الريس', 'إطار عملي
         db.prepare("INSERT INTO app_settings (key, value) VALUES ('store_catalog_v2', ?)").run(String(t));
     })();
     logger.log('Store: catalog v2 applied (design frames at ' + CATALOG_V2_PRICE + ')');
+}());
+
+// دفعة إطارات جديدة للمتجر (مرة وحدة لكل قاعدة بيانات) — نفس قسم «إطارات
+// عامة» ونفس سعر CATALOG_V2_PRICE وتسليم 'frame'. ما يضيف منتج صورته موجودة.
+var STORE_FRAMES_BATCH_3 = [
+    ['إطار الثلج الكريستالي', 'frame-ice-crystal.png'],
+    ['إطار الدبدوب', 'frame-cute-bear.png'],
+    ['إطار القط الخفاش', 'frame-bat-cat.png'],
+    ['إطار البطة الوردية', 'frame-pink-duck.png'],
+    ['إطار الولد الكول', 'frame-cool-boy.png'],
+    ['إطار الكاوبوي', 'frame-cowboy.png'],
+    ['إطار النار والماء', 'frame-fire-water.png']
+];
+
+(function ensureStoreFramesBatch3() {
+    if (db.prepare("SELECT 1 FROM app_settings WHERE key = 'store_frames_batch_3'").get()) return;
+    var t = now();
+    db.transaction(function () {
+        var cat = db.prepare("SELECT id FROM store_categories WHERE name = 'إطارات عامة' AND kind = 'normal'").get();
+        if (!cat) {
+            var order = db.prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM store_categories').get().n;
+            cat = { id: Number(db.prepare("INSERT INTO store_categories (name, kind, sort_order, created_at) VALUES ('إطارات عامة', 'normal', ?, ?)").run(order, t).lastInsertRowid) };
+        }
+        var insert = db.prepare(
+            "INSERT INTO store_products (category_id, name, price, badge, image_url, hidden, delivery, created_at) VALUES (?, ?, ?, '', ?, 0, 'frame', ?)"
+        );
+        // created_at أحدث من كل الموجود عشان تطلع أول المتجر بنفس ترتيب القائمة.
+        STORE_FRAMES_BATCH_3.forEach(function (f, i) {
+            if (db.prepare('SELECT 1 FROM store_products WHERE image_url = ?').get(f[1])) return;
+            insert.run(cat.id, f[0], CATALOG_V2_PRICE, f[1], t + STORE_FRAMES_BATCH_3.length - i);
+        });
+        db.prepare("INSERT INTO app_settings (key, value) VALUES ('store_frames_batch_3', ?)").run(String(t));
+    })();
+    logger.log('Store: frames batch 3 added (' + STORE_FRAMES_BATCH_3.length + ' frames)');
 }());
 
 // حذف الاستريمر «الريس» من المتجر (مرة وحدة) — نفس حذفه من لوحة الإدارة.

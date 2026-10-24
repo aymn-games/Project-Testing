@@ -71,6 +71,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             detailColor: 'linear-gradient(180deg,#3a5fa8 0%,#2b4a86 50%,#16306a 100%)',
             fallbackBg: '#dce7f7',
             fallbackColor: '#2b4a86'
+        },
+        // ساكورا الوردي — منح محدود (حصري لشخص واحد). 1024×1536. الدائرة
+        // شفافة (281→743 × 304→773)، الاسم داخل اللوح البيضاوي، والنقاط/الترتيب
+        // بالكرت السفلي. اللوحان زهري فاتح — نص وردي غامق.
+        'sakura-pink': {
+            image: 'win-card-sakura-pink.png',
+            width: 1024,
+            height: 1536,
+            photoHole: { x: 280, y: 306, w: 465, h: 465 },
+            holeBleed: 8,
+            nameBox: { x: 240, y: 950, w: 545, h: 100 },
+            detailBox: { x: 180, y: 1185, w: 640, h: 185 },
+            textColor: 'linear-gradient(180deg,#8a3a5c 0%,#6b2546 50%,#4a1530 100%)',
+            detailColor: 'linear-gradient(180deg,#8a3a5c 0%,#6b2546 50%,#4a1530 100%)',
+            fallbackBg: '#f7dbe4',
+            fallbackColor: '#6b2546'
         }
     };
 
