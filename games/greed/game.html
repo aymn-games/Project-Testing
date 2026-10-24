@@ -134,9 +134,6 @@ button{font-family:inherit;cursor:pointer}
 .wbtns button:hover{filter:brightness(1.2)}.wbtns button:active{transform:scale(.97)}
 .wbtns .p{border:none;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 8px 22px rgba(124,58,237,.4)}
 .wbtns .s{border:1px solid rgba(167,139,250,.55);background:rgba(139,92,246,.16);color:#ddd6fe}
-#wConf{position:absolute;inset:0;pointer-events:none}
-#wConf span{position:absolute;bottom:-30px}
-@keyframes floatUp{0%{transform:translateY(0) rotate(0deg);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-1300px) rotate(var(--r));opacity:0}}
 @keyframes agpPop{0%{opacity:0;transform:scale(.85) translateY(10px)}100%{opacity:1;transform:none}}
 @keyframes agpCrown{0%{opacity:0;transform:translateX(calc(-50% - 12px)) translateY(-14px) rotate(-6deg)}60%{opacity:1}100%{opacity:1;transform:translateX(calc(-50% - 12px)) translateY(0) rotate(0)}}
 @keyframes agpShine{0%{transform:translateX(-140%) rotate(20deg)}100%{transform:translateX(240%) rotate(20deg)}}
@@ -215,7 +212,7 @@ button{font-family:inherit;cursor:pointer}
   <div style="padding:clamp(12px,3vw,18px) clamp(14px,3.5vw,22px) 0"><div class="tabs" id="setTabs"><button data-tab="0" class="on">الإعدادات</button><button data-tab="1">اللاعبين</button></div></div>
   <div class="db" id="tab0">
     <div class="sc2"><div class="t"><b>نقاط الفوز</b><small>أول لاعب يصل هذا الرصيد يفوز</small></div><div class="seg" id="cTarget" style="grid-template-columns:repeat(4,minmax(0,1fr))"></div></div>
-    <div class="sc2"><div class="t"><b>مهلة صاحب الدور</b><small>من لا يكتب «لف» أو «توقف» في المهلة يضيع دوره، أو تُحفظ نقاطه إن كان قد لفّ</small></div><div class="seg" id="cTime" style="grid-template-columns:repeat(4,minmax(0,1fr))"></div></div>
+    <div class="sc2"><div class="t"><b>مهلة صاحب الدور</b><small>تتجدد مع كل لفة. من لا يكتب «لف» أو «توقف» في المهلة يرجع لمكانه وتضيع نقاط دوره</small></div><div class="seg" id="cTime" style="grid-template-columns:repeat(4,minmax(0,1fr))"></div></div>
     <div class="sc2"><div class="t"><b>تخطّي الأدوار الحالية</b><small>ينهي دور اللاعبين على المسرح الآن ويدخل اللي بعدهم (تُحفظ نقاط من لفّ)</small></div><button class="ghost" id="skipBtn">تخطّي الأدوار</button></div>
   </div>
   <div class="db" id="tab1" style="display:none"><div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px 6px"><span style="font:700 15px 'IBM Plex Sans Arabic';color:#cfcad9">قائمة اللاعبين</span><span style="font:700 14px 'IBM Plex Sans Arabic';color:#a78bfa" id="pCount"></span></div><div id="pRows" style="display:flex;flex-direction:column;gap:8px"></div></div>
@@ -230,7 +227,7 @@ button{font-family:inherit;cursor:pointer}
 </div></div>
 <div class="modal" id="pauseM"><div class="box"><h3>لوحة النقاط</h3><div class="mlist" id="pList"></div><div class="mb" style="grid-template-columns:1fr"><button class="blue" id="resumeBtn">متابعة اللعب</button></div></div></div>
 <div class="modal" id="exitM"><div class="box"><h3>الخروج من المباراة؟</h3><p>بترجع لمكتبة الألعاب وتنتهي المباراة الحالية</p><div class="mb"><button data-close>إلغاء</button><button class="red" id="exitYes">خروج</button></div></div></div>
-<div id="win"><div id="wConf"></div><div class="wrap">
+<div id="win"><div class="wrap">
   <div id="wVid"><span style="font:500 13px 'IBM Plex Sans Arabic';color:#8a8596">فيديو الفوز</span></div>
   <h2>🏆 الفائز في لعبة "الطمع"</h2>
   <div id="wCards"></div>
@@ -244,7 +241,8 @@ button{font-family:inherit;cursor:pointer}
 //  الأدوار: كل صاحب دور يقف على منصة أمام ماكينة «رقم الحظ» (1 إلى 6):
 //   لف   → رقم جديد يُضاف لنقاط الدور، ورقم 1 يضيّع نقاط الدور وينهي دوره.
 //   توقف → نقاط الدور تُضاف لرصيده وينتهي دوره.
-//   انتهاء المهلة → تُحفظ نقاطه إن كان قد لفّ، وإلا يضيع دوره.
+//   انتهاء المهلة → يرجع لمكانه بدون أي نقاط جديدة (تضيع نقاط الدور).
+//   مع كل رقم غير 1 تحتفل الشخصية وتتجدد المهلة، ومع 1 أو انتهاء المهلة تزعل وترجع لمكانها.
 //  أول من يصل الهدف يفوز. النقاط تُرسل لنظام نقاط المنصة عند الفوز.
 // ============================================================
 const SETUP=GR.readJSON(GR.keys.setup,null), ROSTER=GR.readJSON(GR.keys.roster,null);
@@ -252,7 +250,7 @@ if(!SETUP) location.replace('index.html'); else if(!Array.isArray(ROSTER)||ROSTE
 const reg=GR.createRegistry(GR.readJSON(GR.keys.players,{}));
 const TARGETS=[30,50,100,150], TIMES=[10,15,20,30];
 const num=s=>parseInt(String(s||'').replace(/\D+/g,' ').trim(),10)||0;
-const cfg={ target:TARGETS.includes(num(SETUP&&SETUP.winPoints))?num(SETUP.winPoints):50, time:TIMES.includes(num(SETUP&&SETUP.turnSec))?num(SETUP.turnSec):20,
+const cfg={ target:TARGETS.includes(num(SETUP&&SETUP.winPoints))?num(SETUP.winPoints):50, time:TIMES.includes(num(SETUP&&SETUP.turnSec))?num(SETUP.turnSec):15,
   per:/^3/.test(String(SETUP&&SETUP.perTurn||''))?3:/^لاعبان/.test(String(SETUP&&SETUP.perTurn||''))?2:1,
   keyword:String(SETUP&&SETUP.keyword||'').trim(), max:Math.max(2,Math.min(200,+(SETUP&&SETUP.maxPlayers)||50)), followers:SETUP&&SETUP.who==='المتابعون فقط' };
 // نفس ألوان شخصيات سفينة النجاة (games/survival-ship/game.html → LOOKS)
@@ -336,7 +334,7 @@ function figure(d){ const G=new T.Group(), Mt=(c,o={})=>new T.MeshStandardMateri
     const br=add(new T.CapsuleGeometry(.025,.13,3,6),d.hair,s*.22,.2,.55,head); br.rotation.z=Math.PI/2+s*.15;
     const ch=add(new T.SphereGeometry(.09,10,8),Mt('#fb7185',{transparent:true,opacity:.55}),s*.36,-.2,.47,head); ch.scale.set(1,.55,.3); }
   const mouth=add(new T.TorusGeometry(.08,.022,6,14,Math.PI),'#9f1239',0,-.2,.57,head); mouth.rotation.z=Math.PI;
-  G.userData={legs,arms,head}; return G; }
+  G.userData={legs,arms,head,mouth}; return G; }
 
 const figs=new Map(); // name → {g, pos, to, from, t, dur, ph}
 function figOf(p){ let f=figs.get(p.name); if(!f){ f={g:figure(p.look),pos:new T.Vector3(),from:null,to:null,t:0,dur:0,ph:Math.random()*6}; scene.add(f.g); figs.set(p.name,f);
@@ -405,12 +403,13 @@ function fx(i,html,color){ const e=document.createElement('div'); e.className='f
 function cmd(i,c){ const s=S.slots[i]; if(!s||!s.p||frozen()) return; if(s.rolling>0){ s.queued=c; return; } if(s.busy) return;
   if(c==='spin'){ s.busy=true; s.rolling=1.1; s.rolled=true; pods[i].pull=0; }
   else if(c==='stop'){ if(!s.rolled) return; s.busy=true; fx(i,`+${s.turnPts} للرصيد`,'#6ee7b7'); setTimeout(()=>endTurn(i,true),700); } }
+const react=(p,type,dur)=>{ const f=figs.get(p.name); if(f) f.react={type,t:0,dur}; };
 function landRoll(i){ const s=S.slots[i], r=1+Math.floor(Math.random()*6); s.res=r;
-  if(r===1){ drawDisp(pods[i],'1','#f87171'); fx(i,'1 · ضاعت نقاط الدور','#fca5a5'); s.turnPts=0; setTimeout(()=>endTurn(i,false),1500); return; }
-  drawDisp(pods[i],String(r),'#c4b5fd'); s.turnPts+=r; fx(i,`+${r}`,'#c4b5fd');
+  if(r===1){ drawDisp(pods[i],'1','#f87171'); fx(i,'1 · ضاعت نقاط الدور','#fca5a5'); s.turnPts=0; react(s.p,'sad',2.2); setTimeout(()=>endTurn(i,false),1700); return; }
+  drawDisp(pods[i],String(r),'#c4b5fd'); s.turnPts+=r; fx(i,`+${r}`,'#c4b5fd'); react(s.p,'cheer',1.2);
   if(s.p.total+s.turnPts>=cfg.target){ s.p.total+=s.turnPts; s.turnPts=0; return setTimeout(()=>win(s.p,i),700); }
   s.left=cfg.time; s.busy=false; if(s.queued){ const c=s.queued; s.queued=null; setTimeout(()=>cmd(i,c),500); } }
-function timeout(i){ const s=S.slots[i]; s.busy=true; if(s.rolled&&s.turnPts>0){ fx(i,`انتهى الوقت · +${s.turnPts}`,'#6ee7b7'); setTimeout(()=>endTurn(i,true),900); } else { fx(i,'انتهى الوقت · ضاع الدور','#fca5a5'); setTimeout(()=>endTurn(i,false),900); } }
+function timeout(i){ const s=S.slots[i]; s.busy=true; fx(i,s.turnPts>0?'انتهى الوقت · ضاعت نقاط الدور':'انتهى الوقت · ضاع الدور','#fca5a5'); s.turnPts=0; react(s.p,'sad',2.2); setTimeout(()=>endTurn(i,false),1200); }
 
 function win(p,i){ if(S.phase==='over') return; S.phase='over'; S.winner=p; S.pts='pending'; S.slots.forEach((s,k)=>{ if(s&&s.p&&s.p!==p){ const f=figs.get(s.p.name); if(f&&f.home) walkTo(f,f.home,1.1); } S.slots[k]={p:null}; });
   renderUI(); $('hint').style.display='none';
@@ -428,8 +427,6 @@ function winCardHtml(){ const p=S.winner, P=reg.player(p.name), WC=window.AymanG
 function showWin(){ const p=S.winner; $('wCards').innerHTML=winCardHtml();
   const vid=reg.winVideo(p.name), V=$('wVid'); V.querySelector('video')?.remove(); V.style.display=vid?'grid':'none';
   if(vid){ const v=document.createElement('video'); v.src=vid; v.loop=true; v.playsInline=true; v.autoplay=true; v.onerror=()=>v.remove(); V.appendChild(v); v.muted=false; v.play()?.catch(()=>{ v.muted=true; v.play().catch(()=>{}); }); }
-  const cols=['#fbbf24','#a78bfa','#34d399','#f472b6','#60a5fa','#fde68a'], r=(a,b)=>a+Math.random()*(b-a);
-  $('wConf').innerHTML=Array.from({length:70},(_,i)=>`<span style="left:${r(0,100)}%;width:${r(8,14)}px;height:${r(12,22)}px;border-radius:${i%3?'2px':'50%'};background:${cols[i%cols.length]};--r:${r(-540,540)}deg;animation:floatUp ${r(3.5,6).toFixed(2)}s linear ${r(0,2.5).toFixed(2)}s infinite"></span>`).join('');
   $('win').style.display='flex'; }
 // نظام نقاط المنصة — مرة واحدة لكل مباراة (CLAUDE.md)
 function report(p){ if(S.reported) return; S.reported=true; const A=window.AGPAuth; if(!A||typeof A.reportMatchPoints!=='function'){ S.pts=null; return; }
@@ -447,7 +444,7 @@ $('endBtn').onclick=()=>open('exitM',true);
 $('exitYes').onclick=()=>{ location.href=GR.libraryUrl; };
 $('leaveBtn').onclick=()=>{ location.href=GR.libraryUrl; };
 $('newBtn').onclick=()=>{ try{ localStorage.removeItem(GR.keys.roster); localStorage.removeItem(GR.keys.players); }catch(e){} location.href='lobby.html'; };
-$('againBtn').onclick=()=>{ $('win').style.display='none'; $('wConf').innerHTML=''; S.players.forEach(p=>p.total=0); Object.assign(S,{phase:'ready',order:[],next:0,turns:0,slots:[],winner:null,reported:false,paused:false}); layoutWaiting(); renderUI(); };
+$('againBtn').onclick=()=>{ $('win').style.display='none'; S.players.forEach(p=>p.total=0); Object.assign(S,{phase:'ready',order:[],next:0,turns:0,slots:[],winner:null,reported:false,paused:false}); layoutWaiting(); renderUI(); };
 $('fsBtn').onclick=()=>{ document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.().catch(()=>{}); };
 document.addEventListener('fullscreenchange',()=>{ $('fsLbl').textContent=document.fullscreenElement?'الخروج من ملء الشاشة':'ملء الشاشة'; });
 
@@ -503,11 +500,19 @@ function tick(){ requestAnimationFrame(tick); const raw=Math.min(clock.getDelta(
   // الشخصيات
   const focus=new Set(activeNames());
   figs.forEach((f,n)=>{ if(!f.g.visible) return; const U=f.g.userData, q=t*2+f.ph;
+    const R=f.react; if(R){ R.t+=dt; if(R.t>=R.dur&&!(R.type==='sad'&&f.to)) f.react=null; }
+    const sad=f.react&&f.react.type==='sad'; U.mouth.rotation.z=sad?0:Math.PI; U.mouth.position.y=sad?-.25:-.2;
     if(f.to){ f.t+=dt; const k=Math.min(1,f.t/f.dur), e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2; f.g.position.lerpVectors(f.from,f.to,e);
-      const dx=f.to.x-f.from.x, dz=f.to.z-f.from.z; f.g.rotation.y=Math.atan2(dx,dz); U.legs[0].rotation.x=Math.sin(f.t*14)*.6; U.legs[1].rotation.x=-Math.sin(f.t*14)*.6; U.arms[0].rotation.x=-Math.sin(f.t*14)*.5; U.arms[1].rotation.x=Math.sin(f.t*14)*.5;
-      if(k>=1){ f.to=null; f.g.rotation.y=0; } return; }
+      const dx=f.to.x-f.from.x, dz=f.to.z-f.from.z, sw=sad?.35:1; f.g.rotation.y=Math.atan2(dx,dz); U.legs[0].rotation.x=Math.sin(f.t*14)*.6*sw; U.legs[1].rotation.x=-Math.sin(f.t*14)*.6*sw; U.arms[0].rotation.x=-Math.sin(f.t*14)*.5*sw; U.arms[1].rotation.x=Math.sin(f.t*14)*.5*sw;
+      U.arms[0].rotation.z=-.08; U.arms[1].rotation.z=.08; U.head.rotation.x=sad?.4:0; U.head.rotation.z=0;
+      if(k>=1){ f.to=null; f.g.rotation.y=0; if(sad) f.react=null; } return; }
     const baseY=f.home&&!focus.has(n)?0:(focus.has(n)?.24:0);
     if(ph==='over'&&S.winner&&S.winner.name===n){ const c=t*7; f.g.position.y=baseY+Math.abs(Math.sin(c*.5))*1.1; U.arms[0].rotation.z=-2.7+Math.sin(c)*.35; U.arms[1].rotation.z=2.7-Math.sin(c)*.35; U.arms[0].rotation.x=U.arms[1].rotation.x=0; f.g.rotation.y+=dt*4; U.head.rotation.z=Math.sin(c)*.15; return; }
+    if(f.react&&f.react.type==='cheer'){ const c=f.react.t*9; f.g.position.y=baseY+Math.abs(Math.sin(c*.5))*.8; U.arms[0].rotation.z=-2.6+Math.sin(c)*.3; U.arms[1].rotation.z=2.6-Math.sin(c)*.3; U.arms[0].rotation.x=U.arms[1].rotation.x=0;
+      U.legs[0].rotation.x=Math.sin(c*.5)*.35; U.legs[1].rotation.x=-Math.sin(c*.5)*.35; U.head.rotation.x=-.15; U.head.rotation.z=Math.sin(c)*.12; f.g.rotation.y=Math.sin(c*.5)*.25; return; }
+    if(sad){ const c=f.react.t; f.g.position.y=baseY-Math.min(.12,c*.3); U.head.rotation.x=.45; U.head.rotation.z=Math.sin(c*10)*.08*Math.max(0,1-c); U.arms[0].rotation.z=-.05; U.arms[1].rotation.z=.05;
+      U.arms[0].rotation.x=U.arms[1].rotation.x=.15; U.legs[0].rotation.x=U.legs[1].rotation.x=0; f.g.rotation.y=0; return; }
+    U.head.rotation.x=0;
     const cur=focus.has(n); f.g.position.y=baseY+Math.abs(Math.sin(q*(cur?1.6:1)))*(cur?.1:.04);
     U.arms[0].rotation.x=Math.sin(q)*(cur?.5:.15); U.arms[1].rotation.x=-Math.sin(q)*(cur?.5:.15); U.arms[0].rotation.z=-.18; U.arms[1].rotation.z=.18;
     U.head.rotation.z=Math.sin(q*.5)*.06; U.legs[0].rotation.x=U.legs[1].rotation.x=0; f.g.rotation.y=cur?Math.sin(t)*.12:Math.sin(q*.3)*.2; });
