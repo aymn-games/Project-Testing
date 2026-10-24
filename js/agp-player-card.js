@@ -366,6 +366,58 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             nameLeftPct: 37.75, nameTopPct: 42.71, nameWidthPct: 44.66, nameHeightPct: 27.14,
             textColor: '#5a1e3a'
         },
+        // [دفعة إطارات المتجر] 7 إطارات 2172×724 — مقاسة بالبكسل: مربع الصورة =
+        // حدود الفتحة الشفافة، لوح الاسم = داخل اللوح بعيداً عن الزخارف والشخصيات
+        // المتداخلة، نافذة المحتوى = أعلى/أسفل بكسل غير شفاف. ألواح فاتحة = نص
+        // غامق بلون الإطار، لوح النار والماء داكن = أبيض افتراضي.
+        // [الثلج الكريستالي] hole 230→666 × 139→542, name 860→1780 × 240→480, content 18→681
+        'frame-ice-crystal.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 18, contentHeight: 663,
+            avatarLeftPct: 10.59, avatarTopPct: 18.25, avatarWidthPct: 20.12, avatarHeightPct: 60.94,
+            nameLeftPct: 39.59, nameTopPct: 33.48, nameWidthPct: 42.36, nameHeightPct: 36.20,
+            textColor: '#1c3a5e'
+        },
+        // [الدبدوب] hole 189→672 × 156→619, name 800→1960 × 355→580, content 4→689
+        'frame-cute-bear.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 4, contentHeight: 685,
+            avatarLeftPct: 8.70, avatarTopPct: 22.19, avatarWidthPct: 22.28, avatarHeightPct: 67.74,
+            nameLeftPct: 36.83, nameTopPct: 51.24, nameWidthPct: 53.41, nameHeightPct: 32.85,
+            textColor: '#7a2d3a'
+        },
+        // [القط الخفاش] hole 138→621 × 106→577, name 1130→2070 × 285→545, content 34→657
+        'frame-bat-cat.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 34, contentHeight: 623,
+            avatarLeftPct: 6.35, avatarTopPct: 11.56, avatarWidthPct: 22.28, avatarHeightPct: 75.76,
+            nameLeftPct: 52.03, nameTopPct: 40.29, nameWidthPct: 43.28, nameHeightPct: 41.73,
+            textColor: '#2a1a12'
+        },
+        // [البطة الوردية] hole 178→674 × 162→619, name 820→1990 × 440→620, content 10→712
+        'frame-pink-duck.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 10, contentHeight: 702,
+            avatarLeftPct: 8.20, avatarTopPct: 21.65, avatarWidthPct: 22.88, avatarHeightPct: 65.24,
+            nameLeftPct: 37.75, nameTopPct: 61.25, nameWidthPct: 53.87, nameHeightPct: 25.64,
+            textColor: '#8a1f4a'
+        },
+        // [الولد الكول] hole 179→615 × 149→574, name 1000→2000 × 225→515, content 7→690
+        'frame-cool-boy.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 7, contentHeight: 683,
+            avatarLeftPct: 8.24, avatarTopPct: 20.79, avatarWidthPct: 20.12, avatarHeightPct: 62.37,
+            nameLeftPct: 46.04, nameTopPct: 31.92, nameWidthPct: 46.04, nameHeightPct: 42.46,
+            textColor: '#2a2622'
+        },
+        // [الكاوبوي] hole 182→641 × 147→598, name 760→1900 × 280→525, content 10→712
+        'frame-cowboy.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 10, contentHeight: 702,
+            avatarLeftPct: 8.38, avatarTopPct: 19.52, avatarWidthPct: 21.18, avatarHeightPct: 64.39,
+            nameLeftPct: 34.99, nameTopPct: 38.46, nameWidthPct: 52.49, nameHeightPct: 34.90,
+            textColor: '#3e2410'
+        },
+        // [النار والماء] hole 196→638 × 145→583, name 960→1960 × 280→550, content 10→705
+        'frame-fire-water.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 10, contentHeight: 695,
+            avatarLeftPct: 9.02, avatarTopPct: 19.42, avatarWidthPct: 20.40, avatarHeightPct: 63.17,
+            nameLeftPct: 44.20, nameTopPct: 38.85, nameWidthPct: 46.04, nameHeightPct: 38.85
+        },
         'frame-girls-bunny-blue.png': {
             canvasW: 2158, canvasH: 729, contentTop: 29, contentHeight: 511,
             avatarLeftPct: 12.23, avatarTopPct: 29.55, avatarWidthPct: 17.15, avatarHeightPct: 68.88,
