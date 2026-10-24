@@ -366,6 +366,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             nameLeftPct: 37.75, nameTopPct: 42.71, nameWidthPct: 44.66, nameHeightPct: 27.14,
             textColor: '#5a1e3a'
         },
+        // إطار "عزوز" — منح محدود (حصري لشخص واحد). الاسم "عزوز" مطبوع بالصورة
+        // نفسها مع توهج خفيف مدمج حوله، فـprintedName يخفي اسم تيك توك فوق
+        // الإطار (يبقى كـtitle عند التمرير). اسم اللاعب يظهر عادي بباقي اللعبة
+        // (البطاقات بدون إطار). مقاس بالبكسل: نافذة المحتوى 14→711، الفتحة
+        // 185→663 × 142→572، ومربع الاسم = حدود الكلمة المطبوعة 940→1640 ×
+        // 285→520 (يُستخدم فقط لتوسيط القص).
+        'frame-azooz.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 14, contentHeight: 697,
+            avatarLeftPct: 8.52, avatarTopPct: 18.36, avatarWidthPct: 22.05, avatarHeightPct: 61.84,
+            nameLeftPct: 43.28, nameTopPct: 38.88, nameWidthPct: 32.23, nameHeightPct: 33.72,
+            printedName: true
+        },
         // [دفعة إطارات المتجر] 7 إطارات 2172×724 — مقاسة بالبكسل: مربع الصورة =
         // حدود الفتحة الشفافة، لوح الاسم = داخل اللوح بعيداً عن الزخارف والشخصيات
         // المتداخلة، نافذة المحتوى = أعلى/أسفل بكسل غير شفاف. ألواح فاتحة = نص
@@ -731,12 +743,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             ? '<img class="agp-pcard-tpl-avatar" style="' + avatarStyle + '" src="' + escapeHtml(avatarUrl) + '" alt="" referrerpolicy="no-referrer" onerror="this.outerHTML=\'<div class=&quot;agp-pcard-tpl-avatar agp-pcard-tpl-avatar--fallback&quot; style=&quot;' + avatarStyle + '&quot;>' + escapeHtml(initials(name)) + '</div>\';">'
             : '<div class="agp-pcard-tpl-avatar agp-pcard-tpl-avatar--fallback" style="' + avatarStyle + '">' + escapeHtml(initials(name)) + '</div>';
 
-        return '<span class="agp-pcard-tpl' + (opts && opts.outClass ? ' ' + opts.outClass : '') + '" style="' + wrapStyle + '">' +
-            avatarHtml +
-            '<span class="agp-pcard-tpl-frame-img" style="' + frameImgStyle + '"></span>' +
+        // printedName: الاسم مطبوع بصورة الإطار نفسها — لا نكتب اسم اللاعب فوقه.
+        var nameHtml = tpl.printedName ? '' :
             '<span class="agp-pcard-tpl-name" data-agp-pcard-name="1" style="' + nameStyle + '">' +
             '<span class="agp-pcard-name-inner">' + escapeHtml(name) + '</span>' +
-            '</span>' +
+            '</span>';
+
+        return '<span class="agp-pcard-tpl' + (opts && opts.outClass ? ' ' + opts.outClass : '') + '" style="' + wrapStyle + '"' +
+            (tpl.printedName ? ' title="' + escapeHtml(name) + '"' : '') + '>' +
+            avatarHtml +
+            '<span class="agp-pcard-tpl-frame-img" style="' + frameImgStyle + '"></span>' +
+            nameHtml +
             '</span>';
     }
 
