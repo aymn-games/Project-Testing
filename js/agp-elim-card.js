@@ -78,6 +78,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             fontScale: 0.72,
             avatarBg: '#0f2a5c',
             sound: 'elim-card-crystal-crown.mp3'
+        },
+        // البجعة الوردية — منح محدود (حصري لشخص واحد). 1640×959. "عملية
+        // إقصاء" مطبوعة باللوح الأوسط ولا يوجد مكان كافٍ للجملة، فالبطاقة
+        // بدون textBox (الصورتين فقط) — بطلب صاحب المشروع.
+        'pink-swan': {
+            image: 'elim-card-pink-swan.png',
+            width: 1640,
+            height: 959,
+            actorHole: { x: 1158, y: 286, w: 319, h: 312 },  // right circle
+            targetHole: { x: 164, y: 286, w: 319, h: 311 },  // left circle
+            holeBleed: 8,
+            avatarBg: '#f7dbe4',
+            sound: 'elim-card-pink-swan.mp3'
         }
     };
 
@@ -177,18 +190,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (!tpl) return '';
             injectStyles();
 
-            var text = playerName(actor) + ' أقصى ' + playerName(target);
+            // textBox اختياري — بطاقة بدونه تعرض الصورتين فقط بدون جملة.
+            var textHtml = '';
             var tb = tpl.textBox;
-            var textStyle = 'left:' + pct(tb.x, tpl.width) + ';top:' + pct(tb.y, tpl.height) +
-                ';width:' + pct(tb.w, tpl.width) + ';height:' + pct(tb.h, tpl.height) +
-                ';font-size:' + fontSizeFor(text, tpl.fontScale) + ';background-image:' + tpl.textColor + ';' +
-                (tpl.textFilter ? 'filter:' + tpl.textFilter + ';' : '');
+            if (tb) {
+                var text = playerName(actor) + ' أقصى ' + playerName(target);
+                var textStyle = 'left:' + pct(tb.x, tpl.width) + ';top:' + pct(tb.y, tpl.height) +
+                    ';width:' + pct(tb.w, tpl.width) + ';height:' + pct(tb.h, tpl.height) +
+                    ';font-size:' + fontSizeFor(text, tpl.fontScale) + ';background-image:' + tpl.textColor + ';' +
+                    (tpl.textFilter ? 'filter:' + tpl.textFilter + ';' : '');
+                textHtml = '<div class="agp-elimcard-text" style="' + textStyle + '">' + escapeHtml(text) + '</div>';
+            }
 
             return '<div class="agp-elimcard" style="aspect-ratio:' + tpl.width + '/' + tpl.height + ';">' +
                 avatarHtml(actor, tpl.actorHole, tpl) +
                 avatarHtml(target, tpl.targetHole, tpl) +
                 '<img class="agp-elimcard-frame" src="' + escapeHtml(ASSETS_BASE + tpl.image) + '" alt="">' +
-                '<div class="agp-elimcard-text" style="' + textStyle + '">' + escapeHtml(text) + '</div>' +
+                textHtml +
                 '</div>';
         },
 

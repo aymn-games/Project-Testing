@@ -323,7 +323,9 @@ function setEntranceEnabled(userId, enabled) {
 var ELIM_CARD_CATALOG = [
   { key: 'ksa-green', displayNameAr: 'بطاقة الإقصاء — السعودية الخضراء', imageFilename: 'assets/elim-cards/elim-card-ksa-green.png' },
   { key: 'blue-bunny', displayNameAr: 'بطاقة الإقصاء — الأرنب الأزرق', imageFilename: 'assets/elim-cards/elim-card-blue-bunny.png' },
-  { key: 'crystal-crown', displayNameAr: 'بطاقة الإقصاء — الريس الكريستالي', imageFilename: 'assets/elim-cards/elim-card-crystal-crown.png' }
+  { key: 'crystal-crown', displayNameAr: 'بطاقة الإقصاء — الريس الكريستالي', imageFilename: 'assets/elim-cards/elim-card-crystal-crown.png' },
+  // limited = منح محدود: تُمنح يدوياً من الأدمن فقط، ولا تظهر كخيار تسليم بالمتجر.
+  { key: 'pink-swan', displayNameAr: 'بطاقة الإقصاء — البجعة الوردية (منح محدود)', imageFilename: 'assets/elim-cards/elim-card-pink-swan.png', limited: true }
 ];
 
 function getElimCardCatalog() {
