@@ -658,7 +658,17 @@ migrateSingleCardTable('user_win_cards');
     // منح محدود — حصري لشخص واحد، خارج المتجر وعرض الإطارات.
     { image_filename: 'frame-sakura-pink.png', display_name_ar: 'ساكورا الوردي (منح محدود)' },
     { image_filename: 'frame-pink-swan.png', display_name_ar: 'البجعة الوردية (منح محدود)' },
-    { image_filename: 'frame-azooz.png', display_name_ar: 'عزوز (منح محدود)' }
+    { image_filename: 'frame-azooz.png', display_name_ar: 'عزوز (منح محدود)' },
+    // دفعة إطارات المتجر 3 — تنباع بالمتجر، ومسجّلة هنا عشان الأدمن يقدر يمنحها
+    // ويسوي لها أكواد استرداد بدون انتظار أول شراء. المتجر يعيد استخدام نفس
+    // الصف (ensureCustomFrameForProduct يبحث بنفس image_filename).
+    { image_filename: 'frame-ice-crystal.png', display_name_ar: 'إطار الثلج الكريستالي' },
+    { image_filename: 'frame-cute-bear.png', display_name_ar: 'إطار الدبدوب' },
+    { image_filename: 'frame-bat-cat.png', display_name_ar: 'إطار القط الخفاش' },
+    { image_filename: 'frame-pink-duck.png', display_name_ar: 'إطار البطة الوردية' },
+    { image_filename: 'frame-cool-boy.png', display_name_ar: 'إطار الولد الكول' },
+    { image_filename: 'frame-cowboy.png', display_name_ar: 'إطار الكاوبوي' },
+    { image_filename: 'frame-fire-water.png', display_name_ar: 'إطار النار والماء' }
 ].forEach(function (frame) {
     var exists = db.prepare('SELECT id FROM custom_frames WHERE image_filename = ?').get(frame.image_filename);
     if (!exists) {
