@@ -261,6 +261,7 @@ const SETTINGS = [
     { type:'choice', key:'who',        label:'مين يقدر يدخل؟', options:['الكل','المتابعون فقط'], default:0 }
   ]},
   { title:'المباراة', rows:[
+    { type:'choice', key:'deck',     label:'نوع البطاقات', options:['قبائل','أعلام دول','أكلات شعبية'], default:0 },
     { type:'choice', key:'mode',     label:'شكل الاختيار', options:['روليت','سكرول'], default:0 },
     { type:'choice', key:'elimSec',  label:'موقّت الإقصاء (ثانية)', options:['20','25','30','40'], default:2 },
     { type:'choice', key:'onTimeout',label:'عند انتهاء الوقت', options:['يُقصى صاحب الدور','يتخطى دوره فقط'], default:0 }
