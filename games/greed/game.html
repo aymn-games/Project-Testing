@@ -153,6 +153,9 @@ button{font-family:inherit;cursor:pointer}
 .jp .av{font-size:14px}.jp span.n{flex:1;min-width:0;font:600 14px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 @keyframes slideIn{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:none}}
+#heads{position:fixed;inset:0;z-index:9;pointer-events:none}
+.hd{position:absolute;transform:translate(-50%,-100%);display:none}
+.hd .av{font-size:var(--s,14px);width:2.6em;height:2.6em;box-shadow:0 4px 14px rgba(0,0,0,.5)}
 #conf{position:fixed;inset:0;z-index:55;pointer-events:none;overflow:hidden;display:none}
 #conf i{position:absolute;top:-30px;width:10px;height:16px;border-radius:2px;animation:fall linear infinite}
 @keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
@@ -179,6 +182,7 @@ button{font-family:inherit;cursor:pointer}
 <div class="hint" id="hint">اكتب <span class="y">لف</span> لرقم جديد · <span class="y">توقف</span> لتحفظ نقاط دورك · <span class="r">رقم 1 يضيّع نقاط الدور</span></div>
 
 <div id="board"><div class="bh"><span class="bt">الطمع</span><span class="first" id="bFirst"></span><span class="chip">الهدف <b id="bTarget">50</b></span></div><div class="list" id="bList"></div></div>
+<div id="heads"></div>
 <div id="slots"></div>
 <div id="arrows"></div>
 
@@ -309,7 +313,8 @@ function figure(d){ const G=new T.Group(), Mt=(c,o={})=>new T.MeshStandardMateri
   G.userData={legs,arms,head}; return G; }
 
 const figs=new Map(); // name → {g, pos, to, from, t, dur, ph}
-function figOf(p){ let f=figs.get(p.name); if(!f){ f={g:figure(p.look),pos:new T.Vector3(),from:null,to:null,t:0,dur:0,ph:Math.random()*6}; scene.add(f.g); figs.set(p.name,f); } return f; }
+function figOf(p){ let f=figs.get(p.name); if(!f){ f={g:figure(p.look),pos:new T.Vector3(),from:null,to:null,t:0,dur:0,ph:Math.random()*6}; scene.add(f.g); figs.set(p.name,f);
+  const h=document.createElement('div'); h.className='hd'; h.innerHTML=`<span class="av">${avHtml(p.name)}</span>`; $('heads').appendChild(h); f.head=h; } return f; }
 function walkTo(f,to,dur=1.2){ f.from=f.g.position.clone(); f.to=to.clone(); f.t=0; f.dur=dur; }
 // أماكن الانتظار بالخلف أمام الشاشة
 function layoutWaiting(instant){ const act=new Set(activeNames()), wait=S.order.length?S.order.filter(n=>!act.has(n)):S.players.map(p=>p.name);
@@ -371,14 +376,14 @@ function endTurn(i,bank){ const s=S.slots[i]; if(!s||!s.p) return; if(bank) s.p.
   layoutWaiting(); const f=figs.get(p.name); if(f&&f.home) walkTo(f,f.home,1.1); renderUI();
   setTimeout(()=>fillSlot(i),900); }
 function fx(i,html,color){ const e=document.createElement('div'); e.className='fx'; e.style.color=color; e.innerHTML=html; slotEls[i].appendChild(e); setTimeout(()=>e.remove(),1400); }
-function cmd(i,c){ const s=S.slots[i]; if(!s||!s.p||s.busy||frozen()) return;
+function cmd(i,c){ const s=S.slots[i]; if(!s||!s.p||frozen()) return; if(s.rolling>0){ s.queued=c; return; } if(s.busy) return;
   if(c==='spin'){ s.busy=true; s.rolling=1.1; s.rolled=true; pods[i].pull=0; }
   else if(c==='stop'){ if(!s.rolled) return; s.busy=true; fx(i,`+${s.turnPts} للرصيد`,'#6ee7b7'); setTimeout(()=>endTurn(i,true),700); } }
 function landRoll(i){ const s=S.slots[i], r=1+Math.floor(Math.random()*6); s.res=r;
   if(r===1){ drawDisp(pods[i],'1','#f87171'); fx(i,'1 · ضاعت نقاط الدور','#fca5a5'); s.turnPts=0; setTimeout(()=>endTurn(i,false),1500); return; }
   drawDisp(pods[i],String(r),'#c4b5fd'); s.turnPts+=r; fx(i,`+${r}`,'#c4b5fd');
   if(s.p.total+s.turnPts>=cfg.target){ s.p.total+=s.turnPts; s.turnPts=0; return setTimeout(()=>win(s.p,i),700); }
-  s.left=cfg.time; s.busy=false; }
+  s.left=cfg.time; s.busy=false; if(s.queued){ const c=s.queued; s.queued=null; setTimeout(()=>cmd(i,c),500); } }
 function timeout(i){ const s=S.slots[i]; s.busy=true; if(s.rolled&&s.turnPts>0){ fx(i,`انتهى الوقت · +${s.turnPts}`,'#6ee7b7'); setTimeout(()=>endTurn(i,true),900); } else { fx(i,'انتهى الوقت · ضاع الدور','#fca5a5'); setTimeout(()=>endTurn(i,false),900); } }
 
 function win(p,i){ if(S.phase==='over') return; S.phase='over'; S.winner=p; S.slots.forEach((s,k)=>{ if(s&&s.p&&s.p!==p){ const f=figs.get(s.p.name); if(f&&f.home) walkTo(f,f.home,1.1); } S.slots[k]={p:k===i?p:null}; });
@@ -417,7 +422,7 @@ $('setTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{ setTab=+b.dat
 $('setBtn').onclick=()=>{ if(S.phase==='over') return; S.menu=true; setTab=0; S.pending=[]; renderDrawer(); $('setD').style.display='block'; };
 // إخراج اللاعبين المعلّمين يُطبَّق بعد إغلاق الدرج (مع إمكانية التراجع قبله)
 function removePlayer(n){ const i=S.slots.findIndex(s=>s.p&&s.p.name===n); S.players=S.players.filter(p=>p.name!==n); S.order=S.order.filter(x=>x!==n);
-  const f=figs.get(n); if(f){ scene.remove(f.g); figs.delete(n); } if(i>=0){ S.slots[i]={p:null}; setTimeout(()=>fillSlot(i),400); } }
+  const f=figs.get(n); if(f){ scene.remove(f.g); f.head?.remove(); figs.delete(n); } if(i>=0){ S.slots[i]={p:null}; setTimeout(()=>fillSlot(i),400); } }
 function closeDrawer(){ $('setD').style.display='none'; S.menu=false; if(S.pending.length){ S.pending.forEach(removePlayer); S.pending=[]; layoutWaiting(); renderUI(); } }
 $('setD').onclick=e=>{ if(e.target===$('setD')) closeDrawer(); }; $('setD').querySelector('[data-dclose]').onclick=closeDrawer;
 $('skipBtn').onclick=()=>{ if(S.phase!=='play') return toast('ما فيه أدوار حالية'); closeDrawer(); S.slots.forEach((s,i)=>{ if(s.p&&!s.busy){ s.busy=true; endTurn(i,s.rolled&&s.turnPts>0); } }); };
@@ -445,11 +450,11 @@ function project(v){ tmp.copy(v).project(cam); return {x:(tmp.x+1)/2*innerWidth,
 function resize(){ R.setSize(innerWidth,innerHeight,false); cam.aspect=innerWidth/innerHeight; cam.fov=cam.aspect<1.3?58:46; cam.updateProjectionMatrix(); }
 addEventListener('resize',resize); resize();
 const clock=new T.Clock();
-function tick(){ requestAnimationFrame(tick); const dt=Math.min(clock.getDelta(),.05), t=clock.elapsedTime, ph=S.phase;
+function tick(){ requestAnimationFrame(tick); const raw=Math.min(clock.getDelta(),1), dt=Math.min(raw,.05), t=clock.elapsedTime, ph=S.phase;
   // الأدوار والمهلة
   if(ph==='play'&&!frozen()) S.slots.forEach((s,i)=>{ if(!s.p) return; const f=figs.get(s.p.name), arrived=f&&!f.to;
-    if(s.rolling>0){ s.rolling-=dt; drawDisp(pods[i],String(1+Math.floor((t*14)%6)),'#ffffff'); if(s.rolling<=0){ s.rolling=0; landRoll(i); } }
-    else if(!s.busy&&arrived){ s.left-=dt; if(s.left<=0){ s.left=0; timeout(i); } } });
+    if(s.rolling>0){ s.rolling-=raw; drawDisp(pods[i],String(1+Math.floor((t*14)%6)),'#ffffff'); if(s.rolling<=0){ s.rolling=0; landRoll(i); } }
+    else if(!s.busy&&arrived){ s.left-=raw; if(s.left<=0){ s.left=0; timeout(i); } } });
   // حركة الذراع
   pods.forEach(p=>{ if(p.pull!=null){ p.pull+=dt; p.lever.rotation.x=Math.sin(Math.min(1,p.pull/.5)*Math.PI)*1.1; if(p.pull>.5){ p.lever.rotation.x=0; p.pull=null; } } p.cone.material.opacity=.06+Math.sin(t*2)*.015; });
   // الشخصيات
@@ -473,6 +478,11 @@ function tick(){ requestAnimationFrame(tick); const dt=Math.min(clock.getDelta()
   // لوحة النقاط فوق شاشة المسرح
   if(ph==='ready'||ph==='order'){ const a=project(new T.Vector3(-SCR.w/2,SCR.y+SCR.h/2,SCR.z)), b=project(new T.Vector3(SCR.w/2,SCR.y-SCR.h/2,SCR.z)), B=$('board');
     const w=b.x-a.x, h=b.y-a.y; Object.assign(B.style,{left:a.x+'px',top:a.y+'px',width:w+'px',height:h+'px',fontSize:Math.max(6,h/34)+'px'}); }
+  // صور اللاعبين فوق رؤوسهم
+  const hv=new T.Vector3(), dist=new T.Vector3();
+  figs.forEach(f=>{ const on=f.g.visible&&(ph==='ready'||ph==='order'); f.head.style.display=on?'block':'none'; if(!on) return;
+    hv.copy(f.g.position); hv.y+=3.05; const q=project(hv), d=dist.copy(f.g.position).distanceTo(cam.position);
+    f.head.style.left=q.x+'px'; f.head.style.top=q.y+'px'; f.head.style.setProperty('--s',Math.max(9,Math.min(18,220/d))+'px'); });
   // سهم صاحب الدور الأول
   const first=ph==='order'?S.order.slice(0,slotCount()):[], AR=$('arrows'); while(AR.children.length<first.length){ const a=document.createElement('div'); a.className='arrow'; AR.appendChild(a); }
   [...AR.children].forEach((A,k)=>{ const f=first[k]&&figs.get(first[k]); if(!f){ A.style.display='none'; return; } const s=project(f.g.position.clone().add(new T.Vector3(0,3.1,0))); A.style.display='block'; A.style.left=s.x+'px'; A.style.top=(s.y-50)+'px'; });
