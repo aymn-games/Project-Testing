@@ -47,6 +47,7 @@ button{font-family:inherit;cursor:pointer}
 .hint{position:fixed;top:160px;left:50%;transform:translateX(-50%);z-index:19;padding:10px 26px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font:700 17px 'IBM Plex Sans Arabic';white-space:nowrap;display:none}
 .hint .y{color:var(--gold)}.hint .r{color:#fda4af}
 /* لوحة النقاط على شاشة المسرح */
+@media (max-height:780px){.info{top:86px;padding:4px 20px;gap:20px}.info b{font-size:20px}.info small{font-size:11px}.hint{top:134px;padding:6px 18px;font-size:13px}.sub{top:88px}.pause{top:88px}.live{height:30px;font-size:12px}}
 #board{position:fixed;z-index:10;display:none;flex-direction:column;overflow:hidden;pointer-events:none}
 #board .bh{display:flex;align-items:center;justify-content:space-between;padding:0 2.2em;height:3.8em;background:rgba(7,6,11,.55)}
 #board .bt{font:700 2.6em 'IBM Plex Sans Arabic'}
@@ -64,7 +65,7 @@ button{font-family:inherit;cursor:pointer}
 .row.hl .sc{background:var(--acc);color:#fff}
 .more{text-align:center;color:var(--muted);font:600 1em 'IBM Plex Sans Arabic'}
 /* بطاقات أصحاب الأدوار تحت كل منصة */
-.slot{position:fixed;z-index:15;transform:translateX(-50%);width:var(--w,520px);padding:18px 18px 14px;border-radius:26px;background:linear-gradient(160deg,rgba(76,52,140,.95),rgba(46,30,92,.95));border:2px solid rgba(196,181,253,.85);box-shadow:0 16px 44px rgba(0,0,0,.5),0 0 40px rgba(139,92,246,.25);display:none}
+.slot{position:fixed;z-index:15;transform:translateX(-50%);transform-origin:50% 0;width:520px;padding:18px 18px 14px;border-radius:26px;background:linear-gradient(160deg,rgba(76,52,140,.95),rgba(46,30,92,.95));border:2px solid rgba(196,181,253,.85);box-shadow:0 16px 44px rgba(0,0,0,.5),0 0 40px rgba(139,92,246,.25);display:none}
 .slot .badge{position:absolute;top:-21px;left:50%;transform:translateX(-50%);padding:5px 22px;border-radius:999px;background:var(--acc);color:#fff;box-shadow:0 6px 18px rgba(139,92,246,.45);font:700 20px 'IBM Plex Sans Arabic';white-space:nowrap}
 .slot .srow{display:flex;align-items:center;gap:14px;margin-top:6px}
 .slot .ln{flex:1;min-width:0;display:flex;align-items:center;gap:10px}
@@ -186,7 +187,7 @@ button{font-family:inherit;cursor:pointer}
 #heads{position:fixed;inset:0;z-index:9;pointer-events:none}
 .hd{position:absolute;transform:translate(-50%,-100%);display:none}
 .hd .av{font-size:var(--s,14px);width:2.6em;height:2.6em;box-shadow:0 4px 14px rgba(0,0,0,.5)}
-@media (max-width:900px){.slot .st div{width:60px}.slot .st b{font-size:22px}.slot .nm{font-size:18px}.tb span{display:none}.info{gap:16px;padding:6px 18px}.hint{font-size:13px;white-space:normal;width:calc(100vw - 32px);text-align:center}.slot{width:230px}}
+@media (max-width:900px){.tb span{display:none}.info{gap:16px;padding:6px 18px}.hint{font-size:13px;white-space:normal;width:calc(100vw - 32px);text-align:center}}
 </style>
 </head>
 <body>
@@ -415,7 +416,8 @@ function cmd(i,c){ const s=S.slots[i]; if(!s||!s.p||frozen()) return; if(s.rolli
 // ---------- الأصوات (Web Audio، بدون ملفات) ----------
 let AC=null; const ac=()=>{ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended') AC.resume(); }catch(e){} return AC; };
 addEventListener('pointerdown',ac,{once:true});
-function tone(f,dur=.15,type='sine',delay=0,vol=.18,slide){ const C=ac(); if(!C) return; const t0=C.currentTime+delay, o=C.createOscillator(), g=C.createGain();
+const VOL=.4; // مستوى الصوت العام
+function tone(f,dur=.15,type='sine',delay=0,vol=.18,slide){ const C=ac(); if(!C) return; vol*=VOL; const t0=C.currentTime+delay, o=C.createOscillator(), g=C.createGain();
   o.type=type; o.frequency.setValueAtTime(f,t0); if(slide) o.frequency.exponentialRampToValueAtTime(slide,t0+dur);
   g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(vol,t0+.01); g.gain.exponentialRampToValueAtTime(.0001,t0+dur); o.connect(g).connect(C.destination); o.start(t0); o.stop(t0+dur+.05); }
 const SND={
@@ -556,7 +558,7 @@ function tick(){ requestAnimationFrame(tick); const raw=Math.min(clock.getDelta(
     U.head.rotation.z=Math.sin(q*.5)*.06; U.legs[0].rotation.x=U.legs[1].rotation.x=0; f.g.rotation.y=cur?Math.sin(t)*.12:Math.sin(q*.3)*.2; });
   // الكاميرا
   const P=new T.Vector3(), L=new T.Vector3();
-  if(ph==='play'){ const n=slotCount(), V=n===1?[3.9,13.8,3.3,1.4]:n===2?[4.2,14.6,3,1.1]:[4.6,17,2.8,.8]; P.set(0,V[0],V[1]*(cam.aspect<1.3?1.5:1)); L.set(0,V[2],V[3]); }
+  if(ph==='play'){ const n=slotCount(), V=n===1?[3.9,13.8,3.3,1.4]:n===2?[4.2,14.6,3,1.1]:[4.6,17,2.8,.8]; P.set(0,V[0],V[1]*(cam.aspect<1.3?1.5:1)*(n===1&&innerHeight<780?1.18:1)); L.set(0,V[2],V[3]); }
   else if(ph==='over'&&S.winner){ const f=figs.get(S.winner.name), w=f?f.g.position:new T.Vector3(); const a=Math.sin(t*.3)*.6; P.set(w.x+Math.sin(a)*12,5.2,w.z+Math.cos(a)*12); L.set(w.x,2.6,w.z); }
   else { P.set(0,4.4,cam.aspect<1.3?24:16.5); L.set(0,3.9,-6); }
   const k=1-Math.exp(-dt*2); cam.position.lerp(P,k); camLook.lerp(L,k); cam.lookAt(camLook);
@@ -574,7 +576,10 @@ function tick(){ requestAnimationFrame(tick); const raw=Math.min(clock.getDelta(
   [...AR.children].forEach((A,k)=>{ const f=first[k]&&figs.get(first[k]); if(!f){ A.style.display='none'; return; } const s=project(f.g.position.clone().add(new T.Vector3(0,3.1,0))); A.style.display='block'; A.style.left=s.x+'px'; A.style.top=(s.y-50)+'px'; });
   // بطاقات أصحاب الأدوار
   slotEls.forEach((el,i)=>{ const s=S.slots[i]; if(ph!=='play'||!s||!s.p){ el.style.display='none'; el.dataset.n=''; return; }
-    el.style.display='block'; const s2=project(pods[i].g.position.clone().add(new T.Vector3(0,0,2.3))); el.style.setProperty('--w',(slotCount()===3?Math.min(520,innerWidth/3.15):Math.min(560,innerWidth/2.2))+'px'); el.style.left=s2.x+'px'; el.style.top=Math.min(innerHeight-175,s2.y-40)+'px';
+    el.style.display='block'; const s2=project(pods[i].g.position.clone().add(new T.Vector3(0,0,2.3)));
+    // البطاقة بعرض ثابت 520 وتصغر بنسبة المسافة بين المنصات حتى ما تتراكب على أي شاشة
+    const n=slotCount(), gap=n>1?Math.abs(project(pods[1].g.position).x-project(pods[0].g.position).x)*.94:innerWidth*.42, k=Math.min(1,gap/520,innerHeight/1000);
+    el.style.transform=`translateX(-50%) scale(${k.toFixed(3)})`; el.style.left=s2.x+'px'; el.style.top=Math.min(innerHeight-180*k-8,s2.y-40*k)+'px';
     if(el.dataset.n!==s.p.name){ el.dataset.n=s.p.name; el.querySelector('.av').innerHTML=avHtml(s.p.name); el.querySelector('.nm').textContent=s.p.name; }
     el.querySelector('.tt').textContent=s.p.total; el.querySelector('.tpv').textContent=s.turnPts;
     el.querySelector('.badge').textContent=s.rolling>0?'يلف…':s.busy?'…':`اكتب ${s.rolled?'لف أو توقف':'لف'} · ${Math.ceil(s.left)}`;
