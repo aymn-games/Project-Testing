@@ -329,7 +329,7 @@ function buildPod(){ const g=new T.Group(); scene.add(g);
   const cone=new T.Mesh(new T.ConeGeometry(2.3,10,40,1,true),new T.MeshBasicMaterial({color:'#ddd6fe',transparent:true,opacity:.07,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending})); cone.position.y=5; g.add(cone);
   const sp=new T.SpotLight('#fff7e0',40,16,.42,.5,1.2); sp.position.set(0,11,0); sp.target.position.set(0,0,0); g.add(sp); g.add(sp.target);
   // ماكينة «رقم الحظ»
-  const m=new T.Group(); m.position.set(1.7,3.6,-.4); g.add(m);
+  const m=new T.Group(); m.position.set(0,4.4,-.2); g.add(m);
   mesh(new T.BoxGeometry(2.4,2.1,1.1),M('#3b1a78'),0,0,0,m);
   mesh(new T.BoxGeometry(2.7,.22,1.3),M('#a78bfa',{metalness:.3}),0,1.1,0,m); mesh(new T.BoxGeometry(2.7,.22,1.3),M('#a78bfa',{metalness:.3}),0,-1.1,0,m);
   const hdr=mesh(new T.PlaneGeometry(2.3,.6),new T.MeshBasicMaterial({map:tex(512,128,(c,w,h)=>{ c.fillStyle='#24124a'; c.fillRect(0,0,w,h); c.fillStyle='#e9d5ff'; c.font='700 78px "IBM Plex Sans Arabic", sans-serif'; c.textAlign='center'; c.textBaseline='middle'; c.direction='rtl'; c.fillText('رقم الحظ',w/2,h/2+4); })}),0,1.55,.3,m);
