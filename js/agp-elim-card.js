@@ -91,6 +91,19 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             holeBleed: 8,
             avatarBg: '#f7dbe4',
             sound: 'elim-card-pink-swan.mp3'
+        },
+        // عزوز (جماجم وسلاسل فضية) — منح محدود. 1641×959. الصورة الأصلية بدون
+        // شفافية: الخلفية والدائرتين فُرّغت. "عملية إقصاء" مطبوعة باللوح الأوسط،
+        // فالبطاقة بدون textBox (الصورتين فقط) مثل البجعة الوردية.
+        'azooz': {
+            image: 'elim-card-azooz.png',
+            width: 1641,
+            height: 959,
+            actorHole: { x: 1127, y: 212, w: 307, h: 295 },  // right circle
+            targetHole: { x: 205, y: 212, w: 304, h: 295 },  // left circle
+            holeBleed: 8,
+            avatarBg: '#111216',
+            sound: 'elim-card-azooz.mp3'
         }
     };
 
