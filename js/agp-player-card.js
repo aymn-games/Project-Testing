@@ -344,6 +344,28 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             avatarLeftPct: 7.41, avatarTopPct: 28.68, avatarWidthPct: 16.94, avatarHeightPct: 69.62,
             nameLeftPct: 31.86, nameTopPct: 50.00, nameWidthPct: 48.34, nameHeightPct: 42.83
         },
+        // إطار "ساكورا الوردي" — منح محدود (حصري لشخص واحد، خارج المتجر
+        // وعرض الإطارات). مقاس بالبكسل: نافذة المحتوى = أعلى/أسفل بكسل غير
+        // شفاف (9→705)، مربع الصورة = حدود الفتحة الشفافة (212→663 × 131→569)،
+        // ولوح الاسم = داخل اللوح بين الحدود قبل الوردة (770→1820 × 270→490).
+        // اللوح زهري فاتح — اسم وردي غامق.
+        'frame-sakura-pink.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 9, contentHeight: 697,
+            avatarLeftPct: 9.76, avatarTopPct: 17.50, avatarWidthPct: 20.81, avatarHeightPct: 62.98,
+            nameLeftPct: 35.45, nameTopPct: 37.45, nameWidthPct: 48.34, nameHeightPct: 31.56,
+            textColor: '#5a1e3a'
+        },
+        // إطار "البجعة الوردية" — منح محدود (حصري لشخص واحد، خارج المتجر
+        // وعرض الإطارات). مقاس بالبكسل: نافذة المحتوى 6→706، مربع الصورة =
+        // حدود الفتحة الشفافة (245→691 × 116→570)، ولوح الاسم = داخل الكبسولة
+        // بعيداً عن أطرافها المدوّرة والوردة (820→1790 × 305→495). اللوح
+        // زهري فاتح — اسم وردي غامق.
+        'frame-pink-swan.png': {
+            canvasW: 2172, canvasH: 724, contentTop: 6, contentHeight: 700,
+            avatarLeftPct: 11.28, avatarTopPct: 15.71, avatarWidthPct: 20.58, avatarHeightPct: 65.00,
+            nameLeftPct: 37.75, nameTopPct: 42.71, nameWidthPct: 44.66, nameHeightPct: 27.14,
+            textColor: '#5a1e3a'
+        },
         'frame-girls-bunny-blue.png': {
             canvasW: 2158, canvasH: 729, contentTop: 29, contentHeight: 511,
             avatarLeftPct: 12.23, avatarTopPct: 29.55, avatarWidthPct: 17.15, avatarHeightPct: 68.88,

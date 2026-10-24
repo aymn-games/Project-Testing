@@ -684,8 +684,8 @@ function deliveryOptions() {
     var frames = collectiblesService.getCatalog().map(function (c) {
         return { value: 'catalog:' + c.slug, label: 'إطار: ' + (c.display_name_ar || c.slug) };
     });
-    var elims = collectiblesService.getElimCardCatalog().map(function (c) { return { value: 'elim:' + c.key, label: c.displayNameAr }; });
-    var wins = collectiblesService.getWinCardCatalog().map(function (c) { return { value: 'win:' + c.key, label: c.displayNameAr }; });
+    var elims = collectiblesService.getElimCardCatalog().filter(function (c) { return !c.limited; }).map(function (c) { return { value: 'elim:' + c.key, label: c.displayNameAr }; });
+    var wins = collectiblesService.getWinCardCatalog().filter(function (c) { return !c.limited; }).map(function (c) { return { value: 'win:' + c.key, label: c.displayNameAr }; });
     return [{ value: '', label: 'بدون تسليم تلقائي' }, { value: 'frame', label: 'إطار بروفايل (صورة المنتج)' }]
         .concat(frames, elims, wins);
 }
