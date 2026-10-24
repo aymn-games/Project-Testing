@@ -134,9 +134,6 @@ button{font-family:inherit;cursor:pointer}
 .wbtns button:hover{filter:brightness(1.2)}.wbtns button:active{transform:scale(.97)}
 .wbtns .p{border:none;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 8px 22px rgba(124,58,237,.4)}
 .wbtns .s{border:1px solid rgba(167,139,250,.55);background:rgba(139,92,246,.16);color:#ddd6fe}
-#wConf{position:absolute;inset:0;pointer-events:none}
-#wConf span{position:absolute;bottom:-30px}
-@keyframes floatUp{0%{transform:translateY(0) rotate(0deg);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-1300px) rotate(var(--r));opacity:0}}
 @keyframes agpPop{0%{opacity:0;transform:scale(.85) translateY(10px)}100%{opacity:1;transform:none}}
 @keyframes agpCrown{0%{opacity:0;transform:translateX(calc(-50% - 12px)) translateY(-14px) rotate(-6deg)}60%{opacity:1}100%{opacity:1;transform:translateX(calc(-50% - 12px)) translateY(0) rotate(0)}}
 @keyframes agpShine{0%{transform:translateX(-140%) rotate(20deg)}100%{transform:translateX(240%) rotate(20deg)}}
@@ -230,7 +227,7 @@ button{font-family:inherit;cursor:pointer}
 </div></div>
 <div class="modal" id="pauseM"><div class="box"><h3>لوحة النقاط</h3><div class="mlist" id="pList"></div><div class="mb" style="grid-template-columns:1fr"><button class="blue" id="resumeBtn">متابعة اللعب</button></div></div></div>
 <div class="modal" id="exitM"><div class="box"><h3>الخروج من المباراة؟</h3><p>بترجع لمكتبة الألعاب وتنتهي المباراة الحالية</p><div class="mb"><button data-close>إلغاء</button><button class="red" id="exitYes">خروج</button></div></div></div>
-<div id="win"><div id="wConf"></div><div class="wrap">
+<div id="win"><div class="wrap">
   <div id="wVid"><span style="font:500 13px 'IBM Plex Sans Arabic';color:#8a8596">فيديو الفوز</span></div>
   <h2>🏆 الفائز في لعبة "الطمع"</h2>
   <div id="wCards"></div>
@@ -428,8 +425,6 @@ function winCardHtml(){ const p=S.winner, P=reg.player(p.name), WC=window.AymanG
 function showWin(){ const p=S.winner; $('wCards').innerHTML=winCardHtml();
   const vid=reg.winVideo(p.name), V=$('wVid'); V.querySelector('video')?.remove(); V.style.display=vid?'grid':'none';
   if(vid){ const v=document.createElement('video'); v.src=vid; v.loop=true; v.playsInline=true; v.autoplay=true; v.onerror=()=>v.remove(); V.appendChild(v); v.muted=false; v.play()?.catch(()=>{ v.muted=true; v.play().catch(()=>{}); }); }
-  const cols=['#fbbf24','#a78bfa','#34d399','#f472b6','#60a5fa','#fde68a'], r=(a,b)=>a+Math.random()*(b-a);
-  $('wConf').innerHTML=Array.from({length:70},(_,i)=>`<span style="left:${r(0,100)}%;width:${r(8,14)}px;height:${r(12,22)}px;border-radius:${i%3?'2px':'50%'};background:${cols[i%cols.length]};--r:${r(-540,540)}deg;animation:floatUp ${r(3.5,6).toFixed(2)}s linear ${r(0,2.5).toFixed(2)}s infinite"></span>`).join('');
   $('win').style.display='flex'; }
 // نظام نقاط المنصة — مرة واحدة لكل مباراة (CLAUDE.md)
 function report(p){ if(S.reported) return; S.reported=true; const A=window.AGPAuth; if(!A||typeof A.reportMatchPoints!=='function'){ S.pts=null; return; }
@@ -447,7 +442,7 @@ $('endBtn').onclick=()=>open('exitM',true);
 $('exitYes').onclick=()=>{ location.href=GR.libraryUrl; };
 $('leaveBtn').onclick=()=>{ location.href=GR.libraryUrl; };
 $('newBtn').onclick=()=>{ try{ localStorage.removeItem(GR.keys.roster); localStorage.removeItem(GR.keys.players); }catch(e){} location.href='lobby.html'; };
-$('againBtn').onclick=()=>{ $('win').style.display='none'; $('wConf').innerHTML=''; S.players.forEach(p=>p.total=0); Object.assign(S,{phase:'ready',order:[],next:0,turns:0,slots:[],winner:null,reported:false,paused:false}); layoutWaiting(); renderUI(); };
+$('againBtn').onclick=()=>{ $('win').style.display='none'; S.players.forEach(p=>p.total=0); Object.assign(S,{phase:'ready',order:[],next:0,turns:0,slots:[],winner:null,reported:false,paused:false}); layoutWaiting(); renderUI(); };
 $('fsBtn').onclick=()=>{ document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.().catch(()=>{}); };
 document.addEventListener('fullscreenchange',()=>{ $('fsLbl').textContent=document.fullscreenElement?'الخروج من ملء الشاشة':'ملء الشاشة'; });
 
