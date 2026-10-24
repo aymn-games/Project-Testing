@@ -744,8 +744,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   // ---- الدخول / إنشاء حساب بتيك توك (زي جوجل) — AGPAuth.tiktokLoginUrl
   // يحوّل لصفحة موافقة تيك توك، والخادم يرجّع هنا بـ#tiktok_token=
-  // (نجاح) أو ?tiktok_login=<خطأ>. الزر يُضاف تحت زر جوجل لأن القالب ما فيه
-  // زر تيك توك، وMutationObserver يرجّعه لو القالب أعاد رسم البطاقة.
+  // (نجاح) أو ?tiktok_login=<خطأ>. ضغطة وحدة: دخول لو الحساب موجود، أو
+  // إنشاء حساب جديد مربوط وموثَّق تيك توك مباشرة (loginWithTikTok).
+  // الزر يُضاف تحت زر جوجل لأن القالب ما فيه زر تيك توك، وMutationObserver
+  // يرجّعه (هو وستايلات SOCIAL_CSS) لو القالب أعاد رسم الصفحة.
   var TIKTOK_LOGIN_ERRORS = {
     cancelled: 'تم إلغاء الدخول بتيك توك',
     device_locked: 'هذا الحساب وصل للحد الأقصى من الأجهزة (3 أجهزة). تواصل مع الأدمن للسماح بجهاز جديد.',
@@ -757,22 +759,45 @@ document.addEventListener('DOMContentLoaded', async function() {
   function isSignupMode(){
     return Array.prototype.some.call(document.querySelectorAll('button'), function(b){ return b.textContent.trim() === 'أنشئ الحساب'; });
   }
+  var TIKTOK_ICON_PATH = 'M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z';
+  var GOOGLE_G_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='%23EA4335' d='M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z'/%3E%3Cpath fill='%234285F4' d='M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z'/%3E%3Cpath fill='%23FBBC05' d='M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z'/%3E%3Cpath fill='%2334A853' d='M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z'/%3E%3C/svg%3E";
+  // زر جوجل الظاهر من القالب (الزر الحقيقي شفاف فوقه) — ستايل جوجل الرسمي
+  // بـ!important عشان يغلب الستايل المضمَّن بالقالب.
+  var SOCIAL_CSS =
+    'div:has(> [data-google-real-btn]) > a{min-height:52px;box-sizing:border-box;padding:0 16px !important;border-radius:14px !important;border:1px solid #dadce0 !important;background:#fff !important;color:#1f1f1f !important;font-weight:600 !important;font-size:15px !important;letter-spacing:.1px;box-shadow:0 1px 2px rgba(0,0,0,.3),0 10px 24px -14px rgba(0,0,0,.9) !important;transition:transform .2s,box-shadow .2s,background .2s !important}' +
+    'div:has(> [data-google-real-btn]):hover > a{background:#f6f8fc !important;color:#1f1f1f !important;transform:translateY(-2px) !important;box-shadow:0 2px 4px rgba(0,0,0,.3),0 16px 30px -16px rgba(0,0,0,.95) !important}' +
+    'div:has(> [data-google-real-btn]) > a > span:first-child{flex:none;width:22px !important;height:22px !important;border-radius:0 !important;background:url("' + GOOGLE_G_SVG + '") center/contain no-repeat !important}' +
+    '#agp-tiktok-wrap{position:relative;margin-top:12px}' +
+    '#agp-tiktok-badge{position:absolute;top:0;right:18px;transform:translateY(-55%);z-index:1;display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:999px;background:linear-gradient(90deg,#25f4ee,#fe2c55);color:#fff;font-size:12px;font-weight:700;line-height:1.4;box-shadow:0 6px 16px -6px rgba(254,44,85,.8);pointer-events:none;white-space:nowrap}' +
+    '#agp-tiktok-login{display:flex;align-items:center;justify-content:center;gap:11px;min-height:52px;box-sizing:border-box;padding:0 16px;border-radius:14px;border:1px solid rgba(255,255,255,.22);background:#000;color:#fff;font-size:15px;font-weight:600;letter-spacing:.1px;box-shadow:0 0 0 1px rgba(37,244,238,.10) inset,0 10px 24px -14px rgba(0,0,0,.9);transition:transform .2s,box-shadow .2s,border-color .2s}' +
+    '#agp-tiktok-login:hover{color:#fff;transform:translateY(-2px);border-color:rgba(255,255,255,.4);box-shadow:-2px 0 0 rgba(37,244,238,.55),2px 0 0 rgba(254,44,85,.55),0 16px 30px -16px rgba(0,0,0,.95)}' +
+    '#agp-tiktok-login:focus-visible{outline:2px solid #25f4ee;outline-offset:2px}';
+  function tiktokIconSvg(){
+    return '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="flex:none;overflow:visible">' +
+      '<path fill="#25f4ee" transform="translate(-.9 -.7)" d="' + TIKTOK_ICON_PATH + '"/>' +
+      '<path fill="#fe2c55" transform="translate(.9 .7)" d="' + TIKTOK_ICON_PATH + '"/>' +
+      '<path fill="#fff" d="' + TIKTOK_ICON_PATH + '"/></svg>';
+  }
   function ensureTikTokButton(){
+    if (!document.getElementById('agp-social-css') && document.head) {
+      var style = document.createElement('style');
+      style.id = 'agp-social-css'; style.textContent = SOCIAL_CSS;
+      document.head.appendChild(style);
+    }
     var googleReal = document.querySelector('[data-google-real-btn]');
     if (!googleReal || !googleReal.parentElement) return;
     var googleBox = googleReal.parentElement;
-    var btn = document.getElementById('agp-tiktok-login');
-    if (!btn) {
-      btn = document.createElement('a');
+    var wrap = document.getElementById('agp-tiktok-wrap');
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.id = 'agp-tiktok-wrap';
+      var badge = document.createElement('span');
+      badge.id = 'agp-tiktok-badge';
+      badge.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>أسرع وآمن';
+      var btn = document.createElement('a');
       btn.id = 'agp-tiktok-login';
       btn.href = '#';
-      btn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:11px;padding:14px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#f4f2fb;font-size:14.5px;font-weight:500;transition:transform .25s,border-color .25s,background .25s';
-      var icon = document.createElement('img');
-      icon.src = 'tiktok-logo.png'; icon.alt = ''; icon.style.cssText = 'width:22px;height:22px;border-radius:50%;object-fit:cover';
-      var label = document.createElement('span');
-      btn.appendChild(icon); btn.appendChild(label);
-      btn.addEventListener('mouseenter', function(){ btn.style.transform = 'translateY(-2px)'; btn.style.borderColor = 'rgba(178,140,245,.5)'; btn.style.background = 'rgba(255,255,255,.08)'; });
-      btn.addEventListener('mouseleave', function(){ btn.style.transform = ''; btn.style.borderColor = 'rgba(255,255,255,.14)'; btn.style.background = 'rgba(255,255,255,.05)'; });
+      btn.innerHTML = tiktokIconSvg() + '<span></span>';
       btn.addEventListener('click', function(e){
         e.preventDefault();
         if (!window.AGPAuth || !window.AGPAuth.tiktokLoginUrl) { setNote('تعذّر تحميل نظام الحسابات', false); return; }
@@ -780,10 +805,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         setNote('جارٍ تحويلك لتيك توك…', true);
         window.location.href = window.AGPAuth.tiktokLoginUrl(next === './' ? '' : next);
       });
+      wrap.appendChild(badge); wrap.appendChild(btn);
     }
-    if (btn.previousElementSibling !== googleBox) googleBox.insertAdjacentElement('afterend', btn);
+    if (wrap.previousElementSibling !== googleBox) googleBox.insertAdjacentElement('afterend', wrap);
+    var label = document.getElementById('agp-tiktok-login').lastChild;
     var text = isSignupMode() ? 'أنشئ حساب بتيك توك' : 'سجّل دخولك بتيك توك';
-    if (btn.lastChild.textContent !== text) btn.lastChild.textContent = text;
+    if (label.textContent !== text) label.textContent = text;
   }
   new MutationObserver(ensureTikTokButton).observe(document, { childList: true, subtree: true, characterData: true });
   ensureTikTokButton();
