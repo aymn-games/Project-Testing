@@ -242,40 +242,55 @@ input::placeholder{color:#6f6a7c}
     </div>
   </sc-if>
 
-  <!-- نتائج الجولة -->
+  <!-- نتائج الجولة: اللاعبين اللي جاوبوا، إجابات كل لاعب، وإجمالي نقاطه بالجولة -->
   <sc-if value="{{ resOpen }}" hint-placeholder-val="{{ false }}">
-    <div style="position:fixed;inset:0;z-index:85;display:flex;flex-direction:column;align-items:center;padding:16px;overflow-y:auto;box-sizing:border-box;background:rgba(8,4,16,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);animation:{{ resOv }}">
+    <div style="position:fixed;inset:0;z-index:85;display:flex;flex-direction:column;align-items:center;padding:20px;overflow-y:auto;box-sizing:border-box;background:rgba(10,8,18,.6);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);animation:{{ resOv }}">
       {{ resConfetti }}
-      <div style="position:relative;margin:auto 0;width:min(1100px,100%);box-sizing:border-box;padding:clamp(18px,2.4vw,40px);border-radius:32px;background:rgba(12,11,18,.94);border:1px solid rgba(167,139,250,.35);box-shadow:0 40px 120px rgba(0,0,0,.6), 0 0 80px rgba(124,58,237,.2);display:flex;flex-direction:column;gap:22px;animation:{{ resAn }}">
-        <div style="text-align:center;display:flex;flex-direction:column;gap:6px">
-          <span style="font:800 clamp(28px,3vw,48px) 'IBM Plex Sans Arabic'">🏁 نتائج الجولة</span>
-          <span style="font:500 clamp(14px,1.1vw,18px) 'IBM Plex Sans Arabic';color:#a8a3b5">{{ resSub }}</span>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
-          <div style="padding:18px;border-radius:22px;background:rgba(139,92,246,.08);border:1px solid rgba(167,139,250,.3);text-align:center;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px 'IBM Plex Sans Arabic';color:#a8a3b5">الكلمات المكتشفة</span><span style="font:800 40px 'IBM Plex Sans Arabic';color:#ddd6fe">{{ resFound }}</span></div>
-          <div style="padding:18px;border-radius:22px;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.35);text-align:center;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px 'IBM Plex Sans Arabic';color:#a8a3b5">الكلمات الذهبية المكتشفة</span><span style="font:800 26px/1.5 'IBM Plex Sans Arabic';color:#fde68a">{{ resGold }}</span></div>
-          <div style="padding:18px;border-radius:22px;background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.35);text-align:center;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px 'IBM Plex Sans Arabic';color:#a8a3b5">{{ resWinLabel }}</span><span style="font:800 26px/1.5 'IBM Plex Sans Arabic';color:#6ee7b7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ resWinner }}</span><span style="font:600 13px 'IBM Plex Sans Arabic';color:#8a8596">{{ resPts }}</span></div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <span style="font:700 20px 'IBM Plex Sans Arabic'">الترتيب النهائي</span>
-          <div data-noscroll="" style="max-height:min(360px,40vh);overflow-y:auto;scrollbar-width:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">
-            <sc-for list="{{ resBoard }}" as="p" hint-placeholder-count="4">
-              <div style="display:flex;align-items:center;gap:12px;height:62px;padding:0 14px;border-radius:16px;background:{{ p.bg }};border:1px solid {{ p.bd }}">
-                <span style="flex-shrink:0;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:{{ p.rankBg }};color:#fff;font:800 19px 'IBM Plex Sans Arabic'">{{ p.rank }}</span>
-                <span style="flex:1;min-width:0;font:700 19px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
-                <span style="flex-shrink:0;font:500 14px 'IBM Plex Sans Arabic';color:#a8a3b5">{{ p.words }} كلمة</span>
-                <span style="flex-shrink:0;font:800 24px 'IBM Plex Sans Arabic';color:{{ p.scoreC }}">{{ p.score }}</span>
-              </div>
-            </sc-for>
-            <sc-if value="{{ boardEmpty }}" hint-placeholder-val="{{ false }}">
-              <div style="grid-column:1/-1;padding:30px 0;text-align:center;color:#8a8596;font:500 17px 'IBM Plex Sans Arabic'">لم يكتشف أحد أي كلمة في هذه الجولة</div>
-            </sc-if>
+      <div style="position:relative;margin:auto 0;width:min(1240px,100%);max-height:calc(100dvh - 40px);box-sizing:border-box;padding:clamp(20px,2.2vw,36px);border-radius:32px;background:linear-gradient(180deg,rgba(30,26,46,.94),rgba(16,14,26,.96));border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 40px 120px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:22px;animation:{{ resAn }}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:700 clamp(26px,2.4vw,40px) 'IBM Plex Sans Arabic';color:#f2eefc">انتهت الجولة</span>
+            <span style="font:500 clamp(14px,1vw,17px) 'IBM Plex Sans Arabic';color:#9d96b8">{{ resSub }}</span>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <span style="display:flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:999px;background:rgba(181,169,240,.1);border:1px solid rgba(181,169,240,.22);font:600 15px 'IBM Plex Sans Arabic';color:#d6cff5">الكلمات المكتشفة <b dir="ltr" style="font-weight:800;color:#f2eefc">{{ resFound }}</b></span>
+            <span style="display:flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:999px;background:rgba(232,196,122,.08);border:1px solid rgba(232,196,122,.25);font:600 15px 'IBM Plex Sans Arabic';color:#e8c47a">🌟 {{ resGold }}</span>
           </div>
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
-          <button onClick="{{ newRound }}" style="flex:1;min-width:180px;max-width:280px;height:54px;border-radius:999px;border:none;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;font:700 18px 'IBM Plex Sans Arabic';cursor:pointer;box-shadow:0 8px 22px rgba(124,58,237,.4)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">جولة جديدة</button>
-          <button onClick="{{ openAnswers }}" style="flex:1;min-width:180px;max-width:280px;height:54px;border-radius:999px;border:1px solid rgba(251,191,36,.5);background:rgba(251,191,36,.08);color:#fde68a;font:700 18px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="filter:brightness(1.2)" style-active="transform:scale(.97)">عرض الإجابات</button>
-          <button onClick="{{ closeRes }}" style="flex:1;min-width:180px;max-width:280px;height:54px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#f4f2f8;font:700 18px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="filter:brightness(1.25)" style-active="transform:scale(.97)">العودة إلى شاشة اللعبة</button>
+
+        <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,520px),1fr));gap:14px;align-content:start">
+          <sc-for list="{{ resPlayers }}" as="p" hint-placeholder-count="4">
+            <div style="display:flex;flex-direction:column;gap:12px;padding:16px 18px;border-radius:22px;background:{{ p.bg }};border:1px solid {{ p.bd }};box-shadow:inset 0 1px 0 rgba(255,255,255,.04);animation:rise .45s ease both;animation-delay:{{ p.delay }}">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="flex-shrink:0;width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:{{ p.rankBg }};color:{{ p.rankC }};font:800 15px 'IBM Plex Sans Arabic'">{{ p.rank }}</span>
+                <span style="position:relative;overflow:hidden;flex-shrink:0;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#4c3d8f,#2b4f6b);border:2px solid {{ p.ring }};box-sizing:border-box;color:#e9e5f7;font:700 18px 'IBM Plex Sans Arabic'">{{ p.ini }}<img src="{{ p.av }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.op }}"></span>
+                <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                  <span style="font:700 20px 'IBM Plex Sans Arabic';color:{{ p.nameC }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+                  <span style="font:500 13px 'IBM Plex Sans Arabic';color:#8f88a8">{{ p.count }} كلمة</span>
+                </span>
+                <span style="flex-shrink:0;display:flex;align-items:baseline;gap:5px;padding:6px 16px;border-radius:999px;background:{{ p.sbg }};border:1px solid {{ p.sbd }}"><b style="font:800 24px 'IBM Plex Sans Arabic';color:{{ p.scoreC }};font-variant-numeric:tabular-nums">{{ p.score }}</b><span style="font:600 13px 'IBM Plex Sans Arabic';color:#9d96b8">نقطة</span></span>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <sc-for list="{{ p.words }}" as="w" hint-placeholder-count="3">
+                  <span style="display:flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:12px;background:{{ w.bg }};border:1px solid {{ w.bd }}"><span style="font:700 17px 'IBM Plex Sans Arabic';color:{{ w.c }}">{{ w.word }}</span><span dir="ltr" style="font:700 12px 'IBM Plex Sans Arabic';color:{{ w.pc }}">+{{ w.pts }}</span></span>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ boardEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="grid-column:1/-1;padding:50px 0;text-align:center;color:#8a8596;font:500 18px 'IBM Plex Sans Arabic'">ما أحد جاوب في هذه الجولة</div>
+          </sc-if>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:4px;border-top:1px solid rgba(255,255,255,.06)">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:14px">
+            <button onClick="{{ openAnswers }}" style="height:44px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#c9c2e6;font:600 14px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="background:rgba(255,255,255,.07)" style-active="transform:scale(.97)">عرض الإجابات</button>
+            <button onClick="{{ closeRes }}" style="height:44px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#c9c2e6;font:600 14px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="background:rgba(255,255,255,.07)" style-active="transform:scale(.97)">العودة لشاشة اللعبة</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;padding-top:14px">
+            <span style="font:500 13px 'IBM Plex Sans Arabic';color:#8f88a8">{{ resPts }}</span>
+            <button onClick="{{ nextRoundNow }}" style="height:56px;padding:0 34px;border-radius:999px;border:1px solid rgba(196,181,253,.45);background:linear-gradient(90deg,rgba(139,92,246,.55),rgba(167,139,250,.45));color:#fff;font:700 18px 'IBM Plex Sans Arabic';cursor:pointer;display:flex;align-items:center;gap:10px;box-shadow:0 12px 30px rgba(124,58,237,.25)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">الجولة التالية<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+          </div>
         </div>
       </div>
     </div>
@@ -622,9 +637,18 @@ class Component extends DCLogic {
     const answers=s.eligible.slice().sort((a,b)=>(fby[b]?1:0)-(fby[a]?1:0)||[...b].length-[...a].length).map(w=>{ const f=fby[w], g=E.isGolden(w,s.round);
       return { key:w, word:w, by:f?`${f.name} · +${f.points}`:'لم تُكتشف', c:g?'#fde68a':f?'#6ee7b7':'#cfcad9', bg:f?'rgba(52,211,153,.07)':'rgba(255,255,255,.03)', bd:g?'rgba(251,191,36,.5)':f?'rgba(52,211,153,.35)':'rgba(255,255,255,.07)' }; });
     return { resOpen:!!S.resOpen, resSub:`${s.round.id.replace('r','جولة ')} · ${s.endReason==='time'?'انتهى الوقت':s.endReason==='complete'?'اكتُشفت كل الكلمات المطلوبة':'أنهاها الهوست'}`,
-      resFound:`${found.length} / ${s.total}`, resGold:gold.length?gold.map(g=>`${g.word} (${g.name})`).join('، '):(s.goldenWords.length?'لم تُكتشف':'لا توجد في هذه الجولة'),
+      resFound:`${found.length} / ${s.total}`, resGold:gold.length?'الذهبية: '+gold.map(g=>`${g.word} (${g.name})`).join('، '):(s.goldenWords.length?'الكلمة الذهبية لم تُكتشف':'لا توجد كلمة ذهبية'),
       resWinLabel:win.length>1?'تعادل في المركز الأول':'الفائز', resWinner:win.length?win.map(w=>w.name).join('، '):'—',
-      resPts:!win.length?'':pts==='pending'?'جارٍ احتساب نقاط المنصة…':typeof pts==='number'?`+${pts} نقطة منصة`:'نقاط المنصة للحسابات الموثّقة في الموقع',
+      resPts:!win.length?'':pts==='pending'?'جارٍ احتساب نقاط المنصة…':typeof pts==='number'?`الفائز +${pts} نقطة منصة`:'نقاط المنصة للحسابات الموثّقة',
+      resPlayers:lb.map((p,i)=>{ const mine=found.filter(f=>f.playerKey===p.key).sort((a,b)=>b.points-a.points||a.at-b.at);
+        return { key:p.key, rank:i+1, name:p.name, ini:ini(p.name), av:p.avatar||'', op:p.avatar?1:0, score:p.score, count:mine.length, delay:(Math.min(i,10)*0.05).toFixed(2)+'s',
+          rankBg:['rgba(232,196,122,.18)','rgba(207,212,220,.14)','rgba(201,146,90,.16)'][i]||'rgba(255,255,255,.05)', rankC:['#f0d9a6','#e3e6ec','#e0b48a'][i]||'#a39cbc',
+          ring:['#e8c47a','#cfd4dc','#c9925a'][i]||'rgba(255,255,255,.16)', nameC:i===0?'#f3dfb2':'#ece9f5', scoreC:i===0?'#f0d9a6':'#e6e1fa',
+          sbg:i===0?'rgba(232,196,122,.1)':'rgba(181,169,240,.08)', sbd:i===0?'rgba(232,196,122,.3)':'rgba(181,169,240,.18)',
+          bg:i===0?'linear-gradient(180deg,rgba(232,196,122,.08),rgba(255,255,255,.02))':'rgba(255,255,255,.03)', bd:i===0?'rgba(232,196,122,.25)':'rgba(255,255,255,.07)',
+          words:mine.map(f=>({ key:f.word, word:f.word, pts:f.points, c:f.golden?'#f3dfb2':'#e6e1fa', pc:f.golden?'#e8c47a':'#b5a9f0',
+            bg:f.golden?'rgba(232,196,122,.1)':'rgba(181,169,240,.07)', bd:f.golden?'rgba(232,196,122,.3)':'rgba(181,169,240,.16)' })) }; }),
+      nextRoundNow:()=>{ this.shut('resOpen'); setTimeout(()=>{ this.newRound(); this.startRound(); },280); },
       resBoard:this.boardRows(lb), resConfetti:S.resOpen&&win.length?this.confetti('rc'+(S.resRun||0),70):null,
       resOv:S.resOpenOut?'fadeOut .26s ease forwards':'fade .3s ease', resAn:S.resOpenOut?'popOut .26s ease forwards':this.anim('popIn .55s cubic-bezier(.2,1.25,.35,1)'),
       closeRes:()=>this.shut('resOpen'), openAnswers:()=>this.setState({ansOpen:true,ansOpenOut:false}),
