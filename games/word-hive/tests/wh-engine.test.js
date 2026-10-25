@@ -205,7 +205,8 @@ test('الإعدادات لا تتجاوز شرط حرف الوسط ولا أح�
     assert.equal(S.rules(v).minLen, 3);
     assert.equal(S.rules({ golden: 50 }).points.golden, 7);
     assert.equal(v.allowRepeat, true);
-    assert.equal(v.p3, 50);
+    assert.ok(!('p3' in v));
+    assert.deepEqual(S.rules({ p3: 999 }).points, { p3: 1, p4: 2, p5: 3, p6: 5, golden: 7 });
     assert.equal(v.durationSec, 180);
     assert.ok(!('requireCenter' in v));
     const s = E.createSession(R, Object.assign(S.rules(v), { requireCenter: false, minLen: 1 }));

@@ -25,9 +25,10 @@
         { type: 'choice', key: 'who', label: 'المسموح لهم', options: ['المتابعين فقط', 'الجميع'], values: ['followers', 'all'], default: 'all' }
     ]};
 
-    // قواعد ثابتة لا تظهر بالإعدادات: أقل طول 3 أحرف، ومكافأة الكلمة الذهبية 7 نقاط،
+    // قواعد ثابتة لا تظهر بالإعدادات: أقل طول 3 أحرف، والنقاط حسب طول الكلمة
+    // (3 أحرف: 1 · 4: 2 · 5: 3 · 6 فأكثر: 5) + مكافأة الكلمة الذهبية 7،
     // وحرف الوسط + أحرف الخلية + القاموس + منع الاحتساب مرتين إلزامية دائماً (wh-engine.js).
-    var FIXED = { minLen: 3, golden: 7 };
+    var FIXED = { minLen: 3, points: { p3: 1, p4: 2, p5: 3, p6: 5, golden: 7 } };
 
     var SECTIONS = [
         { title: 'إعدادات الجولة', rows: [
@@ -43,12 +44,6 @@
             { type: 'toggle', key: 'allowRepeat', label: 'السماح بتكرار الحرف', default: true, rule: true },
             { type: 'toggle', key: 'showErrors', label: 'تنبيهات الكلمات المرفوضة', default: true },
             { type: 'toggle', key: 'showAccepted', label: 'إظهار الكلمات المقبولة', default: true }
-        ]},
-        { title: 'إعدادات النقاط', rows: [
-            { type: 'number', key: 'p3', label: 'كلمة من 3 أحرف', min: 0, max: 50, step: 1, default: 1, rule: true },
-            { type: 'number', key: 'p4', label: 'كلمة من 4 أحرف', min: 0, max: 50, step: 1, default: 2, rule: true },
-            { type: 'number', key: 'p5', label: 'كلمة من 5 أحرف', min: 0, max: 50, step: 1, default: 3, rule: true },
-            { type: 'number', key: 'p6', label: 'كلمة من 6 أحرف فأكثر', min: 0, max: 50, step: 1, default: 5, rule: true }
         ]},
         { title: 'العرض', rows: [
             { type: 'choice', key: 'motion', label: 'المؤثرات الحركية', options: ['كاملة', 'مخففة', 'بدون'], values: ['full', 'low', 'off'], default: 'full' },
@@ -84,7 +79,7 @@
     function rules(v) {
         v = sanitize(v);
         return { durationSec: v.durationSec, minLen: FIXED.minLen, allowRepeat: v.allowRepeat,
-            points: { p3: v.p3, p4: v.p4, p5: v.p5, p6: v.p6, golden: FIXED.golden } };
+            points: Object.assign({}, FIXED.points) };
     }
 
     function ruleKeys() { return rows().filter(function (r) { return r.rule; }).map(function (r) { return r.key; }); }
