@@ -86,6 +86,8 @@ function awardForRoundCompletion(userId, params) {
     db.prepare(
         'UPDATE user_points SET games_played = games_played + 1, games_won = games_won + ?, total_play_ms = total_play_ms + ? WHERE user_id = ?'
     ).run(params.won ? 1 : 0, params.durationMs || 0, userId);
+    db.prepare('INSERT INTO player_rounds_log (user_id, won, created_at) VALUES (?, ?, ?)')
+        .run(userId, params.won ? 1 : 0, now());
 
     return result;
 }
@@ -140,21 +142,25 @@ function getUserPoints(userId) {
 }
 
 /**
- * أعلى اللاعبين بعدد مرات الفوز — بيانات علنية غير حساسة فقط. يستبعد
- * من لا جولات فائزة له بعد.
+ * أعلى اللاعبين بعدد مرات الفوز — بيانات علنية غير حساسة فقط. التصنيف
+ * أسبوعي مثل توب الاستريمرز: يحسب الجولات من sinceMs فقط (بداية الأسبوع
+ * من getRankingPeriodStart بـauth-service.js، يمررها الراوتر). يستبعد من
+ * لا جولات فائزة له بالفترة.
  * @param {number} [limit]
+ * @param {number} [sinceMs]
  * @returns {Array<{username: string, displayName: string, avatarBase64: (string|null), customId: (string|null), gamesWon: number, gamesPlayed: number}>}
  */
-function getTopPlayersByWins(limit) {
+function getTopPlayersByWins(limit, sinceMs) {
     var rows = db.prepare(
         `SELECT u.username, u.display_name AS displayName, u.avatar_image_base64 AS avatarBase64,
-                u.custom_id AS customId, p.games_won AS gamesWon, p.games_played AS gamesPlayed
-         FROM user_points p
-         JOIN users u ON u.id = p.user_id
-         WHERE p.games_won > 0
-         ORDER BY p.games_won DESC, p.games_played ASC
+                u.custom_id AS customId, l.games_won AS gamesWon, l.games_played AS gamesPlayed
+         FROM (SELECT user_id, SUM(won) AS games_won, COUNT(*) AS games_played
+               FROM player_rounds_log WHERE created_at >= ? GROUP BY user_id) l
+         JOIN users u ON u.id = l.user_id
+         WHERE l.games_won > 0
+         ORDER BY l.games_won DESC, l.games_played ASC
          LIMIT ?`
-    ).all(limit || 20);
+    ).all(sinceMs || 0, limit || 20);
     return rows.map(function (r) {
         return {
             username: r.username,

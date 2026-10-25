@@ -723,6 +723,12 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
     if (!rows || rows.dataset.realData) return;
     window.AGPAuth.getTopPlayersByWins(5).then(function(result){
       var players = (result && result.success && result.players) || [];
+      // التصنيف أسبوعي (يتجدد كل سبت) مثل توب الاستريمرز.
+      if (result && result.success && !players.length) {
+        rows.innerHTML = '<div style="padding:18px 10px;text-align:center;font-size:13.5px;color:#968ea4;">ما فيه انتصارات هالأسبوع بعد — التصنيف يتجدد كل سبت.</div>';
+        rows.dataset.realData = '1';
+        return;
+      }
       if (!players.length) return;
       rows.innerHTML = '';
       players.slice(0, 5).forEach(function(pl, idx){
@@ -746,7 +752,7 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
         winsNum.textContent = arDigits(pl.gamesWon || 0);
         var winsLbl = document.createElement('span');
         winsLbl.style.cssText = 'display:block;margin-top:2px;font-size:11px;color:#968ea4;';
-        winsLbl.textContent = 'فوز';
+        winsLbl.textContent = 'فوز هالأسبوع';
         winsWrap.appendChild(winsNum);
         winsWrap.appendChild(winsLbl);
         row.appendChild(rankSpan);
@@ -1401,7 +1407,7 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
   // [صنّاع النجاح] عرض احترافي بتبويبات: شريط أزرار (الداعمين/اللاعبين/
   // الاستريمرز) يعرض توب واحد بكل مرة بعرض الشاشة كامل، والصفوف تصير
   // بطاقات (المراكز ١–٣ بصف، و٤–٥ بصف) بألوان ذهبي/فضي/برونزي للثلاثة
-  // الأوائل. فوق توب الاستريمرز مؤقت تنازلي (أيام/ساعات/دقائق) مع شريط
+  // الأوائل. فوق توب الاستريمرز واللاعبين مؤقت تنازلي (أيام/ساعات/دقائق) مع شريط
   // تقدّم الأسبوع — نفس حد التصفير بالخادم (getRankingPeriodStart بـ
   // auth-service.js): كل سبت 12:00 ص بتوقيت السعودية (UTC+3 ثابت).
   // ملاحظة: الكود اللي يعبّي البيانات الحقيقية (loadReal*) يستبدل محتوى
@@ -1412,7 +1418,7 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
   var SATURDAY = 6;
   var TABS = [
     { key: 'supporters', title: 'توب الداعمين للمنصة', label: 'الداعمين', icon: '💜', hint: 'حسب مبالغ الدعم' },
-    { key: 'players', title: 'توب اللاعبين الأكثر نشاطاً', label: 'اللاعبين', icon: '🎮', hint: 'حسب عدد مرات الفوز' },
+    { key: 'players', title: 'توب اللاعبين الأكثر نشاطاً', label: 'اللاعبين', icon: '🎮', hint: 'حسب مرات الفوز هالأسبوع' },
     { key: 'streamers', title: 'توب الاستريمرز الأكثر نشاطاً', label: 'الاستريمرز', icon: '🎥', hint: 'حسب ساعات البث هالأسبوع' }
   ];
   var activeKey = 'supporters';
@@ -1583,7 +1589,7 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
       if (!card.hasAttribute('data-lb-card')) card.setAttribute('data-lb-card', t.key);
       var rows = rowsOf(card);
       if (rows) rows.classList.add('agp-lb-rows');
-      if (t.key === 'streamers' && !card.querySelector('.agp-lb-timer')) {
+      if ((t.key === 'streamers' || t.key === 'players') && !card.querySelector('.agp-lb-timer')) {
         var timer = buildTimer();
         card.insertBefore(timer, card.firstChild);
         renderTimer(timer);

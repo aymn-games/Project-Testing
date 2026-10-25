@@ -356,6 +356,17 @@ db.exec(`
     );
     CREATE INDEX IF NOT EXISTS idx_streamer_match_time_user ON streamer_match_time(user_id);
 
+    -- سجل الجولات المكتملة لكل لاعب (صف لكل جولة) — لتصنيف "توب اللاعبين"
+    -- الأسبوعي بالرئيسية (getTopPlayersByWins بـpoints-service.js). العدّادات
+    -- التراكمية بـuser_points تبقى كما هي للبروفايل.
+    CREATE TABLE IF NOT EXISTS player_rounds_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        won INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_player_rounds_log_created ON player_rounds_log(created_at);
+
     -- إعدادات عامة بسيطة (مفتاح/قيمة).
     CREATE TABLE IF NOT EXISTS app_settings (
         key TEXT PRIMARY KEY,

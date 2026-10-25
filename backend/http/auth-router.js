@@ -977,10 +977,11 @@ function handleTopStreamers(req, res) {
   sendJson(res, 200, { success: true, streamers: authService.getTopStreamersByHours(limit) });
 }
 
-/** أعلى اللاعبين بعدد مرات الفوز — عام، لبطاقة "الأكثر نشاطاً" بالصفحة الرئيسية. */
+/** أعلى اللاعبين بعدد مرات الفوز هالأسبوع — عام، لبطاقة "الأكثر نشاطاً" بالصفحة الرئيسية.
+ * نفس حد التصفير الأسبوعي لتوب الاستريمرز (كل سبت 12:00 ص بتوقيت السعودية). */
 function handleTopPlayersByWins(req, res) {
   var limit = Math.min(50, Math.max(1, parseInt(getQueryParam(req, 'limit'), 10) || 20));
-  sendJson(res, 200, { success: true, players: pointsService.getTopPlayersByWins(limit) });
+  sendJson(res, 200, { success: true, players: pointsService.getTopPlayersByWins(limit, authService.getRankingPeriodStart()) });
 }
 
 /** أعلى اللاعبين بساعات اللعب الفعلية — عام. */
