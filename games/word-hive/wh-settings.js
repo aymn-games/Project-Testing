@@ -30,32 +30,25 @@
     // وحرف الوسط + أحرف الخلية + القاموس + منع الاحتساب مرتين إلزامية دائماً (wh-engine.js).
     var FIXED = { minLen: 3, points: { p3: 1, p4: 2, p5: 3, p6: 5, golden: 7 } };
 
+    // داخل المباراة: الوقت وعدد الجولات والصوت فقط — والباقي ثابت (VIEW_FIXED)
     var SECTIONS = [
-        { title: 'إعدادات الجولة', rows: [
+        { title: 'إعدادات المباراة', rows: [
             { type: 'choice', basic: true, key: 'matchRounds', label: 'عدد الجولات', options: ['3', '5', '7'], values: [3, 5, 7], default: 3, rule: true },
             { type: 'choice', basic: true, key: 'durationSec', label: 'مدة الجولة', options: ['3 دقائق', '4 دقائق', '5 دقائق'], values: [180, 240, 300], default: 180, rule: true },
-            { type: 'choice', key: 'roundPick', label: 'اختيار الجولة', options: ['عشوائية', 'يدوية'], values: ['random', 'manual'], default: 'random', rule: true },
-            { type: 'select', key: 'roundId', label: 'الجولة المحددة', showIf: 'roundPick', showIfVal: 'manual', default: '', rule: true },
-            { type: 'toggle', key: 'avoidRecent', label: 'منع تكرار الجولات الأخيرة', default: true },
-            { type: 'toggle', key: 'showTotal', label: 'عرض إجمالي الكلمات', default: true }
-        ]},
-        { title: 'إعدادات الكلمات', rows: [
-            { type: 'toggle', key: 'allowRepeat', label: 'السماح بتكرار الحرف', default: true, rule: true },
-            { type: 'toggle', key: 'showErrors', label: 'تنبيهات الكلمات المرفوضة', default: true },
-            { type: 'toggle', key: 'showAccepted', label: 'إظهار الكلمات المقبولة', default: true }
-        ]},
-        { title: 'العرض', rows: [
-            { type: 'choice', key: 'motion', label: 'المؤثرات الحركية', options: ['كاملة', 'مخففة', 'بدون'], values: ['full', 'low', 'off'], default: 'full' },
             { type: 'toggle', basic: true, key: 'sound', label: 'الأصوات', default: true }
         ]}
     ];
+
+    // سلوك ثابت بدون خيارات: جولة عشوائية مع تجنّب الجولات الأخيرة، عرض الإجمالي،
+    // تكرار الحرف مسموح، تنبيهات المرفوض وإظهار المقبول مفعّلة، والمؤثرات كاملة.
+    var VIEW_FIXED = { roundPick: 'random', roundId: '', avoidRecent: true, showTotal: true, allowRepeat: true, showErrors: true, showAccepted: true, motion: 'full' };
 
     function rows() { return [JOIN].concat(SECTIONS).reduce(function (a, s) { return a.concat(s.rows); }, []); }
 
     function defaults() {
         var out = {};
         rows().forEach(function (r) { if (r.type !== 'locked') out[r.key] = r.default; });
-        return out;
+        return Object.assign(out, VIEW_FIXED);
     }
 
     /** يدمج القيم المحفوظة مع الافتراضية ويضبط كل قيمة ضمن خياراتها/حدودها. */
@@ -71,7 +64,7 @@
             else if (r.type === 'number') { var n = Math.round(+x); out[r.key] = x === '' || x == null || isNaN(n) ? d[r.key] : Math.max(r.min, Math.min(r.max, n)); }
             else out[r.key] = typeof x === 'string' ? x : d[r.key];
         });
-        return out;
+        return Object.assign(out, VIEW_FIXED);
     }
 
     /** قواعد الجولة للمحرك (createSession) من الإعدادات. */
@@ -130,9 +123,7 @@
      * وإلا لوحة الإعدادات داخل اللعبة (كل الأقسام عدا الدخول).
      */
     function viewSections(values, set, ctx) {
-        var list = ctx && ctx.basic
-            ? [JOIN, { title: 'المباراة', rows: rows().filter(function (r) { return r.basic; }) }]
-            : SECTIONS;
+        var list = ctx && ctx.basic ? [JOIN, { title: 'المباراة', rows: SECTIONS[0].rows }] : SECTIONS;
         return list.map(function (s, i) {
             var visible = s.rows.filter(function (r) { return !r.showIf || values[r.showIf] === r.showIfVal; });
             return { title: s.title, num: i + 1, span: s.full ? '1 / -1' : 'auto', delay: (i * 0.07).toFixed(2) + 's',
