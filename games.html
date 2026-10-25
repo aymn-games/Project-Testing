@@ -441,14 +441,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     'codenames':            { name: 'كود نيمز', cat: 'q', icon: 'key', desc: 'السباي ماستر يلمّح بكلمة ورقم، وفريقه يخمّن الكلمات السرية.' },
     'photo-challenge':      { name: 'تحدي الصور', cat: 'c', icon: 'image_search', badge: 'رائج', desc: 'صورة كل جولة، وأول من يكتب الإجابة يسجّل نقطة لفريقه.' },
     'khazna':               { name: 'الخزنة', cat: 'c', icon: 'lock', badge: 'رائج', desc: 'العجلة تختار لاعب، ويكتب أرقام ساعات الخزنة بالترتيب برسالة وحدة.' },
-    'team-war':             { name: 'حرب الفريقين', cat: 'c', icon: 'swords', badge: 'تم التحديث', desc: 'فريق أزرق وفريق أحمر، وكل لاعب بدوره يفتح مربع برقمه من الشات.' },
-    'elimination-roulette': { name: 'روليت الإقصاء', cat: 'r', icon: 'person_remove', badge: 'تم التحديث', desc: 'العجلة تختار لاعب، وهو يقصي لاعب ثاني برقمه من الشات.' },
-    'tribe-roulette':       { name: 'روليت مخفي', cat: 'r', icon: 'groups', badge: 'تم التحديث', desc: 'العجلة تختار لاعب، واللاعبين مختبين خلف بطاقات.. يختار رقم بطاقة بالشات ويقصي اللي خلفها.' },
-    'russian-roulette':     { name: 'الروليت الروسي', cat: 'r', icon: 'casino', badge: 'تم التحديث', desc: 'عجلة أو سكرول يختار لاعب، ويستهدف لاعب ثاني برقمه من الشات.' },
+    'team-war':             { name: 'حرب الفريقين', cat: 'c', icon: 'swords', desc: 'فريق أزرق وفريق أحمر، وكل لاعب بدوره يفتح مربع برقمه من الشات.' },
+    'elimination-roulette': { name: 'روليت الإقصاء', cat: 'r', icon: 'person_remove', desc: 'العجلة تختار لاعب، وهو يقصي لاعب ثاني برقمه من الشات.' },
+    'tribe-roulette':       { name: 'روليت مخفي', cat: 'r', icon: 'groups', desc: 'العجلة تختار لاعب، واللاعبين مختبين خلف بطاقات.. يختار رقم بطاقة بالشات ويقصي اللي خلفها.' },
+    'russian-roulette':     { name: 'الروليت الروسي', cat: 'r', icon: 'casino', desc: 'عجلة أو سكرول يختار لاعب، ويستهدف لاعب ثاني برقمه من الشات.' },
     'fruit-roulette':       { name: 'روليت الفواكه', cat: 'r', icon: 'nutrition', badge: 'رائج', desc: 'افتح صندوق من أربعة.. ثلاثة فيها فواكه وواحد يخبّي مفاجأة.' },
-    'musical-chairs':       { name: 'الكراسي الموسيقية', cat: 'c', icon: 'chair', badge: 'تم التحديث', desc: 'تتوقف الموسيقى فجأة، وأول من يكتب رقم الكرسي يثبت مكانه.' },
-    'word-categories':      { name: 'اسم حيوان نبات جماد بلاد', cat: 'q', icon: 'pets', badge: 'تم التحديث', desc: 'حرف عشوائي كل جولة، واكتب إجاباتك بالشات قبل انتهاء الوقت.' },
-    'top-ten':              { name: 'خمّن العشرة', cat: 'q', icon: 'format_list_numbered', badge: 'تم التحديث', desc: 'سؤال وعشر إجابات مرتبة، وكل إجابة صحيحة لها نقاطها.' },
+    'musical-chairs':       { name: 'الكراسي الموسيقية', cat: 'c', icon: 'chair', desc: 'تتوقف الموسيقى فجأة، وأول من يكتب رقم الكرسي يثبت مكانه.' },
+    'word-categories':      { name: 'اسم حيوان نبات جماد بلاد', cat: 'q', icon: 'pets', desc: 'حرف عشوائي كل جولة، واكتب إجاباتك بالشات قبل انتهاء الوقت.' },
+    'top-ten':              { name: 'خمّن العشرة', cat: 'q', icon: 'format_list_numbered', desc: 'سؤال وعشر إجابات مرتبة، وكل إجابة صحيحة لها نقاطها.' },
     'fastest-answer':       { name: 'أسرع إجابة', cat: 'q', icon: 'bolt', badge: 'جديد', desc: 'لاعب من كل فريق وسؤال سريع، وأول إجابة صحيحة بالشات تكسب فريقها النقاط.' }
   };
   var CARD_CATS = {
@@ -456,6 +456,54 @@ document.addEventListener('DOMContentLoaded', async function() {
     c: { label: 'تحديات', hue: 150 },
     q: { label: 'أسئلة وكلمات', hue: 255 }
   };
+
+  // [آخر التحديثات] سجل تحديثات الألعاب — الأحدث أولاً. كل ما تتعدل لعبة
+  // نضيف لها سطر هنا بأعلى القائمة: قسم "آخر التحديثات" فوق الشبكة يعرض
+  // آخر 3 تلقائياً، وشارة "تم التحديث" تظهر على بطاقاتها فقط (وتنشال عن
+  // الأقدم)، وزر الجرس يضيء بنقطة حمراء لأي تحديث ما شافه المستخدم.
+  var GAME_UPDATES = [
+    { id: 'top-ten', date: '2026-10-25', notes: [
+      'بنك أسئلة جديد فيه 120 سؤال.',
+      'الإجابة تنقبل حتى لو كُتبت بصيغة مختلفة شوي.'
+    ] },
+    { id: 'dots', date: '2026-10-25', notes: [
+      'كل دور فيه حد أقصى 3 مربعات.',
+      'إذا اللاعب فوّت دوره مرتين، اللعبة تلعب عنه تلقائياً.',
+      'بطاقة «جاء دورك يا…» تنبّه صاحب الدور.',
+      'إطارات اللاعبين تظهر وقت إضافة لاعب جديد أثناء المباراة.'
+    ] },
+    { id: 'survival-ship', date: '2026-10-25', notes: [
+      'نمط جديد اسمه «مواجهة»: لاعبين يجاوبون على نفس السؤال، واللي يجاوب صح أول ينجو.',
+      'صار أوضح الفرق بين «بالدور» (لاعب واحد) و«مواجهة» (لاعبين).'
+    ] }
+  ];
+  var RECENT_UPDATES = GAME_UPDATES.slice(0, 3);
+  var UPDATED_IDS = RECENT_UPDATES.map(function(u){ return u.id; });
+  var UPD_SEEN_KEY = 'agp:updates-seen';
+  function updKey(u){ return u.id + '@' + u.date; }
+  function getSeenUpdates(){
+    try { var v = JSON.parse(localStorage.getItem(UPD_SEEN_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+  }
+  function unseenUpdates(){
+    var seen = getSeenUpdates();
+    return RECENT_UPDATES.filter(function(u){ return seen.indexOf(updKey(u)) === -1; });
+  }
+  function markUpdatesSeen(){
+    try { localStorage.setItem(UPD_SEEN_KEY, JSON.stringify(RECENT_UPDATES.map(updKey))); } catch (e) {}
+    var bell = document.getElementById('gl-upd-bell');
+    if (bell) bell.classList.remove('gl-upd-has');
+    Array.prototype.forEach.call(document.querySelectorAll('.gl-upd-card.gl-upd-unseen'), function(c){ c.classList.remove('gl-upd-unseen'); });
+  }
+  function updTimeAgo(date){
+    var d = new Date(date + 'T00:00:00'), now = new Date();
+    var days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - d) / 86400000);
+    if (days <= 0) return 'اليوم';
+    if (days === 1) return 'أمس';
+    if (days === 2) return 'قبل يومين';
+    if (days <= 10) return 'قبل ' + days + ' أيام';
+    if (days < 30) return 'قبل ' + Math.round(days / 7) + ' أسابيع';
+    return d.toLocaleDateString('ar', { day: 'numeric', month: 'long' });
+  }
 
   function ensureCardStyles(){
     if (document.getElementById('gl-card-styles')) return;
@@ -664,6 +712,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   function buildCard(g, i){
     var info = CARD_INFO[g.id] || { name: g.title, cat: 'c', icon: 'sports_esports', desc: g.desc };
     var cat = CARD_CATS[info.cat];
+    // شارة "تم التحديث" محسوبة من GAME_UPDATES (آخر 3) — تحل محل "جديد"
+    // بس ما تغطي شارات الحالة (صيانة / تجريبية / مرحلة اختبار).
+    var badge = info.badge;
+    if (UPDATED_IDS.indexOf(g.id) !== -1 && (!badge || badge === 'جديد')) badge = 'تم التحديث';
     var card = document.createElement('article');
     card.className = 'gl-card' + (info.maintenance ? ' gl-maint' : '') + (info.adminOnly ? ' gl-admin' : '');
     card.style.setProperty('--hue', cat.hue);
@@ -673,7 +725,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       '<div class="gl-top"><span class="gl-tile"><span class="gl-ms">' + info.icon + '</span></span>' +
       '<span class="gl-num" dir="ltr">' + (i + 1 < 10 ? '0' : '') + (i + 1) + '</span></div>' +
       '<div class="gl-meta"><span class="gl-cat">' + cat.label + '</span>' +
-      (info.badge ? '<span class="gl-badge">' + info.badge + '</span>' : '') + '</div>' +
+      (badge ? '<span class="gl-badge' + (badge === 'تم التحديث' ? ' gl-badge-upd' : '') + '">' + badge + '</span>' : '') + '</div>' +
       '<h3 class="gl-title"></h3><p class="gl-desc"></p>' +
       '<a class="gl-play" href="' + g.href + '">العب الآن<span class="gl-ms">arrow_back</span></a>';
     card.querySelector('.gl-title').textContent = info.name;
@@ -693,6 +745,167 @@ document.addEventListener('DOMContentLoaded', async function() {
       window.location.href = g.href;
     });
     return card;
+  }
+
+  // [آخر التحديثات] قسم ثابت فوق الشبكة بآخر 3 ألعاب تحدثت + زر جرس
+  // بجنب "عدد البطاقات بالصف" عليه نقطة حمراء للتحديثات اللي ما انشافت
+  // (يتذكرها جهاز المستخدم). الضغط على الجرس ينزل للقسم ويعلّمها مقروءة.
+  function ensureUpdStyles(){
+    if (document.getElementById('gl-upd-styles')) return;
+    var st = document.createElement('style');
+    st.id = 'gl-upd-styles';
+    st.textContent =
+      '@property --gl-upd-a{syntax:"<angle>";inherits:false;initial-value:0deg;}' +
+      '.gl-upd{direction:rtl;font-family:"Readex Pro",system-ui,sans-serif;color:#fff;text-align:right;' +
+      'width:calc(100vw - 48px);margin:0 calc(50% - 50vw + 24px) 26px;scroll-margin-top:110px;}' +
+      '.gl-upd-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;}' +
+      '.gl-upd-head-tile{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;' +
+      'background:linear-gradient(135deg,oklch(0.62 0.22 300),oklch(0.55 0.23 285));box-shadow:0 10px 30px -10px oklch(0.6 0.24 295 / 0.8);}' +
+      '.gl-upd-head-tile .gl-ms{font-size:22px;font-variation-settings:"FILL" 1,"wght" 500;}' +
+      '.gl-upd-head h2{margin:0;font-size:20px;font-weight:700;line-height:1.3;}' +
+      '.gl-upd-head p{margin:2px 0 0;font-size:13px;color:oklch(0.72 0.02 300);}' +
+      '.gl-upd-list{display:grid;gap:18px;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) minmax(0,1fr);}' +
+      '.gl-upd-card{position:relative;isolation:isolate;overflow:hidden;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:14px;' +
+      'background:radial-gradient(420px circle at 100% 0%,oklch(0.6 0.17 var(--hue) / 0.2),transparent 65%),oklch(0.17 0.025 300);' +
+      'border:1px solid oklch(0.6 0.16 var(--hue) / 0.3);opacity:0;transform:translateY(14px);' +
+      'animation:gl-upd-in .6s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:calc(var(--i) * 110ms);' +
+      'transition:border-color .25s,box-shadow .25s,translate .25s;}' +
+      '.gl-upd-card:hover{border-color:oklch(0.7 0.16 var(--hue) / 0.6);box-shadow:0 22px 50px -28px oklch(0.6 0.2 var(--hue) / 0.9);translate:0 -3px;}' +
+      '.gl-upd-card.gl-upd-top{border-color:transparent;background:' +
+      'radial-gradient(520px circle at 100% 0%,oklch(0.6 0.17 var(--hue) / 0.26),transparent 65%) padding-box,' +
+      'linear-gradient(oklch(0.17 0.025 300),oklch(0.17 0.025 300)) padding-box,' +
+      'conic-gradient(from var(--gl-upd-a),oklch(0.7 0.18 var(--hue)),oklch(0.62 0.22 300),transparent 40%,oklch(0.7 0.18 var(--hue))) border-box;' +
+      'animation:gl-upd-in .6s cubic-bezier(.2,.7,.2,1) forwards,gl-upd-spin 6s linear infinite;}' +
+      '.gl-upd-bg{position:absolute;z-index:-1;left:-22px;bottom:-26px;font-size:150px;pointer-events:none;' +
+      'color:oklch(0.74 0.14 var(--hue));opacity:.07;transform:rotate(-14deg);font-variation-settings:"FILL" 1,"wght" 500,"opsz" 48;}' +
+      '.gl-upd-top-row{display:flex;align-items:center;gap:12px;}' +
+      '.gl-upd-card .gl-tile{flex:none;}' +
+      '.gl-upd-name{margin:0;font-size:18px;font-weight:600;line-height:1.3;}' +
+      '.gl-upd-meta{display:flex;align-items:center;gap:6px;font-size:12px;color:oklch(0.72 0.02 300);margin-top:2px;}' +
+      '.gl-upd-meta .gl-ms{font-size:14px;}' +
+      '.gl-upd-meta b{font-weight:500;color:oklch(0.74 0.14 var(--hue));}' +
+      '.gl-upd-chips{margin-inline-start:auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px;}' +
+      '.gl-upd-chip{font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;' +
+      'background:oklch(0.6 0.16 var(--hue) / 0.16);color:oklch(0.82 0.12 var(--hue));border:1px solid oklch(0.6 0.16 var(--hue) / 0.45);}' +
+      '.gl-upd-new{display:none;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#fca5a5;}' +
+      '.gl-upd-new::before{content:"";width:7px;height:7px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 0 rgba(239,68,68,.7);animation:gl-upd-ping 1.6s infinite;}' +
+      '.gl-upd-card.gl-upd-unseen .gl-upd-new{display:inline-flex;}' +
+      '.gl-upd-notes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;flex:1 1 auto;}' +
+      '.gl-upd-notes li{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;line-height:1.7;color:oklch(0.86 0.015 300);text-wrap:pretty;}' +
+      '.gl-upd-notes li .gl-ms{flex:none;font-size:18px;margin-top:3px;color:oklch(0.74 0.14 var(--hue));font-variation-settings:"FILL" 1,"wght" 500;}' +
+      '.gl-upd-play{font-family:inherit;font-size:14px;font-weight:600;height:44px;border-radius:12px;text-decoration:none;' +
+      'display:flex;align-items:center;justify-content:center;gap:6px;color:oklch(0.99 0 0);' +
+      'background:linear-gradient(90deg,oklch(0.6 0.17 var(--hue)),oklch(0.55 0.23 285));transition:filter .15s;}' +
+      '.gl-upd-play:hover{filter:brightness(1.12);color:oklch(0.99 0 0);}' +
+      '.gl-upd-play .gl-ms{font-size:18px;transition:transform .25s;}' +
+      '.gl-upd-play:hover .gl-ms{transform:translateX(-4px);}' +
+      '.gl-upd.gl-upd-flash .gl-upd-card{animation:gl-upd-flash 1.1s ease;opacity:1;transform:none;}' +
+      '.gl-badge.gl-badge-upd{background:oklch(0.65 0.17 160 / 0.16);color:oklch(0.84 0.13 160);border-color:oklch(0.65 0.17 160 / 0.5);}' +
+      '.gl-upd-bell{position:relative;font-family:"Readex Pro",system-ui,sans-serif;display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 14px;' +
+      'border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e2f5;font-size:13px;font-weight:600;' +
+      'cursor:pointer;transition:background .2s,border-color .2s;direction:rtl;}' +
+      '.gl-upd-bell:hover{background:rgba(178,140,245,.12);border-color:rgba(178,140,245,.45);}' +
+      '.gl-upd-bell .gl-ms{font-size:20px;color:#b28cf5;font-variation-settings:"FILL" 1,"wght" 500;}' +
+      '.gl-upd-dot{display:none;position:absolute;top:-5px;left:-5px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;' +
+      'background:#ef4444;color:#fff;font-size:11px;font-weight:700;line-height:19px;text-align:center;border:2px solid #0d0b14;' +
+      'box-shadow:0 0 0 0 rgba(239,68,68,.7);animation:gl-upd-ping 1.6s infinite;}' +
+      '.gl-upd-bell.gl-upd-has .gl-upd-dot{display:block;}' +
+      '.gl-upd-bell.gl-upd-has .gl-ms{animation:gl-upd-ring 2.4s ease-in-out infinite;transform-origin:50% 10%;}' +
+      '@keyframes gl-upd-in{to{opacity:1;transform:none;}}' +
+      '@keyframes gl-upd-spin{to{--gl-upd-a:360deg;}}' +
+      '@keyframes gl-upd-ping{0%{box-shadow:0 0 0 0 rgba(239,68,68,.65);}70%{box-shadow:0 0 0 9px rgba(239,68,68,0);}100%{box-shadow:0 0 0 0 rgba(239,68,68,0);}}' +
+      '@keyframes gl-upd-ring{0%,60%,100%{transform:rotate(0);}64%{transform:rotate(16deg);}70%{transform:rotate(-14deg);}76%{transform:rotate(9deg);}82%{transform:rotate(-5deg);}}' +
+      '@keyframes gl-upd-flash{0%,100%{box-shadow:none;}40%{box-shadow:0 0 0 3px oklch(0.7 0.18 var(--hue) / 0.7),0 0 40px -6px oklch(0.7 0.18 var(--hue) / 0.8);}}' +
+      '@media (max-width:1199px){.gl-upd-list{grid-template-columns:repeat(2,minmax(0,1fr));}.gl-upd-card.gl-upd-top{grid-column:1 / -1;}}' +
+      '@media (max-width:699px){.gl-upd-list{grid-template-columns:minmax(0,1fr);}' +
+      '.gl-upd{width:calc(100vw - 32px);margin-left:calc(50% - 50vw + 16px);margin-right:calc(50% - 50vw + 16px);}}' +
+      '@media (prefers-reduced-motion:reduce){.gl-upd-card,.gl-upd-card.gl-upd-top{animation:none;opacity:1;transform:none;}' +
+      '.gl-upd-dot,.gl-upd-new::before,.gl-upd-bell.gl-upd-has .gl-ms{animation:none;}}';
+    document.head.appendChild(st);
+  }
+
+  function buildUpdatesSection(){
+    var sec = document.createElement('section');
+    sec.id = 'gl-upd';
+    sec.className = 'gl-upd';
+    sec.innerHTML =
+      '<div class="gl-upd-head"><span class="gl-upd-head-tile"><span class="gl-ms">auto_awesome</span></span>' +
+      '<div><h2>آخر التحديثات</h2><p>آخر الألعاب اللي طوّرناها، وش الجديد فيها</p></div></div>' +
+      '<div class="gl-upd-list"></div>';
+    var list = sec.querySelector('.gl-upd-list');
+    var unseen = unseenUpdates().map(updKey);
+    RECENT_UPDATES.forEach(function(u, i){
+      var game = REAL_GAMES.find(function(g){ return g.id === u.id; });
+      var info = CARD_INFO[u.id];
+      if (!game || !info) return;
+      var cat = CARD_CATS[info.cat];
+      var card = document.createElement('article');
+      card.className = 'gl-upd-card' + (i === 0 ? ' gl-upd-top' : '') + (unseen.indexOf(updKey(u)) !== -1 ? ' gl-upd-unseen' : '');
+      card.style.setProperty('--hue', cat.hue);
+      card.style.setProperty('--i', i);
+      card.innerHTML =
+        '<span class="gl-upd-bg gl-ms">' + info.icon + '</span>' +
+        '<div class="gl-upd-top-row"><span class="gl-tile"><span class="gl-ms">' + info.icon + '</span></span>' +
+        '<div><h3 class="gl-upd-name"></h3><div class="gl-upd-meta"><b>' + cat.label + '</b>·' +
+        '<span class="gl-ms">schedule</span><span>' + updTimeAgo(u.date) + '</span></div></div>' +
+        '<div class="gl-upd-chips"><span class="gl-upd-chip">' + (i === 0 ? 'الأحدث' : 'تحديث') + '</span>' +
+        '<span class="gl-upd-new">جديد عليك</span></div></div>' +
+        '<ul class="gl-upd-notes"></ul>' +
+        '<a class="gl-upd-play" href="' + game.href + '">جرّبها الآن<span class="gl-ms">arrow_back</span></a>';
+      card.querySelector('.gl-upd-name').textContent = info.name;
+      var ul = card.querySelector('.gl-upd-notes');
+      u.notes.forEach(function(n){
+        var li = document.createElement('li');
+        li.innerHTML = '<span class="gl-ms">check_circle</span><span></span>';
+        li.lastChild.textContent = n;
+        ul.appendChild(li);
+      });
+      // نفس قيود فتح الألعاب اللي ببطاقات الشبكة (صيانة / اختبار / حساب)
+      card.querySelector('.gl-upd-play').addEventListener('click', function(e){
+        var block = info.maintenance ? 'maintenance' : (info.adminOnly && !isAdminUser()) ? 'testing' : getGameAccessBlock();
+        markUpdatesSeen();
+        if (!block) return;
+        e.preventDefault();
+        showGameLockModal(block);
+      });
+      list.appendChild(card);
+    });
+    return sec;
+  }
+
+  function ensureUpdatesSection(grid){
+    if (!RECENT_UPDATES.length || !grid || !grid.parentNode) return;
+    var prev = grid.previousElementSibling;
+    if (prev && prev.id === 'gl-upd') return;
+    var old = document.getElementById('gl-upd');
+    if (old) old.remove();
+    ensureUpdStyles();
+    grid.parentNode.insertBefore(buildUpdatesSection(), grid);
+  }
+
+  function ensureUpdatesBell(anchorRow){
+    if (!RECENT_UPDATES.length || !anchorRow || document.getElementById('gl-upd-bell')) return;
+    ensureUpdStyles();
+    var bell = document.createElement('button');
+    bell.type = 'button';
+    bell.id = 'gl-upd-bell';
+    bell.className = 'gl-upd-bell';
+    bell.setAttribute('aria-label', 'آخر التحديثات');
+    bell.innerHTML = '<span class="gl-ms">notifications</span>آخر التحديثات<span class="gl-upd-dot"></span>';
+    var n = unseenUpdates().length;
+    if (n) { bell.classList.add('gl-upd-has'); bell.querySelector('.gl-upd-dot').textContent = n; }
+    bell.addEventListener('click', function(){
+      var sec = document.getElementById('gl-upd');
+      if (sec) {
+        sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        sec.classList.remove('gl-upd-flash');
+        void sec.offsetWidth;
+        sec.classList.add('gl-upd-flash');
+        setTimeout(function(){ sec.classList.remove('gl-upd-flash'); }, 1300);
+      }
+      markUpdatesSeen();
+    });
+    anchorRow.insertBefore(bell, document.getElementById('gl-cols'));
   }
 
   function isAlreadyReal(grid){
@@ -722,7 +935,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   function rebuild(){
     if (applying) return;
     var grid = findGrid();
-    if (!grid || isAlreadyReal(grid)) return;
+    if (!grid) return;
+    if (isAlreadyReal(grid)) { ensureUpdatesSection(grid); return; }
     applying = true;
     if (observer) observer.disconnect();
 
@@ -739,6 +953,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     var countLabel = allDivs.find(function(d){ return /لعبة معروضة|الحقيقية بالمنصة/.test(d.textContent || '') && d.textContent.length < 40 && !d.querySelector('div'); });
     if (countLabel) countLabel.textContent = 'الألعاب الـ ' + REAL_GAMES.length + ' الحقيقية بالمنصة'; // يتحدّث تلقائياً مع أي لعبة تنضاف لـREAL_GAMES
     ensureColsControl(grid, countLabel ? countLabel.parentElement : null);
+    ensureUpdatesBell(countLabel ? countLabel.parentElement : null);
+    ensureUpdatesSection(grid);
     var filterRows = allDivs.filter(function(d){
       return d.children.length >= 4 && Array.prototype.every.call(d.children, function(c){ return c.tagName === 'BUTTON'; });
     });
