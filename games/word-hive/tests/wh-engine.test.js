@@ -202,7 +202,8 @@ test('لا نقاط قبل بدء الجولة أو بعد إنهائها يدو
 
 test('الإعدادات لا تتجاوز شرط حرف الوسط ولا أحرف الخلية', () => {
     const v = S.sanitize({ minLen: 1, allowRepeat: 'x', p3: 999, durationSec: 7, requireCenter: false });
-    assert.equal(v.minLen, 3);
+    assert.equal(S.rules(v).minLen, 3);
+    assert.equal(S.rules({ golden: 50 }).points.golden, 7);
     assert.equal(v.allowRepeat, true);
     assert.equal(v.p3, 50);
     assert.equal(v.durationSec, 180);

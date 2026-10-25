@@ -423,7 +423,7 @@ input::placeholder{color:#6f6a7c}
         </div>
         <sc-if value="{{ tabSettings }}" hint-placeholder-val="{{ true }}">
         <sc-if value="{{ rulesLocked }}" hint-placeholder-val="{{ false }}">
-          <div style="flex-shrink:0;margin:12px 16px 0;padding:10px 14px;border-radius:14px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35);font:600 13px/1.6 'IBM Plex Sans Arabic';color:#fde68a">الجولة الحالية تحتفظ بقواعدها كما بدأت. أي تعديل على قواعد الجولة (المدة، الطول، التكرار، النقاط، اختيار الجولة) يُحفظ ويُطبَّق من الجولة القادمة. إعدادات العرض تتطبق فوراً.</div>
+          <div style="flex-shrink:0;margin:12px 16px 0;padding:10px 14px;border-radius:14px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35);font:600 13px/1.6 'IBM Plex Sans Arabic';color:#fde68a">تعديلات القواعد تُطبَّق من الجولة القادمة.</div>
         </sc-if>
         <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:12px 16px 16px;display:flex;flex-direction:column;gap:12px">
           <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="4">
@@ -481,7 +481,6 @@ input::placeholder{color:#6f6a7c}
               </sc-for>
             </section>
           </sc-for>
-          <div style="padding:12px 16px;border-radius:16px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.1);font:500 12px/1.7 'IBM Plex Sans Arabic';color:#8a8596">{{ bankInfo }}</div>
         </div>
         <div style="flex-shrink:0;display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px;padding:12px 16px 16px;border-top:1px solid rgba(255,255,255,.06)">
           <button onClick="{{ saveSettings }}" style="height:48px;border:none;border-radius:999px;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;font:700 15px 'IBM Plex Sans Arabic';cursor:pointer;box-shadow:0 8px 22px rgba(124,58,237,.35)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">حفظ الإعدادات</button>
@@ -519,7 +518,6 @@ input::placeholder{color:#6f6a7c}
             </sc-if>
           </div>
           <div style="flex-shrink:0;padding:12px 16px 16px;border-top:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;gap:8px">
-            <span style="font:500 12px/1.6 'IBM Plex Sans Arabic';color:#8a8596">اللاعب المُزال ما تنحسب إجاباته بعد إغلاق اللوحة، ونقاطه السابقة تبقى. اللاعبين الجدد يدخلون بكلمة الدخول ويبدأون من صفر.</span>
             <button onClick="{{ openJoin }}" style="width:100%;height:52px;border:none;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg,rgba(139,92,246,.55),rgba(167,139,250,.45));color:#fff;font:700 16px 'IBM Plex Sans Arabic';box-shadow:0 8px 22px rgba(124,58,237,.22);transition:filter .2s" style-hover="filter:brightness(1.1)" style-active="transform:scale(.98)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>إدخال لاعب جديد</button>
           </div>
           </div>
@@ -743,7 +741,7 @@ class Component extends DCLogic {
         else { this.tone(784,.16,'sine',.07); setTimeout(()=>this.tone(1175,.28,'sine',.06),110); } });
       this.bump(); return; }
     if(res.status==='rejected'&&st.showErrors){
-      if(st.notify==='high'||(st.notify==='medium'&&res.usesHiveOnly)) this.notify({kind:res.reason==='duplicate'?'dup':'error',who:res.player.name,word:res.word,txt:res.reason==='duplicate'&&res.by?`${res.message} — كتبها ${res.by}`:res.message}); } }
+      if(res.usesHiveOnly) this.notify({kind:res.reason==='duplicate'?'dup':'error',who:res.player.name,word:res.word,txt:res.reason==='duplicate'&&res.by?`${res.message} — كتبها ${res.by}`:res.message}); } }
   // كتابة الكلمة حرفاً حرفاً على بطاقتها، مع إضاءة خلية كل حرف بالترتيب ونقرة خفيفة لكل حرف، ثم نبضة للخلية ونغمة قبول
   typeWord(word,done){ clearInterval(this._ty); clearTimeout(this._ft); const L=[...word], run=(this._tyRun=(this._tyRun||0)+1);
     if(this.motion()==='off'){ this.setState({typing:null,flash:null}); done&&done(); return; }
@@ -785,7 +783,7 @@ class Component extends DCLogic {
     const hr=this.state.hiveRun||0;
     return { hexes, hiveW:Math.round(cx*2), hiveH:Math.round(cy*2), pausedOv:st==='paused', hiveAnim:hr?this.anim(`hivePulse${hr%2?'A':'B'} .55s cubic-bezier(.2,1.4,.4,1)`):'none' }; }
   // 20 بطاقة: المكتشفة أولاً (الأحدث أولاً) بصورة صاحبها ونقاطها، ثم الباقية نقاطاً بعدد حروفها (من الأقصر) بدون كشف أحرفها
-  cardVals(s,found,st){ if(!s||!st.showRecent) return { cards:[], cardsDisp:'none' };
+  cardVals(s,found,st){ if(!s) return { cards:[], cardsDisp:'none' };
     const got=new Set(found.map(f=>f.word)), last=found[found.length-1];
     const fcards=found.slice().reverse().map(f=>{ const n=[...f.word].length, g=f.golden, nw=f===last;
       const ty=nw&&this.state.typing&&this.state.typing.word===f.word?this.state.typing:null, full=st.showAccepted?f.word:this.mask(f.word);
@@ -814,11 +812,11 @@ class Component extends DCLogic {
       :state==='paused'?[btn('استئناف','▶',this.resumeRound,'primary'),btn('إعادة الجولة','↺',ask('restart'),'ghost'),btn('إنهاء الجولة','⏹',ask('end'),'danger')]
       :state==='ended'?[this.isLastRound()?btn('عرض الفائز','🏆',this.showWin,'primary'):btn('الجولة التالية','✦',this.goNext,'primary'),btn('عرض النتائج','🏁',()=>this.setState({resOpen:true,resOpenOut:false}),'ghost')]
       :[btn('بدء الجولة','▶',this.startRound,'primary')];
-    const showBoard=st.showBoard, showRecent=st.showRecent;
+    const showBoard=true, showRecent=true;
     const r=s?s.round:null;
     return { stLabel:L[0], stC:L[1], stBg:L[1]+'14', stBd:L[1]+'55', roundTag:r?`${r.id.replace('r','جولة ')} · ${DIFF[r.difficulty]||''}`:'',
       controls, showIntro:!s, showStats:!!s,
-      introTips:[{icon:'🐝',txt:'كل كلمة لازم تحتوي على حرف الوسط المضيء'},{icon:'🔤',txt:'باقي الأحرف من الخلية فقط — والتكرار '+(st.allowRepeat?'مسموح':'غير مسموح')},{icon:'⚡',txt:`أول من يكتب الكلمة بالشات ياخذ نقاطها · ${st.minLen} أحرف فأكثر`}],
+      introTips:[{icon:'🐝',txt:'كل كلمة لازم تحتوي على حرف الوسط المضيء'},{icon:'🔤',txt:'باقي الأحرف من الخلية فقط — والتكرار '+(st.allowRepeat?'مسموح':'غير مسموح')},{icon:'⚡',txt:`أول من يكتب الكلمة بالشات ياخذ نقاطها · 3 أحرف فأكثر`}],
       timeTxt:String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'), timePct:dur?Math.max(0,Math.min(100,rem/(dur*10))):0,
       timeCol:state==='paused'?'#fbbf24':sec<=10?'#f87171':'#34d399',
       tMin:String(Math.floor(sec/60)).padStart(2,'0'), tSec:String(sec%60).padStart(2,'0'),

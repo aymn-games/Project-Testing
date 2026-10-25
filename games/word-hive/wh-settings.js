@@ -20,44 +20,38 @@
 
     // الدخول (شاشة الإعدادات الأساسية واللوبي): كلمة الدخول بالشات، الحد الأقصى، والمسموح لهم
     var JOIN = { title: 'الدخول', join: true, rows: [
-        { type: 'text', key: 'keyword', label: 'كلمة الدخول', hint: 'يكتبها المتابع بالشات في اللوبي حتى ينضم للمباراة', placeholder: 'اكتب كلمة الدخول', default: '' },
+        { type: 'text', key: 'keyword', label: 'كلمة الدخول', placeholder: 'اكتب كلمة الدخول', default: '' },
         { type: 'number', key: 'maxPlayers', label: 'الحد الأقصى للاعبين', min: 1, max: 200, step: 1, default: 50 },
         { type: 'choice', key: 'who', label: 'المسموح لهم', options: ['المتابعين فقط', 'الجميع'], values: ['followers', 'all'], default: 'all' }
     ]};
 
+    // قواعد ثابتة لا تظهر بالإعدادات: أقل طول 3 أحرف، ومكافأة الكلمة الذهبية 7 نقاط،
+    // وحرف الوسط + أحرف الخلية + القاموس + منع الاحتساب مرتين إلزامية دائماً (wh-engine.js).
+    var FIXED = { minLen: 3, golden: 7 };
+
     var SECTIONS = [
         { title: 'إعدادات الجولة', rows: [
-            { type: 'choice', basic: true, key: 'matchRounds', label: 'عدد الجولات بالمباراة', hint: 'بعد آخر جولة يظهر الفائز: صاحب أعلى مجموع نقاط', options: ['3', '5', '7'], values: [3, 5, 7], default: 3, rule: true },
+            { type: 'choice', basic: true, key: 'matchRounds', label: 'عدد الجولات', options: ['3', '5', '7'], values: [3, 5, 7], default: 3, rule: true },
             { type: 'choice', basic: true, key: 'durationSec', label: 'مدة الجولة', options: ['3 دقائق', '4 دقائق', '5 دقائق'], values: [180, 240, 300], default: 180, rule: true },
             { type: 'choice', basic: true, key: 'difficulty', label: 'مستوى الصعوبة', options: ['سهل', 'متوسط', 'مختلط'], values: ['easy', 'medium', 'mixed'], default: 'mixed', rule: true },
             { type: 'choice', key: 'roundPick', label: 'اختيار الجولة', options: ['عشوائية', 'يدوية'], values: ['random', 'manual'], default: 'random', rule: true },
             { type: 'select', key: 'roundId', label: 'الجولة المحددة', showIf: 'roundPick', showIfVal: 'manual', default: '', rule: true },
-            { type: 'toggle', key: 'avoidRecent', label: 'منع تكرار الجولات الأخيرة', hint: 'لا تُختار جولة لعبتها مؤخراً في الاختيار العشوائي', default: true },
-            { type: 'toggle', key: 'showTotal', label: 'عرض إجمالي الكلمات الممكنة', hint: 'عند الإيقاف يظهر عدد الكلمات المكتشفة فقط', default: true }
+            { type: 'toggle', key: 'avoidRecent', label: 'منع تكرار الجولات الأخيرة', default: true },
+            { type: 'toggle', key: 'showTotal', label: 'عرض إجمالي الكلمات', default: true }
         ]},
         { title: 'إعدادات الكلمات', rows: [
-            { type: 'choice', key: 'minLen', label: 'أقل طول للكلمة', options: ['3', '4', '5'], values: [3, 4, 5], default: 3, rule: true },
-            { type: 'toggle', key: 'allowRepeat', label: 'السماح بتكرار الحرف داخل الكلمة', default: true, rule: true },
-            { type: 'locked', key: '_center', label: 'اشتراط حرف الوسط', hint: 'كل كلمة لازم تحتوي على حرف الوسط', text: 'إلزامي دائماً' },
-            { type: 'locked', key: '_dict', label: 'قبول الكلمات', hint: 'من القاموس المعتمد للجولة فقط — وبأحرف الخلية فقط', text: 'القاموس المعتمد' },
-            { type: 'locked', key: '_norm', label: 'توحيد الكتابة', hint: 'حذف التشكيل والتطويل · أ إ آ ← ا · ى ← ي · ة ← ه · ؤ ← و · ئ ← ي', text: 'مفعّل' },
-            { type: 'locked', key: '_dup', label: 'منع احتساب الكلمة مرتين', hint: 'أول لاعب يرسل الكلمة ياخذ نقاطها فقط', text: 'مفعّل' },
-            { type: 'toggle', key: 'showErrors', label: 'رسائل توضيح الأخطاء', hint: 'تظهر على شاشة الهوست سبب رفض الكلمة', default: true },
-            { type: 'toggle', key: 'showAccepted', label: 'عرض الكلمات المقبولة على الشاشة', hint: 'عند الإيقاف تظهر الكلمة مخفية (●●●) مع اسم اللاعب ونقاطه', default: true }
+            { type: 'toggle', key: 'allowRepeat', label: 'السماح بتكرار الحرف', default: true, rule: true },
+            { type: 'toggle', key: 'showErrors', label: 'تنبيهات الكلمات المرفوضة', default: true },
+            { type: 'toggle', key: 'showAccepted', label: 'إظهار الكلمات المقبولة', default: true }
         ]},
         { title: 'إعدادات النقاط', rows: [
             { type: 'number', key: 'p3', label: 'كلمة من 3 أحرف', min: 0, max: 50, step: 1, default: 1, rule: true },
             { type: 'number', key: 'p4', label: 'كلمة من 4 أحرف', min: 0, max: 50, step: 1, default: 2, rule: true },
             { type: 'number', key: 'p5', label: 'كلمة من 5 أحرف', min: 0, max: 50, step: 1, default: 3, rule: true },
-            { type: 'number', key: 'p6', label: 'كلمة من 6 أحرف فأكثر', min: 0, max: 50, step: 1, default: 5, rule: true },
-            { type: 'number', key: 'golden', label: 'مكافأة الكلمة الذهبية', hint: 'كلمة تحتوي الأحرف السبعة كلها — مرة واحدة عند أول اكتشاف', min: 0, max: 50, step: 1, default: 7, rule: true, dot: '#fbbf24' }
+            { type: 'number', key: 'p6', label: 'كلمة من 6 أحرف فأكثر', min: 0, max: 50, step: 1, default: 5, rule: true }
         ]},
-        { title: 'إعدادات عرض البث', rows: [
-            { type: 'toggle', key: 'showBoard', label: 'لوحة ترتيب اللاعبين', default: true },
-            { type: 'toggle', key: 'showRecent', label: 'لوحة الكلمات المطلوبة', default: true },
+        { title: 'العرض', rows: [
             { type: 'choice', key: 'motion', label: 'المؤثرات الحركية', options: ['كاملة', 'مخففة', 'بدون'], values: ['full', 'low', 'off'], default: 'full' },
-            { type: 'choice', key: 'notify', label: 'كثافة الإشعارات', options: ['عالية', 'متوسطة', 'منخفضة'], values: ['high', 'medium', 'low'], default: 'medium',
-                hint: 'عالية: كل المحاولات المرفوضة · متوسطة: المرفوضة بأحرف الخلية · منخفضة: الذهبية فقط' },
             { type: 'toggle', basic: true, key: 'sound', label: 'الأصوات', default: true }
         ]}
     ];
@@ -89,8 +83,8 @@
     /** قواعد الجولة للمحرك (createSession) من الإعدادات. */
     function rules(v) {
         v = sanitize(v);
-        return { durationSec: v.durationSec, minLen: v.minLen, allowRepeat: v.allowRepeat,
-            points: { p3: v.p3, p4: v.p4, p5: v.p5, p6: v.p6, golden: v.golden } };
+        return { durationSec: v.durationSec, minLen: FIXED.minLen, allowRepeat: v.allowRepeat,
+            points: { p3: v.p3, p4: v.p4, p5: v.p5, p6: v.p6, golden: FIXED.golden } };
     }
 
     function ruleKeys() { return rows().filter(function (r) { return r.rule; }).map(function (r) { return r.key; }); }
@@ -152,5 +146,5 @@
         });
     }
 
-    return { JOIN: JOIN, SECTIONS: SECTIONS, rows: rows, defaults: defaults, sanitize: sanitize, rules: rules, ruleKeys: ruleKeys, viewRow: viewRow, viewSections: viewSections };
+    return { JOIN: JOIN, FIXED: FIXED, SECTIONS: SECTIONS, rows: rows, defaults: defaults, sanitize: sanitize, rules: rules, ruleKeys: ruleKeys, viewRow: viewRow, viewSections: viewSections };
 }));
