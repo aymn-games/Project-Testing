@@ -776,11 +776,17 @@ function getTopPlayersByWins(limit) {
     return request('/api/public/top-players-wins' + qs, { method: 'GET' });
 }
 
-/** Top players by actual play hours. Data starts at zero for everyone
- * from when this system was added — no retroactive history. */
+/** Top players by actual play time this week (resets every Saturday,
+ * same as top streamers). */
 function getTopPlayersByHours(limit) {
     var qs = limit ? ('?limit=' + encodeURIComponent(limit)) : '';
     return request('/api/public/top-players-hours' + qs, { method: 'GET' });
+}
+
+/** Top players by completed rounds this week. */
+function getTopPlayersByRounds(limit) {
+    var qs = limit ? ('?limit=' + encodeURIComponent(limit)) : '';
+    return request('/api/public/top-players-rounds' + qs, { method: 'GET' });
 }
 
 function getAdminStreamerStats() {
@@ -1067,6 +1073,7 @@ global.AGPAuth = {
     getTopStreamers: getTopStreamers,
     getTopPlayersByWins: getTopPlayersByWins,
     getTopPlayersByHours: getTopPlayersByHours,
+    getTopPlayersByRounds: getTopPlayersByRounds,
     getAdminStreamerStats: getAdminStreamerStats,
     getAdminUserStats: getAdminUserStats,
     getAdminLiveStreams: getAdminLiveStreams,
