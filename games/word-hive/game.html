@@ -610,8 +610,7 @@ if(!SETUP||!SETUP.keyword) location.replace('index.html'); else if(!Array.isArra
 const PLAYERS = WH.readJSON(WH.keys.players, {});
 const E = WordHiveEngine;
 const BANK = E.buildBank(WordHiveRounds);
-const DIFF = { easy:'سهل', medium:'متوسط' };
-const ROUND_OPTS = BANK.approved.map(r=>({ value:r.id, label:`${r.id.replace('r','جولة ')} · الوسط «${r.center}» · ${DIFF[r.difficulty]||''} · ${r.count} كلمة` }));
+const ROUND_OPTS = BANK.approved.map(r=>({ value:r.id, label:`${r.id.replace('r','جولة ')} · الوسط «${r.center}» · ${r.count} كلمة` }));
 const RECENT_KEEP = Math.max(1, Math.min(5, BANK.approved.length - 1));
 const ini = n=>[...String(n||'')].find(ch=>/[^\s_\d@]/.test(ch))||'؟';
 const HEX_W = 166, HEX_H = Math.round(HEX_W*1.1547), GAP = 1.05;
@@ -652,7 +651,7 @@ class Component extends DCLogic {
 
   // ---------- الجولات ----------
   recentIds(){ const r=WH.readJSON(WH.keys.recent,[]); return Array.isArray(r)?r:[]; }
-  pick(){ const s=this.settings; return E.pickRound(BANK,{ manualId:s.roundPick==='manual'?s.roundId:null, difficulty:s.difficulty, avoidRecent:s.avoidRecent, recent:this.recentIds() }); }
+  pick(){ const s=this.settings; return E.pickRound(BANK,{ manualId:s.roundPick==='manual'?s.roundId:null, avoidRecent:s.avoidRecent, recent:this.recentIds() }); }
   rememberRound(id){ WH.writeJSON(WH.keys.recent,[id,...this.recentIds().filter(x=>x!==id)].slice(0,RECENT_KEEP)); }
   // ---------- المباراة: عدة جولات (3/5/7) ومجموع نقاط تراكمي، والفائز بعد آخر جولة ----------
   totals={}; roundNo=0; matchRounds=null; matchActiveMs=0;
@@ -814,7 +813,7 @@ class Component extends DCLogic {
       :[btn('بدء الجولة','▶',this.startRound,'primary')];
     const showBoard=true, showRecent=true;
     const r=s?s.round:null;
-    return { stLabel:L[0], stC:L[1], stBg:L[1]+'14', stBd:L[1]+'55', roundTag:r?`${r.id.replace('r','جولة ')} · ${DIFF[r.difficulty]||''}`:'',
+    return { stLabel:L[0], stC:L[1], stBg:L[1]+'14', stBd:L[1]+'55', roundTag:r?r.id.replace('r','جولة '):'',
       controls, showIntro:!s, showStats:!!s,
       introTips:[{icon:'🐝',txt:'كل كلمة لازم تحتوي على حرف الوسط المضيء'},{icon:'🔤',txt:'باقي الأحرف من الخلية فقط — والتكرار '+(st.allowRepeat?'مسموح':'غير مسموح')},{icon:'⚡',txt:`أول من يكتب الكلمة بالشات ياخذ نقاطها · 3 أحرف فأكثر`}],
       timeTxt:String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'), timePct:dur?Math.max(0,Math.min(100,rem/(dur*10))):0,

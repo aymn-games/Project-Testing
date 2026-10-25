@@ -214,8 +214,7 @@ const GAME = {
   lobbyUrl: 'lobby.html'
 };
 const BANK = WordHiveEngine.buildBank(WordHiveRounds);
-const DIFF = { easy:'سهل', medium:'متوسط' };
-const ROUND_OPTS = BANK.approved.map((r,i)=>({ value:r.id, label:`${r.id.replace('r','جولة ')} · الوسط «${r.center}» · ${DIFF[r.difficulty]||''} · ${r.count} كلمة` }));
+const ROUND_OPTS = BANK.approved.map((r,i)=>({ value:r.id, label:`${r.id.replace('r','جولة ')} · الوسط «${r.center}» · ${r.count} كلمة` }));
 
 class Component extends DCLogic {
   state = { values:WHSettings.sanitize(WH.readJSON(WH.keys.setup, null)), live:!!WH.getSavedConnection(), narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };

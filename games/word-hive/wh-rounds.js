@@ -14,8 +14,8 @@
  *   2) شغّل: node games/word-hive/tools/wh-report.js
  *      → يحدّث games/word-hive/rounds-report.md بالمقبول والمرفوض وسببه.
  *
- * الحقول: id · center (حرف الوسط) · letters (الستة حوله) · difficulty
- * ('easy' | 'medium') · status ('approved' | 'draft') · words.
+ * الحقول: id · center (حرف الوسط) · letters (الستة حوله) · status ('approved' | 'draft') · words.
+ * (حقل difficulty قديم وغير مستخدم — اللعبة نمط واحد بدون مستويات صعوبة.)
  * الحقول المحسوبة بعد الفحص: answers · golden · count · status الفعلية.
  */
 (function (root, data) {
