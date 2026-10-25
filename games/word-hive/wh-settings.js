@@ -46,10 +46,10 @@
         ]},
         { title: 'إعدادات عرض البث', rows: [
             { type: 'toggle', key: 'showBoard', label: 'لوحة ترتيب اللاعبين', default: true },
-            { type: 'toggle', key: 'showRecent', label: 'آخر الكلمات المكتشفة', default: true },
+            { type: 'toggle', key: 'showRecent', label: 'لوحة الكلمات المطلوبة', default: true },
             { type: 'choice', key: 'motion', label: 'المؤثرات الحركية', options: ['كاملة', 'مخففة', 'بدون'], values: ['full', 'low', 'off'], default: 'full' },
             { type: 'choice', key: 'notify', label: 'كثافة الإشعارات', options: ['عالية', 'متوسطة', 'منخفضة'], values: ['high', 'medium', 'low'], default: 'medium',
-                hint: 'عالية: كل المحاولات · متوسطة: المقبولة والمحاولات بأحرف الخلية · منخفضة: الذهبية فقط' },
+                hint: 'عالية: كل المحاولات المرفوضة · متوسطة: المرفوضة بأحرف الخلية · منخفضة: الذهبية فقط' },
             { type: 'toggle', key: 'sound', label: 'الأصوات', default: true }
         ]}
     ];
