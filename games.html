@@ -1723,7 +1723,11 @@ document.addEventListener('DOMContentLoaded', async function() {
       '.agp-live-avatar-ph{display:flex;align-items:center;justify-content:center;font-weight:700;color:#d9cff2;background:linear-gradient(135deg,#2e2547,#1a1628)}' +
       '.agp-live-tag{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);padding:1px 7px;border-radius:6px;background:#e11d48;border:2px solid #15131f;color:#fff;font-size:9.5px;font-weight:800;letter-spacing:.8px;line-height:1.5}' +
       '.agp-live-info{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}' +
-      '.agp-live-name{font-size:15px;font-weight:700;color:#f4f2fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+      '.agp-live-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}' +
+      '.agp-live-name{min-width:0;font-size:15px;font-weight:700;color:#f4f2fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+      '.agp-live-watch{flex:none;display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;background:linear-gradient(180deg,#f43f5e,#e11d48);color:#fff;font-size:12px;font-weight:700;box-shadow:0 6px 16px -8px rgba(225,29,72,.9),inset 0 1px 0 rgba(255,255,255,.25);transition:filter .2s,transform .2s}' +
+      '.agp-live-watch svg{width:11px;height:11px}' +
+      '.agp-live-card:hover .agp-live-watch{filter:brightness(1.1);transform:translateX(-2px)}' +
       '.agp-live-acc{font-size:12.5px;color:#a596cf;direction:ltr;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
       '.agp-live-game{display:flex;align-items:center;gap:5px;font-size:12.5px;color:#b9b2c9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
       '.agp-live-game svg,.agp-live-chip svg{flex:none;width:13px;height:13px}' +
@@ -1803,7 +1807,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     meta.appendChild(viewers);
     meta.appendChild(idChip);
 
-    info.appendChild(name);
+    // زر «شاهد» — البطاقة كلها رابط للبث، فالزر عنصر شكلي داخلها (ما نحط رابط داخل رابط).
+    var top = document.createElement('div');
+    top.className = 'agp-live-top';
+    var watch = document.createElement('span');
+    watch.className = 'agp-live-watch';
+    watch.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14z"/></svg>';
+    watch.appendChild(document.createTextNode('شاهد'));
+    top.appendChild(name);
+    top.appendChild(watch);
+    info.appendChild(top);
     info.appendChild(acc);
     info.appendChild(game);
     info.appendChild(meta);
