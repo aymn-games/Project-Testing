@@ -1,5 +1,5 @@
 /**
- * خلية الكلمات — ربط الشاشات بالمنصة (منقول ومختصر من er-platform.js لروليت الإقصاء).
+ * كوّن كلمة — ربط الشاشات بالمنصة (منقول ومختصر من er-platform.js لروليت الإقصاء).
  *  - حالة الاتصال بالبث: من الاتصال الموثّق المحفوظ بمكتبة الألعاب
  *    (games.html → localStorage 'agp:agp-stream-connection').
  *  - الشات: AGP.streamConnector + adapters/agp-tiktok-adapter.js

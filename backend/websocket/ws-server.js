@@ -235,7 +235,7 @@ var GAME_NAMES = {
   'memory-challenge': 'تحدي الذاكرة', 'musical-chairs': 'الكراسي الموسيقية', 'photo-challenge': 'تحدي الصور',
   'russian-roulette': 'الروليت الروسي', 'snakes-ladders': 'السلم والثعبان', 'team-war': 'حرب الفريقين',
   'top-ten': 'خمّن العشرة', 'tribe-roulette': 'روليت مخفي', 'vocab': 'تحدي المفردات',
-  'word-categories': 'اسم و حيوان و نبات و جماد و بلاد', 'word-hive': 'خلية الكلمات', 'xo': 'إكس أو'
+  'word-categories': 'اسم و حيوان و نبات و جماد و بلاد', 'word-hive': 'كوّن كلمة', 'xo': 'إكس أو'
 };
 
 function gameFromPage(page) {

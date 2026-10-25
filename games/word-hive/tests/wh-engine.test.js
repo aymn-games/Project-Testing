@@ -1,4 +1,4 @@
-// خلية الكلمات — اختبارات المحرك والبنك والإعدادات.
+// كوّن كلمة — اختبارات المحرك والبنك والإعدادات.
 // التشغيل: node --test games/word-hive/tests/
 'use strict';
 const test = require('node:test');

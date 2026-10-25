@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="../../js/agp-dc-raw-guard.js"></script>
-<title>خلية الكلمات — ألعاب أيمن</title>
+<title>كوّن كلمة — ألعاب أيمن</title>
 <script src="../../js/agp-core.js"></script>
 <script src="../../js/agp-events.js"></script>
 <script src="../../js/agp-timer-manager.js"></script>
@@ -374,7 +374,7 @@ input::placeholder{color:#6f6a7c}
     <div onClick="{{ closeHelp }}" style="position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;padding:12px;animation:{{ helpOv }}">
       <div onClick="{{ stop }}" data-noscroll="" style="width:min(940px, calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow-y:auto;scrollbar-width:none;box-sizing:border-box;padding:clamp(18px,2.4vw,32px);border-radius:28px;background:rgba(12,11,18,.97);border:1px solid rgba(56,189,248,.35);box-shadow:0 30px 90px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:18px;animation:{{ helpAn }}">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-          <span style="font:800 clamp(22px,2vw,30px) 'IBM Plex Sans Arabic'">كيف تلعب خلية الكلمات؟</span>
+          <span style="font:800 clamp(22px,2vw,30px) 'IBM Plex Sans Arabic'">كيف تلعب كوّن كلمة؟</span>
           <button onClick="{{ closeHelp }}" aria-label="إغلاق" style="flex-shrink:0;width:42px;height:42px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;cursor:pointer;display:grid;place-items:center" style-hover="background:rgba(255,255,255,.09)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
         </div>
         <ol style="margin:0;padding:0 26px 0 0;display:flex;flex-direction:column;gap:8px">
@@ -553,7 +553,7 @@ input::placeholder{color:#6f6a7c}
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 // ============================================================
-//  خلية الكلمات — شاشة الهوست (قالب روليت الإقصاء بدون العجلة)
+//  كوّن كلمة — شاشة الهوست (قالب روليت الإقصاء بدون العجلة)
 //  المحرك: wh-engine.js (كل التحقق والنقاط) · البنك: wh-rounds.js
 //  الإعدادات: wh-settings.js (مشتركة مع index.html) · الشات: wh-platform.js
 //  النقاط: AGPAuth.reportMatchPoints مرة واحدة عند نهاية كل جولة
@@ -861,7 +861,7 @@ class Component extends DCLogic {
   // شاشة الفوز — نفس منطق روليت الإقصاء (بطاقة الفوز المملوكة، فيديو الفوز، نقاط المنصة)
   winVals(){ const S=this.state, w=S.winner, h=React.createElement, n=Object.values(this.totals).filter(t=>t.score>0).length;
     const pi=w?(this.pinfo[w.key]||{}):{}, pts=S.pts, ptsLine=pts==='pending'?'جارٍ احتساب النقاط':typeof pts==='number'?`+${pts} نقطة`:'النقاط للحسابات الموثّقة في الموقع';
-    const card=S.winOpen&&w?WH.winCard({id:w.id,name:w.name,avatarUrl:w.avatar||null,winCard:pi.winCard||null},[ptsLine,`المركز الأول من ${n} لاعب · ${w.score} نقطة`,'خلية الكلمات'],'wc'+(S.winRun||0)):null;
+    const card=S.winOpen&&w?WH.winCard({id:w.id,name:w.name,avatarUrl:w.avatar||null,winCard:pi.winCard||null},[ptsLine,`المركز الأول من ${n} لاعب · ${w.score} نقطة`,'كوّن كلمة'],'wc'+(S.winRun||0)):null;
     const vid=S.winOpen&&w?pi.winVideo:null;
     const winVideoEl=vid?h('video',{key:'wv'+(S.winRun||0),src:vid,autoPlay:true,loop:true,playsInline:true,
       ref:el=>{ if(!el||el._armed) return; el._armed=true; el.muted=false; const p=el.play(); if(p&&p.catch) p.catch(()=>{ el.muted=true; el.play().catch(()=>{}); }); },
@@ -869,7 +869,7 @@ class Component extends DCLogic {
     const ptsMain=pts==='pending'?'…':typeof pts==='number'?`+${pts} نقطة`:`${w?w.score:0} نقطة`, ptsSub=pts==='pending'?'جارٍ احتساب النقاط':typeof pts==='number'?'تظهر في بروفايلك':'مجموع نقاطه بالمباراة';
     return { winOpen:!!S.winOpen, winnerName:w?w.name:'', winnerIni:w?[...w.name].filter(c=>/[^\s_\d]/.test(c)).slice(0,2).join(''):'', winnerAv:w&&w.avatar?w.avatar:'', winnerOp:w&&w.avatar?1:0,
       ptsMain, ptsSub, ptsSize:typeof pts==='number'?'2em':'1.5em', ptsSubSize:typeof pts==='number'?'.4em':'.45em', hasWinVideo:!!vid, winVideoEl,
-      winCardOn:!!card, winStd:!card, winCardEl:card, gameName:'خلية الكلمات', newMatch:this.newMatch, replaySame:this.replaySame,
+      winCardOn:!!card, winStd:!card, winCardEl:card, gameName:'كوّن كلمة', newMatch:this.newMatch, replaySame:this.replaySame,
       winOv:S.winOpenOut?'fadeOut .26s ease forwards':'fade .3s ease', winAn:S.winOpenOut?'popOut .26s ease forwards':'popIn .55s cubic-bezier(.2,1.25,.35,1)' }; }
   renderVals(){ const S=this.state;
     return { lblDisp:S.narrow?'none':'inline', scale:S.scale, fx:this.buildFx(), stop:e=>e.stopPropagation(), toast:S.toast,

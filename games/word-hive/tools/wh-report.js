@@ -1,4 +1,4 @@
-// خلية الكلمات — تقرير تحقق بنك الجولات (مراجعة منفصلة عن تشغيل اللعبة).
+// كوّن كلمة — تقرير تحقق بنك الجولات (مراجعة منفصلة عن تشغيل اللعبة).
 // التشغيل: node games/word-hive/tools/wh-report.js
 // يكتب games/word-hive/rounds-report.md: لكل جولة الكلمات المقبولة والمرفوضة وسبب الرفض والعدد والحالة.
 'use strict';
@@ -10,7 +10,7 @@ const ROUNDS = require('../wh-rounds.js');
 const bank = E.buildBank(ROUNDS);
 const DIFF = { easy: 'سهل', medium: 'متوسط' };
 const lines = [
-    '# تقرير تحقق بنك جولات خلية الكلمات',
+    '# تقرير تحقق بنك جولات كوّن كلمة',
     '',
     '> مُولَّد تلقائياً بـ `node games/word-hive/tools/wh-report.js` — لا تعدّله يدوياً.',
     '',
