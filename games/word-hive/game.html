@@ -45,8 +45,11 @@ input::placeholder{color:#6f6a7c}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes hexInA{0%{opacity:0;transform:scale(.3) rotate(-30deg)}70%{opacity:1;transform:scale(1.08) rotate(3deg)}100%{opacity:1;transform:none}}
 @keyframes hexInB{0%{opacity:0;transform:scale(.3) rotate(-30deg)}70%{opacity:1;transform:scale(1.08) rotate(3deg)}100%{opacity:1;transform:none}}
-@keyframes hexFlashA{0%{filter:brightness(1)}35%{filter:brightness(1.22);transform:scale(1.04)}100%{filter:brightness(1);transform:none}}
-@keyframes hexFlashB{0%{filter:brightness(1)}35%{filter:brightness(1.22);transform:scale(1.04)}100%{filter:brightness(1);transform:none}}
+@keyframes hexFlashA{0%{filter:brightness(1);transform:none}30%{filter:brightness(1.35) drop-shadow(0 0 18px rgba(196,181,253,.55));transform:scale(1.07)}100%{filter:brightness(1);transform:none}}
+@keyframes hexFlashB{0%{filter:brightness(1);transform:none}30%{filter:brightness(1.35) drop-shadow(0 0 18px rgba(196,181,253,.55));transform:scale(1.07)}100%{filter:brightness(1);transform:none}}
+@keyframes hivePulseA{0%{transform:none}35%{transform:scale(1.035)}100%{transform:none}}
+@keyframes hivePulseB{0%{transform:none}35%{transform:scale(1.035)}100%{transform:none}}
+@keyframes caretBlink{0%,50%{opacity:1}51%,100%{opacity:0}}
 @keyframes breathe{0%,100%{opacity:.55;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
 @keyframes wordInA{0%{opacity:0;transform:translateY(-14px) scale(.9)}100%{opacity:1;transform:none}}
 @keyframes wordInB{0%{opacity:0;transform:translateY(-14px) scale(.9)}100%{opacity:1;transform:none}}
@@ -84,7 +87,7 @@ input::placeholder{color:#6f6a7c}
         <div style="position:relative;height:118px;box-sizing:border-box;border-radius:22px;background:{{ k.bg }};border:1px solid {{ k.bd }};box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 12px 28px rgba(0,0,0,.22){{ k.glow }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;overflow:hidden;transition:background .4s, border-color .4s;animation:{{ k.anim }}">
           <span style="position:absolute;top:0;left:22%;right:22%;height:1px;background:linear-gradient(90deg,transparent,{{ k.line }},transparent)"></span>
           <sc-if value="{{ k.found }}" hint-placeholder-val="{{ false }}">
-            <span style="max-width:92%;font:700 {{ k.fs }}px/1.1 'IBM Plex Sans Arabic';color:{{ k.c }};letter-spacing:{{ k.ls }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ k.word }}</span>
+            <span style="max-width:92%;min-height:{{ k.fs }}px;display:flex;align-items:center;gap:2px;font:700 {{ k.fs }}px/1.1 'IBM Plex Sans Arabic';color:{{ k.c }};letter-spacing:{{ k.ls }};white-space:nowrap;overflow:hidden"><span>{{ k.word }}</span><sc-if value="{{ k.typing }}" hint-placeholder-val="{{ false }}"><span style="width:2px;height:.9em;border-radius:2px;background:#cfc6ff;animation:caretBlink .7s steps(1) infinite"></span></sc-if></span>
             <div style="display:flex;align-items:center;gap:7px;max-width:92%">
               <span style="position:relative;overflow:hidden;flex-shrink:0;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#4c3d8f,#2b4f6b);border:1.5px solid {{ k.ring }};box-sizing:border-box;color:#e9e5f7;font:600 12px 'IBM Plex Sans Arabic'">{{ k.ini }}<img src="{{ k.av }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ k.op }}"></span>
               <span style="min-width:0;font:500 14px 'IBM Plex Sans Arabic';color:#a39cbc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ k.name }}</span>
@@ -131,7 +134,7 @@ input::placeholder{color:#6f6a7c}
         </sc-for>
       </div>
 
-      <div style="position:relative;width:{{ hiveW }}px;height:{{ hiveH }}px;flex-shrink:0">
+      <div style="position:relative;width:{{ hiveW }}px;height:{{ hiveH }}px;flex-shrink:0;animation:{{ hiveAnim }}">
         <div style="position:absolute;inset:-80px;border-radius:50%;background:radial-gradient(circle, rgba(232,196,122,.07), rgba(139,92,246,.06) 45%, transparent 70%);pointer-events:none"></div>
         <sc-for list="{{ hexes }}" as="x" hint-placeholder-count="7">
           <div style="position:absolute;left:{{ x.left }}px;top:{{ x.top }}px;width:{{ x.w }}px;height:{{ x.h }}px">
@@ -490,7 +493,7 @@ class Component extends DCLogic {
     this.unsub=WH.onComment(p=>this.onChat(p));
     this.onEnded=()=>this.setState({conn:'none'}); addEventListener('agp:stream-ended',this.onEnded);
     this._ti=setInterval(()=>this.tick(),200); }
-  componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('agp:stream-ended',this.onEnded); clearInterval(this._ti); clearTimeout(this.tt); clearTimeout(this._gt); clearTimeout(this._ft); this.unsub?.(); this.unsubStatus?.(); }
+  componentWillUnmount(){ clearInterval(this._ty); removeEventListener('resize',this.fit); removeEventListener('agp:stream-ended',this.onEnded); clearInterval(this._ti); clearTimeout(this.tt); clearTimeout(this._gt); clearTimeout(this._ft); this.unsub?.(); this.unsubStatus?.(); }
   bump(extra){ this.setState(s=>({v:s.v+1,...(extra||{})})); }
   toastMsg(t){ this.setState({toast:t}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toast:null}),2600); }
   shut(k){ this.setState({[k+'Out']:true}); setTimeout(()=>this.setState({[k]:false,[k+'Out']:false}),260); }
@@ -535,14 +538,23 @@ class Component extends DCLogic {
   handle(res){ const st=this.settings;
     if(res.status==='accepted'){
       const e={id:Math.random(),word:res.word,name:res.player.name,pts:res.points,golden:res.golden};
-      this.setState(x=>({recent:[e,...x.recent].slice(0,40),flash:{letters:[...new Set(res.word)],run:(x.flash?.run||0)+1}})); clearTimeout(this._ft); this._ft=setTimeout(()=>this.setState({flash:null}),900);
-      if(res.golden){ this.tone(784,.18,'triangle'); setTimeout(()=>this.tone(1046,.18,'triangle'),140); setTimeout(()=>this.tone(1318,.4,'triangle'),280);
-        this.setState({goldOpen:true,goldOpenOut:false,goldWord:res.word,goldWho:`${res.player.name} · +${res.points} نقطة`,goldRun:(this.state.goldRun||0)+1}); clearTimeout(this._gt); this._gt=setTimeout(()=>this.shut('goldOpen'),3200); }
-      else this.tone(990,.12,'sine',.1);
-      if(res.golden) this.notify({ok:true,who:res.player.name,txt:`+${res.points} · «${st.showAccepted?res.word:this.mask(res.word)}»${res.golden?' 🌟':''}`});
+      this.setState(x=>({recent:[e,...x.recent].slice(0,40)}));
+      this.typeWord(res.word,()=>{
+        if(res.golden){ this.tone(784,.18,'triangle'); setTimeout(()=>this.tone(1046,.18,'triangle'),140); setTimeout(()=>this.tone(1318,.4,'triangle'),280);
+          this.setState({goldOpen:true,goldOpenOut:false,goldWord:res.word,goldWho:`${res.player.name} · +${res.points} نقطة`,goldRun:(this.state.goldRun||0)+1}); clearTimeout(this._gt); this._gt=setTimeout(()=>this.shut('goldOpen'),3200);
+          this.notify({ok:true,who:res.player.name,txt:`+${res.points} · «${st.showAccepted?res.word:this.mask(res.word)}» 🌟`}); }
+        else { this.tone(784,.16,'sine',.07); setTimeout(()=>this.tone(1175,.28,'sine',.06),110); } });
       this.bump(); return; }
     if(res.status==='rejected'&&st.showErrors){
       if(st.notify==='high'||(st.notify==='medium'&&res.usesHiveOnly)) this.notify({ok:false,who:res.player.name,txt:`«${res.word}» — ${res.message}${res.by?' بواسطة '+res.by:''}`}); } }
+  // كتابة الكلمة حرفاً حرفاً على بطاقتها، مع إضاءة خلية كل حرف بالترتيب ونقرة خفيفة لكل حرف، ثم نبضة للخلية ونغمة قبول
+  typeWord(word,done){ clearInterval(this._ty); clearTimeout(this._ft); const L=[...word], run=(this._tyRun=(this._tyRun||0)+1);
+    if(this.motion()==='off'){ this.setState({typing:null,flash:null}); done&&done(); return; }
+    let n=0; this.setState({typing:{word,n:0,run},flash:null});
+    this._ty=setInterval(()=>{ n++; this.tone(1250,.03,'sine',.025);
+      this.setState({typing:{word,n,run},flash:{letters:[L[n-1]],run:(this.state.flash?.run||0)+1}});
+      if(n>=L.length){ clearInterval(this._ty); this.setState(x=>({hiveRun:(x.hiveRun||0)+1})); done&&done();
+        this._ft=setTimeout(()=>{ if(this._tyRun===run) this.setState({typing:null,flash:null}); },700); } },this.motion()==='low'?70:120); }
   mask(w){ return '●'.repeat([...w].length); }
   notify(n){ this._nRun=(this._nRun||0)+1; const item={...n,id:Math.random(),run:this._nRun}; this.setState({notifs:[item]}); setTimeout(()=>this.setState(x=>({notifs:x.notifs.filter(y=>y.id!==item.id)})),2800); }
 
@@ -572,13 +584,15 @@ class Component extends DCLogic {
         ts:c?'0 1px 0 rgba(255,255,255,.35)':'0 2px 6px rgba(0,0,0,.35)',
         shadow:c?'drop-shadow(0 12px 26px rgba(220,165,71,.28)) drop-shadow(0 10px 18px rgba(0,0,0,.45))':'drop-shadow(0 10px 18px rgba(0,0,0,.45))',
         enter:show?this.anim(`hexIn${run%2?'A':'B'} .6s cubic-bezier(.2,1.3,.4,1) ${delay}s both`):(c?this.anim('breathe 2.4s ease-in-out infinite'):'none'),
-        flash:lit?this.anim(`hexFlash${fl.run%2?'A':'B'} .8s ease`):'none' }; });
-    return { hexes, hiveW:Math.round(cx*2), hiveH:Math.round(cy*2), pausedOv:st==='paused' }; }
+        flash:lit?this.anim(`hexFlash${fl.run%2?'A':'B'} .5s ease`):'none' }; });
+    const hr=this.state.hiveRun||0;
+    return { hexes, hiveW:Math.round(cx*2), hiveH:Math.round(cy*2), pausedOv:st==='paused', hiveAnim:hr?this.anim(`hivePulse${hr%2?'A':'B'} .55s cubic-bezier(.2,1.4,.4,1)`):'none' }; }
   // 20 بطاقة: المكتشفة أولاً (الأحدث أولاً) بصورة صاحبها ونقاطها، ثم الباقية نقاطاً بعدد حروفها (من الأقصر) بدون كشف أحرفها
   cardVals(s,found,st){ if(!s||!st.showRecent) return { cards:[], cardsDisp:'none' };
     const got=new Set(found.map(f=>f.word)), last=found[found.length-1];
     const fcards=found.slice().reverse().map(f=>{ const n=[...f.word].length, g=f.golden, nw=f===last;
-      return { key:'f'+f.word, found:true, hidden:false, word:st.showAccepted?f.word:this.mask(f.word), ls:st.showAccepted?'0':'2px', pts:f.points, name:f.name, ini:ini(f.name), av:f.avatar||'', op:f.avatar?1:0,
+      const ty=nw&&this.state.typing&&this.state.typing.word===f.word?this.state.typing:null, full=st.showAccepted?f.word:this.mask(f.word);
+      return { key:'f'+f.word, found:true, hidden:false, typing:!!ty&&ty.n<n, word:ty?[...full].slice(0,ty.n).join(''):full, ls:st.showAccepted?'0':'2px', pts:f.points, name:f.name, ini:ini(f.name), av:f.avatar||'', op:f.avatar?1:0,
         fs:n>=7?26:n>=6?28:31, c:g?'#f3dfb2':'#efeaff', pc:g?'#f0d9a6':'#cfc6ff', pbg:g?'rgba(232,196,122,.14)':'rgba(181,169,240,.13)', ring:g?'rgba(232,196,122,.55)':'rgba(255,255,255,.16)',
         bg:g?'linear-gradient(180deg,rgba(240,210,150,.15),rgba(240,210,150,.035))':nw?'linear-gradient(180deg,rgba(196,181,253,.13),rgba(196,181,253,.035))':'linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.018))',
         bd:g?'rgba(232,196,122,.32)':nw?'rgba(196,181,253,.26)':'rgba(255,255,255,.075)', glow:g?', 0 0 32px rgba(232,196,122,.10)':nw?', 0 0 32px rgba(167,139,250,.12)':'',
