@@ -296,7 +296,7 @@
     }
 
     /** صورة دائرية، وإلا أول حرف من الاسم. */
-    function drawAvatar(ctx, img, name, cx, cy, r, ring, ringW) {
+    function drawAvatar(ctx, img, name, cx, cy, r, ring, ringW, font) {
         ctx.save();
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
@@ -308,7 +308,7 @@
             ctx.fillStyle = 'rgba(8,10,20,0.75)';
             ctx.fill();
             ctx.fillStyle = ring;
-            ctx.font = '700 ' + Math.round(r * 0.95) + 'px ' + FONT;
+            ctx.font = '700 ' + Math.round(r * 0.95) + 'px ' + (font || FONT);
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(String(name || '?').trim().charAt(0) || '?', cx, cy + r * 0.06);

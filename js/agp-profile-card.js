@@ -17,6 +17,12 @@
 (function () {
     'use strict';
 
+    // خط الصورة: Readex Pro (عربي حديث) — يتحمّل من Google Fonts وقت
+    // تجهيز الصورة فقط، وIBM Plex احتياط لو ما تحمّل.
+    var CARD_FONT = '"Readex Pro","IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,sans-serif';
+    var CARD_FONT_CSS = 'https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&display=swap';
+    var LOGO_SRC = 'logo.png';
+    var LOGO_BOX = [20, 38, 332, 107]; // حدود الشعار داخل logo.png (بدون الهوامش الشفافة)
     var PREFS_KEY = 'agp:profile-card-prefs';
     var CUSTOM_BG_KEY = 'agp:profile-card-bg';
 
@@ -135,7 +141,7 @@
     /** عنوان قسم بالنص مع نجمتين وخطين رفيعين على الجانبين (نفس إحصائيات البث). */
     function sectionTitle(ctx, text, y, s, accent, side) {
         var sh = S(), W = sh.W;
-        ctx.font = '700 ' + (40 * s) + 'px ' + sh.FONT;
+        ctx.font = '700 ' + (40 * s) + 'px ' + CARD_FONT;
         var tw = ctx.measureText(text).width;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -165,7 +171,7 @@
         ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
         if (!medal) { ctx.lineWidth = 2; ctx.strokeStyle = accent; ctx.stroke(); }
         ctx.fillStyle = medal ? '#1a1208' : '#ffffff';
-        ctx.font = '800 ' + (rank.rank > 99 ? 30 : 40) * s + 'px ' + sh.FONT;
+        ctx.font = '800 ' + (rank.rank > 99 ? 30 : 40) * s + 'px ' + CARD_FONT;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.direction = 'ltr';
@@ -176,10 +182,10 @@
         ctx.textAlign = 'right';
         ctx.textBaseline = 'alphabetic';
         ctx.fillStyle = '#ffffff';
-        ctx.font = '700 ' + (34 * s) + 'px ' + sh.FONT;
+        ctx.font = '700 ' + (34 * s) + 'px ' + CARD_FONT;
         ctx.fillText(sh.fitText(ctx, r.title, maxW), tx, my - 14 * s);
         ctx.fillStyle = 'rgba(255,255,255,0.62)';
-        ctx.font = '500 ' + (22 * s) + 'px ' + sh.FONT;
+        ctx.font = '500 ' + (22 * s) + 'px ' + CARD_FONT;
         ctx.fillText(sh.fitText(ctx, r.group + ' · ' + r.unit(rank.value), maxW), tx, my + 26 * s);
     }
 
@@ -190,19 +196,19 @@
         ctx.textAlign = 'center';
         ctx.textBaseline = 'alphabetic';
         ctx.fillStyle = '#ffffff';
-        ctx.font = '800 ' + (44 * s) + 'px ' + sh.FONT;
+        ctx.font = '800 ' + (44 * s) + 'px ' + CARD_FONT;
         ctx.fillText(sh.fitText(ctx, st.value(p), w - 30 * s), x + w / 2, y + h * 0.48);
         ctx.fillStyle = accent;
-        ctx.font = '600 ' + (24 * s) + 'px ' + sh.FONT;
+        ctx.font = '600 ' + (24 * s) + 'px ' + CARD_FONT;
         ctx.fillText(sh.fitText(ctx, st.title, w - 24 * s), x + w / 2, y + h * 0.48 + 42 * s);
         if (st.sub) {
             ctx.fillStyle = 'rgba(255,255,255,0.55)';
-            ctx.font = '500 ' + (19 * s) + 'px ' + sh.FONT;
+            ctx.font = '500 ' + (19 * s) + 'px ' + CARD_FONT;
             ctx.fillText(sh.fitText(ctx, st.sub(p), w - 24 * s), x + w / 2, y + h * 0.48 + 74 * s);
         }
     }
 
-    var SIDE = 70, CONTENT_TOP = 790, CONTENT_BOTTOM = 1800;
+    var SIDE = 70, CONTENT_TOP = 810, CONTENT_BOTTOM = 1800;
 
     /** ارتفاع المحتوى بمقياس s — للتصغير التلقائي لما العناصر كثيرة. */
     function contentHeight(nRanks, nStats, s) {
@@ -214,7 +220,7 @@
     }
 
     function draw(p, ranks, prefs) {
-        var sh = S(), W = sh.W, H = sh.H, FONT = sh.FONT;
+        var sh = S(), W = sh.W, H = sh.H, FONT = CARD_FONT;
         var custom = prefs.bg === 'custom' ? loadCustomBg() : null;
         var bg = custom ? null : findBg(prefs.bg);
         var accent = bg ? bg.accent : sh.CUSTOM_ACCENT;
@@ -222,8 +228,8 @@
         var chosenStats = availableStats(p).filter(function (st) { return prefs.items[st.key]; });
         var name = p.display_name || p.username || '';
 
-        return Promise.all([sh.loadImg(p.avatar_image_base64), sh.loadImg(custom)]).then(function (loaded) {
-            var avatarImg = loaded[0], customImg = loaded[1];
+        return Promise.all([sh.loadImg(p.avatar_image_base64), sh.loadImg(custom), sh.loadImg(LOGO_SRC)]).then(function (loaded) {
+            var avatarImg = loaded[0], customImg = loaded[1], logoImg = loaded[2];
             var canvas = document.createElement('canvas');
             canvas.width = W; canvas.height = H;
             var ctx = canvas.getContext('2d');
@@ -239,43 +245,46 @@
             ctx.fillStyle = shade;
             ctx.fillRect(0, 0, W, H);
 
-            // الرأس: توهّج خلف الصورة، الصورة، الاسم، اليوزر والـID، والشارات
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'alphabetic';
-            ctx.fillStyle = accent;
-            ctx.font = '700 26px ' + FONT;
-            ctx.fillText('بطاقة اللاعب · ألعاب أيمن', W / 2, 110);
-            var glow = ctx.createRadialGradient(W / 2, 330, 120, W / 2, 330, 260);
+            // الرأس: شعار ألعاب أيمن، توهّج خلف الصورة، الصورة، الاسم، اليوزر والـID، والشارات
+            if (logoImg) {
+                var lw = 400, lh = lw * LOGO_BOX[3] / LOGO_BOX[2];
+                ctx.save();
+                ctx.shadowColor = 'rgba(0,0,0,0.45)';
+                ctx.shadowBlur = 24;
+                ctx.drawImage(logoImg, LOGO_BOX[0], LOGO_BOX[1], LOGO_BOX[2], LOGO_BOX[3], W / 2 - lw / 2, 56, lw, lh);
+                ctx.restore();
+            }
+            var glow = ctx.createRadialGradient(W / 2, 370, 120, W / 2, 370, 260);
             glow.addColorStop(0, accent + '66');
             glow.addColorStop(1, 'rgba(0,0,0,0)');
             ctx.fillStyle = glow;
-            ctx.fillRect(W / 2 - 260, 70, 520, 520);
-            sh.drawAvatar(ctx, avatarImg, name, W / 2, 330, 150, accent, 8);
+            ctx.fillRect(W / 2 - 260, 110, 520, 520);
+            sh.drawAvatar(ctx, avatarImg, name, W / 2, 370, 140, accent, 8, FONT);
 
             ctx.textAlign = 'center';
             ctx.textBaseline = 'alphabetic';
             ctx.fillStyle = '#ffffff';
-            ctx.font = '700 66px ' + FONT;
-            ctx.fillText(sh.fitText(ctx, name, W - SIDE * 2), W / 2, 570);
+            ctx.font = '700 64px ' + FONT;
+            ctx.fillText(sh.fitText(ctx, name, W - SIDE * 2), W / 2, 600);
             var sub = [];
             if (p.tiktok_username) sub.push('@' + p.tiktok_username);
             if (p.custom_id) sub.push('ID ' + p.custom_id);
             if (sub.length) {
                 ctx.direction = 'ltr';
                 ctx.fillStyle = 'rgba(255,255,255,0.72)';
-                ctx.font = '600 30px ' + FONT;
-                ctx.fillText(sub.join('   ·   '), W / 2, 626);
+                ctx.font = '500 29px ' + FONT;
+                ctx.fillText(sub.join('   ·   '), W / 2, 656);
                 ctx.direction = 'rtl';
             }
             var pills = [isStreamer(p) ? 'ستريمر' : 'لاعب'];
             var lvl = p.points && p.points.currentLevel;
             if (lvl) pills.push(lvl.displayNameAr);
-            var pf = '700 26px ' + FONT;
+            var pf = '600 25px ' + FONT;
             ctx.font = pf;
             var widths = pills.map(function (t) { return ctx.measureText(t).width + 44; });
             var total = widths.reduce(function (a, b) { return a + b; }, 0) + (pills.length - 1) * 16;
             var px = W / 2 + total / 2;
-            pills.forEach(function (t, i) { pill(ctx, t, px - widths[i] / 2, 700, accent, pf); px -= widths[i] + 16; });
+            pills.forEach(function (t, i) { pill(ctx, t, px - widths[i] / 2, 728, accent, pf); px -= widths[i] + 16; });
 
             // المحتوى: يتصغّر لين يدخل، ويتوسّط عمودياً لو كان قليل
             var avail = CONTENT_BOTTOM - CONTENT_TOP, s = 1;
@@ -514,12 +523,37 @@
         ]);
     }
 
+    /** يحمّل خط الصورة (مرة وحدة) — ما يرمي خطأ أبداً، والرسم يكمل بالخط الاحتياطي. */
+    var fontPromise = null;
+    function loadCardFont() {
+        if (fontPromise) return fontPromise;
+        fontPromise = new Promise(function (resolve) {
+            if (!document.fonts || !document.fonts.load) { resolve(); return; }
+            var link = document.querySelector('link[data-agp-card-font]');
+            if (!link) {
+                link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = CARD_FONT_CSS;
+                link.setAttribute('data-agp-card-font', '1');
+                document.head.appendChild(link);
+            }
+            var done = false;
+            function finish() { if (!done) { done = true; resolve(); } }
+            function loadFaces() {
+                Promise.all(['400', '500', '600', '700', '800'].map(function (w) {
+                    return document.fonts.load(w + ' 40px "Readex Pro"', 'أب 12');
+                })).then(finish, finish);
+            }
+            if (link.sheet) loadFaces();
+            else { link.addEventListener('load', loadFaces); link.addEventListener('error', finish); }
+            setTimeout(finish, 4000);
+        });
+        return fontPromise;
+    }
+
     function generate(wrap, ctx) {
         message(wrap, 'جاري تجهيز الصورة…');
-        var fontsReady = (document.fonts && document.fonts.load)
-            ? Promise.all([document.fonts.load('700 40px "IBM Plex Sans Arabic"'), document.fonts.load('500 24px "IBM Plex Sans Arabic"')]).catch(function () {})
-            : Promise.resolve();
-        fontsReady.then(function () { return draw(ctx.profile, ctx.ranks, loadPrefs()); }).then(function (canvas) {
+        loadCardFont().then(function () { return draw(ctx.profile, ctx.ranks, loadPrefs()); }).then(function (canvas) {
             if (document.body.contains(wrap)) showImage(wrap, canvas, ctx);
         }).catch(function () {
             if (document.body.contains(wrap)) message(wrap, 'تعذّر تجهيز الصورة — جرّب مرة ثانية', true, ctx);
