@@ -1704,48 +1704,96 @@ document.addEventListener('DOMContentLoaded', async function() {
     var st = document.createElement('style');
     st.id = 'agp-live-streams-style';
     st.textContent =
-      '.agp-live-streams{margin:0 0 28px;direction:rtl}' +
+      '.agp-live-streams{margin:0 0 32px;direction:rtl}' +
       '.agp-live-streams[hidden]{display:none}' +
-      '.agp-live-head{display:flex;align-items:center;gap:8px;margin-bottom:14px;font-family:"Noto Kufi Arabic",sans-serif;font-size:15px;font-weight:700;color:#f4f2fb}' +
-      '.agp-live-head-dot{width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 10px 2px rgba(239,68,68,.7);animation:agpLiveDot 1.6s ease-in-out infinite}' +
-      '.agp-live-head-count{font-size:12.5px;font-weight:600;color:#968ea4}' +
-      '.agp-live-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}' +
-      '.agp-live-card{display:flex;align-items:center;gap:12px;padding:14px;border-radius:18px;border:1px solid rgba(255,255,255,.09);background:linear-gradient(135deg,rgba(28,24,46,.9),rgba(11,10,18,.94));color:inherit;text-decoration:none;transition:transform .25s,border-color .25s}' +
-      '.agp-live-card:hover{transform:translateY(-3px);border-color:rgba(178,140,245,.45)}' +
-      '.agp-live-avatar{position:relative;flex:none;width:56px;height:56px}' +
-      '.agp-live-avatar-img,.agp-live-avatar-ph{display:block;width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid #ef4444;box-sizing:border-box;background:#241d3c}' +
-      '.agp-live-avatar-ph{display:flex;align-items:center;justify-content:center;font-weight:700;color:#e2d6ff}' +
-      '.agp-live-tag{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);padding:1px 7px;border-radius:6px;background:#ef4444;color:#fff;font-size:10px;font-weight:700;letter-spacing:.5px}' +
-      '.agp-live-info{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}' +
-      '.agp-live-name{font-size:15px;font-weight:700;color:#f4f2fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
-      '.agp-live-acc{font-size:12.5px;color:#b28cf5;direction:ltr;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
-      '.agp-live-game{font-size:12.5px;color:#cfc7e2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
-      '.agp-live-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:3px}' +
-      '.agp-live-chip{padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:11.5px;color:#cfc7e2}' +
-      '.agp-live-chip-id{direction:ltr}' +
-      '@keyframes agpLiveDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.35)}}' +
-      '@media (prefers-reduced-motion:reduce){.agp-live-head-dot{animation:none}}';
+      '.agp-live-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px}' +
+      '.agp-live-head-title{display:flex;align-items:center;gap:10px;font-family:"Noto Kufi Arabic",sans-serif;font-size:18px;font-weight:700;color:#f4f2fb}' +
+      '.agp-live-head-dot{position:relative;width:10px;height:10px;border-radius:50%;background:#ef4444}' +
+      '.agp-live-head-dot::after{content:"";position:absolute;inset:0;border-radius:50%;background:#ef4444;animation:agpLivePing 1.8s cubic-bezier(0,0,.2,1) infinite}' +
+      '.agp-live-head-count{padding:2px 10px;border-radius:999px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);font-size:12.5px;font-weight:600;color:#fca5a5}' +
+      '.agp-live-head-note{font-size:12.5px;color:#7c7590}' +
+      '.agp-live-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}' +
+      '.agp-live-card{position:relative;display:flex;flex-direction:column;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(30,26,48,.92),rgba(12,11,20,.96));color:inherit;text-decoration:none;box-shadow:0 24px 50px -38px rgba(0,0,0,1);transition:transform .3s cubic-bezier(.22,1,.36,1),border-color .3s,box-shadow .3s}' +
+      '.agp-live-card:hover{transform:translateY(-5px);border-color:rgba(178,140,245,.45);box-shadow:0 30px 60px -36px rgba(122,63,212,.85)}' +
+      '.agp-live-cover{position:relative;height:88px;overflow:hidden;background:linear-gradient(135deg,#3b1f6e,#1a1430 60%,#3a1424)}' +
+      '.agp-live-cover-img{position:absolute;inset:-20px;width:calc(100% + 40px);height:calc(100% + 40px);object-fit:cover;filter:blur(18px) saturate(140%);opacity:.55;transform:scale(1.1)}' +
+      '.agp-live-cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,9,16,.05),rgba(14,12,24,.85))}' +
+      '.agp-live-badge{position:absolute;top:12px;right:12px;z-index:1;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;letter-spacing:1px;box-shadow:0 6px 16px -6px rgba(239,68,68,.8)}' +
+      '.agp-live-badge i{width:6px;height:6px;border-radius:50%;background:#fff;animation:agpLiveBlink 1.4s ease-in-out infinite}' +
+      '.agp-live-viewers{position:absolute;top:12px;left:12px;z-index:1;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;background:rgba(5,5,8,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);color:#f4f2fb;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}' +
+      '.agp-live-viewers svg{width:14px;height:14px;opacity:.85}' +
+      '.agp-live-body{position:relative;display:flex;flex-direction:column;align-items:center;padding:0 16px 16px;margin-top:-38px;text-align:center}' +
+      '.agp-live-avatar{position:relative;z-index:1;width:76px;height:76px;padding:3px;border-radius:50%;background:conic-gradient(from 200deg,#ef4444,#b28cf5,#7a3fd4,#ef4444);box-shadow:0 10px 26px -8px rgba(0,0,0,.9)}' +
+      '.agp-live-avatar-img,.agp-live-avatar-ph{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover;border:3px solid #15121f;box-sizing:border-box;background:#241d3c}' +
+      '.agp-live-avatar-ph{display:flex;align-items:center;justify-content:center;font-family:"Noto Kufi Arabic",sans-serif;font-size:26px;font-weight:700;color:#e2d6ff;background:linear-gradient(135deg,#4c2a8a,#241d3c)}' +
+      '.agp-live-name{margin-top:10px;max-width:100%;font-family:"Noto Kufi Arabic",sans-serif;font-size:16px;font-weight:700;color:#f4f2fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+      '.agp-live-acc{margin-top:2px;max-width:100%;direction:ltr;font-size:13px;color:#b28cf5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+      '.agp-live-game{display:inline-flex;align-items:center;gap:7px;max-width:100%;margin-top:12px;padding:6px 12px;border-radius:10px;background:rgba(122,63,212,.12);border:1px solid rgba(178,140,245,.22);font-size:12.5px;font-weight:600;color:#e2d6ff}' +
+      '.agp-live-game svg{flex:none;width:15px;height:15px;color:#b28cf5}' +
+      '.agp-live-game span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+      '.agp-live-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;border-top:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02)}' +
+      '.agp-live-id{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#7c7590}' +
+      '.agp-live-id b{direction:ltr;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;font-weight:600;color:#cfc7e2}' +
+      '.agp-live-cta{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;color:#b28cf5;transition:gap .25s,color .25s}' +
+      '.agp-live-card:hover .agp-live-cta{gap:8px;color:#d3bcff}' +
+      '@keyframes agpLivePing{75%,100%{transform:scale(2.4);opacity:0}}' +
+      '@keyframes agpLiveBlink{0%,100%{opacity:1}50%{opacity:.35}}' +
+      '@media (max-width:640px){.agp-live-head{flex-direction:column;align-items:flex-start;gap:4px}.agp-live-grid{grid-template-columns:1fr 1fr;gap:12px}.agp-live-cover{height:74px}.agp-live-avatar{width:64px;height:64px}.agp-live-body{margin-top:-32px;padding:0 10px 14px}.agp-live-foot{padding:10px 12px}.agp-live-cta{display:none}}' +
+      '@media (max-width:360px){.agp-live-grid{grid-template-columns:1fr}}' +
+      '@media (prefers-reduced-motion:reduce){.agp-live-head-dot::after,.agp-live-badge i{animation:none}.agp-live-card{transition:none}}';
     document.head.appendChild(st);
   }
 
   function arNum(n){ return String(n).replace(/[0-9]/g, function(d){ return '٠١٢٣٤٥٦٧٨٩'[d]; }); }
 
-  function buildLiveCard(s){
-    var card = document.createElement('a');
-    card.className = 'agp-live-card';
-    card.href = 'profile.html?id=' + encodeURIComponent(s.customId);
+  // ١٢٤٣ ← ١٫٢ألف — عشان الرقم يبقى قصير داخل شارة المشاهدين.
+  function formatViewers(v){
+    if (typeof v !== 'number') return '—';
+    if (v >= 1000000) return arNum((v / 1000000).toFixed(1).replace(/\.0$/, '')).replace('.', '٫') + 'M';
+    if (v >= 1000) return arNum((v / 1000).toFixed(1).replace(/\.0$/, '')).replace('.', '٫') + 'K';
+    return arNum(v);
+  }
 
-    var av = document.createElement('div');
-    av.className = 'agp-live-avatar';
-    function fallbackAvatar(){
-      var ph = document.createElement('span');
-      ph.className = 'agp-live-avatar-ph';
-      ph.textContent = String(s.name || s.tiktok || '?').charAt(0).toUpperCase();
-      return ph;
-    }
+  var LIVE_ICON_EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var LIVE_ICON_GAME = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><path d="M17.3 5H6.7a4 4 0 0 0-3.96 3.43l-.7 4.9A2.5 2.5 0 0 0 6.6 15.2L8 13.5h8l1.4 1.7a2.5 2.5 0 0 0 4.56-1.87l-.7-4.9A4 4 0 0 0 17.3 5z"/></svg>';
+
+  function el(tag, cls, text){
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function buildLiveCard(s){
+    var card = el('a', 'agp-live-card');
+    card.href = 'profile.html?id=' + encodeURIComponent(s.customId);
+    card.setAttribute('aria-label', 'بث ' + (s.name || s.tiktok) + ' — ' + (s.gameName || ''));
+
+    // الغلاف: نفس صورة الستريمر مكبّرة ومموّهة كخلفية، وفوقها شارة LIVE والمشاهدين.
+    var cover = el('div', 'agp-live-cover');
     if (s.avatar) {
-      var img = document.createElement('img');
-      img.className = 'agp-live-avatar-img';
+      var bg = el('img', 'agp-live-cover-img');
+      bg.src = s.avatar;
+      bg.alt = '';
+      bg.referrerPolicy = 'no-referrer';
+      bg.onerror = function(){ bg.remove(); };
+      cover.appendChild(bg);
+    }
+    var badge = el('span', 'agp-live-badge');
+    badge.appendChild(el('i'));
+    badge.appendChild(document.createTextNode('LIVE'));
+    var viewers = el('span', 'agp-live-viewers');
+    viewers.innerHTML = LIVE_ICON_EYE;
+    viewers.appendChild(document.createTextNode(formatViewers(s.viewers)));
+    viewers.title = (typeof s.viewers === 'number' ? arNum(s.viewers) : '—') + ' مشاهد';
+    cover.appendChild(badge);
+    cover.appendChild(viewers);
+
+    var body = el('div', 'agp-live-body');
+    var av = el('div', 'agp-live-avatar');
+    function fallbackAvatar(){ return el('span', 'agp-live-avatar-ph', String(s.name || s.tiktok || '?').charAt(0).toUpperCase()); }
+    if (s.avatar) {
+      var img = el('img', 'agp-live-avatar-img');
       img.src = s.avatar;
       img.alt = '';
       img.loading = 'lazy';
@@ -1755,52 +1803,35 @@ document.addEventListener('DOMContentLoaded', async function() {
     } else {
       av.appendChild(fallbackAvatar());
     }
-    var tag = document.createElement('span');
-    tag.className = 'agp-live-tag';
-    tag.textContent = 'LIVE';
-    av.appendChild(tag);
+    var game = el('div', 'agp-live-game');
+    game.innerHTML = LIVE_ICON_GAME;
+    game.appendChild(el('span', null, s.gameName || 'لعبة'));
+    body.appendChild(av);
+    body.appendChild(el('div', 'agp-live-name', s.name || s.tiktok));
+    body.appendChild(el('div', 'agp-live-acc', '@' + s.tiktok));
+    body.appendChild(game);
 
-    var info = document.createElement('div');
-    info.className = 'agp-live-info';
-    var name = document.createElement('div');
-    name.className = 'agp-live-name';
-    name.textContent = s.name || s.tiktok;
-    var acc = document.createElement('div');
-    acc.className = 'agp-live-acc';
-    acc.textContent = '@' + s.tiktok;
-    var game = document.createElement('div');
-    game.className = 'agp-live-game';
-    game.textContent = '🎮 ' + (s.gameName || 'لعبة');
-    var meta = document.createElement('div');
-    meta.className = 'agp-live-meta';
-    var viewers = document.createElement('span');
-    viewers.className = 'agp-live-chip';
-    viewers.textContent = '👁 ' + (typeof s.viewers === 'number' ? arNum(s.viewers) : '—') + ' مشاهد';
-    var idChip = document.createElement('span');
-    idChip.className = 'agp-live-chip agp-live-chip-id';
-    idChip.textContent = 'ID: ' + s.customId;
-    meta.appendChild(viewers);
-    meta.appendChild(idChip);
+    var foot = el('div', 'agp-live-foot');
+    var id = el('span', 'agp-live-id', 'ID');
+    id.appendChild(el('b', null, s.customId));
+    foot.appendChild(id);
+    foot.appendChild(el('span', 'agp-live-cta', 'البروفايل ←'));
 
-    info.appendChild(name);
-    info.appendChild(acc);
-    info.appendChild(game);
-    info.appendChild(meta);
-    card.appendChild(av);
-    card.appendChild(info);
+    card.appendChild(cover);
+    card.appendChild(body);
+    card.appendChild(foot);
     return card;
   }
 
   function buildLiveStreamsSection(){
-    var section = document.createElement('div');
-    section.className = 'agp-live-streams';
+    var section = el('div', 'agp-live-streams');
     section.setAttribute('data-live-streams', '1');
     section.hidden = true;
-    var head = document.createElement('div');
-    head.className = 'agp-live-head';
-    head.innerHTML = '<span class="agp-live-head-dot"></span><span>بثوث شغّالة الآن</span><span class="agp-live-head-count" data-live-count></span>';
-    var grid = document.createElement('div');
-    grid.className = 'agp-live-grid';
+    var head = el('div', 'agp-live-head');
+    head.innerHTML =
+      '<div class="agp-live-head-title"><span class="agp-live-head-dot"></span><span>بثوث شغّالة الآن</span><span class="agp-live-head-count" data-live-count></span></div>' +
+      '<div class="agp-live-head-note">ستريمرز يلعبون على المنصة هالحين</div>';
+    var grid = el('div', 'agp-live-grid');
     grid.setAttribute('data-live-grid', '1');
     section.appendChild(head);
     section.appendChild(grid);
@@ -1813,7 +1844,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var grid = section.querySelector('[data-live-grid]');
     grid.innerHTML = '';
     (streams || []).forEach(function(s){ grid.appendChild(buildLiveCard(s)); });
-    section.querySelector('[data-live-count]').textContent = streams && streams.length ? '(' + arNum(streams.length) + ')' : '';
+    section.querySelector('[data-live-count]').textContent = streams && streams.length ? arNum(streams.length) : '';
     section.hidden = !(streams && streams.length);
   }
 
