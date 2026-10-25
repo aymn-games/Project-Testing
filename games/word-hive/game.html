@@ -41,7 +41,6 @@ input::placeholder{color:#6f6a7c}
 @keyframes fadeOut{from{opacity:1}to{opacity:0}}
 @keyframes slideOut{from{opacity:1;transform:none}to{opacity:0;transform:translateX(60px)}}
 @keyframes popOut{from{opacity:1;transform:none}to{opacity:0;transform:scale(.9)}}
-@keyframes floatUp{0%{transform:translateY(0) rotate(0deg);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-1300px) rotate(var(--r));opacity:0}}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes hexInA{0%{opacity:0;transform:scale(.3) rotate(-30deg)}70%{opacity:1;transform:scale(1.08) rotate(3deg)}100%{opacity:1;transform:none}}
@@ -213,7 +212,6 @@ input::placeholder{color:#6f6a7c}
   <!-- الكلمة الذهبية -->
   <sc-if value="{{ goldOpen }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;z-index:84;display:grid;place-items:center;pointer-events:none;background:radial-gradient(circle, rgba(251,191,36,.18), rgba(0,0,0,.35) 60%);animation:{{ goldOv }}">
-      {{ goldConfetti }}
       <div style="position:relative;overflow:hidden;padding:clamp(20px,3vw,40px) clamp(30px,5vw,80px);border-radius:36px;background:linear-gradient(160deg,#3b2a05,#1a1206 60%);border:2px solid #fbbf24;box-shadow:0 0 0 10px rgba(251,191,36,.12), 0 0 90px rgba(251,191,36,.45);text-align:center;display:flex;flex-direction:column;gap:10px;animation:{{ goldAn }}">
         <div style="position:absolute;top:0;left:0;width:50%;height:100%;background:linear-gradient(75deg,transparent 40%,rgba(255,255,255,.18) 50%,transparent 60%);animation:goldShine 2s ease-in-out infinite"></div>
         <span style="font:800 clamp(20px,2vw,32px) 'IBM Plex Sans Arabic';color:#fde68a">🌟 كلمة ذهبية!</span>
@@ -245,7 +243,6 @@ input::placeholder{color:#6f6a7c}
   <!-- نتائج الجولة: اللاعبين اللي جاوبوا، إجابات كل لاعب، وإجمالي نقاطه بالجولة -->
   <sc-if value="{{ resOpen }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;z-index:85;display:flex;flex-direction:column;align-items:center;padding:20px;overflow-y:auto;box-sizing:border-box;background:rgba(10,8,18,.6);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);animation:{{ resOv }}">
-      {{ resConfetti }}
       <div style="position:relative;margin:auto 0;width:min(1240px,100%);max-height:calc(100dvh - 40px);box-sizing:border-box;padding:clamp(20px,2.2vw,36px);border-radius:32px;background:linear-gradient(180deg,rgba(30,26,46,.94),rgba(16,14,26,.96));border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 40px 120px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:22px;animation:{{ resAn }}">
         <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
           <div style="display:flex;flex-direction:column;gap:6px">
@@ -561,8 +558,6 @@ class Component extends DCLogic {
     const sq=[[88,14,14,1],[73,82,18,0],[16,66,10,1],[42,8,12,0]].map(([x,y,s,fill],i)=>h('span',{key:'q'+i,style:{position:'absolute',left:x+'%',top:y+'%',width:s,height:s,background:fill?'rgba(139,92,246,.45)':'transparent',border:fill?'none':'1.5px solid rgba(139,92,246,.35)'}}));
     return this._fx=h('div',{key:'fx','aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none',overflow:'hidden'}},[...glows,...stars,...sq]);
   }
-  confetti(key,n){ if(this.motion()!=='full') return null; const h=React.createElement, rnd=(a,b)=>a+Math.random()*(b-a), cols=['#fbbf24','#a78bfa','#67e8f9','#f472b6','#34d399','#fde68a'];
-    return h('div',{key,'aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none',overflow:'hidden'}},Array.from({length:n},(_,i)=>h('span',{key:i,style:{position:'absolute',left:rnd(0,100)+'%',bottom:-30,width:rnd(8,14),height:rnd(12,22),borderRadius:i%3?2:'50%',background:cols[i%cols.length],'--r':rnd(-540,540)+'deg',animation:`floatUp ${rnd(3.5,6).toFixed(2)}s linear ${rnd(0,1.5).toFixed(2)}s infinite`}}))); }
   anim(a){ const m=this.motion(); return m==='off'?'none':a; }
   hexVals(){ const s=this.session, st=s?s.state:'idle', round=s?s.round:null, show=!!round, letters=show?E.hiveLetters(round):Array(7).fill('؟');
     const cx=HEX_W*1.5*GAP, cy=HEX_H/2+HEX_H*.75*GAP;
@@ -629,7 +624,7 @@ class Component extends DCLogic {
       recentEmpty:!s||(!found.length&&!st.showTotal), emptyWordsTxt:s?'الكلمات المكتشفة تظهر هنا':'ابدأ الجولة وتظهر هنا الكلمات المطلوبة',
       ...this.cardVals(s,found,st),
       notifs:S.notifs.map(n=>({ key:n.id, icon:n.ok?'✅':'⛔', who:n.who, txt:n.txt, c:n.ok?'#6ee7b7':'#fca5a5', bd:n.ok?'rgba(52,211,153,.45)':'rgba(248,113,113,.4)', anim:this.anim(`notifIn${n.run%2?'A':'B'} .3s ease`) })),
-      goldOpen:!!S.goldOpen, goldWord:S.goldWord||'', goldWho:S.goldWho||'', goldConfetti:S.goldOpen?this.confetti('gc'+(S.goldRun||0),60):null,
+      goldOpen:!!S.goldOpen, goldWord:S.goldWord||'', goldWho:S.goldWho||'',
       goldOv:S.goldOpenOut?'fadeOut .26s ease forwards':this.anim('fade .25s ease'), goldAn:S.goldOpenOut?'popOut .26s ease forwards':this.anim('goldIn .7s cubic-bezier(.2,1.3,.4,1)') }; }
   resVals(){ const S=this.state, s=this.session; if(!s) return { resOpen:false, ansOpen:false, answers:[] };
     const lb=s.leaderboard(), win=s.winners(), found=s.found, gold=found.filter(f=>f.golden), pts=S.pts;
@@ -649,7 +644,7 @@ class Component extends DCLogic {
           words:mine.map(f=>({ key:f.word, word:f.word, pts:f.points, c:f.golden?'#f3dfb2':'#e6e1fa', pc:f.golden?'#e8c47a':'#b5a9f0',
             bg:f.golden?'rgba(232,196,122,.1)':'rgba(181,169,240,.07)', bd:f.golden?'rgba(232,196,122,.3)':'rgba(181,169,240,.16)' })) }; }),
       nextRoundNow:()=>{ this.shut('resOpen'); setTimeout(()=>{ this.newRound(); this.startRound(); },280); },
-      resBoard:this.boardRows(lb), resConfetti:S.resOpen&&win.length?this.confetti('rc'+(S.resRun||0),70):null,
+      resBoard:this.boardRows(lb),
       resOv:S.resOpenOut?'fadeOut .26s ease forwards':'fade .3s ease', resAn:S.resOpenOut?'popOut .26s ease forwards':this.anim('popIn .55s cubic-bezier(.2,1.25,.35,1)'),
       closeRes:()=>this.shut('resOpen'), openAnswers:()=>this.setState({ansOpen:true,ansOpenOut:false}),
       ansOpen:!!S.ansOpen, closeAnswers:()=>this.shut('ansOpen'), answers, ansSummary:`اكتُشف ${found.length} من ${s.total}`,
