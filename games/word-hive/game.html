@@ -341,6 +341,7 @@ input::placeholder{color:#6f6a7c}
         <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:520px;margin:0 auto">
           <button onClick="{{ onExit }}" style="flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#f4f2f8" style-hover="filter:brightness(1.25)" style-active="transform:scale(.97)">الخروج</button>
           <button onClick="{{ newMatch }}" style="flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:none;background:linear-gradient(90deg,rgba(139,92,246,.55),rgba(167,139,250,.45));color:#fff;box-shadow:0 10px 26px rgba(124,58,237,.22)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">مباراة جديدة</button>
+          <button onClick="{{ replaySame }}" style="flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:1px solid rgba(196,181,253,.35);background:rgba(139,92,246,.1);color:#ddd6fe" style-hover="filter:brightness(1.2)" style-active="transform:scale(.97)">إعادة بنفس اللاعبين</button>
         </div>
       </div>
     </div>
@@ -510,6 +511,11 @@ input::placeholder{color:#6f6a7c}
 //  الإعدادات: wh-settings.js (مشتركة مع index.html) · الشات: wh-platform.js
 //  النقاط: AGPAuth.reportMatchPoints مرة واحدة عند نهاية كل جولة
 // ============================================================
+// المباراة تبدأ من الإعدادات الأساسية (wh-settings) ثم اللوبي (wh-roster/wh-players)
+const SETUP = WH.readJSON(WH.keys.setup, null);
+const ROSTER = WH.readJSON(WH.keys.roster, null);
+if(!SETUP||!SETUP.keyword) location.replace('index.html'); else if(!Array.isArray(ROSTER)||!ROSTER.length) location.replace('lobby.html');
+const PLAYERS = WH.readJSON(WH.keys.players, {});
 const E = WordHiveEngine;
 const BANK = E.buildBank(WordHiveRounds);
 const DIFF = { easy:'سهل', medium:'متوسط' };
@@ -533,8 +539,8 @@ const HELP_STEPS = [
 class Component extends DCLogic {
   settings = WHSettings.sanitize(WH.readJSON(WH.keys.setup, null));
   session = null;
-  state = { v:0, scale:1, narrow:innerWidth<820, logo:false, recent:[], notifs:[], toast:null, flash:null, hexRun:0,
-    conn:WH.getSavedConnection()?'connecting':'none', simOpen:false, simName:'لاعب تجريبي', simText:'', simLast:null };
+  state = { v:0, simName:(Array.isArray(ROSTER)&&ROSTER[0])||'لاعب تجريبي', scale:1, narrow:innerWidth<820, logo:false, recent:[], notifs:[], toast:null, flash:null, hexRun:0,
+    conn:WH.getSavedConnection()?'connecting':'none', simOpen:false, simText:'', simLast:null };
   componentDidMount(){
     this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}); this.fit(); addEventListener('resize',this.fit);
     this.nextRound=this.pick();
@@ -585,11 +591,12 @@ class Component extends DCLogic {
     const s=this.session; if(s&&!this.reported) s.leaderboard().forEach(p=>{ const t=m[p.key]||(m[p.key]={key:p.key,id:p.id,name:p.name,avatar:null,score:0,words:0,lastAt:0});
       t.name=p.name; if(p.avatar) t.avatar=p.avatar; t.score+=p.score; t.words+=p.words.length; t.lastAt=Math.max(t.lastAt,p.lastAt||0); });
     return Object.values(m).filter(t=>t.score>0).sort((a,b)=>b.score-a.score||b.words-a.words||a.lastAt-b.lastAt).map(t=>({...t,words:Array(t.words)})); }
-  showWin=()=>{ const top=this.matchBoard()[0]; this.shut('resOpen'); if(!top){ this.toastMsg('ما أحد جمع نقاط في هذه المباراة'); return this.newMatch(); }
+  showWin=()=>{ const top=this.matchBoard()[0]; this.shut('resOpen'); if(!top){ this.toastMsg('ما أحد جمع نقاط في هذه المباراة'); return this.replaySame(); }
     this.setState({winOpen:true,winOpenOut:false,winner:top,winRun:(this.state.winRun||0)+1,pts:'pending'});
     this.tone(523.25,.22); setTimeout(()=>this.tone(659.25,.22),160); setTimeout(()=>this.tone(783.99,.5,'sine',.165),320);
     this.reportMatch(top); }
-  newMatch=()=>{ this.shut('winOpen'); this.roundNo=0; this.totals={}; this.matchRounds=null; this.session=null; this.nextRound=this.pick();
+  newMatch=()=>{ this.shut('winOpen'); try{ localStorage.removeItem(WH.keys.roster); localStorage.removeItem(WH.keys.players); }catch(e){} location.href='lobby.html'; };
+  replaySame=()=>{ this.shut('winOpen'); this.roundNo=0; this.totals={}; this.matchRounds=null; this.session=null; this.nextRound=this.pick();
     this.setState({resOpen:false,ansOpen:false,winner:null}); this.bump({recent:[],notifs:[]}); }
   // نظام نقاط المنصة — مرة واحدة لكل مباراة عند إعلان الفائز (CLAUDE.md). المشاركون = من جمع نقاط بأي جولة.
   reportMatch(top){ if(this.matchReported) return; this.matchReported=true;
@@ -600,9 +607,14 @@ class Component extends DCLogic {
       const aw=res&&res.success&&Array.isArray(res.awarded)?res.awarded.find(a=>a.tiktokUsername===uname):null; this.setState({pts:aw?aw.added:null}); }); }
 
   // ---------- الشات ----------
-  pinfo={};
-  onChat(p){ const k=E.playerKey(p.id,p.name); if(k) this.pinfo[k]={winCard:p.winCard||(this.pinfo[k]&&this.pinfo[k].winCard)||null,winVideo:WH.winVideoOf(p)||(this.pinfo[k]&&this.pinfo[k].winVideo)||null};
-    this.submit({playerId:p.id,playerName:p.name,text:p.text,msgId:p.msgId??p.messageId??null,payload:p,avatar:p.avatarUrl||null}); }
+  // اللاعبون المنضمون من اللوبي فقط تُحتسب إجاباتهم — الاسم والصورة والإطار من سجل اللوبي
+  reg=WH.createRegistry(PLAYERS);
+  joined=new Set((Array.isArray(ROSTER)?ROSTER:[]).map(n=>E.playerKey(PLAYERS[n]&&PLAYERS[n].id,n)).filter(Boolean));
+  pinfo=Object.fromEntries((Array.isArray(ROSTER)?ROSTER:[]).map(n=>{ const d=PLAYERS[n]||{}; return [E.playerKey(d.id,n),{winCard:d.winCard||null,winVideo:d.winVideo||null}]; }));
+  isJoined(id,name){ return this.joined.has(E.playerKey(id,name)); }
+  onChat(raw){ if(!this.isJoined(raw.id,raw.name)) return; const name=this.reg.nameFor(raw), k=E.playerKey(raw.id,name), prev=this.pinfo[k]||{};
+    this.pinfo[k]={winCard:raw.winCard||prev.winCard||null,winVideo:WH.winVideoOf(raw)||prev.winVideo||null};
+    this.submit({playerId:raw.id,playerName:name,text:raw.text,msgId:raw.msgId??raw.messageId??null,payload:raw,avatar:raw.avatarUrl||this.reg.avatar(name)||null}); }
   submit(msg){ const s=this.session; if(!s) return null; const res=s.submit(msg,Date.now());
     if(res.status==='accepted') this.handle(res);
     if(s.state==='ended'&&!this.reported){ if(res.completed) setTimeout(()=>this.onRoundEnd(),1400); else this.onRoundEnd(); return res; }
@@ -774,7 +786,8 @@ class Component extends DCLogic {
   simVals(){ const S=this.state;
     const send=()=>{ const t=S.simText.trim(), n=S.simName.trim()||'لاعب تجريبي'; if(!t) return;
       if(!this.session) { this.setState({simLast:'ابدأ الجولة أولاً',simLastC:'#fbbf24'}); return; }
-      const res=this.submit({playerId:'sim:'+n,playerName:n,text:t,msgId:'sim-'+Date.now()+'-'+Math.random()});
+      if(!this.isJoined('sim:'+n,n)) { this.setState({simLast:`«${n}» ليس من اللاعبين المنضمين — أضفه من محاكي الانضمام باللوبي`,simLastC:'#fbbf24'}); return; }
+      const res=this.submit({playerId:'sim:'+n,playerName:n,text:t,msgId:'sim-'+Date.now()+'-'+Math.random(),avatar:this.reg.avatar(n)});
       const txt=!res?'':res.status==='accepted'?`مقبولة +${res.points}${res.golden?' (ذهبية)':''}`:res.status==='rejected'?`مرفوضة: ${res.message}${res.by?' بواسطة '+res.by:''}`:`تجاهل: ${res.message}`;
       this.setState({simText:'',simLast:`«${t}» — ${txt}`,simLastC:res&&res.status==='accepted'?'#6ee7b7':'#fca5a5'}); };
     return { simOpen:S.simOpen, toggleSim:()=>this.setState(x=>({simOpen:!x.simOpen})), simBd:S.simOpen?'rgba(167,139,250,.6)':'rgba(255,255,255,.14)',
@@ -791,7 +804,7 @@ class Component extends DCLogic {
     const ptsMain=pts==='pending'?'…':typeof pts==='number'?`+${pts} نقطة`:`${w?w.score:0} نقطة`, ptsSub=pts==='pending'?'جارٍ احتساب النقاط':typeof pts==='number'?'تظهر في بروفايلك':'مجموع نقاطه بالمباراة';
     return { winOpen:!!S.winOpen, winnerName:w?w.name:'', winnerIni:w?[...w.name].filter(c=>/[^\s_\d]/.test(c)).slice(0,2).join(''):'', winnerAv:w&&w.avatar?w.avatar:'', winnerOp:w&&w.avatar?1:0,
       ptsMain, ptsSub, ptsSize:typeof pts==='number'?'2em':'1.5em', ptsSubSize:typeof pts==='number'?'.4em':'.45em', hasWinVideo:!!vid, winVideoEl,
-      winCardOn:!!card, winStd:!card, winCardEl:card, gameName:'خلية الكلمات', newMatch:this.newMatch,
+      winCardOn:!!card, winStd:!card, winCardEl:card, gameName:'خلية الكلمات', newMatch:this.newMatch, replaySame:this.replaySame,
       winOv:S.winOpenOut?'fadeOut .26s ease forwards':'fade .3s ease', winAn:S.winOpenOut?'popOut .26s ease forwards':'popIn .55s cubic-bezier(.2,1.25,.35,1)' }; }
   renderVals(){ const S=this.state;
     return { lblDisp:S.narrow?'none':'inline', scale:S.scale, fx:this.buildFx(), stop:e=>e.stopPropagation(), toast:S.toast,

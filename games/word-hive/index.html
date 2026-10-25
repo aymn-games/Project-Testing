@@ -203,14 +203,15 @@ input::placeholder{color:#6f6a7c}
 </x-dc>
 <script type="text/x-dc" data-dc-script>
 // ============================================================
-//  خلية الكلمات — شاشة إعدادات اللعبة (قالب روليت الإقصاء)
-//  تعريف الإعدادات مشترك مع لوحة الإعدادات داخل اللعبة: wh-settings.js
+//  خلية الكلمات — شاشة الإعدادات الأساسية (قالب روليت الإقصاء)
+//  الدخول + أساسيات المباراة فقط؛ الإعدادات المتقدمة داخل اللعبة (wh-settings.js)
+//  التالي: lobby.html (انضمام اللاعبين بكلمة الدخول)
 //  الحفظ: wh-settings · بنك الجولات يُفحص بالمحرك قبل عرضه (wh-engine.js)
 // ============================================================
 const GAME = {
   name: 'خلية الكلمات',
   libraryUrl: WH.libraryUrl,
-  gameUrl: 'game.html'
+  lobbyUrl: 'lobby.html'
 };
 const BANK = WordHiveEngine.buildBank(WordHiveRounds);
 const DIFF = { easy:'سهل', medium:'متوسط' };
@@ -245,17 +246,19 @@ class Component extends DCLogic {
       gameName:GAME.name, tagline:`كوّن كلمات عربية من أحرف الخلية بشات تيك توك — كل كلمة لازم تحتوي حرف الوسط · ${BANK.approved.length} جولة معتمدة`,
       fx:this.buildFx(), lblDisp:S.narrow?'none':'inline', stop:e=>e.stopPropagation(), toast:S.toast,
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
-      sections:WHSettings.viewSections(S.values,(k,v)=>this.set(k,v),{rounds:ROUND_OPTS}),
+      sections:WHSettings.viewSections(S.values,(k,v)=>this.set(k,v),{basic:true,rounds:ROUND_OPTS}),
       offline:!S.live, online:S.live,
       liveColor:S.live?'#34d399':'#f87171', liveBg:S.live?'rgba(52,211,153,.08)':'rgba(248,113,113,.06)', liveBd:S.live?'rgba(52,211,153,.3)':'rgba(248,113,113,.28)',
       liveTitle:S.live?'متصل بالبث':'غير متصل بالبث — تقدر تجرب بمحاكي الرسائل', libraryUrl:GAME.libraryUrl,
-      connOpen:!!S.connOpen, connBusy:!S.connStep, connDone:S.connStep===1, connMsg:S.connStep?'تم الحفظ':'جارٍ تجهيز اللعبة…', connSub:'لحظات وتنتقل لشاشة اللعبة', connBd:S.connStep?'rgba(52,211,153,.45)':'rgba(167,139,250,.35)', connGlow:S.connStep?'rgba(16,185,129,.25)':'rgba(124,58,237,.2)',
-      startOp:1, startLabel:'الدخول لشاشة اللعبة',
+      connOpen:!!S.connOpen, connBusy:!S.connStep, connDone:S.connStep===1, connMsg:S.connStep?'تم الحفظ':'جارٍ تجهيز اللوبي…', connSub:'لحظات وتنتقل للوبي', connBd:S.connStep?'rgba(52,211,153,.45)':'rgba(167,139,250,.35)', connGlow:S.connStep?'rgba(16,185,129,.25)':'rgba(124,58,237,.2)',
+      startOp:1, startLabel:'الدخول للوبي',
       start:()=>{ if(S.connOpen) return; const v=WHSettings.sanitize(S.values);
+        if(!v.keyword) return this.toastMsg('اكتب كلمة الدخول');
+        if(S.values.maxPlayers===''||+S.values.maxPlayers<1) return this.toastMsg('الحد الأقصى للاعبين من 1 إلى 200');
         if(v.roundPick==='manual'&&!BANK.approved.some(r=>r.id===v.roundId)) return this.toastMsg('اختر الجولة المحددة أو غيّر الاختيار إلى عشوائية');
         if(!BANK.approved.length) return this.toastMsg('لا توجد جولات معتمدة في البنك');
-        WH.writeJSON(WH.keys.setup,v); this.props.onStart?.(v);
-        this.setState({connOpen:true,connStep:0}); this.t1=setTimeout(()=>this.setState({connStep:1}),900); this.t2=setTimeout(()=>{ location.href=GAME.gameUrl; },1500); },
+        WH.writeJSON(WH.keys.setup,v); try{ localStorage.removeItem(WH.keys.roster); localStorage.removeItem(WH.keys.players); }catch(e){} this.props.onStart?.(v);
+        this.setState({connOpen:true,connStep:0}); this.t1=setTimeout(()=>this.setState({connStep:1}),900); this.t2=setTimeout(()=>{ location.href=GAME.lobbyUrl; },1500); },
       exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'),
       confirmExit:()=>{ location.href=GAME.libraryUrl; },
       exitOv:o('fade .25s ease','fadeOut .26s ease forwards'), exitAn:o('popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards')
