@@ -55,6 +55,24 @@
         });
     }
 
+    /**
+     * بطاقة الفوز المملوكة (js/agp-win-card.js) كعنصر React بعرض 240px — نفس
+     * er-platform.js لروليت الإقصاء: تحل محل بطاقة الفائز العادية فقط لو الفائز
+     * يملك بطاقة مفعّلة. player: {name, avatarUrl, winCard}. ترجع null لو ما يملك بطاقة.
+     */
+    function winCard(player, lines, key, width) {
+        var React = window.React;
+        if (!React || !AGP.winCard || !player || !AGP.winCard.canShow(player)) return null;
+        return React.createElement('div', { key: key || 'wc', style: { width: width || 240, maxWidth: '100%', lineHeight: 0, animation: 'agpWinCardPop .55s cubic-bezier(.2,1.3,.4,1) both' }, dangerouslySetInnerHTML: { __html: AGP.winCard.renderHtml(player, lines, { pop: false }) } });
+    }
+
+    /** فيديو الفوز من بيانات رسالة الشات (إن وُجد). */
+    function winVideoOf(payload) {
+        var v = payload && (payload.winVideo || payload.winVideoUrl) || null;
+        if (v && typeof v === 'object') v = v.url || v.src || null;
+        return typeof v === 'string' && v ? v : null;
+    }
+
     /** صورة حساب تيك توك الموثّق للاستريمر (من حسابه بالمنصة) أو null. */
     function streamerAvatar() {
         try {
@@ -72,6 +90,8 @@
         connect: connect,
         onComment: onComment,
         onStatus: onStatus,
-        streamerAvatar: streamerAvatar
+        streamerAvatar: streamerAvatar,
+        winCard: winCard,
+        winVideoOf: winVideoOf
     };
 }());

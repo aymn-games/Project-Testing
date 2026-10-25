@@ -17,6 +17,8 @@
 <script src="../../auth/auth-client.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
+<script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-win-card.js"></script>
 <script src="wh-engine.js"></script>
 <script src="wh-rounds.js"></script>
 <script src="wh-settings.js"></script>
@@ -58,7 +60,9 @@ input::placeholder{color:#6f6a7c}
 @keyframes goldIn{0%{opacity:0;transform:scale(.4) rotate(-8deg)}55%{opacity:1;transform:scale(1.12) rotate(2deg)}100%{opacity:1;transform:none}}
 @keyframes goldShine{0%{transform:translateX(-140%) rotate(20deg)}100%{transform:translateX(240%) rotate(20deg)}}
 @keyframes urgent{0%,100%{transform:none}50%{transform:scale(1.03)}}
-@keyframes agpCrown{0%{opacity:0;transform:translateY(-14px) rotate(-6deg)}60%{opacity:1}100%{opacity:1;transform:none}}
+@keyframes agpCrown{0%{opacity:0;transform:translateX(calc(-50% - 12px)) translateY(-14px) rotate(-6deg)}60%{opacity:1}100%{opacity:1;transform:translateX(calc(-50% - 12px)) translateY(0) rotate(0)}}
+@keyframes agpPop{0%{opacity:0;transform:scale(.85) translateY(10px)}100%{opacity:1;transform:none}}
+@keyframes agpShine{0%{transform:translateX(-140%) rotate(20deg)}100%{transform:translateX(240%) rotate(20deg)}}
 </style>
 </helmet>
 <div dir="rtl" style="position:fixed;inset:0;overflow:hidden;background:#07060b;font-family:'IBM Plex Sans Arabic',sans-serif;color:#f4f2f8">
@@ -185,7 +189,7 @@ input::placeholder{color:#6f6a7c}
             <div style="position:absolute;left:0;right:0;bottom:0;height:{{ timePct }}%;background:{{ tFill }};transition:height .25s linear"></div>
           </div>
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px">
-            <span style="font:600 15px 'IBM Plex Sans Arabic';color:#9d96b8">الوقت المتبقي</span>
+            <span style="font:600 15px 'IBM Plex Sans Arabic';color:#9d96b8">{{ roundLabel }}</span>
             <div dir="ltr" style="display:flex;align-items:flex-start;gap:6px">
               <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
                 <span style="font:700 62px/1 'IBM Plex Sans Arabic';color:{{ tDigit }};font-variant-numeric:tabular-nums">{{ tMin }}</span>
@@ -294,8 +298,49 @@ input::placeholder{color:#6f6a7c}
           </div>
           <div style="display:flex;align-items:center;gap:14px;padding-top:14px">
             <span style="font:500 13px 'IBM Plex Sans Arabic';color:#8f88a8">{{ resPts }}</span>
-            <button onClick="{{ nextRoundNow }}" style="height:56px;padding:0 34px;border-radius:999px;border:1px solid rgba(196,181,253,.45);background:linear-gradient(90deg,rgba(139,92,246,.55),rgba(167,139,250,.45));color:#fff;font:700 18px 'IBM Plex Sans Arabic';cursor:pointer;display:flex;align-items:center;gap:10px;box-shadow:0 12px 30px rgba(124,58,237,.25)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">الجولة التالية<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+            <button onClick="{{ nextRoundNow }}" style="height:56px;padding:0 34px;border-radius:999px;border:1px solid rgba(196,181,253,.45);background:linear-gradient(90deg,rgba(139,92,246,.55),rgba(167,139,250,.45));color:#fff;font:700 18px 'IBM Plex Sans Arabic';cursor:pointer;display:flex;align-items:center;gap:10px;box-shadow:0 12px 30px rgba(124,58,237,.25)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">{{ nextLabel }}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
           </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- شاشة الفوز (نفس شاشة فوز روليت الإقصاء بألوان أنعم) — الفائز صاحب أعلى مجموع نقاط بعد آخر جولة -->
+  <sc-if value="{{ winOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:85;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:18px;padding:16px;overflow-y:auto;box-sizing:border-box;background:rgba(10,8,18,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);font-family:'Zain','IBM Plex Sans Arabic',sans-serif;font-size:18px;animation:{{ winOv }}">
+      <div style="margin:auto 0;text-align:center;max-width:100%;display:flex;flex-direction:column;align-items:center">
+        <sc-if value="{{ hasWinVideo }}" hint-placeholder-val="{{ false }}">
+        <div style="position:relative;overflow:hidden;width:160px;height:160px;margin-bottom:18px;border-radius:24px;display:grid;place-items:center;box-sizing:border-box;border:1px dashed rgba(196,181,253,.3);background:rgba(255,255,255,.03);animation:agpPop .45s cubic-bezier(.2,1,.3,1) both">
+          <!-- فيديو الفوز (160×160) — يظهر فقط لو الفائز عنده فيديو فوز -->
+          <span style="font:500 13px 'IBM Plex Sans Arabic';color:#8a8596">فيديو الفوز</span>
+          {{ winVideoEl }}
+        </div>
+        </sc-if>
+        <h2 style="margin:0 0 6px;font-size:1.6em;font-weight:800;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.65);text-wrap:balance">🏆 الفائز في لعبة "{{ gameName }}"</h2>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:40px 0 34px">
+          <!-- بطاقة الفوز المملوكة (js/agp-win-card.js) تحل محل بطاقة الفائز العادية بنفس المكان -->
+          <sc-if value="{{ winCardOn }}" hint-placeholder-val="{{ false }}">
+          {{ winCardEl }}
+          </sc-if>
+          <sc-if value="{{ winStd }}" hint-placeholder-val="{{ true }}">
+          <div style="position:relative;width:200px;display:flex;flex-direction:column;align-items:center">
+            <div style="position:absolute;top:4px;left:50%;z-index:3;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35));animation:agpCrown .6s cubic-bezier(.2,1.4,.4,1) .15s both"><svg width="60" height="40" viewBox="0 0 60 40" style="display:block;fill:#d9cffb;stroke:#8b7fd6;stroke-linejoin:round"><polygon points="6,36 4,15 15,25 30,5 45,25 56,15 54,36" stroke-width="1.5"></polygon><circle cx="6" cy="13" r="4" stroke-width="1.5"></circle><circle cx="30" cy="4" r="4.5" stroke-width="1.5"></circle><circle cx="54" cy="13" r="4" stroke-width="1.5"></circle><rect x="6" y="32" width="48" height="6" rx="1.5" stroke-width="1.5"></rect></svg></div>
+            <div style="position:relative;width:200px;height:300px;margin-top:36px;box-sizing:border-box;border-radius:22px;overflow:hidden;background:linear-gradient(165deg, rgba(34,29,52,.82) 0%, rgba(18,16,28,.9) 100%);border:1.5px solid #c4b5fd66;box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.04), 0 0 40px #c4b5fd1a;backdrop-filter:blur(2px);animation:agpPop .45s cubic-bezier(.2,1,.3,1) both">
+              <div style="position:absolute;top:0;left:0;width:60%;height:100%;background:linear-gradient(75deg,transparent 40%,rgba(255,255,255,.12) 50%,transparent 60%);animation:agpShine 2.6s ease-in-out .6s infinite;pointer-events:none"></div>
+              <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;height:100%;padding:18px 14px 16px;box-sizing:border-box">
+                <span style="font-size:15px;letter-spacing:3px;font-weight:800;color:#c9bff5;margin-bottom:12px">WINNER</span>
+                <span style="flex-shrink:0;width:84px;height:84px;border-radius:50%;box-sizing:border-box;border:2.5px solid #c4b5fd;box-shadow:0 4px 10px rgba(0,0,0,.4);background:linear-gradient(135deg,#4c3d8f,#2b4f6b);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.4em;position:relative;overflow:hidden">{{ winnerIni }}<img src="{{ winnerAv }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ winnerOp }}"></span>
+                <span style="margin-top:12px;font-size:17px;font-weight:800;color:#FBF6EC;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ winnerName }}</span>
+                <div style="margin-top:auto;width:100%;padding-top:10px;border-top:1px solid #c4b5fd33;text-align:center"><span style="display:block;font-weight:800;letter-spacing:1px;color:#d6cff5;text-shadow:0 2px 6px rgba(0,0,0,.4);line-height:1.1;font-size:{{ ptsSize }}">{{ ptsMain }}<span style="display:block;font-size:{{ ptsSubSize }};font-weight:500;letter-spacing:0;margin-top:4px;color:rgba(201,191,245,.75);text-wrap:balance">{{ ptsSub }}</span></span></div>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+          
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:520px;margin:0 auto">
+          <button onClick="{{ onExit }}" style="flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#f4f2f8" style-hover="filter:brightness(1.25)" style-active="transform:scale(.97)">الخروج</button>
+          <button onClick="{{ newMatch }}" style="flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:none;background:linear-gradient(90deg,rgba(139,92,246,.55),rgba(167,139,250,.45));color:#fff;box-shadow:0 10px 26px rgba(124,58,237,.22)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">مباراة جديدة</button>
         </div>
       </div>
     </div>
@@ -509,7 +554,11 @@ class Component extends DCLogic {
   recentIds(){ const r=WH.readJSON(WH.keys.recent,[]); return Array.isArray(r)?r:[]; }
   pick(){ const s=this.settings; return E.pickRound(BANK,{ manualId:s.roundPick==='manual'?s.roundId:null, difficulty:s.difficulty, avoidRecent:s.avoidRecent, recent:this.recentIds() }); }
   rememberRound(id){ WH.writeJSON(WH.keys.recent,[id,...this.recentIds().filter(x=>x!==id)].slice(0,RECENT_KEEP)); }
+  // ---------- المباراة: عدة جولات (3/5/7) ومجموع نقاط تراكمي، والفائز بعد آخر جولة ----------
+  totals={}; roundNo=0; matchRounds=null; matchActiveMs=0;
   startRound=()=>{ const round=this.nextRound||this.pick(); if(!round) return this.toastMsg('لا توجد جولات معتمدة');
+    if(!this.roundNo){ this.totals={}; this.matchActiveMs=0; this.matchReported=false; this.matchRounds=this.settings.matchRounds; this.matchStartedAt=Date.now(); }
+    this.roundNo++;
     this.session=E.createSession(round,WHSettings.rules(this.settings)); this.session.start(Date.now()); this.reported=false; this.lastSec=null;
     this.rememberRound(round.id); this.tone(523,.12,'triangle'); setTimeout(()=>this.tone(784,.2,'triangle'),120);
     this.bump({recent:[],notifs:[],hexRun:this.state.hexRun+1,resOpen:false,pts:null}); }
@@ -518,6 +567,7 @@ class Component extends DCLogic {
   pauseRound=()=>{ if(this.session&&this.session.pause(Date.now())){ this.tone(440,.12,'triangle'); this.bump(); } else this.checkEnd(); }
   resumeRound=()=>{ if(this.session&&this.session.resume(Date.now())){ this.tone(660,.12,'triangle'); this.bump(); } }
   endRound(){ if(this.session&&this.session.end(Date.now(),'manual')) this.onRoundEnd(); }
+  goNext=()=>{ this.shut('resOpen'); setTimeout(()=>{ this.newRound(); this.startRound(); },280); };
   newRound=()=>{ this.session=null; this.nextRound=this.pick(); this.setState({resOpen:false,ansOpen:false}); this.bump({recent:[],notifs:[]}); }
   tick(){ const s=this.session; if(!s) return; const now=Date.now();
     if(s.state==='running'){ if(s.tick(now)) return this.onRoundEnd(); const sec=Math.ceil(s.remaining(now)/1000);
@@ -525,17 +575,34 @@ class Component extends DCLogic {
   checkEnd(){ if(this.session&&this.session.state==='ended'&&!this.reported) this.onRoundEnd(); }
   onRoundEnd(){ if(this.reported) return; this.reported=true; const s=this.session;
     this.tone(523.25,.22); setTimeout(()=>this.tone(659.25,.22),160); setTimeout(()=>this.tone(783.99,.5,'sine',.16),320);
-    this.bump({resOpen:true,resRun:(this.state.resRun||0)+1,pts:'pending'}); this.reportPoints(s); }
-  // نظام نقاط المنصة — مرة واحدة لكل جولة (CLAUDE.md). المشاركون = من اكتشف كلمة صحيحة على الأقل.
-  reportPoints(s){ const lb=s.leaderboard(), win=s.winners(); if(!lb.length) return this.setState({pts:null});
-    const players=lb.map(p=>({id:p.id,name:p.name})), winnerIds=win.map(p=>p.id), A=window.AGPAuth;
-    if(!A||typeof A.reportMatchPoints!=='function') return this.setState({pts:null});
-    A.reportMatchPoints({players,winnerIds,teamGame:false,durationMs:s.activeMs(Date.now())}).then(res=>{
-      if(this.session!==s) return; const w=win[0], uname=String(w.id).indexOf('tiktok:')===0?String(w.id).slice(7):w.id;
-      const aw=win.length===1&&res&&res.success&&Array.isArray(res.awarded)?res.awarded.find(a=>a.tiktokUsername===uname):null; this.setState({pts:aw?aw.added:null}); }); }
+    this.addTotals(s); this.bump({resOpen:true,resRun:(this.state.resRun||0)+1}); }
+  isLastRound(){ return this.roundNo>=(this.matchRounds||this.settings.matchRounds); }
+  addTotals(s){ this.matchActiveMs+=s.activeMs(Date.now());
+    s.leaderboard().forEach(p=>{ const t=this.totals[p.key]||(this.totals[p.key]={key:p.key,id:p.id,name:p.name,avatar:null,score:0,words:0,lastAt:0});
+      t.name=p.name; if(p.avatar) t.avatar=p.avatar; t.score+=p.score; t.words+=p.words.length; t.lastAt=Math.max(t.lastAt,p.lastAt||0); }); }
+  // ترتيب المباراة: المجموع التراكمي + نقاط الجولة الجارية (لو لم تُضف بعد). التعادل: الأكثر كلمات ثم الأسبق.
+  matchBoard(){ const m={}; Object.values(this.totals).forEach(t=>{ m[t.key]={...t}; });
+    const s=this.session; if(s&&!this.reported) s.leaderboard().forEach(p=>{ const t=m[p.key]||(m[p.key]={key:p.key,id:p.id,name:p.name,avatar:null,score:0,words:0,lastAt:0});
+      t.name=p.name; if(p.avatar) t.avatar=p.avatar; t.score+=p.score; t.words+=p.words.length; t.lastAt=Math.max(t.lastAt,p.lastAt||0); });
+    return Object.values(m).filter(t=>t.score>0).sort((a,b)=>b.score-a.score||b.words-a.words||a.lastAt-b.lastAt).map(t=>({...t,words:Array(t.words)})); }
+  showWin=()=>{ const top=this.matchBoard()[0]; this.shut('resOpen'); if(!top){ this.toastMsg('ما أحد جمع نقاط في هذه المباراة'); return this.newMatch(); }
+    this.setState({winOpen:true,winOpenOut:false,winner:top,winRun:(this.state.winRun||0)+1,pts:'pending'});
+    this.tone(523.25,.22); setTimeout(()=>this.tone(659.25,.22),160); setTimeout(()=>this.tone(783.99,.5,'sine',.165),320);
+    this.reportMatch(top); }
+  newMatch=()=>{ this.shut('winOpen'); this.roundNo=0; this.totals={}; this.matchRounds=null; this.session=null; this.nextRound=this.pick();
+    this.setState({resOpen:false,ansOpen:false,winner:null}); this.bump({recent:[],notifs:[]}); }
+  // نظام نقاط المنصة — مرة واحدة لكل مباراة عند إعلان الفائز (CLAUDE.md). المشاركون = من جمع نقاط بأي جولة.
+  reportMatch(top){ if(this.matchReported) return; this.matchReported=true;
+    const players=Object.values(this.totals).filter(t=>t.score>0).map(t=>({id:t.id,name:t.name})), A=window.AGPAuth;
+    if(!players.length||!A||typeof A.reportMatchPoints!=='function') return this.setState({pts:null});
+    A.reportMatchPoints({players,winnerIds:[top.id],teamGame:false,durationMs:this.matchActiveMs}).then(res=>{
+      if(!this.state.winner||this.state.winner.key!==top.key) return; const uname=String(top.id).indexOf('tiktok:')===0?String(top.id).slice(7):top.id;
+      const aw=res&&res.success&&Array.isArray(res.awarded)?res.awarded.find(a=>a.tiktokUsername===uname):null; this.setState({pts:aw?aw.added:null}); }); }
 
   // ---------- الشات ----------
-  onChat(p){ this.submit({playerId:p.id,playerName:p.name,text:p.text,msgId:p.msgId??p.messageId??null,payload:p,avatar:p.avatarUrl||null}); }
+  pinfo={};
+  onChat(p){ const k=E.playerKey(p.id,p.name); if(k) this.pinfo[k]={winCard:p.winCard||(this.pinfo[k]&&this.pinfo[k].winCard)||null,winVideo:WH.winVideoOf(p)||(this.pinfo[k]&&this.pinfo[k].winVideo)||null};
+    this.submit({playerId:p.id,playerName:p.name,text:p.text,msgId:p.msgId??p.messageId??null,payload:p,avatar:p.avatarUrl||null}); }
   submit(msg){ const s=this.session; if(!s) return null; const res=s.submit(msg,Date.now());
     if(res.status==='accepted') this.handle(res);
     if(s.state==='ended'&&!this.reported){ if(res.completed) setTimeout(()=>this.onRoundEnd(),1400); else this.onRoundEnd(); return res; }
@@ -561,7 +628,7 @@ class Component extends DCLogic {
       if(n>=L.length){ clearInterval(this._ty); this.setState(x=>({hiveRun:(x.hiveRun||0)+1})); done&&done();
         this._ft=setTimeout(()=>{ if(this._tyRun===run) this.setState({typing:null,flash:null}); },700); } },this.motion()==='low'?70:120); }
   mask(w){ return '●'.repeat([...w].length); }
-  notify(n){ this._nRun=(this._nRun||0)+1; const item={...n,id:Math.random(),run:this._nRun}; this.setState(x=>({notifs:[item,...x.notifs].slice(0,3)})); setTimeout(()=>this.setState(x=>({notifs:x.notifs.filter(y=>y.id!==item.id)})),5000); }
+  notify(n){ this._nRun=(this._nRun||0)+1; const item={...n,id:Math.random(),run:this._nRun}; this.setState(x=>({notifs:[item,...x.notifs].slice(0,3)})); }
 
   // ---------- العرض ----------
   buildFx(){
@@ -620,7 +687,7 @@ class Component extends DCLogic {
     const ask=(k)=>()=>this.setState({confirmOpen:true,confirmOpenOut:false,confKind:k});
     const controls=state==='running'?[btn('إيقاف مؤقت','⏸',this.pauseRound,'warn'),btn('إنهاء الجولة','⏹',ask('end'),'danger')]
       :state==='paused'?[btn('استئناف','▶',this.resumeRound,'primary'),btn('إعادة الجولة','↺',ask('restart'),'ghost'),btn('إنهاء الجولة','⏹',ask('end'),'danger')]
-      :state==='ended'?[btn('جولة جديدة','✦',this.newRound,'primary'),btn('عرض النتائج','🏁',()=>this.setState({resOpen:true,resOpenOut:false}),'ghost')]
+      :state==='ended'?[this.isLastRound()?btn('عرض الفائز','🏆',this.showWin,'primary'):btn('الجولة التالية','✦',this.goNext,'primary'),btn('عرض النتائج','🏁',()=>this.setState({resOpen:true,resOpenOut:false}),'ghost')]
       :[btn('بدء الجولة','▶',this.startRound,'primary')];
     const showBoard=st.showBoard, showRecent=st.showRecent;
     const r=s?s.round:null;
@@ -637,7 +704,7 @@ class Component extends DCLogic {
       tColor:state==='running'?'#9fdcc0':state==='paused'?'#e8c47a':'#a39cbc', tState:state==='running'?'جارية':state==='paused'?'متوقفة':'انتهت', timeBd:sec<=10&&state==='running'?'rgba(248,113,113,.5)':'rgba(255,255,255,.08)', timeAnim:sec<=10&&sec>0&&state==='running'?this.anim('urgent 1s ease-in-out infinite'):'none',
       countTxt:st.showTotal?`${found.length} / ${s?s.total:0}`:String(found.length), goldTxt:s&&s.goldenWords.length?`🌟 ذهبية: ${goldFound.length} من ${st.showTotal?s.goldenWords.length:'؟'}`:'',
       cols:'340px minmax(0,1fr) 340px',
-      showBoard, showRecent, board:this.boardRows(lb).slice(0,7), boardCount:lb.length, boardEmpty:!lb.length,
+      showBoard, showRecent, board:this.boardRows(this.matchBoard()).slice(0,7), boardCount:lb.length, boardEmpty:!lb.length,
       boardEmptyTxt:s?'أول كلمة صحيحة بالشات تظهر صاحبها هنا':'ابدأ الجولة وخل المتابعين يكتبون الكلمات بالشات',
       wordsCount:s?(st.showTotal?`${found.length} / ${s.total}`:String(found.length)):'',
       recentEmpty:!s||(!found.length&&!st.showTotal), emptyWordsTxt:s?'الكلمات المكتشفة تظهر هنا':'ابدأ الجولة وتظهر هنا الكلمات المطلوبة',
@@ -651,10 +718,10 @@ class Component extends DCLogic {
     const fby={}; found.forEach(f=>{ fby[f.word]=f; });
     const answers=s.eligible.slice().sort((a,b)=>(fby[b]?1:0)-(fby[a]?1:0)||[...b].length-[...a].length).map(w=>{ const f=fby[w], g=E.isGolden(w,s.round);
       return { key:w, word:w, by:f?`${f.name} · +${f.points}`:'لم تُكتشف', c:g?'#fde68a':f?'#6ee7b7':'#cfcad9', bg:f?'rgba(52,211,153,.07)':'rgba(255,255,255,.03)', bd:g?'rgba(251,191,36,.5)':f?'rgba(52,211,153,.35)':'rgba(255,255,255,.07)' }; });
-    return { resOpen:!!S.resOpen, resSub:`${s.round.id.replace('r','جولة ')} · ${s.endReason==='time'?'انتهى الوقت':s.endReason==='complete'?'اكتُشفت كل الكلمات المطلوبة':'أنهاها الهوست'}`,
+    return { resOpen:!!S.resOpen, resSub:`الجولة ${this.roundNo} من ${this.matchRounds||this.settings.matchRounds} · ${s.endReason==='time'?'انتهى الوقت':s.endReason==='complete'?'اكتُشفت كل الكلمات المطلوبة':'أنهاها الهوست'}`,
       resFound:`${found.length} / ${s.total}`, resGold:gold.length?'الذهبية: '+gold.map(g=>`${g.word} (${g.name})`).join('، '):(s.goldenWords.length?'الكلمة الذهبية لم تُكتشف':'لا توجد كلمة ذهبية'),
       resWinLabel:win.length>1?'تعادل في المركز الأول':'الفائز', resWinner:win.length?win.map(w=>w.name).join('، '):'—',
-      resPts:!win.length?'':pts==='pending'?'جارٍ احتساب نقاط المنصة…':typeof pts==='number'?`الفائز +${pts} نقطة منصة`:'نقاط المنصة للحسابات الموثّقة',
+      resPts:this.isLastRound()?'آخر جولة — الفائز صاحب أعلى مجموع نقاط':`باقي ${(this.matchRounds||this.settings.matchRounds)-this.roundNo} من الجولات`,
       resPlayers:lb.map((p,i)=>{ const mine=found.filter(f=>f.playerKey===p.key).sort((a,b)=>b.points-a.points||a.at-b.at);
         return { key:p.key, rank:i+1, name:p.name, ini:ini(p.name), av:p.avatar||'', op:p.avatar?1:0, score:p.score, count:mine.length, delay:(Math.min(i,10)*0.05).toFixed(2)+'s',
           rankBg:['rgba(232,196,122,.18)','rgba(207,212,220,.14)','rgba(201,146,90,.16)'][i]||'rgba(255,255,255,.05)', rankC:['#f0d9a6','#e3e6ec','#e0b48a'][i]||'#a39cbc',
@@ -663,7 +730,7 @@ class Component extends DCLogic {
           bg:i===0?'linear-gradient(180deg,rgba(232,196,122,.08),rgba(255,255,255,.02))':'rgba(255,255,255,.03)', bd:i===0?'rgba(232,196,122,.25)':'rgba(255,255,255,.07)',
           words:mine.map(f=>({ key:f.word, word:f.word, pts:f.points, c:f.golden?'#f3dfb2':'#e6e1fa', pc:f.golden?'#e8c47a':'#b5a9f0',
             bg:f.golden?'rgba(232,196,122,.1)':'rgba(181,169,240,.07)', bd:f.golden?'rgba(232,196,122,.3)':'rgba(181,169,240,.16)' })) }; }),
-      nextRoundNow:()=>{ this.shut('resOpen'); setTimeout(()=>{ this.newRound(); this.startRound(); },280); },
+      nextRoundNow:()=>this.isLastRound()?this.showWin():this.goNext(), nextLabel:this.isLastRound()?'عرض الفائز':'الجولة التالية',
       resBoard:this.boardRows(lb),
       resOv:S.resOpenOut?'fadeOut .26s ease forwards':'fade .3s ease', resAn:S.resOpenOut?'popOut .26s ease forwards':this.anim('popIn .55s cubic-bezier(.2,1.25,.35,1)'),
       closeRes:()=>this.shut('resOpen'), openAnswers:()=>this.setState({ansOpen:true,ansOpenOut:false}),
@@ -713,11 +780,25 @@ class Component extends DCLogic {
     return { simOpen:S.simOpen, toggleSim:()=>this.setState(x=>({simOpen:!x.simOpen})), simBd:S.simOpen?'rgba(167,139,250,.6)':'rgba(255,255,255,.14)',
       simName:S.simName, simText:S.simText, simNameIn:e=>this.setState({simName:e.target.value}), simTextIn:e=>this.setState({simText:e.target.value}),
       simKey:e=>{ if(e.key==='Enter') send(); }, simSend:send, simLast:S.simLast, simLastC:S.simLastC||'#cfcad9' }; }
+  // شاشة الفوز — نفس منطق روليت الإقصاء (بطاقة الفوز المملوكة، فيديو الفوز، نقاط المنصة)
+  winVals(){ const S=this.state, w=S.winner, h=React.createElement, n=Object.values(this.totals).filter(t=>t.score>0).length;
+    const pi=w?(this.pinfo[w.key]||{}):{}, pts=S.pts, ptsLine=pts==='pending'?'جارٍ احتساب النقاط':typeof pts==='number'?`+${pts} نقطة`:'النقاط للحسابات الموثّقة في الموقع';
+    const card=S.winOpen&&w?WH.winCard({id:w.id,name:w.name,avatarUrl:w.avatar||null,winCard:pi.winCard||null},[ptsLine,`المركز الأول من ${n} لاعب · ${w.score} نقطة`,'خلية الكلمات'],'wc'+(S.winRun||0)):null;
+    const vid=S.winOpen&&w?pi.winVideo:null;
+    const winVideoEl=vid?h('video',{key:'wv'+(S.winRun||0),src:vid,autoPlay:true,loop:true,playsInline:true,
+      ref:el=>{ if(!el||el._armed) return; el._armed=true; el.muted=false; const p=el.play(); if(p&&p.catch) p.catch(()=>{ el.muted=true; el.play().catch(()=>{}); }); },
+      onError:e=>{ e.currentTarget.style.display='none'; }, style:{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}):null;
+    const ptsMain=pts==='pending'?'…':typeof pts==='number'?`+${pts} نقطة`:`${w?w.score:0} نقطة`, ptsSub=pts==='pending'?'جارٍ احتساب النقاط':typeof pts==='number'?'تظهر في بروفايلك':'مجموع نقاطه بالمباراة';
+    return { winOpen:!!S.winOpen, winnerName:w?w.name:'', winnerIni:w?[...w.name].filter(c=>/[^\s_\d]/.test(c)).slice(0,2).join(''):'', winnerAv:w&&w.avatar?w.avatar:'', winnerOp:w&&w.avatar?1:0,
+      ptsMain, ptsSub, ptsSize:typeof pts==='number'?'2em':'1.5em', ptsSubSize:typeof pts==='number'?'.4em':'.45em', hasWinVideo:!!vid, winVideoEl,
+      winCardOn:!!card, winStd:!card, winCardEl:card, gameName:'خلية الكلمات', newMatch:this.newMatch,
+      winOv:S.winOpenOut?'fadeOut .26s ease forwards':'fade .3s ease', winAn:S.winOpenOut?'popOut .26s ease forwards':'popIn .55s cubic-bezier(.2,1.25,.35,1)' }; }
   renderVals(){ const S=this.state;
     return { lblDisp:S.narrow?'none':'inline', scale:S.scale, fx:this.buildFx(), stop:e=>e.stopPropagation(), toast:S.toast,
       onExit:()=>this.setState({confirmOpen:true,confirmOpenOut:false,confKind:'exit'}), onSettings:()=>this.setState({settingsOpen:true,settingsOpenOut:false,draft:{...this.settings}}),
       onHelp:()=>this.setState({helpOpen:true,helpOpenOut:false}), newRound:this.newRound,
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
+      ...this.winVals(), roundLabel:this.roundNo?`الجولة ${this.roundNo} من ${this.matchRounds||this.settings.matchRounds}`:'الوقت المتبقي',
       ...this.hexVals(), ...this.mainVals(), ...this.resVals(), ...this.helpVals(), ...this.settingsVals(), ...this.connVals(), ...this.confirmVals(), ...this.simVals() }; }
 }
 </script>

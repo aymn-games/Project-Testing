@@ -20,6 +20,7 @@
 
     var SECTIONS = [
         { title: 'إعدادات الجولة', rows: [
+            { type: 'choice', key: 'matchRounds', label: 'عدد الجولات بالمباراة', hint: 'بعد آخر جولة يظهر الفائز: صاحب أعلى مجموع نقاط', options: ['3', '5', '7'], values: [3, 5, 7], default: 3, rule: true },
             { type: 'choice', key: 'durationSec', label: 'مدة الجولة (ثانية)', options: ['60', '90', '120', '180', '300'], values: [60, 90, 120, 180, 300], default: 120, rule: true },
             { type: 'choice', key: 'difficulty', label: 'مستوى الصعوبة', options: ['سهل', 'متوسط', 'مختلط'], values: ['easy', 'medium', 'mixed'], default: 'mixed', rule: true },
             { type: 'choice', key: 'roundPick', label: 'اختيار الجولة', options: ['عشوائية', 'يدوية'], values: ['random', 'manual'], default: 'random', rule: true },
