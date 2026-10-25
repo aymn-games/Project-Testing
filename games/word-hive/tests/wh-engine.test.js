@@ -7,7 +7,7 @@ const E = require('../wh-engine.js');
 const ROUNDS = require('../wh-rounds.js');
 const S = require('../wh-settings.js');
 
-// جولة اختبار صغيرة بأحرف «برمجيات» (حرف الوسط ر) — 31 كلمة حتى تُعتمد
+// جولة اختبار بأحرف «برمجيات» (حرف الوسط ر) — 31 كلمة، أول 20 منها هي المطلوبة أثناء اللعب
 const R = E.validateRound({
     id: 't1', center: 'ر', letters: ['ب', 'م', 'ج', 'ي', 'ا', 'ت'], status: 'approved',
     words: ['برمجيات', 'برامج', 'تاجر', 'تجار', 'جار', 'جرار', 'برج', 'أبراج', 'جرب', 'جبر', 'إجبار', 'جبار', 'أمير', 'مرايا',
@@ -50,7 +50,8 @@ test('كلمة أقصر من الحد الأدنى تُرفض', () => {
     const s = running(Object.assign({}, RULES, { minLen: 4 }));
     assert.equal(s.submit(msg('a', 'a', 'جار'), T0 + 1).reason, 'short');
     assert.equal(s.submit(msg('a', 'a', 'تاجر'), T0 + 1).status, 'accepted');
-    assert.equal(s.total, R.answers.filter(w => [...w].length >= 4).length);
+    assert.equal(s.total, 20);
+    assert.deepEqual(s.eligible, R.answers.filter(w => [...w].length >= 4).slice(0, 20));
 });
 
 test('كلمة بأحرف الخلية لكنها غير موجودة في القاموس تُرفض', () => {
@@ -141,17 +142,18 @@ test('جدول النقاط حسب الطول والإعدادات', () => {
     assert.equal(E.pointsFor('تاجر', R, { p4: 9 }).total, 9);
 });
 
-test('جولة أقل من 30 كلمة صحيحة تبقى مسودة ولا تُختار', () => {
+test('جولة أقل من 20 كلمة صحيحة تبقى مسودة ولا تُختار', () => {
     const draft = E.validateRound({ id: 'd', center: 'ر', letters: ['ب', 'م', 'ج', 'ي', 'ا', 'ت'], status: 'approved', words: ['تاجر', 'جار', 'برج'] });
     assert.equal(draft.status, 'draft');
     const bank = E.buildBank(ROUNDS);
-    assert.ok(bank.drafts.some(r => r.id === 'r10'));
+    const withDraft = E.buildBank(ROUNDS.concat([{ id: 'dx', center: 'ر', letters: ['ب', 'م', 'ج', 'ي', 'ا', 'ت'], status: 'approved', words: ['تاجر', 'جار', 'برج'] }]));
+    assert.ok(withDraft.drafts.some(r => r.id === 'dx'));
     for (let i = 0; i < 200; i++) {
-        const r = E.pickRound(bank, { difficulty: 'mixed' });
+        const r = E.pickRound(withDraft, { difficulty: 'mixed' });
         assert.equal(r.status, 'approved');
-        assert.ok(r.count >= 30);
+        assert.ok(r.count >= 20);
     }
-    assert.notEqual(E.pickRound(bank, { manualId: 'r10' }).id, 'r10');
+    assert.notEqual(E.pickRound(withDraft, { manualId: 'dx' }).id, 'dx');
 });
 
 test('الجولة المعلّمة draft تبقى مسودة حتى لو عدد كلماتها كافٍ', () => {
@@ -163,7 +165,7 @@ test('اختلافات الكتابة العربية والتشكيل والتط
     const s = running();
     assert.equal(s.submit(msg('a', 'a', 'أَمِيـــر'), T0 + 1).status, 'accepted');
     assert.equal(s.submit(msg('b', 'b', 'إجبار'), T0 + 1).status, 'accepted');
-    assert.equal(s.submit(msg('c', 'c', 'مرمي'), T0 + 1).word, 'مرمي'); // مرمى بالبنك ← ى = ي
+    assert.equal(E.normalizeWord('مرمى'), 'مرمي');
     assert.equal(E.normalizeWord('مَدْرَسَة'), 'مدرسه');
     assert.equal(E.normalizeWord('آبار'), 'ابار');
     assert.equal(E.normalizeWord('سؤال'), 'سوال');
@@ -229,12 +231,37 @@ test('الفائزون: أعلى نقاط، والتعادل يعطي أكثر �
     assert.deepEqual(s.winners().map(p => p.name), ['B']);
 });
 
-test('بنك المشروع: كل جولة معتمدة ≥30 كلمة وأحرفها 7 مختلفة', () => {
+test('بنك المشروع: كل جولة معتمدة ≥20 كلمة وأحرفها 7 مختلفة', () => {
     const bank = E.buildBank(ROUNDS);
     assert.ok(bank.approved.length >= 10);
     bank.approved.forEach(r => {
-        assert.ok(r.count >= 30, r.id);
+        assert.ok(r.count >= 20, r.id);
+        assert.equal(E.targetWords(r, { minLen: 3 }).length, 20, r.id);
         assert.equal(new Set(E.hiveLetters(r)).size, 7, r.id);
         r.answers.forEach(w => assert.ok(E.checkLetters(w, r, { minLen: 3 }).ok, r.id + ' ' + w));
     });
+});
+
+test('20 كلمة مطلوبة فقط: كلمة صحيحة بالقاموس لكنها خارج الـ20 تُرفض', () => {
+    const s = running();
+    assert.equal(s.total, 20);
+    assert.ok(!s.eligible.includes('ارتياب'));
+    assert.equal(s.submit(msg('a', 'a', 'ارتياب'), T0 + 1).reason, 'not_in_dict');
+});
+
+test('اكتمال الكلمات العشرين ينهي الجولة فوراً', () => {
+    const s = running();
+    let last;
+    s.eligible.forEach((w, i) => { last = s.submit(msg('p' + (i % 3), 'P' + (i % 3), w), T0 + 100 + i); });
+    assert.equal(last.status, 'accepted');
+    assert.equal(last.completed, true);
+    assert.equal(s.state, 'ended');
+    assert.equal(s.endReason, 'complete');
+    assert.equal(s.found.length, 20);
+});
+
+test('صورة صاحب الإجابة تُحفظ مع الكلمة المكتشفة', () => {
+    const s = running();
+    s.submit(msg('tiktok:x', 'X', 'تاجر', { avatar: 'https://example.com/x.jpg' }), T0 + 1);
+    assert.equal(s.foundBy('تاجر').avatar, 'https://example.com/x.jpg');
 });

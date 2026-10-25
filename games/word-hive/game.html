@@ -77,7 +77,33 @@ input::placeholder{color:#6f6a7c}
       </div>
     </header>
 
-  <div style="position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform:translate(-50%,-50%) scale({{ scale }});padding:104px 32px 24px;box-sizing:border-box;display:grid;grid-template-columns:{{ cols }};gap:28px">
+  <div style="position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform:translate(-50%,-50%) scale({{ scale }});padding:100px 32px 22px;box-sizing:border-box;display:grid;grid-template-columns:{{ cols }};grid-template-rows:auto minmax(0,1fr);column-gap:28px;row-gap:18px">
+
+    <!-- الكلمات المطلوبة: 20 بطاقة بصفين (10 بكل صف) — المكتشفة أولاً (الأحدث أولاً) بصورة صاحبها ونقاطها، والباقية نقاط بعدد حروفها -->
+    <div style="grid-column:1/-1;display:{{ cardsDisp }};grid-template-columns:repeat(10,minmax(0,1fr));gap:12px">
+      <sc-for list="{{ cards }}" as="k" hint-placeholder-count="20">
+        <div style="position:relative;height:118px;box-sizing:border-box;border-radius:20px;background:{{ k.bg }};border:1px solid {{ k.bd }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;overflow:hidden;animation:{{ k.anim }}">
+          <sc-if value="{{ k.found }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:8px;max-width:92%">
+              <span style="position:relative;overflow:hidden;flex-shrink:0;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#6d28d9,#0e7490);border:2px solid {{ k.ring }};box-sizing:border-box;color:#fff;font:700 16px 'IBM Plex Sans Arabic'">{{ k.ini }}<img src="{{ k.av }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ k.op }}"></span>
+              <span style="min-width:0;font:600 15px 'IBM Plex Sans Arabic';color:#b9b3cc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ k.name }}</span>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:6px;max-width:94%">
+              <span style="font:800 {{ k.fs }}px/1.1 'IBM Plex Sans Arabic';color:{{ k.c }};letter-spacing:{{ k.ls }};white-space:nowrap">{{ k.word }}</span>
+              <span dir="ltr" style="font:800 16px 'IBM Plex Sans Arabic';color:{{ k.pc }};white-space:nowrap">+{{ k.pts }}</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ k.hidden }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;gap:6px">
+              <sc-for list="{{ k.cells }}" as="c" hint-placeholder-count="4">
+                <span style="width:11px;height:11px;border-radius:50%;background:{{ c.bg }}"></span>
+              </sc-for>
+            </div>
+            <span style="font:600 13px 'IBM Plex Sans Arabic';color:#7d7596">{{ k.len }} أحرف</span>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
 
     <!-- ترتيب اللاعبين (يمين) -->
     <sc-if value="{{ showBoard }}" hint-placeholder-val="{{ true }}">
@@ -95,47 +121,13 @@ input::placeholder{color:#6f6a7c}
 
     <!-- الوسط: الكلمات فوق الخلية، ثم الخلية والعداد والتحكم -->
     <main style="position:relative;min-width:0;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:16px">
-      <div style="position:absolute;top:318px;left:50%;transform:translateX(-50%);z-index:5;height:0;display:flex;align-items:flex-start;justify-content:center;width:100%;pointer-events:none">
+      <div style="position:absolute;top:6px;left:50%;transform:translateX(-50%);z-index:5;height:0;display:flex;align-items:flex-start;justify-content:center;width:100%;pointer-events:none">
         <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="0">
           <div style="display:flex;align-items:center;gap:10px;max-width:100%;padding:8px 22px;border-radius:999px;background:rgba(12,11,18,.94);border:1px solid {{ n.bd }};box-shadow:0 14px 40px rgba(0,0,0,.45);font:600 22px 'IBM Plex Sans Arabic';color:{{ n.c }};animation:{{ n.anim }}">
             <span>{{ n.icon }}</span><span style="font-weight:800;color:#f4f2f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px">{{ n.who }}</span><span style="white-space:nowrap">{{ n.txt }}</span>
           </div>
         </sc-for>
       </div>
-
-      <!-- الكلمات المطلوبة مجمّعة حسب طول الكلمة: المكتشفة أولاً (الأحدث أولاً) ثم الباقية نقاطاً بعدد حروفها -->
-      <sc-if value="{{ showRecent }}" hint-placeholder-val="{{ true }}">
-        <div style="width:100%;height:{{ groupsH }}px;flex-shrink:0;display:grid;grid-template-columns:repeat({{ groupCols }},minmax(0,1fr));gap:14px">
-          <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
-            <div style="min-width:0;min-height:0;display:flex;flex-direction:column;gap:8px;padding:12px 16px;box-sizing:border-box;border-radius:20px;background:rgba(255,255,255,.028);border:1px solid rgba(255,255,255,.07);overflow:hidden">
-              <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center">
-                <span style="font:700 18px 'IBM Plex Sans Arabic';color:#c9c2ea">{{ g.title }}</span>
-                <span style="font:700 16px 'IBM Plex Sans Arabic';color:#8f86b8;font-variant-numeric:tabular-nums">{{ g.countTxt }}</span>
-              </div>
-              <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-wrap:wrap;align-content:flex-start;column-gap:16px;row-gap:6px">
-                <sc-for list="{{ g.items }}" as="w" hint-placeholder-count="6">
-                  <sc-if value="{{ w.isWord }}" hint-placeholder-val="{{ true }}">
-                    <span style="height:{{ g.rowH }}px;display:flex;align-items:center;gap:4px;white-space:nowrap;animation:{{ w.anim }}">
-                      <span style="font:800 {{ g.fs }}px/1 'IBM Plex Sans Arabic';color:{{ w.c }};letter-spacing:{{ w.ls }}">{{ w.word }}</span>
-                      <span style="font:700 {{ g.ps }}px/1 'IBM Plex Sans Arabic';color:{{ w.pc }};align-self:flex-start;margin-top:5px">+{{ w.pts }}</span>
-                    </span>
-                  </sc-if>
-                  <sc-if value="{{ w.isSlot }}" hint-placeholder-val="{{ false }}">
-                    <span style="height:{{ g.rowH }}px;display:flex;align-items:center;gap:4px">
-                      <sc-for list="{{ w.cells }}" as="c" hint-placeholder-count="4">
-                        <span style="width:{{ g.dot }}px;height:{{ g.dot }}px;border-radius:50%;background:{{ c.bg }}"></span>
-                      </sc-for>
-                    </span>
-                  </sc-if>
-                </sc-for>
-              </div>
-            </div>
-          </sc-for>
-          <sc-if value="{{ recentEmpty }}" hint-placeholder-val="{{ false }}">
-            <div style="grid-column:1/-1;display:grid;place-items:center;color:#8a8596;font:500 22px 'IBM Plex Sans Arabic'">{{ emptyWordsTxt }}</div>
-          </sc-if>
-        </div>
-      </sc-if>
 
       <div style="position:relative;width:{{ hiveW }}px;height:{{ hiveH }}px;flex-shrink:0">
         <div style="position:absolute;inset:-80px;border-radius:50%;background:radial-gradient(circle, rgba(232,196,122,.07), rgba(139,92,246,.06) 45%, transparent 70%);pointer-events:none"></div>
@@ -431,7 +423,7 @@ const DIFF = { easy:'سهل', medium:'متوسط' };
 const ROUND_OPTS = BANK.approved.map(r=>({ value:r.id, label:`${r.id.replace('r','جولة ')} · الوسط «${r.center}» · ${DIFF[r.difficulty]||''} · ${r.count} كلمة` }));
 const RECENT_KEEP = Math.max(1, Math.min(5, BANK.approved.length - 1));
 const ini = n=>[...String(n||'')].find(ch=>/[^\s_\d@]/.test(ch))||'؟';
-const HEX_W = 168, HEX_H = Math.round(HEX_W*1.1547), GAP = 1.05;
+const HEX_W = 166, HEX_H = Math.round(HEX_W*1.1547), GAP = 1.05;
 const HELP_STEPS = [
   'ستظهر أمامك خلية تحتوي على سبعة أحرف.',
   'يوجد حرف أساسي في وسط الخلية، ويجب أن تحتوي عليه كل كلمة.',
@@ -497,8 +489,9 @@ class Component extends DCLogic {
   // ---------- الشات ----------
   onChat(p){ this.submit({playerId:p.id,playerName:p.name,text:p.text,msgId:p.msgId??p.messageId??null,payload:p,avatar:p.avatarUrl||null}); }
   submit(msg){ const s=this.session; if(!s) return null; const res=s.submit(msg,Date.now());
-    if(s.state==='ended'&&!this.reported){ this.onRoundEnd(); return res; }
-    this.handle(res); return res; }
+    if(res.status==='accepted') this.handle(res);
+    if(s.state==='ended'&&!this.reported){ if(res.completed) setTimeout(()=>this.onRoundEnd(),1400); else this.onRoundEnd(); return res; }
+    if(res.status!=='accepted') this.handle(res); return res; }
   handle(res){ const st=this.settings;
     if(res.status==='accepted'){
       const e={id:Math.random(),word:res.word,name:res.player.name,pts:res.points,golden:res.golden};
@@ -543,18 +536,19 @@ class Component extends DCLogic {
         enter:show?this.anim(`hexIn${run%2?'A':'B'} .6s cubic-bezier(.2,1.3,.4,1) ${delay}s both`):(c?this.anim('breathe 2.4s ease-in-out infinite'):'none'),
         flash:lit?this.anim(`hexFlash${fl.run%2?'A':'B'} .8s ease`):'none' }; });
     return { hexes, hiveW:Math.round(cx*2), hiveH:Math.round(cy*2), pausedOv:st==='paused' }; }
-  // مجموعات حسب طول الكلمة (3، 4، 5، 6+): المكتشفة أولاً (الأحدث أولاً) ثم الباقية نقاطاً بعدد حروفها بدون كشف أحرفها.
-  wordGroupVals(s,found,st){ const H=300; if(!s) return { groups:[], groupCols:1, groupsH:H };
-    const len=w=>[...w].length, bucket=w=>Math.min(6,len(w)), got=new Set(found.map(f=>f.word));
-    const keys=[...new Set((st.showTotal?s.eligible:found.map(f=>f.word)).map(bucket))].sort((a,b)=>a-b);
-    const groups=keys.map(k=>{ const fw=found.filter(f=>bucket(f.word)===k).reverse(), all=s.eligible.filter(w=>bucket(w)===k);
-      const rest=st.showTotal?all.filter(w=>!got.has(w)):[], n=fw.length+rest.length, fs=n<=12?30:n<=18?26:22, dot=Math.max(7,Math.round(fs*.3));
-      const items=fw.map((f,i)=>({ key:'w'+f.word, isWord:true, isSlot:false, word:st.showAccepted?f.word:this.mask(f.word), ls:st.showAccepted?'0':'2px', pts:f.points,
-          c:f.golden?'#e8c47a':f===found[found.length-1]?'#ffffff':'#ddd9ea', pc:f.golden?'#e8c47a':'#a99de6',
-          anim:f===found[found.length-1]?this.anim(`wordIn${found.length%2?'A':'B'} .45s cubic-bezier(.2,1.2,.4,1)`):'none' }))
-        .concat(rest.map((w,i)=>{ const g=E.isGolden(w,s.round); return { key:'s'+k+'-'+i, isWord:false, isSlot:true, cells:[...w].map((_,j)=>({key:j,bg:g?'rgba(232,196,122,.55)':'rgba(200,190,240,.3)'})) }; }));
-      return { key:'g'+k, title:k>=6?'6 أحرف فأكثر':`${k} أحرف`, countTxt:st.showTotal?`${fw.length} / ${all.length}`:String(fw.length), items, fs, ps:Math.round(fs*.5), dot, rowH:Math.round(fs*1.45) }; });
-    return { groups, groupCols:Math.max(1,groups.length), groupsH:H }; }
+  // 20 بطاقة: المكتشفة أولاً (الأحدث أولاً) بصورة صاحبها ونقاطها، ثم الباقية نقاطاً بعدد حروفها (من الأقصر) بدون كشف أحرفها
+  cardVals(s,found,st){ if(!s||!st.showRecent) return { cards:[], cardsDisp:'none' };
+    const got=new Set(found.map(f=>f.word)), last=found[found.length-1];
+    const fcards=found.slice().reverse().map(f=>{ const n=[...f.word].length;
+      return { key:'f'+f.word, found:true, hidden:false, word:st.showAccepted?f.word:this.mask(f.word), ls:st.showAccepted?'0':'2px', pts:f.points, name:f.name, ini:ini(f.name), av:f.avatar||'', op:f.avatar?1:0,
+        fs:n>=7?26:n>=6?28:32, c:f.golden?'#f1d79a':'#f4f1ff', pc:f.golden?'#e8c47a':'#b5a9f0', ring:f.golden?'#e8c47a':'rgba(196,181,253,.6)',
+        bg:f.golden?'linear-gradient(180deg,rgba(232,196,122,.16),rgba(232,196,122,.05))':f===last?'rgba(196,181,253,.12)':'rgba(255,255,255,.045)',
+        bd:f.golden?'rgba(232,196,122,.5)':f===last?'rgba(196,181,253,.45)':'rgba(255,255,255,.09)',
+        anim:f===last?this.anim(`wordIn${found.length%2?'A':'B'} .5s cubic-bezier(.2,1.2,.4,1)`):'none' }; });
+    const hcards=st.showTotal?s.eligible.filter(w=>!got.has(w)).sort((a,b)=>[...a].length-[...b].length).map((w,i)=>{ const g=E.isGolden(w,s.round);
+      return { key:'h'+i, found:false, hidden:true, len:[...w].length, cells:[...w].map((_,j)=>({key:j,bg:g?'rgba(232,196,122,.6)':'rgba(200,190,240,.32)'})),
+        bg:'rgba(255,255,255,.02)', bd:g?'rgba(232,196,122,.35)':'rgba(255,255,255,.07)', anim:'none' }; }):[];
+    return { cards:[...fcards,...hcards], cardsDisp:'grid' }; }
   boardRows(list){ const medal=['linear-gradient(135deg,#f59e0b,#b45309)','linear-gradient(135deg,#94a3b8,#475569)','linear-gradient(135deg,#d97706,#78350f)'];
     return list.map((p,i)=>({ key:p.key, rank:i+1, name:p.name, ini:ini(p.name), av:p.avatar||'', op:p.avatar?1:0, words:p.words.length, score:p.score,
       rankBg:medal[i]||'rgba(139,92,246,.35)', ring:['#e8c47a','#cfd4dc','#c9925a'][i]||'rgba(167,139,250,.35)', glow:i===0?'rgba(232,196,122,.22)':'transparent', size:i===0?72:i<3?62:54, fs:i===0?28:i<3?24:21, nameC:i===0?'#f1dcae':i<3?'#ece9f5':'#c9c4d6', scoreC:i===0?'#fde68a':'#ddd6fe', bg:i===0?'rgba(251,191,36,.07)':'rgba(255,255,255,.03)', bd:i===0?'rgba(251,191,36,.35)':'rgba(255,255,255,.07)' })); }
@@ -578,12 +572,12 @@ class Component extends DCLogic {
       timeTxt:String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'), timePct:dur?Math.max(0,Math.min(100,rem/(dur*10))):0,
       timeCol:state==='paused'?'#fbbf24':sec<=10?'#f87171':'#34d399', timeBd:sec<=10&&state==='running'?'rgba(248,113,113,.5)':'rgba(255,255,255,.08)', timeAnim:sec<=10&&state==='running'?this.anim('urgent 1s ease-in-out infinite'):'none',
       countTxt:st.showTotal?`${found.length} / ${s?s.total:0}`:String(found.length), goldTxt:s&&s.goldenWords.length?`🌟 ذهبية: ${goldFound.length} من ${st.showTotal?s.goldenWords.length:'؟'}`:'',
-      cols:'320px minmax(0,1fr) 320px',
+      cols:'340px minmax(0,1fr) 340px',
       showBoard, showRecent, board:this.boardRows(lb).slice(0,30), boardCount:lb.length, boardEmpty:!lb.length,
       boardEmptyTxt:s?'أول كلمة صحيحة بالشات تظهر صاحبها هنا':'ابدأ الجولة وخل المتابعين يكتبون الكلمات بالشات',
       wordsCount:s?(st.showTotal?`${found.length} / ${s.total}`:String(found.length)):'',
       recentEmpty:!s||(!found.length&&!st.showTotal), emptyWordsTxt:s?'الكلمات المكتشفة تظهر هنا':'ابدأ الجولة وتظهر هنا الكلمات المطلوبة',
-      ...this.wordGroupVals(s,found,st),
+      ...this.cardVals(s,found,st),
       notifs:S.notifs.map(n=>({ key:n.id, icon:n.ok?'✅':'⛔', who:n.who, txt:n.txt, c:n.ok?'#6ee7b7':'#fca5a5', bd:n.ok?'rgba(52,211,153,.45)':'rgba(248,113,113,.4)', anim:this.anim(`notifIn${n.run%2?'A':'B'} .3s ease`) })),
       goldOpen:!!S.goldOpen, goldWord:S.goldWord||'', goldWho:S.goldWho||'', goldConfetti:S.goldOpen?this.confetti('gc'+(S.goldRun||0),60):null,
       goldOv:S.goldOpenOut?'fadeOut .26s ease forwards':this.anim('fade .25s ease'), goldAn:S.goldOpenOut?'popOut .26s ease forwards':this.anim('goldIn .7s cubic-bezier(.2,1.3,.4,1)') }; }
@@ -592,7 +586,7 @@ class Component extends DCLogic {
     const fby={}; found.forEach(f=>{ fby[f.word]=f; });
     const answers=s.eligible.slice().sort((a,b)=>(fby[b]?1:0)-(fby[a]?1:0)||[...b].length-[...a].length).map(w=>{ const f=fby[w], g=E.isGolden(w,s.round);
       return { key:w, word:w, by:f?`${f.name} · +${f.points}`:'لم تُكتشف', c:g?'#fde68a':f?'#6ee7b7':'#cfcad9', bg:f?'rgba(52,211,153,.07)':'rgba(255,255,255,.03)', bd:g?'rgba(251,191,36,.5)':f?'rgba(52,211,153,.35)':'rgba(255,255,255,.07)' }; });
-    return { resOpen:!!S.resOpen, resSub:`${s.round.id.replace('r','جولة ')} · ${s.endReason==='time'?'انتهى الوقت':'أنهاها الهوست'}`,
+    return { resOpen:!!S.resOpen, resSub:`${s.round.id.replace('r','جولة ')} · ${s.endReason==='time'?'انتهى الوقت':s.endReason==='complete'?'اكتُشفت كل الكلمات المطلوبة':'أنهاها الهوست'}`,
       resFound:`${found.length} / ${s.total}`, resGold:gold.length?gold.map(g=>`${g.word} (${g.name})`).join('، '):(s.goldenWords.length?'لم تُكتشف':'لا توجد في هذه الجولة'),
       resWinLabel:win.length>1?'تعادل في المركز الأول':'الفائز', resWinner:win.length?win.map(w=>w.name).join('، '):'—',
       resPts:!win.length?'':pts==='pending'?'جارٍ احتساب نقاط المنصة…':typeof pts==='number'?`+${pts} نقطة منصة`:'نقاط المنصة للحسابات الموثّقة في الموقع',
@@ -604,7 +598,7 @@ class Component extends DCLogic {
   // أمثلة طريقة اللعب من أحرف الجولة الحالية (أو القادمة) — كل مثال مفحوص بالمحرك نفسه
   helpVals(){ const S=this.state, round=(this.session&&this.session.round)||this.nextRound||BANK.approved[0]; if(!round) return { helpOpen:false };
     const letters=E.hiveLetters(round), rules=WHSettings.rules(this.settings);
-    const good=round.answers.find(w=>[...w].length===4&&E.checkLetters(w,round,rules).ok)||round.answers.find(w=>E.checkLetters(w,round,rules).ok);
+    const targets=E.targetWords(round,rules), good=targets.find(w=>[...w].length===4)||targets[0];
     const others=BANK.rounds.filter(r=>r.id!==round.id).flatMap(r=>r.answers).filter(w=>round.answers.indexOf(w)===-1);
     const noCenter=others.find(w=>E.checkLetters(w,round,rules).reason==='no_center');
     const badLetter=others.find(w=>E.checkLetters(w,round,rules).reason==='bad_letter'&&w.indexOf(letters[0])!==-1);

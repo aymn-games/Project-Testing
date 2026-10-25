@@ -12,6 +12,8 @@
  *  - لا تُحذف "ال" ولا يُختصر تكرار الحرف (تكرار الحرف مسموح بالكلمة).
  * نفس التطبيع يُطبَّق على أحرف الخلية وكلمات القاموس ورسائل الشات.
  *
+ * كل جولة لها 20 كلمة مطلوبة محددة (targetWords) — وهي وحدها قاموس الجولة أثناء اللعب.
+ *
  * ترتيب فحص الكلمة (submit):
  *  حالة الجولة ← الرسالة مكررة؟ ← تطبيع ← الطول ← حرف الوسط ←
  *  أحرف من الخلية فقط ← تكرار الحرف (حسب الإعداد) ← القاموس المعتمد ←
@@ -24,7 +26,10 @@
 }(typeof self !== 'undefined' ? self : this, function () {
     'use strict';
 
-    var MIN_APPROVED_WORDS = 30;
+    var MIN_APPROVED_WORDS = 20;
+    // كل جولة لها 20 كلمة مطلوبة محددة مسبقاً: أول 20 كلمة من قاموسها المعتمد (حسب ترتيبها بالبنك)
+    // تنطبق عليها قواعد الطول والتكرار. فقط هذه الكلمات تُحتسب، والجولة تكتمل عند اكتشافها كلها.
+    var TARGET_WORDS = 20;
 
     var REASONS = {
         inactive:    'الجولة غير نشطة',
@@ -36,7 +41,7 @@
         no_center:   'لا تحتوي على حرف الوسط',
         bad_letter:  'تحتوي على حرف غير موجود في الخلية',
         repeat:      'تكرار الحرف غير مسموح',
-        not_in_dict: 'غير موجودة في قاموس الجولة',
+        not_in_dict: 'ليست من كلمات الجولة المطلوبة',
         duplicate:   'سبق احتسابها'
     };
 
@@ -117,7 +122,7 @@
      * تقرير تحقق جولة من البنك: يفحص كل كلمة مقابل أحرف جولتها ويستبعد غير
      * المطابقة والمكررة، ويحسب الكلمات الذهبية وحالة الجولة الفعلية.
      * الجولة "معتمدة" فقط لو حالتها المعلنة approved وعدد الكلمات الصحيحة
-     * الفريدة ≥ minWords (30 افتراضياً)، وإلا "مسودة" وتُستبعد من الاختيار.
+     * الفريدة ≥ minWords (20 افتراضياً)، وإلا "مسودة" وتُستبعد من الاختيار.
      */
     function validateRound(raw, opts) {
         opts = opts || {};
@@ -188,6 +193,12 @@
         return k || null;
     }
 
+    /** الكلمات المطلوبة للجولة: أول TARGET_WORDS كلمة من القاموس المعتمد تنطبق عليها القواعد. */
+    function targetWords(round, rules, count) {
+        var n = Math.max(1, +count || TARGET_WORDS);
+        return round.answers.filter(function (w) { return checkLetters(w, round, rules || {}).ok; }).slice(0, n);
+    }
+
     /**
      * جلسة جولة واحدة. rules تُنسخ عند الإنشاء (snapshot) فأي تعديل على
      * الإعدادات أثناء اللعب لا يغيّر قواعد هذه الجولة.
@@ -201,9 +212,7 @@
             allowRepeat: !(rules && rules.allowRepeat === false),
             points: Object.assign({}, DEFAULT_POINTS, rules && rules.points)
         };
-        var eligible = round.answers.filter(function (w) {
-            return checkLetters(w, round, R).ok;
-        });
+        var eligible = targetWords(round, R, rules && rules.targetCount);
         var dict = {};
         eligible.forEach(function (w) { dict[w] = 1; });
 
@@ -288,10 +297,12 @@
             if (!dict[c.word]) return reject('not_in_dict', { word: c.word, player: player, usesHiveOnly: true });
             if (foundBy[c.word]) return reject('duplicate', { word: c.word, player: player, usesHiveOnly: true, by: foundBy[c.word].name });
             var pts = pointsFor(c.word, round, R.points);
-            var entry = { word: c.word, playerKey: player.key, name: player.name, points: pts.total, base: pts.base, bonus: pts.bonus, golden: pts.golden, at: now };
+            var entry = { word: c.word, playerKey: player.key, name: player.name, avatar: player.avatar || null, points: pts.total, base: pts.base, bonus: pts.bonus, golden: pts.golden, at: now };
             foundBy[c.word] = entry; found.push(entry);
             player.score += pts.total; player.words.push(c.word); player.lastAt = now;
-            return { status: 'accepted', reason: null, word: c.word, points: pts.total, base: pts.base, bonus: pts.bonus, golden: pts.golden, player: player };
+            // اكتملت كل الكلمات المطلوبة → تنتهي الجولة فوراً
+            var completed = found.length >= eligible.length && end(now, 'complete');
+            return { status: 'accepted', reason: null, word: c.word, points: pts.total, base: pts.base, bonus: pts.bonus, golden: pts.golden, player: player, completed: !!completed };
         }
         function leaderboard() {
             return Object.keys(players).map(function (k) { return players[k]; })
@@ -322,6 +333,8 @@
 
     return {
         MIN_APPROVED_WORDS: MIN_APPROVED_WORDS,
+        TARGET_WORDS: TARGET_WORDS,
+        targetWords: targetWords,
         REASONS: REASONS,
         DEFAULT_POINTS: DEFAULT_POINTS,
         normalizeWord: normalizeWord,
