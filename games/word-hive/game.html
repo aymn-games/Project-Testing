@@ -80,27 +80,13 @@ input::placeholder{color:#6f6a7c}
 
     <!-- ترتيب اللاعبين (يمين) -->
     <sc-if value="{{ showBoard }}" hint-placeholder-val="{{ true }}">
-    <section style="min-height:0;display:flex;flex-direction:column;border-radius:28px;background:linear-gradient(180deg,rgba(139,92,246,.08),rgba(18,16,26,.72) 40%);border:1px solid rgba(167,139,250,.18);box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:hidden;animation:rise .45s ease both">
-      <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:22px 24px 16px;border-bottom:1px solid rgba(255,255,255,.06)">
-        <span style="display:flex;align-items:center;gap:10px;font:700 26px 'IBM Plex Sans Arabic'"><span style="font-size:26px">🏆</span>ترتيب اللاعبين</span>
-        <span style="font:700 20px 'IBM Plex Sans Arabic';color:#a78bfa">{{ boardCount }} لاعب</span>
-      </div>
-      <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:14px;display:flex;flex-direction:column;gap:10px">
-        <sc-for list="{{ board }}" as="p" hint-placeholder-count="6">
-          <div style="flex-shrink:0;display:flex;align-items:center;gap:14px;height:76px;padding:0 16px 0 14px;border-radius:18px;background:{{ p.bg }};border:1px solid {{ p.bd }};transition:all .3s">
-            <span style="flex-shrink:0;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:{{ p.rankBg }};color:#fff;font:800 22px 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums">{{ p.rank }}</span>
-            <span style="position:relative;overflow:hidden;flex-shrink:0;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#6d28d9,#0e7490);border:2px solid rgba(167,139,250,.4);box-sizing:border-box;color:#fff;font:700 20px 'IBM Plex Sans Arabic'">{{ p.ini }}<img src="{{ p.av }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.op }}"></span>
-            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
-              <span style="font:700 24px 'IBM Plex Sans Arabic';color:#f4f2f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
-              <span style="font:500 16px 'IBM Plex Sans Arabic';color:#a8a3b5">{{ p.words }} كلمة</span>
-            </span>
-            <span style="flex-shrink:0;font:800 32px 'IBM Plex Sans Arabic';color:{{ p.scoreC }};font-variant-numeric:tabular-nums">{{ p.score }}</span>
-          </div>
-        </sc-for>
-        <sc-if value="{{ boardEmpty }}" hint-placeholder-val="{{ false }}">
-          <div style="flex:1;display:grid;place-items:center;text-align:center;padding:40px 20px;color:#8a8596;font:500 20px/1.7 'IBM Plex Sans Arabic'">{{ boardEmptyTxt }}</div>
-        </sc-if>
-      </div>
+    <section data-noscroll="" style="min-height:0;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:14px;padding:18px 6px 18px 0">
+      <sc-for list="{{ board }}" as="p" hint-placeholder-count="6">
+        <div style="flex-shrink:0;display:flex;align-items:center;gap:16px;animation:rise .4s ease both">
+          <span style="position:relative;overflow:hidden;flex-shrink:0;width:{{ p.size }}px;height:{{ p.size }}px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#6d28d9,#0e7490);border:3px solid {{ p.ring }};box-shadow:0 0 22px {{ p.glow }};box-sizing:border-box;color:#fff;font:700 24px 'IBM Plex Sans Arabic';transition:all .3s">{{ p.ini }}<img src="{{ p.av }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.op }}"></span>
+          <span style="min-width:0;font:700 {{ p.fs }}px 'IBM Plex Sans Arabic';color:{{ p.nameC }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 10px rgba(0,0,0,.6)">{{ p.name }}</span>
+        </div>
+      </sc-for>
     </section>
     </sc-if>
 
@@ -573,7 +559,7 @@ class Component extends DCLogic {
       return { key:i, bg:g?'rgba(251,191,36,.08)':'rgba(255,255,255,.035)', bd:g?'rgba(251,191,36,.4)':'rgba(255,255,255,.08)', cells:[...w].map((_,k)=>({key:k,bg:g?'rgba(251,191,36,.6)':'rgba(167,139,250,.45)'})) }; }) }; }
   boardRows(list){ const medal=['linear-gradient(135deg,#f59e0b,#b45309)','linear-gradient(135deg,#94a3b8,#475569)','linear-gradient(135deg,#d97706,#78350f)'];
     return list.map((p,i)=>({ key:p.key, rank:i+1, name:p.name, ini:ini(p.name), av:p.avatar||'', op:p.avatar?1:0, words:p.words.length, score:p.score,
-      rankBg:medal[i]||'rgba(139,92,246,.35)', scoreC:i===0?'#fde68a':'#ddd6fe', bg:i===0?'rgba(251,191,36,.07)':'rgba(255,255,255,.03)', bd:i===0?'rgba(251,191,36,.35)':'rgba(255,255,255,.07)' })); }
+      rankBg:medal[i]||'rgba(139,92,246,.35)', ring:['#fbbf24','#cbd5e1','#d97706'][i]||'rgba(167,139,250,.45)', glow:i===0?'rgba(251,191,36,.45)':i<3?'rgba(167,139,250,.25)':'transparent', size:i===0?72:i<3?62:54, fs:i===0?28:i<3?24:21, nameC:i===0?'#fde68a':i<3?'#f4f2f8':'#cfcad9', scoreC:i===0?'#fde68a':'#ddd6fe', bg:i===0?'rgba(251,191,36,.07)':'rgba(255,255,255,.03)', bd:i===0?'rgba(251,191,36,.35)':'rgba(255,255,255,.07)' })); }
   mainVals(){ const S=this.state, st=this.settings, s=this.session, state=s?s.state:'idle', now=Date.now();
     const rem=s?s.remaining(now):0, sec=Math.ceil(rem/1000), dur=s?s.rules.durationSec:st.durationSec;
     const lb=s?s.leaderboard():[], found=s?s.found:[], goldFound=found.filter(f=>f.golden);
