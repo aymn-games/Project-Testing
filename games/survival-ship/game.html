@@ -286,6 +286,9 @@ html.ship-lite [data-lite-bg]{background:rgba(4,40,70,.78)!important}
               <span style="display:flex;align-items:center;gap:8px">الحرف <b style="font:900 34px/1 'Zain';color:#fcd34d">{{ ansLetter }}</b></span>
             </div>
             <span style="max-width:100%;font:900 clamp(38px,3.4vw,60px)/1.15 'Zain';color:#fff;text-align:center;overflow-wrap:anywhere;text-shadow:0 4px 20px rgba(0,0,0,.4)">{{ ansText }}</span>
+            <sc-if value="{{ ansDup }}" hint-placeholder-val="{{ false }}">
+              <span style="padding:4px 14px;border-radius:999px;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.45);color:#fcd34d;font:800 16px 'Zain'">⚠️ إجابة مكررة · سبق قبولها في هذه المباراة</span>
+            </sc-if>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;margin-top:6px">
               <button onClick="{{ ansOk }}" style="height:60px;border:none;border-radius:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(180deg, #6ee7b7, #34d399);color:#064e3b;font:900 26px 'Zain';box-shadow:0 10px 24px rgba(52,211,153,.25)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">✓ قبول</button>
               <button onClick="{{ ansBad }}" style="height:60px;border:none;border-radius:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(180deg, #fda4af, #fb7185);color:#4c0519;font:900 26px 'Zain';box-shadow:0 10px 24px rgba(251,113,133,.25)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">✗ رفض</button>
@@ -388,6 +391,9 @@ const AR_LETTER=s=>String(s==null?'':s).normalize('NFKC').replace(/[\u064B-\u065
   .replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه').replace(/[ىی]/g,'ي').replace(/ک/g,'ك');
 const startsWithLetter=(text,letter)=>{ const L=AR_LETTER(letter)[0], w=AR_LETTER(text); if(!L||!w) return false;
   return w[0]===L||(w.startsWith('ال')&&w[2]===L); };
+// مفتاح موحّد لكشف الإجابات المكررة مهما تغيّرت كتابتها: نفس توحيد الحروف + حذف المسافات و"ال" التعريف والحروف اللاتينية بحالة صغيرة،
+// ودمج الحرف المكرر المتتالي (مصررر = مصر)
+const ANS_KEY=s=>{ let w=AR_LETTER(s).toLowerCase().replace(/\s+/g,''); if(w.startsWith('ال')&&w.length>3) w=w.slice(2); return w.replace(/(.)\1+/g,'$1'); };
 
 class Component extends DCLogic {
   constructor(p){ super(p); this.reg=SHIP.createRegistry(PLAYERS); const st=this.cfg=this.loadCfg();
@@ -447,7 +453,7 @@ class Component extends DCLogic {
   upd(id,fn){ this.setState(s=>({players:s.players.map(p=>p.id===id?{...p,...fn(p)}:p)})); }
   alive(){ return this.state.players.filter(p=>!p.out&&!p.popping); }
 
-  start(){ this.clearAll(); this.matchStartedAt=Date.now(); this.reported=false; this.setState({queue:[],round:0}); this.nextTurn(); }
+  start(){ this.clearAll(); this.matchStartedAt=Date.now(); this.reported=false; this.usedAns=new Set(); this.setState({queue:[],round:0}); this.nextTurn(); }
   nextTurn(){
     const al=this.alive();
     if(al.length<=1){ return this.win(al[0]); }
@@ -476,7 +482,7 @@ class Component extends DCLogic {
   onChat(name,text){ const S=this.state, cur=S.players.find(p=>p.id===S.cur); text=String(text||'').trim();
     if(S.phase!=='ask'||!cur||cur.name!==name||!text||S.paused) return;
     if(!startsWithLetter(text,S.q&&S.q.letter)) return;
-    this.pushMsg({name,text,ans:true}); }
+    this.pushMsg({name,text,ans:true,dup:!!this.usedAns&&this.usedAns.has(ANS_KEY(text))}); }
   // هدية من البث: هدية طوق النجاة المحددة بالإعدادات من لاعب باقي على السفينة = طوق نجاة (حد ringUses لكل لاعب)
   onGift(name,giftName,giftValue){ const C=this.cfg; if(!C.ring||!C.ringUses||this.state.phase==='over') return;
     if(!SHIP.giftMatches(C.ringGift,giftName,giftValue,C.ringCoins)) return;
@@ -487,7 +493,7 @@ class Component extends DCLogic {
     this.setState({ev:{icon:'🛟',text:`${p.name} صار محمي بطوق النجاة`}});
     this.sfx('gold'); }
   pushMsg(m){ m.id=(this.mid=(this.mid||0)+1); if(m.ans){ clearInterval(this.iv); this.setState({paused:true}); } this.setState(s=>({chat:[...s.chat,m].slice(-7)})); if(m.ans) this.sfx('tick'); }
-  judgeMsg(id,ok){ this.setState({paused:false}); this.setState(s=>({chat:s.chat.map(m=>m.id===id?{...m,res:ok?'ok':'bad'}:m)})); this.resolve(ok?'ok':'bad'); }
+  judgeMsg(id,ok){ const m=this.state.chat.find(x=>x.id===id); if(ok&&m) (this.usedAns||(this.usedAns=new Set())).add(ANS_KEY(m.text)); this.setState({paused:false}); this.setState(s=>({chat:s.chat.map(m=>m.id===id?{...m,res:ok?'ok':'bad'}:m)})); this.resolve(ok?'ok':'bad'); }
   resolve(kind){
     const S=this.state; if(S.phase!=='ask') return; clearInterval(this.iv); (this.ctm||[]).forEach(clearTimeout);
     const p=S.players.find(x=>x.id===S.cur), stages=['pop'];
@@ -624,7 +630,7 @@ class Component extends DCLogic {
       introOn:!!S.intro, inName:S.intro&&S.intro.name, inN:S.intro&&S.intro.n, inC:S.intro?S.intro.c:'#fff', inK:S.intro?String(S.intro.k):'0',
       bannerOn:!!S.banner, bannerIcon:S.banner&&S.banner.icon, bannerText:S.banner&&S.banner.text, bannerDur:S.banner?S.banner.ms+'ms':'1s', bannerBg:BN[0], bannerBd:BN[1], bannerGlow:BN[2],
       stTxt:STS[0], stC:STS[1], stBg:STS[2], stBd:STS[3], stDotAn:S.status==='wait'?'dotP 1s ease-in-out infinite':'none',
-      ...(()=>{ const m=ph==='ask'&&S.chat.filter(m=>m.ans&&!m.res&&curP&&m.name===curP.name).pop(); return {ansOn:!!m, ansName:m?m.name:'', ansText:m?m.text:'', ansOk:()=>m&&this.judgeMsg(m.id,true), ansBad:()=>m&&this.judgeMsg(m.id,false)}; })(),
+      ...(()=>{ const m=ph==='ask'&&S.chat.filter(m=>m.ans&&!m.res&&curP&&m.name===curP.name).pop(); return {ansOn:!!m, ansName:m?m.name:'', ansText:m?m.text:'', ansDup:!!(m&&m.dup), ansOk:()=>m&&this.judgeMsg(m.id,true), ansBad:()=>m&&this.judgeMsg(m.id,false)}; })(),
       isReady:ph==='ready', isAsk:ph==='ask', start:()=>this.start(), judgeOk:()=>this.resolve('ok'), judgeBad:()=>this.resolve('bad'), giveGold:()=>this.giveGold(),
       evIcon:S.ev.icon, evText:S.ev.text,
       ...(()=>{ const F=S.fxk&&{ok:['إجابة صحيحة!','✓','linear-gradient(90deg,#059669,#22c55e)','rgba(34,197,94,.55)','#16a34a','rgba(34,197,94,.45)'],bad:['إجابة خاطئة!','✗','linear-gradient(90deg,#be123c,#f43f5e)','rgba(244,63,94,.55)','#e11d48','rgba(244,63,94,.5)'],timeout:['انتهى الوقت!','⏰','linear-gradient(90deg,#b45309,#f59e0b)','rgba(245,158,11,.55)','#d97706','rgba(245,158,11,.45)']}[S.fxk.kind]||[]; return {fxOn:!!S.fxk,fxText:F[0],fxIcon:F[1],fxBg:F[2],fxGlow:F[3],fxInk:F[4],fxVig:F[5]}; })(),
