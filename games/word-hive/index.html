@@ -249,7 +249,7 @@ class Component extends DCLogic {
       sections:WHSettings.viewSections(S.values,(k,v)=>this.set(k,v),{basic:true,rounds:ROUND_OPTS}),
       offline:!S.live, online:S.live,
       liveColor:S.live?'#34d399':'#f87171', liveBg:S.live?'rgba(52,211,153,.08)':'rgba(248,113,113,.06)', liveBd:S.live?'rgba(52,211,153,.3)':'rgba(248,113,113,.28)',
-      liveTitle:S.live?'متصل بالبث':'غير متصل بالبث — تقدر تجرب بمحاكي الرسائل', libraryUrl:GAME.libraryUrl,
+      liveTitle:S.live?'متصل بالبث':'غير متصل بالبث — للتجربة استخدم محاكي الانضمام باللوبي', libraryUrl:GAME.libraryUrl,
       connOpen:!!S.connOpen, connBusy:!S.connStep, connDone:S.connStep===1, connMsg:S.connStep?'تم الحفظ':'جارٍ تجهيز اللوبي…', connSub:'لحظات وتنتقل للوبي', connBd:S.connStep?'rgba(52,211,153,.45)':'rgba(167,139,250,.35)', connGlow:S.connStep?'rgba(16,185,129,.25)':'rgba(124,58,237,.2)',
       startOp:1, startLabel:'الدخول للوبي',
       start:()=>{ if(S.connOpen) return; const v=WHSettings.sanitize(S.values);
