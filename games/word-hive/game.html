@@ -49,7 +49,8 @@ input::placeholder{color:#6f6a7c}
 @keyframes hexFlashA{0%{filter:brightness(1)}30%{filter:brightness(1.9) drop-shadow(0 0 30px #67e8f9);transform:scale(1.07)}100%{filter:brightness(1);transform:none}}
 @keyframes hexFlashB{0%{filter:brightness(1)}30%{filter:brightness(1.9) drop-shadow(0 0 30px #67e8f9);transform:scale(1.07)}100%{filter:brightness(1);transform:none}}
 @keyframes breathe{0%,100%{opacity:.55;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
-@keyframes wordIn{0%{opacity:0;transform:translateX(40px) scale(.95)}100%{opacity:1;transform:none}}
+@keyframes wordInA{0%{opacity:0;transform:translateY(-14px) scale(.9)}100%{opacity:1;transform:none}}
+@keyframes wordInB{0%{opacity:0;transform:translateY(-14px) scale(.9)}100%{opacity:1;transform:none}}
 @keyframes notifInA{0%{opacity:0;transform:translateY(-12px) scale(.94)}100%{opacity:1;transform:none}}
 @keyframes notifInB{0%{opacity:0;transform:translateY(-12px) scale(.94)}100%{opacity:1;transform:none}}
 @keyframes goldIn{0%{opacity:0;transform:scale(.4) rotate(-8deg)}55%{opacity:1;transform:scale(1.12) rotate(2deg)}100%{opacity:1;transform:none}}
@@ -167,34 +168,27 @@ input::placeholder{color:#6f6a7c}
 
     <!-- الكلمات المطلوبة (يسار): المكتشفة فوق (الأحدث أولاً) والباقي خانات مخفية بعدد حروفها -->
     <sc-if value="{{ showRecent }}" hint-placeholder-val="{{ true }}">
-    <section style="min-height:0;display:flex;flex-direction:column;border-radius:28px;background:linear-gradient(180deg,rgba(56,189,248,.07),rgba(18,16,26,.72) 40%);border:1px solid rgba(103,232,249,.18);box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:hidden;animation:rise .45s ease both">
-      <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:22px 24px 16px;border-bottom:1px solid rgba(255,255,255,.06)">
-        <span style="display:flex;align-items:center;gap:10px;font:700 26px 'IBM Plex Sans Arabic'"><span style="font-size:26px">✨</span>الكلمات المطلوبة</span>
-        <span style="font:700 20px 'IBM Plex Sans Arabic';color:#67e8f9">{{ wordsCount }}</span>
-      </div>
-      <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:12px;display:flex;flex-direction:column;gap:8px">
-        <sc-for list="{{ recent }}" as="w" hint-placeholder-count="4">
-          <div style="flex-shrink:0;display:flex;align-items:center;gap:10px;height:54px;padding:0 14px;box-sizing:border-box;border-radius:14px;background:{{ w.bg }};border:1px solid {{ w.bd }};animation:{{ w.anim }}">
-            <span style="flex-shrink:0;font:800 26px/1 'IBM Plex Sans Arabic';color:{{ w.c }};letter-spacing:{{ w.ls }}">{{ w.word }}</span>
-            <span style="flex:1;min-width:0;font:500 15px 'IBM Plex Sans Arabic';color:#a8a3b5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ w.by }}</span>
-            <span style="flex-shrink:0;font:800 20px 'IBM Plex Sans Arabic';color:{{ w.pc }};font-variant-numeric:tabular-nums">+{{ w.pts }}</span>
-          </div>
-        </sc-for>
-        <sc-if value="{{ showSlots }}" hint-placeholder-val="{{ true }}">
-          <div style="flex-shrink:0;display:flex;flex-wrap:wrap;gap:6px;padding-top:4px">
-            <sc-for list="{{ slots }}" as="d" hint-placeholder-count="12">
-              <span style="display:flex;align-items:center;gap:3px;height:30px;padding:0 9px;border-radius:9px;background:{{ d.bg }};border:1px solid {{ d.bd }}">
-                <sc-for list="{{ d.cells }}" as="c" hint-placeholder-count="4">
-                  <span style="width:9px;height:9px;border-radius:2px;background:{{ c.bg }}"></span>
-                </sc-for>
-              </span>
-            </sc-for>
-          </div>
-        </sc-if>
-        <sc-if value="{{ recentEmpty }}" hint-placeholder-val="{{ false }}">
-          <div style="flex:1;display:grid;place-items:center;text-align:center;padding:40px 20px;color:#8a8596;font:500 20px/1.7 'IBM Plex Sans Arabic'">{{ emptyWordsTxt }}</div>
-        </sc-if>
-      </div>
+    <section data-noscroll="" style="min-height:0;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;align-items:flex-end;gap:16px;padding:18px 0 18px 6px">
+      <sc-for list="{{ recent }}" as="w" hint-placeholder-count="4">
+        <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:2px;opacity:{{ w.op }};animation:{{ w.anim }}">
+          <span style="font:800 {{ w.fs }}px/1.15 'IBM Plex Sans Arabic';color:{{ w.c }};letter-spacing:{{ w.ls }};text-shadow:{{ w.ts }}">{{ w.word }}</span>
+          <span style="font:500 16px 'IBM Plex Sans Arabic';color:#a8a3b5;white-space:nowrap">{{ w.by }} · <span style="color:{{ w.pc }};font-weight:700">+{{ w.pts }}</span></span>
+        </div>
+      </sc-for>
+      <sc-if value="{{ showSlots }}" hint-placeholder-val="{{ true }}">
+        <div style="flex-shrink:0;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;margin-top:6px;max-width:100%;opacity:.75">
+          <sc-for list="{{ slots }}" as="d" hint-placeholder-count="12">
+            <span style="display:flex;align-items:center;gap:3px;height:22px;padding:0 6px">
+              <sc-for list="{{ d.cells }}" as="c" hint-placeholder-count="4">
+                <span style="width:8px;height:8px;border-radius:50%;background:{{ c.bg }}"></span>
+              </sc-for>
+            </span>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ recentEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:20px 0;color:#8a8596;font:500 18px/1.7 'IBM Plex Sans Arabic';text-align:left">{{ emptyWordsTxt }}</div>
+      </sc-if>
     </section>
     </sc-if>
   </div>
@@ -585,9 +579,9 @@ class Component extends DCLogic {
       boardEmptyTxt:s?'أول كلمة صحيحة بالشات تظهر صاحبها هنا':'ابدأ الجولة وخل المتابعين يكتبون الكلمات بالشات',
       ...this.slotVals(s,found,st), wordsCount:s?(st.showTotal?`${found.length} / ${s.total}`:String(found.length)):'',
       recentEmpty:!s||(!S.recent.length&&!st.showTotal), emptyWordsTxt:s?'الكلمات المكتشفة تظهر هنا فوق أول بأول':'ابدأ الجولة وتظهر هنا الكلمات المطلوبة',
-      recent:S.recent.map((w,i)=>({ key:w.id, word:st.showAccepted?w.word:this.mask(w.word), ls:st.showAccepted?'0':'2px', by:w.name+(w.golden?' · 🌟 ذهبية':''), pts:w.pts, golden:w.golden,
-        c:w.golden?'#fde68a':'#f4f2f8', pc:w.golden?'#fbbf24':'#67e8f9', bg:w.golden?'linear-gradient(90deg,rgba(251,191,36,.14),rgba(251,191,36,.04))':i===0?'rgba(103,232,249,.08)':'rgba(255,255,255,.03)',
-        bd:w.golden?'rgba(251,191,36,.45)':i===0?'rgba(103,232,249,.35)':'rgba(255,255,255,.07)', anim:i===0?this.anim('wordIn .45s cubic-bezier(.2,1.2,.4,1)'):'none' })),
+      recent:S.recent.map((w,i)=>({ key:w.id, word:st.showAccepted?w.word:this.mask(w.word), ls:st.showAccepted?'0':'2px', by:w.name+(w.golden?' · 🌟 ذهبية':''), pts:w.pts,
+        fs:i===0?44:32, op:Math.max(.45,1-i*.08), c:w.golden?'#fde68a':i===0?'#a5f3fc':'#f4f2f8', pc:w.golden?'#fbbf24':'#67e8f9',
+        ts:w.golden?'0 0 22px rgba(251,191,36,.6)':i===0?'0 0 22px rgba(103,232,249,.45)':'0 2px 10px rgba(0,0,0,.6)', anim:i===0?this.anim(`wordIn${S.recent.length%2?'A':'B'} .45s cubic-bezier(.2,1.2,.4,1)`):'none' })),
       notifs:S.notifs.map(n=>({ key:n.id, icon:n.ok?'✅':'⛔', who:n.who, txt:n.txt, c:n.ok?'#6ee7b7':'#fca5a5', bd:n.ok?'rgba(52,211,153,.45)':'rgba(248,113,113,.4)', anim:this.anim(`notifIn${n.run%2?'A':'B'} .3s ease`) })),
       goldOpen:!!S.goldOpen, goldWord:S.goldWord||'', goldWho:S.goldWho||'', goldConfetti:S.goldOpen?this.confetti('gc'+(S.goldRun||0),60):null,
       goldOv:S.goldOpenOut?'fadeOut .26s ease forwards':this.anim('fade .25s ease'), goldAn:S.goldOpenOut?'popOut .26s ease forwards':this.anim('goldIn .7s cubic-bezier(.2,1.3,.4,1)') }; }
