@@ -368,6 +368,17 @@ db.exec(`
     );
     CREATE INDEX IF NOT EXISTS idx_player_rounds_log_created ON player_rounds_log(created_at);
 
+    -- عدد المشاركين بكل مباراة يشغّلها الاستريمر (صف لكل مباراة) — لتصنيف
+    -- "الأكثر مشاركات" الأسبوعي بتوب الاستريمرز (getTopStreamersByParticipations
+    -- بـauth-service.js). يُعبّى من /api/points/round-complete.
+    CREATE TABLE IF NOT EXISTS streamer_participations_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        participants INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_streamer_participations_log_created ON streamer_participations_log(created_at);
+
     -- إعدادات عامة بسيطة (مفتاح/قيمة).
     CREATE TABLE IF NOT EXISTS app_settings (
         key TEXT PRIMARY KEY,

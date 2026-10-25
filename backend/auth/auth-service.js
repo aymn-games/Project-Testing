@@ -1282,9 +1282,49 @@ function computeTopStreamersByHours(limit, periodStart) {
             displayName: r.displayName || r.username || r.tiktokUsername,
             avatarBase64: r.avatarBase64 || null,
             customId: r.customId || null,
+            totalMinutes: Math.round(r.total_ms / 60000),
             totalHours: Math.round((r.total_ms / 3600000) * 10) / 10
         };
     });
+}
+
+/** تسجيل عدد المشاركين بمباراة واحدة شغّلها الاستريمر (لتصنيف "الأكثر مشاركات"). */
+function recordStreamerParticipations(userId, count) {
+    if (!userId || !(count > 0)) return;
+    db.prepare('INSERT INTO streamer_participations_log (user_id, participants, created_at) VALUES (?, ?, ?)')
+        .run(userId, count, now());
+}
+
+// "الأكثر مشاركات": مجموع المشاركين بكل المباريات اللي شغّلها الاستريمر
+// هالأسبوع — نفس حد التصفير وشروط الظهور ومدة الكاش لتصنيف الساعات.
+var _topParticipationsCache = {};
+
+function getTopStreamersByParticipations(limit) {
+    limit = limit || 20;
+    var periodStart = getRankingPeriodStart();
+    var cached = _topParticipationsCache[limit];
+    if (cached && cached.periodStart === periodStart && now() - cached.at < TOP_STREAMERS_CACHE_MS) return cached.rows;
+    var rows = db.prepare(
+        `SELECT u.tiktok_username AS tiktokUsername, u.username, u.display_name AS displayName,
+                u.avatar_image_base64 AS avatarBase64, u.custom_id AS customId,
+                l.total AS total
+         FROM users u
+         JOIN (SELECT user_id, SUM(participants) AS total FROM streamer_participations_log
+               WHERE created_at >= ? GROUP BY user_id) l ON l.user_id = u.id
+         WHERE u.tiktok_verified = 1 AND u.tiktok_username IS NOT NULL AND l.total > 0
+         ORDER BY l.total DESC
+         LIMIT ?`
+    ).all(periodStart, limit).map(function (r) {
+        return {
+            tiktokUsername: r.tiktokUsername,
+            displayName: r.displayName || r.username || r.tiktokUsername,
+            avatarBase64: r.avatarBase64 || null,
+            customId: r.customId || null,
+            totalParticipations: r.total
+        };
+    });
+    _topParticipationsCache[limit] = { at: now(), periodStart: periodStart, rows: rows };
+    return rows;
 }
 
 /**
@@ -1566,6 +1606,8 @@ module.exports = {
     resetPasswordWithCode: resetPasswordWithCode,
     updateBroadcastViewerStats: updateBroadcastViewerStats,
     getTopStreamersByHours: getTopStreamersByHours,
+    getTopStreamersByParticipations: getTopStreamersByParticipations,
+    recordStreamerParticipations: recordStreamerParticipations,
     getAdminStreamerStats: getAdminStreamerStats,
     getAdminUserStats: getAdminUserStats,
     getPublicPlatformStats: getPublicPlatformStats,
