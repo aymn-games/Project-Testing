@@ -30,6 +30,20 @@
     return {ok:false,reason:'not_adjacent'};
   }
 
+  // Auto-play pick: complete a box if possible, else avoid giving one away, else any free line. → {a,b}|null
+  function autoMove(g){
+    const C=g.cols, free=[];
+    for(let r=0;r<=g.rows;r++) for(let c=0;c<C;c++) if(!g.h[r*C+c]) free.push({a:r*(C+1)+c+1,b:r*(C+1)+c+2,k:'h',r,c});
+    for(let r=0;r<g.rows;r++) for(let c=0;c<=C;c++) if(!g.v[r*(C+1)+c]) free.push({a:r*(C+1)+c+1,b:(r+1)*(C+1)+c+1,k:'v',r,c});
+    if(!free.length) return null;
+    const sides=(r,c)=>(g.h[r*C+c]?1:0)+(g.h[(r+1)*C+c]?1:0)+(g.v[r*(C+1)+c]?1:0)+(g.v[r*(C+1)+c+1]?1:0);
+    const adj=m=>m.k==='h'?[[m.r-1,m.c],[m.r,m.c]]:[[m.r,m.c-1],[m.r,m.c]];
+    const ok=([r,c])=>r>=0&&c>=0&&r<g.rows&&c<C;
+    const score=m=>{ const bs=adj(m).filter(ok).map(([r,c])=>sides(r,c)); if(bs.some(s=>s===3)) return 2; if(bs.some(s=>s===2)) return 0; return 1; };
+    const best=Math.max(...free.map(score)), pool=free.filter(m=>score(m)===best);
+    const m=pool[Math.floor(Math.random()*pool.length)]; return {a:m.a,b:m.b};
+  }
+
   function boxDone(g,h,v,r,c){ return h[r*g.cols+c]&&h[(r+1)*g.cols+c]&&v[r*(g.cols+1)+c]&&v[r*(g.cols+1)+c+1]; }
 
   // Pure: returns {ok, reason?, game, completed:[boxIdx], extraTurn}
@@ -47,12 +61,13 @@
     else { const r=Math.floor(e.edge.i/(g.cols+1)), c=e.edge.i%(g.cols+1); if(c>0) cand.push([r,c-1]); if(c<g.cols) cand.push([r,c]); }
     const completed=[];
     for(const [r,c] of cand){ const k=r*g.cols+c; if(!boxes[k]&&boxDone(g,h,v,r,c)){ boxes[k]=team; scores[team]++; completed.push(k); } }
-    const extraTurn=completed.length>0;
+    const got=completed.length>0, chainN=got?(g.chain||0)+1:0, capped=got&&g.maxChain>0&&chainN>=g.maxChain;
+    const extraTurn=got&&!capped, chain=extraTurn?chainN:0;
     const turn=g.mode==='turns'?(extraTurn?team:(team==='blue'?'pink':'blue')):g.turn;
     const over=boxes.every(Boolean);
     const winner=over?(scores.blue>scores.pink?'blue':scores.pink>scores.blue?'pink':'draw'):null;
     const move={a:e.a,b:e.b,kind:e.edge.kind,i:e.edge.i,team,player:player||null,completed,n:g.moves.length+1};
-    return {ok:true,completed,extraTurn,move,game:{...g,h,v,boxes,scores,turn,over,winner,moves:[...g.moves,move]}};
+    return {ok:true,completed,extraTurn,capped,move,game:{...g,h,v,boxes,scores,turn,chain,over,winner,moves:[...g.moves,move]}};
   }
 
   function endByTime(g){ if(g.over) return g; const s=g.scores; return {...g,over:true,winner:s.blue>s.pink?'blue':s.pink>s.blue?'pink':'draw'}; }
@@ -96,6 +111,6 @@
 
   const REASONS={no_dot:'رقم نقطة غير موجود',same_dot:'نفس النقطة',not_adjacent:'النقطتان غير متجاورتين',taken:'الخط مرسوم من قبل',not_turn:'مو دور فريقك',over:'الجولة انتهت',no_team:'اختر فريقك أول (أزرق / وردي)',paused:'اللعبة متوقفة مؤقتاً',closed:'استقبال الأوامر مقفل',rate:'انتظر شوي قبل الأمر الجاي',dup:'أمر مكرر'};
 
-  const api={normDigits,createGame,parseCommand,edgeFor,applyMove,endByTime,remaining,progress,dotRC,dotCount,createRouter,createQueue,REASONS};
+  const api={autoMove,normDigits,createGame,parseCommand,edgeFor,applyMove,endByTime,remaining,progress,dotRC,dotCount,createRouter,createQueue,REASONS};
   if(typeof module!=='undefined'&&module.exports) module.exports=api; else root.DotsEngine=api;
 })(typeof window!=='undefined'?window:globalThis);

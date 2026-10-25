@@ -263,6 +263,7 @@ const SETTINGS = [
     { type:'choice', key:'size',    label:'حجم اللوحة', options:['4×4','5×5','6×6','7×7'], default:1 },
     { type:'choice', key:'mode',    label:'نظام اللعب', options:['بالتناوب','تنافسي حر'], default:0 },
     { type:'choice', key:'turnSec', label:'وقت الدور', options:['10','15','20','30'], default:2 },
+    { type:'toggle', key:'chain3',  label:'حد 3 مربعات ورا بعض', default:false, hint:'اللي يكمّل 3 مربعات متتالية ينتقل الدور' },
     { type:'toggle', key:'nums',    label:'أرقام النقاط', default:true },
     { type:'toggle', key:'sound',   label:'الأصوات', default:true }
   ]}
@@ -324,7 +325,7 @@ class Component extends DCLogic {
       start:()=>{ if(S.connOpen) return; const live=!!DT.getSavedConnection(); if(live!==S.live) this.setState({live});
         if(GAME.requireLive&&!live) return this.toastMsg('ابدأ البث على حساب تيك توك المربوط بحسابك — نتصل تلقائياً'); const V0=S.values; if(!String(V0.nameA||'').trim()||!String(V0.nameB||'').trim()) return this.toastMsg('اكتب اسم كل فريق'); if(!String(V0.keyA||'').trim()||!String(V0.keyB||'').trim()) return this.toastMsg('اكتب كلمة دخول لكل فريق'); if(DT.norm(V0.keyA)===DT.norm(V0.keyB)) return this.toastMsg('كلمة الدخول لازم تختلف بين الفريقين');
         const values=this.readValues(); try{ const V=S.values, cur=JSON.parse(localStorage.getItem('dots-settings')||'{}');
-        localStorage.setItem('dots-settings',JSON.stringify({...cur,rows:4+V.size,cols:4+V.size,mode:V.mode===1?'free':'turns',turnSec:[10,15,20,30][V.turnSec],nums:!!V.nums,sound:!!V.sound,policy:'choose'}));
+        localStorage.setItem('dots-settings',JSON.stringify({...cur,rows:4+V.size,cols:4+V.size,mode:V.mode===1?'free':'turns',turnSec:[10,15,20,30][V.turnSec],nums:!!V.nums,chain3:!!V.chain3,sound:!!V.sound,policy:'choose'}));
         localStorage.setItem('dots-join',JSON.stringify({nameA:V.nameA.trim(),keyA:V.keyA.trim(),nameB:V.nameB.trim(),keyB:V.keyB.trim(),maxPlayers:50,who:values.who,policy:'choose'})); localStorage.removeItem('dots-game'); localStorage.removeItem('dots-teams'); localStorage.removeItem('dots-tidx'); localStorage.removeItem('dots-players'); localStorage.removeItem('dots-left'); localStorage.removeItem('dots-started'); }catch(e){} this.props.onStart?.(values); this.setState({connOpen:true,connStep:0}); this.nav=[setTimeout(()=>this.setState({connStep:1}),1600), setTimeout(()=>{ location.href=GAME.lobbyUrl; },2400)]; },
       exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'),
       confirmExit:()=>DT.go(GAME.libraryUrl),

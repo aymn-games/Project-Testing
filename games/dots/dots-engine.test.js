@@ -15,6 +15,12 @@ t('turn alternates and enforces', ()=>{ let g=E.createGame(2,2); let r=E.applyMo
 t('complete box scores + extra turn', ()=>{ let g=E.createGame(2,2);
   g=E.applyMove(g,1,2,'blue').game; g=E.applyMove(g,1,4,'pink').game; g=E.applyMove(g,4,5,'blue').game;
   const r=E.applyMove(g,2,5,'pink'); eq(r.completed,[0]); eq(r.game.scores,{blue:0,pink:1}); eq(r.game.turn,'pink'); eq(r.extraTurn,true); eq(r.game.boxes[0],'pink'); });
+t('chain cap 3 passes turn', ()=>{ let g={...E.createGame(1,4),maxChain:3};
+  for(const [a,b,tm] of [[1,2,'blue'],[6,7,'pink'],[2,3,'blue'],[7,8,'pink'],[3,4,'blue'],[8,9,'pink'],[9,10,'blue'],[1,6,'pink']]) g={...E.applyMove(g,a,b,tm).game,maxChain:3};
+  let r=E.applyMove(g,2,7,'blue'); eq(r.extraTurn,true); g={...r.game,maxChain:3};
+  r=E.applyMove(g,3,8,'blue'); eq(r.extraTurn,true); g={...r.game,maxChain:3};
+  r=E.applyMove(g,4,9,'blue'); eq(r.capped,true); eq(r.game.turn,'pink'); });
+t('autoMove completes box when possible', ()=>{ let g=E.createGame(1,1); g=E.applyMove(g,1,2,'blue').game; g=E.applyMove(g,1,3,'pink').game; g=E.applyMove(g,2,4,'blue').game; const m=E.autoMove(g); eq([m.a,m.b],[3,4]); });
 t('one line completes two boxes', ()=>{ let g=E.createGame(1,2,{mode:'free'});
   for(const [a,b] of [[1,2],[2,3],[4,5],[5,6],[1,4],[3,6]]) g=E.applyMove(g,a,b,'blue').game;
   const r=E.applyMove(g,2,5,'pink'); eq(r.completed.length,2); eq(r.game.scores.pink,2); eq(r.game.over,true); eq(r.game.winner,'pink'); });
