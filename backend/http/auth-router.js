@@ -1070,20 +1070,29 @@ function handleAdminLiveStreams(req, res) {
 
 /** البثوث المتصلة الآن من داخل الألعاب لستريمرز مسجّلين — لبطاقات مكتبة
  * الألعاب. يرجع حقول عامة فقط (بدون connectionId/user.id/role)، وبث واحد
- * لكل يوزر تيك توك (لو فاتح أكثر من تبويب ناخذ أعلى عدد مشاهدين). */
+ * لكل يوزر تيك توك (لو فاتح أكثر من تبويب ناخذ أعلى عدد مشاهدين).
+ * البث يظهر فقط لو حساب تيك توك الموثَّق الحالي لصاحب الجلسة هو نفسه
+ * البث المتصل — الأدمن/«تشغيل كامل» يقدرون يتصلون ببث غيرهم، وبدون هذا
+ * الشرط تطلع بطاقة باسمهم وصورتهم على بث شخص ثاني. الاسم من قاعدة
+ * البيانات لحظة الطلب (نفس ترتيب صفحة البروفايل: display_name ثم username). */
 function handlePublicLiveStreams(req, res) {
   var connections = [];
   try { connections = require('../websocket/ws-server').listLiveConnections(); } catch (err) { logger.error('Public live streams failed:', err); }
   var byUser = {};
   connections.forEach(function (c) {
     if (c.status !== 'connected' || !c.user || !c.user.customId || !c.username) return;
-    var prev = byUser[c.username];
+    var u = null;
+    try { u = authService.adminLookupUser(c.user.customId, 'profile'); } catch (err) { logger.error('Public live streams: user lookup failed:', err); }
+    if (!u || !u.tiktok_username) return;
+    var tiktok = String(u.tiktok_username).trim().replace(/^@+/, '').toLowerCase();
+    if (tiktok !== c.username) return;
+    var prev = byUser[tiktok];
     if (prev && (prev.viewers || 0) >= (c.viewers || 0)) return;
-    byUser[c.username] = {
-      name: c.user.name || c.username,
-      tiktok: c.username,
+    byUser[tiktok] = {
+      name: u.display_name || u.username || tiktok,
+      tiktok: tiktok,
       avatar: c.user.avatar || null,
-      customId: c.user.customId,
+      customId: u.custom_id,
       gameName: c.gameName || null,
       viewers: typeof c.viewers === 'number' ? c.viewers : null,
       connectedAt: c.connectedAt || null
