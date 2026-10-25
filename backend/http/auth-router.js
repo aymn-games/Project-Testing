@@ -991,14 +991,24 @@ function handleTopStreamers(req, res) {
   sendJson(res, 200, { success: true, streamers: authService.getTopStreamersByHours(limit) });
 }
 
-/** مراكز مستخدم (?id=custom_id) بالتصنيفات الأسبوعية — عام، لصورة البروفايل. */
+/** مراكز مستخدم (?id=custom_id) بالتصنيفات الأسبوعية — عام، لصورة البروفايل.
+ * avatar: صورته كـData URL (المرفوعة بالموقع، وإلا صورة تيك توك يجيبها السيرفر
+ * لأن المتصفح ما يقدر يرسمها على Canvas ويحفظها — CORS)، أو null. */
 function handleUserRanks(req, res) {
-  var ranks = authService.getUserWeeklyRanks(getQueryParam(req, 'id'));
+  var profile = authService.getPublicProfile(getQueryParam(req, 'id'));
+  var ranks = profile ? authService.getUserWeeklyRanks(profile.custom_id) : null;
   if (!ranks) {
     sendJson(res, 404, { success: false, error: 'not_found' });
     return;
   }
-  sendJson(res, 200, { success: true, ranks: ranks });
+  var avatar = profile.avatar_image_base64
+    ? Promise.resolve(profile.avatar_image_base64)
+    : profile.tiktok_username
+      ? liveSessionStats.getStreamerProfile(profile.tiktok_username).then(function (sp) { return sp.avatar || null; }, function () { return null; })
+      : Promise.resolve(null);
+  return avatar.then(function (a) {
+    sendJson(res, 200, { success: true, ranks: ranks, avatar: a });
+  });
 }
 
 /** أعلى الاستريمرز بعدد المشاركات بألعابهم هالأسبوع — عام، لتوب الاستريمرز بالرئيسية. */

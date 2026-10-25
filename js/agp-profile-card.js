@@ -10,7 +10,8 @@
  *     والإحصائيات المختارة. زر «حفظ الصورة» يحمّلها PNG بجهازه.
  *
  * المراكز من GET /api/public/user-ranks?id=<custom_id> (getUserWeeklyRanks
- * بـauth-service.js). الخلفية المرفوعة ما تطلع من الجهاز.
+ * بـauth-service.js) — ومعها صورته Data URL (صورة تيك توك لو ما رفع صورة).
+ * الخلفية المرفوعة ما تطلع من الجهاز.
  *
  * AGPProfileCard.open(profile) — profile = نفس كائن /api/profile.
  */
@@ -219,7 +220,7 @@
         return h;
     }
 
-    function draw(p, ranks, prefs) {
+    function draw(p, ranks, prefs, avatar) {
         var sh = S(), W = sh.W, H = sh.H, FONT = CARD_FONT;
         var custom = prefs.bg === 'custom' ? loadCustomBg() : null;
         var bg = custom ? null : findBg(prefs.bg);
@@ -228,7 +229,7 @@
         var chosenStats = availableStats(p).filter(function (st) { return prefs.items[st.key]; });
         var name = p.display_name || p.username || '';
 
-        return Promise.all([sh.loadImg(p.avatar_image_base64), sh.loadImg(custom), sh.loadImg(LOGO_SRC)]).then(function (loaded) {
+        return Promise.all([sh.loadImg(avatar || p.avatar_image_base64), sh.loadImg(custom), sh.loadImg(LOGO_SRC)]).then(function (loaded) {
             var avatarImg = loaded[0], customImg = loaded[1], logoImg = loaded[2];
             var canvas = document.createElement('canvas');
             canvas.width = W; canvas.height = H;
@@ -553,7 +554,7 @@
 
     function generate(wrap, ctx) {
         message(wrap, 'جاري تجهيز الصورة…');
-        loadCardFont().then(function () { return draw(ctx.profile, ctx.ranks, loadPrefs()); }).then(function (canvas) {
+        loadCardFont().then(function () { return draw(ctx.profile, ctx.ranks, loadPrefs(), ctx.avatar); }).then(function (canvas) {
             if (document.body.contains(wrap)) showImage(wrap, canvas, ctx);
         }).catch(function () {
             if (document.body.contains(wrap)) message(wrap, 'تعذّر تجهيز الصورة — جرّب مرة ثانية', true, ctx);
@@ -569,7 +570,7 @@
             : Promise.resolve(null);
         req.then(function (r) {
             if (!document.body.contains(wrap)) return;
-            showSettings(wrap, { profile: profile, ranks: (r && r.success && r.ranks) || null });
+            showSettings(wrap, { profile: profile, ranks: (r && r.success && r.ranks) || null, avatar: (r && r.avatar) || null });
         });
     }
 
