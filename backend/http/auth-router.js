@@ -200,6 +200,8 @@ var ROUTES = [
   // ---- أرقام حقيقية لقسم "الأرقام" بالصفحة الرئيسية — عام، مخزَّن مؤقتاً
   // (٣ أيام) بالسيرفر — راجع backend/stats/platform-stats-service.js
   { method: 'GET', path: '/api/public/platform-stats', requireAuth: false, handler: handleGetPlatformStats },
+  // ---- البثوث الشغّالة الآن (بطاقات مكتبة الألعاب) — عام، حقول عامة فقط.
+  { method: 'GET', path: '/api/public/live-streams', requireAuth: false, handler: handlePublicLiveStreams },
   // ---- إحصائيات لوحة الأدمن
   { method: 'GET', path: '/api/admin/stats/streamers', requireAuth: true, requireAdmin: true, handler: handleAdminStreamerStats },
   { method: 'GET', path: '/api/admin/stats/users', requireAuth: true, requireAdmin: true, handler: handleAdminUserStats },
@@ -1064,6 +1066,32 @@ function handleAdminLiveStreams(req, res) {
   // مراقبات إحصائيات البث (stats/stream-stats-watcher.js) — بنفس شكل صفوف الاتصالات
   try { connections = connections.concat(listStatsWatchers()); } catch (err) { logger.error('Admin live streams: watchers failed:', err); }
   sendJson(res, 200, { success: true, now: Date.now(), connections: connections, matches: matches, chatLatency: chatLatency.getStats() });
+}
+
+/** البثوث المتصلة الآن من داخل الألعاب لستريمرز مسجّلين — لبطاقات مكتبة
+ * الألعاب. يرجع حقول عامة فقط (بدون connectionId/user.id/role)، وبث واحد
+ * لكل يوزر تيك توك (لو فاتح أكثر من تبويب ناخذ أعلى عدد مشاهدين). */
+function handlePublicLiveStreams(req, res) {
+  var connections = [];
+  try { connections = require('../websocket/ws-server').listLiveConnections(); } catch (err) { logger.error('Public live streams failed:', err); }
+  var byUser = {};
+  connections.forEach(function (c) {
+    if (c.status !== 'connected' || !c.user || !c.user.customId || !c.username) return;
+    var prev = byUser[c.username];
+    if (prev && (prev.viewers || 0) >= (c.viewers || 0)) return;
+    byUser[c.username] = {
+      name: c.user.name || c.username,
+      tiktok: c.username,
+      avatar: c.user.avatar || null,
+      customId: c.user.customId,
+      gameName: c.gameName || null,
+      viewers: typeof c.viewers === 'number' ? c.viewers : null,
+      connectedAt: c.connectedAt || null
+    };
+  });
+  var streams = Object.keys(byUser).map(function (k) { return byUser[k]; })
+    .sort(function (x, y) { return (y.viewers || 0) - (x.viewers || 0); });
+  sendJson(res, 200, { success: true, streams: streams });
 }
 
 function listStatsWatchers() {
