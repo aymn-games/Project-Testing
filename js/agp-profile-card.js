@@ -24,11 +24,39 @@
     var CARD_FONT_CSS = 'https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&display=swap';
     var LOGO_SRC = 'logo.png';
     var LOGO_BOX = [20, 38, 332, 107]; // حدود الشعار داخل logo.png (بدون الهوامش الشفافة)
+    // أيقونات الصورة: إيموجي أبل من نفس مصدر js/agp-apple-emoji.js عشان
+    // تطلع بنفس الشكل بكل الأجهزة (crossOrigin — jsDelivr يسمح، فالصورة
+    // تنحفظ عادي). لو ما تحمّلت، ينرسم الإيموجي كنص بدلها.
+    var EMOJI_CDN = 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@16.0.0/img/apple/64/';
+    var ICONS = {
+        trophy: ['1f3c6', '🏆'], timer: ['23f1-fe0f', '⏱️'], game: ['1f3ae', '🎮'], people: ['1f465', '👥'],
+        camera: ['1f3a5', '🎥'], star: ['2b50', '⭐'], target: ['1f3af', '🎯'], satellite: ['1f4e1', '📡'],
+        chat: ['1f4ac', '💬'], heart: ['2764-fe0f', '❤️'], gem: ['1f48e', '💎'], frame: ['1f5bc-fe0f', '🖼️'], crown: ['1f451', '👑']
+    };
     var PREFS_KEY = 'agp:profile-card-prefs';
     var CUSTOM_BG_KEY = 'agp:profile-card-bg';
 
     function S() { return window.AGPStreamStats && window.AGPStreamStats.shared; }
     function fmt(n) { return (Number(n) || 0).toLocaleString('en-US'); }
+    /** رقم المستوى من الـslug (level-5 / sp-level-5)، أو null. */
+    function levelNum(level) {
+        var m = level && /(\d+)$/.exec(level.slug || '');
+        return m ? Number(m[1]) : null;
+    }
+    function playerLevel(p) { return levelNum(p.points && p.points.currentLevel); }
+    function streamerLevel(p) { return levelNum(p.streamerLevel && p.streamerLevel.currentLevel); }
+
+    /** الإطار المفعّل: {name, src} أو null. أسماء إطارات المستويات ممكن تكون فاضية. */
+    function equippedFrame(p) {
+        var f = (p.frames || []).filter(function (x) { return x.equipped; })[0];
+        if (!f) return null;
+        var lvl = /^level-(\d+)$/.exec(f.frameRef || '');
+        return {
+            name: f.displayNameAr || (lvl ? 'إطار المستوى ' + lvl[1] : 'إطار مميز'),
+            src: f.imageFilename || null
+        };
+    }
+
     function fmtMinutes(mins) {
         mins = Number(mins) || 0;
         if (mins < 60) return fmt(mins) + ' دقيقة';
@@ -39,32 +67,32 @@
 
     // التصنيفات الأسبوعية — نفس مبدّلات توب الرئيسية.
     var RANKS = [
-        { key: 'players.wins', title: 'الأكثر فوزاً', group: 'توب اللاعبين', unit: function (v) { return fmt(v) + ' فوز'; } },
-        { key: 'players.hours', title: 'الأكثر نشاطاً', group: 'توب اللاعبين', unit: fmtMinutes },
-        { key: 'players.rounds', title: 'الأكثر لعباً', group: 'توب اللاعبين', unit: function (v) { return fmt(v) + ' جولة'; } },
-        { key: 'streamers.hours', title: 'الأكثر نشاطاً', group: 'توب الاستريمرز', unit: fmtMinutes },
-        { key: 'streamers.participations', title: 'الأكثر مشاركات', group: 'توب الاستريمرز', unit: function (v) { return fmt(v) + ' مشاركة'; } }
+        { key: 'players.wins', icon: 'trophy', title: 'الأكثر فوزاً', group: 'توب اللاعبين', unit: function (v) { return fmt(v) + ' فوز'; } },
+        { key: 'players.hours', icon: 'timer', title: 'الأكثر نشاطاً', group: 'توب اللاعبين', unit: fmtMinutes },
+        { key: 'players.rounds', icon: 'game', title: 'الأكثر لعباً', group: 'توب اللاعبين', unit: function (v) { return fmt(v) + ' جولة'; } },
+        { key: 'streamers.hours', icon: 'camera', title: 'الأكثر نشاطاً', group: 'توب الاستريمرز', unit: fmtMinutes },
+        { key: 'streamers.participations', icon: 'people', title: 'الأكثر مشاركات', group: 'توب الاستريمرز', unit: function (v) { return fmt(v) + ' مشاركة'; } }
     ];
 
     function isStreamer(p) { return Boolean(p && (p.is_streamer || p.can_run_games || p.role === 'admin')); }
 
     // الإحصائيات — streamer: true تطلع لحسابات الستريمر فقط. def = مفعّلة افتراضياً.
     var STATS = [
-        { key: 'level', title: 'مستوى اللاعب', def: true,
-          value: function (p) { var c = p.points && p.points.currentLevel; return c ? c.displayNameAr : '—'; },
+        { key: 'level', icon: 'star', title: 'مستوى اللاعب', def: true,
+          value: function (p) { var n = playerLevel(p); return n ? fmt(n) : '—'; },
           sub: function (p) { return fmt(p.points && p.points.totalPoints) + ' نقطة خبرة'; } },
-        { key: 'played', title: 'جولات مكتملة', def: true, value: function (p) { return fmt(p.points && p.points.gamesPlayed); } },
-        { key: 'won', title: 'مرات الفوز', def: true, value: function (p) { return fmt(p.points && p.points.gamesWon); } },
-        { key: 'winRate', title: 'نسبة الفوز', def: true, value: function (p) { return fmt(p.points && p.points.winRatePct) + '%'; } },
-        { key: 'spLevel', title: 'مستوى الستريمر', streamer: true, def: true,
-          value: function (p) { var l = p.streamerLevel; return (l && l.currentLevel && (l.currentLevel.displayNameAr || l.currentLevel.display_name_ar)) || '—'; },
+        { key: 'played', icon: 'game', title: 'جولات مكتملة', def: true, value: function (p) { return fmt(p.points && p.points.gamesPlayed); } },
+        { key: 'won', icon: 'trophy', title: 'مرات الفوز', def: true, value: function (p) { return fmt(p.points && p.points.gamesWon); } },
+        { key: 'winRate', icon: 'target', title: 'نسبة الفوز', def: true, value: function (p) { return fmt(p.points && p.points.winRatePct) + '%'; } },
+        { key: 'spLevel', icon: 'crown', title: 'مستوى الستريمر', streamer: true, def: true,
+          value: function (p) { var n = streamerLevel(p); return n ? fmt(n) : '—'; },
           sub: function (p) { return fmt(p.streamerLevel && p.streamerLevel.sp) + ' SP'; } },
-        { key: 'liveHours', title: 'ساعات البث', streamer: true, def: true,
+        { key: 'liveHours', icon: 'timer', title: 'ساعات البث', streamer: true, def: true,
           value: function (p) { return (Math.round(((p.stats && p.stats.total_live_ms) || 0) / 360000) / 10).toLocaleString('en-US'); } },
-        { key: 'broadcasts', title: 'عدد البثوث', streamer: true, def: false, value: function (p) { return fmt(p.stats && p.stats.total_broadcasts); } },
-        { key: 'comments', title: 'التعليقات', streamer: true, def: false, value: function (p) { return fmt(p.stats && p.stats.total_comments); } },
-        { key: 'follows', title: 'متابعين جدد', streamer: true, def: false, value: function (p) { return fmt(p.stats && p.stats.total_follows); } },
-        { key: 'gifts', title: 'قيمة الهدايا', streamer: true, def: false, value: function (p) { return fmt(p.stats && p.stats.total_gifts_value) + ' 💎'; } }
+        { key: 'broadcasts', icon: 'satellite', title: 'عدد البثوث', streamer: true, def: false, value: function (p) { return fmt(p.stats && p.stats.total_broadcasts); } },
+        { key: 'comments', icon: 'chat', title: 'التعليقات', streamer: true, def: false, value: function (p) { return fmt(p.stats && p.stats.total_comments); } },
+        { key: 'follows', icon: 'heart', title: 'متابعين جدد', streamer: true, def: false, value: function (p) { return fmt(p.stats && p.stats.total_follows); } },
+        { key: 'gifts', icon: 'gem', title: 'قيمة الهدايا (ألماس)', streamer: true, def: false, value: function (p) { return fmt(p.stats && p.stats.total_gifts_value); } }
     ];
 
     function rankOf(ranks, key) {
@@ -86,6 +114,7 @@
         var out = { bg: (p && typeof p.bg === 'string') ? p.bg : bgs[0].key, items: {} };
         RANKS.forEach(function (r) { out.items[r.key] = p && p.items && r.key in p.items ? Boolean(p.items[r.key]) : true; });
         STATS.forEach(function (st) { out.items[st.key] = p && p.items && st.key in p.items ? Boolean(p.items[st.key]) : st.def; });
+        out.items.frame = p && p.items && 'frame' in p.items ? Boolean(p.items.frame) : true;
         if (out.bg === 'custom' && !loadCustomBg()) out.bg = bgs[0].key;
         return out;
     }
@@ -100,6 +129,64 @@
     /* ---------------- الرسم ---------------- */
 
     var MEDALS = [['#fff1b8', '#f0c64e', '#b8861f'], ['#ffffff', '#cfd6e3', '#8f99ad'], ['#ffd2ae', '#d9935c', '#8f5226']];
+
+    function loadCors(src) {
+        return new Promise(function (resolve) {
+            if (!src) { resolve(null); return; }
+            var img = new Image();
+            if (/^https?:\/\//i.test(src)) img.crossOrigin = 'anonymous';
+            img.onload = function () { resolve(img); };
+            img.onerror = function () { resolve(null); };
+            img.src = src;
+        });
+    }
+
+    /** يقص الهوامش الشفافة من صورة الإطار (ملفات الإطارات فيها فراغ كبير
+     * حول الإطار نفسه). لو تعذّر القص (صورة بدون CORS) يرجّع الصورة كما هي. */
+    function trimTransparent(img) {
+        if (!img) return null;
+        try {
+            var c = document.createElement('canvas');
+            c.width = img.naturalWidth || img.width; c.height = img.naturalHeight || img.height;
+            var x = c.getContext('2d');
+            x.drawImage(img, 0, 0);
+            var d = x.getImageData(0, 0, c.width, c.height).data;
+            var minX = c.width, minY = c.height, maxX = -1, maxY = -1;
+            for (var yy = 0; yy < c.height; yy += 2) {
+                for (var xx = 0; xx < c.width; xx += 2) {
+                    if (d[(yy * c.width + xx) * 4 + 3] > 16) {
+                        if (xx < minX) minX = xx; if (xx > maxX) maxX = xx;
+                        if (yy < minY) minY = yy; if (yy > maxY) maxY = yy;
+                    }
+                }
+            }
+            if (maxX < 0) return img;
+            var out = document.createElement('canvas');
+            out.width = maxX - minX + 2; out.height = maxY - minY + 2;
+            out.getContext('2d').drawImage(c, minX, minY, out.width, out.height, 0, 0, out.width, out.height);
+            return out;
+        } catch (e) { return img; }
+    }
+
+    /** يحمّل أيقونات العناصر المختارة → {name: img|null}. */
+    function loadIcons(names) {
+        var out = {};
+        return Promise.all(names.map(function (n) {
+            return loadCors(EMOJI_CDN + ICONS[n][0] + '.png').then(function (img) { out[n] = img; });
+        })).then(function () { return out; });
+    }
+
+    function drawIcon(ctx, icons, name, cx, cy, size) {
+        if (!name) return;
+        var img = icons[name];
+        if (img) { ctx.drawImage(img, cx - size / 2, cy - size / 2, size, size); return; }
+        ctx.save();
+        ctx.font = Math.round(size * 0.9) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(ICONS[name][1], cx, cy);
+        ctx.restore();
+    }
 
     function roundRect(ctx, x, y, w, h, r) {
         ctx.beginPath();
@@ -161,7 +248,7 @@
     }
 
     /** بطاقة مركز: ميدالية الرقم يمين، والتصنيف وقيمته يسارها. */
-    function drawRankCard(ctx, r, rank, x, y, w, h, s, accent) {
+    function drawRankCard(ctx, r, rank, x, y, w, h, s, accent, icons) {
         var sh = S();
         var medal = MEDALS[rank.rank - 1];
         glass(ctx, x, y, w, h, 28 * s, medal ? medal[1] : null);
@@ -179,7 +266,9 @@
         ctx.fillText('#' + rank.rank, mx, my + 2 * s);
         ctx.direction = 'rtl';
 
-        var tx = mx - mr - 22 * s, maxW = tx - x - 24 * s;
+        var iconSize = 54 * s;
+        drawIcon(ctx, icons, r.icon, x + 26 * s + iconSize / 2, my, iconSize);
+        var tx = mx - mr - 22 * s, maxW = tx - x - 40 * s - iconSize;
         ctx.textAlign = 'right';
         ctx.textBaseline = 'alphabetic';
         ctx.fillStyle = '#ffffff';
@@ -190,33 +279,63 @@
         ctx.fillText(sh.fitText(ctx, r.group + ' · ' + r.unit(rank.value), maxW), tx, my + 26 * s);
     }
 
-    /** مربع إحصائية: القيمة كبيرة والعنوان تحتها. */
-    function drawStatTile(ctx, st, p, x, y, w, h, s, accent) {
+    /** مربع إحصائية: أيقونة فوق، القيمة كبيرة، والعنوان تحتها. */
+    function drawStatTile(ctx, st, p, x, y, w, h, s, accent, icons) {
         var sh = S();
         glass(ctx, x, y, w, h, 26 * s);
+        drawIcon(ctx, icons, st.icon, x + w / 2, y + 44 * s, 46 * s);
+        var vy = y + 128 * s;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'alphabetic';
         ctx.fillStyle = '#ffffff';
         ctx.font = '800 ' + (44 * s) + 'px ' + CARD_FONT;
-        ctx.fillText(sh.fitText(ctx, st.value(p), w - 30 * s), x + w / 2, y + h * 0.48);
+        ctx.fillText(sh.fitText(ctx, st.value(p), w - 30 * s), x + w / 2, vy);
         ctx.fillStyle = accent;
         ctx.font = '600 ' + (24 * s) + 'px ' + CARD_FONT;
-        ctx.fillText(sh.fitText(ctx, st.title, w - 24 * s), x + w / 2, y + h * 0.48 + 42 * s);
+        ctx.fillText(sh.fitText(ctx, st.title, w - 24 * s), x + w / 2, vy + 40 * s);
         if (st.sub) {
             ctx.fillStyle = 'rgba(255,255,255,0.55)';
             ctx.font = '500 ' + (19 * s) + 'px ' + CARD_FONT;
-            ctx.fillText(sh.fitText(ctx, st.sub(p), w - 24 * s), x + w / 2, y + h * 0.48 + 74 * s);
+            ctx.fillText(sh.fitText(ctx, st.sub(p), w - 24 * s), x + w / 2, vy + 70 * s);
         }
+    }
+
+    /** بطاقة الإطار المفعّل: صورة الإطار يمين، والاسم يسارها. */
+    function drawFrameCard(ctx, frame, img, x, y, w, h, s, accent, icons) {
+        var sh = S();
+        glass(ctx, x, y, w, h, 28 * s, accent);
+        var tx = x + w - 30 * s;
+        if (img) {
+            var ih = h - 30 * s, iw = Math.min(w * 0.58, ih * img.width / img.height);
+            ih = iw * img.height / img.width;
+            ctx.drawImage(img, x + w - 24 * s - iw, y + (h - ih) / 2, iw, ih);
+            tx = x + w - 24 * s - iw - 24 * s;
+        } else {
+            drawIcon(ctx, icons, 'frame', x + w - 30 * s - 30 * s, y + h / 2, 60 * s);
+            tx = x + w - 120 * s;
+        }
+        var maxW = tx - x - 30 * s;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = accent;
+        ctx.font = '600 ' + (24 * s) + 'px ' + CARD_FONT;
+        ctx.fillText('الإطار المفعّل', tx, y + h / 2 - 12 * s);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '700 ' + (36 * s) + 'px ' + CARD_FONT;
+        ctx.fillText(sh.fitText(ctx, frame.name, maxW), tx, y + h / 2 + 32 * s);
     }
 
     var SIDE = 70, CONTENT_TOP = 810, CONTENT_BOTTOM = 1800;
 
     /** ارتفاع المحتوى بمقياس s — للتصغير التلقائي لما العناصر كثيرة. */
-    function contentHeight(nRanks, nStats, s) {
+    var FRAME_H = 190, TILE_H = 230;
+    function contentHeight(nRanks, nStats, hasFrame, s) {
         var h = 0;
         if (nRanks) h += 90 * s + Math.ceil(nRanks / 2) * (150 + 22) * s;
-        if (nRanks && nStats) h += 40 * s;
-        if (nStats) h += 90 * s + Math.ceil(nStats / 3) * (190 + 22) * s;
+        if (nRanks && (nStats || hasFrame)) h += 40 * s;
+        if (hasFrame || nStats) h += 90 * s;
+        if (hasFrame) h += (FRAME_H + 22) * s;
+        if (nStats) h += Math.ceil(nStats / 3) * (TILE_H + 22) * s;
         return h;
     }
 
@@ -228,9 +347,13 @@
         var chosenRanks = availableRanks(ranks).filter(function (r) { return prefs.items[r.key]; });
         var chosenStats = availableStats(p).filter(function (st) { return prefs.items[st.key]; });
         var name = p.display_name || p.username || '';
+        var frame = prefs.items.frame ? equippedFrame(p) : null;
+        var iconNames = chosenRanks.map(function (r) { return r.icon; })
+            .concat(chosenStats.map(function (st) { return st.icon; }), ['frame']);
 
-        return Promise.all([sh.loadImg(avatar || p.avatar_image_base64), sh.loadImg(custom), sh.loadImg(LOGO_SRC)]).then(function (loaded) {
-            var avatarImg = loaded[0], customImg = loaded[1], logoImg = loaded[2];
+        return Promise.all([sh.loadImg(avatar || p.avatar_image_base64), sh.loadImg(custom), sh.loadImg(LOGO_SRC),
+                loadCors(frame && frame.src), loadIcons(iconNames)]).then(function (loaded) {
+            var avatarImg = loaded[0], customImg = loaded[1], logoImg = loaded[2], frameImg = trimTransparent(loaded[3]), icons = loaded[4];
             var canvas = document.createElement('canvas');
             canvas.width = W; canvas.height = H;
             var ctx = canvas.getContext('2d');
@@ -278,8 +401,8 @@
                 ctx.direction = 'rtl';
             }
             var pills = [isStreamer(p) ? 'ستريمر' : 'لاعب'];
-            var lvl = p.points && p.points.currentLevel;
-            if (lvl) pills.push(lvl.displayNameAr);
+            var lvl = playerLevel(p);
+            if (lvl) pills.push('مستوى ' + lvl);
             var pf = '600 25px ' + FONT;
             ctx.font = pf;
             var widths = pills.map(function (t) { return ctx.measureText(t).width + 44; });
@@ -289,8 +412,8 @@
 
             // المحتوى: يتصغّر لين يدخل، ويتوسّط عمودياً لو كان قليل
             var avail = CONTENT_BOTTOM - CONTENT_TOP, s = 1;
-            while (contentHeight(chosenRanks.length, chosenStats.length, s) > avail && s > 0.5) s -= 0.05;
-            var y = CONTENT_TOP + Math.max(0, (avail - contentHeight(chosenRanks.length, chosenStats.length, s)) / 2);
+            while (contentHeight(chosenRanks.length, chosenStats.length, !!frame, s) > avail && s > 0.5) s -= 0.05;
+            var y = CONTENT_TOP + Math.max(0, (avail - contentHeight(chosenRanks.length, chosenStats.length, !!frame, s)) / 2);
             var inner = W - SIDE * 2, gap = 22 * s;
 
             if (chosenRanks.length) {
@@ -302,15 +425,21 @@
                     var lastAlone = i === chosenRanks.length - 1 && col === 0;
                     var w = lastAlone ? inner : rw;
                     var x = lastAlone ? SIDE : W - SIDE - rw - col * (rw + gap);
-                    drawRankCard(ctx, r, rankOf(ranks, r.key), x, y + row * (rh + gap), w, rh, s, accent);
+                    drawRankCard(ctx, r, rankOf(ranks, r.key), x, y + row * (rh + gap), w, rh, s, accent, icons);
                 });
                 y += Math.ceil(chosenRanks.length / 2) * (rh + gap);
-                if (chosenStats.length) y += 40 * s;
+                if (chosenStats.length || frame) y += 40 * s;
             }
-            if (chosenStats.length) {
+            if (chosenStats.length || frame) {
                 sectionTitle(ctx, 'إحصائياتي', y + 40 * s, s, accent, SIDE);
                 y += 90 * s;
-                var cols = 3, th = 190 * s;
+            }
+            if (frame) {
+                drawFrameCard(ctx, frame, frameImg, SIDE, y, inner, FRAME_H * s, s, accent, icons);
+                y += (FRAME_H + 22) * s;
+            }
+            if (chosenStats.length) {
+                var cols = 3, th = TILE_H * s;
                 chosenStats.forEach(function (st, i) {
                     var row = Math.floor(i / cols), col = i % cols;
                     // آخر صف ناقص يتوسّط
@@ -318,7 +447,7 @@
                     var tw = (inner - gap * (cols - 1)) / cols;
                     var rowW = inRow * tw + (inRow - 1) * gap;
                     var x = W / 2 + rowW / 2 - tw - col * (tw + gap);
-                    drawStatTile(ctx, st, p, x, y + row * (th + gap), tw, th, s, accent);
+                    drawStatTile(ctx, st, p, x, y + row * (th + gap), tw, th, s, accent, icons);
                 });
             }
 
@@ -436,6 +565,12 @@
         body.appendChild(heading('إحصائياتي'));
         var statList = document.createElement('div');
         statList.style.cssText = 'display:flex;flex-direction:column;gap:10px';
+        var eq = equippedFrame(p);
+        if (eq) {
+            statList.appendChild(toggleRow('الإطار المفعّل', eq.name, prefs.items.frame, function (on) {
+                prefs.items.frame = on; savePrefs(prefs);
+            }));
+        }
         availableStats(p).forEach(function (st) {
             statList.appendChild(toggleRow(st.title, st.value(p) + (st.sub ? ' · ' + st.sub(p) : ''), prefs.items[st.key], function (on) {
                 prefs.items[st.key] = on; savePrefs(prefs);
