@@ -44,8 +44,17 @@
             .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
             .replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x06F0); })
             .replace(/[ً-ْـ]/g, '')
-            .replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
+            .replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
+            .replace(/ؤ/g, 'و').replace(/ئ/g, 'ي')
             .toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    // مفتاح مطابقة الإجابات: التطبيع + حذف الرموز/الإيموجي + تجاهل «ال» التعريف
+    // (الجواز = جواز، طماطم! = طماطم) بدون الحاجة لكتابة كل صيغة في البنك.
+    function answerKey(s) {
+        return norm(s).replace(/[^\p{L}\p{N}\s]/gu, ' ').trim().split(/\s+/)
+            .map(function (w) { return w.length > 3 && w.indexOf('ال') === 0 ? w.slice(2) : w; })
+            .join(' ');
     }
 
     /** أدمن المنصة؟ (يظهر له رابط بنك الأسئلة — الحماية الفعلية داخل admin-questions.html). */
@@ -219,6 +228,7 @@
         writeJSON: writeJSON,
         getSavedConnection: getSavedConnection,
         norm: norm,
+        answerKey: answerKey,
         isAdmin: isAdmin,
         loadBank: loadBank,
         frameCard: frameCard,
