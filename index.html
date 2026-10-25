@@ -721,7 +721,7 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
     if (!window.AGPAuth || !window.AGPAuth.getTopPlayersByWins) return;
     var rows = findCardRowsContainer('توب اللاعبين الأكثر نشاطاً');
     if (!rows || rows.dataset.realData) return;
-    window.AGPAuth.getTopPlayersByWins(5).then(function(result){
+    window.AGPAuth.getTopPlayersByWins(10).then(function(result){
       var players = (result && result.success && result.players) || [];
       // التصنيف أسبوعي (يتجدد كل سبت) مثل توب الاستريمرز.
       if (result && result.success && !players.length) {
@@ -731,7 +731,7 @@ var AGP_LOTTIE_TIKTOK = {"v":"5.12.1","fr":60,"ip":0,"op":180,"w":430,"h":430,"n
       }
       if (!players.length) return;
       rows.innerHTML = '';
-      players.slice(0, 5).forEach(function(pl, idx){
+      players.slice(0, 10).forEach(function(pl, idx){
         var row = document.createElement('div');
         row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:11px 10px;border-radius:14px;transition:background .2s;';
         var rankSpan = document.createElement('span');
