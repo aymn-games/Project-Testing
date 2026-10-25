@@ -338,10 +338,10 @@ input::placeholder{color:#6f6a7c}
           </sc-if>
           
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:520px;margin:0 auto">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:600px;margin:0 auto">
           <button onClick="{{ onExit }}" style="flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#f4f2f8" style-hover="filter:brightness(1.25)" style-active="transform:scale(.97)">الخروج</button>
           <button onClick="{{ newMatch }}" style="flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:none;background:linear-gradient(90deg,rgba(139,92,246,.55),rgba(167,139,250,.45));color:#fff;box-shadow:0 10px 26px rgba(124,58,237,.22)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">مباراة جديدة</button>
-          <button onClick="{{ replaySame }}" style="flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:1px solid rgba(196,181,253,.35);background:rgba(139,92,246,.1);color:#ddd6fe" style-hover="filter:brightness(1.2)" style-active="transform:scale(.97)">إعادة بنفس اللاعبين</button>
+          <button onClick="{{ replaySame }}" style="white-space:nowrap;flex:1;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;transition:filter .2s, transform .15s;border:1px solid rgba(196,181,253,.35);background:rgba(139,92,246,.1);color:#ddd6fe" style-hover="filter:brightness(1.2)" style-active="transform:scale(.97)">إعادة بنفس اللاعبين</button>
         </div>
       </div>
     </div>
@@ -544,6 +544,8 @@ class Component extends DCLogic {
   componentDidMount(){
     this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}); this.fit(); addEventListener('resize',this.fit);
     this.nextRound=this.pick();
+    // بطاقات الفوز المملوكة تُحمَّل مسبقاً حتى تظهر بدون تأخير (نفس روليت الإقصاء)
+    (Array.isArray(ROSTER)?ROSTER:[]).forEach(n=>{ try{ window.AymanGamesPlatform.winCard?.preloadFor(this.reg.player(n)); }catch(e){} });
     this.unsubStatus=WH.onStatus(st=>this.setState({conn:st||'none'}));
     if(!WH.connect()&&!WH.getSavedConnection()) this.setState({conn:'none'});
     this.unsub=WH.onComment(p=>this.onChat(p));

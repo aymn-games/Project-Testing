@@ -28,7 +28,7 @@
     var SECTIONS = [
         { title: 'إعدادات الجولة', rows: [
             { type: 'choice', basic: true, key: 'matchRounds', label: 'عدد الجولات بالمباراة', hint: 'بعد آخر جولة يظهر الفائز: صاحب أعلى مجموع نقاط', options: ['3', '5', '7'], values: [3, 5, 7], default: 3, rule: true },
-            { type: 'choice', basic: true, key: 'durationSec', label: 'مدة الجولة (ثانية)', options: ['60', '90', '120', '180', '300'], values: [60, 90, 120, 180, 300], default: 120, rule: true },
+            { type: 'choice', basic: true, key: 'durationSec', label: 'مدة الجولة', options: ['3 دقائق', '4 دقائق', '5 دقائق'], values: [180, 240, 300], default: 180, rule: true },
             { type: 'choice', basic: true, key: 'difficulty', label: 'مستوى الصعوبة', options: ['سهل', 'متوسط', 'مختلط'], values: ['easy', 'medium', 'mixed'], default: 'mixed', rule: true },
             { type: 'choice', key: 'roundPick', label: 'اختيار الجولة', options: ['عشوائية', 'يدوية'], values: ['random', 'manual'], default: 'random', rule: true },
             { type: 'select', key: 'roundId', label: 'الجولة المحددة', showIf: 'roundPick', showIfVal: 'manual', default: '', rule: true },
