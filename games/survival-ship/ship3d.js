@@ -1,4 +1,4 @@
-// <ship-3d> — three.js ship scene. attr scene = JSON {players:[{id,name,skin,hair,girl,outfit,pants,out,fall}], focus:id|null}
+// <ship-3d> — three.js ship scene. attr scene = JSON {players:[{id,name,skin,hair,girl,outfit,pants,out,fall}], focus:id|null, duel:[id,id]|null}
 class Ship3D extends HTMLElement {
   static get observedAttributes(){ return ['scene']; }
   constructor(){ super(); this.data={players:[],focus:null}; this.figs=new Map(); this.ang=0; }
@@ -63,6 +63,7 @@ class Ship3D extends HTMLElement {
     this.sk=1.5; ship.scale.setScalar(1.5); const crew=this.crew=new T.Group(); crew.scale.setScalar(1/1.5); ship.add(crew);
     // focus ring
     const fr=this.focusRing=new T.Mesh(new T.RingGeometry(.9,1.15,32),new T.MeshBasicMaterial({color:'#fde68a',transparent:true,opacity:.9,side:T.DoubleSide})); fr.rotation.x=-Math.PI/2; fr.visible=false; this.crew.add(fr);
+    const fr2=this.focusRing2=new T.Mesh(fr.geometry,fr.material.clone()); fr2.rotation.x=-Math.PI/2; fr2.visible=false; this.crew.add(fr2);
   }
   buildFx(){ const T=this.T, n=90, g=new T.SphereGeometry(.16,6,5), m=new T.MeshBasicMaterial({color:'#ffffff',transparent:true});
     this.drops=new T.InstancedMesh(g,m,n); this.drops.visible=false; this.sc.add(this.drops); this.dropV=[];
@@ -98,12 +99,16 @@ class Ship3D extends HTMLElement {
     G.userData={legs,arms,head,sp}; return G; }
   slots(n){ const sk=this.sk, cols=Math.max(2,Math.ceil(Math.sqrt(n*2.4))), rows=Math.ceil(n/cols), out=[]; const sx=Math.min(2.67,17/Math.max(1,cols-1)), sz=rows>1?Math.min(2.4,7.3/(rows-1)):0;
     for(let i=0;i<n;i++){ const r=Math.floor(i/cols), c=i%cols, inRow=Math.min(cols,n-r*cols); out.push(new this.T.Vector3((3.3+(c-(inRow-1)/2)*sx+(r%2?sx/2:0))*sk,1.5*sk,(r-(rows-1)/2)*sz*sk)); } return out; }
-  sync(){ const ps=this.data.players||[], keep=new Set(ps.map(p=>p.id));
+  // نمط المواجهة: مكان الثنائي جنب بعض بمقدمة السطح (الأول يمين الشاشة والثاني يساره)
+  duelSpot(i){ const sk=this.sk; return new this.T.Vector3(3.3*sk+(i?-1.1:1.1),1.5*sk,3.3*sk); }
+  sync(){ const ps=this.data.players||[], keep=new Set(ps.map(p=>p.id)), D=Array.isArray(this.data.duel)?this.data.duel:null;
     const sk=+Math.min(3.4,1.5*Math.max(1,Math.sqrt(ps.length/12))).toFixed(2); if(sk!==this.sk){ this.sk=sk; this.ship.scale.setScalar(sk); this.crew.scale.setScalar(1/sk); this.plankEnd.set(4*sk,1.7*sk,8.3*sk); }
     const sl=this.slots(ps.length);
     for(const [id,f] of this.figs) if(!keep.has(id)){ this.crew.remove(f.g); this.figs.delete(id); }
-    ps.forEach((p,i)=>{ let f=this.figs.get(p.id); if(!f||f.name!==p.name){ if(f) this.crew.remove(f.g); f={g:this.figure(p),name:p.name,ph:Math.random()*6}; this.crew.add(f.g); this.figs.set(p.id,f); }
-      f.home=sl[i]; if(!f.fallT&&!p.fall) f.g.position.copy(sl[i]); if(p.fall&&f.fallT==null){ f.fallT=0; f.from=f.g.position.clone(); f.splashed=false; } if(!p.fall&&!p.out){ f.fallT=null; f.g.visible=true; f.g.rotation.set(0,0,0); } if(p.out&&!p.fall){ f.fallT=null; f.g.visible=false; }
+    ps.forEach((p,i)=>{ let f=this.figs.get(p.id), born=false; if(!f||f.name!==p.name){ if(f) this.crew.remove(f.g); f={g:this.figure(p),name:p.name,ph:Math.random()*6}; this.crew.add(f.g); this.figs.set(p.id,f); born=true; }
+      // target = المكان اللي يمشي له اللاعب (مكانه الأصلي أو مكان المواجهة) — tick() يحركه له بخطوات
+      const di=D?D.indexOf(p.id):-1; f.home=sl[i]; f.duel=di>=0; f.target=di>=0?this.duelSpot(di):sl[i]; if(born) f.g.position.copy(f.target);
+      if(p.fall&&f.fallT==null){ f.fallT=0; f.from=f.g.position.clone(); f.splashed=false; } if(!p.fall&&!p.out){ if(f.fallT!=null) f.g.position.copy(f.target); f.fallT=null; f.g.visible=true; f.g.rotation.set(0,0,0); } if(p.out&&!p.fall){ f.fallT=null; f.g.visible=false; }
       f.out=p.out; if(p.out&&!p.fall) f.g.visible=false; }); }
   // وضع الأداء: لو متوسط الإطارات نزل تحت 40/ث (بعد أول 3 ث) تنطفي الظلال، وتنضاف ship-lite للصفحة (تشيل التغبيش بالـ CSS)
   perf(raw){ if(this.lite||raw>.5) return; const p=this.pf||(this.pf={n:0,s:0,w:0}); p.w+=raw; if(p.w<3) return; p.n++; p.s+=raw;
@@ -116,7 +121,7 @@ class Ship3D extends HTMLElement {
     this.ship.position.y=Math.sin(t*1.05)*.32; this.ship.rotation.z=Math.sin(t*.8)*.022; this.ship.rotation.x=Math.cos(t*.62)*.028; this.flag.rotation.y=Math.sin(t*3)*.3;
     // names:false (شاشة المباراة) = بدون أسماء فوق اللاعبين
     for(const [,f] of this.figs) if(f.g.userData.sp) f.g.userData.sp.visible=d.names!==false;
-    let fallF=null, focusF=d.focus!=null?this.figs.get(d.focus):null;
+    let fallF=null, focusF=d.focus!=null?this.figs.get(d.focus):null; const duelOn=Array.isArray(d.duel);
     for(const [id,f] of this.figs){ const U=f.g.userData, ph=t*2+f.ph;
       if(f.fallT!=null){ f.fallT+=dt; const k=f.fallT, s=new T.Vector3(4*this.sk,1.5*this.sk,4.3*this.sk), e=this.plankEnd; if(k<3.4) fallF=f;
         if(k<.8){ f.g.position.lerpVectors(f.from,s,k/.8); f.g.rotation.y=Math.atan2(s.x-f.from.x,s.z-f.from.z)||0; U.legs[0].rotation.x=Math.sin(k*18)*.6; U.legs[1].rotation.x=-Math.sin(k*18)*.6; }
@@ -126,11 +131,16 @@ class Ship3D extends HTMLElement {
           if(q>=1){ f.g.position.y-=(k-2.1)*2.2; if(k>3.6) f.g.visible=false; } }
         continue; }
       if(!f.g.visible) continue;
+      const tg=f.target||f.home, dx=tg.x-f.g.position.x, dz=tg.z-f.g.position.z, dist=Math.hypot(dx,dz);
+      if(dist>.05){ const st=Math.min(dist,dt*8), w=t*14+f.ph; f.g.position.x+=dx/dist*st; f.g.position.z+=dz/dist*st; f.g.position.y=tg.y; f.g.rotation.y=Math.atan2(dx,dz);
+        U.legs[0].rotation.x=Math.sin(w)*.6; U.legs[1].rotation.x=-Math.sin(w)*.6; U.arms[0].rotation.x=-Math.sin(w)*.5; U.arms[1].rotation.x=Math.sin(w)*.5; U.arms[0].rotation.z=-.18; U.arms[1].rotation.z=.18; continue; }
       if(d.cheer!=null&&d.cheer===id){ const c=t*7; f.g.position.y=f.home.y+Math.abs(Math.sin(c*.5))*1.1; U.arms[0].rotation.z=-2.7+Math.sin(c)*.35; U.arms[1].rotation.z=2.7-Math.sin(c)*.35; U.arms[0].rotation.x=U.arms[1].rotation.x=0; U.legs[0].rotation.x=Math.sin(c*.5)*.4; U.legs[1].rotation.x=-Math.sin(c*.5)*.4; f.g.rotation.y+=dt*5; U.head.rotation.z=Math.sin(c)*.15; continue; }
-      const cur=focusF===f; f.g.position.y=f.home.y+Math.abs(Math.sin(ph*(cur?1.6:1)))*(cur?.12:.04);
+      const cur=focusF===f||(duelOn&&f.duel); f.g.position.y=f.home.y+Math.abs(Math.sin(ph*(cur?1.6:1)))*(cur?.12:.04);
       U.arms[0].rotation.x=Math.sin(ph)*(cur?.5:.15); U.arms[1].rotation.x=-Math.sin(ph)*(cur?.5:.15); U.arms[0].rotation.z=-.18; U.arms[1].rotation.z=.18; U.head.rotation.z=Math.sin(ph*.5)*.06;
       U.legs[0].rotation.x=U.legs[1].rotation.x=0; f.g.rotation.y=cur?Math.sin(t)*.15:Math.sin(ph*.3)*.2; }
-    this.focusRing.visible=!!focusF&&!fallF; if(focusF){ this.focusRing.position.set(focusF.home.x,1.53*this.sk,focusF.home.z); this.focusRing.material.opacity=.6+Math.sin(t*5)*.3; }
+    const duelFs=duelOn?d.duel.map(id=>this.figs.get(id)).filter(f=>f&&f.g.visible&&f.fallT==null):[], rings=[this.focusRing,this.focusRing2];
+    const ringFs=fallF?[]:duelFs.length?duelFs:focusF?[focusF]:[];
+    rings.forEach((r,i)=>{ const f=ringFs[i]; r.visible=!!f; if(f){ r.position.set(f.g.position.x,1.53*this.sk,f.g.position.z); r.material.opacity=.6+Math.sin(t*5)*.3; } });
     // splash
     if(this.splashT!=null){ this.splashT+=dt; const k=this.splashT, m=new T.Matrix4(), s=new T.Vector3();
       this.dropV.forEach((o,i)=>{ o.v.y-=18*dt; o.p.addScaledVector(o.v,dt); if(o.p.y<.3) o.p.y=-5; const sc=Math.max(0,o.k*(1-k/1.8)); m.compose(o.p,new T.Quaternion(),s.set(sc,sc,sc)); this.drops.setMatrixAt(i,m); }); this.drops.instanceMatrix.needsUpdate=true;
@@ -140,11 +150,13 @@ class Ship3D extends HTMLElement {
     const cam=this.cam, P=new T.Vector3(), L=new T.Vector3(); let rate=1.6;
     if(fallF){ const w=new T.Vector3(); fallF.g.getWorldPosition(w); w.y=Math.max(w.y,.5); P.set(w.x+7,w.y+3.5,w.z+9); L.copy(w); rate=2.4; }
     else if(focusF&&d.win){ const w=new T.Vector3(); focusF.g.getWorldPosition(w); const an=t*.18; P.set(w.x+Math.sin(an)*7.5,w.y+3.2,w.z+Math.cos(an)*7.5); L.set(w.x,w.y+1.6,w.z); rate=1.4; }
+    else if(duelFs.length&&!d.win){ const M=new T.Vector3(), w=new T.Vector3(); duelFs.forEach(f=>{ f.g.getWorldPosition(w); M.add(w); }); M.divideScalar(duelFs.length);
+      P.set(M.x+Math.sin(t*.25)*.4,M.y+4.6,M.z+7.4); L.set(M.x,M.y+1.3,M.z); rate=2; this.ang=Math.atan2(P.x,P.z); }
     else if(focusF){ const w=new T.Vector3(); focusF.g.getWorldPosition(w); P.set(w.x+Math.sin(t*.25)*.4,w.y+4.2,w.z+5.6); L.set(w.x,w.y+1.3,w.z); rate=2; this.ang=Math.atan2(P.x,P.z); }
     else { const far=d.far, zm=d.zoom||1, R0=(far?88:54)/zm*(this.sk/1.5), A=this.ang+(d.yaw||0); this.ang+=dt*(far?.22:.13); P.set(Math.sin(A)*R0,Math.max(6,((far?44:26)*(this.sk/1.5)+(d.lift||0))/zm)+Math.sin(t*.2)*2,Math.cos(A)*R0); L.set(0,2,0); rate=far?1.6:1.2; }
     const k=1-Math.exp(-dt*rate); cam.position.lerp(P,k); this.camLook.lerp(L,k); cam.lookAt(this.camLook);
     // صاحب الدور (قبل الفوز) ينزل لأسفل الكادر عشان بطاقة السؤال فوق ما تغطي اسمه وشخصيته
-    const vt=focusF&&!d.win&&!fallF?.2:0; this.vo=(this.vo||0)+(vt-(this.vo||0))*k; const vw=this.clientWidth||1, vh=this.clientHeight||1;
+    const vt=(focusF||duelFs.length)&&!d.win&&!fallF?.2:0; this.vo=(this.vo||0)+(vt-(this.vo||0))*k; const vw=this.clientWidth||1, vh=this.clientHeight||1;
     if(this.vo>.001) cam.setViewOffset(vw,vh,0,-vh*this.vo,vw,vh); else if(cam.view&&cam.view.enabled) cam.clearViewOffset();
     this.r.render(this.sc,cam); }
 }
