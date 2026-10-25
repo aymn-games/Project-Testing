@@ -363,6 +363,7 @@ db.exec(`
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         won INTEGER NOT NULL DEFAULT 0,
+        duration_ms INTEGER NOT NULL DEFAULT 0,
         created_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_player_rounds_log_created ON player_rounds_log(created_at);
@@ -553,6 +554,8 @@ ensureColumn('user_points', 'games_won', 'INTEGER NOT NULL DEFAULT 0');
 // إجمالي وقت اللعب الفعلي للاعب (مللي ثانية) — لـ"الأكثر نشاطاً بالساعات"
 // (getTopPlayersByHours بـpoints-service.js).
 ensureColumn('user_points', 'total_play_ms', 'INTEGER NOT NULL DEFAULT 0');
+// مدة كل جولة بسجل الجولات — لتبويب "الأكثر نشاطاً" الأسبوعي (ساعات اللعب).
+ensureColumn('player_rounds_log', 'duration_ms', 'INTEGER NOT NULL DEFAULT 0');
 // تفعيل/إيقاف ذاتي للدخولية من البروفايل — 1 افتراضي (مفعّلة)، 0 يعني
 // الستريمر أطفأها بنفسه (القالب/النص يبقيان محفوظين لإعادة التفعيل).
 ensureColumn('user_entrances', 'enabled', 'INTEGER NOT NULL DEFAULT 1');

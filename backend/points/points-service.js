@@ -86,8 +86,8 @@ function awardForRoundCompletion(userId, params) {
     db.prepare(
         'UPDATE user_points SET games_played = games_played + 1, games_won = games_won + ?, total_play_ms = total_play_ms + ? WHERE user_id = ?'
     ).run(params.won ? 1 : 0, params.durationMs || 0, userId);
-    db.prepare('INSERT INTO player_rounds_log (user_id, won, created_at) VALUES (?, ?, ?)')
-        .run(userId, params.won ? 1 : 0, now());
+    db.prepare('INSERT INTO player_rounds_log (user_id, won, duration_ms, created_at) VALUES (?, ?, ?, ?)')
+        .run(userId, params.won ? 1 : 0, params.durationMs || 0, now());
 
     return result;
 }
@@ -141,24 +141,30 @@ function getUserPoints(userId) {
     };
 }
 
-/**
- * أعلى اللاعبين بعدد مرات الفوز — بيانات علنية غير حساسة فقط. التصنيف
- * أسبوعي مثل توب الاستريمرز: يحسب الجولات من sinceMs فقط (بداية الأسبوع
- * من getRankingPeriodStart بـauth-service.js، يمررها الراوتر). يستبعد من
- * لا جولات فائزة له بالفترة.
- * @param {number} [limit]
- * @param {number} [sinceMs]
- * @returns {Array<{username: string, displayName: string, avatarBase64: (string|null), customId: (string|null), gamesWon: number, gamesPlayed: number}>}
- */
-function getTopPlayersByWins(limit, sinceMs) {
+// تصنيفات "توب اللاعبين" بالرئيسية — كلها أسبوعية مثل توب الاستريمرز:
+// تحسب الجولات من sinceMs فقط (بداية الأسبوع من getRankingPeriodStart
+// بـauth-service.js، يمررها الراوتر). العمود metric يحدد الترتيب.
+var TOP_PLAYERS_ORDER = {
+    wins: 'l.games_won DESC, l.games_played ASC',
+    rounds: 'l.games_played DESC, l.games_won DESC',
+    hours: 'l.play_ms DESC, l.games_played DESC'
+};
+var TOP_PLAYERS_MIN = {
+    wins: 'l.games_won > 0',
+    rounds: 'l.games_played > 0',
+    hours: 'l.play_ms > 0'
+};
+
+function getTopPlayers(metric, limit, sinceMs) {
     var rows = db.prepare(
         `SELECT u.username, u.display_name AS displayName, u.avatar_image_base64 AS avatarBase64,
-                u.custom_id AS customId, l.games_won AS gamesWon, l.games_played AS gamesPlayed
-         FROM (SELECT user_id, SUM(won) AS games_won, COUNT(*) AS games_played
+                u.custom_id AS customId, l.games_won AS gamesWon, l.games_played AS gamesPlayed,
+                l.play_ms AS playMs
+         FROM (SELECT user_id, SUM(won) AS games_won, COUNT(*) AS games_played, SUM(duration_ms) AS play_ms
                FROM player_rounds_log WHERE created_at >= ? GROUP BY user_id) l
          JOIN users u ON u.id = l.user_id
-         WHERE l.games_won > 0
-         ORDER BY l.games_won DESC, l.games_played ASC
+         WHERE ${TOP_PLAYERS_MIN[metric]}
+         ORDER BY ${TOP_PLAYERS_ORDER[metric]}
          LIMIT ?`
     ).all(sinceMs || 0, limit || 20);
     return rows.map(function (r) {
@@ -168,37 +174,25 @@ function getTopPlayersByWins(limit, sinceMs) {
             avatarBase64: r.avatarBase64 || null,
             customId: r.customId || null,
             gamesWon: r.gamesWon || 0,
-            gamesPlayed: r.gamesPlayed || 0
+            gamesPlayed: r.gamesPlayed || 0,
+            totalMinutes: Math.round((r.playMs || 0) / 60000),
+            totalHours: Math.round(((r.playMs || 0) / 3600000) * 10) / 10
         };
     });
 }
 
 /**
- * أعلى اللاعبين بساعات اللعب الفعلية (total_play_ms). يستبعد من ما له
- * وقت لعب مسجَّل بعد.
+ * أعلى اللاعبين بعدد مرات الفوز هالأسبوع — بيانات علنية غير حساسة فقط.
  * @param {number} [limit]
- * @returns {Array<{username: string, displayName: string, avatarBase64: (string|null), customId: (string|null), totalHours: number}>}
+ * @param {number} [sinceMs]
  */
-function getTopPlayersByHours(limit) {
-    var rows = db.prepare(
-        `SELECT u.username, u.display_name AS displayName, u.avatar_image_base64 AS avatarBase64,
-                u.custom_id AS customId, p.total_play_ms AS totalMs
-         FROM user_points p
-         JOIN users u ON u.id = p.user_id
-         WHERE p.total_play_ms > 0
-         ORDER BY p.total_play_ms DESC
-         LIMIT ?`
-    ).all(limit || 20);
-    return rows.map(function (r) {
-        return {
-            username: r.username,
-            displayName: r.displayName || r.username,
-            avatarBase64: r.avatarBase64 || null,
-            customId: r.customId || null,
-            totalHours: Math.round((r.totalMs / 3600000) * 10) / 10
-        };
-    });
-}
+function getTopPlayersByWins(limit, sinceMs) { return getTopPlayers('wins', limit, sinceMs); }
+
+/** أعلى اللاعبين بعدد الجولات المكتملة هالأسبوع ("الأكثر لعباً"). */
+function getTopPlayersByRounds(limit, sinceMs) { return getTopPlayers('rounds', limit, sinceMs); }
+
+/** أعلى اللاعبين بوقت اللعب الفعلي هالأسبوع ("الأكثر نشاطاً"). */
+function getTopPlayersByHours(limit, sinceMs) { return getTopPlayers('hours', limit, sinceMs); }
 
 module.exports = {
     awardPoints: awardPoints,
@@ -206,5 +200,6 @@ module.exports = {
     getUserPoints: getUserPoints,
     getTopPlayersByWins: getTopPlayersByWins,
     getTopPlayersByHours: getTopPlayersByHours,
+    getTopPlayersByRounds: getTopPlayersByRounds,
     DAILY_CAP: DAILY_CAP
 };

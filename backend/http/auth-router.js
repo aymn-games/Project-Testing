@@ -194,6 +194,7 @@ var ROUTES = [
   { method: 'GET', path: '/api/public/top-streamers', requireAuth: false, handler: handleTopStreamers },
   { method: 'GET', path: '/api/public/top-players-wins', requireAuth: false, handler: handleTopPlayersByWins },
   { method: 'GET', path: '/api/public/top-players-hours', requireAuth: false, handler: handleTopPlayersByHours },
+  { method: 'GET', path: '/api/public/top-players-rounds', requireAuth: false, handler: handleTopPlayersByRounds },
   // ---- أرقام حقيقية لقسم "الأرقام" بالصفحة الرئيسية — عام، مخزَّن مؤقتاً
   // (٣ أيام) بالسيرفر — راجع backend/stats/platform-stats-service.js
   { method: 'GET', path: '/api/public/platform-stats', requireAuth: false, handler: handleGetPlatformStats },
@@ -984,10 +985,16 @@ function handleTopPlayersByWins(req, res) {
   sendJson(res, 200, { success: true, players: pointsService.getTopPlayersByWins(limit, authService.getRankingPeriodStart()) });
 }
 
-/** أعلى اللاعبين بساعات اللعب الفعلية — عام. */
+/** أعلى اللاعبين بوقت اللعب الفعلي هالأسبوع ("الأكثر نشاطاً") — عام. */
 function handleTopPlayersByHours(req, res) {
   var limit = Math.min(50, Math.max(1, parseInt(getQueryParam(req, 'limit'), 10) || 20));
-  sendJson(res, 200, { success: true, players: pointsService.getTopPlayersByHours(limit) });
+  sendJson(res, 200, { success: true, players: pointsService.getTopPlayersByHours(limit, authService.getRankingPeriodStart()) });
+}
+
+/** أعلى اللاعبين بعدد الجولات المكتملة هالأسبوع ("الأكثر لعباً") — عام. */
+function handleTopPlayersByRounds(req, res) {
+  var limit = Math.min(50, Math.max(1, parseInt(getQueryParam(req, 'limit'), 10) || 20));
+  sendJson(res, 200, { success: true, players: pointsService.getTopPlayersByRounds(limit, authService.getRankingPeriodStart()) });
 }
 
 /** أرقام حقيقية لقسم "الأرقام" بالصفحة الرئيسية — عام، مخزَّن مؤقتاً بالسيرفر. */
