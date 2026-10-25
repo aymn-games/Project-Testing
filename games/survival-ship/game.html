@@ -112,13 +112,31 @@ html.ship-lite [data-lite-bg]{background:rgba(4,40,70,.78)!important}
           <div style="min-width:0;display:flex;flex-direction:column;gap:12px">
             <sc-if value="{{ qShow }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex;flex-direction:column;gap:12px;animation:qIn .45s cubic-bezier(.2,1.2,.4,1)">
-                <div style="display:flex;align-items:center;gap:14px;min-width:0">
-                  <span style="position:relative;width:96px;height:96px;flex-shrink:0;border-radius:24px;overflow:hidden;background:{{ turnBg }};box-shadow:0 0 0 5px #38bdf8, 0 0 30px rgba(56,189,248,.45)"><sc-if value="{{ turnAv }}" hint-placeholder-val="{{ false }}"><img src="{{ turnAv }}" alt="" referrerpolicy="no-referrer" onLoad="{{ showImg }}" onError="{{ hideImg }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
-                  <div style="min-width:0;display:flex;flex-direction:column;gap:2px">
-                    <span style="font:700 20px 'Zain';color:#94a3d8">الدور الآن على</span>
-                    <span style="font:900 46px/1.1 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ turnName }}</span>
+                <sc-if value="{{ soloOn }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:center;gap:14px;min-width:0">
+                    <span style="position:relative;width:96px;height:96px;flex-shrink:0;border-radius:24px;overflow:hidden;background:{{ turnBg }};box-shadow:0 0 0 5px #38bdf8, 0 0 30px rgba(56,189,248,.45)"><sc-if value="{{ turnAv }}" hint-placeholder-val="{{ false }}"><img src="{{ turnAv }}" alt="" referrerpolicy="no-referrer" onLoad="{{ showImg }}" onError="{{ hideImg }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
+                    <div style="min-width:0;display:flex;flex-direction:column;gap:2px">
+                      <span style="font:700 20px 'Zain';color:#94a3d8">الدور الآن على</span>
+                      <span style="font:900 46px/1.1 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ turnName }}</span>
+                    </div>
                   </div>
-                </div>
+                </sc-if>
+                <sc-if value="{{ duelOn }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+                    <span style="font:700 20px 'Zain';color:#94a3d8">⚔️ مواجهة · أول إجابة صحيحة تنجو</span>
+                    <div style="display:flex;align-items:center;gap:14px;min-width:0">
+                      <div style="flex:1;min-width:0;display:flex;align-items:center;gap:12px">
+                        <span style="position:relative;width:76px;height:76px;flex-shrink:0;border-radius:20px;overflow:hidden;background:{{ dA.bg }};box-shadow:0 0 0 4px #38bdf8, 0 0 24px rgba(56,189,248,.4)"><sc-if value="{{ dA.av }}" hint-placeholder-val="{{ false }}"><img src="{{ dA.av }}" alt="" referrerpolicy="no-referrer" onLoad="{{ showImg }}" onError="{{ hideImg }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
+                        <span style="min-width:0;font:900 36px/1.1 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ dA.name }}</span>
+                      </div>
+                      <span style="flex-shrink:0;font:900 30px 'Zain';color:#fcd34d">ضد</span>
+                      <div style="flex:1;min-width:0;display:flex;align-items:center;gap:12px">
+                        <span style="position:relative;width:76px;height:76px;flex-shrink:0;border-radius:20px;overflow:hidden;background:{{ dB.bg }};box-shadow:0 0 0 4px #38bdf8, 0 0 24px rgba(56,189,248,.4)"><sc-if value="{{ dB.av }}" hint-placeholder-val="{{ false }}"><img src="{{ dB.av }}" alt="" referrerpolicy="no-referrer" onLoad="{{ showImg }}" onError="{{ hideImg }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
+                        <span style="min-width:0;font:900 36px/1.1 'Zain';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ dB.name }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
                 <span style="font:900 78px/1.05 'Zain';color:{{ q.ink }};text-shadow:0 0 34px {{ q.glow }}">{{ q.label }}</span>
               </div>
             </sc-if>
@@ -141,7 +159,7 @@ html.ship-lite [data-lite-bg]{background:rgba(4,40,70,.78)!important}
         <sc-if value="{{ nextOn }}" hint-placeholder-val="{{ false }}">
           <div style="position:absolute;z-index:5;top:300px;left:56px;height:96px;padding:0 30px 0 16px;box-sizing:border-box;border-radius:28px;display:flex;align-items:center;gap:16px;background:rgba(8,14,46,.94);border:2px solid rgba(125,211,252,.22);box-shadow:0 18px 40px rgba(4,20,50,.35);animation:fade .4s ease">
             <span style="position:relative;width:64px;height:64px;flex-shrink:0;border-radius:18px;overflow:hidden;background:{{ nextBg }};box-shadow:0 0 0 4px #38bdf8"><sc-if value="{{ nextAv }}" hint-placeholder-val="{{ false }}"><img src="{{ nextAv }}" alt="" referrerpolicy="no-referrer" onLoad="{{ showImg }}" onError="{{ hideImg }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
-            <span style="font:700 22px 'Zain';color:#94a3d8">اللاعب التالي</span>
+            <span style="font:700 22px 'Zain';color:#94a3d8">{{ nextLbl }}</span>
             <span style="font:900 30px 'Zain';color:#fff;white-space:nowrap;max-width:300px;overflow:hidden;text-overflow:ellipsis">{{ nextName }}</span>
           </div>
         </sc-if>
@@ -295,6 +313,44 @@ html.ship-lite [data-lite-bg]{background:rgba(4,40,70,.78)!important}
             </div>
           </div></div>
   </sc-if>
+  <sc-if value="{{ dAnsOn }}" hint-placeholder-val="{{ false }}">
+          <div style="position:fixed;inset:80px 0 0 0;z-index:75;display:grid;place-items:center;background:rgba(4,20,40,.25);animation:fade .2s ease"><div style="width:min(760px, 94vw);box-sizing:border-box;padding:20px 24px 22px;border-radius:32px;background:rgba(18,32,64,.9);backdrop-filter:blur(16px);border:1.5px solid rgba(186,230,253,.3);box-shadow:0 30px 80px rgba(4,20,50,.4);display:flex;flex-direction:column;align-items:center;gap:10px;animation:popIn .45s cubic-bezier(.2,1.25,.35,1)">
+            <div style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;font:800 18px 'Zain'">
+              <span style="color:#e0f2fe">⚔️ إجابات المواجهة</span>
+              <span style="width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.3)"></span>
+              <span style="color:#fde68a">⏸ الوقت متوقف · القرار لك</span>
+            </div>
+            <span style="width:100%;height:1px;background:rgba(255,255,255,.1)"></span>
+            <div style="display:flex;align-items:center;justify-content:center;gap:22px;font:700 18px 'Zain';color:#94a3d8">
+              <span style="display:flex;align-items:center;gap:8px">الفئة <b style="font:900 28px 'Zain';color:{{ ansCatC }}">{{ ansCat }}</b></span>
+              <span style="display:flex;align-items:center;gap:8px">الحرف <b style="font:900 34px/1 'Zain';color:#fcd34d">{{ ansLetter }}</b></span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;width:100%">
+              <sc-for list="{{ dAns }}" as="r" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:22px;background:{{ r.bg }};border:1.5px solid {{ r.bd }};opacity:{{ r.op }};transition:all .25s">
+                  <span style="flex-shrink:0;min-width:64px;text-align:center;padding:5px 12px;box-sizing:border-box;border-radius:999px;background:{{ r.badgeBg }};color:{{ r.badgeC }};font:900 16px 'Zain'">{{ r.order }}</span>
+                  <span style="position:relative;width:56px;height:56px;flex-shrink:0;border-radius:16px;overflow:hidden;background:{{ r.avBg }}"><sc-if value="{{ r.av }}" hint-placeholder-val="{{ false }}"><img src="{{ r.av }}" alt="" referrerpolicy="no-referrer" onLoad="{{ showImg }}" onError="{{ hideImg }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if></span>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                    <span style="font:800 17px 'Zain';color:#94a3d8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span>
+                    <span style="font:900 clamp(26px,2.4vw,40px)/1.15 'Zain';color:{{ r.tc }};text-decoration:{{ r.deco }};overflow-wrap:anywhere">{{ r.text }}</span>
+                    <sc-if value="{{ r.dup }}" hint-placeholder-val="{{ false }}">
+                      <span style="align-self:flex-start;padding:2px 12px;border-radius:999px;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.45);color:#fcd34d;font:800 14px 'Zain'">⚠️ إجابة مكررة · سبق قبولها</span>
+                    </sc-if>
+                  </div>
+                  <sc-if value="{{ r.act }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;gap:8px;flex-shrink:0">
+                      <button onClick="{{ r.ok }}" style="height:52px;padding:0 18px;border:none;border-radius:16px;cursor:pointer;background:linear-gradient(180deg, #6ee7b7, #34d399);color:#064e3b;font:900 22px 'Zain';box-shadow:0 8px 20px rgba(52,211,153,.25)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">✓ قبول</button>
+                      <button onClick="{{ r.bad }}" style="height:52px;padding:0 18px;border:none;border-radius:16px;cursor:pointer;background:linear-gradient(180deg, #fda4af, #fb7185);color:#4c0519;font:900 22px 'Zain';box-shadow:0 8px 20px rgba(251,113,133,.25)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">✗ رفض</button>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ r.note }}" hint-placeholder-val="{{ false }}">
+                    <span style="flex-shrink:0;font:800 16px 'Zain';color:#94a3d8;white-space:nowrap">{{ r.note }}</span>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div></div>
+  </sc-if>
   <sc-if value="{{ shufOn }}" hint-placeholder-val="{{ false }}">
     <div data-lite-bg="" style="position:fixed;inset:80px 0 0 0;z-index:70;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(10px,2vh,24px);background:rgba(4,40,70,.35);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);pointer-events:none;animation:fade .5s ease">
       <span style="font:800 clamp(26px,2.6vw,48px) 'Zain';color:#e0f7ff;text-shadow:0 4px 20px rgba(0,30,60,.5)">{{ shTitle }}</span>
@@ -403,7 +459,7 @@ class Component extends DCLogic {
       cam:null, chat:[], settingsOpen:false, exitOpen:false, scale:1, narrow:innerWidth<820, logo:false };
     this.confetti=Array.from({length:46},(_,i)=>({x:(Math.random()*100).toFixed(1),w:8+Math.round(Math.random()*8),h:12+Math.round(Math.random()*10),c:rand(['#fbbf24','#38bdf8','#f472b6','#a78bfa','#34d399','#fff']),d:(4+Math.random()*4).toFixed(2),dl:(-Math.random()*8).toFixed(2)})); }
   loadCfg(){ const c=SHIP.readJSON(SHIP.keys.setup,{})||{};
-    return { sys:[0,1,2,3].includes(c.sys)?c.sys:2, time:TIMES.includes(c.time)?c.time:15, types:Array.isArray(c.types)&&c.types.length===TYPES.length&&c.types.some(Boolean)?c.types:TYPES.map(()=>true), gift:c.gift>=0&&c.gift<6?c.gift:0, extra:!!c.extra, ring:!!c.ring&&!!c.giftId, ringGift:c.giftId||null, ringName:c.giftName||'', ringCoins:+c.giftCoins||0, ringUses:Math.max(0,+c.ringUses||0) }; }
+    return { sys:[0,1,2,3].includes(c.sys)?c.sys:2, time:TIMES.includes(c.time)?c.time:15, types:Array.isArray(c.types)&&c.types.length===TYPES.length&&c.types.some(Boolean)?c.types:TYPES.map(()=>true), gift:c.gift>=0&&c.gift<6?c.gift:0, extra:!!c.extra, ring:!!c.ring&&!!c.giftId, ringGift:c.giftId||null, ringName:c.giftName||'', ringCoins:+c.giftCoins||0, ringUses:Math.max(0,+c.ringUses||0), duel:c.mode===1 }; }
   save(){ const S=this.state; SHIP.writeJSON(SHIP.keys.setup,{...SHIP.readJSON(SHIP.keys.setup,{}),sys:S.sys,time:S.time,types:S.types,gift:S.gift,extra:S.extra}); }
   fresh(){ const r=Array.isArray(ROSTER)?ROSTER:[];
     const slots=this.layout(r.length);
@@ -460,26 +516,30 @@ class Component extends DCLogic {
     let {queue,round}=this.state; queue=queue.filter(id=>al.some(p=>p.id===id));
     if(!queue.length){ queue=al.map(p=>p.id); round++; }
     const cur=queue[0];
+    // نمط المواجهة: صاحب الدور + اللي بعده بالطابور، ولو ما بقى غيره بالجولة (عدد فردي) خصمه عشوائي من الباقين
+    let pair=null; if(this.cfg.duel){ const opp=queue[1]!=null?queue[1]:rand(al.filter(p=>p.id!==cur)).id; pair=[cur,opp]; }
     const S=this.state, on=TYPES.map((t,i)=>i).filter(i=>S.types[i]), ti=rand(on.length?on:[0]), T=TYPES[ti], POOL='ابتجحدرزسشصطعفقكلمنهوي'.split('').filter(c=>c!==this.lastL), letter=rand(POOL), pre={ti,letter}; this.lastL=letter;
-    const nm=S.players.find(p=>p.id===cur).name;
-    this.setState({paused:false,chat:[],fallFx:null,popShake:false,landShake:false,camFall:null,fxk:null,cam:null,phase:'shuffle',cur,queue:queue.slice(1),round,status:'turn',okId:null,badId:null,q:null,left:S.time,total:S.time,intro:null,
+    const nm=pair?pair.map(id=>S.players.find(p=>p.id===id).name).join(' و '):S.players.find(p=>p.id===cur).name;
+    this.setState({paused:false,chat:[],fallFx:null,popShake:false,landShake:false,camFall:null,fxk:null,cam:null,duel:null,phase:'shuffle',cur,queue:queue.slice(pair&&queue[1]!=null?2:1),round,status:'turn',okId:null,badId:null,q:null,left:S.time,total:S.time,intro:null,
       shuf:{name:'…',type:'…',ic:'🎲',letter:'؟',lock:false},ev:{icon:'🎲',text:'خلط عشوائي للدور القادم…'}});
     const AL=POOL.filter(c=>c!==letter), names=al.map(p=>p.name); let t=600, prev='';
     for(let i=0;i<24;i++){ t+=50+Math.pow(i/23,2.2)*330; this.later(()=>{ const rt=TYPES[rand(on.length?on:[0])]; this.setState({shuf:{name:nm,type:rt.label,ic:rt.icon,letter:i===23?letter:(()=>{ let c; do{ c=rand(AL); }while(c===prev); prev=c; return c; })(),lock:false}}); this.tone(520+Math.random()*380,.045,'square',.025); },t); }
     t+=420; this.later(()=>{ this.setState({shuf:{name:nm,type:T.label,ic:T.icon,letter,lock:true}}); this.sfx('turn'); },t);
-    t+=1000; this.later(()=>this.setState({shuf:null,cam:cur,phase:'turn',ev:{icon:'🎯',text:`الدور على ${nm}`}}),t);
+    t+=1000; this.later(()=>this.setState({shuf:null,cam:cur,duel:pair,phase:'turn',ev:pair?{icon:'⚔️',text:`مواجهة: ${nm.replace(' و ',' ضد ')}`}:{icon:'🎯',text:`الدور على ${nm}`}}),t);
     t+=900; this.later(()=>this.ask(pre),t);
   }
   ask(pre){
     const S=this.state, on=TYPES.map((t,i)=>i).filter(i=>S.types[i]), ti=pre?pre.ti:rand(on.length?on:[0]), T=TYPES[ti];
     this.setState({phase:'ask',status:'wait',q:{ti,txt:'',tiles:[],letter:pre?pre.letter:'ا',k:Date.now()},left:S.time,total:S.time});
     this.sfx('q');
-    clearInterval(this.iv);
-    this.iv=setInterval(()=>{ const l=this.state.left-1; if(l<=0){ this.setState({left:0}); this.resolve('timeout'); } else { this.setState({left:l}); if(l<=5) this.sfx('tick'); } },1000);
+    this.countdown();
   }
+  countdown(){ clearInterval(this.iv);
+    this.iv=setInterval(()=>{ const l=this.state.left-1; if(l<=0){ this.setState({left:0}); this.resolve('timeout'); } else { this.setState({left:l}); if(l<=5) this.sfx('tick'); } },1000); }
   // كل تعليق من الشات: تُقبل فقط رسالة صاحب الدور أثناء السؤال اللي تبدأ بحرف الجولة (باقي السوالف تنتجاهل)،
   // وأول رسالة مطابقة توقف الوقت وتفتح تبويب الإجابة
   onChat(name,text){ const S=this.state, cur=S.players.find(p=>p.id===S.cur); text=String(text||'').trim();
+    if(S.duel) return this.onDuelChat(name,text);
     if(S.phase!=='ask'||!cur||cur.name!==name||!text||S.paused) return;
     if(!startsWithLetter(text,S.q&&S.q.letter)) return;
     this.pushMsg({name,text,ans:true,dup:!!this.usedAns&&this.usedAns.has(ANS_KEY(text))}); }
@@ -494,39 +554,70 @@ class Component extends DCLogic {
     this.sfx('gold'); }
   pushMsg(m){ m.id=(this.mid=(this.mid||0)+1); if(m.ans){ clearInterval(this.iv); this.setState({paused:true}); } this.setState(s=>({chat:[...s.chat,m].slice(-7)})); if(m.ans) this.sfx('tick'); }
   judgeMsg(id,ok){ const m=this.state.chat.find(x=>x.id===id); if(ok&&m) (this.usedAns||(this.usedAns=new Set())).add(ANS_KEY(m.text)); this.setState({paused:false}); this.setState(s=>({chat:s.chat.map(m=>m.id===id?{...m,res:ok?'ok':'bad'}:m)})); this.resolve(ok?'ok':'bad'); }
+  // نمط المواجهة: كل لاعب من الثنائي له إجابة وحدة بالسؤال، تُرتب حسب الأسبقية. أول إجابة توقف الوقت، والإجابة الثانية
+  // (لو وصلت) تنتظر لين يحكم الستريمر على الأولى. قبول الأولى = صاحبها ينجو والثاني يطيح بحكم الأسبقية
+  onDuelChat(name,text){ const S=this.state, p=S.players.find(x=>S.duel.includes(x.id)&&x.name===name);
+    if(S.phase!=='ask'||!p||!text) return;
+    if(S.chat.some(m=>m.ans&&m.pid===p.id)) return;
+    if(!startsWithLetter(text,S.q&&S.q.letter)) return;
+    this.pushMsg({name,text,pid:p.id,ans:true,dup:!!this.usedAns&&this.usedAns.has(ANS_KEY(text))}); }
+  duelJudge(id,ok){ const S=this.state, m=S.chat.find(x=>x.id===id); if(S.phase!=='ask'||!m||m.res) return;
+    if(S.chat.find(x=>x.ans&&!x.res)!==m) return;
+    const chat=S.chat.map(x=>x.id===id?{...x,res:ok?'ok':'bad'}:x); this.setState({chat});
+    if(ok){ (this.usedAns||(this.usedAns=new Set())).add(ANS_KEY(m.text)); return this.duelEnd(m.pid,S.duel.filter(id=>id!==m.pid),'ok'); }
+    const other=S.duel.find(id=>id!==m.pid), om=chat.find(x=>x.ans&&x.pid===other);
+    if(om&&om.res) return this.duelEnd(null,S.duel.slice(),'bad');
+    if(om) return;
+    const op=S.players.find(x=>x.id===other); this.sfx('bad');
+    this.setState({paused:false,ev:{icon:'❌',text:`رُفضت إجابة ${m.name} · الفرصة الآن لـ ${op.name}`}}); this.countdown(); }
+  // نهاية المواجهة: wid الفائز (أو null لو ما أحد جاوب صح)، losers يطيحون بالبحر واحد ورا الثاني.
+  // لو كانوا آخر لاعبين على السفينة وما أحد جاوب صح، ما أحد يطيح وتنعاد لهم مواجهة جديدة
+  duelEnd(wid,losers,kind){ const S=this.state; clearInterval(this.iv); (this.ctm||[]).forEach(clearTimeout);
+    this.setState({phase:'result',status:kind,paused:false});
+    const w=S.players.find(p=>p.id===wid), names=losers.map(id=>S.players.find(p=>p.id===id).name);
+    if(w){ this.setState({okId:w.id,ev:{icon:'✅',text:`${w.name} جاوب أول وصح · ${names.join(' و ')} يطيح بالبحر`}}); this.sfx('ok'); this.fx('ok'); }
+    else { this.sfx(kind==='timeout'?'timeout':'bad'); this.fx(kind==='timeout'?'timeout':'bad'); }
+    if(!w&&losers.length>=this.alive().length){ this.setState({ev:{icon:'🔁',text:'ما أحد جاوب صح · مواجهة جديدة'}}); return this.later(()=>this.nextTurn(),2300); }
+    if(!w) this.setState({ev:{icon:kind==='timeout'?'⏰':'❌',text:`ما أحد جاوب صح · ${names.join(' و ')} يطيحون بالبحر`}});
+    const run=i=>{ if(i>=losers.length) return this.nextTurn(); const p=this.state.players.find(x=>x.id===losers[i]); this.later(()=>run(i+1),this.overboard(p)); };
+    this.later(()=>run(0),w?1200:0); }
   resolve(kind){
-    const S=this.state; if(S.phase!=='ask') return; clearInterval(this.iv); (this.ctm||[]).forEach(clearTimeout);
+    const S=this.state; if(S.phase!=='ask') return;
+    if(S.duel) return this.duelEnd(null,S.duel.slice(),'timeout');
+    clearInterval(this.iv); (this.ctm||[]).forEach(clearTimeout);
     const p=S.players.find(x=>x.id===S.cur), stages=['pop'];
     this.setState({phase:'result',status:kind});
     if(kind==='ok'){ this.setState({okId:p.id,ev:{icon:'✅',text:`${p.name} جاوب صح وباقي على السفينة`}}); this.sfx('ok'); this.fx('ok'); this.later(()=>this.setState({cam:null}),1300); return this.later(()=>this.nextTurn(),2300); }
     const dmg=p.dmg+1;
     this.setState({badId:p.id}); this.sfx(kind==='timeout'?'timeout':'bad'); this.fx(kind==='timeout'?'timeout':'bad');
-    if(dmg>=stages.length){
-      if(p.gold){
-        this.upd(p.id,()=>({gold:false,goldUsed:true,dmg:0})); this.setState({shardId:p.id});
-        this.banner('save','🛟',`${p.name} نجا! طوق النجاة حماه من البحر`,2000);
-        this.setState({ev:{icon:'🛟',text:`${p.name} نجا وباقي على السفينة`}});
-        this.sfx('gold');
-        this.later(()=>this.setState({shardId:null}),800); this.later(()=>this.setState({cam:null}),2000); return this.later(()=>this.nextTurn(),3000);
-      }
-      this.upd(p.id,()=>({dmg}));
-      const landX=p.pos.cx<960?40:1880;
-      const useFile=this.fallOk!==false; this.later(()=>{ this.upd(p.id,()=>({popping:true,landX})); this.setState({popShake:true}); if(!useFile){ this.sfx('heave'); this.sfx('fall'); } },800);
-      // fall.mp3 (1.8 ث مقصوص من بداية السقوط، أعلى صوت = الارتطام عند 0.7 ث) يبدأ لحظة ما يطيح اللاعب من آخر اللوح بالمشهد
-      // (1.4 ث من بداية حركته، اللي تبدأ عند 0.8 ث) فيوافق الارتطام وصوله للماء (2.1 ث من بداية الحركة) — ما يشتغل وقت المشي
-      if(useFile) this.later(()=>{ try{ const A=this.fallAud; A.currentTime=0; A.play().catch(()=>{}); }catch(e){} },2200);
-      this.later(()=>this.setState({camFall:{x:landX,y:LAND_Y-140},popShake:false}),1100);
-      this.later(()=>{ this.setState({fallFx:{x:landX},landShake:true}); if(!useFile) this.sfx('splash'); },2700);
-      this.later(()=>this.banner('out','🌊',`انرمى ${p.name} في البحر وخرج من المباراة`,2000),3000);
-      this.setState({ev:{icon:'🌊',text:`${p.name} طاح في البحر`}});
-      this.later(()=>this.setState({camFall:null,cam:null,landShake:false,fallFx:null}),4300);
-      this.later(()=>{ this.upd(p.id,()=>({out:true,popping:false})); this.setState({shardId:null}); },5600);
-      return this.later(()=>this.nextTurn(),5800);
-    }
+    if(dmg>=stages.length) return this.later(()=>this.nextTurn(),this.overboard(p));
     this.upd(p.id,()=>({dmg})); this.later(()=>this.sfx('leak'),350);
     const lbl=STG[stages[dmg-1]].label, why=kind==='timeout'?'انتهى وقته':'أخطأ';
     this.setState({ev:{icon:kind==='timeout'?'⏰':'❌',text:`${p.name} ${why} · بالونه: ${lbl}`}});
     this.later(()=>this.setState({cam:null}),1700); this.later(()=>this.nextTurn(),2700);
+  }
+  // رمي اللاعب في البحر (أو نجاته بطوق النجاة) — ترجع المدة بالملّي ثانية لين يخلص المشهد
+  overboard(p){ const dmg=p.dmg+1;
+    if(p.gold){
+      this.upd(p.id,()=>({gold:false,goldUsed:true,dmg:0})); this.setState({shardId:p.id});
+      this.banner('save','🛟',`${p.name} نجا! طوق النجاة حماه من البحر`,2000);
+      this.setState({ev:{icon:'🛟',text:`${p.name} نجا وباقي على السفينة`}});
+      this.sfx('gold');
+      this.later(()=>this.setState({shardId:null}),800); this.later(()=>this.setState({cam:null}),2000); return 3000;
+    }
+    this.upd(p.id,()=>({dmg}));
+    const landX=p.pos.cx<960?40:1880;
+    const useFile=this.fallOk!==false; this.later(()=>{ this.upd(p.id,()=>({popping:true,landX})); this.setState({popShake:true}); if(!useFile){ this.sfx('heave'); this.sfx('fall'); } },800);
+    // fall.mp3 (1.8 ث مقصوص من بداية السقوط، أعلى صوت = الارتطام عند 0.7 ث) يبدأ لحظة ما يطيح اللاعب من آخر اللوح بالمشهد
+    // (1.4 ث من بداية حركته، اللي تبدأ عند 0.8 ث) فيوافق الارتطام وصوله للماء (2.1 ث من بداية الحركة) — ما يشتغل وقت المشي
+    if(useFile) this.later(()=>{ try{ const A=this.fallAud; A.currentTime=0; A.play().catch(()=>{}); }catch(e){} },2200);
+    this.later(()=>this.setState({camFall:{x:landX,y:LAND_Y-140},popShake:false}),1100);
+    this.later(()=>{ this.setState({fallFx:{x:landX},landShake:true}); if(!useFile) this.sfx('splash'); },2700);
+    this.later(()=>this.banner('out','🌊',`انرمى ${p.name} في البحر وخرج من المباراة`,2000),3000);
+    this.setState({ev:{icon:'🌊',text:`${p.name} طاح في البحر`}});
+    this.later(()=>this.setState({camFall:null,cam:null,landShake:false,fallFx:null}),4300);
+    this.later(()=>{ this.upd(p.id,()=>({out:true,popping:false})); this.setState({shardId:null}); },5600);
+    return 5800;
   }
   giveGold(){
     const S=this.state, p=S.players.find(x=>x.id===S.cur); if(!p) return;
@@ -544,7 +635,7 @@ class Component extends DCLogic {
     const players=this.state.players.map(p=>({id:this.reg.id(p.name),name:p.name})).filter(p=>p.id), wid=this.reg.id(w.name);
     const A=window.AGPAuth; if(!A||typeof A.reportMatchPoints!=='function'||!players.length) return;
     A.reportMatchPoints({players,winnerIds:wid?[wid]:[],teamGame:false,durationMs:Date.now()-(this.matchStartedAt||Date.now())}); }
-  replay(){ this.clearAll(); this.setState({chat:[],cam:null,camFall:null,fallFx:null,players:this.fresh(),phase:'ready',cur:null,queue:[],round:0,q:null,status:'ready',winner:null,okId:null,badId:null,shardId:null,banner:null,ev:{icon:'🔁',text:'مباراة جديدة بنفس اللاعبين'}}); }
+  replay(){ this.clearAll(); this.setState({chat:[],cam:null,camFall:null,fallFx:null,players:this.fresh(),phase:'ready',cur:null,duel:null,queue:[],round:0,q:null,status:'ready',winner:null,okId:null,badId:null,shardId:null,banner:null,ev:{icon:'🔁',text:'مباراة جديدة بنفس اللاعبين'}}); }
 
   pv(p,i){
     const S=this.state, stages=['pop'], st=p.dmg===0?'ok':(stages[p.dmg-1]||'ok'), stv=st==='pop'?'sway':st, B=BODY[stv];
@@ -611,13 +702,14 @@ class Component extends DCLogic {
       roundTxt:S.round||'—', aliveN,
       hudLetter:S.q&&S.q.letter||(S.shuf&&S.shuf.lock?S.shuf.letter:'؟'),
       ansCat:S.q?TYPES[S.q.ti].label:'', ansCatC:S.q?TYPES[S.q.ti].c:'#fff', ansLetter:S.q?S.q.letter:'',
-      sceneJson:JSON.stringify({names:false,focus:S.phase==='over'?S.winner:S.cam,cheer:S.phase==='over'?S.winner:S.okId,win:S.phase==='over',far:S.phase==='shuffle',players:S.players.map(p=>({id:p.id,name:p.name,skin:p.look.skin,hair:p.look.hair,girl:p.look.girl,outfit:p.look.outfit,pants:p.look.pants,out:p.out,fall:p.popping}))}),
+      sceneJson:JSON.stringify({names:false,focus:S.phase==='over'?S.winner:S.duel?null:S.cam,duel:S.phase==='over'?null:S.duel||null,cheer:S.phase==='over'?S.winner:S.okId,win:S.phase==='over',far:S.phase==='shuffle',players:S.players.map(p=>({id:p.id,name:p.name,skin:p.look.skin,hair:p.look.hair,girl:p.look.girl,outfit:p.look.outfit,pants:p.look.pants,out:p.out,fall:p.popping}))}),
       tOffB:(527.8*(1-(S.total?S.left/S.total:1))).toFixed(1),
-      ...(()=>{ const n=(S.queue||[]).map(id=>S.players.find(p=>p.id===id)).find(p=>p&&!p.out&&!p.popping); return {nextOn:!!n&&ph!=='ready'&&ph!=='over', nextName:n?n.name:'', nextAv:n?this.reg.avatar(n.name)||'':'', nextBg:n?bgOf(n.gold?GOLD:n.col):'transparent'}; })(), totalN:S.players.length,
+      ...(()=>{ const nx=(S.queue||[]).map(id=>S.players.find(p=>p.id===id)).filter(p=>p&&!p.out&&!p.popping), n=nx[0]; return {nextOn:!!n&&ph!=='ready'&&ph!=='over', nextLbl:S.duel?'المواجهة التالية':'اللاعب التالي', nextName:n?(S.duel&&nx[1]?`${n.name} ضد ${nx[1].name}`:n.name):'', nextAv:n?this.reg.avatar(n.name)||'':'', nextBg:n?bgOf(n.gold?GOLD:n.col):'transparent'}; })(), totalN:S.players.length,
       turnName:curP&&ph!=='ready'?curP.name:'—', turnAv:curP&&ph!=='ready'?this.reg.avatar(curP.name)||'':'', hideImg:e=>{ e.currentTarget.style.display='none'; }, showImg:e=>{ e.currentTarget.style.display=''; }, turnBg:curP&&ph!=='ready'?bgOf(curP.gold?GOLD:curP.col):'rgba(255,255,255,.08)', turnGlow:curP&&ph!=='ready'?(curP.gold?GOLD:curP.col)[0]+'88':'transparent',
       qShow:!!q&&(ph==='ask'||ph==='result'), q:q||{segs:[],tiles:[]}, qIdle:!(q&&(ph==='ask'||ph==='result')),
-      idleTitle:ph==='turn'&&curP?`استعد يا ${curP.name}…`:ph==='over'?'انتهت المباراة':'جاهزين للمباراة؟',
-      idleSub:ph==='turn'?'السؤال جاي بعد لحظة':ph==='over'?'':'كل لاعب يجاوب بدوره قبل ما يخلص الوقت',
+      soloOn:!S.duel, duelOn:!!S.duel, ...(()=>{ const d=(S.duel||[]).map(id=>S.players.find(p=>p.id===id)), card=p=>p?{name:p.name,av:this.reg.avatar(p.name)||'',bg:bgOf(p.gold?GOLD:p.col)}:{name:'—',av:'',bg:'transparent'}; return {dA:card(d[0]),dB:card(d[1])}; })(),
+      idleTitle:ph==='turn'&&S.duel?`استعدوا يا ${S.duel.map(id=>S.players.find(p=>p.id===id).name).join(' و ')}…`:ph==='turn'&&curP?`استعد يا ${curP.name}…`:ph==='over'?'انتهت المباراة':'جاهزين للمباراة؟',
+      idleSub:ph==='turn'?'السؤال جاي بعد لحظة':ph==='over'?'':this.cfg.duel?'لاعبين بنفس السؤال · أول إجابة صحيحة تنجو':'كل لاعب يجاوب بدوره قبل ما يخلص الوقت',
       tPct:ph==='ask'||ph==='result'?Math.round(pct*100):100, tBar:urgent?'linear-gradient(90deg,#ef4444,#f87171)':pct<=.5?'linear-gradient(90deg,#f59e0b,#fbbf24)':'linear-gradient(90deg,#10b981,#34d399)',
       tOff:ph==='ask'||ph==='result'?(502.65*(1-pct)).toFixed(1):0, tStroke:tc, tColor:ph==='ask'||ph==='result'?tc:'#c7d2fe', tNum:ph==='ask'||ph==='result'?S.left:S.time,
       ringAn:ph==='ask'&&S.left===S.total?'ringStart .5s ease':urgent?'pulse 1s ease-in-out infinite':'none',
@@ -630,7 +722,19 @@ class Component extends DCLogic {
       introOn:!!S.intro, inName:S.intro&&S.intro.name, inN:S.intro&&S.intro.n, inC:S.intro?S.intro.c:'#fff', inK:S.intro?String(S.intro.k):'0',
       bannerOn:!!S.banner, bannerIcon:S.banner&&S.banner.icon, bannerText:S.banner&&S.banner.text, bannerDur:S.banner?S.banner.ms+'ms':'1s', bannerBg:BN[0], bannerBd:BN[1], bannerGlow:BN[2],
       stTxt:STS[0], stC:STS[1], stBg:STS[2], stBd:STS[3], stDotAn:S.status==='wait'?'dotP 1s ease-in-out infinite':'none',
-      ...(()=>{ const m=ph==='ask'&&S.chat.filter(m=>m.ans&&!m.res&&curP&&m.name===curP.name).pop(); return {ansOn:!!m, ansName:m?m.name:'', ansText:m?m.text:'', ansDup:!!(m&&m.dup), ansOk:()=>m&&this.judgeMsg(m.id,true), ansBad:()=>m&&this.judgeMsg(m.id,false)}; })(),
+      ...(()=>{ const m=ph==='ask'&&!S.duel&&S.chat.filter(m=>m.ans&&!m.res&&curP&&m.name===curP.name).pop(); return {ansOn:!!m, ansName:m?m.name:'', ansText:m?m.text:'', ansDup:!!(m&&m.dup), ansOk:()=>m&&this.judgeMsg(m.id,true), ansBad:()=>m&&this.judgeMsg(m.id,false)}; })(),
+      // تبويب إجابات المواجهة: الإجابات بترتيب وصولها، والقرار متاح على أول إجابة ما انحكم عليها بس
+      ...(()=>{ const D=S.duel, ans=D?S.chat.filter(m=>m.ans):[], head=ans.find(m=>!m.res), on=ph==='ask'&&!!head;
+        if(!on) return {dAnsOn:false,dAns:[]};
+        const row=(p,m,i)=>{ const act=m===head, rej=m&&m.res==='bad', none=!m;
+          return {order:none?'—':['الأول','الثاني'][i], name:p.name, av:this.reg.avatar(p.name)||'', avBg:bgOf(p.gold?GOLD:p.col), text:none?'لسا ما جاوب':m.text, dup:!!(m&&m.dup&&!rej), act,
+            note:rej?'✗ مرفوضة':none?'⏳ ينتظر':!act?'⏸ بانتظار قرارك على الأول':'', tc:none?'#64748b':rej?'#fb7185':'#fff', deco:rej?'line-through':'none',
+            bg:act?'rgba(56,189,248,.1)':'rgba(255,255,255,.03)', bd:act?'rgba(125,211,252,.55)':'rgba(255,255,255,.08)', op:act?1:.7,
+            badgeBg:none?'rgba(255,255,255,.06)':i===0?'linear-gradient(90deg,#f59e0b,#fbbf24)':'rgba(148,163,216,.25)', badgeC:none?'#94a3d8':i===0?'#422006':'#e0e7ff',
+            ok:()=>m&&this.duelJudge(m.id,true), bad:()=>m&&this.duelJudge(m.id,false)}; };
+        const rows=ans.map((m,i)=>row(S.players.find(p=>p.id===m.pid),m,i));
+        D.filter(id=>!ans.some(m=>m.pid===id)).forEach(id=>rows.push(row(S.players.find(p=>p.id===id),null,rows.length)));
+        return {dAnsOn:true,dAns:rows}; })(),
       isReady:ph==='ready', isAsk:ph==='ask', start:()=>this.start(), judgeOk:()=>this.resolve('ok'), judgeBad:()=>this.resolve('bad'), giveGold:()=>this.giveGold(),
       evIcon:S.ev.icon, evText:S.ev.text,
       ...(()=>{ const F=S.fxk&&{ok:['إجابة صحيحة!','✓','linear-gradient(90deg,#059669,#22c55e)','rgba(34,197,94,.55)','#16a34a','rgba(34,197,94,.45)'],bad:['إجابة خاطئة!','✗','linear-gradient(90deg,#be123c,#f43f5e)','rgba(244,63,94,.55)','#e11d48','rgba(244,63,94,.5)'],timeout:['انتهى الوقت!','⏰','linear-gradient(90deg,#b45309,#f59e0b)','rgba(245,158,11,.55)','#d97706','rgba(245,158,11,.45)']}[S.fxk.kind]||[]; return {fxOn:!!S.fxk,fxText:F[0],fxIcon:F[1],fxBg:F[2],fxGlow:F[3],fxInk:F[4],fxVig:F[5]}; })(),
