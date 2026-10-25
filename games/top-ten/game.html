@@ -402,7 +402,7 @@ class Component extends DCLogic {
     if(t===this.norm(s.keyword)){ if(this.followersOnly&&!isFollower) return 'rejected'; if(!s.players.includes(user)&&!(this._ever||[]).includes(user)){ this._ever=[...(this._ever||[]),user]; this.tone(880,.12,'triangle'); this.setState(x=>({players:[...x.players,user],joinNew:x.joinOpen?[...x.joinNew,user]:x.joinNew})); } return 'join'; }
     if(!s.players.includes(user)) return 'notJoined';
     if(!s.ready||s.revealed||s.winOpen) return 'closed';
-    const A=this.q().a, i=A.findIndex((al,k)=>!s.opened[k]&&al.some(x=>this.norm(x)===t)); if(i<0) return 'miss';
+    const g=TT.answerKey(text), A=this.q().a, i=g?A.findIndex((al,k)=>!s.opened[k]&&al.some(x=>TT.answerKey(x)===g)):-1; if(i<0) return 'miss';
     const pts=10-i, opened={...s.opened,[i]:{by:user}};
     this.tone(660,.12,'triangle'); setTimeout(()=>this.tone(990,.25,'triangle'),110);
     this.setState({opened,scores:{...s.scores,[user]:(s.scores[user]||0)+pts}});
