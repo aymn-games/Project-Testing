@@ -415,7 +415,7 @@ input::placeholder{color:#6f6a7c}
           <button onClick="{{ cancelSettings }}" aria-label="إغلاق" style="width:42px;height:42px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;cursor:pointer;display:grid;place-items:center;transition:background .2s" style-hover="background:rgba(255,255,255,.09)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
         </div>
         <sc-if value="{{ rulesLocked }}" hint-placeholder-val="{{ false }}">
-          <div style="flex-shrink:0;margin:12px 16px 0;padding:10px 14px;border-radius:14px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35);font:600 13px/1.6 'IBM Plex Sans Arabic';color:#fde68a">تعديلات القواعد تُطبَّق من الجولة القادمة.</div>
+          <div style="flex-shrink:0;margin:12px 16px 0;padding:10px 14px;border-radius:14px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35);font:600 13px/1.6 'IBM Plex Sans Arabic';color:#fde68a">تغيير المدة يُطبَّق من الجولة القادمة.</div>
         </sc-if>
         <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:12px 16px 16px;display:flex;flex-direction:column;gap:12px">
           <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="4">
@@ -476,10 +476,6 @@ input::placeholder{color:#6f6a7c}
         </div>
         <div style="flex-shrink:0;display:flex;flex-direction:column;gap:10px;padding:12px 16px 16px;border-top:1px solid rgba(255,255,255,.06)">
           <button onClick="{{ openJoin }}" style="width:100%;height:52px;border:none;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg,rgba(139,92,246,.55),rgba(167,139,250,.45));color:#fff;font:700 16px 'IBM Plex Sans Arabic';box-shadow:0 8px 22px rgba(124,58,237,.22);transition:filter .2s" style-hover="filter:brightness(1.1)" style-active="transform:scale(.98)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>إدخال لاعب جديد</button>
-          <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:8px">
-            <button onClick="{{ saveSettings }}" style="height:48px;border:none;border-radius:999px;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;font:700 15px 'IBM Plex Sans Arabic';cursor:pointer;box-shadow:0 8px 22px rgba(124,58,237,.35)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">حفظ الإعدادات</button>
-            <button onClick="{{ cancelSettings }}" style="height:48px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;font:700 14px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="background:rgba(255,255,255,.09)" style-active="transform:scale(.97)">إلغاء</button>
-          </div>
         </div>
       </aside>
     </div>
@@ -589,7 +585,7 @@ const HELP_STEPS = [
 class Component extends DCLogic {
   settings = WHSettings.sanitize(WH.readJSON(WH.keys.setup, null));
   session = null;
-  state = { v:0, setTab:0, pending:[], joinOpen:false, joined:[], simName:(Array.isArray(ROSTER)&&ROSTER[0])||'لاعب تجريبي', scale:1, narrow:innerWidth<820, logo:false, recent:[], notifs:[], toast:null, flash:null, hexRun:0,
+  state = { v:0, joinOpen:false, joined:[], simName:(Array.isArray(ROSTER)&&ROSTER[0])||'لاعب تجريبي', scale:1, narrow:innerWidth<820, logo:false, recent:[], notifs:[], toast:null, flash:null, hexRun:0,
     conn:WH.getSavedConnection()?'connecting':'none', simOpen:false, simText:'', simLast:null };
   componentDidMount(){
     this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}); this.fit(); addEventListener('resize',this.fit);
@@ -615,7 +611,7 @@ class Component extends DCLogic {
   // ---------- المباراة: عدة جولات (3/5/7) ومجموع نقاط تراكمي، والفائز بعد آخر جولة ----------
   totals={}; roundNo=0; matchRounds=null; matchActiveMs=0;
   startRound=()=>{ const round=this.nextRound||this.pick(); if(!round) return this.toastMsg('لا توجد جولات معتمدة');
-    if(!this.roundNo){ this.totals={}; this.matchActiveMs=0; this.matchReported=false; this.matchRounds=this.settings.matchRounds; this.matchStartedAt=Date.now(); }
+    if(!this.roundNo){ this.totals={}; this.matchActiveMs=0; this.matchReported=false; this.matchStartedAt=Date.now(); }
     this.roundNo++;
     this.session=E.createSession(round,WHSettings.rules(this.settings)); this.session.start(Date.now()); this.reported=false; this.lastSec=null;
     this.rememberRound(round.id); this.tone(523,.12,'triangle'); setTimeout(()=>this.tone(784,.2,'triangle'),120);
@@ -667,9 +663,6 @@ class Component extends DCLogic {
   roster=Array.isArray(ROSTER)?[...ROSTER]:[];
   maxPlayers(){ return Math.max(1,Math.min(200,+(SETUP&&SETUP.maxPlayers)||50)); }
   saveRoster(){ const all=this.reg.all(); WH.writeJSON(WH.keys.roster,this.roster); WH.writeJSON(WH.keys.players,Object.fromEntries(this.roster.map(n=>[n,all[n]]))); }
-  // إزالة من تبويب اللاعبين تُطبَّق بعد إغلاق اللوحة (مع تراجع قبلها) — إجاباته بعدها ما تنحسب ونقاطه السابقة تبقى
-  applyPending(){ const P=this.state.pending; if(!P.length) return; this.setState({pending:[]});
-    P.forEach(n=>{ this.joined.delete(E.playerKey(this.reg.id(n),n)); }); this.roster=this.roster.filter(n=>!P.includes(n)); this.saveRoster(); this.bump(); }
   // نافذة «إدخال لاعبين جدد»: كلمة الدخول بالشات (المتابعين فقط لو مفعّل) → ينضافون للمباراة عند الإغلاق
   joinChat(raw){ const S=this.state; if(!S.joinOpen||S.joinOpenOut||!SETUP||WH.norm(raw.text)!==WH.norm(SETUP.keyword)) return false;
     if(SETUP.who==='followers'&&!raw.isFollower) return true;
@@ -830,24 +823,14 @@ class Component extends DCLogic {
     return { helpOpen:!!S.helpOpen, closeHelp:()=>this.shut('helpOpen'), helpSteps:HELP_STEPS.map((t,i)=>({key:i,txt:t})), exRound:round.id.replace('r',''),
       exLetters:letters.map((ch,i)=>({key:i,ch,bg:i===0?'linear-gradient(160deg,#fde68a,#f59e0b)':'rgba(139,92,246,.35)',fg:i===0?'#1a1206':'#fff'})), examples:ex,
       helpOv:S.helpOpenOut?'fadeOut .26s ease forwards':'fade .25s ease', helpAn:S.helpOpenOut?'popOut .26s ease forwards':'popIn .4s cubic-bezier(.2,1.25,.35,1)' }; }
-  settingsVals(){ const S=this.state, d=S.draft||this.settings, st=this.session?this.session.state:'idle';
+  // كل تغيير يُحفظ مباشرة بدون زر حفظ. المدة تُطبَّق من الجولة القادمة (الجولة الجارية تحتفظ بقواعدها)،
+  // وعدد الجولات يُطبَّق على المباراة الحالية مباشرة.
+  saveSetting(k,v){ const n=WHSettings.sanitize({...this.settings,[k]:v}); this.settings=n; WH.writeJSON(WH.keys.setup,n); this.bump(); }
+  settingsVals(){ const S=this.state, st=this.session?this.session.state:'idle';
     return { settingsOpen:!!S.settingsOpen, rulesLocked:st==='running'||st==='paused',
-      sections:WHSettings.viewSections(d,(k,v)=>this.setState(x=>({draft:{...(x.draft||this.settings),[k]:v}})),{rounds:ROUND_OPTS}),
-      bankInfo:`بنك الجولات: ${BANK.approved.length} جولة معتمدة · ${BANK.drafts.length} مسودة مستبعدة من الاختيار`+(BANK.drafts.length?` (${BANK.drafts.map(r=>r.id+': '+r.count+' كلمة').join('، ')})`:'')+` — الجولة تُعتمد عند ${E.MIN_APPROVED_WORDS} كلمة صحيحة فريدة على الأقل.`,
-      saveSettings:()=>{ const v=WHSettings.sanitize(S.draft||this.settings);
-        if(v.roundPick==='manual'&&!BANK.approved.some(r=>r.id===v.roundId)) return this.toastMsg('اختر الجولة المحددة أو غيّر الاختيار إلى عشوائية');
-        this.settings=v; WH.writeJSON(WH.keys.setup,v); if(!this.session||this.session.state==='ended') this.nextRound=this.pick(); else this.nextRound=null;
-        this.shut('settingsOpen'); this.setState({draft:null}); setTimeout(()=>this.applyPending(),260); this.toastMsg(this.session&&(this.session.state==='running'||this.session.state==='paused')?'تم الحفظ — قواعد الجولة الجديدة تُطبَّق من الجولة القادمة':'تم حفظ الإعدادات'); },
-      resetSettings:()=>this.setState({draft:WHSettings.defaults()}),
-      cancelSettings:()=>{ this.shut('settingsOpen'); this.setState({draft:null}); setTimeout(()=>this.applyPending(),260); },
-      setTabs:['الإعدادات','اللاعبين'].map((l,i)=>{ const on=(S.setTab||0)===i; return {key:i,label:l,pick:()=>this.setState({setTab:i}),bg:on?'linear-gradient(90deg,rgba(139,92,246,.55),rgba(167,139,250,.45))':'transparent',fg:on?'#fff':'#a8a3b5',sh:on?'0 6px 18px rgba(124,58,237,.22)':'none'}; }),
-      tabSettings:(S.setTab||0)===0, tabPlayers:S.setTab===1, playerCount:this.roster.length, noPlayers:!this.roster.length,
-      players:(()=>{ const tot={}; this.matchBoard().forEach(t=>{ tot[t.key]=t.score; });
-        return this.roster.map((n,i)=>{ const pd=S.pending.includes(n), av=this.reg.avatar(n), k=E.playerKey(this.reg.id(n),n);
-          return {key:n,name:n,num:i+1,ini:ini(n),av:av||'',avOp:av?1:0,score:tot[k]||0,pending:pd,active:!pd,isOut:false,op:pd?.55:1,deco:pd?'line-through':'none',
-            bg:pd?'rgba(248,113,113,.06)':'rgba(255,255,255,.025)',bd:pd?'rgba(248,113,113,.25)':'rgba(255,255,255,.07)',
-            kick:()=>this.setState(x=>({pending:[...x.pending,n]})), undo:()=>this.setState(x=>({pending:x.pending.filter(y=>y!==n)})), revive:()=>{}}; }); })(),
-      openJoin:()=>{ this.shut('settingsOpen'); this.setState({draft:null}); setTimeout(()=>this.applyPending(),260); this.setState({joinOpen:true,joinOpenOut:false,joined:[]}); },
+      sections:WHSettings.viewSections(this.settings,(k,v)=>this.saveSetting(k,v),{}),
+      cancelSettings:()=>this.shut('settingsOpen'),
+      openJoin:()=>{ this.shut('settingsOpen'); this.setState({joinOpen:true,joinOpenOut:false,joined:[]}); },
       joinOpen:!!S.joinOpen, closeJoin:this.closeJoin, joinTeams:[{key:0,name:'كلمة الدخول',cmd:(SETUP&&SETUP.keyword)||''}],
       joined:S.joined.map(n=>{ const a=this.reg.avatar(n), fr=this.reg.framed(n), kick=()=>this.setState(x=>({joined:x.joined.filter(y=>y!==n)}));
         return {key:n,name:n,ini:ini(n),av:a||'',op:a?1:0,framed:!!fr,plain:!fr,frameEl:fr?WH.frameCard(fr,kick):null,kick}; }), joinRowH:S.joined.some(n=>this.reg.framed(n))?'100px':'54px',
@@ -890,7 +873,7 @@ class Component extends DCLogic {
       winOv:S.winOpenOut?'fadeOut .26s ease forwards':'fade .3s ease', winAn:S.winOpenOut?'popOut .26s ease forwards':'popIn .55s cubic-bezier(.2,1.25,.35,1)' }; }
   renderVals(){ const S=this.state;
     return { lblDisp:S.narrow?'none':'inline', scale:S.scale, fx:this.buildFx(), stop:e=>e.stopPropagation(), toast:S.toast,
-      onExit:()=>this.setState({confirmOpen:true,confirmOpenOut:false,confKind:'exit'}), onSettings:()=>this.setState({settingsOpen:true,settingsOpenOut:false,draft:{...this.settings}}),
+      onExit:()=>this.setState({confirmOpen:true,confirmOpenOut:false,confKind:'exit'}), onSettings:()=>this.setState({settingsOpen:true,settingsOpenOut:false}),
       onHelp:()=>this.setState({helpOpen:true,helpOpenOut:false}), newRound:this.newRound,
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
       ...this.winVals(), roundLabel:this.roundNo?`الجولة ${this.roundNo} من ${this.matchRounds||this.settings.matchRounds}`:'الوقت المتبقي',
