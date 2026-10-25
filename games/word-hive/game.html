@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../../js/agp-dc-raw-guard.js"></script>
+<title>خلية الكلمات — ألعاب أيمن</title>
+<script src="../../js/agp-core.js"></script>
+<script src="../../js/agp-events.js"></script>
+<script src="../../js/agp-timer-manager.js"></script>
+<script src="../../js/agp-storage-manager.js"></script>
+<script src="../../js/agp-services.js"></script>
+<script src="../../js/agp-stream-connector.js"></script>
+<script src="../../js/agp-keyword-manager.js"></script>
+<script src="../../js/agp-queue-manager.js"></script>
+<script src="../../adapters/agp-tiktok-adapter.js"></script>
+<script src="../../auth/auth-client.js"></script>
+<script src="../../auth/game-access-guard.js"></script>
+<script src="../../js/agp-live-watch.js"></script>
+<script src="wh-engine.js"></script>
+<script src="wh-rounds.js"></script>
+<script src="wh-settings.js"></script>
+<script src="wh-platform.js"></script>
+<script src="./support.js"></script>
+    <script src="../../js/agp-apple-emoji.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;height:100%;background:#07060b;overflow:hidden}
+a{color:#a78bfa}a:hover{color:#c4b5fd}
+input:focus,select:focus{outline:none;border-color:rgba(167,139,250,.55)}
+input::placeholder{color:#6f6a7c}
+[data-noscroll]::-webkit-scrollbar{display:none}
+@keyframes slideDown{from{opacity:0;transform:translateY(-14px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes popIn{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:none}}
+@keyframes slideIn{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes fadeOut{from{opacity:1}to{opacity:0}}
+@keyframes slideOut{from{opacity:1;transform:none}to{opacity:0;transform:translateX(60px)}}
+@keyframes popOut{from{opacity:1;transform:none}to{opacity:0;transform:scale(.9)}}
+@keyframes floatUp{0%{transform:translateY(0) rotate(0deg);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-1300px) rotate(var(--r));opacity:0}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes hexInA{0%{opacity:0;transform:scale(.3) rotate(-30deg)}70%{opacity:1;transform:scale(1.08) rotate(3deg)}100%{opacity:1;transform:none}}
+@keyframes hexInB{0%{opacity:0;transform:scale(.3) rotate(-30deg)}70%{opacity:1;transform:scale(1.08) rotate(3deg)}100%{opacity:1;transform:none}}
+@keyframes hexFlashA{0%{filter:brightness(1)}30%{filter:brightness(1.9) drop-shadow(0 0 30px #67e8f9);transform:scale(1.07)}100%{filter:brightness(1);transform:none}}
+@keyframes hexFlashB{0%{filter:brightness(1)}30%{filter:brightness(1.9) drop-shadow(0 0 30px #67e8f9);transform:scale(1.07)}100%{filter:brightness(1);transform:none}}
+@keyframes breathe{0%,100%{opacity:.55;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
+@keyframes wordIn{0%{opacity:0;transform:translateX(40px) scale(.95)}100%{opacity:1;transform:none}}
+@keyframes notifInA{0%{opacity:0;transform:translateY(-12px) scale(.94)}100%{opacity:1;transform:none}}
+@keyframes notifInB{0%{opacity:0;transform:translateY(-12px) scale(.94)}100%{opacity:1;transform:none}}
+@keyframes goldIn{0%{opacity:0;transform:scale(.4) rotate(-8deg)}55%{opacity:1;transform:scale(1.12) rotate(2deg)}100%{opacity:1;transform:none}}
+@keyframes goldShine{0%{transform:translateX(-140%) rotate(20deg)}100%{transform:translateX(240%) rotate(20deg)}}
+@keyframes urgent{0%,100%{transform:none}50%{transform:scale(1.06)}}
+@keyframes agpCrown{0%{opacity:0;transform:translateY(-14px) rotate(-6deg)}60%{opacity:1}100%{opacity:1;transform:none}}
+</style>
+</helmet>
+<div dir="rtl" style="position:fixed;inset:0;overflow:hidden;background:#07060b;font-family:'IBM Plex Sans Arabic',sans-serif;color:#f4f2f8">
+  {{ fx }}
+  <header style="position:fixed;top:0;left:0;right:0;z-index:50;height:80px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:clamp(10px,1.2vw,24px);padding:0 clamp(12px,1.25vw,24px);box-sizing:border-box;background:rgba(10,9,15,.72);border-bottom:1px solid rgba(255,255,255,.07);backdrop-filter:blur(16px)">
+      <div style="display:flex;gap:clamp(6px,0.5vw,10px);justify-content:flex-start">
+        <button onClick="{{ onExit }}" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.45vw,8px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;cursor:pointer;transition:all .2s;backdrop-filter:blur(10px);border:1px solid rgba(248,113,113,.25);background:rgba(255,255,255,.03);color:#fca5a5" style-hover="background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.45)" style-active="transform:scale(.97)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span style="display:{{ lblDisp }}">خروج</span></button>
+        <button onClick="{{ onSettings }}" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.45vw,8px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;cursor:pointer;transition:all .2s;backdrop-filter:blur(10px);border:1px solid rgba(167,139,250,.3);background:rgba(139,92,246,.08);color:#ddd6fe" style-hover="background:rgba(139,92,246,.16);border-color:rgba(167,139,250,.55)" style-active="transform:scale(.97)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span style="display:{{ lblDisp }}">إعدادات اللعبة</span></button>
+        <button onClick="{{ onHelp }}" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.45vw,8px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;cursor:pointer;transition:all .2s;backdrop-filter:blur(10px);border:1px solid rgba(56,189,248,.3);background:rgba(56,189,248,.06);color:#bae6fd" style-hover="background:rgba(56,189,248,.14);border-color:rgba(56,189,248,.55)" style-active="transform:scale(.97)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg><span style="display:{{ lblDisp }}">طريقة اللعب</span></button>
+      </div>
+      <div style="height:60px;min-width:clamp(96px,14vw,280px);position:relative;display:grid;place-items:center;border-radius:14px;border:1px dashed rgba(167,139,250,{{ phBorder }})">
+        <span style="font:500 clamp(11px,0.75vw,14px) 'IBM Plex Sans Arabic';color:#8a8596;opacity:{{ phOp }}">ألعاب أيمن</span>
+        <img src="../../logo.png" alt="ألعاب أيمن" onLoad="{{ logoOk }}" onError="{{ logoErr }}" style="position:absolute;inset:0;margin:auto;height:60px;max-width:none;object-fit:contain;opacity:{{ logoOp }};filter:drop-shadow(0 0 14px rgba(139,92,246,.45))">
+      </div>
+      <div style="display:flex;gap:clamp(6px,0.5vw,10px);justify-content:flex-end;align-items:center">
+        <span title="{{ connHint }}" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:8px;font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;border:1px solid {{ connBd }};background:{{ connBg }};color:{{ connColor }}"><span style="width:8px;height:8px;border-radius:50%;background:{{ connColor }};box-shadow:0 0 8px {{ connColor }}"></span><span style="display:{{ lblDisp }}">{{ connLabel }}</span></span>
+        <button onClick="{{ toggleSim }}" aria-pressed="{{ simOpen }}" style="height:clamp(32px,2.3vw,42px);padding:0 clamp(10px,0.9vw,16px);border-radius:999px;display:flex;align-items:center;gap:clamp(6px,0.45vw,8px);font:600 clamp(12px,0.78vw,15px) 'IBM Plex Sans Arabic';white-space:nowrap;cursor:pointer;transition:all .2s;border:1px solid {{ simBd }};background:rgba(255,255,255,.03);color:#e9d5ff" style-hover="background:rgba(139,92,246,.12)" style-active="transform:scale(.97)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span style="display:{{ lblDisp }}">محاكي الرسائل</span></button>
+      </div>
+    </header>
+
+  <div style="position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform:translate(-50%,-50%) scale({{ scale }});padding:104px 32px 24px;box-sizing:border-box;display:grid;grid-template-columns:{{ cols }};gap:28px">
+
+    <!-- ترتيب اللاعبين (يمين) -->
+    <sc-if value="{{ showBoard }}" hint-placeholder-val="{{ true }}">
+    <section style="min-height:0;display:flex;flex-direction:column;border-radius:28px;background:linear-gradient(180deg,rgba(139,92,246,.08),rgba(18,16,26,.72) 40%);border:1px solid rgba(167,139,250,.18);box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:hidden;animation:rise .45s ease both">
+      <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:22px 24px 16px;border-bottom:1px solid rgba(255,255,255,.06)">
+        <span style="display:flex;align-items:center;gap:10px;font:700 26px 'IBM Plex Sans Arabic'"><span style="font-size:26px">🏆</span>ترتيب اللاعبين</span>
+        <span style="font:700 20px 'IBM Plex Sans Arabic';color:#a78bfa">{{ boardCount }} لاعب</span>
+      </div>
+      <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:14px;display:flex;flex-direction:column;gap:10px">
+        <sc-for list="{{ board }}" as="p" hint-placeholder-count="6">
+          <div style="flex-shrink:0;display:flex;align-items:center;gap:14px;height:76px;padding:0 16px 0 14px;border-radius:18px;background:{{ p.bg }};border:1px solid {{ p.bd }};transition:all .3s">
+            <span style="flex-shrink:0;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:{{ p.rankBg }};color:#fff;font:800 22px 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums">{{ p.rank }}</span>
+            <span style="position:relative;overflow:hidden;flex-shrink:0;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#6d28d9,#0e7490);border:2px solid rgba(167,139,250,.4);box-sizing:border-box;color:#fff;font:700 20px 'IBM Plex Sans Arabic'">{{ p.ini }}<img src="{{ p.av }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.op }}"></span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+              <span style="font:700 24px 'IBM Plex Sans Arabic';color:#f4f2f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+              <span style="font:500 16px 'IBM Plex Sans Arabic';color:#a8a3b5">{{ p.words }} كلمة</span>
+            </span>
+            <span style="flex-shrink:0;font:800 32px 'IBM Plex Sans Arabic';color:{{ p.scoreC }};font-variant-numeric:tabular-nums">{{ p.score }}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ boardEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;display:grid;place-items:center;text-align:center;padding:40px 20px;color:#8a8596;font:500 20px/1.7 'IBM Plex Sans Arabic'">{{ boardEmptyTxt }}</div>
+        </sc-if>
+      </div>
+    </section>
+    </sc-if>
+
+    <!-- الوسط: الخلية والمؤقت والتحكم -->
+    <main style="min-width:0;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:8px">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center">
+        <span style="font:800 52px/1.1 'IBM Plex Sans Arabic';background:linear-gradient(180deg,#f4f2f8,#c4b5fd 55%,#67e8f9);-webkit-background-clip:text;background-clip:text;color:transparent">خلية الكلمات</span>
+        <span style="display:flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:999px;background:{{ stBg }};border:1px solid {{ stBd }};font:700 18px 'IBM Plex Sans Arabic';color:{{ stC }}"><span style="width:9px;height:9px;border-radius:50%;background:{{ stC }};box-shadow:0 0 10px {{ stC }}"></span>{{ stLabel }}</span>
+        <sc-if value="{{ roundTag }}" hint-placeholder-val="{{ false }}">
+          <span style="height:38px;padding:0 16px;display:flex;align-items:center;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);font:600 17px 'IBM Plex Sans Arabic';color:#cfcad9">{{ roundTag }}</span>
+        </sc-if>
+      </div>
+
+      <div style="height:48px;flex-shrink:0;display:flex;align-items:center;justify-content:center;max-width:100%">
+        <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="0">
+          <div style="display:flex;align-items:center;gap:10px;max-width:100%;padding:8px 22px;border-radius:999px;background:rgba(12,11,18,.94);border:1px solid {{ n.bd }};box-shadow:0 14px 40px rgba(0,0,0,.45);font:600 22px 'IBM Plex Sans Arabic';color:{{ n.c }};animation:{{ n.anim }}">
+            <span>{{ n.icon }}</span><span style="font-weight:800;color:#f4f2f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px">{{ n.who }}</span><span style="white-space:nowrap">{{ n.txt }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="position:relative;width:{{ hiveW }}px;height:{{ hiveH }}px;flex-shrink:0">
+        <div style="position:absolute;inset:-80px;border-radius:50%;background:radial-gradient(circle, rgba(124,58,237,.28), rgba(56,189,248,.08) 50%, transparent 70%);pointer-events:none"></div>
+        <sc-for list="{{ hexes }}" as="x" hint-placeholder-count="7">
+          <div style="position:absolute;left:{{ x.left }}px;top:{{ x.top }}px;width:{{ x.w }}px;height:{{ x.h }}px">
+            <div style="width:100%;height:100%;animation:{{ x.enter }}">
+            <div style="position:relative;width:100%;height:100%;animation:{{ x.flash }};filter:{{ x.shadow }}">
+              <div style="position:absolute;inset:0;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:{{ x.border }}"></div>
+              <div style="position:absolute;inset:5px;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:{{ x.bg }};display:grid;place-items:center">
+                <span style="font:800 {{ x.fs }}px/1 'IBM Plex Sans Arabic';color:{{ x.fg }};text-shadow:{{ x.ts }};margin-top:-6px">{{ x.letter }}</span>
+              </div>
+            </div>
+            </div>
+          </div>
+        </sc-for>
+        <sc-if value="{{ pausedOv }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;animation:fade .25s ease">
+            <span style="padding:14px 34px;border-radius:999px;background:rgba(12,11,18,.9);border:1px solid rgba(251,191,36,.5);font:800 34px 'IBM Plex Sans Arabic';color:#fde68a;box-shadow:0 20px 60px rgba(0,0,0,.6)">⏸ متوقفة مؤقتاً</span>
+          </div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ showIntro }}" hint-placeholder-val="{{ true }}">
+        <div style="width:min(860px,100%);box-sizing:border-box;padding:22px 30px;border-radius:26px;background:rgba(18,16,26,.78);border:1px solid rgba(103,232,249,.25);display:flex;flex-direction:column;gap:12px;animation:rise .45s ease both">
+          <span style="font:800 26px 'IBM Plex Sans Arabic';color:#a5f3fc">قبل بدء الجولة</span>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+            <sc-for list="{{ introTips }}" as="t" hint-placeholder-count="3">
+              <div style="display:flex;align-items:flex-start;gap:10px;padding:14px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
+                <span style="flex-shrink:0;font-size:26px;line-height:1">{{ t.icon }}</span>
+                <span style="font:600 19px/1.55 'IBM Plex Sans Arabic';color:#e7e3ef">{{ t.txt }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showStats }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:18px;align-items:stretch">
+          <div style="min-width:280px;padding:16px 26px;border-radius:24px;background:rgba(18,16,26,.78);border:1px solid {{ timeBd }};display:flex;flex-direction:column;align-items:center;gap:8px">
+            <span style="font:600 18px 'IBM Plex Sans Arabic';color:#a8a3b5">الوقت المتبقي</span>
+            <span style="font:800 64px/1 'IBM Plex Sans Arabic';color:{{ timeCol }};font-variant-numeric:tabular-nums;animation:{{ timeAnim }}">{{ timeTxt }}</span>
+            <div style="width:220px;height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden"><div style="height:100%;width:{{ timePct }}%;background:{{ timeCol }};border-radius:999px;transition:width .25s linear"></div></div>
+          </div>
+          <div style="min-width:280px;padding:16px 26px;border-radius:24px;background:rgba(18,16,26,.78);border:1px solid rgba(167,139,250,.3);display:flex;flex-direction:column;align-items:center;gap:8px">
+            <span style="font:600 18px 'IBM Plex Sans Arabic';color:#a8a3b5">الكلمات المكتشفة</span>
+            <span style="font:800 64px/1 'IBM Plex Sans Arabic';color:#ddd6fe;font-variant-numeric:tabular-nums">{{ countTxt }}</span>
+            <span style="font:600 16px 'IBM Plex Sans Arabic';color:#fcd34d">{{ goldTxt }}</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center">
+        <sc-for list="{{ controls }}" as="c" hint-placeholder-count="2">
+          <button onClick="{{ c.run }}" style="height:68px;padding:0 44px;border-radius:999px;border:{{ c.bd }};background:{{ c.bg }};box-shadow:{{ c.sh }};color:{{ c.fg }};font:700 26px 'IBM Plex Sans Arabic';cursor:pointer;display:flex;align-items:center;gap:12px;transition:transform .2s" style-hover="transform:translateY(-2px)" style-active="transform:scale(.97)"><span style="font-size:24px">{{ c.icon }}</span>{{ c.label }}</button>
+        </sc-for>
+      </div>
+    </main>
+
+    <!-- آخر الكلمات (يسار) -->
+    <sc-if value="{{ showRecent }}" hint-placeholder-val="{{ true }}">
+    <section style="min-height:0;display:flex;flex-direction:column;border-radius:28px;background:linear-gradient(180deg,rgba(56,189,248,.07),rgba(18,16,26,.72) 40%);border:1px solid rgba(103,232,249,.18);box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:hidden;animation:rise .45s ease both">
+      <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:22px 24px 16px;border-bottom:1px solid rgba(255,255,255,.06)">
+        <span style="display:flex;align-items:center;gap:10px;font:700 26px 'IBM Plex Sans Arabic'"><span style="font-size:26px">✨</span>آخر الكلمات الصحيحة</span>
+        <span style="font:700 20px 'IBM Plex Sans Arabic';color:#67e8f9">{{ foundCount }}</span>
+      </div>
+      <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:14px;display:flex;flex-direction:column;gap:10px">
+        <sc-for list="{{ recent }}" as="w" hint-placeholder-count="6">
+          <div style="flex-shrink:0;position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;min-height:72px;padding:8px 16px;box-sizing:border-box;border-radius:18px;background:{{ w.bg }};border:1px solid {{ w.bd }};animation:{{ w.anim }}">
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+              <span style="font:800 30px/1.2 'IBM Plex Sans Arabic';color:{{ w.c }};letter-spacing:{{ w.ls }}">{{ w.word }}</span>
+              <span style="font:500 16px 'IBM Plex Sans Arabic';color:#a8a3b5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ w.by }}</span>
+            </span>
+            <sc-if value="{{ w.golden }}" hint-placeholder-val="{{ false }}"><span style="flex-shrink:0;padding:4px 10px;border-radius:999px;background:rgba(251,191,36,.16);border:1px solid rgba(251,191,36,.5);font:700 14px 'IBM Plex Sans Arabic';color:#fde68a">ذهبية</span></sc-if>
+            <span style="flex-shrink:0;font:800 26px 'IBM Plex Sans Arabic';color:{{ w.pc }};font-variant-numeric:tabular-nums">+{{ w.pts }}</span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ recentEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;display:grid;place-items:center;text-align:center;padding:40px 20px;color:#8a8596;font:500 20px/1.7 'IBM Plex Sans Arabic'">الكلمات الصحيحة تظهر هنا أول بأول</div>
+        </sc-if>
+      </div>
+    </section>
+    </sc-if>
+  </div>
+
+  <!-- الكلمة الذهبية -->
+  <sc-if value="{{ goldOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:84;display:grid;place-items:center;pointer-events:none;background:radial-gradient(circle, rgba(251,191,36,.18), rgba(0,0,0,.35) 60%);animation:{{ goldOv }}">
+      {{ goldConfetti }}
+      <div style="position:relative;overflow:hidden;padding:clamp(20px,3vw,40px) clamp(30px,5vw,80px);border-radius:36px;background:linear-gradient(160deg,#3b2a05,#1a1206 60%);border:2px solid #fbbf24;box-shadow:0 0 0 10px rgba(251,191,36,.12), 0 0 90px rgba(251,191,36,.45);text-align:center;display:flex;flex-direction:column;gap:10px;animation:{{ goldAn }}">
+        <div style="position:absolute;top:0;left:0;width:50%;height:100%;background:linear-gradient(75deg,transparent 40%,rgba(255,255,255,.18) 50%,transparent 60%);animation:goldShine 2s ease-in-out infinite"></div>
+        <span style="font:800 clamp(20px,2vw,32px) 'IBM Plex Sans Arabic';color:#fde68a">🌟 كلمة ذهبية!</span>
+        <span style="font:800 clamp(48px,6vw,110px)/1.1 'IBM Plex Sans Arabic';color:#fff;text-shadow:0 0 30px rgba(251,191,36,.8)">{{ goldWord }}</span>
+        <span style="font:700 clamp(18px,1.6vw,28px) 'IBM Plex Sans Arabic';color:#fcd34d">{{ goldWho }}</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- محاكي الرسائل (اختبار محلي) -->
+  <sc-if value="{{ simOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;left:clamp(8px,1.25vw,24px);bottom:clamp(8px,1.25vw,24px);z-index:70;width:min(380px, calc(100vw - 16px));box-sizing:border-box;padding:16px;border-radius:22px;background:rgba(12,11,18,.96);border:1px solid rgba(167,139,250,.4);box-shadow:0 30px 90px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:10px;animation:rise .3s ease">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font:700 16px 'IBM Plex Sans Arabic'">محاكي رسائل الشات</span>
+        <span style="font:600 11px 'IBM Plex Sans Arabic';color:#fcd34d;padding:3px 10px;border-radius:999px;border:1px solid rgba(251,191,36,.35)">اختبار محلي فقط</span>
+      </div>
+      <span style="font:500 12px/1.6 'IBM Plex Sans Arabic';color:#8a8596">يمرّر الرسالة لنفس محرك التحقق كأنها من شات تيك توك. لا يرسل أي شيء للبث.</span>
+      <input value="{{ simName }}" onChange="{{ simNameIn }}" placeholder="اسم اللاعب" style="height:40px;box-sizing:border-box;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f2f8;font:600 14px 'IBM Plex Sans Arabic';padding:0 12px">
+      <div style="display:flex;gap:8px">
+        <input value="{{ simText }}" onChange="{{ simTextIn }}" onKeyDown="{{ simKey }}" placeholder="اكتب كلمة…" style="flex:1;min-width:0;height:44px;box-sizing:border-box;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#f4f2f8;font:700 17px 'IBM Plex Sans Arabic';padding:0 12px">
+        <button onClick="{{ simSend }}" style="flex-shrink:0;height:44px;padding:0 18px;border:none;border-radius:12px;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;font:700 15px 'IBM Plex Sans Arabic';cursor:pointer" style-active="transform:scale(.97)">إرسال</button>
+      </div>
+      <sc-if value="{{ simLast }}" hint-placeholder-val="{{ false }}">
+        <span style="font:600 13px 'IBM Plex Sans Arabic';color:{{ simLastC }}">{{ simLast }}</span>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- نتائج الجولة -->
+  <sc-if value="{{ resOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:85;display:flex;flex-direction:column;align-items:center;padding:16px;overflow-y:auto;box-sizing:border-box;background:rgba(8,4,16,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);animation:{{ resOv }}">
+      {{ resConfetti }}
+      <div style="position:relative;margin:auto 0;width:min(1100px,100%);box-sizing:border-box;padding:clamp(18px,2.4vw,40px);border-radius:32px;background:rgba(12,11,18,.94);border:1px solid rgba(167,139,250,.35);box-shadow:0 40px 120px rgba(0,0,0,.6), 0 0 80px rgba(124,58,237,.2);display:flex;flex-direction:column;gap:22px;animation:{{ resAn }}">
+        <div style="text-align:center;display:flex;flex-direction:column;gap:6px">
+          <span style="font:800 clamp(28px,3vw,48px) 'IBM Plex Sans Arabic'">🏁 نتائج الجولة</span>
+          <span style="font:500 clamp(14px,1.1vw,18px) 'IBM Plex Sans Arabic';color:#a8a3b5">{{ resSub }}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
+          <div style="padding:18px;border-radius:22px;background:rgba(139,92,246,.08);border:1px solid rgba(167,139,250,.3);text-align:center;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px 'IBM Plex Sans Arabic';color:#a8a3b5">الكلمات المكتشفة</span><span style="font:800 40px 'IBM Plex Sans Arabic';color:#ddd6fe">{{ resFound }}</span></div>
+          <div style="padding:18px;border-radius:22px;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.35);text-align:center;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px 'IBM Plex Sans Arabic';color:#a8a3b5">الكلمات الذهبية المكتشفة</span><span style="font:800 26px/1.5 'IBM Plex Sans Arabic';color:#fde68a">{{ resGold }}</span></div>
+          <div style="padding:18px;border-radius:22px;background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.35);text-align:center;display:flex;flex-direction:column;gap:4px"><span style="font:600 15px 'IBM Plex Sans Arabic';color:#a8a3b5">{{ resWinLabel }}</span><span style="font:800 26px/1.5 'IBM Plex Sans Arabic';color:#6ee7b7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ resWinner }}</span><span style="font:600 13px 'IBM Plex Sans Arabic';color:#8a8596">{{ resPts }}</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font:700 20px 'IBM Plex Sans Arabic'">الترتيب النهائي</span>
+          <div data-noscroll="" style="max-height:min(360px,40vh);overflow-y:auto;scrollbar-width:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">
+            <sc-for list="{{ resBoard }}" as="p" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:12px;height:62px;padding:0 14px;border-radius:16px;background:{{ p.bg }};border:1px solid {{ p.bd }}">
+                <span style="flex-shrink:0;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:{{ p.rankBg }};color:#fff;font:800 19px 'IBM Plex Sans Arabic'">{{ p.rank }}</span>
+                <span style="flex:1;min-width:0;font:700 19px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+                <span style="flex-shrink:0;font:500 14px 'IBM Plex Sans Arabic';color:#a8a3b5">{{ p.words }} كلمة</span>
+                <span style="flex-shrink:0;font:800 24px 'IBM Plex Sans Arabic';color:{{ p.scoreC }}">{{ p.score }}</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ boardEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="grid-column:1/-1;padding:30px 0;text-align:center;color:#8a8596;font:500 17px 'IBM Plex Sans Arabic'">لم يكتشف أحد أي كلمة في هذه الجولة</div>
+            </sc-if>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+          <button onClick="{{ newRound }}" style="flex:1;min-width:180px;max-width:280px;height:54px;border-radius:999px;border:none;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;font:700 18px 'IBM Plex Sans Arabic';cursor:pointer;box-shadow:0 8px 22px rgba(124,58,237,.4)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">جولة جديدة</button>
+          <button onClick="{{ openAnswers }}" style="flex:1;min-width:180px;max-width:280px;height:54px;border-radius:999px;border:1px solid rgba(251,191,36,.5);background:rgba(251,191,36,.08);color:#fde68a;font:700 18px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="filter:brightness(1.2)" style-active="transform:scale(.97)">عرض الإجابات (للهوست)</button>
+          <button onClick="{{ closeRes }}" style="flex:1;min-width:180px;max-width:280px;height:54px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#f4f2f8;font:700 18px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="filter:brightness(1.25)" style-active="transform:scale(.97)">العودة إلى شاشة اللعبة</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- الإجابات (للهوست فقط) -->
+  <sc-if value="{{ ansOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeAnswers }}" style="position:fixed;inset:0;z-index:92;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;padding:12px;animation:{{ ansOv }}">
+      <div onClick="{{ stop }}" style="width:min(1000px, calc(100vw - 24px));max-height:calc(100dvh - 24px);box-sizing:border-box;padding:22px;border-radius:28px;background:rgba(12,11,18,.97);border:1px solid rgba(251,191,36,.35);box-shadow:0 30px 90px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:14px;animation:{{ ansAn }}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font:700 22px 'IBM Plex Sans Arabic'">إجابات الجولة · {{ ansSummary }}</span>
+            <span style="font:500 13px 'IBM Plex Sans Arabic';color:#fca5a5">للهوست فقط — إذا كانت الشاشة معروضة في البث سيراها المشاهدون</span>
+          </div>
+          <button onClick="{{ closeAnswers }}" aria-label="إغلاق" style="flex-shrink:0;width:42px;height:42px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;cursor:pointer;display:grid;place-items:center" style-hover="background:rgba(255,255,255,.09)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
+        </div>
+        <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;align-content:start">
+          <sc-for list="{{ answers }}" as="a" hint-placeholder-count="12">
+            <div style="display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:14px;background:{{ a.bg }};border:1px solid {{ a.bd }}">
+              <span style="font:800 20px 'IBM Plex Sans Arabic';color:{{ a.c }}">{{ a.word }}</span>
+              <span style="font:500 12px 'IBM Plex Sans Arabic';color:#a8a3b5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.by }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- طريقة اللعب -->
+  <sc-if value="{{ helpOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeHelp }}" style="position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;padding:12px;animation:{{ helpOv }}">
+      <div onClick="{{ stop }}" data-noscroll="" style="width:min(940px, calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow-y:auto;scrollbar-width:none;box-sizing:border-box;padding:clamp(18px,2.4vw,32px);border-radius:28px;background:rgba(12,11,18,.97);border:1px solid rgba(56,189,248,.35);box-shadow:0 30px 90px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:18px;animation:{{ helpAn }}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <span style="font:800 clamp(22px,2vw,30px) 'IBM Plex Sans Arabic'">كيف تلعب خلية الكلمات؟</span>
+          <button onClick="{{ closeHelp }}" aria-label="إغلاق" style="flex-shrink:0;width:42px;height:42px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;cursor:pointer;display:grid;place-items:center" style-hover="background:rgba(255,255,255,.09)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
+        </div>
+        <ol style="margin:0;padding:0 26px 0 0;display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ helpSteps }}" as="h" hint-placeholder-count="10">
+            <li style="font:500 clamp(15px,1.15vw,18px)/1.7 'IBM Plex Sans Arabic';color:#e7e3ef">{{ h.txt }}</li>
+          </sc-for>
+        </ol>
+        <div style="display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:22px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)">
+          <span style="font:700 18px 'IBM Plex Sans Arabic'">أمثلة من أحرف جولة {{ exRound }}</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <sc-for list="{{ exLetters }}" as="l" hint-placeholder-count="7">
+              <span style="width:54px;height:60px;display:grid;place-items:center;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:{{ l.bg }};color:{{ l.fg }};font:800 26px 'IBM Plex Sans Arabic'">{{ l.ch }}</span>
+            </sc-for>
+            <span style="font:500 14px 'IBM Plex Sans Arabic';color:#a8a3b5;margin-inline-start:6px">الحرف المضيء = حرف الوسط</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px">
+            <sc-for list="{{ examples }}" as="e" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:18px;background:{{ e.bg }};border:1px solid {{ e.bd }}">
+                <span style="flex-shrink:0;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:{{ e.c }};color:#0b0912;font:800 20px 'IBM Plex Sans Arabic'">{{ e.icon }}</span>
+                <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                  <span style="font:800 24px 'IBM Plex Sans Arabic';color:#f4f2f8">{{ e.word }}</span>
+                  <span style="font:500 14px/1.5 'IBM Plex Sans Arabic';color:{{ e.c }}">{{ e.why }}</span>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- إعدادات اللعبة -->
+  <sc-if value="{{ settingsOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ cancelSettings }}" style="position:fixed;inset:80px 0 0 0;z-index:60;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);animation:{{ settOv }}">
+      <aside onClick="{{ stop }}" style="position:absolute;top:clamp(6px,1vw,12px);right:clamp(8px,1vw,16px);width:min(520px, calc(100vw - 16px));height:calc(100dvh - 92px);box-sizing:border-box;background:rgba(12,11,18,.96);border:1px solid rgba(255,255,255,.08);border-radius:24px;box-shadow:0 30px 90px rgba(0,0,0,.6), 0 0 80px rgba(124,58,237,.12);display:flex;flex-direction:column;overflow:hidden;animation:{{ settAn }}">
+        <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:clamp(14px,3.5vw,20px) clamp(16px,4vw,24px);border-bottom:1px solid rgba(255,255,255,.06)">
+          <span style="font:700 clamp(18px,1.2vw,22px) 'IBM Plex Sans Arabic'">إعدادات اللعبة</span>
+          <button onClick="{{ cancelSettings }}" aria-label="إغلاق" style="width:42px;height:42px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;cursor:pointer;display:grid;place-items:center;transition:background .2s" style-hover="background:rgba(255,255,255,.09)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
+        </div>
+        <sc-if value="{{ rulesLocked }}" hint-placeholder-val="{{ false }}">
+          <div style="flex-shrink:0;margin:12px 16px 0;padding:10px 14px;border-radius:14px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35);font:600 13px/1.6 'IBM Plex Sans Arabic';color:#fde68a">الجولة الحالية تحتفظ بقواعدها كما بدأت. أي تعديل على قواعد الجولة (المدة، الطول، التكرار، النقاط، اختيار الجولة) يُحفظ ويُطبَّق من الجولة القادمة. إعدادات العرض تتطبق فوراً.</div>
+        </sc-if>
+        <div data-noscroll="" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:12px 16px 16px;display:flex;flex-direction:column;gap:12px">
+          <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="4">
+            <section style="display:flex;flex-direction:column;padding:14px 18px;border-radius:20px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)">
+              <div style="display:flex;align-items:center;gap:10px;padding-bottom:8px;margin-bottom:2px;border-bottom:1px solid rgba(255,255,255,.06)">
+                <span style="width:28px;height:28px;border-radius:999px;display:grid;place-items:center;background:rgba(139,92,246,.14);color:#c4b5fd;font:700 13px 'IBM Plex Sans Arabic'">{{ sec.num }}</span>
+                <span style="font:700 16px 'IBM Plex Sans Arabic'">{{ sec.title }}</span>
+              </div>
+              <sc-for list="{{ sec.rows }}" as="row" hint-placeholder-count="3">
+                <sc-if value="{{ row.divider }}" hint-placeholder-val="{{ false }}">
+                  <span style="display:block;height:1px;background:rgba(255,255,255,.05)"></span>
+                </sc-if>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:50px;padding:6px 0">
+                  <div style="display:flex;align-items:center;gap:8px;min-width:0">
+                    <sc-if value="{{ row.dot }}" hint-placeholder-val="{{ false }}">
+                      <span style="width:8px;height:8px;flex-shrink:0;border-radius:50%;background:{{ row.dot }};box-shadow:0 0 8px {{ row.dot }}"></span>
+                    </sc-if>
+                    <div style="display:flex;flex-direction:column;gap:3px;min-width:0;text-align:right">
+                      <span style="font:600 14px 'IBM Plex Sans Arabic';color:#e7e3ef">{{ row.label }}</span>
+                      <sc-if value="{{ row.hint }}" hint-placeholder-val="{{ false }}">
+                        <span style="font:500 12px/1.55 'IBM Plex Sans Arabic';color:#8a8596;text-wrap:pretty">{{ row.hint }}</span>
+                      </sc-if>
+                    </div>
+                  </div>
+                  <sc-if value="{{ row.isNumber }}" hint-placeholder-val="{{ false }}">
+                    <div style="flex-shrink:0;display:flex;align-items:center;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)">
+                      <button onClick="{{ row.dec }}" aria-label="إنقاص" style="width:32px;height:32px;border-radius:999px;border:none;background:transparent;color:#a8a3b5;font:500 20px/1 'IBM Plex Sans Arabic';cursor:pointer" style-hover="background:rgba(255,255,255,.08);color:#fff">−</button>
+                      <input type="text" inputmode="numeric" value="{{ row.value }}" onChange="{{ row.onInput }}" aria-label="{{ row.label }}" style="width:46px;height:32px;box-sizing:border-box;border:none;border-radius:999px;background:transparent;text-align:center;font:700 16px 'IBM Plex Sans Arabic';color:#ddd6fe;font-variant-numeric:tabular-nums">
+                      <button onClick="{{ row.inc }}" aria-label="زيادة" style="width:32px;height:32px;border-radius:999px;border:none;background:transparent;color:#a8a3b5;font:500 20px/1 'IBM Plex Sans Arabic';cursor:pointer" style-hover="background:rgba(255,255,255,.08);color:#fff">+</button>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ row.isChoice }}" hint-placeholder-val="{{ false }}">
+                    <div style="flex-shrink:0;display:flex;gap:3px;padding:3px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)">
+                      <sc-for list="{{ row.opts }}" as="o" hint-placeholder-count="2">
+                        <button onClick="{{ o.pick }}" style="height:32px;padding:0 12px;border:none;border-radius:999px;cursor:pointer;white-space:nowrap;font:600 13px 'IBM Plex Sans Arabic';background:{{ o.bg }};color:{{ o.fg }};box-shadow:{{ o.sh }};transition:all .25s">{{ o.label }}</button>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ row.isToggle }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ row.flip }}" role="switch" aria-checked="{{ row.on }}" aria-label="{{ row.label }}" style="width:52px;height:30px;flex-shrink:0;border-radius:999px;border:none;cursor:pointer;padding:3px;display:flex;justify-content:{{ row.knobSide }};background:{{ row.trackBg }};transition:all .25s">
+                      <span style="width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>
+                    </button>
+                  </sc-if>
+                  <sc-if value="{{ row.isSelect }}" hint-placeholder-val="{{ false }}">
+                    <select onChange="{{ row.onInput }}" value="{{ row.value }}" aria-label="{{ row.label }}" style="flex-shrink:0;width:min(230px,55%);height:38px;box-sizing:border-box;border-radius:999px;border:1px solid rgba(167,139,250,.35);background:#15121f;color:#f4f2f8;font:600 13px 'IBM Plex Sans Arabic';padding:0 12px;cursor:pointer">
+                      <sc-for list="{{ row.opts }}" as="o" hint-placeholder-count="3">
+                        <option value="{{ o.value }}">{{ o.label }}</option>
+                      </sc-for>
+                    </select>
+                  </sc-if>
+                  <sc-if value="{{ row.isLocked }}" hint-placeholder-val="{{ false }}">
+                    <span style="flex-shrink:0;display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.3);color:#6ee7b7;font:600 12px 'IBM Plex Sans Arabic';white-space:nowrap"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>{{ row.text }}</span>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </section>
+          </sc-for>
+          <div style="padding:12px 16px;border-radius:16px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.1);font:500 12px/1.7 'IBM Plex Sans Arabic';color:#8a8596">{{ bankInfo }}</div>
+        </div>
+        <div style="flex-shrink:0;display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px;padding:12px 16px 16px;border-top:1px solid rgba(255,255,255,.06)">
+          <button onClick="{{ saveSettings }}" style="height:48px;border:none;border-radius:999px;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;font:700 15px 'IBM Plex Sans Arabic';cursor:pointer;box-shadow:0 8px 22px rgba(124,58,237,.35)" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">حفظ الإعدادات</button>
+          <button onClick="{{ resetSettings }}" style="height:48px;border-radius:999px;border:1px solid rgba(167,139,250,.4);background:rgba(139,92,246,.08);color:#ddd6fe;font:700 14px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="background:rgba(139,92,246,.16)" style-active="transform:scale(.97)">استعادة الافتراضي</button>
+          <button onClick="{{ cancelSettings }}" style="height:48px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;font:700 14px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="background:rgba(255,255,255,.09)" style-active="transform:scale(.97)">إلغاء</button>
+        </div>
+      </aside>
+    </div>
+  </sc-if>
+
+  <!-- تأكيد (خروج / إنهاء الجولة / إعادة الجولة) -->
+  <sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeConfirm }}" style="position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);display:grid;place-items:center;animation:{{ confOv }}">
+      <div onClick="{{ stop }}" style="width:min(420px, calc(100vw - 16px));box-sizing:border-box;padding:clamp(18px,5vw,28px);border-radius:24px;background:rgba(12,11,18,.96);border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 90px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;animation:{{ confAn }}">
+        <span style="width:60px;height:60px;border-radius:999px;display:grid;place-items:center;background:rgba(248,113,113,.1);color:#fca5a5;font-size:28px">{{ confIcon }}</span>
+        <span style="font:700 22px 'IBM Plex Sans Arabic'">{{ confTitle }}</span>
+        <span style="font:500 15px/1.6 'IBM Plex Sans Arabic';color:#a8a3b5">{{ confSub }}</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:6px">
+          <button onClick="{{ closeConfirm }}" style="height:48px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#e7e3ef;font:700 15px 'IBM Plex Sans Arabic';cursor:pointer" style-hover="background:rgba(255,255,255,.09)">إلغاء</button>
+          <button onClick="{{ confirmOk }}" style="height:48px;border-radius:999px;border:none;background:linear-gradient(90deg, #dc2626, #ef4444);color:#fff;font:700 15px 'IBM Plex Sans Arabic';cursor:pointer;box-shadow:0 8px 22px rgba(239,68,68,.3)" style-hover="filter:brightness(1.1)">{{ confOk }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:100;padding:10px 22px;border-radius:999px;background:rgba(12,11,18,.94);border:1px solid rgba(167,139,250,.4);color:#ddd6fe;font:600 14px 'IBM Plex Sans Arabic';box-shadow:0 20px 50px rgba(0,0,0,.5);animation:rise .3s ease">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+// ============================================================
+//  خلية الكلمات — شاشة الهوست (قالب روليت الإقصاء بدون العجلة)
+//  المحرك: wh-engine.js (كل التحقق والنقاط) · البنك: wh-rounds.js
+//  الإعدادات: wh-settings.js (مشتركة مع index.html) · الشات: wh-platform.js
+//  النقاط: AGPAuth.reportMatchPoints مرة واحدة عند نهاية كل جولة
+// ============================================================
+const E = WordHiveEngine;
+const BANK = E.buildBank(WordHiveRounds);
+const DIFF = { easy:'سهل', medium:'متوسط' };
+const ROUND_OPTS = BANK.approved.map(r=>({ value:r.id, label:`${r.id.replace('r','جولة ')} · الوسط «${r.center}» · ${DIFF[r.difficulty]||''} · ${r.count} كلمة` }));
+const RECENT_KEEP = Math.max(1, Math.min(5, BANK.approved.length - 1));
+const ini = n=>[...String(n||'')].find(ch=>/[^\s_\d@]/.test(ch))||'؟';
+const HEX_W = 180, HEX_H = Math.round(HEX_W*1.1547), GAP = 1.07;
+const HELP_STEPS = [
+  'ستظهر أمامك خلية تحتوي على سبعة أحرف.',
+  'يوجد حرف أساسي في وسط الخلية، ويجب أن تحتوي عليه كل كلمة.',
+  'اكتب كلمة باستخدام الأحرف الموجودة فقط.',
+  'يمكنك تكرار الحرف داخل الكلمة.',
+  'أرسل الكلمة في شات تيك توك.',
+  'يتحقق النظام من الكلمة تلقائيًا.',
+  'إذا كانت صحيحة ولم تُحتسب من قبل، تحصل على النقاط.',
+  'حاول اكتشاف أكبر عدد من الكلمات قبل انتهاء الوقت.',
+  'بعض الكلمات تستخدم الأحرف السبعة جميعها، وتمنح مكافأة إضافية.',
+  'عند انتهاء الوقت، تظهر النتائج النهائية وترتيب المشاركين.'
+];
+
+class Component extends DCLogic {
+  settings = WHSettings.sanitize(WH.readJSON(WH.keys.setup, null));
+  session = null;
+  state = { v:0, scale:1, narrow:innerWidth<820, logo:false, recent:[], notifs:[], toast:null, flash:null, hexRun:0,
+    conn:WH.getSavedConnection()?'connecting':'none', simOpen:false, simName:'لاعب تجريبي', simText:'', simLast:null };
+  componentDidMount(){
+    this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}); this.fit(); addEventListener('resize',this.fit);
+    this.nextRound=this.pick();
+    this.unsubStatus=WH.onStatus(st=>this.setState({conn:st||'none'}));
+    if(!WH.connect()&&!WH.getSavedConnection()) this.setState({conn:'none'});
+    this.unsub=WH.onComment(p=>this.onChat(p));
+    this.onEnded=()=>this.setState({conn:'none'}); addEventListener('agp:stream-ended',this.onEnded);
+    this._ti=setInterval(()=>this.tick(),200); }
+  componentWillUnmount(){ removeEventListener('resize',this.fit); removeEventListener('agp:stream-ended',this.onEnded); clearInterval(this._ti); clearTimeout(this.tt); clearTimeout(this._gt); clearTimeout(this._ft); this.unsub?.(); this.unsubStatus?.(); }
+  bump(extra){ this.setState(s=>({v:s.v+1,...(extra||{})})); }
+  toastMsg(t){ this.setState({toast:t}); clearTimeout(this.tt); this.tt=setTimeout(()=>this.setState({toast:null}),2600); }
+  shut(k){ this.setState({[k+'Out']:true}); setTimeout(()=>this.setState({[k]:false,[k+'Out']:false}),260); }
+  motion(){ return this.settings.motion; }
+  tone(fr,d,type='sine',v=.15){ if(!this.settings.sound) return; try{ const A=this._ac||(this._ac=new (window.AudioContext||window.webkitAudioContext)()); const o=A.createOscillator(),g=A.createGain(); o.type=type; o.frequency.value=fr; g.gain.setValueAtTime(v,A.currentTime); g.gain.exponentialRampToValueAtTime(.001,A.currentTime+d); o.connect(g).connect(A.destination); o.start(); o.stop(A.currentTime+d); }catch(e){} }
+
+  // ---------- الجولات ----------
+  recentIds(){ const r=WH.readJSON(WH.keys.recent,[]); return Array.isArray(r)?r:[]; }
+  pick(){ const s=this.settings; return E.pickRound(BANK,{ manualId:s.roundPick==='manual'?s.roundId:null, difficulty:s.difficulty, avoidRecent:s.avoidRecent, recent:this.recentIds() }); }
+  rememberRound(id){ WH.writeJSON(WH.keys.recent,[id,...this.recentIds().filter(x=>x!==id)].slice(0,RECENT_KEEP)); }
+  startRound=()=>{ const round=this.nextRound||this.pick(); if(!round) return this.toastMsg('لا توجد جولات معتمدة');
+    this.session=E.createSession(round,WHSettings.rules(this.settings)); this.session.start(Date.now()); this.reported=false; this.lastSec=null;
+    this.rememberRound(round.id); this.tone(523,.12,'triangle'); setTimeout(()=>this.tone(784,.2,'triangle'),120);
+    this.bump({recent:[],notifs:[],hexRun:this.state.hexRun+1,resOpen:false,pts:null}); }
+  restartRound(){ const s=this.session; if(!s) return; this.session=E.createSession(s.round,WHSettings.rules(this.settings)); this.session.start(Date.now()); this.reported=false;
+    this.bump({recent:[],notifs:[],hexRun:this.state.hexRun+1}); this.toastMsg('أُعيدت الجولة من البداية — بدون احتساب الجولة السابقة'); }
+  pauseRound=()=>{ if(this.session&&this.session.pause(Date.now())){ this.tone(440,.12,'triangle'); this.bump(); } else this.checkEnd(); }
+  resumeRound=()=>{ if(this.session&&this.session.resume(Date.now())){ this.tone(660,.12,'triangle'); this.bump(); } }
+  endRound(){ if(this.session&&this.session.end(Date.now(),'manual')) this.onRoundEnd(); }
+  newRound=()=>{ this.session=null; this.nextRound=this.pick(); this.setState({resOpen:false,ansOpen:false}); this.bump({recent:[],notifs:[]}); }
+  tick(){ const s=this.session; if(!s) return; const now=Date.now();
+    if(s.state==='running'){ if(s.tick(now)) return this.onRoundEnd(); const sec=Math.ceil(s.remaining(now)/1000);
+      if(sec!==this.lastSec){ this.lastSec=sec; if(sec<=10&&sec>0) this.tone(880,.05,'square',.04); this.bump(); } } }
+  checkEnd(){ if(this.session&&this.session.state==='ended'&&!this.reported) this.onRoundEnd(); }
+  onRoundEnd(){ if(this.reported) return; this.reported=true; const s=this.session;
+    this.tone(523.25,.22); setTimeout(()=>this.tone(659.25,.22),160); setTimeout(()=>this.tone(783.99,.5,'sine',.16),320);
+    this.bump({resOpen:true,resRun:(this.state.resRun||0)+1,pts:'pending'}); this.reportPoints(s); }
+  // نظام نقاط المنصة — مرة واحدة لكل جولة (CLAUDE.md). المشاركون = من اكتشف كلمة صحيحة على الأقل.
+  reportPoints(s){ const lb=s.leaderboard(), win=s.winners(); if(!lb.length) return this.setState({pts:null});
+    const players=lb.map(p=>({id:p.id,name:p.name})), winnerIds=win.map(p=>p.id), A=window.AGPAuth;
+    if(!A||typeof A.reportMatchPoints!=='function') return this.setState({pts:null});
+    A.reportMatchPoints({players,winnerIds,teamGame:false,durationMs:s.activeMs(Date.now())}).then(res=>{
+      if(this.session!==s) return; const w=win[0], uname=String(w.id).indexOf('tiktok:')===0?String(w.id).slice(7):w.id;
+      const aw=win.length===1&&res&&res.success&&Array.isArray(res.awarded)?res.awarded.find(a=>a.tiktokUsername===uname):null; this.setState({pts:aw?aw.added:null}); }); }
+
+  // ---------- الشات ----------
+  onChat(p){ this.submit({playerId:p.id,playerName:p.name,text:p.text,msgId:p.msgId??p.messageId??null,payload:p,avatar:p.avatarUrl||null}); }
+  submit(msg){ const s=this.session; if(!s) return null; const res=s.submit(msg,Date.now());
+    if(s.state==='ended'&&!this.reported){ this.onRoundEnd(); return res; }
+    this.handle(res); return res; }
+  handle(res){ const st=this.settings;
+    if(res.status==='accepted'){
+      const e={id:Math.random(),word:res.word,name:res.player.name,pts:res.points,golden:res.golden};
+      this.setState(x=>({recent:[e,...x.recent].slice(0,40),flash:{letters:[...new Set(res.word)],run:(x.flash?.run||0)+1}})); clearTimeout(this._ft); this._ft=setTimeout(()=>this.setState({flash:null}),900);
+      if(res.golden){ this.tone(784,.18,'triangle'); setTimeout(()=>this.tone(1046,.18,'triangle'),140); setTimeout(()=>this.tone(1318,.4,'triangle'),280);
+        this.setState({goldOpen:true,goldOpenOut:false,goldWord:res.word,goldWho:`${res.player.name} · +${res.points} نقطة`,goldRun:(this.state.goldRun||0)+1}); clearTimeout(this._gt); this._gt=setTimeout(()=>this.shut('goldOpen'),3200); }
+      else this.tone(990,.12,'sine',.1);
+      if(st.notify!=='low'||res.golden) this.notify({ok:true,who:res.player.name,txt:`+${res.points} · «${st.showAccepted?res.word:this.mask(res.word)}»${res.golden?' 🌟':''}`});
+      this.bump(); return; }
+    if(res.status==='rejected'&&st.showErrors){
+      if(st.notify==='high'||(st.notify==='medium'&&res.usesHiveOnly)) this.notify({ok:false,who:res.player.name,txt:`«${res.word}» — ${res.message}${res.by?' بواسطة '+res.by:''}`}); } }
+  mask(w){ return '●'.repeat([...w].length); }
+  notify(n){ this._nRun=(this._nRun||0)+1; const item={...n,id:Math.random(),run:this._nRun}; this.setState({notifs:[item]}); setTimeout(()=>this.setState(x=>({notifs:x.notifs.filter(y=>y.id!==item.id)})),2800); }
+
+  // ---------- العرض ----------
+  buildFx(){
+    if(this._fx) return this._fx;
+    const h=React.createElement, rnd=(a,b)=>a+Math.random()*(b-a);
+    const glow=(k,css)=>h('div',{key:k,style:{position:'absolute',borderRadius:'50%',filter:'blur(40px)',...css}});
+    const glows=[glow('g1',{top:'-20%',right:'-10%',width:900,height:900,background:'radial-gradient(circle, rgba(124,58,237,.22), transparent 65%)'}),
+      glow('g2',{top:'30%',left:'-15%',width:800,height:800,background:'radial-gradient(circle, rgba(56,189,248,.12), transparent 65%)'}),
+      glow('g3',{bottom:'-30%',left:'35%',width:1000,height:700,background:'radial-gradient(circle, rgba(168,85,247,.1), transparent 65%)'})];
+    const stars=Array.from({length:90},(_,i)=>h('span',{key:'s'+i,style:{position:'absolute',left:rnd(0,100)+'%',top:rnd(0,100)+'%',width:i%9?1.5:3,height:i%9?1.5:3,borderRadius:'50%',background:`rgba(255,255,255,${rnd(.12,.35).toFixed(2)})`}}));
+    const sq=[[88,14,14,1],[73,82,18,0],[16,66,10,1],[42,8,12,0]].map(([x,y,s,fill],i)=>h('span',{key:'q'+i,style:{position:'absolute',left:x+'%',top:y+'%',width:s,height:s,background:fill?'rgba(139,92,246,.45)':'transparent',border:fill?'none':'1.5px solid rgba(139,92,246,.35)'}}));
+    return this._fx=h('div',{key:'fx','aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none',overflow:'hidden'}},[...glows,...stars,...sq]);
+  }
+  confetti(key,n){ if(this.motion()!=='full') return null; const h=React.createElement, rnd=(a,b)=>a+Math.random()*(b-a), cols=['#fbbf24','#a78bfa','#67e8f9','#f472b6','#34d399','#fde68a'];
+    return h('div',{key,'aria-hidden':true,style:{position:'absolute',inset:0,pointerEvents:'none',overflow:'hidden'}},Array.from({length:n},(_,i)=>h('span',{key:i,style:{position:'absolute',left:rnd(0,100)+'%',bottom:-30,width:rnd(8,14),height:rnd(12,22),borderRadius:i%3?2:'50%',background:cols[i%cols.length],'--r':rnd(-540,540)+'deg',animation:`floatUp ${rnd(3.5,6).toFixed(2)}s linear ${rnd(0,1.5).toFixed(2)}s infinite`}}))); }
+  anim(a){ const m=this.motion(); return m==='off'?'none':a; }
+  hexVals(){ const s=this.session, st=s?s.state:'idle', round=s?s.round:null, show=!!round, letters=show?E.hiveLetters(round):Array(7).fill('؟');
+    const cx=HEX_W*1.5*GAP, cy=HEX_H/2+HEX_H*.75*GAP;
+    const pos=[[0,0],[HEX_W*GAP,0],[-HEX_W*GAP,0],[HEX_W/2*GAP,-HEX_H*.75*GAP],[-HEX_W/2*GAP,-HEX_H*.75*GAP],[HEX_W/2*GAP,HEX_H*.75*GAP],[-HEX_W/2*GAP,HEX_H*.75*GAP]];
+    const order=[0,4,3,1,5,6,2], fl=this.state.flash, run=this.state.hexRun;
+    const hexes=pos.map(([x,y],i)=>{ const c=i===0, ch=letters[i], lit=fl&&show&&fl.letters.includes(ch);
+      const delay=(order.indexOf(i)*0.07).toFixed(2);
+      return { key:i, left:Math.round(cx+x-HEX_W/2), top:Math.round(cy+y-HEX_H/2), w:HEX_W, h:HEX_H, letter:ch,
+        border:c?'linear-gradient(160deg,#fde68a,#f59e0b 45%,#67e8f9)':'linear-gradient(160deg,#c4b5fd,#5b21b6 50%,#38bdf8)',
+        bg:c?'radial-gradient(circle at 50% 35%,#7c3aed,#3b0764 70%)':'radial-gradient(circle at 50% 30%,#1f1838,#0d0a16 75%)',
+        fg:show?(c?'#fff7d6':'#f4f2f8'):'rgba(255,255,255,.25)', fs:c?100:84,
+        ts:c?'0 0 24px rgba(253,230,138,.85), 0 4px 10px rgba(0,0,0,.6)':'0 0 18px rgba(167,139,250,.6), 0 4px 10px rgba(0,0,0,.6)',
+        shadow:c?'drop-shadow(0 0 26px rgba(251,191,36,.55)) drop-shadow(0 18px 30px rgba(0,0,0,.6))':'drop-shadow(0 0 14px rgba(124,58,237,.45)) drop-shadow(0 16px 26px rgba(0,0,0,.55))',
+        enter:show?this.anim(`hexIn${run%2?'A':'B'} .6s cubic-bezier(.2,1.3,.4,1) ${delay}s both`):(c?this.anim('breathe 2.4s ease-in-out infinite'):'none'),
+        flash:lit?this.anim(`hexFlash${fl.run%2?'A':'B'} .8s ease`):'none' }; });
+    return { hexes, hiveW:Math.round(cx*2), hiveH:Math.round(cy*2), pausedOv:st==='paused' }; }
+  boardRows(list){ const medal=['linear-gradient(135deg,#f59e0b,#b45309)','linear-gradient(135deg,#94a3b8,#475569)','linear-gradient(135deg,#d97706,#78350f)'];
+    return list.map((p,i)=>({ key:p.key, rank:i+1, name:p.name, ini:ini(p.name), av:p.avatar||'', op:p.avatar?1:0, words:p.words.length, score:p.score,
+      rankBg:medal[i]||'rgba(139,92,246,.35)', scoreC:i===0?'#fde68a':'#ddd6fe', bg:i===0?'rgba(251,191,36,.07)':'rgba(255,255,255,.03)', bd:i===0?'rgba(251,191,36,.35)':'rgba(255,255,255,.07)' })); }
+  mainVals(){ const S=this.state, st=this.settings, s=this.session, state=s?s.state:'idle', now=Date.now();
+    const rem=s?s.remaining(now):0, sec=Math.ceil(rem/1000), dur=s?s.rules.durationSec:st.durationSec;
+    const lb=s?s.leaderboard():[], found=s?s.found:[], goldFound=found.filter(f=>f.golden);
+    const L={idle:['بانتظار البدء','#a78bfa'],ready:['بانتظار البدء','#a78bfa'],running:['الجولة جارية','#34d399'],paused:['متوقفة مؤقتاً','#fbbf24'],ended:['انتهت الجولة','#f87171']}[state];
+    const btn=(label,icon,run,kind)=>({label,icon,run,...({primary:{bg:'linear-gradient(90deg,#7c3aed,#a855f7)',bd:'none',fg:'#fff',sh:'0 14px 40px rgba(124,58,237,.5)'},
+      warn:{bg:'rgba(251,191,36,.1)',bd:'1px solid rgba(251,191,36,.5)',fg:'#fde68a',sh:'none'},danger:{bg:'rgba(248,113,113,.1)',bd:'1px solid rgba(248,113,113,.5)',fg:'#fca5a5',sh:'none'},
+      ghost:{bg:'rgba(255,255,255,.05)',bd:'1px solid rgba(255,255,255,.16)',fg:'#e7e3ef',sh:'none'}})[kind]});
+    const ask=(k)=>()=>this.setState({confirmOpen:true,confirmOpenOut:false,confKind:k});
+    const controls=state==='running'?[btn('إيقاف مؤقت','⏸',this.pauseRound,'warn'),btn('إنهاء الجولة','⏹',ask('end'),'danger')]
+      :state==='paused'?[btn('استئناف','▶',this.resumeRound,'primary'),btn('إعادة الجولة','↺',ask('restart'),'ghost'),btn('إنهاء الجولة','⏹',ask('end'),'danger')]
+      :state==='ended'?[btn('جولة جديدة','✦',this.newRound,'primary'),btn('عرض النتائج','🏁',()=>this.setState({resOpen:true,resOpenOut:false}),'ghost')]
+      :[btn('بدء الجولة','▶',this.startRound,'primary')];
+    const showBoard=st.showBoard, showRecent=st.showRecent;
+    const r=s?s.round:null;
+    return { stLabel:L[0], stC:L[1], stBg:L[1]+'14', stBd:L[1]+'55', roundTag:r?`${r.id.replace('r','جولة ')} · ${DIFF[r.difficulty]||''}`:'',
+      controls, showIntro:!s, showStats:!!s,
+      introTips:[{icon:'🐝',txt:'كل كلمة لازم تحتوي على حرف الوسط المضيء'},{icon:'🔤',txt:'باقي الأحرف من الخلية فقط — والتكرار '+(st.allowRepeat?'مسموح':'غير مسموح')},{icon:'⚡',txt:`أول من يكتب الكلمة بالشات ياخذ نقاطها · ${st.minLen} أحرف فأكثر`}],
+      timeTxt:String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'), timePct:dur?Math.max(0,Math.min(100,rem/(dur*10))):0,
+      timeCol:state==='paused'?'#fbbf24':sec<=10?'#f87171':'#34d399', timeBd:sec<=10&&state==='running'?'rgba(248,113,113,.5)':'rgba(255,255,255,.08)', timeAnim:sec<=10&&state==='running'?this.anim('urgent 1s ease-in-out infinite'):'none',
+      countTxt:st.showTotal?`${found.length} / ${s?s.total:0}`:String(found.length), goldTxt:s&&s.goldenWords.length?`🌟 ذهبية: ${goldFound.length} من ${st.showTotal?s.goldenWords.length:'؟'}`:'',
+      cols:showBoard&&showRecent?'420px minmax(0,1fr) 420px':showBoard?'420px minmax(0,1fr)':showRecent?'minmax(0,1fr) 420px':'minmax(0,1fr)',
+      showBoard, showRecent, board:this.boardRows(lb).slice(0,30), boardCount:lb.length, boardEmpty:!lb.length,
+      boardEmptyTxt:s?'أول كلمة صحيحة بالشات تظهر صاحبها هنا':'ابدأ الجولة وخل المتابعين يكتبون الكلمات بالشات',
+      foundCount:found.length, recentEmpty:!S.recent.length,
+      recent:S.recent.map((w,i)=>({ key:w.id, word:st.showAccepted?w.word:this.mask(w.word), ls:st.showAccepted?'0':'2px', by:w.name, pts:w.pts, golden:w.golden,
+        c:w.golden?'#fde68a':'#f4f2f8', pc:w.golden?'#fbbf24':'#67e8f9', bg:w.golden?'linear-gradient(90deg,rgba(251,191,36,.14),rgba(251,191,36,.04))':i===0?'rgba(103,232,249,.08)':'rgba(255,255,255,.03)',
+        bd:w.golden?'rgba(251,191,36,.45)':i===0?'rgba(103,232,249,.35)':'rgba(255,255,255,.07)', anim:i===0?this.anim('wordIn .45s cubic-bezier(.2,1.2,.4,1)'):'none' })),
+      notifs:S.notifs.map(n=>({ key:n.id, icon:n.ok?'✅':'⛔', who:n.who, txt:n.txt, c:n.ok?'#6ee7b7':'#fca5a5', bd:n.ok?'rgba(52,211,153,.45)':'rgba(248,113,113,.4)', anim:this.anim(`notifIn${n.run%2?'A':'B'} .3s ease`) })),
+      goldOpen:!!S.goldOpen, goldWord:S.goldWord||'', goldWho:S.goldWho||'', goldConfetti:S.goldOpen?this.confetti('gc'+(S.goldRun||0),60):null,
+      goldOv:S.goldOpenOut?'fadeOut .26s ease forwards':this.anim('fade .25s ease'), goldAn:S.goldOpenOut?'popOut .26s ease forwards':this.anim('goldIn .7s cubic-bezier(.2,1.3,.4,1)') }; }
+  resVals(){ const S=this.state, s=this.session; if(!s) return { resOpen:false, ansOpen:false, answers:[] };
+    const lb=s.leaderboard(), win=s.winners(), found=s.found, gold=found.filter(f=>f.golden), pts=S.pts;
+    const fby={}; found.forEach(f=>{ fby[f.word]=f; });
+    const answers=s.eligible.slice().sort((a,b)=>(fby[b]?1:0)-(fby[a]?1:0)||[...b].length-[...a].length).map(w=>{ const f=fby[w], g=E.isGolden(w,s.round);
+      return { key:w, word:w, by:f?`${f.name} · +${f.points}`:'لم تُكتشف', c:g?'#fde68a':f?'#6ee7b7':'#cfcad9', bg:f?'rgba(52,211,153,.07)':'rgba(255,255,255,.03)', bd:g?'rgba(251,191,36,.5)':f?'rgba(52,211,153,.35)':'rgba(255,255,255,.07)' }; });
+    return { resOpen:!!S.resOpen, resSub:`${s.round.id.replace('r','جولة ')} · ${s.endReason==='time'?'انتهى الوقت':'أنهاها الهوست'}`,
+      resFound:`${found.length} / ${s.total}`, resGold:gold.length?gold.map(g=>`${g.word} (${g.name})`).join('، '):(s.goldenWords.length?'لم تُكتشف':'لا توجد في هذه الجولة'),
+      resWinLabel:win.length>1?'تعادل في المركز الأول':'الفائز', resWinner:win.length?win.map(w=>w.name).join('، '):'—',
+      resPts:!win.length?'':pts==='pending'?'جارٍ احتساب نقاط المنصة…':typeof pts==='number'?`+${pts} نقطة منصة`:'نقاط المنصة للحسابات الموثّقة في الموقع',
+      resBoard:this.boardRows(lb), resConfetti:S.resOpen&&win.length?this.confetti('rc'+(S.resRun||0),70):null,
+      resOv:S.resOpenOut?'fadeOut .26s ease forwards':'fade .3s ease', resAn:S.resOpenOut?'popOut .26s ease forwards':this.anim('popIn .55s cubic-bezier(.2,1.25,.35,1)'),
+      closeRes:()=>this.shut('resOpen'), openAnswers:()=>this.setState({ansOpen:true,ansOpenOut:false}),
+      ansOpen:!!S.ansOpen, closeAnswers:()=>this.shut('ansOpen'), answers, ansSummary:`اكتُشف ${found.length} من ${s.total}`,
+      ansOv:S.ansOpenOut?'fadeOut .26s ease forwards':'fade .25s ease', ansAn:S.ansOpenOut?'popOut .26s ease forwards':'popIn .4s cubic-bezier(.2,1.25,.35,1)' }; }
+  // أمثلة طريقة اللعب من أحرف الجولة الحالية (أو القادمة) — كل مثال مفحوص بالمحرك نفسه
+  helpVals(){ const S=this.state, round=(this.session&&this.session.round)||this.nextRound||BANK.approved[0]; if(!round) return { helpOpen:false };
+    const letters=E.hiveLetters(round), rules=WHSettings.rules(this.settings);
+    const good=round.answers.find(w=>[...w].length===4&&E.checkLetters(w,round,rules).ok)||round.answers.find(w=>E.checkLetters(w,round,rules).ok);
+    const others=BANK.rounds.filter(r=>r.id!==round.id).flatMap(r=>r.answers).filter(w=>round.answers.indexOf(w)===-1);
+    const noCenter=others.find(w=>E.checkLetters(w,round,rules).reason==='no_center');
+    const badLetter=others.find(w=>E.checkLetters(w,round,rules).reason==='bad_letter'&&w.indexOf(letters[0])!==-1);
+    const ex=[]; if(good) ex.push({key:'g',word:good,icon:'✓',why:'صحيحة: فيها حرف الوسط «'+letters[0]+'» وكل أحرفها من الخلية',c:'#34d399',bg:'rgba(52,211,153,.07)',bd:'rgba(52,211,153,.35)'});
+    if(noCenter) ex.push({key:'n',word:noCenter,icon:'✕',why:'مرفوضة: لا تحتوي على حرف الوسط «'+letters[0]+'»',c:'#f87171',bg:'rgba(248,113,113,.07)',bd:'rgba(248,113,113,.35)'});
+    if(badLetter){ const bad=[...badLetter].find(c=>letters.indexOf(c)===-1); ex.push({key:'b',word:badLetter,icon:'✕',why:'مرفوضة: الحرف «'+bad+'» غير موجود في الخلية',c:'#f87171',bg:'rgba(248,113,113,.07)',bd:'rgba(248,113,113,.35)'}); }
+    return { helpOpen:!!S.helpOpen, closeHelp:()=>this.shut('helpOpen'), helpSteps:HELP_STEPS.map((t,i)=>({key:i,txt:t})), exRound:round.id.replace('r',''),
+      exLetters:letters.map((ch,i)=>({key:i,ch,bg:i===0?'linear-gradient(160deg,#fde68a,#f59e0b)':'rgba(139,92,246,.35)',fg:i===0?'#1a1206':'#fff'})), examples:ex,
+      helpOv:S.helpOpenOut?'fadeOut .26s ease forwards':'fade .25s ease', helpAn:S.helpOpenOut?'popOut .26s ease forwards':'popIn .4s cubic-bezier(.2,1.25,.35,1)' }; }
+  settingsVals(){ const S=this.state, d=S.draft||this.settings, st=this.session?this.session.state:'idle';
+    return { settingsOpen:!!S.settingsOpen, rulesLocked:st==='running'||st==='paused',
+      sections:WHSettings.viewSections(d,(k,v)=>this.setState(x=>({draft:{...(x.draft||this.settings),[k]:v}})),{rounds:ROUND_OPTS}),
+      bankInfo:`بنك الجولات: ${BANK.approved.length} جولة معتمدة · ${BANK.drafts.length} مسودة مستبعدة من الاختيار`+(BANK.drafts.length?` (${BANK.drafts.map(r=>r.id+': '+r.count+' كلمة').join('، ')})`:'')+` — الجولة تُعتمد عند ${E.MIN_APPROVED_WORDS} كلمة صحيحة فريدة على الأقل.`,
+      saveSettings:()=>{ const v=WHSettings.sanitize(S.draft||this.settings);
+        if(v.roundPick==='manual'&&!BANK.approved.some(r=>r.id===v.roundId)) return this.toastMsg('اختر الجولة المحددة أو غيّر الاختيار إلى عشوائية');
+        this.settings=v; WH.writeJSON(WH.keys.setup,v); if(!this.session||this.session.state==='ended') this.nextRound=this.pick(); else this.nextRound=null;
+        this.shut('settingsOpen'); this.setState({draft:null}); this.toastMsg(this.session&&(this.session.state==='running'||this.session.state==='paused')?'تم الحفظ — قواعد الجولة الجديدة تُطبَّق من الجولة القادمة':'تم حفظ الإعدادات'); },
+      resetSettings:()=>this.setState({draft:WHSettings.defaults()}),
+      cancelSettings:()=>{ this.shut('settingsOpen'); this.setState({draft:null}); },
+      settOv:S.settingsOpenOut?'fadeOut .26s ease forwards':'fade .25s ease', settAn:S.settingsOpenOut?'slideOut .26s ease forwards':'slideIn .45s cubic-bezier(.2,1,.3,1)' }; }
+  connVals(){ const c=this.state.conn, saved=!!WH.getSavedConnection();
+    const M={connected:['متصل بشات تيك توك','#34d399','الرسائل تصل من البث مباشرة'],connecting:['جارٍ الاتصال بالشات…','#fbbf24','بانتظار تأكيد الاتصال من الخادم'],
+      error:['تعذّر الاتصال بالشات','#f87171','الخادم رفض أو تعذّر الاتصال — جرّب إعادة البث من مكتبة الألعاب'],disconnected:['غير متصل بالشات','#f87171','انقطع الاتصال بالبث'],
+      none:['الشات غير متاح','#f87171','لا يوجد بث متصل: ابدأ البث على حساب تيك توك المربوط من مكتبة الألعاب. للتجربة استخدم محاكي الرسائل']}[saved||c!=='none'?c:'none']||['غير متصل بالشات','#f87171',''];
+    return { connLabel:M[0], connColor:M[1], connHint:M[2], connBg:M[1]+'12', connBd:M[1]+'55' }; }
+  confirmVals(){ const S=this.state, k=S.confKind;
+    const C={exit:['🚪','الخروج من اللعبة؟','سيتم إنهاء الجولة الحالية بدون احتسابها','خروج',()=>{ location.href=WH.libraryUrl; }],
+      end:['⏹','إنهاء الجولة الآن؟','تتوقف الإجابات وتظهر النتائج وتُحتسب النقاط الحالية','إنهاء',()=>this.endRound()],
+      restart:['↺','إعادة الجولة من البداية؟','تنمسح نقاط وكلمات هذه الجولة ويبدأ الوقت من جديد بنفس الأحرف','إعادة',()=>this.restartRound()]}[k]||['','','','',()=>{}];
+    return { confirmOpen:!!S.confirmOpen, confIcon:C[0], confTitle:C[1], confSub:C[2], confOk:C[3], closeConfirm:()=>this.shut('confirmOpen'), confirmOk:()=>{ this.shut('confirmOpen'); C[4](); },
+      confOv:S.confirmOpenOut?'fadeOut .26s ease forwards':'fade .25s ease', confAn:S.confirmOpenOut?'popOut .26s ease forwards':'popIn .45s cubic-bezier(.2,1.25,.35,1)' }; }
+  simVals(){ const S=this.state;
+    const send=()=>{ const t=S.simText.trim(), n=S.simName.trim()||'لاعب تجريبي'; if(!t) return;
+      if(!this.session) { this.setState({simLast:'ابدأ الجولة أولاً',simLastC:'#fbbf24'}); return; }
+      const res=this.submit({playerId:'sim:'+n,playerName:n,text:t,msgId:'sim-'+Date.now()+'-'+Math.random()});
+      const txt=!res?'':res.status==='accepted'?`مقبولة +${res.points}${res.golden?' (ذهبية)':''}`:res.status==='rejected'?`مرفوضة: ${res.message}${res.by?' بواسطة '+res.by:''}`:`تجاهل: ${res.message}`;
+      this.setState({simText:'',simLast:`«${t}» — ${txt}`,simLastC:res&&res.status==='accepted'?'#6ee7b7':'#fca5a5'}); };
+    return { simOpen:S.simOpen, toggleSim:()=>this.setState(x=>({simOpen:!x.simOpen})), simBd:S.simOpen?'rgba(167,139,250,.6)':'rgba(255,255,255,.14)',
+      simName:S.simName, simText:S.simText, simNameIn:e=>this.setState({simName:e.target.value}), simTextIn:e=>this.setState({simText:e.target.value}),
+      simKey:e=>{ if(e.key==='Enter') send(); }, simSend:send, simLast:S.simLast, simLastC:S.simLastC||'#cfcad9' }; }
+  renderVals(){ const S=this.state;
+    return { lblDisp:S.narrow?'none':'inline', scale:S.scale, fx:this.buildFx(), stop:e=>e.stopPropagation(), toast:S.toast,
+      onExit:()=>this.setState({confirmOpen:true,confirmOpenOut:false,confKind:'exit'}), onSettings:()=>this.setState({settingsOpen:true,settingsOpenOut:false,draft:{...this.settings}}),
+      onHelp:()=>this.setState({helpOpen:true,helpOpenOut:false}), newRound:this.newRound,
+      logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
+      ...this.hexVals(), ...this.mainVals(), ...this.resVals(), ...this.helpVals(), ...this.settingsVals(), ...this.connVals(), ...this.confirmVals(), ...this.simVals() }; }
+}
+</script>
+</body>
+</html>
