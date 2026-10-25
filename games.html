@@ -1763,18 +1763,16 @@ document.addEventListener('DOMContentLoaded', async function() {
       ph.textContent = String(s.name || s.tiktok || '?').charAt(0).toUpperCase();
       return ph;
     }
-    if (s.avatar) {
-      var img = document.createElement('img');
-      img.className = 'agp-live-avatar-img';
-      img.src = s.avatar;
-      img.alt = '';
-      img.loading = 'lazy';
-      img.referrerPolicy = 'no-referrer';
-      img.onerror = function(){ img.replaceWith(fallbackAvatar()); };
-      av.appendChild(img);
-    } else {
-      av.appendChild(fallbackAvatar());
-    }
+    // الصورة من السيرفر (المخزَّنة بالحساب) بدل رابط تيك توك اللي تنتهي
+    // صلاحيته — ولو ما فيه صورة (404) يظهر أول حرف من الاسم.
+    var apiBase = (window.AGPAuth && window.AGPAuth.API_BASE) || 'https://project-testing-akds.onrender.com';
+    var img = document.createElement('img');
+    img.className = 'agp-live-avatar-img';
+    img.src = apiBase + '/api/public/streamer-avatar?u=' + encodeURIComponent(s.tiktok);
+    img.alt = '';
+    img.decoding = 'async';
+    img.onerror = function(){ img.replaceWith(fallbackAvatar()); };
+    av.appendChild(img);
     var tag = document.createElement('span');
     tag.className = 'agp-live-tag';
     tag.textContent = 'LIVE';

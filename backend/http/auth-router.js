@@ -202,6 +202,8 @@ var ROUTES = [
   { method: 'GET', path: '/api/public/platform-stats', requireAuth: false, handler: handleGetPlatformStats },
   // ---- البثوث الشغّالة الآن (بطاقات مكتبة الألعاب) — عام، حقول عامة فقط.
   { method: 'GET', path: '/api/public/live-streams', requireAuth: false, handler: handlePublicLiveStreams },
+  // صورة الستريمر لبطاقات البث — ملف صورة مباشر (مو JSON) عشان يُستخدم في <img>.
+  { method: 'GET', path: '/api/public/streamer-avatar', requireAuth: false, handler: handlePublicStreamerAvatar },
   // ---- إحصائيات لوحة الأدمن
   { method: 'GET', path: '/api/admin/stats/streamers', requireAuth: true, requireAdmin: true, handler: handleAdminStreamerStats },
   { method: 'GET', path: '/api/admin/stats/users', requireAuth: true, requireAdmin: true, handler: handleAdminUserStats },
@@ -1091,7 +1093,6 @@ function handlePublicLiveStreams(req, res) {
     byUser[tiktok] = {
       name: u.display_name || u.username || tiktok,
       tiktok: tiktok,
-      avatar: c.user.avatar || null,
       customId: u.custom_id,
       gameName: c.gameName || null,
       viewers: typeof c.viewers === 'number' ? c.viewers : null,
@@ -1101,6 +1102,23 @@ function handlePublicLiveStreams(req, res) {
   var streams = Object.keys(byUser).map(function (k) { return byUser[k]; })
     .sort(function (x, y) { return (y.viewers || 0) - (x.viewers || 0); });
   sendJson(res, 200, { success: true, streams: streams });
+}
+
+/** صورة ستريمر موثَّق (?u=<يوزر تيك توك>) كملف صورة. روابط صور تيك توك
+ * موقّعة وتنتهي صلاحيتها بعد أيام، فما نرسلها للمتصفح مباشرة: نعتمد على
+ * getStreamerProfile — الصورة المخزَّنة بالحساب (المرفوعة أو المحفوظة من
+ * تيك توك)، وإلا يحمّلها السيرفر من الرابط المخزَّن (مع كاش). 404 لو ما فيه
+ * صورة، والواجهة تعرض أول حرف من الاسم بدلها. */
+function handlePublicStreamerAvatar(req, res) {
+  var username = String(getQueryParam(req, 'u') || '').trim().replace(/^@+/, '').toLowerCase();
+  if (!/^[a-z0-9._]{1,40}$/.test(username)) { sendJson(res, 400, { success: false, error: 'invalid_username' }); return; }
+  return liveSessionStats.getStreamerProfile(username).then(function (p) { return p && p.avatar; }, function () { return null; }).then(function (dataUrl) {
+    var m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(dataUrl || '');
+    if (!m) { sendJson(res, 404, { success: false, error: 'no_avatar' }); return; }
+    var buf = Buffer.from(m[2], 'base64');
+    res.writeHead(200, { 'Content-Type': m[1], 'Content-Length': buf.length, 'Cache-Control': 'public, max-age=600' });
+    res.end(buf);
+  });
 }
 
 function listStatsWatchers() {
