@@ -46,8 +46,8 @@ input::placeholder{color:#6f6a7c}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes hexInA{0%{opacity:0;transform:scale(.3) rotate(-30deg)}70%{opacity:1;transform:scale(1.08) rotate(3deg)}100%{opacity:1;transform:none}}
 @keyframes hexInB{0%{opacity:0;transform:scale(.3) rotate(-30deg)}70%{opacity:1;transform:scale(1.08) rotate(3deg)}100%{opacity:1;transform:none}}
-@keyframes hexFlashA{0%{filter:brightness(1)}30%{filter:brightness(1.9) drop-shadow(0 0 30px #67e8f9);transform:scale(1.07)}100%{filter:brightness(1);transform:none}}
-@keyframes hexFlashB{0%{filter:brightness(1)}30%{filter:brightness(1.9) drop-shadow(0 0 30px #67e8f9);transform:scale(1.07)}100%{filter:brightness(1);transform:none}}
+@keyframes hexFlashA{0%{filter:brightness(1)}35%{filter:brightness(1.22);transform:scale(1.04)}100%{filter:brightness(1);transform:none}}
+@keyframes hexFlashB{0%{filter:brightness(1)}35%{filter:brightness(1.22);transform:scale(1.04)}100%{filter:brightness(1);transform:none}}
 @keyframes breathe{0%,100%{opacity:.55;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
 @keyframes wordInA{0%{opacity:0;transform:translateY(-14px) scale(.9)}100%{opacity:1;transform:none}}
 @keyframes wordInB{0%{opacity:0;transform:translateY(-14px) scale(.9)}100%{opacity:1;transform:none}}
@@ -92,15 +92,7 @@ input::placeholder{color:#6f6a7c}
     </sc-if>
 
     <!-- الوسط: الخلية والمؤقت والتحكم -->
-    <main style="min-width:0;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:8px">
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center">
-        <span style="font:800 52px/1.1 'IBM Plex Sans Arabic';background:linear-gradient(180deg,#f4f2f8,#c4b5fd 55%,#67e8f9);-webkit-background-clip:text;background-clip:text;color:transparent">خلية الكلمات</span>
-        <span style="display:flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:999px;background:{{ stBg }};border:1px solid {{ stBd }};font:700 18px 'IBM Plex Sans Arabic';color:{{ stC }}"><span style="width:9px;height:9px;border-radius:50%;background:{{ stC }};box-shadow:0 0 10px {{ stC }}"></span>{{ stLabel }}</span>
-        <sc-if value="{{ roundTag }}" hint-placeholder-val="{{ false }}">
-          <span style="height:38px;padding:0 16px;display:flex;align-items:center;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);font:600 17px 'IBM Plex Sans Arabic';color:#cfcad9">{{ roundTag }}</span>
-        </sc-if>
-      </div>
-
+    <main style="min-width:0;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px">
       <div style="height:48px;flex-shrink:0;display:flex;align-items:center;justify-content:center;max-width:100%">
         <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="0">
           <div style="display:flex;align-items:center;gap:10px;max-width:100%;padding:8px 22px;border-radius:999px;background:rgba(12,11,18,.94);border:1px solid {{ n.bd }};box-shadow:0 14px 40px rgba(0,0,0,.45);font:600 22px 'IBM Plex Sans Arabic';color:{{ n.c }};animation:{{ n.anim }}">
@@ -110,14 +102,14 @@ input::placeholder{color:#6f6a7c}
       </div>
 
       <div style="position:relative;width:{{ hiveW }}px;height:{{ hiveH }}px;flex-shrink:0">
-        <div style="position:absolute;inset:-80px;border-radius:50%;background:radial-gradient(circle, rgba(124,58,237,.28), rgba(56,189,248,.08) 50%, transparent 70%);pointer-events:none"></div>
+        <div style="position:absolute;inset:-80px;border-radius:50%;background:radial-gradient(circle, rgba(232,196,122,.07), rgba(139,92,246,.06) 45%, transparent 70%);pointer-events:none"></div>
         <sc-for list="{{ hexes }}" as="x" hint-placeholder-count="7">
           <div style="position:absolute;left:{{ x.left }}px;top:{{ x.top }}px;width:{{ x.w }}px;height:{{ x.h }}px">
             <div style="width:100%;height:100%;animation:{{ x.enter }}">
             <div style="position:relative;width:100%;height:100%;animation:{{ x.flash }};filter:{{ x.shadow }}">
               <div style="position:absolute;inset:0;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:{{ x.border }}"></div>
-              <div style="position:absolute;inset:5px;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:{{ x.bg }};display:grid;place-items:center">
-                <span style="font:800 {{ x.fs }}px/1 'IBM Plex Sans Arabic';color:{{ x.fg }};text-shadow:{{ x.ts }};margin-top:-6px">{{ x.letter }}</span>
+              <div style="position:absolute;inset:2px;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:{{ x.bg }};display:grid;place-items:center">
+                <span style="font:800 {{ x.fs }}px/1 'IBM Plex Sans Arabic';color:{{ x.fg }};text-shadow:{{ x.ts }};margin-top:-4px">{{ x.letter }}</span>
               </div>
             </div>
             </div>
@@ -125,14 +117,14 @@ input::placeholder{color:#6f6a7c}
         </sc-for>
         <sc-if value="{{ pausedOv }}" hint-placeholder-val="{{ false }}">
           <div style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;animation:fade .25s ease">
-            <span style="padding:14px 34px;border-radius:999px;background:rgba(12,11,18,.9);border:1px solid rgba(251,191,36,.5);font:800 34px 'IBM Plex Sans Arabic';color:#fde68a;box-shadow:0 20px 60px rgba(0,0,0,.6)">⏸ متوقفة مؤقتاً</span>
+            <span style="padding:14px 34px;border-radius:999px;background:rgba(20,18,30,.92);border:1px solid rgba(232,196,122,.35);font:700 30px 'IBM Plex Sans Arabic';color:#e8c47a;box-shadow:0 20px 60px rgba(0,0,0,.6)">⏸ متوقفة مؤقتاً</span>
           </div>
         </sc-if>
       </div>
 
       <sc-if value="{{ showIntro }}" hint-placeholder-val="{{ true }}">
-        <div style="width:min(860px,100%);box-sizing:border-box;padding:22px 30px;border-radius:26px;background:rgba(18,16,26,.78);border:1px solid rgba(103,232,249,.25);display:flex;flex-direction:column;gap:12px;animation:rise .45s ease both">
-          <span style="font:800 26px 'IBM Plex Sans Arabic';color:#a5f3fc">قبل بدء الجولة</span>
+        <div style="width:min(860px,100%);box-sizing:border-box;padding:22px 30px;border-radius:26px;background:rgba(18,16,26,.78);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:12px;animation:rise .45s ease both">
+          <span style="font:700 24px 'IBM Plex Sans Arabic';color:#e8c47a">قبل بدء الجولة</span>
           <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
             <sc-for list="{{ introTips }}" as="t" hint-placeholder-count="3">
               <div style="display:flex;align-items:flex-start;gap:10px;padding:14px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
@@ -145,23 +137,16 @@ input::placeholder{color:#6f6a7c}
       </sc-if>
 
       <sc-if value="{{ showStats }}" hint-placeholder-val="{{ false }}">
-        <div style="display:flex;gap:18px;align-items:stretch">
-          <div style="min-width:280px;padding:16px 26px;border-radius:24px;background:rgba(18,16,26,.78);border:1px solid {{ timeBd }};display:flex;flex-direction:column;align-items:center;gap:8px">
-            <span style="font:600 18px 'IBM Plex Sans Arabic';color:#a8a3b5">الوقت المتبقي</span>
-            <span style="font:800 64px/1 'IBM Plex Sans Arabic';color:{{ timeCol }};font-variant-numeric:tabular-nums;animation:{{ timeAnim }}">{{ timeTxt }}</span>
-            <div style="width:220px;height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden"><div style="height:100%;width:{{ timePct }}%;background:{{ timeCol }};border-radius:999px;transition:width .25s linear"></div></div>
-          </div>
-          <div style="min-width:280px;padding:16px 26px;border-radius:24px;background:rgba(18,16,26,.78);border:1px solid rgba(167,139,250,.3);display:flex;flex-direction:column;align-items:center;gap:8px">
-            <span style="font:600 18px 'IBM Plex Sans Arabic';color:#a8a3b5">الكلمات المكتشفة</span>
-            <span style="font:800 64px/1 'IBM Plex Sans Arabic';color:#ddd6fe;font-variant-numeric:tabular-nums">{{ countTxt }}</span>
-            <span style="font:600 16px 'IBM Plex Sans Arabic';color:#fcd34d">{{ goldTxt }}</span>
-          </div>
+        <div style="display:flex;align-items:baseline;gap:14px;color:#a8a3b5;font:600 22px 'IBM Plex Sans Arabic'">
+          <span style="font:800 46px/1 'IBM Plex Sans Arabic';color:#ece9f5;font-variant-numeric:tabular-nums">{{ countTxt }}</span>
+          <span>كلمة مكتشفة</span>
+          <sc-if value="{{ goldTxt }}" hint-placeholder-val="{{ false }}"><span style="font:600 18px 'IBM Plex Sans Arabic';color:#e8c47a">· {{ goldTxt }}</span></sc-if>
         </div>
       </sc-if>
 
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center">
         <sc-for list="{{ controls }}" as="c" hint-placeholder-count="2">
-          <button onClick="{{ c.run }}" style="height:68px;padding:0 44px;border-radius:999px;border:{{ c.bd }};background:{{ c.bg }};box-shadow:{{ c.sh }};color:{{ c.fg }};font:700 26px 'IBM Plex Sans Arabic';cursor:pointer;display:flex;align-items:center;gap:12px;transition:transform .2s" style-hover="transform:translateY(-2px)" style-active="transform:scale(.97)"><span style="font-size:24px">{{ c.icon }}</span>{{ c.label }}</button>
+          <button onClick="{{ c.run }}" style="height:60px;padding:0 38px;border-radius:999px;border:{{ c.bd }};background:{{ c.bg }};box-shadow:{{ c.sh }};color:{{ c.fg }};font:700 22px 'IBM Plex Sans Arabic';cursor:pointer;display:flex;align-items:center;gap:12px;transition:transform .2s" style-hover="transform:translateY(-2px)" style-active="transform:scale(.97)"><span style="font-size:24px">{{ c.icon }}</span>{{ c.label }}</button>
         </sc-for>
       </div>
     </main>
@@ -434,7 +419,7 @@ const DIFF = { easy:'سهل', medium:'متوسط' };
 const ROUND_OPTS = BANK.approved.map(r=>({ value:r.id, label:`${r.id.replace('r','جولة ')} · الوسط «${r.center}» · ${DIFF[r.difficulty]||''} · ${r.count} كلمة` }));
 const RECENT_KEEP = Math.max(1, Math.min(5, BANK.approved.length - 1));
 const ini = n=>[...String(n||'')].find(ch=>/[^\s_\d@]/.test(ch))||'؟';
-const HEX_W = 180, HEX_H = Math.round(HEX_W*1.1547), GAP = 1.07;
+const HEX_W = 200, HEX_H = Math.round(HEX_W*1.1547), GAP = 1.05;
 const HELP_STEPS = [
   'ستظهر أمامك خلية تحتوي على سبعة أحرف.',
   'يوجد حرف أساسي في وسط الخلية، ويجب أن تحتوي عليه كل كلمة.',
@@ -521,8 +506,8 @@ class Component extends DCLogic {
     if(this._fx) return this._fx;
     const h=React.createElement, rnd=(a,b)=>a+Math.random()*(b-a);
     const glow=(k,css)=>h('div',{key:k,style:{position:'absolute',borderRadius:'50%',filter:'blur(40px)',...css}});
-    const glows=[glow('g1',{top:'-20%',right:'-10%',width:900,height:900,background:'radial-gradient(circle, rgba(124,58,237,.22), transparent 65%)'}),
-      glow('g2',{top:'30%',left:'-15%',width:800,height:800,background:'radial-gradient(circle, rgba(56,189,248,.12), transparent 65%)'}),
+    const glows=[glow('g1',{top:'-20%',right:'-10%',width:900,height:900,background:'radial-gradient(circle, rgba(124,58,237,.12), transparent 65%)'}),
+      glow('g2',{top:'30%',left:'-15%',width:800,height:800,background:'radial-gradient(circle, rgba(139,92,246,.06), transparent 65%)'}),
       glow('g3',{bottom:'-30%',left:'35%',width:1000,height:700,background:'radial-gradient(circle, rgba(168,85,247,.1), transparent 65%)'})];
     const stars=Array.from({length:90},(_,i)=>h('span',{key:'s'+i,style:{position:'absolute',left:rnd(0,100)+'%',top:rnd(0,100)+'%',width:i%9?1.5:3,height:i%9?1.5:3,borderRadius:'50%',background:`rgba(255,255,255,${rnd(.12,.35).toFixed(2)})`}}));
     const sq=[[88,14,14,1],[73,82,18,0],[16,66,10,1],[42,8,12,0]].map(([x,y,s,fill],i)=>h('span',{key:'q'+i,style:{position:'absolute',left:x+'%',top:y+'%',width:s,height:s,background:fill?'rgba(139,92,246,.45)':'transparent',border:fill?'none':'1.5px solid rgba(139,92,246,.35)'}}));
@@ -538,11 +523,11 @@ class Component extends DCLogic {
     const hexes=pos.map(([x,y],i)=>{ const c=i===0, ch=letters[i], lit=fl&&show&&fl.letters.includes(ch);
       const delay=(order.indexOf(i)*0.07).toFixed(2);
       return { key:i, left:Math.round(cx+x-HEX_W/2), top:Math.round(cy+y-HEX_H/2), w:HEX_W, h:HEX_H, letter:ch,
-        border:c?'linear-gradient(160deg,#fde68a,#f59e0b 45%,#67e8f9)':'linear-gradient(160deg,#c4b5fd,#5b21b6 50%,#38bdf8)',
-        bg:c?'radial-gradient(circle at 50% 35%,#7c3aed,#3b0764 70%)':'radial-gradient(circle at 50% 30%,#1f1838,#0d0a16 75%)',
-        fg:show?(c?'#fff7d6':'#f4f2f8'):'rgba(255,255,255,.25)', fs:c?100:84,
-        ts:c?'0 0 24px rgba(253,230,138,.85), 0 4px 10px rgba(0,0,0,.6)':'0 0 18px rgba(167,139,250,.6), 0 4px 10px rgba(0,0,0,.6)',
-        shadow:c?'drop-shadow(0 0 26px rgba(251,191,36,.55)) drop-shadow(0 18px 30px rgba(0,0,0,.6))':'drop-shadow(0 0 14px rgba(124,58,237,.45)) drop-shadow(0 16px 26px rgba(0,0,0,.55))',
+        border:c?'linear-gradient(180deg,rgba(255,240,205,.75),rgba(196,140,50,.6))':'linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.05))',
+        bg:c?'linear-gradient(180deg,#f3cd7a,#dca547)':'linear-gradient(180deg,#25213a,#1a1729)',
+        fg:show?(c?'#3a2608':'#ece9f5'):(c?'rgba(58,38,8,.45)':'rgba(255,255,255,.22)'), fs:c?104:90,
+        ts:c?'0 1px 0 rgba(255,255,255,.35)':'0 2px 6px rgba(0,0,0,.35)',
+        shadow:c?'drop-shadow(0 12px 26px rgba(220,165,71,.28)) drop-shadow(0 10px 18px rgba(0,0,0,.45))':'drop-shadow(0 10px 18px rgba(0,0,0,.45))',
         enter:show?this.anim(`hexIn${run%2?'A':'B'} .6s cubic-bezier(.2,1.3,.4,1) ${delay}s both`):(c?this.anim('breathe 2.4s ease-in-out infinite'):'none'),
         flash:lit?this.anim(`hexFlash${fl.run%2?'A':'B'} .8s ease`):'none' }; });
     return { hexes, hiveW:Math.round(cx*2), hiveH:Math.round(cy*2), pausedOv:st==='paused' }; }
@@ -550,16 +535,16 @@ class Component extends DCLogic {
   slotVals(s,found,st){ if(!s||!st.showTotal) return { slots:[], showSlots:false };
     const got=new Set(found.map(f=>f.word)), rest=s.eligible.filter(w=>!got.has(w)).sort((a,b)=>[...a].length-[...b].length);
     return { showSlots:rest.length>0, slots:rest.map((w,i)=>{ const g=E.isGolden(w,s.round);
-      return { key:i, bg:g?'rgba(251,191,36,.08)':'rgba(255,255,255,.035)', bd:g?'rgba(251,191,36,.4)':'rgba(255,255,255,.08)', cells:[...w].map((_,k)=>({key:k,bg:g?'rgba(251,191,36,.6)':'rgba(167,139,250,.45)'})) }; }) }; }
+      return { key:i, bg:g?'rgba(251,191,36,.08)':'rgba(255,255,255,.035)', bd:g?'rgba(251,191,36,.4)':'rgba(255,255,255,.08)', cells:[...w].map((_,k)=>({key:k,bg:g?'rgba(232,196,122,.55)':'rgba(200,190,240,.28)'})) }; }) }; }
   boardRows(list){ const medal=['linear-gradient(135deg,#f59e0b,#b45309)','linear-gradient(135deg,#94a3b8,#475569)','linear-gradient(135deg,#d97706,#78350f)'];
     return list.map((p,i)=>({ key:p.key, rank:i+1, name:p.name, ini:ini(p.name), av:p.avatar||'', op:p.avatar?1:0, words:p.words.length, score:p.score,
-      rankBg:medal[i]||'rgba(139,92,246,.35)', ring:['#fbbf24','#cbd5e1','#d97706'][i]||'rgba(167,139,250,.45)', glow:i===0?'rgba(251,191,36,.45)':i<3?'rgba(167,139,250,.25)':'transparent', size:i===0?72:i<3?62:54, fs:i===0?28:i<3?24:21, nameC:i===0?'#fde68a':i<3?'#f4f2f8':'#cfcad9', scoreC:i===0?'#fde68a':'#ddd6fe', bg:i===0?'rgba(251,191,36,.07)':'rgba(255,255,255,.03)', bd:i===0?'rgba(251,191,36,.35)':'rgba(255,255,255,.07)' })); }
+      rankBg:medal[i]||'rgba(139,92,246,.35)', ring:['#e8c47a','#cfd4dc','#c9925a'][i]||'rgba(167,139,250,.35)', glow:i===0?'rgba(232,196,122,.22)':'transparent', size:i===0?72:i<3?62:54, fs:i===0?28:i<3?24:21, nameC:i===0?'#f1dcae':i<3?'#ece9f5':'#c9c4d6', scoreC:i===0?'#fde68a':'#ddd6fe', bg:i===0?'rgba(251,191,36,.07)':'rgba(255,255,255,.03)', bd:i===0?'rgba(251,191,36,.35)':'rgba(255,255,255,.07)' })); }
   mainVals(){ const S=this.state, st=this.settings, s=this.session, state=s?s.state:'idle', now=Date.now();
     const rem=s?s.remaining(now):0, sec=Math.ceil(rem/1000), dur=s?s.rules.durationSec:st.durationSec;
     const lb=s?s.leaderboard():[], found=s?s.found:[], goldFound=found.filter(f=>f.golden);
     const L={idle:['بانتظار البدء','#a78bfa'],ready:['بانتظار البدء','#a78bfa'],running:['الجولة جارية','#34d399'],paused:['متوقفة مؤقتاً','#fbbf24'],ended:['انتهت الجولة','#f87171']}[state];
-    const btn=(label,icon,run,kind)=>({label,icon,run,...({primary:{bg:'linear-gradient(90deg,#7c3aed,#a855f7)',bd:'none',fg:'#fff',sh:'0 14px 40px rgba(124,58,237,.5)'},
-      warn:{bg:'rgba(251,191,36,.1)',bd:'1px solid rgba(251,191,36,.5)',fg:'#fde68a',sh:'none'},danger:{bg:'rgba(248,113,113,.1)',bd:'1px solid rgba(248,113,113,.5)',fg:'#fca5a5',sh:'none'},
+    const btn=(label,icon,run,kind)=>({label,icon,run,...({primary:{bg:'rgba(167,139,250,.18)',bd:'1px solid rgba(167,139,250,.45)',fg:'#ede9fe',sh:'0 10px 30px rgba(0,0,0,.35)'},
+      warn:{bg:'rgba(232,196,122,.08)',bd:'1px solid rgba(232,196,122,.35)',fg:'#e8c47a',sh:'none'},danger:{bg:'rgba(248,113,113,.06)',bd:'1px solid rgba(248,113,113,.3)',fg:'#f3a5a5',sh:'none'},
       ghost:{bg:'rgba(255,255,255,.05)',bd:'1px solid rgba(255,255,255,.16)',fg:'#e7e3ef',sh:'none'}})[kind]});
     const ask=(k)=>()=>this.setState({confirmOpen:true,confirmOpenOut:false,confKind:k});
     const controls=state==='running'?[btn('إيقاف مؤقت','⏸',this.pauseRound,'warn'),btn('إنهاء الجولة','⏹',ask('end'),'danger')]
@@ -580,8 +565,8 @@ class Component extends DCLogic {
       ...this.slotVals(s,found,st), wordsCount:s?(st.showTotal?`${found.length} / ${s.total}`:String(found.length)):'',
       recentEmpty:!s||(!S.recent.length&&!st.showTotal), emptyWordsTxt:s?'الكلمات المكتشفة تظهر هنا فوق أول بأول':'ابدأ الجولة وتظهر هنا الكلمات المطلوبة',
       recent:S.recent.map((w,i)=>({ key:w.id, word:st.showAccepted?w.word:this.mask(w.word), ls:st.showAccepted?'0':'2px', by:w.name+(w.golden?' · 🌟 ذهبية':''), pts:w.pts,
-        fs:i===0?44:32, op:Math.max(.45,1-i*.08), c:w.golden?'#fde68a':i===0?'#a5f3fc':'#f4f2f8', pc:w.golden?'#fbbf24':'#67e8f9',
-        ts:w.golden?'0 0 22px rgba(251,191,36,.6)':i===0?'0 0 22px rgba(103,232,249,.45)':'0 2px 10px rgba(0,0,0,.6)', anim:i===0?this.anim(`wordIn${S.recent.length%2?'A':'B'} .45s cubic-bezier(.2,1.2,.4,1)`):'none' })),
+        fs:i===0?44:32, op:Math.max(.45,1-i*.08), c:w.golden?'#e8c47a':i===0?'#f4f1ff':'#d9d5e6', pc:w.golden?'#e8c47a':'#b9aef0',
+        ts:'0 2px 10px rgba(0,0,0,.5)', anim:i===0?this.anim(`wordIn${S.recent.length%2?'A':'B'} .45s cubic-bezier(.2,1.2,.4,1)`):'none' })),
       notifs:S.notifs.map(n=>({ key:n.id, icon:n.ok?'✅':'⛔', who:n.who, txt:n.txt, c:n.ok?'#6ee7b7':'#fca5a5', bd:n.ok?'rgba(52,211,153,.45)':'rgba(248,113,113,.4)', anim:this.anim(`notifIn${n.run%2?'A':'B'} .3s ease`) })),
       goldOpen:!!S.goldOpen, goldWord:S.goldWord||'', goldWho:S.goldWho||'', goldConfetti:S.goldOpen?this.confetti('gc'+(S.goldRun||0),60):null,
       goldOv:S.goldOpenOut?'fadeOut .26s ease forwards':this.anim('fade .25s ease'), goldAn:S.goldOpenOut?'popOut .26s ease forwards':this.anim('goldIn .7s cubic-bezier(.2,1.3,.4,1)') }; }
