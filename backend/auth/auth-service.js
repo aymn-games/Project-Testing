@@ -1328,6 +1328,41 @@ function getTopStreamersByParticipations(limit) {
 }
 
 /**
+ * مراكز مستخدم واحد بكل التصنيفات الأسبوعية (اللاعبين + الاستريمرز) — لصورة
+ * البروفايل (js/agp-profile-card.js). نفس ترتيب وشروط قوائم التوب بالرئيسية،
+ * والتصنيف اللي ما يدخله يرجع null. بيانات علنية أصلاً (التوب عام).
+ * @param {string} customId
+ * @returns {?{players: Object, streamers: Object}}
+ */
+function getUserWeeklyRanks(customId) {
+    var user = db.prepare('SELECT id, tiktok_verified, tiktok_username FROM users WHERE custom_id = ?').get(String(customId || '').trim());
+    if (!user) return null;
+    var periodStart = getRankingPeriodStart();
+    var streamers = { hours: null, participations: null };
+    if (user.tiktok_verified && user.tiktok_username) {
+        var eligible = 'u.tiktok_verified = 1 AND u.tiktok_username IS NOT NULL';
+        var h = db.prepare(
+            `SELECT rn, total_ms FROM (
+                SELECT u.id AS user_id, h.total_ms, ROW_NUMBER() OVER (ORDER BY h.total_ms DESC) AS rn
+                FROM users u JOIN (${streamerHours.HOURS_BY_USER_SQL}) h ON h.user_id = u.id
+                WHERE ${eligible} AND h.total_ms > 0
+             ) WHERE user_id = @userId`
+        ).get(Object.assign({ userId: user.id }, streamerHours.hoursParams(periodStart)));
+        if (h) streamers.hours = { rank: h.rn, value: Math.round(h.total_ms / 60000) };
+        var p = db.prepare(
+            `SELECT rn, total FROM (
+                SELECT u.id AS user_id, l.total, ROW_NUMBER() OVER (ORDER BY l.total DESC) AS rn
+                FROM users u JOIN (SELECT user_id, SUM(participants) AS total FROM streamer_participations_log
+                                   WHERE created_at >= ? GROUP BY user_id) l ON l.user_id = u.id
+                WHERE ${eligible} AND l.total > 0
+             ) WHERE user_id = ?`
+        ).get(periodStart, user.id);
+        if (p) streamers.participations = { rank: p.rn, value: p.total };
+    }
+    return { players: pointsService.getPlayerWeeklyRanks(user.id, periodStart), streamers: streamers };
+}
+
+/**
  * إحصائيات مجمَّعة عن كل الاستريمرز — لتبويب "إحصائيات الاستريمرز" بلوحة
  * الأدمن فقط. total_views مبنية على حقل totalUser من مكتبة tiktok-live-connector.
  */
@@ -1607,6 +1642,7 @@ module.exports = {
     updateBroadcastViewerStats: updateBroadcastViewerStats,
     getTopStreamersByHours: getTopStreamersByHours,
     getTopStreamersByParticipations: getTopStreamersByParticipations,
+    getUserWeeklyRanks: getUserWeeklyRanks,
     recordStreamerParticipations: recordStreamerParticipations,
     getAdminStreamerStats: getAdminStreamerStats,
     getAdminUserStats: getAdminUserStats,

@@ -812,5 +812,15 @@
         showSettings(modal());
     }
 
-    window.AGPStreamStats = { open: open };
+    // shared: الخلفيات وأدوات الرسم والنافذة — تعيد استخدامها صورة البروفايل
+    // (js/agp-profile-card.js) بنفس الشكل والمقاس.
+    window.AGPStreamStats = {
+        open: open,
+        shared: {
+            W: W, H: H, FONT: FONT, BACKGROUNDS: BACKGROUNDS, CUSTOM_ACCENT: CUSTOM_ACCENT,
+            BTN_PRIMARY: BTN_PRIMARY, BTN_GHOST: BTN_GHOST, ROW: ROW, HEADING: HEADING,
+            drawCover: drawCover, prepareUpload: prepareUpload, loadImg: loadImg, fitText: fitText,
+            drawAvatar: drawAvatar, sparkle: sparkle, bgTile: bgTile, setActions: setActions
+        }
+    };
 }());

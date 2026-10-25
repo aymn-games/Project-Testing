@@ -193,6 +193,7 @@ var ROUTES = [
   // عام بدون تسجيل دخول، بيانات غير حساسة فقط.
   { method: 'GET', path: '/api/public/top-streamers', requireAuth: false, handler: handleTopStreamers },
   { method: 'GET', path: '/api/public/top-streamers-participations', requireAuth: false, handler: handleTopStreamersByParticipations },
+  { method: 'GET', path: '/api/public/user-ranks', requireAuth: false, handler: handleUserRanks },
   { method: 'GET', path: '/api/public/top-players-wins', requireAuth: false, handler: handleTopPlayersByWins },
   { method: 'GET', path: '/api/public/top-players-hours', requireAuth: false, handler: handleTopPlayersByHours },
   { method: 'GET', path: '/api/public/top-players-rounds', requireAuth: false, handler: handleTopPlayersByRounds },
@@ -839,6 +840,8 @@ function handleStreamSessionStats(req, res, body, user) {
  * فوز مختلفة، راجع points-service.js). كل مشارك يُطابَق بحساب مسجَّل موثَّق تيك توك قبل
  * منح أي نقاط — لا نقاط لمن لا حساب له، بصمت.
  */
+var MAX_PARTICIPATIONS_PER_MATCH = 500;
+
 function handleRoundComplete(req, res, body, user) {
   var participants = Array.isArray(body.participants) ? body.participants : [];
   var durationMs = Number(body.durationMs) || 0;
@@ -850,7 +853,9 @@ function handleRoundComplete(req, res, body, user) {
     var name = p && p.tiktokUsername ? String(p.tiktokUsername).toLowerCase() : '';
     if (name) seen[name] = true;
   });
-  try { authService.recordStreamerParticipations(user && user.id, Object.keys(seen).length); } catch (err) { logger.error('Round complete: participations record failed:', err); }
+  // حد أعلى ٥٠٠ للمباراة الوحدة: العدد يجي من متصفح الاستريمر، فالحد يمنع
+  // قائمة مزيفة ضخمة تقفز بالتصنيف من مباراة وحدة.
+  try { authService.recordStreamerParticipations(user && user.id, Math.min(MAX_PARTICIPATIONS_PER_MATCH, Object.keys(seen).length)); } catch (err) { logger.error('Round complete: participations record failed:', err); }
   var teamGame = Boolean(body.teamGame);
   var results = [];
   participants.forEach(function (p) {
@@ -984,6 +989,16 @@ function handleAdminClearTheme(req, res) {
 function handleTopStreamers(req, res) {
   var limit = Math.min(50, Math.max(1, parseInt(getQueryParam(req, 'limit'), 10) || 20));
   sendJson(res, 200, { success: true, streamers: authService.getTopStreamersByHours(limit) });
+}
+
+/** مراكز مستخدم (?id=custom_id) بالتصنيفات الأسبوعية — عام، لصورة البروفايل. */
+function handleUserRanks(req, res) {
+  var ranks = authService.getUserWeeklyRanks(getQueryParam(req, 'id'));
+  if (!ranks) {
+    sendJson(res, 404, { success: false, error: 'not_found' });
+    return;
+  }
+  sendJson(res, 200, { success: true, ranks: ranks });
 }
 
 /** أعلى الاستريمرز بعدد المشاركات بألعابهم هالأسبوع — عام، لتوب الاستريمرز بالرئيسية. */

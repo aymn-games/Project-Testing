@@ -771,6 +771,12 @@ function getTopStreamers(limit) {
     return request('/api/public/top-streamers' + qs, { method: 'GET' });
 }
 
+/** A user's position in every weekly ranking ({players:{wins,hours,rounds},
+ * streamers:{hours,participations}}, each {rank, value} or null). */
+function getUserWeeklyRanks(customId) {
+    return request('/api/public/user-ranks?id=' + encodeURIComponent(customId || ''), { method: 'GET' });
+}
+
 /** Top streamers by total game participations this week (every participant
  * in every match they ran; resets every Saturday). */
 function getTopStreamersByParticipations(limit) {
@@ -1079,6 +1085,7 @@ global.AGPAuth = {
     adminResetWelcome: adminResetWelcome,
     getTopStreamers: getTopStreamers,
     getTopStreamersByParticipations: getTopStreamersByParticipations,
+    getUserWeeklyRanks: getUserWeeklyRanks,
     getTopPlayersByWins: getTopPlayersByWins,
     getTopPlayersByHours: getTopPlayersByHours,
     getTopPlayersByRounds: getTopPlayersByRounds,

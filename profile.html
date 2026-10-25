@@ -394,6 +394,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 <script src="auth/auth-client.js"></script>
 <script src="js/agp-frame-picker.js"></script>
 <script src="js/agp-stream-stats.js"></script>
+<script src="js/agp-profile-card.js"></script>
 <script>
 (function(){
   function findLeaf(text){
@@ -1154,6 +1155,22 @@ document.addEventListener('DOMContentLoaded', async function() {
         adminLink.style.cssText = 'display:inline-block;margin-top:12px;padding:10px 18px;border-radius:10px;background:linear-gradient(135deg,#7a3fd4,#b28cf5);color:#f3ecff;font-size:13.5px;font-weight:600;text-align:center;';
         adminLink.textContent = '⚙️ لوحة تحكم الأدمن';
         topRightBox.appendChild(adminLink);
+      }
+    }
+
+    /* ---- زر "صورة بروفايلي" (صاحب الحساب فقط) — صورة ستوري فيها صورته
+       واسمه وتصنيفاته الأسبوعية وإحصائياته، يختار وش يطلع فيها والخلفية
+       ويحفظها بجهازه (js/agp-profile-card.js). ---- */
+    if (isOwner && window.AGPProfileCard && !document.querySelector('[data-profile-card-btn]')) {
+      var topRightBoxCard = heading ? heading.parentElement.parentElement.parentElement : null;
+      if (topRightBoxCard) {
+        var cardBtn = document.createElement('button');
+        cardBtn.type = 'button';
+        cardBtn.setAttribute('data-profile-card-btn', '1');
+        cardBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:10px;padding:11px 18px;border-radius:10px;border:none;cursor:pointer;background:linear-gradient(135deg,#7a3fd4,#c46ae0);color:#fdf7ff;font-family:inherit;font-size:13.5px;font-weight:700;box-shadow:0 10px 24px -12px rgba(196,106,224,.9);';
+        cardBtn.textContent = '📸 صورة بروفايلي';
+        cardBtn.addEventListener('click', function(){ window.AGPProfileCard.open(window.__profileData); });
+        topRightBoxCard.appendChild(cardBtn);
       }
     }
 
