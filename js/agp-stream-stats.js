@@ -296,7 +296,7 @@
     }
 
     /** صورة دائرية، وإلا أول حرف من الاسم. */
-    function drawAvatar(ctx, img, name, cx, cy, r, ring, ringW) {
+    function drawAvatar(ctx, img, name, cx, cy, r, ring, ringW, font) {
         ctx.save();
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
@@ -308,7 +308,7 @@
             ctx.fillStyle = 'rgba(8,10,20,0.75)';
             ctx.fill();
             ctx.fillStyle = ring;
-            ctx.font = '700 ' + Math.round(r * 0.95) + 'px ' + FONT;
+            ctx.font = '700 ' + Math.round(r * 0.95) + 'px ' + (font || FONT);
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(String(name || '?').trim().charAt(0) || '?', cx, cy + r * 0.06);
@@ -812,5 +812,15 @@
         showSettings(modal());
     }
 
-    window.AGPStreamStats = { open: open };
+    // shared: الخلفيات وأدوات الرسم والنافذة — تعيد استخدامها صورة البروفايل
+    // (js/agp-profile-card.js) بنفس الشكل والمقاس.
+    window.AGPStreamStats = {
+        open: open,
+        shared: {
+            W: W, H: H, FONT: FONT, BACKGROUNDS: BACKGROUNDS, CUSTOM_ACCENT: CUSTOM_ACCENT,
+            BTN_PRIMARY: BTN_PRIMARY, BTN_GHOST: BTN_GHOST, ROW: ROW, HEADING: HEADING,
+            drawCover: drawCover, prepareUpload: prepareUpload, loadImg: loadImg, fitText: fitText,
+            drawAvatar: drawAvatar, sparkle: sparkle, bgTile: bgTile, setActions: setActions
+        }
+    };
 }());

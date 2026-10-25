@@ -182,6 +182,32 @@ function getTopPlayers(metric, limit, sinceMs) {
 }
 
 /**
+ * مركز لاعب واحد بكل تصنيف أسبوعي (نفس ترتيب وشروط getTopPlayers) — لصورة
+ * البروفايل. التصنيف اللي ما يدخله اللاعب يرجع null.
+ * @returns {{wins: ?{rank: number, value: number}, hours: ?{rank: number, value: number}, rounds: ?{rank: number, value: number}}}
+ */
+function getPlayerWeeklyRanks(userId, sinceMs) {
+    var out = {};
+    Object.keys(TOP_PLAYERS_ORDER).forEach(function (metric) {
+        var row = db.prepare(
+            `SELECT rn, games_won, games_played, play_ms FROM (
+                SELECT l.user_id, l.games_won, l.games_played, l.play_ms,
+                       ROW_NUMBER() OVER (ORDER BY ${TOP_PLAYERS_ORDER[metric]}) AS rn
+                FROM (SELECT user_id, SUM(won) AS games_won, COUNT(*) AS games_played, SUM(duration_ms) AS play_ms
+                      FROM player_rounds_log WHERE created_at >= ? GROUP BY user_id) l
+                WHERE ${TOP_PLAYERS_MIN[metric]}
+             ) WHERE user_id = ?`
+        ).get(sinceMs || 0, userId);
+        if (!row) { out[metric] = null; return; }
+        var value = metric === 'wins' ? row.games_won
+            : metric === 'rounds' ? row.games_played
+            : Math.round((row.play_ms || 0) / 60000);
+        out[metric] = { rank: row.rn, value: value };
+    });
+    return out;
+}
+
+/**
  * أعلى اللاعبين بعدد مرات الفوز هالأسبوع — بيانات علنية غير حساسة فقط.
  * @param {number} [limit]
  * @param {number} [sinceMs]
@@ -201,5 +227,6 @@ module.exports = {
     getTopPlayersByWins: getTopPlayersByWins,
     getTopPlayersByHours: getTopPlayersByHours,
     getTopPlayersByRounds: getTopPlayersByRounds,
+    getPlayerWeeklyRanks: getPlayerWeeklyRanks,
     DAILY_CAP: DAILY_CAP
 };
