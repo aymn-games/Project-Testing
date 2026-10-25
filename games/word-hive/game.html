@@ -561,7 +561,7 @@ class Component extends DCLogic {
       if(n>=L.length){ clearInterval(this._ty); this.setState(x=>({hiveRun:(x.hiveRun||0)+1})); done&&done();
         this._ft=setTimeout(()=>{ if(this._tyRun===run) this.setState({typing:null,flash:null}); },700); } },this.motion()==='low'?70:120); }
   mask(w){ return '●'.repeat([...w].length); }
-  notify(n){ this._nRun=(this._nRun||0)+1; const item={...n,id:Math.random(),run:this._nRun}; this.setState(x=>({notifs:[item,...x.notifs].slice(0,4)})); setTimeout(()=>this.setState(x=>({notifs:x.notifs.filter(y=>y.id!==item.id)})),5000); }
+  notify(n){ this._nRun=(this._nRun||0)+1; const item={...n,id:Math.random(),run:this._nRun}; this.setState(x=>({notifs:[item,...x.notifs].slice(0,3)})); setTimeout(()=>this.setState(x=>({notifs:x.notifs.filter(y=>y.id!==item.id)})),5000); }
 
   // ---------- العرض ----------
   buildFx(){
