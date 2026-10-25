@@ -275,7 +275,7 @@ const TYPE_LABELS=['اسم','نبات','جماد','بلاد'];
 const SETTINGS = [
   { title:'اللعب', rows:[
     { type:'choice', key:'time', label:'⏳ وقت الإجابة', options:TIMES.map(t=>t+' ث'), default:1 },
-    { type:'choice', key:'mode', label:'⚔️ نمط اللعب', hint:'مواجهة: لاعبين بنفس السؤال، أول إجابة صحيحة تنجو والثاني يطيح', options:['بالدور','مواجهة'], default:0 }
+    { type:'choice', key:'mode', label:'⚔️ نمط اللعب', hint:'بالدور: كل لاعب يجاوب لحاله · مواجهة: لاعبين بنفس السؤال والأسرع بالإجابة الصحيحة ينجو', options:['👤 بالدور (لاعب واحد)','⚔️ مواجهة (لاعبين)'], default:0 }
   ]},
   { title:'الدخول للمباراة', rows:[
     { type:'choice', key:'who', label:'🔑 مين يقدر يدخل؟', options:['الجميع','المتابعون فقط'], default:0 },
