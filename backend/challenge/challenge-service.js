@@ -227,7 +227,7 @@ function respond(me, inviteId, accept, guestSettings) {
         inv.guestSettings = null; // تنحفظ لما يضغط «جاهز» (guestReady)
         return { success: true, setup: true, inviteId: inv.id, game: inv.game };
     }
-    var guest = challengeMatch.GAMES[inv.game].sanitizeGuest(guestSettings);
+    var guest = challengeMatch.GAMES[inv.game].sanitizeGuest(guestSettings, inv.settings);
     if (guest.error) return { success: false, error: guest.error };
     return startMatchFor(inv, guest);
 }
@@ -262,7 +262,7 @@ function guestReady(me, inviteId, ready, guestSettings) {
     var inv = _invites[String(inviteId || '')];
     if (!inv || inv.toId !== me.id || !inv.twoStep) return { success: false, error: 'invite_not_found' };
     if (inv.status !== 'setup' && inv.status !== 'ready') return { success: false, error: 'invite_' + inv.status };
-    var guest = challengeMatch.GAMES[inv.game].sanitizeGuest(guestSettings);
+    var guest = challengeMatch.GAMES[inv.game].sanitizeGuest(guestSettings, inv.settings);
     if (guest.error) return { success: false, error: guest.error };
     inv.guestSettings = guest;
     inv.status = ready ? 'ready' : 'setup';

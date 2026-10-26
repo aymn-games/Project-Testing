@@ -31,8 +31,9 @@ var ALL_CATS = [
 ];
 // إعدادات ثابتة لتحدي البثوث: كلمة الدخول 1 لفريق المنشئ و2 لفريق الخصم،
 // 20 ثانية للإجابة، و25 لاعب كحد أقصى لكل فريق (شرط أساسي ما يتعدّل). كل
-// ستريمر يختار فئاته (فئة وحدة على الأقل — المنشئ بالدعوة والخصم قبل «جاهز»)،
-// والأسئلة تطلع من فئات الطرفين.
+// ستريمر يختار 3 فئات بالضبط (المنشئ بالدعوة والخصم قبل «جاهز»)، والخصم ما
+// يقدر يختار فئات المنشئ — والأسئلة تطلع من فئات الطرفين (6 فئات).
+var CATS_PER_SIDE = 3;
 var KEYWORDS = ['1', '2'];
 var DURATION_SEC = 20;
 var MAX_PLAYERS = 25;
@@ -81,18 +82,19 @@ function cleanTeamName(v) { return String(v || '').trim().slice(0, 24); }
 function sanitizeHostSettings(raw) {
     raw = raw || {};
     var cats = cleanCats(raw.cats);
-    if (!cats.length) return { error: 'pick_cats' };
+    if (cats.length !== CATS_PER_SIDE) return { error: 'pick_cats' };
     return {
         team1: cleanTeamName(raw.team1), followers1: Boolean(raw.followersOnly), hostCats: cats,
         target: clampInt(raw.target, 1, 99, 15), lobbySec: clampInt(raw.lobbySec, LOBBY_MIN_SEC, LOBBY_MAX_SEC, LOBBY_DEF_SEC)
     };
 }
 
-/** جزء الخصم (قبل «جاهز»): اسم فريقه + المسموح لهم + فئاته. */
-function sanitizeGuestSettings(raw) {
+/** جزء الخصم (قبل «جاهز»): اسم فريقه + المسموح لهم + فئاته (غير فئات المنشئ). */
+function sanitizeGuestSettings(raw, hostSettings) {
     raw = raw || {};
-    var cats = cleanCats(raw.cats);
-    if (!cats.length) return { error: 'pick_cats' };
+    var cats = cleanCats(raw.cats), taken = (hostSettings && hostSettings.hostCats) || [];
+    if (cats.length !== CATS_PER_SIDE) return { error: 'pick_cats' };
+    if (cats.some(function (id) { return taken.indexOf(id) >= 0; })) return { error: 'cats_taken' };
     return { team2: cleanTeamName(raw.team2), followers2: Boolean(raw.followersOnly), guestCats: cats };
 }
 
