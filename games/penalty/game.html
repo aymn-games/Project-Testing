@@ -119,9 +119,18 @@
     .lb-note{ font-size:12px; color:#8a8596; }
     .lb-players{ flex:1; overflow-y:auto; padding:clamp(12px,1.4vw,20px); }
     .lb-empty{ height:100%; min-height:120px; display:grid; place-items:center; color:#6f6a7c; font-size:14px; }
-    .lb-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; align-items:center; }
+    .lb-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 10px; align-items:center; }
+    .lb-card{ position:relative; display:flex; justify-content:center; align-items:center; min-height:64px; direction:ltr; line-height:0; }
+    .lb-card > .lb-kick{ position:absolute; top:-4px; right:10%; z-index:5; filter:drop-shadow(0 1px 2px rgba(0,0,0,.9)); }
+    .lb-card .lb-plain{ direction:rtl; line-height:normal; }
+    /* خانة اللاعب بشريط الدور لما يكون عنده إطار: البطاقة بالإطار بدل الدائرة والاسم */
+    .tc-frame{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; pointer-events:none; }
+    .tc-frame b{ position:absolute; top:6px; right:12px; z-index:2; font:600 13px/1 'IBM Plex Sans Arabic'; text-shadow:0 1px 3px #000, 0 0 6px #000; }
+    .tc-frame .tc-card{ direction:ltr; line-height:0; transform-origin:50% 50%; }
+    .framed > .tc-frame{ display:flex; }
+    .framed > :not(.tc-frame){ visibility:hidden; }
     .lb-plain{ width:100%; box-sizing:border-box; display:flex; align-items:center; gap:10px; padding:6px 8px 6px 12px; border-radius:999px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
-    .lb-plain .av{ width:40px; height:40px; border-radius:50%; flex:0 0 auto; display:grid; place-items:center; overflow:hidden; color:#fff; font-weight:700; background:linear-gradient(135deg,var(--c),#1e1638); }
+    .lb-plain .av{ position:relative; width:40px; height:40px; border-radius:50%; flex:0 0 auto; display:grid; place-items:center; overflow:hidden; color:#fff; font-weight:700; background:linear-gradient(135deg,var(--c),#1e1638); }
     .lb-plain .av img{ width:100%; height:100%; object-fit:cover; }
     .lb-plain .nm{ flex:1; min-width:0; font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .lb-kick{ flex:0 0 auto; width:28px; height:28px; border:0; padding:0; background:transparent; color:#fca5a5; cursor:pointer; opacity:.8; font-size:16px; line-height:1; }
@@ -418,6 +427,8 @@
     <div class="toast hidden" id="toast"></div>
 </div>
 
+<script src="../../js/agp-core.js"></script>
+<script src="../../js/agp-player-card.js"></script>
 <script src="../../auth/auth-client.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
 <script>
@@ -555,7 +566,9 @@
             hole('kw' + n, t.ph === 'run' ? 'translate(' + (k ? 10 : -10) + 'px,8px) rotate(' + (k ? -4 : 4) + 'deg)' : kicked ? 'rotate(' + (k ? -6 : 6) + 'deg)' : 'translate(' + (k ? 30 : -30) + 'px,22px)');
             hole('kl' + n, t.ph === 'run' ? 'rotate(' + (k ? -35 : 35) + 'deg)' : kicked ? 'rotate(' + (k ? 100 : -100) + 'deg)' : 'none');
             var sh = t.shooter || P[0] || '—', nx = t.next || P[P.length > 1 ? 1 : 0] || '—';
-            hole('sh' + n, sh); hole('shi' + n, initial(sh)); hole('nx' + n, nx); hole('nxi' + n, initial(nx));
+            hole('sh' + n, sh); hole('nx' + n, nx);
+            personCell('shi' + n, sh, k, 'يسدد الآن');
+            personCell('nxi' + n, nx, -1, 'الدور التالي');
             var banner = $('res' + k), showRes = live && t.ph === 'done' && t.res;
             banner.classList.toggle('hidden', !showRes);
             if (showRes) {
@@ -575,11 +588,45 @@
         $('sudden').classList.toggle('hidden', st.phase !== 'sudden');
     }
 
+    /* ---- صورة اللاعب وإطاره بشريط الدور ---- */
+    var PC = window.AymanGamesPlatform && window.AymanGamesPlatform.playerCard;
+    var cellKeys = {};
+    // avHole: فتحة الدائرة (shi1/nxi1…) — خانتها هي الأب. اللاعب صاحب الإطار
+    // تنعرض بطاقته بالإطار مكان الدائرة والاسم، وغيره صورته داخل الدائرة.
+    function personCell(avHole, name, side, label) {
+        var avEl = H[avHole] && H[avHole][0] && H[avHole][0].el;
+        if (!avEl) return;
+        var info = (M.state.playerInfo || {})[name] || {};
+        var framed = Boolean(PC && info.frame && info.frame.imageFilename);
+        var key = name + '|' + (info.avatar || '') + '|' + (framed ? info.frame.imageFilename : '');
+        if (cellKeys[avHole] === key) return;
+        cellKeys[avHole] = key;
+        avEl.style.position = 'relative';
+        avEl.style.overflow = 'hidden';
+        avEl.innerHTML = esc(initial(name)) + (info.avatar ? '<img src="' + esc(info.avatar) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">' : '');
+        var cell = avEl.parentElement, fr = cell.querySelector('.tc-frame');
+        cell.style.position = 'relative';
+        cell.classList.toggle('framed', framed);
+        if (!framed) { if (fr) fr.innerHTML = ''; return; }
+        if (!fr) { fr = document.createElement('div'); fr.className = 'tc-frame'; cell.appendChild(fr); }
+        fr.innerHTML = '<b style="color:' + (side >= 0 ? COLORS[side] : '#a8a3b5') + '">' + label + '</b>' +
+            '<div class="tc-card">' + PC.renderHtml({ id: info.id || name, name: name, avatarUrl: info.avatar || null, frame: info.frame }, { showFrame: true, basePath: '../../', size: 44 }) + '</div>';
+        var card = fr.querySelector('.tc-card'), w = card.offsetWidth || 1, h = card.offsetHeight || 1;
+        // الإطار فيه فراغ شفاف فوق وتحت، فنسمح له يطلع شوي عن حدود الخانة.
+        var scale = Math.min(1.15, (cell.clientWidth - 8) / w, (cell.clientHeight + 14) / h);
+        card.style.transform = 'translateY(6px) scale(' + scale + ')';
+        card.style.margin = (-(h * (1 - scale)) / 2) + 'px ' + (-(w * (1 - scale)) / 2) + 'px';
+    }
+
     /* ---- لوبي الدخول ---- */
+    // نفس بطاقة اللاعب المشتركة بلوبي الألعاب (agp-player-card.js): الصورة والاسم، والإطار لمن يملكه.
     function playerHtml(name, side, canKick) {
         var info = (M.state.playerInfo || {})[name] || {};
-        return '<div class="lb-plain"><span class="av">' + (info.avatar ? '<img src="' + esc(info.avatar) + '" alt="" onerror="this.remove()">' : esc(initial(name))) + '</span><span class="nm">' + esc(name) + '</span>' +
-            (canKick ? '<button type="button" class="lb-kick" data-kick="' + esc(name) + '" aria-label="إخراج ' + esc(name) + '">✕</button>' : '') + '</div>';
+        var kick = canKick ? '<button type="button" class="lb-kick" data-kick="' + esc(name) + '" aria-label="إخراج ' + esc(name) + '">✕</button>' : '';
+        if (PC && info.frame && info.frame.imageFilename) {
+            return '<div class="lb-card">' + PC.renderHtml({ id: info.id || name, name: name, avatarUrl: info.avatar || null, frame: info.frame }, { showFrame: true, basePath: '../../', size: 42 }) + kick + '</div>';
+        }
+        return '<div class="lb-card"><div class="lb-plain"><span class="av">' + esc(initial(name)) + (info.avatar ? '<img src="' + esc(info.avatar) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()" style="position:absolute;inset:0">' : '') + '</span><span class="nm">' + esc(name) + '</span>' + kick + '</div></div>';
     }
     function lobbyTeamHtml(side) {
         var st = M.state, t = st.teams[side], s = M.sides[side], mine = side === M.you;
@@ -605,12 +652,13 @@
     function renderLobby() {
         var st = M.state, ready = st.teams.every(function (t) { return t.players.length > 0; });
         $('lobby').innerHTML = '<div class="lb-wrap">' +
-            '<div class="lb-game">ركلات الترجيح · مباراة بين بثين · ' + st.settings.rounds + ' جولات (الفائز بجولتين) · الجولة ' + st.settings.roundMinutes + ' دقائق</div>' +
+            '<div class="lb-game">ركلات الترجيح · مباراة بين بثين · ' + st.settings.rounds + ' جولات (الفائز بجولتين) · الجولة ' + st.settings.roundMinutes + ' دقائق · الركلة ' + st.settings.shotSec + ' ثانية</div>' +
             '<h2 class="lb-title gold">لوبي الدخول</h2>' + lobbyTimerHtml() +
             '<div class="lb-teams">' + lobbyTeamHtml(M.you) + lobbyTeamHtml(1 - M.you) + '</div>' +
             '<div class="lb-foot">' + (isHost()
                 ? '<button type="button" class="lb-start" data-a="start"' + (ready ? '' : ' disabled') + '>⚽ ابدأ المباراة الآن</button>' + (ready ? '' : '<span class="lb-wait">كل فريق يحتاج لاعب واحد على الأقل</span>')
                 : '<span class="lb-wait">بانتظار ' + esc(M.sides[M.host].name) + ' يبدأ المباراة — أو تبدأ تلقائياً لما يخلص الوقت</span>') + '</div></div>';
+        if (PC && PC.fitAllNames) PC.fitAllNames($('lobby'));
     }
 
     /* ---- المقدمة ثلاثية الأبعاد ---- */

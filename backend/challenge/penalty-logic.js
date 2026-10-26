@@ -7,7 +7,7 @@
  *
  * المباراة 3 جولات ثابتة: أول فريق يكسب جولتين يفوز. كل جولة لها وقت
  * (3 / 4 / 5 دقائق)، وكل فريق يسدد بالدور على مرماه بشكل مستقل: صاحب الدور
- * يكتب رقم الزاوية (1–4) في شات بثه خلال 10 ثواني، والحارس يرتمي لزاوية
+ * يكتب رقم الزاوية (1–4) في شات بثه خلال وقت الركلة (10 / 15 / 20 ثانية)، والحارس يرتمي لزاوية
  * عشوائية — زاوية مختلفة = هدف، نفس الزاوية = صدّها. بدون رقم = ضاعت.
  * لما يخلص وقت الجولة: الأكثر أهدافاً ياخذ الجولة، والتعادل = ركلات ترجيح
  * حاسمة (ركلة لكل فريق لين يسجل فريق ويضيّع الثاني).
@@ -17,15 +17,15 @@
  */
 'use strict';
 
-// إعدادات ثابتة: كلمة الدخول 1 لفريق المنشئ و2 لفريق الخصم، 3 جولات
-// (الفائز بجولتين)، 10 ثواني لكل ركلة.
+// إعدادات ثابتة: كلمة الدخول 1 لفريق المنشئ و2 لفريق الخصم، و3 جولات
+// (الفائز بجولتين). وقت الركلة يختاره المنشئ (10 / 15 / 20 ثانية).
 var KEYWORDS = ['1', '2'];
 var ROUNDS = 3;
 var ROUNDS_TO_WIN = 2;
 var ROUND_MINUTES = [3, 4, 5];
 var LOBBY_MIN_SEC = 15, LOBBY_MAX_SEC = 300, LOBBY_DEF_SEC = 60;
 var MAX_PLAYERS = 100;
-var SHOT_SEC = 10;
+var SHOT_SECS = [10, 15, 20];
 // نفس توقيت الحركة بالتصميم: ركض 800ms ← ركلة، النتيجة بعد 750ms، الدور التالي بعد 1900ms.
 var RUN_MS = 800, FLIGHT_MS = 750, NEXT_MS = 1900;
 var FIRST_TURN_MS = [800, 3800];        // الفريق الثاني يبدأ بعد الأول بـ3 ثواني
@@ -44,6 +44,11 @@ function clampInt(v, min, max, def) {
 
 function cleanTeamName(v) { return String(v || '').trim().slice(0, 24); }
 
+function cleanShotSec(v) {
+    var n = Number(v);
+    return SHOT_SECS.indexOf(n) >= 0 ? n : 10;
+}
+
 function cleanMinutes(v) {
     var n = Number(v);
     return ROUND_MINUTES.indexOf(n) >= 0 ? n : 4;
@@ -57,13 +62,14 @@ function cornerOf(text) {
     return /^[1-4]$/.test(t) ? Number(t) : 0;
 }
 
-/** جزء المنشئ (مع الدعوة): اسم فريقه + المسموح لهم + وقت الجولة + وقت انتظار اللوبي. */
+/** جزء المنشئ (مع الدعوة): اسم فريقه + المسموح لهم + وقت الجولة + وقت الركلة + وقت انتظار اللوبي. */
 function sanitizeHostSettings(raw) {
     raw = raw || {};
     return {
         team1: cleanTeamName(raw.team1),
         followers1: Boolean(raw.followersOnly),
         roundMinutes: cleanMinutes(raw.roundMinutes),
+        shotSec: cleanShotSec(raw.shotSec),
         lobbySec: clampInt(raw.lobbySec, LOBBY_MIN_SEC, LOBBY_MAX_SEC, LOBBY_DEF_SEC)
     };
 }
@@ -86,7 +92,7 @@ function sanitizeSettings(raw, sideNames) {
         lobbySec: clampInt(raw.lobbySec, LOBBY_MIN_SEC, LOBBY_MAX_SEC, LOBBY_DEF_SEC),
         rounds: ROUNDS,
         roundsToWin: ROUNDS_TO_WIN,
-        shotSec: SHOT_SEC,
+        shotSec: cleanShotSec(raw.shotSec),
         maxPlayers: MAX_PLAYERS
     };
 }
@@ -201,7 +207,7 @@ function createPenalty(settings, hooks) {
         S.turns[k] = {
             seq: t.seq + 1, idx: i,
             shooter: P[i % P.length], next: P[(i + 1) % P.length],
-            endsAt: Date.now() + SHOT_SEC * 1000,
+            endsAt: Date.now() + settings.shotSec * 1000,
             shot: 0, dive: 0, res: '', ph: 'ready'
         };
         var seq = S.turns[k].seq;
@@ -209,7 +215,7 @@ function createPenalty(settings, hooks) {
             var cur = S.turns[k];
             if (tk !== roundToken || cur.seq !== seq || cur.ph !== 'ready') return;
             resolve(k, tk, 'miss');
-        }, SHOT_SEC * 1000);
+        }, settings.shotSec * 1000);
         hooks.onChange();
     }
 

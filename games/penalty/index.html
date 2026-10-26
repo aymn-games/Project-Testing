@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!-- شاشة إعدادات "ركلات الترجيح" — اللعبة مباراة بين بثين فقط (تحدي البثوث).
-     المنشئ يكتب اسم فريقه ويختار المسموح لهم ووقت الجولة ووقت انتظار
-     اللوبي، ثم يدعو ستريمر (من البثوث النشطة الآن أو بالبحث بيوزر تيك توك
+     المنشئ يكتب اسم فريقه ويختار المسموح لهم ووقت الجولة ووقت الركلة ووقت
+     انتظار اللوبي (كلمات الدخول ثابتة 1 و2 وتظهر باللوبي بس)، ثم يدعو ستريمر (من البثوث النشطة الآن أو بالبحث بيوزر تيك توك
      أو ID البروفايل). الخصم يقبل، يكتب اسم فريقه ويختار المسموح لهم، ويضغط
      «جاهز»، والمنشئ يضغط «الدخول للوبي» فتنتقل الشاشتين لـ game.html.
      الدعوات والمباراة على الخادم (backend/challenge/ — لعبة twoStep).
@@ -178,6 +178,7 @@
     var POLL_MS = 3000;
     var LIVE_MS = 30000;
     var MINUTES = [3, 4, 5];
+    var SHOT_SECS = [10, 15, 20];
     var LOBBY_MIN = 15, LOBBY_MAX = 300, LOBBY_STEP = 15;
     var API = String((A && A.API_BASE) || '');
 
@@ -197,7 +198,7 @@
     };
 
     var state = {
-        settings: { team1: '', followersOnly: false, roundMinutes: 4, lobbySec: 60 },
+        settings: { team1: '', followersOnly: false, roundMinutes: 4, shotSec: 10, lobbySec: 60 },
         guest: { team2: '', followersOnly: false },
         tab: 'live',
         live: [],
@@ -295,20 +296,18 @@
         if (inv.status !== 'ready' && inv.status !== 'setup') return head;
         return head +
             row('فريق ' + esc(inv.other.name), fixed(esc(g.team2 || inv.other.name)), { divider: true }) +
-            row('المسموح لهم بفريقه', fixed(g.followers2 ? 'المتابعين فقط' : 'الجميع'), { divider: true }) +
-            row('كلمة الدخول لجمهوره', fixed('2'), { divider: true });
+            row('المسموح لهم بفريقه', fixed(g.followers2 ? 'المتابعين فقط' : 'الجميع'), { divider: true });
     }
 
     /* ---- المنشئ: إعدادات المباراة + دعوة خصم ---- */
     function renderHost() {
         var s = state.settings, locked = Boolean(openOut());
         var team = row('اسم فريقك', '<input class="txt" data-k="team1" maxlength="24" placeholder="' + esc(myName()) + '" value="' + esc(s.team1) + '">', { hint: 'فاضي = اسم حسابك' }) +
-            row('كلمة الدخول لجمهورك', fixed('1'), { divider: true, hint: 'جمهور خصمك يكتب 2 في شاته' }) +
             row('المسموح لهم بالدخول', followersSeg('data-fo', s.followersOnly), { divider: true });
         var match = row('وقت الجولة', seg('data-min', MINUTES.map(function (m) { return [m, m + ' دقائق']; }), s.roundMinutes)) +
             row('عدد الجولات', fixed('3 · الفائز بجولتين'), { divider: true }) +
             row('وقت انتظار اللوبي', '<div class="step"><button type="button" data-step="-1" aria-label="إنقاص">−</button><input type="text" readonly value="' + lobbyText(s.lobbySec) + '" aria-label="وقت انتظار اللوبي" style="width:68px"><button type="button" data-step="1" aria-label="زيادة">+</button></div>', { divider: true, hint: 'تقدر تبدأ المباراة قبل ما يخلص' }) +
-            row('وقت الركلة', fixed('10 ثواني'), { divider: true });
+            row('وقت الركلة', seg('data-shot', SHOT_SECS.map(function (n) { return [n, n + ' ثانية']; }), s.shotSec), { divider: true });
         var note = locked ? '<div class="lock-note">الإعدادات انرسلت مع الدعوة — ألغِ الدعوة لو تبي تعدّلها.</div>' : '';
         var opp = '<div class="tabs" role="tablist">' +
                 '<button type="button" data-tab="live" class="' + (state.tab === 'live' ? 'on' : '') + '"><span class="live-dot"></span>البثوث النشطة الآن' + (state.liveLoaded ? ' <em>(' + liveList().length + ')</em>' : '') + '</button>' +
@@ -357,11 +356,11 @@
         var s = inv.settings || {}, g = state.guest, ready = inv.status === 'ready';
         var host = row('فريق ' + esc(inv.other.name), fixed(esc(s.team1 || inv.other.name))) +
             row('وقت الجولة', fixed((s.roundMinutes || 4) + ' دقائق'), { divider: true }) +
+            row('وقت الركلة', fixed((s.shotSec || 10) + ' ثانية'), { divider: true }) +
             row('عدد الجولات', fixed('3 · الفائز بجولتين'), { divider: true }) +
             row('وقت انتظار اللوبي', fixed(lobbyText(s.lobbySec || 60)), { divider: true }) +
             row('المسموح لهم بفريقه', fixed(s.followers1 ? 'المتابعين فقط' : 'الجميع'), { divider: true });
         var mine = row('اسم فريقك', '<input class="txt" data-g="team2" maxlength="24" placeholder="' + esc(myName()) + '" value="' + esc(g.team2) + '"' + (ready ? ' disabled' : '') + '>', { hint: 'فاضي = اسم حسابك' }) +
-            row('كلمة الدخول لجمهورك', fixed('2'), { divider: true, hint: 'جمهور ' + esc(inv.other.name) + ' يكتب 1 في شاته' }) +
             row('المسموح لهم بالدخول', '<div class="' + (ready ? 'locked' : '') + '">' + followersSeg('data-gfo', g.followersOnly) + '</div>', { divider: true }) +
             '<div class="btns" style="margin-top:10px"><button class="btn ghost" data-act="withdraw" data-id="' + inv.id + '">انسحاب من المباراة</button></div>';
         $('main-grid').innerHTML =
@@ -432,6 +431,8 @@
         if (t) { state.tab = t.getAttribute('data-tab'); renderHost(); if (state.tab === 'search' && $('q')) $('q').focus(); return; }
         var fo = e.target.closest('[data-fo]');
         if (fo) { state.settings.followersOnly = fo.getAttribute('data-fo') === '1'; renderHost(); return; }
+        var sh = e.target.closest('[data-shot]');
+        if (sh) { state.settings.shotSec = Number(sh.getAttribute('data-shot')); renderHost(); return; }
         var mn = e.target.closest('[data-min]');
         if (mn) { state.settings.roundMinutes = Number(mn.getAttribute('data-min')); renderHost(); return; }
         var st = e.target.closest('[data-step]');
@@ -454,7 +455,7 @@
     function sendInvite(customId) {
         state.busy = true; redrawList();
         var s = state.settings;
-        A.challengeInvite(customId, GAME, { team1: s.team1, followersOnly: s.followersOnly, roundMinutes: s.roundMinutes, lobbySec: s.lobbySec }).then(function (r) {
+        A.challengeInvite(customId, GAME, { team1: s.team1, followersOnly: s.followersOnly, roundMinutes: s.roundMinutes, shotSec: s.shotSec, lobbySec: s.lobbySec }).then(function (r) {
             state.busy = false;
             if (r && r.success) { setMsg('تم إرسال الدعوة ✓', 'good'); msgLocked = false; poll(true); return; }
             setMsg(ERRORS[r && r.error] || 'تعذّر إرسال الدعوة، حاول مرة ثانية.', 'bad');
@@ -570,7 +571,7 @@
         var cu = A.getCachedUser ? A.getCachedUser() : null;
         if (cu) {
             state.me = { name: cu.display_name || cu.tiktok_display_name || cu.tiktok_username || cu.username || '', tiktok: String(cu.tiktok_username || '').replace(/^@+/, '') };
-            if (cu.tiktok_username) $('me-text').innerHTML = 'حسابك <bdi dir="ltr">@' + esc(state.me.tiktok) + '</bdi> · جمهورك يكتب 1 وجمهور خصمك يكتب 2';
+            if (cu.tiktok_username) $('me-text').innerHTML = 'حسابك <bdi dir="ltr">@' + esc(state.me.tiktok) + '</bdi> · مباراة بين بثين';
         }
     } catch (e) {}
     renderTop();
