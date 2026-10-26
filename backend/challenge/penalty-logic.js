@@ -122,6 +122,7 @@ function createPenalty(settings, hooks) {
         suddenPair: 0,
         turns: [blankTurn(), blankTurn()],
         lastRound: null,        // {winner, goals:[a,b], sudden}
+        forfeit: null,          // الفريق اللي خسر لأن كل لاعبينه انقصوا
         playerGoals: {},        // اسم اللاعب -> أهدافه بكل المباراة (لشاشة الفوز)
         winner: null,
         log: []
@@ -296,6 +297,34 @@ function createPenalty(settings, hooks) {
         hooks.schedule(function () { if (tk === roundToken) suddenPair(tk); }, SUDDEN_GAP_MS);
     }
 
+    // فريق فضى من اللاعبين (كلهم انقصوا) = يخسر المباراة مباشرة.
+    function forfeit(w) {
+        roundToken++;
+        S.phase = 'over';
+        S.phaseEndsAt = null;
+        S.winner = w;
+        S.forfeit = 1 - w;
+        S.turns.forEach(function (t) { t.endsAt = null; });
+        log('win', 'فوز ' + S.teams[w].name + ' بالمباراة — ما بقى لاعبين بـ ' + S.teams[1 - w].name);
+        hooks.onWin(w, durationMs());
+        hooks.onChange();
+    }
+
+    // إقصاء يدوي وسط المباراة: يطلع من دور التسديد وما يرجع. لو كان دوره الحين
+    // وما سدد تنحسب ركلته ضايعة، والدور يكمل للي بعده.
+    function eliminate(k, i) {
+        var team = S.teams[k], old = team.players.slice(), n = old.length, name = old[i], t = S.turns[k];
+        var cur = turnIdx[k] < 0 ? -1 : turnIdx[k] % n, nextName = null;
+        for (var s = 1; s <= n; s++) { var c = old[(cur + s) % n]; if (c !== name) { nextName = c; break; } }
+        team.players.splice(i, 1);
+        log('kick', name + ' انقصى من ' + team.name);
+        if (!team.players.length) { forfeit(1 - k); return; }
+        turnIdx[k] = team.players.indexOf(nextName) - 1;
+        if (t.shooter) t.next = nextName;
+        if (t.shooter === name && t.ph === 'ready') resolve(k, roundToken, 'miss');
+        hooks.onChange();
+    }
+
     function endRound(w, sudden) {
         roundToken++;
         S.roundsWon[w]++;
@@ -389,11 +418,12 @@ function createPenalty(settings, hooks) {
             return { ok: true };
         },
 
-        /** إخراج لاعب من فريق بثه (بلوبي الدخول بس). */
+        /** إخراج لاعب من فريق بثه: باللوبي يطلع (ويقدر يرجع لنفس فريقه)، وبعد البدء ينقصى. */
         kick: function (side, name) {
-            if (S.phase !== 'lobby') return { ok: false, error: 'busy' };
-            var team = S.teams[side], i = team.players.indexOf(name);
+            if (S.phase === 'over') return { ok: false, error: 'ended' };
+            var team = S.teams[side], i = team ? team.players.indexOf(name) : -1;
             if (i < 0) return { ok: false, error: 'not_found' };
+            if (S.phase !== 'lobby') { eliminate(side, i); return { ok: true }; }
             team.players.splice(i, 1);
             log('kick', name + ' طلع من ' + team.name);
             return { ok: true };

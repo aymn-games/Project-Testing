@@ -291,7 +291,7 @@ function createFastestAnswer(settings, hooks) {
             }
 
             // الإجابة: بس اللاعب صاحب الدور، ومن شات بثه.
-            if (S.phase !== 'question' || !currentQ || sideById[id] !== side) return false;
+            if (S.phase !== 'question' || !currentQ || sideById[id] !== side || !inTeam) return false;
             if (S.chosen[side] !== user || answered[user]) return false;
             S.received++;
             if (checkAnswer(text, currentQ)) {
@@ -323,13 +323,29 @@ function createFastestAnswer(settings, hooks) {
             return { ok: true };
         },
 
-        /** إخراج لاعب من فريق بثه (بلوبي الدخول بس). */
+        /**
+         * إخراج لاعب من فريق بثه: باللوبي يطلع (ويقدر يرجع لنفس فريقه)، وبعد البدء
+         * ينقصى — ما يجاوب حتى لو كان مختار بالجولة الحالية. فريق فضى = يخسر.
+         */
         kick: function (side, name) {
-            if (S.phase !== 'lobby') return { ok: false, error: 'busy' };
-            var team = S.teams[side], i = team.players.indexOf(name);
+            if (S.winner !== null) return { ok: false, error: 'match_over' };
+            var team = S.teams[side], i = team ? team.players.indexOf(name) : -1;
             if (i < 0) return { ok: false, error: 'not_found' };
             team.players.splice(i, 1);
-            log('kick', name + ' طلع من ' + team.name);
+            if (S.phase === 'lobby') { log('kick', name + ' طلع من ' + team.name); return { ok: true }; }
+            delete played[side][name];
+            if (lastPick[side] === name) lastPick[side] = null;
+            log('kick', name + ' انقصى من ' + team.name);
+            if (!team.players.length) {
+                roundToken++;
+                S.phase = 'results';
+                S.phaseEndsAt = null;
+                if (currentQ) S.answer = currentQ.answer;
+                S.winner = 1 - side;
+                log('win', 'فوز ' + S.teams[1 - side].name + ' — ما بقى لاعبين بـ ' + team.name);
+                hooks.onWin(1 - side, durationMs());
+            }
+            hooks.onChange();
             return { ok: true };
         },
 
