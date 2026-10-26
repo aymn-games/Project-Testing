@@ -1774,7 +1774,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   // الألعاب: صورة، اسم، حساب تيك توك، اسم اللعبة، عدد المشاهدين، والآيدي
   // (يفتح البروفايل). المصدر GET /api/public/live-streams ويتحدّث كل 30 ثانية.
   // يُركَّب تحت بطاقة "اتصل بالبث"، ويختفي القسم لو ما فيه أي بث.
-  var LIVE_STREAMS_POLL_MS = 30000;
+  var LIVE_STREAMS_POLL_MS = 15000;
 
   function ensureLiveStreamsStyles(){
     if (document.getElementById('agp-live-streams-style')) return;
@@ -1814,6 +1814,13 @@ document.addEventListener('DOMContentLoaded', async function() {
       '.agp-live-chip b{font-weight:700;color:#ece8f6}' +
       '.agp-live-chip-viewers svg{color:#f43f5e}' +
       '.agp-live-chip-id{direction:ltr;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}' +
+      // بطاقات الستريمرز المتاحين: ينتظر خصم («دخول مباشر») وفاضي بمكتبة الألعاب («تحدّاه»).
+      '.agp-live-card.wait .agp-live-avatar-img,.agp-live-card.wait .agp-live-avatar-ph{border-color:#fbbf24;box-shadow:0 0 0 3px rgba(251,191,36,.16)}' +
+      '.agp-live-card.wait .agp-live-tag{background:#d97706}' +
+      '.agp-live-card.wait .agp-live-watch{background:linear-gradient(180deg,#10b981,#059669);box-shadow:0 6px 16px -8px rgba(5,150,105,.9),inset 0 1px 0 rgba(255,255,255,.25)}' +
+      '.agp-live-card.idle .agp-live-avatar-img,.agp-live-card.idle .agp-live-avatar-ph{border-color:#34d399;box-shadow:0 0 0 3px rgba(52,211,153,.14)}' +
+      '.agp-live-card.idle .agp-live-tag{background:#059669}' +
+      '.agp-live-card.idle .agp-live-watch{background:linear-gradient(180deg,#8a4fe8,#7a3fd4);box-shadow:0 6px 16px -8px rgba(122,63,212,.9),inset 0 1px 0 rgba(255,255,255,.25)}' +
       '@keyframes agpLiveDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(1.35)}}' +
       '@media (prefers-reduced-motion:reduce){.agp-live-head-dot{animation:none}.agp-live-marquee{overflow-x:auto}.agp-live-track{animation:none}}';
     document.head.appendChild(st);
@@ -1824,13 +1831,34 @@ document.addEventListener('DOMContentLoaded', async function() {
   var LIVE_ICON_EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
   var LIVE_ICON_GAME = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><path d="M17.3 5H6.7a4 4 0 0 0-3.96 3.43l-.7 4.9A2.5 2.5 0 0 0 6.6 15.2L8 13.5h8l1.4 1.7a2.5 2.5 0 0 0 4.56-1.87l-.7-4.9A4 4 0 0 0 17.3 5z"/></svg>';
 
+  // s.kind: 'live' (يلعب الحين) | 'wait' (فاتح شاشة دعوة لعبة بثين وينتظر خصم) | 'idle' (فاضي بمكتبة الألعاب)
+  var LIVE_JOIN_PAGES = { 'penalty': 'games/penalty/index.html?mode=versus', 'fastest-answer': 'games/fastest-answer/versus.html' };
+  var LIVE_JOIN_ERRORS = { not_waiting: 'الستريمر طلع من شاشة الدعوة — جرّب غيره.', opponent_in_match: 'الستريمر بدأ مباراة مع غيرك.', you_in_match: 'عندك مباراة أو تجهيز جاري — خلّصه أول.', not_eligible: 'لازم حساب ستريمر مربوط بتيك توك.', self: 'هذا أنت 🙂' };
+  function joinFromLibrary(s){
+    var A = window.AGPAuth;
+    if (!A || !A.getToken || !A.getToken()) { location.href = 'login.html'; return; }
+    A.challengeJoin(s.customId, s.game).then(function(r){
+      if (r && r.success) { location.href = LIVE_JOIN_PAGES[s.game] || 'challenge.html'; return; }
+      alert(LIVE_JOIN_ERRORS[r && r.error] || 'تعذّر الدخول، حاول مرة ثانية.');
+      fetchLiveStreams();
+    }).catch(function(){ alert('تعذّر الاتصال، حاول مرة ثانية.'); });
+  }
+
   function buildLiveCard(s){
+    var kind = s.kind || 'live';
     var card = document.createElement('a');
-    card.className = 'agp-live-card';
-    // الضغط يفتح بث الستريمر نفسه في تيك توك (تبويب جديد).
-    card.href = 'https://www.tiktok.com/@' + encodeURIComponent(s.tiktok) + '/live';
-    card.target = '_blank';
-    card.rel = 'noopener noreferrer';
+    card.className = 'agp-live-card' + (kind === 'live' ? '' : ' ' + kind);
+    if (kind === 'live') {
+      // الضغط يفتح بث الستريمر نفسه في تيك توك (تبويب جديد).
+      card.href = 'https://www.tiktok.com/@' + encodeURIComponent(s.tiktok) + '/live';
+      card.target = '_blank';
+      card.rel = 'noopener noreferrer';
+    } else if (kind === 'wait') {
+      card.href = '#';
+      card.addEventListener('click', function(e){ e.preventDefault(); joinFromLibrary(s); });
+    } else {
+      card.href = 'challenge.html';
+    }
 
     var av = document.createElement('div');
     av.className = 'agp-live-avatar';
@@ -1852,7 +1880,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     av.appendChild(img);
     var tag = document.createElement('span');
     tag.className = 'agp-live-tag';
-    tag.textContent = 'LIVE';
+    tag.textContent = kind === 'wait' ? 'ينتظر' : kind === 'idle' ? 'فاضي' : 'LIVE';
     av.appendChild(tag);
 
     var info = document.createElement('div');
@@ -1866,20 +1894,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     var game = document.createElement('div');
     game.className = 'agp-live-game';
     game.innerHTML = LIVE_ICON_GAME;
-    game.appendChild(document.createTextNode(s.gameName || 'لعبة'));
+    game.appendChild(document.createTextNode(kind === 'wait' ? (s.gameName || 'لعبة') + ' · ينتظر خصم' : kind === 'idle' ? 'فاتح مكتبة الألعاب' : (s.gameName || 'لعبة')));
     var meta = document.createElement('div');
     meta.className = 'agp-live-meta';
     var viewers = document.createElement('span');
     viewers.className = 'agp-live-chip agp-live-chip-viewers';
     viewers.innerHTML = LIVE_ICON_EYE;
     var count = document.createElement('b');
-    count.textContent = typeof s.viewers === 'number' ? arNum(s.viewers) : '—';
+    // عدد المشاهدين بالأرقام الإنجليزية.
+    count.textContent = typeof s.viewers === 'number' ? Number(s.viewers).toLocaleString('en') : '—';
     viewers.appendChild(count);
     viewers.appendChild(document.createTextNode(' مشاهد'));
     var idChip = document.createElement('span');
     idChip.className = 'agp-live-chip agp-live-chip-id';
     idChip.textContent = 'ID: ' + s.customId;
-    meta.appendChild(viewers);
+    if (kind === 'live') meta.appendChild(viewers);
     meta.appendChild(idChip);
 
     // زر «شاهد» — البطاقة كلها رابط للبث، فالزر عنصر شكلي داخلها (ما نحط رابط داخل رابط).
@@ -1888,7 +1917,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var watch = document.createElement('span');
     watch.className = 'agp-live-watch';
     watch.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14z"/></svg>';
-    watch.appendChild(document.createTextNode('شاهد'));
+    watch.appendChild(document.createTextNode(kind === 'wait' ? 'دخول مباشر' : kind === 'idle' ? 'تحدّاه' : 'شاهد'));
     top.appendChild(name);
     top.appendChild(watch);
     info.appendChild(top);
@@ -1950,8 +1979,18 @@ document.addEventListener('DOMContentLoaded', async function() {
   function fetchLiveStreams(){
     if (document.hidden || !window.fetch) return;
     var base = (window.AGPAuth && window.AGPAuth.API_BASE) || 'https://project-testing-akds.onrender.com';
-    fetch(base + '/api/public/live-streams').then(function(res){ return res.json(); }).then(function(d){
-      if (d && d.success) renderLiveStreams(d.streams);
+    var lobby = window.AGPChallengeLobby ? window.AGPChallengeLobby.load() : Promise.resolve({ waiting: [], idle: [] });
+    Promise.all([
+      fetch(base + '/api/public/live-streams').then(function(res){ return res.json(); }).catch(function(){ return null; }),
+      lobby
+    ]).then(function(all){
+      var d = all[0], L = all[1] || {};
+      if (!(d && d.success) && !(L.waiting || []).length && !(L.idle || []).length) return;
+      // ينتظرون خصم أول، بعدهم اللي يلعبون، وآخر شي الفاضين بالمكتبة (بدون تكرار نفس الستريمر).
+      var seen = {}, list = [];
+      function add(arr, kind){ (arr || []).forEach(function(x){ var k = String(x.tiktok || '').toLowerCase(); if (!k || seen[k]) return; seen[k] = true; list.push(Object.assign({}, x, { kind: kind })); }); }
+      add(L.waiting, 'wait'); add(d && d.streams, 'live'); add(L.idle, 'idle');
+      renderLiveStreams(list);
     }).catch(function(){});
   }
 
@@ -2265,18 +2304,26 @@ document.addEventListener('DOMContentLoaded', async function() {
     }, 300);
   })();
 </script>
-<!-- تنويه جوائز مباريات البثين — نافذة تطلع مرة وحدة بمكتبة الألعاب (لين يضغط
-     «فهمت» أو «العب ضد بث»، localStorage 'agp-notice-win-frames-v1'). تشرح إن
+<!-- تنويه جوائز مباريات البثين — نافذة بمكتبة الألعاب للستريمر بس، مرة وحدة كل
+     ساعة كحد أقصى (localStorage 'agp-notice-win-frames-v1' = وقت آخر ظهور). تشرح إن
      أول فوز للستريمر بمباراة بين بثين يعطيه كود إطارات يوزعه على متابعينه،
      وإن التعليق الأخير بالمنصة كان بسبب هذا التحديث. -->
 <script>
 (function () {
-  var KEY = 'agp-notice-win-frames-v1';
-  try { if (localStorage.getItem(KEY)) return; } catch (e) {}
+  // يطلع للستريمر بس، ومرة وحدة كل ساعة كحد أقصى (وقت آخر ظهور بـ localStorage).
+  var KEY = 'agp-notice-win-frames-v1', EVERY_MS = 60 * 60 * 1000;
+  try { if (Date.now() - (Number(localStorage.getItem(KEY)) || 0) < EVERY_MS) return; } catch (e) {}
+  function isStreamer() {
+    var A = window.AGPAuth, u = null;
+    try { u = A && A.getCachedUser ? A.getCachedUser() : null; } catch (e) {}
+    if (!u) return false;
+    return Boolean((A.canPlayGames && A.canPlayGames(u)) || (A.isStreamerAccount && A.isStreamerAccount(u)));
+  }
   var FRAMES = ['frame-club-hilal-wolf.png', 'frame-rare-dragon.png', 'frame-fire-water.png', 'frame-club-nassr-eagle.png', 'frame-girls-kitty-hearts.png', 'frame-general-stadium.png'];
 
   function show() {
-    if (document.getElementById('agp-win-frames-notice')) return;
+    if (document.getElementById('agp-win-frames-notice') || !isStreamer()) return;
+    try { localStorage.setItem(KEY, String(Date.now())); } catch (e) {}
     var st = document.createElement('style');
     st.textContent =
       '@keyframes agpWfIn{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}' +
@@ -2318,7 +2365,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     '</div>';
     ov.addEventListener('click', function (e) {
       if (!e.target.closest('[data-wf-close]') && e.target !== ov) return;
-      try { localStorage.setItem(KEY, String(Date.now())); } catch (err) {}
       if (!e.target.closest('a')) ov.remove();
     });
     document.body.appendChild(ov);
