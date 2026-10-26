@@ -1107,6 +1107,33 @@ function listChoiceCodes() {
 var WIN_REWARD_KEY = 'challenge_win_reward';
 var WIN_REWARD_DEFAULT = { enabled: false, maxUses: 10, frames: [] };
 
+// الإطارات المبدئية للجائزة (اختيار الأدمن) — تنطبق لين يحفظ الأدمن إعدادات ثانية.
+// أغلبها إطارات حصرية منشأة من لوحة الإدارة (معرّفها يختلف من قاعدة لقاعدة)،
+// فتنطابق بالاسم: بالضبط، أو ببداية الاسم للي آخرها «…».
+var WIN_REWARD_PRESET_SLUGS = ['level-7'];
+var WIN_REWARD_PRESET_NAMES = [
+  'إطار الكاوبوي', 'إطار النار والماء', 'إطار الثلج الكريستالي', 'إطار الدبدوب', 'إطار القط الخفاش',
+  'إطار البطة الوردية', 'إطار الولد الكول', 'الارنب الازرق',
+  'الهلال-ذئب الزعيم', 'الهلال - ذئب الزعيم', 'الملاك و القمر', 'الهلال الوردي', 'القطة والقلوب',
+  'الاهلي - النخبوي', 'الهلال - زعيم اسيا', 'لمسة وردية', 'التنين الثائر', 'عرش الكورة',
+  'بنات - القطة الوردية', 'الاتحاد - التاج والنمر', 'النصر - أفق الرياض', 'النصر - النسر الملكي',
+  'النصر - التاج الملكي', 'الهلال - النجوم', 'الهلال - أفق الرياض',
+  'السعودية - رؤية و…', 'السعودية - أصالة…', 'الهلال - الكأس وال…', 'الهلال - التاج والو…'
+];
+
+function presetWinRewardFrames() {
+  var norm = function (t) { return String(t || '').replace(/\s+/g, ' ').trim(); };
+  return listAllFramesForChoice().filter(function (f) {
+    if (f.frameType === 'catalog' && WIN_REWARD_PRESET_SLUGS.indexOf(f.frameRef) >= 0) return true;
+    var name = norm(f.displayNameAr);
+    if (!name) return false;
+    return WIN_REWARD_PRESET_NAMES.some(function (n) {
+      n = norm(n);
+      return n.slice(-1) === '…' ? name.indexOf(norm(n.slice(0, -1))) === 0 : name === n;
+    });
+  }).map(function (f) { return frameKey(f.frameType, f.frameRef); });
+}
+
 function getWinRewardConfig() {
   var row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get(WIN_REWARD_KEY);
   var cfg = {};
@@ -1114,7 +1141,7 @@ function getWinRewardConfig() {
   return {
     enabled: Boolean(cfg.enabled),
     maxUses: Math.floor(Number(cfg.maxUses)) || WIN_REWARD_DEFAULT.maxUses,
-    frames: Array.isArray(cfg.frames) ? cfg.frames.map(String) : []
+    frames: Array.isArray(cfg.frames) ? cfg.frames.map(String) : (row ? [] : presetWinRewardFrames())
   };
 }
 
