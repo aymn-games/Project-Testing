@@ -4,12 +4,16 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>ركلات الترجيح — مباراة بين بثين</title>
+<title>بلنتي</title>
 <link rel="icon" href="../../favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-<!-- شاشة إعدادات "ركلات الترجيح" — اللعبة مباراة بين بثين فقط (تحدي البثوث).
+<!-- شاشة "بلنتي" — أول ما تنفتح يختار الستريمر الوضع:
+     • «في بثي»: جمهور بثه ينقسم فريقين (كلمة 1 و2) — إعدادات المباراة هنا
+       وتنحفظ بـ localStorage 'penalty-solo-settings'، ثم game.html?mode=solo
+       (المنطق بالمتصفح: solo-engine.js).
+     • «ضد بث آخر»: مباراة بين بثين (تحدي البثوث) كما يلي.
      المنشئ يكتب اسم فريقه ويختار المسموح لهم ووقت الجولة ووقت الركلة ووقت
      انتظار اللوبي (كلمات الدخول ثابتة 1 و2 وتظهر باللوبي بس)، ثم يدعو ستريمر (من البثوث النشطة الآن أو بالبحث بيوزر تيك توك
      أو ID البروفايل). الخصم يقبل، يكتب اسم فريقه ويختار المسموح لهم، ويضغط
@@ -125,7 +129,7 @@
     .msg{ min-height:18px; font:600 13px 'IBM Plex Sans Arabic'; color:#a8a3b5; text-align:center; }
     .msg.bad{ color:#fca5a5; } .msg.good{ color:#86efac; }
 
-    /* إضافات ركلات الترجيح */
+    /* إضافات بلنتي */
     .tabs{ display:flex; gap:3px; padding:3px; margin-top:12px; border-radius:999px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); }
     .tabs button{ flex:1; height:38px; border:none; border-radius:999px; cursor:pointer; font:600 13.5px 'IBM Plex Sans Arabic'; background:transparent; color:#a8a3b5; display:flex; align-items:center; justify-content:center; gap:8px; transition:all .25s; }
     .tabs button.on{ background:linear-gradient(90deg,#7c3aed,#a855f7); color:#fff; box-shadow:0 6px 20px rgba(139,92,246,.4); }
@@ -140,6 +144,18 @@
     .locked{ opacity:.55; pointer-events:none; }
     .lock-note{ font:500 12px 'IBM Plex Sans Arabic'; color:#fbbf24; padding:6px 0 0; }
     .status-ok{ color:#86efac; }
+    /* اختيار الوضع (أول شاشة) */
+    .modes{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap:clamp(12px,1.4vw,18px); grid-column:1 / -1; }
+    .mode{ display:flex; flex-direction:column; align-items:center; gap:10px; padding:clamp(24px,3vw,36px) clamp(18px,2vw,26px); border-radius:24px; cursor:pointer; text-align:center; color:#f4f2f8;
+        background:rgba(18,16,26,.72); border:1px solid rgba(255,255,255,.08); box-shadow:0 20px 60px rgba(0,0,0,.3); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); transition:all .25s; animation:rise .45s ease both; }
+    .mode:hover{ border-color:rgba(167,139,250,.55); box-shadow:0 20px 60px rgba(139,92,246,.22); transform:translateY(-2px); }
+    .mode .ic{ width:72px; height:72px; border-radius:50%; display:grid; place-items:center; font-size:34px; background:rgba(139,92,246,.14); border:1px solid rgba(167,139,250,.3); }
+    .mode b{ font:700 clamp(19px,1.7vw,23px) 'IBM Plex Sans Arabic'; }
+    .mode span{ font:500 13.5px/1.8 'IBM Plex Sans Arabic'; color:#a8a3b5; max-width:340px; }
+    .mode em{ font-style:normal; font:700 12px 'IBM Plex Sans Arabic'; padding:3px 12px; border-radius:999px; background:rgba(251,191,36,.12); color:#fbbf24; }
+    .back{ height:34px; padding:0 14px; border-radius:999px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font:600 12.5px 'IBM Plex Sans Arabic';
+        border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.03); color:#c4b5fd; }
+    .back:hover{ background:rgba(139,92,246,.12); }
     /* حركة الظهور مرة وحدة بس — الصفحة تعيد رسم أقسامها مع كل تحديث */
     .grid.calm .sec{ animation:none; }
 </style>
@@ -156,8 +172,9 @@
 
 <main>
     <div class="head">
-        <h1>ركلات الترجيح</h1>
-        <span class="chip" id="me-chip"><i></i><span id="me-text">مباراة بين بثين: جمهورك فريق وجمهور خصمك فريق</span></span>
+        <h1>بلنتي</h1>
+        <span class="chip" id="me-chip"><i></i><span id="me-text">اختر وين تلعب</span></span>
+        <button type="button" class="back hidden" id="back">تغيير الوضع</button>
     </div>
 
     <div class="grid" id="top-grid"></div>
@@ -170,6 +187,7 @@
 </div>
 
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-auto-connect.js"></script>
 <script>
 (function () {
     'use strict';
@@ -197,7 +215,24 @@
         invite_accepted: 'المباراة بدأت من قبل.'
     };
 
+    var SOLO_KEY = 'penalty-solo-settings';
+    var CONN_KEY = 'agp:agp-stream-connection';
+    var MODE_TEXT = { choose: 'اختر وين تلعب', solo: 'في بثك: جمهورك ينقسم فريقين', versus: 'مباراة بين بثين: جمهورك فريق وجمهور خصمك فريق' };
+
+    function loadSolo() {
+        var d = { team1: '', team2: '', followersOnly: false, roundMinutes: 4, shotSec: 10, lobbySec: 60 }, raw = null;
+        try { raw = JSON.parse(localStorage.getItem(SOLO_KEY) || 'null'); } catch (e) {}
+        if (raw && typeof raw === 'object') for (var k in d) if (raw[k] !== undefined) d[k] = raw[k];
+        return d;
+    }
+    function savedConn() {
+        try { var c = JSON.parse(localStorage.getItem(CONN_KEY) || 'null'); return c && c.username ? c : null; } catch (e) { return null; }
+    }
+
     var state = {
+        // choose = شاشة الخيارين، solo = في بثي، versus = ضد بث آخر
+        view: { solo: 'solo', versus: 'versus' }[new URLSearchParams(location.search).get('mode')] || 'choose',
+        solo: loadSolo(),
         settings: { team1: '', followersOnly: false, roundMinutes: 4, shotSec: 10, lobbySec: 60 },
         guest: { team2: '', followersOnly: false },
         tab: 'live',
@@ -279,7 +314,7 @@
                 '<a class="btn ghost" href="' + otherPage(inv.game) + '">افتح الدعوة</a></div>';
         }
         return '<div class="person">' + av(state.avatars[inv.id], inv.other.name) +
-            '<div class="pi"><b>' + esc(inv.other.name) + ' يتحداك بركلات الترجيح!</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · فريقه «' + esc(s.team1 || inv.other.name) + '» · الجولة ' + (s.roundMinutes || 4) + ' دقائق · تنتهي خلال <bdi data-exp="' + inv.id + '">' + secs(inv.expiresIn) + '</bdi> ث</span></div>' +
+            '<div class="pi"><b>' + esc(inv.other.name) + ' يتحداك ببلنتي!</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · فريقه «' + esc(s.team1 || inv.other.name) + '» · الجولة ' + (s.roundMinutes || 4) + ' دقائق · تنتهي خلال <bdi data-exp="' + inv.id + '">' + secs(inv.expiresIn) + '</bdi> ث</span></div>' +
             '<div class="btns"><button class="btn ok" data-act="accept" data-id="' + inv.id + '">قبول</button><button class="btn ghost" data-act="decline" data-id="' + inv.id + '">رفض</button></div></div>';
     }
 
@@ -295,7 +330,7 @@
             cancelled: 'ألغيت الدعوة.'
         }[inv.status] || '';
         var head = '<div class="person">' + av(state.avatars[inv.id], inv.other.name) +
-            '<div class="pi"><b>' + esc(inv.other.name) + '</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · ركلات الترجيح</span><span class="' + (inv.status === 'ready' ? 'status-ok' : '') + '">' + esc(text) + '</span></div>' +
+            '<div class="pi"><b>' + esc(inv.other.name) + '</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · بلنتي</span><span class="' + (inv.status === 'ready' ? 'status-ok' : '') + '">' + esc(text) + '</span></div>' +
             (openOut() ? '<button class="btn ghost" data-cancel="' + inv.id + '">إلغاء الدعوة</button>' : '<button class="btn ghost" data-dismiss="' + inv.id + '">إخفاء</button>') + '</div>';
         if (inv.status !== 'ready' && inv.status !== 'setup') return head;
         return head +
@@ -373,10 +408,57 @@
         updateCta();
     }
 
+    /* ---- أول شاشة: خيارين بس ---- */
+    function renderChoose() {
+        var badge = state.incoming.some(function (inv) { return inv.game === GAME; }) ? '<em>عندك دعوة</em>' : '';
+        $('main-grid').innerHTML = '<div class="modes">' +
+            '<button type="button" class="mode" data-mode="solo"><span class="ic">📺</span><b>في بثي</b><span>جمهور بثك ينقسم فريقين: يكتبون 1 أو 2 بالشات للانضمام، ويسددون على المرمى بالدور.</span></button>' +
+            '<button type="button" class="mode" data-mode="versus"><span class="ic">⚔️</span><b>ضد بث آخر</b><span>ادعُ ستريمر ثاني: جمهورك فريق وجمهوره فريق، وكل واحد يكتب بشات بثه.</span>' + badge + '</button>' +
+        '</div>';
+        $('cta-wrap').classList.add('hidden');
+        $('back').classList.add('hidden');
+    }
+
+    /* ---- «في بثي»: إعدادات المباراة ---- */
+    function renderSolo() {
+        var s = state.solo, conn = savedConn();
+        var teams = row('اسم الفريق الأول', '<input class="txt" data-s="team1" maxlength="24" placeholder="الفريق 1" value="' + esc(s.team1) + '">', { hint: 'كلمة الدخول 1' }) +
+            row('اسم الفريق الثاني', '<input class="txt" data-s="team2" maxlength="24" placeholder="الفريق 2" value="' + esc(s.team2) + '">', { divider: true, hint: 'كلمة الدخول 2' }) +
+            row('المسموح لهم بالدخول', followersSeg('data-fo', s.followersOnly), { divider: true }) +
+            row('الحد الأقصى لكل فريق', fixed('25 لاعب'), { divider: true });
+        var match = row('وقت الجولة', seg('data-min', MINUTES.map(function (m) { return [m, m + ' دقائق']; }), s.roundMinutes)) +
+            row('عدد الجولات', fixed('3 · الفائز بجولتين'), { divider: true }) +
+            row('وقت انتظار اللوبي', '<div class="step"><button type="button" data-step="-1" aria-label="إنقاص">−</button><input type="text" readonly value="' + lobbyText(s.lobbySec) + '" aria-label="وقت انتظار اللوبي" style="width:68px"><button type="button" data-step="1" aria-label="زيادة">+</button></div>', { divider: true, hint: 'تقدر تبدأ المباراة قبل ما يخلص' }) +
+            row('وقت الركلة', seg('data-shot', SHOT_SECS.map(function (n) { return [n, n + ' ثانية']; }), s.shotSec), { divider: true });
+        var stream = conn
+            ? row('البث', fixed('<span><bdi dir="ltr">@' + esc(conn.username) + '</bdi> · متصل</span>', true), { hint: 'الشات يجي من هذا البث' })
+            : row('البث غير متصل', '<a class="btn" href="../../games.html">مكتبة الألعاب</a>', { hint: 'افتح بثك أو اتصل من مكتبة الألعاب' });
+        var how = '<div class="empty" style="line-height:1.9">الجمهور يكتب <b>1</b> أو <b>2</b> بالشات للانضمام لفريق. باللعب: صاحب الدور يكتب رقم الزاوية من <b>1</b> إلى <b>4</b> خلال وقت الركلة، والحارس يرتمي لزاوية عشوائية. الفريق الأكثر أهدافاً ياخذ الجولة، والتعادل يُحسم بركلات ترجيح حاسمة.</div>';
+        $('main-grid').innerHTML =
+            section(1, 'الفريقين', teams) + section(2, 'المباراة', match) +
+            section(3, 'البث وطريقة اللعب', stream + '<span class="div"></span>' + how, { full: true, hot: !conn });
+        updateCta();
+    }
+
+    function setView(v) {
+        state.view = v;
+        msgLocked = false;
+        if (!state.gate) {
+            if (v === 'versus' && state.me && state.me.tiktok) $('me-text').innerHTML = 'حسابك <bdi dir="ltr">@' + esc(state.me.tiktok) + '</bdi> · مباراة بين بثين';
+            else $('me-text').textContent = MODE_TEXT[v];
+        }
+        renderMain();
+    }
+
     function renderMain() {
         if (state.gate) { $('main-grid').innerHTML = ''; $('cta-wrap').classList.add('hidden'); return; }
         var j = guestMode();
-        if (j) renderGuest(j); else renderHost();
+        // دعوة مقبولة أو مرسلة = وضع «ضد بث آخر» تلقائياً.
+        if ((j || openOut()) && state.view !== 'versus') { setView('versus'); return; }
+        if (j) renderGuest(j);
+        else if (state.view === 'solo') renderSolo();
+        else if (state.view === 'versus') renderHost();
+        else renderChoose();
     }
 
     /* ---- الزر الكبير: «جاهز» للخصم، «الدخول للوبي» للمنشئ ---- */
@@ -389,8 +471,16 @@
         b.style.background = cls === 'ok' ? 'linear-gradient(90deg,#059669,#34d399)' : '';
     }
     function updateCta() {
-        $('cta-wrap').classList.toggle('hidden', Boolean(state.gate));
+        $('cta-wrap').classList.toggle('hidden', Boolean(state.gate) || (state.view === 'choose' && !guestMode()));
+        // الرجوع لشاشة الخيارين مقفول وفيه دعوة مقبولة أو مرسلة.
+        $('back').classList.toggle('hidden', Boolean(state.gate) || state.view === 'choose' || Boolean(guestMode()) || Boolean(openOut()));
         var j = guestMode();
+        if (!j && state.view === 'solo') {
+            var conn = savedConn();
+            setCta('الدخول للوبي', Boolean(conn));
+            if (!msgLocked) setMsg(conn ? 'الفريقين من جمهور بثك — اضغط وادخل اللوبي' : 'اتصل ببثك أول عشان يوصل الشات للعبة');
+            return;
+        }
         if (j) {
             var ready = j.status === 'ready';
             setCta(ready ? 'تعديل الإعدادات' : 'جاهز ✓', !state.busy, ready ? '' : 'ok');
@@ -409,6 +499,11 @@
     $('cta').addEventListener('click', function () {
         if ($('cta').disabled) return;
         var j = guestMode();
+        if (!j && state.view === 'solo') {
+            try { localStorage.setItem(SOLO_KEY, JSON.stringify(state.solo)); } catch (e) {}
+            location.href = 'game.html?mode=solo';
+            return;
+        }
         state.busy = true; updateCta();
         if (j) {
             var ready = j.status !== 'ready';
@@ -430,17 +525,21 @@
     });
 
     /* ---- الأحداث ---- */
+    function redraw() { if (state.view === 'solo') renderSolo(); else renderHost(); }
+    function cur() { return state.view === 'solo' && !guestMode() ? state.solo : state.settings; }
     $('main-grid').addEventListener('click', function (e) {
+        var md = e.target.closest('[data-mode]');
+        if (md) { setView(md.getAttribute('data-mode')); window.scrollTo(0, 0); return; }
         var t = e.target.closest('[data-tab]');
         if (t) { state.tab = t.getAttribute('data-tab'); renderHost(); if (state.tab === 'search' && $('q')) $('q').focus(); return; }
         var fo = e.target.closest('[data-fo]');
-        if (fo) { state.settings.followersOnly = fo.getAttribute('data-fo') === '1'; renderHost(); return; }
+        if (fo) { cur().followersOnly = fo.getAttribute('data-fo') === '1'; redraw(); return; }
         var sh = e.target.closest('[data-shot]');
-        if (sh) { state.settings.shotSec = Number(sh.getAttribute('data-shot')); renderHost(); return; }
+        if (sh) { cur().shotSec = Number(sh.getAttribute('data-shot')); redraw(); return; }
         var mn = e.target.closest('[data-min]');
-        if (mn) { state.settings.roundMinutes = Number(mn.getAttribute('data-min')); renderHost(); return; }
+        if (mn) { cur().roundMinutes = Number(mn.getAttribute('data-min')); redraw(); return; }
         var st = e.target.closest('[data-step]');
-        if (st) { state.settings.lobbySec = Math.min(LOBBY_MAX, Math.max(LOBBY_MIN, state.settings.lobbySec + Number(st.getAttribute('data-step')) * LOBBY_STEP)); renderHost(); return; }
+        if (st) { cur().lobbySec = Math.min(LOBBY_MAX, Math.max(LOBBY_MIN, cur().lobbySec + Number(st.getAttribute('data-step')) * LOBBY_STEP)); redraw(); return; }
         var gfo = e.target.closest('[data-gfo]');
         if (gfo) { state.guest.followersOnly = gfo.getAttribute('data-gfo') === '1'; renderMain(); return; }
         var inv = e.target.closest('[data-invite]');
@@ -453,6 +552,8 @@
     $('main-grid').addEventListener('input', function (e) {
         if (e.target.getAttribute('data-k') === 'team1') state.settings.team1 = e.target.value;
         if (e.target.getAttribute('data-g') === 'team2') state.guest.team2 = e.target.value;
+        var sk = e.target.getAttribute('data-s');
+        if (sk) state.solo[sk] = e.target.value;
         if (e.target.id === 'q') search(e.target.value);
     });
 
@@ -481,6 +582,10 @@
             });
         }, 300);
     }
+
+    $('back').addEventListener('click', function () { setView('choose'); });
+    window.addEventListener('agp:stream-connected', function () { if (state.view === 'solo' && !guestMode()) renderSolo(); });
+    window.addEventListener('storage', function (e) { if (e.key === CONN_KEY && state.view === 'solo' && !guestMode()) renderSolo(); });
 
     $('top-grid').addEventListener('click', function (e) {
         var cn = e.target.closest('[data-cancel]'), dm = e.target.closest('[data-dismiss]');
@@ -543,7 +648,7 @@
         fetch(API + '/api/public/live-streams').then(function (res) { return res.json(); }).then(function (d) {
             state.live = (d && d.streams) || [];
             state.liveLoaded = true;
-            if (!guestMode() && !state.gate) {
+            if (!guestMode() && !state.gate && state.view === 'versus') {
                 if (state.tab === 'live') redrawList();
                 var tab = $('main-grid').querySelector('[data-tab="live"] em');
                 if (tab) tab.textContent = '(' + liveList().length + ')'; else if (!guestMode()) renderHost();
@@ -553,8 +658,8 @@
 
     function setGate(kind) {
         state.gate = kind === 'login'
-            ? { text: 'سجّل دخول بحساب ستريمر مربوط بتيك توك عشان تلعب ركلات الترجيح.', href: '../../login.html', btn: 'تسجيل الدخول' }
-            : { text: 'ركلات الترجيح مباراة بين بثين لحسابات الستريمر المربوطة بتيك توك. اربط حسابك من صفحة حسابي.', href: '../../profile.html', btn: 'ربط حساب تيك توك' };
+            ? { text: 'سجّل دخول بحساب ستريمر مربوط بتيك توك عشان تلعب بلنتي.', href: '../../login.html', btn: 'تسجيل الدخول' }
+            : { text: 'بلنتي متاحة لحسابات الستريمر المربوطة بتيك توك. اربط حسابك من صفحة حسابي.', href: '../../profile.html', btn: 'ربط حساب تيك توك' };
         $('me-chip').classList.add('warn');
         $('me-text').textContent = kind === 'login' ? 'غير مسجّل دخول' : 'الحساب غير مربوط بتيك توك';
         renderTop();
@@ -576,11 +681,10 @@
         var cu = A.getCachedUser ? A.getCachedUser() : null;
         if (cu) {
             state.me = { name: cu.display_name || cu.tiktok_display_name || cu.tiktok_username || cu.username || '', tiktok: String(cu.tiktok_username || '').replace(/^@+/, '') };
-            if (cu.tiktok_username) $('me-text').innerHTML = 'حسابك <bdi dir="ltr">@' + esc(state.me.tiktok) + '</bdi> · مباراة بين بثين';
         }
     } catch (e) {}
     renderTop();
-    renderMain();
+    setView(state.view);
     setTimeout(function () { $('top-grid').classList.add('calm'); $('main-grid').classList.add('calm'); }, 700);
     poll(true);
     loadLive();

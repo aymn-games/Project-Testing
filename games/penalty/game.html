@@ -4,17 +4,20 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>ركلات الترجيح — المباراة</title>
+<title>بلنتي — المباراة</title>
 <link rel="icon" href="../../favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
-<!-- شاشة مباراة "ركلات الترجيح" بين بثين (تحدي البثوث). المنطق كله على
+<!-- شاشة مباراة "بلنتي" بين بثين (تحدي البثوث). المنطق كله على
      الخادم (backend/challenge/penalty-logic.js): الشاشة تعرض الحالة اللي
      توصلها عبر /ws/challenge وترسل أوامر التحكم بس (بدء المباراة من اللوبي،
      تخطي المقدمة، إخراج لاعب، انسحاب). فريق صاحب الدعوة دايماً على اليسار
      (المرمى الأول) وفريق الخصم على اليمين — نفس الشاشة للبثين.
-     التصميم من design_handoff_penalty_game: ملعب 1920×1000 يتمدد على الشاشة. -->
+     التصميم من design_handoff_penalty_game: ملعب 1920×1000 يتمدد على الشاشة.
+     وضع «في بثي» (game.html?mode=solo): نفس الشاشة، لكن المنطق بالمتصفح
+     (solo-engine.js) والفريقين من جمهور بث الستريمر نفسه (كلمة 1 و2)،
+     والإعدادات من شاشة الإعدادات (localStorage 'penalty-solo-settings'). -->
 <style>
     html,body{ margin:0; height:100%; background:#07060b; overflow:hidden; }
     body{ font-family:'IBM Plex Sans Arabic',sans-serif; color:#f4f2f8; }
@@ -429,16 +432,25 @@
 </div>
 
 <script src="../../js/agp-core.js"></script>
+<script src="../../js/agp-events.js"></script>
+<script src="../../js/agp-services.js"></script>
+<script src="../../js/agp-stream-connector.js"></script>
+<script src="../../js/agp-keyword-manager.js"></script>
+<script src="../../js/agp-queue-manager.js"></script>
+<script src="../../adapters/agp-tiktok-adapter.js"></script>
 <script src="../../js/agp-player-card.js"></script>
 <script src="../../js/agp-challenge-comms.js"></script>
 <script src="../../js/agp-challenge-win.js"></script>
 <script src="../../auth/auth-client.js"></script>
 <script src="../../auth/game-access-guard.js"></script>
+<script src="solo-engine.js"></script>
 <script>
 (function () {
     'use strict';
     var A = window.AGPAuth;
-    var matchId = new URLSearchParams(location.search).get('match') || '';
+    var params = new URLSearchParams(location.search);
+    var matchId = params.get('match') || '';
+    var SOLO = params.get('mode') === 'solo';
     var wsUrl = String((A && A.API_BASE) || 'https://project-testing-akds.onrender.com').replace(/^http/, 'ws') + '/ws/challenge';
     var HUB = 'index.html';
     var LIBRARY = '../../games.html';
@@ -463,7 +475,10 @@
     function mmss(ms) { var s = Math.ceil(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
     function toast(t) { var el = $('toast'); el.textContent = t; el.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.add('hidden'); }, 3000); }
     function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
-    function action(a, extra) { var o = { type: 'action', action: a }; if (extra) for (var k in extra) o[k] = extra[k]; send(o); }
+    function action(a, extra) {
+        if (SOLO) { solo.action(a, extra); return; }
+        var o = { type: 'action', action: a }; if (extra) for (var k in extra) o[k] = extra[k]; send(o);
+    }
     function isHost() { return M && M.you === M.host; }
 
     /* ---- فتحات التصميم: data-t = نص، data-h = "اسم|خاصية|قالب" ---- */
@@ -612,18 +627,18 @@
     // نفس بطاقة اللاعب المشتركة بلوبي الألعاب (agp-player-card.js): الصورة والاسم، والإطار لمن يملكه.
     function playerHtml(name, side, canKick) {
         var info = (M.state.playerInfo || {})[name] || {};
-        var kick = canKick ? '<button type="button" class="lb-kick" data-kick="' + esc(name) + '" aria-label="إخراج ' + esc(name) + '">✕</button>' : '';
+        var kick = canKick ? '<button type="button" class="lb-kick" data-kick="' + esc(name) + '" data-side="' + side + '" aria-label="إخراج ' + esc(name) + '">✕</button>' : '';
         if (PC && info.frame && info.frame.imageFilename) {
             return '<div class="lb-card">' + PC.renderHtml({ id: info.id || name, name: name, avatarUrl: info.avatar || null, frame: info.frame }, { showFrame: true, basePath: '../../', size: 42 }) + kick + '</div>';
         }
         return '<div class="lb-card"><div class="lb-plain"><span class="av">' + esc(initial(name)) + (info.avatar ? '<img src="' + esc(info.avatar) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()" style="position:absolute;inset:0">' : '') + '</span><span class="nm">' + esc(name) + '</span>' + kick + '</div></div>';
     }
     function lobbyTeamHtml(side) {
-        var st = M.state, t = st.teams[side], s = M.sides[side], mine = side === M.you;
+        var st = M.state, t = st.teams[side], s = M.sides[side], mine = SOLO || side === M.you;
         return '<section class="lb-team t' + side + '">' +
             '<div class="lb-head">' +
                 '<div class="lb-row"><span class="lb-name"><i></i><span>' + esc(t.name) + '</span></span><span class="lb-count"><b>' + t.players.length + '</b>/ ' + st.settings.maxPlayers + ' لاعب</span></div>' +
-                '<div class="lb-owner">' + (mine ? 'فريقك' : 'الخصم') + ' · بث <bdi>@' + esc(s.tiktok) + '</bdi> · <i class="dot ' + (s.present ? s.stream : 'error') + '"></i> ' + esc(s.present ? (STREAM_TEXT[s.stream] || '') : 'الستريمر مو موجود بالشاشة') + '</div>' +
+                '<div class="lb-owner">' + (SOLO ? 'الفريق ' + (side + 1) : mine ? 'فريقك' : 'الخصم') + ' · بث <bdi>@' + esc(s.tiktok) + '</bdi> · <i class="dot ' + (s.present ? s.stream : 'error') + '"></i> ' + esc(s.present ? (STREAM_TEXT[s.stream] || '') : 'الستريمر مو موجود بالشاشة') + '</div>' +
                 '<div class="lb-kw-label">كلمة الدخول · اكتبها في شات <bdi>@' + esc(s.tiktok) + '</bdi></div>' +
                 '<div class="lb-kw">' + esc(st.settings.keywords[side]) + '</div>' +
                 '<div class="lb-note">' + (st.settings.followersOnly[side] ? 'الدخول للمتابعين فقط' : 'الدخول متاح للجميع') + ' · اللي ينضم لفريق ما يقدر ينضم للثاني</div>' +
@@ -637,14 +652,14 @@
         var st = M.state;
         if (st.lobbyEndsAt) return '<div class="lb-timer" id="lb-timer">تبدأ المباراة خلال <b id="lb-left">' + mmss(left(st.lobbyEndsAt)) + '</b></div>';
         var both = M.sides.every(function (s) { return s.stream === 'connected'; });
-        return '<div class="lb-timer wait">' + (both ? 'انتهى وقت الانتظار — المباراة تبدأ أول ما يصير بكل فريق لاعب' : 'بانتظار اتصال البثين — عدّاد اللوبي يبدأ بعدها') + '</div>';
+        return '<div class="lb-timer wait">' + (both ? 'انتهى وقت الانتظار — المباراة تبدأ أول ما يصير بكل فريق لاعب' : SOLO ? 'بانتظار اتصال البث — عدّاد اللوبي يبدأ بعدها' : 'بانتظار اتصال البثين — عدّاد اللوبي يبدأ بعدها') + '</div>';
     }
     function renderLobby() {
         var st = M.state, ready = st.teams.every(function (t) { return t.players.length > 0; });
         $('lobby').innerHTML = '<div class="lb-wrap">' +
-            '<div class="lb-game">ركلات الترجيح · مباراة بين بثين · ' + st.settings.rounds + ' جولات (الفائز بجولتين) · الجولة ' + st.settings.roundMinutes + ' دقائق · الركلة ' + st.settings.shotSec + ' ثانية</div>' +
+            '<div class="lb-game">بلنتي · ' + (SOLO ? 'في بثك: جمهورك فريقين' : 'مباراة بين بثين') + ' · ' + st.settings.rounds + ' جولات (الفائز بجولتين) · الجولة ' + st.settings.roundMinutes + ' دقائق · الركلة ' + st.settings.shotSec + ' ثانية</div>' +
             '<h2 class="lb-title gold">لوبي الدخول</h2>' + lobbyTimerHtml() +
-            '<div class="lb-teams">' + lobbyTeamHtml(M.you) + lobbyTeamHtml(1 - M.you) + '</div>' +
+            '<div class="lb-teams">' + (SOLO ? lobbyTeamHtml(0) + lobbyTeamHtml(1) : lobbyTeamHtml(M.you) + lobbyTeamHtml(1 - M.you)) + '</div>' +
             '<div class="lb-foot">' + (isHost()
                 ? '<button type="button" class="lb-start" data-a="start"' + (ready ? '' : ' disabled') + '>⚽ ابدأ المباراة الآن</button>' + (ready ? '' : '<span class="lb-wait">كل فريق يحتاج لاعب واحد على الأقل</span>')
                 : '<span class="lb-wait">بانتظار ' + esc(M.sides[M.host].name) + ' يبدأ المباراة — أو تبدأ تلقائياً لما يخلص الوقت</span>') + '</div></div>';
@@ -697,7 +712,9 @@
     var END_TEXT = { left: 'انسحب', stream_lost: 'انقطع بثه' };
     function renderPanel() {
         var st = M.state, box = $('panel-box'), html = '';
-        if (M.ended && st.phase !== 'over') {
+        if (M.ended && st.phase !== 'over' && SOLO) {
+            html = '<h2 class="gold">' + esc(M.endTitle || 'انتهت المباراة') + '</h2><p>' + esc(M.endText || '') + '</p><a class="pbtn" href="' + (M.endHref || HUB) + '">' + esc(M.endBtn || 'الرجوع') + '</a>';
+        } else if (M.ended && st.phase !== 'over') {
             var who = M.endedBy != null ? M.sides[M.endedBy].name : '', mine = M.endedBy === M.you;
             var text = M.endReason === 'left'
                 ? (mine ? 'انسحبت من المباراة.' : who + ' انسحب من المباراة أو قفل الشاشة.')
@@ -780,9 +797,9 @@
                 M = msg.match;
                 clockOffset = M.serverNow - Date.now();
                 render();
-                comms.onState(M);
+                if (comms) comms.onState(M);
                 if (M.ended) closedForGood = true;
-            } else if (comms.onMessage(msg)) {
+            } else if (comms && comms.onMessage(msg)) {
                 return;
             } else if (msg.type === 'error') {
                 if (msg.error === 'match_not_found' || msg.error === 'not_in_match' || msg.error === 'auth_required') {
@@ -797,17 +814,18 @@
     }
 
     // تواصل الستريمرين (شات + مايك طوال المباراة) — js/agp-challenge-comms.js
-    var comms = window.AGPChallengeComms.create({ container: document.querySelector('.hgroup'), btnClass: 'hbtn', matchId: matchId, send: send, toast: toast, colors: COLORS });
+    var comms = SOLO ? null : window.AGPChallengeComms.create({ container: document.querySelector('.hgroup'), btnClass: 'hbtn', matchId: matchId, send: send, toast: toast, colors: COLORS });
 
     // بعد إعلان الفائز: الخروج يقفل المباراة للطرفين (وإلا تبقى «جارية» وترجّعه شاشة الإعدادات لها).
     function closeAndGo(url) {
+        if (SOLO) { solo.stop(); location.href = url || HUB; return; }
         if (M && !M.ended) action('leave');
         setTimeout(function () { location.href = url || HUB; }, 300);
     }
 
     document.addEventListener('click', function (e) {
         var k = e.target.closest('[data-kick]');
-        if (k) { action('kick', { name: k.getAttribute('data-kick') }); return; }
+        if (k) { action('kick', { name: k.getAttribute('data-kick'), side: Number(k.getAttribute('data-side')) }); return; }
         var b = e.target.closest('[data-a]');
         if (b && !b.disabled) {
             // بدء المباراة = ضغطة المستخدم: نشغّل الصوت معها (المتصفح يمنع الصوت بدون تفاعل).
@@ -819,6 +837,7 @@
     $('leave').addEventListener('click', function () {
         if (!M || M.ended) { location.href = HUB; return; }
         if (M.state.phase === 'over') { closeAndGo(); return; }
+        if (SOLO) { if (M.state.phase === 'lobby' || confirm('تنهي المباراة وتطلع؟')) closeAndGo(); return; }
         if (!confirm('تنسحب من المباراة؟ المباراة بتنتهي للطرفين.')) return;
         action('leave');
         setTimeout(function () { location.href = HUB; }, 300);
@@ -834,6 +853,83 @@
         $('fx').innerHTML = html;
     })();
 
+    /* ---- وضع «في بثي»: المنطق محلي (solo-engine.js) وشات بث الستريمر نفسه ---- */
+    var solo = null;
+    function startSolo() {
+        var AGP = window.AymanGamesPlatform || {};
+        var conn = null, raw = {};
+        try { conn = JSON.parse(localStorage.getItem('agp:agp-stream-connection') || 'null'); } catch (e) {}
+        try { raw = JSON.parse(localStorage.getItem('penalty-solo-settings') || '{}') || {}; } catch (e) {}
+        var cu = A && A.getCachedUser ? A.getCachedUser() : null;
+        var tiktok = (conn && conn.username) || String((cu && cu.tiktok_username) || '').replace(/^@+/, '');
+        var side = {
+            name: (cu && (cu.display_name || cu.tiktok_display_name || cu.username)) || tiktok,
+            tiktok: tiktok, avatar: tiktok && A && A.API_BASE ? A.API_BASE + '/api/public/streamer-avatar?u=' + encodeURIComponent(tiktok) : null,
+            present: true, stream: 'connecting'
+        };
+        var settings = window.AGPPenaltySolo.sanitizeSettings(raw);
+        var reported = false, engine = null;
+        M = { game: 'penalty', you: 0, host: 0, sides: [side, side], ended: false, state: null };
+
+        function refresh() { if (!M.ended) M.state = engine.state(); render(); }
+        engine = window.AGPPenaltySolo.create(settings, {
+            onChange: refresh,
+            onWin: function (w, durationMs) {
+                if (reported) return;
+                reported = true;
+                var all = engine.participants();
+                if (window.AGPAuth && typeof window.AGPAuth.reportMatchPoints === 'function') {
+                    window.AGPAuth.reportMatchPoints({
+                        players: all.map(function (p) { return { id: p.id, name: p.name }; }),
+                        winnerIds: all.filter(function (p) { return p.team === w; }).map(function (p) { return p.id; }),
+                        teamGame: true,
+                        durationMs: durationMs
+                    });
+                }
+            }
+        });
+        M.state = engine.state();
+
+        function endWith(title, text, href, btn) {
+            engine.stop();
+            M.ended = true; M.endTitle = title; M.endText = text; M.endHref = href; M.endBtn = btn;
+            render();
+        }
+        if (!conn || !conn.username) {
+            endWith('البث غير متصل', 'اتصل ببثك من مكتبة الألعاب أول، وبعدها ارجع لشاشة الإعدادات.', LIBRARY, 'مكتبة الألعاب');
+            return { action: function () {}, stop: function () {} };
+        }
+
+        function setStream(status) {
+            side.stream = status === 'connected' ? 'connected' : status === 'connecting' ? 'connecting' : 'error';
+            if (side.stream === 'connected') engine.onStreamReady();
+            render();
+        }
+        if (AGP.events && AGP.events.on) {
+            AGP.events.on('stream:statusChanged', function (p) { if (p && p.platform === 'tiktok') setStream(p.status); });
+            AGP.events.on('stream:commentReceived', function (p) { if (!M.ended && engine.onChat(p)) refresh(); });
+        }
+        if (AGP.streamConnector) AGP.streamConnector.connect('tiktok', { username: conn.username });
+        render();
+
+        return {
+            action: function (a, extra) {
+                var r = null;
+                if (a === 'start') r = engine.startMatch();
+                else if (a === 'skipIntro') r = engine.skipIntro();
+                else if (a === 'kick' && extra) r = engine.kick(extra.side, extra.name);
+                if (r && !r.ok && ERR[r.error]) toast(ERR[r.error]);
+                refresh();
+            },
+            stop: function () { engine.stop(); }
+        };
+    }
+
+    if (SOLO) {
+        solo = startSolo();
+        setInterval(tick, 200);
+        return;
+    }
     if (!matchId) {
         $('panel-box').innerHTML = '<h2 class="gold">ما فيه مباراة</h2><p>ابدأ من شاشة الإعدادات: ادعُ ستريمر وادخل اللوبي.</p><a class="pbtn" href="' + HUB + '">شاشة الإعدادات</a>';
         $('panel').classList.remove('hidden');

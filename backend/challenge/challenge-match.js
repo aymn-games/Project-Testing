@@ -53,7 +53,7 @@ var GAMES = {
         twoStep: true
     },
     'penalty': {
-        name: 'ركلات الترجيح',
+        name: 'بلنتي',
         create: penalty.createPenalty,
         sanitize: penalty.sanitizeSettings,
         sanitizeHost: penalty.sanitizeHostSettings,
