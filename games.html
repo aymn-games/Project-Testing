@@ -684,6 +684,51 @@ document.addEventListener('DOMContentLoaded', async function() {
     m.addEventListener('click', function(e){ if (e.target === m) closeGameLockModal(); });
     document.body.appendChild(m);
   }
+  // [تنويه «العب ضد ستريمر»] يطلع مرة وحدة لكل مستخدم مسجّل (ينحفظ بالمتصفح
+  // باسم حسابه بعد «فهمت»): فكرة اللعب ضد بثوث ثانية، البريد، والمايك والشات.
+  function showVersusIntro(){
+    var auth = window.AGPAuth;
+    var user = auth && auth.getToken && auth.getToken() && auth.getCachedUser ? auth.getCachedUser() : null;
+    if (!user || !user.id) return;
+    var key = 'agp-vs-intro-seen:' + user.id;
+    try { if (localStorage.getItem(key)) return; } catch (e) { return; }
+    if (document.getElementById('gl-vs-intro') || document.getElementById('gl-lock-modal')) return;
+    function ico(d){ return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; }
+    function av(c, t){ return '<span style="width:76px;height:76px;border-radius:50%;display:grid;place-items:center;font:700 30px \'IBM Plex Sans Arabic\',system-ui,sans-serif;color:#fff;background:linear-gradient(135deg,' + c + ',#1e1638);border:3px solid ' + c + ';box-shadow:0 0 30px ' + c + '88">' + t + '</span>'; }
+    function pt(icon, title, text){
+      return '<div style="display:flex;gap:12px;align-items:flex-start;text-align:right"><span style="flex:0 0 auto;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:#c4b5fd;background:rgba(139,92,246,.14);border:1px solid rgba(167,139,250,.3)">' + icon + '</span>' +
+        '<div><b style="display:block;font-size:14.5px;color:#f4f2f8">' + title + '</b><span style="font-size:13px;color:#a8a3b5;line-height:1.7">' + text + '</span></div></div>';
+    }
+    var m = document.createElement('div');
+    m.id = 'gl-vs-intro';
+    m.setAttribute('role', 'dialog');
+    m.setAttribute('aria-modal', 'true');
+    m.setAttribute('aria-label', 'العب ضد ستريمر');
+    m.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(5,5,8,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);direction:rtl;overflow-y:auto;';
+    m.innerHTML =
+      '<div style="position:relative;overflow:hidden;width:100%;max-width:440px;margin:auto;padding:28px 24px 22px;border-radius:24px;border:1px solid rgba(178,140,245,.35);background:linear-gradient(180deg,#1a1526,#0d0b14);text-align:center;font-family:\'IBM Plex Sans Arabic\',system-ui,sans-serif;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 70px -25px #8b5cf6">' +
+        '<div style="position:absolute;top:-120px;left:50%;width:420px;height:260px;margin-left:-210px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.35),transparent 65%);pointer-events:none"></div>' +
+        '<span style="position:relative;display:inline-block;padding:4px 14px;border-radius:999px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.35);color:#6ee7b7;font-size:12px;font-weight:700">جديد بالمنصة</span>' +
+        '<div style="position:relative;display:flex;align-items:center;justify-content:center;gap:16px;margin:18px 0 14px">' + av('#a78bfa', 'أ') +
+          '<span style="padding:6px 14px;border-radius:12px;background:linear-gradient(180deg,#fde7a8,#f0c25a);color:#1a1206;font:900 20px \'IBM Plex Sans Arabic\',system-ui,sans-serif">VS</span>' + av('#22d3ee', 'س') + '</div>' +
+        '<h2 style="position:relative;margin:0;font-size:28px;font-weight:700;background:linear-gradient(180deg,#f4f2f8,#c4b5fd);-webkit-background-clip:text;background-clip:text;color:transparent">العب ضد ستريمر</h2>' +
+        '<p style="position:relative;margin:8px 0 18px;font-size:14.5px;line-height:1.8;color:#cfc7e2">تحدّى أي ستريمر ثاني على المنصة: جمهورك فريق وجمهوره فريق، وكل لاعب يلعب من شات بثه.</p>' +
+        '<div style="position:relative;display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">' +
+          pt(ico('<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="M14.5 6.5 18 3h3v3l-3.5 3.5"/><path d="m5 14 4 4"/>'), 'ادعُ أي ستريمر', 'من البثوث النشطة الآن أو بالبحث بالـID ويوزر تيك توك — من زر «العب ضد ستريمر».') +
+          pt(ico('<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>'), 'الدعوات توصلك بالبريد', 'زر «البريد» بمكتبة الألعاب: تقبل أو ترفض، وتجهّز فريقك وتضغط «جاهز».') +
+          pt(ico('<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/>'), 'مايك وشات بينكم', 'تكلّم الستريمر الثاني واكتب له طوال المباراة، وتقفل المايك متى ما بغيت.') +
+        '</div>' +
+        '<button type="button" data-gl-vs-ok style="position:relative;margin-top:18px;width:100%;padding:13px;border:none;border-radius:14px;background:linear-gradient(90deg,#7a3fd4,#b28cf5);color:#fff;font-family:inherit;font-weight:700;font-size:15.5px;cursor:pointer;box-shadow:0 10px 30px rgba(139,92,246,.4)">فهمت</button>' +
+      '</div>';
+    m.querySelector('[data-gl-vs-ok]').addEventListener('click', function(){
+      try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
+      m.remove();
+    });
+    document.body.appendChild(m);
+    m.querySelector('[data-gl-vs-ok]').focus();
+  }
+  setTimeout(showVersusIntro, 1200);
+
   // مستمع واحد (capture) على الصفحة: يلتقط الضغط على أي بطاقة حتى لو
   // انعاد بناؤها، ويمنع فتح اللعبة قبل أي مستمع آخر.
   document.addEventListener('click', function(e){
