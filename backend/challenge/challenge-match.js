@@ -12,6 +12,13 @@
  *   خادم  → { type:'state', match:{...} }      (بعد كل تغيير)
  *   خادم  → { type:'error', error }
  *
+ * تواصل الستريمرين (شات + مايك) طوال المباراة:
+ *   متصفح → { type:'chat', text }              → للطرفين { type:'chat', msg:{side, name, text, at} }
+ *   خادم  → { type:'chatHistory', messages }    (عند الدخول — آخر MAX_CHAT رسالة)
+ *   متصفح → { type:'mic', on }                  (حالة المايك تظهر بالـ state: sides[i].mic)
+ *   متصفح → { type:'rtc', data }                → للطرف الثاني كما هي (إشارات WebRTC للصوت)
+ *   خادم  → { type:'peer' }                      (للطرفين لما تكون شاشتيهم مفتوحة — المنشئ يبدأ الاتصال الصوتي)
+ *
  * ساعات البث والإحصائيات: كل بث يُسجَّل لصاحبه (broadcasts) من لحظة اتصال
  * تيك توك لين تنتهي المباراة — نفس الألعاب العادية (ws-server.js): التعليقات
  * والهدايا وقيمتها (تدخل بنقاط الستريمر SP) والمتابعات والمشاهدين، وإحصائيات
@@ -60,6 +67,9 @@ var STREAM_GRACE_MS = 2 * 60 * 1000;   // بث طرف منقطع أكثر من �
 var RECONNECT_EVERY_MS = 30 * 1000;    // إعادة محاولة الاتصال ببث منقطع والشاشة مفتوحة
 var KEEP_ENDED_MS = 10 * 60 * 1000;    // المباراة المنتهية تبقى للعرض ثم تُحذف
 var WATCHDOG_MS = 5000;
+var MAX_CHAT = 50;                     // آخر كم رسالة بشات الستريمرين تنحفظ للمباراة
+var MAX_CHAT_LEN = 200;
+var CHAT_MIN_GAP_MS = 400;
 
 var _matches = {};
 var _watchdogStarted = false;
@@ -91,7 +101,9 @@ function createMatch(opts) {
         createdAt: now(),
         pointsReported: false,
         onEnd: opts.onEnd || function () {},
-        _sendTimer: null
+        _sendTimer: null,
+        chat: [],                           // شات الستريمرين [{side, name, text, at}]
+        mic: [false, false]
     };
     m.settings = game.sanitize(opts.settings, [opts.sides[0].name, opts.sides[1].name]);
     m.logic = game.create(m.settings, {
@@ -251,7 +263,7 @@ function snapshot(m, side) {
         sides: m.sides.map(function (s, i) {
             return {
                 name: s.name, tiktok: s.tiktok, customId: s.customId, avatar: s.avatar,
-                stream: m.stream[i], streamMsg: m.streamMsg[i], present: m.clients[i].length > 0
+                stream: m.stream[i], streamMsg: m.streamMsg[i], present: m.clients[i].length > 0, mic: m.mic[i]
             };
         }),
         settings: m.settings,
@@ -288,6 +300,7 @@ function endMatch(m, reason, bySide) {
     m.endReason = reason;
     m.endedBy = bySide == null ? null : bySide;
     m.endedAt = now();
+    m.mic = [false, false];
     m.timers.forEach(clearTimeout);
     m.timers = [];
     [0, 1].forEach(function (i) {
@@ -350,9 +363,38 @@ function onClientMessage(client, msg) {
         m.clients[side].push(client);
         if (!m.ended && (m.stream[side] === 'idle' || ((m.stream[side] === 'error' || m.stream[side] === 'ended') && now() - m.lastConnectAttempt[side] > 5000))) connectSide(m, side);
         sendState(m);
+        sendTo(client, { type: 'chatHistory', messages: m.chat });
+        // الشاشتين مفتوحة: نبلّغ الطرفين عشان المنشئ يبدأ (أو يعيد) الاتصال الصوتي.
+        if (!m.ended && m.clients[1 - side].length) [0, 1].forEach(function (i) { m.clients[i].forEach(function (c) { sendTo(c, { type: 'peer' }); }); });
         return;
     }
-    if (msg.type === 'action' && client.match) {
+    if (!client.match) return;
+    var cm = client.match;
+    if (msg.type === 'chat') {
+        if (cm.ended) return;
+        var text = String(msg.text || '').replace(/\s+/g, ' ').trim().slice(0, MAX_CHAT_LEN);
+        if (!text) return;
+        var t = now();
+        if (client.lastChatAt && t - client.lastChatAt < CHAT_MIN_GAP_MS) return sendTo(client, { type: 'error', error: 'chat_too_fast' });
+        client.lastChatAt = t;
+        var chatMsg = { side: client.side, name: cm.sides[client.side].name, text: text, at: t };
+        cm.chat.push(chatMsg);
+        if (cm.chat.length > MAX_CHAT) cm.chat.shift();
+        [0, 1].forEach(function (i) { cm.clients[i].forEach(function (c) { sendTo(c, { type: 'chat', msg: chatMsg }); }); });
+        return;
+    }
+    if (msg.type === 'mic') {
+        cm.mic[client.side] = Boolean(msg.on) && !cm.ended;
+        scheduleSend(cm);
+        return;
+    }
+    if (msg.type === 'rtc') {
+        // إشارات WebRTC (offer/answer/candidate) تنتقل للطرف الثاني بدون ما يقراها الخادم.
+        if (cm.ended || !msg.data || typeof msg.data !== 'object') return;
+        cm.clients[1 - client.side].forEach(function (c) { sendTo(c, { type: 'rtc', data: msg.data }); });
+        return;
+    }
+    if (msg.type === 'action') {
         var res = handleAction(client.match, client.side, String(msg.action || ''), msg);
         if (res && !res.ok) sendTo(client, { type: 'error', error: res.error });
     }
@@ -362,7 +404,7 @@ function removeClient(client) {
     var m = client.match;
     if (!m) return;
     m.clients[client.side] = m.clients[client.side].filter(function (c) { return c !== client; });
-    if (!m.clients[client.side].length) m.absentSince[client.side] = now();
+    if (!m.clients[client.side].length) { m.absentSince[client.side] = now(); m.mic[client.side] = false; }
     client.match = null;
     if (!m.ended) scheduleSend(m);
 }

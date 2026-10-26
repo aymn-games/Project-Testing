@@ -158,6 +158,32 @@
     .lb-start:disabled{ opacity:.4; cursor:default; }
     .lb-wait{ color:#a8a3b5; font-size:15px; text-align:center; }
 
+    /* ===== تواصل الستريمرين: المايك والشات ===== */
+    .hgroup{ display:flex; align-items:center; gap:10px; }
+    .hbtn.mic-on{ border-color:rgba(74,222,128,.5); background:rgba(34,197,94,.14); color:#bbf7d0; }
+    .hbtn.mic-off{ border-color:rgba(248,113,113,.3); color:#fecaca; }
+    .hbtn .bd{ position:absolute; top:-7px; right:-4px; min-width:20px; height:20px; padding:0 5px; box-sizing:border-box; border-radius:999px; background:#ef4444; color:#fff; font:700 11px/20px 'IBM Plex Sans Arabic'; text-align:center; box-shadow:0 0 0 3px #07060b; }
+    .hbtn{ position:relative; }
+    .chat{ position:fixed; left:clamp(12px,1.25vw,24px); top:88px; z-index:97; width:min(360px,calc(100vw - 24px)); height:min(62vh,540px); display:flex; flex-direction:column; border-radius:22px; overflow:hidden;
+        background:rgba(14,12,22,.94); border:1px solid rgba(167,139,250,.35); box-shadow:0 24px 60px rgba(0,0,0,.55), 0 0 50px -20px #8b5cf6; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); animation:popIn .2s ease both; }
+    .chat-h{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.07); }
+    .chat-h b{ font:700 15px 'IBM Plex Sans Arabic'; }
+    .chat-h small{ display:flex; align-items:center; gap:6px; margin-top:3px; font:500 12px 'IBM Plex Sans Arabic'; color:#a8a3b5; }
+    .chat-x{ width:32px; height:32px; flex:0 0 auto; border-radius:50%; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.04); color:#e7e3ef; cursor:pointer; font-size:14px; }
+    .chat-list{ flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; }
+    .chat-empty{ margin:auto; color:#6f6a7c; font-size:13px; text-align:center; line-height:1.8; }
+    .cm{ max-width:85%; align-self:flex-start; padding:7px 12px; border-radius:16px 16px 16px 4px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); }
+    .cm.mine{ align-self:flex-end; border-radius:16px 16px 4px 16px; background:rgba(139,92,246,.18); border-color:rgba(167,139,250,.35); }
+    .cm i{ display:flex; justify-content:space-between; gap:10px; font-style:normal; font:700 12px 'IBM Plex Sans Arabic'; }
+    .cm i em{ font-style:normal; font-weight:500; color:#6f6a7c; }
+    .cm p{ margin:2px 0 0; font:500 14px/1.6 'IBM Plex Sans Arabic'; color:#f4f2f8; word-break:break-word; }
+    .chat-f{ display:flex; gap:8px; padding:10px; border-top:1px solid rgba(255,255,255,.07); }
+    .chat-f input{ flex:1; min-width:0; height:40px; padding:0 14px; border-radius:999px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04); color:#f4f2f8; font:500 14px 'IBM Plex Sans Arabic'; outline:none; }
+    .chat-f input:focus{ border-color:rgba(167,139,250,.55); }
+    .chat-f button{ height:40px; padding:0 16px; border-radius:999px; border:none; cursor:pointer; color:#fff; font:700 14px 'IBM Plex Sans Arabic'; background:linear-gradient(90deg,#7c3aed,#a855f7); }
+    .mic-dot{ width:8px; height:8px; border-radius:50%; background:#6b6480; display:inline-block; }
+    .mic-dot.on{ background:#4ade80; box-shadow:0 0 8px #4ade80; }
+
     .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%); padding:12px 20px; border-radius:999px; background:#16121f; border:1px solid rgba(248,113,113,.4); font-size:14px; z-index:120; }
 </style>
 <script src="../../js/agp-apple-emoji.js"></script>
@@ -172,8 +198,19 @@
             <div class="vol" id="vol-box"><input type="range" min="0" max="100" value="80" id="vol" aria-label="قوة الصوت"><span id="vol-n">80%</span></div>
         </div>
         <div class="logo"><img src="../../logo.png" alt="ألعاب أيمن"></div>
+        <div class="hgroup">
+            <button type="button" class="hbtn" id="chat-btn" aria-label="شات الستريمرين"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span>الشات</span><span class="bd hidden" id="chat-bd"></span></button>
+            <button type="button" class="hbtn mic-off" id="mic-btn" aria-label="المايك"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M19 10v1a7 7 0 0 1-14 0v-1"></path><line x1="12" y1="18" x2="12" y2="22"></line><line id="mic-slash" x1="3" y1="3" x2="21" y2="21"></line></svg><span id="mic-label">المايك مقفول</span></button>
         <button type="button" class="hbtn exit" id="leave"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span>خروج</span></button>
+        </div>
     </header>
+
+    <div class="chat hidden" id="chat" dir="rtl">
+        <div class="chat-h"><div><b>شات الستريمرين</b><small><i class="mic-dot" id="opp-mic-dot"></i><span id="opp-mic">—</span></small></div><button type="button" class="chat-x" id="chat-x" aria-label="إغلاق">✕</button></div>
+        <div class="chat-list" id="chat-list"><div class="chat-empty">تواصل مع الستريمر الثاني هنا<br>والمايك تقدر تشغّله وتقفله طوال المباراة</div></div>
+        <form class="chat-f" id="chat-f"><input id="chat-in" maxlength="200" autocomplete="off" placeholder="اكتب رسالة…"><button type="submit">إرسال</button></form>
+    </div>
+    <audio id="peer-audio" autoplay playsinline></audio>
 
     <div class="stage" id="stage">
         <div dir="ltr" style="position:absolute;left:0;top:0;width:1920px;height:1000px;animation:fade .4s ease both">
@@ -466,7 +503,7 @@
     var ERR = {
         auth_required: 'لازم تسجّل دخول.', match_not_found: 'المباراة غير موجودة أو انتهت.', not_in_match: 'هذي المباراة مو لك.',
         need_players: 'كل فريق يحتاج لاعب واحد على الأقل — خلّ الجمهور يكتب كلمة الدخول.', busy: 'المباراة بدأت.',
-        host_only: 'التحكم لصاحب الدعوة.', ended: 'المباراة انتهت.'
+        host_only: 'التحكم لصاحب الدعوة.', ended: 'المباراة انتهت.', chat_too_fast: 'لحظة.. أرسلت بسرعة.'
     };
     var STREAM_TEXT = { connected: 'متصل بالبث', connecting: 'جاري الاتصال بالبث...', error: 'البث غير متصل', ended: 'البث انتهى', idle: 'بانتظار دخول الستريمر' };
 
@@ -807,7 +844,17 @@
                 M = msg.match;
                 clockOffset = M.serverNow - Date.now();
                 render();
-                if (M.ended) closedForGood = true;
+                renderComms();
+                if (M.ended) { closedForGood = true; endCall(); }
+            } else if (msg.type === 'chatHistory') {
+                chatMsgs = msg.messages || []; renderChat();
+            } else if (msg.type === 'chat' && msg.msg) {
+                chatMsgs.push(msg.msg); if (chatMsgs.length > 50) chatMsgs.shift(); renderChat();
+                if ($('chat').classList.contains('hidden') && M && msg.msg.side !== M.you) { unread++; renderComms(); toast(msg.msg.name + ': ' + msg.msg.text); }
+            } else if (msg.type === 'peer') {
+                if (M && isHost() && !M.ended) startCall();
+            } else if (msg.type === 'rtc' && msg.data) {
+                onRtc(msg.data);
             } else if (msg.type === 'error') {
                 if (msg.error === 'match_not_found' || msg.error === 'not_in_match' || msg.error === 'auth_required') {
                     closedForGood = true;
@@ -818,6 +865,136 @@
         };
         ws.onclose = function () { ws = null; if (!closedForGood) setTimeout(connect, 2000); };
         ws.onerror = function () {};
+    }
+
+    /* ---- تواصل الستريمرين: الشات ---- */
+    var chatMsgs = [], unread = 0;
+    function hhmm(t) { var d = new Date(t); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+    function renderChat() {
+        var el = $('chat-list');
+        if (!chatMsgs.length) return;
+        var atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+        el.innerHTML = chatMsgs.map(function (c) {
+            var mine = M && c.side === M.you;
+            return '<div class="cm' + (mine ? ' mine' : '') + '"><i><span style="color:' + COLORS[c.side] + '">' + esc(mine ? 'أنت' : c.name) + '</span><em>' + hhmm(c.at) + '</em></i><p>' + esc(c.text) + '</p></div>';
+        }).join('');
+        if (atBottom || (chatMsgs.length && M && chatMsgs[chatMsgs.length - 1].side === M.you)) el.scrollTop = el.scrollHeight;
+    }
+    function setChatOpen(open) {
+        $('chat').classList.toggle('hidden', !open);
+        if (open) { unread = 0; renderComms(); var el = $('chat-list'); el.scrollTop = el.scrollHeight; $('chat-in').focus(); }
+    }
+    $('chat-btn').addEventListener('click', function () { setChatOpen($('chat').classList.contains('hidden')); });
+    $('chat-x').addEventListener('click', function () { setChatOpen(false); });
+    $('chat-f').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var v = $('chat-in').value.trim();
+        if (!v || !M || M.ended) return;
+        send({ type: 'chat', text: v });
+        $('chat-in').value = '';
+    });
+
+    /* ---- تواصل الستريمرين: المايك (WebRTC مباشر بين الشاشتين — الخادم يمرّر الإشارات بس) ---- */
+    var ICE = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+    var pc = null, sender = null, micStream = null, micOn = false, pendingIce = [], callState = 'idle';
+    // offerer (المنشئ): يضيف مسار صوت واحد بالاتجاهين، والطرف الثاني يستخدم نفس المسار
+    // اللي يجيه بالعرض (useOffered) — تشغيل/قفل المايك بعدها ما يحتاج إعادة تفاوض.
+    function attachSender(tr) {
+        tr.direction = 'sendrecv';
+        sender = tr.sender;
+        if (micStream) sender.replaceTrack(micStream.getAudioTracks()[0]);
+    }
+    function newPC(offerer) {
+        if (pc) { try { pc.close(); } catch (e) {} }
+        pendingIce = [];
+        sender = null;
+        pc = new RTCPeerConnection({ iceServers: ICE });
+        if (offerer) attachSender(pc.addTransceiver('audio', { direction: 'sendrecv' }));
+        var me = pc;
+        pc.onicecandidate = function (e) { if (e.candidate && me === pc) send({ type: 'rtc', data: { candidate: e.candidate.toJSON() } }); };
+        pc.ontrack = function (e) {
+            var a = $('peer-audio');
+            a.srcObject = (e.streams && e.streams[0]) || new MediaStream([e.track]);
+            a.play().catch(function () {});
+        };
+        pc.onconnectionstatechange = function () {
+            if (me !== pc) return;
+            callState = pc.connectionState;
+            renderComms();
+            // انقطع الاتصال الصوتي: المنشئ يعيد المحاولة.
+            if ((callState === 'failed' || callState === 'disconnected') && isHost() && M && !M.ended) setTimeout(function () { if (me === pc && (pc.connectionState === 'failed' || pc.connectionState === 'disconnected')) startCall(); }, 3000);
+        };
+        callState = 'connecting';
+        return pc;
+    }
+    function startCall() {
+        if (!window.RTCPeerConnection) return;
+        var p = newPC(true);
+        p.createOffer().then(function (o) { return p.setLocalDescription(o); })
+            .then(function () { if (p === pc) send({ type: 'rtc', data: { sdp: p.localDescription.toJSON ? p.localDescription.toJSON() : p.localDescription } }); })
+            .catch(function (e) { console.error(e); });
+    }
+    function flushIce() { var q = pendingIce; pendingIce = []; q.forEach(function (c) { pc.addIceCandidate(c).catch(function () {}); }); }
+    function onRtc(data) {
+        if (!window.RTCPeerConnection || !M || M.ended) return;
+        if (data.sdp && data.sdp.type === 'offer' && !isHost()) {
+            var p = newPC(false);
+            p.setRemoteDescription(data.sdp).then(function () {
+                var tr = p.getTransceivers()[0];
+                if (tr) attachSender(tr);
+                flushIce();
+                return p.createAnswer();
+            })
+                .then(function (a) { return p.setLocalDescription(a); })
+                .then(function () { if (p === pc) send({ type: 'rtc', data: { sdp: p.localDescription.toJSON ? p.localDescription.toJSON() : p.localDescription } }); })
+                .catch(function (e) { console.error(e); });
+        } else if (data.sdp && data.sdp.type === 'answer' && isHost() && pc && pc.signalingState === 'have-local-offer') {
+            pc.setRemoteDescription(data.sdp).then(flushIce).catch(function (e) { console.error(e); });
+        } else if (data.candidate && pc) {
+            if (pc.remoteDescription) pc.addIceCandidate(data.candidate).catch(function () {});
+            else pendingIce.push(data.candidate);
+        }
+    }
+    function endCall() {
+        if (pc) { try { pc.close(); } catch (e) {} pc = null; }
+        if (micStream) { micStream.getTracks().forEach(function (t) { t.stop(); }); micStream = null; }
+        micOn = false; callState = 'idle';
+        renderComms();
+    }
+    function setMic(on) {
+        if (!M || M.ended) return;
+        if (on && !micStream) {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('المتصفح ما يدعم المايك.'); return; }
+            navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }).then(function (stream) {
+                micStream = stream;
+                if (sender) sender.replaceTrack(stream.getAudioTracks()[0]);
+                setMic(true);
+            }).catch(function () { toast('ما قدرنا نوصل للمايك — اسمح للمتصفح باستخدامه.'); });
+            return;
+        }
+        micOn = Boolean(on && micStream);
+        if (micStream) micStream.getAudioTracks().forEach(function (t) { t.enabled = micOn; });
+        send({ type: 'mic', on: micOn });
+        renderComms();
+    }
+    $('mic-btn').addEventListener('click', function () { setMic(!micOn); });
+    // المتصفح يمنع تشغيل الصوت بدون ضغطة: أي ضغطة بالصفحة تشغّل صوت الستريمر الثاني لو كان واقف.
+    document.addEventListener('click', function () { var a = $('peer-audio'); if (a.srcObject && a.paused) a.play().catch(function () {}); });
+
+    function renderComms() {
+        var b = $('chat-bd');
+        b.classList.toggle('hidden', !unread);
+        b.textContent = unread;
+        $('mic-btn').classList.toggle('mic-on', micOn);
+        $('mic-btn').classList.toggle('mic-off', !micOn);
+        $('mic-label').textContent = micOn ? 'المايك شغّال' : 'المايك مقفول';
+        $('mic-slash').style.display = micOn ? 'none' : '';
+        $('mic-btn').disabled = Boolean(M && M.ended);
+        if (!M) return;
+        var opp = M.sides[1 - M.you];
+        var link = callState === 'connected' ? 'متصل صوتياً' : opp.present ? 'جاري ربط الصوت…' : 'شاشته مسكّرة';
+        $('opp-mic').textContent = 'مايك ' + opp.name + ': ' + (opp.mic ? 'شغّال' : 'مقفول') + ' · ' + link;
+        $('opp-mic-dot').classList.toggle('on', Boolean(opp.mic));
     }
 
     // بعد إعلان الفائز: الخروج يقفل المباراة للطرفين (وإلا تبقى «جارية» وترجّعه شاشة الإعدادات لها).
