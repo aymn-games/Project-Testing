@@ -6,6 +6,10 @@
  * (challenge.html — تسحب صندوق الدعوات كل بضع ثواني)، ولو قبلها تنشأ
  * المباراة (challenge-match.js) وتنتقل الشاشتين لها.
  *
+ * ألعاب twoStep (ركلات الترجيح): القبول ما ينشئ المباراة مباشرة — الخصم
+ * يجهّز إعداداته (اسم فريقه + المسموح لهم) ويضغط «جاهز» (status: setup →
+ * ready)، والمنشئ يضغط «الدخول للوبي» (start) فتنشأ المباراة.
+ *
  * كل شي هنا بالذاكرة: إعادة تشغيل الخادم تلغي الدعوات والمباريات الجارية.
  * شروط الطرفين: حساب ستريمر (أو أدمن/صلاحية تشغيل) مربوط بتيك توك موثَّق.
  */
@@ -18,6 +22,7 @@ var challengeMatch = require('./challenge-match');
 
 var INVITE_TTL_MS = 2 * 60 * 1000;
 var KEEP_INVITE_MS = 10 * 60 * 1000;
+var SETUP_TTL_MS = 10 * 60 * 1000;   // مدة تجهيز الخصم لإعداداته بعد القبول (twoStep)
 
 var _invites = {};        // id -> invite
 var _activeMatch = {};    // userId -> matchId (مباراة جارية)
@@ -66,12 +71,16 @@ function activeMatchFor(userId) {
     return m;
 }
 
+/** دعوة ما انحسمت بعد (بانتظار الرد أو الخصم يجهّز). */
+function isOpen(inv) { return inv.status === 'pending' || inv.status === 'setup' || inv.status === 'ready'; }
+
 function expireInvites() {
     var t = now();
     Object.keys(_invites).forEach(function (id) {
         var inv = _invites[id];
         if (inv.status === 'pending' && t > inv.expiresAt) inv.status = 'expired';
-        if (inv.status !== 'pending' && t - inv.createdAt > KEEP_INVITE_MS) delete _invites[id];
+        if ((inv.status === 'setup' || inv.status === 'ready') && t > inv.setupExpiresAt) inv.status = 'expired';
+        if (!isOpen(inv) && t - (inv.setupExpiresAt || inv.createdAt) > KEEP_INVITE_MS) delete _invites[id];
     });
 }
 
@@ -118,7 +127,7 @@ function createInvite(me, toCustomId, game, settings) {
     // دعوة وحدة معلّقة لكل مرسل — الجديدة تلغي القديمة.
     Object.keys(_invites).forEach(function (id) {
         var inv = _invites[id];
-        if (inv.fromId === me.id && inv.status === 'pending') inv.status = 'cancelled';
+        if (inv.fromId === me.id && isOpen(inv)) inv.status = 'cancelled';
     });
 
     var hostSettings = challengeMatch.GAMES[game].sanitizeHost(settings);
@@ -134,6 +143,9 @@ function createInvite(me, toCustomId, game, settings) {
         game: game,
         gameName: challengeMatch.GAMES[game].name,
         settings: hostSettings,
+        guestSettings: null,
+        twoStep: Boolean(challengeMatch.GAMES[game].twoStep),
+        setupExpiresAt: null,
         status: 'pending',
         matchId: null,
         createdAt: now(),
@@ -154,9 +166,11 @@ function inviteView(inv, viewerId, haveAvatars) {
         game: inv.game,
         gameName: inv.gameName,
         settings: inv.settings,
+        guestSettings: inv.guestSettings,
+        twoStep: inv.twoStep,
         status: inv.status,
         matchId: inv.matchId,
-        expiresIn: Math.max(0, inv.expiresAt - now())
+        expiresIn: Math.max(0, (inv.status === 'pending' ? inv.expiresAt : (inv.setupExpiresAt || inv.expiresAt)) - now())
     };
 }
 
@@ -168,37 +182,59 @@ function inbox(me, have) {
     expireInvites();
     var haveAvatars = {};
     String(have || '').split(',').forEach(function (id) { if (id) haveAvatars[id] = true; });
-    var incoming = [], outgoing = null;
+    var incoming = [], outgoing = null, joined = null;
     Object.keys(_invites).forEach(function (id) {
         var inv = _invites[id];
         if (inv.toId === me.id && inv.status === 'pending') incoming.push(inviteView(inv, me.id, haveAvatars));
+        // دعوة قبلها وهو يجهّز إعداداته (twoStep) — أو بدأت مباراتها.
+        if (inv.toId === me.id && inv.twoStep && inv.status !== 'pending' && (!joined || inv.createdAt > joined._createdAt)) {
+            joined = inviteView(inv, me.id, haveAvatars);
+            joined._createdAt = inv.createdAt;
+        }
         if (inv.fromId === me.id && (!outgoing || inv.createdAt > outgoing._createdAt)) {
             outgoing = inviteView(inv, me.id, haveAvatars);
             outgoing._createdAt = inv.createdAt;
         }
     });
     if (outgoing) delete outgoing._createdAt;
+    if (joined) delete joined._createdAt;
     var m = activeMatchFor(me.id);
     return {
         success: true,
         eligible: isEligible(me),
         incoming: incoming,
         outgoing: outgoing,
+        joined: joined,
         activeMatch: m ? { id: m.id, game: m.game } : null
     };
 }
 
-/** قبول/رفض دعوة واردة. guestSettings: اسم فريق الخصم + فئاته الثلاث. */
+/** قبول/رفض دعوة واردة. ألعاب twoStep: القبول يبدأ التجهيز بس، وإعدادات الخصم تجي مع «جاهز». */
 function respond(me, inviteId, accept, guestSettings) {
     expireInvites();
     var inv = _invites[String(inviteId || '')];
     if (!inv || inv.toId !== me.id) return { success: false, error: 'invite_not_found' };
+    // twoStep: الخصم يقدر ينسحب وهو يجهّز (قبل ما يدخل المنشئ اللوبي).
+    if (!accept && inv.twoStep && (inv.status === 'setup' || inv.status === 'ready')) { inv.status = 'declined'; return { success: true }; }
     if (inv.status !== 'pending') return { success: false, error: 'invite_' + inv.status };
     if (!accept) { inv.status = 'declined'; return { success: true }; }
 
     if (!isEligible(me)) return { success: false, error: 'not_eligible' };
+    if (inv.twoStep) {
+        if (activeMatchFor(inv.toId)) return { success: false, error: 'you_in_match' };
+        inv.status = 'setup';
+        inv.setupExpiresAt = now() + SETUP_TTL_MS;
+        inv.guestSettings = null; // تنحفظ لما يضغط «جاهز» (guestReady)
+        return { success: true, setup: true, inviteId: inv.id, game: inv.game };
+    }
     var guest = challengeMatch.GAMES[inv.game].sanitizeGuest(guestSettings);
     if (guest.error) return { success: false, error: guest.error };
+    return startMatchFor(inv, guest);
+}
+
+/** إنشاء مباراة دعوة (بعد قبول الخصم — أو بعد «جاهز» + دخول المنشئ للوبي بألعاب twoStep).
+ * guest: إعدادات الخصم بعد sanitizeGuest. */
+function startMatchFor(inv, guest) {
     var fromRow = loadUser(inv.fromId), toRow = loadUser(inv.toId);
     if (!fromRow || !isEligible(fromRow)) { inv.status = 'cancelled'; return { success: false, error: 'opponent_not_eligible' }; }
     if (activeMatchFor(inv.fromId)) { inv.status = 'cancelled'; return { success: false, error: 'opponent_in_match' }; }
@@ -220,11 +256,38 @@ function respond(me, inviteId, accept, guestSettings) {
     return { success: true, matchId: m.id, game: m.game };
 }
 
+/** twoStep: الخصم يحفظ إعداداته ويضغط «جاهز» (ready=false يرجّعه للتعديل). */
+function guestReady(me, inviteId, ready, guestSettings) {
+    expireInvites();
+    var inv = _invites[String(inviteId || '')];
+    if (!inv || inv.toId !== me.id || !inv.twoStep) return { success: false, error: 'invite_not_found' };
+    if (inv.status !== 'setup' && inv.status !== 'ready') return { success: false, error: 'invite_' + inv.status };
+    var guest = challengeMatch.GAMES[inv.game].sanitizeGuest(guestSettings);
+    if (guest.error) return { success: false, error: guest.error };
+    inv.guestSettings = guest;
+    inv.status = ready ? 'ready' : 'setup';
+    return { success: true, status: inv.status };
+}
+
+/** twoStep: المنشئ يدخل اللوبي بعد ما الخصم جاهز — تنشأ المباراة للطرفين. */
+function hostStart(me, inviteId) {
+    expireInvites();
+    var inv = _invites[String(inviteId || '')];
+    if (!inv || inv.fromId !== me.id || !inv.twoStep) return { success: false, error: 'invite_not_found' };
+    if (inv.status === 'setup') return { success: false, error: 'opponent_not_ready' };
+    if (inv.status !== 'ready' || !inv.guestSettings) return { success: false, error: 'invite_' + inv.status };
+    if (!isEligible(me)) return { success: false, error: 'not_eligible' };
+    if (activeMatchFor(inv.fromId)) return { success: false, error: 'you_in_match' };
+    if (activeMatchFor(inv.toId)) { inv.status = 'cancelled'; return { success: false, error: 'opponent_in_match' }; }
+    if (!isEligible(loadUser(inv.toId))) { inv.status = 'cancelled'; return { success: false, error: 'opponent_not_eligible' }; }
+    return startMatchFor(inv, inv.guestSettings);
+}
+
 /** إلغاء دعوة صادرة. */
 function cancel(me, inviteId) {
     var inv = _invites[String(inviteId || '')];
     if (!inv || inv.fromId !== me.id) return { success: false, error: 'invite_not_found' };
-    if (inv.status === 'pending') inv.status = 'cancelled';
+    if (isOpen(inv)) inv.status = 'cancelled';
     return { success: true };
 }
 
@@ -234,5 +297,7 @@ module.exports = {
     createInvite: createInvite,
     inbox: inbox,
     respond: respond,
+    guestReady: guestReady,
+    hostStart: hostStart,
     cancel: cancel
 };

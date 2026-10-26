@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>أسرع إجابة — مباراة بين بثين</title>
+<link rel="icon" href="../../favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- شاشة إعدادات "أسرع إجابة" بين بثين (العب ضد ستريمر) — نفس تنسيق ونظام
+     ركلات الترجيح (games/penalty/index.html). المنشئ يكتب اسم فريقه ويختار
+     المسموح لهم ونقاط الفوز ووقت انتظار اللوبي وفئاته (فئة وحدة على الأقل)،
+     ثم يدعو ستريمر (من البثوث النشطة الآن أو بالبحث بيوزر تيك توك أو ID
+     البروفايل). الخصم يقبل، يكتب اسم فريقه ويختار المسموح لهم وفئاته، ويضغط
+     «جاهز»، والمنشئ يضغط «الدخول للوبي» فتنتقل الشاشتين للوبي (challenge.html).
+     الأسئلة من فئات الطرفين. كلمات الدخول ثابتة (1 و2) وتظهر باللوبي بس.
+     الدعوات والمباراة على الخادم (backend/challenge/ — لعبة twoStep). -->
+<style>
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; min-height:100%; background:#07060b; }
+    body{ font-family:'IBM Plex Sans Arabic',sans-serif; color:#f4f2f8; }
+    a{ color:inherit; text-decoration:none; }
+    button,input{ font-family:inherit; }
+    input:focus{ outline:none; border-color:rgba(167,139,250,.5) !important; }
+    input::placeholder{ color:#6f6a7c; }
+    bdi{ unicode-bidi:isolate; }
+    .hidden{ display:none !important; }
+    @keyframes rise{ from{ opacity:0; transform:translateY(14px) } to{ opacity:1; transform:none } }
+
+    /* ===== الخلفية (نفس buildFx بشاشة الإعدادات) ===== */
+    .fx{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:0; }
+    .fx .g{ position:absolute; border-radius:50%; filter:blur(40px); }
+    .fx .s{ position:absolute; border-radius:50%; }
+
+    /* ===== الترويسة ===== */
+    header.bar{ position:sticky; top:0; z-index:50; height:80px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:clamp(10px,1.2vw,24px);
+        padding:0 clamp(12px,1.25vw,24px); background:rgba(10,9,15,.72); border-bottom:1px solid rgba(255,255,255,.07); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); }
+    .exit{ justify-self:start; height:clamp(32px,2.3vw,42px); padding:0 clamp(10px,.9vw,16px); border-radius:999px; display:flex; align-items:center; gap:8px; font:600 clamp(12px,.78vw,15px) 'IBM Plex Sans Arabic';
+        white-space:nowrap; border:1px solid rgba(248,113,113,.25); background:rgba(255,255,255,.03); color:#fca5a5; }
+    .exit:hover{ background:rgba(248,113,113,.1); border-color:rgba(248,113,113,.45); }
+    .logo img{ display:block; height:60px; filter:drop-shadow(0 0 14px rgba(139,92,246,.45)); }
+
+    main{ position:relative; z-index:1; width:100%; max-width:1080px; margin:0 auto; padding:0 clamp(12px,2.5vw,32px) 130px; }
+    .head{ display:flex; flex-direction:column; align-items:center; gap:12px; padding:clamp(16px,3.2vh,34px) 0 clamp(14px,2.6vh,26px); text-align:center; }
+    .head h1{ margin:0; font:700 clamp(32px,4.2vw,56px)/1.1 'IBM Plex Sans Arabic'; background:linear-gradient(180deg,#f4f2f8,#c4b5fd); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .chip{ display:inline-flex; align-items:center; gap:8px; min-height:30px; padding:4px 12px; border-radius:999px; font:600 12px 'IBM Plex Sans Arabic'; background:rgba(52,211,153,.08); border:1px solid rgba(52,211,153,.3); color:#34d399; }
+    .chip i{ width:7px; height:7px; border-radius:50%; background:currentColor; box-shadow:0 0 8px currentColor; flex:0 0 auto; }
+    .chip.warn{ background:rgba(251,191,36,.08); border-color:rgba(251,191,36,.3); color:#fbbf24; }
+
+    .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr)); gap:clamp(12px,1.4vw,18px); }
+    .grid + .grid{ margin-top:clamp(12px,1.4vw,18px); }
+    .grid:empty{ display:none; }
+    .sec{ display:flex; flex-direction:column; padding:clamp(16px,1.6vw,22px) clamp(18px,1.8vw,26px); border-radius:24px; background:rgba(18,16,26,.72); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+        border:1px solid rgba(255,255,255,.08); box-shadow:0 20px 60px rgba(0,0,0,.3); animation:rise .45s ease both; min-width:0; }
+    .sec.full{ grid-column:1 / -1; }
+    .sec.hot{ border-color:rgba(167,139,250,.45); box-shadow:0 20px 60px rgba(139,92,246,.18); }
+    .sec-h{ display:flex; align-items:center; gap:10px; padding-bottom:10px; margin-bottom:4px; border-bottom:1px solid rgba(255,255,255,.06); }
+    .num{ width:30px; height:30px; flex:0 0 auto; border-radius:999px; display:grid; place-items:center; background:rgba(139,92,246,.14); color:#c4b5fd; font:700 13px 'IBM Plex Sans Arabic'; }
+    .sec-t{ font:700 clamp(15px,1.2vw,17px) 'IBM Plex Sans Arabic'; }
+    .sec-n{ margin-inline-start:auto; font:500 12px 'IBM Plex Sans Arabic'; color:#8a8596; }
+    .div{ display:block; height:1px; background:rgba(255,255,255,.06); }
+
+    /* صف: العنوان يمين والعنصر يسار */
+    .row{ display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:52px; padding:6px 0; }
+    .lbl{ display:flex; align-items:center; gap:8px; min-width:0; }
+    .lbl .d{ width:8px; height:8px; flex-shrink:0; border-radius:50%; background:#a78bfa; box-shadow:0 0 8px #a78bfa; }
+    .lbl > span:last-child{ font:600 clamp(14px,1.1vw,16px) 'IBM Plex Sans Arabic'; color:#e7e3ef; }
+    .lbl small{ display:block; font:500 12px 'IBM Plex Sans Arabic'; color:#8a8596; }
+    .txt{ width:min(190px,48%); height:40px; flex:0 0 auto; border-radius:999px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.035); color:#f4f2f8; font:600 14px 'IBM Plex Sans Arabic'; padding:0 16px; text-align:center; }
+    .fixed{ height:40px; min-width:64px; max-width:60%; padding:0 18px; border-radius:999px; display:grid; place-items:center; border:1px dashed rgba(167,139,250,.4); background:rgba(139,92,246,.08); color:#ddd6fe; font:700 15px 'IBM Plex Sans Arabic'; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .step{ display:flex; align-items:center; gap:2px; padding:3px; border-radius:999px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); }
+    .step button{ width:34px; height:34px; border-radius:999px; border:none; background:transparent; color:#a8a3b5; font:500 20px/1 'IBM Plex Sans Arabic'; cursor:pointer; }
+    .step button:hover{ background:rgba(255,255,255,.08); color:#fff; }
+    .step input{ width:52px; height:34px; border:none; border-radius:999px; background:transparent; text-align:center; font:700 16px 'IBM Plex Sans Arabic'; color:#ddd6fe; }
+    .seg{ display:flex; gap:3px; padding:3px; border-radius:999px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); }
+    .seg button{ height:34px; padding:0 14px; border:none; border-radius:999px; cursor:pointer; white-space:nowrap; font:600 13px 'IBM Plex Sans Arabic'; background:transparent; color:#a8a3b5; transition:all .25s; }
+    .seg button.on{ background:linear-gradient(90deg,#7c3aed,#a855f7); color:#fff; box-shadow:0 6px 20px rgba(139,92,246,.4); }
+
+    /* اختيار متعدد بنقطة (الألعاب، الفئات) */
+    .multi{ display:flex; flex-direction:column; gap:10px; padding:10px 0 6px; }
+    .multi .ml{ display:flex; align-items:center; gap:8px; font:600 clamp(14px,1.1vw,16px) 'IBM Plex Sans Arabic'; color:#e7e3ef; }
+    .multi .ml em{ font-style:normal; font:600 12px 'IBM Plex Sans Arabic'; color:#8a8596; }
+    .multi .ml em.full{ color:#34d399; }
+    .opts{ display:flex; flex-wrap:wrap; gap:8px; }
+    .opt{ height:36px; padding:0 16px; border-radius:999px; cursor:pointer; display:flex; align-items:center; gap:6px; font:600 13px 'IBM Plex Sans Arabic';
+        border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.02); color:#8a8596; transition:all .2s; }
+    .opt i{ width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.2); }
+    .opt.on{ border-color:rgba(167,139,250,.55); background:rgba(139,92,246,.16); color:#ddd6fe; }
+    .opt.on i{ background:#a78bfa; }
+    .opt:disabled{ opacity:.4; cursor:default; }
+    .opt.big{ height:44px; padding:0 20px; font-size:14px; }
+    .opt .soon{ font-size:11px; color:#6f6a7c; }
+
+    /* أشخاص (دعوات، نتائج البحث) */
+    .person{ display:flex; align-items:center; gap:12px; padding:10px 0; flex-wrap:wrap; }
+    .av{ width:46px; height:46px; flex:0 0 auto; border-radius:50%; object-fit:cover; background:linear-gradient(135deg,#7c3aed,#a855f766); border:2px solid rgba(255,255,255,.12); display:grid; place-items:center; color:#fff; font-weight:700; }
+    .pi{ flex:1 1 180px; min-width:0; }
+    .pi b{ display:block; font:700 15px 'IBM Plex Sans Arabic'; }
+    .pi span{ display:block; font:500 12.5px 'IBM Plex Sans Arabic'; color:#8a8596; line-height:1.7; }
+    .pi bdi{ direction:ltr; }
+    .res{ display:block; width:100%; text-align:right; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.02); border-radius:18px; padding:8px 12px; margin-top:8px; cursor:pointer; color:#f4f2f8; }
+    .res.on{ border-color:rgba(167,139,250,.55); background:rgba(139,92,246,.16); }
+    .res:disabled{ opacity:.5; cursor:default; }
+    .tag{ font:600 11px 'IBM Plex Sans Arabic'; padding:3px 10px; border-radius:999px; background:rgba(248,113,113,.12); color:#fca5a5; white-space:nowrap; }
+    .search{ width:100%; height:44px; margin:10px 0 2px; border-radius:999px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.035); color:#f4f2f8; font:600 14px 'IBM Plex Sans Arabic'; padding:0 18px; }
+    .empty{ font:500 13px 'IBM Plex Sans Arabic'; color:#8a8596; padding:10px 2px; }
+
+    .btns{ display:flex; gap:8px; flex-wrap:wrap; }
+    .btn{ height:40px; padding:0 18px; border-radius:999px; border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; font:700 14px 'IBM Plex Sans Arabic'; color:#fff;
+        background:linear-gradient(90deg,#7c3aed,#a855f7); box-shadow:0 6px 20px rgba(139,92,246,.35); white-space:nowrap; }
+    .btn:hover{ filter:brightness(1.1); }
+    .btn:disabled{ opacity:.45; cursor:default; filter:none; }
+    .btn.ok{ background:linear-gradient(90deg,#059669,#34d399); box-shadow:0 6px 20px rgba(52,211,153,.3); }
+    .btn.ghost{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); color:#e7e3ef; box-shadow:none; }
+
+    /* زر الإرسال الكبير (نفس "الدخول للوبي") */
+    .cta-wrap{ position:fixed; left:0; right:0; bottom:0; z-index:40; display:flex; flex-direction:column; align-items:center; gap:6px; padding:18px 16px clamp(16px,3vh,28px);
+        background:linear-gradient(0deg,#07060b 60%,transparent); }
+    .cta{ width:100%; max-width:440px; height:clamp(52px,6.5vh,62px); border:none; border-radius:999px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px;
+        background:linear-gradient(90deg,#7c3aed,#a855f7); color:#fff; font:700 clamp(17px,1.6vw,20px) 'IBM Plex Sans Arabic'; box-shadow:0 10px 34px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.2); }
+    .cta:hover{ filter:brightness(1.1); }
+    .cta:disabled{ opacity:.4; cursor:default; filter:none; }
+    .msg{ min-height:18px; font:600 13px 'IBM Plex Sans Arabic'; color:#a8a3b5; text-align:center; }
+    .msg.bad{ color:#fca5a5; } .msg.good{ color:#86efac; }
+
+    /* إضافات شاشات «العب ضد ستريمر» */
+    .tabs{ display:flex; gap:3px; padding:3px; margin-top:12px; border-radius:999px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); }
+    .tabs button{ flex:1; height:38px; border:none; border-radius:999px; cursor:pointer; font:600 13.5px 'IBM Plex Sans Arabic'; background:transparent; color:#a8a3b5; display:flex; align-items:center; justify-content:center; gap:8px; transition:all .25s; }
+    .tabs button.on{ background:linear-gradient(90deg,#7c3aed,#a855f7); color:#fff; box-shadow:0 6px 20px rgba(139,92,246,.4); }
+    .tabs .live-dot{ width:7px; height:7px; border-radius:50%; background:#ef4444; box-shadow:0 0 8px #ef4444; }
+    .tabs em{ font-style:normal; font-size:11.5px; opacity:.8; }
+    .plist .person{ border-bottom:1px solid rgba(255,255,255,.06); }
+    .plist .person:last-child{ border-bottom:none; }
+    .person .btn{ flex:0 0 auto; }
+    .av-wrap{ position:relative; width:46px; height:46px; flex:0 0 auto; }
+    .av-wrap .av{ position:absolute; inset:0; }
+    .live-tag{ font:700 10.5px 'IBM Plex Sans Arabic'; padding:2px 8px; border-radius:999px; background:rgba(239,68,68,.15); color:#fca5a5; margin-inline-start:6px; }
+    .locked{ opacity:.55; pointer-events:none; }
+    .lock-note{ font:500 12px 'IBM Plex Sans Arabic'; color:#fbbf24; padding:6px 0 0; }
+    .status-ok{ color:#86efac; }
+    /* حركة الظهور مرة وحدة بس — الصفحة تعيد رسم أقسامها مع كل تحديث */
+    .grid.calm .sec{ animation:none; }
+</style>
+<script src="../../js/agp-apple-emoji.js"></script>
+</head>
+<body>
+<div class="fx" id="fx" aria-hidden="true"></div>
+
+<header class="bar">
+    <a class="exit" href="../../games.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>مكتبة الألعاب</a>
+    <a class="logo" href="../../"><img src="../../logo.png" alt="ألعاب أيمن"></a>
+    <div></div>
+</header>
+
+<main>
+    <div class="head">
+        <h1>أسرع إجابة</h1>
+        <span class="chip" id="me-chip"><i></i><span id="me-text">مباراة بين بثين: جمهورك فريق وجمهور خصمك فريق</span></span>
+    </div>
+
+    <div class="grid" id="top-grid"></div>
+    <div class="grid" id="main-grid"></div>
+</main>
+
+<div class="cta-wrap hidden" id="cta-wrap">
+    <div class="msg" id="cta-msg"></div>
+    <button class="cta" id="cta" disabled>الدخول للوبي<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+</div>
+
+<script src="../../auth/auth-client.js"></script>
+<script>
+(function () {
+    'use strict';
+    var A = window.AGPAuth;
+    var GAME = 'fastest-answer';
+    var POLL_MS = 3000;
+    var LIVE_MS = 30000;
+    // نفس فئات أسرع إجابة العادية (backend/challenge/fastest-answer-logic.js: ALL_CATS).
+    var CATS = [['math','مسألة رياضية'],['image','صورة واكتب الاسم'],['reverse','اعكس الكلمة'],['number','اكتب الرقم'],['capital','عاصمة الدولة'],['proverb','أكمل المثل'],['scramble','ترتيب الحروف'],['flag','علم الدولة'],['complete','أكمل الكلمة'],['odd','اكتشف المختلف']];
+    var ALL_IDS = CATS.map(function (c) { return c[0]; });
+    var ANSWER_SEC = 20;
+    var LOBBY_MIN = 15, LOBBY_MAX = 300, LOBBY_STEP = 15;
+    var API = String((A && A.API_BASE) || '');
+
+    var ERRORS = {
+        not_eligible: 'حسابك لازم يكون ستريمر مربوط بتيك توك.',
+        pick_cats: 'اختر فئة وحدة على الأقل.',
+        opponent_not_eligible: 'هذا الحساب مو ستريمر مربوط بتيك توك.',
+        self: 'ما تقدر تتحدى نفسك 🙂',
+        you_in_match: 'عندك مباراة جارية — خلّصها أول.',
+        opponent_in_match: 'الخصم في مباراة ثانية الحين.',
+        opponent_not_ready: 'الخصم لسا ما ضغط جاهز.',
+        unknown_game: 'اللعبة غير متاحة.',
+        invite_not_found: 'الدعوة ما عادت موجودة.',
+        invite_expired: 'انتهت مدة الدعوة.',
+        invite_cancelled: 'الدعوة انلغت.',
+        invite_declined: 'الدعوة مرفوضة.',
+        invite_accepted: 'المباراة بدأت من قبل.'
+    };
+
+    var state = {
+        settings: { team1: '', followersOnly: false, target: 15, lobbySec: 60, cats: ALL_IDS.slice() },
+        guest: { team2: '', followersOnly: false, cats: ALL_IDS.slice() },
+        tab: 'live',
+        live: [],
+        liveLoaded: false,
+        query: '',
+        results: [],
+        incoming: [],
+        outgoing: null,
+        joined: null,
+        activeMatch: null,
+        avatars: {},
+        handled: {},
+        gate: null,
+        me: null,
+        busy: false
+    };
+
+    function $(id) { return document.getElementById(id); }
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function initial(name) { return (Array.from(String(name || '').replace(/[\s_.@\d]/g, ''))[0] || '؟').toUpperCase(); }
+    function av(src, name) { return src ? '<img class="av" src="' + esc(src) + '" alt="">' : '<span class="av">' + esc(initial(name)) + '</span>'; }
+    // صورة ستريمر من السيرفر (روابط تيك توك تنتهي) — وأول حرف من الاسم لو ما فيه صورة.
+    function streamerAv(tiktok, name) {
+        return '<span class="av-wrap"><span class="av">' + esc(initial(name)) + '</span>' +
+            '<img class="av" src="' + esc(API + '/api/public/streamer-avatar?u=' + encodeURIComponent(tiktok)) + '" alt="" onerror="this.remove()"></span>';
+    }
+    function secs(ms) { return Math.ceil(ms / 1000); }
+    function myName() { return (state.me && state.me.name) || 'اسم حسابك'; }
+    function myTikTok() { return (state.me && state.me.tiktok) || ''; }
+    function matchUrl(matchId) { return 'challenge.html?match=' + encodeURIComponent(matchId); }
+    // صفحات ألعاب البثين الثانية (الدعوة والمباراة الجارية تنفتح بصفحة لعبتها).
+    var OTHER = { 'penalty': { page: '../penalty/index.html', match: '../penalty/game.html?match=' } };
+    function otherPage(game) { return (OTHER[game] && OTHER[game].page) || '../../challenge.html'; }
+    function otherMatch(game, id) { return OTHER[game] ? OTHER[game].match + encodeURIComponent(id) : '../../challenge.html'; }
+    function lobbyText(sec) { return sec < 60 ? sec + ' ث' : Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0') + ' د'; }
+    function openOut() { var o = state.outgoing; return o && (o.status === 'pending' || o.status === 'setup' || o.status === 'ready') ? o : null; }
+    function guestMode() { var j = state.joined; return j && (j.status === 'setup' || j.status === 'ready') ? j : null; }
+
+    /* ---- لبنات التصميم (نفس شاشة إعدادات الألعاب) ---- */
+    function section(num, title, body, opts) {
+        opts = opts || {};
+        return '<section class="sec' + (opts.full ? ' full' : '') + (opts.hot ? ' hot' : '') + '">' +
+            '<div class="sec-h"><span class="num">' + num + '</span><span class="sec-t">' + title + '</span>' + (opts.note ? '<span class="sec-n">' + opts.note + '</span>' : '') + '</div>' + body + '</section>';
+    }
+    function row(label, control, opts) {
+        opts = opts || {};
+        return (opts.divider ? '<span class="div"></span>' : '') + '<div class="row"><div class="lbl">' + (opts.dot === false ? '' : '<span class="d"></span>') +
+            '<span>' + label + (opts.hint ? '<small>' + opts.hint + '</small>' : '') + '</span></div>' + control + '</div>';
+    }
+    function seg(attr, items, current) {
+        return '<div class="seg">' + items.map(function (it) {
+            return '<button type="button" ' + attr + '="' + it[0] + '" class="' + (String(it[0]) === String(current) ? 'on' : '') + '">' + it[1] + '</button>';
+        }).join('') + '</div>';
+    }
+    function followersSeg(attr, on) { return seg(attr, [['1', 'المتابعين فقط'], ['0', 'الجميع']], on ? '1' : '0'); }
+    function catName(id) { var c = CATS.filter(function (x) { return x[0] === id; })[0]; return c ? c[1] : id; }
+    function catList(ids) { return (ids || []).map(catName).join('، '); }
+    // اختيار الفئات (نفس شاشة الفئات بأسرع إجابة العادية: أي عدد، فئة وحدة على الأقل).
+    function catsBlock(selected, attr, locked) {
+        return '<div class="multi' + (locked ? ' locked' : '') + '"><div class="ml">اختر الفئات <em class="' + (selected.length ? 'full' : '') + '">' + selected.length + ' من ' + CATS.length + '</em></div>' +
+            '<div class="opts">' + CATS.map(function (c) {
+                return '<button type="button" class="opt' + (selected.indexOf(c[0]) >= 0 ? ' on' : '') + '" ' + attr + '="' + c[0] + '"><i></i>' + c[1] + '</button>';
+            }).join('') + '</div></div>';
+    }
+    function toggleCat(list, id) {
+        var i = list.indexOf(id);
+        if (i >= 0) { if (list.length <= 1) { setMsg('اختر فئة وحدة على الأقل', 'bad'); return; } list.splice(i, 1); }
+        else list.push(id);
+        msgLocked = false;
+    }
+    function fixed(t, small) { return '<span class="fixed"' + (small ? ' style="font-size:13px"' : '') + '>' + t + '</span>'; }
+
+    /* ---- القسم العلوي: منع الدخول / المباراة الجارية / الدعوات الواردة / دعوتك ---- */
+    function renderTop() {
+        var html = '';
+        if (state.gate) html += section('!', 'تنبيه', row(state.gate.text, '<a class="btn" href="' + state.gate.href + '">' + state.gate.btn + '</a>', { dot: false }), { full: true, hot: true });
+        if (state.activeMatch) {
+            var mine = state.activeMatch.game === GAME;
+            html += section('●', 'مباراة جارية', row('عندك مباراة تحدي شغّالة الحين', '<a class="btn ok" href="' + (mine ? matchUrl(state.activeMatch.id) : otherMatch(state.activeMatch.game, state.activeMatch.id)) + '">ادخل المباراة</a>', { dot: false }), { full: true });
+        }
+        if (state.incoming.length && !guestMode()) html += section('✉', 'دعوات وصلتك', state.incoming.map(incomingHtml).join('<span class="div"></span>'), { full: true, hot: true });
+        var out = state.outgoing;
+        if (!guestMode() && out && (openOut() || !state.handled[out.id])) html += section('↗', 'دعوتك', outgoingHtml(out), { full: true, hot: out.status === 'ready' });
+        if (html !== lastTop) { lastTop = html; $('top-grid').innerHTML = html; }
+    }
+    var lastTop = null;
+
+    function incomingHtml(inv) {
+        var s = inv.settings || {};
+        if (inv.game !== GAME) {
+            return '<div class="person">' + av(state.avatars[inv.id], inv.other.name) +
+                '<div class="pi"><b>' + esc(inv.other.name) + ' يتحداك!</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · ' + esc(inv.gameName) + '</span></div>' +
+                '<a class="btn ghost" href="' + otherPage(inv.game) + '">افتح الدعوة</a></div>';
+        }
+        return '<div class="person">' + av(state.avatars[inv.id], inv.other.name) +
+            '<div class="pi"><b>' + esc(inv.other.name) + ' يتحداك بأسرع إجابة!</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · فريقه «' + esc(s.team1 || inv.other.name) + '» · ' + (s.target || 15) + ' نقطة للفوز · تنتهي خلال <bdi data-exp="' + inv.id + '">' + secs(inv.expiresIn) + '</bdi> ث</span></div>' +
+            '<div class="btns"><button class="btn ok" data-act="accept" data-id="' + inv.id + '">قبول</button><button class="btn ghost" data-act="decline" data-id="' + inv.id + '">رفض</button></div></div>';
+    }
+
+    function outgoingHtml(inv) {
+        var g = inv.guestSettings || {};
+        var text = {
+            pending: 'بانتظار رد ' + inv.other.name + ' · تنتهي خلال ' + secs(inv.expiresIn) + ' ث',
+            setup: inv.other.name + ' قبل التحدي ويجهّز إعداداته...',
+            ready: inv.other.name + ' جاهز ✓ — اضغط «الدخول للوبي»',
+            accepted: 'جاري الانتقال للمباراة...',
+            declined: inv.other.name + ' رفض الدعوة أو انسحب.',
+            expired: 'انتهت مدة الدعوة.',
+            cancelled: 'ألغيت الدعوة.'
+        }[inv.status] || '';
+        var head = '<div class="person">' + av(state.avatars[inv.id], inv.other.name) +
+            '<div class="pi"><b>' + esc(inv.other.name) + '</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · أسرع إجابة</span><span class="' + (inv.status === 'ready' ? 'status-ok' : '') + '">' + esc(text) + '</span></div>' +
+            (openOut() ? '<button class="btn ghost" data-cancel="' + inv.id + '">إلغاء الدعوة</button>' : '<button class="btn ghost" data-dismiss="' + inv.id + '">إخفاء</button>') + '</div>';
+        if (inv.status !== 'ready' && inv.status !== 'setup') return head;
+        return head +
+            row('فريق ' + esc(inv.other.name), fixed(esc(g.team2 || inv.other.name)), { divider: true }) +
+            row('المسموح لهم بفريقه', fixed(g.followers2 ? 'المتابعين فقط' : 'الجميع'), { divider: true }) +
+            (g.guestCats ? row('فئاته', fixed(esc(catList(g.guestCats)), true), { divider: true }) : '');
+    }
+
+    /* ---- المنشئ: إعدادات المباراة + دعوة خصم ---- */
+    function renderHost() {
+        var s = state.settings, locked = Boolean(openOut());
+        var team = row('اسم فريقك', '<input class="txt" data-k="team1" maxlength="24" placeholder="' + esc(myName()) + '" value="' + esc(s.team1) + '">', { hint: 'فاضي = اسم حسابك' }) +
+            row('المسموح لهم بالدخول', followersSeg('data-fo', s.followersOnly), { divider: true });
+        var match = row('نقاط الفوز', '<div class="step"><button type="button" data-tstep="-1" aria-label="إنقاص">−</button><input type="text" readonly value="' + s.target + '" aria-label="نقاط الفوز"><button type="button" data-tstep="1" aria-label="زيادة">+</button></div>', { hint: 'أول إجابة صحيحة = نقطتين' }) +
+            row('وقت الإجابة', fixed(ANSWER_SEC + ' ثانية'), { divider: true }) +
+            row('وقت انتظار اللوبي', '<div class="step"><button type="button" data-step="-1" aria-label="إنقاص">−</button><input type="text" readonly value="' + lobbyText(s.lobbySec) + '" aria-label="وقت انتظار اللوبي" style="width:68px"><button type="button" data-step="1" aria-label="زيادة">+</button></div>', { divider: true, hint: 'تقدر تبدأ المباراة قبل ما يخلص' });
+        var note = locked ? '<div class="lock-note">الإعدادات انرسلت مع الدعوة — ألغِ الدعوة لو تبي تعدّلها.</div>' : '';
+        var opp = '<div class="tabs" role="tablist">' +
+                '<button type="button" data-tab="live" class="' + (state.tab === 'live' ? 'on' : '') + '"><span class="live-dot"></span>البثوث النشطة الآن' + (state.liveLoaded ? ' <em>(' + liveList().length + ')</em>' : '') + '</button>' +
+                '<button type="button" data-tab="search" class="' + (state.tab === 'search' ? 'on' : '') + '">بحث بالـID أو اليوزر</button>' +
+            '</div>' +
+            (state.tab === 'search' ? '<input class="search" id="q" type="search" dir="auto" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="يوزر تيك توك أو ID البروفايل" value="' + esc(state.query) + '">' : '') +
+            '<div class="plist" id="plist">' + (state.tab === 'live' ? liveHtml() : resultsHtml()) + '</div>';
+        $('main-grid').innerHTML =
+            section(1, 'فريقك', team + note) + section(2, 'المباراة', match + note) +
+            section(3, 'الفئات', catsBlock(s.cats, 'data-cat') + '<div class="lock-note" style="color:#8a8596">خصمك يختار فئاته لما يقبل، والأسئلة تطلع من فئاتكم الاثنين</div>' + note, { full: true }) +
+            section(4, 'ادعُ خصمك', opp, { full: true, note: 'ستريمر مربوط بتيك توك' });
+        if (locked) Array.prototype.forEach.call($('main-grid').querySelectorAll('.sec'), function (el, k, all) { if (k < all.length - 1) el.classList.add('locked'); });
+        updateCta();
+    }
+
+    function liveList() {
+        var me = myTikTok().toLowerCase();
+        return state.live.filter(function (u) { return u.tiktok && u.tiktok.toLowerCase() !== me; });
+    }
+    function inviteBtn(customId, busy) {
+        if (busy) return '<span class="tag">في مباراة</span>';
+        var out = openOut(), sentHere = out && out.other.customId === customId;
+        return '<button type="button" class="btn' + (sentHere ? ' ok' : '') + '" data-invite="' + esc(customId) + '"' + (state.busy || state.gate ? ' disabled' : '') + '>' + (sentHere ? 'تم الإرسال ✓' : 'إرسال دعوة') + '</button>';
+    }
+    function liveHtml() {
+        if (!state.liveLoaded) return '<div class="empty">جاري تحميل البثوث النشطة...</div>';
+        var list = liveList();
+        if (!list.length) return '<div class="empty">ما فيه ستريمرز فاتحين بث على المنصة الحين — جرّب البحث بالـID أو يوزر تيك توك.</div>';
+        return list.map(function (u) {
+            return '<div class="person">' + streamerAv(u.tiktok, u.name) +
+                '<div class="pi"><b>' + esc(u.name) + '<span class="live-tag">مباشر</span></b><span><bdi>@' + esc(u.tiktok) + '</bdi>' + (u.gameName ? ' · يلعب ' + esc(u.gameName) : '') + (u.viewers != null ? ' · ' + Number(u.viewers).toLocaleString('en') + ' مشاهد' : '') + '</span></div>' +
+                inviteBtn(u.customId, false) + '</div>';
+        }).join('');
+    }
+    function resultsHtml() {
+        if (state.query.trim().length < 2) return '<div class="empty">ابحث بيوزر تيك توك أو بالـID حق البروفايل.</div>';
+        if (!state.results.length) return '<div class="empty">ما لقينا ستريمر مربوط بهذا اليوزر أو الـID.</div>';
+        return state.results.map(function (u) {
+            return '<div class="person">' + av(u.avatar, u.name) +
+                '<div class="pi"><b>' + esc(u.name) + '</b><span><bdi>@' + esc(u.tiktok) + '</bdi> · ID <bdi>' + esc(u.customId) + '</bdi></span></div>' + inviteBtn(u.customId, u.busy) + '</div>';
+        }).join('');
+    }
+    function redrawList() { var el = $('plist'); if (el) el.innerHTML = state.tab === 'live' ? liveHtml() : resultsHtml(); }
+
+    /* ---- الخصم: بعد القبول يجهّز فريقه ويضغط جاهز ---- */
+    function renderGuest(inv) {
+        var s = inv.settings || {}, g = state.guest, ready = inv.status === 'ready';
+        var host = row('فريق ' + esc(inv.other.name), fixed(esc(s.team1 || inv.other.name))) +
+            row('نقاط الفوز', fixed(s.target || 15), { divider: true }) +
+            row('وقت الإجابة', fixed(ANSWER_SEC + ' ثانية'), { divider: true }) +
+            row('وقت انتظار اللوبي', fixed(lobbyText(s.lobbySec || 60)), { divider: true }) +
+            row('المسموح لهم بفريقه', fixed(s.followers1 ? 'المتابعين فقط' : 'الجميع'), { divider: true }) +
+            row('فئاته', fixed(esc(catList(s.hostCats)), true), { divider: true });
+        var mine = row('اسم فريقك', '<input class="txt" data-g="team2" maxlength="24" placeholder="' + esc(myName()) + '" value="' + esc(g.team2) + '"' + (ready ? ' disabled' : '') + '>', { hint: 'فاضي = اسم حسابك' }) +
+            row('المسموح لهم بالدخول', '<div class="' + (ready ? 'locked' : '') + '">' + followersSeg('data-gfo', g.followersOnly) + '</div>', { divider: true }) +
+            '<span class="div"></span>' + catsBlock(g.cats, 'data-gcat', ready) +
+            '<div class="btns" style="margin-top:10px"><button class="btn ghost" data-act="withdraw" data-id="' + inv.id + '">انسحاب من المباراة</button></div>';
+        $('main-grid').innerHTML =
+            section('✓', 'إعدادات ' + esc(inv.other.name), host, { note: 'يحددها صاحب الدعوة' }) +
+            section(1, 'فريقك', mine, { hot: !ready });
+        updateCta();
+    }
+
+    function renderMain() {
+        if (state.gate) { $('main-grid').innerHTML = ''; $('cta-wrap').classList.add('hidden'); return; }
+        var j = guestMode();
+        if (j) renderGuest(j); else renderHost();
+    }
+
+    /* ---- الزر الكبير: «جاهز» للخصم، «الدخول للوبي» للمنشئ ---- */
+    var msgLocked = false;
+    function setMsg(t, kind) { var m = $('cta-msg'); m.textContent = t || ''; m.className = 'msg' + (kind ? ' ' + kind : ''); msgLocked = Boolean(kind); }
+    function setCta(label, enabled, cls) {
+        var b = $('cta');
+        b.firstChild.nodeValue = label;
+        b.disabled = !enabled;
+        b.style.background = cls === 'ok' ? 'linear-gradient(90deg,#059669,#34d399)' : '';
+    }
+    function updateCta() {
+        $('cta-wrap').classList.toggle('hidden', Boolean(state.gate));
+        var j = guestMode();
+        if (j) {
+            var ready = j.status === 'ready';
+            setCta(ready ? 'تعديل الإعدادات' : 'جاهز ✓', !state.busy, ready ? '' : 'ok');
+            if (!msgLocked) setMsg(ready ? 'أنت جاهز — بانتظار ' + j.other.name + ' يدخل اللوبي' : 'اكتب اسم فريقك واختر المسموح لهم وفئاتك ثم اضغط جاهز');
+            return;
+        }
+        var out = openOut();
+        setCta('الدخول للوبي', Boolean(out && out.status === 'ready') && !state.busy);
+        if (msgLocked) return;
+        if (!out) setMsg('ادعُ خصمك من البثوث النشطة أو بالبحث');
+        else if (out.status === 'pending') setMsg('بانتظار رد ' + out.other.name + ' على الدعوة');
+        else if (out.status === 'setup') setMsg(out.other.name + ' يجهّز إعداداته...');
+        else setMsg(out.other.name + ' جاهز ✓', 'good');
+    }
+
+    $('cta').addEventListener('click', function () {
+        if ($('cta').disabled) return;
+        var j = guestMode();
+        state.busy = true; updateCta();
+        if (j) {
+            var ready = j.status !== 'ready';
+            A.challengeReady(j.id, ready, { team2: state.guest.team2, followersOnly: state.guest.followersOnly, cats: state.guest.cats }).then(function (r) {
+                state.busy = false; msgLocked = false;
+                if (!(r && r.success)) setMsg(ERRORS[r && r.error] || 'تعذّر الحفظ، حاول مرة ثانية.', 'bad');
+                poll(true);
+            }).catch(function () { state.busy = false; setMsg('تعذّر الاتصال، حاول مرة ثانية.', 'bad'); });
+            return;
+        }
+        var out = openOut();
+        if (!out) { state.busy = false; return; }
+        A.challengeStart(out.id).then(function (r) {
+            if (r && r.success) { state.handled[out.id] = true; location.href = matchUrl(r.matchId); return; }
+            state.busy = false;
+            setMsg(ERRORS[r && r.error] || 'تعذّر الدخول للوبي، حاول مرة ثانية.', 'bad');
+            poll(true);
+        }).catch(function () { state.busy = false; setMsg('تعذّر الاتصال، حاول مرة ثانية.', 'bad'); });
+    });
+
+    /* ---- الأحداث ---- */
+    $('main-grid').addEventListener('click', function (e) {
+        var t = e.target.closest('[data-tab]');
+        if (t) { state.tab = t.getAttribute('data-tab'); renderHost(); if (state.tab === 'search' && $('q')) $('q').focus(); return; }
+        var fo = e.target.closest('[data-fo]');
+        if (fo) { state.settings.followersOnly = fo.getAttribute('data-fo') === '1'; renderHost(); return; }
+        var ts = e.target.closest('[data-tstep]');
+        if (ts) { state.settings.target = Math.min(99, Math.max(1, state.settings.target + Number(ts.getAttribute('data-tstep')))); renderHost(); return; }
+        var ct = e.target.closest('[data-cat]');
+        if (ct) { toggleCat(state.settings.cats, ct.getAttribute('data-cat')); renderHost(); return; }
+        var gc = e.target.closest('[data-gcat]');
+        if (gc) { toggleCat(state.guest.cats, gc.getAttribute('data-gcat')); renderMain(); return; }
+        var st = e.target.closest('[data-step]');
+        if (st) { state.settings.lobbySec = Math.min(LOBBY_MAX, Math.max(LOBBY_MIN, state.settings.lobbySec + Number(st.getAttribute('data-step')) * LOBBY_STEP)); renderHost(); return; }
+        var gfo = e.target.closest('[data-gfo]');
+        if (gfo) { state.guest.followersOnly = gfo.getAttribute('data-gfo') === '1'; renderMain(); return; }
+        var inv = e.target.closest('[data-invite]');
+        if (inv && !inv.disabled) { sendInvite(inv.getAttribute('data-invite')); return; }
+        var b = e.target.closest('[data-act="withdraw"]');
+        if (b && confirm('تنسحب من المباراة؟')) {
+            A.challengeRespond(b.getAttribute('data-id'), false).then(function () { state.joined = null; poll(true); });
+        }
+    });
+    $('main-grid').addEventListener('input', function (e) {
+        if (e.target.getAttribute('data-k') === 'team1') state.settings.team1 = e.target.value;
+        if (e.target.getAttribute('data-g') === 'team2') state.guest.team2 = e.target.value;
+        if (e.target.id === 'q') search(e.target.value);
+    });
+
+    function sendInvite(customId) {
+        state.busy = true; redrawList();
+        var s = state.settings;
+        A.challengeInvite(customId, GAME, { team1: s.team1, followersOnly: s.followersOnly, target: s.target, lobbySec: s.lobbySec, cats: s.cats }).then(function (r) {
+            state.busy = false;
+            if (r && r.success) { setMsg('تم إرسال الدعوة ✓', 'good'); msgLocked = false; poll(true); return; }
+            setMsg(ERRORS[r && r.error] || 'تعذّر إرسال الدعوة، حاول مرة ثانية.', 'bad');
+            redrawList();
+        }).catch(function () { state.busy = false; setMsg('تعذّر الاتصال، حاول مرة ثانية.', 'bad'); redrawList(); });
+    }
+
+    var searchTimer = null, searchSeq = 0;
+    function search(q) {
+        state.query = q;
+        clearTimeout(searchTimer);
+        if (q.trim().length < 2) { state.results = []; redrawList(); return; }
+        searchTimer = setTimeout(function () {
+            var seq = ++searchSeq;
+            A.challengeSearch(q.trim()).then(function (r) {
+                if (seq !== searchSeq) return;
+                state.results = (r && r.results) || [];
+                redrawList();
+            });
+        }, 300);
+    }
+
+    $('top-grid').addEventListener('click', function (e) {
+        var cn = e.target.closest('[data-cancel]'), dm = e.target.closest('[data-dismiss]');
+        if (cn) { A.challengeCancel(cn.getAttribute('data-cancel')).then(function () { msgLocked = false; poll(true); }); return; }
+        if (dm) { state.handled[dm.getAttribute('data-dismiss')] = true; renderTop(); return; }
+        var b = e.target.closest('[data-act]');
+        if (!b || b.disabled) return;
+        var id = b.getAttribute('data-id'), accept = b.getAttribute('data-act') === 'accept';
+        b.disabled = true;
+        A.challengeRespond(id, accept).then(function (r) {
+            if (!(r && r.success)) alert(ERRORS[r && r.error] || 'تعذّر الرد على الدعوة.');
+            if (accept && r && r.success) { state.guest = { team2: '', followersOnly: false, cats: ALL_IDS.slice() }; msgLocked = false; }
+            poll(true);
+        });
+    });
+
+    /* ---- صندوق الدعوات (سحب دوري) ---- */
+    var polling = false, lastMode = null;
+    function poll(force) {
+        if (polling) return;
+        polling = true;
+        A.challengeInbox(Object.keys(state.avatars).join(',')).then(function (r) {
+            polling = false;
+            if (!r || !r.success) { if (r && r.__httpStatus === 401) setGate('login'); return; }
+            if (!r.eligible) { if (!state.gate) setGate('link'); return; }
+            if (state.gate) { state.gate = null; force = true; }
+            (r.incoming || []).forEach(function (inv) { if (inv.other.avatar) state.avatars[inv.id] = inv.other.avatar; });
+            if (r.outgoing && r.outgoing.other.avatar) state.avatars[r.outgoing.id] = r.outgoing.other.avatar;
+            state.incoming = r.incoming || [];
+            state.activeMatch = r.activeMatch;
+            var out = r.outgoing;
+            if (out && out.game !== GAME) out = null;
+            if (out && out.status === 'accepted' && !(r.activeMatch && r.activeMatch.id === out.matchId)) state.handled[out.id] = true;
+            state.outgoing = out;
+            var j = r.joined;
+            if (j && j.game !== GAME) j = null; // دعوة لعبة ثانية — تتجهّز بصفحتها
+            if (j && j.status === 'accepted' && j.matchId && r.activeMatch && r.activeMatch.id === j.matchId && !state.handled[j.id]) {
+                state.handled[j.id] = true; location.href = matchUrl(j.matchId); return;
+            }
+            // دعوة قبلناها وانتهت (المنشئ ألغاها أو انتهى الوقت) — نبلّغ مرة وحدة.
+            if (j && !state.handled[j.id] && (j.status === 'cancelled' || j.status === 'expired') && state.joined && state.joined.id === j.id) {
+                state.handled[j.id] = true;
+                setMsg(j.status === 'cancelled' ? j.other.name + ' ألغى المباراة.' : 'انتهت مدة تجهيز المباراة.', 'bad');
+            }
+            state.joined = j;
+            if (guestMode() && guestMode().status === 'ready' && guestMode().guestSettings) {
+                var gs = guestMode().guestSettings;
+                state.guest = { team2: gs.team2 || '', followersOnly: Boolean(gs.followers2), cats: (gs.guestCats || ALL_IDS).slice() };
+            }
+            renderTop();
+            var mode = (guestMode() ? 'g:' + guestMode().id + ':' + guestMode().status : 'h:' + (openOut() ? openOut().id + ':' + openOut().status : '-'));
+            // ما نعيد رسم النموذج وهو يكتب إلا لو تغيّرت الحالة.
+            if (force || mode !== lastMode) { lastMode = mode; renderMain(); } else updateCta();
+            if (out && out.status === 'accepted' && out.matchId && !state.handled[out.id]) { state.handled[out.id] = true; location.href = matchUrl(out.matchId); }
+        }).catch(function () { polling = false; });
+    }
+
+    function loadLive() {
+        if (!API) return;
+        fetch(API + '/api/public/live-streams').then(function (res) { return res.json(); }).then(function (d) {
+            state.live = (d && d.streams) || [];
+            state.liveLoaded = true;
+            if (!guestMode() && !state.gate) {
+                if (state.tab === 'live') redrawList();
+                var tab = $('main-grid').querySelector('[data-tab="live"] em');
+                if (tab) tab.textContent = '(' + liveList().length + ')'; else if (!guestMode()) renderHost();
+            }
+        }).catch(function () { state.liveLoaded = true; redrawList(); });
+    }
+
+    function setGate(kind) {
+        state.gate = kind === 'login'
+            ? { text: 'سجّل دخول بحساب ستريمر مربوط بتيك توك عشان تلعب أسرع إجابة ضد ستريمر.', href: '../../login.html', btn: 'تسجيل الدخول' }
+            : { text: 'أسرع إجابة بين بثين لحسابات الستريمر المربوطة بتيك توك. اربط حسابك من صفحة حسابي.', href: '../../profile.html', btn: 'ربط حساب تيك توك' };
+        $('me-chip').classList.add('warn');
+        $('me-text').textContent = kind === 'login' ? 'غير مسجّل دخول' : 'الحساب غير مربوط بتيك توك';
+        renderTop();
+        renderMain();
+    }
+
+    /* ---- الخلفية ---- */
+    (function fx() {
+        var r = function (a, b) { return a + Math.random() * (b - a); }, html = '';
+        html += '<div class="g" style="top:-20%;right:-10%;width:900px;height:900px;background:radial-gradient(circle, rgba(124,58,237,.22), transparent 65%)"></div>';
+        html += '<div class="g" style="top:30%;left:-15%;width:800px;height:800px;background:radial-gradient(circle, rgba(139,92,246,.12), transparent 65%)"></div>';
+        html += '<div class="g" style="bottom:-30%;left:35%;width:1000px;height:700px;background:radial-gradient(circle, rgba(168,85,247,.1), transparent 65%)"></div>';
+        for (var i = 0; i < 90; i++) html += '<span class="s" style="left:' + r(0, 100) + '%;top:' + r(0, 100) + '%;width:' + (i % 9 ? 1.5 : 3) + 'px;height:' + (i % 9 ? 1.5 : 3) + 'px;background:rgba(255,255,255,' + r(.12, .35).toFixed(2) + ')"></span>';
+        $('fx').innerHTML = html;
+    })();
+
+    if (!A || !A.getToken || !A.getToken()) { setGate('login'); return; }
+    try {
+        var cu = A.getCachedUser ? A.getCachedUser() : null;
+        if (cu) {
+            state.me = { name: cu.display_name || cu.tiktok_display_name || cu.tiktok_username || cu.username || '', tiktok: String(cu.tiktok_username || '').replace(/^@+/, '') };
+            if (cu.tiktok_username) $('me-text').innerHTML = 'حسابك <bdi dir="ltr">@' + esc(state.me.tiktok) + '</bdi> · مباراة بين بثين';
+        }
+    } catch (e) {}
+    renderTop();
+    renderMain();
+    setTimeout(function () { $('top-grid').classList.add('calm'); $('main-grid').classList.add('calm'); }, 700);
+    poll(true);
+    loadLive();
+    setInterval(function () { if (!document.hidden) poll(); }, POLL_MS);
+    setInterval(function () { if (!document.hidden && !guestMode()) loadLive(); }, LIVE_MS);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
+})();
+</script>
+</body>
+</html>

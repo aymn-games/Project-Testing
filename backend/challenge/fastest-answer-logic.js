@@ -3,8 +3,9 @@
  *
  * نفس قواعد games/fastest-answer/game.html، بفرق واحد: الفريق = البث.
  * الفريق 0 = جمهور بث منشئ التحدي، الفريق 1 = جمهور بث الخصم. اللاعب
- * ينضم بكتابة رقم فريقه (1 لبث المنشئ، 2 لبث الخصم) في شات بثه هو، فما
- * يقدر ينضم لفريق البث الثاني.
+ * ينضم بكتابة رقم فريقه (1 لبث المنشئ، 2 لبث الخصم) في شات بثه هو، واللي
+ * انضم لفريق ما يقدر ينضم للفريق الثاني (حتى لو كتب بشات البث الثاني).
+ * لوبي الدخول له وقت انتظار يبدأ لما يتصل البثين (المنشئ يقدر يبدأ قبل).
  * كل جولة يُختار لاعب واحد من كل فريق (تدوير: كل لاعب يجيه الدور مرة قبل
  * ما يتكرر)، وفئة عشوائية من الفئات المختارة. بس اللاعبين المختارين
  * يقدرون يجاوبون، وكل واحد من شات بثه فقط. أول إجابة صحيحة = نقطتين.
@@ -28,13 +29,14 @@ var ALL_CATS = [
     { id: 'scramble', name: 'ترتيب الحروف' }, { id: 'flag', name: 'علم الدولة' },
     { id: 'complete', name: 'أكمل الكلمة' }, { id: 'odd', name: 'اكتشف المختلف' }
 ];
-// إعدادات ثابتة لتحدي البثوث (بسيطة عمداً): كلمة الدخول 1 لفريق المنشئ و2
-// لفريق الخصم، 20 ثانية للإجابة، 20 لاعب كحد أقصى لكل فريق، وكل ستريمر
-// يختار 3 فئات (المنشئ بالدعوة والخصم عند القبول).
+// إعدادات ثابتة لتحدي البثوث: كلمة الدخول 1 لفريق المنشئ و2 لفريق الخصم،
+// 20 ثانية للإجابة، و25 لاعب كحد أقصى لكل فريق (شرط أساسي ما يتعدّل). كل
+// ستريمر يختار فئاته (فئة وحدة على الأقل — المنشئ بالدعوة والخصم قبل «جاهز»)،
+// والأسئلة تطلع من فئات الطرفين.
 var KEYWORDS = ['1', '2'];
 var DURATION_SEC = 20;
-var MAX_PLAYERS = 20;
-var CATS_PER_STREAMER = 3;
+var MAX_PLAYERS = 25;
+var LOBBY_MIN_SEC = 15, LOBBY_MAX_SEC = 300, LOBBY_DEF_SEC = 60;
 // نفس توقيت حركة game.html الأصلية: بكرات اللاعبين ثم بكرة الفئة (6.25 ث)، ثم 3، 2، 1 (3.9 ث).
 var SPIN_MS = 6250;
 var COUNTDOWN_MS = 3900;
@@ -75,20 +77,23 @@ function cleanCats(list) {
 
 function cleanTeamName(v) { return String(v || '').trim().slice(0, 24); }
 
-/** جزء المنشئ (مع الدعوة): اسم فريقه + 3 فئات + نقاط الفوز + المتابعين فقط. */
+/** جزء المنشئ (مع الدعوة): اسم فريقه + المسموح لهم + فئاته + نقاط الفوز + وقت انتظار اللوبي. */
 function sanitizeHostSettings(raw) {
     raw = raw || {};
     var cats = cleanCats(raw.cats);
-    if (cats.length !== CATS_PER_STREAMER) return { error: 'pick_3_cats' };
-    return { team1: cleanTeamName(raw.team1), hostCats: cats, target: clampInt(raw.target, 1, 99, 15), followersOnly: Boolean(raw.followersOnly) };
+    if (!cats.length) return { error: 'pick_cats' };
+    return {
+        team1: cleanTeamName(raw.team1), followers1: Boolean(raw.followersOnly), hostCats: cats,
+        target: clampInt(raw.target, 1, 99, 15), lobbySec: clampInt(raw.lobbySec, LOBBY_MIN_SEC, LOBBY_MAX_SEC, LOBBY_DEF_SEC)
+    };
 }
 
-/** جزء الخصم (عند القبول): اسم فريقه + 3 فئات. */
+/** جزء الخصم (قبل «جاهز»): اسم فريقه + المسموح لهم + فئاته. */
 function sanitizeGuestSettings(raw) {
     raw = raw || {};
     var cats = cleanCats(raw.cats);
-    if (cats.length !== CATS_PER_STREAMER) return { error: 'pick_3_cats' };
-    return { team2: cleanTeamName(raw.team2), guestCats: cats };
+    if (!cats.length) return { error: 'pick_cats' };
+    return { team2: cleanTeamName(raw.team2), followers2: Boolean(raw.followersOnly), guestCats: cats };
 }
 
 /** إعدادات المباراة النهائية (المنشئ + الخصم + الثوابت). اسم الفريق الفاضي = اسم حساب الستريمر. */
@@ -103,7 +108,8 @@ function sanitizeSettings(raw, sideNames) {
         maxPlayers: MAX_PLAYERS,
         dur: DURATION_SEC,
         target: clampInt(raw.target, 1, 99, 15),
-        followersOnly: Boolean(raw.followersOnly),
+        followersOnly: [Boolean(raw.followers1), Boolean(raw.followers2)],
+        lobbySec: clampInt(raw.lobbySec, LOBBY_MIN_SEC, LOBBY_MAX_SEC, LOBBY_DEF_SEC),
         hostCats: hostCats,
         guestCats: guestCats,
         cats: cats.length ? cats : ALL_CATS.map(function (c) { return c.id; })
@@ -166,10 +172,14 @@ function createFastestAnswer(settings, hooks) {
         answers: [],      // [{user, team, pts, rank}]
         received: 0,
         winner: null,     // رقم الفريق الفائز
+        lobbyEndsAt: null,  // يبدأ العد لما يتصل البثين
+        playerStats: {},  // اسم اللاعب -> {pts, correct} بكل المباراة (لشاشة الفوز)
         log: []
     };
     var players = {};           // name -> {id, side, avatar, frame}
-    var nameById = {};          // 'side:id' -> name
+    var nameById = {};          // id -> name
+    var sideById = {};          // id -> الفريق اللي انضم له (يمنع الانضمام للفريق الثاني)
+    var lobbyExpired = false;
     var played = [{}, {}];      // تدوير الأدوار
     var lastPick = [null, null];
     var currentQ = null;        // السؤال الكامل (مع accept)
@@ -183,8 +193,8 @@ function createFastestAnswer(settings, hooks) {
         if (S.log.length > MAX_LOG) S.log.length = MAX_LOG;
     }
 
-    function nameFor(side, p) {
-        var key = side + ':' + p.id;
+    function nameFor(p) {
+        var key = String(p.id);
         if (nameById[key]) {
             var known = players[nameById[key]];
             if (p.avatarUrl && !known.avatar) known.avatar = p.avatarUrl;
@@ -193,7 +203,7 @@ function createFastestAnswer(settings, hooks) {
         }
         var base = String(p.name || p.id).trim() || String(p.id), name = base, k = 2;
         while (players[name]) name = base + ' ' + (k++);
-        players[name] = { id: p.id, side: side, avatar: p.avatarUrl || null, frame: p.frame || null };
+        players[name] = { id: p.id, side: null, avatar: p.avatarUrl || null, frame: p.frame || null };
         nameById[key] = name;
         return name;
     }
@@ -240,29 +250,48 @@ function createFastestAnswer(settings, hooks) {
             S.teams.forEach(function (t) {
                 t.players.forEach(function (n) { var p = players[n]; view.playerInfo[n] = { id: p.id, avatar: p.avatar, frame: p.frame }; });
             });
-            view.settings = { keywords: settings.keywords, target: settings.target, dur: settings.dur, maxPlayers: settings.maxPlayers, followersOnly: settings.followersOnly };
+            view.settings = { keywords: settings.keywords, target: settings.target, dur: settings.dur, maxPlayers: settings.maxPlayers, followersOnly: settings.followersOnly, lobbySec: settings.lobbySec };
             return view;
+        },
+
+        /** البثين اتصلوا: يبدأ عدّاد انتظار اللوبي (مرة وحدة). */
+        onStreamsReady: function () {
+            if (S.phase !== 'lobby' || S.lobbyEndsAt || lobbyExpired) return;
+            S.lobbyEndsAt = Date.now() + settings.lobbySec * 1000;
+            hooks.schedule(function () {
+                if (S.phase !== 'lobby') return;
+                lobbyExpired = true;
+                S.lobbyEndsAt = null;
+                if (!api.startMatch().ok) log('round', 'انتهى وقت اللوبي — المباراة تبدأ أول ما يصير بكل فريق لاعب');
+                hooks.onChange();
+            }, settings.lobbySec * 1000);
+            hooks.onChange();
         },
 
         /** تعليق من شات البث رقم side (0 أو 1). */
         onChat: function (side, p) {
             if (!p || typeof p.text !== 'string' || !p.id) return false;
             var text = p.text;
-            var user = nameFor(side, p);
+            var id = String(p.id);
+            var user = nameFor(p);
             var team = S.teams[side];
             var inTeam = team.players.indexOf(user) >= 0;
 
             // الانضمام بلوبي الدخول بس: كلمة دخول هذا البث (1 للمنشئ، 2 للخصم) من شاته هو.
             if (!inTeam && S.phase === 'lobby' && norm(text) === norm(settings.keywords[side])) {
-                if (settings.followersOnly && !p.isFollower) return false;
+                if (sideById[id] !== undefined && sideById[id] !== side) return false; // انضم للفريق الثاني من قبل
+                if (settings.followersOnly[side] && !p.isFollower) return false;
                 if (team.players.length >= settings.maxPlayers) return false;
+                sideById[id] = side;
+                players[user].side = side;
                 team.players.push(user);
                 log('join', user + ' انضم لـ ' + team.name);
+                if (lobbyExpired) api.startMatch();
                 return true;
             }
 
             // الإجابة: بس اللاعب صاحب الدور، ومن شات بثه.
-            if (S.phase !== 'question' || !currentQ) return false;
+            if (S.phase !== 'question' || !currentQ || sideById[id] !== side) return false;
             if (S.chosen[side] !== user || answered[user]) return false;
             S.received++;
             if (checkAnswer(text, currentQ)) {
@@ -270,6 +299,9 @@ function createFastestAnswer(settings, hooks) {
                 answered[user] = true;
                 S.answers.push({ user: user, team: side, pts: pts, rank: rank + 1 });
                 team.score += pts;
+                var ps = S.playerStats[user] || (S.playerStats[user] = { pts: 0, correct: 0 });
+                ps.pts += pts;
+                ps.correct++;
                 log('correct', user + ' أجاب ' + (rank === 0 ? 'أولاً' : 'ثانياً') + ' · ' + team.name + (pts ? ' +' + pts : ''));
                 if (Object.keys(answered).length >= 2) {
                     var tk = roundToken;
@@ -286,6 +318,7 @@ function createFastestAnswer(settings, hooks) {
             if (S.phase !== 'lobby') return { ok: false, error: 'busy' };
             if (S.teams.some(function (t) { return !t.players.length; })) return { ok: false, error: 'need_players' };
             S.phase = 'ready';
+            S.lobbyEndsAt = null;
             log('round', 'بدأت المباراة: ' + S.teams[0].name + ' (' + S.teams[0].players.length + ') ضد ' + S.teams[1].name + ' (' + S.teams[1].players.length + ')');
             return { ok: true };
         },
@@ -344,6 +377,7 @@ function createFastestAnswer(settings, hooks) {
             matchStartedAt = null;
             played = [{}, {}];
             S.teams.forEach(function (t) { t.score = 0; });
+            S.playerStats = {};
             S.phase = 'ready'; S.round = 0; S.chosen = [null, null]; S.catName = null;
             S.question = null; S.answer = null; S.phaseEndsAt = null; S.answers = []; S.received = 0; S.winner = null;
             currentQ = null; answered = {};
@@ -382,7 +416,6 @@ function createFastestAnswer(settings, hooks) {
 
 module.exports = {
     ALL_CATS: ALL_CATS,
-    CATS_PER_STREAMER: CATS_PER_STREAMER,
     sanitizeHostSettings: sanitizeHostSettings,
     sanitizeGuestSettings: sanitizeGuestSettings,
     sanitizeSettings: sanitizeSettings,

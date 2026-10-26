@@ -12,9 +12,19 @@
  *   خادم  → { type:'state', match:{...} }      (بعد كل تغيير)
  *   خادم  → { type:'error', error }
  *
+ * تواصل الستريمرين (شات + مايك) طوال المباراة:
+ *   متصفح → { type:'chat', text }              → للطرفين { type:'chat', msg:{side, name, text, at} }
+ *   خادم  → { type:'chatHistory', messages }    (عند الدخول — آخر MAX_CHAT رسالة)
+ *   متصفح → { type:'mic', on }                  (حالة المايك تظهر بالـ state: sides[i].mic)
+ *   متصفح → { type:'rtc', data }                → للطرف الثاني كما هي (إشارات WebRTC للصوت)
+ *   خادم  → { type:'peer' }                      (للطرفين لما تكون شاشتيهم مفتوحة — المنشئ يبدأ الاتصال الصوتي)
+ *
  * ساعات البث والإحصائيات: كل بث يُسجَّل لصاحبه (broadcasts) من لحظة اتصال
- * تيك توك لين تنتهي المباراة — نفس الألعاب العادية. النقاط: مرة وحدة لكل
- * مباراة عند إعلان الفائز (لعبة فريقين — points-service.js).
+ * تيك توك لين تنتهي المباراة — نفس الألعاب العادية (ws-server.js): التعليقات
+ * والهدايا وقيمتها (تدخل بنقاط الستريمر SP) والمتابعات والمشاهدين، وإحصائيات
+ * البث (live-session-stats.js). عند إعلان الفائز (مرة وحدة لكل مباراة):
+ * وقت المباراة لساعات كل ستريمر، وعدد مشاركي فريقه («الأكثر مشاركات»)،
+ * ونقاط كل لاعب (لعبة فريقين — points-service.js).
  */
 'use strict';
 
@@ -25,16 +35,31 @@ var connectorRouter = require('../platforms/connector-router');
 var authService = require('../auth/auth-service');
 var pointsService = require('../points/points-service');
 var streamerHours = require('../points/streamer-hours');
+var liveSessionStats = require('../stats/live-session-stats');
 var logger = require('../utils/logger');
 var fastestAnswer = require('./fastest-answer-logic');
+var penalty = require('./penalty-logic');
 
+// hostActions: أوامر المنشئ من الشاشة → دالة منطق اللعبة.
+// twoStep: الخصم يقبل ثم يجهّز إعداداته ويضغط «جاهز»، والمنشئ يدخل اللوبي (challenge-service.js).
 var GAMES = {
     'fastest-answer': {
         name: 'أسرع إجابة',
         create: fastestAnswer.createFastestAnswer,
         sanitize: fastestAnswer.sanitizeSettings,
         sanitizeHost: fastestAnswer.sanitizeHostSettings,
-        sanitizeGuest: fastestAnswer.sanitizeGuestSettings
+        sanitizeGuest: fastestAnswer.sanitizeGuestSettings,
+        hostActions: { start: 'startMatch', spin: 'spin', newGame: 'newGame', finish: 'finish' },
+        twoStep: true
+    },
+    'penalty': {
+        name: 'ركلات الترجيح',
+        create: penalty.createPenalty,
+        sanitize: penalty.sanitizeSettings,
+        sanitizeHost: penalty.sanitizeHostSettings,
+        sanitizeGuest: penalty.sanitizeGuestSettings,
+        hostActions: { start: 'startMatch', skipIntro: 'skipIntro' },
+        twoStep: true
     }
 };
 
@@ -43,6 +68,9 @@ var STREAM_GRACE_MS = 2 * 60 * 1000;   // بث طرف منقطع أكثر من �
 var RECONNECT_EVERY_MS = 30 * 1000;    // إعادة محاولة الاتصال ببث منقطع والشاشة مفتوحة
 var KEEP_ENDED_MS = 10 * 60 * 1000;    // المباراة المنتهية تبقى للعرض ثم تُحذف
 var WATCHDOG_MS = 5000;
+var MAX_CHAT = 50;                     // آخر كم رسالة بشات الستريمرين تنحفظ للمباراة
+var MAX_CHAT_LEN = 200;
+var CHAT_MIN_GAP_MS = 400;
 
 var _matches = {};
 var _watchdogStarted = false;
@@ -74,7 +102,9 @@ function createMatch(opts) {
         createdAt: now(),
         pointsReported: false,
         onEnd: opts.onEnd || function () {},
-        _sendTimer: null
+        _sendTimer: null,
+        chat: [],                           // شات الستريمرين [{side, name, text, at}]
+        mic: [false, false]
     };
     m.settings = game.sanitize(opts.settings, [opts.sides[0].name, opts.sides[1].name]);
     m.logic = game.create(m.settings, {
@@ -114,6 +144,14 @@ function reportPoints(m, winnerIdx, durationMs) {
         try { streamerHours.recordMatchTime(m.sides[i].userId, durationMs); } catch (err) { logger.error('Challenge: match time record failed:', err); }
     });
     try {
+        // «الأكثر مشاركات»: كل ستريمر ينحسب له لاعبين فريقه (جمهور بثه) بدون تكرار.
+        var perSide = [{}, {}];
+        m.logic.participants().forEach(function (p) { if (perSide[p.team]) perSide[p.team][p.tiktokUsername.toLowerCase()] = true; });
+        [0, 1].forEach(function (i) { authService.recordStreamerParticipations(m.sides[i].userId, Object.keys(perSide[i]).length); });
+    } catch (err) {
+        logger.error('Challenge: participations record failed:', err);
+    }
+    try {
         var seen = {};
         m.logic.participants().forEach(function (p) {
             // نفس الشخص بالشاتين (نادر) ينحسب مرة وحدة.
@@ -141,6 +179,8 @@ function endBroadcastFor(m, i) {
 }
 
 /* ---- اتصال تيك توك لكل طرف ---- */
+function statsConnId(m, i) { return 'challenge:' + m.id + ':' + i; }
+
 function connectSide(m, i) {
     if (m.ended) return;
     if (m.connectors[i]) { try { m.connectors[i].disconnect(); } catch (e) {} }
@@ -159,10 +199,17 @@ function connectSide(m, i) {
                 m.streamMsg[i] = null;
                 m.streamDownSince[i] = null;
                 startBroadcastFor(m, i);
+                // إحصائيات البث (زر «عرض إحصائيات البث»): نفس Room ID = نفس البث.
+                try { liveSessionStats.attach(m.sides[i].tiktok, connector.getRoomId ? connector.getRoomId() : null, statsConnId(m, i)); } catch (err) { logger.error('Challenge: live stats attach failed:', err); }
+                // البثين متصلين: بعض الألعاب تبدأ عدّاد اللوبي من هنا.
+                if (m.stream[0] === 'connected' && m.stream[1] === 'connected' && typeof m.logic.onStreamsReady === 'function') {
+                    try { m.logic.onStreamsReady(); } catch (err) { logger.error('Challenge: onStreamsReady failed:', err); }
+                }
             } else if (status === 'connecting') {
                 m.stream[i] = 'connecting';
             } else {
                 m.stream[i] = status === 'ended' ? 'ended' : 'error';
+                if (status === 'ended') { try { liveSessionStats.markEnded(m.sides[i].tiktok, statsConnId(m, i)); } catch (e) {} }
                 m.streamMsg[i] = message || null;
                 if (!m.streamDownSince[i]) m.streamDownSince[i] = now();
                 endBroadcastFor(m, i);
@@ -172,13 +219,36 @@ function connectSide(m, i) {
         onComment: function (data) {
             if (m.connectors[i] !== connector || m.ended) return;
             if (m.broadcastIds[i]) { try { authService.incrementBroadcastStat(m.broadcastIds[i], 'comment', 1); } catch (e) {} }
+            try { liveSessionStats.recordComment(m.sides[i].tiktok, statsConnId(m, i), data); } catch (e) {}
             var changed = false;
             try { changed = m.logic.onChat(i, data); } catch (err) { logger.error('Challenge: onChat failed:', err); }
             if (changed) scheduleSend(m);
         },
-        onGift: function () {},
-        onFollow: function () {},
-        onViewerUpdate: function () {}
+        // الهدايا (عددها وقيمتها بالماس × التكرار — تدخل بنقاط الستريمر SP)، المتابعات، والمشاهدين.
+        onGift: function (data) {
+            if (m.connectors[i] !== connector || m.ended) return;
+            if (m.broadcastIds[i]) {
+                try {
+                    authService.incrementBroadcastStat(m.broadcastIds[i], 'gift', 1);
+                    var value = (Number(data && data.giftValue) || 0) * (Number(data && data.repeatCount) || 1);
+                    if (value > 0) authService.addGiftValue(m.broadcastIds[i], value);
+                } catch (err) { logger.error('Challenge: gift stat failed:', err); }
+            }
+            try { liveSessionStats.recordGift(m.sides[i].tiktok, statsConnId(m, i), data); } catch (e) {}
+        },
+        onFollow: function () {
+            if (m.connectors[i] !== connector || m.ended) return;
+            if (m.broadcastIds[i]) { try { authService.incrementBroadcastStat(m.broadcastIds[i], 'follow', 1); } catch (e) {} }
+            try { liveSessionStats.recordFollow(m.sides[i].tiktok, statsConnId(m, i)); } catch (e) {}
+        },
+        onViewerUpdate: function (data) {
+            if (m.connectors[i] !== connector || m.ended) return;
+            if (m.broadcastIds[i]) { try { authService.updateBroadcastViewerStats(m.broadcastIds[i], data && data.current, data && data.totalUsers); } catch (e) {} }
+            try { liveSessionStats.recordViewers(m.sides[i].tiktok, statsConnId(m, i), data && data.current, data && data.totalUsers); } catch (e) {}
+        },
+        onLike: function (data) { if (m.connectors[i] === connector && !m.ended) { try { liveSessionStats.recordLike(m.sides[i].tiktok, statsConnId(m, i), data); } catch (e) {} } },
+        onShare: function (data) { if (m.connectors[i] === connector && !m.ended) { try { liveSessionStats.recordShare(m.sides[i].tiktok, statsConnId(m, i), data); } catch (e) {} } },
+        onMember: function (data) { if (m.connectors[i] === connector && !m.ended) { try { liveSessionStats.recordMember(m.sides[i].tiktok, statsConnId(m, i), data); } catch (e) {} } }
     });
 }
 
@@ -194,7 +264,7 @@ function snapshot(m, side) {
         sides: m.sides.map(function (s, i) {
             return {
                 name: s.name, tiktok: s.tiktok, customId: s.customId, avatar: s.avatar,
-                stream: m.stream[i], streamMsg: m.streamMsg[i], present: m.clients[i].length > 0
+                stream: m.stream[i], streamMsg: m.streamMsg[i], present: m.clients[i].length > 0, mic: m.mic[i]
             };
         }),
         settings: m.settings,
@@ -231,11 +301,13 @@ function endMatch(m, reason, bySide) {
     m.endReason = reason;
     m.endedBy = bySide == null ? null : bySide;
     m.endedAt = now();
+    m.mic = [false, false];
     m.timers.forEach(clearTimeout);
     m.timers = [];
     [0, 1].forEach(function (i) {
         if (m.connectors[i]) { try { m.connectors[i].disconnect(); } catch (e) {} m.connectors[i] = null; }
         endBroadcastFor(m, i);
+        try { liveSessionStats.markEnded(m.sides[i].tiktok, statsConnId(m, i)); } catch (e) {}
     });
     logger.log('Challenge: match ' + m.id + ' ended (' + reason + ').');
     sendState(m);
@@ -270,12 +342,9 @@ function handleAction(m, side, action, msg) {
     // كل ستريمر يقدر يطلّع لاعبين من فريقه هو بس.
     if (action === 'kick') { var k = m.logic.kick(side, String((msg && msg.name) || '')); scheduleSend(m); return k; }
     if (side !== 0) return { ok: false, error: 'host_only' };
-    var r;
-    if (action === 'start') r = m.logic.startMatch();
-    else if (action === 'spin') r = m.logic.spin();
-    else if (action === 'newGame') r = m.logic.newGame();
-    else if (action === 'finish') r = m.logic.finish();
-    else return { ok: false, error: 'unknown_action' };
+    var method = Object.prototype.hasOwnProperty.call(GAMES[m.game].hostActions, action) ? GAMES[m.game].hostActions[action] : null;
+    if (!method) return { ok: false, error: 'unknown_action' };
+    var r = m.logic[method]();
     scheduleSend(m);
     return r;
 }
@@ -295,9 +364,38 @@ function onClientMessage(client, msg) {
         m.clients[side].push(client);
         if (!m.ended && (m.stream[side] === 'idle' || ((m.stream[side] === 'error' || m.stream[side] === 'ended') && now() - m.lastConnectAttempt[side] > 5000))) connectSide(m, side);
         sendState(m);
+        sendTo(client, { type: 'chatHistory', messages: m.chat });
+        // الشاشتين مفتوحة: نبلّغ الطرفين عشان المنشئ يبدأ (أو يعيد) الاتصال الصوتي.
+        if (!m.ended && m.clients[1 - side].length) [0, 1].forEach(function (i) { m.clients[i].forEach(function (c) { sendTo(c, { type: 'peer' }); }); });
         return;
     }
-    if (msg.type === 'action' && client.match) {
+    if (!client.match) return;
+    var cm = client.match;
+    if (msg.type === 'chat') {
+        if (cm.ended) return;
+        var text = String(msg.text || '').replace(/\s+/g, ' ').trim().slice(0, MAX_CHAT_LEN);
+        if (!text) return;
+        var t = now();
+        if (client.lastChatAt && t - client.lastChatAt < CHAT_MIN_GAP_MS) return sendTo(client, { type: 'error', error: 'chat_too_fast' });
+        client.lastChatAt = t;
+        var chatMsg = { side: client.side, name: cm.sides[client.side].name, text: text, at: t };
+        cm.chat.push(chatMsg);
+        if (cm.chat.length > MAX_CHAT) cm.chat.shift();
+        [0, 1].forEach(function (i) { cm.clients[i].forEach(function (c) { sendTo(c, { type: 'chat', msg: chatMsg }); }); });
+        return;
+    }
+    if (msg.type === 'mic') {
+        cm.mic[client.side] = Boolean(msg.on) && !cm.ended;
+        scheduleSend(cm);
+        return;
+    }
+    if (msg.type === 'rtc') {
+        // إشارات WebRTC (offer/answer/candidate) تنتقل للطرف الثاني بدون ما يقراها الخادم.
+        if (cm.ended || !msg.data || typeof msg.data !== 'object') return;
+        cm.clients[1 - client.side].forEach(function (c) { sendTo(c, { type: 'rtc', data: msg.data }); });
+        return;
+    }
+    if (msg.type === 'action') {
         var res = handleAction(client.match, client.side, String(msg.action || ''), msg);
         if (res && !res.ok) sendTo(client, { type: 'error', error: res.error });
     }
@@ -307,7 +405,7 @@ function removeClient(client) {
     var m = client.match;
     if (!m) return;
     m.clients[client.side] = m.clients[client.side].filter(function (c) { return c !== client; });
-    if (!m.clients[client.side].length) m.absentSince[client.side] = now();
+    if (!m.clients[client.side].length) { m.absentSince[client.side] = now(); m.mic[client.side] = false; }
     client.match = null;
     if (!m.ended) scheduleSend(m);
 }
