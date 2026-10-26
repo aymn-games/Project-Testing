@@ -36,6 +36,7 @@ var authService = require('../auth/auth-service');
 var pointsService = require('../points/points-service');
 var streamerHours = require('../points/streamer-hours');
 var liveSessionStats = require('../stats/live-session-stats');
+var collectiblesService = require('../collectibles/collectibles-service');
 var logger = require('../utils/logger');
 var fastestAnswer = require('./fastest-answer-logic');
 var penalty = require('./penalty-logic');
@@ -101,6 +102,7 @@ function createMatch(opts) {
         endedAt: null,
         createdAt: now(),
         pointsReported: false,
+        reward: null,                       // جائزة الفوز {side} — كود واحد لكل مباراة لستريمر الفريق الفائز
         onEnd: opts.onEnd || function () {},
         _sendTimer: null,
         chat: [],                           // شات الستريمرين [{side, name, text, at}]
@@ -119,7 +121,7 @@ function createMatch(opts) {
         },
         onChange: function () { scheduleSend(m); },
         onRoundStart: function () { m.pointsReported = false; },
-        onWin: function (winnerIdx, durationMs) { reportPoints(m, winnerIdx, durationMs); }
+        onWin: function (winnerIdx, durationMs) { reportPoints(m, winnerIdx, durationMs); grantWinReward(m, winnerIdx); }
     });
     _matches[id] = m;
     startWatchdog();
@@ -164,6 +166,24 @@ function reportPoints(m, winnerIdx, durationMs) {
         });
     } catch (err) {
         logger.error('Challenge: points report failed:', err);
+    }
+}
+
+/* ---- جائزة الفوز (كود اختيار إطار) ---- */
+// مرة وحدة لكل مباراة (حتى لو أسرع إجابة بدأت مباراة جديدة بنفس الفرق).
+// الكود نفسه ما ينرسل للشاشة أبداً — يظهر للستريمر الفائز ببروفايله بس.
+function grantWinReward(m, winnerIdx) {
+    if (m.reward) return;
+    var side = m.sides[winnerIdx];
+    if (!side) return;
+    try {
+        var st = m.logic.state();
+        var r = collectiblesService.createWinRewardCode(side.userId, {
+            matchId: m.id, game: m.game, gameName: m.gameName, teamName: st.teams && st.teams[winnerIdx] ? st.teams[winnerIdx].name : ''
+        });
+        if (r.success) m.reward = { side: winnerIdx };
+    } catch (err) {
+        logger.error('Challenge: win reward failed:', err);
     }
 }
 
@@ -271,6 +291,7 @@ function snapshot(m, side) {
         ended: m.ended,
         endReason: m.endReason,
         endedBy: m.endedBy,
+        reward: m.reward ? { side: m.reward.side, mine: m.reward.side === side } : null,
         state: m.logic.state()
     };
 }

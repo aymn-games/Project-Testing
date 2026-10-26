@@ -269,6 +269,16 @@ db.exec(`
         redeemed_at INTEGER NOT NULL,
         PRIMARY KEY (code, user_id)
     );
+    -- جوائز فوز مباريات البثين: كل مباراة تنتهي بفائز تنشئ كود اختيار إطار
+    -- (choice_codes) لستريمر الفريق الفائز، ويظهر له ببروفايله (أكواد جوائز الفوز).
+    CREATE TABLE IF NOT EXISTS challenge_reward_codes (
+        code TEXT PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        match_id TEXT NOT NULL,
+        game TEXT NOT NULL,
+        team_name TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL
+    );
 
     -- كتالوج مستويات "SP" (نقاط الستريمر) — عتبات قابلة للتعديل من الأدمن.
     -- جدول منفصل عن frame_catalog بدل تعديل قيد CHECK(kind IN (...))

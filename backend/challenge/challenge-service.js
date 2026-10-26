@@ -26,6 +26,11 @@ var SETUP_TTL_MS = 10 * 60 * 1000;   // مدة تجهيز الخصم لإعدا�
 
 var _invites = {};        // id -> invite
 var _activeMatch = {};    // userId -> matchId (مباراة جارية)
+// وين الستريمر الحين (نبضة من صفحته كل ~20 ثانية): 'library' = فاضي بمكتبة
+// الألعاب، أو اسم لعبة بثين = فاتح شاشة دعوتها وينتظر خصم (مع إعداداته عشان
+// أي ستريمر يقدر يدخل مباشرة).
+var _presence = {};       // userId -> {where, settings, at}
+var PRESENCE_TTL_MS = 45 * 1000;
 
 function now() { return Date.now(); }
 
@@ -283,6 +288,99 @@ function hostStart(me, inviteId) {
     return startMatchFor(inv, inv.guestSettings);
 }
 
+/* ---- الحضور + «دخول مباشر» ---- */
+
+/** نبضة حضور من صفحة الستريمر. where فاضي = طلع من الصفحة. */
+function presence(me, where, settings) {
+    if (!isEligible(me)) return { success: false, error: 'not_eligible' };
+    where = String(where || '');
+    if (!where) { delete _presence[me.id]; return { success: true }; }
+    if (where !== 'library' && !challengeMatch.GAMES[where]) return { success: false, error: 'unknown_game' };
+    _presence[me.id] = { where: where, settings: settings && typeof settings === 'object' ? settings : {}, at: now() };
+    return { success: true };
+}
+
+/** مشغول بدعوة: خصم يجهّز معه، أو هو نفسه يجهّز لمباراة غيره. */
+function busyWithInvite(userId) {
+    return Object.keys(_invites).some(function (id) {
+        var inv = _invites[id];
+        return (inv.status === 'setup' || inv.status === 'ready') && (inv.fromId === userId || inv.toId === userId);
+    });
+}
+
+/**
+ * البثوث المتاحة الحين: waiting = فاتحين شاشة دعوة لعبة بثين (ينتظرون خصم)،
+ * idle = فاضين بمكتبة الألعاب. بدون اللي بمباراة أو يجهّزون لمباراة.
+ */
+function lobby(me) {
+    expireInvites();
+    var t = now(), waiting = [], idle = [];
+    Object.keys(_presence).forEach(function (uid) {
+        var p = _presence[uid], id = Number(uid);
+        if (t - p.at > PRESENCE_TTL_MS) { delete _presence[uid]; return; }
+        if (id === me.id || activeMatchFor(id) || busyWithInvite(id)) return;
+        var u = loadUser(id);
+        if (!u || !isEligible(u)) return;
+        var row = publicProfile(u, false);
+        if (p.where === 'library') { idle.push(row); return; }
+        var game = challengeMatch.GAMES[p.where];
+        var s = game.sanitizeHost(p.settings);
+        if (s.error) return; // إعداداته ناقصة (مثلاً ما اختار فئاته) — ما يقدر أحد يدخل
+        row.game = p.where;
+        row.gameName = game.name;
+        row.settings = s;
+        waiting.push(row);
+    });
+    return { success: true, waiting: waiting, idle: idle };
+}
+
+/**
+ * «دخول مباشر» لمباراة ستريمر ينتظر: دعوة منه لي بإعداداته الحالية، وتبدأ
+ * مباشرة بخطوة التجهيز (كأني قبلتها) — بعدها نفس الدعوة العادية.
+ */
+function joinWaiting(me, hostCustomId, game) {
+    expireInvites();
+    if (!isEligible(me)) return { success: false, error: 'not_eligible' };
+    var spec = challengeMatch.GAMES[game];
+    if (!spec || !spec.twoStep) return { success: false, error: 'unknown_game' };
+    var host = db.prepare('SELECT ' + USER_COLUMNS + ' FROM users WHERE custom_id = ?').get(String(hostCustomId || ''));
+    if (!host || !isEligible(host)) return { success: false, error: 'opponent_not_eligible' };
+    if (host.id === me.id) return { success: false, error: 'self' };
+    var p = _presence[host.id];
+    if (!p || p.where !== game || now() - p.at > PRESENCE_TTL_MS) return { success: false, error: 'not_waiting' };
+    if (activeMatchFor(me.id)) return { success: false, error: 'you_in_match' };
+    if (activeMatchFor(host.id) || busyWithInvite(host.id)) return { success: false, error: 'opponent_in_match' };
+    if (busyWithInvite(me.id)) return { success: false, error: 'you_in_match' };
+    var hostSettings = spec.sanitizeHost(p.settings);
+    if (hostSettings.error) return { success: false, error: 'not_waiting' };
+
+    Object.keys(_invites).forEach(function (id) {
+        var inv = _invites[id];
+        if (inv.fromId === host.id && isOpen(inv)) inv.status = 'cancelled';
+    });
+    var inv = {
+        id: crypto.randomBytes(6).toString('hex'),
+        fromId: host.id,
+        toId: me.id,
+        from: profile(host),
+        to: profile(loadUser(me.id)),
+        game: game,
+        gameName: spec.name,
+        settings: hostSettings,
+        guestSettings: null,
+        twoStep: true,
+        setupExpiresAt: now() + SETUP_TTL_MS,
+        status: 'setup',
+        matchId: null,
+        direct: true,
+        createdAt: now(),
+        expiresAt: now() + INVITE_TTL_MS
+    };
+    _invites[inv.id] = inv;
+    logger.log('Challenge: direct join ' + inv.id + ' ' + inv.to.tiktok + ' → ' + inv.from.tiktok + ' (' + game + ')');
+    return { success: true, inviteId: inv.id, game: game };
+}
+
 /** إلغاء دعوة صادرة. */
 function cancel(me, inviteId) {
     var inv = _invites[String(inviteId || '')];
@@ -299,5 +397,8 @@ module.exports = {
     respond: respond,
     guestReady: guestReady,
     hostStart: hostStart,
-    cancel: cancel
+    cancel: cancel,
+    presence: presence,
+    lobby: lobby,
+    joinWaiting: joinWaiting
 };
