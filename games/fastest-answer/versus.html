@@ -170,6 +170,7 @@
 </div>
 
 <script src="../../auth/auth-client.js"></script>
+<script src="../../js/agp-challenge-lobby.js"></script>
 <script>
 (function () {
     'use strict';
@@ -209,6 +210,7 @@
         guest: { team2: '', followersOnly: false, cats: null },
         tab: 'live',
         live: [],
+        lobby: { waiting: [], idle: [] },
         liveLoaded: false,
         query: '',
         results: [],
@@ -340,7 +342,7 @@
             row('وقت انتظار اللوبي', '<div class="step"><button type="button" data-step="-1" aria-label="إنقاص">−</button><input type="text" readonly value="' + lobbyText(s.lobbySec) + '" aria-label="وقت انتظار اللوبي" style="width:68px"><button type="button" data-step="1" aria-label="زيادة">+</button></div>', { divider: true, hint: 'تقدر تبدأ المباراة قبل ما يخلص' });
         var note = locked ? '<div class="lock-note">الإعدادات انرسلت مع الدعوة — ألغِ الدعوة لو تبي تعدّلها.</div>' : '';
         var opp = '<div class="tabs" role="tablist">' +
-                '<button type="button" data-tab="live" class="' + (state.tab === 'live' ? 'on' : '') + '"><span class="live-dot"></span>البثوث النشطة الآن' + (state.liveLoaded ? ' <em>(' + liveList().length + ')</em>' : '') + '</button>' +
+                '<button type="button" data-tab="live" class="' + (state.tab === 'live' ? 'on' : '') + '"><span class="live-dot"></span>البثوث النشطة الآن' + (state.liveLoaded ? ' <em>(' + lobbyCount() + ')</em>' : '') + '</button>' +
                 '<button type="button" data-tab="search" class="' + (state.tab === 'search' ? 'on' : '') + '">بحث بالـID أو اليوزر</button>' +
             '</div>' +
             (state.tab === 'search' ? '<input class="search" id="q" type="search" dir="auto" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="يوزر تيك توك أو ID البروفايل" value="' + esc(state.query) + '">' : '') +
@@ -362,15 +364,15 @@
         var out = openOut(), sentHere = out && out.other.customId === customId;
         return '<button type="button" class="btn' + (sentHere ? ' ok' : '') + '" data-invite="' + esc(customId) + '"' + (state.busy || state.gate ? ' disabled' : '') + '>' + (sentHere ? 'تم الإرسال ✓' : 'إرسال دعوة') + '</button>';
     }
+    // القائمة 3 أقسام (js/agp-challenge-lobby.js): مباريات تنتظر خصم («دخول مباشر»)،
+    // فاضين بمكتبة الألعاب، ويلعبون الحين.
+    function lobbyData() { return { waiting: state.lobby.waiting, idle: state.lobby.idle, live: liveList() }; }
+    function lobbyCount() { return window.AGPChallengeLobby.count(lobbyData()); }
     function liveHtml() {
         if (!state.liveLoaded) return '<div class="empty">جاري تحميل البثوث النشطة...</div>';
-        var list = liveList();
-        if (!list.length) return '<div class="empty">ما فيه ستريمرز فاتحين بث على المنصة الحين — جرّب البحث بالـID أو يوزر تيك توك.</div>';
-        return list.map(function (u) {
-            return '<div class="person">' + streamerAv(u.tiktok, u.name) +
-                '<div class="pi"><b>' + esc(u.name) + '<span class="live-tag">مباشر</span></b><span><bdi>@' + esc(u.tiktok) + '</bdi>' + (u.gameName ? ' · يلعب ' + esc(u.gameName) : '') + (u.viewers != null ? ' · ' + Number(u.viewers).toLocaleString('en') + ' مشاهد' : '') + '</span></div>' +
-                inviteBtn(u.customId, false) + '</div>';
-        }).join('');
+        var d = lobbyData();
+        d.inviteBtn = inviteBtn; d.avatar = streamerAv; d.esc = esc; d.disabled = Boolean(state.busy || state.gate);
+        return window.AGPChallengeLobby.html(d) || '<div class="empty">ما فيه ستريمرز فاتحين بث على المنصة الحين — جرّب البحث بالـID أو يوزر تيك توك.</div>';
     }
     function resultsHtml() {
         if (state.query.trim().length < 2) return '<div class="empty">ابحث بيوزر تيك توك أو بالـID حق البروفايل.</div>';
@@ -417,7 +419,9 @@
         b.disabled = !enabled;
         b.style.background = cls === 'ok' ? 'linear-gradient(90deg,#059669,#34d399)' : '';
     }
+    var presenceCtl = null;
     function updateCta() {
+        if (presenceCtl) presenceCtl.ping();
         $('cta-wrap').classList.toggle('hidden', Boolean(state.gate));
         var j = guestMode();
         if (j) {
@@ -477,6 +481,8 @@
         if (gfo) { state.guest.followersOnly = gfo.getAttribute('data-gfo') === '1'; renderMain(); return; }
         var inv = e.target.closest('[data-invite]');
         if (inv && !inv.disabled) { sendInvite(inv.getAttribute('data-invite')); return; }
+        var jn = e.target.closest('[data-join]');
+        if (jn && !jn.disabled) { joinDirect(jn.getAttribute('data-join'), jn.getAttribute('data-game')); return; }
         var b = e.target.closest('[data-act="withdraw"]');
         if (b && confirm('تنسحب من المباراة؟')) {
             A.challengeRespond(b.getAttribute('data-id'), false).then(function () { state.joined = null; poll(true); });
@@ -497,6 +503,21 @@
             if (r && r.success) { setMsg('تم إرسال الدعوة ✓', 'good'); msgLocked = false; poll(true); return; }
             setMsg(ERRORS[r && r.error] || 'تعذّر إرسال الدعوة، حاول مرة ثانية.', 'bad');
             redrawList();
+        }).catch(function () { state.busy = false; setMsg('تعذّر الاتصال، حاول مرة ثانية.', 'bad'); redrawList(); });
+    }
+
+    // «دخول مباشر» لمباراة ستريمر ينتظر: تنفتح خطوة تجهيز فريقك مباشرة (نفس قبول دعوة).
+    var JOIN_ERRORS = { not_waiting: 'الستريمر طلع من شاشة الدعوة أو غيّر إعداداته — حدّث القائمة.', opponent_in_match: 'الستريمر بدأ مباراة مع غيرك.', you_in_match: 'عندك مباراة أو تجهيز جاري — خلّصه أول.' };
+    function joinDirect(customId, game) {
+        state.busy = true; redrawList();
+        A.challengeJoin(customId, game).then(function (r) {
+            state.busy = false;
+            if (r && r.success) {
+                if (game !== GAME) { location.href = window.AGPChallengeLobby.pageFor(game); return; }
+                state.guest = { team2: '', followersOnly: false, cats: null }; msgLocked = false; poll(true); return;
+            }
+            setMsg(JOIN_ERRORS[r && r.error] || ERRORS[r && r.error] || 'تعذّر الدخول، حاول مرة ثانية.', 'bad');
+            loadLive();
         }).catch(function () { state.busy = false; setMsg('تعذّر الاتصال، حاول مرة ثانية.', 'bad'); redrawList(); });
     }
 
@@ -573,13 +594,18 @@
 
     function loadLive() {
         if (!API) return;
-        fetch(API + '/api/public/live-streams').then(function (res) { return res.json(); }).then(function (d) {
+        Promise.all([
+            fetch(API + '/api/public/live-streams').then(function (res) { return res.json(); }),
+            window.AGPChallengeLobby.load()
+        ]).then(function (all) {
+            var d = all[0];
             state.live = (d && d.streams) || [];
+            state.lobby = all[1];
             state.liveLoaded = true;
             if (!guestMode() && !state.gate) {
                 if (state.tab === 'live') redrawList();
                 var tab = $('main-grid').querySelector('[data-tab="live"] em');
-                if (tab) tab.textContent = '(' + liveList().length + ')'; else if (!guestMode()) renderHost();
+                if (tab) tab.textContent = '(' + lobbyCount() + ')'; else if (!guestMode()) renderHost();
             }
         }).catch(function () { state.liveLoaded = true; redrawList(); });
     }
@@ -619,6 +645,9 @@
     loadLive();
     setInterval(function () { if (!document.hidden) poll(); }, POLL_MS);
     setInterval(function () { if (!document.hidden && !guestMode()) loadLive(); }, LIVE_MS);
+    // الحضور: شاشة الدعوة = ينتظر خصم (بإعداداته)، عشان يطلع للباقين بـ«مباريات تنتظر خصم».
+    presenceCtl = window.AGPChallengeLobby.startPresence(function () { return state.gate || guestMode() ? '' : 'fastest-answer'; }, function () { return state.settings; });
+    setInterval(function () { if (!document.hidden && !guestMode() && true && state.tab === 'live') loadLive(); }, 10000);
     document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
 })();
 </script>

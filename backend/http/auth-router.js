@@ -150,6 +150,9 @@ var ROUTES = [
   // ألعاب twoStep (ركلات الترجيح): الخصم يضغط «جاهز» ثم المنشئ يدخل اللوبي.
   { method: 'POST', path: '/api/challenge/ready', requireAuth: true, handler: handleChallengeReady },
   { method: 'POST', path: '/api/challenge/start', requireAuth: true, handler: handleChallengeStart },
+  { method: 'POST', path: '/api/challenge/presence', requireAuth: true, handler: handleChallengePresence },
+  { method: 'GET', path: '/api/challenge/lobby', requireAuth: true, handler: handleChallengeLobby },
+  { method: 'POST', path: '/api/challenge/join', requireAuth: true, handler: handleChallengeJoin },
   // أكواد "اختيار إطار" — توليد/عرض للأدمن، واستلام الإطار المختار للاعب.
   { method: 'POST', path: '/api/admin/choice-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateChoiceCode },
   { method: 'GET', path: '/api/admin/choice-codes', requireAuth: true, requireAdmin: true, handler: handleAdminListChoiceCodes },
@@ -728,6 +731,20 @@ function handleChallengeRespond(req, res, body, user) {
 
 function handleChallengeCancel(req, res, body, user) {
   var result = challengeService.cancel(user, body.inviteId);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleChallengePresence(req, res, body, user) {
+  var result = challengeService.presence(user, body.where, body.settings);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleChallengeLobby(req, res, body, user) {
+  sendJson(res, 200, challengeService.lobby(user));
+}
+
+function handleChallengeJoin(req, res, body, user) {
+  var result = challengeService.joinWaiting(user, body.customId, body.game);
   sendJson(res, result.success ? 200 : 400, result);
 }
 

@@ -144,7 +144,8 @@ function request(path, options) {
     return fetch(API_BASE + path, {
         method: options.method || 'GET',
         headers: headers,
-        body: options.body ? JSON.stringify(options.body) : undefined
+        body: options.body ? JSON.stringify(options.body) : undefined,
+        keepalive: Boolean(options.keepalive)   // يكمل الطلب حتى لو الصفحة تتسكّر (نبضة الخروج)
     }).then(function (res) {
         return res.json().catch(function () { return {}; }).then(function (data) {
             data.__httpStatus = res.status;
@@ -576,6 +577,18 @@ function challengeCancel(inviteId) {
     return request('/api/challenge/cancel', { method: 'POST', body: { inviteId: inviteId } });
 }
 /** twoStep games: the opponent saves settings and marks ready (ready=false = back to editing). */
+/** حضور الستريمر: where = 'library' أو اسم لعبة بثين (ينتظر خصم، مع إعداداته)، أو '' = طلع. */
+function challengePresence(where, settings, keepalive) {
+    return request('/api/challenge/presence', { method: 'POST', body: { where: where || '', settings: settings || {} }, keepalive: Boolean(keepalive) });
+}
+/** البثوث المتاحة: {waiting:[{customId,name,tiktok,game,gameName,settings}], idle:[{customId,name,tiktok}]} */
+function challengeLobby() {
+    return request('/api/challenge/lobby', { method: 'GET' });
+}
+/** «دخول مباشر» لمباراة ستريمر ينتظر → {success, inviteId, game} (تبدأ بخطوة التجهيز) */
+function challengeJoin(customId, game) {
+    return request('/api/challenge/join', { method: 'POST', body: { customId: customId, game: game } });
+}
 function challengeReady(inviteId, ready, settings) {
     return request('/api/challenge/ready', { method: 'POST', body: { inviteId: inviteId, ready: Boolean(ready), settings: settings || {} } });
 }
@@ -1071,6 +1084,9 @@ global.AGPAuth = {
     equipFrame: equipFrame,
     challengeSearch: challengeSearch,
     challengeInbox: challengeInbox,
+    challengePresence: challengePresence,
+    challengeLobby: challengeLobby,
+    challengeJoin: challengeJoin,
     challengeInvite: challengeInvite,
     challengeRespond: challengeRespond,
     challengeCancel: challengeCancel,
