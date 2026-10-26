@@ -140,6 +140,23 @@
     /* ===== أزرار الترويسة ===== */
     .hgroup{ display:flex; align-items:center; gap:10px; }
 
+    /* قائمة الفريق: الستريمر يقصي لاعبين من فريقه يدوياً طول المباراة */
+    .rs-card{ width:min(520px,calc(100vw - 32px)); max-height:calc(100vh - 120px); display:flex; flex-direction:column; gap:12px; text-align:right; }
+    .rs-card > *{ width:100%; }
+    .rs-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .rs-head h2{ margin:0; font:800 26px 'Zain'; }
+    .rs-head small{ display:block; font:500 13px 'IBM Plex Sans Arabic'; color:#8f88a0; }
+    .rs-x{ width:38px; height:38px; flex:0 0 auto; border-radius:50%; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04); color:#e7e3ef; font-size:18px; cursor:pointer; }
+    .rs-list{ display:flex; flex-direction:column; gap:8px; overflow-y:auto; padding-inline-end:4px; }
+    .rs-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:56px; padding:6px 10px 6px 14px; border-radius:16px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.08); }
+    .rs-who{ display:flex; align-items:center; gap:10px; min-width:0; }
+    .rs-who .av{ position:relative; overflow:hidden; width:40px; height:40px; flex:0 0 auto; border-radius:50%; display:grid; place-items:center; color:#fff; font-weight:700; border:2px solid var(--c); background:linear-gradient(135deg,var(--c),#0d0b14); }
+    .rs-who .av img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+    .rs-who b{ font:600 15px 'IBM Plex Sans Arabic'; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rs-who em{ font-style:normal; font:600 11.5px 'IBM Plex Sans Arabic'; color:#fbbf24; margin-inline-start:6px; }
+    .rs-kick{ height:36px; padding:0 16px; flex:0 0 auto; border-radius:999px; border:1px solid rgba(248,113,113,.35); background:rgba(248,113,113,.1); color:#fca5a5; font:700 13px 'IBM Plex Sans Arabic'; cursor:pointer; }
+    .rs-kick:hover{ background:rgba(248,113,113,.2); }
+    .rs-note{ font:500 12.5px 'IBM Plex Sans Arabic'; color:#8f88a0; }
     .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%); padding:12px 20px; border-radius:999px; background:#16121f; border:1px solid rgba(248,113,113,.4); font-size:14px; z-index:120; }
 </style>
 <script src="../../js/agp-apple-emoji.js"></script>
@@ -155,6 +172,7 @@
         </div>
         <div class="logo"><img src="../../logo.png" alt="ألعاب أيمن"></div>
         <div class="hgroup">
+        <span id="roster-btns" style="display:contents"></span>
         <button type="button" class="hbtn exit" id="leave"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span>خروج</span></button>
         </div>
     </header>
@@ -428,6 +446,7 @@
 
     <div class="ov count hidden" id="count"><span id="count-n">3</span></div>
     <div class="ov scrim hidden" id="panel" style="z-index:85"><div class="card" id="panel-box" dir="rtl"></div></div>
+    <div class="ov scrim hidden" id="roster" style="z-index:95"><div class="card rs-card" id="roster-box" dir="rtl"></div></div>
     <div class="toast hidden" id="toast"></div>
 </div>
 
@@ -462,7 +481,7 @@
     var prevTurns = [{}, {}], prevPhase = null, whistled = false;
     var ERR = {
         auth_required: 'لازم تسجّل دخول.', match_not_found: 'المباراة غير موجودة أو انتهت.', not_in_match: 'هذي المباراة مو لك.',
-        need_players: 'كل فريق يحتاج لاعب واحد على الأقل — خلّ الجمهور يكتب كلمة الدخول.', busy: 'المباراة بدأت.',
+        need_players: 'كل فريق يحتاج لاعب واحد على الأقل — خلّ الجمهور يكتب كلمة الدخول.', busy: 'المباراة بدأت.', not_found: 'اللاعب مو موجود بالفريق.',
         host_only: 'التحكم لصاحب الدعوة.', ended: 'المباراة انتهت.', chat_too_fast: 'لحظة.. أرسلت بسرعة.'
     };
     var STREAM_TEXT = { connected: 'متصل بالبث', connecting: 'جاري الاتصال بالبث...', error: 'البث غير متصل', ended: 'البث انتهى', idle: 'بانتظار دخول الستريمر' };
@@ -701,11 +720,41 @@
         var w = st.winner, goals = st.playerGoals || {}, info = st.playerInfo || {};
         window.AGPChallengeWin.show({
             color: COLORS[w], teamName: st.teams[w].name, streamer: M.sides[w],
-            scoreHtml: 'الجولات <b>' + st.roundsWon[w] + '</b> مقابل <b>' + st.roundsWon[1 - w] + '</b> ضد ' + esc(st.teams[1 - w].name),
+            scoreHtml: st.forfeit != null
+                ? 'ما بقى لاعبين بـ ' + esc(st.teams[st.forfeit].name) + ' · الجولات <b>' + st.roundsWon[w] + '</b> مقابل <b>' + st.roundsWon[1 - w] + '</b>'
+                : 'الجولات <b>' + st.roundsWon[w] + '</b> مقابل <b>' + st.roundsWon[1 - w] + '</b> ضد ' + esc(st.teams[1 - w].name),
             players: st.teams[w].players.map(function (n) { return { name: n, avatar: info[n] && info[n].avatar, value: goals[n] || 0 }; }),
             unit: window.AGPChallengeWin.arabicUnit('هدف', 'هدفين', 'أهداف'),
             onBack: function () { closeAndGo(LIBRARY); }
         });
+    }
+
+    /* ---- قائمة الفريق (إقصاء يدوي) — كل ستريمر لفريقه، وبوضع «في بثي» الفريقين ---- */
+    var rosterSide = null;
+    function mySides() { return SOLO ? [0, 1] : [M.you]; }
+    function renderRoster() {
+        var st = M.state, live = !M.ended && st.phase !== 'lobby' && st.phase !== 'over';
+        var btns = live ? mySides().map(function (k) {
+            return '<button type="button" class="hbtn" data-roster="' + k + '" style="border-color:' + COLORS[k] + '66"><span style="width:8px;height:8px;border-radius:50%;background:' + COLORS[k] + '"></span>قائمة ' + esc(st.teams[k].name) + ' (' + st.teams[k].players.length + ')</button>';
+        }).join('') : '';
+        var bb = $('roster-btns');
+        if (bb.getAttribute('data-h') !== btns) { bb.setAttribute('data-h', btns); bb.innerHTML = btns; }
+        if (!live) rosterSide = null;
+        $('roster').classList.toggle('hidden', rosterSide == null);
+        if (rosterSide == null) return;
+        var k = rosterSide, t = st.teams[k], info = st.playerInfo || {}, turn = st.turns[k] || {};
+        var rows = t.players.map(function (n) {
+            var pi = info[n] || {}, now = (st.phase === 'playing' || st.phase === 'sudden') && turn.shooter === n && turn.ph !== 'done';
+            return '<div class="rs-row"><div class="rs-who"><span class="av" style="--c:' + COLORS[k] + '">' + esc(initial(n)) + (pi.avatar ? '<img src="' + esc(pi.avatar) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>' +
+                '<b>' + esc(n) + '</b>' + (now ? '<em>دوره الحين</em>' : '') + '</div>' +
+                '<button type="button" class="rs-kick" data-elim="' + esc(n) + '" data-side="' + k + '">إقصاء</button></div>';
+        }).join('');
+        var html = '<div class="rs-head"><div><h2 style="color:' + COLORS[k] + '">قائمة ' + esc(t.name) + '</h2><small>' + t.players.length + ' لاعب · اللي ينقصى يطلع من دور التسديد وما يرجع</small></div>' +
+            '<button type="button" class="rs-x" data-roster-close aria-label="إغلاق">✕</button></div>' +
+            '<div class="rs-list">' + rows + '</div>' +
+            '<div class="rs-note">لو انقصى صاحب الدور قبل ما يسدد تنحسب ركلته ضايعة. ولو ما بقى بالفريق أحد يخسر المباراة.</div>';
+        var box = $('roster-box');
+        if (box.getAttribute('data-h') !== html) { box.setAttribute('data-h', html); box.innerHTML = html; }
     }
 
     /* ---- لوحات النتائج ---- */
@@ -746,6 +795,7 @@
         if (ph === 'intro' && !M.ended) startIntro(); else stopIntro();
         if (ph !== 'countdown') whistled = false;
         renderPanel();
+        renderRoster();
         if (ph === 'over' && prevPhase && prevPhase !== 'over') sfx('goal');
         prevPhase = ph;
         tick();
@@ -824,6 +874,15 @@
     }
 
     document.addEventListener('click', function (e) {
+        var ro = e.target.closest('[data-roster]');
+        if (ro) { rosterSide = Number(ro.getAttribute('data-roster')); renderRoster(); return; }
+        if (e.target.closest('[data-roster-close]') || e.target.id === 'roster') { rosterSide = null; renderRoster(); return; }
+        var el = e.target.closest('[data-elim]');
+        if (el) {
+            var en = el.getAttribute('data-elim');
+            if (confirm('تقصي ' + en + ' من الفريق؟ ما يقدر يرجع لهذي المباراة.')) action('kick', { name: en, side: Number(el.getAttribute('data-side')) });
+            return;
+        }
         var k = e.target.closest('[data-kick]');
         if (k) { action('kick', { name: k.getAttribute('data-kick'), side: Number(k.getAttribute('data-side')) }); return; }
         var b = e.target.closest('[data-a]');

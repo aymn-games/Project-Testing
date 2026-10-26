@@ -435,7 +435,7 @@ class Component extends DCLogic {
       if(m.type==='state'&&m.match){ this.chComms().onState(m.match); this.chApply(m.match); }
       else if(this.chComms().onMessage(m)) return;
       else if(m.type==='error'){ if(['match_not_found','not_in_match','auth_required'].includes(m.error)){ this.chClosed=true; location.replace(CH_LOBBY); }
-        else this.toastMsg({need_players:'كل فريق يحتاج لاعب واحد على الأقل',busy:'الجولة شغّالة',match_over:'المباراة انتهت — ابدأ مباراة جديدة',host_only:'التحكم لمنشئ المباراة'}[m.error]||'تعذّر تنفيذ الأمر'); } };
+        else this.toastMsg({need_players:'كل فريق يحتاج لاعب واحد على الأقل',busy:'الجولة شغّالة',match_over:'المباراة انتهت — ابدأ مباراة جديدة',host_only:'التحكم لمنشئ المباراة',not_found:'اللاعب مو موجود بالفريق'}[m.error]||'تعذّر تنفيذ الأمر'); } };
     ws.onclose=()=>{ this.ws=null; if(!this.chClosed) setTimeout(()=>this.chConnect(),2000); }; }
   // تواصل الستريمرين (شات + مايك طوال المباراة) و شاشة الفوز المشتركة لمباريات البثين.
   chComms(){ if(!this._comms){ const bar=document.createElement('div'); bar.style.cssText='position:fixed;top:92px;left:clamp(12px,1.25vw,24px);z-index:60;display:flex;gap:10px;direction:rtl'; document.body.appendChild(bar);
@@ -642,10 +642,11 @@ class Component extends DCLogic {
       return {name:t.name,color:c,halo:c+'33',bd:c+'55',count:t.players.length,joinCmd:this.KW[i],scoreText:fmt(t.score),pct:Math.min(100,t.score/(s.target||15)*100),
         offset:spun?r.offset:0,trans:spun?r.trans:'none',items,empty:!t.players.length,
         band:r.stopped&&spun?c+'22':'rgba(255,255,255,.03)',bandLine:r.stopped&&spun?c:'rgba(255,255,255,.08)',
-        players:t.players.map((n,j)=>{ const key=i+'|'+n, pd=s.pending.includes(key); return {name:n,num:j+1,pending:pd,active:!pd,op:pd?.55:1,deco:pd?'line-through':'none',
+        // تحدي البثوث: كل ستريمر يقصي من فريقه هو بس (الخادم يتحقق بعد).
+        players:t.players.map((n,j)=>{ const key=i+'|'+n, pd=s.pending.includes(key), mine=!CHALLENGE||(this.chM&&this.chM.you===i); return {name:n,num:j+1,pending:pd,active:!pd&&mine,op:pd?.55:1,deco:pd?'line-through':'none',
           bg:pd?'rgba(248,113,113,.06)':'rgba(255,255,255,.025)',bd:pd?'rgba(248,113,113,.25)':'rgba(255,255,255,.07)',
           // الإقصاء من الإعدادات فوري: يطلع من الفريق مباشرة (بدون انتظار إغلاق الإعدادات)
-          kick:()=>{ if(CHALLENGE) return this.toastMsg('الإقصاء بتحدي البثوث من لوبي الدخول'); this.snd('wrong'); this.addLog('kick',`تم إقصاء ${n} من ${t.name}`); this.setState(st=>({teams:st.teams.map((tt,k)=>k===i?{...tt,players:tt.players.filter(p=>p!==n)}:tt),pending:st.pending.filter(x=>x!==key)})); }, undo:()=>this.setState(st=>({pending:st.pending.filter(x=>x!==key)}))}; })}; });
+          kick:()=>{ if(CHALLENGE){ if(!mine) return; if(!confirm('تقصي '+n+' من فريقك؟ ما يقدر يرجع لهذي المباراة.')) return; const ws=this.ws; if(ws&&ws.readyState===1){ this.snd('wrong'); ws.send(JSON.stringify({type:'action',action:'kick',name:n})); } return; } this.snd('wrong'); this.addLog('kick',`تم إقصاء ${n} من ${t.name}`); this.setState(st=>({teams:st.teams.map((tt,k)=>k===i?{...tt,players:tt.players.filter(p=>p!==n)}:tt),pending:st.pending.filter(x=>x!==key)})); }, undo:()=>this.setState(st=>({pending:st.pending.filter(x=>x!==key)}))}; })}; });
     const cs=s.cat, cspun=cs.items.length>0;
     const catItems=(cspun?cs.items:this.CATS.map(c=>c.name)).map((nm,j)=>{ const win=cspun&&cs.stopped&&j===cs.ci; return {name:nm,color:win?'#ddd6fe':'#e7e3ef',op:cspun&&cs.stopped&&!win?.22:1,sc:win?1.1:1}; });
     const P=s.phase, catName=cs.idx!=null?this.CATS[cs.idx].name:'';
