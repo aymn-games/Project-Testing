@@ -612,7 +612,7 @@
         var st = M.state, t = st.teams[side], s = M.sides[side], mine = side === M.you;
         return '<section class="lb-team t' + side + '">' +
             '<div class="lb-head">' +
-                '<div class="lb-row"><span class="lb-name"><i></i><span>' + esc(t.name) + '</span></span><span class="lb-count"><b>' + t.players.length + '</b>لاعب</span></div>' +
+                '<div class="lb-row"><span class="lb-name"><i></i><span>' + esc(t.name) + '</span></span><span class="lb-count"><b>' + t.players.length + '</b>/ ' + st.settings.maxPlayers + ' لاعب</span></div>' +
                 '<div class="lb-owner">' + (mine ? 'فريقك' : 'الخصم') + ' · بث <bdi>@' + esc(s.tiktok) + '</bdi> · <i class="dot ' + (s.present ? s.stream : 'error') + '"></i> ' + esc(s.present ? (STREAM_TEXT[s.stream] || '') : 'الستريمر مو موجود بالشاشة') + '</div>' +
                 '<div class="lb-kw-label">كلمة الدخول · اكتبها في شات <bdi>@' + esc(s.tiktok) + '</bdi></div>' +
                 '<div class="lb-kw">' + esc(st.settings.keywords[side]) + '</div>' +

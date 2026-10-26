@@ -13,8 +13,11 @@
  *   خادم  → { type:'error', error }
  *
  * ساعات البث والإحصائيات: كل بث يُسجَّل لصاحبه (broadcasts) من لحظة اتصال
- * تيك توك لين تنتهي المباراة — نفس الألعاب العادية. النقاط: مرة وحدة لكل
- * مباراة عند إعلان الفائز (لعبة فريقين — points-service.js).
+ * تيك توك لين تنتهي المباراة — نفس الألعاب العادية (ws-server.js): التعليقات
+ * والهدايا وقيمتها (تدخل بنقاط الستريمر SP) والمتابعات والمشاهدين، وإحصائيات
+ * البث (live-session-stats.js). عند إعلان الفائز (مرة وحدة لكل مباراة):
+ * وقت المباراة لساعات كل ستريمر، وعدد مشاركي فريقه («الأكثر مشاركات»)،
+ * ونقاط كل لاعب (لعبة فريقين — points-service.js).
  */
 'use strict';
 
@@ -25,6 +28,7 @@ var connectorRouter = require('../platforms/connector-router');
 var authService = require('../auth/auth-service');
 var pointsService = require('../points/points-service');
 var streamerHours = require('../points/streamer-hours');
+var liveSessionStats = require('../stats/live-session-stats');
 var logger = require('../utils/logger');
 var fastestAnswer = require('./fastest-answer-logic');
 var penalty = require('./penalty-logic');
@@ -127,6 +131,14 @@ function reportPoints(m, winnerIdx, durationMs) {
         try { streamerHours.recordMatchTime(m.sides[i].userId, durationMs); } catch (err) { logger.error('Challenge: match time record failed:', err); }
     });
     try {
+        // «الأكثر مشاركات»: كل ستريمر ينحسب له لاعبين فريقه (جمهور بثه) بدون تكرار.
+        var perSide = [{}, {}];
+        m.logic.participants().forEach(function (p) { if (perSide[p.team]) perSide[p.team][p.tiktokUsername.toLowerCase()] = true; });
+        [0, 1].forEach(function (i) { authService.recordStreamerParticipations(m.sides[i].userId, Object.keys(perSide[i]).length); });
+    } catch (err) {
+        logger.error('Challenge: participations record failed:', err);
+    }
+    try {
         var seen = {};
         m.logic.participants().forEach(function (p) {
             // نفس الشخص بالشاتين (نادر) ينحسب مرة وحدة.
@@ -154,6 +166,8 @@ function endBroadcastFor(m, i) {
 }
 
 /* ---- اتصال تيك توك لكل طرف ---- */
+function statsConnId(m, i) { return 'challenge:' + m.id + ':' + i; }
+
 function connectSide(m, i) {
     if (m.ended) return;
     if (m.connectors[i]) { try { m.connectors[i].disconnect(); } catch (e) {} }
@@ -172,6 +186,8 @@ function connectSide(m, i) {
                 m.streamMsg[i] = null;
                 m.streamDownSince[i] = null;
                 startBroadcastFor(m, i);
+                // إحصائيات البث (زر «عرض إحصائيات البث»): نفس Room ID = نفس البث.
+                try { liveSessionStats.attach(m.sides[i].tiktok, connector.getRoomId ? connector.getRoomId() : null, statsConnId(m, i)); } catch (err) { logger.error('Challenge: live stats attach failed:', err); }
                 // البثين متصلين: بعض الألعاب تبدأ عدّاد اللوبي من هنا.
                 if (m.stream[0] === 'connected' && m.stream[1] === 'connected' && typeof m.logic.onStreamsReady === 'function') {
                     try { m.logic.onStreamsReady(); } catch (err) { logger.error('Challenge: onStreamsReady failed:', err); }
@@ -180,6 +196,7 @@ function connectSide(m, i) {
                 m.stream[i] = 'connecting';
             } else {
                 m.stream[i] = status === 'ended' ? 'ended' : 'error';
+                if (status === 'ended') { try { liveSessionStats.markEnded(m.sides[i].tiktok, statsConnId(m, i)); } catch (e) {} }
                 m.streamMsg[i] = message || null;
                 if (!m.streamDownSince[i]) m.streamDownSince[i] = now();
                 endBroadcastFor(m, i);
@@ -189,13 +206,36 @@ function connectSide(m, i) {
         onComment: function (data) {
             if (m.connectors[i] !== connector || m.ended) return;
             if (m.broadcastIds[i]) { try { authService.incrementBroadcastStat(m.broadcastIds[i], 'comment', 1); } catch (e) {} }
+            try { liveSessionStats.recordComment(m.sides[i].tiktok, statsConnId(m, i), data); } catch (e) {}
             var changed = false;
             try { changed = m.logic.onChat(i, data); } catch (err) { logger.error('Challenge: onChat failed:', err); }
             if (changed) scheduleSend(m);
         },
-        onGift: function () {},
-        onFollow: function () {},
-        onViewerUpdate: function () {}
+        // الهدايا (عددها وقيمتها بالماس × التكرار — تدخل بنقاط الستريمر SP)، المتابعات، والمشاهدين.
+        onGift: function (data) {
+            if (m.connectors[i] !== connector || m.ended) return;
+            if (m.broadcastIds[i]) {
+                try {
+                    authService.incrementBroadcastStat(m.broadcastIds[i], 'gift', 1);
+                    var value = (Number(data && data.giftValue) || 0) * (Number(data && data.repeatCount) || 1);
+                    if (value > 0) authService.addGiftValue(m.broadcastIds[i], value);
+                } catch (err) { logger.error('Challenge: gift stat failed:', err); }
+            }
+            try { liveSessionStats.recordGift(m.sides[i].tiktok, statsConnId(m, i), data); } catch (e) {}
+        },
+        onFollow: function () {
+            if (m.connectors[i] !== connector || m.ended) return;
+            if (m.broadcastIds[i]) { try { authService.incrementBroadcastStat(m.broadcastIds[i], 'follow', 1); } catch (e) {} }
+            try { liveSessionStats.recordFollow(m.sides[i].tiktok, statsConnId(m, i)); } catch (e) {}
+        },
+        onViewerUpdate: function (data) {
+            if (m.connectors[i] !== connector || m.ended) return;
+            if (m.broadcastIds[i]) { try { authService.updateBroadcastViewerStats(m.broadcastIds[i], data && data.current, data && data.totalUsers); } catch (e) {} }
+            try { liveSessionStats.recordViewers(m.sides[i].tiktok, statsConnId(m, i), data && data.current, data && data.totalUsers); } catch (e) {}
+        },
+        onLike: function (data) { if (m.connectors[i] === connector && !m.ended) { try { liveSessionStats.recordLike(m.sides[i].tiktok, statsConnId(m, i), data); } catch (e) {} } },
+        onShare: function (data) { if (m.connectors[i] === connector && !m.ended) { try { liveSessionStats.recordShare(m.sides[i].tiktok, statsConnId(m, i), data); } catch (e) {} } },
+        onMember: function (data) { if (m.connectors[i] === connector && !m.ended) { try { liveSessionStats.recordMember(m.sides[i].tiktok, statsConnId(m, i), data); } catch (e) {} } }
     });
 }
 
@@ -253,6 +293,7 @@ function endMatch(m, reason, bySide) {
     [0, 1].forEach(function (i) {
         if (m.connectors[i]) { try { m.connectors[i].disconnect(); } catch (e) {} m.connectors[i] = null; }
         endBroadcastFor(m, i);
+        try { liveSessionStats.markEnded(m.sides[i].tiktok, statsConnId(m, i)); } catch (e) {}
     });
     logger.log('Challenge: match ' + m.id + ' ended (' + reason + ').');
     sendState(m);
