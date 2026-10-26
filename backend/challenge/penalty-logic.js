@@ -122,6 +122,7 @@ function createPenalty(settings, hooks) {
         suddenPair: 0,
         turns: [blankTurn(), blankTurn()],
         lastRound: null,        // {winner, goals:[a,b], sudden}
+        playerGoals: {},        // اسم اللاعب -> أهدافه بكل المباراة (لشاشة الفوز)
         winner: null,
         log: []
     };
@@ -242,7 +243,7 @@ function createPenalty(settings, hooks) {
         t.res = res;
         t.ph = 'done';
         t.endsAt = null;
-        if (res === 'goal') team.score++;
+        if (res === 'goal') { team.score++; S.playerGoals[t.shooter] = (S.playerGoals[t.shooter] || 0) + 1; }
         log(res, t.shooter + (res === 'goal' ? ' سجّل هدف لـ ' + team.name : res === 'save' ? ' — صدّها الحارس' : ' — ضاعت الركلة (انتهى الوقت)'));
         if (S.phase === 'sudden') {
             hooks.onChange();

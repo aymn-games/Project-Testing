@@ -67,7 +67,28 @@
     .card .big{ font:800 clamp(30px,3.4vw,48px)/1.2 'IBM Plex Sans Arabic'; }
     .card .score{ display:flex; align-items:center; gap:18px; font:800 44px/1 'IBM Plex Sans Arabic'; font-variant-numeric:tabular-nums; direction:ltr; }
     .card .score small{ font:700 16px 'IBM Plex Sans Arabic'; }
-    .pbtn{ height:52px; padding:0 28px; border-radius:16px; border:none; cursor:pointer; background:linear-gradient(90deg,#7c3aed,#a855f7); color:#fff; font:700 18px 'IBM Plex Sans Arabic'; text-decoration:none; display:inline-flex; align-items:center; }
+    /* شاشة الفوز: الفريق الفائز فوق (صورته واسمه واسم الستريمر)، وتحته لاعبينه بصورهم وأهدافهم */
+    .card.win{ --c:#fbbf24; width:min(980px,calc(100vw - 32px)); max-height:calc(100vh - 110px); margin-top:60px; gap:10px; border-color:color-mix(in srgb, var(--c) 55%, transparent); box-shadow:0 30px 80px rgba(0,0,0,.6), 0 0 80px -20px var(--c); }
+    .win-pic{ position:relative; width:104px; height:104px; margin-top:18px; border-radius:50%; border:4px solid var(--c); box-shadow:0 0 30px color-mix(in srgb, var(--c) 60%, transparent); background:#1e1638; display:grid; place-items:center; font:800 40px 'IBM Plex Sans Arabic'; color:#fff; }
+    .win-pic img{ position:absolute; inset:0; width:100%; height:100%; border-radius:50%; object-fit:cover; background:#1e1638; }
+    .win-pic i{ position:absolute; top:-30px; left:50%; transform:translateX(-50%); font-style:normal; font-size:34px; line-height:1; }
+    .win-tag{ font:800 18px/1 'Zain'; letter-spacing:1px; color:#fde7a8; }
+    .card.win h2{ color:var(--c); font:900 clamp(34px,4vw,54px)/1.1 'Zain'; text-shadow:0 0 30px color-mix(in srgb, var(--c) 45%, transparent); }
+    .win-streamer{ font:600 15px 'IBM Plex Sans Arabic'; color:#c9c4d6; }
+    .win-streamer bdi{ direction:ltr; color:#8a8596; }
+    .win-score{ display:inline-flex; align-items:center; gap:10px; padding:6px 16px; border-radius:999px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); font:700 14px 'IBM Plex Sans Arabic'; color:#a8a3b5; }
+    .win-score b{ font:800 20px 'IBM Plex Sans Arabic'; color:#fff; font-variant-numeric:tabular-nums; }
+    .win-players{ width:100%; flex:1; min-height:0; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; padding:12px 2px 4px; border-top:1px solid rgba(255,255,255,.07); margin-top:4px; }
+    .wp{ display:flex; align-items:center; gap:10px; padding:8px 12px 8px 8px; border-radius:18px; background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.08); text-align:right; min-width:0; }
+    .wp.top{ border-color:color-mix(in srgb, var(--c) 60%, transparent); background:color-mix(in srgb, var(--c) 10%, transparent); }
+    .wp .av{ position:relative; width:46px; height:46px; flex:0 0 auto; border-radius:50%; overflow:hidden; display:grid; place-items:center; color:#fff; font-weight:700; background:linear-gradient(135deg,var(--c),#1e1638); border:2px solid color-mix(in srgb, var(--c) 70%, transparent); }
+    .wp .av img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#1e1638; }
+    .wp .nm{ flex:1; min-width:0; font:700 14px 'IBM Plex Sans Arabic'; color:#f4f2f8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .wp .gl{ flex:0 0 auto; display:flex; flex-direction:column; align-items:center; line-height:1; }
+    .wp .gl b{ font:800 22px 'IBM Plex Sans Arabic'; color:#fff; font-variant-numeric:tabular-nums; }
+    .wp .gl small{ font:600 11px 'IBM Plex Sans Arabic'; color:#a8a3b5; margin-top:3px; }
+    .wp.zero .gl b{ color:#6f6a7c; }
+    .pbtn{ flex:0 0 auto; height:52px; padding:0 28px; border-radius:16px; border:none; cursor:pointer; background:linear-gradient(90deg,#7c3aed,#a855f7); color:#fff; font:700 18px 'IBM Plex Sans Arabic'; text-decoration:none; display:inline-flex; align-items:center; }
     .pbtn:active{ transform:scale(.98); }
 
     /* المقدمة ثلاثية الأبعاد */
@@ -671,6 +692,25 @@
         $('intro-cv').innerHTML = '';
     }
 
+    /* ---- شاشة الفوز ---- */
+    function winHtml(st) {
+        var w = st.winner, side = M.sides[w], goals = st.playerGoals || {}, info = st.playerInfo || {};
+        var players = st.teams[w].players.slice().sort(function (a, b) { return (goals[b] || 0) - (goals[a] || 0); });
+        var best = players.length ? (goals[players[0]] || 0) : 0;
+        return '<div class="win-pic">' + esc(initial(side.name)) + (side.avatar ? '<img src="' + esc(side.avatar) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '<i>👑</i></div>' +
+            '<span class="win-tag">🏆 الفريق الفائز</span>' +
+            '<h2>' + esc(st.teams[w].name) + '</h2>' +
+            '<span class="win-streamer">الستريمر ' + esc(side.name) + ' · <bdi>@' + esc(side.tiktok) + '</bdi></span>' +
+            '<span class="win-score">الجولات <b>' + st.roundsWon[w] + '</b> مقابل <b>' + st.roundsWon[1 - w] + '</b> ضد ' + esc(st.teams[1 - w].name) + '</span>' +
+            '<div class="win-players">' + players.map(function (n) {
+                var g = goals[n] || 0, av = info[n] && info[n].avatar;
+                return '<div class="wp' + (g && g === best ? ' top' : '') + (g ? '' : ' zero') + '"><span class="av">' + esc(initial(n)) +
+                    (av ? '<img src="' + esc(av) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>' +
+                    '<span class="nm">' + esc(n) + '</span><span class="gl"><b>' + g + '</b><small>' + (g === 1 ? 'هدف' : g === 2 ? 'هدفين' : g >= 3 && g <= 10 ? 'أهداف' : 'هدف') + '</small></span></div>';
+            }).join('') + '</div>' +
+            '<a class="pbtn" href="' + HUB + '" data-back>الرجوع لشاشة الإعدادات</a>';
+    }
+
     /* ---- لوحات النتائج ---- */
     var END_TEXT = { left: 'انسحب', stream_lost: 'انقطع بثه' };
     function renderPanel() {
@@ -683,10 +723,7 @@
                 : 'انتهت المباراة.';
             html = '<h2 class="gold">انتهت المباراة</h2><p>' + esc(text) + '</p><a class="pbtn" href="' + HUB + '">الرجوع</a>';
         } else if (st.phase === 'over' && st.winner != null) {
-            var w = st.winner;
-            html = '<div style="font-size:64px;line-height:1">🏆</div><h2 class="gold">فوز ' + esc(st.teams[w].name) + '</h2>' +
-                '<div class="score"><span style="color:' + COLORS[0] + '">' + st.roundsWon[0] + '<small> ' + esc(st.teams[0].name) + '</small></span><span style="color:#8a8596">—</span><span style="color:' + COLORS[1] + '">' + st.roundsWon[1] + '<small> ' + esc(st.teams[1].name) + '</small></span></div>' +
-                '<p>الجولات المكسوبة · بث <bdi dir="ltr">@' + esc(M.sides[w].tiktok) + '</bdi> فاز بالمباراة</p><a class="pbtn" href="' + HUB + '" data-back>الرجوع لشاشة الإعدادات</a>';
+            html = winHtml(st);
         } else if (st.phase === 'roundEnd' && st.lastRound) {
             var r = st.lastRound;
             html = '<span class="gold" style="font:800 26px \'Zain\'">نهاية الجولة ' + r.round + '</span>' +
@@ -696,6 +733,9 @@
                 '<p>الجولة التالية خلال <b id="next-left">' + Math.ceil(left(st.phaseEndsAt) / 1000) + '</b> ثانية</p>';
         }
         $('panel').classList.toggle('hidden', !html);
+        var isWin = st.phase === 'over' && st.winner != null;
+        box.classList.toggle('win', isWin);
+        if (isWin) box.style.setProperty('--c', COLORS[st.winner]); else box.style.removeProperty('--c');
         if (box.getAttribute('data-k') !== (M.ended ? 'e' : st.phase) + ':' + st.round) { box.setAttribute('data-k', (M.ended ? 'e' : st.phase) + ':' + st.round); box.innerHTML = html; }
     }
 
