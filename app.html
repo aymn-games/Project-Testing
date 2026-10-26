@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>لوحتي — منصة ألعاب أيمن</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<!-- لوحة المستخدم الموحّدة: قائمة جانبية (يمين) + محتوى (يسار).
+     "نظرة عامة" مبنية هنا مباشرة، وباقي الأقسام تفتح صفحات الموقع الحالية
+     (games.html, profile.html, store.html, ...) داخل إطار مع إخفاء هيدرها
+     الخاص — بدون أي تعديل على تلك الصفحات. أي تنقّل داخل الإطار لصفحة
+     خارج الأقسام (مثل فتح لعبة أو صفحة دفع) يُنقل للنافذة الكاملة. -->
+<style>
+:root{
+  --bg:#0a0811;
+  --panel:rgba(255,255,255,0.035);
+  --panel-2:rgba(255,255,255,0.06);
+  --line:rgba(255,255,255,0.08);
+  --line-accent:rgba(167,139,250,0.35);
+  --text:#ece9f5;
+  --muted:#9c96b0;
+  --dim:#6f6984;
+  --accent:#a78bfa;
+  --accent-2:#7c4dff;
+  --accent-grad:linear-gradient(135deg,#a47bff,#6d5cf0);
+  --gold:#fcd34d;
+  --green:#34d399;
+  --side-w:272px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;height:100%;background:var(--bg);}
+body{font-family:'IBM Plex Sans Arabic',system-ui,sans-serif;color:var(--text);-webkit-text-size-adjust:100%;overflow:hidden;}
+a{color:inherit;text-decoration:none;}
+button{font-family:inherit;cursor:pointer;}
+[hidden]{display:none !important;}
+svg.ic{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+.app{display:flex;height:100vh;height:100dvh;padding:16px;gap:16px;
+  background:radial-gradient(1100px 600px at 70% -10%,rgba(124,77,255,0.16),transparent 70%),var(--bg);}
+
+/* ---------- القائمة الجانبية ---------- */
+.side{width:var(--side-w);flex:none;display:flex;flex-direction:column;gap:14px;padding:20px 14px;border-radius:26px;
+  border:1px solid var(--line);background:linear-gradient(180deg,rgba(124,77,255,0.08),rgba(255,255,255,0.02));overflow-y:auto;}
+.side-logo{display:flex;align-items:center;justify-content:space-between;padding:0 8px 8px;}
+.side-logo img{height:40px;width:auto;}
+.side-logo .live{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+.side-logo .live i{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);}
+.side-label{font-size:12px;color:var(--dim);padding:6px 12px 0;}
+.nav{display:flex;flex-direction:column;gap:4px;}
+.nav a{display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px;border-radius:16px;font-size:15px;font-weight:600;color:#c9c3dc;
+  border:1px solid transparent;transition:background .15s,color .15s,border-color .15s;}
+.nav a:hover{background:var(--panel-2);color:#fff;}
+.nav a.active{background:var(--accent-grad);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),0 10px 24px -12px rgba(124,77,255,0.9);}
+.nav a .tag{margin-inline-start:auto;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(252,211,77,0.14);color:var(--gold);}
+.side-spacer{flex:1;}
+.side-card{padding:14px;border-radius:18px;border:1px solid var(--line-accent);background:rgba(124,77,255,0.08);display:flex;flex-direction:column;gap:10px;}
+.side-card .row{display:flex;justify-content:space-between;align-items:center;font-size:13px;}
+.side-card .row b{font-size:15px;}
+.side-card .row span{color:var(--muted);}
+.bar{height:6px;border-radius:999px;background:rgba(255,255,255,0.08);overflow:hidden;}
+.bar i{display:block;height:100%;width:0;border-radius:inherit;background:var(--accent-grad);transition:width .6s;}
+.side-link{display:flex;align-items:center;gap:10px;padding:8px 12px;font-size:14px;color:var(--muted);border-radius:12px;}
+.side-link:hover{color:#fff;background:var(--panel);}
+.side-user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:16px;border:1px solid var(--line);background:var(--panel);}
+.avatar{width:42px;height:42px;border-radius:50%;flex:none;object-fit:cover;background:var(--panel-2);display:grid;place-items:center;font-weight:700;color:var(--accent);overflow:hidden;}
+.avatar img{width:100%;height:100%;object-fit:cover;}
+.side-user .who{flex:1;min-width:0;display:flex;flex-direction:column;}
+.side-user .who b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.side-user .who span{font-size:12px;color:var(--dim);font-family:monospace;direction:ltr;text-align:right;}
+.icon-btn{width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--muted);display:grid;place-items:center;flex:none;}
+.icon-btn:hover{color:#fff;background:var(--panel-2);}
+
+/* ---------- المحتوى ---------- */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;gap:16px;}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-radius:24px;border:1px solid var(--line);background:var(--panel);flex:none;}
+.topbar .hello{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.topbar .hello b{font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.topbar .hello span{font-size:13px;color:var(--muted);}
+.topbar .actions{display:flex;align-items:center;gap:10px;flex:none;}
+.btn-main{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:14px;border:none;background:var(--accent-grad);color:#fff;font-size:14px;font-weight:700;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),0 10px 24px -10px rgba(124,77,255,0.8);}
+.btn-main:hover{filter:brightness(1.1);}
+.btn-soft{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:14px;border:1px solid var(--line-accent);background:rgba(124,77,255,0.08);color:#d6ccff;font-size:14px;font-weight:600;}
+.btn-soft:hover{background:rgba(124,77,255,0.16);color:#fff;}
+.burger{display:none;}
+
+.view{flex:1;min-height:0;border-radius:24px;overflow:hidden;position:relative;}
+.view-scroll{height:100%;overflow-y:auto;padding:2px;}
+.frame{width:100%;height:100%;border:0;display:block;border-radius:24px;background:var(--bg);border:1px solid var(--line);}
+.frame-loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:14px;pointer-events:none;}
+
+/* ---------- نظرة عامة ---------- */
+.ov{display:flex;flex-direction:column;gap:16px;}
+.card{border-radius:24px;border:1px solid var(--line);background:var(--panel);padding:22px;}
+.card--accent{border-color:var(--line-accent);background:linear-gradient(135deg,rgba(124,77,255,0.16),rgba(255,255,255,0.02));}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.card-head .t{display:flex;align-items:center;gap:14px;min-width:0;}
+.card-head .t .ico{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;background:var(--panel-2);border:1px solid var(--line);flex:none;}
+.card-head h3{margin:0;font-size:18px;}
+.card-head p{margin:4px 0 0;font-size:13px;color:var(--muted);}
+.status{font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px;background:var(--panel-2);color:var(--muted);flex:none;}
+.status.ok{background:rgba(52,211,153,0.12);color:var(--green);}
+.tt-row{display:flex;align-items:center;gap:12px;margin-top:18px;}
+.tt-field{flex:1;min-width:0;display:flex;align-items:center;gap:8px;min-height:52px;padding:0 16px;border-radius:16px;background:rgba(0,0,0,0.25);border:1px solid var(--line);direction:ltr;font-size:15px;}
+.tt-field span{color:var(--dim);}
+.tt-field b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hint{margin:10px 0 0;font-size:12px;color:var(--dim);}
+
+.level{display:flex;align-items:center;gap:22px;}
+.ring{--p:0;width:120px;height:120px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:conic-gradient(var(--accent) calc(var(--p)*1%),rgba(255,255,255,0.08) 0);}
+.ring>div{width:96px;height:96px;border-radius:50%;background:#140f22;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.ring b{font-size:26px;}
+.ring span{font-size:11px;color:var(--muted);}
+.level .info{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+.level .info small{color:var(--dim);font-size:12px;}
+.level .info h2{margin:0;font-size:24px;}
+.level .info p{margin:0;font-size:14px;color:var(--muted);}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;}
+.stat{border-radius:20px;border:1px solid var(--line);background:var(--panel);padding:16px;display:flex;flex-direction:column;gap:12px;}
+.stat .ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:rgba(124,77,255,0.12);color:var(--accent);}
+.stat b{font-size:26px;font-variant-numeric:tabular-nums;}
+.stat span{font-size:13px;color:var(--muted);}
+
+.quick{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+.quick a{display:flex;align-items:center;gap:12px;padding:16px;border-radius:20px;border:1px solid var(--line);background:var(--panel);font-weight:600;transition:border-color .15s,background .15s;}
+.quick a:hover{border-color:var(--line-accent);background:rgba(124,77,255,0.08);}
+.quick a .ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--panel-2);color:var(--accent);flex:none;}
+.quick a small{display:block;font-weight:400;font-size:12px;color:var(--muted);margin-top:2px;}
+.sec-title{margin:6px 4px 0;font-size:16px;color:#d6d1e6;}
+
+.overlay{display:none;}
+
+/* ---------- الجوال ---------- */
+@media (max-width:900px){
+  .app{padding:10px;gap:10px;}
+  .side{position:fixed;top:0;bottom:0;right:0;z-index:50;border-radius:0 0 0 0;width:min(86vw,var(--side-w));background:#110c1c;
+    transform:translateX(100%);transition:transform .25s ease;}
+  body.nav-open .side{transform:none;}
+  .overlay{display:block;position:fixed;inset:0;z-index:40;background:rgba(0,0,0,0.55);opacity:0;pointer-events:none;transition:opacity .2s;}
+  body.nav-open .overlay{opacity:1;pointer-events:auto;}
+  .burger{display:grid;}
+  .topbar{padding:10px 12px;border-radius:18px;}
+  .topbar .hello b{font-size:16px;}
+  .topbar .hello span{display:none;}
+  .topbar .btn-soft{display:none;}
+  .view,.frame{border-radius:18px;}
+  .card{padding:16px;border-radius:20px;}
+  .tt-row{flex-direction:column;align-items:stretch;}
+  .level{gap:14px;}
+  .ring{width:92px;height:92px;}
+  .ring>div{width:72px;height:72px;}
+  .ring b{font-size:20px;}
+  .stats{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+<div class="overlay" id="overlay"></div>
+<div class="app">
+
+  <aside class="side" id="side">
+    <div class="side-logo">
+      <a href="./"><img src="logo.png" alt="ألعاب أيمن"></a>
+      <span class="live"><i></i>متصل</span>
+    </div>
+
+    <div class="side-label">لوحتي</div>
+    <nav class="nav" id="nav">
+      <a href="#overview" data-sec="overview"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>نظرة عامة</a>
+      <a href="#games" data-sec="games"><svg class="ic" viewBox="0 0 24 24"><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><path d="M17.3 5H6.7a4 4 0 0 0-4 3.6L2 15a3 3 0 0 0 5.2 2.1L9 15h6l1.8 2.1A3 3 0 0 0 22 15l-.7-6.4A4 4 0 0 0 17.3 5z"/></svg>الألعاب</a>
+      <a href="#challenge" data-sec="challenge"><svg class="ic" viewBox="0 0 24 24"><path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/></svg>تحدي البثوث<span class="tag">جديد</span></a>
+      <a href="#profile" data-sec="profile"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>البروفايل</a>
+      <a href="#store" data-sec="store"><svg class="ic" viewBox="0 0 24 24"><path d="M3 9h18l-1.5 11a2 2 0 0 1-2 1.7H6.5a2 2 0 0 1-2-1.7z"/><path d="M8 9V7a4 4 0 0 1 8 0v2"/></svg>المتجر</a>
+    </nav>
+
+    <div class="side-label">الإحصائيات والترتيب</div>
+    <nav class="nav">
+      <a href="#stats" data-sec="stats" id="nav-stats" hidden><svg class="ic" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>إحصائيات البث</a>
+      <a href="#top-streamers" data-sec="top-streamers"><svg class="ic" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>الأكثر نشاطاً</a>
+      <a href="#top-supporters" data-sec="top-supporters"><svg class="ic" viewBox="0 0 24 24"><path d="M12 21s-7-4.4-9.3-9A5 5 0 0 1 12 6a5 5 0 0 1 9.3 6c-2.3 4.6-9.3 9-9.3 9z"/></svg>توب الداعمين</a>
+    </nav>
+
+    <div class="side-spacer"></div>
+
+    <div class="side-card" id="side-level" hidden>
+      <div class="row"><b id="side-level-name">—</b><span id="side-level-pts">0 نقطة</span></div>
+      <div class="bar"><i id="side-level-bar"></i></div>
+      <a href="#store" class="btn-main" style="justify-content:center;">المتجر والإطارات</a>
+    </div>
+
+    <a href="#support" data-sec="support" class="side-link"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></svg>الدعم الفني</a>
+    <a href="./" class="side-link"><svg class="ic" viewBox="0 0 24 24"><path d="M3 11 12 3l9 8M5 9.5V21h14V9.5"/></svg>الصفحة الرئيسية</a>
+
+    <div class="side-user">
+      <div class="avatar" id="side-avatar">؟</div>
+      <div class="who"><b id="side-name">...</b><span id="side-id"></span></div>
+      <button class="icon-btn" id="logout" title="تسجيل الخروج" aria-label="تسجيل الخروج"><svg class="ic" viewBox="0 0 24 24" style="transform:scaleX(-1)"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="hello"><b id="greet">أهلاً</b><span id="greet-sub">كل شي تحتاجه في مكان واحد</span></div>
+      <div class="actions">
+        <a href="#store" class="btn-soft">المتجر</a>
+        <a href="#games" class="btn-main"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>ابدأ لعبة</a>
+        <button class="icon-btn burger" id="burger" aria-label="القائمة"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      </div>
+    </header>
+
+    <div class="view">
+      <div class="view-scroll" id="overview">
+        <div class="ov">
+          <section class="card card--accent" id="tt-card">
+            <div class="card-head">
+              <div class="t">
+                <div class="ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5M14 3c.4 2.6 2.2 4.4 5 4.6"/></svg></div>
+                <div><h3>حساب تيك توك</h3><p>الحساب اللي نقرأ منه تعليقات وهدايا بثك</p></div>
+              </div>
+              <span class="status" id="tt-status">غير موثّق</span>
+            </div>
+            <div class="tt-row">
+              <div class="tt-field"><span>@</span><b id="tt-user">—</b></div>
+              <a class="btn-main" id="tt-action" href="#profile">وثّق حسابك</a>
+            </div>
+            <p class="hint" id="tt-hint">توثيق حساب تيك توك يتم من صفحة البروفايل.</p>
+          </section>
+
+          <section class="card">
+            <div class="level">
+              <div class="ring" id="ring"><div><b id="ring-val">0</b><span>نقطة</span></div></div>
+              <div class="info">
+                <small>مستواك الحالي</small>
+                <h2 id="lvl-name">—</h2>
+                <p id="lvl-next">العب وجمّع نقاط عشان ترتقي للمستوى التالي</p>
+              </div>
+            </div>
+          </section>
+
+          <h4 class="sec-title">إحصائياتك</h4>
+          <div class="stats" id="stats"></div>
+
+          <h4 class="sec-title">وصول سريع</h4>
+          <div class="quick">
+            <a href="#games"><span class="ico"><svg class="ic" viewBox="0 0 24 24"><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><path d="M17.3 5H6.7a4 4 0 0 0-4 3.6L2 15a3 3 0 0 0 5.2 2.1L9 15h6l1.8 2.1A3 3 0 0 0 22 15l-.7-6.4A4 4 0 0 0 17.3 5z"/></svg></span><div>مكتبة الألعاب<small>اختر لعبة وابدأ بثك</small></div></a>
+            <a href="#challenge"><span class="ico"><svg class="ic" viewBox="0 0 24 24"><path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/></svg></span><div>تحدي البثوث<small>تحدّى ستريمر ثاني</small></div></a>
+            <a href="#profile"><span class="ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><div>بروفايلي<small>الإطارات والمقتنيات</small></div></a>
+            <a href="#store"><span class="ico"><svg class="ic" viewBox="0 0 24 24"><path d="M3 9h18l-1.5 11a2 2 0 0 1-2 1.7H6.5a2 2 0 0 1-2-1.7z"/><path d="M8 9V7a4 4 0 0 1 8 0v2"/></svg></span><div>المتجر<small>إطارات وباقات</small></div></a>
+          </div>
+        </div>
+      </div>
+      <iframe class="frame" id="frame" title="محتوى القسم" hidden></iframe>
+      <div class="frame-loading" id="frame-loading" hidden>جاري التحميل...</div>
+    </div>
+  </main>
+</div>
+
+<script src="auth/auth-client.js"></script>
+<script>
+(function () {
+'use strict';
+
+var user = null;
+
+// القسم ← الصفحة الحالية في الموقع. "overview" مبنية داخل app.html نفسها.
+var SECTIONS = {
+  games: function () { return 'games.html'; },
+  challenge: function () { return 'challenge.html'; },
+  profile: function () { return user && user.custom_id ? 'profile.html?id=' + encodeURIComponent(user.custom_id) : 'profile.html'; },
+  store: function () { return 'store.html'; },
+  stats: function () { return 'streamer-stats.html'; },
+  'top-streamers': function () { return 'top-streamers.html'; },
+  'top-supporters': function () { return 'top-supporters.html'; },
+  support: function () { return 'support-tickets.html'; }
+};
+var PAGE_TO_SECTION = {};
+Object.keys(SECTIONS).forEach(function (k) { PAGE_TO_SECTION[SECTIONS[k]().split('?')[0]] = k; });
+
+var frame = document.getElementById('frame');
+var overview = document.getElementById('overview');
+var loading = document.getElementById('frame-loading');
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function fmt(n) { return Number(n || 0).toLocaleString('en-US'); }
+
+function currentSection() {
+  var h = (location.hash || '').replace('#', '');
+  return h === 'overview' || SECTIONS[h] ? h : 'overview';
+}
+
+function setActive(sec) {
+  document.querySelectorAll('[data-sec]').forEach(function (a) { a.classList.toggle('active', a.getAttribute('data-sec') === sec); });
+}
+
+function show(sec) {
+  setActive(sec);
+  document.body.classList.remove('nav-open');
+  if (sec === 'overview') {
+    overview.hidden = false; frame.hidden = true; loading.hidden = true;
+    return;
+  }
+  overview.hidden = true; frame.hidden = false;
+  var url = SECTIONS[sec]();
+  var cur = frame.getAttribute('data-src');
+  if (cur !== url) {
+    loading.hidden = false;
+    frame.setAttribute('data-src', url);
+    frame.src = url;
+  }
+}
+
+// إخفاء هيدر الصفحة المضمّنة (اللوحة لها قائمتها الخاصة) + توجيه أي
+// تنقّل لصفحة خارج الأقسام (لعبة، دفع، تسجيل دخول...) للنافذة الكاملة.
+// يشتغل أول ما تجهز صفحة الإطار (قبل load، لأن بعض الصفحات تنتظر سكربتات
+// CDN) — مرة واحدة لكل مستند.
+setInterval(function () {
+  var d;
+  try { d = frame.contentDocument; } catch (e) { return; }
+  if (d && d.readyState !== 'loading' && d.body && d.URL !== 'about:blank') setupFrame();
+}, 100);
+frame.addEventListener('load', setupFrame);
+
+function setupFrame() {
+  var w, doc;
+  try { w = frame.contentWindow; doc = w.document; } catch (e) { return; }
+  if (doc.__agpSetup) return;
+  doc.__agpSetup = true;
+  loading.hidden = true;
+  var path = w.location.pathname.split('/').pop() || 'index.html';
+  var sec = PAGE_TO_SECTION[path];
+  if (!sec) {
+    if (w.location.href !== 'about:blank') location.href = w.location.href;
+    return;
+  }
+  frame.setAttribute('data-src', path + w.location.search);
+  if (currentSection() !== sec) { history.replaceState(null, '', '#' + sec); setActive(sec); }
+
+  var style = doc.createElement('style');
+  style.textContent =
+    '.site-header-wrap,body>header,header.topbar,header.bar{display:none !important;}' +
+    'body.st-has-site-header{padding-top:0 !important;}' +
+    '[data-agp-hide]{display:none !important;}';
+  doc.head.appendChild(style);
+  hideTemplateHeader(doc);
+  // الصفحات المجمّعة (games/profile) تبني الهيدر وتعيد رسمه بعد التحميل.
+  var pending = false;
+  new w.MutationObserver(function () {
+    if (pending) return;
+    pending = true;
+    w.requestAnimationFrame(function () { pending = false; hideTemplateHeader(doc); });
+  }).observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+
+  // الروابط داخل الإطار: صفحة قسم ← تبقى داخل اللوحة، غيرها ← النافذة الكاملة.
+  doc.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href]');
+    if (!a || a.target === '_blank' || e.defaultPrevented) return;
+    var u;
+    try { u = new URL(a.getAttribute('href'), w.location.href); } catch (err) { return; }
+    if (u.origin !== location.origin) { e.preventDefault(); location.href = u.href; return; }
+    var p = u.pathname.split('/').pop() || 'index.html';
+    if (p === path && u.hash && !u.search) return;
+    var target = PAGE_TO_SECTION[p];
+    e.preventDefault();
+    if (target) { frame.setAttribute('data-src', p + u.search); frame.src = p + u.search + u.hash; history.replaceState(null, '', '#' + target); setActive(target); }
+    else location.href = u.href;
+  }, true);
+}
+
+function hideTemplateHeader(doc) {
+  var headers = doc.querySelectorAll('header');
+  for (var i = 0; i < headers.length; i++) {
+    var h = headers[i];
+    if (h.closest('main')) continue;
+    if (!h.hasAttribute('data-agp-hide')) h.setAttribute('data-agp-hide', '');
+    // الغلاف اللاصق (sticky/fixed) حول الهيدر يختفي معه عشان ما يترك فراغ.
+    var el = h.parentElement;
+    for (var depth = 0; el && el !== doc.body && depth < 3; depth++, el = el.parentElement) {
+      var pos = doc.defaultView.getComputedStyle(el).position;
+      if (pos === 'sticky' || pos === 'fixed') {
+        if (!el.hasAttribute('data-agp-hide')) el.setAttribute('data-agp-hide', '');
+        break;
+      }
+    }
+  }
+}
+
+window.addEventListener('hashchange', function () { show(currentSection()); });
+
+document.getElementById('burger').addEventListener('click', function () { document.body.classList.toggle('nav-open'); });
+document.getElementById('overlay').addEventListener('click', function () { document.body.classList.remove('nav-open'); });
+document.getElementById('logout').addEventListener('click', function () {
+  AGPAuth.logout().then(function () { location.href = './'; });
+});
+
+function greeting() {
+  var h = new Date().getHours();
+  return h < 12 ? 'صباح الخير' : 'مساء الخير';
+}
+
+function renderUser(u) {
+  var name = u.display_name || u.tiktok_display_name || u.username || '';
+  document.getElementById('greet').textContent = greeting() + '، ' + name;
+  document.getElementById('greet-sub').textContent = AGPAuth.isStreamerAccount(u) ? 'جاهز تشغّل البث الليلة؟' : 'كل شي تحتاجه في مكان واحد';
+  document.getElementById('side-name').textContent = name;
+  document.getElementById('side-id').textContent = u.custom_id || '';
+  var av = document.getElementById('side-avatar');
+  var img = u.avatar_image_base64 || u.tiktok_avatar_url;
+  if (img) { av.innerHTML = '<img alt="">'; av.firstChild.src = img; }
+  else av.textContent = (name || '؟').charAt(0);
+
+  var verified = Boolean(u.tiktok_verified && u.tiktok_username);
+  document.getElementById('tt-user').textContent = verified ? u.tiktok_username : (u.tiktok_username || 'غير مربوط');
+  var st = document.getElementById('tt-status');
+  st.textContent = verified ? 'موثّق' : 'غير موثّق';
+  st.classList.toggle('ok', verified);
+  var act = document.getElementById('tt-action');
+  act.textContent = verified ? 'ابدأ لعبة' : 'وثّق حسابك';
+  act.setAttribute('href', verified ? '#games' : '#profile');
+  document.getElementById('tt-hint').textContent = verified
+    ? 'حسابك موثّق. لازم يكون البث شغّال عشان نلتقط التعليقات.'
+    : 'توثيق حساب تيك توك يتم من صفحة البروفايل.';
+
+  document.getElementById('nav-stats').hidden = !AGPAuth.isStreamerAccount(u);
+}
+
+function renderProfile(p) {
+  var pts = p.points || {};
+  var total = pts.totalPoints || 0;
+  var cur = pts.currentLevel, next = pts.nextLevel;
+  var pct = 100;
+  if (next) {
+    var base = cur ? cur.pointsRequired : 0;
+    pct = Math.max(0, Math.min(100, Math.round(((total - base) / Math.max(1, next.pointsRequired - base)) * 100)));
+  }
+  document.getElementById('ring').style.setProperty('--p', pct);
+  document.getElementById('ring-val').textContent = fmt(total);
+  document.getElementById('lvl-name').textContent = cur ? cur.displayNameAr : 'بدون مستوى';
+  document.getElementById('lvl-next').textContent = next
+    ? 'باقي ' + fmt(next.pointsRequired - total) + ' نقطة للوصول إلى ' + next.displayNameAr
+    : 'وصلت لأعلى مستوى 🎉';
+
+  document.getElementById('side-level').hidden = false;
+  document.getElementById('side-level-name').textContent = cur ? cur.displayNameAr : 'بدون مستوى';
+  document.getElementById('side-level-pts').textContent = fmt(total) + ' نقطة';
+  document.getElementById('side-level-bar').style.width = pct + '%';
+
+  var s = p.stats || {};
+  var items = [
+    ['الجولات', fmt(pts.gamesPlayed), '<path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><path d="M17.3 5H6.7a4 4 0 0 0-4 3.6L2 15a3 3 0 0 0 5.2 2.1L9 15h6l1.8 2.1A3 3 0 0 0 22 15l-.7-6.4A4 4 0 0 0 17.3 5z"/>'],
+    ['الفوز', fmt(pts.gamesWon) + ' <small style="font-size:13px;color:var(--muted)">(' + (pts.winRatePct || 0) + '%)</small>', '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/>']
+  ];
+  if (AGPAuth.isStreamerAccount(p)) {
+    items.push(
+      ['البثوث', fmt(s.total_broadcasts), '<circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19.1 4.9a10 10 0 0 1 0 14.2M4.9 19.1a10 10 0 0 1 0-14.2"/>'],
+      ['ساعات البث', fmt(Math.round((s.total_live_ms || 0) / 3600000)), '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'],
+      ['اللاعبين', fmt(s.total_players), '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/>'],
+      ['التعليقات', fmt(s.total_comments), '<path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z"/>'],
+      ['الهدايا', fmt(s.total_gifts), '<rect x="3" y="8" width="18" height="5" rx="1"/><path d="M12 8v13M5 13v8h14v-8M12 8S10 3 7.5 4.5 9 8 12 8zM12 8s2-5 4.5-3.5S15 8 12 8z"/>']
+    );
+  }
+  document.getElementById('stats').innerHTML = items.map(function (it) {
+    return '<div class="stat"><span class="ico"><svg class="ic" viewBox="0 0 24 24">' + it[2] + '</svg></span><div><b>' + it[1] + '</b></div><span>' + esc(it[0]) + '</span></div>';
+  }).join('');
+}
+
+// عرض فوري من الكاش ثم التأكيد من الخادم.
+show(currentSection());
+AGPAuth.requireAuth('login.html').then(function (u) {
+  if (!u) return;
+  user = u;
+  renderUser(u);
+  if (u.custom_id) {
+    AGPAuth.getPublicProfile(u.custom_id).then(function (r) {
+      if (r && r.success && r.profile && !r.profile.restricted) renderProfile(r.profile);
+    }).catch(function () {});
+  }
+  // رابط البروفايل يحتاج custom_id — نعيد فتحه لو كان مفتوحاً قبل وصول بيانات المستخدم.
+  if (currentSection() === 'profile') { frame.removeAttribute('data-src'); show('profile'); }
+});
+})();
+</script>
+</body>
+</html>
