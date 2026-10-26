@@ -458,7 +458,7 @@ class Component extends DCLogic {
       logoOp:S.logo?1:0, phOp:S.logo?0:1, phBorder:S.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
       round:S.round, roundLbl:'الجولة '+S.round, aliveN:A.length, totalN:A.length, cols, cardH, avS, avF:Math.round(avS*.44), cardR:Math.round(cardH*.32), numW:Math.round(Math.min(92,cardH*.7)), numF:Math.round(Math.min(54,cardH*.44)), nameF:Math.round(Math.min(34,Math.max(15,cardH*.28))), bombF:Math.round(Math.min(52,cardH*.48)), noLog:!S.log.length, cards,
       isLive:live, isIdle:S.phase==='idle', isBoom:S.phase==='boom', isOver:S.phase==='over',
-      tC, tDeg:Math.round(pct*360), secTxt:S.phase==='idle'?'--':String(Math.floor(left/1000)).padStart(2,'0'), msTxt:S.phase==='idle'?'--':String(Math.floor((left%1000)/10)).padStart(2,'0'),
+      tC, tDeg:S.tMode==='ظاهر'?Math.round(pct*360):0, secTxt:S.phase==='idle'?'--':String(Math.floor(left/1000)).padStart(2,'0'), msTxt:S.phase==='idle'?'--':String(Math.floor((left%1000)/10)).padStart(2,'0'),
       showTime:S.tMode==='ظاهر', hideTime:S.tMode!=='ظاهر',
       heat:`rgba(239,68,68,${(.08+hot*.32).toFixed(2)})`, heatGlow:`rgba(249,115,22,${(.2+hot*.6).toFixed(2)})`,
       panelBd:live?`rgba(248,113,113,${(.3+hot*.6).toFixed(2)})`:'rgba(255,255,255,.08)', panelGlow:'rgba(239,68,68,.35)', panelGlowR:live?Math.round(20+hot*60):0,
