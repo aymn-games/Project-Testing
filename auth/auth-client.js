@@ -545,6 +545,17 @@ function adminGenerateChoiceCode(maxUses, excluded, note) {
 function adminListChoiceCodes() {
     return request('/api/admin/choice-codes', { method: 'GET' });
 }
+/** جائزة فوز مباريات البثين: {enabled, maxUses, frames:["catalog:<slug>"|"custom:<id>"]} */
+function adminGetWinReward() {
+    return request('/api/admin/win-reward', { method: 'GET' });
+}
+function adminSetWinReward(config) {
+    return request('/api/admin/win-reward', { method: 'POST', body: config || {} });
+}
+/** أكواد جوائز الفوز للستريمر الحالي (بروفايله). */
+function getWinRewardCodes() {
+    return request('/api/collectibles/win-codes', { method: 'GET' });
+}
 
 /* Stream challenge (two streams play one game) — backend/challenge/. */
 function challengeSearch(query) {
@@ -1068,6 +1079,9 @@ global.AGPAuth = {
     redeemChoiceCode: redeemChoiceCode,
     adminGenerateChoiceCode: adminGenerateChoiceCode,
     adminListChoiceCodes: adminListChoiceCodes,
+    adminGetWinReward: adminGetWinReward,
+    adminSetWinReward: adminSetWinReward,
+    getWinRewardCodes: getWinRewardCodes,
     redeemFrameCode: redeemFrameCode,
     adminGenerateFrameCodes: adminGenerateFrameCodes,
     adminGenerateCardCodes: adminGenerateCardCodes,

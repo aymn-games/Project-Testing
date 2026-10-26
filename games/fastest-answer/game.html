@@ -446,6 +446,7 @@ class Component extends DCLogic {
       scoreHtml:'النقاط <b>'+st.teams[w].score+'</b> مقابل <b>'+st.teams[1-w].score+'</b> ضد '+String(st.teams[1-w].name).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
       players:st.teams[w].players.map(n=>({name:n,avatar:info[n]&&info[n].avatar,value:(stats[n]&&stats[n].pts)||0})),
       unit:W.arabicUnit('نقطة','نقطتين','نقاط'),
+      reward:M.reward&&M.reward.mine?{href:'../../profile.html#win-codes'}:null,
       onBack:()=>{ this.chClosed=true; this.chSend('leave'); setTimeout(()=>{ location.href='../../games.html'; },300); } }); }
   chSend(action){ const ws=this.ws; if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:'action',action})); }
   chHostOnly(){ if(this.chHost) return true; this.toastMsg('التحكم لـ '+((this.chM&&this.chM.sides[this.chM.host].name)||'منشئ المباراة')); return false; }

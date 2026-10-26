@@ -488,6 +488,30 @@ input::placeholder,textarea::placeholder{color:#5b6274}
             </table></div>
             <sc-if value="{{ choiceEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:18px;text-align:center;color:#5b6274;font-size:13px">ما فيه أكواد اختيار بعد.</div></sc-if>
           </div>
+          <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
+            <div style="padding:14px 18px;border-bottom:1px solid #262a37;display:flex;flex-direction:column;gap:4px">
+              <span style="font-weight:600">جائزة فوز مباريات البثين</span>
+              <span style="font-size:12.5px;color:#9199ab;line-height:1.8">كل مباراة بين بثين (بلنتي، أسرع إجابة) تنتهي بفائز تنشئ كود اختيار إطار جديد لستريمر الفريق الفائز. الكود يطلع مغبّش بشاشة الفوز، ويلقاه الستريمر واضح ببروفايله (أكواد جوائز الفوز). اختر الإطارات اللي تظهر بالقائمة وكم شخص يقدر يستخدم الكود.</span>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:12px;padding:14px 18px;flex-wrap:wrap">
+              <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#9199ab">عدد مرات الاستخدام لكل كود (كم شخص)</span><input type="number" min="1" value="{{ wrMax }}" onChange="{{ onWrMax }}" style="width:160px;height:36px;background:#0b0d12;border:1px solid #2f3342;border-radius:8px;color:#e7e9ee;padding:0 12px;font-size:13px;outline:none;font-family:'IBM Plex Mono',monospace"></label>
+              <button onClick="{{ wrToggle }}" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid {{ wrToggleBd }};background:{{ wrToggleBg }};color:{{ wrToggleFg }};font-size:13px;font-weight:500;cursor:pointer">{{ wrToggleText }}</button>
+              <button onClick="{{ wrSave }}" style="height:36px;padding:0 16px;border-radius:8px;background:#7c3aed;color:#fff;border:none;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#6d28d9">حفظ الإعدادات</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 18px;border-top:1px solid #1f222c;flex-wrap:wrap">
+              <span style="font-size:12.5px;color:{{ wrSummaryColor }}">{{ wrSummary }}</span>
+              <div style="display:flex;gap:6px"><button onClick="{{ wrPickAll }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">اختيار الكل</button><button onClick="{{ wrPickNone }}" style="height:28px;padding:0 10px;border-radius:7px;background:#1b1e27;color:#e7e9ee;border:1px solid #2f3342;font-size:12px;cursor:pointer">إلغاء الكل</button></div>
+            </div>
+            <div style="padding:4px 18px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;max-height:520px;overflow-y:auto">
+              <sc-for list="{{ wrFrames }}" as="f" hint-placeholder-count="8">
+                <button onClick="{{ f.toggle }}" title="{{ f.hint }}" style="display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:10px;cursor:pointer;text-align:right;color:#e7e9ee;border:1px solid {{ f.border }};background:#11131a" style-hover="border-color:#7c3aed">
+                  <div style="height:70px;border-radius:6px;background:#0b0d12;display:flex;align-items:center;justify-content:center;overflow:hidden;opacity:{{ f.opacity }}"><img src="{{ f.file }}" alt="" loading="lazy" style="max-width:100%;max-height:70px;object-fit:contain"></div>
+                  <span style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ f.name }}</span>
+                  <span style="font-size:11px;color:{{ f.statusColor }}">{{ f.status }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;align-items:start">
             <div style="background:#14161d;border:1px solid #262a37;border-radius:14px;overflow:hidden">
               <div style="padding:14px 18px;font-weight:600;border-bottom:1px solid #262a37">إنشاء باكج</div>
@@ -1020,7 +1044,7 @@ class Component extends DCLogic {
     users:null, catalog:null, customFrames:[], elimCardList:[], winCardList:[], codes:null,
     pickType:'internal', pickId:'', pickUser:null, pickState:'empty',
     frameKey:null, libTab:'club', libQ:'', grantTpl:'', grantText:'', entranceModel:'gold', entranceText:'', cardKey:null,
-    codesFrame:'', codesCount:10, codesNote:'', codesOut:'', choiceMax:10, choiceNote:'', choiceExcluded:[], choiceCodes:null, choiceOut:'', bundles:null, bundleName:'', bundlePick:[], burnInput:'',
+    codesFrame:'', codesCount:10, codesNote:'', codesOut:'', choiceMax:10, choiceNote:'', choiceExcluded:[], choiceCodes:null, choiceOut:'', winReward:{ enabled:false, maxUses:10, frames:[] }, bundles:null, bundleName:'', bundlePick:[], burnInput:'',
     catEdits:{}, exFile:'', exName:'',
     annText:'', annImage:'', annActive:false,
     supporters:null, supName:'', supMsg:'', supAmount:'',
@@ -1112,7 +1136,7 @@ class Component extends DCLogic {
   allFrames(){ const s=this.state; return [ ...(s.catalog||[]).map(c=>({ key:'catalog:'+c.slug, type:'catalog', ref:c.slug, file:c.image_filename, name:c.display_name_ar||c.slug })),
     ...(s.customFrames||[]).map(c=>({ key:'custom:'+c.id, type:'custom', ref:c.id, file:c.image_filename, name:c.display_name_ar||c.image_filename })) ]; }
   catEdit(slug, field, value){ this.setState(s=>({ catEdits:{ ...s.catEdits, [slug]:{ ...(s.catEdits[slug]||{}), [field]:value } } })); }
-  loadCodes(){ A.adminListBundles().then(r=>this.setState({ bundles:(r&&r.bundles)||[] })); A.adminListChoiceCodes().then(r=>this.setState({ choiceCodes:(r&&r.codes)||[] })); return A.adminListFrameCodes().then(r=>this.setState({ codes:(r&&r.codes)||[] })); }
+  loadCodes(){ A.adminGetWinReward().then(r=>{ if(r&&r.success&&r.config) this.setState({ winReward:r.config }); }); A.adminListBundles().then(r=>this.setState({ bundles:(r&&r.bundles)||[] })); A.adminListChoiceCodes().then(r=>this.setState({ choiceCodes:(r&&r.codes)||[] })); return A.adminListFrameCodes().then(r=>this.setState({ codes:(r&&r.codes)||[] })); }
   burnCode(code){ this.ask('حرق الكود؟',`الكود ${code} بيتلغى نهائياً وما يقدر أحد يسترده. هذا الإجراء ما يتراجع عنه.`,'حرق الكود',()=>this.busy('burn',()=>A.adminBurnCode(code)).then(r=>{ if(!r) return;
     const E={ invalid_code:'الكود غير موجود.', code_used:'الكود مستخدم — ما ينحرق.', already_burned:'الكود محروق من قبل.' };
     if(!r.success) return this.flash(E[r.error]||('تعذّر الحرق: '+(r.error||'unknown')),'err'); this.setState({ burnInput:'' }); this.flash(`تم حرق الكود ${r.code}.`); this.loadCodes(); })); }
@@ -1454,6 +1478,28 @@ class Component extends DCLogic {
               status:c.burnedAt?`موقوف · \u2068${fmtDate(c.burnedAt)}\u2069`:full?'اكتمل':'فعّال', color:c.burnedAt?'#f87171':full?'#9199ab':'#4ade80',
               canBurn:!c.burnedAt&&!full, burn:()=>this.ask('إيقاف الكود؟',`الكود ${c.code} يوقف ومحد يقدر يستخدمه بعد الآن. اللي استخدموه يبقى لهم إطارهم.`,'إيقاف',()=>this.busy('burn',()=>A.adminBurnCode(c.code)).then(r=>{ if(!r) return;
                 if(!r.success) return this.flash('تعذّر الإيقاف: '+(r.error||'unknown'),'err'); this.flash(`تم إيقاف الكود ${c.code}.`); this.loadCodes(); })) }; }) }; })(),
+      // جائزة فوز مباريات البثين (إطارات مختارة + عدد الاستخدام + تشغيل/إيقاف)
+      ...(()=>{ const frames=this.allFrames(), wr=s.winReward, on=new Set(wr.frames);
+        const NAMES={ founder:'المؤسس', streamer:'الاستريمر', supporter:'الداعم', distinguished:'المميز' };
+        const label=f=>(f.type==='catalog'&&!(s.catalog||[]).find(c=>c.slug===f.ref&&c.display_name_ar))?(NAMES[f.ref]||(/^level-\d$/.test(f.ref)?'المستوى '+f.ref.slice(6):f.name)):f.name;
+        const upd=patch=>this.setState(st=>({ winReward:{ ...st.winReward, ...patch } }));
+        const picked=frames.filter(f=>on.has(f.key)).length;
+        return {
+          wrMax:wr.maxUses, onWrMax:e=>upd({ maxUses:e.target.value }),
+          wrToggleText:wr.enabled?'الجائزة شغّالة — اضغط للإيقاف':'الجائزة موقوفة — اضغط للتشغيل',
+          wrToggleBd:wr.enabled?'#166534':'#2f3342', wrToggleBg:wr.enabled?'rgba(34,197,94,.12)':'#1b1e27', wrToggleFg:wr.enabled?'#86efac':'#c3c8d4',
+          wrToggle:()=>upd({ enabled:!wr.enabled }),
+          wrSummary:(wr.enabled?'شغّالة':'موقوفة')+` · يظهر للاعب ${picked} من ${frames.length} إطار · كل كود يستخدمه ${wr.maxUses} شخص`, wrSummaryColor:wr.enabled?'#4ade80':'#9199ab',
+          wrPickAll:()=>upd({ frames:frames.map(f=>f.key) }), wrPickNone:()=>upd({ frames:[] }),
+          wrFrames:frames.map(f=>{ const sel=on.has(f.key); return { file:f.file, name:label(f), status:sel?'بالجائزة':'مو بالجائزة', statusColor:sel?'#4ade80':'#9199ab',
+            border:sel?'#7c3aed':'#262a37', opacity:sel?1:0.35, hint:sel?'اضغط لإزالته من الجائزة':'اضغط لإضافته للجائزة',
+            toggle:()=>this.setState(st=>({ winReward:{ ...st.winReward, frames:st.winReward.frames.includes(f.key)?st.winReward.frames.filter(k=>k!==f.key):[...st.winReward.frames,f.key] } })) }; }),
+          wrSave:()=>{ const n=Math.floor(Number(wr.maxUses)); if(!(n>=1)) return this.flash('عدد مرات الاستخدام لازم يكون 1 أو أكثر.','err');
+            if(wr.enabled&&!picked) return this.flash('اختر إطار واحد على الأقل قبل تشغيل الجائزة.','err');
+            this.busy('winReward',()=>A.adminSetWinReward({ enabled:wr.enabled, maxUses:n, frames:wr.frames })).then(r=>{ if(!r) return;
+              const E={ invalid_max_uses:'عدد مرات الاستخدام غير صحيح.', no_frames:'اختر إطار واحد على الأقل قبل تشغيل الجائزة.' };
+              if(!r.success) return this.flash(E[r.error]||('تعذّر الحفظ: '+(r.error||'unknown')),'err');
+              this.setState({ winReward:r.config }); this.flash(r.config.enabled?`تم الحفظ — كل فوز بمباراة بثين يعطي كود لـ ${r.config.maxUses} شخص.`:'تم الحفظ — الجائزة موقوفة.'); }); } }; })(),
       codeRows:(s.codes||[]).map(c=>({ code:c.code, frame:c.displayNameAr||c.cardKey||c.frameRef, note:c.note||'—',
         canBurn:!c.redeemedAt&&!c.burnedAt, burn:()=>this.burnCode(c.code),
         status:c.burnedAt?`محروق · \u2068${fmtDate(c.burnedAt)}\u2069`:c.redeemedAt?`مستخدم — \u2068${c.redeemedUsername||('#'+c.redeemedBy)}\u2069${c.redeemedCustomId?' (\u2066'+c.redeemedCustomId+'\u2069)':''} · \u2068${fmtDate(c.redeemedAt)}\u2069`:'غير مستخدم', color:c.burnedAt?'#f87171':c.redeemedAt?'#4ade80':'#fcd34d' })),

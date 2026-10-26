@@ -1411,6 +1411,71 @@ document.addEventListener('DOMContentLoaded', async function() {
       rPanel.appendChild(rRow);
       rPanel.appendChild(rMsg);
       fPanel.parentNode.insertBefore(rPanel, fPanel);
+
+      /* ---- أكواد جوائز الفوز (مباريات البثين) — يوصلها الستريمر من زر
+       *      «اذهب لكشف كود الاسترداد» بشاشة الفوز (profile.html#win-codes) ---- */
+      var GAME_NAMES = { 'penalty': 'بلنتي', 'fastest-answer': 'أسرع إجابة' };
+      window.AGPAuth.getWinRewardCodes().then(function (res) {
+        var codes = (res && res.success && res.codes) || [];
+        var wanted = location.hash === '#win-codes';
+        if (!codes.length && !wanted) return;
+        var wPanel = fPanel.cloneNode(false);
+        wPanel.id = 'win-codes';
+        var wHeader = fPanel.children[0].cloneNode(true);
+        wHeader.children[0].textContent = 'أكواد جوائز الفوز';
+        if (wHeader.children[1]) wHeader.children[1].textContent = codes.length ? codes.length + ' كود' : '';
+        var how = document.createElement('div');
+        how.style.cssText = 'margin-top:14px;padding:12px 14px;border-radius:12px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.25);font-size:12.5px;line-height:1.9;color:#d9d3e6;';
+        how.innerHTML = '<b style="color:#fde7a8">كيف اللاعبين يستردون الكود؟</b><br>' +
+          '1. انسخ الكود وأرسله للاعبين فريقك الفائز (لا تعرضه بالبث).<br>' +
+          '2. لازم كل لاعب يكون عنده حساب بالموقع <b>مربوط بحساب تيك توك</b>.<br>' +
+          '3. اللاعب يفتح بروفايله ← قسم «استرداد كود»، يكتب الكود ويضغط «استرداد».<br>' +
+          '4. تطلع له قائمة الإطارات المتاحة ويختار إطار واحد ينضاف لمقتنياته.<br>' +
+          'كل كود له عدد استخدامات محدد، وكل لاعب يستخدمه مرة وحدة.';
+        var list = document.createElement('div');
+        list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:14px;';
+        if (!codes.length) {
+          var none = document.createElement('div');
+          none.style.cssText = 'font-size:12.5px;color:#8f8ea3;padding:6px 2px;';
+          none.textContent = 'ما عندك أكواد جوائز للحين — تطلع لك هنا لما تفوز بمباراة بين بثين.';
+          list.appendChild(none);
+        }
+        codes.forEach(function (c) {
+          var full = c.uses >= c.maxUses, off = Boolean(c.burnedAt);
+          var item = document.createElement('div');
+          item.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);';
+          var info = document.createElement('div');
+          info.style.cssText = 'display:flex;flex-direction:column;gap:3px;min-width:0;';
+          var codeEl = document.createElement('span');
+          codeEl.style.cssText = 'font-family:monospace;font-size:15px;letter-spacing:1px;direction:ltr;text-align:right;color:' + (off || full ? '#8f8ea3' : '#e6dcff') + ';';
+          codeEl.textContent = c.code;
+          var meta = document.createElement('span');
+          meta.style.cssText = 'font-size:11.5px;color:#8f8ea3;';
+          var d = new Date(c.createdAt);
+          meta.textContent = (GAME_NAMES[c.game] || c.game) + (c.teamName ? ' · ' + c.teamName : '') + ' · ' + d.toLocaleDateString('ar-SA') +
+            ' · ' + c.uses + ' / ' + c.maxUses + ' استخدام' + (off ? ' · موقوف' : full ? ' · اكتمل' : '');
+          info.appendChild(codeEl);
+          info.appendChild(meta);
+          item.appendChild(info);
+          if (!off && !full) {
+            var copy = document.createElement('button');
+            copy.textContent = 'نسخ';
+            copy.style.cssText = 'padding:8px 16px;border-radius:10px;cursor:pointer;font-family:\'IBM Plex Sans Arabic\',sans-serif;font-size:12.5px;border:1px solid rgba(251,191,36,.45);background:rgba(251,191,36,.12);color:#fde7a8;';
+            copy.addEventListener('click', function () {
+              var done = function () { copy.textContent = 'تم النسخ ✓'; setTimeout(function () { copy.textContent = 'نسخ'; }, 1500); };
+              var fallback = function () { var ta = document.createElement('textarea'); ta.value = c.code; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} ta.remove(); done(); };
+              if (navigator.clipboard) navigator.clipboard.writeText(c.code).then(done, fallback); else fallback();
+            });
+            item.appendChild(copy);
+          }
+          list.appendChild(item);
+        });
+        wPanel.appendChild(wHeader);
+        wPanel.appendChild(how);
+        wPanel.appendChild(list);
+        rPanel.parentNode.insertBefore(wPanel, rPanel);
+        if (wanted) setTimeout(function () { wPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150);
+      }).catch(function () {});
     }
 
     /* ---- دخولياتي الحالية ---- */
@@ -1589,6 +1654,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (!customId || !window.AGPAuth) return;
     window.AGPAuth.getPublicProfile(customId).then(function(result){
       if (result && result.success && result.profile) populate(result.profile);
+      // جاي من زر «اذهب لكشف كود الاسترداد» بشاشة الفوز: نفتح تبويب المقتنيات (فيه أكواد جوائز الفوز).
+      if (location.hash === '#win-codes') {
+        setTimeout(function(){
+          var tab = Array.prototype.filter.call(document.querySelectorAll('button'), function(b){ return (b.textContent || '').trim() === 'المقتنيات'; })[0];
+          if (tab) tab.click();
+        }, 300);
+      }
     }).catch(function(){});
   }
 

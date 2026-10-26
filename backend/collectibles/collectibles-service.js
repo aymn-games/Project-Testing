@@ -1098,6 +1098,70 @@ function listChoiceCodes() {
   });
 }
 
+/* ----------------------------------------------------------------------
+ * جائزة فوز مباريات البثين — الأدمن يحدد الإطارات المسموحة وعدد مرات
+ * الاستخدام (app_settings 'challenge_win_reward')، وكل مباراة تنتهي بفائز
+ * تنشئ كود اختيار جديد بهذي الإعدادات لستريمر الفريق الفائز. الإطارات اللي
+ * تنضاف بعدين ما تدخل بالجائزة لين الأدمن يختارها.
+ * ---------------------------------------------------------------------- */
+var WIN_REWARD_KEY = 'challenge_win_reward';
+var WIN_REWARD_DEFAULT = { enabled: false, maxUses: 10, frames: [] };
+
+function getWinRewardConfig() {
+  var row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get(WIN_REWARD_KEY);
+  var cfg = {};
+  try { cfg = row ? JSON.parse(row.value) || {} : {}; } catch (e) { cfg = {}; }
+  return {
+    enabled: Boolean(cfg.enabled),
+    maxUses: Math.floor(Number(cfg.maxUses)) || WIN_REWARD_DEFAULT.maxUses,
+    frames: Array.isArray(cfg.frames) ? cfg.frames.map(String) : []
+  };
+}
+
+/** @returns {{success: boolean, config?: Object, error?: string}} */
+function setWinRewardConfig(input) {
+  input = input || {};
+  var maxUses = Math.floor(Number(input.maxUses));
+  if (!maxUses || maxUses < 1 || maxUses > MAX_CHOICE_CODE_USES) return { success: false, error: 'invalid_max_uses' };
+  var known = {};
+  listAllFramesForChoice().forEach(function (f) { known[frameKey(f.frameType, f.frameRef)] = true; });
+  var frames = (Array.isArray(input.frames) ? input.frames : []).map(String).filter(function (k, i, arr) { return known[k] && arr.indexOf(k) === i; });
+  var enabled = Boolean(input.enabled);
+  if (enabled && !frames.length) return { success: false, error: 'no_frames' };
+  var cfg = { enabled: enabled, maxUses: maxUses, frames: frames };
+  db.prepare('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(WIN_REWARD_KEY, JSON.stringify(cfg));
+  return { success: true, config: cfg };
+}
+
+/**
+ * كود جائزة لستريمر الفريق الفائز (مرة وحدة لكل مباراة — challenge-match.js).
+ * @returns {{success: boolean, code?: string, error?: string}}
+ */
+function createWinRewardCode(userId, meta) {
+  meta = meta || {};
+  var cfg = getWinRewardConfig();
+  if (!cfg.enabled) return { success: false, error: 'disabled' };
+  var allowed = {};
+  cfg.frames.forEach(function (k) { allowed[k] = true; });
+  var excluded = listAllFramesForChoice().map(function (f) { return frameKey(f.frameType, f.frameRef); }).filter(function (k) { return !allowed[k]; });
+  var r = generateChoiceCode(cfg.maxUses, excluded, 'جائزة فوز — ' + String(meta.gameName || meta.game || '') + ' — ' + String(meta.teamName || ''));
+  if (!r.success) return r;
+  db.prepare('INSERT INTO challenge_reward_codes (code, user_id, match_id, game, team_name, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(r.code, userId, String(meta.matchId || ''), String(meta.game || ''), String(meta.teamName || '').slice(0, 40), now());
+  logger.log('Collectibles: win reward code ' + r.code + ' for user ' + userId + ' (match ' + meta.matchId + ')');
+  return { success: true, code: r.code };
+}
+
+/** أكواد جوائز الفوز لستريمر (بروفايله)، الأحدث أولاً. */
+function listWinRewardCodes(userId) {
+  return db.prepare(
+    'SELECT r.code, r.game, r.team_name, r.created_at, c.uses, c.max_uses, c.burned_at FROM challenge_reward_codes r ' +
+    'JOIN choice_codes c ON c.code = r.code WHERE r.user_id = ? ORDER BY r.created_at DESC LIMIT 100'
+  ).all(userId).map(function (r) {
+    return { code: r.code, game: r.game, teamName: r.team_name, createdAt: r.created_at, uses: r.uses, maxUses: r.max_uses, burnedAt: r.burned_at || null };
+  });
+}
+
 /**
  * حرق كود (إلغاؤه نهائياً — استرجاع مبلغ مثلاً). يشتغل على كل أنواع الأكواد.
  * الكود المستخدم ما ينحرق (العناصر صارت عند العميل — تُسحب يدوياً لو لزم).
@@ -1166,6 +1230,10 @@ module.exports = {
   claimChoiceCode: claimChoiceCode,
   generateChoiceCode: generateChoiceCode,
   listChoiceCodes: listChoiceCodes,
+  getWinRewardConfig: getWinRewardConfig,
+  setWinRewardConfig: setWinRewardConfig,
+  createWinRewardCode: createWinRewardCode,
+  listWinRewardCodes: listWinRewardCodes,
   listFrameCodes: listFrameCodes,
   redeemFrameCode: redeemFrameCode
 };

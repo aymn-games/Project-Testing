@@ -153,6 +153,9 @@ var ROUTES = [
   // أكواد "اختيار إطار" — توليد/عرض للأدمن، واستلام الإطار المختار للاعب.
   { method: 'POST', path: '/api/admin/choice-codes/generate', requireAuth: true, requireAdmin: true, handler: handleAdminGenerateChoiceCode },
   { method: 'GET', path: '/api/admin/choice-codes', requireAuth: true, requireAdmin: true, handler: handleAdminListChoiceCodes },
+  { method: 'GET', path: '/api/admin/win-reward', requireAuth: true, requireAdmin: true, handler: handleAdminGetWinReward },
+  { method: 'POST', path: '/api/admin/win-reward', requireAuth: true, requireAdmin: true, handler: handleAdminSetWinReward },
+  { method: 'GET', path: '/api/collectibles/win-codes', requireAuth: true, handler: handleWinRewardCodes },
   { method: 'POST', path: '/api/collectibles/redeem-choice', requireAuth: true, handler: handleRedeemChoiceCode },
   { method: 'POST', path: '/api/points/round-complete', requireAuth: true, handler: handleRoundComplete },
   // ---- هل البث شغّال الحين؟ — مكتبة الألعاب والألعاب تقطع الاتصال المحفوظ
@@ -690,6 +693,19 @@ function handleAdminGenerateChoiceCode(req, res, body) {
 
 function handleAdminListChoiceCodes(req, res) {
   sendJson(res, 200, { success: true, codes: collectiblesService.listChoiceCodes() });
+}
+
+function handleAdminGetWinReward(req, res) {
+  sendJson(res, 200, { success: true, config: collectiblesService.getWinRewardConfig() });
+}
+
+function handleAdminSetWinReward(req, res, body) {
+  var result = collectiblesService.setWinRewardConfig(body);
+  sendJson(res, result.success ? 200 : 400, result);
+}
+
+function handleWinRewardCodes(req, res, body, user) {
+  sendJson(res, 200, { success: true, codes: collectiblesService.listWinRewardCodes(user.id) });
 }
 
 function handleChallengeSearch(req, res, body, user) {
