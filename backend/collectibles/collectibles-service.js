@@ -1161,13 +1161,15 @@ function setWinRewardConfig(input) {
 }
 
 /**
- * كود جائزة لستريمر الفريق الفائز (مرة وحدة لكل مباراة — challenge-match.js).
+ * كود جائزة لستريمر الفريق الفائز. كل ستريمر ياخذ كود واحد بس طول الوقت
+ * (أول فوز له) — بعدها الفوز ما يعطيه كود ثاني.
  * @returns {{success: boolean, code?: string, error?: string}}
  */
 function createWinRewardCode(userId, meta) {
   meta = meta || {};
   var cfg = getWinRewardConfig();
   if (!cfg.enabled) return { success: false, error: 'disabled' };
+  if (db.prepare('SELECT 1 FROM challenge_reward_codes WHERE user_id = ?').get(userId)) return { success: false, error: 'already_rewarded' };
   var allowed = {};
   cfg.frames.forEach(function (k) { allowed[k] = true; });
   var excluded = listAllFramesForChoice().map(function (f) { return frameKey(f.frameType, f.frameRef); }).filter(function (k) { return !allowed[k]; });

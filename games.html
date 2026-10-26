@@ -2261,5 +2261,68 @@ document.addEventListener('DOMContentLoaded', async function() {
     }, 300);
   })();
 </script>
+<!-- تنويه جوائز مباريات البثين — نافذة تطلع مرة وحدة بمكتبة الألعاب (لين يضغط
+     «فهمت» أو «العب ضد بث»، localStorage 'agp-notice-win-frames-v1'). تشرح إن
+     أول فوز للستريمر بمباراة بين بثين يعطيه كود إطارات يوزعه على متابعينه،
+     وإن التعليق الأخير بالمنصة كان بسبب هذا التحديث. -->
+<script>
+(function () {
+  var KEY = 'agp-notice-win-frames-v1';
+  try { if (localStorage.getItem(KEY)) return; } catch (e) {}
+  var FRAMES = ['frame-club-hilal-wolf.png', 'frame-rare-dragon.png', 'frame-fire-water.png', 'frame-club-nassr-eagle.png', 'frame-girls-kitty-hearts.png', 'frame-general-stadium.png'];
+
+  function show() {
+    if (document.getElementById('agp-win-frames-notice')) return;
+    var st = document.createElement('style');
+    st.textContent =
+      '@keyframes agpWfIn{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}' +
+      '#agp-win-frames-notice{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:16px;direction:rtl;font-family:"Readex Pro","IBM Plex Sans Arabic",sans-serif;background:rgba(5,5,8,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}' +
+      '#agp-win-frames-notice .bx{width:min(560px,100%);max-height:calc(100vh - 32px);overflow-y:auto;box-sizing:border-box;padding:26px clamp(18px,4vw,30px) 22px;border-radius:26px;color:#f4f2fb;text-align:right;' +
+        'background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(251,191,36,.16),transparent 70%),linear-gradient(180deg,#1b1530,#0c0a14);border:1px solid rgba(251,191,36,.4);box-shadow:0 30px 80px -30px rgba(0,0,0,.95);animation:agpWfIn .45s cubic-bezier(.22,1,.36,1) both}' +
+      '#agp-win-frames-notice .tag{display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border-radius:999px;font-size:12.5px;font-weight:600;color:#fde7a8;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35)}' +
+      '#agp-win-frames-notice h2{margin:14px 0 6px;font-size:clamp(21px,3.2vw,26px);line-height:1.45;font-weight:700}' +
+      '#agp-win-frames-notice h2 em{font-style:normal;color:#fbbf24}' +
+      '#agp-win-frames-notice .lead{margin:0;font-size:14.5px;line-height:1.9;color:#cfc7e2}' +
+      '#agp-win-frames-notice .fr{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}' +
+      '#agp-win-frames-notice .fr span{height:52px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;overflow:hidden}' +
+      '#agp-win-frames-notice .fr img{max-width:92%;max-height:46px;object-fit:contain}' +
+      '#agp-win-frames-notice ol{margin:0;padding:0 20px 0 0;display:flex;flex-direction:column;gap:7px;font-size:14px;line-height:1.8;color:#e2dcef}' +
+      '#agp-win-frames-notice ol b{color:#fde7a8}' +
+      '#agp-win-frames-notice .note{margin-top:16px;padding:11px 14px;border-radius:14px;font-size:13px;line-height:1.85;color:#d9d3e6;background:rgba(178,140,245,.08);border:1px solid rgba(178,140,245,.28)}' +
+      '#agp-win-frames-notice .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}' +
+      '#agp-win-frames-notice .btns a,#agp-win-frames-notice .btns button{flex:1 1 180px;height:48px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font:600 15px "Readex Pro","IBM Plex Sans Arabic",sans-serif;cursor:pointer;text-decoration:none}' +
+      '#agp-win-frames-notice .go{border:none;color:#1a1206;background:linear-gradient(90deg,#fbbf24,#fde68a);box-shadow:0 10px 30px -10px rgba(251,191,36,.6)}' +
+      '#agp-win-frames-notice .ok{border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.04);color:#e7e3ef}';
+    document.head.appendChild(st);
+
+    var ov = document.createElement('div');
+    ov.id = 'agp-win-frames-notice';
+    ov.innerHTML = '<div class="bx" role="dialog" aria-modal="true" aria-labelledby="agp-wf-t">' +
+      '<span class="tag">🎁 جديد بالمنصة</span>' +
+      '<h2 id="agp-wf-t">العبوا ضد بعض، و<em>فوزك يجيب إطارات لمتابعينك</em></h2>' +
+      '<p class="lead">صار تقدر تتحدى ستريمر ثاني بمباراة بين بثين (بلنتي أو أسرع إجابة): جمهورك فريق وجمهوره فريق. ولو فاز فريقك تاخذ كود إطارات توزعه على متابعينك.</p>' +
+      '<div class="fr">' + FRAMES.map(function (f) { return '<span><img src="' + f + '" alt="" loading="lazy"></span>'; }).join('') + '</div>' +
+      '<ol>' +
+        '<li>ادخل <b>«العب ضد ستريمر»</b> وادعُ بث ثاني لمباراة.</li>' +
+        '<li>أول فوز لك يعطيك <b>كود إطارات</b> يستخدمه عدد من متابعينك، وكل واحد منهم يختار إطاره.</li>' +
+        '<li>الكود يطلع مخفي بشاشة الفوز عشان ما ينسرق من البث، وتلقاه واضح ببروفايلك ← المقتنيات ← <b>أكواد جوائز الفوز</b>.</li>' +
+        '<li>متابعينك لازم يكون عندهم <b>حساب بالموقع مربوط بتيك توك</b>، ويستردون الكود من بروفايلهم ← «استرداد كود».</li>' +
+        '<li>كل ستريمر ياخذ كود واحد بس.</li>' +
+      '</ol>' +
+      '<div class="note">💜 التعليق اللي صار بالمنصة الفترة الماضية كان بسبب هذا التحديث. شكراً لصبركم!</div>' +
+      '<div class="btns"><a class="go" href="challenge.html" data-wf-close>العب ضد ستريمر الحين</a><button type="button" class="ok" data-wf-close>فهمت</button></div>' +
+    '</div>';
+    ov.addEventListener('click', function (e) {
+      if (!e.target.closest('[data-wf-close]') && e.target !== ov) return;
+      try { localStorage.setItem(KEY, String(Date.now())); } catch (err) {}
+      if (!e.target.closest('a')) ov.remove();
+    });
+    document.body.appendChild(ov);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(show, 900); });
+  else setTimeout(show, 900);
+})();
+</script>
 </body>
 </html>
