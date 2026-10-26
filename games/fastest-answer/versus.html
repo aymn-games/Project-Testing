@@ -181,12 +181,16 @@
     var CATS = [['math','مسألة رياضية'],['image','صورة واكتب الاسم'],['reverse','اعكس الكلمة'],['number','اكتب الرقم'],['capital','عاصمة الدولة'],['proverb','أكمل المثل'],['scramble','ترتيب الحروف'],['flag','علم الدولة'],['complete','أكمل الكلمة'],['odd','اكتشف المختلف']];
     var ALL_IDS = CATS.map(function (c) { return c[0]; });
     var ANSWER_SEC = 20;
+    var PER_SIDE = 3;   // كل ستريمر يختار 3 فئات بالضبط، والخصم ما يختار فئات المنشئ
+    // أول 3 فئات متاحة (غير المحجوزة) كاختيار مبدئي.
+    function defaultCats(taken) { return ALL_IDS.filter(function (id) { return (taken || []).indexOf(id) < 0; }).slice(0, PER_SIDE); }
     var LOBBY_MIN = 15, LOBBY_MAX = 300, LOBBY_STEP = 15;
     var API = String((A && A.API_BASE) || '');
 
     var ERRORS = {
         not_eligible: 'حسابك لازم يكون ستريمر مربوط بتيك توك.',
-        pick_cats: 'اختر فئة وحدة على الأقل.',
+        pick_cats: 'اختر 3 فئات بالضبط.',
+        cats_taken: 'فيه فئة اختارها خصمك — اختر غيرها.',
         opponent_not_eligible: 'هذا الحساب مو ستريمر مربوط بتيك توك.',
         self: 'ما تقدر تتحدى نفسك 🙂',
         you_in_match: 'عندك مباراة جارية — خلّصها أول.',
@@ -201,8 +205,8 @@
     };
 
     var state = {
-        settings: { team1: '', followersOnly: false, target: 15, lobbySec: 60, cats: ALL_IDS.slice() },
-        guest: { team2: '', followersOnly: false, cats: ALL_IDS.slice() },
+        settings: { team1: '', followersOnly: false, target: 15, lobbySec: 60, cats: defaultCats([]) },
+        guest: { team2: '', followersOnly: false, cats: null },
         tab: 'live',
         live: [],
         liveLoaded: false,
@@ -259,16 +263,20 @@
     function followersSeg(attr, on) { return seg(attr, [['1', 'المتابعين فقط'], ['0', 'الجميع']], on ? '1' : '0'); }
     function catName(id) { var c = CATS.filter(function (x) { return x[0] === id; })[0]; return c ? c[1] : id; }
     function catList(ids) { return (ids || []).map(catName).join('، '); }
-    // اختيار الفئات (نفس شاشة الفئات بأسرع إجابة العادية: أي عدد، فئة وحدة على الأقل).
-    function catsBlock(selected, attr, locked) {
-        return '<div class="multi' + (locked ? ' locked' : '') + '"><div class="ml">اختر الفئات <em class="' + (selected.length ? 'full' : '') + '">' + selected.length + ' من ' + CATS.length + '</em></div>' +
+    // اختيار الفئات: 3 فئات بالضبط لكل ستريمر. taken = فئات المنشئ (مقفولة على الخصم).
+    function catsBlock(selected, attr, locked, taken) {
+        taken = taken || [];
+        return '<div class="multi' + (locked ? ' locked' : '') + '"><div class="ml">اختر ' + PER_SIDE + ' فئات <em class="' + (selected.length === PER_SIDE ? 'full' : '') + '">' + selected.length + ' من ' + PER_SIDE + '</em></div>' +
             '<div class="opts">' + CATS.map(function (c) {
-                return '<button type="button" class="opt' + (selected.indexOf(c[0]) >= 0 ? ' on' : '') + '" ' + attr + '="' + c[0] + '"><i></i>' + c[1] + '</button>';
+                var off = taken.indexOf(c[0]) >= 0;
+                return '<button type="button" class="opt' + (selected.indexOf(c[0]) >= 0 ? ' on' : '') + '" ' + attr + '="' + c[0] + '"' + (off ? ' disabled title="اختارها خصمك"' : '') + '><i></i>' + c[1] + (off ? ' <span class="soon">· اختارها خصمك</span>' : '') + '</button>';
             }).join('') + '</div></div>';
     }
-    function toggleCat(list, id) {
+    function toggleCat(list, id, taken) {
+        if ((taken || []).indexOf(id) >= 0) return;
         var i = list.indexOf(id);
-        if (i >= 0) { if (list.length <= 1) { setMsg('اختر فئة وحدة على الأقل', 'bad'); return; } list.splice(i, 1); }
+        if (i >= 0) list.splice(i, 1);
+        else if (list.length >= PER_SIDE) { setMsg('تقدر تختار ' + PER_SIDE + ' فئات بس — شيل وحدة أول', 'bad'); return; }
         else list.push(id);
         msgLocked = false;
     }
@@ -339,7 +347,7 @@
             '<div class="plist" id="plist">' + (state.tab === 'live' ? liveHtml() : resultsHtml()) + '</div>';
         $('main-grid').innerHTML =
             section(1, 'فريقك', team + note) + section(2, 'المباراة', match + note) +
-            section(3, 'الفئات', catsBlock(s.cats, 'data-cat') + '<div class="lock-note" style="color:#8a8596">خصمك يختار فئاته لما يقبل، والأسئلة تطلع من فئاتكم الاثنين</div>' + note, { full: true }) +
+            section(3, 'الفئات', catsBlock(s.cats, 'data-cat') + '<div class="lock-note" style="color:#8a8596">خصمك يختار ' + PER_SIDE + ' فئات غير فئاتك لما يقبل، والأسئلة تطلع من فئاتكم الاثنين</div>' + note, { full: true }) +
             section(4, 'ادعُ خصمك', opp, { full: true, note: 'ستريمر مربوط بتيك توك' });
         if (locked) Array.prototype.forEach.call($('main-grid').querySelectorAll('.sec'), function (el, k, all) { if (k < all.length - 1) el.classList.add('locked'); });
         updateCta();
@@ -377,6 +385,7 @@
     /* ---- الخصم: بعد القبول يجهّز فريقه ويضغط جاهز ---- */
     function renderGuest(inv) {
         var s = inv.settings || {}, g = state.guest, ready = inv.status === 'ready';
+        if (!g.cats) g.cats = defaultCats(s.hostCats);
         var host = row('فريق ' + esc(inv.other.name), fixed(esc(s.team1 || inv.other.name))) +
             row('نقاط الفوز', fixed(s.target || 15), { divider: true }) +
             row('وقت الإجابة', fixed(ANSWER_SEC + ' ثانية'), { divider: true }) +
@@ -385,7 +394,7 @@
             row('فئاته', fixed(esc(catList(s.hostCats)), true), { divider: true });
         var mine = row('اسم فريقك', '<input class="txt" data-g="team2" maxlength="24" placeholder="' + esc(myName()) + '" value="' + esc(g.team2) + '"' + (ready ? ' disabled' : '') + '>', { hint: 'فاضي = اسم حسابك' }) +
             row('المسموح لهم بالدخول', '<div class="' + (ready ? 'locked' : '') + '">' + followersSeg('data-gfo', g.followersOnly) + '</div>', { divider: true }) +
-            '<span class="div"></span>' + catsBlock(g.cats, 'data-gcat', ready) +
+            '<span class="div"></span>' + catsBlock(g.cats, 'data-gcat', ready, s.hostCats) +
             '<div class="btns" style="margin-top:10px"><button class="btn ghost" data-act="withdraw" data-id="' + inv.id + '">انسحاب من المباراة</button></div>';
         $('main-grid').innerHTML =
             section('✓', 'إعدادات ' + esc(inv.other.name), host, { note: 'يحددها صاحب الدعوة' }) +
@@ -432,6 +441,7 @@
         state.busy = true; updateCta();
         if (j) {
             var ready = j.status !== 'ready';
+            if (ready && (state.guest.cats || []).length !== PER_SIDE) { state.busy = false; setMsg(ERRORS.pick_cats, 'bad'); updateCta(); return; }
             A.challengeReady(j.id, ready, { team2: state.guest.team2, followersOnly: state.guest.followersOnly, cats: state.guest.cats }).then(function (r) {
                 state.busy = false; msgLocked = false;
                 if (!(r && r.success)) setMsg(ERRORS[r && r.error] || 'تعذّر الحفظ، حاول مرة ثانية.', 'bad');
@@ -460,7 +470,7 @@
         var ct = e.target.closest('[data-cat]');
         if (ct) { toggleCat(state.settings.cats, ct.getAttribute('data-cat')); renderHost(); return; }
         var gc = e.target.closest('[data-gcat]');
-        if (gc) { toggleCat(state.guest.cats, gc.getAttribute('data-gcat')); renderMain(); return; }
+        if (gc) { var gj = guestMode(); toggleCat(state.guest.cats, gc.getAttribute('data-gcat'), gj && gj.settings && gj.settings.hostCats); renderMain(); return; }
         var st = e.target.closest('[data-step]');
         if (st) { state.settings.lobbySec = Math.min(LOBBY_MAX, Math.max(LOBBY_MIN, state.settings.lobbySec + Number(st.getAttribute('data-step')) * LOBBY_STEP)); renderHost(); return; }
         var gfo = e.target.closest('[data-gfo]');
@@ -479,6 +489,7 @@
     });
 
     function sendInvite(customId) {
+        if (state.settings.cats.length !== PER_SIDE) { setMsg(ERRORS.pick_cats, 'bad'); return; }
         state.busy = true; redrawList();
         var s = state.settings;
         A.challengeInvite(customId, GAME, { team1: s.team1, followersOnly: s.followersOnly, target: s.target, lobbySec: s.lobbySec, cats: s.cats }).then(function (r) {
@@ -514,7 +525,7 @@
         b.disabled = true;
         A.challengeRespond(id, accept).then(function (r) {
             if (!(r && r.success)) alert(ERRORS[r && r.error] || 'تعذّر الرد على الدعوة.');
-            if (accept && r && r.success) { state.guest = { team2: '', followersOnly: false, cats: ALL_IDS.slice() }; msgLocked = false; }
+            if (accept && r && r.success) { state.guest = { team2: '', followersOnly: false, cats: null }; msgLocked = false; }
             poll(true);
         });
     });
@@ -550,7 +561,7 @@
             state.joined = j;
             if (guestMode() && guestMode().status === 'ready' && guestMode().guestSettings) {
                 var gs = guestMode().guestSettings;
-                state.guest = { team2: gs.team2 || '', followersOnly: Boolean(gs.followers2), cats: (gs.guestCats || ALL_IDS).slice() };
+                state.guest = { team2: gs.team2 || '', followersOnly: Boolean(gs.followers2), cats: gs.guestCats ? gs.guestCats.slice() : null };
             }
             renderTop();
             var mode = (guestMode() ? 'g:' + guestMode().id + ':' + guestMode().status : 'h:' + (openOut() ? openOut().id + ':' + openOut().status : '-'));
