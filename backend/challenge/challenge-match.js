@@ -49,7 +49,8 @@ var GAMES = {
         sanitize: fastestAnswer.sanitizeSettings,
         sanitizeHost: fastestAnswer.sanitizeHostSettings,
         sanitizeGuest: fastestAnswer.sanitizeGuestSettings,
-        hostActions: { start: 'startMatch', spin: 'spin', newGame: 'newGame', finish: 'finish' }
+        hostActions: { start: 'startMatch', spin: 'spin', newGame: 'newGame', finish: 'finish' },
+        twoStep: true
     },
     'penalty': {
         name: 'ركلات الترجيح',

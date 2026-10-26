@@ -209,7 +209,7 @@ function inbox(me, have) {
     };
 }
 
-/** قبول/رفض دعوة واردة. guestSettings: اسم فريق الخصم + فئاته الثلاث. */
+/** قبول/رفض دعوة واردة. ألعاب twoStep: القبول يبدأ التجهيز بس، وإعدادات الخصم تجي مع «جاهز». */
 function respond(me, inviteId, accept, guestSettings) {
     expireInvites();
     var inv = _invites[String(inviteId || '')];
@@ -224,7 +224,7 @@ function respond(me, inviteId, accept, guestSettings) {
         if (activeMatchFor(inv.toId)) return { success: false, error: 'you_in_match' };
         inv.status = 'setup';
         inv.setupExpiresAt = now() + SETUP_TTL_MS;
-        inv.guestSettings = challengeMatch.GAMES[inv.game].sanitizeGuest({});
+        inv.guestSettings = null; // تنحفظ لما يضغط «جاهز» (guestReady)
         return { success: true, setup: true, inviteId: inv.id, game: inv.game };
     }
     var guest = challengeMatch.GAMES[inv.game].sanitizeGuest(guestSettings);
@@ -275,7 +275,7 @@ function hostStart(me, inviteId) {
     var inv = _invites[String(inviteId || '')];
     if (!inv || inv.fromId !== me.id || !inv.twoStep) return { success: false, error: 'invite_not_found' };
     if (inv.status === 'setup') return { success: false, error: 'opponent_not_ready' };
-    if (inv.status !== 'ready') return { success: false, error: 'invite_' + inv.status };
+    if (inv.status !== 'ready' || !inv.guestSettings) return { success: false, error: 'invite_' + inv.status };
     if (!isEligible(me)) return { success: false, error: 'not_eligible' };
     if (activeMatchFor(inv.fromId)) return { success: false, error: 'you_in_match' };
     if (activeMatchFor(inv.toId)) { inv.status = 'cancelled'; return { success: false, error: 'opponent_in_match' }; }

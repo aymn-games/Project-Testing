@@ -18,6 +18,8 @@
 <script src="../../auth/game-access-guard.js"></script>
 <script src="../../js/agp-live-watch.js"></script>
 <script src="../../js/agp-player-card.js"></script>
+<script src="../../js/agp-challenge-comms.js"></script>
+<script src="../../js/agp-challenge-win.js"></script>
 <script src="../../js/agp-win-card.js"></script>
 <script src="fa-platform.js"></script>
 <script src="fa-questions.js"></script>
@@ -430,13 +432,26 @@ class Component extends DCLogic {
     this.ws=ws;
     ws.onopen=()=>ws.send(JSON.stringify({type:'join',matchId:CHALLENGE,token:window.AGPAuth&&window.AGPAuth.getToken?window.AGPAuth.getToken():''}));
     ws.onmessage=ev=>{ let m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
-      if(m.type==='state'&&m.match) this.chApply(m.match);
+      if(m.type==='state'&&m.match){ this.chComms().onState(m.match); this.chApply(m.match); }
+      else if(this.chComms().onMessage(m)) return;
       else if(m.type==='error'){ if(['match_not_found','not_in_match','auth_required'].includes(m.error)){ this.chClosed=true; location.replace(CH_LOBBY); }
         else this.toastMsg({need_players:'كل فريق يحتاج لاعب واحد على الأقل',busy:'الجولة شغّالة',match_over:'المباراة انتهت — ابدأ مباراة جديدة',host_only:'التحكم لمنشئ المباراة'}[m.error]||'تعذّر تنفيذ الأمر'); } };
     ws.onclose=()=>{ this.ws=null; if(!this.chClosed) setTimeout(()=>this.chConnect(),2000); }; }
+  // تواصل الستريمرين (شات + مايك طوال المباراة) و شاشة الفوز المشتركة لمباريات البثين.
+  chComms(){ if(!this._comms){ const bar=document.createElement('div'); bar.style.cssText='position:fixed;top:92px;left:clamp(12px,1.25vw,24px);z-index:60;display:flex;gap:10px;direction:rtl'; document.body.appendChild(bar);
+      this._comms=window.AGPChallengeComms.create({container:bar,matchId:CHALLENGE,send:o=>{ const ws=this.ws; if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); },toast:t=>this.toastMsg(t),colors:['#a78bfa','#38bdf8']}); }
+    return this._comms; }
+  chShowWin(M){ const st=M.state, w=st.winner, stats=st.playerStats||{}, info=st.playerInfo||{}, W=window.AGPChallengeWin;
+    W.show({ color:['#a78bfa','#38bdf8'][w], teamName:st.teams[w].name, streamer:M.sides[w],
+      scoreHtml:'النقاط <b>'+st.teams[w].score+'</b> مقابل <b>'+st.teams[1-w].score+'</b> ضد '+String(st.teams[1-w].name).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
+      players:st.teams[w].players.map(n=>({name:n,avatar:info[n]&&info[n].avatar,value:(stats[n]&&stats[n].pts)||0})),
+      unit:W.arabicUnit('نقطة','نقطتين','نقاط'),
+      onBack:()=>{ this.chClosed=true; this.chSend('leave'); setTimeout(()=>{ location.href='../../games.html'; },300); } }); }
   chSend(action){ const ws=this.ws; if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:'action',action})); }
   chHostOnly(){ if(this.chHost) return true; this.toastMsg('التحكم لـ '+((this.chM&&this.chM.sides[this.chM.host].name)||'منشئ المباراة')); return false; }
   chApply(M){ this.chM=M; const st=M.state;
+    // بعد إعلان الفائز تبقى شاشة الفوز حتى لو الطرف الثاني طلع (المباراة انتهت).
+    if(st.winner!=null&&st.phase==='results'){ this.chShowWin(M); if(M.ended){ this.chClosed=true; return; } } else window.AGPChallengeWin.hide();
     if(M.ended||st.phase==='lobby'){ this.chClosed=true; try{ this.ws&&this.ws.close(); }catch(e){} location.replace(CH_LOBBY); return; }
     this.chOffset=M.serverNow-Date.now(); this.chHost=M.you===M.host; this.chInfo=st.playerInfo||{};
     if(!this.chInit){ this.chInit=true; this.DUR=M.settings.dur; this.KW=M.settings.keywords.slice();
@@ -459,8 +474,8 @@ class Component extends DCLogic {
         if(s.phase==='countdown') this.snd('open'); this.chTick(st); } }
     if(st.phase==='results'&&(s.phase==='question'||s.phase==='countdown'||patch.reels)){ clearInterval(this.ti);
       patch.phase='results'; patch.countdown=null; patch.q={...(this.chQ||st.question||{catName:st.catName,sub:''}),answer:st.answer}; patch.timeLeft=(st.answers||[]).length>=2?Math.max(1,s.timeLeft):0; if(s.phase==='question') this.snd('timeup'); }
-    if(st.phase==='results'&&st.winner!=null&&!s.winner){ const w=st.teams[st.winner]; patch.winner={name:w.name,score:w.score,players:w.players,i:st.winner};
-      setTimeout(()=>this.snd('win'),300); }
+    if(st.phase==='results'&&st.winner!=null&&!this.chWinSnd){ this.chWinSnd=true; setTimeout(()=>this.snd('win'),300); }
+    if(st.winner==null) this.chWinSnd=false;
     if(st.phase==='ready'&&st.round===0&&s.round>0){ // مباراة جديدة من المنشئ
       clearInterval(this.ti); this.chRound=0; this.played=[new Set(),new Set()];
       Object.assign(patch,{winner:null,phase:'ready',round:0,q:null,countdown:null,reels:[0,1].map(()=>this.blankReel()),cat:{items:[],offset:0,trans:'none',stopped:false,idx:null,ci:-1}}); }
@@ -652,13 +667,13 @@ class Component extends DCLogic {
       q:s.q||{}, timeLeft:s.timeLeft, timerDeg:s.timeLeft/this.DUR*360, timerColor:s.timeLeft<=5?'#f87171':'#a78bfa',
       chosen:s.reels.map((r,i)=>({name:r.chosen||'—',color:col(i),bg:col(i)+'1a',bd:col(i)+'55',...this.avItem(r.chosen,col(i))})), received:s.received,
       answers:s.answers.map(a=>({...a,pts:fmt(a.pts),color:col(a.team),bg:col(a.team)+'26',glow:col(a.team)+'40',...this.avItem(a.user,col(a.team))})),
-      closeResults:this.closeResults, newGame:this.newGame, goLibrary:()=>{ this.snd('close'); if(CHALLENGE){ this.chSend('leave'); location.href='../../challenge.html'; return; } location.href=FA.libraryUrl; },
+      closeResults:this.closeResults, newGame:this.newGame, goLibrary:()=>{ this.snd('close'); if(CHALLENGE){ this.chSend('leave'); location.href='versus.html'; return; } location.href=FA.libraryUrl; },
       winner:s.winner?(()=>{ const w=s.winner, c=col(w.i), pl=s.teams[w.i].players;
         return {name:w.name,score:fmt(w.score),color:c,ring:c+'40',bd:c+'66',soft:c+'1a',
           players:pl.map((n,j)=>{ const av=this.avatar(n); return {name:n,initial:[...n].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:av||'',imgOp:av?1:0,color:c,glow:c+'55',cardBd:c+'55',soft:c+'1a',avBg:`linear-gradient(135deg, ${c}, ${c}66)`,delay:(0.5+j*0.08).toFixed(2)+'s',...this.winCardItem(n,j,['فوز '+w.name,fmt(w.score)+' نقطة','أسرع إجابة'])}; })}; })():null, toast:s.toast,
       lblDisp:s.narrow?'none':'inline', stop:e=>e.stopPropagation(),
       logoOp:s.logo?1:0, phOp:s.logo?0:1, phBorder:s.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}), fx:this.buildFx(),
-      onExit:()=>this.open('exitOpen'), closeExit:()=>this.shut('exitOpen'), confirmExit:()=>{ this.shut('exitOpen'); if(CHALLENGE){ this.chSend('leave'); setTimeout(()=>{ location.href='../../challenge.html'; },300); return; } this.newGame(); location.href=FA.libraryUrl; }, exitOpen:s.exitOpen,
+      onExit:()=>this.open('exitOpen'), closeExit:()=>this.shut('exitOpen'), confirmExit:()=>{ this.shut('exitOpen'); if(CHALLENGE){ this.chSend('leave'); setTimeout(()=>{ location.href='versus.html'; },300); return; } this.newGame(); location.href=FA.libraryUrl; }, exitOpen:s.exitOpen,
       onEvents:()=>s.eventsOpen?this.shut('eventsOpen'):this.open('eventsOpen'), closeEvents:()=>this.shut('eventsOpen'), eventsOpen:s.eventsOpen, eventGroups:eg, noEvents:!eg.length,
       onSettings:()=>this.open('settingsOpen'), closeSettings:this.closeSettings, settingsOpen:s.settingsOpen, tabSettings:s.setTab===0, tabPlayers:s.setTab===1,
       setTabs:['الإعدادات','اللاعبين'].map((l,i)=>{const on=s.setTab===i;return {label:l,pick:()=>{this.snd('tick');this.setState({setTab:i});},bg:on?'linear-gradient(90deg, #7c3aed, #a855f7)':'transparent',fg:on?'#fff':'#a8a3b5',sh:on?'0 6px 20px rgba(139,92,246,.4)':'none'};}),

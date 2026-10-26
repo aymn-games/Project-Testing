@@ -229,6 +229,10 @@
     function myName() { return (state.me && state.me.name) || 'اسم حسابك'; }
     function myTikTok() { return (state.me && state.me.tiktok) || ''; }
     function matchUrl(matchId) { return 'game.html?match=' + encodeURIComponent(matchId); }
+    // صفحات ألعاب البثين الثانية (الدعوة والمباراة الجارية تنفتح بصفحة لعبتها).
+    var OTHER = { 'fastest-answer': { page: '../fastest-answer/versus.html', match: '../fastest-answer/challenge.html?match=' } };
+    function otherPage(game) { return (OTHER[game] && OTHER[game].page) || '../../challenge.html'; }
+    function otherMatch(game, id) { return OTHER[game] ? OTHER[game].match + encodeURIComponent(id) : '../../challenge.html'; }
     function lobbyText(sec) { return sec < 60 ? sec + ' ث' : Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0') + ' د'; }
     function openOut() { var o = state.outgoing; return o && (o.status === 'pending' || o.status === 'setup' || o.status === 'ready') ? o : null; }
     function guestMode() { var j = state.joined; return j && (j.status === 'setup' || j.status === 'ready') ? j : null; }
@@ -258,7 +262,7 @@
         if (state.gate) html += section('!', 'تنبيه', row(state.gate.text, '<a class="btn" href="' + state.gate.href + '">' + state.gate.btn + '</a>', { dot: false }), { full: true, hot: true });
         if (state.activeMatch) {
             var mine = state.activeMatch.game === GAME;
-            html += section('●', 'مباراة جارية', row('عندك مباراة تحدي شغّالة الحين', '<a class="btn ok" href="' + (mine ? matchUrl(state.activeMatch.id) : '../../challenge.html') + '">ادخل المباراة</a>', { dot: false }), { full: true });
+            html += section('●', 'مباراة جارية', row('عندك مباراة تحدي شغّالة الحين', '<a class="btn ok" href="' + (mine ? matchUrl(state.activeMatch.id) : otherMatch(state.activeMatch.game, state.activeMatch.id)) + '">ادخل المباراة</a>', { dot: false }), { full: true });
         }
         if (state.incoming.length && !guestMode()) html += section('✉', 'دعوات وصلتك', state.incoming.map(incomingHtml).join('<span class="div"></span>'), { full: true, hot: true });
         var out = state.outgoing;
@@ -272,7 +276,7 @@
         if (inv.game !== GAME) {
             return '<div class="person">' + av(state.avatars[inv.id], inv.other.name) +
                 '<div class="pi"><b>' + esc(inv.other.name) + ' يتحداك!</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · ' + esc(inv.gameName) + '</span></div>' +
-                '<a class="btn ghost" href="../../challenge.html">افتح تحدي البثوث</a></div>';
+                '<a class="btn ghost" href="' + otherPage(inv.game) + '">افتح الدعوة</a></div>';
         }
         return '<div class="person">' + av(state.avatars[inv.id], inv.other.name) +
             '<div class="pi"><b>' + esc(inv.other.name) + ' يتحداك بركلات الترجيح!</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · فريقه «' + esc(s.team1 || inv.other.name) + '» · الجولة ' + (s.roundMinutes || 4) + ' دقائق · تنتهي خلال <bdi data-exp="' + inv.id + '">' + secs(inv.expiresIn) + '</bdi> ث</span></div>' +
@@ -512,6 +516,7 @@
             if (out && out.status === 'accepted' && !(r.activeMatch && r.activeMatch.id === out.matchId)) state.handled[out.id] = true;
             state.outgoing = out;
             var j = r.joined;
+            if (j && j.game !== GAME) j = null; // دعوة لعبة ثانية — تتجهّز بصفحتها
             if (j && j.status === 'accepted' && j.matchId && r.activeMatch && r.activeMatch.id === j.matchId && !state.handled[j.id]) {
                 state.handled[j.id] = true; location.href = matchUrl(j.matchId); return;
             }
