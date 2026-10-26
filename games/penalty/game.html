@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ركلات الترجيح — المباراة</title>
+<link rel="icon" href="../../favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
+<!-- شاشة مباراة "ركلات الترجيح" بين بثين (تحدي البثوث). المنطق كله على
+     الخادم (backend/challenge/penalty-logic.js): الشاشة تعرض الحالة اللي
+     توصلها عبر /ws/challenge وترسل أوامر التحكم بس (بدء المباراة من اللوبي،
+     تخطي المقدمة، إخراج لاعب، انسحاب). فريق صاحب الدعوة دايماً على اليسار
+     (المرمى الأول) وفريق الخصم على اليمين — نفس الشاشة للبثين.
+     التصميم من design_handoff_penalty_game: ملعب 1920×1000 يتمدد على الشاشة. -->
+<style>
+    html,body{ margin:0; height:100%; background:#07060b; overflow:hidden; }
+    body{ font-family:'IBM Plex Sans Arabic',sans-serif; color:#f4f2f8; }
+    button{ font-family:inherit; }
+    bdi{ unicode-bidi:isolate; }
+    .hidden{ display:none !important; }
+    @keyframes fade{from{opacity:0}to{opacity:1}}
+    @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+    @keyframes popIn{0%{opacity:0;transform:scale(.88)}100%{opacity:1;transform:none}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+    @keyframes numIn{0%{opacity:0;transform:translateY(30px) scale(.7)}100%{opacity:1;transform:none}}
+
+    .root{ position:fixed; inset:0; overflow:hidden; background:#07060b; }
+    .fx{ position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+    .fx .g{ position:absolute; border-radius:50%; filter:blur(40px); }
+    .fx .s{ position:absolute; border-radius:50%; }
+
+    /* ===== الترويسة ===== */
+    header.hd{ position:fixed; top:0; left:0; right:0; z-index:96; height:80px; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:0 clamp(12px,1.25vw,24px); box-sizing:border-box; pointer-events:none; }
+    header.hd > *{ pointer-events:auto; }
+    .hbtn{ height:clamp(32px,2.3vw,42px); padding:0 clamp(10px,.9vw,16px); border-radius:999px; display:flex; align-items:center; gap:clamp(6px,.45vw,8px); font:600 clamp(12px,.78vw,15px) 'IBM Plex Sans Arabic'; white-space:nowrap; cursor:pointer; transition:all .2s;
+        backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.03); color:#e7e3ef; }
+    .hbtn:active{ transform:scale(.97); }
+    .hbtn.on{ border-color:rgba(74,222,128,.45); background:rgba(34,197,94,.12); color:#bbf7d0; }
+    .hbtn.exit{ border-color:rgba(248,113,113,.25); color:#fca5a5; }
+    .hbtn.exit:hover{ background:rgba(248,113,113,.1); border-color:rgba(248,113,113,.45); }
+    .vol{ height:clamp(32px,2.3vw,42px); display:flex; align-items:center; gap:10px; padding:0 14px; border-radius:999px; box-sizing:border-box; border:1px solid rgba(255,255,255,.18); background:rgba(10,9,15,.45); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); opacity:.55; }
+    .vol.on{ opacity:1; }
+    .vol input{ width:clamp(90px,8vw,150px); accent-color:#a855f7; cursor:pointer; }
+    .vol span{ min-width:34px; font:700 clamp(12px,.78vw,14px) 'IBM Plex Sans Arabic'; color:#e7e3ef; font-variant-numeric:tabular-nums; }
+    .logo{ position:absolute; left:50%; top:10px; transform:translateX(-50%); height:60px; }
+    .logo img{ height:60px; display:block; filter:drop-shadow(0 0 14px rgba(139,92,246,.45)); }
+
+    /* ===== الملعب ===== */
+    .stage{ position:absolute; left:0; top:80px; width:1920px; height:1000px; transform-origin:0 0; overflow:hidden; }
+    .banner{ position:absolute; top:380px; width:400px; display:flex; justify-content:center; z-index:7; pointer-events:none; animation:popIn .3s ease both; }
+    .banner span{ padding:14px 34px; border-radius:22px; border:2px solid rgba(255,255,255,.85); box-shadow:0 16px 40px rgba(0,0,0,.45); font:800 54px/1.1 'Zain'; color:#fff; }
+    .banner.goal span{ background:linear-gradient(180deg,#22c55e,#15803d); }
+    .banner.save span,.banner.miss span{ background:linear-gradient(180deg,#ef4444,#b91c1c); }
+    .sudden-tag{ position:absolute; left:0; right:0; margin:0 auto; width:max-content; top:200px; z-index:8; padding:10px 26px; border-radius:999px; background:linear-gradient(180deg,#fde7a8,#f0c25a); color:#1a1206; font:900 30px/1 'Zain'; box-shadow:0 10px 30px rgba(240,194,90,.45); animation:popIn .3s ease both; }
+
+    /* ===== طبقات فوق الملعب ===== */
+    .ov{ position:fixed; inset:0; display:grid; place-items:center; animation:fade .3s ease both; }
+    .scrim{ background:radial-gradient(ellipse at 50% 45%,rgba(7,6,11,.6),rgba(7,6,11,.92)); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+    .card{ width:min(560px,calc(100vw - 32px)); box-sizing:border-box; padding:clamp(22px,3vw,34px); border-radius:28px; background:linear-gradient(180deg,#17142a,#0d0b14); border:1.5px solid rgba(240,194,90,.45);
+        box-shadow:0 30px 80px rgba(0,0,0,.6); display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center; animation:popIn .3s ease both; }
+    .gold{ background:linear-gradient(180deg,#fde7a8,#f0c25a); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .card h2{ margin:0; font:900 clamp(34px,4vw,56px)/1.15 'Zain'; }
+    .card p{ margin:0; color:#c9c4d6; font:500 16px/1.8 'IBM Plex Sans Arabic'; }
+    .card .big{ font:800 clamp(30px,3.4vw,48px)/1.2 'IBM Plex Sans Arabic'; }
+    .card .score{ display:flex; align-items:center; gap:18px; font:800 44px/1 'IBM Plex Sans Arabic'; font-variant-numeric:tabular-nums; direction:ltr; }
+    .card .score small{ font:700 16px 'IBM Plex Sans Arabic'; }
+    .pbtn{ height:52px; padding:0 28px; border-radius:16px; border:none; cursor:pointer; background:linear-gradient(90deg,#7c3aed,#a855f7); color:#fff; font:700 18px 'IBM Plex Sans Arabic'; text-decoration:none; display:inline-flex; align-items:center; }
+    .pbtn:active{ transform:scale(.98); }
+
+    /* المقدمة ثلاثية الأبعاد */
+    .intro{ z-index:95; background:#0b0816; display:block; }
+    .intro .cv{ position:absolute; inset:0; }
+    .intro .top{ position:absolute; top:94px; left:28px; right:28px; display:flex; align-items:center; justify-content:space-between; gap:16px; pointer-events:none; }
+    .intro .tag{ display:flex; align-items:center; gap:12px; padding:10px 18px; border-radius:16px; background:rgba(10,9,15,.6); backdrop-filter:blur(10px); border:1px solid rgba(240,194,90,.35); font:800 clamp(20px,1.6vw,28px)/1 'Zain'; color:#fde7a8; }
+    .intro .tag i{ width:9px; height:9px; border-radius:50%; background:#ef4444; box-shadow:0 0 10px #ef4444; animation:pulse 1.2s infinite; }
+    .intro .skip{ pointer-events:auto; height:44px; padding:0 18px; border-radius:999px; border:1px solid rgba(255,255,255,.25); background:rgba(10,9,15,.6); backdrop-filter:blur(10px); color:#fff; font:700 16px 'IBM Plex Sans Arabic'; cursor:pointer; display:flex; align-items:center; gap:8px; }
+    .intro .skip span{ font-variant-numeric:tabular-nums; color:#a8a3b5; }
+    .intro .vs{ position:absolute; left:50%; bottom:52px; transform:translateX(-50%); display:flex; align-items:center; gap:clamp(14px,1.6vw,28px); padding:14px clamp(20px,2vw,34px); border-radius:24px; background:rgba(10,9,15,.72); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,.12); box-shadow:0 16px 40px rgba(0,0,0,.5); pointer-events:none; direction:ltr; }
+    .intro .vs b{ font:800 clamp(24px,2.2vw,40px)/1 'IBM Plex Sans Arabic'; }
+    .intro .vs em{ font-style:normal; padding:6px 14px; border-radius:12px; background:linear-gradient(180deg,#fde7a8,#f0c25a); font:900 clamp(18px,1.4vw,26px)/1 'Zain'; color:#1a1206; }
+    .intro .bar{ position:absolute; left:0; right:0; bottom:0; height:5px; background:rgba(255,255,255,.08); }
+    .intro .bar i{ display:block; height:100%; width:0; background:linear-gradient(90deg,#7c3aed,#f0c25a); }
+
+    .count{ z-index:91; pointer-events:none; background:rgba(7,6,11,.45); }
+    .count span{ font:900 clamp(120px,14vw,240px)/1 'Zain'; color:#fff; text-shadow:0 0 60px rgba(240,194,90,.7), 0 10px 0 rgba(0,0,0,.3); animation:numIn .35s ease both; }
+
+    /* ===== لوبي الدخول (نفس تصميم لوبي أسرع إجابة بتحدي البثوث) ===== */
+    .lobby{ z-index:80; place-items:start center; overflow-y:auto; padding:92px clamp(12px,2.5vw,32px) 24px; box-sizing:border-box; background:radial-gradient(ellipse at 50% 30%,rgba(7,6,11,.72),rgba(7,6,11,.95)); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+    .lb-wrap{ width:100%; max-width:1080px; display:flex; flex-direction:column; align-items:center; }
+    .lb-game{ font-size:clamp(14px,1.2vw,17px); font-weight:600; color:#a8a3b5; }
+    .lb-title{ margin:2px 0 8px; font:900 clamp(40px,5vw,68px)/1.2 'Zain'; }
+    .lb-timer{ display:inline-flex; align-items:center; gap:10px; margin-bottom:clamp(14px,2vw,22px); padding:8px 18px; border-radius:999px; background:rgba(240,194,90,.1); border:1px solid rgba(240,194,90,.4); color:#fde7a8; font:700 15px 'IBM Plex Sans Arabic'; }
+    .lb-timer b{ font:800 22px 'IBM Plex Sans Arabic'; font-variant-numeric:tabular-nums; color:#fff; direction:ltr; }
+    .lb-timer.wait{ background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.14); color:#c9c4d6; }
+    .lb-teams{ width:100%; display:grid; grid-template-columns:1fr 1fr; gap:clamp(12px,1.6vw,20px); }
+    @media (max-width:760px){ .lb-teams{ grid-template-columns:1fr; } }
+    .lb-team{ --c:#fbbf24; position:relative; display:flex; flex-direction:column; min-height:min(52vh,540px); border-radius:24px; overflow:hidden;
+        border:1px solid color-mix(in srgb, var(--c) 55%, transparent); background:linear-gradient(180deg,color-mix(in srgb, var(--c) 12%, transparent),rgba(255,255,255,.015) 40%); box-shadow:0 0 60px -30px var(--c); }
+    .lb-team.t1{ --c:#22d3ee; }
+    .lb-head{ padding:clamp(16px,1.8vw,24px); border-bottom:1px solid rgba(255,255,255,.07); display:flex; flex-direction:column; gap:12px; }
+    .lb-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .lb-name{ display:flex; align-items:center; gap:10px; min-width:0; font:800 clamp(18px,1.8vw,24px) 'IBM Plex Sans Arabic'; color:var(--c); }
+    .lb-name i{ width:10px; height:10px; border-radius:50%; background:var(--c); box-shadow:0 0 10px var(--c); flex:0 0 auto; }
+    .lb-name span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .lb-count{ flex:0 0 auto; padding:6px 14px; border-radius:999px; border:1px solid rgba(255,255,255,.12); font-size:13px; color:#a8a3b5; }
+    .lb-count b{ color:var(--c); font-size:18px; margin-left:4px; }
+    .lb-owner{ font-size:12.5px; color:#8f88a0; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .lb-owner bdi{ direction:ltr; }
+    .dot{ width:8px; height:8px; border-radius:50%; background:#6b6480; flex:0 0 auto; display:inline-block; }
+    .dot.connected{ background:#4ade80; box-shadow:0 0 8px #4ade80; }
+    .dot.connecting{ background:#fbbf24; animation:pulse 1s infinite; }
+    .dot.error,.dot.ended{ background:#f87171; }
+    .lb-kw-label{ font-size:13px; color:#a8a3b5; }
+    .lb-kw{ height:clamp(52px,6vh,64px); display:grid; place-items:center; border-radius:999px; border:1px dashed color-mix(in srgb, var(--c) 70%, transparent);
+        background:color-mix(in srgb, var(--c) 8%, transparent); font:800 clamp(26px,2.6vw,34px) 'IBM Plex Sans Arabic'; color:var(--c); }
+    .lb-note{ font-size:12px; color:#8a8596; }
+    .lb-players{ flex:1; overflow-y:auto; padding:clamp(12px,1.4vw,20px); }
+    .lb-empty{ height:100%; min-height:120px; display:grid; place-items:center; color:#6f6a7c; font-size:14px; }
+    .lb-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; align-items:center; }
+    .lb-plain{ width:100%; box-sizing:border-box; display:flex; align-items:center; gap:10px; padding:6px 8px 6px 12px; border-radius:999px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+    .lb-plain .av{ width:40px; height:40px; border-radius:50%; flex:0 0 auto; display:grid; place-items:center; overflow:hidden; color:#fff; font-weight:700; background:linear-gradient(135deg,var(--c),#1e1638); }
+    .lb-plain .av img{ width:100%; height:100%; object-fit:cover; }
+    .lb-plain .nm{ flex:1; min-width:0; font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .lb-kick{ flex:0 0 auto; width:28px; height:28px; border:0; padding:0; background:transparent; color:#fca5a5; cursor:pointer; opacity:.8; font-size:16px; line-height:1; }
+    .lb-kick:hover{ opacity:1; transform:scale(1.15); }
+    .lb-foot{ margin-top:clamp(16px,2.4vh,26px); display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .lb-start{ width:min(400px,90vw); height:58px; border-radius:999px; border:0; cursor:pointer; color:#fff; font-weight:700; font-size:20px; background:linear-gradient(180deg,#22c55e,#15803d); box-shadow:0 16px 44px rgba(34,197,94,.35); }
+    .lb-start:disabled{ opacity:.4; cursor:default; }
+    .lb-wait{ color:#a8a3b5; font-size:15px; text-align:center; }
+
+    .toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%); padding:12px 20px; border-radius:999px; background:#16121f; border:1px solid rgba(248,113,113,.4); font-size:14px; z-index:120; }
+</style>
+<script src="../../js/agp-apple-emoji.js"></script>
+</head>
+<body>
+<div class="root" dir="rtl">
+    <div class="fx" id="fx" aria-hidden="true"></div>
+
+    <header class="hd">
+        <div style="display:flex;align-items:center;gap:10px">
+            <button type="button" class="hbtn" id="snd"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path id="snd-wave" d="M23 9l-6 6M17 9l6 6"></path></svg><span id="snd-label">شغّل الصوت</span></button>
+            <div class="vol" id="vol-box"><input type="range" min="0" max="100" value="80" id="vol" aria-label="قوة الصوت"><span id="vol-n">80%</span></div>
+        </div>
+        <div class="logo"><img src="../../logo.png" alt="ألعاب أيمن"></div>
+        <button type="button" class="hbtn exit" id="leave"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span>خروج</span></button>
+    </header>
+
+    <div class="stage" id="stage">
+        <div dir="ltr" style="position:absolute;left:0;top:0;width:1920px;height:1000px;animation:fade .4s ease both">
+        <div style="position:absolute;left:0;right:0;top:0;height:200px;overflow:hidden;z-index:0;background:linear-gradient(180deg,#0b0a12,#15131f)">
+          <div style="position:absolute;inset:0 0 34px 0;background-image:radial-gradient(circle at 0% 0%,#f87171 0 3px,transparent 4px),radial-gradient(circle at 37% 53%,#fbbf24 0 3px,transparent 4px),radial-gradient(circle at 74% 6%,#60a5fa 0 3px,transparent 4px),radial-gradient(circle at 11% 59%,#f4f2f8 0 3px,transparent 4px),radial-gradient(circle at 48% 12%,#34d399 0 3px,transparent 4px),radial-gradient(circle at 85% 65%,#a78bfa 0 3px,transparent 4px),radial-gradient(circle at 22% 18%,#fb923c 0 3px,transparent 4px),radial-gradient(circle at 59% 71%,#e5e7eb 0 3px,transparent 4px);background-size:22px 18px,28px 23px,34px 28px,22px 33px,28px 18px,34px 23px,22px 28px,28px 33px;opacity:.55"></div>
+          <div style="position:absolute;inset:0 0 34px 0;background:repeating-linear-gradient(180deg,rgba(0,0,0,0) 0 26px,rgba(0,0,0,.45) 26px 30px),linear-gradient(180deg,rgba(7,6,11,.85),rgba(7,6,11,.2))"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;height:34px;display:flex;box-shadow:0 -4px 16px rgba(124,58,237,.45)"><span style="flex:1;display:grid;place-items:center;font:800 20px/1 'Zain';letter-spacing:1px;color:#fff;background:linear-gradient(180deg,#7c3aed,#5b21b6);border-left:2px solid rgba(0,0,0,.4)">ألعاب أيمن</span><span style="flex:1;display:grid;place-items:center;font:800 20px/1 'Zain';letter-spacing:1px;color:#fde7a8;background:linear-gradient(180deg,#4c1d95,#2e1065);border-left:2px solid rgba(0,0,0,.4)">ألعاب أيمن</span><span style="flex:1;display:grid;place-items:center;font:800 20px/1 'Zain';letter-spacing:1px;color:#fff;background:linear-gradient(180deg,#7c3aed,#5b21b6);border-left:2px solid rgba(0,0,0,.4)">ألعاب أيمن</span><span style="flex:1;display:grid;place-items:center;font:800 20px/1 'Zain';letter-spacing:1px;color:#fde7a8;background:linear-gradient(180deg,#4c1d95,#2e1065);border-left:2px solid rgba(0,0,0,.4)">ألعاب أيمن</span><span style="flex:1;display:grid;place-items:center;font:800 20px/1 'Zain';letter-spacing:1px;color:#fff;background:linear-gradient(180deg,#7c3aed,#5b21b6);border-left:2px solid rgba(0,0,0,.4)">ألعاب أيمن</span><span style="flex:1;display:grid;place-items:center;font:800 20px/1 'Zain';letter-spacing:1px;color:#fde7a8;background:linear-gradient(180deg,#4c1d95,#2e1065);border-left:2px solid rgba(0,0,0,.4)">ألعاب أيمن</span><span style="flex:1;display:grid;place-items:center;font:800 20px/1 'Zain';letter-spacing:1px;color:#fff;background:linear-gradient(180deg,#7c3aed,#5b21b6);border-left:2px solid rgba(0,0,0,.4)">ألعاب أيمن</span><span style="flex:1;display:grid;place-items:center;font:800 20px/1 'Zain';letter-spacing:1px;color:#fde7a8;background:linear-gradient(180deg,#4c1d95,#2e1065);border-left:2px solid rgba(0,0,0,.4)">ألعاب أيمن</span><span style="flex:1;display:grid;place-items:center;font:800 20px/1 'Zain';letter-spacing:1px;color:#fff;background:linear-gradient(180deg,#7c3aed,#5b21b6);border-left:2px solid rgba(0,0,0,.4)">ألعاب أيمن</span><span style="flex:1;display:grid;place-items:center;font:800 20px/1 'Zain';letter-spacing:1px;color:#fde7a8;background:linear-gradient(180deg,#4c1d95,#2e1065);border-left:2px solid rgba(0,0,0,.4)">ألعاب أيمن</span><span style="flex:1;display:grid;place-items:center;font:800 20px/1 'Zain';letter-spacing:1px;color:#fff;background:linear-gradient(180deg,#7c3aed,#5b21b6);border-left:2px solid rgba(0,0,0,.4)">ألعاب أيمن</span><span style="flex:1;display:grid;place-items:center;font:800 20px/1 'Zain';letter-spacing:1px;color:#fde7a8;background:linear-gradient(180deg,#4c1d95,#2e1065);border-left:2px solid rgba(0,0,0,.4)">ألعاب أيمن</span></div>
+        </div>
+        <div style="position:absolute;left:-200px;top:-260px;width:900px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(255,250,230,.16),transparent 65%);pointer-events:none;z-index:5"></div>
+        <div style="position:absolute;right:-200px;top:-260px;width:900px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(255,250,230,.16),transparent 65%);pointer-events:none;z-index:5"></div>
+        <div style="position:absolute;left:220px;top:0;width:520px;height:204px;z-index:2">
+          <div style="position:absolute;left:70px;right:70px;top:6px;bottom:6px;background:repeating-linear-gradient(0deg,rgba(255,255,255,0.32) 0 2px,transparent 2px 13px),repeating-linear-gradient(90deg,rgba(255,255,255,0.32) 0 2px,transparent 2px 13px),linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.35))"></div>
+          <div style="position:absolute;left:0;top:0;width:72px;height:204px;clip-path:polygon(0 0,72px 6px,72px 198px,0 204px);background:repeating-linear-gradient(0deg,rgba(255,255,255,0.22) 0 2px,transparent 2px 13px),repeating-linear-gradient(90deg,rgba(255,255,255,0.22) 0 2px,transparent 2px 13px),linear-gradient(90deg,rgba(0,0,0,.25),rgba(0,0,0,.5))"></div>
+          <div style="position:absolute;right:0;top:0;width:72px;height:204px;clip-path:polygon(72px 0,0 6px,0 198px,72px 204px);background:repeating-linear-gradient(0deg,rgba(255,255,255,0.22) 0 2px,transparent 2px 13px),repeating-linear-gradient(90deg,rgba(255,255,255,0.22) 0 2px,transparent 2px 13px),linear-gradient(270deg,rgba(0,0,0,.25),rgba(0,0,0,.5))"></div>
+          <div style="position:absolute;left:70px;right:70px;top:4px;height:5px;background:#bdbdbd;border-radius:3px"></div>
+          <div style="position:absolute;left:66px;top:4px;width:6px;height:196px;background:#bdbdbd;border-radius:3px"></div>
+          <div style="position:absolute;right:66px;top:4px;width:6px;height:196px;background:#bdbdbd;border-radius:3px"></div>
+          <div style="position:absolute;left:-6px;top:-4px;width:532px;height:14px;border-radius:7px;background:linear-gradient(90deg,#d9d9d9,#fff 40%,#cfcfcf);box-shadow:0 4px 10px rgba(0,0,0,.45)"></div>
+          <div style="position:absolute;left:-6px;top:-4px;width:14px;height:212px;border-radius:7px;background:linear-gradient(90deg,#d9d9d9,#fff 40%,#cfcfcf);box-shadow:0 4px 10px rgba(0,0,0,.45)"></div>
+          <div style="position:absolute;right:-6px;top:-4px;width:14px;height:212px;border-radius:7px;background:linear-gradient(90deg,#d9d9d9,#fff 40%,#cfcfcf);box-shadow:0 4px 10px rgba(0,0,0,.45)"></div>
+          <div style="position:absolute;left:-10px;right:-10px;bottom:-10px;height:16px;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.45),transparent 70%)"></div>
+          <span style="position:absolute;top:24px;left:26px;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);border:3px solid #fff;box-shadow:0 6px 18px rgba(0,0,0,.45);font:800 30px/1 'IBM Plex Sans Arabic';color:#fff">1</span><span style="position:absolute;top:24px;right:26px;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);border:3px solid #fff;box-shadow:0 6px 18px rgba(0,0,0,.45);font:800 30px/1 'IBM Plex Sans Arabic';color:#fff">2</span><span style="position:absolute;bottom:12px;left:26px;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);border:3px solid #fff;box-shadow:0 6px 18px rgba(0,0,0,.45);font:800 30px/1 'IBM Plex Sans Arabic';color:#fff">3</span><span style="position:absolute;bottom:12px;right:26px;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);border:3px solid #fff;box-shadow:0 6px 18px rgba(0,0,0,.45);font:800 30px/1 'IBM Plex Sans Arabic';color:#fff">4</span>
+        </div>
+        <div style="position:absolute;left:1180px;top:0;width:520px;height:204px;z-index:2">
+          <div style="position:absolute;left:70px;right:70px;top:6px;bottom:6px;background:repeating-linear-gradient(0deg,rgba(255,255,255,0.32) 0 2px,transparent 2px 13px),repeating-linear-gradient(90deg,rgba(255,255,255,0.32) 0 2px,transparent 2px 13px),linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.35))"></div>
+          <div style="position:absolute;left:0;top:0;width:72px;height:204px;clip-path:polygon(0 0,72px 6px,72px 198px,0 204px);background:repeating-linear-gradient(0deg,rgba(255,255,255,0.22) 0 2px,transparent 2px 13px),repeating-linear-gradient(90deg,rgba(255,255,255,0.22) 0 2px,transparent 2px 13px),linear-gradient(90deg,rgba(0,0,0,.25),rgba(0,0,0,.5))"></div>
+          <div style="position:absolute;right:0;top:0;width:72px;height:204px;clip-path:polygon(72px 0,0 6px,0 198px,72px 204px);background:repeating-linear-gradient(0deg,rgba(255,255,255,0.22) 0 2px,transparent 2px 13px),repeating-linear-gradient(90deg,rgba(255,255,255,0.22) 0 2px,transparent 2px 13px),linear-gradient(270deg,rgba(0,0,0,.25),rgba(0,0,0,.5))"></div>
+          <div style="position:absolute;left:70px;right:70px;top:4px;height:5px;background:#bdbdbd;border-radius:3px"></div>
+          <div style="position:absolute;left:66px;top:4px;width:6px;height:196px;background:#bdbdbd;border-radius:3px"></div>
+          <div style="position:absolute;right:66px;top:4px;width:6px;height:196px;background:#bdbdbd;border-radius:3px"></div>
+          <div style="position:absolute;left:-6px;top:-4px;width:532px;height:14px;border-radius:7px;background:linear-gradient(90deg,#d9d9d9,#fff 40%,#cfcfcf);box-shadow:0 4px 10px rgba(0,0,0,.45)"></div>
+          <div style="position:absolute;left:-6px;top:-4px;width:14px;height:212px;border-radius:7px;background:linear-gradient(90deg,#d9d9d9,#fff 40%,#cfcfcf);box-shadow:0 4px 10px rgba(0,0,0,.45)"></div>
+          <div style="position:absolute;right:-6px;top:-4px;width:14px;height:212px;border-radius:7px;background:linear-gradient(90deg,#d9d9d9,#fff 40%,#cfcfcf);box-shadow:0 4px 10px rgba(0,0,0,.45)"></div>
+          <div style="position:absolute;left:-10px;right:-10px;bottom:-10px;height:16px;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.45),transparent 70%)"></div>
+          <span style="position:absolute;top:24px;left:26px;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);border:3px solid #fff;box-shadow:0 6px 18px rgba(0,0,0,.45);font:800 30px/1 'IBM Plex Sans Arabic';color:#fff">1</span><span style="position:absolute;top:24px;right:26px;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);border:3px solid #fff;box-shadow:0 6px 18px rgba(0,0,0,.45);font:800 30px/1 'IBM Plex Sans Arabic';color:#fff">2</span><span style="position:absolute;bottom:12px;left:26px;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);border:3px solid #fff;box-shadow:0 6px 18px rgba(0,0,0,.45);font:800 30px/1 'IBM Plex Sans Arabic';color:#fff">3</span><span style="position:absolute;bottom:12px;right:26px;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);border:3px solid #fff;box-shadow:0 6px 18px rgba(0,0,0,.45);font:800 30px/1 'IBM Plex Sans Arabic';color:#fff">4</span>
+        </div>
+        <div style="position:absolute;left:0;right:0;top:200px;bottom:0;overflow:hidden;background:radial-gradient(ellipse 70% 55% at 50% 30%,rgba(255,255,255,.08),transparent 70%),repeating-linear-gradient(90deg,rgba(0,0,0,.035) 0 3px,transparent 3px 7px),repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 2px,transparent 2px 5px),repeating-linear-gradient(180deg,#2a8a4c 0 100px,#237a42 100px 200px),#237a42;box-shadow:inset 0 0 220px rgba(0,0,0,.5), inset 0 30px 40px rgba(0,0,0,.35)">
+          <div style="position:absolute;left:0;right:0;top:0;height:4px;background:rgba(245,248,240,.85)"></div>
+          <div style="position:absolute;left:160px;top:0;width:640px;height:320px;box-sizing:border-box;border:4px solid rgba(245,248,240,.85);border-top:none"></div>
+          <div style="position:absolute;left:310px;top:0;width:340px;height:120px;box-sizing:border-box;border:4px solid rgba(245,248,240,.85);border-top:none"></div>
+          <div style="position:absolute;left:473px;top:553px;width:14px;height:14px;border-radius:50%;background:#fff"></div>
+          <div style="position:absolute;left:300px;top:316px;width:360px;height:84px;overflow:hidden"><div style="position:absolute;left:0;top:-276px;width:360px;height:360px;box-sizing:border-box;border-radius:50%;border:4px solid rgba(245,248,240,.85)"></div></div>
+          <div style="position:absolute;left:1120px;top:0;width:640px;height:320px;box-sizing:border-box;border:4px solid rgba(245,248,240,.85);border-top:none"></div>
+          <div style="position:absolute;left:1270px;top:0;width:340px;height:120px;box-sizing:border-box;border:4px solid rgba(245,248,240,.85);border-top:none"></div>
+          <div style="position:absolute;left:1433px;top:553px;width:14px;height:14px;border-radius:50%;background:#fff"></div>
+          <div style="position:absolute;left:1260px;top:316px;width:360px;height:84px;overflow:hidden"><div style="position:absolute;left:0;top:-276px;width:360px;height:360px;box-sizing:border-box;border-radius:50%;border:4px solid rgba(245,248,240,.85)"></div></div>
+          <div style="position:absolute;left:956px;top:0;bottom:0;width:8px;background:#fff;box-shadow:0 0 18px rgba(255,255,255,.55)"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;height:200px;background:linear-gradient(rgba(7,6,11,0),rgba(7,6,11,.45));pointer-events:none"></div>
+        </div>
+        <div data-h="kp1|transform|{};kt1|transition|{}" style="position:absolute;left:370px;top:50px;width:220px;height:190px;z-index:3;pointer-events:none;transform:none;transition:transform .35s ease">
+          <div style="position:absolute;left:45px;bottom:2px;width:130px;height:20px;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.5),transparent 70%)"></div>
+          <div style="position:absolute;left:84px;top:150px;width:20px;height:34px;border-radius:6px 6px 4px 4px;background:linear-gradient(180deg,#f59e0b 0 70%,#fff 70% 78%,#f59e0b 78%)"></div>
+          <div style="position:absolute;left:116px;top:150px;width:20px;height:34px;border-radius:6px 6px 4px 4px;background:linear-gradient(180deg,#f59e0b 0 70%,#fff 70% 78%,#f59e0b 78%)"></div>
+          <div style="position:absolute;left:78px;top:176px;width:28px;height:12px;border-radius:8px 4px 6px 6px;background:#111827;box-shadow:inset 0 -3px 0 #374151"></div>
+          <div style="position:absolute;left:114px;top:176px;width:28px;height:12px;border-radius:4px 8px 6px 6px;background:#111827;box-shadow:inset 0 -3px 0 #374151"></div>
+          <div style="position:absolute;left:78px;top:132px;width:64px;height:26px;border-radius:8px 8px 12px 12px;background:linear-gradient(180deg,#1f2937,#111827);box-shadow:inset 0 3px 0 rgba(255,255,255,.08)"></div>
+          <div style="position:absolute;left:22px;top:82px;width:66px;height:18px;border-radius:9px;background:linear-gradient(180deg,#fde047,#f59e0b);transform:rotate(-38deg);transform-origin:100% 50%;box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)"></div>
+          <div style="position:absolute;left:132px;top:82px;width:66px;height:18px;border-radius:9px;background:linear-gradient(180deg,#fde047,#f59e0b);transform:rotate(38deg);transform-origin:0 50%;box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)"></div>
+          <div style="position:absolute;left:4px;top:26px;width:40px;height:44px;border-radius:16px 16px 12px 12px;background:radial-gradient(circle at 40% 30%,#fff,#e5e7eb);border:4px solid #b45309;box-sizing:border-box;box-shadow:0 5px 12px rgba(0,0,0,.35)"><span style="position:absolute;left:4px;right:4px;bottom:4px;height:6px;border-radius:3px;background:#b45309"></span></div>
+          <div style="position:absolute;right:4px;top:26px;width:40px;height:44px;border-radius:16px 16px 12px 12px;background:radial-gradient(circle at 40% 30%,#fff,#e5e7eb);border:4px solid #b45309;box-sizing:border-box;box-shadow:0 5px 12px rgba(0,0,0,.35)"><span style="position:absolute;left:4px;right:4px;bottom:4px;height:6px;border-radius:3px;background:#b45309"></span></div>
+          <div style="position:absolute;left:74px;top:80px;width:72px;height:60px;border-radius:26px 26px 12px 12px;background:linear-gradient(160deg,#fde047,#f59e0b);box-shadow:inset 0 -7px 0 rgba(0,0,0,.14), inset 0 4px 0 rgba(255,255,255,.2)">
+            <span style="position:absolute;left:24px;top:-1px;width:24px;height:12px;border-radius:0 0 12px 12px;background:#b45309"></span>
+            <span style="position:absolute;left:0;right:0;top:30px;height:5px;background:rgba(255,255,255,.35)"></span>
+            <span style="position:absolute;left:50%;top:14px;margin-left:-13px;width:26px;height:26px;border-radius:50%;background:#fff;display:grid;place-items:center;font:800 16px/1 'IBM Plex Sans Arabic';color:#b45309;box-shadow:0 2px 0 rgba(0,0,0,.15)">1</span>
+          </div>
+          <div style="position:absolute;left:68px;top:40px;width:12px;height:16px;border-radius:50%;background:#f0ab7c"></div>
+          <div style="position:absolute;left:140px;top:40px;width:12px;height:16px;border-radius:50%;background:#f0ab7c"></div>
+          <div style="position:absolute;left:74px;top:10px;width:72px;height:72px;border-radius:46% 46% 44% 44%;background:radial-gradient(circle at 38% 32%,#ffe4cc,#f4b98a 78%);box-shadow:0 6px 14px rgba(0,0,0,.3)">
+            <div style="position:absolute;left:-3px;top:-5px;width:78px;height:34px;border-radius:40px 40px 10px 10px;background:linear-gradient(180deg,#4a2e1a,#24150b);clip-path:polygon(0 100%,0 35%,18% 4%,50% 0,82% 4%,100% 35%,100% 100%,86% 58%,66% 72%,50% 52%,30% 72%,14% 58%)"></div>
+            <span style="position:absolute;left:18px;top:14px;width:16px;height:5px;border-radius:3px;background:rgba(255,255,255,.18)"></span>
+            <span style="position:absolute;left:17px;top:33px;width:14px;height:4px;border-radius:3px;background:#3b2414;transform:rotate(-8deg)"></span>
+            <span style="position:absolute;right:17px;top:33px;width:14px;height:4px;border-radius:3px;background:#3b2414;transform:rotate(8deg)"></span>
+            <span style="position:absolute;left:19px;top:39px;width:11px;height:13px;border-radius:50%;background:#1f2937;box-shadow:inset 3px 2px 0 #fff"></span>
+            <span style="position:absolute;right:19px;top:39px;width:11px;height:13px;border-radius:50%;background:#1f2937;box-shadow:inset 3px 2px 0 #fff"></span>
+            <span style="position:absolute;left:8px;top:52px;width:13px;height:7px;border-radius:50%;background:rgba(244,114,182,.5)"></span>
+            <span style="position:absolute;right:8px;top:52px;width:13px;height:7px;border-radius:50%;background:rgba(244,114,182,.5)"></span>
+            <span style="position:absolute;left:28px;top:55px;width:16px;height:8px;border-radius:0 0 9px 9px;background:#9f1239;box-shadow:inset 0 2px 0 #fff"></span>
+          </div>
+        </div>
+        <div data-h="kp2|transform|{};kt2|transition|{}" style="position:absolute;left:1330px;top:50px;width:220px;height:190px;z-index:3;pointer-events:none;transform:none;transition:transform .35s ease">
+          <div style="position:absolute;left:45px;bottom:2px;width:130px;height:20px;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.5),transparent 70%)"></div>
+          <div style="position:absolute;left:84px;top:150px;width:20px;height:34px;border-radius:6px 6px 4px 4px;background:linear-gradient(180deg,#22d3ee 0 70%,#fff 70% 78%,#22d3ee 78%)"></div>
+          <div style="position:absolute;left:116px;top:150px;width:20px;height:34px;border-radius:6px 6px 4px 4px;background:linear-gradient(180deg,#22d3ee 0 70%,#fff 70% 78%,#22d3ee 78%)"></div>
+          <div style="position:absolute;left:78px;top:176px;width:28px;height:12px;border-radius:8px 4px 6px 6px;background:#111827;box-shadow:inset 0 -3px 0 #374151"></div>
+          <div style="position:absolute;left:114px;top:176px;width:28px;height:12px;border-radius:4px 8px 6px 6px;background:#111827;box-shadow:inset 0 -3px 0 #374151"></div>
+          <div style="position:absolute;left:78px;top:132px;width:64px;height:26px;border-radius:8px 8px 12px 12px;background:linear-gradient(180deg,#1f2937,#111827);box-shadow:inset 0 3px 0 rgba(255,255,255,.08)"></div>
+          <div style="position:absolute;left:22px;top:82px;width:66px;height:18px;border-radius:9px;background:linear-gradient(180deg,#a5f3fc,#22d3ee);transform:rotate(-38deg);transform-origin:100% 50%;box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)"></div>
+          <div style="position:absolute;left:132px;top:82px;width:66px;height:18px;border-radius:9px;background:linear-gradient(180deg,#a5f3fc,#22d3ee);transform:rotate(38deg);transform-origin:0 50%;box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)"></div>
+          <div style="position:absolute;left:4px;top:26px;width:40px;height:44px;border-radius:16px 16px 12px 12px;background:radial-gradient(circle at 40% 30%,#fff,#e5e7eb);border:4px solid #0e7490;box-sizing:border-box;box-shadow:0 5px 12px rgba(0,0,0,.35)"><span style="position:absolute;left:4px;right:4px;bottom:4px;height:6px;border-radius:3px;background:#0e7490"></span></div>
+          <div style="position:absolute;right:4px;top:26px;width:40px;height:44px;border-radius:16px 16px 12px 12px;background:radial-gradient(circle at 40% 30%,#fff,#e5e7eb);border:4px solid #0e7490;box-sizing:border-box;box-shadow:0 5px 12px rgba(0,0,0,.35)"><span style="position:absolute;left:4px;right:4px;bottom:4px;height:6px;border-radius:3px;background:#0e7490"></span></div>
+          <div style="position:absolute;left:74px;top:80px;width:72px;height:60px;border-radius:26px 26px 12px 12px;background:linear-gradient(160deg,#a5f3fc,#22d3ee);box-shadow:inset 0 -7px 0 rgba(0,0,0,.14), inset 0 4px 0 rgba(255,255,255,.2)">
+            <span style="position:absolute;left:24px;top:-1px;width:24px;height:12px;border-radius:0 0 12px 12px;background:#0e7490"></span>
+            <span style="position:absolute;left:0;right:0;top:30px;height:5px;background:rgba(255,255,255,.35)"></span>
+            <span style="position:absolute;left:50%;top:14px;margin-left:-13px;width:26px;height:26px;border-radius:50%;background:#fff;display:grid;place-items:center;font:800 16px/1 'IBM Plex Sans Arabic';color:#0e7490;box-shadow:0 2px 0 rgba(0,0,0,.15)">1</span>
+          </div>
+          <div style="position:absolute;left:68px;top:40px;width:12px;height:16px;border-radius:50%;background:#f0ab7c"></div>
+          <div style="position:absolute;left:140px;top:40px;width:12px;height:16px;border-radius:50%;background:#f0ab7c"></div>
+          <div style="position:absolute;left:74px;top:10px;width:72px;height:72px;border-radius:46% 46% 44% 44%;background:radial-gradient(circle at 38% 32%,#ffe4cc,#f4b98a 78%);box-shadow:0 6px 14px rgba(0,0,0,.3)">
+            <div style="position:absolute;left:-3px;top:-5px;width:78px;height:34px;border-radius:40px 40px 10px 10px;background:linear-gradient(180deg,#4a2e1a,#24150b);clip-path:polygon(0 100%,0 35%,18% 4%,50% 0,82% 4%,100% 35%,100% 100%,86% 58%,66% 72%,50% 52%,30% 72%,14% 58%)"></div>
+            <span style="position:absolute;left:18px;top:14px;width:16px;height:5px;border-radius:3px;background:rgba(255,255,255,.18)"></span>
+            <span style="position:absolute;left:17px;top:33px;width:14px;height:4px;border-radius:3px;background:#3b2414;transform:rotate(-8deg)"></span>
+            <span style="position:absolute;right:17px;top:33px;width:14px;height:4px;border-radius:3px;background:#3b2414;transform:rotate(8deg)"></span>
+            <span style="position:absolute;left:19px;top:39px;width:11px;height:13px;border-radius:50%;background:#1f2937;box-shadow:inset 3px 2px 0 #fff"></span>
+            <span style="position:absolute;right:19px;top:39px;width:11px;height:13px;border-radius:50%;background:#1f2937;box-shadow:inset 3px 2px 0 #fff"></span>
+            <span style="position:absolute;left:8px;top:52px;width:13px;height:7px;border-radius:50%;background:rgba(244,114,182,.5)"></span>
+            <span style="position:absolute;right:8px;top:52px;width:13px;height:7px;border-radius:50%;background:rgba(244,114,182,.5)"></span>
+            <span style="position:absolute;left:28px;top:55px;width:16px;height:8px;border-radius:0 0 9px 9px;background:#9f1239;box-shadow:inset 0 2px 0 #fff"></span>
+          </div>
+        </div>
+        <div data-h="bs1|opacity|{}" style="position:absolute;left:444px;top:742px;width:72px;height:22px;z-index:3;opacity:1;transition:opacity .3s;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.45),transparent 70%)"></div>
+        <div data-h="b1|transform|{};bt1|transition|{}" style="position:absolute;left:456px;top:712px;width:48px;height:48px;z-index:6;transform:none;transition:none;border-radius:50%;background:radial-gradient(circle at 50% 50%,#1a1a1a 0 7px,transparent 8px),radial-gradient(circle at 18% 30%,#1a1a1a 0 5px,transparent 6px),radial-gradient(circle at 82% 30%,#1a1a1a 0 5px,transparent 6px),radial-gradient(circle at 30% 85%,#1a1a1a 0 5px,transparent 6px),radial-gradient(circle at 70% 85%,#1a1a1a 0 5px,transparent 6px),radial-gradient(circle at 35% 30%,#fff,#d4d4d4 70%);box-shadow:inset -5px -6px 10px rgba(0,0,0,.25)"></div>
+        <div data-h="bs2|opacity|{}" style="position:absolute;left:1404px;top:742px;width:72px;height:22px;z-index:3;opacity:1;transition:opacity .3s;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.45),transparent 70%)"></div>
+        <div data-h="b2|transform|{};bt2|transition|{}" style="position:absolute;left:1416px;top:712px;width:48px;height:48px;z-index:6;transform:none;transition:none;border-radius:50%;background:radial-gradient(circle at 50% 50%,#1a1a1a 0 7px,transparent 8px),radial-gradient(circle at 18% 30%,#1a1a1a 0 5px,transparent 6px),radial-gradient(circle at 82% 30%,#1a1a1a 0 5px,transparent 6px),radial-gradient(circle at 30% 85%,#1a1a1a 0 5px,transparent 6px),radial-gradient(circle at 70% 85%,#1a1a1a 0 5px,transparent 6px),radial-gradient(circle at 35% 30%,#fff,#d4d4d4 70%);box-shadow:inset -5px -6px 10px rgba(0,0,0,.25)"></div>
+        
+        <div dir="rtl" style="position:absolute;left:14px;top:14px;width:196px;height:172px;box-sizing:border-box;padding:12px;border-radius:22px;background:linear-gradient(180deg,rgba(20,18,30,.92),rgba(10,9,15,.92));border:1.5px solid #fbbf2488;box-shadow:0 10px 30px rgba(0,0,0,.45), 0 0 34px #fbbf2430;display:flex;flex-direction:column;align-items:stretch;justify-content:space-between;z-index:4">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0">
+            <div style="flex-shrink:0;width:54px;height:54px;border-radius:50%;overflow:hidden;border:2.5px solid #fbbf24;box-shadow:0 0 14px #fbbf2455;background:#1e1638"><img data-h="pv1|visibility|{}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;visibility:hidden" data-pic="0"></div>
+            <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+              <span data-t="tn1" style="font:800 19px/1.15 'IBM Plex Sans Arabic';color:#fbbf24;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">الفريق 1</span>
+              <span data-t="th1" style="font:600 13px/1.2 'IBM Plex Sans Arabic';color:#c9c4d6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr;text-align:right"></span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;border-radius:14px;background:#fbbf2414;border:1px solid #fbbf2440">
+            <span style="font:600 15px 'IBM Plex Sans Arabic';color:#a8a3b5">الأهداف</span>
+            <span data-t="s1" style="font:800 50px/1 'IBM Plex Sans Arabic';color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 0 22px #fbbf2466">0</span>
+          </div>
+        </div>
+        <div dir="rtl" style="position:absolute;left:1710px;top:14px;width:196px;height:172px;box-sizing:border-box;padding:12px;border-radius:22px;background:linear-gradient(180deg,rgba(20,18,30,.92),rgba(10,9,15,.92));border:1.5px solid #22d3ee88;box-shadow:0 10px 30px rgba(0,0,0,.45), 0 0 34px #22d3ee30;display:flex;flex-direction:column;align-items:stretch;justify-content:space-between;z-index:4">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0">
+            <div style="flex-shrink:0;width:54px;height:54px;border-radius:50%;overflow:hidden;border:2.5px solid #22d3ee;box-shadow:0 0 14px #22d3ee55;background:#1e1638"><img data-h="pv2|visibility|{}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;visibility:hidden" data-pic="1"></div>
+            <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+              <span data-t="tn2" style="font:800 19px/1.15 'IBM Plex Sans Arabic';color:#22d3ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">الفريق 2</span>
+              <span data-t="th2" style="font:600 13px/1.2 'IBM Plex Sans Arabic';color:#c9c4d6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr;text-align:right"></span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 12px;border-radius:14px;background:#22d3ee14;border:1px solid #22d3ee40">
+            <span style="font:600 15px 'IBM Plex Sans Arabic';color:#a8a3b5">الأهداف</span>
+            <span data-t="s2" style="font:800 50px/1 'IBM Plex Sans Arabic';color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 0 22px #22d3ee66">0</span>
+          </div>
+        </div>
+        <div dir="rtl" style="position:absolute;left:750px;top:10px;width:420px;height:180px;box-sizing:border-box;padding:12px 16px;border-radius:26px;background:linear-gradient(180deg,rgba(24,20,36,.96),rgba(10,9,15,.96));border:1.5px solid rgba(240,194,90,.55);box-shadow:0 12px 36px rgba(0,0,0,.5), 0 0 44px rgba(240,194,90,.16);display:flex;flex-direction:column;align-items:stretch;gap:8px;z-index:4">
+          <div style="display:flex;align-items:center;justify-content:center;gap:10px">
+            <span data-t="round" style="font:800 24px/1 'Zain';background:linear-gradient(180deg,#fde7a8,#f0c25a);-webkit-background-clip:text;background-clip:text;color:transparent">الجولة 1</span>
+            <span style="font:600 13px 'IBM Plex Sans Arabic';color:#8a8596">· الجولات المكسوبة</span>
+          </div>
+          <div dir="ltr" style="flex:1;display:flex;align-items:center;gap:10px">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0">
+              <span data-t="tn1" style="font:700 14px/1.1 'IBM Plex Sans Arabic';color:#fbbf24;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">الفريق 1</span>
+              <span data-t="r1" style="width:62px;height:62px;border-radius:16px;display:grid;place-items:center;background:#fbbf2422;border:1.5px solid #fbbf24;box-shadow:0 0 18px #fbbf2455;font:800 40px/1 'IBM Plex Sans Arabic';color:#fff;font-variant-numeric:tabular-nums">0</span>
+            </div>
+            <div data-h="clockBorder|border|1.5px solid {}" style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 14px;border-radius:16px;background:rgba(0,0,0,.35);border:1.5px solid rgba(240,194,90,.4)">
+              <span data-t="clock" data-h="clockColor|color|{}" style="font:800 46px/1 'IBM Plex Sans Arabic';color:#fff;font-variant-numeric:tabular-nums;direction:ltr;letter-spacing:1px">0:00</span>
+              <span data-t="clockLbl" style="font:600 12px 'IBM Plex Sans Arabic';color:#a8a3b5">الوقت المتبقي</span>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0">
+              <span data-t="tn2" style="font:700 14px/1.1 'IBM Plex Sans Arabic';color:#22d3ee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">الفريق 2</span>
+              <span data-t="r2" style="width:62px;height:62px;border-radius:16px;display:grid;place-items:center;background:#22d3ee22;border:1.5px solid #22d3ee;box-shadow:0 0 18px #22d3ee55;font:800 40px/1 'IBM Plex Sans Arabic';color:#fff;font-variant-numeric:tabular-nums">0</span>
+            </div>
+          </div>
+        </div>
+        <div data-h="kw1|transform|{}" style="position:absolute;left:330px;top:662px;width:140px;height:196px;z-index:3;pointer-events:none;transform:translate(-30px,22px);transition:transform .32s cubic-bezier(.3,.7,.3,1)">
+          <div style="position:absolute;left:18px;bottom:0;width:104px;height:18px;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.5),transparent 70%)"></div>
+          <div style="position:absolute;left:42px;top:132px;width:20px;height:56px">
+            <div style="position:absolute;inset:0 0 12px 0;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,#f4b98a 0 28%,#f97316 28% 82%,#fff 82%)"></div>
+            <div style="position:absolute;left:-4px;bottom:0;width:28px;height:13px;border-radius:7px 7px 5px 5px;background:#111827;box-shadow:inset 0 -3px 0 #fbbf24"></div>
+          </div>
+          <div data-h="kl1|transform|{}" style="position:absolute;left:78px;top:130px;width:20px;height:56px;transform-origin:50% 4px;transform:none;transition:transform .22s cubic-bezier(.5,0,.3,1)">
+            <div style="position:absolute;inset:0 0 12px 0;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,#f4b98a 0 28%,#f97316 28% 82%,#fff 82%)"></div>
+            <div style="position:absolute;left:-4px;bottom:0;width:28px;height:13px;border-radius:7px 7px 5px 5px;background:#111827;box-shadow:inset 0 -3px 0 #fbbf24"></div>
+          </div>
+          <div style="position:absolute;left:34px;top:114px;width:72px;height:30px;border-radius:8px 8px 14px 14px;background:linear-gradient(180deg,#f8fafc,#cbd5e1);box-shadow:inset 0 -4px 0 rgba(0,0,0,.08)"><span style="position:absolute;top:0;bottom:6px;left:6px;width:5px;background:#f97316"></span></div>
+          <div style="position:absolute;left:2px;top:72px;width:50px;height:16px;border-radius:8px;background:linear-gradient(90deg,#f4b98a 0 40%,#f97316 40%);transform:rotate(30deg);transform-origin:100% 50%"></div>
+          <div style="position:absolute;left:88px;top:72px;width:50px;height:16px;border-radius:8px;background:linear-gradient(270deg,#f4b98a 0 40%,#f97316 40%);transform:rotate(-24deg);transform-origin:0 50%"></div>
+          <div style="position:absolute;left:28px;top:60px;width:84px;height:62px;border-radius:28px 28px 14px 14px;background:linear-gradient(160deg,#fbbf24,#f97316);box-shadow:inset 0 -7px 0 rgba(0,0,0,.14), inset 0 4px 0 rgba(255,255,255,.22);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+            <span style="position:absolute;left:30px;top:-1px;width:24px;height:9px;border-radius:0 0 10px 10px;background:#c2410c"></span>
+            <span data-t="sh1" style="font:800 11px/1 'IBM Plex Sans Arabic';color:#fff;letter-spacing:.5px">—</span>
+            <span style="font:800 32px/1 'IBM Plex Sans Arabic';color:#fff;text-shadow:0 2px 0 #c2410c, 0 -1px 0 #c2410c">7</span>
+          </div>
+          <div style="position:absolute;left:32px;top:28px;width:12px;height:16px;border-radius:50%;background:#f0ab7c"></div>
+          <div style="position:absolute;left:96px;top:28px;width:12px;height:16px;border-radius:50%;background:#f0ab7c"></div>
+          <div style="position:absolute;left:38px;top:0;width:64px;height:66px;border-radius:48% 48% 44% 44%;background:radial-gradient(circle at 42% 30%,#5b3a22,#24150b 72%);box-shadow:0 6px 14px rgba(0,0,0,.3)">
+            <span style="position:absolute;left:16px;top:10px;width:20px;height:7px;border-radius:4px;background:rgba(255,255,255,.14);transform:rotate(-12deg)"></span>
+            <span style="position:absolute;left:14px;right:14px;bottom:-2px;height:12px;border-radius:0 0 12px 12px;background:#f4b98a"></span>
+          </div>
+        </div>
+        <div data-h="kw2|transform|{}" style="position:absolute;left:1450px;top:662px;width:140px;height:196px;z-index:3;pointer-events:none;transform:translate(30px,22px);transition:transform .32s cubic-bezier(.3,.7,.3,1)">
+          <div style="position:absolute;left:18px;bottom:0;width:104px;height:18px;border-radius:50%;background:radial-gradient(ellipse,rgba(0,0,0,.5),transparent 70%)"></div>
+          <div style="position:absolute;left:78px;top:132px;width:20px;height:56px">
+            <div style="position:absolute;inset:0 0 12px 0;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,#f4b98a 0 28%,#06b6d4 28% 82%,#fff 82%)"></div>
+            <div style="position:absolute;left:-4px;bottom:0;width:28px;height:13px;border-radius:7px 7px 5px 5px;background:#111827;box-shadow:inset 0 -3px 0 #67e8f9"></div>
+          </div>
+          <div data-h="kl2|transform|{}" style="position:absolute;left:42px;top:130px;width:20px;height:56px;transform-origin:50% 4px;transform:none;transition:transform .22s cubic-bezier(.5,0,.3,1)">
+            <div style="position:absolute;inset:0 0 12px 0;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,#f4b98a 0 28%,#06b6d4 28% 82%,#fff 82%)"></div>
+            <div style="position:absolute;left:-4px;bottom:0;width:28px;height:13px;border-radius:7px 7px 5px 5px;background:#111827;box-shadow:inset 0 -3px 0 #67e8f9"></div>
+          </div>
+          <div style="position:absolute;left:34px;top:114px;width:72px;height:30px;border-radius:8px 8px 14px 14px;background:linear-gradient(180deg,#f8fafc,#cbd5e1);box-shadow:inset 0 -4px 0 rgba(0,0,0,.08)"><span style="position:absolute;top:0;bottom:6px;right:6px;width:5px;background:#06b6d4"></span></div>
+          <div style="position:absolute;left:2px;top:72px;width:50px;height:16px;border-radius:8px;background:linear-gradient(90deg,#f4b98a 0 40%,#06b6d4 40%);transform:rotate(-30deg);transform-origin:100% 50%"></div>
+          <div style="position:absolute;left:88px;top:72px;width:50px;height:16px;border-radius:8px;background:linear-gradient(270deg,#f4b98a 0 40%,#06b6d4 40%);transform:rotate(24deg);transform-origin:0 50%"></div>
+          <div style="position:absolute;left:28px;top:60px;width:84px;height:62px;border-radius:28px 28px 14px 14px;background:linear-gradient(160deg,#67e8f9,#06b6d4);box-shadow:inset 0 -7px 0 rgba(0,0,0,.14), inset 0 4px 0 rgba(255,255,255,.22);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+            <span style="position:absolute;left:30px;top:-1px;width:24px;height:9px;border-radius:0 0 10px 10px;background:#0e7490"></span>
+            <span data-t="sh2" style="font:800 11px/1 'IBM Plex Sans Arabic';color:#fff;letter-spacing:.5px">—</span>
+            <span style="font:800 32px/1 'IBM Plex Sans Arabic';color:#fff;text-shadow:0 2px 0 #0e7490, 0 -1px 0 #0e7490">10</span>
+          </div>
+          <div style="position:absolute;left:32px;top:28px;width:12px;height:16px;border-radius:50%;background:#f0ab7c"></div>
+          <div style="position:absolute;left:96px;top:28px;width:12px;height:16px;border-radius:50%;background:#f0ab7c"></div>
+          <div style="position:absolute;left:38px;top:0;width:64px;height:66px;border-radius:48% 48% 44% 44%;background:radial-gradient(circle at 42% 30%,#5b3a22,#24150b 72%);box-shadow:0 6px 14px rgba(0,0,0,.3)">
+            <span style="position:absolute;left:16px;top:10px;width:20px;height:7px;border-radius:4px;background:rgba(255,255,255,.14);transform:rotate(-12deg)"></span>
+            <span style="position:absolute;left:14px;right:14px;bottom:-2px;height:12px;border-radius:0 0 12px 12px;background:#f4b98a"></span>
+          </div>
+        </div>
+        <div dir="rtl" style="position:absolute;left:40px;top:872px;width:880px;height:112px;box-sizing:border-box;padding:12px;border-radius:26px;background:linear-gradient(180deg,rgba(20,18,30,.92),rgba(10,9,15,.92));border:1.5px solid #fbbf2466;box-shadow:0 12px 34px rgba(0,0,0,.5);display:flex;align-items:stretch;gap:10px;z-index:4">
+          <div style="flex:1.25;min-width:0;display:flex;align-items:center;gap:12px;padding:0 14px;border-radius:18px;background:#fbbf241f;border:1px solid #fbbf2455">
+            <span data-t="shi1" style="flex-shrink:0;width:62px;height:62px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#fbbf24,#1e1638);border:3px solid #fbbf24;font:700 27px 'IBM Plex Sans Arabic';color:#fff;box-shadow:0 0 18px #fbbf2466">؟</span>
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:600 15px 'IBM Plex Sans Arabic';color:#fbbf24">يسدد الآن</span><span data-t="sh1" style="font:800 28px/1.15 'IBM Plex Sans Arabic';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</span></div>
+          </div>
+          <div style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:18px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.16)">
+            <span data-t="nxi1" style="flex-shrink:0;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#1e1638;border:2px solid rgba(255,255,255,.3);font:700 19px 'IBM Plex Sans Arabic';color:#e7e3ef">؟</span>
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:600 14px 'IBM Plex Sans Arabic';color:#a8a3b5">الدور التالي</span><span data-t="nx1" style="font:700 22px/1.15 'IBM Plex Sans Arabic';color:#e7e3ef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</span></div>
+          </div>
+          <div style="flex:1.35;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border-radius:18px;background:rgba(139,92,246,.1);border:1px solid rgba(167,139,250,.3)">
+            <span style="font:600 15px 'IBM Plex Sans Arabic';color:#e7e3ef">اكتب رقم الزاوية بالشات</span>
+            <div style="display:flex;gap:8px"><span style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);border:2px solid #fff;font:800 20px/1 'IBM Plex Sans Arabic';color:#fff">1</span><span style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);border:2px solid #fff;font:800 20px/1 'IBM Plex Sans Arabic';color:#fff">2</span><span style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);border:2px solid #fff;font:800 20px/1 'IBM Plex Sans Arabic';color:#fff">3</span><span style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);border:2px solid #fff;font:800 20px/1 'IBM Plex Sans Arabic';color:#fff">4</span></div>
+          </div>
+          <div style="width:88px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:18px;background:rgba(240,194,90,.1);border:1px solid rgba(240,194,90,.45)">
+            <span data-t="tm1" style="font:800 36px/1 'IBM Plex Sans Arabic';color:#fff;font-variant-numeric:tabular-nums">10</span><span style="font:600 13px 'IBM Plex Sans Arabic';color:#fde7a8">ثانية</span>
+          </div>
+        </div>
+        <div dir="rtl" style="position:absolute;left:1000px;top:872px;width:880px;height:112px;box-sizing:border-box;padding:12px;border-radius:26px;background:linear-gradient(180deg,rgba(20,18,30,.92),rgba(10,9,15,.92));border:1.5px solid #22d3ee66;box-shadow:0 12px 34px rgba(0,0,0,.5);display:flex;align-items:stretch;gap:10px;z-index:4">
+          <div style="flex:1.25;min-width:0;display:flex;align-items:center;gap:12px;padding:0 14px;border-radius:18px;background:#22d3ee1f;border:1px solid #22d3ee55">
+            <span data-t="shi2" style="flex-shrink:0;width:62px;height:62px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#22d3ee,#1e1638);border:3px solid #22d3ee;font:700 27px 'IBM Plex Sans Arabic';color:#fff;box-shadow:0 0 18px #22d3ee66">؟</span>
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:600 15px 'IBM Plex Sans Arabic';color:#22d3ee">يسدد الآن</span><span data-t="sh2" style="font:800 28px/1.15 'IBM Plex Sans Arabic';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</span></div>
+          </div>
+          <div style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:18px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.16)">
+            <span data-t="nxi2" style="flex-shrink:0;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#1e1638;border:2px solid rgba(255,255,255,.3);font:700 19px 'IBM Plex Sans Arabic';color:#e7e3ef">؟</span>
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:600 14px 'IBM Plex Sans Arabic';color:#a8a3b5">الدور التالي</span><span data-t="nx2" style="font:700 22px/1.15 'IBM Plex Sans Arabic';color:#e7e3ef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</span></div>
+          </div>
+          <div style="flex:1.35;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border-radius:18px;background:rgba(139,92,246,.1);border:1px solid rgba(167,139,250,.3)">
+            <span style="font:600 15px 'IBM Plex Sans Arabic';color:#e7e3ef">اكتب رقم الزاوية بالشات</span>
+            <div style="display:flex;gap:8px"><span style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);border:2px solid #fff;font:800 20px/1 'IBM Plex Sans Arabic';color:#fff">1</span><span style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);border:2px solid #fff;font:800 20px/1 'IBM Plex Sans Arabic';color:#fff">2</span><span style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);border:2px solid #fff;font:800 20px/1 'IBM Plex Sans Arabic';color:#fff">3</span><span style="width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,#7c3aed,#a855f7);border:2px solid #fff;font:800 20px/1 'IBM Plex Sans Arabic';color:#fff">4</span></div>
+          </div>
+          <div style="width:88px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:18px;background:rgba(240,194,90,.1);border:1px solid rgba(240,194,90,.45)">
+            <span data-t="tm2" style="font:800 36px/1 'IBM Plex Sans Arabic';color:#fff;font-variant-numeric:tabular-nums">10</span><span style="font:600 13px 'IBM Plex Sans Arabic';color:#fde7a8">ثانية</span>
+          </div>
+        </div>
+        
+        
+        
+        <div style="position:absolute;left:10px;top:150px;width:4px;height:56px;background:#e5e7eb;z-index:3"></div><div style="position:absolute;left:14px;top:150px;width:26px;height:18px;background:#f0c25a;clip-path:polygon(0 0,100% 50%,0 100%);z-index:3"></div><div style="position:absolute;left:1906px;top:150px;width:4px;height:56px;background:#e5e7eb;z-index:3"></div><div style="position:absolute;left:1880px;top:150px;width:26px;height:18px;background:#f0c25a;clip-path:polygon(100% 0,0 50%,100% 100%);z-index:3"></div>
+            <div class="banner hidden" id="res0" dir="rtl" style="left:280px"><span></span></div>
+            <div class="banner hidden" id="res1" dir="rtl" style="left:1240px"><span></span></div>
+            <div class="sudden-tag hidden" id="sudden" dir="rtl">ركلات ترجيح حاسمة</div>
+        </div>
+    </div>
+
+    <div class="ov lobby hidden" id="lobby" dir="rtl"></div>
+
+    <div class="ov intro hidden" id="intro">
+        <div class="cv" id="intro-cv"></div>
+        <div class="top" dir="rtl">
+            <div class="tag"><i></i>تشكيلة الفريقين</div>
+            <button type="button" class="skip" id="skip">تخطي <span id="intro-sec">30</span></button>
+        </div>
+        <div class="vs"><b id="intro-t0" style="color:#fbbf24"></b><em>VS</em><b id="intro-t1" style="color:#22d3ee"></b></div>
+        <div class="bar"><i id="intro-bar"></i></div>
+    </div>
+
+    <div class="ov count hidden" id="count"><span id="count-n">3</span></div>
+    <div class="ov scrim hidden" id="panel" style="z-index:85"><div class="card" id="panel-box" dir="rtl"></div></div>
+    <div class="toast hidden" id="toast"></div>
+</div>
+
+<script src="../../auth/auth-client.js"></script>
+<script src="../../auth/game-access-guard.js"></script>
+<script>
+(function () {
+    'use strict';
+    var A = window.AGPAuth;
+    var matchId = new URLSearchParams(location.search).get('match') || '';
+    var wsUrl = String((A && A.API_BASE) || 'https://project-testing-akds.onrender.com').replace(/^http/, 'ws') + '/ws/challenge';
+    var HUB = 'index.html';
+    var INTRO_MS = 30000, COUNTDOWN_MS = 3300;
+    var COLORS = ['#fbbf24', '#22d3ee'];
+    var GOAL_X = [220, 1180], BALL_X = [480, 1440];
+
+    var M = null, clockOffset = 0, ws = null, closedForGood = false;
+    var prevTurns = [{}, {}], prevPhase = null, whistled = false;
+    var ERR = {
+        auth_required: 'لازم تسجّل دخول.', match_not_found: 'المباراة غير موجودة أو انتهت.', not_in_match: 'هذي المباراة مو لك.',
+        need_players: 'كل فريق يحتاج لاعب واحد على الأقل — خلّ الجمهور يكتب كلمة الدخول.', busy: 'المباراة بدأت.',
+        host_only: 'التحكم لصاحب الدعوة.', ended: 'المباراة انتهت.'
+    };
+    var STREAM_TEXT = { connected: 'متصل بالبث', connecting: 'جاري الاتصال بالبث...', error: 'البث غير متصل', ended: 'البث انتهى', idle: 'بانتظار دخول الستريمر' };
+
+    function $(id) { return document.getElementById(id); }
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function initial(name) { return (Array.from(String(name || '').replace(/[\s_.@\d]/g, ''))[0] || '؟').toUpperCase(); }
+    function serverNow() { return Date.now() + clockOffset; }
+    function left(endsAt) { return Math.max(0, (endsAt || 0) - serverNow()); }
+    function mmss(ms) { var s = Math.ceil(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+    function toast(t) { var el = $('toast'); el.textContent = t; el.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.add('hidden'); }, 3000); }
+    function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+    function action(a, extra) { var o = { type: 'action', action: a }; if (extra) for (var k in extra) o[k] = extra[k]; send(o); }
+    function isHost() { return M && M.you === M.host; }
+
+    /* ---- فتحات التصميم: data-t = نص، data-h = "اسم|خاصية|قالب" ---- */
+    var H = {};
+    Array.prototype.forEach.call(document.querySelectorAll('[data-t]'), function (el) { var n = el.getAttribute('data-t'); (H[n] = H[n] || []).push({ el: el }); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-h]'), function (el) {
+        el.getAttribute('data-h').split(';').forEach(function (spec) { var p = spec.split('|'); (H[p[0]] = H[p[0]] || []).push({ el: el, prop: p[1], tpl: p[2] }); });
+    });
+    var last = {};
+    function hole(name, value) {
+        value = String(value);
+        if (last[name] === value) return;
+        last[name] = value;
+        (H[name] || []).forEach(function (h) { if (h.prop) h.el.style.setProperty(h.prop, h.tpl.replace('{}', value)); else h.el.textContent = value; });
+    }
+
+    // تمديد الملعب على الشاشة (نفس التصميم: تمدد غير متساوي).
+    function fit() { $('stage').style.transform = 'scale(' + (innerWidth / 1920) + ',' + ((innerHeight - 80) / 1000) + ')'; }
+    addEventListener('resize', fit);
+    fit();
+
+    /* ---- الصوت (Web Audio، كله مولَّد — نفس التصميم) ---- */
+    var snd = false, vol = 80, ac = null, master = null, crowd = null, noiseBuf = null, white = null;
+    function initAudio() {
+        if (ac) return;
+        var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+        ac = new AC();
+        master = ac.createGain(); master.gain.value = vol / 100; master.connect(ac.destination);
+        var len = ac.sampleRate * 2, buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0), b = 0, i;
+        for (i = 0; i < len; i++) { b = .97 * b + .03 * (Math.random() * 2 - 1); d[i] = b * 6; } noiseBuf = buf;
+        var wb = ac.createBuffer(1, len, ac.sampleRate), w = wb.getChannelData(0); for (i = 0; i < len; i++) w[i] = Math.random() * 2 - 1; white = wb;
+        var src = ac.createBufferSource(); src.buffer = buf; src.loop = true; var bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 700; bp.Q.value = .6;
+        crowd = ac.createGain(); crowd.gain.value = .14; src.connect(bp); bp.connect(crowd); crowd.connect(master); src.start();
+        var lfo = ac.createOscillator(), lg = ac.createGain(); lfo.frequency.value = .13; lg.gain.value = .04; lfo.connect(lg); lg.connect(crowd.gain); lfo.start();
+    }
+    function noise(t, dur, o) {
+        o = o || {}; var s = ac.createBufferSource(); s.buffer = o.white ? white : noiseBuf;
+        var fl = ac.createBiquadFilter(); fl.type = o.type || 'bandpass'; fl.frequency.setValueAtTime(o.freq || 1000, t); if (o.freqTo) fl.frequency.exponentialRampToValueAtTime(o.freqTo, t + dur); fl.Q.value = o.q || 1;
+        var g = ac.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(o.peak == null ? .5 : o.peak, t + (o.attack || .01)); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+        s.connect(fl); fl.connect(g); g.connect(master); s.start(t, Math.random()); s.stop(t + dur + .05);
+    }
+    function tone(t, dur, o) {
+        o = o || {}; var osc = ac.createOscillator(), g = ac.createGain(); osc.type = o.type || 'sine';
+        osc.frequency.setValueAtTime(o.f0 || 440, t); if (o.f1) osc.frequency.exponentialRampToValueAtTime(o.f1, t + dur);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(o.peak == null ? .4 : o.peak, t + (o.attack || .005)); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+        osc.connect(g); g.connect(master); osc.start(t); osc.stop(t + dur + .05); return osc;
+    }
+    function swellCrowd(to, dur) { var g = crowd.gain, t = ac.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(to, t + .25); g.linearRampToValueAtTime(.14, t + dur); }
+    function sfx(name) {
+        if (!snd || !ac) return; var t = ac.currentTime, i;
+        if (name === 'introCrowd') { swellCrowd(.42, 30); for (i = 0; i < 6; i++) noise(t + 1 + i * 5 + Math.random() * 1.5, 2.6, { freq: 950, q: .5, peak: .5, attack: .6 }); }
+        if (name === 'whistle') { var o = tone(t, .35, { type: 'square', f0: 2900, peak: .06, attack: .01 }); var l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 28; lg.gain.value = 120; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + .4); }
+        if (name === 'run') { for (i = 0; i < 3; i++) noise(t + i * .17, .08, { type: 'lowpass', freq: 600, peak: .25, white: true }); }
+        if (name === 'kick') { tone(t, .18, { f0: 150, f1: 45, peak: .9 }); noise(t, .06, { type: 'highpass', freq: 2500, peak: .35, white: true }); swellCrowd(.3, 1.2); }
+        if (name === 'goal') {
+            noise(t, .5, { type: 'highpass', freq: 3000, peak: .12, white: true });
+            noise(t + .05, 2.6, { freq: 900, q: .5, peak: .75, attack: .35 }); noise(t + .1, 2.4, { freq: 2200, q: .7, peak: .35, attack: .4 });
+            [523, 659, 784].forEach(function (fq, k) { tone(t + .1 + k * .12, .6, { type: 'sawtooth', f0: fq, peak: .06 }); }); tone(t + .5, 1, { type: 'sawtooth', f0: 1047, peak: .06 }); swellCrowd(.45, 3);
+        }
+        if (name === 'save') { tone(t, .12, { f0: 220, f1: 80, peak: .7 }); noise(t, .1, { type: 'lowpass', freq: 900, peak: .6, white: true }); noise(t + .15, 1.6, { freq: 500, freqTo: 220, q: .8, peak: .55, attack: .2 }); swellCrowd(.22, 1.8); }
+    }
+    function setSound(on) {
+        if (on) { initAudio(); if (!ac) return; ac.resume(); master.gain.setTargetAtTime(vol / 100, ac.currentTime, .05); }
+        else if (master) master.gain.setTargetAtTime(0, ac.currentTime, .05);
+        snd = on;
+        $('snd').classList.toggle('on', on);
+        $('vol-box').classList.toggle('on', on);
+        $('snd-label').textContent = on ? 'الصوت شغّال' : 'شغّل الصوت';
+        $('snd-wave').setAttribute('d', on ? 'M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14' : 'M23 9l-6 6M17 9l6 6');
+    }
+    $('snd').addEventListener('click', function () { setSound(!snd); });
+    $('vol').addEventListener('input', function (e) { vol = Number(e.target.value); $('vol-n').textContent = vol + '%'; if (snd && master) master.gain.setTargetAtTime(vol / 100, ac.currentTime, .03); });
+
+    /* ---- الملعب ---- */
+    function corner(k, n) { return [GOAL_X[k] + (n % 2 === 1 ? 55 : 465), n <= 2 ? 53 : 163]; }
+
+    function renderTeams() {
+        var st = M.state;
+        [0, 1].forEach(function (k) {
+            var n = k + 1, s = M.sides[k], ok = s.present && s.stream === 'connected';
+            hole('tn' + n, st.teams[k].name);
+            hole('th' + n, '@' + s.tiktok + (ok ? '' : ' · ' + (s.present ? 'البث غير متصل' : 'غير موجود')));
+            hole('s' + n, st.teams[k].score);
+            hole('r' + n, st.roundsWon[k]);
+            var pic = document.querySelector('[data-pic="' + k + '"]');
+            if (pic && s.avatar && pic.getAttribute('src') !== s.avatar) { pic.onerror = function () { hole('pv' + n, 'hidden'); }; pic.src = s.avatar; hole('pv' + n, 'visible'); }
+        });
+        hole('round', 'الجولة ' + Math.max(1, st.round));
+    }
+
+    function renderTurns() {
+        var st = M.state, live = st.phase === 'playing' || st.phase === 'sudden' || st.phase === 'roundEnd';
+        [0, 1].forEach(function (k) {
+            var n = k + 1, t = live ? st.turns[k] : { ph: 'idle' }, P = st.teams[k].players;
+            if (t.shot && t.dive) {
+                var c = corner(k, t.shot);
+                hole('b' + n, 'translate(' + (c[0] - BALL_X[k]) + 'px,' + (c[1] - 736) + 'px) scale(.62)'); hole('bt' + n, 'transform .6s cubic-bezier(.2,.75,.3,1)'); hole('bs' + n, 0);
+            } else { hole('b' + n, 'none'); hole('bt' + n, 'none'); hole('bs' + n, 1); }
+            if (t.dive) {
+                var d = t.dive, sx = d % 2 === 1 ? -1 : 1;
+                hole('kp' + n, 'translate(' + (sx * 165) + 'px,' + (d <= 2 ? -22 : 28) + 'px) rotate(' + (sx * (d <= 2 ? 25 : 70)) + 'deg)'); hole('kt' + n, 'transform .5s cubic-bezier(.3,.8,.3,1)');
+            } else { hole('kp' + n, 'none'); hole('kt' + n, 'transform .35s ease'); }
+            var kicked = t.ph === 'kick' || (t.ph === 'done' && t.shot);
+            hole('kw' + n, t.ph === 'run' ? 'translate(' + (k ? 10 : -10) + 'px,8px) rotate(' + (k ? -4 : 4) + 'deg)' : kicked ? 'rotate(' + (k ? -6 : 6) + 'deg)' : 'translate(' + (k ? 30 : -30) + 'px,22px)');
+            hole('kl' + n, t.ph === 'run' ? 'rotate(' + (k ? -35 : 35) + 'deg)' : kicked ? 'rotate(' + (k ? 100 : -100) + 'deg)' : 'none');
+            var sh = t.shooter || P[0] || '—', nx = t.next || P[P.length > 1 ? 1 : 0] || '—';
+            hole('sh' + n, sh); hole('shi' + n, initial(sh)); hole('nx' + n, nx); hole('nxi' + n, initial(nx));
+            var banner = $('res' + k), showRes = live && t.ph === 'done' && t.res;
+            banner.classList.toggle('hidden', !showRes);
+            if (showRes) {
+                var txt = t.res === 'goal' ? 'هدف!' : t.res === 'save' ? 'صدّها الحارس!' : 'ضاعت الركلة!';
+                if (banner.className.indexOf(t.res) < 0 || banner.firstChild.textContent !== txt) { banner.className = 'banner ' + t.res; banner.firstChild.textContent = txt; }
+            }
+            // الأصوات حسب تغيّر الدور
+            var p = prevTurns[k] || {};
+            if (live) {
+                if (t.seq !== p.seq && t.ph === 'ready') sfx('whistle');
+                if (t.ph === 'run' && p.ph !== 'run') sfx('run');
+                if (t.ph === 'kick' && p.ph !== 'kick') sfx('kick');
+                if (t.ph === 'done' && p.ph !== 'done' && t.res) sfx(t.res === 'goal' ? 'goal' : 'save');
+            }
+            prevTurns[k] = { seq: t.seq, ph: t.ph };
+        });
+        $('sudden').classList.toggle('hidden', st.phase !== 'sudden');
+    }
+
+    /* ---- لوبي الدخول ---- */
+    function playerHtml(name, side, canKick) {
+        var info = (M.state.playerInfo || {})[name] || {};
+        return '<div class="lb-plain"><span class="av">' + (info.avatar ? '<img src="' + esc(info.avatar) + '" alt="" onerror="this.remove()">' : esc(initial(name))) + '</span><span class="nm">' + esc(name) + '</span>' +
+            (canKick ? '<button type="button" class="lb-kick" data-kick="' + esc(name) + '" aria-label="إخراج ' + esc(name) + '">✕</button>' : '') + '</div>';
+    }
+    function lobbyTeamHtml(side) {
+        var st = M.state, t = st.teams[side], s = M.sides[side], mine = side === M.you;
+        return '<section class="lb-team t' + side + '">' +
+            '<div class="lb-head">' +
+                '<div class="lb-row"><span class="lb-name"><i></i><span>' + esc(t.name) + '</span></span><span class="lb-count"><b>' + t.players.length + '</b>لاعب</span></div>' +
+                '<div class="lb-owner">' + (mine ? 'فريقك' : 'الخصم') + ' · بث <bdi>@' + esc(s.tiktok) + '</bdi> · <i class="dot ' + (s.present ? s.stream : 'error') + '"></i> ' + esc(s.present ? (STREAM_TEXT[s.stream] || '') : 'الستريمر مو موجود بالشاشة') + '</div>' +
+                '<div class="lb-kw-label">كلمة الدخول · اكتبها في شات <bdi>@' + esc(s.tiktok) + '</bdi></div>' +
+                '<div class="lb-kw">' + esc(st.settings.keywords[side]) + '</div>' +
+                '<div class="lb-note">' + (st.settings.followersOnly[side] ? 'الدخول للمتابعين فقط' : 'الدخول متاح للجميع') + ' · اللي ينضم لفريق ما يقدر ينضم للثاني</div>' +
+            '</div>' +
+            '<div class="lb-players">' + (t.players.length
+                ? '<div class="lb-grid">' + t.players.map(function (n) { return playerHtml(n, side, mine); }).join('') + '</div>'
+                : '<div class="lb-empty">بانتظار انضمام اللاعبين…</div>') + '</div>' +
+        '</section>';
+    }
+    function lobbyTimerHtml() {
+        var st = M.state;
+        if (st.lobbyEndsAt) return '<div class="lb-timer" id="lb-timer">تبدأ المباراة خلال <b id="lb-left">' + mmss(left(st.lobbyEndsAt)) + '</b></div>';
+        var both = M.sides.every(function (s) { return s.stream === 'connected'; });
+        return '<div class="lb-timer wait">' + (both ? 'انتهى وقت الانتظار — المباراة تبدأ أول ما يصير بكل فريق لاعب' : 'بانتظار اتصال البثين — عدّاد اللوبي يبدأ بعدها') + '</div>';
+    }
+    function renderLobby() {
+        var st = M.state, ready = st.teams.every(function (t) { return t.players.length > 0; });
+        $('lobby').innerHTML = '<div class="lb-wrap">' +
+            '<div class="lb-game">ركلات الترجيح · مباراة بين بثين · ' + st.settings.rounds + ' جولات (الفائز بجولتين) · الجولة ' + st.settings.roundMinutes + ' دقائق</div>' +
+            '<h2 class="lb-title gold">لوبي الدخول</h2>' + lobbyTimerHtml() +
+            '<div class="lb-teams">' + lobbyTeamHtml(M.you) + lobbyTeamHtml(1 - M.you) + '</div>' +
+            '<div class="lb-foot">' + (isHost()
+                ? '<button type="button" class="lb-start" data-a="start"' + (ready ? '' : ' disabled') + '>⚽ ابدأ المباراة الآن</button>' + (ready ? '' : '<span class="lb-wait">كل فريق يحتاج لاعب واحد على الأقل</span>')
+                : '<span class="lb-wait">بانتظار ' + esc(M.sides[M.host].name) + ' يبدأ المباراة — أو تبدأ تلقائياً لما يخلص الوقت</span>') + '</div></div>';
+    }
+
+    /* ---- المقدمة ثلاثية الأبعاد ---- */
+    var intro = null, introLoading = false;
+    function startIntro() {
+        if (intro || introLoading) return;
+        introLoading = true;
+        var st = M.state;
+        $('intro-t0').textContent = st.teams[0].name;
+        $('intro-t1').textContent = st.teams[1].name;
+        $('skip').disabled = !isHost();
+        $('skip').style.cursor = isHost() ? 'pointer' : 'default';
+        $('skip').firstChild.nodeValue = isHost() ? 'تخطي ' : '';
+        sfx('introCrowd');
+        import('./intro3d.js').then(function (mod) {
+            introLoading = false;
+            if (!M || M.state.phase !== 'intro') return;
+            intro = mod.mountIntro($('intro-cv'), {
+                duration: Math.max(1, left(M.state.phaseEndsAt) / 1000),
+                onProgress: function () {}, onDone: function () {},
+                teams: [
+                    { name: st.teams[0].name, color: COLORS[0], players: st.teams[0].players, kit: 0xfbbf24, shorts: 0x1f2937, socks: 0xf97316, numColor: '#7c2d12' },
+                    { name: st.teams[1].name, color: COLORS[1], players: st.teams[1].players, kit: 0x22d3ee, shorts: 0xffffff, socks: 0x0e7490, numColor: '#083344' }
+                ]
+            });
+        }).catch(function (e) { introLoading = false; console.error(e); });
+    }
+    function stopIntro() {
+        if (intro) { try { intro.stop(); } catch (e) {} intro = null; }
+        $('intro-cv').innerHTML = '';
+    }
+
+    /* ---- لوحات النتائج ---- */
+    var END_TEXT = { left: 'انسحب', stream_lost: 'انقطع بثه' };
+    function renderPanel() {
+        var st = M.state, box = $('panel-box'), html = '';
+        if (M.ended && st.phase !== 'over') {
+            var who = M.endedBy != null ? M.sides[M.endedBy].name : '', mine = M.endedBy === M.you;
+            var text = M.endReason === 'left'
+                ? (mine ? 'انسحبت من المباراة.' : who + ' انسحب من المباراة أو قفل الشاشة.')
+                : M.endReason === 'stream_lost' ? (mine ? 'انقطع بثك لفترة طويلة فانتهت المباراة.' : 'انقطع بث ' + who + ' لفترة طويلة فانتهت المباراة.')
+                : 'انتهت المباراة.';
+            html = '<h2 class="gold">انتهت المباراة</h2><p>' + esc(text) + '</p><a class="pbtn" href="' + HUB + '">الرجوع</a>';
+        } else if (st.phase === 'over' && st.winner != null) {
+            var w = st.winner;
+            html = '<div style="font-size:64px;line-height:1">🏆</div><h2 class="gold">فوز ' + esc(st.teams[w].name) + '</h2>' +
+                '<div class="score"><span style="color:' + COLORS[0] + '">' + st.roundsWon[0] + '<small> ' + esc(st.teams[0].name) + '</small></span><span style="color:#8a8596">—</span><span style="color:' + COLORS[1] + '">' + st.roundsWon[1] + '<small> ' + esc(st.teams[1].name) + '</small></span></div>' +
+                '<p>الجولات المكسوبة · بث <bdi dir="ltr">@' + esc(M.sides[w].tiktok) + '</bdi> فاز بالمباراة</p><a class="pbtn" href="' + HUB + '" data-back>الرجوع لشاشة الإعدادات</a>';
+        } else if (st.phase === 'roundEnd' && st.lastRound) {
+            var r = st.lastRound;
+            html = '<span class="gold" style="font:800 26px \'Zain\'">نهاية الجولة ' + r.round + '</span>' +
+                '<div class="big" style="color:' + COLORS[r.winner] + '">الجولة لـ ' + esc(st.teams[r.winner].name) + '</div>' +
+                '<p>الأهداف ' + r.goals[0] + ' — ' + r.goals[1] + (r.sudden ? ' · حُسمت بركلات الترجيح الحاسمة' : '') + '</p>' +
+                '<div class="score"><span style="color:' + COLORS[0] + '">' + st.roundsWon[0] + '</span><span style="color:#8a8596;font-size:18px">الجولات</span><span style="color:' + COLORS[1] + '">' + st.roundsWon[1] + '</span></div>' +
+                '<p>الجولة التالية خلال <b id="next-left">' + Math.ceil(left(st.phaseEndsAt) / 1000) + '</b> ثانية</p>';
+        }
+        $('panel').classList.toggle('hidden', !html);
+        if (box.getAttribute('data-k') !== (M.ended ? 'e' : st.phase) + ':' + st.round) { box.setAttribute('data-k', (M.ended ? 'e' : st.phase) + ':' + st.round); box.innerHTML = html; }
+    }
+
+    function render() {
+        if (!M) return;
+        var st = M.state, ph = st.phase;
+        renderTeams();
+        renderTurns();
+        var inLobby = ph === 'lobby' && !M.ended;
+        $('lobby').classList.toggle('hidden', !inLobby);
+        if (inLobby) renderLobby();
+        $('intro').classList.toggle('hidden', ph !== 'intro' || M.ended);
+        if (ph === 'intro' && !M.ended) startIntro(); else stopIntro();
+        if (ph !== 'countdown') whistled = false;
+        renderPanel();
+        if (ph === 'over' && prevPhase && prevPhase !== 'over') sfx('goal');
+        prevPhase = ph;
+        tick();
+    }
+
+    // العدّادات بين رسائل الخادم.
+    function tick() {
+        if (!M) return;
+        var st = M.state, ph = st.phase;
+        // ساعة الجولة
+        if (ph === 'playing') {
+            var ms = left(st.roundEndsAt);
+            hole('clock', mmss(ms)); hole('clockColor', ms <= 30000 ? '#f87171' : '#fff'); hole('clockBorder', ms <= 30000 ? 'rgba(248,113,113,.7)' : 'rgba(240,194,90,.4)'); hole('clockLbl', 'الوقت المتبقي');
+        } else if (ph === 'sudden') {
+            hole('clock', 'حاسمة'); hole('clockColor', '#fde7a8'); hole('clockBorder', 'rgba(240,194,90,.7)'); hole('clockLbl', 'ركلات الترجيح');
+        } else {
+            hole('clock', ph === 'roundEnd' || ph === 'over' ? '0:00' : st.settings.roundMinutes + ':00'); hole('clockColor', '#fff'); hole('clockBorder', 'rgba(240,194,90,.4)'); hole('clockLbl', 'الوقت المتبقي');
+        }
+        // وقت الركلة
+        [0, 1].forEach(function (k) {
+            var t = st.turns[k];
+            var playing = ph === 'playing' || ph === 'sudden';
+            hole('tm' + (k + 1), playing && t.ph === 'ready' && t.endsAt ? Math.ceil(left(t.endsAt) / 1000) : playing && t.ph !== 'idle' ? '—' : st.settings.shotSec);
+        });
+        if (ph === 'lobby') { var lb = $('lb-left'); if (lb && st.lobbyEndsAt) lb.textContent = mmss(left(st.lobbyEndsAt)); }
+        if (ph === 'intro') {
+            var il = left(st.phaseEndsAt);
+            $('intro-sec').textContent = Math.ceil(il / 1000);
+            $('intro-bar').style.width = Math.min(100, Math.max(0, (1 - il / INTRO_MS) * 100)) + '%';
+        }
+        var counting = ph === 'countdown' && !M.ended;
+        $('count').classList.toggle('hidden', !counting);
+        if (counting) {
+            var el = COUNTDOWN_MS - left(st.phaseEndsAt), c = el < 900 ? '3' : el < 1800 ? '2' : el < 2700 ? '1' : 'يلا!';
+            var cn = $('count-n');
+            if (cn.textContent !== c) { cn.textContent = c; cn.style.animation = 'none'; void cn.offsetWidth; cn.style.animation = ''; }
+            if (c === 'يلا!' && !whistled) { whistled = true; sfx('whistle'); }
+        }
+        if (ph === 'roundEnd') { var nl = $('next-left'); if (nl) nl.textContent = Math.ceil(left(st.phaseEndsAt) / 1000); }
+    }
+
+    function connect() {
+        try { ws = new WebSocket(wsUrl); } catch (e) { setTimeout(connect, 2000); return; }
+        ws.onopen = function () { send({ type: 'join', matchId: matchId, token: A && A.getToken ? A.getToken() : '' }); };
+        ws.onmessage = function (ev) {
+            var msg; try { msg = JSON.parse(ev.data); } catch (e) { return; }
+            if (msg.type === 'state' && msg.match) {
+                if (msg.match.game !== 'penalty') { closedForGood = true; location.replace('../../challenge.html'); return; }
+                M = msg.match;
+                clockOffset = M.serverNow - Date.now();
+                render();
+                if (M.ended) closedForGood = true;
+            } else if (msg.type === 'error') {
+                if (msg.error === 'match_not_found' || msg.error === 'not_in_match' || msg.error === 'auth_required') {
+                    closedForGood = true;
+                    $('panel-box').innerHTML = '<h2 class="gold">تعذّر فتح المباراة</h2><p>' + esc(ERR[msg.error]) + '</p><a class="pbtn" href="' + HUB + '">الرجوع</a>';
+                    $('panel').classList.remove('hidden');
+                } else toast(ERR[msg.error] || 'تعذّر تنفيذ الأمر.');
+            }
+        };
+        ws.onclose = function () { ws = null; if (!closedForGood) setTimeout(connect, 2000); };
+        ws.onerror = function () {};
+    }
+
+    // بعد إعلان الفائز: الخروج يقفل المباراة للطرفين (وإلا تبقى «جارية» وترجّعه شاشة الإعدادات لها).
+    function closeAndGo() {
+        if (M && !M.ended) action('leave');
+        setTimeout(function () { location.href = HUB; }, 300);
+    }
+
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('[data-back]')) { e.preventDefault(); closeAndGo(); return; }
+        var k = e.target.closest('[data-kick]');
+        if (k) { action('kick', { name: k.getAttribute('data-kick') }); return; }
+        var b = e.target.closest('[data-a]');
+        if (b && !b.disabled) {
+            // بدء المباراة = ضغطة المستخدم: نشغّل الصوت معها (المتصفح يمنع الصوت بدون تفاعل).
+            if (b.getAttribute('data-a') === 'start' && !snd) setSound(true);
+            action(b.getAttribute('data-a'));
+        }
+    });
+    $('skip').addEventListener('click', function () { if (isHost()) action('skipIntro'); });
+    $('leave').addEventListener('click', function () {
+        if (!M || M.ended) { location.href = HUB; return; }
+        if (M.state.phase === 'over') { closeAndGo(); return; }
+        if (!confirm('تنسحب من المباراة؟ المباراة بتنتهي للطرفين.')) return;
+        action('leave');
+        setTimeout(function () { location.href = HUB; }, 300);
+    });
+
+    /* ---- الخلفية ---- */
+    (function fx() {
+        var r = function (a, b) { return a + Math.random() * (b - a); }, html = '';
+        html += '<div class="g" style="top:-20%;right:-10%;width:900px;height:900px;background:radial-gradient(circle, rgba(124,58,237,.22), transparent 65%)"></div>';
+        html += '<div class="g" style="top:30%;left:-15%;width:800px;height:800px;background:radial-gradient(circle, rgba(139,92,246,.12), transparent 65%)"></div>';
+        html += '<div class="g" style="bottom:-30%;left:35%;width:1000px;height:700px;background:radial-gradient(circle, rgba(168,85,247,.1), transparent 65%)"></div>';
+        for (var i = 0; i < 90; i++) html += '<span class="s" style="left:' + r(0, 100) + '%;top:' + r(0, 100) + '%;width:' + (i % 9 ? 1.5 : 3) + 'px;height:' + (i % 9 ? 1.5 : 3) + 'px;background:rgba(255,255,255,' + r(.12, .35).toFixed(2) + ')"></span>';
+        $('fx').innerHTML = html;
+    })();
+
+    if (!matchId) {
+        $('panel-box').innerHTML = '<h2 class="gold">ما فيه مباراة</h2><p>ابدأ من شاشة الإعدادات: ادعُ ستريمر وادخل اللوبي.</p><a class="pbtn" href="' + HUB + '">شاشة الإعدادات</a>';
+        $('panel').classList.remove('hidden');
+        return;
+    }
+    connect();
+    setInterval(tick, 200);
+})();
+</script>
+</body>
+</html>

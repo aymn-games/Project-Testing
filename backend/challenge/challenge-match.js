@@ -27,14 +27,27 @@ var pointsService = require('../points/points-service');
 var streamerHours = require('../points/streamer-hours');
 var logger = require('../utils/logger');
 var fastestAnswer = require('./fastest-answer-logic');
+var penalty = require('./penalty-logic');
 
+// hostActions: أوامر المنشئ من الشاشة → دالة منطق اللعبة.
+// twoStep: الخصم يقبل ثم يجهّز إعداداته ويضغط «جاهز»، والمنشئ يدخل اللوبي (challenge-service.js).
 var GAMES = {
     'fastest-answer': {
         name: 'أسرع إجابة',
         create: fastestAnswer.createFastestAnswer,
         sanitize: fastestAnswer.sanitizeSettings,
         sanitizeHost: fastestAnswer.sanitizeHostSettings,
-        sanitizeGuest: fastestAnswer.sanitizeGuestSettings
+        sanitizeGuest: fastestAnswer.sanitizeGuestSettings,
+        hostActions: { start: 'startMatch', spin: 'spin', newGame: 'newGame', finish: 'finish' }
+    },
+    'penalty': {
+        name: 'ركلات الترجيح',
+        create: penalty.createPenalty,
+        sanitize: penalty.sanitizeSettings,
+        sanitizeHost: penalty.sanitizeHostSettings,
+        sanitizeGuest: penalty.sanitizeGuestSettings,
+        hostActions: { start: 'startMatch', skipIntro: 'skipIntro' },
+        twoStep: true
     }
 };
 
@@ -159,6 +172,10 @@ function connectSide(m, i) {
                 m.streamMsg[i] = null;
                 m.streamDownSince[i] = null;
                 startBroadcastFor(m, i);
+                // البثين متصلين: بعض الألعاب تبدأ عدّاد اللوبي من هنا.
+                if (m.stream[0] === 'connected' && m.stream[1] === 'connected' && typeof m.logic.onStreamsReady === 'function') {
+                    try { m.logic.onStreamsReady(); } catch (err) { logger.error('Challenge: onStreamsReady failed:', err); }
+                }
             } else if (status === 'connecting') {
                 m.stream[i] = 'connecting';
             } else {
@@ -270,12 +287,9 @@ function handleAction(m, side, action, msg) {
     // كل ستريمر يقدر يطلّع لاعبين من فريقه هو بس.
     if (action === 'kick') { var k = m.logic.kick(side, String((msg && msg.name) || '')); scheduleSend(m); return k; }
     if (side !== 0) return { ok: false, error: 'host_only' };
-    var r;
-    if (action === 'start') r = m.logic.startMatch();
-    else if (action === 'spin') r = m.logic.spin();
-    else if (action === 'newGame') r = m.logic.newGame();
-    else if (action === 'finish') r = m.logic.finish();
-    else return { ok: false, error: 'unknown_action' };
+    var method = Object.prototype.hasOwnProperty.call(GAMES[m.game].hostActions, action) ? GAMES[m.game].hostActions[action] : null;
+    if (!method) return { ok: false, error: 'unknown_action' };
+    var r = m.logic[method]();
     scheduleSend(m);
     return r;
 }

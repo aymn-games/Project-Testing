@@ -200,7 +200,7 @@
     function $(id) { return document.getElementById(id); }
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
     function gameById(id) { return GAMES.filter(function (g) { return g.id === id; })[0]; }
-    function matchUrl(game, matchId) { var g = gameById(game); return (g && g.screen ? g.screen : 'games.html') + '?match=' + encodeURIComponent(matchId); }
+    function matchUrl(game, matchId) { var g = gameById(game); return (g && g.screen ? g.screen : game === 'penalty' ? 'games/penalty/game.html' : 'games.html') + '?match=' + encodeURIComponent(matchId); }
     function initial(name) { return (Array.from(String(name || '').replace(/[\s_.@\d]/g, ''))[0] || '؟').toUpperCase(); }
     function av(src, name) { return src ? '<img class="av" src="' + esc(src) + '" alt="">' : '<span class="av">' + esc(initial(name)) + '</span>'; }
     function secs(ms) { return Math.ceil(ms / 1000); }
@@ -247,7 +247,15 @@
         $('top-grid').innerHTML = html;
     }
 
+    // ألعاب لها شاشة إعدادات خاصة بالتحدي (قبول + تجهيز + «جاهز») — الدعوة تنفتح هناك.
+    var OWN_PAGE = { 'penalty': 'games/penalty/index.html' };
+
     function incomingHtml(inv) {
+        if (OWN_PAGE[inv.game]) {
+            return '<div class="person">' + av(state.avatars[inv.id], inv.other.name) +
+                '<div class="pi"><b>' + esc(inv.other.name) + ' يتحداك!</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · ' + esc(inv.gameName) + ' · تنتهي خلال <bdi data-exp="' + inv.id + '">' + secs(inv.expiresIn) + '</bdi> ث</span></div>' +
+                '<div class="btns"><a class="btn ok" href="' + OWN_PAGE[inv.game] + '">افتح الدعوة</a></div></div>';
+        }
         var s = inv.settings || {}, open = state.acceptOpen === inv.id;
         var head = '<div class="person">' + av(state.avatars[inv.id], inv.other.name) +
             '<div class="pi"><b>' + esc(inv.other.name) + ' يتحداك!</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · ' + esc(inv.gameName) + ' · تنتهي خلال <bdi data-exp="' + inv.id + '">' + secs(inv.expiresIn) + '</bdi> ث</span></div>' +
@@ -269,6 +277,8 @@
     function outgoingHtml(inv) {
         var text = {
             pending: 'بانتظار رد ' + inv.other.name + ' · تنتهي خلال ' + secs(inv.expiresIn) + ' ث',
+            setup: inv.other.name + ' قبل التحدي ويجهّز إعداداته...',
+            ready: inv.other.name + ' جاهز ✓',
             accepted: 'قبل التحدي! جاري الانتقال للمباراة...',
             declined: inv.other.name + ' رفض الدعوة.',
             expired: 'انتهت مدة الدعوة بدون رد.',
@@ -276,7 +286,8 @@
         }[inv.status] || '';
         return '<div class="person">' + av(state.avatars[inv.id], inv.other.name) +
             '<div class="pi"><b>' + esc(inv.other.name) + '</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · ' + esc(inv.gameName) + '</span><span>' + esc(text) + '</span></div>' +
-            (inv.status === 'pending' ? '<button class="btn ghost" data-cancel="' + inv.id + '">إلغاء الدعوة</button>' : '<button class="btn ghost" data-dismiss="' + inv.id + '">إخفاء</button>') + '</div>';
+            (OWN_PAGE[inv.game] && (inv.status === 'pending' || inv.status === 'setup' || inv.status === 'ready') ? '<a class="btn" href="' + OWN_PAGE[inv.game] + '">افتح ' + esc(inv.gameName) + '</a>'
+                : inv.status === 'pending' ? '<button class="btn ghost" data-cancel="' + inv.id + '">إلغاء الدعوة</button>' : '<button class="btn ghost" data-dismiss="' + inv.id + '">إخفاء</button>') + '</div>';
     }
 
     /* ---- إنشاء مباراة (نفس أقسام إعدادات اللعبة) ---- */

@@ -564,6 +564,14 @@ function challengeRespond(inviteId, accept, settings) {
 function challengeCancel(inviteId) {
     return request('/api/challenge/cancel', { method: 'POST', body: { inviteId: inviteId } });
 }
+/** twoStep games: the opponent saves settings and marks ready (ready=false = back to editing). */
+function challengeReady(inviteId, ready, settings) {
+    return request('/api/challenge/ready', { method: 'POST', body: { inviteId: inviteId, ready: Boolean(ready), settings: settings || {} } });
+}
+/** twoStep games: the host enters the lobby once the opponent is ready → {success, matchId, game} */
+function challengeStart(inviteId) {
+    return request('/api/challenge/start', { method: 'POST', body: { inviteId: inviteId } });
+}
 
 /** Owner equips one of their owned frames (own profile page only). */
 function equipFrame(frameType, frameRef) {
@@ -1055,6 +1063,8 @@ global.AGPAuth = {
     challengeInvite: challengeInvite,
     challengeRespond: challengeRespond,
     challengeCancel: challengeCancel,
+    challengeReady: challengeReady,
+    challengeStart: challengeStart,
     redeemChoiceCode: redeemChoiceCode,
     adminGenerateChoiceCode: adminGenerateChoiceCode,
     adminListChoiceCodes: adminListChoiceCodes,
