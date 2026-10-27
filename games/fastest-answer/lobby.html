@@ -83,20 +83,21 @@ input::placeholder{color:#6f6a7c}
             <sc-if value="{{ t.empty }}" hint-placeholder-val="{{ true }}">
               <div style="height:100%;min-height:140px;box-sizing:border-box;display:grid;place-items:center;border-radius:18px;border:1.5px dashed rgba(255,255,255,.1);color:#8a8596;font:500 14px 'IBM Plex Sans Arabic';text-align:center;padding:20px">بانتظار انضمام اللاعبين…</div>
             </sc-if>
-            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:center;gap:10px">
+            <!-- نفس مقاس بطاقات لوبي روليت الإقصاء (games/elimination-roulette/lobby.html) -->
+            <div style="display:grid;grid-template-columns:{{ t.cols }};grid-auto-rows:{{ t.rowH }};align-items:center;gap:{{ t.gap }}">
               <sc-for list="{{ t.players }}" as="p" hint-placeholder-count="0">
+                <div style="min-width:0;height:100%;display:flex;align-items:center;animation:rise .4s cubic-bezier(.2,1.3,.4,1) both">
                 <sc-if value="{{ p.framed }}" hint-placeholder-val="{{ false }}">
-                  <div style="display:flex;align-items:center;gap:4px;min-width:0;animation:rise .4s cubic-bezier(.2,1.3,.4,1) both">
-                    {{ p.frameEl }}
-                  </div>
+                  <div style="width:100%;min-width:0;display:flex;align-items:center">{{ p.frameEl }}</div>
                 </sc-if>
                 <sc-if value="{{ p.plain }}" hint-placeholder-val="{{ true }}">
-                  <div style="display:flex;align-items:center;gap:10px;height:54px;padding:0 8px 0 7px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);animation:rise .4s cubic-bezier(.2,1.3,.4,1) both">
+                  <div style="width:100%;min-width:0;display:flex;align-items:center;gap:10px;height:54px;padding:0 8px 0 7px;box-sizing:border-box;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)">
                     <span style="width:40px;height:40px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ t.avBg }};border:1.5px solid {{ t.color }};font:700 16px 'IBM Plex Sans Arabic';color:#fff">{{ p.initial }}<img src="{{ p.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
                     <span style="flex:1;min-width:0;font:600 14px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
                     <button onClick="{{ p.kick }}" aria-label="إقصاء {{ p.name }}" style="width:30px;height:30px;flex-shrink:0;border:none;background:transparent;padding:0;color:#fca5a5;cursor:pointer;display:grid;place-items:center;opacity:.75;transition:opacity .2s, transform .2s" style-hover="opacity:1;transform:scale(1.15)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
                   </div>
 </sc-if>
+                </div>
               </sc-for>
             </div>
           </div>
@@ -209,7 +210,9 @@ class Component extends DCLogic {
 
   renderVals(){ const S=this.state, o=(i,out)=>S.exitOpenOut?out:i;
     return {
-      gameName:GAME.name, lobbyTeams:TEAMS.map((t,i)=>{ const pl=S.roster[i]||[], c=t.color, on=S.lobbyTab===i; return {name:t.name,keyword:t.keyword,color:c,max:t.max,count:pl.length,empty:!pl.length,
+      gameName:GAME.name, lobbyTeams:TEAMS.map((t,i)=>{ const pl=S.roster[i]||[], c=t.color, on=S.lobbyTab===i, anyFramed=pl.some(n=>this.reg.framed(n)); return {name:t.name,keyword:t.keyword,color:c,max:t.max,count:pl.length,empty:!pl.length,
+        // قائمة وحدة بعرض الشاشة (الفردي) = 5 أعمدة مثل روليت الإقصاء، وكل فريق بنص الشاشة = عمودين بنفس مقاس البطاقة تقريباً
+        cols:S.narrow||!SOLO?'repeat(2,minmax(0,1fr))':'repeat(5,minmax(0,1fr))', rowH:anyFramed?'78px':'54px', gap:anyFramed?'6px 10px':'10px',
         pick:()=>this.setState({lobbyTab:i}), tabBg:on?'rgba(255,255,255,.07)':'transparent', tabBd:on?c+'66':'transparent', tabFg:on?'#f4f2f8':'#8a8596', tabSh:on?'0 6px 20px rgba(0,0,0,.3)':'none',
         bd:c+'40',bdStrong:c+'80',soft:c+'14',halo:c+'2e',avBg:`linear-gradient(135deg, ${c}, ${c}66)`,delay:(i*0.08).toFixed(2)+'s',
         players:pl.map(n=>{ const av=this.reg.avatar(n), fr=this.reg.framed(n), kick=()=>this.setState(st=>({roster:st.roster.map((list,k)=>k===i?list.filter(x=>x!==n):list)})); return {name:n,initial:[...n].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:av||'',imgOp:av?1:0,
