@@ -724,7 +724,8 @@ export function createStage(container, getFrame) {
 
         // ----- الشخصيات
         const speakers = {};
-        if (G && G.chat) G.chat.forEach((m) => { if (m.from && now - m.at < 6000) speakers[m.from] = m; });
+        const chatList = G ? G.chat : (F.room && F.room.chat) || [];   // باللوبي: شات الانتظار
+        chatList.forEach((m) => { if (m.from && m.ch !== 'district' && m.ch !== 'mafia' && now - m.at < 6000) speakers[m.from] = m; });
         const votes = (G && G.votes) || {}, tally = {};
         Object.keys(votes).forEach((k) => { const t = votes[k]; if (t && t !== 'skip') tally[t] = (tally[t] || 0) + 1; });
         const sleeping = phase === 'night' || (sh && sh.s.k !== 'result');
@@ -764,7 +765,7 @@ export function createStage(container, getFrame) {
             // المطرود بالتصويت راح مع القفص: يبقى كرسيه فاضي واسمه عليه
             c.root.visible = !(revealDead && p.cause === 'vote');
             const sp = speakers[id];
-            v.bubble.visible = !!(sp && alive && !v.lite && (phase === 'day' || phase === 'vote'));
+            v.bubble.visible = !!(sp && alive && !v.lite && (phase === 'day' || phase === 'vote' || phase === 'lobby'));
             if (v.bubble.visible) { drawBubble(v.bubble, sp.text); v.bubble.position.set(0, 3.55, 0); }
             const n = tally[id] || 0;
             v.badge.visible = (phase === 'vote' || phase === 'verdict') && n > 0 && alive;

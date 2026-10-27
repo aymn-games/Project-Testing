@@ -108,7 +108,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         <h1>جهّز شخصيتك</h1>
         <p id="roomInfo"></p>
         <div class="card">
-            <input class="field" id="nameIn" maxlength="16" autocomplete="nickname" placeholder="اسمك باللعبة" aria-label="اسمك">
+            <input class="field" id="nameIn" maxlength="24" autocomplete="nickname" placeholder="اسمك باللعبة" aria-label="اسمك">
         </div>
         <div class="card">
             <div class="preview" id="preview"></div>
@@ -122,6 +122,9 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
     <!-- 3) انتظار البداية -->
     <section id="vWait" class="hide">
         <div class="big"><div class="preview" id="waitAv"></div><div class="tt">أنت جالس حول النار 🔥</div><p>شوف شخصيتك على البث! بانتظار المذيع يبدأ اللعبة…</p><p id="waitCount"></p></div>
+        <h2>💬 شات الانتظار</h2>
+        <div class="chatbox" id="lobbyChat"></div>
+        <div class="send"><input class="field" id="lobbyIn" maxlength="140" placeholder="سلّم على اللي معك…" autocomplete="off"><button type="button" id="lobbySend">إرسال</button></div>
         <button class="btn ghost" id="editLook" type="button">غيّر شكل شخصيتك</button>
         <button class="btn ghost" id="leaveBtn" type="button">اطلع من الروم</button>
     </section>
@@ -237,7 +240,18 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
     function renderWait() {
         $('waitAv').innerHTML = L.avatarSVG(S.look, 130);
         $('waitCount').textContent = S.room ? 'داخل الروم: ' + S.room.players.length + ' لاعب' : '';
+        var byId = {}, chat = (S.room && S.room.chat) || [], box = $('lobbyChat');
+        (S.room ? S.room.players : []).forEach(function (p) { byId[p.id] = p; });
+        var last = chat.length ? chat[chat.length - 1].n : 0;
+        if (box.dataset.n !== String(last)) {
+            box.dataset.n = last;
+            box.innerHTML = chat.length ? chat.map(function (c) { return '<div class="cm"><b>' + esc((byId[c.from] || { name: '؟' }).name) + ':</b> ' + esc(c.text) + '</div>'; }).join('') : '<div class="cm sys">ما فيه رسائل للحين</div>';
+            box.scrollTop = box.scrollHeight;
+        }
     }
+    function sendLobby() { var i = $('lobbyIn'), t = i.value.trim(); if (!t) return; net.send({ t: 'lchat', text: t }); i.value = ''; i.focus(); }
+    $('lobbySend').onclick = sendLobby;
+    $('lobbyIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') sendLobby(); });
     $('editLook').onclick = function () { show('vProfile'); $('joinGo').textContent = 'حفظ'; renderEditor(); };
     $('leaveBtn').onclick = function () { if (!confirm('تطلع من الروم؟')) return; net.send({ t: 'leave' }); NET.me(null); S.me = null; show('vCode'); };
 

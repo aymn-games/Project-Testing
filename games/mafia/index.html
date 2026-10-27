@@ -74,6 +74,7 @@ button { font-family: inherit; cursor: pointer; }
 /* الشات */
 .chat { position: absolute; top: 140px; right: 14px; bottom: 14px; width: min(330px, 26vw); display: flex; flex-direction: column; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); overflow: hidden; transition: opacity .3s, transform .3s; }
 .chat.off { opacity: 0; transform: translateX(30px); pointer-events: none; }
+.chat.in-lobby { top: 66px; bottom: auto; height: calc(100vh - 66px - 360px); min-height: 160px; }
 .chat h3 { margin: 0; padding: 10px 14px; font-size: 17px; font-weight: 900; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
 .chat h3 small { color: var(--mute); font-weight: 700; font-size: 13px; }
 .msgs { flex: 1; overflow-y: auto; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; scrollbar-width: thin; }
@@ -183,7 +184,7 @@ button { font-family: inherit; cursor: pointer; }
     <div class="banner hide" id="banner"><div class="sub" id="bSub"></div><div class="title" id="bTitle"></div><div class="prog" id="bProg"></div></div>
     <div class="caption" id="caption"><div class="k" id="capK"></div><div class="s" id="capS"></div><div id="capR"></div></div>
 
-    <aside class="chat off" id="chat"><h3>💬 النقاش <small id="chatHint">من جوالات اللاعبين</small></h3><div class="msgs" id="msgs"></div></aside>
+    <aside class="chat off" id="chat"><h3><span id="chatTitle">💬 النقاش</span> <small id="chatHint">من جوالات اللاعبين</small></h3><div class="msgs" id="msgs"></div></aside>
 
     <div class="qr-mini hide" id="qrMini"><img id="qrMiniImg" alt="باركود الدخول"><div><b>دورك على هاتفك</b><div class="code" id="qrMiniCode">----</div><small>قفلت الصفحة؟ امسح الباركود</small></div></div>
 
@@ -245,6 +246,7 @@ button { font-family: inherit; cursor: pointer; }
             S.room = m.room;
             if (!m.room.started) S.G = null;
             renderLobby(); renderCtl();
+            if (!m.room.started) renderChat(m.room.chat || [], m.room.players, 'l' + ((m.room.chat || []).length ? m.room.chat[m.room.chat.length - 1].n : 0));
         } else if (m.t === 'state') {
             S.G = m.G; onState();
         } else if (m.t === 'err') {
@@ -351,22 +353,24 @@ button { font-family: inherit; cursor: pointer; }
     };
 
     // ---------------------------------------------------------------- الحالة
-    var lastChatN = 0;
-    function onState() {
-        var G = S.G;
-        renderCtl();
-        // الشات
-        var box = $('msgs'), newest = G.chat.length ? G.chat[G.chat.length - 1].n : 0;
-        if (newest !== lastChatN) {
-            lastChatN = newest;
-            var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
-            box.innerHTML = G.chat.slice(-40).map(function (c) {
+    var lastChatN = '';
+    // لوحة الشات: شات المباراة العام، أو شات الانتظار باللوبي
+    function renderChat(list, players, key) {
+        var box = $('msgs');
+        if (key === lastChatN) return;
+        lastChatN = key;
+        var byId = {}; players.forEach(function (p) { byId[p.id] = p; });
+        box.innerHTML = list.slice(-40).map(function (c) {
                 if (c.sys) return '<div class="msg sys"><div class="bd">' + esc(c.text) + '</div></div>';
                 var p = byId[c.from] || { name: '؟' };
                 return '<div class="msg"><div class="av">' + L.avatarSVG(p.look, 32) + '</div><div class="bd"><div class="nm">' + esc(p.name) + '</div><div class="tx">' + esc(c.text) + '</div></div></div>';
-            }).join('');
-            box.scrollTop = box.scrollHeight;
-        }
+            }).join('') || '<div class="msg sys"><div class="bd">شات الانتظار — اكتبوا من جوالاتكم</div></div>';
+        box.scrollTop = box.scrollHeight;
+    }
+    function onState() {
+        var G = S.G;
+        renderCtl();
+        renderChat(G.chat, G.players, 'g' + G.id + ':' + (G.chat.length ? G.chat[G.chat.length - 1].n : 0));
         // نتيجة المباراة ← نقاط المنصة (مرة وحدة لكل مباراة)
         if (G.phase === 'over' && G.winner) reportPoints(G);
     }
@@ -419,7 +423,10 @@ button { font-family: inherit; cursor: pointer; }
         $('over').classList.toggle('hide', !(G && G.phase === 'over'));
         document.body.classList.toggle('is-over', !!(G && G.phase === 'over'));
         $('round').classList.toggle('hide', !started);
-        $('chat').classList.toggle('off', !(G && (G.phase === 'day' || G.phase === 'vote' || G.phase === 'verdict')));
+        var inLobby = !!(S.room && !S.room.started);
+        $('chat').classList.toggle('off', !(inLobby || (G && (G.phase === 'day' || G.phase === 'vote' || G.phase === 'verdict'))));
+        $('chat').classList.toggle('in-lobby', inLobby);
+        $('chatTitle').textContent = inLobby ? '💬 شات الانتظار' : '💬 النقاش';
         if (!started) { $('timer').classList.add('hide'); banner(''); caption(''); $('letterbox').classList.remove('on'); flash('#000', 0); return; }
 
         var alive = G.players.filter(function (p) { return p.alive; }).length;

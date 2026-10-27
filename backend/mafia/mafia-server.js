@@ -10,7 +10,7 @@
  *   عميل → peek {code}                  شاشة الدخول: معلومات الروم
  *   عميل → join {code,name,look,auth}   دخول لاعب ← welcome {id,key}
  *                                       (auth = توكن حساب الموقع؛ الموثّق بتيك توك تنحسب له النقاط)
- *   عميل → resume {code,id,key} · leave · look {look} (باللوبي) · ping {k}
+ *   عميل → resume {code,id,key} · leave · look {look} · lchat {text} (شات الانتظار، باللوبي) · ping {k}
  *   اللاعب → act {a,arg}   a: kill|recruit|card ('كرت|هدف' أو 'none')|protect|inspect|vote|chat ('city|district|mafia' + '|' + النص)
  *   المذيع → settings {settings} · kick {id} · endStage · start · again · lobby · close
  *   خادم → welcome · room {room} · state {G,now} · err {err} · kicked · lobby · closed · gone · pong
@@ -35,7 +35,7 @@ var _clients = {};
 var _validateSession = function (token) { return require('../auth/auth-service').validateSession(String(token || '')); };
 
 function rid(n) { return crypto.randomBytes(n || 12).toString('hex'); }
-function cleanName(n) { return String(n == null ? '' : n).replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 16); }
+function cleanName(n) { return String(n == null ? '' : n).replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24); }
 function cleanLook(l) {
     var o = {};
     Object.keys(LOOK_LIMITS).forEach(function (k) {
@@ -56,7 +56,8 @@ function publicRoom(room) {
     return {
         code: room.code, started: room.started, settings: room.settings, minPlayers: Settings.minPlayers(room.settings),
         hostOnline: !!room.hostConn,
-        players: room.players.map(function (p) { return { id: p.id, name: p.name, look: p.look, tiktok: p.tiktok, online: isOnline(room, p.id) }; })
+        players: room.players.map(function (p) { return { id: p.id, name: p.name, look: p.look, tiktok: p.tiktok, online: isOnline(room, p.id) }; }),
+        chat: room.lobbyChat.slice(-40)
     };
 }
 function broadcastRoom(room) { var msg = { t: 'room', room: publicRoom(room) }; roomClients(room).forEach(function (c) { send(c, msg); }); }
@@ -74,7 +75,7 @@ function sendStates(room) {
 
 function createRoom() {
     var code; do { code = String(1000 + Math.floor(Math.random() * 9000)); } while (_rooms[code]);
-    var room = { code: code, token: rid(16), settings: Settings.validate({}), players: [], started: false, game: null, hostConn: null, hostGoneAt: 0, dirty: false, lastSend: 0 };
+    var room = { code: code, token: rid(16), settings: Settings.validate({}), players: [], lobbyChat: [], started: false, game: null, hostConn: null, hostGoneAt: 0, dirty: false, lastSend: 0 };
     _rooms[code] = room;
     logger.log('Mafia: room ' + code + ' created');
     return room;
@@ -135,9 +136,9 @@ function onMessage(client, msg) {
         var jr = _rooms[String(msg.code || '')]; if (!jr) return send(client, { t: 'err', err: 'الروم انقفل', step: 'code' });
         if (jr.started) return send(client, { t: 'err', err: 'المباراة بدأت، انتظر الجولة الجاية' });
         var name = cleanName(msg.name);
-        if (!name) return send(client, { t: 'err', err: 'اكتب اسمك' });
+        if (name.length < 2) return send(client, { t: 'err', err: 'الاسم لازم يكون من حرفين إلى 24 حرف' });
         if (jr.players.length >= jr.settings.maxPlayers) return send(client, { t: 'err', err: 'الروم ممتلئ' });
-        if (jr.players.some(function (p) { return p.name === name; })) return send(client, { t: 'err', err: 'الاسم مستخدم، اختر اسم ثاني' });
+        if (jr.players.some(function (p) { return p.name.toLowerCase() === name.toLowerCase(); })) return send(client, { t: 'err', err: 'الاسم مستخدم، اختر اسم ثاني' });
         var tk = tiktokOf(msg.auth);
         if (tk && jr.players.some(function (p) { return p.tiktok && p.tiktok.toLowerCase() === tk.toLowerCase(); })) return send(client, { t: 'err', err: 'حسابك داخل الروم من جهاز ثاني' });
         var p = { id: 'p' + rid(5), key: rid(16), name: name, look: cleanLook(msg.look), tiktok: tk };
@@ -165,6 +166,17 @@ function onMessage(client, msg) {
             client.code = null; client.id = null; broadcastRoom(room);
         }
         return;
+    }
+    if (t === 'lchat') {
+        // شات الانتظار (قبل بداية المباراة) — الشات العام للمدينة حسب القواعد
+        var who = room.players.find(function (q) { return q.id === client.id; }), now = Date.now();
+        var text = String(msg.text == null ? '' : msg.text).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 140);
+        if (!who || room.started || !text || (who._lastChat && now - who._lastChat < 1500)) return;
+        who._lastChat = now;
+        room.lobbyChatN = (room.lobbyChatN || 0) + 1;
+        room.lobbyChat.push({ n: room.lobbyChatN, from: who.id, text: text, at: now });
+        if (room.lobbyChat.length > 60) room.lobbyChat.shift();
+        return broadcastRoom(room);
     }
     if (t === 'look') {
         var mine = room.players.find(function (q) { return q.id === client.id; });
