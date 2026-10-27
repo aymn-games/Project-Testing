@@ -133,8 +133,8 @@ button{font-family:inherit}
         </aside>
       </sc-for>
       <div style="grid-column:2;grid-row:1;min-height:0;display:grid;place-items:center">
-        <div style="display:grid;grid-template-columns:repeat(8,90px);grid-template-rows:repeat(8,90px);gap:10px">
-          <div style="grid-column:3 / 7;grid-row:3 / 7;position:relative;display:grid;place-items:center;border-radius:30px;background:rgba(255,255,255,.02);border:1.5px dashed rgba(255,255,255,.1)">
+        <div style="display:grid;grid-template-columns:repeat(10,80px);grid-template-rows:repeat(9,80px);gap:8px">
+          <div style="grid-column:4 / 8;grid-row:3 / 8;position:relative;display:grid;place-items:center;border-radius:30px;background:rgba(255,255,255,.02);border:1.5px dashed rgba(255,255,255,.1)">
             <sc-if value="{{ noLast }}" hint-placeholder-val="{{ true }}">
               <div style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:20px">
                 <span style="font:800 26px 'Zain';color:#8a8596">آخر بطاقة</span>
@@ -156,11 +156,11 @@ button{font-family:inherit}
               </div>
             </sc-if>
           </div>
-          <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="48">
-            <button onClick="{{ t.pick }}" aria-label="المربع {{ t.n }}" style="position:relative;width:90px;height:90px;padding:0;box-sizing:border-box;border-radius:16px;cursor:{{ t.cursor }};border:{{ t.border }};background:{{ t.bg }};box-shadow:{{ t.sh }};transition:transform .2s, border-color .2s" style-hover="transform:translateY(-3px)">
+          <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="70">
+            <button onClick="{{ t.pick }}" aria-label="المربع {{ t.n }}" style="position:relative;width:80px;height:80px;padding:0;box-sizing:border-box;border-radius:16px;cursor:{{ t.cursor }};border:{{ t.border }};background:{{ t.bg }};box-shadow:{{ t.sh }};transition:transform .2s, border-color .2s" style-hover="transform:translateY(-3px)">
               <sc-if value="{{ t.closed }}" hint-placeholder-val="{{ true }}">
-                <span style="position:absolute;top:6px;right:9px;font:900 31px/1 'Zain';color:#f4f2f8;font-variant-numeric:tabular-nums">{{ t.n }}</span>
-                <img src="{{ t.icon }}" alt="" draggable="false" style="position:absolute;bottom:7px;left:8px;width:30px;height:30px">
+                <span style="position:absolute;top:5px;right:8px;font:900 28px/1 'Zain';color:#f4f2f8;font-variant-numeric:tabular-nums">{{ t.n }}</span>
+                <img src="{{ t.icon }}" alt="" draggable="false" style="position:absolute;bottom:6px;left:7px;width:26px;height:26px">
               </sc-if>
             </button>
           </sc-for>
@@ -321,7 +321,7 @@ button{font-family:inherit}
 //  النقاط: AGPAuth.reportMatchPoints مرة واحدة عند إعلان الفريق الفائز (teamGame)
 //  الأدوار: أزرق ← أحمر ← أزرق… كل فريق له مؤشر لاعب خاص يدور على لاعبيه
 // ============================================================
-const ICONS=['🇸🇦','🇰🇼','🇦🇪','🇶🇦','🇧🇭','🇴🇲','🇪🇬','🇯🇴','🇮🇶','🇲🇦','🇱🇧','🇩🇿','🦁','🐪','🦅','🐎','🐆','🐬','🦊','🐺','🐢','🦉','🐘','🐙','🪐','🌍','🌙','☀️','⭐','☄️','🌑','🌕','🎁','🏆','💎','🔑','🎲','🧭','⚓','🛡️','🏺','🎈','🪁','🧩','🎻','🚀','🔭','⏳'];
+const ICONS=['🇸🇦','🇰🇼','🇦🇪','🇶🇦','🇧🇭','🇴🇲','🇪🇬','🇯🇴','🇮🇶','🇲🇦','🇱🇧','🇩🇿','🦁','🐪','🦅','🐎','🐆','🐬','🦊','🐺','🐢','🦉','🐘','🐙','🪐','🌍','🌙','☀️','⭐','☄️','🌑','🌕','🎁','🏆','💎','🔑','🎲','🧭','⚓','🛡️','🏺','🎈','🪁','🧩','🎻','🚀','🔭','⏳','🇸🇾','🇹🇳','🇱🇾','🇸🇩','🇾🇪','🇵🇸','🐅','🦒','🦓','🦜','🐝','🦋','🌋','🌈','⚡','🔥','🎯','🎨','🎺','🥁','🗝️','📜'];
 const T={red:{c:'#ef4444',l:'#f87171',d:'#991b1b'},blue:{c:'#3b82f6',l:'#60a5fa',d:'#1e3a8a'}};
 const OTHER={red:'blue',blue:'red'};
 const SETUP=TW.readJSON(TW.keys.setup,null), ROSTER=TW.readJSON(TW.keys.roster,null);
@@ -346,7 +346,7 @@ class Component extends DCLogic {
       adminOpen:false,adminOpenOut:false,join:null,joinOut:false,narrow:innerWidth<820,scale:Math.min(innerWidth/1920,(innerHeight-80)/1000),logo:false,toast:null}; }
   makeTiles(){ const w=v=>v<=10?10:v<=20?6:v<=29?3:1, vals=Array.from({length:35},(_,i)=>i+1), tot=vals.reduce((a,v)=>a+w(v),0);
     const pick=()=>{ let r=Math.random()*tot; for(const v of vals){ r-=w(v); if(r<=0) return v; } return 1; };
-    const cards=shuffle([...Array.from({length:32},()=>({kind:'pos',val:pick()})),...Array.from({length:13},()=>({kind:'neg',val:pick()})),{kind:'skipOpp'},{kind:'skipMate'},{kind:'extra'}]);
+    const cards=shuffle([...Array.from({length:47},()=>({kind:'pos',val:pick()})),...Array.from({length:20},()=>({kind:'neg',val:pick()})),{kind:'skipOpp'},{kind:'skipMate'},{kind:'extra'}]);
     const icons=shuffle([...ICONS]);
     return cards.map((c,i)=>({...c,n:i+1,icon:TW.emojiUrl(icons[i]),open:false,emo:c.kind==='pos'?POS_E[i%POS_E.length]:c.kind==='neg'?NEG_E[i%NEG_E.length]:SPECIAL[c.kind].emo})); }
 
@@ -429,7 +429,7 @@ class Component extends DCLogic {
     const pct=k=>Math.max(0,Math.min(100,s.teams[k].pts/s.start*100));
     const RV={pos:{c:'#22c55e',bg:'linear-gradient(165deg, #0d3220, #08140e)',label:'ضربة للخصم'},neg:{c:'#ef4444',bg:'linear-gradient(165deg, #3a0f14, #14080a)',label:'ضربة عكسية'},sp:{c:'#fbbf24',bg:'linear-gradient(165deg, #3a2c0a, #14100a)',label:'بطاقة خاصة'}};
     const rk=r?(r.kind==='pos'||r.kind==='neg'?r.kind:'sp'):'pos', rv=RV[rk];
-    const W=s.winner?s.teams[s.winner]:null, wn=W?W.players.length:0, sz=wn<=2?{w:300,a:150,af:60,f:34,pf:44,crown:54,pad:44}:wn<=4?{w:250,a:124,af:50,f:28,pf:38,crown:46,pad:40}:{w:196,a:90,af:38,f:22,pf:30,crown:38,pad:34};
+    const W=s.winner?s.teams[s.winner]:null, wn=W?W.players.length:0, sz=wn<=2?{w:300,a:150,af:60,f:34,pf:44,crown:54,pad:44}:wn<=4?{w:250,a:124,af:50,f:28,pf:38,crown:46,pad:40}:wn<=8?{w:196,a:90,af:38,f:22,pf:30,crown:38,pad:34}:{w:170,a:70,af:30,f:20,pf:26,crown:30,pad:28};
     return {
       fx:this.buildFx(), lblDisp:s.narrow?'none':'inline', narrow:s.narrow, exitOpen:!!s.exitOpen, onExit:()=>this.setState({exitOpen:true,exitOpenOut:false}), closeExit:()=>this.shut('exitOpen'), exitOv:s.exitOpenOut?'fadeOut .26s ease forwards':'fade .25s ease', exitAn:s.exitOpenOut?'popOut .26s ease forwards':'popIn .45s cubic-bezier(.2,1.25,.35,1)',
       scale:s.scale, stop:e=>e.stopPropagation(), toast:s.toast,
