@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d0f24">
+<title>المافيا — العب من جوالك</title>
+<link rel="icon" href="../../favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800;900&display=swap" rel="stylesheet">
+<script src="../../auth/auth-client.js"></script>
+<script src="mafia-net.js"></script>
+<script src="mafia-looks.js"></script>
+<style>
+:root { --bg: #0d0f24; --card: #171a38; --card2: #1e2247; --ink: #f6f3ff; --mute: #a9a6c6; --line: rgba(255,255,255,.12); --gold: #ffcc4d; --red: #e2483d; --green: #2fb36a; --blue: #3e8ef0; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: Zain, "Segoe UI", Tahoma, sans-serif; direction: rtl; }
+body { min-height: 100dvh; padding: env(safe-area-inset-top) 16px calc(16px + env(safe-area-inset-bottom)); }
+button, input { font-family: inherit; }
+.wrap { max-width: 480px; margin: 0 auto; }
+.hide { display: none !important; }
+h1 { font-size: 30px; font-weight: 900; margin: 16px 0 4px; }
+h2 { font-size: 22px; font-weight: 900; margin: 16px 0 8px; }
+p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px; margin-top: 12px; }
+.field { width: 100%; height: 52px; border-radius: 14px; border: 2px solid var(--line); background: #0f1130; color: #fff; font-size: 20px; font-weight: 800; padding: 0 14px; outline: none; }
+.field:focus { border-color: var(--gold); }
+.code-in { text-align: center; letter-spacing: 10px; font-size: 32px; direction: ltr; }
+.btn { width: 100%; height: 54px; border-radius: 16px; border: 0; font-weight: 900; font-size: 20px; color: #1b1300; background: linear-gradient(180deg, #ffd96b, #f2b632); box-shadow: 0 5px 0 #a87710; margin-top: 12px; cursor: pointer; }
+.btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #a87710; }
+.btn[disabled] { filter: grayscale(1) brightness(.6); }
+.btn.ghost { background: rgba(255,255,255,.08); color: #fff; box-shadow: none; border: 1px solid var(--line); }
+.err { color: #ff8a80; font-weight: 800; min-height: 22px; margin-top: 8px; }
+.brand { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-weight: 900; font-size: 18px; color: var(--mute); }
+
+/* محرر الشخصية — صف لكل خيار: العنوان يمين والاختيارات يسار */
+.preview { display: grid; place-items: center; padding: 6px; }
+.preview svg { width: 130px; height: 130px; border-radius: 50%; background: radial-gradient(circle at 50% 40%, #2b2f63, #15183a); }
+.opt-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.opt-row:first-of-type { border-top: 0; }
+.opt-row .lbl { font-weight: 800; font-size: 16px; text-align: right; flex: none; }
+.opts { display: flex; gap: 6px; overflow-x: auto; padding: 2px; scrollbar-width: none; direction: rtl; }
+.opts::-webkit-scrollbar { display: none; }
+.sw { width: 34px; height: 34px; flex: none; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
+.sw.on { border-color: #fff; box-shadow: 0 0 0 2px var(--gold); }
+.pill { flex: none; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.06); color: #fff; font-weight: 800; font-size: 15px; cursor: pointer; }
+.pill.on { background: var(--gold); color: #1b1300; border-color: var(--gold); }
+.acct { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 800; }
+.acct a { color: var(--gold); font-weight: 900; }
+
+/* اللعبة */
+.top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; background: var(--bg); }
+.me { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 18px; }
+.me svg { width: 40px; height: 40px; border-radius: 50%; background: var(--card2); }
+.rolechip { padding: 6px 12px; border-radius: 999px; font-weight: 900; font-size: 15px; border: 0; color: #fff; cursor: pointer; }
+.phase { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 16px; background: var(--card2); }
+.phase b { font-size: 20px; font-weight: 900; }
+.phase .t:empty { display: none; }
+.phase .t { min-width: 52px; text-align: center; font-size: 22px; font-weight: 900; padding: 2px 10px; border-radius: 10px; background: rgba(0,0,0,.3); }
+.role-card { text-align: center; padding: 22px 14px; border-radius: 22px; margin-top: 12px; color: #fff; }
+.role-card .ic { font-size: 64px; line-height: 1; }
+.role-card .nm { font-size: 36px; font-weight: 900; margin-top: 6px; }
+.role-card .ds { font-size: 17px; font-weight: 700; opacity: .95; margin-top: 4px; }
+.role-card .mates { margin-top: 10px; font-weight: 800; }
+.list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.prow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 14px; background: var(--card); border: 2px solid transparent; cursor: pointer; width: 100%; color: #fff; text-align: right; font-size: 17px; font-weight: 800; }
+.prow .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.prow svg { width: 40px; height: 40px; flex: none; border-radius: 50%; background: var(--card2); }
+.prow .num { width: 26px; height: 26px; flex: none; border-radius: 50%; display: grid; place-items: center; background: #5b54d6; font-size: 14px; }
+.prow .tag { font-size: 14px; font-weight: 900; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.08); flex: none; }
+.prow.sel { border-color: var(--gold); background: #2a2650; }
+.prow.dead { opacity: .45; cursor: default; }
+.prow[disabled] { cursor: default; }
+.note { padding: 12px 14px; border-radius: 14px; background: rgba(255,204,77,.1); color: #ffe7a6; font-weight: 800; margin-top: 10px; font-size: 16px; }
+.res { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 12px; background: var(--card); margin-top: 6px; font-weight: 800; }
+.chatbox { display: flex; flex-direction: column; gap: 6px; max-height: 42vh; overflow-y: auto; padding: 8px; border-radius: 14px; background: #0b0c22; border: 1px solid var(--line); margin-top: 10px; }
+.cm { font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+.cm b { color: var(--gold); font-weight: 900; }
+.cm.sys { color: #ffe7a6; text-align: center; font-size: 14px; }
+.cm.maf b { color: #ff8a80; }
+.send { display: flex; gap: 8px; margin-top: 8px; }
+.send .field { height: 48px; font-size: 17px; }
+.send button { flex: none; width: 74px; height: 48px; border-radius: 14px; border: 0; background: var(--gold); font-weight: 900; font-size: 17px; }
+.big { text-align: center; padding: 26px 10px; }
+.big .ic { font-size: 70px; }
+.big .tt { font-size: 28px; font-weight: 900; margin-top: 6px; }
+.status { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: var(--red); font-weight: 800; display: none; z-index: 9; }
+.status.on { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <div class="brand">🔪 المافيا · ساحة القرية</div>
+
+    <!-- 1) رقم الروم -->
+    <section id="vCode" class="hide">
+        <h1>ادخل رقم الروم</h1>
+        <p>الرقم ظاهر على شاشة البث تحت الباركود.</p>
+        <div class="card">
+            <input class="field code-in" id="codeIn" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000" aria-label="رقم الروم">
+            <button class="btn" id="codeGo" type="button">التالي</button>
+            <div class="err" id="codeErr"></div>
+        </div>
+    </section>
+
+    <!-- 2) الاسم والشخصية -->
+    <section id="vProfile" class="hide">
+        <h1>جهّز شخصيتك</h1>
+        <p id="roomInfo"></p>
+        <div class="card">
+            <input class="field" id="nameIn" maxlength="16" autocomplete="nickname" placeholder="اسمك باللعبة" aria-label="اسمك">
+        </div>
+        <div class="card">
+            <div class="preview" id="preview"></div>
+            <div id="editor"></div>
+        </div>
+        <div class="card acct" id="acct"></div>
+        <button class="btn" id="joinGo" type="button">ادخل الساحة</button>
+        <div class="err" id="joinErr"></div>
+    </section>
+
+    <!-- 3) انتظار البداية -->
+    <section id="vWait" class="hide">
+        <div class="big"><div class="preview" id="waitAv"></div><div class="tt">أنت جالس حول النار 🔥</div><p>شوف شخصيتك على البث! بانتظار المذيع يبدأ اللعبة…</p><p id="waitCount"></p></div>
+        <button class="btn ghost" id="editLook" type="button">غيّر شكل شخصيتك</button>
+        <button class="btn ghost" id="leaveBtn" type="button">اطلع من الروم</button>
+    </section>
+
+    <!-- 4) المباراة -->
+    <section id="vGame" class="hide">
+        <div class="top"><div class="me" id="meBox"></div><button class="rolechip" id="roleChip" type="button"></button></div>
+        <div class="phase"><b id="phaseTxt"></b><span class="t" id="phaseT"></span></div>
+        <div id="gameBody"></div>
+    </section>
+</div>
+<div class="status" id="status">جاري الاتصال…</div>
+
+<script>
+(function () {
+    'use strict';
+    var L = window.MafiaLooks, NET = window.MafiaNet, ROLE = L.ROLE;
+    var $ = function (id) { return document.getElementById(id); };
+    var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+    var params = new URLSearchParams(location.search);
+    var S = { code: params.get('room') || '', me: NET.me(), room: null, G: null, look: NET.look() || L.randomLook(), view: '', hideRole: false, draft: '' };
+    if (S.me && S.code && S.me.room !== S.code) S.me = null;
+
+    function show(v) { S.view = v; ['vCode', 'vProfile', 'vWait', 'vGame'].forEach(function (id) { $(id).classList.toggle('hide', id !== v); }); }
+
+    var net = NET.connect(onMsg, function () {
+        if (S.me && (S.me.room === S.code || !S.code)) { S.code = S.me.room; net.send({ t: 'resume', code: S.me.room, id: S.me.id, key: S.me.key }); }
+        else if (S.code) net.send({ t: 'peek', code: S.code });
+        else show('vCode');
+    }, function (ok) { $('status').classList.toggle('on', !ok); });
+
+    function onMsg(m) {
+        if (m.t === 'peek') {
+            if (!m.ok) { show('vCode'); $('codeErr').textContent = m.err; return; }
+            S.room = m.room; if (S.view !== 'vProfile') openProfile();
+            renderRoomInfo();
+        } else if (m.t === 'welcome') {
+            S.me = { room: m.code, id: m.id, key: m.key }; NET.me(S.me);
+            if (!S.G) show('vWait');
+        } else if (m.t === 'room') {
+            S.room = m.room; renderRoomInfo();
+            if (S.me && !m.room.started && S.view !== 'vProfile') { S.G = null; show('vWait'); renderWait(); }
+        } else if (m.t === 'state') {
+            S.G = m.G; if (S.view !== 'vGame') show('vGame'); renderGame();
+        } else if (m.t === 'lobby') {
+            S.G = null; show('vWait'); renderWait();
+        } else if (m.t === 'err') {
+            if (m.step === 'code') { show('vCode'); $('codeErr').textContent = m.err; }
+            else $('joinErr').textContent = m.err;
+        } else if (m.t === 'gone' || m.t === 'kicked' || m.t === 'closed') {
+            NET.me(null); S.me = null; S.G = null;
+            show('vCode'); $('codeErr').textContent = m.t === 'kicked' || m.reason === 'kicked' ? 'المذيع طلّعك من الروم' : 'الروم انقفل';
+        }
+    }
+
+    // ---------------------------------------------------------------- رقم الروم
+    $('codeGo').onclick = function () {
+        var c = $('codeIn').value.replace(/\D/g, '');
+        if (c.length !== 4) { $('codeErr').textContent = 'الرقم من 4 خانات'; return; }
+        S.code = c; $('codeErr').textContent = ''; net.send({ t: 'peek', code: c });
+    };
+    $('codeIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('codeGo').click(); });
+
+    // ---------------------------------------------------------------- الشخصية
+    function renderRoomInfo() {
+        if (!S.room) return;
+        $('roomInfo').textContent = 'روم ' + S.room.code + ' · ' + S.room.players.length + ' لاعب داخل';
+        if (S.view === 'vWait') renderWait();
+    }
+    function openProfile() {
+        show('vProfile');
+        var u = null; try { u = window.AGPAuth && AGPAuth.getCachedUser(); } catch (e) { }
+        if (!$('nameIn').value) $('nameIn').value = (u && (u.tiktok_display_name || u.username)) ? String(u.tiktok_display_name || u.username).slice(0, 16) : (localStorage.getItem('mafia-name') || '');
+        var tk = u && u.tiktok_verified && u.tiktok_username;
+        var next = 'games/mafia/join.html?room=' + encodeURIComponent(S.code);
+        $('acct').innerHTML = tk
+            ? '<span>✅ داخل بحساب <b>@' + esc(tk) + '</b></span><span style="color:#7ee2a6">تنحسب لك نقاط المنصة</span>'
+            : '<span>ما سجّلت دخول بحساب موثّق — تقدر تلعب بدون نقاط</span><a href="../../login.html?next=' + encodeURIComponent(next) + '">تسجيل الدخول</a>';
+        renderEditor();
+    }
+    var ROWS = [
+        { k: 'skin', n: 'لون البشرة', c: L.SKIN },
+        { k: 'hair', n: 'التسريحة', names: L.HAIR_STYLES },
+        { k: 'hairC', n: 'لون الشعر', c: L.HAIR_C },
+        { k: 'shirt', n: 'القميص', c: L.SHIRT },
+        { k: 'pants', n: 'البنطلون', c: L.PANTS }
+    ];
+    function renderEditor(target) {
+        var host = target || $('editor');
+        $('preview').innerHTML = L.avatarSVG(S.look, 130);
+        host.innerHTML = ROWS.map(function (r) {
+            var items = r.c ? r.c.map(function (col, i) { return '<button type="button" class="sw' + (S.look[r.k] === i ? ' on' : '') + '" style="background:' + col + '" data-k="' + r.k + '" data-v="' + i + '" aria-label="' + r.n + ' ' + (i + 1) + '"></button>'; }).join('')
+                : r.names.map(function (nm, i) { return '<button type="button" class="pill' + (S.look[r.k] === i ? ' on' : '') + '" data-k="' + r.k + '" data-v="' + i + '">' + nm + '</button>'; }).join('');
+            return '<div class="opt-row"><span class="lbl">' + r.n + '</span><div class="opts">' + items + '</div></div>';
+        }).join('') + '<button type="button" class="btn ghost" id="randLook">🎲 شكل عشوائي</button>';
+    }
+    $('editor').addEventListener('click', function (e) {
+        if (e.target.id === 'randLook') S.look = L.randomLook();
+        else { var b = e.target.closest('[data-k]'); if (!b) return; S.look[b.getAttribute('data-k')] = Number(b.getAttribute('data-v')); }
+        NET.look(S.look); renderEditor();
+        if (S.me) net.send({ t: 'look', look: S.look });
+    });
+    $('joinGo').onclick = function () {
+        var name = $('nameIn').value.trim();
+        if (!name) { $('joinErr').textContent = 'اكتب اسمك'; return; }
+        try { localStorage.setItem('mafia-name', name); } catch (e) { }
+        $('joinErr').textContent = ''; NET.look(S.look);
+        if (S.me) { show('vWait'); renderWait(); return; }   // تعديل الشكل بعد الدخول
+        net.send({ t: 'join', code: S.code, name: name, look: S.look, auth: NET.authToken() });
+    };
+
+    // ---------------------------------------------------------------- الانتظار
+    function renderWait() {
+        $('waitAv').innerHTML = L.avatarSVG(S.look, 130);
+        $('waitCount').textContent = S.room ? 'داخل الروم: ' + S.room.players.length + ' لاعب' : '';
+    }
+    $('editLook').onclick = function () { show('vProfile'); $('joinGo').textContent = 'حفظ'; renderEditor(); };
+    $('leaveBtn').onclick = function () { if (!confirm('تطلع من الروم؟')) return; net.send({ t: 'leave' }); NET.me(null); S.me = null; show('vCode'); };
+
+    // ---------------------------------------------------------------- المباراة
+    $('roleChip').onclick = function () { S.hideRole = !S.hideRole; renderGame(); };
+    function plist(G) { return G.players.slice().sort(function (a, b) { return a.seat - b.seat; }); }
+    function avatar(p, s) { return L.avatarSVG(p.look, s || 40); }
+    function act(a, arg) { net.send({ t: 'act', a: a, arg: arg }); }
+
+    function playerRows(G, opts) {
+        // opts: {can(p) → bool, sel(p) → bool, tag(p) → html, action}
+        return '<div class="list">' + plist(G).map(function (p) {
+            var ok = opts.can(p), sel = opts.sel && opts.sel(p);
+            return '<button type="button" class="prow' + (sel ? ' sel' : '') + (!p.alive ? ' dead' : '') + '"' + (ok ? ' data-act="' + opts.action + '" data-id="' + p.id + '"' : ' disabled') + '>' +
+                '<span class="who"><span class="num">' + (p.seat + 1) + '</span>' + avatar(p) + '<span>' + esc(p.name) + (p.id === S.me.id ? ' (أنت)' : '') + '</span></span>' +
+                (function (t) { return t ? '<span class="tag">' + t + '</span>' : ''; })(opts.tag ? opts.tag(p) : '') + '</button>';
+        }).join('') + '</div>';
+    }
+
+    function chatHtml(G, canSend, hint) {
+        var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
+        var msgs = G.chat.slice(-50).map(function (c) {
+            if (c.sys) return '<div class="cm sys">' + esc(c.text) + '</div>';
+            var p = byId[c.from] || { name: '؟' };
+            return '<div class="cm' + (c.mafia ? ' maf' : '') + '"><b>' + esc(p.name) + (c.mafia ? ' 🔪' : '') + ':</b> ' + esc(c.text) + '</div>';
+        }).join('');
+        return '<div class="chatbox" id="chatbox">' + msgs + '</div>' + (canSend
+            ? '<div class="send"><input class="field" id="chatIn" maxlength="140" placeholder="' + (hint || 'اكتب رسالة…') + '" autocomplete="off"><button type="button" id="chatSend">إرسال</button></div>' : '');
+    }
+
+    var lastRenderKey = '';
+    function renderGame() {
+        var G = S.G; if (!G || !G.me) return;
+        var me = G.me, R = ROLE[me.role], mp = G.players.find(function (p) { return p.id === me.id; }) || {};
+        $('meBox').innerHTML = avatar(mp, 40) + '<span>' + esc(mp.name || '') + '</span>';
+        $('roleChip').style.background = S.hideRole ? '#3b3f63' : R.c;
+        $('roleChip').textContent = S.hideRole ? '👁 اضغط لعرض دورك' : R.icon + ' ' + R.n;
+
+        // نعيد بناء المحتوى فقط إذا تغيّر شي يهم (عشان ما يضيع النص اللي يكتبه)
+        var key = JSON.stringify([G.phase, G.round, G.players.map(function (p) { return p.alive; }), me, G.votes, G.chat.length && G.chat[G.chat.length - 1].n, G.verdict, G.winner, S.hideRole, G.phase === 'dawn' ? G.players.length : 0]);
+        if (key === lastRenderKey) return; lastRenderKey = key;
+        var input = $('chatIn'); if (input) S.draft = input.value;
+        var focused = document.activeElement && document.activeElement.id === 'chatIn';
+
+        var html = '', ph = G.phase, alive = me.alive;
+        var mates = G.players.filter(function (p) { return p.role === 'mafia' && p.id !== me.id; });
+        if (!alive && ph !== 'over') html += '<div class="note">💀 خرجت من اللعبة — تقدر تتابع البث بس ما تقدر تتكلم أو تصوّت.</div>';
+
+        if (ph === 'reveal') {
+            html += '<div class="role-card" style="background:linear-gradient(160deg,' + R.c + ',#1b1d3d)"><div class="ic">' + R.icon + '</div><div class="nm">أنت ' + R.n + '</div><div class="ds">' + R.desc + '</div>' +
+                (me.role === 'mafia' && mates.length ? '<div class="mates">فريقك: ' + mates.map(function (p) { return esc(p.name); }).join('، ') + '</div>' : '') + '</div>' +
+                '<div class="note">لا تخلي أحد يشوف جوالك! وخبّ الدور من الزر فوق إذا تبي.</div>';
+        } else if (ph === 'night') {
+            if (!alive) html += '<div class="big"><div class="ic">🌙</div><div class="tt">الليل</div></div>';
+            else if (me.role === 'mafia') {
+                var mv = me.mafiaVotes || {}, count = {};
+                Object.keys(mv).forEach(function (k) { count[mv[k]] = (count[mv[k]] || 0) + 1; });
+                html += '<h2>🔪 اختاروا ضحية الليلة</h2><p>الأكثر اختياراً من فريقك هو الهدف.</p>' + playerRows(G, {
+                    action: 'kill', can: function (p) { return p.alive && p.role !== 'mafia'; },
+                    sel: function (p) { return mv[me.id] === p.id; },
+                    tag: function (p) { return p.role === 'mafia' ? '🔪 فريقك' : (count[p.id] ? '🎯 ' + count[p.id] : ''); }
+                }) + '<h2>شات المافيا السري</h2>' + chatHtml({ players: G.players, chat: G.chat.filter(function (c) { return c.mafia; }) }, true, 'كلّم فريقك بسرية…');
+            } else if (me.role === 'doctor') {
+                html += '<h2>🩺 مين تحمي الليلة؟</h2><p>لو المافيا هاجمته، تنقذه.</p>' + playerRows(G, {
+                    action: 'protect', can: function (p) { return p.alive && (p.id !== me.id || G.settings.doctorSelf); },
+                    sel: function (p) { return me.protect === p.id; }, tag: function (p) { return me.protect === p.id ? '🛡️ محمي' : ''; }
+                });
+            } else if (me.role === 'detective') {
+                html += '<h2>🕵️ مين تستجوب الليلة؟</h2><p>تعرف النتيجة الصبح (اختيار واحد بالليلة).</p>' + playerRows(G, {
+                    action: 'inspect', can: function (p) { return p.alive && p.id !== me.id && !me.inspect; },
+                    sel: function (p) { return me.inspect === p.id; }, tag: function (p) { return me.inspect === p.id ? '🔍 تحت التحقيق' : ''; }
+                }) + inspections(G);
+            } else {
+                html += '<div class="big"><div class="ic">😴</div><div class="tt">نام يا مواطن…</div><p>أصحاب الأدوار يختارون الحين. لا تشيل عينك عن البث!</p></div>';
+            }
+        } else if (ph === 'dawn') {
+            html += '<div class="big"><div class="ic">🎬</div><div class="tt">شوف البث!</div><p>مشاهد الليلة شغالة على شاشة البث الحين.</p></div>';
+            if (me.role === 'detective') html += inspections(G);
+        } else if (ph === 'day') {
+            html += '<h2>💬 النقاش</h2><p>رسائلك تظهر فوق شخصيتك على البث.</p>' + chatHtml(G, alive) + (me.role === 'detective' ? inspections(G) : '');
+        } else if (ph === 'vote') {
+            var tally = {}; Object.keys(G.votes).forEach(function (k) { var t = G.votes[k]; tally[t] = (tally[t] || 0) + 1; });
+            html += '<h2>🗳️ مين يطلع؟</h2>' + playerRows(G, {
+                action: 'vote', can: function (p) { return alive && p.alive && p.id !== me.id; },
+                sel: function (p) { return me.vote === p.id; }, tag: function (p) { return tally[p.id] ? '🗳️ ' + tally[p.id] : ''; }
+            }) + (alive ? '<button type="button" class="btn ghost" data-act="vote" data-id="skip">' + (me.vote === 'skip' ? '✓ ' : '') + 'ما أبي أطرد أحد (' + (tally.skip || 0) + ')</button>' : '') +
+                chatHtml(G, alive) + (me.role === 'detective' ? inspections(G) : '');
+        } else if (ph === 'verdict') {
+            var V = G.verdict, op = V && V.id && G.players.find(function (p) { return p.id === V.id; });
+            html += '<div class="big"><div class="ic">⚖️</div><div class="tt">' + (op ? 'البلدة طردت ' + esc(op.name) : (V && V.tie ? 'تعادل — ما أحد طلع' : 'ما أحد طلع')) + '</div><p>' + (op && op.id === me.id ? 'هذا أنت! 😢' : 'شوف البث') + '</p></div>';
+        } else if (ph === 'over') {
+            var won = R.team === G.winner;
+            html += '<div class="big"><div class="ic">' + (won ? '🏆' : '💔') + '</div><div class="tt">' + (G.winner === 'mafia' ? 'فازت المافيا' : 'فازت البلدة') + '</div><p>' + (won ? 'مبروك! فريقك فاز' : 'حظ أوفر المرة الجاية') + '</p></div>' +
+                '<div class="list">' + plist(G).map(function (p) { var r = ROLE[p.role] || ROLE.citizen; return '<div class="prow"><span class="who">' + avatar(p) + esc(p.name) + '</span><span class="tag" style="color:' + r.c + '">' + r.icon + ' ' + r.n + '</span></div>'; }).join('') + '</div>' +
+                '<p style="text-align:center;margin-top:10px">بانتظار المذيع يبدأ جولة جديدة…</p>';
+        }
+        $('gameBody').innerHTML = html;
+        var box = $('chatbox'); if (box) box.scrollTop = box.scrollHeight;
+        var ci = $('chatIn'); if (ci) { ci.value = S.draft; if (focused) { ci.focus(); ci.setSelectionRange(ci.value.length, ci.value.length); } }
+    }
+
+    function inspections(G) {
+        var list = (G.me && G.me.inspections) || []; if (!list.length) return '';
+        return '<h2>📁 ملف التحقيقات</h2>' + list.map(function (r) {
+            var p = G.players.find(function (q) { return q.id === r.id; });
+            return '<div class="res"><span>الليلة ' + r.round + ': ' + esc(p ? p.name : '') + '</span><span style="color:' + (r.mafia ? '#ff8a80' : '#7ee2a6') + '">' + (r.mafia ? '🔪 مافيا!' : '✓ بريء') + '</span></div>';
+        }).join('');
+    }
+
+    $('gameBody').addEventListener('click', function (e) {
+        var b = e.target.closest('[data-act]');
+        if (b) { act(b.getAttribute('data-act'), b.getAttribute('data-id')); if (navigator.vibrate) navigator.vibrate(20); return; }
+        if (e.target.id === 'chatSend') sendChat();
+    });
+    $('gameBody').addEventListener('keydown', function (e) { if (e.target.id === 'chatIn' && e.key === 'Enter') sendChat(); });
+    function sendChat() { var i = $('chatIn'); if (!i) return; var t = i.value.trim(); if (!t) return; act('chat', t); i.value = ''; S.draft = ''; i.focus(); }
+
+    // المؤقت
+    setInterval(function () {
+        var G = S.G; if (!G || S.view !== 'vGame') return;
+        var names = { reveal: 'كشف الأدوار', night: '🌙 الليل', dawn: '🎬 مشاهد الليلة', day: '☀️ النقاش', vote: '🗳️ التصويت', verdict: '⚖️ الحكم', over: '🏁 النهاية' };
+        $('phaseTxt').textContent = names[G.phase] + (G.round ? ' · ' + G.round : '');
+        var left = G.endsAt ? Math.max(0, Math.ceil((G.endsAt - NET.now()) / 1000)) : 0;
+        $('phaseT').textContent = G.endsAt && G.phase !== 'dawn' && G.phase !== 'verdict' ? left : '';
+    }, 250);
+
+    if (!S.code && !S.me) show('vCode');
+    if (S.code) $('codeIn').value = S.code;
+})();
+</script>
+</body>
+</html>
