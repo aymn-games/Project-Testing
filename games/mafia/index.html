@@ -444,9 +444,11 @@ button { font-family: inherit; cursor: pointer; }
                 if (sh.k === 'intro') caption('الليلة ' + G.round, 'البلدة نايمة… والمافيا صاحية', '', '#9fb4ff');
                 else if (sh.k === 'inspect') caption('🕵️ غرفة التحقيق', 'المحقق يستجوب مشتبهاً… والنتيجة وصلت لجواله بس', '', '#8cc0ff');
                 else if (sh.k === 'attack') {
-                    if (u < 3500) caption('🔪 المافيا تتحرك في الظلام…', 'مين بيكون الضحية الليلة؟', '', '#ff8a80');
-                    else caption('هجوم على ' + nameOf(sh.target) + '!', '', '', '#ff5a4d');
-                    if (u > 3550 && u < 4100) flash('#c40000', 0.55 * (1 - (u - 3550) / 550));
+                    if (u < 1600) caption('🌙 السوق بالليل…', 'أحد يمشي لحاله بين الدكاكين', '', '#9fb4ff');
+                    else if (u < 3900) caption('🔪 المافيا تتحرك في الظلام…', 'انتبه وراك!', '', '#ff8a80');
+                    else if (u < 4700) caption('هجوم على ' + nameOf(sh.target) + '!', '', '', '#ff5a4d');
+                    else caption('المافيا هرب في الظلام…', nameOf(sh.target) + ' طايح بالسوق', '', '#ff8a80');
+                    if (u > 3900 && u < 4450) flash('#c40000', 0.55 * (1 - (u - 3900) / 550));
                 } else if (sh.k === 'save') caption('🩺 الطبيب وصل!', 'أنقذ ' + nameOf(sh.target) + ' في آخر لحظة', '', '#7ee2a6');
                 else if (sh.k === 'quiet') caption('ليلة هادية', 'المافيا ما اختارت أحد…', '', '#9fb4ff');
                 else if (sh.k === 'result') {

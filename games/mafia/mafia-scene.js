@@ -454,6 +454,76 @@ export function createStage(container, getFrame) {
     const healRing = new THREE.Mesh(new THREE.RingGeometry(0.6, 0.8, 40), new THREE.MeshBasicMaterial({ color: '#6dffa6', transparent: true, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false }));
     healRing.rotation.x = -Math.PI / 2; scene.add(healRing); healRing.visible = false;
 
+    // ---------- السوق الشعبي بالليل (لقطة هجوم المافيا والإنقاذ — بعيد عن الساحة)
+    // الشارع على محور x (الضحية تمشي من -x إلى +x)، والزقاق المظلم اللي يطلع منه المافيا عند x=-4 بالجهة السالبة من z
+    const MARKET = new THREE.Vector3(-80, 0, 0);
+    const market = new THREE.Group(); market.position.copy(MARKET); scene.add(market);
+    const cobble = canvasTex(256, 256, (ctx) => {
+        ctx.fillStyle = '#3a2c26'; ctx.fillRect(0, 0, 256, 256);
+        for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+            const ox = (y % 2) * 16, v = 70 + ((x * 7 + y * 13) % 5) * 9;
+            ctx.fillStyle = 'rgb(' + v + ',' + (v * 0.78 | 0) + ',' + (v * 0.66 | 0) + ')';
+            roundRect(ctx, x * 32 + ox + 2, y * 32 + 2, 28, 28, 7); ctx.fill();
+        }
+    });
+    cobble.wrapS = cobble.wrapT = THREE.RepeatWrapping; cobble.repeat.set(12, 5);
+    const street = new THREE.Mesh(new THREE.PlaneGeometry(44, 22), new THREE.MeshStandardMaterial({ map: cobble, roughness: 0.9 }));
+    street.rotation.x = -Math.PI / 2; street.receiveShadow = true; market.add(street);
+    const awningTex = (a, b) => canvasTex(128, 64, (ctx) => { for (let i = 0; i < 8; i++) { ctx.fillStyle = i % 2 ? a : b; ctx.fillRect(i * 16, 0, 16, 64); } ctx.fillStyle = 'rgba(0,0,0,.25)'; for (let i = 0; i < 8; i++) { ctx.beginPath(); ctx.arc(i * 16 + 8, 64, 8, Math.PI, 0); ctx.fill(); } });
+    const awnings = [['#b3261e', '#f2e3c4'], ['#1f6f6b', '#f2e3c4'], ['#d98b1f', '#5a2a14'], ['#6b2a7a', '#f2e3c4'], ['#2f5aa8', '#f2c94c']].map((p) => awningTex(p[0], p[1]));
+    const wallCols = ['#8a5a3c', '#7a4e34', '#9a6a46', '#6e4630'];
+    const goodsCols = ['#e8a33a', '#c0392b', '#7cb342', '#f4d03f', '#d35400', '#8e44ad'];
+    const darkM = mat('#0d0a0a', { roughness: 1 });
+    // دكاكين على الجهتين، مع فجوة بالجهة السالبة عند x=-4 (الزقاق)
+    for (const side of [-1, 1]) {
+        for (let i = 0, x = -18; x <= 18; x += 4, i++) {
+            if (side === -1 && x === -6) continue;           // الزقاق
+            const h = 4 + ((i * 3 + (side > 0 ? 1 : 0)) % 3) * 1.2, w = 3.8, z = side * 5;
+            const b = mesh(new THREE.BoxGeometry(w, h, 3), mat(wallCols[(i + (side > 0 ? 2 : 0)) % 4], { roughness: 0.95 }), x, h / 2, z + side * 1.5); market.add(b);
+            // باب/مدخل مظلم بقوس
+            const door = mesh(new THREE.PlaneGeometry(1.3, 2.1), darkM, x - 0.8, 1.05, z - side * 0.01); door.rotation.y = side > 0 ? Math.PI : 0; market.add(door);
+            // مظلّة مخططة
+            const aw = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.2, 1.6), new THREE.MeshStandardMaterial({ map: awnings[(i + (side > 0 ? 3 : 0)) % awnings.length], side: THREE.DoubleSide, roughness: 0.9 }));
+            aw.position.set(x, 2.75, z - side * 0.75); aw.rotation.x = -Math.PI / 2 + side * 0.45; aw.castShadow = true; market.add(aw);
+            // بسطة وبضاعة
+            market.add(mesh(new THREE.BoxGeometry(2.2, 0.9, 0.9), mat('#5a3a22'), x + 0.6, 0.45, z - side * 0.6));
+            for (let g = 0; g < 6; g++) market.add(mesh(new THREE.SphereGeometry(0.13, 8, 6), mat(goodsCols[(g + i) % goodsCols.length]), x - 0.2 + (g % 3) * 0.4 + 0.4, 0.98, z - side * 0.6 + (g < 3 ? -0.18 : 0.18)));
+            if (i % 2) market.add(mesh(new THREE.CylinderGeometry(0.22, 0.3, 0.6, 10), mat('#a0522d'), x - 1.4, 0.3, z - side * 0.9));
+        }
+    }
+    // الزقاق: جدران ضيقة وجدار خلفي، بدون إضاءة
+    market.add(mesh(new THREE.BoxGeometry(0.4, 5, 7), mat('#3a261c'), -7.6, 2.5, -8.5));
+    market.add(mesh(new THREE.BoxGeometry(0.4, 5, 7), mat('#3a261c'), -4.4, 2.5, -8.5));
+    market.add(mesh(new THREE.BoxGeometry(3.6, 5, 0.4), mat('#24170f'), -6, 2.5, -12));
+    // أسلاك إضاءة فوق الشارع
+    const bulbM = new THREE.MeshStandardMaterial({ color: '#ffd27a', emissive: '#ffb347', emissiveIntensity: 2.5 });
+    for (let x = -16; x <= 16; x += 4) {
+        for (let j = 0; j < 7; j++) { const zz = -3.4 + j * (6.8 / 6), sag = Math.sin((j / 6) * Math.PI) * 0.5; const bl = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), bulbM); bl.position.set(x + 1, 4.2 - sag, zz); market.add(bl); }
+    }
+    [-12, -2, 6, 14].forEach((x) => { const pl = new THREE.PointLight('#ffb35c', 14, 11, 1.6); pl.position.set(x, 3.6, 0.3); market.add(pl); });
+    const marketMoon = new THREE.PointLight('#6f86ff', 6, 30, 1.2); marketMoon.position.set(4, 9, 6); market.add(marketMoon);
+    // فوانيس معلّقة على الدكاكين
+    [[-10, 3.4], [2, 3.4], [10, -3.4], [-14, -3.4]].forEach(([x, z]) => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.4, 0.28), bulbM); l.position.set(x, 3.1, z); market.add(l); });
+    // الضحية بالسوق: نسخة واقفة من شخصية اللاعب (بدون اسم)
+    let walker = null, walkerKey = '';
+    function marketWalker(look) {
+        const key = JSON.stringify(look || {});
+        if (walker && walkerKey === key) return walker;
+        if (walker) market.remove(walker.wrap);
+        walker = buildChar(look); walker.sit(false); walkerKey = key;
+        walker.wrap = new THREE.Group(); walker.wrap.add(walker.root); market.add(walker.wrap);
+        walker.root.userData.base = walker.mats.map((m) => m.color.clone());
+        return walker;
+    }
+    function walkPose(c, t, amp) {
+        const w = Math.sin(t);
+        c.legs[0].hip.rotation.x = w * amp; c.legs[1].hip.rotation.x = -w * amp;
+        c.legs[0].knee.rotation.x = Math.max(0, -w) * amp; c.legs[1].knee.rotation.x = Math.max(0, w) * amp;
+        c.armL.rotation.set(-w * amp * 0.8, 0, -0.2); c.armR.rotation.set(w * amp * 0.8, 0, 0.2);
+    }
+    function standPose(c) { c.legs.forEach((l) => { l.hip.rotation.x = 0; l.knee.rotation.x = 0; }); }
+    const mw = (x, y, z) => new THREE.Vector3(MARKET.x + x, MARKET.y + y, MARKET.z + z);   // من إحداثيات السوق للعالم
+
     // ---------- القفص (حكم الطرد)
     const cage = new THREE.Group(); scene.add(cage); cage.visible = false;
     const barM = mat('#6c6f78', { metalness: 0.8, roughness: 0.35 });
@@ -584,11 +654,6 @@ export function createStage(container, getFrame) {
         chars.forEach((v, id) => {
             const p = v.p, c = v.c, ph = id.charCodeAt(1) * 0.7 + v.num;
             let alive = p.alive !== false, fallK = 0;
-            // لقطة الهجوم/الإنقاذ على هذا اللاعب
-            if (sh && sh.s.target === id) {
-                if (sh.s.k === 'attack') fallK = ease(span(sh.u, 3600, 4400));
-                if (sh.s.k === 'save') fallK = 1 - ease(span(sh.u, 3800, 4800));
-            }
             if (!alive) fallK = 1;
             // وضع الجلوس الأساسي
             c.root.position.set(0, 0, 0); c.root.rotation.set(0, 0, 0);
@@ -629,7 +694,7 @@ export function createStage(container, getFrame) {
         });
 
         // ----- المشاهد الخاصة
-        mafioso.root.visible = false; doctor.root.visible = false; evilLight.intensity = 0; healPts.visible = false; healRing.visible = false; healLight.intensity = 0;
+        mafioso.root.visible = false; doctor.root.visible = false; if (walker) walker.wrap.visible = false; evilLight.intensity = 0; healPts.visible = false; healRing.visible = false; healLight.intensity = 0;
         cage.visible = false; verdictSpot.intensity = 0; confetti.visible = false;
         let cam = null;   // [px,py,pz, lx,ly,lz, snap]
 
@@ -653,38 +718,68 @@ export function createStage(container, getFrame) {
                 cam = [ROOM.x + Math.sin(a) * d, lerp(2.7, 2.3, k), ROOM.z + Math.cos(a) * d, ROOM.x, 1.3, ROOM.z];
                 hemi.intensity = 0.06; sky.intensity = 0;
             } else if ((s.k === 'attack' || s.k === 'save') && vt) {
-                const p = seatWorld(vt, tmp), dir = tmp2.copy(p).normalize();
+                // كل اللقطة بالسوق: الضحية نسخة واقفة من شخصية اللاعب، وما فيه أسماء فوق أحد
+                const w = marketWalker(vt.p.look);
+                w.wrap.visible = true; w.root.position.set(0, 0, 0); w.root.rotation.set(0, 0, 0); standPose(w);
+                w.head.rotation.set(0, 0, 0); w.body.position.y = 0; setGrey(w, 0);
+                w.eyes.forEach((e) => { e.scale.y = e.userData.sy; e.visible = true; });
+                w.wrap.rotation.y = Math.PI / 2;   // وجهه باتجاه +x (اتجاه المشي)
+                const STOP_X = 0, Z = 0.6;
                 if (s.k === 'attack') {
-                    // يظهر من الظلام خلف الضحية، يرفع السكين ويطعن
-                    mafioso.root.visible = true;
-                    const appear = ease(span(u, 400, 2400));
-                    const back = 1.1 + (1 - appear) * 3.5;
-                    mafioso.root.position.set(p.x + dir.x * back, 0, p.z + dir.z * back);
-                    mafioso.root.rotation.set(0, Math.atan2(-dir.x, -dir.z), 0);
+                    // 0–3.4ث يمشي بالسوق · المافيا يطلع من الزقاق من 1.6ث ويوصل وراه · طعنة 3.9ث · يطيح · المافيا يهرب للزقاق
+                    const walkK = span(u, 0, 3400), vx = lerp(-10, STOP_X, walkK);
+                    w.wrap.position.set(vx, 0, Z);
+                    if (u < 3400) { walkPose(w, u / 110, 0.55); w.root.position.y = Math.abs(Math.sin(u / 110)) * 0.05; }
+                    if (u > 3500 && u < 3950) w.head.rotation.y = -ease(span(u, 3500, 3800)) * 0.9;   // يحس بأحد وراه
+                    const fall = ease(span(u, 3950, 4700));
+                    if (fall > 0) { w.root.rotation.x = fall * Math.PI / 2 * 0.96; w.armL.rotation.set(-2.6 * fall, 0, -0.3); w.armR.rotation.set(-2.6 * fall, 0, 0.3); standPose(w); w.head.rotation.set(0, 0, 0); }
+
+                    mafioso.root.visible = u > 1200 && u < 6600;
+                    const alley = new THREE.Vector3(-6, 0, -9), mouth = new THREE.Vector3(-5.2, 0, -3.2), behind = new THREE.Vector3(STOP_X - 1.0, 0, Z);
+                    const fleeK = ease(span(u, 4700, 6400));
+                    let mp, moving = false, dirV;
+                    if (u < 4700) {
+                        const a = ease(span(u, 1600, 2600)), b = ease(span(u, 2600, 3700));
+                        mp = b > 0 ? mouth.clone().lerp(behind, b) : alley.clone().lerp(mouth, a);
+                        moving = (u > 1600 && u < 3700);
+                        dirV = b > 0 ? behind.clone().sub(mouth) : mouth.clone().sub(alley);
+                        if (u >= 3700) dirV = new THREE.Vector3(1, 0, 0);
+                    } else {
+                        mp = fleeK < 0.5 ? behind.clone().lerp(mouth, fleeK * 2) : mouth.clone().lerp(alley, fleeK * 2 - 1);
+                        moving = fleeK < 1; dirV = fleeK < 0.5 ? mouth.clone().sub(behind) : alley.clone().sub(mouth);
+                    }
+                    mafioso.root.position.copy(mw(mp.x, 0, mp.z));
+                    mafioso.root.rotation.set(0, Math.atan2(dirV.x, dirV.z), 0);
                     mafioso.root.scale.setScalar(1.05);
-                    const raise = ease(span(u, 2400, 3300)), strike = ease(span(u, 3450, 3650));
-                    mafioso.armR.rotation.set(-0.5 - raise * 2.6 + strike * 2.2, 0, 0.15);
-                    mafioso.armL.rotation.set(-0.4 - raise * 0.6, 0, -0.2);
-                    mafioso.head.rotation.set(0.15 - raise * 0.2, Math.sin(u / 300) * 0.05, 0);
+                    standPose(mafioso);
+                    const raise = ease(span(u, 3500, 3850)), strike = ease(span(u, 3850, 4000)) * (u < 4700 ? 1 : 0);
+                    if (moving) walkPose(mafioso, u / (u > 4700 ? 70 : 120), u > 4700 ? 0.8 : 0.45);
+                    if (u > 3400 && u < 4700) { mafioso.armR.rotation.set(-0.5 - raise * 2.6 + strike * 2.2, 0, 0.15); mafioso.armL.rotation.set(-0.4 - raise * 0.6, 0, -0.2); }
+                    mafioso.head.rotation.set(0.15 - raise * 0.2, 0, 0);
                     mafioso.eyes.forEach((e) => { e.material.emissiveIntensity = 1 + raise * 1.5; });
-                    evilLight.position.set(mafioso.root.position.x - dir.x * 0.8, 2.6, mafioso.root.position.z - dir.z * 0.8);
-                    evilLight.intensity = appear * (14 + raise * 16);
-                    if (u > 3500 && u < 3800) shake = 0.25;
-                    const side = new THREE.Vector3(-dir.z, 0, dir.x);
-                    const k = ease(u / s.dur);
-                    const camBase = p.clone().addScaledVector(dir, -Math.min(3.4, vt.seat.r - 1.6) + k * 0.8).addScaledVector(side, 2.4);
-                    cam = [camBase.x, lerp(3.2, 2.3, k), camBase.z, p.x + dir.x * 0.6, 1.3, p.z + dir.z * 0.6];
+                    evilLight.position.copy(mafioso.root.position).add(new THREE.Vector3(0.6, 2.4, 0.8));
+                    evilLight.intensity = mafioso.root.visible ? 6 + raise * 14 : 0;
+                    if (u > 3880 && u < 4150) shake = 0.25;
+
+                    // الكاميرا: تتبع بالسوق ← الزقاق والمافيا يطلع ← قدّام الضحية والمافيا وراه ← لقطة واسعة للهروب
+                    if (u < 1700) { const c0 = mw(vx + 3.6, 1.9, Z + 3.6), l0 = mw(vx + 0.4, 1.3, Z); cam = [c0.x, c0.y, c0.z, l0.x, l0.y, l0.z]; }
+                    else if (u < 3300) { const k = span(u, 1700, 3300), c0 = mw(-1.8 - k * 0.6, 1.5, 4.4), l0 = mw(-4.6 + k * 2, 1.3, -3.4 + k * 2.6); cam = [c0.x, c0.y, c0.z, l0.x, l0.y, l0.z]; }
+                    else if (u < 4450) { const c0 = mw(STOP_X + 2.7, 1.75, Z + 1.3), l0 = mw(STOP_X - 0.5, 1.25, Z); cam = [c0.x, c0.y, c0.z, l0.x, l0.y, l0.z]; }
+                    else { const k = ease(span(u, 4450, 7000)), c0 = mw(6.6 + k * 0.6, 2.9 + k * 0.3, 2.6), l0 = mw(-2.4, 0.4, -1.6); cam = [c0.x, c0.y, c0.z, l0.x, l0.y, l0.z]; }
                 } else {
-                    // الطبيب يركض من النار للمصاب، يركع، وهالة خضراء ترجعه
-                    doctor.root.visible = true;
+                    // الطبيب يركض بالسوق للمصاب، يركع، وهالة خضراء ترجعه واقف
+                    w.wrap.position.set(STOP_X, 0, Z);
+                    const fall = 1 - ease(span(u, 3800, 4800));
+                    w.root.rotation.x = fall * Math.PI / 2 * 0.96;
+                    if (fall > 0) { w.armL.rotation.set(-2.6 * fall, 0, -0.3); w.armR.rotation.set(-2.6 * fall, 0, 0.3); }
+                    const p = mw(STOP_X + 0.8, 0, Z);   // مكان جسم المصاب على الأرض
+                    doctor.root.visible = true; standPose(doctor);
                     const run = ease(span(u, 0, 2000));
-                    const from = new THREE.Vector3(-dir.z * 6, 0, dir.x * 6).add(p);
-                    const to = p.clone().addScaledVector(new THREE.Vector3(-dir.z, 0, dir.x), 1.1);
+                    const from = mw(9, 0, Z + 0.9), to = mw(STOP_X + 0.8, 0, Z + 1.2);
                     doctor.root.position.lerpVectors(from, to, run);
-                    doctor.root.position.y = run < 1 ? Math.abs(Math.sin(u / 90)) * 0.15 : 0;
-                    doctor.root.lookAt(p.x, 0, p.z);
-                    const swing = run < 1 ? Math.sin(u / 90) * 0.9 : 0;
-                    doctor.armL.rotation.set(-0.3 + swing, 0, -0.15); doctor.armR.rotation.set(run < 1 ? -0.3 - swing : -1.4 + Math.sin(u / 160) * 0.15, 0, 0.15);
+                    if (run < 1) { walkPose(doctor, u / 70, 0.8); doctor.root.position.y = Math.abs(Math.sin(u / 70)) * 0.12; }
+                    else doctor.armR.rotation.set(-1.4 + Math.sin(u / 160) * 0.15, 0, 0.15);
+                    doctor.root.lookAt(run < 1 ? to.x : p.x, 0, run < 1 ? to.z : p.z);
                     const kneel = ease(span(u, 2000, 2400)); doctor.root.position.y -= kneel * 0.25;
                     const healK = span(u, 2200, 5200);
                     if (healK > 0 && healK < 1) {
@@ -694,10 +789,8 @@ export function createStage(container, getFrame) {
                         healGeo.attributes.position.needsUpdate = true;
                         healRing.position.set(p.x, 0.05 + healK * 1.8, p.z); healRing.scale.setScalar(1 + healK); healRing.material.opacity = 1 - healK;
                     }
-                    const side = new THREE.Vector3(-dir.z, 0, dir.x);
-                    // من خارج الحلقة وفوق: نشوف المصاب والطبيب جاي من الجنب والنار خلفهم
-                    const camBase = p.clone().addScaledVector(dir, 3.6).addScaledVector(side, -2.2);
-                    cam = [camBase.x, 3.6, camBase.z, p.x - dir.x * 0.4, 0.7, p.z - dir.z * 0.4];
+                    const k = ease(u / s.dur), c0 = mw(STOP_X + 4 - k * 0.6, 2.7 - k * 0.5, Z + 4.2 - k * 0.6), l0 = mw(STOP_X + 0.8, 0.8, Z);
+                    cam = [c0.x, c0.y, c0.z, l0.x, l0.y, l0.z];
                 }
             } else if (s.k === 'quiet') {
                 mafioso.root.visible = u < 3500;
