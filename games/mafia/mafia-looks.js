@@ -9,7 +9,7 @@
     'use strict';
 
     var SKIN = ['#f8d7bc', '#f0c09a', '#dca277', '#bd7e55', '#8f5b3b', '#603c27'];
-    var HAIR_STYLES = ['قصير', 'منكوش', 'طويل', 'كعكتين', 'كيرلي', 'كاب', 'شماغ'];
+    var HAIR_STYLES = ['قصير', 'ضفاير', 'طويل', 'كعكتين', 'كيرلي', 'كاب', 'شماغ'];
     var HAIR_C = ['#1f1a17', '#4a2c1a', '#7b4a24', '#e2b65a', '#f07c2a', '#b3261e', '#3459c9', '#e26aa8'];
     var SHIRT = ['#e2483d', '#2f7de1', '#2fb36a', '#f2b632', '#f07c2a', '#8f55d6', '#e65fa3', '#18a8a0', '#f4f1ea', '#3b4250', '#7cc243', '#1aa6d6'];
     var PANTS = ['#2b3346', '#4a3b2c', '#1f2b4a', '#5a5f6b', '#6b4a2b', '#20242c'];
@@ -38,7 +38,7 @@
         var c = colors(look), s = size || 96, hair = '';
         switch (c.style) {
             case 0: hair = '<path d="M22 42 Q22 14 50 14 Q78 14 78 42 Q70 28 50 28 Q30 28 22 42Z" fill="' + c.hair + '"/>'; break;
-            case 1: hair = '<path d="M20 44 L24 20 L34 30 L40 12 L50 26 L60 10 L66 28 L78 18 L80 44 Q70 28 50 28 Q30 28 20 44Z" fill="' + c.hair + '"/>'; break;
+            case 1: hair = '<rect x="12" y="38" width="12" height="34" rx="6" fill="' + c.hair + '"/><rect x="76" y="38" width="12" height="34" rx="6" fill="' + c.hair + '"/><circle cx="20" cy="40" r="4" fill="#f472b6"/><circle cx="80" cy="40" r="4" fill="#f472b6"/><path d="M22 42 Q22 14 50 14 Q78 14 78 42 Q70 28 50 28 Q30 28 22 42Z" fill="' + c.hair + '"/>'; break;
             case 2: hair = '<path d="M18 74 Q14 16 50 14 Q86 16 82 74 L74 74 Q76 36 50 30 Q24 36 26 74Z" fill="' + c.hair + '"/>'; break;
             case 3: hair = '<circle cx="24" cy="18" r="11" fill="' + c.hair + '"/><circle cx="76" cy="18" r="11" fill="' + c.hair + '"/><path d="M22 42 Q22 14 50 14 Q78 14 78 42 Q70 28 50 28 Q30 28 22 42Z" fill="' + c.hair + '"/>'; break;
             case 4: hair = '<g fill="' + c.hair + '"><circle cx="30" cy="24" r="12"/><circle cx="44" cy="16" r="12"/><circle cx="58" cy="16" r="12"/><circle cx="71" cy="25" r="12"/><circle cx="22" cy="38" r="9"/><circle cx="79" cy="38" r="9"/></g>'; break;
@@ -47,8 +47,11 @@
         }
         return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="' + s + '" height="' + s + '" aria-hidden="true">' +
             '<path d="M24 100 Q24 74 50 74 Q76 74 76 100Z" fill="' + c.shirt + '"/>' +
+            '<path d="M38 76 Q50 84 62 76" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="50" cy="92" r="2.6" fill="#fde68a"/>' +
+            '<ellipse cx="20" cy="48" rx="4.5" ry="6" fill="' + c.skin + '"/><ellipse cx="80" cy="48" rx="4.5" ry="6" fill="' + c.skin + '"/>' +
             '<circle cx="50" cy="46" r="30" fill="' + c.skin + '"/>' +
-            '<ellipse cx="40" cy="50" rx="3.4" ry="4.6" fill="#1b1410"/><ellipse cx="60" cy="50" rx="3.4" ry="4.6" fill="#1b1410"/>' +
+            '<ellipse cx="39" cy="50" rx="4.4" ry="5.8" fill="#1e1b2e"/><ellipse cx="61" cy="50" rx="4.4" ry="5.8" fill="#1e1b2e"/><circle cx="40.5" cy="47.5" r="1.5" fill="#fff"/><circle cx="62.5" cy="47.5" r="1.5" fill="#fff"/>' +
+            '<path d="M34 41 L44 40" stroke="' + c.hair + '" stroke-width="2.4" stroke-linecap="round"/><path d="M56 40 L66 41" stroke="' + c.hair + '" stroke-width="2.4" stroke-linecap="round"/>' +
             '<circle cx="33" cy="60" r="4" fill="#f08a8a" opacity=".45"/><circle cx="67" cy="60" r="4" fill="#f08a8a" opacity=".45"/>' +
             '<path d="M44 63 Q50 67 56 63" stroke="#7a3b2b" stroke-width="2.4" fill="none" stroke-linecap="round"/>' +
             hair + '</svg>';
