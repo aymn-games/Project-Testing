@@ -1,16 +1,18 @@
-/* «المافيا» — شاشتا الإعدادات واللوبي للمذيع، بنفس تنسيق باقي الألعاب (روليت الإقصاء):
-   هيدر زجاجي بالخروج واللوقو، عنوان متدرّج، وكروت أقسام زجاجية. لون اللعبة أحمر المافيا.
+/* «المافيا» — شاشتا الإعدادات واللوبي للمذيع، بنفس هوية وتنسيق «روليت الإقصاء»
+   (games/elimination-roulette/index.html و lobby.html): نفس الألوان البنفسجية، الهيدر الزجاجي
+   بالخروج واللوقو، العنوان المتدرّج، كروت الأقسام، شبكة بطاقات اللاعبين، والخلفية بالتوهّج والنجوم.
    صفوف الإعدادات حسب قاعدة المنصة: العنوان يمين وعنصر التحكم يسار (flex + space-between). */
 :root {
     --bg: #07060b; --card: rgba(18,16,26,.72); --line: rgba(255,255,255,.08); --line2: rgba(255,255,255,.06);
-    --ink: #f4f2f8; --ink2: #e7e3ef; --sub: #8a8596; --sub2: #a8a3b5;
-    --acc: #ef4444; --acc2: #b91c1c; --acc-text: #fca5a5; --acc-soft: rgba(239,68,68,.14); --acc-glow: rgba(239,68,68,.35);
-    --gold: #fcd34d;
+    --ink: #f4f2f8; --ink2: #e7e3ef; --sub: #8a8596; --sub2: #a8a3b5; --mute: #6f6a7c;
+    --c: #a78bfa; --c2: #c4b5fd; --c3: #ddd6fe; --g1: #7c3aed; --g2: #a855f7;
+    --c-bd: #a78bfa40; --c-bd2: #a78bfa80; --c-soft: #a78bfa14; --c-halo: #a78bfa2e; --c-glow: rgba(139,92,246,.45);
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
 body { font-family: 'IBM Plex Sans Arabic', sans-serif; color: var(--ink); direction: rtl; }
 button { font-family: inherit; }
+a { color: var(--c); } a:hover { color: var(--c2); }
 .hide { display: none !important; }
 @keyframes fade { from { opacity: 0 } to { opacity: 1 } }
 @keyframes popIn { 0% { opacity: 0; transform: scale(.85) } 100% { opacity: 1; transform: none } }
@@ -19,37 +21,42 @@ button { font-family: inherit; }
 .noscroll { scrollbar-width: none; overscroll-behavior: contain; }
 .noscroll::-webkit-scrollbar { display: none; }
 
-/* خلفية: توهج أحمر خفيف مثل ليل الساحة */
-.fx { position: fixed; inset: 0; pointer-events: none; background:
-    radial-gradient(60vw 40vh at 50% -10%, rgba(185,28,28,.22), transparent 70%),
-    radial-gradient(40vw 30vh at 90% 110%, rgba(252,211,77,.06), transparent 70%); }
+/* الخلفية: توهجات بنفسجية ونجوم ومربعات (mafia-host.js يعبّيها) */
+.fx { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.fx .glow { position: absolute; border-radius: 50%; filter: blur(40px); }
+.fx .g1 { top: -20%; right: -10%; width: 900px; height: 900px; background: radial-gradient(circle, rgba(124,58,237,.22), transparent 65%); }
+.fx .g2 { top: 30%; left: -15%; width: 800px; height: 800px; background: radial-gradient(circle, rgba(139,92,246,.12), transparent 65%); }
+.fx .g3 { bottom: -30%; left: 35%; width: 1000px; height: 700px; background: radial-gradient(circle, rgba(168,85,247,.1), transparent 65%); }
+.fx .st { position: absolute; border-radius: 50%; }
+.fx .sq { position: absolute; }
 
 /* الهيدر */
 .hdr { position: fixed; top: 0; left: 0; right: 0; z-index: 50; height: 80px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: clamp(10px,1.2vw,24px); padding: 0 clamp(12px,1.25vw,24px); background: rgba(10,9,15,.72); border-bottom: 1px solid rgba(255,255,255,.07); backdrop-filter: blur(16px); }
 .hdr .side { display: flex; gap: 8px; }
 .hdr .side.end { justify-content: flex-end; }
-.hbtn { height: clamp(32px,2.3vw,42px); padding: 0 clamp(10px,.9vw,16px); border-radius: 999px; display: flex; align-items: center; gap: 8px; font: 600 clamp(12px,.78vw,15px) 'IBM Plex Sans Arabic'; white-space: nowrap; cursor: pointer; transition: all .2s; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.03); color: var(--ink2); text-decoration: none; }
-.hbtn:hover { background: rgba(255,255,255,.08); }
+.hbtn { height: clamp(32px,2.3vw,42px); padding: 0 clamp(10px,.9vw,16px); border-radius: 999px; display: flex; align-items: center; gap: clamp(6px,.45vw,8px); font: 600 clamp(12px,.78vw,15px) 'IBM Plex Sans Arabic'; white-space: nowrap; cursor: pointer; transition: all .2s; border: 1px solid rgba(167,139,250,.3); background: rgba(139,92,246,.08); color: var(--c3); text-decoration: none; }
+.hbtn:hover { background: rgba(139,92,246,.16); border-color: rgba(167,139,250,.55); color: var(--c3); }
 .hbtn:active { transform: scale(.97); }
-.hbtn.exit { border-color: rgba(248,113,113,.25); color: #fca5a5; }
+.hbtn.exit { border-color: rgba(248,113,113,.25); background: rgba(255,255,255,.03); color: #fca5a5; }
 .hbtn.exit:hover { background: rgba(248,113,113,.1); border-color: rgba(248,113,113,.45); }
-.logo { height: 60px; display: grid; place-items: center; }
-.logo img { height: 60px; object-fit: contain; filter: drop-shadow(0 0 14px var(--acc-glow)); }
+.logo { height: 60px; min-width: clamp(96px,14vw,280px); display: grid; place-items: center; }
+.logo img { height: 60px; object-fit: contain; filter: drop-shadow(0 0 14px rgba(139,92,246,.45)); }
 
 /* الصفحة */
 .main { position: fixed; top: 80px; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; }
 .wrap { width: 100%; max-width: 1080px; height: 100%; padding: 0 clamp(12px,2.5vw,32px); display: flex; flex-direction: column; }
-.titlebox { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: clamp(14px,3vh,32px) 0 clamp(14px,2.6vh,26px); text-align: center; }
+.titlebox { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: clamp(16px,3.2vh,34px) 0 clamp(14px,2.6vh,26px); text-align: center; }
+.titlebox.tight { gap: 10px; padding: clamp(6px,1.2vh,12px) 0 clamp(14px,2.6vh,26px); }
 .kicker { font: 600 clamp(14px,1.4vw,18px) 'IBM Plex Sans Arabic'; color: var(--sub2); letter-spacing: .5px; }
-.title { font: 700 clamp(32px,4.2vw,56px)/1.1 'IBM Plex Sans Arabic'; background: linear-gradient(180deg, #f4f2f8, #fca5a5); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.pill { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: 999px; background: var(--acc-soft); border: 1px solid rgba(239,68,68,.3); font: 600 12px 'IBM Plex Sans Arabic'; color: var(--acc-text); }
-.pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 8px var(--acc); }
+.title { font: 700 clamp(32px,4.2vw,56px)/1.1 'IBM Plex Sans Arabic'; background: linear-gradient(180deg, #f4f2f8, #c4b5fd); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.pill { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: 999px; background: rgba(139,92,246,.08); border: 1px solid rgba(167,139,250,.3); font: 600 12px 'IBM Plex Sans Arabic'; color: var(--c2); }
+.pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
 .scroll { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 16px; }
 .footer { flex-shrink: 0; display: flex; justify-content: center; gap: 10px; padding: clamp(10px,2vh,18px) 0 clamp(16px,3vh,28px); }
-.cta { width: 100%; max-width: 400px; height: clamp(52px,6.5vh,62px); border: none; border-radius: 999px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; background: linear-gradient(90deg, var(--acc2), var(--acc)); color: #fff; font: 700 clamp(17px,1.6vw,20px) 'IBM Plex Sans Arabic'; box-shadow: 0 10px 34px var(--acc-glow), inset 0 1px 0 rgba(255,255,255,.2); transition: filter .2s, opacity .2s; }
+.cta { width: 100%; max-width: 400px; height: clamp(52px,6.5vh,62px); border: none; border-radius: 999px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; background: linear-gradient(90deg, #7c3aed, #a855f7); color: #fff; font: 700 clamp(17px,1.6vw,20px) 'IBM Plex Sans Arabic'; box-shadow: 0 10px 34px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.2); transition: filter .2s, opacity .2s; }
 .cta:hover { filter: brightness(1.1); }
 .cta:active { transform: scale(.97); }
-.cta[disabled] { opacity: .45; cursor: not-allowed; filter: grayscale(.4); }
+.cta[disabled] { opacity: .4; cursor: not-allowed; }
 
 /* كروت الأقسام */
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,400px),1fr)); gap: clamp(12px,1.4vw,18px); }
@@ -57,25 +64,31 @@ button { font-family: inherit; }
 .sec.anim { animation: rise .45s ease both; }
 .sec.full { grid-column: 1 / -1; }
 .sec-h { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; margin-bottom: 4px; border-bottom: 1px solid var(--line2); }
-.sec-n { width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center; background: var(--acc-soft); color: var(--acc-text); font: 700 13px 'IBM Plex Sans Arabic'; }
+.sec-n { width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center; background: rgba(139,92,246,.14); color: var(--c2); font: 700 13px 'IBM Plex Sans Arabic'; }
 .sec-t { font: 700 clamp(15px,1.2vw,17px) 'IBM Plex Sans Arabic'; }
 
 /* صف إعداد: العنوان يمين والتحكم يسار */
 .row { direction: rtl; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 6px 0; }
-.row + .row { border-top: 1px solid rgba(255,255,255,.04); }
 .row .lbl { display: flex; flex-direction: column; gap: 3px; min-width: 0; text-align: right; }
 .row .lbl b { font: 600 clamp(14px,1.1vw,16px) 'IBM Plex Sans Arabic'; color: var(--ink2); }
 .row .lbl small { font: 500 13px/1.55 'IBM Plex Sans Arabic'; color: var(--sub); }
 .stepper { flex-shrink: 0; display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.07); }
 .stepper button { width: 34px; height: 34px; border-radius: 999px; border: none; background: transparent; color: var(--sub2); font: 500 20px/1 'IBM Plex Sans Arabic'; cursor: pointer; }
 .stepper button:hover { background: rgba(255,255,255,.08); color: #fff; }
-.stepper output { min-width: 56px; text-align: center; font: 700 16px 'IBM Plex Sans Arabic'; color: #fecaca; font-variant-numeric: tabular-nums; }
-.toggle { width: 52px; height: 30px; flex-shrink: 0; border-radius: 999px; border: none; cursor: pointer; padding: 3px; display: flex; justify-content: flex-start; background: rgba(255,255,255,.12); transition: all .25s; }   /* RTL: مطفي = المقبض يمين، مفعّل = يسار */
+.stepper output { min-width: 56px; text-align: center; font: 700 16px 'IBM Plex Sans Arabic'; color: var(--c3); font-variant-numeric: tabular-nums; }
+.toggle { width: 52px; height: 30px; flex-shrink: 0; border-radius: 999px; border: none; cursor: pointer; padding: 3px; display: flex; justify-content: flex-start; background: rgba(255,255,255,.12); transition: all .25s; }   /* RTL: مطفي = المقبض يمين */
 .toggle span { width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
-.toggle.on { justify-content: flex-end; background: linear-gradient(90deg, var(--acc2), var(--acc)); }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 0 4px; }
-.chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px; border-radius: 999px; font: 600 13px 'IBM Plex Sans Arabic'; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); color: var(--ink2); }
-.note { font: 500 13px/1.6 'IBM Plex Sans Arabic'; color: var(--sub2); padding-top: 6px; }
+.toggle.on { justify-content: flex-end; background: linear-gradient(90deg, #7c3aed, #a855f7); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px; border-radius: 999px; font: 600 13px 'IBM Plex Sans Arabic'; background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.07); color: var(--ink2); }
+.note { font: 500 13px/1.6 'IBM Plex Sans Arabic'; color: var(--sub2); }
+
+/* خطوات الدخول للمباراة (باركود / رقم الغرفة / حساب الموقع) */
+.steps { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.steps li { display: flex; align-items: flex-start; gap: 10px; font: 500 14px/1.6 'IBM Plex Sans Arabic'; color: var(--ink2); }
+.steps li > span:first-child { width: 24px; height: 24px; flex-shrink: 0; margin-top: 1px; border-radius: 999px; display: grid; place-items: center; background: rgba(139,92,246,.14); color: var(--c2); font: 700 12px 'IBM Plex Sans Arabic'; }
+.steps b { color: #fff; font-weight: 700; }
+.steps .must { color: #fcd34d; }
 
 /* النوافذ والتنبيه */
 .ov { position: fixed; inset: 0; z-index: 70; background: rgba(0,0,0,.6); backdrop-filter: blur(10px); display: none; place-items: center; animation: fade .25s ease; }
@@ -90,6 +103,6 @@ button { font-family: inherit; }
 .btn-ghost:hover { background: rgba(255,255,255,.09); }
 .btn-red { border: none; background: linear-gradient(90deg, #dc2626, #ef4444); color: #fff; box-shadow: 0 8px 22px rgba(239,68,68,.3); }
 .toast { position: fixed; top: 96px; left: 50%; transform: translateX(-50%); z-index: 90; padding: 10px 22px; border-radius: 999px; background: rgba(12,11,18,.94); border: 1px solid rgba(248,113,113,.4); color: #fca5a5; font: 600 14px 'IBM Plex Sans Arabic'; box-shadow: 0 20px 50px rgba(0,0,0,.5); animation: rise .3s ease; }
-.spinner { width: 40px; height: 40px; border-radius: 50%; border: 4px solid rgba(239,68,68,.18); border-top-color: var(--acc); animation: spin .9s linear infinite; margin: 40px auto; }
+.spinner { width: 40px; height: 40px; border-radius: 50%; border: 4px solid rgba(167,139,250,.18); border-top-color: var(--c); animation: spin .9s linear infinite; margin: 40px auto; }
 
 @media (max-width: 640px) { .hbtn .lbl-txt { display: none; } }
