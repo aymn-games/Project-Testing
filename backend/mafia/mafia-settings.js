@@ -3,26 +3,29 @@
  *
  * الخادم يرسل SCHEMA لشاشة المذيع داخل welcome، فالواجهة تبني صفوف
  * الإعدادات منه مباشرة بدون نسخة ثانية بالمتصفح.
- * الأدوار يحددها المذيع يدوياً: عدد المافيا + وجود الطبيب + وجود المحقق،
- * والباقي مواطنين.
+ * الأدوار يحددها المذيع يدوياً (قواعد «مدينة المافيا» 1.0): عدد المافيا
+ * (ومنهم المتخفين) وعدد الأطباء والمحققين، والباقي مواطنين.
+ * الغرفة من 10 إلى 200 لاعب، وفوق 25 لاعب تتوزع الأسماء على أحياء.
  */
 'use strict';
 
+var MIN_ROOM = 10, MAX_ROOM = 200;
+
 var SCHEMA = [
     { id: 'roles', n: 'الأدوار', f: [
-        { k: 'mafia', n: 'عدد المافيا', t: 'num', min: 1, max: 5, step: 1, d: 1 },
-        { k: 'doctor', n: 'الطبيب', t: 'bool', d: true, desc: 'يختار كل ليلة شخص يحميه من المافيا' },
-        { k: 'detective', n: 'المحقق', t: 'bool', d: true, desc: 'يستجوب كل ليلة شخص ويعرف هل هو مافيا' },
-        { k: 'doctorSelf', n: 'الطبيب يقدر يحمي نفسه', t: 'bool', d: true },
-        { k: 'revealRole', n: 'كشف دور اللي يطلع', t: 'bool', d: true, desc: 'يظهر دور اللاعب بعد ما يُقتل أو يُطرد' }
+        { k: 'mafia', n: 'عدد المافيا', t: 'num', min: 1, max: 60, step: 1, d: 2, desc: 'يشمل المتخفين' },
+        { k: 'disguised', n: 'منهم متخفين', t: 'num', min: 0, max: 10, step: 1, d: 1, desc: 'أول فحص ناجح له يطلع «من المدينة»' },
+        { k: 'doctors', n: 'عدد الأطباء', t: 'num', min: 0, max: 10, step: 1, d: 1 },
+        { k: 'detectives', n: 'عدد المحققين', t: 'num', min: 0, max: 10, step: 1, d: 1 },
+        { k: 'fullReveal', n: 'كشف الدور كامل', t: 'bool', d: false, desc: 'مطفي = حسب القواعد: قتيل الليل بدون كشف، والمطرود يظهر فريقه بس' }
     ] },
     { id: 'time', n: 'الوقت', f: [
-        { k: 'nightSec', n: 'مدة الليل', t: 'num', min: 15, max: 120, step: 5, d: 40, u: 'ث' },
-        { k: 'talkSec', n: 'مدة النقاش', t: 'num', min: 20, max: 300, step: 10, d: 90, u: 'ث' },
-        { k: 'voteSec', n: 'مدة التصويت', t: 'num', min: 10, max: 120, step: 5, d: 30, u: 'ث' }
+        { k: 'nightSec', n: 'مدة الليل', t: 'num', min: 20, max: 180, step: 5, d: 90, u: 'ث' },
+        { k: 'talkSec', n: 'مدة النقاش', t: 'num', min: 30, max: 600, step: 10, d: 180, u: 'ث' },
+        { k: 'voteSec', n: 'مدة التصويت', t: 'num', min: 15, max: 180, step: 5, d: 45, u: 'ث' }
     ] },
     { id: 'room', n: 'الروم', f: [
-        { k: 'maxPlayers', n: 'أكثر عدد بالروم', t: 'num', min: 4, max: 20, step: 1, d: 16 }
+        { k: 'maxPlayers', n: 'أكثر عدد بالروم', t: 'num', min: MIN_ROOM, max: MAX_ROOM, step: 5, d: MAX_ROOM }
     ] }
 ];
 
@@ -43,13 +46,13 @@ function validate(input) {
             }
         });
     });
+    out.disguised = Math.min(out.disguised, out.mafia);   // المتخفين من ضمن المافيا
     return out;
 }
 
-/** أقل عدد لاعبين لهالإعدادات: المافيا أقل من الباقين، ومواطن واحد على الأقل. */
+/** أقل عدد لاعبين لهالإعدادات: 10 على الأقل، والمافيا أقل من الباقين، ومواطن واحد على الأقل. */
 function minPlayers(s) {
-    var specials = (s.doctor ? 1 : 0) + (s.detective ? 1 : 0);
-    return Math.max(4, s.mafia * 2 + 1, s.mafia + specials + 1);
+    return Math.max(MIN_ROOM, s.mafia * 2 + 1, s.mafia + s.doctors + s.detectives + 1);
 }
 
-module.exports = { SCHEMA: SCHEMA, DEFAULTS: DEFAULTS, validate: validate, minPlayers: minPlayers };
+module.exports = { SCHEMA: SCHEMA, DEFAULTS: DEFAULTS, validate: validate, minPlayers: minPlayers, MIN_ROOM: MIN_ROOM, MAX_ROOM: MAX_ROOM };

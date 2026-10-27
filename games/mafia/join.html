@@ -243,70 +243,130 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 
     // ---------------------------------------------------------------- المباراة
     $('roleChip').onclick = function () { S.hideRole = !S.hideRole; renderGame(); };
+    S.opMode = 'kill'; S.cardSel = null; S.chan = 'city'; S.filter = '';
     function plist(G) { return G.players.slice().sort(function (a, b) { return a.seat - b.seat; }); }
     function avatar(p, s) { return L.avatarSVG(p.look, s || 40); }
     function act(a, arg) { net.send({ t: 'act', a: a, arg: arg }); }
+    function big(G) { return G.players.length > 25; }
 
     function playerRows(G, opts) {
-        // opts: {can(p) → bool, sel(p) → bool, tag(p) → html, action}
-        return '<div class="list">' + plist(G).map(function (p) {
-            var ok = opts.can(p), sel = opts.sel && opts.sel(p);
-            return '<button type="button" class="prow' + (sel ? ' sel' : '') + (!p.alive ? ' dead' : '') + '"' + (ok ? ' data-act="' + opts.action + '" data-id="' + p.id + '"' : ' disabled') + '>' +
-                '<span class="who"><span class="num">' + (p.seat + 1) + '</span>' + avatar(p) + '<span>' + esc(p.name) + (p.id === S.me.id ? ' (أنت)' : '') + '</span></span>' +
-                (function (t) { return t ? '<span class="tag">' + t + '</span>' : ''; })(opts.tag ? opts.tag(p) : '') + '</button>';
-        }).join('') + '</div>';
+        // opts: {can(p) → bool, sel(p) → bool, tag(p) → html, action, argOf(p)} — الرومات الكبيرة: الأحياء فقط مع بحث بالاسم
+        var f = S.filter.trim().toLowerCase();
+        var list = plist(G).filter(function (p) { return (!big(G) || p.alive) && (!f || p.name.toLowerCase().indexOf(f) >= 0); });
+        return (big(G) ? '<input class="field" id="pf" placeholder="🔎 دوّر على اسم…" autocomplete="off" style="margin-top:10px;height:44px;font-size:16px" value="' + esc(S.filter) + '">' : '') +
+            '<div class="list">' + list.map(function (p) {
+                var ok = opts.can(p), sel = opts.sel && opts.sel(p), t = opts.tag ? opts.tag(p) : '';
+                return '<button type="button" class="prow' + (sel ? ' sel' : '') + (!p.alive ? ' dead' : '') + '"' + (ok ? ' data-act="' + opts.action + '" data-id="' + esc(opts.argOf ? opts.argOf(p) : p.id) + '"' : ' disabled') + '>' +
+                    '<span class="who"><span class="num">' + (p.seat + 1) + '</span>' + avatar(p) + '<span>' + esc(p.name) + (p.id === S.me.id ? ' (أنت)' : '') + '</span></span>' +
+                    (t ? '<span class="tag">' + t + '</span>' : '') + '</button>';
+            }).join('') + (list.length ? '' : '<p>ما فيه أحد بهالاسم</p>') + '</div>';
     }
 
-    function chatHtml(G, canSend, hint) {
+    // الشات: عام للمدينة، حي (لو فيه أحياء)، والمافيا السري — العام والحي بالنقاش فقط، والمافيا طول المباراة
+    function chatHtml(G, chans) {
+        if (chans.indexOf(S.chan) < 0) S.chan = chans[0];
+        var names = { city: '🏙️ العام', district: '🏘️ حيّك (' + G.me.district + ')', mafia: '🔪 المافيا' };
         var byId = {}; G.players.forEach(function (p) { byId[p.id] = p; });
-        var msgs = G.chat.slice(-50).map(function (c) {
+        var msgs = G.chat.filter(function (c) { return c.sys ? S.chan === 'city' : c.ch === S.chan; }).slice(-60).map(function (c) {
             if (c.sys) return '<div class="cm sys">' + esc(c.text) + '</div>';
             var p = byId[c.from] || { name: '؟' };
-            return '<div class="cm' + (c.mafia ? ' maf' : '') + '"><b>' + esc(p.name) + (c.mafia ? ' 🔪' : '') + ':</b> ' + esc(c.text) + '</div>';
+            return '<div class="cm' + (c.ch === 'mafia' ? ' maf' : '') + '"><b>' + esc(p.name) + ':</b> ' + esc(c.text) + '</div>';
         }).join('');
-        return '<div class="chatbox" id="chatbox">' + msgs + '</div>' + (canSend
-            ? '<div class="send"><input class="field" id="chatIn" maxlength="140" placeholder="' + (hint || 'اكتب رسالة…') + '" autocomplete="off"><button type="button" id="chatSend">إرسال</button></div>' : '');
+        var canSend = G.me.alive && (S.chan === 'mafia' ? G.me.team === 'mafia' : G.phase === 'day' && !G.me.silenced);
+        return (chans.length > 1 ? '<div class="opts" style="margin-top:10px">' + chans.map(function (c) { return '<button type="button" class="pill' + (S.chan === c ? ' on' : '') + '" data-chan="' + c + '">' + names[c] + '</button>'; }).join('') + '</div>' : '') +
+            '<div class="chatbox" id="chatbox">' + msgs + '</div>' + (canSend
+            ? '<div class="send"><input class="field" id="chatIn" maxlength="140" placeholder="' + (S.chan === 'mafia' ? 'كلّم فريقك بسرية…' : 'اكتب رسالة…') + '" autocomplete="off"><button type="button" id="chatSend">إرسال</button></div>' : '');
+    }
+    function chansFor(G) {
+        var c = [];
+        if (G.phase === 'day' || G.phase === 'vote') { c.push('city'); if (G.districts > 1) c.push('district'); }
+        if (G.me.team === 'mafia' && G.me.alive) c.push('mafia');
+        return c;
+    }
+
+    var CARD_INFO = {
+        recruit: { i: '🤝', d: 'بدل القتل: يحوّل لاعب من المدينة لمافيا الصبح (من الليلة 3)' },
+        shield: { i: '🛡️', d: 'عضو مافيا يطلع للمحقق «تعذر التحقيق» لمدة ليلتين' },
+        reveal: { i: '👁️', d: 'تعرفون الدور الدقيق للاعب من المدينة' },
+        mislead: { i: '🎭', d: 'لاعب من المدينة يطلع للمحقق «مافيا» لمدة ليلتين' },
+        silence: { i: '🤐', d: 'لاعب من المدينة ما يقدر يكتب بالنقاش الجاي (يصوّت عادي)' }
+    };
+    function mafiaNight(G) {
+        var me = G.me, ops = me.ops || {}, cv = me.cardVotes || {}, cards = G.cards || [], html = '';
+        var recruit = cards.find(function (c) { return c.id === 'recruit'; });
+        if (S.opMode === 'recruit' && !(recruit && recruit.available)) S.opMode = 'kill';
+        var cnt = {}; Object.keys(ops).forEach(function (k) { var o = ops[k]; if (o.op === S.opMode) cnt[o.target] = (cnt[o.target] || 0) + 1; });
+        html += '<h2>🔪 عملية الليلة</h2><p>كل المافيا يصوّتون، والأكثر يتنفّذ — التعادل يلغي العملية.</p>' +
+            '<div class="opts"><button type="button" class="pill' + (S.opMode === 'kill' ? ' on' : '') + '" data-opmode="kill">🔪 قتل</button>' +
+            (recruit ? '<button type="button" class="pill' + (S.opMode === 'recruit' ? ' on' : '') + '" data-opmode="recruit"' + (recruit.available ? '' : ' disabled style="opacity:.45"') + '>🤝 تجنيد' + (recruit.used ? ' (مستخدم)' : recruit.available ? '' : ' (من الليلة 3)') + '</button>' : '') + '</div>' +
+            playerRows(G, {
+                action: S.opMode, can: function (p) { return p.alive && p.team !== 'mafia'; },
+                sel: function (p) { return ops[me.id] && ops[me.id].op === S.opMode && ops[me.id].target === p.id; },
+                tag: function (p) { return p.team === 'mafia' ? '🔪 فريقك' : (cnt[p.id] ? '🎯 ' + cnt[p.id] : ''); }
+            });
+        // الكروت المساعدة (قبل قائمة الأهداف بالرومات الكبيرة عشان ما تضيع تحت)
+        var opHtml = html; html = '';
+        html += '<h2>🃏 كروت المافيا</h2><p>كرت مساعد واحد بالليلة (من الليلة 2)، وكل كرت مرة وحدة. التجنيد ما ينجمع مع كرت.</p><div class="list">' +
+            cards.filter(function (c) { return c.id !== 'recruit'; }).map(function (c) {
+                var on = S.cardSel === c.id, I = CARD_INFO[c.id];
+                return '<button type="button" class="prow' + (on ? ' sel' : '') + '"' + (c.available ? ' data-cardsel="' + c.id + '"' : ' disabled') + ' style="' + (c.available ? '' : 'opacity:.5') + '">' +
+                    '<span class="who"><span style="font-size:26px">' + I.i + '</span><span>' + esc(c.name) + '<br><small style="color:var(--mute);font-weight:700">' + I.d + '</small></span></span>' +
+                    '<span class="tag">' + (c.used ? 'مستخدم' : c.available ? 'متاح' : 'من الليلة 2') + '</span></button>';
+            }).join('') + '<button type="button" class="btn ghost" data-act="card" data-id="none">' + (cv[me.id] && cv[me.id].card === 'none' ? '✓ ' : '') + 'بدون كرت الليلة</button></div>';
+        var votesTxt = Object.keys(cv).map(function (k) { var v = cv[k]; if (v.card === 'none') return 'بدون كرت'; var t = G.players.find(function (p) { return p.id === v.target; }); return CARD_INFO[v.card].i + ' ' + (t ? t.name : ''); });
+        if (votesTxt.length) html += '<div class="note">ترشيحات فريقك للكرت: ' + votesTxt.map(esc).join(' · ') + '</div>';
+        if (S.cardSel) {
+            var shield = S.cardSel === 'shield';
+            html += '<h2>' + CARD_INFO[S.cardSel].i + ' على مين؟</h2>' + playerRows(G, {
+                action: 'card', argOf: function (p) { return S.cardSel + '|' + p.id; },
+                can: function (p) { return p.alive && (shield ? p.team === 'mafia' : p.team !== 'mafia'); },
+                sel: function (p) { return cv[me.id] && cv[me.id].card === S.cardSel && cv[me.id].target === p.id; },
+                tag: function (p) { return p.team === 'mafia' ? '🔪 فريقك' : ''; }
+            });
+        }
+        return big(G) ? html + opHtml : opHtml + html;
+    }
+
+    function noticesHtml(G) {
+        var list = (G.me.notices || []).slice(-6).reverse(); if (!list.length) return '';
+        return '<h2>📬 إشعاراتك السرية</h2>' + list.map(function (n) { return '<div class="res" style="font-size:15px">' + esc(n.text) + '</div>'; }).join('');
     }
 
     var lastRenderKey = '';
     function renderGame() {
         var G = S.G; if (!G || !G.me) return;
         var me = G.me, R = ROLE[me.role], mp = G.players.find(function (p) { return p.id === me.id; }) || {};
-        $('meBox').innerHTML = avatar(mp, 40) + '<span>' + esc(mp.name || '') + '</span>';
+        $('meBox').innerHTML = avatar(mp, 40) + '<span>' + esc(mp.name || '') + (G.districts > 1 ? ' <small style="color:var(--mute)">· حي ' + me.district + '</small>' : '') + '</span>';
         $('roleChip').style.background = S.hideRole ? '#3b3f63' : R.c;
         $('roleChip').textContent = S.hideRole ? '👁 اضغط لعرض دورك' : R.icon + ' ' + R.n;
 
         // نعيد بناء المحتوى فقط إذا تغيّر شي يهم (عشان ما يضيع النص اللي يكتبه)
-        var key = JSON.stringify([G.phase, G.round, G.players.map(function (p) { return p.alive; }), me, G.votes, G.chat.length && G.chat[G.chat.length - 1].n, G.verdict, G.winner, S.hideRole, G.phase === 'dawn' ? G.players.length : 0]);
+        var key = JSON.stringify([G.phase, G.round, G.players.map(function (p) { return [p.alive, p.team]; }), me, G.cards, G.votes, G.chat.length && G.chat[G.chat.length - 1].n, G.verdict, G.winner, S.hideRole, S.opMode, S.cardSel, S.chan, S.filter]);
         if (key === lastRenderKey) return; lastRenderKey = key;
         var input = $('chatIn'); if (input) S.draft = input.value;
-        var focused = document.activeElement && document.activeElement.id === 'chatIn';
+        var focusId = document.activeElement && document.activeElement.id;
 
         var html = '', ph = G.phase, alive = me.alive;
-        var mates = G.players.filter(function (p) { return p.role === 'mafia' && p.id !== me.id; });
+        var mates = G.players.filter(function (p) { return p.team === 'mafia' && p.id !== me.id; });
         if (!alive && ph !== 'over') html += '<div class="note">💀 خرجت من اللعبة — تقدر تتابع البث بس ما تقدر تتكلم أو تصوّت.</div>';
+        if (me.silenced) html += '<div class="note">🤐 المافيا أسكتتك هالنهار — ما تقدر تكتب بالشات، بس تقدر تصوّت.</div>';
 
         if (ph === 'reveal') {
             html += '<div class="role-card" style="background:linear-gradient(160deg,' + R.c + ',#1b1d3d)"><div class="ic">' + R.icon + '</div><div class="nm">أنت ' + R.n + '</div><div class="ds">' + R.desc + '</div>' +
-                (me.role === 'mafia' && mates.length ? '<div class="mates">فريقك: ' + mates.map(function (p) { return esc(p.name); }).join('، ') + '</div>' : '') + '</div>' +
+                (me.team === 'mafia' && mates.length ? '<div class="mates">فريقك: ' + mates.map(function (p) { return esc(p.name) + (p.role === 'disguised' ? ' 🎭' : ''); }).join('، ') + '</div>' : '') + '</div>' +
+                (G.districts > 1 ? '<div class="note">أنت في الحي ' + me.district + ' — شات الحي لأهل حيّك بس.</div>' : '') +
                 '<div class="note">لا تخلي أحد يشوف جوالك! وخبّ الدور من الزر فوق إذا تبي.</div>';
         } else if (ph === 'night') {
             if (!alive) html += '<div class="big"><div class="ic">🌙</div><div class="tt">الليل</div></div>';
-            else if (me.role === 'mafia') {
-                var mv = me.mafiaVotes || {}, count = {};
-                Object.keys(mv).forEach(function (k) { count[mv[k]] = (count[mv[k]] || 0) + 1; });
-                html += '<h2>🔪 اختاروا ضحية الليلة</h2><p>الأكثر اختياراً من فريقك هو الهدف.</p>' + playerRows(G, {
-                    action: 'kill', can: function (p) { return p.alive && p.role !== 'mafia'; },
-                    sel: function (p) { return mv[me.id] === p.id; },
-                    tag: function (p) { return p.role === 'mafia' ? '🔪 فريقك' : (count[p.id] ? '🎯 ' + count[p.id] : ''); }
-                }) + '<h2>شات المافيا السري</h2>' + chatHtml({ players: G.players, chat: G.chat.filter(function (c) { return c.mafia; }) }, true, 'كلّم فريقك بسرية…');
-            } else if (me.role === 'doctor') {
-                html += '<h2>🩺 مين تحمي الليلة؟</h2><p>لو المافيا هاجمته، تنقذه.</p>' + playerRows(G, {
-                    action: 'protect', can: function (p) { return p.alive && (p.id !== me.id || G.settings.doctorSelf); },
-                    sel: function (p) { return me.protect === p.id; }, tag: function (p) { return me.protect === p.id ? '🛡️ محمي' : ''; }
+            else if (me.team === 'mafia') html += mafiaNight(G) + '<h2>شات المافيا السري</h2>' + chatHtml(G, ['mafia']);
+            else if (me.role === 'doctor') {
+                html += '<h2>🩺 مين تحمي الليلة؟</h2><p>ما تكرر نفس الشخص ليلتين ورا بعض، وتحمي نفسك مرة وحدة بالمباراة' + (me.doctorSelfUsed ? ' (استخدمتها)' : '') + '.</p>' + playerRows(G, {
+                    action: 'protect', can: function (p) { return p.alive && p.id !== me.doctorPrev && !(p.id === me.id && me.doctorSelfUsed); },
+                    sel: function (p) { return me.protect === p.id; },
+                    tag: function (p) { return me.protect === p.id ? '🛡️ محمي' : p.id === me.doctorPrev ? 'حميته أمس' : ''; }
                 });
             } else if (me.role === 'detective') {
-                html += '<h2>🕵️ مين تستجوب الليلة؟</h2><p>تعرف النتيجة الصبح (اختيار واحد بالليلة).</p>' + playerRows(G, {
+                html += '<h2>🕵️ مين تفحص الليلة؟</h2><p>فحص واحد بالليلة، والنتيجة توصلك الصبح.</p>' + playerRows(G, {
                     action: 'inspect', can: function (p) { return p.alive && p.id !== me.id && !me.inspect; },
                     sel: function (p) { return me.inspect === p.id; }, tag: function (p) { return me.inspect === p.id ? '🔍 تحت التحقيق' : ''; }
                 }) + inspections(G);
@@ -314,51 +374,57 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
                 html += '<div class="big"><div class="ic">😴</div><div class="tt">نام يا مواطن…</div><p>أصحاب الأدوار يختارون الحين. لا تشيل عينك عن البث!</p></div>';
             }
         } else if (ph === 'dawn') {
-            html += '<div class="big"><div class="ic">🎬</div><div class="tt">شوف البث!</div><p>مشاهد الليلة شغالة على شاشة البث الحين.</p></div>';
-            if (me.role === 'detective') html += inspections(G);
+            html += '<div class="big"><div class="ic">🎬</div><div class="tt">شوف البث!</div><p>مشاهد الليلة شغالة على شاشة البث الحين.</p></div>' + noticesHtml(G);
         } else if (ph === 'day') {
-            html += '<h2>💬 النقاش</h2><p>رسائلك تظهر فوق شخصيتك على البث.</p>' + chatHtml(G, alive) + (me.role === 'detective' ? inspections(G) : '');
+            html += '<h2>💬 النقاش</h2><p>رسائل الشات العام تظهر على البث.</p>' + chatHtml(G, chansFor(G)) + noticesHtml(G) + inspections(G);
         } else if (ph === 'vote') {
             var tally = {}; Object.keys(G.votes).forEach(function (k) { var t = G.votes[k]; tally[t] = (tally[t] || 0) + 1; });
-            html += '<h2>🗳️ مين يطلع؟</h2>' + playerRows(G, {
+            html += '<h2>🗳️ مين يطلع؟</h2><p>تقدر تغيّر صوتك لين يخلص الوقت. التعادل = ما أحد يطلع.</p>' + (alive ? '<button type="button" class="btn ghost" data-act="vote" data-id="skip">' + (me.vote === 'skip' ? '✓ ' : '') + 'أمتنع عن التصويت (' + (tally.skip || 0) + ')</button>' : '') + playerRows(G, {
                 action: 'vote', can: function (p) { return alive && p.alive && p.id !== me.id; },
                 sel: function (p) { return me.vote === p.id; }, tag: function (p) { return tally[p.id] ? '🗳️ ' + tally[p.id] : ''; }
-            }) + (alive ? '<button type="button" class="btn ghost" data-act="vote" data-id="skip">' + (me.vote === 'skip' ? '✓ ' : '') + 'ما أبي أطرد أحد (' + (tally.skip || 0) + ')</button>' : '') +
-                chatHtml(G, alive) + (me.role === 'detective' ? inspections(G) : '');
+            }) + (chansFor(G).length ? chatHtml(G, chansFor(G)) : '') + inspections(G);
         } else if (ph === 'verdict') {
             var V = G.verdict, op = V && V.id && G.players.find(function (p) { return p.id === V.id; });
-            html += '<div class="big"><div class="ic">⚖️</div><div class="tt">' + (op ? 'البلدة طردت ' + esc(op.name) : (V && V.tie ? 'تعادل — ما أحد طلع' : 'ما أحد طلع')) + '</div><p>' + (op && op.id === me.id ? 'هذا أنت! 😢' : 'شوف البث') + '</p></div>';
+            html += '<div class="big"><div class="ic">⚖️</div><div class="tt">' + (op ? 'المدينة طردت ' + esc(op.name) : (V && V.tie ? 'تعادل — ما أحد طلع' : 'ما أحد طلع')) + '</div><p>' +
+                (op ? (op.id === me.id ? 'هذا أنت! 😢 ' : '') + (op.team === 'mafia' ? 'كان من المافيا 🔪' : 'كان من المدينة 🏠') : 'شوف البث') + '</p></div>';
         } else if (ph === 'over') {
-            var won = R.team === G.winner;
-            html += '<div class="big"><div class="ic">' + (won ? '🏆' : '💔') + '</div><div class="tt">' + (G.winner === 'mafia' ? 'فازت المافيا' : 'فازت البلدة') + '</div><p>' + (won ? 'مبروك! فريقك فاز' : 'حظ أوفر المرة الجاية') + '</p></div>' +
-                '<div class="list">' + plist(G).map(function (p) { var r = ROLE[p.role] || ROLE.citizen; return '<div class="prow"><span class="who">' + avatar(p) + esc(p.name) + '</span><span class="tag" style="color:' + r.c + '">' + r.icon + ' ' + r.n + '</span></div>'; }).join('') + '</div>' +
+            var won = me.team === G.winner;
+            html += '<div class="big"><div class="ic">' + (won ? '🏆' : '💔') + '</div><div class="tt">' + (G.winner === 'mafia' ? 'فازت المافيا' : 'فازت المدينة') + '</div><p>' + (won ? 'مبروك! فريقك فاز' : 'حظ أوفر المرة الجاية') + '</p></div>' +
+                (G.cards ? '<div class="note">🃏 كروت المافيا كانت: ' + G.cards.map(function (c) { return esc(c.name) + (c.used ? ' ✓' : ''); }).join('، ') + '</div>' : '') +
+                '<div class="list">' + plist(G).map(function (p) { var r = ROLE[p.role] || ROLE.citizen; return '<div class="prow"><span class="who">' + avatar(p) + esc(p.name) + '</span><span class="tag" style="color:' + r.c + '">' + r.icon + ' ' + r.n + (p.recruited ? ' ← جُنّد' : '') + '</span></div>'; }).join('') + '</div>' +
                 '<p style="text-align:center;margin-top:10px">بانتظار المذيع يبدأ جولة جديدة…</p>';
         }
         $('gameBody').innerHTML = html;
         var box = $('chatbox'); if (box) box.scrollTop = box.scrollHeight;
-        var ci = $('chatIn'); if (ci) { ci.value = S.draft; if (focused) { ci.focus(); ci.setSelectionRange(ci.value.length, ci.value.length); } }
+        var ci = $('chatIn'); if (ci) ci.value = S.draft;
+        var fe = focusId && $(focusId); if (fe && fe.tagName === 'INPUT') { fe.focus(); fe.setSelectionRange(fe.value.length, fe.value.length); }
     }
 
     function inspections(G) {
         var list = (G.me && G.me.inspections) || []; if (!list.length) return '';
+        var R3 = { mafia: ['#ff8a80', '🔪 مافيا!'], town: ['#7ee2a6', '✓ من المدينة'], blocked: ['#ffd27a', '❔ تعذر التحقيق'] };
         return '<h2>📁 ملف التحقيقات</h2>' + list.map(function (r) {
-            var p = G.players.find(function (q) { return q.id === r.id; });
-            return '<div class="res"><span>الليلة ' + r.round + ': ' + esc(p ? p.name : '') + '</span><span style="color:' + (r.mafia ? '#ff8a80' : '#7ee2a6') + '">' + (r.mafia ? '🔪 مافيا!' : '✓ بريء') + '</span></div>';
+            var p = G.players.find(function (q) { return q.id === r.id; }), x = R3[r.res] || R3.town;
+            return '<div class="res"><span>الليلة ' + r.round + ': ' + esc(p ? p.name : '') + '</span><span style="color:' + x[0] + '">' + x[1] + '</span></div>';
         }).join('');
     }
 
     $('gameBody').addEventListener('click', function (e) {
         var b = e.target.closest('[data-act]');
         if (b) { act(b.getAttribute('data-act'), b.getAttribute('data-id')); if (navigator.vibrate) navigator.vibrate(20); return; }
+        var m = e.target.closest('[data-opmode]'); if (m) { S.opMode = m.getAttribute('data-opmode'); return renderGame(); }
+        var c = e.target.closest('[data-cardsel]'); if (c) { var id = c.getAttribute('data-cardsel'); S.cardSel = S.cardSel === id ? null : id; return renderGame(); }
+        var ch = e.target.closest('[data-chan]'); if (ch) { S.chan = ch.getAttribute('data-chan'); return renderGame(); }
         if (e.target.id === 'chatSend') sendChat();
     });
     $('gameBody').addEventListener('keydown', function (e) { if (e.target.id === 'chatIn' && e.key === 'Enter') sendChat(); });
-    function sendChat() { var i = $('chatIn'); if (!i) return; var t = i.value.trim(); if (!t) return; act('chat', t); i.value = ''; S.draft = ''; i.focus(); }
+    $('gameBody').addEventListener('input', function (e) { if (e.target.id === 'pf') { S.filter = e.target.value; renderGame(); } });
+    function sendChat() { var i = $('chatIn'); if (!i) return; var t = i.value.trim(); if (!t) return; act('chat', S.chan + '|' + t); i.value = ''; S.draft = ''; i.focus(); }
 
     // المؤقت
     setInterval(function () {
         var G = S.G; if (!G || S.view !== 'vGame') return;
-        var names = { reveal: 'كشف الأدوار', night: '🌙 الليل', dawn: '🎬 مشاهد الليلة', day: '☀️ النقاش', vote: '🗳️ التصويت', verdict: '⚖️ الحكم', over: '🏁 النهاية' };
+        var names = { reveal: 'كشف الأدوار', night: '🌙 الليل', dawn: '🎬 مشاهد الليلة', day: '☀️ النقاش', vote: '🗳️ التصويت', verdict: '⚖️ النتائج', over: '🏁 النهاية' };
         $('phaseTxt').textContent = names[G.phase] + (G.round ? ' · ' + G.round : '');
         var left = G.endsAt ? Math.max(0, Math.ceil((G.endsAt - NET.now()) / 1000)) : 0;
         $('phaseT').textContent = G.endsAt && G.phase !== 'dawn' && G.phase !== 'verdict' ? left : '';

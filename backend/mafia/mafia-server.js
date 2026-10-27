@@ -11,7 +11,7 @@
  *   عميل → join {code,name,look,auth}   دخول لاعب ← welcome {id,key}
  *                                       (auth = توكن حساب الموقع؛ الموثّق بتيك توك تنحسب له النقاط)
  *   عميل → resume {code,id,key} · leave · look {look} (باللوبي) · ping {k}
- *   اللاعب → act {a,arg}   a: kill|protect|inspect|vote|chat
+ *   اللاعب → act {a,arg}   a: kill|recruit|card ('كرت|هدف' أو 'none')|protect|inspect|vote|chat ('city|district|mafia' + '|' + النص)
  *   المذيع → settings {settings} · kick {id} · endStage · start · again · lobby · close
  *   خادم → welcome · room {room} · state {G,now} · err {err} · kicked · lobby · closed · gone · pong
  */
@@ -213,8 +213,9 @@ function tickAll() {
         if (!room.hostConn && room.hostGoneAt && now - room.hostGoneAt > HOST_GRACE_MS) return closeRoom(room, 'host-timeout');
         if (!room.game) return;
         try { room.game.tick(now); } catch (err) { logger.error('Mafia: tick error:', err); }
-        var gap = now - room.lastSend, live = room.game.G.phase === 'dawn';
-        if (room.dirty || gap >= (live ? LIVE_SEND_MS : IDLE_SEND_MS)) sendStates(room);
+        // الرومات الكبيرة (لين 200 لاعب): نجمع التغييرات بدل ما نرسل نسخة لكل لاعب مع كل رسالة شات
+        var gap = now - room.lastSend, live = room.game.G.phase === 'dawn', minGap = room.players.length > 40 ? 500 : 0;
+        if ((room.dirty && gap >= minGap) || gap >= (live ? LIVE_SEND_MS : IDLE_SEND_MS)) sendStates(room);
     });
 }
 var _ticker = null;

@@ -64,8 +64,10 @@ function drawTag(sp, o) {
     ctx.fillText(o.dead ? '✕' : String(o.num), x + 40, y + h / 2 + 2);
     ctx.font = '800 46px ' + FONT; ctx.textAlign = 'right'; ctx.fillStyle = '#fff';
     ctx.fillText(name, x + bw - 22, y + h / 2 + 3, tw);
-    if (o.role) {
-        const R = L.ROLE[o.role], t = R.icon + ' ' + R.n;
+    if (o.role || o.team) {
+        // الدور كامل لو مكشوف، وإلا الفريق بس (المطرود حسب القواعد)
+        const R = o.role ? L.ROLE[o.role] : o.team === 'mafia' ? { icon: '🔪', n: 'مافيا', c: '#e2483d' } : { icon: '🏠', n: 'من المدينة', c: '#2f7de1' };
+        const t = R.icon + ' ' + R.n;
         ctx.font = '800 38px ' + FONT; const rw = ctx.measureText(t).width + 40;
         roundRect(ctx, (W - rw) / 2, y + h + 8, rw, 52, 26); ctx.fillStyle = R.c; ctx.fill();
         ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText(t, W / 2, y + h + 36);
@@ -122,7 +124,7 @@ function drawBadge(sp, text, color) {
 // ---------------------------------------------------------------- الشخصية (نفس تصميم شخصيات «سفينة النجاة» — games/survival-ship/ship3d.js)
 const CHAR_K = 0.72;   // مقياس الشخصية بالساحة (وحدات السفينة أكبر)
 const SIT_Y = -0.12;   // نزول الجسم وهو جالس عشان الحوض يركب على الكرسي
-const GEO = {
+const GEO_HI = {
     head: new THREE.SphereGeometry(0.62, 28, 22),
     ear: new THREE.SphereGeometry(0.13, 12, 10),
     eye: new THREE.SphereGeometry(0.12, 16, 12),
@@ -150,6 +152,26 @@ const GEO = {
     stool: new THREE.CylinderGeometry(0.3, 0.26, 0.42, 18)
 };
 
+// نسخة خفيفة للحلقات البعيدة (أقل تقسيمات) — نفس الأشكال بمثلثات أقل بكثير
+const GEO = GEO_HI;   // الافتراضي لباقي المشهد (الكراسي وغيرها)
+const GEO_LO = Object.assign({}, GEO_HI, {
+    head: new THREE.SphereGeometry(0.62, 12, 9),
+    eye: new THREE.SphereGeometry(0.12, 6, 5),
+    torso: new THREE.CapsuleGeometry(0.36, 0.42, 3, 8),
+    arm: new THREE.CapsuleGeometry(0.1, 0.34, 2, 6),
+    hand: new THREE.SphereGeometry(0.12, 6, 5),
+    leg: new THREE.CapsuleGeometry(0.13, 0.14, 2, 6),
+    shoe: new THREE.SphereGeometry(0.19, 7, 5),
+    neck: new THREE.CylinderGeometry(0.13, 0.15, 0.16, 6),
+    hairCap: new THREE.SphereGeometry(0.67, 12, 6, 0, TAU, 0, Math.PI * 0.52),
+    fringe: new THREE.SphereGeometry(0.2, 6, 5),
+    tail: new THREE.CapsuleGeometry(0.16, 0.55, 2, 6),
+    clip: new THREE.SphereGeometry(0.09, 5, 4),
+    backHair: new THREE.SphereGeometry(0.5, 9, 7),
+    cap: new THREE.SphereGeometry(0.475, 12, 6, 0, TAU, 0, 1.3),
+    blob: new THREE.SphereGeometry(0.17, 6, 5)
+});
+
 /**
  * يبني شخصية بتصميم السفينة (رأس كبير، ياقة بيضاء وحزام وزر، جزمة بيضاء).
  * opts.outfit = 'doctor'|'detective'|'shadow' للشخصيات الخاصة.
@@ -157,6 +179,7 @@ const GEO = {
  */
 function buildChar(look, opts) {
     opts = opts || {};
+    const GEO = opts.lite ? GEO_LO : GEO_HI;
     const C = L.colors(look);
     const shadow = opts.outfit === 'shadow';
     const S = (c, o) => mat(c, Object.assign({ roughness: 0.55 }, o || {}));
@@ -178,13 +201,15 @@ function buildChar(look, opts) {
         const knee = new THREE.Group(); knee.position.y = -0.36; hip.add(knee);
         add(GEO.leg, pantsM, 0, -0.14, 0, knee);
         add(GEO.shoe, shoeM, 0, -0.34, 0.07, knee).scale.set(1, 0.62, 1.35);
-        add(GEO.sole, soleM, 0, -0.41, 0.07, knee);
+        if (!opts.lite) add(GEO.sole, soleM, 0, -0.41, 0.07, knee);
         return { hip, knee };
     });
     const torso = add(GEO.torso, outfitM, 0, 1.18, 0, body); torso.scale.set(1, 1, 0.82);
-    add(GEO.collar, whiteM, 0, 1.52, 0, body).rotation.x = Math.PI / 2;
-    add(GEO.belt, shadeM, 0, 0.93, 0, body);
-    add(GEO.button, btnM, 0, 1.22, 0.31, body);
+    if (!opts.lite) {
+        add(GEO.collar, whiteM, 0, 1.52, 0, body).rotation.x = Math.PI / 2;
+        add(GEO.belt, shadeM, 0, 0.93, 0, body);
+        add(GEO.button, btnM, 0, 1.22, 0.31, body);
+    }
     const arm = (s) => {
         const g = new THREE.Group(); g.position.set(s * 0.44, 1.42, 0); body.add(g);
         add(GEO.arm, outfitM, 0, -0.24, 0, g); add(GEO.hand, skinM, 0, -0.52, 0, g);
@@ -195,14 +220,14 @@ function buildChar(look, opts) {
 
     const head = new THREE.Group(); head.position.y = 2.18; body.add(head);
     add(GEO.head, skinM, 0, 0, 0, head).scale.set(1, 0.96, 0.94);
-    [-1, 1].forEach((s) => add(GEO.ear, skinM, s * 0.6, -0.04, 0, head).scale.set(0.6, 1, 0.8));
+    if (!opts.lite) [-1, 1].forEach((s) => add(GEO.ear, skinM, s * 0.6, -0.04, 0, head).scale.set(0.6, 1, 0.8));
 
     const eyeM = shadow ? mat('#ff0000', { emissive: '#ff0000', emissiveIntensity: 1 }) : S('#1e1b2e', { roughness: 0.2 });
     const shineM = new THREE.MeshBasicMaterial({ color: '#ffffff' });
     const eyes = [];
     [-1, 1].forEach((s) => {
         const e = add(GEO.eye, eyeM, s * 0.22, -0.02, 0.53, head); e.scale.set(0.85, 1.15, 0.5); e.userData.sy = 1.15; eyes.push(e);
-        if (shadow) return;
+        if (shadow || opts.lite) return;
         const sh = new THREE.Mesh(GEO.shine, shineM); sh.position.set(s * 0.22 + 0.03, 0.05, 0.59); head.add(sh); sh.userData.sy = 1; eyes.push(sh);
         add(GEO.brow, hairM, s * 0.22, 0.2, 0.55, head).rotation.z = Math.PI / 2 + s * 0.15;
         add(GEO.cheek, new THREE.MeshStandardMaterial({ color: '#fb7185', transparent: true, opacity: 0.55, roughness: 0.55 }), s * 0.36, -0.2, 0.47, head).scale.set(1, 0.55, 0.3);
@@ -210,8 +235,10 @@ function buildChar(look, opts) {
     if (!shadow) add(GEO.mouth, S('#9f1239'), 0, -0.2, 0.57, head).rotation.z = Math.PI;
 
     const style = opts.outfit ? (opts.outfit === 'detective' ? 'fedora' : opts.outfit === 'doctor' ? 'surgeon' : 'hood') : C.style;
-    buildHair(head, style, hairM, mats);
+    buildHair(head, style, hairM, mats, GEO);
 
+    // الحلقات البعيدة (فوق 25 لاعب): بدون ظلال عشان الأداء
+    if (opts.lite) root.traverse((o) => { o.castShadow = false; });
     root.userData.base = mats.map((m) => m.color.clone());
     const c = { root, body, head, armL, armR, legs, eyes, mats, torso, sitY: SIT_Y };
     c.sit = (on) => {
@@ -222,7 +249,37 @@ function buildChar(look, opts) {
     return c;
 }
 
-function buildHair(head, style, hairM, mats) {
+/**
+ * الحلقات البعيدة (لين 200 لاعب): نذوّب الشخصية كلها في mesh واحد بألوان على الرؤوس
+ * (draw call واحد بدل ~30). الحركة بعدها للجسم كامل بس (طيحة/قفز/تلوين الميت).
+ */
+function bakeChar(c) {
+    c.root.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(c.root.matrixWorld).invert(), m = new THREE.Matrix4();
+    const pos = [], nor = [], col = [], idx = [];
+    let base = 0;
+    c.root.traverse((o) => {
+        if (!o.isMesh || !o.material.color) return;
+        const g = o.geometry.clone(); g.applyMatrix4(m.multiplyMatrices(inv, o.matrixWorld));
+        const P = g.attributes.position, N = g.attributes.normal, cc = o.material.color;
+        for (let i = 0; i < P.count; i++) { pos.push(P.getX(i), P.getY(i), P.getZ(i)); nor.push(N.getX(i), N.getY(i), N.getZ(i)); col.push(cc.r, cc.g, cc.b); }
+        if (g.index) for (let i = 0; i < g.index.count; i++) idx.push(base + g.index.getX(i));
+        else for (let i = 0; i < P.count; i++) idx.push(base + i);
+        base += P.count; g.dispose();
+    });
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    geo.setIndex(idx);
+    const baked = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 }));
+    baked.receiveShadow = true;
+    c.root.remove(c.body); c.root.add(baked); c.baked = baked;
+    c.mats.forEach((mm) => mm.dispose());
+    return c;
+}
+
+function buildHair(head, style, hairM, mats, GEO) {
     // تسريحة السفينة: طاقية شعر + غُرّة من خمس كرات
     const shipCap = () => {
         const cap = mesh(GEO.hairCap, hairM, 0, 0.04, -0.05); cap.rotation.x = -0.32; head.add(cap);
@@ -542,28 +599,42 @@ export function createStage(container, getFrame) {
 
     // ---------------------------------------------------------------- اللاعبين
     const chars = new Map();   // id -> {c, stool, tag, bubble, badge, seat, angle, lookKey}
+    // أول 25 حول النار بأسمائهم، والباقي (لين 200) حلقات أبعد بشخصيات أصغر وبدون أسماء
+    const INNER = 25, RINGS = [[9.4, 44], [11, 52], [12.6, 60], [14.2, 68]];
     function seatPos(i, n) {
-        const r = Math.max(3.4, Math.min(7.2, 2.6 + n * 0.32)), a = (i / n) * TAU + Math.PI / 2;
-        return { x: Math.cos(a) * r, z: Math.sin(a) * r, a, r };
+        if (i < INNER) {
+            const m = Math.min(n, INNER), r = Math.max(3.4, Math.min(7.2, 2.6 + m * 0.32)), a = (i / m) * TAU + Math.PI / 2;
+            return { x: Math.cos(a) * r, z: Math.sin(a) * r, a, r, inner: true };
+        }
+        let j = i - INNER, left = n - INNER;
+        for (let k = 0; k < RINGS.length; k++) {
+            const [r, cap] = RINGS[k], cnt = Math.min(cap, left);
+            if (j < cnt) { const a = (j / cnt) * TAU + Math.PI / 2 + k * 0.17; return { x: Math.cos(a) * r, z: Math.sin(a) * r, a, r, inner: false }; }
+            j -= cnt; left -= cnt;
+        }
+        const a = j * 0.37; return { x: Math.cos(a) * 15.6, z: Math.sin(a) * 15.6, a, r: 15.6, inner: false };
     }
+    let outerR = 0;   // نصف قطر أبعد حلقة (الكاميرات العامة ترجع لورا وتطلع فوق لما تكبر الحلقات)
     function syncPlayers(list) {
+        outerR = 0;
         const ids = new Set(list.map((p) => p.id));
         chars.forEach((v, id) => { if (!ids.has(id)) { scene.remove(v.group); chars.delete(id); } });
         list.forEach((p, i) => {
             let v = chars.get(p.id); const lookKey = JSON.stringify(p.look || {});
-            if (v && v.lookKey !== lookKey) { scene.remove(v.group); chars.delete(p.id); v = null; }
+            if (v && (v.lookKey !== lookKey || v.lite !== (i >= INNER))) { scene.remove(v.group); chars.delete(p.id); v = null; }
             if (!v) {
-                const group = new THREE.Group(), c = buildChar(p.look);
-                const stool = mesh(GEO.stool, mat('#4a3020'), 0, 0.21, 0);
+                const lite = i >= INNER, group = new THREE.Group(), c = buildChar(p.look, { lite });
+                if (lite) bakeChar(c);
+                const stool = mesh(GEO.stool, mat('#4a3020'), 0, 0.21, 0); if (lite) stool.castShadow = false;
                 group.add(stool); group.add(c.root);
                 const tag = makeSprite(0.62), bubble = makeBubble(), badge = makeBadge();
                 group.add(tag); group.add(bubble); group.add(badge);
                 scene.add(group);
-                v = { group, c, stool, tag, bubble, badge, lookKey, enter: performance.now() };
+                v = { group, c, stool, tag, bubble, badge, lookKey, lite, enter: performance.now() };
                 chars.set(p.id, v);
             }
             const s = seatPos(i, list.length);
-            v.seat = s; v.num = i + 1; v.p = p;
+            v.seat = s; v.num = i + 1; v.p = p; outerR = Math.max(outerR, s.r);
             v.group.position.set(s.x, 0, s.z);
             v.group.rotation.y = Math.atan2(-s.x, -s.z);   // وجهه للنار
         });
@@ -571,6 +642,7 @@ export function createStage(container, getFrame) {
     function standUp(c) { c.sit(false); }   // المافيا والطبيب واقفين
 
     function setGrey(c, k) {
+        if (c.baked) { c.baked.material.color.setScalar(lerp(1, 0.4, k)); return; }
         c.mats.forEach((m, i) => { const base = c.root.userData.base[i]; if (!base) return; const g = (base.r + base.g + base.b) / 3; m.color.setRGB(lerp(base.r, g * 0.55, k), lerp(base.g, g * 0.55, k), lerp(base.b, g * 0.6, k)); });
     }
 
@@ -598,7 +670,9 @@ export function createStage(container, getFrame) {
         camTarget.set(px, py, pz); lookTarget.set(lx, ly, lz);
         camPos.lerp(camTarget, 0.06); camLook.lerp(lookTarget, 0.06);
     }
-    function orbit(t, r, h, speed) { const a = t * (speed || 0.05) + 0.6; setCam(Math.sin(a) * r, h, Math.cos(a) * r, 0, 1.0, 0); }
+    // بالرومات الكبيرة الكاميرا تكون برا أبعد حلقة وأعلى، عشان ما تنحجب بالرؤوس القريبة
+    function pull(r, h) { const extra = Math.max(0, outerR - 7.2); return [Math.max(r, outerR + 7), h + extra * 1.1]; }
+    function orbit(t, r, h, speed) { const a = t * (speed || 0.05) + 0.6, [R, H] = pull(r, h); setCam(Math.sin(a) * R, H, Math.cos(a) * R, 0, 1.0, 0); }
     function seatWorld(v, out) { return (out || new THREE.Vector3()).set(v.seat.x, 0, v.seat.z); }
 
     // ---------------------------------------------------------------- معلومات اللقطة الحالية (للافتات)
@@ -631,6 +705,10 @@ export function createStage(container, getFrame) {
         syncPlayers(plist);
         const phase = G ? G.phase : 'lobby';
         const sh = currentShot(G, now);
+        // السوق وغرفة التحقيق ما ينرسمون إلا بلقطاتهم، واللاعبين بالساحة يختفون وقتها (أداء)
+        market.visible = !!(sh && (sh.s.k === 'attack' || sh.s.k === 'save'));
+        room.visible = !!(sh && sh.s.k === 'inspect');
+        const away = market.visible || room.visible;
         info = { shot: sh ? sh.s.k : null, u: sh ? sh.u : 0, s: sh ? sh.s : null };
 
         // ----- النار
@@ -679,18 +757,21 @@ export function createStage(container, getFrame) {
             // اللافتات
             let revealDead = !alive;
             const hideRoleNow = phase === 'verdict' && G.verdict && G.verdict.id === id && now - G.phaseAt < 4200;
-            drawTag(v.tag, { name: p.name, num: v.num, dead: revealDead && !(phase === 'verdict' && G.verdict && G.verdict.id === id), role: p.role && (revealDead || phase === 'over') && !hideRoleNow ? p.role : null, ring: speakers[id] ? '#ffd34d' : null });
+            const shown = (revealDead || phase === 'over') && !hideRoleNow, isVerdict = phase === 'verdict' && G.verdict && G.verdict.id === id;
+            v.tag.visible = !v.lite || isVerdict;   // الحلقات البعيدة بدون أسماء (إلا المطرود وقت مشهده)
+            if (v.tag.visible) drawTag(v.tag, { name: p.name, num: v.num, dead: revealDead && !isVerdict, role: shown ? p.role : null, team: shown ? p.team : null, ring: speakers[id] ? '#ffd34d' : null });
             v.tag.position.set(0, revealDead ? 1.25 : 2.45, 0);
             // المطرود بالتصويت راح مع القفص: يبقى كرسيه فاضي واسمه عليه
             c.root.visible = !(revealDead && p.cause === 'vote');
             const sp = speakers[id];
-            v.bubble.visible = !!(sp && alive && (phase === 'day' || phase === 'vote'));
+            v.bubble.visible = !!(sp && alive && !v.lite && (phase === 'day' || phase === 'vote'));
             if (v.bubble.visible) { drawBubble(v.bubble, sp.text); v.bubble.position.set(0, 3.55, 0); }
             const n = tally[id] || 0;
             v.badge.visible = (phase === 'vote' || phase === 'verdict') && n > 0 && alive;
             if (v.badge.visible) { drawBadge(v.badge, String(n), '#e2483d'); v.badge.position.set(0, v.bubble.visible ? 4.6 : 3.2, 0); }
             // دخول لاعب جديد باللوبي: يطلع من الأرض
-            const ek = ease(span(pnow - v.enter, 0, 700)); v.group.scale.setScalar(0.3 + ek * 0.7);
+            v.group.visible = !away;
+            const ek = ease(span(pnow - v.enter, 0, 700)); v.group.scale.setScalar((0.3 + ek * 0.7) * (v.lite ? 0.85 : 1));
         });
 
         // ----- المشاهد الخاصة
@@ -702,7 +783,8 @@ export function createStage(container, getFrame) {
             const s = sh.s, u = sh.u, vt = s.target && chars.get(s.target);
             if (s.k === 'intro') {
                 const k = ease(u / s.dur);
-                cam = [lerp(0, -6, k), lerp(9, 16, k), lerp(15, 22, k), -10 * k, lerp(1, 12, k), -20 * k];
+                const [R0, H0] = pull(15, 9);
+                cam = [lerp(0, -6, k), lerp(H0, H0 + 7, k), lerp(R0, R0 + 7, k), -10 * k, lerp(1, 12, k), -20 * k];
             } else if (s.k === 'inspect') {
                 const k = u / s.dur;
                 lampPivot.rotation.z = Math.sin(u / 600) * 0.22;
@@ -795,15 +877,16 @@ export function createStage(container, getFrame) {
             } else if (s.k === 'quiet') {
                 mafioso.root.visible = u < 3500;
                 const k = span(u, 0, 3500);
-                const a = 2.2 + k * 0.6;
-                mafioso.root.position.set(Math.cos(a) * 11, 0, Math.sin(a) * 11);
+                const a = 2.2 + k * 0.6, LR = Math.max(11, outerR + 3.2);   // المافيا يحوم برا آخر حلقة
+                mafioso.root.position.set(Math.cos(a) * LR, 0, Math.sin(a) * LR);
                 mafioso.root.lookAt(0, 0, 0); mafioso.root.rotateY(k > 0.6 ? Math.PI * ease(span(k, 0.6, 0.8)) : 0);
                 mafioso.armR.rotation.set(-0.5, 0, 0.15);
-                evilLight.position.set(Math.cos(a) * 10, 2.6, Math.sin(a) * 10); evilLight.intensity = mafioso.root.visible ? 18 : 0;
-                cam = [Math.cos(a - 0.25) * 5.5, 2.4, Math.sin(a - 0.25) * 5.5, Math.cos(a) * 11, 1.4, Math.sin(a) * 11];
+                evilLight.position.set(Math.cos(a) * (LR - 1), 2.6, Math.sin(a) * (LR - 1)); evilLight.intensity = mafioso.root.visible ? 18 : 0;
+                cam = [Math.cos(a - 0.25) * (LR - 5.5), 2.4 + Math.max(0, outerR - 7.2) * 0.4, Math.sin(a - 0.25) * (LR - 5.5), Math.cos(a) * LR, 1.4, Math.sin(a) * LR];
             } else if (s.k === 'result') {
                 const k = ease(u / s.dur);
-                cam = [lerp(0, 2, k), lerp(13, 8.5, k), lerp(15.5, 12.5, k), 0, 1, 0];
+                const [R1, H1] = pull(15.5, 13);
+                cam = [lerp(0, 2, k), lerp(H1, H1 - 4.5, k), lerp(R1, R1 - 3, k), 0, 1, 0];
             }
         }
 

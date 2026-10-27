@@ -268,9 +268,10 @@ button { font-family: inherit; cursor: pointer; }
     // ---------------------------------------------------------------- اللوبي
     function rolesSummary(s, n) {
         var html = '<span class="rpill" style="color:#ff8a80">🔪 ' + s.mafia + ' مافيا</span>';
-        if (s.doctor) html += '<span class="rpill" style="color:#7ee2a6">🩺 طبيب</span>';
-        if (s.detective) html += '<span class="rpill" style="color:#8cc0ff">🕵️ محقق</span>';
-        var cit = n - s.mafia - (s.doctor ? 1 : 0) - (s.detective ? 1 : 0);
+        if (s.disguised) html += '<span class="rpill" style="color:#ff8a80">🎭 منهم ' + s.disguised + ' متخفي</span>';
+        if (s.doctors) html += '<span class="rpill" style="color:#7ee2a6">🩺 ' + s.doctors + ' طبيب</span>';
+        if (s.detectives) html += '<span class="rpill" style="color:#8cc0ff">🕵️ ' + s.detectives + ' محقق</span>';
+        var cit = n - s.mafia - s.doctors - s.detectives;
         html += '<span class="rpill" style="color:#ffe08a">🏠 ' + Math.max(0, cit) + ' مواطن</span>';
         return html;
     }
@@ -381,7 +382,7 @@ button { font-family: inherit; cursor: pointer; }
         if (!verified.length) return;
         var pid = function (p) { return 'tiktok:' + p.tiktok; };
         var players = verified.map(function (p) { return { id: pid(p), name: p.name }; });
-        var winners = verified.filter(function (p) { return p.role && L.ROLE[p.role].team === G.winner; }).map(pid);
+        var winners = verified.filter(function (p) { return p.team === G.winner; }).map(pid);   // المجنّد يفوز مع المافيا
         window.AGPAuth.reportMatchPoints({ players: players, winnerIds: winners, teamGame: true, durationMs: (G.endedAt || NET.now()) - G.startedAt });
     }
 
@@ -389,7 +390,13 @@ button { font-family: inherit; cursor: pointer; }
     var ROLE = L.ROLE;
     function nameOf(id) { var p = S.G && S.G.players.find(function (q) { return q.id === id; }); return p ? p.name : ''; }
     function playerOf(id) { return S.G && S.G.players.find(function (q) { return q.id === id; }); }
-    function roleBadge(role) { if (!role) return ''; var R = ROLE[role]; return '<span class="role" style="background:' + R.c + '">كان ' + R.icon + ' ' + R.n + '</span>'; }
+    // الدور كامل لو مكشوف (إعداد «كشف الدور كامل»)، وإلا الفريق بس (القواعد)
+    function roleBadge(p) {
+        if (!p) return '';
+        if (p.role) { var R = ROLE[p.role]; return '<span class="role" style="background:' + R.c + '">كان ' + R.icon + ' ' + R.n + '</span>'; }
+        if (p.team) return '<span class="role" style="background:' + (p.team === 'mafia' ? '#e2483d' : '#2f7de1') + '">' + (p.team === 'mafia' ? 'كان من 🔪 المافيا' : 'كان من 🏠 المدينة') + '</span>';
+        return '';
+    }
     var capKey = '';
     function caption(k, s, r, color) {
         var key = k + '|' + s + '|' + (r || '');
@@ -400,7 +407,8 @@ button { font-family: inherit; cursor: pointer; }
         $('banner').classList.toggle('hide', !title);
         if (!title) return;
         $('bTitle').textContent = title; $('bSub').textContent = sub || '';
-        $('bProg').innerHTML = prog ? Array.from({ length: prog.need }, function (_, i) { return '<i class="' + (i < prog.done ? 'on' : '') + '"></i>'; }).join('') : '';
+        $('bProg').innerHTML = !prog ? '' : prog.need > 14 ? '<span style="font-weight:900;color:#ffcc4d">' + prog.done + ' / ' + prog.need + '</span>'
+            : Array.from({ length: prog.need }, function (_, i) { return '<i class="' + (i < prog.done ? 'on' : '') + '"></i>'; }).join('');
     }
     function flash(color, a) { var f = $('flash'); f.style.background = color; f.style.opacity = a; }
 
@@ -433,15 +441,15 @@ button { font-family: inherit; cursor: pointer; }
         if (G.phase === 'reveal') {
             banner('توزيع الأدوار', 'كل لاعب يشوف دوره على جواله — لا تكشف دورك لأحد!');
             var s = G.settings, parts = [s.mafia + ' مافيا'];
-            if (s.doctor) parts.push('طبيب'); if (s.detective) parts.push('محقق');
-            caption('في البلدة ' + parts.join(' و'), 'والباقي مواطنين… مين تثق فيه؟', '', '#ffcc4d');
+            if (s.doctors) parts.push(s.doctors + ' طبيب'); if (s.detectives) parts.push(s.detectives + ' محقق');
+            caption('في المدينة ' + parts.join(' و'), 'والباقي مواطنين… مين تثق فيه؟', '', '#ffcc4d');
         } else if (G.phase === 'night') {
             banner('حل الليل: الاختيار من الهواتف فقط', 'أغمضوا أعينكم.. المافيا تختار ضحيتها، وأصحاب الأدوار يختارون من هواتفهم', G.nightProgress);
         } else if (G.phase === 'dawn') {
             banner('');
             var sh = info.s, u = info.u;
             if (sh) {
-                if (sh.k === 'intro') caption('الليلة ' + G.round, 'البلدة نايمة… والمافيا صاحية', '', '#9fb4ff');
+                if (sh.k === 'intro') caption('الليلة ' + G.round, 'المدينة نايمة… والمافيا صاحية', '', '#9fb4ff');
                 else if (sh.k === 'inspect') caption('🕵️ غرفة التحقيق', 'المحقق يستجوب مشتبهاً… والنتيجة وصلت لجواله بس', '', '#8cc0ff');
                 else if (sh.k === 'attack') {
                     if (u < 1600) caption('🌙 السوق بالليل…', 'أحد يمشي لحاله بين الدكاكين', '', '#9fb4ff');
@@ -452,7 +460,7 @@ button { font-family: inherit; cursor: pointer; }
                 } else if (sh.k === 'save') caption('🩺 الطبيب وصل!', 'أنقذ ' + nameOf(sh.target) + ' في آخر لحظة', '', '#7ee2a6');
                 else if (sh.k === 'quiet') caption('ليلة هادية', 'المافيا ما اختارت أحد…', '', '#9fb4ff');
                 else if (sh.k === 'result') {
-                    if (sh.victim) { var vp = playerOf(sh.victim); caption('صباح حزين ☀️', (vp ? vp.name : '') + ' ما نجا من الليلة', vp && u > 1500 ? roleBadge(vp.role) : '', '#ffcc4d'); }
+                    if (sh.victim) { var vp = playerOf(sh.victim); caption('صباح حزين ☀️', (vp ? vp.name : '') + ' ما نجا من الليلة', vp && u > 1500 ? roleBadge(vp) : '', '#ffcc4d'); }
                     else caption('طلع الصبح ☀️', sh.saved ? 'الكل بخير بفضل الطبيب' : 'ما مات أحد الليلة', '', '#ffcc4d');
                 }
             }
@@ -460,14 +468,14 @@ button { font-family: inherit; cursor: pointer; }
             banner('النقاش: مين المافيا؟', 'اكتبوا بالشات من جوالاتكم — بعدها يبدأ التصويت');
         } else if (G.phase === 'vote') {
             var voted = G.players.filter(function (p) { return p.alive && G.votes[p.id]; }).length;
-            banner('التصويت: مين يطلع من البلدة؟', 'صوّتوا من جوالاتكم', { need: alive, done: voted });
+            banner('التصويت: مين يطلع من المدينة؟', 'صوّتوا من جوالاتكم', { need: alive, done: voted });
         } else if (G.phase === 'verdict') {
             banner('');
             var V = G.verdict, uu = now - G.phaseAt;
             if (V && V.id) {
                 var op = playerOf(V.id);
-                caption('البلدة قررت طرد ' + (op ? op.name : ''), uu > 4200 ? '' : 'القفص نازل…', uu > 4200 && op ? roleBadge(op.role) : '', '#ffcc4d');
-            } else caption(V && V.tie ? 'تعادل بالأصوات' : 'ما أحد طلع', 'البلدة ما اتفقت هالمرة', '', '#ffcc4d');
+                caption('المدينة قررت طرد ' + (op ? op.name : ''), uu > 4200 ? '' : 'القفص نازل…', uu > 4200 && op ? roleBadge(op) : '', '#ffcc4d');
+            } else caption(V && V.tie ? 'تعادل بالأصوات' : 'ما أحد طلع', 'المدينة ما اتفقت هالمرة', '', '#ffcc4d');
         } else if (G.phase === 'over') {
             banner('');
             renderOver(G);
@@ -478,11 +486,14 @@ button { font-family: inherit; cursor: pointer; }
     function renderOver(G) {
         if (overKey === G.id) return; overKey = G.id;
         var mafiaWin = G.winner === 'mafia';
-        $('winTxt').innerHTML = mafiaWin ? '<span style="color:#ff5a4d">🔪 فازت المافيا!</span>' : '<span style="color:#ffcc4d">🏠 فازت البلدة!</span>';
-        $('winRoles').innerHTML = G.players.map(function (p) {
-            var R = ROLE[p.role] || ROLE.citizen, w = R.team === G.winner;
-            return '<span class="rl' + (w ? ' w' : '') + '">' + L.avatarSVG(p.look, 28) + esc(p.name) + ' <span style="color:' + R.c + '">' + R.icon + ' ' + R.n + '</span></span>';
-        }).join('');
+        $('winTxt').innerHTML = mafiaWin ? '<span style="color:#ff5a4d">🔪 فازت المافيا!</span>' : '<span style="color:#ffcc4d">🏠 فازت المدينة!</span>';
+        // الأدوار الحقيقية للكل، والمجنّد يظهر دوره الأصلي + «جُنّد». كروت المافيا تنكشف هنا
+        var list = G.players.length > 40 ? G.players.filter(function (p) { return p.team === 'mafia' || p.role === 'doctor' || p.role === 'detective'; }) : G.players;
+        $('winRoles').innerHTML = list.map(function (p) {
+            var R = ROLE[p.role] || ROLE.citizen, w = p.team === G.winner;
+            return '<span class="rl' + (w ? ' w' : '') + '">' + L.avatarSVG(p.look, 28) + esc(p.name) + ' <span style="color:' + R.c + '">' + R.icon + ' ' + R.n + (p.recruited ? ' ← جُنّد للمافيا' : '') + '</span></span>';
+        }).join('') + (G.players.length > 40 ? '<span class="rl">🏠 والباقي مواطنين</span>' : '') +
+            (G.cards ? '<span class="rl">🃏 كروت المافيا: ' + G.cards.map(function (c) { return c.name + (c.used ? ' ✓' : ''); }).join('، ') + '</span>' : '');
     }
 
     requestAnimationFrame(tickUI);
