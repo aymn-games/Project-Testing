@@ -133,8 +133,8 @@ button{font-family:inherit}
         </aside>
       </sc-for>
       <div style="grid-column:2;grid-row:1;min-height:0;display:grid;place-items:center">
-        <div style="display:grid;grid-template-columns:repeat(10,80px);grid-template-rows:repeat(9,80px);gap:8px">
-          <div style="grid-column:4 / 8;grid-row:3 / 8;position:relative;display:grid;place-items:center;border-radius:30px;background:rgba(255,255,255,.02);border:1.5px dashed rgba(255,255,255,.1)">
+        <div style="display:grid;grid-template-columns:repeat({{ bCols }},{{ bCell }}px);grid-template-rows:repeat({{ bRows }},{{ bCell }}px);gap:{{ bGap }}px">
+          <div style="grid-column:{{ bMidCol }};grid-row:{{ bMidRow }};position:relative;display:grid;place-items:center;border-radius:30px;background:rgba(255,255,255,.02);border:1.5px dashed rgba(255,255,255,.1)">
             <sc-if value="{{ noLast }}" hint-placeholder-val="{{ true }}">
               <div style="display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:20px">
                 <span style="font:800 26px 'Zain';color:#8a8596">آخر بطاقة</span>
@@ -157,10 +157,10 @@ button{font-family:inherit}
             </sc-if>
           </div>
           <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="70">
-            <button onClick="{{ t.pick }}" aria-label="المربع {{ t.n }}" style="position:relative;width:80px;height:80px;padding:0;box-sizing:border-box;border-radius:16px;cursor:{{ t.cursor }};border:{{ t.border }};background:{{ t.bg }};box-shadow:{{ t.sh }};transition:transform .2s, border-color .2s" style-hover="transform:translateY(-3px)">
+            <button onClick="{{ t.pick }}" aria-label="المربع {{ t.n }}" style="position:relative;width:{{ bCell }}px;height:{{ bCell }}px;padding:0;box-sizing:border-box;border-radius:16px;cursor:{{ t.cursor }};border:{{ t.border }};background:{{ t.bg }};box-shadow:{{ t.sh }};transition:transform .2s, border-color .2s" style-hover="transform:translateY(-3px)">
               <sc-if value="{{ t.closed }}" hint-placeholder-val="{{ true }}">
-                <span style="position:absolute;top:5px;right:8px;font:900 28px/1 'Zain';color:#f4f2f8;font-variant-numeric:tabular-nums">{{ t.n }}</span>
-                <img src="{{ t.icon }}" alt="" draggable="false" style="position:absolute;bottom:6px;left:7px;width:26px;height:26px">
+                <span style="position:absolute;top:5px;right:8px;font:900 {{ bNum }}px/1 'Zain';color:#f4f2f8;font-variant-numeric:tabular-nums">{{ t.n }}</span>
+                <img src="{{ t.icon }}" alt="" draggable="false" style="position:absolute;bottom:6px;left:7px;width:{{ bIcon }}px;height:{{ bIcon }}px">
               </sc-if>
             </button>
           </sc-for>
@@ -276,7 +276,7 @@ button{font-family:inherit}
               <span style="position:relative;overflow:hidden;width:{{ p.a }}px;height:{{ p.a }}px;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;background:{{ p.avBg }};border:4px solid {{ p.light }};box-shadow:0 0 0 6px {{ p.soft }};font:800 {{ p.af }}px 'Zain';color:#fff">{{ p.ini }}<img src="{{ p.avatar }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;opacity:{{ p.imgOp }}"></span>
               <span style="max-width:100%;font:800 {{ p.f }}px/1.2 'Zain';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
               <span style="width:60%;height:1px;background:{{ p.bd }}"></span>
-              <span style="font:700 16px 'Zain';color:#a8a3b5">نقاط الفريق</span>
+              <span style="font:700 {{ p.lf }}px 'Zain';color:#a8a3b5;white-space:nowrap">نقاط الفريق</span>
               <span style="font:900 {{ p.pf }}px/1 'Zain';color:{{ p.light }};font-variant-numeric:tabular-nums">{{ p.pts }}</span>
             </div>
             </sc-if>
@@ -321,7 +321,9 @@ button{font-family:inherit}
 //  النقاط: AGPAuth.reportMatchPoints مرة واحدة عند إعلان الفريق الفائز (teamGame)
 //  الأدوار: أزرق ← أحمر ← أزرق… كل فريق له مؤشر لاعب خاص يدور على لاعبيه
 // ============================================================
-const ICONS=['🇸🇦','🇰🇼','🇦🇪','🇶🇦','🇧🇭','🇴🇲','🇪🇬','🇯🇴','🇮🇶','🇲🇦','🇱🇧','🇩🇿','🦁','🐪','🦅','🐎','🐆','🐬','🦊','🐺','🐢','🦉','🐘','🐙','🪐','🌍','🌙','☀️','⭐','☄️','🌑','🌕','🎁','🏆','💎','🔑','🎲','🧭','⚓','🛡️','🏺','🎈','🪁','🧩','🎻','🚀','🔭','⏳','🇸🇾','🇹🇳','🇱🇾','🇸🇩','🇾🇪','🇵🇸','🐅','🦒','🦓','🦜','🐝','🦋','🌋','🌈','⚡','🔥','🎯','🎨','🎺','🥁','🗝️','📜'];
+const ICONS=['🇸🇦','🇰🇼','🇦🇪','🇶🇦','🇧🇭','🇴🇲','🇪🇬','🇯🇴','🇮🇶','🇲🇦','🇱🇧','🇩🇿','🦁','🐪','🦅','🐎','🐆','🐬','🦊','🐺','🐢','🦉','🐘','🐙','🪐','🌍','🌙','☀️','⭐','☄️','🌑','🌕','🎁','🏆','💎','🔑','🎲','🧭','⚓','🛡️','🏺','🎈','🪁','🧩','🎻','🚀','🔭','⏳','🇸🇾','🇹🇳','🇱🇾','🇸🇩','🇾🇪','🇵🇸','🐅','🦒','🦓','🦜','🐝','🦋','🌋','🌈','⚡','🔥','🎯','🎨','🎺','🥁','🗝️','📜','🇹🇷','🇲🇷','🇸🇴','🇩🇯','🇰🇲','🦈','🐳','🦀','🦚','🦩','🐊','🦬','🐫','🦔','🌵','🌴','🍀','🌻','🌊','❄️','🌪️','🎪','🎭','🎬','🎧','🎮','🏹','⚔️','🪄','🔮'];
+// شكل اللوحة لكل عدد مربعات: شبكة حول لوحة «آخر بطاقة» بالوسط
+const BOARDS={70:{bCols:10,bRows:9,bCell:80,bGap:8,bMidCol:'4 / 8',bMidRow:'3 / 8',bNum:28,bIcon:26},100:{bCols:13,bRows:10,bCell:72,bGap:6,bMidCol:'5 / 10',bMidRow:'3 / 9',bNum:25,bIcon:24}};
 const T={red:{c:'#ef4444',l:'#f87171',d:'#991b1b'},blue:{c:'#3b82f6',l:'#60a5fa',d:'#1e3a8a'}};
 const OTHER={red:'blue',blue:'red'};
 const SETUP=TW.readJSON(TW.keys.setup,null), ROSTER=TW.readJSON(TW.keys.roster,null);
@@ -338,15 +340,15 @@ class Component extends DCLogic {
   reg = TW.createRegistry(PLAYERS);
   state = this.fresh();
   fresh(keep){ const cfg=SETUP||{}, ro=ROSTER;
-    const size=+cfg.size||4, start=+cfg.start||200, timer=cfg.timer===0?0:(+cfg.timer||25);
+    const size=+cfg.size||4, start=+cfg.start||200, count=BOARDS[+cfg.tiles]?+cfg.tiles:70, timer=cfg.timer===0?0:(+cfg.timer||25);
     const pl=k=>keep?keep[k].players:((ro&&Array.isArray(ro[k]))?ro[k]:[]).slice(0,size);
     const team=(k,n,kw)=>({name:keep?keep[k].name:(cfg[k+'Name']||n),kw:keep?keep[k].kw:(cfg[k+'Kw']||kw),players:pl(k),pts:start});
-    return {size,start,timer,teams:{red:team('red','الفريق الأحمر','أحمر'),blue:team('blue','الفريق الأزرق','أزرق')},
-      running:false,started:false,tiles:this.makeTiles(),last:null,lastRun:0,turn:'blue',ptr:{red:0,blue:0},left:timer,reveal:null,revOut:false,hold:false,winner:null,flash:{red:0,blue:0},
+    return {size,start,timer,count,teams:{red:team('red','الفريق الأحمر','أحمر'),blue:team('blue','الفريق الأزرق','أزرق')},
+      running:false,started:false,tiles:this.makeTiles(count),last:null,lastRun:0,turn:'blue',ptr:{red:0,blue:0},left:timer,reveal:null,revOut:false,hold:false,winner:null,flash:{red:0,blue:0},
       adminOpen:false,adminOpenOut:false,join:null,joinOut:false,narrow:innerWidth<820,scale:Math.min(innerWidth/1920,(innerHeight-80)/1000),logo:false,toast:null}; }
-  makeTiles(){ const w=v=>v<=10?10:v<=20?6:v<=29?3:1, vals=Array.from({length:35},(_,i)=>i+1), tot=vals.reduce((a,v)=>a+w(v),0);
+  makeTiles(count){ const neg=Math.round((count-3)*20/67), w=v=>v<=10?10:v<=20?6:v<=29?3:1, vals=Array.from({length:35},(_,i)=>i+1), tot=vals.reduce((a,v)=>a+w(v),0);
     const pick=()=>{ let r=Math.random()*tot; for(const v of vals){ r-=w(v); if(r<=0) return v; } return 1; };
-    const cards=shuffle([...Array.from({length:47},()=>({kind:'pos',val:pick()})),...Array.from({length:20},()=>({kind:'neg',val:pick()})),{kind:'skipOpp'},{kind:'skipMate'},{kind:'extra'}]);
+    const cards=shuffle([...Array.from({length:count-3-neg},()=>({kind:'pos',val:pick()})),...Array.from({length:neg},()=>({kind:'neg',val:pick()})),{kind:'skipOpp'},{kind:'skipMate'},{kind:'extra'}]);
     const icons=shuffle([...ICONS]);
     return cards.map((c,i)=>({...c,n:i+1,icon:TW.emojiUrl(icons[i]),open:false,emo:c.kind==='pos'?POS_E[i%POS_E.length]:c.kind==='neg'?NEG_E[i%NEG_E.length]:SPECIAL[c.kind].emo})); }
 
@@ -429,8 +431,9 @@ class Component extends DCLogic {
     const pct=k=>Math.max(0,Math.min(100,s.teams[k].pts/s.start*100));
     const RV={pos:{c:'#22c55e',bg:'linear-gradient(165deg, #0d3220, #08140e)',label:'ضربة للخصم'},neg:{c:'#ef4444',bg:'linear-gradient(165deg, #3a0f14, #14080a)',label:'ضربة عكسية'},sp:{c:'#fbbf24',bg:'linear-gradient(165deg, #3a2c0a, #14100a)',label:'بطاقة خاصة'}};
     const rk=r?(r.kind==='pos'||r.kind==='neg'?r.kind:'sp'):'pos', rv=RV[rk];
-    const W=s.winner?s.teams[s.winner]:null, wn=W?W.players.length:0, sz=wn<=2?{w:300,a:150,af:60,f:34,pf:44,crown:54,pad:44}:wn<=4?{w:250,a:124,af:50,f:28,pf:38,crown:46,pad:40}:wn<=8?{w:196,a:90,af:38,f:22,pf:30,crown:38,pad:34}:{w:170,a:70,af:30,f:20,pf:26,crown:30,pad:28};
+    const W=s.winner?s.teams[s.winner]:null, wn=W?W.players.length:0, sz=wn<=2?{w:300,a:150,af:60,f:34,pf:44,crown:54,pad:44,lf:16}:wn<=4?{w:250,a:124,af:50,f:28,pf:38,crown:46,pad:40,lf:16}:wn<=8?{w:196,a:90,af:38,f:22,pf:30,crown:38,pad:34,lf:16}:wn<=16?{w:170,a:70,af:30,f:20,pf:26,crown:30,pad:28,lf:16}:{w:108,a:54,af:24,f:17,pf:24,crown:28,pad:24,lf:13};
     return {
+      ...BOARDS[s.count],
       fx:this.buildFx(), lblDisp:s.narrow?'none':'inline', narrow:s.narrow, exitOpen:!!s.exitOpen, onExit:()=>this.setState({exitOpen:true,exitOpenOut:false}), closeExit:()=>this.shut('exitOpen'), exitOv:s.exitOpenOut?'fadeOut .26s ease forwards':'fade .25s ease', exitAn:s.exitOpenOut?'popOut .26s ease forwards':'popIn .45s cubic-bezier(.2,1.25,.35,1)',
       scale:s.scale, stop:e=>e.stopPropagation(), toast:s.toast,
       logoOp:s.logo?1:0, phOp:s.logo?0:1, phBorder:s.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}),
@@ -460,7 +463,7 @@ class Component extends DCLogic {
       joinOpen:!!s.join, closeJoin:()=>{ clearTimeout(this._jt); this.shut('join',null); }, confirmJoin:this.confirmJoin,
       joinOv:s.joinOut?'fadeOut .26s ease forwards':'fade .25s ease', joinAn:s.joinOut?'popOut .26s ease forwards':'popIn .4s cubic-bezier(.2,1.25,.35,1)',
       ...(()=>{ const j=s.join, k=j?j.team:'red', m=T[k]; return {jTeam:s.teams[k].name, jKw:s.teams[k].kw, jLight:m.l, jSoft:m.c+'14', jBd:m.c+'66', jGlow:m.c+'2e', jWaiting:!(j&&j.cand), jFound:!!(j&&j.cand), jName:j&&j.cand||'', jIni:ini(j&&j.cand), jImg:(j&&j.cand&&this.reg.avatar(j.cand))||'', jImgOp:j&&j.cand&&this.reg.avatar(j.cand)?1:0, jAv:av(k)}; })(),
-      winOpen:!!W, winName:W?W.name:'', winLight:W?T[s.winner].l:'#fff', winGap:wn>4?16:24,
+      winOpen:!!W, winName:W?W.name:'', winLight:W?T[s.winner].l:'#fff', winGap:wn>16?12:wn>4?16:24,
       winPlayers:W?W.players.map((n,i)=>({name:n,ini:ini(n),...this.avOf(n),pts:Math.max(0,W.pts),avBg:av(s.winner),light:T[s.winner].l,bd:T[s.winner].c+'88',soft:T[s.winner].c+'26',glow:T[s.winner].c+'33',delay:(0.3+i*0.08).toFixed(2)+'s',...sz,...this.winCardItem(n,i,['فوز '+W.name,Math.max(0,W.pts)+' نقطة','حرب الفريقين'],sz.w)})):[],
       replaySame:()=>{ this.setState({...this.fresh(this.state.teams),scale:this.state.scale,logo:this.state.logo},()=>this.resetMatch()); },
       newMatch:()=>{ location.href='index.html'; },
