@@ -72,6 +72,35 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
       <span style="padding:8px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font:500 18px 'IBM Plex Sans Arabic';color:#a8a3b5">الفوز عند {{ target }} نقطة</span>
     </div>
 
+    <sc-if value="{{ showBoard }}" hint-placeholder-val="{{ false }}">
+      <div style="height:434px;box-sizing:border-box;background:rgba(18,16,26,.7);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);border-radius:30px;padding:28px;display:flex;flex-direction:column;gap:20px;position:relative;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.35)">
+        <div style="position:absolute;top:-120px;left:50%;width:620px;height:240px;margin-left:-310px;border-radius:50%;background:rgba(167,139,250,.2);filter:blur(40px);pointer-events:none"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;position:relative">
+          <div style="display:flex;align-items:center;gap:14px">
+            <span style="width:14px;height:14px;border-radius:50%;background:#a78bfa;box-shadow:0 0 16px #a78bfa"></span>
+            <span style="font:700 30px 'IBM Plex Sans Arabic'">الصدارة</span>
+            <span style="font:500 16px 'IBM Plex Sans Arabic';color:#8a8596">{{ boardCount }} مشارك</span>
+          </div>
+          <span style="font:500 16px 'IBM Plex Sans Arabic';color:#8a8596">{{ boardMore }}</span>
+        </div>
+        <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:14px;position:relative">
+          <sc-for list="{{ board }}" as="p" hint-placeholder-count="8">
+            <div style="min-width:0;display:flex;align-items:center;gap:14px;padding:0 18px 0 14px;border-radius:22px;background:{{ p.bg }};border:1.5px solid {{ p.bd }};transition:all .35s;position:relative;overflow:hidden">
+              <span style="width:30px;flex-shrink:0;font:700 22px 'IBM Plex Sans Arabic';color:#8a8596;text-align:center;font-variant-numeric:tabular-nums">{{ p.rank }}</span>
+              <span style="width:60px;height:60px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ p.avBg }};border:2px solid {{ p.bd }};font:700 26px 'IBM Plex Sans Arabic';color:#fff">{{ p.initial }}<img src="{{ p.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ p.imgOp }}"></span>
+              <span style="flex:1;min-width:0;font:600 24px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+              <span style="font:700 38px/1 'IBM Plex Sans Arabic';font-variant-numeric:tabular-nums;color:#c4b5fd">{{ p.score }}</span>
+              <span style="position:absolute;bottom:0;right:0;height:3px;width:{{ p.pct }}%;background:#a78bfa;box-shadow:0 0 10px #a78bfa;transition:width .8s cubic-bezier(.2,.9,.3,1)"></span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ boardEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;inset:0;display:grid;place-items:center;font:500 20px 'IBM Plex Sans Arabic';color:#8a8596">بانتظار انضمام اللاعبين</div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showTeams }}" hint-placeholder-val="{{ true }}">
     <div style="display:flex;gap:28px">
       <sc-for list="{{ teams }}" as="t" hint-placeholder-count="2">
         <div style="flex:1;min-width:0;background:rgba(18,16,26,.7);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);border-radius:30px;padding:28px;display:flex;flex-direction:column;gap:20px;position:relative;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.35)">
@@ -111,6 +140,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
         </div>
       </sc-for>
     </div>
+    </sc-if>
 
     <div style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px">
       <div style="width:100%;max-width:1100px;display:flex;flex-direction:column;align-items:center;gap:14px">
@@ -157,7 +187,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;gap:24px">
             <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-              <span style="font:500 18px 'IBM Plex Sans Arabic';color:#8a8596">يجاوب:</span>
+              <span style="font:500 18px 'IBM Plex Sans Arabic';color:#8a8596">{{ answerWho }}</span>
               <sc-for list="{{ chosen }}" as="c" hint-placeholder-count="2">
                 <span style="display:flex;align-items:center;gap:10px;padding:6px 20px 6px 6px;border-radius:999px;font:600 20px 'IBM Plex Sans Arabic';background:{{ c.bg }};border:1px solid {{ c.bd }};color:{{ c.color }}"><span style="width:44px;height:44px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:{{ c.avBg }};border:2px solid {{ c.color }};font:700 19px 'IBM Plex Sans Arabic';color:#fff">{{ c.initial }}<img src="{{ c.avatar }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ c.imgOp }}"></span>{{ c.name }}</span>
               </sc-for>
@@ -341,7 +371,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4}
           <div style="display:flex;flex-direction:column;gap:8px">
             <span style="align-self:flex-start;display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;border:1px solid rgba(167,139,250,.35);background:rgba(139,92,246,.1);font:500 13px 'IBM Plex Sans Arabic';color:#c4b5fd"><span style="width:6px;height:6px;border-radius:50%;background:#a78bfa"></span>لاعبين جدد</span>
             <span style="font:700 clamp(19px,5vw,26px)/1.35 'IBM Plex Sans Arabic'">دخول لاعبين جدد لم يسبق لهم الدخول</span>
-            <span style="font:500 clamp(14px,3.6vw,17px)/1.6 'IBM Plex Sans Arabic';color:#cfcad9">اكتب كلمة الدخول الخاصة بفريقك بشات البث</span>
+            <span style="font:500 clamp(14px,3.6vw,17px)/1.6 'IBM Plex Sans Arabic';color:#cfcad9">{{ joinHint }}</span>
           </div>
           <button onClick="{{ closeJoin }}" aria-label="إغلاق" style="flex-shrink:0;width:44px;height:44px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#e7e3ef;cursor:pointer;display:grid;place-items:center" style-hover="background:rgba(255,255,255,.1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
         </div>
@@ -405,9 +435,13 @@ const SETUP = CHALLENGE ? {} : FA.readJSON('fa-setup', null);
 if(!SETUP) location.replace('index.html');
 const ROSTER = CHALLENGE ? [[],[]] : FA.readJSON('fa-roster', [[],[]]);
 const PLAYERS = CHALLENGE ? {} : FA.readJSON('fa-players', {});
+// النمط الفردي المحلي: قائمة مشاركين وحدة، أسرع إجابة صحيحة = نقطة للاعب، وأول لاعب يوصل نقاط الفوز يكسب.
+const BOARD = !CHALLENGE && SETUP?.mode==='فردي';
 class Component extends DCLogic {
   IT = 84; CI = 76; DUR = +SETUP?.dur||15; TC = ['#a78bfa','#38bdf8'];
-  KW = [SETUP?.keyword1||'', SETUP?.keyword2||'']; MAX = +SETUP?.maxPlayers||20; followersOnly = SETUP?.who==='المتابعين فقط'; muted = SETUP?.sound===false;
+  // solo: بدون اختيار لاعبين — أي لاعب منضم يجاوب والأسرع ياخذ نقطة (محلياً، أو بتحدي البثوث من إعدادات الخادم)
+  solo = BOARD;
+  KW = BOARD ? [SETUP?.keywordS||''] : [SETUP?.keyword1||'', SETUP?.keyword2||'']; MAX = +SETUP?.maxPlayers||20; followersOnly = SETUP?.who==='المتابعين فقط'; muted = SETUP?.sound===false;
   ALL_CATS = [{id:'math',name:'مسألة رياضية'},{id:'image',name:'صورة واكتب الاسم'},{id:'reverse',name:'اعكس الكلمة'},{id:'number',name:'اكتب الرقم'},{id:'capital',name:'عاصمة الدولة'},{id:'proverb',name:'أكمل المثل'},{id:'scramble',name:'ترتيب الحروف'},{id:'flag',name:'علم الدولة'},{id:'complete',name:'أكمل الكلمة'},{id:'odd',name:'اكتشف المختلف'}];
   CATS = (c=>c.length?c:this.ALL_CATS)(this.ALL_CATS.filter(c=>(SETUP?.cats||[]).includes(c.name)));
   DATA = window.FA_QUESTIONS; // بنك الأسئلة لكل الفئات — fa-questions.js
@@ -417,8 +451,8 @@ class Component extends DCLogic {
   avItem(n,c){ const av=n?this.avatar(n):null; return {avatar:av||'',imgOp:av?1:0,initial:[...(n||'')].find(ch=>/[^\s_\d]/.test(ch))||'',avBg:`linear-gradient(135deg, ${c}, ${c}66)`}; }
   blankReel(){ return {items:[],offset:0,trans:'none',stopped:false,chosen:null,ci:-1}; }
   state = { narrow:innerWidth<820, scale:1, logo:false, settingsOpen:false, eventsOpen:false, exitOpen:false, joinOpen:false, setTab:0, pending:[],
-    teams:[0,1].map(i=>({name:[SETUP?.team1,SETUP?.team2][i]||'الفريق '+(i+1),players:[...(ROSTER[i]||[])],score:0})), phase:'ready', round:0,
-    reels:[0,1].map(()=>this.blankReel()), cat:{items:[],offset:0,trans:'none',stopped:false,idx:null,ci:-1},
+    teams:BOARD?[{name:'المشاركين',players:[...(ROSTER[0]||[])],score:0}]:[0,1].map(i=>({name:[SETUP?.team1,SETUP?.team2][i]||'الفريق '+(i+1),players:[...(ROSTER[i]||[])],score:0})), phase:'ready', round:0, scores:{},
+    reels:(BOARD?[0]:[0,1]).map(()=>this.blankReel()), cat:{items:[],offset:0,trans:'none',stopped:false,idx:null,ci:-1},
     q:null, timeLeft:this.DUR, answers:[], received:0, answered:{}, target:+SETUP?.target||15, winner:null, toast:null, countdown:null, log:[], joinBase:null, pendingJoins:[] };
 
   componentDidMount(){ this.fit=()=>this.setState({scale:Math.min(innerWidth/1920,innerHeight/1080),narrow:innerWidth<820}); this.fit(); addEventListener('resize',this.fit);
@@ -455,7 +489,7 @@ class Component extends DCLogic {
     if(st.winner!=null&&st.phase==='results'){ this.chShowWin(M); if(M.ended){ this.chClosed=true; return; } } else window.AGPChallengeWin.hide();
     if(M.ended||st.phase==='lobby'){ this.chClosed=true; try{ this.ws&&this.ws.close(); }catch(e){} location.replace(CH_LOBBY); return; }
     this.chOffset=M.serverNow-Date.now(); this.chHost=M.you===M.host; this.chInfo=st.playerInfo||{};
-    if(!this.chInit){ this.chInit=true; this.DUR=M.settings.dur; this.KW=M.settings.keywords.slice();
+    if(!this.chInit){ this.chInit=true; this.solo=M.settings.mode==='solo'; this.DUR=M.settings.dur; this.KW=M.settings.keywords.slice();
       this.CATS=this.ALL_CATS.filter(c=>M.settings.cats.includes(c.id)); if(!this.CATS.length) this.CATS=this.ALL_CATS; this.chRound=st.round; }
     const s=this.state, catIdx=Math.max(0,this.CATS.findIndex(c=>c.name===st.catName));
     const LK={join:'join',correct:'correct',wrong:'wrong',round:'round',win:'points',kick:'kick'};
@@ -468,13 +502,13 @@ class Component extends DCLogic {
     if(st.round>this.chRound&&['spinning','countdown','question','results'].includes(st.phase)){ this.chRound=st.round; this.chQ=null;
       if(st.phase==='spinning'){ this.setState(patch); this.spinTo(st.chosen,catIdx); return; }
       // دخل متأخر (تحديث الصفحة وسط جولة): بدون حركة
-      patch.reels=[0,1].map(i=>({items:[st.chosen[i]],offset:0,trans:'none',stopped:true,chosen:st.chosen[i],ci:0}));
+      patch.reels=[0,1].map(i=>this.solo?this.blankReel():({items:[st.chosen[i]],offset:0,trans:'none',stopped:true,chosen:st.chosen[i],ci:0}));
       patch.cat={items:[st.catName],offset:0,trans:'none',stopped:true,idx:catIdx,ci:0}; patch.round=st.round; }
     if(st.phase==='question'&&st.question){ this.chQ=st.question;
       if(s.phase!=='question'&&(s.phase==='countdown'||patch.reels)){ clearInterval(this.ti); patch.countdown=null; patch.phase='question'; patch.q={...st.question}; patch.timeLeft=left(); patch.answered={};
         if(s.phase==='countdown') this.snd('open'); this.chTick(st); } }
     if(st.phase==='results'&&(s.phase==='question'||s.phase==='countdown'||patch.reels)){ clearInterval(this.ti);
-      patch.phase='results'; patch.countdown=null; patch.q={...(this.chQ||st.question||{catName:st.catName,sub:''}),answer:st.answer}; patch.timeLeft=(st.answers||[]).length>=2?Math.max(1,s.timeLeft):0; if(s.phase==='question') this.snd('timeup'); }
+      patch.phase='results'; patch.countdown=null; patch.q={...(this.chQ||st.question||{catName:st.catName,sub:''}),answer:st.answer}; patch.timeLeft=(st.answers||[]).length>=(this.solo?1:2)?Math.max(1,s.timeLeft):0; if(s.phase==='question') this.snd('timeup'); }
     if(st.phase==='results'&&st.winner!=null&&!this.chWinSnd){ this.chWinSnd=true; setTimeout(()=>this.snd('win'),300); }
     if(st.winner==null) this.chWinSnd=false;
     if(st.phase==='ready'&&st.round===0&&s.round>0){ // مباراة جديدة من المنشئ
@@ -484,11 +518,15 @@ class Component extends DCLogic {
   chTick(st){ clearInterval(this.ti); this.ti=setInterval(()=>{ const t=Math.max(0,Math.ceil(((st.phaseEndsAt||0)-(Date.now()+this.chOffset))/1000));
       if(t>0&&t<=5&&t!==this.state.timeLeft) this.snd('beep'); this.setState({timeLeft:t}); if(t<=0) clearInterval(this.ti); },250); }
   // نظام نقاط المنصة: مرة واحدة لكل مباراة عند إعلان الفائز
+  // wi: رقم الفريق الفائز، أو اسم اللاعب الفائز بالنمط الفردي المحلي (لعبة فردية: teamGame:false).
   reportPoints(wi){ if(CHALLENGE||this.reported) return; this.reported=true; const s=this.state;
     const players=s.teams.flatMap(t=>t.players).map(n=>({id:this.reg.id(n),name:n})).filter(p=>p.id);
-    const winnerIds=s.teams[wi].players.map(n=>this.reg.id(n)).filter(Boolean);
+    const winnerIds=(BOARD?[wi]:s.teams[wi].players).map(n=>this.reg.id(n)).filter(Boolean);
     if(window.AGPAuth&&typeof window.AGPAuth.reportMatchPoints==='function')
-      window.AGPAuth.reportMatchPoints({players,winnerIds,teamGame:true,durationMs:Date.now()-(this.matchStartedAt||Date.now())}); }
+      window.AGPAuth.reportMatchPoints({players,winnerIds,teamGame:!BOARD,durationMs:Date.now()-(this.matchStartedAt||Date.now())}); }
+  // ترتيب المشاركين بالنمط الفردي المحلي: الأعلى نقاطاً أولاً (والتعادل بترتيب الانضمام)
+  ranking(s=this.state){ return s.teams[0].players.map((n,j)=>({name:n,score:s.scores[n]||0,j})).sort((a,b)=>b.score-a.score||a.j-b.j); }
+  soloWinner(n,score){ return {name:n,score,i:0,player:n}; }
   // بطاقة الفوز (js/agp-win-card.js) — تحل محل بطاقة اللاعب العادية بشاشة الفوز لو يملك بطاقة مفعّلة
   winCardItem(n,j,lines){ const el=FA.winCard(this.reg.player(n),lines,'wc'+j,200); return { wcOn:!!el, wcStd:!el, wcEl:el }; }
 
@@ -536,15 +574,17 @@ class Component extends DCLogic {
 
   spin=()=>{ const s=this.state; if(s.phase!=='ready'||s.winner) return;
     if(CHALLENGE){ this.ac(); if(this.chHostOnly()) this.chSend('spin'); return; }
+    if(BOARD&&s.teams[0].players.length<2) return this.toastMsg('النمط الفردي يحتاج لاعبين اثنين على الأقل');
     if(s.teams.some(t=>!t.players.length)) return this.toastMsg('كل فريق يحتاج لاعب واحد على الأقل');
     this.spinTo(null,null); };
   // chosenGiven/idxGiven: من الخادم بتحدي البثوث، وإلا اختيار محلي عادي.
-  spinTo=(chosenGiven,idxGiven)=>{ const s=this.state,n=2;
+  spinTo=(chosenGiven,idxGiven)=>{ const s=this.state,n=this.solo?0:2;
     clearInterval(this.ti); this.ac(); this.snd('start'); if(!this.matchStartedAt) this.matchStartedAt=Date.now();
-    const reels=s.reels.map((r,i)=>{ const P=s.teams[i].players,L=26+i*5,items=Array.from({length:L},()=>this.pick(P)),chosen=chosenGiven?chosenGiven[i]:this.nextPlayer(i,P); items[L-2]=chosen; return {items,offset:0,trans:'none',stopped:false,chosen,ci:L-2}; });
+    const reels=this.solo?s.reels.map(()=>this.blankReel()):s.reels.map((r,i)=>{ const P=s.teams[i].players,L=26+i*5,items=Array.from({length:L},()=>this.pick(P)),chosen=chosenGiven?chosenGiven[i]:this.nextPlayer(i,P); items[L-2]=chosen; return {items,offset:0,trans:'none',stopped:false,chosen,ci:L-2}; });
     const C=this.CATS,CL=34,idx=idxGiven!=null?idxGiven:this.r(C.length),st0=this.r(C.length),citems=Array.from({length:CL},(_,j)=>C[(j+st0)%C.length].name); citems[CL-2]=C[idx].name;
     this.setState({phase:'spinning',reels,cat:{items:citems,offset:0,trans:'none',stopped:false,idx,ci:CL-2},q:null,answers:[],received:0,answered:{},round:CHALLENGE?this.chRound:s.round+1});
-    const ease='cubic-bezier(.12,.86,.2,1)', teamEnd=(2.6+(n-1)*.55)*1000, catStart=teamEnd+500, catDur=2600;
+    // النمط الفردي: بكرة الفئة بس (نفس SPIN_MS_SOLO بالخادم)
+    const ease='cubic-bezier(.12,.86,.2,1)', teamEnd=n?(2.6+(n-1)*.55)*1000:0, catStart=n?teamEnd+500:0, catDur=2600;
     const ticks=(from,dur)=>{ for(let t=0;t<dur-200;){ setTimeout(()=>this.snd('tick'),from+t); const p=t/dur; t+=40+p*p*360; } };
     setTimeout(()=>{
       this.setState(st=>({reels:st.reels.map((r,i)=>({...r,offset:-(r.ci-1)*this.IT,trans:`transform ${2.6+i*.55}s ${ease}`}))}));
@@ -553,7 +593,7 @@ class Component extends DCLogic {
       setTimeout(()=>{ this.snd('start'); this.setState(st=>({phase:'category',cat:{...st.cat,offset:-(st.cat.ci-1)*this.CI,trans:`transform ${catDur/1000}s ${ease}`}})); },catStart);
       ticks(catStart,catDur);
       setTimeout(()=>{ this.snd('reveal'); this.setState(st=>({cat:{...st.cat,stopped:true},phase:'countdown',countdown:null}));
-        if(!CHALLENGE) this.addLog('round',`${this.state.reels.map(r=>r.chosen).join(' ضد ')} · ${C[idx].name}`);
+        if(!CHALLENGE) this.addLog('round',this.solo?C[idx].name:`${this.state.reels.map(r=>r.chosen).join(' ضد ')} · ${C[idx].name}`);
         [3,2,1].forEach((k,i)=>setTimeout(()=>{ this.snd('beep'); this.setState({countdown:k}); },900+i*1000));
         setTimeout(()=>{ this.setState({countdown:null}); this.showQuestion(); },3900);
       },catStart+catDur);
@@ -566,13 +606,17 @@ class Component extends DCLogic {
     clearInterval(this.ti); this.ti=setInterval(()=>{ const t=this.state.timeLeft-1; if(t>0&&t<=5) this.snd('beep'); this.setState({timeLeft:Math.max(0,t)}); if(t<=0){clearInterval(this.ti);this.endRound();} },1000);
   };
   endRound(){ if(this.state.phase!=='question') return; clearInterval(this.ti); this.snd('timeup'); this.setState({phase:'results'});
-    const s=this.state, lead=s.teams.map((t,i)=>({...t,i})).filter(t=>t.score>=s.target).sort((a,b)=>b.score-a.score)[0];
+    const s=this.state;
+    if(BOARD){ const top=this.ranking(s)[0]; if(top&&top.score>=s.target) setTimeout(()=>{this.snd('win');this.addLog('points',`فوز ${top.name} بـ ${top.score} نقطة`);this.setState({winner:this.soloWinner(top.name,top.score)});this.reportPoints(top.name);},1400); return; }
+    const lead=s.teams.map((t,i)=>({...t,i})).filter(t=>t.score>=s.target).sort((a,b)=>b.score-a.score)[0];
     if(lead) setTimeout(()=>{this.snd('win');this.addLog('points',`فوز ${lead.name} بـ ${lead.score} نقطة`);this.setState({winner:lead});this.reportPoints(lead.i);},1400);
   }
   closeResults=()=>{ if(this.state.phase==='results'){ this.snd('close'); this.setState({phase:'ready',q:null}); } };
-  newGame=()=>{ if(CHALLENGE){ if(this.chHostOnly()) this.chSend('newGame'); return; } clearInterval(this.ti); this.matchStartedAt=null; this.reported=false; this.played=[new Set(),new Set()]; this.setState(s=>({teams:s.teams.map(t=>({...t,score:0})),winner:null,phase:'ready',round:0,q:null,answers:[],received:0,countdown:null,log:[],reels:[0,1].map(()=>this.blankReel()),cat:{items:[],offset:0,trans:'none',stopped:false,idx:null,ci:-1}})); };
+  newGame=()=>{ if(CHALLENGE){ if(this.chHostOnly()) this.chSend('newGame'); return; } clearInterval(this.ti); this.matchStartedAt=null; this.reported=false; this.played=[new Set(),new Set()]; this.setState(s=>({teams:s.teams.map(t=>({...t,score:0})),scores:{},winner:null,phase:'ready',round:0,q:null,answers:[],received:0,countdown:null,log:[],reels:s.teams.map(()=>this.blankReel()),cat:{items:[],offset:0,trans:'none',stopped:false,idx:null,ci:-1}})); };
   endMatch=()=>{ if(CHALLENGE){ this.shut('settingsOpen'); if(this.chHostOnly()) this.chSend('finish'); return; } clearInterval(this.ti); const s=this.state, ts=s.teams.map((t,i)=>({...t,i})).sort((a,b)=>b.score-a.score);
     this.shut('settingsOpen');
+    if(BOARD){ const rk=this.ranking(s); if(!rk.length||!rk[0].score||(rk[1]&&rk[1].score===rk[0].score)) return this.toastMsg('تعادل! لا يوجد فائز');
+      this.snd('win'); this.addLog('points',`إنهاء يدوي · فوز ${rk[0].name}`); this.setState({phase:'results',q:null,winner:this.soloWinner(rk[0].name,rk[0].score)}); this.reportPoints(rk[0].name); return; }
     if(ts[0].score===ts[1].score) return this.toastMsg('تعادل! لا يوجد فائز');
     this.snd('win'); this.addLog('points',`إنهاء يدوي · فوز ${ts[0].name}`); this.setState({phase:'results',q:null,winner:ts[0]}); this.reportPoints(ts[0].i); };
 
@@ -589,16 +633,18 @@ class Component extends DCLogic {
         else if(r.cur<0&&s.joinOpen) patch.pendingJoins=[...s.pendingJoins,{name:user,team:r.k}];
         else { patch.teams=s.teams.map((t,i)=>({...t,players:i===r.k?[...t.players,user]:t.players.filter(x=>x!==user)}));
           this.addLog('join',r.cur<0?`${user} انضم لـ ${s.teams[r.k].name}`:`${user} انتقل إلى ${s.teams[r.k].name}`); } } }
-    else if(s.phase==='question'&&s.q){ const ti=s.reels.findIndex(r=>r.chosen===user);
+    else if(s.phase==='question'&&s.q){ const ti=this.solo?s.teams.findIndex(t=>t.players.includes(user)):s.reels.findIndex(r=>r.chosen===user);
       // صاحب الدور يقدر يرسل أكثر من محاولة: الغلط ما يقفل عليه، وأول إجابة صحيحة منه تُعتمد وتقفل دوره.
-      if(ti<0||s.answered[user]) return;
+      // النمط الفردي: أي لاعب منضم يجاوب، وأول إجابة صحيحة (نقطة وحدة) تقفل الجولة على الكل.
+      if(ti<0||s.answered[user]||(this.solo&&s.answers.length)) return;
       patch.received=s.received+1;
-      if(this.check(text,s.q)){ const rank=s.answers.length, pts=rank===0?2:0; patch.answered={...s.answered,[user]:true};
+      if(this.check(text,s.q)){ const rank=s.answers.length, pts=this.solo?1:rank===0?2:0; patch.answered={...s.answered,[user]:true};
         patch.answers=[...s.answers,{user,team:ti,pts,rank:rank+1}]; patch.teams=s.teams.map((t,i)=>i===ti?{...t,score:t.score+pts}:t); this.snd('correct');
-        this.addLog('correct',`${user} أجاب ${rank===0?'أولاً':'ثانياً'} · ${s.teams[ti].name}`); if(pts) this.addLog('points',`${s.teams[ti].name} +${pts} نقطة`);
+        if(BOARD) patch.scores={...s.scores,[user]:(s.scores[user]||0)+pts};
+        this.addLog('correct',this.solo?`${user} أجاب أولاً`:`${user} أجاب ${rank===0?'أولاً':'ثانياً'} · ${s.teams[ti].name}`); if(pts) this.addLog('points',`${BOARD?user:s.teams[ti].name} +${pts} نقطة`);
       } else { this.snd('wrong'); this.addLog('wrong',`${user} أجاب خطأ`); } }
     this.setState(patch);
-    if(patch.answered&&Object.keys(patch.answered).length>=2) setTimeout(()=>this.endRound(),600);
+    if(patch.answered&&(this.solo||Object.keys(patch.answered).length>=2)) setTimeout(()=>this.endRound(),600);
   }
 
   buildFx(){
@@ -651,14 +697,19 @@ class Component extends DCLogic {
     const cs=s.cat, cspun=cs.items.length>0;
     const catItems=(cspun?cs.items:this.CATS.map(c=>c.name)).map((nm,j)=>{ const win=cspun&&cs.stopped&&j===cs.ci; return {name:nm,color:win?'#ddd6fe':'#e7e3ef',op:cspun&&cs.stopped&&!win?.22:1,sc:win?1.1:1}; });
     const P=s.phase, catName=cs.idx!=null?this.CATS[cs.idx].name:'';
-    const titles={ready:['فئة الجولة','اضغط تحريك لاختيار لاعب من كل فريق'],spinning:['اختيار اللاعبين…',''],category:['اختيار الفئة…',''],countdown:[catName,'استعدوا'],question:[catName,'الإجابة في الشات'],results:[catName,'انتهت الجولة']};
+    const titles={ready:['فئة الجولة',this.solo?'اضغط تحريك لاختيار الفئة':'اضغط تحريك لاختيار لاعب من كل فريق'],spinning:['اختيار اللاعبين…',''],category:['اختيار الفئة…',''],countdown:[catName,'استعدوا'],question:[catName,'الإجابة في الشات'],results:[catName,'انتهت الجولة']};
     const h=React.createElement;
     const newJoins=s.pendingJoins.map(pj=>{ const c=col(pj.team), av=this.avatar(pj.name), fr=this.reg.framed(pj.name),
       kick=()=>{ this.snd('wrong'); this.addLog('kick',`تم إقصاء ${pj.name} من ${s.teams[pj.team].name}`); this.setState(st=>({pendingJoins:st.pendingJoins.filter(x=>x.name!==pj.name)})); }; return {name:pj.name,team:s.teams[pj.team].name,color:c,bd:c+'55',avBg:`linear-gradient(135deg, ${c}, ${c}66)`,
         framed:!!fr, plain:!fr, frameEl:fr?FA.frameCard(fr,kick):null,
         initial:[...pj.name].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:av||'',imgOp:av?1:0, kick}; });
     const eg=this.eventGroups();
-    return { ...this.anims(), scale:s.scale, round:s.round, target:s.target, teams, catItems, catOffset:cspun?cs.offset:0, catTrans:cspun?cs.trans:'none',
+    // لوحة الصدارة بالنمط الفردي المحلي (بدل كروت الفريقين)
+    const rk=BOARD?this.ranking():[];
+    const board=rk.slice(0,8).map((p,j)=>({name:p.name,score:p.score,rank:j+1,lead:j===0&&p.score>0,bd:j===0&&p.score>0?'rgba(167,139,250,.6)':'rgba(255,255,255,.08)',
+      bg:j===0&&p.score>0?'rgba(139,92,246,.14)':'rgba(255,255,255,.03)',pct:Math.min(100,p.score/(s.target||15)*100),...this.avItem(p.name,col(0))}));
+    return { ...this.anims(), showTeams:!BOARD, showBoard:BOARD, board, boardEmpty:!board.length, boardCount:rk.length, boardMore:rk.length>8?'+'+(rk.length-8)+' لاعب':'',
+      answerWho:this.solo?'يجاوب: كل المشاركين':'يجاوب:', joinHint:BOARD?'اكتب كلمة الدخول بشات البث':'اكتب كلمة الدخول الخاصة بفريقك بشات البث', scale:s.scale, round:s.round, target:s.target, teams, catItems, catOffset:cspun?cs.offset:0, catTrans:cspun?cs.trans:'none',
       catBand:cs.stopped&&cspun?'rgba(139,92,246,.16)':'rgba(255,255,255,.03)', statusTitle:titles[P][0], statusText:titles[P][1],
       spinOp:P==='ready'?1:.35, spinAnim:P==='ready'?'glow 1.8s infinite':'none', spin:this.spin,
       countdownEl:s.countdown?h('div',{key:'cd',style:{position:'absolute',inset:0,zIndex:6,background:'rgba(0,0,0,.55)',backdropFilter:'blur(10px)',display:'grid',placeItems:'center',animation:'fade .3s ease'}},
@@ -667,12 +718,12 @@ class Component extends DCLogic {
           h('span',{style:{font:"700 300px/1 'IBM Plex Sans Arabic'",background:'linear-gradient(180deg, #ddd6fe, #8b5cf6)',WebkitBackgroundClip:'text',backgroundClip:'text',color:'transparent',filter:'drop-shadow(0 0 40px rgba(139,92,246,.5))'}},String(s.countdown)))):null,
       showModal:(P==='question'||P==='results')&&!!s.q, isResults:P==='results', resultLabel:s.answers.length?(s.timeLeft>0?'وصلت كل الإجابات':'انتهى الوقت'):'لا توجد إجابة صحيحة',
       q:s.q||{}, timeLeft:s.timeLeft, timerDeg:s.timeLeft/this.DUR*360, timerColor:s.timeLeft<=5?'#f87171':'#a78bfa',
-      chosen:s.reels.map((r,i)=>({name:r.chosen||'—',color:col(i),bg:col(i)+'1a',bd:col(i)+'55',...this.avItem(r.chosen,col(i))})), received:s.received,
+      chosen:this.solo?[]:s.reels.map((r,i)=>({name:r.chosen||'—',color:col(i),bg:col(i)+'1a',bd:col(i)+'55',...this.avItem(r.chosen,col(i))})), received:s.received,
       answers:s.answers.map(a=>({...a,pts:fmt(a.pts),color:col(a.team),bg:col(a.team)+'26',glow:col(a.team)+'40',...this.avItem(a.user,col(a.team))})),
       closeResults:this.closeResults, newGame:this.newGame, goLibrary:()=>{ this.snd('close'); if(CHALLENGE){ this.chSend('leave'); location.href='versus.html'; return; } location.href=FA.libraryUrl; },
-      winner:s.winner?(()=>{ const w=s.winner, c=col(w.i), pl=s.teams[w.i].players;
+      winner:s.winner?(()=>{ const w=s.winner, c=col(w.i), pl=w.player?[w.player]:s.teams[w.i].players;
         return {name:w.name,score:fmt(w.score),color:c,ring:c+'40',bd:c+'66',soft:c+'1a',
-          players:pl.map((n,j)=>{ const av=this.avatar(n); return {name:n,initial:[...n].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:av||'',imgOp:av?1:0,color:c,glow:c+'55',cardBd:c+'55',soft:c+'1a',avBg:`linear-gradient(135deg, ${c}, ${c}66)`,delay:(0.5+j*0.08).toFixed(2)+'s',...this.winCardItem(n,j,['فوز '+w.name,fmt(w.score)+' نقطة','أسرع إجابة'])}; })}; })():null, toast:s.toast,
+          players:pl.map((n,j)=>{ const av=this.avatar(n); return {name:n,initial:[...n].find(ch=>/[^\s_\d]/.test(ch))||'',avatar:av||'',imgOp:av?1:0,color:c,glow:c+'55',cardBd:c+'55',soft:c+'1a',avBg:`linear-gradient(135deg, ${c}, ${c}66)`,delay:(0.5+j*0.08).toFixed(2)+'s',...this.winCardItem(n,j,[w.player?'فوز':'فوز '+w.name,fmt(w.score)+' نقطة','أسرع إجابة'])}; })}; })():null, toast:s.toast,
       lblDisp:s.narrow?'none':'inline', stop:e=>e.stopPropagation(),
       logoOp:s.logo?1:0, phOp:s.logo?0:1, phBorder:s.logo?0:.4, logoOk:()=>this.setState({logo:true}), logoErr:()=>this.setState({logo:false}), fx:this.buildFx(),
       onExit:()=>this.open('exitOpen'), closeExit:()=>this.shut('exitOpen'), confirmExit:()=>{ this.shut('exitOpen'); if(CHALLENGE){ this.chSend('leave'); setTimeout(()=>{ location.href='versus.html'; },300); return; } this.newGame(); location.href=FA.libraryUrl; }, exitOpen:s.exitOpen,

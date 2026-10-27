@@ -11,6 +11,10 @@
  * يقدرون يجاوبون، وكل واحد من شات بثه فقط. أول إجابة صحيحة = نقطتين.
  * أول فريق يوصل نقاط الفوز يكسب.
  *
+ * النمط الفردي (settings.mode === 'solo'): ما فيه اختيار لاعبين — أي لاعب
+ * منضم يقدر يجاوب من شات بثه، وأسرع إجابة صحيحة = نقطة وحدة له ولفريق بثه،
+ * وتنتهي الجولة فوراً. أول بث يوصل مجموع نقاطه لنقاط الفوز يكسب.
+ *
  * هذا الملف منطق خالص: ما يعرف شي عن تيك توك أو WebSocket. الأوقات
  * والمؤقتات يديرها challenge-match.js عبر hooks.schedule/onChange/onWin.
  */
@@ -40,6 +44,8 @@ var MAX_PLAYERS = 25;
 var LOBBY_MIN_SEC = 15, LOBBY_MAX_SEC = 300, LOBBY_DEF_SEC = 60;
 // نفس توقيت حركة game.html الأصلية: بكرات اللاعبين ثم بكرة الفئة (6.25 ث)، ثم 3، 2، 1 (3.9 ث).
 var SPIN_MS = 6250;
+// النمط الفردي: بكرة الفئة بس (2.65 ث) — نفس توقيت game.html.
+var SPIN_MS_SOLO = 2650;
 var COUNTDOWN_MS = 3900;
 var MAX_LOG = 60;
 
@@ -78,13 +84,15 @@ function cleanCats(list) {
 
 function cleanTeamName(v) { return String(v || '').trim().slice(0, 24); }
 
-/** جزء المنشئ (مع الدعوة): اسم فريقه + المسموح لهم + فئاته + نقاط الفوز + وقت انتظار اللوبي. */
+function cleanMode(v) { return v === 'solo' ? 'solo' : 'teams'; }
+
+/** جزء المنشئ (مع الدعوة): نمط اللعب + اسم فريقه + المسموح لهم + فئاته + نقاط الفوز + وقت انتظار اللوبي. */
 function sanitizeHostSettings(raw) {
     raw = raw || {};
     var cats = cleanCats(raw.cats);
     if (cats.length !== CATS_PER_SIDE) return { error: 'pick_cats' };
     return {
-        team1: cleanTeamName(raw.team1), followers1: Boolean(raw.followersOnly), hostCats: cats,
+        mode: cleanMode(raw.mode), team1: cleanTeamName(raw.team1), followers1: Boolean(raw.followersOnly), hostCats: cats,
         target: clampInt(raw.target, 1, 99, 15), lobbySec: clampInt(raw.lobbySec, LOBBY_MIN_SEC, LOBBY_MAX_SEC, LOBBY_DEF_SEC)
     };
 }
@@ -104,6 +112,7 @@ function sanitizeSettings(raw, sideNames) {
     var hostCats = cleanCats(raw.hostCats), guestCats = cleanCats(raw.guestCats);
     var cats = cleanCats(hostCats.concat(guestCats));
     return {
+        mode: cleanMode(raw.mode),
         team1: cleanTeamName(raw.team1) || (sideNames && sideNames[0]) || 'الفريق 1',
         team2: cleanTeamName(raw.team2) || (sideNames && sideNames[1]) || 'الفريق 2',
         keywords: KEYWORDS.slice(),
@@ -189,6 +198,7 @@ function createFastestAnswer(settings, hooks) {
     var roundToken = 0;
     var matchStartedAt = null;
     var catIds = settings.cats;
+    var solo = settings.mode === 'solo';
 
     function log(kind, text) {
         S.log.unshift({ kind: kind, text: text, at: Date.now() });
@@ -252,7 +262,7 @@ function createFastestAnswer(settings, hooks) {
             S.teams.forEach(function (t) {
                 t.players.forEach(function (n) { var p = players[n]; view.playerInfo[n] = { id: p.id, avatar: p.avatar, frame: p.frame }; });
             });
-            view.settings = { keywords: settings.keywords, target: settings.target, dur: settings.dur, maxPlayers: settings.maxPlayers, followersOnly: settings.followersOnly, lobbySec: settings.lobbySec };
+            view.settings = { mode: settings.mode, keywords: settings.keywords, target: settings.target, dur: settings.dur, maxPlayers: settings.maxPlayers, followersOnly: settings.followersOnly, lobbySec: settings.lobbySec };
             return view;
         },
 
@@ -292,12 +302,12 @@ function createFastestAnswer(settings, hooks) {
                 return true;
             }
 
-            // الإجابة: بس اللاعب صاحب الدور، ومن شات بثه.
+            // الإجابة: بس اللاعب صاحب الدور (أو أي لاعب منضم بالنمط الفردي)، ومن شات بثه.
             if (S.phase !== 'question' || !currentQ || sideById[id] !== side || !inTeam) return false;
-            if (S.chosen[side] !== user || answered[user]) return false;
+            if (solo ? S.answers.length > 0 : (S.chosen[side] !== user || answered[user])) return false;
             S.received++;
             if (checkAnswer(text, currentQ)) {
-                var rank = S.answers.length, pts = rank === 0 ? 2 : 0;
+                var rank = S.answers.length, pts = solo ? 1 : (rank === 0 ? 2 : 0);
                 answered[user] = true;
                 S.answers.push({ user: user, team: side, pts: pts, rank: rank + 1 });
                 team.score += pts;
@@ -305,7 +315,7 @@ function createFastestAnswer(settings, hooks) {
                 ps.pts += pts;
                 ps.correct++;
                 log('correct', user + ' أجاب ' + (rank === 0 ? 'أولاً' : 'ثانياً') + ' · ' + team.name + (pts ? ' +' + pts : ''));
-                if (Object.keys(answered).length >= 2) {
+                if (solo || Object.keys(answered).length >= 2) {
                     var tk = roundToken;
                     hooks.schedule(function () { endRound(tk); }, 600);
                 }
@@ -361,7 +371,7 @@ function createFastestAnswer(settings, hooks) {
             hooks.onRoundStart();
             var token = ++roundToken;
             S.round++;
-            S.chosen = [nextPlayer(0), nextPlayer(1)];
+            S.chosen = solo ? [null, null] : [nextPlayer(0), nextPlayer(1)];
             currentQ = genQuestion(pick(catIds));
             S.catName = currentQ.catName;
             S.question = null;
@@ -370,8 +380,9 @@ function createFastestAnswer(settings, hooks) {
             S.received = 0;
             answered = {};
             S.phase = 'spinning';
-            S.phaseEndsAt = Date.now() + SPIN_MS;
-            log('round', 'الجولة ' + S.round + ': ' + S.chosen.join(' ضد ') + ' · ' + S.catName);
+            var spinMs = solo ? SPIN_MS_SOLO : SPIN_MS;
+            S.phaseEndsAt = Date.now() + spinMs;
+            log('round', 'الجولة ' + S.round + ': ' + (solo ? '' : S.chosen.join(' ضد ') + ' · ') + S.catName);
             hooks.schedule(function () {
                 if (token !== roundToken) return;
                 S.phase = 'countdown';
@@ -385,7 +396,7 @@ function createFastestAnswer(settings, hooks) {
                     hooks.onChange();
                     hooks.schedule(function () { endRound(token); }, settings.dur * 1000);
                 }, COUNTDOWN_MS);
-            }, SPIN_MS);
+            }, spinMs);
             return { ok: true };
         },
 

@@ -153,13 +153,17 @@ const SETTINGS = [];
 // إعدادات المباراة من شاشة الإعدادات (fa-setup)
 const SETUP = FA.readJSON('fa-setup', null);
 if(!SETUP) location.replace('index.html');
-const TEAMS = [
+// النمط الفردي: قائمة مشاركين وحدة بكلمة دخول وحدة (بدل فريقين)
+const SOLO = SETUP?.mode==='فردي';
+const TEAMS = SOLO ? [
+  { name:'المشاركين', keyword:SETUP?.keywordS||'', color:'#a78bfa', max:+SETUP?.maxPlayers||20 }
+] : [
   { name:SETUP?.team1||'الفريق 1', keyword:SETUP?.keyword1||'', color:'#a78bfa', max:+SETUP?.maxPlayers||20 },
   { name:SETUP?.team2||'الفريق 2', keyword:SETUP?.keyword2||'', color:'#38bdf8', max:+SETUP?.maxPlayers||20 }
 ];
 
 class Component extends DCLogic {
-  state = { lobbyTab:0, roster:[[],[]], values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:true, connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
+  state = { lobbyTab:0, roster:TEAMS.map(()=>[]), values:Object.fromEntries(SETTINGS.flatMap(s=>s.rows).map(r=>[r.key,r.default])), live:true, connecting:false, narrow:innerWidth<820, logo:false, exitOpen:false, toast:null };
   reg = FA.createRegistry();
   componentDidMount(){ window.lobbyChat=(u,t)=>this.onChat(u,t); this.fit=()=>this.setState({narrow:innerWidth<820}); addEventListener('resize',this.fit);
     FA.connect(); this.unsub=FA.onComment(p=>this.onChat(this.reg.nameFor(p),p.text,!!p.isFollower)); }
@@ -218,7 +222,8 @@ class Component extends DCLogic {
       liveColor:S.live?'#34d399':S.connecting?'#fbbf24':'#f87171', liveBg:S.live?'rgba(52,211,153,.08)':'rgba(248,113,113,.06)', liveBd:S.live?'rgba(52,211,153,.3)':'rgba(248,113,113,.28)',
       liveTitle:S.live?'متصل بالبث':S.connecting?'جارٍ الاتصال…':'غير متصل',
       startOp:(!GAME.requireLive||S.live)?1:.4,
-      start:()=>{ if(TEAMS.some((t,i)=>!(S.roster[i]||[]).length)) return this.toastMsg('كل فريق يحتاج لاعب واحد على الأقل');
+      start:()=>{ if(SOLO&&(S.roster[0]||[]).length<2) return this.toastMsg('النمط الفردي يحتاج لاعبين اثنين على الأقل');
+        if(TEAMS.some((t,i)=>!(S.roster[i]||[]).length)) return this.toastMsg('كل فريق يحتاج لاعب واحد على الأقل');
         try{ localStorage.setItem('fa-roster',JSON.stringify(S.roster)); }catch(e){}
         const all=this.reg.all(); FA.writeJSON('fa-players',Object.fromEntries(S.roster.flat().map(n=>[n,all[n]]))); this.props.onStart?.(S.roster); location.href=GAME.gameUrl; },
       exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'),

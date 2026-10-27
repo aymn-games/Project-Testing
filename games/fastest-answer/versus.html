@@ -206,7 +206,7 @@
     };
 
     var state = {
-        settings: { team1: '', followersOnly: false, target: 15, lobbySec: 60, cats: defaultCats([]) },
+        settings: { mode: 'teams', team1: '', followersOnly: false, target: 15, lobbySec: 60, cats: defaultCats([]) },
         guest: { team2: '', followersOnly: false, cats: null },
         tab: 'live',
         live: [],
@@ -263,6 +263,9 @@
         }).join('') + '</div>';
     }
     function followersSeg(attr, on) { return seg(attr, [['1', 'المتابعين فقط'], ['0', 'الجميع']], on ? '1' : '0'); }
+    function modeText(m) { return m === 'solo' ? 'فردي' : 'فريقين'; }
+    function modeHint(m) { return m === 'solo' ? 'أي لاعب منضم يجاوب، وأسرعهم ياخذ نقطة لبثه' : 'كل جولة لاعب من كل فريق'; }
+    function pointsHint(m) { return m === 'solo' ? 'أسرع إجابة صحيحة = نقطة' : 'أول إجابة صحيحة = نقطتين'; }
     function catName(id) { var c = CATS.filter(function (x) { return x[0] === id; })[0]; return c ? c[1] : id; }
     function catList(ids) { return (ids || []).map(catName).join('، '); }
     // اختيار الفئات: 3 فئات بالضبط لكل ستريمر. taken = فئات المنشئ (مقفولة على الخصم).
@@ -307,7 +310,7 @@
                 '<a class="btn ghost" href="' + otherPage(inv.game) + '">افتح الدعوة</a></div>';
         }
         return '<div class="person">' + av(state.avatars[inv.id], inv.other.name) +
-            '<div class="pi"><b>' + esc(inv.other.name) + ' يتحداك بأسرع إجابة!</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · فريقه «' + esc(s.team1 || inv.other.name) + '» · ' + (s.target || 15) + ' نقطة للفوز · تنتهي خلال <bdi data-exp="' + inv.id + '">' + secs(inv.expiresIn) + '</bdi> ث</span></div>' +
+            '<div class="pi"><b>' + esc(inv.other.name) + ' يتحداك بأسرع إجابة!</b><span><bdi>@' + esc(inv.other.tiktok) + '</bdi> · ' + modeText(s.mode) + ' · فريقه «' + esc(s.team1 || inv.other.name) + '» · ' + (s.target || 15) + ' نقطة للفوز · تنتهي خلال <bdi data-exp="' + inv.id + '">' + secs(inv.expiresIn) + '</bdi> ث</span></div>' +
             '<div class="btns"><button class="btn ok" data-act="accept" data-id="' + inv.id + '">قبول</button><button class="btn ghost" data-act="decline" data-id="' + inv.id + '">رفض</button></div></div>';
     }
 
@@ -337,7 +340,8 @@
         var s = state.settings, locked = Boolean(openOut());
         var team = row('اسم فريقك', '<input class="txt" data-k="team1" maxlength="24" placeholder="' + esc(myName()) + '" value="' + esc(s.team1) + '">', { hint: 'فاضي = اسم حسابك' }) +
             row('المسموح لهم بالدخول', followersSeg('data-fo', s.followersOnly), { divider: true });
-        var match = row('نقاط الفوز', '<div class="step"><button type="button" data-tstep="-1" aria-label="إنقاص">−</button><input type="text" readonly value="' + s.target + '" aria-label="نقاط الفوز"><button type="button" data-tstep="1" aria-label="زيادة">+</button></div>', { hint: 'أول إجابة صحيحة = نقطتين' }) +
+        var match = row('نمط اللعب', seg('data-mode', [['teams', 'فريقين'], ['solo', 'فردي']], s.mode), { hint: modeHint(s.mode) }) +
+            row('نقاط الفوز', '<div class="step"><button type="button" data-tstep="-1" aria-label="إنقاص">−</button><input type="text" readonly value="' + s.target + '" aria-label="نقاط الفوز"><button type="button" data-tstep="1" aria-label="زيادة">+</button></div>', { divider: true, hint: pointsHint(s.mode) }) +
             row('وقت الإجابة', fixed(ANSWER_SEC + ' ثانية'), { divider: true }) +
             row('وقت انتظار اللوبي', '<div class="step"><button type="button" data-step="-1" aria-label="إنقاص">−</button><input type="text" readonly value="' + lobbyText(s.lobbySec) + '" aria-label="وقت انتظار اللوبي" style="width:68px"><button type="button" data-step="1" aria-label="زيادة">+</button></div>', { divider: true, hint: 'تقدر تبدأ المباراة قبل ما يخلص' });
         var note = locked ? '<div class="lock-note">الإعدادات انرسلت مع الدعوة — ألغِ الدعوة لو تبي تعدّلها.</div>' : '';
@@ -389,6 +393,7 @@
         var s = inv.settings || {}, g = state.guest, ready = inv.status === 'ready';
         if (!g.cats) g.cats = defaultCats(s.hostCats);
         var host = row('فريق ' + esc(inv.other.name), fixed(esc(s.team1 || inv.other.name))) +
+            row('نمط اللعب', fixed(modeText(s.mode)), { divider: true, hint: modeHint(s.mode) }) +
             row('نقاط الفوز', fixed(s.target || 15), { divider: true }) +
             row('وقت الإجابة', fixed(ANSWER_SEC + ' ثانية'), { divider: true }) +
             row('وقت انتظار اللوبي', fixed(lobbyText(s.lobbySec || 60)), { divider: true }) +
@@ -467,6 +472,8 @@
     $('main-grid').addEventListener('click', function (e) {
         var t = e.target.closest('[data-tab]');
         if (t) { state.tab = t.getAttribute('data-tab'); renderHost(); if (state.tab === 'search' && $('q')) $('q').focus(); return; }
+        var md = e.target.closest('[data-mode]');
+        if (md) { state.settings.mode = md.getAttribute('data-mode') === 'solo' ? 'solo' : 'teams'; renderHost(); return; }
         var fo = e.target.closest('[data-fo]');
         if (fo) { state.settings.followersOnly = fo.getAttribute('data-fo') === '1'; renderHost(); return; }
         var ts = e.target.closest('[data-tstep]');
@@ -498,7 +505,7 @@
         if (state.settings.cats.length !== PER_SIDE) { setMsg(ERRORS.pick_cats, 'bad'); return; }
         state.busy = true; redrawList();
         var s = state.settings;
-        A.challengeInvite(customId, GAME, { team1: s.team1, followersOnly: s.followersOnly, target: s.target, lobbySec: s.lobbySec, cats: s.cats }).then(function (r) {
+        A.challengeInvite(customId, GAME, { mode: s.mode, team1: s.team1, followersOnly: s.followersOnly, target: s.target, lobbySec: s.lobbySec, cats: s.cats }).then(function (r) {
             state.busy = false;
             if (r && r.success) { setMsg('تم إرسال الدعوة ✓', 'good'); msgLocked = false; poll(true); return; }
             setMsg(ERRORS[r && r.error] || 'تعذّر إرسال الدعوة، حاول مرة ثانية.', 'bad');
