@@ -47,6 +47,14 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
 .pill.on { background: var(--gold); color: #1b1300; border-color: var(--gold); }
 .acct { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 800; }
 .acct a { color: var(--gold); font-weight: 900; }
+.acct .av { width: 52px; height: 52px; flex: none; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--card2); font-weight: 900; font-size: 22px; }
+.acct .av img { width: 100%; height: 100%; object-fit: cover; }
+.acct .who2 { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.acct .who2 div { min-width: 0; }
+.acct .nm2 { font-size: 20px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct .sub2 { font-size: 14px; color: var(--mute); font-weight: 700; }
+.need-login { flex-direction: column; align-items: stretch; text-align: center; gap: 10px; }
+.need-login .btn { margin-top: 0; color: #1b1300; }
 
 /* اللعبة */
 .top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; background: var(--bg); }
@@ -107,14 +115,12 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
     <section id="vProfile" class="hide">
         <h1>جهّز شخصيتك</h1>
         <p id="roomInfo"></p>
-        <div class="card">
-            <input class="field" id="nameIn" maxlength="24" autocomplete="nickname" placeholder="اسمك باللعبة" aria-label="اسمك">
-        </div>
+        <!-- الدخول بحساب الموقع إلزامي: الاسم والصورة والإطار من الحساب نفسه -->
+        <div class="card acct" id="acct"></div>
         <div class="card">
             <div class="preview" id="preview"></div>
             <div id="editor"></div>
         </div>
-        <div class="card acct" id="acct"></div>
         <button class="btn" id="joinGo" type="button">ادخل الساحة</button>
         <div class="err" id="joinErr"></div>
     </section>
@@ -173,6 +179,7 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
             S.G = null; show('vWait'); renderWait();
         } else if (m.t === 'err') {
             if (m.step === 'code') { show('vCode'); $('codeErr').textContent = m.err; }
+            else if (m.step === 'auth') { $('joinErr').innerHTML = esc(m.err) + ' — <a href="' + loginUrl() + '" style="color:var(--gold)">سجّل دخول</a>'; }
             else $('joinErr').textContent = m.err;
         } else if (m.t === 'gone' || m.t === 'kicked' || m.t === 'closed') {
             NET.me(null); S.me = null; S.G = null;
@@ -194,16 +201,27 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         $('roomInfo').textContent = 'روم ' + S.room.code + ' · ' + S.room.players.length + ' لاعب داخل';
         if (S.view === 'vWait') renderWait();
     }
+    function loginUrl() { return '../../login.html?next=' + encodeURIComponent('games/mafia/join.html?room=' + S.code); }
+    function account() { try { return window.AGPAuth && AGPAuth.getToken() ? AGPAuth.getCachedUser() : null; } catch (e) { return null; } }
+    function renderAccount() {
+        var u = account(), box = $('acct');
+        box.classList.toggle('need-login', !u);
+        $('joinGo').classList.toggle('hide', !u);
+        if (!u) {
+            box.innerHTML = '<div style="font-size:42px">🔐</div><b style="font-size:20px">لازم تسجّل دخول بحساب الموقع</b>' +
+                '<p>اللعب بحساب الموقع بس. بعد الدخول يرجعك هنا تلقائياً، واسمك وصورتك وإطارك يطلعون على البث.</p>' +
+                '<a class="btn" style="display:grid;place-items:center;text-decoration:none" href="' + loginUrl() + '">تسجيل الدخول / إنشاء حساب</a>';
+            return;
+        }
+        var name = u.tiktok_display_name || u.username || '', tk = u.tiktok_verified && u.tiktok_username;
+        box.innerHTML = '<span class="who2"><span class="av">' + (u.tiktok_avatar_url ? '<img src="' + esc(u.tiktok_avatar_url) + '" alt="" referrerpolicy="no-referrer">' : esc(name.slice(0, 1))) + '</span>' +
+            '<div><div class="nm2">' + esc(name) + '</div><div class="sub2">' + (tk ? '@' + esc(tk) + ' · <span style="color:#7ee2a6">تنحسب لك النقاط</span>' : 'حسابك مو موثّق بتيك توك — بدون نقاط ولا إطار') + '</div></div></span>';
+    }
     function openProfile() {
         show('vProfile');
-        var u = null; try { u = window.AGPAuth && AGPAuth.getCachedUser(); } catch (e) { }
-        if (!$('nameIn').value) $('nameIn').value = (u && (u.tiktok_display_name || u.username)) ? String(u.tiktok_display_name || u.username).slice(0, 16) : (localStorage.getItem('mafia-name') || '');
-        var tk = u && u.tiktok_verified && u.tiktok_username;
-        var next = 'games/mafia/join.html?room=' + encodeURIComponent(S.code);
-        $('acct').innerHTML = tk
-            ? '<span>✅ داخل بحساب <b>@' + esc(tk) + '</b></span><span style="color:#7ee2a6">تنحسب لك نقاط المنصة</span>'
-            : '<span>ما سجّلت دخول بحساب موثّق — تقدر تلعب بدون نقاط</span><a href="../../login.html?next=' + encodeURIComponent(next) + '">تسجيل الدخول</a>';
-        renderEditor();
+        renderAccount(); renderEditor();
+        // تحديث بيانات الحساب من الخادم (الصورة/التوثيق/انتهاء الجلسة)
+        try { if (window.AGPAuth && AGPAuth.getToken() && AGPAuth.refreshUser) AGPAuth.refreshUser().then(renderAccount, renderAccount); } catch (e) { }
     }
     var ROWS = [
         { k: 'skin', n: 'لون البشرة', c: L.SKIN },
@@ -228,12 +246,10 @@ p { margin: 4px 0; color: var(--mute); font-weight: 700; font-size: 16px; }
         if (S.me) net.send({ t: 'look', look: S.look });
     });
     $('joinGo').onclick = function () {
-        var name = $('nameIn').value.trim();
-        if (!name) { $('joinErr').textContent = 'اكتب اسمك'; return; }
-        try { localStorage.setItem('mafia-name', name); } catch (e) { }
         $('joinErr').textContent = ''; NET.look(S.look);
-        if (S.me) { show('vWait'); renderWait(); return; }   // تعديل الشكل بعد الدخول
-        net.send({ t: 'join', code: S.code, name: name, look: S.look, auth: NET.authToken() });
+        if (S.me) { net.send({ t: 'look', look: S.look }); show('vWait'); renderWait(); return; }   // تعديل الشكل بعد الدخول
+        if (!NET.authToken()) { location.href = loginUrl(); return; }
+        net.send({ t: 'join', code: S.code, look: S.look, auth: NET.authToken() });
     };
 
     // ---------------------------------------------------------------- الانتظار

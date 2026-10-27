@@ -6,10 +6,12 @@
  * (mafia-game.js) ويرسل لكل طرف نسخته المفلترة. المذيع راوي وليس لاعباً.
  *
  * بروتوكول (JSON، كل رسالة فيها t):
- *   عميل → host {code?,token?}          إنشاء روم أو رجوع المذيع لرومه
+ *   عميل → host {code?,token?,settings?} إنشاء روم أو رجوع المذيع لرومه
  *   عميل → peek {code}                  شاشة الدخول: معلومات الروم
- *   عميل → join {code,name,look,auth}   دخول لاعب ← welcome {id,key}
- *                                       (auth = توكن حساب الموقع؛ الموثّق بتيك توك تنحسب له النقاط)
+ *   عميل → schema                       مخطط الإعدادات (شاشة الإعدادات قبل إنشاء الروم)
+ *   عميل → join {code,look,auth}        دخول لاعب ← welcome {id,key}
+ *                                       (auth = توكن حساب الموقع — إلزامي. الاسم والصورة والإطار من الحساب،
+ *                                        والموثّق بتيك توك تنحسب له النقاط)
  *   عميل → resume {code,id,key} · leave · look {look} · lchat {text} (شات الانتظار، باللوبي) · ping {k}
  *   اللاعب → act {a,arg}   a: kill|recruit|card ('كرت|هدف' أو 'none')|protect|inspect|vote|chat ('city|district|mafia' + '|' + النص)
  *   المذيع → settings {settings} · kick {id} · endStage · start · again · lobby · close
@@ -33,6 +35,8 @@ var MAX_MSG = 8 * 1024;
 var _rooms = {};
 var _clients = {};
 var _validateSession = function (token) { return require('../auth/auth-service').validateSession(String(token || '')); };
+// الإطار المفعّل بحساب اللاعب (لحسابات تيك توك الموثّقة) — نفس مصدر بطاقات اللوبي بباقي الألعاب
+var _frameOf = function (tiktok) { return require('../collectibles/collectibles-service').getEquippedFrameForVerifiedTikTok(tiktok); };
 
 function rid(n) { return crypto.randomBytes(n || 12).toString('hex'); }
 function cleanName(n) { return String(n == null ? '' : n).replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24); }
@@ -56,7 +60,7 @@ function publicRoom(room) {
     return {
         code: room.code, started: room.started, settings: room.settings, minPlayers: Settings.minPlayers(room.settings),
         hostOnline: !!room.hostConn,
-        players: room.players.map(function (p) { return { id: p.id, name: p.name, look: p.look, tiktok: p.tiktok, online: isOnline(room, p.id) }; }),
+        players: room.players.map(function (p) { return { id: p.id, name: p.name, look: p.look, tiktok: p.tiktok, avatar: p.avatar, frame: p.frame, online: isOnline(room, p.id) }; }),
         chat: room.lobbyChat.slice(-40)
     };
 }
@@ -106,11 +110,18 @@ function attach(client, room, role, id) {
     if (role === 'host') { if (room.hostConn && room.hostConn !== client) send(room.hostConn, { t: 'gone', reason: 'host-elsewhere' }); room.hostConn = client; room.hostGoneAt = 0; }
 }
 
-/** حساب الموقع الموثّق بتيك توك ← اسم المستخدم (للنقاط)، وإلا null. */
-function tiktokOf(auth) {
+/**
+ * حساب الموقع (إلزامي للدخول) ← {uid, name, avatar, tiktok, frame}، أو null لو الجلسة مو صالحة.
+ * tiktok (للنقاط) والإطار لحسابات تيك توك الموثّقة فقط.
+ */
+function accountOf(auth) {
     if (!auth) return null;
-    try { var u = _validateSession(auth); return u && u.tiktok_verified && u.tiktok_username ? String(u.tiktok_username) : null; }
-    catch (err) { logger.error('Mafia: auth check failed:', err); return null; }
+    var u;
+    try { u = _validateSession(auth); } catch (err) { logger.error('Mafia: auth check failed:', err); return null; }
+    if (!u) return null;
+    var tk = u.tiktok_verified && u.tiktok_username ? String(u.tiktok_username) : null, fr = null;
+    if (tk) { try { fr = _frameOf(tk) || null; } catch (err) { logger.error('Mafia: frame lookup failed:', err); } }
+    return { uid: String(u.id), name: cleanName(u.tiktok_display_name || u.username || tk || ''), avatar: u.tiktok_avatar_url || null, tiktok: tk, frame: fr };
 }
 
 function onMessage(client, msg) {
@@ -118,9 +129,12 @@ function onMessage(client, msg) {
 
     if (t === 'ping') return send(client, { t: 'pong', k: msg.k, now: Date.now() });
 
+    if (t === 'schema') return send(client, { t: 'schema', schema: Settings.SCHEMA });
     if (t === 'host') {
         var r = msg.code && _rooms[msg.code];
         if (!(r && msg.token && r.token === msg.token)) r = createRoom();
+        // إعدادات شاشة الإعدادات تنطبق قبل البداية بس
+        if (msg.settings && !r.started) r.settings = Settings.validate(msg.settings);
         attach(client, r, 'host', 'host');
         send(client, { t: 'welcome', role: 'host', id: 'host', code: r.code, token: r.token, schema: Settings.SCHEMA });
         broadcastRoom(r); if (r.game) sendStates(r);
@@ -135,15 +149,24 @@ function onMessage(client, msg) {
     if (t === 'join') {
         var jr = _rooms[String(msg.code || '')]; if (!jr) return send(client, { t: 'err', err: 'الروم انقفل', step: 'code' });
         if (jr.started) return send(client, { t: 'err', err: 'المباراة بدأت، انتظر الجولة الجاية' });
-        var name = cleanName(msg.name);
-        if (name.length < 2) return send(client, { t: 'err', err: 'الاسم لازم يكون من حرفين إلى 24 حرف' });
+        // الدخول بحساب الموقع إلزامي، والاسم والصورة والإطار من الحساب نفسه
+        var acc = accountOf(msg.auth);
+        if (!acc) return send(client, { t: 'err', err: 'لازم تسجّل دخول بحساب الموقع عشان تلعب', step: 'auth' });
+        var mine = jr.players.find(function (q) { return q.uid === acc.uid; });
+        if (mine) {   // نفس الحساب من جهاز ثاني ← يكمل بنفس اللاعب
+            mine.look = cleanLook(msg.look || mine.look); mine.avatar = acc.avatar; mine.frame = acc.frame;
+            roomClients(jr).forEach(function (c) { if (c.id === mine.id && c !== client) { send(c, { t: 'gone', reason: 'elsewhere' }); c.code = null; c.id = null; } });
+            attach(client, jr, 'player', mine.id);
+            send(client, { t: 'welcome', role: 'player', id: mine.id, key: mine.key, code: jr.code, tiktok: mine.tiktok });
+            return broadcastRoom(jr);
+        }
         if (jr.players.length >= jr.settings.maxPlayers) return send(client, { t: 'err', err: 'الروم ممتلئ' });
-        if (jr.players.some(function (p) { return p.name.toLowerCase() === name.toLowerCase(); })) return send(client, { t: 'err', err: 'الاسم مستخدم، اختر اسم ثاني' });
-        var tk = tiktokOf(msg.auth);
-        if (tk && jr.players.some(function (p) { return p.tiktok && p.tiktok.toLowerCase() === tk.toLowerCase(); })) return send(client, { t: 'err', err: 'حسابك داخل الروم من جهاز ثاني' });
-        var p = { id: 'p' + rid(5), key: rid(16), name: name, look: cleanLook(msg.look), tiktok: tk };
+        var name = acc.name.length >= 2 ? acc.name : 'لاعب';
+        // أسماء الحسابات ممكن تتكرر — نميّزها برقم
+        for (var k = 2, base = name; jr.players.some(function (q) { return q.name.toLowerCase() === name.toLowerCase(); }); k++) name = base.slice(0, 21) + ' ' + k;
+        var p = { id: 'p' + rid(5), key: rid(16), uid: acc.uid, name: name, look: cleanLook(msg.look), tiktok: acc.tiktok, avatar: acc.avatar, frame: acc.frame };
         jr.players.push(p); attach(client, jr, 'player', p.id);
-        send(client, { t: 'welcome', role: 'player', id: p.id, key: p.key, code: jr.code, tiktok: tk });
+        send(client, { t: 'welcome', role: 'player', id: p.id, key: p.key, code: jr.code, tiktok: acc.tiktok });
         broadcastRoom(jr);
         return;
     }
@@ -261,4 +284,4 @@ function handleUpgrade(req, socket) {
     socket.on('error', function () { removeClient(id); });
 }
 
-module.exports = { handleUpgrade: handleUpgrade, _rooms: _rooms, _setSessionValidator: function (fn) { _validateSession = fn; } };
+module.exports = { handleUpgrade: handleUpgrade, _rooms: _rooms, _setSessionValidator: function (fn) { _validateSession = fn; }, _setFrameLookup: function (fn) { _frameOf = fn; } };

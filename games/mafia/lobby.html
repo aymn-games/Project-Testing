@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>المافيا — لوبي الدخول</title>
+<link rel="icon" href="../../favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="mafia-host.css">
+<script src="../../js/agp-core.js"></script>
+<script src="../../js/agp-player-card.js"></script>
+<script src="mafia-net.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<style>
+.titlebox { padding: clamp(8px,1.6vh,18px) 0 clamp(10px,1.8vh,18px); gap: 4px; }
+.lobby { flex: 1; min-height: 0; display: flex; flex-direction: column; border-radius: 26px; background: var(--card); backdrop-filter: blur(14px); border: 1.5px solid rgba(239,68,68,.35); box-shadow: 0 20px 60px rgba(0,0,0,.3), 0 0 50px rgba(239,68,68,.12); overflow: hidden; position: relative; }
+.lobby .halo { position: absolute; top: -100px; left: 50%; width: 460px; height: 200px; margin-left: -230px; border-radius: 50%; background: rgba(239,68,68,.16); filter: blur(44px); pointer-events: none; }
+.join { position: relative; flex-shrink: 0; display: grid; grid-template-columns: auto 1fr; gap: clamp(12px,1.6vw,22px); align-items: center; padding: clamp(12px,1.6vw,18px) clamp(16px,2vw,24px); border-bottom: 1px solid var(--line2); }
+.qr { width: clamp(100px,9.5vw,136px); aspect-ratio: 1; padding: 10px; border-radius: 18px; background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.4); display: grid; place-items: center; }
+.qr img { width: 100%; height: 100%; image-rendering: pixelated; }
+.jinfo { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.jtop { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.jname { display: flex; align-items: center; gap: 10px; font: 700 clamp(18px,1.7vw,22px) 'IBM Plex Sans Arabic'; color: var(--acc-text); }
+.jname i { width: 12px; height: 12px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 14px var(--acc); }
+.count { display: flex; align-items: baseline; gap: 4px; padding: 6px 14px; border-radius: 999px; background: var(--acc-soft); border: 1px solid rgba(239,68,68,.3); }
+.count b { font: 700 20px 'IBM Plex Sans Arabic'; color: var(--acc-text); font-variant-numeric: tabular-nums; }
+.count span { font: 500 13px 'IBM Plex Sans Arabic'; color: var(--sub2); }
+.jlbl { font: 500 13px 'IBM Plex Sans Arabic'; color: var(--sub); }
+.code { align-self: stretch; text-align: center; padding: 8px 22px; border-radius: 999px; background: var(--acc-soft); border: 1.5px dashed var(--acc); font: 700 clamp(26px,2.8vw,38px)/1.15 'IBM Plex Sans Arabic'; color: var(--acc-text); letter-spacing: 10px; direction: ltr; font-variant-numeric: tabular-nums; }
+.url { font: 600 13px 'IBM Plex Sans Arabic'; color: var(--sub2); direction: ltr; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.players { position: relative; flex: 1; min-height: 0; overflow-y: auto; padding: clamp(12px,1.6vw,20px); }
+.empty { height: 100%; min-height: 140px; display: grid; place-items: center; border-radius: 18px; border: 1.5px dashed rgba(255,255,255,.1); color: var(--sub); font: 500 14px 'IBM Plex Sans Arabic'; text-align: center; padding: 20px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: 100px; align-items: center; gap: 6px 14px; }
+.cell { position: relative; min-width: 0; height: 100%; display: flex; align-items: center; justify-content: center; animation: rise .4s cubic-bezier(.2,1.3,.4,1) both; transition: opacity .3s; }
+.cell.off { opacity: .45; }
+.kick { position: absolute; top: 6px; left: 2px; z-index: 5; width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(248,113,113,.35); background: rgba(12,11,18,.85); color: #fca5a5; cursor: pointer; display: grid; place-items: center; opacity: 0; transition: opacity .2s, transform .2s; }
+.cell:hover .kick, .kick:focus-visible { opacity: 1; }
+.kick:hover { transform: scale(1.12); }
+.tk { position: absolute; bottom: 4px; left: 8px; font: 700 11px 'IBM Plex Sans Arabic'; color: #67e8f9; background: rgba(12,11,18,.8); padding: 1px 8px; border-radius: 999px; }
+.foot-row { display: flex; gap: 10px; width: 100%; max-width: 560px; }
+@media (max-width: 640px) { .join { grid-template-columns: 1fr; justify-items: center; } .jinfo { width: 100%; } }
+</style>
+</head>
+<body>
+<div class="fx"></div>
+<header class="hdr">
+    <div class="side"><button class="hbtn exit" id="exitBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><span class="lbl-txt">خروج</span></button></div>
+    <div class="logo"><img src="../../logo.png" alt="" onerror="this.style.display='none'"></div>
+    <div class="side end"><a class="hbtn" href="index.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span class="lbl-txt">الإعدادات</span></a></div>
+</header>
+
+<main class="main">
+    <div class="wrap">
+        <div class="titlebox">
+            <span class="kicker">🔪 المافيا</span>
+            <span class="title">لوبي الدخول</span>
+        </div>
+
+        <section class="lobby">
+            <span class="halo"></span>
+            <div class="join">
+                <div class="qr"><img id="qrImg" alt="باركود الدخول للعبة"></div>
+                <div class="jinfo">
+                    <div class="jtop">
+                        <span class="jname"><i></i>اللاعبين</span>
+                        <span class="count"><b id="cnt">0</b><span id="cntMax">/ 200 لاعب</span></span>
+                    </div>
+                    <span class="jlbl">كود الغرفة · امسح الباركود أو افتح الرابط وادخل الكود (بحساب الموقع)</span>
+                    <span class="code" id="code">----</span>
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><span class="url" id="url"></span><div class="chips" id="roles" style="padding:0"></div></div>
+                </div>
+            </div>
+            <div class="players noscroll" id="players">
+                <div class="empty" id="empty">بانتظار انضمام اللاعبين…</div>
+                <div class="cards" id="cards"></div>
+            </div>
+        </section>
+
+        <div class="footer">
+            <button class="cta" id="startBtn" type="button" disabled>ابدأ المباراة<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+        </div>
+    </div>
+</main>
+
+<div class="ov" id="exitOv">
+    <div class="dlg">
+        <span class="ic"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></span>
+        <b>الخروج؟</b>
+        <p>الغرفة بتنقفل واللاعبين بيطلعون منها</p>
+        <div class="two"><button class="btn-ghost" type="button" data-close>إلغاء</button><button class="btn-red" type="button" id="exitYes">خروج</button></div>
+    </div>
+</div>
+<div class="toast hide" id="toast" role="status"></div>
+
+<script>
+(function () {
+    'use strict';
+    var NET = window.MafiaNet, AGP = window.AymanGamesPlatform;
+    var $ = function (id) { return document.getElementById(id); };
+    var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+    var S = { code: '', room: null };
+
+    var net = NET.connect(function (m) {
+        if (m.t === 'welcome') {
+            S.code = m.code; NET.hostSession({ code: m.code, token: m.token });
+            $('code').textContent = m.code; makeQr();
+        } else if (m.t === 'room') {
+            S.room = m.room;
+            if (m.room.started) return location.replace('game.html');   // بدأت المباراة ← شاشة المباراة
+            render();
+        } else if (m.t === 'err') toast(m.err);
+        else if (m.t === 'gone') toast('شاشة اللعبة انفتحت بمكان ثاني');
+    }, function () {
+        // إنشاء الغرفة (أو الرجوع لها) بإعدادات شاشة الإعدادات
+        var h = NET.hostSession() || {};
+        net.send({ t: 'host', code: h.code, token: h.token, settings: NET.setup() || undefined });
+    }, function (ok) { if (!ok) toast('جاري الاتصال بالخادم…'); });
+
+    function joinUrl() { return new URL('join.html?room=' + S.code, location.href).href; }
+    function makeQr() {
+        if (!window.qrcode) { setTimeout(makeQr, 200); return; }
+        var q = qrcode(0, 'M'); q.addData(joinUrl()); q.make();
+        $('qrImg').src = q.createDataURL(8, 0);
+        $('url').textContent = joinUrl().replace(/^https?:\/\//, '');
+    }
+
+    // بطاقات اللاعبين: نفس بطاقة المنصة (AGP.playerCard) مع الإطار المفعّل بحساب اللاعب.
+    // تحديث بالمفتاح عشان البطاقة الموجودة ما تعيد حركة الدخول مع كل تحديث.
+    var cells = {};
+    function cardHtml(p) {
+        return AGP.playerCard.renderHtml({ id: p.id, name: p.name, avatarUrl: p.avatar || null, frame: p.frame || null }, { showFrame: true, basePath: '../../', size: 50 });
+    }
+    function render() {
+        var R = S.room, list = R.players, box = $('cards'), seen = {};
+        list.forEach(function (p) {
+            seen[p.id] = true;
+            var key = p.name + '|' + (p.avatar || '') + '|' + (p.frame ? p.frame.imageFilename : '');
+            var c = cells[p.id];
+            if (!c) {
+                c = cells[p.id] = document.createElement('div');
+                c.className = 'cell';
+                box.appendChild(c);
+            }
+            if (c.dataset.key !== key) {
+                c.dataset.key = key;
+                c.innerHTML = cardHtml(p) + (p.tiktok ? '<span class="tk" title="حساب تيك توك موثّق — تنحسب له النقاط">✓ نقاط</span>' : '') +
+                    '<button class="kick" type="button" data-kick="' + p.id + '" aria-label="طرد ' + esc(p.name) + '"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>';
+                AGP.playerCard.fitAllNames(c);
+            }
+            c.classList.toggle('off', !p.online);
+        });
+        Object.keys(cells).forEach(function (id) { if (!seen[id]) { cells[id].remove(); delete cells[id]; } });
+        $('empty').classList.toggle('hide', list.length > 0);
+        $('cnt').textContent = list.length; $('cntMax').textContent = '/ ' + R.settings.maxPlayers + ' لاعب';
+        var s = R.settings;
+        $('roles').innerHTML = '<span class="chip" style="color:#fca5a5">🔪 ' + s.mafia + ' مافيا' + (s.disguised ? ' (منهم ' + s.disguised + ' متخفي)' : '') + '</span>' +
+            (s.doctors ? '<span class="chip" style="color:#86efac">🩺 ' + s.doctors + ' طبيب</span>' : '') +
+            (s.detectives ? '<span class="chip" style="color:#93c5fd">🕵️ ' + s.detectives + ' محقق</span>' : '');
+        var need = R.minPlayers, ok = list.length >= need;
+        $('startBtn').disabled = !ok;
+        $('startBtn').firstChild.textContent = ok ? 'ابدأ المباراة' : 'تحتاج ' + need + ' لاعبين (' + list.length + '/' + need + ')';
+    }
+
+    $('cards').addEventListener('click', function (e) {
+        var b = e.target.closest('[data-kick]'); if (b) net.send({ t: 'kick', id: b.getAttribute('data-kick') });
+    });
+    $('startBtn').onclick = function () { net.send({ t: 'start' }); };
+
+    var tt;
+    function toast(text) { var t = $('toast'); t.textContent = text; t.classList.remove('hide'); clearTimeout(tt); tt = setTimeout(function () { t.classList.add('hide'); }, 3500); }
+
+    $('exitBtn').onclick = function () { $('exitOv').classList.add('on'); };
+    $('exitOv').addEventListener('click', function (e) { if (e.target === this || e.target.closest('[data-close]')) this.classList.remove('on'); });
+    $('exitYes').onclick = function () { net.send({ t: 'close' }); NET.hostSession(null); setTimeout(function () { location.href = '../../games.html'; }, 200); };
+})();
+</script>
+</body>
+</html>

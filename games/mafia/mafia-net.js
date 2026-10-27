@@ -66,6 +66,8 @@
         hostSession: function (v) { if (arguments.length) writeJSON('mafia-host', v); else return readJSON('mafia-host'); },
         me: function (v) { if (arguments.length) writeJSON('mafia-me', v); else return readJSON('mafia-me'); },
         look: function (v) { if (arguments.length) writeJSON('mafia-look', v); else return readJSON('mafia-look'); },
+        // إعدادات المباراة من شاشة الإعدادات (index.html) — اللوبي يرسلها للخادم عند إنشاء الروم
+        setup: function (v) { if (arguments.length) writeJSON('mafia-setup', v); else return readJSON('mafia-setup'); },
         authToken: function () { try { return window.AGPAuth && window.AGPAuth.getToken ? window.AGPAuth.getToken() : null; } catch (e) { return null; } }
     };
 })();
