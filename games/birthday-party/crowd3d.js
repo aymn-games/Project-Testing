@@ -136,9 +136,11 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
         const b = c.buf; let a0 = b[0], a1 = b[b.length - 1];
         for (let k = b.length - 1; k > 0; k--) if (b[k - 1].t <= renderT) { a0 = b[k - 1]; a1 = b[k]; break; }
         const span = a1.t - a0.t, k = span > 0 ? Math.max(0, Math.min(1, (renderT - a0.t) / span)) : 1;
-        const tx = a0.x + (a1.x - a0.x) * k, tz = a0.z + (a1.z - a0.z) * k;
-        moving = Math.hypot(tx - c.x, tz - c.z) > .004 || a1.a === 1;
-        const sm = 1 - Math.exp(-dt * 18);
+        // البعيدين يوصلون مرة بالثانية بس — بدل القفز ننزلق لآخر موقع بنعومة
+        const sparse = span > 400 || renderT > a1.t + 300;
+        const tx = sparse ? a1.x : a0.x + (a1.x - a0.x) * k, tz = sparse ? a1.z : a0.z + (a1.z - a0.z) * k;
+        moving = Math.hypot(tx - c.x, tz - c.z) > (sparse ? .05 : .004) || a1.a === 1;
+        const sm = 1 - Math.exp(-dt * (sparse ? 3.5 : 18));
         c.x += (tx - c.x) * sm; c.z += (tz - c.z) * sm; c.ry = lerpAngle(c.ry, a1.ry, 1 - Math.exp(-dt * 10));
         c.run = false;
       }

@@ -158,7 +158,7 @@
 
     // ---- الحفلة الجماعية: الاتصال بالسيرفر + الشخصيات ----
     async function startParty(hall) {
-        const [{ connect, readJSON, writeJSON, serverNow }, { createCrowd }] = await Promise.all([import('./party-net.js'), import('./crowd3d.js')]);
+        const [{ connect, readJSON, writeJSON, serverNow, unpackRows }, { createCrowd }] = await Promise.all([import('./party-net.js'), import('./crowd3d.js')]);
         const me = viewOnly ? null : readJSON('party-me');
         if (!viewOnly && !(me && me.code === code)) { location.replace('join.html?code=' + code); return; }
         if (!viewOnly) $('hint').querySelector('.touch').textContent = 'العصا للمشي · اسحب للف الكاميرا';
@@ -174,9 +174,10 @@
                     crowd.sync(m.room.players);
                     if (m.room.girlName) { $('title').textContent = 'حفلة ' + m.room.girlName; hall.setName(m.room.girlName); }
                 } else if (m.t === 'all' || m.t === 's') {
-                    crowd.apply(m.d, m.now, m.t === 'all');
+                    const rows = unpackRows(m.d);
+                    crowd.apply(rows, m.now, m.t === 'all');
                     // أول مرة نعرف مكاننا من السيرفر ← نبدأ وضع الشخصية
-                    if (!placed && myN != null) { const r = m.d.find(x => x[0] === myN); if (r) { placed = true; hall.setFollow({ x: r[1], z: r[2], ry: r[3] }); } }
+                    if (!placed && myN != null) { const r = rows.find(x => x[0] === myN); if (r) { placed = true; hall.setFollow({ x: r[1], z: r[2], ry: r[3] }); } }
                 } else if (m.t === 'err') {
                     if (m.err === 'resume' || m.err === 'nocode') { writeJSON('party-me', null); location.replace('join.html?code=' + code); }
                     else if (m.err === 'elsewhere') { $('netBad').textContent = 'فتحت الحفلة من مكان ثاني'; $('netBad').classList.remove('hidden'); net.close(); }

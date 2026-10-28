@@ -18,12 +18,16 @@ var MAX_SPEED = 14;             // م/ث — أسرع من الجري بالوا
 var SPEED_SLACK = 0.5;          // م — تذبذب الشبكة
 var MIN_MOVE_GAP_MS = 60;       // أقل فاصل بين رسائل الحركة من نفس اللاعب
 var MAX_ANIM = 15;
+var STALE_MS = 2 * 60 * 1000;    // ضيف غايب أكثر من كذا ← مكانه ينعطى لضيف جديد لو الحفلة مكتملة
+var NEAR_R = 10;                // م — اللي أقرب من كذا يوصل 8 مرات/ث، والأبعد أبطأ (party-server)
 
 function rid(n) { return crypto.randomBytes(n || 12).toString('hex'); }
 function cleanName(n) { return String(n == null ? '' : n).replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16).trim(); }
 function r2(v) { return Math.round(v * 100) / 100; }
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 function fail(err) { return { ok: false, err: err }; }
+// صيغة الإرسال المضغوطة: صفوف [n, x, z, ry, a] ← مصفوفة مسطّحة بأعداد صحيحة (سم وسنتي-راديان)
+function packRows(rows) { var out = []; rows.forEach(function (r) { out.push(r[0], Math.round(r[1] * 100), Math.round(r[2] * 100), Math.round(r[3] * 100), r[4]); }); return out; }
 
 function createRoomManager(opts) {
     opts = opts || {};
@@ -41,7 +45,7 @@ function createRoomManager(opts) {
             user: user || null, online: true,
             // مكان البداية: منطقة المدخل
             x: r2(-8 + Math.random() * 16), z: r2(38 + Math.random() * 6), ry: Math.PI, a: 0,
-            lastMoveAt: now(), dirty: true
+            lastMoveAt: now(), dirty: true, ver: 1
         };
         room.players.push(p);
         return p;
@@ -71,7 +75,7 @@ function createRoomManager(opts) {
             if (cur && cur.online) return fail('girl-taken');
             if (cur) {
                 // جوالها الأول طفى/ضاع: نفس الشخصية تنتقل للجهاز الجديد بمفتاح جديد
-                cur.key = rid(16); cur.online = true; cur.dirty = true;
+                cur.key = rid(16); cur.online = true; cur.dirty = true; cur.ver++;
                 if (o.name && cleanName(o.name)) cur.name = cleanName(o.name);
                 return welcome(cur);
             }
@@ -79,7 +83,13 @@ function createRoomManager(opts) {
             if (!gname) return fail('name');
             return welcome(addPlayer(room, gname, 'girl', 'member', user));
         }
-        if (guestCount(room) >= maxGuests) return fail('full');
+        if (guestCount(room) >= maxGuests) {
+            // مكتملة: نشيل أقدم ضيف غايب من دقيقتين أو أكثر (اللي طلع وما رجع)
+            var t = now(), stale = room.players.filter(function (p) { return p.role === 'guest' && !p.online && t - p.offlineSince >= STALE_MS; })
+                .sort(function (a, b) { return a.offlineSince - b.offlineSince; })[0];
+            if (!stale) return fail('full');
+            room.players.splice(room.players.indexOf(stale), 1);
+        }
         var name = cleanName(o.name) || (user ? cleanName(user.username) : '');
         if (!name) return fail('name');
         return welcome(addPlayer(room, name, 'guest', user ? 'member' : 'quick', user));
@@ -89,14 +99,14 @@ function createRoomManager(opts) {
         var room = rooms[code]; if (!room) return fail('nocode');
         var p = playerOf(room, id);
         if (!p || p.key !== key) return fail('resume');
-        p.online = true; p.dirty = true;
+        p.online = true; p.dirty = true; p.ver++; p.ver++;
         return welcome(p);
     }
 
     function leave(code, id) {
         var room = rooms[code]; if (!room) return fail('nocode');
         var p = playerOf(room, id); if (!p) return fail('noplayer');
-        p.online = false;
+        p.online = false; p.offlineSince = now();
         return { ok: true };
     }
 
@@ -114,7 +124,7 @@ function createRoomManager(opts) {
         p.lastMoveAt = t;
         if (dist > MAX_SPEED * Math.min(gap, 2000) / 1000 + SPEED_SLACK) return fail('speed');
         p.x = r2(x); p.z = r2(z); p.ry = r2(ry); p.a = clamp(Math.round(a), 0, MAX_ANIM);
-        p.dirty = true;
+        p.dirty = true; p.ver++;
         return { ok: true };
     }
 
@@ -124,6 +134,21 @@ function createRoomManager(opts) {
         var room = rooms[code]; if (!room) return fail('nocode');
         var out = [];
         room.players.forEach(function (p) { if (p.dirty) { out.push(stateRow(p)); p.dirty = false; } });
+        return out;
+    }
+
+    // دلتا خاصة بكل مستقبل: القريب منه (≤ 12م) يوصل كل دورة، والبعيد بس بدورات
+    // farTick — يقلل الحمل بحفلة 100 لاعب لجزء صغير. seen = Map(n → آخر نسخة وصلته)
+    // يملكها الخادم لكل اتصال. viewerId = null (شاشة عرض) ← كل التغييرات.
+    function deltaFor(code, viewerId, seen, farTick) {
+        var room = rooms[code]; if (!room) return fail('nocode');
+        var me = viewerId ? playerOf(room, viewerId) : null, out = [];
+        room.players.forEach(function (p) {
+            if (me && p === me) return;
+            if (seen.get(p.n) === p.ver) return;
+            if (me && !farTick && Math.hypot(p.x - me.x, p.z - me.z) > NEAR_R) return;
+            seen.set(p.n, p.ver); out.push(stateRow(p));
+        });
         return out;
     }
 
@@ -148,10 +173,10 @@ function createRoomManager(opts) {
 
     return {
         createRoom: createRoom, hostResume: hostResume, join: join, resume: resume, leave: leave,
-        move: move, takeDelta: takeDelta, fullState: fullState, roster: roster,
+        move: move, takeDelta: takeDelta, deltaFor: deltaFor, fullState: fullState, roster: roster,
         closeRoom: closeRoom, rooms: function () { return Object.keys(rooms); },
         getRoom: getRoom, pointsId: pointsId
     };
 }
 
-module.exports = { createRoomManager: createRoomManager };
+module.exports = { createRoomManager: createRoomManager, packRows: packRows };

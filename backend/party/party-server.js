@@ -13,7 +13,8 @@
  *   عميل → peek {code}                            ← room + all (شاشة عرض بدون شخصية)
  *   عميل → mv {p:[x, z, ry, a]} · ping {k}        ← pong {k, now}
  *   خادم → room {room} عند تغيّر القائمة · s {now, d} دلتا الحركة كل 125ms
- *          (d = [[n, x, z, ry, a], ...] للي تحركوا فقط) · err {err, of} · closed
+ *          (d مسطّحة: n,x,z,ry,a لكل لاعب تحرك، x/z بالسم وry ×100 — خاصة بكل مستقبل:
+ *          القريب منه كل دورة والبعيد كل 1.5ث، وبدون صفه هو) — all {d} بنفس الصيغة · err {err, of} · closed
  */
 'use strict';
 
@@ -22,8 +23,10 @@ var handshake = require('../websocket/ws-handshake');
 var logger = require('../utils/logger');
 var config = require('../config');
 var createRoomManager = require('./party-rooms').createRoomManager;
+var packRows = require('./party-rooms').packRows;
 
-var SEND_MS = 125;                       // 8 تحديثات حركة بالثانية
+var SEND_MS = 125;                       // 8 تحديثات حركة بالثانية للقريبين
+var FAR_EVERY = 12;                      // البعيدين (> 10م) كل 12 دورة = مرة كل 1.5ث
 var EMPTY_ROOM_MS = 30 * 60 * 1000;      // غرفة بدون أي اتصال أكثر من كذا ← تنقفل
 var MAX_MSG = 4 * 1024;
 
@@ -50,10 +53,10 @@ function broadcastRoster(code) {
     var encoded = frame.encodeTextFrame(JSON.stringify({ t: 'room', room: { code: r.code, girlName: r.girlName, players: r.players } }));
     roomClients(code).forEach(function (c) { sendRaw(c, encoded); });
 }
-function sendAll(client) { var d = _mgr.fullState(client.code); if (Array.isArray(d)) send(client, { t: 'all', now: Date.now(), d: d }); }
+function sendAll(client) { var d = _mgr.fullState(client.code); if (Array.isArray(d)) send(client, { t: 'all', now: Date.now(), d: packRows(d) }); }
 
 function attach(client, code, role, id) {
-    client.code = code; client.role = role; client.id = id || null;
+    client.code = code; client.role = role; client.id = id || null; client.seen = new Map();
     delete _emptySince[code];
 }
 
@@ -118,8 +121,9 @@ function onMessage(client, msg) {
     }
 }
 
+var _tickN = 0;
 function tickAll() {
-    var now = Date.now();
+    var now = Date.now(), farTick = (++_tickN % FAR_EVERY) === 0;
     _mgr.rooms().forEach(function (code) {
         try {
             var cs = roomClients(code);
@@ -128,11 +132,10 @@ function tickAll() {
                 else if (now - _emptySince[code] > EMPTY_ROOM_MS) { _mgr.closeRoom(code); delete _emptySince[code]; logger.log('Party: room ' + code + ' closed (empty)'); }
                 return;
             }
-            var d = _mgr.takeDelta(code);
-            if (!Array.isArray(d) || !d.length) return;
-            // الدلتا تتحول JSON مرة وحدة وتنرسل للكل
-            var encoded = frame.encodeTextFrame(JSON.stringify({ t: 's', now: now, d: d }));
-            cs.forEach(function (c) { sendRaw(c, encoded); });
+            cs.forEach(function (c) {
+                var d = _mgr.deltaFor(code, c.role === 'player' ? c.id : null, c.seen || (c.seen = new Map()), farTick);
+                if (Array.isArray(d) && d.length) sendRaw(c, frame.encodeTextFrame(JSON.stringify({ t: 's', now: now, d: packRows(d) })));
+            });
         } catch (err) { logger.error('Party: tick error:', err); }
     });
 }

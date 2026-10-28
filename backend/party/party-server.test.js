@@ -75,12 +75,13 @@ test('movement reaches other client within 300ms', async function () {
     a.send({ t: 'join', code: code, name: 'أ' }); b.send({ t: 'join', code: code, name: 'ب' });
     var wa = await a.wait(function (x) { return x.t === 'welcome'; });
     await b.wait(function (x) { return x.t === 'welcome'; });
-    var start = (await a.wait(function (x) { return x.t === 'all'; })).d.find(function (r) { return r[0] === wa.n; });
+    var flat = (await a.wait(function (x) { return x.t === 'all'; })).d, start = null;
+    for (var i = 0; i < flat.length; i += 5) if (flat[i] === wa.n) start = [flat[i], flat[i + 1] / 100, flat[i + 2] / 100];
     await new Promise(function (r) { setTimeout(r, 200); });
     b.msgs.length = 0;
     var t0 = Date.now();
     a.send({ t: 'mv', p: [start[1] + 1, start[2], 0, 1] });
-    var s = await b.wait(function (x) { return x.t === 's' && x.d.some(function (r) { return r[0] === wa.n; }); }, 300);
+    var s = await b.wait(function (x) { if (x.t !== 's') return false; for (var i = 0; i < x.d.length; i += 5) if (x.d[i] === wa.n) return true; return false; }, 300);
     assert.ok(Date.now() - t0 <= 300);
     assert.equal(typeof s.now, 'number');
     h.close(); a.close(); b.close(); srv.close();

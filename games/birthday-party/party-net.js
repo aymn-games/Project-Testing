@@ -19,6 +19,9 @@ export function wsUrl() {
 export function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
 export function writeJSON(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* تخزين محجوب */ } }
 
+// صفوف الحركة توصل مسطّحة بأعداد صحيحة (n, x سم, z سم, ry×100, a) ← [[n, x, z, ry, a], ...] بالمتر
+export function unpackRows(d) { const out = []; for (let i = 0; i + 4 < d.length; i += 5) out.push([d[i], d[i + 1] / 100, d[i + 2] / 100, d[i + 3] / 100, d[i + 4]]); return out; }
+
 // ---- فرق الساعة مع الخادم ----
 const realNow = () => Date.now();
 let samples = [], offset = 0;
