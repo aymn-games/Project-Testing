@@ -115,7 +115,7 @@ test('move clamps to hall bounds', function () {
 });
 
 test('move rejects teleport', function () {
-    var c = clockMgr(), room = c.mgr.createRoom({ girlName: 'سارة' });
+    var c = clockMgr(), room = c.mgr.createRoom({ girlName: 'سارة' }); toFree(c.mgr, room.code);
     var a = c.mgr.join(room.code, { name: 'ريم' });
     var before = c.mgr.fullState(room.code)[0].slice();
     c.t.now += 500;
@@ -256,7 +256,7 @@ test('lobby spawns guests in lounge and girl in her room', function () {
 test('guest cannot leave the lounge during lobby', function () {
     var s = showRoom(), g = s.mgr.join(s.code, { name: 'ريم' });
     var r = rowOf(s.mgr, s.code, g.n, null);
-    s.c.t.now += 2000; s.mgr.move(s.code, g.id, [r[1], r[2] - 10, 0, 1]);
+    s.c.t.now += 2000; s.mgr.move(s.code, g.id, [r[1], 40, 0, 1]); // نقطة برا الصالة (القاعة)
     assert.equal(rowOf(s.mgr, s.code, g.n, null)[2], 50.5);
 });
 
