@@ -67,7 +67,14 @@ function createRoomManager(opts) {
         if (o.auth) { user = validateSession(String(o.auth)); if (!user) return fail('auth'); }
         if (o.girlKey != null) {
             if (o.girlKey !== room.girlKey) return fail('girl-key');
-            if (room.players.some(function (p) { return p.role === 'girl'; })) return fail('girl-taken');
+            var cur = room.players.find(function (p) { return p.role === 'girl'; });
+            if (cur && cur.online) return fail('girl-taken');
+            if (cur) {
+                // جوالها الأول طفى/ضاع: نفس الشخصية تنتقل للجهاز الجديد بمفتاح جديد
+                cur.key = rid(16); cur.online = true; cur.dirty = true;
+                if (o.name && cleanName(o.name)) cur.name = cleanName(o.name);
+                return welcome(cur);
+            }
             var gname = cleanName(o.name) || room.girlName || (user && cleanName(user.username));
             if (!gname) return fail('name');
             return welcome(addPlayer(room, gname, 'girl', 'member', user));

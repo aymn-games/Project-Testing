@@ -165,3 +165,16 @@ test('unknown room', function () {
         assert.equal(r.err, 'nocode', fn);
     });
 });
+
+test('girl can take over from another device when first is offline', function () {
+    var mgr = createRoomManager(), room = mgr.createRoom({ girlName: 'سارة' });
+    var a = mgr.join(room.code, { name: 'سارة', girlKey: room.girlKey });
+    mgr.leave(room.code, a.id);
+    var b = mgr.join(room.code, { name: 'سارة', girlKey: room.girlKey });
+    assert.equal(b.ok, true);
+    assert.equal(b.role, 'girl');
+    assert.equal(b.n, a.n);
+    assert.notEqual(b.key, a.key);
+    assert.equal(mgr.resume(room.code, a.id, a.key).ok, false);
+    assert.equal(mgr.roster(room.code).players.filter(function (p) { return p[2] === 'girl'; }).length, 1);
+});
