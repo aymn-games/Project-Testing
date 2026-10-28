@@ -4,153 +4,201 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>حفلة عيد الميلاد — القاعة</title>
+<title>حفلة عيد الميلاد — المذيع</title>
 <link rel="icon" href="../../favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Zain:wght@700;900&display=swap" rel="stylesheet">
-<!-- حفلة عيد الميلاد ثري دي — المرحلة الأولى: القاعة الرئيسية (الماب).
-     المشهد كله في hall3d.js، والتحكم بالتجوّل في controls.js. اسم صاحبة
-     الحفلة يُمرَّر مؤقتاً بالرابط: index.html?name=سارة
-     أبواب الأقسام الأربعة موجودة بالقاعة وتظهر "قريباً" لحد ما تنبني مشاهدها. -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<!-- صفحة المذيع: إنشاء الحفلة، كود الغرفة، باركود الضيوف وباركود صاحبة
+     الحفلة (مخفي افتراضياً عشان ما تنكشف المفاجأة)، وقائمة الداخلين.
+     الاتصال عبر party-net.js بخادم /ws/party، والجلسة محفوظة بـ 'party-host'
+     فتحديث الصفحة يرجع لنفس الحفلة. -->
 <style>
-    :root{ --agp-accent:#f472b6; --ink:#6b2147; --glass:rgba(255,246,250,.72); --line:rgba(236,160,195,.55); }
-    html,body{ margin:0; height:100%; overflow:hidden; background:#f3d3e0; }
-    body{ font-family:'IBM Plex Sans Arabic',sans-serif; color:var(--ink); -webkit-tap-highlight-color:transparent; }
-    button{ font-family:inherit; }
+    :root{ --ink:#5b1d3e; --soft:#9b6683; --rose:#e2709a; --rose2:#c94f7e; --line:rgba(226,112,154,.28); --card:rgba(255,250,252,.86); --gold:#d9b07a; }
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; min-height:100%; }
+    body{ font-family:'IBM Plex Sans Arabic',sans-serif; color:var(--ink); background:radial-gradient(circle at 85% -10%,#ffe1ee,transparent 55%),radial-gradient(circle at 0% 110%,#ecdcff,transparent 50%),#fbf1f5; }
+    button,input{ font-family:inherit; }
     .hidden{ display:none !important; }
+    main{ max-width:980px; margin:0 auto; padding:max(20px,env(safe-area-inset-top)) 16px 40px; }
+    header{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+    header h1{ margin:0; font:700 34px/1.2 'Aref Ruqaa',serif; color:var(--rose2); }
+    .net{ display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px; background:var(--card); border:1px solid var(--line); font:600 13px 'IBM Plex Sans Arabic'; }
+    .net i{ width:9px; height:9px; border-radius:50%; background:#f59e0b; }
+    .net.on i{ background:#22c55e; }
+    .card{ background:var(--card); border:1px solid var(--line); border-radius:22px; padding:20px; box-shadow:0 10px 30px rgba(201,79,126,.08); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+    .card h2{ margin:0 0 14px; font:900 22px/1.2 'Zain'; }
+    /* صف إعداد: العنوان يمين والحقل يسار (قاعدة CLAUDE.md) */
+    .row{ display:flex; justify-content:space-between; align-items:center; gap:14px; padding:12px 14px; border-radius:16px; background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,240,246,.5)); border:1px solid var(--line); }
+    .row label{ text-align:right; font-weight:700; }
+    .row input{ width:min(260px,55%); padding:10px 14px; border-radius:12px; border:1px solid var(--line); background:#fff; font-size:16px; color:var(--ink); text-align:right; }
+    .row input:focus{ outline:3px solid rgba(226,112,154,.35); }
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; height:46px; padding:0 22px; border-radius:999px; border:0; cursor:pointer; font:700 15px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); box-shadow:0 8px 20px rgba(212,90,138,.3); text-decoration:none; transition:transform .15s; }
+    .btn:active{ transform:scale(.97); }
+    .btn:focus-visible{ outline:3px solid #f472b6; outline-offset:2px; }
+    .btn.ghost{ background:#fff; color:var(--rose2); border:1px solid var(--line); box-shadow:none; }
+    .btn:disabled{ opacity:.55; cursor:default; }
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+    .msg{ margin-top:12px; padding:10px 14px; border-radius:12px; background:#fff1f2; color:#9f1239; font-weight:600; }
 
-    #stage{ position:fixed; inset:0; touch-action:none; cursor:grab; }
-    #stage:active{ cursor:grabbing; }
+    .grid{ display:grid; grid-template-columns:1.1fr .9fr; gap:16px; }
+    @media (max-width:760px){ .grid{ grid-template-columns:1fr; } }
+    .code{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+    .code b{ font:900 54px/1 'Zain'; letter-spacing:6px; color:var(--rose2); direction:ltr; }
+    .qrs{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
+    @media (max-width:520px){ .qrs{ grid-template-columns:1fr; } }
+    .qr{ text-align:center; padding:14px; border-radius:18px; background:#fff; border:1px solid var(--line); }
+    .qr h3{ margin:0 0 4px; font:900 18px 'Zain'; }
+    .qr p{ margin:0 0 10px; font-size:12px; color:var(--soft); }
+    .qr img{ width:100%; max-width:220px; aspect-ratio:1; image-rendering:pixelated; border-radius:8px; display:block; margin:0 auto; }
+    .qr .veil{ position:relative; }
+    .qr .veil.closed img{ filter:blur(14px); }
+    .qr .veil button{ position:absolute; inset:0; margin:auto; height:40px; width:max-content; }
+    .qr .veil:not(.closed) button{ display:none; }
+    .qr .link{ margin-top:8px; display:flex; gap:6px; justify-content:center; }
+    .qr .link button{ font:600 12px 'IBM Plex Sans Arabic'; padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--rose2); cursor:pointer; }
 
-    .hud{ position:fixed; inset:0; pointer-events:none; z-index:5; }
-    .hud > *{ pointer-events:auto; }
-    .top{ position:absolute; top:max(12px,env(safe-area-inset-top)); left:16px; right:16px; display:flex; align-items:center; justify-content:space-between; gap:10px; pointer-events:none; }
-    .top > *{ pointer-events:auto; }
-    .pill{ height:40px; padding:0 16px; border-radius:999px; display:inline-flex; align-items:center; gap:8px; border:1px solid var(--line); background:var(--glass); color:var(--ink);
-        font:700 14px 'IBM Plex Sans Arabic'; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow:0 6px 20px rgba(214,110,160,.18); cursor:pointer; text-decoration:none; white-space:nowrap; transition:transform .15s, background .2s; }
-    .pill:active{ transform:scale(.96); }
-    .pill:focus-visible{ outline:3px solid #f472b6; outline-offset:2px; }
-    .pill.on{ background:linear-gradient(180deg,#ff9ccc,#f472b6); color:#fff; border-color:transparent; }
-    .pill svg{ width:18px; height:18px; flex:none; }
-    .title{ font:900 24px/1 'Zain'; color:#fff; text-shadow:0 2px 3px rgba(140,30,80,.55),0 2px 16px rgba(219,39,119,.6); pointer-events:none; text-align:center; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .group{ display:flex; gap:8px; }
-    .pill.party.on{ background:linear-gradient(180deg,#c86bff,#8b3fd9); box-shadow:0 0 22px rgba(200,107,255,.55); }
-    body.party{ --glass:rgba(48,20,52,.55); --line:rgba(214,140,255,.45); --ink:#fde7f3; }
-    body.party .title{ text-shadow:0 0 18px rgba(255,79,174,.9),0 2px 3px rgba(40,0,30,.7); }
-
-    .hint{ position:absolute; bottom:max(16px,env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); padding:9px 18px; border-radius:999px; background:var(--glass); border:1px solid var(--line);
-        backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); font:600 13px 'IBM Plex Sans Arabic'; white-space:nowrap; pointer-events:none; transition:opacity .4s; }
-    .toast{ position:absolute; top:76px; left:50%; transform:translate(-50%,-8px); opacity:0; transition:all .3s; pointer-events:none; text-align:center;
-        padding:12px 26px; border-radius:22px; background:rgba(255,250,252,.9); border:2px solid #f0c98f; box-shadow:0 12px 34px rgba(214,110,160,.3); }
-    .toast.show{ opacity:1; transform:translate(-50%,0); }
-    .toast b{ display:block; font:900 26px/1.1 'Zain'; color:#a3306a; }
-    .toast span{ font:600 13px 'IBM Plex Sans Arabic'; color:#c07a9c; }
-
-    .joy{ position:absolute; left:max(24px,env(safe-area-inset-left)); bottom:max(28px,env(safe-area-inset-bottom)); width:124px; height:124px; border-radius:50%; touch-action:none;
-        background:radial-gradient(circle,rgba(255,255,255,.5),rgba(255,214,231,.35)); border:2px solid rgba(255,255,255,.75); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); display:none; }
-    .joy-knob{ position:absolute; left:50%; top:50%; width:54px; height:54px; margin:-27px 0 0 -27px; border-radius:50%; background:linear-gradient(180deg,#ffb3d6,#f472b6); box-shadow:0 4px 14px rgba(219,39,119,.4); pointer-events:none; transition:transform .12s; }
-    .joy.on .joy-knob{ transition:none; }
-    @media (pointer:coarse){ .joy{ display:block; } .hint .desk{ display:none; } .hint{ bottom:auto; top:calc(max(12px,env(safe-area-inset-top)) + 52px); } .toast{ top:118px; } }
-    @media (pointer:fine){ .hint .touch{ display:none; } }
-
-    .loader{ position:fixed; inset:0; z-index:10; display:grid; place-items:center; background:radial-gradient(circle at 50% 40%,#fff3f8,#f7c9dc); transition:opacity .6s; }
-    .loader.out{ opacity:0; pointer-events:none; }
-    .loader .box{ text-align:center; }
-    .loader h1{ margin:14px 0 4px; font:700 46px/1.2 'Aref Ruqaa',serif; color:#d6407f; }
-    .loader p{ margin:0; font:600 14px 'IBM Plex Sans Arabic'; color:#b0708f; }
-    .spin{ width:58px; height:58px; margin:auto; border-radius:50%; border:5px solid #fbd3e4; border-top-color:#f472b6; animation:sp 1s linear infinite; }
-    @keyframes sp{ to{ transform:rotate(360deg); } }
-    .loader.fail .spin{ display:none; }
-    @media (prefers-reduced-motion:reduce){ .spin{ animation-duration:3s; } }
-    @media (max-width:520px){ .title{ font-size:19px; } .pill .lbl{ display:none; } .pill{ padding:0 12px; } }
+    .people h2{ display:flex; justify-content:space-between; align-items:center; }
+    .people h2 span{ font:700 14px 'IBM Plex Sans Arabic'; color:var(--soft); }
+    ul.list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; max-height:460px; overflow:auto; }
+    ul.list li{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 12px; border-radius:12px; background:#fff; border:1px solid var(--line); }
+    ul.list li .nm{ display:flex; align-items:center; gap:8px; font-weight:700; min-width:0; }
+    ul.list li .nm bdi{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    ul.list li i{ width:9px; height:9px; border-radius:50%; background:#cbd5e1; flex:none; }
+    ul.list li.on i{ background:#22c55e; }
+    .tag{ font:700 11px 'IBM Plex Sans Arabic'; padding:3px 9px; border-radius:999px; background:#f3e8ff; color:#7e22ce; white-space:nowrap; }
+    .tag.girl{ background:linear-gradient(180deg,#fde68a,#f5c26b); color:#7c4a03; }
+    .tag.quick{ background:#f1f5f9; color:#64748b; }
+    .empty{ color:var(--soft); text-align:center; padding:20px 0; }
 </style>
 </head>
 <body>
-<div id="stage" aria-label="قاعة حفلة عيد الميلاد"></div>
+<main>
+    <header>
+        <h1>حفلة عيد الميلاد</h1>
+        <span class="net" id="net"><i></i><span id="netTxt">جاري الاتصال…</span></span>
+    </header>
 
-<div class="hud" id="hud">
-    <div class="top">
-        <a class="pill" href="../../games.html" aria-label="خروج">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg><span class="lbl">خروج</span>
-        </a>
-        <div class="title" id="title">حفلة عيد الميلاد</div>
-        <div class="group">
-            <button class="pill party" id="partyBtn" type="button" aria-pressed="false">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg><span class="lbl" id="partyLbl">بدء الحفل</span>
-            </button>
-            <button class="pill on" id="tourBtn" type="button" aria-pressed="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span class="lbl">جولة سينمائية</span>
-            </button>
-            <button class="pill" id="fsBtn" type="button" aria-label="ملء الشاشة">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>
-            </button>
+    <!-- إنشاء الحفلة -->
+    <section class="card" id="create">
+        <h2>حفلة جديدة</h2>
+        <div class="row">
+            <label for="girlName">اسم صاحبة الحفلة</label>
+            <input id="girlName" maxlength="16" placeholder="مثلاً: سارة" autocomplete="off">
         </div>
-    </div>
-    <div class="toast" id="toast" role="status" aria-live="polite"><b id="toastTitle"></b><span>هذا القسم قريباً</span></div>
-    <div class="hint" id="hint">
-        <span class="desk">W A S D للمشي · اسحب بالماوس للنظر · Shift للجري</span>
-        <span class="touch">العصا للمشي · اسحب بإصبعك للنظر</span>
-    </div>
-    <div class="joy" id="joy" aria-hidden="true"><div class="joy-knob"></div></div>
-</div>
+        <div class="actions"><button class="btn" id="createBtn" type="button">إنشاء الحفلة</button></div>
+        <div class="msg hidden" id="createMsg" role="alert"></div>
+    </section>
 
-<div class="loader" id="loader">
-    <div class="box">
-        <div class="spin"></div>
-        <h1>عيد ميلاد سعيد</h1>
-        <p id="loaderMsg">نجهّز القاعة…</p>
-    </div>
-</div>
+    <!-- الحفلة -->
+    <section class="grid hidden" id="room">
+        <div class="card">
+            <div class="code"><h2>رقم الحفلة</h2><b id="code">----</b></div>
+            <div class="qrs">
+                <div class="qr">
+                    <h3>باركود الضيوف</h3>
+                    <p>يمسحه كل الضيوف من جوالاتهم</p>
+                    <img id="qrGuest" alt="باركود دخول الضيوف">
+                    <div class="link"><button type="button" data-copy="guest">نسخ الرابط</button></div>
+                </div>
+                <div class="qr">
+                    <h3>باركود صاحبة الحفلة</h3>
+                    <p>خاص فيها — لا تعرضه للضيوف</p>
+                    <div class="veil closed" id="girlVeil">
+                        <img id="qrGirl" alt="باركود دخول صاحبة الحفلة">
+                        <button class="btn ghost" type="button" id="showGirl">إظهار</button>
+                    </div>
+                    <div class="link"><button type="button" data-copy="girl">نسخ الرابط</button></div>
+                </div>
+            </div>
+            <div class="actions">
+                <a class="btn" id="viewBtn" target="_blank" rel="noopener">شاشة عرض</a>
+                <a class="btn ghost" id="playBtn" target="_blank" rel="noopener">دخول كمشارك</a>
+            </div>
+        </div>
+        <div class="card people">
+            <h2>الحضور <span id="count">0 / 100</span></h2>
+            <ul class="list" id="list"></ul>
+        </div>
+    </section>
+</main>
 
 <script type="module">
-    const log = (...a) => { try { const A = window.AymanGamesPlatform; (A && A.log ? A.log : function () {})(...a); } catch (e) {} };
+    import { connect, readJSON, writeJSON } from './party-net.js';
     const $ = id => document.getElementById(id);
-    const params = new URLSearchParams(location.search);
-    const name = (params.get('name') || '').trim().slice(0, 30);
-    if (name) $('title').textContent = 'حفلة ' + name;
+    const ERR = {
+        disabled: 'الحفلات متوقفة حالياً على السيرفر.',
+        busy: 'فيه حفلتين شغالة الحين — جرّب بعد شوي.',
+        nocode: 'انتهت الحفلة السابقة — أنشئ حفلة جديدة.',
+        token: 'انتهت الحفلة السابقة — أنشئ حفلة جديدة.',
+    };
+    let state = null; // {code, token, girlKey}
 
-    // الخطوط لازم تكون جاهزة قبل رسم اللافتات على الـ canvas
-    const fontLoads = ['700 100px "Aref Ruqaa"', '900 100px Zain', '700 50px "IBM Plex Sans Arabic"'].map(f => document.fonts.load(f, 'عيد'));
-    await Promise.race([Promise.all(fontLoads).catch(() => {}), new Promise(r => setTimeout(r, 3500))]);
-
-    let hall = null;
-    try {
-        const [{ mountHall }, { createControls }] = await Promise.all([import('./hall3d.js'), import('./controls.js')]);
-        const controls = createControls($('stage'), $('joy'));
-        let toastTimer = 0;
-        hall = mountHall($('stage'), {
-            name, controls,
-            onReady: () => setTimeout(() => $('loader').classList.add('out'), 250),
-            onModeChange: m => {
-                const on = m === 'tour';
-                $('tourBtn').classList.toggle('on', on); $('tourBtn').setAttribute('aria-pressed', String(on));
-                $('hint').style.opacity = on ? '1' : '.75';
-            },
-            onPartyChange: on => {
-                document.body.classList.toggle('party', on);
-                $('partyBtn').classList.toggle('on', on); $('partyBtn').setAttribute('aria-pressed', String(on));
-                $('partyLbl').textContent = on ? 'إنهاء الحفل' : 'بدء الحفل';
-            },
-            onSectionNear: s => {
-                clearTimeout(toastTimer);
-                if (s) { $('toastTitle').textContent = s.title; $('toast').classList.add('show'); }
-                else toastTimer = setTimeout(() => $('toast').classList.remove('show'), 200);
-            },
+    const link = (q) => new URL('join.html?' + q, location.href).href;
+    const guestUrl = () => link('code=' + state.code);
+    const girlUrl = () => link('code=' + state.code + '&g=' + state.girlKey);
+    function qr(img, url) {
+        if (!window.qrcode) { setTimeout(() => qr(img, url), 200); return; }
+        const q = window.qrcode(0, 'M'); q.addData(url); q.make(); img.src = q.createDataURL(8, 2);
+    }
+    function showCreate(msg) {
+        $('room').classList.add('hidden'); $('create').classList.remove('hidden');
+        $('createBtn').disabled = false;
+        $('createMsg').classList.toggle('hidden', !msg); $('createMsg').textContent = msg || '';
+    }
+    function showRoom() {
+        $('create').classList.add('hidden'); $('room').classList.remove('hidden');
+        $('code').textContent = state.code;
+        qr($('qrGuest'), guestUrl()); qr($('qrGirl'), girlUrl());
+        $('viewBtn').href = 'play.html?code=' + state.code + '&view=1';
+        $('playBtn').href = 'join.html?code=' + state.code + '&host=1';
+    }
+    function renderList(room) {
+        const ps = room.players, guests = ps.filter(p => p[2] === 'guest').length;
+        $('count').textContent = guests + ' / 100';
+        const ul = $('list'); ul.textContent = '';
+        if (!ps.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'لسا ما دخل أحد'; ul.append(li); return; }
+        // صاحبة الحفلة أول القائمة، ثم المتصلين
+        ps.slice().sort((a, b) => (b[2] === 'girl') - (a[2] === 'girl') || b[4] - a[4] || a[0] - b[0]).forEach(([n, name, role, kind, online]) => {
+            const li = document.createElement('li'); li.className = online ? 'on' : '';
+            const nm = document.createElement('span'); nm.className = 'nm';
+            const dot = document.createElement('i'); const b = document.createElement('bdi'); b.textContent = name;
+            nm.append(dot, b);
+            const tag = document.createElement('span');
+            tag.className = 'tag' + (role === 'girl' ? ' girl' : kind === 'quick' ? ' quick' : '');
+            tag.textContent = role === 'girl' ? 'صاحبة الحفلة' : kind === 'member' ? 'مسجّل' : 'ضيف';
+            li.append(nm, tag); ul.append(li);
         });
-        $('partyBtn').addEventListener('click', () => hall.setParty(!hall.party));
-        $('tourBtn').addEventListener('click', () => hall.setMode(hall.mode === 'tour' ? 'walk' : 'tour'));
-    } catch (err) {
-        log('[birthday-party] 3D غير متاح', err);
-        $('loader').classList.add('fail');
-        $('loaderMsg').textContent = 'جهازك أو متصفحك ما يدعم العرض ثلاثي الأبعاد — جرّب متصفح Chrome أو جهاز آخر.';
     }
 
-    $('fsBtn').addEventListener('click', () => {
-        const d = document;
-        if (d.fullscreenElement) d.exitFullscreen && d.exitFullscreen();
-        else d.documentElement.requestFullscreen && d.documentElement.requestFullscreen().catch(() => {});
+    const net = connect({
+        onStatus: on => { $('net').classList.toggle('on', on); $('netTxt').textContent = on ? 'متصل' : 'جاري إعادة الاتصال…'; },
+        onOpen: () => { const s = readJSON('party-host'); if (s && s.code && s.token) net.send({ t: 'host', code: s.code, token: s.token }); },
+        onMessage: m => {
+            if (m.t === 'hosted') { state = { code: m.code, token: m.token, girlKey: m.girlKey }; writeJSON('party-host', { code: m.code, token: m.token }); showRoom(); }
+            else if (m.t === 'room') renderList(m.room);
+            else if (m.t === 'err' && m.of === 'host') {
+                if (m.err === 'nocode' || m.err === 'token') { writeJSON('party-host', null); state = null; }
+                showCreate(ERR[m.err] || 'صار خطأ، جرّب مرة ثانية.');
+            }
+        },
     });
+
+    $('createBtn').addEventListener('click', () => {
+        const girlName = $('girlName').value.trim();
+        if (!girlName) { showCreate('اكتب اسم صاحبة الحفلة'); $('girlName').focus(); return; }
+        $('createBtn').disabled = true;
+        net.send({ t: 'host', girlName });
+    });
+    $('girlName').addEventListener('keydown', e => { if (e.key === 'Enter') $('createBtn').click(); });
+    $('showGirl').addEventListener('click', () => $('girlVeil').classList.remove('closed'));
+    document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
+        const url = b.dataset.copy === 'girl' ? girlUrl() : guestUrl();
+        try { await navigator.clipboard.writeText(url); b.textContent = 'تم النسخ'; } catch (e) { prompt('انسخ الرابط:', url); }
+        setTimeout(() => { b.textContent = 'نسخ الرابط'; }, 1500);
+    }));
+    if (!readJSON('party-host')) showCreate();
 </script>
 </body>
 </html>
