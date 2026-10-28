@@ -673,6 +673,9 @@ export function mountHall(el, opts = {}) {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const pos = new T.Vector3(0, 0, HZ - 6);
   let yaw = 0, pitch = -.02, mode = 'tour', tourA = 0, eyeY = EYE, near = null;
+  // وضع 'follow' (اللعب الجماعي): pos = مكان شخصية اللاعب، والكاميرا خلفها وتلف بالسحب
+  let localRy = Math.PI, moving = false, sprinting = false, camElev = .42;
+  const followLook = new T.Vector3();
   const tourPos = new T.Vector3(), tourLook = new T.Vector3(), curLook = new T.Vector3(0, 4, -20);
   const OBST = [
     ...TABLES.map(t => [t.x, t.z, 3.0]),
@@ -690,6 +693,14 @@ export function mountHall(el, opts = {}) {
     for (const [ox, oz, rr] of OBST) { const dx = pos.x - ox, dz = pos.z - oz, d = Math.hypot(dx, dz); if (d < rr && d > 1e-4) { pos.x = ox + dx / d * rr; pos.z = oz + dz / d * rr; } }
     pos.x = Math.max(-HX + 1, Math.min(HX - 1, pos.x)); pos.z = Math.max(-HZ + 2, Math.min(HZ - 1.2, pos.z));
   };
+  // بدء وضع الشخصية: يحط اللاعب بمكانه من السيرفر والكاميرا خلفه
+  function setFollow(start) {
+    if (!start) { setMode('tour'); return; }
+    pos.set(start.x, 0, start.z); resolve();
+    localRy = start.ry == null ? Math.PI : start.ry; yaw = localRy - Math.PI;
+    if (mode !== 'follow') { mode = 'follow'; cam.fov = 58; cam.updateProjectionMatrix(); onModeChange && onModeChange('follow'); }
+  }
+  const getLocal = () => ({ x: pos.x, z: pos.z, ry: localRy, moving, running: sprinting, y: floorAt(pos.x, pos.z) });
   function setMode(m) {
     if (m === mode) return;
     if (m === 'walk') {
@@ -705,8 +716,29 @@ export function mountHall(el, opts = {}) {
   const q0 = new T.Quaternion(), m4 = new T.Matrix4();
   function updateCamera(dt) {
     const inp = controls ? controls.read() : null;
-    if (inp && inp.active && mode === 'tour') setMode('walk');
-    if (mode === 'tour') {
+    if (inp && inp.active && mode === 'tour' && !opts.noFreeWalk) setMode('walk');
+    if (mode === 'follow') {
+      moving = false; sprinting = false;
+      if (inp) {
+        yaw -= inp.dx * .005; camElev = Math.max(.08, Math.min(1.1, camElev + inp.dy * .003));
+        const sp = (inp.run ? 9 : 5.5) * dt, fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
+        const mx = (fx * inp.mz + rx * inp.mx) * sp, mz = (fz * inp.mz + rz * inp.mx) * sp, f0 = floorAt(pos.x, pos.z);
+        if (Math.abs(mx) + Math.abs(mz) > 1e-5) {
+          moving = true; sprinting = !!inp.run;
+          if (free(pos.x + mx, pos.z, f0)) pos.x += mx;
+          if (free(pos.x, pos.z + mz, f0)) pos.z += mz;
+          // الشخصية تلف بنعومة لاتجاه المشي
+          const want = Math.atan2(mx, mz); let d = want - localRy; d = Math.atan2(Math.sin(d), Math.cos(d));
+          localRy += d * (1 - Math.exp(-dt * 12));
+        }
+        resolve();
+      }
+      const fy = floorAt(pos.x, pos.z), D = 6.5;
+      tourPos.set(pos.x + Math.sin(yaw) * Math.cos(camElev) * D, fy + 1.4 + Math.sin(camElev) * D, pos.z + Math.cos(yaw) * Math.cos(camElev) * D);
+      tourPos.x = Math.max(-HX + .4, Math.min(HX - .4, tourPos.x)); tourPos.z = Math.max(-HZ + .4, Math.min(HZ - .4, tourPos.z)); tourPos.y = Math.min(HALL.h - .5, tourPos.y);
+      cam.position.lerp(tourPos, 1 - Math.exp(-dt * 8));
+      followLook.set(pos.x, fy + 1.3, pos.z); cam.lookAt(followLook);
+    } else if (mode === 'tour') {
       tourA += dt * (reduced ? .04 : .075);
       tourPos.set(Math.sin(tourA) * 20, 6.5 + Math.sin(tourA * 2) * 2.2, -2 + Math.cos(tourA) * 32);
       tourLook.set(Math.sin(tourA + 1.2) * 6, 4.2, -18 + Math.cos(tourA) * 6);
@@ -733,6 +765,7 @@ export function mountHall(el, opts = {}) {
 
   // ---------- الحلقة ----------
   const clock = new T.Clock();
+  const tickers = new Set(); // دوال تشتغل كل إطار (مثل الشخصيات) قبل الرسم
   let raf = 0, running = true, readyFired = false;
   const pf = { n: 0, s: 0, w: 0, lite: false };
   function perf(raw) {
@@ -765,6 +798,7 @@ export function mountHall(el, opts = {}) {
     flameMat.size = .42 + Math.sin(t * 17) * .04 + Math.sin(t * 29) * .03;
     cakeGlow.intensity = 14 + Math.sin(t * 13) * 2;
     for (const p of portals) { p.tex.offset.y = -t * .04; p.ring.material.opacity = (near === p.s ? .75 : .3) + Math.sin(t * 2.4) * .1; }
+    tickers.forEach(fn => fn(dt, t, cam));
     r.render(scene, cam);
     if (!readyFired) { readyFired = true; onReady && onReady(); }
   }
@@ -783,5 +817,9 @@ export function mountHall(el, opts = {}) {
     r.dispose(); r.domElement.remove();
   }
 
-  return { stop, setName, setMode, setParty, get mode() { return mode; }, get party() { return partyTarget === 1; } };
+  return {
+    stop, setName, setMode, setParty, setFollow, getLocal, floorAt, scene, camera: cam,
+    addTicker: fn => { tickers.add(fn); return () => tickers.delete(fn); },
+    get mode() { return mode; }, get party() { return partyTarget === 1; },
+  };
 }

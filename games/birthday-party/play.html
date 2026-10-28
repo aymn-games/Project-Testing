@@ -41,6 +41,9 @@
 
     .hint{ position:absolute; bottom:max(16px,env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); padding:9px 18px; border-radius:999px; background:var(--glass); border:1px solid var(--line);
         backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); font:600 13px 'IBM Plex Sans Arabic'; white-space:nowrap; pointer-events:none; transition:opacity .4s; }
+    .netbad{ position:absolute; top:64px; right:16px; padding:7px 14px; border-radius:999px; background:#fff1f2; color:#9f1239; border:1px solid #fecdd3; font:700 13px 'IBM Plex Sans Arabic'; pointer-events:none; }
+    body.net #tourBtn, body.net #partyBtn{ display:none; }
+    body.viewer .hint, body.viewer .joy{ display:none !important; }
     .toast{ position:absolute; top:76px; left:50%; transform:translate(-50%,-8px); opacity:0; transition:all .3s; pointer-events:none; text-align:center;
         padding:12px 26px; border-radius:22px; background:rgba(255,250,252,.9); border:2px solid #f0c98f; box-shadow:0 12px 34px rgba(214,110,160,.3); }
     .toast.show{ opacity:1; transform:translate(-50%,0); }
@@ -87,6 +90,7 @@
             </button>
         </div>
     </div>
+    <div class="netbad hidden" id="netBad" role="status">جاري إعادة الاتصال…</div>
     <div class="toast" id="toast" role="status" aria-live="polite"><b id="toastTitle"></b><span>هذا القسم قريباً</span></div>
     <div class="hint" id="hint">
         <span class="desk">W A S D للمشي · اسحب بالماوس للنظر · Shift للجري</span>
@@ -108,6 +112,11 @@
     const $ = id => document.getElementById(id);
     const params = new URLSearchParams(location.search);
     const name = (params.get('name') || '').trim().slice(0, 30);
+    // play.html?code=XXXX → حفلة جماعية (view=1 = شاشة عرض بدون شخصية). بدون code = القاعة التجريبية.
+    const code = (params.get('code') || '').replace(/\D/g, '').slice(0, 4);
+    const viewOnly = params.get('view') === '1';
+    if (code) document.body.classList.add('net');
+    if (code && viewOnly) document.body.classList.add('viewer');
     if (name) $('title').textContent = 'حفلة ' + name;
 
     // الخطوط لازم تكون جاهزة قبل رسم اللافتات على الـ canvas
@@ -120,7 +129,7 @@
         const controls = createControls($('stage'), $('joy'));
         let toastTimer = 0;
         hall = mountHall($('stage'), {
-            name, controls,
+            name, controls: (code && viewOnly) ? null : controls, noFreeWalk: !!code,
             onReady: () => setTimeout(() => $('loader').classList.add('out'), 250),
             onModeChange: m => {
                 const on = m === 'tour';
@@ -140,10 +149,49 @@
         });
         $('partyBtn').addEventListener('click', () => hall.setParty(!hall.party));
         $('tourBtn').addEventListener('click', () => hall.setMode(hall.mode === 'tour' ? 'walk' : 'tour'));
+        if (code) await startParty(hall);
     } catch (err) {
         log('[birthday-party] 3D غير متاح', err);
         $('loader').classList.add('fail');
         $('loaderMsg').textContent = 'جهازك أو متصفحك ما يدعم العرض ثلاثي الأبعاد — جرّب متصفح Chrome أو جهاز آخر.';
+    }
+
+    // ---- الحفلة الجماعية: الاتصال بالسيرفر + الشخصيات ----
+    async function startParty(hall) {
+        const [{ connect, readJSON, writeJSON, serverNow }, { createCrowd }] = await Promise.all([import('./party-net.js'), import('./crowd3d.js')]);
+        const me = viewOnly ? null : readJSON('party-me');
+        if (!viewOnly && !(me && me.code === code)) { location.replace('join.html?code=' + code); return; }
+        if (!viewOnly) $('hint').querySelector('.touch').textContent = 'العصا للمشي · اسحب للف الكاميرا';
+        const crowd = createCrowd(hall.scene, { floorAt: hall.floorAt });
+        let myN = null, placed = false, lastSent = null;
+        hall.addTicker(dt => crowd.update(dt, hall.camera, serverNow()));
+        const net = connect({
+            onStatus: on => $('netBad').classList.toggle('hidden', on),
+            onOpen: () => net.send(viewOnly ? { t: 'peek', code } : { t: 'resume', code, id: me.id, key: me.key }),
+            onMessage: m => {
+                if (m.t === 'welcome') { myN = m.n; crowd.setLocal(myN, hall.getLocal); }
+                else if (m.t === 'room') {
+                    crowd.sync(m.room.players);
+                    if (m.room.girlName) { $('title').textContent = 'حفلة ' + m.room.girlName; hall.setName(m.room.girlName); }
+                } else if (m.t === 'all' || m.t === 's') {
+                    crowd.apply(m.d, m.now, m.t === 'all');
+                    // أول مرة نعرف مكاننا من السيرفر ← نبدأ وضع الشخصية
+                    if (!placed && myN != null) { const r = m.d.find(x => x[0] === myN); if (r) { placed = true; hall.setFollow({ x: r[1], z: r[2], ry: r[3] }); } }
+                } else if (m.t === 'err') {
+                    if (m.err === 'resume' || m.err === 'nocode') { writeJSON('party-me', null); location.replace('join.html?code=' + code); }
+                    else if (m.err === 'elsewhere') { $('netBad').textContent = 'فتحت الحفلة من مكان ثاني'; $('netBad').classList.remove('hidden'); net.close(); }
+                    else if (m.err === 'disabled') { $('netBad').textContent = 'الحفلات متوقفة حالياً'; $('netBad').classList.remove('hidden'); }
+                }
+            },
+        });
+        // نرسل مكاننا 8 مرات بالثانية — بس إذا تغيّر
+        if (!viewOnly) setInterval(() => {
+            if (!placed || hall.mode !== 'follow') return;
+            const L = hall.getLocal(), a = L.moving ? 1 : 0;
+            const p = [Math.round(L.x * 100) / 100, Math.round(L.z * 100) / 100, Math.round(L.ry * 100) / 100, a];
+            if (lastSent && Math.abs(p[0] - lastSent[0]) < .02 && Math.abs(p[1] - lastSent[1]) < .02 && Math.abs(p[2] - lastSent[2]) < .03 && p[3] === lastSent[3]) return;
+            lastSent = p; net.send({ t: 'mv', p });
+        }, 125);
     }
 
     $('fsBtn').addEventListener('click', () => {
