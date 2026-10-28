@@ -167,9 +167,13 @@ test('unknown room', function () {
 });
 
 test('girl can take over from another device when first is offline', function () {
-    var mgr = createRoomManager(), room = mgr.createRoom({ girlName: 'سارة' });
+    var c = clockMgr(), mgr = c.mgr, room = mgr.createRoom({ girlName: 'سارة' });
     var a = mgr.join(room.code, { name: 'سارة', girlKey: room.girlKey });
     mgr.leave(room.code, a.id);
+    // انتقالها العادي من صفحة الدخول للقاعة (ثواني) ما يسمح لأحد ياخذ مكانها
+    c.t.now += 10 * 1000;
+    assert.equal(mgr.join(room.code, { name: 'دخيل', girlKey: room.girlKey }).err, 'girl-taken');
+    c.t.now += 21 * 1000;
     var b = mgr.join(room.code, { name: 'سارة', girlKey: room.girlKey });
     assert.equal(b.ok, true);
     assert.equal(b.role, 'girl');

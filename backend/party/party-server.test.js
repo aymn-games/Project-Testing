@@ -3,7 +3,9 @@
 var test = require('node:test');
 var assert = require('node:assert/strict');
 var http = require('http');
+var net = require('net');
 var party = require('./party-server');
+party._setHostKey('test-key');
 
 // سيرفر HTTP صغير يمرّر طلبات الترقية لـ party-server مباشرة (نفس اللي يسويه
 // ws-server.js بالإنتاج) — بدون تحميل باقي السيرفر وقاعدة البيانات.
@@ -43,7 +45,7 @@ function reset() { party._mgr.rooms().forEach(function (c) { party._mgr.closeRoo
 test('disabled by default refuses host', async function () {
     reset(); party._setEnabled(false);
     var srv = await startServer(), c = await client(srv.address().port);
-    c.send({ t: 'host', girlName: 'سارة' });
+    c.send({ t: 'host', girlName: 'سارة', key: 'test-key' });
     var m = await c.wait(function (x) { return x.t === 'err'; });
     assert.equal(m.err, 'disabled');
     c.close(); srv.close();
@@ -53,7 +55,7 @@ test('host → join → both receive room roster with the guest', async function
     reset(); party._setEnabled(true);
     var srv = await startServer(), port = srv.address().port;
     var h = await client(port);
-    h.send({ t: 'host', girlName: 'سارة' });
+    h.send({ t: 'host', girlName: 'سارة', key: 'test-key' });
     var hosted = await h.wait(function (x) { return x.t === 'hosted'; });
     var g = await client(port);
     g.send({ t: 'join', code: hosted.code, name: 'ريم' });
@@ -69,7 +71,7 @@ test('host → join → both receive room roster with the guest', async function
 test('movement reaches other client within 300ms', async function () {
     reset(); party._setEnabled(true);
     var srv = await startServer(), port = srv.address().port;
-    var h = await client(port); h.send({ t: 'host', girlName: 'سارة' });
+    var h = await client(port); h.send({ t: 'host', girlName: 'سارة', key: 'test-key' });
     var code = (await h.wait(function (x) { return x.t === 'hosted'; })).code;
     var a = await client(port), b = await client(port);
     a.send({ t: 'join', code: code, name: 'أ' }); b.send({ t: 'join', code: code, name: 'ب' });
@@ -103,7 +105,7 @@ test('garbage message does not crash server', async function () {
 test('reconnect with resume restores same n', async function () {
     reset(); party._setEnabled(true);
     var srv = await startServer(), port = srv.address().port;
-    var h = await client(port); h.send({ t: 'host', girlName: 'سارة' });
+    var h = await client(port); h.send({ t: 'host', girlName: 'سارة', key: 'test-key' });
     var code = (await h.wait(function (x) { return x.t === 'hosted'; })).code;
     var a = await client(port); a.send({ t: 'join', code: code, name: 'ريم' });
     var w = await a.wait(function (x) { return x.t === 'welcome'; });
@@ -113,4 +115,113 @@ test('reconnect with resume restores same n', async function () {
     var w2 = await a2.wait(function (x) { return x.t === 'welcome'; });
     assert.equal(w2.n, w.n);
     h.close(); a2.close(); srv.close();
+});
+
+// ---- عميل خام (TCP) للحالات اللي WebSocket المدمج ما يقدر يسويها ----
+function maskFrame(str) {
+    var payload = Buffer.from(str), len = payload.length, mask = Buffer.from([1, 2, 3, 4]), head;
+    if (len < 126) head = Buffer.from([0x81, 0x80 | len]);
+    else { head = Buffer.alloc(4); head[0] = 0x81; head[1] = 0x80 | 126; head.writeUInt16BE(len, 2); }
+    var out = Buffer.alloc(len); for (var i = 0; i < len; i++) out[i] = payload[i] ^ mask[i % 4];
+    return Buffer.concat([head, mask, out]);
+}
+function rawClient(port) {
+    return new Promise(function (resolve) {
+        var sock = net.connect(port, '127.0.0.1', function () {
+            sock.write('GET /ws/party HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n');
+            setTimeout(function () { resolve({ sock: sock, send: function (o) { sock.write(maskFrame(JSON.stringify(o))); } }); }, 80);
+        });
+        sock.on('error', function () { });
+    });
+}
+async function hostRoom(port) {
+    var h = await client(port); h.send({ t: 'host', girlName: 'سارة', key: 'test-key' });
+    return { h: h, code: (await h.wait(function (x) { return x.t === 'hosted'; })).code };
+}
+function onlineOf(code, name) { var r = party._mgr.roster(code).players.find(function (p) { return p[1] === name; }); return r ? r[4] : null; }
+var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+
+test('creating a party needs the private host key', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), c = await client(srv.address().port);
+    c.send({ t: 'host', girlName: 'سارة' });
+    assert.equal((await c.wait(function (x) { return x.t === 'err'; })).err, 'hostkey');
+    c.send({ t: 'host', girlName: 'سارة', key: 'wrong' });
+    await sleep(1100);
+    assert.equal(c.msgs.filter(function (x) { return x.t === 'err' && x.err === 'hostkey'; }).length, 2);
+    c.close(); srv.close();
+});
+
+test('a second join on the same socket is refused (no ghost players)', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var c = await client(port);
+    c.send({ t: 'peek', code: r.code });
+    await c.wait(function (x) { return x.t === 'room'; });
+    c.send({ t: 'join', code: r.code, name: 'أ' });
+    await c.wait(function (x) { return x.t === 'welcome'; });
+    await sleep(1100);
+    c.send({ t: 'join', code: r.code, name: 'ب' });
+    assert.equal((await c.wait(function (x) { return x.t === 'err'; })).err, 'already');
+    assert.equal(party._mgr.roster(r.code).players.length, 1);
+    r.h.close(); c.close(); srv.close();
+});
+
+test('peek flood from one socket is throttled', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var c = await client(port);
+    for (var i = 0; i < 200; i++) c.send({ t: 'peek', code: r.code });
+    await sleep(1000);
+    var rooms = c.msgs.filter(function (x) { return x.t === 'room'; }).length;
+    assert.ok(rooms <= 4, 'got ' + rooms + ' room replies');
+    r.h.close(); c.close(); srv.close();
+});
+
+test('slow reader with a huge backlog is disconnected instead of buffering', function () {
+    var destroyed = false, wrote = false;
+    var fake = { closed: false, socket: { writableLength: 300 * 1024, write: function () { wrote = true; }, destroy: function () { destroyed = true; } } };
+    party._sendRaw(fake, Buffer.from('x'));
+    assert.equal(destroyed, true);
+    assert.equal(wrote, false);
+});
+
+test('half-closed socket (FIN without close frame) marks the player offline', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var raw = await rawClient(port);
+    raw.send({ t: 'join', code: r.code, name: 'غائب' });
+    await sleep(300);
+    assert.equal(onlineOf(r.code, 'غائب'), 1);
+    raw.sock.end();
+    await sleep(400);
+    assert.equal(onlineOf(r.code, 'غائب'), 0);
+    r.h.close(); srv.close();
+});
+
+test('silent socket is dropped after the idle timeout', async function () {
+    reset(); party._setEnabled(true); party._setIdleMs(500);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var raw = await rawClient(port);
+    raw.send({ t: 'join', code: r.code, name: 'نايم' });
+    await sleep(200);
+    assert.equal(onlineOf(r.code, 'نايم'), 1);
+    await sleep(900);
+    assert.equal(onlineOf(r.code, 'نايم'), 0);
+    party._setIdleMs(40000);
+    raw.sock.destroy(); r.h.close(); srv.close();
+});
+
+test('roster broadcasts are coalesced when many people arrive at once', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var obs = await client(port); obs.send({ t: 'peek', code: r.code }); await obs.wait(function (x) { return x.t === 'room'; });
+    await sleep(1100); obs.msgs.length = 0;
+    var cs = [];
+    for (var i = 0; i < 20; i++) { var c = await client(port); c.send({ t: 'join', code: r.code, name: 'ض' + i }); cs.push(c); }
+    await sleep(1500);
+    var rooms = obs.msgs.filter(function (x) { return x.t === 'room'; });
+    assert.ok(rooms.length <= 3, 'got ' + rooms.length + ' roster broadcasts');
+    assert.equal(rooms[rooms.length - 1].room.players.length, 20);
+    cs.forEach(function (c) { c.close(); }); obs.close(); r.h.close(); srv.close();
 });

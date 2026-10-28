@@ -1,7 +1,8 @@
 // اتصال صفحات الحفلة بخادم الحفلة (backend/party/party-server.js على /ws/party).
 // نسخة ES module من games/intruder/station-net.js: إعادة اتصال تلقائية بمهلة
 // متزايدة، ping كل 15ث، وحساب فرق الساعة مع الخادم (serverNow) عشان كل
-// الجوالات تمشي على نفس الوقت.
+// الجوالات تمشي على نفس الوقت. وفيه حارس: إذا ما وصل شي من السيرفر مدة deadMs
+// (شبكة ماتت والاتصال باقٍ «مفتوح» شكلياً) نعتبره مقطوع ونعيد الاتصال.
 //
 // التخزين المحلي (لكل جهاز):
 //   'party-host' → {code, token}   جلسة المذيع (يرجع لنفس الحفلة بعد التحديث)
@@ -33,8 +34,8 @@ function noteServerNow(sn) {
 }
 export function serverNow() { return realNow() + offset; }
 
-export function connect({ onMessage, onOpen, onStatus } = {}) {
-  let ws = null, closed = false, tries = 0, pingT = 0, retryT = 0;
+export function connect({ onMessage, onOpen, onStatus, deadMs = 35000 } = {}) {
+  let ws = null, closed = false, tries = 0, pingT = 0, retryT = 0, lastMsgAt = 0;
   const queue = [];
   const raw = s => { if (ws && ws.readyState === 1) ws.send(s); else queue.push(s); };
   const send = obj => raw(JSON.stringify(obj));
@@ -42,13 +43,14 @@ export function connect({ onMessage, onOpen, onStatus } = {}) {
     if (closed) return;
     try { ws = new WebSocket(wsUrl()); } catch (e) { retry(); return; }
     ws.onopen = () => {
-      tries = 0; onStatus && onStatus(true);
+      tries = 0; lastMsgAt = realNow(); onStatus && onStatus(true);
       onOpen && onOpen();
       queue.splice(0).forEach(m => ws.send(m));
       clearInterval(pingT); pingT = setInterval(() => send({ t: 'ping', k: realNow() }), 15000);
       send({ t: 'ping', k: realNow() });
     };
     ws.onmessage = e => {
+      lastMsgAt = realNow();
       let m; try { m = JSON.parse(e.data); } catch (err) { return; }
       if (!m) return;
       if (m.t === 's' || m.t === 'all' || m.t === 'pong') noteServerNow(m.now);
@@ -63,9 +65,20 @@ export function connect({ onMessage, onOpen, onStatus } = {}) {
     clearTimeout(retryT);
     retryT = setTimeout(open, Math.min(8000, 500 * Math.pow(2, tries++)));
   }
+  // اتصال ميت: نفصل المعالجات عشان إغلاقه المتأخر ما يأثر، ونبلّغ ونعيد المحاولة فوراً
+  function kill() {
+    const old = ws; ws = null;
+    if (old) { old.onopen = old.onmessage = old.onclose = old.onerror = null; try { old.close(); } catch (e) { /* ميت */ } }
+    clearInterval(pingT); onStatus && onStatus(false);
+    tries = 0; retry();
+  }
+  const watch = setInterval(() => { if (!closed && ws && ws.readyState === 1 && realNow() - lastMsgAt > deadMs) kill(); }, Math.min(5000, Math.max(100, deadMs / 3)));
+  // الجوال صحى من النوم: إذا آخر رسالة قديمة لا ننتظر الحارس
+  const onVis = () => { if (typeof document !== 'undefined' && !document.hidden && ws && ws.readyState === 1 && realNow() - lastMsgAt > 20000) kill(); };
+  if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVis);
   open();
   return {
     send,
-    close() { closed = true; clearInterval(pingT); clearTimeout(retryT); try { ws && ws.close(); } catch (e) { /* مقفل */ } },
+    close() { closed = true; clearInterval(pingT); clearInterval(watch); clearTimeout(retryT); if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVis); try { ws && ws.close(); } catch (e) { /* مقفل */ } },
   };
 }

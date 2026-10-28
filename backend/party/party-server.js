@@ -4,10 +4,12 @@
  * يوصّل منطق الغرف (party-rooms.js) بالجوالات وشاشة المذيع، بنفس أسلوب
  * «محطة سهيل» (station-server.js). الحفلات طافية افتراضياً (config.partyEnabled
  * ← متغير البيئة PARTY_ENABLED=1)، وكل رسالة وكل دورة تحديث محمية بـ try/catch:
- * أي خطأ هنا يتسجل وما يطيّح باقي سيرفر الموقع.
+ * أي خطأ هنا يتسجل وما يطيّح باقي سيرفر الموقع. إنشاء حفلة يحتاج المفتاح الخاص
+ * (config.partyHostKey ← PARTY_HOST_KEY)، وكل اتصال عليه حد للرسائل وحد للي
+ * يتكدّس له (جوال ما يقرأ ← ينقطع بدل ما يملأ ذاكرة السيرفر).
  *
  * بروتوكول (JSON، كل رسالة فيها t):
- *   عميل → host {girlName} | host {code, token}   ← hosted {code, token, girlKey}
+ *   عميل → host {girlName, key} | host {code, token}   ← hosted {code, token, girlKey}
  *   عميل → join {code, name, auth?, girlKey?}     ← welcome {id, key, n, role, kind} ثم all {d}
  *   عميل → resume {code, id, key}                 ← نفس رد join
  *   عميل → peek {code}                            ← room + all (شاشة عرض بدون شخصية)
@@ -29,8 +31,17 @@ var SEND_MS = 125;                       // 8 تحديثات حركة بالثا
 var FAR_EVERY = 12;                      // البعيدين (> 10م) كل 12 دورة = مرة كل 1.5ث
 var EMPTY_ROOM_MS = 30 * 60 * 1000;      // غرفة بدون أي اتصال أكثر من كذا ← تنقفل
 var MAX_MSG = 4 * 1024;
+var MAX_BACKLOG = 256 * 1024;            // بايتات متكدّسة لاتصال ما يقرأ ← نقطعه
+var ROSTER_MS = 1000;                    // قائمة الحضور تنرسل للكل مرة بالثانية كحد أقصى
+var MSG_RATE = 30, MSG_BURST = 60;       // رسائل/ث لكل اتصال
+var HEAVY_RATE = 1, HEAVY_BURST = 3;     // host/join/resume/peek (ردها كبير) — مرة بالثانية
+var MAX_DROPS = 300;                     // تجاوزات كثيرة ← نقطع الاتصال
+var crypto = require('crypto');
 
 var _enabled = !!config.partyEnabled;
+var _hostKey = String(config.partyHostKey || '');
+var _idleMs = 40 * 1000;                 // ما وصل شي من الاتصال كذا (الجوال يرسل ping كل 15ث) ← ميت
+var _roster = {};                        // code -> {at, dirty}
 // التحقق من الجلسة يتحمّل وقت الحاجة فقط (يفتح قاعدة البيانات)
 var _mgr = createRoomManager({
     validateSession: function (token) { try { return require('../auth/auth-service').validateSession(token); } catch (err) { logger.error('Party: session check failed:', err); return null; } }
@@ -38,17 +49,41 @@ var _mgr = createRoomManager({
 var _clients = {};   // connectionId -> { socket, code, role: 'host'|'player'|'viewer', id, closed }
 var _emptySince = {}; // code -> وقت آخر مرة صارت الغرفة بدون اتصالات
 
-function send(client, obj) {
-    if (!client || client.closed) return;
-    try { client.socket.write(frame.encodeTextFrame(JSON.stringify(obj))); } catch (err) { logger.error('Party: write failed:', err); }
-}
 function sendRaw(client, encoded) {
     if (!client || client.closed) return;
+    // جوال معلّق ما يقرأ: بدل ما نكدّس له بالذاكرة للأبد نقطعه (يرجع بـ resume)
+    if ((client.socket.writableLength || 0) > MAX_BACKLOG) { try { client.socket.destroy(); } catch (e) { } if (client.cid) removeClient(client.cid); return; }
     try { client.socket.write(encoded); } catch (err) { logger.error('Party: write failed:', err); }
+}
+function send(client, obj) { if (client && !client.closed) sendRaw(client, frame.encodeTextFrame(JSON.stringify(obj))); }
+function keyOk(k) {
+    if (!_hostKey) return false;
+    var a = Buffer.from(String(k || '')), b = Buffer.from(_hostKey);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+// دلو رموز بسيط لكل اتصال: يرجع false إذا لازم نتجاهل الرسالة
+function allow(client, heavy) {
+    var now = Date.now(), dt = (now - client.bucketAt) / 1000; client.bucketAt = now;
+    client.tokens = Math.min(MSG_BURST, client.tokens + dt * MSG_RATE);
+    client.heavy = Math.min(HEAVY_BURST, client.heavy + dt * HEAVY_RATE);
+    if (client.tokens < 1 || (heavy && client.heavy < 1)) {
+        if (++client.drops > MAX_DROPS) { try { client.socket.destroy(); } catch (e) { } removeClient(client.cid); }
+        return false;
+    }
+    client.tokens -= 1; if (heavy) client.heavy -= 1;
+    return true;
 }
 function roomClients(code) { return Object.keys(_clients).map(function (k) { return _clients[k]; }).filter(function (c) { return c.code === code && !c.closed; }); }
 
+function rosterMsg(code) { var r = _mgr.roster(code); return r.ok ? { t: 'room', room: { code: r.code, girlName: r.girlName, players: r.players } } : null; }
+// تغيّر بالحضور: نرسل فوراً إذا آخر إرسال قبل ثانية، وإلا نأجّله لدورة tickAll (يمنع
+// موجة دخول 100 شخص من إرسال القائمة الكاملة لكل واحد 100 مرة)
+function markRoster(code) {
+    var st = _roster[code] || (_roster[code] = { at: 0, dirty: false });
+    if (Date.now() - st.at >= ROSTER_MS) broadcastRoster(code); else st.dirty = true;
+}
 function broadcastRoster(code) {
+    var st = _roster[code] || (_roster[code] = { at: 0, dirty: false }); st.at = Date.now(); st.dirty = false;
     var r = _mgr.roster(code); if (!r.ok) return;
     var encoded = frame.encodeTextFrame(JSON.stringify({ t: 'room', room: { code: r.code, girlName: r.girlName, players: r.players } }));
     roomClients(code).forEach(function (c) { sendRaw(c, encoded); });
@@ -63,7 +98,8 @@ function attach(client, code, role, id) {
 function onWelcome(client, code, res) {
     attach(client, code, 'player', res.id);
     send(client, { t: 'welcome', id: res.id, key: res.key, n: res.n, role: res.role, kind: res.kind });
-    broadcastRoster(code);
+    send(client, rosterMsg(code));
+    markRoster(code);
     sendAll(client);
 }
 
@@ -71,7 +107,11 @@ function onMessage(client, msg) {
     var t = msg && msg.t;
     if (t === 'ping') return send(client, { t: 'pong', k: msg.k, now: Date.now() });
     if (typeof t !== 'string') return;
+    var heavy = t === 'host' || t === 'join' || t === 'resume' || t === 'peek';
+    if (!allow(client, heavy)) return;
     if (!_enabled) return send(client, { t: 'err', err: 'disabled', of: t });
+    // كل اتصال له هوية وحدة: المشاهد (peek) يقدر يدخل كلاعب مرة، وغير كذا مرفوض
+    if (heavy && (client.role === 'player' || client.role === 'host' || (client.role === 'viewer' && t === 'host'))) return send(client, { t: 'err', err: 'already', of: t });
     var code = typeof msg.code === 'string' ? msg.code : null, res;
 
     if (t === 'host') {
@@ -82,20 +122,20 @@ function onMessage(client, msg) {
             attach(client, code, 'host');
             send(client, { t: 'hosted', code: code, token: room.token, girlKey: room.girlKey });
         } else {
+            if (!keyOk(msg.key)) return send(client, { t: 'err', err: 'hostkey', of: t });
             res = _mgr.createRoom({ girlName: msg.girlName });
             if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
             attach(client, res.code, 'host');
             logger.log('Party: room ' + res.code + ' created');
             send(client, { t: 'hosted', code: res.code, token: res.token, girlKey: res.girlKey });
         }
-        broadcastRoster(client.code); sendAll(client);
+        send(client, rosterMsg(client.code)); sendAll(client);
         return;
     }
     if (t === 'peek') {
         if (!code || !_mgr.getRoom(code)) return send(client, { t: 'err', err: 'nocode', of: t });
         attach(client, code, 'viewer');
-        var r = _mgr.roster(code);
-        send(client, { t: 'room', room: { code: r.code, girlName: r.girlName, players: r.players } });
+        send(client, rosterMsg(code));
         sendAll(client);
         return;
     }
@@ -124,15 +164,23 @@ function onMessage(client, msg) {
 var _tickN = 0;
 function tickAll() {
     var now = Date.now(), farTick = (++_tickN % FAR_EVERY) === 0;
+    // اتصالات صامتة (جوال نايم/شبكة ميتة) تنقطع عشان صاحبها ما يبقى «متصل» للأبد
+    Object.keys(_clients).forEach(function (cid) {
+        var c = _clients[cid];
+        if (c && now - c.lastRx > _idleMs) { try { c.socket.destroy(); } catch (e) { } removeClient(cid); }
+    });
     _mgr.rooms().forEach(function (code) {
         try {
             var cs = roomClients(code);
             if (!cs.length) {
                 if (!_emptySince[code]) _emptySince[code] = now;
-                else if (now - _emptySince[code] > EMPTY_ROOM_MS) { _mgr.closeRoom(code); delete _emptySince[code]; logger.log('Party: room ' + code + ' closed (empty)'); }
+                else if (now - _emptySince[code] > EMPTY_ROOM_MS) { _mgr.closeRoom(code); delete _emptySince[code]; delete _roster[code]; logger.log('Party: room ' + code + ' closed (empty)'); }
                 return;
             }
+            var st = _roster[code];
+            if (st && st.dirty && now - st.at >= ROSTER_MS) broadcastRoster(code);
             cs.forEach(function (c) {
+                if (c.role === 'host') return; // لوحة المذيع ما تعرض الحركة
                 var d = _mgr.deltaFor(code, c.role === 'player' ? c.id : null, c.seen || (c.seen = new Map()), farTick);
                 if (Array.isArray(d) && d.length) sendRaw(c, frame.encodeTextFrame(JSON.stringify({ t: 's', now: now, d: packRows(d) })));
             });
@@ -146,7 +194,7 @@ function removeClient(id) {
     var c = _clients[id]; if (!c) return;
     c.closed = true; delete _clients[id];
     try {
-        if (c.code && c.id && c.role === 'player') { _mgr.leave(c.code, c.id); broadcastRoster(c.code); }
+        if (c.code && c.id && c.role === 'player') { _mgr.leave(c.code, c.id); markRoster(c.code); }
     } catch (err) { logger.error('Party: leave error:', err); }
 }
 
@@ -158,11 +206,13 @@ function handleUpgrade(req, socket) {
     ensureTicker();
 
     var id = 'pt_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
-    var client = _clients[id] = { socket: socket, code: null, role: null, id: null, closed: false };
+    var now0 = Date.now();
+    var client = _clients[id] = { cid: id, socket: socket, code: null, role: null, id: null, closed: false, lastRx: now0, bucketAt: now0, tokens: MSG_BURST, heavy: HEAVY_BURST, drops: 0 };
     var buffer = Buffer.alloc(0);
 
     socket.on('data', function (chunk) {
         try {
+            client.lastRx = Date.now();
             buffer = Buffer.concat([buffer, chunk]);
             if (buffer.length > MAX_MSG * 8) { socket.destroy(); removeClient(id); return; }
             var result;
@@ -176,6 +226,8 @@ function handleUpgrade(req, socket) {
             }
         } catch (err) { logger.error('Party: data error:', err); try { socket.destroy(); } catch (e) { } removeClient(id); }
     });
+    // FIN بدون إطار إغلاق (http.Server يسمح بنصف-إغلاق) ← نقفل من جهتنا
+    socket.on('end', function () { try { socket.end(); } catch (e) { } removeClient(id); });
     socket.on('close', function () { removeClient(id); });
     socket.on('error', function () { removeClient(id); });
 }
@@ -183,5 +235,8 @@ function handleUpgrade(req, socket) {
 module.exports = {
     handleUpgrade: handleUpgrade,
     _mgr: _mgr,
-    _setEnabled: function (v) { _enabled = !!v; }
+    _setEnabled: function (v) { _enabled = !!v; },
+    _setHostKey: function (k) { _hostKey = String(k || ''); },
+    _setIdleMs: function (ms) { _idleMs = ms; },
+    _sendRaw: sendRaw
 };

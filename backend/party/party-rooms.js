@@ -18,6 +18,7 @@ var MAX_SPEED = 14;             // م/ث — أسرع من الجري بالوا
 var SPEED_SLACK = 0.5;          // م — تذبذب الشبكة
 var MIN_MOVE_GAP_MS = 60;       // أقل فاصل بين رسائل الحركة من نفس اللاعب
 var MAX_ANIM = 15;
+var GIRL_GRACE_MS = 30 * 1000;  // صاحبة الحفلة غايبة أقل من كذا (تنقّل بين الصفحات/انقطاع قصير) ← مكانها محجوز لها
 var STALE_MS = 2 * 60 * 1000;    // ضيف غايب أكثر من كذا ← مكانه ينعطى لضيف جديد لو الحفلة مكتملة
 var NEAR_R = 10;                // م — اللي أقرب من كذا يوصل 8 مرات/ث، والأبعد أبطأ (party-server)
 
@@ -72,7 +73,7 @@ function createRoomManager(opts) {
         if (o.girlKey != null) {
             if (o.girlKey !== room.girlKey) return fail('girl-key');
             var cur = room.players.find(function (p) { return p.role === 'girl'; });
-            if (cur && cur.online) return fail('girl-taken');
+            if (cur && (cur.online || now() - (cur.offlineSince || 0) < GIRL_GRACE_MS)) return fail('girl-taken');
             if (cur) {
                 // جوالها الأول طفى/ضاع: نفس الشخصية تنتقل للجهاز الجديد بمفتاح جديد
                 cur.key = rid(16); cur.online = true; cur.dirty = true; cur.ver++;

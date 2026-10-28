@@ -13,7 +13,8 @@
 <!-- صفحة المذيع: إنشاء الحفلة، كود الغرفة، باركود الضيوف وباركود صاحبة
      الحفلة (مخفي افتراضياً عشان ما تنكشف المفاجأة)، وقائمة الداخلين.
      الاتصال عبر party-net.js بخادم /ws/party، والجلسة محفوظة بـ 'party-host'
-     فتحديث الصفحة يرجع لنفس الحفلة. -->
+     فتحديث الصفحة يرجع لنفس الحفلة. إنشاء حفلة يحتاج الرابط الخاص (?k=المفتاح)،
+     والمفتاح ينحفظ بالجهاز ('party-host-key') فيكفي فتح الرابط الخاص مرة وحدة. -->
 <style>
     :root{ --ink:#5b1d3e; --soft:#9b6683; --rose:#e2709a; --rose2:#c94f7e; --line:rgba(226,112,154,.28); --card:rgba(255,250,252,.86); --gold:#d9b07a; }
     *{ box-sizing:border-box; }
@@ -132,8 +133,13 @@
         busy: 'فيه حفلتين شغالة الحين — جرّب بعد شوي.',
         nocode: 'انتهت الحفلة السابقة — أنشئ حفلة جديدة.',
         token: 'انتهت الحفلة السابقة — أنشئ حفلة جديدة.',
+        hostkey: 'هذا الرابط ما يسمح بإنشاء حفلة — افتح الرابط الخاص بالمذيع.',
     };
     let state = null; // {code, token, girlKey}
+    // المفتاح الخاص من الرابط ← نحفظه ونشيله من شريط العنوان عشان ما ينكشف
+    const urlKey = new URLSearchParams(location.search).get('k');
+    if (urlKey) { writeJSON('party-host-key', urlKey); const u = new URL(location.href); u.searchParams.delete('k'); history.replaceState(null, '', u.pathname + u.search + u.hash); }
+    const hostKey = () => readJSON('party-host-key') || '';
 
     const link = (q) => new URL('join.html?' + q, location.href).href;
     const guestUrl = () => link('code=' + state.code);
@@ -189,7 +195,7 @@
         const girlName = $('girlName').value.trim();
         if (!girlName) { showCreate('اكتب اسم صاحبة الحفلة'); $('girlName').focus(); return; }
         $('createBtn').disabled = true;
-        net.send({ t: 'host', girlName });
+        net.send({ t: 'host', girlName, key: hostKey() });
     });
     $('girlName').addEventListener('keydown', e => { if (e.key === 'Enter') $('createBtn').click(); });
     $('showGirl').addEventListener('click', () => $('girlVeil').classList.remove('closed'));

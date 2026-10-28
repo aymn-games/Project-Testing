@@ -120,6 +120,8 @@
         const net = connect({
             onStatus: on => { if (!on && !sentJoin) $('wait').classList.remove('hidden'); },
             onOpen: () => {
+                // انقطع الاتصال بعد ما ضغط «دخول» وقبل ما يوصل الرد: نرجّع النموذج بدل التعليق
+                sentJoin = false;
                 const me = readJSON('party-me');
                 if (me && me.code === code && me.id && me.key && (me.role === 'girl') === !!girlKey) { sentJoin = true; net.send({ t: 'resume', code, id: me.id, key: me.key }); }
                 else net.send({ t: 'peek', code });
