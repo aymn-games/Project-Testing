@@ -21,8 +21,9 @@ export const SECTIONS = [
   { id: 'photos', title: 'ركن الصور', side: 1, z: 12, c1: '#ffe0c2', c2: '#ffc0d6' },
 ];
 
-const PASTEL = ['#f9a8d4', '#fbcfe8', '#ffffff', '#f5d0fe', '#e9d5ff', '#f472b6', '#fde2e4', '#ffd6e7'];
-const CHROME = ['#f2b8a2', '#f7d08a', '#f9c6d6', '#e8c4ff'];
+// لوحة ألوان ناعمة متناسقة: وردي غبار، بلاش، ليلكي، لافندر، عاجي
+const PASTEL = ['#f4a3c0', '#f8c4d6', '#fde6ee', '#e8c8f0', '#cdb6ef', '#e98bb0', '#f6d3e2', '#d9b8e8'];
+const CHROME = ['#efb7a4', '#ecc98f', '#f2b6cc', '#d6b6f2'];
 const FONT_AR = '"IBM Plex Sans Arabic", sans-serif';
 
 // مولّد عشوائي ثابت — نفس توزيع الديكور بكل مرة تنفتح فيها القاعة
@@ -40,7 +41,7 @@ export function mountHall(el, opts = {}) {
   r.setPixelRatio(dpr);
   r.setSize(W(), H(), false);
   r.outputColorSpace = T.SRGBColorSpace;
-  r.toneMapping = T.ACESFilmicToneMapping; r.toneMappingExposure = 0.86;
+  r.toneMapping = T.ACESFilmicToneMapping; r.toneMappingExposure = 0.95;
   r.shadowMap.enabled = true; r.shadowMap.type = T.PCFSoftShadowMap;
   Object.assign(r.domElement.style, { display: 'block', width: '100%', height: '100%' });
   el.appendChild(r.domElement);
@@ -48,7 +49,7 @@ export function mountHall(el, opts = {}) {
 
   const scene = new T.Scene();
   scene.background = new T.Color('#f3d3e0');
-  scene.fog = new T.Fog('#f3d3e0', 80, 210);
+  scene.fog = new T.Fog('#e7c0d2', 90, 230);
   const cam = new T.PerspectiveCamera(52, W() / H(), 0.1, 260);
   cam.rotation.order = 'YXZ';
 
@@ -118,8 +119,8 @@ export function mountHall(el, opts = {}) {
     scene.environment = pm.fromScene(envScene, 0.04).texture;
     pm.dispose(); envScene.traverse(o => { o.geometry?.dispose(); o.material?.map?.dispose(); o.material?.dispose(); });
   }
-  scene.add(new T.HemisphereLight('#ffe9f2', '#c98aa5', 0.3));
-  const sun = new T.DirectionalLight('#fff1f6', 1.15);
+  const hemi = new T.HemisphereLight('#ffe3ee', '#b97a9c', 0.24); scene.add(hemi);
+  const sun = new T.DirectionalLight('#ffe9f1', .6);
   sun.position.set(14, 46, 20); sun.target.position.set(0, 0, -4); scene.add(sun.target);
   sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
   Object.assign(sun.shadow.camera, { left: -42, right: 42, top: 58, bottom: -58, near: 1, far: 120 });
@@ -129,17 +130,18 @@ export function mountHall(el, opts = {}) {
   // ---------- الأرضية والسجادة ----------
   const floorTex = tex(1024, 1024, (g, w, h) => {
     const n = 4, s = w / n;
-    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { g.fillStyle = (i + j) % 2 ? '#efc9d8' : '#f9ebf1'; g.fillRect(i * s, j * s, s, s); }
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { g.fillStyle = (i + j) % 2 ? '#efd3df' : '#f7e6ed'; g.fillRect(i * s, j * s, s, s); }
+    const sh = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * .75); sh.addColorStop(0, 'rgba(255,255,255,.18)'); sh.addColorStop(1, 'rgba(190,120,155,.10)'); g.fillStyle = sh; g.fillRect(0, 0, w, h);
     g.lineWidth = 1.6;
     for (let k = 0; k < 80; k++) {
-      g.strokeStyle = `rgba(${200 + rand() * 40 | 0},150,175,${.1 + rand() * .18})`; g.beginPath();
+      g.strokeStyle = `rgba(${196 + rand() * 30 | 0},150,178,${.06 + rand() * .12})`; g.beginPath();
       let x = rand() * w, y = rand() * h; g.moveTo(x, y);
       for (let q = 0; q < 4; q++) { const nx = x + (rand() - .5) * 170, ny = y + (rand() - .5) * 170; g.quadraticCurveTo(x + (rand() - .5) * 70, y + (rand() - .5) * 70, nx, ny); x = nx; y = ny; }
       g.stroke();
     }
-    g.strokeStyle = '#dcb67e'; g.lineWidth = 5;
+    g.strokeStyle = 'rgba(214,176,130,.75)'; g.lineWidth = 3;
     for (let i = 0; i <= n; i++) { g.beginPath(); g.moveTo(i * s, 0); g.lineTo(i * s, h); g.moveTo(0, i * s); g.lineTo(w, i * s); g.stroke(); }
-    g.fillStyle = '#e8c48e';
+    g.fillStyle = 'rgba(222,186,140,.85)';
     for (let i = 0; i <= n; i++) for (let j = 0; j <= n; j++) { g.beginPath(); g.moveTo(i * s, j * s - 16); g.lineTo(i * s + 16, j * s); g.lineTo(i * s, j * s + 16); g.lineTo(i * s - 16, j * s); g.fill(); }
   }, [HALL.w / 8, HALL.l / 8]);
   const floor = mesh(new T.PlaneGeometry(HALL.w, HALL.l), std('#ffffff', { map: floorTex, roughness: 0.22, metalness: 0.05, envMapIntensity: .55 }), 0, 0, 0);
@@ -147,10 +149,10 @@ export function mountHall(el, opts = {}) {
 
   const carpetLen = HZ - (STAGE.front + 3);
   const carpetTex = tex(256, 512, (g, w, h) => {
-    g.fillStyle = '#e57fa4'; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#efc58a'; g.fillRect(10, 0, 12, h); g.fillRect(w - 22, 0, 12, h);
+    const cg = g.createLinearGradient(0, 0, w, 0); cg.addColorStop(0, '#c9668a'); cg.addColorStop(.5, '#dc7f9f'); cg.addColorStop(1, '#c9668a'); g.fillStyle = cg; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#e8c595'; g.fillRect(10, 0, 12, h); g.fillRect(w - 22, 0, 12, h);
     g.fillStyle = '#f6b3cb'; g.fillRect(30, 0, 3, h); g.fillRect(w - 33, 0, 3, h);
-    g.fillStyle = 'rgba(255,214,231,.75)'; for (let y = 32; y < h; y += 128) heart(g, w / 2, y, 64);
+    g.fillStyle = 'rgba(255,214,231,.45)'; for (let y = 32; y < h; y += 128) heart(g, w / 2, y, 64);
     g.fillStyle = 'rgba(255,255,255,.35)'; for (let y = 96; y < h; y += 128) { g.beginPath(); g.arc(w / 2, y, 6, 0, 7); g.fill(); }
   }, [1, carpetLen / 12]);
   const carpet = mesh(new T.PlaneGeometry(6, carpetLen), std('#ffffff', { map: carpetTex, roughness: 0.9 }), 0, 0.025, (HZ + STAGE.front + 3) / 2);
@@ -158,22 +160,26 @@ export function mountHall(el, opts = {}) {
 
   // ---------- الجدران ----------
   const wallTex = tex(512, 512, (g, w, h) => {
-    g.fillStyle = '#f8d7e3'; g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 8; i += 2) { g.fillStyle = '#f4cddb'; g.fillRect(i * 64, 0, 64, h); }
-    g.fillStyle = 'rgba(236,180,203,.7)';
+    g.fillStyle = '#f3d0de'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 8; i += 2) { g.fillStyle = 'rgba(226,170,196,.22)'; g.fillRect(i * 64, 0, 64, h); }
+    g.fillStyle = 'rgba(222,160,190,.38)';
     for (let i = 0; i < 8; i++) for (let j = 0; j < 4; j++) heart(g, i * 64 + 32, j * 128 + (i % 2 ? 64 : 0) + 40, 22);
-    g.fillStyle = 'rgba(232,196,142,.8)';
+    g.fillStyle = 'rgba(226,192,148,.6)';
     for (let i = 0; i < 8; i++) for (let j = 0; j < 4; j++) { g.beginPath(); g.arc(i * 64 + 32, j * 128 + (i % 2 ? 0 : 64) + 20, 3, 0, 7); g.fill(); }
   });
   wallTex.wrapS = wallTex.wrapT = T.RepeatWrapping;
   const panelTex = tex(512, 384, (g, w, h) => {
-    g.fillStyle = '#fff6f9'; g.fillRect(0, 0, w, h);
-    g.strokeStyle = '#ead0db'; g.lineWidth = 10; g.strokeRect(34, 44, w / 2 - 52, h - 88); g.strokeRect(w / 2 + 18, 44, w / 2 - 52, h - 88);
+    g.fillStyle = '#fbeaf1'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#e8c6d5'; g.lineWidth = 10; g.strokeRect(34, 44, w / 2 - 52, h - 88); g.strokeRect(w / 2 + 18, 44, w / 2 - 52, h - 88);
     g.strokeStyle = '#e3c08f'; g.lineWidth = 3; g.strokeRect(46, 56, w / 2 - 76, h - 112); g.strokeRect(w / 2 + 30, 56, w / 2 - 76, h - 112);
   });
   panelTex.wrapS = panelTex.wrapT = T.RepeatWrapping;
-  const wallMat = std('#ffffff', { map: wallTex, roughness: 0.85 });
+  const wallMat = std('#ffffff', { map: wallTex, roughness: 0.85, vertexColors: true });
   const panelMat = std('#ffffff', { map: panelTex, roughness: 0.6 });
+  // تدرّج ناعم على الجدار: أغمق تحت (وردي ترابي) وأفتح فوق (بلاش)
+  const wallShade = geo => { const pa = geo.attributes.position, c = new Float32Array(pa.count * 3), lo = new T.Color('#d8a8c0'), hi = new T.Color('#fff4f8'), k = new T.Color();
+    for (let i = 0; i < pa.count; i++) { const v = (pa.getY(i) + HALL.h / 2) / HALL.h; k.lerpColors(lo, hi, Math.pow(v, .8)); c.set([k.r, k.g, k.b], i * 3); }
+    geo.setAttribute('color', new T.BufferAttribute(c, 3)); return geo; };
   const WALLS = [
     { k: 'N', len: HALL.w, gaps: [] },
     { k: 'S', len: HALL.w, gaps: [[0, 9]] },
@@ -183,7 +189,7 @@ export function mountHall(el, opts = {}) {
   const goldTrim = [], whiteTrim = [];
   for (const wd of WALLS) {
     const p = onWall(wd.k, 0, HALL.h / 2, 0);
-    const wall = mesh(scaleUV(new T.PlaneGeometry(wd.len, HALL.h), wd.len / 4, HALL.h / 4), wallMat, p.x, p.y, p.z); wall.rotation.y = p.ry; wall.receiveShadow = true;
+    const wall = mesh(wallShade(scaleUV(new T.PlaneGeometry(wd.len, HALL.h, 1, 8), wd.len / 4, HALL.h / 4)), wallMat, p.x, p.y, p.z); wall.rotation.y = p.ry; wall.receiveShadow = true;
     const q = onWall(wd.k, 0, 1.5, 0.03);
     const pan = mesh(scaleUV(new T.PlaneGeometry(wd.len, 3), wd.len / 4, 1), panelMat, q.x, q.y, q.z); pan.rotation.y = q.ry; pan.receiveShadow = true;
     // الحليات تنقطع عند الأبواب
@@ -207,17 +213,18 @@ export function mountHall(el, opts = {}) {
 
   // ---------- السقف + الأعمدة ----------
   const ceilTex = tex(512, 512, (g, w) => {
-    g.fillStyle = '#f7e1ea'; g.fillRect(0, 0, w, w);
+    g.fillStyle = '#f1d8e3'; g.fillRect(0, 0, w, w);
     const gr = g.createRadialGradient(w / 2, w / 2, 20, w / 2, w / 2, w * .45); gr.addColorStop(0, '#fff8fb'); gr.addColorStop(1, '#f6dce7');
     g.fillStyle = gr; g.fillRect(40, 40, w - 80, w - 80);
-    g.strokeStyle = '#e3c08f'; g.lineWidth = 6; g.strokeRect(40, 40, w - 80, w - 80);
+    g.strokeStyle = 'rgba(220,186,140,.8)'; g.lineWidth = 4; g.strokeRect(40, 40, w - 80, w - 80);
     g.strokeStyle = '#efd3df'; g.lineWidth = 14; g.strokeRect(14, 14, w - 28, w - 28);
   }, [HALL.w / 8, HALL.l / 8]);
-  const ceil = mesh(new T.PlaneGeometry(HALL.w, HALL.l), basic({ map: ceilTex, color: '#e9cfda' }), 0, HALL.h, 0); ceil.rotation.x = Math.PI / 2;
+  const ceilMat = basic({ map: ceilTex, color: '#dcbccc' });
+  const ceil = mesh(new T.PlaneGeometry(HALL.w, HALL.l), ceilMat, 0, HALL.h, 0); ceil.rotation.x = Math.PI / 2;
 
   const PILLAR_Z = [-42, -30, -18, -6, 6, 18, 30, 42];
   const pil = PILLAR_Z.flatMap(z => [-1, 1].map(sd => ({ x: sd * (HX - .75), z })));
-  instanced(new T.CylinderGeometry(.5, .56, 14, 16), std('#fff3f7', { roughness: 0.35, flatShading: true }), pil.map(p => ({ ...p, y: 7.8 })), { shadow: true });
+  instanced(new T.CylinderGeometry(.5, .56, 14, 28), std('#fbeef3', { roughness: 0.35 }), pil.map(p => ({ ...p, y: 7.8 })), { shadow: true });
   instanced(new T.BoxGeometry(1.5, .8, 1.5), roseGold, pil.map(p => ({ ...p, y: .4 })));
   instanced(new T.BoxGeometry(1.5, .6, 1.5), roseGold, pil.map(p => ({ ...p, y: 15.0 })));
   instanced(new T.TorusGeometry(.6, .08, 8, 20), gold, pil.flatMap(p => [{ ...p, y: 1.0, rx: Math.PI / 2 }, { ...p, y: 14.5, rx: Math.PI / 2 }]));
@@ -232,8 +239,9 @@ export function mountHall(el, opts = {}) {
     g.strokeStyle = '#fff8fb'; g.lineWidth = 7;
     g.beginPath(); g.moveTo(w / 2, 0); g.lineTo(w / 2, h); for (let y = h * .28; y < h; y += h * .18) { g.moveTo(0, y); g.lineTo(w, y); } g.stroke();
   });
+  const winMat = basic({ map: winTex, color: '#ffeaf2' });
   const winList = WIN_Z.flatMap(z => ['W', 'E'].map(k => onWall(k, z, 4.4, .06)));
-  instanced(normUV(new T.ShapeGeometry(arch(2.2, 5.8, 2.2), 24)), basic({ map: winTex, color: '#ffeaf2' }), winList);
+  instanced(normUV(new T.ShapeGeometry(arch(2.2, 5.8, 2.2), 24)), winMat, winList);
   instanced(new T.ExtrudeGeometry(archFrame(2.6, 2.2, 5.8, 2.6, 2.2), { depth: .2, bevelEnabled: false, curveSegments: 24 }), gold, WIN_Z.flatMap(z => ['W', 'E'].map(k => onWall(k, z, 4.4, .05))));
   instanced(new T.BoxGeometry(5.6, .25, .5), std('#fffafc'), WIN_Z.flatMap(z => ['W', 'E'].map(k => onWall(k, z, 4.3, .25))));
   // بقع ضوء النوافذ على الأرض
@@ -261,7 +269,7 @@ export function mountHall(el, opts = {}) {
   const haloMat = new T.SpriteMaterial({ map: radial('rgba(255,255,255,.9)', 'rgba(255,220,235,.35)'), color: '#ffd2e5', transparent: true, opacity: .75, blending: T.AdditiveBlending, depthWrite: false });
   const chLights = CH_Z.map(z => {
     const s = new T.Sprite(haloMat); s.position.set(0, chY - .2, z); s.scale.setScalar(9); scene.add(s);
-    const l = new T.PointLight('#ffd3e4', 240, 46, 2); l.position.set(0, chY - .6, z); scene.add(l); return l;
+    const l = new T.PointLight('#ffd3e4', 200, 46, 2); l.position.set(0, chY - .6, z); scene.add(l); return l;
   });
 
   // ---------- سلاسل الإضاءة المعلّقة + البوم بوم ----------
@@ -285,7 +293,7 @@ export function mountHall(el, opts = {}) {
       const sd = i % 2 ? 1 : -1, x = sd * (7 + rand() * 16), z = -28 + rand() * 60, s = .45 + rand() * .45, y = 9.6 + rand() * 4;
       poms.push({ x, y, z, s, ry: rand() * 6, c: pick(PASTEL) }); strings.push(x, y + s, z, x, HALL.h, z);
     }
-    instanced(new T.IcosahedronGeometry(1, 1), std('#ffffff', { roughness: .9, flatShading: true }), poms);
+    instanced(new T.IcosahedronGeometry(1, 4), std('#ffffff', { roughness: .85 }), poms);
     const sg = new T.BufferGeometry(); sg.setAttribute('position', new T.Float32BufferAttribute(strings, 3));
     scene.add(new T.LineSegments(sg, new T.LineBasicMaterial({ color: '#f3cfdc' })));
   }
@@ -301,8 +309,8 @@ export function mountHall(el, opts = {}) {
 
   // خلفية المسرح: قوس ترتر وردي بإطار ذهبي
   const sequin = tex(512, 512, (g, w) => {
-    g.fillStyle = '#e384aa'; g.fillRect(0, 0, w, w);
-    for (let y = 0; y < w; y += 14) for (let x = (y / 14 % 2) * 7; x < w; x += 14) { const l = 62 + rand() * 24; g.fillStyle = `hsl(${330 + rand() * 18},${70 + rand() * 20}%,${l}%)`; g.beginPath(); g.arc(x, y, 6.4, 0, 7); g.fill(); }
+    g.fillStyle = '#d8789f'; g.fillRect(0, 0, w, w);
+    for (let y = 0; y < w; y += 14) for (let x = (y / 14 % 2) * 7; x < w; x += 14) { const l = 62 + rand() * 24; g.fillStyle = `hsl(${325 + rand() * 20},${48 + rand() * 18}%,${l}%)`; g.beginPath(); g.arc(x, y, 6.4, 0, 7); g.fill(); }
   });
   sequin.wrapS = sequin.wrapT = T.RepeatWrapping;
   const bd = mesh(normUV(new T.ShapeGeometry(arch(13, 8, 6), 40), 3, 3), std('#ffffff', { map: sequin, metalness: .45, roughness: .35 }), 0, STAGE.h, -HZ + .15);
@@ -329,11 +337,11 @@ export function mountHall(el, opts = {}) {
     g.fillStyle = gr; g.fillText('عيد ميلاد سعيد', w / 2, h * .52, w - 120);
     g.fillStyle = '#fff3c4'; for (let i = 0; i < 26; i++) { const x = rand() * w, y = rand() * h, s = 4 + rand() * 9; g.beginPath(); g.moveTo(x, y - s * 2); g.lineTo(x + s * .5, y); g.lineTo(x, y + s * 2); g.lineTo(x - s * .5, y); g.fill(); g.beginPath(); g.moveTo(x - s * 2, y); g.lineTo(x, y + s * .5); g.lineTo(x + s * 2, y); g.lineTo(x, y - s * .5); g.fill(); }
   });
-  const sign = mesh(new T.PlaneGeometry(22, 6), basic({ map: signTex, transparent: true, toneMapped: false, depthWrite: false }), 0, STAGE.h + 10.4, -HZ + .5);
+  const sign = mesh(new T.PlaneGeometry(22, 6), basic({ map: signTex, transparent: true, toneMapped: false, depthWrite: false, fog: false }), 0, STAGE.h + 10.4, -HZ + .5);
   sign.renderOrder = 2;
   const nameCanvas = document.createElement('canvas'); nameCanvas.width = 2048; nameCanvas.height = 384;
   const nameTex = new T.CanvasTexture(nameCanvas); nameTex.colorSpace = T.SRGBColorSpace;
-  const namePlane = mesh(new T.PlaneGeometry(16, 3), basic({ map: nameTex, transparent: true, toneMapped: false, depthWrite: false }), 0, STAGE.h + 7.3, -HZ + .5);
+  const namePlane = mesh(new T.PlaneGeometry(16, 3), basic({ map: nameTex, transparent: true, toneMapped: false, depthWrite: false, fog: false }), 0, STAGE.h + 7.3, -HZ + .5);
   namePlane.renderOrder = 2;
   function setName(name) {
     const g = nameCanvas.getContext('2d'), w = nameCanvas.width, h = nameCanvas.height;
@@ -360,7 +368,7 @@ export function mountHall(el, opts = {}) {
   // أعمدة بالونات عند أبواب الأقسام والمدخل
   for (const s of SECTIONS) for (let y = 0; y <= 8; y += .8) for (const d of [-1, 1]) { const p = onWall(s.side < 0 ? 'W' : 'E', s.z + d * 3.6, y + .4, .7); cluster(p.x, p.y, p.z, 3, 1, 'x'); }
   for (let y = 0; y <= 9; y += .8) for (const d of [-1, 1]) cluster(d * 4.8, y + .4, HZ - 1.4, 3, 1.1);
-  const balloonGeo = new T.SphereGeometry(1, 20, 14);
+  const balloonGeo = new T.SphereGeometry(1, 28, 20);
   matte.forEach(b => { b.c = pick(PASTEL); }); chrome.forEach(b => { b.c = pick(CHROME); });
   instanced(balloonGeo, std('#ffffff', { roughness: .32, metalness: .05 }), matte, { shadow: true });
   instanced(balloonGeo, std('#ffffff', { roughness: .12, metalness: .9, envMapIntensity: 1.4 }), chrome, { cast: true });
@@ -388,7 +396,7 @@ export function mountHall(el, opts = {}) {
     ty += hh;
   });
   const pearlIM = instanced(new T.SphereGeometry(.07, 8, 6), std('#fffaf2', { roughness: .15, metalness: .2 }), pearls); cake.add(pearlIM);
-  const roseIM = instanced(new T.IcosahedronGeometry(1, 1), std('#ffffff', { roughness: .7, flatShading: true }), roses); cake.add(roseIM);
+  const roseIM = instanced(new T.IcosahedronGeometry(1, 1), std('#ffffff', { roughness: .6 }), roses); cake.add(roseIM);
   // تاج صغير + شموع
   mesh(new T.CylinderGeometry(.34, .3, .26, 20, 1, true), std('#f2cf8e', { metalness: .9, roughness: .2, side: T.DoubleSide }), 0, ty + .13, 0, false, cake);
   const cones = []; for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; cones.push({ x: Math.cos(a) * .32, y: ty + .36, z: Math.sin(a) * .32 }); }
@@ -438,16 +446,16 @@ export function mountHall(el, opts = {}) {
       plates.push({ x: t.x + ca * 1.3, y: .83, z: t.z + sa * 1.3 });
     }
     vases.push({ x: t.x, y: 1.06, z: t.z });
-    flowers.push({ x: t.x, y: 1.55, z: t.z, s: .5, c: pick(['#f9a8d4', '#fbcfe8', '#f472b6', '#ffe4ef']) });
+    flowers.push({ x: t.x, y: 1.55, z: t.z, s: .5, c: pick(['#f4a3c0', '#f8c4d6', '#e98bb0', '#e8c8f0']) });
   }
-  instanced(new T.CylinderGeometry(1.75, 1.98, .8, 32), std('#f3abc6', { roughness: .8 }), TABLES.map(t => ({ ...t, y: .4 })), { shadow: true });
+  instanced(new T.CylinderGeometry(1.75, 1.98, .8, 32), std('#e3a1b9', { roughness: .85 }), TABLES.map(t => ({ ...t, y: .4 })), { shadow: true });
   instanced(new T.CylinderGeometry(1.8, 1.8, .05, 32), std('#fffafc', { roughness: .7 }), TABLES.map(t => ({ ...t, y: .81 })), { receive: true });
   instanced(new T.CylinderGeometry(.24, .24, .02, 20), std('#ffffff', { roughness: .2, metalness: .1 }), plates);
   instanced(new T.CylinderGeometry(.12, .2, .5, 12), gold, vases);
-  instanced(new T.IcosahedronGeometry(1, 2), std('#ffffff', { roughness: .8, flatShading: true }), flowers, { cast: true });
-  instanced(unitBox, std('#fffafc', { roughness: .75 }), seat, { shadow: true });
-  instanced(unitBox, std('#fffafc', { roughness: .75 }), back, { shadow: true });
-  instanced(unitBox, std('#f6a3c2', { roughness: .5 }), sash);
+  instanced(new T.IcosahedronGeometry(1, 4), std('#ffffff', { roughness: .75 }), flowers, { cast: true });
+  instanced(unitBox, std('#fbf1ee', { roughness: .75 }), seat, { shadow: true });
+  instanced(unitBox, std('#fbf1ee', { roughness: .75 }), back, { shadow: true });
+  instanced(unitBox, std('#c97597', { roughness: .45, metalness: .1 }), sash);
 
   // بالونات الطاولات (تتمايل) + خيوطها
   const tb = [];
@@ -479,7 +487,7 @@ export function mountHall(el, opts = {}) {
     const p = onWall('S', -x, 3.9, .24);
     mesh(new T.PlaneGeometry(10, 7.4), std('#ffffff', { map: roseWall, roughness: .85 }), p.x, p.y, p.z).rotation.y = p.ry;
     const f = onWall('S', -x, 3.9, .1); const fr = mesh(new T.BoxGeometry(10.5, 7.9, .2), gold, f.x, f.y, f.z); fr.rotation.y = f.ry;
-    const q = onWall('S', -x, 4.8, .4); const n = mesh(new T.PlaneGeometry(9.6, 2.0), basic({ map: neon(txt, '700 170px "Aref Ruqaa", serif'), transparent: true, toneMapped: false, depthWrite: false }), q.x, q.y, q.z); n.rotation.y = q.ry;
+    const q = onWall('S', -x, 4.8, .4); const n = mesh(new T.PlaneGeometry(9.6, 2.0), basic({ map: neon(txt, '700 170px "Aref Ruqaa", serif'), transparent: true, toneMapped: false, depthWrite: false, fog: false }), q.x, q.y, q.z); n.rotation.y = q.ry;
   });
 
   // ---------- المدخل ----------
@@ -494,7 +502,7 @@ export function mountHall(el, opts = {}) {
     const f = onWall('S', 0, 0, .05); const fr = mesh(new T.ExtrudeGeometry(archFrame(3.4, 2.7, 6.6, 1.6, 1.2), { depth: .3, bevelEnabled: false, curveSegments: 24 }), gold, f.x, f.y, f.z); fr.rotation.y = f.ry;
     const top = onWall('S', 0, 7.0, .1); const tp = mesh(normUV(new T.ShapeGeometry((() => { const s = new T.Shape(); s.moveTo(-2.7, 0); s.lineTo(2.7, 0); s.absellipse(0, 0, 2.7, 1.2, 0, Math.PI, false); return s; })(), 24)), basic({ map: winTex, color: '#ffeaf2' }), top.x, top.y - .4, top.z); tp.rotation.y = top.ry;
     const sg = onWall('S', 0, 9.9, .15);
-    const st = mesh(new T.PlaneGeometry(11, 2.3), basic({ map: neon('أهلاً بكم في الحفلة', '700 150px "Aref Ruqaa", serif'), transparent: true, toneMapped: false, depthWrite: false }), sg.x, sg.y, sg.z); st.rotation.y = sg.ry;
+    const st = mesh(new T.PlaneGeometry(11, 2.3), basic({ map: neon('أهلاً بكم في الحفلة', '700 150px "Aref Ruqaa", serif'), transparent: true, toneMapped: false, depthWrite: false, fog: false }), sg.x, sg.y, sg.z); st.rotation.y = sg.ry;
   }
 
   // ---------- أبواب الأقسام ----------
@@ -509,7 +517,7 @@ export function mountHall(el, opts = {}) {
     });
     portalTex.wrapS = portalTex.wrapT = T.RepeatWrapping;
     const pp = onWall(k, s.z, 0, .1);
-    const pm = mesh(normUV(new T.ShapeGeometry(arch(2.6, 5.4, 2.6), 24)), basic({ map: portalTex, toneMapped: false }), pp.x, pp.y, pp.z); pm.rotation.y = pp.ry;
+    const pm = mesh(normUV(new T.ShapeGeometry(arch(2.6, 5.4, 2.6), 24)), basic({ map: portalTex, toneMapped: false, fog: false }), pp.x, pp.y, pp.z); pm.rotation.y = pp.ry;
     const fp = onWall(k, s.z, 0, .05);
     const fm = mesh(new T.ExtrudeGeometry(archFrame(3.15, 2.6, 5.4, 3.15, 2.6), { depth: .35, bevelEnabled: false, curveSegments: 24 }), gold, fp.x, fp.y, fp.z); fm.rotation.y = fp.ry;
     const lt = tex(1024, 280, (g, w, h) => {
@@ -519,7 +527,7 @@ export function mountHall(el, opts = {}) {
       g.fillStyle = '#d08cab'; g.font = '700 50px ' + FONT_AR; g.fillText('قريباً', w / 2, h * .76);
     });
     const lp = onWall(k, s.z, 10.0, .2);
-    const lm = mesh(new T.PlaneGeometry(6.4, 1.75), basic({ map: lt, transparent: true }), lp.x, lp.y, lp.z); lm.rotation.y = lp.ry;
+    const lm = mesh(new T.PlaneGeometry(6.4, 1.75), basic({ map: lt, transparent: true, fog: false }), lp.x, lp.y, lp.z); lm.rotation.y = lp.ry;
     const ring = mesh(new T.RingGeometry(2.1, 2.7, 40), basic({ color: s.c2, transparent: true, opacity: .35, blending: T.AdditiveBlending, depthWrite: false }), s.side * (HX - 3.4), .05, s.z);
     ring.rotation.x = -Math.PI / 2;
     portals.push({ s, tex: portalTex, ring, x: s.side * (HX - 1.5) });
@@ -535,6 +543,131 @@ export function mountHall(el, opts = {}) {
   confGeo.setAttribute('position', new T.BufferAttribute(cPos, 3)); confGeo.setAttribute('color', new T.BufferAttribute(cCol, 3));
   const confMat = new T.PointsMaterial({ size: .16, vertexColors: true, map: radial('rgba(255,255,255,1)', 'rgba(255,255,255,.9)'), transparent: true, depthWrite: false, alphaTest: .05 });
   const confetti = new T.Points(confGeo, confMat); confetti.frustumCulled = false; scene.add(confetti);
+
+  // ---------- إضاءات المزاج ووقت الحفل ----------
+  // party = 0 (استقبال: إضاءة دافئة خافتة) → 1 (وقت الحفل: القاعة تغمق،
+  // ليزر، كرة ديسكو، بقع ألوان تتحرك على الأرض). الانتقال تدريجي بالـ tick.
+  const ADD = { transparent: true, depthWrite: false, blending: T.AdditiveBlending, toneMapped: false, fog: false };
+  // إضاءة جدارية من تحت لفوق (Uplights) — ألوان ثابتة ناعمة بالاستقبال، وتتلوّن بالحفل
+  const upTex = tex(128, 512, (g, w, h) => {
+    g.save(); g.translate(w / 2, h); g.scale(1, 2 * h / w);
+    const gr = g.createRadialGradient(0, 0, 0, 0, 0, w / 2); gr.addColorStop(0, 'rgba(255,255,255,.95)'); gr.addColorStop(.4, 'rgba(255,255,255,.4)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(-w / 2, -w / 2, w, w / 2); g.restore();
+  });
+  const upList = [
+    ...WIN_Z.flatMap(z => ['W', 'E'].map(k => onWall(k, z, 6, .14))),
+    ...[-27, -22, 22, 27].map(x => onWall('N', x, 6, .2)),
+    ...[-26, -9, 9, 26].map(x => onWall('S', x, 6, .2)),
+  ].map((p, i) => ({ ...p, c: i % 2 ? '#c9a0ff' : '#ff8fc0' }));
+  const upMat = basic({ map: upTex, ...ADD, opacity: .45 });
+  const uplights = instanced(new T.PlaneGeometry(6, 12), upMat, upList);
+  const upBase = upList.map(p => new T.Color(p.c));
+
+  // بقع ألوان تتحرك على الأرض (بالحفل)
+  const SPOTS = 9;
+  const spotMat = basic({ map: radial('rgba(255,255,255,1)', 'rgba(255,255,255,.55)'), ...ADD, opacity: 0 });
+  const spots = instanced(new T.PlaneGeometry(1, 1), spotMat, Array.from({ length: SPOTS }, () => ({ x: 0, y: .06, z: 0, rx: -Math.PI / 2, s: 6, c: '#ff6fb5' })));
+  spots.frustumCulled = false;
+
+  // الليزر: باعثات على المسرح وفوق الخلفية وفي زوايا المدخل، كل باعث مروحة أشعة
+  const EMIT = [
+    { o: [-15.5, 1.6, STAGE.front + .2], yaw: .35, pitch: .16, n: 4 },
+    { o: [15.5, 1.6, STAGE.front + .2], yaw: -.35, pitch: .16, n: 4 },
+    { o: [-8, 14.6, -HZ + 1.2], yaw: .1, pitch: -.3, n: 3 },
+    { o: [0, 15.2, -HZ + 1.2], yaw: 0, pitch: -.24, n: 4 },
+    { o: [8, 14.6, -HZ + 1.2], yaw: -.1, pitch: -.3, n: 3 },
+    { o: [-29, 14, HZ - 2], yaw: Math.PI - .5, pitch: -.22, n: 3 },
+    { o: [29, 14, HZ - 2], yaw: Math.PI + .5, pitch: -.22, n: 3 },
+  ];
+  const BEAMS = [];
+  EMIT.forEach((e, ei) => { for (let i = 0; i < e.n; i++) BEAMS.push({ e, i, ph: ei * 1.3 + i * .4, o: new T.Vector3(...e.o) }); });
+  const beamGeo = new T.CylinderGeometry(1, 1, 1, 6, 1, true); beamGeo.translate(0, .5, 0);
+  const coreMat = basic({ ...ADD, opacity: 0 }), glowMat = basic({ ...ADD, opacity: 0 });
+  const beamInit = BEAMS.map(() => ({ x: 0, y: -50, z: 0, c: '#ff4fae' }));
+  const beamCore = instanced(beamGeo, coreMat, beamInit), beamGlow = instanced(beamGeo, glowMat, beamInit);
+  beamCore.frustumCulled = beamGlow.frustumCulled = false;
+  const dotPos = new Float32Array(BEAMS.length * 3), dotCol = new Float32Array(BEAMS.length * 3);
+  const dotGeo = new T.BufferGeometry(); dotGeo.setAttribute('position', new T.BufferAttribute(dotPos, 3)); dotGeo.setAttribute('color', new T.BufferAttribute(dotCol, 3));
+  const dotMat = new T.PointsMaterial({ map: radial(), size: .9, vertexColors: true, ...ADD, opacity: 0 });
+  const dots = new T.Points(dotGeo, dotMat); dots.frustumCulled = false; scene.add(dots);
+  for (const e of EMIT) { const b = mesh(new T.BoxGeometry(.5, .35, .6), std('#2b1830', { metalness: .6, roughness: .3 }), e.o[0], e.o[1], e.o[2]); b.rotation.y = e.yaw; }
+  const LASER_SETS = [['#ff3fa4', '#ff8ad0', '#ff3fa4'], ['#c45cff', '#ff4fae', '#9d7bff'], ['#ff5fc8', '#ffd1ec', '#ff5fc8'], ['#7fe3ff', '#ff6fc0', '#c99bff']];
+  // أقرب نقطة يصطدم فيها الشعاع بجدار/أرض/سقف القاعة
+  const hitT = (o, d) => {
+    let t = 200;
+    if (d.x) t = Math.min(t, ((d.x > 0 ? HX : -HX) - o.x) / d.x);
+    if (d.y) t = Math.min(t, ((d.y > 0 ? HALL.h : 0) - o.y) / d.y);
+    if (d.z) t = Math.min(t, ((d.z > 0 ? HZ : -HZ) - o.z) / d.z);
+    return Math.max(.1, t);
+  };
+
+  // كرة ديسكو تنزل من السقف بالحفل + انعكاساتها على الجدران
+  const DISCO_Z = -5;
+  const disco = mesh(new T.IcosahedronGeometry(1.15, 3), std('#ffffff', { metalness: 1, roughness: .12, flatShading: true, envMapIntensity: 2.5 }), 0, HALL.h + 2, DISCO_Z);
+  const discoRod = mesh(new T.CylinderGeometry(.04, .04, 1, 6), gold, 0, HALL.h, DISCO_Z);
+  const discoHalo = new T.Sprite(new T.SpriteMaterial({ map: radial(), color: '#ffd6ef', ...ADD, opacity: 0 })); discoHalo.scale.setScalar(5); scene.add(discoHalo);
+  const REFL = 240, reflDir = [], reflPos = new Float32Array(REFL * 3);
+  for (let i = 0; i < REFL; i++) { const y = -1 + rand() * 1.25, a = rand() * Math.PI * 2, q = Math.sqrt(1 - y * y); reflDir.push([Math.cos(a) * q, y, Math.sin(a) * q]); }
+  const reflGeo = new T.BufferGeometry(); reflGeo.setAttribute('position', new T.BufferAttribute(reflPos, 3));
+  const reflMat = new T.PointsMaterial({ map: radial('rgba(255,255,255,1)', 'rgba(255,255,255,.6)'), color: '#ffe4f3', size: .45, ...ADD, opacity: 0 });
+  const refl = new T.Points(reflGeo, reflMat); refl.frustumCulled = false; scene.add(refl);
+
+  let party = 0, partyTarget = 0, envMats = null;
+  const CEIL_A = new T.Color('#dcbccc'), CEIL_B = new T.Color('#3b2342');
+  const FOG_A = new T.Color('#e7c0d2'), FOG_B = new T.Color('#24102a'), WIN_A = new T.Color('#ffeaf2'), WIN_B = new T.Color('#5d4373');
+  const lerp = (a, b, k) => a + (b - a) * k, col = new T.Color(), v3 = new T.Vector3(), UP = new T.Vector3(0, 1, 0);
+  function updateParty(dt, t) {
+    party += (partyTarget - party) * (1 - Math.exp(-dt * 1.8));
+    const k = party, on = k > .01;
+    // انعكاسات البيئة هي أكبر مصدر إنارة بالقاعة — نخفّضها بالحفل عشان تغمق فعلاً
+    if (!envMats) { envMats = []; scene.traverse(o => [].concat(o.material || []).forEach(m => { if (m.isMeshStandardMaterial && !envMats.some(e => e.m === m)) envMats.push({ m, b: m.envMapIntensity }); })); }
+    const envK = lerp(1, .09, k); for (const e of envMats) e.m.envMapIntensity = e.b * envK;
+    ceilMat.color.lerpColors(CEIL_A, CEIL_B, k);
+    hemi.intensity = lerp(.24, .035, k); sun.intensity = lerp(.6, .05, k); stageFill.intensity = lerp(.7, .35, k);
+    r.toneMappingExposure = lerp(.95, 1.0, k);
+    scene.fog.color.lerpColors(FOG_A, FOG_B, k); scene.background.copy(scene.fog.color);
+    scene.fog.near = lerp(90, 30, k); scene.fog.far = lerp(230, 150, k);
+    winMat.color.lerpColors(WIN_A, WIN_B, k); haloMat.opacity = lerp(.75, .3, k); poolMat.opacity = lerp(.4, .04, k);
+    upMat.opacity = lerp(.45, .95, k);
+    // ألوان الإضاءة الجدارية: ثابتة بالاستقبال، موجة وردي↔بنفسجي بالحفل
+    upBase.forEach((c0, i) => { col.setHSL(.86 + Math.sin(t * .9 + i * .7) * .09, .95, .62); col.lerpColors(c0, col, k); uplights.setColorAt(i, col); });
+    uplights.instanceColor.needsUpdate = true;
+    spots.visible = beamCore.visible = beamGlow.visible = dots.visible = refl.visible = discoHalo.visible = on;
+    disco.position.y = lerp(HALL.h + 2, 12.4, Math.min(1, k * 1.3)); disco.rotation.y = t * .5;
+    discoRod.scale.y = HALL.h - disco.position.y + .6; discoRod.position.y = (HALL.h + disco.position.y) / 2;
+    if (!on) return;
+    spotMat.opacity = .5 * k;
+    for (let i = 0; i < SPOTS; i++) {
+      setInst(spots, i, { x: Math.sin(t * .37 + i * 2.1) * 18, y: .06 + i * .002, z: -6 + Math.sin(t * .29 + i * 1.3) * 24, rx: -Math.PI / 2, s: 5 + Math.sin(t + i) });
+      col.setHSL(.8 + ((i * .07 + t * .03) % .22), .9, .6); spots.setColorAt(i, col);
+    }
+    spots.instanceMatrix.needsUpdate = true; spots.instanceColor.needsUpdate = true;
+    // الليزر يغيّر مجموعة ألوانه كل 6 ثواني ويتأرجح بأنماط مختلفة
+    const set = LASER_SETS[Math.floor(t / 6) % LASER_SETS.length], blink = (Math.floor(t * 2) % 8) === 7 ? .35 : 1;
+    coreMat.opacity = .9 * k * blink; glowMat.opacity = .16 * k * blink; dotMat.opacity = .9 * k * blink;
+    BEAMS.forEach((b, i) => {
+      const e = b.e, spread = e.n > 1 ? (b.i - (e.n - 1) / 2) * .22 : 0;
+      const yaw = e.yaw + spread + Math.sin(t * .8 + b.ph) * .45, pitch = e.pitch + Math.sin(t * .55 + b.ph * 2) * .14;
+      v3.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+      const len = hitT(b.o, v3);
+      dummy.position.copy(b.o); dummy.quaternion.setFromUnitVectors(UP, v3);
+      dummy.scale.set(.028, len, .028); dummy.updateMatrix(); beamCore.setMatrixAt(i, dummy.matrix);
+      dummy.scale.set(.09, len, .09); dummy.updateMatrix(); beamGlow.setMatrixAt(i, dummy.matrix);
+      col.set(set[i % set.length]); beamCore.setColorAt(i, col); beamGlow.setColorAt(i, col); dotCol.set([col.r, col.g, col.b], i * 3);
+      dotPos.set([b.o.x + v3.x * (len - .05), b.o.y + v3.y * (len - .05), b.o.z + v3.z * (len - .05)], i * 3);
+    });
+    for (const m of [beamCore, beamGlow]) { m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; }
+    dotGeo.attributes.position.needsUpdate = true; dotGeo.attributes.color.needsUpdate = true;
+    // انعكاسات كرة الديسكو: نقاط تدور على الجدران والأرض
+    const c0 = disco.position, ca = Math.cos(t * .5), sa = Math.sin(t * .5);
+    reflMat.opacity = .85 * k; discoHalo.material.opacity = .6 * k; discoHalo.position.copy(c0);
+    for (let i = 0; i < REFL; i++) {
+      const d = reflDir[i]; v3.set(d[0] * ca - d[2] * sa, d[1], d[0] * sa + d[2] * ca);
+      const L = hitT(c0, v3) - .06; reflPos.set([c0.x + v3.x * L, c0.y + v3.y * L, c0.z + v3.z * L], i * 3);
+    }
+    reflGeo.attributes.position.needsUpdate = true;
+  }
+  function setParty(onOff) { partyTarget = onOff ? 1 : 0; opts.onPartyChange && opts.onPartyChange(!!onOff); }
 
   // ---------- الكاميرا: جولة سينمائية أو تجوّل ----------
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -626,8 +759,9 @@ export function mountHall(el, opts = {}) {
     tableBalloons.instanceMatrix.needsUpdate = true; tbGeo.attributes.position.needsUpdate = true;
     heartsData.forEach((h, i) => setInst(hearts, i, { x: h.x, y: h.y + Math.sin(t * .8 + h.ph) * .25, z: h.z, s: h.s, ry: Math.sin(t * .5 + h.ph) * .5 }));
     hearts.instanceMatrix.needsUpdate = true;
-    crystalMat.emissiveIntensity = .5 + Math.sin(t * 2.2) * .12;
-    chLights.forEach((l, i) => { l.intensity = 240 + Math.sin(t * 1.7 + i) * 14; });
+    updateParty(dt, t);
+    crystalMat.emissiveIntensity = (.5 + Math.sin(t * 2.2) * .12) * (1 - party * .7);
+    chLights.forEach((l, i) => { l.intensity = (200 + Math.sin(t * 1.7 + i) * 12) * (1 - party * .85); });
     flameMat.size = .42 + Math.sin(t * 17) * .04 + Math.sin(t * 29) * .03;
     cakeGlow.intensity = 14 + Math.sin(t * 13) * 2;
     for (const p of portals) { p.tex.offset.y = -t * .04; p.ring.material.opacity = (near === p.s ? .75 : .3) + Math.sin(t * 2.4) * .1; }
@@ -649,5 +783,5 @@ export function mountHall(el, opts = {}) {
     r.dispose(); r.domElement.remove();
   }
 
-  return { stop, setName, setMode, get mode() { return mode; } };
+  return { stop, setName, setMode, setParty, get mode() { return mode; }, get party() { return partyTarget === 1; } };
 }
