@@ -179,6 +179,15 @@
         $('partyBtn').addEventListener('click', () => hall.setParty(!hall.party));
         $('tourBtn').addEventListener('click', () => hall.setMode(hall.mode === 'tour' ? 'walk' : 'tour'));
         if (code) await startParty(hall);
+        // اختبار بصري: play.html?cam=x,y,z,lx,ly,lz&curtain=0&doors=1&fw=1&party=1
+        const camQ = params.get('cam');
+        if (!code && camQ) {
+            const v = camQ.split(',').map(Number); hall.debugView(v.slice(0, 3), v.slice(3, 6));
+            if (params.has('curtain')) hall.setCurtain(+params.get('curtain'), true);
+            if (params.has('doors')) hall.setDoors(+params.get('doors'), true);
+            if (params.get('party') === '1') hall.setParty(true);
+            if (params.get('fw') === '1') hall.fireworks(30);
+        }
     } catch (err) {
         log('[birthday-party] 3D غير متاح', err);
         $('loader').classList.add('fail');
