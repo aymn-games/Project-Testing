@@ -5,6 +5,8 @@ var assert = require('node:assert/strict');
 var createRoomManager = require('./party-rooms').createRoomManager;
 
 // ساعة قابلة للتحكم عشان اختبارات السرعة والإغراق
+function toFree(mgr, code) { mgr.start(code); ['entrance', 'reveal', 'dance'].forEach(function (ph) { mgr.skip(code, ph); }); }
+
 function clockMgr(extra) {
     var t = { now: 1000000 };
     var mgr = createRoomManager(Object.assign({ now: function () { return t.now; } }, extra || {}));
@@ -101,15 +103,15 @@ test('resume keeps same id and n, wrong key refused', function () {
 });
 
 test('move clamps to hall bounds', function () {
-    var c = clockMgr(), room = c.mgr.createRoom({ girlName: 'سارة' });
+    var c = clockMgr(), room = c.mgr.createRoom({ girlName: 'سارة' }); toFree(c.mgr, room.code);
     var a = c.mgr.join(room.code, { name: 'ريم' });
     // نقرّب اللاعب من الزاوية بخطوات قانونية ثم نطلب أبعد من الحدود
-    for (var i = 0; i < 20; i++) { c.t.now += 1000; c.mgr.move(room.code, a.id, [31 * (i + 1) / 20, 47 - 94 * (i + 1) / 20, 0, 1]); }
+    for (var i = 0; i < 20; i++) { c.t.now += 1000; c.mgr.move(room.code, a.id, [31 * (i + 1) / 20, -20 + 67 * (i + 1) / 20, 0, 1]); }
     c.t.now += 1000;
-    c.mgr.move(room.code, a.id, [99, -99, 0, 0]);
+    c.mgr.move(room.code, a.id, [99, 99, 0, 0]);
     var p = c.mgr.fullState(room.code).find(function (d) { return d[0] === a.n; });
     assert.equal(p[1], 31);
-    assert.equal(p[2], -47);
+    assert.equal(p[2], 47);
 });
 
 test('move rejects teleport', function () {
@@ -124,7 +126,7 @@ test('move rejects teleport', function () {
 });
 
 test('move ignores flood', function () {
-    var c = clockMgr(), room = c.mgr.createRoom({ girlName: 'سارة' });
+    var c = clockMgr(), room = c.mgr.createRoom({ girlName: 'سارة' }); toFree(c.mgr, room.code);
     var a = c.mgr.join(room.code, { name: 'ريم' });
     var s = c.mgr.fullState(room.code)[0];
     c.t.now += 200;
@@ -143,7 +145,7 @@ test('move rejects non-numbers', function () {
 });
 
 test('takeDelta returns only changed players once', function () {
-    var c = clockMgr(), room = c.mgr.createRoom({ girlName: 'سارة' });
+    var c = clockMgr(), room = c.mgr.createRoom({ girlName: 'سارة' }); toFree(c.mgr, room.code);
     var a = c.mgr.join(room.code, { name: 'ريم' });
     c.mgr.join(room.code, { name: 'هيا' });
     c.mgr.takeDelta(room.code); // الدخول نفسه تغيير — نصفّره
@@ -184,13 +186,13 @@ test('girl can take over from another device when first is offline', function ()
 });
 
 test('deltaFor: near players every tick, far players only on far ticks, never self', function () {
-    var c = clockMgr(), room = c.mgr.createRoom({ girlName: 'سارة' });
+    var c = clockMgr(), room = c.mgr.createRoom({ girlName: 'سارة' }); toFree(c.mgr, room.code);
     var A = c.mgr.join(room.code, { name: 'أ' }), B = c.mgr.join(room.code, { name: 'ب' }), C = c.mgr.join(room.code, { name: 'ج' });
     var st = function (n) { return c.mgr.fullState(room.code).find(function (r) { return r[0] === n; }); };
     var a = st(A.n);
     c.t.now += 5000; c.mgr.move(room.code, B.id, [a[1] + 1, a[2], 0, 1]);
     // خطوات قانونية (≤ 28م لكل حركة) لأن أماكن البداية عشوائية
-    [10, 20, 30, 40, 45].forEach(function (d) { c.t.now += 5000; assert.equal(c.mgr.move(room.code, C.id, [a[1], a[2] - d, 0, 1]).ok, true); });
+    [10, 20, 30, 40, 45].forEach(function (d) { c.t.now += 5000; assert.equal(c.mgr.move(room.code, C.id, [a[1], a[2] + d, 0, 1]).ok, true); });
     var seen = new Map();
     var d1 = c.mgr.deltaFor(room.code, A.id, seen, false).map(function (r) { return r[0]; });
     assert.ok(d1.indexOf(B.n) >= 0, 'near B sent');
@@ -226,4 +228,130 @@ test('full room reuses the slot of a guest offline for over 2 minutes', function
     assert.equal(r.ok, true);
     assert.equal(c.mgr.roster(room.code).players.length, 100);
     assert.equal(c.mgr.resume(room.code, first.id, first.key).ok, false);
+});
+
+// ================= الدفعة 2: المراحل والمناطق =================
+function showRoom(extra) {
+    var c = clockMgr(), room = c.mgr.createRoom(Object.assign({ girlName: 'سارة' }, extra || {}));
+    return { c: c, mgr: c.mgr, code: room.code, room: room };
+}
+function rowOf(mgr, code, n, viewer) { return mgr.fullState(code, viewer).find(function (r) { return r[0] === n; }); }
+
+test('new room starts in lobby with dance duration clamped', function () {
+    var a = showRoom({ danceSec: 5 }), b = showRoom({ danceSec: 99999 }), d = showRoom();
+    assert.equal(a.mgr.phaseOf(a.code).p, 'lobby');
+    assert.equal(a.mgr.getRoom(a.code).danceSec, 60);
+    assert.equal(b.mgr.getRoom(b.code).danceSec, 900);
+    assert.equal(d.mgr.getRoom(d.code).danceSec, 300);
+});
+
+test('lobby spawns guests in lounge and girl in her room', function () {
+    var s = showRoom();
+    var g = s.mgr.join(s.code, { name: 'ريم' }), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
+    var rg = rowOf(s.mgr, s.code, g.n, null), rr = rowOf(s.mgr, s.code, girl.n, null);
+    assert.ok(rg[1] >= -15 && rg[1] <= 15 && rg[2] >= 50.5 && rg[2] <= 69, 'guest in lounge ' + rg);
+    assert.ok(rr[1] >= -9 && rr[1] <= 9 && rr[2] >= -67 && rr[2] <= -50.5, 'girl in her room ' + rr);
+});
+
+test('guest cannot leave the lounge during lobby', function () {
+    var s = showRoom(), g = s.mgr.join(s.code, { name: 'ريم' });
+    var r = rowOf(s.mgr, s.code, g.n, null);
+    s.c.t.now += 2000; s.mgr.move(s.code, g.id, [r[1], r[2] - 10, 0, 1]);
+    assert.equal(rowOf(s.mgr, s.code, g.n, null)[2], 50.5);
+});
+
+test('start moves to entrance with walk targets for everyone', function () {
+    var s = showRoom(), gs = [];
+    for (var i = 0; i < 5; i++) gs.push(s.mgr.join(s.code, { name: 'ض' + i }));
+    var girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
+    assert.equal(s.mgr.start(s.code).ok, true);
+    var ph = s.mgr.phaseOf(s.code);
+    assert.equal(ph.p, 'entrance');
+    assert.equal(ph.until - ph.at, 40000);
+    var seen = {};
+    gs.forEach(function (g) {
+        var t = ph.walk[g.n];
+        assert.ok(t[0] >= -14 && t[0] <= 14 && t[1] >= -30.5 && t[1] <= -18, 'grid ' + t);
+        assert.ok(!seen[t.join()], 'unique'); seen[t.join()] = 1;
+    });
+    assert.deepEqual(ph.walk[girl.n], [0, -36.5]);
+});
+
+test('double start and stale skip are refused', function () {
+    var s = showRoom();
+    assert.equal(s.mgr.start(s.code).ok, true);
+    assert.equal(s.mgr.start(s.code).err, 'phase');
+    assert.equal(s.mgr.skip(s.code, 'lobby').err, 'phase');
+    assert.equal(s.mgr.skip(s.code, 'entrance').ok, true);
+    assert.equal(s.mgr.phaseOf(s.code).p, 'reveal');
+});
+
+test('mv is ignored during entrance and reveal', function () {
+    var s = showRoom(), g = s.mgr.join(s.code, { name: 'ريم' });
+    s.mgr.start(s.code);
+    s.c.t.now += 2000;
+    assert.equal(s.mgr.move(s.code, g.id, [0, 50.5, 0, 1]).err, 'auto');
+    s.mgr.skip(s.code, 'entrance'); s.c.t.now += 2000;
+    assert.equal(s.mgr.move(s.code, g.id, [0, 50.5, 0, 1]).err, 'auto');
+});
+
+test('tick advances entrance→reveal→dance→free on time and places everyone', function () {
+    var s = showRoom({ danceSec: 60 }), g = s.mgr.join(s.code, { name: 'ريم' });
+    s.mgr.start(s.code);
+    var target = s.mgr.phaseOf(s.code).walk[g.n];
+    s.c.t.now += 39000; assert.equal(s.mgr.tick(s.code).changed, false);
+    s.c.t.now += 1000; assert.equal(s.mgr.tick(s.code).changed, true);
+    assert.equal(s.mgr.phaseOf(s.code).p, 'reveal');
+    var r = rowOf(s.mgr, s.code, g.n, null);
+    assert.equal(r[1], target[0]); assert.equal(r[2], target[1]);
+    assert.ok(Math.abs(r[3] - Math.PI) < .01);
+    s.c.t.now += 12000; s.mgr.tick(s.code); assert.equal(s.mgr.phaseOf(s.code).p, 'dance');
+    s.c.t.now += 60000; s.mgr.tick(s.code); assert.equal(s.mgr.phaseOf(s.code).p, 'free');
+    s.c.t.now += 999999; assert.equal(s.mgr.tick(s.code).changed, false);
+});
+
+test('guest cannot climb the stage during dance; girl can', function () {
+    var s = showRoom(), g = s.mgr.join(s.code, { name: 'ريم' }), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
+    s.mgr.start(s.code); s.mgr.skip(s.code, 'entrance'); s.mgr.skip(s.code, 'reveal');
+    var r = rowOf(s.mgr, s.code, g.n, null);
+    s.c.t.now += 2000; s.mgr.move(s.code, g.id, [r[1], -36, 0, 1]);
+    assert.equal(rowOf(s.mgr, s.code, g.n, null)[2], -31);
+    s.c.t.now += 2000; assert.equal(s.mgr.move(s.code, girl.id, [3, -36.5, 0, 1]).ok, true);
+    assert.equal(rowOf(s.mgr, s.code, girl.n, null)[1], 3);
+    s.c.t.now += 2000; s.mgr.move(s.code, girl.id, [3, -20, 0, 1]);
+    assert.equal(rowOf(s.mgr, s.code, girl.n, null)[2], -20, 'girl can come down');
+});
+
+test('girl row hidden from guests before reveal, visible after', function () {
+    var s = showRoom(), g = s.mgr.join(s.code, { name: 'ريم' }), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
+    var has = function (rows) { return rows.some(function (r) { return r[0] === girl.n; }); };
+    assert.equal(has(s.mgr.fullState(s.code, g.id)), false);
+    assert.equal(has(s.mgr.deltaFor(s.code, g.id, new Map(), true)), false);
+    assert.equal(has(s.mgr.fullState(s.code, null)), true, 'display sees her');
+    assert.equal(has(s.mgr.fullState(s.code, girl.id)), true, 'she sees herself');
+    s.mgr.start(s.code);
+    assert.equal(has(s.mgr.fullState(s.code, g.id)), false, 'still hidden during entrance');
+    s.mgr.skip(s.code, 'entrance');
+    assert.equal(has(s.mgr.fullState(s.code, g.id)), true);
+    assert.equal(has(s.mgr.deltaFor(s.code, g.id, new Map(), true)), true);
+});
+
+test('late joiner during entrance gets a target and appears there', function () {
+    var s = showRoom(); s.mgr.join(s.code, { name: 'ريم' });
+    s.mgr.start(s.code);
+    var late = s.mgr.join(s.code, { name: 'متأخر' }), t = s.mgr.phaseOf(s.code).walk[late.n];
+    assert.ok(t, 'has target');
+    var r = rowOf(s.mgr, s.code, late.n, null);
+    assert.equal(r[1], t[0]); assert.equal(r[2], t[1]);
+    s.mgr.skip(s.code, 'entrance'); s.mgr.skip(s.code, 'reveal');
+    var late2 = s.mgr.join(s.code, { name: 'متأخر٢' }), r2 = rowOf(s.mgr, s.code, late2.n, null);
+    assert.ok(r2[2] >= -24 && r2[2] <= -14, 'dance spawn near stage ' + r2);
+});
+
+test('emote values above 4 become 0', function () {
+    var s = showRoom(), g = s.mgr.join(s.code, { name: 'ريم' }), r = rowOf(s.mgr, s.code, g.n, null);
+    s.c.t.now += 2000; s.mgr.move(s.code, g.id, [r[1], r[2], 0, 4]);
+    assert.equal(rowOf(s.mgr, s.code, g.n, null)[4], 4);
+    s.c.t.now += 2000; s.mgr.move(s.code, g.id, [r[1], r[2], 0, 9]);
+    assert.equal(rowOf(s.mgr, s.code, g.n, null)[4], 0);
 });

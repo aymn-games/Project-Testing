@@ -74,9 +74,10 @@ test('movement reaches other client within 300ms', async function () {
     var h = await client(port); h.send({ t: 'host', girlName: 'سارة', key: 'test-key' });
     var code = (await h.wait(function (x) { return x.t === 'hosted'; })).code;
     var a = await client(port), b = await client(port);
-    a.send({ t: 'join', code: code, name: 'أ' }); b.send({ t: 'join', code: code, name: 'ب' });
+    // b شاشة عرض (تستقبل كل حركة كل دورة) — قاعدة القريب/البعيد لها اختبارها في party-rooms
+    a.send({ t: 'join', code: code, name: 'أ' }); b.send({ t: 'peek', code: code });
     var wa = await a.wait(function (x) { return x.t === 'welcome'; });
-    await b.wait(function (x) { return x.t === 'welcome'; });
+    await b.wait(function (x) { return x.t === 'all'; });
     var flat = (await a.wait(function (x) { return x.t === 'all'; })).d, start = null;
     for (var i = 0; i < flat.length; i += 5) if (flat[i] === wa.n) start = [flat[i], flat[i + 1] / 100, flat[i + 2] / 100];
     await new Promise(function (r) { setTimeout(r, 200); });
