@@ -226,3 +226,65 @@ test('roster broadcasts are coalesced when many people arrive at once', async fu
     assert.equal(rooms[rooms.length - 1].room.players.length, 20);
     cs.forEach(function (c) { c.close(); }); obs.close(); r.h.close(); srv.close();
 });
+
+// ================= الدفعة 2: المراحل =================
+function walkHas(d, n) { for (var i = 0; i + 2 < d.length; i += 3) if (d[i] === n) return true; return false; }
+function flatHas(d, n) { for (var i = 0; i + 4 < d.length; i += 5) if (d[i] === n) return true; return false; }
+
+test('host can start; guests receive phase entrance with walk', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    await r.h.wait(function (x) { return x.t === 'phase' && x.p === 'lobby'; });
+    var g = await client(port); g.send({ t: 'join', code: r.code, name: 'ريم' });
+    var w = await g.wait(function (x) { return x.t === 'welcome'; });
+    await g.wait(function (x) { return x.t === 'phase' && x.p === 'lobby'; });
+    await sleep(1100);
+    r.h.send({ t: 'start' });
+    try {
+        var ph = await g.wait(function (x) { return x.t === 'phase' && x.p === 'entrance'; });
+        assert.ok(walkHas(ph.walk, w.n), 'walk has my target');
+        assert.equal(ph.until - ph.at, 40000);
+    } catch (e) { e.message += ' | host msgs: ' + JSON.stringify(r.h.msgs.map(function (m) { return m.t + ':' + (m.p || m.err || ''); })); throw e; }
+    finally { r.h.close(); g.close(); srv.close(); }
+});
+
+test('guest cannot start or skip', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var g = await client(port); g.send({ t: 'join', code: r.code, name: 'ريم' });
+    await g.wait(function (x) { return x.t === 'welcome'; });
+    await sleep(1100);
+    g.send({ t: 'start' });
+    assert.equal((await g.wait(function (x) { return x.t === 'err' && x.of === 'start'; })).err, 'host-only');
+    assert.equal(party._mgr.phaseOf(r.code).p, 'lobby');
+    r.h.close(); g.close(); srv.close();
+});
+
+test('late peek gets current phase', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    await sleep(1100); r.h.send({ t: 'start' });
+    await r.h.wait(function (x) { return x.t === 'phase' && x.p === 'entrance'; });
+    var v = await client(port); v.send({ t: 'peek', code: r.code });
+    var ph = await v.wait(function (x) { return x.t === 'phase'; });
+    assert.equal(ph.p, 'entrance');
+    r.h.close(); v.close(); srv.close();
+});
+
+test('guest never receives girl row before reveal', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var girlKey = (await r.h.wait(function (x) { return x.t === 'hosted'; })).girlKey;
+    var gl = await client(port); gl.send({ t: 'join', code: r.code, name: 'سارة', girlKey: girlKey });
+    var wg = await gl.wait(function (x) { return x.t === 'welcome'; });
+    var g = await client(port); g.send({ t: 'join', code: r.code, name: 'ريم' });
+    await g.wait(function (x) { return x.t === 'welcome'; });
+    var all = await g.wait(function (x) { return x.t === 'all'; });
+    assert.equal(flatHas(all.d, wg.n), false, 'not in all');
+    var st = (await gl.wait(function (x) { return x.t === 'all'; })).d, me = null;
+    for (var i = 0; i + 4 < st.length; i += 5) if (st[i] === wg.n) me = [st[i + 1] / 100, st[i + 2] / 100];
+    for (var k = 1; k <= 6; k++) { gl.send({ t: 'mv', p: [me[0] + k * .3, me[1], 0, 1] }); await sleep(150); }
+    await sleep(300);
+    assert.equal(g.msgs.some(function (x) { return x.t === 's' && flatHas(x.d, wg.n); }), false, 'not in deltas');
+    r.h.close(); gl.close(); g.close(); srv.close();
+});
