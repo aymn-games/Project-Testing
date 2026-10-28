@@ -874,7 +874,7 @@ export function mountHall(el, opts = {}) {
   const ZONES = { lounge: [-15, 15, 50.5, 69], girl: [-9, 9, -67, -50.5], hall: [-HX + 1, HX - 1, -HZ + 2, HZ - 1.2], nostage: [-HX + 1, HX - 1, -31, HZ - 1.2] };
   // صندوق الكاميرا لكل غرفة [xmin, xmax, zmin, zmax, سقف]
   const CAMBOX = { lounge: [-16.6, 16.6, HZ + .3, 70.7, LOUNGE_H - .4], girl: [-11.6, 17.6, -68.7, -HZ - .3, GIRL_H - .4], hall: [-HX + .4, HX - .4, -HZ + .4, HZ - .4, HALL.h - .5] };
-  let zone = 'hall', auto = null;
+  let zone = 'hall', auto = null, shot = null; // shot: لقطة ثابتة لشاشة العرض ('stage' | 'entrance' | null = جولة)
   const floorAt = (x, z) => {
     if (Math.abs(x) <= STAGE.w / 2 && z <= STAGE.front && z >= -HZ) return STAGE.h;
     if (Math.abs(x) <= 6 && z > STAGE.front && z <= STAGE.front + 1) return .8;
@@ -957,8 +957,12 @@ export function mountHall(el, opts = {}) {
       followLook.set(pos.x, fy + 1.3, pos.z); cam.lookAt(followLook);
     } else if (mode === 'tour') {
       tourA += dt * (reduced ? .04 : .075);
-      tourPos.set(Math.sin(tourA) * 20, 6.5 + Math.sin(tourA * 2) * 2.2, -2 + Math.cos(tourA) * 32);
-      tourLook.set(Math.sin(tourA + 1.2) * 6, 4.2, -18 + Math.cos(tourA) * 6);
+      if (shot === 'stage') { tourPos.set(Math.sin(tourA * .6) * 3, 5.2, -12); tourLook.set(0, 5.5, -40); }
+      else if (shot === 'entrance') { tourPos.set(10, 9, 30); tourLook.set(0, 2, 46); }
+      else {
+        tourPos.set(Math.sin(tourA) * 20, 6.5 + Math.sin(tourA * 2) * 2.2, -2 + Math.cos(tourA) * 32);
+        tourLook.set(Math.sin(tourA + 1.2) * 6, 4.2, -18 + Math.cos(tourA) * 6);
+      }
       const k = 1 - Math.exp(-dt * 1.6);
       cam.position.lerp(tourPos, k); curLook.lerp(tourLook, k);
       m4.lookAt(cam.position, curLook, cam.up); q0.setFromRotationMatrix(m4); cam.quaternion.slerp(q0, k);
@@ -1047,7 +1051,7 @@ export function mountHall(el, opts = {}) {
     setCurtain: (k, instant) => { curtainT = k; if (instant) curtainK = k; },
     setDoors: (k, instant) => { doorT = k; if (instant) doorK = k; },
     fireworks: (sec = 6) => { fwUntil = clock.elapsedTime + sec; fwNext = 0; },
-    setAutoPath, ZONES,
+    setAutoPath, ZONES, setShot: v => { shot = v || null; },
     debugView: (p, l) => { mode = 'debug'; cam.fov = 60; cam.updateProjectionMatrix(); cam.position.set(p[0], p[1], p[2]); cam.lookAt(l[0], l[1], l[2]); },
     addTicker: fn => { tickers.add(fn); return () => tickers.delete(fn); },
     get mode() { return mode; }, get party() { return partyTarget === 1; },

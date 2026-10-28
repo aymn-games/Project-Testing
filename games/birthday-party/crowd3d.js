@@ -7,6 +7,9 @@
 // الحركة: مواقع الباقين توصل من السيرفر 8 مرات/ث، ونعرضها متأخرة 150ms
 // ونتنقّل بنعومة بين آخر عيّنتين (interpolation). شخصية اللاعب نفسه تُقرأ
 // مباشرة من getLocal() بدون انتظار السيرفر.
+// وقت المشي التلقائي (مرحلة الدخول) كل شخصية تمشي على مسار يحسبه الجوال نفسه
+// (setAutoPaths) بتوقيت السيرفر — نفس الشي على كل الجوالات بدون إرسال حركة.
+// الحركات: a = 0 وقوف · 1 مشي · 2 رقص · 3 تلويح · 4 تصفيق.
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
 const T = THREE;
@@ -73,6 +76,27 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
   const chars = new Map(); // n -> {slot, name, role, online, buf:[], x,z,ry, phase, moving}
   const free = Array.from({ length: CAP }, (_, i) => CAP - 1 - i);
   let localN = null, getLocal = null, labelT = 0;
+  let autoPaths = null; // {map: n → {points, cum, len}, t0, t1}
+  function setAutoPaths(map, t0, t1) {
+    if (!map) {
+      // نهاية المشي: نثبّت كل شخصية على نهاية مسارها عشان ما ترجع لعيّنات قديمة
+      if (autoPaths) for (const [n, a] of Object.entries(autoPaths.map)) { const c = chars.get(+n); if (c) { const e = a.points[a.points.length - 1]; c.x = e[0]; c.z = e[1]; c.buf = [{ t: t0 || 0, x: e[0], z: e[1], ry: c.ry, a: 0 }]; } }
+      autoPaths = null; return;
+    }
+    const m = {};
+    for (const [n, points] of Object.entries(map)) {
+      const cum = [0]; for (let i = 1; i < points.length; i++) cum.push(cum[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]));
+      m[n] = { points, cum, len: cum[cum.length - 1] || 1 };
+    }
+    autoPaths = { map: m, t0, t1 };
+  }
+  function pathAt(a, f) {
+    const d = f * a.len; let i = 1; while (i < a.points.length - 1 && a.cum[i] < d) i++;
+    const p0 = a.points[i - 1], p1 = a.points[i], seg = (a.cum[i] - a.cum[i - 1]) || 1, k = Math.max(0, Math.min(1, (d - a.cum[i - 1]) / seg));
+    return [p0[0] + (p1[0] - p0[0]) * k, p0[1] + (p1[1] - p0[1]) * k, Math.atan2(p1[0] - p0[0], p1[1] - p0[1])];
+  }
+  // مكان أي شخصية الحين (للمسارات: نقطة البداية) — null لو ما وصلها شي
+  function posOf(n) { const c = chars.get(n); return c && c.ready ? [c.x, c.z] : null; }
 
   function paint(c) {
     const h = hash(c.n), girl = c.role === 'girl', i = c.slot;
@@ -129,8 +153,12 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
     for (const c of chars.values()) {
       if (!c.online || !c.ready) { hide(c); continue; }
       let moving;
+      const ap = autoPaths && autoPaths.map[c.n];
       if (c.n === localN && getLocal) {
-        const L = getLocal(); c.x = L.x; c.z = L.z; c.ry = L.ry; moving = L.moving; c.run = L.running;
+        const L = getLocal(); c.x = L.x; c.z = L.z; c.ry = L.ry; moving = L.moving; c.run = L.running; c.anim = moving ? 1 : (L.emote || 0);
+      } else if (ap) {
+        const f = Math.max(0, Math.min(1, (serverNowMs - autoPaths.t0) / Math.max(1, autoPaths.t1 - autoPaths.t0))), p = pathAt(ap, f);
+        c.x = p[0]; c.z = p[1]; moving = f > 0 && f < 1; if (moving) c.ry = lerpAngle(c.ry, p[2], 1 - Math.exp(-dt * 10)); c.run = false; c.anim = moving ? 1 : 0;
       } else {
         // نلقى العيّنتين اللي يقع بينهم وقت العرض
         const b = c.buf; let a0 = b[0], a1 = b[b.length - 1];
@@ -142,21 +170,29 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
         moving = Math.hypot(tx - c.x, tz - c.z) > (sparse ? .05 : .004) || a1.a === 1;
         const sm = 1 - Math.exp(-dt * (sparse ? 3.5 : 18));
         c.x += (tx - c.x) * sm; c.z += (tz - c.z) * sm; c.ry = lerpAngle(c.ry, a1.ry, 1 - Math.exp(-dt * 10));
-        c.run = false;
+        c.run = false; c.anim = moving ? 1 : (a1.a || 0);
       }
       c.moving = moving;
       c.phase += dt * (moving ? (c.run ? 13 : 9) : 2);
-      const y = floorAt(c.x, c.z), bob = moving ? Math.abs(Math.sin(c.phase)) * .05 : Math.sin(c.phase) * .01;
+      const an = moving ? 1 : (c.anim || 0), dance = an === 2;
+      if (dance) c.phase += dt * 5;
+      const y = floorAt(c.x, c.z), bob = moving ? Math.abs(Math.sin(c.phase)) * .05 : dance ? Math.abs(Math.sin(c.phase)) * .14 : Math.sin(c.phase) * .01;
       const scale = c.role === 'girl' ? 1.08 : 1;
-      q.setFromEuler(e.set(0, c.ry, 0)); base.compose(v.set(c.x, y + bob, c.z), q, s1.set(scale, scale, scale));
+      q.setFromEuler(e.set(0, c.ry, dance ? Math.sin(c.phase * .5) * .16 : 0, 'YXZ')); base.compose(v.set(c.x, y + bob, c.z), q, s1.set(scale, scale, scale));
       const i = c.slot;
       for (const k of ['dress', 'torso', 'head', 'hair']) parts[k].setMatrixAt(i, base);
       m4.compose(v.set(c.x, y + .02, c.z), q.identity(), s1.set(scale, 1, scale)); parts.blob.setMatrixAt(i, m4);
       const swing = moving ? Math.sin(c.phase) * .7 : 0, armIdle = moving ? 0 : Math.sin(c.phase * .8) * .05;
       for (const sd of [-1, 1]) {
         const j = i * 2 + (sd > 0 ? 1 : 0);
-        m4.compose(v.set(sd * .11, .42, 0), q.setFromEuler(e.set(swing * sd, 0, 0)), s1.set(1, 1, 1)); parts.leg.setMatrixAt(j, m4.premultiply(base));
-        m4.compose(v.set(sd * .3, 1.22, 0), q.setFromEuler(e.set(-swing * sd * .9, 0, sd * (.18 + armIdle))), s1.set(1, 1, 1)); parts.arm.setMatrixAt(j, m4.premultiply(base));
+        // زاوية اليد حسب الحركة: رقص (فوق وتتمايل) · تلويح (اليمين فوق وتهتز) · تصفيق (قدام وتتقارب)
+        let ax = -swing * sd * .9, az = sd * (.18 + armIdle), lx = swing * sd;
+        if (dance) { ax = -2.7 + Math.sin(c.phase + sd) * .35; az = sd * (.35 + Math.sin(c.phase) * .2); lx = Math.sin(c.phase * 2 + sd) * .25; }
+        else if (an === 3 && sd > 0) { ax = -2.9; az = .35 + Math.sin(c.phase * 6) * .45; }
+        else if (an === 4) { ax = -1.35; az = -sd * (.32 + Math.abs(Math.sin(c.phase * 4)) * .3); }
+        if (an === 3 || an === 4) c.phase += dt * .5;
+        m4.compose(v.set(sd * .11, .42, 0), q.setFromEuler(e.set(lx, 0, 0)), s1.set(1, 1, 1)); parts.leg.setMatrixAt(j, m4.premultiply(base));
+        m4.compose(v.set(sd * .3, 1.22, 0), q.setFromEuler(e.set(ax, 0, az)), s1.set(1, 1, 1)); parts.arm.setMatrixAt(j, m4.premultiply(base));
         m4.compose(v.set(sd * .11, 1.57, .27), q.identity(), s1.set(1, 1, 1)); parts.eye.setMatrixAt(j, m4.premultiply(base));
       }
       if (c.role === 'girl') girl = { x: c.x, y: y + bob, z: c.z, ry: c.ry, s: scale };
@@ -182,5 +218,5 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
     labels.forEach(s => { s.material.dispose(); scene.remove(s); }); labelCache.forEach(t => t.dispose());
   }
 
-  return { sync, apply, update, setLocal, dispose, get count() { return chars.size; } };
+  return { sync, apply, update, setLocal, setAutoPaths, posOf, dispose, get count() { return chars.size; } };
 }

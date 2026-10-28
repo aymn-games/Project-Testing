@@ -77,6 +77,17 @@
         .toast{ top:54px; } .netbad{ top:50px; }
     }
     .hint.gone{ opacity:0 !important; }
+    .phase{ position:absolute; top:max(58px,calc(env(safe-area-inset-top) + 50px)); left:50%; transform:translateX(-50%); display:flex; gap:10px; align-items:center; padding:7px 16px; border-radius:999px; background:var(--glass); border:1px solid var(--line); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); font:700 13px 'IBM Plex Sans Arabic'; pointer-events:none; white-space:nowrap; }
+    .phase:empty, .phase b:empty + span:empty{ display:none; }
+    body:not(.net) .phase{ display:none; }
+    .phase span{ font:900 16px 'Zain'; color:#c94f7e; font-variant-numeric:tabular-nums; direction:ltr; }
+    .count{ position:absolute; inset:0; display:grid; place-items:center; pointer-events:none; font:900 min(34vw,180px)/1 'Zain'; color:#fff; text-shadow:0 0 30px #ff4fa8,0 0 80px rgba(255,79,168,.6); }
+    .count.pop{ animation:cpop .9s ease-out both; }
+    @keyframes cpop{ 0%{ transform:scale(1.6); opacity:0; } 25%{ opacity:1; } 100%{ transform:scale(.9); opacity:.2; } }
+    .emotes{ position:absolute; right:max(16px,env(safe-area-inset-right)); bottom:max(18px,env(safe-area-inset-bottom)); display:flex; gap:8px; }
+    .emotes button{ height:44px; padding:0 14px; border-radius:999px; border:1px solid var(--line); background:var(--glass); color:var(--ink); font:700 14px 'IBM Plex Sans Arabic'; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); cursor:pointer; }
+    .emotes button.on{ background:linear-gradient(180deg,#ff9ccc,#f472b6); color:#fff; border-color:transparent; }
+    @media (pointer:coarse) and (orientation:landscape) and (max-height:520px){ .phase{ top:48px; font-size:12px; } .emotes button{ height:38px; padding:0 11px; font-size:13px; } }
     /* الجوال بالطول: نطلب يلفّه (اللعبة مصممة بالعرض) */
     .rotate{ position:fixed; inset:0; z-index:20; display:none; place-items:center; text-align:center; padding:24px; background:radial-gradient(circle at 50% 35%,#fff3f8,#f3c6da); color:var(--ink); }
     .rotate .ph{ width:64px; height:104px; margin:0 auto 18px; border:5px solid #d45a8a; border-radius:14px; position:relative; animation:turn 2.2s ease-in-out infinite; }
@@ -111,6 +122,13 @@
         </div>
     </div>
     <div class="netbad hidden" id="netBad" role="status">جاري إعادة الاتصال…</div>
+    <div class="phase" id="phase" aria-live="polite"><b id="phaseTxt"></b><span id="phaseTime"></span></div>
+    <div class="count" id="count" aria-live="assertive"></div>
+    <div class="emotes hidden" id="emotes">
+        <button type="button" data-e="2">💃 رقص</button>
+        <button type="button" data-e="3">👋 تلويح</button>
+        <button type="button" data-e="4">👏 تصفيق</button>
+    </div>
     <div class="toast" id="toast" role="status" aria-live="polite"><b id="toastTitle"></b><span>هذا القسم قريباً</span></div>
     <div class="hint" id="hint">
         <span class="desk">W A S D للمشي · اسحب بالماوس للنظر · Shift للجري</span>
@@ -196,26 +214,88 @@
 
     // ---- الحفلة الجماعية: الاتصال بالسيرفر + الشخصيات ----
     async function startParty(hall) {
-        const [{ connect, readJSON, writeJSON, serverNow, unpackRows }, { createCrowd }] = await Promise.all([import('./party-net.js'), import('./crowd3d.js')]);
+        const [{ connect, readJSON, writeJSON, serverNow, unpackRows }, { createCrowd }, { createMusic }] = await Promise.all([import('./party-net.js'), import('./crowd3d.js'), import('./music.js')]);
         const me = viewOnly ? null : readJSON('party-me');
         if (!viewOnly && !(me && me.code === code)) { location.replace('join.html?code=' + code); return; }
         if (!viewOnly) $('hint').querySelector('.touch').textContent = 'العصا للمشي · اسحب للف الكاميرا';
         const crowd = createCrowd(hall.scene, { floorAt: hall.floorAt });
-        let myN = null, placed = false, lastSent = null;
-        hall.addTicker(dt => crowd.update(dt, hall.camera, serverNow()));
+        const music = createMusic();
+        const roles = new Map();
+        let myN = null, myRole = null, placed = false, gotAll = false, lastSent = null;
+        let phase = null, applied = null, revealFired = false, emote = 0, emoteUntil = 0;
+        // نقاط العبور (نفس كل الجوالات): الضيوف من باب الصالة، وصاحبة الحفلة من الباب الخلفي ورا الستارة
+        const GIRL_WP = [[0, -52], [16, -51], [16, -44]];
+        const guestWp = n => { const ox = ((n % 5) - 2) * .9; return [[ox, 52], [ox, 45]]; };
+        const pathFor = (n, start, target) => [start, ...(roles.get(n) === 'girl' ? GIRL_WP : guestWp(n)), target];
+        const curEmote = () => { if (emote && emoteUntil && serverNow() > emoteUntil) emote = 0; return emote; };
+        const autoPhase = () => phase && (phase.p === 'entrance' || phase.p === 'reveal');
+
+        function applyPhase() {
+            if (!phase || !gotAll) return;
+            const now = serverNow(), p = phase.p, key = p + ':' + phase.at;
+            if (applied === key) return;
+            applied = key;
+            const isGirl = myRole === 'girl', preShow = p === 'lobby' || p === 'entrance', lateReveal = now > phase.at + 3000;
+            hall.setCurtain(preShow ? 0 : 1, preShow || (p === 'reveal' ? lateReveal : true));
+            hall.setDoors(p === 'lobby' ? 0 : 1, p !== 'entrance');
+            hall.setParty(p === 'dance' || p === 'free' || (p === 'reveal' && lateReveal));
+            revealFired = p !== 'reveal' || lateReveal;
+            if (p === 'reveal' && lateReveal && now < phase.at + 9000) hall.fireworks(phase.at + 9000 - now > 0 ? (phase.at + 9000 - now) / 1000 : 0);
+            if (!viewOnly) hall.setZone(p === 'lobby' ? (isGirl ? 'girl' : 'lounge') : (isGirl ? 'hall' : 'nostage'));
+            if (p === 'entrance' && phase.walk) {
+                const walk = {}; for (let i = 0; i + 2 < phase.walk.length; i += 3) walk[phase.walk[i]] = [phase.walk[i + 1] / 100, phase.walk[i + 2] / 100];
+                const t0 = phase.at, t1 = phase.at + (phase.until - phase.at) * .85, paths = {};
+                for (const n of Object.keys(walk)) { if (+n === myN) continue; const st = crowd.posOf(+n); if (st) paths[n] = pathFor(+n, st, walk[n]); }
+                crowd.setAutoPaths(paths, t0, t1);
+                if (!viewOnly && myN != null && walk[myN]) { const L = hall.getLocal(); hall.setAutoPath(pathFor(myN, [L.x, L.z], walk[myN]), t0, t1, serverNow, isGirl ? 0 : Math.PI); }
+            } else {
+                crowd.setAutoPaths(null, now);
+                if (!viewOnly) hall.setAutoPath(null);
+            }
+            if (viewOnly) hall.setShot(p === 'reveal' ? 'stage' : p === 'entrance' ? 'entrance' : null);
+            if (p === 'lobby' || p === 'entrance') music.play('lobby');
+            else if (p === 'dance' || p === 'free') music.play('dance');
+            $('emotes').classList.toggle('hidden', viewOnly || !(p === 'dance' || p === 'free'));
+        }
+
+        const fmt = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+        const LABEL = {
+            lobby: () => viewOnly ? 'بانتظار بدء الحفلة' : myRole === 'girl' ? 'غرفتك · الحفلة تبدأ قريباً' : 'صالة الضيوف · بانتظار بدء الحفلة',
+            entrance: () => myRole === 'girl' ? 'طريقك للمنصة… محد يشوفك' : 'الدخول للقاعة',
+            reveal: () => 'الافتتاح',
+            dance: () => 'وقت الرقص',
+            free: () => 'الحفلة مستمرة',
+        };
+        hall.addTicker(dt => {
+            const now = serverNow();
+            crowd.update(dt, hall.camera, now);
+            if (!phase) return;
+            // الافتتاح: عد تنازلي 3-2-1 ثم الستارة تنفتح مع ألعاب نارية
+            if (phase.p === 'reveal' && !revealFired) {
+                const left = phase.at + 3000 - now;
+                if (left > 0) { const n = String(Math.ceil(left / 1000)); if ($('count').textContent !== n) { $('count').textContent = n; $('count').classList.remove('pop'); void $('count').offsetWidth; $('count').classList.add('pop'); } }
+                else { revealFired = true; $('count').textContent = ''; hall.setCurtain(1); hall.fireworks(7); hall.setParty(true); music.play('reveal'); }
+            } else if ($('count').textContent) $('count').textContent = '';
+            $('phaseTxt').textContent = (LABEL[phase.p] || (() => ''))();
+            $('phaseTime').textContent = phase.until && phase.p !== 'reveal' ? fmt(phase.until - now) : '';
+        });
+
         const net = connect({
             onStatus: on => $('netBad').classList.toggle('hidden', on),
-            onOpen: () => net.send(viewOnly ? { t: 'peek', code } : { t: 'resume', code, id: me.id, key: me.key }),
+            onOpen: () => { gotAll = false; net.send(viewOnly ? { t: 'peek', code } : { t: 'resume', code, id: me.id, key: me.key }); },
             onMessage: m => {
-                if (m.t === 'welcome') { myN = m.n; crowd.setLocal(myN, hall.getLocal); }
+                if (m.t === 'welcome') { myN = m.n; myRole = m.role; crowd.setLocal(myN, () => Object.assign(hall.getLocal(), { emote: curEmote() })); }
                 else if (m.t === 'room') {
+                    m.room.players.forEach(r => roles.set(r[0], r[2]));
                     crowd.sync(m.room.players);
                     if (m.room.girlName) { $('title').textContent = 'حفلة ' + m.room.girlName; hall.setName(m.room.girlName); }
-                } else if (m.t === 'all' || m.t === 's') {
+                } else if (m.t === 'phase') { phase = m; applied = null; applyPhase(); }
+                else if (m.t === 'all' || m.t === 's') {
                     const rows = unpackRows(m.d);
                     crowd.apply(rows, m.now, m.t === 'all');
                     // أول مرة نعرف مكاننا من السيرفر ← نبدأ وضع الشخصية
                     if (!placed && myN != null) { const r = rows.find(x => x[0] === myN); if (r) { placed = true; hall.setFollow({ x: r[1], z: r[2], ry: r[3] }); } }
+                    if (m.t === 'all' && !gotAll) { gotAll = true; applied = null; applyPhase(); }
                 } else if (m.t === 'err') {
                     if (m.err === 'resume' || m.err === 'nocode') { writeJSON('party-me', null); location.replace('join.html?code=' + code); }
                     else if (m.err === 'elsewhere') { $('netBad').textContent = 'فتحت الحفلة من مكان ثاني'; $('netBad').classList.remove('hidden'); net.close(); }
@@ -223,10 +303,20 @@
                 }
             },
         });
-        // نرسل مكاننا 8 مرات بالثانية — بس إذا تغيّر
+        // أزرار الحركات (وقت الرقص): رقص يشتغل لين تضغطه مرة ثانية أو تمشي، والباقي ثواني
+        document.querySelectorAll('#emotes button').forEach(b => b.addEventListener('click', () => {
+            const e = +b.dataset.e;
+            if (e === 2) { emote = emote === 2 ? 0 : 2; emoteUntil = 0; }
+            else { emote = e; emoteUntil = serverNow() + (e === 3 ? 2500 : 3000); }
+            document.querySelectorAll('#emotes button').forEach(x => x.classList.toggle('on', +x.dataset.e === emote));
+        }));
+        // نرسل مكاننا 8 مرات بالثانية — بس إذا تغيّر (ووقت المشي التلقائي ما نرسل)
         if (!viewOnly) setInterval(() => {
-            if (!placed || hall.mode !== 'follow') return;
-            const L = hall.getLocal(), a = L.moving ? 1 : 0;
+            if (!placed || hall.mode !== 'follow' || autoPhase()) return;
+            const L = hall.getLocal();
+            if (L.moving && emote) { emote = 0; document.querySelectorAll('#emotes button').forEach(x => x.classList.remove('on')); }
+            const a = L.moving ? 1 : curEmote();
+            if (!a) document.querySelectorAll('#emotes button.on').forEach(x => x.classList.remove('on'));
             const p = [Math.round(L.x * 100) / 100, Math.round(L.z * 100) / 100, Math.round(L.ry * 100) / 100, a];
             if (lastSent && Math.abs(p[0] - lastSent[0]) < .02 && Math.abs(p[1] - lastSent[1]) < .02 && Math.abs(p[2] - lastSent[2]) < .03 && p[3] === lastSent[3]) return;
             lastSent = p; net.send({ t: 'mv', p });
