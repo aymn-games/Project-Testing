@@ -67,6 +67,26 @@
     .loader.fail .spin{ display:none; }
     @media (prefers-reduced-motion:reduce){ .spin{ animation-duration:3s; } }
     @media (max-width:520px){ .title{ font-size:19px; } .pill .lbl{ display:none; } .pill{ padding:0 12px; } }
+    /* الجوال بالعرض (اللعب الأساسي): شريط علوي أصغر، العصا أصغر، التلميح تحت بالنص */
+    @media (pointer:coarse) and (orientation:landscape) and (max-height:520px){
+        .top{ top:max(8px,env(safe-area-inset-top)); left:max(12px,env(safe-area-inset-left)); right:max(12px,env(safe-area-inset-right)); }
+        .pill{ height:34px; font-size:12px; } .title{ font-size:18px; }
+        .joy{ width:108px; height:108px; bottom:max(14px,env(safe-area-inset-bottom)); left:max(18px,env(safe-area-inset-left)); }
+        .joy-knob{ width:46px; height:46px; margin:-23px 0 0 -23px; }
+        .hint{ top:auto; bottom:max(10px,env(safe-area-inset-bottom)); font-size:12px; padding:6px 14px; }
+        .toast{ top:54px; } .netbad{ top:50px; }
+    }
+    .hint.gone{ opacity:0 !important; }
+    /* الجوال بالطول: نطلب يلفّه (اللعبة مصممة بالعرض) */
+    .rotate{ position:fixed; inset:0; z-index:20; display:none; place-items:center; text-align:center; padding:24px; background:radial-gradient(circle at 50% 35%,#fff3f8,#f3c6da); color:var(--ink); }
+    .rotate .ph{ width:64px; height:104px; margin:0 auto 18px; border:5px solid #d45a8a; border-radius:14px; position:relative; animation:turn 2.2s ease-in-out infinite; }
+    .rotate .ph::after{ content:''; position:absolute; bottom:6px; left:50%; width:14px; height:4px; margin-left:-7px; border-radius:2px; background:#d45a8a; }
+    .rotate h2{ margin:0 0 6px; font:900 26px/1.2 'Zain'; color:#a3306a; }
+    .rotate p{ margin:0 0 16px; font:600 14px 'IBM Plex Sans Arabic'; color:#9b6683; }
+    .rotate button{ height:46px; padding:0 24px; border:0; border-radius:999px; font:700 15px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); box-shadow:0 8px 20px rgba(212,90,138,.3); cursor:pointer; }
+    @keyframes turn{ 0%,20%{ transform:rotate(0); } 50%,80%{ transform:rotate(-90deg); } 100%{ transform:rotate(0); } }
+    @media (prefers-reduced-motion:reduce){ .rotate .ph{ animation:none; transform:rotate(-90deg); } }
+    @media (pointer:coarse) and (orientation:portrait){ body:not(.viewer) .rotate{ display:grid; } }
 </style>
 </head>
 <body>
@@ -97,6 +117,15 @@
         <span class="touch">العصا للمشي · اسحب بإصبعك للنظر</span>
     </div>
     <div class="joy" id="joy" aria-hidden="true"><div class="joy-knob"></div></div>
+</div>
+
+<div class="rotate" id="rotate" role="dialog" aria-label="لف الجوال بالعرض">
+    <div>
+        <div class="ph" aria-hidden="true"></div>
+        <h2>لف جوالك بالعرض</h2>
+        <p>الحفلة مصممة للشاشة العريضة</p>
+        <button type="button" id="landBtn">تشغيل بالعرض</button>
+    </div>
 </div>
 
 <div class="loader" id="loader">
@@ -194,6 +223,22 @@
             lastSent = p; net.send({ t: 'mv', p });
         }, 125);
     }
+
+    // ---- العرض الأفقي على الجوال ----
+    // أندرويد: ملء الشاشة + قفل الاتجاه بالعرض (يحتاج ضغطة من المستخدم). الآيفون ما يسمح
+    // بقفل الاتجاه للمواقع، فتبقى شاشة «لف جوالك» لين يلفّه بنفسه.
+    const coarse = matchMedia('(pointer:coarse)').matches;
+    async function goLandscape() {
+        try {
+            const d = document.documentElement;
+            if (!document.fullscreenElement && d.requestFullscreen) await d.requestFullscreen({ navigationUI: 'hide' });
+            if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape');
+        } catch (e) { /* غير مدعوم (آيفون) — المستخدم يلفّه بنفسه */ }
+    }
+    $('landBtn').addEventListener('click', goLandscape);
+    if (coarse && !viewOnly) document.addEventListener('pointerdown', function once() { document.removeEventListener('pointerdown', once); if (matchMedia('(orientation:portrait)').matches) goLandscape(); }, { once: true });
+    // التلميح يختفي بعد شوي عشان ما يغطي اللعب
+    setTimeout(() => $('hint').classList.add('gone'), 9000);
 
     $('fsBtn').addEventListener('click', () => {
         const d = document;
