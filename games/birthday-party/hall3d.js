@@ -362,6 +362,7 @@ export function mountHall(el, opts = {}) {
   let girlSign = null; // لافتة غرفة صاحبة الحفلة (تنبني تحت)
   let lastName = '';
   function setName(name) {
+    if (name === lastName && girlSign && girlSign.material.map) return; // نفس الاسم: لا نعيد رسم اللافتات (يتكرر مع كل تحديث للحضور)
     lastName = name;
     const g = nameCanvas.getContext('2d'), w = nameCanvas.width, h = nameCanvas.height;
     g.clearRect(0, 0, w, h); name = String(name || '').trim().slice(0, 30);
@@ -901,6 +902,9 @@ export function mountHall(el, opts = {}) {
     if (!points || points.length < 2) { auto = null; return; }
     const cum = [0]; for (let i = 1; i < points.length; i++) cum.push(cum[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]));
     auto = { points, cum, len: cum[cum.length - 1] || 1, t0, t1, now: nowFn, endRy };
+    // نحط اللاعب على المسار فوراً (بدون انتظار الإطار الجاي) عشان ما يظهر لحظة بمكان غلط
+    const f = Math.max(0, Math.min(1, (nowFn() - t0) / Math.max(1, t1 - t0))), ap = pathAt(auto, f);
+    pos.x = ap.x; pos.z = ap.z;
   }
   function pathAt(a, f) {
     const d = f * a.len; let i = 1; while (i < a.points.length - 1 && a.cum[i] < d) i++;
@@ -1056,6 +1060,7 @@ export function mountHall(el, opts = {}) {
     setDoors: (k, instant) => { doorT = k; if (instant) doorK = k; },
     fireworks: (sec = 6) => { fwUntil = clock.elapsedTime + sec; fwNext = 0; },
     setAutoPath, ZONES, setShot: v => { shot = v || null; },
+    get curtain() { return curtainT; }, get autoActive() { return !!auto; }, get zone() { return zone; }, // للاختبار
     debugView: (p, l) => { mode = 'debug'; cam.fov = 60; cam.updateProjectionMatrix(); cam.position.set(p[0], p[1], p[2]); cam.lookAt(l[0], l[1], l[2]); },
     addTicker: fn => { tickers.add(fn); return () => tickers.delete(fn); },
     get mode() { return mode; }, get party() { return partyTarget === 1; },

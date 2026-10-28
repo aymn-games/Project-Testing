@@ -219,11 +219,12 @@
         if (!viewOnly && !(me && me.code === code)) { location.replace('join.html?code=' + code); return; }
         if (!viewOnly) $('hint').querySelector('.touch').textContent = 'العصا للمشي · اسحب للف الكاميرا';
         const crowd = createCrowd(hall.scene, { floorAt: hall.floorAt });
-        if (params.has('debug')) window.__crowd = crowd;
+        if (params.has('debug')) { window.__crowd = crowd; window.__hall = hall; }
         const music = createMusic();
         const roles = new Map();
         let myN = null, myRole = null, placed = false, gotAll = false, lastSent = null;
-        let phase = null, applied = null, revealFired = false, emote = 0, emoteUntil = 0, myTarget = null;
+        let phase = null, applied = null, revealFired = false, emote = 0, emoteUntil = 0, myTarget = null, myServer = null;
+        const zoneFor = p => p === 'lobby' ? (myRole === 'girl' ? 'girl' : 'lounge') : (myRole === 'girl' ? 'hall' : 'nostage');
         // نقاط العبور (نفس كل الجوالات): الضيوف من باب الصالة، وصاحبة الحفلة من الباب الخلفي ورا الستارة
         const GIRL_WP = [[0, -52], [16, -51], [16, -44]];
         const guestWp = n => { const ox = ((n % 5) - 2) * .9; return [[ox, 52], [ox, 45]]; };
@@ -237,18 +238,26 @@
             if (applied === key) return;
             applied = key;
             const isGirl = myRole === 'girl', preShow = p === 'lobby' || p === 'entrance', lateReveal = now > phase.at + 3000;
-            hall.setCurtain(preShow ? 0 : 1, preShow || (p === 'reveal' ? lateReveal : true));
+            // الستارة مسكّرة لين يخلص العد التنازلي (الفتح يصير بالـ ticker عند الصفر)
+            const closed = preShow || (p === 'reveal' && !lateReveal);
+            hall.setCurtain(closed ? 0 : 1, true);
             hall.setDoors(p === 'lobby' ? 0 : 1, p !== 'entrance');
             hall.setParty(p === 'dance' || p === 'free' || (p === 'reveal' && lateReveal));
             revealFired = p !== 'reveal' || lateReveal;
             if (p === 'reveal' && lateReveal && now < phase.at + 9000) hall.fireworks(phase.at + 9000 - now > 0 ? (phase.at + 9000 - now) / 1000 : 0);
-            if (!viewOnly) hall.setZone(p === 'lobby' ? (isGirl ? 'girl' : 'lounge') : (isGirl ? 'hall' : 'nostage'));
+            if (!viewOnly) hall.setZone(zoneFor(p));
             if (p === 'entrance' && phase.walk) {
                 const walk = {}; for (let i = 0; i + 2 < phase.walk.length; i += 3) walk[phase.walk[i]] = [phase.walk[i + 1] / 100, phase.walk[i + 2] / 100];
                 const t0 = phase.at, t1 = phase.at + (phase.until - phase.at) * .85, paths = {};
                 for (const n of Object.keys(walk)) { if (+n === myN) continue; const st = crowd.posOf(+n); if (st) paths[n] = pathFor(+n, st, walk[n]); }
                 crowd.setAutoPaths(paths, t0, t1);
-                if (!viewOnly && myN != null && walk[myN]) { const L = hall.getLocal(); myTarget = walk[myN]; hall.setAutoPath(pathFor(myN, [L.x, L.z], myTarget), t0, t1, serverNow, isGirl ? 0 : Math.PI); }
+                if (!viewOnly && myN != null && walk[myN]) {
+                    // بداية المسار = مكاني عند السيرفر (نفس اللي تحسبه باقي الجوالات)، مو مكاني المحلي
+                    myTarget = walk[myN];
+                    const st = myServer || [hall.getLocal().x, hall.getLocal().z];
+                    if (Math.hypot(st[0] - myTarget[0], st[1] - myTarget[1]) < .5) hall.setFollow({ x: myTarget[0], z: myTarget[1], ry: isGirl ? 0 : Math.PI });
+                    else hall.setAutoPath(pathFor(myN, st, myTarget), t0, t1, serverNow, isGirl ? 0 : Math.PI);
+                }
             } else {
                 crowd.setAutoPaths(null, now);
                 if (!viewOnly) {
@@ -297,12 +306,14 @@
                     m.room.players.forEach(r => roles.set(r[0], r[2]));
                     crowd.sync(m.room.players);
                     if (m.room.girlName) { $('title').textContent = 'حفلة ' + m.room.girlName; hall.setName(m.room.girlName); }
-                } else if (m.t === 'phase') { phase = m; applied = null; applyPhase(); }
+                } else if (m.t === 'phase') { phase = m; applied = null; if (!viewOnly && myRole) hall.setZone(zoneFor(m.p)); applyPhase(); }
                 else if (m.t === 'all' || m.t === 's') {
                     const rows = unpackRows(m.d);
                     crowd.apply(rows, m.now, m.t === 'all');
                     // أول مرة نعرف مكاننا من السيرفر ← نبدأ وضع الشخصية
-                    if (!placed && myN != null) { const r = rows.find(x => x[0] === myN); if (r) { placed = true; hall.setFollow({ x: r[1], z: r[2], ry: r[3] }); } }
+                    const mine = myN != null ? rows.find(x => x[0] === myN) : null;
+                    if (mine) myServer = [mine[1], mine[2]];
+                    if (!placed && mine) { placed = true; hall.setFollow({ x: mine[1], z: mine[2], ry: mine[3] }); }
                     if (m.t === 'all' && !gotAll) { gotAll = true; applied = null; applyPhase(); }
                 } else if (m.t === 'err') {
                     if (m.err === 'resume' || m.err === 'nocode') { writeJSON('party-me', null); location.replace('join.html?code=' + code); }

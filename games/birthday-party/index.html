@@ -252,7 +252,11 @@
     }, 250);
     // الزر يتعطل ثانية بعد الضغط (والسيرفر أصلاً يرفض الضغط المزدوج)
     const press = (btn, msg) => { btn.disabled = true; net.send(msg); setTimeout(() => { btn.disabled = false; }, 1200); };
-    $('startBtn').addEventListener('click', () => press($('startBtn'), { t: 'start' }));
+    $('startBtn').addEventListener('click', () => {
+        // ما يرجع: نتأكد قبل ما يبدأ العرض عند الكل
+        if (!confirm('بدء الحفلة الحين؟ الضيوف يمشون للقاعة وصاحبة الحفلة للمنصة، وما ينقدر التراجع.')) return;
+        press($('startBtn'), { t: 'start' });
+    });
     $('skipBtn').addEventListener('click', () => phase && press($('skipBtn'), { t: 'skip', from: phase.p }));
 
     $('girlName').addEventListener('keydown', e => { if (e.key === 'Enter') $('createBtn').click(); });

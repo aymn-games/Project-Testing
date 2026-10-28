@@ -18,9 +18,18 @@ export function createMusic(base = 'music/') {
     const p = a.play();
     if (p && p.catch) p.catch(() => { pending = a; });
   }
-  const unlock = () => { if (pending) { const a = pending; pending = null; tryPlay(a); } };
-  addEventListener('pointerdown', unlock, { passive: true });
-  addEventListener('keydown', unlock);
+  // أول لمسة: نجهّز كل المقاطع (iOS يحتاج كل عنصر صوت يتفعّل بلمسة)، ونشغّل اللي كان منتظر
+  let primed = false;
+  const unlock = () => {
+    if (!primed) {
+      primed = true;
+      ['lobby', 'reveal', 'dance'].forEach(n => { const a = track(n); if (a === cur || a.broken) return; a.muted = true; const p = a.play(); if (p && p.then) p.then(() => { a.pause(); a.muted = false; a.currentTime = 0; }).catch(() => { a.muted = false; }); });
+    }
+    if (pending) { const a = pending; pending = null; tryPlay(a); }
+  };
+  // capture: عصا التحكم توقف انتشار الحدث، فنسمعه قبلها
+  addEventListener('pointerdown', unlock, { passive: true, capture: true });
+  addEventListener('keydown', unlock, { capture: true });
   return {
     play(name, { from = 0 } = {}) {
       if (curName === name && cur && !cur.paused) return;
