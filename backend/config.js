@@ -16,6 +16,12 @@ module.exports = {
 
     debug: process.env.NODE_ENV !== 'production',
 
+    // «حفلة عيد الميلاد» (/ws/party) — مطفأة افتراضياً. تشتغل فقط بـ PARTY_ENABLED=1
+    // (مفتاح إيقاف: أي مشكلة بالحفلة ← تشيل المتغير والموقع يكمل عادي).
+    partyEnabled: process.env.PARTY_ENABLED === '1',
+    // المفتاح الخاص لإنشاء حفلة (رابط المذيع: games/birthday-party/?k=...). فارغ = ممنوع إنشاء أي حفلة.
+    partyHostKey: process.env.PARTY_HOST_KEY || '',
+
     // ⚠️ لازم يُنشأ من Google Cloud Console — راجع README.md.
     googleClientId: process.env.GOOGLE_CLIENT_ID || '777683353907-hkemaaft5t7mktgtjvlf47ptuqk93qbg.apps.googleusercontent.com',
 

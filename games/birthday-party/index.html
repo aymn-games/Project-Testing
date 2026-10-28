@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>حفلة عيد الميلاد — المذيع</title>
+<link rel="icon" href="../../favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Zain:wght@700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<!-- صفحة المذيع: إنشاء الحفلة، كود الغرفة، باركود الضيوف وباركود صاحبة
+     الحفلة (مخفي افتراضياً عشان ما تنكشف المفاجأة)، وقائمة الداخلين.
+     الاتصال عبر party-net.js بخادم /ws/party، والجلسة محفوظة بـ 'party-host'
+     فتحديث الصفحة يرجع لنفس الحفلة. إنشاء حفلة يحتاج الرابط الخاص (?k=المفتاح)،
+     والمفتاح ينحفظ بالجهاز ('party-host-key') فيكفي فتح الرابط الخاص مرة وحدة. -->
+<style>
+    :root{ --ink:#5b1d3e; --soft:#9b6683; --rose:#e2709a; --rose2:#c94f7e; --line:rgba(226,112,154,.28); --card:rgba(255,250,252,.86); --gold:#d9b07a; }
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; min-height:100%; }
+    body{ font-family:'IBM Plex Sans Arabic',sans-serif; color:var(--ink); background:radial-gradient(circle at 85% -10%,#ffe1ee,transparent 55%),radial-gradient(circle at 0% 110%,#ecdcff,transparent 50%),#fbf1f5; }
+    button,input{ font-family:inherit; }
+    .hidden{ display:none !important; }
+    main{ max-width:980px; margin:0 auto; padding:max(20px,env(safe-area-inset-top)) 16px 40px; }
+    header{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+    header h1{ margin:0; font:700 34px/1.2 'Aref Ruqaa',serif; color:var(--rose2); }
+    .net{ display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px; background:var(--card); border:1px solid var(--line); font:600 13px 'IBM Plex Sans Arabic'; }
+    .net i{ width:9px; height:9px; border-radius:50%; background:#f59e0b; }
+    .net.on i{ background:#22c55e; }
+    .card{ background:var(--card); border:1px solid var(--line); border-radius:22px; padding:20px; box-shadow:0 10px 30px rgba(201,79,126,.08); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+    .card h2{ margin:0 0 14px; font:900 22px/1.2 'Zain'; }
+    /* صف إعداد: العنوان يمين والحقل يسار (قاعدة CLAUDE.md) */
+    .row{ display:flex; justify-content:space-between; align-items:center; gap:14px; padding:12px 14px; border-radius:16px; background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,240,246,.5)); border:1px solid var(--line); }
+    .row label{ text-align:right; font-weight:700; }
+    .row input{ width:min(260px,55%); padding:10px 14px; border-radius:12px; border:1px solid var(--line); background:#fff; font-size:16px; color:var(--ink); text-align:right; }
+    .row input:focus{ outline:3px solid rgba(226,112,154,.35); }
+    .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; height:46px; padding:0 22px; border-radius:999px; border:0; cursor:pointer; font:700 15px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); box-shadow:0 8px 20px rgba(212,90,138,.3); text-decoration:none; transition:transform .15s; }
+    .btn:active{ transform:scale(.97); }
+    .btn:focus-visible{ outline:3px solid #f472b6; outline-offset:2px; }
+    .btn.ghost{ background:#fff; color:var(--rose2); border:1px solid var(--line); box-shadow:none; }
+    .btn:disabled{ opacity:.55; cursor:default; }
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+    .msg{ margin-top:12px; padding:10px 14px; border-radius:12px; background:#fff1f2; color:#9f1239; font-weight:600; }
+
+    .grid{ display:grid; grid-template-columns:1.1fr .9fr; gap:16px; }
+    @media (max-width:760px){ .grid{ grid-template-columns:1fr; } }
+    .code{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+    .code b{ font:900 54px/1 'Zain'; letter-spacing:6px; color:var(--rose2); direction:ltr; }
+    .qrs{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
+    @media (max-width:520px){ .qrs{ grid-template-columns:1fr; } }
+    .qr{ text-align:center; padding:14px; border-radius:18px; background:#fff; border:1px solid var(--line); }
+    .qr h3{ margin:0 0 4px; font:900 18px 'Zain'; }
+    .qr p{ margin:0 0 10px; font-size:12px; color:var(--soft); }
+    .qr img{ width:100%; max-width:220px; aspect-ratio:1; image-rendering:pixelated; border-radius:8px; display:block; margin:0 auto; }
+    .qr .veil{ position:relative; }
+    .qr .veil.closed img{ filter:blur(14px); }
+    .qr .veil button{ position:absolute; inset:0; margin:auto; height:40px; width:max-content; }
+    .qr .veil:not(.closed) button{ display:none; }
+    .qr .link{ margin-top:8px; display:flex; gap:6px; justify-content:center; }
+    .qr .link button{ font:600 12px 'IBM Plex Sans Arabic'; padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--rose2); cursor:pointer; }
+
+    .people h2{ display:flex; justify-content:space-between; align-items:center; }
+    .people h2 span{ font:700 14px 'IBM Plex Sans Arabic'; color:var(--soft); }
+    ul.list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; max-height:460px; overflow:auto; }
+    ul.list li{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 12px; border-radius:12px; background:#fff; border:1px solid var(--line); }
+    ul.list li .nm{ display:flex; align-items:center; gap:8px; font-weight:700; min-width:0; }
+    ul.list li .nm bdi{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    ul.list li i{ width:9px; height:9px; border-radius:50%; background:#cbd5e1; flex:none; }
+    ul.list li.on i{ background:#22c55e; }
+    .tag{ font:700 11px 'IBM Plex Sans Arabic'; padding:3px 9px; border-radius:999px; background:#f3e8ff; color:#7e22ce; white-space:nowrap; }
+    .tag.girl{ background:linear-gradient(180deg,#fde68a,#f5c26b); color:#7c4a03; }
+    .tag.quick{ background:#f1f5f9; color:#64748b; }
+    .empty{ color:var(--soft); text-align:center; padding:20px 0; }
+</style>
+</head>
+<body>
+<main>
+    <header>
+        <h1>حفلة عيد الميلاد</h1>
+        <span class="net" id="net"><i></i><span id="netTxt">جاري الاتصال…</span></span>
+    </header>
+
+    <!-- إنشاء الحفلة -->
+    <section class="card" id="create">
+        <h2>حفلة جديدة</h2>
+        <div class="row">
+            <label for="girlName">اسم صاحبة الحفلة</label>
+            <input id="girlName" maxlength="16" placeholder="مثلاً: سارة" autocomplete="off">
+        </div>
+        <div class="actions"><button class="btn" id="createBtn" type="button">إنشاء الحفلة</button></div>
+        <div class="msg hidden" id="createMsg" role="alert"></div>
+    </section>
+
+    <!-- الحفلة -->
+    <section class="grid hidden" id="room">
+        <div class="card">
+            <div class="code"><h2>رقم الحفلة</h2><b id="code">----</b></div>
+            <div class="qrs">
+                <div class="qr">
+                    <h3>باركود الضيوف</h3>
+                    <p>يمسحه كل الضيوف من جوالاتهم</p>
+                    <img id="qrGuest" alt="باركود دخول الضيوف">
+                    <div class="link"><button type="button" data-copy="guest">نسخ الرابط</button></div>
+                </div>
+                <div class="qr">
+                    <h3>باركود صاحبة الحفلة</h3>
+                    <p>خاص فيها — لا تعرضه للضيوف</p>
+                    <div class="veil closed" id="girlVeil">
+                        <img id="qrGirl" alt="باركود دخول صاحبة الحفلة">
+                        <button class="btn ghost" type="button" id="showGirl">إظهار</button>
+                    </div>
+                    <div class="link"><button type="button" data-copy="girl">نسخ الرابط</button></div>
+                </div>
+            </div>
+            <div class="actions">
+                <a class="btn" id="viewBtn" target="_blank" rel="noopener">شاشة عرض</a>
+                <a class="btn ghost" id="playBtn" target="_blank" rel="noopener">دخول كمشارك</a>
+            </div>
+        </div>
+        <div class="card people">
+            <h2>الحضور <span id="count">0 / 100</span></h2>
+            <ul class="list" id="list"></ul>
+        </div>
+    </section>
+</main>
+
+<script type="module">
+    import { connect, readJSON, writeJSON } from './party-net.js';
+    const $ = id => document.getElementById(id);
+    const ERR = {
+        disabled: 'الحفلات متوقفة حالياً على السيرفر.',
+        busy: 'فيه حفلتين شغالة الحين — جرّب بعد شوي.',
+        nocode: 'انتهت الحفلة السابقة — أنشئ حفلة جديدة.',
+        token: 'انتهت الحفلة السابقة — أنشئ حفلة جديدة.',
+        hostkey: 'هذا الرابط ما يسمح بإنشاء حفلة — افتح الرابط الخاص بالمذيع.',
+    };
+    let state = null; // {code, token, girlKey}
+    // المفتاح الخاص من الرابط ← نحفظه ونشيله من شريط العنوان عشان ما ينكشف
+    const urlKey = new URLSearchParams(location.search).get('k');
+    if (urlKey) { writeJSON('party-host-key', urlKey); const u = new URL(location.href); u.searchParams.delete('k'); history.replaceState(null, '', u.pathname + u.search + u.hash); }
+    const hostKey = () => readJSON('party-host-key') || '';
+
+    const link = (q) => new URL('join.html?' + q, location.href).href;
+    const guestUrl = () => link('code=' + state.code);
+    const girlUrl = () => link('code=' + state.code + '&g=' + state.girlKey);
+    function qr(img, url) {
+        if (!window.qrcode) { setTimeout(() => qr(img, url), 200); return; }
+        const q = window.qrcode(0, 'M'); q.addData(url); q.make(); img.src = q.createDataURL(8, 2);
+    }
+    function showCreate(msg) {
+        $('room').classList.add('hidden'); $('create').classList.remove('hidden');
+        $('createBtn').disabled = false;
+        $('createMsg').classList.toggle('hidden', !msg); $('createMsg').textContent = msg || '';
+    }
+    function showRoom() {
+        $('create').classList.add('hidden'); $('room').classList.remove('hidden');
+        $('code').textContent = state.code;
+        qr($('qrGuest'), guestUrl()); qr($('qrGirl'), girlUrl());
+        $('viewBtn').href = 'play.html?code=' + state.code + '&view=1';
+        $('playBtn').href = 'join.html?code=' + state.code + '&host=1';
+    }
+    function renderList(room) {
+        const ps = room.players, guests = ps.filter(p => p[2] === 'guest').length;
+        $('count').textContent = guests + ' / 100';
+        const ul = $('list'); ul.textContent = '';
+        if (!ps.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'لسا ما دخل أحد'; ul.append(li); return; }
+        // صاحبة الحفلة أول القائمة، ثم المتصلين
+        ps.slice().sort((a, b) => (b[2] === 'girl') - (a[2] === 'girl') || b[4] - a[4] || a[0] - b[0]).forEach(([n, name, role, kind, online]) => {
+            const li = document.createElement('li'); li.className = online ? 'on' : '';
+            const nm = document.createElement('span'); nm.className = 'nm';
+            const dot = document.createElement('i'); const b = document.createElement('bdi'); b.textContent = name;
+            nm.append(dot, b);
+            const tag = document.createElement('span');
+            tag.className = 'tag' + (role === 'girl' ? ' girl' : kind === 'quick' ? ' quick' : '');
+            tag.textContent = role === 'girl' ? 'صاحبة الحفلة' : kind === 'member' ? 'مسجّل' : 'ضيف';
+            li.append(nm, tag); ul.append(li);
+        });
+    }
+
+    const net = connect({
+        onStatus: on => { $('net').classList.toggle('on', on); $('netTxt').textContent = on ? 'متصل' : 'جاري إعادة الاتصال…'; },
+        onOpen: () => { const s = readJSON('party-host'); if (s && s.code && s.token) net.send({ t: 'host', code: s.code, token: s.token }); },
+        onMessage: m => {
+            if (m.t === 'hosted') { state = { code: m.code, token: m.token, girlKey: m.girlKey }; writeJSON('party-host', { code: m.code, token: m.token }); showRoom(); }
+            else if (m.t === 'room') renderList(m.room);
+            else if (m.t === 'err' && m.of === 'host') {
+                if (m.err === 'nocode' || m.err === 'token') { writeJSON('party-host', null); state = null; }
+                showCreate(ERR[m.err] || 'صار خطأ، جرّب مرة ثانية.');
+            }
+        },
+    });
+
+    $('createBtn').addEventListener('click', () => {
+        const girlName = $('girlName').value.trim();
+        if (!girlName) { showCreate('اكتب اسم صاحبة الحفلة'); $('girlName').focus(); return; }
+        $('createBtn').disabled = true;
+        net.send({ t: 'host', girlName, key: hostKey() });
+    });
+    $('girlName').addEventListener('keydown', e => { if (e.key === 'Enter') $('createBtn').click(); });
+    $('showGirl').addEventListener('click', () => $('girlVeil').classList.remove('closed'));
+    document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
+        const url = b.dataset.copy === 'girl' ? girlUrl() : guestUrl();
+        try { await navigator.clipboard.writeText(url); b.textContent = 'تم النسخ'; } catch (e) { prompt('انسخ الرابط:', url); }
+        setTimeout(() => { b.textContent = 'نسخ الرابط'; }, 1500);
+    }));
+    if (!readJSON('party-host')) showCreate();
+</script>
+</body>
+</html>
