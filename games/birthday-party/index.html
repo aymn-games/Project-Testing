@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>حفلة عيد الميلاد — القاعة</title>
+<link rel="icon" href="../../favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Zain:wght@700;900&display=swap" rel="stylesheet">
+<!-- حفلة عيد الميلاد ثري دي — المرحلة الأولى: القاعة الرئيسية (الماب).
+     المشهد كله في hall3d.js، والتحكم بالتجوّل في controls.js. اسم صاحبة
+     الحفلة يُمرَّر مؤقتاً بالرابط: index.html?name=سارة
+     أبواب الأقسام الأربعة موجودة بالقاعة وتظهر "قريباً" لحد ما تنبني مشاهدها. -->
+<style>
+    :root{ --agp-accent:#f472b6; --ink:#6b2147; --glass:rgba(255,246,250,.72); --line:rgba(236,160,195,.55); }
+    html,body{ margin:0; height:100%; overflow:hidden; background:#f3d3e0; }
+    body{ font-family:'IBM Plex Sans Arabic',sans-serif; color:var(--ink); -webkit-tap-highlight-color:transparent; }
+    button{ font-family:inherit; }
+    .hidden{ display:none !important; }
+
+    #stage{ position:fixed; inset:0; touch-action:none; cursor:grab; }
+    #stage:active{ cursor:grabbing; }
+
+    .hud{ position:fixed; inset:0; pointer-events:none; z-index:5; }
+    .hud > *{ pointer-events:auto; }
+    .top{ position:absolute; top:max(12px,env(safe-area-inset-top)); left:16px; right:16px; display:flex; align-items:center; justify-content:space-between; gap:10px; pointer-events:none; }
+    .top > *{ pointer-events:auto; }
+    .pill{ height:40px; padding:0 16px; border-radius:999px; display:inline-flex; align-items:center; gap:8px; border:1px solid var(--line); background:var(--glass); color:var(--ink);
+        font:700 14px 'IBM Plex Sans Arabic'; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow:0 6px 20px rgba(214,110,160,.18); cursor:pointer; text-decoration:none; white-space:nowrap; transition:transform .15s, background .2s; }
+    .pill:active{ transform:scale(.96); }
+    .pill:focus-visible{ outline:3px solid #f472b6; outline-offset:2px; }
+    .pill.on{ background:linear-gradient(180deg,#ff9ccc,#f472b6); color:#fff; border-color:transparent; }
+    .pill svg{ width:18px; height:18px; flex:none; }
+    .title{ font:900 24px/1 'Zain'; color:#fff; text-shadow:0 2px 3px rgba(140,30,80,.55),0 2px 16px rgba(219,39,119,.6); pointer-events:none; text-align:center; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .group{ display:flex; gap:8px; }
+
+    .hint{ position:absolute; bottom:max(16px,env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); padding:9px 18px; border-radius:999px; background:var(--glass); border:1px solid var(--line);
+        backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); font:600 13px 'IBM Plex Sans Arabic'; white-space:nowrap; pointer-events:none; transition:opacity .4s; }
+    .toast{ position:absolute; top:76px; left:50%; transform:translate(-50%,-8px); opacity:0; transition:all .3s; pointer-events:none; text-align:center;
+        padding:12px 26px; border-radius:22px; background:rgba(255,250,252,.9); border:2px solid #f0c98f; box-shadow:0 12px 34px rgba(214,110,160,.3); }
+    .toast.show{ opacity:1; transform:translate(-50%,0); }
+    .toast b{ display:block; font:900 26px/1.1 'Zain'; color:#a3306a; }
+    .toast span{ font:600 13px 'IBM Plex Sans Arabic'; color:#c07a9c; }
+
+    .joy{ position:absolute; left:max(24px,env(safe-area-inset-left)); bottom:max(28px,env(safe-area-inset-bottom)); width:124px; height:124px; border-radius:50%; touch-action:none;
+        background:radial-gradient(circle,rgba(255,255,255,.5),rgba(255,214,231,.35)); border:2px solid rgba(255,255,255,.75); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); display:none; }
+    .joy-knob{ position:absolute; left:50%; top:50%; width:54px; height:54px; margin:-27px 0 0 -27px; border-radius:50%; background:linear-gradient(180deg,#ffb3d6,#f472b6); box-shadow:0 4px 14px rgba(219,39,119,.4); pointer-events:none; transition:transform .12s; }
+    .joy.on .joy-knob{ transition:none; }
+    @media (pointer:coarse){ .joy{ display:block; } .hint .desk{ display:none; } .hint{ bottom:auto; top:calc(max(12px,env(safe-area-inset-top)) + 52px); } .toast{ top:118px; } }
+    @media (pointer:fine){ .hint .touch{ display:none; } }
+
+    .loader{ position:fixed; inset:0; z-index:10; display:grid; place-items:center; background:radial-gradient(circle at 50% 40%,#fff3f8,#f7c9dc); transition:opacity .6s; }
+    .loader.out{ opacity:0; pointer-events:none; }
+    .loader .box{ text-align:center; }
+    .loader h1{ margin:14px 0 4px; font:700 46px/1.2 'Aref Ruqaa',serif; color:#d6407f; }
+    .loader p{ margin:0; font:600 14px 'IBM Plex Sans Arabic'; color:#b0708f; }
+    .spin{ width:58px; height:58px; margin:auto; border-radius:50%; border:5px solid #fbd3e4; border-top-color:#f472b6; animation:sp 1s linear infinite; }
+    @keyframes sp{ to{ transform:rotate(360deg); } }
+    .loader.fail .spin{ display:none; }
+    @media (prefers-reduced-motion:reduce){ .spin{ animation-duration:3s; } }
+    @media (max-width:520px){ .title{ font-size:19px; } .pill .lbl{ display:none; } .pill{ padding:0 12px; } }
+</style>
+</head>
+<body>
+<div id="stage" aria-label="قاعة حفلة عيد الميلاد"></div>
+
+<div class="hud" id="hud">
+    <div class="top">
+        <a class="pill" href="../../games.html" aria-label="خروج">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg><span class="lbl">خروج</span>
+        </a>
+        <div class="title" id="title">حفلة عيد الميلاد</div>
+        <div class="group">
+            <button class="pill on" id="tourBtn" type="button" aria-pressed="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span class="lbl">جولة سينمائية</span>
+            </button>
+            <button class="pill" id="fsBtn" type="button" aria-label="ملء الشاشة">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>
+            </button>
+        </div>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"><b id="toastTitle"></b><span>هذا القسم قريباً</span></div>
+    <div class="hint" id="hint">
+        <span class="desk">W A S D للمشي · اسحب بالماوس للنظر · Shift للجري</span>
+        <span class="touch">العصا للمشي · اسحب بإصبعك للنظر</span>
+    </div>
+    <div class="joy" id="joy" aria-hidden="true"><div class="joy-knob"></div></div>
+</div>
+
+<div class="loader" id="loader">
+    <div class="box">
+        <div class="spin"></div>
+        <h1>عيد ميلاد سعيد</h1>
+        <p id="loaderMsg">نجهّز القاعة…</p>
+    </div>
+</div>
+
+<script type="module">
+    const log = (...a) => { try { const A = window.AymanGamesPlatform; (A && A.log ? A.log : function () {})(...a); } catch (e) {} };
+    const $ = id => document.getElementById(id);
+    const params = new URLSearchParams(location.search);
+    const name = (params.get('name') || '').trim().slice(0, 30);
+    if (name) $('title').textContent = 'حفلة ' + name;
+
+    // الخطوط لازم تكون جاهزة قبل رسم اللافتات على الـ canvas
+    const fontLoads = ['700 100px "Aref Ruqaa"', '900 100px Zain', '700 50px "IBM Plex Sans Arabic"'].map(f => document.fonts.load(f, 'عيد'));
+    await Promise.race([Promise.all(fontLoads).catch(() => {}), new Promise(r => setTimeout(r, 3500))]);
+
+    let hall = null;
+    try {
+        const [{ mountHall }, { createControls }] = await Promise.all([import('./hall3d.js'), import('./controls.js')]);
+        const controls = createControls($('stage'), $('joy'));
+        let toastTimer = 0;
+        hall = mountHall($('stage'), {
+            name, controls,
+            onReady: () => setTimeout(() => $('loader').classList.add('out'), 250),
+            onModeChange: m => {
+                const on = m === 'tour';
+                $('tourBtn').classList.toggle('on', on); $('tourBtn').setAttribute('aria-pressed', String(on));
+                $('hint').style.opacity = on ? '1' : '.75';
+            },
+            onSectionNear: s => {
+                clearTimeout(toastTimer);
+                if (s) { $('toastTitle').textContent = s.title; $('toast').classList.add('show'); }
+                else toastTimer = setTimeout(() => $('toast').classList.remove('show'), 200);
+            },
+        });
+        $('tourBtn').addEventListener('click', () => hall.setMode(hall.mode === 'tour' ? 'walk' : 'tour'));
+    } catch (err) {
+        log('[birthday-party] 3D غير متاح', err);
+        $('loader').classList.add('fail');
+        $('loaderMsg').textContent = 'جهازك أو متصفحك ما يدعم العرض ثلاثي الأبعاد — جرّب متصفح Chrome أو جهاز آخر.';
+    }
+
+    $('fsBtn').addEventListener('click', () => {
+        const d = document;
+        if (d.fullscreenElement) d.exitFullscreen && d.exitFullscreen();
+        else d.documentElement.requestFullscreen && d.documentElement.requestFullscreen().catch(() => {});
+    });
+</script>
+</body>
+</html>
