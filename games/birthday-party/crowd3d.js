@@ -218,5 +218,7 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
     labels.forEach(s => { s.material.dispose(); scene.remove(s); }); labelCache.forEach(t => t.dispose());
   }
 
-  return { sync, apply, update, setLocal, setAutoPaths, posOf, dispose, get count() { return chars.size; } };
+  // للاختبار: حالة كل شخصية
+  const debug = () => [...chars.values()].map(c => ({ n: c.n, name: c.name, online: c.online, ready: c.ready, x: +c.x.toFixed(2), z: +c.z.toFixed(2), buf: c.buf.length, slot: c.slot }));
+  return { sync, apply, update, setLocal, setAutoPaths, posOf, dispose, debug, get count() { return chars.size; } };
 }

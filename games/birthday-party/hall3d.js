@@ -892,6 +892,8 @@ export function mountHall(el, opts = {}) {
     if (!start) { setMode('tour'); return; }
     pos.set(start.x, 0, start.z); resolve();
     localRy = start.ry == null ? Math.PI : start.ry; yaw = localRy - Math.PI;
+    if (start.elev != null) camElev = start.elev; // زاوية الكاميرا
+    if (start.yawOff) yaw += start.yawOff;       // كاميرا مائلة لجنب (صاحبة الحفلة على المنصة: جنب الكيكة مو فوقها)
     if (mode !== 'follow') { mode = 'follow'; cam.fov = 58; cam.updateProjectionMatrix(); onModeChange && onModeChange('follow'); }
   }
   // مسار تلقائي للاعب المحلي (المشي للمنصة) بتوقيت السيرفر: points = [[x, z], ...]
@@ -953,6 +955,8 @@ export function mountHall(el, opts = {}) {
       const cb = CAMBOX[zone === 'nostage' ? 'hall' : zone] || CAMBOX.hall;
       if (!auto) { tourPos.x = Math.max(cb[0], Math.min(cb[1], tourPos.x)); tourPos.z = Math.max(cb[2], Math.min(cb[3], tourPos.z)); }
       tourPos.y = Math.min(auto ? LOUNGE_H - .4 : cb[4], tourPos.y);
+      // الكاميرا لا تدخل الكيكة (صاحبة الحفلة واقفة قدامها): ترتفع فوقها
+      if (Math.hypot(tourPos.x, tourPos.z - (STAGE.front - 6.5)) < 3) tourPos.y = Math.max(tourPos.y, STAGE.h + 6.6);
       cam.position.lerp(tourPos, 1 - Math.exp(-dt * 8));
       followLook.set(pos.x, fy + 1.3, pos.z); cam.lookAt(followLook);
     } else if (mode === 'tour') {

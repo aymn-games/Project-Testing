@@ -219,10 +219,11 @@
         if (!viewOnly && !(me && me.code === code)) { location.replace('join.html?code=' + code); return; }
         if (!viewOnly) $('hint').querySelector('.touch').textContent = 'العصا للمشي · اسحب للف الكاميرا';
         const crowd = createCrowd(hall.scene, { floorAt: hall.floorAt });
+        if (params.has('debug')) window.__crowd = crowd;
         const music = createMusic();
         const roles = new Map();
         let myN = null, myRole = null, placed = false, gotAll = false, lastSent = null;
-        let phase = null, applied = null, revealFired = false, emote = 0, emoteUntil = 0;
+        let phase = null, applied = null, revealFired = false, emote = 0, emoteUntil = 0, myTarget = null;
         // نقاط العبور (نفس كل الجوالات): الضيوف من باب الصالة، وصاحبة الحفلة من الباب الخلفي ورا الستارة
         const GIRL_WP = [[0, -52], [16, -51], [16, -44]];
         const guestWp = n => { const ox = ((n % 5) - 2) * .9; return [[ox, 52], [ox, 45]]; };
@@ -247,15 +248,22 @@
                 const t0 = phase.at, t1 = phase.at + (phase.until - phase.at) * .85, paths = {};
                 for (const n of Object.keys(walk)) { if (+n === myN) continue; const st = crowd.posOf(+n); if (st) paths[n] = pathFor(+n, st, walk[n]); }
                 crowd.setAutoPaths(paths, t0, t1);
-                if (!viewOnly && myN != null && walk[myN]) { const L = hall.getLocal(); hall.setAutoPath(pathFor(myN, [L.x, L.z], walk[myN]), t0, t1, serverNow, isGirl ? 0 : Math.PI); }
+                if (!viewOnly && myN != null && walk[myN]) { const L = hall.getLocal(); myTarget = walk[myN]; hall.setAutoPath(pathFor(myN, [L.x, L.z], myTarget), t0, t1, serverNow, isGirl ? 0 : Math.PI); }
             } else {
                 crowd.setAutoPaths(null, now);
-                if (!viewOnly) hall.setAutoPath(null);
+                if (!viewOnly) {
+                    hall.setAutoPath(null);
+                    // انتهى الدخول (أو تخطاه المذيع): السيرفر حطنا على مكاننا، فنثبّت نفس المكان
+                    if (myTarget && p !== 'lobby') hall.setFollow({ x: myTarget[0], z: myTarget[1], ry: isGirl ? 0 : Math.PI, elev: isGirl ? .45 : undefined, yawOff: isGirl ? .7 : 0 });
+                    myTarget = null;
+                }
             }
             if (viewOnly) hall.setShot(p === 'reveal' ? 'stage' : p === 'entrance' ? 'entrance' : null);
             if (p === 'lobby' || p === 'entrance') music.play('lobby');
             else if (p === 'dance' || p === 'free') music.play('dance');
-            $('emotes').classList.toggle('hidden', viewOnly || !(p === 'dance' || p === 'free'));
+            const showEmotes = !viewOnly && (p === 'dance' || p === 'free');
+            $('emotes').classList.toggle('hidden', !showEmotes);
+            if (showEmotes) $('hint').classList.add('gone'); // التلميح يغطي الأزرار
         }
 
         const fmt = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };

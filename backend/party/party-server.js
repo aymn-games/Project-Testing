@@ -46,6 +46,7 @@ var _idleMs = 40 * 1000;                 // ما وصل شي من الاتصال
 var _roster = {};                        // code -> {at, dirty}
 // التحقق من الجلسة يتحمّل وقت الحاجة فقط (يفتح قاعدة البيانات)
 var _mgr = createRoomManager({
+    maxRooms: config.partyMaxRooms || 2,
     validateSession: function (token) { try { return require('../auth/auth-service').validateSession(token); } catch (err) { logger.error('Party: session check failed:', err); return null; } }
 });
 var _clients = {};   // connectionId -> { socket, code, role: 'host'|'player'|'viewer', id, closed }
