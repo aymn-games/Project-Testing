@@ -718,6 +718,87 @@ export function mountHall(el, opts = {}) {
     if (any) { fwGeo.attributes.position.needsUpdate = true; fwGeo.attributes.color.needsUpdate = true; }
   }
 
+  // ---------- الدفعة 3: شاشة التهاني + قص الكيكة + كاميرا الصورة ----------
+  // شاشة تنزل من السقف قدام لافتة الخلفية وتعرض التهنئة الحالية
+  const WISH_W = 16, WISH_H = 9, WISH_Y = 11.3; // أسفلها فوق شموع الكيكة
+  const wishCanvas = document.createElement('canvas'); wishCanvas.width = 1600; wishCanvas.height = 900;
+  const wishTex = new T.CanvasTexture(wishCanvas); wishTex.colorSpace = T.SRGBColorSpace;
+  const wishGroup = new T.Group(); wishGroup.position.set(0, HALL.h + 6, -HZ + 4.4); scene.add(wishGroup); // قدام قوس البالونات والقلوب
+  mesh(new T.BoxGeometry(WISH_W + .7, WISH_H + .7, .3), gold, 0, 0, -.18, false, wishGroup);
+  mesh(new T.PlaneGeometry(WISH_W, WISH_H), basic({ map: wishTex, toneMapped: false, fog: false }), 0, 0, 0, false, wishGroup);
+  for (const sd of [-1, 1]) mesh(new T.CylinderGeometry(.03, .03, 12, 6), gold, sd * (WISH_W / 2 - 1), WISH_H / 2 + 6, -.1, false, wishGroup);
+  let wishK = 0, wishT = 0;
+  // لفّ النص العربي على أسطر بعرض محدد (ويصغّر الخط لين يدخل بـ 5 أسطر)
+  function wrapLines(g, text, maxW, maxLines) {
+    const words = String(text).split(/\s+/), lines = []; let cur = '';
+    for (const w of words) { const t = cur ? cur + ' ' + w : w; if (g.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; }
+    if (cur) lines.push(cur);
+    return lines.length <= maxLines ? lines : null;
+  }
+  function drawWish(w) {
+    const g = wishCanvas.getContext('2d'), W = wishCanvas.width, H = wishCanvas.height;
+    const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#3a1236'); bg.addColorStop(1, '#6b1f4f');
+    g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(255,214,231,.18)'; for (let i = 0; i < 18; i++) heart(g, rand() * W, rand() * H, 30 + rand() * 40);
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'rtl';
+    if (!w) {
+      g.fillStyle = '#ffd9ea'; g.font = '700 120px "Aref Ruqaa", serif'; g.fillText('رسائل التهاني', W / 2, H * .42);
+      g.fillStyle = 'rgba(255,230,240,.8)'; g.font = '600 52px ' + FONT_AR; g.fillText('اكتبوا تهانيكم من جوالاتكم 💌', W / 2, H * .62);
+    } else {
+      g.fillStyle = 'rgba(255,220,235,.75)'; g.font = '700 44px ' + FONT_AR; g.fillText('تهنئة ' + w.i + ' من ' + w.total, W / 2, 90);
+      g.fillStyle = '#f2cf8e'; g.font = '900 96px Zain, ' + FONT_AR; g.fillText(w.name, W / 2, 210, W - 160);
+      let size = 84, lines = null;
+      while (size >= 40) { g.font = '700 ' + size + 'px ' + FONT_AR; lines = wrapLines(g, w.text, W - 220, 5); if (lines) break; size -= 6; }
+      lines = lines || [w.text.slice(0, 120) + '…'];
+      g.fillStyle = '#ffffff'; const lh = size * 1.45, y0 = 520 - (lines.length - 1) * lh / 2;
+      lines.forEach((l, i) => g.fillText(l, W / 2, y0 + i * lh, W - 160));
+    }
+    wishTex.needsUpdate = true;
+  }
+  drawWish(null);
+  let lastWishKey = '';
+  function setWishScreen(k, w, instant) {
+    wishT = k; if (instant) wishK = k;
+    const key = w ? w.i + '|' + w.name + '|' + w.text + '|' + w.total : '';
+    if (key !== lastWishKey) { lastWishKey = key; drawWish(w || null); }
+  }
+
+  // قص الكيكة: سكين ذهبي ينزل، وشريحة تطلع على صحن جنب الكيكة، والشموع تنطفي
+  const knife = new T.Group(); knife.visible = false; cake.add(knife);
+  mesh(new T.BoxGeometry(.08, 1.2, .02), std('#f4f4f8', { metalness: 1, roughness: .15 }), 0, -.5, 0, false, knife);
+  mesh(new T.CylinderGeometry(.06, .06, .5, 10), gold, 0, .35, 0, false, knife);
+  const sliceShape = new T.Shape(); sliceShape.moveTo(0, 0); sliceShape.absarc(0, 0, .95, -.28, .28, false); sliceShape.lineTo(0, 0);
+  const sliceGeo = new T.ExtrudeGeometry(sliceShape, { depth: .8, bevelEnabled: false, curveSegments: 10 }); sliceGeo.rotateX(-Math.PI / 2);
+  const slice = mesh(sliceGeo, std('#fbe3ec', { roughness: .55 }), 0, 0, 0, true, cake); slice.visible = false;
+  const plate = mesh(new T.CylinderGeometry(.7, .55, .06, 32), gold, 3, .05, 1.4, true, cake); plate.visible = false;
+  let cutT = -1; // -1 ما انقصت · 0..1 أنيميشن · ≥1 مقصوصة
+  function cutCake(instant) {
+    if (cutT >= 0 && !instant) return;
+    cutT = instant ? 1 : 0; knife.visible = !instant; slice.visible = plate.visible = true;
+    flameMat.opacity = 0; flameMat.transparent = true;
+  }
+  function updateCut(dt) {
+    if (cutT < 0 || cutT > 1.0001) return;
+    cutT = Math.min(1.0001, cutT + dt / 2.6);
+    const k = Math.min(1, cutT * 2), m = Math.max(0, cutT * 2 - 1);
+    knife.position.set(.55, ty + .9 - k * 1.4, .6); knife.rotation.z = -.25;
+    // الشريحة تطلع من الطبقة الأولى للصحن
+    slice.position.set(.9 + m * 2.1, .92 + Math.sin(m * Math.PI) * 1.2, .6 + m * .8); slice.rotation.y = -.6 - m * .4;
+    if (cutT >= 1) { knife.visible = false; slice.position.set(3, .11, 1.4); }
+  }
+
+  // الاحتفال الثاني: ألعاب نارية أكثر + ليزر ذهبي/وردي/أبيض + كونفيتي أسرع
+  let celebUntil = 0;
+  const CELEB_SET = ['#ffd27a', '#ffffff', '#ff5fb0'];
+  function celebrate(sec = 30) { celebUntil = clock.elapsedTime + sec; fwUntil = clock.elapsedTime + Math.min(sec, 14); fwNext = 0; }
+
+  // كاميرا الصورة الجماعية: ثابتة على المنصة تطالع الكل
+  let photoCam = false;
+  function snapshot() {
+    r.render(scene, cam);
+    try { return r.domElement.toDataURL('image/jpeg', .92); } catch (e) { return null; }
+  }
+
   // ---------- قصاصات الورق (كونفيتي) ----------
   const CONF = 900, cPos = new Float32Array(CONF * 3), cCol = new Float32Array(CONF * 3), cVel = new Float32Array(CONF);
   {
@@ -828,7 +909,7 @@ export function mountHall(el, opts = {}) {
     }
     spots.instanceMatrix.needsUpdate = true; spots.instanceColor.needsUpdate = true;
     // الليزر يغيّر مجموعة ألوانه كل 6 ثواني ويتأرجح بأنماط مختلفة
-    const set = LASER_SETS[Math.floor(t / 6) % LASER_SETS.length], blink = (Math.floor(t * 2) % 8) === 7 ? .35 : 1;
+    const set = t < celebUntil ? CELEB_SET : LASER_SETS[Math.floor(t / 6) % LASER_SETS.length], blink = (Math.floor(t * 2) % 8) === 7 ? .35 : 1;
     coreMat.opacity = .9 * k * blink; glowMat.opacity = .16 * k * blink; dotMat.opacity = .9 * k * blink;
     BEAMS.forEach((b, i) => {
       const e = b.e, spread = e.n > 1 ? (b.i - (e.n - 1) / 2) * .22 : 0;
@@ -927,6 +1008,12 @@ export function mountHall(el, opts = {}) {
   }
   const q0 = new T.Quaternion(), m4 = new T.Matrix4();
   function updateCamera(dt) {
+    if (photoCam) {
+      // لقطة الصورة الجماعية (نفسها على كل الجوالات)
+      tourPos.set(0, 5, -37.5); cam.position.lerp(tourPos, 1 - Math.exp(-dt * 4)); followLook.set(0, 1.7, -25); cam.lookAt(followLook);
+      if (controls) controls.read();
+      return;
+    }
     if (mode === 'debug') return; // لقطة ثابتة للاختبار (play.html?cam=...)
     const inp = controls ? controls.read() : null;
     if (inp && inp.active && mode === 'tour' && !opts.noFreeWalk) setMode('walk');
@@ -1009,7 +1096,7 @@ export function mountHall(el, opts = {}) {
     updateCamera(dt);
     // كونفيتي
     for (let i = 0; i < CONF; i++) {
-      const j = i * 3; cPos[j + 1] -= cVel[i] * dt; cPos[j] += Math.sin(t * 1.3 + i) * dt * .25;
+      const j = i * 3; cPos[j + 1] -= cVel[i] * dt * (t < celebUntil ? 3 : 1); cPos[j] += Math.sin(t * 1.3 + i) * dt * .25;
       if (cPos[j + 1] < .05) cPos[j + 1] = HALL.h - .2;
     }
     confGeo.attributes.position.needsUpdate = true;
@@ -1026,7 +1113,9 @@ export function mountHall(el, opts = {}) {
     crystalMat.emissiveIntensity = (.5 + Math.sin(t * 2.2) * .12) * (1 - party * .7);
     chLights.forEach((l, i) => { l.intensity = (200 + Math.sin(t * 1.7 + i) * 12) * (1 - party * .85); });
     flameMat.size = .42 + Math.sin(t * 17) * .04 + Math.sin(t * 29) * .03;
-    cakeGlow.intensity = 14 + Math.sin(t * 13) * 2;
+    wishK += (wishT - wishK) * (1 - Math.exp(-dt * 1.5)); wishGroup.position.y = HALL.h + 6 - (HALL.h + 6 - WISH_Y) * wishK; wishGroup.visible = wishK > .01;
+    updateCut(dt);
+    cakeGlow.intensity = cutT >= 0 ? 0 : 14 + Math.sin(t * 13) * 2;
     for (const p of portals) { p.tex.offset.y = -t * .04; p.ring.material.opacity = (near === p.s ? .75 : .3) + Math.sin(t * 2.4) * .1; }
     curtainK += (curtainT - curtainK) * (1 - Math.exp(-dt * 1.1));
     curtains.forEach(c => { c.scale.x = 1 - .86 * curtainK; });
@@ -1060,7 +1149,9 @@ export function mountHall(el, opts = {}) {
     setDoors: (k, instant) => { doorT = k; if (instant) doorK = k; },
     fireworks: (sec = 6) => { fwUntil = clock.elapsedTime + sec; fwNext = 0; },
     setAutoPath, ZONES, setShot: v => { shot = v || null; },
-    get curtain() { return curtainT; }, get autoActive() { return !!auto; }, get zone() { return zone; }, // للاختبار
+    setWishScreen, cutCake, celebrate, snapshot,
+    setPhotoCam: on => { photoCam = !!on; cam.fov = on ? 50 : (mode === 'follow' ? 58 : 52); cam.updateProjectionMatrix(); },
+    get curtain() { return curtainT; }, get wishY() { return wishGroup.position.y; }, get wishVis() { return wishGroup.visible; }, get autoActive() { return !!auto; }, get zone() { return zone; }, // للاختبار
     debugView: (p, l) => { mode = 'debug'; cam.fov = 60; cam.updateProjectionMatrix(); cam.position.set(p[0], p[1], p[2]); cam.lookAt(l[0], l[1], l[2]); },
     addTicker: fn => { tickers.add(fn); return () => tickers.delete(fn); },
     get mode() { return mode; }, get party() { return partyTarget === 1; },

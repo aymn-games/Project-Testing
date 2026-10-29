@@ -199,12 +199,15 @@
         if (code) await startParty(hall);
         // اختبار بصري: play.html?cam=x,y,z,lx,ly,lz&curtain=0&doors=1&fw=1&party=1
         const camQ = params.get('cam');
+        if (params.has('debug')) window.__hall = hall;
         if (!code && camQ) {
             const v = camQ.split(',').map(Number); hall.debugView(v.slice(0, 3), v.slice(3, 6));
             if (params.has('curtain')) hall.setCurtain(+params.get('curtain'), true);
             if (params.has('doors')) hall.setDoors(+params.get('doors'), true);
             if (params.get('party') === '1') hall.setParty(true);
             if (params.get('fw') === '1') hall.fireworks(30);
+            if (params.get('wish') === '1') hall.setWishScreen(1, { i: 3, total: 12, name: 'نورة', text: 'كل عام وانتي بخير يا أحلى سارة، الله يسعدك ويحقق كل أمانيك وتبقين دايم مبتسمة 💖' }, true);
+            if (params.get('cut') === '1') hall.cutCake(params.get('cutnow') === '1');
         }
     } catch (err) {
         log('[birthday-party] 3D غير متاح', err);
