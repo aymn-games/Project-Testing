@@ -60,6 +60,15 @@
     .qr .link{ margin-top:8px; display:flex; gap:6px; justify-content:center; }
     .qr .link button{ font:600 12px 'IBM Plex Sans Arabic'; padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--rose2); cursor:pointer; }
 
+    .stepper{ display:flex; align-items:center; gap:6px; }
+    .stepper button{ width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background:#fff; color:var(--rose2); font:700 20px/1 'IBM Plex Sans Arabic'; cursor:pointer; }
+    .stepper output{ min-width:34px; text-align:center; font:900 22px 'Zain'; }
+    .card.show{ grid-column:1/-1; }
+    .showRow{ display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+    .showRow small{ display:block; font-size:12px; color:var(--soft); }
+    .showRow b{ font:900 24px 'Zain'; }
+    .clock{ font:900 30px 'Zain'; color:var(--rose2); font-variant-numeric:tabular-nums; direction:ltr; }
+    .showBtns{ display:flex; gap:8px; }
     .people h2{ display:flex; justify-content:space-between; align-items:center; }
     .people h2 span{ font:700 14px 'IBM Plex Sans Arabic'; color:var(--soft); }
     ul.list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; max-height:460px; overflow:auto; }
@@ -88,12 +97,31 @@
             <label for="girlName">اسم صاحبة الحفلة</label>
             <input id="girlName" maxlength="16" placeholder="مثلاً: سارة" autocomplete="off">
         </div>
+        <div class="row" style="margin-top:10px">
+            <label id="danceLbl">مدة الرقص (دقايق)</label>
+            <div class="stepper" role="group" aria-labelledby="danceLbl">
+                <button type="button" id="danceMinus" aria-label="أقل">−</button>
+                <output id="danceMin">5</output>
+                <button type="button" id="dancePlus" aria-label="أكثر">+</button>
+            </div>
+        </div>
         <div class="actions"><button class="btn" id="createBtn" type="button">إنشاء الحفلة</button></div>
         <div class="msg hidden" id="createMsg" role="alert"></div>
     </section>
 
     <!-- الحفلة -->
     <section class="grid hidden" id="room">
+        <div class="card show">
+            <div class="showRow">
+                <div><small>المرحلة الحالية</small><b id="phaseName">—</b></div>
+                <span class="clock" id="phaseClock"></span>
+                <div class="showBtns">
+                    <button class="btn" id="startBtn" type="button">بدء الحفلة</button>
+                    <button class="btn ghost hidden" id="skipBtn" type="button">تخطي</button>
+                </div>
+            </div>
+            <div class="msg hidden" id="showMsg" role="alert"></div>
+        </div>
         <div class="card">
             <div class="code"><h2>رقم الحفلة</h2><b id="code">----</b></div>
             <div class="qrs">
@@ -126,7 +154,7 @@
 </main>
 
 <script type="module">
-    import { connect, readJSON, writeJSON } from './party-net.js';
+    import { connect, readJSON, writeJSON, serverNow } from './party-net.js';
     const $ = id => document.getElementById(id);
     const ERR = {
         disabled: 'الحفلات متوقفة حالياً على السيرفر.',
@@ -184,6 +212,8 @@
         onMessage: m => {
             if (m.t === 'hosted') { state = { code: m.code, token: m.token, girlKey: m.girlKey }; writeJSON('party-host', { code: m.code, token: m.token }); showRoom(); }
             else if (m.t === 'room') renderList(m.room);
+            else if (m.t === 'phase') { phase = m; renderPhase(); }
+            else if (m.t === 'err' && (m.of === 'start' || m.of === 'skip')) showShowMsg(m.err === 'phase' ? 'المرحلة تغيّرت قبل الضغط — جرّب مرة ثانية.' : 'صار خطأ.');
             else if (m.t === 'err' && m.of === 'host') {
                 if (m.err === 'nocode' || m.err === 'token') { writeJSON('party-host', null); state = null; }
                 showCreate(ERR[m.err] || 'صار خطأ، جرّب مرة ثانية.');
@@ -195,8 +225,40 @@
         const girlName = $('girlName').value.trim();
         if (!girlName) { showCreate('اكتب اسم صاحبة الحفلة'); $('girlName').focus(); return; }
         $('createBtn').disabled = true;
-        net.send({ t: 'host', girlName, key: hostKey() });
+        net.send({ t: 'host', girlName, key: hostKey(), danceMin });
     });
+    // مدة الرقص 1-15 دقيقة
+    let danceMin = 5;
+    const setDance = v => { danceMin = Math.max(1, Math.min(15, v)); $('danceMin').textContent = danceMin; };
+    $('danceMinus').addEventListener('click', () => setDance(danceMin - 1));
+    $('dancePlus').addEventListener('click', () => setDance(danceMin + 1));
+
+    // ---- التحكم بالعرض ----
+    let phase = null;
+    const PH = { lobby: 'الانتظار', entrance: 'دخول الضيوف', reveal: 'الافتتاح', dance: 'وقت الرقص', free: 'الحفلة مستمرة' };
+    const SKIP = { entrance: 'تخطي المشي', reveal: 'تخطي الافتتاح', dance: 'إنهاء الرقص' };
+    function showShowMsg(t) { $('showMsg').textContent = t || ''; $('showMsg').classList.toggle('hidden', !t); if (t) setTimeout(() => showShowMsg(''), 4000); }
+    function renderPhase() {
+        if (!phase) return;
+        $('phaseName').textContent = PH[phase.p] || phase.p;
+        $('startBtn').classList.toggle('hidden', phase.p !== 'lobby');
+        $('skipBtn').classList.toggle('hidden', !SKIP[phase.p]);
+        $('skipBtn').textContent = SKIP[phase.p] || 'تخطي';
+    }
+    setInterval(() => {
+        if (!phase || !phase.until) { $('phaseClock').textContent = ''; return; }
+        const left = Math.max(0, Math.ceil((phase.until - serverNow()) / 1000));
+        $('phaseClock').textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+    }, 250);
+    // الزر يتعطل ثانية بعد الضغط (والسيرفر أصلاً يرفض الضغط المزدوج)
+    const press = (btn, msg) => { btn.disabled = true; net.send(msg); setTimeout(() => { btn.disabled = false; }, 1200); };
+    $('startBtn').addEventListener('click', () => {
+        // ما يرجع: نتأكد قبل ما يبدأ العرض عند الكل
+        if (!confirm('بدء الحفلة الحين؟ الضيوف يمشون للقاعة وصاحبة الحفلة للمنصة، وما ينقدر التراجع.')) return;
+        press($('startBtn'), { t: 'start' });
+    });
+    $('skipBtn').addEventListener('click', () => phase && press($('skipBtn'), { t: 'skip', from: phase.p }));
+
     $('girlName').addEventListener('keydown', e => { if (e.key === 'Enter') $('createBtn').click(); });
     $('showGirl').addEventListener('click', () => $('girlVeil').classList.remove('closed'));
     document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {

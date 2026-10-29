@@ -14,6 +14,8 @@
  *   عميل → resume {code, id, key}                 ← نفس رد join
  *   عميل → peek {code}                            ← room + all (شاشة عرض بدون شخصية)
  *   عميل → mv {p:[x, z, ry, a]} · ping {k}        ← pong {k, now}
+ *   المذيع → start · skip {from}                  ← phase {p, at, until, walk} للكل
+ *   (phase تنرسل أيضاً لكل اتصال جديد؛ walk مسطّحة n, x×100, z×100 وقت المشي التلقائي)
  *   خادم → room {room} عند تغيّر القائمة · s {now, d} دلتا الحركة كل 125ms
  *          (d مسطّحة: n,x,z,ry,a لكل لاعب تحرك، x/z بالسم وry ×100 — خاصة بكل مستقبل:
  *          القريب منه كل دورة والبعيد كل 1.5ث، وبدون صفه هو) — all {d} بنفس الصيغة · err {err, of} · closed
@@ -44,6 +46,7 @@ var _idleMs = 40 * 1000;                 // ما وصل شي من الاتصال
 var _roster = {};                        // code -> {at, dirty}
 // التحقق من الجلسة يتحمّل وقت الحاجة فقط (يفتح قاعدة البيانات)
 var _mgr = createRoomManager({
+    maxRooms: config.partyMaxRooms || 2,
     validateSession: function (token) { try { return require('../auth/auth-service').validateSession(token); } catch (err) { logger.error('Party: session check failed:', err); return null; } }
 });
 var _clients = {};   // connectionId -> { socket, code, role: 'host'|'player'|'viewer', id, closed }
@@ -88,7 +91,18 @@ function broadcastRoster(code) {
     var encoded = frame.encodeTextFrame(JSON.stringify({ t: 'room', room: { code: r.code, girlName: r.girlName, players: r.players } }));
     roomClients(code).forEach(function (c) { sendRaw(c, encoded); });
 }
-function sendAll(client) { var d = _mgr.fullState(client.code); if (Array.isArray(d)) send(client, { t: 'all', now: Date.now(), d: packRows(d) }); }
+function phaseMsg(code) {
+    var ph = _mgr.phaseOf(code); if (!ph.ok) return null;
+    var walk = null;
+    if (ph.walk) { walk = []; Object.keys(ph.walk).forEach(function (n) { walk.push(Number(n), Math.round(ph.walk[n][0] * 100), Math.round(ph.walk[n][1] * 100)); }); }
+    return { t: 'phase', p: ph.p, at: ph.at, until: ph.until, walk: walk, now: Date.now() };
+}
+function broadcastPhase(code) {
+    var m = phaseMsg(code); if (!m) return;
+    var encoded = frame.encodeTextFrame(JSON.stringify(m));
+    roomClients(code).forEach(function (c) { sendRaw(c, encoded); });
+}
+function sendAll(client) { var d = _mgr.fullState(client.code, client.role === 'player' ? client.id : null); if (Array.isArray(d)) send(client, { t: 'all', now: Date.now(), d: packRows(d) }); }
 
 function attach(client, code, role, id) {
     client.code = code; client.role = role; client.id = id || null; client.seen = new Map();
@@ -100,6 +114,7 @@ function onWelcome(client, code, res) {
     send(client, { t: 'welcome', id: res.id, key: res.key, n: res.n, role: res.role, kind: res.kind });
     send(client, rosterMsg(code));
     markRoster(code);
+    send(client, phaseMsg(code));
     sendAll(client);
 }
 
@@ -107,11 +122,12 @@ function onMessage(client, msg) {
     var t = msg && msg.t;
     if (t === 'ping') return send(client, { t: 'pong', k: msg.k, now: Date.now() });
     if (typeof t !== 'string') return;
-    var heavy = t === 'host' || t === 'join' || t === 'resume' || t === 'peek';
+    var ident = t === 'host' || t === 'join' || t === 'resume' || t === 'peek';
+    var heavy = ident || t === 'start' || t === 'skip';
     if (!allow(client, heavy)) return;
     if (!_enabled) return send(client, { t: 'err', err: 'disabled', of: t });
     // كل اتصال له هوية وحدة: المشاهد (peek) يقدر يدخل كلاعب مرة، وغير كذا مرفوض
-    if (heavy && (client.role === 'player' || client.role === 'host' || (client.role === 'viewer' && t === 'host'))) return send(client, { t: 'err', err: 'already', of: t });
+    if (ident && (client.role === 'player' || client.role === 'host' || (client.role === 'viewer' && t === 'host'))) return send(client, { t: 'err', err: 'already', of: t });
     var code = typeof msg.code === 'string' ? msg.code : null, res;
 
     if (t === 'host') {
@@ -123,19 +139,20 @@ function onMessage(client, msg) {
             send(client, { t: 'hosted', code: code, token: room.token, girlKey: room.girlKey });
         } else {
             if (!keyOk(msg.key)) return send(client, { t: 'err', err: 'hostkey', of: t });
-            res = _mgr.createRoom({ girlName: msg.girlName });
+            var dm = Number(msg.danceMin); res = _mgr.createRoom({ girlName: msg.girlName, danceSec: isFinite(dm) && dm > 0 ? Math.round(dm) * 60 : 300 });
             if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
             attach(client, res.code, 'host');
             logger.log('Party: room ' + res.code + ' created');
             send(client, { t: 'hosted', code: res.code, token: res.token, girlKey: res.girlKey });
         }
-        send(client, rosterMsg(client.code)); sendAll(client);
+        send(client, rosterMsg(client.code)); send(client, phaseMsg(client.code)); sendAll(client);
         return;
     }
     if (t === 'peek') {
         if (!code || !_mgr.getRoom(code)) return send(client, { t: 'err', err: 'nocode', of: t });
         attach(client, code, 'viewer');
         send(client, rosterMsg(code));
+        send(client, phaseMsg(code));
         sendAll(client);
         return;
     }
@@ -153,6 +170,13 @@ function onMessage(client, msg) {
         // نفس اللاعب من اتصال أقدم (تبويب ثاني/اتصال معلّق) يتفصل عنه
         Object.keys(_clients).forEach(function (k) { var c = _clients[k]; if (c !== client && c.code === code && c.id === msg.id) { c.id = null; c.role = 'viewer'; send(c, { t: 'err', err: 'elsewhere', of: t }); } });
         return onWelcome(client, code, res);
+    }
+    if (t === 'start' || t === 'skip') {
+        if (client.role !== 'host' || !client.code) return send(client, { t: 'err', err: 'host-only', of: t });
+        res = t === 'start' ? _mgr.start(client.code) : _mgr.skip(client.code, String(msg.from || ''));
+        if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
+        logger.log('Party: room ' + client.code + ' → ' + _mgr.phaseOf(client.code).p);
+        return broadcastPhase(client.code);
     }
     if (t === 'mv') {
         if (client.role !== 'player' || !client.code) return;
@@ -177,6 +201,8 @@ function tickAll() {
                 else if (now - _emptySince[code] > EMPTY_ROOM_MS) { _mgr.closeRoom(code); delete _emptySince[code]; delete _roster[code]; logger.log('Party: room ' + code + ' closed (empty)'); }
                 return;
             }
+            var tk = _mgr.tick(code);
+            if (tk.ok && tk.changed) { logger.log('Party: room ' + code + ' → ' + _mgr.phaseOf(code).p); broadcastPhase(code); }
             var st = _roster[code];
             if (st && st.dirty && now - st.at >= ROSTER_MS) broadcastRoster(code);
             cs.forEach(function (c) {

@@ -53,7 +53,7 @@ export function connect({ onMessage, onOpen, onStatus, deadMs = 35000 } = {}) {
       lastMsgAt = realNow();
       let m; try { m = JSON.parse(e.data); } catch (err) { return; }
       if (!m) return;
-      if (m.t === 's' || m.t === 'all' || m.t === 'pong') noteServerNow(m.now);
+      if (m.t === 's' || m.t === 'all' || m.t === 'pong' || m.t === 'phase') noteServerNow(m.now);
       if (m.t === 'pong') return;
       try { onMessage && onMessage(m); } catch (err) { console.error(err); }
     };

@@ -147,7 +147,8 @@ export function mountHall(el, opts = {}) {
   const floor = mesh(new T.PlaneGeometry(HALL.w, HALL.l), std('#ffffff', { map: floorTex, roughness: 0.22, metalness: 0.05, envMapIntensity: .55 }), 0, 0, 0);
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true;
 
-  const carpetLen = HZ - (STAGE.front + 3);
+  const DANCE_Z = [-31, -9];  // ساحة الرقص قدام المنصة (بدل صفّي الطاولات الأماميين)
+  const carpetLen = HZ - DANCE_Z[1];
   const carpetTex = tex(256, 512, (g, w, h) => {
     const cg = g.createLinearGradient(0, 0, w, 0); cg.addColorStop(0, '#c9668a'); cg.addColorStop(.5, '#dc7f9f'); cg.addColorStop(1, '#c9668a'); g.fillStyle = cg; g.fillRect(0, 0, w, h);
     g.fillStyle = '#e8c595'; g.fillRect(10, 0, 12, h); g.fillRect(w - 22, 0, 12, h);
@@ -155,7 +156,7 @@ export function mountHall(el, opts = {}) {
     g.fillStyle = 'rgba(255,214,231,.45)'; for (let y = 32; y < h; y += 128) heart(g, w / 2, y, 64);
     g.fillStyle = 'rgba(255,255,255,.35)'; for (let y = 96; y < h; y += 128) { g.beginPath(); g.arc(w / 2, y, 6, 0, 7); g.fill(); }
   }, [1, carpetLen / 12]);
-  const carpet = mesh(new T.PlaneGeometry(6, carpetLen), std('#ffffff', { map: carpetTex, roughness: 0.9 }), 0, 0.025, (HZ + STAGE.front + 3) / 2);
+  const carpet = mesh(new T.PlaneGeometry(6, carpetLen), std('#ffffff', { map: carpetTex, roughness: 0.9 }), 0, 0.025, (HZ + DANCE_Z[1]) / 2);
   carpet.rotation.x = -Math.PI / 2; carpet.receiveShadow = true;
 
   // ---------- الجدران ----------
@@ -177,21 +178,36 @@ export function mountHall(el, opts = {}) {
   const wallMat = std('#ffffff', { map: wallTex, roughness: 0.85, vertexColors: true });
   const panelMat = std('#ffffff', { map: panelTex, roughness: 0.6 });
   // تدرّج ناعم على الجدار: أغمق تحت (وردي ترابي) وأفتح فوق (بلاش)
-  const wallShade = geo => { const pa = geo.attributes.position, c = new Float32Array(pa.count * 3), lo = new T.Color('#d8a8c0'), hi = new T.Color('#fff4f8'), k = new T.Color();
-    for (let i = 0; i < pa.count; i++) { const v = (pa.getY(i) + HALL.h / 2) / HALL.h; k.lerpColors(lo, hi, Math.pow(v, .8)); c.set([k.r, k.g, k.b], i * 3); }
+  const wallShade = (geo, hgt = HALL.h) => { const pa = geo.attributes.position, c = new Float32Array(pa.count * 3), lo = new T.Color('#d8a8c0'), hi = new T.Color('#fff4f8'), k = new T.Color();
+    for (let i = 0; i < pa.count; i++) { const v = (pa.getY(i) + hgt / 2) / hgt; k.lerpColors(lo, hi, Math.pow(v, .8)); c.set([k.r, k.g, k.b], i * 3); }
     geo.setAttribute('color', new T.BufferAttribute(c, 3)); return geo; };
+  // جدار بفتحات أبواب من الأرض (notches = [[مركز, عرض, ارتفاع], ...] بإحداثيات الجدار المحلية)
+  // — مضلّع واحد يلف حول كل فتحة، ونفس UV الجدار العادي (كل 4م تكرار خامة)
+  const wallGeo = (len, hgt, notches = []) => {
+    const sh = new T.Shape(), y0 = -hgt / 2; sh.moveTo(-len / 2, y0);
+    notches.slice().sort((a, b) => a[0] - b[0]).forEach(([c, w, h]) => { sh.lineTo(c - w / 2, y0); sh.lineTo(c - w / 2, y0 + h); sh.lineTo(c + w / 2, y0 + h); sh.lineTo(c + w / 2, y0); });
+    sh.lineTo(len / 2, y0); sh.lineTo(len / 2, -y0); sh.lineTo(-len / 2, -y0); sh.lineTo(-len / 2, y0);
+    const g = new T.ShapeGeometry(sh), pa = g.attributes.position, uv = g.attributes.uv;
+    for (let i = 0; i < pa.count; i++) uv.setXY(i, (pa.getX(i) + len / 2) / 4, (pa.getY(i) + hgt / 2) / 4);
+    return g;
+  };
+  const ENTRY_DOOR = [0, 5.4, 6.6];          // باب المدخل للصالة (مركز، عرض، ارتفاع)
+  const BACK_DOOR_X = 16;                     // الباب الخلفي لصاحبة الحفلة (ورا الستارة الجانبية اليمين)
+  const BACK_DOOR = [BACK_DOOR_X, 2.4, 4.2];
   const WALLS = [
-    { k: 'N', len: HALL.w, gaps: [] },
-    { k: 'S', len: HALL.w, gaps: [[0, 9]] },
+    { k: 'N', len: HALL.w, gaps: [[BACK_DOOR_X, 3]], notch: [BACK_DOOR] },
+    { k: 'S', len: HALL.w, gaps: [[0, 9]], notch: [ENTRY_DOOR] },
     { k: 'W', len: HALL.l, gaps: SECTIONS.filter(s => s.side < 0).map(s => [s.z, 7.2]) },
     { k: 'E', len: HALL.l, gaps: SECTIONS.filter(s => s.side > 0).map(s => [s.z, 7.2]) },
   ];
   const goldTrim = [], whiteTrim = [];
   for (const wd of WALLS) {
     const p = onWall(wd.k, 0, HALL.h / 2, 0);
-    const wall = mesh(wallShade(scaleUV(new T.PlaneGeometry(wd.len, HALL.h, 1, 8), wd.len / 4, HALL.h / 4)), wallMat, p.x, p.y, p.z); wall.rotation.y = p.ry; wall.receiveShadow = true;
+    // الجدار الجنوبي مقلوب (ry = π) فمحوره المحلي x عكس العالم
+    const nl = (wd.notch || []).map(([c, w, h]) => [wd.k === 'S' ? -c : c, w, h]);
+    const wall = mesh(wallShade(nl.length ? wallGeo(wd.len, HALL.h, nl) : scaleUV(new T.PlaneGeometry(wd.len, HALL.h, 1, 8), wd.len / 4, HALL.h / 4)), wallMat, p.x, p.y, p.z); wall.rotation.y = p.ry; wall.receiveShadow = true;
     const q = onWall(wd.k, 0, 1.5, 0.03);
-    const pan = mesh(scaleUV(new T.PlaneGeometry(wd.len, 3), wd.len / 4, 1), panelMat, q.x, q.y, q.z); pan.rotation.y = q.ry; pan.receiveShadow = true;
+    const pan = mesh(nl.length ? scaleUV(wallGeo(wd.len, 3, nl.map(([c, w]) => [c, w, 2.995])), 1, .75) : scaleUV(new T.PlaneGeometry(wd.len, 3), wd.len / 4, 1), panelMat, q.x, q.y, q.z); pan.rotation.y = q.ry; pan.receiveShadow = true;
     // الحليات تنقطع عند الأبواب
     const segs = []; let s0 = -wd.len / 2;
     for (const [c, gw] of wd.gaps.slice().sort((a, b) => a[0] - b[0])) { if (c - gw / 2 > s0) segs.push([s0, c - gw / 2]); s0 = c + gw / 2; }
@@ -343,10 +359,15 @@ export function mountHall(el, opts = {}) {
   const nameTex = new T.CanvasTexture(nameCanvas); nameTex.colorSpace = T.SRGBColorSpace;
   const namePlane = mesh(new T.PlaneGeometry(16, 3), basic({ map: nameTex, transparent: true, toneMapped: false, depthWrite: false, fog: false }), 0, STAGE.h + 7.3, -HZ + .5);
   namePlane.renderOrder = 2;
+  let girlSign = null; // لافتة غرفة صاحبة الحفلة (تنبني تحت)
+  let lastName = '';
   function setName(name) {
+    if (name === lastName && girlSign && girlSign.material.map) return; // نفس الاسم: لا نعيد رسم اللافتات (يتكرر مع كل تحديث للحضور)
+    lastName = name;
     const g = nameCanvas.getContext('2d'), w = nameCanvas.width, h = nameCanvas.height;
     g.clearRect(0, 0, w, h); name = String(name || '').trim().slice(0, 30);
     namePlane.visible = !!name;
+    if (girlSign) { const old = girlSign.material.map; girlSign.material.map = neon(name ? 'غرفة ' + name : 'غرفة صاحبة الحفلة', '700 170px "Aref Ruqaa", serif'); girlSign.material.needsUpdate = true; old && old.dispose(); }
     if (name) {
       g.font = '900 230px Zain, ' + FONT_AR; g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'rtl'; g.lineJoin = 'round';
       g.shadowColor = '#b8245f'; g.shadowBlur = 40; g.strokeStyle = '#a3306a'; g.lineWidth = 18; g.strokeText(name, w / 2, h / 2 + 10, w - 140); g.shadowBlur = 0;
@@ -418,7 +439,7 @@ export function mountHall(el, opts = {}) {
       const placed = [];
       for (let i = 0; i < 13; i++) {
         const w = .6 + rand() * .7, h = .5 + rand() * .7, d = .6 + rand() * .6, ry = rand() * 1.4;
-        let x = sd * (8.6 + rand() * 5.2), z = STAGE.front + .8 + rand() * 4.2, y = h / 2;
+        let x = sd * (12 + rand() * 3.4), z = -42.5 + rand() * 4, y = STAGE.h + h / 2;
         if (i > 8) { const b = placed[i - 9]; x = b.x + (rand() - .5) * .2; z = b.z + (rand() - .5) * .2; y = b.top + h / 2; }
         const rib = rand() < .5 ? '#f3d08e' : '#ffffff';
         gifts.push({ x, y, z, ry, s: [w, h, d], c: pick(GIFT_C) });
@@ -435,7 +456,7 @@ export function mountHall(el, opts = {}) {
 
   // ---------- الطاولات والكراسي ----------
   const TABLES = [];
-  for (const z of [-22, -13, -4, 5, 14, 23]) for (const x of [-19, -10.5, 10.5, 19]) TABLES.push({ x, z });
+  for (const z of [-4, 5, 14, 23]) for (const x of [-19, -10.5, 10.5, 19]) TABLES.push({ x, z });
   const plates = [], seat = [], back = [], sash = [], vases = [], flowers = [];
   for (const t of TABLES) {
     for (let k = 0; k < 8; k++) {
@@ -490,6 +511,7 @@ export function mountHall(el, opts = {}) {
     const q = onWall('S', -x, 4.8, .4); const n = mesh(new T.PlaneGeometry(9.6, 2.0), basic({ map: neon(txt, '700 170px "Aref Ruqaa", serif'), transparent: true, toneMapped: false, depthWrite: false, fog: false }), q.x, q.y, q.z); n.rotation.y = q.ry;
   });
 
+  const doorLeaves = []; // {g, open} — مفصلات الأبواب اللي تنفتح (المدخل + الباب الخلفي)
   // ---------- المدخل ----------
   {
     const doorTex = tex(256, 640, (g, w, h) => {
@@ -498,7 +520,13 @@ export function mountHall(el, opts = {}) {
       g.fillStyle = '#f9cfdd'; heart(g, w / 2, h * .16, 70);
     });
     const dm = std('#ffffff', { map: doorTex, roughness: .45 });
-    for (const d of [-1, 1]) { const p = onWall('S', d * 1.3, 3.3, .12); const m = mesh(new T.BoxGeometry(2.6, 6.6, .2), dm, p.x, p.y, p.z); m.rotation.y = p.ry; mesh(new T.SphereGeometry(.13, 12, 10), gold, d * .35, 3.2, HZ - .3); }
+    // ضلفتين بمفصلات على طرفي الفتحة — setDoors يفتحهم لداخل القاعة
+    for (const d of [-1, 1]) {
+      const hinge = new T.Group(); hinge.position.set(d * 2.65, 0, HZ - .12); scene.add(hinge);
+      const leaf = mesh(new T.BoxGeometry(2.6, 6.6, .2), dm, -d * 1.3, 3.3, 0, false, hinge);
+      mesh(new T.SphereGeometry(.13, 12, 10), gold, -d * 2.3, 3.2, -.18, false, hinge);
+      leaf.castShadow = true; doorLeaves.push({ g: hinge, open: d < 0 ? 1.6 : -1.6 });
+    }
     const f = onWall('S', 0, 0, .05); const fr = mesh(new T.ExtrudeGeometry(archFrame(3.4, 2.7, 6.6, 1.6, 1.2), { depth: .3, bevelEnabled: false, curveSegments: 24 }), gold, f.x, f.y, f.z); fr.rotation.y = f.ry;
     const top = onWall('S', 0, 7.0, .1); const tp = mesh(normUV(new T.ShapeGeometry((() => { const s = new T.Shape(); s.moveTo(-2.7, 0); s.lineTo(2.7, 0); s.absellipse(0, 0, 2.7, 1.2, 0, Math.PI, false); return s; })(), 24)), basic({ map: winTex, color: '#ffeaf2' }), top.x, top.y - .4, top.z); tp.rotation.y = top.ry;
     const sg = onWall('S', 0, 9.9, .15);
@@ -531,6 +559,163 @@ export function mountHall(el, opts = {}) {
     const ring = mesh(new T.RingGeometry(2.1, 2.7, 40), basic({ color: s.c2, transparent: true, opacity: .35, blending: T.AdditiveBlending, depthWrite: false }), s.side * (HX - 3.4), .05, s.z);
     ring.rotation.x = -Math.PI / 2;
     portals.push({ s, tex: portalTex, ring, x: s.side * (HX - 1.5) });
+  }
+
+  // ---------- غرف الانتظار + الستارة + ساحة الرقص (الدفعة 2) ----------
+  // غرفة مقفلة بسيطة: أرضية وسقف وجدران تطالع للداخل. front = الجدار المشترك مع القاعة
+  // (فيه فتحة الباب)، والباقي جدران عادية. rect = [xmin, xmax, zmin, zmax].
+  const roomMats = {};
+  function buildRoom(rect, hgt, { wall = wallMat, floorMap, floorColor = '#ffffff', ceilColor = '#e7cbd8', front, notch }) {
+    const [x0, x1, z0, z1] = rect, w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    const fl = mesh(new T.PlaneGeometry(w, d), std(floorColor, { map: floorMap || null, roughness: .3, envMapIntensity: .6 }), cx, .01, cz); fl.rotation.x = -Math.PI / 2; fl.receiveShadow = true;
+    const ce = mesh(new T.PlaneGeometry(w, d), basic({ color: ceilColor }), cx, hgt, cz); ce.rotation.x = Math.PI / 2;
+    // [مركز x, z, طول, دوران] لكل جدار يطالع لداخل الغرفة
+    const sides = [[cx, z0, w, 0], [cx, z1, w, Math.PI], [x0, cz, d, Math.PI / 2], [x1, cz, d, -Math.PI / 2]];
+    sides.forEach(([x, z, len, ry], i) => {
+      const isFront = (front === 'z0' && i === 0) || (front === 'z1' && i === 1);
+      // الإحداثي المحلي للفتحة: الجدار اللي دورانه π محوره عكس العالم
+      const nl = isFront && notch ? notch.map(([c, nw, nh]) => [(ry === Math.PI ? -(c - x) : c - x), nw, nh]) : [];
+      const g = nl.length ? wallGeo(len, hgt, nl) : scaleUV(new T.PlaneGeometry(len, hgt, 1, 6), len / 4, hgt / 4);
+      const m = mesh(wallShade(g, hgt), wall, x, hgt / 2, z); m.rotation.y = ry; m.receiveShadow = true;
+      const b = mesh(new T.BoxGeometry(len, .3, .1), std('#fffafc', { roughness: .5 }), x, .15, z); b.rotation.y = ry; b.translateZ(.05);
+      if (nl.length) b.visible = false;
+    });
+  }
+  const sofaMat = std('#e6a2bc', { roughness: .8 }), sofaDark = std('#cf7f9f', { roughness: .8 });
+  function sofa(x, z, ry, len = 3.2) {
+    const g = new T.Group(); g.position.set(x, 0, z); g.rotation.y = ry; scene.add(g);
+    mesh(new T.BoxGeometry(len, .45, 1.05), sofaMat, 0, .35, 0, true, g);
+    mesh(new T.BoxGeometry(len, .85, .28), sofaDark, 0, .78, -.42, true, g);
+    for (const sd of [-1, 1]) mesh(new T.BoxGeometry(.28, .62, 1.05), sofaDark, sd * (len / 2 - .14), .45, 0, true, g);
+    for (let i = 0; i < 3; i++) mesh(new T.BoxGeometry(len / 3 - .12, .12, .9), std('#f4c4d4', { roughness: .9 }), (i - 1) * len / 3, .63, .04, false, g);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) mesh(new T.CylinderGeometry(.04, .03, .14, 8), gold, sx * (len / 2 - .2), .07, sz * .4, false, g);
+  }
+  const neonSign = (text, w, h, x, y, z, ry, font = '700 170px "Aref Ruqaa", serif') => {
+    const m = mesh(new T.PlaneGeometry(w, h), basic({ map: neon(text, font), transparent: true, toneMapped: false, depthWrite: false, fog: false }), x, y, z); m.rotation.y = ry; return m;
+  };
+  const roomBalloons = [];
+  const roomCluster = (x, y, z, n) => { for (let i = 0; i < n; i++) { const sc = .32 + rand() * .3; roomBalloons.push({ x: x + (rand() - .5) * .9, y: y + (rand() - .5) * .9, z: z + (rand() - .5) * .9, s: [sc, sc * 1.15, sc], c: rand() < .3 ? pick(CHROME) : pick(PASTEL) }); } };
+  const halo = (x, y, z, sc, color) => { const sp = new T.Sprite(new T.SpriteMaterial({ map: radial('rgba(255,255,255,.9)', 'rgba(255,220,235,.35)'), color, transparent: true, opacity: .6, blending: T.AdditiveBlending, depthWrite: false })); sp.position.set(x, y, z); sp.scale.setScalar(sc); scene.add(sp); return sp; };
+
+  // --- صالة الضيوف (خلف باب المدخل) ---
+  // الجدار المشترك مزاح 8سم عن جدار القاعة عشان ما يتداخل مع حليات القاعة (وميض)
+  const LOUNGE = [-17, 17, HZ + .08, 71], LOUNGE_H = 7;
+  buildRoom(LOUNGE, LOUNGE_H, { floorMap: floorTex, front: 'z0', notch: [[0, ENTRY_DOOR[1], ENTRY_DOOR[2]]], ceilColor: '#e2c3d2' });
+  { // سجادة دائرية + طاولة قهوة + كنب حولها
+    const rug = mesh(new T.CircleGeometry(6.2, 48), std('#ffffff', { map: tex(512, 512, (g, w) => { const gr = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); gr.addColorStop(0, '#f7c9d8'); gr.addColorStop(.75, '#eeb0c6'); gr.addColorStop(.8, '#e8c595'); gr.addColorStop(.84, '#f2bfd1'); gr.addColorStop(1, '#e9a9c0'); g.fillStyle = gr; g.fillRect(0, 0, w, w); g.fillStyle = 'rgba(255,240,246,.6)'; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; heart(g, w / 2 + Math.cos(a) * w * .3, w / 2 + Math.sin(a) * w * .3 - 14, 26); } }), roughness: .95 }), 0, .03, 60);
+    rug.rotation.x = -Math.PI / 2; rug.receiveShadow = true;
+    mesh(new T.CylinderGeometry(.95, .95, .06, 40), std('#ffffff', { roughness: .05, metalness: .1, transparent: true, opacity: .45, envMapIntensity: 1.5 }), 0, .5, 60);
+    mesh(new T.CylinderGeometry(.12, .5, .47, 24), gold, 0, .235, 60, true);
+    mesh(new T.IcosahedronGeometry(.42, 4), std('#f4a3c0', { roughness: .75 }), 0, .85, 60, true);
+    sofa(-6.8, 60, Math.PI / 2); sofa(6.8, 60, -Math.PI / 2); sofa(0, 66.6, Math.PI, 4.2);
+    sofa(-12.5, 54.5, Math.PI / 4, 2.6); sofa(12.5, 54.5, -Math.PI / 4, 2.6);
+    // جدار ورد ولافتة على الجدار الخلفي
+    const fw = mesh(new T.PlaneGeometry(12, 5), std('#ffffff', { map: roseWall, roughness: .85 }), 0, 3.6, 70.9); fw.rotation.y = Math.PI;
+    const fr = mesh(new T.BoxGeometry(12.5, 5.5, .15), gold, 0, 3.6, 70.98); fr.rotation.y = Math.PI;
+    neonSign('صالة الضيوف', 9, 1.9, 0, 4.2, 70.7, Math.PI);
+    // مرايا بإطار ذهبي على الجانبين
+    const mirMat = std('#ffffff', { metalness: 1, roughness: .04, envMapIntensity: 1.6 });
+    for (const sd of [-1, 1]) for (const z of [55, 65]) {
+      const p = sd < 0 ? Math.PI / 2 : -Math.PI / 2;
+      const mf = mesh(new T.ExtrudeGeometry(archFrame(1.35, 1.1, 2.6, 1.35, 1.1), { depth: .12, bevelEnabled: false, curveSegments: 20 }), gold, sd * 16.95, 1.1, z); mf.rotation.y = p;
+      const mi = mesh(new T.ShapeGeometry(arch(1.1, 2.6, 1.1), 20), mirMat, sd * 16.93, 1.1, z); mi.rotation.y = p;
+    }
+    // ثريا صغيرة
+    const lc = []; for (let i = 0; i < 22; i++) { const a = i / 22 * Math.PI * 2; for (let j = 0; j < 2; j++) lc.push({ x: Math.cos(a) * 1.2, y: 5.6 - j * .3, z: 60 + Math.sin(a) * 1.2, s: [1, 1.8, 1] }); }
+    instanced(new T.OctahedronGeometry(.1), crystalMat, lc);
+    const lr = mesh(new T.TorusGeometry(1.2, .05, 8, 40), gold, 0, 5.9, 60); lr.rotation.x = Math.PI / 2;
+    mesh(new T.CylinderGeometry(.04, .04, 1, 6), gold, 0, LOUNGE_H - .5, 60);
+    halo(0, 5.5, 60, 5, '#ffd3e6');
+    [[-15, 69], [15, 69], [-15, 50], [15, 50]].forEach(([x, z]) => { for (let y = .5; y < 4.5; y += .8) roomCluster(x, y, z, 3); });
+    // صف اضاءات علوية دافئة على الجدارين الجانبيين
+    for (const sd of [-1, 1]) for (const z of [52, 60, 68]) halo(sd * 16.6, 5.4, z, 2.4, '#ffe3c4');
+  }
+
+  // --- غرفة صاحبة الحفلة (خلف الجدار الشمالي، بابها الخلفي يطلع ورا الستارة) ---
+  const GIRL = [-12, 18, -69, -HZ - .08], GIRL_H = 6.5;
+  roomMats.girlWall = std('#efe2ff', { map: wallTex, roughness: .85, vertexColors: true });
+  buildRoom(GIRL, GIRL_H, { wall: roomMats.girlWall, floorMap: floorTex, floorColor: '#efe0ff', front: 'z1', notch: [[BACK_DOOR_X, BACK_DOOR[1], BACK_DOOR[2]]], ceilColor: '#dcc7ec' });
+  {
+    const rug = mesh(new T.CircleGeometry(5, 48), std('#f5c9e0', { roughness: .95 }), 0, .03, -59); rug.rotation.x = -Math.PI / 2;
+    // تسريحة بمرآة فيها لمبات (مرآة هوليوود)
+    mesh(new T.BoxGeometry(4.2, .9, 1.1), std('#fff7fb', { roughness: .4 }), 0, .45, -68.3, true);
+    mesh(new T.BoxGeometry(4.3, .06, 1.15), gold, 0, .92, -68.3);
+    const mi = mesh(new T.PlaneGeometry(3.2, 2.2), std('#ffffff', { metalness: 1, roughness: .04, envMapIntensity: 1.7 }), 0, 2.3, -68.9);
+    mesh(new T.BoxGeometry(3.5, 2.5, .08), gold, 0, 2.3, -68.95);
+    const bulbs = []; for (let i = 0; i < 9; i++) bulbs.push({ x: -1.5 + i * 3 / 8, y: 3.45, z: -68.85 }); for (let j = 0; j < 4; j++) for (const sd of [-1, 1]) bulbs.push({ x: sd * 1.72, y: 1.4 + j * .62, z: -68.85 });
+    instanced(new T.SphereGeometry(.09, 10, 8), basic({ color: '#fff4dc', toneMapped: false }), bulbs);
+    halo(0, 2.4, -68.4, 3.4, '#ffd9b0');
+    mesh(new T.CylinderGeometry(.42, .38, .5, 24), std('#f7b8d2', { roughness: .8 }), 0, .25, -66.8, true);
+    // خزانة + ورد + ستائر شيفون جانبية
+    mesh(new T.BoxGeometry(3, 4.2, 1), std('#fff3f9', { roughness: .5 }), -10.3, 2.1, -64, true).rotation.y = Math.PI / 2;
+    for (const z of [-66, -62]) mesh(new T.SphereGeometry(.08, 8, 6), gold, -9.75, 2.1, z);
+    for (const [x, z] of [[-3.2, -68.2], [3.2, -68.2]]) { mesh(new T.CylinderGeometry(.18, .26, .7, 16), gold, x, .35, z); mesh(new T.IcosahedronGeometry(.5, 4), std('#f4a3c0', { roughness: .75 }), x, 1.1, z, true); }
+    const chif = std('#ffe9f6', { transparent: true, opacity: .55, side: T.DoubleSide, roughness: .6 });
+    const cg = new T.PlaneGeometry(3, GIRL_H - .3, 24, 1), cpa = cg.attributes.position; for (let i = 0; i < cpa.count; i++) cpa.setZ(i, Math.sin(cpa.getX(i) * 4) * .2); cg.computeVertexNormals();
+    for (const z of [-66, -56, -51]) { const c = mesh(cg, chif, -11.7, (GIRL_H - .3) / 2, z); c.rotation.y = Math.PI / 2; }
+    girlSign = neonSign(' ', 9, 1.9, 0, 4.9, -68.8, 0);
+    setName(lastName);
+    halo(3, 5.9, -59, 3.2, '#d9b8ff'); halo(-3, 5.9, -59, 3.2, '#ffc2e0'); halo(15, 5, -50, 2.6, '#ffc9e2');
+    [[-11, -68], [17, -68], [17, -55]].forEach(([x, z]) => { for (let y = .5; y < 4.5; y += .8) roomCluster(x, y, z, 3); });
+  }
+  if (roomBalloons.length) instanced(balloonGeo, std('#ffffff', { roughness: .3, metalness: .12 }), roomBalloons, { cast: true });
+  // الباب الخلفي: ضلفة وحدة تنفتح لجهة القاعة (مخفية ورا الستارة الجانبية)
+  {
+    const hinge = new T.Group(); hinge.position.set(BACK_DOOR_X - 1.2, 0, -HZ + .06); scene.add(hinge);
+    mesh(new T.BoxGeometry(2.4, 4.2, .12), std('#fff3f8', { roughness: .45 }), 1.2, 2.1, 0, false, hinge);
+    mesh(new T.SphereGeometry(.09, 10, 8), gold, 2.1, 2.1, .1, false, hinge);
+    doorLeaves.push({ g: hinge, open: -1.5 });
+  }
+
+  // --- ستارة المنصة الكبيرة (نصين ينسحبون للأطراف) ---
+  const CURT_W = STAGE.w / 2 + .6, CURT_H = 12.8, curtains = [];
+  {
+    const vel = std('#b23c6c', { roughness: .55, side: T.DoubleSide, metalness: .08 });
+    for (const sd of [-1, 1]) {
+      const g = new T.PlaneGeometry(CURT_W, CURT_H, 48, 1), pa = g.attributes.position;
+      for (let i = 0; i < pa.count; i++) pa.setZ(i, Math.sin(pa.getX(i) * 3.2) * .22);
+      g.computeVertexNormals(); g.translate(-sd * CURT_W / 2, 0, 0); // محور الانسحاب على الطرف الخارجي
+      const c = mesh(g, vel, sd * CURT_W, STAGE.h + CURT_H / 2, STAGE.front + .25); c.castShadow = true; curtains.push(c);
+    }
+    mesh(new T.BoxGeometry(STAGE.w + 2, 1.1, .5), vel, 0, STAGE.h + CURT_H + .1, STAGE.front + .25);
+    mesh(new T.BoxGeometry(STAGE.w + 2, .14, .55), gold, 0, STAGE.h + CURT_H - .45, STAGE.front + .25);
+  }
+
+  // --- ساحة الرقص: بلاط لامع بخطوط ذهبية، يتوهج وقت الحفل ---
+  const danceMat = std('#ffffff', {
+    map: tex(512, 512, (g, w) => { const n = 4, s = w / n; for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { g.fillStyle = (i + j) % 2 ? '#f0c3d6' : '#fbe4ee'; g.fillRect(i * s, j * s, s, s); } g.strokeStyle = '#e2bd86'; g.lineWidth = 6; for (let i = 0; i <= n; i++) { g.beginPath(); g.moveTo(i * s, 0); g.lineTo(i * s, w); g.moveTo(0, i * s); g.lineTo(w, i * s); g.stroke(); } }, [8, 5.5]),
+    roughness: .12, metalness: .1, envMapIntensity: .8, emissive: '#ff4fa8', emissiveIntensity: 0,
+  });
+  const dfl = mesh(new T.PlaneGeometry(32, DANCE_Z[1] - DANCE_Z[0]), danceMat, 0, .02, (DANCE_Z[0] + DANCE_Z[1]) / 2); dfl.rotation.x = -Math.PI / 2; dfl.receiveShadow = true;
+
+  // --- ألعاب نارية فوق المنصة (جسيمات مُعاد استخدامها) ---
+  const FW_N = 8, FW_P = 110, fwPos = new Float32Array(FW_N * FW_P * 3), fwCol = new Float32Array(FW_N * FW_P * 3), fwVel = new Float32Array(FW_N * FW_P * 3);
+  const fwBursts = Array.from({ length: FW_N }, () => ({ t: -1 }));
+  const fwGeo = new T.BufferGeometry(); fwGeo.setAttribute('position', new T.BufferAttribute(fwPos, 3)); fwGeo.setAttribute('color', new T.BufferAttribute(fwCol, 3));
+  const fwMat = new T.PointsMaterial({ map: radial(), size: .55, vertexColors: true, transparent: true, depthWrite: false, blending: T.AdditiveBlending, toneMapped: false, fog: false, opacity: 1 });
+  const fwPts = new T.Points(fwGeo, fwMat); fwPts.frustumCulled = false; fwPts.visible = false; scene.add(fwPts);
+  const FW_COL = ['#ff5fb0', '#ffd27a', '#c99bff', '#ffffff', '#7fe3ff', '#ff8ad0'];
+  let fwUntil = 0, fwNext = 0, fwI = 0;
+  function burst(b) {
+    const col = new T.Color(pick(FW_COL)), cx = (rand() - .5) * 28, cy = 9 + rand() * 5, cz = -40 + rand() * 10;
+    fwBursts[b].t = 0;
+    for (let i = 0; i < FW_P; i++) {
+      const k = (b * FW_P + i) * 3, u = rand() * 2 - 1, a = rand() * Math.PI * 2, q = Math.sqrt(1 - u * u), sp = 5 + rand() * 4;
+      fwPos[k] = cx; fwPos[k + 1] = cy; fwPos[k + 2] = cz;
+      fwVel[k] = Math.cos(a) * q * sp; fwVel[k + 1] = u * sp; fwVel[k + 2] = Math.sin(a) * q * sp;
+      fwCol[k] = col.r; fwCol[k + 1] = col.g; fwCol[k + 2] = col.b;
+    }
+  }
+  function updateFireworks(dt, t) {
+    if (t < fwUntil && t >= fwNext) { burst(fwI); fwI = (fwI + 1) % FW_N; fwNext = t + .35 + rand() * .3; }
+    let any = false;
+    fwBursts.forEach((b, bi) => {
+      if (b.t < 0) return; b.t += dt; if (b.t > 2.2) { b.t = -1; for (let i = 0; i < FW_P * 3; i++) fwCol[bi * FW_P * 3 + i] = 0; return; }
+      any = true; const fade = Math.exp(-dt * 1.6);
+      for (let i = 0; i < FW_P; i++) { const k = (bi * FW_P + i) * 3; fwVel[k + 1] -= 4.5 * dt; fwVel[k] *= .985; fwVel[k + 2] *= .985; fwPos[k] += fwVel[k] * dt; fwPos[k + 1] += fwVel[k + 1] * dt; fwPos[k + 2] += fwVel[k + 2] * dt; fwCol[k] *= fade; fwCol[k + 1] *= fade; fwCol[k + 2] *= fade; }
+    });
+    fwPts.visible = any;
+    if (any) { fwGeo.attributes.position.needsUpdate = true; fwGeo.attributes.color.needsUpdate = true; }
   }
 
   // ---------- قصاصات الورق (كونفيتي) ----------
@@ -679,11 +864,20 @@ export function mountHall(el, opts = {}) {
   const tourPos = new T.Vector3(), tourLook = new T.Vector3(), curLook = new T.Vector3(0, 4, -20);
   const OBST = [
     ...TABLES.map(t => [t.x, t.z, 3.0]),
-    [0, STAGE.front - 6.5, 2.6], [-11.2, STAGE.front + 3, 3.2], [11.2, STAGE.front + 3, 3.2],
+    [0, STAGE.front - 6.5, 2.6], [-13.7, -40.5, 2.6], [13.7, -40.5, 2.6],
     ...pil.map(p => [p.x, p.z, 1.3]),
+    // صالة الضيوف
+    [0, 60, 1.5], [-6.8, 60, 1.7], [6.8, 60, 1.7], [0, 66.6, 2.2], [-12.5, 54.5, 1.4], [12.5, 54.5, 1.4],
+    // غرفة صاحبة الحفلة
+    [0, -68.3, 2], [0, -66.8, .55],
   ];
+  // مناطق الحركة — نفس حدود السيرفر (backend/party/party-rooms.js ZONES)
+  const ZONES = { lounge: [-15, 15, 50.5, 69], girl: [-9, 9, -67, -50.5], hall: [-HX + 1, HX - 1, -HZ + 2, HZ - 1.2], nostage: [-HX + 1, HX - 1, -31, HZ - 1.2] };
+  // صندوق الكاميرا لكل غرفة [xmin, xmax, zmin, zmax, سقف]
+  const CAMBOX = { lounge: [-16.6, 16.6, HZ + .3, 70.7, LOUNGE_H - .4], girl: [-11.6, 17.6, -68.7, -HZ - .3, GIRL_H - .4], hall: [-HX + .4, HX - .4, -HZ + .4, HZ - .4, HALL.h - .5] };
+  let zone = 'hall', auto = null, shot = null; // shot: لقطة ثابتة لشاشة العرض ('stage' | 'entrance' | null = جولة)
   const floorAt = (x, z) => {
-    if (Math.abs(x) <= STAGE.w / 2 && z <= STAGE.front) return STAGE.h;
+    if (Math.abs(x) <= STAGE.w / 2 && z <= STAGE.front && z >= -HZ) return STAGE.h;
     if (Math.abs(x) <= 6 && z > STAGE.front && z <= STAGE.front + 1) return .8;
     if (Math.abs(x) <= 6 && z > STAGE.front + 1 && z <= STAGE.front + 2) return .4;
     return 0;
@@ -691,15 +885,33 @@ export function mountHall(el, opts = {}) {
   const free = (x, z, from) => floorAt(x, z) - from <= .45;
   const resolve = () => {
     for (const [ox, oz, rr] of OBST) { const dx = pos.x - ox, dz = pos.z - oz, d = Math.hypot(dx, dz); if (d < rr && d > 1e-4) { pos.x = ox + dx / d * rr; pos.z = oz + dz / d * rr; } }
-    pos.x = Math.max(-HX + 1, Math.min(HX - 1, pos.x)); pos.z = Math.max(-HZ + 2, Math.min(HZ - 1.2, pos.z));
+    const zr = ZONES[zone] || ZONES.hall;
+    pos.x = Math.max(zr[0], Math.min(zr[1], pos.x)); pos.z = Math.max(zr[2], Math.min(zr[3], pos.z));
   };
   // بدء وضع الشخصية: يحط اللاعب بمكانه من السيرفر والكاميرا خلفه
   function setFollow(start) {
     if (!start) { setMode('tour'); return; }
     pos.set(start.x, 0, start.z); resolve();
     localRy = start.ry == null ? Math.PI : start.ry; yaw = localRy - Math.PI;
+    if (start.elev != null) camElev = start.elev; // زاوية الكاميرا
+    if (start.yawOff) yaw += start.yawOff;       // كاميرا مائلة لجنب (صاحبة الحفلة على المنصة: جنب الكيكة مو فوقها)
     if (mode !== 'follow') { mode = 'follow'; cam.fov = 58; cam.updateProjectionMatrix(); onModeChange && onModeChange('follow'); }
   }
+  // مسار تلقائي للاعب المحلي (المشي للمنصة) بتوقيت السيرفر: points = [[x, z], ...]
+  function setAutoPath(points, t0, t1, nowFn, endRy) {
+    if (!points || points.length < 2) { auto = null; return; }
+    const cum = [0]; for (let i = 1; i < points.length; i++) cum.push(cum[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]));
+    auto = { points, cum, len: cum[cum.length - 1] || 1, t0, t1, now: nowFn, endRy };
+    // نحط اللاعب على المسار فوراً (بدون انتظار الإطار الجاي) عشان ما يظهر لحظة بمكان غلط
+    const f = Math.max(0, Math.min(1, (nowFn() - t0) / Math.max(1, t1 - t0))), ap = pathAt(auto, f);
+    pos.x = ap.x; pos.z = ap.z;
+  }
+  function pathAt(a, f) {
+    const d = f * a.len; let i = 1; while (i < a.points.length - 1 && a.cum[i] < d) i++;
+    const p0 = a.points[i - 1], p1 = a.points[i], seg = (a.cum[i] - a.cum[i - 1]) || 1, k = Math.max(0, Math.min(1, (d - a.cum[i - 1]) / seg));
+    return { x: p0[0] + (p1[0] - p0[0]) * k, z: p0[1] + (p1[1] - p0[1]) * k, dx: p1[0] - p0[0], dz: p1[1] - p0[1] };
+  }
+  const lerpAng = (a, b, k) => { let d = b - a; d = Math.atan2(Math.sin(d), Math.cos(d)); return a + d * k; };
   const getLocal = () => ({ x: pos.x, z: pos.z, ry: localRy, moving, running: sprinting, y: floorAt(pos.x, pos.z) });
   function setMode(m) {
     if (m === mode) return;
@@ -715,11 +927,19 @@ export function mountHall(el, opts = {}) {
   }
   const q0 = new T.Quaternion(), m4 = new T.Matrix4();
   function updateCamera(dt) {
+    if (mode === 'debug') return; // لقطة ثابتة للاختبار (play.html?cam=...)
     const inp = controls ? controls.read() : null;
     if (inp && inp.active && mode === 'tour' && !opts.noFreeWalk) setMode('walk');
     if (mode === 'follow') {
       moving = false; sprinting = false;
-      if (inp) {
+      if (auto) {
+        // المشي التلقائي: المكان من المسار، والسحب يلف الكاميرا بس
+        if (inp) { yaw -= inp.dx * .005; camElev = Math.max(.08, Math.min(1.1, camElev + inp.dy * .003)); }
+        const f = Math.max(0, Math.min(1, (auto.now() - auto.t0) / Math.max(1, auto.t1 - auto.t0))), ap = pathAt(auto, f);
+        pos.x = ap.x; pos.z = ap.z;
+        if (f > 0 && f < 1) { moving = true; localRy = lerpAng(localRy, Math.atan2(ap.dx, ap.dz), 1 - Math.exp(-dt * 10)); yaw = lerpAng(yaw, localRy - Math.PI, 1 - Math.exp(-dt * 2.5)); }
+        else if (f >= 1 && auto.endRy != null) localRy = lerpAng(localRy, auto.endRy, 1 - Math.exp(-dt * 6));
+      } else if (inp) {
         yaw -= inp.dx * .005; camElev = Math.max(.08, Math.min(1.1, camElev + inp.dy * .003));
         const sp = (inp.run ? 9 : 5.5) * dt, fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
         const mx = (fx * inp.mz + rx * inp.mx) * sp, mz = (fz * inp.mz + rz * inp.mx) * sp, f0 = floorAt(pos.x, pos.z);
@@ -735,13 +955,22 @@ export function mountHall(el, opts = {}) {
       }
       const fy = floorAt(pos.x, pos.z), D = 6.5;
       tourPos.set(pos.x + Math.sin(yaw) * Math.cos(camElev) * D, fy + 1.4 + Math.sin(camElev) * D, pos.z + Math.cos(yaw) * Math.cos(camElev) * D);
-      tourPos.x = Math.max(-HX + .4, Math.min(HX - .4, tourPos.x)); tourPos.z = Math.max(-HZ + .4, Math.min(HZ - .4, tourPos.z)); tourPos.y = Math.min(HALL.h - .5, tourPos.y);
+      // الكاميرا داخل غرفة اللاعب (وقت المشي التلقائي بين الغرف: السقف بس)
+      const cb = CAMBOX[zone === 'nostage' ? 'hall' : zone] || CAMBOX.hall;
+      if (!auto) { tourPos.x = Math.max(cb[0], Math.min(cb[1], tourPos.x)); tourPos.z = Math.max(cb[2], Math.min(cb[3], tourPos.z)); }
+      tourPos.y = Math.min(auto ? LOUNGE_H - .4 : cb[4], tourPos.y);
+      // الكاميرا لا تدخل الكيكة (صاحبة الحفلة واقفة قدامها): ترتفع فوقها
+      if (Math.hypot(tourPos.x, tourPos.z - (STAGE.front - 6.5)) < 3) tourPos.y = Math.max(tourPos.y, STAGE.h + 6.6);
       cam.position.lerp(tourPos, 1 - Math.exp(-dt * 8));
       followLook.set(pos.x, fy + 1.3, pos.z); cam.lookAt(followLook);
     } else if (mode === 'tour') {
       tourA += dt * (reduced ? .04 : .075);
-      tourPos.set(Math.sin(tourA) * 20, 6.5 + Math.sin(tourA * 2) * 2.2, -2 + Math.cos(tourA) * 32);
-      tourLook.set(Math.sin(tourA + 1.2) * 6, 4.2, -18 + Math.cos(tourA) * 6);
+      if (shot === 'stage') { tourPos.set(Math.sin(tourA * .6) * 3, 5.2, -12); tourLook.set(0, 5.5, -40); }
+      else if (shot === 'entrance') { tourPos.set(10, 9, 30); tourLook.set(0, 2, 46); }
+      else {
+        tourPos.set(Math.sin(tourA) * 20, 6.5 + Math.sin(tourA * 2) * 2.2, -2 + Math.cos(tourA) * 32);
+        tourLook.set(Math.sin(tourA + 1.2) * 6, 4.2, -18 + Math.cos(tourA) * 6);
+      }
       const k = 1 - Math.exp(-dt * 1.6);
       cam.position.lerp(tourPos, k); curLook.lerp(tourLook, k);
       m4.lookAt(cam.position, curLook, cam.up); q0.setFromRotationMatrix(m4); cam.quaternion.slerp(q0, k);
@@ -765,7 +994,8 @@ export function mountHall(el, opts = {}) {
 
   // ---------- الحلقة ----------
   const clock = new T.Clock();
-  const tickers = new Set(); // دوال تشتغل كل إطار (مثل الشخصيات) قبل الرسم
+  const tickers = new Set();
+  let curtainK = 1, curtainT = 1, doorK = 0, doorT = 0; // الستارة مفتوحة بالقاعة التجريبية؛ الحفلة تسكّرها // دوال تشتغل كل إطار (مثل الشخصيات) قبل الرسم
   let raf = 0, running = true, readyFired = false;
   const pf = { n: 0, s: 0, w: 0, lite: false };
   function perf(raw) {
@@ -798,6 +1028,12 @@ export function mountHall(el, opts = {}) {
     flameMat.size = .42 + Math.sin(t * 17) * .04 + Math.sin(t * 29) * .03;
     cakeGlow.intensity = 14 + Math.sin(t * 13) * 2;
     for (const p of portals) { p.tex.offset.y = -t * .04; p.ring.material.opacity = (near === p.s ? .75 : .3) + Math.sin(t * 2.4) * .1; }
+    curtainK += (curtainT - curtainK) * (1 - Math.exp(-dt * 1.1));
+    curtains.forEach(c => { c.scale.x = 1 - .86 * curtainK; });
+    doorK += (doorT - doorK) * (1 - Math.exp(-dt * 2.2));
+    doorLeaves.forEach(d => { d.g.rotation.y = d.open * doorK; });
+    updateFireworks(dt, t);
+    danceMat.emissiveIntensity = party * (.16 + .1 * Math.sin(t * 3));
     tickers.forEach(fn => fn(dt, t, cam));
     r.render(scene, cam);
     if (!readyFired) { readyFired = true; onReady && onReady(); }
@@ -819,6 +1055,13 @@ export function mountHall(el, opts = {}) {
 
   return {
     stop, setName, setMode, setParty, setFollow, getLocal, floorAt, scene, camera: cam,
+    setZone: z => { zone = ZONES[z] ? z : 'hall'; resolve(); },
+    setCurtain: (k, instant) => { curtainT = k; if (instant) curtainK = k; },
+    setDoors: (k, instant) => { doorT = k; if (instant) doorK = k; },
+    fireworks: (sec = 6) => { fwUntil = clock.elapsedTime + sec; fwNext = 0; },
+    setAutoPath, ZONES, setShot: v => { shot = v || null; },
+    get curtain() { return curtainT; }, get autoActive() { return !!auto; }, get zone() { return zone; }, // للاختبار
+    debugView: (p, l) => { mode = 'debug'; cam.fov = 60; cam.updateProjectionMatrix(); cam.position.set(p[0], p[1], p[2]); cam.lookAt(l[0], l[1], l[2]); },
     addTicker: fn => { tickers.add(fn); return () => tickers.delete(fn); },
     get mode() { return mode; }, get party() { return partyTarget === 1; },
   };

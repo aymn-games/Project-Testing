@@ -21,6 +21,8 @@ module.exports = {
     partyEnabled: process.env.PARTY_ENABLED === '1',
     // المفتاح الخاص لإنشاء حفلة (رابط المذيع: games/birthday-party/?k=...). فارغ = ممنوع إنشاء أي حفلة.
     partyHostKey: process.env.PARTY_HOST_KEY || '',
+    // كم حفلة ممكن تشتغل بنفس الوقت (الافتراضي 2 — يرفع بس للاختبار المحلي).
+    partyMaxRooms: Number(process.env.PARTY_MAX_ROOMS) || 2,
 
     // ⚠️ لازم يُنشأ من Google Cloud Console — راجع README.md.
     googleClientId: process.env.GOOGLE_CLIENT_ID || '777683353907-hkemaaft5t7mktgtjvlf47ptuqk93qbg.apps.googleusercontent.com',
