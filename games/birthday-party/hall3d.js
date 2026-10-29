@@ -1099,6 +1099,94 @@ export function mountHall(el, opts = {}) {
     if (nowNear !== near) { near = nowNear; onSectionNear && onSectionNear(near); }
   }
 
+  // ---------- شموع الميلاد ورا صاحبة الحفلة + تطاير ناعم وقت فتح الستارة ----------
+  // صفين شموع ميلاد كبيرة (مخططة حلزوني) على جانبي الكيكة ورا مكانها، شعلتها تتراقص ولها توهّج.
+  // setCandles(true) يولّعها وحدة وحدة من النص للأطراف، وflutter(sec) ينزّل بتلات وردية ولمعات ذهبية بهدوء.
+  const candleList = [];
+  for (const sd of [-1, 1]) for (let k = 0; k < 7; k++) {
+    const h = 2.7 - k * .2 + (k % 2) * .25, r = .17 - k * .006;
+    candleList.push({ x: sd * (3.7 + k * 1.22), z: -45.4 + k * .42, h, r, c: ['#f7a8c6', '#cdb6ef', '#a9dcc8', '#ffd6a5', '#9fc6f0', '#f6d3e2', '#ffe08a'][(k + (sd > 0 ? 3 : 0)) % 7], rank: k });
+  }
+  const stripeTex = tex(64, 256, (g, w, h) => {
+    g.fillStyle = '#f2f2f2'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#ffffff'; g.lineWidth = 0;
+    for (let y = -w; y < h + w; y += 44) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y + w * .9); g.lineTo(w, y + w * .9 + 16); g.lineTo(0, y + 16); g.fill(); }
+  });
+  instanced(new T.CylinderGeometry(1, 1, 1, 20), std('#ffffff', { map: stripeTex, roughness: .45, emissive: '#3a2420', emissiveIntensity: .25 }),
+    candleList.map(c => ({ x: c.x, y: STAGE.h + .14 + c.h / 2, z: c.z, s: [c.r, c.h, c.r], c: c.c })), { shadow: true });
+  instanced(new T.CylinderGeometry(1, 1.15, 1, 24), gold, candleList.map(c => ({ x: c.x, y: STAGE.h + .07, z: c.z, s: [c.r * 1.9, .14, c.r * 1.9] })));
+  instanced(new T.CylinderGeometry(.012, .012, .12, 6), std('#2a1a14'), candleList.map(c => ({ x: c.x, y: STAGE.h + .14 + c.h + .05, z: c.z })));
+  const flameTex = tex(64, 128, (g, w, h) => {
+    const gr = g.createRadialGradient(w / 2, h * .66, 2, w / 2, h * .6, h * .5);
+    gr.addColorStop(0, 'rgba(255,255,240,1)'); gr.addColorStop(.25, 'rgba(255,230,140,.95)'); gr.addColorStop(.6, 'rgba(255,140,40,.55)'); gr.addColorStop(1, 'rgba(255,90,20,0)');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(w / 2, 4); g.bezierCurveTo(w * .95, h * .5, w * .9, h * .95, w / 2, h - 4); g.bezierCurveTo(w * .1, h * .95, w * .05, h * .5, w / 2, 4); g.fill();
+  });
+  const glowTex = radial('rgba(255,230,170,.9)', 'rgba(255,180,90,.3)');
+  const flames = candleList.map(c => {
+    const top = STAGE.h + .14 + c.h + .1;
+    const f = new T.Sprite(new T.SpriteMaterial({ map: flameTex, transparent: true, depthWrite: false, blending: T.AdditiveBlending }));
+    const gl = new T.Sprite(new T.SpriteMaterial({ map: glowTex, color: '#ffc27a', transparent: true, opacity: .55, depthWrite: false, blending: T.AdditiveBlending }));
+    f.position.set(c.x, top + .1, c.z); gl.position.set(c.x, top + .08, c.z); f.renderOrder = gl.renderOrder = 3;
+    scene.add(f, gl);
+    return { f, gl, top, k: 1, at: 0, ph: c.x * 7.3 };
+  });
+  let candlesOn = true;
+  function setCandles(on, instant) {
+    candlesOn = !!on; const t = clock.elapsedTime;
+    candleList.forEach((c, i) => { flames[i].at = instant ? -1 : t + .35 + c.rank * .14 + (c.x > 0 ? .05 : 0); if (instant) flames[i].k = on ? 1 : 0; });
+  }
+  function updateCandles(dt, t) {
+    flames.forEach((fl, i) => {
+      const want = candlesOn && (fl.at < 0 || t >= fl.at) ? 1 : 0;
+      fl.k += (want - fl.k) * (1 - Math.exp(-dt * (want ? 5 : 12)));
+      const fk = Math.sin(t * 13 + fl.ph) * .08 + Math.sin(t * 31 + fl.ph * 2) * .05, k = fl.k;
+      fl.f.visible = fl.gl.visible = k > .02;
+      fl.f.scale.set(.15 * k * (1 - fk * .5), .34 * k * (1 + fk), 1);
+      fl.f.position.x = candleList[i].x + Math.sin(t * 7 + fl.ph) * .012;
+      fl.gl.scale.setScalar((1.05 + fk * .6) * k); fl.gl.material.opacity = .5 * k;
+    });
+  }
+  // التطاير: بتلات وردية (ورقية، تنزل وتتمايل) ولمعات ذهبية (تطلع وتختفي) — pool ثابت
+  const petalTex = tex(64, 64, (g, w) => { g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(w / 2, w / 2, w * .22, w * .4, .5, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.ellipse(w * .44, w * .4, w * .07, w * .16, .5, 0, 7); g.fill(); });
+  const PET = 340, GLI = 220;
+  const mkPool = (n, map, size, additive) => {
+    const pos = new Float32Array(n * 3).fill(-100), col = new Float32Array(n * 3), geo = new T.BufferGeometry();
+    geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setAttribute('color', new T.BufferAttribute(col, 3));
+    const pts = new T.Points(geo, new T.PointsMaterial({ map, size, vertexColors: true, transparent: true, depthWrite: false, alphaTest: additive ? 0 : .08, blending: additive ? T.AdditiveBlending : T.NormalBlending }));
+    pts.frustumCulled = false; scene.add(pts);
+    return { pos, col, geo, n, life: new Float32Array(n), vel: new Float32Array(n * 3), ph: new Float32Array(n), base: new Float32Array(n * 3), next: 0, any: false };
+  };
+  const petals = mkPool(PET, petalTex, .3, false), glits = mkPool(GLI, radial('rgba(255,255,255,1)', 'rgba(255,230,160,.6)'), .13, true);
+  const PET_C = ['#ffb3cf', '#ff8fbd', '#ffd1e3', '#ffffff', '#f7c9ff', '#ffe3a6'].map(c => new T.Color(c)), GLI_C = ['#ffe08a', '#fff4d0', '#ffd0ea'].map(c => new T.Color(c));
+  const spawn = (P, x, y, z, vx, vy, vz, life, cols) => {
+    const k = P.next; P.next = (P.next + 1) % P.n; P.pos.set([x, y, z], k * 3); P.vel.set([vx, vy, vz], k * 3); P.life[k] = life; P.ph[k] = rand() * 7;
+    const c = cols[Math.floor(rand() * cols.length)]; P.base.set([c.r, c.g, c.b], k * 3); P.col.set([c.r, c.g, c.b], k * 3); P.any = true;
+  };
+  let flutterUntil = -1, flutterStart = 0, petalCarry = 0, gliCarry = 0;
+  function flutter(sec = 12) { flutterStart = clock.elapsedTime; flutterUntil = flutterStart + sec; }
+  function updateFlutter(dt, t) {
+    const on = t < flutterUntil, ramp = on ? Math.min(1, (t - flutterStart) / 1.2) * Math.min(1, (flutterUntil - t) / 3) : 0;
+    if (on) {
+      let n = Math.floor(petalCarry += dt * 45 * ramp); petalCarry -= n;
+      while (n-- > 0) spawn(petals, (rand() - .5) * 34, 9 + rand() * 5, -46 + rand() * 22, (rand() - .5) * .3, -(.45 + rand() * .4), (rand() - .5) * .3, 16, PET_C);
+      n = Math.floor(gliCarry += dt * 30 * ramp); gliCarry -= n;
+      while (n-- > 0) { const c = candleList[Math.floor(rand() * candleList.length)]; spawn(glits, c.x + (rand() - .5) * 1.2, STAGE.h + .3 + rand() * c.h, c.z + (rand() - .5) * 1.2, (rand() - .5) * .15, .35 + rand() * .4, (rand() - .5) * .15, 2.6, GLI_C); }
+    }
+    for (const P of [petals, glits]) {
+      if (!P.any) continue; let alive = false;
+      for (let k = 0; k < P.n; k++) {
+        if (P.life[k] <= 0) continue;
+        P.life[k] -= dt; const j = k * 3;
+        if (P.life[k] <= 0 || P.pos[j + 1] < .05) { P.life[k] = 0; P.pos[j + 1] = -100; continue; }
+        alive = true;
+        const sway = P === petals ? Math.sin(t * 1.4 + P.ph[k]) * .5 : 0;
+        P.pos[j] += (P.vel[j] + sway) * dt; P.pos[j + 1] += P.vel[j + 1] * dt; P.pos[j + 2] += (P.vel[j + 2] + Math.cos(t * 1.1 + P.ph[k]) * .2 * (P === petals)) * dt;
+        if (P === glits) { const f = Math.min(1, P.life[k] / 1.2) * (.6 + .4 * Math.sin(t * 9 + P.ph[k])); for (let q = 0; q < 3; q++) P.col[j + q] = P.base[j + q] * f; }
+      }
+      P.geo.attributes.position.needsUpdate = true; P.geo.attributes.color.needsUpdate = true; P.any = alive || on;
+    }
+  }
+
   // ---------- الحلقة ----------
   const clock = new T.Clock();
   const tickers = new Set();
@@ -1142,6 +1230,7 @@ export function mountHall(el, opts = {}) {
     doorK += (doorT - doorK) * (1 - Math.exp(-dt * 2.2));
     doorLeaves.forEach(d => { d.g.rotation.y = d.open * doorK; });
     updateFireworks(dt, t);
+    updateCandles(dt, t); updateFlutter(dt, t);
     danceMat.emissiveIntensity = party * (.16 + .1 * Math.sin(t * 3));
     tickers.forEach(fn => fn(dt, t, cam));
     r.render(scene, cam);
@@ -1169,9 +1258,9 @@ export function mountHall(el, opts = {}) {
     setDoors: (k, instant) => { doorT = k; if (instant) doorK = k; },
     fireworks: (sec = 6) => { fwUntil = clock.elapsedTime + sec; fwNext = 0; },
     setAutoPath, ZONES, setShot: v => { shot = v || null; },
-    setWishScreen, cutCake, celebrate, snapshot,
+    setWishScreen, cutCake, celebrate, snapshot, setCandles, flutter,
     setPhotoCam: on => { photoCam = !!on; cam.fov = on ? 50 : (mode === 'follow' ? 58 : 52); cam.updateProjectionMatrix(); },
-    get curtain() { return curtainT; }, get wishY() { return wishGroup.position.y; }, get wishVis() { return wishGroup.visible; }, get autoActive() { return !!auto; }, get zone() { return zone; }, get cut() { return cutT; }, // للاختبار
+    get curtain() { return curtainT; }, get wishY() { return wishGroup.position.y; }, get wishVis() { return wishGroup.visible; }, get autoActive() { return !!auto; }, get zone() { return zone; }, get cut() { return cutT; }, get candles() { return flames.filter(f => f.k > .5).length; }, // للاختبار
     debugView: (p, l) => { mode = 'debug'; cam.fov = 60; cam.updateProjectionMatrix(); cam.position.set(p[0], p[1], p[2]); cam.lookAt(l[0], l[1], l[2]); },
     addTicker: fn => { tickers.add(fn); return () => tickers.delete(fn); },
     // تجهيز الـ shaders مسبقاً (عشان ما يعلّق الجوال أول مرة يظهر شي جديد، مثل فستانها وقت الافتتاح)

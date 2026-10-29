@@ -408,6 +408,9 @@
             // الستارة مسكّرة لين يخلص العد التنازلي (الفتح يصير بالـ ticker عند الصفر)
             const closed = preShow || (p === 'reveal' && !lateReveal);
             hall.setCurtain(closed ? 0 : 1, true);
+            // شموع الميلاد ورا صاحبة الحفلة: تنطفي لين تنفتح الستارة (تولّع بالـ ticker عند الصفر)
+            hall.setCandles(!closed, true);
+            if (p === 'reveal' && lateReveal && since < 13000) hall.flutter(15 - (since - 3000) / 1000);
             hall.setDoors(p === 'lobby' || p === 'closed' ? 0 : 1, p !== 'entrance');
             // الإضاءة الخافتة والليزر وقت الرقص والاحتفال؛ التهاني والكيكة أهدى عشان القراءة
             hall.setParty(['dance', 'celebrate', 'free'].includes(p) || (p === 'reveal' && lateReveal));
@@ -547,7 +550,7 @@
             if (phase.p === 'reveal' && !revealFired) {
                 const left = phase.at + 3000 - now;
                 if (left > 0) { const n = String(Math.ceil(left / 1000)); if ($('count').textContent !== n) { $('count').textContent = n; $('count').classList.remove('pop'); void $('count').offsetWidth; $('count').classList.add('pop'); } }
-                else { revealFired = true; $('count').textContent = ''; hall.setCurtain(1); hall.fireworks(7); hall.setParty(true); }
+                else { revealFired = true; $('count').textContent = ''; hall.setCurtain(1); hall.fireworks(7); hall.setParty(true); hall.setCandles(true); hall.flutter(15); }
             } else if (phase.p === 'photo') photoTick(now);
             else if ($('count').textContent) $('count').textContent = '';
             $('phaseTxt').textContent = (LABEL[phase.p] || (() => ''))();
