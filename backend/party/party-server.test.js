@@ -288,3 +288,65 @@ test('guest never receives girl row before reveal', async function () {
     assert.equal(g.msgs.some(function (x) { return x.t === 's' && flatHas(x.d, wg.n); }), false, 'not in deltas');
     r.h.close(); gl.close(); g.close(); srv.close();
 });
+
+// ================= الدفعة 3 =================
+async function toPhase(r, target) {
+    for (var k = 0; k < 12; k++) {
+        var p = party._mgr.phaseOf(r.code).p; if (p === target) return;
+        if (p === 'lobby') party._mgr.start(r.code); else party._mgr.skip(r.code, p);
+    }
+}
+
+test('guest wish appears in host wishList, girl next broadcasts wishes cur to all', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var girlKey = (await r.h.wait(function (x) { return x.t === 'hosted'; })).girlKey;
+    var gl = await client(port); gl.send({ t: 'join', code: r.code, name: 'سارة', girlKey: girlKey }); await gl.wait(function (x) { return x.t === 'welcome'; });
+    var g = await client(port); g.send({ t: 'join', code: r.code, name: 'ريم' }); await g.wait(function (x) { return x.t === 'welcome'; });
+    await toPhase(r, 'wishes');
+    await sleep(1100);
+    g.send({ t: 'wish', text: 'كل عام وانتي بخير' });
+    await g.wait(function (x) { return x.t === 'myWish' && x.text === 'كل عام وانتي بخير'; });
+    var wl = await r.h.wait(function (x) { return x.t === 'wishList' && x.items.length === 1; });
+    assert.equal(wl.items[0].name, 'ريم');
+    await sleep(1100);
+    gl.send({ t: 'next' });
+    var ws = await g.wait(function (x) { return x.t === 'wishes' && x.cur; });
+    assert.equal(ws.cur.text, 'كل عام وانتي بخير'); assert.equal(ws.total, 1);
+    await r.h.wait(function (x) { return x.t === 'wishes' && x.cur; });
+    r.h.close(); gl.close(); g.close(); srv.close();
+});
+
+test('guest cannot next/cut/hideWish', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var g = await client(port); g.send({ t: 'join', code: r.code, name: 'ريم' }); await g.wait(function (x) { return x.t === 'welcome'; });
+    await toPhase(r, 'wishes'); await sleep(1100);
+    g.send({ t: 'next' });
+    assert.equal((await g.wait(function (x) { return x.t === 'err' && x.of === 'next'; })).err, 'role');
+    await sleep(1100); g.send({ t: 'hideWish', id: 1, hidden: true });
+    assert.equal((await g.wait(function (x) { return x.t === 'err' && x.of === 'hideWish'; })).err, 'host-only');
+    await toPhase(r, 'cake'); await sleep(1100); g.send({ t: 'cut' });
+    assert.equal((await g.wait(function (x) { return x.t === 'err' && x.of === 'cut'; })).err, 'role');
+    assert.equal(party._mgr.phaseOf(r.code).p, 'cake');
+    r.h.close(); g.close(); srv.close();
+});
+
+test('host receives points on photo, again after reconnect until pointsDone', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var hosted = await r.h.wait(function (x) { return x.t === 'hosted'; });
+    await toPhase(r, 'celebrate'); await sleep(1100);
+    r.h.send({ t: 'skip', from: 'celebrate' });
+    var pts = await r.h.wait(function (x) { return x.t === 'points'; });
+    assert.ok(Array.isArray(pts.players)); assert.equal(typeof pts.durationMs, 'number');
+    r.h.close(); await sleep(150);
+    var h2 = await client(port); h2.send({ t: 'host', code: r.code, token: hosted.token });
+    await h2.wait(function (x) { return x.t === 'points'; });
+    await sleep(1100); h2.send({ t: 'pointsDone' }); await sleep(200);
+    h2.close(); await sleep(150);
+    var h3 = await client(port); h3.send({ t: 'host', code: r.code, token: hosted.token });
+    await h3.wait(function (x) { return x.t === 'phase'; }); await sleep(300);
+    assert.equal(h3.msgs.some(function (x) { return x.t === 'points'; }), false, 'not resent after pointsDone');
+    h3.close(); srv.close();
+});
