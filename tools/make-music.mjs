@@ -3,7 +3,7 @@
 // بيانو كهربائي FM، باد، باص، بلَك، ليد، أجراس، نحاس، وطبول مصنوعة من الموجات والضجيج.
 //
 //   lobby.mp3  — لو-فاي هادي (84 BPM) للانتظار والتهاني، يتكرر بدون قطع
-//   reveal.mp3 — فانفير الافتتاح (حوالي 12ث، مرة وحدة)
+//   reveal.mp3 — فانفير الافتتاح (14ث) — بس مع --reveal: الحفلة الحين تستخدم أغنية يرفعها صاحب المشروع
 //   dance.mp3  — دانس بوب (124 BPM) للرقص والرقص الحر، يتكرر بدون قطع
 //   cake.mp3   — «سنة حلوة» فالس كلاسيكي ثم احتفال دانس (128 BPM)، يتكرر طول رقص الكيكة
 //
@@ -299,7 +299,9 @@ function reveal() {
 
 function main() {
   fs.mkdirSync(OUT, { recursive: true });
-  for (const [name, fn, lufs] of [['reveal', reveal, -14], ['lobby', lobby, -19], ['dance', dance, -15], ['cake', cake, -15]]) {
+  const jobs = [['lobby', lobby, -19], ['dance', dance, -15], ['cake', cake, -15]];
+  if (process.argv.includes('--reveal')) jobs.unshift(['reveal', reveal, -14]);
+  for (const [name, fn, lufs] of jobs) {
     const t0 = Date.now(); writeMp3(name, fn(), lufs);
     console.log(name + '.mp3', (fs.statSync(path.join(OUT, name + '.mp3')).size / 1024).toFixed(0) + 'KB', ((Date.now() - t0) / 1000).toFixed(1) + 's');
   }
