@@ -116,6 +116,8 @@
     .wbrow button.ghost{ background:#fff; color:#c94f7e; border:1px solid var(--line); }
     .flash{ position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:8; }
     .flash.go{ animation:flash .8s ease-out; }
+    /* آخر ثواني مشهد النهاية: الشاشة تبيض بهدوء (كأنها دخلت النور) */
+    .fadeout{ position:fixed; inset:0; background:radial-gradient(circle at 50% 45%,#fffdf6,#fff3e0); opacity:0; pointer-events:none; z-index:10; }
     @keyframes flash{ 0%{ opacity:1; } 100%{ opacity:0; } }
     .photomodal{ position:fixed; inset:0; z-index:9; display:grid; place-items:center; background:rgba(30,10,30,.6); padding:16px; }
     .photomodal > div{ background:#fff; padding:12px; border-radius:18px; display:flex; flex-direction:column; gap:10px; max-width:min(720px,94vw); }
@@ -230,6 +232,7 @@
 </div>
 
 <div class="flash" id="flash" aria-hidden="true"></div>
+<div class="fadeout" id="fadeOut" aria-hidden="true"></div>
 <div class="endscreen hidden" id="endScreen" role="dialog" aria-label="انتهت الحفلة"><div><h2>انتهت الحفلة</h2><p>شكراً لحضوركم 💖</p><a class="savebtn hidden" id="endPhoto" href="#">الصورة الجماعية</a></div></div>
 <div class="kicked hidden" id="kicked" role="alertdialog" aria-label="طلّعك المذيع"><div><h2>طلّعك المذيع من الحفلة</h2><a id="kickedBack" href="../../games.html">رجوع للألعاب</a></div></div>
 <div class="photomodal hidden" id="photoModal" role="dialog" aria-label="الصورة الجماعية">
@@ -360,13 +363,15 @@
         const guestWp = n => { const ox = ((n % 5) - 2) * .9; return [[ox, 52], [ox, 45]]; };
         const pathFor = (n, start, target) => [start, ...(roles.get(n) === 'girl' ? GIRL_WP : guestWp(n)), target];
         const curEmote = () => { if (emote && emoteUntil && serverNow() > emoteUntil) emote = 0; return emote; };
-        const autoPhase = () => phase && !!{ entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1 }[phase.p];
+        const autoPhase = () => phase && !!{ entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1, outro: 1 }[phase.p];
 
         // مراحل المشي التلقائي: مدة المشي من وقت المرحلة، والدخول بس يمر بنقاط عبور
-        const WALK = { entrance: .85, gather: .85, cakeWalk: .85, photo: 6000 };
-        const AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1 };
+        // outro: صاحبة الحفلة تمشي السجادة كلها (27ث)، والضيوف يوصلون صفوف الوداع بسرعة (7ث)
+        const WALK = { entrance: .85, gather: .85, cakeWalk: .85, photo: 6000, outro: 27000 }, OUTRO_GUEST_MS = 7000;
+        const AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1, outro: 1 };
         // اتجاه الوقوف بعد المشي (نفس السيرفر): صاحبة الحفلة تطالع الضيوف إلا عند الكيكة والصورة
-        const facing = p => myRole === 'girl' && !['cakeWalk', 'cake', 'celebrate', 'photo', 'free'].includes(p) ? 0 : Math.PI;
+        const facing = p => p === 'outro' ? (myRole === 'girl' ? 0 : (myTarget && myTarget[0] < 0 ? 1 : -1) * Math.PI / 2)
+            : myRole === 'girl' && !['cakeWalk', 'cake', 'celebrate', 'photo', 'free'].includes(p) ? 0 : Math.PI;
         let photoKey = null, celebKey = null, lastWishes = null, photoUrl = null, noticeT = 0;
         // جا وقت البداية وصاحبة الحفلة مو موجودة (نحسبها هنا عشان تتحدث لحظة ما تدخل)
         const waitingGirl = () => !!(phase && phase.p === 'lobby' && phase.sched && serverNow() >= phase.sched.startAt && !girlOn);
@@ -385,8 +390,10 @@
             if (!wf || !phase.walk) return null;
             const walk = {}; for (let i = 0; i + 2 < phase.walk.length; i += 3) walk[phase.walk[i]] = [phase.walk[i + 1] / 100, phase.walk[i + 2] / 100];
             const t0 = phase.at, t1 = wf > 1 ? phase.at + wf : phase.at + (phase.until - phase.at) * wf;
-            const route = (n, st, tg) => p === 'entrance' ? pathFor(n, st, tg) : [st, tg];
-            return { walk, t0, t1, route };
+            // مشهد النهاية: هي تنزل للسجادة وتمشيها للباب، والضيوف يوصلون صفوفهم أسرع
+            const outro = p === 'outro', t1Of = n => outro && roles.get(n) !== 'girl' ? t0 + OUTRO_GUEST_MS : t1;
+            const route = (n, st, tg) => p === 'entrance' ? pathFor(n, st, tg) : outro && roles.get(n) === 'girl' ? [st, [0, Math.max(st[1], -36.5)], tg] : [st, tg];
+            return { walk, t0, t1, route, t1Of };
         }
         // اللي يخص الشخصيات بس من المرحلة (المسارات والسبوت لايت) — ينعاد لحاله بعد تبديل الشخصيات
         function crowdPhase() {
@@ -395,7 +402,9 @@
             if (W) {
                 const paths = {};
                 for (const n of Object.keys(W.walk)) { if (+n === myN) continue; const st = crowd.posOf(+n); if (st) paths[n] = W.route(+n, st, W.walk[n]); }
-                crowd.setAutoPaths(paths, W.t0, W.t1, role => role === 'girl' && !['cakeWalk', 'photo'].includes(p) ? 0 : Math.PI);
+                const t1s = {}; for (const n of Object.keys(paths)) t1s[n] = W.t1Of(+n);
+                crowd.setAutoPaths(paths, W.t0, W.t1, (role, c) => p === 'outro' ? (role === 'girl' ? 0 : (c && c.x < 0 ? 1 : -1) * Math.PI / 2)
+                    : role === 'girl' && !['cakeWalk', 'photo'].includes(p) ? 0 : Math.PI, { t1Of: t1s, endAnim: p === 'outro' ? (role => role === 'girl' ? 0 : 3) : null });
             } else crowd.setAutoPaths(null, serverNow());
             crowd.setGirlFx(!['lobby', 'entrance', 'closed', 'ended'].includes(p));
         }
@@ -431,9 +440,16 @@
             }
             hall.setPhotoCam(p === 'photo');
             crowdPhase();
+            // مشهد النهاية: الكاميرا تتبعها عند الكل، والنور من الباب، والبتلات، وصوت المشهد. الضيوف يلوّحون لها
+            if (p === 'outro') {
+                hall.setOutro(() => { const gn = [...roles].find(([, r]) => r === 'girl'); return gn && crowd ? crowd.posOf(gn[0]) : null; }, since / 1000);
+                hall.flutter(Math.max(2, 30 - since / 1000));
+                if (!isGirl && !viewOnly) { emote = 3; emoteUntil = 0; }
+                if (since < 6000) notice('إلى لقاء أجمل ✨', 'شكراً لأنكم كنتوا جزء من هالليلة', 6000);
+            } else hall.setOutro(null);
             const W = walkOf();
             if (W) {
-                const { walk, t0, t1, route } = W;
+                const { walk, t0, route } = W, t1 = W.t1Of(myN);
                 if (!viewOnly && myN != null && walk[myN]) {
                     // بداية المسار = مكاني عند السيرفر (نفس اللي تحسبه باقي الجوالات)، مو مكاني المحلي
                     myTarget = walk[myN];
@@ -455,6 +471,7 @@
             }
             if (viewOnly) hall.setShot(p === 'reveal' || p === 'cake' || p === 'celebrate' || p === 'cakeWalk' ? 'stage' : p === 'entrance' ? 'entrance' : p === 'wishes' || p === 'wishWrite' || p === 'gather' ? 'screen' : null);
             if (p === 'ended') music.stop();
+            else if (p === 'outro') music.play('outro', { from: since / 1000 });
             else if (p === 'dance' || p === 'free' || p === 'wishWrite' || p === 'wishes') {
                 // أول الرقص: أغنية الافتتاح تكمل لين آخرها (بدأت قبل الرقص بـ 12ث) وبعدها أغنية الرقص
                 if (p === 'dance') music.play('reveal', { from: (since + 12000) / 1000 });
@@ -532,6 +549,7 @@
             celebrate: () => 'احتفال 🎉',
             photo: () => 'الصورة الجماعية 📸',
             free: () => sc() ? 'الحفلة مستمرة · تنتهي الساعة ' + at(sc().endAt) : 'الحفلة مستمرة',
+            outro: () => 'إلى لقاء أجمل ✨',
         };
         // العدّاد بجنب اسم المرحلة: فتح الدخول، ثم بداية الحفل، ثم مدة المرحلة، ثم نهاية الحفل
         function phaseLeft(now) {
@@ -555,6 +573,8 @@
             else if ($('count').textContent) $('count').textContent = '';
             $('phaseTxt').textContent = (LABEL[phase.p] || (() => ''))();
             $('phaseTime').textContent = phaseLeft(now);
+            const fo = phase.p === 'outro' ? Math.max(0, Math.min(1, (now - phase.at - 26000) / 3500)) : 0;
+            if (+$('fadeOut').style.opacity !== fo) $('fadeOut').style.opacity = fo;
         });
 
         const net = connect({
