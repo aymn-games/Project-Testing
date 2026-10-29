@@ -47,7 +47,7 @@ var FIXED_MS = { entrance: 40000, reveal: 12000, gather: 12000, cakeWalk: 10000,
 // الجدول الافتراضي (بالدقايق، ومهلة القص بالثواني) والحدود
 var SCHED_DEF = { durationMin: 60, openBeforeMin: 15, danceMin: 7, writeMin: 3, cakeDanceMin: 5, cutTimeoutSec: 60 };
 var SCHED_LIM = { durationMin: [15, 240], openBeforeMin: [0, 120], danceMin: [1, 60], writeMin: [1, 60], cakeDanceMin: [1, 60], cutTimeoutSec: [10, 600] };
-var MIN_MS = 60000, MAX_AHEAD_MS = 30 * 24 * 3600 * 1000, PAST_SLACK_MS = 60000;
+var MIN_MS = 60000, MAX_AHEAD_MS = 30 * 24 * 3600 * 1000, PAST_SLACK_MS = 60000, EXPIRE_MS = 48 * 3600 * 1000;
 // مراحل مشي تلقائي: نوع الأهداف لكل مرحلة
 var WALK_KIND = { entrance: 'grid', gather: 'grid', cakeWalk: 'cake', photo: 'photo' };
 var AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1 };  // الحركة اليدوية ممنوعة
@@ -414,6 +414,8 @@ function createRoomManager(opts) {
         if (room.phase === 'ended') return fail('phase');
         var sc = cleanSchedule(s, now(), { base: room.sched }); if (!sc) return fail('schedule');
         if (room.phase !== 'closed' && room.phase !== 'lobby') { sc.startAt = room.sched.startAt; sc.openBeforeMin = room.sched.openBeforeMin; }
+        // غلطة بالتعديل ما تنهي الحفلة الحقيقية فجأة (ended ما يرجع)
+        if (endAtOf(sc) <= now() + 60000) return fail('ends');
         room.sched = sc;
         var ms = durationOf(room, room.phase);
         if (ms && room.phaseUntil) room.phaseUntil = room.phaseAt + ms;
@@ -508,6 +510,12 @@ function createRoomManager(opts) {
     }
     function restore(o) {
         if (!o || typeof o.code !== 'string' || !/^\d{4}$/.test(o.code) || !Array.isArray(o.players) || PHASES.indexOf(o.phase) < 0) return fail('bad');
+        if (!o.players.every(function (q) { return q && typeof q.id === 'string' && typeof q.key === 'string' && Number.isInteger(q.n); })) return fail('bad');
+        if (o.sched != null) {
+            var sc = o.sched;
+            if (typeof sc !== 'object' || !isFinite(sc.startAt) || Object.keys(SCHED_LIM).some(function (k) { return typeof sc[k] !== 'number' || !isFinite(sc[k]); })) return fail('bad');
+            if (now() > endAtOf(sc) + EXPIRE_MS) return fail('expired'); // حفلة قديمة مرّ عليها يومين: ما ترجع
+        }
         if (rooms[o.code]) return fail('exists');
         var room = { players: [], walk: {}, slotN: 0, slotTotal: 0, wishes: [], wishSeq: 1, wishCur: -1, cakeCut: false, photoDone: false, startedAt: 0, banned: { users: {}, devs: {} }, sched: null, nextN: 1, phaseUntil: 0 };
         ROOM_KEYS.forEach(function (k) { if (o[k] !== undefined) room[k] = o[k]; });

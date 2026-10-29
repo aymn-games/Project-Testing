@@ -555,3 +555,42 @@ test('prev from the girl moves back one wish and broadcasts wishes', async funct
     assert.equal((await gl.wait(function (x) { return x.t === 'err' && x.of === 'prev'; })).err, 'first');
     r.h.close(); gl.close(); a.close(); b.close(); srv.close();
 });
+
+// ---- إصلاحات المراجعة النهائية ----
+test('host reconnecting after the party ended still gets the pending points', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var room = party._mgr.getRoom(r.code);
+    room.photoDone = true; room.pointsMsg = { t: 'points', id: r.code + ':1', players: [{ id: 'tiktok:nora', name: 'نورة' }], durationMs: 1000 };
+    room.phase = 'ended';
+    r.h.close(); await sleep(300);
+    var h2 = await client(port); h2.send({ t: 'host', code: r.code, token: room.token });
+    var pm = await h2.wait(function (x) { return x.t === 'points'; });
+    assert.equal(pm.players[0].id, 'tiktok:nora');
+    h2.close(); srv.close();
+});
+
+test('boot restores the good rooms even when one saved row is broken', async function () {
+    reset(); party._setEnabled(true);
+    var Database = require('better-sqlite3'), st = require('./party-store').createStore(new Database(':memory:'));
+    var good = party._mgr.createRoom({ girlName: 'سارة', schedule: SCHED() });
+    st.save('9999', { code: '9999', phase: 'lobby', players: [null], sched: SCHED() });
+    st.save(good.code, party._mgr.serialize(good.code));
+    party._mgr.closeRoom(good.code);
+    party._setStore(st); party.boot();
+    assert.ok(party._mgr.getRoom(good.code), 'good room restored');
+    assert.equal(party._mgr.getRoom('9999'), null);
+    party._setStore(null);
+});
+
+test('flushAll writes pending changes right away (SIGTERM on deploy)', async function () {
+    reset(); party._setEnabled(true);
+    var Database = require('better-sqlite3'), st = require('./party-store').createStore(new Database(':memory:'));
+    party._setStore(st);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var g = await client(port); g.send({ t: 'join', code: r.code, name: 'ريم' }); var wg = await g.wait(function (x) { return x.t === 'welcome'; });
+    party._flushAll();
+    var saved = st.loadAll().find(function (o) { return o.code === r.code; });
+    assert.ok(saved && saved.players.some(function (p) { return p.id === wg.id; }), 'just-joined player saved');
+    r.h.close(); g.close(); srv.close(); party._setStore(null);
+});

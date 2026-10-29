@@ -170,6 +170,7 @@
                 <button class="btn ghost" id="editBtn" type="button">تعديل الأوقات</button>
                 <button class="btn ghost" id="qrBtn" type="button" aria-pressed="false">اعرض الباركود على الشاشة</button>
                 <button class="btn ghost" id="closePanel" type="button">إغلاق اللوحة ✕</button>
+                <button class="btn ghost" id="newParty" type="button">حفلة جديدة</button>
             </div>
             <div class="hidden" id="editBox" style="margin-top:12px">
                 <div class="rows" id="editSched"></div>
@@ -408,6 +409,7 @@
         $('nextBtn').classList.toggle('hidden', phase.p !== 'wishes');
         $('prevBtn').classList.toggle('hidden', !(phase.p === 'wishes' && wishesPos > 1));
         $('editBtn').classList.toggle('hidden', !phase.sched || phase.p === 'ended');
+        if (phase.p === 'ended') $('newParty').textContent = 'حفلة جديدة ✨';
         renderCast();
     }
     // باركود الضيوف على البث: تلقائي قبل البداية، وبعدها بس لو المذيع شغّله
@@ -458,9 +460,25 @@
     // ---- لوحة التحكم فوق شاشة البث: زر ⚙️ (يختفي بدون حركة ماوس) أو حرف C ----
     let idleT = 0;
     function wake() { $('gear').classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => $('gear').classList.add('idle'), 3000); }
-    const togglePanel = on => { document.body.classList.toggle('panel', on == null ? !document.body.classList.contains('panel') : on); wake(); };
+    // باركود صاحبة الحفلة يرجع مغطّى كل ما تنقفل اللوحة (اللوحة تطلع بالبث، والباركود سري)
+    const togglePanel = on => {
+        const open = on == null ? !document.body.classList.contains('panel') : on;
+        document.body.classList.toggle('panel', open);
+        if (!open) $('girlVeil').classList.add('closed');
+        wake();
+    };
     $('gear').addEventListener('click', () => togglePanel());
     $('closePanel').addEventListener('click', () => togglePanel(false));
+    // «حفلة جديدة»: الصفحة تترك الحفلة الحالية (تكمل لحالها لين نهايتها) وترجع لنموذج الإنشاء —
+    // مثلاً بعد حفلة تجربة. التأكيد بضغطة ثانية، وبدون تأكيد لو الحفلة انتهت
+    let newSure = false, newT = 0;
+    $('newParty').addEventListener('click', () => {
+        if (!(phase && phase.p === 'ended') && !newSure) { newSure = true; $('newParty').textContent = 'متأكد؟ الحفلة الحالية تكمل بدون تحكم'; newT = setTimeout(() => { newSure = false; $('newParty').textContent = 'حفلة جديدة'; }, 4000); return; }
+        clearTimeout(newT); newSure = false; $('newParty').textContent = 'حفلة جديدة';
+        writeJSON('party-host', null); state = null; phase = null; listSig = '';
+        document.body.classList.remove('live', 'panel'); $('stage').removeAttribute('src'); $('qrCast').classList.remove('on');
+        net.close(); location.reload();
+    });
     const onKey = e => {
         const t = e.target, typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
         if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey && e.code === 'KeyC' && document.body.classList.contains('live')) { e.preventDefault(); togglePanel(); }
@@ -519,10 +537,12 @@
     }
 
     $('girlName').addEventListener('keydown', e => { if (e.key === 'Enter') $('createBtn').click(); });
-    $('showGirl').addEventListener('click', () => $('girlVeil').classList.remove('closed'));
+    let veilT = 0;
+    $('showGirl').addEventListener('click', () => { $('girlVeil').classList.remove('closed'); clearTimeout(veilT); veilT = setTimeout(() => $('girlVeil').classList.add('closed'), 20000); });
     document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
         const url = b.dataset.copy === 'girl' ? girlUrl() : guestUrl();
-        try { await navigator.clipboard.writeText(url); b.textContent = 'تم النسخ'; } catch (e) { prompt('انسخ الرابط:', url); }
+        // رابط صاحبة الحفلة ما ينعرض بنافذة (تطلع بالبث)
+        try { await navigator.clipboard.writeText(url); b.textContent = 'تم النسخ'; } catch (e) { if (b.dataset.copy === 'girl') b.textContent = 'ما قدرنا ننسخ'; else prompt('انسخ الرابط:', url); }
         setTimeout(() => { b.textContent = 'نسخ الرابط'; }, 1500);
     }));
     if (!readJSON('party-host')) showCreate();

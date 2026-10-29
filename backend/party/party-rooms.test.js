@@ -859,3 +859,26 @@ test('restore after endAt lands on ended', function () {
     s.c.t.now = s.start + 61 * MIN;
     assert.equal(reboot(s).ph(), 'ended');
 });
+
+// ---- إصلاحات المراجعة النهائية ----
+test('schedule edit that would end the party within a minute is refused', function () {
+    var s = schedRoom(); girlIn(s);
+    s.at(s.start - 15 * MIN); s.at(s.start); s.mgr.skip(s.code, 'entrance'); s.mgr.skip(s.code, 'reveal');
+    s.c.t.now = s.start + 20 * MIN;
+    assert.equal(s.mgr.setSchedule(s.code, { durationMin: 15 }).err, 'ends', 'endAt already passed');
+    s.c.t.now = s.start + 14.5 * MIN;
+    assert.equal(s.mgr.setSchedule(s.code, { durationMin: 15 }).err, 'ends', 'would end in 30s');
+    assert.equal(s.mgr.setSchedule(s.code, { durationMin: 30 }).ok, true);
+    assert.equal(s.ph(), 'dance');
+});
+
+test('restore refuses rooms long past their end and bad schedules', function () {
+    var s = schedRoom(); girlIn(s);
+    var data = JSON.parse(JSON.stringify(s.mgr.serialize(s.code)));
+    s.c.t.now = s.start + 60 * MIN + 49 * 3600000;
+    assert.equal(createRoomManager({ now: function () { return s.c.t.now; } }).restore(data).err, 'expired');
+    var bad = JSON.parse(JSON.stringify(data)); bad.sched.durationMin = 'x';
+    assert.equal(createRoomManager({ now: function () { return s.start; } }).restore(bad).err, 'bad');
+    var nul = JSON.parse(JSON.stringify(data)); nul.players.push(null);
+    assert.equal(createRoomManager({ now: function () { return s.start; } }).restore(nul).err, 'bad');
+});

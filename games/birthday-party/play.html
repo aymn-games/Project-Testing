@@ -405,7 +405,8 @@
             if (p === 'wishWrite' && since < 4000) notice('اكتبوا تهانيكم 💌', isGirl || viewOnly ? 'الضيوف يكتبون من جوالاتهم' : 'اضغط «اكتب تهنئتك» تحت');
             if (p === 'photo' && since < 5000) notice('وقت الصورة الجماعية 📸', 'الكل يتصف تلقائياً');
             if (p === 'free' && since < 8000) notice('شكراً لحضوركم 💖', 'استمتعوا بالحفل', 6500);
-            if (!touched && (p === 'closed' || p === 'lobby')) $('soundTip').classList.remove('hidden');
+            // أي مرحلة (مو بس الانتظار): بعد تحديث الصفحة وسط الحفلة الصوت يحتاج لمسة من جديد
+            if (!touched && p !== 'ended') $('soundTip').classList.remove('hidden');
             // نهاية الحفلة: شاشة شكر فوق المشهد، والصورة (لو انأخذت) تبقى تنحفظ
             $('endScreen').classList.toggle('hidden', p !== 'ended');
             if (p === 'ended') { $('photoModal').classList.add('hidden'); $('endPhoto').classList.toggle('hidden', !$('photoImg').src); }

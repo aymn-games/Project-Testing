@@ -64,7 +64,7 @@
         <h2>الدخول يفتح الساعة <bdi id="doorsAt"></bdi></h2>
         <div class="when" id="doorsWhen"></div>
         <div class="left" id="doorsLeft"></div>
-        <p>اكتب اسمك من الحين، وزر الدخول يشتغل أول ما يفتح الدخول.</p>
+        <p>اكتب اسمك واضغط «دخول» من الحين — بتدخل لحالك أول ما يفتح الدخول.</p>
     </div>
     <div class="wait" id="wait"><div class="spin"></div>جاري الاتصال بالحفلة…</div>
 
@@ -120,13 +120,14 @@
 
     // الحفلة المجدولة قبل فتح الدخول: الضيف يشوف الوقت والعدّاد، وأزرار دخول الضيوف مقفلة
     // لين توصل phase lobby (صاحبة الحفلة تقدر تدخل غرفتها بدري)
-    let doorsAt = 0, doorsT = 0;
+    let doorsAt = 0, doorsT = 0, pendingJoin = null, onDoorsOpen = null; // ضغط دخول قبل ما يفتح: يدخل لحاله أول ما يفتح
     function setDoors(openAt, tz) {
         doorsAt = openAt || 0;
         $('doors').classList.toggle('hidden', !doorsAt || !!girlKey);
-        ['memberBtn', 'quickBtn'].forEach(id => { $(id).dataset.closed = doorsAt ? '1' : ''; if (doorsAt) $(id).disabled = true; else if (!sentJoin) $(id).disabled = false; });
+        // الأزرار تبقى تنضغط: الضغطة قبل الفتح تنحفظ، ويدخل لحاله أول ما يفتح
+        ['memberBtn', 'quickBtn'].forEach(id => { $(id).dataset.closed = doorsAt ? '1' : ''; });
         clearInterval(doorsT);
-        if (!doorsAt) return;
+        if (!doorsAt) { if (pendingJoin && onDoorsOpen) { const pj = pendingJoin; pendingJoin = null; onDoorsOpen(pj); } return; }
         $('doorsAt').textContent = clockText(doorsAt, tz);
         $('doorsWhen').textContent = dateText(doorsAt, tz) + ' · ' + tzLabel(tz);
         const tickDoors = () => { $('doorsLeft').textContent = countdownText(doorsAt - serverNow()); };
@@ -136,7 +137,7 @@
     function showForm() {
         $('wait').classList.add('hidden');
         $((girlKey ? 'girl' : 'guest') + 'Form').classList.remove('hidden');
-        sentJoin = false; ['memberBtn', 'quickBtn', 'girlBtn'].forEach(id => { $(id).disabled = !!$(id).dataset.closed; });
+        sentJoin = false; ['memberBtn', 'quickBtn', 'girlBtn'].forEach(id => { $(id).disabled = false; });
     }
     function renderMember() {
         const A = window.AGPAuth, tok = A && A.getToken && A.getToken(), user = A && A.getCachedUser && A.getCachedUser();
@@ -179,8 +180,8 @@
             },
         });
         const join = (extra, btn) => { showMsg(''); sentJoin = true; $(btn).disabled = true; net.send(Object.assign({ t: 'join', code, dev }, extra)); };
+        onDoorsOpen = pj => join(pj.extra, pj.btn);
         $('memberBtn').addEventListener('click', () => {
-            if ($('memberBtn').dataset.closed) return;
             const tok = window.AGPAuth && window.AGPAuth.getToken && window.AGPAuth.getToken();
             if (!tok) {
                 // login.html يقبل ?next= كمسار نسبي من جذر الموقع فقط
@@ -188,12 +189,13 @@
                 location.href = '../../login.html?next=' + encodeURIComponent(next);
                 return;
             }
+            if ($('memberBtn').dataset.closed) { pendingJoin = { extra: { auth: tok }, btn: 'memberBtn' }; $('doors').querySelector('p').textContent = 'تمام ✓ بتدخل بحسابك لحالك أول ما يفتح الدخول — خلّ الصفحة مفتوحة.'; return; }
             join({ auth: tok }, 'memberBtn');
         });
         $('quickBtn').addEventListener('click', () => {
-            if ($('quickBtn').dataset.closed) return;
             const name = $('quickName').value.trim();
             if (!name) { showMsg(ERR.name); $('quickName').focus(); return; }
+            if ($('quickBtn').dataset.closed) { pendingJoin = { extra: { name }, btn: 'quickBtn' }; showMsg(''); $('doors').querySelector('p').textContent = 'تمام ✓ بتدخل لحالك أول ما يفتح الدخول — خلّ الصفحة مفتوحة.'; return; }
             join({ name }, 'quickBtn');
         });
         $('girlBtn').addEventListener('click', () => join({ name: $('girlName').value.trim(), girlKey }, 'girlBtn'));

@@ -60,8 +60,8 @@ var _mgr = createRoomManager({
 });
 // الحفظ في SQLite (party-store): الحفلة ترجع بعد إعادة تشغيل السيرفر. مجمّع (مرة كل 2ث بالأكثر لكل
 // غرفة)، وفوري لما تتغيّر المرحلة. _store = null ← بدون حفظ (الاختبارات، أو القاعدة ما اشتغلت)
-var SAVE_MS = 2000, ENDED_KEEP_MS = 2 * 60 * 60 * 1000;
-var _store = null, _save = {};   // code -> {at, dirty}
+var SAVE_MS = 2000, ENDED_KEEP_MS = 2 * 60 * 60 * 1000, POINTS_KEEP_MS = 48 * 60 * 60 * 1000;
+var _store = null, _save = {}, _sigHooked = false;   // code -> {at, dirty}
 function markSave(code, now) {
     if (!_store || !code) return;
     var st = _save[code] || (_save[code] = { at: 0, dirty: false });
@@ -73,6 +73,8 @@ function flushSave(code, force) {
     st.at = t; st.dirty = false;
     try { var o = _mgr.serialize(code); if (o) _store.save(code, o); } catch (err) { logger.error('Party: save failed:', err); }
 }
+// إيقاف السيرفر (نشر جديد على Render يرسل SIGTERM): نكتب كل التغييرات المعلّقة قبل ما يطفي
+function flushAll() { Object.keys(_save).forEach(function (code) { flushSave(code, true); }); }
 function dropRoom(code, why) {
     _mgr.closeRoom(code); delete _emptySince[code]; delete _roster[code]; delete _wl[code]; delete _save[code];
     if (_store) { try { _store.remove(code); } catch (err) { logger.error('Party: store remove failed:', err); } }
@@ -83,8 +85,21 @@ function boot() {
     if (!_enabled) return;
     if (!_store) { try { _store = require('./party-store').createStore(require('../db/database')); } catch (err) { logger.error('Party: store unavailable:', err); return; } }
     var n = 0;
-    try { _store.loadAll().forEach(function (o) { var res = _mgr.restore(o); if (res.ok) { n++; markSave(res.code, true); } }); } catch (err) { logger.error('Party: restore failed:', err); }
+    var rows = [];
+    try { rows = _store.loadAll(); } catch (err) { logger.error('Party: load failed:', err); }
+    // كل غرفة لحالها: صف تالف ما يوقف رجوع الباقي
+    rows.forEach(function (o) {
+        try {
+            var res = _mgr.restore(o);
+            if (res.ok) { n++; markSave(res.code, true); }
+            else if ((res.err === 'expired' || res.err === 'bad') && o && typeof o.code === 'string') _store.remove(o.code);
+        } catch (err) { logger.error('Party: restore failed for ' + (o && o.code) + ':', err); }
+    });
     if (n) logger.log('Party: restored ' + n + ' rooms');
+    if (!_sigHooked) {
+        _sigHooked = true;
+        process.once('SIGTERM', function () { try { flushAll(); } catch (e) { } process.kill(process.pid, 'SIGTERM'); });
+    }
     ensureTicker();
 }
 
@@ -221,7 +236,9 @@ function handle(client, msg, t, ident) {
         }
         send(client, rosterMsg(client.code)); send(client, phaseMsg(client.code)); send(client, wishesMsg(client.code)); sendAll(client);
         sendWishList(client.code, client);
-        var ph0 = _mgr.phaseOf(client.code).p; if (ph0 === 'photo' || ph0 === 'free') sendPoints(client.code, client);
+        // النقاط تنتظر المذيع حتى بعد نهاية الحفلة (لو ما كان مسجّل دخوله وقت الصورة)
+        var ph0 = _mgr.phaseOf(client.code).p, rm0 = _mgr.getRoom(client.code);
+        if (ph0 === 'photo' || ph0 === 'free' || (ph0 === 'ended' && rm0 && rm0.photoDone)) sendPoints(client.code, client);
         return;
     }
     if (t === 'peek') {
@@ -349,7 +366,8 @@ function tickAll() {
             // (وأكثر لو النقاط ما انحسبت — تنتظر المذيع يفتح صفحته)
             if (sc) {
                 var endAt = sc.startAt + sc.durationMin * 60000;
-                if (now > endAt + ENDED_KEEP_MS && (!room.photoDone || room.pointsAcked) && !cs.length) return dropRoom(code, 'ended');
+                // تنشال بعد ساعتين من النهاية لو ما فيه نقاط تنتظر المذيع، وبعد يومين بأي حال
+                if ((now > endAt + ENDED_KEEP_MS && (!room.pointsMsg || room.pointsAcked) && !cs.length) || now > endAt + POINTS_KEEP_MS) return dropRoom(code, 'ended');
             } else if (!cs.length) {
                 if (!_emptySince[code]) _emptySince[code] = now;
                 else if (now - _emptySince[code] > EMPTY_ROOM_MS) dropRoom(code, 'empty');
@@ -419,6 +437,7 @@ function handleUpgrade(req, socket) {
 module.exports = {
     handleUpgrade: handleUpgrade,
     boot: boot,
+    _flushAll: flushAll,
     _setStore: function (st) { _store = st || null; _save = {}; },
     _mgr: _mgr,
     _setEnabled: function (v) { _enabled = !!v; },
