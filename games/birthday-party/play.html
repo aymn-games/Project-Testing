@@ -274,7 +274,7 @@
         const AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1 };
         // اتجاه الوقوف بعد المشي (نفس السيرفر): صاحبة الحفلة تطالع الضيوف إلا عند الكيكة والصورة
         const facing = p => myRole === 'girl' && !['cakeWalk', 'cake', 'celebrate', 'photo', 'free'].includes(p) ? 0 : Math.PI;
-        let photoKey = null, celebKey = null, lastWishes = null;
+        let photoKey = null, celebKey = null, lastWishes = null, photoUrl = null;
 
         function applyPhase() {
             if (!phase || !gotAll) return;
@@ -359,7 +359,12 @@
             if (now - at > 6000) return; // رجع متأخر: فاتته اللقطة
             const shot = hall.snapshot();
             $('flash').classList.remove('go'); void $('flash').offsetWidth; $('flash').classList.add('go');
-            if (shot) { $('photoImg').src = shot; $('photoSave').href = shot; $('photoSave').download = 'party-' + code + '.jpg'; setTimeout(() => $('photoModal').classList.remove('hidden'), 700); }
+            if (shot) {
+                $('photoImg').src = shot; $('photoSave').href = shot; $('photoSave').download = 'party-' + code + '.jpg';
+                // رابط blob للحفظ: بعض نسخ iOS تفتح رابط data: بدل ما تحفظه
+                fetch(shot).then(r => r.blob()).then(b => { if (photoUrl) URL.revokeObjectURL(photoUrl); photoUrl = URL.createObjectURL(b); $('photoSave').href = photoUrl; }).catch(() => {});
+                setTimeout(() => $('photoModal').classList.remove('hidden'), 700);
+            }
         }
 
         const fmt = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
@@ -434,9 +439,10 @@
             const text = $('wishText').value.trim(); if (!text) { $('wishStatus').textContent = 'اكتب تهنئتك أول'; return; }
             $('wishSend').disabled = true; $('wishStatus').textContent = 'جاري الإرسال…'; net.send({ t: 'wish', text });
         });
-        const once = (id, msg) => $(id).addEventListener('click', () => { $(id).disabled = true; net.send(msg); setTimeout(() => { $(id).disabled = false; }, 1100); });
-        once('nextBtn', { t: 'next' });
-        once('cutBtn', { t: 'cut' });
+        const once = (id, msg) => $(id).addEventListener('click', () => { $(id).disabled = true; net.send(msg()); setTimeout(() => { $(id).disabled = false; }, 1100); });
+        // seen: كم رسالة شافت — لو المذيع ضغط التالي بنفس اللحظة السيرفر يرفض الثانية بدل ما تنتخطى رسالة
+        once('nextBtn', () => ({ t: 'next', seen: lastWishes ? lastWishes.shown : 0 }));
+        once('cutBtn', () => ({ t: 'cut' }));
         $('photoClose').addEventListener('click', () => $('photoModal').classList.add('hidden'));
 
         // أزرار الحركات (وقت الرقص): رقص يشتغل لين تضغطه مرة ثانية أو تمشي، والباقي ثواني

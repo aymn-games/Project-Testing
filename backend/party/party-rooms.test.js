@@ -388,6 +388,16 @@ test('wish: only guests, only during wishes, trimmed to 200, text kept as text, 
     assert.ok(t2.indexOf('كلب') < 0 && t2.indexOf('***') > 0, 'masked: ' + t2);
 });
 
+test('bad-word mask is whole-word: blessings untouched, insults (with ال/يا, caps, zero-width) masked', function () {
+    function clean(text) { var w = showRoom(), g = w.mgr.join(w.code, { name: 'هيا' }); toWishes(w); w.mgr.addWish(w.code, g.id, text); return w.mgr.wishList(w.code).items[0].text; }
+    assert.equal(clean('الله يرزقك ويسعدك، رزقك الله'), 'الله يرزقك ويسعدك، رزقك الله');
+    assert.equal(clean('أول دخول لي للحفلة'), 'أول دخول لي للحفلة');
+    assert.equal(clean('يا كلب'), 'يا ***');
+    assert.equal(clean('ياكلب والكلب'), '*** ***');
+    assert.equal(clean('FUCK this'), '*** this');
+    assert.equal(clean('ك​لب'), '***');
+});
+
 test('wish edit before shown, refused after shown', function () {
     var s = showRoom(), g = s.mgr.join(s.code, { name: 'ريم' }), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
     toWishes(s);
@@ -413,6 +423,27 @@ test('nextWish shows one per call in first-sent order, skips hidden, and after t
     var r3 = s.mgr.nextWish(s.code, girl.id);
     assert.equal(r3.done, true);
     assert.equal(s.mgr.phaseOf(s.code).p, 'cakeWalk');
+});
+
+test('next with a stale seen count is refused (girl and host pressing together skip only one)', function () {
+    var s = showRoom(), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey }), gs = [];
+    for (var i = 0; i < 3; i++) gs.push(s.mgr.join(s.code, { name: 'ض' + i }));
+    toWishes(s);
+    gs.forEach(function (g, i) { s.mgr.addWish(s.code, g.id, 'رسالة ' + i); });
+    assert.equal(s.mgr.nextWish(s.code, girl.id, 0).cur.text, 'رسالة 0');
+    assert.equal(s.mgr.nextWish(s.code, 'host', 0).err, 'stale');
+    assert.equal(s.mgr.wishesState(s.code).cur.text, 'رسالة 0');
+    assert.equal(s.mgr.nextWish(s.code, 'host', 1).cur.text, 'رسالة 1');
+});
+
+test('offline guests go after online ones in walk slots and do not count in photo rows', function () {
+    var s = showRoom(), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey }), gs = [];
+    for (var i = 0; i < 4; i++) gs.push(s.mgr.join(s.code, { name: 'ض' + i }));
+    s.mgr.leave(s.code, gs[0].id);
+    toWishes(s); s.mgr.skip(s.code, 'wishes'); s.mgr.skip(s.code, 'cakeWalk'); s.mgr.cut(s.code, girl.id); s.mgr.skip(s.code, 'celebrate');
+    var walk = s.mgr.phaseOf(s.code).walk, on = [1, 2, 3].map(function (i) { return walk[gs[i].n]; });
+    assert.deepEqual(on.map(function (t) { return t[0]; }), [-1.1, 0, 1.1], 'three online guests centered');
+    assert.ok(walk[gs[0].n][1] > on[0][1], 'offline guest behind');
 });
 
 test('only the girl (or host) can next and cut', function () {

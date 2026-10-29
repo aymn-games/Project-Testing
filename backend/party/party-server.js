@@ -14,11 +14,11 @@
  *   عميل → resume {code, id, key}                 ← نفس رد join
  *   عميل → peek {code}                            ← room + all (شاشة عرض بدون شخصية)
  *   عميل → mv {p:[x, z, ry, a]} · ping {k}        ← pong {k, now}
- *   المذيع → start · skip {from}                  ← phase {p, at, until, walk} للكل
+ *   المذيع → start · skip {from}                  ← phase {p, at, until, walk, cut} للكل
  *   (phase تنرسل أيضاً لكل اتصال جديد؛ walk مسطّحة n, x×100, z×100 وقت المشي التلقائي)
- *   الضيف → wish {text} ← myWish {text} · صاحبة الحفلة/المذيع → next · cut
- *   المذيع → hideWish {id, hidden} · pointsDone
- *   خادم → wishes {cur, shown, total} للكل · wishList {items} للمذيع · points {players, durationMs} للمذيع
+ *   الضيف → wish {text} ← myWish {text} · صاحبة الحفلة/المذيع → next {seen} · cut
+ *   المذيع → hideWish {id, hidden} · pointsClaim ← pointsGo {id} (جهاز واحد بس) · pointsRelease · pointsDone ← pointsOk لباقي أجهزة المذيع
+ *   خادم → wishes {cur, shown, total} للكل · wishList {items} للمذيع · points {id, players, durationMs} للمذيع
  *   خادم → room {room} عند تغيّر القائمة · s {now, d} دلتا الحركة كل 125ms
  *          (d مسطّحة: n,x,z,ry,a لكل لاعب تحرك، x/z بالسم وry ×100 — خاصة بكل مستقبل:
  *          القريب منه كل دورة والبعيد كل 1.5ث، وبدون صفه هو) — all {d} بنفس الصيغة · err {err, of} · closed
@@ -98,7 +98,7 @@ function phaseMsg(code) {
     var ph = _mgr.phaseOf(code); if (!ph.ok) return null;
     var walk = null;
     if (ph.walk) { walk = []; Object.keys(ph.walk).forEach(function (n) { walk.push(Number(n), Math.round(ph.walk[n][0] * 100), Math.round(ph.walk[n][1] * 100)); }); }
-    return { t: 'phase', p: ph.p, at: ph.at, until: ph.until, walk: walk, now: Date.now() };
+    return { t: 'phase', p: ph.p, at: ph.at, until: ph.until, walk: walk, cut: !!ph.cut, now: Date.now() };
 }
 function broadcastPhase(code) {
     var m = phaseMsg(code); if (!m) return;
@@ -115,12 +115,19 @@ function broadcastWishes(code) {
 function hosts(code) { return roomClients(code).filter(function (c) { return c.role === 'host'; }); }
 function sendWishList(code, only) {
     var wl = _mgr.wishList(code); if (!wl.ok) return;
+    if (!only) { var st = _wl[code] || (_wl[code] = { at: 0, dirty: false }); st.at = Date.now(); st.dirty = false; }
     (only ? [only] : hosts(code)).forEach(function (c) { send(c, { t: 'wishList', items: wl.items }); });
+}
+// القائمة كاملة ممكن توصل ~45KB مع 100 رسالة، فتعديلات الضيوف تتجمّع (مرة كل نص ثانية بالأكثر)
+var _wl = {}, WISHLIST_MS = 500;
+function markWishList(code) {
+    var st = _wl[code] || (_wl[code] = { at: 0, dirty: false });
+    if (Date.now() - st.at >= WISHLIST_MS) sendWishList(code); else st.dirty = true;
 }
 // النقاط تنرسل للمذيع (هو اللي مسجّل دخول ويرسلها للمنصة) لين يرد pointsDone
 function sendPoints(code, only) {
     var room = _mgr.getRoom(code); if (!room || room.pointsAcked) return;
-    if (!room.pointsMsg) { var pl = _mgr.pointsList(code); if (!pl.ok) return; room.pointsMsg = { t: 'points', players: pl.players, durationMs: pl.durationMs }; }
+    if (!room.pointsMsg) { var pl = _mgr.pointsList(code); if (!pl.ok) return; room.pointsMsg = { t: 'points', id: code + ':' + room.startedAt, players: pl.players, durationMs: pl.durationMs }; }
     (only ? [only] : hosts(code)).forEach(function (c) { send(c, room.pointsMsg); });
 }
 function myWishFor(code, id) { var room = _mgr.getRoom(code); var w = room && room.wishes.find(function (x) { return x.pid === id; }); return w ? { t: 'myWish', text: w.text, shown: w.shown } : null; }
@@ -147,7 +154,7 @@ function onMessage(client, msg) {
     if (t === 'ping') return send(client, { t: 'pong', k: msg.k, now: Date.now() });
     if (typeof t !== 'string') return;
     var ident = t === 'host' || t === 'join' || t === 'resume' || t === 'peek';
-    var heavy = ident || t === 'start' || t === 'skip' || t === 'wish' || t === 'next' || t === 'cut' || t === 'hideWish' || t === 'pointsDone';
+    var heavy = ident || t === 'start' || t === 'skip' || t === 'wish' || t === 'next' || t === 'cut' || t === 'hideWish' || t === 'pointsDone' || t === 'pointsClaim' || t === 'pointsRelease';
     if (!allow(client, heavy)) return;
     if (!_enabled) return send(client, { t: 'err', err: 'disabled', of: t });
     // كل اتصال له هوية وحدة: المشاهد (peek) يقدر يدخل كلاعب مرة، وغير كذا مرفوض
@@ -210,21 +217,33 @@ function onMessage(client, msg) {
         res = _mgr.addWish(client.code, client.id, typeof msg.text === 'string' ? msg.text.slice(0, 2000) : '');
         if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
         send(client, myWishFor(client.code, client.id));
-        sendWishList(client.code); broadcastWishes(client.code);
+        markWishList(client.code);
+        if (res.isNew) broadcastWishes(client.code); // التعديل ما يغيّر العدد ولا المعروضة
         return;
     }
     if (t === 'next' || t === 'cut') {
         if (!client.code || (client.role !== 'host' && client.role !== 'player')) return send(client, { t: 'err', err: 'role', of: t });
         var by = client.role === 'host' ? 'host' : client.id;
-        res = t === 'next' ? _mgr.nextWish(client.code, by) : _mgr.cut(client.code, by);
+        res = t === 'next' ? _mgr.nextWish(client.code, by, typeof msg.seen === 'number' ? msg.seen : null) : _mgr.cut(client.code, by);
         if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
         sendWishList(client.code); broadcastWishes(client.code);
         if (t === 'cut' || res.done) { logger.log('Party: room ' + client.code + ' → ' + _mgr.phaseOf(client.code).p); broadcastPhase(client.code); }
         return;
     }
-    if (t === 'hideWish' || t === 'pointsDone') {
+    if (t === 'hideWish' || t === 'pointsDone' || t === 'pointsClaim' || t === 'pointsRelease') {
         if (client.role !== 'host' || !client.code) return send(client, { t: 'err', err: 'host-only', of: t });
-        if (t === 'pointsDone') { var rm = _mgr.getRoom(client.code); if (rm) rm.pointsAcked = true; return; }
+        var rm = _mgr.getRoom(client.code);
+        // النقاط: جهاز مذيع واحد بس يرسلها (لو المذيع فاتح الصفحة بجهازين) — اللي يحجز أول
+        if (t === 'pointsClaim') {
+            if (!rm || !rm.pointsMsg || rm.pointsAcked) return send(client, { t: 'err', err: 'done', of: t });
+            if (rm.pointsClaim && rm.pointsClaim !== client.cid && _clients[rm.pointsClaim]) return send(client, { t: 'err', err: 'claimed', of: t });
+            rm.pointsClaim = client.cid; return send(client, { t: 'pointsGo', id: rm.pointsMsg.id });
+        }
+        if (t === 'pointsRelease') { if (rm && rm.pointsClaim === client.cid) rm.pointsClaim = null; return; }
+        if (t === 'pointsDone') {
+            if (rm && !rm.pointsAcked) { rm.pointsAcked = true; rm.pointsClaim = null; hosts(client.code).forEach(function (c) { if (c !== client) send(c, { t: 'pointsOk' }); }); }
+            return;
+        }
         res = _mgr.hideWish(client.code, msg.id, !!msg.hidden);
         if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
         sendWishList(client.code); broadcastWishes(client.code);
@@ -250,13 +269,15 @@ function tickAll() {
             var cs = roomClients(code);
             if (!cs.length) {
                 if (!_emptySince[code]) _emptySince[code] = now;
-                else if (now - _emptySince[code] > EMPTY_ROOM_MS) { _mgr.closeRoom(code); delete _emptySince[code]; delete _roster[code]; logger.log('Party: room ' + code + ' closed (empty)'); }
+                else if (now - _emptySince[code] > EMPTY_ROOM_MS) { _mgr.closeRoom(code); delete _emptySince[code]; delete _roster[code]; delete _wl[code]; logger.log('Party: room ' + code + ' closed (empty)'); }
                 return;
             }
             var tk = _mgr.tick(code);
             if (tk.ok && tk.changed) { logger.log('Party: room ' + code + ' → ' + _mgr.phaseOf(code).p); broadcastPhase(code); }
             var st = _roster[code];
             if (st && st.dirty && now - st.at >= ROSTER_MS) broadcastRoster(code);
+            var wl = _wl[code];
+            if (wl && wl.dirty && now - wl.at >= WISHLIST_MS) sendWishList(code);
             cs.forEach(function (c) {
                 if (c.role === 'host') return; // لوحة المذيع ما تعرض الحركة
                 var d = _mgr.deltaFor(code, c.role === 'player' ? c.id : null, c.seen || (c.seen = new Map()), farTick);

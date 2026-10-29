@@ -39,7 +39,9 @@ var WALK_KIND = { entrance: 'grid', gather: 'grid', cakeWalk: 'cake', photo: 'ph
 var AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1 };  // الحركة اليدوية ممنوعة
 var MAX_WISH = 200;
 // فلتر بسيط — الكلمة تنستبدل بنجوم (المذيع يقدر يخفي أي رسالة)
-var BAD_WORDS = ['كلب', 'حمار', 'حيوان', 'زق', 'قحب', 'شرموط', 'منيوك', 'خول', 'fuck', 'shit', 'bitch'];
+// كلمات كاملة بس (مو جزء من كلمة: «يرزقك» و«دخول» تبقى مثل ما هي)، ومعها «ال» و«يا» والتشكيل ما يفرق
+var BAD_WORDS = ['كلب', 'كلبه', 'كلبة', 'حمار', 'حماره', 'حمارة', 'حيوان', 'حيوانه', 'حيوانة', 'قحبه', 'قحبة', 'شرموط', 'شرموطه', 'شرموطة', 'منيوك', 'خول', 'fuck', 'fucking', 'shit', 'bitch'];
+var BAD_SET = new Set(BAD_WORDS);
 var GIRL_GRACE_MS = 30 * 1000;  // صاحبة الحفلة غايبة أقل من كذا (تنقّل بين الصفحات/انقطاع قصير) ← مكانها محجوز لها
 var STALE_MS = 2 * 60 * 1000;    // ضيف غايب أكثر من كذا ← مكانه ينعطى لضيف جديد لو الحفلة مكتملة
 var NEAR_R = 10;                // م — اللي أقرب من كذا يوصل 8 مرات/ث، والأبعد أبطأ (party-server)
@@ -61,10 +63,13 @@ function photoSlot(i, total) {
     return [r2((col - (cnt - 1) / 2 + (row % 2 ? .5 : 0)) * PHOTO_DX), r2(PHOTO_SPOT[1] + 1.5 + row * 1.2)];
 }
 function cleanWish(t) {
-    var s = String(t == null ? '' : t).replace(/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim();
+    var s = String(t == null ? '' : t).replace(/[\u200b-\u200f\u2060\ufeff]/g, '').replace(/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim();
     s = Array.from(s).slice(0, MAX_WISH).join('').trim();
-    BAD_WORDS.forEach(function (w) { s = s.split(w).join('***'); });
-    return s;
+    return s.replace(/[\p{L}\p{M}\p{N}\u0640]+/gu, function (word) {
+        var w = word.toLowerCase().replace(/[\u064b-\u065f\u0670\u0640]/g, ''); // تشكيل وتطويل
+        var bare = w.replace(/^(يا|وال|بال|ال|و|ب)(?=..)/, '');
+        return BAD_SET.has(w) || BAD_SET.has(bare) ? '***' : word;
+    });
 }
 function gridSlot(i) { return [r2(-13.8 + (i % 24) * 1.2), r2(-30.5 + Math.floor(i / 24) * 1.2)]; }
 // صيغة الإرسال المضغوطة: صفوف [n, x, z, ry, a] ← مصفوفة مسطّحة بأعداد صحيحة (سم وسنتي-راديان)
@@ -123,8 +128,9 @@ function createRoomManager(opts) {
         if (kind) {
             // أهداف المشي بترتيب n (نفس الترتيب عند الكل)
             room.walk = {}; room.slotN = 0;
-            room.slotTotal = room.players.filter(function (p) { return p.role !== 'girl'; }).length;
-            room.players.slice().sort(function (a, b) { return a.n - b.n; }).forEach(function (p) { room.walk[p.n] = targetFor(room, p, kind); });
+            // المتصلين أول بالترتيب (صفوف الصورة بدون فراغات للغايبين)، والغايبين بعدهم
+            room.slotTotal = room.players.filter(function (p) { return p.role !== 'girl' && p.online; }).length;
+            room.players.slice().sort(function (a, b) { return (b.online - a.online) || a.n - b.n; }).forEach(function (p) { room.walk[p.n] = targetFor(room, p, kind); });
         }
         if (ph === 'entrance') room.startedAt = t;
     }
@@ -304,10 +310,10 @@ function createRoomManager(opts) {
         if (p.role !== 'guest') return fail('role');
         var t = cleanWish(text); if (!t) return fail('empty');
         var w = room.wishes.find(function (x) { return x.pid === p.id; });
-        if (w) { if (w.shown) return fail('shown'); w.text = t; w.name = p.name; return { ok: true, wishId: w.id }; }
+        if (w) { if (w.shown) return fail('shown'); w.text = t; w.name = p.name; return { ok: true, wishId: w.id, isNew: false }; }
         w = { id: room.wishSeq++, pid: p.id, name: p.name, text: t, hidden: false, shown: false };
         room.wishes.push(w);
-        return { ok: true, wishId: w.id };
+        return { ok: true, wishId: w.id, isNew: true };
     }
     function hideWish(code, wishId, hidden) {
         var room = rooms[code]; if (!room) return fail('nocode');
@@ -321,10 +327,13 @@ function createRoomManager(opts) {
         var shown = vis.filter(function (x) { return x.shown; }).length;
         return { ok: true, cur: w && !w.hidden ? { i: shown, name: w.name, text: w.text } : null, shown: shown, total: vis.length };
     }
-    function nextWish(code, byId) {
+    // seen = عدد المعروضة عند اللي ضغط: لو صاحبة الحفلة والمذيع ضغطوا سوا، الضغطة الثانية تنرفض
+    // بدل ما تتخطى رسالة محد قرأها
+    function nextWish(code, byId, seen) {
         var room = rooms[code]; if (!room) return fail('nocode');
         if (!canLead(room, byId)) return fail('role');
         if (room.phase !== 'wishes') return fail('phase');
+        if (seen != null && seen !== wishesState(code).shown) return fail('stale');
         for (var i = room.wishCur + 1; i < room.wishes.length; i++) {
             var w = room.wishes[i];
             if (!w.hidden) { room.wishCur = i; w.shown = true; return { ok: true, cur: wishesState(code).cur, done: false }; }

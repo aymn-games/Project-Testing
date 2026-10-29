@@ -317,6 +317,51 @@ test('guest wish appears in host wishList, girl next broadcasts wishes cur to al
     r.h.close(); gl.close(); g.close(); srv.close();
 });
 
+test('phase message after cut carries cut=true (phones play the cake cut)', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var g = await client(port); g.send({ t: 'join', code: r.code, name: 'ريم' }); await g.wait(function (x) { return x.t === 'welcome'; });
+    await toPhase(r, 'cake'); await sleep(1100);
+    r.h.send({ t: 'cut' });
+    var ph = await g.wait(function (x) { return x.t === 'phase' && x.p === 'celebrate'; });
+    assert.equal(ph.cut, true);
+    var late = await client(port); late.send({ t: 'peek', code: r.code });
+    assert.equal((await late.wait(function (x) { return x.t === 'phase'; })).cut, true, 'late viewer sees the cake cut');
+    r.h.close(); g.close(); late.close(); srv.close();
+});
+
+test('points: only one host device may claim; others get pointsOk after pointsDone', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var hosted = await r.h.wait(function (x) { return x.t === 'hosted'; });
+    var h2 = await client(port); h2.send({ t: 'host', code: r.code, token: hosted.token }); await h2.wait(function (x) { return x.t === 'phase'; });
+    await toPhase(r, 'celebrate'); await sleep(1100);
+    r.h.send({ t: 'skip', from: 'celebrate' });
+    var p1 = await r.h.wait(function (x) { return x.t === 'points'; }), p2 = await h2.wait(function (x) { return x.t === 'points'; });
+    assert.ok(p1.id && p1.id === p2.id, 'stable id');
+    await sleep(1100);
+    r.h.send({ t: 'pointsClaim' }); await r.h.wait(function (x) { return x.t === 'pointsGo'; });
+    h2.send({ t: 'pointsClaim' }); assert.equal((await h2.wait(function (x) { return x.t === 'err' && x.of === 'pointsClaim'; })).err, 'claimed');
+    await sleep(1100); r.h.send({ t: 'pointsDone' });
+    await h2.wait(function (x) { return x.t === 'pointsOk'; });
+    await sleep(1100); h2.send({ t: 'pointsClaim' });
+    await h2.wait(function (x) { return x.t === 'err' && x.of === 'pointsClaim' && x.err === 'done'; });
+    r.h.close(); h2.close(); srv.close();
+});
+
+test('claim is released when the claiming host disconnects', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var hosted = await r.h.wait(function (x) { return x.t === 'hosted'; });
+    await toPhase(r, 'celebrate'); await sleep(1100);
+    r.h.send({ t: 'skip', from: 'celebrate' }); await r.h.wait(function (x) { return x.t === 'points'; });
+    await sleep(1100); r.h.send({ t: 'pointsClaim' }); await r.h.wait(function (x) { return x.t === 'pointsGo'; });
+    r.h.close(); await sleep(200);
+    var h2 = await client(port); h2.send({ t: 'host', code: r.code, token: hosted.token }); await h2.wait(function (x) { return x.t === 'points'; });
+    await sleep(1100); h2.send({ t: 'pointsClaim' }); await h2.wait(function (x) { return x.t === 'pointsGo'; });
+    h2.close(); srv.close();
+});
+
 test('guest cannot next/cut/hideWish', async function () {
     reset(); party._setEnabled(true);
     var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);

@@ -730,7 +730,13 @@ export function mountHall(el, opts = {}) {
   let wishK = 0, wishT = 0;
   // لفّ النص العربي على أسطر بعرض محدد (ويصغّر الخط لين يدخل بـ 5 أسطر)
   function wrapLines(g, text, maxW, maxLines) {
-    const words = String(text).split(/\s+/), lines = []; let cur = '';
+    // كلمة أطول من السطر (حروف أو إيموجي بدون مسافات) تنقسم على أكثر من سطر بدل ما تنضغط
+    const words = [], lines = []; let cur = '';
+    for (const w of String(text).split(/\s+/)) {
+      if (g.measureText(w).width <= maxW) { words.push(w); continue; }
+      let part = ''; for (const ch of Array.from(w)) { if (part && g.measureText(part + ch).width > maxW) { words.push(part); part = ''; } part += ch; }
+      if (part) words.push(part);
+    }
     for (const w of words) { const t = cur ? cur + ' ' + w : w; if (g.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; }
     if (cur) lines.push(cur);
     return lines.length <= maxLines ? lines : null;
@@ -1158,7 +1164,7 @@ export function mountHall(el, opts = {}) {
     setAutoPath, ZONES, setShot: v => { shot = v || null; },
     setWishScreen, cutCake, celebrate, snapshot,
     setPhotoCam: on => { photoCam = !!on; cam.fov = on ? 50 : (mode === 'follow' ? 58 : 52); cam.updateProjectionMatrix(); },
-    get curtain() { return curtainT; }, get wishY() { return wishGroup.position.y; }, get wishVis() { return wishGroup.visible; }, get autoActive() { return !!auto; }, get zone() { return zone; }, // للاختبار
+    get curtain() { return curtainT; }, get wishY() { return wishGroup.position.y; }, get wishVis() { return wishGroup.visible; }, get autoActive() { return !!auto; }, get zone() { return zone; }, get cut() { return cutT; }, // للاختبار
     debugView: (p, l) => { mode = 'debug'; cam.fov = 60; cam.updateProjectionMatrix(); cam.position.set(p[0], p[1], p[2]); cam.lookAt(l[0], l[1], l[2]); },
     addTicker: fn => { tickers.add(fn); return () => tickers.delete(fn); },
     get mode() { return mode; }, get party() { return partyTarget === 1; },

@@ -249,6 +249,11 @@
             else if (m.t === 'phase') { phase = m; renderPhase(); }
             else if (m.t === 'wishList') renderWishList(m.items || []);
             else if (m.t === 'points') onPoints(m);
+            else if (m.t === 'pointsGo') onPointsGo(m.id);
+            else if (m.t === 'pointsOk') pointsNote('انحسبت النقاط ✓');
+            else if (m.t === 'wishes') wishesShown = m.shown || 0;
+            else if (m.t === 'err' && m.of === 'pointsClaim') { if (m.err === 'claimed') pointsNote('جهاز ثاني فاتح صفحة المذيع يحسب النقاط الحين…'); }
+            else if (m.t === 'err' && m.of === 'next' && m.err === 'stale') { /* صاحبة الحفلة سبقت — الرسالة الجديدة على الشاشة */ }
             else if (m.t === 'err' && (m.of === 'start' || m.of === 'skip' || m.of === 'next' || m.of === 'cut' || m.of === 'hideWish')) showShowMsg(m.err === 'phase' ? 'المرحلة تغيّرت قبل الضغط — جرّب مرة ثانية.' : 'صار خطأ.');
             else if (m.t === 'err' && m.of === 'host') {
                 if (m.err === 'nocode' || m.err === 'token') { writeJSON('party-host', null); state = null; }
@@ -305,7 +310,9 @@
         press($('startBtn'), { t: 'start' });
     });
     $('skipBtn').addEventListener('click', () => phase && press($('skipBtn'), phase.p === 'cake' ? { t: 'cut' } : { t: 'skip', from: phase.p }));
-    $('nextBtn').addEventListener('click', () => press($('nextBtn'), { t: 'next' }));
+    // seen: عدد المعروضة عند المذيع — لو صاحبة الحفلة ضغطت قبله بلحظة السيرفر يرفض ضغطته بدل ما تنتخطى رسالة
+    let wishesShown = 0;
+    $('nextBtn').addEventListener('click', () => press($('nextBtn'), { t: 'next', seen: wishesShown }));
 
     // ---- رسائل التهاني: المذيع يشوفها كلها ويخفي اللي ما يناسب ----
     function renderWishList(items) {
@@ -329,19 +336,28 @@
     }
 
     // ---- النقاط (إلزامي — CLAUDE.md): السيرفر يرسل المشاركين الموثّقين بعد الصورة ----
-    let pointsBusy = false;
+    // ما تنحسب مرتين: جهاز مذيع واحد بس يحجزها من السيرفر (pointsClaim ← pointsGo)، والجهاز يتذكر
+    // اللي أرسله ('party-points:<id>') عشان لو انقطع أو تحدّثت الصفحة قبل ما يوصل pointsDone ما يعيدها.
+    let pointsMsg = null, pointsBusy = false;
+    const pointsKey = id => 'party-points:' + id;
     function pointsNote(text, warn) { $('pointsMsg').textContent = text; $('pointsMsg').classList.toggle('warn', !!warn); $('pointsMsg').classList.remove('hidden'); }
-    async function onPoints(m) {
-        if (pointsBusy) return;
+    function onPoints(m) {
         const A = window.AGPAuth;
-        if (!A || typeof A.reportMatchPoints !== 'function') return;
+        if (pointsBusy || !A || typeof A.reportMatchPoints !== 'function') return;
+        pointsMsg = m;
+        if (readJSON(pointsKey(m.id))) { net.send({ t: 'pointsDone' }); pointsNote('انحسبت النقاط ✓'); return; }
         if (!m.players.length) { net.send({ t: 'pointsDone' }); pointsNote('ما فيه مشاركين بحسابات تيك توك موثّقة — ما فيه نقاط تنحسب.'); return; }
         if (!A.getToken()) { pointsNote('سجّل دخولك بحسابك عشان تنحسب نقاط ' + m.players.length + ' مشارك — بعد الدخول ارجع لهذي الصفحة.', true); return; }
+        net.send({ t: 'pointsClaim' });
+    }
+    async function onPointsGo(id) {
+        const m = pointsMsg; if (!m || m.id !== id || pointsBusy) return;
         pointsBusy = true;
-        const r = await A.reportMatchPoints({ players: m.players, winnerIds: [], teamGame: false, durationMs: m.durationMs });
+        const r = await window.AGPAuth.reportMatchPoints({ players: m.players, winnerIds: [], teamGame: false, durationMs: m.durationMs });
         pointsBusy = false;
-        // لو فشل الطلب ما نرسل pointsDone: السيرفر يعيد إرسال القائمة لما المذيع يرجع للصفحة
-        if (!r || !r.success) { pointsNote('ما قدرنا نحسب النقاط الحين — حدّث الصفحة بعد شوي عشان نعيد المحاولة.', true); return; }
+        // لو فشل الطلب نفك الحجز وما نرسل pointsDone: السيرفر يعيد إرسال القائمة لما المذيع يرجع للصفحة
+        if (!r || !r.success) { net.send({ t: 'pointsRelease' }); pointsNote('ما قدرنا نحسب النقاط الحين — حدّث الصفحة بعد شوي عشان نعيد المحاولة.', true); return; }
+        writeJSON(pointsKey(m.id), 1);
         net.send({ t: 'pointsDone' });
         pointsNote('انحسبت النقاط لـ ' + (r.awarded ? r.awarded.length : m.players.length) + ' مشارك ✓');
     }
