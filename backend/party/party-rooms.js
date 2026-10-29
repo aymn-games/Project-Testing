@@ -47,16 +47,19 @@ var ZONES = {
     nostage: [-31, 31, -31, 47]       // الضيوف وقت الرقص: المنصة والدرج ممنوعين
 };
 var GIRL_SPOT = [0, -36.5], CAKE_SPOT = [0, -37.6], PHOTO_SPOT = [0, -29.6];
-var PHASES = ['closed', 'lobby', 'entrance', 'reveal', 'dance', 'gather', 'wishWrite', 'wishes', 'cakeWalk', 'cake', 'celebrate', 'photo', 'free', 'ended'];
+var PHASES = ['closed', 'lobby', 'entrance', 'reveal', 'dance', 'gather', 'wishWrite', 'wishes', 'cakeWalk', 'cake', 'celebrate', 'photo', 'free', 'outro', 'ended'];
+// مشهد النهاية: آخر 30 ثانية من الحفل (من أي مرحلة بعد الافتتاح) — صاحبة الحفلة تمشي لحالها على السجادة
+// لباب القاعة (الضيوف يختفون عند الكل ويبقون بمكانهم)
+var OUTRO_MS = 30000, OUTRO_END = [0, 45];
 // مدد ثابتة (ms) — dance و wishWrite و celebrate و cake من الجدول، wishes و free بدون وقت
-var FIXED_MS = { entrance: 40000, reveal: 12000, gather: 12000, cakeWalk: 10000, photo: 16000 };
+var FIXED_MS = { entrance: 40000, reveal: 12000, gather: 12000, cakeWalk: 10000, photo: 16000, outro: OUTRO_MS };
 // الجدول الافتراضي (بالدقايق، ومهلة القص بالثواني) والحدود
 var SCHED_DEF = { durationMin: 60, openBeforeMin: 15, danceMin: 7, writeMin: 3, cakeDanceMin: 5, cutTimeoutSec: 60 };
 var SCHED_LIM = { durationMin: [15, 240], openBeforeMin: [0, 120], danceMin: [1, 60], writeMin: [1, 60], cakeDanceMin: [1, 60], cutTimeoutSec: [10, 600] };
 var MIN_MS = 60000, MAX_AHEAD_MS = 30 * 24 * 3600 * 1000, PAST_SLACK_MS = 60000, EXPIRE_MS = 48 * 3600 * 1000;
 // مراحل مشي تلقائي: نوع الأهداف لكل مرحلة
-var WALK_KIND = { entrance: 'grid', gather: 'grid', cakeWalk: 'cake', photo: 'photo' };
-var AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1 };  // الحركة اليدوية ممنوعة
+var WALK_KIND = { entrance: 'grid', gather: 'grid', cakeWalk: 'cake', photo: 'photo', outro: 'outro' };
+var AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1, outro: 1 };  // الحركة اليدوية ممنوعة
 var MAX_WISH = 200;
 // فلتر بسيط — الكلمة تنستبدل بنجوم (المذيع يقدر يخفي أي رسالة)
 // كلمات كاملة بس (مو جزء من كلمة: «يرزقك» و«دخول» تبقى مثل ما هي)، ومعها «ال» و«يا» والتشكيل ما يفرق
@@ -163,11 +166,15 @@ function createRoomManager(opts) {
     }
     function targetFor(room, p, kind) {
         kind = kind || 'grid';
-        if (p.role === 'girl') return (kind === 'cake' ? CAKE_SPOT : kind === 'photo' ? PHOTO_SPOT : GIRL_SPOT).slice();
-        return kind === 'photo' ? photoSlot(room.slotN++, room.slotTotal) : gridSlot(room.slotN++);
+        if (p.role === 'girl') return (kind === 'cake' ? CAKE_SPOT : kind === 'photo' ? PHOTO_SPOT : kind === 'outro' ? OUTRO_END : GIRL_SPOT).slice();
+        return kind === 'photo' ? photoSlot(room.slotN++, room.slotTotal) : kind === 'outro' ? [p.x, p.z] : gridSlot(room.slotN++);
     }
     // اتجاه الوقوف: الضيوف يطالعون المنصة (π)، وصاحبة الحفلة تطالع الضيوف (0) إلا عند الكيكة والصورة
-    function facing(ph, p) { return p.role === 'girl' && !(ph === 'cakeWalk' || ph === 'cake' || ph === 'celebrate' || ph === 'photo') ? 0 : r2(Math.PI); }
+    // مشهد النهاية: هي تطالع الباب (0)، والضيوف على حالهم
+    function facing(ph, p) {
+        if (ph === 'outro') return p.role === 'girl' ? 0 : p.ry;
+        return p.role === 'girl' && !(ph === 'cakeWalk' || ph === 'cake' || ph === 'celebrate' || ph === 'photo') ? 0 : r2(Math.PI);
+    }
     // مدة المرحلة (ms) من الجدول — 0 = بدون وقت. الغرفة بدون جدول: نفس الافتراضي، والكيكة تنتظر القص
     function durationOf(room, ph) {
         var sc = room.sched || SCHED_DEF;
@@ -408,6 +415,8 @@ function createRoomManager(opts) {
         if (room.phase === 'ended') return { ok: true, changed: false };
         // وقت النهاية يغلب كل شي، وين ما وصلت الحفلة
         if (sc && t >= endAtOf(sc)) { setPhase(room, 'ended', catchUp ? endAtOf(sc) : 0); return { ok: true, changed: true }; }
+        // آخر 30 ثانية: مشهد النهاية من أي مرحلة بعد الافتتاح
+        if (sc && t >= endAtOf(sc) - OUTRO_MS && room.phase !== 'outro' && PHASES.indexOf(room.phase) >= PHASES.indexOf('reveal')) { setPhase(room, 'outro', catchUp ? endAtOf(sc) - OUTRO_MS : 0); return { ok: true, changed: true }; }
         if (room.phase === 'closed') return { ok: true, changed: !!(sc && t >= openAtOf(sc)) && (setPhase(room, 'lobby', catchUp ? openAtOf(sc) : 0), true) };
         if (room.phase === 'lobby') return { ok: true, changed: !!(sc && t >= sc.startAt && girlOnline(room)) && advance(room) };
         if (room.phaseUntil && t >= room.phaseUntil) return { ok: true, changed: advance(room, catchUp ? room.phaseUntil : 0) };

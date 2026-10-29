@@ -38,8 +38,9 @@ export const lerpAngle = (a, b, k) => { let d = b - a; d = Math.atan2(Math.sin(d
 
 export function createMotion(chars) {
   let autoPaths = null; // {map: n → {points, cum, len}, t0, t1, endRy}
-  // endRy(role): اتجاه الوقوف بعد الوصول (مثلاً للصورة: الكل يطالع الكاميرا)
-  function setAutoPaths(map, t0, t1, endRy) {
+  // endRy(role, c): اتجاه الوقوف بعد الوصول (مثلاً للصورة: الكل يطالع الكاميرا)
+  // opts.t1Of: نهاية مختلفة لكل شخصية {n: ms}، وopts.endAnim(role): الحركة بعد الوصول (مثلاً تلويح)
+  function setAutoPaths(map, t0, t1, endRy, opts = {}) {
     if (!map) {
       // نهاية المشي: نثبّت كل شخصية على نهاية مسارها عشان ما ترجع لعيّنات قديمة
       if (autoPaths) for (const [n, a] of Object.entries(autoPaths.map)) { const c = chars.get(+n); if (c) { const e = a.points[a.points.length - 1]; c.x = e[0]; c.z = e[1]; c.buf = [{ t: t0 || 0, x: e[0], z: e[1], ry: c.ry, a: 0 }]; } }
@@ -50,7 +51,7 @@ export function createMotion(chars) {
       const cum = [0]; for (let i = 1; i < points.length; i++) cum.push(cum[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]));
       m[n] = { points, cum, len: cum[cum.length - 1] || 1 };
     }
-    autoPaths = { map: m, t0, t1, endRy };
+    autoPaths = { map: m, t0, t1, endRy, t1Of: opts.t1Of || null, endAnim: opts.endAnim || null };
   }
   function pathAt(a, f) {
     const d = f * a.len; let i = 1; while (i < a.points.length - 1 && a.cum[i] < d) i++;
@@ -76,10 +77,11 @@ export function createMotion(chars) {
     if (c.n === localN && getLocal) {
       const L = getLocal(); c.x = L.x; c.z = L.z; c.ry = L.ry; moving = L.moving; c.run = L.running; c.anim = L.emote === JUMP_A ? JUMP_A : moving ? 1 : (L.emote || 0);
     } else if (ap) {
-      const f = Math.max(0, Math.min(1, (serverNowMs - autoPaths.t0) / Math.max(1, autoPaths.t1 - autoPaths.t0))), p = pathAt(ap, f);
+      const t1 = (autoPaths.t1Of && autoPaths.t1Of[c.n]) || autoPaths.t1;
+      const f = Math.max(0, Math.min(1, (serverNowMs - autoPaths.t0) / Math.max(1, t1 - autoPaths.t0))), p = pathAt(ap, f);
       c.x = p[0]; c.z = p[1]; moving = f > 0 && f < 1; if (moving) c.ry = lerpAngle(c.ry, p[2], 1 - Math.exp(-dt * 10));
-      else if (f >= 1 && autoPaths.endRy) c.ry = lerpAngle(c.ry, autoPaths.endRy(c.role), 1 - Math.exp(-dt * 6));
-      c.run = false; c.anim = moving ? 1 : 0; c.speed = ap.len / Math.max(.1, (autoPaths.t1 - autoPaths.t0) / 1000);
+      else if (f >= 1 && autoPaths.endRy) c.ry = lerpAngle(c.ry, autoPaths.endRy(c.role, c), 1 - Math.exp(-dt * 6));
+      c.run = false; c.anim = moving ? 1 : f >= 1 && autoPaths.endAnim ? autoPaths.endAnim(c.role) : 0; c.speed = ap.len / Math.max(.1, (t1 - autoPaths.t0) / 1000);
     } else {
       // نلقى العيّنتين اللي يقع بينهم وقت العرض
       const b = c.buf; let a0 = b[0], a1 = b[b.length - 1];

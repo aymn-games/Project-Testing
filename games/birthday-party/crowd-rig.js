@@ -13,7 +13,7 @@ import { LOOK, REACTS, resolveLook, createMotion, createLabels, createReactions,
 
 export { LOOK, REACTS, resolveLook };
 const T = THREE;
-const CAP = 104, NEAR = 16, FAR_M = 40, LABELS = 12;
+const CAP = 104, NEAR = 16, FAR_M = 40, LABELS = 12, NO_LABELS = new Map();
 
 // الحركات المسجّلة تتحمّل مرة وحدة للصفحة كلها؛ لو فشلت تبقى النسخ المكتوبة بالكود
 let clipsP = null;
@@ -74,8 +74,10 @@ export function createCrowd(scene, { floorAt = () => 0, clipsBase = './anims/' }
 
   // ---- التفاعلات ومطر القلوب (مشتركة مع الكلاسيكي) ----
   const fx = createReactions(T, scene, heartTex);
+  // solo: مشهد النهاية — شخصية وحدة بس تبان (صاحبة الحفلة)، بدون أسماء ولا تفاعلات
+  let solo = null;
   function react(n, e) {
-    const c = chars.get(n); if (!c || !c.ready || !c.online) return;
+    const c = chars.get(n); if (!c || !c.ready || !c.online || solo != null) return;
     fx.react(c.x, floorAt(c.x, c.z) + (c.role === 'girl' ? 2.05 : 1.8), c.z, e);
     if (c.rig) c.rig.express(REACTS[e], 1.6);
   }
@@ -102,7 +104,7 @@ export function createCrowd(scene, { floorAt = () => 0, clipsBase = './anims/' }
     const nearD = dists.length > NEAR ? dists.sort((a, b) => a - b)[NEAR - 1] : Infinity;
     for (const c of chars.values()) {
       const rig = c.rig;
-      if (!rig || !c.online || !c.ready) { if (rig) rig.root.visible = false; blobs.setMatrixAt(c.slot, zero); continue; }
+      if (!rig || !c.online || !c.ready || (solo != null && c.n !== solo)) { if (rig) rig.root.visible = false; blobs.setMatrixAt(c.slot, zero); continue; }
       const moving = motion.step(c, dt, serverNowMs, localN, getLocal);
       const an = c.anim === 6 ? 6 : moving ? 1 : (c.anim || 0);
       c.spin = an === 5 ? c.spin + dt * Math.PI * 2 / 1.2 : 0;
@@ -142,7 +144,7 @@ export function createCrowd(scene, { floorAt = () => 0, clipsBase = './anims/' }
     }
     hearts.step(dt, -.15); sparks.step(dt, 2.2);
     fx.step(dt, cam, serverNowMs);
-    labels.update(dt, chars, cam, localN, floorAt);
+    labels.update(dt, solo != null ? NO_LABELS : chars, cam, localN, floorAt);
   }
 
   // نجهّز shaders الشخصيات (ضيف بقبعة وشعر طويل وفستان، وصاحبة الحفلة) وقت التحميل بدل لحظة ظهورهم
@@ -168,5 +170,5 @@ export function createCrowd(scene, { floorAt = () => 0, clipsBase = './anims/' }
   // للاختبار: حالة كل شخصية، وعدد الجزيئات الحية
   const debug = () => [...chars.values()].map(c => ({ n: c.n, name: c.name, online: c.online, ready: c.ready, x: +c.x.toFixed(2), z: +c.z.toFixed(2), buf: c.buf.length, slot: c.slot, anim: c.rig ? c.rig.anim : null }));
   const fxDebug = () => Object.assign(fx.debug(), { beam: beam.visible });
-  return { sync, apply: motion.apply, update, setLocal, setLocalLook, setAutoPaths, posOf, prewarm, dispose, debug, fxDebug, react, rain: fx.rain, setGirlFx, kind: 'rig', get count() { return chars.size; } };
+  return { sync, apply: motion.apply, update, setLocal, setLocalLook, setAutoPaths, posOf, prewarm, dispose, debug, fxDebug, react, rain: fx.rain, setGirlFx, setSolo: n => { solo = n == null ? null : n; }, kind: 'rig', get count() { return chars.size; } };
 }

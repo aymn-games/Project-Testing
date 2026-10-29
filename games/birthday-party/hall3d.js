@@ -900,7 +900,7 @@ export function mountHall(el, opts = {}) {
     const envK = lerp(1, .09, k); for (const e of envMats) e.m.envMapIntensity = e.b * envK;
     ceilMat.color.lerpColors(CEIL_A, CEIL_B, k);
     hemi.intensity = lerp(.24, .035, k); sun.intensity = lerp(.6, .05, k); stageFill.intensity = lerp(.7, .35, k);
-    r.toneMappingExposure = lerp(.95, 1.0, k);
+    r.toneMappingExposure = lerp(.95, 1.0, k) * (1 - .38 * outroDim); // مشهد النهاية: القاعة تخفت والنور من الباب بس
     scene.fog.color.lerpColors(FOG_A, FOG_B, k); scene.background.copy(scene.fog.color);
     scene.fog.near = lerp(90, 30, k); scene.fog.far = lerp(230, 150, k);
     winMat.color.lerpColors(WIN_A, WIN_B, k); haloMat.opacity = lerp(.75, .3, k); poolMat.opacity = lerp(.4, .04, k);
@@ -1030,6 +1030,24 @@ export function mountHall(el, opts = {}) {
   }
   const q0 = new T.Quaternion(), m4 = new T.Matrix4();
   function updateCamera(dt) {
+    // مشهد النهاية: كاميرا سينمائية تتبع صاحبة الحفلة (من قدام وهي نازلة، ثم من الجنب، ثم من وراها للنور)
+    const og = outroGet && outroGet();
+    if (og) {
+      const e = clock.elapsedTime - outroStart, fy = floorAt(og[0], og[1]);
+      // لقطات: من قدام بعيد وهي تنزل (عدسة ضيقة) ← من الجنب واطي ← من وراها ← واقفة وهي تدخل النور
+      if (og[1] > 24) { tourPos.set(.8, 2.2, 14); tourLook.set(0, 2.4, HZ); }
+      else if (e < 6) { tourPos.set(og[0] + 3.5, fy + 1.9, og[1] + 14); tourLook.set(og[0], fy + 1.2, og[1]); }
+      else if (e < 11) { tourPos.set(og[0] + 5.5, fy + 1.1, og[1] + 5); tourLook.set(og[0], fy + 1.25, og[1]); }
+      else { tourPos.set(og[0] + 1.1, fy + 1.6, og[1] - 7.5); tourLook.set(og[0], fy + 1.3, og[1] + 10); }
+      // الكاميرا تتحرك ببطء، بس النظر يلحقها بسرعة عشان ما تطلع من الكادر
+      const k = 1 - Math.exp(-dt * 1.1), kl = 1 - Math.exp(-dt * 5);
+      cam.position.lerp(tourPos, k); curLook.lerp(tourLook, kl);
+      m4.lookAt(cam.position, curLook, cam.up); q0.setFromRotationMatrix(m4); cam.quaternion.slerp(q0, kl);
+      if (controls) controls.read();
+      moving = false; sprinting = false;
+      if (auto && mode === 'follow') stepAuto(dt);
+      return;
+    }
     if (photoCam) {
       // لقطة الصورة الجماعية (نفسها على كل الجوالات) — واللاعب يكمل مشيه لمكانه بالصورة
       tourPos.set(0, 5, -37.5); cam.position.lerp(tourPos, 1 - Math.exp(-dt * 4)); followLook.set(0, 1.7, -25); cam.lookAt(followLook);
@@ -1189,6 +1207,39 @@ export function mountHall(el, opts = {}) {
     }
   }
 
+  // ---------- مشهد النهاية (آخر 30ث): نور من باب القاعة وأضواء على جنبي السجادة ----------
+  // setOutro(getGirl, ago): الكاميرا (عند الكل) تتبع صاحبة الحفلة وهي تمشي على السجادة لباب مليان نور،
+  // والأضواء على الجنبين تولّع قدامها لين الباب. getGirl() ترجع [x, z] أو null.
+  const doorLight = mesh(new T.PlaneGeometry(ENTRY_DOOR[1] + .3, ENTRY_DOOR[2] + .3), basic({ color: '#fff4dc', transparent: true, opacity: 0, toneMapped: false, depthWrite: false }), 0, (ENTRY_DOOR[2] + .3) / 2, HZ + .05);
+  doorLight.rotation.y = Math.PI; doorLight.visible = false;
+  const doorGlow = new T.Sprite(new T.SpriteMaterial({ map: radial('rgba(255,255,255,1)', 'rgba(255,232,190,.6)'), transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending }));
+  doorGlow.position.set(0, 3.4, HZ - .6); doorGlow.visible = false; doorGlow.renderOrder = 4; scene.add(doorGlow);
+  const beamTex = tex(32, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,240,210,.95)'); gr.addColorStop(1, 'rgba(255,240,210,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+  const floorBeam = mesh(new T.PlaneGeometry(6.4, 34), basic({ map: beamTex, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false }), 0, .04, HZ - 17);
+  floorBeam.rotation.x = -Math.PI / 2; floorBeam.rotation.z = Math.PI; floorBeam.visible = false;
+  const PL_N = 66, plPos = new Float32Array(PL_N * 2 * 3), plCol = new Float32Array(PL_N * 2 * 3);
+  for (let i = 0; i < PL_N; i++) for (let sd = 0; sd < 2; sd++) { const k = (i * 2 + sd) * 3, z = -33 + i * 1.22; plPos.set([(sd ? 1 : -1) * 3.25, floorAt(0, z) + .06, z], k); }
+  const plGeo = new T.BufferGeometry(); plGeo.setAttribute('position', new T.BufferAttribute(plPos, 3)); plGeo.setAttribute('color', new T.BufferAttribute(plCol, 3));
+  const pathLights = new T.Points(plGeo, new T.PointsMaterial({ map: radial('rgba(255,255,255,1)', 'rgba(255,214,150,.6)'), size: .55, vertexColors: true, transparent: true, depthWrite: false, blending: T.AdditiveBlending }));
+  pathLights.frustumCulled = false; pathLights.visible = false; scene.add(pathLights);
+  let outroGet = null, outroStart = 0, outroDim = 0;
+  function setOutro(getGirl, ago = 0) {
+    outroGet = getGirl || null; outroStart = clock.elapsedTime - ago;
+    doorLight.visible = doorGlow.visible = floorBeam.visible = pathLights.visible = !!outroGet;
+    // عدسة أضيق (سينمائية) وقت المشهد
+    cam.fov = outroGet ? 36 : (photoCam ? 50 : mode === 'follow' ? 58 : 52); cam.updateProjectionMatrix();
+  }
+  function updateOutro(t, dt) {
+    outroDim += ((outroGet ? 1 : 0) - outroDim) * (1 - Math.exp(-dt * 1.2));
+    if (!outroGet) return;
+    const e = t - outroStart, k = Math.min(1, e / 5), late = Math.max(0, Math.min(1, (e - 18) / 10));
+    doorLight.material.opacity = k; doorGlow.material.opacity = .55 * k + .45 * late; doorGlow.scale.setScalar(9 + 10 * k + 16 * late);
+    floorBeam.material.opacity = .45 * k + .3 * late;
+    const C = [1, .86, .62];
+    for (let i = 0; i < PL_N; i++) { const on = Math.max(0, Math.min(1, (e - .5 - i * .07) / .5)), f = on * (.75 + .25 * Math.sin(t * 4 + i * .7)); for (let sd = 0; sd < 2; sd++) { const j = (i * 2 + sd) * 3; plCol[j] = C[0] * f; plCol[j + 1] = C[1] * f; plCol[j + 2] = C[2] * f; } }
+    plGeo.attributes.color.needsUpdate = true;
+  }
+
   // ---------- الحلقة ----------
   const clock = new T.Clock();
   const tickers = new Set();
@@ -1232,7 +1283,7 @@ export function mountHall(el, opts = {}) {
     doorK += (doorT - doorK) * (1 - Math.exp(-dt * 2.2));
     doorLeaves.forEach(d => { d.g.rotation.y = d.open * doorK; });
     updateFireworks(dt, t);
-    updateCandles(dt, t); updateFlutter(dt, t);
+    updateCandles(dt, t); updateFlutter(dt, t); updateOutro(t, dt);
     danceMat.emissiveIntensity = party * (.16 + .1 * Math.sin(t * 3));
     tickers.forEach(fn => fn(dt, t, cam));
     r.render(scene, cam);
@@ -1260,7 +1311,7 @@ export function mountHall(el, opts = {}) {
     setDoors: (k, instant) => { doorT = k; if (instant) doorK = k; },
     fireworks: (sec = 6) => { fwUntil = clock.elapsedTime + sec; fwNext = 0; },
     setAutoPath, ZONES, setShot: v => { shot = v || null; },
-    setWishScreen, cutCake, celebrate, snapshot, setCandles, flutter,
+    setWishScreen, cutCake, celebrate, snapshot, setCandles, flutter, setOutro,
     setPhotoCam: on => { photoCam = !!on; cam.fov = on ? 50 : (mode === 'follow' ? 58 : 52); cam.updateProjectionMatrix(); },
     get curtain() { return curtainT; }, get wishY() { return wishGroup.position.y; }, get wishVis() { return wishGroup.visible; }, get autoActive() { return !!auto; }, get zone() { return zone; }, get cut() { return cutT; }, get candles() { return flames.filter(f => f.k > .5).length; }, // للاختبار
     debugView: (p, l) => { mode = 'debug'; cam.fov = 60; cam.updateProjectionMatrix(); cam.position.set(p[0], p[1], p[2]); cam.lookAt(l[0], l[1], l[2]); },

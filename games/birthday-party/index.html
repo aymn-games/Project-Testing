@@ -283,7 +283,7 @@
             const rows = [[st - v.openBeforeMin * M, 'فتح الدخول'], [st, 'الافتتاح (أول ما تدخل صاحبة الحفلة)'], [dance, 'الرقص · ' + v.danceMin + ' د'], [write, 'كتابة التهاني · ' + v.writeMin + ' د'], [show, 'عرض التهاني (بدون وقت)']];
             line.innerHTML = '';
             rows.forEach(([ms, t]) => { const li = document.createElement('li'); li.innerHTML = '<span></span><b></b>'; li.firstChild.textContent = t; li.lastChild.textContent = c(ms); line.append(li); });
-            const after = document.createElement('li'); after.className = 'note'; after.textContent = 'بعد آخر رسالة: الكيكة ← رقص الكيكة ' + v.cakeDanceMin + ' د ← الصورة الجماعية ← رقص حر'; line.append(after);
+            const after = document.createElement('li'); after.className = 'note'; after.textContent = 'بعد آخر رسالة: الكيكة ← رقص الكيكة ' + v.cakeDanceMin + ' د ← الصورة الجماعية ← رقص حر ← آخر 30ث مشهد النهاية'; line.append(after);
             const li = document.createElement('li'); li.innerHTML = '<span>نهاية الحفل</span><b></b>'; li.lastChild.textContent = c(end); line.append(li);
             const fixed = (FIXED.entrance + FIXED.reveal + FIXED.gather + FIXED.cakeWalk + FIXED.photo) * S + v.cutTimeoutSec * S + (v.danceMin + v.writeMin + v.cakeDanceMin) * M;
             const spare = end - st - fixed;
@@ -414,7 +414,7 @@
     // ---- التحكم بالعرض ----
     let phase = null;
     const PH = { closed: 'الدخول لسا ما فتح', lobby: 'الانتظار', entrance: 'دخول الضيوف', reveal: 'الافتتاح', dance: 'وقت الرقص', gather: 'المشي لمنصة التهاني', wishWrite: 'كتابة التهاني', wishes: 'عرض التهاني',
-        cakeWalk: 'المشي للكيكة', cake: 'قص الكيكة', celebrate: 'رقص الكيكة', photo: 'الصورة الجماعية', free: 'الحفلة مستمرة', ended: 'انتهت الحفلة' };
+        cakeWalk: 'المشي للكيكة', cake: 'قص الكيكة', celebrate: 'رقص الكيكة', photo: 'الصورة الجماعية', free: 'الحفلة مستمرة', outro: 'مشهد النهاية', ended: 'انتهت الحفلة' };
     // وقت الكيكة الزر «قص الكيكة» احتياط لو صاحبة الحفلة ما قدرت (يرسل cut مو skip عشان يطلع الاحتفال)
     const SKIP = { closed: 'فتح الدخول الحين', entrance: 'تخطي المشي', reveal: 'تخطي الافتتاح', dance: 'إنهاء الرقص', gather: 'تخطي المشي', wishWrite: 'إنهاء الكتابة', wishes: 'إنهاء التهاني',
         cakeWalk: 'تخطي المشي', cake: 'قص الكيكة 🎂', celebrate: 'إنهاء رقص الكيكة', photo: 'تخطي الصورة' };
