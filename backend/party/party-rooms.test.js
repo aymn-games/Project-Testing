@@ -348,11 +348,11 @@ test('late joiner during entrance gets a target and appears there', function () 
     assert.ok(r2[2] >= -24 && r2[2] <= -14, 'dance spawn near stage ' + r2);
 });
 
-test('emote values above 4 become 0', function () {
+test('emote values above the guest limit (10) become 0', function () {
     var s = showRoom(), g = s.mgr.join(s.code, { name: 'ريم' }), r = rowOf(s.mgr, s.code, g.n, null);
     s.c.t.now += 2000; s.mgr.move(s.code, g.id, [r[1], r[2], 0, 4]);
     assert.equal(rowOf(s.mgr, s.code, g.n, null)[4], 4);
-    s.c.t.now += 2000; s.mgr.move(s.code, g.id, [r[1], r[2], 0, 9]);
+    s.c.t.now += 2000; s.mgr.move(s.code, g.id, [r[1], r[2], 0, 12]);
     assert.equal(rowOf(s.mgr, s.code, g.n, null)[4], 0);
 });
 
@@ -523,33 +523,40 @@ function lookRoom() {
     return { c: c, mgr: c.mgr, code: room.code, room: room };
 }
 
-test('quick guest look keeps only outfit color; member and girl keep all fields; out-of-range → -1', function () {
+test('look has 8 fields: quick keeps outfit color and hat only; hs 4/5 allowed', function () {
     var s = lookRoom(), q = s.mgr.join(s.code, { name: 'ريم' }), m = s.mgr.join(s.code, { auth: 'm' }), g = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
-    assert.deepEqual(s.mgr.setLook(s.code, q.id, [1, 3, 2, 4, 1, 2, 1]).look, [-1, 3, -1, -1, -1, -1, -1]);
-    assert.deepEqual(s.mgr.setLook(s.code, m.id, [1, 3, 2, 4, 1, 2, 1]).look, [1, 3, 2, 4, 1, 2, 1]);
-    assert.deepEqual(s.mgr.setLook(s.code, g.id, [0, 11, 4, 7, 3, 5, 3]).look, [0, 11, 4, 7, 3, 5, 3]);
-    assert.deepEqual(s.mgr.setLook(s.code, m.id, [2, 12, 5, 8, 4, 6, 4]).look, [-1, -1, -1, -1, -1, -1, -1]);
-    assert.deepEqual(s.mgr.setLook(s.code, m.id, ['1', 1.5, null, -3, 0, 0, 0]).look, [-1, -1, -1, -1, 0, 0, 0]);
+    assert.deepEqual(s.mgr.setLook(s.code, q.id, [1, 3, 2, 4, 5, 2, 1, 3]).look, [-1, 3, -1, -1, -1, -1, -1, 3]);
+    assert.deepEqual(s.mgr.setLook(s.code, m.id, [1, 3, 2, 4, 5, 2, 1, 4]).look, [1, 3, 2, 4, 5, 2, 1, 4]);
+    assert.deepEqual(s.mgr.setLook(s.code, g.id, [0, 11, 4, 7, 4, 5, 3, 0]).look, [0, 11, 4, 7, 4, 5, 3, 0]);
+    assert.deepEqual(s.mgr.setLook(s.code, m.id, [2, 12, 5, 8, 6, 6, 4, 5]).look, [-1, -1, -1, -1, -1, -1, -1, -1]);
+    assert.deepEqual(s.mgr.setLook(s.code, m.id, ['1', 1.5, null, -3, 0, 0, 0, 1]).look, [-1, -1, -1, -1, 0, 0, 0, 1]);
     assert.equal(s.mgr.setLook(s.code, m.id, 'x').err, 'bad');
-    assert.deepEqual(s.mgr.setLook(s.code, m.id, [0, 1]).look, [0, 1, -1, -1, -1, -1, -1], 'short array padded');
+    assert.deepEqual(s.mgr.setLook(s.code, m.id, [0, 1]).look, [0, 1, -1, -1, -1, -1, -1, -1], 'short array padded');
 });
 
-test('quick guest anim above 4 becomes 0; member keeps 5-8; 9 becomes 0', function () {
-    var s = lookRoom(), q = s.mgr.join(s.code, { name: 'ريم' }), m = s.mgr.join(s.code, { auth: 'm' });
+test('7-field look is accepted and hat becomes -1', function () {
+    var s = lookRoom(), m = s.mgr.join(s.code, { auth: 'm' });
+    assert.deepEqual(s.mgr.setLook(s.code, m.id, [1, 3, 2, 4, 1, 2, 1]).look, [1, 3, 2, 4, 1, 2, 1, -1]);
+});
+
+test('every guest kind gets anims up to 10; 11 only for the girl', function () {
+    var s = lookRoom(), q = s.mgr.join(s.code, { name: 'ريم' }), m = s.mgr.join(s.code, { auth: 'm' }), g = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
     toFree(s.mgr, s.code);
     function animAfter(p, a) { s.c.t.now += 500; var r = rowOf(s.mgr, s.code, p.n, null); s.mgr.move(s.code, p.id, [r[1], r[2], 0, a]); return rowOf(s.mgr, s.code, p.n, null)[4]; }
-    assert.equal(animAfter(q, 4), 4);
-    assert.equal(animAfter(q, 7), 0);
-    assert.equal(animAfter(m, 7), 7);
-    assert.equal(animAfter(m, 8), 8);
-    assert.equal(animAfter(m, 9), 0);
+    assert.equal(animAfter(q, 7), 7, 'quick guests get every move now');
+    assert.equal(animAfter(q, 10), 10);
+    assert.equal(animAfter(q, 11), 0, 'princess bow is the girl\'s');
+    assert.equal(animAfter(m, 11), 0);
+    assert.equal(animAfter(g, 11), 11);
+    assert.equal(animAfter(g, 12), 0);
+    assert.equal(animAfter(m, -1), 0);
 });
 
 test('roster rows carry look', function () {
     var s = lookRoom(), m = s.mgr.join(s.code, { auth: 'm' });
-    assert.deepEqual(s.mgr.roster(s.code).players[0][5], [-1, -1, -1, -1, -1, -1, -1]);
-    s.mgr.setLook(s.code, m.id, [1, 2, 3, 4, 1, 2, 3]);
-    assert.deepEqual(s.mgr.roster(s.code).players[0][5], [1, 2, 3, 4, 1, 2, 3]);
+    assert.deepEqual(s.mgr.roster(s.code).players[0][5], [-1, -1, -1, -1, -1, -1, -1, -1]);
+    s.mgr.setLook(s.code, m.id, [1, 2, 3, 4, 1, 2, 3, 2]);
+    assert.deepEqual(s.mgr.roster(s.code).players[0][5], [1, 2, 3, 4, 1, 2, 3, 2]);
 });
 
 test('kick removes the player; resume with the old key fails', function () {
@@ -809,7 +816,7 @@ test('serialize/restore round-trips players, looks, wishes, keys, kicked bans an
     var room = b.mgr.getRoom(s.code), old = s.mgr.getRoom(s.code);
     assert.deepEqual([room.token, room.girlKey, room.viewKey, room.girlName], [old.token, old.girlKey, old.viewKey, old.girlName]);
     assert.equal(b.mgr.roster(s.code).players.every(function (p) { return p[4] === 0; }), true, 'everyone offline until they reconnect');
-    assert.deepEqual(b.mgr.roster(s.code).players.find(function (p) { return p[0] === g.n; })[5], [0, 3, 2, 1, 2, 3, 1]);
+    assert.deepEqual(b.mgr.roster(s.code).players.find(function (p) { return p[0] === g.n; })[5], [0, 3, 2, 1, 2, 3, 1, -1]);
     assert.equal(b.mgr.resume(s.code, q.id, q.key).ok, true);
     assert.equal(b.mgr.resume(s.code, g.id, g.key).role, 'girl');
     assert.equal(b.mgr.wishList(s.code).items[0].text, 'كل عام وانتي بخير');
@@ -881,4 +888,54 @@ test('restore refuses rooms long past their end and bad schedules', function () 
     assert.equal(createRoomManager({ now: function () { return s.start; } }).restore(bad).err, 'bad');
     var nul = JSON.parse(JSON.stringify(data)); nul.players.push(null);
     assert.equal(createRoomManager({ now: function () { return s.start; } }).restore(nul).err, 'bad');
+});
+
+// ---- التفاعلات ومطر القلوب وإعداد الشخصيات ----
+var REACTS = require('./party-rooms').REACTS;
+test('react: allowed set by role, rate-limited per player (2/s, burst 4)', function () {
+    var s = lookRoom(), q = s.mgr.join(s.code, { name: 'ريم' }), g = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
+    assert.deepEqual(REACTS, ['heart', 'smile', 'laugh', 'party', 'crown', 'love', 'sparkle']);
+    assert.equal(s.mgr.react(s.code, q.id, 'crown').err, 'role', 'crown is the girl\'s');
+    assert.equal(s.mgr.react(s.code, q.id, 'nope').err, 'bad');
+    for (var k = 0; k < 4; k++) assert.equal(s.mgr.react(s.code, q.id, 'heart').ok, true, 'burst ' + k);
+    assert.equal(s.mgr.react(s.code, q.id, 'heart').err, 'flood');
+    s.c.t.now += 500;
+    assert.equal(s.mgr.react(s.code, q.id, 'laugh').ok, true, 'refills 2/s');
+    assert.equal(s.mgr.react(s.code, q.id, 'laugh').err, 'flood');
+    assert.equal(s.mgr.react(s.code, g.id, 'crown').ok, true);
+    var d = s.mgr.takeReacts(s.code);
+    assert.equal(d.length, 6);
+    assert.deepEqual(d[5], { n: g.n, e: REACTS.indexOf('crown'), girl: true });
+    assert.deepEqual(d[0], { n: q.n, e: 0, girl: false });
+    assert.equal(s.mgr.takeReacts(s.code).length, 0, 'queue drained');
+});
+
+test('girl reactions are hidden from guests before reveal', function () {
+    var s = lookRoom(), g = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
+    assert.equal(s.mgr.reactHidden(s.code, true), true, 'lobby: hidden');
+    toFree(s.mgr, s.code);
+    assert.equal(s.mgr.reactHidden(s.code, true), false, 'after reveal: visible');
+    assert.equal(s.mgr.reactHidden(s.code, false), false, 'guest reactions are never hidden');
+    assert.equal(g.ok, true);
+});
+
+test('rain: girl only, after the reveal, 20s cooldown that reports the last rain', function () {
+    var s = lookRoom(), q = s.mgr.join(s.code, { name: 'ريم' }), g = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
+    assert.equal(s.mgr.rain(s.code, q.id).err, 'role');
+    assert.equal(s.mgr.rain(s.code, g.id).err, 'phase', 'before the reveal it would show she is there');
+    s.mgr.start(s.code); s.mgr.skip(s.code, 'entrance'); s.mgr.skip(s.code, 'reveal');
+    var r = s.mgr.rain(s.code, g.id); assert.equal(r.ok, true); assert.equal(r.at, s.c.t.now);
+    s.c.t.now += 19000; var cd = s.mgr.rain(s.code, g.id); assert.equal(cd.err, 'cooldown'); assert.equal(cd.at, r.at);
+    s.c.t.now += 1000; assert.equal(s.mgr.rain(s.code, g.id).ok, true);
+});
+
+test('chars setting defaults to rig, host can switch, roster carries it, serialize keeps it', function () {
+    var s = lookRoom();
+    assert.equal(s.mgr.roster(s.code).chars, 'rig');
+    assert.equal(s.mgr.setChars(s.code, 'classic').ok, true);
+    assert.equal(s.mgr.roster(s.code).chars, 'classic');
+    assert.equal(s.mgr.setChars(s.code, 'x').err, 'bad');
+    assert.equal(s.mgr.serialize(s.code).chars, 'classic');
+    var c2 = clockMgr(), r2 = c2.mgr.createRoom({ girlName: 'س', chars: 'classic' });
+    assert.equal(c2.mgr.roster(r2.code).chars, 'classic');
 });

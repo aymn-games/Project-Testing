@@ -17,7 +17,9 @@
  *          صاحبة الحفلة تقدر تدخل غرفتها قبل. بعد النهاية: err ended)
  *   عميل → resume {code, id, key}                 ← نفس رد join
  *   عميل → peek {code, vk}                        ← room + all (شاشة عرض بدون شخصية؛ بدون vk صحيح صاحبة الحفلة مخفية قبل الافتتاح)
- *   اللاعب → look {look: 7 أرقام}                ← room (الصف السادس = الشكل بعد التحقق حسب نوع الحساب)
+ *   اللاعب → react {e} (heart|smile|laugh|party، ولصاحبة الحفلة crown|love|sparkle) ← reacts {d: n,e,…} للكل
+ *   صاحبة الحفلة → rain ← rain {at} للكل (مطر قلوب، مرة كل 20ث) · المذيع → chars {v: rig|classic} ← room
+ *   اللاعب → look {look: 8 أرقام}                ← room (الصف السادس = الشكل بعد التحقق حسب نوع الحساب)
  *   عميل → mv {p:[x, z, ry, a]} · ping {k}        ← pong {k, now}
  *   المذيع → start · skip {from}                  ← phase {p, at, until, walk, cut} للكل
  *   (phase تنرسل أيضاً لكل اتصال جديد؛ walk مسطّحة n, x×100, z×100 وقت المشي التلقائي)
@@ -132,7 +134,7 @@ function allow(client, heavy) {
 }
 function roomClients(code) { return Object.keys(_clients).map(function (k) { return _clients[k]; }).filter(function (c) { return c.code === code && !c.closed; }); }
 
-function rosterMsg(code) { var r = _mgr.roster(code); return r.ok ? { t: 'room', room: { code: r.code, girlName: r.girlName, players: r.players } } : null; }
+function rosterMsg(code) { var r = _mgr.roster(code); return r.ok ? { t: 'room', room: { code: r.code, girlName: r.girlName, chars: r.chars, players: r.players } } : null; }
 // تغيّر بالحضور: نرسل فوراً إذا آخر إرسال قبل ثانية، وإلا نأجّله لدورة tickAll (يمنع
 // موجة دخول 100 شخص من إرسال القائمة الكاملة لكل واحد 100 مرة)
 function markRoster(code) {
@@ -142,7 +144,7 @@ function markRoster(code) {
 function broadcastRoster(code) {
     var st = _roster[code] || (_roster[code] = { at: 0, dirty: false }); st.at = Date.now(); st.dirty = false;
     var r = _mgr.roster(code); if (!r.ok) return;
-    var encoded = frame.encodeTextFrame(JSON.stringify({ t: 'room', room: { code: r.code, girlName: r.girlName, players: r.players } }));
+    var encoded = frame.encodeTextFrame(JSON.stringify({ t: 'room', room: { code: r.code, girlName: r.girlName, chars: r.chars, players: r.players } }));
     roomClients(code).forEach(function (c) { sendRaw(c, encoded); });
 }
 function phaseMsg(code) {
@@ -207,7 +209,7 @@ function onMessage(client, msg) {
     if (t === 'ping') return send(client, { t: 'pong', k: msg.k, now: Date.now() });
     if (typeof t !== 'string') return;
     var ident = t === 'host' || t === 'join' || t === 'resume' || t === 'peek';
-    var heavy = ident || t === 'start' || t === 'skip' || t === 'wish' || t === 'next' || t === 'cut' || t === 'hideWish' || t === 'pointsDone' || t === 'pointsClaim' || t === 'pointsRelease' || t === 'look' || t === 'kick' || t === 'schedule' || t === 'prev';
+    var heavy = ident || t === 'start' || t === 'skip' || t === 'wish' || t === 'next' || t === 'cut' || t === 'hideWish' || t === 'pointsDone' || t === 'pointsClaim' || t === 'pointsRelease' || t === 'look' || t === 'kick' || t === 'schedule' || t === 'prev' || t === 'rain' || t === 'chars';
     if (!allow(client, heavy)) return;
     try { return handle(client, msg, t, ident); } finally { if (heavy && client.code) markSave(client.code); }
 }
@@ -228,7 +230,7 @@ function handle(client, msg, t, ident) {
             if (!keyOk(msg.key)) return send(client, { t: 'err', err: 'hostkey', of: t });
             // كل حفلة من صفحة المذيع مجدولة (الغرفة بدون جدول للاختبارات بس)
             if (!msg.schedule || typeof msg.schedule !== 'object') return send(client, { t: 'err', err: 'schedule', of: t });
-            res = _mgr.createRoom({ girlName: msg.girlName, schedule: msg.schedule });
+            res = _mgr.createRoom({ girlName: msg.girlName, schedule: msg.schedule, chars: msg.chars });
             if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
             attach(client, res.code, 'host');
             logger.log('Party: room ' + res.code + ' created');
@@ -325,6 +327,25 @@ function handle(client, msg, t, ident) {
         sendWishList(client.code); broadcastWishes(client.code);
         return;
     }
+    if (t === 'react') {
+        if (client.role !== 'player' || !client.code) return;
+        _mgr.react(client.code, client.id, msg.e); // الزيادة تنتجاهل بصمت (ضغط سريع على الأيقونة)
+        return;
+    }
+    if (t === 'rain') {
+        if (client.role !== 'player' || !client.code) return send(client, { t: 'err', err: 'role', of: t });
+        res = _mgr.rain(client.code, client.id);
+        if (!res.ok) return send(client, { t: 'err', err: res.err, of: t, at: res.at });
+        var enc = frame.encodeTextFrame(JSON.stringify({ t: 'rain', at: res.at }));
+        roomClients(client.code).forEach(function (c) { sendRaw(c, enc); });
+        return;
+    }
+    if (t === 'chars') {
+        if (client.role !== 'host' || !client.code) return send(client, { t: 'err', err: 'host-only', of: t });
+        res = _mgr.setChars(client.code, msg.v);
+        if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
+        return broadcastRoster(client.code);
+    }
     if (t === 'look') {
         if (client.role !== 'player' || !client.code) return send(client, { t: 'err', err: 'role', of: t });
         res = _mgr.setLook(client.code, client.id, msg.look);
@@ -381,6 +402,20 @@ function tickAll() {
             if (st && st.dirty && now - st.at >= ROSTER_MS) broadcastRoster(code);
             var wl = _wl[code];
             if (wl && wl.dirty && now - wl.at >= WISHLIST_MS) sendWishList(code);
+            // التفاعلات توصل الكل كل دورة (محدودة بمعدل لكل لاعب)؛ الجوال يقرر يرسم البعيد أو لا
+            var rq = _mgr.takeReacts(code);
+            if (rq.length) {
+                var rmObj = _mgr.getRoom(code);
+                cs.forEach(function (c) {
+                    if (c.role === 'host') return;
+                    var me = c.role === 'player' && c.id ? rmObj.players.find(function (p) { return p.id === c.id; }) : null, d = [];
+                    rq.forEach(function (x) {
+                        if (x.girl && !c.trusted && _mgr.reactHidden(code, true) && !(me && me.role === 'girl')) return;
+                        d.push(x.n, x.e);
+                    });
+                    if (d.length) sendRaw(c, frame.encodeTextFrame(JSON.stringify({ t: 'reacts', d: d })));
+                });
+            }
             cs.forEach(function (c) {
                 if (c.role === 'host') return; // لوحة المذيع ما تعرض الحركة
                 var d = _mgr.deltaFor(code, c.role === 'player' ? c.id : null, c.seen || (c.seen = new Map()), farTick, !!c.trusted);

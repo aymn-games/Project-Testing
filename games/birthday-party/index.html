@@ -107,6 +107,11 @@
     .points.warn{ background:#fffbeb; color:#92400e; }
     .points a{ color:inherit; }
     .row input[type=date], .row input[type=time]{ width:auto; direction:ltr; text-align:center; }
+    /* اختيار من خيارين (الشخصيات): العنوان يمين والأزرار يسار */
+    .seg{ display:inline-flex; gap:4px; padding:4px; border-radius:999px; background:rgba(255,255,255,.7); border:1px solid var(--line); }
+    .seg button{ height:34px; padding:0 14px; border-radius:999px; border:0; background:transparent; color:var(--ink); font:700 14px 'IBM Plex Sans Arabic'; cursor:pointer; }
+    .seg button.on{ background:linear-gradient(180deg,#f08ab0,#d45a8a); color:#fff; }
+    .row label small, .row > span small{ display:block; font-weight:500; color:#9b6683; font-size:12px; }
     .rows{ display:flex; flex-direction:column; gap:10px; }
     .tz{ margin:10px 2px 0; font:600 12px 'IBM Plex Sans Arabic'; color:var(--soft); }
     .timeline{ margin:14px 0 0; padding:12px 14px; border-radius:16px; background:#fff; border:1px dashed var(--line); list-style:none; display:flex; flex-direction:column; gap:6px; }
@@ -152,6 +157,10 @@
             <label for="girlName">اسم صاحبة الحفلة</label>
             <input id="girlName" maxlength="16" placeholder="مثلاً: سارة" autocomplete="off">
         </div>
+        <div class="row" style="margin-top:10px">
+            <span id="cCharsL"><b>الشخصيات</b><small>الجديدة: هيكل عظمي ورقص حقيقي · الكلاسيكية: أخف للأجهزة الضعيفة</small></span>
+            <div class="seg" role="group" aria-labelledby="cCharsL" id="cChars"><button type="button" data-v="rig" class="on" aria-pressed="true">الجديدة</button><button type="button" data-v="classic" aria-pressed="false">الكلاسيكية</button></div>
+        </div>
         <div class="rows" id="createSched" style="margin-top:10px"></div>
         <div class="actions"><button class="btn" id="createBtn" type="button">إنشاء الحفلة</button></div>
         <div class="msg hidden" id="createMsg" role="alert"></div>
@@ -173,6 +182,10 @@
                 <button class="btn ghost" id="qrBtn" type="button" aria-pressed="false">اعرض الباركود على الشاشة</button>
                 <button class="btn ghost" id="closePanel" type="button">إغلاق اللوحة ✕</button>
                 <button class="btn ghost" id="newParty" type="button">حفلة جديدة</button>
+            </div>
+            <div class="row" style="margin-top:12px">
+                <span id="rCharsL"><b>الشخصيات</b><small>تتبدّل عند الكل فوراً</small></span>
+                <div class="seg" role="group" aria-labelledby="rCharsL" id="rChars"><button type="button" data-v="rig" aria-pressed="false">الجديدة</button><button type="button" data-v="classic" aria-pressed="false">الكلاسيكية</button></div>
             </div>
             <div class="hidden" id="editBox" style="margin-top:12px">
                 <div class="rows" id="editSched"></div>
@@ -362,7 +375,7 @@
         onOpen: () => { const s = readJSON('party-host'); if (s && s.code && s.token) net.send({ t: 'host', code: s.code, token: s.token }); },
         onMessage: m => {
             if (m.t === 'hosted') { state = { code: m.code, token: m.token, girlKey: m.girlKey, viewKey: m.viewKey }; writeJSON('party-host', { code: m.code, token: m.token, viewKey: m.viewKey }); showRoom(); }
-            else if (m.t === 'room') renderList(m.room);
+            else if (m.t === 'room') { renderList(m.room); segSet($('rChars'), m.room.chars || 'rig'); }
             else if (m.t === 'phase') { phase = m; renderPhase(); if (editing) { editing = false; $('editBox').classList.add('hidden'); } }
             else if (m.t === 'wishList') renderWishList(m.items || []);
             else if (m.t === 'points') onPoints(m);
@@ -388,8 +401,15 @@
         if (!schedule) { showCreate('اختر تاريخ الحفل وساعة البداية'); return; }
         if (schedule.startAt < Date.now() - 60000) { showCreate(ERR.schedule); return; }
         $('createBtn').disabled = true;
-        net.send({ t: 'host', girlName, key: hostKey(), schedule });
+        net.send({ t: 'host', girlName, key: hostKey(), schedule, chars: segValue($('cChars')) });
     });
+
+    // ---- الشخصيات: الجديدة (rig) أو الكلاسيكية ----
+    const segValue = el => (el.querySelector('button.on') || el.querySelector('button')).dataset.v;
+    const segSet = (el, v) => el.querySelectorAll('button').forEach(b => { const on = b.dataset.v === v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+    $('cChars').addEventListener('click', e => { const b = e.target.closest('button'); if (b) segSet($('cChars'), b.dataset.v); });
+    // ما نغيّر الزر محلياً: ينحدّث لما ترجع قائمة الحضور من السيرفر بالقيمة الجديدة
+    $('rChars').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.classList.contains('on')) return; net.send({ t: 'chars', v: b.dataset.v }); });
 
     // ---- التحكم بالعرض ----
     let phase = null;

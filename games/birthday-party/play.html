@@ -107,7 +107,7 @@
     body.stream .phase span{ font-size:26px; }
     body.stream .wishcard{ width:min(820px,72vw); padding:18px 26px; }
     body.stream .wishcard b{ font-size:34px; } body.stream .wishcard p{ font-size:22px; max-height:none; }
-    body:has(#nextBtn:not(.hidden)) .emotes, body:has(#wishBtn:not(.hidden)) .emotes{ bottom:max(80px,calc(env(safe-area-inset-bottom) + 76px)); }
+    body:has(#nextBtn:not(.hidden)) .actbar, body:has(#wishBtn:not(.hidden)) .actbar{ bottom:max(80px,calc(env(safe-area-inset-bottom) + 76px)); }
     .wishbox{ position:absolute; left:50%; bottom:max(16px,env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(520px,92vw); padding:14px; border-radius:18px; background:rgba(255,250,252,.97); border:1px solid var(--line); box-shadow:0 14px 40px rgba(0,0,0,.25); display:flex; flex-direction:column; gap:8px; z-index:6; }
     .wishbox b{ font:900 18px 'Zain'; }
     .wishbox textarea{ width:100%; box-sizing:border-box; resize:none; padding:10px 12px; border-radius:12px; border:1px solid var(--line); font:600 15px/1.6 'IBM Plex Sans Arabic'; color:var(--ink); text-align:right; }
@@ -120,12 +120,20 @@
     .photomodal{ position:fixed; inset:0; z-index:9; display:grid; place-items:center; background:rgba(30,10,30,.6); padding:16px; }
     .photomodal > div{ background:#fff; padding:12px; border-radius:18px; display:flex; flex-direction:column; gap:10px; max-width:min(720px,94vw); }
     .photomodal img{ width:100%; max-height:70vh; object-fit:contain; border-radius:10px; }
-    .emotes{ position:absolute; right:max(16px,env(safe-area-inset-right)); bottom:max(18px,env(safe-area-inset-bottom)); display:flex; gap:8px; }
-    .emotes button{ height:44px; padding:0 14px; border-radius:999px; border:1px solid var(--line); background:var(--glass); color:var(--ink); font:700 14px 'IBM Plex Sans Arabic'; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); cursor:pointer; }
-    .emotes button.on{ background:linear-gradient(180deg,#ff9ccc,#f472b6); color:#fff; border-color:transparent; }
-    .emotes{ max-width:calc(100vw - 190px); overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
-    .emotes::-webkit-scrollbar{ display:none; }
-    .emotes button{ flex:none; }
+    /* أزرار تحت يمين: صف التفاعلات فوق، وصف أيقونات الحركات تحته */
+    .actbar{ position:absolute; right:max(16px,env(safe-area-inset-right)); bottom:max(18px,env(safe-area-inset-bottom)); display:flex; flex-direction:column; align-items:flex-end; gap:8px; max-width:calc(100vw - 190px); }
+    .emotes, .reacts{ display:flex; gap:8px; max-width:100%; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; padding:2px; }
+    .emotes::-webkit-scrollbar, .reacts::-webkit-scrollbar{ display:none; }
+    .emotes button, .reacts button, .jumpbtn{ flex:none; width:46px; height:46px; padding:0; border-radius:50%; border:1px solid var(--line); background:var(--glass); color:var(--ink); font:22px/1 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); cursor:pointer; -webkit-touch-callout:none; user-select:none; -webkit-user-select:none; }
+    .emotes button.on{ background:linear-gradient(180deg,#ff9ccc,#f472b6); border-color:transparent; box-shadow:0 4px 14px rgba(219,39,119,.4); }
+    .reacts button{ width:42px; height:42px; font-size:20px; background:rgba(255,255,255,.55); }
+    .reacts button:active, .emotes button:active, .jumpbtn:active{ transform:scale(.9); }
+    .reacts .rainbtn{ width:auto; padding:0 12px; border-radius:999px; font:800 13px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#ff8fc0,#e11d74); border-color:transparent; }
+    .reacts .rainbtn:disabled{ opacity:.55; }
+    .jumpbtn{ position:absolute; left:calc(max(24px,env(safe-area-inset-left)) + 136px); bottom:max(32px,env(safe-area-inset-bottom)); width:58px; height:58px; font-size:26px; display:none; }
+    @media (pointer:coarse){ .jumpbtn:not(.hidden){ display:block; } }
+    body.viewer .jumpbtn, body.stream .jumpbtn{ display:none !important; }
+    .emotip{ position:absolute; z-index:8; padding:6px 12px; border-radius:999px; background:rgba(60,24,48,.88); color:#fff; font:700 13px 'IBM Plex Sans Arabic'; pointer-events:none; transform:translate(-50%,-100%); white-space:nowrap; }
     /* ركن التعديل: لوحة جانبية (يمين) والشخصية تبان باقي الشاشة للمعاينة */
     .lookpanel{ position:absolute; top:0; bottom:0; right:0; width:min(400px,46vw); box-sizing:border-box; padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) 14px;
         background:rgba(255,248,251,.96); color:#6b2147; border-left:1px solid rgba(236,160,195,.55); box-shadow:-12px 0 40px rgba(120,30,80,.22); display:flex; flex-direction:column; gap:8px; z-index:7; direction:rtl; }
@@ -150,7 +158,7 @@
     .kicked{ position:fixed; inset:0; z-index:12; display:grid; place-items:center; text-align:center; padding:24px; background:radial-gradient(circle at 50% 35%,#fff3f8,#f3c6da); }
     .kicked h2{ margin:0 0 14px; font:900 26px/1.2 'Zain'; color:#a3306a; }
     .kicked a{ display:inline-flex; align-items:center; height:46px; padding:0 24px; border-radius:999px; font:700 15px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); text-decoration:none; }
-    @media (pointer:coarse) and (orientation:landscape) and (max-height:520px){ .phase{ top:48px; font-size:12px; } .emotes button{ height:38px; padding:0 11px; font-size:13px; } }
+    @media (pointer:coarse) and (orientation:landscape) and (max-height:520px){ .phase{ top:48px; font-size:12px; } .emotes button{ width:40px; height:40px; font-size:19px; } .reacts button{ width:36px; height:36px; font-size:17px; } .reacts .rainbtn{ font-size:12px; } .actbar{ gap:6px; } .jumpbtn{ left:calc(max(18px,env(safe-area-inset-left)) + 118px); bottom:max(18px,env(safe-area-inset-bottom)); width:50px; height:50px; } }
     /* الجوال بالطول: نطلب يلفّه (اللعبة مصممة بالعرض) */
     .rotate{ position:fixed; inset:0; z-index:20; display:none; place-items:center; text-align:center; padding:24px; background:radial-gradient(circle at 50% 35%,#fff3f8,#f3c6da); color:var(--ink); }
     .rotate .ph{ width:64px; height:104px; margin:0 auto 18px; border:5px solid #d45a8a; border-radius:14px; position:relative; animation:turn 2.2s ease-in-out infinite; }
@@ -201,19 +209,24 @@
         <div class="wbrow"><span id="wishStatus"></span><small><span id="wishLeft">200</span> حرف</small></div>
         <div class="wbrow"><button type="button" id="wishCancel" class="ghost">إغلاق</button><button type="button" id="wishSend">إرسال 💌</button></div>
     </div>
-    <div class="emotes hidden" id="emotes"></div>
+    <div class="actbar">
+        <div class="reacts hidden" id="reacts" aria-label="تفاعلات"></div>
+        <div class="emotes hidden" id="emotes" aria-label="الحركات"></div>
+    </div>
+    <div class="emotip hidden" id="emoTip"></div>
     <div class="lookpanel hidden" id="lookPanel" role="dialog" aria-label="ركن التعديل">
         <h3>✨ شكلي</h3>
-        <div class="lockmsg hidden" id="lookLock">🔒 دخلت كضيف سريع: تقدر تغيّر لون لبسك بس. <a href="#" id="lookLogin">سجّل دخولك تفتحها كلها</a></div>
+        <div class="lockmsg hidden" id="lookLock">🔒 دخلت كضيف سريع: تقدر تغيّر لون لبسك وقبعتك بس. <a href="#" id="lookLogin">سجّل دخولك تفتحها كلها</a></div>
         <div class="lookbody" id="lookBody"></div>
         <div class="lookfoot"><button type="button" class="ghost" id="lookCancel">إلغاء</button><button type="button" id="lookSave">حفظ</button></div>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"><b id="toastTitle"></b><span>هذا القسم قريباً</span></div>
     <div class="hint" id="hint">
-        <span class="desk">W A S D للمشي · اسحب بالماوس للنظر · Shift للجري</span>
+        <span class="desk">W A S D للمشي · اسحب بالماوس للنظر · Shift للجري · Space للقفز</span>
         <span class="touch">العصا للمشي · اسحب بإصبعك للنظر</span>
     </div>
     <div class="joy" id="joy" aria-hidden="true"><div class="joy-knob"></div></div>
+    <button class="jumpbtn hidden" id="jumpBtn" type="button" aria-label="قفز">⤴️</button>
 </div>
 
 <div class="flash" id="flash" aria-hidden="true"></div>
@@ -304,14 +317,37 @@
 
     // ---- الحفلة الجماعية: الاتصال بالسيرفر + الشخصيات ----
     async function startParty(hall) {
-        const [{ connect, readJSON, writeJSON, serverNow, unpackRows }, { createCrowd, LOOK, resolveLook }, { createMusic }] = await Promise.all([import('./party-net.js'), import('./crowd3d.js'), import('./music.js')]);
+        const [{ connect, readJSON, writeJSON, serverNow, unpackRows }, rigMod, { LOOK, REACTS, REACT_EMOJI, resolveLook }, { ANIMS, JUMP }, { createMusic }] = await Promise.all([import('./party-net.js'), import('./crowd-rig.js'), import('./crowd-common.js'), import('./rig3d.js'), import('./music.js')]);
         const { clockText, tzLabel, countdownText } = await import('./party-net.js');
         const me = viewOnly ? null : readJSON('party-me');
         if (!viewOnly && !(me && me.code === code)) { location.replace('join.html?code=' + code); return; }
         if (!viewOnly) $('hint').querySelector('.touch').textContent = 'العصا للمشي · اسحب للف الكاميرا';
-        const crowd = createCrowd(hall.scene, { floorAt: hall.floorAt });
-        crowd.prewarm(hall.compile);
-        if (params.has('debug')) { window.__crowd = crowd; window.__hall = hall; }
+        // الشخصيات: الهيكل العظمي (crowd-rig) أو الكلاسيكية (crowd3d) حسب إعداد الغرفة room.chars.
+        // التبديل وسط الحفلة: نشيل القديمة ونبني الجديدة من آخر قائمة حضور وآخر مواقع وصلت
+        // تنبني أول ما توصل قائمة الحضور (عشان الغرفة الكلاسيكية ما تبني الجديدة على الفاضي)
+        let crowd = null, crowdKind = null, wantKind = null, localGetter = null, lastPlayers = null;
+        const lastRows = new Map(); // n → آخر [n, x, z, ry, a]
+        if (params.has('debug')) { window.__hall = hall; Object.defineProperty(window, '__crowd', { get: () => crowd, configurable: true }); }
+        async function useCrowd(kind) {
+            kind = kind === 'classic' ? 'classic' : 'rig';
+            if (kind === (wantKind || crowdKind)) return;
+            wantKind = kind;
+            let mod;
+            try { mod = kind === 'classic' ? await import('./crowd3d.js') : rigMod; }
+            catch (err) { log('[birthday-party] الشخصيات الكلاسيكية ما تحمّلت', err); if (wantKind === kind) wantKind = null; if (!crowd) useCrowd('rig'); return; }
+            if (wantKind !== kind) return; // تبدّل مرة ثانية وهو يحمّل
+            wantKind = null; crowdKind = kind;
+            const next = mod.createCrowd(hall.scene, { floorAt: hall.floorAt });
+            next.prewarm(hall.compile);
+            if (crowd) crowd.dispose();
+            crowd = next;
+            if (localGetter) crowd.setLocal(myN, localGetter);
+            if (lastPlayers) crowd.sync(lastPlayers);
+            if (lastRows.size) crowd.apply([...lastRows.values()], serverNow(), true);
+            if (draft && !$('lookPanel').classList.contains('hidden')) crowd && crowd.setLocalLook(lookToSend());
+            else if (pendingLook) crowd && crowd.setLocalLook(pendingLook.split(',').map(Number));
+            crowdPhase(); // يرجّع المشي التلقائي والسبوت لايت
+        }
         const music = createMusic();
         const roles = new Map();
         let myN = null, myRole = null, myKind = null, placed = false, gotAll = false, lastSent = null;
@@ -343,6 +379,26 @@
         addEventListener('pointerdown', () => { touched = true; $('soundTip').classList.add('hidden'); }, { capture: true, once: true });
         $('soundTip').addEventListener('click', () => $('soundTip').classList.add('hidden'));
 
+        // المشي التلقائي للمرحلة الحالية (نفس الحساب على كل الجوالات): الأهداف ووقت البداية والنهاية والمسار
+        function walkOf() {
+            const p = phase.p, wf = WALK[p];
+            if (!wf || !phase.walk) return null;
+            const walk = {}; for (let i = 0; i + 2 < phase.walk.length; i += 3) walk[phase.walk[i]] = [phase.walk[i + 1] / 100, phase.walk[i + 2] / 100];
+            const t0 = phase.at, t1 = wf > 1 ? phase.at + wf : phase.at + (phase.until - phase.at) * wf;
+            const route = (n, st, tg) => p === 'entrance' ? pathFor(n, st, tg) : [st, tg];
+            return { walk, t0, t1, route };
+        }
+        // اللي يخص الشخصيات بس من المرحلة (المسارات والسبوت لايت) — ينعاد لحاله بعد تبديل الشخصيات
+        function crowdPhase() {
+            if (!crowd || !phase) return;
+            const p = phase.p, W = walkOf();
+            if (W) {
+                const paths = {};
+                for (const n of Object.keys(W.walk)) { if (+n === myN) continue; const st = crowd.posOf(+n); if (st) paths[n] = W.route(+n, st, W.walk[n]); }
+                crowd.setAutoPaths(paths, W.t0, W.t1, role => role === 'girl' && !['cakeWalk', 'photo'].includes(p) ? 0 : Math.PI);
+            } else crowd.setAutoPaths(null, serverNow());
+            crowd.setGirlFx(!['lobby', 'entrance', 'closed', 'ended'].includes(p));
+        }
         function applyPhase() {
             if (!phase || !gotAll) return;
             const now = serverNow(), p = phase.p, key = p + ':' + phase.at, since = now - phase.at;
@@ -370,13 +426,10 @@
                 if (p === 'celebrate' && celebKey !== key) { celebKey = key; hall.celebrate(Math.max(3, (phase.until - now) / 1000), { strobe: true }); music.play('cake'); }
             }
             hall.setPhotoCam(p === 'photo');
-            const wf = WALK[p];
-            if (wf && phase.walk) {
-                const walk = {}; for (let i = 0; i + 2 < phase.walk.length; i += 3) walk[phase.walk[i]] = [phase.walk[i + 1] / 100, phase.walk[i + 2] / 100];
-                const t0 = phase.at, t1 = wf > 1 ? phase.at + wf : phase.at + (phase.until - phase.at) * wf, paths = {};
-                const route = (n, st, tg) => p === 'entrance' ? pathFor(n, st, tg) : [st, tg];
-                for (const n of Object.keys(walk)) { if (+n === myN) continue; const st = crowd.posOf(+n); if (st) paths[n] = route(+n, st, walk[n]); }
-                crowd.setAutoPaths(paths, t0, t1, role => role === 'girl' && !['cakeWalk', 'photo'].includes(p) ? 0 : Math.PI);
+            crowdPhase();
+            const W = walkOf();
+            if (W) {
+                const { walk, t0, t1, route } = W;
                 if (!viewOnly && myN != null && walk[myN]) {
                     // بداية المسار = مكاني عند السيرفر (نفس اللي تحسبه باقي الجوالات)، مو مكاني المحلي
                     myTarget = walk[myN];
@@ -385,7 +438,6 @@
                     else hall.setAutoPath(route(myN, st, myTarget), t0, t1, serverNow, facing(p));
                 }
             } else {
-                crowd.setAutoPaths(null, now);
                 if (!viewOnly) {
                     hall.setAutoPath(null);
                     // انتهى المشي (أو تخطاه المذيع): السيرفر حطنا على مكاننا، فنثبّت نفس المكان
@@ -411,8 +463,11 @@
             $('endScreen').classList.toggle('hidden', p !== 'ended');
             if (p === 'ended') { $('photoModal').classList.add('hidden'); $('endPhoto').classList.toggle('hidden', !$('photoImg').src); }
             // الأزرار حسب المرحلة والدور — وقت عرض التهاني الكل يرقص ويسوي حركات
-            const showEmotes = !viewOnly && ['dance', 'celebrate', 'free', 'cake', 'wishes'].includes(p);
-            $('emotes').classList.toggle('hidden', !showEmotes);
+            const showEmotes = !viewOnly && ['lobby', 'dance', 'celebrate', 'free', 'cake', 'wishes'].includes(p);
+            $('emotes').classList.toggle('hidden', !showEmotes); $('jumpBtn').classList.toggle('hidden', !showEmotes);
+            // التفاعلات بكل وقت (إلا قبل فتح الباب وبعد النهاية)، ومطر القلوب لصاحبة الحفلة بعد الافتتاح
+            $('reacts').classList.toggle('hidden', viewOnly || p === 'closed' || p === 'ended');
+            rainShown = isGirl && !preShow && p !== 'ended'; buildReacts();
             updateLookBtn();
             $('wishBtn').classList.toggle('hidden', viewOnly || isGirl || p !== 'wishWrite');
             if (p !== 'wishWrite') $('wishBox').classList.add('hidden');
@@ -480,7 +535,8 @@
         }
         hall.addTicker(dt => {
             const now = serverNow();
-            crowd.update(dt, hall.camera, now);
+            if (crowd) crowd.update(dt, hall.camera, now);
+            rainTick(now);
             if (!phase) return;
             // الافتتاح: عد تنازلي 3-2-1 ثم الستارة تنفتح مع ألعاب نارية
             if (phase.p === 'reveal' && !revealFired) {
@@ -498,15 +554,18 @@
             onOpen: () => { gotAll = false; net.send(viewOnly ? { t: 'peek', code, vk: params.get('vk') || undefined } : { t: 'resume', code, id: me.id, key: me.key }); },
             onMessage: m => {
                 if (m.t === 'welcome') {
-                    myN = m.n; myRole = m.role; myKind = m.kind || 'quick'; buildEmotes(); updateLookBtn();
-                    crowd.setLocal(myN, () => Object.assign(hall.getLocal(), { emote: curEmote() }));
+                    myN = m.n; myRole = m.role; myKind = m.kind || 'quick'; buildEmotes(); buildReacts(); updateLookBtn();
+                    localGetter = () => Object.assign(hall.getLocal(), { emote: curEmote() });
+                    if (crowd) crowd.setLocal(myN, localGetter);
                     // حفظ شكله وانقطع قبل ما يوصل: نعيد إرساله
                     if (pendingLook) net.send({ t: 'look', look: pendingLook.split(',').map(Number) });
                 }
                 else if (m.t === 'room') {
                     m.room.players.forEach(r => roles.set(r[0], r[2]));
                     girlOn = m.room.players.some(r => r[2] === 'girl' && r[4]);
-                    crowd.sync(m.room.players);
+                    lastPlayers = m.room.players;
+                    if (crowd) crowd.sync(m.room.players);
+                    useCrowd(m.room.chars);
                     const mine = myN != null ? m.room.players.find(r => r[0] === myN) : null;
                     if (mine) onMyLook(mine[5]);
                     if (m.room.girlName) { $('title').textContent = 'حفلة ' + m.room.girlName; hall.setName(m.room.girlName); }
@@ -515,19 +574,24 @@
                 else if (m.t === 'phase') { phase = m; applied = null; if (!viewOnly && myRole) hall.setZone(zoneFor(m.p)); applyPhase(); }
                 else if (m.t === 'all' || m.t === 's') {
                     const rows = unpackRows(m.d);
-                    crowd.apply(rows, m.now, m.t === 'all');
+                    if (m.t === 'all') lastRows.clear();
+                    rows.forEach(r => lastRows.set(r[0], r));
+                    if (crowd) crowd.apply(rows, m.now, m.t === 'all');
                     // أول مرة نعرف مكاننا من السيرفر ← نبدأ وضع الشخصية
                     const mine = myN != null ? rows.find(x => x[0] === myN) : null;
                     if (mine) myServer = [mine[1], mine[2]];
                     if (!placed && mine) { placed = true; hall.setFollow({ x: mine[1], z: mine[2], ry: mine[3] }); }
                     if (m.t === 'all' && !gotAll) { gotAll = true; applied = null; applyPhase(); }
-                } else if (m.t === 'err') {
+                } else if (m.t === 'reacts') { if (crowd) for (let i = 0; i + 1 < m.d.length; i += 2) crowd.react(m.d[i], m.d[i + 1]); }
+                else if (m.t === 'rain') { rainAt = m.at; clearTimeout(rainRetry); rainTick(serverNow(), true); if (crowd && serverNow() - m.at < 4000) crowd.rain(m.at); }
+                else if (m.t === 'err') {
                     if (m.err === 'resume' || m.err === 'nocode') { writeJSON('party-me', null); location.replace('join.html?code=' + code); }
                     else if (m.err === 'kicked') { net.close(); writeJSON('party-me', null); closeLook(); $('kicked').classList.remove('hidden'); }
                     else if (m.err === 'elsewhere') { $('netBad').textContent = 'فتحت الحفلة من مكان ثاني'; $('netBad').classList.remove('hidden'); net.close(); }
                     else if (m.err === 'disabled') { $('netBad').textContent = 'الحفلات متوقفة حالياً'; $('netBad').classList.remove('hidden'); }
                     else if (m.of === 'wish') { $('wishStatus').textContent = m.err === 'shown' ? 'تهنئتك انعرضت خلاص 💖' : m.err === 'empty' ? 'اكتب تهنئتك أول' : 'ما وصلت، جرّب مرة ثانية'; $('wishSend').disabled = false; }
                     else if (m.of === 'next' || m.of === 'cut') { $(m.of === 'next' ? 'nextBtn' : 'cutBtn').disabled = false; }
+                    else if (m.of === 'rain') { if (m.at) rainAt = m.at; clearTimeout(rainRetry); rainTick(serverNow(), true); }
                 }
             },
         });
@@ -553,21 +617,62 @@
         once('cutBtn', () => ({ t: 'cut' }));
         $('photoClose').addEventListener('click', () => $('photoModal').classList.add('hidden'));
 
-        // أزرار الحركات (وقت الرقص): الضيف السريع 3 حركات، والمسجّل وصاحبة الحفلة 7.
-        // الرقص والتمايل يستمرون لين تضغطهم مرة ثانية أو تمشي، والباقي ثواني
-        const EMOTES = [[2, '💃 رقص'], [3, '👋 تلويح'], [4, '👏 تصفيق'], [5, '🌀 لفّة'], [6, '🦘 قفز'], [7, '💖 قلب'], [8, '🎶 تمايل']];
-        const LOOP_EMOTE = { 2: 1, 8: 1 };
+        // أيقونات الحركات: كل الضيوف كل الحركات (السيرفر يسمح لين 10)، وصاحبة الحفلة زيادة تحية الأميرة.
+        // الرقصات والتمايل تستمر لين تضغطها مرة ثانية أو تمشي، والباقي ثواني. الضغط المطوّل يطلّع اسم الحركة
+        const LOOP_EMOTE = { 2: 1, 8: 1, 9: 1, 10: 1 }, EMOTE_MS = { 3: 2500, 4: 3000, 5: 2400, 7: 3000, 11: 3200, [JUMP]: 1000 };
         function buildEmotes() {
-            const list = myKind === 'quick' ? EMOTES.slice(0, 3) : EMOTES;
-            $('emotes').innerHTML = list.map(([e, t]) => '<button type="button" data-e="' + e + '">' + t + '</button>').join('');
+            const list = ANIMS.filter(a => !a.girl || myRole === 'girl');
+            $('emotes').innerHTML = list.map(a => '<button type="button" data-e="' + a.id + '" aria-label="' + a.name + '" title="' + a.name + '">' + a.icon + '</button>').join('');
         }
-        $('emotes').addEventListener('click', ev => {
-            const b = ev.target.closest('button'); if (!b) return;
-            const e = +b.dataset.e;
+        function setEmote(e) {
             if (LOOP_EMOTE[e]) { emote = emote === e ? 0 : e; emoteUntil = 0; }
-            else { emote = e; emoteUntil = serverNow() + (e === 3 ? 2500 : 3000); }
+            else { emote = e; emoteUntil = serverNow() + (EMOTE_MS[e] || 3000); }
             document.querySelectorAll('#emotes button').forEach(x => x.classList.toggle('on', +x.dataset.e === emote));
+        }
+        let tipT = 0, tipShown = false;
+        function holdTip(bar) {
+            bar.addEventListener('pointerdown', ev => {
+                const b = ev.target.closest('button'); if (!b) return;
+                tipShown = false; clearTimeout(tipT);
+                tipT = setTimeout(() => { const r = b.getBoundingClientRect(), t = $('emoTip'); t.textContent = b.getAttribute('aria-label'); t.style.left = (r.left + r.width / 2) + 'px'; t.style.top = (r.top - 6) + 'px'; t.classList.remove('hidden'); tipShown = true; }, 450);
+            });
+            const end = () => { clearTimeout(tipT); setTimeout(() => $('emoTip').classList.add('hidden'), tipShown ? 900 : 0); };
+            ['pointerup', 'pointercancel', 'pointerleave'].forEach(k => bar.addEventListener(k, end));
+            bar.addEventListener('contextmenu', ev => ev.preventDefault());
+        }
+        holdTip($('emotes')); holdTip($('reacts'));
+        $('emotes').addEventListener('click', ev => {
+            const b = ev.target.closest('button'); if (!b || tipShown) return;
+            setEmote(+b.dataset.e);
         });
+        const jump = () => { if (!$('emotes').classList.contains('hidden')) setEmote(JUMP); };
+        $('jumpBtn').addEventListener('click', jump);
+        if (!viewOnly) addEventListener('keydown', ev => { if (ev.code === 'Space' && !ev.repeat && !$('emotes').classList.contains('hidden') && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { ev.preventDefault(); jump(); } });
+
+        // ---- التفاعلات: إيموجي يطير فوق راسك عند الكل (السيرفر يحدد 2/ث)، ولصاحبة الحفلة 3 زيادة + مطر القلوب ----
+        const REACT_NAMES = ['قلب', 'ابتسامة', 'ضحك', 'احتفال', 'تاج', 'حب', 'لمعة'];
+        let rainShown = false, rainAt = 0, rainRetry = 0, reactsKey = '';
+        function buildReacts() {
+            const n = myRole === 'girl' ? REACTS.length : 4, key = n + ':' + rainShown;
+            if (key === reactsKey) return; reactsKey = key;
+            $('reacts').innerHTML = (rainShown ? '<button type="button" class="rainbtn" id="rainBtn" aria-label="مطر القلوب">مطر القلوب 💕</button>' : '')
+                + REACT_EMOJI.slice(0, n).map((ch, i) => '<button type="button" data-r="' + i + '" aria-label="' + REACT_NAMES[i] + '">' + ch + '</button>').join('');
+            rainTick(serverNow(), true);
+        }
+        $('reacts').addEventListener('click', ev => {
+            const b = ev.target.closest('button'); if (!b || tipShown) return;
+            // لو الرسالة ضاعت (انقطاع) ما يبقى الزر مقفل للأبد
+            if (b.id === 'rainBtn') { if (!b.disabled) { b.disabled = true; net.send({ t: 'rain' }); clearTimeout(rainRetry); rainRetry = setTimeout(() => rainTick(serverNow(), true), 4000); } return; }
+            net.send({ t: 'react', e: REACTS[+b.dataset.r] });
+        });
+        // عدّاد الانتظار على زر المطر (مرة كل 20ث)
+        let rainLeft = -1;
+        function rainTick(now, force) {
+            const b = $('rainBtn'); if (!b) return;
+            const left = Math.max(0, Math.ceil((rainAt + 20000 - now) / 1000));
+            if (left === rainLeft && !force) return; rainLeft = left;
+            b.disabled = left > 0; b.textContent = left > 0 ? 'مطر القلوب 💕 ' + left : 'مطر القلوب 💕';
+        }
 
         // ---- ركن التعديل: اللاعب يختار شكله ويشوفه على شخصيته قبل الحفظ ----
         // الضيف السريع: لون اللبس بس (السيرفر يفرض نفس الشي)، والباقي يبان مقفل
@@ -579,11 +684,12 @@
             { k: 4, label: 'التسريحة', opts: LOOK.hairStyles },
             { k: 5, label: 'إكسسوار', opts: LOOK.accs, girlSkip: [2, 5] }, // عندها تاج: التاج الصغير والقبعة ما يركبون فوقه
             { k: 6, label: 'المؤثر', opts: LOOK.fxs },
+            { k: 7, label: 'قبعة الحفلة', opts: LOOK.hats, quick: true, noGirl: true }, // صاحبة الحفلة عليها تاجها
         ];
-        const FIELDS = ['st', 'o', 's', 'h', 'hs', 'acc', 'fx'];
+        const FIELDS = ['st', 'o', 's', 'h', 'hs', 'acc', 'fx', 'hat'];
         let draft = null;
         const isDefault = L => !Array.isArray(L) || L.every(v => !(v >= 0));
-        const lookToSend = () => myKind === 'quick' ? draft.map((v, i) => i === 1 ? v : -1) : draft.slice();
+        const lookToSend = () => myKind === 'quick' ? draft.map((v, i) => i === 1 || i === 7 ? v : -1) : draft.slice();
         function updateLookBtn() {
             const ok = !viewOnly && myKind && phase && (phase.p === 'lobby' || phase.p === 'free' || phase.p === 'closed');
             $('lookBtn').classList.toggle('hidden', !ok);
@@ -618,22 +724,22 @@
                 const L = lookToSend();
                 net.send({ t: 'look', look: L }); writeJSON('party-look', { look: L });
                 // المعاينة تبقى لين يرجع الشكل من السيرفر (أو 4 ثواني لو قصّه السيرفر لشي ثاني)
-                pendingLook = L.join(); clearTimeout(pendingT); pendingT = setTimeout(() => { pendingLook = null; crowd.setLocalLook(null); }, 4000);
-            } else if (!pendingLook) crowd.setLocalLook(null);
+                pendingLook = L.join(); clearTimeout(pendingT); pendingT = setTimeout(() => { pendingLook = null; crowd && crowd.setLocalLook(null); }, 4000);
+            } else if (!pendingLook) crowd && crowd.setLocalLook(null);
         }
         // شكلي من السيرفر (الصف السادس في room). أول مرة: لو السيرفر ما عنده شكل لي والجوال حافظ شكل، نرسله
         function onMyLook(L) {
             myLook = L;
-            if (pendingLook && Array.isArray(L) && L.join() === pendingLook) { pendingLook = null; clearTimeout(pendingT); crowd.setLocalLook(null); }
+            if (pendingLook && Array.isArray(L) && L.join() === pendingLook) { pendingLook = null; clearTimeout(pendingT); crowd && crowd.setLocalLook(null); }
             if (lookAuto) return;
             lookAuto = true;
             const saved = readJSON('party-look');
-            if (saved && Array.isArray(saved.look) && saved.look.length === 7 && isDefault(L) && !isDefault(saved.look)) net.send({ t: 'look', look: saved.look });
+            if (saved && Array.isArray(saved.look) && (saved.look.length === 7 || saved.look.length === 8) && isDefault(L) && !isDefault(saved.look)) net.send({ t: 'look', look: saved.look });
         }
         $('lookBtn').addEventListener('click', () => $('lookPanel').classList.contains('hidden') ? openLook() : closeLook());
         $('lookBody').addEventListener('click', ev => {
             const b = ev.target.closest('[data-k]'); if (!b || !draft) return;
-            draft[+b.dataset.k] = +b.dataset.v; markLook(); crowd.setLocalLook(lookToSend());
+            draft[+b.dataset.k] = +b.dataset.v; markLook(); crowd && crowd.setLocalLook(lookToSend());
         });
         $('lookSave').addEventListener('click', () => closeLook(true));
         $('lookCancel').addEventListener('click', () => closeLook());
@@ -644,8 +750,9 @@
         if (!viewOnly) setInterval(() => {
             if (!placed || hall.mode !== 'follow' || autoPhase()) return;
             const L = hall.getLocal();
-            if (L.moving && emote) { emote = 0; document.querySelectorAll('#emotes button').forEach(x => x.classList.remove('on')); }
-            const a = L.moving ? 1 : curEmote();
+            // القفزة تشتغل حتى وهو يمشي؛ باقي الحركات تنلغي مع المشي
+            if (L.moving && emote && emote !== JUMP) { emote = 0; document.querySelectorAll('#emotes button').forEach(x => x.classList.remove('on')); }
+            const a = L.moving && curEmote() !== JUMP ? 1 : curEmote();
             if (!a) document.querySelectorAll('#emotes button.on').forEach(x => x.classList.remove('on'));
             const p = [Math.round(L.x * 100) / 100, Math.round(L.z * 100) / 100, Math.round(L.ry * 100) / 100, a];
             if (lastSent && Math.abs(p[0] - lastSent[0]) < .02 && Math.abs(p[1] - lastSent[1]) < .02 && Math.abs(p[2] - lastSent[2]) < .03 && p[3] === lastSent[3]) return;
