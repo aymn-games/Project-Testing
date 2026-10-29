@@ -377,7 +377,8 @@ function createRoomManager(opts) {
         if (WALK_KIND[room.phase] || room.phase === 'reveal') walk = room.walk;
         var sc = room.sched;
         return { ok: true, p: room.phase, at: room.phaseAt, until: room.phaseUntil, walk: walk, cut: room.cakeCut,
-            sched: sc ? { openAt: openAtOf(sc), startAt: sc.startAt, endAt: endAtOf(sc), tzOffsetMin: sc.tzOffsetMin } : null,
+            // الجدول كامل (المدد مو سرية) — صفحة المذيع تعبّي منه نموذج «تعديل الأوقات»
+            sched: sc ? Object.assign({ openAt: openAtOf(sc), endAt: endAtOf(sc) }, sc) : null,
             waitGirl: waitingGirl(room) };
     }
     function girlOnline(room) { return room.players.some(function (p) { return p.role === 'girl' && p.online; }); }

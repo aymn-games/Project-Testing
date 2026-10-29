@@ -633,7 +633,8 @@ test('room starts closed; guests refused with closed, girl allowed; lobby opens 
     var s = schedRoom();
     assert.equal(s.ph(), 'closed');
     var sc = s.mgr.phaseOf(s.code).sched;
-    assert.deepEqual(sc, { openAt: s.start - 15 * MIN, startAt: s.start, endAt: s.start + 60 * MIN, tzOffsetMin: 180 });
+    assert.deepEqual(sc, { openAt: s.start - 15 * MIN, startAt: s.start, endAt: s.start + 60 * MIN, tzOffsetMin: 180,
+        durationMin: 60, openBeforeMin: 15, danceMin: 7, writeMin: 3, cakeDanceMin: 5, cutTimeoutSec: 60 }, 'host page prefills its edit form from this');
     assert.equal(s.mgr.join(s.code, { name: 'ريم' }).err, 'closed');
     assert.equal(girlIn(s).ok, true);
     assert.equal(s.mgr.fullState(s.code, null, false).length, 0, 'girl hidden from untrusted viewers while closed');
