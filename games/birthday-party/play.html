@@ -324,25 +324,29 @@
         if (!viewOnly) $('hint').querySelector('.touch').textContent = 'العصا للمشي · اسحب للف الكاميرا';
         // الشخصيات: الهيكل العظمي (crowd-rig) أو الكلاسيكية (crowd3d) حسب إعداد الغرفة room.chars.
         // التبديل وسط الحفلة: نشيل القديمة ونبني الجديدة من آخر قائمة حضور وآخر مواقع وصلت
-        let crowd = rigMod.createCrowd(hall.scene, { floorAt: hall.floorAt }), crowdKind = 'rig', localGetter = null, lastPlayers = null;
+        // تنبني أول ما توصل قائمة الحضور (عشان الغرفة الكلاسيكية ما تبني الجديدة على الفاضي)
+        let crowd = null, crowdKind = null, wantKind = null, localGetter = null, lastPlayers = null;
         const lastRows = new Map(); // n → آخر [n, x, z, ry, a]
-        crowd.prewarm(hall.compile);
         if (params.has('debug')) { window.__hall = hall; Object.defineProperty(window, '__crowd', { get: () => crowd, configurable: true }); }
         async function useCrowd(kind) {
             kind = kind === 'classic' ? 'classic' : 'rig';
-            if (kind === crowdKind) return;
-            crowdKind = kind;
-            const mod = kind === 'classic' ? await import('./crowd3d.js') : rigMod;
-            if (crowdKind !== kind) return; // تبدّل مرة ثانية وهو يحمّل
+            if (kind === (wantKind || crowdKind)) return;
+            wantKind = kind;
+            let mod;
+            try { mod = kind === 'classic' ? await import('./crowd3d.js') : rigMod; }
+            catch (err) { log('[birthday-party] الشخصيات الكلاسيكية ما تحمّلت', err); if (wantKind === kind) wantKind = null; if (!crowd) useCrowd('rig'); return; }
+            if (wantKind !== kind) return; // تبدّل مرة ثانية وهو يحمّل
+            wantKind = null; crowdKind = kind;
             const next = mod.createCrowd(hall.scene, { floorAt: hall.floorAt });
             next.prewarm(hall.compile);
-            crowd.dispose(); crowd = next;
+            if (crowd) crowd.dispose();
+            crowd = next;
             if (localGetter) crowd.setLocal(myN, localGetter);
             if (lastPlayers) crowd.sync(lastPlayers);
             if (lastRows.size) crowd.apply([...lastRows.values()], serverNow(), true);
-            if (draft && !$('lookPanel').classList.contains('hidden')) crowd.setLocalLook(lookToSend());
-            else if (pendingLook) crowd.setLocalLook(pendingLook.split(',').map(Number));
-            applied = null; applyPhase(); // يرجّع المشي التلقائي والسبوت لايت
+            if (draft && !$('lookPanel').classList.contains('hidden')) crowd && crowd.setLocalLook(lookToSend());
+            else if (pendingLook) crowd && crowd.setLocalLook(pendingLook.split(',').map(Number));
+            crowdPhase(); // يرجّع المشي التلقائي والسبوت لايت
         }
         const music = createMusic();
         const roles = new Map();
@@ -375,6 +379,26 @@
         addEventListener('pointerdown', () => { touched = true; $('soundTip').classList.add('hidden'); }, { capture: true, once: true });
         $('soundTip').addEventListener('click', () => $('soundTip').classList.add('hidden'));
 
+        // المشي التلقائي للمرحلة الحالية (نفس الحساب على كل الجوالات): الأهداف ووقت البداية والنهاية والمسار
+        function walkOf() {
+            const p = phase.p, wf = WALK[p];
+            if (!wf || !phase.walk) return null;
+            const walk = {}; for (let i = 0; i + 2 < phase.walk.length; i += 3) walk[phase.walk[i]] = [phase.walk[i + 1] / 100, phase.walk[i + 2] / 100];
+            const t0 = phase.at, t1 = wf > 1 ? phase.at + wf : phase.at + (phase.until - phase.at) * wf;
+            const route = (n, st, tg) => p === 'entrance' ? pathFor(n, st, tg) : [st, tg];
+            return { walk, t0, t1, route };
+        }
+        // اللي يخص الشخصيات بس من المرحلة (المسارات والسبوت لايت) — ينعاد لحاله بعد تبديل الشخصيات
+        function crowdPhase() {
+            if (!crowd || !phase) return;
+            const p = phase.p, W = walkOf();
+            if (W) {
+                const paths = {};
+                for (const n of Object.keys(W.walk)) { if (+n === myN) continue; const st = crowd.posOf(+n); if (st) paths[n] = W.route(+n, st, W.walk[n]); }
+                crowd.setAutoPaths(paths, W.t0, W.t1, role => role === 'girl' && !['cakeWalk', 'photo'].includes(p) ? 0 : Math.PI);
+            } else crowd.setAutoPaths(null, serverNow());
+            crowd.setGirlFx(!['lobby', 'entrance', 'closed', 'ended'].includes(p));
+        }
         function applyPhase() {
             if (!phase || !gotAll) return;
             const now = serverNow(), p = phase.p, key = p + ':' + phase.at, since = now - phase.at;
@@ -402,13 +426,10 @@
                 if (p === 'celebrate' && celebKey !== key) { celebKey = key; hall.celebrate(Math.max(3, (phase.until - now) / 1000), { strobe: true }); music.play('cake'); }
             }
             hall.setPhotoCam(p === 'photo');
-            const wf = WALK[p];
-            if (wf && phase.walk) {
-                const walk = {}; for (let i = 0; i + 2 < phase.walk.length; i += 3) walk[phase.walk[i]] = [phase.walk[i + 1] / 100, phase.walk[i + 2] / 100];
-                const t0 = phase.at, t1 = wf > 1 ? phase.at + wf : phase.at + (phase.until - phase.at) * wf, paths = {};
-                const route = (n, st, tg) => p === 'entrance' ? pathFor(n, st, tg) : [st, tg];
-                for (const n of Object.keys(walk)) { if (+n === myN) continue; const st = crowd.posOf(+n); if (st) paths[n] = route(+n, st, walk[n]); }
-                crowd.setAutoPaths(paths, t0, t1, role => role === 'girl' && !['cakeWalk', 'photo'].includes(p) ? 0 : Math.PI);
+            crowdPhase();
+            const W = walkOf();
+            if (W) {
+                const { walk, t0, t1, route } = W;
                 if (!viewOnly && myN != null && walk[myN]) {
                     // بداية المسار = مكاني عند السيرفر (نفس اللي تحسبه باقي الجوالات)، مو مكاني المحلي
                     myTarget = walk[myN];
@@ -417,7 +438,6 @@
                     else hall.setAutoPath(route(myN, st, myTarget), t0, t1, serverNow, facing(p));
                 }
             } else {
-                crowd.setAutoPaths(null, now);
                 if (!viewOnly) {
                     hall.setAutoPath(null);
                     // انتهى المشي (أو تخطاه المذيع): السيرفر حطنا على مكاننا، فنثبّت نفس المكان
@@ -448,7 +468,6 @@
             // التفاعلات بكل وقت (إلا قبل فتح الباب وبعد النهاية)، ومطر القلوب لصاحبة الحفلة بعد الافتتاح
             $('reacts').classList.toggle('hidden', viewOnly || p === 'closed' || p === 'ended');
             rainShown = isGirl && !preShow && p !== 'ended'; buildReacts();
-            crowd.setGirlFx(!preShow && p !== 'ended');
             updateLookBtn();
             $('wishBtn').classList.toggle('hidden', viewOnly || isGirl || p !== 'wishWrite');
             if (p !== 'wishWrite') $('wishBox').classList.add('hidden');
@@ -516,7 +535,7 @@
         }
         hall.addTicker(dt => {
             const now = serverNow();
-            crowd.update(dt, hall.camera, now);
+            if (crowd) crowd.update(dt, hall.camera, now);
             rainTick(now);
             if (!phase) return;
             // الافتتاح: عد تنازلي 3-2-1 ثم الستارة تنفتح مع ألعاب نارية
@@ -537,15 +556,16 @@
                 if (m.t === 'welcome') {
                     myN = m.n; myRole = m.role; myKind = m.kind || 'quick'; buildEmotes(); buildReacts(); updateLookBtn();
                     localGetter = () => Object.assign(hall.getLocal(), { emote: curEmote() });
-                    crowd.setLocal(myN, localGetter);
+                    if (crowd) crowd.setLocal(myN, localGetter);
                     // حفظ شكله وانقطع قبل ما يوصل: نعيد إرساله
                     if (pendingLook) net.send({ t: 'look', look: pendingLook.split(',').map(Number) });
                 }
                 else if (m.t === 'room') {
                     m.room.players.forEach(r => roles.set(r[0], r[2]));
                     girlOn = m.room.players.some(r => r[2] === 'girl' && r[4]);
-                    lastPlayers = m.room.players; crowd.sync(m.room.players);
-                    if (m.room.chars) useCrowd(m.room.chars);
+                    lastPlayers = m.room.players;
+                    if (crowd) crowd.sync(m.room.players);
+                    useCrowd(m.room.chars);
                     const mine = myN != null ? m.room.players.find(r => r[0] === myN) : null;
                     if (mine) onMyLook(mine[5]);
                     if (m.room.girlName) { $('title').textContent = 'حفلة ' + m.room.girlName; hall.setName(m.room.girlName); }
@@ -556,14 +576,14 @@
                     const rows = unpackRows(m.d);
                     if (m.t === 'all') lastRows.clear();
                     rows.forEach(r => lastRows.set(r[0], r));
-                    crowd.apply(rows, m.now, m.t === 'all');
+                    if (crowd) crowd.apply(rows, m.now, m.t === 'all');
                     // أول مرة نعرف مكاننا من السيرفر ← نبدأ وضع الشخصية
                     const mine = myN != null ? rows.find(x => x[0] === myN) : null;
                     if (mine) myServer = [mine[1], mine[2]];
                     if (!placed && mine) { placed = true; hall.setFollow({ x: mine[1], z: mine[2], ry: mine[3] }); }
                     if (m.t === 'all' && !gotAll) { gotAll = true; applied = null; applyPhase(); }
-                } else if (m.t === 'reacts') { for (let i = 0; i + 1 < m.d.length; i += 2) crowd.react(m.d[i], m.d[i + 1]); }
-                else if (m.t === 'rain') { rainAt = m.at; if (serverNow() - m.at < 4000) crowd.rain(m.at); }
+                } else if (m.t === 'reacts') { if (crowd) for (let i = 0; i + 1 < m.d.length; i += 2) crowd.react(m.d[i], m.d[i + 1]); }
+                else if (m.t === 'rain') { rainAt = m.at; clearTimeout(rainRetry); rainTick(serverNow(), true); if (crowd && serverNow() - m.at < 4000) crowd.rain(m.at); }
                 else if (m.t === 'err') {
                     if (m.err === 'resume' || m.err === 'nocode') { writeJSON('party-me', null); location.replace('join.html?code=' + code); }
                     else if (m.err === 'kicked') { net.close(); writeJSON('party-me', null); closeLook(); $('kicked').classList.remove('hidden'); }
@@ -571,7 +591,7 @@
                     else if (m.err === 'disabled') { $('netBad').textContent = 'الحفلات متوقفة حالياً'; $('netBad').classList.remove('hidden'); }
                     else if (m.of === 'wish') { $('wishStatus').textContent = m.err === 'shown' ? 'تهنئتك انعرضت خلاص 💖' : m.err === 'empty' ? 'اكتب تهنئتك أول' : 'ما وصلت، جرّب مرة ثانية'; $('wishSend').disabled = false; }
                     else if (m.of === 'next' || m.of === 'cut') { $(m.of === 'next' ? 'nextBtn' : 'cutBtn').disabled = false; }
-                    else if (m.of === 'rain') rainTick(serverNow(), true);
+                    else if (m.of === 'rain') { if (m.at) rainAt = m.at; clearTimeout(rainRetry); rainTick(serverNow(), true); }
                 }
             },
         });
@@ -631,7 +651,7 @@
 
         // ---- التفاعلات: إيموجي يطير فوق راسك عند الكل (السيرفر يحدد 2/ث)، ولصاحبة الحفلة 3 زيادة + مطر القلوب ----
         const REACT_NAMES = ['قلب', 'ابتسامة', 'ضحك', 'احتفال', 'تاج', 'حب', 'لمعة'];
-        let rainShown = false, rainAt = 0, reactsKey = '';
+        let rainShown = false, rainAt = 0, rainRetry = 0, reactsKey = '';
         function buildReacts() {
             const n = myRole === 'girl' ? REACTS.length : 4, key = n + ':' + rainShown;
             if (key === reactsKey) return; reactsKey = key;
@@ -641,7 +661,8 @@
         }
         $('reacts').addEventListener('click', ev => {
             const b = ev.target.closest('button'); if (!b || tipShown) return;
-            if (b.id === 'rainBtn') { if (!b.disabled) { b.disabled = true; net.send({ t: 'rain' }); } return; }
+            // لو الرسالة ضاعت (انقطاع) ما يبقى الزر مقفل للأبد
+            if (b.id === 'rainBtn') { if (!b.disabled) { b.disabled = true; net.send({ t: 'rain' }); clearTimeout(rainRetry); rainRetry = setTimeout(() => rainTick(serverNow(), true), 4000); } return; }
             net.send({ t: 'react', e: REACTS[+b.dataset.r] });
         });
         // عدّاد الانتظار على زر المطر (مرة كل 20ث)
@@ -703,13 +724,13 @@
                 const L = lookToSend();
                 net.send({ t: 'look', look: L }); writeJSON('party-look', { look: L });
                 // المعاينة تبقى لين يرجع الشكل من السيرفر (أو 4 ثواني لو قصّه السيرفر لشي ثاني)
-                pendingLook = L.join(); clearTimeout(pendingT); pendingT = setTimeout(() => { pendingLook = null; crowd.setLocalLook(null); }, 4000);
-            } else if (!pendingLook) crowd.setLocalLook(null);
+                pendingLook = L.join(); clearTimeout(pendingT); pendingT = setTimeout(() => { pendingLook = null; crowd && crowd.setLocalLook(null); }, 4000);
+            } else if (!pendingLook) crowd && crowd.setLocalLook(null);
         }
         // شكلي من السيرفر (الصف السادس في room). أول مرة: لو السيرفر ما عنده شكل لي والجوال حافظ شكل، نرسله
         function onMyLook(L) {
             myLook = L;
-            if (pendingLook && Array.isArray(L) && L.join() === pendingLook) { pendingLook = null; clearTimeout(pendingT); crowd.setLocalLook(null); }
+            if (pendingLook && Array.isArray(L) && L.join() === pendingLook) { pendingLook = null; clearTimeout(pendingT); crowd && crowd.setLocalLook(null); }
             if (lookAuto) return;
             lookAuto = true;
             const saved = readJSON('party-look');
@@ -718,7 +739,7 @@
         $('lookBtn').addEventListener('click', () => $('lookPanel').classList.contains('hidden') ? openLook() : closeLook());
         $('lookBody').addEventListener('click', ev => {
             const b = ev.target.closest('[data-k]'); if (!b || !draft) return;
-            draft[+b.dataset.k] = +b.dataset.v; markLook(); crowd.setLocalLook(lookToSend());
+            draft[+b.dataset.k] = +b.dataset.v; markLook(); crowd && crowd.setLocalLook(lookToSend());
         });
         $('lookSave').addEventListener('click', () => closeLook(true));
         $('lookCancel').addEventListener('click', () => closeLook());
@@ -729,8 +750,9 @@
         if (!viewOnly) setInterval(() => {
             if (!placed || hall.mode !== 'follow' || autoPhase()) return;
             const L = hall.getLocal();
-            if (L.moving && emote) { emote = 0; document.querySelectorAll('#emotes button').forEach(x => x.classList.remove('on')); }
-            const a = L.moving ? 1 : curEmote();
+            // القفزة تشتغل حتى وهو يمشي؛ باقي الحركات تنلغي مع المشي
+            if (L.moving && emote && emote !== JUMP) { emote = 0; document.querySelectorAll('#emotes button').forEach(x => x.classList.remove('on')); }
+            const a = L.moving && curEmote() !== JUMP ? 1 : curEmote();
             if (!a) document.querySelectorAll('#emotes button.on').forEach(x => x.classList.remove('on'));
             const p = [Math.round(L.x * 100) / 100, Math.round(L.z * 100) / 100, Math.round(L.ry * 100) / 100, a];
             if (lastSent && Math.abs(p[0] - lastSent[0]) < .02 && Math.abs(p[1] - lastSent[1]) < .02 && Math.abs(p[2] - lastSent[2]) < .03 && p[3] === lastSent[3]) return;

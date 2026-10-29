@@ -408,7 +408,8 @@
     const segValue = el => (el.querySelector('button.on') || el.querySelector('button')).dataset.v;
     const segSet = (el, v) => el.querySelectorAll('button').forEach(b => { const on = b.dataset.v === v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
     $('cChars').addEventListener('click', e => { const b = e.target.closest('button'); if (b) segSet($('cChars'), b.dataset.v); });
-    $('rChars').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.classList.contains('on')) return; segSet($('rChars'), b.dataset.v); net.send({ t: 'chars', v: b.dataset.v }); });
+    // ما نغيّر الزر محلياً: ينحدّث لما ترجع قائمة الحضور من السيرفر بالقيمة الجديدة
+    $('rChars').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.classList.contains('on')) return; net.send({ t: 'chars', v: b.dataset.v }); });
 
     // ---- التحكم بالعرض ----
     let phase = null;

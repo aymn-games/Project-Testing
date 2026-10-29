@@ -617,6 +617,7 @@ test('heart rain from the girl reaches everyone; guests refused', async function
     var g = await client(port); g.send({ t: 'join', code: r.code, name: 'ريم' }); await g.wait(function (x) { return x.t === 'welcome'; });
     await sleep(1100); g.send({ t: 'rain' });
     assert.equal((await g.wait(function (x) { return x.t === 'err' && x.of === 'rain'; })).err, 'role');
+    var mg = party._mgr; mg.start(r.code); mg.skip(r.code, 'entrance'); mg.skip(r.code, 'reveal');
     gl.send({ t: 'rain' });
     var m = await g.wait(function (x) { return x.t === 'rain'; });
     assert.ok(m.at > 0);

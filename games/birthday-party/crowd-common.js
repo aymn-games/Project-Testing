@@ -33,6 +33,7 @@ export function resolveLook(n, role, look) {
 // شخصية اللاعب نفسه تُقرأ مباشرة من getLocal(). وقت المشي التلقائي (setAutoPaths) كل شخصية تمشي
 // على مسار يحسبه الجوال نفسه بتوقيت السيرفر — نفس الشي على كل الجوالات بدون إرسال حركة.
 export const DELAY_MS = 150;
+const JUMP_A = 6; // القفزة تشتغل حتى وقت المشي
 export const lerpAngle = (a, b, k) => { let d = b - a; d = Math.atan2(Math.sin(d), Math.cos(d)); return a + d * k; };
 
 export function createMotion(chars) {
@@ -73,12 +74,12 @@ export function createMotion(chars) {
     let moving;
     const ap = autoPaths && autoPaths.map[c.n];
     if (c.n === localN && getLocal) {
-      const L = getLocal(); c.x = L.x; c.z = L.z; c.ry = L.ry; moving = L.moving; c.run = L.running; c.anim = moving ? 1 : (L.emote || 0);
+      const L = getLocal(); c.x = L.x; c.z = L.z; c.ry = L.ry; moving = L.moving; c.run = L.running; c.anim = L.emote === JUMP_A ? JUMP_A : moving ? 1 : (L.emote || 0);
     } else if (ap) {
       const f = Math.max(0, Math.min(1, (serverNowMs - autoPaths.t0) / Math.max(1, autoPaths.t1 - autoPaths.t0))), p = pathAt(ap, f);
       c.x = p[0]; c.z = p[1]; moving = f > 0 && f < 1; if (moving) c.ry = lerpAngle(c.ry, p[2], 1 - Math.exp(-dt * 10));
       else if (f >= 1 && autoPaths.endRy) c.ry = lerpAngle(c.ry, autoPaths.endRy(c.role), 1 - Math.exp(-dt * 6));
-      c.run = false; c.anim = moving ? 1 : 0;
+      c.run = false; c.anim = moving ? 1 : 0; c.speed = ap.len / Math.max(.1, (autoPaths.t1 - autoPaths.t0) / 1000);
     } else {
       // نلقى العيّنتين اللي يقع بينهم وقت العرض
       const b = c.buf; let a0 = b[0], a1 = b[b.length - 1];
@@ -92,7 +93,7 @@ export function createMotion(chars) {
       const ox = c.x, oz = c.z;
       c.x += (tx - c.x) * sm; c.z += (tz - c.z) * sm; c.ry = lerpAngle(c.ry, a1.ry, 1 - Math.exp(-dt * 10));
       c.speed = dt > 0 ? Math.hypot(c.x - ox, c.z - oz) / dt : 0;
-      c.run = false; c.anim = moving ? 1 : (a1.a || 0);
+      c.run = false; c.anim = a1.a === JUMP_A ? JUMP_A : moving ? 1 : (a1.a || 0);
     }
     c.moving = moving;
     return moving;

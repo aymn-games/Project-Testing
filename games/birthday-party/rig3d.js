@@ -447,7 +447,7 @@ export function makeRig({ look, role = 'guest', n = 0 } = {}) {
     const next = action(a); next.reset().setEffectiveTimeScale(a === 1 ? speed : 1).setEffectiveWeight(1).play();
     if (curAction && curAction !== next) curAction.crossFadeTo(next, FADE, false);
     // نسخة قديمة من الحركة (قبل تحميل المسجّلة) تختفي بعد الـ fade
-    const old = curAction; if (old && old.getClip() !== next.getClip()) setTimeout(() => { if (old !== curAction) old.stop(); }, FADE * 1000 + 50);
+    const old = curAction; if (old && old.getClip() !== next.getClip()) setTimeout(() => { if (old !== curAction) { old.stop(); if (!Object.values(actions).includes(old)) mixer.uncacheAction(old.getClip(), body); } }, FADE * 1000 + 50);
     cur = a; curAction = next;
   }
   function setSpeed(mps) { speed = Math.max(.6, Math.min(1.9, mps / 1.3)); if (cur === 1 && curAction) curAction.setEffectiveTimeScale(speed); }
@@ -537,7 +537,7 @@ export function makeRig({ look, role = 'guest', n = 0 } = {}) {
   function dispose() {
     mixer.stopAllAction(); mixer.uncacheRoot(body);
     for (const m of [bodyMesh, gear, hat, strands, skirt]) clearMesh(m);
-    headGeo.dispose();
+    headGeo.dispose(); skeleton.dispose();
     [bodyMat, gearMat, hairMat, skirtMat, headMat, hatMat].forEach(m => m && m.dispose());
     if (gown) gown.dispose(); if (crown) crown.dispose();
     root.removeFromParent();

@@ -104,7 +104,7 @@ export function createCrowd(scene, { floorAt = () => 0, clipsBase = './anims/' }
       const rig = c.rig;
       if (!rig || !c.online || !c.ready) { if (rig) rig.root.visible = false; blobs.setMatrixAt(c.slot, zero); continue; }
       const moving = motion.step(c, dt, serverNowMs, localN, getLocal);
-      const an = moving ? 1 : (c.anim || 0);
+      const an = c.anim === 6 ? 6 : moving ? 1 : (c.anim || 0);
       c.spin = an === 5 ? c.spin + dt * Math.PI * 2 / 1.2 : 0;
       rig.play(an);
       if (moving) rig.setSpeed(c.n === localN ? (c.run ? 3 : 1.5) : (c.speed || 1.3));

@@ -210,12 +210,12 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
       if (!c.online || !c.ready) { hide(c); continue; }
       const moving = motion.step(c, dt, serverNowMs, localN, getLocal);
       c.phase += dt * (moving ? (c.run ? 13 : 9) : 2);
-      const an = moving ? 1 : (c.anim || 0), dance = an === 2 || an === 9 || an === 10, L = c.L || (c.L = classic(resolveLook(c.n, c.role, c.look)));
+      const an = c.anim === 6 ? 6 : moving ? 1 : (c.anim || 0), dance = an === 2 || an === 9 || an === 10, L = c.L || (c.L = classic(resolveLook(c.n, c.role, c.look)));
       if (dance) c.phase += dt * 5;
       else if (an >= 5) c.phase += dt * 4;
       // 5 لفّة كاملة كل 1.2ث · 6 قفز · 8 تمايل (الجسم يميل)
       c.spin = an === 5 ? (c.spin || 0) + dt * Math.PI * 2 / 1.2 : 0;
-      const y = floorAt(c.x, c.z), bob = moving ? Math.abs(Math.sin(c.phase)) * .05 : dance ? Math.abs(Math.sin(c.phase)) * .14
+      const y = floorAt(c.x, c.z), bob = moving && an !== 6 ? Math.abs(Math.sin(c.phase)) * .05 : dance ? Math.abs(Math.sin(c.phase)) * .14
         : an === 6 ? Math.abs(Math.sin(c.phase * 1.3)) * .35 : an === 7 ? Math.abs(Math.sin(c.phase)) * .04 : Math.sin(c.phase) * .01;
       const roll = dance ? Math.sin(c.phase * .5) * .16 : an === 8 ? Math.sin(c.phase * .8) * .22 : 0;
       const scale = c.role === 'girl' ? 1.08 : 1;
@@ -247,6 +247,7 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
         else if (an === 5) { ax = 0; az = sd * 1.35; }
         else if (an === 6) { ax = -2.85; az = sd * (.3 + Math.abs(Math.sin(c.phase * 1.3)) * .25); lx = -Math.abs(Math.sin(c.phase * 1.3)) * .5 * (sd > 0 ? 1 : .6); }
         else if (an === 7) { ax = -2.05; az = -sd * .62; }
+        else if (an === 11) { ax = -.35; az = sd * .95; } // تحية الأميرة: الإيدين تمسك الفستان
         else if (an === 8) { ax = -.3 + Math.sin(c.phase * .8 + sd) * .5; az = sd * (.5 + Math.sin(c.phase * .8) * .3); lx = Math.sin(c.phase * .8) * .15; }
         if (an === 3 || an === 4) c.phase += dt * .5;
         m4.compose(v.set(sd * .11, .42, 0), q.setFromEuler(e.set(lx, 0, 0)), s1.set(legW, 1, legW)); parts.leg.setMatrixAt(j, m4.premultiply(base));

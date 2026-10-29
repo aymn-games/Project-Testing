@@ -919,11 +919,13 @@ test('girl reactions are hidden from guests before reveal', function () {
     assert.equal(g.ok, true);
 });
 
-test('rain: girl only, 20s cooldown', function () {
+test('rain: girl only, after the reveal, 20s cooldown that reports the last rain', function () {
     var s = lookRoom(), q = s.mgr.join(s.code, { name: 'ريم' }), g = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
     assert.equal(s.mgr.rain(s.code, q.id).err, 'role');
+    assert.equal(s.mgr.rain(s.code, g.id).err, 'phase', 'before the reveal it would show she is there');
+    s.mgr.start(s.code); s.mgr.skip(s.code, 'entrance'); s.mgr.skip(s.code, 'reveal');
     var r = s.mgr.rain(s.code, g.id); assert.equal(r.ok, true); assert.equal(r.at, s.c.t.now);
-    s.c.t.now += 19000; assert.equal(s.mgr.rain(s.code, g.id).err, 'cooldown');
+    s.c.t.now += 19000; var cd = s.mgr.rain(s.code, g.id); assert.equal(cd.err, 'cooldown'); assert.equal(cd.at, r.at);
     s.c.t.now += 1000; assert.equal(s.mgr.rain(s.code, g.id).ok, true);
 });
 

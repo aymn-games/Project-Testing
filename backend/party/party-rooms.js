@@ -449,7 +449,8 @@ function createRoomManager(opts) {
     function rain(code, id) {
         var room = rooms[code]; if (!room) return fail('nocode');
         var p = playerOf(room, id); if (!p || p.role !== 'girl') return fail('role');
-        var t = now(); if (room.rainAt && t - room.rainAt < RAIN_COOLDOWN_MS) return fail('cooldown');
+        if (reactHidden(code, true)) return fail('phase'); // قبل الافتتاح يكشف إنها موجودة
+        var t = now(); if (room.rainAt && t - room.rainAt < RAIN_COOLDOWN_MS) { var f = fail('cooldown'); f.at = room.rainAt; return f; }
         room.rainAt = t; return { ok: true, at: t };
     }
     function setChars(code, v) { var room = rooms[code]; if (!room) return fail('nocode'); if (CHARS.indexOf(v) < 0) return fail('bad'); room.chars = v; return { ok: true }; }
@@ -551,6 +552,7 @@ function createRoomManager(opts) {
         if (rooms[o.code]) return fail('exists');
         var room = { chars: 'rig', reacts: [], players: [], walk: {}, slotN: 0, slotTotal: 0, wishes: [], wishSeq: 1, wishCur: -1, cakeCut: false, photoDone: false, startedAt: 0, banned: { users: {}, devs: {} }, sched: null, nextN: 1, phaseUntil: 0 };
         ROOM_KEYS.forEach(function (k) { if (o[k] !== undefined) room[k] = o[k]; });
+        if (CHARS.indexOf(room.chars) < 0) room.chars = 'rig';
         var t = now();
         room.players = o.players.map(function (q) {
             var p = { id: q.id, key: q.key, n: q.n, name: q.name, role: q.role, kind: q.kind, look: Array.isArray(q.look) ? q.look : LOOK_MAX.map(function () { return -1; }),

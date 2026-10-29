@@ -335,7 +335,7 @@ function handle(client, msg, t, ident) {
     if (t === 'rain') {
         if (client.role !== 'player' || !client.code) return send(client, { t: 'err', err: 'role', of: t });
         res = _mgr.rain(client.code, client.id);
-        if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
+        if (!res.ok) return send(client, { t: 'err', err: res.err, of: t, at: res.at });
         var enc = frame.encodeTextFrame(JSON.stringify({ t: 'rain', at: res.at }));
         roomClients(client.code).forEach(function (c) { sendRaw(c, enc); });
         return;

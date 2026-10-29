@@ -137,7 +137,7 @@ export function createGown(scene) {
     time += dt;
     if (!attached) { group.position.set(girl.x, girl.y, girl.z); group.rotation.set(0, girl.ry, girl.roll, 'YXZ'); group.scale.setScalar(girl.s); }
     // تمايل التنورة مع الرقص، وتنفتح وقت اللفّة
-    const an = girl.an, dancing = an === 2 || an === 8 || an === 6;
+    const an = girl.an, dancing = an === 2 || an === 8 || an === 6 || an === 9 || an === 10;
     skirt.rotation.y = dancing ? Math.sin(girl.phase) * .14 : Math.sin(time * .8) * .02;
     skirt.rotation.x = dancing ? Math.sin(girl.phase * .5) * .035 : 0;
     flare += ((an === 5 ? 1.16 : an === 2 ? 1.05 : 1) - flare) * (1 - Math.exp(-dt * 6));
