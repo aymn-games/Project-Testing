@@ -34,11 +34,11 @@ export const LOOK = {
 const FONT = '"IBM Plex Sans Arabic", sans-serif';
 
 const hash = n => { let h = (n * 2654435761) >>> 0; h ^= h >>> 13; h = Math.imul(h, 1274126177) >>> 0; return h ^ (h >>> 16); };
-// الشكل الفعلي: -1 (أو ما فيه شكل) ← الافتراضي المشتق من n
+// الشكل الفعلي: -1 (أو ما فيه شكل) ← الافتراضي المشتق من n. صاحبة الحفلة st = 0 دايماً (فستانها الفخم)
 export function resolveLook(n, role, look) {
   const h = hash(n), L = Array.isArray(look) ? look : [], pick = (i, def) => (Number.isInteger(L[i]) && L[i] >= 0 ? L[i] : def);
   return {
-    st: role === 'girl' ? 0 : pick(0, 0), // صاحبة الحفلة لابسة فستانها الفخم دايماً o: pick(1, role === 'girl' ? -1 : h % OUTFIT.length), s: pick(2, (h >>> 8) % SKIN.length),
+    st: role === 'girl' ? 0 : pick(0, 0), o: pick(1, role === 'girl' ? -1 : h % OUTFIT.length), s: pick(2, (h >>> 8) % SKIN.length),
     h: pick(3, (h >>> 12) % 6), hs: pick(4, role === 'girl' ? 1 : (h >>> 18) % 3), acc: pick(5, 0), fx: pick(6, 0),
   };
 }
