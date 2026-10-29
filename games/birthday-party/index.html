@@ -313,7 +313,8 @@
         $('viewBtn').href = 'play.html?code=' + state.code + '&view=1' + (state.viewKey ? '&vk=' + encodeURIComponent(state.viewKey) : '');
         $('playBtn').href = 'join.html?code=' + state.code + '&host=1';
     }
-    let listSig = '', girlOn = false;
+    // تأكيد الطرد يتذكر مين (n) — لو القائمة انبنت من جديد بين الضغطتين (أحد دخل أو طلع) ما يضيع
+    let listSig = '', girlOn = false, sureN = null, sureUntil = 0, sureT = 0;
     function renderList(room) {
         const ps = room.players, guests = ps.filter(p => p[2] === 'guest').length;
         girlOn = ps.some(p => p[2] === 'girl' && p[4]);
@@ -337,10 +338,15 @@
                 const k = document.createElement('button'); k.type = 'button'; k.className = 'kick'; k.textContent = 'طرد';
                 k.setAttribute('aria-label', 'طرد ' + name);
                 // التأكيد داخل اللوحة (نافذة confirm تطلع بالبث): ضغطة ثانية خلال 4 ثواني
-                let sureT = 0;
+                const sure = on => { k.classList.toggle('sure', on); k.textContent = on ? 'تأكيد الطرد؟' : 'طرد'; };
+                if (sureN === n && Date.now() < sureUntil) sure(true);
                 k.addEventListener('click', () => {
-                    if (!k.classList.contains('sure')) { k.classList.add('sure'); k.textContent = 'تأكيد الطرد؟'; sureT = setTimeout(() => { k.classList.remove('sure'); k.textContent = 'طرد'; }, 4000); return; }
-                    clearTimeout(sureT); k.disabled = true; net.send({ t: 'kick', n });
+                    if (!(sureN === n && Date.now() < sureUntil)) {
+                        sureN = n; sureUntil = Date.now() + 4000; sure(true); clearTimeout(sureT);
+                        sureT = setTimeout(() => { sureN = null; document.querySelectorAll('#list .kick.sure').forEach(b => { b.classList.remove('sure'); b.textContent = 'طرد'; }); }, 4000);
+                        return;
+                    }
+                    clearTimeout(sureT); sureN = null; k.disabled = true; net.send({ t: 'kick', n });
                 });
                 end.append(k);
             }
