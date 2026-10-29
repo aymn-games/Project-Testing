@@ -284,7 +284,7 @@ class Component extends DCLogic {
         if(!String(S.values.keyword||'').trim()) return this.toastMsg('اكتب كلمة الدخول');
         if(S.values.winPoints===''||+S.values.winPoints<10) return this.toastMsg('نقاط الفوز من 10 إلى 200');
         const values=this.readValues(); values.winPoints=Math.max(10,Math.min(200,+values.winPoints||30)); values.answerSec=+values.answerSec; values.keyword=String(values.keyword).trim();
-        WCH.writeJSON(WCH.keys.setup,values); this.props.onStart?.(values);
+        WCH.writeJSON(WCH.keys.setup,values); try{ localStorage.removeItem(WCH.keys.roster); localStorage.removeItem(WCH.keys.players); }catch(e){} this.props.onStart?.(values);
         this.setState({connOpen:true,connStep:0}); this.t1=setTimeout(()=>this.setState({connStep:1}),1600); this.t2=setTimeout(()=>{ location.href=GAME.lobbyUrl; },2400); },
       exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'),
       confirmExit:()=>{ location.href=GAME.libraryUrl; },
