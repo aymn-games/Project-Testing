@@ -444,3 +444,23 @@ test('hosted carries viewKey; peek with wrong vk hides the girl in lobby', async
     assert.equal((await h2.wait(function (x) { return x.t === 'hosted'; })).viewKey, hosted.viewKey, 'resent on host resume');
     r.h.close(); gl.close(); bad.close(); ok.close(); h2.close(); srv.close();
 });
+
+// ---- الحفظ: الغرف تنحفظ في المخزن، وboot يرجّعها بعد إعادة التشغيل ----
+test('rooms are saved to the store (batched) and boot restores saved rooms', async function () {
+    reset(); party._setEnabled(true);
+    var Database = require('better-sqlite3'), st = require('./party-store').createStore(new Database(':memory:'));
+    party._setStore(st);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var g = await client(port); g.send({ t: 'join', code: r.code, name: 'ريم' }); var wg = await g.wait(function (x) { return x.t === 'welcome'; });
+    await sleep(2600);
+    var saved = st.loadAll().find(function (o) { return o.code === r.code; });
+    assert.ok(saved, 'room saved'); assert.ok(saved.players.some(function (p) { return p.id === wg.id; }), 'player saved');
+    r.h.close(); g.close(); await sleep(200);
+    // «إعادة تشغيل»: الغرفة تنشال من الذاكرة، والمخزن يرجّعها
+    party._mgr.closeRoom(r.code);
+    party.boot();
+    assert.ok(party._mgr.getRoom(r.code), 'restored on boot');
+    var g2 = await client(port); g2.send({ t: 'resume', code: r.code, id: wg.id, key: wg.key });
+    assert.equal((await g2.wait(function (x) { return x.t === 'welcome'; })).n, wg.n);
+    g2.close(); srv.close(); party._setStore(null);
+});

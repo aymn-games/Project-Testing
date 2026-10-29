@@ -171,11 +171,17 @@ function createRoomManager(opts) {
         if (ph === 'cake') return room.sched ? sc.cutTimeoutSec * 1000 : 0;
         return FIXED_MS[ph] || 0;
     }
-    function setPhase(room, ph) {
-        var t = now(); room.phase = ph; room.phaseAt = t;
+    // at: وقت بداية المرحلة (الافتراضي الحين) — الرجوع بعد إعادة تشغيل يبدأ كل مرحلة فاتت بوقتها الصحيح
+    function setPhase(room, ph, at) {
+        var t = at || now(); room.phase = ph; room.phaseAt = t;
         var ms = durationOf(room, ph);
         room.phaseUntil = ms ? t + ms : 0;
-        var kind = WALK_KIND[ph];
+        buildWalk(room);
+        if (ph === 'entrance') room.startedAt = t;
+    }
+    // أهداف المشي التلقائي للمرحلة الحالية (لو لها مشي)
+    function buildWalk(room) {
+        var kind = WALK_KIND[room.phase];
         if (kind) {
             // أهداف المشي بترتيب n (نفس الترتيب عند الكل)
             room.walk = {}; room.slotN = 0;
@@ -183,10 +189,9 @@ function createRoomManager(opts) {
             room.slotTotal = room.players.filter(function (p) { return p.role !== 'girl' && p.online; }).length;
             room.players.slice().sort(function (a, b) { return (b.online - a.online) || a.n - b.n; }).forEach(function (p) { room.walk[p.n] = targetFor(room, p, kind); });
         }
-        if (ph === 'entrance') room.startedAt = t;
     }
     // الانتقال للمرحلة اللي بعد الحالية (مرة وحدة)
-    function advance(room) {
+    function advance(room, at) {
         var i = PHASES.indexOf(room.phase);
         if (i < 0 || i >= PHASES.length - 1) return false;
         var from = room.phase;
@@ -199,9 +204,9 @@ function createRoomManager(opts) {
         }
         if (from === 'cake') room.cakeCut = true;   // تخطي المذيع للكيكة = قص
         if (from === 'photo') room.photoDone = true;
-        setPhase(room, PHASES[i + 1]);
+        setPhase(room, PHASES[i + 1], at);
         // العرض بدون ولا رسالة ظاهرة: ما فيه شي ينتظر ← للكيكة على طول
-        if (room.phase === 'wishes') { room.wishCur = -1; if (!visibleWishes(room).length) advance(room); }
+        if (room.phase === 'wishes') { room.wishCur = -1; if (!visibleWishes(room).length) advance(room, at); }
         return true;
     }
     // مفاجأة الافتتاح: مكان صاحبة الحفلة مخفي قبل الافتتاح عن الضيوف، وعن شاشة العرض اللي ما معها مفتاح المذيع
@@ -213,7 +218,8 @@ function createRoomManager(opts) {
     function welcome(p) { return { ok: true, id: p.id, key: p.key, n: p.n, role: p.role, kind: p.kind }; }
 
     function createRoom(o) {
-        if (Object.keys(rooms).length >= maxRooms) return fail('busy');
+        // الحفلات اللي انتهت ما تحجز مكان (تبقى بس عشان الرجوع وحفظ الصورة والنقاط)
+        if (Object.keys(rooms).filter(function (c) { return rooms[c].phase !== 'ended'; }).length >= maxRooms) return fail('busy');
         var code; do { code = String(1000 + Math.floor(Math.random() * 9000)); } while (rooms[code]);
         var sched = null;
         if (o && o.schedule != null) { sched = cleanSchedule(o.schedule, now(), { creating: true }); if (!sched) return fail('schedule'); }
@@ -387,15 +393,16 @@ function createRoomManager(opts) {
         if (room.phase !== from || room.phase === 'free' || room.phase === 'ended') return fail('phase');
         advance(room); return { ok: true };
     }
-    function tick(code) {
+    // catchUp: رجوع بعد إعادة تشغيل — كل مرحلة فاتت تبدأ بوقتها حسب الساعة (مو «الحين»)
+    function tick(code, catchUp) {
         var room = rooms[code]; if (!room) return fail('nocode');
         var t = now(), sc = room.sched;
         if (room.phase === 'ended') return { ok: true, changed: false };
         // وقت النهاية يغلب كل شي، وين ما وصلت الحفلة
-        if (sc && t >= endAtOf(sc)) { setPhase(room, 'ended'); return { ok: true, changed: true }; }
-        if (room.phase === 'closed') return { ok: true, changed: !!(sc && t >= openAtOf(sc)) && (setPhase(room, 'lobby'), true) };
+        if (sc && t >= endAtOf(sc)) { setPhase(room, 'ended', catchUp ? endAtOf(sc) : 0); return { ok: true, changed: true }; }
+        if (room.phase === 'closed') return { ok: true, changed: !!(sc && t >= openAtOf(sc)) && (setPhase(room, 'lobby', catchUp ? openAtOf(sc) : 0), true) };
         if (room.phase === 'lobby') return { ok: true, changed: !!(sc && t >= sc.startAt && girlOnline(room)) && advance(room) };
-        if (room.phaseUntil && t >= room.phaseUntil) return { ok: true, changed: advance(room) };
+        if (room.phaseUntil && t >= room.phaseUntil) return { ok: true, changed: advance(room, catchUp ? room.phaseUntil : 0) };
         return { ok: true, changed: false };
     }
     // تعديل الجدول من المذيع (أي وقت): البداية وفتح الدخول بس قبل ما يبدأ الحفل، والمرحلة الشغالة
@@ -484,13 +491,47 @@ function createRoomManager(opts) {
         return { ok: true, players: players, durationMs: room.startedAt ? now() - room.startedAt : 0 };
     }
 
+    // ---- الحفظ (party-store) والرجوع بعد إعادة تشغيل السيرفر ----
+    // كل شي إلا المواقع (تتغيّر 8 مرات/ث) وحالة الإرسال — بعد الرجوع كل لاعب يتحط بمكان مرحلته
+    var ROOM_KEYS = ['code', 'token', 'girlKey', 'viewKey', 'girlName', 'createdAt', 'sched', 'phase', 'phaseAt', 'phaseUntil', 'nextN',
+        'wishes', 'wishSeq', 'wishCur', 'cakeCut', 'photoDone', 'startedAt', 'banned', 'pointsMsg', 'pointsAcked'];
+    function serialize(code) {
+        var room = rooms[code]; if (!room) return null;
+        var o = { v: 1 };
+        ROOM_KEYS.forEach(function (k) { if (room[k] !== undefined) o[k] = room[k]; });
+        o.players = room.players.map(function (p) {
+            var u = p.user ? { id: p.user.id, username: p.user.username, tiktok_username: p.user.tiktok_username, tiktok_verified: p.user.tiktok_verified } : null;
+            return { id: p.id, key: p.key, n: p.n, name: p.name, role: p.role, kind: p.kind, look: p.look, dev: p.dev, user: u };
+        });
+        return o;
+    }
+    function restore(o) {
+        if (!o || typeof o.code !== 'string' || !/^\d{4}$/.test(o.code) || !Array.isArray(o.players) || PHASES.indexOf(o.phase) < 0) return fail('bad');
+        if (rooms[o.code]) return fail('exists');
+        var room = { players: [], walk: {}, slotN: 0, slotTotal: 0, wishes: [], wishSeq: 1, wishCur: -1, cakeCut: false, photoDone: false, startedAt: 0, banned: { users: {}, devs: {} }, sched: null, nextN: 1, phaseUntil: 0 };
+        ROOM_KEYS.forEach(function (k) { if (o[k] !== undefined) room[k] = o[k]; });
+        var t = now();
+        room.players = o.players.map(function (q) {
+            var p = { id: q.id, key: q.key, n: q.n, name: q.name, role: q.role, kind: q.kind, look: Array.isArray(q.look) ? q.look : LOOK_MAX.map(function () { return -1; }),
+                dev: q.dev || null, user: q.user || null, online: false, offlineSince: t, x: 0, z: 0, ry: Math.PI, a: 0, lastMoveAt: t, dirty: true, ver: 1 };
+            room.nextN = Math.max(room.nextN, p.n + 1);
+            return p;
+        });
+        rooms[o.code] = room;
+        buildWalk(room);
+        room.players.forEach(function (p) { var w = room.walk[p.n]; if (w) { p.x = w[0]; p.z = w[1]; p.ry = facing(room.phase, p); } else place(room, p); });
+        // اللي فات وقت ما كان السيرفر طافي
+        for (var k = 0; k < 30 && tick(o.code, true).changed; k++) { }
+        return { ok: true, code: o.code };
+    }
+
     function closeRoom(code) { if (!rooms[code]) return fail('nocode'); delete rooms[code]; return { ok: true }; }
     function getRoom(code) { return rooms[code] || null; }
 
     return {
         createRoom: createRoom, hostResume: hostResume, join: join, resume: resume, leave: leave,
         move: move, takeDelta: takeDelta, deltaFor: deltaFor, fullState: fullState, roster: roster,
-        closeRoom: closeRoom, rooms: function () { return Object.keys(rooms); },
+        closeRoom: closeRoom, rooms: function () { return Object.keys(rooms); }, serialize: serialize, restore: restore,
         getRoom: getRoom, pointsId: pointsId, phaseOf: phaseOf, start: start, skip: skip, tick: tick,
         setLook: setLook, kick: kick, setSchedule: setSchedule, addWish: addWish, hideWish: hideWish, nextWish: nextWish, prevWish: prevWish, wishesState: wishesState, wishList: wishList, cut: cut, pointsList: pointsList
     };

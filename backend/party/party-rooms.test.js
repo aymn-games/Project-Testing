@@ -784,3 +784,77 @@ test('join refused with ended after the party ends', function () {
     assert.equal(s.mgr.join(s.code, { name: 'ريم' }).err, 'ended');
     assert.equal(girlIn(s).err, 'ended');
 });
+
+// ---- الحفظ والرجوع بعد إعادة تشغيل السيرفر ----
+// مدير جديد بنفس الساعة = سيرفر رجع يشتغل
+function reboot(s) {
+    var data = JSON.parse(JSON.stringify(s.mgr.serialize(s.code)));
+    var mgr2 = createRoomManager({ now: function () { return s.c.t.now; }, validateSession: function () { return null; } });
+    var r = mgr2.restore(data);
+    return { r: r, mgr: mgr2, ph: function () { return mgr2.phaseOf(s.code).p; } };
+}
+
+test('serialize/restore round-trips players, looks, wishes, keys, kicked bans and schedule', function () {
+    var s = schedRoom(), g = girlIn(s), q, k;
+    s.at(s.start - 15 * MIN);
+    q = s.mgr.join(s.code, { name: 'ريم', dev: 'aaaabbbbcccc' }); k = s.mgr.join(s.code, { name: 'مزعج', dev: 'ddddeeeeffff' });
+    s.mgr.setLook(s.code, g.id, [0, 3, 2, 1, 2, 3, 1]);
+    s.mgr.kick(s.code, k.n);
+    s.at(s.start); ['entrance', 'reveal', 'dance', 'gather'].forEach(function (p) { s.mgr.skip(s.code, p); });
+    s.mgr.addWish(s.code, q.id, 'كل عام وانتي بخير');
+    var b = reboot(s);
+    assert.equal(b.r.ok, true); assert.equal(b.ph(), 'wishWrite');
+    assert.deepEqual(b.mgr.phaseOf(s.code).sched, s.mgr.phaseOf(s.code).sched);
+    var room = b.mgr.getRoom(s.code), old = s.mgr.getRoom(s.code);
+    assert.deepEqual([room.token, room.girlKey, room.viewKey, room.girlName], [old.token, old.girlKey, old.viewKey, old.girlName]);
+    assert.equal(b.mgr.roster(s.code).players.every(function (p) { return p[4] === 0; }), true, 'everyone offline until they reconnect');
+    assert.deepEqual(b.mgr.roster(s.code).players.find(function (p) { return p[0] === g.n; })[5], [0, 3, 2, 1, 2, 3, 1]);
+    assert.equal(b.mgr.resume(s.code, q.id, q.key).ok, true);
+    assert.equal(b.mgr.resume(s.code, g.id, g.key).role, 'girl');
+    assert.equal(b.mgr.wishList(s.code).items[0].text, 'كل عام وانتي بخير');
+    assert.equal(b.mgr.join(s.code, { name: 'رجع', dev: 'ddddeeeeffff' }).err, 'kicked');
+    var n = b.mgr.join(s.code, { name: 'جديد' });
+    assert.ok(n.n > k.n, 'numbering continues after the restore');
+    assert.equal(b.mgr.restore(JSON.parse(JSON.stringify(s.mgr.serialize(s.code)))).err, 'exists');
+    assert.equal(b.mgr.restore({ code: 5 }).err, 'bad');
+});
+
+test('restore catches up through elapsed timed phases and stops at wishes', function () {
+    var s = schedRoom(), g = girlIn(s), q;
+    s.at(s.start - 15 * MIN); q = s.mgr.join(s.code, { name: 'ريم' }); s.at(s.start);
+    s.mgr.skip(s.code, 'entrance'); s.mgr.skip(s.code, 'reveal');
+    var danceAt = s.mgr.phaseOf(s.code).at;
+    var data = JSON.parse(JSON.stringify(s.mgr.serialize(s.code)));
+    s.c.t.now = danceAt + 7 * MIN + 12000 + 3 * MIN + 1000;
+    var mgr2 = createRoomManager({ now: function () { return s.c.t.now; } });
+    mgr2.restore(data);
+    assert.equal(mgr2.phaseOf(s.code).p, 'cakeWalk', 'no wishes were written → straight past the display');
+    // نفس الشي ومعه تهنئة مكتوبة قبل الطفي ← يوقف عند العرض
+    var t = schedRoom(), tg = girlIn(t), tq;
+    t.at(t.start - 15 * MIN); tq = t.mgr.join(t.code, { name: 'ريم' }); t.at(t.start);
+    ['entrance', 'reveal', 'dance', 'gather'].forEach(function (p) { t.mgr.skip(t.code, p); });
+    t.mgr.addWish(t.code, tq.id, 'هلا');
+    var writeAt = t.mgr.phaseOf(t.code).at, d2 = JSON.parse(JSON.stringify(t.mgr.serialize(t.code)));
+    t.c.t.now = writeAt + 3 * MIN + 20 * MIN;
+    var mgr3 = createRoomManager({ now: function () { return t.c.t.now; } });
+    mgr3.restore(d2);
+    var ph = mgr3.phaseOf(t.code);
+    assert.equal(ph.p, 'wishes'); assert.equal(ph.at, writeAt + 3 * MIN, 'started when it should have, by the clock');
+    assert.equal(g.ok && tg.ok, true);
+});
+
+test('restore while dance is still running keeps its end time', function () {
+    var s = schedRoom(); girlIn(s);
+    s.at(s.start - 15 * MIN); s.at(s.start); s.mgr.skip(s.code, 'entrance'); s.mgr.skip(s.code, 'reveal');
+    var before = s.mgr.phaseOf(s.code);
+    s.c.t.now += 2 * MIN;
+    var b = reboot(s), after = b.mgr.phaseOf(s.code);
+    assert.equal(after.p, 'dance'); assert.equal(after.until, before.until); assert.equal(after.at, before.at);
+});
+
+test('restore after endAt lands on ended', function () {
+    var s = schedRoom(); girlIn(s);
+    s.at(s.start - 15 * MIN);
+    s.c.t.now = s.start + 61 * MIN;
+    assert.equal(reboot(s).ph(), 'ended');
+});

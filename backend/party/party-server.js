@@ -53,6 +53,36 @@ var _mgr = createRoomManager({
     maxRooms: config.partyMaxRooms || 2,
     validateSession: function (token) { try { return require('../auth/auth-service').validateSession(token); } catch (err) { logger.error('Party: session check failed:', err); return null; } }
 });
+// الحفظ في SQLite (party-store): الحفلة ترجع بعد إعادة تشغيل السيرفر. مجمّع (مرة كل 2ث بالأكثر لكل
+// غرفة)، وفوري لما تتغيّر المرحلة. _store = null ← بدون حفظ (الاختبارات، أو القاعدة ما اشتغلت)
+var SAVE_MS = 2000, ENDED_KEEP_MS = 2 * 60 * 60 * 1000;
+var _store = null, _save = {};   // code -> {at, dirty}
+function markSave(code, now) {
+    if (!_store || !code) return;
+    var st = _save[code] || (_save[code] = { at: 0, dirty: false });
+    st.dirty = true; if (now) st.at = 0;
+}
+function flushSave(code, force) {
+    var st = _save[code]; if (!_store || !st || !st.dirty) return;
+    var t = Date.now(); if (!force && t - st.at < SAVE_MS) return;
+    st.at = t; st.dirty = false;
+    try { var o = _mgr.serialize(code); if (o) _store.save(code, o); } catch (err) { logger.error('Party: save failed:', err); }
+}
+function dropRoom(code, why) {
+    _mgr.closeRoom(code); delete _emptySince[code]; delete _roster[code]; delete _wl[code]; delete _save[code];
+    if (_store) { try { _store.remove(code); } catch (err) { logger.error('Party: store remove failed:', err); } }
+    logger.log('Party: room ' + code + ' closed (' + why + ')');
+}
+// عند تشغيل السيرفر: نرجّع الحفلات المحفوظة (party-rooms.restore يكمّل حسب الساعة)
+function boot() {
+    if (!_enabled) return;
+    if (!_store) { try { _store = require('./party-store').createStore(require('../db/database')); } catch (err) { logger.error('Party: store unavailable:', err); return; } }
+    var n = 0;
+    try { _store.loadAll().forEach(function (o) { var res = _mgr.restore(o); if (res.ok) { n++; markSave(res.code, true); } }); } catch (err) { logger.error('Party: restore failed:', err); }
+    if (n) logger.log('Party: restored ' + n + ' rooms');
+    ensureTicker();
+}
+
 var _clients = {};   // connectionId -> { socket, code, role: 'host'|'player'|'viewer', id, closed }
 var _emptySince = {}; // code -> وقت آخر مرة صارت الغرفة بدون اتصالات
 
@@ -106,6 +136,7 @@ function broadcastPhase(code) {
     var encoded = frame.encodeTextFrame(JSON.stringify(m));
     roomClients(code).forEach(function (c) { sendRaw(c, encoded); });
     if (m.p === 'photo') sendPoints(code);
+    markSave(code, true);
 }
 function wishesMsg(code) { var w = _mgr.wishesState(code); return w.ok ? { t: 'wishes', cur: w.cur, shown: w.shown, total: w.total } : null; }
 function broadcastWishes(code) {
@@ -158,6 +189,9 @@ function onMessage(client, msg) {
     var ident = t === 'host' || t === 'join' || t === 'resume' || t === 'peek';
     var heavy = ident || t === 'start' || t === 'skip' || t === 'wish' || t === 'next' || t === 'cut' || t === 'hideWish' || t === 'pointsDone' || t === 'pointsClaim' || t === 'pointsRelease' || t === 'look' || t === 'kick';
     if (!allow(client, heavy)) return;
+    try { return handle(client, msg, t, ident); } finally { if (heavy && client.code) markSave(client.code); }
+}
+function handle(client, msg, t, ident) {
     if (!_enabled) return send(client, { t: 'err', err: 'disabled', of: t });
     // كل اتصال له هوية وحدة: المشاهد (peek) يقدر يدخل كلاعب مرة، وغير كذا مرفوض
     if (ident && (client.role === 'player' || client.role === 'host' || (client.role === 'viewer' && t === 'host'))) return send(client, { t: 'err', err: 'already', of: t });
@@ -287,14 +321,21 @@ function tickAll() {
     });
     _mgr.rooms().forEach(function (code) {
         try {
-            var cs = roomClients(code);
-            if (!cs.length) {
+            var cs = roomClients(code), room = _mgr.getRoom(code), sc = room && room.sched;
+            // الحفلة المجدولة تمشي على الساعة حتى لو محد متصل، وتبقى لين ساعتين بعد نهايتها
+            // (وأكثر لو النقاط ما انحسبت — تنتظر المذيع يفتح صفحته)
+            if (sc) {
+                var endAt = sc.startAt + sc.durationMin * 60000;
+                if (now > endAt + ENDED_KEEP_MS && (!room.photoDone || room.pointsAcked) && !cs.length) return dropRoom(code, 'ended');
+            } else if (!cs.length) {
                 if (!_emptySince[code]) _emptySince[code] = now;
-                else if (now - _emptySince[code] > EMPTY_ROOM_MS) { _mgr.closeRoom(code); delete _emptySince[code]; delete _roster[code]; delete _wl[code]; logger.log('Party: room ' + code + ' closed (empty)'); }
+                else if (now - _emptySince[code] > EMPTY_ROOM_MS) dropRoom(code, 'empty');
                 return;
             }
             var tk = _mgr.tick(code);
             if (tk.ok && tk.changed) { logger.log('Party: room ' + code + ' → ' + _mgr.phaseOf(code).p); broadcastPhase(code); }
+            flushSave(code);
+            if (!cs.length) return;
             var st = _roster[code];
             if (st && st.dirty && now - st.at >= ROSTER_MS) broadcastRoster(code);
             var wl = _wl[code];
@@ -354,6 +395,8 @@ function handleUpgrade(req, socket) {
 
 module.exports = {
     handleUpgrade: handleUpgrade,
+    boot: boot,
+    _setStore: function (st) { _store = st || null; _save = {}; },
     _mgr: _mgr,
     _setEnabled: function (v) { _enabled = !!v; },
     _setHostKey: function (k) { _hostKey = String(k || ''); },
