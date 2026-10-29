@@ -662,11 +662,11 @@
     };
 
     var CATEGORIES = [
-        { id: 'countries', name: 'دول', icon: '🌍' },
-        { id: 'produce', name: 'فواكه وخضار', icon: '🍎' },
-        { id: 'cities', name: 'مدن سعودية وخليجية', icon: '🏙️' },
-        { id: 'currencies', name: 'عملات', icon: '💰' },
-        { id: 'sweets', name: 'حلويات', icon: '🍰' }
+        { id: 'countries', name: 'دول', one: 'دولة', icon: '🌍' },
+        { id: 'produce', name: 'فواكه وخضار', one: 'فاكهة أو خضار', icon: '🍎' },
+        { id: 'cities', name: 'مدن سعودية وخليجية', one: 'مدينة سعودية أو خليجية', icon: '🏙️' },
+        { id: 'currencies', name: 'عملات', one: 'عملة', icon: '💰' },
+        { id: 'sweets', name: 'حلويات', one: 'حلى', icon: '🍰' }
     ];
 
     /** تطبيع للمقارنة: يوحّد الحروف المتشابهة ويحذف التشكيل والرموز والمسافات الزائدة. */
