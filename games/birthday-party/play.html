@@ -84,6 +84,26 @@
     .count{ position:absolute; inset:0; display:grid; place-items:center; pointer-events:none; font:900 min(34vw,180px)/1 'Zain'; color:#fff; text-shadow:0 0 30px #ff4fa8,0 0 80px rgba(255,79,168,.6); }
     .count.pop{ animation:cpop .9s ease-out both; }
     @keyframes cpop{ 0%{ transform:scale(1.6); opacity:0; } 25%{ opacity:1; } 100%{ transform:scale(.9); opacity:.2; } }
+    .wishcard{ position:absolute; top:max(100px,calc(env(safe-area-inset-top) + 92px)); left:50%; transform:translateX(-50%); width:min(560px,86vw); padding:12px 18px; border-radius:18px; background:rgba(58,18,54,.86); color:#fff; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.25); pointer-events:none; }
+    .wishcard small{ display:block; font:600 12px 'IBM Plex Sans Arabic'; color:#f6bcd6; }
+    .wishcard b{ display:block; font:900 22px/1.2 'Zain'; color:#f2cf8e; }
+    .wishcard p{ margin:4px 0 0; font:600 15px/1.6 'IBM Plex Sans Arabic'; white-space:pre-wrap; overflow-wrap:anywhere; max-height:5.2em; overflow:hidden; }
+    .bigbtn{ position:absolute; right:max(16px,env(safe-area-inset-right)); bottom:max(18px,env(safe-area-inset-bottom)); height:52px; padding:0 22px; border:0; border-radius:999px; color:#fff; font:800 16px 'IBM Plex Sans Arabic'; background:linear-gradient(180deg,#f08ab0,#d45a8a); box-shadow:0 8px 24px rgba(212,90,138,.4); cursor:pointer; }
+    .bigbtn.cake{ background:linear-gradient(180deg,#f7d08a,#d9a24e); color:#4a2a05; font-size:18px; height:58px; }
+    #nextBtn{ right:auto; left:50%; transform:translateX(-50%); }
+    body:has(#nextBtn:not(.hidden)) .emotes, body:has(#wishBtn:not(.hidden)) .emotes{ bottom:max(80px,calc(env(safe-area-inset-bottom) + 76px)); }
+    .wishbox{ position:absolute; left:50%; bottom:max(16px,env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(520px,92vw); padding:14px; border-radius:18px; background:rgba(255,250,252,.97); border:1px solid var(--line); box-shadow:0 14px 40px rgba(0,0,0,.25); display:flex; flex-direction:column; gap:8px; z-index:6; }
+    .wishbox b{ font:900 18px 'Zain'; }
+    .wishbox textarea{ width:100%; box-sizing:border-box; resize:none; padding:10px 12px; border-radius:12px; border:1px solid var(--line); font:600 15px/1.6 'IBM Plex Sans Arabic'; color:var(--ink); text-align:right; }
+    .wbrow{ display:flex; align-items:center; justify-content:space-between; gap:10px; font:600 12px 'IBM Plex Sans Arabic'; color:#9b6683; }
+    .wbrow button, .savebtn{ height:40px; padding:0 18px; border-radius:999px; border:0; font:700 14px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
+    .wbrow button.ghost{ background:#fff; color:#c94f7e; border:1px solid var(--line); }
+    .flash{ position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:8; }
+    .flash.go{ animation:flash .8s ease-out; }
+    @keyframes flash{ 0%{ opacity:1; } 100%{ opacity:0; } }
+    .photomodal{ position:fixed; inset:0; z-index:9; display:grid; place-items:center; background:rgba(30,10,30,.6); padding:16px; }
+    .photomodal > div{ background:#fff; padding:12px; border-radius:18px; display:flex; flex-direction:column; gap:10px; max-width:min(720px,94vw); }
+    .photomodal img{ width:100%; max-height:70vh; object-fit:contain; border-radius:10px; }
     .emotes{ position:absolute; right:max(16px,env(safe-area-inset-right)); bottom:max(18px,env(safe-area-inset-bottom)); display:flex; gap:8px; }
     .emotes button{ height:44px; padding:0 14px; border-radius:999px; border:1px solid var(--line); background:var(--glass); color:var(--ink); font:700 14px 'IBM Plex Sans Arabic'; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); cursor:pointer; }
     .emotes button.on{ background:linear-gradient(180deg,#ff9ccc,#f472b6); color:#fff; border-color:transparent; }
@@ -124,6 +144,16 @@
     <div class="netbad hidden" id="netBad" role="status">جاري إعادة الاتصال…</div>
     <div class="phase" id="phase" aria-live="polite"><b id="phaseTxt"></b><span id="phaseTime"></span></div>
     <div class="count" id="count" aria-live="assertive"></div>
+    <div class="wishcard hidden" id="wishCard" aria-live="polite"><small id="wcCount"></small><b id="wcName"></b><p id="wcText"></p></div>
+    <button class="bigbtn hidden" id="wishBtn" type="button">اكتب تهنئتك 💌</button>
+    <button class="bigbtn hidden" id="nextBtn" type="button">التالي ←</button>
+    <button class="bigbtn cake hidden" id="cutBtn" type="button">قص الكيكة 🎂</button>
+    <div class="wishbox hidden" id="wishBox" role="dialog" aria-label="اكتب تهنئتك">
+        <b>تهنئتك لصاحبة الحفلة</b>
+        <textarea id="wishText" maxlength="200" rows="3" placeholder="كل عام وأنتِ بخير…"></textarea>
+        <div class="wbrow"><span id="wishStatus"></span><small><span id="wishLeft">200</span> حرف</small></div>
+        <div class="wbrow"><button type="button" id="wishCancel" class="ghost">إغلاق</button><button type="button" id="wishSend">إرسال 💌</button></div>
+    </div>
     <div class="emotes hidden" id="emotes">
         <button type="button" data-e="2">💃 رقص</button>
         <button type="button" data-e="3">👋 تلويح</button>
@@ -137,6 +167,10 @@
     <div class="joy" id="joy" aria-hidden="true"><div class="joy-knob"></div></div>
 </div>
 
+<div class="flash" id="flash" aria-hidden="true"></div>
+<div class="photomodal hidden" id="photoModal" role="dialog" aria-label="الصورة الجماعية">
+    <div><img id="photoImg" alt="الصورة الجماعية"><div class="wbrow"><button type="button" id="photoClose" class="ghost">إغلاق</button><a id="photoSave" class="savebtn">حفظ الصورة</a></div></div>
+</div>
 <div class="rotate" id="rotate" role="dialog" aria-label="لف الجوال بالعرض">
     <div>
         <div class="ph" aria-hidden="true"></div>
@@ -199,12 +233,15 @@
         if (code) await startParty(hall);
         // اختبار بصري: play.html?cam=x,y,z,lx,ly,lz&curtain=0&doors=1&fw=1&party=1
         const camQ = params.get('cam');
+        if (params.has('debug')) window.__hall = hall;
         if (!code && camQ) {
             const v = camQ.split(',').map(Number); hall.debugView(v.slice(0, 3), v.slice(3, 6));
             if (params.has('curtain')) hall.setCurtain(+params.get('curtain'), true);
             if (params.has('doors')) hall.setDoors(+params.get('doors'), true);
             if (params.get('party') === '1') hall.setParty(true);
             if (params.get('fw') === '1') hall.fireworks(30);
+            if (params.get('wish') === '1') hall.setWishScreen(1, { i: 3, total: 12, name: 'نورة', text: 'كل عام وانتي بخير يا أحلى سارة، الله يسعدك ويحقق كل أمانيك وتبقين دايم مبتسمة 💖' }, true);
+            if (params.get('cut') === '1') hall.cutCake(params.get('cutnow') === '1');
         }
     } catch (err) {
         log('[birthday-party] 3D غير متاح', err);
@@ -230,11 +267,18 @@
         const guestWp = n => { const ox = ((n % 5) - 2) * .9; return [[ox, 52], [ox, 45]]; };
         const pathFor = (n, start, target) => [start, ...(roles.get(n) === 'girl' ? GIRL_WP : guestWp(n)), target];
         const curEmote = () => { if (emote && emoteUntil && serverNow() > emoteUntil) emote = 0; return emote; };
-        const autoPhase = () => phase && (phase.p === 'entrance' || phase.p === 'reveal');
+        const autoPhase = () => phase && !!{ entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1 }[phase.p];
+
+        // مراحل المشي التلقائي: مدة المشي من وقت المرحلة، والدخول بس يمر بنقاط عبور
+        const WALK = { entrance: .85, gather: .85, cakeWalk: .85, photo: 6000 };
+        const AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1 };
+        // اتجاه الوقوف بعد المشي (نفس السيرفر): صاحبة الحفلة تطالع الضيوف إلا عند الكيكة والصورة
+        const facing = p => myRole === 'girl' && !['cakeWalk', 'cake', 'celebrate', 'photo', 'free'].includes(p) ? 0 : Math.PI;
+        let photoKey = null, celebKey = null, lastWishes = null, photoUrl = null;
 
         function applyPhase() {
             if (!phase || !gotAll) return;
-            const now = serverNow(), p = phase.p, key = p + ':' + phase.at;
+            const now = serverNow(), p = phase.p, key = p + ':' + phase.at, since = now - phase.at;
             if (applied === key) return;
             applied = key;
             const isGirl = myRole === 'girl', preShow = p === 'lobby' || p === 'entrance', lateReveal = now > phase.at + 3000;
@@ -242,37 +286,85 @@
             const closed = preShow || (p === 'reveal' && !lateReveal);
             hall.setCurtain(closed ? 0 : 1, true);
             hall.setDoors(p === 'lobby' ? 0 : 1, p !== 'entrance');
-            hall.setParty(p === 'dance' || p === 'free' || (p === 'reveal' && lateReveal));
+            // الإضاءة الخافتة والليزر وقت الرقص والاحتفال؛ التهاني والكيكة أهدى عشان القراءة
+            hall.setParty(['dance', 'celebrate', 'free'].includes(p) || (p === 'reveal' && lateReveal));
             revealFired = p !== 'reveal' || lateReveal;
-            if (p === 'reveal' && lateReveal && now < phase.at + 9000) hall.fireworks(phase.at + 9000 - now > 0 ? (phase.at + 9000 - now) / 1000 : 0);
+            if (p === 'reveal' && lateReveal && since < 9000) hall.fireworks((9000 - since) / 1000);
             if (!viewOnly) hall.setZone(zoneFor(p));
-            if (p === 'entrance' && phase.walk) {
+            hall.setWishScreen(p === 'wishes' ? 1 : 0, lastWishes && lastWishes.cur ? Object.assign({ total: lastWishes.total }, lastWishes.cur) : null, since > 2500);
+            // الكيكة: مقصوصة (رجوع) أو أنيميشن القص + احتفال ثاني
+            if (phase.cut) {
+                if (p === 'celebrate' && since < 4000 && celebKey !== key) { celebKey = key; hall.cutCake(false); hall.celebrate(Math.max(5, (phase.until - now) / 1000)); music.play('cake'); }
+                else hall.cutCake(true);
+                if (p === 'celebrate' && celebKey !== key) { celebKey = key; hall.celebrate(Math.max(3, (phase.until - now) / 1000)); music.play('cake'); }
+            }
+            hall.setPhotoCam(p === 'photo');
+            const wf = WALK[p];
+            if (wf && phase.walk) {
                 const walk = {}; for (let i = 0; i + 2 < phase.walk.length; i += 3) walk[phase.walk[i]] = [phase.walk[i + 1] / 100, phase.walk[i + 2] / 100];
-                const t0 = phase.at, t1 = phase.at + (phase.until - phase.at) * .85, paths = {};
-                for (const n of Object.keys(walk)) { if (+n === myN) continue; const st = crowd.posOf(+n); if (st) paths[n] = pathFor(+n, st, walk[n]); }
-                crowd.setAutoPaths(paths, t0, t1);
+                const t0 = phase.at, t1 = wf > 1 ? phase.at + wf : phase.at + (phase.until - phase.at) * wf, paths = {};
+                const route = (n, st, tg) => p === 'entrance' ? pathFor(n, st, tg) : [st, tg];
+                for (const n of Object.keys(walk)) { if (+n === myN) continue; const st = crowd.posOf(+n); if (st) paths[n] = route(+n, st, walk[n]); }
+                crowd.setAutoPaths(paths, t0, t1, role => role === 'girl' && !['cakeWalk', 'photo'].includes(p) ? 0 : Math.PI);
                 if (!viewOnly && myN != null && walk[myN]) {
                     // بداية المسار = مكاني عند السيرفر (نفس اللي تحسبه باقي الجوالات)، مو مكاني المحلي
                     myTarget = walk[myN];
                     const st = myServer || [hall.getLocal().x, hall.getLocal().z];
-                    if (Math.hypot(st[0] - myTarget[0], st[1] - myTarget[1]) < .5) hall.setFollow({ x: myTarget[0], z: myTarget[1], ry: isGirl ? 0 : Math.PI });
-                    else hall.setAutoPath(pathFor(myN, st, myTarget), t0, t1, serverNow, isGirl ? 0 : Math.PI);
+                    if (Math.hypot(st[0] - myTarget[0], st[1] - myTarget[1]) < .5) hall.setFollow({ x: myTarget[0], z: myTarget[1], ry: facing(p) });
+                    else hall.setAutoPath(route(myN, st, myTarget), t0, t1, serverNow, facing(p));
                 }
             } else {
                 crowd.setAutoPaths(null, now);
                 if (!viewOnly) {
                     hall.setAutoPath(null);
-                    // انتهى الدخول (أو تخطاه المذيع): السيرفر حطنا على مكاننا، فنثبّت نفس المكان
-                    if (myTarget && p !== 'lobby') hall.setFollow({ x: myTarget[0], z: myTarget[1], ry: isGirl ? 0 : Math.PI, elev: isGirl ? .45 : undefined, yawOff: isGirl ? .7 : 0 });
+                    // انتهى المشي (أو تخطاه المذيع): السيرفر حطنا على مكاننا، فنثبّت نفس المكان
+                    if (myTarget && p !== 'lobby') {
+                        const onStage = isGirl && myTarget[1] < -34;
+                        hall.setFollow({ x: myTarget[0], z: myTarget[1], ry: facing(p), elev: onStage ? .45 : undefined, yawOff: onStage ? .7 : 0 });
+                        myServer = myTarget.slice(); // السيرفر ما يرسل لنا صفّنا، فنعرف مكاننا عنده من هنا
+                    }
                     myTarget = null;
                 }
             }
-            if (viewOnly) hall.setShot(p === 'reveal' ? 'stage' : p === 'entrance' ? 'entrance' : null);
-            if (p === 'lobby' || p === 'entrance') music.play('lobby');
+            if (viewOnly) hall.setShot(p === 'reveal' || p === 'cake' || p === 'celebrate' || p === 'cakeWalk' ? 'stage' : p === 'entrance' ? 'entrance' : p === 'wishes' || p === 'gather' ? 'screen' : null);
+            if (p === 'lobby' || p === 'entrance' || p === 'gather' || p === 'wishes' || p === 'cakeWalk' || p === 'cake') music.play('lobby');
             else if (p === 'dance' || p === 'free') music.play('dance');
-            const showEmotes = !viewOnly && (p === 'dance' || p === 'free');
+            // الأزرار حسب المرحلة والدور
+            const showEmotes = !viewOnly && (['dance', 'celebrate', 'free', 'cake'].includes(p) || (p === 'wishes' && isGirl));
             $('emotes').classList.toggle('hidden', !showEmotes);
-            if (showEmotes) $('hint').classList.add('gone'); // التلميح يغطي الأزرار
+            $('wishBtn').classList.toggle('hidden', viewOnly || isGirl || p !== 'wishes');
+            if (p !== 'wishes') $('wishBox').classList.add('hidden');
+            $('nextBtn').classList.toggle('hidden', !isGirl || p !== 'wishes');
+            $('cutBtn').classList.toggle('hidden', !isGirl || p !== 'cake');
+            $('wishCard').classList.toggle('hidden', !(p === 'wishes' && lastWishes && lastWishes.cur));
+            if (showEmotes || p === 'wishes') $('hint').classList.add('gone'); // التلميح يغطي الأزرار
+        }
+
+        function onWishes(m) {
+            lastWishes = m;
+            const cur = m.cur, inWishes = phase && phase.p === 'wishes';
+            hall.setWishScreen(inWishes ? 1 : 0, cur ? Object.assign({ total: m.total }, cur) : null);
+            $('wishCard').classList.toggle('hidden', !(inWishes && cur));
+            if (cur) { $('wcName').textContent = cur.name; $('wcText').textContent = cur.text; $('wcCount').textContent = cur.i + ' من ' + m.total; }
+            $('nextBtn').textContent = cur && cur.i >= m.total ? 'خلصت الرسائل ← الكيكة' : cur ? 'التالي ←' : (m.total ? 'ابدئي الرسائل ←' : 'التالي ←');
+        }
+
+        // ---- الصورة الجماعية: بعد ما يوصل الكل، عد 3-2-1 ثم فلاش ولقطة ----
+        function photoTick(now) {
+            if (!phase || phase.p !== 'photo') return;
+            const key = 'photo:' + phase.at, at = phase.at + 8000, left = at + 3000 - now;
+            if (photoKey === key || now < at) return;
+            if (left > 0) { const n = String(Math.ceil(left / 1000)); if ($('count').textContent !== n) { $('count').textContent = n; $('count').classList.remove('pop'); void $('count').offsetWidth; $('count').classList.add('pop'); } return; }
+            photoKey = key; $('count').textContent = '';
+            if (now - at > 6000) return; // رجع متأخر: فاتته اللقطة
+            const shot = hall.snapshot();
+            $('flash').classList.remove('go'); void $('flash').offsetWidth; $('flash').classList.add('go');
+            if (shot) {
+                $('photoImg').src = shot; $('photoSave').href = shot; $('photoSave').download = 'party-' + code + '.jpg';
+                // رابط blob للحفظ: بعض نسخ iOS تفتح رابط data: بدل ما تحفظه
+                fetch(shot).then(r => r.blob()).then(b => { if (photoUrl) URL.revokeObjectURL(photoUrl); photoUrl = URL.createObjectURL(b); $('photoSave').href = photoUrl; }).catch(() => {});
+                setTimeout(() => $('photoModal').classList.remove('hidden'), 700);
+            }
         }
 
         const fmt = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
@@ -281,6 +373,12 @@
             entrance: () => myRole === 'girl' ? 'طريقك للمنصة… محد يشوفك' : 'الدخول للقاعة',
             reveal: () => 'الافتتاح',
             dance: () => 'وقت الرقص',
+            gather: () => 'التجمّع للتهاني',
+            wishes: () => 'التهاني',
+            cakeWalk: () => 'وقت الكيكة',
+            cake: () => myRole === 'girl' ? 'اضغطي «قص الكيكة»' : 'صاحبة الحفلة بتقص الكيكة…',
+            celebrate: () => 'احتفال 🎉',
+            photo: () => 'الصورة الجماعية 📸',
             free: () => 'الحفلة مستمرة',
         };
         hall.addTicker(dt => {
@@ -292,9 +390,10 @@
                 const left = phase.at + 3000 - now;
                 if (left > 0) { const n = String(Math.ceil(left / 1000)); if ($('count').textContent !== n) { $('count').textContent = n; $('count').classList.remove('pop'); void $('count').offsetWidth; $('count').classList.add('pop'); } }
                 else { revealFired = true; $('count').textContent = ''; hall.setCurtain(1); hall.fireworks(7); hall.setParty(true); music.play('reveal'); }
-            } else if ($('count').textContent) $('count').textContent = '';
+            } else if (phase.p === 'photo') photoTick(now);
+            else if ($('count').textContent) $('count').textContent = '';
             $('phaseTxt').textContent = (LABEL[phase.p] || (() => ''))();
-            $('phaseTime').textContent = phase.until && phase.p !== 'reveal' ? fmt(phase.until - now) : '';
+            $('phaseTime').textContent = phase.until && phase.p !== 'reveal' && phase.p !== 'photo' ? fmt(phase.until - now) : '';
         });
 
         const net = connect({
@@ -306,7 +405,9 @@
                     m.room.players.forEach(r => roles.set(r[0], r[2]));
                     crowd.sync(m.room.players);
                     if (m.room.girlName) { $('title').textContent = 'حفلة ' + m.room.girlName; hall.setName(m.room.girlName); }
-                } else if (m.t === 'phase') { phase = m; applied = null; if (!viewOnly && myRole) hall.setZone(zoneFor(m.p)); applyPhase(); }
+                } else if (m.t === 'wishes') onWishes(m);
+                else if (m.t === 'myWish') onMyWish(m);
+                else if (m.t === 'phase') { phase = m; applied = null; if (!viewOnly && myRole) hall.setZone(zoneFor(m.p)); applyPhase(); }
                 else if (m.t === 'all' || m.t === 's') {
                     const rows = unpackRows(m.d);
                     crowd.apply(rows, m.now, m.t === 'all');
@@ -319,9 +420,31 @@
                     if (m.err === 'resume' || m.err === 'nocode') { writeJSON('party-me', null); location.replace('join.html?code=' + code); }
                     else if (m.err === 'elsewhere') { $('netBad').textContent = 'فتحت الحفلة من مكان ثاني'; $('netBad').classList.remove('hidden'); net.close(); }
                     else if (m.err === 'disabled') { $('netBad').textContent = 'الحفلات متوقفة حالياً'; $('netBad').classList.remove('hidden'); }
+                    else if (m.of === 'wish') { $('wishStatus').textContent = m.err === 'shown' ? 'تهنئتك انعرضت خلاص 💖' : m.err === 'empty' ? 'اكتب تهنئتك أول' : 'ما وصلت، جرّب مرة ثانية'; $('wishSend').disabled = false; }
+                    else if (m.of === 'next' || m.of === 'cut') { $(m.of === 'next' ? 'nextBtn' : 'cutBtn').disabled = false; }
                 }
             },
         });
+        // ---- التهاني: كتابة الضيف + زر التالي لصاحبة الحفلة + قص الكيكة ----
+        function onMyWish(m) {
+            $('wishStatus').textContent = m.shown ? 'تهنئتك انعرضت 💖' : 'وصلت تهنئتك ✓ (تقدر تعدّلها قبل ما تنعرض)';
+            $('wishSend').disabled = false; if (m.text && !$('wishText').value) $('wishText').value = m.text;
+            $('wishBtn').textContent = m.shown ? 'تهنئتك انعرضت 💖' : 'تعديل تهنئتك ✏️';
+            setTimeout(() => { if (!$('wishBox').classList.contains('hidden') && !m.shown) $('wishBox').classList.add('hidden'); }, 1200);
+        }
+        $('wishBtn').addEventListener('click', () => { $('wishBox').classList.remove('hidden'); $('wishText').focus(); });
+        $('wishCancel').addEventListener('click', () => $('wishBox').classList.add('hidden'));
+        $('wishText').addEventListener('input', () => { $('wishLeft').textContent = (200 - Array.from($('wishText').value).length) + ''; });
+        $('wishSend').addEventListener('click', () => {
+            const text = $('wishText').value.trim(); if (!text) { $('wishStatus').textContent = 'اكتب تهنئتك أول'; return; }
+            $('wishSend').disabled = true; $('wishStatus').textContent = 'جاري الإرسال…'; net.send({ t: 'wish', text });
+        });
+        const once = (id, msg) => $(id).addEventListener('click', () => { $(id).disabled = true; net.send(msg()); setTimeout(() => { $(id).disabled = false; }, 1100); });
+        // seen: كم رسالة شافت — لو المذيع ضغط التالي بنفس اللحظة السيرفر يرفض الثانية بدل ما تنتخطى رسالة
+        once('nextBtn', () => ({ t: 'next', seen: lastWishes ? lastWishes.shown : 0 }));
+        once('cutBtn', () => ({ t: 'cut' }));
+        $('photoClose').addEventListener('click', () => $('photoModal').classList.add('hidden'));
+
         // أزرار الحركات (وقت الرقص): رقص يشتغل لين تضغطه مرة ثانية أو تمشي، والباقي ثواني
         document.querySelectorAll('#emotes button').forEach(b => b.addEventListener('click', () => {
             const e = +b.dataset.e;
@@ -338,7 +461,7 @@
             if (!a) document.querySelectorAll('#emotes button.on').forEach(x => x.classList.remove('on'));
             const p = [Math.round(L.x * 100) / 100, Math.round(L.z * 100) / 100, Math.round(L.ry * 100) / 100, a];
             if (lastSent && Math.abs(p[0] - lastSent[0]) < .02 && Math.abs(p[1] - lastSent[1]) < .02 && Math.abs(p[2] - lastSent[2]) < .03 && p[3] === lastSent[3]) return;
-            lastSent = p; net.send({ t: 'mv', p });
+            lastSent = p; myServer = [p[0], p[1]]; net.send({ t: 'mv', p });
         }, 125);
     }
 

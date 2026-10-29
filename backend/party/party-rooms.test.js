@@ -5,7 +5,7 @@ var assert = require('node:assert/strict');
 var createRoomManager = require('./party-rooms').createRoomManager;
 
 // ساعة قابلة للتحكم عشان اختبارات السرعة والإغراق
-function toFree(mgr, code) { mgr.start(code); ['entrance', 'reveal', 'dance'].forEach(function (ph) { mgr.skip(code, ph); }); }
+function toFree(mgr, code) { mgr.start(code); for (var k = 0; k < 20 && mgr.phaseOf(code).p !== 'free'; k++) mgr.skip(code, mgr.phaseOf(code).p); }
 
 function clockMgr(extra) {
     var t = { now: 1000000 };
@@ -306,8 +306,7 @@ test('tick advances entrance→reveal→dance→free on time and places everyone
     assert.equal(r[1], target[0]); assert.equal(r[2], target[1]);
     assert.ok(Math.abs(r[3] - Math.PI) < .01);
     s.c.t.now += 12000; s.mgr.tick(s.code); assert.equal(s.mgr.phaseOf(s.code).p, 'dance');
-    s.c.t.now += 60000; s.mgr.tick(s.code); assert.equal(s.mgr.phaseOf(s.code).p, 'free');
-    s.c.t.now += 999999; assert.equal(s.mgr.tick(s.code).changed, false);
+    s.c.t.now += 60000; s.mgr.tick(s.code); assert.equal(s.mgr.phaseOf(s.code).p, 'gather');
 });
 
 test('guest cannot climb the stage during dance; girl can', function () {
@@ -354,4 +353,161 @@ test('emote values above 4 become 0', function () {
     assert.equal(rowOf(s.mgr, s.code, g.n, null)[4], 4);
     s.c.t.now += 2000; s.mgr.move(s.code, g.id, [r[1], r[2], 0, 9]);
     assert.equal(rowOf(s.mgr, s.code, g.n, null)[4], 0);
+});
+
+// ================= الدفعة 3: التهاني والكيكة والصورة والنقاط =================
+function toDance(s) { s.mgr.start(s.code); s.mgr.skip(s.code, 'entrance'); s.mgr.skip(s.code, 'reveal'); }
+function toWishes(s) { toDance(s); s.mgr.skip(s.code, 'dance'); s.mgr.skip(s.code, 'gather'); }
+
+test('dance ends into gather with walk targets, then wishes', function () {
+    var s = showRoom({ danceSec: 60, wishesSec: 300 }), g = s.mgr.join(s.code, { name: 'ريم' });
+    toDance(s);
+    s.c.t.now += 60000; s.mgr.tick(s.code);
+    var ph = s.mgr.phaseOf(s.code);
+    assert.equal(ph.p, 'gather'); assert.ok(ph.walk[g.n]); assert.equal(ph.until - ph.at, 12000);
+    assert.equal(s.mgr.move(s.code, g.id, [0, -20, 0, 1]).err, 'auto');
+    s.c.t.now += 12000; s.mgr.tick(s.code);
+    ph = s.mgr.phaseOf(s.code);
+    assert.equal(ph.p, 'wishes'); assert.equal(ph.until - ph.at, 300000);
+});
+
+test('wish: only guests, only during wishes, trimmed to 200, text kept as text, bad words masked', function () {
+    var s = showRoom(), g = s.mgr.join(s.code, { name: 'ريم' }), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
+    assert.equal(s.mgr.addWish(s.code, g.id, 'كل عام وانتي بخير').err, 'phase');
+    toWishes(s);
+    assert.equal(s.mgr.addWish(s.code, girl.id, 'x').err, 'role');
+    assert.equal(s.mgr.addWish(s.code, g.id, '   \u0007  ').err, 'empty');
+    var long = Array(300).fill('ح').join('');
+    assert.equal(s.mgr.addWish(s.code, g.id, long + ' <b>هلا</b> يا كلب').ok, true);
+    var it = s.mgr.wishList(s.code).items[0];
+    assert.equal(Array.from(it.text).length, 200);
+    var w2 = showRoom(), g2 = w2.mgr.join(w2.code, { name: 'هيا' }); toWishes(w2);
+    w2.mgr.addWish(w2.code, g2.id, '<b>هلا</b> يا كلب');
+    var t2 = w2.mgr.wishList(w2.code).items[0].text;
+    assert.ok(t2.indexOf('<b>هلا</b>') === 0, 'kept as plain text: ' + t2);
+    assert.ok(t2.indexOf('كلب') < 0 && t2.indexOf('***') > 0, 'masked: ' + t2);
+});
+
+test('bad-word mask is whole-word: blessings untouched, insults (with ال/يا, caps, zero-width) masked', function () {
+    function clean(text) { var w = showRoom(), g = w.mgr.join(w.code, { name: 'هيا' }); toWishes(w); w.mgr.addWish(w.code, g.id, text); return w.mgr.wishList(w.code).items[0].text; }
+    assert.equal(clean('الله يرزقك ويسعدك، رزقك الله'), 'الله يرزقك ويسعدك، رزقك الله');
+    assert.equal(clean('أول دخول لي للحفلة'), 'أول دخول لي للحفلة');
+    assert.equal(clean('يا كلب'), 'يا ***');
+    assert.equal(clean('ياكلب والكلب'), '*** ***');
+    assert.equal(clean('FUCK this'), '*** this');
+    assert.equal(clean('ك​لب'), '***');
+});
+
+test('wish edit before shown, refused after shown', function () {
+    var s = showRoom(), g = s.mgr.join(s.code, { name: 'ريم' }), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
+    toWishes(s);
+    s.mgr.addWish(s.code, g.id, 'أول'); s.mgr.addWish(s.code, g.id, 'ثاني');
+    assert.equal(s.mgr.wishList(s.code).items.length, 1);
+    assert.equal(s.mgr.wishList(s.code).items[0].text, 'ثاني');
+    s.mgr.nextWish(s.code, girl.id);
+    assert.equal(s.mgr.addWish(s.code, g.id, 'ثالث').err, 'shown');
+});
+
+test('nextWish shows one per call in first-sent order, skips hidden, and after the last moves to cakeWalk', function () {
+    var s = showRoom(), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey }), gs = [];
+    for (var i = 0; i < 3; i++) gs.push(s.mgr.join(s.code, { name: 'ض' + i }));
+    toWishes(s);
+    s.mgr.addWish(s.code, gs[2].id, 'ج'); s.mgr.addWish(s.code, gs[0].id, 'أ'); s.mgr.addWish(s.code, gs[1].id, 'ب');
+    s.mgr.hideWish(s.code, s.mgr.wishList(s.code).items[1].id, true); // يخفي «أ»
+    var r1 = s.mgr.nextWish(s.code, girl.id);
+    assert.equal(r1.cur.text, 'ج'); assert.equal(s.mgr.wishesState(s.code).total, 2);
+    assert.deepEqual(s.mgr.wishList(s.code).items.map(function (w) { return w.cur; }), [true, false, false], 'host sees which wish is on screen');
+    var r2 = s.mgr.nextWish(s.code, 'host');
+    assert.equal(r2.cur.text, 'ب'); assert.equal(r2.done, false);
+    assert.equal(s.mgr.phaseOf(s.code).p, 'wishes');
+    var r3 = s.mgr.nextWish(s.code, girl.id);
+    assert.equal(r3.done, true);
+    assert.equal(s.mgr.phaseOf(s.code).p, 'cakeWalk');
+});
+
+test('next with a stale seen count is refused (girl and host pressing together skip only one)', function () {
+    var s = showRoom(), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey }), gs = [];
+    for (var i = 0; i < 3; i++) gs.push(s.mgr.join(s.code, { name: 'ض' + i }));
+    toWishes(s);
+    gs.forEach(function (g, i) { s.mgr.addWish(s.code, g.id, 'رسالة ' + i); });
+    assert.equal(s.mgr.nextWish(s.code, girl.id, 0).cur.text, 'رسالة 0');
+    assert.equal(s.mgr.nextWish(s.code, 'host', 0).err, 'stale');
+    assert.equal(s.mgr.wishesState(s.code).cur.text, 'رسالة 0');
+    assert.equal(s.mgr.nextWish(s.code, 'host', 1).cur.text, 'رسالة 1');
+});
+
+test('offline guests go after online ones in walk slots and do not count in photo rows', function () {
+    var s = showRoom(), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey }), gs = [];
+    for (var i = 0; i < 4; i++) gs.push(s.mgr.join(s.code, { name: 'ض' + i }));
+    s.mgr.leave(s.code, gs[0].id);
+    toWishes(s); s.mgr.skip(s.code, 'wishes'); s.mgr.skip(s.code, 'cakeWalk'); s.mgr.cut(s.code, girl.id); s.mgr.skip(s.code, 'celebrate');
+    var walk = s.mgr.phaseOf(s.code).walk, on = [1, 2, 3].map(function (i) { return walk[gs[i].n]; });
+    assert.deepEqual(on.map(function (t) { return t[0]; }), [-1.1, 0, 1.1], 'three online guests centered');
+    assert.ok(walk[gs[0].n][1] > on[0][1], 'offline guest behind');
+});
+
+test('only the girl (or host) can next and cut', function () {
+    var s = showRoom(), g = s.mgr.join(s.code, { name: 'ريم' }), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
+    toWishes(s);
+    assert.equal(s.mgr.nextWish(s.code, g.id).err, 'role');
+    s.mgr.skip(s.code, 'wishes'); s.mgr.skip(s.code, 'cakeWalk');
+    assert.equal(s.mgr.phaseOf(s.code).p, 'cake');
+    assert.equal(s.mgr.cut(s.code, g.id).err, 'role');
+    assert.equal(s.mgr.cut(s.code, girl.id).ok, true);
+    assert.equal(s.mgr.cut(s.code, girl.id).err, 'phase');
+});
+
+test('cut only during cake → celebrate → photo → free with photo targets behind the girl', function () {
+    var s = showRoom(), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey }), gs = [];
+    for (var i = 0; i < 20; i++) gs.push(s.mgr.join(s.code, { name: 'ض' + i }));
+    toWishes(s);
+    assert.equal(s.mgr.cut(s.code, 'host').err, 'phase');
+    s.mgr.skip(s.code, 'wishes'); s.mgr.skip(s.code, 'cakeWalk');
+    var ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'cake'); assert.equal(ph.until, 0);
+    s.mgr.cut(s.code, 'host');
+    ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'celebrate'); assert.equal(ph.cut, true); assert.equal(ph.until - ph.at, 30000);
+    s.c.t.now += 30000; s.mgr.tick(s.code);
+    ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'photo'); assert.equal(ph.until - ph.at, 16000);
+    assert.deepEqual(ph.walk[girl.n], [0, -29.6]);
+    gs.forEach(function (g) { var t = ph.walk[g.n]; assert.ok(t[1] > -29.6 && t[1] <= -29.6 + 1.2 * 6 + .01, 'row behind ' + t); });
+    s.c.t.now += 16000; s.mgr.tick(s.code);
+    assert.equal(s.mgr.phaseOf(s.code).p, 'free');
+    var r = rowOf(s.mgr, s.code, girl.n, null);
+    assert.equal(r[1], 0); assert.equal(r[2], -29.6);
+});
+
+test('photo rows are centered behind the girl, staggered, no overlap; late joiner goes to a new row behind', function () {
+    var s = showRoom(), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey }), gs = [];
+    for (var i = 0; i < 30; i++) gs.push(s.mgr.join(s.code, { name: 'ض' + i }));
+    toWishes(s); s.mgr.skip(s.code, 'wishes'); s.mgr.skip(s.code, 'cakeWalk'); s.mgr.cut(s.code, girl.id); s.mgr.skip(s.code, 'celebrate');
+    var walk = s.mgr.phaseOf(s.code).walk, ts = gs.map(function (g) { return walk[g.n]; }), keys = {};
+    ts.forEach(function (t) { keys[t.join()] = 1; assert.ok(Math.abs(t[0]) <= 7.7, 'inside frame ' + t); assert.ok(t[1] > -29.6, 'behind girl ' + t); });
+    assert.equal(Object.keys(keys).length, 30, 'no two guests on one spot');
+    var row0 = ts.filter(function (t) { return t[1] === ts[0][1]; });
+    assert.equal(row0.length, 14);
+    assert.ok(Math.abs(row0.reduce(function (a, t) { return a + t[0]; }, 0) / 14) < .01, 'row centered');
+    var last = ts.filter(function (t) { return t[1] === ts[29][1]; });
+    assert.equal(last.length, 2, 'last row has the remainder');
+    var late = s.mgr.join(s.code, { name: 'متأخر' }), lt = s.mgr.phaseOf(s.code).walk[late.n];
+    assert.ok(lt[1] > ts[29][1], 'late joiner behind everyone ' + lt);
+});
+
+test('pointsList includes only tiktok-verified members (not quick guests even if named like a tiktok user)', function () {
+    var users = { a: { id: 1, username: 'nora', tiktok_username: 'nora_tt', tiktok_verified: true }, b: { id: 2, username: 'lama', tiktok_username: 'lama_tt', tiktok_verified: false } };
+    var c = clockMgr({ validateSession: function (t) { return users[t] || null; } }), room = c.mgr.createRoom({ girlName: 'سارة' });
+    c.mgr.join(room.code, { auth: 'a' }); c.mgr.join(room.code, { auth: 'b' }); c.mgr.join(room.code, { name: 'nora_tt' });
+    c.mgr.start(room.code); c.t.now += 90000;
+    var pl = c.mgr.pointsList(room.code);
+    assert.deepEqual(pl.players.map(function (p) { return p.id; }), ['tiktok:nora_tt']);
+    assert.equal(pl.durationMs, 90000);
+});
+
+test('late joiner during wishes/photo is placed correctly', function () {
+    var s = showRoom(), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
+    toWishes(s);
+    var a = s.mgr.join(s.code, { name: 'متأخر' }), ra = rowOf(s.mgr, s.code, a.n, null);
+    assert.ok(ra[2] >= -31 && ra[2] <= -14, 'near stage ' + ra);
+    s.mgr.skip(s.code, 'wishes'); s.mgr.skip(s.code, 'cakeWalk'); s.mgr.cut(s.code, girl.id); s.mgr.skip(s.code, 'celebrate');
+    var b = s.mgr.join(s.code, { name: 'متأخر٢' }), t = s.mgr.phaseOf(s.code).walk[b.n], rb = rowOf(s.mgr, s.code, b.n, null);
+    assert.ok(t, 'photo target'); assert.equal(rb[1], t[0]); assert.equal(rb[2], t[1]);
 });
