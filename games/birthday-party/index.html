@@ -10,11 +10,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Zain:wght@700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script src="../../auth/auth-client.js"></script>
 <!-- صفحة المذيع: إنشاء الحفلة، كود الغرفة، باركود الضيوف وباركود صاحبة
      الحفلة (مخفي افتراضياً عشان ما تنكشف المفاجأة)، وقائمة الداخلين.
      الاتصال عبر party-net.js بخادم /ws/party، والجلسة محفوظة بـ 'party-host'
      فتحديث الصفحة يرجع لنفس الحفلة. إنشاء حفلة يحتاج الرابط الخاص (?k=المفتاح)،
-     والمفتاح ينحفظ بالجهاز ('party-host-key') فيكفي فتح الرابط الخاص مرة وحدة. -->
+     والمفتاح ينحفظ بالجهاز ('party-host-key') فيكفي فتح الرابط الخاص مرة وحدة.
+     وقت التهاني: المذيع يشوف الرسائل ويخفي اللي ما يناسب، وعنده «التالي» و«قص الكيكة» احتياط.
+     النقاط: السيرفر يرسل للمذيع قائمة المشاركين الموثّقين بعد الصورة، والصفحة ترسلها
+     لنظام النقاط بحساب المذيع (AGPAuth.reportMatchPoints) — قاعدة CLAUDE.md. -->
 <style>
     :root{ --ink:#5b1d3e; --soft:#9b6683; --rose:#e2709a; --rose2:#c94f7e; --line:rgba(226,112,154,.28); --card:rgba(255,250,252,.86); --gold:#d9b07a; }
     *{ box-sizing:border-box; }
@@ -81,6 +85,22 @@
     .tag.girl{ background:linear-gradient(180deg,#fde68a,#f5c26b); color:#7c4a03; }
     .tag.quick{ background:#f1f5f9; color:#64748b; }
     .empty{ color:var(--soft); text-align:center; padding:20px 0; }
+    .card.wishes{ grid-column:1/-1; }
+    .wishes h2{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .wishes h2 span{ font:700 14px 'IBM Plex Sans Arabic'; color:var(--soft); }
+    ul.list.wl{ max-height:360px; }
+    ul.list.wl li{ align-items:flex-start; }
+    ul.list.wl li .wt{ min-width:0; }
+    ul.list.wl li .wt b{ display:block; font-size:13px; color:var(--rose2); }
+    ul.list.wl li .wt p{ margin:2px 0 0; overflow-wrap:anywhere; }
+    ul.list.wl li.cur{ border-color:var(--rose); box-shadow:0 0 0 2px rgba(226,112,154,.25); }
+    ul.list.wl li.off{ opacity:.5; }
+    ul.list.wl li.off p{ text-decoration:line-through; }
+    .wbtns{ display:flex; align-items:center; gap:6px; flex:none; }
+    .wbtns button{ font:600 12px 'IBM Plex Sans Arabic'; padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--rose2); cursor:pointer; }
+    .points{ margin-top:12px; padding:10px 14px; border-radius:12px; background:#f0fdf4; color:#166534; font-weight:600; }
+    .points.warn{ background:#fffbeb; color:#92400e; }
+    .points a{ color:inherit; }
 </style>
 </head>
 <body>
@@ -105,6 +125,14 @@
                 <button type="button" id="dancePlus" aria-label="أكثر">+</button>
             </div>
         </div>
+        <div class="row" style="margin-top:10px">
+            <label id="wishesLbl">مدة التهاني (دقايق)</label>
+            <div class="stepper" role="group" aria-labelledby="wishesLbl">
+                <button type="button" id="wishesMinus" aria-label="أقل">−</button>
+                <output id="wishesMin">8</output>
+                <button type="button" id="wishesPlus" aria-label="أكثر">+</button>
+            </div>
+        </div>
         <div class="actions"><button class="btn" id="createBtn" type="button">إنشاء الحفلة</button></div>
         <div class="msg hidden" id="createMsg" role="alert"></div>
     </section>
@@ -121,6 +149,12 @@
                 </div>
             </div>
             <div class="msg hidden" id="showMsg" role="alert"></div>
+            <div class="points hidden" id="pointsMsg" role="status"></div>
+        </div>
+        <div class="card wishes hidden" id="wishesCard">
+            <h2>رسائل التهاني <span id="wishCount">0</span></h2>
+            <ul class="list wl" id="wishList"></ul>
+            <div class="actions"><button class="btn" id="nextBtn" type="button">التالي ←</button></div>
         </div>
         <div class="card">
             <div class="code"><h2>رقم الحفلة</h2><b id="code">----</b></div>
@@ -213,7 +247,9 @@
             if (m.t === 'hosted') { state = { code: m.code, token: m.token, girlKey: m.girlKey }; writeJSON('party-host', { code: m.code, token: m.token }); showRoom(); }
             else if (m.t === 'room') renderList(m.room);
             else if (m.t === 'phase') { phase = m; renderPhase(); }
-            else if (m.t === 'err' && (m.of === 'start' || m.of === 'skip')) showShowMsg(m.err === 'phase' ? 'المرحلة تغيّرت قبل الضغط — جرّب مرة ثانية.' : 'صار خطأ.');
+            else if (m.t === 'wishList') renderWishList(m.items || []);
+            else if (m.t === 'points') onPoints(m);
+            else if (m.t === 'err' && (m.of === 'start' || m.of === 'skip' || m.of === 'next' || m.of === 'cut' || m.of === 'hideWish')) showShowMsg(m.err === 'phase' ? 'المرحلة تغيّرت قبل الضغط — جرّب مرة ثانية.' : 'صار خطأ.');
             else if (m.t === 'err' && m.of === 'host') {
                 if (m.err === 'nocode' || m.err === 'token') { writeJSON('party-host', null); state = null; }
                 showCreate(ERR[m.err] || 'صار خطأ، جرّب مرة ثانية.');
@@ -225,18 +261,26 @@
         const girlName = $('girlName').value.trim();
         if (!girlName) { showCreate('اكتب اسم صاحبة الحفلة'); $('girlName').focus(); return; }
         $('createBtn').disabled = true;
-        net.send({ t: 'host', girlName, key: hostKey(), danceMin });
+        net.send({ t: 'host', girlName, key: hostKey(), danceMin, wishesMin });
     });
     // مدة الرقص 1-15 دقيقة
     let danceMin = 5;
     const setDance = v => { danceMin = Math.max(1, Math.min(15, v)); $('danceMin').textContent = danceMin; };
     $('danceMinus').addEventListener('click', () => setDance(danceMin - 1));
     $('dancePlus').addEventListener('click', () => setDance(danceMin + 1));
+    // مدة التهاني 2-20 دقيقة
+    let wishesMin = 8;
+    const setWishes = v => { wishesMin = Math.max(2, Math.min(20, v)); $('wishesMin').textContent = wishesMin; };
+    $('wishesMinus').addEventListener('click', () => setWishes(wishesMin - 1));
+    $('wishesPlus').addEventListener('click', () => setWishes(wishesMin + 1));
 
     // ---- التحكم بالعرض ----
     let phase = null;
-    const PH = { lobby: 'الانتظار', entrance: 'دخول الضيوف', reveal: 'الافتتاح', dance: 'وقت الرقص', free: 'الحفلة مستمرة' };
-    const SKIP = { entrance: 'تخطي المشي', reveal: 'تخطي الافتتاح', dance: 'إنهاء الرقص' };
+    const PH = { lobby: 'الانتظار', entrance: 'دخول الضيوف', reveal: 'الافتتاح', dance: 'وقت الرقص', gather: 'المشي لمنصة التهاني', wishes: 'التهاني',
+        cakeWalk: 'المشي للكيكة', cake: 'قص الكيكة', celebrate: 'الاحتفال', photo: 'الصورة الجماعية', free: 'الحفلة مستمرة' };
+    // وقت الكيكة الزر «قص الكيكة» احتياط لو صاحبة الحفلة ما قدرت (يرسل cut مو skip عشان يطلع الاحتفال)
+    const SKIP = { entrance: 'تخطي المشي', reveal: 'تخطي الافتتاح', dance: 'إنهاء الرقص', gather: 'تخطي المشي', wishes: 'إنهاء التهاني',
+        cakeWalk: 'تخطي المشي', cake: 'قص الكيكة 🎂', celebrate: 'إنهاء الاحتفال' };
     function showShowMsg(t) { $('showMsg').textContent = t || ''; $('showMsg').classList.toggle('hidden', !t); if (t) setTimeout(() => showShowMsg(''), 4000); }
     function renderPhase() {
         if (!phase) return;
@@ -244,6 +288,9 @@
         $('startBtn').classList.toggle('hidden', phase.p !== 'lobby');
         $('skipBtn').classList.toggle('hidden', !SKIP[phase.p]);
         $('skipBtn').textContent = SKIP[phase.p] || 'تخطي';
+        $('skipBtn').classList.toggle('ghost', phase.p !== 'cake');
+        $('wishesCard').classList.toggle('hidden', phase.p !== 'gather' && phase.p !== 'wishes');
+        $('nextBtn').classList.toggle('hidden', phase.p !== 'wishes');
     }
     setInterval(() => {
         if (!phase || !phase.until) { $('phaseClock').textContent = ''; return; }
@@ -257,7 +304,47 @@
         if (!confirm('بدء الحفلة الحين؟ الضيوف يمشون للقاعة وصاحبة الحفلة للمنصة، وما ينقدر التراجع.')) return;
         press($('startBtn'), { t: 'start' });
     });
-    $('skipBtn').addEventListener('click', () => phase && press($('skipBtn'), { t: 'skip', from: phase.p }));
+    $('skipBtn').addEventListener('click', () => phase && press($('skipBtn'), phase.p === 'cake' ? { t: 'cut' } : { t: 'skip', from: phase.p }));
+    $('nextBtn').addEventListener('click', () => press($('nextBtn'), { t: 'next' }));
+
+    // ---- رسائل التهاني: المذيع يشوفها كلها ويخفي اللي ما يناسب ----
+    function renderWishList(items) {
+        const ul = $('wishList'); ul.textContent = '';
+        const vis = items.filter(w => !w.hidden).length;
+        $('wishCount').textContent = items.length ? vis + (vis !== items.length ? ' (+' + (items.length - vis) + ' مخفية)' : '') : '0';
+        if (!items.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'لسا ما وصلت رسائل'; ul.append(li); return; }
+        items.forEach(w => {
+            const li = document.createElement('li'); li.className = (w.cur && !w.hidden ? 'cur' : '') + (w.hidden ? ' off' : '');
+            const t = document.createElement('div'); t.className = 'wt';
+            const b = document.createElement('b'); const nm = document.createElement('bdi'); nm.textContent = w.name; b.append(nm);
+            const p = document.createElement('p'); p.textContent = w.text;
+            t.append(b, p);
+            const bs = document.createElement('div'); bs.className = 'wbtns';
+            if (w.cur && !w.hidden) { const tag = document.createElement('span'); tag.className = 'tag girl'; tag.textContent = 'على الشاشة'; bs.append(tag); }
+            else if (w.shown && !w.hidden) { const tag = document.createElement('span'); tag.className = 'tag quick'; tag.textContent = 'انعرضت'; bs.append(tag); }
+            const hb = document.createElement('button'); hb.type = 'button'; hb.textContent = w.hidden ? 'إظهار' : 'إخفاء';
+            hb.addEventListener('click', () => { hb.disabled = true; net.send({ t: 'hideWish', id: w.id, hidden: !w.hidden }); });
+            bs.append(hb); li.append(t, bs); ul.append(li);
+        });
+    }
+
+    // ---- النقاط (إلزامي — CLAUDE.md): السيرفر يرسل المشاركين الموثّقين بعد الصورة ----
+    let pointsBusy = false;
+    function pointsNote(text, warn) { $('pointsMsg').textContent = text; $('pointsMsg').classList.toggle('warn', !!warn); $('pointsMsg').classList.remove('hidden'); }
+    async function onPoints(m) {
+        if (pointsBusy) return;
+        const A = window.AGPAuth;
+        if (!A || typeof A.reportMatchPoints !== 'function') return;
+        if (!m.players.length) { net.send({ t: 'pointsDone' }); pointsNote('ما فيه مشاركين بحسابات تيك توك موثّقة — ما فيه نقاط تنحسب.'); return; }
+        if (!A.getToken()) { pointsNote('سجّل دخولك بحسابك عشان تنحسب نقاط ' + m.players.length + ' مشارك — بعد الدخول ارجع لهذي الصفحة.', true); return; }
+        pointsBusy = true;
+        const r = await A.reportMatchPoints({ players: m.players, winnerIds: [], teamGame: false, durationMs: m.durationMs });
+        pointsBusy = false;
+        // لو فشل الطلب ما نرسل pointsDone: السيرفر يعيد إرسال القائمة لما المذيع يرجع للصفحة
+        if (!r || !r.success) { pointsNote('ما قدرنا نحسب النقاط الحين — حدّث الصفحة بعد شوي عشان نعيد المحاولة.', true); return; }
+        net.send({ t: 'pointsDone' });
+        pointsNote('انحسبت النقاط لـ ' + (r.awarded ? r.awarded.length : m.players.length) + ' مشارك ✓');
+    }
 
     $('girlName').addEventListener('keydown', e => { if (e.key === 'Enter') $('createBtn').click(); });
     $('showGirl').addEventListener('click', () => $('girlVeil').classList.remove('closed'));

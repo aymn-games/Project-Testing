@@ -406,6 +406,7 @@ test('nextWish shows one per call in first-sent order, skips hidden, and after t
     s.mgr.hideWish(s.code, s.mgr.wishList(s.code).items[1].id, true); // يخفي «أ»
     var r1 = s.mgr.nextWish(s.code, girl.id);
     assert.equal(r1.cur.text, 'ج'); assert.equal(s.mgr.wishesState(s.code).total, 2);
+    assert.deepEqual(s.mgr.wishList(s.code).items.map(function (w) { return w.cur; }), [true, false, false], 'host sees which wish is on screen');
     var r2 = s.mgr.nextWish(s.code, 'host');
     assert.equal(r2.cur.text, 'ب'); assert.equal(r2.done, false);
     assert.equal(s.mgr.phaseOf(s.code).p, 'wishes');

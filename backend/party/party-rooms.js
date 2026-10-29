@@ -335,7 +335,7 @@ function createRoomManager(opts) {
     }
     function wishList(code) {
         var room = rooms[code]; if (!room) return fail('nocode');
-        return { ok: true, items: room.wishes.map(function (w) { return { id: w.id, name: w.name, text: w.text, hidden: w.hidden, shown: w.shown }; }) };
+        return { ok: true, items: room.wishes.map(function (w, i) { return { id: w.id, name: w.name, text: w.text, hidden: w.hidden, shown: w.shown, cur: i === room.wishCur }; }) };
     }
     function cut(code, byId) {
         var room = rooms[code]; if (!room) return fail('nocode');
