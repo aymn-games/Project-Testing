@@ -940,7 +940,7 @@ test('chars setting defaults to rig, host can switch, roster carries it, seriali
     assert.equal(c2.mgr.roster(r2.code).chars, 'classic');
 });
 
-test('last 30s: outro from any phase after the reveal; girl walks to the door, guests line both sides facing the carpet', function () {
+test('last 30s: outro from any phase after the reveal; only the girl walks (to the door), guests stay put', function () {
     var s = schedRoom(), g = girlIn(s);
     s.at(s.start - 15 * MIN);
     var gs = [0, 1, 2, 3].map(function (i) { return s.mgr.join(s.code, { name: 'ضيف' + i }); });
@@ -948,15 +948,14 @@ test('last 30s: outro from any phase after the reveal; girl walks to the door, g
     var end = s.start + 60 * MIN;
     s.at(end - 30001); settle(s);
     assert.notEqual(s.ph(), 'outro');
+    var before = s.mgr.getRoom(s.code).players.filter(function (p) { return p.role === 'guest'; }).map(function (p) { return [p.n, p.x, p.z]; });
     s.at(end - 30000); settle(s);
     assert.equal(s.ph(), 'outro');
     var ph = s.mgr.phaseOf(s.code);
     assert.equal(ph.until, end, 'outro lasts exactly until the end');
-    var walk = ph.walk;
     var girlN = s.mgr.getRoom(s.code).players.find(function (p) { return p.role === 'girl'; }).n;
-    assert.deepEqual(walk[girlN], [0, 45]);
-    var xs = gs.map(function (q) { return walk[s.mgr.getRoom(s.code).players.find(function (p) { return p.id === q.id; }).n][0]; });
-    assert.ok(xs.some(function (x) { return x < -2; }) && xs.some(function (x) { return x > 2; }), 'two rows: ' + xs);
+    assert.deepEqual(ph.walk[girlN], [0, 45]);
+    before.forEach(function (b) { assert.deepEqual(ph.walk[b[0]], [b[1], b[2]], 'guest ' + b[0] + ' stays'); });
     s.at(end); settle(s);
     assert.equal(s.ph(), 'ended');
 });

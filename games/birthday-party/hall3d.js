@@ -900,7 +900,7 @@ export function mountHall(el, opts = {}) {
     const envK = lerp(1, .09, k); for (const e of envMats) e.m.envMapIntensity = e.b * envK;
     ceilMat.color.lerpColors(CEIL_A, CEIL_B, k);
     hemi.intensity = lerp(.24, .035, k); sun.intensity = lerp(.6, .05, k); stageFill.intensity = lerp(.7, .35, k);
-    r.toneMappingExposure = lerp(.95, 1.0, k);
+    r.toneMappingExposure = lerp(.95, 1.0, k) * (1 - .38 * outroDim); // مشهد النهاية: القاعة تخفت والنور من الباب بس
     scene.fog.color.lerpColors(FOG_A, FOG_B, k); scene.background.copy(scene.fog.color);
     scene.fog.near = lerp(90, 30, k); scene.fog.far = lerp(230, 150, k);
     winMat.color.lerpColors(WIN_A, WIN_B, k); haloMat.opacity = lerp(.75, .3, k); poolMat.opacity = lerp(.4, .04, k);
@@ -1034,11 +1034,12 @@ export function mountHall(el, opts = {}) {
     const og = outroGet && outroGet();
     if (og) {
       const e = clock.elapsedTime - outroStart, fy = floorAt(og[0], og[1]);
-      if (og[1] > 26) { tourPos.set(1.4, 3.3, 22); tourLook.set(0, 2.6, HZ); }
-      else if (e < 5) { tourPos.set(og[0] + 2.4, fy + 2.5, og[1] + 8); tourLook.set(og[0], fy + 1.3, og[1]); }
-      else if (e < 9) { tourPos.set(og[0] + 5, fy + 2.3, og[1] + 1); tourLook.set(og[0], fy + 1.3, og[1] + 2); }
-      else { tourPos.set(og[0] + 1.8, fy + 2.4, og[1] - 6); tourLook.set(og[0], fy + 1.5, og[1] + 8); }
-      const k = 1 - Math.exp(-dt * 2);
+      // لقطات: من قدام بعيد وهي تنزل (عدسة ضيقة) ← من الجنب واطي ← من وراها ← واقفة وهي تدخل النور
+      if (og[1] > 24) { tourPos.set(.8, 2.2, 14); tourLook.set(0, 2.4, HZ); }
+      else if (e < 6) { tourPos.set(og[0] + 3.5, fy + 1.9, og[1] + 14); tourLook.set(og[0], fy + 1.2, og[1]); }
+      else if (e < 11) { tourPos.set(og[0] + 5.5, fy + 1.1, og[1] + 2.5); tourLook.set(og[0], fy + 1.25, og[1]); }
+      else { tourPos.set(og[0] + 1.1, fy + 1.6, og[1] - 7.5); tourLook.set(og[0], fy + 1.3, og[1] + 10); }
+      const k = 1 - Math.exp(-dt * 1.1);
       cam.position.lerp(tourPos, k); curLook.lerp(tourLook, k);
       m4.lookAt(cam.position, curLook, cam.up); q0.setFromRotationMatrix(m4); cam.quaternion.slerp(q0, k);
       if (controls) controls.read();
@@ -1220,12 +1221,15 @@ export function mountHall(el, opts = {}) {
   const plGeo = new T.BufferGeometry(); plGeo.setAttribute('position', new T.BufferAttribute(plPos, 3)); plGeo.setAttribute('color', new T.BufferAttribute(plCol, 3));
   const pathLights = new T.Points(plGeo, new T.PointsMaterial({ map: radial('rgba(255,255,255,1)', 'rgba(255,214,150,.6)'), size: .55, vertexColors: true, transparent: true, depthWrite: false, blending: T.AdditiveBlending }));
   pathLights.frustumCulled = false; pathLights.visible = false; scene.add(pathLights);
-  let outroGet = null, outroStart = 0;
+  let outroGet = null, outroStart = 0, outroDim = 0;
   function setOutro(getGirl, ago = 0) {
     outroGet = getGirl || null; outroStart = clock.elapsedTime - ago;
     doorLight.visible = doorGlow.visible = floorBeam.visible = pathLights.visible = !!outroGet;
+    // عدسة أضيق (سينمائية) وقت المشهد
+    cam.fov = outroGet ? 36 : (photoCam ? 50 : mode === 'follow' ? 58 : 52); cam.updateProjectionMatrix();
   }
-  function updateOutro(t) {
+  function updateOutro(t, dt) {
+    outroDim += ((outroGet ? 1 : 0) - outroDim) * (1 - Math.exp(-dt * 1.2));
     if (!outroGet) return;
     const e = t - outroStart, k = Math.min(1, e / 5), late = Math.max(0, Math.min(1, (e - 18) / 10));
     doorLight.material.opacity = k; doorGlow.material.opacity = .55 * k + .45 * late; doorGlow.scale.setScalar(9 + 10 * k + 16 * late);
@@ -1278,7 +1282,7 @@ export function mountHall(el, opts = {}) {
     doorK += (doorT - doorK) * (1 - Math.exp(-dt * 2.2));
     doorLeaves.forEach(d => { d.g.rotation.y = d.open * doorK; });
     updateFireworks(dt, t);
-    updateCandles(dt, t); updateFlutter(dt, t); updateOutro(t);
+    updateCandles(dt, t); updateFlutter(dt, t); updateOutro(t, dt);
     danceMat.emissiveIntensity = party * (.16 + .1 * Math.sin(t * 3));
     tickers.forEach(fn => fn(dt, t, cam));
     r.render(scene, cam);

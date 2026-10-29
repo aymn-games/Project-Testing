@@ -175,7 +175,8 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
   const hearts = fxPool(T, scene, heartTex, .6, ['#ff2d7a', '#e11d74', '#ff5fa2', '#c026d3'], false, 1.8, 256);
   // التفاعلات ومطر القلوب (نفس اللي في crowd-rig)
   const reacts = createReactions(T, scene, heartTex);
-  function react(n, e) { const c = chars.get(n); if (c && c.ready && c.online) reacts.react(c.x, floorAt(c.x, c.z) + (c.role === 'girl' ? 2.5 : 2.2), c.z, e); }
+  let solo = null; // مشهد النهاية: صاحبة الحفلة بس تبان
+  function react(n, e) { const c = chars.get(n); if (c && c.ready && c.online && solo == null) reacts.react(c.x, floorAt(c.x, c.z) + (c.role === 'girl' ? 2.5 : 2.2), c.z, e); }
   const sparks = fxPool(T, scene, sparkTex, .14, ['#ffd27a', '#ffffff', '#ffe9b0', '#f9c6ff'], true, .8, 320); // 16 × 22/ث × ~0.7ث
   const ringMat = new T.MeshBasicMaterial({ color: '#ffc04d', transparent: true, opacity: 1, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide });
   // الهالة: حلقتين ذهبية (وحدة على الأرض ووحدة أصغر حول الخصر) تلف وتنبض
@@ -207,7 +208,7 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
     let girl = null;
     emN = 0;
     for (const c of chars.values()) {
-      if (!c.online || !c.ready) { hide(c); continue; }
+      if (!c.online || !c.ready || (solo != null && c.n !== solo)) { hide(c); continue; }
       const moving = motion.step(c, dt, serverNowMs, localN, getLocal);
       c.phase += dt * (moving ? (c.run ? 13 : 9) : 2);
       const an = c.anim === 6 ? 6 : moving ? 1 : (c.anim || 0), dance = an === 2 || an === 9 || an === 10, L = c.L || (c.L = classic(resolveLook(c.n, c.role, c.look)));
@@ -264,7 +265,7 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
     crown.visible = halo.visible = !!girl;
     if (girl) halo.position.set(girl.x, girl.y + 1.1, girl.z);
 
-    labels.update(dt, chars, cam, localN, floorAt);
+    labels.update(dt, solo != null ? new Map() : chars, cam, localN, floorAt);
   }
 
   // نجهّز shaders الفستان والهالة وقت التحميل بدل لحظة الافتتاح (compile يتجاهل المخفي، فنظهرهم لحظة)
@@ -286,5 +287,5 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
   // للاختبار: حالة كل شخصية
   const debug = () => [...chars.values()].map(c => ({ n: c.n, name: c.name, online: c.online, ready: c.ready, x: +c.x.toFixed(2), z: +c.z.toFixed(2), buf: c.buf.length, slot: c.slot }));
   // سبوت لايت صاحبة الحفلة خاص بشخصيات الهيكل العظمي؛ هنا عندها هالتها الدايمة
-  return { sync, apply, update, setLocal, setLocalLook, setAutoPaths, posOf, prewarm, dispose, debug, fxDebug: reacts.debug, react, rain: reacts.rain, setGirlFx() {}, kind: 'classic', get count() { return chars.size; } };
+  return { sync, apply, update, setLocal, setLocalLook, setAutoPaths, posOf, prewarm, dispose, debug, fxDebug: reacts.debug, react, rain: reacts.rain, setGirlFx() {}, setSolo: n => { solo = n == null ? null : n; }, kind: 'classic', get count() { return chars.size; } };
 }

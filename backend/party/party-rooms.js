@@ -48,8 +48,8 @@ var ZONES = {
 };
 var GIRL_SPOT = [0, -36.5], CAKE_SPOT = [0, -37.6], PHOTO_SPOT = [0, -29.6];
 var PHASES = ['closed', 'lobby', 'entrance', 'reveal', 'dance', 'gather', 'wishWrite', 'wishes', 'cakeWalk', 'cake', 'celebrate', 'photo', 'free', 'outro', 'ended'];
-// مشهد النهاية: آخر 30 ثانية من الحفل (من أي مرحلة بعد الافتتاح) — صاحبة الحفلة تمشي على السجادة لباب القاعة
-// والضيوف صفين على جنبيها يودّعونها
+// مشهد النهاية: آخر 30 ثانية من الحفل (من أي مرحلة بعد الافتتاح) — صاحبة الحفلة تمشي لحالها على السجادة
+// لباب القاعة (الضيوف يختفون عند الكل ويبقون بمكانهم)
 var OUTRO_MS = 30000, OUTRO_END = [0, 45];
 // مدد ثابتة (ms) — dance و wishWrite و celebrate و cake من الجدول، wishes و free بدون وقت
 var FIXED_MS = { entrance: 40000, reveal: 12000, gather: 12000, cakeWalk: 10000, photo: 16000, outro: OUTRO_MS };
@@ -122,12 +122,6 @@ function cleanWish(t) {
         return BAD_SET.has(w) || BAD_SET.has(bare) ? '***' : word;
     });
 }
-// صفين الوداع على جنبي السجادة (يمين/يسار بالتناوب) موزّعين على طولها، ولو كثروا صف ثاني ورا الأول
-function aisleSlot(i, total) {
-    var side = i % 2 ? 1 : -1, k = Math.floor(i / 2), per = Math.max(1, Math.min(44, Math.ceil(Math.max(total, 1) / 2))), rank = Math.floor(k / 44);
-    var dz = Math.min(6, 66 / per);
-    return [r2(side * (2.6 + rank * 1.3)), r2(-26 + (k % 44) * dz + (rank % 2) * dz / 2)];
-}
 function gridSlot(i) { return [r2(-13.8 + (i % 24) * 1.2), r2(-30.5 + Math.floor(i / 24) * 1.2)]; }
 // صيغة الإرسال المضغوطة: صفوف [n, x, z, ry, a] ← مصفوفة مسطّحة بأعداد صحيحة (سم وسنتي-راديان)
 function packRows(rows) { var out = []; rows.forEach(function (r) { out.push(r[0], Math.round(r[1] * 100), Math.round(r[2] * 100), Math.round(r[3] * 100), r[4]); }); return out; }
@@ -173,12 +167,12 @@ function createRoomManager(opts) {
     function targetFor(room, p, kind) {
         kind = kind || 'grid';
         if (p.role === 'girl') return (kind === 'cake' ? CAKE_SPOT : kind === 'photo' ? PHOTO_SPOT : kind === 'outro' ? OUTRO_END : GIRL_SPOT).slice();
-        return kind === 'photo' ? photoSlot(room.slotN++, room.slotTotal) : kind === 'outro' ? aisleSlot(room.slotN++, room.slotTotal) : gridSlot(room.slotN++);
+        return kind === 'photo' ? photoSlot(room.slotN++, room.slotTotal) : kind === 'outro' ? [p.x, p.z] : gridSlot(room.slotN++);
     }
     // اتجاه الوقوف: الضيوف يطالعون المنصة (π)، وصاحبة الحفلة تطالع الضيوف (0) إلا عند الكيكة والصورة
-    // مشهد النهاية: هي تطالع الباب (0)، والضيوف يطالعون السجادة
+    // مشهد النهاية: هي تطالع الباب (0)، والضيوف على حالهم
     function facing(ph, p) {
-        if (ph === 'outro') { if (p.role === 'girl') return 0; return r2((p.x < 0 ? 1 : -1) * Math.PI / 2); }
+        if (ph === 'outro') return p.role === 'girl' ? 0 : p.ry;
         return p.role === 'girl' && !(ph === 'cakeWalk' || ph === 'cake' || ph === 'celebrate' || ph === 'photo') ? 0 : r2(Math.PI);
     }
     // مدة المرحلة (ms) من الجدول — 0 = بدون وقت. الغرفة بدون جدول: نفس الافتراضي، والكيكة تنتظر القص

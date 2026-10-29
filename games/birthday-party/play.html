@@ -117,6 +117,17 @@
     .flash{ position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:8; }
     .flash.go{ animation:flash .8s ease-out; }
     /* آخر ثواني مشهد النهاية: الشاشة تبيض بهدوء (كأنها دخلت النور) */
+    /* مشهد النهاية: لقطة سينمائية — شريطين سود، ألوان خافتة دافية، إطار معتم، وبدون أزرار */
+    body.cine #stage canvas{ filter:saturate(.55) contrast(1.06) brightness(.88) sepia(.14); transition:filter 2.5s ease; }
+    #stage canvas{ transition:filter 2.5s ease; }
+    .cinebar{ position:fixed; left:0; right:0; height:11vh; background:#07040a; z-index:9; transform:scaleY(0); transition:transform 1.8s cubic-bezier(.2,.7,.2,1); pointer-events:none; }
+    .cinebar.t{ top:0; transform-origin:top; } .cinebar.b{ bottom:0; transform-origin:bottom; display:grid; place-items:center; }
+    body.cine .cinebar{ transform:scaleY(1); }
+    .cinebar.b span{ font:400 clamp(15px,2.6vh,24px) 'Aref Ruqaa',serif; color:#e9d6c2; letter-spacing:.06em; opacity:0; transition:opacity 2.5s ease 2.5s; }
+    body.cine .cinebar.b span{ opacity:.9; }
+    .vignette{ position:fixed; inset:0; z-index:8; pointer-events:none; opacity:0; transition:opacity 2.5s ease; background:radial-gradient(ellipse at 50% 55%,rgba(0,0,0,0) 45%,rgba(10,4,12,.6) 100%); }
+    body.cine .vignette{ opacity:1; }
+    body.cine .top, body.cine .phase, body.cine .actbar, body.cine .joy, body.cine .jumpbtn, body.cine .hint, body.cine .notice, body.cine .toast, body.cine .wishcard, body.cine .bigbtn, body.cine .emotip{ opacity:0 !important; pointer-events:none !important; transition:opacity 1.2s; }
     .fadeout{ position:fixed; inset:0; background:radial-gradient(circle at 50% 45%,#fffdf6,#fff3e0); opacity:0; pointer-events:none; z-index:10; }
     @keyframes flash{ 0%{ opacity:1; } 100%{ opacity:0; } }
     .photomodal{ position:fixed; inset:0; z-index:9; display:grid; place-items:center; background:rgba(30,10,30,.6); padding:16px; }
@@ -232,6 +243,9 @@
 </div>
 
 <div class="flash" id="flash" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="cinebar t" aria-hidden="true"></div>
+<div class="cinebar b" aria-hidden="true"><span>إلى لقاء أجمل</span></div>
 <div class="fadeout" id="fadeOut" aria-hidden="true"></div>
 <div class="endscreen hidden" id="endScreen" role="dialog" aria-label="انتهت الحفلة"><div><h2>انتهت الحفلة</h2><p>شكراً لحضوركم 💖</p><a class="savebtn hidden" id="endPhoto" href="#">الصورة الجماعية</a></div></div>
 <div class="kicked hidden" id="kicked" role="alertdialog" aria-label="طلّعك المذيع"><div><h2>طلّعك المذيع من الحفلة</h2><a id="kickedBack" href="../../games.html">رجوع للألعاب</a></div></div>
@@ -366,8 +380,8 @@
         const autoPhase = () => phase && !!{ entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1, outro: 1 }[phase.p];
 
         // مراحل المشي التلقائي: مدة المشي من وقت المرحلة، والدخول بس يمر بنقاط عبور
-        // outro: صاحبة الحفلة تمشي السجادة كلها (27ث)، والضيوف يوصلون صفوف الوداع بسرعة (7ث)
-        const WALK = { entrance: .85, gather: .85, cakeWalk: .85, photo: 6000, outro: 27000 }, OUTRO_GUEST_MS = 7000;
+        // outro: صاحبة الحفلة تمشي السجادة كلها لحالها (27ث)، والضيوف يبقون بمكانهم ومخفيين
+        const WALK = { entrance: .85, gather: .85, cakeWalk: .85, photo: 6000, outro: 27000 }, OUTRO_GUEST_MS = 1000;
         const AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1, outro: 1 };
         // اتجاه الوقوف بعد المشي (نفس السيرفر): صاحبة الحفلة تطالع الضيوف إلا عند الكيكة والصورة
         const facing = p => p === 'outro' ? (myRole === 'girl' ? 0 : (myTarget && myTarget[0] < 0 ? 1 : -1) * Math.PI / 2)
@@ -403,10 +417,13 @@
                 const paths = {};
                 for (const n of Object.keys(W.walk)) { if (+n === myN) continue; const st = crowd.posOf(+n); if (st) paths[n] = W.route(+n, st, W.walk[n]); }
                 const t1s = {}; for (const n of Object.keys(paths)) t1s[n] = W.t1Of(+n);
-                crowd.setAutoPaths(paths, W.t0, W.t1, (role, c) => p === 'outro' ? (role === 'girl' ? 0 : (c && c.x < 0 ? 1 : -1) * Math.PI / 2)
-                    : role === 'girl' && !['cakeWalk', 'photo'].includes(p) ? 0 : Math.PI, { t1Of: t1s, endAnim: p === 'outro' ? (role => role === 'girl' ? 0 : 3) : null });
+                crowd.setAutoPaths(paths, W.t0, W.t1, (role, c) => p === 'outro' ? (role === 'girl' ? 0 : c.ry)
+                    : role === 'girl' && !['cakeWalk', 'photo'].includes(p) ? 0 : Math.PI, { t1Of: t1s });
             } else crowd.setAutoPaths(null, serverNow());
             crowd.setGirlFx(!['lobby', 'entrance', 'closed', 'ended', 'outro'].includes(p)); // بالنهاية النور من الباب بداله
+            // مشهد النهاية: هي بس اللي تبان (الضيوف ومعهم أنا يختفون عند الكل)
+            const gn = [...roles].find(([, r]) => r === 'girl');
+            crowd.setSolo(p === 'outro' && gn ? gn[0] : null);
         }
         function applyPhase() {
             if (!phase || !gotAll) return;
@@ -444,9 +461,9 @@
             if (p === 'outro') {
                 hall.setOutro(() => { const gn = [...roles].find(([, r]) => r === 'girl'); return gn && crowd ? crowd.posOf(gn[0]) : null; }, since / 1000);
                 hall.flutter(Math.max(2, 30 - since / 1000));
-                if (!isGirl && !viewOnly) { emote = 3; emoteUntil = 0; }
-                if (since < 6000) notice('إلى لقاء أجمل ✨', 'شكراً لأنكم كنتوا جزء من هالليلة', 6000);
             } else hall.setOutro(null);
+            // لقطة سينمائية: الأزرار والنصوص تختفي، شريطين سود، وألوان خافتة
+            document.body.classList.toggle('cine', p === 'outro');
             const W = walkOf();
             if (W) {
                 const { walk, t0, route } = W, t1 = W.t1Of(myN);
