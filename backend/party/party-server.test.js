@@ -303,12 +303,13 @@ test('guest wish appears in host wishList, girl next broadcasts wishes cur to al
     var girlKey = (await r.h.wait(function (x) { return x.t === 'hosted'; })).girlKey;
     var gl = await client(port); gl.send({ t: 'join', code: r.code, name: 'سارة', girlKey: girlKey }); await gl.wait(function (x) { return x.t === 'welcome'; });
     var g = await client(port); g.send({ t: 'join', code: r.code, name: 'ريم' }); await g.wait(function (x) { return x.t === 'welcome'; });
-    await toPhase(r, 'wishes');
+    await toPhase(r, 'wishWrite');
     await sleep(1100);
     g.send({ t: 'wish', text: 'كل عام وانتي بخير' });
     await g.wait(function (x) { return x.t === 'myWish' && x.text === 'كل عام وانتي بخير'; });
     var wl = await r.h.wait(function (x) { return x.t === 'wishList' && x.items.length === 1; });
     assert.equal(wl.items[0].name, 'ريم');
+    await toPhase(r, 'wishes'); // الكتابة تنقفل ← العرض
     await sleep(1100);
     gl.send({ t: 'next' });
     var ws = await g.wait(function (x) { return x.t === 'wishes' && x.cur; });
@@ -366,7 +367,7 @@ test('guest cannot next/cut/hideWish', async function () {
     reset(); party._setEnabled(true);
     var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
     var g = await client(port); g.send({ t: 'join', code: r.code, name: 'ريم' }); await g.wait(function (x) { return x.t === 'welcome'; });
-    await toPhase(r, 'wishes'); await sleep(1100);
+    await toPhase(r, 'wishWrite'); await sleep(1100);
     g.send({ t: 'next' });
     assert.equal((await g.wait(function (x) { return x.t === 'err' && x.of === 'next'; })).err, 'role');
     await sleep(1100); g.send({ t: 'hideWish', id: 1, hidden: true });
