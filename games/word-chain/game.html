@@ -357,12 +357,19 @@ a{color:#a78bfa}a:hover{color:#c4b5fd}
           <sc-if value="{{ joinedEmpty }}" hint-placeholder-val="{{ true }}">
           <div style="flex:1;min-height:120px;display:grid;place-items:center;border-radius:20px;border:1.5px dashed rgba(167,139,250,.3);color:#8a8596;font:500 16px 'IBM Plex Sans Arabic'">بانتظار انضمام اللاعبين…</div>
           </sc-if>
-          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:{{ joinRowH }};align-items:center;gap:{{ joinGap }}">
             <sc-for list="{{ joined }}" as="j" hint-placeholder-count="0">
-              <div style="min-width:0;display:flex;align-items:center;gap:10px;height:54px;padding:0 8px 0 7px;box-sizing:border-box;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);animation:rise .4s cubic-bezier(.2,1.3,.4,1) both">
+              <div style="min-width:0;height:100%;display:flex;align-items:center;animation:rise .4s cubic-bezier(.2,1.3,.4,1) both">
+              <sc-if value="{{ j.framed }}" hint-placeholder-val="{{ false }}">
+                <div style="width:100%;min-width:0;display:flex;align-items:center">{{ j.frameEl }}</div>
+              </sc-if>
+              <sc-if value="{{ j.plain }}" hint-placeholder-val="{{ true }}">
+              <div style="width:100%;min-width:0;display:flex;align-items:center;gap:10px;height:54px;padding:0 8px 0 7px;box-sizing:border-box;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);animation:rise .4s cubic-bezier(.2,1.3,.4,1) both">
                 <span style="width:40px;height:40px;flex-shrink:0;border-radius:50%;position:relative;overflow:hidden;display:grid;place-items:center;background:linear-gradient(135deg, #a78bfa, #a78bfa66);border:1.5px solid #a78bfa;box-sizing:border-box;font:700 16px 'IBM Plex Sans Arabic';color:#fff">{{ j.ini }}<img src="{{ j.av }}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:{{ j.op }}"></span>
                 <span style="flex:1;min-width:0;font:600 14px 'IBM Plex Sans Arabic';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ j.name }}</span>
                 <button onClick="{{ j.kick }}" aria-label="إزالة {{ j.name }}" style="width:30px;height:30px;flex-shrink:0;border:none;background:transparent;padding:0;color:#fca5a5;cursor:pointer;display:grid;place-items:center;opacity:.75" style-hover="opacity:1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg></button>
+              </div>
+              </sc-if>
               </div>
             </sc-for>
           </div>
@@ -554,7 +561,9 @@ class Component extends DCLogic {
   renderVals(){ const S=this.state; return { lblDisp:S.narrow?'none':'inline', onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'), confirmExit:()=>{ this.shut('exitOpen'); location.href=WCH.libraryUrl; }, ...this.anims(), exitOpen:S.exitOpen, toast:S.toast,
       eventsOpen:S.eventsOpen, closeEvents:()=>this.shut('eventsOpen'), ...this.events(), onSettings:()=>this.setState({settingsOpen:true}), settingsOpen:S.settingsOpen, tabSettings:S.setTab===0,
       joinOpen:S.joinOpen, openJoin:()=>{ this.shut('settingsOpen'); setTimeout(()=>this.applyPending(),260); this.setState({joinOpen:true,joined:[]}); }, closeJoin:this.closeJoin, joinTeams:[{name:'كلمة الدخول',cmd:(SETUP&&SETUP.keyword)||''}],
-      joined:S.joined.map(n=>({name:n,ini:ini(n),...this.av(n),op:this.av(n).op,kick:()=>this.setState(st=>({joined:st.joined.filter(x=>x!==n)}))})), joinedCount:S.joined.length, joinedEmpty:!S.joined.length,
+      joined:S.joined.map(n=>{ const kick=()=>this.setState(st=>({joined:st.joined.filter(x=>x!==n)})), fr=this.reg.framed(n);
+        return {name:n,ini:ini(n),...this.av(n),kick,framed:!!fr,plain:!fr,frameEl:fr?WCH.frameCard(fr,kick):null}; }),
+      joinRowH:S.joined.some(n=>this.reg.framed(n))?'78px':'54px', joinGap:S.joined.some(n=>this.reg.framed(n))?'6px 10px':'8px', joinedCount:S.joined.length, joinedEmpty:!S.joined.length,
       tabPlayers:S.setTab===1, playerCount:S.players.length,  noPlayers:!S.players.length&&!S.out.length, players:[...[...S.players].sort((a,b)=>(S.scores[b]||0)-(S.scores[a]||0)||this.order(a)-this.order(b)).map((n,i)=>{ const pd=S.pending.includes(n); return {name:n,num:i+1,pts:S.scores[n]||0,pending:pd,active:!pd,op:pd?.55:1,deco:pd?'line-through':'none',
         bg:pd?'rgba(248,113,113,.06)':'rgba(255,255,255,.025)',bd:pd?'rgba(248,113,113,.25)':'rgba(255,255,255,.07)',
         kick:()=>this.setState(s=>({pending:[...s.pending,n]})), undo:()=>this.setState(s=>({pending:s.pending.filter(x=>x!==n)}))}; }), ...S.out.map(n=>({name:n,num:'—',pts:S.scores[n]||0,pending:false,active:false,isOut:true,op:.75,deco:'none',bg:'rgba(248,113,113,.05)',bd:'rgba(248,113,113,.2)',
