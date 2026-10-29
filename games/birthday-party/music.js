@@ -1,5 +1,5 @@
 // موسيقى الحفلة: ملفات music/<الاسم>.mp3 (يرفعها صاحب المشروع لاحقاً): lobby.mp3
-// للانتظار والتهاني، reveal.mp3 للافتتاح، dance.mp3 للرقص، cake.mp3 لقص الكيكة. لو الملف مو موجود تسكت بدون أي خطأ.
+// للانتظار والتهاني، reveal.mp3 للافتتاح، dance.mp3 للرقص، cake.mp3 لقص الكيكة ورقصها. لو الملف مو موجود تسكت بدون أي خطأ.
 // المتصفحات تمنع التشغيل قبل أول لمسة، فلو انرفض التشغيل نعيد المحاولة مع أول لمسة.
 export function createMusic(base = 'music/') {
   let cur = null, curName = null, pending = null, vol = 0.75;
@@ -7,7 +7,7 @@ export function createMusic(base = 'music/') {
   function track(name) {
     if (!tracks.has(name)) {
       const a = new Audio(); a.preload = 'auto'; a.src = base + name + '.mp3'; a.volume = vol;
-      a.loop = name !== 'reveal' && name !== 'cake';
+      a.loop = name !== 'reveal'; // cake تتكرر طول رقص الكيكة (5 دقايق)
       a.onerror = () => { a.broken = true; };
       tracks.set(name, a);
     }

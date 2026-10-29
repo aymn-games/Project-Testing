@@ -44,6 +44,11 @@
     .spin{ width:40px; height:40px; margin:0 auto 10px; border-radius:50%; border:4px solid #fbd3e4; border-top-color:#e2709a; animation:sp 1s linear infinite; }
     @keyframes sp{ to{ transform:rotate(360deg); } }
     @media (prefers-reduced-motion:reduce){ .spin{ animation-duration:3s; } }
+    .doors{ text-align:center; }
+    .doors h2{ margin:0 0 2px; font:900 22px/1.3 'Zain'; }
+    .doors .when{ font:600 13px 'IBM Plex Sans Arabic'; color:var(--soft); }
+    .doors .left{ margin:10px 0 4px; font:900 44px/1 'Zain'; color:var(--rose2); font-variant-numeric:tabular-nums; direction:ltr; }
+    .doors p{ margin:6px 0 0; }
 </style>
 </head>
 <body>
@@ -54,6 +59,13 @@
     </div>
 
     <div class="msg hidden" id="msg" role="alert"></div>
+    <!-- قبل فتح الدخول (الحفلة المجدولة): الوقت والعدّاد، وأزرار الدخول تنفتح لحالها -->
+    <div class="card doors hidden" id="doors" role="status" aria-live="polite">
+        <h2>الدخول يفتح الساعة <bdi id="doorsAt"></bdi></h2>
+        <div class="when" id="doorsWhen"></div>
+        <div class="left" id="doorsLeft"></div>
+        <p>اكتب اسمك من الحين، وزر الدخول يشتغل أول ما يفتح الدخول.</p>
+    </div>
     <div class="wait" id="wait"><div class="spin"></div>جاري الاتصال بالحفلة…</div>
 
     <!-- ضيف -->
@@ -85,13 +97,14 @@
 </main>
 
 <script type="module">
-    import { connect, readJSON, writeJSON } from './party-net.js';
+    import { connect, readJSON, writeJSON, serverNow, clockText, dateText, tzLabel, countdownText } from './party-net.js';
     const $ = id => document.getElementById(id);
     const q = new URLSearchParams(location.search);
     const code = (q.get('code') || '').replace(/\D/g, '').slice(0, 4);
     const girlKey = q.get('g');
     const ERR = {
-        full: 'الحفلة مكتملة (100 ضيف).',
+        full: 'الحفلة مكتملة (100 ضيف) — تابعها من البث 💖',
+        ended: 'انتهت الحفلة · شكراً لحضوركم 💖',
         'girl-taken': 'صاحبة الحفلة داخلة من جهاز ثاني.',
         'girl-key': 'رابط صاحبة الحفلة غير صحيح.',
         nocode: 'الحفلة غير موجودة أو انتهت.',
@@ -105,11 +118,25 @@
     let dev = readJSON('party-dev');
     if (typeof dev !== 'string' || !/^[a-z0-9]{8,32}$/i.test(dev)) { dev = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''); writeJSON('party-dev', dev); }
 
+    // الحفلة المجدولة قبل فتح الدخول: الضيف يشوف الوقت والعدّاد، وأزرار دخول الضيوف مقفلة
+    // لين توصل phase lobby (صاحبة الحفلة تقدر تدخل غرفتها بدري)
+    let doorsAt = 0, doorsT = 0;
+    function setDoors(openAt, tz) {
+        doorsAt = openAt || 0;
+        $('doors').classList.toggle('hidden', !doorsAt || !!girlKey);
+        ['memberBtn', 'quickBtn'].forEach(id => { $(id).dataset.closed = doorsAt ? '1' : ''; if (doorsAt) $(id).disabled = true; else if (!sentJoin) $(id).disabled = false; });
+        clearInterval(doorsT);
+        if (!doorsAt) return;
+        $('doorsAt').textContent = clockText(doorsAt, tz);
+        $('doorsWhen').textContent = dateText(doorsAt, tz) + ' · ' + tzLabel(tz);
+        const tickDoors = () => { $('doorsLeft').textContent = countdownText(doorsAt - serverNow()); };
+        tickDoors(); doorsT = setInterval(tickDoors, 1000);
+    }
     function showMsg(t) { $('msg').textContent = t || ''; $('msg').classList.toggle('hidden', !t); }
     function showForm() {
         $('wait').classList.add('hidden');
         $((girlKey ? 'girl' : 'guest') + 'Form').classList.remove('hidden');
-        sentJoin = false; ['memberBtn', 'quickBtn', 'girlBtn'].forEach(id => { $(id).disabled = false; });
+        sentJoin = false; ['memberBtn', 'quickBtn', 'girlBtn'].forEach(id => { $(id).disabled = !!$(id).dataset.closed; });
     }
     function renderMember() {
         const A = window.AGPAuth, tok = A && A.getToken && A.getToken(), user = A && A.getCachedUser && A.getCachedUser();
@@ -135,6 +162,12 @@
                     girlName = m.room.girlName || '';
                     if (girlName) { $('heroTitle').textContent = 'حفلة ' + girlName; if (girlKey && !$('girlName').value) $('girlName').value = girlName; }
                     if (!sentJoin) { showForm(); renderMember(); }
+                } else if (m.t === 'phase') {
+                    if (m.p === 'ended') { setDoors(0); $('wait').classList.add('hidden'); $('guestForm').classList.add('hidden'); $('girlForm').classList.add('hidden'); $('doors').classList.add('hidden'); showMsg(ERR.ended); return; }
+                    setDoors(m.p === 'closed' && m.sched ? m.sched.openAt : 0, m.sched && m.sched.tzOffsetMin);
+                } else if (m.t === 'closed') {
+                    // ضغط دخول والدخول لسا ما فتح (السيرفر يرسل phase lobby أول ما يفتح)
+                    sentJoin = false; showForm(); setDoors(m.openAt, m.tzOffsetMin);
                 } else if (m.t === 'welcome') {
                     writeJSON('party-me', { code, id: m.id, key: m.key, role: m.role });
                     location.replace('play.html?code=' + code);
@@ -147,6 +180,7 @@
         });
         const join = (extra, btn) => { showMsg(''); sentJoin = true; $(btn).disabled = true; net.send(Object.assign({ t: 'join', code, dev }, extra)); };
         $('memberBtn').addEventListener('click', () => {
+            if ($('memberBtn').dataset.closed) return;
             const tok = window.AGPAuth && window.AGPAuth.getToken && window.AGPAuth.getToken();
             if (!tok) {
                 // login.html يقبل ?next= كمسار نسبي من جذر الموقع فقط
@@ -157,6 +191,7 @@
             join({ auth: tok }, 'memberBtn');
         });
         $('quickBtn').addEventListener('click', () => {
+            if ($('quickBtn').dataset.closed) return;
             const name = $('quickName').value.trim();
             if (!name) { showMsg(ERR.name); $('quickName').focus(); return; }
             join({ name }, 'quickBtn');

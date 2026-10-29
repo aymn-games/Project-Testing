@@ -32,3 +32,21 @@ test('a silent connection is detected as dead and reported offline', async () =>
   assert.equal(states[0], true, 'connected first');
   assert.ok(states.includes(false), 'reported offline after silence: ' + JSON.stringify(states));
 });
+
+test('clockText/tzLabel/countdownText format times in the host timezone', async () => {
+  const { clockText, tzLabel, countdownText, dateText } = await import('./party-net.js');
+  const midnightRiyadh = Date.UTC(2026, 10, 2, 21, 0, 0); // 3/11/2026 00:00 بتوقيت السعودية
+  assert.equal(clockText(midnightRiyadh, 180), '12:00 ص');
+  assert.equal(clockText(midnightRiyadh - 15 * 60000, 180), '11:45 م');
+  assert.equal(clockText(midnightRiyadh + 60 * 60000, 180), '1:00 ص');
+  assert.equal(clockText(Date.UTC(2026, 10, 3, 9, 5), 180), '12:05 م');
+  assert.equal(dateText(midnightRiyadh, 180), '3/11/2026');
+  assert.equal(tzLabel(180), 'بتوقيت السعودية');
+  assert.equal(tzLabel(0), 'UTC');
+  assert.equal(tzLabel(-300), 'UTC-5');
+  assert.equal(tzLabel(330), 'UTC+5:30');
+  assert.equal(countdownText(65000), '1:05');
+  assert.equal(countdownText(3 * 3600000 + 2 * 60000 + 9000), '3:02:09');
+  assert.equal(countdownText(-5), '0:00');
+  assert.equal(countdownText(1), '0:01', 'rounds up so it never shows 0 before the moment');
+});

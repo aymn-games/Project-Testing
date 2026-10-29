@@ -794,9 +794,13 @@ export function mountHall(el, opts = {}) {
   }
 
   // الاحتفال الثاني: ألعاب نارية أكثر + ليزر ذهبي/وردي/أبيض + كونفيتي أسرع
-  let celebUntil = 0;
+  // strobe (احتفال الكيكة الطويل): ألعاب نارية طول المدة، والأنوار تشتغل وتطفي
+  let celebUntil = 0, strobeUntil = 0;
   const CELEB_SET = ['#ffd27a', '#ffffff', '#ff5fb0'];
-  function celebrate(sec = 30) { celebUntil = clock.elapsedTime + sec; fwUntil = clock.elapsedTime + Math.min(sec, 14); fwNext = 0; }
+  function celebrate(sec = 30, { strobe = false } = {}) {
+    const t = clock.elapsedTime; celebUntil = t + sec; fwUntil = t + (strobe ? sec : Math.min(sec, 14)); fwNext = 0;
+    strobeUntil = strobe ? t + sec : 0;
+  }
 
   // كاميرا الصورة الجماعية: ثابتة على المنصة تطالع الكل
   let photoCam = false;
@@ -915,7 +919,10 @@ export function mountHall(el, opts = {}) {
     }
     spots.instanceMatrix.needsUpdate = true; spots.instanceColor.needsUpdate = true;
     // الليزر يغيّر مجموعة ألوانه كل 6 ثواني ويتأرجح بأنماط مختلفة
-    const set = t < celebUntil ? CELEB_SET : LASER_SETS[Math.floor(t / 6) % LASER_SETS.length], blink = (Math.floor(t * 2) % 8) === 7 ? .35 : 1;
+    // الوميض: عادي نبضة كل 4ث، ووقت strobe الأنوار تشتغل وتطفي (أبطأ مع تقليل الحركة)
+    const strobing = t < strobeUntil, blink = strobing ? (Math.floor(t * (reduced ? 1.5 : 5)) % 2 ? .12 : 1) : (Math.floor(t * 2) % 8) === 7 ? .35 : 1;
+    if (strobing) { spotMat.opacity *= blink; upMat.opacity *= .35 + blink * .65; }
+    const set = t < celebUntil ? CELEB_SET : LASER_SETS[Math.floor(t / 6) % LASER_SETS.length];
     coreMat.opacity = .9 * k * blink; glowMat.opacity = .16 * k * blink; dotMat.opacity = .9 * k * blink;
     BEAMS.forEach((b, i) => {
       const e = b.e, spread = e.n > 1 ? (b.i - (e.n - 1) / 2) * .22 : 0;
