@@ -221,7 +221,12 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
   // ---- المؤثرات وقت الحركات: قلوب وشرار (جزيئات مشتركة للكل) وهالة تحت القدمين ----
   const FXN = 240, MAXE = 16, emitters = [];
   const spriteTex = draw => { const c = document.createElement('canvas'); c.width = c.height = 64; draw(c.getContext('2d')); const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return t; };
-  const heartTex = spriteTex(g => { g.fillStyle = '#fff'; g.beginPath(); g.moveTo(32, 56); g.bezierCurveTo(2, 36, 8, 6, 32, 20); g.bezierCurveTo(56, 6, 62, 36, 32, 56); g.fill(); });
+  // القلب: حافة أغمق (تنضرب بلون الجزيء) عشان يبان فوق أرضية القاعة الوردية، ولمعة صغيرة
+  const heartTex = spriteTex(g => {
+    g.beginPath(); g.moveTo(32, 56); g.bezierCurveTo(4, 36, 8, 8, 32, 21); g.bezierCurveTo(56, 8, 60, 36, 32, 56); g.closePath();
+    g.fillStyle = '#fff'; g.fill(); g.lineWidth = 5; g.strokeStyle = '#7a7a7a'; g.lineJoin = 'round'; g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.ellipse(21, 24, 5, 3.4, -.6, 0, Math.PI * 2); g.fill();
+  });
   const sparkTex = spriteTex(g => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.22, 'rgba(255,255,255,.85)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
   function fxPool(tex, size, colors, additive, maxLife) {
     const pos = new Float32Array(FXN * 3).fill(-100), col = new Float32Array(FXN * 3), base = new Float32Array(FXN * 3), vel = new Float32Array(FXN * 3), life = new Float32Array(FXN);
@@ -250,7 +255,7 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
       },
     };
   }
-  const hearts = fxPool(heartTex, .42, ['#ff2d7a', '#e11d74', '#ff5fa2', '#c026d3'], false, 1.8);
+  const hearts = fxPool(heartTex, .6, ['#ff2d7a', '#e11d74', '#ff5fa2', '#c026d3'], false, 1.8);
   const sparks = fxPool(sparkTex, .14, ['#ffd27a', '#ffffff', '#ffe9b0', '#f9c6ff'], true, .8);
   const ringMat = new T.MeshBasicMaterial({ color: '#ffc04d', transparent: true, opacity: 1, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide });
   // الهالة: حلقتين ذهبية (وحدة على الأرض ووحدة أصغر حول الخصر) تلف وتنبض
@@ -264,7 +269,7 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
     for (let k = 0; k < Math.min(MAXE, emitters.length); k++) {
       const em = emitters[k], R = Math.random;
       // عدد ثابت بالثانية (مو بالإطار) عشان الجوال البطيء يطلع نفس الكمية
-      const c = em.c, n = Math.floor((c.fxCarry = (c.fxCarry || 0) + dt * (em.fx === 1 ? 6 : 22)));
+      const c = em.c, n = Math.floor((c.fxCarry = (c.fxCarry || 0) + dt * (em.fx === 1 ? 8 : 22)));
       c.fxCarry -= n;
       for (let j = 0; j < Math.min(n, 6); j++) {
         if (em.fx === 1) hearts.spawn(em.x + (R() - .5) * .7, em.y + 1.45 + R() * .45, em.z + (R() - .5) * .7, (R() - .5) * .35, .65 + R() * .4, (R() - .5) * .35);
