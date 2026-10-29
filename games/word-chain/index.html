@@ -208,7 +208,7 @@ const GAME = {
   gameUrl: 'game.html',
   requireLive: true
 };
-// الفئات من قوائم الكلمات نفسها (wc-words.js) — أي فئة تُضاف هناك تظهر هنا تلقائياً
+// كل فئات wc-words.js تدخل في المباراة — أي فئة تُضاف هناك تدخل تلقائياً
 const CATEGORIES = AGPWordChainWords.categories;
 const SETTINGS = [
   { title:'المباراة', rows:[
@@ -220,9 +220,6 @@ const SETTINGS = [
     { type:'toggle', key:'noRepeatPlayer', label:'منع نفس اللاعب يجاوب مرتين ورا بعض', hint:'لازم لاعب ثاني يجاوب قبل ما يرجع يجاوب', default:true },
     { type:'choice', key:'order',  label:'ترتيب الفئات', options:['بالترتيب','عشوائي'], default:1 },
     { type:'toggle', key:'sound',  label:'الأصوات', default:true }
-  ]},
-  { title:'الفئات', full:true, rows:[
-    { type:'multi', key:'categories', label:'اختر الفئات اللي تدخل في المباراة', options:CATEGORIES.map(c=>c.icon+' '+c.name), default:CATEGORIES.map((_,i)=>i), minPick:1 }
   ]}
 ];
 
@@ -254,7 +251,7 @@ class Component extends DCLogic {
     return row; }
 
   readValues(){ const out={}; for(const r of SETTINGS.flatMap(s=>s.rows)){ const v=this.state.values[r.key];
-    out[r.key]=r.type==='choice'?r.options[v]:r.type==='multi'?v.map(k=>r.options[k]):v; } out.categoryIds=this.state.values.categories.map(k=>CATEGORIES[k].id); return out; }
+    out[r.key]=r.type==='choice'?r.options[v]:r.type==='multi'?v.map(k=>r.options[k]):v; } out.categoryIds=CATEGORIES.map(c=>c.id); return out; }
 
   buildFx(){
     if(this._fx) return this._fx;
