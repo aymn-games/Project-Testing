@@ -1,5 +1,5 @@
-// موسيقى الحفلة: ملفات music/<الاسم>.mp3 (يرفعها صاحب المشروع لاحقاً — مثلاً
-// reveal.mp3 للافتتاح و dance.mp3 لوقت الرقص). لو الملف مو موجود تسكت بدون أي خطأ.
+// موسيقى الحفلة: ملفات music/<الاسم>.mp3 (يرفعها صاحب المشروع لاحقاً): lobby.mp3
+// للانتظار والتهاني، reveal.mp3 للافتتاح، dance.mp3 للرقص، cake.mp3 لقص الكيكة. لو الملف مو موجود تسكت بدون أي خطأ.
 // المتصفحات تمنع التشغيل قبل أول لمسة، فلو انرفض التشغيل نعيد المحاولة مع أول لمسة.
 export function createMusic(base = 'music/') {
   let cur = null, curName = null, pending = null, vol = 0.75;
@@ -7,7 +7,7 @@ export function createMusic(base = 'music/') {
   function track(name) {
     if (!tracks.has(name)) {
       const a = new Audio(); a.preload = 'auto'; a.src = base + name + '.mp3'; a.volume = vol;
-      a.loop = name !== 'reveal';
+      a.loop = name !== 'reveal' && name !== 'cake';
       a.onerror = () => { a.broken = true; };
       tracks.set(name, a);
     }
@@ -23,7 +23,7 @@ export function createMusic(base = 'music/') {
   const unlock = () => {
     if (!primed) {
       primed = true;
-      ['lobby', 'reveal', 'dance'].forEach(n => { const a = track(n); if (a === cur || a.broken) return; a.muted = true; const p = a.play(); if (p && p.then) p.then(() => { a.pause(); a.muted = false; a.currentTime = 0; }).catch(() => { a.muted = false; }); });
+      ['lobby', 'reveal', 'dance', 'cake'].forEach(n => { const a = track(n); if (a === cur || a.broken) return; a.muted = true; const p = a.play(); if (p && p.then) p.then(() => { a.pause(); a.muted = false; a.currentTime = 0; }).catch(() => { a.muted = false; }); });
     }
     if (pending) { const a = pending; pending = null; tryPlay(a); }
   };

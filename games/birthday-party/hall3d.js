@@ -993,6 +993,13 @@ export function mountHall(el, opts = {}) {
     return { x: p0[0] + (p1[0] - p0[0]) * k, z: p0[1] + (p1[1] - p0[1]) * k, dx: p1[0] - p0[0], dz: p1[1] - p0[1] };
   }
   const lerpAng = (a, b, k) => { let d = b - a; d = Math.atan2(Math.sin(d), Math.cos(d)); return a + d * k; };
+  // خطوة المشي التلقائي: المكان من المسار حسب وقت السيرفر
+  function stepAuto(dt) {
+    const f = Math.max(0, Math.min(1, (auto.now() - auto.t0) / Math.max(1, auto.t1 - auto.t0))), ap = pathAt(auto, f);
+    pos.x = ap.x; pos.z = ap.z;
+    if (f > 0 && f < 1) { moving = true; localRy = lerpAng(localRy, Math.atan2(ap.dx, ap.dz), 1 - Math.exp(-dt * 10)); yaw = lerpAng(yaw, localRy - Math.PI, 1 - Math.exp(-dt * 2.5)); }
+    else if (f >= 1 && auto.endRy != null) localRy = lerpAng(localRy, auto.endRy, 1 - Math.exp(-dt * 6));
+  }
   const getLocal = () => ({ x: pos.x, z: pos.z, ry: localRy, moving, running: sprinting, y: floorAt(pos.x, pos.z) });
   function setMode(m) {
     if (m === mode) return;
@@ -1009,9 +1016,11 @@ export function mountHall(el, opts = {}) {
   const q0 = new T.Quaternion(), m4 = new T.Matrix4();
   function updateCamera(dt) {
     if (photoCam) {
-      // لقطة الصورة الجماعية (نفسها على كل الجوالات)
+      // لقطة الصورة الجماعية (نفسها على كل الجوالات) — واللاعب يكمل مشيه لمكانه بالصورة
       tourPos.set(0, 5, -37.5); cam.position.lerp(tourPos, 1 - Math.exp(-dt * 4)); followLook.set(0, 1.7, -25); cam.lookAt(followLook);
       if (controls) controls.read();
+      moving = false; sprinting = false;
+      if (auto && mode === 'follow') stepAuto(dt);
       return;
     }
     if (mode === 'debug') return; // لقطة ثابتة للاختبار (play.html?cam=...)
@@ -1022,10 +1031,7 @@ export function mountHall(el, opts = {}) {
       if (auto) {
         // المشي التلقائي: المكان من المسار، والسحب يلف الكاميرا بس
         if (inp) { yaw -= inp.dx * .005; camElev = Math.max(.08, Math.min(1.1, camElev + inp.dy * .003)); }
-        const f = Math.max(0, Math.min(1, (auto.now() - auto.t0) / Math.max(1, auto.t1 - auto.t0))), ap = pathAt(auto, f);
-        pos.x = ap.x; pos.z = ap.z;
-        if (f > 0 && f < 1) { moving = true; localRy = lerpAng(localRy, Math.atan2(ap.dx, ap.dz), 1 - Math.exp(-dt * 10)); yaw = lerpAng(yaw, localRy - Math.PI, 1 - Math.exp(-dt * 2.5)); }
-        else if (f >= 1 && auto.endRy != null) localRy = lerpAng(localRy, auto.endRy, 1 - Math.exp(-dt * 6));
+        stepAuto(dt);
       } else if (inp) {
         yaw -= inp.dx * .005; camElev = Math.max(.08, Math.min(1.1, camElev + inp.dy * .003));
         const sp = (inp.run ? 9 : 5.5) * dt, fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
@@ -1054,6 +1060,7 @@ export function mountHall(el, opts = {}) {
       tourA += dt * (reduced ? .04 : .075);
       if (shot === 'stage') { tourPos.set(Math.sin(tourA * .6) * 3, 5.2, -12); tourLook.set(0, 5.5, -40); }
       else if (shot === 'entrance') { tourPos.set(10, 9, 30); tourLook.set(0, 2, 46); }
+      else if (shot === 'screen') { tourPos.set(Math.sin(tourA * .5) * 2, 5, -16); tourLook.set(0, 9.5, -44); }
       else {
         tourPos.set(Math.sin(tourA) * 20, 6.5 + Math.sin(tourA * 2) * 2.2, -2 + Math.cos(tourA) * 32);
         tourLook.set(Math.sin(tourA + 1.2) * 6, 4.2, -18 + Math.cos(tourA) * 6);

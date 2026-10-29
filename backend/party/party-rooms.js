@@ -51,8 +51,15 @@ function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 function fail(err) { return { ok: false, err: err }; }
 function inZone(z, x, y) { return [clamp(x, z[0], z[1]), clamp(y, z[2], z[3])]; }
 // مكان رقم i بالشبكة قدام المنصة (24 عمود × صفوف بمسافة 1.2م، الصف الأول الأقرب للمنصة)
-// صفوف الصورة الجماعية ورا صاحبة الحفلة (18 بالصف، 1.15م)
-function photoSlot(i) { var row = Math.floor(i / 18) + 1, col = i % 18; return [r2(-9.775 + col * 1.15), r2(PHOTO_SPOT[1] + row * 1.2)]; }
+// صفوف الصورة الجماعية ورا صاحبة الحفلة: 14 بالصف (عرض الكادر)، كل صف بالنص حسب عدده،
+// والصفوف متبادلة بنص مسافة عشان الرؤوس ما تغطي بعض. اللي يدخل متأخر (i >= total) بصف جديد ورا.
+var PHOTO_ROW = 14, PHOTO_DX = 1.1;
+function photoSlot(i, total) {
+    var row, col, cnt, full = Math.ceil(total / PHOTO_ROW);
+    if (i < total) { row = Math.floor(i / PHOTO_ROW); col = i % PHOTO_ROW; cnt = Math.min(PHOTO_ROW, total - row * PHOTO_ROW); }
+    else { row = full + Math.floor((i - total) / PHOTO_ROW); col = (i - total) % PHOTO_ROW; cnt = PHOTO_ROW; }
+    return [r2((col - (cnt - 1) / 2 + (row % 2 ? .5 : 0)) * PHOTO_DX), r2(PHOTO_SPOT[1] + 1.5 + row * 1.2)];
+}
 function cleanWish(t) {
     var s = String(t == null ? '' : t).replace(/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim();
     s = Array.from(s).slice(0, MAX_WISH).join('').trim();
@@ -104,7 +111,7 @@ function createRoomManager(opts) {
     function targetFor(room, p, kind) {
         kind = kind || 'grid';
         if (p.role === 'girl') return (kind === 'cake' ? CAKE_SPOT : kind === 'photo' ? PHOTO_SPOT : GIRL_SPOT).slice();
-        return kind === 'photo' ? photoSlot(room.slotN++) : gridSlot(room.slotN++);
+        return kind === 'photo' ? photoSlot(room.slotN++, room.slotTotal) : gridSlot(room.slotN++);
     }
     // اتجاه الوقوف: الضيوف يطالعون المنصة (π)، وصاحبة الحفلة تطالع الضيوف (0) إلا عند الكيكة والصورة
     function facing(ph, p) { return p.role === 'girl' && !(ph === 'cakeWalk' || ph === 'cake' || ph === 'celebrate' || ph === 'photo') ? 0 : r2(Math.PI); }
@@ -116,6 +123,7 @@ function createRoomManager(opts) {
         if (kind) {
             // أهداف المشي بترتيب n (نفس الترتيب عند الكل)
             room.walk = {}; room.slotN = 0;
+            room.slotTotal = room.players.filter(function (p) { return p.role !== 'girl'; }).length;
             room.players.slice().sort(function (a, b) { return a.n - b.n; }).forEach(function (p) { room.walk[p.n] = targetFor(room, p, kind); });
         }
         if (ph === 'entrance') room.startedAt = t;
@@ -147,7 +155,7 @@ function createRoomManager(opts) {
         var ds = Math.round(Number(o && o.danceSec)); ds = isFinite(ds) && ds > 0 ? clamp(ds, 60, 900) : 300;
         var ws = Math.round(Number(o && o.wishesSec)); ws = isFinite(ws) && ws > 0 ? clamp(ws, 120, 1200) : 480;
         rooms[code] = { code: code, token: rid(16), girlKey: rid(16), girlName: cleanName(o && o.girlName), players: [], nextN: 1, createdAt: now(),
-            danceSec: ds, wishesSec: ws, phase: 'lobby', phaseAt: now(), phaseUntil: 0, walk: {}, slotN: 0,
+            danceSec: ds, wishesSec: ws, phase: 'lobby', phaseAt: now(), phaseUntil: 0, walk: {}, slotN: 0, slotTotal: 0,
             wishes: [], wishSeq: 1, wishCur: -1, cakeCut: false, photoDone: false, startedAt: 0 };
         return { ok: true, code: code, token: rooms[code].token, girlKey: rooms[code].girlKey };
     }

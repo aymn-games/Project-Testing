@@ -444,6 +444,22 @@ test('cut only during cake → celebrate → photo → free with photo targets b
     assert.equal(r[1], 0); assert.equal(r[2], -29.6);
 });
 
+test('photo rows are centered behind the girl, staggered, no overlap; late joiner goes to a new row behind', function () {
+    var s = showRoom(), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey }), gs = [];
+    for (var i = 0; i < 30; i++) gs.push(s.mgr.join(s.code, { name: 'ض' + i }));
+    toWishes(s); s.mgr.skip(s.code, 'wishes'); s.mgr.skip(s.code, 'cakeWalk'); s.mgr.cut(s.code, girl.id); s.mgr.skip(s.code, 'celebrate');
+    var walk = s.mgr.phaseOf(s.code).walk, ts = gs.map(function (g) { return walk[g.n]; }), keys = {};
+    ts.forEach(function (t) { keys[t.join()] = 1; assert.ok(Math.abs(t[0]) <= 7.7, 'inside frame ' + t); assert.ok(t[1] > -29.6, 'behind girl ' + t); });
+    assert.equal(Object.keys(keys).length, 30, 'no two guests on one spot');
+    var row0 = ts.filter(function (t) { return t[1] === ts[0][1]; });
+    assert.equal(row0.length, 14);
+    assert.ok(Math.abs(row0.reduce(function (a, t) { return a + t[0]; }, 0) / 14) < .01, 'row centered');
+    var last = ts.filter(function (t) { return t[1] === ts[29][1]; });
+    assert.equal(last.length, 2, 'last row has the remainder');
+    var late = s.mgr.join(s.code, { name: 'متأخر' }), lt = s.mgr.phaseOf(s.code).walk[late.n];
+    assert.ok(lt[1] > ts[29][1], 'late joiner behind everyone ' + lt);
+});
+
 test('pointsList includes only tiktok-verified members (not quick guests even if named like a tiktok user)', function () {
     var users = { a: { id: 1, username: 'nora', tiktok_username: 'nora_tt', tiktok_verified: true }, b: { id: 2, username: 'lama', tiktok_username: 'lama_tt', tiktok_verified: false } };
     var c = clockMgr({ validateSession: function (t) { return users[t] || null; } }), room = c.mgr.createRoom({ girlName: 'سارة' });
