@@ -959,6 +959,8 @@ export function mountHall(el, opts = {}) {
   const OBST = [
     ...TABLES.map(t => [t.x, t.z, 3.0]),
     [0, STAGE.front - 6.5, 2.6], [-13.7, -40.5, 2.6], [13.7, -40.5, 2.6],
+    // شموع الميلاد ورا مكانها (نفس candleList تحت)
+    ...[-1, 1].flatMap(sd => Array.from({ length: 7 }, (_, k) => [sd * (3.9 + k * 1.2), -45.3 + k * .45, .55])),
     ...pil.map(p => [p.x, p.z, 1.3]),
     // صالة الضيوف
     [0, 60, 1.5], [-6.8, 60, 1.7], [6.8, 60, 1.7], [0, 66.6, 2.2], [-12.5, 54.5, 1.4], [12.5, 54.5, 1.4],
@@ -1104,8 +1106,8 @@ export function mountHall(el, opts = {}) {
   // setCandles(true) يولّعها وحدة وحدة من النص للأطراف، وflutter(sec) ينزّل بتلات وردية ولمعات ذهبية بهدوء.
   const candleList = [];
   for (const sd of [-1, 1]) for (let k = 0; k < 7; k++) {
-    const h = 2.7 - k * .2 + (k % 2) * .25, r = .17 - k * .006;
-    candleList.push({ x: sd * (3.7 + k * 1.22), z: -45.4 + k * .42, h, r, c: ['#f7a8c6', '#cdb6ef', '#a9dcc8', '#ffd6a5', '#9fc6f0', '#f6d3e2', '#ffe08a'][(k + (sd > 0 ? 3 : 0)) % 7], rank: k });
+    const h = 4.1 - k * .3 + (k % 2) * .35, r = .27 - k * .01;
+    candleList.push({ x: sd * (3.9 + k * 1.2), z: -45.3 + k * .45, h, r, c: ['#f7a8c6', '#cdb6ef', '#a9dcc8', '#ffd6a5', '#9fc6f0', '#f6d3e2', '#ffe08a'][(k + (sd > 0 ? 3 : 0)) % 7], rank: k });
   }
   const stripeTex = tex(64, 256, (g, w, h) => {
     g.fillStyle = '#f2f2f2'; g.fillRect(0, 0, w, h);
@@ -1115,7 +1117,7 @@ export function mountHall(el, opts = {}) {
   instanced(new T.CylinderGeometry(1, 1, 1, 20), std('#ffffff', { map: stripeTex, roughness: .45, emissive: '#3a2420', emissiveIntensity: .25 }),
     candleList.map(c => ({ x: c.x, y: STAGE.h + .14 + c.h / 2, z: c.z, s: [c.r, c.h, c.r], c: c.c })), { shadow: true });
   instanced(new T.CylinderGeometry(1, 1.15, 1, 24), gold, candleList.map(c => ({ x: c.x, y: STAGE.h + .07, z: c.z, s: [c.r * 1.9, .14, c.r * 1.9] })));
-  instanced(new T.CylinderGeometry(.012, .012, .12, 6), std('#2a1a14'), candleList.map(c => ({ x: c.x, y: STAGE.h + .14 + c.h + .05, z: c.z })));
+  instanced(new T.CylinderGeometry(.02, .02, .16, 6), std('#2a1a14'), candleList.map(c => ({ x: c.x, y: STAGE.h + .14 + c.h + .05, z: c.z })));
   const flameTex = tex(64, 128, (g, w, h) => {
     const gr = g.createRadialGradient(w / 2, h * .66, 2, w / 2, h * .6, h * .5);
     gr.addColorStop(0, 'rgba(255,255,240,1)'); gr.addColorStop(.25, 'rgba(255,230,140,.95)'); gr.addColorStop(.6, 'rgba(255,140,40,.55)'); gr.addColorStop(1, 'rgba(255,90,20,0)');
@@ -1126,7 +1128,7 @@ export function mountHall(el, opts = {}) {
     const top = STAGE.h + .14 + c.h + .1;
     const f = new T.Sprite(new T.SpriteMaterial({ map: flameTex, transparent: true, depthWrite: false, blending: T.AdditiveBlending }));
     const gl = new T.Sprite(new T.SpriteMaterial({ map: glowTex, color: '#ffc27a', transparent: true, opacity: .55, depthWrite: false, blending: T.AdditiveBlending }));
-    f.position.set(c.x, top + .1, c.z); gl.position.set(c.x, top + .08, c.z); f.renderOrder = gl.renderOrder = 3;
+    f.position.set(c.x, top + .22, c.z); gl.position.set(c.x, top + .2, c.z); f.renderOrder = gl.renderOrder = 3;
     scene.add(f, gl);
     return { f, gl, top, k: 1, at: 0, ph: c.x * 7.3 };
   });
@@ -1141,14 +1143,14 @@ export function mountHall(el, opts = {}) {
       fl.k += (want - fl.k) * (1 - Math.exp(-dt * (want ? 5 : 12)));
       const fk = Math.sin(t * 13 + fl.ph) * .08 + Math.sin(t * 31 + fl.ph * 2) * .05, k = fl.k;
       fl.f.visible = fl.gl.visible = k > .02;
-      fl.f.scale.set(.15 * k * (1 - fk * .5), .34 * k * (1 + fk), 1);
+      fl.f.scale.set(.32 * k * (1 - fk * .5), .7 * k * (1 + fk), 1);
       fl.f.position.x = candleList[i].x + Math.sin(t * 7 + fl.ph) * .012;
-      fl.gl.scale.setScalar((1.05 + fk * .6) * k); fl.gl.material.opacity = .5 * k;
+      fl.gl.scale.setScalar((2.1 + fk * 1.1) * k); fl.gl.material.opacity = .6 * k;
     });
   }
   // التطاير: بتلات وردية (ورقية، تنزل وتتمايل) ولمعات ذهبية (تطلع وتختفي) — pool ثابت
   const petalTex = tex(64, 64, (g, w) => { g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(w / 2, w / 2, w * .22, w * .4, .5, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.ellipse(w * .44, w * .4, w * .07, w * .16, .5, 0, 7); g.fill(); });
-  const PET = 340, GLI = 220;
+  const PET = 520, GLI = 260;
   const mkPool = (n, map, size, additive) => {
     const pos = new Float32Array(n * 3).fill(-100), col = new Float32Array(n * 3), geo = new T.BufferGeometry();
     geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setAttribute('color', new T.BufferAttribute(col, 3));
@@ -1156,8 +1158,8 @@ export function mountHall(el, opts = {}) {
     pts.frustumCulled = false; scene.add(pts);
     return { pos, col, geo, n, life: new Float32Array(n), vel: new Float32Array(n * 3), ph: new Float32Array(n), base: new Float32Array(n * 3), next: 0, any: false };
   };
-  const petals = mkPool(PET, petalTex, .3, false), glits = mkPool(GLI, radial('rgba(255,255,255,1)', 'rgba(255,230,160,.6)'), .13, true);
-  const PET_C = ['#ffb3cf', '#ff8fbd', '#ffd1e3', '#ffffff', '#f7c9ff', '#ffe3a6'].map(c => new T.Color(c)), GLI_C = ['#ffe08a', '#fff4d0', '#ffd0ea'].map(c => new T.Color(c));
+  const petals = mkPool(PET, petalTex, .5, false), glits = mkPool(GLI, radial('rgba(255,255,255,1)', 'rgba(255,230,160,.6)'), .2, true);
+  const PET_C = ['#ff8fbd', '#ff6fa8', '#ffb3cf', '#ffffff', '#e9a8ff', '#ffd36e'].map(c => new T.Color(c)), GLI_C = ['#ffe08a', '#fff4d0', '#ffd0ea'].map(c => new T.Color(c));
   const spawn = (P, x, y, z, vx, vy, vz, life, cols) => {
     const k = P.next; P.next = (P.next + 1) % P.n; P.pos.set([x, y, z], k * 3); P.vel.set([vx, vy, vz], k * 3); P.life[k] = life; P.ph[k] = rand() * 7;
     const c = cols[Math.floor(rand() * cols.length)]; P.base.set([c.r, c.g, c.b], k * 3); P.col.set([c.r, c.g, c.b], k * 3); P.any = true;
@@ -1167,7 +1169,7 @@ export function mountHall(el, opts = {}) {
   function updateFlutter(dt, t) {
     const on = t < flutterUntil, ramp = on ? Math.min(1, (t - flutterStart) / 1.2) * Math.min(1, (flutterUntil - t) / 3) : 0;
     if (on) {
-      let n = Math.floor(petalCarry += dt * 45 * ramp); petalCarry -= n;
+      let n = Math.floor(petalCarry += dt * 70 * ramp); petalCarry -= n;
       while (n-- > 0) spawn(petals, (rand() - .5) * 34, 9 + rand() * 5, -46 + rand() * 22, (rand() - .5) * .3, -(.45 + rand() * .4), (rand() - .5) * .3, 16, PET_C);
       n = Math.floor(gliCarry += dt * 30 * ramp); gliCarry -= n;
       while (n-- > 0) { const c = candleList[Math.floor(rand() * candleList.length)]; spawn(glits, c.x + (rand() - .5) * 1.2, STAGE.h + .3 + rand() * c.h, c.z + (rand() - .5) * 1.2, (rand() - .5) * .15, .35 + rand() * .4, (rand() - .5) * .15, 2.6, GLI_C); }
