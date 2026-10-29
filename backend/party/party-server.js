@@ -9,17 +9,22 @@
  * يتكدّس له (جوال ما يقرأ ← ينقطع بدل ما يملأ ذاكرة السيرفر).
  *
  * بروتوكول (JSON، كل رسالة فيها t):
- *   عميل → host {girlName, key} | host {code, token}   ← hosted {code, token, girlKey}
+ *   عميل → host {girlName, key, schedule} | host {code, token}   ← hosted {code, token, girlKey, viewKey}
+ *          schedule = {startAt (ms UTC), durationMin, openBeforeMin, danceMin, writeMin, cakeDanceMin, cutTimeoutSec, tzOffsetMin}
+ *   المذيع → schedule {schedule} (تعديل أي وقت) ← phase جديدة للكل
  *   عميل → join {code, name, auth?, girlKey?, dev?} ← welcome {id, key, n, role, kind} ثم all {d}
+ *          (قبل فتح الدخول: ← closed {openAt, tzOffsetMin, girlName} ويبقى مشاهد لين توصله phase lobby؛
+ *          صاحبة الحفلة تقدر تدخل غرفتها قبل. بعد النهاية: err ended)
  *   عميل → resume {code, id, key}                 ← نفس رد join
  *   عميل → peek {code, vk}                        ← room + all (شاشة عرض بدون شخصية؛ بدون vk صحيح صاحبة الحفلة مخفية قبل الافتتاح)
  *   اللاعب → look {look: 7 أرقام}                ← room (الصف السادس = الشكل بعد التحقق حسب نوع الحساب)
  *   عميل → mv {p:[x, z, ry, a]} · ping {k}        ← pong {k, now}
  *   المذيع → start · skip {from}                  ← phase {p, at, until, walk, cut} للكل
  *   (phase تنرسل أيضاً لكل اتصال جديد؛ walk مسطّحة n, x×100, z×100 وقت المشي التلقائي)
- *   الضيف → wish {text} ← myWish {text} · صاحبة الحفلة/المذيع → next {seen} · cut
+ *   الضيف → wish {text} (وقت wishWrite بس) ← myWish {text} · صاحبة الحفلة/المذيع → next {seen} · prev {seen} · cut
+ *          (seen = pos آخر wishes وصلت)
  *   المذيع → kick {n} (المطرود ياخذ err kicked وينقطع، وحسابه/جهازه ما يقدر يدخل مرة ثانية، وتهنئته تنخفي) · hideWish {id, hidden} · pointsClaim ← pointsGo {id} (جهاز واحد بس) · pointsRelease · pointsDone ← pointsOk لباقي أجهزة المذيع
- *   خادم → wishes {cur, shown, total} للكل · wishList {items} للمذيع · points {id, players, durationMs} للمذيع
+ *   خادم → wishes {cur, shown, total, pos} للكل · phase {p, at, until, walk, cut, sched, waitGirl} · wishList {items} للمذيع · points {id, players, durationMs} للمذيع
  *   خادم → room {room} عند تغيّر القائمة · s {now, d} دلتا الحركة كل 125ms
  *          (d مسطّحة: n,x,z,ry,a لكل لاعب تحرك، x/z بالسم وry ×100 — خاصة بكل مستقبل:
  *          القريب منه كل دورة والبعيد كل 1.5ث، وبدون صفه هو) — all {d} بنفس الصيغة · err {err, of} · closed
@@ -129,7 +134,7 @@ function phaseMsg(code) {
     var ph = _mgr.phaseOf(code); if (!ph.ok) return null;
     var walk = null;
     if (ph.walk) { walk = []; Object.keys(ph.walk).forEach(function (n) { walk.push(Number(n), Math.round(ph.walk[n][0] * 100), Math.round(ph.walk[n][1] * 100)); }); }
-    return { t: 'phase', p: ph.p, at: ph.at, until: ph.until, walk: walk, cut: !!ph.cut, now: Date.now() };
+    return { t: 'phase', p: ph.p, at: ph.at, until: ph.until, walk: walk, cut: !!ph.cut, sched: ph.sched, waitGirl: !!ph.waitGirl, now: Date.now() };
 }
 function broadcastPhase(code) {
     var m = phaseMsg(code); if (!m) return;
@@ -138,7 +143,7 @@ function broadcastPhase(code) {
     if (m.p === 'photo') sendPoints(code);
     markSave(code, true);
 }
-function wishesMsg(code) { var w = _mgr.wishesState(code); return w.ok ? { t: 'wishes', cur: w.cur, shown: w.shown, total: w.total } : null; }
+function wishesMsg(code) { var w = _mgr.wishesState(code); return w.ok ? { t: 'wishes', cur: w.cur, shown: w.shown, total: w.total, pos: w.pos } : null; }
 function broadcastWishes(code) {
     var m = wishesMsg(code); if (!m) return;
     var encoded = frame.encodeTextFrame(JSON.stringify(m));
@@ -187,7 +192,7 @@ function onMessage(client, msg) {
     if (t === 'ping') return send(client, { t: 'pong', k: msg.k, now: Date.now() });
     if (typeof t !== 'string') return;
     var ident = t === 'host' || t === 'join' || t === 'resume' || t === 'peek';
-    var heavy = ident || t === 'start' || t === 'skip' || t === 'wish' || t === 'next' || t === 'cut' || t === 'hideWish' || t === 'pointsDone' || t === 'pointsClaim' || t === 'pointsRelease' || t === 'look' || t === 'kick';
+    var heavy = ident || t === 'start' || t === 'skip' || t === 'wish' || t === 'next' || t === 'cut' || t === 'hideWish' || t === 'pointsDone' || t === 'pointsClaim' || t === 'pointsRelease' || t === 'look' || t === 'kick' || t === 'schedule' || t === 'prev';
     if (!allow(client, heavy)) return;
     try { return handle(client, msg, t, ident); } finally { if (heavy && client.code) markSave(client.code); }
 }
@@ -206,7 +211,9 @@ function handle(client, msg, t, ident) {
             send(client, { t: 'hosted', code: code, token: room.token, girlKey: room.girlKey, viewKey: room.viewKey });
         } else {
             if (!keyOk(msg.key)) return send(client, { t: 'err', err: 'hostkey', of: t });
-            var dm = Number(msg.danceMin), wm = Number(msg.wishesMin); res = _mgr.createRoom({ girlName: msg.girlName, danceSec: isFinite(dm) && dm > 0 ? Math.round(dm) * 60 : 300, wishesSec: isFinite(wm) && wm > 0 ? Math.round(wm) * 60 : 480 });
+            // كل حفلة من صفحة المذيع مجدولة (الغرفة بدون جدول للاختبارات بس)
+            if (!msg.schedule || typeof msg.schedule !== 'object') return send(client, { t: 'err', err: 'schedule', of: t });
+            res = _mgr.createRoom({ girlName: msg.girlName, schedule: msg.schedule });
             if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
             attach(client, res.code, 'host');
             logger.log('Party: room ' + res.code + ' created');
@@ -229,6 +236,14 @@ function handle(client, msg, t, ident) {
     if (t === 'join') {
         if (!code) return send(client, { t: 'err', err: 'nocode', of: t });
         res = _mgr.join(code, { name: msg.name, auth: msg.auth || null, girlKey: msg.girlKey == null ? null : String(msg.girlKey), dev: msg.dev });
+        if (!res.ok && res.err === 'closed') {
+            // الدخول لسا ما فتح: يبقى مشاهد (بدون صاحبة الحفلة) لين توصله phase lobby ويدخل
+            var rc = _mgr.getRoom(code), pc = _mgr.phaseOf(code);
+            if (!client.code) attach(client, code, 'viewer', null, false);
+            send(client, { t: 'closed', openAt: pc.sched.openAt, tzOffsetMin: pc.sched.tzOffsetMin, girlName: rc.girlName });
+            send(client, phaseMsg(code));
+            return;
+        }
         if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
         logger.log('Party: ' + res.role + ' joined room ' + code + ' (' + res.kind + ')');
         return onWelcome(client, code, res);
@@ -257,10 +272,18 @@ function handle(client, msg, t, ident) {
         if (res.isNew) broadcastWishes(client.code); // التعديل ما يغيّر العدد ولا المعروضة
         return;
     }
-    if (t === 'next' || t === 'cut') {
+    if (t === 'schedule') {
+        if (client.role !== 'host' || !client.code) return send(client, { t: 'err', err: 'host-only', of: t });
+        res = _mgr.setSchedule(client.code, msg.schedule);
+        if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
+        logger.log('Party: room ' + client.code + ' schedule updated');
+        _mgr.tick(client.code); // تعديل فتح الدخول أو البداية ممكن ينقل المرحلة على طول
+        return broadcastPhase(client.code);
+    }
+    if (t === 'next' || t === 'cut' || t === 'prev') {
         if (!client.code || (client.role !== 'host' && client.role !== 'player')) return send(client, { t: 'err', err: 'role', of: t });
-        var by = client.role === 'host' ? 'host' : client.id;
-        res = t === 'next' ? _mgr.nextWish(client.code, by, typeof msg.seen === 'number' ? msg.seen : null) : _mgr.cut(client.code, by);
+        var by = client.role === 'host' ? 'host' : client.id, seen = typeof msg.seen === 'number' ? msg.seen : null;
+        res = t === 'next' ? _mgr.nextWish(client.code, by, seen) : t === 'prev' ? _mgr.prevWish(client.code, by, seen) : _mgr.cut(client.code, by);
         if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
         sendWishList(client.code); broadcastWishes(client.code);
         if (t === 'cut' || res.done) { logger.log('Party: room ' + client.code + ' → ' + _mgr.phaseOf(client.code).p); broadcastPhase(client.code); }
