@@ -6,42 +6,19 @@
 // التسريحات والإكسسوارات والبنطلون أجزاء Instanced إضافية تنخفى عند اللي ما اختارها،
 // فعدد أوامر الرسم ثابت مهما كثر اللاعبين. صاحبة الحفلة لها تاج وهالة.
 //
-// الحركة: مواقع الباقين توصل من السيرفر 8 مرات/ث، ونعرضها متأخرة 150ms
-// ونتنقّل بنعومة بين آخر عيّنتين (interpolation). شخصية اللاعب نفسه تُقرأ
-// مباشرة من getLocal() بدون انتظار السيرفر.
-// وقت المشي التلقائي (مرحلة الدخول) كل شخصية تمشي على مسار يحسبه الجوال نفسه
-// (setAutoPaths) بتوقيت السيرفر — نفس الشي على كل الجوالات بدون إرسال حركة.
+// الحركة (التنقّل بين العيّنات والمشي التلقائي) والأسماء في crowd-common.js، مشتركة مع crowd-rig.js.
 // الحركات: a = 0 وقوف · 1 مشي · 2 رقص · 3 تلويح · 4 تصفيق · 5 لفّة · 6 قفز · 7 قلب · 8 تمايل.
 // المؤثرات (قلوب، شرار، هالة) تطلع وقت الحركات (a >= 2) لأقرب 16 شخصية بس.
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { createGown } from './gown3d.js';
+import { SKIN, HAIR, OUTFIT, LOOK, hash, resolveLook, createMotion, createLabels, createReactions, fxPool, makeHeartTex, makeSparkTex } from './crowd-common.js';
 
 const T = THREE;
 const CAP = 104;
-const DELAY_MS = 150;
 const LABELS = 12;
-const SKIN = ['#f9d7c3', '#f1c3a5', '#e0a882', '#c98d66', '#9c6a4a'];
-const HAIR = ['#3b2418', '#5a3622', '#8a5a35', '#c99a5b', '#1f1a1d', '#7a3b52', '#e8cf9a', '#a8432f'];
-const OUTFIT = ['#f4a3c0', '#cdb6ef', '#a9dcc8', '#f7c59f', '#9fc6f0', '#f6d3e2', '#e98bb0', '#d9b8e8', '#ffd6a5', '#b5e2f0', '#8e6cc9', '#c94f7e'];
-// أسماء الخيارات للوحة التعديل (نفس الترتيب والحدود اللي يفرضها السيرفر: LOOK_MAX)
-export const LOOK = {
-  styles: ['فستان', 'بنطلون وقميص'],
-  outfits: OUTFIT, skins: SKIN, hairs: HAIR,
-  hairStyles: ['قصير', 'طويل', 'كعكة', 'ذيلين'],
-  accs: ['بدون', 'فيونكة', 'تاج صغير', 'وردة', 'نظارة', 'قبعة حفلة'],
-  fxs: ['بدون', 'قلوب', 'شرار', 'هالة'],
-};
-const FONT = '"IBM Plex Sans Arabic", sans-serif';
+// الكيرلي القصير/الطويل يطلعون هنا قصير/طويل، والقبعة (hat) تطلع قبعة الحفلة البسيطة
+export { LOOK, resolveLook };
 
-const hash = n => { let h = (n * 2654435761) >>> 0; h ^= h >>> 13; h = Math.imul(h, 1274126177) >>> 0; return h ^ (h >>> 16); };
-// الشكل الفعلي: -1 (أو ما فيه شكل) ← الافتراضي المشتق من n. صاحبة الحفلة st = 0 دايماً (فستانها الفخم)
-export function resolveLook(n, role, look) {
-  const h = hash(n), L = Array.isArray(look) ? look : [], pick = (i, def) => (Number.isInteger(L[i]) && L[i] >= 0 ? L[i] : def);
-  return {
-    st: role === 'girl' ? 0 : pick(0, 0), o: pick(1, role === 'girl' ? -1 : h % OUTFIT.length), s: pick(2, (h >>> 8) % SKIN.length),
-    h: pick(3, (h >>> 12) % 6), hs: pick(4, role === 'girl' ? 1 : (h >>> 18) % 3), acc: pick(5, 0), fx: pick(6, 0),
-  };
-}
 // دمج أشكال بسيطة في شكل واحد (بدون مكتبات إضافية)
 function mergeGeos(list) {
   const pos = [], nor = [];
@@ -49,6 +26,13 @@ function mergeGeos(list) {
   const out = new T.BufferGeometry();
   out.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); out.setAttribute('normal', new T.Float32BufferAttribute(nor, 3));
   return out;
+}
+
+// الشكل الجديد بالأشكال الكلاسيكية: الكيرلي ← قصير/طويل، والقبعة ← قبعة الحفلة (لو ما فيه إكسسوار)
+function classic(L) {
+  if (L.hs === 4) L.hs = 0; else if (L.hs === 5) L.hs = 1;
+  if (L.hat > 0 && !L.acc) L.acc = 5;
+  return L;
 }
 
 export function createCrowd(scene, { floorAt = () => 0 } = {}) {
@@ -121,46 +105,16 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
   const halo = new T.Sprite(new T.SpriteMaterial({ map: haloTex, transparent: true, depthWrite: false, blending: T.AdditiveBlending })); halo.scale.set(2.6, 3.2, 1); halo.visible = false; scene.add(halo);
 
   // ---- لوحات الأسماء: 12 فقط لأقرب الشخصيات للكاميرا ----
-  const labelCache = new Map(); // n -> texture
-  const labelTex = (name, girl) => {
-    const c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d');
-    g.font = '700 54px ' + FONT; g.direction = 'rtl'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    const w = Math.min(500, g.measureText(name).width + 56);
-    g.fillStyle = girl ? 'rgba(201,79,126,.92)' : 'rgba(60,24,48,.72)'; g.beginPath(); g.roundRect((512 - w) / 2, 20, w, 88, 44); g.fill();
-    g.fillStyle = '#fff'; g.fillText(name, 256, 66, 470);
-    const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return t;
-  };
-  const labels = Array.from({ length: LABELS }, () => { const s = new T.Sprite(new T.SpriteMaterial({ transparent: true, depthWrite: false })); s.scale.set(1.9, .48, 1); s.visible = false; s.renderOrder = 5; scene.add(s); return s; });
+  const labels = createLabels(T, scene, { count: LABELS, heightOf: c => 2.25 * (c.role === 'girl' ? 1.08 : 1) + (c.role === 'girl' ? .25 : 0) });
 
   const chars = new Map(); // n -> {slot, name, role, online, buf:[], x,z,ry, phase, moving}
   const free = Array.from({ length: CAP }, (_, i) => CAP - 1 - i);
-  let localN = null, getLocal = null, labelT = 0;
-  let autoPaths = null; // {map: n → {points, cum, len}, t0, t1}
-  // endRy(role): اتجاه الوقوف بعد الوصول (مثلاً للصورة: الكل يطالع الكاميرا)
-  function setAutoPaths(map, t0, t1, endRy) {
-    if (!map) {
-      // نهاية المشي: نثبّت كل شخصية على نهاية مسارها عشان ما ترجع لعيّنات قديمة
-      if (autoPaths) for (const [n, a] of Object.entries(autoPaths.map)) { const c = chars.get(+n); if (c) { const e = a.points[a.points.length - 1]; c.x = e[0]; c.z = e[1]; c.buf = [{ t: t0 || 0, x: e[0], z: e[1], ry: c.ry, a: 0 }]; } }
-      autoPaths = null; return;
-    }
-    const m = {};
-    for (const [n, points] of Object.entries(map)) {
-      const cum = [0]; for (let i = 1; i < points.length; i++) cum.push(cum[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]));
-      m[n] = { points, cum, len: cum[cum.length - 1] || 1 };
-    }
-    autoPaths = { map: m, t0, t1, endRy };
-  }
-  function pathAt(a, f) {
-    const d = f * a.len; let i = 1; while (i < a.points.length - 1 && a.cum[i] < d) i++;
-    const p0 = a.points[i - 1], p1 = a.points[i], seg = (a.cum[i] - a.cum[i - 1]) || 1, k = Math.max(0, Math.min(1, (d - a.cum[i - 1]) / seg));
-    return [p0[0] + (p1[0] - p0[0]) * k, p0[1] + (p1[1] - p0[1]) * k, Math.atan2(p1[0] - p0[0], p1[1] - p0[1])];
-  }
-  // مكان أي شخصية الحين (للمسارات: نقطة البداية) — null لو ما وصلها شي
-  function posOf(n) { const c = chars.get(n); return c && c.ready ? [c.x, c.z] : null; }
+  let localN = null, getLocal = null;
+  const motion = createMotion(chars), { setAutoPaths, posOf } = motion;
 
   function paint(c) {
     const h = hash(c.n), girl = c.role === 'girl', i = c.slot;
-    const L = c.L = resolveLook(c.n, c.role, c.n === localN && previewLook ? previewLook : c.look);
+    const L = c.L = classic(resolveLook(c.n, c.role, c.n === localN && previewLook ? previewLook : c.look));
     const col = new T.Color(), out = L.o < 0 ? '#fff4f8' : OUTFIT[L.o], skin = SKIN[L.s], hairC = HAIR[L.h];
     const pants = L.st === 1, shirt = pants ? new T.Color(out).lerp(new T.Color('#ffffff'), .55) : (L.o < 0 ? new T.Color('#ffe3ef') : new T.Color(OUTFIT[(h >>> 4) % OUTFIT.length]));
     const pantsC = new T.Color(out).multiplyScalar(.62);
@@ -198,20 +152,12 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
       const changed = c.name !== name || c.role !== role, lookKey = Array.isArray(look) ? look.join() : '';
       c.name = name; c.role = role; c.online = !!online; c.gown = role === 'girl';
       if (changed || c.lookKey !== lookKey) { c.look = look; c.lookKey = lookKey; paint(c); }
-      if (changed) { const old = labelCache.get(n); if (old) old.dispose(); labelCache.set(n, labelTex(name, role === 'girl')); }
+      if (changed) labels.set(n, name, role === 'girl');
     }
-    for (const [n, c] of chars) if (!seen.has(n)) { hide(c); free.push(c.slot); chars.delete(n); const t = labelCache.get(n); if (t) { t.dispose(); labelCache.delete(n); } }
+    for (const [n, c] of chars) if (!seen.has(n)) { hide(c); free.push(c.slot); chars.delete(n); labels.remove(n); }
   }
 
-  // rows = [[n, x, z, ry, a], ...] بتوقيت السيرفر now؛ reset=true لرسالة 'all'
-  function apply(rows, now, reset) {
-    for (const [n, x, z, ry, a] of rows) {
-      const c = chars.get(n); if (!c) continue;
-      if (reset || !c.ready) { c.buf.length = 0; c.x = x; c.z = z; c.ry = ry; c.ready = true; }
-      c.buf.push({ t: now, x, z, ry, a });
-      if (c.buf.length > 12) c.buf.shift();
-    }
-  }
+  const apply = motion.apply;
 
   function setLocal(n, getter) { localN = n; getLocal = getter; }
 
@@ -225,43 +171,12 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
   // emitters: pool ثابت يتعبّى كل إطار (بدون إنشاء كائنات جديدة)، وemN عدد المستخدم منه
   const MAXE = 16, emitters = [];
   let emN = 0;
-  const spriteTex = draw => { const c = document.createElement('canvas'); c.width = c.height = 64; draw(c.getContext('2d')); const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return t; };
-  // القلب: حافة أغمق (تنضرب بلون الجزيء) عشان يبان فوق أرضية القاعة الوردية، ولمعة صغيرة
-  const heartTex = spriteTex(g => {
-    g.beginPath(); g.moveTo(32, 56); g.bezierCurveTo(4, 36, 8, 8, 32, 21); g.bezierCurveTo(56, 8, 60, 36, 32, 56); g.closePath();
-    g.fillStyle = '#fff'; g.fill(); g.lineWidth = 5; g.strokeStyle = '#7a7a7a'; g.lineJoin = 'round'; g.stroke();
-    g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.ellipse(21, 24, 5, 3.4, -.6, 0, Math.PI * 2); g.fill();
-  });
-  const sparkTex = spriteTex(g => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.22, 'rgba(255,255,255,.85)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
-  function fxPool(tex, size, colors, additive, maxLife, FXN) {
-    const pos = new Float32Array(FXN * 3).fill(-100), col = new Float32Array(FXN * 3), base = new Float32Array(FXN * 3), vel = new Float32Array(FXN * 3), life = new Float32Array(FXN);
-    const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setAttribute('color', new T.BufferAttribute(col, 3));
-    const pts = new T.Points(geo, new T.PointsMaterial({ map: tex, size, vertexColors: true, transparent: true, depthWrite: false, alphaTest: .05, blending: additive ? T.AdditiveBlending : T.NormalBlending }));
-    pts.frustumCulled = false; scene.add(pts);
-    const cc = new T.Color(); let next = 0;
-    return {
-      pts, tex,
-      spawn(x, y, z, vx, vy, vz) {
-        const k = next; next = (next + 1) % FXN;
-        pos.set([x, y, z], k * 3); vel.set([vx, vy, vz], k * 3); life[k] = maxLife * (.75 + Math.random() * .25);
-        cc.set(colors[Math.floor(Math.random() * colors.length)]); base.set([cc.r, cc.g, cc.b], k * 3); col.set([cc.r, cc.g, cc.b], k * 3);
-      },
-      step(dt, gravity) {
-        let any = false;
-        for (let k = 0; k < FXN; k++) {
-          if (life[k] <= 0) continue;
-          any = true; life[k] -= dt;
-          if (life[k] <= 0) { pos[k * 3 + 1] = -100; continue; }
-          vel[k * 3 + 1] -= gravity * dt;
-          pos[k * 3] += vel[k * 3] * dt; pos[k * 3 + 1] += vel[k * 3 + 1] * dt; pos[k * 3 + 2] += vel[k * 3 + 2] * dt;
-          if (additive) { const f = Math.min(1, life[k] / (maxLife * .5)); for (let j = 0; j < 3; j++) col[k * 3 + j] = base[k * 3 + j] * f; }
-        }
-        if (any) { geo.attributes.position.needsUpdate = true; geo.attributes.color.needsUpdate = true; }
-      },
-    };
-  }
-  const hearts = fxPool(heartTex, .6, ['#ff2d7a', '#e11d74', '#ff5fa2', '#c026d3'], false, 1.8, 256);
-  const sparks = fxPool(sparkTex, .14, ['#ffd27a', '#ffffff', '#ffe9b0', '#f9c6ff'], true, .8, 320); // 16 × 22/ث × ~0.7ث
+  const heartTex = makeHeartTex(T), sparkTex = makeSparkTex(T);
+  const hearts = fxPool(T, scene, heartTex, .6, ['#ff2d7a', '#e11d74', '#ff5fa2', '#c026d3'], false, 1.8, 256);
+  // التفاعلات ومطر القلوب (نفس اللي في crowd-rig)
+  const reacts = createReactions(T, scene, heartTex);
+  function react(n, e) { const c = chars.get(n); if (c && c.ready && c.online) reacts.react(c.x, floorAt(c.x, c.z) + (c.role === 'girl' ? 2.5 : 2.2), c.z, e); }
+  const sparks = fxPool(T, scene, sparkTex, .14, ['#ffd27a', '#ffffff', '#ffe9b0', '#f9c6ff'], true, .8, 320); // 16 × 22/ث × ~0.7ث
   const ringMat = new T.MeshBasicMaterial({ color: '#ffc04d', transparent: true, opacity: 1, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide });
   // الهالة: حلقتين ذهبية (وحدة على الأرض ووحدة أصغر حول الخصر) تلف وتنبض
   const ringGeo = mergeGeos([(() => { const g = new T.RingGeometry(.4, .58, 40); g.rotateX(-Math.PI / 2); return g; })(), (() => { const g = new T.RingGeometry(.36, .42, 40); g.rotateX(-Math.PI / 2); g.translate(0, .95, 0); return g; })()]);
@@ -288,39 +203,14 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
     hearts.step(dt, -.15); sparks.step(dt, 2.2);
   }
 
-  const lerpAngle = (a, b, k) => { let d = b - a; d = Math.atan2(Math.sin(d), Math.cos(d)); return a + d * k; };
-
   function update(dt, cam, serverNowMs) {
-    const renderT = serverNowMs - DELAY_MS;
     let girl = null;
     emN = 0;
     for (const c of chars.values()) {
       if (!c.online || !c.ready) { hide(c); continue; }
-      let moving;
-      const ap = autoPaths && autoPaths.map[c.n];
-      if (c.n === localN && getLocal) {
-        const L = getLocal(); c.x = L.x; c.z = L.z; c.ry = L.ry; moving = L.moving; c.run = L.running; c.anim = moving ? 1 : (L.emote || 0);
-      } else if (ap) {
-        const f = Math.max(0, Math.min(1, (serverNowMs - autoPaths.t0) / Math.max(1, autoPaths.t1 - autoPaths.t0))), p = pathAt(ap, f);
-        c.x = p[0]; c.z = p[1]; moving = f > 0 && f < 1; if (moving) c.ry = lerpAngle(c.ry, p[2], 1 - Math.exp(-dt * 10));
-        else if (f >= 1 && autoPaths.endRy) c.ry = lerpAngle(c.ry, autoPaths.endRy(c.role), 1 - Math.exp(-dt * 6));
-        c.run = false; c.anim = moving ? 1 : 0;
-      } else {
-        // نلقى العيّنتين اللي يقع بينهم وقت العرض
-        const b = c.buf; let a0 = b[0], a1 = b[b.length - 1];
-        for (let k = b.length - 1; k > 0; k--) if (b[k - 1].t <= renderT) { a0 = b[k - 1]; a1 = b[k]; break; }
-        const span = a1.t - a0.t, k = span > 0 ? Math.max(0, Math.min(1, (renderT - a0.t) / span)) : 1;
-        // البعيدين يوصلون مرة بالثانية بس — بدل القفز ننزلق لآخر موقع بنعومة
-        const sparse = span > 400 || renderT > a1.t + 300;
-        const tx = sparse ? a1.x : a0.x + (a1.x - a0.x) * k, tz = sparse ? a1.z : a0.z + (a1.z - a0.z) * k;
-        moving = Math.hypot(tx - c.x, tz - c.z) > (sparse ? .05 : .004) || a1.a === 1;
-        const sm = 1 - Math.exp(-dt * (sparse ? 3.5 : 18));
-        c.x += (tx - c.x) * sm; c.z += (tz - c.z) * sm; c.ry = lerpAngle(c.ry, a1.ry, 1 - Math.exp(-dt * 10));
-        c.run = false; c.anim = moving ? 1 : (a1.a || 0);
-      }
-      c.moving = moving;
+      const moving = motion.step(c, dt, serverNowMs, localN, getLocal);
       c.phase += dt * (moving ? (c.run ? 13 : 9) : 2);
-      const an = moving ? 1 : (c.anim || 0), dance = an === 2, L = c.L || (c.L = resolveLook(c.n, c.role, c.look));
+      const an = moving ? 1 : (c.anim || 0), dance = an === 2 || an === 9 || an === 10, L = c.L || (c.L = classic(resolveLook(c.n, c.role, c.look)));
       if (dance) c.phase += dt * 5;
       else if (an >= 5) c.phase += dt * 4;
       // 5 لفّة كاملة كل 1.2ث · 6 قفز · 8 تمايل (الجسم يميل)
@@ -368,18 +258,12 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
     }
     for (const key in parts) parts[key].instanceMatrix.needsUpdate = true;
     runFx(dt);
+    reacts.step(dt, cam, serverNowMs);
     gown.update(girl, dt);
     crown.visible = halo.visible = !!girl;
     if (girl) halo.position.set(girl.x, girl.y + 1.1, girl.z);
 
-    // الأسماء لأقرب 12 (تتحدث كل نص ثانية)
-    labelT -= dt;
-    if (labelT <= 0) {
-      labelT = .5;
-      const list = [...chars.values()].filter(c => c.online && c.ready && c.n !== localN).map(c => ({ c, d: (c.x - cam.position.x) ** 2 + (c.z - cam.position.z) ** 2 })).sort((a, b) => a.d - b.d).slice(0, LABELS);
-      labels.forEach((s, k) => { const it = list[k]; s.userData.c = it ? it.c : null; s.visible = !!it; if (it) { s.material.map = labelCache.get(it.c.n) || null; s.material.needsUpdate = true; } });
-    }
-    labels.forEach(s => { const c = s.userData.c; if (c && s.visible) s.position.set(c.x, floorAt(c.x, c.z) + 2.25 * (c.role === 'girl' ? 1.08 : 1) + (c.role === 'girl' ? .25 : 0), c.z); });
+    labels.update(dt, chars, cam, localN, floorAt);
   }
 
   // نجهّز shaders الفستان والهالة وقت التحميل بدل لحظة الافتتاح (compile يتجاهل المخفي، فنظهرهم لحظة)
@@ -393,12 +277,13 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
     for (const key in parts) { parts[key].geometry.dispose(); parts[key].material.dispose(); scene.remove(parts[key]); }
     blobTex.dispose(); haloTex.dispose();
     crown.traverse(o => { o.geometry?.dispose(); }); gold.dispose(); scene.remove(crown, halo); halo.material.dispose();
-    labels.forEach(s => { s.material.dispose(); scene.remove(s); }); labelCache.forEach(t => t.dispose());
+    labels.dispose();
     for (const p of [hearts, sparks]) { p.pts.geometry.dispose(); p.pts.material.dispose(); p.tex.dispose(); scene.remove(p.pts); }
-    rings.forEach(m => scene.remove(m)); ringGeo.dispose(); ringMat.dispose(); gown.dispose();
+    rings.forEach(m => scene.remove(m)); ringGeo.dispose(); ringMat.dispose(); gown.dispose(); reacts.dispose();
   }
 
   // للاختبار: حالة كل شخصية
   const debug = () => [...chars.values()].map(c => ({ n: c.n, name: c.name, online: c.online, ready: c.ready, x: +c.x.toFixed(2), z: +c.z.toFixed(2), buf: c.buf.length, slot: c.slot }));
-  return { sync, apply, update, setLocal, setLocalLook, setAutoPaths, posOf, prewarm, dispose, debug, get count() { return chars.size; } };
+  // سبوت لايت صاحبة الحفلة خاص بشخصيات الهيكل العظمي؛ هنا عندها هالتها الدايمة
+  return { sync, apply, update, setLocal, setLocalLook, setAutoPaths, posOf, prewarm, dispose, debug, fxDebug: reacts.debug, react, rain: reacts.rain, setGirlFx() {}, kind: 'classic', get count() { return chars.size; } };
 }
