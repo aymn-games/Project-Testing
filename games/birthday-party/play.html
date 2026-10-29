@@ -406,7 +406,7 @@
                 crowd.setAutoPaths(paths, W.t0, W.t1, (role, c) => p === 'outro' ? (role === 'girl' ? 0 : (c && c.x < 0 ? 1 : -1) * Math.PI / 2)
                     : role === 'girl' && !['cakeWalk', 'photo'].includes(p) ? 0 : Math.PI, { t1Of: t1s, endAnim: p === 'outro' ? (role => role === 'girl' ? 0 : 3) : null });
             } else crowd.setAutoPaths(null, serverNow());
-            crowd.setGirlFx(!['lobby', 'entrance', 'closed', 'ended'].includes(p));
+            crowd.setGirlFx(!['lobby', 'entrance', 'closed', 'ended', 'outro'].includes(p)); // بالنهاية النور من الباب بداله
         }
         function applyPhase() {
             if (!phase || !gotAll) return;
