@@ -14,6 +14,7 @@
 // الحركات: a = 0 وقوف · 1 مشي · 2 رقص · 3 تلويح · 4 تصفيق · 5 لفّة · 6 قفز · 7 قلب · 8 تمايل.
 // المؤثرات (قلوب، شرار، هالة) تطلع وقت الحركات (a >= 2) لأقرب 16 شخصية بس.
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { createGown } from './gown3d.js';
 
 const T = THREE;
 const CAP = 104;
@@ -115,6 +116,7 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
   const band = new T.Mesh(new T.CylinderGeometry(.17, .15, .12, 18, 1, true), gold); band.material.side = T.DoubleSide; crown.add(band);
   for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, c = new T.Mesh(new T.ConeGeometry(.04, .12, 6), gold); c.position.set(Math.cos(a) * .16, .11, Math.sin(a) * .16); crown.add(c); }
   crown.visible = false; scene.add(crown);
+  const gown = createGown(scene); // فستانها الفخم بدل الفستان والجذع الموحّدين
   const haloTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,230,245,.9)'); gr.addColorStop(.4, 'rgba(255,180,220,.35)'); gr.addColorStop(1, 'rgba(255,180,220,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return t; })();
   const halo = new T.Sprite(new T.SpriteMaterial({ map: haloTex, transparent: true, depthWrite: false, blending: T.AdditiveBlending })); halo.scale.set(2.6, 3.2, 1); halo.visible = false; scene.add(halo);
 
@@ -177,6 +179,7 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
       parts.leg.setColorAt(i * 2 + k, pants ? pantsC : col.set(girl ? '#f9c6d9' : '#6d5a7a'));
     }
     for (const key in parts) if (parts[key].instanceColor) parts[key].instanceColor.needsUpdate = true;
+    if (girl) gown.setColor(L.o >= 0 ? OUTFIT[L.o] : null);
   }
   // معاينة شكل اللاعب نفسه في ركن التعديل قبل الحفظ (null = يرجع لشكله المحفوظ)
   let previewLook = null;
@@ -193,7 +196,7 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
         chars.set(n, c);
       }
       const changed = c.name !== name || c.role !== role, lookKey = Array.isArray(look) ? look.join() : '';
-      c.name = name; c.role = role; c.online = !!online;
+      c.name = name; c.role = role; c.online = !!online; c.gown = role === 'girl';
       if (changed || c.lookKey !== lookKey) { c.look = look; c.lookKey = lookKey; paint(c); }
       if (changed) { const old = labelCache.get(n); if (old) old.dispose(); labelCache.set(n, labelTex(name, role === 'girl')); }
     }
@@ -324,6 +327,8 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
       const scale = c.role === 'girl' ? 1.08 : 1;
       q.setFromEuler(e.set(0, c.ry + c.spin, roll, 'YXZ')); base.compose(v.set(c.x + (an === 8 ? Math.sin(c.phase * .8) * .08 : 0), y + bob, c.z), q, s1.set(scale, scale, scale));
       const i = c.slot, pants = L.st === 1;
+      // التاج يتبع رأسها حتى وهي تميل وتلف وقت الرقص
+      if (c.role === 'girl') { crown.position.set(0, 1.9, 0).applyMatrix4(base); crown.quaternion.copy(q); crown.scale.setScalar(scale); }
       for (const k of ['torso', 'head', 'hair']) parts[k].setMatrixAt(i, base);
       parts.dress.setMatrixAt(i, pants || c.gown ? zero : base);
       parts.hips.setMatrixAt(i, pants && !c.gown ? base : zero);
@@ -359,8 +364,9 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
     }
     for (const key in parts) parts[key].instanceMatrix.needsUpdate = true;
     runFx(dt);
+    gown.update(girl, dt);
     crown.visible = halo.visible = !!girl;
-    if (girl) { crown.position.set(girl.x, girl.y + 1.9 * girl.s, girl.z); crown.rotation.y = girl.ry; halo.position.set(girl.x, girl.y + 1.1, girl.z); }
+    if (girl) halo.position.set(girl.x, girl.y + 1.1, girl.z);
 
     // الأسماء لأقرب 12 (تتحدث كل نص ثانية)
     labelT -= dt;
@@ -378,7 +384,7 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
     crown.traverse(o => { o.geometry?.dispose(); }); gold.dispose(); scene.remove(crown, halo); halo.material.dispose();
     labels.forEach(s => { s.material.dispose(); scene.remove(s); }); labelCache.forEach(t => t.dispose());
     for (const p of [hearts, sparks]) { p.pts.geometry.dispose(); p.pts.material.dispose(); p.tex.dispose(); scene.remove(p.pts); }
-    rings.forEach(m => scene.remove(m)); ringGeo.dispose(); ringMat.dispose();
+    rings.forEach(m => scene.remove(m)); ringGeo.dispose(); ringMat.dispose(); gown.dispose();
   }
 
   // للاختبار: حالة كل شخصية
