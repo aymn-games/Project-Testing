@@ -408,7 +408,7 @@ test('look message updates roster for everyone (coalesced)', async function () {
     await sleep(1100);
     a.send({ t: 'look', look: [1, 5, 2, 3, 1, 2, 1] });
     var rm = await b.wait(function (x) { return x.t === 'room' && x.room.players.some(function (p) { return p[0] === wa.n && p[5][1] === 5; }); }, 2500);
-    assert.deepEqual(rm.room.players.find(function (p) { return p[0] === wa.n; })[5], [-1, 5, -1, -1, -1, -1, -1], 'quick guest: outfit only');
+    assert.deepEqual(rm.room.players.find(function (p) { return p[0] === wa.n; })[5], [-1, 5, -1, -1, -1, -1, -1, -1], 'quick guest: outfit (and hat) only');
     r.h.close(); a.close(); b.close(); srv.close();
 });
 
@@ -593,4 +593,45 @@ test('flushAll writes pending changes right away (SIGTERM on deploy)', async fun
     var saved = st.loadAll().find(function (o) { return o.code === r.code; });
     assert.ok(saved && saved.players.some(function (p) { return p.id === wg.id; }), 'just-joined player saved');
     r.h.close(); g.close(); srv.close(); party._setStore(null);
+});
+
+// ---- التفاعلات ومطر القلوب وإعداد الشخصيات ----
+test('react reaches other players within 300ms', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var a = await client(port); a.send({ t: 'join', code: r.code, name: 'ريم' }); var wa = await a.wait(function (x) { return x.t === 'welcome'; });
+    var b = await client(port); b.send({ t: 'join', code: r.code, name: 'هيا' }); await b.wait(function (x) { return x.t === 'welcome'; });
+    a.send({ t: 'react', e: 'laugh' });
+    var m = await b.wait(function (x) { return x.t === 'reacts'; }, 600);
+    assert.deepEqual(m.d, [wa.n, 2]);
+    a.send({ t: 'react', e: 'crown' }); await sleep(400);
+    assert.equal(b.msgs.filter(function (x) { return x.t === 'reacts'; }).length, 1, 'guest cannot send the girl\'s reactions');
+    r.h.close(); a.close(); b.close(); srv.close();
+});
+
+test('heart rain from the girl reaches everyone; guests refused', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var girlKey = party._mgr.getRoom(r.code).girlKey;
+    var gl = await client(port); gl.send({ t: 'join', code: r.code, name: 'سارة', girlKey: girlKey }); await gl.wait(function (x) { return x.t === 'welcome'; });
+    var g = await client(port); g.send({ t: 'join', code: r.code, name: 'ريم' }); await g.wait(function (x) { return x.t === 'welcome'; });
+    await sleep(1100); g.send({ t: 'rain' });
+    assert.equal((await g.wait(function (x) { return x.t === 'err' && x.of === 'rain'; })).err, 'role');
+    gl.send({ t: 'rain' });
+    var m = await g.wait(function (x) { return x.t === 'rain'; });
+    assert.ok(m.at > 0);
+    r.h.close(); gl.close(); g.close(); srv.close();
+});
+
+test('chars message from host broadcasts room with new chars; guest refused', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var g = await client(port); g.send({ t: 'join', code: r.code, name: 'ريم' }); var rm = await g.wait(function (x) { return x.t === 'room'; });
+    assert.equal(rm.room.chars, 'rig');
+    await sleep(1100); g.send({ t: 'chars', v: 'classic' });
+    assert.equal((await g.wait(function (x) { return x.t === 'err' && x.of === 'chars'; })).err, 'host-only');
+    await sleep(1100); r.h.send({ t: 'chars', v: 'classic' });
+    var m = await g.wait(function (x) { return x.t === 'room' && x.room.chars === 'classic'; }, 2500);
+    assert.ok(m);
+    r.h.close(); g.close(); srv.close();
 });

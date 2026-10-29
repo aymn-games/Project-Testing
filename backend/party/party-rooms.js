@@ -28,11 +28,17 @@ var HX = 31, HZ = 47;           // حدود الحركة داخل القاعة (
 var MAX_SPEED = 14;             // م/ث — أسرع من الجري بالواجهة بهامش
 var SPEED_SLACK = 0.5;          // م — تذبذب الشبكة
 var MIN_MOVE_GAP_MS = 60;       // أقل فاصل بين رسائل الحركة من نفس اللاعب
-var MAX_ANIM = 8;                // 0 وقوف · 1 مشي · 2 رقص · 3 تلويح · 4 تصفيق · 5 لفّة · 6 قفز · 7 قلب · 8 تمايل
-var QUICK_ANIM = 4;              // الضيف السريع: 3 حركات بس (رقص، تلويح، تصفيق)
-// الشكل: [نوع اللبس، لون اللبس، البشرة، لون الشعر، التسريحة، الإكسسوار، المؤثر] — -1 = الافتراضي (الجوال يشتقه من n)
-var LOOK_MAX = [1, 11, 4, 7, 3, 5, 3];
-var LOOK_QUICK = [false, true, false, false, false, false, false]; // السريع يختار لون لبسه بس
+// 0 وقوف · 1 مشي · 2 سامبا · 3 تلويح · 4 تصفيق · 5 لفّة · 6 قفز · 7 قلب · 8 تمايل · 9 رقصة 2 · 10 رقصة 3
+// · 11 تحية الأميرة (لصاحبة الحفلة بس). كل الضيوف (حتى السريع) ياخذون 0-10
+var MAX_ANIM = 11, GUEST_ANIM = 10;
+// الشكل: [نوع اللبس، لون اللبس، البشرة، لون الشعر، التسريحة، الإكسسوار، المؤثر، قبعة الحفلة] — -1 = الافتراضي (الجوال يشتقه من n)
+// التسريحة: 0 قصير · 1 طويل · 2 كعكة · 3 ذيلين · 4 كيرلي قصير · 5 كيرلي طويل. القبعة: 0 بدون · 1-4 أشكال
+var LOOK_MAX = [1, 11, 4, 7, 5, 5, 3, 4];
+var LOOK_QUICK = [false, true, false, false, false, false, false, true]; // السريع: لون لبسه وقبعته بس
+// التفاعلات اللي تطير فوق الراس (الثلاث الأخيرة لصاحبة الحفلة بس)
+var REACTS = ['heart', 'smile', 'laugh', 'party', 'crown', 'love', 'sparkle'], GIRL_REACT_FROM = 4;
+var REACT_RATE = 2, REACT_BURST = 4, RAIN_COOLDOWN_MS = 20000;
+var CHARS = ['rig', 'classic'];
 // مناطق الحركة [xmin, xmax, zmin, zmax]
 var ZONES = {
     lounge: [-15, 15, 50.5, 69],      // صالة الضيوف خلف المدخل
@@ -224,6 +230,7 @@ function createRoomManager(opts) {
         var sched = null;
         if (o && o.schedule != null) { sched = cleanSchedule(o.schedule, now(), { creating: true }); if (!sched) return fail('schedule'); }
         rooms[code] = { code: code, token: rid(16), girlKey: rid(16), viewKey: rid(8), girlName: cleanName(o && o.girlName), players: [], nextN: 1, createdAt: now(),
+            chars: CHARS.indexOf(o && o.chars) >= 0 ? o.chars : 'rig', reacts: [],
             sched: sched, phase: sched && now() < openAtOf(sched) ? 'closed' : 'lobby', phaseAt: now(), phaseUntil: 0, walk: {}, slotN: 0, slotTotal: 0,
             wishes: [], wishSeq: 1, wishCur: -1, cakeCut: false, photoDone: false, startedAt: 0, banned: { users: {}, devs: {} } };
         return { ok: true, code: code, token: rooms[code].token, girlKey: rooms[code].girlKey, viewKey: rooms[code].viewKey };
@@ -299,7 +306,7 @@ function createRoomManager(opts) {
         var t = now(), gap = t - p.lastMoveAt;
         if (gap < MIN_MOVE_GAP_MS) return fail('flood');
         var zc = inZone(zoneOf(room, p), x, z); x = zc[0]; z = zc[1]; // المناطق فيها حدود القاعة والغرف
-        if (a > (p.kind === 'quick' ? QUICK_ANIM : MAX_ANIM) || a < 0) a = 0;
+        if (a > (p.role === 'girl' ? MAX_ANIM : GUEST_ANIM) || a < 0) a = 0;
         var dist = Math.hypot(x - p.x, z - p.z);
         p.lastMoveAt = t;
         if (dist > MAX_SPEED * Math.min(gap, 2000) / 1000 + SPEED_SLACK) return fail('speed');
@@ -363,7 +370,7 @@ function createRoomManager(opts) {
     function roster(code) {
         var room = rooms[code]; if (!room) return fail('nocode');
         return {
-            ok: true, code: room.code, girlName: room.girlName,
+            ok: true, code: room.code, girlName: room.girlName, chars: room.chars || 'rig',
             players: room.players.map(function (p) { return [p.n, p.name, p.role, p.kind, p.online ? 1 : 0, p.look]; })
         };
     }
@@ -421,6 +428,31 @@ function createRoomManager(opts) {
         if (ms && room.phaseUntil) room.phaseUntil = room.phaseAt + ms;
         return { ok: true, changed: true };
     }
+
+    // ---- التفاعلات (قلوب وضحك…) ومطر القلوب وإعداد الشخصيات ----
+    // كل لاعب له دلو: 2 بالثانية وبحد أقصى 4 دفعة وحدة، والزيادة تنتجاهل بدون ما تقطع الاتصال
+    function react(code, id, e) {
+        var room = rooms[code]; if (!room) return fail('nocode');
+        var p = playerOf(room, id); if (!p) return fail('noplayer');
+        var i = REACTS.indexOf(e); if (i < 0) return fail('bad');
+        if (i >= GIRL_REACT_FROM && p.role !== 'girl') return fail('role');
+        var t = now(), b = p.reactB || (p.reactB = { tokens: REACT_BURST, at: t });
+        b.tokens = Math.min(REACT_BURST, b.tokens + (t - b.at) / 1000 * REACT_RATE); b.at = t;
+        if (b.tokens < 1) return fail('flood');
+        b.tokens -= 1;
+        if (room.reacts.length < 400) room.reacts.push({ n: p.n, e: i, girl: p.role === 'girl' });
+        return { ok: true };
+    }
+    function takeReacts(code) { var room = rooms[code]; if (!room) return []; var d = room.reacts; room.reacts = []; return d; }
+    // تفاعل صاحبة الحفلة قبل الافتتاح يكشف إنها موجودة: ينخفي عن الضيوف والمشاهد غير الموثوق
+    function reactHidden(code, fromGirl) { var room = rooms[code]; return !!(room && fromGirl && (room.phase === 'closed' || room.phase === 'lobby' || room.phase === 'entrance')); }
+    function rain(code, id) {
+        var room = rooms[code]; if (!room) return fail('nocode');
+        var p = playerOf(room, id); if (!p || p.role !== 'girl') return fail('role');
+        var t = now(); if (room.rainAt && t - room.rainAt < RAIN_COOLDOWN_MS) return fail('cooldown');
+        room.rainAt = t; return { ok: true, at: t };
+    }
+    function setChars(code, v) { var room = rooms[code]; if (!room) return fail('nocode'); if (CHARS.indexOf(v) < 0) return fail('bad'); room.chars = v; return { ok: true }; }
 
     // ---- التهاني ----
     function visibleWishes(room) { return room.wishes.filter(function (w) { return !w.hidden; }); }
@@ -496,7 +528,7 @@ function createRoomManager(opts) {
 
     // ---- الحفظ (party-store) والرجوع بعد إعادة تشغيل السيرفر ----
     // كل شي إلا المواقع (تتغيّر 8 مرات/ث) وحالة الإرسال — بعد الرجوع كل لاعب يتحط بمكان مرحلته
-    var ROOM_KEYS = ['code', 'token', 'girlKey', 'viewKey', 'girlName', 'createdAt', 'sched', 'phase', 'phaseAt', 'phaseUntil', 'nextN',
+    var ROOM_KEYS = ['chars', 'code', 'token', 'girlKey', 'viewKey', 'girlName', 'createdAt', 'sched', 'phase', 'phaseAt', 'phaseUntil', 'nextN',
         'wishes', 'wishSeq', 'wishCur', 'cakeCut', 'photoDone', 'startedAt', 'banned', 'pointsMsg', 'pointsAcked'];
     function serialize(code) {
         var room = rooms[code]; if (!room) return null;
@@ -517,7 +549,7 @@ function createRoomManager(opts) {
             if (now() > endAtOf(sc) + EXPIRE_MS) return fail('expired'); // حفلة قديمة مرّ عليها يومين: ما ترجع
         }
         if (rooms[o.code]) return fail('exists');
-        var room = { players: [], walk: {}, slotN: 0, slotTotal: 0, wishes: [], wishSeq: 1, wishCur: -1, cakeCut: false, photoDone: false, startedAt: 0, banned: { users: {}, devs: {} }, sched: null, nextN: 1, phaseUntil: 0 };
+        var room = { chars: 'rig', reacts: [], players: [], walk: {}, slotN: 0, slotTotal: 0, wishes: [], wishSeq: 1, wishCur: -1, cakeCut: false, photoDone: false, startedAt: 0, banned: { users: {}, devs: {} }, sched: null, nextN: 1, phaseUntil: 0 };
         ROOM_KEYS.forEach(function (k) { if (o[k] !== undefined) room[k] = o[k]; });
         var t = now();
         room.players = o.players.map(function (q) {
@@ -542,8 +574,8 @@ function createRoomManager(opts) {
         move: move, takeDelta: takeDelta, deltaFor: deltaFor, fullState: fullState, roster: roster,
         closeRoom: closeRoom, rooms: function () { return Object.keys(rooms); }, serialize: serialize, restore: restore,
         getRoom: getRoom, pointsId: pointsId, phaseOf: phaseOf, start: start, skip: skip, tick: tick,
-        setLook: setLook, kick: kick, setSchedule: setSchedule, addWish: addWish, hideWish: hideWish, nextWish: nextWish, prevWish: prevWish, wishesState: wishesState, wishList: wishList, cut: cut, pointsList: pointsList
+        setLook: setLook, kick: kick, react: react, takeReacts: takeReacts, reactHidden: reactHidden, rain: rain, setChars: setChars, setSchedule: setSchedule, addWish: addWish, hideWish: hideWish, nextWish: nextWish, prevWish: prevWish, wishesState: wishesState, wishList: wishList, cut: cut, pointsList: pointsList
     };
 }
 
-module.exports = { createRoomManager: createRoomManager, packRows: packRows, cleanSchedule: cleanSchedule };
+module.exports = { createRoomManager: createRoomManager, packRows: packRows, cleanSchedule: cleanSchedule, REACTS: REACTS };
