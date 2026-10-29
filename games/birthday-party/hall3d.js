@@ -1167,6 +1167,8 @@ export function mountHall(el, opts = {}) {
     get curtain() { return curtainT; }, get wishY() { return wishGroup.position.y; }, get wishVis() { return wishGroup.visible; }, get autoActive() { return !!auto; }, get zone() { return zone; }, get cut() { return cutT; }, // للاختبار
     debugView: (p, l) => { mode = 'debug'; cam.fov = 60; cam.updateProjectionMatrix(); cam.position.set(p[0], p[1], p[2]); cam.lookAt(l[0], l[1], l[2]); },
     addTicker: fn => { tickers.add(fn); return () => tickers.delete(fn); },
+    // تجهيز الـ shaders مسبقاً (عشان ما يعلّق الجوال أول مرة يظهر شي جديد، مثل فستانها وقت الافتتاح)
+    compile: () => { try { r.compile(scene, cam); } catch (e) { /* مو ضروري */ } },
     get mode() { return mode; }, get party() { return partyTarget === 1; },
   };
 }

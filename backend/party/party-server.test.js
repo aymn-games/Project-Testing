@@ -412,7 +412,7 @@ test('look message updates roster for everyone (coalesced)', async function () {
 test('kick: host-only, kicked socket gets err kicked and is closed', async function () {
     reset(); party._setEnabled(true);
     var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
-    var a = await client(port); a.send({ t: 'join', code: r.code, name: 'ريم' }); var wa = await a.wait(function (x) { return x.t === 'welcome'; });
+    var a = await client(port); a.send({ t: 'join', code: r.code, name: 'ريم', dev: 'devkicked01' }); var wa = await a.wait(function (x) { return x.t === 'welcome'; });
     var b = await client(port); b.send({ t: 'join', code: r.code, name: 'هيا' }); await b.wait(function (x) { return x.t === 'welcome'; });
     await sleep(1100);
     b.send({ t: 'kick', n: wa.n });
@@ -422,7 +422,10 @@ test('kick: host-only, kicked socket gets err kicked and is closed', async funct
     assert.equal((await a.wait(function (x) { return x.t === 'err' && x.err === 'kicked'; })).err, 'kicked');
     await closed;
     await r.h.wait(function (x) { return x.t === 'room' && !x.room.players.some(function (p) { return p[0] === wa.n; }); }, 2500);
-    r.h.close(); b.close(); srv.close();
+    // نفس الجهاز يحاول يرجع باسم ثاني ← مرفوض
+    var a2 = await client(port); a2.send({ t: 'join', code: r.code, name: 'اسم ثاني', dev: 'devkicked01' });
+    assert.equal((await a2.wait(function (x) { return x.t === 'err' && x.of === 'join'; })).err, 'kicked');
+    r.h.close(); b.close(); a2.close(); srv.close();
 });
 
 test('hosted carries viewKey; peek with wrong vk hides the girl in lobby', async function () {

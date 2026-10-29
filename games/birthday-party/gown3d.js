@@ -142,5 +142,5 @@ export function createGown(scene) {
   }
 
   function dispose() { scene.remove(group); geos.forEach(g => g.dispose()); mats.forEach(m => m.dispose()); spTex.dispose(); }
-  return { update, setColor, dispose };
+  return { update, setColor, setVisible: v => { group.visible = v; }, dispose };
 }

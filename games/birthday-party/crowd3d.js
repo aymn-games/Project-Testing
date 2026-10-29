@@ -38,7 +38,7 @@ const hash = n => { let h = (n * 2654435761) >>> 0; h ^= h >>> 13; h = Math.imul
 export function resolveLook(n, role, look) {
   const h = hash(n), L = Array.isArray(look) ? look : [], pick = (i, def) => (Number.isInteger(L[i]) && L[i] >= 0 ? L[i] : def);
   return {
-    st: pick(0, 0), o: pick(1, role === 'girl' ? -1 : h % OUTFIT.length), s: pick(2, (h >>> 8) % SKIN.length),
+    st: role === 'girl' ? 0 : pick(0, 0), // صاحبة الحفلة لابسة فستانها الفخم دايماً o: pick(1, role === 'girl' ? -1 : h % OUTFIT.length), s: pick(2, (h >>> 8) % SKIN.length),
     h: pick(3, (h >>> 12) % 6), hs: pick(4, role === 'girl' ? 1 : (h >>> 18) % 3), acc: pick(5, 0), fx: pick(6, 0),
   };
 }
@@ -222,7 +222,9 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
     for (const k of DOUBLE) { parts[k].setMatrixAt(i * 2, zero); parts[k].setMatrixAt(i * 2 + 1, zero); }
   }
   // ---- المؤثرات وقت الحركات: قلوب وشرار (جزيئات مشتركة للكل) وهالة تحت القدمين ----
-  const FXN = 240, MAXE = 16, emitters = [];
+  // emitters: pool ثابت يتعبّى كل إطار (بدون إنشاء كائنات جديدة)، وemN عدد المستخدم منه
+  const MAXE = 16, emitters = [];
+  let emN = 0;
   const spriteTex = draw => { const c = document.createElement('canvas'); c.width = c.height = 64; draw(c.getContext('2d')); const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return t; };
   // القلب: حافة أغمق (تنضرب بلون الجزيء) عشان يبان فوق أرضية القاعة الوردية، ولمعة صغيرة
   const heartTex = spriteTex(g => {
@@ -231,7 +233,7 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
     g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.ellipse(21, 24, 5, 3.4, -.6, 0, Math.PI * 2); g.fill();
   });
   const sparkTex = spriteTex(g => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.22, 'rgba(255,255,255,.85)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
-  function fxPool(tex, size, colors, additive, maxLife) {
+  function fxPool(tex, size, colors, additive, maxLife, FXN) {
     const pos = new Float32Array(FXN * 3).fill(-100), col = new Float32Array(FXN * 3), base = new Float32Array(FXN * 3), vel = new Float32Array(FXN * 3), life = new Float32Array(FXN);
     const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3)); geo.setAttribute('color', new T.BufferAttribute(col, 3));
     const pts = new T.Points(geo, new T.PointsMaterial({ map: tex, size, vertexColors: true, transparent: true, depthWrite: false, alphaTest: .05, blending: additive ? T.AdditiveBlending : T.NormalBlending }));
@@ -258,8 +260,8 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
       },
     };
   }
-  const hearts = fxPool(heartTex, .6, ['#ff2d7a', '#e11d74', '#ff5fa2', '#c026d3'], false, 1.8);
-  const sparks = fxPool(sparkTex, .14, ['#ffd27a', '#ffffff', '#ffe9b0', '#f9c6ff'], true, .8);
+  const hearts = fxPool(heartTex, .6, ['#ff2d7a', '#e11d74', '#ff5fa2', '#c026d3'], false, 1.8, 256);
+  const sparks = fxPool(sparkTex, .14, ['#ffd27a', '#ffffff', '#ffe9b0', '#f9c6ff'], true, .8, 320); // 16 × 22/ث × ~0.7ث
   const ringMat = new T.MeshBasicMaterial({ color: '#ffc04d', transparent: true, opacity: 1, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide });
   // الهالة: حلقتين ذهبية (وحدة على الأرض ووحدة أصغر حول الخصر) تلف وتنبض
   const ringGeo = mergeGeos([(() => { const g = new T.RingGeometry(.4, .58, 40); g.rotateX(-Math.PI / 2); return g; })(), (() => { const g = new T.RingGeometry(.36, .42, 40); g.rotateX(-Math.PI / 2); g.translate(0, .95, 0); return g; })()]);
@@ -267,9 +269,11 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
   let fxT = 0;
   function runFx(dt) {
     fxT += dt;
-    emitters.sort((a, b) => a.d - b.d);
+    // أقرب 16 بس: اختيار جزئي بالتبديل بدل ترتيب الكل
+    const top = Math.min(MAXE, emN);
+    for (let k = 0; k < top; k++) { let b = k; for (let j = k + 1; j < emN; j++) if (emitters[j].d < emitters[b].d) b = j; if (b !== k) { const t = emitters[k]; emitters[k] = emitters[b]; emitters[b] = t; } }
     let r = 0;
-    for (let k = 0; k < Math.min(MAXE, emitters.length); k++) {
+    for (let k = 0; k < top; k++) {
       const em = emitters[k], R = Math.random;
       // عدد ثابت بالثانية (مو بالإطار) عشان الجوال البطيء يطلع نفس الكمية
       const c = em.c, n = Math.floor((c.fxCarry = (c.fxCarry || 0) + dt * (em.fx === 1 ? 8 : 22)));
@@ -289,7 +293,7 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
   function update(dt, cam, serverNowMs) {
     const renderT = serverNowMs - DELAY_MS;
     let girl = null;
-    emitters.length = 0;
+    emN = 0;
     for (const c of chars.values()) {
       if (!c.online || !c.ready) { hide(c); continue; }
       let moving;
@@ -359,7 +363,7 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
         m4.compose(v.set(sd * .3, 1.22, 0), q.setFromEuler(e.set(ax, 0, az)), s1.set(1, 1, 1)); parts.arm.setMatrixAt(j, m4.premultiply(base));
         m4.compose(v.set(sd * .11, 1.57, .27), q.identity(), s1.set(1, 1, 1)); parts.eye.setMatrixAt(j, m4.premultiply(base));
       }
-      if (L.fx && an >= 2) emitters.push({ c, fx: L.fx, x: c.x, y: y + bob, z: c.z, d: (c.x - cam.position.x) ** 2 + (c.z - cam.position.z) ** 2 });
+      if (L.fx && an >= 2) { const em = emitters[emN] || (emitters[emN] = {}); emN++; em.c = c; em.fx = L.fx; em.x = c.x; em.y = y + bob; em.z = c.z; em.d = (c.x - cam.position.x) ** 2 + (c.z - cam.position.z) ** 2; }
       if (c.role === 'girl') girl = { x: c.x, y: y + bob, z: c.z, ry: c.ry + c.spin, s: scale, an, phase: c.phase, roll };
     }
     for (const key in parts) parts[key].instanceMatrix.needsUpdate = true;
@@ -378,6 +382,13 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
     labels.forEach(s => { const c = s.userData.c; if (c && s.visible) s.position.set(c.x, floorAt(c.x, c.z) + 2.25 * (c.role === 'girl' ? 1.08 : 1) + (c.role === 'girl' ? .25 : 0), c.z); });
   }
 
+  // نجهّز shaders الفستان والهالة وقت التحميل بدل لحظة الافتتاح (compile يتجاهل المخفي، فنظهرهم لحظة)
+  function prewarm(compile) {
+    gown.setVisible(true); rings[0].visible = true;
+    compile();
+    gown.setVisible(false); rings[0].visible = false;
+  }
+
   function dispose() {
     for (const key in parts) { parts[key].geometry.dispose(); parts[key].material.dispose(); scene.remove(parts[key]); }
     blobTex.dispose(); haloTex.dispose();
@@ -389,5 +400,5 @@ export function createCrowd(scene, { floorAt = () => 0 } = {}) {
 
   // للاختبار: حالة كل شخصية
   const debug = () => [...chars.values()].map(c => ({ n: c.n, name: c.name, online: c.online, ready: c.ready, x: +c.x.toFixed(2), z: +c.z.toFixed(2), buf: c.buf.length, slot: c.slot }));
-  return { sync, apply, update, setLocal, setLocalLook, setAutoPaths, posOf, dispose, debug, get count() { return chars.size; } };
+  return { sync, apply, update, setLocal, setLocalLook, setAutoPaths, posOf, prewarm, dispose, debug, get count() { return chars.size; } };
 }

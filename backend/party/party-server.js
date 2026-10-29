@@ -10,7 +10,7 @@
  *
  * بروتوكول (JSON، كل رسالة فيها t):
  *   عميل → host {girlName, key} | host {code, token}   ← hosted {code, token, girlKey}
- *   عميل → join {code, name, auth?, girlKey?}     ← welcome {id, key, n, role, kind} ثم all {d}
+ *   عميل → join {code, name, auth?, girlKey?, dev?} ← welcome {id, key, n, role, kind} ثم all {d}
  *   عميل → resume {code, id, key}                 ← نفس رد join
  *   عميل → peek {code, vk}                        ← room + all (شاشة عرض بدون شخصية؛ بدون vk صحيح صاحبة الحفلة مخفية قبل الافتتاح)
  *   اللاعب → look {look: 7 أرقام}                ← room (الصف السادس = الشكل بعد التحقق حسب نوع الحساب)
@@ -18,7 +18,7 @@
  *   المذيع → start · skip {from}                  ← phase {p, at, until, walk, cut} للكل
  *   (phase تنرسل أيضاً لكل اتصال جديد؛ walk مسطّحة n, x×100, z×100 وقت المشي التلقائي)
  *   الضيف → wish {text} ← myWish {text} · صاحبة الحفلة/المذيع → next {seen} · cut
- *   المذيع → kick {n} (المطرود ياخذ err kicked وينقطع) · hideWish {id, hidden} · pointsClaim ← pointsGo {id} (جهاز واحد بس) · pointsRelease · pointsDone ← pointsOk لباقي أجهزة المذيع
+ *   المذيع → kick {n} (المطرود ياخذ err kicked وينقطع، وحسابه/جهازه ما يقدر يدخل مرة ثانية، وتهنئته تنخفي) · hideWish {id, hidden} · pointsClaim ← pointsGo {id} (جهاز واحد بس) · pointsRelease · pointsDone ← pointsOk لباقي أجهزة المذيع
  *   خادم → wishes {cur, shown, total} للكل · wishList {items} للمذيع · points {id, players, durationMs} للمذيع
  *   خادم → room {room} عند تغيّر القائمة · s {now, d} دلتا الحركة كل 125ms
  *          (d مسطّحة: n,x,z,ry,a لكل لاعب تحرك، x/z بالسم وry ×100 — خاصة بكل مستقبل:
@@ -194,7 +194,7 @@ function onMessage(client, msg) {
     }
     if (t === 'join') {
         if (!code) return send(client, { t: 'err', err: 'nocode', of: t });
-        res = _mgr.join(code, { name: msg.name, auth: msg.auth || null, girlKey: msg.girlKey == null ? null : String(msg.girlKey) });
+        res = _mgr.join(code, { name: msg.name, auth: msg.auth || null, girlKey: msg.girlKey == null ? null : String(msg.girlKey), dev: msg.dev });
         if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
         logger.log('Party: ' + res.role + ' joined room ' + code + ' (' + res.kind + ')');
         return onWelcome(client, code, res);
@@ -267,6 +267,7 @@ function onMessage(client, msg) {
             if (c.code === client.code && c.id === res.id) { send(c, { t: 'err', err: 'kicked', of: 'kick' }); c.id = null; c.role = 'viewer'; try { c.socket.end(); } catch (e) { } }
         });
         logger.log('Party: room ' + client.code + ' kicked n=' + Number(msg.n));
+        if (res.wishHidden) { sendWishList(client.code); broadcastWishes(client.code); }
         return markRoster(client.code);
     }
     if (t === 'mv') {

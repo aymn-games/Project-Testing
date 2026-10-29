@@ -225,9 +225,13 @@
         $('viewBtn').href = 'play.html?code=' + state.code + '&view=1' + (state.viewKey ? '&vk=' + encodeURIComponent(state.viewKey) : '');
         $('playBtn').href = 'join.html?code=' + state.code + '&host=1';
     }
+    let listSig = '';
     function renderList(room) {
         const ps = room.players, guests = ps.filter(p => p[2] === 'guest').length;
         $('count').textContent = guests + ' / 100';
+        // القائمة تنبني من جديد بس لو تغيّر شي يبان فيها (مو الشكل) — عشان ضغطة «طرد» ما تضيع وسط إعادة بناء
+        const sig = JSON.stringify(ps.map(p => p.slice(0, 5)));
+        if (sig === listSig) return; listSig = sig;
         const ul = $('list'); ul.textContent = '';
         if (!ps.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'لسا ما دخل أحد'; ul.append(li); return; }
         // صاحبة الحفلة أول القائمة، ثم المتصلين
@@ -262,6 +266,7 @@
             else if (m.t === 'pointsGo') onPointsGo(m.id);
             else if (m.t === 'pointsOk') pointsNote('انحسبت النقاط ✓');
             else if (m.t === 'wishes') wishesShown = m.shown || 0;
+            else if (m.t === 'err' && m.of === 'kick') showShowMsg(m.err === 'noplayer' ? 'الضيف طلع من الحفلة أصلاً.' : 'ما قدرنا نطرده، جرّب مرة ثانية.');
             else if (m.t === 'err' && m.of === 'pointsClaim') { if (m.err === 'claimed') pointsNote('جهاز ثاني فاتح صفحة المذيع يحسب النقاط الحين…'); }
             else if (m.t === 'err' && m.of === 'next' && m.err === 'stale') { /* صاحبة الحفلة سبقت — الرسالة الجديدة على الشاشة */ }
             else if (m.t === 'err' && (m.of === 'start' || m.of === 'skip' || m.of === 'next' || m.of === 'cut' || m.of === 'hideWish')) showShowMsg(m.err === 'phase' ? 'المرحلة تغيّرت قبل الضغط — جرّب مرة ثانية.' : 'صار خطأ.');

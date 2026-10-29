@@ -52,6 +52,8 @@ var NEAR_R = 10;                // م — اللي أقرب من كذا يوصل
 
 function rid(n) { return crypto.randomBytes(n || 12).toString('hex'); }
 function cleanName(n) { return String(n == null ? '' : n).replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16).trim(); }
+// معرّف الجهاز (party-dev بالجوال): عشان المطرود ما يرجع، والجهاز ياخذ شخصيته الغايبة بدل ما يسوي ثانية
+function cleanDev(d) { return typeof d === 'string' && /^[a-z0-9]{8,32}$/i.test(d) ? d : null; }
 function r2(v) { return Math.round(v * 100) / 100; }
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 function fail(err) { return { ok: false, err: err }; }
@@ -96,10 +98,10 @@ function createRoomManager(opts) {
     function playerOf(room, id) { return room.players.find(function (p) { return p.id === id; }); }
     function guestCount(room) { return room.players.filter(function (p) { return p.role === 'guest'; }).length; }
 
-    function addPlayer(room, name, role, kind, user) {
+    function addPlayer(room, name, role, kind, user, dev) {
         var p = {
             id: rid(8), key: rid(16), n: room.nextN++, name: name, role: role, kind: kind,
-            user: user || null, online: true, look: LOOK_MAX.map(function () { return -1; }),
+            user: user || null, dev: dev || null, online: true, look: LOOK_MAX.map(function () { return -1; }),
             // مكان البداية: منطقة المدخل
             x: r2(-8 + Math.random() * 16), z: r2(38 + Math.random() * 6), ry: Math.PI, a: 0,
             lastMoveAt: now(), dirty: true, ver: 1
@@ -177,7 +179,7 @@ function createRoomManager(opts) {
         var ws = Math.round(Number(o && o.wishesSec)); ws = isFinite(ws) && ws > 0 ? clamp(ws, 120, 1200) : 480;
         rooms[code] = { code: code, token: rid(16), girlKey: rid(16), viewKey: rid(8), girlName: cleanName(o && o.girlName), players: [], nextN: 1, createdAt: now(),
             danceSec: ds, wishesSec: ws, phase: 'lobby', phaseAt: now(), phaseUntil: 0, walk: {}, slotN: 0, slotTotal: 0,
-            wishes: [], wishSeq: 1, wishCur: -1, cakeCut: false, photoDone: false, startedAt: 0 };
+            wishes: [], wishSeq: 1, wishCur: -1, cakeCut: false, photoDone: false, startedAt: 0, banned: { users: {}, devs: {} } };
         return { ok: true, code: code, token: rooms[code].token, girlKey: rooms[code].girlKey, viewKey: rooms[code].viewKey };
     }
 
@@ -205,6 +207,11 @@ function createRoomManager(opts) {
             if (!gname) return fail('name');
             return welcome(addPlayer(room, gname, 'girl', 'member', user));
         }
+        var dev = cleanDev(o.dev);
+        // المطرود ما يرجع: حسابه (المسجّل) أو جهازه (السريع — حماية بسيطة تكفي لحفلة)
+        if ((user && user.id != null && room.banned.users[user.id]) || (dev && room.banned.devs[dev])) return fail('kicked');
+        // نفس الجهاز رجع يدخل (مثلاً سجّل دخوله بعد ما كان ضيف سريع): شخصيته القديمة الغايبة تنشال
+        if (dev) room.players = room.players.filter(function (p) { return !(p.role === 'guest' && p.dev === dev && !p.online); });
         if (guestCount(room) >= maxGuests) {
             // مكتملة: نشيل أقدم ضيف غايب من دقيقتين أو أكثر (اللي طلع وما رجع)
             var t = now(), stale = room.players.filter(function (p) { return p.role === 'guest' && !p.online && t - p.offlineSince >= STALE_MS; })
@@ -214,7 +221,7 @@ function createRoomManager(opts) {
         }
         var name = cleanName(o.name) || (user ? cleanName(user.username) : '');
         if (!name) return fail('name');
-        return welcome(addPlayer(room, name, 'guest', user ? 'member' : 'quick', user));
+        return welcome(addPlayer(room, name, 'guest', user ? 'member' : 'quick', user, dev));
     }
 
     function resume(code, id, key) {
@@ -265,7 +272,12 @@ function createRoomManager(opts) {
         var p = room.players.find(function (x) { return x.n === Number(n); }); if (!p) return fail('noplayer');
         if (p.role === 'girl') return fail('girl');
         room.players.splice(room.players.indexOf(p), 1);
-        return { ok: true, id: p.id };
+        if (p.user && p.user.id != null) room.banned.users[p.user.id] = 1;
+        if (p.dev) room.banned.devs[p.dev] = 1;
+        // تهنئته تنخفي تلقائياً (لو كانت مزعجة ما تحتاج المذيع يخفيها بعد)
+        var wish = room.wishes.find(function (w) { return w.pid === p.id; }), wishHidden = !!(wish && !wish.shown && !wish.hidden);
+        if (wishHidden) wish.hidden = true;
+        return { ok: true, id: p.id, wishHidden: wishHidden };
     }
 
     function stateRow(p) { return [p.n, p.x, p.z, p.ry, p.a]; }

@@ -566,3 +566,33 @@ test('untrusted peek does not see the girl before reveal; trusted peek (vk) does
     s.mgr.start(s.code); s.mgr.skip(s.code, 'entrance');
     assert.equal(has(false), true, 'visible after reveal starts');
 });
+
+test('kicked member and kicked device cannot join again; other devices still can', function () {
+    var s = lookRoom(), m = s.mgr.join(s.code, { auth: 'm' }), q = s.mgr.join(s.code, { name: 'ريم', dev: 'aaaabbbbcccc' });
+    s.mgr.kick(s.code, m.n); s.mgr.kick(s.code, q.n);
+    assert.equal(s.mgr.join(s.code, { auth: 'm' }).err, 'kicked');
+    assert.equal(s.mgr.join(s.code, { name: 'اسم ثاني', dev: 'aaaabbbbcccc' }).err, 'kicked');
+    assert.equal(s.mgr.join(s.code, { name: 'هيا', dev: 'ddddeeeeffff' }).ok, true);
+    assert.equal(s.mgr.join(s.code, { name: 'بدون جهاز' }).ok, true, 'no dev → allowed (weak protection by design)');
+    assert.equal(s.mgr.join(s.code, { name: 'جهاز غلط', dev: '../x' }).ok, true, 'malformed dev is ignored');
+});
+
+test('same device joining again replaces its own offline guest, not an online one', function () {
+    var s = lookRoom(), q = s.mgr.join(s.code, { name: 'ريم', dev: 'aaaabbbbcccc' });
+    var on = s.mgr.join(s.code, { name: 'تبويب ثاني', dev: 'aaaabbbbcccc' });
+    assert.equal(s.mgr.roster(s.code).players.length, 2, 'online character is kept');
+    s.mgr.leave(s.code, q.id);
+    var again = s.mgr.join(s.code, { auth: 'm', dev: 'aaaabbbbcccc' });
+    var ns = s.mgr.roster(s.code).players.map(function (r) { return r[0]; });
+    assert.deepEqual(ns.sort(), [on.n, again.n].sort());
+});
+
+test('kick hides the kicked guest\'s pending wish', function () {
+    var s = showRoom(), g = s.mgr.join(s.code, { name: 'ريم' }); s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
+    toWishes(s);
+    s.mgr.addWish(s.code, g.id, 'رسالة مزعجة');
+    var k = s.mgr.kick(s.code, g.n);
+    assert.equal(k.wishHidden, true);
+    assert.equal(s.mgr.wishList(s.code).items[0].hidden, true);
+    assert.equal(s.mgr.wishesState(s.code).total, 0);
+});

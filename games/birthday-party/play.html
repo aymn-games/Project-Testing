@@ -198,7 +198,7 @@
 </div>
 
 <div class="flash" id="flash" aria-hidden="true"></div>
-<div class="kicked hidden" id="kicked" role="alertdialog" aria-label="طلّعك المذيع"><div><h2>طلّعك المذيع من الحفلة</h2><a id="kickedBack" href="join.html">رجوع لصفحة الدخول</a></div></div>
+<div class="kicked hidden" id="kicked" role="alertdialog" aria-label="طلّعك المذيع"><div><h2>طلّعك المذيع من الحفلة</h2><a id="kickedBack" href="../../games.html">رجوع للألعاب</a></div></div>
 <div class="photomodal hidden" id="photoModal" role="dialog" aria-label="الصورة الجماعية">
     <div><img id="photoImg" alt="الصورة الجماعية"><div class="wbrow"><button type="button" id="photoClose" class="ghost">إغلاق</button><a id="photoSave" class="savebtn">حفظ الصورة</a></div></div>
 </div>
@@ -287,6 +287,7 @@
         if (!viewOnly && !(me && me.code === code)) { location.replace('join.html?code=' + code); return; }
         if (!viewOnly) $('hint').querySelector('.touch').textContent = 'العصا للمشي · اسحب للف الكاميرا';
         const crowd = createCrowd(hall.scene, { floorAt: hall.floorAt });
+        crowd.prewarm(hall.compile);
         if (params.has('debug')) { window.__crowd = crowd; window.__hall = hall; }
         const music = createMusic();
         const roles = new Map();
@@ -435,7 +436,12 @@
             onStatus: on => $('netBad').classList.toggle('hidden', on),
             onOpen: () => { gotAll = false; net.send(viewOnly ? { t: 'peek', code, vk: params.get('vk') || undefined } : { t: 'resume', code, id: me.id, key: me.key }); },
             onMessage: m => {
-                if (m.t === 'welcome') { myN = m.n; myRole = m.role; myKind = m.kind || 'quick'; buildEmotes(); updateLookBtn(); crowd.setLocal(myN, () => Object.assign(hall.getLocal(), { emote: curEmote() })); }
+                if (m.t === 'welcome') {
+                    myN = m.n; myRole = m.role; myKind = m.kind || 'quick'; buildEmotes(); updateLookBtn();
+                    crowd.setLocal(myN, () => Object.assign(hall.getLocal(), { emote: curEmote() }));
+                    // حفظ شكله وانقطع قبل ما يوصل: نعيد إرساله
+                    if (pendingLook) net.send({ t: 'look', look: pendingLook.split(',').map(Number) });
+                }
                 else if (m.t === 'room') {
                     m.room.players.forEach(r => roles.set(r[0], r[2]));
                     crowd.sync(m.room.players);
@@ -455,7 +461,7 @@
                     if (m.t === 'all' && !gotAll) { gotAll = true; applied = null; applyPhase(); }
                 } else if (m.t === 'err') {
                     if (m.err === 'resume' || m.err === 'nocode') { writeJSON('party-me', null); location.replace('join.html?code=' + code); }
-                    else if (m.err === 'kicked') { net.close(); writeJSON('party-me', null); closeLook(); $('kickedBack').href = 'join.html?code=' + code; $('kicked').classList.remove('hidden'); }
+                    else if (m.err === 'kicked') { net.close(); writeJSON('party-me', null); closeLook(); $('kicked').classList.remove('hidden'); }
                     else if (m.err === 'elsewhere') { $('netBad').textContent = 'فتحت الحفلة من مكان ثاني'; $('netBad').classList.remove('hidden'); net.close(); }
                     else if (m.err === 'disabled') { $('netBad').textContent = 'الحفلات متوقفة حالياً'; $('netBad').classList.remove('hidden'); }
                     else if (m.of === 'wish') { $('wishStatus').textContent = m.err === 'shown' ? 'تهنئتك انعرضت خلاص 💖' : m.err === 'empty' ? 'اكتب تهنئتك أول' : 'ما وصلت، جرّب مرة ثانية'; $('wishSend').disabled = false; }

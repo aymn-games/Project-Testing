@@ -98,8 +98,12 @@
         disabled: 'الحفلات متوقفة حالياً.',
         auth: 'انتهت جلسة حسابك — سجّل دخولك من جديد.',
         name: 'اكتب اسمك.',
+        kicked: 'المذيع طلّعك من هذي الحفلة.',
     };
     let girlName = '', sentJoin = false;
+    // معرّف ثابت للجهاز: المطرود ما يرجع بنفس الجهاز، ورجوعه بحسابه ياخذ مكان شخصيته الغايبة
+    let dev = readJSON('party-dev');
+    if (typeof dev !== 'string' || !/^[a-z0-9]{8,32}$/i.test(dev)) { dev = Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''); writeJSON('party-dev', dev); }
 
     function showMsg(t) { $('msg').textContent = t || ''; $('msg').classList.toggle('hidden', !t); }
     function showForm() {
@@ -141,7 +145,7 @@
                 }
             },
         });
-        const join = (extra, btn) => { showMsg(''); sentJoin = true; $(btn).disabled = true; net.send(Object.assign({ t: 'join', code }, extra)); };
+        const join = (extra, btn) => { showMsg(''); sentJoin = true; $(btn).disabled = true; net.send(Object.assign({ t: 'join', code, dev }, extra)); };
         $('memberBtn').addEventListener('click', () => {
             const tok = window.AGPAuth && window.AGPAuth.getToken && window.AGPAuth.getToken();
             if (!tok) {
