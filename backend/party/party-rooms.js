@@ -9,10 +9,16 @@
  * نوع الدخول: quick (اسم فقط) · member (حساب موقع صالح — أو صاحبة الحفلة دائماً).
  * كل دالة ترجع { ok:true, ... } أو { ok:false, err } — ما ترمي أخطاء للخادم.
  *
- * مراحل العرض: lobby (الضيوف بالصالة وصاحبة الحفلة بغرفتها) ← entrance (مشي
- * تلقائي: walk = هدف كل لاعب) ← reveal (الستارة) ← dance ← gather (تجمّع) ← wishes
- * (التهاني) ← cakeWalk ← cake (تنتظر صاحبة الحفلة تقص) ← celebrate ← photo ← free. السيرفر يحصر
- * الحركة بمنطقة الدور والمرحلة، ويخفي صاحبة الحفلة عن الضيوف قبل الافتتاح.
+ * مراحل العرض: closed (قبل فتح الدخول — صاحبة الحفلة بس تقدر تدخل غرفتها) ← lobby (الضيوف
+ * بالصالة وصاحبة الحفلة بغرفتها) ← entrance (مشي تلقائي: walk = هدف كل لاعب) ← reveal (الستارة)
+ * ← dance ← gather (تجمّع) ← wishWrite (كتابة التهاني بوقت) ← wishes (العرض، بدون وقت) ← cakeWalk
+ * ← cake (تنتظر القص، أو قص تلقائي) ← celebrate ← photo ← free ← ended. السيرفر يحصر الحركة
+ * بمنطقة الدور والمرحلة، ويخفي صاحبة الحفلة عن الضيوف قبل الافتتاح.
+ *
+ * الجدول (schedule، يحدده المذيع ويعدّله): الانتقالات كلها على الساعة في tick() —
+ * closed ← lobby عند openAt، و lobby ← entrance عند startAt بشرط صاحبة الحفلة متصلة،
+ * والمراحل الموقّتة بمددها، ومن أي مرحلة ← ended عند endAt. غرفة بدون جدول (اختبارات)
+ * تبدأ lobby وتنتظر «بدء» المذيع، بنفس المدد الافتراضية.
  */
 'use strict';
 
@@ -35,9 +41,13 @@ var ZONES = {
     nostage: [-31, 31, -31, 47]       // الضيوف وقت الرقص: المنصة والدرج ممنوعين
 };
 var GIRL_SPOT = [0, -36.5], CAKE_SPOT = [0, -37.6], PHOTO_SPOT = [0, -29.6];
-var PHASES = ['lobby', 'entrance', 'reveal', 'dance', 'gather', 'wishes', 'cakeWalk', 'cake', 'celebrate', 'photo', 'free'];
-// مدد ثابتة (ms) — dance و wishes من إعدادات المذيع، cake و free بدون وقت
-var FIXED_MS = { entrance: 40000, reveal: 12000, gather: 12000, cakeWalk: 10000, celebrate: 30000, photo: 16000 };
+var PHASES = ['closed', 'lobby', 'entrance', 'reveal', 'dance', 'gather', 'wishWrite', 'wishes', 'cakeWalk', 'cake', 'celebrate', 'photo', 'free', 'ended'];
+// مدد ثابتة (ms) — dance و wishWrite و celebrate و cake من الجدول، wishes و free بدون وقت
+var FIXED_MS = { entrance: 40000, reveal: 12000, gather: 12000, cakeWalk: 10000, photo: 16000 };
+// الجدول الافتراضي (بالدقايق، ومهلة القص بالثواني) والحدود
+var SCHED_DEF = { durationMin: 60, openBeforeMin: 15, danceMin: 7, writeMin: 3, cakeDanceMin: 5, cutTimeoutSec: 60 };
+var SCHED_LIM = { durationMin: [15, 240], openBeforeMin: [0, 120], danceMin: [1, 60], writeMin: [1, 60], cakeDanceMin: [1, 60], cutTimeoutSec: [10, 600] };
+var MIN_MS = 60000, MAX_AHEAD_MS = 30 * 24 * 3600 * 1000, PAST_SLACK_MS = 60000, EXPIRE_MS = 48 * 3600 * 1000;
 // مراحل مشي تلقائي: نوع الأهداف لكل مرحلة
 var WALK_KIND = { entrance: 'grid', gather: 'grid', cakeWalk: 'cake', photo: 'photo' };
 var AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1 };  // الحركة اليدوية ممنوعة
@@ -57,6 +67,25 @@ function cleanDev(d) { return typeof d === 'string' && /^[a-z0-9]{8,32}$/i.test(
 function r2(v) { return Math.round(v * 100) / 100; }
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 function fail(err) { return { ok: false, err: err }; }
+// الجدول من المذيع: أرقام صحيحة بحدودها، والحقل الغلط أو الناقص ← القيمة الافتراضية (أو base لو تعديل).
+// creating: البداية ما تكون بالماضي (بسماح دقيقة) ولا بعد أكثر من 30 يوم
+function cleanSchedule(s, nowMs, o) {
+    if (!s || typeof s !== 'object') return null;
+    var base = (o && o.base) || SCHED_DEF;
+    var startAt = Math.round(Number(s.startAt != null ? s.startAt : base.startAt));
+    if (!isFinite(startAt) || startAt <= 0) return null;
+    if (o && o.creating && (startAt < nowMs - PAST_SLACK_MS || startAt > nowMs + MAX_AHEAD_MS)) return null;
+    var out = { startAt: startAt };
+    Object.keys(SCHED_LIM).forEach(function (k) {
+        var v = s[k] == null || s[k] === '' ? NaN : Math.round(Number(s[k]));
+        out[k] = isFinite(v) ? clamp(v, SCHED_LIM[k][0], SCHED_LIM[k][1]) : (base[k] != null ? base[k] : SCHED_DEF[k]);
+    });
+    var tz = s.tzOffsetMin == null ? NaN : Math.round(Number(s.tzOffsetMin));
+    out.tzOffsetMin = isFinite(tz) ? clamp(tz, -720, 840) : (base.tzOffsetMin || 0);
+    return out;
+}
+function openAtOf(sc) { return sc.startAt - sc.openBeforeMin * MIN_MS; }
+function endAtOf(sc) { return sc.startAt + sc.durationMin * MIN_MS; }
 function inZone(z, x, y) { return [clamp(x, z[0], z[1]), clamp(y, z[2], z[3])]; }
 // مكان رقم i بالشبكة قدام المنصة (24 عمود × صفوف بمسافة 1.2م، الصف الأول الأقرب للمنصة)
 // صفوف الصورة الجماعية ورا صاحبة الحفلة: 14 بالصف (عرض الكادر)، كل صف بالنص حسب عدده،
@@ -111,14 +140,14 @@ function createRoomManager(opts) {
         return p;
     }
     function zoneOf(room, p) {
-        if (room.phase === 'lobby') return p.role === 'girl' ? ZONES.girl : ZONES.lounge;
+        if (room.phase === 'lobby' || room.phase === 'closed') return p.role === 'girl' ? ZONES.girl : ZONES.lounge;
         return p.role === 'girl' ? ZONES.hall : ZONES.nostage;
     }
     function rnd(a, b) { return r2(a + Math.random() * (b - a)); }
     // مكان اللاعب حسب المرحلة (للداخل جديد)
     function place(room, p) {
         var ph = room.phase;
-        if (ph === 'lobby') {
+        if (ph === 'lobby' || ph === 'closed' || ph === 'ended') {
             if (p.role === 'girl') { p.x = rnd(-3, 3); p.z = rnd(-62, -56); p.ry = 0; }
             else { p.x = rnd(-10, 10); p.z = rnd(54, 64); p.ry = Math.PI; }
         } else if (WALK_KIND[ph] || ph === 'reveal') {
@@ -133,11 +162,26 @@ function createRoomManager(opts) {
     }
     // اتجاه الوقوف: الضيوف يطالعون المنصة (π)، وصاحبة الحفلة تطالع الضيوف (0) إلا عند الكيكة والصورة
     function facing(ph, p) { return p.role === 'girl' && !(ph === 'cakeWalk' || ph === 'cake' || ph === 'celebrate' || ph === 'photo') ? 0 : r2(Math.PI); }
-    function setPhase(room, ph) {
-        var t = now(); room.phase = ph; room.phaseAt = t;
-        var ms = ph === 'dance' ? room.danceSec * 1000 : ph === 'wishes' ? room.wishesSec * 1000 : (FIXED_MS[ph] || 0);
+    // مدة المرحلة (ms) من الجدول — 0 = بدون وقت. الغرفة بدون جدول: نفس الافتراضي، والكيكة تنتظر القص
+    function durationOf(room, ph) {
+        var sc = room.sched || SCHED_DEF;
+        if (ph === 'dance') return sc.danceMin * MIN_MS;
+        if (ph === 'wishWrite') return sc.writeMin * MIN_MS;
+        if (ph === 'celebrate') return sc.cakeDanceMin * MIN_MS;
+        if (ph === 'cake') return room.sched ? sc.cutTimeoutSec * 1000 : 0;
+        return FIXED_MS[ph] || 0;
+    }
+    // at: وقت بداية المرحلة (الافتراضي الحين) — الرجوع بعد إعادة تشغيل يبدأ كل مرحلة فاتت بوقتها الصحيح
+    function setPhase(room, ph, at) {
+        var t = at || now(); room.phase = ph; room.phaseAt = t;
+        var ms = durationOf(room, ph);
         room.phaseUntil = ms ? t + ms : 0;
-        var kind = WALK_KIND[ph];
+        buildWalk(room);
+        if (ph === 'entrance') room.startedAt = t;
+    }
+    // أهداف المشي التلقائي للمرحلة الحالية (لو لها مشي)
+    function buildWalk(room) {
+        var kind = WALK_KIND[room.phase];
         if (kind) {
             // أهداف المشي بترتيب n (نفس الترتيب عند الكل)
             room.walk = {}; room.slotN = 0;
@@ -145,10 +189,9 @@ function createRoomManager(opts) {
             room.slotTotal = room.players.filter(function (p) { return p.role !== 'girl' && p.online; }).length;
             room.players.slice().sort(function (a, b) { return (b.online - a.online) || a.n - b.n; }).forEach(function (p) { room.walk[p.n] = targetFor(room, p, kind); });
         }
-        if (ph === 'entrance') room.startedAt = t;
     }
     // الانتقال للمرحلة اللي بعد الحالية (مرة وحدة)
-    function advance(room) {
+    function advance(room, at) {
         var i = PHASES.indexOf(room.phase);
         if (i < 0 || i >= PHASES.length - 1) return false;
         var from = room.phase;
@@ -161,24 +204,27 @@ function createRoomManager(opts) {
         }
         if (from === 'cake') room.cakeCut = true;   // تخطي المذيع للكيكة = قص
         if (from === 'photo') room.photoDone = true;
-        setPhase(room, PHASES[i + 1]);
+        setPhase(room, PHASES[i + 1], at);
+        // العرض بدون ولا رسالة ظاهرة: ما فيه شي ينتظر ← للكيكة على طول
+        if (room.phase === 'wishes') { room.wishCur = -1; if (!visibleWishes(room).length) advance(room, at); }
         return true;
     }
     // مفاجأة الافتتاح: مكان صاحبة الحفلة مخفي قبل الافتتاح عن الضيوف، وعن شاشة العرض اللي ما معها مفتاح المذيع
     function hiddenFor(room, viewer, p, trusted) {
-        if (p.role !== 'girl' || (room.phase !== 'lobby' && room.phase !== 'entrance')) return false;
+        if (p.role !== 'girl' || (room.phase !== 'lobby' && room.phase !== 'entrance' && room.phase !== 'closed')) return false;
         return viewer ? viewer.role === 'guest' : !trusted;
     }
 
     function welcome(p) { return { ok: true, id: p.id, key: p.key, n: p.n, role: p.role, kind: p.kind }; }
 
     function createRoom(o) {
-        if (Object.keys(rooms).length >= maxRooms) return fail('busy');
+        // الحفلات اللي انتهت ما تحجز مكان (تبقى بس عشان الرجوع وحفظ الصورة والنقاط)
+        if (Object.keys(rooms).filter(function (c) { return rooms[c].phase !== 'ended'; }).length >= maxRooms) return fail('busy');
         var code; do { code = String(1000 + Math.floor(Math.random() * 9000)); } while (rooms[code]);
-        var ds = Math.round(Number(o && o.danceSec)); ds = isFinite(ds) && ds > 0 ? clamp(ds, 60, 900) : 300;
-        var ws = Math.round(Number(o && o.wishesSec)); ws = isFinite(ws) && ws > 0 ? clamp(ws, 120, 1200) : 480;
+        var sched = null;
+        if (o && o.schedule != null) { sched = cleanSchedule(o.schedule, now(), { creating: true }); if (!sched) return fail('schedule'); }
         rooms[code] = { code: code, token: rid(16), girlKey: rid(16), viewKey: rid(8), girlName: cleanName(o && o.girlName), players: [], nextN: 1, createdAt: now(),
-            danceSec: ds, wishesSec: ws, phase: 'lobby', phaseAt: now(), phaseUntil: 0, walk: {}, slotN: 0, slotTotal: 0,
+            sched: sched, phase: sched && now() < openAtOf(sched) ? 'closed' : 'lobby', phaseAt: now(), phaseUntil: 0, walk: {}, slotN: 0, slotTotal: 0,
             wishes: [], wishSeq: 1, wishCur: -1, cakeCut: false, photoDone: false, startedAt: 0, banned: { users: {}, devs: {} } };
         return { ok: true, code: code, token: rooms[code].token, girlKey: rooms[code].girlKey, viewKey: rooms[code].viewKey };
     }
@@ -190,6 +236,7 @@ function createRoomManager(opts) {
 
     function join(code, o) {
         var room = rooms[code]; if (!room) return fail('nocode');
+        if (room.phase === 'ended') return fail('ended');
         o = o || {};
         var user = null;
         if (o.auth) { user = validateSession(String(o.auth)); if (!user) return fail('auth'); }
@@ -207,6 +254,7 @@ function createRoomManager(opts) {
             if (!gname) return fail('name');
             return welcome(addPlayer(room, gname, 'girl', 'member', user));
         }
+        if (room.phase === 'closed') return fail('closed'); // الدخول لسا ما فتح (صاحبة الحفلة بس)
         var dev = cleanDev(o.dev);
         // المطرود ما يرجع: حسابه (المسجّل) أو جهازه (السريع — حماية بسيطة تكفي لحفلة)
         if ((user && user.id != null && room.banned.users[user.id]) || (dev && room.banned.devs[dev])) return fail('kicked');
@@ -247,6 +295,7 @@ function createRoomManager(opts) {
         var x = Number(pos[0]), z = Number(pos[1]), ry = Number(pos[2]), a = Number(pos[3]);
         if (typeof pos[0] !== 'number' || typeof pos[1] !== 'number' || !isFinite(x) || !isFinite(z) || !isFinite(ry) || !isFinite(a)) return fail('bad');
         if (AUTO[room.phase]) return fail('auto');
+        if (room.phase === 'ended') return fail('phase');
         var t = now(), gap = t - p.lastMoveAt;
         if (gap < MIN_MOVE_GAP_MS) return fail('flood');
         var zc = inZone(zoneOf(room, p), x, z); x = zc[0]; z = zc[1]; // المناطق فيها حدود القاعة والغرف
@@ -326,8 +375,15 @@ function createRoomManager(opts) {
         var room = rooms[code]; if (!room) return fail('nocode');
         var walk = null;
         if (WALK_KIND[room.phase] || room.phase === 'reveal') walk = room.walk;
-        return { ok: true, p: room.phase, at: room.phaseAt, until: room.phaseUntil, walk: walk, cut: room.cakeCut };
+        var sc = room.sched;
+        return { ok: true, p: room.phase, at: room.phaseAt, until: room.phaseUntil, walk: walk, cut: room.cakeCut,
+            // الجدول كامل (المدد مو سرية) — صفحة المذيع تعبّي منه نموذج «تعديل الأوقات»
+            sched: sc ? Object.assign({ openAt: openAtOf(sc), endAt: endAtOf(sc) }, sc) : null,
+            waitGirl: waitingGirl(room) };
     }
+    function girlOnline(room) { return room.players.some(function (p) { return p.role === 'girl' && p.online; }); }
+    // جا وقت البداية وصاحبة الحفلة مو موجودة: الحفل ينتظرها
+    function waitingGirl(room) { return !!(room.sched && room.phase === 'lobby' && now() >= room.sched.startAt && !girlOnline(room)); }
     function start(code) {
         var room = rooms[code]; if (!room) return fail('nocode');
         if (room.phase !== 'lobby') return fail('phase');
@@ -335,13 +391,35 @@ function createRoomManager(opts) {
     }
     function skip(code, from) {
         var room = rooms[code]; if (!room) return fail('nocode');
-        if (room.phase !== from || room.phase === 'free') return fail('phase');
+        if (room.phase !== from || room.phase === 'free' || room.phase === 'ended') return fail('phase');
         advance(room); return { ok: true };
     }
-    function tick(code) {
+    // catchUp: رجوع بعد إعادة تشغيل — كل مرحلة فاتت تبدأ بوقتها حسب الساعة (مو «الحين»)
+    function tick(code, catchUp) {
         var room = rooms[code]; if (!room) return fail('nocode');
-        if (room.phaseUntil && now() >= room.phaseUntil) return { ok: true, changed: advance(room) };
+        var t = now(), sc = room.sched;
+        if (room.phase === 'ended') return { ok: true, changed: false };
+        // وقت النهاية يغلب كل شي، وين ما وصلت الحفلة
+        if (sc && t >= endAtOf(sc)) { setPhase(room, 'ended', catchUp ? endAtOf(sc) : 0); return { ok: true, changed: true }; }
+        if (room.phase === 'closed') return { ok: true, changed: !!(sc && t >= openAtOf(sc)) && (setPhase(room, 'lobby', catchUp ? openAtOf(sc) : 0), true) };
+        if (room.phase === 'lobby') return { ok: true, changed: !!(sc && t >= sc.startAt && girlOnline(room)) && advance(room) };
+        if (room.phaseUntil && t >= room.phaseUntil) return { ok: true, changed: advance(room, catchUp ? room.phaseUntil : 0) };
         return { ok: true, changed: false };
+    }
+    // تعديل الجدول من المذيع (أي وقت): البداية وفتح الدخول بس قبل ما يبدأ الحفل، والمرحلة الشغالة
+    // تنعاد حسبة نهايتها من بدايتها الفعلية بالمدة الجديدة (لو فاتت، tick ينقلها مرة وحدة)
+    function setSchedule(code, s) {
+        var room = rooms[code]; if (!room) return fail('nocode');
+        if (!room.sched) return fail('schedule');
+        if (room.phase === 'ended') return fail('phase');
+        var sc = cleanSchedule(s, now(), { base: room.sched }); if (!sc) return fail('schedule');
+        if (room.phase !== 'closed' && room.phase !== 'lobby') { sc.startAt = room.sched.startAt; sc.openBeforeMin = room.sched.openBeforeMin; }
+        // غلطة بالتعديل ما تنهي الحفلة الحقيقية فجأة (ended ما يرجع)
+        if (endAtOf(sc) <= now() + 60000) return fail('ends');
+        room.sched = sc;
+        var ms = durationOf(room, room.phase);
+        if (ms && room.phaseUntil) room.phaseUntil = room.phaseAt + ms;
+        return { ok: true, changed: true };
     }
 
     // ---- التهاني ----
@@ -349,7 +427,7 @@ function createRoomManager(opts) {
     function addWish(code, id, text) {
         var room = rooms[code]; if (!room) return fail('nocode');
         var p = playerOf(room, id); if (!p) return fail('noplayer');
-        if (room.phase !== 'wishes') return fail('phase');
+        if (room.phase !== 'wishWrite') return fail('phase');
         if (p.role !== 'guest') return fail('role');
         var t = cleanWish(text); if (!t) return fail('empty');
         var w = room.wishes.find(function (x) { return x.pid === p.id; });
@@ -368,7 +446,9 @@ function createRoomManager(opts) {
         var room = rooms[code]; if (!room) return fail('nocode');
         var vis = visibleWishes(room), w = room.wishCur >= 0 ? room.wishes[room.wishCur] : null;
         var shown = vis.filter(function (x) { return x.shown; }).length;
-        return { ok: true, cur: w && !w.hidden ? { i: shown, name: w.name, text: w.text } : null, shown: shown, total: vis.length };
+        // pos: ترتيب المعروضة الحين بين الظاهرة (مع «رجوع» ممكن يكون أقل من shown)
+        var pos = w && !w.hidden ? vis.indexOf(w) + 1 : 0;
+        return { ok: true, cur: pos ? { i: pos, name: w.name, text: w.text } : null, shown: shown, total: vis.length, pos: pos };
     }
     // seen = عدد المعروضة عند اللي ضغط: لو صاحبة الحفلة والمذيع ضغطوا سوا، الضغطة الثانية تنرفض
     // بدل ما تتخطى رسالة محد قرأها
@@ -376,7 +456,7 @@ function createRoomManager(opts) {
         var room = rooms[code]; if (!room) return fail('nocode');
         if (!canLead(room, byId)) return fail('role');
         if (room.phase !== 'wishes') return fail('phase');
-        if (seen != null && seen !== wishesState(code).shown) return fail('stale');
+        if (seen != null && seen !== wishesState(code).pos) return fail('stale');
         for (var i = room.wishCur + 1; i < room.wishes.length; i++) {
             var w = room.wishes[i];
             if (!w.hidden) { room.wishCur = i; w.shown = true; return { ok: true, cur: wishesState(code).cur, done: false }; }
@@ -384,6 +464,17 @@ function createRoomManager(opts) {
         // ما فيه رسالة جاية: ننتقل للكيكة
         advance(room);
         return { ok: true, cur: null, done: true };
+    }
+    // «رجوع»: للرسالة الظاهرة اللي قبل المعروضة (seen = pos عند اللي ضغط، مثل التالي)
+    function prevWish(code, byId, seen) {
+        var room = rooms[code]; if (!room) return fail('nocode');
+        if (!canLead(room, byId)) return fail('role');
+        if (room.phase !== 'wishes') return fail('phase');
+        if (seen != null && seen !== wishesState(code).pos) return fail('stale');
+        for (var i = room.wishCur - 1; i >= 0; i--) {
+            if (!room.wishes[i].hidden) { room.wishCur = i; return { ok: true, cur: wishesState(code).cur }; }
+        }
+        return fail('first');
     }
     function wishList(code) {
         var room = rooms[code]; if (!room) return fail('nocode');
@@ -403,16 +494,56 @@ function createRoomManager(opts) {
         return { ok: true, players: players, durationMs: room.startedAt ? now() - room.startedAt : 0 };
     }
 
+    // ---- الحفظ (party-store) والرجوع بعد إعادة تشغيل السيرفر ----
+    // كل شي إلا المواقع (تتغيّر 8 مرات/ث) وحالة الإرسال — بعد الرجوع كل لاعب يتحط بمكان مرحلته
+    var ROOM_KEYS = ['code', 'token', 'girlKey', 'viewKey', 'girlName', 'createdAt', 'sched', 'phase', 'phaseAt', 'phaseUntil', 'nextN',
+        'wishes', 'wishSeq', 'wishCur', 'cakeCut', 'photoDone', 'startedAt', 'banned', 'pointsMsg', 'pointsAcked'];
+    function serialize(code) {
+        var room = rooms[code]; if (!room) return null;
+        var o = { v: 1 };
+        ROOM_KEYS.forEach(function (k) { if (room[k] !== undefined) o[k] = room[k]; });
+        o.players = room.players.map(function (p) {
+            var u = p.user ? { id: p.user.id, username: p.user.username, tiktok_username: p.user.tiktok_username, tiktok_verified: p.user.tiktok_verified } : null;
+            return { id: p.id, key: p.key, n: p.n, name: p.name, role: p.role, kind: p.kind, look: p.look, dev: p.dev, user: u };
+        });
+        return o;
+    }
+    function restore(o) {
+        if (!o || typeof o.code !== 'string' || !/^\d{4}$/.test(o.code) || !Array.isArray(o.players) || PHASES.indexOf(o.phase) < 0) return fail('bad');
+        if (!o.players.every(function (q) { return q && typeof q.id === 'string' && typeof q.key === 'string' && Number.isInteger(q.n); })) return fail('bad');
+        if (o.sched != null) {
+            var sc = o.sched;
+            if (typeof sc !== 'object' || !isFinite(sc.startAt) || Object.keys(SCHED_LIM).some(function (k) { return typeof sc[k] !== 'number' || !isFinite(sc[k]); })) return fail('bad');
+            if (now() > endAtOf(sc) + EXPIRE_MS) return fail('expired'); // حفلة قديمة مرّ عليها يومين: ما ترجع
+        }
+        if (rooms[o.code]) return fail('exists');
+        var room = { players: [], walk: {}, slotN: 0, slotTotal: 0, wishes: [], wishSeq: 1, wishCur: -1, cakeCut: false, photoDone: false, startedAt: 0, banned: { users: {}, devs: {} }, sched: null, nextN: 1, phaseUntil: 0 };
+        ROOM_KEYS.forEach(function (k) { if (o[k] !== undefined) room[k] = o[k]; });
+        var t = now();
+        room.players = o.players.map(function (q) {
+            var p = { id: q.id, key: q.key, n: q.n, name: q.name, role: q.role, kind: q.kind, look: Array.isArray(q.look) ? q.look : LOOK_MAX.map(function () { return -1; }),
+                dev: q.dev || null, user: q.user || null, online: false, offlineSince: t, x: 0, z: 0, ry: Math.PI, a: 0, lastMoveAt: t, dirty: true, ver: 1 };
+            room.nextN = Math.max(room.nextN, p.n + 1);
+            return p;
+        });
+        rooms[o.code] = room;
+        buildWalk(room);
+        room.players.forEach(function (p) { var w = room.walk[p.n]; if (w) { p.x = w[0]; p.z = w[1]; p.ry = facing(room.phase, p); } else place(room, p); });
+        // اللي فات وقت ما كان السيرفر طافي
+        for (var k = 0; k < 30 && tick(o.code, true).changed; k++) { }
+        return { ok: true, code: o.code };
+    }
+
     function closeRoom(code) { if (!rooms[code]) return fail('nocode'); delete rooms[code]; return { ok: true }; }
     function getRoom(code) { return rooms[code] || null; }
 
     return {
         createRoom: createRoom, hostResume: hostResume, join: join, resume: resume, leave: leave,
         move: move, takeDelta: takeDelta, deltaFor: deltaFor, fullState: fullState, roster: roster,
-        closeRoom: closeRoom, rooms: function () { return Object.keys(rooms); },
+        closeRoom: closeRoom, rooms: function () { return Object.keys(rooms); }, serialize: serialize, restore: restore,
         getRoom: getRoom, pointsId: pointsId, phaseOf: phaseOf, start: start, skip: skip, tick: tick,
-        setLook: setLook, kick: kick, addWish: addWish, hideWish: hideWish, nextWish: nextWish, wishesState: wishesState, wishList: wishList, cut: cut, pointsList: pointsList
+        setLook: setLook, kick: kick, setSchedule: setSchedule, addWish: addWish, hideWish: hideWish, nextWish: nextWish, prevWish: prevWish, wishesState: wishesState, wishList: wishList, cut: cut, pointsList: pointsList
     };
 }
 
-module.exports = { createRoomManager: createRoomManager, packRows: packRows };
+module.exports = { createRoomManager: createRoomManager, packRows: packRows, cleanSchedule: cleanSchedule };

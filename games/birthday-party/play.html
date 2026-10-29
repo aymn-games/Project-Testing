@@ -90,7 +90,23 @@
     .wishcard p{ margin:4px 0 0; font:600 15px/1.6 'IBM Plex Sans Arabic'; white-space:pre-wrap; overflow-wrap:anywhere; max-height:5.2em; overflow:hidden; }
     .bigbtn{ position:absolute; right:max(16px,env(safe-area-inset-right)); bottom:max(18px,env(safe-area-inset-bottom)); height:52px; padding:0 22px; border:0; border-radius:999px; color:#fff; font:800 16px 'IBM Plex Sans Arabic'; background:linear-gradient(180deg,#f08ab0,#d45a8a); box-shadow:0 8px 24px rgba(212,90,138,.4); cursor:pointer; }
     .bigbtn.cake{ background:linear-gradient(180deg,#f7d08a,#d9a24e); color:#4a2a05; font-size:18px; height:58px; }
-    #nextBtn{ right:auto; left:50%; transform:translateX(-50%); }
+    #nextBtn{ right:auto; left:50%; transform:translateX(calc(-100% - 6px)); }
+    #prevBtn{ right:auto; left:50%; transform:translateX(6px); background:#fff; color:#c94f7e; border:1px solid var(--line); }
+    body:has(#prevBtn.hidden) #nextBtn{ transform:translateX(-50%); }
+    /* إشعارات كبيرة وسط الشاشة (وقت الصورة، الشكر، الكتابة) */
+    .notice{ position:absolute; top:30%; left:50%; transform:translate(-50%,-50%) scale(.92); opacity:0; transition:opacity .4s, transform .4s; pointer-events:none; text-align:center; padding:16px 32px; border-radius:26px; background:rgba(58,18,54,.88); color:#fff; font:900 clamp(26px,5vw,54px)/1.2 'Zain'; box-shadow:0 14px 40px rgba(0,0,0,.3); max-width:88vw; }
+    .notice.show{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+    .notice small{ display:block; margin-top:6px; font:600 clamp(13px,2vw,20px) 'IBM Plex Sans Arabic'; color:#f6bcd6; }
+    .soundtip{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); padding:14px 26px; border-radius:999px; border:0; font:800 17px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); box-shadow:0 10px 30px rgba(212,90,138,.45); cursor:pointer; z-index:6; }
+    .endscreen{ position:fixed; inset:0; z-index:11; display:grid; place-items:center; text-align:center; padding:24px; background:radial-gradient(circle at 50% 40%,rgba(255,243,248,.93),rgba(243,198,218,.96)); }
+    .endscreen h2{ margin:0 0 8px; font:700 clamp(40px,8vw,84px)/1.25 'Aref Ruqaa',serif; color:#d6407f; }
+    .endscreen p{ margin:0 0 18px; font:700 clamp(16px,3vw,26px) 'IBM Plex Sans Arabic'; color:#9b6683; }
+    /* شاشة البث (صفحة المذيع، host=1): بدون أزرار، والنصوص أكبر عشان تنقرا بالبث */
+    body.stream .top .pill, body.stream .hint, body.stream .joy{ display:none !important; }
+    body.stream .phase{ top:18px; padding:10px 24px; font-size:20px; }
+    body.stream .phase span{ font-size:26px; }
+    body.stream .wishcard{ width:min(820px,72vw); padding:18px 26px; }
+    body.stream .wishcard b{ font-size:34px; } body.stream .wishcard p{ font-size:22px; max-height:none; }
     body:has(#nextBtn:not(.hidden)) .emotes, body:has(#wishBtn:not(.hidden)) .emotes{ bottom:max(80px,calc(env(safe-area-inset-bottom) + 76px)); }
     .wishbox{ position:absolute; left:50%; bottom:max(16px,env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(520px,92vw); padding:14px; border-radius:18px; background:rgba(255,250,252,.97); border:1px solid var(--line); box-shadow:0 14px 40px rgba(0,0,0,.25); display:flex; flex-direction:column; gap:8px; z-index:6; }
     .wishbox b{ font:900 18px 'Zain'; }
@@ -175,6 +191,9 @@
     <div class="wishcard hidden" id="wishCard" aria-live="polite"><small id="wcCount"></small><b id="wcName"></b><p id="wcText"></p></div>
     <button class="bigbtn hidden" id="wishBtn" type="button">اكتب تهنئتك 💌</button>
     <button class="bigbtn hidden" id="nextBtn" type="button">التالي ←</button>
+    <button class="bigbtn hidden" id="prevBtn" type="button">→ رجوع</button>
+    <div class="notice" id="notice" role="status" aria-live="polite"><span id="noticeTxt"></span><small id="noticeSub"></small></div>
+    <button class="soundtip hidden" id="soundTip" type="button">اضغط عشان تشغّل الصوت 🔊</button>
     <button class="bigbtn cake hidden" id="cutBtn" type="button">قص الكيكة 🎂</button>
     <div class="wishbox hidden" id="wishBox" role="dialog" aria-label="اكتب تهنئتك">
         <b>تهنئتك لصاحبة الحفلة</b>
@@ -198,6 +217,7 @@
 </div>
 
 <div class="flash" id="flash" aria-hidden="true"></div>
+<div class="endscreen hidden" id="endScreen" role="dialog" aria-label="انتهت الحفلة"><div><h2>انتهت الحفلة</h2><p>شكراً لحضوركم 💖</p><a class="savebtn hidden" id="endPhoto" href="#">الصورة الجماعية</a></div></div>
 <div class="kicked hidden" id="kicked" role="alertdialog" aria-label="طلّعك المذيع"><div><h2>طلّعك المذيع من الحفلة</h2><a id="kickedBack" href="../../games.html">رجوع للألعاب</a></div></div>
 <div class="photomodal hidden" id="photoModal" role="dialog" aria-label="الصورة الجماعية">
     <div><img id="photoImg" alt="الصورة الجماعية"><div class="wbrow"><button type="button" id="photoClose" class="ghost">إغلاق</button><a id="photoSave" class="savebtn">حفظ الصورة</a></div></div>
@@ -227,6 +247,8 @@
     // play.html?code=XXXX → حفلة جماعية (view=1 = شاشة عرض بدون شخصية). بدون code = القاعة التجريبية.
     const code = (params.get('code') || '').replace(/\D/g, '').slice(0, 4);
     const viewOnly = params.get('view') === '1';
+    // host=1: نفس شاشة العرض داخل صفحة المذيع (شاشة البث)
+    if (viewOnly && params.get('host') === '1') document.body.classList.add('stream');
     if (code) document.body.classList.add('net');
     if (code && viewOnly) document.body.classList.add('viewer');
     if (name) $('title').textContent = 'حفلة ' + name;
@@ -283,6 +305,7 @@
     // ---- الحفلة الجماعية: الاتصال بالسيرفر + الشخصيات ----
     async function startParty(hall) {
         const [{ connect, readJSON, writeJSON, serverNow, unpackRows }, { createCrowd, LOOK, resolveLook }, { createMusic }] = await Promise.all([import('./party-net.js'), import('./crowd3d.js'), import('./music.js')]);
+        const { clockText, tzLabel, countdownText } = await import('./party-net.js');
         const me = viewOnly ? null : readJSON('party-me');
         if (!viewOnly && !(me && me.code === code)) { location.replace('join.html?code=' + code); return; }
         if (!viewOnly) $('hint').querySelector('.touch').textContent = 'العصا للمشي · اسحب للف الكاميرا';
@@ -293,8 +316,9 @@
         const roles = new Map();
         let myN = null, myRole = null, myKind = null, placed = false, gotAll = false, lastSent = null;
         let myLook = null, lookAuto = false, pendingLook = null, pendingT = 0;
+        let girlOn = false; // صاحبة الحفلة متصلة (من قائمة الحضور) — الحفل المجدول ينتظرها
         let phase = null, applied = null, revealFired = false, emote = 0, emoteUntil = 0, myTarget = null, myServer = null;
-        const zoneFor = p => p === 'lobby' ? (myRole === 'girl' ? 'girl' : 'lounge') : (myRole === 'girl' ? 'hall' : 'nostage');
+        const zoneFor = p => p === 'lobby' || p === 'closed' ? (myRole === 'girl' ? 'girl' : 'lounge') : (myRole === 'girl' ? 'hall' : 'nostage');
         // نقاط العبور (نفس كل الجوالات): الضيوف من باب الصالة، وصاحبة الحفلة من الباب الخلفي ورا الستارة
         const GIRL_WP = [[0, -52], [16, -51], [16, -44]];
         const guestWp = n => { const ox = ((n % 5) - 2) * .9; return [[ox, 52], [ox, 45]]; };
@@ -307,18 +331,28 @@
         const AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1 };
         // اتجاه الوقوف بعد المشي (نفس السيرفر): صاحبة الحفلة تطالع الضيوف إلا عند الكيكة والصورة
         const facing = p => myRole === 'girl' && !['cakeWalk', 'cake', 'celebrate', 'photo', 'free'].includes(p) ? 0 : Math.PI;
-        let photoKey = null, celebKey = null, lastWishes = null, photoUrl = null;
+        let photoKey = null, celebKey = null, lastWishes = null, photoUrl = null, noticeT = 0;
+        // جا وقت البداية وصاحبة الحفلة مو موجودة (نحسبها هنا عشان تتحدث لحظة ما تدخل)
+        const waitingGirl = () => !!(phase && phase.p === 'lobby' && phase.sched && serverNow() >= phase.sched.startAt && !girlOn);
+        function notice(txt, sub, ms) {
+            $('noticeTxt').textContent = txt; $('noticeSub').textContent = sub || '';
+            $('notice').classList.add('show'); clearTimeout(noticeT); noticeT = setTimeout(() => $('notice').classList.remove('show'), ms || 5000);
+        }
+        // المتصفح ما يشغّل الصوت قبل أول لمسة — والحفل المجدول يبدأ لحاله، فنطلبها من بدري
+        let touched = false;
+        addEventListener('pointerdown', () => { touched = true; $('soundTip').classList.add('hidden'); }, { capture: true, once: true });
+        $('soundTip').addEventListener('click', () => $('soundTip').classList.add('hidden'));
 
         function applyPhase() {
             if (!phase || !gotAll) return;
             const now = serverNow(), p = phase.p, key = p + ':' + phase.at, since = now - phase.at;
             if (applied === key) return;
             applied = key;
-            const isGirl = myRole === 'girl', preShow = p === 'lobby' || p === 'entrance', lateReveal = now > phase.at + 3000;
+            const isGirl = myRole === 'girl', preShow = p === 'lobby' || p === 'entrance' || p === 'closed', lateReveal = now > phase.at + 3000;
             // الستارة مسكّرة لين يخلص العد التنازلي (الفتح يصير بالـ ticker عند الصفر)
             const closed = preShow || (p === 'reveal' && !lateReveal);
             hall.setCurtain(closed ? 0 : 1, true);
-            hall.setDoors(p === 'lobby' ? 0 : 1, p !== 'entrance');
+            hall.setDoors(p === 'lobby' || p === 'closed' ? 0 : 1, p !== 'entrance');
             // الإضاءة الخافتة والليزر وقت الرقص والاحتفال؛ التهاني والكيكة أهدى عشان القراءة
             hall.setParty(['dance', 'celebrate', 'free'].includes(p) || (p === 'reveal' && lateReveal));
             revealFired = p !== 'reveal' || lateReveal;
@@ -326,12 +360,14 @@
             // اللي يدخل متأخر وقت الافتتاح يسمع موسيقاه من نفس اللحظة اللي يسمعها الباقين (تبدأ بعد العد)
             if (p === 'reveal' && lateReveal) music.play('reveal', { from: (since - 3000) / 1000 });
             if (!viewOnly) hall.setZone(zoneFor(p));
-            hall.setWishScreen(p === 'wishes' ? 1 : 0, lastWishes && lastWishes.cur ? Object.assign({ total: lastWishes.total }, lastWishes.cur) : null, since > 2500);
+            // الشاشة الكبيرة: «اكتبوا تهانيكم» وقت الكتابة، والرسالة المعروضة وقت العرض
+            hall.setWishScreen(p === 'wishes' || p === 'wishWrite' ? 1 : 0, p === 'wishes' && lastWishes && lastWishes.cur ? Object.assign({ total: lastWishes.total }, lastWishes.cur) : null, since > 2500);
             // الكيكة: مقصوصة (رجوع) أو أنيميشن القص + احتفال ثاني
             if (phase.cut) {
-                if (p === 'celebrate' && since < 4000 && celebKey !== key) { celebKey = key; hall.cutCake(false); hall.celebrate(Math.max(5, (phase.until - now) / 1000)); music.play('cake'); }
+                // رقص الكيكة: ألعاب نارية طول المدة والأنوار تشتغل وتطفي، وأغنية الكيكة
+                if (p === 'celebrate' && since < 4000 && celebKey !== key) { celebKey = key; hall.cutCake(false); hall.celebrate(Math.max(5, (phase.until - now) / 1000), { strobe: true }); music.play('cake'); }
                 else hall.cutCake(true);
-                if (p === 'celebrate' && celebKey !== key) { celebKey = key; hall.celebrate(Math.max(3, (phase.until - now) / 1000)); music.play('cake'); }
+                if (p === 'celebrate' && celebKey !== key) { celebKey = key; hall.celebrate(Math.max(3, (phase.until - now) / 1000), { strobe: true }); music.play('cake'); }
             }
             hall.setPhotoCam(p === 'photo');
             const wf = WALK[p];
@@ -361,19 +397,30 @@
                     myTarget = null;
                 }
             }
-            if (viewOnly) hall.setShot(p === 'reveal' || p === 'cake' || p === 'celebrate' || p === 'cakeWalk' ? 'stage' : p === 'entrance' ? 'entrance' : p === 'wishes' || p === 'gather' ? 'screen' : null);
-            if (p === 'lobby' || p === 'entrance' || p === 'gather' || p === 'wishes' || p === 'cakeWalk' || p === 'cake') music.play('lobby');
-            else if (p === 'dance' || p === 'free') music.play('dance');
-            // الأزرار حسب المرحلة والدور
-            const showEmotes = !viewOnly && (['dance', 'celebrate', 'free', 'cake'].includes(p) || (p === 'wishes' && isGirl));
+            if (viewOnly) hall.setShot(p === 'reveal' || p === 'cake' || p === 'celebrate' || p === 'cakeWalk' ? 'stage' : p === 'entrance' ? 'entrance' : p === 'wishes' || p === 'wishWrite' || p === 'gather' ? 'screen' : null);
+            if (p === 'ended') music.stop();
+            else if (p === 'dance' || p === 'free' || p === 'wishWrite' || p === 'wishes') music.play('dance');
+            else if (p !== 'reveal' && p !== 'celebrate') music.play('lobby');
+            // إشعارات المراحل (بس أول ثواني المرحلة — اللي يرجع متأخر ما يشوفها من جديد)
+            if (p === 'wishWrite' && since < 4000) notice('اكتبوا تهانيكم 💌', isGirl || viewOnly ? 'الضيوف يكتبون من جوالاتهم' : 'اضغط «اكتب تهنئتك» تحت');
+            if (p === 'photo' && since < 5000) notice('وقت الصورة الجماعية 📸', 'الكل يتصف تلقائياً');
+            if (p === 'free' && since < 8000) notice('شكراً لحضوركم 💖', 'استمتعوا بالحفل', 6500);
+            // أي مرحلة (مو بس الانتظار): بعد تحديث الصفحة وسط الحفلة الصوت يحتاج لمسة من جديد
+            if (!touched && p !== 'ended') $('soundTip').classList.remove('hidden');
+            // نهاية الحفلة: شاشة شكر فوق المشهد، والصورة (لو انأخذت) تبقى تنحفظ
+            $('endScreen').classList.toggle('hidden', p !== 'ended');
+            if (p === 'ended') { $('photoModal').classList.add('hidden'); $('endPhoto').classList.toggle('hidden', !$('photoImg').src); }
+            // الأزرار حسب المرحلة والدور — وقت عرض التهاني الكل يرقص ويسوي حركات
+            const showEmotes = !viewOnly && ['dance', 'celebrate', 'free', 'cake', 'wishes'].includes(p);
             $('emotes').classList.toggle('hidden', !showEmotes);
             updateLookBtn();
-            $('wishBtn').classList.toggle('hidden', viewOnly || isGirl || p !== 'wishes');
-            if (p !== 'wishes') $('wishBox').classList.add('hidden');
+            $('wishBtn').classList.toggle('hidden', viewOnly || isGirl || p !== 'wishWrite');
+            if (p !== 'wishWrite') $('wishBox').classList.add('hidden');
             $('nextBtn').classList.toggle('hidden', !isGirl || p !== 'wishes');
+            $('prevBtn').classList.toggle('hidden', !isGirl || p !== 'wishes' || !(lastWishes && lastWishes.pos > 1));
             $('cutBtn').classList.toggle('hidden', !isGirl || p !== 'cake');
             $('wishCard').classList.toggle('hidden', !(p === 'wishes' && lastWishes && lastWishes.cur));
-            if (showEmotes || p === 'wishes') $('hint').classList.add('gone'); // التلميح يغطي الأزرار
+            if (showEmotes || p === 'wishes' || p === 'wishWrite') $('hint').classList.add('gone'); // التلميح يغطي الأزرار
         }
 
         function onWishes(m) {
@@ -383,6 +430,7 @@
             $('wishCard').classList.toggle('hidden', !(inWishes && cur));
             if (cur) { $('wcName').textContent = cur.name; $('wcText').textContent = cur.text; $('wcCount').textContent = cur.i + ' من ' + m.total; }
             $('nextBtn').textContent = cur && cur.i >= m.total ? 'خلصت الرسائل ← الكيكة' : cur ? 'التالي ←' : (m.total ? 'ابدئي الرسائل ←' : 'التالي ←');
+            $('prevBtn').classList.toggle('hidden', !(inWishes && myRole === 'girl' && m.pos > 1));
         }
 
         // ---- الصورة الجماعية: بعد ما يوصل الكل، عد 3-2-1 ثم فلاش ولقطة ----
@@ -403,20 +451,33 @@
             }
         }
 
-        const fmt = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+        const sc = () => phase && phase.sched, at = ms => clockText(ms, sc().tzOffsetMin);
         const LABEL = {
-            lobby: () => viewOnly ? 'بانتظار بدء الحفلة' : myRole === 'girl' ? 'غرفتك · الحفلة تبدأ قريباً' : 'صالة الضيوف · بانتظار بدء الحفلة',
+            closed: () => sc() ? 'الدخول يفتح الساعة ' + at(sc().openAt) : 'الدخول لسا ما فتح',
+            lobby: () => waitingGirl() ? (myRole === 'girl' ? 'الكل ينتظرك 💖' : 'بانتظار صاحبة الحفلة 💖')
+                : sc() ? (myRole === 'girl' ? 'غرفتك · ' : viewOnly ? '' : 'صالة الضيوف · ') + 'الحفل يبدأ الساعة ' + at(sc().startAt) + ' ' + tzLabel(sc().tzOffsetMin)
+                : viewOnly ? 'بانتظار بدء الحفلة' : myRole === 'girl' ? 'غرفتك · الحفلة تبدأ قريباً' : 'صالة الضيوف · بانتظار بدء الحفلة',
+            wishWrite: () => 'اكتبوا تهانيكم 💌',
+            ended: () => 'انتهت الحفلة',
             entrance: () => myRole === 'girl' ? 'طريقك للمنصة… محد يشوفك' : 'الدخول للقاعة',
             reveal: () => 'الافتتاح',
             dance: () => 'وقت الرقص',
             gather: () => 'التجمّع للتهاني',
-            wishes: () => 'التهاني',
+            wishes: () => 'عرض التهاني',
             cakeWalk: () => 'وقت الكيكة',
             cake: () => myRole === 'girl' ? 'اضغطي «قص الكيكة»' : 'صاحبة الحفلة بتقص الكيكة…',
             celebrate: () => 'احتفال 🎉',
             photo: () => 'الصورة الجماعية 📸',
-            free: () => 'الحفلة مستمرة',
+            free: () => sc() ? 'الحفلة مستمرة · تنتهي الساعة ' + at(sc().endAt) : 'الحفلة مستمرة',
         };
+        // العدّاد بجنب اسم المرحلة: فتح الدخول، ثم بداية الحفل، ثم مدة المرحلة، ثم نهاية الحفل
+        function phaseLeft(now) {
+            const p = phase.p, s = sc();
+            if (p === 'closed' && s) return countdownText(s.openAt - now);
+            if (p === 'lobby') return s && now < s.startAt ? countdownText(s.startAt - now) : '';
+            if (p === 'free') return s ? countdownText(s.endAt - now) : '';
+            return phase.until && p !== 'reveal' && p !== 'photo' ? countdownText(phase.until - now) : '';
+        }
         hall.addTicker(dt => {
             const now = serverNow();
             crowd.update(dt, hall.camera, now);
@@ -429,7 +490,7 @@
             } else if (phase.p === 'photo') photoTick(now);
             else if ($('count').textContent) $('count').textContent = '';
             $('phaseTxt').textContent = (LABEL[phase.p] || (() => ''))();
-            $('phaseTime').textContent = phase.until && phase.p !== 'reveal' && phase.p !== 'photo' ? fmt(phase.until - now) : '';
+            $('phaseTime').textContent = phaseLeft(now);
         });
 
         const net = connect({
@@ -444,6 +505,7 @@
                 }
                 else if (m.t === 'room') {
                     m.room.players.forEach(r => roles.set(r[0], r[2]));
+                    girlOn = m.room.players.some(r => r[2] === 'girl' && r[4]);
                     crowd.sync(m.room.players);
                     const mine = myN != null ? m.room.players.find(r => r[0] === myN) : null;
                     if (mine) onMyLook(mine[5]);
@@ -485,7 +547,9 @@
         });
         const once = (id, msg) => $(id).addEventListener('click', () => { $(id).disabled = true; net.send(msg()); setTimeout(() => { $(id).disabled = false; }, 1100); });
         // seen: كم رسالة شافت — لو المذيع ضغط التالي بنفس اللحظة السيرفر يرفض الثانية بدل ما تنتخطى رسالة
-        once('nextBtn', () => ({ t: 'next', seen: lastWishes ? lastWishes.shown : 0 }));
+        once('nextBtn', () => ({ t: 'next', seen: lastWishes ? lastWishes.pos || 0 : 0 }));
+        once('prevBtn', () => ({ t: 'prev', seen: lastWishes ? lastWishes.pos || 0 : 0 }));
+        $('endPhoto').addEventListener('click', ev => { ev.preventDefault(); $('photoModal').classList.remove('hidden'); });
         once('cutBtn', () => ({ t: 'cut' }));
         $('photoClose').addEventListener('click', () => $('photoModal').classList.add('hidden'));
 
@@ -521,7 +585,7 @@
         const isDefault = L => !Array.isArray(L) || L.every(v => !(v >= 0));
         const lookToSend = () => myKind === 'quick' ? draft.map((v, i) => i === 1 ? v : -1) : draft.slice();
         function updateLookBtn() {
-            const ok = !viewOnly && myKind && phase && (phase.p === 'lobby' || phase.p === 'free');
+            const ok = !viewOnly && myKind && phase && (phase.p === 'lobby' || phase.p === 'free' || phase.p === 'closed');
             $('lookBtn').classList.toggle('hidden', !ok);
             if (!ok) closeLook();
         }

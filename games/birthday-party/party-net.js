@@ -82,3 +82,23 @@ export function connect({ onMessage, onOpen, onStatus, deadMs = 35000 } = {}) {
     close() { closed = true; clearInterval(pingT); clearInterval(watch); clearTimeout(retryT); if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVis); try { ws && ws.close(); } catch (e) { /* مقفل */ } },
   };
 }
+
+// ---- أوقات الحفلة المجدولة: تنكتب بتوقيت المذيع (tzOffsetMin = دقائق شرق UTC) عشان تطابق الدعوة ----
+const atTz = (ms, tz) => new Date(ms + (tz || 0) * 60000);
+export function clockText(ms, tz) {
+  const d = atTz(ms, tz), h = d.getUTCHours();
+  return (h % 12 || 12) + ':' + String(d.getUTCMinutes()).padStart(2, '0') + ' ' + (h < 12 ? 'ص' : 'م');
+}
+export function dateText(ms, tz) { const d = atTz(ms, tz); return d.getUTCDate() + '/' + (d.getUTCMonth() + 1) + '/' + d.getUTCFullYear(); }
+export function tzLabel(tz) {
+  tz = tz || 0;
+  if (tz === 180) return 'بتوقيت السعودية';
+  if (!tz) return 'UTC';
+  const a = Math.abs(tz), m = a % 60;
+  return 'UTC' + (tz > 0 ? '+' : '-') + Math.floor(a / 60) + (m ? ':' + String(m).padStart(2, '0') : '');
+}
+// عدّاد تنازلي: د:ث أو س:د:ث، ويقرّب لفوق (ما يطلع 0:00 قبل اللحظة)
+export function countdownText(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = String(s % 60).padStart(2, '0');
+  return h ? h + ':' + String(m).padStart(2, '0') + ':' + ss : m + ':' + ss;
+}
