@@ -126,7 +126,9 @@
     body.live .grid{ grid-template-columns:1fr; }
     .gear{ position:fixed; top:14px; left:14px; z-index:30; width:48px; height:48px; border-radius:50%; border:1px solid rgba(255,255,255,.4); background:rgba(40,12,36,.55); color:#fff; font-size:24px; cursor:pointer; display:none; transition:opacity .4s; }
     body.live .gear{ display:block; }
-    body.live .gear.idle{ opacity:0; pointer-events:none; }
+    /* بدون حركة ماوس يختفي من البث، بس يبقى ينضغط (ما نعتمد على حركة الماوس فوق المشهد وهو يحمّل) */
+    body.live .gear.idle{ opacity:0; }
+    body.live .gear.idle:hover, body.live .gear.idle:focus-visible{ opacity:1; }
     body.live.panel .gear{ opacity:1; pointer-events:auto; }
     .qrcast{ position:fixed; left:18px; bottom:18px; z-index:5; display:none; align-items:center; gap:14px; padding:12px 16px 12px 12px; border-radius:22px; background:rgba(255,250,252,.95); box-shadow:0 14px 40px rgba(0,0,0,.35); }
     body.live .qrcast.on{ display:flex; }
