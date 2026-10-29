@@ -145,7 +145,7 @@ input::placeholder{color:#6f6a7c}
       </div>
 
       <div style="flex-shrink:0;display:flex;justify-content:center;padding:clamp(10px,2vh,18px) 0 clamp(16px,3vh,28px)">
-        <button onClick="{{ start }}" style="width:100%;max-width:400px;height:clamp(52px,6.5vh,62px);border:none;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 clamp(17px,1.6vw,20px) 'IBM Plex Sans Arabic';box-shadow:0 10px 34px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.2);opacity:{{ startOp }}" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">ابدأ اللعبة<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+        <button onClick="{{ start }}" style="width:100%;max-width:400px;height:clamp(52px,6.5vh,62px);border:none;border-radius:999px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(90deg, #7c3aed, #a855f7);color:#fff;font:700 clamp(17px,1.6vw,20px) 'IBM Plex Sans Arabic';box-shadow:0 10px 34px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.2);opacity:{{ startOp }}" style-hover="filter:brightness(1.1)" style-active="transform:scale(.97)">الدخول للوبي<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
       </div>
     </div>
   </main>
@@ -205,20 +205,23 @@ input::placeholder{color:#6f6a7c}
 const GAME = {
   name: 'سلسلة الكلمات',
   libraryUrl: WCH.libraryUrl,
-  gameUrl: 'game.html',
+  lobbyUrl: 'lobby.html',
   requireLive: true
 };
 // كل فئات wc-words.js تدخل في المباراة — أي فئة تُضاف هناك تدخل تلقائياً
 const CATEGORIES = AGPWordChainWords.categories;
 const SETTINGS = [
+  { title:'الدخول', rows:[
+    { type:'text',   key:'keyword', label:'كلمة الدخول', placeholder:'اكتب كلمة الدخول', default:'' },
+    { type:'choice', key:'who',     label:'المسموح لهم', options:['المتابعين فقط','الجميع'], default:1 }
+  ]},
   { title:'المباراة', rows:[
     { type:'number', key:'winPoints', label:'نقاط الفوز', hint:'أول لاعب يوصل لهذا العدد يفوز بالمباراة', min:10, max:200, step:5, default:30 },
     { type:'choice', key:'answerSec', label:'وقت الإجابة (ثانية)', options:['15','20','25'], default:1 },
-    { type:'choice', key:'who',       label:'المسموح لهم', options:['المتابعين فقط','الجميع'], default:1 }
+    { type:'choice', key:'order',     label:'ترتيب الفئات', options:['بالترتيب','عشوائي'], default:1 }
   ]},
-  { title:'قواعد اللعب', rows:[
+  { title:'قواعد اللعب', full:true, rows:[
     { type:'toggle', key:'noRepeatPlayer', label:'منع نفس اللاعب يجاوب مرتين ورا بعض', hint:'لازم لاعب ثاني يجاوب قبل ما يرجع يجاوب', default:true },
-    { type:'choice', key:'order',  label:'ترتيب الفئات', options:['بالترتيب','عشوائي'], default:1 },
     { type:'toggle', key:'sound',  label:'الأصوات', default:true }
   ]}
 ];
@@ -274,14 +277,15 @@ class Component extends DCLogic {
       connect:()=>{ if(S.connecting) return; this.setState({connecting:true}); setTimeout(()=>this.setState({live:true,connecting:false}),1400); },
       disconnect:()=>this.setState({live:false}), connLabel:S.connecting?'…':'اتصل بالبث', connOp:S.connecting?.7:1,
       liveColor:S.live?'#34d399':S.connecting?'#fbbf24':'#f87171', liveBg:S.live?'rgba(52,211,153,.08)':'rgba(248,113,113,.06)', liveBd:S.live?'rgba(52,211,153,.3)':'rgba(248,113,113,.28)',
-      liveTitle:S.live?'متصل بالبث':'غير متصل بالبث', libraryUrl:GAME.libraryUrl, connOpen:!!S.connOpen, connBusy:!S.connStep, connDone:S.connStep===1, connMsg:S.connStep?'تم الاتصال بالبث':'جارٍ الاتصال بالبث…', connSub:S.connStep?'جارٍ بدء اللعبة':'لحظات وتبدأ اللعبة', connBd:S.connStep?'rgba(52,211,153,.45)':'rgba(167,139,250,.35)', connGlow:S.connStep?'rgba(16,185,129,.25)':'rgba(124,58,237,.2)',
+      liveTitle:S.live?'متصل بالبث':'غير متصل بالبث', libraryUrl:GAME.libraryUrl, connOpen:!!S.connOpen, connBusy:!S.connStep, connDone:S.connStep===1, connMsg:S.connStep?'تم الاتصال بالبث':'جارٍ الاتصال بالبث…', connSub:S.connStep?'جارٍ الانتقال للوبي':'لحظات وتنتقل للوبي', connBd:S.connStep?'rgba(52,211,153,.45)':'rgba(167,139,250,.35)', connGlow:S.connStep?'rgba(16,185,129,.25)':'rgba(124,58,237,.2)',
       startOp:(!GAME.requireLive||S.live)?1:.4,
       start:()=>{ if(S.connOpen) return; const live=!!WCH.getSavedConnection(); if(live!==S.live) this.setState({live});
         if(GAME.requireLive&&!live) return this.toastMsg('ابدأ البث على حساب تيك توك المربوط بحسابك — نتصل تلقائياً');
+        if(!String(S.values.keyword||'').trim()) return this.toastMsg('اكتب كلمة الدخول');
         if(S.values.winPoints===''||+S.values.winPoints<10) return this.toastMsg('نقاط الفوز من 10 إلى 200');
-        const values=this.readValues(); values.winPoints=Math.max(10,Math.min(200,+values.winPoints||30)); values.answerSec=+values.answerSec;
+        const values=this.readValues(); values.winPoints=Math.max(10,Math.min(200,+values.winPoints||30)); values.answerSec=+values.answerSec; values.keyword=String(values.keyword).trim();
         WCH.writeJSON(WCH.keys.setup,values); this.props.onStart?.(values);
-        this.setState({connOpen:true,connStep:0}); this.t1=setTimeout(()=>this.setState({connStep:1}),1600); this.t2=setTimeout(()=>{ location.href=GAME.gameUrl; },2400); },
+        this.setState({connOpen:true,connStep:0}); this.t1=setTimeout(()=>this.setState({connStep:1}),1600); this.t2=setTimeout(()=>{ location.href=GAME.lobbyUrl; },2400); },
       exitOpen:S.exitOpen, onExit:()=>this.setState({exitOpen:true}), closeExit:()=>this.shut('exitOpen'),
       confirmExit:()=>{ location.href=GAME.libraryUrl; },
       exitOv:o('fade .25s ease','fadeOut .26s ease forwards'), exitAn:o('popIn .45s cubic-bezier(.2,1.25,.35,1)','popOut .26s ease forwards')
