@@ -81,6 +81,8 @@
     ul.list li .nm bdi{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     ul.list li i{ width:9px; height:9px; border-radius:50%; background:#cbd5e1; flex:none; }
     ul.list li.on i{ background:#22c55e; }
+    ul.list li .end{ display:flex; align-items:center; gap:8px; flex:none; }
+    ul.list li .kick{ height:28px; padding:0 10px; border-radius:999px; border:1px solid #fecdd3; background:#fff1f2; color:#9f1239; font:700 12px 'IBM Plex Sans Arabic'; cursor:pointer; }
     .tag{ font:700 11px 'IBM Plex Sans Arabic'; padding:3px 9px; border-radius:999px; background:#f3e8ff; color:#7e22ce; white-space:nowrap; }
     .tag.girl{ background:linear-gradient(180deg,#fde68a,#f5c26b); color:#7c4a03; }
     .tag.quick{ background:#f1f5f9; color:#64748b; }
@@ -197,7 +199,7 @@
         token: 'انتهت الحفلة السابقة — أنشئ حفلة جديدة.',
         hostkey: 'هذا الرابط ما يسمح بإنشاء حفلة — افتح الرابط الخاص بالمذيع.',
     };
-    let state = null; // {code, token, girlKey}
+    let state = null; // {code, token, girlKey, viewKey}
     // المفتاح الخاص من الرابط ← نحفظه ونشيله من شريط العنوان عشان ما ينكشف
     const urlKey = new URLSearchParams(location.search).get('k');
     if (urlKey) { writeJSON('party-host-key', urlKey); const u = new URL(location.href); u.searchParams.delete('k'); history.replaceState(null, '', u.pathname + u.search + u.hash); }
@@ -219,12 +221,17 @@
         $('create').classList.add('hidden'); $('room').classList.remove('hidden');
         $('code').textContent = state.code;
         qr($('qrGuest'), guestUrl()); qr($('qrGirl'), girlUrl());
-        $('viewBtn').href = 'play.html?code=' + state.code + '&view=1';
+        // vk: شاشة العرض اللي يفتحها المذيع تشوف كل شي (غيرها ما تكشف صاحبة الحفلة قبل الافتتاح)
+        $('viewBtn').href = 'play.html?code=' + state.code + '&view=1' + (state.viewKey ? '&vk=' + encodeURIComponent(state.viewKey) : '');
         $('playBtn').href = 'join.html?code=' + state.code + '&host=1';
     }
+    let listSig = '';
     function renderList(room) {
         const ps = room.players, guests = ps.filter(p => p[2] === 'guest').length;
         $('count').textContent = guests + ' / 100';
+        // القائمة تنبني من جديد بس لو تغيّر شي يبان فيها (مو الشكل) — عشان ضغطة «طرد» ما تضيع وسط إعادة بناء
+        const sig = JSON.stringify(ps.map(p => p.slice(0, 5)));
+        if (sig === listSig) return; listSig = sig;
         const ul = $('list'); ul.textContent = '';
         if (!ps.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'لسا ما دخل أحد'; ul.append(li); return; }
         // صاحبة الحفلة أول القائمة، ثم المتصلين
@@ -236,7 +243,14 @@
             const tag = document.createElement('span');
             tag.className = 'tag' + (role === 'girl' ? ' girl' : kind === 'quick' ? ' quick' : '');
             tag.textContent = role === 'girl' ? 'صاحبة الحفلة' : kind === 'member' ? 'مسجّل' : 'ضيف';
-            li.append(nm, tag); ul.append(li);
+            const end = document.createElement('span'); end.className = 'end'; end.append(tag);
+            if (role !== 'girl') {
+                const k = document.createElement('button'); k.type = 'button'; k.className = 'kick'; k.textContent = 'طرد';
+                k.setAttribute('aria-label', 'طرد ' + name);
+                k.addEventListener('click', () => { if (confirm('تطرد «' + name + '» من الحفلة؟')) net.send({ t: 'kick', n }); });
+                end.append(k);
+            }
+            li.append(nm, end); ul.append(li);
         });
     }
 
@@ -244,7 +258,7 @@
         onStatus: on => { $('net').classList.toggle('on', on); $('netTxt').textContent = on ? 'متصل' : 'جاري إعادة الاتصال…'; },
         onOpen: () => { const s = readJSON('party-host'); if (s && s.code && s.token) net.send({ t: 'host', code: s.code, token: s.token }); },
         onMessage: m => {
-            if (m.t === 'hosted') { state = { code: m.code, token: m.token, girlKey: m.girlKey }; writeJSON('party-host', { code: m.code, token: m.token }); showRoom(); }
+            if (m.t === 'hosted') { state = { code: m.code, token: m.token, girlKey: m.girlKey, viewKey: m.viewKey }; writeJSON('party-host', { code: m.code, token: m.token, viewKey: m.viewKey }); showRoom(); }
             else if (m.t === 'room') renderList(m.room);
             else if (m.t === 'phase') { phase = m; renderPhase(); }
             else if (m.t === 'wishList') renderWishList(m.items || []);
@@ -252,6 +266,7 @@
             else if (m.t === 'pointsGo') onPointsGo(m.id);
             else if (m.t === 'pointsOk') pointsNote('انحسبت النقاط ✓');
             else if (m.t === 'wishes') wishesShown = m.shown || 0;
+            else if (m.t === 'err' && m.of === 'kick') showShowMsg(m.err === 'noplayer' ? 'الضيف طلع من الحفلة أصلاً.' : 'ما قدرنا نطرده، جرّب مرة ثانية.');
             else if (m.t === 'err' && m.of === 'pointsClaim') { if (m.err === 'claimed') pointsNote('جهاز ثاني فاتح صفحة المذيع يحسب النقاط الحين…'); }
             else if (m.t === 'err' && m.of === 'next' && m.err === 'stale') { /* صاحبة الحفلة سبقت — الرسالة الجديدة على الشاشة */ }
             else if (m.t === 'err' && (m.of === 'start' || m.of === 'skip' || m.of === 'next' || m.of === 'cut' || m.of === 'hideWish')) showShowMsg(m.err === 'phase' ? 'المرحلة تغيّرت قبل الضغط — جرّب مرة ثانية.' : 'صار خطأ.');

@@ -395,3 +395,51 @@ test('host receives points on photo, again after reconnect until pointsDone', as
     assert.equal(h3.msgs.some(function (x) { return x.t === 'points'; }), false, 'not resent after pointsDone');
     h3.close(); srv.close();
 });
+
+// ---------- الدفعة 4 ----------
+test('look message updates roster for everyone (coalesced)', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var a = await client(port); a.send({ t: 'join', code: r.code, name: 'ريم' }); var wa = await a.wait(function (x) { return x.t === 'welcome'; });
+    var b = await client(port); b.send({ t: 'join', code: r.code, name: 'هيا' }); await b.wait(function (x) { return x.t === 'welcome'; });
+    await sleep(1100);
+    a.send({ t: 'look', look: [1, 5, 2, 3, 1, 2, 1] });
+    var rm = await b.wait(function (x) { return x.t === 'room' && x.room.players.some(function (p) { return p[0] === wa.n && p[5][1] === 5; }); }, 2500);
+    assert.deepEqual(rm.room.players.find(function (p) { return p[0] === wa.n; })[5], [-1, 5, -1, -1, -1, -1, -1], 'quick guest: outfit only');
+    r.h.close(); a.close(); b.close(); srv.close();
+});
+
+test('kick: host-only, kicked socket gets err kicked and is closed', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var a = await client(port); a.send({ t: 'join', code: r.code, name: 'ريم', dev: 'devkicked01' }); var wa = await a.wait(function (x) { return x.t === 'welcome'; });
+    var b = await client(port); b.send({ t: 'join', code: r.code, name: 'هيا' }); await b.wait(function (x) { return x.t === 'welcome'; });
+    await sleep(1100);
+    b.send({ t: 'kick', n: wa.n });
+    assert.equal((await b.wait(function (x) { return x.t === 'err' && x.of === 'kick'; })).err, 'host-only');
+    var closed = new Promise(function (res) { a.ws.onclose = res; });
+    r.h.send({ t: 'kick', n: wa.n });
+    assert.equal((await a.wait(function (x) { return x.t === 'err' && x.err === 'kicked'; })).err, 'kicked');
+    await closed;
+    await r.h.wait(function (x) { return x.t === 'room' && !x.room.players.some(function (p) { return p[0] === wa.n; }); }, 2500);
+    // نفس الجهاز يحاول يرجع باسم ثاني ← مرفوض
+    var a2 = await client(port); a2.send({ t: 'join', code: r.code, name: 'اسم ثاني', dev: 'devkicked01' });
+    assert.equal((await a2.wait(function (x) { return x.t === 'err' && x.of === 'join'; })).err, 'kicked');
+    r.h.close(); b.close(); a2.close(); srv.close();
+});
+
+test('hosted carries viewKey; peek with wrong vk hides the girl in lobby', async function () {
+    reset(); party._setEnabled(true);
+    var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
+    var hosted = await r.h.wait(function (x) { return x.t === 'hosted'; });
+    assert.ok(hosted.viewKey);
+    var gl = await client(port); gl.send({ t: 'join', code: r.code, name: 'سارة', girlKey: hosted.girlKey }); var wg = await gl.wait(function (x) { return x.t === 'welcome'; });
+    var has = function (m) { for (var i = 0; i < m.d.length; i += 5) if (m.d[i] === wg.n) return true; return false; }; // صفوف مسطّحة n,x,z,ry,a
+    var bad = await client(port); bad.send({ t: 'peek', code: r.code, vk: 'nope' });
+    assert.equal(has(await bad.wait(function (x) { return x.t === 'all'; })), false);
+    var ok = await client(port); ok.send({ t: 'peek', code: r.code, vk: hosted.viewKey });
+    assert.equal(has(await ok.wait(function (x) { return x.t === 'all'; })), true);
+    var h2 = await client(port); h2.send({ t: 'host', code: r.code, token: hosted.token });
+    assert.equal((await h2.wait(function (x) { return x.t === 'hosted'; })).viewKey, hosted.viewKey, 'resent on host resume');
+    r.h.close(); gl.close(); bad.close(); ok.close(); h2.close(); srv.close();
+});

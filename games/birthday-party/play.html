@@ -107,6 +107,33 @@
     .emotes{ position:absolute; right:max(16px,env(safe-area-inset-right)); bottom:max(18px,env(safe-area-inset-bottom)); display:flex; gap:8px; }
     .emotes button{ height:44px; padding:0 14px; border-radius:999px; border:1px solid var(--line); background:var(--glass); color:var(--ink); font:700 14px 'IBM Plex Sans Arabic'; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); cursor:pointer; }
     .emotes button.on{ background:linear-gradient(180deg,#ff9ccc,#f472b6); color:#fff; border-color:transparent; }
+    .emotes{ max-width:calc(100vw - 190px); overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+    .emotes::-webkit-scrollbar{ display:none; }
+    .emotes button{ flex:none; }
+    /* ركن التعديل: لوحة جانبية (يمين) والشخصية تبان باقي الشاشة للمعاينة */
+    .lookpanel{ position:absolute; top:0; bottom:0; right:0; width:min(400px,46vw); box-sizing:border-box; padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) 14px;
+        background:rgba(255,248,251,.96); color:#6b2147; border-left:1px solid rgba(236,160,195,.55); box-shadow:-12px 0 40px rgba(120,30,80,.22); display:flex; flex-direction:column; gap:8px; z-index:7; direction:rtl; }
+    .lookpanel h3{ margin:0; font:900 22px/1.1 'Zain'; color:#a3306a; }
+    .lookbody{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-left:4px; }
+    .lookrow{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 10px; border-radius:14px; border:1px solid rgba(236,160,195,.45); background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,236,245,.55)); }
+    .lookrow > b{ flex:none; width:78px; text-align:right; font:700 13px 'IBM Plex Sans Arabic'; }
+    .lookrow .opts{ flex:1; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px; }
+    .lookrow.locked{ opacity:.5; }
+    .lookrow.locked .opts{ pointer-events:none; }
+    .sw{ width:26px; height:26px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1px rgba(160,80,120,.35); cursor:pointer; padding:0; }
+    .sw.on{ box-shadow:0 0 0 3px var(--agp-accent); }
+    .sw.def{ background:linear-gradient(135deg,#3b1a5c,#b38ae0) !important; }
+    .opt{ height:30px; padding:0 11px; border-radius:999px; border:1px solid rgba(236,160,195,.6); background:rgba(255,255,255,.75); color:#6b2147; font:700 12px 'IBM Plex Sans Arabic'; cursor:pointer; }
+    .opt.on{ background:linear-gradient(180deg,#ff9ccc,#f472b6); color:#fff; border-color:transparent; }
+    .lockmsg{ padding:8px 12px; border-radius:12px; background:#fff1f6; border:1px dashed #f0a0c4; font:600 13px 'IBM Plex Sans Arabic'; }
+    .lockmsg a{ color:#c94f7e; font-weight:800; }
+    .lookfoot{ display:flex; justify-content:space-between; gap:10px; }
+    .lookfoot button{ flex:1; height:42px; border-radius:999px; border:0; font:800 15px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); cursor:pointer; }
+    .lookfoot button.ghost{ background:#fff; color:#c94f7e; border:1px solid rgba(236,160,195,.7); }
+    @media (max-height:420px){ .lookpanel h3{ font-size:18px; } .lookrow{ padding:5px 8px; } .sw{ width:22px; height:22px; } .opt{ height:26px; padding:0 9px; } .lookfoot button{ height:36px; } }
+    .kicked{ position:fixed; inset:0; z-index:12; display:grid; place-items:center; text-align:center; padding:24px; background:radial-gradient(circle at 50% 35%,#fff3f8,#f3c6da); }
+    .kicked h2{ margin:0 0 14px; font:900 26px/1.2 'Zain'; color:#a3306a; }
+    .kicked a{ display:inline-flex; align-items:center; height:46px; padding:0 24px; border-radius:999px; font:700 15px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); text-decoration:none; }
     @media (pointer:coarse) and (orientation:landscape) and (max-height:520px){ .phase{ top:48px; font-size:12px; } .emotes button{ height:38px; padding:0 11px; font-size:13px; } }
     /* الجوال بالطول: نطلب يلفّه (اللعبة مصممة بالعرض) */
     .rotate{ position:fixed; inset:0; z-index:20; display:none; place-items:center; text-align:center; padding:24px; background:radial-gradient(circle at 50% 35%,#fff3f8,#f3c6da); color:var(--ink); }
@@ -130,6 +157,7 @@
         </a>
         <div class="title" id="title">حفلة عيد الميلاد</div>
         <div class="group">
+            <button class="pill hidden" id="lookBtn" type="button" aria-label="شكلي">✨<span class="lbl">شكلي</span></button>
             <button class="pill party" id="partyBtn" type="button" aria-pressed="false">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg><span class="lbl" id="partyLbl">بدء الحفل</span>
             </button>
@@ -154,10 +182,12 @@
         <div class="wbrow"><span id="wishStatus"></span><small><span id="wishLeft">200</span> حرف</small></div>
         <div class="wbrow"><button type="button" id="wishCancel" class="ghost">إغلاق</button><button type="button" id="wishSend">إرسال 💌</button></div>
     </div>
-    <div class="emotes hidden" id="emotes">
-        <button type="button" data-e="2">💃 رقص</button>
-        <button type="button" data-e="3">👋 تلويح</button>
-        <button type="button" data-e="4">👏 تصفيق</button>
+    <div class="emotes hidden" id="emotes"></div>
+    <div class="lookpanel hidden" id="lookPanel" role="dialog" aria-label="ركن التعديل">
+        <h3>✨ شكلي</h3>
+        <div class="lockmsg hidden" id="lookLock">🔒 دخلت كضيف سريع: تقدر تغيّر لون لبسك بس. <a href="#" id="lookLogin">سجّل دخولك تفتحها كلها</a></div>
+        <div class="lookbody" id="lookBody"></div>
+        <div class="lookfoot"><button type="button" class="ghost" id="lookCancel">إلغاء</button><button type="button" id="lookSave">حفظ</button></div>
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"><b id="toastTitle"></b><span>هذا القسم قريباً</span></div>
     <div class="hint" id="hint">
@@ -168,6 +198,7 @@
 </div>
 
 <div class="flash" id="flash" aria-hidden="true"></div>
+<div class="kicked hidden" id="kicked" role="alertdialog" aria-label="طلّعك المذيع"><div><h2>طلّعك المذيع من الحفلة</h2><a id="kickedBack" href="../../games.html">رجوع للألعاب</a></div></div>
 <div class="photomodal hidden" id="photoModal" role="dialog" aria-label="الصورة الجماعية">
     <div><img id="photoImg" alt="الصورة الجماعية"><div class="wbrow"><button type="button" id="photoClose" class="ghost">إغلاق</button><a id="photoSave" class="savebtn">حفظ الصورة</a></div></div>
 </div>
@@ -251,15 +282,17 @@
 
     // ---- الحفلة الجماعية: الاتصال بالسيرفر + الشخصيات ----
     async function startParty(hall) {
-        const [{ connect, readJSON, writeJSON, serverNow, unpackRows }, { createCrowd }, { createMusic }] = await Promise.all([import('./party-net.js'), import('./crowd3d.js'), import('./music.js')]);
+        const [{ connect, readJSON, writeJSON, serverNow, unpackRows }, { createCrowd, LOOK, resolveLook }, { createMusic }] = await Promise.all([import('./party-net.js'), import('./crowd3d.js'), import('./music.js')]);
         const me = viewOnly ? null : readJSON('party-me');
         if (!viewOnly && !(me && me.code === code)) { location.replace('join.html?code=' + code); return; }
         if (!viewOnly) $('hint').querySelector('.touch').textContent = 'العصا للمشي · اسحب للف الكاميرا';
         const crowd = createCrowd(hall.scene, { floorAt: hall.floorAt });
+        crowd.prewarm(hall.compile);
         if (params.has('debug')) { window.__crowd = crowd; window.__hall = hall; }
         const music = createMusic();
         const roles = new Map();
-        let myN = null, myRole = null, placed = false, gotAll = false, lastSent = null;
+        let myN = null, myRole = null, myKind = null, placed = false, gotAll = false, lastSent = null;
+        let myLook = null, lookAuto = false, pendingLook = null, pendingT = 0;
         let phase = null, applied = null, revealFired = false, emote = 0, emoteUntil = 0, myTarget = null, myServer = null;
         const zoneFor = p => p === 'lobby' ? (myRole === 'girl' ? 'girl' : 'lounge') : (myRole === 'girl' ? 'hall' : 'nostage');
         // نقاط العبور (نفس كل الجوالات): الضيوف من باب الصالة، وصاحبة الحفلة من الباب الخلفي ورا الستارة
@@ -290,6 +323,8 @@
             hall.setParty(['dance', 'celebrate', 'free'].includes(p) || (p === 'reveal' && lateReveal));
             revealFired = p !== 'reveal' || lateReveal;
             if (p === 'reveal' && lateReveal && since < 9000) hall.fireworks((9000 - since) / 1000);
+            // اللي يدخل متأخر وقت الافتتاح يسمع موسيقاه من نفس اللحظة اللي يسمعها الباقين (تبدأ بعد العد)
+            if (p === 'reveal' && lateReveal) music.play('reveal', { from: (since - 3000) / 1000 });
             if (!viewOnly) hall.setZone(zoneFor(p));
             hall.setWishScreen(p === 'wishes' ? 1 : 0, lastWishes && lastWishes.cur ? Object.assign({ total: lastWishes.total }, lastWishes.cur) : null, since > 2500);
             // الكيكة: مقصوصة (رجوع) أو أنيميشن القص + احتفال ثاني
@@ -332,6 +367,7 @@
             // الأزرار حسب المرحلة والدور
             const showEmotes = !viewOnly && (['dance', 'celebrate', 'free', 'cake'].includes(p) || (p === 'wishes' && isGirl));
             $('emotes').classList.toggle('hidden', !showEmotes);
+            updateLookBtn();
             $('wishBtn').classList.toggle('hidden', viewOnly || isGirl || p !== 'wishes');
             if (p !== 'wishes') $('wishBox').classList.add('hidden');
             $('nextBtn').classList.toggle('hidden', !isGirl || p !== 'wishes');
@@ -398,12 +434,19 @@
 
         const net = connect({
             onStatus: on => $('netBad').classList.toggle('hidden', on),
-            onOpen: () => { gotAll = false; net.send(viewOnly ? { t: 'peek', code } : { t: 'resume', code, id: me.id, key: me.key }); },
+            onOpen: () => { gotAll = false; net.send(viewOnly ? { t: 'peek', code, vk: params.get('vk') || undefined } : { t: 'resume', code, id: me.id, key: me.key }); },
             onMessage: m => {
-                if (m.t === 'welcome') { myN = m.n; myRole = m.role; crowd.setLocal(myN, () => Object.assign(hall.getLocal(), { emote: curEmote() })); }
+                if (m.t === 'welcome') {
+                    myN = m.n; myRole = m.role; myKind = m.kind || 'quick'; buildEmotes(); updateLookBtn();
+                    crowd.setLocal(myN, () => Object.assign(hall.getLocal(), { emote: curEmote() }));
+                    // حفظ شكله وانقطع قبل ما يوصل: نعيد إرساله
+                    if (pendingLook) net.send({ t: 'look', look: pendingLook.split(',').map(Number) });
+                }
                 else if (m.t === 'room') {
                     m.room.players.forEach(r => roles.set(r[0], r[2]));
                     crowd.sync(m.room.players);
+                    const mine = myN != null ? m.room.players.find(r => r[0] === myN) : null;
+                    if (mine) onMyLook(mine[5]);
                     if (m.room.girlName) { $('title').textContent = 'حفلة ' + m.room.girlName; hall.setName(m.room.girlName); }
                 } else if (m.t === 'wishes') onWishes(m);
                 else if (m.t === 'myWish') onMyWish(m);
@@ -418,6 +461,7 @@
                     if (m.t === 'all' && !gotAll) { gotAll = true; applied = null; applyPhase(); }
                 } else if (m.t === 'err') {
                     if (m.err === 'resume' || m.err === 'nocode') { writeJSON('party-me', null); location.replace('join.html?code=' + code); }
+                    else if (m.err === 'kicked') { net.close(); writeJSON('party-me', null); closeLook(); $('kicked').classList.remove('hidden'); }
                     else if (m.err === 'elsewhere') { $('netBad').textContent = 'فتحت الحفلة من مكان ثاني'; $('netBad').classList.remove('hidden'); net.close(); }
                     else if (m.err === 'disabled') { $('netBad').textContent = 'الحفلات متوقفة حالياً'; $('netBad').classList.remove('hidden'); }
                     else if (m.of === 'wish') { $('wishStatus').textContent = m.err === 'shown' ? 'تهنئتك انعرضت خلاص 💖' : m.err === 'empty' ? 'اكتب تهنئتك أول' : 'ما وصلت، جرّب مرة ثانية'; $('wishSend').disabled = false; }
@@ -445,13 +489,93 @@
         once('cutBtn', () => ({ t: 'cut' }));
         $('photoClose').addEventListener('click', () => $('photoModal').classList.add('hidden'));
 
-        // أزرار الحركات (وقت الرقص): رقص يشتغل لين تضغطه مرة ثانية أو تمشي، والباقي ثواني
-        document.querySelectorAll('#emotes button').forEach(b => b.addEventListener('click', () => {
+        // أزرار الحركات (وقت الرقص): الضيف السريع 3 حركات، والمسجّل وصاحبة الحفلة 7.
+        // الرقص والتمايل يستمرون لين تضغطهم مرة ثانية أو تمشي، والباقي ثواني
+        const EMOTES = [[2, '💃 رقص'], [3, '👋 تلويح'], [4, '👏 تصفيق'], [5, '🌀 لفّة'], [6, '🦘 قفز'], [7, '💖 قلب'], [8, '🎶 تمايل']];
+        const LOOP_EMOTE = { 2: 1, 8: 1 };
+        function buildEmotes() {
+            const list = myKind === 'quick' ? EMOTES.slice(0, 3) : EMOTES;
+            $('emotes').innerHTML = list.map(([e, t]) => '<button type="button" data-e="' + e + '">' + t + '</button>').join('');
+        }
+        $('emotes').addEventListener('click', ev => {
+            const b = ev.target.closest('button'); if (!b) return;
             const e = +b.dataset.e;
-            if (e === 2) { emote = emote === 2 ? 0 : 2; emoteUntil = 0; }
+            if (LOOP_EMOTE[e]) { emote = emote === e ? 0 : e; emoteUntil = 0; }
             else { emote = e; emoteUntil = serverNow() + (e === 3 ? 2500 : 3000); }
             document.querySelectorAll('#emotes button').forEach(x => x.classList.toggle('on', +x.dataset.e === emote));
-        }));
+        });
+
+        // ---- ركن التعديل: اللاعب يختار شكله ويشوفه على شخصيته قبل الحفظ ----
+        // الضيف السريع: لون اللبس بس (السيرفر يفرض نفس الشي)، والباقي يبان مقفل
+        const LOOK_ROWS = [
+            { k: 0, label: 'نوع اللبس', opts: LOOK.styles, noGirl: true },
+            { k: 1, label: 'لون اللبس', colors: LOOK.outfits, quick: true },
+            { k: 2, label: 'البشرة', colors: LOOK.skins },
+            { k: 3, label: 'لون الشعر', colors: LOOK.hairs },
+            { k: 4, label: 'التسريحة', opts: LOOK.hairStyles },
+            { k: 5, label: 'إكسسوار', opts: LOOK.accs, girlSkip: [2, 5] }, // عندها تاج: التاج الصغير والقبعة ما يركبون فوقه
+            { k: 6, label: 'المؤثر', opts: LOOK.fxs },
+        ];
+        const FIELDS = ['st', 'o', 's', 'h', 'hs', 'acc', 'fx'];
+        let draft = null;
+        const isDefault = L => !Array.isArray(L) || L.every(v => !(v >= 0));
+        const lookToSend = () => myKind === 'quick' ? draft.map((v, i) => i === 1 ? v : -1) : draft.slice();
+        function updateLookBtn() {
+            const ok = !viewOnly && myKind && phase && (phase.p === 'lobby' || phase.p === 'free');
+            $('lookBtn').classList.toggle('hidden', !ok);
+            if (!ok) closeLook();
+        }
+        function renderLook() {
+            const girl = myRole === 'girl', quick = myKind === 'quick';
+            $('lookLock').classList.toggle('hidden', !quick);
+            $('lookBody').innerHTML = LOOK_ROWS.filter(row => !(girl && row.noGirl)).map(row => {
+                let opts = '';
+                if (row.colors) {
+                    if (girl && row.k === 1) opts += '<button type="button" class="sw def" data-k="1" data-v="-1" aria-label="الفستان البنفسجي الفخم" title="الفستان البنفسجي الفخم"></button>';
+                    opts += row.colors.map((c, v) => '<button type="button" class="sw" data-k="' + row.k + '" data-v="' + v + '" style="background:' + c + '" aria-label="' + row.label + ' ' + (v + 1) + '"></button>').join('');
+                } else opts = row.opts.map((t, v) => (girl && row.girlSkip && row.girlSkip.includes(v)) ? '' : '<button type="button" class="opt" data-k="' + row.k + '" data-v="' + v + '">' + t + '</button>').join('');
+                const locked = quick && !row.quick;
+                return '<div class="lookrow' + (locked ? ' locked' : '') + '"><b>' + (locked ? '🔒 ' : '') + row.label + '</b><div class="opts">' + opts + '</div></div>';
+            }).join('');
+            markLook();
+        }
+        function markLook() {
+            $('lookBody').querySelectorAll('[data-k]').forEach(b => { const on = draft[+b.dataset.k] === +b.dataset.v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+        }
+        function openLook() {
+            const R = resolveLook(myN, myRole, pendingLook ? pendingLook.split(',').map(Number) : myLook);
+            draft = FIELDS.map(f => R[f]);
+            renderLook(); $('lookPanel').classList.remove('hidden');
+        }
+        function closeLook(save) {
+            if ($('lookPanel').classList.contains('hidden')) return;
+            $('lookPanel').classList.add('hidden');
+            if (save) {
+                const L = lookToSend();
+                net.send({ t: 'look', look: L }); writeJSON('party-look', { look: L });
+                // المعاينة تبقى لين يرجع الشكل من السيرفر (أو 4 ثواني لو قصّه السيرفر لشي ثاني)
+                pendingLook = L.join(); clearTimeout(pendingT); pendingT = setTimeout(() => { pendingLook = null; crowd.setLocalLook(null); }, 4000);
+            } else if (!pendingLook) crowd.setLocalLook(null);
+        }
+        // شكلي من السيرفر (الصف السادس في room). أول مرة: لو السيرفر ما عنده شكل لي والجوال حافظ شكل، نرسله
+        function onMyLook(L) {
+            myLook = L;
+            if (pendingLook && Array.isArray(L) && L.join() === pendingLook) { pendingLook = null; clearTimeout(pendingT); crowd.setLocalLook(null); }
+            if (lookAuto) return;
+            lookAuto = true;
+            const saved = readJSON('party-look');
+            if (saved && Array.isArray(saved.look) && saved.look.length === 7 && isDefault(L) && !isDefault(saved.look)) net.send({ t: 'look', look: saved.look });
+        }
+        $('lookBtn').addEventListener('click', () => $('lookPanel').classList.contains('hidden') ? openLook() : closeLook());
+        $('lookBody').addEventListener('click', ev => {
+            const b = ev.target.closest('[data-k]'); if (!b || !draft) return;
+            draft[+b.dataset.k] = +b.dataset.v; markLook(); crowd.setLocalLook(lookToSend());
+        });
+        $('lookSave').addEventListener('click', () => closeLook(true));
+        $('lookCancel').addEventListener('click', () => closeLook());
+        document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeLook(); });
+        $('lookLogin').addEventListener('click', ev => { ev.preventDefault(); writeJSON('party-me', null); location.href = 'join.html?code=' + code; });
+
         // نرسل مكاننا 8 مرات بالثانية — بس إذا تغيّر (ووقت المشي التلقائي ما نرسل)
         if (!viewOnly) setInterval(() => {
             if (!placed || hall.mode !== 'follow' || autoPhase()) return;
