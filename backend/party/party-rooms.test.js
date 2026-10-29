@@ -235,7 +235,7 @@ function showRoom(extra) {
     var c = clockMgr(), room = c.mgr.createRoom(Object.assign({ girlName: 'سارة' }, extra || {}));
     return { c: c, mgr: c.mgr, code: room.code, room: room };
 }
-function rowOf(mgr, code, n, viewer) { return mgr.fullState(code, viewer).find(function (r) { return r[0] === n; }); }
+function rowOf(mgr, code, n, viewer) { return mgr.fullState(code, viewer, true).find(function (r) { return r[0] === n; }); }
 
 test('new room starts in lobby with dance duration clamped', function () {
     var a = showRoom({ danceSec: 5 }), b = showRoom({ danceSec: 99999 }), d = showRoom();
@@ -326,7 +326,7 @@ test('girl row hidden from guests before reveal, visible after', function () {
     var has = function (rows) { return rows.some(function (r) { return r[0] === girl.n; }); };
     assert.equal(has(s.mgr.fullState(s.code, g.id)), false);
     assert.equal(has(s.mgr.deltaFor(s.code, g.id, new Map(), true)), false);
-    assert.equal(has(s.mgr.fullState(s.code, null)), true, 'display sees her');
+    assert.equal(has(s.mgr.fullState(s.code, null, true)), true, 'trusted display sees her');
     assert.equal(has(s.mgr.fullState(s.code, girl.id)), true, 'she sees herself');
     s.mgr.start(s.code);
     assert.equal(has(s.mgr.fullState(s.code, g.id)), false, 'still hidden during entrance');
@@ -510,4 +510,59 @@ test('late joiner during wishes/photo is placed correctly', function () {
     s.mgr.skip(s.code, 'wishes'); s.mgr.skip(s.code, 'cakeWalk'); s.mgr.cut(s.code, girl.id); s.mgr.skip(s.code, 'celebrate');
     var b = s.mgr.join(s.code, { name: 'متأخر٢' }), t = s.mgr.phaseOf(s.code).walk[b.n], rb = rowOf(s.mgr, s.code, b.n, null);
     assert.ok(t, 'photo target'); assert.equal(rb[1], t[0]); assert.equal(rb[2], t[1]);
+});
+
+// ---------- الدفعة 4: الشكل والحركات والطرد والمشاهد الموثوق ----------
+function lookRoom() {
+    var c = clockMgr({ validateSession: function (t) { return t === 'm' ? { id: 7, username: 'nora' } : null; } }), room = c.mgr.createRoom({ girlName: 'سارة' });
+    return { c: c, mgr: c.mgr, code: room.code, room: room };
+}
+
+test('quick guest look keeps only outfit color; member and girl keep all fields; out-of-range → -1', function () {
+    var s = lookRoom(), q = s.mgr.join(s.code, { name: 'ريم' }), m = s.mgr.join(s.code, { auth: 'm' }), g = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
+    assert.deepEqual(s.mgr.setLook(s.code, q.id, [1, 3, 2, 4, 1, 2, 1]).look, [-1, 3, -1, -1, -1, -1, -1]);
+    assert.deepEqual(s.mgr.setLook(s.code, m.id, [1, 3, 2, 4, 1, 2, 1]).look, [1, 3, 2, 4, 1, 2, 1]);
+    assert.deepEqual(s.mgr.setLook(s.code, g.id, [0, 11, 4, 7, 3, 5, 3]).look, [0, 11, 4, 7, 3, 5, 3]);
+    assert.deepEqual(s.mgr.setLook(s.code, m.id, [2, 12, 5, 8, 4, 6, 4]).look, [-1, -1, -1, -1, -1, -1, -1]);
+    assert.deepEqual(s.mgr.setLook(s.code, m.id, ['1', 1.5, null, -3, 0, 0, 0]).look, [-1, -1, -1, -1, 0, 0, 0]);
+    assert.equal(s.mgr.setLook(s.code, m.id, 'x').err, 'bad');
+    assert.deepEqual(s.mgr.setLook(s.code, m.id, [0, 1]).look, [0, 1, -1, -1, -1, -1, -1], 'short array padded');
+});
+
+test('quick guest anim above 4 becomes 0; member keeps 5-8; 9 becomes 0', function () {
+    var s = lookRoom(), q = s.mgr.join(s.code, { name: 'ريم' }), m = s.mgr.join(s.code, { auth: 'm' });
+    toFree(s.mgr, s.code);
+    function animAfter(p, a) { s.c.t.now += 500; var r = rowOf(s.mgr, s.code, p.n, null); s.mgr.move(s.code, p.id, [r[1], r[2], 0, a]); return rowOf(s.mgr, s.code, p.n, null)[4]; }
+    assert.equal(animAfter(q, 4), 4);
+    assert.equal(animAfter(q, 7), 0);
+    assert.equal(animAfter(m, 7), 7);
+    assert.equal(animAfter(m, 8), 8);
+    assert.equal(animAfter(m, 9), 0);
+});
+
+test('roster rows carry look', function () {
+    var s = lookRoom(), m = s.mgr.join(s.code, { auth: 'm' });
+    assert.deepEqual(s.mgr.roster(s.code).players[0][5], [-1, -1, -1, -1, -1, -1, -1]);
+    s.mgr.setLook(s.code, m.id, [1, 2, 3, 4, 1, 2, 3]);
+    assert.deepEqual(s.mgr.roster(s.code).players[0][5], [1, 2, 3, 4, 1, 2, 3]);
+});
+
+test('kick removes the player; resume with the old key fails', function () {
+    var s = lookRoom(), q = s.mgr.join(s.code, { name: 'ريم' }), g = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
+    var k = s.mgr.kick(s.code, q.n);
+    assert.equal(k.ok, true); assert.equal(k.id, q.id);
+    assert.equal(s.mgr.roster(s.code).players.length, 1);
+    assert.equal(s.mgr.resume(s.code, q.id, q.key).err, 'resume');
+    assert.equal(s.mgr.kick(s.code, 999).err, 'noplayer');
+    assert.equal(s.mgr.kick(s.code, g.n).err, 'girl', 'the girl cannot be kicked');
+});
+
+test('untrusted peek does not see the girl before reveal; trusted peek (vk) does', function () {
+    var s = lookRoom(), g = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
+    assert.ok(s.room.viewKey && s.room.viewKey.length >= 16);
+    var has = function (trusted) { return s.mgr.fullState(s.code, null, trusted).some(function (r) { return r[0] === g.n; }); };
+    assert.equal(has(false), false); assert.equal(has(true), true);
+    var seen = new Map(); assert.equal(s.mgr.deltaFor(s.code, null, seen, true, false).some(function (r) { return r[0] === g.n; }), false);
+    s.mgr.start(s.code); s.mgr.skip(s.code, 'entrance');
+    assert.equal(has(false), true, 'visible after reveal starts');
 });

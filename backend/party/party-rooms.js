@@ -22,7 +22,11 @@ var HX = 31, HZ = 47;           // حدود الحركة داخل القاعة (
 var MAX_SPEED = 14;             // م/ث — أسرع من الجري بالواجهة بهامش
 var SPEED_SLACK = 0.5;          // م — تذبذب الشبكة
 var MIN_MOVE_GAP_MS = 60;       // أقل فاصل بين رسائل الحركة من نفس اللاعب
-var MAX_ANIM = 4;                // 0 وقوف · 1 مشي · 2 رقص · 3 تلويح · 4 تصفيق (5+ للدفعة 4)
+var MAX_ANIM = 8;                // 0 وقوف · 1 مشي · 2 رقص · 3 تلويح · 4 تصفيق · 5 لفّة · 6 قفز · 7 قلب · 8 تمايل
+var QUICK_ANIM = 4;              // الضيف السريع: 3 حركات بس (رقص، تلويح، تصفيق)
+// الشكل: [نوع اللبس، لون اللبس، البشرة، لون الشعر، التسريحة، الإكسسوار، المؤثر] — -1 = الافتراضي (الجوال يشتقه من n)
+var LOOK_MAX = [1, 11, 4, 7, 3, 5, 3];
+var LOOK_QUICK = [false, true, false, false, false, false, false]; // السريع يختار لون لبسه بس
 // مناطق الحركة [xmin, xmax, zmin, zmax]
 var ZONES = {
     lounge: [-15, 15, 50.5, 69],      // صالة الضيوف خلف المدخل
@@ -62,6 +66,13 @@ function photoSlot(i, total) {
     else { row = full + Math.floor((i - total) / PHOTO_ROW); col = (i - total) % PHOTO_ROW; cnt = PHOTO_ROW; }
     return [r2((col - (cnt - 1) / 2 + (row % 2 ? .5 : 0)) * PHOTO_DX), r2(PHOTO_SPOT[1] + 1.5 + row * 1.2)];
 }
+function cleanLook(look, kind) {
+    return LOOK_MAX.map(function (max, i) {
+        var v = look[i];
+        if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > max) return -1;
+        return kind === 'quick' && !LOOK_QUICK[i] ? -1 : v;
+    });
+}
 function cleanWish(t) {
     var s = String(t == null ? '' : t).replace(/[\u200b-\u200f\u2060\ufeff]/g, '').replace(/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim();
     s = Array.from(s).slice(0, MAX_WISH).join('').trim();
@@ -88,7 +99,7 @@ function createRoomManager(opts) {
     function addPlayer(room, name, role, kind, user) {
         var p = {
             id: rid(8), key: rid(16), n: room.nextN++, name: name, role: role, kind: kind,
-            user: user || null, online: true,
+            user: user || null, online: true, look: LOOK_MAX.map(function () { return -1; }),
             // مكان البداية: منطقة المدخل
             x: r2(-8 + Math.random() * 16), z: r2(38 + Math.random() * 6), ry: Math.PI, a: 0,
             lastMoveAt: now(), dirty: true, ver: 1
@@ -151,7 +162,11 @@ function createRoomManager(opts) {
         setPhase(room, PHASES[i + 1]);
         return true;
     }
-    function hiddenFor(room, viewer, p) { return p.role === 'girl' && viewer && viewer.role === 'guest' && (room.phase === 'lobby' || room.phase === 'entrance'); }
+    // مفاجأة الافتتاح: مكان صاحبة الحفلة مخفي قبل الافتتاح عن الضيوف، وعن شاشة العرض اللي ما معها مفتاح المذيع
+    function hiddenFor(room, viewer, p, trusted) {
+        if (p.role !== 'girl' || (room.phase !== 'lobby' && room.phase !== 'entrance')) return false;
+        return viewer ? viewer.role === 'guest' : !trusted;
+    }
 
     function welcome(p) { return { ok: true, id: p.id, key: p.key, n: p.n, role: p.role, kind: p.kind }; }
 
@@ -160,10 +175,10 @@ function createRoomManager(opts) {
         var code; do { code = String(1000 + Math.floor(Math.random() * 9000)); } while (rooms[code]);
         var ds = Math.round(Number(o && o.danceSec)); ds = isFinite(ds) && ds > 0 ? clamp(ds, 60, 900) : 300;
         var ws = Math.round(Number(o && o.wishesSec)); ws = isFinite(ws) && ws > 0 ? clamp(ws, 120, 1200) : 480;
-        rooms[code] = { code: code, token: rid(16), girlKey: rid(16), girlName: cleanName(o && o.girlName), players: [], nextN: 1, createdAt: now(),
+        rooms[code] = { code: code, token: rid(16), girlKey: rid(16), viewKey: rid(8), girlName: cleanName(o && o.girlName), players: [], nextN: 1, createdAt: now(),
             danceSec: ds, wishesSec: ws, phase: 'lobby', phaseAt: now(), phaseUntil: 0, walk: {}, slotN: 0, slotTotal: 0,
             wishes: [], wishSeq: 1, wishCur: -1, cakeCut: false, photoDone: false, startedAt: 0 };
-        return { ok: true, code: code, token: rooms[code].token, girlKey: rooms[code].girlKey };
+        return { ok: true, code: code, token: rooms[code].token, girlKey: rooms[code].girlKey, viewKey: rooms[code].viewKey };
     }
 
     function hostResume(code, token) {
@@ -228,13 +243,29 @@ function createRoomManager(opts) {
         var t = now(), gap = t - p.lastMoveAt;
         if (gap < MIN_MOVE_GAP_MS) return fail('flood');
         var zc = inZone(zoneOf(room, p), x, z); x = zc[0]; z = zc[1]; // المناطق فيها حدود القاعة والغرف
-        if (a > MAX_ANIM || a < 0) a = 0;
+        if (a > (p.kind === 'quick' ? QUICK_ANIM : MAX_ANIM) || a < 0) a = 0;
         var dist = Math.hypot(x - p.x, z - p.z);
         p.lastMoveAt = t;
         if (dist > MAX_SPEED * Math.min(gap, 2000) / 1000 + SPEED_SLACK) return fail('speed');
         p.x = r2(x); p.z = r2(z); p.ry = r2(ry); p.a = Math.round(a);
         p.dirty = true; p.ver++;
         return { ok: true };
+    }
+
+    function setLook(code, id, look) {
+        var room = rooms[code]; if (!room) return fail('nocode');
+        var p = playerOf(room, id); if (!p) return fail('noplayer');
+        if (!Array.isArray(look)) return fail('bad');
+        p.look = cleanLook(look, p.kind);
+        return { ok: true, look: p.look };
+    }
+    // طرد ضيف (المذيع): يطلع من الغرفة ومفتاحه ما عاد يرجّعه
+    function kick(code, n) {
+        var room = rooms[code]; if (!room) return fail('nocode');
+        var p = room.players.find(function (x) { return x.n === Number(n); }); if (!p) return fail('noplayer');
+        if (p.role === 'girl') return fail('girl');
+        room.players.splice(room.players.indexOf(p), 1);
+        return { ok: true, id: p.id };
     }
 
     function stateRow(p) { return [p.n, p.x, p.z, p.ry, p.a]; }
@@ -249,12 +280,12 @@ function createRoomManager(opts) {
     // دلتا خاصة بكل مستقبل: القريب منه (≤ 12م) يوصل كل دورة، والبعيد بس بدورات
     // farTick — يقلل الحمل بحفلة 100 لاعب لجزء صغير. seen = Map(n → آخر نسخة وصلته)
     // يملكها الخادم لكل اتصال. viewerId = null (شاشة عرض) ← كل التغييرات.
-    function deltaFor(code, viewerId, seen, farTick) {
+    function deltaFor(code, viewerId, seen, farTick, trusted) {
         var room = rooms[code]; if (!room) return fail('nocode');
         var me = viewerId ? playerOf(room, viewerId) : null, out = [];
         room.players.forEach(function (p) {
             if (me && p === me) return;
-            if (hiddenFor(room, me, p)) return;
+            if (hiddenFor(room, me, p, trusted)) return;
             if (seen.get(p.n) === p.ver) return;
             if (me && !farTick && Math.hypot(p.x - me.x, p.z - me.z) > NEAR_R) return;
             seen.set(p.n, p.ver); out.push(stateRow(p));
@@ -262,17 +293,17 @@ function createRoomManager(opts) {
         return out;
     }
 
-    function fullState(code, viewerId) {
+    function fullState(code, viewerId, trusted) {
         var room = rooms[code]; if (!room) return fail('nocode');
         var me = viewerId ? playerOf(room, viewerId) : null;
-        return room.players.filter(function (p) { return !hiddenFor(room, me, p); }).map(stateRow);
+        return room.players.filter(function (p) { return !hiddenFor(room, me, p, trusted); }).map(stateRow);
     }
 
     function roster(code) {
         var room = rooms[code]; if (!room) return fail('nocode');
         return {
             ok: true, code: room.code, girlName: room.girlName,
-            players: room.players.map(function (p) { return [p.n, p.name, p.role, p.kind, p.online ? 1 : 0]; })
+            players: room.players.map(function (p) { return [p.n, p.name, p.role, p.kind, p.online ? 1 : 0, p.look]; })
         };
     }
 
@@ -368,7 +399,7 @@ function createRoomManager(opts) {
         move: move, takeDelta: takeDelta, deltaFor: deltaFor, fullState: fullState, roster: roster,
         closeRoom: closeRoom, rooms: function () { return Object.keys(rooms); },
         getRoom: getRoom, pointsId: pointsId, phaseOf: phaseOf, start: start, skip: skip, tick: tick,
-        addWish: addWish, hideWish: hideWish, nextWish: nextWish, wishesState: wishesState, wishList: wishList, cut: cut, pointsList: pointsList
+        setLook: setLook, kick: kick, addWish: addWish, hideWish: hideWish, nextWish: nextWish, wishesState: wishesState, wishList: wishList, cut: cut, pointsList: pointsList
     };
 }
 

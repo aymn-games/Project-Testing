@@ -12,12 +12,13 @@
  *   عميل → host {girlName, key} | host {code, token}   ← hosted {code, token, girlKey}
  *   عميل → join {code, name, auth?, girlKey?}     ← welcome {id, key, n, role, kind} ثم all {d}
  *   عميل → resume {code, id, key}                 ← نفس رد join
- *   عميل → peek {code}                            ← room + all (شاشة عرض بدون شخصية)
+ *   عميل → peek {code, vk}                        ← room + all (شاشة عرض بدون شخصية؛ بدون vk صحيح صاحبة الحفلة مخفية قبل الافتتاح)
+ *   اللاعب → look {look: 7 أرقام}                ← room (الصف السادس = الشكل بعد التحقق حسب نوع الحساب)
  *   عميل → mv {p:[x, z, ry, a]} · ping {k}        ← pong {k, now}
  *   المذيع → start · skip {from}                  ← phase {p, at, until, walk, cut} للكل
  *   (phase تنرسل أيضاً لكل اتصال جديد؛ walk مسطّحة n, x×100, z×100 وقت المشي التلقائي)
  *   الضيف → wish {text} ← myWish {text} · صاحبة الحفلة/المذيع → next {seen} · cut
- *   المذيع → hideWish {id, hidden} · pointsClaim ← pointsGo {id} (جهاز واحد بس) · pointsRelease · pointsDone ← pointsOk لباقي أجهزة المذيع
+ *   المذيع → kick {n} (المطرود ياخذ err kicked وينقطع) · hideWish {id, hidden} · pointsClaim ← pointsGo {id} (جهاز واحد بس) · pointsRelease · pointsDone ← pointsOk لباقي أجهزة المذيع
  *   خادم → wishes {cur, shown, total} للكل · wishList {items} للمذيع · points {id, players, durationMs} للمذيع
  *   خادم → room {room} عند تغيّر القائمة · s {now, d} دلتا الحركة كل 125ms
  *          (d مسطّحة: n,x,z,ry,a لكل لاعب تحرك، x/z بالسم وry ×100 — خاصة بكل مستقبل:
@@ -62,9 +63,9 @@ function sendRaw(client, encoded) {
     try { client.socket.write(encoded); } catch (err) { logger.error('Party: write failed:', err); }
 }
 function send(client, obj) { if (client && !client.closed) sendRaw(client, frame.encodeTextFrame(JSON.stringify(obj))); }
-function keyOk(k) {
-    if (!_hostKey) return false;
-    var a = Buffer.from(String(k || '')), b = Buffer.from(_hostKey);
+function keyOk(k) { return !!_hostKey && sameKey(k, _hostKey); }
+function sameKey(k, secret) {
+    var a = Buffer.from(String(k || '')), b = Buffer.from(String(secret));
     return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 // دلو رموز بسيط لكل اتصال: يرجع false إذا لازم نتجاهل الرسالة
@@ -131,10 +132,11 @@ function sendPoints(code, only) {
     (only ? [only] : hosts(code)).forEach(function (c) { send(c, room.pointsMsg); });
 }
 function myWishFor(code, id) { var room = _mgr.getRoom(code); var w = room && room.wishes.find(function (x) { return x.pid === id; }); return w ? { t: 'myWish', text: w.text, shown: w.shown } : null; }
-function sendAll(client) { var d = _mgr.fullState(client.code, client.role === 'player' ? client.id : null); if (Array.isArray(d)) send(client, { t: 'all', now: Date.now(), d: packRows(d) }); }
+function sendAll(client) { var d = _mgr.fullState(client.code, client.role === 'player' ? client.id : null, !!client.trusted); if (Array.isArray(d)) send(client, { t: 'all', now: Date.now(), d: packRows(d) }); }
 
-function attach(client, code, role, id) {
-    client.code = code; client.role = role; client.id = id || null; client.seen = new Map();
+// trusted: المذيع وشاشة العرض اللي معها مفتاحه (vk) — يشوفون صاحبة الحفلة قبل الافتتاح
+function attach(client, code, role, id, trusted) {
+    client.code = code; client.role = role; client.id = id || null; client.seen = new Map(); client.trusted = role === 'host' || !!trusted;
     delete _emptySince[code];
 }
 
@@ -154,7 +156,7 @@ function onMessage(client, msg) {
     if (t === 'ping') return send(client, { t: 'pong', k: msg.k, now: Date.now() });
     if (typeof t !== 'string') return;
     var ident = t === 'host' || t === 'join' || t === 'resume' || t === 'peek';
-    var heavy = ident || t === 'start' || t === 'skip' || t === 'wish' || t === 'next' || t === 'cut' || t === 'hideWish' || t === 'pointsDone' || t === 'pointsClaim' || t === 'pointsRelease';
+    var heavy = ident || t === 'start' || t === 'skip' || t === 'wish' || t === 'next' || t === 'cut' || t === 'hideWish' || t === 'pointsDone' || t === 'pointsClaim' || t === 'pointsRelease' || t === 'look' || t === 'kick';
     if (!allow(client, heavy)) return;
     if (!_enabled) return send(client, { t: 'err', err: 'disabled', of: t });
     // كل اتصال له هوية وحدة: المشاهد (peek) يقدر يدخل كلاعب مرة، وغير كذا مرفوض
@@ -167,14 +169,14 @@ function onMessage(client, msg) {
             if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
             var room = _mgr.getRoom(code);
             attach(client, code, 'host');
-            send(client, { t: 'hosted', code: code, token: room.token, girlKey: room.girlKey });
+            send(client, { t: 'hosted', code: code, token: room.token, girlKey: room.girlKey, viewKey: room.viewKey });
         } else {
             if (!keyOk(msg.key)) return send(client, { t: 'err', err: 'hostkey', of: t });
             var dm = Number(msg.danceMin), wm = Number(msg.wishesMin); res = _mgr.createRoom({ girlName: msg.girlName, danceSec: isFinite(dm) && dm > 0 ? Math.round(dm) * 60 : 300, wishesSec: isFinite(wm) && wm > 0 ? Math.round(wm) * 60 : 480 });
             if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
             attach(client, res.code, 'host');
             logger.log('Party: room ' + res.code + ' created');
-            send(client, { t: 'hosted', code: res.code, token: res.token, girlKey: res.girlKey });
+            send(client, { t: 'hosted', code: res.code, token: res.token, girlKey: res.girlKey, viewKey: res.viewKey });
         }
         send(client, rosterMsg(client.code)); send(client, phaseMsg(client.code)); send(client, wishesMsg(client.code)); sendAll(client);
         sendWishList(client.code, client);
@@ -183,7 +185,7 @@ function onMessage(client, msg) {
     }
     if (t === 'peek') {
         if (!code || !_mgr.getRoom(code)) return send(client, { t: 'err', err: 'nocode', of: t });
-        attach(client, code, 'viewer');
+        attach(client, code, 'viewer', null, sameKey(msg.vk, _mgr.getRoom(code).viewKey));
         send(client, rosterMsg(code));
         send(client, phaseMsg(code));
         send(client, wishesMsg(code));
@@ -249,6 +251,24 @@ function onMessage(client, msg) {
         sendWishList(client.code); broadcastWishes(client.code);
         return;
     }
+    if (t === 'look') {
+        if (client.role !== 'player' || !client.code) return send(client, { t: 'err', err: 'role', of: t });
+        res = _mgr.setLook(client.code, client.id, msg.look);
+        if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
+        return markRoster(client.code);
+    }
+    if (t === 'kick') {
+        if (client.role !== 'host' || !client.code) return send(client, { t: 'err', err: 'host-only', of: t });
+        res = _mgr.kick(client.code, msg.n);
+        if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
+        // المطرود: نبلغه ونقفل اتصاله (بدون leave — شخصيته انشالت أصلاً)
+        Object.keys(_clients).forEach(function (k) {
+            var c = _clients[k];
+            if (c.code === client.code && c.id === res.id) { send(c, { t: 'err', err: 'kicked', of: 'kick' }); c.id = null; c.role = 'viewer'; try { c.socket.end(); } catch (e) { } }
+        });
+        logger.log('Party: room ' + client.code + ' kicked n=' + Number(msg.n));
+        return markRoster(client.code);
+    }
     if (t === 'mv') {
         if (client.role !== 'player' || !client.code) return;
         _mgr.move(client.code, client.id, msg.p);
@@ -280,7 +300,7 @@ function tickAll() {
             if (wl && wl.dirty && now - wl.at >= WISHLIST_MS) sendWishList(code);
             cs.forEach(function (c) {
                 if (c.role === 'host') return; // لوحة المذيع ما تعرض الحركة
-                var d = _mgr.deltaFor(code, c.role === 'player' ? c.id : null, c.seen || (c.seen = new Map()), farTick);
+                var d = _mgr.deltaFor(code, c.role === 'player' ? c.id : null, c.seen || (c.seen = new Map()), farTick, !!c.trusted);
                 if (Array.isArray(d) && d.length) sendRaw(c, frame.encodeTextFrame(JSON.stringify({ t: 's', now: now, d: packRows(d) })));
             });
         } catch (err) { logger.error('Party: tick error:', err); }
