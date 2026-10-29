@@ -3,6 +3,8 @@
 // كورسيه وحزام ذهبي ببروش كريستال، نقاط لامعة تبرق، ذيل على الأرض، وأكمام شيفون منفوخة.
 // يحل مكان الفستان والجذع الموحّدين عندها (crowd3d يخفيهم لما c.gown = true)،
 // ويتحرك مع جسمها: يدور معها، والتنورة تتمايل وقت الرقص وتنفتح وقت اللفّة.
+// مع شخصيات الهيكل العظمي (rig3d) ينربط بعظمة الورك عبر attachTo(bone, hipsY): يتبعها بنفسه،
+// والكورسيه والأكمام تنخفى لأن جذعها المرن (skinned) هو اللي يلبسها.
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
 const T = THREE;
@@ -76,12 +78,13 @@ export function createGown(scene) {
   const bodice = keep(new T.LatheGeometry([[.16, WAIST - .02], [.165, .98], [.2, 1.06], [.235, 1.13], [.225, 1.2], [.2, 1.26]].map(([r, y]) => new T.Vector2(r, y)), 48));
   bodice.scale(1, 1, .84); bodice.computeVertexNormals();
   tint(bodice, (x, y) => .08 + Math.max(0, y - .98) * .55, 0, 1);
-  group.add(new T.Mesh(bodice, satin));
+  const upper = []; // الكورسيه والحافة والأكمام: تنخفى وقت الربط بالعظمة
+  const bodiceM = new T.Mesh(bodice, satin); group.add(bodiceM); upper.push(bodiceM);
   // حزام الخصر الذهبي + بروش كريستال بالنص + حافة ذهبية رفيعة فوق الصدر
   const belt = keep(new T.TorusGeometry(.172, .024, 10, 48)); belt.rotateX(Math.PI / 2); belt.scale(1, 1, .86); belt.translate(0, WAIST + .01, 0);
   group.add(new T.Mesh(belt, gold));
   const trim = keep(new T.TorusGeometry(.2, .009, 6, 48)); trim.rotateX(Math.PI / 2); trim.scale(1, 1, .84); trim.translate(0, 1.255, 0);
-  group.add(new T.Mesh(trim, gold));
+  const trimM = new T.Mesh(trim, gold); group.add(trimM); upper.push(trimM);
   const gem = keep(new T.OctahedronGeometry(.042, 0)); gem.scale(1, 1.25, .6); gem.translate(0, WAIST + .01, .158);
   group.add(new T.Mesh(gem, crystal));
   const setting = keep(new T.TorusGeometry(.05, .008, 6, 20)); setting.translate(0, WAIST + .01, .152);
@@ -89,7 +92,7 @@ export function createGown(scene) {
 
   // الأكمام: كتوف شيفون منفوخة
   const puff = keep(new T.SphereGeometry(.115, 16, 12)); puff.scale(1, .82, 1);
-  for (const sd of [-1, 1]) { const m = new T.Mesh(puff, chiffon); m.position.set(sd * .29, 1.22, 0); m.renderOrder = 2; group.add(m); }
+  for (const sd of [-1, 1]) { const m = new T.Mesh(puff, chiffon); m.position.set(sd * .29, 1.22, 0); m.renderOrder = 2; group.add(m); upper.push(m); }
 
   // اللمعان: نقاط موزعة على الطبقة الطويلة، كل وحدة تبرق ببطء بطورها الخاص
   const SP = 110, spPos = new Float32Array(SP * 3), spCol = new Float32Array(SP * 3), spPh = new Float32Array(SP);
@@ -122,12 +125,17 @@ export function createGown(scene) {
   }
   setColor(null);
 
-  let time = 0, flare = 1;
+  let time = 0, flare = 1, attached = false;
+  // يركب على عظمة الورك: الأصل (القدمين) تحت الورك بـ hipsY
+  function attachTo(bone, hipsY) {
+    attached = true; bone.add(group); group.position.set(0, -hipsY, 0); group.rotation.set(0, 0, 0); group.scale.setScalar(1);
+    upper.forEach(m => { m.visible = false; });
+  }
   // girl = {x, y, z, ry, s, an, phase, roll} من crowd.update، أو null لو ما هي موجودة
   function update(girl, dt) {
     group.visible = !!girl; if (!girl) return;
     time += dt;
-    group.position.set(girl.x, girl.y, girl.z); group.rotation.set(0, girl.ry, girl.roll, 'YXZ'); group.scale.setScalar(girl.s);
+    if (!attached) { group.position.set(girl.x, girl.y, girl.z); group.rotation.set(0, girl.ry, girl.roll, 'YXZ'); group.scale.setScalar(girl.s); }
     // تمايل التنورة مع الرقص، وتنفتح وقت اللفّة
     const an = girl.an, dancing = an === 2 || an === 8 || an === 6;
     skirt.rotation.y = dancing ? Math.sin(girl.phase) * .14 : Math.sin(time * .8) * .02;
@@ -141,6 +149,6 @@ export function createGown(scene) {
     spGeo.attributes.color.needsUpdate = true;
   }
 
-  function dispose() { scene.remove(group); geos.forEach(g => g.dispose()); mats.forEach(m => m.dispose()); spTex.dispose(); }
-  return { update, setColor, setVisible: v => { group.visible = v; }, dispose };
+  function dispose() { group.removeFromParent(); geos.forEach(g => g.dispose()); mats.forEach(m => m.dispose()); spTex.dispose(); }
+  return { update, setColor, attachTo, setVisible: v => { group.visible = v; }, dispose };
 }
