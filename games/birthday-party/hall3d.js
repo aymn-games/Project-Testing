@@ -1037,11 +1037,12 @@ export function mountHall(el, opts = {}) {
       // لقطات: من قدام بعيد وهي تنزل (عدسة ضيقة) ← من الجنب واطي ← من وراها ← واقفة وهي تدخل النور
       if (og[1] > 24) { tourPos.set(.8, 2.2, 14); tourLook.set(0, 2.4, HZ); }
       else if (e < 6) { tourPos.set(og[0] + 3.5, fy + 1.9, og[1] + 14); tourLook.set(og[0], fy + 1.2, og[1]); }
-      else if (e < 11) { tourPos.set(og[0] + 5.5, fy + 1.1, og[1] + 2.5); tourLook.set(og[0], fy + 1.25, og[1]); }
+      else if (e < 11) { tourPos.set(og[0] + 5.5, fy + 1.1, og[1] + 5); tourLook.set(og[0], fy + 1.25, og[1]); }
       else { tourPos.set(og[0] + 1.1, fy + 1.6, og[1] - 7.5); tourLook.set(og[0], fy + 1.3, og[1] + 10); }
-      const k = 1 - Math.exp(-dt * 1.1);
-      cam.position.lerp(tourPos, k); curLook.lerp(tourLook, k);
-      m4.lookAt(cam.position, curLook, cam.up); q0.setFromRotationMatrix(m4); cam.quaternion.slerp(q0, k);
+      // الكاميرا تتحرك ببطء، بس النظر يلحقها بسرعة عشان ما تطلع من الكادر
+      const k = 1 - Math.exp(-dt * 1.1), kl = 1 - Math.exp(-dt * 5);
+      cam.position.lerp(tourPos, k); curLook.lerp(tourLook, kl);
+      m4.lookAt(cam.position, curLook, cam.up); q0.setFromRotationMatrix(m4); cam.quaternion.slerp(q0, kl);
       if (controls) controls.read();
       moving = false; sprinting = false;
       if (auto && mode === 'follow') stepAuto(dt);
