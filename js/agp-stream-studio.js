@@ -609,6 +609,13 @@
 
     /* ---------------- تشغيل ---------------- */
 
+    // «ثبّت الموقع كتطبيق» بالشريط العلوي (ينخفى لو الاستوديو مفتوح كتطبيق)
+    if (window.AGPInstallApp) {
+        var topBar = document.querySelector('.st-top');
+        var install = window.AGPInstallApp.mountButton(topBar, 'display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;border:1px solid rgba(178,140,245,.4);background:rgba(122,63,212,.12);color:#e2d6ff;font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap');
+        if (install) topBar.insertBefore(install, savedEl);
+    }
+
     enabledEl.checked = S().enabled !== false;
     enabledEl.addEventListener('change', function () { S().enabled = enabledEl.checked; commit(); });
 
