@@ -34,6 +34,9 @@
  *   الألعاب (مثل * {box-sizing}) ما توصل للأدوات، وتكبير الصفحة بالشاشات
  *   العريضة (js/agp-wide-scale.js — zoom على html) ينلغى عن الطبقة — فالأدوات
  *   بنفس الشكل والمكان بكل صفحة وبمعاينة الاستوديو.
+ * - فوق كل شي: الطبقة بـ«الطبقة العليا» للمتصفح (popover manual — فوق أي z-index
+ *   بأي صفحة)، وترجع فوق لما لعبة تدخل/تطلع من ملء الشاشة. وتكبير الصفحة
+ *   بإصبعين (visualViewport) ينعكس عليها، فتبقى ثابتة على الشاشة الظاهرة.
  *
  * <html data-agp-studio> = صفحة الاستوديو: ما ترسم طبقة البث، بس توفّر الرسم
  * والبيانات للمعاينة. النصوص تنعرض بـtextContent فقط. مستقل عن
@@ -929,6 +932,25 @@
 
     var layer = null, stage = null, nodes = {}, frameRect = null;
 
+    /** يحط الطبقة بـ«الطبقة العليا» للمتصفح (فوق أي z-index)، أو يرجّعها لآخرها. */
+    function bringToTop() {
+        if (!layer || typeof layer.showPopover !== 'function') return; // متصفح قديم: يبقى z-index الأقصى
+        try {
+            if (!layer.hasAttribute('popover')) layer.setAttribute('popover', 'manual');
+            if (layer.matches(':popover-open')) layer.hidePopover();
+            layer.showPopover();
+        } catch (e) { /* ignore */ }
+    }
+
+    /** تكبير بإصبعين: نعاكسه عشان الطبقة تبقى ثابتة على الجزء الظاهر من الشاشة وبنفس الحجم. */
+    function followVisualViewport() {
+        var vv = window.visualViewport;
+        if (!layer || !vv) return;
+        var sc = vv.scale || 1;
+        var still = Math.abs(sc - 1) < 0.01 && Math.abs(vv.offsetLeft) < 1 && Math.abs(vv.offsetTop) < 1;
+        layer.style.transform = still ? 'none' : 'translate(' + vv.offsetLeft + 'px,' + vv.offsetTop + 'px) scale(' + (1 / sc) + ')';
+    }
+
     /** تكبير الصفحة كاملة (zoom على html من agp-wide-scale.js) — نلغيه عن الطبقة. */
     function pageZoom() {
         var z = parseFloat(document.documentElement.style.zoom) || 1;
@@ -1120,7 +1142,7 @@
             layer = document.createElement('div');
             layer.id = 'agp-so-layer';
             // الموقع والطبقة inline (أقوى من :host{all:initial} ومن أي قاعدة بالصفحة)
-            layer.style.cssText = 'position:fixed;top:0;left:0;right:0;height:100vh;z-index:' + Z + ';pointer-events:none;overflow:hidden;display:block;margin:0;padding:0;border:0;transform:none;filter:none';
+            layer.style.cssText = 'position:fixed;inset:0 auto auto 0;width:100%;height:100vh;max-width:none;max-height:none;z-index:2147483647;pointer-events:none;overflow:hidden;margin:0;padding:0;border:0;background:transparent;transform:none;transform-origin:0 0;filter:none';
             stage = document.createElement('div');
             stage.id = 'agp-so-stage';
             var root = layer.attachShadow ? layer.attachShadow({ mode: 'open' }) : layer;
@@ -1129,6 +1151,14 @@
             root.appendChild(style);
             root.appendChild(stage);
             document.body.appendChild(layer);
+            bringToTop();
+            // لعبة دخلت/طلعت من ملء الشاشة: عنصرها يصير بالطبقة العليا فوقنا — نرجع فوقه
+            document.addEventListener('fullscreenchange', bringToTop);
+            document.addEventListener('webkitfullscreenchange', bringToTop);
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', followVisualViewport);
+                window.visualViewport.addEventListener('scroll', followVisualViewport);
+            }
             listeners.stats.push(repaintData);
             // نعيد الرسم بس لو المقاس الثابت تغيّر فعلاً (تدوير/تغيير حجم النافذة)،
             // مو لما شريط Safari يختفي ويرجع مع التمرير
