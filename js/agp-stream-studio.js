@@ -30,9 +30,10 @@
         { type: 'top', section: 'commenters', label: 'المتفاعلين', sub: 'أكثر من علّق' },
         { type: 'top', section: 'sharers', label: 'توب الشير', sub: 'أكثر من نشر البث' },
         { type: 'goal', label: 'هدف', sub: 'شريط يتعبّى لين الهدف', icon: 'heart' },
-        { type: 'counter', label: 'عدّادات البث', sub: 'تكبيسات، ماس، متابعين…', icon: 'eye' }
+        { type: 'counter', label: 'عدّادات البث', sub: 'تكبيسات، ماس، متابعين…', icon: 'eye' },
+        { type: 'jar', label: 'وعاء الهدايا', sub: 'يتعبّى بصور الهدايا', icon: 'gift' }
     ];
-    var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات' };
+    var TYPE_NAMES = { text: 'نص', top: 'توب', goal: 'هدف', counter: 'عدّادات', jar: 'وعاء' };
 
     var side = document.getElementById('st-side');
     var canvas = document.getElementById('st-canvas');
@@ -262,6 +263,7 @@
         if (it.type === 'text') return (it.text || '').replace(/\s+/g, ' ').trim().slice(0, 28) || 'نص فاضي';
         if (it.type === 'top') return it.title || (O.SECTIONS[it.section] || O.SECTIONS.likers).title;
         if (it.type === 'goal') return it.title || 'هدف';
+        if (it.type === 'jar') return it.title || 'وعاء الهدايا';
         return it.title || 'عدّادات البث';
     }
 
@@ -519,6 +521,18 @@
         box.appendChild(row('اللون', swatches(it.color, function (c) { update(it, 'color', c, true); })));
     }
 
+    function jarProps(it, box) {
+        box.appendChild(row('العنوان (اختياري)', textInput(it.title, 40, function (v) { update(it, 'title', v); })));
+        box.appendChild(row('تحت الوعاء', pills([{ label: 'مجموع الماس', value: 'diamonds' }, { label: 'عدد الهدايا', value: 'gifts' }, { label: 'بدون', value: 'none' }], it.counter || 'diamonds', function (v) { update(it, 'counter', v, true); })));
+        box.appendChild(row('الحجم', slider(1.5, 5, 0.1, it.size, function (v) { update(it, 'size', v); })));
+        box.appendChild(row('لون الغطاء والتوهّج', swatches(it.color, function (c) { update(it, 'color', c, true); })));
+        var demo = el('div', 'st-actions');
+        demo.appendChild(button('جرّب سقوط هدايا', 'st-btn primary', function () { O.jarDemo(6); }));
+        demo.appendChild(button('فرّغ التجربة', 'st-btn', function () { O.jarClearDemo(); }));
+        box.appendChild(demo);
+        box.appendChild(el('div', 'st-hint', 'يتعبّى بصور الهدايا اللي توصل بالبث (آخر 70 صورة)، والهدايا الجديدة تطيح من فوق. التجربة بالمعاينة هنا بس.'));
+    }
+
     function propsPane(it) {
         var card = el('div', 'st-card');
         var head = el('div', 'st-props-head');
@@ -529,6 +543,7 @@
         else if (it.type === 'top') topProps(it, card);
         else if (it.type === 'goal') goalProps(it, card);
         else if (it.type === 'counter') counterProps(it, card);
+        else if (it.type === 'jar') jarProps(it, card);
         var actions = el('div', 'st-actions');
         actions.appendChild(button(it.hidden ? 'إظهار' : 'إخفاء', 'st-btn', function () { it.hidden = !it.hidden; commit(); renderCanvas(); renderSide(); }));
         actions.appendChild(button('تكرار', 'st-btn', function () { duplicate(it); }));

@@ -16,6 +16,9 @@
  * - الأدوات: نص (خطوط FONTS، تأثيرات TEXT_STYLES، حركة ANIMS)، توب (SECTIONS:
  *   المكبّسين/الداعمين/المتفاعلين/الشير بتصاميم DESIGNS)، هدف (goal) وعدّادات
  *   (counter) من إجماليات البث (METRICS).
+ * - «وعاء الهدايا» (jar): صور آخر الهدايا تطيح فيه وتتكدّس، من
+ *   GET /api/stream/recent-gifts?since=<seq> كل JAR_POLL_MS (طلب خفيف — الجديد
+ *   بس). الهدايا اللي كانت موجودة قبل فتح الصفحة تطلع مستقرة بدون سقوط.
  * - البيانات من GET /api/stream/session-stats (backend/stats/live-session-stats.js)
  *   كل POLL_MS والصفحة ظاهرة، وبس الأقسام اللي التصميم يحتاجها. آخر نتيجة
  *   بـsessionStorage عشان ما تفضى العناصر لحظة الانتقال بين الصفحات.
@@ -38,6 +41,11 @@
 
     var STORE_KEY = 'agp:stream-overlay';
     var STATS_CACHE_KEY = 'agp:stream-overlay:stats';
+    var JAR_CACHE_KEY = 'agp:stream-overlay:jar';
+    var JAR_POLL_MS = 3000;
+    var JAR_CAP = 70;          // أقصى عدد صور بالوعاء (7 أعمدة × 10 صفوف)
+    var JAR_COLS = 7;
+    var JAR_REPEAT_MAX = 10;   // هدية مكررة ×50 تطلع 10 صور بالكثير
     var CONN_KEY = 'agp:agp-stream-connection'; // نفس مفتاح زر «اتصل بالبث» بمكتبة الألعاب
     var BACKEND_WS_URL = 'wss://project-testing-akds.onrender.com';
     var LINK_CHECK_MS = 5000;
@@ -151,6 +159,15 @@
         { name: 'الأول', count: 12400, diamonds: 5200 }, { name: 'الثاني', count: 8100, diamonds: 3100 },
         { name: 'الثالث', count: 4600, diamonds: 1450 }, { name: 'الرابع', count: 2100, diamonds: 600 }, { name: 'الخامس', count: 900, diamonds: 210 }
     ];
+    // صور هدايا تجريبية للمعاينة (مرسومة بالكود)
+    var SAMPLE_GIFT_SVGS = [
+        '<circle cx="20" cy="15" r="9" fill="#e53950"/><circle cx="15" cy="13" r="5" fill="#ff6b81"/><circle cx="25" cy="13" r="5" fill="#ff6b81"/><path d="M20 24v13" stroke="#3aa556" stroke-width="3"/><path d="M20 31c-5-1-7-4-7-6 4 0 6 2 7 6z" fill="#3aa556"/>',
+        '<path d="M20 35S5 26 5 15a8 8 0 0115-4 8 8 0 0115 4c0 11-15 20-15 20z" fill="#ff4d8d"/>',
+        '<path d="M20 3l5 11 12 1-9 8 3 12-11-6-11 6 3-12-9-8 12-1z" fill="#ffd54a"/>',
+        '<path d="M5 30h30l3-18-10 8-8-14-8 14-10-8z" fill="#ffc83d"/><rect x="5" y="31" width="30" height="5" rx="2" fill="#e0a21b"/>',
+        '<path d="M10 6h20l8 10-18 20L2 16z" fill="#4dd8ff"/><path d="M10 6l4 10h12l4-10M2 16h36" stroke="#b8f1ff" stroke-width="1.5" fill="none"/>',
+        '<rect x="6" y="16" width="28" height="20" rx="3" fill="#9b5cf6"/><rect x="4" y="11" width="32" height="7" rx="2" fill="#b78bff"/><path d="M20 11v25" stroke="#ffd54a" stroke-width="4"/><path d="M20 11c-4-7-11-6-9-1 1 2 5 1 9 1 4 0 8 1 9-1 2-5-5-6-9 1z" fill="#ffd54a"/>'
+    ].map(function (svg) { return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">' + svg + '</svg>'); });
     var SAMPLE_TOTALS = { likes: 4320, diamonds: 860, gifts: 57, follows: 23, shares: 12, comments: 340, peakViewers: 185 };
 
     /* ---------------- الحالة والتخزين ---------------- */
@@ -308,7 +325,9 @@
         return keys.length ? keys.map(function (k) { return k + ':' + secs[k]; }).join(',') : 'likers:0';
     }
 
-    function dataWanted() { return Boolean(needs()) && (STUDIO || state.enabled); }
+    function hasJar() { return activeItems().some(function (it) { return it.type === 'jar'; }); }
+
+    function dataWanted() { return (Boolean(needs()) || hasJar()) && (STUDIO || state.enabled); }
 
     function fetchStats() {
         var q = needs();
@@ -343,6 +362,71 @@
             pollTimer = null;
         } else if (want && needs() !== lastNeeds) {
             fetchStats(); // أداة جديدة تحتاج قسم ما طلبناه
+        }
+    }
+
+    /* ---------------- وعاء الهدايا: البيانات ---------------- */
+
+    // icons = صورة لكل هدية (المكررة تتفرّد لين JAR_REPEAT_MAX)، الأقدم أول
+    var jar = loadJarCache();
+    var jarTimer = null;
+    var jarInflight = false;
+    var jarDemo = [];       // سقوط تجريبي بالاستوديو فقط (ما ينحفظ)
+    var jarNodes = [];      // عناصر الوعاء المرسومة حالياً (طبقة البث أو معاينة الاستوديو)
+
+    function loadJarCache() {
+        try {
+            var c = JSON.parse(sessionStorage.getItem(JAR_CACHE_KEY) || 'null');
+            if (c && Array.isArray(c.icons)) return { sid: c.sid || 0, seq: Number(c.seq) || 0, icons: c.icons, totals: c.totals || null };
+        } catch (e) { /* ignore */ }
+        return { sid: 0, seq: 0, icons: [], totals: null };
+    }
+
+    function expandGifts(gifts) {
+        var out = [];
+        gifts.forEach(function (g) {
+            var n = Math.min(JAR_REPEAT_MAX, Math.max(1, Number(g.count) || 1));
+            for (var j = 0; j < n; j++) out.push({ k: g.seq + '-' + j, img: typeof g.img === 'string' && /^https:\/\//.test(g.img) ? g.img : null, name: String(g.name || '') });
+        });
+        return out;
+    }
+
+    function fetchJar() {
+        if (jarInflight || document.visibilityState === 'hidden') return;
+        var t = token();
+        if (!t) return;
+        jarInflight = true;
+        fetch(apiBase() + '/api/stream/recent-gifts?since=' + (jar.sid ? jar.seq : 0), { headers: { 'Authorization': 'Bearer ' + t } })
+            .then(function (res) { return res.json(); })
+            .then(function (d) {
+                if (!d || !d.success) return;
+                var fresh = [];
+                if (d.sid !== jar.sid) {
+                    // أول مرة أو بث جديد: اللي موجود يطلع مستقر بدون سقوط
+                    jar.icons = expandGifts(d.gifts || []);
+                } else {
+                    fresh = expandGifts(d.gifts || []);
+                    jar.icons = jar.icons.concat(fresh);
+                }
+                if (jar.icons.length > JAR_CAP) jar.icons = jar.icons.slice(jar.icons.length - JAR_CAP);
+                jar.sid = d.sid;
+                jar.seq = Number(d.seq) || 0;
+                jar.totals = d.totals || null;
+                try { sessionStorage.setItem(JAR_CACHE_KEY, JSON.stringify(jar)); } catch (e) { /* ignore */ }
+                paintJars(fresh.map(function (x) { return x.k; }));
+            })
+            .catch(function () { /* نحاول بالدورة الجاية */ })
+            .then(function () { jarInflight = false; });
+    }
+
+    function syncJarPolling() {
+        var want = hasJar() && (STUDIO || state.enabled);
+        if (want && !jarTimer) {
+            fetchJar();
+            jarTimer = setInterval(fetchJar, JAR_POLL_MS);
+        } else if (!want && jarTimer) {
+            clearInterval(jarTimer);
+            jarTimer = null;
         }
     }
 
@@ -461,7 +545,7 @@
         if (link.state === 'denied') return link.msg || 'الاتصال بالبث مرفوض';
         if (link.state === 'ended') return 'البث انتهى — اتصل من جديد من مكتبة الألعاب';
         if (link.state === 'error') return 'انقطع الاتصال بالبث — نعيد المحاولة…';
-        if (!needs()) return 'أضف أداة بيانات (توب، هدف، عدّاد) عشان نتصل بالبث';
+        if (!needs() && !hasJar()) return 'أضف أداة بيانات (توب، هدف، عدّاد، وعاء) عشان نتصل بالبث';
         return 'جاري الاتصال بالبث…';
     }
 
@@ -686,8 +770,114 @@
             if (it.type === 'top') fillTop(n, it, preview);
             else if (it.type === 'goal') fillGoal(n, it, preview);
             else if (it.type === 'counter') fillCounter(n, it, preview);
+            else if (it.type === 'jar') buildJar(n, it, preview);
         }
         return n;
+    }
+
+    /* ---------------- وعاء الهدايا: الرسم ---------------- */
+
+    /** رقم شبه عشوائي ثابت لكل صورة (ميلان وإزاحة ما يتغيّرون مع كل رسم). */
+    function hash(str) {
+        var h = 2166136261;
+        for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+        return ((h >>> 0) % 1000) / 1000;
+    }
+
+    function jarIcon(ic) {
+        var g = el('span', 'agp-so-gi');
+        var r = Math.round((hash(ic.k + 'r') - 0.5) * 60);
+        g.style.setProperty('--r', r + 'deg');
+        if (ic.img) {
+            var img = document.createElement('img');
+            img.alt = '';
+            img.draggable = false;
+            img.referrerPolicy = 'no-referrer';
+            img.onerror = function () { g.textContent = ''; g.classList.add('fb'); g.textContent = (ic.name || '?').charAt(0); };
+            img.src = ic.img;
+            g.appendChild(img);
+        } else {
+            g.classList.add('fb');
+            g.textContent = (ic.name || '?').charAt(0);
+        }
+        return g;
+    }
+
+    /** يرتّب الصور من تحت لفوق (7 بالصف، صفوف متداخلة شوي) بإزاحة وميلان ثابتين. */
+    function layoutJar(pile, list) {
+        var W = 8.06, G = 1.15, STEP = G * 0.82;
+        var span = (W - G) / (JAR_COLS - 1);
+        list.forEach(function (ic, i) {
+            var node = pile._icons[ic.k];
+            var row = Math.floor(i / JAR_COLS), col = i % JAR_COLS;
+            var x = col * span + (row % 2 ? span / 2 : 0) + (hash(ic.k + 'x') - 0.5) * 0.3;
+            node.style.left = clamp(x, 0, W - G) + 'em';
+            node.style.bottom = (row * STEP + (hash(ic.k + 'y') - 0.5) * 0.12) + 'em';
+        });
+    }
+
+    /** يحدّث صور الوعاء: يشيل اللي طلع ويضيف الجديد (fresh = يطيح من فوق). */
+    function paintJarNode(node, fresh, preview) {
+        var pile = node.querySelector('.agp-so-jpile');
+        if (!pile) return;
+        var real = jar.icons;
+        var ghost = !real.length && !jarDemo.length && preview;
+        var list = real.concat(preview ? jarDemo : []);
+        if (ghost) {
+            list = [];
+            for (var i = 0; i < 24; i++) list.push({ k: 'sample-' + i, img: SAMPLE_GIFT_SVGS[i % SAMPLE_GIFT_SVGS.length], name: '' });
+        }
+        if (list.length > JAR_CAP) list = list.slice(list.length - JAR_CAP);
+        pile.classList.toggle('agp-so-ghost', ghost);
+        pile._icons = pile._icons || {};
+        var keep = {};
+        list.forEach(function (ic) { keep[ic.k] = true; });
+        Object.keys(pile._icons).forEach(function (k) {
+            if (!keep[k]) { pile.removeChild(pile._icons[k]); delete pile._icons[k]; }
+        });
+        var delay = 0;
+        list.forEach(function (ic) {
+            if (pile._icons[ic.k]) return;
+            var g = jarIcon(ic);
+            if (fresh && fresh.indexOf(ic.k) !== -1) {
+                g.classList.add('drop');
+                g.style.animationDelay = delay + 'ms';
+                delay = Math.min(delay + 140, 2000);
+            }
+            pile._icons[ic.k] = g;
+            pile.appendChild(g);
+        });
+        layoutJar(pile, list);
+        var it = node._item;
+        var cnt = node.querySelector('.agp-so-jcount');
+        if (cnt && it) {
+            var tt = jar.totals || (preview ? { diamonds: 860, gifts: 57 } : { diamonds: 0, gifts: 0 });
+            cnt.textContent = '';
+            if (it.counter === 'gifts') { cnt.appendChild(icon('gift')); cnt.appendChild(el('span', null, fmt(tt.gifts) + ' هدية')); }
+            else { cnt.appendChild(icon('diamond')); cnt.appendChild(el('span', null, fmt(tt.diamonds))); }
+        }
+    }
+
+    function paintJars(fresh) {
+        jarNodes = jarNodes.filter(function (j) { return j.node.isConnected; });
+        jarNodes.forEach(function (j) { paintJarNode(j.node, fresh, j.preview); });
+    }
+
+    function buildJar(n, it, preview) {
+        n.className += ' agp-so-jar';
+        n._item = it;
+        title(n, it.title);
+        var wrap = el('div', 'agp-so-jwrap');
+        wrap.appendChild(el('div', 'agp-so-jlid'));
+        wrap.appendChild(el('div', 'agp-so-jneck'));
+        var glass = el('div', 'agp-so-jglass');
+        glass.appendChild(el('div', 'agp-so-jpile'));
+        wrap.appendChild(glass);
+        n.appendChild(wrap);
+        if (it.counter !== 'none') n.appendChild(el('div', 'agp-so-jcount'));
+        jarNodes = jarNodes.filter(function (j) { return j.node.isConnected; });
+        jarNodes.push({ node: n, preview: preview });
+        paintJarNode(n, null, preview);
     }
 
     function isDataItem(it) { return it.type === 'top' || it.type === 'goal' || it.type === 'counter'; }
@@ -707,6 +897,7 @@
         }
         if (type === 'goal') return Object.assign(base, { metric: 'likes', title: 'هدف التكبيسات', target: 10000, autoNext: true, design: 'bar', size: 3, color: '#ff4d6d' });
         if (type === 'counter') return Object.assign(base, { metrics: ['likes', 'diamonds', 'follows'], title: '', design: 'pills', size: 3, color: '#ffd54a' });
+        if (type === 'jar') return Object.assign(base, { title: 'وعاء الهدايا', counter: 'diamonds', size: 2.6, color: '#ff5fa8' });
         return base;
     }
 
@@ -735,6 +926,7 @@
             });
         }
         syncPolling();
+        syncJarPolling();
         syncLink();
     }
 
@@ -744,7 +936,7 @@
         var key = keyFor(state.template, orient());
         activeItems().forEach(function (it) {
             var old = nodes[it.id];
-            if (!old || !isDataItem(it)) return;
+            if (!old || !isDataItem(it) || it.type === 'jar') return;
             var n = buildItem(it, frameRect);
             stage.replaceChild(n, old);
             nodes[it.id] = n;
@@ -847,6 +1039,22 @@
         '.agp-so-rpct{position:relative;font-weight:900;font-size:1.2em;color:#fff}',
         '.agp-so-done .agp-so-gfill,.agp-so-done.agp-so-goal .agp-so-ring{animation:agp-so-pulse 1.2s ease-in-out infinite}',
         '@keyframes agp-so-sheen{from{background-position:-100% 0}to{background-position:200% 0}}',
+        /* وعاء الهدايا */
+        '.agp-so-jar{color:#fff;display:flex;flex-direction:column;align-items:center;gap:.3em;text-shadow:0 .04em .12em rgba(0,0,0,.85)}',
+        '.agp-so-jwrap{position:relative;width:9em;filter:drop-shadow(0 .3em .6em rgba(0,0,0,.45))}',
+        '.agp-so-jlid{position:relative;z-index:2;width:6.8em;height:1.2em;margin:0 auto -.15em;border-radius:.4em;background:repeating-linear-gradient(90deg,rgba(0,0,0,.16) 0 .1em,transparent .1em .42em),linear-gradient(180deg,color-mix(in srgb,var(--agp-so-c) 55%,#fff),var(--agp-so-c) 50%,color-mix(in srgb,var(--agp-so-c) 65%,#000));box-shadow:inset 0 .08em 0 rgba(255,255,255,.55),0 .08em .25em rgba(0,0,0,.45)}',
+        '.agp-so-jneck{width:6.3em;height:.55em;margin:0 auto;border:.1em solid rgba(255,255,255,.7);border-bottom:0;border-radius:.15em .15em 0 0;background:rgba(255,255,255,.07);box-sizing:border-box}',
+        '.agp-so-jglass{position:relative;width:9em;height:10.5em;box-sizing:border-box;border:.12em solid rgba(255,255,255,.78);border-radius:1.5em 1.5em 2.1em 2.1em;overflow:hidden;background:linear-gradient(90deg,rgba(255,255,255,.12),rgba(255,255,255,.02) 35%,rgba(255,255,255,.02) 70%,rgba(255,255,255,.1));box-shadow:0 0 .8em color-mix(in srgb,var(--agp-so-c) 55%,transparent),inset 0 0 1em color-mix(in srgb,var(--agp-so-c) 30%,transparent)}',
+        '.agp-so-jglass::after{content:"";position:absolute;z-index:3;top:.9em;right:.55em;width:.32em;height:62%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.8),rgba(255,255,255,0));pointer-events:none}',
+        '.agp-so-jglass::before{content:"";position:absolute;z-index:3;left:12%;right:12%;bottom:.25em;height:.9em;border-radius:50%;border-top:.07em solid rgba(255,255,255,.35);pointer-events:none}',
+        '.agp-so-jpile{position:absolute;left:.35em;right:.35em;top:.4em;bottom:.35em}',
+        '.agp-so-gi{position:absolute;width:1.15em;height:1.15em;transform:rotate(var(--r,0deg));transition:left .5s ease,bottom .5s ease;filter:drop-shadow(0 .05em .08em rgba(0,0,0,.55))}',
+        '.agp-so-gi img{width:100%;height:100%;object-fit:contain;display:block}',
+        '.agp-so-gi.fb{display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:.55em;width:2.1em;height:2.1em;font-weight:900;color:#1a1206;text-shadow:none;background:radial-gradient(circle at 35% 30%,#fff,var(--agp-so-c))}',
+        '.agp-so-gi.drop{animation:agp-so-drop .95s cubic-bezier(.35,0,.45,1) both}',
+        '@keyframes agp-so-drop{0%{transform:translateY(-13em) rotate(0) scale(1.35);opacity:0}12%{opacity:1}68%{transform:translateY(0) rotate(var(--r,0deg)) scale(1)}80%{transform:translateY(-.4em) rotate(var(--r,0deg))}100%{transform:translateY(0) rotate(var(--r,0deg))}}',
+        '.agp-so-jcount{display:inline-flex;align-items:center;gap:.3em;margin-top:.15em;padding:.25em .9em;border-radius:999px;font-weight:900;direction:ltr;background:rgba(10,12,24,.7);border:.07em solid color-mix(in srgb,var(--agp-so-c) 60%,transparent);box-shadow:0 .1em .35em rgba(0,0,0,.45)}',
+        '.agp-so-jcount .agp-so-ic{color:var(--agp-so-c)}',
         /* عدّادات */
         '.agp-so-counter{color:#fff;display:flex;flex-direction:column;align-items:center;gap:.35em;text-shadow:0 .04em .12em rgba(0,0,0,.85)}',
         '.agp-so-cbox{display:flex;gap:.45em;align-items:stretch;justify-content:center}',
@@ -894,19 +1102,24 @@
             render();
         } else {
             syncPolling();
+            syncJarPolling();
             syncLink();
         }
         // اتصال/قطع من زر المكتبة، واتصال اللعبة نفسها
         setInterval(syncLink, LINK_CHECK_MS);
         var A = window.AymanGamesPlatform;
         if (A && A.events && typeof A.events.on === 'function') A.events.on('stream:statusChanged', function () { setTimeout(syncLink, 0); });
-        document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && pollTimer) fetchStats(); });
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState !== 'visible') return;
+            if (pollTimer) fetchStats();
+            if (jarTimer) fetchJar();
+        });
         // تعديل من الاستوديو بتبويب ثاني
         window.addEventListener('storage', function (e) {
             if (e.key === CONN_KEY) { syncLink(); return; }
             if (e.key !== STORE_KEY) return;
             state = load();
-            if (layer) render(); else { syncPolling(); syncLink(); }
+            if (layer) render(); else { syncPolling(); syncJarPolling(); syncLink(); }
         });
     }
 
@@ -916,7 +1129,19 @@
         SECTIONS: SECTIONS, METRICS: METRICS, DEFAULT_FONT: DEFAULT_FONT,
         getState: function () { return state; },
         /** بعد أي تعديل على getState(): يحفظ ويحدّث الرسم والبيانات. */
-        commit: function () { save(); if (layer) render(); else { syncPolling(); syncLink(); } },
+        commit: function () { save(); if (layer) render(); else { syncPolling(); syncJarPolling(); syncLink(); } },
+        /** الاستوديو: هدايا تجريبية تطيح بالوعاء (بالمعاينة فقط، ما تنحفظ). */
+        jarDemo: function (n) {
+            var fresh = [];
+            for (var i = 0; i < (n || 6); i++) {
+                var k = 'demo-' + Date.now().toString(36) + '-' + i;
+                jarDemo.push({ k: k, img: SAMPLE_GIFT_SVGS[Math.floor(Math.random() * SAMPLE_GIFT_SVGS.length)], name: '' });
+                fresh.push(k);
+            }
+            if (jarDemo.length > JAR_CAP) jarDemo = jarDemo.slice(jarDemo.length - JAR_CAP);
+            paintJars(fresh);
+        },
+        jarClearDemo: function () { jarDemo = []; paintJars(null); },
         tpl: tpl, keyFor: keyFor, frameIn: frameIn, posOf: posOf, place: place, orient: orient,
         fontOf: fontOf, loadFont: loadFont, fontStack: fontStack,
         buildItem: buildItem, newItem: newItem, isDataItem: isDataItem, icon: icon,

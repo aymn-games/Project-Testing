@@ -166,6 +166,7 @@ var ROUTES = [
   { method: 'GET', path: '/api/stream/is-live', requireAuth: true, handler: handleStreamIsLive },
   // زر «عرض إحصائيات البث» بمكتبة الألعاب — ملخص البث الحالي/الأخير (بالذاكرة).
   { method: 'GET', path: '/api/stream/session-stats', requireAuth: true, handler: handleStreamSessionStats },
+  { method: 'GET', path: '/api/stream/recent-gifts', requireAuth: true, handler: handleStreamRecentGifts },
   // زر «دخول غرفة» بالهيدر: أي لعبة فيها روم بهذا الرقم؟ (بدون حساب — الجوالات تدخل بدون تسجيل)
   { method: 'GET', path: '/api/rooms/lookup', requireAuth: false, handler: handleRoomLookup },
   // تفعيل/إيقاف الدخولية ذاتياً — نفس نمط handleEquipFrame (صاحب الجلسة فقط).
@@ -882,6 +883,23 @@ function handleStreamSessionStats(req, res, body, user) {
   }).then(function (r) {
     sendJson(res, 200, { success: true, stats: r.stats, streamer: r.streamer });
   });
+}
+
+/**
+ * GET /api/stream/recent-gifts?since=<seq> → { success, sid, seq, gifts: [...], totals, live } (sid = معرّف البث)
+ * آخر الهدايا (حتى 72) بعد seq — لوعاء الهدايا بأوفرلي البث (js/agp-stream-overlay.js).
+ * طلب خفيف (بدون صور بروفايل) يتكرر كل كم ثانية. نفس قواعد اليوزر بـsession-stats.
+ */
+function handleStreamRecentGifts(req, res, body, user) {
+  var canAny = user.role === 'admin' || Boolean(user.permissions && user.permissions.full_game_access);
+  var requested = canAny ? tiktokLiveCheck.normalize(getQueryParam(req, 'username')) : null;
+  var username = requested || (user.tiktok_verified ? tiktokLiveCheck.normalize(user.tiktok_username) : null);
+  if (!username) {
+    sendJson(res, 400, { success: false, error: 'tiktok_not_linked' });
+    return;
+  }
+  var r = liveSessionStats.getRecentGifts(username, getQueryParam(req, 'since'));
+  sendJson(res, 200, r ? { success: true, sid: r.sid, seq: r.seq, gifts: r.gifts, totals: r.totals, live: r.live } : { success: true, sid: 0, seq: 0, gifts: [], totals: null, live: false });
 }
 
 /**

@@ -45,6 +45,7 @@ var DEFAULT_TOP = 10;
 var AVATAR_CACHE_MAX = 500;
 var AVATAR_CONCURRENCY = 8;
 var FLUSH_MS = 60 * 1000;
+var RECENT_GIFTS_MAX = 72;                    // وعاء الهدايا بالأوفرلي يعرض آخر كذا هدية
 
 // القسم -> الحقل اللي نرتّب عليه (تنازلي). المشاهدين: مدة التواجد (watchMs)
 // = من أول ما شفناه بالبث (دخول/تعليق/لايك/هدية/شير) لآخر مرة شفناه —
@@ -81,7 +82,10 @@ function newSession(username, roomId, connectionId) {
     endedAt: null,
     totals: { likes: 0, diamonds: 0, gifts: 0, shares: 0, comments: 0, follows: 0, joins: 0, peakViewers: 0, totalViewers: 0 },
     lists: {},
-    avatars: new Map() // id -> روابط الصورة (مشتركة بين كل الأقسام)
+    avatars: new Map(), // id -> روابط الصورة (مشتركة بين كل الأقسام)
+    // آخر الهدايا بالترتيب (وعاء الهدايا) — seq يزيد مع كل هدية عشان الأوفرلي يطلب الجديد بس
+    recentGifts: [],
+    giftSeq: 0
   };
   Object.keys(SECTIONS).forEach(function (k) { s.lists[k] = new Map(); });
   return s;
@@ -237,6 +241,32 @@ function recordGift(username, connectionId, data) {
   s.totals.diamonds += diamonds;
   var r = rec(s, s.lists.gifters, data);
   if (r) { r.count += repeat; r.diamonds += diamonds; }
+  s.giftSeq++;
+  s.recentGifts.push({
+    seq: s.giftSeq, name: String(data.giftName || ''), img: typeof data.giftImage === 'string' ? data.giftImage : null,
+    count: repeat, diamonds: diamonds, user: String(data.name || ''), at: Date.now()
+  });
+  if (s.recentGifts.length > RECENT_GIFTS_MAX) s.recentGifts.splice(0, s.recentGifts.length - RECENT_GIFTS_MAX);
+}
+
+/**
+ * آخر الهدايا (وعاء الهدايا) بعد seq معيّن، أو null لو ما فيه بث.
+ * sid = معرّف البث (وقت بدايته) — يتغيّر = بث جديد، فالأوفرلي يفرّغ الوعاء.
+ * @returns {{sid: number, seq: number, gifts: Array, totals: {gifts: number, diamonds: number}, live: boolean}|null}
+ */
+function getRecentGifts(username, since) {
+  var s = _sessions.get(normalize(username));
+  if (!s) return null;
+  var after = Number(since) || 0;
+  // seq أكبر من آخر هدية = بث جديد (أو رجوع بعد إعادة تشغيل) — نرجّع الكل
+  if (after > s.giftSeq) after = 0;
+  return {
+    sid: s.startedAt,
+    seq: s.giftSeq,
+    gifts: s.recentGifts.filter(function (g) { return g.seq > after; }),
+    totals: { gifts: s.totals.gifts, diamonds: s.totals.diamonds },
+    live: !s.endedAt
+  };
 }
 
 function recordComment(username, connectionId, data) {
@@ -408,6 +438,7 @@ module.exports = {
   recordViewers: recordViewers,
   markEnded: markEnded,
   getSummary: getSummary,
+  getRecentGifts: getRecentGifts,
   flush: flush,
   cachedAvatar: cachedAvatar
 };
