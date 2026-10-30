@@ -28,6 +28,9 @@
  *   الاحتياطي) يظهر اسمه بمكان صندوق السؤال، وله وحده صلاحية اختيار
  *   الحرف التالي بكتابته مباشرة بالشات؛ المضيف يقدر دائماً يتجاوز هذا
  *   ويضغط أي خلية غير مفتوحة يدوياً في أي وقت.
+ * - الفوز بالجولة: كل فريق يوصّل جهتيه بسلسلة خلايا متجاورة من لونه
+ *   (متعرّجة عادي، ولو لمست جهة الخصم عادي) -- الفريق الأول (البنفسجي) من
+ *   فوق لتحت، والفريق الثاني (الأزرق) من اليسار لليمين (isConnected).
  * - المباراة "Best of 3": أول فريق يفوز بجولتين (خط متصل) يحسم المباراة
  *   فوراً بدون ما تُلعب الجولة الثالثة لو صارت غير ضرورية.
  * - لو امتلأت كل خلايا الرقعة بدون أي خط متصل لأي فريق: تُعاد نفس الجولة
@@ -176,15 +179,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var idx = 0;
         var leftEdge = [], rightEdge = [], topEdge = [], bottomEdge = [];
         for (var r = 0; r < rows; r++) {
-            var isOffsetRow = (r % 2 === 1);
             for (var c = 0; c < cols; c++) {
                 var pt = hexCenter(r, c);
                 centers.push(pt);
                 layout.push(toLayout(pt));
-                // حدود اليمين/اليسار تقتصر على الصفوف المتوازية (غير المُزاحة)،
-                // لأن الصفوف المُزاحة لا تصل فعلياً للحد الخارجي الحقيقي.
-                if (!isOffsetRow && c === 0) leftEdge.push(idx);
-                if (!isOffsetRow && c === cols - 1) rightEdge.push(idx);
+                // أول وآخر خلية بكل صف تلامس جهة اليسار/اليمين (المُزاحة وغير المُزاحة).
+                if (c === 0) leftEdge.push(idx);
+                if (c === cols - 1) rightEdge.push(idx);
                 if (r === 0) topEdge.push(idx);
                 if (r === rows - 1) bottomEdge.push(idx);
                 idx++;
@@ -228,8 +229,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
         return false;
     }
+    // كل فريق له اتجاه: الفريق الأول (البنفسجي) يوصل من فوق لتحت، والفريق
+    // الثاني (الأزرق) من اليسار لليمين. المسار أي سلسلة خلايا متجاورة من
+    // لون الفريق -- متعرّج أو يلمس جهة الفريق الثاني عادي.
     function isConnected(cellStates, team) {
-        return pathExists(cellStates, team, LEFT_EDGE, RIGHT_EDGE) || pathExists(cellStates, team, TOP_EDGE, BOTTOM_EDGE);
+        return (team === TEAM2)
+            ? pathExists(cellStates, team, LEFT_EDGE, RIGHT_EDGE)
+            : pathExists(cellStates, team, TOP_EDGE, BOTTOM_EDGE);
     }
 
     function shuffleArray(arr) {
@@ -1317,7 +1323,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<span class="lc-dot lc-dot-xl"></span>' +
                 '<div class="lc-gteam-text">' +
                     '<span class="lc-gteam-name">' + escapeHtml(teamName(team)) + '</span>' +
-                    '<span class="lc-gteam-meta">' + getTeamPlayers(team).length + ' لاعب · <span class="lc-pips">' + pips + '</span></span>' +
+                    '<span class="lc-gteam-meta">' + (team === TEAM2 ? 'يوصّل من اليسار لليمين' : 'يوصّل من فوق لتحت') + ' · ' + getTeamPlayers(team).length + ' لاعب · <span class="lc-pips">' + pips + '</span></span>' +
                 '</div>' +
             '</div>' +
             '<div class="lc-gteam-side">' +
