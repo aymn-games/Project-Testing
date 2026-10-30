@@ -286,14 +286,16 @@ body.lc-active a { color: var(--lc-accent); }
 .lc-board-card { position: relative; overflow: hidden; border-radius: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 30px 80px rgba(0,0,0,.35); }
 .lc-board-halo { position: absolute; top: -140px; left: 50%; width: 700px; height: 280px; margin-left: -350px; border-radius: 50%; background: rgba(167,139,250,.16); filter: blur(44px); pointer-events: none; }
 .lc-board { position: relative; flex-shrink: 0; }
-/* توهج أطراف الخلية: خط ضوء ناعم على الحواف المتعرّجة (خلف الخلايا فيبان نصه برّا) --
-   هالة مغبّشة عريضة + خط مضيء رفيع. فوق وتحت بلون الفريق الأول، يمين ويسار بلون الثاني */
-.lc-board-edges { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.lc-board-edges path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.lc-edge-halo { filter: blur(14px); opacity: .55; animation: lc-edge-breathe 3.2s ease-in-out infinite alternate; }
-.lc-edge-wide { stroke-width: 34; }
-.lc-edge-line { stroke-width: 9; opacity: .95; }
-@keyframes lc-edge-breathe { from { opacity: .4; } to { opacity: .7; } }
+/* توهج ناعم وهادي على أطراف مربع الرقعة (من الداخل): فوق وتحت بلون الفريق الأول، يمين ويسار بلون الفريق الثاني */
+.lc-board-glow { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; overflow: hidden; animation: lc-glow-breathe 4s ease-in-out infinite alternate; }
+.lc-board-glow span { position: absolute; }
+.lc-glow-top, .lc-glow-bottom { left: 0; right: 0; height: 140px; }
+.lc-glow-top { top: 0; background: linear-gradient(to bottom, var(--g1), transparent); box-shadow: inset 0 2px 0 var(--g1l); }
+.lc-glow-bottom { bottom: 0; background: linear-gradient(to top, var(--g1), transparent); box-shadow: inset 0 -2px 0 var(--g1l); }
+.lc-glow-right, .lc-glow-left { top: 0; bottom: 0; width: 140px; }
+.lc-glow-right { right: 0; background: linear-gradient(to left, var(--g2), transparent); box-shadow: inset -2px 0 0 var(--g2l); }
+.lc-glow-left { left: 0; background: linear-gradient(to right, var(--g2), transparent); box-shadow: inset 2px 0 0 var(--g2l); }
+@keyframes lc-glow-breathe { from { opacity: .75; } to { opacity: 1; } }
 .lc-hex { position: absolute; padding: 5px; transition: background .25s; }
 .lc-hex-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font: 700 var(--lc-hexfont, 80px)/1 var(--lc-font); transition: background .25s, color .25s; }
 .lc-hex-free { background: rgba(167,139,250,.3); cursor: pointer; }
