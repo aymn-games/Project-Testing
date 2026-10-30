@@ -116,6 +116,8 @@
   .st-fbtn span:first-child { font-size: 21px; line-height: 1.5; }
   .st-fbtn span:last-child { font-size: 11px; color: var(--muted); }
 
+  .st-pip-host video { display: block; width: 100%; max-height: 220px; margin: 8px 0; border-radius: 12px; background: #000; object-fit: contain; }
+
   /* آيباد عمودي وجوال: المعاينة فوق والقائمة تحت */
   @media (max-width: 900px) {
     .st-main { grid-template-columns: 1fr; grid-template-rows: minmax(300px, 52vh) 1fr; }
@@ -144,6 +146,7 @@
 </div>
 <script src="auth/auth-client.js"></script>
 <script src="js/agp-stream-overlay.js"></script>
+<script src="js/agp-stream-pip.js"></script>
 <script src="js/agp-stream-studio.js"></script>
 </body>
 </html>

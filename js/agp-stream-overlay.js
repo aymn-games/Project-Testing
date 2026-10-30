@@ -1161,6 +1161,10 @@
             paintJars(fresh);
         },
         jarClearDemo: function () { jarDemo = []; paintJars(null); },
+        /** للنافذة العائمة (js/agp-stream-pip.js): صور الوعاء والإجماليات. */
+        jarData: function () { return { icons: jar.icons.concat(jarDemo), totals: jar.totals }; },
+        mediaUrl: mediaUrl,
+        SAMPLE_ROWS: SAMPLE_ROWS, SAMPLE_TOTALS: SAMPLE_TOTALS, SAMPLE_GIFT_SVGS: SAMPLE_GIFT_SVGS,
         tpl: tpl, keyFor: keyFor, frameIn: frameIn, posOf: posOf, place: place, orient: orient,
         fontOf: fontOf, loadFont: loadFont, fontStack: fontStack,
         buildItem: buildItem, newItem: newItem, isDataItem: isDataItem, icon: icon,

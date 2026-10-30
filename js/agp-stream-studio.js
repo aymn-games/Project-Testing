@@ -533,6 +533,43 @@
         box.appendChild(el('div', 'st-hint', 'يتعبّى بصور هدايا تيك توك نفسها اللي توصل بالبث (آخر 54 صورة)، والهدايا الجديدة تطيح من فوق. التجربة بالمعاينة هنا بس.'));
     }
 
+    /* ---------------- النافذة العائمة (تجريبي) ---------------- */
+
+    // بطاقة وحدة تبقى بين إعادة رسم القائمة — عشان النافذة المفتوحة ما تنقفل مع أي تعديل
+    var pip = { card: null, host: null, status: null, itemId: null, open: null };
+
+    function pipCard(it) {
+        var P = window.AGPStreamPip;
+        if (!pip.card) {
+            pip.card = el('div', 'st-card');
+            pip.card.appendChild(el('h3', null, 'نافذة عائمة فوق كل التطبيقات (تجريبي)'));
+            pip.card.appendChild(el('div', 'st-hint', 'تطفو فوق أي تطبيق تفتحه وانت تشارك الشاشة. افتحها من هنا وبعدها اطلع لأي تطبيق — لو انتقلت لصفحة ثانية بالموقع تنقفل. شكلها مبسّط وبخلفية، وممكن الآيباد يوقف تحديثها وانت برّا Safari.'));
+            pip.host = el('div', 'st-pip-host');
+            pip.card.appendChild(pip.host);
+            pip.status = el('div', 'st-hint');
+            var actions = el('div', 'st-actions');
+            actions.appendChild(button('افتح النافذة العائمة', 'st-btn primary', function () {
+                if (!pip.open) return;
+                pip.open().then(function () { pip.status.textContent = 'النافذة مفتوحة — تقدر تطلع لأي تطبيق الحين'; }, function () {
+                    pip.status.textContent = 'ما قدرنا نفتح النافذة — جرّب من Safari على الآيباد، وتأكد إن «صورة داخل صورة» مفعّلة بالإعدادات';
+                });
+            }));
+            actions.appendChild(button('اقفلها', 'st-btn', function () { if (P) P.close(); pip.itemId = null; pip.open = null; pip.status.textContent = ''; renderSide(); }));
+            pip.card.appendChild(actions);
+            pip.card.appendChild(pip.status);
+        }
+        if (!P || !P.supported()) {
+            pip.status.textContent = 'جهازك أو متصفحك ما يدعم النافذة العائمة';
+            pip.open = null;
+        } else if (pip.itemId !== it.id && !P.isOpen()) {
+            // نجهّز الفيديو مسبقاً (شغّال وساكت) عشان الضغطة تفتح النافذة على طول
+            pip.open = P.attach(it, pip.host);
+            pip.itemId = it.id;
+            if (!pip.open) pip.status.textContent = 'جهازك أو متصفحك ما يدعم النافذة العائمة';
+        }
+        return pip.card;
+    }
+
     function propsPane(it) {
         var card = el('div', 'st-card');
         var head = el('div', 'st-props-head');
@@ -559,7 +596,7 @@
         layersBox = null;
         side.appendChild(connCard());
         var it = selectedId && find(selectedId);
-        if (it) { side.appendChild(propsPane(it)); return; }
+        if (it) { side.appendChild(propsPane(it)); side.appendChild(pipCard(it)); return; }
         var tabs = el('div', 'st-tabs');
         [['tools', 'الأدوات'], ['layers', 'العناصر (' + S().items.length + ')'], ['screen', 'الشاشة']].forEach(function (t) {
             tabs.appendChild(button(t[1], t[0] === tab ? 'on' : '', function () { tab = t[0]; renderSide(); }));
