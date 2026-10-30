@@ -1202,40 +1202,34 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return initials;
     }
 
-    // الكوب: كوب ساحر بجوانب منحنية وقبّة مدوّرة ومقبض صغير فوق، وحافة
-    // عريضة تحت — بألوان لافندر باستيل ناعمة (بدون أطراف بنفسجية غامقة)
+    // الكوب: مربع (صندوق مقلوب) بزوايا مدوّرة شوي — بنفسجي داكن ناعم
+    // بحدود لافندر خفيفة، وجه علوي أفتح شوي، وحافة سفلية
     var CUP_SVG =
         '<svg class="cp-cup-svg" viewBox="0 0 100 112" aria-hidden="true">' +
             '<defs>' +
-                '<linearGradient id="cp-cup-g" x1="0" y1="0" x2="1" y2="0">' +
-                    '<stop offset="0" stop-color="#a996e3"/><stop offset=".3" stop-color="#cfc3f4"/>' +
-                    '<stop offset=".48" stop-color="#ece6fd"/><stop offset=".72" stop-color="#c6b8f1"/>' +
-                    '<stop offset="1" stop-color="#9e8bdb"/></linearGradient>' +
-                '<linearGradient id="cp-cup-shade" x1="0" y1="0" x2="0" y2="1">' +
-                    '<stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/>' +
-                    '<stop offset="1" stop-color="#5b4a99" stop-opacity=".22"/></linearGradient>' +
+                '<linearGradient id="cp-cup-g" x1="0" y1="0" x2="1" y2="1">' +
+                    '<stop offset="0" stop-color="#3f3463"/><stop offset=".5" stop-color="#2f2650"/>' +
+                    '<stop offset="1" stop-color="#241d3f"/></linearGradient>' +
+                '<linearGradient id="cp-cup-top" x1="0" y1="0" x2="0" y2="1">' +
+                    '<stop offset="0" stop-color="#5a4c8a"/><stop offset="1" stop-color="#43386b"/></linearGradient>' +
                 '<linearGradient id="cp-rim-g" x1="0" y1="0" x2="1" y2="0">' +
-                    '<stop offset="0" stop-color="#9884d6"/><stop offset=".45" stop-color="#f3effe"/>' +
-                    '<stop offset="1" stop-color="#9884d6"/></linearGradient>' +
-                '<linearGradient id="cp-band-g" x1="0" y1="0" x2="1" y2="0">' +
-                    '<stop offset="0" stop-color="#f5b8d0"/><stop offset=".5" stop-color="#fde3ee"/>' +
-                    '<stop offset="1" stop-color="#eaa6c4"/></linearGradient>' +
+                    '<stop offset="0" stop-color="#2a2247"/><stop offset=".5" stop-color="#4a3e75"/>' +
+                    '<stop offset="1" stop-color="#2a2247"/></linearGradient>' +
             '</defs>' +
-            // الجسم: جوانب منحنية تتسع تحت، وقبّة مدوّرة فوق
-            '<path d="M17 92 C19 64 23 38 29 22 C33 12 41 9 50 9 C59 9 67 12 71 22 C77 38 81 64 83 92 Z" fill="url(#cp-cup-g)"/>' +
-            '<path d="M17 92 C19 64 23 38 29 22 C33 12 41 9 50 9 C59 9 67 12 71 22 C77 38 81 64 83 92 Z" fill="url(#cp-cup-shade)" ' +
-                'stroke="rgba(255,255,255,.55)" stroke-width="1.2" stroke-linejoin="round"/>' +
-            // المقبض الصغير فوق
-            '<ellipse cx="50" cy="9" rx="11" ry="3.6" fill="#ddd4fa" stroke="rgba(255,255,255,.6)" stroke-width="1"/>' +
-            '<rect x="44" y="2" width="12" height="7" rx="3.5" fill="url(#cp-rim-g)" stroke="rgba(255,255,255,.6)" stroke-width="1"/>' +
-            // شريط وردي ناعم منحني بالنص + خط رفيع تحته
-            '<path d="M22 60 Q50 66 78 60 L79.6 70 Q50 76.5 20.4 70 Z" fill="url(#cp-band-g)" opacity=".9"/>' +
-            '<path d="M24 46 Q50 51 76 46" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.6" stroke-linecap="round"/>' +
-            // لمعة طويلة ناعمة على اليسار
-            '<path d="M35 20 C31 34 28 56 27 80" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="4.5" stroke-linecap="round"/>' +
-            // الحافة السفلية العريضة
-            '<rect x="10" y="88" width="80" height="15" rx="7.5" fill="url(#cp-rim-g)" stroke="rgba(255,255,255,.6)" stroke-width="1.2"/>' +
-            '<path d="M16 92.5 L84 92.5" stroke="rgba(255,255,255,.65)" stroke-width="1.4" stroke-linecap="round"/>' +
+            // الوجه العلوي (بعمق خفيف)
+            '<path d="M18 16 L26 8 L82 8 L82 16 Z" fill="url(#cp-cup-top)"/>' +
+            '<path d="M82 8 L90 16 L82 16 Z" fill="#3a2f5e"/>' +
+            // الجسم المربع
+            '<rect x="12" y="14" width="78" height="78" rx="9" fill="url(#cp-cup-g)" stroke="rgba(196,181,253,.38)" stroke-width="1.5"/>' +
+            // إطار داخلي ناعم
+            '<rect x="19" y="21" width="64" height="64" rx="6" fill="none" stroke="rgba(196,181,253,.16)" stroke-width="1.5"/>' +
+            // لمعة خفيفة بالزاوية العلوية
+            '<path d="M20 30 L20 22 Q20 20 22 20 L36 20" fill="none" stroke="rgba(237,233,254,.35)" stroke-width="2.5" stroke-linecap="round"/>' +
+            // شريط لافندر خافت قرب الأسفل
+            '<rect x="12" y="66" width="78" height="5" fill="rgba(167,139,250,.22)"/>' +
+            // الحافة السفلية
+            '<rect x="8" y="88" width="86" height="15" rx="6" fill="url(#cp-rim-g)" stroke="rgba(196,181,253,.4)" stroke-width="1.2"/>' +
+            '<path d="M14 92 L88 92" stroke="rgba(237,233,254,.22)" stroke-width="1.2" stroke-linecap="round"/>' +
         '</svg>';
 
     function cupById(id) {
