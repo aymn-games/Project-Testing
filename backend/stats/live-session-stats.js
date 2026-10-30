@@ -19,14 +19,22 @@
  * صغير بالذاكرة. التحميل بالسيرفر لأن صور تيك توك ما تسمح برسمها على
  * Canvas مباشرة من المتصفح (CORS).
  *
- * ملاحظة: الأحداث تنحسب فقط والاستريمر فاتح لعبة متصلة بالبث. إعادة تشغيل
- * السيرفر تمسح الإحصائيات (ما تنحفظ بقاعدة البيانات).
+ * ملاحظة: الأحداث تنحسب فقط والاستريمر متصل بالبث من الموقع (لعبة، أو
+ * أوفرلي البث js/agp-stream-overlay.js بالصفحات اللي ما فيها لعبة)، أو عليه
+ * مراقب سيرفر.
+ *
+ * الحفظ: الجلسة المتغيّرة تنكتب بـSQLite (stats/live-session-store.js) كل
+ * FLUSH_MS وعند SIGTERM، وترجع عند تشغيل السيرفر — فإعادة التشغيل وسط البث
+ * ما تصفّر الأرقام (أقصى خسارة = أحداث آخر FLUSH_MS لو السيرفر طاح فجأة).
+ * بعد الرجوع الجلسة ما لها صاحب اتصال لين أول attach من اتصال جديد بنفس البث.
  */
 
 'use strict';
 
 var db = require('../db/database');
 var tiktokAvatarSync = require('../auth/tiktok-avatar-sync');
+var logger = require('../utils/logger');
+var sessionStore = require('./live-session-store');
 
 var SESSION_GAP_MS = 30 * 60 * 1000;          // انقطاع أطول من كذا بدون Room ID = بث جديد
 var RETENTION_MS = 24 * 60 * 60 * 1000;       // نحتفظ بآخر بث ٢٤ ساعة بعد آخر نشاط
@@ -36,6 +44,7 @@ var MAX_TOP = 20;
 var DEFAULT_TOP = 10;
 var AVATAR_CACHE_MAX = 500;
 var AVATAR_CONCURRENCY = 8;
+var FLUSH_MS = 60 * 1000;
 
 // القسم -> الحقل اللي نرتّب عليه (تنازلي). المشاهدين: مدة التواجد (watchMs)
 // = من أول ما شفناه بالبث (دخول/تعليق/لايك/هدية/شير) لآخر مرة شفناه —
@@ -55,6 +64,8 @@ var WATCH_PREFIX = 'watch:';
 var _watching = new Set();
 var _avatarCache = new Map(); // url -> dataUrl|null
 var _cleanupStarted = false;
+var _store = null;
+var _dirty = new Set(); // يوزرات جلساتها تغيّرت من آخر حفظ
 
 function normalize(name) {
   return String(name || '').trim().replace(/^@+/, '').toLowerCase();
@@ -82,10 +93,58 @@ function startCleanup() {
   var timer = setInterval(function () {
     var cutoff = Date.now() - RETENTION_MS;
     _sessions.forEach(function (s, key) {
-      if (s.lastActivityAt < cutoff) _sessions.delete(key);
+      if (s.lastActivityAt < cutoff) {
+        _sessions.delete(key);
+        _dirty.delete(key);
+        if (_store) { try { _store.remove(key); } catch (err) { logger.error('Live Stats: store remove failed:', err); } }
+      }
     });
+    if (_store) { try { _store.removeOlderThan(cutoff); } catch (err) { logger.error('Live Stats: store cleanup failed:', err); } }
   }, CLEANUP_INTERVAL_MS);
   if (timer.unref) timer.unref();
+}
+
+/* ---------------- الحفظ بقاعدة البيانات ---------------- */
+
+function markDirty(s) { if (s) _dirty.add(s.username); }
+
+/** يكتب كل الجلسات المتغيّرة (صف لكل يوزر). */
+function flush() {
+  if (!_store || !_dirty.size) return;
+  var keys = Array.from(_dirty);
+  _dirty.clear();
+  keys.forEach(function (key) {
+    var s = _sessions.get(key);
+    if (!s) return;
+    try { _store.save(key, sessionStore.serialize(s, SECTIONS, MAX_TOP)); } catch (err) { logger.error('Live Stats: save failed for "' + key + '":', err); }
+  });
+}
+
+/** عند تشغيل السيرفر: نرجّع آخر جلسة لكل يوزر لو ما صار لها أكثر من RETENTION_MS. */
+function boot() {
+  try { _store = sessionStore.createStore(db); } catch (err) { logger.error('Live Stats: store unavailable:', err); return; }
+  var cutoff = Date.now() - RETENTION_MS;
+  var n = 0;
+  var rows = [];
+  try { rows = _store.loadAll(); } catch (err) { logger.error('Live Stats: load failed:', err); }
+  // كل جلسة لحالها: صف تالف ما يوقف رجوع الباقي
+  rows.forEach(function (o) {
+    try {
+      var s = sessionStore.deserialize(o, SECTIONS, newSession);
+      if (!s || s.lastActivityAt < cutoff) {
+        if (o && typeof o.username === 'string') _store.remove(o.username);
+        return;
+      }
+      _sessions.set(s.username, s);
+      n++;
+    } catch (err) { logger.error('Live Stats: restore failed:', err); }
+  });
+  if (n) logger.log('Live Stats: restored ' + n + ' stream sessions');
+  if (_sessions.size) startCleanup();
+  var timer = setInterval(flush, FLUSH_MS);
+  if (timer.unref) timer.unref();
+  // نشر جديد على Render يرسل SIGTERM: نكتب المتغيّر قبل ما يطفي
+  process.once('SIGTERM', function () { try { flush(); } catch (e) { } process.kill(process.pid, 'SIGTERM'); });
 }
 
 /**
@@ -102,6 +161,7 @@ function attach(username, roomId, connectionId) {
   );
   if (!sameStream) {
     _sessions.set(key, newSession(key, roomId, connectionId));
+    markDirty(_sessions.get(key));
     return;
   }
   // المراقب شغّال ويحسب هذا البث → اتصال اللعبة ما ياخذ الملكية (ما تنحسب مرتين)
@@ -111,6 +171,7 @@ function attach(username, roomId, connectionId) {
   s.endedAt = null;
   if (roomId && !s.roomId) s.roomId = roomId;
   s.lastActivityAt = Date.now();
+  markDirty(s);
 }
 
 /** يرجع الجلسة فقط لو هذا الاتصال هو المالك الحالي لها. */
@@ -118,6 +179,7 @@ function owned(username, connectionId) {
   var s = _sessions.get(normalize(username));
   if (!s || s.endedAt || s.ownerConnectionId !== connectionId) return null;
   s.lastActivityAt = Date.now();
+  markDirty(s);
   return s;
 }
 
@@ -212,6 +274,8 @@ function markEnded(username, connectionId) {
   var s = _sessions.get(normalize(username));
   if (!s || s.ownerConnectionId !== connectionId) return;
   s.endedAt = Date.now();
+  markDirty(s);
+  flush(); // نهاية البث تنحفظ فوراً
 }
 
 function top(s, map, field, n) {
@@ -325,6 +389,8 @@ function setWatching(username, on) {
   if (on) _watching.add(key); else _watching.delete(key);
 }
 
+boot();
+
 module.exports = {
   WATCH_PREFIX: WATCH_PREFIX,
   setWatching: setWatching,
@@ -342,5 +408,6 @@ module.exports = {
   recordViewers: recordViewers,
   markEnded: markEnded,
   getSummary: getSummary,
+  flush: flush,
   cachedAvatar: cachedAvatar
 };
