@@ -1532,7 +1532,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '</div>' +
                     '<div class="lc-drawer-foot">' +
                         '<button type="button" id="lc-drawer-reset" class="lc-btn-ghost">إعادة توزيع الجولة</button>' +
-                        '<button type="button" id="lc-drawer-end-match" class="lc-btn-danger">إنهاء المباراة</button>' +
                     '</div>' +
                 '</aside>';
         }
@@ -1691,7 +1690,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         if (_settingsOpen) {
             el('lc-drawer-close').addEventListener('click', closeSettingsDrawer);
             el('lc-drawer-backdrop').addEventListener('click', closeSettingsDrawer);
-            el('lc-drawer-end-match').addEventListener('click', endMatch);
             el('lc-drawer-reset').addEventListener('click', handleRoundBadgeClick);
             el('lc-drawer-timer-group').addEventListener('click', function (e) {
                 var btn = e.target.closest('.lc-timer-pill'); if (!btn) return;
