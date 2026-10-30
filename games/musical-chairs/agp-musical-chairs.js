@@ -307,7 +307,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '--mc-ctl-bg:rgba(255,255,255,.05);--mc-ctl-line:rgba(255,255,255,.12);',
             '--mc-text:#f7f5fb;--mc-label:#f1eef7;--mc-muted:#9a95a6;--mc-muted-2:#b9b4c6;',
             '--mc-grad:linear-gradient(90deg,#7c3aed,#a855f7);--mc-ok:#34d399;--mc-bad:#f87171;--mc-bad-soft:#fca5a5;',
-            '--mc-video-glow:#6d28d9;',
             '--mc-backdrop:radial-gradient(55% 45% at 85% 0%,rgba(124,58,237,.16),transparent 70%),',
             'radial-gradient(50% 45% at 8% 100%,rgba(91,33,182,.14),transparent 72%),#07060b;}',
             'html,body.agp-shell-active{background:#07060b !important;}',
@@ -581,38 +580,71 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-panel,.mc-panel-inner{width:100%;}',
             '#mc-stage.mc-panel-closed .mc-panel{width:100%;max-height:0;}}',
 
-            /* شاشة الفائز + فيديو الاحتفال: المحتوى عائم بدون لوحة خلفية */
-            '#agp-shell-overlay:has(.mc-winner-screen){background:rgba(7,6,11,.82) !important;',
-            'backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-family:"IBM Plex Sans Arabic",sans-serif !important;}',
-            '#agp-shell-box.mc-winner-screen{background:none !important;font-family:"IBM Plex Sans Arabic",sans-serif !important;',
-            'border:none !important;box-shadow:none !important;}',
-            '.mc-winner-screen h2{font-size:clamp(30px,3.6vw,48px) !important;font-weight:800 !important;',
-            'background:linear-gradient(180deg,#f4f2f8,#c4b5fd);',
-            '-webkit-background-clip:text;background-clip:text;color:transparent !important;}',
-            '.mc-winner-video-wrap{width:250px;height:250px;margin:6px auto 14px;border-radius:24px;',
-            'overflow:hidden;position:relative;border:3px solid rgba(196,181,253,.7);',
-            'background:rgba(18,16,26,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);',
-            'box-shadow:0 0 18px var(--mc-video-glow),0 0 38px var(--mc-video-glow);',
-            'animation:mcVideoPulse 1.8s ease-in-out infinite;}',
-            '@keyframes mcVideoPulse{0%,100%{box-shadow:0 0 14px var(--mc-video-glow),0 0 26px var(--mc-video-glow);}',
-            '50%{box-shadow:0 0 22px var(--mc-video-glow),0 0 48px var(--mc-video-glow);}}',
-            '.mc-winner-video-wrap video{width:100%;height:100%;object-fit:cover;display:block;}',
-            '.mc-winner-video-unmute{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);',
-            'background:rgba(0,0,0,0.55);color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:5px 12px;',
-            'font-size:0.8em;cursor:pointer;font-family:inherit;}',
-            /* حاوية توسيط بس لبطاقة AGP.playerCard.renderTrophyCard */
-            '.mc-trophy-wrap{display:flex;justify-content:center;margin:0 0 14px;}',
-            '.mc-winner-video-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;',
-            'font-size:3em;background:rgba(0,0,0,0.3);}',
-            /* أزرار شاشة الفوز: بحجم نصها، جنب بعض بصف واحد */
-            '.mc-winner-actions{display:flex;gap:12px;flex-wrap:nowrap;justify-content:center;width:100%;}',
-            '.mc-winner-action-btn{width:auto !important;flex:0 0 auto;white-space:nowrap;padding:0 28px !important;margin-top:0 !important;',
-            'height:56px;border:none !important;border-radius:999px !important;font:800 17px "IBM Plex Sans Arabic",sans-serif !important;',
-            'color:#fff !important;background:var(--mc-grad) !important;',
-            'box-shadow:0 10px 34px rgba(139,92,246,.45),inset 0 1px 0 rgba(255,255,255,.2) !important;}',
-            '.mc-winner-action-btn + .mc-winner-action-btn{background:rgba(139,92,246,.08) !important;color:#ddd6fe !important;',
-            'border:1.5px solid rgba(167,139,250,.45) !important;box-shadow:none !important;}',
-            '.mc-winner-action-btn:hover{filter:brightness(1.1);}',
+            /* شاشة الفائز — نفس شاشة الفوز بروليت الإقصاء */
+            '#agp-shell-overlay:has(.mc-winner-screen){padding:0 !important;background:rgba(8,4,16,.38) !important;',
+            'backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);overflow:hidden !important;}',
+            '#agp-shell-box.mc-winner-screen{position:static !important;width:100% !important;max-width:none !important;',
+            'height:100% !important;max-height:none !important;margin:0 !important;padding:16px !important;box-sizing:border-box;',
+            'overflow-y:auto !important;display:flex;flex-direction:column;align-items:center;',
+            'background:none !important;border:none !important;border-radius:0 !important;box-shadow:none !important;',
+            'font-family:"IBM Plex Sans Arabic",sans-serif !important;font-size:18px;color:#f4f2f8;animation:mc-fade .3s ease;}',
+            '@keyframes mc-fade{from{opacity:0}to{opacity:1}}',
+            '@keyframes mc-float{0%{transform:translateY(0) rotate(0);opacity:0}10%{opacity:1}90%{opacity:1}',
+            '100%{transform:translateY(-1300px) rotate(var(--r));opacity:0}}',
+            '@keyframes mc-crown{0%{opacity:0;transform:translateX(-50%) translateY(-14px) rotate(-6deg)}60%{opacity:1}',
+            '100%{opacity:1;transform:translateX(-50%) translateY(0) rotate(0)}}',
+            '@keyframes mc-shine{0%{transform:translateX(-140%) rotate(20deg)}100%{transform:translateX(240%) rotate(20deg)}}',
+            '.mc-win-confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;}',
+            '.mc-win-confetti span{position:absolute;bottom:-30px;animation-name:mc-float;animation-timing-function:linear;',
+            'animation-iteration-count:infinite;}',
+            '.mc-win-inner{position:relative;margin:auto 0;max-width:100%;text-align:center;display:flex;flex-direction:column;align-items:center;}',
+            '.mc-winner-screen h2{margin:0 0 6px !important;padding:0 !important;font-size:1.6em !important;font-weight:800 !important;',
+            'color:#fff !important;background:none !important;border:none !important;',
+            'text-shadow:0 2px 12px rgba(0,0,0,.65) !important;text-wrap:balance;}',
+            '.mc-winner-video-wrap{position:relative;overflow:hidden;width:160px;height:160px;margin-bottom:18px;border-radius:24px;',
+            'box-sizing:border-box;border:1px dashed rgba(167,139,250,.4);background:rgba(255,255,255,.03);',
+            'animation:mc-pop .45s cubic-bezier(.2,1,.3,1) both;}',
+            '.mc-winner-video-wrap video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}',
+            '.mc-winner-video-unmute{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);z-index:2;white-space:nowrap;',
+            'background:rgba(0,0,0,0.55);color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:4px 10px;',
+            'font-size:12px;cursor:pointer;font-family:inherit;}',
+            '.mc-winner-video-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3em;}',
+            '.mc-win-cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin:40px 0 34px;}',
+            '.mc-win-none{margin:30px 0;color:#a8a3b5;font-size:16px;}',
+            '.mc-win-card-wrap{position:relative;width:200px;display:flex;flex-direction:column;align-items:center;}',
+            '.mc-win-crown{position:absolute;top:4px;left:50%;z-index:3;display:block;fill:#a78bfa;stroke:#6d28d9;stroke-linejoin:round;',
+            'filter:drop-shadow(0 3px 4px rgba(0,0,0,.35));animation:mc-crown .6s cubic-bezier(.2,1.4,.4,1) .15s both;}',
+            '.mc-win-card{position:relative;width:200px;height:300px;margin-top:36px;box-sizing:border-box;border-radius:22px;overflow:hidden;',
+            'background:linear-gradient(165deg,rgba(30,20,52,.74) 0%,rgba(13,10,24,.84) 100%);border:1.5px solid #a78bfa8c;',
+            'box-shadow:0 10px 30px rgba(0,0,0,.35),inset 0 0 0 1px rgba(255,255,255,.04),0 0 40px #a78bfa26;',
+            'animation:mc-pop .45s cubic-bezier(.2,1,.3,1) both;}',
+            '.mc-win-shine{position:absolute;top:0;left:0;width:60%;height:100%;pointer-events:none;',
+            'background:linear-gradient(75deg,transparent 40%,rgba(255,255,255,.12) 50%,transparent 60%);',
+            'animation:mc-shine 2.6s ease-in-out .6s infinite;}',
+            '.mc-win-card-in{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;height:100%;',
+            'padding:18px 14px 16px;box-sizing:border-box;}',
+            '.mc-win-label{font-size:15px;letter-spacing:3px;font-weight:800;color:#a78bfa;margin-bottom:12px;}',
+            '.mc-win-av{flex-shrink:0;width:84px;height:84px;border-radius:50%;box-sizing:border-box;border:2.5px solid #a78bfa;',
+            'box-shadow:0 4px 10px rgba(0,0,0,.4);background:#5b21b6;display:flex;align-items:center;justify-content:center;',
+            'color:#fff;font-weight:800;font-size:1.4em;overflow:hidden;}',
+            '.mc-win-av img{width:100%;height:100%;object-fit:cover;display:block;}',
+            '.mc-win-name{margin-top:12px;font-size:17px;font-weight:800;color:#FBF6EC;line-height:1.2;max-width:100%;',
+            'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+            '.mc-win-pts{margin-top:auto;width:100%;padding-top:10px;border-top:1px solid #a78bfa40;text-align:center;}',
+            '.mc-win-pts b{display:block;font-size:1.4em;font-weight:800;letter-spacing:1px;color:#a78bfa;line-height:1.1;',
+            'text-shadow:0 2px 6px rgba(0,0,0,.4);}',
+            '.mc-win-pts b.mc-win-pts-num{font-size:2em;}',
+            '.mc-win-pts span{display:block;margin-top:4px;font-size:.5em;font-weight:500;color:rgba(167,139,250,.8);text-wrap:balance;}',
+            '.mc-winner-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:min(600px,100%);margin:0 auto;}',
+            '.mc-win-btn{flex:1 0 auto;min-width:150px;height:46px;padding:0 20px;border-radius:999px;font-family:inherit;font-weight:700;white-space:nowrap;',
+            'font-size:15px;cursor:pointer;transition:filter .2s,transform .15s;}',
+            '.mc-win-btn:active{transform:scale(.97);}',
+            '.mc-win-btn-exit{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#f4f2f8;}',
+            '.mc-win-btn-exit:hover{filter:brightness(1.25);}',
+            '.mc-win-btn-new{border:none;background:linear-gradient(90deg,#7c3aed,#a855f7);color:#fff;box-shadow:0 8px 22px rgba(124,58,237,.4);}',
+            '.mc-win-btn-new:hover{filter:brightness(1.1);}',
+            '.mc-win-btn-replay{border:1px solid rgba(167,139,250,.55);background:rgba(139,92,246,.16);color:#ddd6fe;}',
+            '.mc-win-btn-replay:hover{filter:brightness(1.2);}',
 
             /* ==================================================================
              * شاشة الإعدادات الأولى + اللوبي + طبقة "جاري الاتصال" — نفس
@@ -1699,8 +1731,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return pointsResult.awarded.filter(function (a) { return a.tiktokUsername === uname; })[0] || null;
     }
 
-    // ⚠️ فيديو الاحتفال (250×250، حدود بلون الفيديو #4d0008 + توهج نابض)
-    // يشتغل مباشرة مع بطاقة الفائز بنفس الشاشة — طلب صريح.
+    // فيديو الاحتفال (160×160 مثل روليت الإقصاء) يشتغل مع بطاقة الفائز.
     function winnerVideoHtml() {
         // ⚠️ onerror جديد: لو ملف الفيديو مو موجود على السيرفر (404) أو
         // فشل تحميله لأي سبب، نستبدل الصندوق برسالة واضحة بدل ما يطلع
@@ -1759,39 +1790,68 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         box.className = 'mc-winner-screen';
         var awarded = winner ? findAwardedFor(pointsResult, winner) : null;
 
-        // ⚠️ صار يستخدم البطاقة الرسمية المشتركة (AGP.playerCard.renderTrophyCard)
-        // بدل بطاقة الكراسي الموسيقية المحلية القديمة — بطلب صريح، بدون
-        // أي لمس أو تعديل على تصميمها بملف js/agp-player-card.js المشترك
-        // نفسه، فقط استدعاء واجهتها العامة الجاهزة.
-        var trophyHtml = '';
+        // نفس شاشة الفوز بروليت الإقصاء: فيديو الفوز فوق، العنوان، بطاقة
+        // WINNER بنفسجية (أو بطاقة الفوز المملوكة من js/agp-win-card.js
+        // لو الفائز يملكها)، وثلاث أزرار، مع قصاصات ملوّنة.
+        var cardHtml = '';
         if (winner) {
-            var pointsHtml = awarded
-                ? '<div class="agp-trophy-points">+' + awarded.added + ' نقطة 🎉</div>'
-                : '';
-            trophyHtml = AGP.playerCard.renderTrophyCard(winner, {
-                kind: 'winner',
-                showCrown: true,
-                pointsHtml: pointsHtml,
-                // بطاقة الفوز (js/agp-win-card.js) -- تحل محل هذي البطاقة لو الفائز يملكها
-                winCardLines: ['المركز الأول من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'صاحب آخر كرسي', 'الكراسي الموسيقية']
-            });
+            if (AGP.winCard && AGP.winCard.canShow(winner)) {
+                cardHtml = AGP.playerCard.renderTrophyCard(winner, {
+                    kind: 'winner',
+                    pointsHtml: awarded ? '<div class="agp-trophy-points">+' + awarded.added + ' نقطة 🎉</div>' : '',
+                    winCardLines: ['المركز الأول من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'صاحب آخر كرسي', GAME_NAME]
+                });
+            } else {
+                cardHtml =
+                    '<div class="mc-win-card-wrap">' +
+                        '<svg class="mc-win-crown" width="60" height="40" viewBox="0 0 60 40" aria-hidden="true">' +
+                            '<polygon points="6,36 4,15 15,25 30,5 45,25 56,15 54,36" stroke-width="1.5"/>' +
+                            '<circle cx="6" cy="13" r="4" stroke-width="1.5"/><circle cx="30" cy="4" r="4.5" stroke-width="1.5"/>' +
+                            '<circle cx="54" cy="13" r="4" stroke-width="1.5"/><rect x="6" y="32" width="48" height="6" rx="1.5" stroke-width="1.5"/></svg>' +
+                        '<div class="mc-win-card"><div class="mc-win-shine"></div><div class="mc-win-card-in">' +
+                            '<span class="mc-win-label">WINNER</span>' +
+                            '<span class="mc-win-av">' + avatarHtml(winner) + '</span>' +
+                            '<span class="mc-win-name">' + escapeHtml(playerLabel(winner)) + '</span>' +
+                            '<div class="mc-win-pts">' + (awarded
+                                ? '<b class="mc-win-pts-num">+' + awarded.added + ' نقطة</b><span>تظهر في بروفايلك</span>'
+                                : '<b>—</b><span>النقاط للحسابات الموثّقة في الموقع</span>') + '</div>' +
+                        '</div></div></div>';
+            }
+        }
+
+        var confetti = '';
+        var CONFETTI_COLORS = ['#fbbf24', '#a78bfa', '#34d399', '#f472b6', '#60a5fa', '#fde68a'];
+        for (var ci = 0; ci < 70; ci++) {
+            var w = 8 + Math.random() * 6, h = 12 + Math.random() * 10;
+            confetti += '<span style="left:' + (Math.random() * 100).toFixed(1) + '%;width:' + w.toFixed(1) + 'px;height:' + h.toFixed(1) +
+                'px;border-radius:' + (ci % 3 ? '2px' : '50%') + ';background:' + CONFETTI_COLORS[ci % CONFETTI_COLORS.length] +
+                ';--r:' + Math.round(Math.random() * 1080 - 540) + 'deg;animation-duration:' + (3.5 + Math.random() * 2.5).toFixed(2) +
+                's;animation-delay:' + (Math.random() * 2.5).toFixed(2) + 's"></span>';
         }
 
         box.innerHTML =
-            '<h2>🏆 انتهت المباراة</h2>' +
-            (winner ? winnerVideoHtml() : '') +
-            (winner
-                ? '<div class="mc-trophy-wrap">' + trophyHtml + '</div>'
-                : '<p class="agp-shell-status" style="text-align:center;">ما فيه فائز واضح لهذي المباراة.</p>') +
-            '<div class="mc-winner-actions">' +
-            '<button class="agp-shell-btn-connect mc-winner-action-btn" id="mc-new-match-btn">🔄 مباراة جديدة</button>' +
-            '<button class="agp-shell-btn-connect mc-winner-action-btn" id="mc-replay-same-btn">🔁 إعادة المباراة (نفس اللاعبين)</button>' +
+            '<div class="mc-win-confetti" aria-hidden="true">' + confetti + '</div>' +
+            '<div class="mc-win-inner">' +
+                (winner ? winnerVideoHtml() : '') +
+                '<h2>🏆 الفائز في لعبة "' + GAME_NAME + '"</h2>' +
+                (winner
+                    ? '<div class="mc-win-cards">' + cardHtml + '</div>'
+                    : '<p class="mc-win-none">ما فيه فائز واضح لهذي المباراة.</p>') +
+                '<div class="mc-winner-actions">' +
+                    '<button type="button" class="mc-win-btn mc-win-btn-exit" id="mc-exit-btn">الخروج</button>' +
+                    '<button type="button" class="mc-win-btn mc-win-btn-new" id="mc-new-match-btn">مباراة جديدة</button>' +
+                    '<button type="button" class="mc-win-btn mc-win-btn-replay" id="mc-replay-same-btn">إعادة بنفس اللاعبين</button>' +
+                '</div>' +
             '</div>';
 
         box.id = 'agp-shell-box';
         overlay.style.display = 'flex';
 
         if (winner) wireWinnerVideo();
+        document.getElementById('mc-exit-btn').onclick = function () {
+            stopWinnerVideo();
+            homeNavigate();
+        };
         document.getElementById('mc-new-match-btn').onclick = function () {
             stopWinnerVideo();
             window.location.reload();
