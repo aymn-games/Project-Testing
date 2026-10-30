@@ -464,6 +464,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-center{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;',
             'gap:10px;text-align:center;}',
             '.mc-center.mc-show{display:flex;}',
+            '.mc-hub{aspect-ratio:1;border-radius:50%;box-sizing:border-box;padding:0 2.2cqw;display:flex;flex-direction:column;',
+            'align-items:center;justify-content:center;gap:.8cqw;text-align:center;pointer-events:none;',
+            'background:radial-gradient(circle at 50% 35%,#1d1838,#0d0b1a 75%);',
+            'border:max(2px,.35cqw) solid rgba(201,164,101,.75);',
+            'box-shadow:0 0 0 max(3px,.5cqw) rgba(13,11,26,.65),0 10px 30px rgba(0,0,0,.55),inset 0 0 24px rgba(124,58,237,.25);',
+            'animation:mc-pop .4s cubic-bezier(.2,1.25,.35,1);}',
+            '.mc-hub-title{font-size:clamp(11px,2.1cqw,20px);font-weight:800;line-height:1.35;color:#f7f5fb;}',
+            '.mc-hub-sub{font-size:clamp(9px,1.55cqw,15px);font-weight:600;line-height:1.5;color:#b9b4c6;}',
             '.mc-ended-title{font-size:6.4cqw;font-weight:800;background:linear-gradient(180deg,#f4f2f8,#c4b5fd);',
             '-webkit-background-clip:text;background-clip:text;color:transparent;}',
             '.mc-ended-sub{font-size:2.6cqw;color:var(--mc-muted-2);}',
@@ -1121,6 +1129,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function setPhase(phase) {
         _phase = phase;
+        renderCenter();
         if (phase !== 'claiming') showSeatTimer(null);
         var btn = el('mc-spin-btn');
         if (btn) {
@@ -1158,19 +1167,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return Math.min(11, 314 / Math.max(_alive.length, 1) * 0.78);
     }
 
-    // الكراسي بحلقات متحدة المركز داخل الدائرة (كرسي واحد = بالمنتصف).
-    // الحلقة k تتسع حتى floor(6.28·k) كرسي، التوزيع نسبي، والحلقات
-    // الفردية تنزاح نص خطوة. c = min(18, R0 / (1.08·rings + 0.5)).
+    // الكراسي بحلقات متحدة المركز داخل الدائرة، تاركة فراغ بالمنتصف
+    // لدائرة الحالة (HUB_GAP%). الحلقة k تتسع حتى floor(6.28·k) كرسي،
+    // التوزيع نسبي، والحلقات الفردية تنزاح نص خطوة.
+    // c = min(18, (R0 − HUB_GAP) / (1.08·rings + 0.5)). كرسي واحد = فوق المنتصف.
+    var HUB_GAP = 5;
     function layoutChairs(count) {
         var pA = playerAvatarPct();
         var R0 = 50 - pA / 2 - 1.5;
         var positions = [];
         var c = 16;
-        if (count === 1) positions.push([50, 50]);
-        else if (count > 1) {
+        if (count === 1) {
+            c = 18;
+            positions.push([50, 50 - (1.08 * c + HUB_GAP)]);
+        } else if (count > 1) {
             var caps = [], cum = 0;
             for (var k = 1; cum < count; k++) { var cap = Math.floor(6.28 * k); caps.push(cap); cum += cap; }
-            c = Math.min(18, R0 / (1.08 * caps.length + 0.5));
+            c = Math.min(18, (R0 - HUB_GAP) / (1.08 * caps.length + 0.5));
             var counts = caps.map(function (cp) { return Math.min(cp, Math.round(count * cp / cum)); });
             var diff = count - counts.reduce(function (a, b) { return a + b; }, 0);
             for (var i = counts.length - 1; diff !== 0; i = (i - 1 + counts.length) % counts.length) {
@@ -1178,7 +1191,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 else if (diff < 0 && counts[i] > 0) { counts[i]--; diff++; }
             }
             counts.forEach(function (cnt, ri) {
-                var r = 1.08 * c * (ri + 1);
+                var r = 1.08 * c * (ri + 1) + HUB_GAP;
                 for (var j = 0; j < cnt; j++) {
                     var a = (j + (ri % 2) * 0.5) / cnt * 2 * Math.PI;
                     positions.push([50 + r * Math.sin(a), 50 - r * Math.cos(a)]);
@@ -1269,17 +1282,32 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    // دائرة الحالة بمنتصف الحلبة: تقول للاعبين وش يصير الحين
+    var HUB_TEXT = {
+        idle: ['استعد للدورة', 'الموسيقى تبدأ مع ضغطة التدوير'],
+        playing: ['استعد لاختيار رقم الكرسي', 'ستظهر أرقام الكراسي فور توقف الموسيقى'],
+        claiming: ['اكتب رقم الكرسي بالشات', 'أول رقم صحيح يثبّت مكانك']
+    };
+
     function renderCenter() {
         var center = el('mc-center');
         if (!center) return;
+        var hub = HUB_TEXT[_phase];
         if (_phase === 'ended') {
             center.innerHTML = '<div class="mc-ended-title">انتهت المباراة</div>' +
                 '<div class="mc-ended-sub">اضغط "مباراة جديدة" للبدء من جديد</div>';
+            center.classList.add('mc-show');
+        } else if (hub && _matchActive) {
+            if (center.getAttribute('data-phase') !== _phase) {
+                center.innerHTML = '<div class="mc-hub" style="width:' + (1.16 * _chairSize + 2 * HUB_GAP - 3) + '%">' +
+                    '<div class="mc-hub-title">' + hub[0] + '</div><div class="mc-hub-sub">' + hub[1] + '</div></div>';
+            }
             center.classList.add('mc-show');
         } else {
             center.innerHTML = '';
             center.classList.remove('mc-show');
         }
+        center.setAttribute('data-phase', center.classList.contains('mc-show') ? _phase : '');
     }
 
     function clearCircle() {
