@@ -1625,7 +1625,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // نفس شاشة الفائز بروليت الإقصاء (games/elimination-roulette): نافذة فوق
     // شاشة اللعب نفسها والخلفية مغبّشة، وبطاقة "WINNER" لكل لاعب فائز (أو
     // بطاقة الفوز المملوكة من المنصة مكانها). لاعبين الفريق كلهم فائزين،
-    // والبطاقات داخل منطقة بارتفاع ثابت -- مهما كثروا تصير سكرول.
+    // وكل البطاقات تظهر بالشاشة: تتصغّر تلقائياً حسب عددهم (fitWinCards).
     var WIN_CROWN_SVG = '<svg width="60" height="40" viewBox="0 0 60 40" aria-hidden="true"><polygon points="6,36 4,15 15,25 30,5 45,25 56,15 54,36" stroke-width="1.5"></polygon><circle cx="6" cy="13" r="4" stroke-width="1.5"></circle><circle cx="30" cy="4" r="4.5" stroke-width="1.5"></circle><circle cx="54" cy="13" r="4" stroke-width="1.5"></circle><rect x="6" y="32" width="48" height="6" rx="1.5" stroke-width="1.5"></rect></svg>';
 
     function winPlayerCardHtml(p, color, i, mainLine, subLine) {
@@ -1667,7 +1667,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="lc-win-btns">' + buttonsHtml + '</div>' +
             '</div>';
         app.appendChild(wrap);
+        fitWinCards();
     }
+
+    // يصغّر البطاقات (zoom) لين تدخل كلها بمنطقتها بدون سكرول -- من حجمها
+    // الأساسي لين ربعه كحد أدنى.
+    function fitWinCards() {
+        var area = document.querySelector('.lc-win-scroll');
+        var cards = area && area.querySelector('.lc-win-cards');
+        if (!cards) return;
+        var k = 1;
+        cards.style.zoom = k;
+        while (k > 0.25 && cards.getBoundingClientRect().height > area.clientHeight + 1) {
+            k = Math.round((k - 0.05) * 100) / 100;
+            cards.style.zoom = k;
+        }
+    }
+    window.addEventListener('resize', fitWinCards);
 
     function renderRoundWinnerScreen() {
         var winningTeam = _connectionWinner;
