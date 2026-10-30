@@ -87,8 +87,7 @@ function deserialize(o, sections, newSession) {
     s.recentGifts = (Array.isArray(o.recentGifts) ? o.recentGifts : []).filter(function (g) { return g && num(g.seq) > 0; }).map(function (g) {
         return {
             seq: num(g.seq), name: String(g.name || ''), img: typeof g.img === 'string' ? g.img : null,
-            giftId: g.giftId != null ? String(g.giftId) : null, uid: g.uid != null ? String(g.uid) : null,
-            avatar: typeof g.avatar === 'string' ? g.avatar : null,
+            giftId: g.giftId != null ? String(g.giftId) : null,
             count: num(g.count) || 1, diamonds: num(g.diamonds), user: String(g.user || ''), at: num(g.at)
         };
     });

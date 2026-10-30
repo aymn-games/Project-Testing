@@ -385,7 +385,7 @@
 
     function https(u) { return typeof u === 'string' && /^https:\/\//.test(u) ? u : null; }
 
-    /** رابط السيرفر للصورة (مخزّنة عنده) — لو الرابط المباشر من تيك توك ما فتح. */
+    /** رابط السيرفر لصورة الهدية (مخزّنة عنده) — لو الرابط المباشر من تيك توك ما فتح. */
     function mediaUrl(kind, id) { return id ? apiBase() + '/api/stream/media?k=' + kind + '&id=' + encodeURIComponent(id) : null; }
 
     /** صورة تحاول الرابط المباشر، وبعده نسخة السيرفر، وبعدها onFail. */
@@ -411,8 +411,8 @@
             var n = Math.min(JAR_REPEAT_MAX, Math.max(1, Number(g.count) || 1));
             for (var j = 0; j < n; j++) {
                 out.push({
-                    k: g.seq + '-' + j, name: String(g.name || ''), user: String(g.user || ''),
-                    img: https(g.img), giftId: g.giftId || null, avatar: https(g.avatar), uid: g.uid || null
+                    k: g.seq + '-' + j, name: String(g.name || ''),
+                    img: https(g.img), giftId: g.giftId || null
                 });
             }
         });
@@ -812,21 +812,13 @@
         return ((h >>> 0) % 1000) / 1000;
     }
 
-    function jarIcon(ic, withAvatar) {
+    function jarIcon(ic) {
         var g = el('span', 'agp-so-gi');
         var r = Math.round((hash(ic.k + 'r') - 0.5) * 50);
         g.style.setProperty('--r', r + 'deg');
         function letter() { g.textContent = ''; g.classList.add('fb'); g.appendChild(el('span', null, (ic.name || '?').charAt(0))); }
         if (ic.img || ic.giftId) g.appendChild(img2(ic.img, mediaUrl('g', ic.giftId), 'agp-so-gimg', letter));
         else letter();
-        // صورة الداعم صغيرة على طرف الهدية (وأول حرف من اسمه لو ما فتحت)
-        if (withAvatar && (ic.avatar || ic.uid || ic.user)) {
-            var a = el('span', 'agp-so-gav');
-            var initial = function () { a.appendChild(el('span', 'agp-so-gav-i', (ic.user || '?').charAt(0))); };
-            if (ic.avatar || ic.uid) a.appendChild(img2(ic.avatar, mediaUrl('u', ic.uid), null, function (im) { im.remove(); initial(); }));
-            else initial();
-            g.appendChild(a);
-        }
         return g;
     }
 
@@ -865,7 +857,7 @@
         var delay = 0;
         list.forEach(function (ic) {
             if (pile._icons[ic.k]) return;
-            var g = jarIcon(ic, node._item ? node._item.avatars !== false : true);
+            var g = jarIcon(ic);
             if (fresh && fresh.indexOf(ic.k) !== -1) {
                 g.classList.add('drop');
                 g.style.animationDelay = delay + 'ms';
@@ -924,7 +916,7 @@
         }
         if (type === 'goal') return Object.assign(base, { metric: 'likes', title: 'هدف التكبيسات', target: 10000, autoNext: true, design: 'bar', size: 3, color: '#ff4d6d' });
         if (type === 'counter') return Object.assign(base, { metrics: ['likes', 'diamonds', 'follows'], title: '', design: 'pills', size: 3, color: '#ffd54a' });
-        if (type === 'jar') return Object.assign(base, { title: 'وعاء الهدايا', counter: 'diamonds', avatars: true, size: 2.6, color: '#ff5fa8' });
+        if (type === 'jar') return Object.assign(base, { title: 'وعاء الهدايا', counter: 'diamonds', size: 2.6, color: '#ff5fa8' });
         return base;
     }
 
@@ -1078,9 +1070,6 @@
         '.agp-so-gi{position:absolute;width:1.3em;height:1.3em;transform:rotate(var(--r,0deg));transition:left .5s ease,bottom .5s ease;filter:drop-shadow(0 .05em .08em rgba(0,0,0,.55))}',
         '.agp-so-gimg{width:100%;height:100%;object-fit:contain;display:block}',
         '.agp-so-gi.fb>span:first-child{display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;font-size:.6em;font-weight:900;color:#1a1206;text-shadow:none;background:radial-gradient(circle at 35% 30%,#fff,var(--agp-so-c))}',
-        '.agp-so-gav{position:absolute;left:-.12em;bottom:-.12em;width:.62em;height:.62em;border-radius:50%;overflow:hidden;border:.06em solid #fff;background:#2a2d45;box-shadow:0 .03em .1em rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-weight:900;line-height:1;color:#fff;text-shadow:none;transform:rotate(calc(var(--r,0deg) * -1))}',
-        '.agp-so-gav-i{font-size:.38em}',
-        '.agp-so-gav img{width:100%;height:100%;object-fit:cover;display:block}',
         '.agp-so-gi.drop{animation:agp-so-drop .95s cubic-bezier(.35,0,.45,1) both}',
         '@keyframes agp-so-drop{0%{transform:translateY(-13em) rotate(0) scale(1.35);opacity:0}12%{opacity:1}68%{transform:translateY(0) rotate(var(--r,0deg)) scale(1)}80%{transform:translateY(-.4em) rotate(var(--r,0deg))}100%{transform:translateY(0) rotate(var(--r,0deg))}}',
         '.agp-so-jcount{display:inline-flex;align-items:center;gap:.3em;margin-top:.15em;padding:.25em .9em;border-radius:999px;font-weight:900;direction:ltr;background:rgba(10,12,24,.7);border:.07em solid color-mix(in srgb,var(--agp-so-c) 60%,transparent);box-shadow:0 .1em .35em rgba(0,0,0,.45)}',

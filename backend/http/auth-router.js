@@ -904,13 +904,13 @@ function handleStreamRecentGifts(req, res, body, user) {
 }
 
 /**
- * GET /api/stream/media?k=g|u&id=<giftId|userId> → صورة (بايتات) أو 404.
- * صورة هدية تيك توك أو صورة داعم لوعاء الهدايا — بديل لو الرابط المباشر ما
+ * GET /api/stream/media?k=g&id=<giftId> → صورة (بايتات) أو 404.
+ * صورة هدية تيك توك لوعاء الهدايا — بديل لو الرابط المباشر ما
  * فتح بالمتصفح. عام (وسم <img> ما يرسل توكن)، بس ما يجيب إلا روابط جات من
  * أحداث الهدايا بالبث (live-session-stats noteGiftMedia)، ومخزّنة بالكاش.
  */
 function handleStreamMedia(req, res) {
-  var kind = getQueryParam(req, 'k') === 'u' ? 'u' : 'g';
+  var kind = getQueryParam(req, 'k') || 'g';
   var id = String(getQueryParam(req, 'id') || '').slice(0, 64);
   return liveSessionStats.getMediaDataUrl(kind, id).then(function (dataUrl) {
     var m = typeof dataUrl === 'string' && dataUrl.match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i);
