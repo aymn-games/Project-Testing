@@ -156,17 +156,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return { x: alignedRowStartX + (isOffsetRow ? halfStep : 0) + c * spacingX, y: BOARD_Y0 + hexH / 2 + r * spacingY };
         }
 
-        // إطار الخلية (زي رقعة لعبة الحروف الكلاسيكية): صف سداسيات ملوّن فوق
-        // وتحت الرقعة (الفريق الأول) وعمود سداسيات يمين ويسار (الفريق الثاني).
-        // صندوق الرقعة يقص سداسيات الإطار من منتصفها، فيطلع الإطار مستطيل من
-        // برّا ومتعرّج على حواف الخلايا من جوّا.
-        var ringRaw = [];
-        for (var rr = -1; rr <= rows; rr++) {
-            for (var cc = -1; cc <= cols; cc++) {
-                if (rr >= 0 && rr < rows && cc >= 0 && cc < cols) continue;
-                ringRaw.push({ center: hexCenter(rr, cc), side: (rr < 0 || rr >= rows) ? 'tb' : 'lr' });
-            }
-        }
+        // صندوق الرقعة أوسع من الخلايا بنص سداسي من كل جهة -- مساحة لتوهج
+        // أطراف الخلية (فوق وتحت بلون الفريق الأول، يمين ويسار بلون الثاني).
         var boxLeft = alignedRowStartX - spacingX;
         var boxRight = alignedRowStartX + halfStep + cols * spacingX;
         var boxTop = hexCenter(-1, 0).y;
@@ -201,7 +192,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 idx++;
             }
         }
-        var ring = ringRaw.map(function (h) { var l = toLayout(h.center); l.side = h.side; return l; });
+        // خطوط أطراف الخلية بنسب الصندوق: رؤوس السداسيات الخارجية (رأس السداسي
+        // المدبّب فوق: (0.5,0) (1,0.25) (1,0.75) (0.5,1) (0,0.75) (0,0.25)).
+        function vertex(r, c, fx, fy) {
+            var l = layout[r * cols + c];
+            return { x: l.leftPct + fx * l.wPct, y: l.topPct + fy * l.hPct };
+        }
+        var edges = { top: [], bottom: [], left: [], right: [] };
+        for (var ec = 0; ec < cols; ec++) {
+            edges.top.push(vertex(0, ec, 0, 0.25), vertex(0, ec, 0.5, 0), vertex(0, ec, 1, 0.25));
+            edges.bottom.push(vertex(rows - 1, ec, 0, 0.75), vertex(rows - 1, ec, 0.5, 1), vertex(rows - 1, ec, 1, 0.75));
+        }
+        for (var er = 0; er < rows; er++) {
+            edges.left.push(vertex(er, 0, 0, 0.25), vertex(er, 0, 0, 0.75));
+            edges.right.push(vertex(er, cols - 1, 1, 0.25), vertex(er, cols - 1, 1, 0.75));
+        }
 
         var adjacency = centers.map(function () { return []; });
         var threshold = spacingX * 1.15;
@@ -212,13 +217,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             }
         }
 
-        return { layout: layout, ring: ring, aspect: boxW / boxH, hexHRatio: hexH / boxH, adjacency: adjacency, leftEdge: leftEdge, rightEdge: rightEdge, topEdge: topEdge, bottomEdge: bottomEdge };
+        return { layout: layout, edges: edges, aspect: boxW / boxH, hexHRatio: hexH / boxH, adjacency: adjacency, leftEdge: leftEdge, rightEdge: rightEdge, topEdge: topEdge, bottomEdge: bottomEdge };
     }
 
     var BOARD_GEOMETRY = buildBrickGeometry(BOARD_ROWS, BOARD_COLS);
     var CELL_LAYOUT = BOARD_GEOMETRY.layout;
     var BOARD_ASPECT = BOARD_GEOMETRY.aspect;
-    var RING_LAYOUT = BOARD_GEOMETRY.ring;
+    var BOARD_EDGES = BOARD_GEOMETRY.edges;
     var HEX_H_RATIO = BOARD_GEOMETRY.hexHRatio;
     var ADJACENCY = BOARD_GEOMETRY.adjacency;
     var LEFT_EDGE = BOARD_GEOMETRY.leftEdge;
@@ -1313,7 +1318,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return 'background:conic-gradient(' + color + ' ' + deg.toFixed(1) + 'deg, rgba(255,255,255,.07) 0);color:' + color;
     }
 
-    var BOARD_HEIGHT_PX = 800; // ارتفاع الرقعة داخل مسرح 1920×1080
+    var BOARD_HEIGHT_PX = 740; // ارتفاع الرقعة داخل مسرح 1920×1080
 
     function gameTeamCardHtml(team, activeLetter) {
         var color = teamColor(team);
@@ -1357,12 +1362,20 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '</div>';
         }).join('');
 
-        // سداسيات الإطار: فوق وتحت بلون الفريق الأول، يمين ويسار بلون الفريق الثاني.
-        var ringHtml = RING_LAYOUT.map(function (l) {
-            return '<div class="lc-hex lc-hex-clip lc-hex-ring lc-hex-ring-' + l.side + '" style="left:' + l.leftPct + '%;top:' + l.topPct + '%;width:' + l.wPct + '%;height:' + l.hPct + '%;">' +
-                '<div class="lc-hex-inner lc-hex-clip"></div>' +
-            '</div>';
-        }).join('');
+        // توهج أطراف الخلية: خط ضوء ناعم يلحق الحواف المتعرّجة للخلايا --
+        // فوق وتحت بلون الفريق الأول، يمين ويسار بلون الفريق الثاني.
+        var boardW = Math.round(BOARD_HEIGHT_PX * BOARD_ASPECT);
+        function edgePath(pts) {
+            return pts.map(function (pt, i) { return (i ? 'L' : 'M') + (pt.x * boardW / 100).toFixed(1) + ' ' + (pt.y * BOARD_HEIGHT_PX / 100).toFixed(1); }).join(' ');
+        }
+        var edgeSets = [['top', teamColor(TEAM1)], ['bottom', teamColor(TEAM1)], ['left', teamColor(TEAM2)], ['right', teamColor(TEAM2)]];
+        function edgeLayer(cls) {
+            return edgeSets.map(function (e) { return '<path class="' + cls + '" d="' + edgePath(BOARD_EDGES[e[0]]) + '" stroke="' + e[1] + '"></path>'; }).join('');
+        }
+        var edgesHtml = '<svg class="lc-board-edges" viewBox="0 0 ' + boardW + ' ' + BOARD_HEIGHT_PX + '" aria-hidden="true">' +
+            '<g class="lc-edge-halo">' + edgeLayer('lc-edge-wide') + '</g>' +
+            edgeLayer('lc-edge-line') +
+        '</svg>';
 
         var activeLetter = (_activeIdx != null) ? _cellLetters[_activeIdx] : null;
         var showAnswerTimer = activeLetter && _settings.answerTimerSeconds && !_answerTimerExpired;
@@ -1508,7 +1521,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         '</div>' +
                         '<div class="lc-card lc-board-card">' +
                             '<span class="lc-board-halo"></span>' +
-                            '<div class="lc-board" style="height:' + BOARD_HEIGHT_PX + 'px;width:' + Math.round(BOARD_HEIGHT_PX * BOARD_ASPECT) + 'px;--lc-hexfont:' + Math.round(BOARD_HEIGHT_PX * HEX_H_RATIO * 0.42) + 'px;--c1:' + teamColor(TEAM1) + ';--c2:' + teamColor(TEAM2) + '">' + ringHtml + cellsHtml + '</div>' +
+                            '<div class="lc-board" style="height:' + BOARD_HEIGHT_PX + 'px;width:' + Math.round(BOARD_HEIGHT_PX * BOARD_ASPECT) + 'px;--lc-hexfont:' + Math.round(BOARD_HEIGHT_PX * HEX_H_RATIO * 0.42) + 'px">' + edgesHtml + cellsHtml + '</div>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +

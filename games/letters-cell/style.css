@@ -286,13 +286,14 @@ body.lc-active a { color: var(--lc-accent); }
 .lc-board-card { position: relative; overflow: hidden; border-radius: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 30px 80px rgba(0,0,0,.35); }
 .lc-board-halo { position: absolute; top: -140px; left: 50%; width: 700px; height: 280px; margin-left: -350px; border-radius: 50%; background: rgba(167,139,250,.16); filter: blur(44px); pointer-events: none; }
 .lc-board { position: relative; flex-shrink: 0; }
-/* إطار الخلية: سداسيات ملوّنة تقصها حدود الرقعة (overflow) -- فوق وتحت بلون الفريق الأول، يمين ويسار بلون الفريق الثاني */
-.lc-board { overflow: hidden; border-radius: 18px; }
-.lc-hex-ring { pointer-events: none; }
-.lc-hex-ring-tb { background: var(--c1); }
-.lc-hex-ring-tb .lc-hex-inner { background: linear-gradient(160deg, var(--c1), rgba(124,58,237,.75)); }
-.lc-hex-ring-lr { background: var(--c2); }
-.lc-hex-ring-lr .lc-hex-inner { background: linear-gradient(160deg, var(--c2), rgba(2,132,199,.75)); }
+/* توهج أطراف الخلية: خط ضوء ناعم على الحواف المتعرّجة (خلف الخلايا فيبان نصه برّا) --
+   هالة مغبّشة عريضة + خط مضيء رفيع. فوق وتحت بلون الفريق الأول، يمين ويسار بلون الثاني */
+.lc-board-edges { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.lc-board-edges path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.lc-edge-halo { filter: blur(14px); opacity: .55; animation: lc-edge-breathe 3.2s ease-in-out infinite alternate; }
+.lc-edge-wide { stroke-width: 34; }
+.lc-edge-line { stroke-width: 9; opacity: .95; }
+@keyframes lc-edge-breathe { from { opacity: .4; } to { opacity: .7; } }
 .lc-hex { position: absolute; padding: 5px; transition: background .25s; }
 .lc-hex-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font: 700 var(--lc-hexfont, 80px)/1 var(--lc-font); transition: background .25s, color .25s; }
 .lc-hex-free { background: rgba(167,139,250,.3); cursor: pointer; }
