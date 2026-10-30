@@ -1347,7 +1347,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var st = _cellStates[idx];
             var layout = CELL_LAYOUT[idx];
             var isActive = _activeIdx === idx;
-            var cls = 'lc-hex lc-hex-clip' + (st === 0 ? ' lc-hex-free' : ' lc-hex-owned') + (isActive ? ' lc-hex-active' : '');
+            var cls = 'lc-hex lc-hex-clip' + (st === 0 ? ' lc-hex-free' : ' lc-hex-owned lc-hex-t' + st) + (isActive ? ' lc-hex-active' : '');
             var style = 'left:' + layout.leftPct + '%;top:' + layout.topPct + '%;width:' + layout.wPct + '%;height:' + layout.hPct + '%;';
             if (st !== 0) style += '--tc:' + teamColor(st) + ';';
             return '<div class="' + cls + '" data-idx="' + idx + '" style="' + style + '">' +
