@@ -68,7 +68,7 @@ test('deserialize rejects wrong shapes', function () {
 
 test('recent gifts (gift jar) survive a round trip; old rows without them still load', function () {
     var s = newSession('streamer', 'r', 'c');
-    s.recentGifts = [{ seq: 4, name: 'Rose', img: 'https://x/rose.png', count: 3, diamonds: 3, user: 'نوره', at: 5 }];
+    s.recentGifts = [{ seq: 4, name: 'Rose', img: 'https://x/rose.png', giftId: '5655', uid: 'u1', avatar: 'https://x/a.jpg', count: 3, diamonds: 3, user: 'نوره', at: 5 }];
     s.giftSeq = 4;
     var back = store.deserialize(JSON.parse(JSON.stringify(store.serialize(s, SECTIONS, 20))), SECTIONS, newSession);
     assert.deepEqual(back.recentGifts, s.recentGifts);
