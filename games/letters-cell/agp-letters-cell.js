@@ -31,8 +31,10 @@
  * - الفوز بالجولة: كل فريق يوصّل جهتيه بسلسلة خلايا متجاورة من لونه
  *   (متعرّجة عادي، ولو لمست جهة الخصم عادي) -- الفريق الأول (البنفسجي) من
  *   فوق لتحت، والفريق الثاني (الأزرق) من اليسار لليمين (isConnected).
- * - المباراة "Best of 3": أول فريق يفوز بجولتين (خط متصل) يحسم المباراة
- *   فوراً بدون ما تُلعب الجولة الثالثة لو صارت غير ضرورية.
+ * - عدد جولات المباراة من شاشة الإعدادات (_settings.rounds): "جولة واحدة"
+ *   = أول خط متصل يحسم المباراة؛ "جولتين" = تُلعب جولتين، ولو فاز نفس
+ *   الفريق بالاثنتين يحسمها 2-0، ولو تعادلوا 1-1 تُلعب جولة ثالثة فاصلة
+ *   (يعني أول فريق يوصل roundWinsToClinch() يفوز).
  * - لو امتلأت كل خلايا الرقعة بدون أي خط متصل لأي فريق: تُعاد نفس الجولة
  *   تلقائياً (تصفير الرقعة + سحب 25 حرفاً وأسئلة جديدة من جديد) بدون
  *   احتساب أي نقطة لأي فريق. المضيف يقدر يطلب نفس الإعادة يدوياً في أي
@@ -77,7 +79,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var TEAM2 = 2;
     var SCORE_KEY_TEAM1 = 'letters-cell:team1';
     var SCORE_KEY_TEAM2 = 'letters-cell:team2';
-    var ROUND_WINS_TO_CLINCH = 2;
 
     // الأبجدية العربية الكاملة (28 حرفاً) -- كل جولة تسحب 25 منها عشوائياً.
     var ALPHABET_28 = ['ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي'];
@@ -283,7 +284,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         team2Color: TEAM2_DEFAULT_COLOR,
         team1AccessCode: '',
         team2AccessCode: '',
-        answerTimerSeconds: 90 // 0 = بدون مؤقت؛ خيارات: 90 (1:30) | 120 (2:00) | 180 (3:00)
+        answerTimerSeconds: 90, // 0 = بدون مؤقت؛ خيارات: 90 (1:30) | 120 (2:00) | 180 (3:00)
+        rounds: 2 // 1 = جولة واحدة | 2 = جولتين (+ جولة فاصلة لو تعادلوا 1-1)
     };
     var ANSWER_TIMER_OPTIONS = [
         { value: 90, label: '1:30' },
@@ -299,6 +301,15 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var active = (_settings.answerTimerSeconds === opt.value) ? ' lc-seg-on' : '';
             return '<button type="button" class="lc-seg-btn lc-timer-pill' + active + '" data-value="' + opt.value + '">' + opt.label + '</button>';
         }).join('');
+    }
+
+    // عدد الجولات اللي يحتاجها الفريق ليحسم المباراة: 1 بنمط "جولة واحدة"، و2
+    // بنمط "جولتين" (لو 1-1 تصير الجولة الثالثة فاصلة).
+    function roundWinsToClinch() { return _settings.rounds === 1 ? 1 : 2; }
+    function isDeciderRound() { return _settings.rounds === 2 && _round === 3; }
+    function roundLabel() { return isDeciderRound() ? 'الجولة الفاصلة' : 'الجولة ' + _round; }
+    function matchRuleText() {
+        return _settings.rounds === 1 ? 'جولة واحدة · أول خط متصل يفوز بالمباراة' : 'جولتين · ولو تعادلوا 1-1 جولة ثالثة فاصلة';
     }
 
     var _round = 1;
@@ -574,9 +585,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         '</section>';
     }
     // صف إعداد واحد: العنوان يمين وعنصر التحكم يسار (قاعدة CLAUDE.md الثابتة).
-    function rowHtml(label, controlHtml, dot) {
+    function rowHtml(label, controlHtml, dot, desc) {
         return '<div class="lc-row">' +
-            '<div class="lc-row-label">' + (dot ? '<span class="lc-dot" style="background:' + dot + ';box-shadow:0 0 8px ' + dot + '"></span>' : '') + '<span>' + escapeHtml(label) + '</span></div>' +
+            '<div class="lc-row-label' + (desc ? ' lc-row-label-desc' : '') + '">' + (dot ? '<span class="lc-dot" style="background:' + dot + ';box-shadow:0 0 8px ' + dot + '"></span>' : '') +
+                '<span>' + escapeHtml(label) + (desc ? '<small class="lc-row-desc">' + escapeHtml(desc) + '</small>' : '') + '</span></div>' +
             controlHtml +
         '</div>';
     }
@@ -598,6 +610,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var matchRows =
             rowHtml('اسمك (حروف مع …)', textInputHtml('lc-input-hostname', _settings.hostName, 'مثلاً: أيمن')) +
             rowHtml('وقت الإجابة (دقيقة)', '<div class="lc-seg" id="lc-timer-group">' + answerTimerPillsHtml() + '</div>') +
+            rowHtml('عدد الجولات', '<div class="lc-seg" id="lc-rounds-group">' +
+                [[1, 'جولة واحدة'], [2, 'جولتين']].map(function (o) {
+                    return '<button type="button" class="lc-seg-btn' + (_settings.rounds === o[0] ? ' lc-seg-on' : '') + '" data-value="' + o[0] + '">' + o[1] + '</button>';
+                }).join('') + '</div>',
+                null, _settings.rounds === 1
+                    ? 'أول فريق يكمّل خطه المتصل يفوز بالمباراة على طول.'
+                    : 'تُلعب جولتين: لو فاز نفس الفريق بالاثنتين يفوز بالمباراة، ولو تعادلوا (1-1) تُلعب جولة ثالثة فاصلة واللي يفوز فيها يفوز بالمباراة.') +
             (isCachedAllowedAdminUser()
                 ? rowHtml('بنك الأسئلة', '<a href="admin-questions.html" target="_blank" class="lc-btn-chip">إدارة الأسئلة</a>')
                 : '');
@@ -660,6 +679,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         el('lc-timer-group').addEventListener('click', function (e) {
             var btn = e.target.closest('.lc-timer-pill'); if (!btn) return;
             _settings.answerTimerSeconds = parseInt(btn.getAttribute('data-value'), 10);
+            renderSettingsScreen();
+        });
+        el('lc-rounds-group').addEventListener('click', function (e) {
+            var btn = e.target.closest('.lc-seg-btn'); if (!btn) return;
+            _settings.rounds = parseInt(btn.getAttribute('data-value'), 10);
             renderSettingsScreen();
         });
 
@@ -1273,9 +1297,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     /**
-     * انيميشن اكتمال الخط المتصل (قبل نافذة الفوز بالجولة): خلايا المسار
-     * تضيء وحدة وحدة بلون الفريق، خط ضوء يرتسم عبر مراكزها، شرارات تطلع
-     * من كل خلية، والرقعة تنبض مع عبارة "خط متصل!" -- ثم done().
+     * انيميشن اكتمال الخط المتصل (قبل نافذة الفوز بالجولة): باقي الرقعة
+     * تخفت، خلايا المسار ترتفع وتضيء وحدة وحدة بموجة ضوء بلون الفريق، خط
+     * ضوء رفيع متدرّج يرتسم عبر مراكزها مع ذرات ضوء ناعمة، ثم لوحة زجاجية
+     * "خط متصل" باسم الفريق -- ثم done().
      */
     function playConnectionAnimation(team, done) {
         var board = document.querySelector('.lc-board');
@@ -1295,11 +1320,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         for (var i = 1; i < pts.length; i++) len += Math.sqrt(Math.pow(pts[i].x - pts[i - 1].x, 2) + Math.pow(pts[i].y - pts[i - 1].y, 2));
         var lineDelay = (path.length * STEP).toFixed(2);
 
-        var sparks = '';
+        // ذرات ضوء ناعمة تطلع ببطء من خلايا المسار
+        var motes = '';
         pts.forEach(function (pt, i) {
-            for (var k = 0; k < 6; k++) {
-                var ang = (Math.PI * 2 * k) / 6 + i;
-                sparks += '<span class="lc-win-spark" style="left:' + pt.x.toFixed(1) + 'px;top:' + pt.y.toFixed(1) + 'px;--dx:' + Math.round(Math.cos(ang) * 90) + 'px;--dy:' + Math.round(Math.sin(ang) * 90) + 'px;animation-delay:' + (i * STEP + 0.1).toFixed(2) + 's"></span>';
+            for (var k = 0; k < 3; k++) {
+                motes += '<span class="lc-win-mote" style="left:' + (pt.x + (k - 1) * 22).toFixed(1) + 'px;top:' + pt.y.toFixed(1) + 'px;animation-delay:' + (i * STEP + 0.25 + k * 0.18).toFixed(2) + 's"></span>';
             }
         });
 
@@ -1308,15 +1333,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         fx.style.setProperty('--wc', color);
         fx.innerHTML =
             '<svg class="lc-win-path" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true">' +
+                '<defs><linearGradient id="lc-win-grad" gradientUnits="userSpaceOnUse" x1="' + pts[0].x.toFixed(1) + '" y1="' + pts[0].y.toFixed(1) + '" x2="' + pts[pts.length - 1].x.toFixed(1) + '" y2="' + pts[pts.length - 1].y.toFixed(1) + '">' +
+                    '<stop offset="0" stop-color="' + color + '"></stop><stop offset=".5" stop-color="#ffffff"></stop><stop offset="1" stop-color="' + color + '"></stop>' +
+                '</linearGradient></defs>' +
                 '<path class="lc-win-path-glow" d="' + d + '" style="stroke-dasharray:' + len.toFixed(0) + ';stroke-dashoffset:' + len.toFixed(0) + ';animation-delay:' + lineDelay + 's"></path>' +
-                '<path class="lc-win-path-core" d="' + d + '" style="stroke-dasharray:' + len.toFixed(0) + ';stroke-dashoffset:' + len.toFixed(0) + ';animation-delay:' + lineDelay + 's"></path>' +
+                '<path class="lc-win-path-core" d="' + d + '" stroke="url(#lc-win-grad)" style="stroke-dasharray:' + len.toFixed(0) + ';stroke-dashoffset:' + len.toFixed(0) + ';animation-delay:' + lineDelay + 's"></path>' +
             '</svg>' +
-            sparks +
-            '<div class="lc-win-banner" style="animation-delay:' + (+lineDelay + 0.5).toFixed(2) + 's"><span>خط متصل!</span><b>' + escapeHtml(teamName(team)) + '</b></div>';
+            motes +
+            '<div class="lc-win-banner" style="animation-delay:' + (+lineDelay + 0.55).toFixed(2) + 's">' +
+                '<span class="lc-win-banner-rays"></span>' +
+                '<span class="lc-win-banner-kicker">خط متصل</span>' +
+                '<b class="lc-win-banner-name">' + escapeHtml(teamName(team)) + '</b>' +
+                '<span class="lc-win-banner-sub">' + escapeHtml('فاز ب' + roundLabel()) + '</span>' +
+            '</div>';
         board.appendChild(fx);
         board.classList.add('lc-board-won');
 
-        setTimeout(done, Math.round((+lineDelay + 2.3) * 1000));
+        setTimeout(done, Math.round((+lineDelay + 2.8) * 1000));
     }
 
     /** إعادة توزيع الجولة الحالية بأحرف وأسئلة جديدة، بدون احتساب نقاط --
@@ -1365,8 +1398,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         syncScoreManagerTotals();
         _connectionWinner = null;
 
-        if (_roundWins1 >= ROUND_WINS_TO_CLINCH || _roundWins2 >= ROUND_WINS_TO_CLINCH) {
-            reportPlatformPoints(_roundWins1 >= ROUND_WINS_TO_CLINCH ? TEAM1 : TEAM2);
+        if (_roundWins1 >= roundWinsToClinch() || _roundWins2 >= roundWinsToClinch()) {
+            reportPlatformPoints(_roundWins1 >= roundWinsToClinch() ? TEAM1 : TEAM2);
             _screen = 'result';
             renderResultScreen();
             return;
@@ -1479,7 +1512,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var cells = _cellStates.filter(function (x) { return x === team; }).length;
         var wins = (team === TEAM1) ? _roundWins1 : _roundWins2;
         var pips = '';
-        for (var i = 0; i < ROUND_WINS_TO_CLINCH; i++) pips += '<span class="lc-pip' + (i < wins ? ' lc-pip-on' : '') + '"></span>';
+        for (var i = 0; i < roundWinsToClinch(); i++) pips += '<span class="lc-pip' + (i < wins ? ' lc-pip-on' : '') + '"></span>';
         // زر التصحيح اليدوي الاحتياطي -- يظهر فقط أثناء سؤال مفتوح.
         var creditBtn = activeLetter
             ? '<button type="button" id="lc-credit-team' + team + '" class="lc-credit-btn" title="احتساب الإجابة لهذا الفريق">✓</button>'
@@ -1541,7 +1574,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             : '';
 
         var introHtml = _showIntro
-            ? '<div class="lc-intro"><div class="lc-intro-box"><span class="lc-intro-title">' + hostLogoHtml() + '</span><span class="lc-pill lc-pill-accent lc-intro-pill"><span class="lc-dot"></span>الجولة ' + _round + '</span></div></div>'
+            ? '<div class="lc-intro"><div class="lc-intro-box"><span class="lc-intro-title">' + hostLogoHtml() + '</span><span class="lc-pill lc-pill-accent lc-intro-pill"><span class="lc-dot"></span>' + roundLabel() + '</span></div></div>'
             : '';
 
         var reshuffleToastHtml = _reshuffleNotice
@@ -1654,8 +1687,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                   headerBtnHtml('lc-open-join-btn', 'دخول لاعبين جدد', ICON_USER_ADD, 'join')) +
                 '<div class="lc-stage lc-game-screen">' +
                     '<div class="lc-pills">' +
-                        '<span class="lc-pill lc-pill-accent"><span class="lc-dot"></span>' + GAME_NAME + ' · الجولة ' + _round + '</span>' +
-                        '<span class="lc-pill">أول فريق يكسب جولتين يفوز بالمباراة</span>' +
+                        '<span class="lc-pill lc-pill-accent"><span class="lc-dot"></span>' + GAME_NAME + ' · ' + roundLabel() + '</span>' +
+                        '<span class="lc-pill">' + matchRuleText() + '</span>' +
                     '</div>' +
                     '<div class="lc-game-body">' +
                         '<div class="lc-game-side">' +
@@ -1869,13 +1902,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var winningTeam = _connectionWinner;
         var prospective1 = _roundWins1 + (winningTeam === TEAM1 ? 1 : 0);
         var prospective2 = _roundWins2 + (winningTeam === TEAM2 ? 1 : 0);
-        var final = prospective1 >= ROUND_WINS_TO_CLINCH || prospective2 >= ROUND_WINS_TO_CLINCH;
+        var final = prospective1 >= roundWinsToClinch() || prospective2 >= roundWinsToClinch();
         var score = Math.max(prospective1, prospective2) + ' - ' + Math.min(prospective1, prospective2) + ' جولات';
 
         showWinOverlay(
             winningTeam,
-            '🏆 خط متصل · فاز بالجولة ' + _round,
-            ['فوز بالجولة ' + _round, score, GAME_NAME],
+            '🏆 خط متصل · فاز ب' + roundLabel(),
+            ['فوز ب' + roundLabel(), score, GAME_NAME],
             '<button type="button" id="lc-roundwinner-cta" class="lc-wbtn lc-wbtn-primary">' + (final ? 'عرض النتيجة النهائية' : 'الجولة التالية') + '</button>'
         );
         _screen = 'roundWinner';
@@ -1883,7 +1916,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     }
 
     function renderResultScreen() {
-        var winningTeam = (_roundWins1 >= ROUND_WINS_TO_CLINCH) ? TEAM1 : TEAM2;
+        var winningTeam = (_roundWins1 >= roundWinsToClinch()) ? TEAM1 : TEAM2;
         var score = Math.max(_roundWins1, _roundWins2) + ' - ' + Math.min(_roundWins1, _roundWins2) + ' جولات';
 
         showWinOverlay(
