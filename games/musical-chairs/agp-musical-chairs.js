@@ -1204,9 +1204,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    // الكرسي: صورة كرسي سفرة (إطار خشب فاتح + تنجيد بيج) بألوان مهدّية
-    // — images/chair-soft.png بخلفية شفافة.
-    var CHAIR_IMG = '<img class="mc-chair-img" src="images/chair-soft.png" alt="" draggable="false">';
+    // الكرسي: صورة كرسي خشب بظهر أعمدة — images/chair-wood.png بخلفية شفافة.
+    var CHAIR_IMG = '<img class="mc-chair-img" src="images/chair-wood.png" alt="" draggable="false">';
 
     function renderChairs() {
         var wrap = el('mc-chairs');
