@@ -19,6 +19,11 @@
  *   كل POLL_MS والصفحة ظاهرة فقط. آخر نتيجة بـsessionStorage عشان ما يفضى
  *   العنصر لحظة الانتقال بين الألعاب.
  *
+ * - النص: خطوط عربية من Google Fonts (FONTS — تتحمّل بس اللي انستخدم، وكلها
+ *   لما تنفتح قائمة الخطوط بالمحرر)، تأثيرات (TEXT_STYLES)، وحركة متكررة
+ *   (ANIMS) بثلاث سرعات. التأثير والحركة على عنصر داخلي (.agp-so-tx) عشان
+ *   ما يتعارض transform الحركة مع تمركز العنصر.
+ *
  * النصوص تنعرض بـtextContent فقط. مستقل عن window.AymanGamesPlatform عشان
  * يشتغل بأي صفحة (مكتبة الألعاب، اللوبي، اللعبة).
  *
@@ -35,11 +40,65 @@
     var Z = 2147483000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
     var COLORS = ['#ffffff', '#ffd54a', '#ff4d6d', '#4dd8ff', '#7cff6b', '#c58bff', '#111111'];
+    // b = أثقل وزن متوفر بالخط (للخطوط اللي وزنها واحد = 400)
+    var FONTS = [
+        { key: 'plex', family: 'IBM Plex Sans Arabic', label: 'بلكس', b: 700 },
+        { key: 'cairo', family: 'Cairo', label: 'القاهرة', b: 900 },
+        { key: 'tajawal', family: 'Tajawal', label: 'تجوال', b: 900 },
+        { key: 'almarai', family: 'Almarai', label: 'المراعي', b: 800 },
+        { key: 'changa', family: 'Changa', label: 'تشانجا', b: 800 },
+        { key: 'alexandria', family: 'Alexandria', label: 'الإسكندرية', b: 900 },
+        { key: 'kufam', family: 'Kufam', label: 'كوفام', b: 900 },
+        { key: 'notokufi', family: 'Noto Kufi Arabic', label: 'نوتو كوفي', b: 900 },
+        { key: 'readex', family: 'Readex Pro', label: 'ريدكس', b: 700 },
+        { key: 'mada', family: 'Mada', label: 'مدى', b: 900 },
+        { key: 'baloo', family: 'Baloo Bhaijaan 2', label: 'بالو', b: 800 },
+        { key: 'lemonada', family: 'Lemonada', label: 'ليمونادة', b: 700 },
+        { key: 'marhey', family: 'Marhey', label: 'مرحي', b: 700 },
+        { key: 'elmessiri', family: 'El Messiri', label: 'المسيري', b: 700 },
+        { key: 'reemkufi', family: 'Reem Kufi', label: 'ريم كوفي', b: 700 },
+        { key: 'lalezar', family: 'Lalezar', label: 'لاله زار', b: 400 },
+        { key: 'rakkas', family: 'Rakkas', label: 'رقّاص', b: 400 },
+        { key: 'jomhuria', family: 'Jomhuria', label: 'جمهورية', b: 400 },
+        { key: 'blaka', family: 'Blaka', label: 'بلاكا', b: 400 },
+        { key: 'katibeh', family: 'Katibeh', label: 'كاتبة', b: 400 },
+        { key: 'vibes', family: 'Vibes', label: 'فايبز', b: 400 },
+        { key: 'mirza', family: 'Mirza', label: 'ميرزا', b: 700 },
+        { key: 'harmattan', family: 'Harmattan', label: 'هرمتان', b: 700 },
+        { key: 'amiri', family: 'Amiri', label: 'أميري', b: 700 },
+        { key: 'arefruqaa', family: 'Aref Ruqaa', label: 'رقعة', b: 700 },
+        { key: 'gulzar', family: 'Gulzar', label: 'نستعليق', b: 400 }
+    ];
     var TEXT_STYLES = [
         { key: 'outline', label: 'حدود' },
         { key: 'shadow', label: 'ظل' },
-        { key: 'pill', label: 'خلفية' }
+        { key: 'pill', label: 'خلفية' },
+        { key: 'glass', label: 'زجاجي' },
+        { key: 'neon', label: 'نيون' },
+        { key: 'fire', label: 'نار' },
+        { key: 'gradient', label: 'تدرّج' },
+        { key: 'gold', label: 'ذهبي' },
+        { key: 'rainbow', label: 'قوس قزح' },
+        { key: '3d', label: 'ثلاثي الأبعاد' },
+        { key: 'hollow', label: 'مفرّغ' },
+        { key: 'plain', label: 'بدون' }
     ];
+    // d = مدة الدورة بالسرعة العادية (ثواني)
+    var ANIMS = [
+        { key: 'none', label: 'بدون', d: 0 },
+        { key: 'pulse', label: 'نبض', d: 1.4 },
+        { key: 'heartbeat', label: 'نبضة قلب', d: 1.3 },
+        { key: 'bounce', label: 'قفز', d: 1.1 },
+        { key: 'float', label: 'طفو', d: 3 },
+        { key: 'swing', label: 'تمايل', d: 2 },
+        { key: 'shake', label: 'اهتزاز', d: 0.8 },
+        { key: 'zoom', label: 'زووم', d: 2.4 },
+        { key: 'blink', label: 'وميض', d: 1.2 },
+        { key: 'glow', label: 'توهّج', d: 1.8 },
+        { key: 'hue', label: 'تلوّن', d: 4 }
+    ];
+    var SPEEDS = [{ label: 'بطيء', value: 1.8 }, { label: 'عادي', value: 1 }, { label: 'سريع', value: 0.55 }];
+    var DEFAULT_FONT = 'plex';
     var LIKERS_TOPS = [1, 3, 5];
     // w×h بالوضع الأفقي (نقاط CSS)؛ العمودي = نفس الأبعاد مقلوبة
     var TEMPLATES = [
@@ -90,6 +149,8 @@
     var inflight = false;
 
     var pickerOpen = false;
+    var textTab = 'text';
+    var loadedFonts = {};
     var frameRect = null;
 
     var layer, stage, launcher, backdrop, bar, panel, picker, enabledBtn, templateBtn, orientPills;
@@ -143,6 +204,26 @@
         }
         return it.pos[key];
     }
+
+    /* ---------------- الخطوط ---------------- */
+
+    function fontOf(key) {
+        for (var i = 0; i < FONTS.length; i++) if (FONTS[i].key === key) return FONTS[i];
+        return FONTS[0];
+    }
+
+    /** يحمّل الخط من Google Fonts مرة وحدة (رابط لكل خط عشان خط غلط ما يكسر الباقي). */
+    function loadFont(f) {
+        if (loadedFonts[f.key]) return;
+        loadedFonts[f.key] = true;
+        var l = document.createElement('link');
+        l.rel = 'stylesheet';
+        l.href = 'https://fonts.googleapis.com/css2?family=' + f.family.replace(/ /g, '+') +
+            (f.b > 400 ? ':wght@400;' + f.b : '') + '&display=swap';
+        document.head.appendChild(l);
+    }
+
+    function fontStack(f) { return '"' + f.family + '",' + FONT; }
 
     /* ---------------- التكبيسات ---------------- */
 
@@ -255,9 +336,27 @@
         n.setAttribute('data-id', it.id);
         n.style.fontSize = ((Number(it.size) || 5) * Math.min(F.w, F.h) / 100) + 'px';
         if (it.type === 'text') {
-            n.className += ' agp-so-text s-' + (it.style || 'outline');
-            n.style.color = it.color || '#fff';
-            n.textContent = it.text || ' ';
+            var f = fontOf(it.font || DEFAULT_FONT);
+            loadFont(f);
+            n.className += ' agp-so-text';
+            var tx = document.createElement('span');
+            tx.className = 'agp-so-tx s-' + (it.style || 'outline');
+            tx.style.color = it.color || '#fff';
+            tx.style.setProperty('--agp-so-c', it.color || '#fff');
+            tx.style.fontFamily = fontStack(f);
+            tx.style.fontWeight = String(f.b);
+            // الحركة على غلاف منفصل عن التأثير، عشان ما تلغي حركة «قوس قزح» ولا فلاتر التأثير
+            var mv = document.createElement('span');
+            mv.className = 'agp-so-mv';
+            mv.style.setProperty('--agp-so-c', it.color || '#fff');
+            var an = ANIMS.filter(function (a) { return a.key === it.anim; })[0];
+            if (an && an.d) {
+                mv.className += ' a-' + an.key;
+                mv.style.animationDuration = (an.d * (Number(it.speed) || 1)) + 's';
+            }
+            tx.textContent = it.text || ' ';
+            mv.appendChild(tx);
+            n.appendChild(mv);
         } else if (it.type === 'likers') {
             n.className += ' agp-so-likers';
             n.style.setProperty('--agp-so-c', it.color || '#ffd54a');
@@ -389,16 +488,52 @@
         if (!it) return;
 
         if (it.type === 'text') {
-            var ta = document.createElement('textarea');
-            ta.className = 'agp-so-input';
-            ta.rows = 2;
-            ta.maxLength = 200;
-            ta.value = it.text || '';
-            ta.addEventListener('input', function () { update(it, 'text', ta.value); });
-            panel.appendChild(row('النص', ta));
-            panel.appendChild(row('الحجم', slider(2, 16, 0.5, it.size, function (v) { update(it, 'size', v); })));
-            panel.appendChild(row('اللون', swatches(it.color, function (c) { update(it, 'color', c, true); })));
-            panel.appendChild(row('الشكل', pills(TEXT_STYLES.map(function (s) { return { label: s.label, value: s.key }; }), it.style, function (v) { update(it, 'style', v, true); })));
+            var tabs = [{ label: 'النص', value: 'text' }, { label: 'الخط', value: 'font' }, { label: 'التأثير', value: 'fx' }, { label: 'الحركة', value: 'anim' }];
+            var tabBar = pills(tabs, textTab, function (v) { textTab = v; renderPanel(); });
+            tabBar.className += ' agp-so-tabs';
+            panel.appendChild(tabBar);
+            if (textTab === 'text') {
+                var ta = document.createElement('textarea');
+                ta.className = 'agp-so-input';
+                ta.rows = 2;
+                ta.maxLength = 200;
+                ta.value = it.text || '';
+                ta.addEventListener('input', function () { update(it, 'text', ta.value); });
+                panel.appendChild(row('النص', ta));
+                panel.appendChild(row('الحجم', slider(2, 16, 0.5, it.size, function (v) { update(it, 'size', v); })));
+                panel.appendChild(row('اللون', swatches(it.color, function (c) { update(it, 'color', c, true); })));
+            } else if (textTab === 'font') {
+                var grid = document.createElement('div');
+                grid.className = 'agp-so-fgrid';
+                var cur = it.font || DEFAULT_FONT;
+                FONTS.forEach(function (f) {
+                    loadFont(f);
+                    var b = btn('', 'agp-so-fbtn' + (f.key === cur ? ' on' : ''), function () { update(it, 'font', f.key, true); });
+                    var sample = document.createElement('span');
+                    sample.className = 'agp-so-fsample';
+                    sample.style.fontFamily = fontStack(f);
+                    sample.style.fontWeight = String(f.b);
+                    sample.textContent = 'حياكم';
+                    var name = document.createElement('span');
+                    name.className = 'agp-so-fname';
+                    name.textContent = f.label;
+                    b.appendChild(sample);
+                    b.appendChild(name);
+                    grid.appendChild(b);
+                });
+                panel.appendChild(grid);
+            } else if (textTab === 'fx') {
+                var fx = pills(TEXT_STYLES.map(function (x) { return { label: x.label, value: x.key }; }), it.style || 'outline', function (v) { update(it, 'style', v, true); });
+                fx.className += ' agp-so-wrap';
+                panel.appendChild(fx);
+            } else {
+                var am = pills(ANIMS.map(function (x) { return { label: x.label, value: x.key }; }), it.anim || 'none', function (v) { update(it, 'anim', v, true); });
+                am.className += ' agp-so-wrap';
+                panel.appendChild(am);
+                if (it.anim && it.anim !== 'none') {
+                    panel.appendChild(row('السرعة', pills(SPEEDS, Number(it.speed) || 1, function (v) { update(it, 'speed', v, true); })));
+                }
+            }
         } else if (it.type === 'likers') {
             var ti = document.createElement('input');
             ti.type = 'text';
@@ -430,7 +565,8 @@
     }
 
     function addText() {
-        var it = { id: uid(), type: 'text', text: 'اكتب نصك هنا', size: 6, color: '#ffffff', style: 'outline', pos: {} };
+        var it = { id: uid(), type: 'text', text: 'اكتب نصك هنا', size: 6, color: '#ffffff', style: 'outline', font: DEFAULT_FONT, anim: 'none', speed: 1, pos: {} };
+        textTab = 'text';
         it.pos[curKey()] = { x: 0.5, y: 0.4 };
         addItem(it);
         var ta = panel.querySelector('textarea');
@@ -581,7 +717,7 @@
         var id = el.getAttribute('data-id');
         var it = find(id);
         if (!it) return;
-        if (selectedId !== id) { selectedId = id; markSelected(); renderPanel(); }
+        if (selectedId !== id) { selectedId = id; textTab = 'text'; markSelected(); renderPanel(); }
         // من المكان الظاهر فعلاً (ممكن يكون متزحزح عن المحفوظ عند حافة الإطار)
         var r = el.getBoundingClientRect(), F = frameRect;
         var px = (r.left + r.width / 2 - F.x) / F.w, py = (r.top + r.height / 2 - F.y) / F.h;
@@ -641,10 +777,42 @@
         '.agp-so-item{position:absolute;transform:translate(-50%,-50%);max-width:96vw;line-height:1.3;user-select:none;-webkit-user-select:none;box-sizing:border-box}',
         '#agp-so-layer.agp-so-editing .agp-so-item{pointer-events:auto;touch-action:none;cursor:grab;outline:2px dashed rgba(255,255,255,.6);outline-offset:6px;border-radius:6px}',
         '#agp-so-layer.agp-so-editing .agp-so-item.agp-so-selected{outline:2px solid #4dd8ff}',
-        '.agp-so-text{white-space:pre-wrap;text-align:center;font-weight:800;word-break:break-word;width:max-content}',
-        '.agp-so-text.s-shadow{text-shadow:0 .05em .2em rgba(0,0,0,.9)}',
-        '.agp-so-text.s-outline{text-shadow:-.04em -.04em 0 #000,.04em -.04em 0 #000,-.04em .04em 0 #000,.04em .04em 0 #000,0 .06em .15em rgba(0,0,0,.6)}',
-        '.agp-so-text.s-pill{background:rgba(0,0,0,.6);padding:.15em .6em;border-radius:.6em}',
+        '.agp-so-text{white-space:pre-wrap;text-align:center;word-break:break-word;width:max-content}',
+        '.agp-so-tx{display:inline-block;padding:.05em .12em}',
+        '.agp-so-tx.s-shadow{text-shadow:0 .05em .2em rgba(0,0,0,.9)}',
+        '.agp-so-tx.s-outline{text-shadow:-.04em -.04em 0 #000,.04em -.04em 0 #000,-.04em .04em 0 #000,.04em .04em 0 #000,0 .06em .15em rgba(0,0,0,.6)}',
+        '.agp-so-tx.s-pill{background:rgba(0,0,0,.6);padding:.15em .6em;border-radius:.6em}',
+        '.agp-so-tx.s-glass{background:linear-gradient(160deg,rgba(255,255,255,.18),rgba(255,255,255,.05));border:1px solid rgba(255,255,255,.3);padding:.15em .6em;border-radius:.6em;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);text-shadow:0 .04em .12em rgba(0,0,0,.5)}',
+        '.agp-so-tx.s-neon{color:#fff !important;text-shadow:0 0 .04em #fff,0 0 .12em var(--agp-so-c),0 0 .3em var(--agp-so-c),0 0 .6em var(--agp-so-c)}',
+        '.agp-so-tx.s-fire{color:#fff6d0 !important;text-shadow:0 0 .06em #fff,0 -.06em .15em #ffd54a,0 -.12em .3em #ff9800,0 -.2em .45em #ff3d00,0 -.3em .7em #b71c1c}',
+        '.agp-so-tx.s-gradient{background:linear-gradient(180deg,#fff 10%,var(--agp-so-c) 90%);-webkit-background-clip:text;background-clip:text;color:transparent !important;filter:drop-shadow(0 .05em .08em rgba(0,0,0,.7))}',
+        '.agp-so-tx.s-gold{background:linear-gradient(180deg,#fff7c9 0%,#ffd54a 40%,#c9871c 60%,#ffe58a 100%);-webkit-background-clip:text;background-clip:text;color:transparent !important;filter:drop-shadow(0 .05em .06em rgba(60,30,0,.9))}',
+        '.agp-so-tx.s-rainbow{background:linear-gradient(90deg,#ff4d6d,#ffd54a,#7cff6b,#4dd8ff,#c58bff,#ff4d6d);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent !important;filter:drop-shadow(0 .05em .06em rgba(0,0,0,.8));animation:agp-so-rainbow 3s linear infinite}',
+        '.agp-so-tx.s-3d{text-shadow:.02em .02em 0 rgba(0,0,0,.55),.04em .04em 0 rgba(0,0,0,.5),.06em .06em 0 rgba(0,0,0,.45),.08em .08em 0 rgba(0,0,0,.4),.1em .1em .12em rgba(0,0,0,.6)}',
+        '.agp-so-tx.s-hollow{color:transparent !important;-webkit-text-stroke:.035em var(--agp-so-c);filter:drop-shadow(0 .03em .06em rgba(0,0,0,.8))}',
+        '.agp-so-mv{display:inline-block}',
+        '.agp-so-mv[class*=" a-"]{animation-iteration-count:infinite;animation-timing-function:ease-in-out;will-change:transform}',
+        '.agp-so-mv.a-pulse{animation-name:agp-so-pulse}',
+        '.agp-so-mv.a-heartbeat{animation-name:agp-so-heartbeat}',
+        '.agp-so-mv.a-bounce{animation-name:agp-so-bounce}',
+        '.agp-so-mv.a-float{animation-name:agp-so-float}',
+        '.agp-so-mv.a-swing{animation-name:agp-so-swing;transform-origin:50% 0}',
+        '.agp-so-mv.a-shake{animation-name:agp-so-shake;animation-timing-function:linear}',
+        '.agp-so-mv.a-zoom{animation-name:agp-so-zoom}',
+        '.agp-so-mv.a-blink{animation-name:agp-so-blink;animation-timing-function:steps(1,end)}',
+        '.agp-so-mv.a-glow{animation-name:agp-so-glow}',
+        '.agp-so-mv.a-hue{animation-name:agp-so-hue;animation-timing-function:linear}',
+        '@keyframes agp-so-rainbow{to{background-position:-200% 0}}',
+        '@keyframes agp-so-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}',
+        '@keyframes agp-so-heartbeat{0%,40%,100%{transform:scale(1)}10%,30%{transform:scale(1.12)}20%{transform:scale(1.02)}}',
+        '@keyframes agp-so-bounce{0%,100%{transform:translateY(0)}30%{transform:translateY(-.25em)}50%{transform:translateY(0)}65%{transform:translateY(-.1em)}80%{transform:translateY(0)}}',
+        '@keyframes agp-so-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-.15em)}}',
+        '@keyframes agp-so-swing{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}',
+        '@keyframes agp-so-shake{0%,100%{transform:translate(0,0) rotate(0)}20%{transform:translate(-.03em,.02em) rotate(-2deg)}40%{transform:translate(.03em,-.02em) rotate(2deg)}60%{transform:translate(-.02em,-.02em) rotate(-1deg)}80%{transform:translate(.02em,.02em) rotate(1deg)}}',
+        '@keyframes agp-so-zoom{0%,100%{transform:scale(.9)}50%{transform:scale(1.15)}}',
+        '@keyframes agp-so-blink{0%,100%{opacity:1}50%{opacity:.15}}',
+        '@keyframes agp-so-glow{0%,100%{filter:brightness(1) drop-shadow(0 0 0 transparent)}50%{filter:brightness(1.35) drop-shadow(0 0 .2em var(--agp-so-c))}}',
+        '@keyframes agp-so-hue{to{filter:hue-rotate(360deg)}}',
         '.agp-so-likers{--agp-so-c:#ffd54a;color:#fff;min-width:11em;padding:.6em .75em;border-radius:.8em;background:linear-gradient(160deg,rgba(28,30,52,.82),rgba(10,12,24,.82));border:1px solid rgba(255,255,255,.14);box-shadow:0 .3em 1em rgba(0,0,0,.35)}',
         '.agp-so-likers-title{text-align:center;font-weight:800;color:var(--agp-so-c);margin-bottom:.35em}',
         '.agp-so-likers-title:empty{display:none}',
@@ -674,6 +842,15 @@
         '.agp-so-input{flex:1;min-width:0;font:inherit;font-size:16px;color:#fff;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:8px 10px;direction:rtl;resize:none}',
         '.agp-so-range{flex:1;max-width:260px;accent-color:#4dd8ff}',
         '.agp-so-pactions{display:flex;justify-content:space-between;gap:8px}',
+        '.agp-so-tabs{justify-content:stretch;flex-wrap:nowrap;background:rgba(255,255,255,.05);border-radius:999px;padding:3px}',
+        '.agp-so-tabs .agp-so-btn{flex:1;border-color:transparent;background:transparent}',
+        '.agp-so-tabs .agp-so-btn.on{background:#4dd8ff;color:#06121c}',
+        '.agp-so-wrap{justify-content:flex-start}',
+        '.agp-so-fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px}',
+        '.agp-so-fbtn{border-radius:12px;padding:6px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:0}',
+        '.agp-so-fbtn.on{background:rgba(77,216,255,.15);color:#fff;border-color:#4dd8ff}',
+        '.agp-so-fsample{font-size:22px;line-height:1.4}',
+        '.agp-so-fname{font-size:11px;opacity:.65;font-weight:600}',
         '#agp-so-picker{top:50%;left:50%;transform:translate(-50%,-50%);width:min(620px,calc(100vw - 20px));max-height:calc(100vh - 20px);overflow:auto;box-sizing:border-box;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:12px}',
         '.agp-so-ptitle{font-size:18px;font-weight:800;text-align:center}',
         '.agp-so-tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}',
