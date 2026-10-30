@@ -142,37 +142,56 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var BOARD_ROWS = 5, BOARD_COLS = 5;
 
     function buildBrickGeometry(rows, cols) {
-        var boardH = BOARD_Y1 - BOARD_Y0;
-        var hexH = boardH / (0.75 * rows + 0.25);
+        var hexH = (BOARD_Y1 - BOARD_Y0) / (0.75 * rows + 0.25);
         var hexW = hexH * (122.7 / 146.67); // نفس نسبة عرض/ارتفاع السداسي الأصلي
         var spacingX = hexW; // سداسيات متلامسة بنفس الصف
         var spacingY = hexH * 0.75;
         var halfStep = spacingX / 2; // إزاحة الصفوف الزوجية عن الفردية فقط (تبديل، مو تراكم)
 
-        var rowSpan = (cols - 1) * spacingX;
-        var totalWidth = rowSpan + halfStep + hexW;
+        var totalWidth = (cols - 1) * spacingX + halfStep + hexW;
         var alignedRowStartX = BOARD_CENTER_X - totalWidth / 2 + hexW / 2; // بداية الصفوف الفردية (1،3،5)
-        // مواضع الخلايا بالنسب المئوية من صندوق الرقعة نفسه (مو من الشاشة) --
-        // الرقعة صارت كرت مستقل داخل مسرح شاشة اللعب.
-        var boxLeft = alignedRowStartX - hexW / 2;
+
+        function hexCenter(r, c) {
+            var isOffsetRow = (((r % 2) + 2) % 2 === 1); // الصفوف الزوجية بالترقيم من واحد (2، 4)
+            return { x: alignedRowStartX + (isOffsetRow ? halfStep : 0) + c * spacingX, y: BOARD_Y0 + hexH / 2 + r * spacingY };
+        }
+
+        // إطار الخلية (زي رقعة لعبة الحروف الكلاسيكية): صف سداسيات ملوّن فوق
+        // وتحت الرقعة (الفريق الأول) وعمود سداسيات يمين ويسار (الفريق الثاني).
+        // صندوق الرقعة يقص سداسيات الإطار من منتصفها، فيطلع الإطار مستطيل من
+        // برّا ومتعرّج على حواف الخلايا من جوّا.
+        var ringRaw = [];
+        for (var rr = -1; rr <= rows; rr++) {
+            for (var cc = -1; cc <= cols; cc++) {
+                if (rr >= 0 && rr < rows && cc >= 0 && cc < cols) continue;
+                ringRaw.push({ center: hexCenter(rr, cc), side: (rr < 0 || rr >= rows) ? 'tb' : 'lr' });
+            }
+        }
+        var boxLeft = alignedRowStartX - spacingX;
+        var boxRight = alignedRowStartX + halfStep + cols * spacingX;
+        var boxTop = hexCenter(-1, 0).y;
+        var boxBottom = hexCenter(rows, 0).y;
+        var boxW = boxRight - boxLeft, boxH = boxBottom - boxTop;
+        // مواضع الخلايا بالنسب المئوية من صندوق الرقعة نفسه (مو من الشاشة).
+        function toLayout(pt) {
+            return {
+                leftPct: ((pt.x - hexW / 2 - boxLeft) / boxW) * 100,
+                topPct: ((pt.y - hexH / 2 - boxTop) / boxH) * 100,
+                wPct: (hexW / boxW) * 100,
+                hPct: (hexH / boxH) * 100
+            };
+        }
 
         var centers = [];
         var layout = [];
         var idx = 0;
         var leftEdge = [], rightEdge = [], topEdge = [], bottomEdge = [];
         for (var r = 0; r < rows; r++) {
-            var cy = BOARD_Y0 + hexH / 2 + r * spacingY;
-            var isOffsetRow = (r % 2 === 1); // الصفوف الزوجية بالترقيم من واحد (2، 4)
-            var rowStartX = alignedRowStartX + (isOffsetRow ? halfStep : 0);
+            var isOffsetRow = (r % 2 === 1);
             for (var c = 0; c < cols; c++) {
-                var cx = rowStartX + c * spacingX;
-                centers.push({ x: cx, y: cy });
-                layout.push({
-                    leftPct: ((cx - hexW / 2 - boxLeft) / totalWidth) * 100,
-                    topPct: ((cy - hexH / 2 - BOARD_Y0) / boardH) * 100,
-                    wPct: (hexW / totalWidth) * 100,
-                    hPct: (hexH / boardH) * 100
-                });
+                var pt = hexCenter(r, c);
+                centers.push(pt);
+                layout.push(toLayout(pt));
                 // حدود اليمين/اليسار تقتصر على الصفوف المتوازية (غير المُزاحة)،
                 // لأن الصفوف المُزاحة لا تصل فعلياً للحد الخارجي الحقيقي.
                 if (!isOffsetRow && c === 0) leftEdge.push(idx);
@@ -182,6 +201,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 idx++;
             }
         }
+        var ring = ringRaw.map(function (h) { var l = toLayout(h.center); l.side = h.side; return l; });
 
         var adjacency = centers.map(function () { return []; });
         var threshold = spacingX * 1.15;
@@ -192,12 +212,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             }
         }
 
-        return { layout: layout, aspect: totalWidth / boardH, adjacency: adjacency, leftEdge: leftEdge, rightEdge: rightEdge, topEdge: topEdge, bottomEdge: bottomEdge };
+        return { layout: layout, ring: ring, aspect: boxW / boxH, hexHRatio: hexH / boxH, adjacency: adjacency, leftEdge: leftEdge, rightEdge: rightEdge, topEdge: topEdge, bottomEdge: bottomEdge };
     }
 
     var BOARD_GEOMETRY = buildBrickGeometry(BOARD_ROWS, BOARD_COLS);
     var CELL_LAYOUT = BOARD_GEOMETRY.layout;
     var BOARD_ASPECT = BOARD_GEOMETRY.aspect;
+    var RING_LAYOUT = BOARD_GEOMETRY.ring;
+    var HEX_H_RATIO = BOARD_GEOMETRY.hexHRatio;
     var ADJACENCY = BOARD_GEOMETRY.adjacency;
     var LEFT_EDGE = BOARD_GEOMETRY.leftEdge;
     var RIGHT_EDGE = BOARD_GEOMETRY.rightEdge;
@@ -1291,7 +1313,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return 'background:conic-gradient(' + color + ' ' + deg.toFixed(1) + 'deg, rgba(255,255,255,.07) 0);color:' + color;
     }
 
-    var BOARD_HEIGHT_PX = 760; // ارتفاع الرقعة داخل مسرح 1920×1080
+    var BOARD_HEIGHT_PX = 800; // ارتفاع الرقعة داخل مسرح 1920×1080
 
     function gameTeamCardHtml(team, activeLetter) {
         var color = teamColor(team);
@@ -1332,6 +1354,13 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             if (st !== 0) style += '--tc:' + teamColor(st) + ';--tc-dark:' + hexToRgba(teamColor(st), 0.55) + ';';
             return '<div class="' + cls + '" data-idx="' + idx + '" style="' + style + '">' +
                 '<div class="lc-hex-inner lc-hex-clip">' + escapeHtml(letter) + '</div>' +
+            '</div>';
+        }).join('');
+
+        // سداسيات الإطار: فوق وتحت بلون الفريق الأول، يمين ويسار بلون الفريق الثاني.
+        var ringHtml = RING_LAYOUT.map(function (l) {
+            return '<div class="lc-hex lc-hex-clip lc-hex-ring lc-hex-ring-' + l.side + '" style="left:' + l.leftPct + '%;top:' + l.topPct + '%;width:' + l.wPct + '%;height:' + l.hPct + '%;">' +
+                '<div class="lc-hex-inner lc-hex-clip"></div>' +
             '</div>';
         }).join('');
 
@@ -1479,14 +1508,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         '</div>' +
                         '<div class="lc-card lc-board-card">' +
                             '<span class="lc-board-halo"></span>' +
-                            // إطار الرقعة: فوق وتحت بلون الفريق الأول (بنفسجي)، يمين ويسار بلون الفريق الثاني (سماوي).
-                            '<div class="lc-board-frame" style="--c1:' + teamColor(TEAM1) + ';--c2:' + teamColor(TEAM2) + '">' +
-                                '<span class="lc-board-edge lc-board-edge-top"></span>' +
-                                '<span class="lc-board-edge lc-board-edge-bottom"></span>' +
-                                '<span class="lc-board-edge lc-board-edge-right"></span>' +
-                                '<span class="lc-board-edge lc-board-edge-left"></span>' +
-                                '<div class="lc-board" style="height:' + BOARD_HEIGHT_PX + 'px;width:' + Math.round(BOARD_HEIGHT_PX * BOARD_ASPECT) + 'px">' + cellsHtml + '</div>' +
-                            '</div>' +
+                            '<div class="lc-board" style="height:' + BOARD_HEIGHT_PX + 'px;width:' + Math.round(BOARD_HEIGHT_PX * BOARD_ASPECT) + 'px;--lc-hexfont:' + Math.round(BOARD_HEIGHT_PX * HEX_H_RATIO * 0.42) + 'px;--c1:' + teamColor(TEAM1) + ';--c2:' + teamColor(TEAM2) + '">' + ringHtml + cellsHtml + '</div>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +

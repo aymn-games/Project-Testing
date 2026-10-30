@@ -286,17 +286,15 @@ body.lc-active a { color: var(--lc-accent); }
 .lc-board-card { position: relative; overflow: hidden; border-radius: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 30px 80px rgba(0,0,0,.35); }
 .lc-board-halo { position: absolute; top: -140px; left: 50%; width: 700px; height: 280px; margin-left: -350px; border-radius: 50%; background: rgba(167,139,250,.16); filter: blur(44px); pointer-events: none; }
 .lc-board { position: relative; flex-shrink: 0; }
-/* إطار الرقعة: شريطان أفقيان (فوق وتحت) بلون الفريق الأول، وشريطان عموديان (يمين ويسار) بلون الفريق الثاني */
-.lc-board-frame { position: relative; flex-shrink: 0; padding: 30px 34px; }
-.lc-board-edge { position: absolute; border-radius: 999px; }
-.lc-board-edge-top, .lc-board-edge-bottom { left: 34px; right: 34px; height: 12px; background: var(--c1); box-shadow: 0 0 22px var(--c1); }
-.lc-board-edge-top { top: 0; }
-.lc-board-edge-bottom { bottom: 0; }
-.lc-board-edge-right, .lc-board-edge-left { top: 30px; bottom: 30px; width: 12px; background: var(--c2); box-shadow: 0 0 22px var(--c2); }
-.lc-board-edge-right { right: 0; }
-.lc-board-edge-left { left: 0; }
+/* إطار الخلية: سداسيات ملوّنة تقصها حدود الرقعة (overflow) -- فوق وتحت بلون الفريق الأول، يمين ويسار بلون الفريق الثاني */
+.lc-board { overflow: hidden; border-radius: 18px; }
+.lc-hex-ring { pointer-events: none; }
+.lc-hex-ring-tb { background: var(--c1); }
+.lc-hex-ring-tb .lc-hex-inner { background: linear-gradient(160deg, var(--c1), rgba(124,58,237,.75)); }
+.lc-hex-ring-lr { background: var(--c2); }
+.lc-hex-ring-lr .lc-hex-inner { background: linear-gradient(160deg, var(--c2), rgba(2,132,199,.75)); }
 .lc-hex { position: absolute; padding: 5px; transition: background .25s; }
-.lc-hex-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font: 700 80px/1 var(--lc-font); transition: background .25s, color .25s; }
+.lc-hex-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font: 700 var(--lc-hexfont, 80px)/1 var(--lc-font); transition: background .25s, color .25s; }
 .lc-hex-free { background: rgba(167,139,250,.3); cursor: pointer; }
 .lc-hex-free .lc-hex-inner { background: linear-gradient(160deg, #1d1830, #110f18); color: var(--lc-text); }
 .lc-hex-free:hover { background: rgba(167,139,250,.75); }
