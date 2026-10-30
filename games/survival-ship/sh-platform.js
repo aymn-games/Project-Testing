@@ -169,7 +169,7 @@
 
     window.SHIP = {
         libraryUrl: 'https://aymngames.online/',
-        keys: { setup: 'ship-settings', join: 'ship-join', roster: 'ship-roster', players: 'ship-players', guideHide: 'ship-guide-hide' },
+        keys: { setup: 'ship-settings', join: 'ship-join', roster: 'ship-roster', players: 'ship-players', guideHide: 'ship-guide-hide-v2' },
         readJSON: readJSON,
         writeJSON: writeJSON,
         getSavedConnection: getSavedConnection,
