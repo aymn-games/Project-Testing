@@ -95,13 +95,13 @@ class Ship3D extends HTMLElement {
       const br=add(new T.CapsuleGeometry(.025,.13,3,6),d.hair,s*.22,.2,.55,head); br.rotation.z=Math.PI/2+s*.15;
       const ch=add(new T.SphereGeometry(.09,10,8),M('#fb7185',{transparent:true,opacity:.55}),s*.36,-.2,.47,head); ch.scale.set(1,.55,.3); }
     const mouth=add(new T.TorusGeometry(.08,.022,6,14,Math.PI),'#9f1239',0,-.2,.57,head); mouth.rotation.z=Math.PI;
-    // طوق النجاة (يظهر حول خصر اللاعب اللي عنده طوق): 8 قطع أحمر/أبيض لامعة + 4 لفّات حبل ذهبية + هالة ذهبية تنبض + نجوم تدور حوله
+    // طوق النجاة (يظهر حول خصر اللاعب اللي عنده طوق): 8 قطع برتقالي فاقع/أبيض لامعة + 4 لفّات حبل ذهبية + هالة ذهبية تنبض + نجوم تدور حوله
     const buoy=new T.Group(); buoy.position.y=1.0; buoy.visible=!!d.ring; buoy.scale.setScalar(d.ring?1:.001); G.add(buoy);
     const spin=new T.Group(); spin.rotation.x=Math.PI/2; buoy.add(spin);
-    const bR=M('#e11d48',{roughness:.25,metalness:.1,emissive:'#7f1d1d',emissiveIntensity:.35}), bW=M('#ffffff',{roughness:.25,emissive:'#fff7ed',emissiveIntensity:.15}), gold=M('#fbbf24',{roughness:.2,metalness:.85,emissive:'#b45309',emissiveIntensity:.4});
+    const bR=M('#ff5a00',{roughness:.2,metalness:.05,emissive:'#ff4500',emissiveIntensity:.75}), bW=M('#ffffff',{roughness:.2,emissive:'#ffffff',emissiveIntensity:.35}), gold=M('#fbbf24',{roughness:.2,metalness:.85,emissive:'#b45309',emissiveIntensity:.4});
     for(let i=0;i<8;i++) add(new T.TorusGeometry(.56,.16,12,8,Math.PI/4),i%2?bW:bR,0,0,0,spin).rotation.z=i*Math.PI/4;
     for(let i=0;i<4;i++){ const w=new T.Group(); w.rotation.z=i*Math.PI/2+Math.PI/8; spin.add(w); for(const o of [-.07,.07]) add(new T.TorusGeometry(.18,.035,8,16),gold,.56,o,0,w).rotation.x=Math.PI/2; }
-    const glow=new T.Mesh(new T.TorusGeometry(.56,.3,10,32),new T.MeshBasicMaterial({color:'#fde68a',transparent:true,opacity:.3,blending:T.AdditiveBlending,depthWrite:false})); glow.rotation.x=Math.PI/2; buoy.add(glow);
+    const glow=new T.Mesh(new T.TorusGeometry(.56,.3,10,32),new T.MeshBasicMaterial({color:'#ffb347',transparent:true,opacity:.3,blending:T.AdditiveBlending,depthWrite:false})); glow.rotation.x=Math.PI/2; buoy.add(glow);
     const star=this.starTex||(this.starTex=this.tex(64,64,(g,w,h)=>{ const r=g.createRadialGradient(32,32,0,32,32,32); r.addColorStop(0,'rgba(255,255,255,1)'); r.addColorStop(.25,'rgba(253,230,138,.9)'); r.addColorStop(1,'rgba(253,230,138,0)'); g.fillStyle=r; g.fillRect(0,0,w,h);
       g.fillStyle='#fff'; g.beginPath(); g.moveTo(32,2); g.lineTo(36,28); g.lineTo(62,32); g.lineTo(36,36); g.lineTo(32,62); g.lineTo(28,36); g.lineTo(2,32); g.lineTo(28,28); g.closePath(); g.fill(); }));
     const stars=[0,1,2].map(i=>{ const st=new T.Sprite(new T.SpriteMaterial({map:star,transparent:true,depthWrite:false,blending:T.AdditiveBlending})); st.scale.setScalar(.38); buoy.add(st); return st; });
