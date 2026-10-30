@@ -282,50 +282,130 @@
         return 'بانتظار التكبيسات… (اتصل بالبث من أي لعبة)';
     }
 
+    var CROWN = '<svg viewBox="0 0 24 16" aria-hidden="true"><path d="M2 14h20l1.5-11-6 4.5L12 0 6.5 7.5.5 3z" fill="currentColor"/></svg>';
+    var SAMPLE_ROWS = [
+        { name: 'المكبّس الأول', count: 12400 }, { name: 'المكبّس الثاني', count: 8100 },
+        { name: 'المكبّس الثالث', count: 4600 }, { name: 'الرابع', count: 2100 }, { name: 'الخامس', count: 900 }
+    ];
+
+    function el(tag, cls, text) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text != null) e.textContent = text;
+        return e;
+    }
+
+    /** صورة المكبّس بحلقة لون مركزه (أو أول حرف من اسمه). */
+    function avatar(r) {
+        var wrap = el('span', 'agp-so-av');
+        if (typeof r.avatar === 'string' && /^data:image\//.test(r.avatar)) {
+            var img = document.createElement('img');
+            img.src = r.avatar;
+            img.alt = '';
+            img.draggable = false;
+            wrap.appendChild(img);
+        } else {
+            wrap.appendChild(el('span', 'agp-so-av-i', String(r.name || r.username || '?').charAt(0)));
+        }
+        return wrap;
+    }
+
+    function rkClass(i) { return ' rk' + (i < 3 ? i + 1 : 'n'); }
+    function nameOf(r) { return r.name || r.username || ''; }
+    function countEl(r) { return el('span', 'agp-so-count', fmt(r.count) + ' ❤'); }
+
+    function podium(rows) {
+        var box = el('div', 'agp-so-podium');
+        // RTL: أول عنصر يمين — الثاني يمين والأول بالوسط والثالث يسار
+        [1, 0, 2].forEach(function (i) {
+            var r = rows[i];
+            if (!r) return;
+            var col = el('div', 'agp-so-pcol' + rkClass(i));
+            if (i === 0) { var c = el('span', 'agp-so-crown'); c.innerHTML = CROWN; col.appendChild(c); }
+            col.appendChild(avatar(r));
+            col.appendChild(el('span', 'agp-so-name', nameOf(r)));
+            col.appendChild(countEl(r));
+            col.appendChild(el('span', 'agp-so-step', String(i + 1)));
+            box.appendChild(col);
+        });
+        var frag = document.createDocumentFragment();
+        frag.appendChild(box);
+        if (rows.length > 3) frag.appendChild(medals(rows.slice(3), 3));
+        return frag;
+    }
+
+    function medals(rows, offset) {
+        var box = el('div', 'agp-so-medals');
+        rows.forEach(function (r, k) {
+            var i = k + (offset || 0);
+            var row = el('div', 'agp-so-mrow' + rkClass(i));
+            row.appendChild(el('span', 'agp-so-medal', String(i + 1)));
+            row.appendChild(avatar(r));
+            row.appendChild(el('span', 'agp-so-name', nameOf(r)));
+            row.appendChild(countEl(r));
+            box.appendChild(row);
+        });
+        return box;
+    }
+
+    function cards(rows) {
+        var box = el('div', 'agp-so-cards');
+        rows.forEach(function (r, i) {
+            var c = el('div', 'agp-so-card' + rkClass(i));
+            var a = avatar(r);
+            a.appendChild(el('span', 'agp-so-badge', String(i + 1)));
+            c.appendChild(a);
+            c.appendChild(el('span', 'agp-so-name', nameOf(r)));
+            c.appendChild(countEl(r));
+            box.appendChild(c);
+        });
+        return box;
+    }
+
+    function minimal(rows) {
+        var box = el('div', 'agp-so-minimal');
+        rows.forEach(function (r, i) {
+            var row = el('div', 'agp-so-nrow' + rkClass(i));
+            row.appendChild(el('span', 'agp-so-medal', String(i + 1)));
+            row.appendChild(el('span', 'agp-so-name', nameOf(r)));
+            row.appendChild(countEl(r));
+            box.appendChild(row);
+        });
+        return box;
+    }
+
+    var DESIGNS = [
+        { key: 'podium', label: 'منصة تتويج', build: podium },
+        { key: 'medals', label: 'ميداليات', build: medals },
+        { key: 'cards', label: 'بطاقات', build: cards },
+        { key: 'minimal', label: 'بسيط', build: minimal }
+    ];
+
     function fillLikers(node, it) {
-        var list = node.querySelector('.agp-so-list');
-        list.textContent = '';
+        var d = DESIGNS.filter(function (x) { return x.key === it.design; })[0] || DESIGNS[0];
+        node.textContent = '';
+        node.className = node.className.replace(/(^|\s)d-\w+/g, '') + ' d-' + d.key;
+        if (it.title) node.appendChild(el('div', 'agp-so-likers-title', it.title));
         var rows = likers.rows.slice(0, Number(it.top) || 3);
-        if (!rows.length) {
-            var em = document.createElement('div');
-            em.className = 'agp-so-empty';
-            em.textContent = emptyMessage();
-            list.appendChild(em);
+        if (!rows.length && !editing) {
+            node.appendChild(el('div', 'agp-so-empty', emptyMessage()));
             return;
         }
-        rows.forEach(function (r, i) {
-            var row = document.createElement('div');
-            row.className = 'agp-so-row';
-            var rank = document.createElement('span');
-            rank.className = 'agp-so-rank';
-            rank.textContent = String(i + 1);
-            var av;
-            if (typeof r.avatar === 'string' && /^data:image\//.test(r.avatar)) {
-                av = document.createElement('img');
-                av.src = r.avatar;
-                av.alt = '';
-            } else {
-                av = document.createElement('span');
-                av.textContent = String(r.name || r.username || '?').charAt(0);
-            }
-            av.className = 'agp-so-av';
-            av.draggable = false;
-            var name = document.createElement('span');
-            name.className = 'agp-so-name';
-            name.textContent = r.name || r.username || '';
-            var count = document.createElement('span');
-            count.className = 'agp-so-count';
-            count.textContent = fmt(r.count) + ' ❤';
-            row.appendChild(rank);
-            row.appendChild(av);
-            row.appendChild(name);
-            row.appendChild(count);
-            list.appendChild(row);
-        });
+        // بالمحرر بدون بيانات: أسماء تجريبية باهتة عشان يشوف التصميم وهو يرتّب
+        var ghost = !rows.length;
+        var body = el('div', 'agp-so-lbody' + (ghost ? ' agp-so-ghost' : ''));
+        body.appendChild(d.build(ghost ? SAMPLE_ROWS.slice(0, Number(it.top) || 3) : rows));
+        node.appendChild(body);
+        if (ghost) node.appendChild(el('div', 'agp-so-empty', emptyMessage()));
     }
 
     function paintLikers() {
-        likersItems().forEach(function (it) { if (nodes[it.id]) fillLikers(nodes[it.id], it); });
+        var key = curKey();
+        likersItems().forEach(function (it) {
+            if (!nodes[it.id]) return;
+            fillLikers(nodes[it.id], it);
+            place(nodes[it.id], posOf(it, key)); // الحجم يتغيّر مع عدد الأسماء
+        });
     }
 
     /* ---------------- الرسم ---------------- */
@@ -360,13 +440,6 @@
         } else if (it.type === 'likers') {
             n.className += ' agp-so-likers';
             n.style.setProperty('--agp-so-c', it.color || '#ffd54a');
-            var title = document.createElement('div');
-            title.className = 'agp-so-likers-title';
-            title.textContent = it.title || '';
-            var list = document.createElement('div');
-            list.className = 'agp-so-list';
-            n.appendChild(title);
-            n.appendChild(list);
             fillLikers(n, it);
         }
         return n;
@@ -541,6 +614,7 @@
             ti.maxLength = 40;
             ti.value = it.title || '';
             ti.addEventListener('input', function () { update(it, 'title', ti.value); });
+            panel.appendChild(row('التصميم', pills(DESIGNS.map(function (x) { return { label: x.label, value: x.key }; }), it.design || 'podium', function (v) { update(it, 'design', v, true); })));
             panel.appendChild(row('العنوان', ti));
             panel.appendChild(row('عدد الأشخاص', pills(LIKERS_TOPS.map(function (n) { return { label: String(n), value: n }; }), Number(it.top), function (v) { update(it, 'top', v, true); fetchLikers(); })));
             panel.appendChild(row('الحجم', slider(2, 7, 0.1, it.size, function (v) { update(it, 'size', v); })));
@@ -576,7 +650,7 @@
     function addLikers() {
         var existing = likersItems()[0];
         if (existing) { selectedId = existing.id; markSelected(); renderPanel(); return; }
-        var it = { id: uid(), type: 'likers', title: 'توب المكبّسين', top: 3, size: 3.2, color: '#ffd54a', pos: {} };
+        var it = { id: uid(), type: 'likers', design: 'podium', title: 'توب المكبّسين', top: 3, size: 3, color: '#ffd54a', pos: {} };
         it.pos[curKey()] = { x: 0.8, y: 0.3 };
         addItem(it);
     }
@@ -813,15 +887,46 @@
         '@keyframes agp-so-blink{0%,100%{opacity:1}50%{opacity:.15}}',
         '@keyframes agp-so-glow{0%,100%{filter:brightness(1) drop-shadow(0 0 0 transparent)}50%{filter:brightness(1.35) drop-shadow(0 0 .2em var(--agp-so-c))}}',
         '@keyframes agp-so-hue{to{filter:hue-rotate(360deg)}}',
-        '.agp-so-likers{--agp-so-c:#ffd54a;color:#fff;min-width:11em;padding:.6em .75em;border-radius:.8em;background:linear-gradient(160deg,rgba(28,30,52,.82),rgba(10,12,24,.82));border:1px solid rgba(255,255,255,.14);box-shadow:0 .3em 1em rgba(0,0,0,.35)}',
-        '.agp-so-likers-title{text-align:center;font-weight:800;color:var(--agp-so-c);margin-bottom:.35em}',
-        '.agp-so-likers-title:empty{display:none}',
-        '.agp-so-row{display:flex;align-items:center;gap:.5em;padding:.22em 0}',
-        '.agp-so-rank{width:1.2em;text-align:center;font-weight:800;color:var(--agp-so-c);flex:none}',
-        '.agp-so-av{width:2em;height:2em;border-radius:50%;object-fit:cover;flex:none;border:2px solid var(--agp-so-c);background:#2a2d45;display:inline-flex;align-items:center;justify-content:center;font-weight:800;box-sizing:border-box}',
-        '.agp-so-name{flex:1;min-width:0;max-width:9em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;text-align:right}',
-        '.agp-so-count{flex:none;font-weight:800;color:var(--agp-so-c);direction:ltr;font-size:.9em}',
-        '.agp-so-empty{text-align:center;font-size:.75em;opacity:.75;padding:.2em 0}',
+        '.agp-so-likers{--agp-so-c:#ffd54a;color:#fff;display:flex;flex-direction:column;align-items:center;gap:.35em;text-shadow:0 .04em .12em rgba(0,0,0,.85)}',
+        '.agp-so-likers .rk1{--rk:#ffd54a;--rk2:#e08e0b}',
+        '.agp-so-likers .rk2{--rk:#eef2f7;--rk2:#8e9aab}',
+        '.agp-so-likers .rk3{--rk:#ffb27a;--rk2:#b25a22}',
+        '.agp-so-likers .rkn{--rk:var(--agp-so-c);--rk2:rgba(0,0,0,.4)}',
+        '.agp-so-likers-title{font-weight:800;font-size:1.05em;letter-spacing:.02em;padding:0 .8em .1em;color:#fff;background:linear-gradient(90deg,transparent,var(--agp-so-c),transparent) bottom/100% .1em no-repeat}',
+        '.agp-so-lbody{display:flex;flex-direction:column;align-items:center;gap:.45em}',
+        '.agp-so-ghost{opacity:.5}',
+        '.agp-so-empty{text-align:center;font-size:.7em;opacity:.8}',
+        '.agp-so-av{position:relative;display:inline-flex;align-items:center;justify-content:center;width:2.2em;height:2.2em;border-radius:50%;flex:none;padding:.12em;box-sizing:border-box;background:linear-gradient(145deg,var(--rk),var(--rk2));box-shadow:0 .1em .35em rgba(0,0,0,.55)}',
+        '.agp-so-av img,.agp-so-av-i{width:100%;height:100%;border-radius:50%;object-fit:cover;background:#22243a;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9em}',
+        '.agp-so-name{font-weight:700;max-width:8em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+        '.agp-so-count{font-weight:800;color:var(--agp-so-c);direction:ltr;font-size:.85em;white-space:nowrap}',
+        '.agp-so-medal{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1.5em;height:1.5em;border-radius:50%;font-weight:900;font-size:.85em;color:#1a1206;text-shadow:none;background:radial-gradient(circle at 35% 30%,#fff8,transparent 45%),linear-gradient(145deg,var(--rk),var(--rk2));box-shadow:0 .08em .25em rgba(0,0,0,.5)}',
+        /* منصة تتويج */
+        '.agp-so-podium{display:flex;align-items:flex-end;justify-content:center;gap:.4em}',
+        '.agp-so-pcol{display:flex;flex-direction:column;align-items:center;gap:.15em;width:5.4em}',
+        '.agp-so-pcol .agp-so-name{max-width:5.4em;font-size:.85em}',
+        '.agp-so-pcol.rk1 .agp-so-av{width:3.3em;height:3.3em;box-shadow:0 0 .6em rgba(255,213,74,.55),0 .1em .35em rgba(0,0,0,.55)}',
+        '.agp-so-pcol.rk2 .agp-so-av,.agp-so-pcol.rk3 .agp-so-av{width:2.6em;height:2.6em}',
+        '.agp-so-crown{width:1.5em;color:#ffd54a;filter:drop-shadow(0 .05em .1em rgba(0,0,0,.6));margin-bottom:-.15em}',
+        '.agp-so-crown svg{display:block;width:100%;height:auto}',
+        '.agp-so-step{margin-top:.25em;width:100%;display:flex;align-items:flex-start;justify-content:center;padding-top:.15em;font-weight:900;font-size:1.3em;color:rgba(0,0,0,.55);text-shadow:0 .04em 0 rgba(255,255,255,.35);border-radius:.3em .3em .1em .1em;background:linear-gradient(180deg,var(--rk),var(--rk2));box-shadow:inset 0 .08em 0 rgba(255,255,255,.45),0 .15em .4em rgba(0,0,0,.45)}',
+        '.agp-so-pcol.rk1 .agp-so-step{height:2.1em}',
+        '.agp-so-pcol.rk2 .agp-so-step{height:1.5em}',
+        '.agp-so-pcol.rk3 .agp-so-step{height:1.1em}',
+        /* ميداليات */
+        '.agp-so-medals{display:flex;flex-direction:column;gap:.35em;min-width:12em}',
+        '.agp-so-mrow{display:flex;align-items:center;gap:.5em;padding:.25em .9em .25em .3em;border-radius:999px;background:rgba(10,12,24,.4);background:linear-gradient(270deg,color-mix(in srgb,var(--rk) 30%,transparent),rgba(10,12,24,.35) 70%,transparent);border-right:.18em solid var(--rk)}',
+        '.agp-so-mrow .agp-so-name{flex:1;text-align:right}',
+        /* بطاقات */
+        '.agp-so-cards{display:flex;align-items:flex-start;justify-content:center;gap:.7em}',
+        '.agp-so-card{display:flex;flex-direction:column;align-items:center;gap:.2em;width:5em}',
+        '.agp-so-card .agp-so-av{width:3em;height:3em;margin-bottom:.45em}',
+        '.agp-so-card .agp-so-name{max-width:5em;font-size:.85em}',
+        '.agp-so-badge{position:absolute;bottom:-.25em;left:50%;transform:translateX(-50%);min-width:1.3em;height:1.3em;padding:0 .2em;box-sizing:border-box;border-radius:999px;font-size:.6em;font-weight:900;display:flex;align-items:center;justify-content:center;color:#1a1206;text-shadow:none;background:linear-gradient(145deg,var(--rk),var(--rk2));border:.12em solid #14162a}',
+        /* بسيط */
+        '.agp-so-minimal{display:flex;flex-direction:column;gap:.25em}',
+        '.agp-so-nrow{display:flex;align-items:center;gap:.45em;text-shadow:-.05em -.05em 0 #000,.05em -.05em 0 #000,-.05em .05em 0 #000,.05em .05em 0 #000}',
+        '.agp-so-nrow .agp-so-medal{width:1.35em;height:1.35em}',
         '#agp-so-launcher{position:fixed;z-index:' + (Z + 1) + ';width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(15,17,32,.7);color:#fff;display:flex;align-items:center;justify-content:center;opacity:.4;touch-action:none;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;transition:opacity .2s}',
         '#agp-so-launcher:hover,#agp-so-launcher:active{opacity:1}',
         '#agp-so-backdrop{position:fixed;inset:0;z-index:' + (Z + 1) + ';background:rgba(0,0,0,.35);touch-action:none}',
