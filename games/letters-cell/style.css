@@ -209,14 +209,40 @@ body.lc-active a { color: var(--lc-accent); }
 .lc-lobby-remove-x { width: 30px; height: 30px; flex-shrink: 0; border: none; background: transparent; padding: 0; color: #fca5a5; cursor: pointer; display: grid; place-items: center; opacity: .75; transition: opacity .2s, transform .2s; }
 .lc-lobby-remove-x:hover { opacity: 1; transform: scale(1.15); }
 /* لاعب بإطار من المنصة: البطاقة المشتركة كاملة بالخانة (fitLobbyFramedCards بالـJS) */
-/* لاعب بإطار اسم: ياخذ صف كامل بعرض اللوحة عشان إطاره واسمه يبانون واضحين */
-.lc-pframe { grid-column: 1 / -1; position: relative; min-width: 0; height: 108px; display: flex; align-items: center; justify-content: center; direction: ltr; animation: lc-rise .4s cubic-bezier(.2,1.3,.4,1) both; }
-.lc-pframe .lc-lobby-remove-x { position: absolute; top: 4px; right: 8%; z-index: 10; filter: drop-shadow(0 1px 2px rgba(0,0,0,.9)); }
+/* لاعب بإطار اسم: إطاره الكامل بنفس خانة اللاعب (مثل لوبي حرب الفريقين) */
+.lc-pframe { position: relative; min-width: 0; height: 84px; display: flex; align-items: center; justify-content: center; direction: ltr; animation: lc-rise .4s cubic-bezier(.2,1.3,.4,1) both; }
+.lc-pframe .lc-lobby-remove-x { position: absolute; top: 2px; right: 2%; z-index: 10; filter: drop-shadow(0 1px 2px rgba(0,0,0,.9)); }
 .lc-pframe .agp-pcard-tpl { zoom: .7282; flex-shrink: 0; }
 .lc-pcard-wrap { max-width: 100% !important; }
 
-.lc-lobby-hint { flex-shrink: 0; align-self: center; max-width: 100%; display: flex; align-items: center; gap: 10px; margin-top: 6px; padding: 10px 18px; border-radius: 999px; background: rgba(255,255,255,.03); border: 1px solid var(--lc-line); font: 500 13px/1.6 var(--lc-font); color: var(--lc-dim); }
-.lc-lobby-hint b { color: var(--lc-accent-soft); font-weight: 700; }
+/* أسفل اللوبي (نفس حرب الفريقين): زر أخضر "الدخول للمباراة" وتحته رابط مكتبة الألعاب */
+.lc-lobby-actions { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: clamp(10px,2vh,18px) 0 clamp(14px,2.6vh,24px); }
+.lc-btn-go {
+    width: 100%; max-width: 400px; height: clamp(52px,6.5vh,62px); border: none; border-radius: 999px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px; background: linear-gradient(90deg, #16a34a, #22c55e); color: #fff;
+    font: 800 clamp(20px,1.8vw,24px) var(--lc-font); box-shadow: 0 10px 34px rgba(34,197,94,.4), inset 0 1px 0 rgba(255,255,255,.2); transition: filter .2s, opacity .3s, transform .15s;
+}
+.lc-btn-go:hover { filter: brightness(1.1); }
+.lc-btn-go:active { transform: scale(.97); }
+.lc-btn-go.lc-btn-dim { opacity: .4; }
+.lc-lobby-link { font: 700 17px var(--lc-font); color: var(--lc-dim) !important; text-decoration: none; }
+.lc-lobby-link:hover { color: var(--lc-text) !important; }
+/* لوبي بخط Zain مثل حرب الفريقين */
+.lc-zain { --lc-font: 'Zain', 'IBM Plex Sans Arabic', sans-serif; }
+.lc-zain .lc-team-panel-name { font-weight: 800; font-size: clamp(22px,2vw,28px); }
+.lc-zain .lc-count-pill b { font-weight: 800; font-size: 24px; }
+.lc-zain .lc-keyword-label { font-weight: 700; font-size: 16px; color: var(--lc-dim); }
+.lc-zain .lc-pchip-name { font-weight: 700; font-size: 18px; }
+/* قائمة زر "الإعدادات" بالشريط العلوي */
+.lc-menu-wrap { position: relative; }
+.lc-hbtn-accent { border-color: rgba(167,139,250,.3); background: rgba(139,92,246,.08); color: #ddd6fe; }
+.lc-hbtn-accent:hover { background: rgba(139,92,246,.16); border-color: rgba(167,139,250,.55); }
+.lc-menu { position: absolute; top: calc(100% + 10px); right: 0; min-width: 230px; padding: 8px; border-radius: 18px; background: rgba(14,12,22,.97); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 20px 60px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 4px; animation: lc-pop .25s ease; z-index: 60; }
+.lc-menu[hidden] { display: none; }
+.lc-menu-item { padding: 12px 14px; border: none; border-radius: 12px; background: transparent; color: var(--lc-text-2); text-align: right; font: 700 17px var(--lc-font); cursor: pointer; }
+.lc-menu-item:hover { background: rgba(255,255,255,.06); }
+.lc-menu-item-danger { color: #fca5a5; }
+.lc-menu-item-danger:hover { background: rgba(248,113,113,.08); }
 
 /* صورة اللاعب الدائرية (نفس صور أسرع إجابة) */
 .lc-av { width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; position: relative; overflow: hidden; display: grid; place-items: center; border: 1.5px solid; font: 700 16px var(--lc-font); color: #fff; }
@@ -226,7 +252,6 @@ body.lc-active a { color: var(--lc-accent); }
 
 @media (max-width: 820px) {
     .lc-lobby-grid { grid-auto-rows: minmax(320px, auto); overflow-y: auto; }
-    .lc-lobby-hint { border-radius: 18px; }
 }
 
 /* ==========================================================================

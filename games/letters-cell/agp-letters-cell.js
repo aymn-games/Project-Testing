@@ -701,11 +701,23 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wireCommentListener();
         if (AGP.lobby && typeof AGP.lobby.open === 'function') AGP.lobby.open();
 
+        // نفس ترتيب لوبي حرب الفريقين (games/team-war/lobby.html): خط Zain، زر
+        // "الإعدادات" بقائمة (الرجوع للإعدادات / مكتبة الألعاب)، كرت لكل فريق،
+        // وزر أخضر "الدخول للمباراة" وتحته رابط مكتبة الألعاب.
         var root = ensureRoot();
         root.innerHTML =
-            '<div class="lc-app">' +
+            '<div class="lc-app lc-zain">' +
                 fxHtml() +
-                headerHtml(headerBtnHtml('lc-exit-btn', 'خروج', ICON_EXIT, 'exit')) +
+                headerHtml(
+                    headerBtnHtml('lc-exit-btn', 'خروج', ICON_EXIT, 'exit') +
+                    '<div class="lc-menu-wrap">' +
+                        headerBtnHtml('lc-lobby-menu-btn', 'الإعدادات', ICON_GEAR, 'accent') +
+                        '<div class="lc-menu" id="lc-lobby-menu" hidden>' +
+                            '<button type="button" id="lc-lobby-back-settings-btn" class="lc-menu-item">الرجوع للإعدادات</button>' +
+                            '<button type="button" id="lc-lobby-library-btn" class="lc-menu-item lc-menu-item-danger">العودة لمكتبة الألعاب</button>' +
+                        '</div>' +
+                    '</div>'
+                ) +
                 '<main class="lc-main"><div class="lc-wrap">' +
                     '<div class="lc-hero lc-hero-lobby">' +
                         '<span class="lc-hero-sub">' + GAME_NAME + '</span>' +
@@ -715,26 +727,27 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         teamPanelHtml(TEAM1) +
                         teamPanelHtml(TEAM2) +
                     '</div>' +
-                    '<div class="lc-lobby-hint">' +
-                        '<span class="lc-dot" style="background:#a78bfa"></span>' +
-                        '<span>ما انضميت لفريق؟ أثناء اللعب اكتب رقم فريقك مع الإجابة بنفس الرسالة — مثل <b>1 تمر</b> (' + escapeHtml(_settings.team1Name) +
-                        ') أو <b>2 تمر</b> (' + escapeHtml(_settings.team2Name) + ') — ولو كانت صحيحة تنضم وتنحسب لفريقك.</span>' +
-                    '</div>' +
-                    '<div class="lc-actions">' +
-                        '<button type="button" id="lc-lobby-back-settings-btn" class="lc-btn-ghost lc-btn-tall">رجوع</button>' +
-                        '<button type="button" id="lc-start-game-btn" class="lc-btn-primary lc-btn-wide">ابدأ المباراة' + ICON_ARROW + '</button>' +
+                    '<div class="lc-lobby-actions">' +
+                        '<button type="button" id="lc-start-game-btn" class="lc-btn-go">الدخول للمباراة' + ICON_ARROW + '</button>' +
+                        '<a href="../../games.html" id="lc-lobby-library-link" class="lc-lobby-link">العودة لمكتبة الألعاب</a>' +
                     '</div>' +
                 '</div></main>' +
             '</div>';
 
         el('lc-start-game-btn').addEventListener('click', handleStartGame);
         el('lc-exit-btn').addEventListener('click', confirmExitToLibrary);
+        var menu = el('lc-lobby-menu');
+        el('lc-lobby-menu-btn').addEventListener('click', function (e) { e.stopPropagation(); menu.hidden = !menu.hidden; });
+        root.querySelector('.lc-app').addEventListener('click', function (e) { if (!e.target.closest('.lc-menu-wrap')) menu.hidden = true; });
         el('lc-lobby-back-settings-btn').addEventListener('click', function () {
+            menu.hidden = true;
             showConfirm({
                 title: 'الرجوع للإعدادات؟', text: 'بترجع لشاشة الإعدادات وينقطع الاتصال الحالي بالبث',
                 okLabel: 'رجوع', danger: true, onOk: function () { window.location.reload(); }
             });
         });
+        el('lc-lobby-library-btn').addEventListener('click', function () { menu.hidden = true; confirmExitToLibrary(); });
+        el('lc-lobby-library-link').addEventListener('click', function (e) { e.preventDefault(); confirmExitToLibrary(); });
 
         refreshLobbyPanels();
     }
@@ -750,7 +763,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '<span class="lc-count-pill"><b id="lc-team-count-' + team + '">' + players.length + '</b><span>لاعب</span></span>' +
                 '</div>' +
                 '<div class="lc-keyword-wrap">' +
-                    '<span class="lc-keyword-label">كلمة الدخول · اكتبها في الشات</span>' +
+                    '<span class="lc-keyword-label">الكلمة المفتاحية · اكتبها في الشات للانضمام</span>' +
                     '<span class="lc-keyword">' + escapeHtml(teamCode(team)) + '</span>' +
                 '</div>' +
             '</div>' +
@@ -795,11 +808,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    // Framed lobby cards take a full row (.lc-pframe) so the frame and the
-    // name read clearly: the shared renderer crops tall frame artwork to its
-    // fixed card height, so each framed card is re-expanded to its frame
-    // image's full opaque height (measured once per image) and zoomed to
-    // fit 400px wide, at most 104px tall.
+    // Framed lobby cards fill one player slot like Team War's lobby: the
+    // shared renderer crops tall frame artwork to its fixed card height, so
+    // each framed card is re-expanded to its frame image's full opaque
+    // height (measured once per image) and zoomed to fit 215px wide, at
+    // most 84px tall.
     var _lcFrameBoundsCache = {};
 
     function getFrameOpaqueRows(src) {
@@ -858,7 +871,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 var fullH = bandBottom - bandTop;
                 var cardW = parseFloat(card.style.width) || 298;
                 card.style.height = fullH + 'px';
-                card.style.zoom = String(Math.min(400 / cardW, 104 / fullH));
+                card.style.zoom = String(Math.min(215 / cardW, 84 / fullH));
                 card.setAttribute('data-lc-fit', '1');
             });
         });
@@ -1483,7 +1496,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="lc-overlay" id="lc-invite-overlay">' +
                     '<div class="lc-dialog lc-invite">' +
                         '<div class="lc-drawer-head"><span class="lc-drawer-title">دخول لاعبين جدد</span><button type="button" id="lc-invite-close-x" class="lc-icon-btn" aria-label="إغلاق">' + ICON_X + '</button></div>' +
-                        '<span class="lc-dialog-text">يكتب اللاعب كلمة الدخول الخاصة بفريقه في شات البث</span>' +
+                        '<span class="lc-dialog-text">يكتب اللاعب كلمة الدخول الخاصة بفريقه في شات البث، أو رقم فريقه مع الإجابة بنفس الرسالة (مثل 1 تمر أو 2 تمر) — ولو كانت صحيحة ينضم وتنحسب لفريقه.</span>' +
                         inviteTeam(TEAM1) +
                         inviteTeam(TEAM2) +
                         '<button type="button" id="lc-invite-done" class="lc-btn-primary">تم</button>' +
