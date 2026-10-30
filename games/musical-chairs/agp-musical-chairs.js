@@ -424,17 +424,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-ring{position:absolute;inset:0;border-radius:50%;padding:max(10px,1.6cqw);',
             'background:conic-gradient(from 210deg,#c4b5fd,#4c1d95 18%,#1e1638 35%,#6d28d9 52%,#e9d5ff 60%,#3b2a6b 72%,#140f24 86%,#c4b5fd);',
             'box-shadow:0 50px 120px rgba(0,0,0,.7),0 0 80px rgba(124,58,237,.35);}',
-            /* أرضية الدائرة: باركيه خشب دافي (ألواح بفواصل خفيفة) مع إضاءة
-             * بالنص وتعتيم ناعم على الأطراف — يتناسق مع خشب الكراسي */
+            /* أرضية الدائرة: بني دافي ناعم (بدون ألواح) ببقع إضاءة خفيفة
+             * وتعتيم على الأطراف، وحولها خط ذهبي رفيع */
             '.mc-ring div{width:100%;height:100%;border-radius:50%;',
             'background:',
-            'radial-gradient(circle at 50% 45%,rgba(255,214,160,.16) 0,transparent 55%),',
-            'radial-gradient(circle,transparent 58%,rgba(20,10,4,.55) 100%),',
-            'repeating-linear-gradient(90deg,rgba(40,22,10,.55) 0 2px,transparent 2px 9%),',
-            'repeating-linear-gradient(90deg,rgba(255,220,170,.05) 0 3%,transparent 3% 6%,rgba(0,0,0,.06) 6% 9%),',
-            'repeating-linear-gradient(0deg,transparent 0 31%,rgba(40,22,10,.35) 31% calc(31% + 2px),transparent calc(31% + 2px) 50%),',
-            'linear-gradient(160deg,#8a5a34,#6e4427 55%,#5a361f);',
-            'box-shadow:inset 0 0 0 3px rgba(42,31,69,.9),inset 0 0 60px rgba(0,0,0,.45);}',
+            'radial-gradient(circle at 50% 40%,rgba(255,196,140,.18) 0,transparent 45%),',
+            'radial-gradient(ellipse 45% 35% at 30% 30%,rgba(190,110,50,.35),transparent 70%),',
+            'radial-gradient(ellipse 40% 30% at 72% 68%,rgba(70,30,10,.35),transparent 70%),',
+            'radial-gradient(ellipse 35% 28% at 25% 75%,rgba(160,85,35,.3),transparent 70%),',
+            'radial-gradient(circle,transparent 55%,rgba(25,10,3,.6) 100%),',
+            'linear-gradient(160deg,#8b4a1f,#6d3816 50%,#5a2d12);',
+            'box-shadow:inset 0 0 0 3px #1a1430,inset 0 0 0 5px #c9a465,inset 0 0 0 7px rgba(26,20,48,.85),',
+            'inset 0 0 70px rgba(0,0,0,.5);}',
             '.mc-watermark{position:absolute;left:50%;top:50%;width:62%;height:auto;transform:translate(-50%,-50%);opacity:0.08;pointer-events:none;}',
             '.mc-ch{position:absolute;aspect-ratio:1;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;}',
             '.mc-ch-glyph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;line-height:1;',
