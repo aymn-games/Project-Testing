@@ -168,7 +168,20 @@
     function uid() { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
     function find(id) { for (var i = 0; i < state.items.length; i++) if (state.items[i].id === id) return state.items[i]; return null; }
     function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-    function orient() { return window.innerWidth >= window.innerHeight ? 'l' : 'p'; }
+    /* طول الشاشة الثابت: بـSafari (آيباد/جوال) شريط العنوان يختفي ويرجع مع
+     * التمرير فيتغيّر innerHeight، ولو حسبنا عليه تتزحزح العناصر مع كل
+     * تمرير. 100vh هناك = الطول الكامل وما يتغيّر، فنقيسه بعنصر ثابت. */
+    var probe = null;
+    function viewW() { return window.innerWidth; }
+    function viewH() {
+        if (!probe && document.body) {
+            probe = document.createElement('div');
+            probe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100vh;visibility:hidden;pointer-events:none';
+            document.body.appendChild(probe);
+        }
+        return (probe && probe.offsetHeight) || window.innerHeight;
+    }
+    function orient() { return viewW() >= viewH() ? 'l' : 'p'; }
     function fmt(n) { return (Number(n) || 0).toLocaleString('en-US'); }
 
     function tpl(key) {
@@ -186,7 +199,7 @@
 
     /** إطار القالب بالبكسل داخل الشاشة (contain + بالوسط). */
     function computeFrame() {
-        var W = window.innerWidth, H = window.innerHeight;
+        var W = viewW(), H = viewH();
         var t = tpl(state.template);
         if (!t.w) return { x: 0, y: 0, w: W, h: H };
         var o = viewOrient();
@@ -953,8 +966,8 @@
             if (Math.abs(dx) + Math.abs(dy) > 8) drag.moved = true;
             if (!drag.moved) return;
             state.launcher = {
-                x: clamp((drag.px + dx) / window.innerWidth, 0, 1),
-                y: clamp((drag.py + dy) / window.innerHeight, 0, 1)
+                x: clamp((drag.px + dx) / viewW(), 0, 1),
+                y: clamp((drag.py + dy) / viewH(), 0, 1)
             };
             placeLauncher();
         }
@@ -971,14 +984,16 @@
     function placeLauncher() {
         var size = 44, m = 8;
         var p = state.launcher || { x: 0, y: 1 };
-        launcher.style.left = clamp(p.x * window.innerWidth, m, window.innerWidth - size - m) + 'px';
-        launcher.style.top = clamp(p.y * window.innerHeight, m, window.innerHeight - size - m) + 'px';
+        // الزر نفسه بالجزء الظاهر فعلاً (innerHeight) عشان ما يختفي تحت شريط Safari
+        var W = viewW(), H = Math.min(viewH(), window.innerHeight);
+        launcher.style.left = clamp(p.x * W, m, W - size - m) + 'px';
+        launcher.style.top = clamp(p.y * viewH(), m, H - size - m) + 'px';
     }
 
     /* ---------------- DOM ---------------- */
 
     var CSS = [
-        '#agp-so-layer{position:fixed;inset:0;z-index:' + Z + ';pointer-events:none;direction:rtl;font-family:' + FONT + ';overflow:hidden}',
+        '#agp-so-layer{position:fixed;top:0;left:0;right:0;height:100vh;z-index:' + Z + ';pointer-events:none;direction:rtl;font-family:' + FONT + ';overflow:hidden}',
         '#agp-so-layer.agp-so-editing{z-index:' + (Z + 2) + '}',
         '#agp-so-stage{position:absolute}',
         '#agp-so-layer.agp-so-framed #agp-so-stage{outline:2px dashed rgba(77,216,255,.8);box-shadow:0 0 0 100vmax rgba(0,0,0,.45)}',
@@ -1173,7 +1188,15 @@
         window.addEventListener('pointermove', onMove);
         window.addEventListener('pointerup', onUp);
         window.addEventListener('pointercancel', onUp);
-        window.addEventListener('resize', function () { if (!drag) render(); });
+        // نعيد الرسم بس لو المقاس الثابت تغيّر فعلاً (تدوير/تغيير حجم النافذة)،
+        // مو لما شريط Safari يختفي ويرجع مع التمرير
+        var lastSize = viewW() + 'x' + viewH();
+        window.addEventListener('resize', function () {
+            var size = viewW() + 'x' + viewH();
+            if (drag || size === lastSize) { if (!drag) placeLauncher(); return; }
+            lastSize = size;
+            render();
+        });
         window.addEventListener('keydown', function (e) {
             if (!editing || e.key !== 'Escape') return;
             if (pickerOpen && state.template) closePicker(); else close();
