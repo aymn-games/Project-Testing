@@ -30,6 +30,11 @@
  * - طول الشاشة ثابت (100vh) بدل innerHeight عشان العناصر ما تتزحزح لما شريط
  *   Safari يختفي ويرجع مع التمرير.
  *
+ * - العزل: طبقة البث داخل Shadow DOM بأنماطها الخاصة، فقواعد CSS العامة بصفحات
+ *   الألعاب (مثل * {box-sizing}) ما توصل للأدوات، وتكبير الصفحة بالشاشات
+ *   العريضة (js/agp-wide-scale.js — zoom على html) ينلغى عن الطبقة — فالأدوات
+ *   بنفس الشكل والمكان بكل صفحة وبمعاينة الاستوديو.
+ *
  * <html data-agp-studio> = صفحة الاستوديو: ما ترسم طبقة البث، بس توفّر الرسم
  * والبيانات للمعاينة. النصوص تنعرض بـtextContent فقط. مستقل عن
  * window.AymanGamesPlatform (زي AGPStreamStats) عشان يشتغل بأي صفحة.
@@ -924,8 +929,16 @@
 
     var layer = null, stage = null, nodes = {}, frameRect = null;
 
+    /** تكبير الصفحة كاملة (zoom على html من agp-wide-scale.js) — نلغيه عن الطبقة. */
+    function pageZoom() {
+        var z = parseFloat(document.documentElement.style.zoom) || 1;
+        return z > 0 ? z : 1;
+    }
+
     function render() {
         if (!layer) return;
+        var z = pageZoom();
+        layer.style.zoom = z === 1 ? '' : String(1 / z);
         var o = orient();
         var F = frameRect = frameIn(state.template, o, viewW(), viewH());
         var key = keyFor(state.template, o);
@@ -964,8 +977,11 @@
     }
 
     var CSS = [
-        '#agp-so-layer{position:fixed;top:0;left:0;right:0;height:100vh;z-index:' + Z + ';pointer-events:none;direction:rtl;font-family:' + FONT + ';overflow:hidden}',
-        '#agp-so-stage{position:absolute}',
+        // all:initial = ما نورث أي شي من الصفحة (خط، تباعد، محاذاة…)
+        ':host{all:initial}',
+        '#agp-so-stage{position:absolute;direction:rtl;font-family:' + FONT + ';color:#fff;line-height:normal;letter-spacing:normal;text-align:right}',
+        // نفس طريقة حساب الأحجام بكل مكان (الاستوديو والصفحات)
+        '.agp-so-item,.agp-so-item *,.agp-so-item *::before,.agp-so-item *::after{box-sizing:border-box}',
         '.agp-so-item{position:absolute;transform:translate(-50%,-50%);max-width:96vw;line-height:1.3;user-select:none;-webkit-user-select:none;box-sizing:border-box}',
         '.agp-so-text{white-space:pre-wrap;text-align:center;word-break:break-word;width:max-content}',
         '.agp-so-tx{display:inline-block;padding:.05em .12em}',
@@ -1100,13 +1116,18 @@
 
     function init() {
         if (!document.body) return;
-        ensureStyle();
         if (!STUDIO) {
             layer = document.createElement('div');
             layer.id = 'agp-so-layer';
+            // الموقع والطبقة inline (أقوى من :host{all:initial} ومن أي قاعدة بالصفحة)
+            layer.style.cssText = 'position:fixed;top:0;left:0;right:0;height:100vh;z-index:' + Z + ';pointer-events:none;overflow:hidden;display:block;margin:0;padding:0;border:0;transform:none;filter:none';
             stage = document.createElement('div');
             stage.id = 'agp-so-stage';
-            layer.appendChild(stage);
+            var root = layer.attachShadow ? layer.attachShadow({ mode: 'open' }) : layer;
+            var style = document.createElement('style');
+            style.textContent = CSS;
+            root.appendChild(style);
+            root.appendChild(stage);
             document.body.appendChild(layer);
             listeners.stats.push(repaintData);
             // نعيد الرسم بس لو المقاس الثابت تغيّر فعلاً (تدوير/تغيير حجم النافذة)،
@@ -1120,6 +1141,7 @@
             });
             render();
         } else {
+            ensureStyle();
             syncPolling();
             syncJarPolling();
             syncLink();
