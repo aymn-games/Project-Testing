@@ -1622,87 +1622,85 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // ================================================================
     // 4) شاشة الفوز بالجولة (خط متصل) + 5) النتيجة النهائية
     // ================================================================
-    // نفس شاشة الفائز بأسرع إجابة (نمط الفريقين): توهج بلون الفريق، اسمه
-    // كبير بلونه، وكروت اللاعبين الفائزين تحته داخل منطقة بارتفاع ثابت --
-    // مهما كثر اللاعبين الشاشة ما تكبر، الكروت تصير سكرول.
+    // نفس شاشة الفائز بروليت الإقصاء (games/elimination-roulette): نافذة فوق
+    // شاشة اللعب نفسها والخلفية مغبّشة، وبطاقة "WINNER" لكل لاعب فائز (أو
+    // بطاقة الفوز المملوكة من المنصة مكانها). لاعبين الفريق كلهم فائزين،
+    // والبطاقات داخل منطقة بارتفاع ثابت -- مهما كثروا تصير سكرول.
+    var WIN_CROWN_SVG = '<svg width="60" height="40" viewBox="0 0 60 40" aria-hidden="true"><polygon points="6,36 4,15 15,25 30,5 45,25 56,15 54,36" stroke-width="1.5"></polygon><circle cx="6" cy="13" r="4" stroke-width="1.5"></circle><circle cx="30" cy="4" r="4.5" stroke-width="1.5"></circle><circle cx="54" cy="13" r="4" stroke-width="1.5"></circle><rect x="6" y="32" width="48" height="6" rx="1.5" stroke-width="1.5"></rect></svg>';
 
-    function winPlayerCardHtml(p, color, i) {
-        return '<div class="lc-win-card" style="animation-delay:' + (0.15 + i * 0.06).toFixed(2) + 's">' +
-            '<span class="lc-win-card-glow"></span>' +
-            avatarHtml(p, color, 'lc-av-win') +
-            '<span class="lc-win-card-name">' + escapeHtml(playerLabel(p)) + '</span>' +
-            '<span class="lc-win-card-tag">فائز</span>' +
+    function winPlayerCardHtml(p, color, i, mainLine, subLine) {
+        var name = playerLabel(p);
+        return '<div class="lc-wcard" style="--wc:' + color + ';--wc-a:' + hexToRgba(color, 0.55) + ';--wc-b:' + hexToRgba(color, 0.25) + ';--wc-c:' + hexToRgba(color, 0.15) + ';animation-delay:' + (i * 0.06).toFixed(2) + 's">' +
+            '<div class="lc-wcard-crown">' + WIN_CROWN_SVG + '</div>' +
+            '<div class="lc-wcard-body">' +
+                '<div class="lc-wcard-shine"></div>' +
+                '<div class="lc-wcard-inner">' +
+                    '<span class="lc-wcard-title">WINNER</span>' +
+                    avatarHtml(p, color, 'lc-wcard-av') +
+                    '<span class="lc-wcard-name">' + escapeHtml(name) + '</span>' +
+                    '<div class="lc-wcard-foot"><span class="lc-wcard-main">' + escapeHtml(mainLine) + '<span class="lc-wcard-sub">' + escapeHtml(subLine) + '</span></span></div>' +
+                '</div>' +
+            '</div>' +
         '</div>';
     }
     function winPlayersHtml(players, color, winCardLines) {
         return players.map(function (p, i) {
-            // بطاقة الفوز المملوكة (js/agp-win-card.js) تحل محل بطاقة اللاعب العادية بنفس المكان
-            if (winCardLines && AGP.winCard && AGP.winCard.canShow(p)) {
-                return '<div class="lc-win-owned">' + AGP.winCard.renderHtml(p, winCardLines) + '</div>';
+            // بطاقة الفوز المملوكة (js/agp-win-card.js) تحل محل بطاقة الفائز العادية بنفس المكان
+            if (AGP.winCard && AGP.winCard.canShow(p)) {
+                return '<div class="lc-win-owned" style="animation-delay:' + (i * 0.06).toFixed(2) + 's">' + AGP.winCard.renderHtml(p, winCardLines, { pop: false }) + '</div>';
             }
-            return winPlayerCardHtml(p, color, i);
+            return winPlayerCardHtml(p, color, i, winCardLines[0], winCardLines[1]);
         }).join('');
     }
 
-    function winScreenHtml(team, pillHtml, subtitle, playersHtml, ctaHtml) {
-        var color = teamColor(team);
-        return '<div class="lc-app">' +
-            fxHtml() +
-            headerHtml() +
-            '<div class="lc-stage lc-win-screen" style="--tc:' + color + ';--tc-soft:' + hexToRgba(color, 0.1) + ';--tc-bd:' + hexToRgba(color, 0.45) + ';--tc-ring:' + hexToRgba(color, 0.35) + '">' +
-                '<span class="lc-win-glow"></span>' +
-                '<div class="lc-win-head">' +
-                    '<span class="lc-win-pill">' + ICON_TROPHY + pillHtml + '</span>' +
-                    '<span class="lc-win-name">' + escapeHtml(teamName(team)) + '</span>' +
-                    '<span class="lc-win-sub">' + subtitle + '</span>' +
-                '</div>' +
-                '<div class="lc-win-scroll"><div class="lc-win-players">' + playersHtml + '</div></div>' +
-                ctaHtml +
-            '</div>' +
-        '</div>';
+    /** يرسم شاشة اللعب كما هي ويحط نافذة الفوز فوقها (الخلفية مغبّشة). */
+    function showWinOverlay(team, title, lines, buttonsHtml) {
+        renderGameScreen();
+        var app = document.querySelector('.lc-game-app');
+        var wrap = document.createElement('div');
+        wrap.className = 'lc-win-overlay';
+        wrap.innerHTML =
+            '<div class="lc-win-box">' +
+                '<h2 class="lc-win-title">' + title + '</h2>' +
+                '<div class="lc-win-team" style="--tc:' + teamColor(team) + '"><span class="lc-dot lc-dot-lg"></span>' + escapeHtml(teamName(team)) + '</div>' +
+                '<div class="lc-win-scroll"><div class="lc-win-cards">' + winPlayersHtml(getTeamPlayers(team), teamColor(team), lines) + '</div></div>' +
+                '<div class="lc-win-btns">' + buttonsHtml + '</div>' +
+            '</div>';
+        app.appendChild(wrap);
     }
 
     function renderRoundWinnerScreen() {
-        _screen = 'roundWinner';
-        ensureBody();
-        var root = ensureRoot();
-
         var winningTeam = _connectionWinner;
         var prospective1 = _roundWins1 + (winningTeam === TEAM1 ? 1 : 0);
         var prospective2 = _roundWins2 + (winningTeam === TEAM2 ? 1 : 0);
-        var ctaLabel = (prospective1 >= ROUND_WINS_TO_CLINCH || prospective2 >= ROUND_WINS_TO_CLINCH) ? 'عرض النتيجة النهائية' : 'الجولة التالية';
+        var final = prospective1 >= ROUND_WINS_TO_CLINCH || prospective2 >= ROUND_WINS_TO_CLINCH;
+        var score = Math.max(prospective1, prospective2) + ' - ' + Math.min(prospective1, prospective2) + ' جولات';
 
-        root.innerHTML = winScreenHtml(
+        showWinOverlay(
             winningTeam,
-            'خط متصل · ' + Math.max(prospective1, prospective2) + ' - ' + Math.min(prospective1, prospective2) + ' بالجولات',
-            'فاز بالجولة ' + _round,
-            winPlayersHtml(getTeamPlayers(winningTeam), teamColor(winningTeam), null),
-            '<div class="lc-win-actions"><button type="button" id="lc-roundwinner-cta" class="lc-btn-primary lc-win-cta">' + ctaLabel + ICON_ARROW + '</button></div>'
+            '🏆 خط متصل · فاز بالجولة ' + _round,
+            ['فوز بالجولة ' + _round, score, GAME_NAME],
+            '<button type="button" id="lc-roundwinner-cta" class="lc-wbtn lc-wbtn-primary">' + (final ? 'عرض النتيجة النهائية' : 'الجولة التالية') + '</button>'
         );
-        fitStages();
+        _screen = 'roundWinner';
         el('lc-roundwinner-cta').addEventListener('click', continueAfterRoundWin);
     }
 
     function renderResultScreen() {
-        _screen = 'result';
-        ensureBody();
-        var root = ensureRoot();
-
         var winningTeam = (_roundWins1 >= ROUND_WINS_TO_CLINCH) ? TEAM1 : TEAM2;
-        var lines = ['فوز ' + teamName(winningTeam), _roundWins1 + ' - ' + _roundWins2 + ' جولات', GAME_NAME];
+        var score = Math.max(_roundWins1, _roundWins2) + ' - ' + Math.min(_roundWins1, _roundWins2) + ' جولات';
 
-        root.innerHTML = winScreenHtml(
+        showWinOverlay(
             winningTeam,
-            Math.max(_roundWins1, _roundWins2) + ' - ' + Math.min(_roundWins1, _roundWins2) + ' جولات',
-            'فاز بالمباراة',
-            winPlayersHtml(getTeamPlayers(winningTeam), teamColor(winningTeam), lines),
-            '<div class="lc-win-actions">' +
-                '<button type="button" id="lc-result-restart" class="lc-btn-primary lc-win-cta">' + ICON_SHUFFLE + 'مباراة جديدة</button>' +
-                '<button type="button" id="lc-result-exit" class="lc-btn-ghost lc-win-cta">' + ICON_EXIT + 'خروج لمكتبة الألعاب</button>' +
-            '</div>'
+            '🏆 الفائز في لعبة "' + GAME_NAME + '"',
+            ['فوز ' + teamName(winningTeam), score, GAME_NAME],
+            '<button type="button" id="lc-result-exit" class="lc-wbtn">الخروج</button>' +
+            '<button type="button" id="lc-result-restart" class="lc-wbtn lc-wbtn-primary">مباراة جديدة</button>' +
+            '<button type="button" id="lc-result-replay" class="lc-wbtn lc-wbtn-soft">إعادة بنفس اللاعبين</button>'
         );
-        fitStages();
+        _screen = 'result';
         el('lc-result-restart').addEventListener('click', restartGame);
+        el('lc-result-replay').addEventListener('click', goToGame);
         el('lc-result-exit').addEventListener('click', confirmExitToLibrary);
     }
 

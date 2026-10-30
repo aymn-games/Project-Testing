@@ -222,7 +222,6 @@ body.lc-active a { color: var(--lc-accent); }
 .lc-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .lc-av-sm { width: 32px; height: 32px; font-size: 13px; }
 .lc-av-xl { width: 96px; height: 96px; font-size: 40px; border-width: 3px; }
-.lc-av-win { width: 110px; height: 110px; font-size: 48px; border-width: 3px; box-shadow: 0 0 30px var(--tc-ring); }
 
 @media (max-width: 820px) {
     .lc-lobby-grid { grid-auto-rows: minmax(320px, auto); overflow-y: auto; }
@@ -415,30 +414,52 @@ body.lc-active a { color: var(--lc-accent); }
 .lc-invite-team .lc-keyword { font-size: 28px; }
 
 /* ==========================================================================
-   4/5) شاشتا الفوز بالجولة والنتيجة النهائية (نفس شاشة الفائز بأسرع إجابة)
+   4/5) الفوز بالجولة والنتيجة النهائية — نفس نافذة الفائز بروليت الإقصاء:
+   فوق شاشة اللعب والخلفية مغبّشة، وبطاقة WINNER لكل لاعب فائز
    ========================================================================== */
-.lc-win-screen { padding: 110px 80px 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 34px; animation: lc-fade .5s ease; }
-.lc-win-glow { position: absolute; top: -30%; left: 50%; width: 1600px; height: 1100px; margin-left: -800px; border-radius: 50%; background: radial-gradient(ellipse, var(--tc-ring), transparent 62%); filter: blur(30px); pointer-events: none; }
-.lc-win-head { position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; animation: lc-pop .8s cubic-bezier(.2,1.3,.35,1); }
-.lc-win-pill { display: flex; align-items: center; gap: 10px; padding: 10px 26px; border-radius: 999px; border: 1px solid var(--tc-bd); background: var(--tc-soft); font: 600 26px var(--lc-font); color: var(--tc); }
-.lc-win-name { max-width: 1700px; font: 700 140px/1.1 var(--lc-font); color: var(--tc); text-shadow: 0 0 60px var(--tc-ring); overflow-wrap: anywhere; }
-.lc-win-sub { font: 700 56px/1.2 var(--lc-font); color: var(--lc-text); }
-/* منطقة الكروت بارتفاع ثابت: الشاشة ما تكبر مهما كثر اللاعبين، والكروت تصير سكرول */
+@keyframes agpPop { 0% { opacity: 0; transform: scale(.85) translateY(10px); } 100% { opacity: 1; transform: none; } }
+@keyframes agpCrown { 0% { opacity: 0; transform: translateX(calc(-50% - 12px)) translateY(-14px) rotate(-6deg); } 60% { opacity: 1; } 100% { opacity: 1; transform: translateX(calc(-50% - 12px)) translateY(0) rotate(0); } }
+@keyframes agpShine { 0% { transform: translateX(-140%) rotate(20deg); } 100% { transform: translateX(240%) rotate(20deg); } }
+.lc-win-overlay {
+    position: fixed; inset: 0; z-index: 260; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 16px; background: rgba(8,4,16,.38); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    font-family: 'Zain', var(--lc-font); font-size: 18px; animation: lc-fade .3s ease;
+}
+.lc-win-box { max-width: 100%; max-height: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.lc-win-title { margin: 0 0 6px; font-size: 1.6em; font-weight: 800; color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,.65); text-wrap: balance; }
+.lc-win-team { display: inline-flex; align-items: center; gap: 10px; margin-top: 6px; padding: 6px 18px; border-radius: 999px; background: color-mix(in srgb, var(--tc) 14%, transparent); border: 1px solid color-mix(in srgb, var(--tc) 40%, transparent); color: var(--tc); font: 700 20px var(--lc-font); }
+/* منطقة البطاقات بارتفاع محدود -- مهما كثر لاعبين الفريق تصير سكرول والنافذة ما تكبر */
 .lc-win-scroll {
-    position: relative; flex-shrink: 0; width: 1600px; max-height: 430px; overflow-y: auto; overscroll-behavior: contain; padding: 14px 20px 24px;
-    -webkit-mask-image: linear-gradient(transparent, #000 14px, #000 calc(100% - 34px), transparent); mask-image: linear-gradient(transparent, #000 14px, #000 calc(100% - 34px), transparent);
+    flex-shrink: 1; min-height: 0; width: min(1120px, calc(100vw - 32px)); max-height: min(400px, calc(100vh - 260px));
+    margin: 18px 0 26px; padding: 4px 8px 18px; overflow-y: auto; overscroll-behavior: contain;
+    -webkit-mask-image: linear-gradient(#000 calc(100% - 26px), transparent); mask-image: linear-gradient(#000 calc(100% - 26px), transparent);
 }
-.lc-win-players { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 24px; }
-.lc-win-card {
-    position: relative; overflow: hidden; width: 190px; padding: 26px 16px 22px; border-radius: 26px;
-    display: flex; flex-direction: column; align-items: center; gap: 14px;
-    background: rgba(18,16,26,.75); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--tc-bd);
-    box-shadow: 0 20px 50px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06); animation: lc-rise .6s cubic-bezier(.2,1.3,.4,1) both;
+.lc-win-cards { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.lc-wcard { position: relative; width: 200px; display: flex; flex-direction: column; align-items: center; animation: agpPop .45s cubic-bezier(.2,1,.3,1) both; }
+.lc-wcard-crown { position: absolute; top: 4px; left: 50%; z-index: 3; filter: drop-shadow(0 3px 4px rgba(0,0,0,.35)); animation: agpCrown .6s cubic-bezier(.2,1.4,.4,1) .15s both; }
+.lc-wcard-crown svg { display: block; fill: var(--wc); stroke: color-mix(in srgb, var(--wc) 55%, #000); stroke-linejoin: round; }
+.lc-wcard-body {
+    position: relative; width: 200px; height: 300px; margin-top: 36px; border-radius: 22px; overflow: hidden;
+    background: linear-gradient(165deg, rgba(30,20,52,.74) 0%, rgba(13,10,24,.84) 100%); border: 1.5px solid var(--wc-a);
+    box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.04), 0 0 40px var(--wc-c); backdrop-filter: blur(2px);
 }
-.lc-win-card-glow { position: absolute; top: -60px; left: 50%; width: 200px; height: 120px; margin-left: -100px; border-radius: 50%; background: var(--tc-ring); filter: blur(30px); pointer-events: none; }
-.lc-win-card-name { position: relative; max-width: 100%; text-align: center; font: 600 24px var(--lc-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lc-win-card-tag { position: relative; padding: 4px 14px; border-radius: 999px; background: var(--tc-soft); border: 1px solid var(--tc-bd); font: 600 14px var(--lc-font); color: var(--tc); }
-.lc-win-owned { width: 240px; line-height: 0; animation: lc-rise .6s cubic-bezier(.2,1.3,.4,1) both; }
-.lc-win-actions { position: relative; flex-shrink: 0; display: flex; gap: 18px; }
-.lc-win-cta { position: relative; height: 72px; padding: 0 52px; font-size: 25px; gap: 12px; }
-.lc-win-cta svg { width: 24px; height: 24px; }
+.lc-wcard-shine { position: absolute; top: 0; left: 0; width: 60%; height: 100%; background: linear-gradient(75deg, transparent 40%, rgba(255,255,255,.12) 50%, transparent 60%); animation: agpShine 2.6s ease-in-out .6s infinite; pointer-events: none; }
+.lc-wcard-inner { position: relative; z-index: 2; height: 100%; padding: 18px 14px 16px; display: flex; flex-direction: column; align-items: center; }
+.lc-wcard-title { font-size: 15px; letter-spacing: 3px; font-weight: 800; color: var(--wc); margin-bottom: 12px; }
+.lc-av.lc-wcard-av { width: 84px; height: 84px; border-width: 2.5px; box-shadow: 0 4px 10px rgba(0,0,0,.4); font-size: 1.4em; }
+.lc-wcard-name { margin-top: 12px; max-width: 100%; font-size: 17px; font-weight: 800; color: #FBF6EC; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-wcard-foot { margin-top: auto; width: 100%; padding-top: 10px; border-top: 1px solid var(--wc-b); }
+.lc-wcard-main { display: block; font-weight: 800; letter-spacing: 1px; color: var(--wc); text-shadow: 0 2px 6px rgba(0,0,0,.4); line-height: 1.1; font-size: 18px; }
+.lc-wcard-sub { display: block; margin-top: 4px; font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--wc-a); text-wrap: balance; }
+.lc-win-owned { width: 240px; max-width: 100%; line-height: 0; animation: agpPop .45s cubic-bezier(.2,1,.3,1) both; }
+.lc-win-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 520px; max-width: 100%; }
+.lc-wbtn {
+    flex: 1; min-width: 150px; height: 46px; padding: 0 20px; border-radius: 999px; font-family: inherit; font-weight: 700; font-size: 15px; cursor: pointer;
+    transition: filter .2s, transform .15s; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: #f4f2f8;
+}
+.lc-wbtn:hover { filter: brightness(1.25); }
+.lc-wbtn:active { transform: scale(.97); }
+.lc-wbtn-primary { border: none; background: linear-gradient(90deg, #7c3aed, #a855f7); color: #fff; box-shadow: 0 8px 22px rgba(124,58,237,.4); }
+.lc-wbtn-primary:hover { filter: brightness(1.1); }
+.lc-wbtn-soft { border: 1px solid rgba(167,139,250,.55); background: rgba(139,92,246,.16); color: #ddd6fe; }
+.lc-wbtn-soft:hover { filter: brightness(1.2); }
