@@ -9,8 +9,11 @@
  *   «توب المكبّسين»، والسحب بالإصبع لأي مكان بالشاشة.
  * - التصميم محفوظ بـlocalStorage (agp:stream-overlay) — نفس الأصل لكل
  *   الألعاب، فيبقى ثابت لما المذيع يغيّر اللعبة.
- * - المواقع نِسب من الشاشة (0..1 لمنتصف العنصر) وتنحفظ لكل اتجاه (عمودي/
- *   أفقي) لحاله؛ الأحجام بـvmin عشان تتناسب مع أي مقاس.
+ * - قوالب شاشات (TEMPLATES): المذيع يختار جهازه واتجاهه، والمحرر يرسم إطار
+ *   بنفس النسبة يرتب داخله. المواقع نِسب من الإطار (0..1 لمنتصف العنصر)
+ *   وتنحفظ لكل قالب+اتجاه لحاله (pos['ipad-air-p'])، والأحجام نسبة من أصغر
+ *   ضلع بالإطار. وقت البث الإطار ياخذ اتجاه الجهاز الفعلي ويتوسّط الشاشة
+ *   (يملاها لو الجهاز نفس القالب).
  * - توب المكبّسين من GET /api/stream/session-stats?sections=likers:N
  *   (backend/stats/live-session-stats.js — نفس مصدر زر «إحصائيات البث»)،
  *   كل POLL_MS والصفحة ظاهرة فقط. آخر نتيجة بـsessionStorage عشان ما يفضى
@@ -38,15 +41,37 @@
         { key: 'pill', label: 'خلفية' }
     ];
     var LIKERS_TOPS = [1, 3, 5];
+    // w×h بالوضع الأفقي (نقاط CSS)؛ العمودي = نفس الأبعاد مقلوبة
+    var TEMPLATES = [
+        { key: 'auto', label: 'شاشة جهازي', sub: 'يملأ الشاشة الحالية' },
+        { key: 'ipad-air', label: 'آيباد Air / Pro 11 / 10.9', w: 1180, h: 820 },
+        { key: 'ipad', label: 'آيباد 4:3 (Pro 12.9 والقديم)', w: 1024, h: 768 },
+        { key: 'ipad-mini', label: 'آيباد mini', w: 1133, h: 744 },
+        { key: 'phone', label: 'جوال', w: 844, h: 390 },
+        { key: 'pc', label: 'كمبيوتر / OBS (16:9)', w: 1920, h: 1080 }
+    ];
 
     /* ---------------- الحالة والتخزين ---------------- */
 
-    function defaults() { return { v: 1, enabled: true, launcher: null, items: [] }; }
+    function defaults() { return { v: 2, enabled: true, launcher: null, template: null, editOrient: null, items: [] }; }
 
     function load() {
         try {
             var s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
-            if (s && Array.isArray(s.items)) return s;
+            if (s && Array.isArray(s.items)) {
+                // v1: المواقع كانت لكل اتجاه بس (pos.l / pos.p) = قالب «شاشة جهازي»
+                if (s.v !== 2) {
+                    s.items.forEach(function (it) {
+                        var pos = it.pos || {};
+                        it.pos = {};
+                        if (pos.l) it.pos['auto-l'] = pos.l;
+                        if (pos.p) it.pos['auto-p'] = pos.p;
+                    });
+                    s.v = 2;
+                    if (!s.template && s.items.length) s.template = 'auto';
+                }
+                return s;
+            }
         } catch (e) { /* تخزين غير متاح أو تالف */ }
         return defaults();
     }
@@ -64,7 +89,10 @@
     var pollTimer = null;
     var inflight = false;
 
-    var layer, launcher, backdrop, bar, panel, enabledBtn;
+    var pickerOpen = false;
+    var frameRect = null;
+
+    var layer, stage, launcher, backdrop, bar, panel, picker, enabledBtn, templateBtn, orientPills;
 
     function uid() { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
     function find(id) { for (var i = 0; i < state.items.length; i++) if (state.items[i].id === id) return state.items[i]; return null; }
@@ -72,14 +100,48 @@
     function orient() { return window.innerWidth >= window.innerHeight ? 'l' : 'p'; }
     function fmt(n) { return (Number(n) || 0).toLocaleString('en-US'); }
 
-    /** موقع العنصر بالاتجاه الحالي — أول مرة ينسخ من الاتجاه الثاني. */
-    function posOf(it, o) {
+    function tpl(key) {
+        for (var i = 0; i < TEMPLATES.length; i++) if (TEMPLATES[i].key === key) return TEMPLATES[i];
+        return TEMPLATES[0];
+    }
+
+    /** الاتجاه المعروض: بالمحرر اللي اختاره المذيع للقالب، وغير كذا اتجاه الجهاز. */
+    function viewOrient() {
+        var t = tpl(state.template);
+        return (editing && t.w && state.editOrient) ? state.editOrient : orient();
+    }
+
+    function curKey() { return tpl(state.template).key + '-' + viewOrient(); }
+
+    /** إطار القالب بالبكسل داخل الشاشة (contain + بالوسط). */
+    function computeFrame() {
+        var W = window.innerWidth, H = window.innerHeight;
+        var t = tpl(state.template);
+        if (!t.w) return { x: 0, y: 0, w: W, h: H };
+        var o = viewOrient();
+        var r = o === 'l' ? t.w / t.h : t.h / t.w;
+        var m = editing ? 14 : 0;
+        // بالمحرر الإطار يبدأ تحت شريط الأدوات عشان ما يغطي عليه
+        var top = (editing && bar && bar.style.display !== 'none') ? bar.getBoundingClientRect().bottom + 10 : m;
+        var aw = W - m * 2, ah = H - top - m;
+        var w = aw, h = aw / r;
+        if (h > ah) { h = ah; w = ah * r; }
+        return { x: (W - w) / 2, y: top + (ah - h) / 2, w: w, h: h };
+    }
+
+    /** موقع العنصر بالقالب الحالي — أول مرة ينسخ من نفس القالب بالاتجاه
+     *  الثاني، وإلا من أي قالب بنفس الاتجاه، وإلا أي موقع محفوظ. */
+    function posOf(it, key) {
         it.pos = it.pos || {};
-        if (!it.pos[o]) {
-            var other = it.pos[o === 'l' ? 'p' : 'l'];
-            it.pos[o] = other ? { x: other.x, y: other.y } : { x: 0.5, y: 0.5 };
+        if (!it.pos[key]) {
+            var keys = Object.keys(it.pos);
+            var o = key.slice(-1), base = key.slice(0, -1);
+            var src = it.pos[base + (o === 'l' ? 'p' : 'l')] ||
+                it.pos[keys.filter(function (k) { return k.slice(-1) === o; })[0]] ||
+                it.pos[keys[0]];
+            it.pos[key] = src ? { x: src.x, y: src.y } : { x: 0.5, y: 0.5 };
         }
-        return it.pos[o];
+        return it.pos[key];
     }
 
     /* ---------------- التكبيسات ---------------- */
@@ -187,11 +249,11 @@
 
     /* ---------------- الرسم ---------------- */
 
-    function buildItem(it) {
+    function buildItem(it, F) {
         var n = document.createElement('div');
         n.className = 'agp-so-item';
         n.setAttribute('data-id', it.id);
-        n.style.fontSize = (Number(it.size) || 5) + 'vmin';
+        n.style.fontSize = ((Number(it.size) || 5) * Math.min(F.w, F.h) / 100) + 'px';
         if (it.type === 'text') {
             n.className += ' agp-so-text s-' + (it.style || 'outline');
             n.style.color = it.color || '#fff';
@@ -213,26 +275,40 @@
 
     function render() {
         if (!layer) return;
-        var o = orient();
-        layer.textContent = '';
+        var F = frameRect = computeFrame();
+        var key = curKey();
+        var t = tpl(state.template);
+        stage.textContent = '';
         nodes = {};
         layer.classList.toggle('agp-so-editing', editing);
+        layer.classList.toggle('agp-so-framed', editing && Boolean(t.w));
         layer.style.display = (editing || state.enabled) ? '' : 'none';
+        stage.style.left = F.x + 'px';
+        stage.style.top = F.y + 'px';
+        stage.style.width = F.w + 'px';
+        stage.style.height = F.h + 'px';
+        if (editing && t.w) {
+            var tag = document.createElement('div');
+            tag.className = 'agp-so-frametag';
+            tag.textContent = t.label + ' · ' + (viewOrient() === 'l' ? 'أفقي' : 'عمودي');
+            stage.appendChild(tag);
+        }
         state.items.forEach(function (it) {
-            var n = buildItem(it);
+            var n = buildItem(it, F);
             if (editing && it.id === selectedId) n.classList.add('agp-so-selected');
-            layer.appendChild(n);
+            stage.appendChild(n);
             nodes[it.id] = n;
-            place(n, posOf(it, o));
+            place(n, posOf(it, key));
         });
+        if (bar) syncBar();
         launcher.style.display = editing ? 'none' : '';
         placeLauncher();
         syncPolling();
     }
 
-    /** يحط العنصر بموقعه، ويزحزحه بصرياً بس لو طلع جزء منه برّا الشاشة. */
+    /** يحط العنصر بموقعه داخل الإطار، ويزحزحه بصرياً بس لو طلع جزء منه برّاه. */
     function place(n, p) {
-        var W = window.innerWidth, H = window.innerHeight;
+        var W = frameRect.w, H = frameRect.h;
         var hw = n.offsetWidth / 2 + 4, hh = n.offsetHeight / 2 + 4;
         n.style.left = (hw * 2 >= W ? W / 2 : clamp(p.x * W, hw, W - hw)) + 'px';
         n.style.top = (hh * 2 >= H ? H / 2 : clamp(p.y * H, hh, H - hh)) + 'px';
@@ -355,7 +431,7 @@
 
     function addText() {
         var it = { id: uid(), type: 'text', text: 'اكتب نصك هنا', size: 6, color: '#ffffff', style: 'outline', pos: {} };
-        it.pos[orient()] = { x: 0.5, y: 0.4 };
+        it.pos[curKey()] = { x: 0.5, y: 0.4 };
         addItem(it);
         var ta = panel.querySelector('textarea');
         if (ta) { ta.focus(); ta.select(); }
@@ -365,13 +441,113 @@
         var existing = likersItems()[0];
         if (existing) { selectedId = existing.id; markSelected(); renderPanel(); return; }
         var it = { id: uid(), type: 'likers', title: 'توب المكبّسين', top: 3, size: 3.2, color: '#ffd54a', pos: {} };
-        it.pos[orient()] = { x: 0.8, y: 0.3 };
+        it.pos[curKey()] = { x: 0.8, y: 0.3 };
         addItem(it);
     }
 
-    function syncEnabledBtn() {
+    function syncBar() {
         enabledBtn.textContent = state.enabled ? 'ظاهر بالشاشة ✓' : 'مخفي من الشاشة';
         enabledBtn.classList.toggle('on', state.enabled);
+        var t = tpl(state.template);
+        templateBtn.textContent = '▦ القالب: ' + t.label;
+        orientPills.style.display = t.w ? '' : 'none';
+        var o = viewOrient();
+        Array.prototype.forEach.call(orientPills.children, function (b) { b.classList.toggle('on', b.getAttribute('data-o') === o); });
+    }
+
+    function setEditOrient(o) {
+        state.editOrient = o;
+        save(); render();
+    }
+
+    /* ---------------- اختيار القالب ---------------- */
+
+    /** رسم مصغّر بنسبة القالب (أفقي) داخل كرت الاختيار. */
+    function thumb(t) {
+        var box = document.createElement('span');
+        box.className = 'agp-so-thumb';
+        var r = document.createElement('span');
+        var tw = t.w || window.innerWidth, th = t.h || window.innerHeight;
+        if (tw < th) { var x = tw; tw = th; th = x; }
+        r.style.width = '56px';
+        r.style.height = Math.round(56 * th / tw) + 'px';
+        box.appendChild(r);
+        return box;
+    }
+
+    function renderPicker() {
+        picker.textContent = '';
+        var chosen = state.template || 'auto';
+        var o = state.editOrient || orient();
+
+        var h = document.createElement('div');
+        h.className = 'agp-so-ptitle';
+        h.textContent = 'اختر قالب شاشتك';
+        var sub = document.createElement('div');
+        sub.className = 'agp-so-hint';
+        sub.textContent = 'اختر الجهاز اللي تبث منه، وبعدها رتّب أدواتك عليه — كل قالب ينحفظ ترتيبه لحاله';
+        picker.appendChild(h);
+        picker.appendChild(sub);
+
+        var grid = document.createElement('div');
+        grid.className = 'agp-so-tgrid';
+        TEMPLATES.forEach(function (t) {
+            var c = document.createElement('button');
+            c.type = 'button';
+            c.className = 'agp-so-tcard' + (t.key === chosen ? ' on' : '');
+            c.appendChild(thumb(t));
+            var name = document.createElement('span');
+            name.className = 'agp-so-tname';
+            name.textContent = t.label;
+            var dim = document.createElement('span');
+            dim.className = 'agp-so-tdim';
+            dim.textContent = t.w ? (t.w + '×' + t.h) : t.sub;
+            c.appendChild(name);
+            c.appendChild(dim);
+            c.addEventListener('click', function () { chosen = t.key; renderPickerSel(); });
+            grid.appendChild(c);
+        });
+        picker.appendChild(grid);
+
+        var oRow = row('الاتجاه', pills([{ label: 'عمودي', value: 'p' }, { label: 'أفقي', value: 'l' }], o, function (v) { o = v; renderPickerSel(); }));
+        picker.appendChild(oRow);
+
+        var actions = document.createElement('div');
+        actions.className = 'agp-so-pactions';
+        if (state.template) actions.appendChild(btn('رجوع', '', function () { closePicker(); }));
+        else actions.appendChild(btn('إغلاق', '', function () { closePicker(); close(); }));
+        actions.appendChild(btn('ابدأ الترتيب', 'primary', function () {
+            state.template = chosen;
+            state.editOrient = o;
+            save();
+            closePicker();
+            render();
+        }));
+        picker.appendChild(actions);
+
+        function renderPickerSel() {
+            Array.prototype.forEach.call(grid.children, function (c, i) { c.classList.toggle('on', TEMPLATES[i].key === chosen); });
+            Array.prototype.forEach.call(oRow.querySelectorAll('.agp-so-btn'), function (b, i) { b.classList.toggle('on', (i === 0 ? 'p' : 'l') === o); });
+            oRow.style.display = tpl(chosen).w ? '' : 'none';
+        }
+        renderPickerSel();
+    }
+
+    function openPicker() {
+        pickerOpen = true;
+        selectedId = null;
+        markSelected();
+        renderPanel();
+        renderPicker();
+        picker.style.display = '';
+        bar.style.display = 'none';
+    }
+
+    function closePicker() {
+        pickerOpen = false;
+        picker.style.display = 'none';
+        if (editing) bar.style.display = '';
+        render();
     }
 
     function open() {
@@ -379,16 +555,18 @@
         editing = true;
         selectedId = null;
         backdrop.style.display = bar.style.display = '';
-        syncEnabledBtn();
+        if (!state.editOrient) state.editOrient = orient();
         render();
         renderPanel();
         fetchLikers();
+        if (!state.template) openPicker();
     }
 
     function close() {
         editing = false;
         selectedId = null;
         drag = null;
+        if (pickerOpen) closePicker();
         backdrop.style.display = bar.style.display = panel.style.display = 'none';
         render();
     }
@@ -404,10 +582,10 @@
         var it = find(id);
         if (!it) return;
         if (selectedId !== id) { selectedId = id; markSelected(); renderPanel(); }
-        // من المكان الظاهر فعلاً (ممكن يكون متزحزح عن المحفوظ عند حافة الشاشة)
-        var r = el.getBoundingClientRect();
-        var px = (r.left + r.width / 2) / window.innerWidth, py = (r.top + r.height / 2) / window.innerHeight;
-        drag = { kind: 'item', it: it, el: el, pid: e.pointerId, sx: e.clientX, sy: e.clientY, px: px, py: py, o: orient() };
+        // من المكان الظاهر فعلاً (ممكن يكون متزحزح عن المحفوظ عند حافة الإطار)
+        var r = el.getBoundingClientRect(), F = frameRect;
+        var px = (r.left + r.width / 2 - F.x) / F.w, py = (r.top + r.height / 2 - F.y) / F.h;
+        drag = { kind: 'item', it: it, el: el, pid: e.pointerId, sx: e.clientX, sy: e.clientY, px: px, py: py, key: curKey() };
         try { el.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
     }
 
@@ -422,10 +600,10 @@
         if (!drag || e.pointerId !== drag.pid) return;
         var dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
         if (drag.kind === 'item') {
-            var x = clamp(drag.px + dx / window.innerWidth, 0.02, 0.98);
-            var y = clamp(drag.py + dy / window.innerHeight, 0.02, 0.98);
-            drag.it.pos[drag.o] = { x: x, y: y };
-            place(drag.el, drag.it.pos[drag.o]);
+            var x = clamp(drag.px + dx / frameRect.w, 0.02, 0.98);
+            var y = clamp(drag.py + dy / frameRect.h, 0.02, 0.98);
+            drag.it.pos[drag.key] = { x: x, y: y };
+            place(drag.el, drag.it.pos[drag.key]);
         } else {
             if (Math.abs(dx) + Math.abs(dy) > 8) drag.moved = true;
             if (!drag.moved) return;
@@ -457,6 +635,9 @@
     var CSS = [
         '#agp-so-layer{position:fixed;inset:0;z-index:' + Z + ';pointer-events:none;direction:rtl;font-family:' + FONT + ';overflow:hidden}',
         '#agp-so-layer.agp-so-editing{z-index:' + (Z + 2) + '}',
+        '#agp-so-stage{position:absolute}',
+        '#agp-so-layer.agp-so-framed #agp-so-stage{outline:2px dashed rgba(77,216,255,.8);box-shadow:0 0 0 100vmax rgba(0,0,0,.45)}',
+        '.agp-so-frametag{position:absolute;bottom:6px;right:8px;font-size:12px;font-weight:700;color:#4dd8ff;opacity:.85}',
         '.agp-so-item{position:absolute;transform:translate(-50%,-50%);max-width:96vw;line-height:1.3;user-select:none;-webkit-user-select:none;box-sizing:border-box}',
         '#agp-so-layer.agp-so-editing .agp-so-item{pointer-events:auto;touch-action:none;cursor:grab;outline:2px dashed rgba(255,255,255,.6);outline-offset:6px;border-radius:6px}',
         '#agp-so-layer.agp-so-editing .agp-so-item.agp-so-selected{outline:2px solid #4dd8ff}',
@@ -492,7 +673,17 @@
         '.agp-so-swatch.on{border-color:#4dd8ff;box-shadow:0 0 0 3px rgba(77,216,255,.35)}',
         '.agp-so-input{flex:1;min-width:0;font:inherit;font-size:16px;color:#fff;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:8px 10px;direction:rtl;resize:none}',
         '.agp-so-range{flex:1;max-width:260px;accent-color:#4dd8ff}',
-        '.agp-so-pactions{display:flex;justify-content:space-between;gap:8px}'
+        '.agp-so-pactions{display:flex;justify-content:space-between;gap:8px}',
+        '#agp-so-picker{top:50%;left:50%;transform:translate(-50%,-50%);width:min(620px,calc(100vw - 20px));max-height:calc(100vh - 20px);overflow:auto;box-sizing:border-box;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:12px}',
+        '.agp-so-ptitle{font-size:18px;font-weight:800;text-align:center}',
+        '.agp-so-tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}',
+        '.agp-so-tcard{font:inherit;color:#fff;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;-webkit-tap-highlight-color:transparent}',
+        '.agp-so-tcard.on{border-color:#4dd8ff;background:rgba(77,216,255,.12);box-shadow:0 0 0 2px rgba(77,216,255,.35)}',
+        '.agp-so-thumb{height:44px;display:flex;align-items:center;justify-content:center}',
+        '.agp-so-thumb span{display:block;border:2px solid currentColor;border-radius:5px;opacity:.85}',
+        '.agp-so-tcard.on .agp-so-thumb{color:#4dd8ff}',
+        '.agp-so-tname{font-size:13px;font-weight:700;text-align:center}',
+        '.agp-so-tdim{font-size:11px;opacity:.6;direction:ltr}'
     ].join('\n');
 
     var ICON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5z"/><path d="m2 16 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>';
@@ -506,6 +697,9 @@
         layer = document.createElement('div');
         layer.id = 'agp-so-layer';
         layer.addEventListener('pointerdown', onLayerDown);
+        stage = document.createElement('div');
+        stage.id = 'agp-so-stage';
+        layer.appendChild(stage);
 
         launcher = document.createElement('button');
         launcher.type = 'button';
@@ -524,15 +718,21 @@
         bar.id = 'agp-so-bar';
         bar.className = 'agp-so-ui';
         bar.style.display = 'none';
+        templateBtn = btn('', '', openPicker);
+        bar.appendChild(templateBtn);
+        orientPills = pills([{ label: 'عمودي', value: 'p' }, { label: 'أفقي', value: 'l' }], null, setEditOrient);
+        orientPills.children[0].setAttribute('data-o', 'p');
+        orientPills.children[1].setAttribute('data-o', 'l');
+        bar.appendChild(orientPills);
         bar.appendChild(btn('＋ نص', '', addText));
         bar.appendChild(btn('＋ توب المكبّسين', '', addLikers));
-        enabledBtn = btn('', '', function () { state.enabled = !state.enabled; save(); syncEnabledBtn(); });
+        enabledBtn = btn('', '', function () { state.enabled = !state.enabled; save(); syncBar(); });
         bar.appendChild(enabledBtn);
         bar.appendChild(btn('إغلاق', 'primary', close));
         var hint = document.createElement('div');
         hint.className = 'agp-so-hint';
         hint.style.flexBasis = '100%';
-        hint.textContent = 'اسحب أي عنصر بإصبعك لأي مكان بالشاشة · اضغط عليه عشان تعدّله';
+        hint.textContent = 'اسحب أي عنصر بإصبعك لأي مكان داخل الإطار · اضغط عليه عشان تعدّله';
         bar.appendChild(hint);
 
         panel = document.createElement('div');
@@ -540,13 +740,21 @@
         panel.className = 'agp-so-ui';
         panel.style.display = 'none';
 
-        [layer, launcher, backdrop, bar, panel].forEach(function (el) { document.body.appendChild(el); });
+        picker = document.createElement('div');
+        picker.id = 'agp-so-picker';
+        picker.className = 'agp-so-ui';
+        picker.style.display = 'none';
+
+        [layer, launcher, backdrop, bar, panel, picker].forEach(function (el) { document.body.appendChild(el); });
 
         window.addEventListener('pointermove', onMove);
         window.addEventListener('pointerup', onUp);
         window.addEventListener('pointercancel', onUp);
         window.addEventListener('resize', function () { if (!drag) render(); });
-        window.addEventListener('keydown', function (e) { if (editing && e.key === 'Escape') close(); });
+        window.addEventListener('keydown', function (e) {
+            if (!editing || e.key !== 'Escape') return;
+            if (pickerOpen && state.template) closePicker(); else close();
+        });
         document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && pollTimer) fetchLikers(); });
         // تعديل من تبويب ثاني بنفس الجهاز
         window.addEventListener('storage', function (e) {
