@@ -283,19 +283,19 @@ body.lc-active a { color: var(--lc-accent); }
 .lc-question-placeholder { font-weight: 500; font-size: 30px; color: var(--lc-dim-2); }
 
 /* كرت الرقعة + الخلايا السداسية */
-.lc-board-card { position: relative; overflow: hidden; border-radius: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 30px 80px rgba(0,0,0,.35); }
-.lc-board-halo { position: absolute; top: -140px; left: 50%; width: 700px; height: 280px; margin-left: -350px; border-radius: 50%; background: rgba(167,139,250,.16); filter: blur(44px); pointer-events: none; }
+.lc-board-card { position: relative; border-radius: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 30px 80px rgba(0,0,0,.35); }
 .lc-board { position: relative; flex-shrink: 0; }
-/* توهج ناعم وهادي على أطراف مربع الرقعة (من الداخل): فوق وتحت بلون الفريق الأول، يمين ويسار بلون الفريق الثاني */
-.lc-board-glow { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; overflow: hidden; animation: lc-glow-breathe 4s ease-in-out infinite alternate; }
-.lc-board-glow span { position: absolute; }
-.lc-glow-top, .lc-glow-bottom { left: 0; right: 0; height: 140px; }
-.lc-glow-top { top: 0; background: linear-gradient(to bottom, var(--g1), transparent); box-shadow: inset 0 2px 0 var(--g1l); }
-.lc-glow-bottom { bottom: 0; background: linear-gradient(to top, var(--g1), transparent); box-shadow: inset 0 -2px 0 var(--g1l); }
-.lc-glow-right, .lc-glow-left { top: 0; bottom: 0; width: 140px; }
-.lc-glow-right { right: 0; background: linear-gradient(to left, var(--g2), transparent); box-shadow: inset -2px 0 0 var(--g2l); }
-.lc-glow-left { left: 0; background: linear-gradient(to right, var(--g2), transparent); box-shadow: inset 2px 0 0 var(--g2l); }
-@keyframes lc-glow-breathe { from { opacity: .75; } to { opacity: 1; } }
+/* توهج ناعم وهادي على حواف كرت الرقعة نفسه: خط مضيء على الحافة يتلاشى عند الزوايا مع هالة مغبّشة.
+   فوق وتحت بلون الفريق الأول، يمين ويسار بلون الفريق الثاني */
+.lc-board-glow { position: absolute; inset: 0; pointer-events: none; animation: lc-glow-breathe 4s ease-in-out infinite alternate; }
+.lc-board-glow span { position: absolute; border-radius: 999px; }
+.lc-glow-top, .lc-glow-bottom { left: 30px; right: 30px; height: 3px; background: linear-gradient(90deg, transparent, var(--g1) 18%, var(--g1) 82%, transparent); box-shadow: 0 0 26px 4px color-mix(in srgb, var(--g1) 55%, transparent); }
+.lc-glow-top { top: -1.5px; }
+.lc-glow-bottom { bottom: -1.5px; }
+.lc-glow-right, .lc-glow-left { top: 30px; bottom: 30px; width: 3px; background: linear-gradient(180deg, transparent, var(--g2) 18%, var(--g2) 82%, transparent); box-shadow: 0 0 26px 4px color-mix(in srgb, var(--g2) 55%, transparent); }
+.lc-glow-right { right: -1.5px; }
+.lc-glow-left { left: -1.5px; }
+@keyframes lc-glow-breathe { from { opacity: .7; } to { opacity: 1; } }
 .lc-hex { position: absolute; padding: 5px; transition: background .25s; }
 .lc-hex-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font: 700 var(--lc-hexfont, 80px)/1 var(--lc-font); transition: background .25s, color .25s; }
 .lc-hex-free { background: rgba(167,139,250,.3); cursor: pointer; }

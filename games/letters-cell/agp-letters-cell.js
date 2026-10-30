@@ -1299,7 +1299,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return 'background:conic-gradient(' + color + ' ' + deg.toFixed(1) + 'deg, rgba(255,255,255,.07) 0);color:' + color;
     }
 
-    var BOARD_HEIGHT_PX = 720; // ارتفاع الرقعة داخل مسرح 1920×1080
+    var BOARD_HEIGHT_PX = 800; // ارتفاع الرقعة داخل مسرح 1920×1080
 
     function gameTeamCardHtml(team, activeLetter) {
         var color = teamColor(team);
@@ -1486,9 +1486,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                             '</div>' +
                         '</div>' +
                         '<div class="lc-card lc-board-card">' +
-                            '<span class="lc-board-halo"></span>' +
-                            // توهج ناعم على أطراف مربع الرقعة: فوق وتحت بلون الفريق الأول، يمين ويسار بلون الفريق الثاني.
-                            '<div class="lc-board-glow" style="--g1:' + hexToRgba(teamColor(TEAM1), 0.22) + ';--g1l:' + hexToRgba(teamColor(TEAM1), 0.55) + ';--g2:' + hexToRgba(teamColor(TEAM2), 0.2) + ';--g2l:' + hexToRgba(teamColor(TEAM2), 0.5) + '" aria-hidden="true">' +
+                            // توهج ناعم على حواف كرت الرقعة نفسه: فوق وتحت بلون الفريق الأول، يمين ويسار بلون الفريق الثاني.
+                            '<div class="lc-board-glow" style="--g1:' + teamColor(TEAM1) + ';--g2:' + teamColor(TEAM2) + '" aria-hidden="true">' +
                                 '<span class="lc-glow-top"></span><span class="lc-glow-bottom"></span><span class="lc-glow-right"></span><span class="lc-glow-left"></span>' +
                             '</div>' +
                             '<div class="lc-board" style="height:' + BOARD_HEIGHT_PX + 'px;width:' + Math.round(BOARD_HEIGHT_PX * BOARD_ASPECT) + 'px;--lc-hexfont:' + Math.round(BOARD_HEIGHT_PX * HEX_H_RATIO * 0.42) + 'px">' + cellsHtml + '</div>' +
