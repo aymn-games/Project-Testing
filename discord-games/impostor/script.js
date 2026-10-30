@@ -988,14 +988,15 @@ async function kickPlayer(id){
    =====================================================================
    بيانات الغرفة أثناء المباراة:
      status: "game" | "final" | "lobby"
-     match:  { round, totals{id:pts}, impHist[], lastImp, done }
+     match:  { round, totals{id:pts}, impHist[], lastImp, done, startedAt }
      usedWords: [] كلمات استُخدمت في هذه الغرفة (لا تتكرر حتى ينفد البنك)
      g (الجولة الحالية):
-       phase: "pre" (مقدمة + بطاقة الدور) → "hints" → "voting" → "reveal"
+       phase: "pre" (مقدمة + بطاقة الدور) → "hints" → "impguess" (الأمبوستر
+              يكتب كلمة الباقين بسرية) → "voting" (بلا وقت) → "reveal"
        t0 / cardAt / cardEndsAt: توقيتات المقدمة والبطاقة
        order[]، impId، words{c,i,cat}، names{id:name}
        turn، hintRound، turnEndsAt، turnSent، nextTurnAt، hints[]
-       votes{voter:target}، revealAt، guessEndsAt، guess، points
+       guessEndsAt، guess، votes{voter:target}، revealAt، points
    كل الأوقات بتوقيت خادم Firebase (now()).
 --------------------------------------------------------------------- */
 const T = {
@@ -1011,7 +1012,7 @@ const T = {
   REVEAL_NAME: 2700,    // ظهور اسم الأمبوستر
   REVEAL_FADE: 5800,    // بدء تلاشي طبقة الكشف
   REVEAL_OFF: 6600,     // انتهاء الكشف وفتح التخمين
-  GUESS_TIMEOUT: 60000, // حد أقصى للتخمين (لو خرج الأمبوستر أو تأخر كثيرًا)
+  GUESS_TIMEOUT: 60000, // حد أقصى لكتابة الأمبوستر كلمة الباقين قبل التصويت
   FOLLOWER_DELAY: 1500  // الأجهزة غير المضيفة تنتظر قليلًا قبل نقل المرحلة
 };
 
@@ -1082,10 +1083,12 @@ function buildRound(room, newMatch){
 
 function isPresent(room, id){ return !!(room.players && room.players[id]); }
 
-/** من يحق لهم التصويت: لاعبو الجولة الموجودون في الغرفة والمتصلون */
+/** من يحق لهم التصويت: لاعبو الجولة الموجودون في الغرفة. التصويت ما ينتهي
+ *  إلا بتصويتهم كلهم (حتى لو انقطع اتصال أحدهم) — أو بزر «إنهاء التصويت»
+ *  عند المضيف لو لاعب طلع. */
 function eligibleVoters(room){
   const g = room.g;
-  return (g.order || []).filter(id => isPresent(room, id) && room.players[id].connected !== false);
+  return (g.order || []).filter(id => isPresent(room, id));
 }
 
 /** ينتقل للدور التالي، متخطيًا من غادر الغرفة. بعد آخر دور ← التصويت. */
@@ -1096,9 +1099,7 @@ function seekTurn(room, turn, round, t){
   for(let guard = 0; guard <= n * (settings.hintRounds + 1); guard++){
     if(turn >= n){ turn = 0; round++; }
     if(round > settings.hintRounds){
-      g.phase = "voting";
-      g.votes = {};
-      g.turnSent = false;
+      startImpGuess(g, t);
       return;
     }
     if(isPresent(room, g.order[turn])){
@@ -1111,8 +1112,17 @@ function seekTurn(room, turn, round, t){
     }
     turn++;
   }
-  g.phase = "voting";
+  startImpGuess(g, t);
+}
+
+/** بعد آخر تلميح: الأمبوستر يكتب كلمة الباقين قبل التصويت. الكل يشوف نفس
+ *  شاشة الانتظار فما ينكشف مين اللي يكتب. */
+function startImpGuess(g, t){
+  g.phase = "impguess";
+  g.turnSent = false;
+  g.guess = null;
   g.votes = {};
+  g.guessEndsAt = t + T.GUESS_TIMEOUT;
 }
 
 function voteCounts(votes){
@@ -1150,14 +1160,24 @@ function computePoints(room, correct){
   return P;
 }
 
+/** يحفظ كلمة الأمبوستر (أو انتهاء وقته) ويفتح التصويت. نتيجتها تنكشف بعد التصويت. */
 function applyGuess(room, text, timeout){
   const g = room.g;
   const correct = !timeout && normalizeArabic(text) === normalizeArabic(g.words.c);
-  const P = computePoints(room, correct);
+  g.guess = { text: text || "", correct, timeout: !!timeout };
+  g.phase = "voting";
+  g.votes = {};
+}
+
+/** يقفل التصويت، يبدأ كشف الأمبوستر، ويحسب نقاط الجولة. */
+function startReveal(room, t){
+  const g = room.g;
+  g.phase = "reveal";
+  g.revealAt = t + T.REVEAL_DELAY;
+  const P = computePoints(room, !!(g.guess && g.guess.correct));
   room.match.totals = room.match.totals || {};
   Object.entries(P).forEach(([id, v]) => { room.match.totals[id] = (room.match.totals[id] || 0) + v.pts; });
   room.match.done = (room.match.done || 0) + 1;
-  g.guess = { text: text || "", correct, timeout: !!timeout };
   g.points = P;
 }
 
@@ -1199,19 +1219,20 @@ function advanceRoom(room, t){
     }
     return undefined;
   }
-  if(g.phase === "voting"){
-    const voters = eligibleVoters(room);
-    if(voters.length && voters.every(id => g.votes[id])){
-      g.phase = "reveal";
-      g.revealAt = t + T.REVEAL_DELAY;
-      g.guessEndsAt = g.revealAt + T.REVEAL_OFF + T.GUESS_TIMEOUT;
+  if(g.phase === "impguess"){
+    if(t >= g.guessEndsAt){
+      applyGuess(room, "", true);
       return room;
     }
     return undefined;
   }
-  if(g.phase === "reveal" && !g.points && t >= g.guessEndsAt){
-    applyGuess(room, "", true);
-    return room;
+  if(g.phase === "voting"){
+    const voters = eligibleVoters(room);
+    if(voters.length && voters.every(id => g.votes[id])){
+      startReveal(room, t);
+      return room;
+    }
+    return undefined;
   }
   return undefined;
 }
@@ -1332,8 +1353,19 @@ function submitGuess(text){
   const me = state.playerId;
   return roomTx(room => {
     const g = room.g;
-    if(room.status !== "game" || !g || g.phase !== "reveal" || g.points || g.impId !== me) return undefined;
+    if(room.status !== "game" || !g || g.phase !== "impguess" || g.guess || g.impId !== me) return undefined;
     applyGuess(room, text, false);
+    return room;
+  });
+}
+
+/** زر «إنهاء التصويت» (المضيف فقط) — لو لاعب طلع أو ما رجع يصوّت.
+ *  يكشف الأمبوستر بالأصوات اللي وصلت لين الحين. */
+function endVoting(){
+  return roomTx(room => {
+    const g = room.g;
+    if(room.hostId !== state.playerId || room.status !== "game" || !g || g.phase !== "voting") return undefined;
+    startReveal(room, now());
     return room;
   });
 }
@@ -1422,6 +1454,7 @@ function currentView(room, t){
   if(!g) return "hints";
   if(g.voided) return "score";
   if(g.phase === "pre" || g.phase === "hints") return "hints";
+  if(g.phase === "impguess") return "impguess";
   if(g.phase === "voting") return (ui.reviewDone || (g.votes && g.votes[state.playerId])) ? "vote" : "review";
   if(g.phase === "reveal"){
     if(t < g.revealAt) return "vote";
@@ -1441,11 +1474,15 @@ function renderGame(room){
 
   // الشريط العلوي
   $("#gm-round").textContent = `الجولة ${match.round || 1} من ${settings.gameRounds}`;
-  const phaseLabels = { review: "مراجعة التلميحات", vote: "التصويت", reveal: "كشف الأمبوستر", score: "النقاط", final: "النتيجة النهائية" };
+  const phaseLabels = { impguess: "كلمة الأمبوستر", review: "مراجعة التلميحات", vote: "التصويت", reveal: "كشف الأمبوستر", score: "النقاط", final: "النتيجة النهائية" };
   $("#gm-phase").textContent = view === "hints"
     ? `التلميح ${Math.min((g && g.hintRound) || 1, settings.hintRounds)} من ${settings.hintRounds}`
     : phaseLabels[view];
   $("#btn-exit").classList.toggle("hidden", view === "final");
+  const endVote = $("#btn-end-vote");
+  const canEndVote = state.isHost && !!g && g.phase === "voting";
+  endVote.classList.toggle("hidden", !canEndVote);
+  if(!canEndVote) disarmEndVote();
   const wordBtn = $("#btn-word");
   wordBtn.classList.toggle("hidden", !(g && inRound) || view === "final");
   if(g && inRound) $("#gm-word").textContent = myWord(g, cardInfo(g, t).words);
@@ -1455,7 +1492,7 @@ function renderGame(room){
   $("#btn-mute").title = Sound.muted ? "تشغيل الصوت" : "كتم الصوت";
 
   // تبديل العرض
-  ["hints", "review", "vote", "reveal", "score", "final"].forEach(v => $("#gv-" + v).classList.toggle("active", v === view));
+  ["hints", "impguess", "review", "vote", "reveal", "score", "final"].forEach(v => $("#gv-" + v).classList.toggle("active", v === view));
   if(view !== ui.lastView){
     if(ui.lastView && view !== "hints") Sound.sfx(view === "score" && room.status === "game" && (match.round || 1) >= settings.gameRounds ? "end" : "whoosh");
     ui.lastView = view;
@@ -1465,6 +1502,8 @@ function renderGame(room){
   else { $("#confetti").classList.add("hidden"); ui.finalKey = ""; }
   if(!g) return;
   if(view === "hints") renderHints(room, t, settings);
+  if(view === "impguess") renderImpGuess(room, t);
+  if(view === "review" || view === "vote") renderVoteNotice(room);
   if(view === "review") renderReview(room, settings);
   if(view === "vote") renderVote(room);
   if(view === "reveal") renderRevealView(room, t);
@@ -1559,6 +1598,31 @@ function sendMyHint(){
   if(!v) return;
   $("#btn-send-hint").disabled = true;
   submitHint(v);
+}
+
+/* ----- كلمة الأمبوستر قبل التصويت ----- */
+function renderImpGuess(room, t){
+  const g = room.g, meImp = g.impId === state.playerId;
+  const left = Math.max(0, Math.ceil((g.guessEndsAt - t) / 1000));
+  $("#ig-title").textContent = meImp ? "اكتب كلمة باقي اللاعبين" : "الأمبوستر يكتب الكلمة الآن…";
+  $("#ig-sub").textContent = meImp
+    ? "اكتب الكلمة اللي تظن إن باقي اللاعبين عندهم. محد بيعرف إنك أنت اللي كتبت، والنتيجة تنكشف بعد التصويت — التخمين الصحيح يعطيك نقطتين."
+    : "الأمبوستر يحاول يخمّن كلمتكم بسرية. أول ما يخلص تقدرون تتناقشون وتصوّتون.";
+  const form = $("#guess-form");
+  if(meImp && form.classList.contains("hidden")){
+    form.classList.remove("hidden");
+    $("#guess-input").focus({ preventScroll: true });
+  } else if(!meImp) form.classList.add("hidden");
+  $("#ig-wait").classList.toggle("hidden", meImp);
+  $("#ig-secs").textContent = `باقي ${left} ث`;
+}
+
+/** تنويه بداية التصويت: الأمبوستر خلّص كلمته، تناقشوا وصوّتوا على راحتكم */
+function renderVoteNotice(room){
+  const g = room.g, timeout = !!(g.guess && g.guess.timeout);
+  const text = (timeout ? "خلص وقت الأمبوستر وما كتب الكلمة" : "خلاص، الأمبوستر كتب الكلمة ✍️")
+    + " — تناقشوا على راحتكم، وبعدين صوّتوا على اللي تبونه. التصويت ما ينتهي إلا لما يصوّت الجميع.";
+  $all(".vote-notice").forEach(el => { el.textContent = text; });
 }
 
 /* ----- مراجعة التلميحات ----- */
@@ -1678,25 +1742,18 @@ function renderRevealView(room, t){
   }).join(""));
   $all("#tally .bar-fill").forEach(b => { b.style.width = barsOn ? b.dataset.w : "0%"; });
 
-  // التخمين
-  const gs = g.points ? "done" : (barsOn ? "wait" : "pending");
+  // كلمة الأمبوستر (كتبها قبل التصويت، وتنكشف هنا بعد عرض الأصوات)
+  const gs = g.points && barsOn ? "done" : "pending";
   const impName = playerName(room, g.impId);
   const card = $("#guess-card");
   card.classList.toggle("is-correct", gs === "done" && !!(g.guess && g.guess.correct));
   card.classList.toggle("is-wrong", gs === "done" && !(g.guess && g.guess.correct));
   $("#guess-title").textContent = gs === "done"
-    ? (g.guess && g.guess.correct ? "خمّن الكلمة صح!" : "تخمين خاطئ")
-    : meImp ? "خمّن كلمتهم" : `${impName} يخمّن كلمتكم`;
+    ? (g.guess && g.guess.correct ? "خمّن الكلمة صح!" : g.guess && g.guess.timeout ? "ما كتب الكلمة" : "تخمين خاطئ")
+    : meImp ? "كلمتك اللي كتبتها" : `وش كتب ${impName}؟`;
   $("#guess-sub").textContent = gs === "done" ? ""
-    : meImp ? "اكتب الكلمة التي تظن أن باقي اللاعبين حصلوا عليها. التخمين الصحيح يمنحك نقطتين إضافيتين."
     : "إن خمّنها صح يكسب نقطتين إضافيتين، وإن أخطأ يأخذ كل لاعب نقطة.";
-  const form = $("#guess-form");
-  const canGuess = meImp && gs === "wait";
-  if(canGuess && form.classList.contains("hidden")){
-    form.classList.remove("hidden");
-    $("#guess-input").focus({ preventScroll: true });
-  } else if(!canGuess) form.classList.add("hidden");
-  $("#guess-wait").classList.toggle("hidden", !(!meImp && gs === "wait"));
+  $("#guess-wait").classList.toggle("hidden", gs !== "pending");
   $("#guess-done").classList.toggle("hidden", gs !== "done");
   if(gs === "done" && g.guess){
     $("#guess-word").textContent = g.guess.timeout ? "لم يُرسل تخمين" : g.guess.text;
@@ -1939,7 +1996,7 @@ function gameSounds(room, t, settings){
     if(ui.lastHints || hints === 1) Sound.sfx(g.hints[hints - 1].skipped ? "skip" : "send");
     ui.lastHints = hints;
   }
-  if(g.phase === "voting" || g.phase === "reveal") sfxAt(`${id}:hintsdone`, t, "end", t);
+  if(g.phase === "impguess" || g.phase === "voting" || g.phase === "reveal") sfxAt(`${id}:hintsdone`, t, "end", t);
   const nv = Object.keys(g.votes || {}).length;
   const myVoted = !!(g.votes || {})[state.playerId];
   if(nv > ui.lastVotes){
@@ -1951,10 +2008,7 @@ function gameSounds(room, t, settings){
     let d = 250;
     for(let i = 0; i < 16; i++){ sfxAt(`${id}:drum${i}`, g.revealAt + d, "drum", t); d += Math.max(55, 170 - i * 9); }
     sfxAt(`${id}:verdict`, g.revealAt + T.REVEAL_NAME, isCaught(g) ? "caught" : "escaped", t);
-    if(g.points && g.guess && ui.guessDoneKey !== id){
-      ui.guessDoneKey = id;
-      if(t - g.revealAt < T.REVEAL_OFF + T.GUESS_TIMEOUT + 2000) Sound.sfx(g.guess.correct ? "impWin" : "citWin");
-    }
+    if(g.points && g.guess) sfxAt(`${id}:guessdone`, g.revealAt + T.REVEAL_OFF, g.guess.correct ? "impWin" : "citWin", t);
   }
 }
 
@@ -1969,6 +2023,26 @@ $("#btn-mute").addEventListener("click", () => {
   if(state.roomData) renderGame(state.roomData);
 });
 $("#btn-reroll").addEventListener("click", rerollWord);
+
+/* «إنهاء التصويت» يحتاج ضغطتين (تأكيد) حتى ما ينقفل التصويت بالغلط */
+function disarmEndVote(){
+  const b = $("#btn-end-vote");
+  clearTimeout(ui.endVoteTimer);
+  b.classList.remove("is-armed");
+  b.querySelector("span").textContent = "إنهاء التصويت";
+}
+$("#btn-end-vote").addEventListener("click", () => {
+  const b = $("#btn-end-vote");
+  if(!b.classList.contains("is-armed")){
+    b.classList.add("is-armed");
+    b.querySelector("span").textContent = "متأكد؟ اضغط مرة ثانية";
+    clearTimeout(ui.endVoteTimer);
+    ui.endVoteTimer = setTimeout(disarmEndVote, 3500);
+    return;
+  }
+  disarmEndVote();
+  endVoting();
+});
 
 /* ----- نافذة الخروج ----- */
 const exitModal = setupModal("#exit-modal");
