@@ -422,20 +422,30 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-circle::before{content:"";position:absolute;inset:-7%;border-radius:50%;pointer-events:none;',
             'background:radial-gradient(circle,rgba(139,92,246,.22) 40%,rgba(139,92,246,.06) 58%,transparent 70%);}',
             /* الإطار: تدرّج بنفسجي ناعم بدل الحلقة المعدنية، مع لمعة خفيفة فوق */
-            '.mc-ring{position:absolute;inset:0;border-radius:50%;padding:max(8px,1.3cqw);',
+            '.mc-ring{position:absolute;inset:0;border-radius:50%;padding:max(6px,.9cqw);',
             'background:linear-gradient(160deg,#c4b5fd 0%,#8b5cf6 30%,#5b21b6 65%,#7c3aed 100%);',
             'box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 50px rgba(139,92,246,.3),inset 0 2px 3px rgba(255,255,255,.35);}',
-            /* أرضية الدائرة: بني دافي ناعم بإضاءة هادية بالنص، أطراف تغمق
-             * بلطف، وخط ذهبي رفيع ناعم حولها */
-            '.mc-ring div{width:100%;height:100%;border-radius:50%;',
+            /* أرضية الدائرة: بني دافي أغمق شوي بإضاءة هادية بالنص، أطراف
+             * تغمق بلطف، وخط ذهبي رفيع ناعم حولها */
+            '.mc-ring div{position:relative;width:100%;height:100%;border-radius:50%;',
             'background:',
             'radial-gradient(circle at 50% 42%,rgba(255,214,170,.20) 0,rgba(255,214,170,.06) 38%,transparent 60%),',
             'radial-gradient(ellipse 50% 40% at 30% 30%,rgba(196,122,64,.22),transparent 70%),',
             'radial-gradient(ellipse 45% 35% at 72% 70%,rgba(80,38,14,.22),transparent 72%),',
             'radial-gradient(circle,transparent 62%,rgba(30,14,6,.42) 100%),',
-            'linear-gradient(160deg,#94552a,#7a4321 50%,#673619);',
+            'linear-gradient(160deg,#7f4724,#68381b 50%,#572e16);',
             'box-shadow:inset 0 0 0 2px rgba(26,20,48,.7),inset 0 0 0 3.5px rgba(214,180,120,.55),',
             'inset 0 0 0 5px rgba(26,20,48,.45),inset 0 10px 40px rgba(0,0,0,.35),inset 0 -6px 30px rgba(0,0,0,.25);}',
+            /* زخرفة داخل الدائرة: أشعة خفيفة من المنتصف + حلقات متحدة
+             * المركز رفيعة، تتلاشى بنعومة نحو الأطراف */
+            '.mc-ring div::before,.mc-ring div::after{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;}',
+            '.mc-ring div::before{background:repeating-conic-gradient(from 0deg,rgba(255,226,186,.045) 0 5deg,transparent 5deg 10deg);',
+            '-webkit-mask:radial-gradient(circle,#000 0,rgba(0,0,0,.8) 35%,transparent 72%);',
+            'mask:radial-gradient(circle,#000 0,rgba(0,0,0,.8) 35%,transparent 72%);}',
+            '.mc-ring div::after{background:',
+            'radial-gradient(circle,transparent 0 15.6%,rgba(222,190,135,.22) 15.8% 16.2%,transparent 16.4%),',
+            'repeating-radial-gradient(circle,transparent 0 calc(11% - 1px),rgba(255,226,186,.07) calc(11% - 1px) 11%);',
+            '-webkit-mask:radial-gradient(circle,#000 55%,transparent 92%);mask:radial-gradient(circle,#000 55%,transparent 92%);}',
             '.mc-watermark{position:absolute;left:50%;top:50%;width:62%;height:auto;transform:translate(-50%,-50%);opacity:0.06;pointer-events:none;}',
             '.mc-ch{position:absolute;aspect-ratio:1;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;}',
             /* ظل ناعم تحت الكرسي على الأرضية */
@@ -444,14 +454,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-ch-glyph{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;line-height:1;',
             'filter:drop-shadow(0 4px 6px rgba(0,0,0,.35));',
             'transition:transform .45s cubic-bezier(.34,1.4,.64,1);}',
-            '.mc-chair-img{height:100%;width:auto;max-width:100%;object-fit:contain;display:block;pointer-events:none;user-select:none;}',
+            '.mc-chair-img{height:100%;width:auto;max-width:100%;object-fit:contain;display:block;pointer-events:none;user-select:none;',
+            'filter:saturate(.68) sepia(.18) brightness(1.08) contrast(.9);}',
             '.mc-ch.mc-numbered .mc-ch-glyph{transform:scale(1.04);}',
-            /* رقم الكرسي: كبسولة ناعمة بتدرّج هادي وحد فاتح رفيع */
-            '.mc-ch-num{position:absolute;left:50%;top:33%;transform:translate(-50%,-50%);padding:0.14em 0.42em;border-radius:999px;',
-            'display:none;align-items:center;justify-content:center;background:linear-gradient(180deg,#a78bfa,#7c3aed);color:#fff;font-weight:800;line-height:1;',
-            'letter-spacing:-0.02em;font-variant-numeric:tabular-nums;border:1.5px solid rgba(237,233,254,.6);',
-            'text-shadow:0 1px 2px rgba(46,16,101,.45);',
-            'box-shadow:0 6px 16px rgba(46,16,101,.45),0 0 18px rgba(167,139,250,.35),inset 0 1px 0 rgba(255,255,255,.35);}',
+            /* رقم الكرسي: كبسولة زجاجية ناعمة بلون لافندر هادي وحد فاتح رفيع */
+            '.mc-ch-num{position:absolute;left:50%;top:33%;transform:translate(-50%,-50%);padding:0.14em 0.44em;border-radius:999px;',
+            'display:none;align-items:center;justify-content:center;color:#fff;font-weight:800;line-height:1;',
+            'background:linear-gradient(180deg,rgba(184,166,240,.9),rgba(132,104,214,.9));',
+            'backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);',
+            'letter-spacing:-0.02em;font-variant-numeric:tabular-nums;border:1px solid rgba(255,255,255,.45);',
+            'text-shadow:0 1px 2px rgba(46,16,101,.3);',
+            'box-shadow:0 4px 12px rgba(30,12,60,.35),inset 0 1px 0 rgba(255,255,255,.4);}',
             '.mc-ch.mc-numbered .mc-ch-num{display:flex;animation:mc-pop .45s cubic-bezier(.2,1.25,.35,1);}',
             '.mc-ch.mc-taken .mc-ch-glyph,.mc-ch.mc-taken .mc-ch-num,.mc-ch.mc-taken::before{display:none;}',
             '.mc-p{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;z-index:2;}',
@@ -1253,7 +1266,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var cls = 'mc-ch' + (numbered ? ' mc-numbered' : '') + (chair.occupantId && chair.arrived ? ' mc-taken' : '');
             return '<div class="' + cls + '" id="mc-chair-' + idx + '" style="left:' + chair.x + '%;top:' + chair.y + '%;width:' + c + '%;">' +
                 '<div class="mc-ch-glyph">' + CHAIR_IMG + '</div>' +
-                '<div class="mc-ch-num" style="font-size:' + (c * 0.36) + 'cqw">' + chair.number + '</div></div>';
+                '<div class="mc-ch-num" style="font-size:' + (c * 0.32) + 'cqw">' + chair.number + '</div></div>';
         }).join('');
     }
 
