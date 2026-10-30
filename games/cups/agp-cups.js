@@ -393,8 +393,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '@keyframes cp-arc-down{0%{transform:none}50%{transform:translateY(9%) scale(1.06)}100%{transform:none}}',
             /* الكورة: ذهبية ناعمة بلمعة، تحت الكوب */
             '.cp-ball{position:absolute;left:50%;bottom:2%;width:40%;aspect-ratio:1;border-radius:50%;transform:translateX(-50%);',
-            'background:radial-gradient(circle at 34% 30%,#fffbeb 0%,#fde68a 22%,#f6c453 52%,#d9962b 100%);',
-            'box-shadow:0 0 18px rgba(253,230,138,.55),0 0 40px rgba(251,191,36,.25),inset -3px -5px 8px rgba(146,84,10,.35);}',
+            'background:radial-gradient(circle at 34% 30%,#fffdf5 0%,#fdf0c4 24%,#f6dc95 55%,#e3bd72 100%);',
+            'box-shadow:0 0 16px rgba(253,236,170,.45),0 0 36px rgba(251,215,120,.18),inset -3px -5px 8px rgba(160,110,40,.22);}',
             '.cp-cup:not(.cp-has-ball) .cp-ball{display:none;}',
             // الكورة (ولمعتها) ما تبان إلا والكوب مرفوع — وتختفي بعد ما ينزل
             '.cp-ball{opacity:0;transition:opacity .2s ease .3s;}',
@@ -402,17 +402,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.cp-cup-lift{position:absolute;inset:0;transition:transform .5s cubic-bezier(.34,1.3,.64,1);}',
             '.cp-cup.cp-lifted .cp-cup-lift{transform:translateY(-64%);}',
             '.cp-cup-svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible;',
-            'filter:drop-shadow(0 8px 10px rgba(0,0,0,.45));}',
+            'filter:drop-shadow(0 8px 12px rgba(10,5,30,.35)) drop-shadow(0 0 10px rgba(196,181,253,.18));}',
             /* رقم الكوب: نفس مربع أرقام الكراسي — بنفسجي داكن وحد لافندر */
             '.cp-cup-num{position:absolute;left:50%;bottom:calc(100% + .14em);transform:translateX(-50%);padding:0.1em 0.3em;',
             'min-width:1.3em;border-radius:0.22em;display:none;align-items:center;justify-content:center;color:#fff;font-weight:900;',
-            'line-height:1;background:linear-gradient(180deg,#4c2f8f,#33206a);letter-spacing:-0.02em;font-variant-numeric:tabular-nums;',
-            'border:2px solid rgba(221,214,254,.7);text-shadow:0 2px 3px rgba(0,0,0,.5);',
+            'line-height:1;background:linear-gradient(180deg,#6a56b4,#4f3f94);letter-spacing:-0.02em;font-variant-numeric:tabular-nums;',
+            'border:2px solid rgba(237,233,254,.8);text-shadow:0 2px 3px rgba(0,0,0,.5);',
             'box-shadow:0 6px 14px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.18);}',
             '.cp-table.cp-numbered .cp-cup-num{display:flex;animation:cp-pop .45s cubic-bezier(.2,1.25,.35,1) both;}',
-            '.cp-cup.cp-win .cp-cup-num{background:linear-gradient(180deg,#0f766e,#065f46);border-color:#6ee7b7;',
+            '.cp-cup.cp-win .cp-cup-num{background:linear-gradient(180deg,#3fae8c,#2a8a6e);border-color:#a7f3d0;',
             'box-shadow:0 6px 14px rgba(0,0,0,.45),0 0 18px rgba(52,211,153,.5);}',
-            '.cp-cup.cp-win .cp-cup-svg{filter:drop-shadow(0 8px 10px rgba(0,0,0,.45)) drop-shadow(0 0 14px rgba(110,231,183,.55));}',
+            '.cp-cup.cp-win .cp-cup-svg{filter:drop-shadow(0 8px 12px rgba(10,5,30,.35)) drop-shadow(0 0 14px rgba(167,243,208,.55));}',
             '.cp-table.cp-revealed .cp-cup:not(.cp-win){opacity:.55;transition:opacity .4s, left var(--sw,650ms);}',
 
             /* شريط اللاعبين تحت الطاولة */
@@ -1202,23 +1202,40 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return initials;
     }
 
-    // الكوب: SVG بتدرّج لافندر ← بنفسجي، حافة سفلية ولمعة ناعمة
+    // الكوب: كوب ساحر بجوانب منحنية وقبّة مدوّرة ومقبض صغير فوق، وحافة
+    // عريضة تحت — بألوان لافندر باستيل ناعمة (بدون أطراف بنفسجية غامقة)
     var CUP_SVG =
         '<svg class="cp-cup-svg" viewBox="0 0 100 112" aria-hidden="true">' +
             '<defs>' +
                 '<linearGradient id="cp-cup-g" x1="0" y1="0" x2="1" y2="0">' +
-                    '<stop offset="0" stop-color="#5b21b6"/><stop offset=".28" stop-color="#8b5cf6"/>' +
-                    '<stop offset=".5" stop-color="#a78bfa"/><stop offset=".78" stop-color="#7c3aed"/>' +
-                    '<stop offset="1" stop-color="#4c1d95"/></linearGradient>' +
+                    '<stop offset="0" stop-color="#a996e3"/><stop offset=".3" stop-color="#cfc3f4"/>' +
+                    '<stop offset=".48" stop-color="#ece6fd"/><stop offset=".72" stop-color="#c6b8f1"/>' +
+                    '<stop offset="1" stop-color="#9e8bdb"/></linearGradient>' +
+                '<linearGradient id="cp-cup-shade" x1="0" y1="0" x2="0" y2="1">' +
+                    '<stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/>' +
+                    '<stop offset="1" stop-color="#5b4a99" stop-opacity=".22"/></linearGradient>' +
                 '<linearGradient id="cp-rim-g" x1="0" y1="0" x2="1" y2="0">' +
-                    '<stop offset="0" stop-color="#4c1d95"/><stop offset=".5" stop-color="#c4b5fd"/>' +
-                    '<stop offset="1" stop-color="#4c1d95"/></linearGradient>' +
+                    '<stop offset="0" stop-color="#9884d6"/><stop offset=".45" stop-color="#f3effe"/>' +
+                    '<stop offset="1" stop-color="#9884d6"/></linearGradient>' +
+                '<linearGradient id="cp-band-g" x1="0" y1="0" x2="1" y2="0">' +
+                    '<stop offset="0" stop-color="#f5b8d0"/><stop offset=".5" stop-color="#fde3ee"/>' +
+                    '<stop offset="1" stop-color="#eaa6c4"/></linearGradient>' +
             '</defs>' +
-            '<path d="M30 6 Q50 0 70 6 L86 94 L14 94 Z" fill="url(#cp-cup-g)" stroke="rgba(221,214,254,.55)" stroke-width="1.5" stroke-linejoin="round"/>' +
-            '<path d="M24 40 L76 40" stroke="rgba(221,214,254,.35)" stroke-width="3" stroke-linecap="round"/>' +
-            '<path d="M21 58 L79 58" stroke="rgba(221,214,254,.22)" stroke-width="2" stroke-linecap="round"/>' +
-            '<path d="M36 12 L28 84" stroke="rgba(255,255,255,.28)" stroke-width="5" stroke-linecap="round"/>' +
-            '<rect x="9" y="90" width="82" height="16" rx="7" fill="url(#cp-rim-g)" stroke="rgba(221,214,254,.6)" stroke-width="1.5"/>' +
+            // الجسم: جوانب منحنية تتسع تحت، وقبّة مدوّرة فوق
+            '<path d="M17 92 C19 64 23 38 29 22 C33 12 41 9 50 9 C59 9 67 12 71 22 C77 38 81 64 83 92 Z" fill="url(#cp-cup-g)"/>' +
+            '<path d="M17 92 C19 64 23 38 29 22 C33 12 41 9 50 9 C59 9 67 12 71 22 C77 38 81 64 83 92 Z" fill="url(#cp-cup-shade)" ' +
+                'stroke="rgba(255,255,255,.55)" stroke-width="1.2" stroke-linejoin="round"/>' +
+            // المقبض الصغير فوق
+            '<ellipse cx="50" cy="9" rx="11" ry="3.6" fill="#ddd4fa" stroke="rgba(255,255,255,.6)" stroke-width="1"/>' +
+            '<rect x="44" y="2" width="12" height="7" rx="3.5" fill="url(#cp-rim-g)" stroke="rgba(255,255,255,.6)" stroke-width="1"/>' +
+            // شريط وردي ناعم منحني بالنص + خط رفيع تحته
+            '<path d="M22 60 Q50 66 78 60 L79.6 70 Q50 76.5 20.4 70 Z" fill="url(#cp-band-g)" opacity=".9"/>' +
+            '<path d="M24 46 Q50 51 76 46" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.6" stroke-linecap="round"/>' +
+            // لمعة طويلة ناعمة على اليسار
+            '<path d="M35 20 C31 34 28 56 27 80" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="4.5" stroke-linecap="round"/>' +
+            // الحافة السفلية العريضة
+            '<rect x="10" y="88" width="80" height="15" rx="7.5" fill="url(#cp-rim-g)" stroke="rgba(255,255,255,.6)" stroke-width="1.2"/>' +
+            '<path d="M16 92.5 L84 92.5" stroke="rgba(255,255,255,.65)" stroke-width="1.4" stroke-linecap="round"/>' +
         '</svg>';
 
     function cupById(id) {
