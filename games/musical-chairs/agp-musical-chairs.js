@@ -425,46 +425,51 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-ring{position:absolute;inset:0;border-radius:50%;padding:max(6px,.9cqw);',
             'background:linear-gradient(160deg,#c4b5fd 0%,#8b5cf6 30%,#5b21b6 65%,#7c3aed 100%);',
             'box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 50px rgba(139,92,246,.3),inset 0 2px 3px rgba(255,255,255,.35);}',
-            /* أرضية الدائرة: بني دافي أغمق شوي بإضاءة هادية بالنص، أطراف
-             * تغمق بلطف، وخط ذهبي رفيع ناعم حولها */
+            /* أرضية الدائرة «مسرح بنفسجي»: مخمل بنفسجي غامق بنسيج مايل خفيف،
+             * إضاءة ناعمة نازلة من فوق، وأطراف تغمق بلطف، وحولها خط لافندر رفيع */
             '.mc-ring div{position:relative;width:100%;height:100%;border-radius:50%;',
             'background:',
-            'radial-gradient(circle at 50% 42%,rgba(255,214,170,.20) 0,rgba(255,214,170,.06) 38%,transparent 60%),',
-            'radial-gradient(ellipse 50% 40% at 30% 30%,rgba(196,122,64,.22),transparent 70%),',
-            'radial-gradient(ellipse 45% 35% at 72% 70%,rgba(80,38,14,.22),transparent 72%),',
-            'radial-gradient(circle,transparent 62%,rgba(30,14,6,.42) 100%),',
-            'linear-gradient(160deg,#7f4724,#68381b 50%,#572e16);',
-            'box-shadow:inset 0 0 0 2px rgba(26,20,48,.7),inset 0 0 0 3.5px rgba(214,180,120,.55),',
-            'inset 0 0 0 5px rgba(26,20,48,.45),inset 0 10px 40px rgba(0,0,0,.35),inset 0 -6px 30px rgba(0,0,0,.25);}',
-            /* زخرفة داخل الدائرة: أشعة خفيفة من المنتصف + حلقات متحدة
-             * المركز رفيعة، تتلاشى بنعومة نحو الأطراف */
+            'radial-gradient(ellipse 60% 45% at 50% 18%,rgba(221,214,254,.22),transparent 70%),',
+            'radial-gradient(circle at 50% 50%,rgba(139,92,246,.18),transparent 60%),',
+            'radial-gradient(circle,transparent 60%,rgba(5,3,12,.55) 100%),',
+            'repeating-linear-gradient(45deg,rgba(255,255,255,.018) 0 2px,transparent 2px 6px),',
+            'linear-gradient(170deg,#2a1d4d,#1b1336 55%,#130d27);',
+            'box-shadow:inset 0 0 0 2px rgba(20,14,40,.8),inset 0 0 0 3.5px rgba(196,181,253,.45),',
+            'inset 0 0 0 5px rgba(20,14,40,.5),inset 0 10px 40px rgba(0,0,0,.4);}',
+            /* لمعات صغيرة متفرّقة مثل النجوم + حلقتين لافندر خفيفة بالنص */
             '.mc-ring div::before,.mc-ring div::after{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;}',
-            '.mc-ring div::before{background:repeating-conic-gradient(from 0deg,rgba(255,226,186,.045) 0 5deg,transparent 5deg 10deg);',
-            '-webkit-mask:radial-gradient(circle,#000 0,rgba(0,0,0,.8) 35%,transparent 72%);',
-            'mask:radial-gradient(circle,#000 0,rgba(0,0,0,.8) 35%,transparent 72%);}',
+            '.mc-ring div::before{background:',
+            'radial-gradient(1.5px 1.5px at 22% 30%,rgba(255,255,255,.7),transparent 60%),',
+            'radial-gradient(1.5px 1.5px at 70% 22%,rgba(255,255,255,.6),transparent 60%),',
+            'radial-gradient(1px 1px at 40% 70%,rgba(255,255,255,.6),transparent 60%),',
+            'radial-gradient(1.5px 1.5px at 80% 60%,rgba(221,214,254,.7),transparent 60%),',
+            'radial-gradient(1px 1px at 30% 82%,rgba(255,255,255,.5),transparent 60%),',
+            'radial-gradient(1px 1px at 58% 45%,rgba(255,255,255,.45),transparent 60%),',
+            'radial-gradient(1.5px 1.5px at 15% 55%,rgba(221,214,254,.55),transparent 60%),',
+            'radial-gradient(1px 1px at 86% 38%,rgba(255,255,255,.5),transparent 60%),',
+            'radial-gradient(1px 1px at 62% 85%,rgba(255,255,255,.45),transparent 60%);}',
             '.mc-ring div::after{background:',
-            'radial-gradient(circle,transparent 0 15.6%,rgba(222,190,135,.22) 15.8% 16.2%,transparent 16.4%),',
-            'repeating-radial-gradient(circle,transparent 0 calc(11% - 1px),rgba(255,226,186,.07) calc(11% - 1px) 11%);',
-            '-webkit-mask:radial-gradient(circle,#000 55%,transparent 92%);mask:radial-gradient(circle,#000 55%,transparent 92%);}',
+            'radial-gradient(circle,transparent 0 15.6%,rgba(196,181,253,.22) 15.8% 16.2%,transparent 16.4%),',
+            'radial-gradient(circle,transparent 0 31.6%,rgba(196,181,253,.10) 31.8% 32.1%,transparent 32.3%);}',
             '.mc-watermark{position:absolute;left:50%;top:50%;width:62%;height:auto;transform:translate(-50%,-50%);opacity:0.06;pointer-events:none;}',
             '.mc-ch{position:absolute;aspect-ratio:1;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;}',
             /* ظل ناعم تحت الكرسي على الأرضية */
             '.mc-ch::before{content:"";position:absolute;left:18%;right:18%;bottom:2%;height:12%;border-radius:50%;',
-            'background:radial-gradient(ellipse,rgba(20,8,2,.45),transparent 70%);filter:blur(2px);}',
+            'background:radial-gradient(ellipse,rgba(0,0,0,.55),transparent 70%);filter:blur(2px);}',
             '.mc-ch-glyph{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;line-height:1;',
-            'filter:drop-shadow(0 4px 6px rgba(0,0,0,.35));',
+            'filter:drop-shadow(0 4px 6px rgba(0,0,0,.45));',
             'transition:transform .45s cubic-bezier(.34,1.4,.64,1);}',
             '.mc-chair-img{height:100%;width:auto;max-width:100%;object-fit:contain;display:block;pointer-events:none;user-select:none;',
-            'filter:saturate(.68) sepia(.18) brightness(1.08) contrast(.9);}',
+            'filter:saturate(.62) sepia(.15) brightness(.8) contrast(.92);}',
             '.mc-ch.mc-numbered .mc-ch-glyph{transform:scale(1.04);}',
-            /* رقم الكرسي: كبسولة زجاجية ناعمة بلون لافندر هادي وحد فاتح رفيع */
-            '.mc-ch-num{position:absolute;left:50%;top:33%;transform:translate(-50%,-50%);padding:0.14em 0.44em;border-radius:999px;',
-            'display:none;align-items:center;justify-content:center;color:#fff;font-weight:800;line-height:1;',
-            'background:linear-gradient(180deg,rgba(184,166,240,.9),rgba(132,104,214,.9));',
-            'backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);',
-            'letter-spacing:-0.02em;font-variant-numeric:tabular-nums;border:1px solid rgba(255,255,255,.45);',
-            'text-shadow:0 1px 2px rgba(46,16,101,.3);',
-            'box-shadow:0 4px 12px rgba(30,12,60,.35),inset 0 1px 0 rgba(255,255,255,.4);}',
+            /* رقم الكرسي: مربع بحواف مدوّرة شوي، خلفية بنفسجي داكن وحد فاتح،
+             * والرقم كبير بخط عريض واضح */
+            '.mc-ch-num{position:absolute;left:50%;top:33%;transform:translate(-50%,-50%);padding:0.1em 0.26em;border-radius:0.22em;',
+            'display:none;align-items:center;justify-content:center;color:#fff;font-weight:900;line-height:1;',
+            'background:linear-gradient(180deg,#4c2f8f,#33206a);',
+            'letter-spacing:-0.02em;font-variant-numeric:tabular-nums;border:2px solid rgba(221,214,254,.7);',
+            'text-shadow:0 2px 3px rgba(0,0,0,.5);',
+            'box-shadow:0 6px 14px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.18);}',
             '.mc-ch.mc-numbered .mc-ch-num{display:flex;animation:mc-pop .45s cubic-bezier(.2,1.25,.35,1);}',
             '.mc-ch.mc-taken .mc-ch-glyph,.mc-ch.mc-taken .mc-ch-num,.mc-ch.mc-taken::before{display:none;}',
             '.mc-p{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;z-index:2;}',
@@ -1266,7 +1271,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var cls = 'mc-ch' + (numbered ? ' mc-numbered' : '') + (chair.occupantId && chair.arrived ? ' mc-taken' : '');
             return '<div class="' + cls + '" id="mc-chair-' + idx + '" style="left:' + chair.x + '%;top:' + chair.y + '%;width:' + c + '%;">' +
                 '<div class="mc-ch-glyph">' + CHAIR_IMG + '</div>' +
-                '<div class="mc-ch-num" style="font-size:' + (c * 0.32) + 'cqw">' + chair.number + '</div></div>';
+                '<div class="mc-ch-num" style="font-size:' + (c * 0.42) + 'cqw">' + chair.number + '</div></div>';
         }).join('');
     }
 
