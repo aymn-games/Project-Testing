@@ -430,7 +430,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-watermark{position:absolute;left:50%;top:50%;width:62%;height:auto;transform:translate(-50%,-50%);opacity:0.08;pointer-events:none;}',
             '.mc-ch{position:absolute;aspect-ratio:1;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;}',
             '.mc-ch-glyph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;line-height:1;',
-            'filter:drop-shadow(0 6px 10px rgba(0,0,0,.55)) drop-shadow(0 0 14px rgba(139,92,246,.35));',
+            'filter:drop-shadow(0 6px 10px rgba(0,0,0,.55)) drop-shadow(0 0 12px rgba(243,196,122,.25));',
             'transition:transform .35s cubic-bezier(.34,1.56,.64,1);}',
             '.mc-chair-svg{width:92%;height:auto;display:block;overflow:visible;}',
             '.mc-ch.mc-numbered .mc-ch-glyph{transform:scale(1.05);}',
@@ -1196,40 +1196,47 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    // الكرسي: رسمة SVG خاصة باللعبة بدل إيموجي 🪑 — حادة بأي حجم وبألوان
-    // الثيم. التدرّجات معرّفة مرة وحدة بـ#mc-chair-defs (داخل المسرح)،
-    // لأن تعريفها داخل كرسي مخفي (mc-taken) يخفيها عن باقي الكراسي.
+    // الكرسي: رسمة SVG لكرسي خشبي كلاسيكي (ظهر بقوس وأعمدة، مقعد خشب،
+    // أرجل مخروطة) بدل إيموجي 🪑 — حادة بأي حجم. التدرّجات معرّفة مرة
+    // وحدة بـ#mc-chair-defs (داخل المسرح)، لأن تعريفها داخل كرسي مخفي
+    // (mc-taken) يخفيها عن باقي الكراسي.
     var CHAIR_SVG =
-        '<svg class="mc-chair-svg" viewBox="0 0 100 110" aria-hidden="true">' +
-            '<ellipse cx="50" cy="102" rx="34" ry="5.5" fill="rgba(0,0,0,.45)"/>' +
-            // الأرجل الخلفية
-            '<rect x="27" y="62" width="9" height="36" rx="4.5" fill="url(#mc-chair-leg-back)"/>' +
-            '<rect x="64" y="62" width="9" height="36" rx="4.5" fill="url(#mc-chair-leg-back)"/>' +
-            // الظهر: إطار + وسادة + لمعة
-            '<rect x="22" y="4" width="56" height="54" rx="17" fill="url(#mc-chair-frame)"/>' +
-            '<rect x="29" y="11" width="42" height="40" rx="12" fill="url(#mc-chair-cushion)"/>' +
-            '<path d="M35 17 Q50 13 65 17" stroke="rgba(255,255,255,.75)" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
-            // المقعد: إطار + وسادة + لمعة
-            '<rect x="12" y="54" width="76" height="22" rx="11" fill="url(#mc-chair-frame)"/>' +
-            '<rect x="16" y="52" width="68" height="15" rx="7.5" fill="url(#mc-chair-cushion)"/>' +
-            '<path d="M24 56 L76 56" stroke="rgba(255,255,255,.7)" stroke-width="3" stroke-linecap="round"/>' +
-            // الأرجل الأمامية
-            '<rect x="16" y="70" width="11" height="32" rx="5.5" fill="url(#mc-chair-leg)"/>' +
-            '<rect x="73" y="70" width="11" height="32" rx="5.5" fill="url(#mc-chair-leg)"/>' +
+        '<svg class="mc-chair-svg" viewBox="0 0 100 112" aria-hidden="true">' +
+            '<ellipse cx="50" cy="104" rx="36" ry="5.5" fill="rgba(0,0,0,.45)"/>' +
+            // القائمين الخلفيين (يكمّلون الظهر لتحت)
+            '<rect x="24" y="8" width="9" height="92" rx="4.5" fill="url(#mc-wood-dark)"/>' +
+            '<rect x="67" y="8" width="9" height="92" rx="4.5" fill="url(#mc-wood-dark)"/>' +
+            // أعمدة الظهر
+            '<rect x="38" y="20" width="6" height="34" rx="3" fill="url(#mc-wood)"/>' +
+            '<rect x="47" y="20" width="6" height="34" rx="3" fill="url(#mc-wood)"/>' +
+            '<rect x="56" y="20" width="6" height="34" rx="3" fill="url(#mc-wood)"/>' +
+            // القوس العلوي + العارضة الوسطى
+            '<path d="M21 14 Q50 2 79 14 L79 22 Q50 11 21 22 Z" fill="url(#mc-wood)" stroke="#8a4f1e" stroke-width="1.2" stroke-linejoin="round"/>' +
+            '<path d="M29 14 Q50 6.5 71 14" stroke="rgba(255,236,200,.7)" stroke-width="1.8" stroke-linecap="round" fill="none"/>' +
+            '<rect x="28" y="36" width="44" height="5" rx="2.5" fill="url(#mc-wood-dark)"/>' +
+            // المقعد: سطح علوي + حافة أمامية + عروق الخشب
+            '<path d="M20 54 L80 54 Q88 54 89 61 L90 64 L10 64 L11 61 Q12 54 20 54 Z" fill="url(#mc-wood-seat)" stroke="#8a4f1e" stroke-width="1.2" stroke-linejoin="round"/>' +
+            '<rect x="10" y="63" width="80" height="8" rx="4" fill="url(#mc-wood-dark)"/>' +
+            '<path d="M24 58 Q40 56.5 56 58 T80 58" stroke="rgba(138,79,30,.4)" stroke-width="1" fill="none"/>' +
+            '<path d="M18 61 Q36 59.5 52 61 T84 61" stroke="rgba(138,79,30,.3)" stroke-width="1" fill="none"/>' +
+            '<path d="M22 56 L78 56" stroke="rgba(255,240,210,.6)" stroke-width="1.6" stroke-linecap="round"/>' +
+            // الأرجل الأمامية المخروطة + العارضة السفلية
+            '<rect x="25" y="88" width="50" height="4.5" rx="2.25" fill="url(#mc-wood-dark)"/>' +
+            '<path d="M14 70 L24 70 L22.5 101 Q19 103 15.5 101 Z" fill="url(#mc-wood)"/>' +
+            '<path d="M76 70 L86 70 L84.5 101 Q81 103 77.5 101 Z" fill="url(#mc-wood)"/>' +
+            '<ellipse cx="19" cy="80" rx="5.6" ry="2.6" fill="url(#mc-wood-dark)"/>' +
+            '<ellipse cx="81" cy="80" rx="5.6" ry="2.6" fill="url(#mc-wood-dark)"/>' +
         '</svg>';
 
     var CHAIR_DEFS =
         '<svg id="mc-chair-defs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' +
-            '<linearGradient id="mc-chair-frame" x1="0" y1="0" x2="0" y2="1">' +
-                '<stop offset="0" stop-color="#a855f7"/><stop offset="1" stop-color="#5b21b6"/></linearGradient>' +
-            '<linearGradient id="mc-chair-cushion" x1="0" y1="0" x2="0" y2="1">' +
-                '<stop offset="0" stop-color="#f5f3ff"/><stop offset=".55" stop-color="#ddd6fe"/>' +
-                '<stop offset="1" stop-color="#a78bfa"/></linearGradient>' +
-            '<linearGradient id="mc-chair-leg" x1="0" y1="0" x2="1" y2="0">' +
-                '<stop offset="0" stop-color="#8b5cf6"/><stop offset=".45" stop-color="#c4b5fd"/>' +
-                '<stop offset="1" stop-color="#6d28d9"/></linearGradient>' +
-            '<linearGradient id="mc-chair-leg-back" x1="0" y1="0" x2="0" y2="1">' +
-                '<stop offset="0" stop-color="#4c1d95"/><stop offset="1" stop-color="#2e1065"/></linearGradient>' +
+            '<linearGradient id="mc-wood" x1="0" y1="0" x2="1" y2="0">' +
+                '<stop offset="0" stop-color="#c9822f"/><stop offset=".45" stop-color="#f3c47a"/>' +
+                '<stop offset="1" stop-color="#b8722a"/></linearGradient>' +
+            '<linearGradient id="mc-wood-dark" x1="0" y1="0" x2="0" y2="1">' +
+                '<stop offset="0" stop-color="#c47d33"/><stop offset="1" stop-color="#8a4f1e"/></linearGradient>' +
+            '<linearGradient id="mc-wood-seat" x1="0" y1="0" x2="0" y2="1">' +
+                '<stop offset="0" stop-color="#f8d394"/><stop offset="1" stop-color="#dd9b4a"/></linearGradient>' +
         '</defs></svg>';
 
     function renderChairs() {
