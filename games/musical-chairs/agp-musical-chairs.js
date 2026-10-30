@@ -430,8 +430,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-watermark{position:absolute;left:50%;top:50%;width:62%;height:auto;transform:translate(-50%,-50%);opacity:0.08;pointer-events:none;}',
             '.mc-ch{position:absolute;aspect-ratio:1;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;}',
             '.mc-ch-glyph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;line-height:1;',
-            'filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5));}',
-            '.mc-ch-num{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:0.12em 0.28em;border-radius:0.3em;',
+            'filter:drop-shadow(0 6px 10px rgba(0,0,0,.55)) drop-shadow(0 0 14px rgba(139,92,246,.35));',
+            'transition:transform .35s cubic-bezier(.34,1.56,.64,1);}',
+            '.mc-chair-svg{width:92%;height:auto;display:block;overflow:visible;}',
+            '.mc-ch.mc-numbered .mc-ch-glyph{transform:scale(1.05);}',
+            '.mc-ch-num{position:absolute;left:50%;top:33%;transform:translate(-50%,-50%);padding:0.12em 0.28em;border-radius:0.3em;',
             'display:none;align-items:center;justify-content:center;background:linear-gradient(180deg,#a855f7,#6d28d9);color:#fff;font-weight:900;line-height:1;',
             'letter-spacing:-0.03em;font-variant-numeric:tabular-nums;border:2px solid rgba(233,213,255,.75);',
             'text-shadow:0 2px 4px rgba(46,16,101,.6);box-shadow:0 0 22px rgba(139,92,246,.7),inset 0 2px 0 rgba(255,255,255,.3);}',
@@ -892,7 +895,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '</section>' +
                 '</div></aside>' +
                 '<section class="mc-arena"><div class="mc-cq"><div class="mc-circle" id="mc-circle">' +
-                    '<div class="mc-ring"><div></div></div>' +
+                    CHAIR_DEFS +
+                '<div class="mc-ring"><div></div></div>' +
                     '<img class="mc-watermark" src="../../logo.png" alt="">' +
                     '<div id="mc-chairs"></div>' +
                     '<div class="mc-center" id="mc-center"></div>' +
@@ -1192,6 +1196,42 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
+    // الكرسي: رسمة SVG خاصة باللعبة بدل إيموجي 🪑 — حادة بأي حجم وبألوان
+    // الثيم. التدرّجات معرّفة مرة وحدة بـ#mc-chair-defs (داخل المسرح)،
+    // لأن تعريفها داخل كرسي مخفي (mc-taken) يخفيها عن باقي الكراسي.
+    var CHAIR_SVG =
+        '<svg class="mc-chair-svg" viewBox="0 0 100 110" aria-hidden="true">' +
+            '<ellipse cx="50" cy="102" rx="34" ry="5.5" fill="rgba(0,0,0,.45)"/>' +
+            // الأرجل الخلفية
+            '<rect x="27" y="62" width="9" height="36" rx="4.5" fill="url(#mc-chair-leg-back)"/>' +
+            '<rect x="64" y="62" width="9" height="36" rx="4.5" fill="url(#mc-chair-leg-back)"/>' +
+            // الظهر: إطار + وسادة + لمعة
+            '<rect x="22" y="4" width="56" height="54" rx="17" fill="url(#mc-chair-frame)"/>' +
+            '<rect x="29" y="11" width="42" height="40" rx="12" fill="url(#mc-chair-cushion)"/>' +
+            '<path d="M35 17 Q50 13 65 17" stroke="rgba(255,255,255,.75)" stroke-width="3.5" stroke-linecap="round" fill="none"/>' +
+            // المقعد: إطار + وسادة + لمعة
+            '<rect x="12" y="54" width="76" height="22" rx="11" fill="url(#mc-chair-frame)"/>' +
+            '<rect x="16" y="52" width="68" height="15" rx="7.5" fill="url(#mc-chair-cushion)"/>' +
+            '<path d="M24 56 L76 56" stroke="rgba(255,255,255,.7)" stroke-width="3" stroke-linecap="round"/>' +
+            // الأرجل الأمامية
+            '<rect x="16" y="70" width="11" height="32" rx="5.5" fill="url(#mc-chair-leg)"/>' +
+            '<rect x="73" y="70" width="11" height="32" rx="5.5" fill="url(#mc-chair-leg)"/>' +
+        '</svg>';
+
+    var CHAIR_DEFS =
+        '<svg id="mc-chair-defs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' +
+            '<linearGradient id="mc-chair-frame" x1="0" y1="0" x2="0" y2="1">' +
+                '<stop offset="0" stop-color="#a855f7"/><stop offset="1" stop-color="#5b21b6"/></linearGradient>' +
+            '<linearGradient id="mc-chair-cushion" x1="0" y1="0" x2="0" y2="1">' +
+                '<stop offset="0" stop-color="#f5f3ff"/><stop offset=".55" stop-color="#ddd6fe"/>' +
+                '<stop offset="1" stop-color="#a78bfa"/></linearGradient>' +
+            '<linearGradient id="mc-chair-leg" x1="0" y1="0" x2="1" y2="0">' +
+                '<stop offset="0" stop-color="#8b5cf6"/><stop offset=".45" stop-color="#c4b5fd"/>' +
+                '<stop offset="1" stop-color="#6d28d9"/></linearGradient>' +
+            '<linearGradient id="mc-chair-leg-back" x1="0" y1="0" x2="0" y2="1">' +
+                '<stop offset="0" stop-color="#4c1d95"/><stop offset="1" stop-color="#2e1065"/></linearGradient>' +
+        '</defs></svg>';
+
     function renderChairs() {
         var wrap = el('mc-chairs');
         if (!wrap) return;
@@ -1200,7 +1240,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wrap.innerHTML = _chairs.map(function (chair, idx) {
             var cls = 'mc-ch' + (numbered ? ' mc-numbered' : '') + (chair.occupantId && chair.arrived ? ' mc-taken' : '');
             return '<div class="' + cls + '" id="mc-chair-' + idx + '" style="left:' + chair.x + '%;top:' + chair.y + '%;width:' + c + '%;">' +
-                '<div class="mc-ch-glyph" style="font-size:' + (c * 0.9) + 'cqw">🪑</div>' +
+                '<div class="mc-ch-glyph">' + CHAIR_SVG + '</div>' +
                 '<div class="mc-ch-num" style="font-size:' + (c * 0.36) + 'cqw">' + chair.number + '</div></div>';
         }).join('');
     }
