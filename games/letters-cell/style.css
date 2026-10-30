@@ -1,435 +1,564 @@
 /* ==========================================================================
-   خلية الحروف (Letters Cell) — "حروف مع أيمن". لعبة أصلية داخل المنصة، بنمط
-   games/team-war من ناحية طريقة التحميل والربط الحقيقي بالبث فقط -- الهوية
-   البصرية والشاشات مستقلة تماماً حسب تصميم التسليم (design handoff)، لا
-   اعتماد على js/agp-game-shell.js.
+   خلية الحروف (Letters Cell) — الهوية البصرية نفس قالب أسرع إجابة
+   (games/fastest-answer): خلفية #07060b بتوهج بنفسجي ونجوم، شريط علوي ثابت
+   بلوقو المنصة، كروت زجاجية، أزرار كبسولة بتدرّج بنفسجي، وخط IBM Plex Sans
+   Arabic. لون الفريق الأول بنفسجي #a78bfa والثاني سماوي #38bdf8.
 
-   ملاحظة امتثال لقاعدة CLAUDE.md (صفوف الإعدادات: العنوان يمين، عنصر
-   التحكم يسار): صف "اكتب اسمك" في شاشة الإعدادات يُبنى بترتيب DOM عادي
-   (تسمية ثم مُدخل) بدون أي خدعة CSS order -- عكس تصميم المرجع الأصلي الذي
-   كان يعرض المُدخل يميناً والتسمية يساراً عبر order، لأن قاعدة المنصة
-   الثابتة تُلزم بعكس ذلك لكل صف إعدادات في أي لعبة.
+   قاعدة CLAUDE.md لصفوف الإعدادات: كل صف (.lc-row) flex بـ
+   justify-content:space-between — العنوان يمين وعنصر التحكم يسار، بترتيب
+   DOM طبيعي (عنوان ثم عنصر تحكم) بدون أي خدعة order.
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Baloo+Bhaijaan+2:wght@800;900&display=swap');
-
 :root {
-    --lc-bg: #0a0812;
-    --lc-panel: #15111f;
-    --lc-panel-border: rgba(255,255,255,0.06);
-    --lc-input-bg: #0f0b1a;
-    --lc-input-border: rgba(255,255,255,0.1);
-    --lc-text: #f2edff;
-    --lc-text-dim: #9d95b8;
-    --lc-text-dim2: #c9c2df;
-    --lc-text-tertiary: #c9a688;
-    --lc-accent1: #8b5cf6;
-    --lc-accent2: #a78bfa;
-    --lc-accent-pink: #e879f9;
-    --lc-success: #22c55e;
-    --lc-green: #4ade80;
-    --lc-remove: #ef4444;
-    --lc-beige: #E2C8A8;
-    --lc-offwhite: #fef4f4;
-    --lc-board-dark: #1b0d0d;
-    --lc-drawer-bg: #2a1210;
+    --lc-bg: #07060b;
+    --lc-card: rgba(18,16,26,.72);
+    --lc-line: rgba(255,255,255,.08);
+    --lc-line-soft: rgba(255,255,255,.06);
+    --lc-text: #f4f2f8;
+    --lc-text-2: #e7e3ef;
+    --lc-dim: #a8a3b5;
+    --lc-dim-2: #8a8596;
+    --lc-accent: #a78bfa;
+    --lc-accent-soft: #c4b5fd;
+    --lc-grad: linear-gradient(90deg, #7c3aed, #a855f7);
+    --lc-green: #34d399;
+    --lc-red: #f87171;
+    --lc-font: 'IBM Plex Sans Arabic', sans-serif;
 }
 
 * { box-sizing: border-box; }
 
 body.lc-active {
-    margin: 0;
-    font-family: 'Cairo', sans-serif;
-    background: var(--lc-board-dark);
-    color: var(--lc-text);
-    direction: rtl;
+    margin: 0; height: 100%; overflow: hidden;
+    font-family: var(--lc-font); background: var(--lc-bg); color: var(--lc-text); direction: rtl;
 }
 body.lc-active *::-webkit-scrollbar { display: none; }
-body.lc-active { scrollbar-width: none; }
+body.lc-active * { scrollbar-width: none; }
+body.lc-active button, body.lc-active input { font-family: var(--lc-font); }
+body.lc-active a { color: var(--lc-accent); }
+
+@keyframes lc-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lc-pop { 0% { opacity: 0; transform: scale(.85); } 100% { opacity: 1; transform: none; } }
+@keyframes lc-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes lc-spin { to { transform: rotate(360deg); } }
 
 .lc-hex-clip { clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); }
+.lc-ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 
-/* ---------- زخرفة الأحرف السداسية (settings / lobby / result) ---------- */
-.lc-decor-wrap { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
-.lc-decor-wrap.lc-decor-wide { mask-image: linear-gradient(to right, black 0%, black 22%, transparent 40%); -webkit-mask-image: linear-gradient(to right, black 0%, black 22%, transparent 40%); }
-.lc-decor-wrap.lc-decor-narrow { mask-image: linear-gradient(to right, black 0%, black 8%, transparent 16%); -webkit-mask-image: linear-gradient(to right, black 0%, black 8%, transparent 16%); }
-.lc-decor-inner { position: absolute; left: -15%; top: -10%; width: 45%; height: 120%; opacity: 0.5; transform: rotate(-14deg); }
-.lc-decor-inner.lc-decor-inner-narrow { left: -20%; top: -10%; width: 24%; height: 120%; opacity: 0.4; }
-.lc-decor-inner.lc-decor-inner-result { left: -20%; top: -10%; width: 24%; height: 120%; opacity: 0.35; }
-.lc-decor-hex {
-    position: absolute; background: #1f1730; border: 1px solid rgba(167,139,250,0.25);
-    display: flex; align-items: center; justify-content: center;
-    color: #a78bfa; font-weight: 900; font-size: 22px;
+/* ---------- الهيكل العام + خلفية التوهج ---------- */
+.lc-app { position: fixed; inset: 0; overflow: hidden; background: var(--lc-bg); color: var(--lc-text); }
+.lc-fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.lc-fx-glow { position: absolute; border-radius: 50%; filter: blur(40px); }
+.lc-fx-glow1 { top: -20%; right: -10%; width: 900px; height: 900px; background: radial-gradient(circle, rgba(124,58,237,.22), transparent 65%); }
+.lc-fx-glow2 { top: 30%; left: -15%; width: 800px; height: 800px; background: radial-gradient(circle, rgba(139,92,246,.12), transparent 65%); }
+.lc-fx-glow3 { bottom: -30%; left: 35%; width: 1000px; height: 700px; background: radial-gradient(circle, rgba(168,85,247,.1), transparent 65%); }
+.lc-fx-star { position: absolute; width: 1.5px; height: 1.5px; border-radius: 50%; background: #fff; }
+.lc-fx-sq { position: absolute; border: 1.5px solid rgba(139,92,246,.35); }
+.lc-fx-sq-fill { border: none; background: rgba(139,92,246,.45); }
+
+.lc-header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50; height: 80px;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: clamp(10px,1.2vw,24px);
+    padding: 0 clamp(12px,1.25vw,24px);
+    background: rgba(10,9,15,.72); border-bottom: 1px solid rgba(255,255,255,.07); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
 }
+.lc-header-side { display: flex; gap: clamp(6px,.5vw,10px); justify-content: flex-start; }
+.lc-header-side-end { justify-content: flex-end; }
+.lc-header-logo { height: 60px; min-width: clamp(96px,14vw,280px); display: grid; place-items: center; }
+.lc-header-logo img { height: 60px; object-fit: contain; filter: drop-shadow(0 0 14px rgba(139,92,246,.45)); }
+.lc-hbtn {
+    height: clamp(32px,2.3vw,42px); padding: 0 clamp(10px,.9vw,16px); border-radius: 999px;
+    display: flex; align-items: center; gap: clamp(6px,.45vw,8px);
+    font: 600 clamp(12px,.78vw,15px) var(--lc-font); white-space: nowrap; cursor: pointer; transition: all .2s;
+    border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.03); color: var(--lc-text-2);
+}
+.lc-hbtn:hover { background: rgba(255,255,255,.08); }
+.lc-hbtn:active { transform: scale(.97); }
+.lc-hbtn-exit { border-color: rgba(248,113,113,.25); color: #fca5a5; }
+.lc-hbtn-exit:hover { background: rgba(248,113,113,.1); border-color: rgba(248,113,113,.45); }
+@media (max-width: 820px) { .lc-hbtn-label { display: none; } }
 
-/* ---------- شعار "حروف مع {الاسم}" (Baloo Bhaijaan 2) ---------- */
-.lc-logo { text-align: center; font-family: 'Baloo Bhaijaan 2', sans-serif; font-weight: 900; line-height: 1.15; }
-.lc-logo-word1 { color: var(--lc-accent2); }
-.lc-logo-word2 { color: var(--lc-text); font-size: 0.55em; font-weight: 800; vertical-align: middle; }
-.lc-logo-name { background: linear-gradient(90deg, var(--lc-accent1), var(--lc-accent-pink)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lc-main { position: fixed; top: 80px; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; }
+.lc-main-center { justify-content: center; }
+.lc-wrap { width: 100%; max-width: 1080px; height: 100%; padding: 0 clamp(12px,2.5vw,32px); display: flex; flex-direction: column; position: relative; }
 
-/* شعار "حروف مع أيمن" المائل ثلاثي الأبعاد (side panel / intro) */
-.lc-logo3d { text-align: center; font-family: 'Baloo Bhaijaan 2', sans-serif; }
-.lc-logo3d-underline { height: 2px; width: 60%; margin: 0 auto 4px; background: #3ba7d9; transform: rotate(-4deg); }
-.lc-logo3d-line1 { font-size: clamp(24px,3.1vw,45px); font-weight: 900; color: #6b4530; line-height: 1; transform: skewX(-8deg); text-shadow: 1px 1px 0 #3d2618, 2px 2px 0 #3d2618, 3px 3px 0 #3d2618, 4px 4px 5px rgba(0,0,0,0.4); }
-.lc-logo3d-line2 { font-size: clamp(13px,1.2vw,18px); font-weight: 800; color: #513222; line-height: 1.3; transform: skewX(-8deg); }
-.lc-logo3d-line3 { font-size: clamp(24px,3.1vw,45px); font-weight: 900; color: #7a1524; line-height: 1; transform: skewX(-8deg); text-shadow: 1px 1px 0 #3d0a12, 2px 2px 0 #3d0a12, 3px 3px 0 #3d0a12, 4px 4px 5px rgba(0,0,0,0.4); }
+.lc-hero { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: clamp(16px,3.2vh,34px) 0 clamp(14px,2.6vh,26px); text-align: center; }
+.lc-hero-lobby { gap: 10px; padding-top: clamp(6px,1.2vh,12px); }
+.lc-title {
+    font: 700 clamp(32px,4.2vw,56px)/1.1 var(--lc-font);
+    background: linear-gradient(180deg, #f4f2f8, #c4b5fd); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.lc-hero-sub { font: 600 clamp(14px,1.4vw,18px) var(--lc-font); color: var(--lc-dim); letter-spacing: .5px; }
 
-/* ---------- أزرار مشتركة ---------- */
-.lc-btn-outline { display: inline-block; padding: 13px 26px; border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; background: transparent; color: var(--lc-text-dim2); font-family: inherit; font-weight: 800; font-size: 15px; cursor: pointer; }
-.lc-btn-primary { display: inline-block; padding: 13px 26px; border: none; border-radius: 12px; background: linear-gradient(90deg, var(--lc-accent1), var(--lc-accent2)); color: var(--lc-bg); font-family: inherit; font-weight: 900; font-size: 15px; cursor: pointer; }
-.lc-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.lc-error-msg { color: #ffb4b4; font-size: 0.88em; margin: 4px 0; text-align: center; font-weight: 700; }
+.lc-live { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: 999px; font: 600 12px var(--lc-font); transition: all .3s; }
+.lc-live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+.lc-live-on { color: var(--lc-green); background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.3); }
+.lc-live-off { color: var(--lc-red); background: rgba(248,113,113,.06); border: 1px solid rgba(248,113,113,.28); }
+
+.lc-dot { width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; background: var(--tc, var(--lc-accent)); box-shadow: 0 0 8px var(--tc, var(--lc-accent)); display: inline-block; }
+.lc-dot-lg { width: 12px; height: 12px; box-shadow: 0 0 14px var(--tc, var(--lc-accent)); }
+.lc-dot-xl { width: 14px; height: 14px; box-shadow: 0 0 16px var(--tc, var(--lc-accent)); }
+
+.lc-card { background: var(--lc-card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--lc-line); box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+
+/* ---------- الأزرار ---------- */
+.lc-btn-primary, .lc-btn-ghost, .lc-btn-danger {
+    height: 48px; padding: 0 26px; border-radius: 999px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    font: 700 15px var(--lc-font); white-space: nowrap; transition: filter .2s, background .2s, opacity .3s, transform .15s;
+}
+.lc-btn-primary:active, .lc-btn-ghost:active, .lc-btn-danger:active { transform: scale(.97); }
+.lc-btn-primary { border: none; background: var(--lc-grad); color: #fff; box-shadow: 0 10px 34px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.2); }
+.lc-btn-primary:hover { filter: brightness(1.1); }
+.lc-btn-ghost { border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04); color: var(--lc-text-2); }
+.lc-btn-ghost:hover { background: rgba(255,255,255,.09); }
+.lc-btn-danger { border: none; background: linear-gradient(90deg, #dc2626, #ef4444); color: #fff; box-shadow: 0 8px 22px rgba(239,68,68,.3); }
+.lc-btn-danger:hover { filter: brightness(1.1); }
+.lc-btn-wide { width: 100%; max-width: 440px; height: clamp(52px,6.5vh,62px); font-size: clamp(17px,1.6vw,20px); }
+.lc-btn-tall { height: clamp(52px,6.5vh,62px); font-size: clamp(15px,1.3vw,17px); flex-shrink: 0; }
+.lc-btn-dim { opacity: .4; }
+.lc-btn-chip { height: 40px; padding: 0 18px; border-radius: 999px; display: inline-flex; align-items: center; border: 1px solid rgba(167,139,250,.35); background: rgba(139,92,246,.1); color: var(--lc-accent-soft) !important; font: 600 14px var(--lc-font); text-decoration: none; }
+.lc-btn-chip:hover { background: rgba(139,92,246,.18); }
+.lc-icon-btn { width: 34px; height: 34px; border-radius: 999px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04); color: var(--lc-dim); display: grid; place-items: center; cursor: pointer; }
+.lc-icon-btn:hover { background: rgba(255,255,255,.09); color: #fff; }
+
+.lc-actions { flex-shrink: 0; display: flex; justify-content: center; gap: 10px; padding: clamp(10px,2vh,18px) 0 clamp(16px,3vh,28px); }
+
+/* ---------- التنبيه + نافذة التأكيد ---------- */
+.lc-toast {
+    position: fixed; top: 96px; left: 50%; transform: translateX(-50%); z-index: 400; max-width: calc(100vw - 32px);
+    padding: 10px 22px; border-radius: 999px; background: rgba(12,11,18,.94); border: 1px solid rgba(248,113,113,.4);
+    color: #fca5a5; font: 600 14px var(--lc-font); text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,.5); animation: lc-rise .3s ease;
+}
+.lc-toast-info { border-color: rgba(167,139,250,.4); color: var(--lc-accent-soft); }
+
+.lc-overlay { position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: grid; place-items: center; padding: 16px; animation: lc-fade .25s ease; }
+.lc-overlay-game { z-index: 200; }
+.lc-dialog {
+    width: min(420px, 100%); padding: clamp(18px,5vw,28px); border-radius: 24px;
+    background: rgba(12,11,18,.96); border: 1px solid var(--lc-line); box-shadow: 0 30px 90px rgba(0,0,0,.6);
+    display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; animation: lc-pop .45s cubic-bezier(.2,1.25,.35,1);
+}
+.lc-dialog-icon { width: 60px; height: 60px; border-radius: 999px; display: grid; place-items: center; background: rgba(139,92,246,.12); color: var(--lc-accent-soft); }
+.lc-dialog-icon-danger { background: rgba(248,113,113,.1); color: #fca5a5; }
+.lc-dialog-title { font: 700 22px var(--lc-font); }
+.lc-dialog-text { font: 500 15px/1.6 var(--lc-font); color: var(--lc-dim); }
+.lc-dialog-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; margin-top: 6px; }
+.lc-dialog-col { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 6px; }
+.lc-dialog-btns > button, .lc-dialog-col > button { width: 100%; }
 
 /* ==========================================================================
    1) شاشة الإعدادات
    ========================================================================== */
-.lc-settings-screen { width: 100%; min-height: 100vh; overflow-y: auto; background: var(--lc-bg); box-sizing: border-box; position: relative; }
-.lc-settings-inner { max-width: 920px; margin: 0 auto; padding: 48px 24px 32px; display: flex; flex-direction: column; gap: 20px; position: relative; z-index: 1; }
-.lc-connected-badge-wrap { text-align: center; }
-.lc-connected-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--lc-panel); border: 1px solid var(--lc-panel-border); border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 700; color: #e6e1f5; }
-.lc-connected-badge--yes { border-color: rgba(34,197,94,0.35); }
-.lc-connected-badge--no { border-color: rgba(239,68,68,0.35); }
-.lc-connected-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lc-success); display: inline-block; }
-.lc-connected-badge--no .lc-connected-dot { background: var(--lc-remove); }
-.lc-connected-badge-link { color: var(--lc-accent2); font-weight: 800; text-decoration: none; }
-.lc-connected-badge-link:hover { text-decoration: underline; }
-.lc-logo-settings { font-size: clamp(28px,4vw,44px); }
+.lc-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 16px; }
+.lc-sections { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,400px), 1fr)); gap: clamp(12px,1.4vw,18px); }
+.lc-section { display: flex; flex-direction: column; padding: clamp(16px,1.6vw,22px) clamp(18px,1.8vw,26px); border-radius: 24px; animation: lc-rise .45s ease both; }
+.lc-section-full { grid-column: 1 / -1; }
+.lc-section-head { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; margin-bottom: 4px; border-bottom: 1px solid var(--lc-line-soft); }
+.lc-section-num { width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center; background: rgba(139,92,246,.14); color: var(--lc-accent-soft); font: 700 13px var(--lc-font); }
+.lc-section-title { font: 700 clamp(15px,1.2vw,17px) var(--lc-font); }
 
-/* على الشاشات الواسعة (جهاز المضيف عادة تابلت/كمبيوتر) يوقفون جنب بعض
-   بدل ما ينزلوا فوق بعض -- استغلال أفضل للعرض بدل عمود ضيق بمنتصف شاشة
-   واسعة؛ يرجعون عمود واحد تلقائياً تحت 720px (جوال). */
-.lc-teams-row { display: flex; flex-direction: column; gap: 20px; }
-@media (min-width: 720px) {
-    .lc-teams-row { flex-direction: row; align-items: stretch; }
-    .lc-teams-row > .lc-team-card { flex: 1; min-width: 0; }
+.lc-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 6px 0; }
+.lc-row + .lc-row { border-top: 1px solid var(--lc-line-soft); }
+.lc-row-label { display: flex; align-items: center; gap: 8px; min-width: 0; text-align: right; font: 600 clamp(14px,1.1vw,16px) var(--lc-font); color: var(--lc-text-2); white-space: nowrap; }
+.lc-row-label-desc { white-space: normal; align-items: flex-start; }
+.lc-row-label-desc > span { display: flex; flex-direction: column; gap: 4px; }
+.lc-row-desc { font: 500 12.5px/1.6 var(--lc-font); color: var(--lc-dim-2); max-width: 520px; }
+.lc-input {
+    width: min(190px, 48%); height: 40px; border-radius: 999px; border: 1px solid var(--lc-line);
+    background: rgba(255,255,255,.035); color: var(--lc-text); font: 600 14px var(--lc-font); padding: 0 16px; text-align: center; outline: none;
 }
+.lc-input:focus { border-color: rgba(167,139,250,.5); }
+.lc-input::placeholder { color: #6f6a7c; }
 
-/* صف "اكتب اسمك": تسمية يمين، مُدخل يسار -- ترتيب DOM طبيعي بدون order (قاعدة CLAUDE.md) */
-.lc-row-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--lc-panel); border: 1px solid var(--lc-panel-border); border-radius: 14px; padding: 16px 20px; flex-wrap: wrap; }
-.lc-row-card-label { font-size: 15px; font-weight: 800; color: var(--lc-text); white-space: nowrap; }
-.lc-row-card-input { flex: 1; min-width: 220px; padding: 11px 14px; border-radius: 10px; border: 1px solid var(--lc-input-border); background: var(--lc-input-bg); color: var(--lc-text); font-family: inherit; font-size: 14px; outline: none; }
+.lc-seg { display: flex; gap: 3px; padding: 3px; border-radius: 999px; background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.07); }
+.lc-seg-btn { height: 34px; padding: 0 14px; border: none; border-radius: 999px; cursor: pointer; white-space: nowrap; font: 600 13px var(--lc-font); background: transparent; color: var(--lc-dim); transition: all .25s; font-variant-numeric: tabular-nums; }
+.lc-seg-btn:hover { color: #fff; }
+.lc-seg-btn.lc-seg-on { background: var(--lc-grad); color: #fff; box-shadow: 0 6px 20px rgba(139,92,246,.4); }
 
-.lc-pill-group { display: flex; gap: 8px; flex-wrap: wrap; }
-.lc-pill-btn { padding: 8px 16px; border-radius: 999px; border: 1px solid var(--lc-input-border); background: var(--lc-input-bg); color: var(--lc-text-dim2); font-family: inherit; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; transition: background .15s ease, border-color .15s ease, color .15s ease; }
-.lc-pill-btn:hover { border-color: var(--lc-accent2); }
-.lc-pill-btn.lc-pill-active { background: linear-gradient(90deg, var(--lc-accent1), var(--lc-accent2)); border-color: transparent; color: var(--lc-bg); }
-
-.lc-team-card { background: var(--lc-panel); border: 1px solid var(--lc-panel-border); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
-.lc-team-card-head { display: flex; align-items: center; gap: 8px; }
-.lc-team-card-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-.lc-team-card-title { font-size: 14px; font-weight: 900; color: var(--lc-text); }
-.lc-field-col { display: flex; flex-direction: column; gap: 6px; }
-.lc-field-label { font-size: 12px; font-weight: 700; color: var(--lc-text-dim); }
-.lc-field-row { display: flex; align-items: center; gap: 10px; }
-.lc-field-input { flex: 1; min-width: 0; padding: 11px 14px; border-radius: 10px; border: 1px solid var(--lc-input-border); background: var(--lc-input-bg); color: var(--lc-text); font-family: inherit; font-size: 14px; outline: none; }
-.lc-field-input.lc-field-input-block { width: 100%; }
-.lc-swatch-btn { flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; padding: 0; }
-.lc-swatch-btn.lc-swatch-active { border-color: var(--lc-accent2); }
-
-.lc-settings-btn-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
-
-.lc-manage-questions-link {
-    display: block; text-align: center; color: var(--lc-accent2); font-size: 0.85em;
-    text-decoration: none; margin: 4px 0; padding: 10px; border: 1px dashed var(--lc-accent1); border-radius: 10px;
-}
-.lc-manage-questions-link:hover { background: rgba(139,92,246,0.1); }
-
-.lc-connecting-box { text-align: center; padding: 46px 10px; color: var(--lc-text-dim2); font-weight: 700; }
-.lc-spinner { width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.2); border-top-color: var(--lc-accent1); border-radius: 50%; margin: 0 auto 18px; animation: lc-spin 0.9s linear infinite; }
-@keyframes lc-spin { to { transform: rotate(360deg); } }
+.lc-connecting { padding: 40px 48px; border-radius: 24px; display: flex; flex-direction: column; align-items: center; gap: 14px; animation: lc-pop .45s cubic-bezier(.2,1.25,.35,1); }
+.lc-spinner { width: 54px; height: 54px; border-radius: 50%; border: 3px solid rgba(167,139,250,.18); border-top-color: var(--lc-accent); animation: lc-spin .9s linear infinite; }
+.lc-connecting-title { font: 700 20px var(--lc-font); }
+.lc-connecting-sub { font: 500 14px var(--lc-font); color: var(--lc-dim-2); }
 
 /* ==========================================================================
-   2) شاشة اللوبي
+   2) شاشة اللوبي — نفس لوبي أسرع إجابة (كرت لكل فريق بلونه)
    ========================================================================== */
-.lc-lobby-screen { width: 100%; min-height: 100vh; overflow-y: auto; background: var(--lc-bg); box-sizing: border-box; display: flex; flex-direction: column; align-items: center; padding: 40px 24px 32px; gap: 28px; position: relative; }
-.lc-logo-lobby { font-size: clamp(24px,3.4vw,38px); position: relative; z-index: 1; }
-.lc-lobby-panels { width: 100%; max-width: 1320px; display: flex; gap: 28px; flex-wrap: wrap; justify-content: center; position: relative; z-index: 1; }
-.lc-team-panel { flex: 0 1 576px; min-width: 0; height: 521px; overflow: hidden; background: #1b1526; border: 4px solid #ffffff; border-radius: 20px; display: flex; flex-direction: column; box-shadow: 0 24px 50px rgba(0,0,0,0.45); box-sizing: border-box; }
-.lc-team-panel-header { padding: 16px 22px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.lc-team-panel-name { font-size: clamp(18px,2vw,24px); font-weight: 900; color: #fef4f4; }
-.lc-team-panel-badges { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.lc-badge-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.3); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 800; }
-.lc-badge-count { color: var(--lc-green); }
-.lc-badge-count span { color: #fef4f4; font-weight: 700; }
-.lc-badge-code { color: #fef4f4; font-weight: 900; }
-.lc-badge-code span { opacity: 0.8; font-weight: 700; }
-.lc-team-panel-body { padding: 24px 22px 18px; overflow-y: auto; scrollbar-width: none; display: grid; grid-template-columns: repeat(2,217px); column-gap: 51px; row-gap: 46px; justify-content: center; flex: 1; align-content: start; }
-.lc-team-panel-body::-webkit-scrollbar { display: none; }
-/* بطاقة اللاعب -- نفس بطاقة اللوبي القياسية 217×57 (مثل روليت الإقصاء
-   وحرب الفريقين): الصورة 48px يمين داخل البطاقة، الاسم بالوسط، وزر
-   الحذف × صغير يسار البطاقة. البطاقة بإطار تظهر كاملة بنفس الخانة
-   (fitLobbyFramedCards بالـJS). */
-.lc-lobby-card-wrap { position: relative; width: 217px; height: 57px; display: flex; align-items: center; justify-content: center; }
-.lc-lobby-screen .agp-pcard {
-    width: 217px !important; height: 57px !important; box-sizing: border-box !important;
-    padding: 0 3px 0 28px !important; gap: 6px !important; border-radius: 24px !important;
+.lc-lobby-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,380px), 1fr)); grid-auto-rows: minmax(0,1fr); gap: clamp(12px,1.4vw,18px); padding-bottom: 8px; }
+.lc-team-panel {
+    min-height: 0; display: flex; flex-direction: column; border-radius: 26px; position: relative; overflow: hidden;
+    background: var(--lc-card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1.5px solid var(--tc-bd); box-shadow: 0 20px 60px rgba(0,0,0,.3), 0 0 50px var(--tc-halo);
+    animation: lc-rise .45s ease both;
 }
-/* الألوان تبقى نفس ألوان البطاقة الأصلية باللعبة (كبسولة شفافة بحد أبيض
-   وصورة داكنة) -- المتغيّر المقاس فقط. */
-.lc-lobby-screen .agp-pcard-avatar-basic { width: 48px !important; height: 48px !important; }
-.lc-lobby-screen .agp-pcard-name-basic {
-    flex: 1 1 auto !important; width: auto !important; min-width: 0 !important; height: auto !important;
-    margin: 0 !important; padding: 0 !important; font-size: 20px !important; font-weight: 800 !important;
-    background: none !important; border: none !important;
+.lc-team-panel-halo { position: absolute; top: -100px; left: 50%; width: 460px; height: 200px; margin-left: -230px; border-radius: 50%; background: var(--tc-halo); filter: blur(44px); pointer-events: none; }
+.lc-team-panel-head { position: relative; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; padding: clamp(16px,2vw,24px) clamp(18px,2.2vw,28px); border-bottom: 1px solid var(--lc-line-soft); }
+.lc-team-panel-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.lc-team-panel-name { display: flex; align-items: center; gap: 10px; min-width: 0; font: 700 clamp(18px,1.7vw,22px) var(--lc-font); color: var(--tc); }
+.lc-count-pill { flex-shrink: 0; display: flex; align-items: baseline; gap: 4px; padding: 6px 14px; border-radius: 999px; background: var(--tc-soft); border: 1px solid var(--tc-bd); }
+.lc-count-pill b { font: 700 20px var(--lc-font); color: var(--tc); font-variant-numeric: tabular-nums; }
+.lc-count-pill span { font: 500 13px var(--lc-font); color: var(--lc-dim); }
+.lc-keyword-wrap { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.lc-keyword-label { font: 500 13px var(--lc-font); color: var(--lc-dim-2); }
+.lc-keyword {
+    display: block; text-align: center; padding: 10px 22px; border-radius: 999px; background: var(--tc-soft); border: 1.5px dashed var(--tc);
+    font: 700 clamp(24px,3vw,36px)/1.2 var(--lc-font); color: var(--tc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.lc-lobby-screen .agp-pcard-avatar-basic--fallback { font-size: 15px !important; }
-.lc-lobby-screen .agp-pcard-tpl { zoom: 0.7282; flex-shrink: 0; }
-.lc-lobby-remove-x {
-    position: absolute; top: 50%; left: 7px; transform: translateY(-50%); z-index: 5;
-    width: 18px; height: 18px; border-radius: 50%; padding: 0;
-    background: var(--lc-remove); color: #fff; border: 2px solid #1b0d0d; font-weight: 900;
-    font-size: 10px; line-height: 14px; text-align: center; cursor: pointer;
-}
+.lc-team-panel-body { position: relative; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: clamp(12px,1.6vw,20px); }
+.lc-team-empty { height: 100%; min-height: 140px; display: grid; place-items: center; border-radius: 18px; border: 1.5px dashed rgba(255,255,255,.1); color: var(--lc-dim-2); font: 500 14px var(--lc-font); text-align: center; padding: 20px; }
+.lc-pgrid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; align-items: center; }
+.lc-pchip { min-width: 0; display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 8px 0 7px; border-radius: 999px; background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.07); animation: lc-rise .4s cubic-bezier(.2,1.3,.4,1) both; }
+.lc-pchip-name { flex: 1; min-width: 0; font: 600 14px var(--lc-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-lobby-remove-x { width: 30px; height: 30px; flex-shrink: 0; border: none; background: transparent; padding: 0; color: #fca5a5; cursor: pointer; display: grid; place-items: center; opacity: .75; transition: opacity .2s, transform .2s; }
+.lc-lobby-remove-x:hover { opacity: 1; transform: scale(1.15); }
+/* لاعب بإطار من المنصة: البطاقة المشتركة كاملة بالخانة (fitLobbyFramedCards بالـJS) */
+/* لاعب بإطار اسم: إطاره الكامل بنفس خانة اللاعب (مثل لوبي حرب الفريقين) */
+.lc-pframe { position: relative; min-width: 0; height: 84px; display: flex; align-items: center; justify-content: center; direction: ltr; animation: lc-rise .4s cubic-bezier(.2,1.3,.4,1) both; }
+.lc-pframe .lc-lobby-remove-x { position: absolute; top: 2px; right: 2%; z-index: 10; filter: drop-shadow(0 1px 2px rgba(0,0,0,.9)); }
+.lc-pframe .agp-pcard-tpl { zoom: .7282; flex-shrink: 0; }
 .lc-pcard-wrap { max-width: 100% !important; }
-.lc-team-empty { font-size: 13px; color: #fef4f4; opacity: 0.6; grid-column: 1/-1; }
-.lc-lobby-join-hint { width: 100%; max-width: 900px; display: flex; align-items: flex-start; gap: 10px; background: var(--lc-panel); border: 1px solid var(--lc-panel-border); border-radius: 14px; padding: 14px 18px; position: relative; z-index: 1; text-align: right; }
-.lc-lobby-join-hint-icon { font-size: 18px; flex-shrink: 0; }
-.lc-lobby-join-hint-text { font-size: 13px; line-height: 1.9; color: var(--lc-text-dim2); }
-.lc-lobby-join-hint-text b { color: var(--lc-accent2); }
-.lc-lobby-btn-row { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; position: relative; z-index: 1; }
-/* أزرار اللوبي بنفس مقاس زر لوبيات الفرق الجديدة (320×48). */
-.lc-lobby-btn-row > button { width: 320px; max-width: 90vw; height: 48px; padding: 0 14px; font-size: 18px; }
-@media (max-width: 1240px) {
-    .lc-lobby-panels { flex-direction: column; align-items: center; }
-    .lc-team-panel { width: min(576px, 100%); flex: none; }
+
+/* أسفل اللوبي (نفس ترتيب حرب الفريقين): زر "الدخول للمباراة" بتدرّج المنصة البنفسجي (ألوان اللعبة) وتحته رابط مكتبة الألعاب */
+.lc-lobby-actions { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: clamp(10px,2vh,18px) 0 clamp(14px,2.6vh,24px); }
+.lc-btn-go {
+    width: 100%; max-width: 400px; height: clamp(52px,6.5vh,62px); border: none; border-radius: 999px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--lc-grad); color: #fff;
+    font: 800 clamp(20px,1.8vw,24px) var(--lc-font); box-shadow: 0 10px 34px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.2); transition: filter .2s, opacity .3s, transform .15s;
 }
-@media (max-width: 600px) { .lc-team-panel-body { grid-template-columns: repeat(auto-fill,217px); } }
+.lc-btn-go:hover { filter: brightness(1.1); }
+.lc-btn-go:active { transform: scale(.97); }
+.lc-btn-go.lc-btn-dim { opacity: .4; }
+.lc-lobby-link { font: 700 17px var(--lc-font); color: var(--lc-dim) !important; text-decoration: none; }
+.lc-lobby-link:hover { color: var(--lc-text) !important; }
+/* لوبي بخط Zain مثل حرب الفريقين */
+.lc-zain { --lc-font: 'Zain', 'IBM Plex Sans Arabic', sans-serif; }
+.lc-zain .lc-team-panel-name { font-weight: 800; font-size: clamp(22px,2vw,28px); }
+.lc-zain .lc-count-pill b { font-weight: 800; font-size: 24px; }
+.lc-zain .lc-keyword-label { font-weight: 700; font-size: 16px; color: var(--lc-dim); }
+.lc-zain .lc-pchip-name { font-weight: 700; font-size: 18px; }
+/* قائمة زر "الإعدادات" بالشريط العلوي */
+.lc-menu-wrap { position: relative; }
+.lc-hbtn-accent { border-color: rgba(167,139,250,.3); background: rgba(139,92,246,.08); color: #ddd6fe; }
+.lc-hbtn-accent:hover { background: rgba(139,92,246,.16); border-color: rgba(167,139,250,.55); }
+.lc-menu { position: absolute; top: calc(100% + 10px); right: 0; min-width: 230px; padding: 8px; border-radius: 18px; background: rgba(14,12,22,.97); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 20px 60px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 4px; animation: lc-pop .25s ease; z-index: 60; }
+.lc-menu[hidden] { display: none; }
+.lc-menu-item { padding: 12px 14px; border: none; border-radius: 12px; background: transparent; color: var(--lc-text-2); text-align: right; font: 700 17px var(--lc-font); cursor: pointer; }
+.lc-menu-item:hover { background: rgba(255,255,255,.06); }
+.lc-menu-item-danger { color: #fca5a5; }
+.lc-menu-item-danger:hover { background: rgba(248,113,113,.08); }
+
+/* صورة اللاعب الدائرية (نفس صور أسرع إجابة) */
+.lc-av { width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; position: relative; overflow: hidden; display: grid; place-items: center; border: 1.5px solid; font: 700 16px var(--lc-font); color: #fff; }
+.lc-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.lc-av-sm { width: 32px; height: 32px; font-size: 13px; }
+.lc-av-xl { width: 96px; height: 96px; font-size: 40px; border-width: 3px; }
+
+@media (max-width: 820px) {
+    .lc-lobby-grid { grid-auto-rows: minmax(320px, auto); overflow-y: auto; }
+}
 
 /* ==========================================================================
-   3) شاشة اللعب
+   3) شاشة اللعب — مسرح ثابت 1920×1080 يتصغّر ليناسب الشاشة (fitStages)
    ========================================================================== */
-/* رقعة اللعب مصمَّمة على قماشة نسبة عرض/ارتفاع ثابتة (1974×1128) وكل
-   عناصرها الداخلية مموضعة بنسب مئوية بالنسبة لها -- لو تمدّدت لتملأ
-   100vw×100vh حرفياً على أي شاشة، أي فرق بين نسبة الشاشة الفعلية ونسبة
-   التصميم (تابلت بنسبة 4:3 أو شاشة عريضة جداً) يفرد/يشوّه الرقعة
-   والسداسيات. الحل: نضبط عرض/ارتفاع الصندوق ليكون أكبر مستطيل بنفس
-   نسبة 1974:1128 يدخل بالشاشة (letterbox)، ونوسّطه فيها -- تماماً متل
-   مشغّل فيديو، بدل ما نمدّده ليملأها بغض النظر عن نسبتها. */
-.lc-game-screen {
-    position: fixed; inset: 0; margin: auto;
-    width: min(100vw, calc(100vh * 1974 / 1128));
-    height: min(100vh, calc(100vw * 1128 / 1974));
-    overflow: hidden;
-    /* وحدة "1% من عرض القماشة الفعلي" -- بخلاف 1vw العادية (نسبة الشاشة
-       نفسها)، هذي تتابع أي بُعد فعلاً يحدّد حجم القماشة بعد letterbox
-       (العرض أحياناً، الارتفاع أحياناً) فتضمن نفس التناسب بصرياً بأي
-       نسبة شاشة. تُستخدم بأي عنصر داخل القماشة محتاج يصغر أكثر من حد
-       الـclamp الأدنى الحالي على قماشات صغيرة جداً (تابلت عمودي مثلاً). */
-    --lc-cvw: min(1vw, 1.75vh);
+.lc-stage {
+    position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px;
+    transform: translate(-50%,-50%) scale(.5); transform-origin: center;
 }
-.lc-game-bg-svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.lc-game-screen { padding: 112px 40px 36px; display: flex; flex-direction: column; gap: 22px; }
 
-.lc-hex-cell-wrap { position: absolute; padding: 4px; box-sizing: border-box; }
-.lc-hex-cell-wrap.lc-hex-clickable { cursor: pointer; }
-.lc-hex-cell-wrap.lc-hex-active { filter: drop-shadow(0 0 10px rgba(34,197,94,0.95)); }
-.lc-hex-cell-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: clamp(16.5px,2.2vw,28.6px); font-weight: 900; transition: background 0.25s ease; }
+.lc-pills { flex-shrink: 0; display: flex; justify-content: center; align-items: center; gap: 14px; }
+.lc-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 999px; border: 1px solid var(--lc-line); background: rgba(255,255,255,.03); font: 500 18px var(--lc-font); color: var(--lc-dim); white-space: nowrap; }
+.lc-pill-accent { border-color: rgba(167,139,250,.3); background: rgba(139,92,246,.08); color: var(--lc-accent-soft); font-weight: 600; }
+.lc-pill .lc-dot { width: 7px; height: 7px; }
 
-.lc-reshuffle-toast { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 120; animation: lc-intro-dim 1.8s ease forwards; }
-.lc-reshuffle-toast-box { background: rgba(27,13,13,0.92); border: 2px solid var(--lc-beige); border-radius: 14px; padding: 14px 24px; color: #fef4f4; font-weight: 800; font-size: clamp(13px,1.3vw,17px); text-align: center; max-width: 70%; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+.lc-game-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 640px 1fr; gap: 24px; }
+.lc-game-side { min-height: 0; display: flex; flex-direction: column; gap: 16px; }
+/* شعار "حروف مع {اسم المقدّم}" أعلى العمود الجانبي (مكان المساحة اللي وفّرها تصغير كروت الفريقين) */
+.lc-host-logo { flex-shrink: 0; height: 104px; display: flex; align-items: center; justify-content: center; gap: 16px; text-align: center; white-space: nowrap; overflow: hidden; font: 700 66px/1.15 var(--lc-font); }
+.lc-host-w1 { background: linear-gradient(180deg, #f4f2f8, #c4b5fd); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lc-host-w2 { font-size: .5em; font-weight: 600; color: var(--lc-dim); vertical-align: middle; }
+.lc-host-w3 { background: linear-gradient(90deg, #a78bfa, #38bdf8); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 22px rgba(139,92,246,.35)); }
 
-.lc-side-panel-btn-settings { position: absolute; left: 78.22%; top: 1.5%; width: 20.21%; box-sizing: border-box; padding: 6px 10px; border: none; border-radius: 10px; background: #1B0D0D; opacity: 0.55; color: #fef4f4; font-family: 'Cairo', sans-serif; font-weight: 800; font-size: clamp(11px,1vw,14px); cursor: pointer; }
-.lc-side-logo { position: absolute; left: 78.22%; top: 7.2%; width: 20.21%; }
-/* تكبير ٥٠% عن الحجم الأساسي (24/13/24px) خاص بهذا الموضع فقط -- شعار
-   الشاشة التمهيدية (.lc-intro-logo) يبقى بحجمه الافتراضي. */
-.lc-side-logo .lc-logo3d-line1, .lc-side-logo .lc-logo3d-line3 { font-size: clamp(18px, calc(4.65 * var(--lc-cvw)), 67.5px); }
-.lc-side-logo .lc-logo3d-line2 { font-size: clamp(10px, calc(1.8 * var(--lc-cvw)), 27px); }
-.lc-cell-question-label { position: absolute; left: 78.22%; top: 29%; width: 20.21%; display: flex; align-items: center; gap: 8px; }
-.lc-cell-question-label span { font-size: clamp(13px,1.1vw,16px); font-weight: 900; color: #E2C8A8; }
-.lc-question-box { position: absolute; left: 78.22%; top: 41.71%; width: 20.21%; height: 24%; box-sizing: border-box; padding: clamp(8px,1.4vw,20px) clamp(10px,1.8vw,26px); overflow: hidden; }
-.lc-question-text { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; color: #fef4f4; font-family: inherit; font-weight: 800; font-size: clamp(20px,2.3vw,33px); line-height: 1.4; overflow: hidden; }
-.lc-question-placeholder { color: #d9c9b8; opacity: 0.85; }
+/* كرت الفريق (نفس كروت الفريقين بأسرع إجابة) */
+/* كرتا الفريقين بصف واحد (مضغوطين) فوق كرت السؤال */
+.lc-gteams { flex-shrink: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.lc-gteam { position: relative; overflow: hidden; min-width: 0; height: 104px; border-radius: 24px; padding: 12px 20px; display: flex; flex-direction: column; justify-content: center; gap: 6px; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.lc-gteam-halo { position: absolute; top: -90px; left: 50%; width: 260px; height: 160px; margin-left: -130px; border-radius: 50%; background: var(--tc-halo); filter: blur(36px); pointer-events: none; }
+.lc-gteam-row { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.lc-gteam-name { display: flex; align-items: center; gap: 10px; min-width: 0; font: 700 23px var(--lc-font); }
+.lc-gteam-score { flex-shrink: 0; font: 700 44px/1 var(--lc-font); color: var(--tc); font-variant-numeric: tabular-nums; }
+.lc-gteam-meta { display: flex; align-items: center; gap: 10px; font: 500 14px var(--lc-font); color: var(--lc-dim-2); white-space: nowrap; }
+.lc-pips { display: inline-flex; gap: 5px; }
+.lc-pip { width: 18px; height: 7px; border-radius: 999px; background: rgba(255,255,255,.1); }
+.lc-pip-on { background: var(--tc); box-shadow: 0 0 10px var(--tc); }
+.lc-credit-btn { flex-shrink: 0; width: 36px; height: 36px; padding: 0; border-radius: 50%; cursor: pointer; border: 1.5px solid var(--tc); background: rgba(255,255,255,.04); color: var(--tc); font: 700 18px/1 var(--lc-font); transition: all .2s; }
+.lc-credit-btn:hover { background: var(--tc); color: #0c0b12; }
 
-.lc-round-label { position: absolute; left: 85.43%; top: 29%; width: 6.01%; text-align: center; color: #1B0D0D; font-weight: 900; font-size: clamp(8px, calc(1 * var(--lc-cvw)), 15px); white-space: nowrap; }
-@keyframes lc-timer-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
-.lc-badge-hex { position: absolute; left: 85.43%; top: 31.69%; width: 6.01%; height: 12.59%; display: flex; align-items: center; justify-content: center; color: #fef4f4; font-weight: 900; text-align: center; }
-/* مؤقت الإجابة -- لوحة كبيرة وواضحة أعلى منتصف رقعة اللعب (فوق الخلايا
-   مباشرة)، بمساحة فاضية أصلاً بالتصميم. */
-.lc-board-timer { position: absolute; left: 30%; top: 5%; width: 40%; text-align: center; z-index: 3; }
-.lc-board-timer span { display: inline-block; padding: clamp(6px, calc(0.8 * var(--lc-cvw)), 16px) clamp(20px, calc(2.4 * var(--lc-cvw)), 46px); border-radius: 999px; background: var(--lc-beige); color: #1b0d0d; font-weight: 900; font-size: clamp(20px, calc(2.6 * var(--lc-cvw)), 48px); box-shadow: 0 12px 28px rgba(0,0,0,0.5); border: clamp(2px, calc(0.25 * var(--lc-cvw)), 4px) solid #5B0E1A; animation: lc-timer-pulse 1s ease-in-out infinite; }
-/* انيميشن ظهور الحرف المختار: يكبر بمنتصف الشاشة ٣ ثوانٍ ثم يطير لمكان
-   شارة الحرف الحالي (.lc-badge-hex) فوق صندوق السؤال -- إحداثيات ووصول
-   النهاية تطابق تماماً موضع/حجم .lc-badge-hex-letter الحقيقي أدناه.
-   خلفية الرقعة تعتم وتتغبّش طول مدة الانيميشن، وتزول بالضبط لحظة وصول
-   الحرف فتظهر الشاشة كاملة وواضحة من جديد. */
-.lc-letter-reveal-backdrop { position: absolute; inset: 0; z-index: 149; background: rgba(10,5,5,0.6); backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); pointer-events: none; animation: lc-letter-reveal-backdrop-fade 3.6s ease forwards; }
-@keyframes lc-letter-reveal-backdrop-fade {
-    0% { opacity: 0; }
-    10% { opacity: 1; }
-    83% { opacity: 1; }
-    100% { opacity: 0; }
+/* كرت السؤال */
+.lc-qcard { position: relative; flex: 1; min-height: 0; border-radius: 30px; padding: 26px 28px; display: flex; flex-direction: column; gap: 18px; box-shadow: 0 30px 80px rgba(0,0,0,.35); }
+.lc-qcard-head { flex-shrink: 0; display: flex; align-items: center; gap: 18px; }
+.lc-qcard-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.lc-qcard-title { font: 700 28px var(--lc-font); color: var(--lc-accent-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-qcard-sub { font: 500 17px var(--lc-font); color: var(--lc-dim-2); }
+.lc-qbadge { flex-shrink: 0; width: 92px; height: 106px; padding: 3px; border: none; background: linear-gradient(180deg, #d1fae5, #10b981); }
+.lc-qbadge-inner { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: linear-gradient(165deg, #34d399 0%, #10b981 45%, #047857 100%); color: #fff; }
+.lc-qbadge-letter { font: 700 52px/1 var(--lc-font); }
+.lc-qbadge-btn { cursor: pointer; background: rgba(255,255,255,.18); }
+.lc-qbadge-btn .lc-qbadge-inner { background: linear-gradient(160deg, #1d1830, #121019); color: var(--lc-accent-soft); }
+.lc-qbadge-btn:hover { background: rgba(167,139,250,.7); }
+.lc-qbadge-cap { font: 600 11px var(--lc-font); color: var(--lc-dim); }
+.lc-timer-ring { flex-shrink: 0; width: 112px; height: 112px; border-radius: 50%; display: grid; place-items: center; }
+.lc-timer-core { width: 94px; height: 94px; border-radius: 50%; background: #0c0b12; display: grid; place-items: center; font: 700 30px var(--lc-font); font-variant-numeric: tabular-nums; color: inherit; }
+.lc-question-box { flex: 1; min-height: 0; border-radius: 24px; background: rgba(255,255,255,.025); border: 1px solid var(--lc-line-soft); padding: 18px 22px; overflow: hidden; }
+.lc-question-text { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; font: 700 66px/1.4 var(--lc-font); text-wrap: balance; overflow: hidden; }
+.lc-question-placeholder { font-weight: 500; font-size: 36px; color: var(--lc-dim-2); }
+
+/* كرت الرقعة + الخلايا السداسية */
+.lc-board-card { position: relative; border-radius: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 30px 80px rgba(0,0,0,.35); }
+.lc-board { position: relative; flex-shrink: 0; }
+/* توهج ناعم وهادي على حواف كرت الرقعة نفسه: خط مضيء على الحافة يتلاشى عند الزوايا مع هالة مغبّشة.
+   فوق وتحت بلون الفريق الأول، يمين ويسار بلون الفريق الثاني */
+.lc-board-glow { position: absolute; inset: 0; pointer-events: none; animation: lc-glow-breathe 4s ease-in-out infinite alternate; }
+.lc-board-glow span { position: absolute; border-radius: 999px; }
+.lc-glow-top, .lc-glow-bottom { left: 30px; right: 30px; height: 3px; background: linear-gradient(90deg, transparent, var(--g1) 18%, var(--g1) 82%, transparent); box-shadow: 0 0 26px 4px color-mix(in srgb, var(--g1) 55%, transparent); }
+.lc-glow-top { top: -1.5px; }
+.lc-glow-bottom { bottom: -1.5px; }
+.lc-glow-right, .lc-glow-left { top: 30px; bottom: 30px; width: 3px; background: linear-gradient(180deg, transparent, var(--g2) 18%, var(--g2) 82%, transparent); box-shadow: 0 0 26px 4px color-mix(in srgb, var(--g2) 55%, transparent); }
+.lc-glow-right { right: -1.5px; }
+.lc-glow-left { left: -1.5px; }
+@keyframes lc-glow-breathe { from { opacity: .7; } to { opacity: 1; } }
+.lc-hex { position: absolute; padding: 5px; transition: background .25s; }
+.lc-hex-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font: 700 var(--lc-hexfont, 80px)/1 var(--lc-font); transition: background .25s, color .25s; }
+/* الخلية الفاضية: زجاج داكن بحافة بنفسجية هادية */
+.lc-hex-free { background: linear-gradient(180deg, rgba(167,139,250,.45), rgba(124,58,237,.18)); cursor: pointer; transition: background .25s, transform .2s; }
+.lc-hex-free .lc-hex-inner { background: radial-gradient(110% 80% at 50% 0%, #2a2244 0%, #17132a 55%, #0f0d18 100%); color: #ede9fe; text-shadow: 0 0 18px rgba(167,139,250,.25); }
+.lc-hex-free:hover { background: linear-gradient(180deg, #c4b5fd, #7c3aed); transform: scale(1.03); z-index: 1; }
+.lc-hex-free:hover .lc-hex-inner { background: radial-gradient(110% 80% at 50% 0%, #3a2d63 0%, #1d1734 60%, #120f1e 100%); }
+
+/* ألوان الهوية: الفريق الأول بتدرّج أزرار المنصة البنفسجي، الثاني سماوي→أزرق،
+   وخلية السؤال زمرّدي -- حافة فاتحة رفيعة + تدرّج غني + لمعة زجاجية */
+.lc-hex-t1 { --c-rim: linear-gradient(180deg, #ddd6fe, #8b5cf6); --c-fill: linear-gradient(180deg, rgba(255,255,255,.2), rgba(255,255,255,0) 42%), linear-gradient(0deg, rgba(0,0,0,.2), rgba(0,0,0,0) 38%), linear-gradient(165deg, #a78bfa 0%, #8b5cf6 45%, #6d28d9 100%); }
+.lc-hex-t2 { --c-rim: linear-gradient(180deg, #bae6fd, #0ea5e9); --c-fill: linear-gradient(180deg, rgba(255,255,255,.2), rgba(255,255,255,0) 42%), linear-gradient(0deg, rgba(0,0,0,.2), rgba(0,0,0,0) 38%), linear-gradient(165deg, #38bdf8 0%, #0ea5e9 45%, #0369a1 100%); }
+.lc-hex-active { --c-rim: linear-gradient(180deg, #d1fae5, #10b981); --c-fill: linear-gradient(180deg, rgba(255,255,255,.2), rgba(255,255,255,0) 42%), linear-gradient(0deg, rgba(0,0,0,.2), rgba(0,0,0,0) 38%), linear-gradient(165deg, #34d399 0%, #10b981 45%, #047857 100%); }
+.lc-hex-owned, .lc-hex-active { background: var(--c-rim); }
+.lc-hex-owned .lc-hex-inner, .lc-hex-active .lc-hex-inner { background: var(--c-fill); color: #fff; text-shadow: 0 2px 14px rgba(0,0,0,.3); }
+.lc-hex-active { z-index: 2; animation: lc-hex-glow 1.8s ease-in-out infinite alternate; }
+@keyframes lc-hex-glow { from { filter: brightness(1) saturate(1); } to { filter: brightness(1.18) saturate(1.1); } }
+
+/* انيميشن ظهور الحرف المختار بمنتصف الشاشة */
+.lc-letter-reveal-backdrop { position: fixed; inset: 0; z-index: 149; background: rgba(7,6,11,.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); pointer-events: none; animation: lc-reveal-bg 2.4s ease forwards; }
+@keyframes lc-reveal-bg { 0% { opacity: 0; } 12% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+.lc-letter-reveal {
+    position: fixed; left: 50%; top: 50%; z-index: 150; pointer-events: none;
+    width: 34vmin; height: 39vmin; display: grid; place-items: center;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    background: var(--lc-grad); color: #fff; font: 700 20vmin/1 var(--lc-font);
+    animation: lc-reveal-pop 2.4s cubic-bezier(.2,1.2,.35,1) forwards;
 }
-.lc-letter-reveal { position: absolute; z-index: 150; pointer-events: none; color: #fef4f4; font-weight: 900; font-size: clamp(18px,1.8vw,30px); text-shadow: 0 10px 30px rgba(0,0,0,0.6); animation: lc-letter-reveal-fly 3.6s cubic-bezier(0.6,0,0.4,1) forwards; }
-@keyframes lc-letter-reveal-fly {
-    0% { top: 50%; left: 50%; transform: translate(-50%,-50%) scale(7); opacity: 0; }
-    8% { opacity: 1; }
-    83% { top: 50%; left: 50%; transform: translate(-50%,-50%) scale(7); opacity: 1; }
-    100% { top: 37.985%; left: 88.435%; transform: translate(-50%,-50%) scale(1); opacity: 1; }
-}
-.lc-badge-hex-inner { font-size: clamp(11px,1vw,16px); line-height: 1.3; }
-.lc-badge-hex-letter { font-size: clamp(18px,1.8vw,30px); color: #0F0E0E; }
-.lc-badge-hex-caption { font-size: clamp(9px,0.75vw,12px); opacity: 0.85; color: #121212; }
-.lc-badge-hex-btn { border: none; background: transparent; padding: 0; cursor: pointer; color: #fef4f4; font-family: inherit; }
-.lc-badge-hex-btn .lc-badge-hex-round { font-size: clamp(16px,1.6vw,26px); }
-.lc-badge-hex-btn .lc-badge-hex-caption { opacity: 0.85; }
-
-.lc-team-row { position: absolute; left: 79.43%; width: 17.78%; height: 5.585%; display: flex; align-items: center; justify-content: space-between; gap: 6px; box-sizing: border-box; padding: 0 clamp(8px,1.3vw,18px); }
-.lc-team-row-1 { top: 78.46%; }
-.lc-team-row-2 { top: 86%; }
-.lc-team-row-badge { flex-shrink: 0; width: clamp(16px,1.4vw,20px); height: clamp(16px,1.4vw,20px); border-radius: 50%; background: rgba(254,244,244,0.2); color: #fef4f4; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: clamp(9px,0.8vw,12px); }
-.lc-team-row-name { flex: 1; min-width: 0; color: #fef4f4; font-family: inherit; font-weight: 900; font-size: clamp(10px,1vw,15px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lc-team-row-score { flex-shrink: 0; min-width: 1.4em; text-align: center; font-weight: 900; color: #fef4f4; font-size: clamp(13px,1.3vw,20px); }
-/* زر التصحيح اليدوي (✓) -- جنب كل صف فريق، يظهر فقط أثناء سؤال مفتوح
-   (بدل صف الأزرار الكبير الي كان داخل تبويب السؤال). */
-.lc-team-row-credit-btn { flex-shrink: 0; width: clamp(18px,1.6vw,24px); height: clamp(18px,1.6vw,24px); border-radius: 50%; border: none; color: #fef4f4; font-weight: 900; font-size: clamp(10px,0.9vw,13px); line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
-
-.lc-footer-logo { position: absolute; left: 78.22%; top: 93%; width: 20.21%; display: flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box; padding: 0 8px; }
-.lc-footer-mark { flex-shrink: 0; width: clamp(20px,1.8vw,26px); height: clamp(18px,1.6vw,23px); clip-path: polygon(50% 0%, 100% 100%, 0% 100%); background: linear-gradient(135deg,#5B0E1A,#E2C8A8); position: relative; }
-.lc-footer-mark-dot { position: absolute; width: 14%; height: 14%; border-radius: 50%; background: #fef4f4; transform: translate(-50%,-50%); }
-.lc-footer-mark-dot-1 { left: 50%; top: 20%; }
-.lc-footer-mark-dot-2 { left: 25%; top: 75%; }
-.lc-footer-mark-dot-3 { left: 75%; top: 75%; }
-.lc-footer-text { text-align: right; line-height: 1.25; }
-.lc-footer-text .lc-footer-title { font-size: clamp(10px,0.9vw,13px); font-weight: 900; color: #513222; font-family: 'Cairo', sans-serif; }
-.lc-footer-text .lc-footer-tagline { font-size: clamp(7px,0.6vw,9px); font-weight: 600; color: #513222; opacity: 0.75; font-family: 'Cairo', sans-serif; }
-
-/* شاشة تمهيدية (intro) عند دخول اللعب / بداية كل جولة */
-.lc-intro-dim { position: fixed; inset: 0; background: #1b0d0d; z-index: 200; animation: lc-intro-dim 1.6s ease forwards; }
-.lc-intro-logo { position: fixed; text-align: center; font-family: 'Baloo Bhaijaan 2', sans-serif; z-index: 201; animation: lc-intro-zoom 1.6s cubic-bezier(0.6,0,0.4,1) forwards; white-space: nowrap; }
-@keyframes lc-intro-dim { 0% { opacity: 1; } 80% { opacity: 0.5; } 100% { opacity: 0; } }
-@keyframes lc-intro-zoom {
-    0% { top: 50%; left: 50%; transform: translate(-50%,-50%) scale(2.6); opacity: 0; }
-    15% { opacity: 1; }
-    70% { top: 16%; left: 88.3%; transform: translate(-50%,-50%) scale(1); opacity: 1; }
-    100% { top: 16%; left: 88.3%; transform: translate(-50%,-50%) scale(1); opacity: 0; }
+@keyframes lc-reveal-pop {
+    0% { transform: translate(-50%,-50%) scale(.3); opacity: 0; }
+    15% { transform: translate(-50%,-50%) scale(1.05); opacity: 1; }
+    25% { transform: translate(-50%,-50%) scale(1); }
+    80% { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+    100% { transform: translate(-50%,-50%) scale(.6); opacity: 0; }
 }
 
-/* نافذة تأكيد الإجابة */
-.lc-answer-modal-overlay { position: fixed; inset: 0; background: rgba(10,5,5,0.65); display: flex; align-items: center; justify-content: center; z-index: 150; }
-.lc-answer-modal { width: 800px; height: 800px; max-width: 94vw; max-height: 94vh; background: #1b0d0d; border-radius: 32px; box-shadow: 0 46px 100px rgba(0,0,0,0.55); box-sizing: border-box; padding: 42px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; font-family: 'Cairo', sans-serif; border-width: 3px; border-style: solid; }
-.lc-answer-modal-label { font-size: 24px; color: #E2C8A8; font-weight: 900; letter-spacing: 0.3px; }
-.lc-answer-modal-question { font-size: 16px; font-weight: 900; color: #fef4f4; line-height: 1.45; }
-/* الإجابة نفسها -- أبرز عنصر بالنافذة (سبب وجودها أصلاً)، بلون ذهبي
-   مميّز يفرّقها بصرياً عن نص السؤال. */
-.lc-answer-modal-answer { font-size: 42px; font-weight: 900; color: #f5c76a; line-height: 1.3; }
-.lc-answer-modal-divider { width: 60%; height: 1px; background: rgba(255,255,255,0.15); margin: 6px 0; }
-.lc-answer-modal-avatar.lc-avatar-xl { width: 150px; height: 150px; font-size: 52px; border-width: 4px; }
-.lc-answer-modal-player { font-size: 30px; font-weight: 900; color: #fef4f4; }
-/* شارة بخلفية لون الفريق ونص أبيض ثابت -- بدل نص ملوَّن مباشرةً فوق
-   خلفية النافذة الغامقة، الذي كان يختفي مع ألوان الفرق الغامقة. */
-.lc-answer-modal-team { display: inline-block; padding: 8px 26px; border-radius: 999px; font-size: 20px; font-weight: 900; color: #fef4f4; }
-.lc-answer-modal-done { margin-top: 10px; padding: 16px 50px; border: none; border-radius: 16px; color: #fef4f4; font-family: inherit; font-weight: 900; font-size: 22px; cursor: pointer; }
-
-/* نافذة "انتهى الوقت" -- تظهر لحظة انتهاء مؤقت الإجابة، وتوقف التصحيح
-   التلقائي حتى يختار المضيف تمديد دقيقة (بنفس السؤال أو سؤال جديد). */
-.lc-timeup-modal-overlay { position: fixed; inset: 0; background: rgba(10,5,5,0.7); display: flex; align-items: center; justify-content: center; z-index: 160; }
-.lc-timeup-modal { width: 400px; height: 400px; max-width: 92vw; max-height: 92vh; background: #1b0d0d; border: 3px solid var(--lc-beige); border-radius: 28px; box-shadow: 0 40px 90px rgba(0,0,0,0.55); box-sizing: border-box; padding: 32px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; font-family: 'Cairo', sans-serif; }
-.lc-timeup-modal-icon { font-size: 54px; line-height: 1; }
-.lc-timeup-modal-title { font-size: 28px; font-weight: 900; color: #fef4f4; }
-.lc-timeup-modal-sub { font-size: 15px; font-weight: 700; color: #d9c9b8; margin-bottom: 8px; }
-.lc-timeup-modal-btn { width: 100%; padding: 14px; border: none; border-radius: 14px; font-family: inherit; font-weight: 900; font-size: 15px; cursor: pointer; }
-.lc-timeup-modal-btn-primary { background: var(--lc-beige); color: #1b0d0d; }
-.lc-timeup-modal-btn-secondary { background: rgba(254,244,244,0.12); color: #fef4f4; border: 1.5px solid rgba(254,244,244,0.3); }
-
-/* درج إعدادات داخل اللعب */
-.lc-ingame-drawer { position: absolute; left: 78.22%; top: 6%; width: 21%; max-height: 75%; overflow-y: auto; background: var(--lc-drawer-bg); border: 2px solid var(--lc-beige); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; gap: 14px; font-family: 'Cairo', sans-serif; z-index: 100; }
-.lc-drawer-head { display: flex; align-items: center; justify-content: space-between; }
-.lc-drawer-title { font-size: clamp(15px,1.3vw,19px); font-weight: 900; color: #fef4f4; }
-.lc-drawer-close { border: none; background: transparent; font-size: 18px; font-weight: 900; color: #fef4f4; cursor: pointer; line-height: 1; }
-.lc-drawer-btn { padding: 10px; border: none; border-radius: 10px; color: #fef4f4; font-family: inherit; font-weight: 800; font-size: clamp(12px,1vw,14px); cursor: pointer; }
-.lc-drawer-btn-end { background: #5B0E1A; }
-.lc-drawer-btn-invite { background: #513222; }
-.lc-drawer-btn-reset { padding: 10px; border: 1px solid rgba(254,244,244,0.4); border-radius: 10px; background: transparent; color: #fef4f4; font-family: inherit; font-weight: 700; font-size: clamp(11px,0.95vw,13px); cursor: pointer; }
-.lc-drawer-section { display: flex; flex-direction: column; gap: 8px; }
-.lc-drawer-section-title { font-size: clamp(12px,1vw,14px); font-weight: 800; color: #E2C8A8; }
-.lc-drawer-roster { background: rgba(0,0,0,0.25); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
-.lc-drawer-roster-team { font-size: clamp(11px,0.95vw,13px); font-weight: 800; color: #fef4f4; }
-.lc-drawer-roster-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.lc-drawer-roster-player { font-size: clamp(11px,0.9vw,13px); color: #fef4f4; opacity: 0.9; }
-.lc-drawer-roster-remove {
-    flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; border: none; background: var(--lc-remove);
-    color: #fff; font-size: 11px; font-weight: 900; line-height: 1; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; padding: 0;
+.lc-reshuffle-toast {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 180; pointer-events: none; max-width: calc(100vw - 32px);
+    padding: 16px 30px; border-radius: 999px; background: rgba(12,11,18,.94); border: 1px solid rgba(167,139,250,.45);
+    color: var(--lc-accent-soft); font: 600 clamp(15px,1.4vw,20px) var(--lc-font); text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,.5);
+    animation: lc-pop .4s cubic-bezier(.2,1.25,.35,1);
 }
-.lc-drawer-roster-empty { font-size: clamp(10px,0.85vw,12px); color: #fef4f4; opacity: 0.5; }
 
-/* نافذة دعوة اللاعبين */
-.lc-invite-modal-overlay { position: absolute; inset: 0; background: rgba(10,5,5,0.55); display: flex; align-items: center; justify-content: center; z-index: 110; }
-.lc-invite-modal { width: 500px; height: 600px; max-width: 92vw; max-height: 90vh; background: var(--lc-drawer-bg); border: 2px solid var(--lc-beige); border-radius: 18px; box-shadow: 0 30px 60px rgba(0,0,0,0.5); box-sizing: border-box; padding: 26px 24px; display: flex; flex-direction: column; gap: 20px; font-family: 'Cairo', sans-serif; overflow-y: auto; }
-.lc-invite-head { display: flex; align-items: center; justify-content: space-between; }
-.lc-invite-title { font-size: 19px; font-weight: 900; color: #fef4f4; }
-.lc-invite-close { border: none; background: transparent; font-size: 20px; font-weight: 900; color: #fef4f4; cursor: pointer; line-height: 1; }
-.lc-invite-team-block { border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-.lc-invite-team-name { font-size: 16px; font-weight: 900; color: #fef4f4; }
-.lc-invite-team-code { font-size: 13px; color: #E2C8A8; font-weight: 700; }
-.lc-invite-hint { font-size: 12px; color: #fef4f4; opacity: 0.7; line-height: 1.8; }
-.lc-invite-done { margin-top: auto; padding: 14px; border: none; border-radius: 12px; background: #5B0E1A; color: #fef4f4; font-family: inherit; font-weight: 900; font-size: 15px; cursor: pointer; }
+/* شاشة تمهيدية عند دخول اللعب / بداية كل جولة */
+.lc-intro { position: fixed; inset: 0; z-index: 220; background: var(--lc-bg); display: grid; place-items: center; animation: lc-intro-out 1.6s ease forwards; pointer-events: none; }
+.lc-intro-box { display: flex; flex-direction: column; align-items: center; gap: 18px; animation: lc-pop .7s cubic-bezier(.2,1.3,.35,1); }
+.lc-intro-title { font: 700 clamp(48px,8vw,120px)/1.1 var(--lc-font); background: linear-gradient(180deg, #f4f2f8, #c4b5fd); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 0 0 60px rgba(139,92,246,.35); }
+.lc-intro-pill { font-size: clamp(16px,1.6vw,22px); }
+@keyframes lc-intro-out { 0% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+
+/* نافذة الإجابة الصحيحة (نفس نافذة سؤال أسرع إجابة) */
+.lc-modal {
+    position: relative; overflow: hidden; width: min(880px, 100%); max-height: calc(100vh - 32px); overflow-y: auto;
+    padding: clamp(22px,3vw,40px) clamp(22px,3.4vw,48px); border-radius: 36px;
+    background: rgba(12,11,18,.94); border: 1px solid var(--lc-line);
+    box-shadow: 0 40px 120px rgba(0,0,0,.6), 0 0 100px rgba(124,58,237,.15);
+    display: flex; flex-direction: column; align-items: center; gap: clamp(14px,2vh,22px); text-align: center;
+    animation: lc-pop .6s cubic-bezier(.2,1.2,.35,1);
+}
+.lc-modal-halo { position: absolute; top: -140px; left: 50%; width: 560px; height: 240px; margin-left: -280px; border-radius: 50%; background: var(--tc-halo); filter: blur(44px); pointer-events: none; }
+.lc-modal > *:not(.lc-modal-halo) { position: relative; }
+.lc-answer-modal { gap: clamp(14px,2.2vh,22px); }
+.lc-answer-block { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: clamp(14px,2vh,20px) clamp(16px,2vw,28px); border-radius: 24px; background: rgba(255,255,255,.035); border: 1px solid var(--lc-line-soft); }
+.lc-answer-block-ok { background: linear-gradient(180deg, rgba(52,211,153,.1), rgba(52,211,153,.03)); border-color: rgba(52,211,153,.28); }
+.lc-answer-label { font: 600 clamp(12px,1vw,14px) var(--lc-font); color: var(--lc-dim-2); letter-spacing: .3px; }
+.lc-answer-block-ok .lc-answer-label { color: #6ee7b7; }
+.lc-answer-question { font: 600 clamp(20px,2vw,30px)/1.55 var(--lc-font); color: var(--lc-text); text-wrap: balance; }
+.lc-answer-text { font: 700 clamp(44px,5.4vw,80px)/1.2 var(--lc-font); color: #6ee7b7; text-shadow: 0 0 34px rgba(52,211,153,.35); text-wrap: balance; }
+.lc-answer-who { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.lc-answer-ring { padding: 4px; display: block; border-radius: 50%; background: linear-gradient(160deg, color-mix(in srgb, var(--tc) 40%, #fff 60%), var(--tc) 55%, color-mix(in srgb, var(--tc) 55%, #0c0b12 45%)); box-shadow: 0 0 34px var(--tc-halo); }
+.lc-answer-ring .lc-av-xl { display: grid; width: clamp(72px,7vw,104px); height: clamp(72px,7vw,104px); font-size: clamp(28px,3vw,42px); border: 4px solid #0c0b12 !important; }
+.lc-answer-player { font: 700 clamp(22px,2.2vw,32px) var(--lc-font); max-width: 70vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-answer-done {
+    width: min(280px, 100%); height: 52px; border-radius: 999px; cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--tc) 55%, transparent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--tc) 22%, transparent), color-mix(in srgb, var(--tc) 8%, transparent));
+    color: color-mix(in srgb, var(--tc) 45%, #fff 55%); font: 700 18px var(--lc-font);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 8px 24px color-mix(in srgb, var(--tc) 18%, transparent);
+    transition: background .2s, transform .15s;
+}
+.lc-answer-done:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--tc) 34%, transparent), color-mix(in srgb, var(--tc) 14%, transparent)); }
+.lc-answer-done:active { transform: scale(.97); }
+.lc-team-tag { display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px; border-radius: 999px; background: color-mix(in srgb, var(--tc) 12%, transparent); border: 1px solid color-mix(in srgb, var(--tc) 35%, transparent); font: 600 clamp(13px,1.2vw,16px) var(--lc-font); color: var(--tc); }
+
+/* درج إعدادات المباراة */
+.lc-drawer-backdrop { position: fixed; inset: 0; z-index: 240; background: rgba(0,0,0,.45); animation: lc-fade .2s ease; }
+.lc-drawer {
+    position: fixed; top: 80px; right: 0; bottom: 0; z-index: 250; width: min(400px, 100vw);
+    display: flex; flex-direction: column; background: rgba(12,11,18,.97); border-left: 1px solid var(--lc-line);
+    box-shadow: -30px 0 90px rgba(0,0,0,.5); animation: lc-drawer-in .3s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes lc-drawer-in { from { transform: translateX(100%); } to { transform: none; } }
+.lc-drawer-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
+.lc-drawer > .lc-drawer-head { flex-shrink: 0; padding: 20px 22px 14px; border-bottom: 1px solid var(--lc-line-soft); }
+.lc-drawer-title { font: 700 19px var(--lc-font); }
+.lc-drawer-body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 22px 16px; display: flex; flex-direction: column; gap: 12px; }
+.lc-row-flat { border-bottom: 1px solid var(--lc-line-soft); }
+.lc-drawer-section-title { font: 600 14px var(--lc-font); color: var(--lc-dim); margin-top: 4px; }
+.lc-roster { border-radius: 18px; background: rgba(255,255,255,.025); border: 1px solid var(--lc-line-soft); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.lc-roster-team { display: flex; align-items: center; gap: 8px; font: 700 15px var(--lc-font); color: var(--tc); }
+.lc-roster-count { margin-right: auto; font: 600 13px var(--lc-font); color: var(--lc-dim); }
+.lc-roster-row { display: flex; align-items: center; gap: 10px; height: 42px; padding: 0 6px 0 5px; border-radius: 999px; background: rgba(255,255,255,.03); }
+.lc-roster-name { flex: 1; min-width: 0; font: 600 14px var(--lc-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-drawer-roster-remove { width: 28px; height: 28px; flex-shrink: 0; border: none; background: transparent; color: #fca5a5; cursor: pointer; display: grid; place-items: center; opacity: .75; }
+.lc-drawer-roster-remove:hover { opacity: 1; }
+.lc-roster-empty { font: 500 13px var(--lc-font); color: var(--lc-dim-2); padding: 4px 2px; }
+.lc-drawer-foot { flex-shrink: 0; padding: 14px 22px 22px; border-top: 1px solid var(--lc-line-soft); display: flex; flex-direction: column; gap: 10px; }
+.lc-drawer-foot > button { width: 100%; }
+
+/* نافذة دعوة لاعبين جدد */
+/* نافذة "دخول لاعبين جدد" — نفس نافذة روليت الإقصاء (زجاج بإطار بنفسجي متوهج) */
+.lc-hbtn-join { border: none; background: var(--lc-grad); color: #fff; box-shadow: 0 8px 26px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.2); }
+.lc-hbtn-join:hover { filter: brightness(1.1); background: var(--lc-grad); }
+.lc-join-overlay { position: fixed; inset: 0; z-index: 255; background: rgba(0,0,0,.45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: grid; place-items: center; animation: lc-fade .25s ease; }
+.lc-join {
+    width: min(560px, calc(100vw - 16px)); height: min(720px, calc(100vh - 16px)); display: flex; flex-direction: column; overflow: hidden;
+    background: rgba(12,11,18,.4); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); border: 2px solid rgba(167,139,250,.7); border-radius: 28px;
+    box-shadow: 0 0 0 6px rgba(139,92,246,.12), 0 0 60px rgba(139,92,246,.3), 0 40px 120px rgba(0,0,0,.6); animation: lc-pop .45s cubic-bezier(.2,1.25,.35,1);
+}
+.lc-join-head { flex-shrink: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: clamp(18px,5vw,28px) clamp(16px,5vw,28px) clamp(14px,4vw,22px); }
+.lc-join-titles { display: flex; flex-direction: column; gap: 8px; }
+.lc-join-pill { align-self: flex-start; font-size: 13px; padding: 6px 14px; }
+.lc-join-title { font: 700 clamp(19px,5vw,26px)/1.35 var(--lc-font); }
+.lc-join-sub { font: 500 clamp(14px,3.6vw,17px)/1.6 var(--lc-font); color: #cfcad9; }
+.lc-join-x { flex-shrink: 0; width: 44px; height: 44px; }
+.lc-join-keys { flex-shrink: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 clamp(16px,5vw,28px) clamp(14px,4vw,22px); border-bottom: 1px solid rgba(167,139,250,.25); }
+.lc-join-key { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 12px; border-radius: 18px; background: rgba(255,255,255,.03); border: 1px solid color-mix(in srgb, var(--tc) 35%, transparent); }
+.lc-join-key-name { display: flex; align-items: center; gap: 6px; max-width: 100%; font: 600 14px var(--lc-font); color: var(--lc-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-join-key-cmd { max-width: 100%; font: 700 clamp(18px,4vw,24px) var(--lc-font); color: var(--tc); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-join-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: clamp(14px,4vw,20px) clamp(16px,5vw,28px); }
+.lc-join-count { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; font: 600 15px var(--lc-font); color: #cfcad9; }
+.lc-join-count b { color: var(--lc-accent); font-weight: 700; }
+.lc-join-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; }
+.lc-join-empty { flex: 1; min-height: 120px; display: grid; place-items: center; border-radius: 20px; border: 1.5px dashed rgba(167,139,250,.3); color: var(--lc-dim-2); font: 500 16px var(--lc-font); }
+.lc-join-foot { flex-shrink: 0; padding: clamp(14px,4vw,20px) clamp(16px,5vw,28px) clamp(16px,5vw,28px); }
+.lc-join-foot .lc-btn-primary { width: 100%; height: 56px; font-size: 18px; }
 
 /* ==========================================================================
-   4/5) شاشتا الفوز بالجولة وملخص الجولة
+   4/5) الفوز بالجولة والنتيجة النهائية — نفس نافذة الفائز بروليت الإقصاء:
+   فوق شاشة اللعب والخلفية مغبّشة، وبطاقة WINNER لكل لاعب فائز
    ========================================================================== */
-.lc-roundwinner-screen, .lc-roundsummary-screen, .lc-result-screen {
-    width: 100%; min-height: 100vh; overflow-y: auto; box-sizing: border-box; font-family: 'Cairo', sans-serif;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px; position: relative;
+@keyframes agpPop { 0% { opacity: 0; transform: scale(.85) translateY(10px); } 100% { opacity: 1; transform: none; } }
+@keyframes lc-crown { 0% { opacity: 0; transform: translateX(-50%) translateY(-14px) rotate(-6deg); } 60% { opacity: 1; } 100% { opacity: 1; transform: translateX(-50%) translateY(0) rotate(0); } }
+@keyframes agpShine { 0% { transform: translateX(-140%) rotate(20deg); } 100% { transform: translateX(240%) rotate(20deg); } }
+.lc-win-overlay {
+    position: fixed; inset: 0; z-index: 260; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 16px; background: rgba(8,4,16,.38); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    font-family: 'Zain', var(--lc-font); font-size: 18px; animation: lc-fade .3s ease;
 }
-/* خلفية معتمة دائماً بغض النظر عن سطوع لون الفريق الفائز (بما إن توهج
-   .lc-roundwinner-pulse يأخذ لون الفريق نفسه، وبعض الألوان فاتحة) --
-   تدرّج أغمق + طبقة تعتيم ثابتة فوقه قبل عنصر التوهج. */
-.lc-roundwinner-screen { gap: 26px; background: radial-gradient(ellipse at center, #1a0806 0%, #050302 65%); }
-.lc-roundsummary-screen, .lc-result-screen { background: radial-gradient(ellipse at top, #1a0806 0%, #050302 60%); }
-
-.lc-roundwinner-pulse-wrap { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; mask-image: radial-gradient(circle at center, black 0%, transparent 70%); -webkit-mask-image: radial-gradient(circle at center, black 0%, transparent 70%); }
-.lc-roundwinner-pulse { position: absolute; inset: 0; opacity: 0.14; animation: lc-intro-dim 1.4s ease-in-out infinite alternate; }
-
-.lc-hxpop { animation: lc-hx-pop 0.6s ease; }
-.lc-hxpop-delay { animation: lc-hx-pop 0.7s ease 0.1s; }
-@keyframes lc-hx-pop { 0% { transform: scale(0.8); opacity: 0.4; } 60% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
-
-.lc-roundwinner-head { text-align: center; font-family: 'Baloo Bhaijaan 2', sans-serif; position: relative; z-index: 1; }
-.lc-roundwinner-caption { font-size: 14px; font-weight: 800; color: var(--lc-text-tertiary); letter-spacing: 2px; margin-bottom: 6px; font-family: 'Cairo', sans-serif; }
-/* نص أبيض ثابت دائماً (بدل لون الفريق مباشرة) لضمان الوضوح فوق الخلفية
-   الغامقة مهما كان لون الفريق نفسه غامقاً؛ هوية الفريق تظهر بشريط اللون
-   الصغير تحت الاسم بدلاً من تلوين النص الكبير نفسه. */
-.lc-roundwinner-name { font-size: clamp(46px,8vw,88px); font-weight: 900; line-height: 1.1; color: #fef4f4; max-width: 92%; text-shadow: 0 0 32px rgba(255,255,255,0.45), 0 8px 32px rgba(0,0,0,0.65); }
-.lc-roundwinner-accent { width: 90px; height: 6px; border-radius: 999px; margin: 12px auto 0; }
-.lc-roundwinner-sub { font-size: 16px; font-weight: 800; color: #fef4f4; margin-top: 10px; font-family: 'Cairo', sans-serif; }
-
-.lc-avatar-row { display: flex; flex-wrap: wrap; gap: 22px; justify-content: center; position: relative; z-index: 1; }
-.lc-avatar-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.lc-avatar-circle { border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fef4f4; font-weight: 900; border: 3px solid #fef4f4; box-shadow: 0 10px 24px rgba(0,0,0,0.4); flex-shrink: 0; }
-.lc-avatar-circle.lc-avatar-lg { width: 104px; height: 104px; font-size: 36px; }
-.lc-avatar-circle.lc-avatar-sm { width: 68px; height: 68px; font-size: 22px; }
-/* عرض أكبر لكل بطاقة لاعب فائز حتى يتّسع اسمه لأكثر من سطر دون ما
-   يتراكب فوق البطاقة المجاورة له بالصف -- كسر الكلمة الطويلة (اسم
-   بلا مسافات) بدل ما يفيض خارج عرضها الثابت. */
-.lc-avatar-item.lc-avatar-item-lg { width: 138px; }
-.lc-avatar-item.lc-avatar-item-sm { width: 100px; }
-.lc-avatar-name { font-weight: 800; color: #fef4f4; text-align: center; width: 100%; overflow-wrap: break-word; word-break: break-word; }
-.lc-avatar-item-lg .lc-avatar-name { font-size: 17px; }
-.lc-avatar-item-sm .lc-avatar-name { font-size: 14px; }
-
-.lc-roundwinner-cta { margin-top: 6px; padding: 15px 36px; border: none; border-radius: 12px; color: #fef4f4; font-family: 'Cairo', sans-serif; font-weight: 900; font-size: 17px; cursor: pointer; position: relative; z-index: 1; }
-
-.lc-logo-small { position: relative; z-index: 1; }
-.lc-logo-small .lc-logo3d-line1, .lc-logo-small .lc-logo3d-line3 { font-size: clamp(20px,2.4vw,32px); }
-.lc-logo-small .lc-logo3d-line2 { font-size: clamp(11px,1vw,15px); }
-
-.lc-round-end-caption { font-size: 13px; font-weight: 800; color: var(--lc-text-tertiary); letter-spacing: 2px; position: relative; z-index: 1; }
-.lc-score-compare { display: flex; gap: 40px; align-items: center; position: relative; z-index: 1; }
-.lc-score-compare-item { text-align: center; }
-.lc-score-compare-val { font-weight: 900; color: #fef4f4; }
-/* شارة بخلفية لون الفريق ونص أبيض ثابت -- نفس نمط شارة الفريق بتبويب
-   الإجابة الصحيحة، لضمان الوضوح مهما كان لون الفريق غامقاً. */
-.lc-score-compare-name { display: inline-block; padding: 4px 14px; border-radius: 999px; font-size: 14px; color: #fef4f4; margin-top: 8px; font-weight: 800; }
-.lc-score-compare-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.2); }
-.lc-roundsummary-cta { margin-top: 8px; padding: 14px 34px; border: none; border-radius: 12px; color: #fef4f4; font-family: inherit; font-weight: 900; font-size: 16px; cursor: pointer; }
+.lc-win-box { max-width: 100%; max-height: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.lc-win-title { margin: 0 0 6px; font-size: 1.6em; font-weight: 800; color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,.65); text-wrap: balance; }
+.lc-win-team { display: inline-flex; align-items: center; gap: 10px; margin-top: 6px; padding: 6px 18px; border-radius: 999px; background: color-mix(in srgb, var(--tc) 14%, transparent); border: 1px solid color-mix(in srgb, var(--tc) 40%, transparent); color: var(--tc); font: 700 20px var(--lc-font); }
+/* منطقة البطاقات بارتفاع محدود -- كل البطاقات تظهر فيها (تتصغّر حسب العدد)، والنافذة ما تكبر */
+.lc-win-scroll {
+    flex-shrink: 1; min-height: 0; width: min(1120px, calc(100vw - 32px)); height: min(440px, calc(100vh - 250px));
+    margin: 18px 0 24px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+}
+/* البطاقة الأساسية أصغر (0.75 من بطاقة روليت الإقصاء)، وتتصغّر أكثر تلقائياً لو اللاعبين كثار */
+.lc-win-cards .lc-wcard, .lc-win-cards .lc-win-owned { zoom: .75; }
+.lc-win-cards { width: 100%; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; align-content: center; }
+.lc-wcard { position: relative; width: 200px; display: flex; flex-direction: column; align-items: center; animation: agpPop .45s cubic-bezier(.2,1,.3,1) both; }
+.lc-wcard-crown { position: absolute; top: 4px; left: 50%; z-index: 3; filter: drop-shadow(0 3px 4px rgba(0,0,0,.35)); animation: lc-crown .6s cubic-bezier(.2,1.4,.4,1) .15s both; }
+.lc-wcard-crown svg { display: block; fill: var(--wc); stroke: color-mix(in srgb, var(--wc) 55%, #000); stroke-linejoin: round; }
+.lc-wcard-body {
+    position: relative; width: 200px; height: 300px; margin-top: 36px; border-radius: 22px; overflow: hidden;
+    background: linear-gradient(165deg, rgba(30,20,52,.74) 0%, rgba(13,10,24,.84) 100%); border: 1.5px solid var(--wc-a);
+    box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.04), 0 0 40px var(--wc-c); backdrop-filter: blur(2px);
+}
+.lc-wcard-shine { position: absolute; top: 0; left: 0; width: 60%; height: 100%; background: linear-gradient(75deg, transparent 40%, rgba(255,255,255,.12) 50%, transparent 60%); animation: agpShine 2.6s ease-in-out .6s infinite; pointer-events: none; }
+.lc-wcard-inner { position: relative; z-index: 2; height: 100%; padding: 18px 14px 16px; display: flex; flex-direction: column; align-items: center; }
+.lc-wcard-title { font-size: 15px; letter-spacing: 3px; font-weight: 800; color: var(--wc); margin-bottom: 12px; }
+.lc-av.lc-wcard-av { width: 84px; height: 84px; border-width: 2.5px; box-shadow: 0 4px 10px rgba(0,0,0,.4); font-size: 1.4em; }
+.lc-wcard-name { margin-top: 12px; max-width: 100%; font-size: 17px; font-weight: 800; color: #FBF6EC; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-wcard-foot { margin-top: auto; width: 100%; padding-top: 10px; border-top: 1px solid var(--wc-b); }
+.lc-wcard-main { display: block; font-weight: 800; letter-spacing: 1px; color: var(--wc); text-shadow: 0 2px 6px rgba(0,0,0,.4); line-height: 1.1; font-size: 18px; }
+.lc-wcard-sub { display: block; margin-top: 4px; font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--wc-a); text-wrap: balance; }
+.lc-win-owned { width: 240px; max-width: 100%; line-height: 0; animation: agpPop .45s cubic-bezier(.2,1,.3,1) both; }
+.lc-win-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 520px; max-width: 100%; }
+.lc-wbtn {
+    flex: 1; min-width: 150px; height: 46px; padding: 0 20px; border-radius: 999px; font-family: inherit; font-weight: 700; font-size: 15px; cursor: pointer;
+    transition: filter .2s, transform .15s; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: #f4f2f8;
+}
+.lc-wbtn:hover { filter: brightness(1.25); }
+.lc-wbtn:active { transform: scale(.97); }
+.lc-wbtn-primary { border: none; background: linear-gradient(90deg, #7c3aed, #a855f7); color: #fff; box-shadow: 0 8px 22px rgba(124,58,237,.4); }
+.lc-wbtn-primary:hover { filter: brightness(1.1); }
+.lc-wbtn-soft { border: 1px solid rgba(167,139,250,.55); background: rgba(139,92,246,.16); color: #ddd6fe; }
+.lc-wbtn-soft:hover { filter: brightness(1.2); }
 
 /* ==========================================================================
-   6) شاشة النتيجة النهائية
+   انيميشن اكتمال الخط المتصل (playConnectionAnimation) — هادي وفخم
    ========================================================================== */
-.lc-result-headline { font-size: clamp(44px,7.5vw,84px); font-weight: 900; color: #fef4f4; text-align: center; max-width: 92%; position: relative; z-index: 1; text-shadow: 0 0 32px rgba(255,255,255,0.45), 0 6px 28px rgba(0,0,0,0.55); }
-.lc-result-score-val { font-size: clamp(56px,8vw,88px); }
-.lc-result-winners-card { border-radius: 16px; padding: 22px 28px; display: flex; flex-direction: column; gap: 14px; min-width: 280px; max-width: 90vw; position: relative; z-index: 1; box-shadow: 0 20px 40px rgba(0,0,0,0.4); background: var(--lc-drawer-bg); border-width: 2px; border-style: solid; }
-.lc-result-winners-title { font-size: 13px; font-weight: 800; color: var(--lc-beige); text-align: center; }
-.lc-result-winners-row { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; }
-.lc-result-cta { margin-top: 4px; padding: 14px 34px; border: none; border-radius: 12px; color: #fef4f4; font-family: inherit; font-weight: 900; font-size: 16px; cursor: pointer; position: relative; z-index: 1; }
+.lc-board-won .lc-hex:not(.lc-hex-win) { animation: lc-win-dim .8s ease forwards; }
+@keyframes lc-win-dim { to { opacity: .28; filter: saturate(.4) blur(.6px); } }
+.lc-hex.lc-hex-win { z-index: 3; animation: lc-hex-win 1s cubic-bezier(.22,1,.36,1) both; }
+.lc-hex.lc-hex-win .lc-hex-inner { position: relative; overflow: hidden; }
+.lc-hex.lc-hex-win .lc-hex-inner::after {
+    content: ''; position: absolute; inset: -20%; pointer-events: none;
+    background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.55) 50%, transparent 65%);
+    transform: translateX(-120%); animation: lc-hex-sheen 1.1s ease-out forwards; animation-delay: inherit;
+}
+@keyframes lc-hex-win {
+    0% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 0 transparent); }
+    55% { transform: scale(1.09); filter: brightness(1.35) drop-shadow(0 0 22px var(--c-glow, rgba(255,255,255,.5))); }
+    100% { transform: scale(1.06); filter: brightness(1.18) drop-shadow(0 0 14px var(--c-glow, rgba(255,255,255,.4))); }
+}
+@keyframes lc-hex-sheen { to { transform: translateX(120%); } }
+.lc-hex-t1 { --c-glow: rgba(167,139,250,.75); }
+.lc-hex-t2 { --c-glow: rgba(56,189,248,.75); }
+.lc-win-fx { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.lc-win-path { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.lc-win-path path { fill: none; stroke-linecap: round; stroke-linejoin: round; animation: lc-win-draw 1.1s cubic-bezier(.65,0,.35,1) forwards; }
+.lc-win-path-glow { stroke: var(--wc); stroke-width: 26; opacity: .35; filter: blur(12px); }
+.lc-win-path-core { stroke-width: 5; filter: drop-shadow(0 0 6px var(--wc)); }
+@keyframes lc-win-draw { to { stroke-dashoffset: 0; } }
+.lc-win-mote { position: absolute; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px 2px var(--wc); opacity: 0; animation: lc-win-mote 2.2s ease-out both; }
+@keyframes lc-win-mote {
+    0% { opacity: 0; transform: translateY(0) scale(.6); }
+    20% { opacity: .9; }
+    100% { opacity: 0; transform: translateY(-120px) scale(1); }
+}
+.lc-win-banner {
+    position: absolute; left: 50%; top: 50%; display: flex; flex-direction: column; align-items: center; gap: 4px; overflow: hidden;
+    padding: 26px 64px 24px; border-radius: 28px; white-space: nowrap;
+    background: linear-gradient(180deg, rgba(22,19,34,.86), rgba(10,9,15,.9)); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border: 1px solid color-mix(in srgb, var(--wc) 45%, rgba(255,255,255,.25));
+    box-shadow: 0 0 0 1px rgba(255,255,255,.04) inset, 0 0 80px color-mix(in srgb, var(--wc) 30%, transparent), 0 30px 80px rgba(0,0,0,.55);
+    opacity: 0; transform: translate(-50%,-46%) scale(.92); animation: lc-win-banner .9s cubic-bezier(.22,1,.36,1) forwards;
+}
+.lc-win-banner-rays { position: absolute; left: 50%; top: -60%; width: 520px; height: 220px; margin-left: -260px; border-radius: 50%; background: radial-gradient(ellipse, color-mix(in srgb, var(--wc) 40%, transparent), transparent 70%); pointer-events: none; }
+.lc-win-banner > :not(.lc-win-banner-rays) { position: relative; }
+.lc-win-banner-kicker { font: 600 20px var(--lc-font); letter-spacing: 6px; color: color-mix(in srgb, var(--wc) 60%, #fff 40%); }
+.lc-win-banner-name { font: 700 70px/1.15 var(--lc-font); background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--wc) 70%, #fff 30%)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 24px color-mix(in srgb, var(--wc) 55%, transparent)); }
+.lc-win-banner-sub { font: 500 20px var(--lc-font); color: var(--lc-dim); }
+@keyframes lc-win-banner { to { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
