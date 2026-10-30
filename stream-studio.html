@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-agp-studio>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>استوديو البث — ألعاب أيمن</title>
+<link rel="icon" href="favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+  /* استوديو البث — نفس هوية مكتبة الألعاب (games.html): خلفية #050508 وبنفسجي #7a3fd4 */
+  :root {
+    --bg: #050508; --panel: rgba(18,16,30,.92); --card: rgba(255,255,255,.04); --line: rgba(255,255,255,.09);
+    --text: #f4f2fb; --muted: #968ea4; --accent: #7a3fd4; --accent-2: #b28cf5; --ok: #22c55e; --warn: #f5a623; --bad: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--text); font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+  button { font: inherit; }
+  a { color: var(--accent-2); text-decoration: none; }
+
+  .st-app { display: grid; grid-template-rows: auto 1fr; height: 100vh; height: 100dvh; }
+  .st-top { display: flex; align-items: center; gap: 12px; padding: 10px clamp(12px, 2vw, 22px); border-bottom: 1px solid var(--line); background: rgba(10,9,16,.85); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+  .st-back { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); color: #cfc7e2; font-size: 14px; white-space: nowrap; }
+  .st-back:hover { border-color: rgba(178,140,245,.5); color: #fff; }
+  .st-title { font-family: "Noto Kufi Arabic", sans-serif; font-weight: 700; font-size: 18px; margin: 0; white-space: nowrap; }
+  .st-sp { flex: 1; }
+  .st-saved { font-size: 12.5px; color: var(--muted); transition: color .3s; white-space: nowrap; }
+  .st-saved.flash { color: var(--ok); }
+
+  .st-main { display: grid; grid-template-columns: 380px 1fr; min-height: 0; }
+  .st-side { border-left: 1px solid var(--line); background: var(--panel); overflow: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .st-canvas { position: relative; min-height: 0; overflow: hidden; background: radial-gradient(circle at 50% 30%, rgba(122,63,212,.14), transparent 60%), #07060c; }
+  .st-frame { position: absolute; overflow: hidden; border-radius: 6px; box-shadow: 0 0 0 1px rgba(178,140,245,.55), 0 30px 80px -30px rgba(0,0,0,.9); touch-action: none; }
+  .st-frame.bg-grid { background-color: #12101d; background-image: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px); background-size: 40px 40px; }
+  .st-frame.bg-light { background: #e8e6ef; }
+  .st-frame.bg-img { background-size: cover; background-position: center; }
+  .st-frametag { position: absolute; top: 8px; right: 10px; font-size: 12px; font-weight: 700; color: var(--accent-2); background: rgba(5,5,8,.6); padding: 3px 10px; border-radius: 999px; pointer-events: none; z-index: 1; }
+  .st-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; color: var(--muted); font-size: 15px; pointer-events: none; padding: 20px; }
+  .st-frame .agp-so-item { cursor: grab; touch-action: none; outline: 1.5px dashed rgba(255,255,255,.35); outline-offset: 5px; border-radius: 6px; }
+  .st-frame .agp-so-item.st-sel { outline: 2px solid var(--accent-2); }
+  .st-frame .agp-so-item.st-hidden { opacity: .3; }
+
+  .st-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
+  .st-card h3 { margin: 0 0 10px; font-size: 14px; font-weight: 700; color: #e2d6ff; }
+  .st-conn { display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.6; }
+  .st-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 10px 2px rgba(245,166,35,.45); }
+  .st-conn.ok .st-dot { background: var(--ok); box-shadow: 0 0 10px 2px rgba(34,197,94,.5); }
+  .st-conn a { white-space: nowrap; }
+
+  .st-tabs { display: flex; gap: 4px; padding: 4px; background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 999px; }
+  .st-tabs button { flex: 1; padding: 9px 6px; border: 0; border-radius: 999px; background: transparent; color: #cfc7e2; font-weight: 600; font-size: 14px; cursor: pointer; }
+  .st-tabs button.on { background: var(--accent); color: #fff; }
+
+  .st-tools { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .st-tool { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--text); cursor: pointer; text-align: right; }
+  .st-tool:hover { border-color: rgba(178,140,245,.5); background: rgba(122,63,212,.12); }
+  .st-tool .agp-so-ic, .st-tool .st-ti { width: 22px; height: 22px; color: var(--accent-2); flex: none; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; }
+  .st-tool b { display: block; font-size: 14px; }
+  .st-tool small { display: block; font-size: 11.5px; color: var(--muted); }
+
+  .st-layers { display: flex; flex-direction: column; gap: 6px; }
+  .st-layer { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255,255,255,.03); cursor: pointer; }
+  .st-layer.on { border-color: var(--accent-2); background: rgba(122,63,212,.16); }
+  .st-layer.off .st-lname { opacity: .45; text-decoration: line-through; }
+  .st-lname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+  .st-ltype { font-size: 11px; color: var(--muted); flex: none; }
+  .st-ib { width: 32px; height: 32px; flex: none; border-radius: 9px; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: #cfc7e2; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; padding: 0; }
+  .st-ib:hover { color: #fff; border-color: rgba(178,140,245,.5); }
+  .st-ib.danger:hover { color: #ff8fa3; border-color: rgba(239,68,68,.5); }
+  .st-hint { font-size: 13px; color: var(--muted); line-height: 1.8; text-align: center; padding: 8px 0; }
+
+  /* صفوف الإعدادات: العنوان يمين والتحكم يسار (قاعدة CLAUDE.md) */
+  .st-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: linear-gradient(160deg, rgba(255,255,255,.045), rgba(255,255,255,.015)); }
+  .st-row + .st-row { margin-top: 8px; }
+  .st-row > .st-label { text-align: right; font-size: 14px; font-weight: 600; flex: none; }
+  .st-row.col { flex-direction: column; align-items: stretch; }
+  .st-pills { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .st-row.col .st-pills { justify-content: flex-start; }
+  .st-pill { padding: 7px 13px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); color: #cfc7e2; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .st-pill.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .st-sw { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-end; }
+  .st-sw button { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); cursor: pointer; padding: 0; }
+  .st-sw button.on { border-color: #fff; box-shadow: 0 0 0 3px rgba(178,140,245,.55); }
+  .st-input { flex: 1; min-width: 0; font: inherit; font-size: 16px; color: #fff; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.16); border-radius: 10px; padding: 8px 10px; direction: rtl; resize: vertical; }
+  .st-input.num { direction: ltr; text-align: left; max-width: 140px; }
+  .st-range { flex: 1; max-width: 200px; accent-color: var(--accent-2); }
+  .st-toggle { position: relative; width: 46px; height: 26px; flex: none; }
+  .st-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .st-toggle span { position: absolute; inset: 0; border-radius: 999px; background: rgba(255,255,255,.15); transition: background .2s; cursor: pointer; }
+  .st-toggle span::after { content: ""; position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .2s; }
+  .st-toggle input:checked + span { background: var(--accent); }
+  .st-toggle input:checked + span::after { transform: translateX(-20px); }
+  .st-live { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+
+  .st-props-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .st-props-head b { font-size: 15px; }
+  .st-btn { padding: 9px 16px; border-radius: 999px; border: 1px solid rgba(178,140,245,.4); background: rgba(122,63,212,.14); color: #e2d6ff; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+  .st-btn.primary { background: linear-gradient(180deg, #8a4fe8, #7a3fd4); border-color: #7a3fd4; color: #fff; }
+  .st-btn.danger { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.45); color: #ff9aa9; }
+  .st-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; margin-top: 12px; }
+
+  .st-tgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .st-tcard { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,.03); color: var(--text); cursor: pointer; }
+  .st-tcard.on { border-color: var(--accent-2); background: rgba(122,63,212,.16); }
+  .st-thumb { height: 40px; display: flex; align-items: center; justify-content: center; }
+  .st-thumb span { display: block; border: 2px solid currentColor; border-radius: 4px; opacity: .8; }
+  .st-tcard.on .st-thumb { color: var(--accent-2); }
+  .st-tname { font-size: 12.5px; font-weight: 600; text-align: center; }
+  .st-tdim { font-size: 11px; color: var(--muted); direction: ltr; }
+
+  .st-fgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .st-fbtn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255,255,255,.03); color: #fff; cursor: pointer; }
+  .st-fbtn.on { border-color: var(--accent-2); background: rgba(122,63,212,.18); }
+  .st-fbtn span:first-child { font-size: 21px; line-height: 1.5; }
+  .st-fbtn span:last-child { font-size: 11px; color: var(--muted); }
+
+  /* آيباد عمودي وجوال: المعاينة فوق والقائمة تحت */
+  @media (max-width: 900px) {
+    .st-main { grid-template-columns: 1fr; grid-template-rows: minmax(300px, 52vh) 1fr; }
+    .st-side { border-left: 0; border-top: 1px solid var(--line); }
+    .st-canvas { order: -1; }
+    .st-title { font-size: 16px; }
+    .st-saved { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="st-app">
+  <header class="st-top">
+    <a class="st-back" href="games.html">→ مكتبة الألعاب</a>
+    <h1 class="st-title">استوديو البث</h1>
+    <span class="st-sp"></span>
+    <span class="st-saved" id="st-saved">يحفظ تلقائياً</span>
+    <label class="st-live"><span>ظاهر بالبث</span><span class="st-toggle"><input type="checkbox" id="st-enabled"><span></span></span></label>
+  </header>
+  <main class="st-main">
+    <aside class="st-side" id="st-side"></aside>
+    <section class="st-canvas" id="st-canvas">
+      <div class="st-frame" id="st-frame"></div>
+    </section>
+  </main>
+</div>
+<script src="auth/auth-client.js"></script>
+<script src="js/agp-stream-overlay.js"></script>
+<script src="js/agp-stream-studio.js"></script>
+</body>
+</html>
