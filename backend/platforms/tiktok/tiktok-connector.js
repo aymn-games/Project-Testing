@@ -6,7 +6,7 @@
  *   callbacks = {
  *     onStatus(status, message?),   // 'connecting'/'connected'/'error'، و'ended' لما ينتهي البث فعلياً في تيك توك
  *     onComment({ id, name, text, isFollower, avatarUrl, frame, entrance, elimCard, winCard }),
- *     onGift({ id, name, giftName, giftId, giftValue, repeatCount }),
+ *     onGift({ id, name, giftName, giftId, giftValue, giftImage, repeatCount }),
  *     onFollow({ id, name }),
  *     onViewerUpdate({ current, totalUsers }),  // اختياري
  *     onLike({ id, name, count, avatarUrls }),  // اختياري — count = عدد التكبيسات بهذه الدفعة
@@ -276,6 +276,17 @@ function extractFollowDebugInfo(data) {
  * الاتصال (gift الأساسي دائماً متاح، giftDetails فقط إن فُعِّل
  * enableExtendedGiftInfo — لم نفعّله هنا لإبقاء الاتصال بسيطاً).
  */
+/** رابط صورة الهدية (giftDetails.giftImage بالرسالة المفكوكة) أو null — لوعاء الهدايا بالأوفرلي. */
+function extractGiftImage(data) {
+    var details = (data && data.giftDetails) || {};
+    var lists = [details.giftImage && details.giftImage.url, details.icon && details.icon.url, data && data.gift && data.gift.image && data.gift.image.url];
+    for (var i = 0; i < lists.length; i++) {
+        var u = Array.isArray(lists[i]) ? lists[i].filter(function (x) { return typeof x === 'string' && /^https:\/\//.test(x); })[0] : null;
+        if (u) return u;
+    }
+    return null;
+}
+
 function extractGiftInfo(data) {
     var gift = (data && data.gift) || {};
     var details = (data && data.giftDetails) || {};
@@ -425,6 +436,7 @@ function createTikTokConnector() {
                 giftName: giftInfo.name,
                 giftId: (data && data.giftId) || null,
                 giftValue: giftInfo.value,
+                giftImage: extractGiftImage(data),
                 repeatCount: (data && data.repeatCount) || 1,
                 avatarUrl: extractAvatarUrl(data),
                 avatarUrls: extractAvatarUrls(data)

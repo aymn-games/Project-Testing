@@ -53,7 +53,9 @@ function serialize(s, sections, maxTop) {
         endedAt: s.endedAt,
         totals: s.totals,
         lists: lists,
-        avatars: avatars
+        avatars: avatars,
+        recentGifts: s.recentGifts || [],
+        giftSeq: s.giftSeq || 0
     };
 }
 
@@ -81,6 +83,15 @@ function deserialize(o, sections, newSession) {
             });
         });
     });
+    // وعاء الهدايا (حقول أُضيفت لاحقاً — الصفوف القديمة بدونها)
+    s.recentGifts = (Array.isArray(o.recentGifts) ? o.recentGifts : []).filter(function (g) { return g && num(g.seq) > 0; }).map(function (g) {
+        return {
+            seq: num(g.seq), name: String(g.name || ''), img: typeof g.img === 'string' ? g.img : null,
+            giftId: g.giftId != null ? String(g.giftId) : null,
+            count: num(g.count) || 1, diamonds: num(g.diamonds), user: String(g.user || ''), at: num(g.at)
+        };
+    });
+    s.giftSeq = Math.max(num(o.giftSeq), s.recentGifts.length ? s.recentGifts[s.recentGifts.length - 1].seq : 0);
     (Array.isArray(o.avatars) ? o.avatars : []).forEach(function (pair) {
         if (Array.isArray(pair) && pair[0] != null && Array.isArray(pair[1])) s.avatars.set(pair[0], pair[1].slice(0, 3));
     });

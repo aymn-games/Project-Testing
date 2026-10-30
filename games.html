@@ -2023,6 +2023,37 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.addEventListener('visibilitychange', function(){ if (!document.hidden) fetchLiveStreams(); });
 </script>
 <script>
+  // زر «استوديو البث» (stream-studio.html) أعلى المكتبة تحت العنوان — يفتح
+  // صفحة تصميم أوفرلي البث (js/agp-stream-studio.js). الصفحة مبنية بعد
+  // التحميل، فنحاول كل 300ms لين يطلع العنوان (نفس أسلوب بانر الإطارات).
+  function mountStudioButton(){
+    if (document.querySelector('[data-studio-btn]')) return true;
+    var heading = Array.prototype.slice.call(document.querySelectorAll('h1')).find(function(h){
+      return h.textContent.trim() === 'مكتبة الألعاب';
+    });
+    var host = heading && heading.parentNode;
+    if (!host) return false;
+    var a = document.createElement('a');
+    a.href = 'stream-studio.html';
+    a.className = 'nl-btn-glossy';
+    a.setAttribute('data-studio-btn', '1');
+    a.style.cssText = 'display:inline-flex;align-items:center;gap:10px;margin-top:22px;padding:13px 26px;border-radius:999px;' +
+      'background:linear-gradient(180deg,#8a4fe8,#7a3fd4);color:#f3ecff;font-weight:700;font-size:15px;' +
+      'box-shadow:0 18px 40px -18px rgba(122,63,212,.9);transition:transform .25s';
+    a.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5z"/><path d="m2 16 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>';
+    a.appendChild(document.createTextNode('استوديو البث — صمّم شاشة بثك'));
+    a.addEventListener('mouseenter', function(){ a.style.transform = 'translateY(-2px)'; });
+    a.addEventListener('mouseleave', function(){ a.style.transform = ''; });
+    host.appendChild(a);
+    return true;
+  }
+  var __studioTries = 0;
+  var __studioTimer = setInterval(function(){
+    __studioTries++;
+    if (mountStudioButton() || __studioTries >= 30) clearInterval(__studioTimer);
+  }, 300);
+</script>
+<script>
   // [عرض مؤقت] بانر خصم الإطارات فوق عنوان "مكتبة الألعاب" — يختفي
   // تلقائياً بعد PROMO_ENDS_AT (3 أيام). لعرض جديد: عدّل النص/الكود/
   // التاريخ هنا، أو احذف هذا السكربت كاملاً بعد انتهاء العرض.
