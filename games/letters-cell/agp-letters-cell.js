@@ -482,11 +482,18 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function teamCode(team) { return (team === TEAM1) ? _settings.team1AccessCode : _settings.team2AccessCode; }
 
     /** صورة اللاعب الدائرية (أول حرف من اسمه تحت الصورة لو ما تحمّلت). */
+    // تدرّج لون كل فريق نفسه اللي بخلايا الرقعة (.lc-hex-t1/.lc-hex-t2 بالـCSS)
+    // -- يُستخدم باللوبي والصور عشان ألوان اللوبي تطابق ألوان اللعبة.
+    var TEAM_FILLS = {};
+    TEAM_FILLS[TEAM1_DEFAULT_COLOR] = 'linear-gradient(165deg,#a78bfa 0%,#8b5cf6 45%,#6d28d9 100%)';
+    TEAM_FILLS[TEAM2_DEFAULT_COLOR] = 'linear-gradient(165deg,#38bdf8 0%,#0ea5e9 45%,#0369a1 100%)';
+    function teamFill(color) { return TEAM_FILLS[color] || 'linear-gradient(135deg,' + color + ',' + hexToRgba(color, 0.4) + ')'; }
+
     function avatarHtml(p, color, cls) {
         var name = playerLabel(p);
         var initial = '';
         for (var i = 0; i < name.length; i++) { if (/[^\s_\d@]/.test(name.charAt(i))) { initial = name.charAt(i); break; } }
-        return '<span class="lc-av' + (cls ? ' ' + cls : '') + '" style="background:linear-gradient(135deg,' + color + ',' + hexToRgba(color, 0.4) + ');border-color:' + color + '">' +
+        return '<span class="lc-av' + (cls ? ' ' + cls : '') + '" style="background:' + teamFill(color) + ';border-color:' + color + '">' +
             escapeHtml(initial) +
             (p && p.avatarUrl ? '<img src="' + escapeAttr(p.avatarUrl) + '" alt="" onerror="this.remove()">' : '') +
         '</span>';
@@ -755,7 +762,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     function teamPanelHtml(team) {
         var color = teamColor(team);
         var players = getTeamPlayers(team);
-        return '<section class="lc-team-panel" style="--tc:' + color + ';--tc-soft:' + hexToRgba(color, 0.08) + ';--tc-bd:' + hexToRgba(color, 0.5) + ';--tc-halo:' + hexToRgba(color, 0.18) + '">' +
+        return '<section class="lc-team-panel" style="--tc:' + color + ';--tc-fill:' + teamFill(color) + ';--tc-soft:' + hexToRgba(color, 0.08) + ';--tc-bd:' + hexToRgba(color, 0.5) + ';--tc-halo:' + hexToRgba(color, 0.18) + '">' +
             '<span class="lc-team-panel-halo"></span>' +
             '<div class="lc-team-panel-head">' +
                 '<div class="lc-team-panel-top">' +
