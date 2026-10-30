@@ -460,7 +460,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'filter:drop-shadow(0 4px 6px rgba(0,0,0,.45));',
             'transition:transform .45s cubic-bezier(.34,1.4,.64,1);}',
             '.mc-chair-img{height:100%;width:auto;max-width:100%;object-fit:contain;display:block;pointer-events:none;user-select:none;',
-            'filter:saturate(.62) sepia(.15) brightness(.8) contrast(.92);}',
+            'filter:saturate(.9) brightness(.95) contrast(.95);}',
             '.mc-ch.mc-numbered .mc-ch-glyph{transform:scale(1.04);}',
             /* رقم الكرسي: مربع بحواف مدوّرة شوي، خلفية بنفسجي داكن وحد فاتح،
              * والرقم كبير بخط عريض واضح */
@@ -1259,8 +1259,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    // الكرسي: صورة كرسي خشب بظهر أعمدة — images/chair-wood.png بخلفية شفافة.
-    var CHAIR_IMG = '<img class="mc-chair-img" src="images/chair-wood.png" alt="" draggable="false">';
+    // الكرسي: صورة كرسي خشب بني غامق بظهر أعمدة — images/chair-final.png بخلفية شفافة.
+    var CHAIR_IMG = '<img class="mc-chair-img" src="images/chair-final.png" alt="" draggable="false">';
 
     function renderChairs() {
         var wrap = el('mc-chairs');
