@@ -1622,28 +1622,26 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     // ================================================================
     // 4) شاشة الفوز بالجولة (خط متصل) + 5) النتيجة النهائية
     // ================================================================
-    // نفس شاشة الفائز بأسرع إجابة: توهج بلون الفريق، اسمه كبير بلونه،
-    // وكروت اللاعبين الفائزين تحته.
-    var WIN_CARDS_MAX = 12;
+    // نفس شاشة الفائز بأسرع إجابة (نمط الفريقين): توهج بلون الفريق، اسمه
+    // كبير بلونه، وكروت اللاعبين الفائزين تحته داخل منطقة بارتفاع ثابت --
+    // مهما كثر اللاعبين الشاشة ما تكبر، الكروت تصير سكرول.
 
     function winPlayerCardHtml(p, color, i) {
         return '<div class="lc-win-card" style="animation-delay:' + (0.15 + i * 0.06).toFixed(2) + 's">' +
             '<span class="lc-win-card-glow"></span>' +
             avatarHtml(p, color, 'lc-av-win') +
             '<span class="lc-win-card-name">' + escapeHtml(playerLabel(p)) + '</span>' +
+            '<span class="lc-win-card-tag">فائز</span>' +
         '</div>';
     }
     function winPlayersHtml(players, color, winCardLines) {
-        var shown = players.slice(0, WIN_CARDS_MAX);
-        var html = shown.map(function (p, i) {
+        return players.map(function (p, i) {
             // بطاقة الفوز المملوكة (js/agp-win-card.js) تحل محل بطاقة اللاعب العادية بنفس المكان
             if (winCardLines && AGP.winCard && AGP.winCard.canShow(p)) {
                 return '<div class="lc-win-owned">' + AGP.winCard.renderHtml(p, winCardLines) + '</div>';
             }
             return winPlayerCardHtml(p, color, i);
         }).join('');
-        if (players.length > shown.length) html += '<div class="lc-win-more">+' + (players.length - shown.length) + ' لاعب</div>';
-        return html;
     }
 
     function winScreenHtml(team, pillHtml, subtitle, playersHtml, ctaHtml) {
@@ -1658,7 +1656,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '<span class="lc-win-name">' + escapeHtml(teamName(team)) + '</span>' +
                     '<span class="lc-win-sub">' + subtitle + '</span>' +
                 '</div>' +
-                '<div class="lc-win-players">' + playersHtml + '</div>' +
+                '<div class="lc-win-scroll"><div class="lc-win-players">' + playersHtml + '</div></div>' +
                 ctaHtml +
             '</div>' +
         '</div>';
@@ -1679,7 +1677,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'خط متصل · ' + Math.max(prospective1, prospective2) + ' - ' + Math.min(prospective1, prospective2) + ' بالجولات',
             'فاز بالجولة ' + _round,
             winPlayersHtml(getTeamPlayers(winningTeam), teamColor(winningTeam), null),
-            '<button type="button" id="lc-roundwinner-cta" class="lc-btn-primary lc-win-cta">' + ctaLabel + ICON_ARROW + '</button>'
+            '<div class="lc-win-actions"><button type="button" id="lc-roundwinner-cta" class="lc-btn-primary lc-win-cta">' + ctaLabel + ICON_ARROW + '</button></div>'
         );
         fitStages();
         el('lc-roundwinner-cta').addEventListener('click', continueAfterRoundWin);
@@ -1699,8 +1697,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'فاز بالمباراة',
             winPlayersHtml(getTeamPlayers(winningTeam), teamColor(winningTeam), lines),
             '<div class="lc-win-actions">' +
-                '<button type="button" id="lc-result-exit" class="lc-btn-ghost lc-win-cta">خروج</button>' +
-                '<button type="button" id="lc-result-restart" class="lc-btn-primary lc-win-cta">لعبة جديدة' + ICON_ARROW + '</button>' +
+                '<button type="button" id="lc-result-restart" class="lc-btn-primary lc-win-cta">' + ICON_SHUFFLE + 'مباراة جديدة</button>' +
+                '<button type="button" id="lc-result-exit" class="lc-btn-ghost lc-win-cta">' + ICON_EXIT + 'خروج لمكتبة الألعاب</button>' +
             '</div>'
         );
         fitStages();
