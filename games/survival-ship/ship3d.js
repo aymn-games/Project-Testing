@@ -1,4 +1,4 @@
-// <ship-3d> — three.js ship scene. attr scene = JSON {players:[{id,name,skin,hair,girl,outfit,pants,out,fall}], focus:id|null, duel:[id,id]|null}
+// <ship-3d> — three.js ship scene. attr scene = JSON {players:[{id,name,skin,hair,girl,outfit,pants,out,fall,ring}], focus:id|null, duel:[id,id]|null}
 class Ship3D extends HTMLElement {
   static get observedAttributes(){ return ['scene']; }
   constructor(){ super(); this.data={players:[],focus:null}; this.figs=new Map(); this.ang=0; }
@@ -95,8 +95,11 @@ class Ship3D extends HTMLElement {
       const br=add(new T.CapsuleGeometry(.025,.13,3,6),d.hair,s*.22,.2,.55,head); br.rotation.z=Math.PI/2+s*.15;
       const ch=add(new T.SphereGeometry(.09,10,8),M('#fb7185',{transparent:true,opacity:.55}),s*.36,-.2,.47,head); ch.scale.set(1,.55,.3); }
     const mouth=add(new T.TorusGeometry(.08,.022,6,14,Math.PI),'#9f1239',0,-.2,.57,head); mouth.rotation.z=Math.PI;
+    // طوق النجاة (يظهر حول خصر اللاعب اللي عنده طوق) — 8 قطع أحمر/أبيض
+    const buoy=new T.Group(); buoy.position.y=1.0; buoy.rotation.x=Math.PI/2; buoy.visible=!!d.ring; G.add(buoy);
+    for(let i=0;i<8;i++){ const q=add(new T.TorusGeometry(.56,.15,10,6,Math.PI/4),i%2?'#ffffff':'#ef4444',0,0,0,buoy); q.rotation.z=i*Math.PI/4; }
     const sp=new T.Sprite(new T.SpriteMaterial({map:this.label(d.name),depthTest:false,transparent:true})); sp.scale.set(3.4,.85,1); sp.position.y=3.4; sp.renderOrder=10; G.add(sp);
-    G.userData={legs,arms,head,sp}; return G; }
+    G.userData={legs,arms,head,sp,buoy}; return G; }
   slots(n){ const sk=this.sk, cols=Math.max(2,Math.ceil(Math.sqrt(n*2.4))), rows=Math.ceil(n/cols), out=[]; const sx=Math.min(2.67,17/Math.max(1,cols-1)), sz=rows>1?Math.min(2.4,7.3/(rows-1)):0;
     for(let i=0;i<n;i++){ const r=Math.floor(i/cols), c=i%cols, inRow=Math.min(cols,n-r*cols); out.push(new this.T.Vector3((3.3+(c-(inRow-1)/2)*sx+(r%2?sx/2:0))*sk,1.5*sk,(r-(rows-1)/2)*sz*sk)); } return out; }
   // نمط المواجهة: مكان الثنائي جنب بعض بمقدمة السطح (الأول يمين الشاشة والثاني يساره)
@@ -109,7 +112,7 @@ class Ship3D extends HTMLElement {
       // target = المكان اللي يمشي له اللاعب (مكانه الأصلي أو مكان المواجهة) — tick() يحركه له بخطوات
       const di=D?D.indexOf(p.id):-1; f.home=sl[i]; f.duel=di>=0; f.target=di>=0?this.duelSpot(di):sl[i]; if(born) f.g.position.copy(f.target);
       if(p.fall&&f.fallT==null){ f.fallT=0; f.from=f.g.position.clone(); f.splashed=false; } if(!p.fall&&!p.out){ if(f.fallT!=null) f.g.position.copy(f.target); f.fallT=null; f.g.visible=true; f.g.rotation.set(0,0,0); } if(p.out&&!p.fall){ f.fallT=null; f.g.visible=false; }
-      f.out=p.out; if(p.out&&!p.fall) f.g.visible=false; }); }
+      f.g.userData.buoy.visible=!!p.ring; f.out=p.out; if(p.out&&!p.fall) f.g.visible=false; }); }
   // وضع الأداء: لو متوسط الإطارات نزل تحت 40/ث (بعد أول 3 ث) تنطفي الظلال، وتنضاف ship-lite للصفحة (تشيل التغبيش بالـ CSS)
   perf(raw){ if(this.lite||raw>.5) return; const p=this.pf||(this.pf={n:0,s:0,w:0}); p.w+=raw; if(p.w<3) return; p.n++; p.s+=raw;
     if(p.s>=2){ const fps=p.n/p.s; p.n=0; p.s=0; if(fps<40) this.goLite(); } }
@@ -118,7 +121,7 @@ class Ship3D extends HTMLElement {
   tick(){ const T=this.T, raw=this.clock.getDelta(), dt=Math.min(raw,.05), t=this.clock.elapsedTime, d=this.data;
     const a=this.seaG.attributes.position.array, b=this.seaBase; for(let i=0;i<a.length;i+=3){ const x=b[i], z=b[i+2]; a[i+1]=Math.sin(x*.07+t*1.3)*.75+Math.cos(z*.09+t*1.05)*.55+Math.sin((x-z)*.16+t*2.1)*.25+Math.sin((x+z)*.33+t*2.9)*.1; } this.seaG.attributes.position.needsUpdate=true; this.perf(raw);
     this.spark.material.map.offset.set(t*.012+Math.sin(t*.5)*.01,t*.018); this.spark.position.y=.55+Math.sin(t*1.2)*.12;
-    this.ship.position.y=Math.sin(t*1.05)*.32; this.ship.rotation.z=Math.sin(t*.8)*.022; this.ship.rotation.x=Math.cos(t*.62)*.028; this.flag.rotation.y=Math.sin(t*3)*.3;
+    this.ship.position.y=Math.sin(t*.8)*.14; this.ship.rotation.z=Math.sin(t*.6)*.008; this.ship.rotation.x=Math.cos(t*.5)*.01; this.flag.rotation.y=Math.sin(t*3)*.3;
     // names:false (شاشة المباراة) = بدون أسماء فوق اللاعبين
     for(const [,f] of this.figs) if(f.g.userData.sp) f.g.userData.sp.visible=d.names!==false;
     let fallF=null, focusF=d.focus!=null?this.figs.get(d.focus):null; const duelOn=Array.isArray(d.duel);
@@ -153,7 +156,7 @@ class Ship3D extends HTMLElement {
     else if(duelFs.length&&!d.win){ const M=new T.Vector3(), w=new T.Vector3(); duelFs.forEach(f=>{ f.g.getWorldPosition(w); M.add(w); }); M.divideScalar(duelFs.length);
       P.set(M.x+Math.sin(t*.25)*.4,M.y+4.6,M.z+7.4); L.set(M.x,M.y+1.3,M.z); rate=2; this.ang=Math.atan2(P.x,P.z); }
     else if(focusF){ const w=new T.Vector3(); focusF.g.getWorldPosition(w); P.set(w.x+Math.sin(t*.25)*.4,w.y+4.2,w.z+5.6); L.set(w.x,w.y+1.3,w.z); rate=2; this.ang=Math.atan2(P.x,P.z); }
-    else { const far=d.far, zm=d.zoom||1, R0=(far?88:54)/zm*(this.sk/1.5), A=this.ang+(d.yaw||0); this.ang+=dt*(far?.22:.13); P.set(Math.sin(A)*R0,Math.max(6,((far?44:26)*(this.sk/1.5)+(d.lift||0))/zm)+Math.sin(t*.2)*2,Math.cos(A)*R0); L.set(0,2,0); rate=far?1.6:1.2; }
+    else { const far=d.far, zm=d.zoom||1, R0=(far?88:54)/zm*(this.sk/1.5), A=this.ang+(d.yaw||0); this.ang+=dt*(far?.07:.04); P.set(Math.sin(A)*R0,Math.max(6,((far?44:26)*(this.sk/1.5)+(d.lift||0))/zm)+Math.sin(t*.2)*.5,Math.cos(A)*R0); L.set(0,2,0); rate=far?1.6:1.2; }
     const k=1-Math.exp(-dt*rate); cam.position.lerp(P,k); this.camLook.lerp(L,k); cam.lookAt(this.camLook);
     // صاحب الدور (قبل الفوز) ينزل لأسفل الكادر عشان بطاقة السؤال فوق ما تغطي اسمه وشخصيته
     const vt=(focusF||duelFs.length)&&!d.win&&!fallF?.2:0; this.vo=(this.vo||0)+(vt-(this.vo||0))*k; const vw=this.clientWidth||1, vh=this.clientHeight||1;
