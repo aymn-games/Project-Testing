@@ -183,6 +183,10 @@
         <span class="chip chip-teal" id="gm-round">الجولة 1 من 5</span>
         <span class="chip chip-yellow" id="gm-phase">التلميح 1 من 3</span>
         <div class="gm-bar-spacer"></div>
+        <button type="button" class="pill-exit pill-endvote hidden" id="btn-end-vote" title="لو لاعب طلع أو ما صوّت">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg>
+          <span>إنهاء التصويت</span>
+        </button>
         <button type="button" class="pill-exit" id="btn-exit" aria-haspopup="dialog">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path></svg>
           <span>خروج</span>
@@ -233,12 +237,28 @@
         </div>
       </div>
 
+      <!-- ===== كلمة الأمبوستر (قبل التصويت) ===== -->
+      <section class="gv gv-anim gv-narrow" id="gv-impguess">
+        <div class="card guess-card">
+          <span class="eyebrow eyebrow-lg c-yellow">انتهت التلميحات</span>
+          <h2 class="h2-md" id="ig-title"></h2>
+          <p class="guess-sub" id="ig-sub"></p>
+          <div class="guess-form hidden" id="guess-form">
+            <input id="guess-input" type="text" maxlength="30" placeholder="اكتب الكلمة هنا" autocomplete="off" aria-label="الكلمة">
+            <button type="button" id="btn-guess" disabled>إرسال الكلمة</button>
+          </div>
+          <div class="dots hidden" id="ig-wait" aria-hidden="true"><span></span><span></span><span></span></div>
+          <span class="cta-hint" id="ig-secs"></span>
+        </div>
+      </section>
+
       <!-- ===== مراجعة التلميحات ===== -->
       <section class="gv gv-anim" id="gv-review">
         <div class="gv-head">
           <div class="gv-title">
             <span class="eyebrow eyebrow-lg">انتهت جولات التلميحات</span>
             <h2 class="h2-lg">تلميحات اللاعبين</h2>
+            <p class="vote-notice"></p>
           </div>
           <div class="seg-tabs hide-scroll" role="tablist" id="review-tabs"></div>
         </div>
@@ -255,6 +275,7 @@
             <span class="eyebrow eyebrow-lg c-yellow">التصويت</span>
             <h2 class="h2-lg">من الأمبوستر برأيك؟</h2>
             <p class="gv-sub">اختر لاعبًا واحدًا ثم اضغط «تصويت»</p>
+            <p class="vote-notice"></p>
           </div>
           <div class="vote-progress">
             <div class="vote-progress-row"><span class="c-text3">صوّت</span><span class="fw7" id="vote-progress-text">0 من 0</span></div>
@@ -279,13 +300,9 @@
             <ul class="tally hide-scroll" id="tally"></ul>
           </div>
           <div class="card guess-card" id="guess-card">
-            <span class="eyebrow eyebrow-lg c-yellow">تخمين الأمبوستر</span>
+            <span class="eyebrow eyebrow-lg c-yellow">كلمة الأمبوستر</span>
             <h2 class="h2-md" id="guess-title"></h2>
             <p class="guess-sub" id="guess-sub"></p>
-            <div class="guess-form hidden" id="guess-form">
-              <input id="guess-input" type="text" maxlength="30" placeholder="اكتب الكلمة هنا" autocomplete="off" aria-label="تخمينك">
-              <button type="button" id="btn-guess" disabled>تأكيد التخمين</button>
-            </div>
             <div class="dots hidden" id="guess-wait" aria-hidden="true"><span></span><span></span><span></span></div>
             <div class="guess-done hidden" id="guess-done">
               <div class="guess-word" id="guess-word"></div>
@@ -448,19 +465,19 @@
     <div class="rules-chips">
       <div class="chip chip-teal">وقت محدد لكل تلميح</div>
       <div class="chip chip-teal"><span class="chip-num">2–3</span> جولات تلميحات</div>
-      <div class="chip chip-yellow">تصويت ثم تخمين الكلمة</div>
+      <div class="chip chip-yellow">تخمين الكلمة ثم التصويت</div>
     </div>
 
     <ol class="rules-list">
       <li><span class="rule-n">1</span><p>كل لاعب يحصل على كلمة سرية واحدة، باستثناء <strong class="c-yellow">الأمبوستر</strong> الذي يحصل على كلمة مختلفة جذريًا.</p></li>
       <li><span class="rule-n">2</span><p>بالتناوب، يعطي كل لاعب تلميحًا قصيرًا (كلمة أو عبارة) يتعلق بكلمته دون كشفها مباشرة — أمامه <strong class="c-teal">الوقت المحدد لكتابة التلميح</strong> (15 أو 20 أو 25 ثانية حسب إعداد الغرفة) لكل دور.</p></li>
       <li><span class="rule-n">3</span><p>إن انتهى الوقت دون إرسال تلميح، يُسجَّل دوره كـ<strong class="c-white">"تخطّى"</strong> تلقائيًا وينتقل الدور للاعب التالي.</p></li>
-      <li><span class="rule-n">4</span><p>تتكرر جولات التلميحات <strong class="c-teal">مرتين أو 3 مرات</strong> لكل اللاعبين حسب إعداد الغرفة، ثم تبدأ مرحلة التصويت.</p></li>
-      <li><span class="rule-n rule-n-y">5</span><p>في التصويت يختار كل لاعب من يظن أنه الأمبوستر؛ صاحب أعلى الأصوات يُكشف.</p></li>
+      <li><span class="rule-n">4</span><p>تتكرر جولات التلميحات <strong class="c-teal">مرتين أو 3 مرات</strong> لكل اللاعبين حسب إعداد الغرفة، ثم يكتب <strong class="c-yellow">الأمبوستر</strong> كلمته بسرية (تحت).</p></li>
+      <li><span class="rule-n rule-n-y">5</span><p>بعدها تتناقشون على راحتكم ويختار كل لاعب من يظن أنه الأمبوستر؛ صاحب أعلى الأصوات يُكشف. التصويت ما له وقت وما ينتهي إلا لما يصوّت الجميع (وللمضيف زر «إنهاء التصويت» لو لاعب طلع).</p></li>
       <li class="rule-y"><span class="rule-n rule-n-y">6</span><p><strong class="c-teal">الأبرياء</strong> : كل لاعب صوّت على الأمبوستر الصحيح يأخذ <strong class="c-teal">نقطة</strong>، ومن صوّت خطأ يأخذ صفرًا. و<strong class="c-yellow">الأمبوستر</strong> يأخذ <strong class="c-yellow">نصف نقطة</strong> عن كل لاعب لم يصوّت عليه.</p></li>
       <li class="rule-y"><span class="rule-n rule-n-y">7</span>
         <div class="rule-body">
-          <p>بعد انتهاء التصويت وكشف <strong class="c-yellow">الأمبوستر</strong>، يظهر له مربع نص ليخمّن الكلمة التي حصل عليها باقي اللاعبين.</p>
+          <p>بعد آخر تلميح وقبل التصويت، يكتب <strong class="c-yellow">الأمبوستر</strong> الكلمة اللي يظن إن باقي اللاعبين عندهم — بدون ما ينكشف (الكل يشوف «الأمبوستر يكتب الكلمة الآن…»). نتيجة تخمينه تنكشف بعد التصويت.</p>
           <div class="rule-cards">
             <div class="rule-card rule-card-y"><strong>خمّنها صح:</strong> يكسب الأمبوستر نقطتين إضافيتين</div>
             <div class="rule-card rule-card-t"><strong>أخطأ:</strong> كل لاعب آخر يأخذ نقطة</div>
@@ -556,6 +573,8 @@
      Firebase يُستورد داخل script.js كوحدة ES (type="module"). -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="words.js"></script>
+<!-- نظام نقاط المنصة (window.AGPAuth.reportMatchPoints) — لازم قبل script.js -->
+<script src="../../auth/auth-client.js"></script>
 <script type="module" src="script.js"></script>
 </body>
 </html>
