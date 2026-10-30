@@ -272,8 +272,8 @@ body.lc-active a { color: var(--lc-accent); }
 .lc-qcard-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .lc-qcard-title { font: 700 28px var(--lc-font); color: var(--lc-accent-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lc-qcard-sub { font: 500 17px var(--lc-font); color: var(--lc-dim-2); }
-.lc-qbadge { flex-shrink: 0; width: 92px; height: 106px; padding: 3px; border: none; background: rgba(167,139,250,.7); }
-.lc-qbadge-inner { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: var(--lc-grad); color: #fff; }
+.lc-qbadge { flex-shrink: 0; width: 92px; height: 106px; padding: 3px; border: none; background: color-mix(in srgb, #34d399 55%, rgba(255,255,255,.55)); }
+.lc-qbadge-inner { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: radial-gradient(120% 70% at 50% 0%, rgba(255,255,255,.28), transparent 60%), linear-gradient(170deg, color-mix(in srgb, #34d399 82%, #fff 18%), color-mix(in srgb, #34d399 62%, #0c0b12 38%)); color: #fff; }
 .lc-qbadge-letter { font: 700 52px/1 var(--lc-font); }
 .lc-qbadge-btn { cursor: pointer; background: rgba(255,255,255,.18); }
 .lc-qbadge-btn .lc-qbadge-inner { background: linear-gradient(160deg, #1d1830, #121019); color: var(--lc-accent-soft); }
@@ -305,11 +305,19 @@ body.lc-active a { color: var(--lc-accent); }
 .lc-hex-free .lc-hex-inner { background: linear-gradient(160deg, #1d1830, #110f18); color: var(--lc-text); }
 .lc-hex-free:hover { background: rgba(167,139,250,.75); }
 .lc-hex-free:hover .lc-hex-inner { background: linear-gradient(160deg, #2a2145, #16131f); }
-.lc-hex-owned { background: var(--tc); }
-.lc-hex-owned .lc-hex-inner { background: linear-gradient(160deg, var(--tc), var(--tc-dark)); color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.35); }
-.lc-hex-active { background: #f4f2f8; z-index: 2; animation: lc-hex-glow 1.4s ease-in-out infinite alternate; }
-.lc-hex-active .lc-hex-inner { background: var(--lc-grad); color: #fff; }
-@keyframes lc-hex-glow { from { filter: drop-shadow(0 0 6px rgba(167,139,250,.6)); } to { filter: drop-shadow(0 0 22px rgba(167,139,250,1)); } }
+.lc-hex-active, .lc-hex-owned { --lc-cell-c: var(--tc); }
+.lc-hex-active { --lc-cell-c: #34d399; }
+/* الخلايا الملوّنة (فريق أو سؤال مفتوح) بشكل ناعم وفخم: حافة فاتحة شفافة، تدرّج
+   هادي بإضاءة من فوق، ولمعة خفيفة داخلية -- اللون الأساسي من --lc-cell-c */
+.lc-hex-owned, .lc-hex-active { background: color-mix(in srgb, var(--lc-cell-c) 55%, rgba(255,255,255,.55)); }
+.lc-hex-owned .lc-hex-inner, .lc-hex-active .lc-hex-inner {
+    background:
+        radial-gradient(120% 70% at 50% 0%, rgba(255,255,255,.28), transparent 60%),
+        linear-gradient(170deg, color-mix(in srgb, var(--lc-cell-c) 82%, #fff 18%) 0%, color-mix(in srgb, var(--lc-cell-c) 62%, #0c0b12 38%) 100%);
+    color: #fff; text-shadow: 0 2px 12px color-mix(in srgb, var(--lc-cell-c) 40%, #000 60%);
+}
+.lc-hex-active { z-index: 2; animation: lc-hex-glow 1.8s ease-in-out infinite alternate; }
+@keyframes lc-hex-glow { from { filter: drop-shadow(0 0 6px rgba(52,211,153,.45)); } to { filter: drop-shadow(0 0 20px rgba(52,211,153,.85)); } }
 
 /* انيميشن ظهور الحرف المختار بمنتصف الشاشة */
 .lc-letter-reveal-backdrop { position: fixed; inset: 0; z-index: 149; background: rgba(7,6,11,.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); pointer-events: none; animation: lc-reveal-bg 2.4s ease forwards; }

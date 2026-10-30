@@ -1349,7 +1349,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             var isActive = _activeIdx === idx;
             var cls = 'lc-hex lc-hex-clip' + (st === 0 ? ' lc-hex-free' : ' lc-hex-owned') + (isActive ? ' lc-hex-active' : '');
             var style = 'left:' + layout.leftPct + '%;top:' + layout.topPct + '%;width:' + layout.wPct + '%;height:' + layout.hPct + '%;';
-            if (st !== 0) style += '--tc:' + teamColor(st) + ';--tc-dark:' + hexToRgba(teamColor(st), 0.55) + ';';
+            if (st !== 0) style += '--tc:' + teamColor(st) + ';';
             return '<div class="' + cls + '" data-idx="' + idx + '" style="' + style + '">' +
                 '<div class="lc-hex-inner lc-hex-clip">' + escapeHtml(letter) + '</div>' +
             '</div>';
