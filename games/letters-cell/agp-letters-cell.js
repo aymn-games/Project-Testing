@@ -441,6 +441,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var ICON_TROPHY = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8"></path><path d="M12 17v4"></path><path d="M7 4h10v5a5 5 0 0 1-10 0z"></path><path d="M17 5h3v2a3 3 0 0 1-3 3"></path><path d="M7 5H4v2a3 3 0 0 0 3 3"></path></svg>';
     var ICON_SHUFFLE = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"></path><path d="M21 3v5h-5"></path></svg>';
     var ICON_USER_ADD = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>';
+    var ICON_FULLSCREEN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"></path><path d="M21 8V5a2 2 0 0 0-2-2h-3"></path><path d="M3 16v3a2 2 0 0 0 2 2h3"></path><path d="M16 21h3a2 2 0 0 0 2-2v-3"></path></svg>';
+    var ICON_FULLSCREEN_EXIT = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3"></path><path d="M21 8h-3a2 2 0 0 1-2-2V3"></path><path d="M3 16h3a2 2 0 0 1 2 2v3"></path><path d="M16 21v-3a2 2 0 0 1 2-2h3"></path></svg>';
     var ICON_CLOCK = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>';
 
     // خلفية التوهج والنجوم -- تُبنى مرة وحدة (مواقع النجوم عشوائية) وتُعاد
@@ -1307,6 +1309,24 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         playIntro();
     }
 
+    // زر "ملء الشاشة" بالشريط العلوي لشاشة اللعب (جنب "دخول لاعبين جدد").
+    function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+    function toggleFullscreen() {
+        var d = document, de = d.documentElement;
+        try {
+            if (isFullscreen()) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+            else (de.requestFullscreen || de.webkitRequestFullscreen).call(de);
+        } catch (e) { showToast('المتصفح ما يدعم ملء الشاشة'); }
+    }
+    function onFullscreenChange() {
+        var btn = el('lc-fullscreen-btn');
+        if (!btn) return;
+        var on = isFullscreen();
+        btn.innerHTML = (on ? ICON_FULLSCREEN_EXIT : ICON_FULLSCREEN) + '<span class="lc-hbtn-label">' + (on ? 'إلغاء ملء الشاشة' : 'ملء الشاشة') + '</span>';
+    }
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+
     function openSettingsDrawer() { _settingsOpen = true; renderGameScreen(); }
     function closeSettingsDrawer() { _settingsOpen = false; renderGameScreen(); }
     // نافذة "دخول لاعبين جدد" (نفس نافذة روليت الإقصاء): وهي مفتوحة، أي
@@ -1511,7 +1531,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         drawerRosterHtml(TEAM2) +
                     '</div>' +
                     '<div class="lc-drawer-foot">' +
-                        '<button type="button" id="lc-drawer-invite" class="lc-btn-primary">' + ICON_USER_ADD + 'إدخال لاعب جديد</button>' +
                         '<button type="button" id="lc-drawer-reset" class="lc-btn-ghost">إعادة توزيع الجولة</button>' +
                         '<button type="button" id="lc-drawer-end-match" class="lc-btn-danger">إنهاء المباراة</button>' +
                     '</div>' +
@@ -1557,7 +1576,8 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 headerHtml(
                     headerBtnHtml('lc-end-match-btn', 'إنهاء المباراة', ICON_EXIT, 'exit') +
                     headerBtnHtml('lc-open-settings-btn', 'إعدادات المباراة', ICON_GEAR, 'ghost')
-                , headerBtnHtml('lc-open-join-btn', 'دخول لاعبين جدد', ICON_USER_ADD, 'join')) +
+                , headerBtnHtml('lc-fullscreen-btn', isFullscreen() ? 'إلغاء ملء الشاشة' : 'ملء الشاشة', isFullscreen() ? ICON_FULLSCREEN_EXIT : ICON_FULLSCREEN, 'ghost') +
+                  headerBtnHtml('lc-open-join-btn', 'دخول لاعبين جدد', ICON_USER_ADD, 'join')) +
                 '<div class="lc-stage lc-game-screen">' +
                     '<div class="lc-pills">' +
                         '<span class="lc-pill lc-pill-accent"><span class="lc-dot"></span>' + GAME_NAME + ' · الجولة ' + _round + '</span>' +
@@ -1672,7 +1692,6 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             el('lc-drawer-close').addEventListener('click', closeSettingsDrawer);
             el('lc-drawer-backdrop').addEventListener('click', closeSettingsDrawer);
             el('lc-drawer-end-match').addEventListener('click', endMatch);
-            el('lc-drawer-invite').addEventListener('click', openInviteModal);
             el('lc-drawer-reset').addEventListener('click', handleRoundBadgeClick);
             el('lc-drawer-timer-group').addEventListener('click', function (e) {
                 var btn = e.target.closest('.lc-timer-pill'); if (!btn) return;
@@ -1688,6 +1707,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         }
 
         el('lc-open-join-btn').addEventListener('click', openInviteModal);
+        el('lc-fullscreen-btn').addEventListener('click', toggleFullscreen);
 
         if (_inviteOpen) {
             el('lc-invite-close-x').addEventListener('click', closeInviteModal);
