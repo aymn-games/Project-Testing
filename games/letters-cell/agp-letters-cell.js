@@ -1479,7 +1479,14 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         '</div>' +
                         '<div class="lc-card lc-board-card">' +
                             '<span class="lc-board-halo"></span>' +
-                            '<div class="lc-board" style="height:' + BOARD_HEIGHT_PX + 'px;width:' + Math.round(BOARD_HEIGHT_PX * BOARD_ASPECT) + 'px">' + cellsHtml + '</div>' +
+                            // إطار الرقعة: فوق وتحت بلون الفريق الأول (بنفسجي)، يمين ويسار بلون الفريق الثاني (سماوي).
+                            '<div class="lc-board-frame" style="--c1:' + teamColor(TEAM1) + ';--c2:' + teamColor(TEAM2) + '">' +
+                                '<span class="lc-board-edge lc-board-edge-top"></span>' +
+                                '<span class="lc-board-edge lc-board-edge-bottom"></span>' +
+                                '<span class="lc-board-edge lc-board-edge-right"></span>' +
+                                '<span class="lc-board-edge lc-board-edge-left"></span>' +
+                                '<div class="lc-board" style="height:' + BOARD_HEIGHT_PX + 'px;width:' + Math.round(BOARD_HEIGHT_PX * BOARD_ASPECT) + 'px">' + cellsHtml + '</div>' +
+                            '</div>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
