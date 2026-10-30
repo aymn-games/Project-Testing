@@ -452,7 +452,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     'elimination-roulette': { name: 'روليت الإقصاء', cat: 'r', icon: 'person_remove', desc: 'العجلة تختار لاعب، وهو يقصي لاعب ثاني برقمه من الشات.' },
     'tribe-roulette':       { name: 'روليت مخفي', cat: 'r', icon: 'groups', desc: 'العجلة تختار لاعب، واللاعبين مختبين خلف بطاقات.. يختار رقم بطاقة بالشات ويقصي اللي خلفها.' },
     'russian-roulette':     { name: 'الروليت الروسي', cat: 'r', icon: 'casino', desc: 'عجلة أو سكرول يختار لاعب، ويستهدف لاعب ثاني برقمه من الشات.' },
-    'fruit-roulette':       { name: 'روليت الفواكه', cat: 'r', icon: 'nutrition', badge: 'رائج', desc: 'افتح صندوق من أربعة.. ثلاثة فيها فواكه وواحد يخبّي مفاجأة.' },
+    'fruit-roulette':       { name: 'روليت الفواكه', cat: 'r', icon: 'nutrition', badge: 'إعادة تصميم', redesign: true, desc: 'افتح صندوق من أربعة.. ثلاثة فيها فواكه وواحد يخبّي مفاجأة.' },
     'musical-chairs':       { name: 'الكراسي الموسيقية', cat: 'c', icon: 'chair', desc: 'تتوقف الموسيقى فجأة، وأول من يكتب رقم الكرسي يثبت مكانه.' },
     'word-categories':      { name: 'اسم حيوان نبات جماد بلاد', cat: 'q', icon: 'pets', desc: 'حرف عشوائي كل جولة، واكتب إجاباتك بالشات قبل انتهاء الوقت.' },
     'top-ten':              { name: 'خمّن العشرة', cat: 'q', icon: 'format_list_numbered', desc: 'سؤال وعشر إجابات مرتبة، وكل إجابة صحيحة لها نقاطها.' },
@@ -658,7 +658,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     var user = window.AGPAuth && window.AGPAuth.getCachedUser ? window.AGPAuth.getCachedUser() : null;
     var profileHref = user && user.custom_id ? 'profile.html?id=' + encodeURIComponent(user.custom_id) : 'profile.html';
     var msg, btnLabel, btnHref;
-    if (reason === 'maintenance') {
+    if (reason === 'redesign') {
+      msg = 'هذي اللعبة مقفلة حالياً لإعادة تصميمها، وبترجع بشكل جديد قريب إن شاء الله.';
+    } else if (reason === 'maintenance') {
       msg = 'هذي اللعبة تحت الصيانة حالياً، وبترجع قريب إن شاء الله.';
     } else if (reason === 'testing') {
       msg = 'هذي اللعبة بمرحلة اختبار ومتاحة حالياً لحساب الأدمن فقط، وبتنفتح للكل قريب إن شاء الله.';
@@ -741,7 +743,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.addEventListener('click', function(e){
     var card = e.target && e.target.closest ? e.target.closest('.gl-card') : null;
     if (!card) return;
-    var block = card.classList.contains('gl-maint') ? 'maintenance' : (card.classList.contains('gl-admin') && !isAdminUser()) ? 'testing' : getGameAccessBlock();
+    var block = card.classList.contains('gl-redesign') ? 'redesign' : card.classList.contains('gl-maint') ? 'maintenance' : (card.classList.contains('gl-admin') && !isAdminUser()) ? 'testing' : getGameAccessBlock();
     if (!block) return;
     e.preventDefault();
     e.stopPropagation();
@@ -771,7 +773,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var badge = info.badge;
     if (UPDATED_IDS.indexOf(g.id) !== -1 && (!badge || badge === 'جديد')) badge = 'تم التحديث';
     var card = document.createElement('article');
-    card.className = 'gl-card' + (info.maintenance ? ' gl-maint' : '') + (info.adminOnly ? ' gl-admin' : '');
+    card.className = 'gl-card' + (info.maintenance || info.redesign ? ' gl-maint' : '') + (info.redesign ? ' gl-redesign' : '') + (info.adminOnly ? ' gl-admin' : '');
     card.style.setProperty('--hue', cat.hue);
     card.innerHTML =
       '<span class="gl-glow"></span>' +
@@ -786,6 +788,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     card.querySelector('.gl-desc').textContent = info.desc;
     // لعبة تحت الصيانة: الزر مقفول دائماً، والضغط يعرض نافذة الصيانة (مستمع الـcapture أعلاه)
     if (info.maintenance) card.querySelector('.gl-play').firstChild.textContent = 'تحت الصيانة';
+    // لعبة مقفلة لإعادة التصميم (redesign بـCARD_INFO): نفس قفل الصيانة بنص مختلف
+    if (info.redesign) card.querySelector('.gl-play').firstChild.textContent = 'إعادة تصميم';
     applyGameLock(card);
     card.addEventListener('mousemove', function(e){
       var r = card.getBoundingClientRect();
@@ -916,7 +920,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       });
       // نفس قيود فتح الألعاب اللي ببطاقات الشبكة (صيانة / اختبار / حساب)
       card.querySelector('.gl-upd-play').addEventListener('click', function(e){
-        var block = info.maintenance ? 'maintenance' : (info.adminOnly && !isAdminUser()) ? 'testing' : getGameAccessBlock();
+        var block = info.redesign ? 'redesign' : info.maintenance ? 'maintenance' : (info.adminOnly && !isAdminUser()) ? 'testing' : getGameAccessBlock();
         markUpdatesSeen();
         if (!block) return;
         e.preventDefault();
