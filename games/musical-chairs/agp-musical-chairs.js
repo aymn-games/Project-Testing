@@ -589,14 +589,10 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             'background:none !important;border:none !important;border-radius:0 !important;box-shadow:none !important;',
             'font-family:"IBM Plex Sans Arabic",sans-serif !important;font-size:18px;color:#f4f2f8;animation:mc-fade .3s ease;}',
             '@keyframes mc-fade{from{opacity:0}to{opacity:1}}',
-            '@keyframes mc-float{0%{transform:translateY(0) rotate(0);opacity:0}10%{opacity:1}90%{opacity:1}',
-            '100%{transform:translateY(-1300px) rotate(var(--r));opacity:0}}',
             '@keyframes mc-crown{0%{opacity:0;transform:translateX(-50%) translateY(-14px) rotate(-6deg)}60%{opacity:1}',
             '100%{opacity:1;transform:translateX(-50%) translateY(0) rotate(0)}}',
             '@keyframes mc-shine{0%{transform:translateX(-140%) rotate(20deg)}100%{transform:translateX(240%) rotate(20deg)}}',
-            '.mc-win-confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;}',
-            '.mc-win-confetti span{position:absolute;bottom:-30px;animation-name:mc-float;animation-timing-function:linear;',
-            'animation-iteration-count:infinite;}',
+            '.mc-win-owned{width:240px;max-width:100%;line-height:0;animation:mc-pop .55s cubic-bezier(.2,1.3,.4,1) both;}',
             '.mc-win-inner{position:relative;margin:auto 0;max-width:100%;text-align:center;display:flex;flex-direction:column;align-items:center;}',
             '.mc-winner-screen h2{margin:0 0 6px !important;padding:0 !important;font-size:1.6em !important;font-weight:800 !important;',
             'color:#fff !important;background:none !important;border:none !important;',
@@ -1791,16 +1787,16 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var awarded = winner ? findAwardedFor(pointsResult, winner) : null;
 
         // نفس شاشة الفوز بروليت الإقصاء: فيديو الفوز فوق، العنوان، بطاقة
-        // WINNER بنفسجية (أو بطاقة الفوز المملوكة من js/agp-win-card.js
-        // لو الفائز يملكها)، وثلاث أزرار، مع قصاصات ملوّنة.
+        // WINNER بنفسجية — أو بطاقة الفوز المملوكة (js/agp-win-card.js) بدالها
+        // لو الفائز يملك وحدة، بنفس أسطر الروليت — وثلاث أزرار.
         var cardHtml = '';
         if (winner) {
             if (AGP.winCard && AGP.winCard.canShow(winner)) {
-                cardHtml = AGP.playerCard.renderTrophyCard(winner, {
-                    kind: 'winner',
-                    pointsHtml: awarded ? '<div class="agp-trophy-points">+' + awarded.added + ' نقطة 🎉</div>' : '',
-                    winCardLines: ['المركز الأول من ' + AGP.gameManager.getPlayers().length + ' لاعب', 'صاحب آخر كرسي', GAME_NAME]
-                });
+                cardHtml = '<div class="mc-win-owned">' + AGP.winCard.renderHtml(winner, [
+                    awarded ? '+' + awarded.added + ' نقطة' : 'النقاط للحسابات الموثّقة في الموقع',
+                    'المركز الأول من ' + AGP.gameManager.getPlayers().length + ' لاعب',
+                    GAME_NAME
+                ], { pop: false }) + '</div>';
             } else {
                 cardHtml =
                     '<div class="mc-win-card-wrap">' +
@@ -1819,18 +1815,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             }
         }
 
-        var confetti = '';
-        var CONFETTI_COLORS = ['#fbbf24', '#a78bfa', '#34d399', '#f472b6', '#60a5fa', '#fde68a'];
-        for (var ci = 0; ci < 70; ci++) {
-            var w = 8 + Math.random() * 6, h = 12 + Math.random() * 10;
-            confetti += '<span style="left:' + (Math.random() * 100).toFixed(1) + '%;width:' + w.toFixed(1) + 'px;height:' + h.toFixed(1) +
-                'px;border-radius:' + (ci % 3 ? '2px' : '50%') + ';background:' + CONFETTI_COLORS[ci % CONFETTI_COLORS.length] +
-                ';--r:' + Math.round(Math.random() * 1080 - 540) + 'deg;animation-duration:' + (3.5 + Math.random() * 2.5).toFixed(2) +
-                's;animation-delay:' + (Math.random() * 2.5).toFixed(2) + 's"></span>';
-        }
-
         box.innerHTML =
-            '<div class="mc-win-confetti" aria-hidden="true">' + confetti + '</div>' +
             '<div class="mc-win-inner">' +
                 (winner ? winnerVideoHtml() : '') +
                 '<h2>🏆 الفائز في لعبة "' + GAME_NAME + '"</h2>' +
