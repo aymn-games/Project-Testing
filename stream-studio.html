@@ -2,6 +2,14 @@
 <html lang="ar" dir="rtl" data-agp-studio>
 <head>
 <meta charset="utf-8">
+<!-- تطبيق ألعاب أيمن (إضافة للشاشة الرئيسية = ملء الشاشة بدون شريط المتصفح) — site.webmanifest -->
+<link rel="manifest" href="/site.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="ألعاب أيمن">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#050508">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>استوديو البث — ألعاب أيمن</title>
 <link rel="icon" href="favicon.ico">
@@ -126,6 +134,10 @@
     .st-title { font-size: 16px; }
     .st-saved { display: none; }
   }
+  /* جوال: زر «ثبّت كتطبيق» أيقونة بس عشان الشريط ما يزحم */
+  @media (max-width: 640px) {
+    .st-top [data-install-app-btn] { font-size: 0 !important; gap: 0 !important; padding: 8px !important; }
+  }
 </style>
 </head>
 <body>
@@ -146,6 +158,7 @@
 </div>
 <script src="auth/auth-client.js"></script>
 <script src="js/agp-stream-overlay.js"></script>
+<script src="js/agp-install-app.js"></script>
 <script src="js/agp-stream-pip.js"></script>
 <script src="js/agp-stream-studio.js"></script>
 </body>
