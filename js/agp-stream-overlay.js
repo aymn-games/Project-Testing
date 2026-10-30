@@ -18,6 +18,11 @@
  *   (backend/stats/live-session-stats.js — نفس مصدر زر «إحصائيات البث»)،
  *   كل POLL_MS والصفحة ظاهرة فقط. آخر نتيجة بـsessionStorage عشان ما يفضى
  *   العنصر لحظة الانتقال بين الألعاب.
+ * - الحساب نفسه يصير بالسيرفر من اتصال البث. داخل اللعبة اتصال اللعبة يكفي؛
+ *   بالصفحات اللي ما فيها لعبة متصلة (مكتبة الألعاب، أو لعبة قبل ما تتصل)
+ *   الأوفرلي يفتح اتصال إحصائيات فقط (source 'overlay' بـws-server.js) بنفس
+ *   الحساب المحفوظ من زر «اتصل بالبث» بالمكتبة (agp:agp-stream-connection)،
+ *   ويقفله أول ما تتصل اللعبة — فيه دايماً اتصال واحد يحسب.
  *
  * - النص: خطوط عربية من Google Fonts (FONTS — تتحمّل بس اللي انستخدم، وكلها
  *   لما تنفتح قائمة الخطوط بالمحرر)، تأثيرات (TEXT_STYLES)، وحركة متكررة
@@ -36,6 +41,10 @@
 
     var STORE_KEY = 'agp:stream-overlay';
     var LIKERS_CACHE_KEY = 'agp:stream-overlay:likers';
+    var CONN_KEY = 'agp:agp-stream-connection'; // نفس مفتاح زر «اتصل بالبث» بمكتبة الألعاب
+    var BACKEND_WS_URL = 'wss://project-testing-akds.onrender.com';
+    var LINK_CHECK_MS = 5000;
+    var GAME_GRACE_MS = 15000; // اللعبة غير متصلة كذا متواصل → الأوفرلي يتصل بداله
     var POLL_MS = 15000;
     var Z = 2147483000;
     var FONT = '"IBM Plex Sans Arabic","Noto Kufi Arabic",system-ui,-apple-system,sans-serif';
@@ -153,6 +162,7 @@
     var loadedFonts = {};
     var frameRect = null;
 
+    var linkStatus;
     var layer, stage, launcher, backdrop, bar, panel, picker, enabledBtn, templateBtn, orientPills;
 
     function uid() { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -240,6 +250,130 @@
         try { return (window.AGPAuth && window.AGPAuth.getToken && window.AGPAuth.getToken()) || localStorage.getItem('agp_auth_token'); } catch (e) { return null; }
     }
 
+    /* ---------------- اتصال الإحصائيات (بدون لعبة متصلة) ---------------- */
+
+    var link = { ws: null, state: 'off', msg: '', retry: 0, timer: null, username: null, stopFor: null };
+    var gameDownSince = null;
+
+    function savedConn() {
+        try {
+            var d = JSON.parse(localStorage.getItem(CONN_KEY) || 'null');
+            return d && typeof d.username === 'string' && d.username ? d : null;
+        } catch (e) { return null; }
+    }
+
+    /** نفس اليوزر لو اتصل من جديد من المكتبة يتغيّر connectedAt — فيرجع يحاول. */
+    function connId(c) { return c.username + '|' + (c.connectedAt || ''); }
+
+    function gameConnector() {
+        var A = window.AymanGamesPlatform;
+        return (A && A.services && A.services.TikTokService && A.streamConnector) ? A.streamConnector : null;
+    }
+
+    function gameConnected() {
+        var sc = gameConnector();
+        return Boolean(sc && sc.getStatus('tiktok') === 'connected');
+    }
+
+    function linkWanted() {
+        var c = savedConn();
+        if (!likersItems().length || !(editing || state.enabled) || !token() || !c) return false;
+        if (link.stopFor === connId(c)) return false; // رُفض أو انتهى البث — نستنى اتصال جديد من المكتبة
+        if (gameConnected()) { gameDownSince = null; return false; }
+        if (gameConnector()) {
+            // صفحة لعبة: نعطيها مهلة تتصل (أو ترجع تتصل) قبل ما نفتح اتصال ثاني
+            if (!gameDownSince) gameDownSince = Date.now();
+            if (Date.now() - gameDownSince < GAME_GRACE_MS) return link.ws !== null;
+        }
+        return true;
+    }
+
+    function closeLink() {
+        if (link.timer) { clearTimeout(link.timer); link.timer = null; }
+        if (link.ws) { var ws = link.ws; link.ws = null; try { ws.close(); } catch (e) { /* ignore */ } }
+        link.state = 'off';
+    }
+
+    function scheduleLink() {
+        if (link.timer) return;
+        var d = Math.min(5000 * Math.pow(2, link.retry), 60000);
+        link.retry++;
+        link.timer = setTimeout(function () { link.timer = null; syncLink(); }, d);
+    }
+
+    function openLink(c) {
+        var ws;
+        try { ws = new WebSocket(BACKEND_WS_URL); } catch (e) { link.state = 'error'; scheduleLink(); return; }
+        link.ws = ws;
+        link.username = c.username;
+        link.state = 'connecting';
+        ws.onopen = function () {
+            ws.send(JSON.stringify({
+                type: 'connect',
+                payload: { platform: 'tiktok', username: c.username, followersOnly: false, source: 'overlay', page: location.pathname, authToken: token() },
+                timestamp: Date.now()
+            }));
+        };
+        ws.onmessage = function (e) {
+            var env;
+            try { env = JSON.parse(e.data); } catch (err) { return; }
+            if (!env || env.type !== 'status' || !env.payload || link.ws !== ws) return;
+            var st = env.payload.status, reason = env.payload.reason;
+            if (st === 'connected') {
+                link.state = 'connected';
+                link.retry = 0;
+                setTimeout(fetchLikers, 2500);
+            } else if (st === 'error' || st === 'disconnected') {
+                // reason = منع (حساب غير مربوط/مختلف) أو انتهاء البث: ما نعيد المحاولة لنفس اليوزر
+                link.state = reason === 'stream_ended' ? 'ended' : (reason ? 'denied' : 'error');
+                link.msg = env.payload.message || '';
+                if (reason) link.stopFor = connId(c);
+                try { ws.close(); } catch (err) { /* ignore */ }
+            } else {
+                link.state = 'connecting';
+            }
+            syncLinkUi();
+        };
+        ws.onclose = function () {
+            if (link.ws !== ws) return;
+            link.ws = null;
+            if (link.state === 'connected' || link.state === 'connecting') link.state = 'error';
+            if (linkWanted()) scheduleLink();
+            syncLinkUi();
+        };
+    }
+
+    function syncLink() {
+        var c = savedConn();
+        if (c && link.stopFor && link.stopFor !== connId(c)) link.stopFor = null;
+        var want = linkWanted();
+        if (want && link.ws && link.username !== c.username) closeLink();
+        if (want && !link.ws && !link.timer) openLink(c);
+        else if (!want && (link.ws || link.timer)) closeLink();
+        syncLinkUi();
+    }
+
+    /** حالة حساب التوب بكلمات للمذيع (شريط المحرر + العنصر لما يكون فاضي). */
+    function linkText() {
+        if (!token()) return 'سجّل دخول بحسابك عشان يطلع التوب';
+        if (!savedConn()) return 'اضغط «اتصل بالبث» بمكتبة الألعاب عشان تنحسب التكبيسات';
+        if (gameConnected()) return '● متصل بالبث من اللعبة — التكبيسات تنحسب';
+        if (link.state === 'connected') return '● متصل بالبث — التكبيسات تنحسب';
+        if (link.state === 'denied') return link.msg || 'الاتصال بالبث مرفوض';
+        if (link.state === 'ended') return 'البث انتهى — اتصل من جديد من مكتبة الألعاب';
+        if (link.state === 'error') return 'انقطع الاتصال بالبث — نعيد المحاولة…';
+        return 'جاري الاتصال بالبث…';
+    }
+
+    function syncLinkUi() {
+        if (linkStatus) {
+            linkStatus.style.display = likersItems().length ? '' : 'none';
+            linkStatus.textContent = 'توب المكبّسين: ' + linkText();
+            linkStatus.classList.toggle('ok', gameConnected() || link.state === 'connected');
+        }
+        if (editing && !likers.rows.length) paintLikers();
+    }
+
     function likersItems() { return state.items.filter(function (it) { return it.type === 'likers'; }); }
 
     function fetchLikers() {
@@ -277,9 +411,9 @@
 
     function emptyMessage() {
         if (!editing) return 'بانتظار التكبيسات…';
-        if (likers.status === 'login') return 'سجّل دخول بحسابك عشان يطلع التوب';
         if (likers.status === 'tiktok') return 'اربط حساب تيك توك بحسابك أولاً';
-        return 'بانتظار التكبيسات… (اتصل بالبث من أي لعبة)';
+        var t = linkText();
+        return t.charAt(0) === '●' ? 'بانتظار التكبيسات…' : t;
     }
 
     var CROWN = '<svg viewBox="0 0 24 16" aria-hidden="true"><path d="M2 14h20l1.5-11-6 4.5L12 0 6.5 7.5.5 3z" fill="currentColor"/></svg>';
@@ -476,6 +610,7 @@
         launcher.style.display = editing ? 'none' : '';
         placeLauncher();
         syncPolling();
+        syncLink();
     }
 
     /** يحط العنصر بموقعه داخل الإطار، ويزحزحه بصرياً بس لو طلع جزء منه برّاه. */
@@ -933,6 +1068,8 @@
         '.agp-so-ui{position:fixed;z-index:' + (Z + 3) + ';direction:rtl;font-family:' + FONT + ';color:#fff;background:rgba(16,18,34,.94);border:1px solid rgba(255,255,255,.12);box-shadow:0 10px 30px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}',
         '#agp-so-bar{top:10px;left:50%;transform:translateX(-50%);border-radius:16px;padding:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;width:max-content;max-width:calc(100vw - 20px);box-sizing:border-box}',
         '.agp-so-hint{font-size:12px;opacity:.7;padding:0 6px;text-align:center}',
+        '.agp-so-link{font-size:12px;font-weight:700;text-align:center;color:#ffd54a}',
+        '.agp-so-link.ok{color:#7cff6b}',
         '#agp-so-panel{bottom:10px;left:50%;transform:translateX(-50%);width:min(520px,calc(100vw - 20px));box-sizing:border-box;border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;max-height:45vh;overflow:auto}',
         '.agp-so-prow{display:flex;justify-content:space-between;align-items:center;gap:12px}',
         '.agp-so-plabel{text-align:right;font-size:14px;font-weight:700;flex:none;opacity:.9}',
@@ -1016,6 +1153,10 @@
         hint.style.flexBasis = '100%';
         hint.textContent = 'اسحب أي عنصر بإصبعك لأي مكان داخل الإطار · اضغط عليه عشان تعدّله';
         bar.appendChild(hint);
+        linkStatus = document.createElement('div');
+        linkStatus.className = 'agp-so-link';
+        linkStatus.style.flexBasis = '100%';
+        bar.appendChild(linkStatus);
 
         panel = document.createElement('div');
         panel.id = 'agp-so-panel';
@@ -1038,8 +1179,13 @@
             if (pickerOpen && state.template) closePicker(); else close();
         });
         document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && pollTimer) fetchLikers(); });
+        // اتصال/قطع من زر المكتبة، واتصال اللعبة نفسها
+        setInterval(syncLink, LINK_CHECK_MS);
+        var A = window.AymanGamesPlatform;
+        if (A && A.events && typeof A.events.on === 'function') A.events.on('stream:statusChanged', function () { setTimeout(syncLink, 0); });
         // تعديل من تبويب ثاني بنفس الجهاز
         window.addEventListener('storage', function (e) {
+            if (e.key === CONN_KEY) { syncLink(); return; }
             if (e.key !== STORE_KEY || editing) return;
             state = load();
             render();

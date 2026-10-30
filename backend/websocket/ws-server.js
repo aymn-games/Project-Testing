@@ -362,20 +362,30 @@ function handleConnectMessage(connectionId, socket, payload) {
   // لعبة. التحقق من اليوزر بمكتبة الألعاب (source: 'library') لا يُحتسب،
   // والبث يبدأ فقط لما تيك توك يؤكّد الاتصال (مو لحظة الطلب)، ويُختَم لحظة
   // انقطاعه (راجع trackBroadcastStatus).
+  //
+  // source: 'overlay' = أوفرلي البث (js/agp-stream-overlay.js) بصفحة ما فيها
+  // لعبة متصلة (مكتبة الألعاب): يحسب إحصائيات البث فقط (statsUsername)، بدون
+  // ساعات بث ولا ظهور بـ«البثوث الشغّالة»، وبوضع statsOnly بالموصِّل.
+  var isOverlay = payload.source === 'overlay';
   entry.broadcastTracking = null;
+  entry.statsUsername = null;
   if (platform === 'tiktok' && payload.username && payload.source !== 'library') {
     try {
       var matchedUser = authService.findVerifiedUserByTikTok(payload.username);
-      if (matchedUser) entry.broadcastTracking = { userId: matchedUser.id, username: payload.username };
+      if (matchedUser) {
+        entry.statsUsername = payload.username;
+        if (!isOverlay) entry.broadcastTracking = { userId: matchedUser.id, username: payload.username };
+      }
     } catch (err) {
       logger.error('WS Server: failed to resolve broadcast owner:', err);
     }
   }
+  if (isOverlay) payload.statsOnly = true;
 
   // معلومات العرض بصفحة «البثوث الشغّالة الآن» بلوحة الأدمن (بالذاكرة فقط).
   // التحقق من اليوزر بمكتبة الألعاب ما يُعرض — المكتبة مو لعبة.
   entry.live = null;
-  if (payload.source !== 'library') {
+  if (payload.source !== 'library' && !isOverlay) {
     entry.live = buildLiveInfo(platform, payload);
   }
 
@@ -387,7 +397,7 @@ function handleConnectMessage(connectionId, socket, payload) {
       // عشان تمسح الاتصال المحفوظ بمكتبة الألعاب وتعرض الرسالة.
       if (status === 'ended') {
         if (entry.activeConnector === connector) {
-          if (entry.broadcastTracking) liveSessionStats.markEnded(entry.broadcastTracking.username, connectionId);
+          if (entry.statsUsername) liveSessionStats.markEnded(entry.statsUsername, connectionId);
           trackBroadcastStatus(entry, 'error');
           entry.activeConnector = null;
           entry.activePlatform = null;
@@ -402,18 +412,19 @@ function handleConnectMessage(connectionId, socket, payload) {
       if (entry.activeConnector === connector) {
         trackBroadcastStatus(entry, status);
         // إحصائيات البث (زر «عرض إحصائيات البث»): نفس Room ID = نفس البث.
-        if (status === 'connected' && entry.broadcastTracking) {
-          liveSessionStats.attach(entry.broadcastTracking.username, connector.getRoomId ? connector.getRoomId() : null, connectionId);
+        if (status === 'connected' && entry.statsUsername) {
+          liveSessionStats.attach(entry.statsUsername, connector.getRoomId ? connector.getRoomId() : null, connectionId);
         }
       }
       sendEnvelope(socket, builder.buildStatusMessage(platform, status, message));
     },
 
     onComment: function (data) {
-      sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, data.isFollower, data.avatarUrl, data.frame, data.elimCard, data.winCard));
+      // الأوفرلي ما يحتاج التعليقات/الهدايا نفسها — يقرأ الملخص من /api/stream/session-stats
+      if (!isOverlay) sendEnvelope(socket, builder.buildCommentMessage(platform, data.id, data.name, data.text, data.isFollower, data.avatarUrl, data.frame, data.elimCard, data.winCard));
 
       if (entry.live && entry.activeConnector === connector) entry.live.comments++;
-      if (entry.broadcastTracking) liveSessionStats.recordComment(entry.broadcastTracking.username, connectionId, data);
+      if (entry.statsUsername) liveSessionStats.recordComment(entry.statsUsername, connectionId, data);
 
       // تجميع بالذاكرة بدل كتابة SQLite فورية — تُفرَّغ دورياً عبر flushAllPendingStats.
       if (entry.activeBroadcastId) {
@@ -423,9 +434,9 @@ function handleConnectMessage(connectionId, socket, payload) {
     },
 
     onGift: function (data) {
-      sendEnvelope(socket, builder.buildGiftMessage(platform, data.id, data.name, data.giftName, data.giftValue, data.repeatCount, data.giftId));
+      if (!isOverlay) sendEnvelope(socket, builder.buildGiftMessage(platform, data.id, data.name, data.giftName, data.giftValue, data.repeatCount, data.giftId));
       if (entry.live && entry.activeConnector === connector) entry.live.gifts++;
-      if (entry.broadcastTracking) liveSessionStats.recordGift(entry.broadcastTracking.username, connectionId, data);
+      if (entry.statsUsername) liveSessionStats.recordGift(entry.statsUsername, connectionId, data);
 
       // قيمة الهدية الفعلية = قيمة الوحدة × عدد التكرار. تجميع بالذاكرة
       // بدل كتابتين SQLite فوريتين لكل هدية.
@@ -438,8 +449,8 @@ function handleConnectMessage(connectionId, socket, payload) {
     },
 
     onFollow: function (data) {
-      sendEnvelope(socket, builder.buildFollowMessage(platform, data.id, data.name));
-      if (entry.broadcastTracking) liveSessionStats.recordFollow(entry.broadcastTracking.username, connectionId);
+      if (!isOverlay) sendEnvelope(socket, builder.buildFollowMessage(platform, data.id, data.name));
+      if (entry.statsUsername) liveSessionStats.recordFollow(entry.statsUsername, connectionId);
 
       if (entry.activeBroadcastId) {
         ensurePendingStats(entry);
@@ -452,7 +463,7 @@ function handleConnectMessage(connectionId, socket, payload) {
     // تراكم) وتُكتب دفعة كل STATS_FLUSH_INTERVAL_MS بدل كل حدث فردي.
     onViewerUpdate: function (data) {
       if (entry.live && entry.activeConnector === connector) entry.live.viewers = Number(data.current) || 0;
-      if (entry.broadcastTracking) liveSessionStats.recordViewers(entry.broadcastTracking.username, connectionId, data.current, data.totalUsers);
+      if (entry.statsUsername) liveSessionStats.recordViewers(entry.statsUsername, connectionId, data.current, data.totalUsers);
       if (entry.activeBroadcastId) {
         ensurePendingStats(entry);
         entry.pendingStats.viewerCurrent = Number(data.current) || 0;
@@ -462,15 +473,15 @@ function handleConnectMessage(connectionId, socket, payload) {
 
     // لايكات وشير ودخول المشاهدين — لإحصائيات البث بالذاكرة فقط، بدون رسالة للمتصفح.
     onLike: function (data) {
-      if (entry.broadcastTracking) liveSessionStats.recordLike(entry.broadcastTracking.username, connectionId, data);
+      if (entry.statsUsername) liveSessionStats.recordLike(entry.statsUsername, connectionId, data);
     },
 
     onShare: function (data) {
-      if (entry.broadcastTracking) liveSessionStats.recordShare(entry.broadcastTracking.username, connectionId, data);
+      if (entry.statsUsername) liveSessionStats.recordShare(entry.statsUsername, connectionId, data);
     },
 
     onMember: function (data) {
-      if (entry.broadcastTracking) liveSessionStats.recordMember(entry.broadcastTracking.username, connectionId, data);
+      if (entry.statsUsername) liveSessionStats.recordMember(entry.statsUsername, connectionId, data);
     }
   });
 }
