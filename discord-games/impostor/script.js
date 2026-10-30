@@ -545,6 +545,14 @@ function readJoinCode(){
   return $("#join-code").value.trim().replace(/\D/g, "");
 }
 
+/** يوزر تيك توك الموثّق لحساب الموقع المسجّل على هذا الجهاز (أو null).
+ *  يُحفظ مع اللاعب في الغرفة حتى يقدر المضيف يرسل نقاط المنصة لكل لاعب. */
+function myTikTok(){
+  const A = window.AGPAuth;
+  const u = A && typeof A.getCachedUser === "function" ? A.getCachedUser() : null;
+  return (u && u.tiktok_verified && u.tiktok_username) || null;
+}
+
 /** إنشاء غرفة جديدة والانضمام إليها كلاعب فعلي (مضيف). */
 async function createRoomAsPlayer(name, settings = DEFAULT_SETTINGS){
   let code, existing, attempts = 0;
@@ -567,7 +575,7 @@ async function createRoomAsPlayer(name, settings = DEFAULT_SETTINGS){
     createdAt: now(),
     settings: Object.assign({}, DEFAULT_SETTINGS, settings),
     players: {
-      [state.playerId]: { name, connected: true, joinedAt: now(), colorIdx: 0 }
+      [state.playerId]: { name, tiktok: myTikTok(), connected: true, joinedAt: now(), colorIdx: 0 }
     }
   });
 
@@ -603,7 +611,7 @@ async function joinRoomAsPlayer(name, code){
 
   const existing = (room.players && room.players[state.playerId]) || {};
   await Backend.setPlayer(code, state.playerId, {
-    name, connected: true,
+    name, tiktok: myTikTok(), connected: true,
     joinedAt: existing.joinedAt || now(),
     colorIdx: Number.isInteger(existing.colorIdx) ? existing.colorIdx : Object.keys(room.players || {}).length
   });
@@ -1047,8 +1055,8 @@ function buildRound(room, newMatch){
   const ids = sortedPlayerIds(room);
   const prev = room.match || {};
   const match = newMatch
-    ? { round: 1, totals: {}, impHist: [], lastImp: null, done: 0 }
-    : { round: (prev.round || 0) + 1, totals: prev.totals || {}, impHist: prev.impHist || [], lastImp: prev.lastImp || null, done: prev.done || 0 };
+    ? { round: 1, totals: {}, impHist: [], lastImp: null, done: 0, startedAt: Date.now() }
+    : { round: (prev.round || 0) + 1, totals: prev.totals || {}, impHist: prev.impHist || [], lastImp: prev.lastImp || null, done: prev.done || 0, startedAt: prev.startedAt || Date.now() };
   const { impId, impHist } = pickImpostor(ids, match);
   match.impHist = impHist;
   match.lastImp = impId;
@@ -1234,12 +1242,40 @@ function nextRound(){
 }
 
 function showFinal(){
+  let report = null;
   return roomTx(room => {
-    if(room.hostId !== state.playerId) return undefined;
+    report = null;
+    if(room.hostId !== state.playerId || room.status === "final") return undefined;
     room.status = "final";
     room.finalAt = now();
+    report = matchPointsReport(room);
     return room;
+  }).then(res => {
+    // يُرسل مرة واحدة فقط: بعد نجاح نقل الغرفة للنتيجة النهائية من جهاز المضيف
+    if(report && (usingFirebase ? res && res.committed : true)) reportPlatformPoints(report);
   });
+}
+
+/** نتيجة المباراة لنظام نقاط المنصة: كل لاعبي المباراة الموجودين، والفائز
+ *  (أو المتعادلون) صاحب أعلى مجموع. اللاعب بدون تيك توك موثّق لا يُرسل. */
+function matchPointsReport(room){
+  const totals = (room.match || {}).totals || {};
+  const ids = sortedPlayerIds(room);
+  const topPts = Math.max(0, ...ids.map(id => totals[id] || 0));
+  const players = ids
+    .filter(id => room.players[id].tiktok)
+    .map(id => ({ id: "tiktok:" + room.players[id].tiktok, name: room.players[id].name }));
+  if(!players.length) return null;
+  const winnerIds = topPts > 0
+    ? ids.filter(id => room.players[id].tiktok && (totals[id] || 0) === topPts).map(id => "tiktok:" + room.players[id].tiktok)
+    : [];
+  return { players, winnerIds, teamGame: false, durationMs: Date.now() - ((room.match || {}).startedAt || Date.now()) };
+}
+
+function reportPlatformPoints(report){
+  if(window.AGPAuth && typeof window.AGPAuth.reportMatchPoints === "function"){
+    window.AGPAuth.reportMatchPoints(report); // ترجع Promise بالنتيجة أو null، ولا ترمي خطأ أبداً
+  }
 }
 
 function backToRoom(){
