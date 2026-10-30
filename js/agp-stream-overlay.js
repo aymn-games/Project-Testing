@@ -43,8 +43,9 @@
     var STATS_CACHE_KEY = 'agp:stream-overlay:stats';
     var JAR_CACHE_KEY = 'agp:stream-overlay:jar';
     var JAR_POLL_MS = 3000;
-    var JAR_CAP = 70;          // أقصى عدد صور بالوعاء (7 أعمدة × 10 صفوف)
-    var JAR_COLS = 7;
+    var JAR_CAP = 54;          // أقصى عدد صور بالوعاء (6 أعمدة × 9 صفوف)
+    var JAR_COLS = 6;
+    var JAR_G = 1.3;           // حجم صورة الهدية (em)
     var JAR_REPEAT_MAX = 10;   // هدية مكررة ×50 تطلع 10 صور بالكثير
     var CONN_KEY = 'agp:agp-stream-connection'; // نفس مفتاح زر «اتصل بالبث» بمكتبة الألعاب
     var BACKEND_WS_URL = 'wss://project-testing-akds.onrender.com';
@@ -382,11 +383,38 @@
         return { sid: 0, seq: 0, icons: [], totals: null };
     }
 
+    function https(u) { return typeof u === 'string' && /^https:\/\//.test(u) ? u : null; }
+
+    /** رابط السيرفر للصورة (مخزّنة عنده) — لو الرابط المباشر من تيك توك ما فتح. */
+    function mediaUrl(kind, id) { return id ? apiBase() + '/api/stream/media?k=' + kind + '&id=' + encodeURIComponent(id) : null; }
+
+    /** صورة تحاول الرابط المباشر، وبعده نسخة السيرفر، وبعدها onFail. */
+    function img2(direct, backup, cls, onFail) {
+        var img = document.createElement('img');
+        img.alt = '';
+        img.draggable = false;
+        img.referrerPolicy = 'no-referrer';
+        if (cls) img.className = cls;
+        var tried = false;
+        img.onerror = function () {
+            if (!tried && backup && img.src !== backup) { tried = true; img.src = backup; return; }
+            img.onerror = null;
+            onFail(img);
+        };
+        img.src = direct || backup;
+        return img;
+    }
+
     function expandGifts(gifts) {
         var out = [];
         gifts.forEach(function (g) {
             var n = Math.min(JAR_REPEAT_MAX, Math.max(1, Number(g.count) || 1));
-            for (var j = 0; j < n; j++) out.push({ k: g.seq + '-' + j, img: typeof g.img === 'string' && /^https:\/\//.test(g.img) ? g.img : null, name: String(g.name || '') });
+            for (var j = 0; j < n; j++) {
+                out.push({
+                    k: g.seq + '-' + j, name: String(g.name || ''), user: String(g.user || ''),
+                    img: https(g.img), giftId: g.giftId || null, avatar: https(g.avatar), uid: g.uid || null
+                });
+            }
         });
         return out;
     }
@@ -784,28 +812,27 @@
         return ((h >>> 0) % 1000) / 1000;
     }
 
-    function jarIcon(ic) {
+    function jarIcon(ic, withAvatar) {
         var g = el('span', 'agp-so-gi');
-        var r = Math.round((hash(ic.k + 'r') - 0.5) * 60);
+        var r = Math.round((hash(ic.k + 'r') - 0.5) * 50);
         g.style.setProperty('--r', r + 'deg');
-        if (ic.img) {
-            var img = document.createElement('img');
-            img.alt = '';
-            img.draggable = false;
-            img.referrerPolicy = 'no-referrer';
-            img.onerror = function () { g.textContent = ''; g.classList.add('fb'); g.textContent = (ic.name || '?').charAt(0); };
-            img.src = ic.img;
-            g.appendChild(img);
-        } else {
-            g.classList.add('fb');
-            g.textContent = (ic.name || '?').charAt(0);
+        function letter() { g.textContent = ''; g.classList.add('fb'); g.appendChild(el('span', null, (ic.name || '?').charAt(0))); }
+        if (ic.img || ic.giftId) g.appendChild(img2(ic.img, mediaUrl('g', ic.giftId), 'agp-so-gimg', letter));
+        else letter();
+        // صورة الداعم صغيرة على طرف الهدية (وأول حرف من اسمه لو ما فتحت)
+        if (withAvatar && (ic.avatar || ic.uid || ic.user)) {
+            var a = el('span', 'agp-so-gav');
+            var initial = function () { a.appendChild(el('span', 'agp-so-gav-i', (ic.user || '?').charAt(0))); };
+            if (ic.avatar || ic.uid) a.appendChild(img2(ic.avatar, mediaUrl('u', ic.uid), null, function (im) { im.remove(); initial(); }));
+            else initial();
+            g.appendChild(a);
         }
         return g;
     }
 
     /** يرتّب الصور من تحت لفوق (7 بالصف، صفوف متداخلة شوي) بإزاحة وميلان ثابتين. */
     function layoutJar(pile, list) {
-        var W = 8.06, G = 1.15, STEP = G * 0.82;
+        var W = 8.06, G = JAR_G, STEP = G * 0.82;
         var span = (W - G) / (JAR_COLS - 1);
         list.forEach(function (ic, i) {
             var node = pile._icons[ic.k];
@@ -838,7 +865,7 @@
         var delay = 0;
         list.forEach(function (ic) {
             if (pile._icons[ic.k]) return;
-            var g = jarIcon(ic);
+            var g = jarIcon(ic, node._item ? node._item.avatars !== false : true);
             if (fresh && fresh.indexOf(ic.k) !== -1) {
                 g.classList.add('drop');
                 g.style.animationDelay = delay + 'ms';
@@ -897,7 +924,7 @@
         }
         if (type === 'goal') return Object.assign(base, { metric: 'likes', title: 'هدف التكبيسات', target: 10000, autoNext: true, design: 'bar', size: 3, color: '#ff4d6d' });
         if (type === 'counter') return Object.assign(base, { metrics: ['likes', 'diamonds', 'follows'], title: '', design: 'pills', size: 3, color: '#ffd54a' });
-        if (type === 'jar') return Object.assign(base, { title: 'وعاء الهدايا', counter: 'diamonds', size: 2.6, color: '#ff5fa8' });
+        if (type === 'jar') return Object.assign(base, { title: 'وعاء الهدايا', counter: 'diamonds', avatars: true, size: 2.6, color: '#ff5fa8' });
         return base;
     }
 
@@ -1048,9 +1075,12 @@
         '.agp-so-jglass::after{content:"";position:absolute;z-index:3;top:.9em;right:.55em;width:.32em;height:62%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.8),rgba(255,255,255,0));pointer-events:none}',
         '.agp-so-jglass::before{content:"";position:absolute;z-index:3;left:12%;right:12%;bottom:.25em;height:.9em;border-radius:50%;border-top:.07em solid rgba(255,255,255,.35);pointer-events:none}',
         '.agp-so-jpile{position:absolute;left:.35em;right:.35em;top:.4em;bottom:.35em}',
-        '.agp-so-gi{position:absolute;width:1.15em;height:1.15em;transform:rotate(var(--r,0deg));transition:left .5s ease,bottom .5s ease;filter:drop-shadow(0 .05em .08em rgba(0,0,0,.55))}',
-        '.agp-so-gi img{width:100%;height:100%;object-fit:contain;display:block}',
-        '.agp-so-gi.fb{display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:.55em;width:2.1em;height:2.1em;font-weight:900;color:#1a1206;text-shadow:none;background:radial-gradient(circle at 35% 30%,#fff,var(--agp-so-c))}',
+        '.agp-so-gi{position:absolute;width:1.3em;height:1.3em;transform:rotate(var(--r,0deg));transition:left .5s ease,bottom .5s ease;filter:drop-shadow(0 .05em .08em rgba(0,0,0,.55))}',
+        '.agp-so-gimg{width:100%;height:100%;object-fit:contain;display:block}',
+        '.agp-so-gi.fb>span:first-child{display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;font-size:.6em;font-weight:900;color:#1a1206;text-shadow:none;background:radial-gradient(circle at 35% 30%,#fff,var(--agp-so-c))}',
+        '.agp-so-gav{position:absolute;left:-.12em;bottom:-.12em;width:.62em;height:.62em;border-radius:50%;overflow:hidden;border:.06em solid #fff;background:#2a2d45;box-shadow:0 .03em .1em rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-weight:900;line-height:1;color:#fff;text-shadow:none;transform:rotate(calc(var(--r,0deg) * -1))}',
+        '.agp-so-gav-i{font-size:.38em}',
+        '.agp-so-gav img{width:100%;height:100%;object-fit:cover;display:block}',
         '.agp-so-gi.drop{animation:agp-so-drop .95s cubic-bezier(.35,0,.45,1) both}',
         '@keyframes agp-so-drop{0%{transform:translateY(-13em) rotate(0) scale(1.35);opacity:0}12%{opacity:1}68%{transform:translateY(0) rotate(var(--r,0deg)) scale(1)}80%{transform:translateY(-.4em) rotate(var(--r,0deg))}100%{transform:translateY(0) rotate(var(--r,0deg))}}',
         '.agp-so-jcount{display:inline-flex;align-items:center;gap:.3em;margin-top:.15em;padding:.25em .9em;border-radius:999px;font-weight:900;direction:ltr;background:rgba(10,12,24,.7);border:.07em solid color-mix(in srgb,var(--agp-so-c) 60%,transparent);box-shadow:0 .1em .35em rgba(0,0,0,.45)}',

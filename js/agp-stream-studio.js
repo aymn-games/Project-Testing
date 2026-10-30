@@ -523,6 +523,7 @@
 
     function jarProps(it, box) {
         box.appendChild(row('العنوان (اختياري)', textInput(it.title, 40, function (v) { update(it, 'title', v); })));
+        box.appendChild(row('صور الداعمين على الهدايا', toggle(it.avatars !== false, function (v) { update(it, 'avatars', v, true); })));
         box.appendChild(row('تحت الوعاء', pills([{ label: 'مجموع الماس', value: 'diamonds' }, { label: 'عدد الهدايا', value: 'gifts' }, { label: 'بدون', value: 'none' }], it.counter || 'diamonds', function (v) { update(it, 'counter', v, true); })));
         box.appendChild(row('الحجم', slider(1.5, 5, 0.1, it.size, function (v) { update(it, 'size', v); })));
         box.appendChild(row('لون الغطاء والتوهّج', swatches(it.color, function (c) { update(it, 'color', c, true); })));
@@ -530,7 +531,7 @@
         demo.appendChild(button('جرّب سقوط هدايا', 'st-btn primary', function () { O.jarDemo(6); }));
         demo.appendChild(button('فرّغ التجربة', 'st-btn', function () { O.jarClearDemo(); }));
         box.appendChild(demo);
-        box.appendChild(el('div', 'st-hint', 'يتعبّى بصور الهدايا اللي توصل بالبث (آخر 70 صورة)، والهدايا الجديدة تطيح من فوق. التجربة بالمعاينة هنا بس.'));
+        box.appendChild(el('div', 'st-hint', 'يتعبّى بصور هدايا تيك توك نفسها اللي توصل بالبث، وعلى كل هدية صورة اللي أرسلها (آخر 54 صورة)، والهدايا الجديدة تطيح من فوق. التجربة بالمعاينة هنا بس.'));
     }
 
     function propsPane(it) {

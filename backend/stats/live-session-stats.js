@@ -64,6 +64,10 @@ var _sessions = new Map(); // username -> session
 var WATCH_PREFIX = 'watch:';
 var _watching = new Set();
 var _avatarCache = new Map(); // url -> dataUrl|null
+// صور وعاء الهدايا: 'g:<giftId>' / 'u:<userId>' -> رابط تيك توك. تنملى بس من
+// أحداث الهدايا نفسها، فمسار /api/stream/media ما يجيب إلا روابط جات من البث.
+var _mediaUrls = new Map();
+var MEDIA_URLS_MAX = 3000;
 var _cleanupStarted = false;
 var _store = null;
 var _dirty = new Set(); // يوزرات جلساتها تغيّرت من آخر حفظ
@@ -140,6 +144,7 @@ function boot() {
         return;
       }
       _sessions.set(s.username, s);
+      s.recentGifts.forEach(noteGiftMedia);
       n++;
     } catch (err) { logger.error('Live Stats: restore failed:', err); }
   });
@@ -242,11 +247,37 @@ function recordGift(username, connectionId, data) {
   var r = rec(s, s.lists.gifters, data);
   if (r) { r.count += repeat; r.diamonds += diamonds; }
   s.giftSeq++;
-  s.recentGifts.push({
+  var g = {
     seq: s.giftSeq, name: String(data.giftName || ''), img: typeof data.giftImage === 'string' ? data.giftImage : null,
+    giftId: data.giftId != null ? String(data.giftId) : null, uid: data.id != null ? String(data.id) : null,
+    avatar: typeof data.avatarUrl === 'string' ? data.avatarUrl : (Array.isArray(data.avatarUrls) && typeof data.avatarUrls[0] === 'string' ? data.avatarUrls[0] : null),
     count: repeat, diamonds: diamonds, user: String(data.name || ''), at: Date.now()
-  });
+  };
+  s.recentGifts.push(g);
+  noteGiftMedia(g);
   if (s.recentGifts.length > RECENT_GIFTS_MAX) s.recentGifts.splice(0, s.recentGifts.length - RECENT_GIFTS_MAX);
+}
+
+function noteMedia(key, url) {
+  if (!key || typeof url !== 'string' || !/^https:\/\//.test(url)) return;
+  _mediaUrls.delete(key);
+  _mediaUrls.set(key, url);
+  if (_mediaUrls.size > MEDIA_URLS_MAX) _mediaUrls.delete(_mediaUrls.keys().next().value);
+}
+
+function noteGiftMedia(g) {
+  if (g.giftId) noteMedia('g:' + g.giftId, g.img);
+  if (g.uid) noteMedia('u:' + g.uid, g.avatar);
+}
+
+/**
+ * صورة هدية (kind 'g' + giftId) أو صورة داعم (kind 'u' + userId) كـData URL
+ * (نفس كاش صور التوب)، أو null. للوعاء لو صورة تيك توك المباشرة ما فتحت بالمتصفح.
+ * @returns {Promise<string|null>}
+ */
+function getMediaDataUrl(kind, id) {
+  var url = _mediaUrls.get((kind === 'u' ? 'u:' : 'g:') + String(id || ''));
+  return url ? cachedAvatar(url) : Promise.resolve(null);
 }
 
 /**
@@ -439,6 +470,7 @@ module.exports = {
   markEnded: markEnded,
   getSummary: getSummary,
   getRecentGifts: getRecentGifts,
+  getMediaDataUrl: getMediaDataUrl,
   flush: flush,
   cachedAvatar: cachedAvatar
 };

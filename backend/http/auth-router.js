@@ -167,6 +167,7 @@ var ROUTES = [
   // زر «عرض إحصائيات البث» بمكتبة الألعاب — ملخص البث الحالي/الأخير (بالذاكرة).
   { method: 'GET', path: '/api/stream/session-stats', requireAuth: true, handler: handleStreamSessionStats },
   { method: 'GET', path: '/api/stream/recent-gifts', requireAuth: true, handler: handleStreamRecentGifts },
+  { method: 'GET', path: '/api/stream/media', requireAuth: false, handler: handleStreamMedia },
   // زر «دخول غرفة» بالهيدر: أي لعبة فيها روم بهذا الرقم؟ (بدون حساب — الجوالات تدخل بدون تسجيل)
   { method: 'GET', path: '/api/rooms/lookup', requireAuth: false, handler: handleRoomLookup },
   // تفعيل/إيقاف الدخولية ذاتياً — نفس نمط handleEquipFrame (صاحب الجلسة فقط).
@@ -900,6 +901,23 @@ function handleStreamRecentGifts(req, res, body, user) {
   }
   var r = liveSessionStats.getRecentGifts(username, getQueryParam(req, 'since'));
   sendJson(res, 200, r ? { success: true, sid: r.sid, seq: r.seq, gifts: r.gifts, totals: r.totals, live: r.live } : { success: true, sid: 0, seq: 0, gifts: [], totals: null, live: false });
+}
+
+/**
+ * GET /api/stream/media?k=g|u&id=<giftId|userId> → صورة (بايتات) أو 404.
+ * صورة هدية تيك توك أو صورة داعم لوعاء الهدايا — بديل لو الرابط المباشر ما
+ * فتح بالمتصفح. عام (وسم <img> ما يرسل توكن)، بس ما يجيب إلا روابط جات من
+ * أحداث الهدايا بالبث (live-session-stats noteGiftMedia)، ومخزّنة بالكاش.
+ */
+function handleStreamMedia(req, res) {
+  var kind = getQueryParam(req, 'k') === 'u' ? 'u' : 'g';
+  var id = String(getQueryParam(req, 'id') || '').slice(0, 64);
+  return liveSessionStats.getMediaDataUrl(kind, id).then(function (dataUrl) {
+    var m = typeof dataUrl === 'string' && dataUrl.match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i);
+    if (!m) { sendJson(res, 404, { success: false, error: 'not_found' }); return; }
+    res.writeHead(200, { 'Content-Type': m[1], 'Cache-Control': 'public, max-age=86400' });
+    res.end(Buffer.from(m[2], 'base64'));
+  });
 }
 
 /**
