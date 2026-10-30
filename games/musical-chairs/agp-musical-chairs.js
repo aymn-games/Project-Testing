@@ -458,7 +458,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-p-av img{width:100%;height:100%;object-fit:cover;display:block;}',
             '.mc-p.mc-seated .mc-p-av{border-color:var(--mc-ok);box-shadow:0 0 0 4px rgba(52,211,153,.22),0 0 22px rgba(52,211,153,.6);}',
             '.mc-p.mc-out .mc-p-av{border-color:var(--mc-bad);box-shadow:0 0 14px rgba(248,113,113,.6);filter:grayscale(.4);}',
-            '.mc-p-name{font-size:clamp(12px,2.4cqw,16px);font-weight:800;padding:2px 11px;border-radius:999px;',
+            '.mc-p-name{font-size:clamp(11px,2cqw,14px);font-weight:800;padding:2px 11px;border-radius:999px;',
             'background:rgba(12,10,18,.88);border:1.5px solid rgba(167,139,250,.35);white-space:nowrap;}',
             '.mc-p.mc-seated .mc-p-name,.mc-circle.mc-no-names .mc-p-name{display:none;}',
             '.mc-center{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;',
@@ -1155,7 +1155,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     // حجم صورة اللاعب (% من عرض الدائرة) — pA = min(11, 314/N × 0.78)
     function playerAvatarPct() {
-        return Math.min(11, 314 / Math.max(_alive.length, 1) * 0.78);
+        return Math.min(8, 314 / Math.max(_alive.length, 1) * 0.62);
     }
 
     // الكراسي بحلقات متحدة المركز داخل الدائرة (كرسي واحد = بالمنتصف).
