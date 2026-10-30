@@ -430,9 +430,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             '.mc-watermark{position:absolute;left:50%;top:50%;width:62%;height:auto;transform:translate(-50%,-50%);opacity:0.08;pointer-events:none;}',
             '.mc-ch{position:absolute;aspect-ratio:1;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;}',
             '.mc-ch-glyph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;line-height:1;',
-            'filter:drop-shadow(0 6px 10px rgba(0,0,0,.55)) drop-shadow(0 0 12px rgba(243,196,122,.25));',
+            'filter:drop-shadow(0 8px 10px rgba(0,0,0,.55)) drop-shadow(0 0 14px rgba(232,214,180,.18));',
             'transition:transform .35s cubic-bezier(.34,1.56,.64,1);}',
-            '.mc-chair-svg{width:92%;height:auto;display:block;overflow:visible;}',
+            '.mc-chair-img{height:100%;width:auto;max-width:100%;object-fit:contain;display:block;pointer-events:none;user-select:none;}',
             '.mc-ch.mc-numbered .mc-ch-glyph{transform:scale(1.05);}',
             '.mc-ch-num{position:absolute;left:50%;top:33%;transform:translate(-50%,-50%);padding:0.12em 0.28em;border-radius:0.3em;',
             'display:none;align-items:center;justify-content:center;background:linear-gradient(180deg,#a855f7,#6d28d9);color:#fff;font-weight:900;line-height:1;',
@@ -895,8 +895,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '</section>' +
                 '</div></aside>' +
                 '<section class="mc-arena"><div class="mc-cq"><div class="mc-circle" id="mc-circle">' +
-                    CHAIR_DEFS +
-                '<div class="mc-ring"><div></div></div>' +
+                    '<div class="mc-ring"><div></div></div>' +
                     '<img class="mc-watermark" src="../../logo.png" alt="">' +
                     '<div id="mc-chairs"></div>' +
                     '<div class="mc-center" id="mc-center"></div>' +
@@ -1196,46 +1195,9 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    // الكرسي: رسمة SVG بنفس شكل إيموجي 🪑 (كرسي خشب بزاوية ثلاثة أرباع:
-    // قائمين ولوح عريض بالظهر، مقعد بمنظور، وأربع أرجل) لكن أسمك شوي،
-    // وحادة بأي حجم. التدرّجات معرّفة مرة وحدة بـ#mc-chair-defs (داخل
-    // المسرح)، لأن تعريفها داخل كرسي مخفي (mc-taken) يخفيها عن الباقي.
-    var CHAIR_SVG =
-        '<svg class="mc-chair-svg" viewBox="0 0 100 112" aria-hidden="true">' +
-            '<ellipse cx="55" cy="104" rx="34" ry="5" fill="rgba(0,0,0,.45)"/>' +
-            // الأرجل الخلفية (ورا المقعد)
-            '<path d="M60 60 h8 v31 q-4 2.5 -8 0 Z" fill="url(#mc-wood-shade)"/>' +
-            '<path d="M24 64 h8 v34 q-4 2.5 -8 0 Z" fill="url(#mc-wood-shade)"/>' +
-            // قائمي الظهر
-            '<path d="M24 14 q0 -4 4 -4 h4 q4 0 4 4 v50 h-12 Z" fill="url(#mc-wood-side)"/>' +
-            '<path d="M58 9 q0 -4 4 -4 h4 q4 0 4 4 v51 h-12 Z" fill="url(#mc-wood-side)"/>' +
-            // لوح الظهر العريض
-            '<path d="M22 13 L72 6 Q76 5.5 76 10 L76 26 Q76 30 72 30.5 L22 37 Q18 37.5 18 33 L18 18 Q18 13.5 22 13 Z" fill="url(#mc-wood-face)" stroke="#7a4218" stroke-width="1.2" stroke-linejoin="round"/>' +
-            '<path d="M24 17 L70 10.5" stroke="rgba(255,226,180,.65)" stroke-width="2" stroke-linecap="round"/>' +
-            '<path d="M24 25 L70 18.5" stroke="rgba(122,66,24,.3)" stroke-width="1"/>' +
-            // المقعد: السطح بمنظور + الحافة الأمامية والجانبية
-            '<path d="M18 62 L66 55 Q70 54.5 73 57 L90 70 Q92 72 89 73 L40 81 Q37 81.5 35 79.5 L16 66 Q14 63 18 62 Z" fill="url(#mc-wood-seat)" stroke="#7a4218" stroke-width="1.2" stroke-linejoin="round"/>' +
-            '<path d="M35 79.5 L40 81 L89 73 Q92 72 91 75 L91 80 Q91 82 88 82.5 L41 90 Q37 90.5 36 88 Z" fill="url(#mc-wood-shade)"/>' +
-            '<path d="M16 66 L35 79.5 L36 88 L17 74 Q15 72.5 15 70 Z" fill="url(#mc-wood-side)"/>' +
-            '<path d="M28 64 L66 58.5 M34 69 L74 63 M42 74.5 L82 68.5" stroke="rgba(122,66,24,.28)" stroke-width="1" stroke-linecap="round"/>' +
-            '<path d="M21 63 L65 56.8" stroke="rgba(255,232,190,.7)" stroke-width="1.8" stroke-linecap="round"/>' +
-            // الأرجل الأمامية
-            '<path d="M37 86 h9 v15 q-4.5 2.5 -9 0 Z" fill="url(#mc-wood-face)"/>' +
-            '<path d="M80 78 h9 v17 q-4.5 2.5 -9 0 Z" fill="url(#mc-wood-face)"/>' +
-            '<path d="M16 71 h8 v25 q-4 2.5 -8 0 Z" fill="url(#mc-wood-side)"/>' +
-        '</svg>';
-
-    var CHAIR_DEFS =
-        '<svg id="mc-chair-defs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' +
-            '<linearGradient id="mc-wood-face" x1="0" y1="0" x2="1" y2="1">' +
-                '<stop offset="0" stop-color="#e9aa6c"/><stop offset="1" stop-color="#c47a42"/></linearGradient>' +
-            '<linearGradient id="mc-wood-seat" x1="0" y1="0" x2="1" y2="1">' +
-                '<stop offset="0" stop-color="#f2bd82"/><stop offset="1" stop-color="#d48b4f"/></linearGradient>' +
-            '<linearGradient id="mc-wood-side" x1="0" y1="0" x2="1" y2="0">' +
-                '<stop offset="0" stop-color="#b8703a"/><stop offset="1" stop-color="#9a5a2c"/></linearGradient>' +
-            '<linearGradient id="mc-wood-shade" x1="0" y1="0" x2="0" y2="1">' +
-                '<stop offset="0" stop-color="#a5622f"/><stop offset="1" stop-color="#7a4218"/></linearGradient>' +
-        '</defs></svg>';
+    // الكرسي: صورة كرسي سفرة (إطار خشب فاتح + تنجيد بيج) بألوان مهدّية
+    // — images/chair-soft.png بخلفية شفافة.
+    var CHAIR_IMG = '<img class="mc-chair-img" src="images/chair-soft.png" alt="" draggable="false">';
 
     function renderChairs() {
         var wrap = el('mc-chairs');
@@ -1245,7 +1207,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         wrap.innerHTML = _chairs.map(function (chair, idx) {
             var cls = 'mc-ch' + (numbered ? ' mc-numbered' : '') + (chair.occupantId && chair.arrived ? ' mc-taken' : '');
             return '<div class="' + cls + '" id="mc-chair-' + idx + '" style="left:' + chair.x + '%;top:' + chair.y + '%;width:' + c + '%;">' +
-                '<div class="mc-ch-glyph">' + CHAIR_SVG + '</div>' +
+                '<div class="mc-ch-glyph">' + CHAIR_IMG + '</div>' +
                 '<div class="mc-ch-num" style="font-size:' + (c * 0.36) + 'cqw">' + chair.number + '</div></div>';
         }).join('');
     }
