@@ -434,10 +434,33 @@ body.lc-active a { color: var(--lc-accent); }
 .lc-drawer-foot > button { width: 100%; }
 
 /* نافذة دعوة لاعبين جدد */
-.lc-invite { width: min(480px, 100%); align-items: stretch; text-align: right; }
-.lc-invite .lc-dialog-text { text-align: right; }
-.lc-invite-team { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 20px; background: var(--tc-soft); border: 1px solid var(--lc-line-soft); }
-.lc-invite-team .lc-keyword { font-size: 28px; }
+/* نافذة "دخول لاعبين جدد" — نفس نافذة روليت الإقصاء (زجاج بإطار بنفسجي متوهج) */
+.lc-hbtn-join { border: none; background: var(--lc-grad); color: #fff; box-shadow: 0 8px 26px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.2); }
+.lc-hbtn-join:hover { filter: brightness(1.1); background: var(--lc-grad); }
+.lc-drawer-foot .lc-btn-primary svg { flex-shrink: 0; }
+.lc-join-overlay { position: fixed; inset: 0; z-index: 255; background: rgba(0,0,0,.45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: grid; place-items: center; animation: lc-fade .25s ease; }
+.lc-join {
+    width: min(560px, calc(100vw - 16px)); height: min(720px, calc(100vh - 16px)); display: flex; flex-direction: column; overflow: hidden;
+    background: rgba(12,11,18,.4); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); border: 2px solid rgba(167,139,250,.7); border-radius: 28px;
+    box-shadow: 0 0 0 6px rgba(139,92,246,.12), 0 0 60px rgba(139,92,246,.3), 0 40px 120px rgba(0,0,0,.6); animation: lc-pop .45s cubic-bezier(.2,1.25,.35,1);
+}
+.lc-join-head { flex-shrink: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: clamp(18px,5vw,28px) clamp(16px,5vw,28px) clamp(14px,4vw,22px); }
+.lc-join-titles { display: flex; flex-direction: column; gap: 8px; }
+.lc-join-pill { align-self: flex-start; font-size: 13px; padding: 6px 14px; }
+.lc-join-title { font: 700 clamp(19px,5vw,26px)/1.35 var(--lc-font); }
+.lc-join-sub { font: 500 clamp(14px,3.6vw,17px)/1.6 var(--lc-font); color: #cfcad9; }
+.lc-join-x { flex-shrink: 0; width: 44px; height: 44px; }
+.lc-join-keys { flex-shrink: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 clamp(16px,5vw,28px) clamp(14px,4vw,22px); border-bottom: 1px solid rgba(167,139,250,.25); }
+.lc-join-key { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 12px; border-radius: 18px; background: rgba(255,255,255,.03); border: 1px solid color-mix(in srgb, var(--tc) 35%, transparent); }
+.lc-join-key-name { display: flex; align-items: center; gap: 6px; max-width: 100%; font: 600 14px var(--lc-font); color: var(--lc-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-join-key-cmd { max-width: 100%; font: 700 clamp(18px,4vw,24px) var(--lc-font); color: var(--tc); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-join-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: clamp(14px,4vw,20px) clamp(16px,5vw,28px); }
+.lc-join-count { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; font: 600 15px var(--lc-font); color: #cfcad9; }
+.lc-join-count b { color: var(--lc-accent); font-weight: 700; }
+.lc-join-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; }
+.lc-join-empty { flex: 1; min-height: 120px; display: grid; place-items: center; border-radius: 20px; border: 1.5px dashed rgba(167,139,250,.3); color: var(--lc-dim-2); font: 500 16px var(--lc-font); }
+.lc-join-foot { flex-shrink: 0; padding: clamp(14px,4vw,20px) clamp(16px,5vw,28px) clamp(16px,5vw,28px); }
+.lc-join-foot .lc-btn-primary { width: 100%; height: 56px; font-size: 18px; }
 
 /* ==========================================================================
    4/5) الفوز بالجولة والنتيجة النهائية — نفس نافذة الفائز بروليت الإقصاء:

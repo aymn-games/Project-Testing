@@ -40,9 +40,10 @@
  * - بهذا صار حسم الفوز بالمباراة حتمياً دائماً (2 من 3) فما عاد فيه حاجة
  *   لحالة "تعادل النقاط" أو شاشة "ملخص الجولة" اليدوية القديمة -- أُزيلتا
  *   بالكامل من هذا الإصدار.
- * - "الانضمام عبر الكلمة المفتاحية" يبقى مفعّلاً طول المباراة (لوبي + لعب
- *   حي)، ليس فقط أثناء اللوبي، لأن نافذة "دعوة لاعبين جدد" داخل اللعب
- *   تفترض ذلك صراحة.
+ * - "الانضمام عبر الكلمة المفتاحية" مفتوح باللوبي، ووسط المباراة فقط وهي
+ *   نافذة "دخول لاعبين جدد" مفتوحة (زر بالشريط العلوي أو بدرج الإعدادات،
+ *   نفس روليت الإقصاء) -- المنضمين يدخلون فرقهم عند "إكمال المباراة".
+ *   ويبقى "رقم الفريق + إجابة صحيحة بنفس الرسالة" شغال طول المباراة.
  * - عند "لعبة جديدة" من شاشة النتيجة النهائية: يبقى الاتصال بالبث كما هو
  *   ويُعاد ضبط اللاعبين/اللوحة والعودة مباشرة للوبي (مو لإعادة كتابة
  *   يوزر البث من الصفر).
@@ -317,6 +318,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var _reshuffleNotice = null;
     var _settingsOpen = false;
     var _inviteOpen = false;
+    var _joinPending = []; // لاعبين انضموا بنافذة "دخول لاعبين جدد" -- يدخلون فرقهم عند إكمال المباراة
     var _showIntro = false;
 
     function el(id) { return document.getElementById(id); }
@@ -438,6 +440,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     var ICON_X = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>';
     var ICON_TROPHY = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8"></path><path d="M12 17v4"></path><path d="M7 4h10v5a5 5 0 0 1-10 0z"></path><path d="M17 5h3v2a3 3 0 0 1-3 3"></path><path d="M7 5H4v2a3 3 0 0 0 3 3"></path></svg>';
     var ICON_SHUFFLE = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"></path><path d="M21 3v5h-5"></path></svg>';
+    var ICON_USER_ADD = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>';
     var ICON_CLOCK = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>';
 
     // خلفية التوهج والنجوم -- تُبنى مرة وحدة (مواقع النجوم عشوائية) وتُعاد
@@ -940,6 +943,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         refreshPlayerCollectibles(payload);
         if (_registrationOpen && tryHandleJoin(payload, norm)) return;
         if (_screen !== 'game') return;
+        if (_inviteOpen && tryHandleInviteJoin(payload, norm)) return;
         if (_activeIdx != null) { tryHandleAutoAnswer(payload, norm); return; }
         tryHandleLetterPick(payload, norm);
     }
@@ -1064,6 +1068,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _reshuffleNotice = null;
         _settingsOpen = false;
         _inviteOpen = false;
+        _joinPending = [];
 
         AGP.scoreManager.reset();
         syncScoreManagerTotals();
@@ -1304,8 +1309,31 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     function openSettingsDrawer() { _settingsOpen = true; renderGameScreen(); }
     function closeSettingsDrawer() { _settingsOpen = false; renderGameScreen(); }
-    function openInviteModal() { _inviteOpen = true; renderGameScreen(); }
-    function closeInviteModal() { _inviteOpen = false; renderGameScreen(); }
+    // نافذة "دخول لاعبين جدد" (نفس نافذة روليت الإقصاء): وهي مفتوحة، أي
+    // مشاهد ما هو بأي فريق يكتب كلمة فريقه بالشات فيظهر بالقائمة (ببطاقته
+    // وإطاره لو عنده)، والمضيف يقدر يشيله بـ×. عند "إكمال المباراة" يدخلون
+    // فرقهم فعلياً. كلمة الدخول خارج هذي النافذة مقفلة وسط المباراة.
+    function openInviteModal() { _settingsOpen = false; _inviteOpen = true; _joinPending = []; renderGameScreen(); }
+    function closeInviteModal() {
+        _inviteOpen = false;
+        _joinPending.forEach(function (j) { if (!findPlayerById(j.id)) AGP.player.addPlayer(j); });
+        _joinPending = [];
+        renderGameScreen();
+    }
+    function tryHandleInviteJoin(payload, norm) {
+        var team = (norm === normalizeArabicText(_settings.team1AccessCode)) ? TEAM1
+            : (norm === normalizeArabicText(_settings.team2AccessCode)) ? TEAM2 : null;
+        if (!team) return false;
+        if (findPlayerById(payload.id)) return true; // منضم أصلاً لفريق
+        var pending = null;
+        for (var i = 0; i < _joinPending.length; i++) { if (_joinPending[i].id === payload.id) pending = _joinPending[i]; }
+        if (pending && pending.team === team) return true;
+        if (pending) pending.team = team; // غيّر فريقه قبل الإكمال
+        else _joinPending.push({ id: payload.id, name: payload.name || payload.id, avatarUrl: payload.avatarUrl || null, frame: payload.frame || null, winCard: payload.winCard || null, team: team });
+        playJoinSound();
+        renderGameScreen();
+        return true;
+    }
 
     function endMatch() {
         showConfirm({
@@ -1323,7 +1351,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _round = 1; _roundWins1 = 0; _roundWins2 = 0; _usedQuestions = {};
         _cellLetters = []; _cellStates = []; _cellQuestions = [];
         _activeIdx = null; _answerTimerExpired = false; _timeUpModalOpen = false; _connectionWinner = null; _boardFullNoWinner = false;
-        _answerModal = null; _lastAnswererPlayer = null; _settingsOpen = false; _inviteOpen = false;
+        _answerModal = null; _lastAnswererPlayer = null; _settingsOpen = false; _inviteOpen = false; _joinPending = [];
 
         renderSettingsScreen();
     }
@@ -1336,7 +1364,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _round = 1; _roundWins1 = 0; _roundWins2 = 0; _usedQuestions = {};
         _cellLetters = []; _cellStates = []; _cellQuestions = [];
         _activeIdx = null; _answerTimerExpired = false; _timeUpModalOpen = false; _connectionWinner = null; _boardFullNoWinner = false;
-        _answerModal = null; _lastAnswererPlayer = null; _settingsOpen = false; _inviteOpen = false;
+        _answerModal = null; _lastAnswererPlayer = null; _settingsOpen = false; _inviteOpen = false; _joinPending = [];
         AGP.scoreManager.reset();
         renderLobbyScreen();
     }
@@ -1483,7 +1511,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                         drawerRosterHtml(TEAM2) +
                     '</div>' +
                     '<div class="lc-drawer-foot">' +
-                        '<button type="button" id="lc-drawer-invite" class="lc-btn-ghost">طريقة انضمام لاعبين جدد</button>' +
+                        '<button type="button" id="lc-drawer-invite" class="lc-btn-primary">' + ICON_USER_ADD + 'إدخال لاعب جديد</button>' +
                         '<button type="button" id="lc-drawer-reset" class="lc-btn-ghost">إعادة توزيع الجولة</button>' +
                         '<button type="button" id="lc-drawer-end-match" class="lc-btn-danger">إنهاء المباراة</button>' +
                     '</div>' +
@@ -1492,21 +1520,33 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
         var inviteHtml = '';
         if (_inviteOpen) {
-            var inviteTeam = function (team) {
+            var joinKeyHtml = function (team) {
                 var color = teamColor(team);
-                return '<div class="lc-invite-team" style="--tc:' + color + ';--tc-soft:' + hexToRgba(color, 0.08) + '">' +
-                    '<span class="lc-team-panel-name"><span class="lc-dot lc-dot-lg"></span><span class="lc-ellipsis">' + escapeHtml(teamName(team)) + '</span></span>' +
-                    '<span class="lc-keyword">' + escapeHtml(teamCode(team)) + '</span>' +
+                return '<div class="lc-join-key" style="--tc:' + color + '">' +
+                    '<span class="lc-join-key-name"><span class="lc-dot"></span>' + escapeHtml(teamName(team)) + '</span>' +
+                    '<span class="lc-join-key-cmd">' + escapeHtml(teamCode(team)) + '</span>' +
                 '</div>';
             };
+            var joinedHtml = _joinPending.length
+                ? '<div class="lc-pgrid">' + _joinPending.map(function (j) { return playerCardHtml(j, teamColor(j.team)); }).join('') + '</div>'
+                : '<div class="lc-join-empty">بانتظار انضمام اللاعبين…</div>';
             inviteHtml =
-                '<div class="lc-overlay" id="lc-invite-overlay">' +
-                    '<div class="lc-dialog lc-invite">' +
-                        '<div class="lc-drawer-head"><span class="lc-drawer-title">دخول لاعبين جدد</span><button type="button" id="lc-invite-close-x" class="lc-icon-btn" aria-label="إغلاق">' + ICON_X + '</button></div>' +
-                        '<span class="lc-dialog-text">يكتب اللاعب كلمة الدخول الخاصة بفريقه في شات البث، أو رقم فريقه مع الإجابة بنفس الرسالة (مثل 1 تمر أو 2 تمر) — ولو كانت صحيحة ينضم وتنحسب لفريقه.</span>' +
-                        inviteTeam(TEAM1) +
-                        inviteTeam(TEAM2) +
-                        '<button type="button" id="lc-invite-done" class="lc-btn-primary">تم</button>' +
+                '<div class="lc-join-overlay" id="lc-invite-overlay">' +
+                    '<div class="lc-join">' +
+                        '<div class="lc-join-head">' +
+                            '<div class="lc-join-titles">' +
+                                '<span class="lc-pill lc-pill-accent lc-join-pill"><span class="lc-dot"></span>لاعبين جدد</span>' +
+                                '<span class="lc-join-title">دخول لاعبين جدد لم يسبق لهم الدخول</span>' +
+                                '<span class="lc-join-sub">اكتب كلمة فريقك بشات البث للانضمام إلى اللعبة</span>' +
+                            '</div>' +
+                            '<button type="button" id="lc-invite-close-x" class="lc-icon-btn lc-join-x" aria-label="إغلاق">' + ICON_X + '</button>' +
+                        '</div>' +
+                        '<div class="lc-join-keys">' + joinKeyHtml(TEAM1) + joinKeyHtml(TEAM2) + '</div>' +
+                        '<div class="lc-join-body">' +
+                            '<div class="lc-join-count"><span>اللاعبون المنضمون</span><b>' + _joinPending.length + '</b></div>' +
+                            '<div id="lc-join-list" class="lc-join-list">' + joinedHtml + '</div>' +
+                        '</div>' +
+                        '<div class="lc-join-foot"><button type="button" id="lc-invite-done" class="lc-btn-primary">إكمال المباراة</button></div>' +
                     '</div>' +
                 '</div>';
         }
@@ -1517,7 +1557,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 headerHtml(
                     headerBtnHtml('lc-end-match-btn', 'إنهاء المباراة', ICON_EXIT, 'exit') +
                     headerBtnHtml('lc-open-settings-btn', 'إعدادات المباراة', ICON_GEAR, 'ghost')
-                ) +
+                , headerBtnHtml('lc-open-join-btn', 'دخول لاعبين جدد', ICON_USER_ADD, 'join')) +
                 '<div class="lc-stage lc-game-screen">' +
                     '<div class="lc-pills">' +
                         '<span class="lc-pill lc-pill-accent"><span class="lc-dot"></span>' + GAME_NAME + ' · الجولة ' + _round + '</span>' +
@@ -1647,10 +1687,22 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             });
         }
 
+        el('lc-open-join-btn').addEventListener('click', openInviteModal);
+
         if (_inviteOpen) {
             el('lc-invite-close-x').addEventListener('click', closeInviteModal);
             el('lc-invite-done').addEventListener('click', closeInviteModal);
             el('lc-invite-overlay').addEventListener('click', function (e) { if (e.target.id === 'lc-invite-overlay') closeInviteModal(); });
+            var joinList = el('lc-join-list');
+            Array.prototype.forEach.call(joinList.querySelectorAll('.lc-lobby-remove-x'), function (btn) {
+                btn.addEventListener('click', function () {
+                    var id = btn.getAttribute('data-id');
+                    _joinPending = _joinPending.filter(function (j) { return j.id !== id; });
+                    renderGameScreen();
+                });
+            });
+            fitLobbyCardNames(joinList);
+            fitLobbyFramedCards(joinList);
         }
     }
 
