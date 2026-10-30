@@ -209,8 +209,9 @@ body.lc-active a { color: var(--lc-accent); }
 .lc-lobby-remove-x { width: 30px; height: 30px; flex-shrink: 0; border: none; background: transparent; padding: 0; color: #fca5a5; cursor: pointer; display: grid; place-items: center; opacity: .75; transition: opacity .2s, transform .2s; }
 .lc-lobby-remove-x:hover { opacity: 1; transform: scale(1.15); }
 /* لاعب بإطار من المنصة: البطاقة المشتركة كاملة بالخانة (fitLobbyFramedCards بالـJS) */
-.lc-pframe { position: relative; min-width: 0; height: 78px; display: flex; align-items: center; justify-content: center; direction: ltr; animation: lc-rise .4s cubic-bezier(.2,1.3,.4,1) both; }
-.lc-pframe .lc-lobby-remove-x { position: absolute; top: 0; right: 4%; z-index: 10; filter: drop-shadow(0 1px 2px rgba(0,0,0,.9)); }
+/* لاعب بإطار اسم: ياخذ صف كامل بعرض اللوحة عشان إطاره واسمه يبانون واضحين */
+.lc-pframe { grid-column: 1 / -1; position: relative; min-width: 0; height: 108px; display: flex; align-items: center; justify-content: center; direction: ltr; animation: lc-rise .4s cubic-bezier(.2,1.3,.4,1) both; }
+.lc-pframe .lc-lobby-remove-x { position: absolute; top: 4px; right: 8%; z-index: 10; filter: drop-shadow(0 1px 2px rgba(0,0,0,.9)); }
 .lc-pframe .agp-pcard-tpl { zoom: .7282; flex-shrink: 0; }
 .lc-pcard-wrap { max-width: 100% !important; }
 

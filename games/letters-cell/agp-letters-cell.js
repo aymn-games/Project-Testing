@@ -795,11 +795,11 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         });
     }
 
-    // Framed lobby cards, shown whole in the 217x57 slot (same approach as
-    // Elimination Roulette's lobby): the shared renderer crops tall frame
-    // artwork to its fixed card height, so each framed card is re-expanded
-    // to its frame image's full opaque height (measured once per image)
-    // and zoomed to fit 217px wide, at most 75px tall.
+    // Framed lobby cards take a full row (.lc-pframe) so the frame and the
+    // name read clearly: the shared renderer crops tall frame artwork to its
+    // fixed card height, so each framed card is re-expanded to its frame
+    // image's full opaque height (measured once per image) and zoomed to
+    // fit 400px wide, at most 104px tall.
     var _lcFrameBoundsCache = {};
 
     function getFrameOpaqueRows(src) {
@@ -858,7 +858,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 var fullH = bandBottom - bandTop;
                 var cardW = parseFloat(card.style.width) || 298;
                 card.style.height = fullH + 'px';
-                card.style.zoom = String(Math.min(217 / cardW, 75 / fullH));
+                card.style.zoom = String(Math.min(400 / cardW, 104 / fullH));
                 card.setAttribute('data-lc-fit', '1');
             });
         });
@@ -899,10 +899,25 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _commentUnsub = AGP.events.on('stream:commentReceived', handleIncomingComment);
     }
 
+    // إطار الاسم وبطاقة الفوز (وصورة الحساب) تجي مع كل تعليق -- نحدّثها
+    // للاعب المنضم أصلاً، حتى لو ما كانت موجودة لحظة انضمامه (نفس سجل
+    // اللاعبين بروليت الإقصاء). اللوبي يتحدّث فوراً لو تغيّر إطار أحد.
+    function refreshPlayerCollectibles(payload) {
+        var p = findPlayerById(payload.id);
+        if (!p) return;
+        var frameChanged = false;
+        if (payload.frame && JSON.stringify(payload.frame) !== JSON.stringify(p.frame || null)) { p.frame = payload.frame; frameChanged = true; }
+        if (payload.winCard !== undefined) p.winCard = payload.winCard || null;
+        if (payload.avatarUrl && !p.avatarUrl) { p.avatarUrl = payload.avatarUrl; frameChanged = true; }
+        if (p.winCard && AGP.winCard) AGP.winCard.preloadFor(p);
+        if (frameChanged && _screen === 'lobby') refreshLobbyPanels();
+    }
+
     function handleIncomingComment(payload) {
         if (!payload || typeof payload.text !== 'string' || !payload.id) return;
         var norm = normalizeArabicText(payload.text);
 
+        refreshPlayerCollectibles(payload);
         if (_registrationOpen && tryHandleJoin(payload, norm)) return;
         if (_screen !== 'game') return;
         if (_activeIdx != null) { tryHandleAutoAnswer(payload, norm); return; }
