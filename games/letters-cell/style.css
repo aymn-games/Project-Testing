@@ -188,8 +188,6 @@ body.lc-active a { color: var(--lc-accent); }
     border: 1.5px solid var(--tc-bd); box-shadow: 0 20px 60px rgba(0,0,0,.3), 0 0 50px var(--tc-halo);
     animation: lc-rise .45s ease both;
 }
-/* شريط علوي بتدرّج لون الفريق نفسه اللي بخلايا الرقعة */
-.lc-team-panel::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--tc-fill); z-index: 1; }
 .lc-team-panel-halo { position: absolute; top: -100px; left: 50%; width: 460px; height: 200px; margin-left: -230px; border-radius: 50%; background: var(--tc-halo); filter: blur(44px); pointer-events: none; }
 .lc-team-panel-head { position: relative; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; padding: clamp(16px,2vw,24px) clamp(18px,2.2vw,28px); border-bottom: 1px solid var(--lc-line-soft); }
 .lc-team-panel-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
@@ -202,11 +200,6 @@ body.lc-active a { color: var(--lc-accent); }
 .lc-keyword {
     display: block; text-align: center; padding: 10px 22px; border-radius: 999px; background: var(--tc-soft); border: 1.5px dashed var(--tc);
     font: 700 clamp(24px,3vw,36px)/1.2 var(--lc-font); color: var(--tc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-/* كلمة الدخول باللوبي: كبسولة بتدرّج لون الفريق (نفس خلايا الرقعة) بحافة فاتحة ولمعة زجاجية */
-.lc-team-panel .lc-keyword {
-    border: 1.5px solid color-mix(in srgb, var(--tc) 55%, #fff 45%); color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,.3);
-    background: linear-gradient(180deg, rgba(255,255,255,.2), rgba(255,255,255,0) 45%), linear-gradient(0deg, rgba(0,0,0,.2), rgba(0,0,0,0) 40%), var(--tc-fill);
 }
 .lc-team-panel-body { position: relative; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: clamp(12px,1.6vw,20px); }
 .lc-team-empty { height: 100%; min-height: 140px; display: grid; place-items: center; border-radius: 18px; border: 1.5px dashed rgba(255,255,255,.1); color: var(--lc-dim-2); font: 500 14px var(--lc-font); text-align: center; padding: 20px; }
