@@ -1232,8 +1232,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         _answerModal = null;
         if (_connectionWinner) {
             playRoundWinSound();
-            _screen = 'roundWinner';
-            renderRoundWinnerScreen();
+            _screen = 'celebrate'; // يوقف الشات/الضغط على الخلايا طول الانيميشن
+            renderGameScreen();
+            playConnectionAnimation(_connectionWinner, function () {
+                _screen = 'roundWinner';
+                renderRoundWinnerScreen();
+            });
             return;
         }
         if (_boardFullNoWinner) {
@@ -1242,6 +1246,77 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             return;
         }
         renderGameScreen();
+    }
+
+    /**
+     * أقصر مسار خلايا للفريق بين جهتيه (BFS) -- نفس قاعدة isConnected:
+     * الفريق الأول من فوق لتحت، والثاني من اليسار لليمين. يرجع فهارس الخلايا.
+     */
+    function findWinningPath(cellStates, team) {
+        var startEdge = (team === TEAM2) ? LEFT_EDGE : TOP_EDGE;
+        var endEdge = (team === TEAM2) ? RIGHT_EDGE : BOTTOM_EDGE;
+        var target = {}; endEdge.forEach(function (i) { target[i] = true; });
+        var parent = {}, queue = [];
+        startEdge.forEach(function (i) { if (cellStates[i] === team) { parent[i] = -1; queue.push(i); } });
+        while (queue.length) {
+            var cur = queue.shift();
+            if (target[cur]) {
+                var path = [];
+                for (var k = cur; k !== -1; k = parent[k]) path.unshift(k);
+                return path;
+            }
+            ADJACENCY[cur].forEach(function (n) {
+                if (!(n in parent) && cellStates[n] === team) { parent[n] = cur; queue.push(n); }
+            });
+        }
+        return [];
+    }
+
+    /**
+     * انيميشن اكتمال الخط المتصل (قبل نافذة الفوز بالجولة): خلايا المسار
+     * تضيء وحدة وحدة بلون الفريق، خط ضوء يرتسم عبر مراكزها، شرارات تطلع
+     * من كل خلية، والرقعة تنبض مع عبارة "خط متصل!" -- ثم done().
+     */
+    function playConnectionAnimation(team, done) {
+        var board = document.querySelector('.lc-board');
+        var path = findWinningPath(_cellStates, team);
+        if (!board || !path.length) { done(); return; }
+        var color = teamColor(team);
+        var W = Math.round(BOARD_HEIGHT_PX * BOARD_ASPECT), H = BOARD_HEIGHT_PX;
+        var STEP = 0.16; // ثانية بين كل خلية والثانية
+        var pts = path.map(function (idx, i) {
+            var l = CELL_LAYOUT[idx];
+            var cell = board.querySelector('.lc-hex[data-idx="' + idx + '"]');
+            if (cell) { cell.classList.add('lc-hex-win'); cell.style.animationDelay = (i * STEP).toFixed(2) + 's'; }
+            return { x: (l.leftPct + l.wPct / 2) / 100 * W, y: (l.topPct + l.hPct / 2) / 100 * H };
+        });
+        var d = pts.map(function (pt, i) { return (i ? 'L' : 'M') + pt.x.toFixed(1) + ' ' + pt.y.toFixed(1); }).join(' ');
+        var len = 0;
+        for (var i = 1; i < pts.length; i++) len += Math.sqrt(Math.pow(pts[i].x - pts[i - 1].x, 2) + Math.pow(pts[i].y - pts[i - 1].y, 2));
+        var lineDelay = (path.length * STEP).toFixed(2);
+
+        var sparks = '';
+        pts.forEach(function (pt, i) {
+            for (var k = 0; k < 6; k++) {
+                var ang = (Math.PI * 2 * k) / 6 + i;
+                sparks += '<span class="lc-win-spark" style="left:' + pt.x.toFixed(1) + 'px;top:' + pt.y.toFixed(1) + 'px;--dx:' + Math.round(Math.cos(ang) * 90) + 'px;--dy:' + Math.round(Math.sin(ang) * 90) + 'px;animation-delay:' + (i * STEP + 0.1).toFixed(2) + 's"></span>';
+            }
+        });
+
+        var fx = document.createElement('div');
+        fx.className = 'lc-win-fx';
+        fx.style.setProperty('--wc', color);
+        fx.innerHTML =
+            '<svg class="lc-win-path" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true">' +
+                '<path class="lc-win-path-glow" d="' + d + '" style="stroke-dasharray:' + len.toFixed(0) + ';stroke-dashoffset:' + len.toFixed(0) + ';animation-delay:' + lineDelay + 's"></path>' +
+                '<path class="lc-win-path-core" d="' + d + '" style="stroke-dasharray:' + len.toFixed(0) + ';stroke-dashoffset:' + len.toFixed(0) + ';animation-delay:' + lineDelay + 's"></path>' +
+            '</svg>' +
+            sparks +
+            '<div class="lc-win-banner" style="animation-delay:' + (+lineDelay + 0.5).toFixed(2) + 's"><span>خط متصل!</span><b>' + escapeHtml(teamName(team)) + '</b></div>';
+        board.appendChild(fx);
+        board.classList.add('lc-board-won');
+
+        setTimeout(done, Math.round((+lineDelay + 2.3) * 1000));
     }
 
     /** إعادة توزيع الجولة الحالية بأحرف وأسئلة جديدة، بدون احتساب نقاط --
