@@ -733,8 +733,10 @@ class Component extends DCLogic {
   decide(kind){ if(this.state.decided) return; this.clearT(); const s=this.state, A=s.answers, tid=s.target, R=this.act().filter(p=>s.roundIds.includes(p.id));
     const el=(kind==='A'?R.filter(p=>p.id!==tid&&!A[p.id]?.ok):kind==='B'?R.filter(p=>p.id===tid):R.filter(p=>p.id===tid||!A[p.id]?.ok)).map(p=>p.id);
     if(kind==='E'&&!el.includes(tid)) el.push(tid);
-    this.setState({decided:true,outcome:{kind,el},phase:kind==='E'?'return':'vanish'});
-    let w=900; if(kind==='E'){ this.sfx('back'); this.later(()=>{ this.setState({phase:'closed'}); this.sfx('close'); },900); w=1900; }
+    // الإلغاء (E) وخلوص الوقت (F): الساعات ترجع للخزنة وتنقفل بدل ما تختفي
+    const back=kind==='E'||kind==='F';
+    this.setState({decided:true,outcome:{kind,el},phase:back?'return':'vanish'});
+    let w=900; if(back){ this.sfx('back'); this.later(()=>{ this.setState({phase:'closed'}); this.sfx('close'); },900); w=1900; }
     this.later(()=>this.setState({phase:'reveal'}),w);
     this.later(()=>{ this.sfx('elim'); this.setState(x=>({screen:'result',players:x.players.map(p=>el.includes(p.id)?{...p,out:true}:p)})); },w+3200); }
   nextRound=()=>{ this.act().length<=1?this.showWinner():this.goWheel(); };
