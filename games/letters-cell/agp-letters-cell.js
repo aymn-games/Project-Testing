@@ -1324,20 +1324,17 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         for (var i = 0; i < ROUND_WINS_TO_CLINCH; i++) pips += '<span class="lc-pip' + (i < wins ? ' lc-pip-on' : '') + '"></span>';
         // زر التصحيح اليدوي الاحتياطي -- يظهر فقط أثناء سؤال مفتوح.
         var creditBtn = activeLetter
-            ? '<button type="button" id="lc-credit-team' + team + '" class="lc-credit-btn" title="احتساب الإجابة لهذا الفريق">✓ احتساب</button>'
+            ? '<button type="button" id="lc-credit-team' + team + '" class="lc-credit-btn" title="احتساب الإجابة لهذا الفريق">✓</button>'
             : '';
         return '<div class="lc-card lc-gteam" style="--tc:' + color + ';--tc-halo:' + hexToRgba(color, 0.2) + '">' +
             '<span class="lc-gteam-halo"></span>' +
-            '<div class="lc-gteam-info">' +
-                '<span class="lc-dot lc-dot-xl"></span>' +
-                '<div class="lc-gteam-text">' +
-                    '<span class="lc-gteam-name">' + escapeHtml(teamName(team)) + '</span>' +
-                    '<span class="lc-gteam-meta">' + (team === TEAM2 ? 'يوصّل من اليسار لليمين' : 'يوصّل من فوق لتحت') + ' · ' + getTeamPlayers(team).length + ' لاعب · <span class="lc-pips">' + pips + '</span></span>' +
-                '</div>' +
+            '<div class="lc-gteam-row">' +
+                '<span class="lc-gteam-name"><span class="lc-dot lc-dot-lg"></span><span class="lc-ellipsis">' + escapeHtml(teamName(team)) + '</span></span>' +
+                '<span class="lc-gteam-score">' + cells + '</span>' +
             '</div>' +
-            '<div class="lc-gteam-side">' +
+            '<div class="lc-gteam-row">' +
+                '<span class="lc-gteam-meta">' + (team === TEAM2 ? '↔ يسار ويمين' : '↕ فوق وتحت') + ' <span class="lc-pips">' + pips + '</span></span>' +
                 creditBtn +
-                '<div class="lc-gteam-score"><b>' + cells + '</b><span>خلية</span></div>' +
             '</div>' +
         '</div>';
     }
@@ -1490,8 +1487,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '<div class="lc-game-body">' +
                         '<div class="lc-game-side">' +
                             '<div class="lc-host-logo">' + hostLogoHtml() + '</div>' +
-                            gameTeamCardHtml(TEAM1, activeLetter) +
-                            gameTeamCardHtml(TEAM2, activeLetter) +
+                            '<div class="lc-gteams">' + gameTeamCardHtml(TEAM1, activeLetter) + gameTeamCardHtml(TEAM2, activeLetter) + '</div>' +
                             '<div class="lc-card lc-qcard">' +
                                 '<div class="lc-qcard-head">' +
                                     badgeHtml +
@@ -1532,7 +1528,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         var textEl = document.querySelector('.lc-question-text');
         if (!textEl || !textEl.textContent.trim()) return;
         textEl.style.fontSize = '';
-        var minSize = 24;
+        var minSize = 32;
         var size = parseFloat(getComputedStyle(textEl).fontSize);
         var guard = 0;
         while (textEl.scrollHeight > textEl.clientHeight && size > minSize && guard < 30) {
