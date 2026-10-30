@@ -1397,17 +1397,21 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                 '<div class="lc-overlay lc-overlay-game">' +
                     '<div class="lc-modal lc-answer-modal" style="--tc:' + m.teamColor + ';--tc-halo:' + hexToRgba(m.teamColor, 0.22) + '">' +
                         '<span class="lc-modal-halo"></span>' +
-                        '<span class="lc-pill lc-pill-accent"><span class="lc-dot"></span>الإجابة الصحيحة</span>' +
-                        '<div class="lc-answer-question">' + escapeHtml(m.question) + '</div>' +
-                        '<div class="lc-answer-text">' + escapeHtml(m.answer) + '</div>' +
-                        '<div class="lc-answer-who">' +
-                            avatarHtml({ name: m.playerName, avatarUrl: m.avatarUrl }, m.teamColor, 'lc-av-xl') +
-                            '<div class="lc-answer-who-text">' +
-                                '<span class="lc-answer-player">' + escapeHtml(m.playerName) + '</span>' +
-                                '<span class="lc-team-tag"><span class="lc-dot"></span>' + escapeHtml(m.teamName) + '</span>' +
-                            '</div>' +
+                        '<div class="lc-answer-block">' +
+                            '<span class="lc-answer-label">السؤال</span>' +
+                            '<div class="lc-answer-question">' + escapeHtml(m.question) + '</div>' +
                         '</div>' +
-                        '<button type="button" id="lc-answer-modal-done" class="lc-btn-primary lc-btn-wide">كمل</button>' +
+                        '<div class="lc-answer-block lc-answer-block-ok">' +
+                            '<span class="lc-answer-label">الإجابة الصحيحة</span>' +
+                            '<div class="lc-answer-text">' + escapeHtml(m.answer) + '</div>' +
+                        '</div>' +
+                        // اللاعب اللي جاوب: صورة بحلقة متدرّجة بلون فريقه، واسمه تحتها مع شارة الفريق
+                        '<div class="lc-answer-who">' +
+                            '<span class="lc-answer-ring">' + avatarHtml({ name: m.playerName, avatarUrl: m.avatarUrl }, m.teamColor, 'lc-av-xl') + '</span>' +
+                            '<span class="lc-answer-player">' + escapeHtml(m.playerName) + '</span>' +
+                            '<span class="lc-team-tag"><span class="lc-dot"></span>' + escapeHtml(m.teamName) + '</span>' +
+                        '</div>' +
+                        '<button type="button" id="lc-answer-modal-done" class="lc-answer-done">كمل</button>' +
                     '</div>' +
                 '</div>';
         }

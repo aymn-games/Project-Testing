@@ -360,13 +360,28 @@ body.lc-active a { color: var(--lc-accent); }
 }
 .lc-modal-halo { position: absolute; top: -140px; left: 50%; width: 560px; height: 240px; margin-left: -280px; border-radius: 50%; background: var(--tc-halo); filter: blur(44px); pointer-events: none; }
 .lc-modal > *:not(.lc-modal-halo) { position: relative; }
-.lc-answer-question { font: 500 clamp(16px,1.5vw,22px)/1.6 var(--lc-font); color: var(--lc-dim); }
-.lc-answer-text { font: 700 clamp(36px,4.4vw,64px)/1.2 var(--lc-font); color: var(--lc-green); text-shadow: 0 0 30px rgba(52,211,153,.35); }
-.lc-answer-who { display: flex; align-items: center; gap: 18px; padding: 10px 28px 10px 10px; border-radius: 999px; background: rgba(255,255,255,.03); border: 1.5px solid var(--tc); box-shadow: 0 0 30px var(--tc-halo); }
-.lc-answer-who .lc-av-xl { width: clamp(64px,7vw,96px); height: clamp(64px,7vw,96px); font-size: clamp(26px,3vw,40px); }
-.lc-answer-who-text { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
-.lc-answer-player { font: 700 clamp(22px,2.4vw,34px) var(--lc-font); max-width: 50vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lc-team-tag { display: inline-flex; align-items: center; gap: 8px; font: 600 clamp(14px,1.3vw,18px) var(--lc-font); color: var(--tc); }
+.lc-answer-modal { gap: clamp(14px,2.2vh,22px); }
+.lc-answer-block { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: clamp(14px,2vh,20px) clamp(16px,2vw,28px); border-radius: 24px; background: rgba(255,255,255,.035); border: 1px solid var(--lc-line-soft); }
+.lc-answer-block-ok { background: linear-gradient(180deg, rgba(52,211,153,.1), rgba(52,211,153,.03)); border-color: rgba(52,211,153,.28); }
+.lc-answer-label { font: 600 clamp(12px,1vw,14px) var(--lc-font); color: var(--lc-dim-2); letter-spacing: .3px; }
+.lc-answer-block-ok .lc-answer-label { color: #6ee7b7; }
+.lc-answer-question { font: 600 clamp(20px,2vw,30px)/1.55 var(--lc-font); color: var(--lc-text); text-wrap: balance; }
+.lc-answer-text { font: 700 clamp(44px,5.4vw,80px)/1.2 var(--lc-font); color: #6ee7b7; text-shadow: 0 0 34px rgba(52,211,153,.35); text-wrap: balance; }
+.lc-answer-who { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.lc-answer-ring { padding: 4px; display: block; border-radius: 50%; background: linear-gradient(160deg, color-mix(in srgb, var(--tc) 40%, #fff 60%), var(--tc) 55%, color-mix(in srgb, var(--tc) 55%, #0c0b12 45%)); box-shadow: 0 0 34px var(--tc-halo); }
+.lc-answer-ring .lc-av-xl { display: grid; width: clamp(72px,7vw,104px); height: clamp(72px,7vw,104px); font-size: clamp(28px,3vw,42px); border: 4px solid #0c0b12 !important; }
+.lc-answer-player { font: 700 clamp(22px,2.2vw,32px) var(--lc-font); max-width: 70vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-answer-done {
+    width: min(280px, 100%); height: 52px; border-radius: 999px; cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--tc) 55%, transparent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--tc) 22%, transparent), color-mix(in srgb, var(--tc) 8%, transparent));
+    color: color-mix(in srgb, var(--tc) 45%, #fff 55%); font: 700 18px var(--lc-font);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 8px 24px color-mix(in srgb, var(--tc) 18%, transparent);
+    transition: background .2s, transform .15s;
+}
+.lc-answer-done:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--tc) 34%, transparent), color-mix(in srgb, var(--tc) 14%, transparent)); }
+.lc-answer-done:active { transform: scale(.97); }
+.lc-team-tag { display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px; border-radius: 999px; background: color-mix(in srgb, var(--tc) 12%, transparent); border: 1px solid color-mix(in srgb, var(--tc) 35%, transparent); font: 600 clamp(13px,1.2vw,16px) var(--lc-font); color: var(--tc); }
 
 /* درج إعدادات المباراة */
 .lc-drawer-backdrop { position: fixed; inset: 0; z-index: 240; background: rgba(0,0,0,.45); animation: lc-fade .2s ease; }
