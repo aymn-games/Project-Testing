@@ -275,6 +275,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
 
     var _settings = {
         tiktokUsername: '',
+        hostName: 'أيمن', // يطلع بشعار "حروف مع {الاسم}" بشاشة اللعب
         team1Name: 'الفريق الأول',
         team2Name: 'الفريق الثاني',
         team1Color: TEAM1_DEFAULT_COLOR,
@@ -470,6 +471,12 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
         return '<button type="button" id="' + id + '" class="lc-hbtn lc-hbtn-' + variant + '">' + icon + '<span class="lc-hbtn-label">' + label + '</span></button>';
     }
 
+    /** شعار "حروف مع {اسم المقدّم}" -- الاسم من شاشة الإعدادات. */
+    function hostLogoHtml() {
+        var name = (_settings.hostName || '').trim();
+        return '<span class="lc-host-w1">حروف</span> <span class="lc-host-w2">مع</span>' + (name ? ' <span class="lc-host-w3">' + escapeHtml(name) + '</span>' : '');
+    }
+
     function teamName(team) { return (team === TEAM1) ? _settings.team1Name : _settings.team2Name; }
     function teamColor(team) { return (team === TEAM1) ? _settings.team1Color : _settings.team2Color; }
     function teamCode(team) { return (team === TEAM1) ? _settings.team1AccessCode : _settings.team2AccessCode; }
@@ -577,6 +584,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             rowHtml('اسم الفريق', textInputHtml('lc-input-team2name', _settings.team2Name, 'مثلاً: النمور'), _settings.team2Color) +
             rowHtml('كلمة الدخول', textInputHtml('lc-input-team2code', _settings.team2AccessCode, 'مثلاً: نمر'), _settings.team2Color);
         var matchRows =
+            rowHtml('اسمك (حروف مع …)', textInputHtml('lc-input-hostname', _settings.hostName, 'مثلاً: أيمن')) +
             rowHtml('وقت الإجابة (دقيقة)', '<div class="lc-seg" id="lc-timer-group">' + answerTimerPillsHtml() + '</div>') +
             (isCachedAllowedAdminUser()
                 ? rowHtml('بنك الأسئلة', '<a href="admin-questions.html" target="_blank" class="lc-btn-chip">إدارة الأسئلة</a>')
@@ -631,6 +639,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
     });
 
     function wireSettingsHandlers() {
+        el('lc-input-hostname').addEventListener('input', function (e) { _settings.hostName = e.target.value; });
         el('lc-input-team1name').addEventListener('input', function (e) { _settings.team1Name = e.target.value; });
         el('lc-input-team2name').addEventListener('input', function (e) { _settings.team2Name = e.target.value; });
         el('lc-input-team1code').addEventListener('input', function (e) { _settings.team1AccessCode = e.target.value; });
@@ -1377,7 +1386,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
             : '';
 
         var introHtml = _showIntro
-            ? '<div class="lc-intro"><div class="lc-intro-box"><span class="lc-intro-title">' + GAME_NAME + '</span><span class="lc-pill lc-pill-accent lc-intro-pill"><span class="lc-dot"></span>الجولة ' + _round + '</span></div></div>'
+            ? '<div class="lc-intro"><div class="lc-intro-box"><span class="lc-intro-title">' + hostLogoHtml() + '</span><span class="lc-pill lc-pill-accent lc-intro-pill"><span class="lc-dot"></span>الجولة ' + _round + '</span></div></div>'
             : '';
 
         var reshuffleToastHtml = _reshuffleNotice
@@ -1480,6 +1489,7 @@ window.AymanGamesPlatform = window.AymanGamesPlatform || {};
                     '</div>' +
                     '<div class="lc-game-body">' +
                         '<div class="lc-game-side">' +
+                            '<div class="lc-host-logo">' + hostLogoHtml() + '</div>' +
                             gameTeamCardHtml(TEAM1, activeLetter) +
                             gameTeamCardHtml(TEAM2, activeLetter) +
                             '<div class="lc-card lc-qcard">' +

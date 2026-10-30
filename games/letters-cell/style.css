@@ -244,22 +244,27 @@ body.lc-active a { color: var(--lc-accent); }
 .lc-pill .lc-dot { width: 7px; height: 7px; }
 
 .lc-game-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 640px 1fr; gap: 24px; }
-.lc-game-side { min-height: 0; display: flex; flex-direction: column; gap: 20px; }
+.lc-game-side { min-height: 0; display: flex; flex-direction: column; gap: 16px; }
+/* شعار "حروف مع {اسم المقدّم}" أعلى العمود الجانبي (مكان المساحة اللي وفّرها تصغير كروت الفريقين) */
+.lc-host-logo { flex-shrink: 0; height: 130px; display: flex; align-items: center; justify-content: center; gap: 16px; text-align: center; white-space: nowrap; overflow: hidden; font: 700 76px/1.15 var(--lc-font); }
+.lc-host-w1 { background: linear-gradient(180deg, #f4f2f8, #c4b5fd); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lc-host-w2 { font-size: .5em; font-weight: 600; color: var(--lc-dim); vertical-align: middle; }
+.lc-host-w3 { background: linear-gradient(90deg, #a78bfa, #38bdf8); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 22px rgba(139,92,246,.35)); }
 
 /* كرت الفريق (نفس كروت الفريقين بأسرع إجابة) */
-.lc-gteam { position: relative; overflow: hidden; flex-shrink: 0; height: 150px; border-radius: 30px; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 30px 80px rgba(0,0,0,.35); }
+.lc-gteam { position: relative; overflow: hidden; flex-shrink: 0; height: 104px; border-radius: 26px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 30px 80px rgba(0,0,0,.35); }
 .lc-gteam-halo { position: absolute; top: -120px; right: 10%; width: 420px; height: 220px; border-radius: 50%; background: var(--tc-halo); filter: blur(40px); pointer-events: none; }
 .lc-gteam-info { position: relative; display: flex; align-items: center; gap: 16px; min-width: 0; }
 .lc-gteam-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.lc-gteam-name { font: 700 30px var(--lc-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lc-gteam-meta { display: flex; align-items: center; gap: 8px; font: 500 16px var(--lc-font); color: var(--lc-dim-2); }
+.lc-gteam-name { font: 700 25px var(--lc-font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-gteam-meta { display: flex; align-items: center; gap: 8px; font: 500 14px var(--lc-font); color: var(--lc-dim-2); }
 .lc-pips { display: inline-flex; gap: 6px; }
 .lc-pip { width: 22px; height: 8px; border-radius: 999px; background: rgba(255,255,255,.1); }
 .lc-pip-on { background: var(--tc); box-shadow: 0 0 10px var(--tc); }
 .lc-gteam-side { position: relative; display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
 .lc-gteam-score { display: flex; align-items: baseline; gap: 8px; }
-.lc-gteam-score b { font: 700 68px/1 var(--lc-font); color: var(--tc); font-variant-numeric: tabular-nums; }
-.lc-gteam-score span { font: 500 18px var(--lc-font); color: var(--lc-dim-2); }
+.lc-gteam-score b { font: 700 52px/1 var(--lc-font); color: var(--tc); font-variant-numeric: tabular-nums; }
+.lc-gteam-score span { font: 500 16px var(--lc-font); color: var(--lc-dim-2); }
 .lc-credit-btn { height: 48px; padding: 0 20px; border-radius: 999px; cursor: pointer; border: 1.5px solid var(--tc); background: rgba(255,255,255,.04); color: var(--tc); font: 700 18px var(--lc-font); transition: all .2s; }
 .lc-credit-btn:hover { background: var(--tc); color: #0c0b12; }
 
