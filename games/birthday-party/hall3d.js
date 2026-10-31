@@ -41,7 +41,9 @@ export function mountHall(el, opts = {}) {
   r.setPixelRatio(dpr);
   r.setSize(W(), H(), false);
   r.outputColorSpace = T.SRGBColorSpace;
-  r.toneMapping = T.ACESFilmicToneMapping; r.toneMappingExposure = 0.95;
+  // MOOD: تعتيم عام طول الحفلة (ألوان أخفت وأعتم شوي) — 1 = الإضاءة الأصلية
+  const MOOD = .8, MOOD_SAT = .7;
+  r.toneMapping = T.ACESFilmicToneMapping; r.toneMappingExposure = 0.95 * MOOD;
   r.shadowMap.enabled = true; r.shadowMap.type = T.PCFSoftShadowMap;
   Object.assign(r.domElement.style, { display: 'block', width: '100%', height: '100%' });
   el.appendChild(r.domElement);
@@ -900,13 +902,13 @@ export function mountHall(el, opts = {}) {
     const envK = lerp(1, .09, k); for (const e of envMats) e.m.envMapIntensity = e.b * envK;
     ceilMat.color.lerpColors(CEIL_A, CEIL_B, k);
     hemi.intensity = lerp(.24, .035, k); sun.intensity = lerp(.6, .05, k); stageFill.intensity = lerp(.7, .35, k);
-    r.toneMappingExposure = lerp(.95, 1.0, k) * (1 - .38 * outroDim); // مشهد النهاية: القاعة تخفت والنور من الباب بس
+    r.toneMappingExposure = lerp(.95, 1.0, k) * MOOD * (1 - .38 * outroDim); // مشهد النهاية: القاعة تخفت والنور من الباب بس
     scene.fog.color.lerpColors(FOG_A, FOG_B, k); scene.background.copy(scene.fog.color);
     scene.fog.near = lerp(90, 30, k); scene.fog.far = lerp(230, 150, k);
     winMat.color.lerpColors(WIN_A, WIN_B, k); haloMat.opacity = lerp(.75, .3, k); poolMat.opacity = lerp(.4, .04, k);
     upMat.opacity = lerp(.45, .95, k);
     // ألوان الإضاءة الجدارية: ثابتة بالاستقبال، موجة وردي↔بنفسجي بالحفل
-    upBase.forEach((c0, i) => { col.setHSL(.86 + Math.sin(t * .9 + i * .7) * .09, .95, .62); col.lerpColors(c0, col, k); uplights.setColorAt(i, col); });
+    upBase.forEach((c0, i) => { col.setHSL(.86 + Math.sin(t * .9 + i * .7) * .09, .95 * MOOD_SAT, .62); col.lerpColors(c0, col, k); uplights.setColorAt(i, col); });
     uplights.instanceColor.needsUpdate = true;
     spots.visible = beamCore.visible = beamGlow.visible = dots.visible = refl.visible = discoHalo.visible = on;
     disco.position.y = lerp(HALL.h + 2, 12.4, Math.min(1, k * 1.3)); disco.rotation.y = t * .5;
@@ -915,7 +917,7 @@ export function mountHall(el, opts = {}) {
     spotMat.opacity = .5 * k;
     for (let i = 0; i < SPOTS; i++) {
       setInst(spots, i, { x: Math.sin(t * .37 + i * 2.1) * 18, y: .06 + i * .002, z: -6 + Math.sin(t * .29 + i * 1.3) * 24, rx: -Math.PI / 2, s: 5 + Math.sin(t + i) });
-      col.setHSL(.8 + ((i * .07 + t * .03) % .22), .9, .6); spots.setColorAt(i, col);
+      col.setHSL(.8 + ((i * .07 + t * .03) % .22), .9 * MOOD_SAT, .6); spots.setColorAt(i, col);
     }
     spots.instanceMatrix.needsUpdate = true; spots.instanceColor.needsUpdate = true;
     // الليزر يغيّر مجموعة ألوانه كل 6 ثواني ويتأرجح بأنماط مختلفة
