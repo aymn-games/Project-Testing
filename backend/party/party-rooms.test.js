@@ -472,10 +472,10 @@ test('cut only during cake → celebrate → photo → free with photo targets b
     s.mgr.cut(s.code, 'host');
     ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'celebrate'); assert.equal(ph.cut, true); assert.equal(ph.until - ph.at, 242500, 'cake dance = the cut song');
     s.c.t.now += 242500; s.mgr.tick(s.code);
-    ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'photo'); assert.equal(ph.until - ph.at, 16000);
+    ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'photo'); assert.equal(ph.until - ph.at, 15000);
     assert.deepEqual(ph.walk[girl.n], [0, -29.6]);
     gs.forEach(function (g) { var t = ph.walk[g.n]; assert.ok(t[1] > -29.6 && t[1] <= -29.6 + 1.2 * 6 + .01, 'row behind ' + t); });
-    s.c.t.now += 16000; s.mgr.tick(s.code);
+    s.c.t.now += 15000; s.mgr.tick(s.code);
     assert.equal(s.mgr.phaseOf(s.code).p, 'free');
     var r = rowOf(s.mgr, s.code, girl.n, null);
     assert.equal(r[1], 0); assert.equal(r[2], -29.6);
@@ -949,16 +949,16 @@ test('chars setting defaults to rig, host can switch, roster carries it, seriali
     assert.equal(c2.mgr.roster(r2.code).chars, 'classic');
 });
 
-test('last 30s: outro from any phase after the reveal; only the girl walks (to the door), guests stay put', function () {
+test('last 58.5s (outro song): outro from any phase after the reveal; only the girl walks (to the door), guests stay put', function () {
     var s = schedRoom(), g = girlIn(s);
     s.at(s.start - 15 * MIN);
     var gs = [0, 1, 2, 3].map(function (i) { return s.mgr.join(s.code, { name: 'ضيف' + i }); });
     s.at(s.start); settle(s);
     var end = s.start + 60 * MIN;
-    s.at(end - 30001); settle(s);
+    s.at(end - 58501); settle(s);
     assert.notEqual(s.ph(), 'outro');
     var before = s.mgr.getRoom(s.code).players.filter(function (p) { return p.role === 'guest'; }).map(function (p) { return [p.n, p.x, p.z]; });
-    s.at(end - 30000); settle(s);
+    s.at(end - 58500); settle(s);
     assert.equal(s.ph(), 'outro');
     var ph = s.mgr.phaseOf(s.code);
     assert.equal(ph.until, end, 'outro lasts exactly until the end');
@@ -1010,15 +1010,15 @@ test('ringSlot fits 100 guests within ~7.5m without overlap', function () {
     for (var a = 0; a < pts.length; a++) for (var b = a + 1; b < pts.length; b++) assert.ok(Math.hypot(pts[a][0] - pts[b][0], pts[a][1] - pts[b][1]) >= 1.04);
 });
 
-test('endNow: host ends the party → outro now (30s) → ended; refused before the reveal and during outro', function () {
+test('endNow: host ends the party → outro now (58.5s) → ended; refused before the reveal and during outro', function () {
     var s = showRoom(), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey }); s.mgr.join(s.code, { name: 'ريم' });
     assert.equal(s.mgr.endNow(s.code).err, 'phase', 'not from the lobby');
     toDance(s);
     var r = s.mgr.endNow(s.code); assert.equal(r.ok, true);
-    var ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'outro'); assert.equal(ph.until - ph.at, 30000);
+    var ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'outro'); assert.equal(ph.until - ph.at, 58500);
     assert.ok(ph.walk && ph.walk[girl.n], 'the girl walks the carpet');
     assert.equal(s.mgr.endNow(s.code).err, 'phase', 'already ending');
-    s.c.t.now += 30000; s.mgr.tick(s.code);
+    s.c.t.now += 58500; s.mgr.tick(s.code);
     assert.equal(s.mgr.phaseOf(s.code).p, 'ended');
     assert.equal(s.mgr.endNow(s.code).err, 'phase');
 });

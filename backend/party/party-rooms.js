@@ -56,15 +56,16 @@ var RING_R0 = 3.6, RING_DR = 1.25, RING_GAP = 1.05, RING_HOLE = .55; // الحل
 var PHASES = ['closed', 'lobby', 'entrance', 'reveal', 'dance', 'gather', 'wishWrite', 'wishes', 'cakeWalk', 'cake', 'celebrate', 'photo', 'free', 'outro', 'ended'];
 // مشهد النهاية: آخر 30 ثانية من الحفل (من أي مرحلة بعد الافتتاح) — صاحبة الحفلة تمشي لحالها على السجادة
 // لباب القاعة (الضيوف يختفون عند الكل ويبقون بمكانهم)
-var OUTRO_MS = 30000, OUTRO_END = [0, 45];
+var OUTRO_MS = 58500, OUTRO_END = [0, 45]; // مشهد النهاية بطول outro.mp3 (58.3ث)
 // مدد ثابتة (ms) — dance و wishWrite و celebrate و cake من الجدول، wishes و free بدون وقت
 // المشاهد اللي لها أغنية: مدتها = طول الأغنية (games/birthday-party/music) — لو تبدّلت أغنية بنفس الاسم حدّث الرقم هنا
 //   dance: أغنية الافتتاح reveal.mp3 (221.7ث) تبدأ مع العد التنازلي (reveal 12ث) ← الرقص = الباقي منها
 //   cakeWalk: التجمّع حول الكيكة بطول cakesong.mp3 (23.9ث) — زر القص يطلع بعدها
 //   celebrate: رقص الكيكة بطول cutsong.mp3 (242.1ث) — تبدأ لحظة القص
-//   outro: مشهد النهاية بطول outro.mp3 (29.6ث)
+//   outro: مشهد النهاية بطول outro.mp3 (58.3ث) — فيه بطاقة التهنئة (play.html)
+//   photo 15ث بالضبط: أغنية الإضاءة الخافتة (slowsong.mp3) تبدأ بعد نهاية أغنية القص بـ 15ث، أول الرقص الحر (play.html SLOW_MS)
 var SONG_MS = { dance: 210000, celebrate: 242500 };
-var FIXED_MS = { entrance: 40000, reveal: 12000, gather: 12000, cakeWalk: 24500, photo: 16000, outro: OUTRO_MS };
+var FIXED_MS = { entrance: 40000, reveal: 12000, gather: 12000, cakeWalk: 24500, photo: 15000, outro: OUTRO_MS };
 // الجدول الافتراضي (بالدقايق، ومهلة القص بالثواني) والحدود
 var SCHED_DEF = { durationMin: 60, openBeforeMin: 15, danceMin: 7, writeMin: 3, cakeDanceMin: 5, cutTimeoutSec: 60 };
 var SCHED_LIM = { durationMin: [15, 240], openBeforeMin: [0, 120], danceMin: [1, 60], writeMin: [1, 60], cakeDanceMin: [1, 60], cutTimeoutSec: [10, 600] };
