@@ -320,29 +320,75 @@ function merge(list) {
   const out = new T.BufferGeometry(); out.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); out.setAttribute('normal', new T.Float32BufferAttribute(nor, 3)); out.setAttribute('color', new T.Float32BufferAttribute(col, 3));
   return out;
 }
+// ================= قصات الأولاد (ستايل أنمي/شبابي): خصل مدببة مفلطحة فوق طاقية شعر =================
+// كل خصلة: أصلها على فروة الراس (theta: 0 قدام، phi: 0 فوق)، واتجاهها، وطولها، وعرضها، ولفّة اختيارية
+// بآخرها (bend) — مفلطحة على سطح الراس عشان تبان طبقات. hs: 0 غرة مبعثرة، 1 سبايكي مرفوع، 2 شعثاء
+// بخصلة، 3 غرة جانبية، 4 أنمي شوكي، 5 محلوق. capOn (كاب): نشيل خصل فوق الراس
+const _X = new T.Vector3(), _Y = new T.Vector3(), _Z = new T.Vector3(), _M = new T.Matrix4();
+function hairLock(parts, color, th, ph, dir, len, w, bend) {
+  const d = new T.Vector3(Math.sin(ph) * Math.sin(th), Math.cos(ph), Math.sin(ph) * Math.cos(th));
+  const base = new T.Vector3(d.x * HEAD_R * .92 * 1.05, HEAD_C + d.y * HEAD_R * 1.1 * 1.04, d.z * HEAD_R * .98 * 1.05); // على سطح الراس (بيضاوي)
+  const seg = (from, dv, l, r0, r1) => {
+    _Y.copy(dv).normalize(); _Z.copy(d).addScaledVector(_Y, -d.dot(_Y)); if (_Z.lengthSq() < 1e-6) _Z.set(0, 0, 1); _Z.normalize(); _X.crossVectors(_Y, _Z);
+    const g = new T.CylinderGeometry(r1, r0, l, 5, 1); g.translate(0, l / 2, 0); g.scale(1, 1, .38);
+    _M.makeBasis(_X, _Y, _Z).setPosition(from); g.applyMatrix4(_M); parts.push(colored(g, color));
+    return from.clone().addScaledVector(_Y, l);
+  };
+  if (!bend) { seg(base, dir, len, w, .002); return; }
+  const mid = seg(base, dir, len * .6, w, w * .55);
+  seg(mid, bend, len * .5, w * .55, .002);
+}
+// قشرة الشعر: قبة أكبر من الراس شوي، وحافتها التحتية مسنّنة (خصل مدببة). prof(th) يرجع [عمق الوادي، عمق الرأس]
+// كزاوية من فوق (phi)، وflare(th) قد ايش الأطراف تطلع لبرا. th: 0 قدام، ±π ورا. noise: عشوائية أطوال الخصل
+function hairShell(parts, C0, nTeeth, prof, flare, noise, seed, shift = 0) {
+  const R = 18, M = nTeeth * 2, pos = [], col = [], idx = [], top = C0.clone().lerp(new T.Color('#ffffff'), .14), tip = C0.clone().multiplyScalar(.86), c = new T.Color();
+  let k = seed; const rnd = () => { k++; const x = Math.sin(k * 12.9898) * 43758.5453; return x - Math.floor(x); };
+  const edges = [];
+  for (let j = 0; j <= M; j++) { const th = -Math.PI + j / M * TAU, [v, t] = prof(th), isTip = j % 2 === 1; edges.push(isTip ? t * (1 - noise / 2 + rnd() * noise) : v); }
+  edges[M] = edges[0];
+  for (let i = 0; i <= R; i++) for (let j = 0; j <= M; j++) {
+    const f = i / R, isTip = j % 2 === 1, th = -Math.PI + j / M * TAU + (isTip ? shift * f * f : 0), ph = edges[j] * f;
+    const fl = 1 + flare(th) * Math.pow(Math.max(0, f - .55) / .45, 2) * (isTip ? 1 : .55), r = HEAD_R * 1.075 * fl;
+    pos.push(Math.sin(ph) * Math.sin(th) * r * .93, HEAD_C + Math.cos(ph) * r * 1.1, Math.sin(ph) * Math.cos(th) * r * .99);
+    c.copy(top).lerp(C0, Math.min(1, f * 1.6)).lerp(tip, Math.max(0, f - .7) / .3 * .8); col.push(c.r, c.g, c.b);
+  }
+  for (let i = 0; i < R; i++) for (let j = 0; j < M; j++) { const a = i * (M + 1) + j, b = a + M + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+  const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new T.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
+  parts.push(g.toNonIndexed());
+}
+function buildBoyHair(L, parts, hairC, capOn) {
+  const hs = L.hs, C0 = new T.Color(hairC), P = Math.PI;
+  if (hs === 5) { // محلوق
+    const cap = new T.SphereGeometry(HEAD_R * 1.03, 28, 16, 0, TAU, 0, P * .48); cap.scale(.92, 1.1, .98); cap.rotateX(.1); cap.translate(0, HEAD_C + .006, -.006);
+    parts.push(colored(cap, C0.clone().lerp(new T.Color(SKIN[L.s]), .2))); return;
+  }
+  // زاوية الحافة حسب الجهة: قدام (|th| صغير) ← جنب ← ورا. a = |th|/π (0 قدام، 1 ورا)
+  const zone = (th, front, side, back) => { const a = Math.abs(th) / P; return a < .5 ? front + (side - front) * (a / .5) ** 1.6 : side + (back - side) * ((a - .5) / .5); };
+  const V = (x, y, z) => new T.Vector3(x, y, z), UP = V(0, 1, 0), fr = th => V(Math.sin(th), 0, Math.cos(th));
+  const lock = (th, ph, dir, len, w, bend) => hairLock(parts, C0.clone().lerp(new T.Color('#ffffff'), .08), th, ph, dir.normalize(), len, w, bend && bend.normalize());
+  if (hs === 0) { // غرة مبعثرة (الصورة 1): غرة مسنّنة لين فوق الحواجب، وطبقات على الأذنين، وورا للرقبة
+    hairShell(parts, C0, 22, th => [zone(th, .3, .5, .56) * P, zone(th, .41, .63, .7) * P], th => .16, .35, 3);
+  } else if (hs === 1) { // سبايكي مرفوع (2): الجنب والورا قصير، وسوالف مدببة، وفوق شوكات مرفوعة للورا
+    hairShell(parts, C0, 16, th => { const sb = Math.exp(-((Math.abs(th) - 1.45) ** 2) / .02); return [zone(th, .2, .44, .5) * P, (zone(th, .25, .5, .58) + sb * .14) * P]; }, th => .05, .2, 7);
+    // شوكات قصيرة رفيعة موزّعة على كل فوق الراس، طالعة لفوق ولبرا وتميل للورا (ملمس مرفوع مثل الصورة 2)
+    if (!capOn) for (let i = 0; i < 22; i++) { const th = i * 2.399, ph = .08 + (i / 22) * .5, o = V(Math.sin(ph) * Math.sin(th), Math.cos(ph), Math.sin(ph) * Math.cos(th));
+      lock(th, ph, o.clone().multiplyScalar(.8).addScaledVector(UP, .5).add(V(0, 0, -.35)), .085 + (i % 3) * .015, .032); }
+  } else if (hs === 2) { // شعثاء بخصلة (3): طبقات أطول أطرافها تطير لبرا، وخصلتين فوق
+    hairShell(parts, C0, 18, th => [zone(th, .3, .52, .6) * P, zone(th, .42, .7, .74) * P], th => .2 + .35 * Math.min(1, Math.abs(Math.sin(th)) * 1.4), .4, 11);
+    if (!capOn) { lock(.1, .02, V(.1, 1, .4), .12, .026, V(0, .2, -1)); lock(-.15, .04, V(-.3, 1, .2), .09, .022, V(-1, -.3, 0)); }
+  } else if (hs === 3) { // غرة جانبية (4): الغرة تنسحب لجنب وتطول عليه (تغطي عين)، وورا أطول
+    hairShell(parts, C0, 20, th => { const sweep = th > -.2 && th < 1 ? Math.max(0, 1 - Math.abs(th - .35) / .65) : 0; return [zone(th, .3, .55, .62) * P, (zone(th, .38, .68, .78) + sweep * .12) * P]; }, th => .12, .3, 5, .35);
+  } else { // أنمي شوكي (5): شوكات كبيرة طالعة لبرا حول الراس، وخصلة كبيرة فوق
+    hairShell(parts, C0, 14, th => [zone(th, .28, .46, .52) * P, zone(th, .43, .68, .74) * P], th => .55, .3, 9);
+    if (!capOn) lock(-.25, .1, V(-.2, 1, .5), .15, .055, V(-.9, .2, .3));
+  }
+}
 // لون لكل رأس (vertex) حسب مكانه — للشماغ (مربعات حمراء وبيضاء)
 function paintBy(geo, fn) { const g = geo.index ? geo.toNonIndexed() : geo, p = g.attributes.position, a = new Float32Array(p.count * 3), c = new T.Color(); for (let i = 0; i < p.count; i++) { c.set(fn(p.getX(i), p.getY(i), p.getZ(i))); a.set([c.r, c.g, c.b], i * 3); } g.setAttribute('color', new T.BufferAttribute(a, 3)); g.deleteAttribute('uv'); return g; }
 // الولد: التسريحة (hs) والإكسسوار (acc: شماغ، غترة، نظارة، كاب، سماعات)
 function buildBoyHead(L) {
   const hairC = HAIR[L.h], parts = [], o = L.o >= 0 ? OUTFIT[L.o] : OUTFIT[4], acc = L.acc, covered = acc === 1 || acc === 2;
-  if (!covered) {
-    const buzz = L.hs === 4;
-    const cap = new T.SphereGeometry(HEAD_R * (buzz ? 1.015 : 1.05), 28, 16, 0, TAU, 0, Math.PI * (buzz ? .46 : .5)); cap.rotateX(-.3); cap.translate(0, HEAD_C + .01, -.015);
-    parts.push(colored(cap, buzz ? new T.Color(hairC).lerp(new T.Color(SKIN[L.s]), .35) : hairC));
-    if (L.hs !== 4) { const nape = new T.SphereGeometry(HEAD_R * 1.035, 20, 10, Math.PI * .15, Math.PI * .7, Math.PI * .38, Math.PI * (L.hs === 5 ? .36 : .26)); nape.rotateY(Math.PI); nape.translate(0, HEAD_C, -.012); parts.push(colored(nape, hairC)); }
-    if (L.hs === 1) for (let k = 0; k < 18; k++) { // سبايكي: شوكات للفوق
-      const a = k * 2.399, ph = .15 + (k / 18) * .55, d = new T.Vector3(Math.cos(a) * Math.sin(ph), Math.cos(ph), Math.sin(a) * Math.sin(ph) * .9 - .15).normalize();
-      const q = new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), d), g2 = new T.ConeGeometry(.03, .1, 5); g2.translate(0, .05, 0); g2.applyQuaternion(q); g2.translate(d.x * HEAD_R * 1.02, HEAD_C + .01 + d.y * HEAD_R * 1.02, d.z * HEAD_R * 1.02 - .015);
-      parts.push(colored(g2, hairC));
-    }
-    if (L.hs === 2) { const f = new T.SphereGeometry(.1, 16, 10); f.scale(1.35, .42, .85); f.rotateZ(-.25); f.translate(.045, HEAD_C + .14, .085); parts.push(colored(f, hairC)); } // مفروق جنب: غرة على جنب
-    if (L.hs === 3) for (let k = 0; k < 34; k++) { // كيرلي
-      const a = k * 2.399, ph = .18 + (k / 34) * 1.25, r = HEAD_R * 1.08;
-      const x = Math.cos(a) * Math.sin(ph) * r, y = HEAD_C + Math.cos(ph) * r * 1.02, z = Math.sin(a) * Math.sin(ph) * r - .01;
-      if (z > .05 && y < HEAD_C + .07) continue;
-      const b = new T.IcosahedronGeometry(.032 + (k % 3) * .005, 1); b.translate(x, y, z); parts.push(colored(b, hairC));
-    }
-    if (L.hs === 5) for (const sd of [1, -1]) { const t = new T.SphereGeometry(.05, 10, 8); t.scale(.6, 1.2, 1); t.translate(sd * .16, HEAD_C - .01, -.02); parts.push(colored(t, hairC)); } // طويل شوي: سوالف
+  if (!covered) { buildBoyHair(L, parts, hairC, acc === 4);
   } else {
     // الشماغ (أحمر وأبيض) أو الغترة (بيضاء) مع العقال الأسود: غطا الراس وطرف ينزل ورا وعلى الجنبين
     const red = acc === 1, pat = (x, y, z) => red && ((Math.floor((x + z) * 38) + Math.floor(y * 38)) & 1) ? '#c4162f' : '#fbfbf7';
@@ -352,9 +398,9 @@ function buildBoyHead(L) {
   }
   if (acc === 3) { for (const x of [-.11, .11]) { const t = new T.TorusGeometry(.075, .014, 6, 18); t.translate(x, 1.58, .29); parts.push(colored(fromOld(t), '#2a1a24')); } const br = new T.CylinderGeometry(.01, .01, .07, 6); br.rotateZ(Math.PI / 2); br.translate(0, 1.58, .29); parts.push(colored(fromOld(br), '#2a1a24')); }
   if (acc === 4) { // كاب بلون اللبس
-    const crown = new T.SphereGeometry(HEAD_R * 1.1, 24, 12, 0, TAU, 0, Math.PI * .45); crown.rotateX(-.15); crown.translate(0, HEAD_C + .01, -.01); parts.push(colored(crown, o));
-    const visor = new T.CylinderGeometry(.13, .13, .012, 20, 1, false, -Math.PI / 2, Math.PI); visor.scale(1, 1, .85); visor.rotateX(.12); visor.translate(0, HEAD_C + .075, .12); parts.push(colored(visor, new T.Color(o).multiplyScalar(.8)));
-    const btn = new T.SphereGeometry(.016, 8, 6); btn.translate(0, HEAD_C + HEAD_R * 1.1, -.03); parts.push(colored(btn, new T.Color(o).multiplyScalar(.8)));
+    const crown = new T.SphereGeometry(HEAD_R * 1.16, 24, 12, 0, TAU, 0, Math.PI * .47); crown.scale(.95, 1.1, 1); crown.rotateX(-.12); crown.translate(0, HEAD_C + .012, -.008); parts.push(colored(crown, o)); // أكبر من قشرة الشعر
+    const visor = new T.CylinderGeometry(.13, .13, .012, 20, 1, false, -Math.PI / 2, Math.PI); visor.scale(1, 1, .85); visor.rotateX(.12); visor.translate(0, HEAD_C + .085, .14); parts.push(colored(visor, new T.Color(o).multiplyScalar(.8)));
+    const btn = new T.SphereGeometry(.016, 8, 6); btn.translate(0, HEAD_C + HEAD_R * 1.27, -.03); parts.push(colored(btn, new T.Color(o).multiplyScalar(.8)));
   }
   if (acc === 5) { // سماعات
     const band = new T.TorusGeometry(HEAD_R * 1.13, .015, 6, 24, Math.PI); band.translate(0, HEAD_C + .01, 0); parts.push(colored(band, '#2b2b33'));
