@@ -499,6 +499,9 @@
                     myTarget = null;
                 }
             }
+            // شاشة البث: بعد ما تنفتح الستارة الكاميرا تتمركز على صاحبة الحفلة وتلف حولها شوي
+            // (العد التنازلي واللقطة الجماعية ومشهد النهاية لها لقطاتها)
+            if (viewOnly) hall.setFocus(['dance', 'gather', 'wishWrite', 'wishes', 'cakeWalk', 'cake', 'celebrate', 'free'].includes(p) || (p === 'reveal' && lateReveal) ? () => { const gn = [...roles].find(([, r]) => r === 'girl'); return gn && crowd ? crowd.posOf(gn[0]) : null; } : null);
             if (viewOnly) hall.setShot(p === 'reveal' || p === 'cake' || p === 'celebrate' || p === 'cakeWalk' ? 'stage' : p === 'entrance' ? 'entrance' : p === 'wishes' || p === 'wishWrite' || p === 'gather' ? 'screen' : null);
             if (p === 'ended') music.stop();
             else if (p === 'outro') music.play('outro', { from: since / 1000 });

@@ -975,6 +975,7 @@ export function mountHall(el, opts = {}) {
   const ZONES = { lounge: [-15, 15, 50.5, 69], girl: [-9, 9, -67, -50.5], hall: [-HX + 1, HX - 1, -HZ + 2, HZ - 1.2], nostage: [-HX + 1, HX - 1, -31, HZ - 1.2] };
   // صندوق الكاميرا لكل غرفة [xmin, xmax, zmin, zmax, سقف]
   const CAMBOX = { lounge: [-16.6, 16.6, HZ + .3, 70.7, LOUNGE_H - .4], girl: [-11.6, 17.6, -68.7, -HZ - .3, GIRL_H - .4], hall: [-HX + .4, HX - .4, -HZ + .4, HZ - .4, HALL.h - .5] };
+  let focusGet = null; // شاشة البث: دالة ترجع [x, z] لصاحبة الحفلة ← الكاميرا تتمركز عليها وتلف حولها شوي
   let zone = 'hall', auto = null, shot = null; // shot: لقطة ثابتة لشاشة العرض ('stage' | 'entrance' | null = جولة)
   const floorAt = (x, z) => {
     if (Math.abs(x) <= STAGE.w / 2 && z <= STAGE.front && z >= -HZ) return STAGE.h;
@@ -1097,7 +1098,15 @@ export function mountHall(el, opts = {}) {
       followLook.set(pos.x, fy + 1.3, pos.z); cam.lookAt(followLook);
     } else if (mode === 'tour') {
       tourA += dt * (reduced ? .04 : .075);
-      if (shot === 'stage') { tourPos.set(Math.sin(tourA * .6) * 3, 5.2, -12); tourLook.set(0, 5.5, -40); }
+      const fg = focusGet && focusGet();
+      if (fg) {
+        // من قدامها (جهة الضيوف) على بعد ~4.5م، تتأرجح يمين ويسار ±32° وتقرب وتبعد وتطلع وتنزل شوي، ببطء
+        const fy = floorAt(fg[0], fg[1]), a = Math.sin(tourA * .9) * .55, R = 4.5 + Math.sin(tourA * .55) * .5, cb = CAMBOX.hall;
+        tourPos.set(fg[0] + Math.sin(a) * R, fy + 1.75 + Math.sin(tourA * .7) * .3, fg[1] + Math.cos(a) * R);
+        tourPos.x = Math.max(cb[0], Math.min(cb[1], tourPos.x)); tourPos.z = Math.max(cb[2], Math.min(cb[3], tourPos.z));
+        tourLook.set(fg[0], fy + 1.2, fg[1]);
+      }
+      else if (shot === 'stage') { tourPos.set(Math.sin(tourA * .6) * 3, 5.2, -12); tourLook.set(0, 5.5, -40); }
       else if (shot === 'entrance') { tourPos.set(10, 9, 30); tourLook.set(0, 2, 46); }
       else if (shot === 'screen') { tourPos.set(Math.sin(tourA * .5) * 2, 5, -16); tourLook.set(0, 9.5, -44); }
       else {
@@ -1316,7 +1325,7 @@ export function mountHall(el, opts = {}) {
     setCurtain: (k, instant) => { curtainT = k; if (instant) curtainK = k; },
     setDoors: (k, instant) => { doorT = k; if (instant) doorK = k; },
     fireworks: (sec = 6) => { fwUntil = clock.elapsedTime + sec; fwNext = 0; },
-    setAutoPath, ZONES, setShot: v => { shot = v || null; },
+    setAutoPath, ZONES, setShot: v => { shot = v || null; }, setFocus: fn => { focusGet = fn || null; },
     setWishScreen, cutCake, celebrate, snapshot, setCandles, flutter, setOutro,
     setPhotoCam: on => { photoCam = !!on; cam.fov = on ? 50 : (mode === 'follow' ? 58 : 52); cam.updateProjectionMatrix(); },
     get curtain() { return curtainT; }, get wishY() { return wishGroup.position.y; }, get wishVis() { return wishGroup.visible; }, get autoActive() { return !!auto; }, get zone() { return zone; }, get cut() { return cutT; }, get candles() { return flames.filter(f => f.k > .5).length; }, // للاختبار
