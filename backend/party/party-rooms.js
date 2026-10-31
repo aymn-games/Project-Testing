@@ -58,7 +58,12 @@ var PHASES = ['closed', 'lobby', 'entrance', 'reveal', 'dance', 'gather', 'wishW
 // لباب القاعة (الضيوف يختفون عند الكل ويبقون بمكانهم)
 var OUTRO_MS = 30000, OUTRO_END = [0, 45];
 // مدد ثابتة (ms) — dance و wishWrite و celebrate و cake من الجدول، wishes و free بدون وقت
-// cakeWalk: التجمّع حول الكيكة بطول أغنية «Happy Birthday» (music/cakesong.mp3 ≈ 23.9ث) — زر القص يطلع بعدها
+// المشاهد اللي لها أغنية: مدتها = طول الأغنية (games/birthday-party/music) — لو تبدّلت أغنية بنفس الاسم حدّث الرقم هنا
+//   dance: أغنية الافتتاح reveal.mp3 (221.7ث) تبدأ مع العد التنازلي (reveal 12ث) ← الرقص = الباقي منها
+//   cakeWalk: التجمّع حول الكيكة بطول cakesong.mp3 (23.9ث) — زر القص يطلع بعدها
+//   celebrate: رقص الكيكة بطول cutsong.mp3 (242.1ث) — تبدأ لحظة القص
+//   outro: مشهد النهاية بطول outro.mp3 (29.6ث)
+var SONG_MS = { dance: 210000, celebrate: 242500 };
 var FIXED_MS = { entrance: 40000, reveal: 12000, gather: 12000, cakeWalk: 24500, photo: 16000, outro: OUTRO_MS };
 // الجدول الافتراضي (بالدقايق، ومهلة القص بالثواني) والحدود
 var SCHED_DEF = { durationMin: 60, openBeforeMin: 15, danceMin: 7, writeMin: 3, cakeDanceMin: 5, cutTimeoutSec: 60 };
@@ -204,9 +209,8 @@ function createRoomManager(opts) {
     // مدة المرحلة (ms) من الجدول — 0 = بدون وقت. الغرفة بدون جدول: نفس الافتراضي، والكيكة تنتظر القص
     function durationOf(room, ph) {
         var sc = room.sched || SCHED_DEF;
-        if (ph === 'dance') return sc.danceMin * MIN_MS;
+        if (SONG_MS[ph]) return SONG_MS[ph]; // الرقص ورقص الكيكة بطول أغانيهم (مو من الجدول)
         if (ph === 'wishWrite') return sc.writeMin * MIN_MS;
-        if (ph === 'celebrate') return sc.cakeDanceMin * MIN_MS;
         if (ph === 'cake') return room.sched ? sc.cutTimeoutSec * 1000 : 0;
         return FIXED_MS[ph] || 0;
     }
@@ -624,4 +628,4 @@ function createRoomManager(opts) {
     };
 }
 
-module.exports = { createRoomManager: createRoomManager, packRows: packRows, cleanSchedule: cleanSchedule, REACTS: REACTS, ringSlot: ringSlot, CAKE_C: CAKE_C, CAKE_SPOT: CAKE_SPOT };
+module.exports = { SONG_MS: SONG_MS, FIXED_MS: FIXED_MS, createRoomManager: createRoomManager, packRows: packRows, cleanSchedule: cleanSchedule, REACTS: REACTS, ringSlot: ringSlot, CAKE_C: CAKE_C, CAKE_SPOT: CAKE_SPOT };

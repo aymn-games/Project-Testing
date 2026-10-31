@@ -243,7 +243,7 @@ test('room without a schedule starts in lobby and waits for the host (default du
     assert.equal(ph.p, 'lobby'); assert.equal(ph.sched, null); assert.equal(ph.waitGirl, false);
     d.c.t.now += 3600000; d.mgr.tick(d.code); assert.equal(d.mgr.phaseOf(d.code).p, 'lobby');
     d.mgr.start(d.code); d.mgr.skip(d.code, 'entrance'); d.mgr.skip(d.code, 'reveal');
-    ph = d.mgr.phaseOf(d.code); assert.equal(ph.until - ph.at, 7 * 60000);
+    ph = d.mgr.phaseOf(d.code); assert.equal(ph.until - ph.at, 210000, 'dance = rest of the opening song');
 });
 
 test('lobby spawns guests in lounge and girl in her room', function () {
@@ -307,7 +307,7 @@ test('tick advances entrance→reveal→dance→free on time and places everyone
     assert.equal(r[1], target[0]); assert.equal(r[2], target[1]);
     assert.ok(Math.abs(r[3] - Math.PI) < .01);
     s.c.t.now += 12000; s.mgr.tick(s.code); assert.equal(s.mgr.phaseOf(s.code).p, 'dance');
-    s.c.t.now += 7 * 60000; s.mgr.tick(s.code); assert.equal(s.mgr.phaseOf(s.code).p, 'gather');
+    s.c.t.now += 210000; s.mgr.tick(s.code); assert.equal(s.mgr.phaseOf(s.code).p, 'gather');
 });
 
 test('guest cannot climb the stage during dance; girl can', function () {
@@ -365,7 +365,7 @@ function toShow(s) { s.mgr.skip(s.code, 'wishWrite'); }
 test('dance ends into gather with walk targets, then wish writing', function () {
     var s = showRoom(), g = s.mgr.join(s.code, { name: 'ريم' });
     toDance(s);
-    s.c.t.now += 7 * 60000; s.mgr.tick(s.code);
+    s.c.t.now += 210000; s.mgr.tick(s.code);
     var ph = s.mgr.phaseOf(s.code);
     assert.equal(ph.p, 'gather'); assert.ok(ph.walk[g.n]); assert.equal(ph.until - ph.at, 12000);
     assert.equal(s.mgr.move(s.code, g.id, [0, -20, 0, 1]).err, 'auto');
@@ -470,8 +470,8 @@ test('cut only during cake → celebrate → photo → free with photo targets b
     s.mgr.skip(s.code, 'wishWrite'); s.mgr.skip(s.code, 'cakeWalk');
     var ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'cake'); assert.equal(ph.until, 0);
     s.mgr.cut(s.code, 'host');
-    ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'celebrate'); assert.equal(ph.cut, true); assert.equal(ph.until - ph.at, 5 * 60000);
-    s.c.t.now += 5 * 60000; s.mgr.tick(s.code);
+    ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'celebrate'); assert.equal(ph.cut, true); assert.equal(ph.until - ph.at, 242500, 'cake dance = the cut song');
+    s.c.t.now += 242500; s.mgr.tick(s.code);
     ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'photo'); assert.equal(ph.until - ph.at, 16000);
     assert.deepEqual(ph.walk[girl.n], [0, -29.6]);
     gs.forEach(function (g) { var t = ph.walk[g.n]; assert.ok(t[1] > -29.6 && t[1] <= -29.6 + 1.2 * 6 + .01, 'row behind ' + t); });
@@ -683,17 +683,17 @@ test('host start skips waiting for the girl', function () {
     assert.equal(s.ph(), 'entrance');
 });
 
-test('timed phases follow the schedule', function () {
+test('timed phases: dance and cake dance follow their songs, wish writing follows the schedule', function () {
     var s = schedRoom({ danceMin: 4, writeMin: 2, cakeDanceMin: 6 }), g = girlIn(s), q;
     s.at(s.start - 15 * MIN); q = s.mgr.join(s.code, { name: 'ريم' }); s.at(s.start);
     s.mgr.skip(s.code, 'entrance'); s.mgr.skip(s.code, 'reveal');
-    var ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'dance'); assert.equal(ph.until - ph.at, 4 * MIN);
+    var ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'dance'); assert.equal(ph.until - ph.at, 210000, 'song, not danceMin');
     s.mgr.skip(s.code, 'dance'); s.mgr.skip(s.code, 'gather');
     ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'wishWrite'); assert.equal(ph.until - ph.at, 2 * MIN);
     s.mgr.addWish(s.code, q.id, 'كل عام وانتي بخير');
     s.mgr.skip(s.code, 'wishWrite'); s.mgr.nextWish(s.code, g.id); s.mgr.nextWish(s.code, g.id);
     s.mgr.skip(s.code, 'cakeWalk'); s.mgr.cut(s.code, g.id);
-    ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'celebrate'); assert.equal(ph.until - ph.at, 6 * MIN);
+    ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'celebrate'); assert.equal(ph.until - ph.at, 242500, 'song, not cakeDanceMin');
 });
 
 test('addWish only during wishWrite; wishes phase has no until', function () {
@@ -769,13 +769,13 @@ test('free lasts until endAt; endAt ends the party from wishes; points only afte
 
 test('shortening the running phase below its elapsed time advances once', function () {
     var s = schedRoom(); girlIn(s);
-    s.at(s.start - 15 * MIN); s.at(s.start); s.mgr.skip(s.code, 'entrance'); s.mgr.skip(s.code, 'reveal');
-    s.at(s.c.t.now + 3 * MIN); assert.equal(s.ph(), 'dance');
-    assert.equal(s.mgr.setSchedule(s.code, { danceMin: 10 }).ok, true);
+    s.at(s.start - 15 * MIN); s.at(s.start); s.mgr.skip(s.code, 'entrance'); s.mgr.skip(s.code, 'reveal'); s.mgr.skip(s.code, 'dance'); s.mgr.skip(s.code, 'gather');
+    s.at(s.c.t.now + 2 * MIN); assert.equal(s.ph(), 'wishWrite');
+    assert.equal(s.mgr.setSchedule(s.code, { writeMin: 10 }).ok, true);
     var ph = s.mgr.phaseOf(s.code); assert.equal(ph.until - ph.at, 10 * MIN, 'longer: running phase extended');
-    s.mgr.setSchedule(s.code, { danceMin: 2 });
-    s.mgr.tick(s.code); assert.equal(s.ph(), 'gather');
-    s.mgr.tick(s.code); assert.equal(s.ph(), 'gather', 'only once');
+    s.mgr.setSchedule(s.code, { writeMin: 1 });
+    s.mgr.tick(s.code); assert.notEqual(s.ph(), 'wishWrite');
+    var after = s.ph(); s.mgr.tick(s.code); assert.equal(s.ph(), after, 'only once');
     assert.equal(s.mgr.setSchedule(s.code, { durationMin: 'x', danceMin: 5 }).ok, true);
     assert.equal(s.mgr.getRoom(s.code).sched.durationMin, 60, 'bad field keeps the old value');
 });
@@ -842,7 +842,7 @@ test('restore catches up through elapsed timed phases and stops at wishes', func
     s.mgr.skip(s.code, 'entrance'); s.mgr.skip(s.code, 'reveal');
     var danceAt = s.mgr.phaseOf(s.code).at;
     var data = JSON.parse(JSON.stringify(s.mgr.serialize(s.code)));
-    s.c.t.now = danceAt + 7 * MIN + 12000 + 3 * MIN + 1000;
+    s.c.t.now = danceAt + 210000 + 12000 + 3 * MIN + 1000; // الرقص بطول أغنية الافتتاح
     var mgr2 = createRoomManager({ now: function () { return s.c.t.now; } });
     mgr2.restore(data);
     assert.equal(mgr2.phaseOf(s.code).p, 'cakeWalk', 'no wishes were written → straight past the display');
@@ -1021,4 +1021,15 @@ test('endNow: host ends the party → outro now (30s) → ended; refused before 
     s.c.t.now += 30000; s.mgr.tick(s.code);
     assert.equal(s.mgr.phaseOf(s.code).p, 'ended');
     assert.equal(s.mgr.endNow(s.code).err, 'phase');
+});
+
+test('song-timed scenes match the actual music files (ffprobe; skipped without it)', function (t) {
+    var cp = require('child_process'), path = require('path'), R = require('./party-rooms');
+    var dur = function (f) { return Number(cp.execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=nw=1:nk=1', path.join(__dirname, '../../games/birthday-party/music', f)]).toString()) * 1000; };
+    try { cp.execFileSync('ffprobe', ['-version'], { stdio: 'ignore' }); } catch (e) { t.skip('no ffprobe'); return; }
+    var near = function (got, want, label) { assert.ok(got >= want && got - want <= 1000, label + ': phase ' + got + 'ms vs song ' + Math.round(want) + 'ms'); };
+    near(R.FIXED_MS.reveal + R.SONG_MS.dance, dur('reveal.mp3'), 'opening + dance');
+    near(R.FIXED_MS.cakeWalk, dur('cakesong.mp3'), 'gathering around the cake');
+    near(R.SONG_MS.celebrate, dur('cutsong.mp3'), 'cake dance');
+    near(R.FIXED_MS.outro, dur('outro.mp3'), 'ending scene');
 });

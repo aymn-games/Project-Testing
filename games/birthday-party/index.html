@@ -247,13 +247,14 @@
     const FIELDS = [
         { k: 'durationMin', label: 'مدة الحفل كاملة', unit: 'دقيقة', def: 60, min: 15, max: 240, step: 5 },
         { k: 'openBeforeMin', label: 'فتح الدخول قبل البداية', unit: 'دقيقة', def: 15, min: 0, max: 120, step: 5 },
-        { k: 'danceMin', label: 'الرقص بعد الافتتاح', unit: 'دقيقة', def: 7, min: 1, max: 60, step: 1 },
         { k: 'writeMin', label: 'كتابة التهاني', unit: 'دقيقة', def: 3, min: 1, max: 60, step: 1 },
-        { k: 'cakeDanceMin', label: 'رقص الكيكة بعد القص', unit: 'دقيقة', def: 5, min: 1, max: 60, step: 1 },
         { k: 'cutTimeoutSec', label: 'مهلة القص قبل القص التلقائي', unit: 'ثانية', def: 60, min: 10, max: 600, step: 10 },
     ];
     // مدد ثابتة بالسيرفر (ثواني): الدخول 40، الافتتاح 12، التجمّع 12، التجمّع حول الكيكة مع أغنيتها 24.5، الصورة 16
     const FIXED = { entrance: 40, reveal: 12, gather: 12, cakeWalk: 24.5, photo: 16 };
+    // المشاهد اللي بطول أغانيها (نفس SONG_MS بالسيرفر): الرقص = باقي أغنية الافتتاح، ورقص الكيكة = أغنية القص
+    const SONG = { dance: 210, celebrate: 242.5 };
+    const mmss = sec => Math.floor(sec / 60) + ':' + String(Math.round(sec % 60)).padStart(2, '0');
     const pad = n => String(n).padStart(2, '0');
     const localDate = ms => { const d = new Date(ms); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
     const localTime = ms => { const d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
@@ -276,13 +277,13 @@
             el('Tz').textContent = 'الأوقات بتوقيت جهازك: ' + tzLabel(tz) + (tz === 180 ? '' : ' — تأكد إنه نفس توقيت الحفلة');
             const line = el('Line'), warn = el('Warn');
             if (!isFinite(st)) { line.innerHTML = '<li class="note">اختر التاريخ والساعة عشان يطلع الجدول</li>'; warn.classList.add('hidden'); return; }
-            const M = 60000, S = 1000, dance = st + (FIXED.entrance + FIXED.reveal) * S, write = dance + v.danceMin * M + FIXED.gather * S, show = write + v.writeMin * M, end = st + v.durationMin * M;
-            const rows = [[st - v.openBeforeMin * M, 'فتح الدخول'], [st, 'الافتتاح (أول ما تدخل صاحبة الحفلة)'], [dance, 'الرقص · ' + v.danceMin + ' د'], [write, 'كتابة التهاني · ' + v.writeMin + ' د'], [show, 'عرض التهاني (بدون وقت)']];
+            const M = 60000, S = 1000, dance = st + (FIXED.entrance + FIXED.reveal) * S, write = dance + SONG.dance * S + FIXED.gather * S, show = write + v.writeMin * M, end = st + v.durationMin * M;
+            const rows = [[st - v.openBeforeMin * M, 'فتح الدخول'], [st, 'الافتتاح (أول ما تدخل صاحبة الحفلة)'], [dance, 'الرقص · بطول أغنية الافتتاح (' + mmss(SONG.dance) + ')'], [write, 'كتابة التهاني · ' + v.writeMin + ' د'], [show, 'عرض التهاني (بدون وقت)']];
             line.innerHTML = '';
             rows.forEach(([ms, t]) => { const li = document.createElement('li'); li.innerHTML = '<span></span><b></b>'; li.firstChild.textContent = t; li.lastChild.textContent = c(ms); line.append(li); });
-            const after = document.createElement('li'); after.className = 'note'; after.textContent = 'بعد آخر رسالة: الكيكة ← رقص الكيكة ' + v.cakeDanceMin + ' د ← الصورة الجماعية ← رقص حر ← آخر 30ث مشهد النهاية'; line.append(after);
+            const after = document.createElement('li'); after.className = 'note'; after.textContent = 'بعد آخر رسالة: التجمّع حول الكيكة مع أغنيته (' + mmss(FIXED.cakeWalk) + ') ← القص ← رقص الكيكة بطول أغنية القص (' + mmss(SONG.celebrate) + ') ← الصورة الجماعية ← رقص حر ← آخر 30ث مشهد النهاية'; line.append(after);
             const li = document.createElement('li'); li.innerHTML = '<span>نهاية الحفل</span><b></b>'; li.lastChild.textContent = c(end); line.append(li);
-            const fixed = (FIXED.entrance + FIXED.reveal + FIXED.gather + FIXED.cakeWalk + FIXED.photo) * S + v.cutTimeoutSec * S + (v.danceMin + v.writeMin + v.cakeDanceMin) * M;
+            const fixed = (FIXED.entrance + FIXED.reveal + FIXED.gather + FIXED.cakeWalk + FIXED.photo) * S + v.cutTimeoutSec * S + (SONG.dance + SONG.celebrate) * S + v.writeMin * M;
             const spare = end - st - fixed;
             warn.classList.toggle('hidden', spare > 5 * M);
             warn.textContent = spare <= 0 ? 'المشاهد أطول من مدة الحفل — الحفلة بتنتهي قبل ما توصل للصورة الجماعية.' : 'باقي ' + Math.round(spare / M) + ' دقيقة بس لعرض التهاني والرقص الحر — زيد مدة الحفل لو الرسائل كثيرة.';

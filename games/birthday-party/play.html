@@ -503,9 +503,9 @@
             // الكيكة: مقصوصة (رجوع) أو أنيميشن القص + احتفال ثاني
             if (phase.cut) {
                 // رقص الكيكة: ألعاب نارية طول المدة والأنوار تشتغل وتطفي، وأغنية الكيكة
-                if (p === 'celebrate' && since < 4000 && celebKey !== key) { celebKey = key; hall.cutCake(false); hall.celebrate(Math.max(5, (phase.until - now) / 1000), { strobe: true }); music.play('cake'); }
+                if (p === 'celebrate' && since < 4000 && celebKey !== key) { celebKey = key; hall.cutCake(false); hall.celebrate(Math.max(5, (phase.until - now) / 1000), { strobe: true }); music.play('cutsong', { from: since / 1000 }); }
                 else hall.cutCake(true);
-                if (p === 'celebrate' && celebKey !== key) { celebKey = key; hall.celebrate(Math.max(3, (phase.until - now) / 1000), { strobe: true }); music.play('cake'); }
+                if (p === 'celebrate' && celebKey !== key) { celebKey = key; hall.celebrate(Math.max(3, (phase.until - now) / 1000), { strobe: true }); music.play('cutsong', { from: since / 1000 }); }
             }
             // كيكة السماء: تنزل أول مشي الكيكة، وتبقى للقص والاحتفال، وترجع للسماء وقت الصورة
             hall.setSkyCake(p === 'cakeWalk' ? 'drop' : p === 'cake' || p === 'celebrate' ? 'on' : p === 'photo' && since < 4000 ? 'up' : 'off', since);
