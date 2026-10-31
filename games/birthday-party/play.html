@@ -24,7 +24,7 @@
 <link rel="icon" href="../../favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Zain:wght@700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@700&family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Zain:wght@700;900&family=Amiri:wght@400;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
 <!-- حفلة عيد الميلاد ثري دي — المرحلة الأولى: القاعة الرئيسية (الماب).
      المشهد كله في hall3d.js، والتحكم بالتجوّل في controls.js. اسم صاحبة
      الحفلة يُمرَّر مؤقتاً بالرابط: index.html?name=سارة
@@ -148,6 +148,22 @@
     .vignette{ position:fixed; inset:0; z-index:8; pointer-events:none; opacity:0; transition:opacity 2.5s ease; background:radial-gradient(ellipse at 50% 55%,rgba(0,0,0,0) 45%,rgba(10,4,12,.6) 100%); }
     body.cine .vignette{ opacity:1; }
     body.cine .top, body.cine .phase, body.cine .actbar, body.cine .joy, body.cine .jumpbtn, body.cine .hint, body.cine .notice, body.cine .toast, body.cine .wishcard, body.cine .bigbtn, body.cine .emotip, body.cine .soundtip{ opacity:0 !important; pointer-events:none !important; transition:opacity 1.2s; }
+    /* بطاقة التهنئة بمشهد النهاية (greeting.js): بطاقة كريمية هادية، نص بني رمادي، بالنص */
+    .bdcard{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:12; width:min(620px,88vw); max-height:76vh; box-sizing:border-box; overflow:hidden;
+        padding:clamp(10px,3.4vh,30px) clamp(16px,4vw,44px); border-radius:20px; background:rgba(251,246,239,.76); border:1px solid rgba(150,120,100,.22);
+        box-shadow:0 18px 50px rgba(30,15,10,.25); backdrop-filter:blur(2.5px); -webkit-backdrop-filter:blur(2.5px); /* شفافة شوي: صاحبة الحفلة تبان وراها */ color:#6e5d55; text-align:center; pointer-events:none; opacity:0; }
+    .bdcard p{ margin:0; display:grid; }
+    .bdcard .g-full, .bdcard .g-typed{ grid-area:1/1; white-space:pre-line; }
+    .bdcard .g-full{ visibility:hidden; }
+    .bdcard .typing .g-typed::after{ content:''; display:inline-block; width:1px; height:.95em; margin-inline-start:2px; vertical-align:-.12em; background:currentColor; animation:gcaret 1s steps(1) infinite; }
+    @keyframes gcaret{ 50%{ opacity:0; } }
+    .bd-date{ font-size:clamp(11px,2.7vh,17px); line-height:1.5; color:#9a7d68; }
+    .bd-date.ar{ font-family:'Amiri',serif; font-weight:700; letter-spacing:.02em; }
+    .bd-date.en{ font-family:'Cormorant Garamond',serif; font-weight:600; letter-spacing:.14em; font-variant:small-caps; }
+    .bd-gap{ height:calc(2 * 1.5 * clamp(11px,2.7vh,17px)); } /* مسافة سطرين بعد التاريخ */
+    .bd-ar{ font-family:'Amiri',serif; font-size:clamp(16px,4.5vh,31px); line-height:1.75; }
+    .bd-en{ font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:500; font-size:clamp(13px,3.3vh,22px); line-height:1.45; margin-top:clamp(6px,1.8vh,16px); color:#7d6c63; }
+    @media (prefers-reduced-motion:reduce){ .bdcard .typing .g-typed::after{ animation:none; } }
     .fadeout{ position:fixed; inset:0; background:radial-gradient(circle at 50% 45%,#fffdf6,#fff3e0); opacity:0; pointer-events:none; z-index:10; }
     @keyframes flash{ 0%{ opacity:1; } 100%{ opacity:0; } }
     .photomodal{ position:fixed; inset:0; z-index:9; display:grid; place-items:center; background:rgba(30,10,30,.6); padding:16px; }
@@ -281,6 +297,13 @@
 <div class="cinebar t" aria-hidden="true"></div>
 <div class="cinebar b" aria-hidden="true"><span>إلى لقاء أجمل</span></div>
 <div class="fadeout" id="fadeOut" aria-hidden="true"></div>
+<div class="bdcard hidden" id="bdCard" role="note" aria-label="تهنئة">
+    <p class="bd-date ar" dir="rtl" lang="ar" data-seg="dateAr"></p>
+    <p class="bd-date en" dir="ltr" lang="en" data-seg="dateEn"></p>
+    <div class="bd-gap"></div>
+    <p class="bd-ar" dir="rtl" lang="ar" data-seg="ar"></p>
+    <p class="bd-en" dir="ltr" lang="en" data-seg="en"></p>
+</div>
 <div class="endscreen hidden" id="endScreen" role="dialog" aria-label="انتهت الحفلة"><div><h2>انتهت الحفلة</h2><p>شكراً لحضوركم 💖</p><a class="savebtn hidden" id="endPhoto" href="#">الصورة الجماعية</a></div></div>
 <div class="kicked hidden" id="kicked" role="alertdialog" aria-label="طلّعك المذيع"><div><h2>طلّعك المذيع من الحفلة</h2><a id="kickedBack" href="../../games.html">رجوع للألعاب</a></div></div>
 <div class="photomodal hidden" id="photoModal" role="dialog" aria-label="الصورة الجماعية">
@@ -380,6 +403,8 @@
     async function startParty(hall) {
         const [{ connect, readJSON, writeJSON, serverNow, unpackRows }, rigMod, { LOOK, REACTS, REACT_EMOJI, resolveLook }, { ANIMS, JUMP }, { createMusic }] = await Promise.all([import('./party-net.js'), import('./crowd-rig.js'), import('./crowd-common.js'), import('./rig3d.js'), import('./music.js')]);
         const { clockText, tzLabel, countdownText } = await import('./party-net.js');
+        const { createGreeting } = await import('./greeting.js');
+        const greet = createGreeting($('bdCard')); // بطاقة التهنئة بمشهد النهاية
         const me = viewOnly ? null : readJSON('party-me');
         if (!viewOnly && !(me && me.code === code)) { location.replace('join.html?code=' + code); return; }
         if (!viewOnly) $('hint').querySelector('.touch').textContent = 'العصا للمشي · اسحب للف الكاميرا';
@@ -424,8 +449,8 @@
         const autoPhase = () => phase && !!{ entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1, outro: 1 }[phase.p];
 
         // مراحل المشي التلقائي: مدة المشي من وقت المرحلة، والدخول بس يمر بنقاط عبور
-        // outro: صاحبة الحفلة تمشي السجادة كلها لحالها (27ث)، والضيوف يبقون بمكانهم ومخفيين
-        const WALK = { entrance: .85, gather: .85, cakeWalk: 8500, photo: 6000, outro: 27000 }, OUTRO_GUEST_MS = 1000;
+        // outro (58.5ث بطول أغنيته): صاحبة الحفلة تمشي السجادة كلها لحالها (45ث)، والضيوف يبقون بمكانهم ومخفيين
+        const WALK = { entrance: .85, gather: .85, cakeWalk: 8500, photo: 6000, outro: 45000 }, OUTRO_GUEST_MS = 1000;
         const AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1, outro: 1 };
         // اتجاه الوقوف بعد المشي (نفس السيرفر): صاحبة الحفلة تطالع الضيوف إلا عند الكيكة والصورة
         // الكيكة تنزل بنص القاعة (نفس CAKE_C بالسيرفر وSKY_C في hall3d.js): الكل يطالعها وقت الكيكة
@@ -525,8 +550,9 @@
             // مشهد النهاية: الكاميرا تتبعها عند الكل، والنور من الباب، والبتلات، وصوت المشهد. الضيوف يلوّحون لها
             if (p === 'outro') {
                 hall.setOutro(() => { const gn = [...roles].find(([, r]) => r === 'girl'); return gn && crowd ? crowd.posOf(gn[0]) : null; }, since / 1000);
-                hall.flutter(Math.max(2, 30 - since / 1000));
-            } else hall.setOutro(null);
+                hall.flutter(Math.max(2, 58 - since / 1000));
+                greet.run(phase.at, phase.until, serverNow); // التاريخ والتهنئة تنكتب (15ث) وتبقى لين آخر المشهد
+            } else { hall.setOutro(null); greet.stop(); }
             // لقطة سينمائية: الأزرار والنصوص تختفي، شريطين سود، وألوان خافتة
             document.body.classList.toggle('cine', p === 'outro');
             const W = walkOf();
@@ -667,7 +693,7 @@
             else if ($('count').textContent) $('count').textContent = '';
             $('phaseTxt').textContent = (LABEL[phase.p] || (() => ''))();
             $('phaseTime').textContent = phaseLeft(now);
-            const fo = phase.p === 'outro' ? Math.max(0, Math.min(1, (now - phase.at - 26000) / 3500)) : 0;
+            const fo = phase.p === 'outro' ? Math.max(0, Math.min(1, (now - phase.at - 52000) / 5000)) : 0; // الشاشة تبيض آخر المشهد
             if (+$('fadeOut').style.opacity !== fo) $('fadeOut').style.opacity = fo;
         });
 

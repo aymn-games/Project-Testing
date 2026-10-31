@@ -1177,8 +1177,9 @@ export function mountHall(el, opts = {}) {
       const e = clock.elapsedTime - outroStart, fy = floorAt(og[0], og[1]);
       // لقطات: من قدام بعيد وهي تنزل (عدسة ضيقة) ← من الجنب واطي ← من وراها ← واقفة وهي تدخل النور
       if (og[1] > 24) { tourPos.set(.8, 2.2, 14); tourLook.set(0, 2.4, HZ); }
-      else if (e < 6) { tourPos.set(og[0] + 3.5, fy + 1.9, og[1] + 14); tourLook.set(og[0], fy + 1.2, og[1]); }
-      else if (e < 11) { tourPos.set(og[0] + 5.5, fy + 1.1, og[1] + 5); tourLook.set(og[0], fy + 1.25, og[1]); }
+      // (المشهد 58ث بطول أغنيته: المشي 45ث، فاللقطات موزّعة عليه)
+      else if (e < 10) { tourPos.set(og[0] + 3.5, fy + 1.9, og[1] + 14); tourLook.set(og[0], fy + 1.2, og[1]); }
+      else if (e < 19) { tourPos.set(og[0] + 5.5, fy + 1.1, og[1] + 5); tourLook.set(og[0], fy + 1.25, og[1]); }
       else { tourPos.set(og[0] + 1.1, fy + 1.6, og[1] - 7.5); tourLook.set(og[0], fy + 1.3, og[1] + 10); }
       // الكاميرا تتحرك ببطء، بس النظر يلحقها بسرعة عشان ما تطلع من الكادر
       const k = 1 - Math.exp(-dt * 1.1), kl = 1 - Math.exp(-dt * 5);
@@ -1388,11 +1389,11 @@ export function mountHall(el, opts = {}) {
   function updateOutro(t, dt) {
     outroDim += ((outroGet ? 1 : 0) - outroDim) * (1 - Math.exp(-dt * 1.2));
     if (!outroGet) return;
-    const e = t - outroStart, k = Math.min(1, e / 5), late = Math.max(0, Math.min(1, (e - 18) / 10));
+    const e = t - outroStart, k = Math.min(1, e / 5), late = Math.max(0, Math.min(1, (e - 30) / 16));
     doorLight.material.opacity = k; doorGlow.material.opacity = .55 * k + .45 * late; doorGlow.scale.setScalar(9 + 10 * k + 16 * late);
     floorBeam.material.opacity = .45 * k + .3 * late;
     const C = [1, .86, .62];
-    for (let i = 0; i < PL_N; i++) { const on = Math.max(0, Math.min(1, (e - .5 - i * .07) / .5)), f = on * (.75 + .25 * Math.sin(t * 4 + i * .7)); for (let sd = 0; sd < 2; sd++) { const j = (i * 2 + sd) * 3; plCol[j] = C[0] * f; plCol[j + 1] = C[1] * f; plCol[j + 2] = C[2] * f; } }
+    for (let i = 0; i < PL_N; i++) { const on = Math.max(0, Math.min(1, (e - .5 - i * .117) / .5)), f = on * (.75 + .25 * Math.sin(t * 4 + i * .7)); for (let sd = 0; sd < 2; sd++) { const j = (i * 2 + sd) * 3; plCol[j] = C[0] * f; plCol[j + 1] = C[1] * f; plCol[j + 2] = C[2] * f; } }
     plGeo.attributes.color.needsUpdate = true;
   }
 
