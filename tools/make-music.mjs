@@ -5,7 +5,7 @@
 //   lobby.mp3  — لو-فاي هادي (84 BPM) للانتظار والتهاني، يتكرر بدون قطع
 //   reveal.mp3 — فانفير الافتتاح (14ث) — بس مع --reveal: الحفلة الحين تستخدم أغنية يرفعها صاحب المشروع
 //   dance.mp3  — دانس بوب (124 BPM) للرقص والرقص الحر، يتكرر بدون قطع
-//   cake.mp3   — «سنة حلوة» فالس كلاسيكي ثم احتفال دانس (128 BPM)، يتكرر طول رقص الكيكة
+//   (موسيقى الكيكة ما عادت تتولد: التجمّع حول الكيكة cakesong.mp3 ورقص الكيكة cutsong.mp3 أغاني يرفعها صاحب المشروع)
 //
 // التشغيل: node tools/make-music.mjs  (يحتاج ffmpeg) ← games/birthday-party/music/*.mp3
 // تسوية خفيفة (حضور أكثر للّحن حوالي 3kHz، وأقل حدّة فوق 10kHz)، ومستوى الصوت موحّد بـ loudnorm: الانتظار أهدى (-19 LUFS) والباقي (-15/-14) عشان ينسمع بالبث.
@@ -245,61 +245,9 @@ function lobby() {
   return master(mix, { loopLen: BARS * bar });
 }
 
-// ================= cake.mp3 — فالس «Happy Birthday» ثم احتفال دانس =================
-function cake() {
-  const wb = 60 / 104, wbar = 3 * wb, W = 8, waltz = W * wbar + 2 * wb; // + نفَس قبل الدانس
-  const bpm = 128, b = 60 / bpm, bar = 4 * b, BARS = 48, start = waltz + wb, mix = makeMix(start + BARS * bar + 5);
-  // الفالس: أوم-با-با بالبيانو، اللحن بالنحاس والأجراس
-  for (let br = 0; br < W; br++) {
-    const ch = HB_CH[br], root = HB_ROOT[br], t0 = wb + br * wbar;
-    bass(mix, t0, root + 12, wb * .9, .24); timpani(mix, t0, root, .18);
-    for (const k of [1, 2]) for (const m of ch) epiano(mix, t0 + k * wb, m, wb * .6, .08);
-    pad(mix, t0, ch, wbar, .03, { bus: 'dry' });
-    if (br === W - 1) { crash(mix, t0 + 3 * wb, .2); for (let q = 0; q < 6; q++) snare(mix, t0 + 3 * wb + q * wb / 3, .2 + q * .05); }
-  }
-  for (const [n, st, d] of HB34) { const t = wb + st * wb; brass(mix, t, 72 + n, d * wb * .92, .1); bell(mix, t, 84 + n, .08); }
-  // الاحتفال
-  const T = (br, bt = 0) => start + br * bar + bt * b, VERSE = [[C, 36], [F, 41], [AM, 33], [G, 31]];
-  for (let br = 0; br < BARS; br++) {
-    const hb = br >= 8 && br < 40, i8 = (br - 8) % 8, [ch, root] = hb ? [HB_CH[i8], HB_ROOT[i8]] : VERSE[br % 4];
-    for (let q = 0; q < 4; q++) kick(mix, T(br, q), .95);
-    clap(mix, T(br, 1)); clap(mix, T(br, 3));
-    for (let e = 0; e < 8; e++) hat(mix, T(br, e * .5), e % 2 ? .16 : .06, e === 7, e % 2 ? .25 : -.2);
-    for (let e = 0; e < 4; e++) bass(mix, T(br, e + .5), root + 12, b * .42, .3);
-    pad(mix, T(br), ch, bar, .055);
-    const notes = [...ch, ch[0] + 12]; for (let e = 0; e < 16; e++) pluck(mix, T(br, e * .25), notes[[0, 2, 1, 3, 2, 1, 3, 0][e % 8]] + 12, e % 4 === 0 ? .12 : .08, { pan: e % 2 ? .3 : -.3 });
-  }
-  for (const sb of [8, 16, 24, 32]) for (const [n, st, d] of HB44) { const t = T(sb, st), m = 72 + n; lead(mix, t, m, d * b * .95, sb >= 24 ? .17 : .14); if (sb >= 24) bell(mix, t, m + 12, .07); }
-  for (const br of [0, 8, 24, 40]) crash(mix, T(br), .22);
-  return master(mix, { loopLen: start + BARS * bar });
-}
-
-// ================= reveal.mp3 — فانفير الافتتاح =================
-function reveal() {
-  const mix = makeMix(14);
-  // طبول تيمباني تتصاعد
-  for (let k = 0; k < 24; k++) timpani(mix, k * .085, 31 + (k % 2) * 7, .05 + k * .012);
-  riser(mix, 0, 2.1, .2);
-  // ضربات نحاس: C ← F ← G ← C
-  const hits = [[2.1, [48, 55, 60, 64]], [2.65, [53, 57, 60, 65]], [3.2, [55, 59, 62, 67]]];
-  for (const [t, ch] of hits) { for (const m of ch) brass(mix, t, m, .42, .12); kick(mix, t, .8); timpani(mix, t, 31, .4); }
-  for (const m of [48, 55, 60, 64, 67, 72]) brass(mix, 3.8, m, 2.2, .1);
-  crash(mix, 3.8, .3); kick(mix, 3.8, 1); timpani(mix, 3.8, 36, .5);
-  for (let k = 0; k < 12; k++) bell(mix, 4 + k * .1, [72, 76, 79, 84][k % 4] + (k > 7 ? 12 : 0), .12);
-  // أول جملة من اللحن بسرعة ثم الختام
-  const fb = .3; let t = 6.2;
-  for (const [n, st, d] of HB34.slice(0, 7)) brass(mix, t + (st + 1) * fb, 72 + n, d * fb * .9, .13);
-  for (const [n, st] of HB34.slice(0, 7)) bell(mix, t + (st + 1) * fb, 84 + n, .08);
-  t = 6.2 + 7 * fb;
-  for (const m of [48, 55, 60, 64, 67, 72, 76]) brass(mix, t + .1, m, 2.6, .1);
-  crash(mix, t + .1, .32); kick(mix, t + .1, 1); timpani(mix, t + .1, 36, .55);
-  for (let k = 0; k < 16; k++) bell(mix, t + .2 + k * .07, [84, 88, 91, 96][k % 4], .1 * (1 - k / 18));
-  return master(mix);
-}
-
 function main() {
   fs.mkdirSync(OUT, { recursive: true });
-  const jobs = [['lobby', lobby, -19], ['dance', dance, -15], ['cake', cake, -15]];
+  const jobs = [['lobby', lobby, -19], ['dance', dance, -15]];
   if (process.argv.includes('--reveal')) jobs.unshift(['reveal', reveal, -14]);
   for (const [name, fn, lufs] of jobs) {
     const t0 = Date.now(); writeMp3(name, fn(), lufs);
