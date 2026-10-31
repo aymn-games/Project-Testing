@@ -84,10 +84,10 @@ export function createCrowd(scene, { floorAt = () => 0, clipsBase = './anims/' }
 
   // ---- صاحبة الحفلة: سبوت لايت (شعاع وهمي) ودائرة ضوء على الأرض وأثر لامع ----
   const beamGeo = new T.CylinderGeometry(.18, 1.05, 7, 32, 1, true); beamGeo.translate(0, 3.5, 0);
-  { const p = beamGeo.attributes.position, col = new Float32Array(p.count * 3); for (let i = 0; i < p.count; i++) { const f = .02 + .11 * (1 - p.getY(i) / 7); col.set([f, f * .92, f * .8], i * 3); } beamGeo.setAttribute('color', new T.BufferAttribute(col, 3)); }
+  { const p = beamGeo.attributes.position, col = new Float32Array(p.count * 3); for (let i = 0; i < p.count; i++) { const f = .004 + .024 * (1 - p.getY(i) / 7); /* خفيف عشان ما يغطي ملامحها */ col.set([f, f * .92, f * .8], i * 3); } beamGeo.setAttribute('color', new T.BufferAttribute(col, 3)); }
   const beamMat = new T.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide });
   const beam = new T.Mesh(beamGeo, beamMat); beam.visible = false; beam.renderOrder = 3; scene.add(beam);
-  const poolTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,240,215,.42)'); gr.addColorStop(.6, 'rgba(255,220,200,.16)'); gr.addColorStop(1, 'rgba(255,220,200,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return t; })();
+  const poolTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,240,215,.24)'); gr.addColorStop(.6, 'rgba(255,220,200,.09)'); gr.addColorStop(1, 'rgba(255,220,200,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return t; })();
   const poolGeo = new T.PlaneGeometry(2.4, 2.4); poolGeo.rotateX(-Math.PI / 2);
   const pool = new T.Mesh(poolGeo, new T.MeshBasicMaterial({ map: poolTex, transparent: true, blending: T.AdditiveBlending, depthWrite: false })); pool.visible = false; pool.renderOrder = 3; scene.add(pool);
   let girlFx = false, trailCarry = 0;
@@ -136,7 +136,7 @@ export function createCrowd(scene, { floorAt = () => 0, clipsBase = './anims/' }
     beam.visible = pool.visible = showFx;
     if (showFx) {
       beam.position.set(girl.c.x, girl.y, girl.c.z); pool.position.set(girl.c.x, girl.y + .02, girl.c.z);
-      beamMat.opacity = .85 + Math.sin(serverNowMs / 400) * .15;
+      beamMat.opacity = .8 + Math.sin(serverNowMs / 400) * .1;
       if (girl.moving) {
         const R = Math.random, k = Math.floor(trailCarry += dt * 26); trailCarry -= k;
         for (let j = 0; j < Math.min(k, 5); j++) sparks.spawn(girl.c.x + (R() - .5) * .9, girl.y + .05 + R() * .25, girl.c.z + (R() - .5) * .9, (R() - .5) * .2, .3 + R() * .5, (R() - .5) * .2);

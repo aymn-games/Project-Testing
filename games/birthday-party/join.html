@@ -6,6 +6,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#fbeaf1">
 <title>حفلة عيد الميلاد — الدخول</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="الحفلة">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<script src="app-mode.js"></script>
 <link rel="icon" href="../../favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,7 +20,8 @@
 <!-- دخول الجوال للحفلة (من الباركود): join.html?code=XXXX
      - ضيف: «دخول بحسابي» (أشكال ورقصات أكثر + نقاط) أو «دخول باسمي فقط».
      - صاحبة الحفلة: join.html?code=XXXX&g=<مفتاحها> — اسم فقط.
-     الجلسة تنحفظ بـ 'party-me' فلو رجع لنفس الرابط يرجع لنفس شخصيته. -->
+     الجلسة تنحفظ بـ 'party-me' فلو رجع لنفس الرابط يرجع لنفس شخصيته.
+     بدون رقم (join.html) أو برقم غلط: خانة «رقم الحفلة» (4 أرقام يقولها المذيع). -->
 <style>
     :root{ --ink:#5b1d3e; --soft:#9b6683; --rose2:#c94f7e; --line:rgba(226,112,154,.28); --card:rgba(255,250,252,.9); }
     *{ box-sizing:border-box; }
@@ -49,6 +56,8 @@
     .doors .when{ font:600 13px 'IBM Plex Sans Arabic'; color:var(--soft); }
     .doors .left{ margin:10px 0 4px; font:900 44px/1 'Zain'; color:var(--rose2); font-variant-numeric:tabular-nums; direction:ltr; }
     .doors p{ margin:6px 0 0; }
+    .codein{ text-align:center !important; font:900 34px/1 'Zain' !important; letter-spacing:.35em; direction:ltr; padding:10px 16px !important; }
+    .linkbtn{ display:block; margin:2px auto 0; padding:8px 14px; border:0; background:none; color:var(--rose2); font:700 14px 'IBM Plex Sans Arabic'; text-decoration:underline; text-underline-offset:4px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -68,6 +77,16 @@
     </div>
     <div class="wait" id="wait"><div class="spin"></div>جاري الاتصال بالحفلة…</div>
 
+    <!-- رقم الحفلة: لو دخل بدون باركود، أو الرقم غلط -->
+    <section class="hidden" id="codeForm">
+        <div class="card">
+            <h2>رقم الحفلة</h2>
+            <p>اكتب رقم الحفلة (4 أرقام) اللي يقوله المذيع أو تحت الباركود.</p>
+            <input id="codeIn" class="codein" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="0000" autocomplete="off" enterkeyhint="go" aria-label="رقم الحفلة">
+            <button class="btn" id="codeBtn" type="button">دخول الحفلة</button>
+        </div>
+    </section>
+
     <!-- ضيف -->
     <section class="hidden" id="guestForm">
         <div class="card">
@@ -83,6 +102,7 @@
             <input id="quickName" maxlength="16" placeholder="اكتب اسمك" autocomplete="nickname" enterkeyhint="go">
             <button class="btn ghost" id="quickBtn" type="button">دخول</button>
         </div>
+        <button class="linkbtn" id="otherCode" type="button">عندك رقم حفلة ثاني؟</button>
     </section>
 
     <!-- صاحبة الحفلة -->
@@ -145,9 +165,30 @@
         else { $('memberBtn').textContent = 'سجّل دخولك'; }
     }
 
-    if (!code) {
-        $('wait').classList.add('hidden');
-        showMsg('الرابط ناقص — امسح الباركود من جديد.');
+    // خانة رقم الحفلة: تودّي لنفس الصفحة بالرقم
+    function showCode(msg) {
+        ['wait', 'guestForm', 'girlForm', 'doors'].forEach(id => $(id).classList.add('hidden'));
+        $('codeForm').classList.remove('hidden'); showMsg(msg || '');
+        if (code) $('codeIn').value = code;
+    }
+    const goCode = () => {
+        const v = $('codeIn').value.replace(/\D/g, '').slice(0, 4);
+        if (v.length !== 4) { showMsg('رقم الحفلة 4 أرقام.'); $('codeIn').focus(); return; }
+        location.href = 'join.html?code=' + v;
+    };
+    $('codeBtn').addEventListener('click', goCode);
+    $('codeIn').addEventListener('input', () => { $('codeIn').value = $('codeIn').value.replace(/\D/g, '').slice(0, 4); });
+    $('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') goCode(); });
+    $('otherCode').addEventListener('click', () => { showCode(); $('codeIn').value = ''; $('codeIn').focus(); });
+
+    const saved = readJSON('party-me');
+    // بس لو انفتحت من الأيقونة (?app=1) — غير كذا يكتب الرقم (يمكن يبي حفلة جديدة)
+    if (!code && q.get('app') && saved && saved.code && /^\d{4}$/.test(saved.code)) {
+        // فتح من الأيقونة (أندرويد: join.html?app=1) أو بدون رقم: يرجع لشخصيته بحفلته المحفوظة
+        // (play.html يكمل بالجلسة، ولو انتهت يرجّعه هنا برقم الحفلة)
+        location.replace('play.html?code=' + saved.code);
+    } else if (!code) {
+        showCode();
     } else {
         const net = connect({
             onStatus: on => { if (!on && !sentJoin) $('wait').classList.remove('hidden'); },
@@ -174,6 +215,7 @@
                     location.replace('play.html?code=' + code);
                 } else if (m.t === 'err') {
                     if (m.of === 'resume') { writeJSON('party-me', null); sentJoin = false; net.send({ t: 'peek', code }); return; }
+                    if (m.err === 'nocode' && !girlKey) { showCode('ما لقينا حفلة بهالرقم — تأكد من الرقم وجرّب مرة ثانية.'); return; }
                     if (m.of === 'peek' || m.err === 'nocode' || m.err === 'disabled') { $('wait').classList.add('hidden'); $('guestForm').classList.add('hidden'); $('girlForm').classList.add('hidden'); showMsg(ERR[m.err] || 'صار خطأ.'); return; }
                     showForm(); showMsg(ERR[m.err] || 'صار خطأ، جرّب مرة ثانية.');
                 }

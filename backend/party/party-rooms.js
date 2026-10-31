@@ -46,7 +46,11 @@ var ZONES = {
     hall: [-31, 31, -47, 47],
     nostage: [-31, 31, -31, 47]       // الضيوف وقت الرقص: المنصة والدرج ممنوعين
 };
-var GIRL_SPOT = [0, -36.5], CAKE_SPOT = [0, -37.6], PHOTO_SPOT = [0, -29.6];
+var GIRL_SPOT = [0, -36.5], PHOTO_SPOT = [0, -29.6];
+// الكيكة تنزل من السماء بنص القاعة (CAKE_C) على طاولة دائرية: صاحبة الحفلة جنبها من جهة المنصة
+// تطالعها، والضيوف حلقات حولها يطالعونها (نفس القيم في hall3d.js وplay.html)
+var CAKE_C = [0, -17], CAKE_SPOT = [0, -19.6];
+var RING_R0 = 3.6, RING_DR = 1.25, RING_GAP = 1.05, RING_HOLE = .55; // الحلقة الأولى، المسافة بين الحلقات وبين الضيوف، فتحة صاحبة الحفلة (±راديان)
 var PHASES = ['closed', 'lobby', 'entrance', 'reveal', 'dance', 'gather', 'wishWrite', 'wishes', 'cakeWalk', 'cake', 'celebrate', 'photo', 'free', 'outro', 'ended'];
 // مشهد النهاية: آخر 30 ثانية من الحفل (من أي مرحلة بعد الافتتاح) — صاحبة الحفلة تمشي لحالها على السجادة
 // لباب القاعة (الضيوف يختفون عند الكل ويبقون بمكانهم)
@@ -122,6 +126,24 @@ function cleanWish(t) {
         return BAD_SET.has(w) || BAD_SET.has(bare) ? '***' : word;
     });
 }
+// مكان الضيف i (من total متصلين) بالحلقات حول الكيكة — زاوية a: (sin a, cos a)، وπ جهة صاحبة الحفلة (فاضية)
+function ringSlot(i, total) {
+    var r = RING_R0, start = 0, arc = 2 * Math.PI - 2 * RING_HOLE, late = i >= total;
+    for (;;) {
+        var cap = Math.max(1, Math.floor(arc * r / RING_GAP));
+        // المتأخرين (بعد المتصلين) يبدون من الحلقة اللي بعد آخر حلقة فيها متصلين، عشان ما يركبون عليهم
+        if (late && start < total) { start += cap; r += RING_DR; if (start >= total) { i = i - total; start = 0; total = 0; } continue; }
+        if (i < start + cap) {
+            // آخر حلقة ناقصة: نوزّعهم على القوس كله بدل ما يتكدّسون بجهة
+            var cnt = late ? cap : Math.min(cap, total - start), k = i - start;
+            var a = Math.PI + RING_HOLE + arc * (k + .5) / cnt;
+            return [r2(CAKE_C[0] + Math.sin(a) * r), r2(CAKE_C[1] + Math.cos(a) * r)];
+        }
+        start += cap; r += RING_DR;
+    }
+}
+function faceCake(x, z) { return r2(Math.atan2(CAKE_C[0] - x, CAKE_C[1] - z)); }
+var CAKE_PH = { cakeWalk: 1, cake: 1, celebrate: 1 };
 function gridSlot(i) { return [r2(-13.8 + (i % 24) * 1.2), r2(-30.5 + Math.floor(i / 24) * 1.2)]; }
 // صيغة الإرسال المضغوطة: صفوف [n, x, z, ry, a] ← مصفوفة مسطّحة بأعداد صحيحة (سم وسنتي-راديان)
 function packRows(rows) { var out = []; rows.forEach(function (r) { out.push(r[0], Math.round(r[1] * 100), Math.round(r[2] * 100), Math.round(r[3] * 100), r[4]); }); return out; }
@@ -159,21 +181,22 @@ function createRoomManager(opts) {
         if (ph === 'lobby' || ph === 'closed' || ph === 'ended') {
             if (p.role === 'girl') { p.x = rnd(-3, 3); p.z = rnd(-62, -56); p.ry = 0; }
             else { p.x = rnd(-10, 10); p.z = rnd(54, 64); p.ry = Math.PI; }
-        } else if (WALK_KIND[ph] || ph === 'reveal') {
-            var t = targetFor(room, p, WALK_KIND[ph] || 'grid'); room.walk[p.n] = t; p.x = t[0]; p.z = t[1]; p.ry = facing(ph, p);
+        } else if (WALK_KIND[ph] || ph === 'reveal' || (CAKE_PH[ph] && p.role !== 'girl')) {
+            var t = targetFor(room, p, WALK_KIND[ph] || (CAKE_PH[ph] ? 'cake' : 'grid')); if (WALK_KIND[ph] || ph === 'reveal') room.walk[p.n] = t; p.x = t[0]; p.z = t[1]; p.ry = facing(ph, p);
         } else if (p.role === 'girl') { var gs = (ph === 'cake' || ph === 'celebrate') ? CAKE_SPOT : ph === 'free' && room.photoDone ? PHOTO_SPOT : GIRL_SPOT; p.x = gs[0]; p.z = gs[1]; p.ry = facing(ph, p); }
         else { p.x = rnd(-12, 12); p.z = rnd(-24, -14); p.ry = Math.PI; }
     }
     function targetFor(room, p, kind) {
         kind = kind || 'grid';
         if (p.role === 'girl') return (kind === 'cake' ? CAKE_SPOT : kind === 'photo' ? PHOTO_SPOT : kind === 'outro' ? OUTRO_END : GIRL_SPOT).slice();
-        return kind === 'photo' ? photoSlot(room.slotN++, room.slotTotal) : kind === 'outro' ? [p.x, p.z] : gridSlot(room.slotN++);
+        return kind === 'photo' ? photoSlot(room.slotN++, room.slotTotal) : kind === 'cake' ? ringSlot(room.slotN++, room.slotTotal) : kind === 'outro' ? [p.x, p.z] : gridSlot(room.slotN++);
     }
     // اتجاه الوقوف: الضيوف يطالعون المنصة (π)، وصاحبة الحفلة تطالع الضيوف (0) إلا عند الكيكة والصورة
     // مشهد النهاية: هي تطالع الباب (0)، والضيوف على حالهم
     function facing(ph, p) {
         if (ph === 'outro') return p.role === 'girl' ? 0 : p.ry;
-        return p.role === 'girl' && !(ph === 'cakeWalk' || ph === 'cake' || ph === 'celebrate' || ph === 'photo') ? 0 : r2(Math.PI);
+        if (CAKE_PH[ph]) return p.role === 'girl' ? 0 : faceCake(p.x, p.z); // الكل يطالع الكيكة
+        return p.role === 'girl' && ph !== 'photo' ? 0 : r2(Math.PI);
     }
     // مدة المرحلة (ms) من الجدول — 0 = بدون وقت. الغرفة بدون جدول: نفس الافتراضي، والكيكة تنتظر القص
     function durationOf(room, ph) {
@@ -589,4 +612,4 @@ function createRoomManager(opts) {
     };
 }
 
-module.exports = { createRoomManager: createRoomManager, packRows: packRows, cleanSchedule: cleanSchedule, REACTS: REACTS };
+module.exports = { createRoomManager: createRoomManager, packRows: packRows, cleanSchedule: cleanSchedule, REACTS: REACTS, ringSlot: ringSlot, CAKE_C: CAKE_C, CAKE_SPOT: CAKE_SPOT };

@@ -5,6 +5,22 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>حفلة عيد الميلاد — القاعة</title>
+<!-- الحفلة كأيقونة بالشاشة الرئيسية (تفتح بكامل الشاشة بدون شريط المتصفح) — app-mode.js -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="الحفلة">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<script src="app-mode.js"></script>
+<script>
+    // شاشة لمس؟ (الآيباد بسفاري يعلن أحياناً إنه جهاز ماوس، فعصا التحكم كانت تختفي وما يقدر يتحرك)
+    window.IS_TOUCH = (navigator.maxTouchPoints || 0) > 0 || matchMedia('(any-pointer:coarse)').matches || matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window;
+    if (window.IS_TOUCH) document.documentElement.classList.add('is-touch');
+    // سفاري قبل 16 (آيبادات قديمة) ما فيه roundRect بالرسم — بدونه تتعطل لوحات الأسماء
+    if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.roundRect) CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+        r = Math.max(0, Math.min(+r || 0, w / 2, h / 2)); this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r); this.arcTo(x, y + h, x, y, r); this.arcTo(x, y, x + w, y, r); this.closePath();
+    };
+</script>
 <link rel="icon" href="../../favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -54,8 +70,9 @@
         background:radial-gradient(circle,rgba(255,255,255,.5),rgba(255,214,231,.35)); border:2px solid rgba(255,255,255,.75); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); display:none; }
     .joy-knob{ position:absolute; left:50%; top:50%; width:54px; height:54px; margin:-27px 0 0 -27px; border-radius:50%; background:linear-gradient(180deg,#ffb3d6,#f472b6); box-shadow:0 4px 14px rgba(219,39,119,.4); pointer-events:none; transition:transform .12s; }
     .joy.on .joy-knob{ transition:none; }
-    @media (pointer:coarse){ .joy{ display:block; } .hint .desk{ display:none; } .hint{ bottom:auto; top:calc(max(12px,env(safe-area-inset-top)) + 52px); } .toast{ top:118px; } }
-    @media (pointer:fine){ .hint .touch{ display:none; } }
+    /* is-touch: أي جهاز فيه شاشة لمس (الآيباد أحياناً يعلن إنه «ماوس» فما نعتمد على pointer:coarse بس) */
+    html.is-touch .joy{ display:block; } html.is-touch .hint .desk{ display:none; } html.is-touch .hint{ bottom:auto; top:calc(max(12px,env(safe-area-inset-top)) + 52px); } html.is-touch .toast{ top:118px; }
+    html:not(.is-touch) .hint .touch{ display:none; }
 
     .loader{ position:fixed; inset:0; z-index:10; display:grid; place-items:center; background:radial-gradient(circle at 50% 40%,#fff3f8,#f7c9dc); transition:opacity .6s; }
     .loader.out{ opacity:0; pointer-events:none; }
@@ -68,13 +85,13 @@
     @media (prefers-reduced-motion:reduce){ .spin{ animation-duration:3s; } }
     @media (max-width:520px){ .title{ font-size:19px; } .pill .lbl{ display:none; } .pill{ padding:0 12px; } }
     /* الجوال بالعرض (اللعب الأساسي): شريط علوي أصغر، العصا أصغر، التلميح تحت بالنص */
-    @media (pointer:coarse) and (orientation:landscape) and (max-height:520px){
-        .top{ top:max(8px,env(safe-area-inset-top)); left:max(12px,env(safe-area-inset-left)); right:max(12px,env(safe-area-inset-right)); }
-        .pill{ height:34px; font-size:12px; } .title{ font-size:18px; }
-        .joy{ width:108px; height:108px; bottom:max(14px,env(safe-area-inset-bottom)); left:max(18px,env(safe-area-inset-left)); }
-        .joy-knob{ width:46px; height:46px; margin:-23px 0 0 -23px; }
-        .hint{ top:auto; bottom:max(10px,env(safe-area-inset-bottom)); font-size:12px; padding:6px 14px; }
-        .toast{ top:54px; } .netbad{ top:50px; }
+    @media (orientation:landscape) and (max-height:520px){
+        html.is-touch .top{ top:max(8px,env(safe-area-inset-top)); left:max(12px,env(safe-area-inset-left)); right:max(12px,env(safe-area-inset-right)); }
+        html.is-touch .pill{ height:34px; font-size:12px; } html.is-touch .title{ font-size:18px; }
+        html.is-touch .joy{ width:108px; height:108px; bottom:max(14px,env(safe-area-inset-bottom)); left:max(18px,env(safe-area-inset-left)); }
+        html.is-touch .joy-knob{ width:46px; height:46px; margin:-23px 0 0 -23px; }
+        html.is-touch .hint{ top:auto; bottom:max(10px,env(safe-area-inset-bottom)); font-size:12px; padding:6px 14px; }
+        html.is-touch .toast{ top:54px; } html.is-touch .netbad{ top:50px; }
     }
     .hint.gone{ opacity:0 !important; }
     .phase{ position:absolute; top:max(58px,calc(env(safe-area-inset-top) + 50px)); left:50%; transform:translateX(-50%); display:flex; gap:10px; align-items:center; padding:7px 16px; border-radius:999px; background:var(--glass); border:1px solid var(--line); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); font:700 13px 'IBM Plex Sans Arabic'; pointer-events:none; white-space:nowrap; }
@@ -144,7 +161,7 @@
     .reacts .rainbtn{ width:auto; padding:0 12px; border-radius:999px; font:800 13px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#ff8fc0,#e11d74); border-color:transparent; }
     .reacts .rainbtn:disabled{ opacity:.55; }
     .jumpbtn{ position:absolute; left:calc(max(24px,env(safe-area-inset-left)) + 136px); bottom:max(32px,env(safe-area-inset-bottom)); width:58px; height:58px; font-size:26px; display:none; }
-    @media (pointer:coarse){ .jumpbtn:not(.hidden){ display:block; } }
+    html.is-touch .jumpbtn:not(.hidden){ display:block; }
     body.viewer .jumpbtn, body.stream .jumpbtn{ display:none !important; }
     .emotip{ position:absolute; z-index:8; padding:6px 12px; border-radius:999px; background:rgba(60,24,48,.88); color:#fff; font:700 13px 'IBM Plex Sans Arabic'; pointer-events:none; transform:translate(-50%,-100%); white-space:nowrap; }
     /* ركن التعديل: لوحة جانبية (يمين) والشخصية تبان باقي الشاشة للمعاينة */
@@ -171,8 +188,21 @@
     .kicked{ position:fixed; inset:0; z-index:12; display:grid; place-items:center; text-align:center; padding:24px; background:radial-gradient(circle at 50% 35%,#fff3f8,#f3c6da); }
     .kicked h2{ margin:0 0 14px; font:900 26px/1.2 'Zain'; color:#a3306a; }
     .kicked a{ display:inline-flex; align-items:center; height:46px; padding:0 24px; border-radius:999px; font:700 15px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); text-decoration:none; }
-    @media (pointer:coarse) and (orientation:landscape) and (max-height:520px){ .phase{ top:48px; font-size:12px; } .emotes button{ width:40px; height:40px; font-size:19px; } .reacts button{ width:36px; height:36px; font-size:17px; } .reacts .rainbtn{ font-size:12px; } .actbar{ gap:6px; } .jumpbtn{ left:calc(max(18px,env(safe-area-inset-left)) + 118px); bottom:max(18px,env(safe-area-inset-bottom)); width:50px; height:50px; } }
+    @media (orientation:landscape) and (max-height:520px){ html.is-touch .phase{ top:48px; font-size:12px; } html.is-touch .emotes button{ width:40px; height:40px; font-size:19px; } html.is-touch .reacts button{ width:36px; height:36px; font-size:17px; } html.is-touch .reacts .rainbtn{ font-size:12px; } html.is-touch .actbar{ gap:6px; } html.is-touch .jumpbtn{ left:calc(max(18px,env(safe-area-inset-left)) + 118px); bottom:max(18px,env(safe-area-inset-bottom)); width:50px; height:50px; } }
     /* الجوال بالطول: نطلب يلفّه (اللعبة مصممة بالعرض) */
+    /* شرح الأيقونة بالشاشة الرئيسية */
+    .appsheet{ position:fixed; inset:0; z-index:21; display:grid; place-items:center; padding:16px; background:rgba(40,12,34,.55); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+    .appcard{ width:min(420px,100%); max-height:100%; overflow:auto; padding:18px 18px 16px; border-radius:22px; background:#fffafc; color:#5b1d3e; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.3); }
+    .appcard img{ border-radius:16px; box-shadow:0 6px 18px rgba(201,79,126,.3); }
+    .appcard h2{ margin:8px 0 2px; font:900 22px/1.25 'Zain'; color:#a3306a; }
+    .appcard p{ margin:0 0 10px; font:600 13px/1.6 'IBM Plex Sans Arabic'; color:#9b6683; }
+    .appcard ol{ margin:0 0 12px; padding:0; list-style:none; counter-reset:st; text-align:right; display:flex; flex-direction:column; gap:8px; }
+    .appcard li{ counter-increment:st; display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:14px; background:#fdeef5; font:700 14px/1.5 'IBM Plex Sans Arabic'; }
+    .appcard li::before{ content:counter(st); flex:none; width:26px; height:26px; border-radius:50%; display:grid; place-items:center; background:#f472b6; color:#fff; font:800 14px 'IBM Plex Sans Arabic'; }
+    .appcard li svg{ flex:none; width:22px; height:22px; color:#2563eb; }
+    .appcard li small{ display:block; font:600 12px 'IBM Plex Sans Arabic'; color:#9b6683; }
+    .appcard button{ width:100%; height:46px; border:0; border-radius:999px; color:#fff; font:800 16px 'IBM Plex Sans Arabic'; background:linear-gradient(180deg,#f08ab0,#d45a8a); cursor:pointer; }
+    @media (max-height:420px){ .appcard{ padding:12px 16px; } .appcard img{ display:none; } .appcard ol{ gap:5px; } .appcard li{ padding:6px 10px; } }
     .rotate{ position:fixed; inset:0; z-index:20; display:none; place-items:center; text-align:center; padding:24px; background:radial-gradient(circle at 50% 35%,#fff3f8,#f3c6da); color:var(--ink); }
     .rotate .ph{ width:64px; height:104px; margin:0 auto 18px; border:5px solid #d45a8a; border-radius:14px; position:relative; animation:turn 2.2s ease-in-out infinite; }
     .rotate .ph::after{ content:''; position:absolute; bottom:6px; left:50%; width:14px; height:4px; margin-left:-7px; border-radius:2px; background:#d45a8a; }
@@ -181,7 +211,7 @@
     .rotate button{ height:46px; padding:0 24px; border:0; border-radius:999px; font:700 15px 'IBM Plex Sans Arabic'; color:#fff; background:linear-gradient(180deg,#f08ab0,#d45a8a); box-shadow:0 8px 20px rgba(212,90,138,.3); cursor:pointer; }
     @keyframes turn{ 0%,20%{ transform:rotate(0); } 50%,80%{ transform:rotate(-90deg); } 100%{ transform:rotate(0); } }
     @media (prefers-reduced-motion:reduce){ .rotate .ph{ animation:none; transform:rotate(-90deg); } }
-    @media (pointer:coarse) and (orientation:portrait){ body:not(.viewer) .rotate{ display:grid; } }
+    @media (orientation:portrait){ html.is-touch body:not(.viewer) .rotate{ display:grid; } }
 </style>
 </head>
 <body>
@@ -201,6 +231,7 @@
             <button class="pill on" id="tourBtn" type="button" aria-pressed="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span class="lbl">جولة سينمائية</span>
             </button>
+            <button class="pill hidden" id="appBtn" type="button" aria-label="شاشة كاملة">📲<span class="lbl">شاشة كاملة</span></button>
             <button class="pill" id="fsBtn" type="button" aria-label="ملء الشاشة">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg>
             </button>
@@ -251,6 +282,16 @@
 <div class="kicked hidden" id="kicked" role="alertdialog" aria-label="طلّعك المذيع"><div><h2>طلّعك المذيع من الحفلة</h2><a id="kickedBack" href="../../games.html">رجوع للألعاب</a></div></div>
 <div class="photomodal hidden" id="photoModal" role="dialog" aria-label="الصورة الجماعية">
     <div><img id="photoImg" alt="الصورة الجماعية"><div class="wbrow"><button type="button" id="photoClose" class="ghost">إغلاق</button><a id="photoSave" class="savebtn">حفظ الصورة</a></div></div>
+</div>
+<!-- شرح «أضف الحفلة للشاشة الرئيسية» (آيفون/آيباد، أو متصفح ما يدعم التثبيت المباشر) -->
+<div class="appsheet hidden" id="appSheet" role="dialog" aria-modal="true" aria-labelledby="appTitle">
+    <div class="appcard">
+        <img src="icons/icon-180.png" alt="" width="64" height="64">
+        <h2 id="appTitle">خلّ الحفلة أيقونة بشاشتك 📲</h2>
+        <p>تفتح بكامل الشاشة بدون شريط المتصفح، وترجع لنفس شخصيتك.</p>
+        <ol id="appSteps"></ol>
+        <button type="button" id="appOk">تمام</button>
+    </div>
 </div>
 <div class="rotate" id="rotate" role="dialog" aria-label="لف الجوال بالعرض">
     <div>
@@ -384,8 +425,12 @@
         const WALK = { entrance: .85, gather: .85, cakeWalk: .85, photo: 6000, outro: 27000 }, OUTRO_GUEST_MS = 1000;
         const AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1, outro: 1 };
         // اتجاه الوقوف بعد المشي (نفس السيرفر): صاحبة الحفلة تطالع الضيوف إلا عند الكيكة والصورة
+        // الكيكة تنزل بنص القاعة (نفس CAKE_C بالسيرفر وSKY_C في hall3d.js): الكل يطالعها وقت الكيكة
+        const CAKE_C = [0, -17], CAKE_PH = ['cakeWalk', 'cake', 'celebrate'];
+        const faceCake = (x, z) => Math.atan2(CAKE_C[0] - x, CAKE_C[1] - z);
         const facing = p => p === 'outro' ? (myRole === 'girl' ? 0 : (myTarget && myTarget[0] < 0 ? 1 : -1) * Math.PI / 2)
-            : myRole === 'girl' && !['cakeWalk', 'cake', 'celebrate', 'photo', 'free'].includes(p) ? 0 : Math.PI;
+            : CAKE_PH.includes(p) ? (myRole === 'girl' ? 0 : faceCake(...(myTarget || [hall.getLocal().x, hall.getLocal().z])))
+            : myRole === 'girl' && !['photo', 'free'].includes(p) ? 0 : Math.PI;
         let photoKey = null, celebKey = null, lastWishes = null, photoUrl = null, noticeT = 0;
         // جا وقت البداية وصاحبة الحفلة مو موجودة (نحسبها هنا عشان تتحدث لحظة ما تدخل)
         const waitingGirl = () => !!(phase && phase.p === 'lobby' && phase.sched && serverNow() >= phase.sched.startAt && !girlOn);
@@ -418,7 +463,8 @@
                 for (const n of Object.keys(W.walk)) { if (+n === myN) continue; const st = crowd.posOf(+n); if (st) paths[n] = W.route(+n, st, W.walk[n]); }
                 const t1s = {}; for (const n of Object.keys(paths)) t1s[n] = W.t1Of(+n);
                 crowd.setAutoPaths(paths, W.t0, W.t1, (role, c) => p === 'outro' ? (role === 'girl' ? 0 : c.ry)
-                    : role === 'girl' && !['cakeWalk', 'photo'].includes(p) ? 0 : Math.PI, { t1Of: t1s });
+                    : CAKE_PH.includes(p) ? (role === 'girl' ? 0 : faceCake(c.x, c.z))
+                    : role === 'girl' && p !== 'photo' ? 0 : Math.PI, { t1Of: t1s });
             } else crowd.setAutoPaths(null, serverNow());
             crowd.setGirlFx(!['lobby', 'entrance', 'closed', 'ended', 'outro'].includes(p)); // بالنهاية النور من الباب بداله
             // مشهد النهاية: هي بس اللي تبان (الضيوف ومعهم أنا يختفون عند الكل)
@@ -431,6 +477,9 @@
             if (applied === key) return;
             applied = key;
             const isGirl = myRole === 'girl', preShow = p === 'lobby' || p === 'entrance' || p === 'closed', lateReveal = now > phase.at + 3000;
+            // المشهد (الستارة، الإضاءة، المشي، الموسيقى) بـ try: لو صار فيه خطأ بأي جهاز (آيباد مثلاً)
+            // ما يمنع الأزرار تحت («التالي» و«قص الكيكة») إنها تطلع
+            try {
             // الستارة مسكّرة لين يخلص العد التنازلي (الفتح يصير بالـ ticker عند الصفر)
             const closed = preShow || (p === 'reveal' && !lateReveal);
             hall.setCurtain(closed ? 0 : 1, true);
@@ -455,6 +504,8 @@
                 else hall.cutCake(true);
                 if (p === 'celebrate' && celebKey !== key) { celebKey = key; hall.celebrate(Math.max(3, (phase.until - now) / 1000), { strobe: true }); music.play('cake'); }
             }
+            // كيكة السماء: تنزل أول مشي الكيكة، وتبقى للقص والاحتفال، وترجع للسماء وقت الصورة
+            hall.setSkyCake(p === 'cakeWalk' ? 'drop' : p === 'cake' || p === 'celebrate' ? 'on' : p === 'photo' && since < 4000 ? 'up' : 'off', since);
             hall.setPhotoCam(p === 'photo');
             crowdPhase();
             // مشهد النهاية: الكاميرا تتبعها عند الكل، والنور من الباب، والبتلات، وصوت المشهد. الضيوف يلوّحون لها
@@ -486,6 +537,12 @@
                     myTarget = null;
                 }
             }
+            // شاشة البث: بعد ما تنفتح الستارة الكاميرا تتمركز على صاحبة الحفلة وتلف حولها شوي
+            // (العد التنازلي واللقطة الجماعية ومشهد النهاية لها لقطاتها)
+            // وقت الكيكة: اللقطة على الكيكة وصاحبة الحفلة وراها، والحلقة حولهم
+            if (viewOnly) hall.setFocus(CAKE_PH.includes(p) ? () => CAKE_C
+                : ['dance', 'gather', 'wishWrite', 'wishes', 'free'].includes(p) || (p === 'reveal' && lateReveal) ? () => { const gn = [...roles].find(([, r]) => r === 'girl'); return gn && crowd ? crowd.posOf(gn[0]) : null; } : null,
+                CAKE_PH.includes(p) ? { r: 6.2, h: 5, look: .9 } : null);
             if (viewOnly) hall.setShot(p === 'reveal' || p === 'cake' || p === 'celebrate' || p === 'cakeWalk' ? 'stage' : p === 'entrance' ? 'entrance' : p === 'wishes' || p === 'wishWrite' || p === 'gather' ? 'screen' : null);
             if (p === 'ended') music.stop();
             else if (p === 'outro') music.play('outro', { from: since / 1000 });
@@ -495,6 +552,7 @@
                 music.play('dance');
             }
             else if (p !== 'reveal' && p !== 'celebrate') music.play('lobby');
+            } catch (e) { console.error('party: phase scene', e); }
             // إشعارات المراحل (بس أول ثواني المرحلة — اللي يرجع متأخر ما يشوفها من جديد)
             if (p === 'wishWrite' && since < 4000) notice('اكتبوا تهانيكم 💌', isGirl || viewOnly ? 'الضيوف يكتبون من جوالاتهم' : 'اضغط «اكتب تهنئتك» تحت');
             if (p === 'photo' && since < 5000) notice('وقت الصورة الجماعية 📸', 'الكل يتصف تلقائياً');
@@ -523,7 +581,7 @@
         function onWishes(m) {
             lastWishes = m;
             const cur = m.cur, inWishes = phase && phase.p === 'wishes';
-            hall.setWishScreen(inWishes ? 1 : 0, cur ? Object.assign({ total: m.total }, cur) : null);
+            try { hall.setWishScreen(inWishes ? 1 : 0, cur ? Object.assign({ total: m.total }, cur) : null); } catch (e) { console.error('party: wish screen', e); }
             $('wishCard').classList.toggle('hidden', !(inWishes && cur));
             if (cur) { $('wcName').textContent = cur.name; $('wcText').textContent = cur.text; $('wcCount').textContent = cur.i + ' من ' + m.total; }
             $('nextBtn').textContent = cur && cur.i >= m.total ? 'خلصت الرسائل ← الكيكة' : cur ? 'التالي ←' : (m.total ? 'ابدئي الرسائل ←' : 'التالي ←');
@@ -616,12 +674,12 @@
                     if (m.room.girlName) { $('title').textContent = 'حفلة ' + m.room.girlName; hall.setName(m.room.girlName); }
                 } else if (m.t === 'wishes') onWishes(m);
                 else if (m.t === 'myWish') onMyWish(m);
-                else if (m.t === 'phase') { phase = m; applied = null; if (!viewOnly && myRole) hall.setZone(zoneFor(m.p)); applyPhase(); }
+                else if (m.t === 'phase') { phase = m; applied = null; try { if (!viewOnly && myRole) hall.setZone(zoneFor(m.p)); } catch (e) { console.error(e); } applyPhase(); }
                 else if (m.t === 'all' || m.t === 's') {
                     const rows = unpackRows(m.d);
                     if (m.t === 'all') lastRows.clear();
                     rows.forEach(r => lastRows.set(r[0], r));
-                    if (crowd) crowd.apply(rows, m.now, m.t === 'all');
+                    try { if (crowd) crowd.apply(rows, m.now, m.t === 'all'); } catch (e) { console.error('party: crowd', e); } // خطأ بالشخصيات ما يوقف المكان والأزرار
                     // أول مرة نعرف مكاننا من السيرفر ← نبدأ وضع الشخصية
                     const mine = myN != null ? rows.find(x => x[0] === myN) : null;
                     if (mine) myServer = [mine[1], mine[2]];
@@ -808,7 +866,7 @@
     // ---- العرض الأفقي على الجوال ----
     // أندرويد: ملء الشاشة + قفل الاتجاه بالعرض (يحتاج ضغطة من المستخدم). الآيفون ما يسمح
     // بقفل الاتجاه للمواقع، فتبقى شاشة «لف جوالك» لين يلفّه بنفسه.
-    const coarse = matchMedia('(pointer:coarse)').matches;
+    const coarse = !!window.IS_TOUCH;
     async function goLandscape() {
         try {
             const d = document.documentElement;
@@ -820,6 +878,44 @@
     if (coarse && !viewOnly) document.addEventListener('pointerdown', function once() { document.removeEventListener('pointerdown', once); if (matchMedia('(orientation:portrait)').matches) goLandscape(); }, { once: true });
     // التلميح يختفي بعد شوي عشان ما يغطي اللعب
     setTimeout(() => $('hint').classList.add('gone'), 9000);
+
+
+    // ---- «📲 شاشة كاملة»: الحفلة كأيقونة بالشاشة الرئيسية (app-mode.js) ----
+    // أبل ما تسمح بملء الشاشة بسفاري ولا بإضافة الأيقونة بالكود، فبالآيفون/الآيباد نشرح الخطوتين،
+    // وبالأندرويد نطلب التثبيت مباشرة. الزر يختفي لو الحفلة مفتوحة من الأيقونة أصلاً.
+    {
+        const APP = window.PARTY_APP || {};
+        const SHARE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 11v8a2 2 0 002 2h10a2 2 0 002-2v-8"/></svg>';
+        const PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>';
+        const ipad = APP.ios && !/iPhone|iPod/.test(navigator.userAgent);
+        const showApp = !viewOnly && !!code && !APP.standalone && !!window.IS_TOUCH;
+        $('appBtn').classList.toggle('hidden', !showApp);
+        // زر ملء الشاشة العادي ما يشتغل بالآيفون، وما له داعي من الأيقونة
+        if (APP.standalone || !(document.fullscreenEnabled || document.webkitFullscreenEnabled) || (APP.ios && showApp)) $('fsBtn').classList.add('hidden');
+        let restoreUrl = null;
+        function openSheet() {
+            const steps = APP.ios ? [
+                `${SHARE}<span>اضغط زر المشاركة<small>${ipad ? 'فوق يمين بسفاري' : 'تحت بنص سفاري'} — أو ••• ثم «مشاركة»</small></span>`,
+                `${PLUS}<span>اختر «إضافة إلى الشاشة الرئيسية»<small>لو ما بان انزل بالقائمة شوي</small></span>`,
+                `<span>اضغط «إضافة»، وافتح الحفلة من أيقونتها 🎂</span>`,
+            ] : [
+                `<span>افتح قائمة المتصفح ⋮<small>فوق بزاوية الشاشة</small></span>`,
+                `${PLUS}<span>اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»</span>`,
+                `<span>افتح الحفلة من أيقونتها 🎂</span>`,
+            ];
+            $('appSteps').innerHTML = steps.map(s => '<li>' + s + '</li>').join('');
+            // الأيقونة بالآيفون تاخذ رابط الصفحة الحالي: نحط فيه الجلسة عشان ترجع لنفس الشخصية
+            if (APP.ios && APP.markUrl) restoreUrl = APP.markUrl();
+            $('appSheet').classList.remove('hidden');
+        }
+        function closeSheet() { $('appSheet').classList.add('hidden'); if (restoreUrl) { restoreUrl(); restoreUrl = null; } }
+        $('appBtn').addEventListener('click', async () => {
+            if (APP.canPrompt && APP.canPrompt()) { const ok = await APP.prompt(); if (ok) $('appBtn').classList.add('hidden'); return; }
+            openSheet();
+        });
+        $('appOk').addEventListener('click', closeSheet);
+        $('appSheet').addEventListener('click', e => { if (e.target === $('appSheet')) closeSheet(); });
+    }
 
     $('fsBtn').addEventListener('click', () => {
         const d = document;
