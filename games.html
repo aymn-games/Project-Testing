@@ -694,50 +694,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     m.addEventListener('click', function(e){ if (e.target === m) closeGameLockModal(); });
     document.body.appendChild(m);
   }
-  // [تنويه «العب ضد ستريمر»] يطلع مرة وحدة لكل مستخدم مسجّل (ينحفظ بالمتصفح
-  // باسم حسابه بعد «فهمت»): فكرة اللعب ضد بثوث ثانية، البريد، والمايك والشات.
-  function showVersusIntro(){
-    var auth = window.AGPAuth;
-    var user = auth && auth.getToken && auth.getToken() && auth.getCachedUser ? auth.getCachedUser() : null;
-    if (!user || !user.id) return;
-    var key = 'agp-vs-intro-seen:' + user.id;
-    try { if (localStorage.getItem(key)) return; } catch (e) { return; }
-    if (document.getElementById('gl-vs-intro') || document.getElementById('gl-lock-modal')) return;
-    function ico(d){ return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; }
-    function av(c, t){ return '<span style="width:76px;height:76px;border-radius:50%;display:grid;place-items:center;font:700 30px \'IBM Plex Sans Arabic\',system-ui,sans-serif;color:#fff;background:linear-gradient(135deg,' + c + ',#1e1638);border:3px solid ' + c + ';box-shadow:0 0 30px ' + c + '88">' + t + '</span>'; }
-    function pt(icon, title, text){
-      return '<div style="display:flex;gap:12px;align-items:flex-start;text-align:right"><span style="flex:0 0 auto;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:#c4b5fd;background:rgba(139,92,246,.14);border:1px solid rgba(167,139,250,.3)">' + icon + '</span>' +
-        '<div><b style="display:block;font-size:14.5px;color:#f4f2f8">' + title + '</b><span style="font-size:13px;color:#a8a3b5;line-height:1.7">' + text + '</span></div></div>';
-    }
-    var m = document.createElement('div');
-    m.id = 'gl-vs-intro';
-    m.setAttribute('role', 'dialog');
-    m.setAttribute('aria-modal', 'true');
-    m.setAttribute('aria-label', 'العب ضد ستريمر');
-    m.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(5,5,8,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);direction:rtl;overflow-y:auto;';
-    m.innerHTML =
-      '<div style="position:relative;overflow:hidden;width:100%;max-width:440px;margin:auto;padding:28px 24px 22px;border-radius:24px;border:1px solid rgba(178,140,245,.35);background:linear-gradient(180deg,#1a1526,#0d0b14);text-align:center;font-family:\'IBM Plex Sans Arabic\',system-ui,sans-serif;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 70px -25px #8b5cf6">' +
-        '<div style="position:absolute;top:-120px;left:50%;width:420px;height:260px;margin-left:-210px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.35),transparent 65%);pointer-events:none"></div>' +
-        '<span style="position:relative;display:inline-block;padding:4px 14px;border-radius:999px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.35);color:#6ee7b7;font-size:12px;font-weight:700">جديد بالمنصة</span>' +
-        '<div style="position:relative;display:flex;align-items:center;justify-content:center;gap:16px;margin:18px 0 14px">' + av('#a78bfa', 'أ') +
-          '<span style="padding:6px 14px;border-radius:12px;background:linear-gradient(180deg,#fde7a8,#f0c25a);color:#1a1206;font:900 20px \'IBM Plex Sans Arabic\',system-ui,sans-serif">VS</span>' + av('#22d3ee', 'س') + '</div>' +
-        '<h2 style="position:relative;margin:0;font-size:28px;font-weight:700;background:linear-gradient(180deg,#f4f2f8,#c4b5fd);-webkit-background-clip:text;background-clip:text;color:transparent">العب ضد ستريمر</h2>' +
-        '<p style="position:relative;margin:8px 0 18px;font-size:14.5px;line-height:1.8;color:#cfc7e2">تحدّى أي ستريمر ثاني على المنصة: جمهورك فريق وجمهوره فريق، وكل لاعب يلعب من شات بثه.</p>' +
-        '<div style="position:relative;display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">' +
-          pt(ico('<path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="M14.5 6.5 18 3h3v3l-3.5 3.5"/><path d="m5 14 4 4"/>'), 'ادعُ أي ستريمر', 'من البثوث النشطة الآن أو بالبحث بالـID ويوزر تيك توك — من زر «العب ضد ستريمر».') +
-          pt(ico('<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>'), 'الدعوات توصلك بالبريد', 'زر «البريد» بمكتبة الألعاب: تقبل أو ترفض، وتجهّز فريقك وتضغط «جاهز».') +
-          pt(ico('<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/>'), 'مايك وشات بينكم', 'تكلّم الستريمر الثاني واكتب له طوال المباراة، وتقفل المايك متى ما بغيت.') +
-        '</div>' +
-        '<button type="button" data-gl-vs-ok style="position:relative;margin-top:18px;width:100%;padding:13px;border:none;border-radius:14px;background:linear-gradient(90deg,#7a3fd4,#b28cf5);color:#fff;font-family:inherit;font-weight:700;font-size:15.5px;cursor:pointer;box-shadow:0 10px 30px rgba(139,92,246,.4)">فهمت</button>' +
-      '</div>';
-    m.querySelector('[data-gl-vs-ok]').addEventListener('click', function(){
-      try { localStorage.setItem(key, String(Date.now())); } catch (e) {}
-      m.remove();
-    });
-    document.body.appendChild(m);
-    m.querySelector('[data-gl-vs-ok]').focus();
-  }
-  setTimeout(showVersusIntro, 1200);
 
   // مستمع واحد (capture) على الصفحة: يلتقط الضغط على أي بطاقة حتى لو
   // انعاد بناؤها، ويمنع فتح اللعبة قبل أي مستمع آخر.
@@ -2343,68 +2299,47 @@ document.addEventListener('DOMContentLoaded', async function() {
     }, 300);
   })();
 </script>
-<!-- تنويه جوائز مباريات البثين — نافذة بمكتبة الألعاب للستريمر بس، مرة وحدة كل
-     ساعة كحد أقصى (localStorage 'agp-notice-win-frames-v1' = وقت آخر ظهور). تشرح إن
-     أول فوز للستريمر بمباراة بين بثين يعطيه كود إطارات يوزعه على متابعينه،
-     وإن التعليق الأخير بالمنصة كان بسبب هذا التحديث. -->
+<!-- تنويه التعليق المؤقت — نافذة بمكتبة الألعاب لكل حساب مسجّل: مرتين بس، وبين
+     المرتين 30 دقيقة على الأقل (localStorage 'agp-notice-freeze-v1:<id>' = {n, t}).
+     تشرح إن التعليق بالألعاب لثواني بس وسببه رفع ملفات وتحديثات. -->
 <script>
 (function () {
-  // يطلع للستريمر بس، ومرة وحدة كل ساعة كحد أقصى (وقت آخر ظهور بـ localStorage).
-  var KEY = 'agp-notice-win-frames-v1', EVERY_MS = 60 * 60 * 1000;
-  try { if (Date.now() - (Number(localStorage.getItem(KEY)) || 0) < EVERY_MS) return; } catch (e) {}
-  function isStreamer() {
-    var A = window.AGPAuth, u = null;
-    try { u = A && A.getCachedUser ? A.getCachedUser() : null; } catch (e) {}
-    if (!u) return false;
-    return Boolean((A.canPlayGames && A.canPlayGames(u)) || (A.isStreamerAccount && A.isStreamerAccount(u)));
-  }
-  var FRAMES = ['frame-club-hilal-wolf.png', 'frame-rare-dragon.png', 'frame-fire-water.png', 'frame-club-nassr-eagle.png', 'frame-girls-kitty-hearts.png', 'frame-general-stadium.png'];
+  var MAX_TIMES = 2, GAP_MS = 30 * 60 * 1000;
 
   function show() {
-    if (document.getElementById('agp-win-frames-notice') || !isStreamer()) return;
-    try { localStorage.setItem(KEY, String(Date.now())); } catch (e) {}
-    var st = document.createElement('style');
-    st.textContent =
-      '@keyframes agpWfIn{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}' +
-      '#agp-win-frames-notice{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:16px;direction:rtl;font-family:"Readex Pro","IBM Plex Sans Arabic",sans-serif;background:rgba(5,5,8,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}' +
-      '#agp-win-frames-notice .bx{width:min(560px,100%);max-height:calc(100vh - 32px);overflow-y:auto;box-sizing:border-box;padding:26px clamp(18px,4vw,30px) 22px;border-radius:26px;color:#f4f2fb;text-align:right;' +
-        'background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(251,191,36,.16),transparent 70%),linear-gradient(180deg,#1b1530,#0c0a14);border:1px solid rgba(251,191,36,.4);box-shadow:0 30px 80px -30px rgba(0,0,0,.95);animation:agpWfIn .45s cubic-bezier(.22,1,.36,1) both}' +
-      '#agp-win-frames-notice .tag{display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border-radius:999px;font-size:12.5px;font-weight:600;color:#fde7a8;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35)}' +
-      '#agp-win-frames-notice h2{margin:14px 0 6px;font-size:clamp(21px,3.2vw,26px);line-height:1.45;font-weight:700}' +
-      '#agp-win-frames-notice h2 em{font-style:normal;color:#fbbf24}' +
-      '#agp-win-frames-notice .lead{margin:0;font-size:14.5px;line-height:1.9;color:#cfc7e2}' +
-      '#agp-win-frames-notice .fr{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}' +
-      '#agp-win-frames-notice .fr span{height:52px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;overflow:hidden}' +
-      '#agp-win-frames-notice .fr img{max-width:92%;max-height:46px;object-fit:contain}' +
-      '#agp-win-frames-notice ol{margin:0;padding:0 20px 0 0;display:flex;flex-direction:column;gap:7px;font-size:14px;line-height:1.8;color:#e2dcef}' +
-      '#agp-win-frames-notice ol b{color:#fde7a8}' +
-      '#agp-win-frames-notice .note{margin-top:16px;padding:11px 14px;border-radius:14px;font-size:13px;line-height:1.85;color:#d9d3e6;background:rgba(178,140,245,.08);border:1px solid rgba(178,140,245,.28)}' +
-      '#agp-win-frames-notice .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}' +
-      '#agp-win-frames-notice .btns a,#agp-win-frames-notice .btns button{flex:1 1 180px;height:48px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font:600 15px "Readex Pro","IBM Plex Sans Arabic",sans-serif;cursor:pointer;text-decoration:none}' +
-      '#agp-win-frames-notice .go{border:none;color:#1a1206;background:linear-gradient(90deg,#fbbf24,#fde68a);box-shadow:0 10px 30px -10px rgba(251,191,36,.6)}' +
-      '#agp-win-frames-notice .ok{border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.04);color:#e7e3ef}';
-    document.head.appendChild(st);
+    if (document.getElementById('agp-freeze-notice')) return;
+    var A = window.AGPAuth, u = null;
+    try { u = A && A.getToken && A.getToken() && A.getCachedUser ? A.getCachedUser() : null; } catch (e) {}
+    if (!u || !u.id) return;
+    var key = 'agp-notice-freeze-v1:' + u.id, st = { n: 0, t: 0 };
+    try { st = JSON.parse(localStorage.getItem(key)) || st; } catch (e) { return; }
+    if ((st.n || 0) >= MAX_TIMES || Date.now() - (st.t || 0) < GAP_MS) return;
+    try { localStorage.setItem(key, JSON.stringify({ n: (st.n || 0) + 1, t: Date.now() })); } catch (e) { return; }
+
+    var css = document.createElement('style');
+    css.textContent =
+      '@keyframes agpFzIn{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}' +
+      '#agp-freeze-notice{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:16px;direction:rtl;font-family:"IBM Plex Sans Arabic",sans-serif;background:rgba(5,5,8,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}' +
+      '#agp-freeze-notice .bx{width:min(380px,100%);max-height:calc(100vh - 32px);overflow-y:auto;box-sizing:border-box;padding:24px 22px 20px;border-radius:26px;color:#f4f2fb;text-align:center;' +
+        'background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(178,140,245,.22),transparent 70%),linear-gradient(180deg,#1b1530,#0c0a14);border:1px solid rgba(178,140,245,.4);box-shadow:0 30px 80px -30px rgba(0,0,0,.95),0 0 70px -25px #8b5cf6;animation:agpFzIn .45s cubic-bezier(.22,1,.36,1) both}' +
+      '#agp-freeze-notice .tag{display:inline-flex;padding:4px 14px;border-radius:999px;font-size:12.5px;font-weight:600;color:#ddd6fe;background:rgba(139,92,246,.14);border:1px solid rgba(167,139,250,.35)}' +
+      '#agp-freeze-notice img.fz-ph{display:block;width:200px;height:200px;object-fit:cover;margin:16px auto 14px;border-radius:22px;border:2px solid rgba(178,140,245,.45);box-shadow:0 12px 34px -10px rgba(139,92,246,.6)}' +
+      '#agp-freeze-notice p{margin:0;font-size:15px;line-height:1.9;color:#e2dcef}' +
+      '#agp-freeze-notice p b{color:#c4b5fd}' +
+      '#agp-freeze-notice img:not(.fz-ph){width:1.15em;height:1.15em;vertical-align:-.2em;margin:0;border:0;box-shadow:none}' +
+      '#agp-freeze-notice .bx button.fz-ok{display:block;margin-top:18px;width:100%;height:48px;padding:0;border:none;border-radius:999px;background:linear-gradient(90deg,#7a3fd4,#b28cf5);color:#fff;font:700 15.5px "IBM Plex Sans Arabic",sans-serif;cursor:pointer;box-shadow:0 10px 30px rgba(139,92,246,.4)}';
+    document.head.appendChild(css);
 
     var ov = document.createElement('div');
-    ov.id = 'agp-win-frames-notice';
-    ov.innerHTML = '<div class="bx" role="dialog" aria-modal="true" aria-labelledby="agp-wf-t">' +
-      '<span class="tag">🎁 جديد بالمنصة</span>' +
-      '<h2 id="agp-wf-t">العبوا ضد بعض، و<em>فوزك يجيب إطارات لمتابعينك</em></h2>' +
-      '<p class="lead">صار تقدر تتحدى ستريمر ثاني بمباراة بين بثين (بلنتي أو أسرع إجابة): جمهورك فريق وجمهوره فريق. ولو فاز فريقك تاخذ كود إطارات توزعه على متابعينك.</p>' +
-      '<div class="fr">' + FRAMES.map(function (f) { return '<span><img src="' + f + '" alt="" loading="lazy"></span>'; }).join('') + '</div>' +
-      '<ol>' +
-        '<li>ادخل <b>«العب ضد ستريمر»</b> وادعُ بث ثاني لمباراة.</li>' +
-        '<li>أول فوز لك يعطيك <b>كود إطارات</b> يستخدمه عدد من متابعينك، وكل واحد منهم يختار إطاره.</li>' +
-        '<li>الكود يطلع مخفي بشاشة الفوز عشان ما ينسرق من البث، وتلقاه واضح ببروفايلك ← المقتنيات ← <b>أكواد جوائز الفوز</b>.</li>' +
-        '<li>متابعينك لازم يكون عندهم <b>حساب بالموقع مربوط بتيك توك</b>، ويستردون الكود من بروفايلهم ← «استرداد كود».</li>' +
-        '<li>كل ستريمر ياخذ كود واحد بس.</li>' +
-      '</ol>' +
-      '<div class="note">💜 التعليق اللي صار بالمنصة الفترة الماضية كان بسبب هذا التحديث. شكراً لصبركم!</div>' +
-      '<div class="btns"><a class="go" href="challenge.html" data-wf-close>العب ضد ستريمر الحين</a><button type="button" class="ok" data-wf-close>فهمت</button></div>' +
+    ov.id = 'agp-freeze-notice';
+    ov.innerHTML = '<div class="bx" role="dialog" aria-modal="true" aria-label="تنويه">' +
+      '<span class="tag">💜 تنويه</span>' +
+      '<img class="fz-ph" src="notice-freeze.jpg" alt="">' +
+      '<p>التعليق اللي يصير بالألعاب <b>لثواني بس</b>، وسببه إني جالس أرفع ملفات وتحديثات جديدة للمنصة.<br>آسفين يا عسل، انت وياه 🤍</p>' +
+      '<button type="button" class="fz-ok" data-fz-close>فهمت</button>' +
     '</div>';
     ov.addEventListener('click', function (e) {
-      if (!e.target.closest('[data-wf-close]') && e.target !== ov) return;
-      if (!e.target.closest('a')) ov.remove();
+      if (e.target === ov || e.target.closest('[data-fz-close]')) ov.remove();
     });
     document.body.appendChild(ov);
   }
