@@ -12,16 +12,16 @@
  *   عميل → host {girlName, key, schedule} | host {code, token}   ← hosted {code, token, girlKey, viewKey}
  *          schedule = {startAt (ms UTC), durationMin, openBeforeMin, danceMin, writeMin, cakeDanceMin, cutTimeoutSec, tzOffsetMin}
  *   المذيع → schedule {schedule} (تعديل أي وقت) ← phase جديدة للكل
- *   عميل → join {code, name, auth?, girlKey?, dev?} ← welcome {id, key, n, role, kind} ثم all {d}
+ *   عميل → join {code, name, auth?, girlKey?, dev?, g? (0 بنت · 1 ولد)} ← welcome {id, key, n, role, kind} ثم all {d}
  *          (قبل فتح الدخول: ← closed {openAt, tzOffsetMin, girlName} ويبقى مشاهد لين توصله phase lobby؛
  *          صاحبة الحفلة تقدر تدخل غرفتها قبل. بعد النهاية: err ended)
  *   عميل → resume {code, id, key}                 ← نفس رد join
  *   عميل → peek {code, vk}                        ← room + all (شاشة عرض بدون شخصية؛ بدون vk صحيح صاحبة الحفلة مخفية قبل الافتتاح)
  *   اللاعب → react {e} (heart|smile|laugh|party، ولصاحبة الحفلة crown|love|sparkle) ← reacts {d: n,e,…} للكل
  *   صاحبة الحفلة → rain ← rain {at} للكل (مطر قلوب، مرة كل 20ث) · المذيع → chars {v: rig|classic} ← room
- *   اللاعب → look {look: 8 أرقام}                ← room (الصف السادس = الشكل بعد التحقق حسب نوع الحساب)
+ *   اللاعب → look {look: 9 أرقام، آخرها g ولد/بنت}                ← room (الصف السادس = الشكل بعد التحقق حسب نوع الحساب)
  *   عميل → mv {p:[x, z, ry, a]} · ping {k}        ← pong {k, now}
- *   المذيع → start · skip {from}                  ← phase {p, at, until, walk, cut} للكل
+ *   المذيع → start · skip {from} · end (إنهاء الحفلة: مشهد النهاية على طول) ← phase {p, at, until, walk, cut} للكل
  *   (phase تنرسل أيضاً لكل اتصال جديد؛ walk مسطّحة n, x×100, z×100 وقت المشي التلقائي)
  *   الضيف → wish {text} (وقت wishWrite بس) ← myWish {text} · صاحبة الحفلة/المذيع → next {seen} · prev {seen} · cut
  *          (seen = pos آخر wishes وصلت)
@@ -209,7 +209,7 @@ function onMessage(client, msg) {
     if (t === 'ping') return send(client, { t: 'pong', k: msg.k, now: Date.now() });
     if (typeof t !== 'string') return;
     var ident = t === 'host' || t === 'join' || t === 'resume' || t === 'peek';
-    var heavy = ident || t === 'start' || t === 'skip' || t === 'wish' || t === 'next' || t === 'cut' || t === 'hideWish' || t === 'pointsDone' || t === 'pointsClaim' || t === 'pointsRelease' || t === 'look' || t === 'kick' || t === 'schedule' || t === 'prev' || t === 'rain' || t === 'chars';
+    var heavy = ident || t === 'start' || t === 'skip' || t === 'end' || t === 'wish' || t === 'next' || t === 'cut' || t === 'hideWish' || t === 'pointsDone' || t === 'pointsClaim' || t === 'pointsRelease' || t === 'look' || t === 'kick' || t === 'schedule' || t === 'prev' || t === 'rain' || t === 'chars';
     if (!allow(client, heavy)) return;
     try { return handle(client, msg, t, ident); } finally { if (heavy && client.code) markSave(client.code); }
 }
@@ -254,7 +254,7 @@ function handle(client, msg, t, ident) {
     }
     if (t === 'join') {
         if (!code) return send(client, { t: 'err', err: 'nocode', of: t });
-        res = _mgr.join(code, { name: msg.name, auth: msg.auth || null, girlKey: msg.girlKey == null ? null : String(msg.girlKey), dev: msg.dev });
+        res = _mgr.join(code, { name: msg.name, auth: msg.auth || null, girlKey: msg.girlKey == null ? null : String(msg.girlKey), dev: msg.dev, g: msg.g === 1 ? 1 : msg.g === 0 ? 0 : null });
         if (!res.ok && res.err === 'closed') {
             // الدخول لسا ما فتح: يبقى مشاهد (بدون صاحبة الحفلة) لين توصله phase lobby ويدخل
             var rc = _mgr.getRoom(code), pc = _mgr.phaseOf(code);
@@ -275,9 +275,9 @@ function handle(client, msg, t, ident) {
         Object.keys(_clients).forEach(function (k) { var c = _clients[k]; if (c !== client && c.code === code && c.id === msg.id) { c.id = null; c.role = 'viewer'; send(c, { t: 'err', err: 'elsewhere', of: t }); } });
         return onWelcome(client, code, res);
     }
-    if (t === 'start' || t === 'skip') {
+    if (t === 'start' || t === 'skip' || t === 'end') {
         if (client.role !== 'host' || !client.code) return send(client, { t: 'err', err: 'host-only', of: t });
-        res = t === 'start' ? _mgr.start(client.code) : _mgr.skip(client.code, String(msg.from || ''));
+        res = t === 'start' ? _mgr.start(client.code) : t === 'end' ? _mgr.endNow(client.code) : _mgr.skip(client.code, String(msg.from || ''));
         if (!res.ok) return send(client, { t: 'err', err: res.err, of: t });
         logger.log('Party: room ' + client.code + ' → ' + _mgr.phaseOf(client.code).p);
         return broadcastPhase(client.code);

@@ -33,8 +33,10 @@ var MIN_MOVE_GAP_MS = 60;       // أقل فاصل بين رسائل الحرك�
 var MAX_ANIM = 11, GUEST_ANIM = 10;
 // الشكل: [نوع اللبس، لون اللبس، البشرة، لون الشعر، التسريحة، الإكسسوار، المؤثر، قبعة الحفلة] — -1 = الافتراضي (الجوال يشتقه من n)
 // التسريحة: 0 قصير · 1 طويل · 2 كعكة · 3 ذيلين · 4 كيرلي قصير · 5 كيرلي طويل. القبعة: 0 بدون · 1-4 أشكال
-var LOOK_MAX = [1, 11, 4, 7, 5, 5, 3, 4];
-var LOOK_QUICK = [false, true, false, false, false, false, false, true]; // السريع: لون لبسه وقبعته بس
+// الشكل: [st, o, s, h, hs, acc, fx, hat, g] — g: 0 بنت، 1 ولد. st للولد 0-3 (ثوب وشماغ، قميص وبنطلون، هودي وجينز، بدلة)
+// وللبنت 0-1 (فستان، بنطلون وقميص)؛ hs وacc لهم قوائم خاصة لكل نوع (crowd-common.js LOOK)
+var LOOK_MAX = [3, 11, 4, 7, 5, 5, 3, 4, 1];
+var LOOK_QUICK = [false, true, false, false, false, false, false, true, true]; // السريع: لون لبسه وقبعته وولد/بنت بس
 // التفاعلات اللي تطير فوق الراس (الثلاث الأخيرة لصاحبة الحفلة بس)
 var REACTS = ['heart', 'smile', 'laugh', 'party', 'crown', 'love', 'sparkle'], GIRL_REACT_FROM = 4;
 var REACT_RATE = 2, REACT_BURST = 4, RAIN_COOLDOWN_MS = 20000;
@@ -306,7 +308,9 @@ function createRoomManager(opts) {
         }
         var name = cleanName(o.name) || (user ? cleanName(user.username) : '');
         if (!name) return fail('name');
-        return welcome(addPlayer(room, name, 'guest', user ? 'member' : 'quick', user, dev));
+        var np = addPlayer(room, name, 'guest', user ? 'member' : 'quick', user, dev);
+        if (o.g === 0 || o.g === 1) np.look[8] = o.g; // ولد/بنت من شاشة الدخول
+        return welcome(np);
     }
 
     function resume(code, id, key) {
@@ -430,6 +434,13 @@ function createRoomManager(opts) {
         var room = rooms[code]; if (!room) return fail('nocode');
         if (room.phase !== from || room.phase === 'free' || room.phase === 'ended') return fail('phase');
         advance(room); return { ok: true };
+    }
+    // «إنهاء الحفلة» من المذيع: مشهد النهاية (30ث) على طول من أي مرحلة بعد الافتتاح، وبعده ended
+    function endNow(code) {
+        var room = rooms[code]; if (!room) return fail('nocode');
+        var i = PHASES.indexOf(room.phase);
+        if (i < PHASES.indexOf('reveal') || room.phase === 'outro' || room.phase === 'ended') return fail('phase');
+        setPhase(room, 'outro'); return { ok: true };
     }
     // catchUp: رجوع بعد إعادة تشغيل — كل مرحلة فاتت تبدأ بوقتها حسب الساعة (مو «الحين»)
     function tick(code, catchUp) {
@@ -607,7 +618,7 @@ function createRoomManager(opts) {
         createRoom: createRoom, hostResume: hostResume, join: join, resume: resume, leave: leave,
         move: move, takeDelta: takeDelta, deltaFor: deltaFor, fullState: fullState, roster: roster,
         closeRoom: closeRoom, rooms: function () { return Object.keys(rooms); }, serialize: serialize, restore: restore,
-        getRoom: getRoom, pointsId: pointsId, phaseOf: phaseOf, start: start, skip: skip, tick: tick,
+        getRoom: getRoom, pointsId: pointsId, phaseOf: phaseOf, start: start, skip: skip, endNow: endNow, tick: tick,
         setLook: setLook, kick: kick, react: react, takeReacts: takeReacts, reactHidden: reactHidden, rain: rain, setChars: setChars, setSchedule: setSchedule, addWish: addWish, hideWish: hideWish, nextWish: nextWish, prevWish: prevWish, wishesState: wishesState, wishList: wishList, cut: cut, pointsList: pointsList
     };
 }

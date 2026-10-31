@@ -110,6 +110,9 @@
     #nextBtn{ right:auto; left:50%; transform:translateX(calc(-100% - 6px)); }
     #prevBtn{ right:auto; left:50%; transform:translateX(6px); background:#fff; color:#c94f7e; border:1px solid var(--line); }
     body:has(#prevBtn.hidden) #nextBtn{ transform:translateX(-50%); }
+    /* قص الكيكة بالنص تحت (مثل «التالي»)، وأزرار الحركات تطلع فوقه عشان ما تغطيه */
+    #cutBtn{ right:auto; left:50%; transform:translateX(-50%); }
+    body.bigup .actbar{ bottom:max(84px,calc(env(safe-area-inset-bottom) + 80px)); }
     /* إشعارات كبيرة وسط الشاشة (وقت الصورة، الشكر، الكتابة) */
     .notice{ position:absolute; top:30%; left:50%; transform:translate(-50%,-50%) scale(.92); opacity:0; transition:opacity .4s, transform .4s; pointer-events:none; text-align:center; padding:16px 32px; border-radius:26px; background:rgba(58,18,54,.88); color:#fff; font:900 clamp(26px,5vw,54px)/1.2 'Zain'; box-shadow:0 14px 40px rgba(0,0,0,.3); max-width:88vw; }
     .notice.show{ opacity:1; transform:translate(-50%,-50%) scale(1); }
@@ -260,7 +263,7 @@
     <div class="emotip hidden" id="emoTip"></div>
     <div class="lookpanel hidden" id="lookPanel" role="dialog" aria-label="ركن التعديل">
         <h3>✨ شكلي</h3>
-        <div class="lockmsg hidden" id="lookLock">🔒 دخلت كضيف سريع: تقدر تغيّر لون لبسك وقبعتك بس. <a href="#" id="lookLogin">سجّل دخولك تفتحها كلها</a></div>
+        <div class="lockmsg hidden" id="lookLock">🔒 دخلت كضيف سريع: تقدر تغيّر الشخصية (ولد/بنت) ولون لبسك وقبعتك بس. <a href="#" id="lookLogin">سجّل دخولك تفتحها كلها</a></div>
         <div class="lookbody" id="lookBody"></div>
         <div class="lookfoot"><button type="button" class="ghost" id="lookCancel">إلغاء</button><button type="button" id="lookSave">حفظ</button></div>
     </div>
@@ -574,6 +577,8 @@
             $('nextBtn').classList.toggle('hidden', !isGirl || p !== 'wishes');
             $('prevBtn').classList.toggle('hidden', !isGirl || p !== 'wishes' || !(lastWishes && lastWishes.pos > 1));
             $('cutBtn').classList.toggle('hidden', !isGirl || p !== 'cake');
+            // زر كبير تحت (التالي/اكتب تهنئتك/قص الكيكة) ← أزرار الحركات ترتفع فوقه (بدون :has عشان سفاري القديم)
+            document.body.classList.toggle('bigup', ['nextBtn', 'wishBtn', 'cutBtn'].some(id => !$(id).classList.contains('hidden')));
             $('wishCard').classList.toggle('hidden', !(p === 'wishes' && lastWishes && lastWishes.cur));
             if (showEmotes || p === 'wishes' || p === 'wishWrite') $('hint').classList.add('gone'); // التلميح يغطي الأزرار
         }
@@ -779,34 +784,36 @@
 
         // ---- ركن التعديل: اللاعب يختار شكله ويشوفه على شخصيته قبل الحفظ ----
         // الضيف السريع: لون اللبس بس (السيرفر يفرض نفس الشي)، والباقي يبان مقفل
+        // opts ممكن تكون دالة (boy) ← الولد له قوائم خاصة للبس والتسريحة والإكسسوار
         const LOOK_ROWS = [
-            { k: 0, label: 'نوع اللبس', opts: LOOK.styles, noGirl: true },
+            { k: 8, label: 'الشخصية', opts: LOOK.genders, quick: true, noGirl: true },
+            { k: 0, label: 'نوع اللبس', opts: boy => boy ? LOOK.boyStyles : LOOK.styles, noGirl: true },
             { k: 1, label: 'لون اللبس', colors: LOOK.outfits, quick: true },
             { k: 2, label: 'البشرة', colors: LOOK.skins },
             { k: 3, label: 'لون الشعر', colors: LOOK.hairs },
-            { k: 4, label: 'التسريحة', opts: LOOK.hairStyles },
-            { k: 5, label: 'إكسسوار', opts: LOOK.accs, girlSkip: [2, 5] }, // عندها تاج: التاج الصغير والقبعة ما يركبون فوقه
+            { k: 4, label: 'التسريحة', opts: boy => boy ? LOOK.boyHairStyles : LOOK.hairStyles },
+            { k: 5, label: 'إكسسوار', opts: boy => boy ? LOOK.boyAccs : LOOK.accs, girlSkip: [2, 5] }, // عندها تاج: التاج الصغير والقبعة ما يركبون فوقه
             { k: 6, label: 'المؤثر', opts: LOOK.fxs },
             { k: 7, label: 'قبعة الحفلة', opts: LOOK.hats, quick: true, noGirl: true }, // صاحبة الحفلة عليها تاجها
         ];
-        const FIELDS = ['st', 'o', 's', 'h', 'hs', 'acc', 'fx', 'hat'];
+        const FIELDS = ['st', 'o', 's', 'h', 'hs', 'acc', 'fx', 'hat', 'g'];
         let draft = null;
         const isDefault = L => !Array.isArray(L) || L.every(v => !(v >= 0));
-        const lookToSend = () => myKind === 'quick' ? draft.map((v, i) => i === 1 || i === 7 ? v : -1) : draft.slice();
+        const lookToSend = () => myKind === 'quick' ? draft.map((v, i) => i === 1 || i === 7 || i === 8 ? v : -1) : draft.slice();
         function updateLookBtn() {
             const ok = !viewOnly && myKind && phase && (phase.p === 'lobby' || phase.p === 'free' || phase.p === 'closed');
             $('lookBtn').classList.toggle('hidden', !ok);
             if (!ok) closeLook();
         }
         function renderLook() {
-            const girl = myRole === 'girl', quick = myKind === 'quick';
+            const girl = myRole === 'girl', quick = myKind === 'quick', boy = !girl && draft[8] === 1;
             $('lookLock').classList.toggle('hidden', !quick);
             $('lookBody').innerHTML = LOOK_ROWS.filter(row => !(girl && row.noGirl)).map(row => {
                 let opts = '';
                 if (row.colors) {
                     if (girl && row.k === 1) opts += '<button type="button" class="sw def" data-k="1" data-v="-1" aria-label="الفستان البنفسجي الفخم" title="الفستان البنفسجي الفخم"></button>';
                     opts += row.colors.map((c, v) => '<button type="button" class="sw" data-k="' + row.k + '" data-v="' + v + '" style="background:' + c + '" aria-label="' + row.label + ' ' + (v + 1) + '"></button>').join('');
-                } else opts = row.opts.map((t, v) => (girl && row.girlSkip && row.girlSkip.includes(v)) ? '' : '<button type="button" class="opt" data-k="' + row.k + '" data-v="' + v + '">' + t + '</button>').join('');
+                } else opts = (typeof row.opts === 'function' ? row.opts(boy) : row.opts).map((t, v) => (girl && row.girlSkip && row.girlSkip.includes(v)) ? '' : '<button type="button" class="opt" data-k="' + row.k + '" data-v="' + v + '">' + t + '</button>').join('');
                 const locked = quick && !row.quick;
                 return '<div class="lookrow' + (locked ? ' locked' : '') + '"><b>' + (locked ? '🔒 ' : '') + row.label + '</b><div class="opts">' + opts + '</div></div>';
             }).join('');
@@ -842,7 +849,13 @@
         $('lookBtn').addEventListener('click', () => $('lookPanel').classList.contains('hidden') ? openLook() : closeLook());
         $('lookBody').addEventListener('click', ev => {
             const b = ev.target.closest('[data-k]'); if (!b || !draft) return;
-            draft[+b.dataset.k] = +b.dataset.v; markLook(); crowd && crowd.setLocalLook(lookToSend());
+            const k = +b.dataset.k, v = +b.dataset.v;
+            if (k === 8 && draft[8] !== v) {
+                // ولد ↔ بنت: اللبس والتسريحة والإكسسوار يرجعون للافتراضي حق النوع الجديد (قوائمهم مختلفة)
+                draft[8] = v; const R = resolveLook(myN, myRole, draft.map((x, i) => i === 0 || i === 4 || i === 5 ? -1 : x));
+                draft[0] = R.st; draft[4] = R.hs; draft[5] = R.acc; renderLook();
+            } else { draft[k] = v; markLook(); }
+            crowd && crowd.setLocalLook(lookToSend());
         });
         $('lookSave').addEventListener('click', () => closeLook(true));
         $('lookCancel').addEventListener('click', () => closeLook());

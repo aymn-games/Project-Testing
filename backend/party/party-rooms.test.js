@@ -523,20 +523,29 @@ function lookRoom() {
     return { c: c, mgr: c.mgr, code: room.code, room: room };
 }
 
-test('look has 8 fields: quick keeps outfit color and hat only; hs 4/5 allowed', function () {
+test('look has 9 fields: quick keeps outfit color, hat and boy/girl only; boy outfits st 0-3', function () {
     var s = lookRoom(), q = s.mgr.join(s.code, { name: 'ريم' }), m = s.mgr.join(s.code, { auth: 'm' }), g = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey });
-    assert.deepEqual(s.mgr.setLook(s.code, q.id, [1, 3, 2, 4, 5, 2, 1, 3]).look, [-1, 3, -1, -1, -1, -1, -1, 3]);
-    assert.deepEqual(s.mgr.setLook(s.code, m.id, [1, 3, 2, 4, 5, 2, 1, 4]).look, [1, 3, 2, 4, 5, 2, 1, 4]);
-    assert.deepEqual(s.mgr.setLook(s.code, g.id, [0, 11, 4, 7, 4, 5, 3, 0]).look, [0, 11, 4, 7, 4, 5, 3, 0]);
-    assert.deepEqual(s.mgr.setLook(s.code, m.id, [2, 12, 5, 8, 6, 6, 4, 5]).look, [-1, -1, -1, -1, -1, -1, -1, -1]);
-    assert.deepEqual(s.mgr.setLook(s.code, m.id, ['1', 1.5, null, -3, 0, 0, 0, 1]).look, [-1, -1, -1, -1, 0, 0, 0, 1]);
+    assert.deepEqual(s.mgr.setLook(s.code, q.id, [1, 3, 2, 4, 5, 2, 1, 3, 1]).look, [-1, 3, -1, -1, -1, -1, -1, 3, 1]);
+    assert.deepEqual(s.mgr.setLook(s.code, m.id, [3, 3, 2, 4, 5, 2, 1, 4, 1]).look, [3, 3, 2, 4, 5, 2, 1, 4, 1]);
+    assert.deepEqual(s.mgr.setLook(s.code, g.id, [0, 11, 4, 7, 4, 5, 3, 0, 0]).look, [0, 11, 4, 7, 4, 5, 3, 0, 0]);
+    assert.deepEqual(s.mgr.setLook(s.code, m.id, [4, 12, 5, 8, 6, 6, 4, 5, 2]).look, [-1, -1, -1, -1, -1, -1, -1, -1, -1]);
+    assert.deepEqual(s.mgr.setLook(s.code, m.id, ['1', 1.5, null, -3, 0, 0, 0, 1]).look, [-1, -1, -1, -1, 0, 0, 0, 1, -1]);
     assert.equal(s.mgr.setLook(s.code, m.id, 'x').err, 'bad');
-    assert.deepEqual(s.mgr.setLook(s.code, m.id, [0, 1]).look, [0, 1, -1, -1, -1, -1, -1, -1], 'short array padded');
+    assert.deepEqual(s.mgr.setLook(s.code, m.id, [0, 1]).look, [0, 1, -1, -1, -1, -1, -1, -1, -1], 'short array padded');
 });
 
-test('7-field look is accepted and hat becomes -1', function () {
+test('older 7/8-field looks are accepted (hat / boy-girl become -1)', function () {
     var s = lookRoom(), m = s.mgr.join(s.code, { auth: 'm' });
-    assert.deepEqual(s.mgr.setLook(s.code, m.id, [1, 3, 2, 4, 1, 2, 1]).look, [1, 3, 2, 4, 1, 2, 1, -1]);
+    assert.deepEqual(s.mgr.setLook(s.code, m.id, [1, 3, 2, 4, 1, 2, 1]).look, [1, 3, 2, 4, 1, 2, 1, -1, -1]);
+    assert.deepEqual(s.mgr.setLook(s.code, m.id, [1, 3, 2, 4, 1, 2, 1, 2]).look, [1, 3, 2, 4, 1, 2, 1, 2, -1]);
+});
+
+test('join with g sets boy/girl on the look (guests only; bad values ignored)', function () {
+    var s = lookRoom();
+    var b = s.mgr.join(s.code, { name: 'خالد', g: 1 }), q = s.mgr.join(s.code, { name: 'ريم', g: 0 }), x = s.mgr.join(s.code, { name: 'س', g: 7 });
+    var g = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey, g: 1 });
+    var look = function (p) { return s.mgr.roster(s.code).players.find(function (r) { return r[0] === p.n; })[5]; };
+    assert.equal(look(b)[8], 1); assert.equal(look(q)[8], 0); assert.equal(look(x)[8], -1); assert.equal(look(g)[8], -1, 'the birthday girl stays a girl');
 });
 
 test('every guest kind gets anims up to 10; 11 only for the girl', function () {
@@ -554,9 +563,9 @@ test('every guest kind gets anims up to 10; 11 only for the girl', function () {
 
 test('roster rows carry look', function () {
     var s = lookRoom(), m = s.mgr.join(s.code, { auth: 'm' });
-    assert.deepEqual(s.mgr.roster(s.code).players[0][5], [-1, -1, -1, -1, -1, -1, -1, -1]);
-    s.mgr.setLook(s.code, m.id, [1, 2, 3, 4, 1, 2, 3, 2]);
-    assert.deepEqual(s.mgr.roster(s.code).players[0][5], [1, 2, 3, 4, 1, 2, 3, 2]);
+    assert.deepEqual(s.mgr.roster(s.code).players[0][5], [-1, -1, -1, -1, -1, -1, -1, -1, -1]);
+    s.mgr.setLook(s.code, m.id, [1, 2, 3, 4, 1, 2, 3, 2, 1]);
+    assert.deepEqual(s.mgr.roster(s.code).players[0][5], [1, 2, 3, 4, 1, 2, 3, 2, 1]);
 });
 
 test('kick removes the player; resume with the old key fails', function () {
@@ -816,7 +825,7 @@ test('serialize/restore round-trips players, looks, wishes, keys, kicked bans an
     var room = b.mgr.getRoom(s.code), old = s.mgr.getRoom(s.code);
     assert.deepEqual([room.token, room.girlKey, room.viewKey, room.girlName], [old.token, old.girlKey, old.viewKey, old.girlName]);
     assert.equal(b.mgr.roster(s.code).players.every(function (p) { return p[4] === 0; }), true, 'everyone offline until they reconnect');
-    assert.deepEqual(b.mgr.roster(s.code).players.find(function (p) { return p[0] === g.n; })[5], [0, 3, 2, 1, 2, 3, 1, -1]);
+    assert.deepEqual(b.mgr.roster(s.code).players.find(function (p) { return p[0] === g.n; })[5], [0, 3, 2, 1, 2, 3, 1, -1, -1]);
     assert.equal(b.mgr.resume(s.code, q.id, q.key).ok, true);
     assert.equal(b.mgr.resume(s.code, g.id, g.key).role, 'girl');
     assert.equal(b.mgr.wishList(s.code).items[0].text, 'كل عام وانتي بخير');
@@ -999,4 +1008,17 @@ test('ringSlot fits 100 guests within ~7.5m without overlap', function () {
     for (var i = 0; i < 100; i++) pts.push(R.ringSlot(i, 100));
     pts.forEach(function (t) { assert.ok(Math.hypot(t[0] - R.CAKE_C[0], t[1] - R.CAKE_C[1]) < 7.6); });
     for (var a = 0; a < pts.length; a++) for (var b = a + 1; b < pts.length; b++) assert.ok(Math.hypot(pts[a][0] - pts[b][0], pts[a][1] - pts[b][1]) >= 1.04);
+});
+
+test('endNow: host ends the party → outro now (30s) → ended; refused before the reveal and during outro', function () {
+    var s = showRoom(), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey }); s.mgr.join(s.code, { name: 'ريم' });
+    assert.equal(s.mgr.endNow(s.code).err, 'phase', 'not from the lobby');
+    toDance(s);
+    var r = s.mgr.endNow(s.code); assert.equal(r.ok, true);
+    var ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'outro'); assert.equal(ph.until - ph.at, 30000);
+    assert.ok(ph.walk && ph.walk[girl.n], 'the girl walks the carpet');
+    assert.equal(s.mgr.endNow(s.code).err, 'phase', 'already ending');
+    s.c.t.now += 30000; s.mgr.tick(s.code);
+    assert.equal(s.mgr.phaseOf(s.code).p, 'ended');
+    assert.equal(s.mgr.endNow(s.code).err, 'phase');
 });

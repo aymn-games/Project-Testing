@@ -120,7 +120,8 @@
     .timeline li b{ font:900 16px 'Zain'; color:var(--rose2); white-space:nowrap; direction:ltr; }
     .timeline li.note{ color:var(--soft); font-size:12px; }
     .warn{ margin-top:10px; padding:10px 14px; border-radius:12px; background:#fffbeb; color:#92400e; font-weight:600; font-size:13px; }
-    .kick.sure{ background:#9f1239 !important; color:#fff !important; }
+    .kick.sure, #endBtn.sure{ background:#9f1239 !important; color:#fff !important; }
+    #endBtn{ color:#9f1239; border-color:#fecdd3; }
 
     /* ---- شاشة البث: المشهد بكامل الشاشة، واللوحة تنفتح فوقه ---- */
     #stage{ display:none; }
@@ -179,18 +180,13 @@
                 </div>
             </div>
             <div class="actions">
-                <button class="btn ghost" id="editBtn" type="button">تعديل الأوقات</button>
                 <button class="btn ghost" id="qrBtn" type="button" aria-pressed="false">اعرض الباركود على الشاشة</button>
+                <button class="btn ghost hidden" id="endBtn" type="button">إنهاء الحفلة</button>
                 <button class="btn ghost" id="closePanel" type="button">إغلاق اللوحة ✕</button>
-                <button class="btn ghost" id="newParty" type="button">حفلة جديدة</button>
             </div>
             <div class="row" style="margin-top:12px">
                 <span id="rCharsL"><b>الشخصيات</b><small>تتبدّل عند الكل فوراً</small></span>
                 <div class="seg" role="group" aria-labelledby="rCharsL" id="rChars"><button type="button" data-v="rig" aria-pressed="false">الجديدة</button><button type="button" data-v="classic" aria-pressed="false">الكلاسيكية</button></div>
-            </div>
-            <div class="hidden" id="editBox" style="margin-top:12px">
-                <div class="rows" id="editSched"></div>
-                <div class="actions"><button class="btn" id="saveSched" type="button">حفظ الأوقات</button><button class="btn ghost" id="cancelSched" type="button">إلغاء</button></div>
             </div>
             <div class="msg hidden" id="showMsg" role="alert"></div>
             <div class="points hidden" id="pointsMsg" role="status"></div>
@@ -295,10 +291,9 @@
         return {
             read() { const st = startAt(); if (!isFinite(st)) return null; return Object.assign({ startAt: st, tzOffsetMin: -new Date(st).getTimezoneOffset() }, v); },
             set(sc) { el('Date').value = localDate(sc.startAt); el('Time').value = localTime(sc.startAt); FIELDS.forEach(f => { if (sc[f.k] != null) setV(f.k, sc[f.k]); }); draw(); },
-            lockStart(on) { el('Date').disabled = el('Time').disabled = on; box.querySelectorAll('button[data-k="openBeforeMin"]').forEach(b => { b.disabled = on; }); },
         };
     }
-    const createForm = schedForm($('createSched'), 'c'), editForm = schedForm($('editSched'), 'e');
+    const createForm = schedForm($('createSched'), 'c');
     let state = null; // {code, token, girlKey, viewKey}
     // المفتاح الخاص من الرابط ← نحفظه ونشيله من شريط العنوان عشان ما ينكشف
     const urlKey = new URLSearchParams(location.search).get('k');
@@ -377,17 +372,16 @@
         onMessage: m => {
             if (m.t === 'hosted') { state = { code: m.code, token: m.token, girlKey: m.girlKey, viewKey: m.viewKey }; writeJSON('party-host', { code: m.code, token: m.token, viewKey: m.viewKey }); showRoom(); }
             else if (m.t === 'room') { renderList(m.room); segSet($('rChars'), m.room.chars || 'rig'); }
-            else if (m.t === 'phase') { phase = m; renderPhase(); if (editing) { editing = false; $('editBox').classList.add('hidden'); } }
+            else if (m.t === 'phase') { phase = m; renderPhase(); }
             else if (m.t === 'wishList') renderWishList(m.items || []);
             else if (m.t === 'points') onPoints(m);
             else if (m.t === 'pointsGo') onPointsGo(m.id);
             else if (m.t === 'pointsOk') pointsNote('انحسبت النقاط ✓');
             else if (m.t === 'wishes') { wishesPos = m.pos || 0; $('prevBtn').classList.toggle('hidden', !(phase && phase.p === 'wishes' && wishesPos > 1)); }
-            else if (m.t === 'err' && m.of === 'schedule') { editing = false; showShowMsg(ERR.schedule); }
             else if (m.t === 'err' && m.of === 'kick') showShowMsg(m.err === 'noplayer' ? 'الضيف طلع من الحفلة أصلاً.' : 'ما قدرنا نطرده، جرّب مرة ثانية.');
             else if (m.t === 'err' && m.of === 'pointsClaim') { if (m.err === 'claimed') pointsNote('جهاز ثاني فاتح صفحة المذيع يحسب النقاط الحين…'); }
             else if (m.t === 'err' && m.of === 'next' && m.err === 'stale') { /* صاحبة الحفلة سبقت — الرسالة الجديدة على الشاشة */ }
-            else if (m.t === 'err' && (m.of === 'start' || m.of === 'skip' || m.of === 'next' || m.of === 'prev' || m.of === 'cut' || m.of === 'hideWish')) showShowMsg(m.err === 'phase' ? 'المرحلة تغيّرت قبل الضغط — جرّب مرة ثانية.' : 'صار خطأ.');
+            else if (m.t === 'err' && (m.of === 'start' || m.of === 'skip' || m.of === 'end' || m.of === 'next' || m.of === 'prev' || m.of === 'cut' || m.of === 'hideWish')) showShowMsg(m.err === 'phase' ? 'المرحلة تغيّرت قبل الضغط — جرّب مرة ثانية.' : 'صار خطأ.');
             else if (m.t === 'err' && m.of === 'host') {
                 if (m.err === 'nocode' || m.err === 'token') { writeJSON('party-host', null); state = null; }
                 showCreate(ERR[m.err] || 'صار خطأ، جرّب مرة ثانية.');
@@ -428,11 +422,12 @@
         $('skipBtn').classList.toggle('hidden', !SKIP[phase.p]);
         $('skipBtn').textContent = SKIP[phase.p] || 'تخطي';
         $('skipBtn').classList.toggle('ghost', phase.p !== 'cake');
+        // «إنهاء الحفلة»: من بعد الافتتاح لين قبل مشهد النهاية
+        $('endBtn').classList.toggle('hidden', !END_OK.includes(phase.p));
+        if (!END_OK.includes(phase.p)) endReset();
         $('wishesCard').classList.toggle('hidden', !['gather', 'wishWrite', 'wishes'].includes(phase.p));
         $('nextBtn').classList.toggle('hidden', phase.p !== 'wishes');
         $('prevBtn').classList.toggle('hidden', !(phase.p === 'wishes' && wishesPos > 1));
-        $('editBtn').classList.toggle('hidden', !phase.sched || phase.p === 'ended');
-        if (phase.p === 'ended') $('newParty').textContent = 'حفلة جديدة ✨';
         renderCast();
     }
     // باركود الضيوف على البث: تلقائي قبل البداية، وبعدها بس لو المذيع شغّله
@@ -454,6 +449,20 @@
     }, 250);
     // الزر يتعطل ثانية بعد الضغط (والسيرفر أصلاً يرفض الضغط المزدوج)
     const press = (btn, msg) => { btn.disabled = true; net.send(msg); setTimeout(() => { btn.disabled = false; }, 1200); };
+    // «إنهاء الحفلة»: مشهد النهاية (30ث) عند الكل على طول ثم «انتهت الحفلة». تأكيد بضغطة ثانية خلال 4ث،
+    // وقبل الصورة الجماعية ينبّه إن النقاط ما تنحسب (تنحسب بعد الصورة بس)
+    const END_OK = ['reveal', 'dance', 'gather', 'wishWrite', 'wishes', 'cakeWalk', 'cake', 'celebrate', 'photo', 'free'];
+    let endSure = false, endT = 0;
+    function endReset() { clearTimeout(endT); endSure = false; $('endBtn').classList.remove('sure'); $('endBtn').textContent = 'إنهاء الحفلة'; }
+    $('endBtn').addEventListener('click', () => {
+        if (!phase) return;
+        if (!endSure) {
+            endSure = true; $('endBtn').classList.add('sure');
+            $('endBtn').textContent = phase.p === 'free' ? 'متأكد؟ مشهد النهاية يبدأ الحين' : 'متأكد؟ النقاط ما تنحسب (قبل الصورة)';
+            endT = setTimeout(endReset, 4000); return;
+        }
+        endReset(); press($('endBtn'), { t: 'end' });
+    });
     // «بدء» ما يرجع: التأكيد بضغطة ثانية خلال 4 ثواني (بدل confirm اللي يطلع بالبث)
     let startSure = false, startT = 0;
     $('startBtn').addEventListener('click', () => {
@@ -467,19 +476,6 @@
     $('nextBtn').addEventListener('click', () => press($('nextBtn'), { t: 'next', seen: wishesPos }));
     $('prevBtn').addEventListener('click', () => press($('prevBtn'), { t: 'prev', seen: wishesPos }));
 
-    // ---- تعديل الأوقات (أي وقت): نفس نموذج الإنشاء معبّى من الجدول الحالي ----
-    let editing = false;
-    $('editBtn').addEventListener('click', () => {
-        if (!phase || !phase.sched) return;
-        editForm.set(phase.sched); editForm.lockStart(phase.p !== 'closed' && phase.p !== 'lobby');
-        $('editBox').classList.remove('hidden');
-    });
-    $('cancelSched').addEventListener('click', () => $('editBox').classList.add('hidden'));
-    $('saveSched').addEventListener('click', () => {
-        const sc = editForm.read(); if (!sc) { showShowMsg('اختر التاريخ والساعة'); return; }
-        editing = true; press($('saveSched'), { t: 'schedule', schedule: sc });
-    });
-
     // ---- لوحة التحكم فوق شاشة البث: زر ⚙️ (يختفي بدون حركة ماوس) أو حرف C ----
     let idleT = 0;
     function wake() { $('gear').classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => $('gear').classList.add('idle'), 3000); }
@@ -492,16 +488,6 @@
     };
     $('gear').addEventListener('click', () => togglePanel());
     $('closePanel').addEventListener('click', () => togglePanel(false));
-    // «حفلة جديدة»: الصفحة تترك الحفلة الحالية (تكمل لحالها لين نهايتها) وترجع لنموذج الإنشاء —
-    // مثلاً بعد حفلة تجربة. التأكيد بضغطة ثانية، وبدون تأكيد لو الحفلة انتهت
-    let newSure = false, newT = 0;
-    $('newParty').addEventListener('click', () => {
-        if (!(phase && phase.p === 'ended') && !newSure) { newSure = true; $('newParty').textContent = 'متأكد؟ الحفلة الحالية تكمل بدون تحكم'; newT = setTimeout(() => { newSure = false; $('newParty').textContent = 'حفلة جديدة'; }, 4000); return; }
-        clearTimeout(newT); newSure = false; $('newParty').textContent = 'حفلة جديدة';
-        writeJSON('party-host', null); state = null; phase = null; listSig = '';
-        document.body.classList.remove('live', 'panel'); $('stage').removeAttribute('src'); $('qrCast').classList.remove('on');
-        net.close(); location.reload();
-    });
     const onKey = e => {
         const t = e.target, typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
         if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey && e.code === 'KeyC' && document.body.classList.contains('live')) { e.preventDefault(); togglePanel(); }

@@ -408,7 +408,7 @@ test('look message updates roster for everyone (coalesced)', async function () {
     await sleep(1100);
     a.send({ t: 'look', look: [1, 5, 2, 3, 1, 2, 1] });
     var rm = await b.wait(function (x) { return x.t === 'room' && x.room.players.some(function (p) { return p[0] === wa.n && p[5][1] === 5; }); }, 2500);
-    assert.deepEqual(rm.room.players.find(function (p) { return p[0] === wa.n; })[5], [-1, 5, -1, -1, -1, -1, -1, -1], 'quick guest: outfit (and hat) only');
+    assert.deepEqual(rm.room.players.find(function (p) { return p[0] === wa.n; })[5], [-1, 5, -1, -1, -1, -1, -1, -1, -1], 'quick guest: outfit (and hat) only');
     r.h.close(); a.close(); b.close(); srv.close();
 });
 
