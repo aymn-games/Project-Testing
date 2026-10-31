@@ -523,10 +523,10 @@ test('schedule edit by host broadcasts the new phase/until; by a guest is refuse
     reset(); party._setEnabled(true);
     var srv = await startServer(), port = srv.address().port, r = await hostRoom(port);
     var g = await client(port); g.send({ t: 'join', code: r.code, name: 'ريم' }); await g.wait(function (x) { return x.t === 'welcome'; });
-    await toPhase(r, 'dance');
+    await toPhase(r, 'wishWrite');
     var before = party._mgr.phaseOf(r.code);
-    await sleep(1100); r.h.send({ t: 'schedule', schedule: { danceMin: 20 } });
-    var ph = await g.wait(function (x) { return x.t === 'phase' && x.p === 'dance' && x.until === before.at + 20 * 60000; });
+    await sleep(1100); r.h.send({ t: 'schedule', schedule: { writeMin: 20 } });
+    var ph = await g.wait(function (x) { return x.t === 'phase' && x.p === 'wishWrite' && x.until === before.at + 20 * 60000; });
     assert.ok(ph);
     await sleep(1100); g.send({ t: 'schedule', schedule: { danceMin: 1 } });
     assert.equal((await g.wait(function (x) { return x.t === 'err' && x.of === 'schedule'; })).err, 'host-only');
