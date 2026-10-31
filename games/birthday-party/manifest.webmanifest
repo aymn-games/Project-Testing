@@ -1,0 +1,17 @@
+{
+  "name": "حفلة عيد الميلاد",
+  "short_name": "الحفلة",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "join.html?app=1",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#fbf1f5",
+  "theme_color": "#f472b6",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
