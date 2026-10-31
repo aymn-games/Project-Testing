@@ -956,6 +956,8 @@ export function mountHall(el, opts = {}) {
   let yaw = 0, pitch = -.02, mode = 'tour', tourA = 0, eyeY = EYE, near = null;
   // وضع 'follow' (اللعب الجماعي): pos = مكان شخصية اللاعب، والكاميرا خلفها وتلف بالسحب
   let localRy = Math.PI, moving = false, sprinting = false, camElev = .42;
+  // كاميرا الجوال: بعدها عن الشخصية، وحدود السحب فوق/تحت (سالب = من تحت تطالع للسقف، 1.3 = تقريباً من فوق)
+  const FOLLOW_D = 4.2, ELEV_MIN = -.28, ELEV_MAX = 1.3, dragCam = inp => { yaw -= inp.dx * .005; camElev = Math.max(ELEV_MIN, Math.min(ELEV_MAX, camElev + inp.dy * .004)); };
   const followLook = new T.Vector3();
   const tourPos = new T.Vector3(), tourLook = new T.Vector3(), curLook = new T.Vector3(0, 4, -20);
   const OBST = [
@@ -1065,10 +1067,10 @@ export function mountHall(el, opts = {}) {
       moving = false; sprinting = false;
       if (auto) {
         // المشي التلقائي: المكان من المسار، والسحب يلف الكاميرا بس
-        if (inp) { yaw -= inp.dx * .005; camElev = Math.max(.08, Math.min(1.1, camElev + inp.dy * .003)); }
+        if (inp) dragCam(inp);
         stepAuto(dt);
       } else if (inp) {
-        yaw -= inp.dx * .005; camElev = Math.max(.08, Math.min(1.1, camElev + inp.dy * .003));
+        dragCam(inp);
         const sp = (inp.run ? 9 : 5.5) * dt, fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
         const mx = (fx * inp.mz + rx * inp.mx) * sp, mz = (fz * inp.mz + rz * inp.mx) * sp, f0 = floorAt(pos.x, pos.z);
         if (Math.abs(mx) + Math.abs(mz) > 1e-5) {
@@ -1081,14 +1083,16 @@ export function mountHall(el, opts = {}) {
         }
         resolve();
       }
-      const fy = floorAt(pos.x, pos.z), D = 6.5;
+      const fy = floorAt(pos.x, pos.z), D = FOLLOW_D;
       tourPos.set(pos.x + Math.sin(yaw) * Math.cos(camElev) * D, fy + 1.4 + Math.sin(camElev) * D, pos.z + Math.cos(yaw) * Math.cos(camElev) * D);
       // الكاميرا داخل غرفة اللاعب (وقت المشي التلقائي بين الغرف: السقف بس)
       const cb = CAMBOX[zone === 'nostage' ? 'hall' : zone] || CAMBOX.hall;
       if (!auto) { tourPos.x = Math.max(cb[0], Math.min(cb[1], tourPos.x)); tourPos.z = Math.max(cb[2], Math.min(cb[3], tourPos.z)); }
-      tourPos.y = Math.min(auto ? LOUNGE_H - .4 : cb[4], tourPos.y);
-      // الكاميرا لا تدخل الكيكة (صاحبة الحفلة واقفة قدامها): ترتفع فوقها
-      if (Math.hypot(tourPos.x, tourPos.z - (STAGE.front - 6.5)) < 3) tourPos.y = Math.max(tourPos.y, STAGE.h + 6.6);
+      tourPos.y = Math.max(floorAt(tourPos.x, tourPos.z) + .2, Math.min(auto ? LOUNGE_H - .4 : cb[4], tourPos.y)); // ما تنزل تحت الأرض
+      // الكاميرا لا تدخل الكيكة (صاحبة الحفلة واقفة قدامها)
+      // (الكاميرا قريبة الحين، فبدل ما تطير فوقها نزحلقها لطرف الكيكة على نفس الارتفاع)
+      { const cz = STAGE.front - 6.5, dx = tourPos.x, dz = tourPos.z - cz, d = Math.hypot(dx, dz), R = 3.2;
+        if (d < R) { const k = d > 1e-3 ? R / d : 0; tourPos.x = k ? dx * k : R; tourPos.z = cz + dz * k; } }
       cam.position.lerp(tourPos, 1 - Math.exp(-dt * 8));
       followLook.set(pos.x, fy + 1.3, pos.z); cam.lookAt(followLook);
     } else if (mode === 'tour') {
