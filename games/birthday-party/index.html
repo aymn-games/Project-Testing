@@ -120,7 +120,8 @@
     .timeline li b{ font:900 16px 'Zain'; color:var(--rose2); white-space:nowrap; direction:ltr; }
     .timeline li.note{ color:var(--soft); font-size:12px; }
     .warn{ margin-top:10px; padding:10px 14px; border-radius:12px; background:#fffbeb; color:#92400e; font-weight:600; font-size:13px; }
-    .kick.sure{ background:#9f1239 !important; color:#fff !important; }
+    .kick.sure, #endBtn.sure{ background:#9f1239 !important; color:#fff !important; }
+    #endBtn{ color:#9f1239; border-color:#fecdd3; }
 
     /* ---- شاشة البث: المشهد بكامل الشاشة، واللوحة تنفتح فوقه ---- */
     #stage{ display:none; }
@@ -180,6 +181,7 @@
             </div>
             <div class="actions">
                 <button class="btn ghost" id="qrBtn" type="button" aria-pressed="false">اعرض الباركود على الشاشة</button>
+                <button class="btn ghost hidden" id="endBtn" type="button">إنهاء الحفلة</button>
                 <button class="btn ghost" id="closePanel" type="button">إغلاق اللوحة ✕</button>
             </div>
             <div class="row" style="margin-top:12px">
@@ -379,7 +381,7 @@
             else if (m.t === 'err' && m.of === 'kick') showShowMsg(m.err === 'noplayer' ? 'الضيف طلع من الحفلة أصلاً.' : 'ما قدرنا نطرده، جرّب مرة ثانية.');
             else if (m.t === 'err' && m.of === 'pointsClaim') { if (m.err === 'claimed') pointsNote('جهاز ثاني فاتح صفحة المذيع يحسب النقاط الحين…'); }
             else if (m.t === 'err' && m.of === 'next' && m.err === 'stale') { /* صاحبة الحفلة سبقت — الرسالة الجديدة على الشاشة */ }
-            else if (m.t === 'err' && (m.of === 'start' || m.of === 'skip' || m.of === 'next' || m.of === 'prev' || m.of === 'cut' || m.of === 'hideWish')) showShowMsg(m.err === 'phase' ? 'المرحلة تغيّرت قبل الضغط — جرّب مرة ثانية.' : 'صار خطأ.');
+            else if (m.t === 'err' && (m.of === 'start' || m.of === 'skip' || m.of === 'end' || m.of === 'next' || m.of === 'prev' || m.of === 'cut' || m.of === 'hideWish')) showShowMsg(m.err === 'phase' ? 'المرحلة تغيّرت قبل الضغط — جرّب مرة ثانية.' : 'صار خطأ.');
             else if (m.t === 'err' && m.of === 'host') {
                 if (m.err === 'nocode' || m.err === 'token') { writeJSON('party-host', null); state = null; }
                 showCreate(ERR[m.err] || 'صار خطأ، جرّب مرة ثانية.');
@@ -420,6 +422,9 @@
         $('skipBtn').classList.toggle('hidden', !SKIP[phase.p]);
         $('skipBtn').textContent = SKIP[phase.p] || 'تخطي';
         $('skipBtn').classList.toggle('ghost', phase.p !== 'cake');
+        // «إنهاء الحفلة»: من بعد الافتتاح لين قبل مشهد النهاية
+        $('endBtn').classList.toggle('hidden', !END_OK.includes(phase.p));
+        if (!END_OK.includes(phase.p)) endReset();
         $('wishesCard').classList.toggle('hidden', !['gather', 'wishWrite', 'wishes'].includes(phase.p));
         $('nextBtn').classList.toggle('hidden', phase.p !== 'wishes');
         $('prevBtn').classList.toggle('hidden', !(phase.p === 'wishes' && wishesPos > 1));
@@ -444,6 +449,20 @@
     }, 250);
     // الزر يتعطل ثانية بعد الضغط (والسيرفر أصلاً يرفض الضغط المزدوج)
     const press = (btn, msg) => { btn.disabled = true; net.send(msg); setTimeout(() => { btn.disabled = false; }, 1200); };
+    // «إنهاء الحفلة»: مشهد النهاية (30ث) عند الكل على طول ثم «انتهت الحفلة». تأكيد بضغطة ثانية خلال 4ث،
+    // وقبل الصورة الجماعية ينبّه إن النقاط ما تنحسب (تنحسب بعد الصورة بس)
+    const END_OK = ['reveal', 'dance', 'gather', 'wishWrite', 'wishes', 'cakeWalk', 'cake', 'celebrate', 'photo', 'free'];
+    let endSure = false, endT = 0;
+    function endReset() { clearTimeout(endT); endSure = false; $('endBtn').classList.remove('sure'); $('endBtn').textContent = 'إنهاء الحفلة'; }
+    $('endBtn').addEventListener('click', () => {
+        if (!phase) return;
+        if (!endSure) {
+            endSure = true; $('endBtn').classList.add('sure');
+            $('endBtn').textContent = phase.p === 'free' ? 'متأكد؟ مشهد النهاية يبدأ الحين' : 'متأكد؟ النقاط ما تنحسب (قبل الصورة)';
+            endT = setTimeout(endReset, 4000); return;
+        }
+        endReset(); press($('endBtn'), { t: 'end' });
+    });
     // «بدء» ما يرجع: التأكيد بضغطة ثانية خلال 4 ثواني (بدل confirm اللي يطلع بالبث)
     let startSure = false, startT = 0;
     $('startBtn').addEventListener('click', () => {

@@ -1000,3 +1000,16 @@ test('ringSlot fits 100 guests within ~7.5m without overlap', function () {
     pts.forEach(function (t) { assert.ok(Math.hypot(t[0] - R.CAKE_C[0], t[1] - R.CAKE_C[1]) < 7.6); });
     for (var a = 0; a < pts.length; a++) for (var b = a + 1; b < pts.length; b++) assert.ok(Math.hypot(pts[a][0] - pts[b][0], pts[a][1] - pts[b][1]) >= 1.04);
 });
+
+test('endNow: host ends the party → outro now (30s) → ended; refused before the reveal and during outro', function () {
+    var s = showRoom(), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey }); s.mgr.join(s.code, { name: 'ريم' });
+    assert.equal(s.mgr.endNow(s.code).err, 'phase', 'not from the lobby');
+    toDance(s);
+    var r = s.mgr.endNow(s.code); assert.equal(r.ok, true);
+    var ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'outro'); assert.equal(ph.until - ph.at, 30000);
+    assert.ok(ph.walk && ph.walk[girl.n], 'the girl walks the carpet');
+    assert.equal(s.mgr.endNow(s.code).err, 'phase', 'already ending');
+    s.c.t.now += 30000; s.mgr.tick(s.code);
+    assert.equal(s.mgr.phaseOf(s.code).p, 'ended');
+    assert.equal(s.mgr.endNow(s.code).err, 'phase');
+});
