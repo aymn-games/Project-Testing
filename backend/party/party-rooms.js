@@ -63,8 +63,9 @@ var OUTRO_MS = 30000, OUTRO_END = [0, 45];
 //   cakeWalk: التجمّع حول الكيكة بطول cakesong.mp3 (23.9ث) — زر القص يطلع بعدها
 //   celebrate: رقص الكيكة بطول cutsong.mp3 (242.1ث) — تبدأ لحظة القص
 //   outro: مشهد النهاية بطول outro.mp3 (29.6ث)
+//   photo 15ث بالضبط: أغنية الإضاءة الخافتة (slowsong.mp3) تبدأ بعد نهاية أغنية القص بـ 15ث، أول الرقص الحر (play.html SLOW_MS)
 var SONG_MS = { dance: 210000, celebrate: 242500 };
-var FIXED_MS = { entrance: 40000, reveal: 12000, gather: 12000, cakeWalk: 24500, photo: 16000, outro: OUTRO_MS };
+var FIXED_MS = { entrance: 40000, reveal: 12000, gather: 12000, cakeWalk: 24500, photo: 15000, outro: OUTRO_MS };
 // الجدول الافتراضي (بالدقايق، ومهلة القص بالثواني) والحدود
 var SCHED_DEF = { durationMin: 60, openBeforeMin: 15, danceMin: 7, writeMin: 3, cakeDanceMin: 5, cutTimeoutSec: 60 };
 var SCHED_LIM = { durationMin: [15, 240], openBeforeMin: [0, 120], danceMin: [1, 60], writeMin: [1, 60], cakeDanceMin: [1, 60], cutTimeoutSec: [10, 600] };

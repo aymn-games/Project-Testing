@@ -472,10 +472,10 @@ test('cut only during cake → celebrate → photo → free with photo targets b
     s.mgr.cut(s.code, 'host');
     ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'celebrate'); assert.equal(ph.cut, true); assert.equal(ph.until - ph.at, 242500, 'cake dance = the cut song');
     s.c.t.now += 242500; s.mgr.tick(s.code);
-    ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'photo'); assert.equal(ph.until - ph.at, 16000);
+    ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'photo'); assert.equal(ph.until - ph.at, 15000);
     assert.deepEqual(ph.walk[girl.n], [0, -29.6]);
     gs.forEach(function (g) { var t = ph.walk[g.n]; assert.ok(t[1] > -29.6 && t[1] <= -29.6 + 1.2 * 6 + .01, 'row behind ' + t); });
-    s.c.t.now += 16000; s.mgr.tick(s.code);
+    s.c.t.now += 15000; s.mgr.tick(s.code);
     assert.equal(s.mgr.phaseOf(s.code).p, 'free');
     var r = rowOf(s.mgr, s.code, girl.n, null);
     assert.equal(r[1], 0); assert.equal(r[2], -29.6);

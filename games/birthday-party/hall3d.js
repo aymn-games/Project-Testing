@@ -1020,33 +1020,37 @@ export function mountHall(el, opts = {}) {
   const refl = new T.Points(reflGeo, reflMat); refl.frustumCulled = false; scene.add(refl);
 
   let party = 0, partyTarget = 0, envMats = null;
+  // الإضاءة الخافتة (أغنية الرقص الحر الهادية): الليزر يطفي، البقع والانعكاسات أبطأ وأخفت وألوانها دافية، والقاعة أعتم
+  let soft = 0, softTarget = 0, spotT = 0, discoT = 0; const warm = new T.Color();
   const CEIL_A = new T.Color('#dcbccc'), CEIL_B = new T.Color('#3b2342');
   const FOG_A = new T.Color('#e7c0d2'), FOG_B = new T.Color('#24102a'), WIN_A = new T.Color('#ffeaf2'), WIN_B = new T.Color('#5d4373');
   const lerp = (a, b, k) => a + (b - a) * k, col = new T.Color(), v3 = new T.Vector3(), UP = new T.Vector3(0, 1, 0);
   function updateParty(dt, t) {
     party += (partyTarget - party) * (1 - Math.exp(-dt * 1.8));
+    soft += (softTarget - soft) * (1 - Math.exp(-dt * .9));
+    spotT += dt * (1 - .72 * soft); discoT += dt * (.5 - .36 * soft);
     const k = party, on = k > .01;
     // انعكاسات البيئة هي أكبر مصدر إنارة بالقاعة — نخفّضها بالحفل عشان تغمق فعلاً
     if (!envMats) { envMats = []; scene.traverse(o => [].concat(o.material || []).forEach(m => { if (m.isMeshStandardMaterial && !envMats.some(e => e.m === m)) envMats.push({ m, b: m.envMapIntensity }); })); }
     const envK = lerp(1, .09, k); for (const e of envMats) e.m.envMapIntensity = e.b * envK;
     ceilMat.color.lerpColors(CEIL_A, CEIL_B, k);
     hemi.intensity = lerp(.24, .035, k); sun.intensity = lerp(.6, .05, k); stageFill.intensity = lerp(.7, .35, k);
-    r.toneMappingExposure = lerp(.95, 1.0, k) * MOOD * (1 - .38 * outroDim); // مشهد النهاية: القاعة تخفت والنور من الباب بس
+    r.toneMappingExposure = lerp(.95, 1.0, k) * MOOD * (1 - .38 * outroDim) * (1 - .34 * soft); // مشهد النهاية: القاعة تخفت والنور من الباب بس
     scene.fog.color.lerpColors(FOG_A, FOG_B, k); scene.background.copy(scene.fog.color);
     scene.fog.near = lerp(90, 30, k); scene.fog.far = lerp(230, 150, k);
     winMat.color.lerpColors(WIN_A, WIN_B, k); haloMat.opacity = lerp(.75, .3, k); poolMat.opacity = lerp(.4, .04, k);
-    upMat.opacity = lerp(.45, .95, k);
+    upMat.opacity = lerp(.45, .95, k) * (1 - .45 * soft);
     // ألوان الإضاءة الجدارية: ثابتة بالاستقبال، موجة وردي↔بنفسجي بالحفل
-    upBase.forEach((c0, i) => { col.setHSL(.86 + Math.sin(t * .9 + i * .7) * .09, .95 * MOOD_SAT, .62); col.lerpColors(c0, col, k); uplights.setColorAt(i, col); });
+    upBase.forEach((c0, i) => { col.setHSL(.86 + Math.sin(t * .9 + i * .7) * .09, .95 * MOOD_SAT, .62); warm.setHSL(.97 + Math.sin(t * .22 + i * .9) * .04, .75 * MOOD_SAT, .55); col.lerp(warm, soft); col.lerpColors(c0, col, k); uplights.setColorAt(i, col); });
     uplights.instanceColor.needsUpdate = true;
     spots.visible = beamCore.visible = beamGlow.visible = dots.visible = refl.visible = discoHalo.visible = on;
-    disco.position.y = lerp(HALL.h + 2, 12.4, Math.min(1, k * 1.3)); disco.rotation.y = t * .5;
+    disco.position.y = lerp(HALL.h + 2, 12.4, Math.min(1, k * 1.3)); disco.rotation.y = discoT;
     discoRod.scale.y = HALL.h - disco.position.y + .6; discoRod.position.y = (HALL.h + disco.position.y) / 2;
     if (!on) return;
-    spotMat.opacity = .5 * k;
+    spotMat.opacity = .5 * k * (1 - .6 * soft);
     for (let i = 0; i < SPOTS; i++) {
-      setInst(spots, i, { x: Math.sin(t * .37 + i * 2.1) * 18, y: .06 + i * .002, z: -6 + Math.sin(t * .29 + i * 1.3) * 24, rx: -Math.PI / 2, s: 5 + Math.sin(t + i) });
-      col.setHSL(.8 + ((i * .07 + t * .03) % .22), .9 * MOOD_SAT, .6); spots.setColorAt(i, col);
+      setInst(spots, i, { x: Math.sin(spotT * .37 + i * 2.1) * 18, y: .06 + i * .002, z: -6 + Math.sin(spotT * .29 + i * 1.3) * 24, rx: -Math.PI / 2, s: 5 + Math.sin(spotT + i) + soft * 2 });
+      col.setHSL(.8 + ((i * .07 + t * .03) % .22), .9 * MOOD_SAT, .6); warm.setHSL(.04 + (i % 3) * .03, .7 * MOOD_SAT, .6); col.lerp(warm, soft); spots.setColorAt(i, col);
     }
     spots.instanceMatrix.needsUpdate = true; spots.instanceColor.needsUpdate = true;
     // الليزر يغيّر مجموعة ألوانه كل 6 ثواني ويتأرجح بأنماط مختلفة
@@ -1054,7 +1058,8 @@ export function mountHall(el, opts = {}) {
     const strobing = t < strobeUntil, blink = strobing ? (Math.floor(t * (reduced ? 1.5 : 5)) % 2 ? .12 : 1) : (Math.floor(t * 2) % 8) === 7 ? .35 : 1;
     if (strobing) { spotMat.opacity *= blink; upMat.opacity *= .35 + blink * .65; }
     const set = t < celebUntil ? CELEB_SET : LASER_SETS[Math.floor(t / 6) % LASER_SETS.length];
-    coreMat.opacity = .9 * k * blink; glowMat.opacity = .16 * k * blink; dotMat.opacity = .9 * k * blink;
+    const lz = 1 - soft; // الليزر يطفي بالإضاءة الخافتة
+    coreMat.opacity = .9 * k * blink * lz; glowMat.opacity = .16 * k * blink * lz; dotMat.opacity = .9 * k * blink * lz;
     BEAMS.forEach((b, i) => {
       const e = b.e, spread = e.n > 1 ? (b.i - (e.n - 1) / 2) * .22 : 0;
       const yaw = e.yaw + spread + Math.sin(t * .8 + b.ph) * .45, pitch = e.pitch + Math.sin(t * .55 + b.ph * 2) * .14;
@@ -1069,8 +1074,8 @@ export function mountHall(el, opts = {}) {
     for (const m of [beamCore, beamGlow]) { m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; }
     dotGeo.attributes.position.needsUpdate = true; dotGeo.attributes.color.needsUpdate = true;
     // انعكاسات كرة الديسكو: نقاط تدور على الجدران والأرض
-    const c0 = disco.position, ca = Math.cos(t * .5), sa = Math.sin(t * .5);
-    reflMat.opacity = .85 * k; discoHalo.material.opacity = .6 * k; discoHalo.position.copy(c0);
+    const c0 = disco.position, ca = Math.cos(discoT), sa = Math.sin(discoT);
+    reflMat.opacity = .85 * k * (1 - .45 * soft); discoHalo.material.opacity = .6 * k * (1 - .3 * soft); discoHalo.position.copy(c0);
     for (let i = 0; i < REFL; i++) {
       const d = reflDir[i]; v3.set(d[0] * ca - d[2] * sa, d[1], d[0] * sa + d[2] * ca);
       const L = hitT(c0, v3) - .06; reflPos.set([c0.x + v3.x * L, c0.y + v3.y * L, c0.z + v3.z * L], i * 3);
@@ -1078,6 +1083,7 @@ export function mountHall(el, opts = {}) {
     reflGeo.attributes.position.needsUpdate = true;
   }
   function setParty(onOff) { partyTarget = onOff ? 1 : 0; opts.onPartyChange && opts.onPartyChange(!!onOff); }
+  function setSoft(on) { softTarget = on ? 1 : 0; }
 
   // ---------- الكاميرا: جولة سينمائية أو تجوّل ----------
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1331,15 +1337,16 @@ export function mountHall(el, opts = {}) {
     const k = P.next; P.next = (P.next + 1) % P.n; P.pos.set([x, y, z], k * 3); P.vel.set([vx, vy, vz], k * 3); P.life[k] = life; P.ph[k] = rand() * 7;
     const c = cols[Math.floor(rand() * cols.length)]; P.base.set([c.r, c.g, c.b], k * 3); P.col.set([c.r, c.g, c.b], k * 3); P.any = true;
   };
-  let flutterUntil = -1, flutterStart = 0, petalCarry = 0, gliCarry = 0;
-  function flutter(sec = 12) { flutterStart = clock.elapsedTime; flutterUntil = flutterStart + sec; }
+  let flutterUntil = -1, flutterStart = 0, petalCarry = 0, gliCarry = 0, flutterWide = false;
+  // wide: على كل القاعة (الأغنية الهادية): بتلات من فوق الكل ولمعات ذهبية تطلع من الأرض مثل اليراعات
+  function flutter(sec = 12, { wide = false } = {}) { flutterStart = clock.elapsedTime; flutterUntil = flutterStart + sec; flutterWide = wide; }
   function updateFlutter(dt, t) {
     const on = t < flutterUntil, ramp = on ? Math.min(1, (t - flutterStart) / 1.2) * Math.min(1, (flutterUntil - t) / 3) : 0;
     if (on) {
       let n = Math.floor(petalCarry += dt * 70 * ramp); petalCarry -= n;
-      while (n-- > 0) spawn(petals, (rand() - .5) * 34, 9 + rand() * 5, -46 + rand() * 22, (rand() - .5) * .3, -(.45 + rand() * .4), (rand() - .5) * .3, 16, PET_C);
+      while (n-- > 0) { if (flutterWide) spawn(petals, (rand() - .5) * 52, 9 + rand() * 5, -40 + rand() * 72, (rand() - .5) * .3, -(.45 + rand() * .4), (rand() - .5) * .3, 16, PET_C); else spawn(petals, (rand() - .5) * 34, 9 + rand() * 5, -46 + rand() * 22, (rand() - .5) * .3, -(.45 + rand() * .4), (rand() - .5) * .3, 16, PET_C); }
       n = Math.floor(gliCarry += dt * 30 * ramp); gliCarry -= n;
-      while (n-- > 0) { const c = candleList[Math.floor(rand() * candleList.length)]; spawn(glits, c.x + (rand() - .5) * 1.2, STAGE.h + .3 + rand() * c.h, c.z + (rand() - .5) * 1.2, (rand() - .5) * .15, .35 + rand() * .4, (rand() - .5) * .15, 2.6, GLI_C); }
+      while (n-- > 0) { if (flutterWide) { spawn(glits, (rand() - .5) * 50, .2 + rand() * 1.5, -36 + rand() * 66, (rand() - .5) * .2, .25 + rand() * .35, (rand() - .5) * .2, 4, GLI_C); continue; } const c = candleList[Math.floor(rand() * candleList.length)]; spawn(glits, c.x + (rand() - .5) * 1.2, STAGE.h + .3 + rand() * c.h, c.z + (rand() - .5) * 1.2, (rand() - .5) * .15, .35 + rand() * .4, (rand() - .5) * .15, 2.6, GLI_C); }
     }
     for (const P of [petals, glits]) {
       if (!P.any) continue; let alive = false;
@@ -1460,9 +1467,9 @@ export function mountHall(el, opts = {}) {
     setDoors: (k, instant) => { doorT = k; if (instant) doorK = k; },
     fireworks: (sec = 6) => { fwUntil = clock.elapsedTime + sec; fwNext = 0; },
     setAutoPath, ZONES, setShot: v => { shot = v || null; }, setFocus: (fn, o) => { focusGet = fn || null; focusOpt = o || null; },
-    setWishScreen, cutCake, setSkyCake, celebrate, snapshot, setCandles, flutter, setOutro,
+    setWishScreen, cutCake, setSkyCake, setSoft, celebrate, snapshot, setCandles, flutter, setOutro,
     setPhotoCam: on => { photoCam = !!on; cam.fov = on ? 50 : (mode === 'follow' ? 58 : 52); cam.updateProjectionMatrix(); },
-    get curtain() { return curtainT; }, get wishY() { return wishGroup.position.y; }, get wishVis() { return wishGroup.visible; }, get autoActive() { return !!auto; }, get zone() { return zone; }, get cut() { return cutT; }, get sky() { return [skyMode, +skyLift.position.y.toFixed(2), +skyCutT.toFixed(2), skyCake.visible, cake.visible]; }, get candles() { return flames.filter(f => f.k > .5).length; }, // للاختبار
+    get curtain() { return curtainT; }, get wishY() { return wishGroup.position.y; }, get wishVis() { return wishGroup.visible; }, get autoActive() { return !!auto; }, get zone() { return zone; }, get cut() { return cutT; }, get soft() { return +soft.toFixed(2); }, get sky() { return [skyMode, +skyLift.position.y.toFixed(2), +skyCutT.toFixed(2), skyCake.visible, cake.visible]; }, get candles() { return flames.filter(f => f.k > .5).length; }, // للاختبار
     debugView: (p, l) => { mode = 'debug'; cam.fov = 60; cam.updateProjectionMatrix(); cam.position.set(p[0], p[1], p[2]); cam.lookAt(l[0], l[1], l[2]); },
     addTicker: fn => { tickers.add(fn); return () => tickers.delete(fn); },
     // تجهيز الـ shaders مسبقاً (عشان ما يعلّق الجوال أول مرة يظهر شي جديد، مثل فستانها وقت الافتتاح)
