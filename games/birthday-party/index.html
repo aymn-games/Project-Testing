@@ -17,6 +17,8 @@
      الاتصال عبر party-net.js بخادم /ws/party، والجلسة محفوظة بـ 'party-host'
      فتحديث الصفحة يرجع لنفس الحفلة. إنشاء حفلة يحتاج الرابط الخاص (?k=المفتاح)،
      والمفتاح ينحفظ بالجهاز ('party-host-key') فيكفي فتح الرابط الخاص مرة وحدة.
+     رابط المذيع يشتغل بأي جهاز ولأي شخص معه: جهاز جديد يسأل السيرفر بالمفتاح عن الحفلة الشغالة
+     (host {key, current}) ويدخل لوحتها، ونموذج الإنشاء يطلع بس لو ما فيه حفلة شغالة.
      وقت التهاني: المذيع يشوف الرسائل ويخفي اللي ما يناسب، وعنده «التالي» و«قص الكيكة» احتياط.
      النقاط: السيرفر يرسل للمذيع قائمة المشاركين الموثّقين بعد الصورة، والصفحة ترسلها
      لنظام النقاط بحساب المذيع (AGPAuth.reportMatchPoints) — قاعدة CLAUDE.md.
@@ -153,7 +155,7 @@
     </header>
 
     <!-- إنشاء الحفلة -->
-    <section class="card" id="create">
+    <section class="card hidden" id="create">
         <h2>حفلة جديدة</h2>
         <div class="row">
             <label for="girlName">اسم صاحبة الحفلة</label>
@@ -367,9 +369,12 @@
         });
     }
 
+    function askCurrent() { if (hostKey()) net.send({ t: 'host', key: hostKey(), current: true }); else showCreate(ERR.hostkey); }
     const net = connect({
         onStatus: on => { $('net').classList.toggle('on', on); $('netTxt').textContent = on ? 'متصل' : 'جاري إعادة الاتصال…'; },
-        onOpen: () => { const s = readJSON('party-host'); if (s && s.code && s.token) net.send({ t: 'host', code: s.code, token: s.token }); },
+        // الجهاز حافظ حفلته ← يرجع لها. غير كذا (جهاز جديد بنفس رابط المذيع) ← نسأل السيرفر عن الحفلة الشغالة بالمفتاح،
+        // ونموذج «حفلة جديدة» يطلع بس لو ما فيه حفلة شغالة
+        onOpen: () => { const s = readJSON('party-host'); if (s && s.code && s.token) net.send({ t: 'host', code: s.code, token: s.token }); else askCurrent(); },
         onMessage: m => {
             if (m.t === 'hosted') { state = { code: m.code, token: m.token, girlKey: m.girlKey, viewKey: m.viewKey }; writeJSON('party-host', { code: m.code, token: m.token, viewKey: m.viewKey }); showRoom(); }
             else if (m.t === 'room') { renderList(m.room); segSet($('rChars'), m.room.chars || 'rig'); }
@@ -384,7 +389,9 @@
             else if (m.t === 'err' && m.of === 'next' && m.err === 'stale') { /* صاحبة الحفلة سبقت — الرسالة الجديدة على الشاشة */ }
             else if (m.t === 'err' && (m.of === 'start' || m.of === 'skip' || m.of === 'end' || m.of === 'next' || m.of === 'prev' || m.of === 'cut' || m.of === 'hideWish')) showShowMsg(m.err === 'phase' ? 'المرحلة تغيّرت قبل الضغط — جرّب مرة ثانية.' : 'صار خطأ.');
             else if (m.t === 'err' && m.of === 'host') {
-                if (m.err === 'nocode' || m.err === 'token') { writeJSON('party-host', null); state = null; }
+                // الحفلة المحفوظة بالجهاز انتهت/انمسحت ← نشوف لو فيه حفلة شغالة ثانية بالمفتاح
+                if (m.err === 'nocode' || m.err === 'token') { writeJSON('party-host', null); state = null; if (hostKey()) { askCurrent(); return; } }
+                if (m.err === 'none') { showCreate(); return; } // ما فيه حفلة شغالة ← إنشاء
                 showCreate(ERR[m.err] || 'صار خطأ، جرّب مرة ثانية.');
             }
         },
@@ -555,7 +562,8 @@
         try { await navigator.clipboard.writeText(url); b.textContent = 'تم النسخ'; } catch (e) { if (b.dataset.copy === 'girl') b.textContent = 'ما قدرنا ننسخ'; else prompt('انسخ الرابط:', url); }
         setTimeout(() => { b.textContent = 'نسخ الرابط'; }, 1500);
     }));
-    if (!readJSON('party-host')) showCreate();
+    // بدون مفتاح ولا حفلة محفوظة: نموذج الإنشاء على طول (برسالة المفتاح) — غير كذا ننتظر رد السيرفر
+    if (!readJSON('party-host') && !hostKey()) showCreate(ERR.hostkey);
 </script>
 </body>
 </html>
