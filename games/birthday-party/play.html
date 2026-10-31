@@ -394,8 +394,12 @@
         const WALK = { entrance: .85, gather: .85, cakeWalk: .85, photo: 6000, outro: 27000 }, OUTRO_GUEST_MS = 1000;
         const AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1, outro: 1 };
         // اتجاه الوقوف بعد المشي (نفس السيرفر): صاحبة الحفلة تطالع الضيوف إلا عند الكيكة والصورة
+        // الكيكة تنزل بنص القاعة (نفس CAKE_C بالسيرفر وSKY_C في hall3d.js): الكل يطالعها وقت الكيكة
+        const CAKE_C = [0, -17], CAKE_PH = ['cakeWalk', 'cake', 'celebrate'];
+        const faceCake = (x, z) => Math.atan2(CAKE_C[0] - x, CAKE_C[1] - z);
         const facing = p => p === 'outro' ? (myRole === 'girl' ? 0 : (myTarget && myTarget[0] < 0 ? 1 : -1) * Math.PI / 2)
-            : myRole === 'girl' && !['cakeWalk', 'cake', 'celebrate', 'photo', 'free'].includes(p) ? 0 : Math.PI;
+            : CAKE_PH.includes(p) ? (myRole === 'girl' ? 0 : faceCake(...(myTarget || [hall.getLocal().x, hall.getLocal().z])))
+            : myRole === 'girl' && !['photo', 'free'].includes(p) ? 0 : Math.PI;
         let photoKey = null, celebKey = null, lastWishes = null, photoUrl = null, noticeT = 0;
         // جا وقت البداية وصاحبة الحفلة مو موجودة (نحسبها هنا عشان تتحدث لحظة ما تدخل)
         const waitingGirl = () => !!(phase && phase.p === 'lobby' && phase.sched && serverNow() >= phase.sched.startAt && !girlOn);
@@ -428,7 +432,8 @@
                 for (const n of Object.keys(W.walk)) { if (+n === myN) continue; const st = crowd.posOf(+n); if (st) paths[n] = W.route(+n, st, W.walk[n]); }
                 const t1s = {}; for (const n of Object.keys(paths)) t1s[n] = W.t1Of(+n);
                 crowd.setAutoPaths(paths, W.t0, W.t1, (role, c) => p === 'outro' ? (role === 'girl' ? 0 : c.ry)
-                    : role === 'girl' && !['cakeWalk', 'photo'].includes(p) ? 0 : Math.PI, { t1Of: t1s });
+                    : CAKE_PH.includes(p) ? (role === 'girl' ? 0 : faceCake(c.x, c.z))
+                    : role === 'girl' && p !== 'photo' ? 0 : Math.PI, { t1Of: t1s });
             } else crowd.setAutoPaths(null, serverNow());
             crowd.setGirlFx(!['lobby', 'entrance', 'closed', 'ended', 'outro'].includes(p)); // بالنهاية النور من الباب بداله
             // مشهد النهاية: هي بس اللي تبان (الضيوف ومعهم أنا يختفون عند الكل)
@@ -468,6 +473,8 @@
                 else hall.cutCake(true);
                 if (p === 'celebrate' && celebKey !== key) { celebKey = key; hall.celebrate(Math.max(3, (phase.until - now) / 1000), { strobe: true }); music.play('cake'); }
             }
+            // كيكة السماء: تنزل أول مشي الكيكة، وتبقى للقص والاحتفال، وترجع للسماء وقت الصورة
+            hall.setSkyCake(p === 'cakeWalk' ? 'drop' : p === 'cake' || p === 'celebrate' ? 'on' : p === 'photo' && since < 4000 ? 'up' : 'off', since);
             hall.setPhotoCam(p === 'photo');
             crowdPhase();
             // مشهد النهاية: الكاميرا تتبعها عند الكل، والنور من الباب، والبتلات، وصوت المشهد. الضيوف يلوّحون لها
@@ -501,7 +508,10 @@
             }
             // شاشة البث: بعد ما تنفتح الستارة الكاميرا تتمركز على صاحبة الحفلة وتلف حولها شوي
             // (العد التنازلي واللقطة الجماعية ومشهد النهاية لها لقطاتها)
-            if (viewOnly) hall.setFocus(['dance', 'gather', 'wishWrite', 'wishes', 'cakeWalk', 'cake', 'celebrate', 'free'].includes(p) || (p === 'reveal' && lateReveal) ? () => { const gn = [...roles].find(([, r]) => r === 'girl'); return gn && crowd ? crowd.posOf(gn[0]) : null; } : null);
+            // وقت الكيكة: اللقطة على الكيكة وصاحبة الحفلة وراها، والحلقة حولهم
+            if (viewOnly) hall.setFocus(CAKE_PH.includes(p) ? () => CAKE_C
+                : ['dance', 'gather', 'wishWrite', 'wishes', 'free'].includes(p) || (p === 'reveal' && lateReveal) ? () => { const gn = [...roles].find(([, r]) => r === 'girl'); return gn && crowd ? crowd.posOf(gn[0]) : null; } : null,
+                CAKE_PH.includes(p) ? { r: 6.2, h: 5, look: .9 } : null);
             if (viewOnly) hall.setShot(p === 'reveal' || p === 'cake' || p === 'celebrate' || p === 'cakeWalk' ? 'stage' : p === 'entrance' ? 'entrance' : p === 'wishes' || p === 'wishWrite' || p === 'gather' ? 'screen' : null);
             if (p === 'ended') music.stop();
             else if (p === 'outro') music.play('outro', { from: since / 1000 });

@@ -967,3 +967,36 @@ test('no outro when the party never started (still in the lobby at the end)', fu
     s.at(s.start + 60 * MIN); settle(s);
     assert.equal(s.ph(), 'ended');
 });
+
+test('cakeWalk: guests form rings around the hall-center cake facing it, the girl stands by it facing it; late joiner gets an outer ring', function () {
+    var R = require('./party-rooms'), C = R.CAKE_C;
+    var s = showRoom(), girl = s.mgr.join(s.code, { name: 'سارة', girlKey: s.room.girlKey }), gs = [];
+    for (var i = 0; i < 40; i++) gs.push(s.mgr.join(s.code, { name: 'ض' + i }));
+    toWishes(s); s.mgr.skip(s.code, 'wishWrite');
+    var ph = s.mgr.phaseOf(s.code); assert.equal(ph.p, 'cakeWalk');
+    assert.deepEqual(ph.walk[girl.n], R.CAKE_SPOT);
+    var pts = gs.map(function (g) { return ph.walk[g.n]; });
+    pts.forEach(function (t) {
+        var d = Math.hypot(t[0] - C[0], t[1] - C[1]);
+        assert.ok(d >= 3.59 && d < 9, 'ring distance ' + d);
+        assert.ok(Math.hypot(t[0] - R.CAKE_SPOT[0], t[1] - R.CAKE_SPOT[1]) > 1.5, 'clear of the girl ' + t);
+        assert.ok(t[1] >= -31, 'inside the guests zone ' + t);
+    });
+    for (var a = 0; a < pts.length; a++) for (var b = a + 1; b < pts.length; b++) assert.ok(Math.hypot(pts[a][0] - pts[b][0], pts[a][1] - pts[b][1]) > 1, 'no overlap');
+    s.mgr.skip(s.code, 'cakeWalk'); assert.equal(s.mgr.phaseOf(s.code).p, 'cake');
+    // بعد الوصول: الضيف يطالع الكيكة، وصاحبة الحفلة تطالعها (0 = جهة +z)
+    var r = rowOf(s.mgr, s.code, gs[0].n, null), want = Math.atan2(C[0] - r[1], C[1] - r[2]);
+    assert.ok(Math.abs(Math.atan2(Math.sin(r[3] - want), Math.cos(r[3] - want))) < .02, 'guest faces the cake');
+    assert.equal(rowOf(s.mgr, s.code, girl.n, null)[3], 0);
+    var late = s.mgr.join(s.code, { name: 'متأخر' }), lr = rowOf(s.mgr, s.code, late.n, null);
+    var ld = Math.hypot(lr[1] - C[0], lr[2] - C[1]);
+    assert.ok(ld > 3.5 && ld < 12, 'late joiner on a ring ' + ld);
+    pts.forEach(function (t) { assert.ok(Math.hypot(t[0] - lr[1], t[1] - lr[2]) > 1, 'late joiner not on top of someone'); });
+});
+
+test('ringSlot fits 100 guests within ~7.5m without overlap', function () {
+    var R = require('./party-rooms'), pts = [];
+    for (var i = 0; i < 100; i++) pts.push(R.ringSlot(i, 100));
+    pts.forEach(function (t) { assert.ok(Math.hypot(t[0] - R.CAKE_C[0], t[1] - R.CAKE_C[1]) < 7.6); });
+    for (var a = 0; a < pts.length; a++) for (var b = a + 1; b < pts.length; b++) assert.ok(Math.hypot(pts[a][0] - pts[b][0], pts[a][1] - pts[b][1]) >= 1.04);
+});

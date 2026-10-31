@@ -781,6 +781,7 @@ export function mountHall(el, opts = {}) {
   const plate = mesh(new T.CylinderGeometry(.7, .55, .06, 32), gold, 3, .05, 1.4, true, cake); plate.visible = false;
   let cutT = -1; // -1 ما انقصت · 0..1 أنيميشن · ≥1 مقصوصة
   function cutCake(instant) {
+    cutSkyCake(instant);
     if (cutT >= 0 && !instant) return;
     cutT = instant ? 1 : 0; knife.visible = !instant; slice.visible = plate.visible = true;
     flameMat.opacity = 0; flameMat.transparent = true;
@@ -793,6 +794,134 @@ export function mountHall(el, opts = {}) {
     // الشريحة تطلع من الطبقة الأولى للصحن
     slice.position.set(.9 + m * 2.1, .92 + Math.sin(m * Math.PI) * 1.2, .6 + m * .8); slice.rotation.y = -.6 - m * .4;
     if (cutT >= 1) { knife.visible = false; slice.position.set(3, .11, 1.4); }
+  }
+
+  // ---------- كيكة السماء: تنزل بنص القاعة وقت الكيكة (cakeWalk)، والكل حولها بحلقات ----------
+  // نفس CAKE_C في backend/party/party-rooms.js. الطاولة دائرية، والكيكة 3 طبقات؛ الطبقة الأولى 12 قطعة
+  // عشان القص يطلّع 6 قطع (وحدة وتخطي وحدة) على 6 صحون حول الطاولة.
+  const SKY_C = [0, -17], SKY_TOP = .64, SKY_DROP_H = 24, SKY_DROP_S = 6.5;
+  const skyCake = new T.Group(); skyCake.position.set(SKY_C[0], 0, SKY_C[1]); skyCake.visible = false; scene.add(skyCake);
+  const skyLift = new T.Group(); skyCake.add(skyLift); // اللي ينزل من السماء (الطاولة والكيكة)
+  {
+    const cloth = std('#fff6fa', { roughness: .8 });
+    mesh(new T.CylinderGeometry(1.95, 2.05, .6, 48, 1, true), std('#f9d3e2', { roughness: .85, side: T.DoubleSide }), 0, .3, 0, true, skyLift);
+    mesh(new T.CylinderGeometry(1.95, 1.95, .06, 48), cloth, 0, .61, 0, true, skyLift);
+    mesh(new T.TorusGeometry(1.95, .03, 6, 64), gold, 0, .61, 0, false, skyLift).rotation.x = Math.PI / 2;
+    mesh(new T.TorusGeometry(2.04, .025, 6, 64), gold, 0, .04, 0, false, skyLift).rotation.x = Math.PI / 2;
+  }
+  // الطبقة الأولى: 12 قطعة (كريمة فوق، إسفنج وردي بالجنب والقص)
+  const SK_R1 = .95, SK_H1 = .3, SK_N = 12, wedgeMats = [std('#fffafc', { roughness: .5 }), std('#f7b9cf', { roughness: .6 })];
+  const wedges = [];
+  for (let i = 0; i < SK_N; i++) {
+    const a0 = i / SK_N * Math.PI * 2, a1 = (i + 1) / SK_N * Math.PI * 2, sh = new T.Shape();
+    sh.moveTo(0, 0); sh.absarc(0, 0, SK_R1, a0, a1, false); sh.lineTo(0, 0);
+    const g = new T.ExtrudeGeometry(sh, { depth: SK_H1, bevelEnabled: false, curveSegments: 6 }); g.rotateX(-Math.PI / 2);
+    const w = new T.Mesh(g, wedgeMats); w.castShadow = true; w.position.y = SKY_TOP; skyLift.add(w);
+    wedges.push({ m: w, mid: (a0 + a1) / 2 });
+  }
+  mesh(new T.TorusGeometry(SK_R1 - .01, .045, 6, 48), std('#f7a6c4', { roughness: .4 }), 0, SKY_TOP + SK_H1, 0, false, skyLift).rotation.x = Math.PI / 2;
+  let sty = SKY_TOP + SK_H1;
+  [[.68, .26, '#fffafc', '#f7a6c4'], [.44, .22, '#f5a7c4', '#fffafc']].forEach(([rr, hh, col, trim]) => {
+    mesh(new T.CylinderGeometry(rr, rr, hh, 40), std(col, { roughness: .55 }), 0, sty + hh / 2, 0, true, skyLift);
+    mesh(new T.TorusGeometry(rr - .01, .04, 6, 40), std(trim, { roughness: .4 }), 0, sty + hh, 0, false, skyLift).rotation.x = Math.PI / 2;
+    sty += hh;
+  });
+  // شموع فوق + شعلتها
+  const skyFlamePos = [], skyCandles = [];
+  for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; const x = Math.cos(a) * .27, z = Math.sin(a) * .27; skyCandles.push({ x, y: sty + .14, z }); skyFlamePos.push(x, sty + .36, z); }
+  skyLift.add(instanced(new T.CylinderGeometry(.03, .03, .28, 8), std('#ffffff', { map: candleTex, roughness: .5 }), skyCandles));
+  const skyFlameGeo = new T.BufferGeometry(); skyFlameGeo.setAttribute('position', new T.Float32BufferAttribute(skyFlamePos, 3));
+  const skyFlameMat = new T.PointsMaterial({ map: radial('rgba(255,255,230,1)', 'rgba(255,190,90,.7)'), color: '#ffd27a', size: .3, transparent: true, depthWrite: false, blending: T.AdditiveBlending });
+  skyLift.add(new T.Points(skyFlameGeo, skyFlameMat));
+  const skyGlow = new T.PointLight('#ffb36b', 8, 6, 2); skyGlow.position.set(0, sty + .8, 0); skyLift.add(skyGlow);
+  // 6 صحون ذهبية حول حافة الطاولة (القطعة i تروح للصحن i)
+  const SLICES = Array.from({ length: 6 }, (_, i) => i * 2); // القطع 0، 2، 4… (وحدة وتخطي وحدة)
+  const skyPlates = SLICES.map(wi => { const a = wedges[wi].mid; const p = mesh(new T.CylinderGeometry(.3, .24, .03, 28), gold, Math.cos(a) * 1.55, .66, -Math.sin(a) * 1.55, false, skyLift); return p; });
+  const skyKnife = new T.Group(); skyKnife.visible = false; skyLift.add(skyKnife);
+  mesh(new T.BoxGeometry(.06, .9, .015), std('#f4f4f8', { metalness: 1, roughness: .15 }), 0, -.4, 0, false, skyKnife);
+  mesh(new T.CylinderGeometry(.045, .045, .38, 10), gold, 0, .26, 0, false, skyKnife);
+  // النزول: فتحة نور بالسقف، عمود نور خفيف، ولمعات تنزل معها، وموجة نور على الأرض لما توصل
+  const ADD_ = { transparent: true, depthWrite: false, blending: T.AdditiveBlending, toneMapped: false, fog: false };
+  const skyHole = mesh(new T.CircleGeometry(3.4, 48), basic({ map: radial('rgba(255,250,235,1)', 'rgba(255,214,235,.55)'), ...ADD_, opacity: 0 }), SKY_C[0], HALL.h - .05, SKY_C[1]);
+  skyHole.rotation.x = Math.PI / 2;
+  const skyBeamGeo = new T.CylinderGeometry(2.6, 2.2, HALL.h, 32, 1, true); skyBeamGeo.translate(0, HALL.h / 2, 0);
+  const skyBeam = mesh(skyBeamGeo, basic({ color: '#ffe6f2', ...ADD_, opacity: 0, side: T.DoubleSide }), SKY_C[0], 0, SKY_C[1]);
+  const skyRing = mesh(new T.RingGeometry(.8, 1.1, 48), basic({ color: '#ffe3a8', ...ADD_, opacity: 0, side: T.DoubleSide }), SKY_C[0], .05, SKY_C[1]);
+  skyRing.rotation.x = -Math.PI / 2;
+  const SKY_SP = 70, skySpPos = new Float32Array(SKY_SP * 3), skySpSeed = Array.from({ length: SKY_SP }, () => [rand() * Math.PI * 2, .4 + rand() * 2.4, rand()]);
+  const skySpGeo = new T.BufferGeometry(); skySpGeo.setAttribute('position', new T.BufferAttribute(skySpPos, 3));
+  const skySp = new T.Points(skySpGeo, new T.PointsMaterial({ map: radial(), color: '#ffe9b0', size: .28, ...ADD_, opacity: 0 })); skySp.frustumCulled = false; scene.add(skySp);
+  skyHole.visible = skyBeam.visible = skyRing.visible = skySp.visible = false;
+  let skyMode = 'off', skyT0 = 0, skyCutT = -1; // skyCutT: -1 ما انقصت · 0..1 أنيميشن · ≥1 مقصوصة
+  const skyObst = [SKY_C[0], SKY_C[1], 0]; // يندمج في OBST تحت (نصف القطر 0 = مطفي)
+  // mode: 'drop' (تنزل الحين، sinceMs من بداية المرحلة) · 'on' (موجودة) · 'up' (ترجع للسماء) · 'off'
+  function setSkyCake(mode, sinceMs = 0) {
+    if (mode === skyMode && mode !== 'drop') return;
+    if (mode === 'drop' && skyMode === 'drop') return;
+    skyMode = mode; skyT0 = clock.elapsedTime - sinceMs / 1000;
+    const on = mode !== 'off';
+    skyCake.visible = on; cake.visible = !on || mode === 'up';
+    skyObst[2] = mode === 'on' || mode === 'drop' ? 2.35 : 0;
+    if (!on) { skyCutT = -1; resetSkyCut(); }
+  }
+  function resetSkyCut() {
+    wedges.forEach((w, i) => { w.m.position.set(0, SKY_TOP, 0); w.m.rotation.set(0, 0, 0); w.m.visible = true; });
+    skyPlates.forEach(p => { p.visible = false; }); skyKnife.visible = false; skyFlameMat.opacity = 1; skyGlow.intensity = 8;
+  }
+  resetSkyCut(); // الصحون مخفية لين القص
+  // قص 6 قطع ورا بعض بضغطة وحدة (~5ث)، أو مقصوصة على طول (instant)
+  function cutSkyCake(instant) {
+    if (skyCutT >= 0 && !instant) return;
+    skyCutT = instant ? 1 : 0; skyFlameMat.opacity = 0; skyGlow.intensity = 0;
+    skyPlates.forEach(p => { p.visible = true; });
+    if (instant) placeSlices(1);
+  }
+  // f: 0..1 للأنيميشن كله. كل قطعة: السكين ينزل ويطلع (أول 45%)، ثم القطعة تطير لصحنها
+  function placeSlices(f) {
+    const per = 1 / SLICES.length;
+    skyKnife.visible = f < 1;
+    SLICES.forEach((wi, i) => {
+      const w = wedges[wi], k = Math.max(0, Math.min(1, (f - i * per) / per)), a = w.mid;
+      if (k > 0 && k < 1) {
+        const kn = Math.min(1, k / .45);
+        skyKnife.position.set(Math.cos(a - .26) * .5, sty + .5 - Math.sin(kn * Math.PI) * .95, -Math.sin(a - .26) * .5);
+        skyKnife.rotation.set(0, a, -.15);
+      }
+      const m = Math.max(0, (k - .45) / .55), e = m * m * (3 - 2 * m);
+      // القطعة تطلع لبرا وفوق ثم تنزل على الصحن (مركز الصحن على 1.55، ومركز القطعة تقريباً على .5)
+      const out = e * 1.05;
+      w.m.position.set(Math.cos(a) * out, SKY_TOP + .05 * e + Math.sin(e * Math.PI) * .7, -Math.sin(a) * out);
+      w.m.rotation.y = 0;
+    });
+  }
+  function updateSkyCake(dt, t) {
+    if (skyMode === 'off') { skyHole.visible = skyBeam.visible = skyRing.visible = skySp.visible = false; return; }
+    const e = t - skyT0;
+    let y = 0, glow = 0;
+    if (skyMode !== 'drop') skyRing.visible = false;
+    if (skyMode === 'drop') {
+      const d0 = .6, f = Math.max(0, Math.min(1, (e - d0) / SKY_DROP_S));
+      // نزول ناعم وآخره ارتداد خفيف
+      const ease = 1 - Math.pow(1 - f, 2);
+      y = (1 - ease) * SKY_DROP_H + (f > .82 ? Math.sin((f - .82) / .18 * Math.PI) * .12 : 0);
+      glow = e < d0 ? e / d0 : f < 1 ? 1 : Math.max(0, 1 - (e - d0 - SKY_DROP_S) / 2.5);
+      const land = e - d0 - SKY_DROP_S;
+      skyRing.visible = land > 0 && land < 1.6;
+      if (skyRing.visible) { const k = land / 1.6; skyRing.scale.setScalar(1 + k * 7); skyRing.material.opacity = (1 - k) * .8; }
+    } else if (skyMode === 'up') {
+      const f = Math.max(0, Math.min(1, e / 3.2)); y = f * f * SKY_DROP_H; glow = f < 1 ? Math.min(1, e / .5) : 0;
+      if (f >= 1) { skyCake.visible = false; }
+    }
+    skyLift.position.y = y;
+    skyHole.visible = skyBeam.visible = skySp.visible = glow > .01;
+    skyHole.material.opacity = glow; skyBeam.material.opacity = glow * .09;
+    if (skySp.visible) {
+      skySp.material.opacity = glow;
+      for (let i = 0; i < SKY_SP; i++) { const [a, r, ph] = skySpSeed[i], yy = ((ph - t * .25) % 1 + 1) % 1; skySpPos.set([SKY_C[0] + Math.cos(a + t * .4) * r, y + yy * Math.min(HALL.h, SKY_DROP_H - y + 3), SKY_C[1] + Math.sin(a + t * .4) * r], i * 3); }
+      skySpGeo.attributes.position.needsUpdate = true;
+    }
+    if (skyCutT >= 0 && skyCutT <= 1) { skyCutT = Math.min(1.0001, skyCutT + dt / 5.2); placeSlices(Math.min(1, skyCutT)); }
+    if (skyCutT < 0) skyGlow.intensity = 8 + Math.sin(t * 13) * 1.2;
   }
 
   // الاحتفال الثاني: ألعاب نارية أكثر + ليزر ذهبي/وردي/أبيض + كونفيتي أسرع
@@ -961,6 +1090,7 @@ export function mountHall(el, opts = {}) {
   const followLook = new T.Vector3();
   const tourPos = new T.Vector3(), tourLook = new T.Vector3(), curLook = new T.Vector3(0, 4, -20);
   const OBST = [
+    skyObst, // كيكة السماء (نصف القطر 0 وهي مطفية)
     ...TABLES.map(t => [t.x, t.z, 3.0]),
     [0, STAGE.front - 6.5, 2.6], [-13.7, -40.5, 2.6], [13.7, -40.5, 2.6],
     // شموع الميلاد ورا مكانها (نفس candleList تحت)
@@ -975,7 +1105,7 @@ export function mountHall(el, opts = {}) {
   const ZONES = { lounge: [-15, 15, 50.5, 69], girl: [-9, 9, -67, -50.5], hall: [-HX + 1, HX - 1, -HZ + 2, HZ - 1.2], nostage: [-HX + 1, HX - 1, -31, HZ - 1.2] };
   // صندوق الكاميرا لكل غرفة [xmin, xmax, zmin, zmax, سقف]
   const CAMBOX = { lounge: [-16.6, 16.6, HZ + .3, 70.7, LOUNGE_H - .4], girl: [-11.6, 17.6, -68.7, -HZ - .3, GIRL_H - .4], hall: [-HX + .4, HX - .4, -HZ + .4, HZ - .4, HALL.h - .5] };
-  let focusGet = null; // شاشة البث: دالة ترجع [x, z] لصاحبة الحفلة ← الكاميرا تتمركز عليها وتلف حولها شوي
+  let focusGet = null, focusOpt = null; // شاشة البث: دالة ترجع [x, z] لصاحبة الحفلة ← الكاميرا تتمركز عليها وتلف حولها شوي
   let zone = 'hall', auto = null, shot = null; // shot: لقطة ثابتة لشاشة العرض ('stage' | 'entrance' | null = جولة)
   const floorAt = (x, z) => {
     if (Math.abs(x) <= STAGE.w / 2 && z <= STAGE.front && z >= -HZ) return STAGE.h;
@@ -1094,6 +1224,9 @@ export function mountHall(el, opts = {}) {
       // (الكاميرا قريبة الحين، فبدل ما تطير فوقها نزحلقها لطرف الكيكة على نفس الارتفاع)
       { const cz = STAGE.front - 6.5, dx = tourPos.x, dz = tourPos.z - cz, d = Math.hypot(dx, dz), R = 3.2;
         if (d < R) { const k = d > 1e-3 ? R / d : 0; tourPos.x = k ? dx * k : R; tourPos.z = cz + dz * k; } }
+      // وكيكة السماء بنص القاعة: نفس الشي
+      if (skyObst[2] > 0) { const dx = tourPos.x - SKY_C[0], dz = tourPos.z - SKY_C[1], d = Math.hypot(dx, dz), R = 2.5;
+        if (d < R && tourPos.y < 2.4) { const k = d > 1e-3 ? R / d : 0; tourPos.x = SKY_C[0] + (k ? dx * k : R); tourPos.z = SKY_C[1] + dz * k; } }
       cam.position.lerp(tourPos, 1 - Math.exp(-dt * 8));
       followLook.set(pos.x, fy + 1.3, pos.z); cam.lookAt(followLook);
     } else if (mode === 'tour') {
@@ -1101,10 +1234,11 @@ export function mountHall(el, opts = {}) {
       const fg = focusGet && focusGet();
       if (fg) {
         // من قدامها (جهة الضيوف) على بعد ~4.5م، تتأرجح يمين ويسار ±32° وتقرب وتبعد وتطلع وتنزل شوي، ببطء
-        const fy = floorAt(fg[0], fg[1]), a = Math.sin(tourA * .9) * .55, R = 4.5 + Math.sin(tourA * .55) * .5, cb = CAMBOX.hall;
-        tourPos.set(fg[0] + Math.sin(a) * R, fy + 1.75 + Math.sin(tourA * .7) * .3, fg[1] + Math.cos(a) * R);
+        // focusOpt (وقت الكيكة): أبعد وأعلى عشان تبان الكيكة وصاحبة الحفلة والحلقة حولهم
+        const fo = focusOpt || {}, fy = floorAt(fg[0], fg[1]), a = Math.sin(tourA * .9) * .55, R = (fo.r || 4.5) + Math.sin(tourA * .55) * .5, cb = CAMBOX.hall;
+        tourPos.set(fg[0] + Math.sin(a) * R, fy + (fo.h || 1.75) + Math.sin(tourA * .7) * .3, fg[1] + Math.cos(a) * R);
         tourPos.x = Math.max(cb[0], Math.min(cb[1], tourPos.x)); tourPos.z = Math.max(cb[2], Math.min(cb[3], tourPos.z));
-        tourLook.set(fg[0], fy + 1.2, fg[1]);
+        tourLook.set(fg[0], fy + (fo.look || 1.2), fg[1]);
       }
       else if (shot === 'stage') { tourPos.set(Math.sin(tourA * .6) * 3, 5.2, -12); tourLook.set(0, 5.5, -40); }
       else if (shot === 'entrance') { tourPos.set(10, 9, 30); tourLook.set(0, 2, 46); }
@@ -1290,7 +1424,7 @@ export function mountHall(el, opts = {}) {
     chLights.forEach((l, i) => { l.intensity = (200 + Math.sin(t * 1.7 + i) * 12) * (1 - party * .85); });
     flameMat.size = .42 + Math.sin(t * 17) * .04 + Math.sin(t * 29) * .03;
     wishK += (wishT - wishK) * (1 - Math.exp(-dt * 1.5)); wishGroup.position.y = HALL.h + 6 - (HALL.h + 6 - WISH_Y) * wishK; wishGroup.visible = wishK > .01;
-    updateCut(dt);
+    updateCut(dt); updateSkyCake(dt, t);
     cakeGlow.intensity = cutT >= 0 ? 0 : 14 + Math.sin(t * 13) * 2;
     for (const p of portals) { p.tex.offset.y = -t * .04; p.ring.material.opacity = (near === p.s ? .75 : .3) + Math.sin(t * 2.4) * .1; }
     curtainK += (curtainT - curtainK) * (1 - Math.exp(-dt * 1.1));
@@ -1325,10 +1459,10 @@ export function mountHall(el, opts = {}) {
     setCurtain: (k, instant) => { curtainT = k; if (instant) curtainK = k; },
     setDoors: (k, instant) => { doorT = k; if (instant) doorK = k; },
     fireworks: (sec = 6) => { fwUntil = clock.elapsedTime + sec; fwNext = 0; },
-    setAutoPath, ZONES, setShot: v => { shot = v || null; }, setFocus: fn => { focusGet = fn || null; },
-    setWishScreen, cutCake, celebrate, snapshot, setCandles, flutter, setOutro,
+    setAutoPath, ZONES, setShot: v => { shot = v || null; }, setFocus: (fn, o) => { focusGet = fn || null; focusOpt = o || null; },
+    setWishScreen, cutCake, setSkyCake, celebrate, snapshot, setCandles, flutter, setOutro,
     setPhotoCam: on => { photoCam = !!on; cam.fov = on ? 50 : (mode === 'follow' ? 58 : 52); cam.updateProjectionMatrix(); },
-    get curtain() { return curtainT; }, get wishY() { return wishGroup.position.y; }, get wishVis() { return wishGroup.visible; }, get autoActive() { return !!auto; }, get zone() { return zone; }, get cut() { return cutT; }, get candles() { return flames.filter(f => f.k > .5).length; }, // للاختبار
+    get curtain() { return curtainT; }, get wishY() { return wishGroup.position.y; }, get wishVis() { return wishGroup.visible; }, get autoActive() { return !!auto; }, get zone() { return zone; }, get cut() { return cutT; }, get sky() { return [skyMode, +skyLift.position.y.toFixed(2), +skyCutT.toFixed(2), skyCake.visible, cake.visible]; }, get candles() { return flames.filter(f => f.k > .5).length; }, // للاختبار
     debugView: (p, l) => { mode = 'debug'; cam.fov = 60; cam.updateProjectionMatrix(); cam.position.set(p[0], p[1], p[2]); cam.lookAt(l[0], l[1], l[2]); },
     addTicker: fn => { tickers.add(fn); return () => tickers.delete(fn); },
     // تجهيز الـ shaders مسبقاً (عشان ما يعلّق الجوال أول مرة يظهر شي جديد، مثل فستانها وقت الافتتاح)
