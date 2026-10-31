@@ -425,7 +425,7 @@
 
         // مراحل المشي التلقائي: مدة المشي من وقت المرحلة، والدخول بس يمر بنقاط عبور
         // outro: صاحبة الحفلة تمشي السجادة كلها لحالها (27ث)، والضيوف يبقون بمكانهم ومخفيين
-        const WALK = { entrance: .85, gather: .85, cakeWalk: .85, photo: 6000, outro: 27000 }, OUTRO_GUEST_MS = 1000;
+        const WALK = { entrance: .85, gather: .85, cakeWalk: 8500, photo: 6000, outro: 27000 }, OUTRO_GUEST_MS = 1000;
         const AUTO = { entrance: 1, reveal: 1, gather: 1, cakeWalk: 1, photo: 1, outro: 1 };
         // اتجاه الوقوف بعد المشي (نفس السيرفر): صاحبة الحفلة تطالع الضيوف إلا عند الكيكة والصورة
         // الكيكة تنزل بنص القاعة (نفس CAKE_C بالسيرفر وSKY_C في hall3d.js): الكل يطالعها وقت الكيكة
@@ -549,6 +549,8 @@
             if (viewOnly) hall.setShot(p === 'reveal' || p === 'cake' || p === 'celebrate' || p === 'cakeWalk' ? 'stage' : p === 'entrance' ? 'entrance' : p === 'wishes' || p === 'wishWrite' || p === 'gather' ? 'screen' : null);
             if (p === 'ended') music.stop();
             else if (p === 'outro') music.play('outro', { from: since / 1000 });
+            // التجمّع حول الكيكة: أغنية «Happy Birthday» من أولها (اللي يدخل متأخر يسمعها من نفس اللحظة)، وبعدها يطلع زر القص
+            else if (p === 'cakeWalk') music.play('cakesong', { from: since / 1000 });
             else if (p === 'dance' || p === 'free' || p === 'wishWrite' || p === 'wishes') {
                 // أول الرقص: أغنية الافتتاح تكمل لين آخرها (بدأت قبل الرقص بـ 12ث) وبعدها أغنية الرقص
                 if (p === 'dance') music.play('reveal', { from: (since + 12000) / 1000 });

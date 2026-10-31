@@ -58,7 +58,8 @@ var PHASES = ['closed', 'lobby', 'entrance', 'reveal', 'dance', 'gather', 'wishW
 // لباب القاعة (الضيوف يختفون عند الكل ويبقون بمكانهم)
 var OUTRO_MS = 30000, OUTRO_END = [0, 45];
 // مدد ثابتة (ms) — dance و wishWrite و celebrate و cake من الجدول، wishes و free بدون وقت
-var FIXED_MS = { entrance: 40000, reveal: 12000, gather: 12000, cakeWalk: 10000, photo: 16000, outro: OUTRO_MS };
+// cakeWalk: التجمّع حول الكيكة بطول أغنية «Happy Birthday» (music/cakesong.mp3 ≈ 23.9ث) — زر القص يطلع بعدها
+var FIXED_MS = { entrance: 40000, reveal: 12000, gather: 12000, cakeWalk: 24500, photo: 16000, outro: OUTRO_MS };
 // الجدول الافتراضي (بالدقايق، ومهلة القص بالثواني) والحدود
 var SCHED_DEF = { durationMin: 60, openBeforeMin: 15, danceMin: 7, writeMin: 3, cakeDanceMin: 5, cutTimeoutSec: 60 };
 var SCHED_LIM = { durationMin: [15, 240], openBeforeMin: [0, 120], danceMin: [1, 60], writeMin: [1, 60], cakeDanceMin: [1, 60], cutTimeoutSec: [10, 600] };

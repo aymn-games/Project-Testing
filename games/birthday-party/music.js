@@ -9,7 +9,7 @@ export function createMusic(base = 'music/') {
   function track(name) {
     if (!tracks.has(name)) {
       const a = new Audio(); a.preload = 'auto'; a.src = base + name + '.mp3'; a.volume = vol;
-      a.loop = name !== 'reveal' && name !== 'outro'; // cake تتكرر طول رقص الكيكة (5 دقايق)، والافتتاح والنهاية مرة وحدة
+      a.loop = name !== 'reveal' && name !== 'outro' && name !== 'cakesong'; // cake تتكرر طول رقص الكيكة (5 دقايق)، والافتتاح والنهاية مرة وحدة
       a.onerror = () => { a.broken = true; if (a === cur) finish(a); };
       a.onended = () => finish(a);
       tracks.set(name, a);
@@ -37,7 +37,7 @@ export function createMusic(base = 'music/') {
   const unlock = () => {
     if (!primed) {
       primed = true;
-      ['lobby', 'reveal', 'dance', 'cake', 'outro'].forEach(n => { const a = track(n); if (a === cur || a.broken) return; a.muted = true; const p = a.play(); if (p && p.then) p.then(() => { a.pause(); a.muted = false; a.currentTime = 0; }).catch(() => { a.muted = false; }); });
+      ['lobby', 'reveal', 'dance', 'cake', 'outro', 'cakesong'].forEach(n => { const a = track(n); if (a === cur || a.broken) return; a.muted = true; const p = a.play(); if (p && p.then) p.then(() => { a.pause(); a.muted = false; a.currentTime = 0; }).catch(() => { a.muted = false; }); });
     }
     if (pending) { const a = pending; pending = null; tryPlay(a); }
   };
@@ -46,7 +46,7 @@ export function createMusic(base = 'music/') {
   addEventListener('keydown', unlock, { capture: true });
   const api = {
     play(name, { from = 0 } = {}) {
-      if (name !== 'reveal' && name !== 'cake' && name !== 'outro' && holding()) { next = name; return; }
+      if (name !== 'reveal' && name !== 'cake' && name !== 'outro' && name !== 'cakesong' && holding()) { next = name; return; }
       if (curName === name && cur && (!cur.paused || pending === cur)) return;
       const a = track(name);
       if (from > 0 && isFinite(a.duration) && from >= a.duration - .2) return; // خلصت من زمان
