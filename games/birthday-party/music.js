@@ -1,10 +1,10 @@
 // موسيقى الحفلة: ملفات music/<الاسم>.mp3 (مولّدة بـ tools/make-music.mjs، وتقدر تنبدّل بأي ملف بنفس الاسم): lobby.mp3
-// للانتظار والتهاني، reveal.mp3 للافتتاح، dance.mp3 للرقص، cake.mp3 لقص الكيكة ورقصها، outro.mp3 لمشهد النهاية (آخر 30ث). لو الملف مو موجود تسكت بدون أي خطأ.
+// للانتظار والتهاني، reveal.mp3 للافتتاح، dance.mp3 للرقص، cakesong.mp3 للتجمّع حول الكيكة، cutsong.mp3 للقص ورقص الكيكة، slowsong.mp3 لأول الرقص الحر (إضاءة خافتة)، outro.mp3 لمشهد النهاية (آخر 30ث). لو الملف مو موجود تسكت بدون أي خطأ.
 // المتصفحات تمنع التشغيل قبل أول لمسة، فلو انرفض التشغيل نعيد المحاولة مع أول لمسة.
 // أغنية الافتتاح (reveal) تبدأ مع العد التنازلي وتكمل لين آخرها: أي مقطع يُطلب وهي شغالة (الرقص مثلاً)
 // ينتظر لين تخلص، إلا الكيكة والإيقاف.
 // مقاطع تشتغل مرة وحدة (المشهد ينتهي مع نهايتها): الافتتاح، أغنية التجمّع حول الكيكة، أغنية القص، النهاية
-const ONCE = new Set(['reveal', 'outro', 'cakesong', 'cutsong']);
+const ONCE = new Set(['reveal', 'outro', 'cakesong', 'cutsong', 'slowsong']);
 export function createMusic(base = 'music/') {
   let cur = null, curName = null, pending = null, next = null, vol = 0.75;
   const tracks = new Map();
@@ -39,7 +39,7 @@ export function createMusic(base = 'music/') {
   const unlock = () => {
     if (!primed) {
       primed = true;
-      ['lobby', 'reveal', 'dance', 'outro', 'cakesong', 'cutsong'].forEach(n => { const a = track(n); if (a === cur || a.broken) return; a.muted = true; const p = a.play(); if (p && p.then) p.then(() => { a.pause(); a.muted = false; a.currentTime = 0; }).catch(() => { a.muted = false; }); });
+      ['lobby', 'reveal', 'dance', 'outro', 'cakesong', 'cutsong', 'slowsong'].forEach(n => { const a = track(n); if (a === cur || a.broken) return; a.muted = true; const p = a.play(); if (p && p.then) p.then(() => { a.pause(); a.muted = false; a.currentTime = 0; }).catch(() => { a.muted = false; }); });
     }
     if (pending) { const a = pending; pending = null; tryPlay(a); }
   };
